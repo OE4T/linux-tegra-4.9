@@ -89,7 +89,7 @@
 #define GPIO_PORT(g)			((g) >> 3)
 #define GPIO_PIN(g)			((g) & 0x7)
 
-static int tegra186_gpio_wakes[] = {
+static const int tegra186_gpio_wakes[] = {
 	TEGRA_GPIO(A, 6),		/* wake0 */
 	TEGRA_GPIO(A, 2),		/* wake1 */
 	TEGRA_GPIO(A, 5),		/* wake2 */
@@ -188,34 +188,13 @@ static int tegra186_gpio_wakes[] = {
 	-EINVAL,		/* wake95 */
 };
 
-struct tegra_gpio_port_chip_info {
+struct tegra_gpio_port_soc_info {
 	int cont_id;
 	int cont_index;
 	int valid_pins;
 	int reg_index;
 	int scr_offset;
 	u32 reg_offset;
-};
-
-struct tegra_gpio_info;
-
-struct tegra_gpio_controller {
-	int controller;
-	int irq;
-	struct tegra_gpio_info *tgi;
-};
-
-struct tegra_gpio_info {
-	struct device *dev;
-
-	int nbanks;
-	void __iomem **gpio_regs;
-	void __iomem **scr_regs;
-	struct irq_domain *irq_domain;
-	struct tegra_gpio_controller tg_contrlr[MAX_GPIO_CONTROLLERS];
-	struct gpio_chip gc;
-	struct irq_chip ic;
-	struct lock_class_key lock_class;
 };
 
 #define TEGRA_GPIO_PORT_INFO(port, cid, cind, npins)		\
@@ -238,7 +217,7 @@ struct tegra_gpio_info {
 		.reg_offset = cind * 0x200,			\
 }
 
-static struct tegra_gpio_port_chip_info tegra_gpio_cinfo[] = {
+static struct tegra_gpio_port_soc_info tegra_gpio_cinfo[] = {
 	TEGRA_GPIO_PORT_INFO(A, 2, 0, 7),
 	TEGRA_GPIO_PORT_INFO(B, 3, 0, 7),
 	TEGRA_GPIO_PORT_INFO(C, 3, 1, 7),
@@ -273,12 +252,41 @@ static struct tegra_gpio_port_chip_info tegra_gpio_cinfo[] = {
 	TEGRA_AON_GPIO_PORT_INFO(FF, 6, 0, 5),
 };
 
-static int tegra186_gpio_to_wake(int gpio)
+struct tegra_gpio_info;
+
+struct tegra_gpio_soc_info {
+	const struct tegra_gpio_port_soc_info *port;
+	int nports;
+	const int *wake_table;
+	int nwakes;
+};
+
+struct tegra_gpio_controller {
+	int controller;
+	int irq;
+	struct tegra_gpio_info *tgi;
+};
+
+struct tegra_gpio_info {
+	struct device *dev;
+
+	int nbanks;
+	void __iomem **gpio_regs;
+	void __iomem **scr_regs;
+	struct irq_domain *irq_domain;
+	const struct tegra_gpio_soc_info *soc;
+	struct tegra_gpio_controller tg_contrlr[MAX_GPIO_CONTROLLERS];
+	struct gpio_chip gc;
+	struct irq_chip ic;
+	struct lock_class_key lock_class;
+};
+
+static int tegra186_gpio_to_wake(struct tegra_gpio_info *tgi, int gpio)
 {
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(tegra186_gpio_wakes); i++) {
-		if (tegra186_gpio_wakes[i] == gpio) {
+	for (i = 0; i < tgi->soc->nwakes; i++) {
+		if (tgi->soc->wake_table[i] == gpio) {
 			pr_info("gpio wake%d for gpio=%d\n", i, gpio);
 			return i;
 		}
@@ -292,8 +300,8 @@ static inline u32 tegra_gpio_readl(struct tegra_gpio_info *tgi, u32 gpio,
 {
 	int port = GPIO_PORT(gpio);
 	int pin = GPIO_PIN(gpio);
-	u32 addr = tegra_gpio_cinfo[port].reg_offset;
-	int rindex = tegra_gpio_cinfo[port].reg_index;
+	u32 addr = tgi->soc->port[port].reg_offset;
+	int rindex = tgi->soc->port[port].reg_index;
 
 	addr += (GPIO_REG_DIFF * pin) + reg_offset;
 	return __raw_readl(tgi->gpio_regs[rindex] + addr);
@@ -304,8 +312,8 @@ static inline void tegra_gpio_writel(struct tegra_gpio_info *tgi, u32 val,
 {
 	int port = GPIO_PORT(gpio);
 	int pin = GPIO_PIN(gpio);
-	u32 addr = tegra_gpio_cinfo[port].reg_offset;
-	int rindex = tegra_gpio_cinfo[port].reg_index;
+	u32 addr = tgi->soc->port[port].reg_offset;
+	int rindex = tgi->soc->port[port].reg_index;
 
 	addr += (GPIO_REG_DIFF * pin) + reg_offset;
 	__raw_writel(val, tgi->gpio_regs[rindex] + addr);
@@ -316,8 +324,8 @@ static inline void tegra_gpio_update(struct tegra_gpio_info *tgi, u32 gpio,
 {
 	int port = GPIO_PORT(gpio);
 	int pin = GPIO_PIN(gpio);
-	u32 addr = tegra_gpio_cinfo[port].reg_offset;
-	int rindex = tegra_gpio_cinfo[port].reg_index;
+	u32 addr = tgi->soc->port[port].reg_offset;
+	int rindex = tgi->soc->port[port].reg_index;
 	u32 rval;
 
 	addr += (GPIO_REG_DIFF * pin) + reg_offset;
@@ -341,17 +349,17 @@ static inline bool is_gpio_accessible(struct tegra_gpio_info *tgi, u32 offset)
 	int pin = GPIO_PIN(offset);
 	u32 val;
 	int cont_id;
-	u32 scr_offset = tegra_gpio_cinfo[port].scr_offset;
+	u32 scr_offset = tgi->soc->port[port].scr_offset;
 	int rindex;
 
-	if (pin >= tegra_gpio_cinfo[port].valid_pins)
+	if (pin >= tgi->soc->port[port].valid_pins)
 		return false;
 
-	cont_id = tegra_gpio_cinfo[port].cont_id;
+	cont_id = tgi->soc->port[port].cont_id;
 	if (cont_id  < 0)
 		return false;
 
-	rindex = tegra_gpio_cinfo[port].reg_index;
+	rindex = tgi->soc->port[port].reg_index;
 
 	val = __raw_readl(tgi->scr_regs[rindex] + scr_offset +
 			(pin * GPIO_SCR_DIFF) + GPIO_SCR_REG);
@@ -535,7 +543,7 @@ static int tegra_gpio_irq_set_type(struct irq_data *d, unsigned int type)
 	u32 lvl_type = 0;
 	u32 trg_type = 0;
 	u32 val;
-	int wake = tegra186_gpio_to_wake(d->hwirq);
+	int wake = tegra186_gpio_to_wake(ctrlr->tgi, d->hwirq);
 
 	switch (type & IRQ_TYPE_SENSE_MASK) {
 	case IRQ_TYPE_EDGE_RISING:
@@ -590,8 +598,9 @@ static int tegra_gpio_irq_set_type(struct irq_data *d, unsigned int type)
 
 static int tegra_gpio_irq_set_wake(struct irq_data *d, unsigned int enable)
 {
+	struct tegra_gpio_controller *ctrlr = irq_data_get_irq_chip_data(d);
+	int wake = tegra186_gpio_to_wake(ctrlr->tgi, d->hwirq);
 	int ret;
-	int wake = tegra186_gpio_to_wake(d->hwirq);
 
 	if (wake < 0)
 		return wake;
@@ -607,6 +616,7 @@ static void tegra_gpio_irq_handler_desc(struct irq_desc *desc)
 {
 	struct irq_chip *chip = irq_desc_get_chip(desc);
 	struct tegra_gpio_controller *tg_cont = irq_desc_get_handler_data(desc);
+	struct tegra_gpio_info *tgi = tg_cont->tgi;
 	int pin;
 	int port;
 	u32 i;
@@ -619,9 +629,9 @@ static void tegra_gpio_irq_handler_desc(struct irq_desc *desc)
 	for (i = 0; i < MAX_GPIO_PORTS; ++i)
 		port_map[i] = -1;
 
-	for (i = 0; i < ARRAY_SIZE(tegra_gpio_cinfo); ++i) {
-		if (tegra_gpio_cinfo[i].cont_id == tg_cont->controller)
-			port_map[tegra_gpio_cinfo[i].cont_index] = i;
+	for (i = 0; i < tgi->soc->nports; ++i) {
+		if (tgi->soc->port[i].cont_id == tg_cont->controller)
+			port_map[tgi->soc->port[i].cont_index] = i;
 	}
 
 	chained_irq_enter(chip, desc);
@@ -630,8 +640,8 @@ static void tegra_gpio_irq_handler_desc(struct irq_desc *desc)
 		if (port == -1)
 			continue;
 
-		rindex = tegra_gpio_cinfo[port].reg_index;
-		addr = tegra_gpio_cinfo[port].reg_offset;
+		rindex = tgi->soc->port[port].reg_index;
+		addr = tgi->soc->port[port].reg_offset;
 		val = __raw_readl(tg_cont->tgi->gpio_regs[rindex] + addr +
 				GPIO_INT_STATUS_OFFSET + GPIO_STATUS_G1);
 		gpio = port * 8;
@@ -730,11 +740,6 @@ static inline void tegra_gpio_debuginit(struct tegra_gpio_info *tgi)
 }
 #endif
 
-static const struct of_device_id tegra_gpio_of_match[] = {
-	{ .compatible = "nvidia,tegra186-gpio",},
-	{ },
-};
-
 static int tegra_gpio_probe(struct platform_device *pdev)
 {
 	struct resource *res;
@@ -762,6 +767,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	tgi->dev = &pdev->dev;
 	tgi->nbanks = nbanks;
+	tgi->soc = of_device_get_match_data(&pdev->dev);
 
 	tgi->gc.label			= "tegra-gpio";
 	tgi->gc.request			= tegra_gpio_request;
@@ -818,7 +824,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	tgi->regs = devm_kzalloc(tgi->dev, nregs * sizeof(*tgi->scr_regs),
+	tgi->scr_regs = devm_kzalloc(tgi->dev, nregs * sizeof(*tgi->scr_regs),
 				 GFP_KERNEL);
 	if (!tgi->scr_regs)
 		return -ENOMEM;
@@ -856,7 +862,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 
 	for (gpio = 0; gpio < tgi->gc.ngpio; gpio++) {
 		int irq = irq_create_mapping(tgi->irq_domain, gpio);
-		int cont_id = tegra_gpio_cinfo[GPIO_PORT(gpio)].cont_id;
+		int cont_id = tgi->soc->port[GPIO_PORT(gpio)].cont_id;
 
 		if (is_gpio_accessible(tgi, gpio))
 			/* mask interrupts for this GPIO */
@@ -877,13 +883,25 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	}
 
 	tegra_pm_update_gpio_wakeup_table(tgi->gc.base,
-					  tegra186_gpio_wakes,
-					  ARRAY_SIZE(tegra186_gpio_wakes));
+					  (int *)tgi->soc->wake_table,
+					  tgi->soc->nwakes);
 
 	tegra_gpio_debuginit(tgi);
 
 	return 0;
 }
+
+const struct tegra_gpio_soc_info t186_gpio_soc = {
+	.port = tegra_gpio_cinfo,
+	.nports = ARRAY_SIZE(tegra_gpio_cinfo),
+	.wake_table = tegra186_gpio_wakes,
+	.nwakes = ARRAY_SIZE(tegra186_gpio_wakes),
+};
+
+static struct of_device_id tegra_gpio_of_match[] = {
+	{ .compatible = "nvidia,tegra186-gpio", .data = &t186_gpio_soc},
+	{ },
+};
 
 static struct platform_driver tegra_gpio_driver = {
 	.driver		= {

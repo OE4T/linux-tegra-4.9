@@ -352,9 +352,11 @@ static int csi4_tpg_start_streaming(struct tegra_csi_channel *chan,
 			(0x10 << PG_HOR_INIT_FREQ_OFFSET));
 	csi4_stream_write(chan, csi_port, PG_BLUE_FREQ_RATE, 0x0);
 	/* calculate PG IMAGE SIZE and DT */
+	mutex_lock(&chan->format_lock);
 	val = port->format.height << HEIGHT_OFFSET |
 		(port->format.width *
 		(port->core_format->vf_code == TEGRA_VF_RAW10 ? 10 : 24) / 8);
+	mutex_unlock(&chan->format_lock);
 	csi4_stream_write(chan, csi_port, PG_IMAGE_SIZE, val);
 	csi4_stream_write(chan, csi_port, PG_IMAGE_DT,
 			port->core_format->img_dt);
@@ -415,4 +417,28 @@ void csi4_stop_streaming(struct tegra_csi_channel *chan,
 		csi4_stream_check_status(chan, csi_port);
 		csi4_cil_check_status(chan, csi_port);
 	}
+}
+
+void csi4_override_format(struct tegra_csi_channel *chan,
+		enum tegra_csi_port_num port_num)
+{
+	struct tegra_csi_port *port = &chan->ports[port_num];
+	unsigned int val;
+	int csi_port;
+
+	if (!chan->pg_mode) {
+		dev_err(chan->csi->dev, "%s non PG format update failed\n",
+				__func__);
+		return;
+	}
+
+	/* calculate PG IMAGE SIZE and DT */
+	mutex_lock(&chan->format_lock);
+	val = port->format.height << HEIGHT_OFFSET |
+		(port->format.width *
+		(port->core_format->vf_code == TEGRA_VF_RAW10 ? 10 : 24) / 8);
+	mutex_unlock(&chan->format_lock);
+
+	csi_port = chan->ports[port_num].num;
+	csi4_stream_write(chan, csi_port, PG_IMAGE_SIZE, val);
 }

@@ -531,7 +531,9 @@ static int tegra_csi_g_mbus_fmt(struct v4l2_subdev *sd,
 		return -EINVAL;
 	}
 
+	mutex_lock(&chan->format_lock);
 	memcpy(fmt, format, sizeof(struct v4l2_mbus_framefmt));
+	mutex_unlock(&chan->format_lock);
 
 	return 0;
 }
@@ -579,7 +581,7 @@ static int tegra_csi_set_format(struct v4l2_subdev *subdev,
 {
 	int ret;
 	struct tegra_csi_channel *chan = to_csi_chan(subdev);
-	struct v4l2_mbus_framefmt *format;
+	struct v4l2_mbus_framefmt *format = &fmt->format;
 	const struct tegra_video_format *vf;
 	struct tegra_channel *vi_chan = v4l2_get_subdev_hostdata(subdev);
 	int index, i;
@@ -587,32 +589,35 @@ static int tegra_csi_set_format(struct v4l2_subdev *subdev,
 	if (!chan->pg_mode)
 		return -ENOIOCTLCMD;
 
-	ret = tegra_csi_try_mbus_fmt(subdev, &fmt->format);
+	ret = tegra_csi_try_mbus_fmt(subdev, format);
 	if (ret)
 		return ret;
 
 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY)
 		return 0;
 
-	for (i = 0; i < vi_chan->valid_ports; i++) {
-		format = &chan->ports[i].format;
-		memcpy(format, &fmt->format, sizeof(struct v4l2_mbus_framefmt));
-		vf = tegra_core_get_format_by_code(format->code);
-		if (vf)
-			chan->ports[i].core_format = vf;
-		else {
-			dev_err(chan->csi->dev, "Fail to find tegra video fmt");
-			return -EINVAL;
-		}
-		index = tegra_csi_get_fmtindex(chan, format->width,
-					format->height, vf->fourcc);
-		if (index < 0) {
-			dev_err(chan->csi->dev, "Fail to find matching fmt");
-			return -EINVAL;
-		}
+	vf = tegra_core_get_format_by_code(format->code);
+	if (!vf) {
+		dev_err(chan->csi->dev, "Fail to find tegra video fmt");
+		mutex_unlock(&chan->format_lock);
+		return -EINVAL;
+	}
+	index = tegra_csi_get_fmtindex(chan, format->width,
+				format->height, vf->fourcc);
+	if (index < 0) {
+		dev_err(chan->csi->dev, "Fail to find matching fmt");
+		return -EINVAL;
+	}
 
+	mutex_lock(&chan->format_lock);
+	for (i = 0; i < vi_chan->valid_ports; i++) {
+		memcpy(&chan->ports[i].format,
+		       &fmt->format, sizeof(struct v4l2_mbus_framefmt));
+		chan->ports[i].core_format = vf;
 		update_blank_intervals(chan, i, index);
 	}
+	mutex_unlock(&chan->format_lock);
+
 	return 0;
 }
 
@@ -781,13 +786,17 @@ static int tegra_csi_channel_init_one(struct tegra_csi_channel *chan)
 	if (!chan->ports)
 		return -ENOMEM;
 
+	mutex_init(&chan->format_lock);
+
 	/* Initialize the default format */
 	for (i = 0; i < chan->numports; i++) {
+		mutex_lock(&chan->format_lock);
 		chan->ports[i].format.code = TEGRA_VF_DEF;
 		chan->ports[i].format.field = V4L2_FIELD_NONE;
 		chan->ports[i].format.colorspace = V4L2_COLORSPACE_SRGB;
 		chan->ports[i].format.width = TEGRA_DEF_WIDTH;
 		chan->ports[i].format.height = TEGRA_DEF_HEIGHT;
+		mutex_unlock(&chan->format_lock);
 	}
 	if (chan->pg_mode) {
 		/* If CSI has 2 existing channels, chan->id will start

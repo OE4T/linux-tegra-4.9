@@ -96,6 +96,8 @@ struct tegra_csi_device {
 	const struct tpg_frmfmt *tpg_frmfmt_table;
 	unsigned int tpg_frmfmt_table_size;
 	atomic_t power_ref;
+
+	struct dentry *debugdir;
 };
 
 /*
@@ -112,6 +114,7 @@ struct tegra_csi_channel {
 	struct tegra_csi_device *csi;
 	struct tegra_csi_port *ports;
 	unsigned char port[TEGRA_CSI_BLOCKS];
+	struct mutex format_lock;
 	unsigned int numports;
 	unsigned int numlanes;
 	unsigned int pg_mode;

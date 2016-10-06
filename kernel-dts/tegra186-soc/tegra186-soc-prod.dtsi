@@ -567,7 +567,7 @@
 						0x00000124 0x000037fe 0x00002462
 						>;
 					};
-				prod_c_dapux_hdmi {
+				prod_c_dpaux_hdmi {
 					prod = <
 						0x00000124 0x00000700 0x00000400
 						>;

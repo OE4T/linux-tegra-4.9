@@ -742,6 +742,14 @@
 			interrupts = <0 73 0x04>;
 			iommus = <&smmu TEGRA_SWGROUP_DC>,
 				 <&smmu TEGRA_SWGROUP_DC12>;
+			clocks = <&tegra_car TEGRA210_CLK_DISP1>,
+				<&tegra_car TEGRA210_CLK_TIMER>,
+				<&tegra_car TEGRA210_CLK_DISP1_EMC>,
+				<&tegra_car TEGRA210_CLK_DISP1_LA_EMC>,
+				<&tegra_car TEGRA210_CLK_PLL_P_OUT3>;
+			clock-names = "disp1", "timer", "disp1_emc", "disp1_la_emc", "pll_p_out3";
+			resets = <&tegra_car TEGRA210_CLK_DISP1>;
+			reset-names = "dc_rst";
 			status = "disabled";
 
 			rgb {
@@ -771,6 +779,16 @@
 			compatible = "nvidia,tegra210-dsi";
 			reg = <0x0 0x54300000 0x0 0x00040000
 			       0x0 0x54400000 0x0 0x00040000>;
+			clocks = <&tegra_car TEGRA210_CLK_DSIA>,
+				<&tegra_car TEGRA210_CLK_DSIALP>,
+				<&tegra_car TEGRA210_CLK_DSIB>,
+				<&tegra_car TEGRA210_CLK_DSIBLP>,
+				<&tegra_car TEGRA210_CLK_PLL_P_OUT3>,
+				<&tegra_car TEGRA210_CLK_CLK72MHZ>;
+			clock-names = "dsi", "dsia_lp", "dsib", "dsib_lp", "pll_p_out3", "clk72mhz";
+			resets = <&tegra_car TEGRA210_CLK_DSIA>,
+				<&tegra_car TEGRA210_CLK_DSIB>;
+			reset-names = "dsia", "dsib";
 			status = "disabled";
 		};
 
@@ -921,6 +939,9 @@
 	mipical {
 		compatible = "nvidia,tegra210-mipical";
 		reg = <0x0 0x700e3000 0x0 0x00000100>;
+		clocks = <&tegra_car TEGRA210_CLK_MIPI_CAL>,
+			<&tegra_car TEGRA210_CLK_CLK72MHZ>;
+		clock-names = "mipi_cal", "uart_mipi_cal";
 		status = "disabled";
 	};
 

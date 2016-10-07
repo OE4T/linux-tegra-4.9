@@ -40,7 +40,7 @@ static const imx274_reg imx274_start[] = {
 
 static const imx274_reg imx274_stop[] = {
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
-	{0x3000, 0x12}, /* mode select streaming off */
+	{0x3000, 0x01}, /* mode select streaming off */
 	{IMX274_TABLE_END, 0x00}
 };
 
@@ -59,6 +59,7 @@ static const imx274_reg tp_colorbars[] = {
 /* Mode 1 : 3840X2160 10 bits 30fps*/
 static const imx274_reg mode_3840X2160[] = {
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
+	{0x3000, 0x12}, /* mode select streaming on */
 	/* input freq. 24M */
 	{0x3120, 0xF0},
 	{0x3122, 0x02},
@@ -131,9 +132,6 @@ static const imx274_reg mode_3840X2160[] = {
 	{0x366D, 0x17},
 	{0x33A6, 0x01},
 	{0x306B, 0x05},
-
-	/* d gain setting */
-	{0x3012, 0x01},
 
 	{0x300E, 0x01},
 
@@ -144,6 +142,7 @@ static const imx274_reg mode_3840X2160[] = {
 /* Mode 1 : 3840X2160 10 bits 60fps*/
 static const imx274_reg mode_3840X2160_60fps[] = {
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
+	{0x3000, 0x12}, /* mode select streaming on */
 	/* input freq. 24M */
 	{0x3120, 0xF0},
 	{0x3122, 0x02},
@@ -217,8 +216,7 @@ static const imx274_reg mode_3840X2160_60fps[] = {
 	{0x33A6, 0x01},
 	{0x306B, 0x05},
 
-	/* d gain setting */
-	{0x3012, 0x01},
+	{0x300E, 0x00},
 
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
 	{IMX274_TABLE_END, 0x0000}
@@ -227,6 +225,7 @@ static const imx274_reg mode_3840X2160_60fps[] = {
 /* Mode 3 : 1920X1080 10 bits 60fps*/
 static imx274_reg mode_1920X1080[] = {
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
+	{0x3000, 0x12}, /* mode select streaming on */
 	/* input freq. 24M */
 	{0x3120, 0xF0},
 	{0x3122, 0x02},
@@ -300,9 +299,6 @@ static imx274_reg mode_1920X1080[] = {
 	{0x33A6, 0x01},
 	{0x306B, 0x05},
 
-	/* d gain setting */
-	{0x3012, 0x01},
-
 	{0x300E, 0x01},
 
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
@@ -312,6 +308,7 @@ static imx274_reg mode_1920X1080[] = {
 /* Mode 5 : 1280X720 10 bits */
 static imx274_reg mode_1280X720[] = {
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
+	{0x3000, 0x12}, /* mode select streaming on */
 	/* input freq. 24M */
 	{0x3120, 0xF0},
 	{0x3122, 0x02},
@@ -399,7 +396,7 @@ enum {
 };
 
 static const imx274_reg *mode_table[] = {
-	[IMX274_MODE_3840X2160] = mode_3840X2160,
+	[IMX274_MODE_3840X2160] = mode_3840X2160_60fps,
 	[IMX274_MODE_1920X1080] = mode_1920X1080,
 	[IMX274_MODE_1280X720] = mode_1280X720,
 
@@ -414,7 +411,7 @@ static const int imx274_framerates[] = {
 };
 
 static const struct camera_common_frmfmt imx274_frmfmt[] = {
-	{{3840, 2160},  0, IMX274_MODE_3840X2160},
+	{{3864, 2174},  0, IMX274_MODE_3840X2160},
 	{{1920, 1080},  0, IMX274_MODE_1920X1080},
 	{{1280, 720},   0, IMX274_MODE_1280X720},
 };

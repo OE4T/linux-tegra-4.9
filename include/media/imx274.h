@@ -75,14 +75,14 @@
 
 #define IMX274_GROUP_HOLD_ADDR			0x302D
 
-#define IMX274_PIXEL_CLK_HZ				576000000
+#define IMX274_PIXEL_CLK_HZ				756000000
 #define IMX274_LINE_LENGTH				4200
 
 #define IMX274_VMAX						4550
 #define IMX274_HMAX						263
 #define IMX274_MODE1_OFFSET				112
 #define IMX274_MODE1_SHR_MIN			12
-#define IMX274_ET_FACTOR				525
+#define IMX274_ET_FACTOR				400
 
 struct imx274_mode {
 	__u32 xres;

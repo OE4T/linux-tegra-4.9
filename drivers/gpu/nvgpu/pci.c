@@ -65,7 +65,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.has_ce = true,
 
 	.vidmem_is_vidmem = true,
-	.vbios_min_version = 0x86062d00,
+	.vbios_min_version = 0x86063000,
 	},
 	{ /* DEVICE=0x1c36 */
 	/* ptimer src frequency in hz */

@@ -70,6 +70,9 @@
 #define RPD_CTRL_SHIFT				(0)
 #define RPD_CTRL_MASK				(0x1f)
 
+/* Data contact detection timeout */
+#define TDCD_TIMEOUT_MS				400
+
 /* XUSB PADCTL registers */
 #define XUSB_PADCTL_USB2_PAD_MUX		(0x4)
 #define   PORT_HSIC				(0)
@@ -121,6 +124,7 @@
 #define   GENERATE_SRP				(1 << 31)
 
 #define USB2_BATTERY_CHRG_OTGPADX_CTL1(x)	(0x84 + (x) * 0x40)
+#define   DIV_DET_EN				(1 << 4)
 #define   PD_VREG				(1 << 6)
 #define   VREG_LEV(x)				(((x) & 0x3) << 7)
 #define   VREG_DIR(x)				(((x) & 0x3) << 11)
@@ -3428,7 +3432,7 @@ bool tegra_phy_xusb_utmi_pad_dcd(struct phy *phy)
 	/* Wait for TDCD_DBNC */
 	usleep_range(10000, 120000);
 
-	while (dcd_timeout_ms < 900) {
+	while (dcd_timeout_ms < TDCD_TIMEOUT_MS) {
 		reg = padctl_readl(padctl,
 				   USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
 		if (reg & DCD_DETECTED) {
@@ -3440,6 +3444,10 @@ bool tegra_phy_xusb_utmi_pad_dcd(struct phy *phy)
 		usleep_range(20000, 22000);
 		dcd_timeout_ms += 22;
 	}
+
+	if (!ret)
+		dev_info(padctl->dev, "%s: DCD timeout %d ms\n", __func__,
+			 dcd_timeout_ms);
 
 	/* Turn off IP_SRC, clear DCD DETECTED*/
 	reg = padctl_readl(padctl, USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
@@ -3455,6 +3463,32 @@ bool tegra_phy_xusb_utmi_pad_dcd(struct phy *phy)
 	return ret;
 }
 EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_dcd);
+
+u32 tegra_phy_xusb_noncompliant_div_detect(struct phy *phy)
+{
+	struct tegra_padctl *padctl;
+	int port;
+	u32 reg;
+
+	if (!phy)
+		return 0;
+
+	padctl = phy_get_drvdata(phy);
+	port = utmi_phy_to_port(phy);
+
+	reg = padctl_readl(padctl, USB2_BATTERY_CHRG_OTGPADX_CTL1(port));
+	reg |= DIV_DET_EN;
+	padctl_writel(padctl, reg, USB2_BATTERY_CHRG_OTGPADX_CTL1(port));
+
+	udelay(10);
+
+	reg = padctl_readl(padctl, USB2_BATTERY_CHRG_OTGPADX_CTL1(port));
+	reg &= ~DIV_DET_EN;
+	padctl_writel(padctl, reg, USB2_BATTERY_CHRG_OTGPADX_CTL1(port));
+
+	return reg;
+}
+EXPORT_SYMBOL_GPL(tegra_phy_xusb_noncompliant_div_detect);
 
 bool tegra_phy_xusb_utmi_pad_primary_charger_detect(struct phy *phy)
 {

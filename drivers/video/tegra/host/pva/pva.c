@@ -71,13 +71,17 @@ static u32 pva_get_evp_reg(u32 index)
 	return evp_reg[index];
 }
 
+/* Buffer for ucode for application code,data or for logging information */
+#define PVA_PRIV2_BUFFER_SIZE 0x100000
+
 #define R5_USER_SEGREG_OFFSET 0x40000000
+#define R5_PRIV2_SEGREG_OFFSET 0x70000000
 static int pva_init_fw(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct pva *pva = pdata->private_data;
 	struct pva_fw *fw_info = &pva->fw_info;
-	u32 *ucode_ptr = fw_info->mapped;
+	u32 *ucode_ptr = fw_info->ucode_mapped;
 	int err = 0, w;
 	int timeout;
 
@@ -86,10 +90,22 @@ static int pva_init_fw(struct platform_device *pdev)
 	/* Set the Ucode Header address for R5 */
 	/* Program user seg subtracting the offset */
 	host1x_writel(pdev, cfg_r5user_lsegreg_r(),
-		PVA_LOW32((fw_info->phys - R5_USER_SEGREG_OFFSET)));
+		PVA_LOW32((fw_info->ucode_phys - R5_USER_SEGREG_OFFSET)));
 	host1x_writel(pdev, cfg_r5user_usegreg_r(),
-		PVA_EXTRACT64((fw_info->phys - R5_USER_SEGREG_OFFSET),
+		PVA_EXTRACT64((fw_info->ucode_phys - R5_USER_SEGREG_OFFSET),
 					39, 32, u32));
+
+	/* Program the extra memory tobe used by R5 */
+	host1x_writel(pdev, cfg_priv_ar2_start_r(), R5_PRIV2_SEGREG_OFFSET);
+	host1x_writel(pdev, cfg_priv_ar2_end_r(),
+			R5_PRIV2_SEGREG_OFFSET + PVA_PRIV2_BUFFER_SIZE);
+	host1x_writel(pdev, cfg_priv_ar2_lsegreg_r(),
+	PVA_LOW32((fw_info->priv2_buffer_phys - R5_PRIV2_SEGREG_OFFSET)));
+
+	host1x_writel(pdev, cfg_priv_ar2_usegreg_r(),
+	PVA_EXTRACT64((fw_info->priv2_buffer_phys - R5_PRIV2_SEGREG_OFFSET),
+			39, 32, u32));
+
 
 	/* check the type of segments and their offset and address */
 	for (w = 0; w < fw_info->hdr->nsegments; w++) {
@@ -116,7 +132,7 @@ static int pva_init_fw(struct platform_device *pdev)
 		{
 			/* R5 segment - Program PRIV1 segment regs*/
 			/* Subracting PRIV1 start for R5PRIV1 address*/
-			u64 seg_addr = (fw_info->phys - useg->addr);
+			u64 seg_addr = (fw_info->ucode_phys - useg->addr);
 
 			host1x_writel(pdev, cfg_priv_ar1_start_r(),
 						useg->addr);
@@ -163,9 +179,14 @@ static int pva_free_fw(struct platform_device *pdev, struct pva *pva)
 {
 	struct pva_fw *fw_info = &pva->fw_info;
 
-	if (fw_info->mapped)
-		dma_free_attrs(&pdev->dev, fw_info->size, fw_info->mapped,
-			fw_info->phys, &fw_info->attrs);
+	if (fw_info->ucode_mapped)
+		dma_free_attrs(&pdev->dev, fw_info->size,
+		fw_info->ucode_mapped, fw_info->ucode_phys, &fw_info->attrs);
+
+	if (fw_info->priv2_buffer_mapped)
+		dma_free_attrs(&pdev->dev, PVA_PRIV2_BUFFER_SIZE,
+		fw_info->priv2_buffer_mapped, fw_info->priv2_buffer_phys,
+		&fw_info->attrs);
 
 	memset(fw_info, 0, sizeof(struct pva_fw));
 
@@ -196,15 +217,25 @@ static int pva_read_ucode(struct platform_device *pdev,
 	dma_set_attr(DMA_ATTR_READ_ONLY, &fw_info->attrs);
 
 	/* Allocate the Memory area to load the firmware */
-	fw_info->mapped = dma_alloc_attrs(&pdev->dev, fw_info->size,
-		&fw_info->phys, GFP_KERNEL, &fw_info->attrs);
+	fw_info->ucode_mapped = dma_alloc_attrs(&pdev->dev, fw_info->size,
+		&fw_info->ucode_phys, GFP_KERNEL, &fw_info->attrs);
 
-	if (!fw_info->mapped) {
+	if (!fw_info->ucode_mapped) {
 		err = -ENOMEM;
 		goto clean_up;
 	}
 
-	ucode_ptr = fw_info->mapped;
+	/* Allocate memory to R5 for app code, data or to log information */
+	fw_info->priv2_buffer_mapped = dma_alloc_attrs(&pdev->dev,
+		PVA_PRIV2_BUFFER_SIZE, &fw_info->priv2_buffer_phys,
+		GFP_KERNEL, &fw_info->attrs);
+
+	if (!fw_info->priv2_buffer_mapped) {
+		err = -ENOMEM;
+		goto clean_up;
+	}
+
+	ucode_ptr = fw_info->ucode_mapped;
 
 	/* copy the whole thing taking into account endianness */
 	for (w = 0; w < ucode_fw->size/sizeof(u32); w++)

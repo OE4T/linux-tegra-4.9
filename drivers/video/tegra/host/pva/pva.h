@@ -40,8 +40,10 @@ extern const struct file_operations tegra_pva_ctrl_ops;
  * @hdr:		pointer to the pva_code_hdr struct
  * @size:		firmware file size
  * @booted:		variable to check whether boot completed
- * @phys:		physical address of the dram allocated
- * @mapped:		virtually mapped address for dram allocated
+ * @ucode_phys:		physical address of dram for ucode image
+ * @ucode_mapped:	virtual address of dram for ucode image
+ * @priv2_buffer_phys:	physical address of extra memory allocated for ucode
+ * @priv2_buffer_mapped:virtual address of extra memory allocated for ucode
  * @attrs:		dma_attrs struct information
  *
  */
@@ -51,8 +53,10 @@ struct pva_fw {
 
 	size_t size;
 
-	dma_addr_t phys;
-	void *mapped;
+	dma_addr_t ucode_phys;
+	void *ucode_mapped;
+	dma_addr_t priv2_buffer_phys;
+	void *priv2_buffer_mapped;
 	struct dma_attrs attrs;
 };
 

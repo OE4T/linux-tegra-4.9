@@ -468,6 +468,11 @@
 		status = "disabled";
         };
 
+	tegra_usb_cd: usb_cd {
+		compatible = "nvidia,tegra210-usb-cd";
+		status = "disabled";
+	};
+
 	xotg {
 		compatible = "nvidia,tegra210-xotg";
 		interrupts = <0 49 0x04
@@ -1788,6 +1793,7 @@
 			<&tegra_car TEGRA210_CLK_XUSB_SS>,
 			<&tegra_car TEGRA210_CLK_PLL_E>;
 		clock-names = "pll_u_480M", "dev", "ss", "pll_e";
+		charger-detector = <&tegra_usb_cd>;
 	};
 
 	soctherm: soctherm@0x700E2000 {

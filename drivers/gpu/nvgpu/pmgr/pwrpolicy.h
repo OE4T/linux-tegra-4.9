@@ -99,10 +99,20 @@ struct pwr_policy_hw_threshold {
 	u16 low_threshold_value;
 };
 
+struct pwr_policy_sw_threshold {
+	struct pwr_policy_limit super;
+	u8 threshold_idx;
+	u8 low_threshold_idx;
+	bool b_use_low_threshold;
+	u16 low_threshold_value;
+	u8 event_id;
+};
+
 union pwr_policy_data_union {
 	struct boardobj boardobj;
 	struct pwr_policy pwrpolicy;
 	struct pwr_policy_hw_threshold hw_threshold;
+	struct pwr_policy_sw_threshold sw_threshold;
 } ;
 
 #define PMGR_GET_PWR_POLICY(g, policy_idx)                                 \

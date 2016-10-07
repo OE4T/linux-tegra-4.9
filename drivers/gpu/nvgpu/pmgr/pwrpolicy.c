@@ -229,6 +229,17 @@ static u32 _pwr_domains_pmudatainit_hw_threshold(struct gk20a *g,
 	pmu_hw_threshold_data->b_use_low_threshold = p_hw_threshold->b_use_low_threshold;
 	pmu_hw_threshold_data->low_threshold_value = p_hw_threshold->low_threshold_value;
 
+	if (BOARDOBJ_GET_TYPE(board_obj_ptr) ==
+		CTRL_PMGR_PWR_POLICY_TYPE_SW_THRESHOLD) {
+		struct nv_pmu_pmgr_pwr_policy_sw_threshold *pmu_sw_threshold_data;
+		struct pwr_policy_sw_threshold *p_sw_threshold;
+
+		p_sw_threshold = (struct pwr_policy_sw_threshold *)board_obj_ptr;
+		pmu_sw_threshold_data =
+			(struct nv_pmu_pmgr_pwr_policy_sw_threshold *) ppmudata;
+		pmu_sw_threshold_data->event_id =
+			p_sw_threshold->event_id;
+	}
 done:
 	return status;
 }
@@ -326,6 +337,15 @@ static struct boardobj *construct_pwr_policy(struct gk20a *g,
 	pwrpolicyhwthreshold->low_threshold_idx = hwthreshold->low_threshold_idx;
 	pwrpolicyhwthreshold->low_threshold_value = hwthreshold->low_threshold_value;
 
+	if (type == CTRL_PMGR_PWR_POLICY_TYPE_SW_THRESHOLD) {
+		struct pwr_policy_sw_threshold *pwrpolicyswthreshold;
+		struct pwr_policy_sw_threshold *swthreshold =
+			(struct pwr_policy_sw_threshold*)pargs;
+
+		pwrpolicyswthreshold = (struct pwr_policy_sw_threshold*)board_obj_ptr;
+		pwrpolicyswthreshold->event_id = swthreshold->event_id;
+	}
+
 	gk20a_dbg_info(" Done");
 
 	return board_obj_ptr;
@@ -378,6 +398,55 @@ done:
 	return status;
 }
 
+static u32 _pwr_policy_construct_WAR_SW_Threshold_policy(struct gk20a *g,
+			struct pmgr_pwr_policy *ppwrpolicyobjs,
+			union pwr_policy_data_union *ppwrpolicydata,
+			u16 pwr_policy_size,
+			u32 obj_index)
+{
+	u32 status = 0;
+	struct boardobj *boardobj;
+
+	/* WARN policy */
+	ppwrpolicydata->pwrpolicy.limit_unit = 0;
+	ppwrpolicydata->pwrpolicy.limit_min = 10000;
+	ppwrpolicydata->pwrpolicy.limit_rated = 100000;
+	ppwrpolicydata->pwrpolicy.limit_max = 100000;
+	ppwrpolicydata->sw_threshold.threshold_idx = 1;
+	ppwrpolicydata->pwrpolicy.filter_type =
+			CTRL_PMGR_PWR_POLICY_FILTER_TYPE_MOVING_AVERAGE;
+	ppwrpolicydata->pwrpolicy.sample_mult  = 5;
+
+	/* Filled the entry.filterParam value in the filterParam */
+	ppwrpolicydata->pwrpolicy.filter_param.moving_avg.window_size = 10;
+
+	ppwrpolicydata->sw_threshold.event_id = 0x01;
+
+	ppwrpolicydata->boardobj.type = CTRL_PMGR_PWR_POLICY_TYPE_SW_THRESHOLD;
+
+	boardobj = construct_pwr_policy(g, ppwrpolicydata,
+				pwr_policy_size, ppwrpolicydata->boardobj.type);
+
+	if (!boardobj) {
+		gk20a_err(dev_from_gk20a(g),
+			"unable to create pwr policy for type %d", ppwrpolicydata->boardobj.type);
+		status = -EINVAL;
+		goto done;
+	}
+
+	status = boardobjgrp_objinsert(&ppwrpolicyobjs->pwr_policies.super,
+			boardobj, obj_index);
+
+	if (status) {
+		gk20a_err(dev_from_gk20a(g),
+			"unable to insert pwr policy boardobj for %d", obj_index);
+		status = -EINVAL;
+		goto done;
+	}
+done:
+	return status;
+}
+
 static u32 devinit_get_pwr_policy_table(struct gk20a *g,
 			struct pmgr_pwr_policy *ppwrpolicyobjs)
 {
@@ -392,6 +461,7 @@ static u32 devinit_get_pwr_policy_table(struct gk20a *g,
 	u16 pwr_policy_size;
 	bool integral_control = false;
 	u32 hw_threshold_policy_index = 0;
+	u32 sw_threshold_policy_index = 0;
 	union pwr_policy_data_union pwr_policy_data;
 
 	gk20a_dbg_info("");
@@ -593,6 +663,21 @@ static u32 devinit_get_pwr_policy_table(struct gk20a *g,
 					&pwr_policy_data,
 					pwr_policy_size,
 					hw_threshold_policy_index,
+					obj_index);
+		if (status) {
+			gk20a_err(dev_from_gk20a(g),
+				"unable to construct_WAR_policy");
+			status = -EINVAL;
+			goto done;
+		}
+		++obj_index;
+	}
+
+	if (!sw_threshold_policy_index) {
+		status = _pwr_policy_construct_WAR_SW_Threshold_policy(g,
+					ppwrpolicyobjs,
+					&pwr_policy_data,
+					sizeof(struct pwr_policy_sw_threshold),
 					obj_index);
 		if (status) {
 			gk20a_err(dev_from_gk20a(g),

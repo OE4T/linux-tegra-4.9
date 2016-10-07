@@ -417,7 +417,7 @@ struct mm_gk20a {
 		struct gk20a_allocator bootstrap_allocator;
 
 		u32 ce_ctx_id;
-		bool cleared;
+		volatile bool cleared;
 		struct mutex first_clear_mutex;
 
 		struct list_head clear_list_head;

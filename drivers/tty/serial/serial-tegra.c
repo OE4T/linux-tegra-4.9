@@ -151,6 +151,7 @@ struct tegra_uart_port {
 	struct tegra_baud_tolerance		*baud_tolerance;
 	int					n_adjustable_baud_rates;
 	bool					use_rx_pio;
+	bool					use_tx_pio;
 	struct timer_list			timer;
 	int					timer_timeout_jiffies;
 	bool					enable_rx_buffer_throttle;
@@ -601,12 +602,16 @@ static void tegra_uart_start_next_tx(struct tegra_uart_port *tup)
 	if (!count)
 		return;
 
-	if (count < TEGRA_UART_MIN_DMA)
+	if (tup->use_tx_pio) {
 		tegra_uart_start_pio_tx(tup, count);
-	else if (BYTES_TO_ALIGN(tail) > 0)
-		tegra_uart_start_pio_tx(tup, BYTES_TO_ALIGN(tail));
-	else
-		tegra_uart_start_tx_dma(tup, count);
+	} else {
+		if (count < TEGRA_UART_MIN_DMA)
+			tegra_uart_start_pio_tx(tup, count);
+		else if (BYTES_TO_ALIGN(tail) > 0)
+			tegra_uart_start_pio_tx(tup, BYTES_TO_ALIGN(tail));
+		else
+			tegra_uart_start_tx_dma(tup, count);
+	}
 }
 
 /* Called by serial core driver with u->lock taken. */
@@ -1341,10 +1346,13 @@ static int tegra_uart_startup(struct uart_port *u)
 	struct tegra_uart_port *tup = to_tegra_uport(u);
 	int ret;
 
-	ret = tegra_uart_dma_channel_allocate(tup, false);
-	if (ret < 0) {
-		dev_err(u->dev, "Tx Dma allocation failed, err = %d\n", ret);
-		return ret;
+	if (!tup->use_tx_pio) {
+		ret = tegra_uart_dma_channel_allocate(tup, false);
+		if (ret < 0) {
+			dev_err(u->dev, "Tx Dma allocation failed, err = %d\n",
+					ret);
+			return ret;
+		}
 	}
 
 	if (!tup->use_rx_pio) {
@@ -1374,7 +1382,8 @@ fail_hw_init:
 	if (!tup->use_rx_pio)
 		tegra_uart_dma_channel_free(tup, true);
 fail_rx_dma:
-	tegra_uart_dma_channel_free(tup, false);
+	if (!tup->use_tx_pio)
+		tegra_uart_dma_channel_free(tup, false);
 	return ret;
 }
 
@@ -1402,7 +1411,8 @@ static void tegra_uart_shutdown(struct uart_port *u)
 
 	if (!tup->use_rx_pio)
 		tegra_uart_dma_channel_free(tup, true);
-	tegra_uart_dma_channel_free(tup, false);
+	if (!tup->use_tx_pio)
+		tegra_uart_dma_channel_free(tup, false);
 	free_irq(u->irq, tup);
 }
 
@@ -1596,6 +1606,11 @@ static int tegra_uart_parse_dt(struct platform_device *pdev,
 	if (index < 0) {
 		tup->use_rx_pio = true;
 		dev_info(&pdev->dev, "RX in PIO mode\n");
+	}
+	index = of_property_match_string(np, "dma-names", "tx");
+	if (index < 0) {
+		tup->use_tx_pio = true;
+		dev_info(&pdev->dev, "TX in PIO mode\n");
 	}
 
 	tup->enable_rx_buffer_throttle = of_property_read_bool(np,

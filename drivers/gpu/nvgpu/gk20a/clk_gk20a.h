@@ -17,6 +17,7 @@
 #define CLK_GK20A_H
 
 #include <linux/mutex.h>
+#include <linux/clk-provider.h>
 
 #define GPUFREQ_TABLE_END     ~(u32)1
 enum {
@@ -79,6 +80,9 @@ struct namemap_cfg;
 struct clk_gk20a {
 	struct gk20a *g;
 	struct clk *tegra_clk;
+#if defined(CONFIG_COMMON_CLK)
+	struct clk_hw hw;
+#endif
 	struct pll gpc_pll;
 	struct pll gpc_pll_last;
 	struct mutex clk_mutex;
@@ -88,6 +92,10 @@ struct clk_gk20a {
 	bool clk_hw_on;
 	bool debugfs_set;
 };
+
+#if defined(CONFIG_COMMON_CLK)
+#define to_clk_gk20a(_hw) container_of(_hw, struct clk_gk20a, hw)
+#endif
 
 struct gpu_ops;
 #ifdef CONFIG_TEGRA_CLK_FRAMEWORK

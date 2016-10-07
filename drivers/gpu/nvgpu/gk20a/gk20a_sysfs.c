@@ -636,9 +636,12 @@ static ssize_t fmax_at_vmin_safe_read(struct device *dev,
 {
 	struct gk20a *g = get_gk20a(dev);
 	unsigned long gpu_fmax_at_vmin_hz = 0;
+	struct clk *clk = g->clk.tegra_clk;
 
-	gpu_fmax_at_vmin_hz = tegra_dvfs_get_fmax_at_vmin_safe_t(
-		clk_get_parent(g->clk.tegra_clk));
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
+	clk = clk_get_parent(clk);
+#endif
+	gpu_fmax_at_vmin_hz = tegra_dvfs_get_fmax_at_vmin_safe_t(clk);
 
 	return snprintf(buf, PAGE_SIZE, "%d\n", (int)(gpu_fmax_at_vmin_hz));
 }

@@ -21,10 +21,10 @@
 
 #include <linux/mutex.h>
 
-#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 void gm20b_init_clk_ops(struct gpu_ops *gops);
-#else
-static inline void gm20b_init_clk_ops(struct gpu_ops *gops) {}
+
+#ifdef CONFIG_COMMON_CLK
+int gm20b_register_gpcclk(struct gk20a *g);
 #endif
 
 #endif /* _NVHOST_CLK_GM20B_H_ */

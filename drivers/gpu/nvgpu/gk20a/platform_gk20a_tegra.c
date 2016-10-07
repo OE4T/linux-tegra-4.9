@@ -40,6 +40,7 @@
 #include "hal_gk20a.h"
 #include "platform_gk20a.h"
 #include "gk20a_scale.h"
+#include "gm20b/clk_gm20b.h"
 
 #define TEGRA_GK20A_BW_PER_FREQ 32
 #define TEGRA_GM20B_BW_PER_FREQ 64
@@ -787,6 +788,7 @@ static int gk20a_tegra_probe(struct device *dev)
 	const __be32 *host1x_ptr;
 	struct platform_device *host1x_pdev = NULL;
 	bool joint_xpu_rail = false;
+	int ret;
 
 	host1x_ptr = of_get_property(np, "nvidia,host1x", NULL);
 	if (host1x_ptr) {
@@ -833,6 +835,12 @@ static int gk20a_tegra_probe(struct device *dev)
 	platform->g->mm.vidmem_is_vidmem = platform->vidmem_is_vidmem;
 
 	gk20a_tegra_get_clocks(dev);
+
+	if (platform->clk_register) {
+		ret = platform->clk_register(platform->g);
+		if (ret)
+			return ret;
+	}
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
 	pmc = ioremap(TEGRA_PMC_BASE, 4096);
@@ -1017,6 +1025,10 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.clk_round_rate = gk20a_round_clk_rate,
 	.clk_set_rate = gk20a_set_clk_rate,
 	.get_clk_freqs = gk20a_clk_get_freqs,
+#endif
+
+#ifdef CONFIG_COMMON_CLK
+	.clk_register = gm20b_register_gpcclk,
 #endif
 
 	/* frequency scaling configuration */

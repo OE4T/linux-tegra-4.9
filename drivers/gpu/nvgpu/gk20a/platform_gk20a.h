@@ -179,6 +179,8 @@ struct gk20a_platform {
 	int (*clk_set_rate)(struct device *dev,
 				unsigned long rate);
 
+	/* Called to register GPCPLL with common clk framework */
+	int (*clk_register)(struct gk20a *g);
 
 	/* Postscale callback is called after frequency change */
 	void (*postscale)(struct device *dev,

@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/version.h>
 #include <linux/clk.h>
 #include <linux/delay.h>	/* for mdelay */
 #include <linux/module.h>
@@ -374,10 +375,16 @@ static void clk_config_dvfs_ndiv(int mv, u32 n_eff, struct na_dvfs *d)
 static void clk_config_dvfs(struct gk20a *g, struct pll *gpll)
 {
 	struct na_dvfs *d = &gpll->dvfs;
+	struct clk* clk;
 
-	d->mv = tegra_dvfs_predict_mv_at_hz_cur_tfloor(
-			clk_get_parent(g->clk.tegra_clk),
+	clk = g->clk.tegra_clk;
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
+	clk = clk_get_parent(clk);
+#endif
+
+	d->mv = tegra_dvfs_predict_mv_at_hz_cur_tfloor(clk,
 			rate_gpc2clk_to_gpu(gpll->freq));
+
 	clk_config_dvfs_detection(d->mv, d);
 	clk_config_dvfs_ndiv(d->mv, gpll->N, d);
 }
@@ -1116,7 +1123,7 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
 	unsigned long safe_rate;
-	struct clk *ref;
+	struct clk *ref, *c;
 
 	gk20a_dbg_fn("");
 
@@ -1128,12 +1135,16 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	if (!gk20a_clk_get(g))
 		return -EINVAL;
 
+	c = clk->tegra_clk;
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 	/*
 	 * On Tegra GPU clock exposed to frequency governor is a shared user on
 	 * GPCPLL bus (gbus). The latter can be accessed as GPU clock parent.
 	 * Respectively the grandparent is PLL reference clock.
 	 */
-	ref = clk_get_parent(clk_get_parent(clk->tegra_clk));
+	c = clk_get_parent(c);
+#endif
+	ref = clk_get_parent(c);
 	if (IS_ERR(ref)) {
 		gk20a_err(dev_from_gk20a(g),
 			"failed to get GPCPLL reference clock");
@@ -1144,7 +1155,7 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	clk->gpc_pll.clk_in = clk_get_rate(ref) / KHZ;
 
 	safe_rate = tegra_dvfs_get_fmax_at_vmin_safe_t(
-		clk_get_parent(clk->tegra_clk));
+		clk_get_parent(c));
 	safe_rate = safe_rate * (100 - DVFS_SAFE_MARGIN) / 100;
 	dvfs_safe_max_freq = rate_gpu_to_gpc2clk(safe_rate);
 	clk->gpc_pll.PL = (dvfs_safe_max_freq == 0) ? 0 :
@@ -1185,6 +1196,124 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 		clk->gpc_pll.M, clk->gpc_pll.N, clk->gpc_pll.PL);
 	return 0;
 }
+
+
+#ifdef CONFIG_COMMON_CLK
+static int set_pll_freq(struct gk20a *g, int allow_slide);
+static int set_pll_target(struct gk20a *g, u32 freq, u32 old_freq);
+
+static int gm20b_clk_prepare(struct clk_hw *hw)
+{
+	struct clk_gk20a *clk = to_clk_gk20a(hw);
+	int ret = 0;
+
+	mutex_lock(&clk->clk_mutex);
+	if (!clk->gpc_pll.enabled && clk->clk_hw_on)
+		ret = set_pll_freq(clk->g, 1);
+	mutex_unlock(&clk->clk_mutex);
+	return ret;
+}
+
+static void gm20b_clk_unprepare(struct clk_hw *hw)
+{
+	struct clk_gk20a *clk = to_clk_gk20a(hw);
+
+	mutex_lock(&clk->clk_mutex);
+	if (clk->gpc_pll.enabled && clk->clk_hw_on)
+		clk_disable_gpcpll(clk->g, 1);
+	mutex_unlock(&clk->clk_mutex);
+}
+
+static int gm20b_clk_is_prepared(struct clk_hw *hw)
+{
+	struct clk_gk20a *clk = to_clk_gk20a(hw);
+
+	return clk->gpc_pll.enabled && clk->clk_hw_on;
+}
+
+static unsigned long gm20b_recalc_rate(struct clk_hw *hw, unsigned long parent_rate)
+{
+	struct clk_gk20a *clk = to_clk_gk20a(hw);
+
+	return rate_gpc2clk_to_gpu(clk->gpc_pll.freq);
+}
+
+static int gm20b_gpcclk_set_rate(struct clk_hw *hw, unsigned long rate,
+				 unsigned long parent_rate)
+{
+	struct clk_gk20a *clk = to_clk_gk20a(hw);
+	u32 old_freq;
+	int ret = -ENODATA;
+
+	mutex_lock(&clk->clk_mutex);
+	old_freq = clk->gpc_pll.freq;
+	ret = set_pll_target(clk->g, rate_gpu_to_gpc2clk(rate), old_freq);
+	if (!ret && clk->gpc_pll.enabled && clk->clk_hw_on)
+		ret = set_pll_freq(clk->g, 1);
+	mutex_unlock(&clk->clk_mutex);
+
+	return ret;
+}
+
+static long gm20b_round_rate(struct clk_hw *hw, unsigned long rate,
+			     unsigned long *parent_rate)
+{
+	struct clk_gk20a *clk = to_clk_gk20a(hw);
+	u32 freq, old_freq;
+	struct pll tmp_pll;
+
+	mutex_lock(&clk->clk_mutex);
+	old_freq = clk->gpc_pll.freq;
+	freq = rate_gpu_to_gpc2clk(rate);
+
+	if (freq > gpc_pll_params.max_freq)
+		freq = gpc_pll_params.max_freq;
+	else if (freq < gpc_pll_params.min_freq)
+		freq = gpc_pll_params.min_freq;
+
+	tmp_pll = clk->gpc_pll;
+	clk_config_pll(clk, &tmp_pll, &gpc_pll_params, &freq, true);
+
+	mutex_unlock(&clk->clk_mutex);
+
+	return rate_gpc2clk_to_gpu(tmp_pll.freq);
+}
+
+const struct clk_ops gk20a_clk_ops = {
+	.prepare = gm20b_clk_prepare,
+	.unprepare = gm20b_clk_unprepare,
+	.is_prepared = gm20b_clk_is_prepared,
+	.recalc_rate = gm20b_recalc_rate,
+	.set_rate = gm20b_gpcclk_set_rate,
+	.round_rate = gm20b_round_rate,
+};
+
+int gm20b_register_gpcclk(struct gk20a *g) {
+	const char *parent_name = "pllg_ref";
+	struct clk_gk20a *clk = &g->clk;
+	struct clk_init_data init;
+	struct clk *c;
+
+	init.name = "gpcclk";
+	init.ops = &gk20a_clk_ops;
+	init.parent_names = &parent_name;
+	init.num_parents = 1;
+	init.flags = 0;
+
+	/* Data in .init is copied by clk_register(), so stack variable OK */
+	clk->hw.init = &init;
+	c = clk_register(g->dev, &clk->hw);
+	if (IS_ERR(c)) {
+		gk20a_err(dev_from_gk20a(g),
+			  "Failed to register GPCPLL clock");
+		return -EINVAL;
+	}
+
+	clk->tegra_clk = c;
+	return 0;
+}
+#endif /* CONFIG_COMMON_CLK */
+
 
 static int gm20b_init_clk_setup_hw(struct gk20a *g)
 {
@@ -1293,6 +1422,7 @@ static int set_pll_freq(struct gk20a *g, int allow_slide)
 	return err;
 }
 
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 static int gm20b_clk_export_set_rate(void *data, unsigned long *rate)
 {
 	u32 old_freq;
@@ -1375,6 +1505,7 @@ static int gm20b_clk_register_export_ops(struct gk20a *g)
 
 	return ret;
 }
+#endif /* CONFIG_TEGRA_CLK_FRAMEWORK */
 
 static int gm20b_init_clk_support(struct gk20a *g)
 {
@@ -1401,12 +1532,14 @@ static int gm20b_init_clk_support(struct gk20a *g)
 	if (err)
 		return err;
 
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 	err = gm20b_clk_register_export_ops(g);
 	if (err)
 		return err;
+#endif
 
 	/* FIXME: this effectively prevents host level clock gating */
-	err = clk_enable(g->clk.tegra_clk);
+	err = clk_prepare_enable(g->clk.tegra_clk);
 	if (err)
 		return err;
 
@@ -1431,7 +1564,7 @@ static int gm20b_suspend_clk_support(struct gk20a *g)
 {
 	int ret = 0;
 
-	clk_disable(g->clk.tegra_clk);
+	clk_disable_unprepare(g->clk.tegra_clk);
 
 	/* The prev call may not disable PLL if gbus is unbalanced - force it */
 	mutex_lock(&g->clk.clk_mutex);

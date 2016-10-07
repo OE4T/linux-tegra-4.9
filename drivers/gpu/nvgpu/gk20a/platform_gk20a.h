@@ -227,6 +227,9 @@ struct gk20a_platform {
 
 	/* minimum supported VBIOS version */
 	u32 vbios_min_version;
+
+	/* true if we run preos microcode on this board */
+	bool run_preos;
 };
 
 static inline struct gk20a_platform *gk20a_get_platform(

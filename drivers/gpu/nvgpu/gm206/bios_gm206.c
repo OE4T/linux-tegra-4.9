@@ -918,10 +918,12 @@ static int gm206_bios_init(struct gk20a *g)
 		return err;
 	}
 
-	err = gm206_bios_preos(g);
-	if (err) {
-		gk20a_err(g->dev, "pre-os failed");
-		return err;
+	if (platform->run_preos) {
+		err = gm206_bios_preos(g);
+		if (err) {
+			gk20a_err(g->dev, "pre-os failed");
+			return err;
+		}
 	}
 
 	return 0;

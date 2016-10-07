@@ -104,11 +104,11 @@ static bool vi4_check_status(struct tegra_channel *chan)
 	return true;
 }
 
-static bool vi_notify_wait(struct tegra_channel *chan)
+static bool vi_notify_wait(struct tegra_channel *chan,
+		struct timespec *ts)
 {
 	int i, err;
 	u32 thresh[TEGRA_CSI_BLOCKS], temp;
-	struct timespec ts;
 
 	/*
 	 * Increment syncpt for ATOMP_FE
@@ -138,7 +138,7 @@ static bool vi_notify_wait(struct tegra_channel *chan)
 	for (i = 0; i < chan->valid_ports; i++) {
 		err = nvhost_syncpt_wait_timeout_ext(chan->vi->ndev,
 				chan->syncpt[i][SOF_SYNCPT_IDX], thresh[i],
-				250, NULL, &ts);
+				250, NULL, ts);
 		if (err)
 			dev_err(chan->vi->dev,
 				"PXL_SOF syncpt timeout! err = %d\n", err);
@@ -424,7 +424,7 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 	}
 
 	/* wait for vi notifier events */
-	vi_notify_wait(chan);
+	vi_notify_wait(chan, &ts);
 
 	vi4_check_status(chan);
 
@@ -433,7 +433,6 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 		chan->capture_state = CAPTURE_GOOD;
 	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
 
-	getnstimeofday(&ts);
 	tegra_channel_ring_buffer(chan, vb, &ts, state);
 
 	return 0;

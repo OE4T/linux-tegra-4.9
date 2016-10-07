@@ -972,12 +972,6 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 			goto done;
 		}
 	}
-
-	err = nvgpu_clk_arb_init_arbiter(g);
-	if (err) {
-		gk20a_err(dev, "failed to init clk arb");
-		goto done;
-	}
 #endif
 
 	if (g->ops.pmu.is_pmu_supported(g)) {
@@ -1009,6 +1003,12 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 			gk20a_err(dev, "failed to init pstates");
 			goto done;
 		}
+	}
+
+	err = nvgpu_clk_arb_init_arbiter(g);
+	if (err) {
+		gk20a_err(dev, "failed to init clk arb");
+		goto done;
 	}
 #endif
 

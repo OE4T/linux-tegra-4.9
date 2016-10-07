@@ -32,6 +32,10 @@
 #include "hw_timer_gk20a.h"
 
 
+#define HZ_TO_MHZ(a) ((a > 0xF414F9CD7) ? 0xffff : (a >> 32) ? \
+	(u32) ((a * 0x10C8ULL) >> 32) : (u16) ((u32) a/MHZ))
+#define MHZ_TO_HZ(a) ((u64)a * MHZ)
+
 struct gk20a_ctrl_priv {
 	struct device *dev;
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
@@ -840,8 +844,6 @@ static int nvgpu_gpu_clk_get_vf_points(struct gk20a *g,
 	u32 i;
 	u32 max_points = 0;
 	u32 num_points = 0;
-	u64 min_hz;
-	u64 max_hz;
 	u16 min_mhz;
 	u16 max_mhz;
 
@@ -870,7 +872,7 @@ static int nvgpu_gpu_clk_get_vf_points(struct gk20a *g,
 		return -EINVAL;
 
 	err = nvgpu_clk_arb_get_arbiter_clk_range(g, args->clk_domain,
-			&min_hz, &max_hz);
+			&min_mhz, &max_mhz);
 	if (err)
 		return err;
 
@@ -887,8 +889,6 @@ static int nvgpu_gpu_clk_get_vf_points(struct gk20a *g,
 			(uintptr_t)args->clk_vf_point_entries;
 
 	last_mhz = 0;
-	min_mhz = (u16)(min_hz / (u64)MHZ);
-	max_mhz = (u16)(max_hz / (u64)MHZ);
 	num_points = 0;
 	for (i = 0; (i < max_points) && !err; i++) {
 
@@ -901,7 +901,7 @@ static int nvgpu_gpu_clk_get_vf_points(struct gk20a *g,
 			continue;
 
 		last_mhz = fpoints[i];
-		clk_point.freq_hz = (u64)fpoints[i] * (u64)MHZ;
+		clk_point.freq_hz = MHZ_TO_HZ(fpoints[i]);
 
 		err = copy_to_user((void __user *)entry, &clk_point,
 				sizeof(clk_point));
@@ -931,6 +931,7 @@ static int nvgpu_gpu_clk_get_range(struct gk20a *g,
 	u32 i;
 	int bit;
 	int err;
+	u16 min_mhz, max_mhz;
 
 	gk20a_dbg_fn("");
 
@@ -979,7 +980,10 @@ static int nvgpu_gpu_clk_get_range(struct gk20a *g,
 		clk_range.flags = 0;
 		err = nvgpu_clk_arb_get_arbiter_clk_range(g,
 				clk_range.clk_domain,
-				&clk_range.min_hz, &clk_range.max_hz);
+				&min_mhz, &max_mhz);
+		clk_range.min_hz = MHZ_TO_HZ(min_mhz);
+		clk_range.max_hz = MHZ_TO_HZ(max_mhz);
+
 		if (err)
 			return err;
 
@@ -1001,8 +1005,12 @@ static int nvgpu_gpu_clk_set_info(struct gk20a *g,
 	struct nvgpu_gpu_clk_info clk_info;
 	struct nvgpu_gpu_clk_info __user *entry;
 	struct nvgpu_clk_session *session = priv->clk_session;
+
+	int fd;
 	u32 clk_domains = 0;
-	u32 i;
+	u16 freq_mhz;
+	int i;
+	int ret;
 
 	gk20a_dbg_fn("");
 
@@ -1031,18 +1039,28 @@ static int nvgpu_gpu_clk_set_info(struct gk20a *g,
 	entry = (struct nvgpu_gpu_clk_info __user *)
 			(uintptr_t)args->clk_info_entries;
 
+	ret = nvgpu_clk_arb_install_request_fd(g, session, &fd);
+	if (ret < 0)
+		return ret;
+
 	for (i = 0; i < args->num_entries; i++, entry++) {
 
 		if (copy_from_user(&clk_info, (void __user *)entry,
 				sizeof(clk_info)))
 			return -EFAULT;
+		freq_mhz = HZ_TO_MHZ(clk_info.freq_hz);
 
-		nvgpu_clk_arb_set_session_target_hz(session,
-				clk_info.clk_domain, clk_info.freq_hz);
+		nvgpu_clk_arb_set_session_target_mhz(session, fd,
+				clk_info.clk_domain, freq_mhz);
 	}
 
-	return nvgpu_clk_arb_apply_session_constraints(g, session,
-			&args->completion_fd);
+	ret = nvgpu_clk_arb_commit_request_fd(g, session, fd);
+	if (ret < 0)
+		return ret;
+
+	args->completion_fd = fd;
+
+	return ret;
 }
 
 
@@ -1057,6 +1075,7 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 	u32 num_domains;
 	u32 num_entries;
 	u32 i;
+	u16 freq_mhz;
 	int err;
 	int bit;
 
@@ -1107,18 +1126,19 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 
 		switch (clk_info.clk_type) {
 		case NVGPU_GPU_CLK_TYPE_TARGET:
-			err = nvgpu_clk_arb_get_session_target_hz(session,
-					clk_info.clk_domain, &clk_info.freq_hz);
+			err = nvgpu_clk_arb_get_session_target_mhz(session,
+					clk_info.clk_domain, &freq_mhz);
 			break;
 		case NVGPU_GPU_CLK_TYPE_ACTUAL:
-			err = nvgpu_clk_arb_get_arbiter_actual_hz(g,
-					clk_info.clk_domain, &clk_info.freq_hz);
+			err = nvgpu_clk_arb_get_arbiter_actual_mhz(g,
+					clk_info.clk_domain, &freq_mhz);
 			break;
 		case NVGPU_GPU_CLK_TYPE_EFFECTIVE:
-			err = nvgpu_clk_arb_get_arbiter_effective_hz(g,
-					clk_info.clk_domain, &clk_info.freq_hz);
+			err = nvgpu_clk_arb_get_arbiter_effective_mhz(g,
+					clk_info.clk_domain, &freq_mhz);
 			break;
 		default:
+			freq_mhz = 0;
 			err = -EINVAL;
 			break;
 		}
@@ -1126,6 +1146,7 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 			return err;
 
 		clk_info.flags = 0;
+		clk_info.freq_hz = MHZ_TO_HZ(freq_mhz);
 
 		err = copy_to_user((void __user *)entry, &clk_info,
 				sizeof(clk_info));

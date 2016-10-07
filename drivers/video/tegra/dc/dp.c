@@ -80,14 +80,12 @@ static void tegra_dp_hpd_config(struct tegra_dc_dp_data *dp);
 
 static inline void tegra_dp_clk_enable(struct tegra_dc_dp_data *dp)
 {
-	if (!tegra_dc_is_clk_enabled(dp->parent_clk))
-		tegra_disp_clk_prepare_enable(dp->parent_clk);
+	tegra_disp_clk_prepare_enable(dp->parent_clk);
 }
 
 static inline void tegra_dp_clk_disable(struct tegra_dc_dp_data *dp)
 {
-	if (tegra_dc_is_clk_enabled(dp->parent_clk))
-		tegra_disp_clk_disable_unprepare(dp->parent_clk);
+	tegra_disp_clk_disable_unprepare(dp->parent_clk);
 }
 
 static inline void tegra_dp_enable_irq(u32 irq)

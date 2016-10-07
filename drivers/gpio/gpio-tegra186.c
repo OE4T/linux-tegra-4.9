@@ -288,7 +288,7 @@ static int tegra186_gpio_to_wake(int gpio)
 }
 
 static inline u32 tegra_gpio_readl(struct tegra_gpio_info *tgi, u32 gpio,
-				 u32 reg_offset)
+				   u32 reg_offset)
 {
 	int port = GPIO_PORT(gpio);
 	int pin = GPIO_PIN(gpio);
@@ -300,7 +300,7 @@ static inline u32 tegra_gpio_readl(struct tegra_gpio_info *tgi, u32 gpio,
 }
 
 static inline void tegra_gpio_writel(struct tegra_gpio_info *tgi, u32 val,
-			u32 gpio, u32 reg_offset)
+				     u32 gpio, u32 reg_offset)
 {
 	int port = GPIO_PORT(gpio);
 	int pin = GPIO_PIN(gpio);
@@ -312,7 +312,7 @@ static inline void tegra_gpio_writel(struct tegra_gpio_info *tgi, u32 val,
 }
 
 static inline void tegra_gpio_update(struct tegra_gpio_info *tgi, u32 gpio,
-			u32 reg_offset,	u32 mask, u32 val)
+				     u32 reg_offset,	u32 mask, u32 val)
 {
 	int port = GPIO_PORT(gpio);
 	int pin = GPIO_PIN(gpio);
@@ -413,7 +413,7 @@ static int tegra_gpio_get(struct gpio_chip *chip, unsigned offset)
 }
 
 static void set_gpio_direction_mode(struct gpio_chip *chip, u32 offset,
-				bool mode)
+				    bool mode)
 {
 	struct tegra_gpio_info *tgi = gpiochip_get_data(chip);
 	u32 val;
@@ -441,7 +441,7 @@ static int tegra_gpio_direction_input(struct gpio_chip *chip, unsigned offset)
 }
 
 static int tegra_gpio_direction_output(struct gpio_chip *chip, unsigned offset,
-					int value)
+				       int value)
 {
 	struct tegra_gpio_info *tgi = gpiochip_get_data(chip);
 	int ret;
@@ -457,7 +457,7 @@ static int tegra_gpio_direction_output(struct gpio_chip *chip, unsigned offset,
 }
 
 static int tegra_gpio_set_debounce(struct gpio_chip *chip, unsigned offset,
-				unsigned debounce)
+				   unsigned debounce)
 {
 	struct tegra_gpio_info *tgi = gpiochip_get_data(chip);
 	unsigned dbc_ms = DIV_ROUND_UP(debounce, 1000);
@@ -599,7 +599,7 @@ static int tegra_gpio_irq_set_wake(struct irq_data *d, unsigned int enable)
 	ret = tegra_pm_irq_set_wake(wake, enable);
 	if (ret)
 		pr_err("Failed gpio lp0 %s for irq=%d, error=%d\n",
-			(enable ? "enable" : "disable"), d->irq, ret);
+		       (enable ? "enable" : "disable"), d->irq, ret);
 	return ret;
 }
 
@@ -654,7 +654,7 @@ static void tegra_gpio_irq_handler(struct irq_desc *desc)
 }
 #endif
 
-#ifdef	CONFIG_DEBUG_FS
+#ifdef CONFIG_DEBUG_FS
 
 #define TOTAL_GPIOS 253
 
@@ -679,7 +679,7 @@ static int dbg_gpio_show(struct seq_file *s, void *unused)
 		if (count == 8)
 			count = 0;
 
-		if ((count == 0) && (i/8)) {
+		if ((count == 0) && (i / 8)) {
 			if (x != ' ')
 				x++;
 			if (y == 'Z') {
@@ -692,7 +692,7 @@ static int dbg_gpio_show(struct seq_file *s, void *unused)
 		count++;
 		if (accessible) {
 			seq_printf(s, "%c%c:%d 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
-				   x, y, i%8,
+				   x, y, i % 8,
 				tegra_gpio_readl(tgi, i, GPIO_ENB_CONFIG_REG),
 				tegra_gpio_readl(tgi, i, GPIO_DBC_THRES_REG),
 				tegra_gpio_readl(tgi, i, GPIO_INPUT_REG),
@@ -719,7 +719,7 @@ static const struct file_operations debug_fops = {
 
 static int __init tegra_gpio_debuginit(struct tegra_gpio_info *tgi)
 {
-	(void) debugfs_create_file("tegra_gpio", S_IRUGO,
+	(void)debugfs_create_file("tegra_gpio", S_IRUGO,
 				   NULL, tgi, &debug_fops);
 
 	return 0;
@@ -730,8 +730,8 @@ static inline void tegra_gpio_debuginit(struct tegra_gpio_info *tgi)
 }
 #endif
 
-static struct of_device_id tegra_gpio_of_match[] = {
-	{ .compatible = "nvidia,tegra186-gpio", NULL },
+static const struct of_device_id tegra_gpio_of_match[] = {
+	{ .compatible = "nvidia,tegra186-gpio",},
 	{ },
 };
 
@@ -752,7 +752,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 
 	for (tgi->tegra_gpio_bank_count = 0;; tgi->tegra_gpio_bank_count++) {
 		res = platform_get_resource(pdev, IORESOURCE_IRQ,
-			tgi->tegra_gpio_bank_count);
+					    tgi->tegra_gpio_bank_count);
 		if (!res)
 			break;
 	}

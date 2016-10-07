@@ -212,6 +212,15 @@ struct nv_pmu_pmgr_pwr_policy_hw_threshold {
 	u16 low_threshold_value;
 };
 
+struct nv_pmu_pmgr_pwr_policy_sw_threshold {
+	struct nv_pmu_pmgr_pwr_policy super;
+	u8 threshold_idx;
+	u8 low_threshold_idx;
+	bool b_use_low_threshold;
+	u16 low_threshold_value;
+	u8 event_id;
+};
+
 struct nv_pmu_pmgr_pwr_policy_pmu_compactible {
 	u8 pmu_compactible_data[68];
 };
@@ -220,6 +229,7 @@ union nv_pmu_pmgr_pwr_policy_union {
 	struct nv_pmu_boardobj board_obj;
 	struct nv_pmu_pmgr_pwr_policy pwr_policy;
 	struct nv_pmu_pmgr_pwr_policy_hw_threshold hw_threshold;
+	struct nv_pmu_pmgr_pwr_policy_sw_threshold sw_threshold;
 	struct nv_pmu_pmgr_pwr_policy_pmu_compactible pmu_pwr_policy;
 };
 

@@ -28,6 +28,7 @@
 
 #define CTRL_PMGR_PWR_POLICY_TABLE_VERSION_3X                        0x30
 #define CTRL_PMGR_PWR_POLICY_TYPE_HW_THRESHOLD                       0x04
+#define CTRL_PMGR_PWR_POLICY_TYPE_SW_THRESHOLD                       0x0C
 
 #define CTRL_PMGR_PWR_POLICY_MAX_LIMIT_INPUTS                       0x8
 #define CTRL_PMGR_PWR_POLICY_IDX_NUM_INDEXES                         0x08

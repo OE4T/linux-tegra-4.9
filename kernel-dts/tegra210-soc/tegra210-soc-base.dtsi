@@ -751,6 +751,7 @@
 			resets = <&tegra_car TEGRA210_CLK_DISP1>;
 			reset-names = "dc_rst";
 			status = "disabled";
+			nvidia,dc-ctrlnum = <0>;
 
 			rgb {
 				status = "disabled";
@@ -764,6 +765,7 @@
 			interrupts = <0 74 0x04>;
 			iommus = <&smmu TEGRA_SWGROUP_DCB>;
 			status = "disabled";
+			nvidia,dc-ctrlnum = <1>;
 			clocks = <&tegra_car TEGRA210_CLK_DISP2>,
 			       <&tegra_car TEGRA210_CLK_TIMER>;
 			clock-names = "disp2", "timer";

@@ -432,22 +432,14 @@ inline void tegra_dsi_reset_deassert(struct tegra_dc_dsi_data *dsi)
 {
 	int i = 0;
 	for (i = 0; i < dsi->max_instances; i++)
-#ifndef CONFIG_TEGRA_NVDISPLAY
-		tegra_periph_reset_deassert(dsi->dsi_clk[i]);
-#else
 		reset_control_deassert(dsi->dsi_reset[i]);
-#endif
 }
 
 inline void tegra_dsi_reset_assert(struct tegra_dc_dsi_data *dsi)
 {
 	int i = 0;
 	for (i = 0; i < dsi->max_instances; i++)
-#ifndef CONFIG_TEGRA_NVDISPLAY
-		tegra_periph_reset_assert(dsi->dsi_clk[i]);
-#else
 		reset_control_assert(dsi->dsi_reset[i]);
-#endif
 }
 
 static inline void tegra_dsi_lp_clk_enable(struct tegra_dc_dsi_data *dsi);
@@ -2498,7 +2490,8 @@ static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 	u32 val = 0;
 #if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	struct clk *clk72mhz = NULL;
-	clk72mhz = clk_get_sys("clk72mhz", NULL);
+	struct device_node *np_dsi = of_find_node_by_path(DSI_NODE);
+	clk72mhz = tegra_disp_of_clk_get_by_name(np_dsi, "clk72mhz");
 	if (IS_ERR_OR_NULL(clk72mhz)) {
 		dev_err(&dsi->dc->ndev->dev, "dsi: can't get clk72mhz clock\n");
 		return;
@@ -2529,6 +2522,7 @@ static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 	}
 #if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	tegra_disp_clk_disable_unprepare(clk72mhz);
+	clk_put(clk72mhz);
 #endif
 }
 #endif
@@ -4886,18 +4880,18 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	char *split_link_reg_name[4] = {"split_dsia_regs", "split_disb_regs",
 					"split_dsic_regs", "split_dsid_regs"};
 	char *dsi_io_padctrl_name[4] = {"dsia", "dsib", "dsic", "dsid"};
-#ifdef CONFIG_TEGRA_NVDISPLAY
 	char *ganged_reg_name[4] = {"ganged_dsia_regs", "ganged_dsib_regs",
 					NULL, NULL};
 	char *dsi_clk_name[4] = {"dsi", "dsib", "dsic", "dsid"};
 	char *dsi_lp_clk_name[4] = {"dsia_lp", "dsib_lp", "dsic_lp", "dsid_lp"};
 	char *dsi_reset_name[4] = {"dsia", "dsib", "dsic", "dsid"};
-#else
-	char *ganged_reg_name[2] = {"ganged_dsia_regs", "ganged_dsib_regs"};
-	char *dsi_clk_name[4] = {"dsia", "dsib", "dsic", "dsid"};
-	char *dsi_lp_clk_name[4] = {"dsialp", "dsiblp", "dsiclp", "dsidlp"};
-#endif
 	struct device_node *np = dc->ndev->dev.of_node;
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	char *dsi_fixed_clk_name = "pllp_display";
+#else
+	char *dsi_fixed_clk_name = "pll_p_out3";
+#endif
+
 #ifdef CONFIG_OF
 	struct device_node *np_dsi =
 		of_find_node_by_path(DSI_NODE);
@@ -4969,7 +4963,6 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 			goto err_release_regs;
 		}
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
 		dsi_clk = dsi_pdata->dsi_instance ?
 				tegra_disp_of_clk_get_by_name(np_dsi,
 				dsi_clk_name[DSI_INSTANCE_1]) :
@@ -4980,25 +4973,12 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 				dsi_lp_clk_name[DSI_INSTANCE_1]) :
 				tegra_disp_of_clk_get_by_name(np_dsi,
 				dsi_lp_clk_name[i]);
-
-#else
-		dsi_clk = dsi_pdata->dsi_instance ?
-				clk_get(&dc->ndev->dev,
-				dsi_clk_name[DSI_INSTANCE_1]) :
-				clk_get(&dc->ndev->dev, dsi_clk_name[i]);
-		dsi_lp_clk = dsi_pdata->dsi_instance ?
-				clk_get(&dc->ndev->dev,
-				dsi_lp_clk_name[DSI_INSTANCE_1]) :
-				clk_get(&dc->ndev->dev, dsi_lp_clk_name[i]);
-#endif
-
 		if (IS_ERR_OR_NULL(dsi_clk) || IS_ERR_OR_NULL(dsi_lp_clk)) {
 			dev_err(&dc->ndev->dev, "dsi: can't get clock\n");
 			err = -EBUSY;
 			goto err_dsi_clk_put;
 		}
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
 		if (tegra_platform_is_silicon() && tegra_bpmp_running()) {
 			dsi_reset = of_reset_control_get(np_dsi,
 					dsi_reset_name[i]);
@@ -5010,7 +4990,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 			}
 			reset_control_reset(dsi_reset);
 		}
-#endif
+
 		dsi_io_padctrl = devm_padctrl_get_from_node(&dc->ndev->dev,
 			np_dsi, dsi_io_padctrl_name[i]);
 		if (IS_ERR_OR_NULL(dsi_io_padctrl)) {
@@ -5070,19 +5050,11 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		dsi->pad_control_base_res = base_res;
 	}
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	dsi_fixed_clk = clk_get(&dc->ndev->dev, "dsi-fixed");
-
+	dsi_fixed_clk = tegra_disp_clk_get(&dc->ndev->dev, dsi_fixed_clk_name);
 	if (IS_ERR_OR_NULL(dsi_fixed_clk)) {
 		dev_err(&dc->ndev->dev, "dsi: can't get fixed clock\n");
-		err = -EBUSY;
-		goto err_release_regs;
-	}
-#else
-	dsi_fixed_clk = tegra_disp_clk_get(&dc->ndev->dev, "pllp_display");
-	if (IS_ERR_OR_NULL(dsi_fixed_clk))
 		dsi_fixed_clk = NULL;
-#endif
+	}
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	{
@@ -5100,7 +5072,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		#undef	CLK_NAME_MAX_LEN
 	}
 #else
-	dc_clk = clk_get_sys(dev_name(&dc->ndev->dev), NULL);
+	dc_clk = tegra_disp_clk_get(&dc->ndev->dev, "disp1");
 #endif
 	if (IS_ERR_OR_NULL(dc_clk)) {
 		dev_err(&dc->ndev->dev, "dsi: dc clock %s unavailable\n",
@@ -5149,12 +5121,15 @@ err_dsi_fixed_clk_put:
 	clk_put(dsi_fixed_clk);
 err_dsi_clk_put:
 	for (i = 0; i < dsi->max_instances; i++) {
-		clk_put(dsi->dsi_lp_clk[i]);
-		clk_put(dsi->dsi_clk[i]);
+		if (dsi->dsi_lp_clk[i])
+			clk_put(dsi->dsi_lp_clk[i]);
+		if (dsi->dsi_clk[i])
+			clk_put(dsi->dsi_clk[i]);
 	}
 err_release_regs:
 	for (i = 0; i < dsi->max_instances; i++)
-		release_resource(dsi->base_res[i]);
+		if (dsi->base_res[i])
+			release_resource(dsi->base_res[i]);
 err_free_dsi:
 	kfree(dsi);
 

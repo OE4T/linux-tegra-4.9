@@ -6063,7 +6063,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #ifdef CONFIG_TEGRA_NVDISPLAY
 		emc_la_clk = tegra_disp_clk_get(&ndev->dev, "emc_latency");
 #else
-		emc_la_clk = tegra_disp_clk_get(&ndev->dev, "emc.la");
+		emc_la_clk = tegra_disp_clk_get(&ndev->dev, "disp1_la_emc");
 #endif
 		if (IS_ERR_OR_NULL(emc_la_clk)) {
 #ifdef CONFIG_ARCH_TEGRA_21x_SOC

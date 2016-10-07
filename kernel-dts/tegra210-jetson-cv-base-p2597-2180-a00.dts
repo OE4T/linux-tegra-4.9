@@ -208,11 +208,12 @@
 	host1x {
 		/* tegradc.0 */
 		dc@54200000 {
-			status = "disabled";
+			status = "okay";
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 			nvidia,emc-clk-rate = <300000000>;
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
+			nvidia,dc-or-node = "/host1x/dsi";
 		};
 
 		/* tegradc.1 */
@@ -228,9 +229,9 @@
 
 		dsi {
 			nvidia,dsi-controller-vs = <DSI_VS_1>;
-			status = "disabled";
+			status = "okay";
 			panel-a-wuxga-8-0 {
-				status = "disabled";
+				status = "okay";
 				nvidia,dsi-dpd-pads = <DSIC_DPD_EN DSID_DPD_EN>;
 				nvidia,panel-rst-gpio = <&gpio TEGRA_GPIO(V, 2) 0>; /* PV2 */
 				nvidia,panel-bl-pwm-gpio = <&gpio TEGRA_GPIO(V, 0) 0>; /* PV0 */

@@ -452,6 +452,12 @@
 		status = "okay";
 	};
 
+	usb_cd {
+		status = "okay";
+		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
+		phy-names = "otg-phy";
+	};
+
 	pinctrl@7009f000 {
 		status = "okay";
 		pinctrl-0 = <&tegra_padctl_uphy_pinmux_default>;

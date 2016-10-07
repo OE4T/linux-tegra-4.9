@@ -32,7 +32,7 @@
 			vdig-supply = <&en_vdd_cam_1v2>;
 			reset-gpios = <&tegra_gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
 			interrupt-parent = <&tegra_gpio_aon>;
-			interrupts = <TEGRA_GPIO(AA, 2) GPIO_ACTIVE_HIGH>;
+			interrupts = <TEGRA_GPIO_AON(AA, 2) GPIO_ACTIVE_HIGH>;
 
 			refclk_hz = <40000000>; /* 40 - 50 MHz */
 
@@ -67,7 +67,7 @@
 	gpio@2200000 {
 		camera-control {
 			gpio-input = <
-				TEGRA_GPIO(AA, 2)
+				TEGRA_GPIO_AON(AA, 2)
 				>;
 			gpio-output-low = <
 				CAM1_RST_L

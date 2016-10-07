@@ -3054,30 +3054,6 @@ struct tegra_dc_platform_data
 }
 #endif
 
-#ifndef MODULE
-static int __init check_fb_console_map(char *this_opt)
-{
-	char *options;
-
-	if (!this_opt || !*this_opt)
-		return 1;
-
-	while ((options = strsep(&this_opt, ",")) != NULL) {
-		if (!strncmp(options, "map:", 4)) {
-			options += 4;
-			if (*options)
-				first_fb_console_map = (*options - '0') % FB_MAX;
-			break;
-		}
-	}
-	pr_info("The first frame buffer console map is %d.\n", first_fb_console_map);
-
-	return 1;
-}
-
-__setup("fbcon=", check_fb_console_map);
-#endif
-
 static int __init check_fb_console_map_default(void)
 {
 	struct device_node *np_l4t = NULL;

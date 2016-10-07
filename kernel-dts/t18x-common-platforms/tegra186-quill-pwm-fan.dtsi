@@ -28,7 +28,7 @@
 		state_cap = <7>;
 		active_pwm_max = <256>;
 		tach_gpio =  <TEGRA_GPIO(X, 4)>; /* TEGRA_GPIO_PX4 */
-		pwm_gpio = <TEGRA_GPIO(V, 6)>; /* TEGRA_GPIO_PV6 */
+		pwm_gpio = <TEGRA_GPIO_AON(V, 6)>; /* TEGRA_GPIO_PV6 */
 	};
 	pwm-fan {
 		status = "okay";

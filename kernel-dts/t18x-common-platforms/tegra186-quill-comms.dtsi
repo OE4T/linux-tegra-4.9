@@ -38,8 +38,8 @@
 		bluedroid_pm,reset-gpio = <&tegra_gpio TEGRA_GPIO(L, 7) 0>;
 		bluedroid_pm,host-wake-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(FF, 4) 0>;
 		bluedroid_pm,ext-wake-gpio = <&tegra_gpio TEGRA_GPIO(Y, 4) 0>;
-		interrupt-parent = <&tegra_gpio>;
-		interrupts = <TEGRA_GPIO(FF, 4) 0x01>;
+		interrupt-parent = <&tegra_gpio_aon>;
+		interrupts = <TEGRA_GPIO_AON(FF, 4) 0x01>;
 	};
 
 	bcm4359: bcmdhd_pcie_wlan {

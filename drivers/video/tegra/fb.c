@@ -1132,7 +1132,11 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	info->fix.line_length = stride;
 	INIT_LIST_HEAD(&info->modelist);
 	/* pick first mode as the default for initialization */
-	tegra_dc_to_fb_videomode(&m, &dc->mode);
+	ret = tegra_dc_to_fb_videomode(&m, &dc->mode);
+	if (ret < 0) {
+		dev_err(&ndev->dev, "fb mode not found!\n");
+		goto err_iounmap_fb;
+	}
 	fb_videomode_to_var(&info->var, &m);
 	info->var.xres_virtual		= fb_data->xres;
 	info->var.yres_virtual		= fb_data->yres;

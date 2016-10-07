@@ -22,9 +22,12 @@ enum gk20a_mclk_speed {
 	gk20a_mclk_high_speed,
 };
 
-#define DEFAULT_BOOT_MCLK_SPEED gk20a_mclk_high_speed
 #define MCLK_LOW_SPEED_LIMIT 405
 #define MCLK_MID_SPEED_LIMIT 810
+#define MCLK_HIGH_SPEED_LIMIT 3003
+
+#define DEFAULT_BOOT_MCLK_SPEED MCLK_HIGH_SPEED_LIMIT
+
 struct clk_mclk_state {
 	enum gk20a_mclk_speed speed;
 	struct mutex mclk_mutex;
@@ -32,7 +35,7 @@ struct clk_mclk_state {
 	bool init;
 
 	/* function pointers */
-	int (*change)(struct gk20a *g, enum gk20a_mclk_speed speed);
+	int (*change)(struct gk20a *g, u16 val);
 
 #ifdef CONFIG_DEBUG_FS
 	s64 switch_max;
@@ -45,7 +48,6 @@ struct clk_mclk_state {
 };
 
 int clk_mclkseq_init_mclk_gddr5(struct gk20a *g);
-int clk_mclkseq_change_mclk_gddr5(struct gk20a *g,
-	enum gk20a_mclk_speed speed);
+int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, u16 val);
 
 #endif

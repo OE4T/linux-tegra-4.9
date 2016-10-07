@@ -23,7 +23,7 @@ static u32 gp106_get_arbiter_clk_domains(struct gk20a *g)
 }
 
 static int gp106_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
-		u64 *min_hz, u64 *max_hz)
+		u16 *min_mhz, u16 *max_mhz)
 {
 	enum nv_pmu_clk_clkwhich clkwhich;
 	struct clk_set_info *p0_info;
@@ -52,14 +52,14 @@ static int gp106_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
 	if (!p0_info)
 		return -EINVAL;
 
-	*min_hz = (u64)(p5_info->min_mhz) * (u64)MHZ;
-	*max_hz = (u64)(p0_info->max_mhz) * (u64)MHZ;
+	*min_mhz = p5_info->min_mhz;
+	*max_mhz = p0_info->max_mhz;
 
 	return 0;
 }
 
 static int gp106_get_arbiter_clk_default(struct gk20a *g, u32 api_domain,
-		u64 *default_hz)
+		u16 *default_mhz)
 {
 	enum nv_pmu_clk_clkwhich clkwhich;
 	struct clk_set_info *p0_info;
@@ -82,7 +82,7 @@ static int gp106_get_arbiter_clk_default(struct gk20a *g, u32 api_domain,
 	if (!p0_info)
 		return -EINVAL;
 
-	*default_hz = (u64)p0_info->max_mhz * (u64)MHZ;
+	*default_mhz = p0_info->max_mhz;
 
 	return 0;
 }

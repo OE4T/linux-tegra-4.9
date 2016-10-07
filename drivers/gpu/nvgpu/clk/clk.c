@@ -255,7 +255,7 @@ static int get_regime_id(struct gk20a *g, u32 domain, u32 *regimeid)
 	return -EINVAL;
 }
 
-int clk_program_fllclks(struct gk20a *g, struct change_fll_clk *fllclk)
+int clk_program_fll_clks(struct gk20a *g, struct change_fll_clk *fllclk)
 {
 	int status = -EINVAL;
 	struct clk_domain *pdomain;
@@ -276,8 +276,6 @@ int clk_program_fllclks(struct gk20a *g, struct change_fll_clk *fllclk)
 		return -EINVAL;
 	if (fllclk->clkmhz == 0)
 		return -EINVAL;
-
-	mutex_lock(&pclk->changeclkmutex);
 
 	setfllclk.voltuv = fllclk->voltuv;
 	setfllclk.gpc2clkmhz = fllclk->clkmhz;
@@ -376,63 +374,6 @@ int clk_program_fllclks(struct gk20a *g, struct change_fll_clk *fllclk)
 	if (status)
 		goto done;
 done:
-	mutex_unlock(&pclk->changeclkmutex);
-	return status;
-}
-
-int clk_set_boot_fll_clk(struct gk20a *g)
-{
-	int status;
-	struct change_fll_clk bootfllclk;
-	u16 gpc2clk_clkmhz = BOOT_GPC2CLK_MHZ;
-	u32 gpc2clk_voltuv = 0;
-	u32 gpc2clk_voltuv_sram = 0;
-	u16 mclk_clkmhz = BOOT_MCLK_MHZ;
-	u32 mclk_voltuv = 0;
-	u32 mclk_voltuv_sram = 0;
-	u32 voltuv = 0;
-	u32 voltuv_sram = 0;
-
-	mutex_init(&g->clk_pmu.changeclkmutex);
-	status = clk_domain_get_f_or_v(g, CTRL_CLK_DOMAIN_GPC2CLK,
-		&gpc2clk_clkmhz, &gpc2clk_voltuv, CTRL_VOLT_DOMAIN_LOGIC);
-	if (status)
-		return status;
-	status = clk_domain_get_f_or_v(g, CTRL_CLK_DOMAIN_GPC2CLK,
-		&gpc2clk_clkmhz, &gpc2clk_voltuv_sram, CTRL_VOLT_DOMAIN_SRAM);
-	if (status)
-		return status;
-	status = clk_domain_get_f_or_v(g, CTRL_CLK_DOMAIN_MCLK,
-		&mclk_clkmhz, &mclk_voltuv, CTRL_VOLT_DOMAIN_LOGIC);
-	if (status)
-		return status;
-	status = clk_domain_get_f_or_v(g, CTRL_CLK_DOMAIN_MCLK,
-		&mclk_clkmhz, &mclk_voltuv_sram, CTRL_VOLT_DOMAIN_SRAM);
-	if (status)
-		return status;
-
-	voltuv = ((gpc2clk_voltuv) > (mclk_voltuv)) ? (gpc2clk_voltuv)
-			: (mclk_voltuv);
-
-	voltuv_sram = ((gpc2clk_voltuv_sram) > (mclk_voltuv_sram)) ?
-		(gpc2clk_voltuv_sram) : (mclk_voltuv_sram);
-
-	status = volt_set_voltage(g, voltuv, voltuv_sram);
-	if (status)
-		gk20a_err(dev_from_gk20a(g),
-			"attempt to set boot voltage failed %d %d",
-			voltuv, voltuv_sram);
-
-	bootfllclk.api_clk_domain = CTRL_CLK_DOMAIN_GPC2CLK;
-	bootfllclk.clkmhz = gpc2clk_clkmhz;
-	bootfllclk.voltuv = voltuv;
-	status = clk_program_fllclks(g, &bootfllclk);
-	if (status)
-		gk20a_err(dev_from_gk20a(g), "attempt to set boot gpc2clk failed");
-	status = g->clk_pmu.clk_mclk.change(g, DEFAULT_BOOT_MCLK_SPEED);
-	if (status)
-		gk20a_err(dev_from_gk20a(g), "attempt to set boot mclk failed");
-
 	return status;
 }
 

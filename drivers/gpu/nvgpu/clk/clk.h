@@ -119,6 +119,5 @@ u32 clk_domain_get_f_points(
 	u32 *fpointscount,
 	u16 *freqpointsinmhz
 );
-int clk_set_boot_fll_clk(struct gk20a *g);
 int clk_program_fll_clks(struct gk20a *g, struct change_fll_clk *fllclk);
 #endif

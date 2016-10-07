@@ -2222,7 +2222,7 @@ int clk_mclkseq_init_mclk_gddr5(struct gk20a *g)
 	return 0;
 }
 
-int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, enum gk20a_mclk_speed speed)
+int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, u16 val)
 {
 	struct clk_mclk_state *mclk;
 	struct pmu_payload payload = { {0} };
@@ -2236,6 +2236,7 @@ int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, enum gk20a_mclk_speed speed)
 #ifdef CONFIG_DEBUG_FS
 	u64 t0, t1;
 #endif
+	enum gk20a_mclk_speed speed;
 
 	gk20a_dbg_info("");
 
@@ -2245,6 +2246,13 @@ int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, enum gk20a_mclk_speed speed)
 
 	if (!mclk->init)
 		goto exit_status;
+
+	/* TODO thia should be done according to VBIOS tables */
+
+	speed = (val <= MCLK_LOW_SPEED_LIMIT) ? gk20a_mclk_low_speed :
+		(val <= MCLK_MID_SPEED_LIMIT) ? gk20a_mclk_mid_speed :
+						gk20a_mclk_high_speed;
+
 
 	if (speed == mclk->speed)
 		goto exit_status;
@@ -2374,20 +2382,13 @@ exit_status:
 #ifdef CONFIG_DEBUG_FS
 static int mclk_debug_speed_set(void *data, u64 val)
 {
-	enum gk20a_mclk_speed speed;
 	struct gk20a *g = (struct gk20a *) data;
 	struct clk_mclk_state *mclk;
 
 	mclk = &g->clk_pmu.clk_mclk;
 
-	/* TODO thia should be done according to VBIOS tables */
-
-	speed = (val <= MCLK_LOW_SPEED_LIMIT) ? gk20a_mclk_low_speed :
-		(val <= MCLK_MID_SPEED_LIMIT) ? gk20a_mclk_mid_speed :
-						gk20a_mclk_high_speed;
-
 	if (mclk->change)
-		return mclk->change(g, speed);
+		return mclk->change(g, (u16) val);
 	return 0;
 
 }

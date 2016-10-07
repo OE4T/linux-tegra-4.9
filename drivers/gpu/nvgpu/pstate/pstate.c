@@ -153,10 +153,6 @@ int gk20a_init_pstate_pmu_support(struct gk20a *g)
 	if (err)
 		return err;
 
-	err = clk_set_boot_fll_clk(g);
-	if (err)
-		return err;
-
 	err = pmgr_domain_pmu_setup(g);
 	return err;
 }

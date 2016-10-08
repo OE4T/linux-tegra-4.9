@@ -1417,6 +1417,7 @@ static struct iommu_domain *arm_smmu_domain_alloc(unsigned type)
 {
 	struct arm_smmu_domain *smmu_domain;
 	pgd_t *pgd;
+	unsigned int order;
 
 	/*
 	 * Allocate the domain and initialise some of its data structures.
@@ -1427,13 +1428,14 @@ static struct iommu_domain *arm_smmu_domain_alloc(unsigned type)
 	if (!smmu_domain)
 		return NULL;
 
-	pgd = kcalloc(PTRS_PER_PGD, sizeof(pgd_t), GFP_KERNEL);
+	order = get_order(PTRS_PER_PGD * sizeof(pgd_t));
+	pgd = (pgd_t *)__get_free_pages(GFP_KERNEL | __GFP_ZERO, order);
 	if (!pgd)
 		goto out_free_domain;
 
 	smmu_domain->arm_dummy_page = alloc_page(GFP_KERNEL | __GFP_ZERO);
 	if (!smmu_domain->arm_dummy_page) {
-		kfree(pgd);
+		free_pages(pgd, order);
 		goto out_free_domain;
 	}
 

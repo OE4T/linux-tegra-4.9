@@ -490,9 +490,6 @@ struct tegra_pcie_port {
 	int status;
 	int rst_gpio;
 	bool has_mxm_port;
-	int pwr_en_gpios_n;
-	int pwr_en_gpios[MAX_PWR_GPIOS];
-	unsigned int pwr_gpio_delay;
 	int pwr_gd_gpio;
 	struct dentry *port_debugfs;
 };
@@ -2506,16 +2503,8 @@ static void mbist_war(struct tegra_pcie *pcie, bool apply)
 
 static int tegra_pcie_mxm_pwr_init(struct tegra_pcie_port *port)
 {
-	int i;
 
 	mdelay(100);
-
-	for (i = 0; i < port->pwr_en_gpios_n; i++) {
-		gpio_set_value(port->pwr_en_gpios[i], 1);
-		mdelay(port->pwr_gpio_delay);
-	}
-	mdelay(90);
-
 	if (!(gpio_get_value(port->pwr_gd_gpio)))
 		return 1;
 
@@ -3334,7 +3323,7 @@ static int tegra_pcie_parse_dt(struct tegra_pcie *pcie)
 	struct of_pci_range range;
 	u32 lanes = 0;
 	struct resource res;
-	int i, err;
+	int err;
 
 	PR_FUNC_LINE;
 
@@ -3461,37 +3450,6 @@ static int tegra_pcie_parse_dt(struct tegra_pcie *pcie)
 		rp->has_mxm_port = of_property_read_bool(port,
 			"nvidia,has-mxm-port");
 		if (rp->has_mxm_port) {
-			rp->pwr_en_gpios_n = of_gpio_named_count(port,
-				"nvidia,pwr-en-gpios");
-			if (rp->pwr_en_gpios_n > MAX_PWR_GPIOS) {
-				dev_err(pcie->dev,
-					"Too many nvidia,pwr-en-gpios specified. Capping at %d\n",
-					MAX_PWR_GPIOS);
-				rp->pwr_en_gpios_n = MAX_PWR_GPIOS;
-			}
-			for (i = 0; i < rp->pwr_en_gpios_n; i++) {
-				rp->pwr_en_gpios[i] = of_get_named_gpio(port,
-				"nvidia,pwr-en-gpios", i);
-				if (gpio_is_valid(rp->pwr_en_gpios[i])) {
-					err = devm_gpio_request(pcie->dev,
-							rp->pwr_en_gpios[i],
-							"pwr_en_gpio");
-					if (err < 0) {
-						dev_err(pcie->dev,
-							"%s: pwr_en_gpio request failed %d\n",
-							__func__, err);
-						return err;
-					}
-					err = gpio_direction_output(
-					rp->pwr_en_gpios[i], 0);
-					if (err < 0) {
-						dev_err(pcie->dev,
-							"%s: pwr_en_gpio direction_output failed %d\n",
-							__func__, err);
-					}
-				}
-			}
-
 			rp->pwr_gd_gpio = of_get_named_gpio(port,
 						 "nvidia,pwr-gd-gpio", 0);
 			if (gpio_is_valid(rp->pwr_gd_gpio)) {
@@ -3510,14 +3468,6 @@ static int tegra_pcie_parse_dt(struct tegra_pcie *pcie)
 						"%s: pwr_gd_gpio direction_input failed %d\n",
 						__func__, err);
 				}
-			}
-
-			err = of_property_read_u32(port, "nvidia,pwr-gpio-delay"
-							, &rp->pwr_gpio_delay);
-			if (err < 0) {
-				dev_err(pcie->dev, "failed to parse pwr-gpio-delay: %d\n",
-					err);
-				rp->pwr_gpio_delay = 0;
 			}
 		}
 		list_add_tail(&rp->list, &pcie->ports);

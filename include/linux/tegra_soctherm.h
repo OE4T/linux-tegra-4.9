@@ -180,12 +180,6 @@ struct soctherm_platform_data {
 	struct tegra_thermtrip_pmic_data *tshut_pmu_trip_data;
 };
 
-#ifdef CONFIG_TEGRA_SOCTHERM
-int __init tegra_soctherm_init(struct soctherm_platform_data *data);
-void tegra_soctherm_adjust_cpu_zone(bool high_voltage_range);
-void tegra_soctherm_adjust_core_zone(bool high_voltage_range);
-int tegra_soctherm_gpu_tsens_invalidate(bool control);
-#else
 static inline int tegra_soctherm_init(struct soctherm_platform_data *data)
 {
 	return 0;
@@ -196,6 +190,5 @@ static inline void tegra_soctherm_adjust_core_zone(bool high_voltage_range)
 { }
 static __maybe_unused int tegra_soctherm_gpu_tsens_invalidate(bool control)
 { return 0; }
-#endif
 
 #endif /* __TEGRA_SOCTHERM_H */

@@ -321,6 +321,9 @@ struct nvhost_device_data {
 	phys_addr_t carveout_addr;
 	phys_addr_t carveout_size;
 
+	/* Information related to engine-side synchronization */
+	void *syncpt_unit_interface;
+
 	u64 transcfg_addr;
 	u32 transcfg_val;
 	u64 mamask_addr;

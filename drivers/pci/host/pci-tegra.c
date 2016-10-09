@@ -61,6 +61,9 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/pm_clock.h>
+#ifdef CONFIG_THERMAL
+#include <linux/thermal.h>
+#endif
 
 #include <asm/sizes.h>
 #include <asm/mach/pci.h>
@@ -443,6 +446,13 @@ struct tegra_pcie {
 	struct reset_control *pciex_rst;
 #if defined(CONFIG_COMMON_CLK)
 	struct tegra_bwmgr_client *emc_bwmgr;
+#endif
+
+#ifdef CONFIG_THERMAL
+	struct thermal_cooling_device *cdev;
+	atomic_t therm_state;
+	struct completion completion;
+	bool is_cooling_dev;
 #endif
 
 	struct list_head ports;
@@ -3368,6 +3378,12 @@ static int tegra_pcie_parse_dt(struct tegra_pcie *pcie)
 		unsigned int index;
 		u32 value;
 
+#ifdef CONFIG_THERMAL
+		if (!strncmp(port->name, "pcie-cool-dev",
+			     sizeof("pcie-cool-dev")))
+			pcie->is_cooling_dev = true;
+#endif
+
 		if (strncmp(port->type, "pci", sizeof("pci")))
 			continue;
 
@@ -4569,10 +4585,27 @@ static void pcie_delayed_detect(struct work_struct *work)
 	int ret = 0;
 
 	pcie = container_of(work, struct tegra_pcie, detect_delay.work);
-	ret = tegra_pcie_probe_complete(pcie);
-	if (ret) {
-		return;
+#ifdef CONFIG_THERMAL
+	if (pcie->is_cooling_dev) {
+		wait_for_completion_interruptible(&pcie->completion);
+		dev_info(pcie->dev,
+			 "proceeding with PCIe hierarchy enumeraton\n");
 	}
+#endif
+	ret = tegra_pcie_probe_complete(pcie);
+	if (ret || !pcie->num_ports) {
+		pm_runtime_put_sync(pcie->dev);
+		pm_runtime_disable(pcie->dev);
+		tegra_pd_remove_device(pcie->dev);
+		goto release_regulators;
+	}
+	return;
+
+release_regulators:
+	devm_kfree(pcie->dev, pcie->pcie_regulators);
+	devm_kfree(pcie->dev, pcie->plat_data);
+	devm_kfree(pcie->dev, pcie);
+	return;
 }
 
 static struct tegra_pcie_domain pcie_domain = {
@@ -4581,6 +4614,69 @@ static struct tegra_pcie_domain pcie_domain = {
 	.tpd.gpd.flags = GENPD_FLAG_PM_CLK | GENPD_FLAG_PM_UPSTREAM,
 	.tpd.is_off = false,
 };
+
+#ifdef CONFIG_THERMAL
+#define TEGRA_PCIE_THERM_MAX_STATE     2
+static int tegra_pcie_max_state(struct thermal_cooling_device *tcd,
+				unsigned long *state)
+{
+	struct tegra_pcie *pcie = tcd->devdata;
+
+	dev_info(pcie->dev, "%s state=%d\n", __func__,
+		 pcie->therm_state.counter);
+	*state = TEGRA_PCIE_THERM_MAX_STATE;
+
+	return 0;
+}
+
+static int tegra_pcie_cur_state(struct thermal_cooling_device *tcd,
+				unsigned long *state)
+{
+	struct tegra_pcie *pcie = tcd->devdata;
+
+	dev_info(pcie->dev, "%s state=%d\n", __func__,
+		 pcie->therm_state.counter);
+	*state = (unsigned long)atomic_read(&pcie->therm_state);
+
+	return 0;
+}
+
+static int tegra_pcie_set_state(struct thermal_cooling_device *tcd,
+				unsigned long state)
+{
+	struct tegra_pcie *pcie = tcd->devdata;
+
+	if (state != (TEGRA_PCIE_THERM_MAX_STATE - 1)) {
+		if ((unsigned long)atomic_read(&pcie->therm_state))
+			dev_err(pcie->dev, "dGPU temp is below zero...!\n");
+		else
+			return 0;
+	} else {
+		atomic_set(&pcie->therm_state, state);
+		complete(&pcie->completion);
+	}
+	return 0;
+}
+
+/* Cooling device support */
+static struct thermal_cooling_device_ops pcie_cdev_ops = {
+	.get_max_state = tegra_pcie_max_state,
+	.get_cur_state = tegra_pcie_cur_state,
+	.set_cur_state = tegra_pcie_set_state,
+};
+
+static int pcie_therm_init(struct tegra_pcie  *pcie)
+{
+	pcie->cdev = thermal_cooling_device_register("tegra-pcie", pcie,
+			&pcie_cdev_ops);
+	if (IS_ERR(pcie->cdev))
+		return PTR_ERR(pcie->cdev);
+	if (pcie->cdev == NULL)
+		return -ENODEV;
+	dev_info(pcie->dev, "PCIE cooling dev registered\n");
+	return 0;
+}
+#endif
 
 static int tegra_pcie_probe(struct platform_device *pdev)
 {
@@ -4686,6 +4782,24 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 		schedule_delayed_work(&pcie->detect_delay, delay);
 		return ret;
 	}
+
+#ifdef CONFIG_THERMAL
+	if (pcie->is_cooling_dev) {
+		init_completion(&pcie->completion);
+		/* register cooling device */
+		ret = pcie_therm_init(pcie);
+		if (ret != 0) {
+			dev_err(pcie->dev,
+				"unable to register cooling device err: %d\n",
+				ret);
+			goto release_regulators;
+		}
+		dev_info(pcie->dev,
+			 "Going to wait till dGPU temp is above 0-C\n");
+		schedule_delayed_work(&pcie->detect_delay, 0);
+		return ret;
+	}
+#endif
 
 	ret = tegra_pcie_probe_complete(pcie);
 	if (ret || !pcie->num_ports) {

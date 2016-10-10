@@ -19,7 +19,7 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	36
+#define QUADD_SAMPLES_VERSION	37
 #define QUADD_IO_VERSION	20
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
@@ -55,8 +55,9 @@
 #define QUADD_SAMPLE_VERSION_SCHED_TASK_STATE	32
 #define QUADD_SAMPLE_VERSION_URCS		33
 #define QUADD_SAMPLE_VERSION_HOTPLUG		34
-#define QUADD_SAMPLE_VERSION_PER_CPU_SETUP      35
-#define QUADD_SAMPLE_VERSION_REPORT_TGID        36
+#define QUADD_SAMPLE_VERSION_PER_CPU_SETUP	35
+#define QUADD_SAMPLE_VERSION_REPORT_TGID	36
+#define QUADD_SAMPLE_VERSION_MMAP_TS		37
 
 #define QUADD_MMAP_HEADER_VERSION		1
 
@@ -254,6 +255,7 @@ struct quadd_sample_data {
 
 struct quadd_mmap_data {
 	u32 pid;
+	u64 time;
 
 	u64 addr;
 	u64 len;
@@ -375,6 +377,7 @@ struct quadd_header_data {
 
 struct quadd_record_data {
 	u8 record_type;
+	u16 extra_size;
 
 	/* sample: it should be the biggest size */
 	union {

@@ -128,15 +128,19 @@ write_sample(struct quadd_ring_buffer *rb,
 {
 	int i;
 	ssize_t err;
-	size_t length_sample, fill_count;
+	size_t length_sample = 0, fill_count;
 	struct quadd_ring_buffer_hdr *rb_hdr = rb->rb_hdr, new_hdr;
 
 	if (!rb_hdr)
 		return -EIO;
 
-	length_sample = sizeof(*sample);
-	for (i = 0; i < vec_count; i++)
-		length_sample += vec[i].len;
+	if (vec) {
+		for (i = 0; i < vec_count; i++)
+			length_sample += vec[i].len;
+	}
+
+	sample->extra_size = length_sample;
+	length_sample += sizeof(*sample);
 
 	new_hdr.size = rb_hdr->size;
 	new_hdr.pos_write = rb_hdr->pos_write;
@@ -159,10 +163,13 @@ write_sample(struct quadd_ring_buffer *rb,
 	if (err < 0)
 		return err;
 
-	for (i = 0; i < vec_count; i++) {
-		err = rb_write(&new_hdr, rb->buf, vec[i].base, vec[i].len);
-		if (err < 0)
-			return err;
+	if (vec) {
+		for (i = 0; i < vec_count; i++) {
+			err = rb_write(&new_hdr, rb->buf,
+				       vec[i].base, vec[i].len);
+			if (err < 0)
+				return err;
+		}
 	}
 
 	fill_count = rb_get_filled_space(&new_hdr);

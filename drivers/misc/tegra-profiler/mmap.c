@@ -42,6 +42,8 @@ put_mmap_sample(struct quadd_mmap_data *s, char *filename,
 	r.record_type = QUADD_RECORD_TYPE_MMAP;
 
 	memcpy(&r.mmap, s, sizeof(*s));
+
+	r.mmap.time = quadd_get_time();
 	r.mmap.filename_length = length;
 
 	if (is_file_exists)

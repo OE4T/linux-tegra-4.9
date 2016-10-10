@@ -177,6 +177,7 @@ struct channel_gk20a {
 	struct dma_buf *error_notifier_ref;
 	struct nvgpu_notification *error_notifier;
 	void *error_notifier_va;
+	struct mutex error_notifier_mutex;
 
 	struct mutex sync_lock;
 	struct gk20a_channel_sync *sync;

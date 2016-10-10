@@ -123,8 +123,10 @@
 #define CPHY						(1)
 
 #define NVCSI_CIL_CONFIG			0x04
-#define DATA_LANE_B					(0x7 << 8)
-#define DATA_LANE_A					(0x7 << 0)
+#define DATA_LANE_B_OFFSET			0x8
+#define DATA_LANE_A_OFFSET			0x0
+#define DATA_LANE_B			(0x7 << DATA_LANE_B_OFFSET)
+#define DATA_LANE_A			(0x7 << DATA_LANE_A_OFFSET)
 
 #define NVCSI_CIL_PAD_CONFIG		0x0c
 #define LOADADJ						(0xf << 12)
@@ -152,19 +154,17 @@
 #define PD_CLK_SHIFT				18
 #define PD_IO1_SHIFT				17
 #define PD_IO0_SHIFT				16
-#define SPARE_CLK					(0xf << 8)
-#define SPARE_IO1					(0xf << 4)
-#define SPARE_IO0					(0xf << 0)
+#define SPARE_CLK					(0x1 << 8)
+#define SPARE_IO1					(0x1 << 4)
+#define SPARE_IO0					(0x1 << 0)
 
 #define NVCSI_CIL_A_CONTROL			0x5c
 #define NVCSI_CIL_B_CONTROL			0xc0
-#define DESKEW_COMPARE				(0xf << 20)
-#define DESKEW_SETTLE				(0xf << 16)
-#define CLK_SETTLE					(0x3f << 8)
-/* TODO - Conflict with the one in registers.h
- * #define BYPASS_LP_SEQ				(0x1 << 7)
- */
-#define THS_SETTLE					(0x3f << 0)
+#define DESKEW_COMPARE				(0x4 << 20)
+#define DESKEW_SETTLE				(0x6 << 16)
+#define CLK_SETTLE					(0x21 << 8)
+#define T18X_BYPASS_LP_SEQ			(0x1 << 7)
+#define THS_SETTLE					(0x14 << 0)
 
 /* MIPICAL */
 #define	NVCSI_CIL_A_BASE            0x18

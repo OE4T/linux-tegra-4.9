@@ -89,50 +89,131 @@ static void csi4_stream_config(struct tegra_csi_channel *chan, int port_num)
 
 
 static void csi4_phy_config(
-	struct tegra_csi_channel *chan, int phy_num, int csi_lanes, bool enable)
+	struct tegra_csi_channel *chan, int csi_port,
+	int csi_lanes, bool enable)
 {
 	struct tegra_csi_device *csi = chan->csi;
-	int val;
+	int phy_num = (csi_port & 0x6) >> 1;
+	bool cil_a = (csi_port & 0x1) ? false : true;
+	int cil_config;
 
 	dev_dbg(csi->dev, "%s\n", __func__);
 
-	csi4_phy_write(chan, phy_num, NVCSI_CIL_A_SW_RESET,
-			SW_RESET1_EN | SW_RESET0_EN);
-	csi4_phy_write(chan, phy_num, NVCSI_CIL_B_SW_RESET,
-			SW_RESET1_EN | SW_RESET0_EN);
-
 	/* set to DPHY */
-	csi4_phy_write(chan, phy_num, NVCSI_CIL_PHY_CTRL, 0);
-	val = csi4_phy_read(chan, phy_num, NVCSI_CIL_CONFIG);
-	dev_dbg(csi->dev, "csi_phy 0 read NVCSI_CIL_CONFIG val = %08x\n", val);
+	csi4_phy_write(chan, phy_num, NVCSI_CIL_PHY_CTRL, DPHY);
 
-	/* set CSI lane number */
-	csi4_phy_write(chan, phy_num, NVCSI_CIL_CONFIG, csi_lanes);
+	/* read current NVCSI_CIL_CONFIG setting */
+	cil_config = csi4_phy_read(chan, phy_num, NVCSI_CIL_CONFIG);
+	dev_dbg(csi->dev, "NVCSI_CIL_CONFIG = %08x\n", cil_config);
 
-	/* power down de-serializer*/
-	csi4_phy_write(chan, phy_num, NVCSI_CIL_PAD_CONFIG, 0x200);
-	/* disable clock lane*/
-	csi4_phy_write(chan, phy_num, NVCSI_CIL_A_PAD_CONFIG, 0x70011);
-	if (chan->numlanes > 2)
-		csi4_phy_write(chan, phy_num, NVCSI_CIL_B_PAD_CONFIG, 0x70011);
+	if (cil_a) {
+		/* soft reset for data lane */
+		csi4_phy_write(chan, phy_num, NVCSI_CIL_A_SW_RESET,
+			SW_RESET1_EN | SW_RESET0_EN);
+		/* reset CSI lane number */
+		csi4_phy_write(chan, phy_num, NVCSI_CIL_CONFIG,
+			cil_config & ~DATA_LANE_A);
+		/* disable clock lane*/
+		csi4_phy_write(chan, phy_num,
+			NVCSI_CIL_A_PAD_CONFIG,
+			PD_CLK | PD_IO0 | PD_IO1 | SPARE_IO0 | SPARE_IO1);
+
+		/* setting up CIL B for 4 lane */
+		if (csi_lanes > 2) {
+			/* soft reset for data lane */
+			csi4_phy_write(chan, phy_num, NVCSI_CIL_B_SW_RESET,
+				SW_RESET1_EN | SW_RESET0_EN);
+			/* reset CSI lane number */
+			csi4_phy_write(chan, phy_num, NVCSI_CIL_CONFIG,
+				cil_config & ~DATA_LANE_B);
+			/* disable clock lane*/
+			csi4_phy_write(chan, phy_num,
+				NVCSI_CIL_B_PAD_CONFIG,
+				PD_CLK | PD_IO0 | PD_IO1 |
+				SPARE_IO0 | SPARE_IO1);
+		}
+
+		/* power down de-serializer is CIL B is not in use*/
+		if ((cil_config & DATA_LANE_B) == 0)
+			csi4_phy_write(chan, phy_num,
+				NVCSI_CIL_PAD_CONFIG, PDVCLAMP);
+	} else {
+		/* soft reset for data lane */
+		csi4_phy_write(chan, phy_num, NVCSI_CIL_B_SW_RESET,
+			SW_RESET1_EN | SW_RESET0_EN);
+		/* reset CSI lane number */
+		csi4_phy_write(chan, phy_num, NVCSI_CIL_CONFIG,
+			cil_config & ~DATA_LANE_B);
+		/* disable clock lane*/
+		csi4_phy_write(chan, phy_num,
+			NVCSI_CIL_B_PAD_CONFIG,
+			PD_CLK | PD_IO0 | PD_IO1 | SPARE_IO0 | SPARE_IO1);
+
+		/* power down de-serializer if CIL A is not in use*/
+		if ((cil_config & DATA_LANE_A) == 0)
+			csi4_phy_write(chan, phy_num,
+				NVCSI_CIL_PAD_CONFIG, PDVCLAMP);
+	}
 
 	if (!enable)
 		return;
 
-	/* power on de-serializer */
-	csi4_phy_write(chan, phy_num, NVCSI_CIL_PAD_CONFIG, 0);
-	/* enable clock lane*/
-	csi4_phy_write(chan, phy_num, NVCSI_CIL_A_PAD_CONFIG, 0x700000);
-	if (chan->numlanes > 2)
-		csi4_phy_write(chan, phy_num, NVCSI_CIL_B_PAD_CONFIG, 0x640000);
+	/* power on de-serializer if no sensor is active*/
+	if (!(cil_config & (DATA_LANE_A | DATA_LANE_B)))
+		csi4_phy_write(chan, phy_num, NVCSI_CIL_PAD_CONFIG, 0);
 
-	/* setup settle time */
-	csi4_phy_write(chan, phy_num, NVCSI_CIL_A_CONTROL, 0x110a14);
-	if (chan->numlanes > 2)
-		csi4_phy_write(chan, phy_num, NVCSI_CIL_B_CONTROL, 0x110a14);
+	if (cil_a) {
+		/* set CSI lane number */
+		csi4_phy_write(chan, phy_num, NVCSI_CIL_CONFIG,
+			(cil_config & ~DATA_LANE_A) |
+			(csi_lanes << DATA_LANE_A_OFFSET));
+		/* enable clock lane*/
+		csi4_phy_write(chan, phy_num,
+			NVCSI_CIL_A_PAD_CONFIG,
+			E_INPUT_LP_CLK | E_INPUT_LP_IO0 | E_INPUT_LP_IO1);
+		/* setup settle time */
+		csi4_phy_write(chan, phy_num,
+			NVCSI_CIL_A_CONTROL,
+			DESKEW_COMPARE | DESKEW_SETTLE | CLK_SETTLE |
+			T18X_BYPASS_LP_SEQ | THS_SETTLE);
+		/* release soft reset */
+		csi4_phy_write(chan, phy_num, NVCSI_CIL_A_SW_RESET, 0x0);
 
-	csi4_phy_write(chan, phy_num, NVCSI_CIL_A_SW_RESET, 0x0);
-	csi4_phy_write(chan, phy_num, NVCSI_CIL_B_SW_RESET, 0x0);
+		/* setting up CIL B for 4 lane */
+		if (csi_lanes > 2) {
+			/* set CSI lane number */
+			csi4_phy_write(chan, phy_num, NVCSI_CIL_CONFIG,
+				csi_lanes << DATA_LANE_A_OFFSET);
+			/* enable clock lane*/
+			csi4_phy_write(chan, phy_num,
+				NVCSI_CIL_B_PAD_CONFIG,
+				E_INPUT_LP_IO0 | E_INPUT_LP_IO1 | PD_CLK);
+			/* setup settle time */
+			csi4_phy_write(chan, phy_num,
+				NVCSI_CIL_B_CONTROL,
+				DESKEW_COMPARE | DESKEW_SETTLE | CLK_SETTLE |
+				T18X_BYPASS_LP_SEQ | THS_SETTLE);
+			/* release soft reset */
+			csi4_phy_write(chan, phy_num,
+				NVCSI_CIL_B_SW_RESET, 0x0);
+		}
+	} else {
+		/* set CSI lane number */
+		csi4_phy_write(chan, phy_num, NVCSI_CIL_CONFIG,
+			(cil_config & ~DATA_LANE_B) |
+			(csi_lanes << DATA_LANE_B_OFFSET));
+		/* enable clock lane*/
+		csi4_phy_write(chan, phy_num,
+			NVCSI_CIL_B_PAD_CONFIG,
+			E_INPUT_LP_CLK | E_INPUT_LP_IO0 | E_INPUT_LP_IO1);
+		/* setup settle time */
+		csi4_phy_write(chan, phy_num,
+			NVCSI_CIL_B_CONTROL,
+			DESKEW_COMPARE | DESKEW_SETTLE | CLK_SETTLE |
+			T18X_BYPASS_LP_SEQ | THS_SETTLE);
+		/* release soft reset */
+		csi4_phy_write(chan, phy_num, NVCSI_CIL_B_SW_RESET, 0x0);
+	}
 }
 
 static void csi4_stream_check_status(
@@ -239,7 +320,7 @@ void csi4_start_streaming(struct tegra_csi_channel *chan,
 	csi4_stream_init(chan, csi_port);
 	csi4_stream_config(chan, csi_port);
 	/* enable DPHY */
-	csi4_phy_config(chan, (csi_port & 0x6) >> 1, csi_lanes, true);
+	csi4_phy_config(chan, csi_port, csi_lanes, true);
 
 	csi4_stream_write(chan, csi_port, PP_EN_CTRL, CFG_PP_EN);
 }
@@ -257,7 +338,7 @@ void csi4_stop_streaming(struct tegra_csi_channel *chan,
 	csi_lanes = chan->ports[port_num].lanes;
 
 	/* disable DPHY */
-	csi4_phy_config(chan, (csi_port & 0x6) >> 1, csi_lanes, false);
+	csi4_phy_config(chan, csi_port, csi_lanes, false);
 	csi4_stream_check_status(chan, csi_port);
 	csi4_cil_check_status(chan, csi_port);
 }

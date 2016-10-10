@@ -1139,16 +1139,25 @@ struct dvfs_rail *tegra_dvfs_get_rail_by_name(char *name)
 
 bool tegra_dvfs_is_rail_up(struct dvfs_rail *rail)
 {
+	if (!rail)
+		return false;
+
 	return regulator_is_enabled(rail->reg);
 }
 
 int tegra_dvfs_rail_power_up(struct dvfs_rail *rail)
 {
+	if (!rail)
+		return -EINVAL;
+
 	return regulator_enable(rail->reg);
 }
 
 int tegra_dvfs_rail_power_down(struct dvfs_rail *rail)
 {
+	if (!rail)
+		return -EINVAL;
+
 	return regulator_disable(rail->reg);
 }
 

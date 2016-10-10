@@ -51,16 +51,12 @@ static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 				u32 class,
 				u32 flags)
 {
-	struct tegra_vgpu_cmd_msg msg = {0};
-	struct tegra_vgpu_gr_bind_ctxsw_buffers_params *p =
-			&msg.params.gr_bind_ctxsw_buffers;
 	struct gr_ctx_desc *gr_ctx;
+	u32 graphics_preempt_mode = 0;
+	u32 compute_preempt_mode = 0;
 	int err;
 
 	gk20a_dbg_fn("");
-
-	WARN_ON(TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAX !=
-		TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_LAST);
 
 	err = vgpu_gr_alloc_gr_ctx(g, __gr_ctx, vm, class, flags);
 	if (err)
@@ -68,14 +64,67 @@ static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 
 	gr_ctx = *__gr_ctx;
 
+	if (flags & NVGPU_ALLOC_OBJ_FLAGS_GFXP)
+		graphics_preempt_mode = NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP;
+	if (flags & NVGPU_ALLOC_OBJ_FLAGS_CILP)
+		compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CILP;
+
+	if (graphics_preempt_mode || compute_preempt_mode) {
+		if (g->ops.gr.set_ctxsw_preemption_mode) {
+			err = g->ops.gr.set_ctxsw_preemption_mode(g, gr_ctx, vm,
+			    class, graphics_preempt_mode, compute_preempt_mode);
+			if (err) {
+				gk20a_err(dev_from_gk20a(g),
+					"set_ctxsw_preemption_mode failed");
+				goto fail;
+			}
+		} else {
+			err = -ENOSYS;
+			goto fail;
+		}
+	}
+
+	gk20a_dbg_fn("done");
+	return err;
+
+fail:
+	vgpu_gr_gp10b_free_gr_ctx(g, vm, gr_ctx);
+	return err;
+}
+
+static int vgpu_gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
+				struct gr_ctx_desc *gr_ctx,
+				struct vm_gk20a *vm, u32 class,
+				u32 graphics_preempt_mode,
+				u32 compute_preempt_mode)
+{
+	struct tegra_vgpu_cmd_msg msg = {};
+	struct tegra_vgpu_gr_bind_ctxsw_buffers_params *p =
+				&msg.params.gr_bind_ctxsw_buffers;
+	int err = 0;
+
+	WARN_ON(TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAX !=
+		TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_LAST);
+
 	if (class == PASCAL_A && g->gr.t18x.ctx_vars.force_preemption_gfxp)
-		flags |= NVGPU_ALLOC_OBJ_FLAGS_GFXP;
+		graphics_preempt_mode = NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP;
 
 	if (class == PASCAL_COMPUTE_A &&
 			g->gr.t18x.ctx_vars.force_preemption_cilp)
-		flags |= NVGPU_ALLOC_OBJ_FLAGS_CILP;
+		compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CILP;
 
-	if (flags & NVGPU_ALLOC_OBJ_FLAGS_GFXP) {
+	/* check for invalid combinations */
+	if ((graphics_preempt_mode == 0) && (compute_preempt_mode == 0))
+		return -EINVAL;
+
+	if ((graphics_preempt_mode == NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP) &&
+		   (compute_preempt_mode == NVGPU_COMPUTE_PREEMPTION_MODE_CILP))
+		return -EINVAL;
+
+	/* set preemption modes */
+	switch (graphics_preempt_mode) {
+	case NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP:
+	{
 		u32 spill_size =
 			gr_gpc0_swdx_rm_spill_buffer_size_256b_default_v() *
 			gr_gpc0_swdx_rm_spill_buffer_size_256b_byte_granularity_v();
@@ -146,15 +195,37 @@ static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 
 		gr_ctx->graphics_preempt_mode = NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP;
 		p->mode = TEGRA_VGPU_GR_CTXSW_PREEMPTION_MODE_GFX_GFXP;
+		break;
+	}
+	case NVGPU_GRAPHICS_PREEMPTION_MODE_WFI:
+		gr_ctx->graphics_preempt_mode = graphics_preempt_mode;
+		break;
+
+	default:
+		break;
 	}
 
 	if (class == PASCAL_COMPUTE_A) {
-		if (flags & NVGPU_ALLOC_OBJ_FLAGS_CILP) {
-			gr_ctx->compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CILP;
-			p->mode = TEGRA_VGPU_GR_CTXSW_PREEMPTION_MODE_COMPUTE_CILP;
-		} else {
-			gr_ctx->compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CTA;
-			p->mode = TEGRA_VGPU_GR_CTXSW_PREEMPTION_MODE_COMPUTE_CTA;
+		switch (compute_preempt_mode) {
+		case NVGPU_COMPUTE_PREEMPTION_MODE_WFI:
+			gr_ctx->compute_preempt_mode =
+				NVGPU_COMPUTE_PREEMPTION_MODE_WFI;
+			p->mode = TEGRA_VGPU_GR_CTXSW_PREEMPTION_MODE_WFI;
+			break;
+		case NVGPU_COMPUTE_PREEMPTION_MODE_CTA:
+			gr_ctx->compute_preempt_mode =
+				NVGPU_COMPUTE_PREEMPTION_MODE_CTA;
+			p->mode =
+				TEGRA_VGPU_GR_CTXSW_PREEMPTION_MODE_COMPUTE_CTA;
+			break;
+		case NVGPU_COMPUTE_PREEMPTION_MODE_CILP:
+			gr_ctx->compute_preempt_mode =
+				NVGPU_COMPUTE_PREEMPTION_MODE_CILP;
+			p->mode =
+				TEGRA_VGPU_GR_CTXSW_PREEMPTION_MODE_COMPUTE_CILP;
+			break;
+		default:
+			break;
 		}
 	}
 
@@ -169,11 +240,52 @@ static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 		}
 	}
 
-	gk20a_dbg_fn("done");
 	return err;
 
 fail:
-	vgpu_gr_gp10b_free_gr_ctx(g, vm, gr_ctx);
+	gk20a_err(dev_from_gk20a(g), "%s failed %d", __func__, err);
+	return err;
+}
+
+static int vgpu_gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
+					u32 graphics_preempt_mode,
+					u32 compute_preempt_mode)
+{
+	struct gr_ctx_desc *gr_ctx = ch->ch_ctx.gr_ctx;
+	struct gk20a *g = ch->g;
+	struct tsg_gk20a *tsg;
+	struct vm_gk20a *vm;
+	u32 class;
+	int err;
+
+	class = ch->obj_class;
+	if (!class)
+		return -EINVAL;
+
+	/* preemption already set ? */
+	if (gr_ctx->graphics_preempt_mode || gr_ctx->compute_preempt_mode)
+		return -EINVAL;
+
+	if (gk20a_is_channel_marked_as_tsg(ch)) {
+		tsg = &g->fifo.tsg[ch->tsgid];
+		vm = tsg->vm;
+	} else {
+		vm = ch->vm;
+	}
+
+	if (g->ops.gr.set_ctxsw_preemption_mode) {
+		err = g->ops.gr.set_ctxsw_preemption_mode(g, gr_ctx, vm, class,
+						graphics_preempt_mode,
+						compute_preempt_mode);
+		if (err) {
+			gk20a_err(dev_from_gk20a(g),
+					"set_ctxsw_preemption_mode failed");
+			return err;
+		}
+	} else {
+		err = -ENOSYS;
+	}
+
 	return err;
 }
 
@@ -202,4 +314,7 @@ void vgpu_gp10b_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.alloc_gr_ctx = vgpu_gr_gp10b_alloc_gr_ctx;
 	gops->gr.free_gr_ctx = vgpu_gr_gp10b_free_gr_ctx;
 	gops->gr.init_ctx_state = vgpu_gr_gp10b_init_ctx_state;
+	gops->gr.set_preemption_mode = vgpu_gr_gp10b_set_preemption_mode;
+	gops->gr.set_ctxsw_preemption_mode =
+			vgpu_gr_gp10b_set_ctxsw_preemption_mode;
 }

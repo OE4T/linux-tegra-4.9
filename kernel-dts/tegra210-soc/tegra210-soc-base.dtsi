@@ -1816,12 +1816,19 @@
 	};
 
 	soctherm: soctherm@0x700E2000 {
-		compatible = "nvidia,tegra-soctherm";
+		compatible = "nvidia,tegra-soctherm", "nvidia,tegra210-soctherm";
 		reg =	<0x0 0x700E2000 0x0 0x600>, /* 0: SOC_THERM reg_base */
 			<0x0 0x60006000 0x0 0x400>, /* 1: CAR reg_base */
 			<0x0 0x70040000 0x0 0x200>; /* 2: CCROC reg_base */
-		interrupts = <0 48 0x04
-			      0 51 0x04>;
+		reg-names = "soctherm-reg", "car-reg", "ccroc-reg";
+		interrupts = <GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH
+			      GIC_SPI 51 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&tegra_car TEGRA210_CLK_TSENSOR>,
+			<&tegra_car TEGRA210_CLK_SOC_THERM>;
+		clock-names = "tsensor", "soctherm";
+		resets = <&tegra_car TEGRA210_CLK_SOC_THERM>;
+		reset-names = "soctherm";
+
 		#thermal-sensor-cells = <1>;
 		status = "disabled";
 		interrupt-controller;

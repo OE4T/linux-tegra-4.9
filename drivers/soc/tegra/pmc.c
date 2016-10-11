@@ -41,6 +41,8 @@
 #include <linux/seq_file.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/tegra-soc.h>
+#include <linux/platform/tegra/io-dpd.h>
 
 #include <soc/tegra/common.h>
 #include <soc/tegra/fuse.h>
@@ -98,9 +100,13 @@
 #define  IO_DPD_REQ_CODE_OFF		(1 << 30)
 #define  IO_DPD_REQ_CODE_ON		(2 << 30)
 #define  IO_DPD_REQ_CODE_MASK		(3 << 30)
+#define  IO_DPD_ENABLE_LSB		30
 
 #define IO_DPD_STATUS			0x1bc
+
 #define IO_DPD2_REQ			0x1c0
+#define  IO_DPD2_ENABLE_LSB		30
+
 #define IO_DPD2_STATUS			0x1c4
 #define SEL_DPD_TIM			0x1c8
 
@@ -127,6 +133,21 @@ struct tegra_powergate {
 	struct reset_control **resets;
 	unsigned int num_resets;
 };
+
+/* io dpd off request code */
+#define IO_DPD_CODE_OFF		1
+
+struct io_dpd_reg_info {
+	u32 req_reg_off;
+	u8 dpd_code_lsb;
+};
+
+static struct io_dpd_reg_info t3_io_dpd_req_regs[] = {
+	{0x1b8, 30},
+	{0x1c0, 30},
+};
+
+static DEFINE_SPINLOCK(tegra_io_dpd_lock);
 
 struct tegra_pmc_soc {
 	unsigned int num_powergates;
@@ -1078,6 +1099,124 @@ int tegra_pmc_iopower_get_status(int reg, u32 bit_mask)
 		return 1;
 }
 EXPORT_SYMBOL(tegra_pmc_iopower_get_status);
+
+void tegra_io_dpd_enable(struct tegra_io_dpd *hnd)
+{
+	unsigned int enable_mask;
+	unsigned int dpd_status;
+	unsigned int dpd_enable_lsb;
+
+	if (!hnd)
+		return;
+
+	spin_lock(&tegra_io_dpd_lock);
+	dpd_enable_lsb = (hnd->io_dpd_reg_index) ? IO_DPD2_ENABLE_LSB :
+						IO_DPD_ENABLE_LSB;
+	tegra_pmc_writel(0x1, DPD_SAMPLE);
+	tegra_pmc_writel(0x10, SEL_DPD_TIM);
+	enable_mask = ((1 << hnd->io_dpd_bit) | (2 << dpd_enable_lsb));
+	tegra_pmc_writel(enable_mask, IO_DPD_REQ + hnd->io_dpd_reg_index * 8);
+	/* delay pclk * (reset SEL_DPD_TIM value 127 + 5) */
+	udelay(7);
+	dpd_status = tegra_pmc_readl(IO_DPD_STATUS + hnd->io_dpd_reg_index * 8);
+	if (!(dpd_status & (1 << hnd->io_dpd_bit))) {
+		if (!tegra_platform_is_fpga()) {
+			pr_info("Error: dpd%d enable failed, status=%#x\n",
+			(hnd->io_dpd_reg_index + 1), dpd_status);
+		}
+	}
+	/* Sample register must be reset before next sample operation */
+	tegra_pmc_writel(0x0, DPD_SAMPLE);
+	spin_unlock(&tegra_io_dpd_lock);
+}
+EXPORT_SYMBOL(tegra_io_dpd_enable);
+
+int tegra_pmc_io_dpd_enable(int reg, int bit_pos)
+{
+        struct tegra_io_dpd io_dpd;
+
+        io_dpd.io_dpd_bit = bit_pos;
+        io_dpd.io_dpd_reg_index = reg;
+        tegra_io_dpd_enable(&io_dpd);
+        return 0;
+}
+EXPORT_SYMBOL(tegra_pmc_io_dpd_enable);
+
+void tegra_io_dpd_disable(struct tegra_io_dpd *hnd)
+{
+	unsigned int enable_mask;
+	unsigned int dpd_status;
+	unsigned int dpd_enable_lsb;
+
+	if (!hnd)
+		return;
+
+	spin_lock(&tegra_io_dpd_lock);
+	dpd_enable_lsb = (hnd->io_dpd_reg_index) ? IO_DPD2_ENABLE_LSB :
+						IO_DPD_ENABLE_LSB;
+	enable_mask = ((1 << hnd->io_dpd_bit) | (1 << dpd_enable_lsb));
+	tegra_pmc_writel(enable_mask, IO_DPD_REQ + hnd->io_dpd_reg_index * 8);
+	dpd_status = tegra_pmc_readl(IO_DPD_STATUS + hnd->io_dpd_reg_index * 8);
+	if (dpd_status & (1 << hnd->io_dpd_bit)) {
+		if (!tegra_platform_is_fpga()) {
+			pr_info("Error: dpd%d disable failed, status=%#x\n",
+			(hnd->io_dpd_reg_index + 1), dpd_status);
+		}
+	}
+	spin_unlock(&tegra_io_dpd_lock);
+}
+EXPORT_SYMBOL(tegra_io_dpd_disable);
+
+int tegra_pmc_io_dpd_disable(int reg, int bit_pos)
+{
+        struct tegra_io_dpd io_dpd;
+
+        io_dpd.io_dpd_bit = bit_pos;
+        io_dpd.io_dpd_reg_index = reg;
+        tegra_io_dpd_disable(&io_dpd);
+        return 0;
+}
+EXPORT_SYMBOL(tegra_pmc_io_dpd_disable);
+
+int tegra_pmc_io_dpd_get_status(int reg, int bit_pos)
+{
+	unsigned int dpd_status;
+
+	dpd_status = tegra_pmc_readl(IO_DPD_STATUS + reg * 8);
+	if (dpd_status & BIT(bit_pos))
+		return 1;
+	else
+		return 0;
+}
+EXPORT_SYMBOL(tegra_pmc_io_dpd_get_status);
+
+/* cleans io dpd settings from bootloader during kernel init */
+void tegra_bl_io_dpd_cleanup(void)
+{
+	int i;
+	unsigned int dpd_mask;
+	unsigned int dpd_status;
+
+	pr_info("Clear bootloader IO dpd settings\n");
+	/* clear all dpd requests from bootloader */
+	for (i = 0; i < ARRAY_SIZE(t3_io_dpd_req_regs); i++) {
+		dpd_mask = ((1 << t3_io_dpd_req_regs[i].dpd_code_lsb) - 1);
+		dpd_mask |= (IO_DPD_CODE_OFF <<
+			t3_io_dpd_req_regs[i].dpd_code_lsb);
+		tegra_pmc_writel(dpd_mask, t3_io_dpd_req_regs[i].req_reg_off);
+		/* dpd status register is next to req reg in tegra3 */
+		dpd_status =
+			tegra_pmc_readl(t3_io_dpd_req_regs[i].req_reg_off + 4);
+	}
+	return;
+}
+EXPORT_SYMBOL(tegra_bl_io_dpd_cleanup);
+
+void tegra_pmc_io_dpd_clear(void)
+{
+	tegra_bl_io_dpd_cleanup();
+}
+EXPORT_SYMBOL(tegra_pmc_io_dpd_clear);
 
 #ifdef CONFIG_PM_SLEEP
 enum tegra_suspend_mode tegra_pmc_get_suspend_mode(void)

@@ -31,11 +31,11 @@
 				/* mclk-index indicates the index of the */
 				/* mclk-name with in the clock-names array */
 
-				clocks = <&tegra_car TEGRA210_CLK_ID_CLK_OUT_3>;
-				clock-names = "mclk";
+				clocks = <&tegra_car TEGRA210_CLK_CLK_OUT_3>;
+				clock-names = "clk_out_3";
 				clock-frequency = <24000000>;
 
-				mclk = "cam_mclk1";
+				mclk = "clk_out_3";
 				reset-gpios = <&gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
 				pwdn-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
 				vana-supply = <&en_vdd_cam_hv_2v8>;

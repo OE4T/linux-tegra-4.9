@@ -27,13 +27,40 @@
 				#size-cells = <0>;
 				port@0 {
 					reg = <0>;
-					vi_in0: endpoint {
-						remote-endpoint = <&ov5693_out0>;
+					e3326_vi_in0: endpoint {
+						csi-port = <2>;
+						bus-width = <2>;
+						remote-endpoint = <&e3326_csi_out0>;
 					};
 				};
 			};
 		};
-
+		nvcsi {
+			num-channels = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			channel@0 {
+				reg = <0>;
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					port@0 {
+						reg = <0>;
+						e3326_csi_in0: endpoint@0 {
+							csi-port = <2>;
+							bus-width = <2>;
+							remote-endpoint = <&e3326_ov5693_out0>;
+						};
+					};
+					port@1 {
+						reg = <1>;
+						e3326_csi_out0: endpoint@1 {
+							remote-endpoint = <&e3326_vi_in0>;
+						};
+					};
+				};
+			};
+		};
 		i2c@546c0000 {
 			avdd_dsi_csi-supply = <&max77620_gpio7>;
 
@@ -56,22 +83,6 @@
 				/* ie. clocks, io pins, power sources */
 				avdd-reg = "vana";
 				iovdd-reg = "vif";
-
-				/**
-				* Generic formula to calculate different parameters.
-				* Please add the formula in proper parenthesis.
-				* Formula must contain only these operators '*' '/' '+' '-' '(' ')'
-				* Formula containing both numbers and variables is supported. Refer example #3.
-				* There must be atleast one operator inside the parenthesis. Refer example #4.
-				* Don't use spaces. Refer example #5.
-				*
-				* Examples -
-				* 1. formula = "(powerx+powery)+(exposure*2)"; /// correct example
-				* 2. formula = "((2*(6-1))/2)*4";          /// correct example
-				* 3. formula = "((powerx*(6-1))/2)*4";     /// correct example
-				* 4. formula = "((2*(6-1))*2)/(2)";        /// incorrect example - extra use of parenthesis
-				* 5. formula = "((2*(6-1)) / 2)*4";        /// incorrect example - use of spaces
-				*/
 
 				/**
 				* A modeX node is required to support v4l2 driver
@@ -161,7 +172,7 @@
 					readout_orientation = "90";
 					line_length = "2688";
 					inherent_gain = "1";
-					mclk_multiplier = "17.0";
+					mclk_multiplier = "6.67";
 					pix_clk_hz = "160000000";
 
 					min_gain_val = "1.0";
@@ -188,7 +199,7 @@
 					readout_orientation = "90";
 					line_length = "2688";
 					inherent_gain = "1";
-					mclk_multiplier = "17.0";
+					mclk_multiplier = "6.67";
 					pix_clk_hz = "160000000";
 
 					min_gain_val = "1.0";
@@ -215,7 +226,7 @@
 					readout_orientation = "90";
 					line_length = "1752";
 					inherent_gain = "1";
-					mclk_multiplier = "17.0";
+					mclk_multiplier = "6.67";
 					pix_clk_hz = "160000000";
 
 					min_gain_val = "1.0";
@@ -228,44 +239,16 @@
 					max_exp_time = "358733";
 				};
 
-				// HDR Modes
-				mode3 { //OV5693_MODE_2592X1944_HDR
-					mclk_khz = "24000";
-					num_lanes = "2";
-					tegra_sinterface = "serial_c";
-					discontinuous_clk = "no";
-					dpcm_enable = "false";
-					cil_settletime = "0";
-
-					active_w = "2592";
-					active_h = "1944";
-					pixel_t = "hdr_bggr";
-					readout_orientation = "90";
-					line_length = "3696";
-					inherent_gain = "1";
-					mclk_multiplier = "19.0";
-					pix_clk_hz = "176000000";
-
-					min_gain_val = "1.0";
-					max_gain_val = "16";
-					min_hdr_ratio = "1";
-					max_hdr_ratio = "64";
-					min_framerate = "1.453262";
-					max_framerate = "24";
-					min_exp_time = "42";
-					max_exp_time = "687981";
-				};
-
 				ports {
 					#address-cells = <1>;
 					#size-cells = <0>;
 
 					port@0 {
 						reg = <0>;
-						ov5693_out0: endpoint {
+						e3326_ov5693_out0: endpoint {
 							csi-port = <2>;
 							bus-width = <2>;
-							remote-endpoint = <&vi_in0>;
+							remote-endpoint = <&e3326_csi_in0>;
 						};
 					};
 				};
@@ -322,7 +305,9 @@
 				orientation = "1";
 				drivernode0 {
 					/* Declare PCL support driver (classically known as guid)  */
-					pcl_id = "v4l2_soc_sensor";
+					pcl_id = "v4l2_sensor";
+					/* Driver's v4l2 device name */
+					devname = "ov5693 6-0036";
 					/* Declare the device-tree hierarchy to driver instance */
 					proc-device-tree = "/proc/device-tree/host1x/i2c@546c0000/ov5693_c@36";
 				};

@@ -358,7 +358,7 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 		dc->blanked = true;
 		if (fb_console_mapped())
 			tegra_dc_cursor_suspend(dc);
-		tegra_dc_blank(dc, BLANK_ALL);
+		tegra_dc_blank_wins(dc, BLANK_ALL);
 		return 0;
 
 	case FB_BLANK_VSYNC_SUSPEND:

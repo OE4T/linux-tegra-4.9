@@ -5218,7 +5218,7 @@ bool tegra_dc_stats_get(struct tegra_dc *dc)
 }
 
 /* blank selected windows by disabling them */
-void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
+void tegra_dc_blank_wins(struct tegra_dc *dc, unsigned windows)
 {
 	struct tegra_dc_win *dcwins[DC_N_WINDOWS];
 	struct tegra_dc_win blank_win;
@@ -5282,15 +5282,6 @@ void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 		dcwins[nr_win++]->flags &= ~TEGRA_WIN_FLAG_ENABLED;
 	}
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	if (dc->shutdown) {
-		if ((dc->out->type == TEGRA_DC_OUT_HDMI) ||
-			(dc->out->type == TEGRA_DC_OUT_DP))
-			if (dc->out_ops && dc->out_ops->shutdown_interface)
-				dc->out_ops->shutdown_interface(dc);
-	}
-#endif
-
 	/* Skip update for linsim */
 	if (!tegra_platform_is_linsim() && !tegra_platform_is_vdk()) {
 		tegra_dc_update_windows(dcwins, nr_win, NULL, true);
@@ -5348,15 +5339,24 @@ void tegra_dc_disable(struct tegra_dc *dc)
 
 static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq)
 {
+	bool blank_windows = true;
+
 	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
 		return;
 
+	if (dc->shutdown) {
+		if ((dc->out->type == TEGRA_DC_OUT_HDMI) ||
+		    (dc->out->type == TEGRA_DC_OUT_DP))
+			if (dc->out_ops && dc->out_ops->shutdown_interface)
+				dc->out_ops->shutdown_interface(dc);
+	}
+
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
-	if (!tegra_dc_ext_disable(dc->ext))
-		tegra_dc_blank(dc, BLANK_ALL);
-#else
-	tegra_dc_blank(dc, BLANK_ALL);
+	blank_windows = !tegra_dc_ext_disable(dc->ext);
 #endif
+
+	if (blank_windows)
+		tegra_dc_blank_wins(dc, BLANK_ALL);
 
 	if (dc->cursor.enabled)
 		tegra_dc_cursor_suspend(dc);

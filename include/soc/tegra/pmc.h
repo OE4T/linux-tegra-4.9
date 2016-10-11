@@ -20,6 +20,7 @@
 #define __SOC_TEGRA_PMC_H__
 
 #include <linux/reboot.h>
+#include <linux/usb/ch9.h>
 
 #include <soc/tegra/pm.h>
 
@@ -184,5 +185,17 @@ void tegra_pmc_io_dpd_clear(void);
 int tegra_pmc_io_dpd_enable(int reg, int bit_pos);
 int tegra_pmc_io_dpd_disable(int reg, int bit_pos);
 int tegra_pmc_io_dpd_get_status(int reg, int bit_pos);
+
+/* T210 USB2 SLEEPWALK APIs */
+struct tegra_utmi_pad_config {
+	u32 tctrl;
+	u32 pctrl;
+	u32 rpd_ctrl;
+};
+int tegra_pmc_utmi_phy_enable_sleepwalk(int port, enum usb_device_speed speed,
+					struct tegra_utmi_pad_config *config);
+int tegra_pmc_utmi_phy_disable_sleepwalk(int port);
+int tegra_pmc_hsic_phy_enable_sleepwalk(int port);
+int tegra_pmc_hsic_phy_disable_sleepwalk(int port);
 
 #endif /* __SOC_TEGRA_PMC_H__ */

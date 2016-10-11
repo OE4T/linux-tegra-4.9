@@ -23,8 +23,6 @@
 
 static void gp10b_init_uncompressed_kind_map(void)
 {
-	gm20b_init_uncompressed_kind_map();
-
 	gk20a_uc_kind_map[gmmu_pte_kind_z16_2cz_v()] =
 	gk20a_uc_kind_map[gmmu_pte_kind_z16_ms2_2cz_v()] =
 	gk20a_uc_kind_map[gmmu_pte_kind_z16_ms4_2cz_v()] =
@@ -76,8 +74,6 @@ static bool gp10b_kind_zbc(u8 k)
 static void gp10b_init_kind_attr(void)
 {
 	u16 k;
-
-	gm20b_init_kind_attr();
 
 	for (k = 0; k < 256; k++) {
 		if (gp10b_kind_supported((u8)k))

@@ -63,12 +63,12 @@ struct sensor_cfg snsr_list[] = {
 		.version		= 1,
 		.float_significance = NVS_FLOAT_NANO,
 		.max_range		= {
-			.ival		= 39,
-			.fval		= 220000000,
+			.ival		= 19,
+			.fval		= 613300000,
 		},
 		.resolution		= {
 			.ival		= 0,
-			.fval		= 118498,
+			.fval		= 598550,
 		},
 		.milliamp		= {
 			.ival		= 0,
@@ -80,7 +80,7 @@ struct sensor_cfg snsr_list[] = {
 		.scale			= {
 		/* 0.000118498 (4.0 * 0.970737134 / 32768.0) */
 			.ival		= 0,
-			.fval		= 118498,
+			.fval		= 598550,
 		},
 	},
 	{
@@ -96,11 +96,11 @@ struct sensor_cfg snsr_list[] = {
 		.float_significance = NVS_FLOAT_NANO,
 		.max_range		= {
 			.ival		= 34,
-			.fval		= 906585000,
+			.fval		= 906585040,
 		},
 		.resolution		= {
 			.ival		= 0,
-			.fval		= 133158,
+			.fval		= 1064225,
 		},
 		.milliamp		= {
 			.ival		= 6,
@@ -112,7 +112,7 @@ struct sensor_cfg snsr_list[] = {
 		.scale			= {
 		/* 0.000133158 (250.0f * 3.14159265f / 180.0f / 32768.0) */
 			.ival		= 0,
-			.fval		= 133158,
+			.fval		= 1064225,
 		},
 	},
 	{
@@ -525,6 +525,8 @@ static inline void dfsh_parse_pkt(struct tty_struct *tty, unsigned char c)
 					/* sensor timestamp */
 					memcpy(&ts, &st->pkt_buf[ts_i],
 					       sizeof(ts));
+					/* convert timestamp from usec to nsec */
+					ts = ts * 1000;
 					st->nvs->handler(st->nvs_st[snsr_id],
 							 &st->pkt_buf[data_i],
 							 ts);
@@ -696,7 +698,7 @@ static int dfsh_open(struct tty_struct *tty)
 	memcpy(&st->cfg, &snsr_list, sizeof(st->cfg));
 
 	for (i = 0; i < DEV_N; i++)
-		nvs_of_dt(tty->dev->of_node, &st->cfg[i], NULL);
+		nvs_of_dt(st->pdev->dev.of_node, &st->cfg[i], NULL);
 
 	dfsh_fn_dev.sts = &st->sts;
 	dfsh_fn_dev.errs = &st->errs;

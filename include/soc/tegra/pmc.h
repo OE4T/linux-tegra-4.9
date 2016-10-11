@@ -198,4 +198,7 @@ int tegra_pmc_utmi_phy_disable_sleepwalk(int port);
 int tegra_pmc_hsic_phy_enable_sleepwalk(int port);
 int tegra_pmc_hsic_phy_disable_sleepwalk(int port);
 
+void tegra_pmc_fuse_control_ps18_latch_set(void);
+void tegra_pmc_fuse_control_ps18_latch_clear(void);
+
 #endif /* __SOC_TEGRA_PMC_H__ */

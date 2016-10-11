@@ -499,6 +499,9 @@ static bool arm_smmu_gr0_tlbiallnsnh; /* Insert TLBIALLNSNH at all */
 static bool arm_smmu_tlb_inv_by_addr = 1; /* debugfs: tlb inv context by default */
 static bool arm_smmu_tlb_inv_at_map;	/* debugfs: tlb inv at map additionally */
 
+static void get_pte_info(struct arm_smmu_cfg *cfg, ulong iova,
+	pgdval_t *pgdval, pudval_t *pudval, pmdval_t *pmdval, pteval_t *pteval);
+
 static inline void writel_single(u32 val, volatile void __iomem *virt_addr)
 {
 	writel(val, virt_addr);
@@ -998,12 +1001,24 @@ static irqreturn_t __arm_smmu_context_fault(int irq, void *dev,
 		ret = IRQ_HANDLED;
 		resume = RESUME_RETRY;
 	} else {
+		pgdval_t pgd;
+		pudval_t pud;
+		pmdval_t pmd;
+		pteval_t pte;
+
+		get_pte_info(cfg, iova, &pgd, &pud, &pmd, &pte);
+
 		dev_err_ratelimited(smmu->dev,
-		    "Unhandled context fault: iova=0x%08lx, fsynr=0x%x, cb=%d, sid=%d(0x%x - %s)\n",
-				    iova, fsynr, cfg->cbndx, sid, sid,
-				    tegra_mc_get_sid_name(sid));
-		trace_printk("Unhandled context fault: iova=0x%08lx, fsynr=0x%x, cb=%d\n",
-			iova, fsynr, cfg->cbndx);
+			"Unhandled context fault: iova=0x%08lx, fsynr=0x%x, "
+			"cb=%d, sid=%d(0x%x - %s), pgd=%llx, pud=%llx, "
+			"pmd=%llx, pte=%llx\n", iova, fsynr, cfg->cbndx,
+			sid, sid, tegra_mc_get_sid_name(sid), pgd,
+			pud, pmd, pte);
+		trace_printk("Unhandled context fault: iova=0x%08lx, "
+			"fsynr=0x%x, cb=%d, sid=%d(0x%x - %s), pgd=%llx "
+			"pud=%llx, pmd=%llx, pte=%llx\n", iova, fsynr,
+			cfg->cbndx, sid, sid, tegra_mc_get_sid_name(sid),
+			pgd, pud, pmd, pte);
 		ret = IRQ_NONE;
 		resume = RESUME_TERMINATE;
 	}
@@ -2186,6 +2201,35 @@ static int arm_smmu_alloc_init_pud(struct arm_smmu_device *smmu, pgd_t *pgd,
 	} while (pud++, addr = next, addr < end);
 
 	return ret;
+}
+
+static void get_pte_info(struct arm_smmu_cfg *cfg, ulong iova,
+	pgdval_t *pgdval, pudval_t *pudval, pmdval_t *pmdval, pteval_t *pteval)
+{
+	pgd_t *pgd;
+	pud_t *pud;
+	pmd_t *pmd;
+	pte_t *pte;
+
+	*pgdval = *pudval = *pmdval = *pteval = 0;
+
+	pgd = cfg->pgd + pgd_index(iova);
+	*pgdval = pgd_val(*pgd);
+	if (pgd_none(*pgd))
+		return;
+
+	pud = pud_offset(pgd, iova);
+	*pudval = pud_val(*pud);
+	if (pud_none(*pud))
+		return;
+
+	pmd = pmd_offset(pud, iova);
+	*pmdval = pmd_val(*pmd);
+	if (pmd_none(*pmd))
+		return;
+
+	pte = pmd_page_vaddr(*pmd) + pte_index(iova);
+	*pteval = pte_val(*pte);
 }
 
 static int arm_smmu_handle_mapping(struct arm_smmu_domain *smmu_domain,

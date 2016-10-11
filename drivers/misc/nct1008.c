@@ -71,6 +71,7 @@
 #define THERM_HYSTERESIS             0x21
 #define COSECUTIVE_ALERT             0x22
 #define MANUFACTURER_ID              0xFE
+#define MAX6649_LOC_TEMP_LO_RD       0x11
 
 /* Set of register types that are sensor dependant. */
 enum nct1008_sensor_reg_types {
@@ -229,7 +230,7 @@ static int nct1008_get_temp_common(int sensor,
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
 	struct nct1008_sensor_data *sensorp;
 	s16 temp_hi;
-	s16 temp_lo;
+	s16 temp_lo = 0;
 	long temp_milli = 0;
 	int i, off = 0;
 	u8 value;
@@ -275,7 +276,17 @@ static int nct1008_get_temp_common(int sensor,
 		else
 			value = ret;
 		temp_hi = value_to_temperature(pdata->extended_range, value);
-		temp_milli = CELSIUS_TO_MILLICELSIUS(temp_hi);
+
+		if (data->chip == MAX6649)
+		{
+			ret = nct1008_read_reg(client, MAX6649_LOC_TEMP_LO_RD);
+			if(ret < 0)
+				return -1;
+			else
+				value = ret;
+			temp_lo = (value >> 6);
+		}
+		temp_milli = CELSIUS_TO_MILLICELSIUS(temp_hi) + temp_lo * 250;
 	}
 
 	if (temp_milli > NCT1008_MAX_TEMP_MILLI)
@@ -292,6 +303,8 @@ static ssize_t nct1008_show_temp(struct device *dev,
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
+	struct nct1008_data *data = i2c_get_clientdata(client);
+
 	s16 temp1 = 0;
 	s16 temp = 0;
 	u8 temp2 = 0;
@@ -304,6 +317,16 @@ static ssize_t nct1008_show_temp(struct device *dev,
 	if (value < 0)
 		goto error;
 	temp1 = value_to_temperature(pdata->extended_range, value);
+
+	if(data->chip == MAX6649)
+	{
+		value = nct1008_read_reg(client, MAX6649_LOC_TEMP_LO_RD);
+		if(value < 0)
+			goto error;
+		temp2 = (value >> 6);
+		return snprintf(buf, MAX_STR_PRINT, "%d.%d\n",
+			temp1, temp2 * 25);
+	}
 
 	value = nct1008_read_reg(client, EXT_TEMP_LO_RD);
 	if (value < 0)
@@ -570,15 +593,21 @@ static ssize_t nct1008_show_regs(struct device *dev,
 	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz,
 		"Ext Temp Hi Limit Hi", EXT_TEMP_HI_LIMIT_HI_BYTE_RD);
 	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz,
-		"Ext Temp Hi Limit Lo", EXT_TEMP_HI_LIMIT_LO_BYTE);
-	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz,
 		"Ext Temp Lo Limit Hi", EXT_TEMP_LO_LIMIT_HI_BYTE_RD);
-	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz,
-		"Ext Temp Lo Limit Lo", EXT_TEMP_LO_LIMIT_LO_BYTE);
-	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz,
-		"Ext Temp Offset Hi  ", OFFSET_WR);
-	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz,
-		"Ext Temp Offset Lo  ", OFFSET_QUARTER_WR);
+	if(nct->chip == MAX6649) {
+		sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz,
+			"Local Temp Value lo ", MAX6649_LOC_TEMP_LO_RD);
+	}
+	else {
+		sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz,
+			"Ext Temp Offset Hi  ", OFFSET_WR);
+		sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz,
+			"Ext Temp Offset Lo  ", OFFSET_QUARTER_WR);
+		sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz,
+			"Ext Temp Hi Limit Lo", EXT_TEMP_HI_LIMIT_LO_BYTE);
+		sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz,
+			"Ext Temp Lo Limit Lo", EXT_TEMP_LO_LIMIT_LO_BYTE);
+	}
 	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz,
 		"Ext Therm Limit     ", EXT_THERM_LIMIT_WR);
 	sz += pr_reg(nct, buf+sz, PAGE_SIZE-sz,
@@ -1381,16 +1410,18 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 	else
 		dev_dbg(&client->dev, "\n initial ext temp = %d.0 deg", temp);
 
-	/* Remote channel offset */
-	ret = nct1008_write_reg(client, OFFSET_WR, pdata->offset / 4);
-	if (ret < 0)
-		goto error;
+	if(data->chip != MAX6649) {
+		/* Remote channel offset */
+		ret = nct1008_write_reg(client, OFFSET_WR, pdata->offset / 4);
+		if (ret < 0)
+			goto error;
 
-	/* Remote channel offset fraction (quarters) */
-	ret = nct1008_write_reg(client, OFFSET_QUARTER_WR,
-				(pdata->offset % 4) << 6);
-	if (ret < 0)
-		goto error;
+		/* Remote channel offset fraction (quarters) */
+		ret = nct1008_write_reg(client, OFFSET_QUARTER_WR,
+					(pdata->offset % 4) << 6);
+		if (ret < 0)
+			goto error;
+	}
 
 	/* Reset current hi/lo limit values with register values */
 	ret = nct1008_read_reg(data->client, EXT_TEMP_LO_LIMIT_HI_BYTE_RD);
@@ -1933,6 +1964,7 @@ static const struct i2c_device_id nct1008_id[] = {
 	{ "nct1008", NCT1008 },
 	{ "nct72", NCT72 },
 	{ "tmp451", TMP451 },
+	{ "max6649", MAX6649 },
 	{}
 };
 MODULE_DEVICE_TABLE(i2c, nct1008_id);
@@ -1940,6 +1972,7 @@ MODULE_DEVICE_TABLE(i2c, nct1008_id);
 static const struct of_device_id nct1008_of_match[] = {
 	{.compatible = "onsemi,nct72", },
 	{.compatible = "ti,tmp451", },
+	{.compatible = "maxim,max6649", },
 	{ }
 };
 

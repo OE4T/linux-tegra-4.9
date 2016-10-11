@@ -30,7 +30,7 @@
 
 struct nct1008_data;
 
-enum nct1008_chip { NCT1008, NCT72, TMP451 };
+enum nct1008_chip { NCT1008, NCT72, TMP451, MAX6649 };
 
 enum nct1008_sensors { LOC, EXT, SENSORS_COUNT };
 

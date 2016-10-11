@@ -168,7 +168,7 @@
 				line_length = "2688";
 				inherent_gain = "1";
 				mclk_multiplier = "6.67";
-				pix_clk_hz = "200000000";
+				pix_clk_hz = "160000000";
 
 				min_gain_val = "1.0";
 				max_gain_val = "16";
@@ -195,7 +195,7 @@
 				line_length = "2688";
 				inherent_gain = "1";
 				mclk_multiplier = "6.67";
-				pix_clk_hz = "200000000";
+				pix_clk_hz = "160000000";
 
 				min_gain_val = "1.0";
 				max_gain_val = "16";
@@ -222,7 +222,7 @@
 				line_length = "1752";
 				inherent_gain = "1";
 				mclk_multiplier = "6.67";
-				pix_clk_hz = "200000000";
+				pix_clk_hz = "160000000";
 
 				min_gain_val = "1.0";
 				max_gain_val = "16";

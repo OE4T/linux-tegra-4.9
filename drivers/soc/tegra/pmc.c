@@ -209,6 +209,16 @@ static void tegra_pmc_writel(u32 value, unsigned long offset)
 	writel(value, pmc->base + offset);
 }
 
+static void tegra_pmc_register_update(int offset,
+		unsigned long mask, unsigned long val)
+{
+	u32 pmc_reg;
+
+	pmc_reg = tegra_pmc_readl(offset);
+	pmc_reg = (pmc_reg & ~mask) | (val & mask);
+	tegra_pmc_writel(pmc_reg, offset);
+}
+
 #ifndef CONFIG_TEGRA_POWERGATE
 static inline bool tegra_powergate_state(int id)
 {
@@ -1044,6 +1054,30 @@ error:
 }
 EXPORT_SYMBOL(tegra_io_rail_power_off);
 #endif /* CONFIG_TEGRA_POWERGATE */
+
+void tegra_pmc_iopower_enable(int reg, u32 bit_mask)
+{
+	tegra_pmc_register_update(reg, bit_mask, 0);
+}
+EXPORT_SYMBOL(tegra_pmc_iopower_enable);
+
+void  tegra_pmc_iopower_disable(int reg, u32 bit_mask)
+{
+	tegra_pmc_register_update(reg, bit_mask, bit_mask);
+}
+EXPORT_SYMBOL(tegra_pmc_iopower_disable);
+
+int tegra_pmc_iopower_get_status(int reg, u32 bit_mask)
+{
+	unsigned int no_iopower;
+
+	no_iopower = tegra_pmc_readl(reg);
+	if (no_iopower & bit_mask)
+		return 0;
+	else
+		return 1;
+}
+EXPORT_SYMBOL(tegra_pmc_iopower_get_status);
 
 #ifdef CONFIG_PM_SLEEP
 enum tegra_suspend_mode tegra_pmc_get_suspend_mode(void)

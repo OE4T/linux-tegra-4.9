@@ -176,4 +176,8 @@ static inline int tegra_pmc_clear_reboot_reason(u32 reboot_reason)
 #endif /* CONFIG_ARCH_TEGRA || CONFIG_PLATFORM_TEGRA */
 #endif /* CONFIG_TEGRA_POWERGATE */
 
+void tegra_pmc_iopower_enable(int reg, u32 bit_mask);
+void tegra_pmc_iopower_disable(int reg, u32 bit_mask);
+int tegra_pmc_iopower_get_status(int reg, u32 bit_mask);
+
 #endif /* __SOC_TEGRA_PMC_H__ */

@@ -26,9 +26,11 @@
 #include <soc/tegra/fuse.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
-#include <linux/tegra-pmc.h>
 #include <linux/delay.h>
 #include <linux/wakelock.h>
+
+#include <soc/tegra/pmc.h>
+
 #include "fuse.h"
 
 #define TEGRA_FUSE_CTRL				0x0

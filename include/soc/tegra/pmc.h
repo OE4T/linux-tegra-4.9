@@ -108,7 +108,13 @@ int tegra_pmc_cpu_remove_clamping(unsigned int cpuid);
 #define TEGRA_IO_RAIL_LVDS	57
 #define TEGRA_IO_RAIL_SYS_DDC	58
 
-#ifdef CONFIG_ARCH_TEGRA
+/* Define reboot-reset mode */
+#define RECOVERY_MODE           BIT(31)
+#define BOOTLOADER_MODE         BIT(30)
+#define FORCED_RECOVERY_MODE    BIT(1)
+
+#ifndef CONFIG_TEGRA_POWERGATE
+#if defined CONFIG_ARCH_TEGRA || CONFIG_PLATFORM_TEGRA
 int tegra_powergate_is_powered(unsigned int id);
 int tegra_powergate_power_on(unsigned int id);
 int tegra_powergate_power_off(unsigned int id);
@@ -157,6 +163,17 @@ static inline int tegra_io_rail_power_off(unsigned int id)
 {
 	return -ENOSYS;
 }
-#endif /* CONFIG_ARCH_TEGRA */
+
+static inline int tegra_pmc_set_reboot_reason(u32 reboot_reason)
+{
+	return -ENOTSUPP;
+}
+
+static inline int tegra_pmc_clear_reboot_reason(u32 reboot_reason)
+{
+	return -ENOTSUPP;
+}
+#endif /* CONFIG_ARCH_TEGRA || CONFIG_PLATFORM_TEGRA */
+#endif /* CONFIG_TEGRA_POWERGATE */
 
 #endif /* __SOC_TEGRA_PMC_H__ */

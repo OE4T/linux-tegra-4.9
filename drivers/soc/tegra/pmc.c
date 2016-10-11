@@ -2,6 +2,7 @@
  * drivers/soc/tegra/pmc.c
  *
  * Copyright (c) 2010 Google, Inc
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * Author:
  *	Colin Cross <ccross@google.com>
@@ -208,6 +209,7 @@ static void tegra_pmc_writel(u32 value, unsigned long offset)
 	writel(value, pmc->base + offset);
 }
 
+#ifndef CONFIG_TEGRA_POWERGATE
 static inline bool tegra_powergate_state(int id)
 {
 	if (id == TEGRA_POWERGATE_3D && pmc->soc->has_gpu_clamps)
@@ -632,6 +634,7 @@ int tegra_pmc_cpu_remove_clamping(unsigned int cpuid)
 	return tegra_powergate_remove_clamping(id);
 }
 #endif /* CONFIG_SMP */
+#endif /* CONFIG_TEGRA_POWERGATE */
 
 static void tegra_pmc_program_reboot_reason(const char *cmd)
 {
@@ -675,6 +678,7 @@ static struct notifier_block tegra_pmc_restart_handler = {
 	.priority = 128,
 };
 
+#ifndef CONFIG_TEGRA_POWERGATE
 static int powergate_show(struct seq_file *s, void *data)
 {
 	unsigned int i;
@@ -894,7 +898,14 @@ set_available:
 free_mem:
 	kfree(pg);
 }
+#else
+static int tegra_powergate_debugfs_init(void)
+{
+	return 0;
+}
+#endif
 
+#ifndef CONFIG_TEGRA_POWERGATE
 static void tegra_powergate_init(struct tegra_pmc *pmc,
 				 struct device_node *parent)
 {
@@ -1032,6 +1043,7 @@ error:
 	return err;
 }
 EXPORT_SYMBOL(tegra_io_rail_power_off);
+#endif /* CONFIG_TEGRA_POWERGATE */
 
 #ifdef CONFIG_PM_SLEEP
 enum tegra_suspend_mode tegra_pmc_get_suspend_mode(void)

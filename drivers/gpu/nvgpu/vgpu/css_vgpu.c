@@ -26,17 +26,9 @@
 #include "gk20a/css_gr_gk20a.h"
 #include "vgpu.h"
 
-struct vgpu_hw_snapshot_buffer {
-	struct tegra_hv_ivm_cookie *cookie;
-	void *buf;
-	struct gk20a_cs_snapshot_fifo_entry *end;
-	struct gk20a_cs_snapshot_fifo_entry *src_get;
-	struct gk20a_cs_snapshot_fifo_entry *src_put;
-};
+static struct tegra_hv_ivm_cookie *css_cookie;
 
-struct tegra_hv_ivm_cookie *css_cookie;
-
-int vgpu_css_init_snapshot_buffer(struct gr_gk20a *gr)
+static int vgpu_css_init_snapshot_buffer(struct gr_gk20a *gr)
 {
 	struct gk20a *g = gr->g;
 	struct device *dev = g->dev;

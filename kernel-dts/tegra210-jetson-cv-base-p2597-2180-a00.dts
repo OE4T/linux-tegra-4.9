@@ -522,6 +522,7 @@
 				nvidia,usb2-map = <0>;
 				nvidia,port-cap =
 					<TEGRA_PADCTL_PORT_OTG_CAP>;
+				status = "disabled";
 			};
 			usb2-micro-AB-snps {
 				nvidia,lanes = "otg-0";
@@ -568,6 +569,14 @@
 				 nvidia,pcie-lane-select =
 					<TEGRA_PADCTL_PCIE_LANE_X4>;
 			};
+			pcie-m2 {
+				nvidia,lanes = "uphy-lane-0";
+				nvidia,function = "pcie";
+				nvidia,pcie-controller = <1>;
+				nvidia,pcie-lane-select =
+					<TEGRA_PADCTL_PCIE_LANE_X1>;
+				status = "okay";
+			};
 			sata {
 				 nvidia,lanes = "uphy-lane-7";
 				 nvidia,function = "sata";
@@ -596,7 +605,7 @@
 	xudc@700d0000 {
 		nvidia,portmap = <0x0108>;
 		#extcon-cells = <1>;
-		status = "okay";
+		status = "disabled";
 		phys =  <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
 			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(2)>;
 		phy-names = "usb2", "usb3";

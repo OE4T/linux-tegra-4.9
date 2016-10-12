@@ -27,8 +27,8 @@
 		step_time = <100>; /* mesecs */
 		state_cap = <7>;
 		active_pwm_max = <256>;
-		tach_gpio =  <TEGRA_GPIO(X, 4)>; /* TEGRA_GPIO_PX4 */
-		pwm_gpio = <TEGRA_GPIO_AON(V, 6)>; /* TEGRA_GPIO_PV6 */
+		tach_gpio =  <&tegra_gpio TEGRA_GPIO(X, 4) GPIO_ACTIVE_LOW>; /* TEGRA_GPIO_PX4 */
+		pwm_gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(V, 6) GPIO_ACTIVE_LOW>; /* TEGRA_GPIO_PV6 */
 	};
 	pwm-fan {
 		status = "okay";

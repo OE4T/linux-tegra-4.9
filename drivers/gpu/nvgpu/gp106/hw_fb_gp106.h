@@ -574,4 +574,32 @@ static inline u32 fb_fbpa_fbio_cmd_delay_cmd_priv_max_v(void)
 {
 	return 1;
 }
+static inline u32 fb_niso_scrubber_status_r(void)
+{
+	return 0x00100b20;
+}
+static inline u32 fb_niso_scrubber_status_flag_s(void)
+{
+	return 1;
+}
+static inline u32 fb_niso_scrubber_status_flag_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 fb_niso_scrubber_status_flag_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 fb_niso_scrubber_status_flag_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 fb_niso_scrub_status_r(void)
+{
+	return 0x00100b20;
+}
+static inline u32 fb_niso_scrub_status_flag_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
 #endif

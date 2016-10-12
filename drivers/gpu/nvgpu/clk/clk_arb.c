@@ -925,8 +925,9 @@ int nvgpu_clk_arb_get_arbiter_actual_mhz(struct gk20a *g,
 int nvgpu_clk_arb_get_arbiter_effective_mhz(struct gk20a *g,
 		u32 api_domain, u16 *freq_mhz)
 {
-	/* TODO: measure clocks from counters */
-	return nvgpu_clk_arb_get_arbiter_actual_mhz(g, api_domain, freq_mhz);
+
+	*freq_mhz = g->ops.clk.get_rate(g, api_domain);
+	return 0;
 }
 
 int nvgpu_clk_arb_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,

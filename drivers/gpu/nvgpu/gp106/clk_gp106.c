@@ -39,10 +39,37 @@ static int clk_gp106_debugfs_init(struct gk20a *g);
 #define NUM_NAMEMAPS	4
 #define XTAL4X_KHZ 108000
 
+
+static u32 gp106_get_rate_cntr(struct gk20a *g, struct namemap_cfg *);
+static u16 gp106_clk_get_rate(struct gk20a *g, u32 api_domain);
 static u32 gp106_crystal_clk_hz(struct gk20a *g)
 {
 	return (XTAL4X_KHZ * 1000);
 }
+
+static u16 gp106_clk_get_rate(struct gk20a *g, u32 api_domain)
+{
+	struct clk_gk20a *clk = &g->clk;
+	u32 freq_khz;
+	int i;
+	struct namemap_cfg *c = NULL;
+
+	for (i = 0; i < clk->namemap_num; i++) {
+		if (api_domain == clk->namemap_xlat_table[i]) {
+			c = &clk->clk_namemap[i];
+			break;
+		}
+	}
+
+	if (!c)
+		return 0;
+
+	freq_khz = c->is_counter ? c->scale * gp106_get_rate_cntr(g, c) :
+		0; /* TODO: PLL read */
+
+	return (u16) freq_khz/1000;
+}
+
 static int gp106_init_clk_support(struct gk20a *g) {
 	struct clk_gk20a *clk = &g->clk;
 	u32 err = 0;
@@ -57,6 +84,14 @@ static int gp106_init_clk_support(struct gk20a *g) {
 	if (!clk->clk_namemap)
 		return -ENOMEM;
 
+	clk->namemap_xlat_table = kcalloc(NUM_NAMEMAPS, sizeof(u32),
+		GFP_KERNEL);
+
+	if (!clk->namemap_xlat_table) {
+		kfree(clk->clk_namemap);
+		return -ENOMEM;
+	}
+
 	clk->clk_namemap[0] = (struct namemap_cfg) {
 		.namemap = CLK_NAMEMAP_INDEX_GPC2CLK,
 		.is_enable = 1,
@@ -66,8 +101,10 @@ static int gp106_init_clk_support(struct gk20a *g) {
 		.cntr.reg_ctrl_idx  =
 			trim_gpc_bcast_clk_cntr_ncgpcclk_cfg_source_gpc2clk_f(),
 		.cntr.reg_cntr_addr = trim_gpc_bcast_clk_cntr_ncgpcclk_cnt_r(),
-		.name = "gpc2clk"
+		.name = "gpc2clk",
+		.scale = 1
 	};
+	clk->namemap_xlat_table[0] = CTRL_CLK_DOMAIN_GPC2CLK;
 	clk->clk_namemap[1] = (struct namemap_cfg) {
 		.namemap = CLK_NAMEMAP_INDEX_SYS2CLK,
 		.is_enable = 1,
@@ -76,8 +113,10 @@ static int gp106_init_clk_support(struct gk20a *g) {
 		.cntr.reg_ctrl_addr = trim_sys_clk_cntr_ncsyspll_cfg_r(),
 		.cntr.reg_ctrl_idx  = trim_sys_clk_cntr_ncsyspll_cfg_source_sys2clk_f(),
 		.cntr.reg_cntr_addr = trim_sys_clk_cntr_ncsyspll_cnt_r(),
-		.name = "sys2clk"
+		.name = "sys2clk",
+		.scale = 1
 	};
+	clk->namemap_xlat_table[1] = CTRL_CLK_DOMAIN_SYS2CLK;
 	clk->clk_namemap[2] = (struct namemap_cfg) {
 		.namemap = CLK_NAMEMAP_INDEX_XBAR2CLK,
 		.is_enable = 1,
@@ -86,8 +125,10 @@ static int gp106_init_clk_support(struct gk20a *g) {
 		.cntr.reg_ctrl_addr = trim_sys_clk_cntr_ncltcpll_cfg_r(),
 		.cntr.reg_ctrl_idx  = trim_sys_clk_cntr_ncltcpll_cfg_source_xbar2clk_f(),
 		.cntr.reg_cntr_addr = trim_sys_clk_cntr_ncltcpll_cnt_r(),
-		.name = "xbar2clk"
+		.name = "xbar2clk",
+		.scale = 1
 	};
+	clk->namemap_xlat_table[2] = CTRL_CLK_DOMAIN_XBAR2CLK;
 	clk->clk_namemap[3] = (struct namemap_cfg) {
 		.namemap = CLK_NAMEMAP_INDEX_DRAMCLK,
 		.is_enable = 1,
@@ -97,8 +138,10 @@ static int gp106_init_clk_support(struct gk20a *g) {
 		.cntr.reg_ctrl_idx  =
 			trim_fbpa_bcast_clk_cntr_ncltcclk_cfg_source_dramdiv4_rec_clk1_f(),
 		.cntr.reg_cntr_addr = trim_fbpa_bcast_clk_cntr_ncltcclk_cnt_r(),
-		.name = "dramdiv2_rec_clk1"
+		.name = "dramdiv2_rec_clk1",
+		.scale = 2
 	};
+	clk->namemap_xlat_table[3] = CTRL_CLK_DOMAIN_MCLK;
 
 	clk->namemap_num = NUM_NAMEMAPS;
 
@@ -112,10 +155,6 @@ static int gp106_init_clk_support(struct gk20a *g) {
 #endif
 	return err;
 }
-
-#ifdef CONFIG_DEBUG_FS
-typedef struct namemap_cfg namemap_cfg_t;
-static u32 gp106_get_rate_cntr(struct gk20a *, struct namemap_cfg *);
 
 static u32 gp106_get_rate_cntr(struct gk20a *g, struct namemap_cfg *c) {
 	u32 save_reg;
@@ -180,6 +219,7 @@ read_err:
 
 }
 
+#ifdef CONFIG_DEBUG_FS
 static int gp106_get_rate_show(void *data , u64 *val) {
 	struct namemap_cfg *c = (struct namemap_cfg *) data;
 	struct gk20a *g = c->g;
@@ -222,12 +262,11 @@ err_out:
 	debugfs_remove_recursive(clocks_root);
 	return -ENOMEM;
 }
-
 #endif /* CONFIG_DEBUG_FS */
 
 void gp106_init_clk_ops(struct gpu_ops *gops) {
 	gops->clk.init_clk_support = gp106_init_clk_support;
 	gops->clk.get_crystal_clk_hz = gp106_crystal_clk_hz;
+	gops->clk.get_rate = gp106_clk_get_rate;
 }
-
 

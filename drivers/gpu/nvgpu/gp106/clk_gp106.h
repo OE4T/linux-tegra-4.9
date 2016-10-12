@@ -26,9 +26,9 @@
 #define CLK_DEFAULT_CNTRL_SETTLE_RETRIES 10
 #define CLK_DEFAULT_CNTRL_SETTLE_USECS   5
 
-#define XTAL_CNTR_CLKS		2700	/* 100usec at 27KHz XTAL */
-#define XTAL_CNTR_DELAY		110	/* leave 10 extra usec   */
-#define XTAL_SCALE_TO_KHZ	10
+#define XTAL_CNTR_CLKS		27000	/* 1000usec at 27KHz XTAL */
+#define XTAL_CNTR_DELAY		1000	/* we need acuracy up to the ms   */
+#define XTAL_SCALE_TO_KHZ	1
 
 
 
@@ -47,6 +47,7 @@ struct namemap_cfg {
 			/* Todo */
 		} pll;
 	};
+	u32 scale;
 	char name[24];
 };
 

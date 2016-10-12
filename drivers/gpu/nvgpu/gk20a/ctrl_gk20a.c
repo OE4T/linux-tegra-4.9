@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1413,6 +1413,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 			}
 			break;
 		case GK20A_ZBC_TYPE_DEPTH:
+		case T19X_ZBC:
 			zbc_val->depth = set_table_args->depth;
 			break;
 		default:
@@ -1452,6 +1453,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 				}
 				break;
 			case GK20A_ZBC_TYPE_DEPTH:
+			case T19X_ZBC:
 				query_table_args->depth = zbc_tbl->depth;
 				break;
 			case GK20A_ZBC_TYPE_INVALID:

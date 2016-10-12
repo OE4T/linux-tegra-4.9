@@ -142,6 +142,9 @@ struct gpu_ops {
 		void (*set_zbc_depth_entry)(struct gk20a *g,
 					    struct zbc_entry *depth_val,
 					    u32 index);
+		void (*set_zbc_s_entry)(struct gk20a *g,
+					    struct zbc_entry *s_val,
+					    u32 index);
 		void (*init_cbc)(struct gk20a *g, struct gr_gk20a *gr);
 		void (*sync_debugfs)(struct gk20a *g);
 		void (*init_fs_state)(struct gk20a *g);
@@ -223,13 +226,23 @@ struct gpu_ops {
 				  struct zbc_entry *color_val, u32 index);
 		int (*add_zbc_depth)(struct gk20a *g, struct gr_gk20a *gr,
 				  struct zbc_entry *depth_val, u32 index);
+		int (*add_zbc_s)(struct gk20a *g, struct gr_gk20a *gr,
+				  struct zbc_entry *s_val, u32 index);
 		int (*zbc_set_table)(struct gk20a *g, struct gr_gk20a *gr,
 				struct zbc_entry *zbc_val);
 		int (*zbc_query_table)(struct gk20a *g, struct gr_gk20a *gr,
 				struct zbc_query_params *query_params);
+		int (*zbc_s_query_table)(struct gk20a *g, struct gr_gk20a *gr,
+				struct zbc_query_params *query_params);
+		int (*load_zbc_s_default_tbl)(struct gk20a *g,
+					 struct gr_gk20a *gr);
+		int (*load_zbc_s_tbl)(struct gk20a *g,
+					 struct gr_gk20a *gr);
 		void (*pmu_save_zbc)(struct gk20a *g, u32 entries);
 		int (*add_zbc)(struct gk20a *g, struct gr_gk20a *gr,
 				struct zbc_entry *zbc_val);
+		bool (*add_zbc_type_s)(struct gk20a *g, struct gr_gk20a *gr,
+				struct zbc_entry *zbc_val, int *ret_val);
 		u32 (*pagepool_default_size)(struct gk20a *g);
 		int (*init_ctx_state)(struct gk20a *g);
 		int (*alloc_gr_ctx)(struct gk20a *g,

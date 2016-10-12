@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics Engine
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,6 +22,10 @@
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "gr_t18x.h"
 #endif
+#ifdef CONFIG_TEGRA_19x_GPU
+#include "gr_t19x.h"
+#endif
+
 
 #include "tsg_gk20a.h"
 #include "gr_ctx_gk20a.h"
@@ -141,6 +145,7 @@ struct gr_zcull_info {
 #define GK20A_ZBC_TYPE_INVALID		0
 #define GK20A_ZBC_TYPE_COLOR		1
 #define GK20A_ZBC_TYPE_DEPTH		2
+#define T19X_ZBC			3
 
 struct zbc_color_table {
 	u32 color_ds[GK20A_ZBC_COLOR_VALUE_SIZE];
@@ -330,12 +335,20 @@ struct gr_gk20a {
 	struct mutex zbc_lock;
 	struct zbc_color_table zbc_col_tbl[GK20A_ZBC_TABLE_SIZE];
 	struct zbc_depth_table zbc_dep_tbl[GK20A_ZBC_TABLE_SIZE];
-
+#ifdef CONFIG_TEGRA_19x_GPU
+	struct zbc_s_table zbc_s_tbl[GK20A_ZBC_TABLE_SIZE];
+#endif
 	s32 max_default_color_index;
 	s32 max_default_depth_index;
+#ifdef CONFIG_TEGRA_19x_GPU
+	s32 max_default_s_index;
+#endif
 
 	u32 max_used_color_index;
 	u32 max_used_depth_index;
+#ifdef CONFIG_TEGRA_19x_GPU
+	u32 max_used_s_index;
+#endif
 
 #define GR_CHANNEL_MAP_TLB_SIZE		2 /* must of power of 2 */
 	struct gr_channel_map_tlb_entry chid_tlb[GR_CHANNEL_MAP_TLB_SIZE];

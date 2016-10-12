@@ -4018,7 +4018,8 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 {
 	struct zbc_color_table *c_tbl;
 	struct zbc_depth_table *d_tbl;
-	u32 i, ret = -ENOMEM;
+	u32 i;
+	int ret = -ENOMEM;
 	bool added = false;
 	u32 entries;
 
@@ -4094,6 +4095,16 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 				gr->max_used_depth_index++;
 		}
 		break;
+	case T19X_ZBC:
+		if (g->ops.gr.add_zbc_type_s) {
+			added =  g->ops.gr.add_zbc_type_s(g, gr, zbc_val, &ret);
+		} else {
+			gk20a_err(dev_from_gk20a(g),
+			"invalid zbc table type %d", zbc_val->type);
+			ret = -EINVAL;
+			goto err_mutex;
+		}
+		break;
 	default:
 		gk20a_err(dev_from_gk20a(g),
 			"invalid zbc table type %d", zbc_val->type);
@@ -4150,6 +4161,16 @@ int gr_gk20a_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
 		query_params->format = gr->zbc_dep_tbl[index].format;
 		query_params->ref_cnt = gr->zbc_dep_tbl[index].ref_cnt;
 		break;
+	case T19X_ZBC:
+		if (g->ops.gr.zbc_s_query_table) {
+			return g->ops.gr.zbc_s_query_table(g, gr,
+					 query_params);
+		} else {
+			gk20a_err(dev_from_gk20a(g),
+				"invalid zbc table type\n");
+			return -EINVAL;
+		}
+		break;
 	default:
 		gk20a_err(dev_from_gk20a(g),
 				"invalid zbc table type\n");
@@ -4192,6 +4213,13 @@ static int gr_gk20a_load_zbc_table(struct gk20a *g, struct gr_gk20a *gr)
 		if (ret)
 			return ret;
 	}
+
+	if (g->ops.gr.load_zbc_s_tbl) {
+		ret = g->ops.gr.load_zbc_s_tbl(g, gr);
+		if (ret)
+			return ret;
+	}
+
 	return 0;
 }
 
@@ -4221,7 +4249,7 @@ int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
 		zbc_val.color_ds[i] = 0;
 		zbc_val.color_l2[i] = 0;
 	}
-	err = gr_gk20a_add_zbc(g, gr, &zbc_val);
+	err |= gr_gk20a_add_zbc(g, gr, &zbc_val);
 
 	/* Opaque white (i.e. solid white) = (fmt 2 = uniform 1) */
 	zbc_val.format = gr_ds_zbc_color_fmt_val_unorm_one_v();
@@ -4244,11 +4272,11 @@ int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
 
 	zbc_val.format = gr_ds_zbc_z_fmt_val_fp32_v();
 	zbc_val.depth = 0x3f800000;
-	err |= gr_gk20a_add_zbc(g, gr, &zbc_val);
+	err = gr_gk20a_add_zbc(g, gr, &zbc_val);
 
 	zbc_val.format = gr_ds_zbc_z_fmt_val_fp32_v();
 	zbc_val.depth = 0;
-	err = gr_gk20a_add_zbc(g, gr, &zbc_val);
+	err |= gr_gk20a_add_zbc(g, gr, &zbc_val);
 
 	if (!err)
 		gr->max_default_depth_index = 2;
@@ -4256,6 +4284,12 @@ int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
 		gk20a_err(dev_from_gk20a(g),
 			   "fail to load default zbc depth table\n");
 		return err;
+	}
+
+	if (g->ops.gr.load_zbc_s_default_tbl) {
+		err = g->ops.gr.load_zbc_s_default_tbl(g, gr);
+		if (err)
+			return err;
 	}
 
 	return 0;

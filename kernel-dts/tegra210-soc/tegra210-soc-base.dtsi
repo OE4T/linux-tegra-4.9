@@ -767,8 +767,10 @@
 			status = "disabled";
 			nvidia,dc-ctrlnum = <1>;
 			clocks = <&tegra_car TEGRA210_CLK_DISP2>,
-			       <&tegra_car TEGRA210_CLK_TIMER>;
-			clock-names = "disp2", "timer";
+			       <&tegra_car TEGRA210_CLK_TIMER>,
+				<&tegra_car TEGRA210_CLK_DISP2_EMC>,
+				<&tegra_car TEGRA210_CLK_DISP2_LA_EMC>;
+			clock-names = "disp2", "timer", "disp2_emc", "disp2_la_emc";
 			resets = <&tegra_car TEGRA210_CLK_DISP2>;
 			reset-names = "dc_rst";
 

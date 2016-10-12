@@ -294,12 +294,14 @@ static ssize_t railgate_enable_store(struct device *dev,
 		/* release extra ref count */
 		gk20a_idle(dev);
 		platform->can_railgate = true;
+		platform->user_railgate_disabled = false;
 	} else if (railgate_enable == 0 && platform->can_railgate) {
 		/* take extra ref count */
 		err = gk20a_busy(dev);
 		if (err)
 			return err;
 		platform->can_railgate = false;
+		platform->user_railgate_disabled = true;
 	}
 	if (err)
 		return err;

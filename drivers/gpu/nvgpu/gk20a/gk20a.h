@@ -1174,6 +1174,7 @@ void gk20a_remove_sysfs(struct device *dev);
 #define GK20A_SIM_IORESOURCE_MEM 2
 
 void gk20a_busy_noresume(struct device *dev);
+void gk20a_idle_nosuspend(struct device *dev);
 int __must_check gk20a_busy(struct device *dev);
 void gk20a_idle(struct device *dev);
 void gk20a_disable(struct gk20a *g, u32 units);

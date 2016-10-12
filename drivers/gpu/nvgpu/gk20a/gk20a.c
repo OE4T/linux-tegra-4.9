@@ -1395,9 +1395,14 @@ static int gk20a_pm_suspend(struct device *dev)
 	struct gk20a *g = get_gk20a(dev);
 	int ret = 0;
 
+	if (platform->user_railgate_disabled)
+		gk20a_idle_nosuspend(dev);
+
 #ifdef CONFIG_PM
-	if (atomic_read(&dev->power.usage_count) > 1)
-		return -EBUSY;
+	if (atomic_read(&dev->power.usage_count) > 1) {
+		ret = -EBUSY;
+		goto fail;
+	}
 #endif
 
 	if (!g->power_on)
@@ -1405,7 +1410,7 @@ static int gk20a_pm_suspend(struct device *dev)
 
 	ret = gk20a_pm_runtime_suspend(dev);
 	if (ret)
-		return ret;
+		goto fail;
 
 	if (platform->suspend)
 		platform->suspend(dev);
@@ -1413,12 +1418,22 @@ static int gk20a_pm_suspend(struct device *dev)
 	g->suspended = true;
 
 	return 0;
+
+fail:
+	if (platform->user_railgate_disabled)
+		gk20a_busy_noresume(dev);
+
+	return ret;
 }
 
 static int gk20a_pm_resume(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
+
+	if (platform->user_railgate_disabled)
+		gk20a_busy_noresume(dev);
 
 	if (!g->suspended)
 		return 0;
@@ -1711,6 +1726,11 @@ fail:
 	return ret < 0 ? ret : 0;
 }
 
+void gk20a_idle_nosuspend(struct device *dev)
+{
+	pm_runtime_put_noidle(dev);
+}
+
 void gk20a_idle(struct device *dev)
 {
 	if (pm_runtime_enabled(dev)) {
@@ -1783,6 +1803,7 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 	unsigned long timeout = jiffies +
 		msecs_to_jiffies(GK20A_WAIT_FOR_IDLE_MS);
 	int ref_cnt;
+	int target_ref_cnt = 0;
 	bool is_railgated;
 	int err = 0;
 
@@ -1802,15 +1823,25 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 	 */
 	mutex_unlock(&platform->railgate_lock);
 	pm_runtime_get_sync(dev);
+
+	/*
+	 * One refcount taken in this API
+	 * If User disables rail gating, we take one more
+	 * extra refcount
+	 */
+	if (platform->user_railgate_disabled)
+		target_ref_cnt = 2;
+	else
+		target_ref_cnt = 1;
 	mutex_lock(&platform->railgate_lock);
 
 	/* check and wait until GPU is idle (with a timeout) */
 	do {
 		msleep(1);
 		ref_cnt = atomic_read(&dev->power.usage_count);
-	} while (ref_cnt != 1 && time_before(jiffies, timeout));
+	} while (ref_cnt != target_ref_cnt && time_before(jiffies, timeout));
 
-	if (ref_cnt != 1) {
+	if (ref_cnt != target_ref_cnt) {
 		gk20a_err(dev, "failed to idle - refcount %d != 1\n",
 			ref_cnt);
 		goto fail_drop_usage_count;

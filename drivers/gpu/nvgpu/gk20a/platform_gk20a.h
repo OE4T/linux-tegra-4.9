@@ -44,6 +44,9 @@ struct gk20a_platform {
 	/* Should be populated at probe. */
 	bool can_railgate;
 
+	/* Set by User while disabling railgating */
+	bool user_railgate_disabled;
+
 	/* Should be populated at probe. */
 	bool can_elpg;
 

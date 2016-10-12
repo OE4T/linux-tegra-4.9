@@ -2182,12 +2182,16 @@ int clk_mclkseq_init_mclk_gddr5(struct gk20a *g)
 {
 	struct clk_mclk_state *mclk;
 	int status;
+	struct clk_set_info *p5_info;
+	struct clk_set_info *p0_info;
+
 
 	gk20a_dbg_fn("");
 
 	mclk = &g->clk_pmu.clk_mclk;
 
-	mutex_init(&mclk->mclk_mutex);
+	mutex_init(&mclk->mclk_lock);
+	mutex_init(&mclk->data_lock);
 
 	/* FBPA gain WAR */
 	gk20a_writel(g, fb_fbpa_fbio_iref_byte_rx_ctrl_r(), 0x22222222);
@@ -2202,7 +2206,23 @@ int clk_mclkseq_init_mclk_gddr5(struct gk20a *g)
 	/* Load RAM pattern */
 	mclk_memory_load_training_pattern(g);
 
-	mclk->vreg_buf = kzalloc((sizeof(u32) * VREG_COUNT), GFP_KERNEL);
+	p5_info = pstate_get_clk_set_info(g,
+			CTRL_PERF_PSTATE_P5, clkwhich_mclk);
+	if (!p5_info)
+		return -EINVAL;
+
+	p0_info = pstate_get_clk_set_info(g,
+			CTRL_PERF_PSTATE_P0, clkwhich_mclk);
+	if (!p0_info)
+		return -EINVAL;
+
+
+	mclk->p5_min = p5_info->min_mhz;
+	mclk->p0_min = p0_info->min_mhz;
+
+
+	mclk->vreg_buf = kcalloc(VREG_COUNT,
+		sizeof(u32), GFP_KERNEL);
 	if (!mclk->vreg_buf) {
 		gk20a_err(dev_from_gk20a(g),
 				"unable to allocate memory for VREG");
@@ -2242,15 +2262,13 @@ int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, u16 val)
 
 	mclk = &g->clk_pmu.clk_mclk;
 
-	mutex_lock(&mclk->mclk_mutex);
+	mutex_lock(&mclk->mclk_lock);
 
 	if (!mclk->init)
 		goto exit_status;
 
-	/* TODO thia should be done according to VBIOS tables */
-
-	speed = (val <= MCLK_LOW_SPEED_LIMIT) ? gk20a_mclk_low_speed :
-		(val <= MCLK_MID_SPEED_LIMIT) ? gk20a_mclk_mid_speed :
+	speed = (val < mclk->p5_min) ? gk20a_mclk_low_speed :
+		(val < mclk->p0_min) ? gk20a_mclk_mid_speed :
 						gk20a_mclk_high_speed;
 
 
@@ -2341,7 +2359,7 @@ int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, u16 val)
 			&seq_completion_status, 0);
 	if (seq_completion_status != 0) {
 		gk20a_err(dev_from_gk20a(g),
-			"seq_scrip update failed");
+			"seq_script update failed");
 		status = -EBUSY;
 		goto exit_status;
 	}
@@ -2350,6 +2368,8 @@ int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, u16 val)
 
 #ifdef CONFIG_DEBUG_FS
 	g->ops.read_ptimer(g, &t1);
+
+	mutex_lock(&mclk->data_lock);
 	mclk->switch_num++;
 
 	if (mclk->switch_num == 1) {
@@ -2372,10 +2392,11 @@ int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, u16 val)
 		mclk->switch_std +=
 			(curr - mclk->switch_avg) * (curr - prev_avg);
 	}
+	mutex_unlock(&mclk->data_lock);
 #endif
 exit_status:
 
-	mutex_unlock(&mclk->mclk_mutex);
+	mutex_unlock(&mclk->mclk_lock);
 	return status;
 }
 
@@ -2387,6 +2408,9 @@ static int mclk_debug_speed_set(void *data, u64 val)
 
 	mclk = &g->clk_pmu.clk_mclk;
 
+	/* This is problematic because it can interrupt the arbiter
+	 * and send it to sleep. we need to consider removing this
+	 */
 	if (mclk->change)
 		return mclk->change(g, (u16) val);
 	return 0;
@@ -2410,13 +2434,13 @@ static int mclk_switch_stats_show(struct seq_file *s, void *unused)
 	mclk = &g->clk_pmu.clk_mclk;
 
 	/* Make copy of structure to reduce time with lock held */
-	mutex_lock(&mclk->mclk_mutex);
+	mutex_lock(&mclk->data_lock);
 	std = mclk->switch_std;
 	avg = mclk->switch_avg;
 	max = mclk->switch_max;
 	min = mclk->switch_min;
 	num = mclk->switch_num;
-	mutex_unlock(&mclk->mclk_mutex);
+	mutex_unlock(&mclk->data_lock);
 
 	tmp = std;
 	do_div(tmp, num);

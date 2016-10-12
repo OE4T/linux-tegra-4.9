@@ -22,15 +22,14 @@ enum gk20a_mclk_speed {
 	gk20a_mclk_high_speed,
 };
 
-#define MCLK_LOW_SPEED_LIMIT 405
-#define MCLK_MID_SPEED_LIMIT 810
-#define MCLK_HIGH_SPEED_LIMIT 3003
-
-#define DEFAULT_BOOT_MCLK_SPEED MCLK_HIGH_SPEED_LIMIT
-
 struct clk_mclk_state {
 	enum gk20a_mclk_speed speed;
-	struct mutex mclk_mutex;
+	struct mutex mclk_lock;
+	struct mutex data_lock;
+
+	u16 p5_min;
+	u16 p0_min;
+
 	void *vreg_buf;
 	bool init;
 

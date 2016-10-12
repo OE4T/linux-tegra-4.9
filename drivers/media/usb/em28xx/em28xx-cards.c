@@ -2837,7 +2837,7 @@ static int em28xx_hint_board(struct em28xx *dev)
 			pr_err("This method is not 100%% failproof.\n");
 			pr_err("If the board were missdetected, please email this log to:\n");
 			pr_err("\tV4L Mailing List  <linux-media@vger.kernel.org>\n");
-			pr_err("Board detected as %s\n",
+			pr_err("Board detected as %s\n", em28xx_boards[dev->model].name);
 			return 0;
 		}
 	}
@@ -2864,7 +2864,7 @@ static int em28xx_hint_board(struct em28xx *dev)
 			pr_err("This method is not 100%% failproof.\n");
 			pr_err("If the board were missdetected, please email this log to:\n");
 			pr_err("\tV4L Mailing List  <linux-media@vger.kernel.org>\n");
-			pr_err("Board detected as %s\n",
+			pr_err("Board detected as %s\n", em28xx_boards[dev->model].name);
 
 			return 0;
 		}
@@ -2879,8 +2879,7 @@ static int em28xx_hint_board(struct em28xx *dev)
 
 	pr_err("Here is a list of valid choices for the card=<n> insmod option:\n");
 	for (i = 0; i < em28xx_bcount; i++) {
-		pr_err("    card=%d -> %s\n",
-			      i, em28xx_boards[i].name);
+		pr_err("    card=%d -> %s\n", i, em28xx_boards[i].name);
 	}
 	return -1;
 }
@@ -2925,7 +2924,7 @@ static void em28xx_card_setup(struct em28xx *dev)
 	}
 
 	pr_info("Identified as %s (card=%d)\n",
-		    dev->board.name, dev->model);
+		dev->board.name, dev->model);
 
 	dev->tuner_type = em28xx_boards[dev->model].tuner_type;
 
@@ -3315,14 +3314,12 @@ static int em28xx_init_dev(struct em28xx *dev, struct usb_device *udev,
 			dev->eeprom_addrwidth_16bit = 1;
 			break;
 		default:
-			printk(KERN_INFO DRIVER_NAME
-			       ": unknown em28xx chip ID (%d)\n", dev->chip_id);
+			pr_info("unknown em28xx chip ID (%d)\n", dev->chip_id);
 		}
 	}
 
 	if (chip_name != default_chip_name)
-		printk(KERN_INFO DRIVER_NAME
-		       ": chip ID is %s\n", chip_name);
+		pr_info("chip ID is %s\n", chip_name);
 
 	/*
 	 * For em2820/em2710, the name may change latter, after checking
@@ -3347,7 +3344,7 @@ static int em28xx_init_dev(struct em28xx *dev, struct usb_device *udev,
 		/* Resets I2C speed */
 		retval = em28xx_write_reg(dev, EM28XX_R06_I2C_CLK, dev->board.i2c_speed);
 		if (retval < 0) {
-			pr_err("%s: em28xx_write_reg failed! retval [%d]\n",
+			pr_err("%s: em28xx_write_reg failed! retval [%d]\n", __func__, retval);
 			return retval;
 		}
 	}
@@ -3361,7 +3358,7 @@ static int em28xx_init_dev(struct em28xx *dev, struct usb_device *udev,
 		retval = em28xx_i2c_register(dev, 0, EM28XX_I2C_ALGO_EM28XX);
 	if (retval < 0) {
 		pr_err("%s: em28xx_i2c_register bus 0 - error [%d]!\n",
-			      __func__, retval);
+		       __func__, retval);
 		return retval;
 	}
 
@@ -3375,7 +3372,7 @@ static int em28xx_init_dev(struct em28xx *dev, struct usb_device *udev,
 						     EM28XX_I2C_ALGO_EM28XX);
 		if (retval < 0) {
 			pr_err("%s: em28xx_i2c_register bus 1 - error [%d]!\n",
-				      __func__, retval);
+			       __func__, retval);
 
 			em28xx_i2c_unregister(dev, 0);
 
@@ -3414,7 +3411,7 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 		nr = find_first_zero_bit(em28xx_devused, EM28XX_MAXBOARDS);
 		if (nr >= EM28XX_MAXBOARDS) {
 			/* No free device slots */
-			printk(DRIVER_NAME ": Supports only %i em28xx boards.\n",
+			pr_err("Driver supports up to %i em28xx boards.\n",
 			       EM28XX_MAXBOARDS);
 			retval = -ENOMEM;
 			goto err_no_slot;
@@ -3484,8 +3481,7 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 					if (usb_endpoint_xfer_isoc(e)) {
 						has_vendor_audio = true;
 					} else {
-						printk(KERN_INFO DRIVER_NAME
-						": error: skipping audio endpoint 0x83, because it uses bulk transfers !\n");
+						pr_err("error: skipping audio endpoint 0x83, because it uses bulk transfers !\n");
 					}
 					break;
 				case 0x84:
@@ -3558,9 +3554,7 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 		speed = "unknown";
 	}
 
-	printk(KERN_INFO DRIVER_NAME
-		": New device %s %s @ %s Mbps "
-		"(%04x:%04x, interface %d, class %d)\n",
+	pr_info("New device %s %s @ %s Mbps (%04x:%04x, interface %d, class %d)\n",
 		udev->manufacturer ? udev->manufacturer : "",
 		udev->product ? udev->product : "",
 		speed,
@@ -3575,9 +3569,8 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 	 * not enough even for most Digital TV streams.
 	 */
 	if (udev->speed != USB_SPEED_HIGH && disable_usb_speed_check == 0) {
-		printk(DRIVER_NAME ": Device initialization failed.\n");
-		printk(DRIVER_NAME ": Device must be connected to a high-speed"
-		       " USB 2.0 port.\n");
+		pr_err("Device initialization failed.\n");
+		pr_err("Device must be connected to a high-speed USB 2.0 port.\n");
 		retval = -ENODEV;
 		goto err_free;
 	}
@@ -3590,8 +3583,7 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 	dev->ifnum = ifnum;
 
 	if (has_vendor_audio) {
-		printk(KERN_INFO DRIVER_NAME ": Audio interface %i found %s\n",
-		       ifnum, "(Vendor Class)");
+		pr_info("Audio interface %i found (Vendor Class)\n", ifnum);
 		dev->usb_audio_type = EM28XX_USB_AUDIO_VENDOR;
 	}
 	/* Checks if audio is provided by a USB Audio Class interface */
@@ -3601,24 +3593,22 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 		if (uif->altsetting[0].desc.bInterfaceClass == USB_CLASS_AUDIO) {
 			if (has_vendor_audio)
 				pr_err("em28xx: device seems to have vendor AND usb audio class interfaces !\n"
-					   "\t\tThe vendor interface will be ignored. Please contact the developers <linux-media@vger.kernel.org>\n");
+				       "\t\tThe vendor interface will be ignored. Please contact the developers <linux-media@vger.kernel.org>\n");
 			dev->usb_audio_type = EM28XX_USB_AUDIO_CLASS;
 			break;
 		}
 	}
 
 	if (has_video)
-		printk(KERN_INFO DRIVER_NAME
-		       ": Video interface %i found:%s%s\n",
-		       ifnum,
-		       dev->analog_ep_bulk ? " bulk" : "",
-		       dev->analog_ep_isoc ? " isoc" : "");
+		pr_info("Video interface %i found:%s%s\n",
+			ifnum,
+			dev->analog_ep_bulk ? " bulk" : "",
+			dev->analog_ep_isoc ? " isoc" : "");
 	if (has_dvb)
-		printk(KERN_INFO DRIVER_NAME
-		       ": DVB interface %i found:%s%s\n",
-		       ifnum,
-		       dev->dvb_ep_bulk ? " bulk" : "",
-		       dev->dvb_ep_isoc ? " isoc" : "");
+		pr_info("DVB interface %i found:%s%s\n",
+			ifnum,
+			dev->dvb_ep_bulk ? " bulk" : "",
+			dev->dvb_ep_isoc ? " isoc" : "");
 
 	dev->num_alt = interface->num_altsetting;
 
@@ -3647,8 +3637,7 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 	/* Disable V4L2 if the device doesn't have a decoder */
 	if (has_video &&
 	    dev->board.decoder == EM28XX_NODECODER && !dev->board.is_webcam) {
-		printk(DRIVER_NAME
-		       ": Currently, V4L2 is not supported on this model\n");
+		pr_err("Currently, V4L2 is not supported on this model\n");
 		has_video = false;
 		dev->has_video = false;
 	}
@@ -3658,13 +3647,13 @@ static int em28xx_usb_probe(struct usb_interface *interface,
 		if (!dev->analog_ep_isoc || (try_bulk && dev->analog_ep_bulk))
 			dev->analog_xfer_bulk = 1;
 		pr_info("analog set to %s mode.\n",
-			    dev->analog_xfer_bulk ? "bulk" : "isoc");
+			dev->analog_xfer_bulk ? "bulk" : "isoc");
 	}
 	if (has_dvb) {
 		if (!dev->dvb_ep_isoc || (try_bulk && dev->dvb_ep_bulk))
 			dev->dvb_xfer_bulk = 1;
 		pr_info("dvb set to %s mode.\n",
-			    dev->dvb_xfer_bulk ? "bulk" : "isoc");
+			dev->dvb_xfer_bulk ? "bulk" : "isoc");
 	}
 
 	kref_init(&dev->ref);

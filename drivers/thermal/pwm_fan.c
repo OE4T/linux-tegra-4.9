@@ -39,6 +39,7 @@
 #include <linux/gfp.h>
 #include <linux/of_device.h>
 #include <linux/of.h>
+#include <linux/of_gpio.h>
 #include <linux/regulator/consumer.h>
 
 struct fan_dev_data {
@@ -730,6 +731,7 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	struct device_node *data_node = NULL;
 	u32 value;
 	int pwm_fan_gpio;
+	int tach_gpio;
 	int gpio_free_flag = 0;
 
 	if (!pdev)
@@ -764,8 +766,9 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	of_err |= of_property_read_string(node, "name", &fan_data->name);
 	pr_info("FAN dev name: %s\n", fan_data->name);
 
-	of_err |= of_property_read_u32(data_node, "pwm_gpio", &value);
-	pwm_fan_gpio = (int)value;
+	pwm_fan_gpio = of_get_named_gpio(data_node, "pwm_gpio", 0);
+	if (pwm_fan_gpio < 0)
+		of_err |= pwm_fan_gpio;
 
 	err = gpio_request(pwm_fan_gpio, "pwm-fan");
 	if (err < 0) {
@@ -801,11 +804,14 @@ static int pwm_fan_probe(struct platform_device *pdev)
 		goto rpm_alloc_fail;
 	}
 
-	if (of_property_read_u32(data_node, "tach_gpio", &value)) {
+	tach_gpio = of_get_named_gpio(data_node, "tach_gpio", 0);
+	if (tach_gpio < 0) {
 		fan_data->tach_gpio = -1;
 		pr_info("FAN: can't find tach_gpio\n");
-	} else
-		fan_data->tach_gpio = (int)value;
+	} else {
+		fan_data->tach_gpio = tach_gpio;
+		value = tach_gpio;
+	}
 
 	/* rpm array */
 	rpm_data = devm_kzalloc(&pdev->dev,

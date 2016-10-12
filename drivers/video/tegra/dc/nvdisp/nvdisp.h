@@ -53,10 +53,10 @@ int tegra_nvdisp_set_csc(struct tegra_dc_win *win, struct tegra_dc_csc_v2 *csc);
 
 void tegra_nvdisp_program_imp_results(struct tegra_dc *dc);
 
-void tegra_nvdisp_program_bandwidth(struct tegra_dc *dc, u32 proposed_bw,
-	u32 proposed_latency, u32 proposed_hubclk, bool before_win_udpate);
-int tegra_nvdisp_negotiate_reserved_bw(struct tegra_dc *dc, u32 proposed_bw,
-	u32 proposed_latency);
+int tegra_nvdisp_program_bandwidth(struct tegra_dc *dc, u32 new_iso_bw,
+	u32 new_total_bw, u32 new_emc, u32 new_hubclk, bool before_win_update);
+int tegra_nvdisp_negotiate_reserved_bw(struct tegra_dc *dc, u32 new_iso_bw,
+	u32 new_total_bw, u32 new_emc, u32 new_hubclk);
 void tegra_nvdisp_init_bandwidth(struct tegra_dc *dc);
 void tegra_nvdisp_clear_bandwidth(struct tegra_dc *dc);
 #endif

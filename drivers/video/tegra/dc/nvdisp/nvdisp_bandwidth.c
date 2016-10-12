@@ -15,6 +15,7 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/platform/tegra/bwmgr_mc.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/platform/tegra/isomgr.h>
 #include <linux/platform/tegra/latency_allowance.h>
@@ -26,55 +27,69 @@
 #include "nvdisp.h"
 
 #ifdef CONFIG_TEGRA_ISOMGR
+
 /*
- * NVDISP_BW_DEDI_BW_KBPS was calculated with the following settings:
- * - 1 active head:
- *	- 4096x2160@60p
- * - 1 active window on that head:
- *	- Fullscreen
- *	- 4BPP packed
- *	- BLx4
- *	- LUT disabled
- *	- Scaling disabled
- *	- Rotation disabled
- * - Cursor active on that head:
- *	- 4BPP packed
- *	- Pitch
- *	- LUT disabled
+ * The following configs were calculated offline with these common settings:
  *
- * NVDISP_BW_MAX_BW_KBPS, NVDISP_BW_TOTAL_MC_LATENCY, and
- * NVDISP_BW_REQ_HUBCLK_HZ were calculated with these settings:
  * - 3 active heads:
  *	- 4096x2160@60p
- * - 2 active windows on each head:
- *	- Fullscreen
- *	- 4BPP packed
- *	- BLx4
- *	- LUT disabled
- *	- Scaling disabled
- *	- Rotation disabled
- * - Cursor active on each head:
+ * - 1 active cursor per head:
  *	- 4BPP packed
  *	- Pitch
  *	- LUT disabled
- *
- * Refer to setDefaultSysParams in libnvimp/nvimp.c for the default sys param
- * values that were used.
- *
- * The below values are rounded to the nearest unit.
+ * - N active windows across all heads:
+ *	- 4BPP packed
+ *	- BLx4
+ *	- LUT disabled
+ *	- Horizontal/vertical scaling disabled
+ *	- Compression disabled
+ *	- Rotation disabled
+ *	- Fullscreen
  */
-
-/* Minimum dedicated bw that is allocated to display (KB/s) */
-#define NVDISP_BW_DEDI_BW_KBPS		2535000
-
-/* Maximum bw that display could potentially need (KB/s) */
-#define NVDISP_BW_MAX_BW_KBPS		15207000
-
-/* Total MC request latency that display can tolerate (usec) */
-#define NVDISP_BW_TOTAL_MC_LATENCY	1
-
-/* Required hubclk rate for max config (Hz) */
-#define NVDISP_BW_REQ_HUBCLK_HZ		362000000
+static struct nvdisp_bandwidth_config max_bw_configs[] = {
+	/* 1 window */
+	{
+		.iso_bw = 3136300,		/* 3136.3   MB/s */
+		.total_bw = 2851200,		/* 2851.2   MB/s */
+		.emc_la_floor = 102000000,	/* 102      MHz  */
+		.hubclk = 169820000,		/* 169.82   MHz  */
+	},
+	/* 2 windows */
+	{
+		.iso_bw = 5924200,		/* 5924.2   MB/s */
+		.total_bw = 5385600,		/* 5385.6   MB/s */
+		.emc_la_floor = 204000000,	/* 204      MHz  */
+		.hubclk = 207380000,		/* 207.38   MHz  */
+	},
+	/* 3 windows */
+	{
+		.iso_bw = 8363500,		/* 8363.5   MB/s */
+		.total_bw = 7603200,		/* 7603.2   MB/s */
+		.emc_la_floor = 332800000,	/* 332.8    MHz  */
+		.hubclk = 244940000,		/* 244.94   MHz  */
+	},
+	/* 4 windows */
+	{
+		.iso_bw = 11151400,		/* 11151.14 MB/s */
+		.total_bw = 10137600,		/* 10137.6  MB/s */
+		.emc_la_floor = 332800000,	/* 332.8    MHz  */
+		.hubclk = 282500000,		/* 282.5    MHz  */
+	},
+	/* 5 windows */
+	{
+		.iso_bw = 13939200,		/* 13939.2  MB/s */
+		.total_bw = 12672000,		/* 12672    MB/s */
+		.emc_la_floor = 531200000,	/* 531.2    MHz  */
+		.hubclk = 320060000,		/* 320.06   MHz  */
+	},
+	/* 6 windows */
+	{
+		.iso_bw = 16727000,		/* 16727    MB/s */
+		.total_bw = 15206400,		/* 15206.4  MB/s */
+		.emc_la_floor = 665600000,	/* 665.6    MHz  */
+		.hubclk = 357620000,		/* 357.62   MHz  */
+	},
+};
 
 /* Output id that we pass to tegra_dc_ext_process_bandwidth_negotiate */
 #define NVDISP_BW_OUTPUT_ID		0
@@ -88,7 +103,9 @@ static u32 tegra_nvdisp_get_max_pending_bw(struct tegra_dc *dc)
 	u32 max_pending_bw = 0;
 
 	list_for_each_entry(settings, &nvdisp_imp_settings_queue, imp_node) {
-		u32 pending_bw = settings->ext_settings.required_total_bw_kbps;
+		u32 pending_bw =
+			settings->ext_settings.total_display_iso_bw_kbps;
+
 		if (pending_bw > max_pending_bw)
 			max_pending_bw = pending_bw;
 	}
@@ -96,10 +113,13 @@ static u32 tegra_nvdisp_get_max_pending_bw(struct tegra_dc *dc)
 	return max_pending_bw;
 }
 
-static void tegra_dc_set_latency_allowance(u32 bw)
+static int tegra_nvdisp_set_latency_allowance(u32 bw, u32 emc_freq)
 {
 	struct dc_to_la_params disp_params;
-	unsigned long emc_freq_hz = tegra_bwmgr_get_emc_rate();
+	int ret = 0;
+
+	if (bw == 0)
+		return ret;
 
 	/* Zero out this struct since it's ignored by the LA/PTSA driver. */
 	memset(&disp_params, 0, sizeof(disp_params));
@@ -108,86 +128,163 @@ static void tegra_dc_set_latency_allowance(u32 bw)
 	if (bw != U32_MAX)
 		bw = bw / 1000 + 1;
 
-	if (tegra_set_disp_latency_allowance(TEGRA_LA_NVDISPLAYR,
-					emc_freq_hz,
+	return tegra_set_disp_latency_allowance(TEGRA_LA_NVDISPLAYR,
+					emc_freq,
 					bw,
-					disp_params))
-		pr_err("Failed to set latency allowance\n");
+					disp_params);
 }
 
-void tegra_nvdisp_program_bandwidth(struct tegra_dc *dc,
-				u32 proposed_bw,
-				u32 proposed_latency,
-				u32 proposed_hubclk,
+int tegra_nvdisp_program_bandwidth(struct tegra_dc *dc,
+				u32 new_iso_bw,
+				u32 new_total_bw,
+				u32 new_emc,
+				u32 new_hubclk,
 				bool before_win_update)
 {
 	/*
-	 * This function handles two cases:
-	 * A) Bw and LA/PTSA changes take effect immediately. Before we program
-	 *    the window state, we must make sure that the effective bw can
-	 *    satisfy both the current and upcoming frames.
+	 * This function is responsible for updating the ISO bw, EMC floor,
+	 * LA/PTSA, and hubclk values both before and after the current window
+	 * update. In the two below cases, let X represent the current frame
+	 * configuration and X' represent the new proposed frame configuration.
 	 *
-	 *    Note that the bw we might potentially realize during this step is
-	 *    just whatever has been reserved at this point, and is not
-	 *    necessarily the proposed bw. However, the reserved bw is
-	 *    guaranteed to be sufficient since we always check against the max
-	 *    pending bw.
-	 *
-	 *    If we end up increasing the realized bw, increase the hubclk rate
-	 *    after.
-	 * B) After the window state has promoted, we need to check if we can
-	 *    decrease the reserved and realized bw. We can safely decrease
-	 *    these values if the target bw is still enough to satisfy all the
-	 *    pending requests.
-	 *
-	 *    If we end up decreasing the realized bw, decrease the hubclk rate
-	 *    before.
+	 * A) Before the window update actually occurs, display needs to ensure
+	 *    that the four aforementioned values are compatible with both X and
+	 *    X'. This is due to the fact that any updates to these values take
+	 *    effect immediately and aren't latched to any kind of frame
+	 *    boundary. In order to update these values appropriately, display
+	 *    will simply program the max across both X and X'.
+	 * B) After the window update occurs and the new state has promoted,
+	 *    display can program all the new values associated with X' as long
+	 *    as they don't violate the ISO bw requirements that are currently
+	 *    in place.
 	 */
 
-	u32 realized_bw = ihub_bw_info.realized_bw_kbps;
-	u32 new_bw_to_realize = 0;
-	u32 latency = 0;
-	bool update_realized_bw = false;
+	struct nvdisp_bandwidth_config *cur_config = &ihub_bw_info.cur_config;
+	u32 final_iso_bw = cur_config->iso_bw;
+	u32 final_total_bw = cur_config->total_bw;
+	u32 final_emc = cur_config->emc_la_floor;
+	u32 final_hubclk = cur_config->hubclk;
+	bool update_la_ptsa = false;
+	int ret = 0;
 
-	if (IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle))
-		return;
+	if (IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle) ||
+				IS_ERR_OR_NULL(ihub_bw_info.bwmgr_handle)) {
+		ret = -EINVAL;
+		goto exit;
+	}
 
-	if (before_win_update && proposed_bw > realized_bw) { /* Case A */
-		new_bw_to_realize = ihub_bw_info.reserved_bw_kbps;
-		update_realized_bw = true;
-	} else if (!before_win_update) { /* Case B */
+	if (before_win_update) { /* Case A */
+		bool update_bw = false;
+
+		/*
+		 * ISO clients can only realize exactly what they have already
+		 * reserved. The ISO bw that display has currently reserved is
+		 * always guaranteed to be at least the bw needed for the
+		 * proposed configuration since we aggregate bw reservations
+		 * during PROPOSE.
+		 */
+		if (new_iso_bw > cur_config->iso_bw) {
+			final_iso_bw = ihub_bw_info.reserved_bw;
+			update_bw = true;
+		}
+
+		final_emc = max(final_emc, new_emc);
+		if (update_bw)
+			final_emc = max(final_emc, ihub_bw_info.emc_at_res_bw);
+
+		final_hubclk = max(final_hubclk, new_hubclk);
+		if (update_bw)
+			final_hubclk =
+			max(final_hubclk, ihub_bw_info.hubclk_at_res_bw);
+	} else { /* Case B */
 		u32 max_bw = tegra_nvdisp_get_max_pending_bw(dc);
-		if (proposed_bw >= max_bw && proposed_bw < realized_bw) {
+		if (new_iso_bw >= max_bw &&
+					new_iso_bw < cur_config->iso_bw) {
+			/*
+			 * Client's latency tolerance is ignored by isomgr. Pass
+			 * in a dummy value of 1000 usec.
+			 */
 			if (!tegra_isomgr_reserve(ihub_bw_info.isomgr_handle,
-							proposed_bw,
-							proposed_latency)) {
-				WARN_ONCE(1, "tegra_isomgr_reserve failed\n");
-				return;
+						new_iso_bw,
+						1000)) {
+				pr_err("%s: failed to reserve %u KB/s\n",
+					__func__, new_iso_bw);
+				ret = -EINVAL;
+				goto exit;
 			}
 
-			ihub_bw_info.reserved_bw_kbps = proposed_bw;
-			new_bw_to_realize = proposed_bw;
-			update_realized_bw = true;
+			ihub_bw_info.reserved_bw = new_iso_bw;
+			ihub_bw_info.emc_at_res_bw = new_emc;
+			ihub_bw_info.hubclk_at_res_bw = new_hubclk;
+			cur_config->total_bw = new_total_bw;
+
+			final_iso_bw = new_iso_bw;
+			final_total_bw = new_total_bw;
+			final_emc = new_emc;
+			final_hubclk = new_hubclk;
 		}
 	}
 
-	if (update_realized_bw) {
-		/* Case B */
-		if (new_bw_to_realize < realized_bw)
-			clk_set_rate(hubclk, proposed_hubclk);
-
-		latency = tegra_isomgr_realize(ihub_bw_info.isomgr_handle);
-		if (!latency) {
-			WARN_ONCE(!latency, "tegra_isomgr_realize failed\n");
-			return;
-		}
-		tegra_dc_set_latency_allowance(new_bw_to_realize);
-		ihub_bw_info.realized_bw_kbps = new_bw_to_realize;
-
-		/* Case A */
-		if (new_bw_to_realize > realized_bw)
-			clk_set_rate(hubclk, proposed_hubclk);
+	if (before_win_update && final_hubclk != cur_config->hubclk) {
+		clk_set_rate(hubclk, final_hubclk);
+		cur_config->hubclk = final_hubclk;
 	}
+
+	if (final_iso_bw != cur_config->iso_bw) {
+		if (!tegra_isomgr_realize(ihub_bw_info.isomgr_handle)) {
+			pr_err("%s: failed to realize %u KB/s\n", __func__,
+				final_iso_bw);
+			ret = -EINVAL;
+			goto exit;
+		}
+
+		cur_config->iso_bw = final_iso_bw;
+		update_la_ptsa = true;
+	}
+
+	if (final_emc != cur_config->emc_la_floor) {
+		/*
+		 * tegra_bwmgr_set_emc() takes in the DRAM frequency. We need
+		 * to use the conversion factor to properly convert the required
+		 * EMC frequency to its corresponding DRAM frequency.
+		 */
+		int freq_factor = bwmgr_get_emc_to_dram_freq_factor();
+
+		ret = tegra_bwmgr_set_emc(ihub_bw_info.bwmgr_handle,
+					final_emc * freq_factor,
+					TEGRA_BWMGR_SET_EMC_FLOOR);
+		if (ret) {
+			pr_err("%s: failed to set EMC floor=%u Hz\n", __func__,
+				final_emc);
+			goto exit;
+		}
+
+		cur_config->emc_la_floor = final_emc;
+		update_la_ptsa = true;
+	}
+
+	if (update_la_ptsa) {
+		/*
+		 * If either our ISO bw requirement or the EMC floor has
+		 * changed, we need to update LA/PTSA. The bw value that we pass
+		 * to the LA/PTSA driver should not include the catchup factor.
+		 */
+		ret = tegra_nvdisp_set_latency_allowance(final_total_bw,
+								final_emc);
+		if (ret) {
+			pr_err("%s: LA/PTSA failed w/ bw=%u KB/s,freq=%u Hz\n",
+				__func__, final_total_bw, final_emc);
+			goto exit;
+		}
+	}
+
+	if (!before_win_update && final_hubclk != cur_config->hubclk) {
+		clk_set_rate(hubclk, final_hubclk);
+		cur_config->hubclk = final_hubclk;
+	}
+
+exit:
+	return ret;
 }
 
 void tegra_nvdisp_init_bandwidth(struct tegra_dc *dc)
@@ -196,80 +293,113 @@ void tegra_nvdisp_init_bandwidth(struct tegra_dc *dc)
 	 * Use the max config settings. These values will eventually be adjusted
 	 * through IMP, if the client supports it.
 	 */
-
-	u32 proposed_bw = NVDISP_BW_MAX_BW_KBPS;
-	u32 proposed_latency = NVDISP_BW_TOTAL_MC_LATENCY;
-	u32 proposed_hubclk = NVDISP_BW_REQ_HUBCLK_HZ;
+	struct nvdisp_bandwidth_config *max_bw_config = ihub_bw_info.max_config;
+	u32 new_iso_bw = max_bw_config->iso_bw;
+	u32 new_total_bw = max_bw_config->total_bw;
+	u32 new_emc = max_bw_config->emc_la_floor;
+	u32 new_hubclk = max_bw_config->hubclk;
 	bool before_win_update = true;
 
-	tegra_nvdisp_negotiate_reserved_bw(dc, proposed_bw, proposed_latency);
+	tegra_nvdisp_negotiate_reserved_bw(dc,
+				new_iso_bw,
+				new_total_bw,
+				new_emc,
+				new_hubclk);
 	tegra_nvdisp_program_bandwidth(dc,
-				proposed_bw,
-				proposed_latency,
-				proposed_hubclk,
+				new_iso_bw,
+				new_total_bw,
+				new_emc,
+				new_hubclk,
 				before_win_update);
 }
 
 void tegra_nvdisp_clear_bandwidth(struct tegra_dc *dc)
 {
-	u32 proposed_bw = 0;
-	u32 proposed_latency = 1000;
-	u32 proposed_hubclk = 0;
+	u32 new_iso_bw = 0;
+	u32 new_total_bw = 0;
+	u32 new_emc = 0;
+	u32 new_hubclk = 0;
 	bool before_win_update = false;
 
 	tegra_nvdisp_program_bandwidth(dc,
-				proposed_bw,
-				proposed_latency,
-				proposed_hubclk,
+				new_iso_bw,
+				new_total_bw,
+				new_emc,
+				new_hubclk,
 				before_win_update);
 }
 
 /*
- * tegra_dc_calc_min_bandwidth - returns the minimum dedicated bw
+ * tegra_dc_calc_min_bandwidth - returns the minimum dedicated ISO bw
  *
  * @dc		dc instance
  *
- * @retval	minimum dedicated bw
+ * @retval	minimum dedicated ISO bw
  */
 long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
 {
-	return NVDISP_BW_DEDI_BW_KBPS;
+	long bw = 0;
+
+	if (ihub_bw_info.max_config)
+		bw = ihub_bw_info.max_config->iso_bw;
+
+	return bw;
 }
 
 int tegra_nvdisp_negotiate_reserved_bw(struct tegra_dc *dc,
-				u32 proposed_bw,
-				u32 proposed_latency)
+				u32 new_iso_bw,
+				u32 new_total_bw,
+				u32 new_emc,
+				u32 new_hubclk)
 {
 	/*
 	 * There are two possible cases:
-	 * A) If the proposed bw is greater than the available bw, fail the
-	 *    ioctl.
-	 * B) If the proposed bw is greater than the max pending bw, try to
-	 *    reserve the proposed bw. Else, the bw that we have currently
-	 *    reserved is already sufficient.
+	 * A) If the proposed ISO bw is greater than the available bw, return an
+	 *    error.
+	 * B) If the proposed ISO bw is greater than the bw that is currently
+	 *    reserved, try to reserve the proposed bw. Else, the current
+	 *    reserved bw is already sufficient.
 	 *
 	 * This function is only responsible for reserving bw, NOT realizing it.
 	 */
 
-	u32 max_pending_bw = 0;
+	int ret = 0;
 
-	if (IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle))
-		return -EINVAL;
-
-	if (proposed_bw > ihub_bw_info.available_bw) /* Case A */
-		return -E2BIG;
-
-	max_pending_bw = tegra_nvdisp_get_max_pending_bw(dc);
-	if (proposed_bw > max_pending_bw) { /* Case B */
-		if (!tegra_isomgr_reserve(ihub_bw_info.isomgr_handle,
-						proposed_bw,
-						proposed_latency))
-			return -EINVAL;
-
-		ihub_bw_info.reserved_bw_kbps = proposed_bw;
+	if (IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle) ||
+				IS_ERR_OR_NULL(ihub_bw_info.bwmgr_handle)) {
+		ret = -EINVAL;
+		goto exit;
 	}
 
-	return 0;
+	if (new_iso_bw > ihub_bw_info.available_bw) { /* Case A */
+		pr_err("%s: requested %u KB/s > available %u KB/s",
+			__func__, new_iso_bw, ihub_bw_info.available_bw);
+		ret = -E2BIG;
+		goto exit;
+	}
+
+	if (new_iso_bw > ihub_bw_info.reserved_bw) { /* Case B */
+		/*
+		 * Client's latency tolerance is ignored by isomgr. Pass in a
+		 * dummy value of 1000 usec.
+		 */
+		if (!tegra_isomgr_reserve(ihub_bw_info.isomgr_handle,
+						new_iso_bw,
+						1000)) {
+			pr_err("%s: failed to reserve %u KB/s\n", __func__,
+				new_iso_bw);
+			ret = -EINVAL;
+			goto exit;
+		}
+
+		ihub_bw_info.reserved_bw = new_iso_bw;
+		ihub_bw_info.emc_at_res_bw = new_emc;
+		ihub_bw_info.hubclk_at_res_bw = new_hubclk;
+		ihub_bw_info.cur_config.total_bw = new_total_bw;
+	}
+
+exit:
+	return ret;
 }
 
 static void tegra_nvdisp_bandwidth_renegotiate(void *p, u32 avail_bw)
@@ -277,94 +407,181 @@ static void tegra_nvdisp_bandwidth_renegotiate(void *p, u32 avail_bw)
 	struct tegra_dc_bw_data data;
 	struct nvdisp_isoclient_bw_info *bw_info = p;
 
-	if (WARN_ONCE(!bw_info, "bw_info is NULL!"))
+	if (!bw_info) {
+		pr_err("%s: bw_info is NULL!\n", __func__);
 		return;
+	}
 
-	if (IS_ERR_OR_NULL(bw_info->isomgr_handle))
+	if (IS_ERR_OR_NULL(bw_info->isomgr_handle) ||
+					IS_ERR_OR_NULL(bw_info->bwmgr_handle))
 		return;
 
 	mutex_lock(&tegra_nvdisp_lock);
-	if (bw_info->available_bw == avail_bw)
-		goto unlock_and_exit;
+
+	if (bw_info->available_bw == avail_bw) {
+		mutex_unlock(&tegra_nvdisp_lock);
+		return;
+	}
 
 	data.total_bw = tegra_isomgr_get_total_iso_bw();
 	data.avail_bw = avail_bw;
-	data.resvd_bw = bw_info->reserved_bw_kbps;
+	data.resvd_bw = bw_info->reserved_bw;
 
 	tegra_dc_ext_process_bandwidth_renegotiate(NVDISP_BW_OUTPUT_ID, &data);
 
 	bw_info->available_bw = avail_bw;
-unlock_and_exit:
+
 	mutex_unlock(&tegra_nvdisp_lock);
 }
 
 /*
- * tegra_nvdisp_isomgr_attach - save reference to ihub_bw_info
+ * tegra_nvdisp_bandwidth_attach - save reference to ihub_bw_info
  *
  * @dc	dc instance
  */
-void tegra_nvdisp_isomgr_attach(struct tegra_dc *dc)
+void tegra_nvdisp_bandwidth_attach(struct tegra_dc *dc)
 {
-	if (WARN_ONCE(!dc, "dc is NULL!"))
+	if (!dc) {
+		pr_err("%s: dc is NULL!\n", __func__);
 		return;
+	}
 
 	dc->ihub_bw_info = &ihub_bw_info;
 }
 
-/*
- * tegra_nvdisp_isomgr_register - register the IHUB ISO BW client
- *
- * Expected to be called only once in the init path.
- *
- * @client	ISO client id
- * @udedi_bw	dedicated bw needed by client
- *
- * @retval	0 on success
- * @retval	-ENOENT if unable to register with isomgr
- */
-int tegra_nvdisp_isomgr_register(enum tegra_iso_client client, u32 udedi_bw)
+static int tegra_nvdisp_bandwidth_register_max_config(
+					enum tegra_iso_client iso_client)
 {
-	int err = 0;
+	tegra_isomgr_handle isomgr_handle = NULL;
+	u32 max_emc_rate, emc_to_dram_factor;
+	int ret = 0, i;
 
-	mutex_lock(&tegra_nvdisp_lock);
+	/* DRAM frequency (Hz) */
+	max_emc_rate = tegra_bwmgr_get_max_emc_rate();
 
-	ihub_bw_info.isomgr_handle = tegra_isomgr_register(client, udedi_bw,
+	/* conversion factor */
+	emc_to_dram_factor = bwmgr_get_emc_to_dram_freq_factor();
+
+	/*
+	 * Start with the highest-bw config and continue to fallback until we
+	 * find one that works.
+	 */
+	ihub_bw_info.max_config = NULL;
+	for (i = ARRAY_SIZE(max_bw_configs) - 1; i >= 0; i--) {
+		struct nvdisp_bandwidth_config *cfg = &max_bw_configs[i];
+		u32 cfg_dram_freq = 0;
+
+		/*
+		 * Check that our dedicated request doesn't exceed the total ISO
+		 * bw. Both operands are in KB/s.
+		 */
+		if (cfg->iso_bw > tegra_isomgr_get_total_iso_bw()) {
+			ret = -E2BIG;
+			continue;
+		}
+
+		/* Make sure isomgr registration succeeds. */
+		isomgr_handle = tegra_isomgr_register(iso_client,
+					cfg->iso_bw,
 					tegra_nvdisp_bandwidth_renegotiate,
 					&ihub_bw_info);
-	if (IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle)) {
-		err = -ENOENT;
+		if (IS_ERR_OR_NULL(isomgr_handle)) {
+			ret = -ENOENT;
+			continue;
+		}
+
+		/*
+		 * Check that the required EMC floor doesn't exceed the max EMC
+		 * rate allowed.
+		 */
+		cfg_dram_freq = cfg->emc_la_floor * emc_to_dram_factor;
+		if (tegra_bwmgr_round_rate(cfg_dram_freq) > max_emc_rate) {
+			tegra_isomgr_unregister(isomgr_handle);
+			ret = -E2BIG;
+			continue;
+		}
+
+		ihub_bw_info.isomgr_handle = isomgr_handle;
+		ihub_bw_info.max_config = cfg;
+
+		pr_info("%s: max config iso bw = %u KB/s\n",
+			__func__, cfg->iso_bw);
+		pr_info("%s: max config EMC floor = %u Hz\n",
+			__func__, cfg->emc_la_floor);
+		pr_info("%s: max config hubclk = %u Hz\n",
+			__func__, cfg->hubclk);
+	}
+
+	if (ihub_bw_info.max_config)
+		ret = 0;
+	else
+		pr_err("%s: couldn't find valid max config!\n", __func__);
+
+	return ret;
+}
+
+/*
+ * tegra_nvdisp_bandwidth_register - register the IHUB BW client
+ *
+ * @iso_client		ISO client id
+ * @bwmgr_client	BWMGR client id
+ * @udedi_bw		minimum dedicated ISO bw (KB/s) needed by client
+ *
+ * @retval		0 on success
+ * @retval		-ENOENT on registration failures
+ */
+int tegra_nvdisp_bandwidth_register(enum tegra_iso_client iso_client,
+				enum tegra_bwmgr_client_id bwmgr_client)
+{
+	int ret = 0;
+
+	mutex_lock(&tegra_nvdisp_lock);
+	memset(&ihub_bw_info, 0, sizeof(ihub_bw_info));
+
+	ihub_bw_info.bwmgr_handle = tegra_bwmgr_register(bwmgr_client);
+	if (IS_ERR_OR_NULL(ihub_bw_info.bwmgr_handle)) {
+		ret = -ENOENT;
 		goto unlock_and_ret;
 	}
 
+	ret = tegra_nvdisp_bandwidth_register_max_config(iso_client);
+	if (ret)
+		goto unlock_and_ret;
+
 	/*
-	 * Use the maximum value so that we can reserve as much as needed until
-	 * we are told by isomgr to backoff.
+	 * Assume that all the bandwidth is currently available to us so that we
+	 * can reserve as much as needed until we are told by isomgr to backoff.
 	 */
 	ihub_bw_info.available_bw = UINT_MAX;
 
 unlock_and_ret:
 	mutex_unlock(&tegra_nvdisp_lock);
-	return err;
+	return ret;
 }
 
 /*
- * tegra_nvdisp_isomgr_unregister - unregister the IHUB ISO BW client
+ * tegra_nvdisp_bandwidth_unregister - unregister the IHUB BW client
  */
-void tegra_nvdisp_isomgr_unregister(void)
+void tegra_nvdisp_bandwidth_unregister(void)
 {
 	mutex_lock(&tegra_nvdisp_lock);
 
 	if (!IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle))
 		tegra_isomgr_unregister(ihub_bw_info.isomgr_handle);
-	memset(&ihub_bw_info, 0, sizeof(ihub_bw_info));
+	if (!IS_ERR_OR_NULL(ihub_bw_info.bwmgr_handle))
+		tegra_bwmgr_unregister(ihub_bw_info.bwmgr_handle);
 
 	mutex_unlock(&tegra_nvdisp_lock);
 }
 #else
-void tegra_nvdisp_program_bandwidth(struct tegra_dc *dc, u32 proposed_bw,
-	u32 proposed_latency, u32 proposed_hubclk, bool before_win_update) {}
-int tegra_nvdisp_negotiate_reserved_bw(struct tegra_dc *dc, u32 proposed_bw,
-	u32 proposed_latency)
+int tegra_nvdisp_program_bandwidth(struct tegra_dc *dc, u32 new_iso_bw,
+	u32 new_total_bw, u32 new_emc, u32 new_hubclk,
+	bool before_win_update)
+{
+	return -ENOSYS;
+}
+int tegra_nvdisp_negotiate_reserved_bw(struct tegra_dc *dc, u32 new_iso_bw,
+	u32 new_total_bw, u32 new_emc, u32 new_hubclk)
 {
 	return -ENOSYS;
 }

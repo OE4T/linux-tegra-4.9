@@ -900,12 +900,17 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 
 #ifdef CONFIG_TEGRA_ISOMGR
 	if (!tegra_platform_is_vdk()) {
-		/* Register with isomgr */
-		ret = tegra_nvdisp_isomgr_register(TEGRA_ISO_CLIENT_DISP_0,
-			tegra_dc_calc_min_bandwidth(dc));
+		/*
+		 * Register the IHUB bw client. The bwmgr id that we pass in
+		 * must be different from the one that's internally mapped to
+		 * the ISO client id.
+		 */
+		ret = tegra_nvdisp_bandwidth_register(TEGRA_ISO_CLIENT_DISP_0,
+					TEGRA_BWMGR_CLIENT_DISP1);
 		if (ret) {
-			dev_err(&dc->ndev->dev, "could not register isomgr\n");
-			goto INIT_ISOMGR_ERR;
+			dev_err(&dc->ndev->dev,
+					"failed to register ihub bw client\n");
+			goto BW_REG_ERR;
 		}
 	}
 #endif
@@ -914,9 +919,9 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 	goto INIT_EXIT;
 
 #ifdef CONFIG_TEGRA_ISOMGR
-INIT_ISOMGR_ERR:
+BW_REG_ERR:
 	if (!tegra_platform_is_vdk())
-		tegra_nvdisp_isomgr_unregister();
+		tegra_nvdisp_bandwidth_unregister();
 #endif
 INIT_LUT_ERR:
 	for (i = 0; i < DC_N_WINDOWS; ++i) {
@@ -1205,7 +1210,7 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 #ifdef CONFIG_TEGRA_ISOMGR
 	/* Save reference to isohub bw info */
 	if (!tegra_platform_is_vdk())
-		tegra_nvdisp_isomgr_attach(dc);
+		tegra_nvdisp_bandwidth_attach(dc);
 #endif
 
 	if ((tegra_bpmp_running() && tegra_platform_is_silicon())
@@ -2541,11 +2546,16 @@ void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 		return;
 	}
 
-	/* Make sure bw and LA/PTSA are set correctly. */
+	/*
+	 * Make sure our bandwidth requirements are met before we start changing
+	 * the current isohub settings.
+	 */
 	ext_settings = &imp_settings->ext_settings;
-	tegra_nvdisp_program_bandwidth(dc,
+	if (before_win_update)
+		tegra_nvdisp_program_bandwidth(dc,
+				(u32)ext_settings->total_display_iso_bw_kbps,
 				(u32)ext_settings->required_total_bw_kbps,
-				(u32)ext_settings->total_latency,
+				(u32)ext_settings->proposed_emc_hz,
 				(u32)ext_settings->hubclk,
 				before_win_update);
 
@@ -2561,6 +2571,17 @@ void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 
 	if (!before_win_update) {
 		mutex_lock(&tegra_nvdisp_lock);
+
+		/*
+		 * Update our bandwidth requirements after the new window state
+		 * and isohub settings have promoted.
+		 */
+		tegra_nvdisp_program_bandwidth(dc,
+				(u32)ext_settings->total_display_iso_bw_kbps,
+				(u32)ext_settings->required_total_bw_kbps,
+				(u32)ext_settings->proposed_emc_hz,
+				(u32)ext_settings->hubclk,
+				before_win_update);
 
 		/* Re-enable ihub latency events. */
 		tegra_dc_writel(dc,
@@ -2723,8 +2744,10 @@ int tegra_dc_handle_imp_propose(struct tegra_dc *dc,
 
 	ext_settings = &imp_settings->ext_settings;
 	ret = tegra_nvdisp_negotiate_reserved_bw(dc,
+			(u32)ext_settings->total_display_iso_bw_kbps,
 			(u32)ext_settings->required_total_bw_kbps,
-			(u32)ext_settings->total_latency);
+			(u32)ext_settings->proposed_emc_hz,
+			(u32)ext_settings->hubclk);
 	if (ret) {
 		mutex_unlock(&tegra_nvdisp_lock);
 		goto free_and_ret;

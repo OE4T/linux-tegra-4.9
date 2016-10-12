@@ -52,16 +52,17 @@
 #include <linux/platform/tegra/emc_bwmgr.h>
 
 #include "tegra-se-nvhost.h"
-#define NV_SE1_CLASS_ID		0x3A
-#define NV_SE2_CLASS_ID		0x3B
-#define NV_SE3_CLASS_ID		0x3C
-#define NV_SE4_CLASS_ID		0x3D
 #include "t186/hardware_t186.h"
 #include "nvhost_job.h"
 #include "nvhost_channel.h"
 #include "nvhost_acm.h"
 
 #define DRIVER_NAME	"tegra-se-nvhost"
+#define NV_SE1_CLASS_ID		0x3A
+#define NV_SE2_CLASS_ID		0x3B
+#define NV_SE3_CLASS_ID		0x3C
+#define NV_SE4_CLASS_ID		0x3D
+#define NUM_SE_ALGO	5
 
 #define __nvhost_opcode_nonincr(x, y)	nvhost_opcode_nonincr((x) / 4, (y))
 #define __nvhost_opcode_incr(x, y)	nvhost_opcode_incr((x) / 4, (y))
@@ -88,17 +89,6 @@ enum tegra_se_key_table_type {
 	SE_KEY_TABLE_TYPE_UPDTDIV	/* Updated IV */
 };
 
-struct tegra_se_dev;
-
-/* Security Engine request context */
-struct tegra_se_req_context {
-	enum tegra_se_aes_op_mode op_mode; /* Security Engine operation mode */
-	bool encrypt;	/* Operation type */
-	u32 config;
-	u32 crypto_config;
-	struct tegra_se_dev *se_dev;
-};
-
 struct tegra_se_chipdata {
 	unsigned long aes_freq;
 	unsigned int cpu_freq_mhz;
@@ -108,6 +98,14 @@ struct tegra_se_chipdata {
 struct tegra_se_ll {
 	dma_addr_t addr; /* DMA buffer address */
 	u32 data_len; /* Data length in DMA buffer */
+};
+
+enum tegra_se_algo {
+	SE_DRBG,
+	SE_AES,
+	SE_CMAC,
+	SE_RSA,
+	SE_SHA,
 };
 
 struct tegra_se_dev {
@@ -159,6 +157,16 @@ struct tegra_se_dev {
 	struct delayed_work restore_cpufreq_work;
 	unsigned long cpufreq_last_boosted;
 	bool cpufreq_boosted;
+};
+static struct tegra_se_dev *se_devices[NUM_SE_ALGO];
+
+/* Security Engine request context */
+struct tegra_se_req_context {
+	enum tegra_se_aes_op_mode op_mode; /* Security Engine operation mode */
+	bool encrypt;	/* Operation type */
+	u32 config;
+	u32 crypto_config;
+	struct tegra_se_dev *se_dev;
 };
 
 struct tegra_se_priv_data {
@@ -1442,34 +1450,11 @@ static int tegra_se_aes_queue_req(struct tegra_se_dev *se_dev,
 	return err;
 }
 
-static struct tegra_se_dev *tegra_se_get_dev(char *prop_check)
-{
-	struct device_node *node;
-	struct platform_device *pdev;
-	struct nvhost_device_data *pdata;
-	struct tegra_se_dev *se_dev;
-
-	node = of_find_node_with_property(NULL, prop_check);
-	if (!node) {
-		pr_err("tegra-se: invalid operation\n");
-		return NULL;
-	}
-
-	pdev = of_find_device_by_node(node);
-	pdata = platform_get_drvdata(pdev);
-	se_dev = pdata->private_data;
-
-	return se_dev;
-}
-
 static int tegra_se_aes_cbc_encrypt(struct ablkcipher_request *req)
 {
 	struct tegra_se_req_context *req_ctx = ablkcipher_request_ctx(req);
 
-	req_ctx->se_dev = tegra_se_get_dev("aes-supported");
-	if (!req_ctx->se_dev)
-		return -ENODEV;
-
+	req_ctx->se_dev = se_devices[SE_AES];
 	req_ctx->encrypt = true;
 	req_ctx->op_mode = SE_AES_OP_MODE_CBC;
 	return tegra_se_aes_queue_req(req_ctx->se_dev, req);
@@ -1479,10 +1464,7 @@ static int tegra_se_aes_cbc_decrypt(struct ablkcipher_request *req)
 {
 	struct tegra_se_req_context *req_ctx = ablkcipher_request_ctx(req);
 
-	req_ctx->se_dev = tegra_se_get_dev("aes-supported");
-	if (!req_ctx->se_dev)
-		return -ENODEV;
-
+	req_ctx->se_dev = se_devices[SE_AES];
 	req_ctx->encrypt = false;
 	req_ctx->op_mode = SE_AES_OP_MODE_CBC;
 	return tegra_se_aes_queue_req(req_ctx->se_dev, req);
@@ -1492,10 +1474,7 @@ static int tegra_se_aes_ecb_encrypt(struct ablkcipher_request *req)
 {
 	struct tegra_se_req_context *req_ctx = ablkcipher_request_ctx(req);
 
-	req_ctx->se_dev = tegra_se_get_dev("aes-supported");
-	if (!req_ctx->se_dev)
-		return -ENODEV;
-
+	req_ctx->se_dev = se_devices[SE_AES];
 	req_ctx->encrypt = true;
 	req_ctx->op_mode = SE_AES_OP_MODE_ECB;
 	return tegra_se_aes_queue_req(req_ctx->se_dev, req);
@@ -1505,10 +1484,7 @@ static int tegra_se_aes_ecb_decrypt(struct ablkcipher_request *req)
 {
 	struct tegra_se_req_context *req_ctx = ablkcipher_request_ctx(req);
 
-	req_ctx->se_dev = tegra_se_get_dev("aes-supported");
-	if (!req_ctx->se_dev)
-		return -ENODEV;
-
+	req_ctx->se_dev = se_devices[SE_AES];
 	req_ctx->encrypt = false;
 	req_ctx->op_mode = SE_AES_OP_MODE_ECB;
 	return tegra_se_aes_queue_req(req_ctx->se_dev, req);
@@ -1518,10 +1494,7 @@ static int tegra_se_aes_ctr_encrypt(struct ablkcipher_request *req)
 {
 	struct tegra_se_req_context *req_ctx = ablkcipher_request_ctx(req);
 
-	req_ctx->se_dev = tegra_se_get_dev("aes-supported");
-	if (!req_ctx->se_dev)
-		return -ENODEV;
-
+	req_ctx->se_dev = se_devices[SE_AES];
 	req_ctx->encrypt = true;
 	req_ctx->op_mode = SE_AES_OP_MODE_CTR;
 	return tegra_se_aes_queue_req(req_ctx->se_dev, req);
@@ -1531,10 +1504,7 @@ static int tegra_se_aes_ctr_decrypt(struct ablkcipher_request *req)
 {
 	struct tegra_se_req_context *req_ctx = ablkcipher_request_ctx(req);
 
-	req_ctx->se_dev = tegra_se_get_dev("aes-supported");
-	if (!req_ctx->se_dev)
-		return -ENODEV;
-
+	req_ctx->se_dev = se_devices[SE_AES];
 	req_ctx->encrypt = false;
 	req_ctx->op_mode = SE_AES_OP_MODE_CTR;
 	return tegra_se_aes_queue_req(req_ctx->se_dev, req);
@@ -1544,10 +1514,7 @@ static int tegra_se_aes_ofb_encrypt(struct ablkcipher_request *req)
 {
 	struct tegra_se_req_context *req_ctx = ablkcipher_request_ctx(req);
 
-	req_ctx->se_dev = tegra_se_get_dev("aes-supported");
-	if (!req_ctx->se_dev)
-		return -ENODEV;
-
+	req_ctx->se_dev = se_devices[SE_AES];
 	req_ctx->encrypt = true;
 	req_ctx->op_mode = SE_AES_OP_MODE_OFB;
 	return tegra_se_aes_queue_req(req_ctx->se_dev, req);
@@ -1557,10 +1524,7 @@ static int tegra_se_aes_ofb_decrypt(struct ablkcipher_request *req)
 {
 	struct tegra_se_req_context *req_ctx = ablkcipher_request_ctx(req);
 
-	req_ctx->se_dev = tegra_se_get_dev("aes-supported");
-	if (!req_ctx->se_dev)
-		return -ENODEV;
-
+	req_ctx->se_dev = se_devices[SE_AES];
 	req_ctx->encrypt = false;
 	req_ctx->op_mode = SE_AES_OP_MODE_OFB;
 	return tegra_se_aes_queue_req(req_ctx->se_dev, req);
@@ -1578,9 +1542,7 @@ static int tegra_se_aes_setkey(struct crypto_ablkcipher *tfm,
 	u32 *cpuvaddr = NULL;
 	dma_addr_t iova = 0;
 
-	se_dev = tegra_se_get_dev("aes-supported");
-	if (!se_dev)
-		return -ENODEV;
+	se_dev = se_devices[SE_AES];
 
 	if (!ctx || !se_dev) {
 		pr_err("invalid context or dev");
@@ -1663,9 +1625,7 @@ static int tegra_se_rng_drbg_init(struct crypto_tfm *tfm)
 	struct tegra_se_rng_context *rng_ctx = crypto_tfm_ctx(tfm);
 	struct tegra_se_dev *se_dev;
 
-	se_dev = tegra_se_get_dev("drbg-supported");
-	if (!se_dev)
-		return -ENODEV;
+	se_dev = se_devices[SE_DRBG];
 
 	mutex_lock(&se_dev->mtx);
 
@@ -1886,9 +1846,7 @@ static int tegra_se_sha_final(struct ahash_request *req)
 		return 0;
 	}
 
-	se_dev = tegra_se_get_dev("sha-supported");
-	if (!se_dev)
-		return -ENODEV;
+	se_dev = se_devices[SE_SHA];
 
 	num_sgs = tegra_se_count_sgs(req->src, req->nbytes, &chained);
 	if ((num_sgs > SE_MAX_SRC_SG_COUNT)) {
@@ -1982,9 +1940,7 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 	bool use_orig_iv = true;
 	int chained;
 
-	se_dev = tegra_se_get_dev("cmac-supported");
-	if (!se_dev)
-		return -ENODEV;
+	se_dev = se_devices[SE_CMAC];
 
 	mutex_lock(&se_dev->mtx);
 
@@ -2159,9 +2115,7 @@ static int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 	u8 const rb = 0x87;
 	u8 msb;
 
-	se_dev = tegra_se_get_dev("cmac-supported");
-	if (!se_dev)
-		return -ENODEV;
+	se_dev = se_devices[SE_CMAC];
 
 	mutex_lock(&se_dev->mtx);
 
@@ -2461,9 +2415,7 @@ static int tegra_se_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 	dma_addr_t cmdbuf_iova = 0;
 	int err = 0;
 
-	se_dev = tegra_se_get_dev("rsa-supported");
-	if (!se_dev)
-		return -ENODEV;
+	se_dev = se_devices[SE_RSA];
 
 	if (!ctx || !key)
 		return -EINVAL;
@@ -2579,9 +2531,7 @@ static int tegra_se_rsa_digest(struct ahash_request *req)
 	int total, err = 0;
 	int chained;
 
-	se_dev = tegra_se_get_dev("rsa-supported");
-	if (!se_dev)
-		return -ENODEV;
+	se_dev = se_devices[SE_RSA];
 
 	if (!req)
 		return -EINVAL;
@@ -3075,6 +3025,30 @@ static struct of_device_id tegra_se_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, tegra_se_of_match);
 
+static bool is_algo_supported(struct device_node *node, char *algo)
+{
+	if (of_property_match_string(node, "supported-algos", algo) >= 0)
+		return true;
+	else
+		return false;
+}
+
+static void tegra_se_fill_se_dev_info(struct tegra_se_dev *se_dev)
+{
+	struct device_node *node = of_node_get(se_dev->dev->of_node);
+
+	if (is_algo_supported(node, "aes"))
+		se_devices[SE_AES] = se_dev;
+	if (is_algo_supported(node, "drbg"))
+		se_devices[SE_DRBG] = se_dev;
+	if (is_algo_supported(node, "sha"))
+		se_devices[SE_SHA] = se_dev;
+	if (is_algo_supported(node, "rsa"))
+		se_devices[SE_RSA] = se_dev;
+	if (is_algo_supported(node, "cmac"))
+		se_devices[SE_CMAC] = se_dev;
+}
+
 static int tegra_se_probe(struct platform_device *pdev)
 {
 	struct tegra_se_dev *se_dev = NULL;
@@ -3166,15 +3140,20 @@ static int tegra_se_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	if (of_property_read_bool(node, "aes-supported") ||
-			of_property_read_bool(node, "drbg-supported")) {
+	if (!of_property_count_strings(node, "supported-algos"))
+		return -EINVAL;
+
+	tegra_se_fill_se_dev_info(se_dev);
+
+	if (is_algo_supported(node, "aes") || is_algo_supported(node, "drbg")) {
 		err = tegra_init_key_slot(se_dev);
 		if (err) {
 			dev_err(se_dev->dev, "init_key_slot failed\n");
 			goto fail;
 		}
 	}
-	if (of_property_read_bool(node, "rsa-supported")) {
+
+	if (is_algo_supported(node, "rsa")) {
 		err = tegra_init_rsa_key_slot(se_dev);
 		if (err) {
 			dev_err(se_dev->dev, "init_rsa_key_slot failed\n");
@@ -3198,7 +3177,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 		goto ll_alloc_fail;
 	}
 
-	if (of_property_read_bool(node, "drbg-supported")) {
+	if (is_algo_supported(node, "drbg")) {
 		/* Register RNG(DRBG), the first element in aes_algs/rng_algs
 		 * with SE1/AES0
 		 */
@@ -3220,7 +3199,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 #endif
 	}
 
-	if (of_property_read_bool(node, "aes-supported")) {
+	if (is_algo_supported(node, "aes")) {
 		/* Register all aes_algs except RNG(DRBG), that is,
 		 * ecb,cbc,ofb,ctr and first element in hash_algs that is
 		 * cmac, with SE2/AES1
@@ -3240,7 +3219,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (of_property_read_bool(node, "cmac-supported")) {
+	if (is_algo_supported(node, "cmac")) {
 		err = crypto_register_ahash(&hash_algs[0]);
 		if (err) {
 			dev_err(se_dev->dev,
@@ -3249,7 +3228,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (of_property_read_bool(node, "sha-supported")) {
+	if (is_algo_supported(node, "sha")) {
 		/* Register all SHA algorithms in hash_algs with SE3 */
 		for (i = 1; i < 6; i++) {
 			err = crypto_register_ahash(&hash_algs[i]);
@@ -3261,7 +3240,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (of_property_read_bool(node, "rsa-supported")) {
+	if (is_algo_supported(node, "rsa")) {
 		/* Register all RSA algorithms in hash_algs with SE4 */
 		for (i = 6; i < ARRAY_SIZE(hash_algs); i++) {
 			err = crypto_register_ahash(&hash_algs[i]);
@@ -3273,7 +3252,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (of_property_read_bool(node, "drbg-supported")) {
+	if (is_algo_supported(node, "drbg")) {
 		/* Make sure engine is powered ON with clk enabled */
 		err = nvhost_module_busy(pdev);
 		if (err) {
@@ -3301,9 +3280,8 @@ static int tegra_se_probe(struct platform_device *pdev)
 	se_dev->src_ll = kzalloc(sizeof(struct tegra_se_ll), GFP_KERNEL);
 	se_dev->dst_ll = kzalloc(sizeof(struct tegra_se_ll), GFP_KERNEL);
 
-	if (of_property_read_bool(node, "drbg-supported") ||
-			of_property_read_bool(node, "aes-supported") ||
-			of_property_read_bool(node, "cmac-supported")) {
+	if (is_algo_supported(node, "drbg") || is_algo_supported(node, "aes") ||
+		is_algo_supported(node, "cmac")) {
 		se_dev->aes_cmdbuf_cpuvaddr =
 			dma_alloc_attrs(se_dev->dev->parent,
 			SZ_8K * SE_MAX_SUBMIT_CHAIN_SZ,
@@ -3355,7 +3333,7 @@ static int tegra_se_remove(struct platform_device *pdev)
 			se_dev->aes_cmdbuf_cpuvaddr, se_dev->aes_cmdbuf_iova,
 			&attrs);
 
-	if (of_property_read_bool(node, "drbg-supported")) {
+	if (is_algo_supported(node, "drbg")) {
 		/* Unregister RNG(DRBG), the first element in aes_algs/rng_algs
 		 * with SE1/AES0
 		 */
@@ -3366,7 +3344,7 @@ static int tegra_se_remove(struct platform_device *pdev)
 #endif
 	}
 
-	if (of_property_read_bool(node, "aes-supported")) {
+	if (is_algo_supported(node, "aes")) {
 		/* Unregister all aes_algs except RNG(DRBG), that is,
 		 * ecb,cbc,ofb,ctr and first element in hash_algs that is
 		 * cmac, with SE2/AES1
@@ -3378,16 +3356,16 @@ static int tegra_se_remove(struct platform_device *pdev)
 			crypto_unregister_alg(&aes_algs[i]);
 	}
 
-	if (of_property_read_bool(node, "cmac-supported"))
+	if (is_algo_supported(node, "cmac"))
 		crypto_unregister_ahash(&hash_algs[0]);
 
-	if (of_property_read_bool(node, "sha-supported")) {
+	if (is_algo_supported(node, "sha")) {
 		/* Unregister all 5 SHA algorithms in hash_algs with SE3 */
 		for (i = 1; i < 6; i++)
 			crypto_unregister_ahash(&hash_algs[i]);
 	}
 
-	if (of_property_read_bool(node, "rsa-supported")) {
+	if (is_algo_supported(node, "rsa")) {
 		/* Unregister all 4 RSA algorithms in hash_algs with SE4 */
 		for (i = 6; i < ARRAY_SIZE(hash_algs); i++)
 			crypto_unregister_ahash(&hash_algs[i]);

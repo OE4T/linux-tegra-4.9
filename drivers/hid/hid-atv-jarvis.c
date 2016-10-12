@@ -812,8 +812,7 @@ static int snd_atvr_alloc_audio_buffs(struct snd_atvr *atvr_snd)
 	 * the substream starts. We don't need DMA because it will just
 	 * get written to by the BTLE code.
 	 */
-	/* We only use this buffer in the kernel and we do not do
-	 * DMA so vmalloc should be OK. */
+
 	if (atvr_snd->pcm_buffer == NULL)
 		atvr_snd->pcm_buffer = vmalloc(MAX_PCM_BUFFER_SIZE);
 	if (atvr_snd->pcm_buffer == NULL) {
@@ -822,9 +821,6 @@ static int snd_atvr_alloc_audio_buffs(struct snd_atvr *atvr_snd)
 		return -ENOMEM;
 	}
 
-	/* We only use this buffer in the kernel and we do not do
-	 * DMA so vmalloc should be OK.
-	 */
 	if (atvr_snd->fifo_packet_buffer == NULL)
 		atvr_snd->fifo_packet_buffer = vmalloc(MAX_BUFFER_SIZE);
 	if (atvr_snd->fifo_packet_buffer == NULL) {
@@ -837,6 +833,13 @@ static int snd_atvr_alloc_audio_buffs(struct snd_atvr *atvr_snd)
 
 	return 0;
 }
+
+static void snd_atvr_dealloc_audio_buffs(struct snd_atvr *atvr_snd)
+{
+	vfree(atvr_snd->pcm_buffer);
+	vfree(atvr_snd->fifo_packet_buffer);
+}
+
 /**
  * This is called by the event filter when it gets an audio packet
  * from the AndroidTV remote.  It writes the packet into a FIFO
@@ -863,15 +866,6 @@ static void audio_dec(struct hid_device *hdev, const uint8_t *raw_input,
 		return;
 
 	atvr_snd = shdr_card->private_data;
-
-	if (atvr_snd && (atvr_snd->pcm_buffer == NULL &&
-			atvr_snd->fifo_packet_buffer == NULL)) {
-		snd_atvr_log("%s: Received audio packet before pcm open \n",
-								__func__);
-		ret = snd_atvr_alloc_audio_buffs(atvr_snd);
-		if (ret)
-			return;
-	}
 
 	if (atvr_snd != NULL && atvr_snd->pcm_stopped == false) {
 		spin_lock(&atvr_snd->s_substream_lock);
@@ -1298,17 +1292,13 @@ static int snd_atvr_pcm_open(struct snd_pcm_substream *substream)
 
 	snd_atvr_log("%s, built %s %s\n", __func__, __DATE__, __TIME__);
 
-	if (!atvr_snd->pcm_buffer && !atvr_snd->fifo_packet_buffer) {
-		snd_atvr_log("%s: Allocating audio buffers \n", __func__);
-		ret = snd_atvr_alloc_audio_buffs(atvr_snd);
-	}
-
 	return ret;
 }
 
 static int snd_atvr_pcm_close(struct snd_pcm_substream *substream)
 {
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
+	int ret;
 
 	/* Make sure the timer is not running */
 	if (atvr_snd->timer_enabled)
@@ -1319,22 +1309,10 @@ static int snd_atvr_pcm_close(struct snd_pcm_substream *substream)
 			atvr_snd->packet_counter,
 			atvr_snd->timer_callback_count);
 
-	if (atvr_snd->pcm_buffer) {
-		vfree(atvr_snd->pcm_buffer);
-		atvr_snd->pcm_buffer = NULL;
-	}
-
-	/*
-	 * Use spinlock so we don't free the FIFO when the
-	 * driver is writing to it.
-	 * The s_substream_for_btle should already be NULL by now.
-	 */
-	spin_lock(&atvr_snd->s_substream_lock);
-	if (atvr_snd->fifo_packet_buffer) {
-		vfree(atvr_snd->fifo_packet_buffer);
-		atvr_snd->fifo_packet_buffer = NULL;
-	}
-	spin_unlock(&atvr_snd->s_substream_lock);
+	ret = atomic_fifo_init(&atvr_snd->fifo_controller,
+				   MAX_PACKETS_PER_BUFFER);
+	if (ret)
+		return ret;
 
 	mutex_lock(&atvr_snd->hdev_lock);
 	if (atvr_snd->hdev)
@@ -1489,6 +1467,11 @@ static int atvr_snd_initialize(struct hid_device *hdev,
 		atvr_snd->pcm_hw = atvr_pcm_hardware_pepper;
 	else
 		atvr_snd->pcm_hw = atvr_pcm_hardware;
+
+	/* Alloc pcm buffers */
+	err = snd_atvr_alloc_audio_buffs(atvr_snd);
+	if (err)
+		goto __nodev;
 
 	strcpy(shdr_card->driver, "SHIELD Remote Audio");
 	strcpy(shdr_card->shortname, "SHDRAudio");
@@ -1797,6 +1780,7 @@ static void atvr_remove(struct hid_device *hdev)
 		switch_set_state(&shdr_mic_switch, false);
 
 	cards_in_use[atvr_snd->card_index] = false;
+	snd_atvr_dealloc_audio_buffs(atvr_snd);
 	mutex_destroy(&atvr_snd->hdev_lock);
 	snd_card_free(shdr_card);
 	kfree(shdr_dev);

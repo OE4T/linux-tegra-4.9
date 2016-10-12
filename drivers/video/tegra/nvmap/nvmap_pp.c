@@ -40,7 +40,7 @@
 #define PENDING_PAGES_SIZE                (SZ_1M / PAGE_SIZE)
 
 static bool enable_pp = 1;
-static int pool_size;
+static u32 pool_size;
 
 static struct task_struct *background_allocator;
 static DECLARE_WAIT_QUEUE_HEAD(nvmap_bg_wait);
@@ -165,6 +165,12 @@ static void nvmap_pp_do_background_zero_pages(struct nvmap_page_pool *pool)
 		if (page == NULL)
 			break;
 		pending_zero_pages[i] = page;
+		/*
+		 * Once the pages are zeroed, this will make sure there
+		 * is enough free space in the pool to insert all zeroed
+		 * pages to pool->page_list
+		 */
+		pool->to_zero++;
 	}
 	mutex_unlock(&pool->lock);
 
@@ -176,6 +182,7 @@ static void nvmap_pp_do_background_zero_pages(struct nvmap_page_pool *pool)
 
 	mutex_lock(&pool->lock);
 	ret = __nvmap_page_pool_fill_lots_locked(pool, pending_zero_pages, i);
+	pool->to_zero -= i;
 	mutex_unlock(&pool->lock);
 
 out:
@@ -399,8 +406,10 @@ int nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
  * Free the passed number of pages from the page pool. This happen irregardless
  * of whether ther page pools are enabled. This lets one disable the page pools
  * and then free all the memory therein.
+ *
+ * FIXME: Pages in pending_zero_pages[] can still be unreleased.
  */
-static int nvmap_page_pool_free(struct nvmap_page_pool *pool, int nr_free)
+static int nvmap_page_pool_free_locked(struct nvmap_page_pool *pool, int nr_free)
 {
 	int i = nr_free;
 	struct page *page;
@@ -408,7 +417,6 @@ static int nvmap_page_pool_free(struct nvmap_page_pool *pool, int nr_free)
 	if (!nr_free)
 		return nr_free;
 
-	mutex_lock(&pool->lock);
 	while (i) {
 		page = get_zero_list_page(pool);
 		if (!page)
@@ -418,7 +426,6 @@ static int nvmap_page_pool_free(struct nvmap_page_pool *pool, int nr_free)
 		__free_page(page);
 		i--;
 	}
-	mutex_unlock(&pool->lock);
 
 	return i;
 }
@@ -441,18 +448,11 @@ ulong nvmap_page_pool_get_unused_pages(void)
  */
 int nvmap_page_pool_clear(void)
 {
-	struct page *page;
 	struct nvmap_page_pool *pool = &nvmap_dev->pool;
 
 	mutex_lock(&pool->lock);
 
-	while ((page = nvmap_page_pool_alloc_locked(pool, 1)) != NULL)
-		__free_page(page);
-
-	while (!list_empty(&pool->zero_list)) {
-		page = get_zero_list_page(pool);
-		__free_page(page);
-	}
+	(void)nvmap_page_pool_free_locked(pool, pool->count + pool->to_zero);
 
 	/* For some reason, if an error occured... */
 	if (!list_empty(&pool->page_list) || !list_empty(&pool->zero_list)) {
@@ -470,12 +470,15 @@ int nvmap_page_pool_clear(void)
  * all associated resources are released back to the system. This operation
  * will only occur if the page pools are enabled.
  */
-static void nvmap_page_pool_resize(struct nvmap_page_pool *pool, int size)
+static void nvmap_page_pool_resize(struct nvmap_page_pool *pool, u32 size)
 {
+	u32 curr;
+
 	mutex_lock(&pool->lock);
 
-	while (pool->count > size)
-		__free_page(nvmap_page_pool_alloc_locked(pool, 0));
+	curr = nvmap_page_pool_get_unused_pages();
+	if (curr > size)
+		(void)nvmap_page_pool_free_locked(pool, curr - size);
 
 	pr_debug("page pool resized to %d from %d pages\n", size, pool->max);
 	pool->max = size;
@@ -496,7 +499,10 @@ static unsigned long nvmap_page_pool_scan_objects(struct shrinker *shrinker,
 
 	pr_debug("sh_pages=%lu", sc->nr_to_scan);
 
-	remaining = nvmap_page_pool_free(&nvmap_dev->pool, sc->nr_to_scan);
+	mutex_lock(&nvmap_dev->pool.lock);
+	remaining = nvmap_page_pool_free_locked(
+			&nvmap_dev->pool, sc->nr_to_scan);
+	mutex_unlock(&nvmap_dev->pool.lock);
 
 	return (remaining == sc->nr_to_scan) ? \
 			   SHRINK_STOP : (sc->nr_to_scan - remaining);
@@ -585,17 +591,12 @@ module_param_cb(enable_page_pools, &enable_pp_ops, &enable_pp, 0644);
 
 static int pool_size_set(const char *arg, const struct kernel_param *kp)
 {
-	param_set_int(arg, kp);
+	int ret = param_set_uint(arg, kp);
 
-	if (pool_size  < 0) {
-		pool_size = nvmap_dev->pool.max;
-		pr_err("pool_size can't be set to -ve value!\n");
-		return -EINVAL;
-	} else if (pool_size != nvmap_dev->pool.max) {
+	if (!ret && (pool_size != nvmap_dev->pool.max))
 		nvmap_page_pool_resize(&nvmap_dev->pool, pool_size);
-	}
 
-	return 0;
+	return ret;
 }
 
 static int pool_size_get(char *buff, const struct kernel_param *kp)

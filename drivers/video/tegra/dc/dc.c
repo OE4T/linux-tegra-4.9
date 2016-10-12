@@ -6043,16 +6043,13 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		 * The emc is a shared clock, it will be set based on
 		 * the requirements for each user on the bus.
 		 */
-		emc_clk = tegra_disp_clk_get(&ndev->dev, "emc");
+		snprintf(clk_name, sizeof(clk_name), "disp%u_emc",
+				dc->ctrl_num + 1);
+		emc_clk = tegra_disp_clk_get(&ndev->dev, clk_name);
 		if (IS_ERR_OR_NULL(emc_clk)) {
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
-			dev_info(&ndev->dev, "can't get emc clock\n");
-			emc_clk = NULL;
-#else
-			dev_err(&ndev->dev, "can't get emc clock\n");
+			dev_err(&ndev->dev, "can't get %s clock\n", clk_name);
 			ret = -ENOENT;
 			goto err_put_clk;
-#endif
 		}
 		dc->emc_clk = emc_clk;
 #endif
@@ -6063,17 +6060,14 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #ifdef CONFIG_TEGRA_NVDISPLAY
 		emc_la_clk = tegra_disp_clk_get(&ndev->dev, "emc_latency");
 #else
-		emc_la_clk = tegra_disp_clk_get(&ndev->dev, "disp1_la_emc");
+		snprintf(clk_name, sizeof(clk_name), "disp%u_la_emc",
+				dc->ctrl_num + 1);
+		emc_la_clk = tegra_disp_clk_get(&ndev->dev, clk_name);
 #endif
 		if (IS_ERR_OR_NULL(emc_la_clk)) {
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
-			dev_info(&ndev->dev, "can't get emc.la clock\n");
-			emc_la_clk = NULL;
-#else
-			dev_err(&ndev->dev, "can't get emc.la clock\n");
+			dev_err(&ndev->dev, "can't get %s clock\n", clk_name);
 			ret = -ENOENT;
 			goto err_put_clk;
-#endif
 		}
 		dc->emc_la_clk = emc_la_clk;
 		clk_set_rate(dc->emc_la_clk, 0);

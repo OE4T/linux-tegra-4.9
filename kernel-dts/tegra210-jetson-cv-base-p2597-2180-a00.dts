@@ -569,7 +569,7 @@
 	};
 
 	pwm_fan_shared_data: pfsd {
-		tach_gpio =  <TEGRA_GPIO(K, 7)>; /* TEGRA_GPIO_PK7 */
+		tach_gpio =  <&gpio TEGRA_GPIO(K, 7) GPIO_ACTIVE_LOW>; /* TEGRA_GPIO_PK7 */
 	};
 
 	i2c@7000c000 {

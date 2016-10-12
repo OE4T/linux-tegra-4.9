@@ -2199,6 +2199,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 	{
 #ifdef CONFIG_TEGRA_NVDISPLAY
 		struct tegra_dc_ext_imp_user_info *info;
+		int ret = 0;
 
 		info = kzalloc(sizeof(*info), GFP_KERNEL);
 		if (!info)
@@ -2209,7 +2210,11 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			return -EFAULT;
 		}
 
-		tegra_nvdisp_get_imp_user_info(user->ext->dc, info);
+		ret = tegra_nvdisp_get_imp_user_info(user->ext->dc, info);
+		if (ret) {
+			kfree(info);
+			return ret;
+		}
 
 		if (copy_to_user(user_arg, info, sizeof(*info))) {
 			kfree(info);
@@ -2217,7 +2222,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		}
 
 		kfree(info);
-		return 0;
+		return ret;
 #else
 		return -EINVAL;
 #endif

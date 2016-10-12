@@ -432,22 +432,22 @@ void ttcan_tx_ded_msg_write(struct ttcan_controller *ttcan,
 int ttcan_tx_msg_buffer_write(struct ttcan_controller *ttcan,
 			      struct ttcanfd_frame *ttcanfd, bool tt_en)
 {
-	int index = ttcan->buf_idx;
+	int cur_index = 0;
+	u32 txbrp_reg = ttcan_read32(ttcan, ADR_MTTCAN_TXBRP);
+	u32 txbrp_free = ~txbrp_reg;
 
-	if (index == ttcan->tx_config.ded_buff_num) {
-		index = 0;
-		ttcan->buf_idx = 0;
-	}
+	/* number of buffers to consider */
+	txbrp_free &= (1 << ttcan->tx_config.ded_buff_num) - 1;
 
-	while (index < ttcan->tx_config.ded_buff_num) {
-		if (!ttcan_tx_buff_req_pending(ttcan, index)) {
-			ttcan_tx_ded_msg_write(ttcan, ttcanfd, index, tt_en);
-			return ttcan->buf_idx++;
-		}
-		index++;
-		ttcan->buf_idx++;
-	}
-	return -ENOMEM;
+	/* find first free buffer */
+	cur_index = ffs(txbrp_free);
+
+	if (!cur_index)
+		return -ENOMEM;
+
+	ttcan_tx_ded_msg_write(ttcan, ttcanfd, (cur_index - 1), tt_en);
+
+	return cur_index - 1;
 }
 
 int ttcan_set_tx_buffer_addr(struct ttcan_controller *ttcan)

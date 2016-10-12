@@ -296,7 +296,6 @@ struct ttcan_controller {
 	int rxq1_mem;
 	int rxb_mem;
 	int evt_mem;
-	int buf_idx;
 	u16 list_status;	/* bit 0: 1=Full; */
 	u16 resv0;
 };

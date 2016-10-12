@@ -938,6 +938,8 @@
 		iommus = <&smmu TEGRA_SWGROUP_GPUB>;
 		access-vpr-phys;
 		status = "disabled";
+		resets = <&tegra_car TEGRA210_CLK_GPU>;
+		reset-names = "gpu";
 	};
 
 	mipical {

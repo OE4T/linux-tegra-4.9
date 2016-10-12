@@ -633,6 +633,7 @@ struct gpu_ops {
 		int (*init_clk_support)(struct gk20a *g);
 		int (*suspend_clk_support)(struct gk20a *g);
 		u32 (*get_crystal_clk_hz)(struct gk20a *g);
+		u16 (*get_rate)(struct gk20a *g, u32 api_domain);
 	} clk;
 	struct {
 		u32 (*get_arbiter_clk_domains)(struct gk20a *g);

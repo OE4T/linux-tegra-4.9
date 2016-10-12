@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 - 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011 - 2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -89,6 +89,7 @@ struct clk_gk20a {
 	struct mutex clk_mutex;
 	struct namemap_cfg *clk_namemap;
 	u32 namemap_num;
+	u32 *namemap_xlat_table;
 	bool sw_ready;
 	bool clk_hw_on;
 	bool debugfs_set;

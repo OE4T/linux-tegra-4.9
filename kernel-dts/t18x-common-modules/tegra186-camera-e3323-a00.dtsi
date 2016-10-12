@@ -44,12 +44,16 @@
 				port@2 {
 					reg = <2>;
 					e3323_vi_in2: endpoint {
+						csi-port = <0>;
+						bus-width = <4>;
 						remote-endpoint = <&e3323_lc898212_out0>;
 					};
 				};
 				port@3 {
 					reg = <3>;
 					e3323_vi_in3: endpoint {
+						csi-port = <2>;
+						bus-width = <4>;
 						remote-endpoint = <&e3323_lc898212_out1>;
 					};
 				};

@@ -115,6 +115,20 @@
 				};
 			};
 		};
+		fragement-power-monitor-p3310-1000-800 {
+			ids = ">=3310-1000-800";
+			override@0 {
+				target = <&ina3221x_41>;
+				_overlay_ {
+					channel@0 {
+						ti,shunt-resistor-mohm = <20>;
+					};
+					channel@2 {
+						ti,rail-name = "VDD_SYS_DDR";
+					};
+				};
+			};
+		};
 
 	};
 };

@@ -32,6 +32,7 @@
 			compatible = "sharp,lr388k7_ts";
 			reg = <0>; /* spi chip select 0 */
 			spi-max-frequency = <12000000>;
+			irq-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(AA, 7) 0x01>;
 			interrupt-parent = <&tegra_gpio_aon>;
 			interrupts = <TEGRA_GPIO_AON(AA, 7) 0x01>; /* GPIO_PAA7 */
 			reset-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(S, 3) 0>; /* GPIO_PS3 */

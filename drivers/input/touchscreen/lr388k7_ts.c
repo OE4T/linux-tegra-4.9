@@ -2183,7 +2183,7 @@ static struct lr388k7_platform_data *lr388k7_parse_dt(struct device *dev,
 	}
 	gpio_direction_output(pdata->gpio_reset, 0);
 
-	ret = of_property_read_u32(np, "interrupts", &irq_gpio);
+	irq_gpio = of_get_named_gpio(np, "irq-gpio", 0);
 	if (!gpio_is_valid(irq_gpio)) {
 		dev_err(dev, "Invalid irq-gpio\n");
 		ret = -EINVAL;

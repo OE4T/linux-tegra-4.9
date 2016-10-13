@@ -498,19 +498,23 @@ static inline u32 ram_fc_acquire_w(void)
 {
 	return 12;
 }
-static inline u32 ram_fc_semaphorea_w(void)
+static inline u32 ram_fc_sem_addr_hi_w(void)
 {
 	return 14;
 }
-static inline u32 ram_fc_semaphoreb_w(void)
+static inline u32 ram_fc_sem_addr_lo_w(void)
 {
 	return 15;
 }
-static inline u32 ram_fc_semaphorec_w(void)
+static inline u32 ram_fc_sem_payload_lo_w(void)
 {
 	return 16;
 }
-static inline u32 ram_fc_semaphored_w(void)
+static inline u32 ram_fc_sem_payload_hi_w(void)
+{
+	return 39;
+}
+static inline u32 ram_fc_sem_execute_w(void)
 {
 	return 17;
 }
@@ -553,10 +557,6 @@ static inline u32 ram_fc_pb_count_w(void)
 static inline u32 ram_fc_subdevice_w(void)
 {
 	return 37;
-}
-static inline u32 ram_fc_formats_w(void)
-{
-	return 39;
 }
 static inline u32 ram_fc_allowed_syncpoints_w(void)
 {

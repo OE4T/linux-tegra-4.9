@@ -2676,7 +2676,7 @@ static inline u32 gr_gpcs_swdx_dss_zbc_color_a_val_f(u32 v)
 }
 static inline u32 gr_gpcs_swdx_dss_zbc_c_01_to_04_format_r(void)
 {
-	return 0x00500100;
+	return 0x00418100;
 }
 static inline u32 gr_gpcs_swdx_dss_zbc_z_r(u32 i)
 {
@@ -2688,7 +2688,19 @@ static inline u32 gr_gpcs_swdx_dss_zbc_z_val_f(u32 v)
 }
 static inline u32 gr_gpcs_swdx_dss_zbc_z_01_to_04_format_r(void)
 {
-	return 0x0050014c;
+	return 0x0041814c;
+}
+static inline u32 gr_gpcs_swdx_dss_zbc_s_r(u32 i)
+{
+	return 0x0041815c + i*4;
+}
+static inline u32 gr_gpcs_swdx_dss_zbc_s_val_f(u32 v)
+{
+	return (v & 0xff) << 0;
+}
+static inline u32 gr_gpcs_swdx_dss_zbc_s_01_to_04_format_r(void)
+{
+	return 0x00418198;
 }
 static inline u32 gr_gpcs_setup_attrib_cb_base_r(void)
 {
@@ -3114,14 +3126,6 @@ static inline u32 gr_gpc0_tpc0_sm0_hww_global_esr_multiple_warp_errors_pending_f
 {
 	return 0x4;
 }
-static inline u32 gr_gpc0_tpc0_tex_m_hww_esr_r(void)
-{
-	return 0x00504224;
-}
-static inline u32 gr_gpc0_tpc0_tex_m_hww_esr_intr_pending_f(void)
-{
-	return 0x1;
-}
 static inline u32 gr_gpc0_tpc0_sm0_hww_warp_esr_r(void)
 {
 	return 0x00504730;
@@ -3293,78 +3297,6 @@ static inline u32 gr_zcull_save_restore_subregion_header_bytes_per_gpc_v(void)
 static inline u32 gr_zcull_subregion_qty_v(void)
 {
 	return 0x00000010;
-}
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control_sel0_r(void)
-{
-	return 0x00504308;
-}
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control_sel1_r(void)
-{
-	return 0x0050430c;
-}
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control0_r(void)
-{
-	return 0x00504318;
-}
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control1_r(void)
-{
-	return 0x00504320;
-}
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control2_r(void)
-{
-	return 0x00504324;
-}
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control3_r(void)
-{
-	return 0x00504328;
-}
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control4_r(void)
-{
-	return 0x0050432c;
-}
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter_control5_r(void)
-{
-	return 0x0050431c;
-}
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter0_control_r(void)
-{
-	return 0x00504378;
-}
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter1_control_r(void)
-{
-	return 0x0050437c;
-}
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter2_control_r(void)
-{
-	return 0x00504380;
-}
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter3_control_r(void)
-{
-	return 0x00504384;
-}
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter4_control_r(void)
-{
-	return 0x00504388;
-}
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter5_control_r(void)
-{
-	return 0x0050438c;
-}
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter6_control_r(void)
-{
-	return 0x00504390;
-}
-static inline u32 gr_pri_gpc0_tpc0_sm_dsm_perf_counter7_control_r(void)
-{
-	return 0x00504394;
-}
-static inline u32 gr_pri_gpc0_tpc0_sm0_dsm_perf_counter_status_s1_r(void)
-{
-	return 0x00504744;
-}
-static inline u32 gr_pri_gpc0_tpc0_sm0_dsm_perf_counter_status1_r(void)
-{
-	return 0x00504750;
 }
 static inline u32 gr_fe_pwr_mode_r(void)
 {

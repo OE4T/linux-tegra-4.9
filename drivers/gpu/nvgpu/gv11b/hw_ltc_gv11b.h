@@ -246,6 +246,26 @@ static inline u32 ltc_ltcs_ltss_dstg_zbc_depth_clear_value_field_v(u32 r)
 {
 	return (r >> 0) & 0xffffffff;
 }
+static inline u32 ltc_ltcs_ltss_dstg_zbc_stencil_clear_value_r(void)
+{
+	return 0x0017e204;
+}
+static inline u32 ltc_ltcs_ltss_dstg_zbc_stencil_clear_value_field_s(void)
+{
+	return 8;
+}
+static inline u32 ltc_ltcs_ltss_dstg_zbc_stencil_clear_value_field_f(u32 v)
+{
+	return (v & 0xff) << 0;
+}
+static inline u32 ltc_ltcs_ltss_dstg_zbc_stencil_clear_value_field_m(void)
+{
+	return 0xff << 0;
+}
+static inline u32 ltc_ltcs_ltss_dstg_zbc_stencil_clear_value_field_v(u32 r)
+{
+	return (r >> 0) & 0xff;
+}
 static inline u32 ltc_ltcs_ltss_tstg_set_mgmt_2_r(void)
 {
 	return 0x0017e2b0;

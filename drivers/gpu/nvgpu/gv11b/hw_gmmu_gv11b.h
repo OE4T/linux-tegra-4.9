@@ -1182,7 +1182,7 @@ static inline u32 gmmu_pte_kind_c64_ms2_2cbr_v(void)
 {
 	return 0x000000ec;
 }
-static inline u32 gmmu_pte_kind_c64_ms2_2cbra_v(void)
+static inline u32 gmmu_pte_kind_c64_ms2_4cbra_v(void)
 {
 	return 0x000000cd;
 }

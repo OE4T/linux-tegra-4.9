@@ -78,6 +78,10 @@ static inline u32 mc_intr_pfifo_pending_f(void)
 {
 	return 0x100;
 }
+static inline u32 mc_intr_hub_pending_f(void)
+{
+	return 0x200;
+}
 static inline u32 mc_intr_pgraph_pending_f(void)
 {
 	return 0x1000;

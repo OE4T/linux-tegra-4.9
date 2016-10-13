@@ -302,6 +302,8 @@ static int tegra_ivc_bus_probe(struct device *dev)
 		struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
 		const struct tegra_ivc_channel_ops *ops = drv->ops.channel;
 
+		mutex_init(&chan->ivc_wr_lock);
+
 		BUG_ON(ops == NULL);
 		if (ops->probe != NULL) {
 			ret = ops->probe(chan);
@@ -350,6 +352,28 @@ static int tegra_ivc_bus_remove(struct device *dev)
 
 		if (ops->remove != NULL)
 			ops->remove(dev);
+	}
+
+	return 0;
+}
+
+static int tegra_ivc_bus_ready_child(struct device *dev, void *data)
+{
+	struct tegra_ivc_driver *drv = to_tegra_ivc_driver(dev->driver);
+	int ret;
+
+	if (drv == NULL)
+		return -EINVAL;
+
+	if (dev->type == &tegra_ivc_channel_type) {
+		struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
+		const struct tegra_ivc_channel_ops *ops = drv->ops.channel;
+
+		if (ops->ready != NULL) {
+			ret = ops->ready(chan);
+			if (ret)
+				return ret;
+		}
 	}
 
 	return 0;
@@ -458,6 +482,12 @@ error:
 	return ERR_PTR(ret);
 }
 EXPORT_SYMBOL(tegra_ivc_bus_create);
+
+void tegra_ivc_bus_ready(struct tegra_ivc_bus *bus)
+{
+	device_for_each_child(&bus->dev, NULL, tegra_ivc_bus_ready_child);
+}
+EXPORT_SYMBOL(tegra_ivc_bus_ready);
 
 void tegra_ivc_bus_destroy(struct tegra_ivc_bus *bus)
 {

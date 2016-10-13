@@ -897,6 +897,8 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	pm_runtime_idle(dev);
 	rtcpu->state = RTCPU_UP;
 
+	tegra_ivc_bus_ready(rtcpu->ivc);
+
 	tegra_camrtc_log_fw_version(dev);
 
 	dev_dbg(dev, "successfully probed RTCPU on %s\n", name);

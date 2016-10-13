@@ -20,9 +20,11 @@ extern struct bus_type tegra_ivc_bus_type;
 struct tegra_ivc_bus;
 struct tegra_hsp_ops;
 struct tegra_ast;
+struct tegra_ivc_rpc_data;
 
 struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *, struct tegra_ast *,
 						u32 sid);
+void tegra_ivc_bus_ready(struct tegra_ivc_bus *bus);
 void tegra_ivc_bus_destroy(struct tegra_ivc_bus *ibus);
 
 struct tegra_ivc_driver {
@@ -76,6 +78,8 @@ struct tegra_ivc_channel {
 	struct device dev;
 	const struct tegra_ivc_channel_ops __rcu *ops;
 	struct tegra_ivc_channel *next;
+	struct mutex ivc_wr_lock;
+	struct tegra_ivc_rpc_data *rpc_priv;
 };
 
 static inline void *tegra_ivc_channel_get_drvdata(
@@ -110,6 +114,7 @@ static inline struct device *tegra_ivc_channel_to_camrtc_dev(
 
 struct tegra_ivc_channel_ops {
 	int (*probe)(struct tegra_ivc_channel *);
+	int (*ready)(struct tegra_ivc_channel *);
 	void (*remove)(struct tegra_ivc_channel *);
 	void (*notify)(struct tegra_ivc_channel *);
 };

@@ -16,6 +16,6 @@ struct tegra_camrtc_mon;
 
 int tegra_camrtc_mon_restore_rtcpu(struct tegra_camrtc_mon *);
 struct tegra_camrtc_mon *tegra_camrtc_mon_create(struct device *);
-int tegra_cam_rtcpu_mon_destroy(void);
+int tegra_cam_rtcpu_mon_destroy(struct tegra_camrtc_mon *);
 
 #endif /* INCLUDE_RTCPU_MONITOR_H */

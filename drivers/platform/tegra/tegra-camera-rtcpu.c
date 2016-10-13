@@ -778,6 +778,7 @@ static int tegra_cam_rtcpu_remove(struct platform_device *pdev)
 	if (rtcpu->power_domain)
 		tegra_pd_remove_device(&pdev->dev);
 
+	tegra_cam_rtcpu_mon_destroy(rtcpu->monitor);
 	tegra_ivc_bus_destroy(rtcpu->ivc);
 	tegra_ast_destroy(rtcpu->ast);
 	tegra_hsp_sm_pair_free(rtcpu->sm_pair);

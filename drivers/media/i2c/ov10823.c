@@ -250,8 +250,14 @@ static inline int ov10823_read_reg(struct camera_common_data *s_data,
 				u16 addr, u8 *val)
 {
 	struct ov10823 *priv = (struct ov10823 *)s_data->priv;
+	unsigned int temp_val;
+	int err;
 
-	return regmap_read(priv->regmap, addr, (unsigned int *) val);
+	err = regmap_read(priv->regmap, addr, &temp_val);
+	if (!err)
+		*val = temp_val;
+
+	return err;
 }
 
 static int ov10823_write_reg(struct camera_common_data *s_data,

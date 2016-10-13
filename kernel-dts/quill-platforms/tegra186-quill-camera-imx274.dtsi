@@ -66,9 +66,6 @@
 
 	gpio@2200000 {
 		camera-control {
-			gpio-input = <
-				TEGRA_GPIO_AON(AA, 2)
-				>;
 			gpio-output-low = <
 				CAM1_RST_L
 				>;

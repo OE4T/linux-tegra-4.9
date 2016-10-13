@@ -142,17 +142,6 @@ static void max77620_prepare_power_off(void *drv_data)
 	max77620_prepare_system_power_off(max77620_poff);
 }
 
-static void max77620_override_poweroff_config(void *drv_data,
-				bool enable)
-{
-	struct max77620_poweroff *max77620_poff = drv_data;
-
-	if (enable)
-		max77620_poff->avoid_power_off_command = true;
-	else
-		max77620_poff->avoid_power_off_command = false;
-}
-
 static void max77620_pm_power_off(void *drv_data)
 {
 	struct max77620_poweroff *max77620_poweroff = drv_data;
@@ -249,7 +238,6 @@ static struct system_pmic_ops max77620_pm_ops = {
 	.power_reset = max77620_pm_power_reset,
 	.configure_power_on = max77620_configure_power_on,
 	.prepare_power_off = max77620_prepare_power_off,
-	.override_poweroff_config = max77620_override_poweroff_config,
 };
 
 static int max77620_poweroff_probe(struct platform_device *pdev)

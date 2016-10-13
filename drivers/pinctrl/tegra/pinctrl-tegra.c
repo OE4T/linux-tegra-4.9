@@ -30,11 +30,21 @@
 #include <linux/pinctrl/pinconf.h>
 #include <linux/pinctrl/pinconf-tegra.h>
 #include <linux/slab.h>
+#include <linux/syscore_ops.h>
 #include <linux/tegra_prod.h>
+
+#include <soc/tegra/fuse.h>
 
 #include "../core.h"
 #include "../pinctrl-utils.h"
 #include "pinctrl-tegra.h"
+
+#define EMMC2_PAD_CFGPADCTRL_OFFSET	0x1C8
+#define EMMC4_PAD_CFGPADCTRL_OFFSET	0x1E0
+
+#define EMMC_PARKING_BIT		0xE
+#define EMMC_DPD_PARKING(x)		(x << EMMC_PARKING_BIT)
+#define EMMC_PARKING_SET		0x1FFF
 
 struct tegra_pmx {
 	struct device *dev;
@@ -48,6 +58,9 @@ struct tegra_pmx {
 	unsigned int *reg_base;
 	u32 *gpio_conf;
 	struct tegra_prod *prod_list;
+
+	int *reg_bank_size;
+	u32 *pg_data;
 };
 
 static struct tegra_pmx *pmx;
@@ -896,6 +909,79 @@ static void tegra_pinctrl_clear_parked_bits(struct tegra_pmx *pmx)
 	}
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int tegra_pinctrl_suspend(void)
+{
+	int i, j;
+	u32 *pg_data = pmx->pg_data;
+	u32 *regs;
+
+	switch (tegra_get_chip_id()) {
+	case TEGRA114:
+	case TEGRA124:
+	case TEGRA132:
+	case TEGRA210:
+		break;
+	default:
+		return 0;
+	}
+
+	for (i = 0; i < pmx->nbanks; i++) {
+		regs = pmx->regs[i];
+		for (j = 0; j < pmx->reg_bank_size[i] / 4; j++)
+			*pg_data++ = readl(regs++);
+	}
+
+	return pinctrl_force_sleep(pmx->pctl);
+}
+
+static void tegra_pinctrl_resume(void)
+{
+	int i, j;
+	u8 chip_id;
+	u32 *pg_data = pmx->pg_data;
+	u32 *regs;
+	u32 val;
+
+	chip_id = tegra_get_chip_id();
+
+	switch (chip_id) {
+	case TEGRA114:
+	case TEGRA124:
+	case TEGRA132:
+	case TEGRA210:
+		break;
+	default:
+		return;
+	}
+
+	for (i = 0; i < pmx->nbanks; i++) {
+		regs = pmx->regs[i];
+		for (j = 0; j < pmx->reg_bank_size[i] / 4; j++)
+			writel(*pg_data++, regs++);
+	}
+
+	if (chip_id == TEGRA210) {
+		/* Clear parking bit for EMMC IO brick pads */
+		val = pmx_readl(pmx, 0, EMMC2_PAD_CFGPADCTRL_OFFSET);
+		val &= ~(EMMC_DPD_PARKING(EMMC_PARKING_SET));
+		pmx_writel(pmx, val, 0, EMMC2_PAD_CFGPADCTRL_OFFSET);
+
+		val = pmx_readl(pmx, 0, EMMC4_PAD_CFGPADCTRL_OFFSET);
+		val &= ~(EMMC_DPD_PARKING(EMMC_PARKING_SET));
+		pmx_writel(pmx, val, 0, EMMC4_PAD_CFGPADCTRL_OFFSET);
+	}
+}
+#else
+#define tegra_pinctrl_suspend   NULL
+#define tegra_pinctrl_resume    NULL
+#endif
+
+static struct syscore_ops pinctrl_syscore_ops = {
+	.suspend = tegra_pinctrl_suspend,
+	.resume = tegra_pinctrl_resume,
+};
+
 static bool gpio_node_has_range(void)
 {
 	struct device_node *np;
@@ -997,12 +1083,31 @@ int tegra_pinctrl_probe(struct platform_device *pdev,
 		return -ENOMEM;
 	}
 
+#ifdef CONFIG_PM_SLEEP
+	pmx->reg_bank_size = devm_kzalloc(&pdev->dev,
+				pmx->nbanks * sizeof(*(pmx->reg_bank_size)),
+				GFP_KERNEL);
+	if (!pmx->reg_bank_size) {
+		dev_err(&pdev->dev, "Can't alloc reg_bank_size pointer\n");
+		return -ENOMEM;
+	}
+
+	pmx->pg_data = devm_kzalloc(&pdev->dev, pg_data_size, GFP_KERNEL);
+	if (!pmx->pg_data) {
+		dev_err(&pdev->dev, "Can't alloc pingroup data pointer\n");
+		return -ENOMEM;
+	}
+#endif
+
 	for (i = 0; i < pmx->nbanks; i++) {
 		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
 		pmx->reg_base[i] = res->start;
 		pmx->regs[i] = devm_ioremap_resource(&pdev->dev, res);
 		if (IS_ERR(pmx->regs[i]))
 			return PTR_ERR(pmx->regs[i]);
+#ifdef CONFIG_PM_SLEEP
+		pmx->reg_bank_size[i] = resource_size(res);
+#endif
 	}
 
 	pmx->pctl = devm_pinctrl_register(&pdev->dev, &tegra_pinctrl_desc, pmx);
@@ -1030,6 +1135,8 @@ int tegra_pinctrl_probe(struct platform_device *pdev,
 		pinctrl_add_gpio_range(pmx->pctl, &tegra_pinctrl_gpio_range);
 
 	platform_set_drvdata(pdev, pmx);
+
+	register_syscore_ops(&pinctrl_syscore_ops);
 
 	dev_dbg(&pdev->dev, "Probed Tegra pinctrl driver\n");
 

@@ -4080,6 +4080,8 @@ static inline u32* tegra210_init_suspend_ctx(void)
 static struct syscore_ops tegra_clk_syscore_ops = {
 	.suspend = tegra210_clk_suspend,
 	.resume = tegra210_clk_resume,
+	.save = tegra210_clk_suspend,
+	.restore = tegra210_clk_resume,
 };
 
 /**

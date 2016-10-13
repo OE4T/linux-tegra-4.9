@@ -122,6 +122,16 @@ static void update_gang_mode(struct tegra_channel *chan)
 	update_gang_mode_params(chan);
 }
 
+/*
+ * nvrm needs size in alignment with a multiple of 128K bytes,
+ * see CL http://git-master/r/256468 and bug 1321091.
+ */
+#define SIZE_ALIGN (128 * 1024)
+static void buffer_size_align(u32 *size)
+{
+	*size = roundup(*size, SIZE_ALIGN);
+}
+
 static void tegra_channel_fmt_align(struct tegra_channel *chan,
 				     u32 *width, u32 *height, u32 *bytesperline)
 {
@@ -154,6 +164,7 @@ static void tegra_channel_fmt_align(struct tegra_channel *chan,
 
 	*width = clamp(temp_width, min_width, max_width) / bpp;
 	*height = clamp(*height, TEGRA_MIN_HEIGHT, TEGRA_MAX_HEIGHT);
+	*height = roundup(*height, chan->line_align);
 
 	/* Clamp the requested bytes per line value. If the maximum bytes per
 	 * line value is zero, the module doesn't support user configurable line
@@ -223,6 +234,10 @@ static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 				&chan->format.bytesperline);
 	chan->format.sizeimage = chan->format.bytesperline *
 		chan->format.height;
+	buffer_size_align(&chan->format.sizeimage);
+	if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
+		chan->format.sizeimage *= 2;
+
 	if (chan->total_ports > 1)
 		update_gang_mode(chan);
 }
@@ -697,6 +712,9 @@ tegra_channel_s_dv_timings(struct file *file, void *fh,
 					&chan->format.bytesperline);
 		chan->format.sizeimage = chan->format.bytesperline *
 			chan->format.height;
+		buffer_size_align(&chan->format.sizeimage);
+		if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
+			chan->format.sizeimage *= 2;
 	}
 
 	if (chan->total_ports > 1)
@@ -965,6 +983,9 @@ __tegra_channel_get_format(struct tegra_channel *chan,
 		tegra_channel_fmt_align(chan,
 			&pix->width, &pix->height, &pix->bytesperline);
 		pix->sizeimage = pix->height * pix->bytesperline;
+		buffer_size_align(&pix->sizeimage);
+		if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
+			pix->sizeimage *= 2;
 	}
 
 	return ret;
@@ -997,10 +1018,6 @@ __tegra_channel_try_format(struct tegra_channel *chan,
 		vfmt = tegra_core_get_format_by_fourcc(pix->pixelformat);
 	}
 
-	tegra_channel_fmt_align(chan,
-				&pix->width, &pix->height, &pix->bytesperline);
-	pix->sizeimage = pix->bytesperline * pix->height;
-
 	fmt.which = V4L2_SUBDEV_FORMAT_TRY;
 	fmt.pad = 0;
 	v4l2_fill_mbus_format(&fmt.format, pix, vfmt->code);
@@ -1011,7 +1028,12 @@ __tegra_channel_try_format(struct tegra_channel *chan,
 
 	v4l2_fill_pix_format(pix, &fmt.format);
 
+	tegra_channel_fmt_align(chan,
+				&pix->width, &pix->height, &pix->bytesperline);
 	pix->sizeimage = pix->height * pix->bytesperline;
+	buffer_size_align(&pix->sizeimage);
+	if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
+		pix->sizeimage *= 2;
 
 	return ret;
 }
@@ -1050,6 +1072,17 @@ __tegra_channel_set_format(struct tegra_channel *chan,
 	if (!ret) {
 		chan->format = *pix;
 		chan->fmtinfo = vfmt;
+		tegra_channel_fmt_align(chan,
+			&pix->width, &pix->height, &pix->bytesperline);
+		pix->bytesperline = pix->width * chan->fmtinfo->bpp;
+		pix->sizeimage = pix->bytesperline * pix->height;
+		buffer_size_align(&pix->sizeimage);
+		if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
+			pix->sizeimage *= 2;
+		/* Update sizeimage and byteperline to channel format */
+		chan->format.sizeimage = pix->sizeimage;
+		chan->format.bytesperline = pix->bytesperline;
+
 		if (chan->total_ports > 1)
 			update_gang_mode(chan);
 	}
@@ -1348,6 +1381,7 @@ int tegra_channel_init(struct tegra_channel *chan)
 
 	chan->width_align = TEGRA_WIDTH_ALIGNMENT;
 	chan->stride_align = TEGRA_STRIDE_ALIGNMENT;
+	chan->line_align = TEGRA_LINE_ALIGNMENT;
 	chan->num_subdevs = 0;
 	mutex_init(&chan->video_lock);
 	INIT_LIST_HEAD(&chan->capture);
@@ -1368,6 +1402,9 @@ int tegra_channel_init(struct tegra_channel *chan)
 	chan->format.bytesperline = chan->format.width * chan->fmtinfo->bpp;
 	chan->format.sizeimage = chan->format.bytesperline *
 				    chan->format.height;
+	buffer_size_align(&chan->format.sizeimage);
+	if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
+		chan->format.sizeimage *= 2;
 	chan->buffer_offset[0] = 0;
 
 	/* Initialize the media entity... */

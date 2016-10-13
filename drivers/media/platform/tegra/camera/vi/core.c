@@ -183,53 +183,12 @@ static const struct tegra_video_format tegra_video_formats[] = {
 	{
 		TEGRA_VF_YUV422,
 		16,
-		MEDIA_BUS_FMT_UYVY8_2X8,
-		2,
-		TEGRA_IMAGE_FORMAT_T_U8_Y8__V8_Y8,
-		TEGRA_IMAGE_DT_YUV422_8,
-		V4L2_PIX_FMT_UYVY,
-		"YUV 4:2:2",
-	},
-	{
-		TEGRA_VF_YUV422,
-		16,
-		MEDIA_BUS_FMT_VYUY8_2X8,
-		2,
-		TEGRA_IMAGE_FORMAT_T_T_V8_Y8__U8_Y8,
-		TEGRA_IMAGE_DT_YUV422_8,
-		V4L2_PIX_FMT_VYUY,
-		"YUV 4:2:2",
-	},
-	{
-		TEGRA_VF_YUV422,
-		16,
-		MEDIA_BUS_FMT_YUYV8_2X8,
-		2,
-		TEGRA_IMAGE_FORMAT_T_Y8_U8__Y8_V8,
-		TEGRA_IMAGE_DT_YUV422_8,
-		V4L2_PIX_FMT_YUYV,
-		"YUV 4:2:2",
-	},
-	{
-		TEGRA_VF_YUV422,
-		16,
-		MEDIA_BUS_FMT_YVYU8_2X8,
-		2,
-		TEGRA_IMAGE_FORMAT_T_Y8_V8__Y8_U8,
-		TEGRA_IMAGE_DT_YUV422_8,
-		V4L2_PIX_FMT_YVYU,
-		"YUV 4:2:2",
-	},
-
-	/* YUV422 */
-	{
-		TEGRA_VF_YUV422,
-		16,
 		MEDIA_BUS_FMT_UYVY8_1X16,
-		2,
-		TEGRA_IMAGE_FORMAT_T_U8_Y8__V8_Y8,
+		1,
+		TEGRA_IMAGE_FORMAT_T_Y8__V8U8_N422,
 		TEGRA_IMAGE_DT_YUV422_8,
-		V4L2_PIX_FMT_UYVY,
+		V4L2_PIX_FMT_NV16,
+		"NV16",
 	},
 	{
 		TEGRA_VF_YUV422,
@@ -239,6 +198,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		TEGRA_IMAGE_FORMAT_T_U8_Y8__V8_Y8,
 		TEGRA_IMAGE_DT_YUV422_8,
 		V4L2_PIX_FMT_UYVY,
+		"YUV 4:2:2",
 	},
 	{
 		TEGRA_VF_YUV422,
@@ -248,6 +208,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		TEGRA_IMAGE_FORMAT_T_T_V8_Y8__U8_Y8,
 		TEGRA_IMAGE_DT_YUV422_8,
 		V4L2_PIX_FMT_VYUY,
+		"YUV 4:2:2",
 	},
 	{
 		TEGRA_VF_YUV422,
@@ -257,6 +218,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		TEGRA_IMAGE_FORMAT_T_Y8_U8__Y8_V8,
 		TEGRA_IMAGE_DT_YUV422_8,
 		V4L2_PIX_FMT_YUYV,
+		"YUV 4:2:2",
 	},
 	{
 		TEGRA_VF_YUV422,
@@ -266,6 +228,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		TEGRA_IMAGE_FORMAT_T_Y8_V8__Y8_U8,
 		TEGRA_IMAGE_DT_YUV422_8,
 		V4L2_PIX_FMT_YVYU,
+		"YUV 4:2:2",
 	},
 };
 

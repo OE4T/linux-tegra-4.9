@@ -160,9 +160,22 @@ static void tegra_channel_surface_setup(
 	vi4_channel_write(chan, vnc_id,
 		ATOMP_SURFACE_STRIDE0, chan->format.bytesperline);
 	vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_OFFSET0_H, 0x0);
-	vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_OFFSET1, 0x0);
-	vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_OFFSET1_H, 0x0);
-	vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_STRIDE1, 0x0);
+
+	if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16) {
+		vi4_channel_write(chan, vnc_id,
+			ATOMP_SURFACE_OFFSET1, buf->addr + offset +
+			chan->format.sizeimage / 2);
+		vi4_channel_write(chan, vnc_id,
+			ATOMP_SURFACE_OFFSET1_H, 0x0);
+		vi4_channel_write(chan, vnc_id,
+			ATOMP_SURFACE_STRIDE1, chan->format.bytesperline);
+
+	} else {
+		vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_OFFSET1, 0x0);
+		vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_OFFSET1_H, 0x0);
+		vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_STRIDE1, 0x0);
+	}
+
 	vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_OFFSET2, 0x0);
 	vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_OFFSET2_H, 0x0);
 	vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_STRIDE2, 0x0);

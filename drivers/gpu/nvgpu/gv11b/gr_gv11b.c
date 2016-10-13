@@ -83,22 +83,7 @@ static int gr_gv11b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 static int gr_gv11b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		bool *post_event)
 {
-	int ret = 0;
-	u32 offset = proj_gpc_stride_v() * gpc +
-		     proj_tpc_in_gpc_stride_v() * tpc;
-	u32 esr;
-
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
-
-	esr = gk20a_readl(g,
-			 gr_gpc0_tpc0_tex_m_hww_esr_r() + offset);
-	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "0x%08x", esr);
-
-	gk20a_writel(g,
-		     gr_gpc0_tpc0_tex_m_hww_esr_r() + offset,
-		     esr);
-
-	return ret;
+	return 0;
 }
 
 static int gr_gv11b_commit_global_cb_manager(struct gk20a *g,

@@ -84,7 +84,7 @@ static struct dvfs_rail tegra210_dvfs_rail_vdd_gpu = {
 	.max_millivolts = 1300,
 	.step = VDD_SAFE_STEP,
 	.step_up = 1300,
-	.jmp_to_zero = true,
+	.jmp_to_zero = false,
 	.alignment = {
 		.step_uv = 6250, /* 6.25mV */
 	},

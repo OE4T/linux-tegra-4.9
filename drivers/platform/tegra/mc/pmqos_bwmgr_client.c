@@ -69,5 +69,4 @@ int __init pmqos_bwmgr_init(void)
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(pmqos_bwmgr_init);
 #endif /* CONFIG_TEGRA_BWMGR */

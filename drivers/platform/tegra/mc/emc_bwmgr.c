@@ -45,8 +45,6 @@ static struct {
 
 static bool clk_update_disabled;
 
-int __init pmqos_bwmgr_init(void);
-
 static struct {
 	unsigned long bw;
 	unsigned long iso_bw;

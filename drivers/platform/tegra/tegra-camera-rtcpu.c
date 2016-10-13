@@ -335,7 +335,7 @@ int tegra_camrtc_start(struct device *dev)
 
 	ret = tegra_cam_rtcpu_apply_resets(dev, reset_control_deassert);
 	if (ret) {
-		dev_err(dev, "failed to assert the resets while starting camrtc: %d",
+		dev_err(dev, "failed to deassert the resets while starting camrtc: %d",
 			ret);
 		return ret;
 	}

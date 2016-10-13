@@ -23,9 +23,6 @@
 		gpio-init-1 = <&wlan_default>;
 
 		wlan_default: wlan-default {
-			gpio-input = <
-				TEGRA_GPIO_AON(FF, 3)
-				>;
 			gpio-output-high = <
 				TEGRA_GPIO(N, 0)
 				>;

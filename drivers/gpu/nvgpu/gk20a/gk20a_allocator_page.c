@@ -229,7 +229,7 @@ static struct page_alloc_slab_page *alloc_slab_page(
 
 	INIT_LIST_HEAD(&slab_page->list_entry);
 	slab_page->slab_size = slab->slab_size;
-	slab_page->nr_objects = a->page_size / slab->slab_size;
+	slab_page->nr_objects = (u32)a->page_size / slab->slab_size;
 	slab_page->nr_objects_alloced = 0;
 	slab_page->owner = slab;
 	slab_page->state = SP_NONE;
@@ -389,7 +389,7 @@ static void __gk20a_free_slab(struct gk20a_page_allocator *a,
 	enum slab_page_state new_state;
 	int offs;
 
-	offs = (alloc->base - slab_page->page_addr) / slab_page->slab_size;
+	offs = (u32)(alloc->base - slab_page->page_addr) / slab_page->slab_size;
 	bitmap_clear(&slab_page->bitmap, offs, 1);
 
 	slab_page->nr_objects_alloced--;

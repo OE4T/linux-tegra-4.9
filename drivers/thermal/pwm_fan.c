@@ -60,6 +60,7 @@ struct fan_dev_data {
 	struct workqueue_struct *workqueue;
 	int fan_temp_control_flag;
 	struct pwm_device *pwm_dev;
+	bool pwm_legacy_api;
 	int fan_cap_pwm;
 	int fan_cur_pwm;
 	int next_target_pwm;
@@ -1062,10 +1063,19 @@ static int pwm_fan_probe(struct platform_device *pdev)
 		goto cdev_register_fail;
 	}
 
-	fan_data->pwm_dev = pwm_request(fan_data->pwm_id, dev_name(&pdev->dev));
-	if (IS_ERR_OR_NULL(fan_data->pwm_dev)) {
-		dev_err(&pdev->dev, "unable to request PWM for fan\n");
-		err = -ENODEV;
+	fan_data->pwm_dev = devm_pwm_get(&pdev->dev, NULL);
+	if (IS_ERR(fan_data->pwm_dev) &&
+		PTR_ERR(fan_data->pwm_dev) != -EPROBE_DEFER) {
+		dev_err(&pdev->dev, "unable to request PWM, trying legacy API\n");
+		fan_data->pwm_legacy_api = true;
+		fan_data->pwm_dev = pwm_request(fan_data->pwm_id,
+					dev_name(&pdev->dev));
+	}
+
+	if (IS_ERR(fan_data->pwm_dev)) {
+		err = PTR_ERR(fan_data->pwm_dev);
+		if (err != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "unable to request PWM for fan\n");
 		goto pwm_req_fail;
 	} else {
 		dev_info(&pdev->dev, "got pwm for fan\n");
@@ -1171,7 +1181,8 @@ sysfs_fail:
 tach_workqueue_alloc_fail:
 tach_request_irq_fail:
 tach_gpio_request_fail:
-	pwm_free(fan_data->pwm_dev);
+	if (fan_data->pwm_legacy_api)
+		pwm_free(fan_data->pwm_dev);
 pwm_req_fail:
 	thermal_cooling_device_unregister(fan_data->cdev);
 cdev_register_fail:
@@ -1210,7 +1221,8 @@ static int pwm_fan_remove(struct platform_device *pdev)
 	destroy_workqueue(fan_data->workqueue);
 	pwm_config(fan_data->pwm_dev, 0, fan_data->pwm_period);
 	pwm_disable(fan_data->pwm_dev);
-	pwm_free(fan_data->pwm_dev);
+	if (fan_data->pwm_legacy_api)
+		pwm_free(fan_data->pwm_dev);
 
 	if (fan_data->fan_reg)
 		regulator_put(fan_data->fan_reg);
@@ -1228,7 +1240,6 @@ static int pwm_fan_suspend(struct platform_device *pdev, pm_message_t state)
 
 	set_pwm_duty_cycle(0, fan_data);
 	pwm_disable(fan_data->pwm_dev);
-	pwm_free(fan_data->pwm_dev);
 
 	err = gpio_request(fan_data->pwm_gpio, "pwm-fan");
 	if (err < 0) {
@@ -1273,15 +1284,7 @@ static int pwm_fan_resume(struct platform_device *pdev)
 	fan_data->is_fan_reg_enabled = true;
 
 	gpio_free(fan_data->pwm_gpio);
-	fan_data->pwm_dev = pwm_request(fan_data->pwm_id, dev_name(&pdev->dev));
-	if (IS_ERR_OR_NULL(fan_data->pwm_dev)) {
-		dev_err(&pdev->dev, " %s: unable to request PWM for fan\n",
-		__func__);
-		mutex_unlock(&fan_data->fan_state_lock);
-		return -ENODEV;
-	} else {
-		dev_info(&pdev->dev, " %s, got pwm for fan\n", __func__);
-	}
+	pwm_enable(fan_data->pwm_dev);
 
 	queue_delayed_work(fan_data->workqueue,
 			&fan_data->fan_ramp_work,

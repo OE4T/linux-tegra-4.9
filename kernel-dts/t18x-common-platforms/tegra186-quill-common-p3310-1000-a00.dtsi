@@ -50,7 +50,7 @@
 		status = "okay";
 	};
 
-	tegra_gpio: gpio@2200000 {
+	gpio@2200000 {
 		wifi_over_pcie: wifi_over_pcie {
 			gpio-output-low = <TEGRA_GPIO(R, 4)>;
 			status = "disabled";

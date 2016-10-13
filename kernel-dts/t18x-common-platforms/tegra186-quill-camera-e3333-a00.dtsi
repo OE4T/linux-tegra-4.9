@@ -27,7 +27,7 @@
 /* camera control gpio definitions */
 
 / {
-	gpio: gpio@2200000 {
+	gpio@2200000 {
 		camera-control {
 			gpio-output-low = <
 				CAM0_RST_L

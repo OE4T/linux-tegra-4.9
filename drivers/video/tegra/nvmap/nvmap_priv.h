@@ -226,12 +226,13 @@ struct nvmap_handle_ref {
 
 struct nvmap_page_pool {
 	struct mutex lock;
-	u32 count;  /* Number of pages in the page list. */
-	u32 max;    /* Max length of the page list. */
+	u32 count;  /* Number of pages in the page & dirty list. */
+	u32 max;    /* Max no. of pages in all lists. */
 	u32 to_zero; /* Number of pages on the zero list */
+	u32 dirty_pages; /* Number of pages in the dirty list */
 	struct list_head page_list;
+	struct list_head dirty_list;
 	struct list_head zero_list;
-	u32 dirty_pages;
 
 #ifdef CONFIG_NVMAP_PAGE_POOL_DEBUG
 	u64 allocs;

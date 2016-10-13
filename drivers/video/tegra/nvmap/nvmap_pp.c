@@ -85,7 +85,7 @@ static void pp_clean_cache(struct nvmap_page_pool *pool)
 		inner_clean_cache_all();
 		outer_clean_all();
 	} else {
-		list_for_each_entry_reverse(page, &pool->page_list, lru) {
+		list_for_each_entry_reverse(page, &pool->dirty_list, lru) {
 			nvmap_clean_cache_page(page);
 			dirty_pages--;
 			if (!dirty_pages)
@@ -93,6 +93,7 @@ static void pp_clean_cache(struct nvmap_page_pool *pool)
 		}
 		BUG_ON(dirty_pages);
 	}
+	list_splice_init(&pool->dirty_list, &pool->page_list);
 	pool->dirty_pages = 0;
 }
 
@@ -295,15 +296,19 @@ int nvmap_page_pool_alloc_lots(struct nvmap_page_pool *pool,
 		return 0;
 
 	mutex_lock(&pool->lock);
-	pp_clean_cache(pool);
 
 	real_nr = min_t(u32, nr, pool->count);
 
 	while (real_nr--) {
 		struct page *page;
 		if (IS_ENABLED(CONFIG_NVMAP_PAGE_POOL_DEBUG))
-			BUG_ON(list_empty(&pool->page_list));
+			BUG_ON(list_empty(&pool->page_list)
+				|| list_empty(&pool->dirty_list));
 		page = get_page_list_page(pool);
+		if (!page && pool->dirty_pages) {
+			pp_clean_cache(pool);
+			page = get_page_list_page(pool);
+		}
 		pages[ind++] = page;
 		if (IS_ENABLED(CONFIG_NVMAP_PAGE_POOL_DEBUG)) {
 			nvmap_pgcount(page, false);
@@ -346,7 +351,7 @@ static int __nvmap_page_pool_fill_lots_locked(struct nvmap_page_pool *pool,
 			nvmap_pgcount(pages[ind], true);
 			BUG_ON(page_count(pages[ind]) != 2);
 		}
-		list_add_tail(&pages[ind++]->lru, &pool->page_list);
+		list_add_tail(&pages[ind++]->lru, &pool->dirty_list);
 	}
 
 	pool->dirty_pages += ind;
@@ -465,7 +470,8 @@ int nvmap_page_pool_clear(void)
 	(void)nvmap_page_pool_free_locked(pool, pool->count + pool->to_zero);
 
 	/* For some reason, if an error occured... */
-	if (!list_empty(&pool->page_list) || !list_empty(&pool->zero_list)) {
+	if (!list_empty(&pool->page_list) || !list_empty(&pool->zero_list) ||
+	    !list_empty(&pool->dirty_list)) {
 		mutex_unlock(&pool->lock);
 		return -ENOMEM;
 	}
@@ -638,6 +644,9 @@ int nvmap_page_pool_debugfs_init(struct dentry *nvmap_root)
 	debugfs_create_u32("page_pool_pages_to_zero",
 			   S_IRUGO, pp_root,
 			   &nvmap_dev->pool.to_zero);
+	debugfs_create_u32("page_pool_zeroed_pages_to_clean",
+			   S_IRUGO, pp_root,
+			   &nvmap_dev->pool.dirty_pages);
 #ifdef CONFIG_NVMAP_PAGE_POOL_DEBUG
 	debugfs_create_u64("page_pool_allocs",
 			   S_IRUGO, pp_root,
@@ -665,6 +674,7 @@ int nvmap_page_pool_init(struct nvmap_device *dev)
 	mutex_init(&pool->lock);
 	INIT_LIST_HEAD(&pool->page_list);
 	INIT_LIST_HEAD(&pool->zero_list);
+	INIT_LIST_HEAD(&pool->dirty_list);
 
 	si_meminfo(&info);
 	pr_info("Total RAM pages: %lu\n", info.totalram);

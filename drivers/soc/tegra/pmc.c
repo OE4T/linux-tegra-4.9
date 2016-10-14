@@ -70,6 +70,8 @@
 
 #define PWRGATE_STATUS			0x38
 
+#define PMC_PWR_DET_ENABLE		0x48
+
 #define PMC_SCRATCH0			0x50
 #define  PMC_SCRATCH0_MODE_RECOVERY	(1 << 31)
 #define  PMC_SCRATCH0_MODE_BOOTLOADER	(1 << 30)
@@ -80,6 +82,8 @@
 
 #define PMC_CPUPWRGOOD_TIMER		0xc8
 #define PMC_CPUPWROFF_TIMER		0xcc
+
+#define PMC_PWR_DET_VAL			0xe4
 
 #define PMC_SCRATCH41			0x140
 
@@ -293,6 +297,7 @@ static struct io_dpd_reg_info t3_io_dpd_req_regs[] = {
 };
 
 static DEFINE_SPINLOCK(tegra_io_dpd_lock);
+static DEFINE_SPINLOCK(tegra_pmc_access_lock);
 
 struct tegra_pmc_soc {
 	unsigned int num_powergates;
@@ -1363,6 +1368,23 @@ void tegra_pmc_io_dpd_clear(void)
 	tegra_bl_io_dpd_cleanup();
 }
 EXPORT_SYMBOL(tegra_pmc_io_dpd_clear);
+
+void tegra_pmc_pwr_detect_update(unsigned long mask, unsigned long val)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&tegra_pmc_access_lock, flags);
+	tegra_pmc_register_update(PMC_PWR_DET_ENABLE, mask, mask);
+	tegra_pmc_register_update(PMC_PWR_DET_VAL, mask, val);
+	spin_unlock_irqrestore(&tegra_pmc_access_lock, flags);
+}
+EXPORT_SYMBOL(tegra_pmc_pwr_detect_update);
+
+unsigned long tegra_pmc_pwr_detect_get(unsigned long mask)
+{
+	return tegra_pmc_readl(PMC_PWR_DET_VAL);
+}
+EXPORT_SYMBOL(tegra_pmc_pwr_detect_get);
 
 /* T210 USB2 SLEEPWALK APIs */
 int tegra_pmc_utmi_phy_enable_sleepwalk(int port, enum usb_device_speed speed,

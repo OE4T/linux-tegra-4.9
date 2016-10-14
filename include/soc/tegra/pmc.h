@@ -181,6 +181,9 @@ void tegra_pmc_iopower_enable(int reg, u32 bit_mask);
 void tegra_pmc_iopower_disable(int reg, u32 bit_mask);
 int tegra_pmc_iopower_get_status(int reg, u32 bit_mask);
 
+void tegra_pmc_pwr_detect_update(unsigned long mask, unsigned long val);
+unsigned long tegra_pmc_pwr_detect_get(unsigned long mask);
+
 void tegra_pmc_io_dpd_clear(void);
 int tegra_pmc_io_dpd_enable(int reg, int bit_pos);
 int tegra_pmc_io_dpd_disable(int reg, int bit_pos);

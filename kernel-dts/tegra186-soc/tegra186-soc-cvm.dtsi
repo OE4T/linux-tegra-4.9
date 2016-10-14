@@ -345,4 +345,72 @@
 			status = "okay";
 		};
 	};
+
+	kfuse@0x3830000 {
+		status = "okay";
+	};
+
+	se_elp@3ad0000 {
+		status = "okay";
+	};
+
+	axi2apb@2390000 {
+		status = "okay";
+	};
+
+	axi2apb@23a0000 {
+		status = "okay";
+	};
+
+	axi2apb@23b0000 {
+		status = "okay";
+	};
+
+	axi2apb@23c0000 {
+		status = "okay";
+	};
+
+	axi2apb@23d0000 {
+		status = "okay";
+	};
+
+	axip2p@2100000 {
+		status = "okay";
+	};
+
+	axip2p@2110000 {
+		status = "okay";
+	};
+
+	axip2p@2120000 {
+		status = "okay";
+	};
+
+	axip2p@2130000 {
+		status = "okay";
+	};
+
+	axip2p@2140000 {
+		status = "okay";
+	};
+
+	axip2p@2150000 {
+		status = "okay";
+	};
+
+	axip2p@2160000 {
+		status = "okay";
+	};
+
+	axip2p@2170000 {
+		status = "okay";
+	};
+
+	axip2p@2180000 {
+		status = "okay";
+	};
+
+	axip2p@2190000 {
+		status = "okay";
+	};
 };

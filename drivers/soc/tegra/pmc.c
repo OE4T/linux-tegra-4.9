@@ -143,6 +143,9 @@ struct tegra_powergate {
 #define PMC_FUSE_CTRL_PS18_LATCH_SET    (1 << 8)
 #define PMC_FUSE_CTRL_PS18_LATCH_CLEAR  (1 << 9)
 
+/* Scratch 250: Bootrom i2c command base */
+#define PMC_BR_COMMAND_BASE		0x908
+
 /* USB2 SLEEPWALK registers */
 #define UTMIP(_port, _offset1, _offset2) \
 		(((_port) <= 2) ? (_offset1) : (_offset2))
@@ -304,6 +307,10 @@ static struct tegra_prod *prod_list;
 #ifdef CONFIG_PADCTRL_TEGRA210_PMC
 extern int tegra210_pmc_padctrl_init(struct device *dev,
 				     struct device_node *np);
+#endif
+
+#ifdef CONFIG_TEGRA210_BOOTROM_PMC
+extern int tegra210_boorom_pmc_init(struct device *dev);
 #endif
 
 struct tegra_pmc_soc {
@@ -1240,6 +1247,22 @@ error:
 EXPORT_SYMBOL(tegra_io_rail_power_off);
 #endif /* CONFIG_TEGRA_POWERGATE */
 
+void tegra_pmc_write_bootrom_command(u32 command_offset, unsigned long val)
+{
+	tegra_pmc_writel(val, command_offset + PMC_BR_COMMAND_BASE);
+}
+EXPORT_SYMBOL(tegra_pmc_write_bootrom_command);
+
+void tegra_pmc_reset_system(void)
+{
+	u32 val;
+
+	val = tegra_pmc_readl(PMC_CNTRL);
+	val |= 0x10;
+	tegra_pmc_writel(val, PMC_CNTRL);
+}
+EXPORT_SYMBOL(tegra_pmc_reset_system);
+
 void tegra_pmc_iopower_enable(int reg, u32 bit_mask)
 {
 	tegra_pmc_register_update(reg, bit_mask, 0);
@@ -2073,6 +2096,12 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 	if (err)
 		pr_err("ERROR: Pad control driver init failed: %d\n",
 			err);
+#endif
+
+#ifdef CONFIG_TEGRA210_BOOTROM_PMC
+	err = tegra210_boorom_pmc_init(&pdev->dev);
+	if (err < 0)
+		pr_err("ERROR: Bootrom PMC config failed: %d\n", err);
 #endif
 
 	/* handle PMC reboot reason with PSCI */

@@ -41,6 +41,7 @@
 #include <linux/seq_file.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/tegra_prod.h>
 #include <linux/tegra-soc.h>
 #include <linux/platform/tegra/io-dpd.h>
 
@@ -298,6 +299,7 @@ static struct io_dpd_reg_info t3_io_dpd_req_regs[] = {
 
 static DEFINE_SPINLOCK(tegra_io_dpd_lock);
 static DEFINE_SPINLOCK(tegra_pmc_access_lock);
+static struct tegra_prod *prod_list;
 
 struct tegra_pmc_soc {
 	unsigned int num_powergates;
@@ -2038,6 +2040,27 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 	iounmap(pmc->base);
 	pmc->base = base;
 	mutex_unlock(&pmc->powergates_lock);
+
+	/* Prod setting like platform specific rails */
+	prod_list = devm_tegra_prod_get(&pdev->dev);
+	if (IS_ERR(prod_list)) {
+		err = PTR_ERR(prod_list);
+		dev_info(&pdev->dev, "prod list not found: %d\n",
+			 err);
+		prod_list = NULL;
+	} else {
+		err = tegra_prod_set_by_name(&base,
+				"prod_c_platform_pad_rail", prod_list);
+		if (err < 0) {
+			dev_info(&pdev->dev,
+				 "prod setting for rail not found\n");
+		} else {
+			dev_info(&pdev->dev,
+				 "POWER_DET: 0x%08x, POWR_VAL: 0x%08x\n",
+				 tegra_pmc_readl(PMC_PWR_DET_ENABLE),
+				 tegra_pmc_readl(PMC_PWR_DET_VAL));
+		}
+	}
 
 	/* handle PMC reboot reason with PSCI */
 	if (arm_pm_restart)

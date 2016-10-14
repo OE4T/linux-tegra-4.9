@@ -236,6 +236,7 @@
 			   &common_as TEGRA_SWGROUP_CELLS(SDMMC3A)
 			   &common_as TEGRA_SWGROUP_CELLS(SDMMC4A)
 			   &common_as TEGRA_SWGROUP_CELLS(AVPC)
+			   &common_as TEGRA_SWGROUP_CELLS(SMMU_TEST)
 			   &common_as 0xFFFFFFFF 0xFFFFFFFF>;
 
 		address-space-prop {
@@ -271,6 +272,11 @@
 				gap-page = <1>;
 			};
 		};
+	};
+
+	smmu_test: smmu_test {
+		compatible = "nvidia,smmu_test";
+		iommus = <&smmu TEGRA_SWGROUP_SMMU_TEST>;
 	};
 
 	bpmp {

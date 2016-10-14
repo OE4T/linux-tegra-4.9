@@ -36,7 +36,8 @@ static void vgpu_channel_bind(struct channel_gk20a *ch)
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
 
-	ch->bound = true;
+	wmb();
+	atomic_set(&ch->bound, true);
 }
 
 static void vgpu_channel_unbind(struct channel_gk20a *ch)
@@ -44,7 +45,7 @@ static void vgpu_channel_unbind(struct channel_gk20a *ch)
 
 	gk20a_dbg_fn("");
 
-	if (ch->bound) {
+	if (atomic_cmpxchg(&ch->bound, true, false)) {
 		struct tegra_vgpu_cmd_msg msg;
 		struct tegra_vgpu_channel_config_params *p =
 				&msg.params.channel_config;
@@ -57,7 +58,6 @@ static void vgpu_channel_unbind(struct channel_gk20a *ch)
 		WARN_ON(err || msg.ret);
 	}
 
-	ch->bound = false;
 }
 
 static int vgpu_channel_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)

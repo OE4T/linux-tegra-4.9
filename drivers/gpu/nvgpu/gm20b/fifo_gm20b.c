@@ -32,7 +32,6 @@ static void channel_gm20b_bind(struct channel_gk20a *c)
 	gk20a_dbg_info("bind channel %d inst ptr 0x%08x",
 		c->hw_chid, inst_ptr);
 
-	c->bound = true;
 
 	gk20a_writel(g, ccsr_channel_inst_r(c->hw_chid),
 		ccsr_channel_inst_ptr_f(inst_ptr) |
@@ -45,6 +44,8 @@ static void channel_gm20b_bind(struct channel_gk20a *c)
 		(gk20a_readl(g, ccsr_channel_r(c->hw_chid)) &
 		 ~ccsr_channel_enable_set_f(~0)) |
 		 ccsr_channel_enable_set_true_f());
+	wmb();
+	atomic_set(&c->bound, true);
 }
 
 static inline u32 gm20b_engine_id_to_mmu_id(struct gk20a *g, u32 engine_id)

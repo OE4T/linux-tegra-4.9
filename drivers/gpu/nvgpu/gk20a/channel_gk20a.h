@@ -128,7 +128,7 @@ struct channel_gk20a {
 
 	int hw_chid;
 	bool wdt_enabled;
-	bool bound;
+	atomic_t bound;
 	bool first_init;
 	bool vpr;
 	bool deterministic;

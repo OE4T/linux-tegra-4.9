@@ -361,7 +361,6 @@ static void channel_gk20a_bind(struct channel_gk20a *c)
 	gk20a_dbg_info("bind channel %d inst ptr 0x%08x",
 		c->hw_chid, inst_ptr);
 
-	c->bound = true;
 
 	gk20a_writel(g, ccsr_channel_r(c->hw_chid),
 		(gk20a_readl(g, ccsr_channel_r(c->hw_chid)) &
@@ -379,6 +378,10 @@ static void channel_gk20a_bind(struct channel_gk20a *c)
 		(gk20a_readl(g, ccsr_channel_r(c->hw_chid)) &
 		 ~ccsr_channel_enable_set_f(~0)) |
 		 ccsr_channel_enable_set_true_f());
+
+	wmb();
+	atomic_set(&c->bound, true);
+
 }
 
 void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a)
@@ -387,12 +390,12 @@ void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a)
 
 	gk20a_dbg_fn("");
 
-	if (ch_gk20a->bound)
+	
+	if (atomic_cmpxchg(&ch_gk20a->bound, true, false)) {
 		gk20a_writel(g, ccsr_channel_inst_r(ch_gk20a->hw_chid),
 			ccsr_channel_inst_ptr_f(0) |
 			ccsr_channel_inst_bind_false_f());
-
-	ch_gk20a->bound = false;
+	}
 }
 
 int channel_gk20a_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
@@ -2799,7 +2802,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	struct channel_gk20a *c = g->fifo.channel+chid;
 	c->g = NULL;
 	c->hw_chid = chid;
-	c->bound = false;
+	atomic_set(&c->bound, false);
 	spin_lock_init(&c->ref_obtain_lock);
 	atomic_set(&c->ref_count, 0);
 	c->referenceable = false;
@@ -3328,30 +3331,34 @@ void gk20a_channel_semaphore_wakeup(struct gk20a *g, bool post_events)
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *c = g->fifo.channel+chid;
 		if (gk20a_channel_get(c)) {
-			wake_up_interruptible_all(&c->semaphore_wq);
-			if (post_events) {
-				if (gk20a_is_channel_marked_as_tsg(c)) {
-					struct tsg_gk20a *tsg =
-						&g->fifo.tsg[c->tsgid];
+			if (atomic_read(&c->bound)) {
+				wake_up_interruptible_all(&c->semaphore_wq);
+				if (post_events) {
+					if (gk20a_is_channel_marked_as_tsg(c)) {
+						struct tsg_gk20a *tsg =
+							&g->fifo.tsg[c->tsgid];
 
-					gk20a_tsg_event_id_post_event(tsg,
-					    NVGPU_IOCTL_CHANNEL_EVENT_ID_BLOCKING_SYNC);
-				} else {
-					gk20a_channel_event_id_post_event(c,
-					    NVGPU_IOCTL_CHANNEL_EVENT_ID_BLOCKING_SYNC);
+						gk20a_tsg_event_id_post_event(tsg,
+						    NVGPU_IOCTL_CHANNEL_EVENT_ID_BLOCKING_SYNC);
+					} else {
+						gk20a_channel_event_id_post_event(c,
+						    NVGPU_IOCTL_CHANNEL_EVENT_ID_BLOCKING_SYNC);
+					}
 				}
+				/*
+				 * Only non-deterministic channels get the
+				 * channel_update callback. We don't allow
+				 * semaphore-backed syncs for these channels
+				 * anyways, since they have a dependency on
+				 * the sync framework.
+				 * If deterministic channels are receiving a
+				 * semaphore wakeup, it must be for a
+				 * user-space managed
+				 * semaphore.
+				 */
+				if (!c->deterministic)
+					gk20a_channel_update(c, 0);
 			}
-			/*
-			 * Only non-deterministic channels get the
-			 * channel_update callback. We don't allow
-			 * semaphore-backed syncs for these channels anyways,
-			 * since they have a dependency on the sync framework.
-			 * If deterministic channels are receiving a semaphore
-			 * wakeup, it must be for a user-space managed
-			 * semaphore.
-			 */
-			if (!c->deterministic)
-				gk20a_channel_update(c, 0);
 			gk20a_channel_put(c);
 		}
 	}

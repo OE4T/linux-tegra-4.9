@@ -40,6 +40,9 @@
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #define CODEC_NAME		NULL
 #define NUM_MUX_INPUT		83
+#define NUM_ASRC_SOURCES	2
+#define TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK		0x1F
+#define TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK		0xFFFFFFFF
 #else
 #define CODEC_NAME		"spdif-dit.0"
 #define NUM_MUX_INPUT		54
@@ -1052,8 +1055,502 @@ static int tegra_virt_t210sfc_set_out_freq(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+static int tegra186_virt_asrc_get_int_ratio(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ASRC_GET_INT_RATIO;
+	msg.params.asrc_info.id = 0;
+	msg.params.asrc_info.stream_num = reg;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: error on ivc_receive\n", __func__);
+		return err;
+	}
+
+	ucontrol->value.integer.value[0] = msg.params.asrc_info.int_ratio;
+
+	return 0;
+}
+static int tegra186_virt_asrc_set_int_ratio(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ASRC_SET_INT_RATIO;
+	msg.params.asrc_info.id = 0;
+	msg.params.asrc_info.stream_num = reg;
+	msg.params.asrc_info.int_ratio =
+		ucontrol->value.integer.value[0];
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra186_virt_asrc_get_frac_ratio(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	struct soc_mreg_control *mc =
+		(struct soc_mreg_control *)kcontrol->private_value;
+	unsigned int reg = mc->regbase;
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ASRC_GET_FRAC_RATIO;
+	msg.params.asrc_info.id = 0;
+	msg.params.asrc_info.stream_num = reg;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: error on ivc_receive\n", __func__);
+		return err;
+	}
+
+	ucontrol->value.integer.value[0] = msg.params.asrc_info.frac_ratio;
+
+	return 0;
+}
+static int tegra186_virt_asrc_set_frac_ratio(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	struct soc_mreg_control *mc =
+		(struct soc_mreg_control *)kcontrol->private_value;
+	unsigned int reg = mc->regbase;
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ASRC_SET_FRAC_RATIO;
+	msg.params.asrc_info.id = 0;
+	msg.params.asrc_info.stream_num = reg;
+	msg.params.asrc_info.frac_ratio =
+		ucontrol->value.integer.value[0];
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra186_virt_asrc_get_ratio_source(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	uint64_t reg = (uint64_t)kcontrol->tlv.p;
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ASRC_GET_RATIO_SOURCE;
+	msg.params.asrc_info.stream_num = reg;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: error on ivc_receive\n", __func__);
+		return err;
+	}
+
+	ucontrol->value.integer.value[0] = msg.params.asrc_info.ratio_source;
+
+	return 0;
+}
+
+static int tegra186_virt_asrc_set_ratio_source(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	uint64_t reg = (uint64_t)kcontrol->tlv.p;
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ASRC_SET_RATIO_SOURCE;
+	msg.params.asrc_info.id = 0;
+	msg.params.asrc_info.stream_num = reg;
+	msg.params.asrc_info.ratio_source =
+		ucontrol->value.integer.value[0];
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra186_virt_asrc_get_stream_enable(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ASRC_GET_STREAM_ENABLE;
+	msg.params.asrc_info.id = 0;
+	msg.params.asrc_info.stream_num = reg;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: error on ivc_receive\n", __func__);
+		return err;
+	}
+
+	ucontrol->value.integer.value[0] = msg.params.asrc_info.stream_enable;
+
+	return 0;
+}
+
+static int tegra186_virt_asrc_set_stream_enable(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ASRC_SET_STREAM_ENABLE;
+	msg.params.asrc_info.id = 0;
+	msg.params.asrc_info.stream_num = reg;
+	msg.params.asrc_info.stream_enable =
+		ucontrol->value.integer.value[0];
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra186_virt_asrc_get_hwcomp_disable(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ASRC_GET_HWCOMP_DISABLE;
+	msg.params.asrc_info.id = 0;
+	msg.params.asrc_info.stream_num = reg;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	ucontrol->value.integer.value[0] = msg.params.asrc_info.hwcomp_disable;
+
+	return 0;
+}
+
+static int tegra186_virt_asrc_set_hwcomp_disable(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ASRC_SET_HWCOMP_DISABLE;
+	msg.params.asrc_info.id = 0;
+	msg.params.asrc_info.stream_num = reg;
+	msg.params.asrc_info.hwcomp_disable =
+		ucontrol->value.integer.value[0];
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra186_virt_asrc_get_input_threshold(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ASRC_GET_INPUT_THRESHOLD;
+	msg.params.asrc_info.id = 0;
+	msg.params.asrc_info.stream_num = reg;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+
+	ucontrol->value.integer.value[0] = msg.params.sfc_info.out_freq;
+
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	ucontrol->value.integer.value[0] = msg.params.asrc_info.input_threshold;
+
+	return 0;
+}
+
+static int tegra186_virt_asrc_set_input_threshold(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ASRC_SET_INPUT_THRESHOLD;
+	msg.params.asrc_info.id = 0;
+	msg.params.asrc_info.stream_num = reg;
+	msg.params.asrc_info.input_threshold =
+		ucontrol->value.integer.value[0];
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra186_virt_asrc_get_output_threshold(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ASRC_GET_OUTPUT_THRESHOLD;
+	msg.params.asrc_info.id = 0;
+	msg.params.asrc_info.stream_num = reg;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	ucontrol->value.integer.value[0] =
+			msg.params.asrc_info.output_threshold;
+
+	return 0;
+}
+
+static int tegra186_virt_asrc_set_output_threshold(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ASRC_SET_OUTPUT_THRESHOLD;
+	msg.params.asrc_info.id = 0;
+	msg.params.asrc_info.stream_num = reg;
+	msg.params.asrc_info.output_threshold =
+		ucontrol->value.integer.value[0];
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+#endif
+
 static const struct soc_enum tegra_virt_t210ref_source =
 	SOC_ENUM_SINGLE_EXT(NUM_MUX_INPUT, tegra_virt_t210ref_source_text);
+
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+static const char * const tegra186_asrc_ratio_source_text[] = {
+	"ARAD",
+	"SW",
+};
+
+static const struct soc_enum tegra_virt_t186_asrc_source =
+	SOC_ENUM_SINGLE_EXT(NUM_ASRC_SOURCES, tegra186_asrc_ratio_source_text);
+#endif
 
 #define MUX_REG(id) (TEGRA210_XBAR_RX_STRIDE * (id))
 #define SOC_ENUM_EXT_REG(xname, xcount, xenum, xhandler_get, xhandler_put) \
@@ -1100,6 +1597,58 @@ static const struct soc_enum tegra_virt_t210ref_source =
 	0, 192000, 0,	\
 	tegra_virt_t210sfc_get_out_freq,	\
 	tegra_virt_t210sfc_set_out_freq)
+
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#define ASRC_RATIO_INT_CTRL_DECL(ename, reg) \
+	SOC_SINGLE_EXT(ename, reg,	\
+	0, TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK, 0,	\
+	tegra186_virt_asrc_get_int_ratio,	\
+	tegra186_virt_asrc_set_int_ratio)
+
+#define SOC_SINGLE_EXT_FRAC(xname, xregbase, xmax, xget, xput) \
+{       .iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname), \
+	.info = snd_soc_info_xr_sx, .get = xget, \
+	.put  = xput, \
+	.private_value = (unsigned long)&(struct soc_mreg_control) \
+		{.regbase = xregbase, .regcount = 1, .nbits = 32, \
+		.invert = 0, .min = 0, .max = xmax} }
+
+#define ASRC_RATIO_FRAC_CTRL_DECL(ename, reg) \
+	SOC_SINGLE_EXT_FRAC(ename, reg,	\
+	TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK,	\
+	tegra186_virt_asrc_get_frac_ratio,	\
+	tegra186_virt_asrc_set_frac_ratio)
+
+#define ASRC_STREAM_RATIO_CTRL_DECL(ename, reg) \
+	SOC_ENUM_EXT_REG(ename, reg,	\
+	tegra_virt_t186_asrc_source,	\
+	tegra186_virt_asrc_get_ratio_source,	\
+	tegra186_virt_asrc_set_ratio_source)
+
+#define ASRC_STREAM_ENABLE_CTRL_DECL(ename, reg) \
+	SOC_SINGLE_EXT(ename, reg,	\
+	0, 1, 0,	\
+	tegra186_virt_asrc_get_stream_enable,	\
+	tegra186_virt_asrc_set_stream_enable)
+
+#define ASRC_STREAM_HWCOMP_CTRL_DECL(ename, reg) \
+	SOC_SINGLE_EXT(ename, reg,	\
+	0, 1, 0,	\
+	tegra186_virt_asrc_get_hwcomp_disable,	\
+	tegra186_virt_asrc_set_hwcomp_disable)
+
+#define ASRC_STREAM_INPUT_THRESHOLD_CTRL_DECL(ename, reg) \
+	SOC_SINGLE_EXT(ename, reg,	\
+	0, 3, 0,	\
+	tegra186_virt_asrc_get_input_threshold,	\
+	tegra186_virt_asrc_set_input_threshold)
+
+#define ASRC_STREAM_OUTPUT_THRESHOLD_CTRL_DECL(ename, reg) \
+	SOC_SINGLE_EXT(ename, reg,	\
+	0, 3, 0,	\
+	tegra186_virt_asrc_get_output_threshold,	\
+	tegra186_virt_asrc_set_output_threshold)
+#endif
 
 static const struct snd_kcontrol_new tegra_virt_t210ref_controls[] = {
 MUX_ENUM_CTRL_DECL("ADMAIF1 Mux", 0x00),
@@ -1262,6 +1811,57 @@ SFC_OUT_FREQ_CTRL_DECL("SFC1 out freq", 0x00),
 SFC_OUT_FREQ_CTRL_DECL("SFC2 out freq", 0x01),
 SFC_OUT_FREQ_CTRL_DECL("SFC3 out freq", 0x02),
 SFC_OUT_FREQ_CTRL_DECL("SFC4 out freq", 0x03),
+
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+ASRC_RATIO_INT_CTRL_DECL("ASRC1 Ratio1 Int", 0x01),
+ASRC_RATIO_INT_CTRL_DECL("ASRC1 Ratio2 Int", 0x02),
+ASRC_RATIO_INT_CTRL_DECL("ASRC1 Ratio3 Int", 0x03),
+ASRC_RATIO_INT_CTRL_DECL("ASRC1 Ratio4 Int", 0x04),
+ASRC_RATIO_INT_CTRL_DECL("ASRC1 Ratio5 Int", 0x05),
+ASRC_RATIO_INT_CTRL_DECL("ASRC1 Ratio6 Int", 0x06),
+
+ASRC_RATIO_FRAC_CTRL_DECL("ASRC1 Ratio1 Frac", 0x01),
+ASRC_RATIO_FRAC_CTRL_DECL("ASRC1 Ratio2 Frac", 0x02),
+ASRC_RATIO_FRAC_CTRL_DECL("ASRC1 Ratio3 Frac", 0x03),
+ASRC_RATIO_FRAC_CTRL_DECL("ASRC1 Ratio4 Frac", 0x04),
+ASRC_RATIO_FRAC_CTRL_DECL("ASRC1 Ratio5 Frac", 0x05),
+ASRC_RATIO_FRAC_CTRL_DECL("ASRC1 Ratio6 Frac", 0x06),
+
+ASRC_STREAM_RATIO_CTRL_DECL("ASRC1 Ratio1 SRC", 0x01),
+ASRC_STREAM_RATIO_CTRL_DECL("ASRC1 Ratio2 SRC", 0x02),
+ASRC_STREAM_RATIO_CTRL_DECL("ASRC1 Ratio3 SRC", 0x03),
+ASRC_STREAM_RATIO_CTRL_DECL("ASRC1 Ratio4 SRC", 0x04),
+ASRC_STREAM_RATIO_CTRL_DECL("ASRC1 Ratio5 SRC", 0x05),
+ASRC_STREAM_RATIO_CTRL_DECL("ASRC1 Ratio6 SRC", 0x06),
+
+ASRC_STREAM_ENABLE_CTRL_DECL("ASRC1 Stream1 Enable", 0x01),
+ASRC_STREAM_ENABLE_CTRL_DECL("ASRC1 Stream2 Enable", 0x02),
+ASRC_STREAM_ENABLE_CTRL_DECL("ASRC1 Stream3 Enable", 0x03),
+ASRC_STREAM_ENABLE_CTRL_DECL("ASRC1 Stream4 Enable", 0x04),
+ASRC_STREAM_ENABLE_CTRL_DECL("ASRC1 Stream5 Enable", 0x05),
+ASRC_STREAM_ENABLE_CTRL_DECL("ASRC1 Stream6 Enable", 0x06),
+
+ASRC_STREAM_HWCOMP_CTRL_DECL("ASRC1 Ratio1 Hwcomp Disable", 0x01),
+ASRC_STREAM_HWCOMP_CTRL_DECL("ASRC1 Ratio2 Hwcomp Disable", 0x02),
+ASRC_STREAM_HWCOMP_CTRL_DECL("ASRC1 Ratio3 Hwcomp Disable", 0x03),
+ASRC_STREAM_HWCOMP_CTRL_DECL("ASRC1 Ratio4 Hwcomp Disable", 0x04),
+ASRC_STREAM_HWCOMP_CTRL_DECL("ASRC1 Ratio5 Hwcomp Disable", 0x05),
+ASRC_STREAM_HWCOMP_CTRL_DECL("ASRC1 Ratio6 Hwcomp Disable", 0x06),
+
+ASRC_STREAM_INPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream1 Input Thresh", 0x01),
+ASRC_STREAM_INPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream2 Input Thresh", 0x02),
+ASRC_STREAM_INPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream3 Input Thresh", 0x03),
+ASRC_STREAM_INPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream4 Input Thresh", 0x04),
+ASRC_STREAM_INPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream5 Input Thresh", 0x05),
+ASRC_STREAM_INPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream6 Input Thresh", 0x06),
+
+ASRC_STREAM_OUTPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream1 Output Thresh", 0x01),
+ASRC_STREAM_OUTPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream2 Output Thresh", 0x02),
+ASRC_STREAM_OUTPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream3 Output Thresh", 0x03),
+ASRC_STREAM_OUTPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream4 Output Thresh", 0x04),
+ASRC_STREAM_OUTPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream5 Output Thresh", 0x05),
+ASRC_STREAM_OUTPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream6 Output Thresh", 0x06),
+#endif
 };
 
 static const struct of_device_id tegra_virt_t210ref_pcm_of_match[] = {

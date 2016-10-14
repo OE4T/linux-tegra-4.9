@@ -58,6 +58,22 @@ enum nvaudio_ivc_cmd_t {
 	NVAUDIO_SFC_GET_IN_FREQ,
 	NVAUDIO_SFC_SET_OUT_FREQ,
 	NVAUDIO_SFC_GET_OUT_FREQ,
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	NVAUDIO_ASRC_SET_INT_RATIO,
+	NVAUDIO_ASRC_GET_INT_RATIO,
+	NVAUDIO_ASRC_SET_FRAC_RATIO,
+	NVAUDIO_ASRC_GET_FRAC_RATIO,
+	NVAUDIO_ASRC_SET_RATIO_SOURCE,
+	NVAUDIO_ASRC_GET_RATIO_SOURCE,
+	NVAUDIO_ASRC_SET_STREAM_ENABLE,
+	NVAUDIO_ASRC_GET_STREAM_ENABLE,
+	NVAUDIO_ASRC_SET_HWCOMP_DISABLE,
+	NVAUDIO_ASRC_GET_HWCOMP_DISABLE,
+	NVAUDIO_ASRC_SET_INPUT_THRESHOLD,
+	NVAUDIO_ASRC_GET_INPUT_THRESHOLD,
+	NVAUDIO_ASRC_SET_OUTPUT_THRESHOLD,
+	NVAUDIO_ASRC_GET_OUTPUT_THRESHOLD,
+#endif
 	NVAUDIO_CMD_MAX,
 };
 
@@ -85,6 +101,20 @@ struct nvaudio_ivc_t210_sfc_info {
 	uint32_t	out_freq;
 };
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+struct nvaudio_ivc_t186_asrc_info {
+	int32_t		id;
+	uint32_t	stream_num;
+	uint32_t	int_ratio;
+	uint32_t	frac_ratio;
+	uint32_t	input_threshold;
+	uint32_t	output_threshold;
+	uint32_t	hwcomp_disable;
+	uint32_t	stream_enable;
+	uint32_t	ratio_source;
+};
+#endif
+
 struct nvaudio_ivc_xbar_link {
 	uint32_t	rx_reg;
 	uint32_t	tx_value;
@@ -105,6 +135,9 @@ struct nvaudio_ivc_msg {
 		struct nvaudio_ivc_t124_dam_info	dam_info;
 		struct nvaudio_ivc_t210_amixer_info	amixer_info;
 		struct nvaudio_ivc_t210_sfc_info	sfc_info;
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+		struct nvaudio_ivc_t186_asrc_info	asrc_info;
+#endif
 		struct nvaudio_ivc_xbar_link		xbar_info;
 	} params;
 	bool			ack_required;

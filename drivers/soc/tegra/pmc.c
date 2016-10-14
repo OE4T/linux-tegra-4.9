@@ -301,6 +301,11 @@ static DEFINE_SPINLOCK(tegra_io_dpd_lock);
 static DEFINE_SPINLOCK(tegra_pmc_access_lock);
 static struct tegra_prod *prod_list;
 
+#ifdef CONFIG_PADCTRL_TEGRA210_PMC
+extern int tegra210_pmc_padctrl_init(struct device *dev,
+				     struct device_node *np);
+#endif
+
 struct tegra_pmc_soc {
 	unsigned int num_powergates;
 	const char *const *powergates;
@@ -2061,6 +2066,14 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 				 tegra_pmc_readl(PMC_PWR_DET_VAL));
 		}
 	}
+
+#ifdef CONFIG_PADCTRL_TEGRA210_PMC
+	/* Register as pad controller */
+	err = tegra210_pmc_padctrl_init(&pdev->dev, pdev->dev.of_node);
+	if (err)
+		pr_err("ERROR: Pad control driver init failed: %d\n",
+			err);
+#endif
 
 	/* handle PMC reboot reason with PSCI */
 	if (arm_pm_restart)

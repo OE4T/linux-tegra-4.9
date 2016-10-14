@@ -390,9 +390,7 @@ static void denver15pmu_enable_event(struct perf_event *event)
 	struct arm_pmu *cpu_pmu = to_arm_pmu(event->pmu);
 	struct pmu_hw_events *events = this_cpu_ptr(cpu_pmu->hw_events);
 	int idx = hwc->idx;
-	int group = get_uncore_group(hwc->config_base & DENVER_EVTYPE_EVENT_ID);
 
-	alloc_denver_ctr(idx, group, hwc->config_base & DENVER_EVTYPE_EVENT_ID);
 	/*
 	 * Enable counter and interrupt, and set the counter to count
 	 * the event that we're interested in.
@@ -543,6 +541,7 @@ static int denver15pmu_get_event_idx(struct pmu_hw_events *cpuc,
 				  struct perf_event *event)
 {
 	int idx;
+	int group;
 	struct arm_pmu *uncore_pmu = to_arm_pmu(event->pmu);
 
 	/*
@@ -550,8 +549,11 @@ static int denver15pmu_get_event_idx(struct pmu_hw_events *cpuc,
 	 * the events counters
 	 */
 	for (idx = ARMV8_IDX_COUNTER0; idx < uncore_pmu->num_events; ++idx) {
-		if (!test_and_set_bit(idx, cpuc->used_mask))
+		if (!test_and_set_bit(idx, cpuc->used_mask)) {
+			group = get_uncore_group(event->attr.config & DENVER_EVTYPE_EVENT_ID);
+                        alloc_denver_ctr(idx, group, event->attr.config & DENVER_EVTYPE_EVENT_ID);
 			return idx;
+		}
 	}
 
 	/* The counters are all in use. */

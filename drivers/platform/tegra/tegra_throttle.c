@@ -136,7 +136,7 @@ static int tegra_throttle_policy_notifier(struct notifier_block *nb,
 
 	cpu_max = per_cpu(max_cpu_rate, policy->cpu);
 
-	if (policy->max != cpu_max)
+	if (policy->max > cpu_max)
 		cpufreq_verify_within_limits(policy, 0, cpu_max);
 
 	return 0;

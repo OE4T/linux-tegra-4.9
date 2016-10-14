@@ -116,6 +116,16 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_USERSPACE_MANAGED_AS	(1ULL << 7)
 /* Both gpu driver and device support TSG */
 #define NVGPU_GPU_FLAGS_SUPPORT_TSG			(1ULL << 8)
+/* Clock control support */
+#define NVGPU_GPU_FLAGS_SUPPORT_CLOCK_CONTROLS		(1ULL << 9)
+/* NVGPU_GPU_IOCTL_GET_VOLTAGE is available */
+#define NVGPU_GPU_FLAGS_SUPPORT_GET_VOLTAGE		(1ULL << 10)
+/* NVGPU_GPU_IOCTL_GET_CURRENT is available */
+#define NVGPU_GPU_FLAGS_SUPPORT_GET_CURRENT		(1ULL << 11)
+/* NVGPU_GPU_IOCTL_GET_POWER is available */
+#define NVGPU_GPU_FLAGS_SUPPORT_GET_POWER		(1ULL << 12)
+/* NVGPU_GPU_IOCTL_GET_TEMPERATURE is available */
+#define NVGPU_GPU_FLAGS_SUPPORT_GET_TEMPERATURE		(1ULL << 13)
 
 struct nvgpu_gpu_characteristics {
 	__u32 arch;
@@ -671,7 +681,7 @@ struct nvgpu_gpu_clk_set_info_args {
 	   this file descriptor to determine when the request has completed.
 	   The fd must be closed afterwards.
 	 */
-	int completion_fd;
+	__s32 completion_fd;
 };
 
 struct nvgpu_gpu_clk_get_event_fd_args {
@@ -680,7 +690,7 @@ struct nvgpu_gpu_clk_get_event_fd_args {
 	__u32 flags;
 
 	/* out: File descriptor for events, i.e. any clock update. */
-	int event_fd;
+	__s32 event_fd;
 };
 
 struct nvgpu_gpu_get_memory_state_args {

@@ -2056,6 +2056,9 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_USERSPACE_MANAGED_AS;
 	gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_TSG;
 
+	if (g->ops.clk_arb.get_arbiter_clk_domains)
+		gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_CLOCK_CONTROLS;
+
 	gpu->gpc_mask = (1 << g->gr.gpc_count)-1;
 
 	g->ops.gr.detect_sm_arch(g);

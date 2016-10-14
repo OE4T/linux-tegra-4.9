@@ -80,6 +80,20 @@ static int gr_gv11b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	return ret;
 }
 
+static void gr_gv11b_enable_gpc_exceptions(struct gk20a *g)
+{
+	struct gr_gk20a *gr = &g->gr;
+	u32 tpc_mask;
+
+	gk20a_writel(g, gr_gpcs_tpcs_tpccs_tpc_exception_en_r(),
+			gr_gpcs_tpcs_tpccs_tpc_exception_en_sm_enabled_f());
+
+	tpc_mask =
+		gr_gpcs_gpccs_gpc_exception_en_tpc_f((1 << gr->tpc_count) - 1);
+
+	gk20a_writel(g, gr_gpcs_gpccs_gpc_exception_en_r(), tpc_mask);
+}
+
 static int gr_gv11b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		bool *post_event)
 {
@@ -1670,6 +1684,7 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.get_access_map = gr_gv11b_get_access_map;
 	gops->gr.handle_sm_exception = gr_gv11b_handle_sm_exception;
 	gops->gr.handle_tex_exception = gr_gv11b_handle_tex_exception;
+	gops->gr.enable_gpc_exceptions = gr_gv11b_enable_gpc_exceptions;
 	gops->gr.mask_hww_warp_esr = gv11b_mask_hww_warp_esr;
 	gops->gr.pre_process_sm_exception =
 		gr_gv11b_pre_process_sm_exception;

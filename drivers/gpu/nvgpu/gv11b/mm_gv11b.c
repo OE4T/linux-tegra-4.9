@@ -20,7 +20,7 @@
 #include "mm_gv11b.h"
 #include "hw_fb_gv11b.h"
 
-bool gv11b_mm_is_bar1_supported(struct gk20a *g)
+static bool gv11b_mm_is_bar1_supported(struct gk20a *g)
 {
 	return false;
 }

@@ -581,6 +581,9 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 
 	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
+	if (dc->mode_dirty)
+		memcpy(&dc->cached_mode, &dc->mode, sizeof(dc->mode));
+
 	tegra_dc_put(dc);
 
 	dc->mode_dirty = false;

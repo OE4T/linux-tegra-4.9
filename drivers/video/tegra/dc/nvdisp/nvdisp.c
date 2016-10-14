@@ -78,7 +78,7 @@ static struct of_device_id nvdisp_disc_pd[] = {
 
 static struct nvdisp_pd_info nvdisp_pg[NVDISP_PD_COUNT];
 static struct nvdisp_compclk_client clk_client[TEGRA_MAX_DC];
-bool compclk_already_on = false, hubclk_already_on = false;
+static bool compclk_already_on = false, hubclk_already_on = false;
 
 static unsigned int default_srgb_regamma_lut[] = {
 		0x6000, 0x60CE, 0x619D, 0x626C, 0x632D, 0x63D4,

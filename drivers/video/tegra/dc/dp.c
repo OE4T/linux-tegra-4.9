@@ -2403,6 +2403,12 @@ static void tegra_dp_hpd_op_edid_ready(void *drv_data)
 	struct tegra_dc_dp_data *dp = drv_data;
 	struct tegra_dc *dc = dp->dc;
 
+	/*
+	 * we have a new panel connected.
+	 * Forget old LT config data.
+	 */
+	tegra_dp_lt_invalidate(&dp->lt_data);
+
 	/* in mm */
 	dc->out->h_size = dc->out->h_size ? : dp->hpd_data.mon_spec.max_x * 10;
 	dc->out->v_size = dc->out->v_size ? : dp->hpd_data.mon_spec.max_y * 10;
@@ -3003,6 +3009,8 @@ static void tegra_dc_dp_suspend(struct tegra_dc *dc)
 		return;
 
 	dp->suspended = true;
+
+	tegra_dp_lt_invalidate(&dp->lt_data);
 
 	/* do not process hpd in suspend. Disable dpaux clocks. */
 	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP)

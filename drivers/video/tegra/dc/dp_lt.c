@@ -531,10 +531,17 @@ static void lt_reset_state(struct tegra_dp_lt_data *lt_data)
 	sor = dp->sor;
 
 	cur_hpd = tegra_dc_hpd(dp->dc);
-	if (!cur_hpd || !dp->link_cfg.is_valid || lt_data->force_disable) {
-		pr_info("dp lt: cur_hpd: %d, link cfg valid: %d, "
-			"force disable: %d\n", !!cur_hpd,
-			!!dp->link_cfg.is_valid, !!lt_data->force_disable);
+
+	if (lt_data->force_disable) {
+		pr_info("dp lt: link training force disable\n");
+		lt_data->force_disable = false;
+		lt_data->force_trigger = false;
+		tgt_state = STATE_DONE_FAIL;
+		timeout = -1;
+		goto done;
+	} else if (!cur_hpd || !dp->link_cfg.is_valid) {
+		pr_info("dp lt: cur_hpd: %d, link cfg valid: %d\n",
+			!!cur_hpd, !!dp->link_cfg.is_valid);
 		lt_failed(lt_data);
 		lt_data->force_disable = false;
 		lt_data->force_trigger = false;
@@ -565,14 +572,10 @@ static void lt_reset_state(struct tegra_dp_lt_data *lt_data)
 	tegra_dc_sor_detach(sor);
 	mutex_unlock(&lt_data->lock);
 
-	if (lt_data->lt_config_valid && lt_data->no_aux_handshake) {
-		tgt_state = STATE_FAST_LT;
-		timeout = 0;
-	} else {
-		lt_data_reset(lt_data);
-		tgt_state = STATE_CLOCK_RECOVERY;
-		timeout = 0;
-	}
+	lt_data_reset(lt_data);
+	tgt_state = STATE_CLOCK_RECOVERY;
+	timeout = 0;
+
 
 	WARN_ON(lt_data->tps != TRAINING_PATTERN_DISABLE);
 
@@ -613,6 +616,16 @@ static void fast_lt_state(struct tegra_dp_lt_data *lt_data)
 		goto done;
 	}
 
+	WARN_ON(lt_data->tps != TRAINING_PATTERN_DISABLE);
+
+	mutex_lock(&lt_data->lock);
+
+	tegra_dc_sor_detach(sor);
+	set_lt_config(lt_data);
+	tegra_sor_precharge_lanes(sor);
+
+	mutex_unlock(&lt_data->lock);
+
 	do_fast_lt_no_handshake(lt_data);
 	lt_status = get_lt_status(lt_data);
 	if (lt_status) {
@@ -620,8 +633,8 @@ static void fast_lt_state(struct tegra_dp_lt_data *lt_data)
 		tgt_state = STATE_DONE_PASS;
 		timeout = -1;
 	} else {
-		lt_data_reset(lt_data);
-		tgt_state = STATE_CLOCK_RECOVERY;
+		lt_failed(lt_data);
+		tgt_state = STATE_RESET;
 		timeout = 0;
 	}
 
@@ -874,6 +887,11 @@ static void handle_lt_hpd_evt(struct tegra_dp_lt_data *lt_data, int cur_hpd)
 	if (!cur_hpd && !lt_data->force_disable)
 		timeout = HPD_DROP_TIMEOUT_MS;
 
+	if (lt_data->lt_config_valid &&
+		lt_data->no_aux_handshake &&
+		!lt_data->force_disable)
+		tgt_state = STATE_FAST_LT;
+
 	set_lt_state(lt_data, tgt_state, timeout);
 }
 
@@ -972,6 +990,17 @@ void tegra_dp_lt_set_pending_evt(struct tegra_dp_lt_data *lt_data)
 	lt_data->pending_evt = 1;
 	sched_lt_work(lt_data, 0);
 
+	mutex_unlock(&lt_data->lock);
+}
+
+/*
+ * Marks previous LT configuration data as invalid.
+ * Full LT is required to get new LT config data.
+ */
+void tegra_dp_lt_invalidate(struct tegra_dp_lt_data *lt_data)
+{
+	mutex_lock(&lt_data->lock);
+	lt_data->lt_config_valid = false;
 	mutex_unlock(&lt_data->lock);
 }
 

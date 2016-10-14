@@ -95,10 +95,22 @@ void *dma_buf_get_drvdata(struct dma_buf *dmabuf, struct device *device)
 }
 EXPORT_SYMBOL(dma_buf_get_drvdata);
 
+static bool dmabuf_can_defer_unmap(struct dma_buf *dmabuf,
+		struct device *device)
+{
+	if (!IS_ENABLED(CONFIG_DMABUF_DEFERRED_UNMAPPING))
+		return false;
+
+	if (!(dmabuf->flags & DMABUF_CAN_DEFER_UNMAP))
+		return false;
+
+	return true;
+}
 
 static int dma_buf_release(struct inode *inode, struct file *file)
 {
 	struct dma_buf *dmabuf;
+	struct dma_buf_attachment *attach, *next;
 
 	if (!is_dma_buf_file(file))
 		return -EINVAL;
@@ -106,6 +118,22 @@ static int dma_buf_release(struct inode *inode, struct file *file)
 	dmabuf = file->private_data;
 
 	BUG_ON(dmabuf->vmapping_counter);
+	mutex_lock(&dmabuf->lock);
+	list_for_each_entry_safe(attach, next, &dmabuf->attachments, node) {
+		BUG_ON(atomic_read(&attach->ref) != 1);
+		BUG_ON(atomic_read(&attach->maps));
+
+		list_del(&attach->node);
+		if (dmabuf_can_defer_unmap(dmabuf, attach->dev)) {
+			attach->dmabuf->ops->unmap_dma_buf(attach, attach->sg_table,
+								DMA_BIDIRECTIONAL);
+			if (dmabuf->ops->detach)
+				dmabuf->ops->detach(dmabuf, attach);
+			kzfree(attach);
+		}
+
+	}
+	mutex_unlock(&dmabuf->lock);
 
 	/*
 	 * Any fences that a dma-buf poll can wait on should be signaled
@@ -127,7 +155,7 @@ static int dma_buf_release(struct inode *inode, struct file *file)
 		reservation_object_fini(dmabuf->resv);
 
 	module_put(dmabuf->owner);
-	kfree(dmabuf);
+	kzfree(dmabuf);
 	return 0;
 }
 
@@ -416,6 +444,7 @@ struct dma_buf *dma_buf_export(const struct dma_buf_export_info *exp_info)
 	dmabuf->ops = exp_info->ops;
 	dmabuf->size = exp_info->size;
 	dmabuf->exp_name = exp_info->exp_name;
+	dmabuf->flags = exp_info->exp_flags;
 	dmabuf->owner = exp_info->owner;
 	init_waitqueue_head(&dmabuf->poll);
 	dmabuf->cb_excl.poll = dmabuf->cb_shared.poll = &dmabuf->poll;
@@ -537,14 +566,43 @@ struct dma_buf_attachment *dma_buf_attach(struct dma_buf *dmabuf,
 	if (WARN_ON(!dmabuf || !dev))
 		return ERR_PTR(-EINVAL);
 
+	mutex_lock(&dmabuf->lock);
+	if (dmabuf_can_defer_unmap(dmabuf, dev)) {
+		/* Don't allow multiple attachments for a device */
+		list_for_each_entry(attach, &dmabuf->attachments, node) {
+			int ref;
+
+			if (attach->dev != dev)
+				continue;
+
+			/* attach is ready for free. Do not use it. */
+			ref = atomic_inc_not_zero(&attach->ref);
+			BUG_ON(ref < 0);
+			if (ref == 0)
+				continue;
+
+			mutex_unlock(&dmabuf->lock);
+			return attach;
+		}
+	}
+
 	attach = kzalloc(sizeof(struct dma_buf_attachment), GFP_KERNEL);
-	if (attach == NULL)
+	if (attach == NULL) {
+		mutex_unlock(&dmabuf->lock);
 		return ERR_PTR(-ENOMEM);
+	}
 
 	attach->dev = dev;
 	attach->dmabuf = dmabuf;
-
-	mutex_lock(&dmabuf->lock);
+	/*
+	 * 2 because it is possible that a dmabuf has matching
+	 * number of attach/detach in many intermediate states
+	 * till the buffer is freed. This extra ref count will
+	 * prevent multiple mappings for a given device in such
+	 * scenarios.
+	 */
+	atomic_set(&attach->ref, 2);
+	atomic_set(&attach->maps, 0);
 
 	if (dmabuf->ops->attach) {
 		ret = dmabuf->ops->attach(dmabuf, dev, attach);
@@ -575,13 +633,21 @@ void dma_buf_detach(struct dma_buf *dmabuf, struct dma_buf_attachment *attach)
 	if (WARN_ON(!dmabuf || !attach))
 		return;
 
+	if (atomic_dec_return(&attach->ref) > 0)
+		return;
+
+	BUG_ON(atomic_read(&attach->maps));
+
+	if (dmabuf_can_defer_unmap(dmabuf, attach->dev))
+		return;
+
 	mutex_lock(&dmabuf->lock);
 	list_del(&attach->node);
 	if (dmabuf->ops->detach)
 		dmabuf->ops->detach(dmabuf, attach);
 
 	mutex_unlock(&dmabuf->lock);
-	kfree(attach);
+	kzfree(attach);
 }
 EXPORT_SYMBOL_GPL(dma_buf_detach);
 
@@ -602,13 +668,28 @@ struct sg_table *dma_buf_map_attachment(struct dma_buf_attachment *attach,
 
 	might_sleep();
 
-	if (WARN_ON(!attach || !attach->dmabuf))
+	if (WARN_ON(!attach || !attach->dmabuf ||
+		    !atomic_inc_not_zero(&attach->ref)))
 		return ERR_PTR(-EINVAL);
+
+	sg_table = attach->sg_table;
+	if (dmabuf_can_defer_unmap(attach->dmabuf, attach->dev) && sg_table) {
+		if (!(attach->dmabuf->flags & DMABUF_SKIP_CACHE_SYNC))
+			dma_sync_sg_for_device(attach->dev, sg_table->sgl,
+					sg_table->nents, direction);
+		goto finish;
+	}
 
 	sg_table = attach->dmabuf->ops->map_dma_buf(attach, direction);
 	if (!sg_table)
 		sg_table = ERR_PTR(-ENOMEM);
 
+	attach->sg_table = sg_table;
+finish:
+	if (!IS_ERR(sg_table))
+		atomic_inc(&attach->maps);
+	else
+		atomic_dec(&attach->ref);
 	return sg_table;
 }
 EXPORT_SYMBOL_GPL(dma_buf_map_attachment);
@@ -631,8 +712,18 @@ void dma_buf_unmap_attachment(struct dma_buf_attachment *attach,
 	if (WARN_ON(!attach || !attach->dmabuf || !sg_table))
 		return;
 
+	if (dmabuf_can_defer_unmap(attach->dmabuf, attach->dev)) {
+		if (!(attach->dmabuf->flags & DMABUF_SKIP_CACHE_SYNC))
+			dma_sync_sg_for_cpu(attach->dev, sg_table->sgl,
+					sg_table->nents, direction);
+		goto finish;
+	}
+
 	attach->dmabuf->ops->unmap_dma_buf(attach, sg_table,
 						direction);
+finish:
+	atomic_dec(&attach->maps);
+	atomic_dec(&attach->ref);
 }
 EXPORT_SYMBOL_GPL(dma_buf_unmap_attachment);
 

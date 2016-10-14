@@ -4502,7 +4502,7 @@ static int gr_gk20a_zcull_init_hw(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 }
 
-static void gk20a_gr_enable_gpc_exceptions(struct gk20a *g)
+void gk20a_gr_enable_gpc_exceptions(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 tpc_mask;
@@ -4641,7 +4641,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	g->ops.gr.set_hww_esr_report_mask(g);
 
 	/* enable TPC exceptions per GPC */
-	gk20a_gr_enable_gpc_exceptions(g);
+	if (g->ops.gr.enable_gpc_exceptions)
+		g->ops.gr.enable_gpc_exceptions(g);
 
 	/* TBD: ECC for L1/SM */
 	/* TBD: enable per BE exceptions */
@@ -9113,6 +9114,7 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.mask_hww_warp_esr = gk20a_mask_hww_warp_esr;
 	gops->gr.handle_sm_exception = gr_gk20a_handle_sm_exception;
 	gops->gr.handle_tex_exception = gr_gk20a_handle_tex_exception;
+	gops->gr.enable_gpc_exceptions = gk20a_gr_enable_gpc_exceptions;
 	gops->gr.get_lrf_tex_ltc_dram_override = NULL;
 	gops->gr.update_smpc_ctxsw_mode = gr_gk20a_update_smpc_ctxsw_mode;
 	gops->gr.update_hwpm_ctxsw_mode = gr_gk20a_update_hwpm_ctxsw_mode;

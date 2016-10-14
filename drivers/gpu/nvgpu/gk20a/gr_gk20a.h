@@ -657,6 +657,7 @@ int gr_gk20a_suspend_contexts(struct gk20a *g,
 int gr_gk20a_resume_contexts(struct gk20a *g,
 			      struct dbg_session_gk20a *dbg_s,
 			      int *ctx_resident_ch_fd);
+void gk20a_gr_enable_gpc_exceptions(struct gk20a *g);
 
 static inline const char *gr_gk20a_graphics_preempt_mode_name(u32 graphics_preempt_mode)
 {

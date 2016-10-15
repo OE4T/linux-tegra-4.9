@@ -58,6 +58,7 @@ static void nvhost_module_load_regs(struct platform_device *pdev, bool prod);
 static int nvhost_module_toggle_slcg(struct notifier_block *nb,
 				     unsigned long action, void *data);
 
+#ifdef CONFIG_PM
 static int nvhost_module_runtime_suspend(struct device *dev);
 static int nvhost_module_runtime_resume(struct device *dev);
 static int nvhost_module_prepare_poweroff(struct device *dev);
@@ -66,6 +67,7 @@ static int nvhost_module_finalize_poweron(struct device *dev);
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 static int nvhost_module_power_on(struct generic_pm_domain *domain);
 static int nvhost_module_power_off(struct generic_pm_domain *domain);
+#endif
 #endif
 
 static DEFINE_MUTEX(client_list_lock);
@@ -1077,6 +1079,7 @@ static void nvhost_module_load_regs(struct platform_device *pdev, bool prod)
 	}
 }
 
+#ifdef CONFIG_PM
 static int nvhost_module_runtime_suspend(struct device *dev)
 {
 	int err;
@@ -1259,6 +1262,7 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 
 	return ret;
 }
+#endif
 
 static int nvhost_module_toggle_slcg(struct notifier_block *nb,
 				     unsigned long action, void *data)

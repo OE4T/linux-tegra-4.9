@@ -412,6 +412,7 @@ static int isc_dev_remove(struct i2c_client *client)
 	return 0;
 }
 
+#ifdef CONFIG_PM
 static int isc_dev_suspend(struct device *dev)
 {
 	struct isc_dev_info *isc = (struct isc_dev_info *)dev_get_drvdata(dev);
@@ -435,6 +436,7 @@ static int isc_dev_resume(struct device *dev)
 
 	return 0;
 }
+#endif
 
 static const struct i2c_device_id isc_dev_id[] = {
 	{ "isc-dev", 0 },

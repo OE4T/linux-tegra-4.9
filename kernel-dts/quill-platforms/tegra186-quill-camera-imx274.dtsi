@@ -74,5 +74,14 @@
 				>;
 		};
 	};
+
+	gpio@c2f0000 {
+		camera-control {
+			gpio-input = <
+				TEGRA_GPIO_AON(AA, 2)
+				>;
+		};
+	};
+
 };
 

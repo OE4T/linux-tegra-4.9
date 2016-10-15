@@ -18,6 +18,11 @@
 #define CAM1_PWDN	TEGRA_GPIO(L, 6)
 
 / {
+	gpio@c2f0000 {
+		camera-control {
+		};
+	};
+
 	/* camera plugin-manager */
 	plugin-manager {
 		/* E3326 camera board */
@@ -140,6 +145,12 @@
 						CAM0_PWDN
 						>;
 					gpio-output-high = <>;
+				};
+			};
+			override@15 {
+				target = <&{/gpio@c2f0000/camera-control}>;
+				_overlay_ {
+					gpio-input = <>;
 				};
 			};
 		};
@@ -393,6 +404,13 @@
 						CAM1_PWDN
 						>;
 					gpio-output-high = <>;
+				};
+			};
+
+			override@32 {
+				target = <&{/gpio@c2f0000/camera-control}>;
+				_overlay_ {
+					gpio-input = <>;
 				};
 			};
 		};
@@ -971,6 +989,12 @@
 					gpio-output-high = <>;
 				};
 			};
+			override@712 {
+				target = <&{/gpio@c2f0000/camera-control}>;
+				_overlay_ {
+					gpio-input = <>;
+				};
+			};
 			/* TCA6408 default */
 			override@72 {
 				target = <&tca6408_21_default>;
@@ -1531,6 +1555,12 @@
 					gpio-input = <>;
 					gpio-output-low = < CAM0_PWDN >;
 					gpio-output-high= < CAM0_RST_L >;
+				};
+			};
+			override@712 {
+				target = <&{/gpio@c2f0000/camera-control}>;
+				_overlay_ {
+					gpio-input = <>;
 				};
 			};
 			/* TCA6408 default */

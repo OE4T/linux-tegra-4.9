@@ -32,6 +32,14 @@
 		};
 	};
 
+	gpio@c2f0000 {
+		wlan-default_aon {
+			gpio-input = <
+				TEGRA_GPIO_AON(FF, 3)
+				>;
+		};
+	};
+
 	bluedroid_pm {
 		compatible = "nvidia,tegra-bluedroid_pm";
 		id = <0>;

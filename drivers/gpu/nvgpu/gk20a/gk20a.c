@@ -1369,6 +1369,7 @@ static void gk20a_pm_shutdown(struct platform_device *pdev)
 	dev_info(&pdev->dev, "shut down complete\n");
 }
 
+#ifdef CONFIG_PM
 static int gk20a_pm_runtime_resume(struct device *dev)
 {
 	int err = 0;
@@ -1419,12 +1420,10 @@ static int gk20a_pm_suspend(struct device *dev)
 	if (platform->user_railgate_disabled)
 		gk20a_idle_nosuspend(dev);
 
-#ifdef CONFIG_PM
 	if (atomic_read(&dev->power.usage_count) > 1) {
 		ret = -EBUSY;
 		goto fail;
 	}
-#endif
 
 	if (!g->power_on)
 		return 0;
@@ -1466,7 +1465,6 @@ static int gk20a_pm_resume(struct device *dev)
 	return ret;
 }
 
-#ifdef CONFIG_PM
 static const struct dev_pm_ops gk20a_pm_ops = {
 	.runtime_resume = gk20a_pm_runtime_resume,
 	.runtime_suspend = gk20a_pm_runtime_suspend,

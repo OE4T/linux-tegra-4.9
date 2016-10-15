@@ -3419,7 +3419,9 @@ static int __init tegra_se_module_init(void)
 static void __exit tegra_se_module_exit(void)
 {
 	platform_driver_unregister(&tegra_se_driver);
+#ifdef CONFIG_PM_GENERIC_DOMAINS
 	pm_genpd_deinit(&nvhost_se1_info.pd);
+#endif
 }
 
 module_init(tegra_se_module_init);

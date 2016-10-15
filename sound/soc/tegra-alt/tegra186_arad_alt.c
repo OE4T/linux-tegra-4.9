@@ -92,6 +92,7 @@ static int tegra186_arad_runtime_suspend(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
 static int tegra186_arad_runtime_resume(struct device *dev)
 {
 	struct tegra186_arad *arad = dev_get_drvdata(dev);
@@ -108,6 +109,7 @@ static int tegra186_arad_runtime_resume(struct device *dev)
 
 	return 0;
 }
+#endif
 
 #ifdef CONFIG_PM_SLEEP
 static int tegra186_arad_suspend(struct device *dev)

@@ -414,15 +414,16 @@
 
 	tegra_gpio: gpio@2200000 {
 		compatible = "nvidia,tegra186-gpio";
-		reg = <0x0 0x2200000 0x0 0x15700
-			0x0 0xc2f0000 0x0 0x2000>;
+		reg-names = "security", "gpio";
+		reg =
+			<0x0 0x2200000 0x0 0x10000>,
+			<0x0 0x2210000 0x0 0x10000>;
 		interrupts = <0 47 0x04
 			0 50 0x04
 			0 53 0x04
 			0 56 0x04
 			0 59 0x04
-			0 180 0x04
-			0 60 0x04>; /*AON GPIO */
+			0 180 0x04>;
 		status = "disabled";
 		gpio-ranges = <&pinmux 0 0 253>;
 		#gpio-cells = <2>;

@@ -1142,6 +1142,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch;
+	struct gk20a_event_id_data *event_id_data, *event_id_data_temp;
 
 	/* compatibility with existing code */
 	if (!gk20a_fifo_is_valid_runlist_id(g, runlist_id)) {
@@ -1181,6 +1182,15 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 
 	ch->pid = current->pid;
 	ch->tgid = current->tgid;  /* process granularity for FECS traces */
+
+	/* unhook all events created on this channel */
+	mutex_lock(&ch->event_id_list_lock);
+	list_for_each_entry_safe(event_id_data, event_id_data_temp,
+				&ch->event_id_list,
+				event_id_node) {
+		list_del_init(&event_id_data->event_id_node);
+	}
+	mutex_unlock(&ch->event_id_list_lock);
 
 	/* By default, channel is regular (non-TSG) channel */
 	ch->tsgid = NVGPU_INVALID_TSG_ID;

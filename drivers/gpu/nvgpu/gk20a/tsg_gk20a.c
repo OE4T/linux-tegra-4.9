@@ -451,6 +451,7 @@ void gk20a_tsg_release(struct kref *ref)
 {
 	struct tsg_gk20a *tsg = container_of(ref, struct tsg_gk20a, refcount);
 	struct gk20a *g = tsg->g;
+	struct gk20a_event_id_data *event_id_data, *event_id_data_temp;
 
 	if (tsg->tsg_gr_ctx) {
 		gr_gk20a_free_tsg_gr_ctx(tsg);
@@ -462,6 +463,16 @@ void gk20a_tsg_release(struct kref *ref)
 	}
 
 	gk20a_sched_ctrl_tsg_removed(g, tsg);
+
+	/* unhook all events created on this TSG */
+	mutex_lock(&tsg->event_id_list_lock);
+	list_for_each_entry_safe(event_id_data, event_id_data_temp,
+				&tsg->event_id_list,
+				event_id_node) {
+		list_del_init(&event_id_data->event_id_node);
+	}
+	mutex_unlock(&tsg->event_id_list_lock);
+
 	release_used_tsg(&g->fifo, tsg);
 
 	tsg->runlist_id = ~0;

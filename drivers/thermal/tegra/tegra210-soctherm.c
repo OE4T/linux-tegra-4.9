@@ -29,6 +29,11 @@
 #define TEGRA210_THERMTRIP_CPU_THRESH_MASK	(0x1ff << 9)
 #define TEGRA210_THERMTRIP_TSENSE_THRESH_MASK	0x1ff
 
+#define TEGRA210_THERM_IRQ_MEM_MASK		(0x3 << 24)
+#define TEGRA210_THERM_IRQ_GPU_MASK		(0x3 << 16)
+#define TEGRA210_THERM_IRQ_CPU_MASK		(0x3 << 8)
+#define TEGRA210_THERM_IRQ_TSENSE_MASK		(0x3 << 0)
+
 #define TEGRA210_THERMCTL_LVL0_UP_THRESH_MASK	(0x1ff << 18)
 #define TEGRA210_THERMCTL_LVL0_DN_THRESH_MASK	(0x1ff << 9)
 
@@ -57,6 +62,7 @@ static const struct tegra_tsensor_group tegra210_tsensor_group_cpu = {
 	.thermtrip_enable_mask = TEGRA210_THERMTRIP_CPU_EN_MASK,
 	.thermtrip_threshold_mask = TEGRA210_THERMTRIP_CPU_THRESH_MASK,
 	.thermctl_lvl0_offset = THERMCTL_LEVEL0_GROUP_CPU,
+	.thermctl_isr_mask = TEGRA210_THERM_IRQ_CPU_MASK,
 	.thermctl_lvl0_up_thresh_mask = TEGRA210_THERMCTL_LVL0_UP_THRESH_MASK,
 	.thermctl_lvl0_dn_thresh_mask = TEGRA210_THERMCTL_LVL0_DN_THRESH_MASK,
 };
@@ -75,6 +81,7 @@ static const struct tegra_tsensor_group tegra210_tsensor_group_gpu = {
 	.thermtrip_enable_mask = TEGRA210_THERMTRIP_GPU_EN_MASK,
 	.thermtrip_threshold_mask = TEGRA210_THERMTRIP_GPUMEM_THRESH_MASK,
 	.thermctl_lvl0_offset = THERMCTL_LEVEL0_GROUP_GPU,
+	.thermctl_isr_mask = TEGRA210_THERM_IRQ_GPU_MASK,
 	.thermctl_lvl0_up_thresh_mask = TEGRA210_THERMCTL_LVL0_UP_THRESH_MASK,
 	.thermctl_lvl0_dn_thresh_mask = TEGRA210_THERMCTL_LVL0_DN_THRESH_MASK,
 };
@@ -91,6 +98,7 @@ static const struct tegra_tsensor_group tegra210_tsensor_group_pll = {
 	.thermtrip_enable_mask = TEGRA210_THERMTRIP_TSENSE_EN_MASK,
 	.thermtrip_threshold_mask = TEGRA210_THERMTRIP_TSENSE_THRESH_MASK,
 	.thermctl_lvl0_offset = THERMCTL_LEVEL0_GROUP_TSENSE,
+	.thermctl_isr_mask = TEGRA210_THERM_IRQ_TSENSE_MASK,
 	.thermctl_lvl0_up_thresh_mask = TEGRA210_THERMCTL_LVL0_UP_THRESH_MASK,
 	.thermctl_lvl0_dn_thresh_mask = TEGRA210_THERMCTL_LVL0_DN_THRESH_MASK,
 };
@@ -109,6 +117,7 @@ static const struct tegra_tsensor_group tegra210_tsensor_group_mem = {
 	.thermtrip_enable_mask = TEGRA210_THERMTRIP_MEM_EN_MASK,
 	.thermtrip_threshold_mask = TEGRA210_THERMTRIP_GPUMEM_THRESH_MASK,
 	.thermctl_lvl0_offset = THERMCTL_LEVEL0_GROUP_MEM,
+	.thermctl_isr_mask = TEGRA210_THERM_IRQ_MEM_MASK,
 	.thermctl_lvl0_up_thresh_mask = TEGRA210_THERMCTL_LVL0_UP_THRESH_MASK,
 	.thermctl_lvl0_dn_thresh_mask = TEGRA210_THERMCTL_LVL0_DN_THRESH_MASK,
 };

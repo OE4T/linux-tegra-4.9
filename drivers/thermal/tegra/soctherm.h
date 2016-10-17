@@ -71,6 +71,7 @@ struct tegra_tsensor_group {
 	u32 thermtrip_any_en_mask;
 	u32 thermtrip_threshold_mask;
 	u16 thermctl_lvl0_offset;
+	u32 thermctl_isr_mask;
 	u32 thermctl_lvl0_up_thresh_mask;
 	u32 thermctl_lvl0_dn_thresh_mask;
 };

@@ -364,7 +364,7 @@ static int gr_gv11b_handle_sw_method(struct gk20a *g, u32 addr,
 {
 	gk20a_dbg_fn("");
 
-	if (class_num == PASCAL_COMPUTE_A) {
+	if (class_num == VOLTA_COMPUTE_A) {
 		switch (offset << 2) {
 		case NVC0C0_SET_SHADER_EXCEPTIONS:
 			gk20a_gr_set_shader_exceptions(g, data);
@@ -374,18 +374,18 @@ static int gr_gv11b_handle_sw_method(struct gk20a *g, u32 addr,
 		}
 	}
 
-	if (class_num == PASCAL_A) {
+	if (class_num == VOLTA_A) {
 		switch (offset << 2) {
-		case NVC097_SET_SHADER_EXCEPTIONS:
+		case NVC397_SET_SHADER_EXCEPTIONS:
 			gk20a_gr_set_shader_exceptions(g, data);
 			break;
-		case NVC097_SET_CIRCULAR_BUFFER_SIZE:
+		case NVC397_SET_CIRCULAR_BUFFER_SIZE:
 			g->ops.gr.set_circular_buffer_size(g, data);
 			break;
-		case NVC097_SET_ALPHA_CIRCULAR_BUFFER_SIZE:
+		case NVC397_SET_ALPHA_CIRCULAR_BUFFER_SIZE:
 			g->ops.gr.set_alpha_circular_buffer_size(g, data);
 			break;
-		case NVC097_SET_GO_IDLE_TIMEOUT:
+		case NVC397_SET_GO_IDLE_TIMEOUT:
 			gr_gv11b_set_go_idle_timeout(g, data);
 			break;
 		case NVC097_SET_COALESCE_BUFFER_SIZE:
@@ -401,12 +401,25 @@ fail:
 	return -EINVAL;
 }
 
+static void gr_gv11b_bundle_cb_defaults(struct gk20a *g)
+{
+	struct gr_gk20a *gr = &g->gr;
+
+	gr->bundle_cb_default_size =
+		gr_scc_bundle_cb_size_div_256b__prod_v();
+	gr->min_gpm_fifo_depth =
+		gr_pd_ab_dist_cfg2_state_limit_min_gpm_fifo_depths_v();
+	gr->bundle_cb_token_limit =
+		gr_pd_ab_dist_cfg2_token_limit_init_v();
+}
+
 static void gr_gv11b_cb_size_default(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 
 	if (!gr->attrib_cb_default_size)
-		gr->attrib_cb_default_size = 0x800;
+		gr->attrib_cb_default_size =
+			gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v();
 	gr->alpha_cb_default_size =
 		gr_gpc0_ppc0_cbm_alpha_cb_size_v_default_v();
 }
@@ -1680,6 +1693,7 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.commit_global_attrib_cb = gr_gv11b_commit_global_attrib_cb;
 	gops->gr.commit_global_bundle_cb = gr_gv11b_commit_global_bundle_cb;
 	gops->gr.handle_sw_method = gr_gv11b_handle_sw_method;
+	gops->gr.bundle_cb_defaults = gr_gv11b_bundle_cb_defaults;
 	gops->gr.cb_size_default = gr_gv11b_cb_size_default;
 	gops->gr.set_alpha_circular_buffer_size =
 		gr_gv11b_set_alpha_circular_buffer_size;

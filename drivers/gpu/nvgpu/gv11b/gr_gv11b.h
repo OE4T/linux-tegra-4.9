@@ -28,6 +28,11 @@ enum {
 /* use magic number 99 for subctx litter value */
 #define GPU_LIT_NUM_SUBCTX 99
 
+#define NVC397_SET_SHADER_EXCEPTIONS		0x1528
+#define NVC397_SET_CIRCULAR_BUFFER_SIZE 	0x1280
+#define NVC397_SET_ALPHA_CIRCULAR_BUFFER_SIZE 	0x02dc
+#define NVC397_SET_GO_IDLE_TIMEOUT 		0x022c
+
 void gv11b_init_gr(struct gpu_ops *ops);
 int gr_gv11b_alloc_buffer(struct vm_gk20a *vm, size_t size,
                         struct mem_desc *mem);

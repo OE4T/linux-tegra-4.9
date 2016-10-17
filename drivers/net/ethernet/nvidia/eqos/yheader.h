@@ -91,6 +91,7 @@
 #include <linux/phy.h>
 #include <linux/mdio.h>
 #include <linux/thermal.h>
+#include <linux/platform/tegra/ptp-notifier.h>
 
 #define L32(data) ((data)&0xFFFFFFFF)
 #define H32(data) (((data)&0xFFFFFFFF00000000)>>32)

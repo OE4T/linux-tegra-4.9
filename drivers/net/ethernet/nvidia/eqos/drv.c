@@ -5789,6 +5789,11 @@ void eqos_stop_dev(struct eqos_prv_data *pdata)
 
 	DBGPR("-->%s()\n", __func__);
 
+#ifdef CONFIG_TEGRA_PTP_NOTIFIER
+	/* Unregister broadcasting MAC timestamp to clients */
+	tegra_unregister_hwtime_source();
+#endif
+
 	/* turn off sources of data into dev */
 	netif_tx_disable(pdata->dev);
 

@@ -289,6 +289,7 @@ static const int tegra186_aon_gpio_wakes[] = {
 
 
 struct tegra_gpio_port_soc_info {
+	const char *port_name;
 	int cont_id;
 	int cont_index;
 	int valid_pins;
@@ -299,6 +300,7 @@ struct tegra_gpio_port_soc_info {
 
 #define TEGRA_GPIO_PORT_INFO(port, cid, cind, npins)		\
 [TEGRA_GPIO_BANK_ID_##port] = {					\
+		.port_name = #port,				\
 		.cont_id = cid,					\
 		.cont_index = cind,				\
 		.valid_pins = npins,				\
@@ -309,6 +311,7 @@ struct tegra_gpio_port_soc_info {
 
 #define TEGRA_AON_GPIO_PORT_INFO(port, cid, cind, npins)	\
 [TEGRA_AON_GPIO_BANK_ID_##port] = {				\
+		.port_name = #port,				\
 		.cont_id = cid,					\
 		.cont_index = cind,				\
 		.valid_pins = npins,				\
@@ -772,33 +775,14 @@ static int dbg_gpio_show(struct seq_file *s, void *unused)
 	struct tegra_gpio_info *tgi = s->private;
 	int i;
 	bool accessible;
-	char x, y;
-	int count = 0;
-
-	x = ' ';
-	y = 'A';
 
 	seq_puts(s, "Port:Pin:ENB DBC IN OUT_CTRL OUT_VAL INT_CLR\n");
-
 	for (i = 0; i < tgi->gc.ngpio; i++) {
 		accessible = is_gpio_accessible(tgi, i);
-		if (count == 8)
-			count = 0;
-
-		if ((count == 0) && (i / 8)) {
-			if (x != ' ')
-				x++;
-			if (y == 'Z') {
-				y = 'A';
-				x = 'A';
-			} else {
-				y++;
-			}
-		}
-		count++;
 		if (accessible) {
-			seq_printf(s, "%c%c:%d 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
-				   x, y, i % 8,
+			seq_printf(s, "%s:%d 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
+				   tgi->soc->port[GPIO_PORT(i)].port_name,
+				   i % 8,
 				tegra_gpio_readl(tgi, i, GPIO_ENB_CONFIG_REG),
 				tegra_gpio_readl(tgi, i, GPIO_DBC_THRES_REG),
 				tegra_gpio_readl(tgi, i, GPIO_INPUT_REG),

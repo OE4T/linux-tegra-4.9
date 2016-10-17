@@ -60,3 +60,8 @@ config TEGRA_CAMERA_RTCPU
 	select TEGRA_IVC
 	select TEGRA_HSP
 	select TEGRA_AST
+
+config TEGRA_PTP_NOTIFIER
+	tristate "Enable PTP Notifier"
+	depends on ARCH_TEGRA_18x_SOC
+	default y if EQOS

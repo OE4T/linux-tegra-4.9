@@ -612,15 +612,6 @@ static void mttcan_tx_cancelled(struct net_device *dev)
 	}
 }
 
-static inline u64 mttcan_init_timebase(void)
-{
-#ifdef CONFIG_CLK_SRC_TEGRA18_US_TIMER
-	return ((u64)tegra_us_timer_read()) * NSEC_PER_USEC;
-#else
-	return ktime_to_ns(ktime_get_real());
-#endif
-}
-
 static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 {
 	int work_done = 0;
@@ -980,10 +971,12 @@ static void mttcan_controller_config(struct net_device *dev)
 void mttcan_timer_cb(unsigned long data)
 {
 	unsigned long flags;
+	u64 tref;
 	struct mttcan_priv *priv = (struct mttcan_priv *)data;
 
 	spin_lock_irqsave(&priv->tc_lock, flags);
-	timecounter_read(&priv->tc);
+	tref = get_ptp_hwtime();
+	timecounter_init(&priv->tc, &priv->cc, tref);
 	spin_unlock_irqrestore(&priv->tc_lock, flags);
 	mod_timer(&priv->timer,
 			jiffies + (msecs_to_jiffies(MTTCAN_HWTS_ROLLOVER)));
@@ -1036,7 +1029,6 @@ static void mttcan_start(struct net_device *dev)
 	if (priv->poll)
 		schedule_delayed_work(&priv->can_work,
 			msecs_to_jiffies(MTTCAN_POLL_TIME));
-	setup_timer(&priv->timer, mttcan_timer_cb, (unsigned long)priv);
 }
 
 static void mttcan_stop(struct mttcan_priv *priv)
@@ -1046,7 +1038,6 @@ static void mttcan_stop(struct mttcan_priv *priv)
 	priv->can.state = CAN_STATE_STOPPED;
 
 	ttcan_set_config_change_enable(priv->ttcan);
-	del_timer_sync(&priv->timer);
 }
 
 static int mttcan_set_mode(struct net_device *dev, enum can_mode mode)
@@ -1139,6 +1130,9 @@ static int mttcan_power_up(struct mttcan_priv *priv)
 	int level;
 	mttcan_pm_runtime_get_sync(priv);
 
+	if (priv->hwts_rx_en)
+		tegra_register_hwtime_notifier(&priv->ttcan_nb);
+
 	if (gpio_is_valid(priv->gpio_can_stb.gpio)) {
 		level = !priv->gpio_can_stb.active_low;
 		gpio_direction_output(priv->gpio_can_stb.gpio, level);
@@ -1156,6 +1150,9 @@ static int mttcan_power_down(struct net_device *dev)
 {
 	int level;
 	struct mttcan_priv *priv = netdev_priv(dev);
+
+	if (priv->hwts_rx_en)
+		tegra_unregister_hwtime_notifier(&priv->ttcan_nb);
 
 	if (ttcan_set_power(priv->ttcan, 0))
 		return -ETIMEDOUT;
@@ -1286,6 +1283,8 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 				      struct ifreq *ifr)
 {
 	struct hwtstamp_config config;
+	unsigned long flags;
+	u64 tref;
 
 	if (copy_from_user(&config, ifr->ifr_data,
 			   sizeof(struct hwtstamp_config)))
@@ -1305,6 +1304,8 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 		/* time stamp no incoming packet at all */
 	case HWTSTAMP_FILTER_NONE:
 		config.rx_filter = HWTSTAMP_FILTER_NONE;
+		priv->hwts_rx_en = 0;
+		tegra_unregister_hwtime_notifier(&priv->ttcan_nb);
 		break;
 		/* time stamp any incoming packet */
 	case HWTSTAMP_FILTER_ALL:
@@ -1314,15 +1315,14 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 			return -ERANGE;
 		}
 		config.rx_filter = HWTSTAMP_FILTER_ALL;
+		priv->hwts_rx_en = 1;
+		tegra_register_hwtime_notifier(&priv->ttcan_nb);
 		break;
 	default:
 		return -ERANGE;
 	}
 
-	priv->hwts_rx_en =
-		((config.rx_filter == HWTSTAMP_FILTER_NONE) ? 0 : 1);
 	priv->hwtstamp_config = config;
-
 	/* Setup hardware time stamping cyclecounter */
 	if (priv->hwts_rx_en) {
 		priv->cc.read = ttcan_read_ts_cntr;
@@ -1332,14 +1332,13 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 				priv->ttcan->bt_config.nominal.bitrate;
 		priv->cc.shift = 0;
 
-		/* reset the ns time counter */
-		ttcan_write32(priv->ttcan, ADR_MTTCAN_TSCV, 0);
-		timecounter_init(&priv->tc, &priv->cc,
-				mttcan_init_timebase());
+		spin_lock_irqsave(&priv->tc_lock, flags);
+		tref = get_ptp_hwtime();
+		timecounter_init(&priv->tc, &priv->cc, tref);
+		spin_unlock_irqrestore(&priv->tc_lock, flags);
 		mod_timer(&priv->timer,
 			jiffies + (msecs_to_jiffies(MTTCAN_HWTS_ROLLOVER)));
 	}
-
 	return (copy_to_user(ifr->ifr_data, &config,
 			sizeof(struct hwtstamp_config))) ? -EFAULT : 0;
 }
@@ -1483,6 +1482,23 @@ pclk_exit:
 	priv->cclk = cclk;
 	priv->hclk = hclk;
 	return 0;
+}
+
+static int mttcan_notifier(struct notifier_block *nb,
+			   unsigned long event, void *data)
+{
+	unsigned long flags;
+	u64 tref;
+	struct mttcan_priv *priv =
+		container_of(nb, struct mttcan_priv, ttcan_nb);
+
+	/* disable context switch between EAVB and CAN counter reads */
+	spin_lock_irqsave(&priv->tc_lock, flags);
+	tref = get_ptp_hwtime();
+	timecounter_init(&priv->tc, &priv->cc, tref);
+	spin_unlock_irqrestore(&priv->tc_lock, flags);
+
+	return NOTIFY_OK;
 }
 
 static int mttcan_probe(struct platform_device *pdev)
@@ -1653,9 +1669,13 @@ static int mttcan_probe(struct platform_device *pdev)
 		goto exit_hw_deinit;
 	}
 
+	priv->ttcan_nb.notifier_call = mttcan_notifier;
+
 	ret = mttcan_create_sys_files(&dev->dev);
 	if (ret)
 		goto exit_unreg_candev;
+
+	setup_timer(&priv->timer, mttcan_timer_cb, (unsigned long)priv);
 
 	dev_info(&dev->dev, "%s device registered (regs=%p, irq=%d)\n",
 		 KBUILD_MODNAME, priv->ttcan->base, dev->irq);
@@ -1684,6 +1704,7 @@ static int mttcan_remove(struct platform_device *pdev)
 
 	dev_info(&dev->dev, "%s\n", __func__);
 
+	del_timer_sync(&priv->timer);
 	mttcan_delete_sys_files(&dev->dev);
 	unregister_mttcan_dev(dev);
 	mttcan_unprepare_clock(priv);

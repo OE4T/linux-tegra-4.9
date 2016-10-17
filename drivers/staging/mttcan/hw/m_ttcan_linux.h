@@ -42,6 +42,7 @@
 #include <linux/net_tstamp.h>
 #include <linux/spinlock.h>
 #include <linux/clocksource.h>
+#include <linux/platform/tegra/ptp-notifier.h>
 #ifdef CONFIG_CLK_SRC_TEGRA18_US_TIMER
 #include <linux/tegra-us-timer.h>
 #endif
@@ -82,6 +83,7 @@ struct mttcan_priv {
 	struct cyclecounter cc;
 	struct timecounter tc;
 	struct hwtstamp_config hwtstamp_config;
+	struct notifier_block ttcan_nb;
 	spinlock_t tc_lock;
 	spinlock_t tslock;
 	void __iomem *regs;

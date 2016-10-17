@@ -45,3 +45,4 @@ obj-$(CONFIG_TEGRA_CENTRAL_ACTMON) += cactmon_t18x.o
 ifeq ($(CONFIG_HW_PERF_EVENTS), y)
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra18_perf_uncore.o
 endif
+obj-$(CONFIG_TEGRA_PTP_NOTIFIER) += ptp-notifier.o

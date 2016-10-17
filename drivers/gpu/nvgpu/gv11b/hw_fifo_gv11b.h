@@ -70,6 +70,34 @@ static inline u32 fifo_bar1_base_valid_true_f(void)
 {
 	return 0x10000000;
 }
+static inline u32 fifo_userd_writeback_r(void)
+{
+	return 0x0000225c;
+}
+static inline u32 fifo_userd_writeback_timer_f(u32 v)
+{
+	return (v & 0xff) << 0;
+}
+static inline u32 fifo_userd_writeback_timer_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_userd_writeback_timer_shorter_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 fifo_userd_writeback_timer_100us_v(void)
+{
+	return 0x00000064;
+}
+static inline u32 fifo_userd_writeback_timescale_f(u32 v)
+{
+	return (v & 0xf) << 12;
+}
+static inline u32 fifo_userd_writeback_timescale_0_v(void)
+{
+	return 0x00000000;
+}
 static inline u32 fifo_runlist_base_r(void)
 {
 	return 0x00002270;

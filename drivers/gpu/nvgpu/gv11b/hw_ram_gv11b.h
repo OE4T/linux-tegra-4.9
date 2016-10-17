@@ -178,6 +178,10 @@ static inline u32 ram_in_engine_cs_fg_f(void)
 {
 	return 0x8;
 }
+static inline u32 ram_in_engine_wfi_mode_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
 static inline u32 ram_in_engine_wfi_mode_w(void)
 {
 	return 132;
@@ -186,17 +190,13 @@ static inline u32 ram_in_engine_wfi_mode_physical_v(void)
 {
 	return 0x00000000;
 }
-static inline u32 ram_in_engine_wfi_mode_physical_f(void)
-{
-	return 0x0;
-}
 static inline u32 ram_in_engine_wfi_mode_virtual_v(void)
 {
 	return 0x00000001;
 }
-static inline u32 ram_in_engine_wfi_mode_virtual_f(void)
+static inline u32 ram_in_engine_wfi_target_f(u32 v)
 {
-	return 0x4;
+	return (v & 0x3) << 0;
 }
 static inline u32 ram_in_engine_wfi_target_w(void)
 {
@@ -206,25 +206,13 @@ static inline u32 ram_in_engine_wfi_target_sys_mem_coh_v(void)
 {
 	return 0x00000002;
 }
-static inline u32 ram_in_engine_wfi_target_sys_mem_coh_f(void)
-{
-	return 0x2;
-}
-static inline u32 ram_in_engine_wfi_target_sys_mem_nocoh_v(void)
+static inline u32 ram_in_engine_wfi_target_sys_mem_ncoh_v(void)
 {
 	return 0x00000003;
-}
-static inline u32 ram_in_engine_wfi_target_sys_mem_nocoh_f(void)
-{
-	return 0x3;
 }
 static inline u32 ram_in_engine_wfi_target_local_mem_v(void)
 {
 	return 0x00000000;
-}
-static inline u32 ram_in_engine_wfi_target_local_mem_f(void)
-{
-	return 0x0;
 }
 static inline u32 ram_in_engine_wfi_ptr_lo_f(u32 v)
 {
@@ -581,6 +569,10 @@ static inline u32 ram_fc_chid_id_f(u32 v)
 static inline u32 ram_fc_chid_id_w(void)
 {
 	return 0;
+}
+static inline u32 ram_fc_config_w(void)
+{
+	return 61;
 }
 static inline u32 ram_fc_runlist_timeslice_w(void)
 {

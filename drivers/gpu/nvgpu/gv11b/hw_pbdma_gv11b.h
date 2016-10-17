@@ -342,6 +342,14 @@ static inline u32 pbdma_config_auth_level_privileged_f(void)
 {
 	return 0x100;
 }
+static inline u32 pbdma_config_userd_writeback_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 pbdma_config_userd_writeback_enable_f(void)
+{
+	return 0x1000;
+}
 static inline u32 pbdma_userd_hi_r(u32 i)
 {
 	return 0x0004000c + i*8192;

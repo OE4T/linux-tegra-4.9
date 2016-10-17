@@ -24,6 +24,9 @@
 #include "hw_ccsr_gv11b.h"
 #include "hw_usermode_gv11b.h"
 
+#define CHANNEL_INFO_VEID0  0
+#define PBDMA_SUBDEVICE_ID  1
+
 static void gv11b_get_tsg_runlist_entry(struct tsg_gk20a *tsg, u32 *runlist)
 {
 
@@ -82,6 +85,88 @@ static void gv11b_get_ch_runlist_entry(struct channel_gk20a *c, u32 *runlist)
 			runlist[0], runlist[1], runlist[2], runlist[3]);
 }
 
+static void gv11b_userd_writeback_config(struct gk20a *g)
+{
+	gk20a_writel(g, fifo_userd_writeback_r(), fifo_userd_writeback_timer_f(
+				fifo_userd_writeback_timer_100us_v()));
+
+
+}
+
+static int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
+		u64 gpfifo_base, u32 gpfifo_entries, u32 flags)
+{
+	struct gk20a *g = c->g;
+	struct mem_desc *mem = &c->inst_block;
+	u32 data;
+
+	gk20a_dbg_fn("");
+
+	gk20a_memset(g, mem, 0, 0, ram_fc_size_val_v());
+
+        gk20a_mem_wr32(g, mem, ram_fc_gp_base_w(),
+		pbdma_gp_base_offset_f(
+		u64_lo32(gpfifo_base >> pbdma_gp_base_rsvd_s())));
+
+	gk20a_mem_wr32(g, mem, ram_fc_gp_base_hi_w(),
+		pbdma_gp_base_hi_offset_f(u64_hi32(gpfifo_base)) |
+		pbdma_gp_base_hi_limit2_f(ilog2(gpfifo_entries)));
+
+	gk20a_mem_wr32(g, mem, ram_fc_signature_w(),
+		c->g->ops.fifo.get_pbdma_signature(c->g));
+
+	gk20a_mem_wr32(g, mem, ram_fc_pb_header_w(),
+		pbdma_pb_header_priv_user_f() |
+		pbdma_pb_header_method_zero_f() |
+		pbdma_pb_header_subchannel_zero_f() |
+		pbdma_pb_header_level_main_f() |
+		pbdma_pb_header_first_true_f() |
+		pbdma_pb_header_type_inc_f());
+
+	gk20a_mem_wr32(g, mem, ram_fc_subdevice_w(),
+		pbdma_subdevice_id_f(PBDMA_SUBDEVICE_ID) |
+		pbdma_subdevice_status_active_f() |
+		pbdma_subdevice_channel_dma_enable_f());
+
+	gk20a_mem_wr32(g, mem, ram_fc_target_w(),
+		pbdma_target_eng_ctx_valid_true_f() |
+		pbdma_target_engine_sw_f());
+
+	gk20a_mem_wr32(g, mem, ram_fc_acquire_w(),
+		channel_gk20a_pbdma_acquire_val(c));
+
+	gk20a_mem_wr32(g, mem, ram_fc_runlist_timeslice_w(),
+		pbdma_runlist_timeslice_timeout_128_f() |
+		pbdma_runlist_timeslice_timescale_3_f() |
+		pbdma_runlist_timeslice_enable_true_f());
+
+
+	gk20a_mem_wr32(g, mem, ram_fc_chid_w(), ram_fc_chid_id_f(c->hw_chid));
+
+	/* Until full subcontext is supported, always use VEID0 */
+	gk20a_mem_wr32(g, mem, ram_fc_set_channel_info_w(),
+		pbdma_set_channel_info_scg_type_graphics_compute0_f() |
+		pbdma_set_channel_info_veid_f(CHANNEL_INFO_VEID0));
+
+	if (c->is_privileged_channel) {
+		/* Set privilege level for channel */
+		gk20a_mem_wr32(g, mem, ram_fc_config_w(),
+			pbdma_config_auth_level_privileged_f());
+
+		gk20a_channel_setup_ramfc_for_privileged_channel(c);
+	}
+
+	/* Enable userd writeback */
+	data = gk20a_mem_rd32(g, mem, ram_fc_config_w());
+	data = data | pbdma_config_userd_writeback_enable_f();
+	gk20a_mem_wr32(g, mem, ram_fc_config_w(),data);
+
+	gv11b_userd_writeback_config(g);
+
+	return channel_gp10b_commit_userd(c);
+}
+
+
 static void gv11b_ring_channel_doorbell(struct channel_gk20a *c)
 {
 	gk20a_dbg_info("channel ring door bell %d\n", c->hw_chid);
@@ -131,4 +216,5 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.get_num_fifos = gv11b_fifo_get_num_fifos;
 	gops->fifo.userd_gp_get = gv11b_userd_gp_get;
 	gops->fifo.userd_gp_put = gv11b_userd_gp_put;
+	gops->fifo.setup_ramfc = channel_gv11b_setup_ramfc;
 }

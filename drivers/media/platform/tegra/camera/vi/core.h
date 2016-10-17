@@ -220,9 +220,9 @@ struct tegra_video_format {
 u32 tegra_core_get_fourcc_by_idx(unsigned int index);
 u32 tegra_core_get_word_count(unsigned int frame_width,
 			      const struct tegra_video_format *fmt);
-int tegra_core_get_idx_by_code(unsigned int code);
+int tegra_core_get_idx_by_code(unsigned int code, unsigned offset);
 const struct tegra_video_format *tegra_core_get_format_by_code(unsigned int
-							       code);
+					code, unsigned offset);
 const struct tegra_video_format *tegra_core_get_format_by_fourcc(u32 fourcc);
 u32 tegra_core_bytes_per_line(unsigned int width, unsigned int align,
 			      const struct tegra_video_format *fmt);

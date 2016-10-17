@@ -16,6 +16,7 @@
 #include "gk20a/gk20a.h"
 #include "gm20b/ltc_gm20b.h"
 #include "gp10b/ltc_gp10b.h"
+#include "gp106/ltc_gp106.h"
 
 void gp106_init_ltc(struct gpu_ops *gops)
 {

@@ -528,7 +528,7 @@ static int tegra186_pmc_debugfs_init(struct device_node *np)
 	cnt_reg_offset = of_property_count_u32_elems(np,
 				"export-pmc-scratch-reg-offset");
 	if (cnt_reg_offset < 0) {
-		pr_info("scratch reg offset data not present\n");
+		pr_info("scratch reg offset dts data not present\n");
 		return -EINVAL;
 	}
 	pmc_pdata.cnt_reg_offset = cnt_reg_offset;
@@ -680,14 +680,13 @@ static int __init tegra186_pmc_init(void)
 
 	ret = tegra186_pmc_debugfs_init(np);
 	if (ret < 0)
-		pr_info("Failed to create PMC debugfs :%d\n", ret);
+		pr_debug("Failed to create PMC debugfs :%d\n", ret);
 
 	/* Prod setting like platform specific rails */
 	prod_list = devm_tegra_prod_get(&tegra186_pmc_dev);
 	if (IS_ERR(prod_list)) {
 		ret = PTR_ERR(prod_list);
-		dev_info(&tegra186_pmc_dev, "prod list not found: %d\n",
-			ret);
+		dev_dbg(&tegra186_pmc_dev, "prod list not found: %d\n", ret);
 		prod_list = NULL;
 	} else {
 		ret = tegra_prod_set_by_name(&tegra186_pmc_base,

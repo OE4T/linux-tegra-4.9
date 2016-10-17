@@ -502,6 +502,8 @@ static int tegra_gpio_irq_set_wake(struct irq_data *d, unsigned int enable)
 static struct syscore_ops tegra_gpio_syscore_ops = {
 	.suspend = tegra_gpio_suspend,
 	.resume = tegra_gpio_resume,
+	.save = tegra_gpio_suspend,
+	.restore = tegra_gpio_resume,
 };
 
 #ifdef	CONFIG_DEBUG_FS

@@ -46,6 +46,11 @@ MODULE_LICENSE("GPL v2");
 
 #define snd_atvr_log(...) pr_info("snd_atvr: " __VA_ARGS__)
 
+#define JOYSTICK_FUZZ 64
+#define TRIGGER_FUZZ 64
+#define JOYSTICK_FLAT 64
+#define TRIGGER_FLAT 0
+
 #define ADPCM_AUDIO_REPORT_ID 30
 
 #define MSBC_AUDIO1_REPORT_ID 0xF7
@@ -1988,6 +1993,44 @@ static void atvr_remove(struct hid_device *hdev)
 	mutex_unlock(&snd_cards_lock);
 }
 
+static int atvr_input_mapped(struct hid_device *hdev, struct hid_input *hi,
+			struct hid_field *field, struct hid_usage *usage,
+			unsigned long **bit, int *max)
+{
+	int a = field->logical_minimum;
+	int b = field->logical_maximum;
+	int fuzz;
+	int flat;
+
+	if ((usage->type == EV_ABS) && (field->application == HID_GD_GAMEPAD
+			|| field->application == HID_GD_JOYSTICK)) {
+		switch (usage->hid) {
+		case HID_GD_X:
+		case HID_GD_Y:
+		case HID_GD_RX:
+		case HID_GD_RY:
+			fuzz = JOYSTICK_FUZZ;
+			flat = JOYSTICK_FLAT;
+			break;
+		case HID_GD_Z:
+		case HID_GD_RZ:
+		case 0x200c4: /* For ABS_GAS */
+		case 0x200c5: /* For ABS_BRAKE */
+			fuzz = TRIGGER_FUZZ;
+			flat = TRIGGER_FLAT;
+			break;
+		default: return 0;/*Use generic mapping for HatX, HatY*/
+		}
+		set_bit(usage->type, hi->input->evbit);
+		set_bit(usage->code, *bit);
+		input_set_abs_params(hi->input, usage->code, a, b, fuzz, flat);
+		input_abs_set_res(hi->input, usage->code,
+			hidinput_calc_abs_res(field, usage->code));
+		return -1;
+	}
+	return 0;
+}
+
 static const struct hid_device_id atvr_devices[] = {
 	{HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NVIDIA,
 			      USB_DEVICE_ID_NVIDIA_JARVIS)},
@@ -2004,6 +2047,7 @@ MODULE_DEVICE_TABLE(hid, atvr_devices);
 static struct hid_driver atvr_driver = {
 	.name = "Jarvis",
 	.id_table = atvr_devices,
+	.input_mapped = atvr_input_mapped,
 	.raw_event = atvr_raw_event,
 	.probe = atvr_probe,
 	.remove = atvr_remove,

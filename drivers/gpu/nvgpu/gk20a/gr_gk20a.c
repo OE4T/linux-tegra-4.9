@@ -330,6 +330,8 @@ int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
 	bool ctxsw_active;
 	bool gr_busy;
 	u32 gr_engine_id;
+	u32 engine_status;
+	bool ctx_status_invalid;
 
 	gk20a_dbg_fn("");
 
@@ -343,14 +345,21 @@ int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
 		gr_enabled = gk20a_readl(g, mc_enable_r()) &
 			mc_enable_pgraph_enabled_f();
 
-		ctxsw_active = gk20a_readl(g,
-			fifo_engine_status_r(gr_engine_id)) &
+		engine_status = gk20a_readl(g,
+					fifo_engine_status_r(gr_engine_id));
+
+		ctxsw_active = engine_status &
 			fifo_engine_status_ctxsw_in_progress_f();
+
+		ctx_status_invalid =
+			(fifo_engine_status_ctx_status_v(engine_status) ==
+			 fifo_engine_status_ctx_status_invalid_v());
 
 		gr_busy = gk20a_readl(g, gr_engine_status_r()) &
 			gr_engine_status_value_busy_f();
 
-		if (!gr_enabled || (!gr_busy && !ctxsw_active)) {
+		if (!gr_enabled || ctx_status_invalid
+				|| (!gr_busy && !ctxsw_active)) {
 			gk20a_dbg_fn("done");
 			return 0;
 		}

@@ -430,6 +430,10 @@ static inline u32 fifo_engine_status_ctx_status_v(u32 r)
 {
 	return (r >> 13) & 0x7;
 }
+static inline u32 fifo_engine_status_ctx_status_invalid_v(void)
+{
+	return 0x00000000;
+}
 static inline u32 fifo_engine_status_ctx_status_valid_v(void)
 {
 	return 0x00000001;

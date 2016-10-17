@@ -2,6 +2,7 @@
  * arch/arm/mach-tegra/gpio.c
  *
  * Copyright (c) 2010 Google, Inc
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Erik Gilling <konkers@google.com>
@@ -30,6 +31,7 @@
 #include <linux/irqchip/chained_irq.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/pm.h>
+#include <linux/syscore_ops.h>
 
 #define GPIO_BANK(x)		((x) >> 5)
 #define GPIO_PORT(x)		(((x) >> 3) & 0x3)
@@ -100,6 +102,7 @@ struct tegra_gpio_info {
 	struct irq_chip				ic;
 	u32					bank_count;
 };
+static struct tegra_gpio_info *gpio_info;
 
 static inline void tegra_gpio_writel(struct tegra_gpio_info *tgi,
 				     u32 val, u32 reg)
@@ -403,15 +406,11 @@ static void tegra_gpio_irq_handler(struct irq_desc *desc)
 }
 
 #ifdef CONFIG_PM_SLEEP
-static int tegra_gpio_resume(struct device *dev)
+static void tegra_gpio_resume(void)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct tegra_gpio_info *tgi = platform_get_drvdata(pdev);
-	unsigned long flags;
+	struct tegra_gpio_info *tgi = gpio_info;
 	int b;
 	int p;
-
-	local_irq_save(flags);
 
 	for (b = 0; b < tgi->bank_count; b++) {
 		struct tegra_gpio_bank *bank = &tgi->bank_info[b];
@@ -438,20 +437,14 @@ static int tegra_gpio_resume(struct device *dev)
 					  GPIO_INT_ENB(tgi, gpio));
 		}
 	}
-
-	local_irq_restore(flags);
-	return 0;
 }
 
-static int tegra_gpio_suspend(struct device *dev)
+static int tegra_gpio_suspend(void)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct tegra_gpio_info *tgi = platform_get_drvdata(pdev);
-	unsigned long flags;
+	struct tegra_gpio_info *tgi = gpio_info;
 	int b;
 	int p;
 
-	local_irq_save(flags);
 	for (b = 0; b < tgi->bank_count; b++) {
 		struct tegra_gpio_bank *bank = &tgi->bank_info[b];
 
@@ -480,7 +473,7 @@ static int tegra_gpio_suspend(struct device *dev)
 					  GPIO_INT_ENB(tgi, gpio));
 		}
 	}
-	local_irq_restore(flags);
+
 	return 0;
 }
 
@@ -501,7 +494,15 @@ static int tegra_gpio_irq_set_wake(struct irq_data *d, unsigned int enable)
 
 	return irq_set_irq_wake(bank->irq, enable);
 }
+#else
+#define tegra_gpio_suspend NULL
+#define tegra_gpio_resume NULL
 #endif
+
+static struct syscore_ops tegra_gpio_syscore_ops = {
+	.suspend = tegra_gpio_suspend,
+	.resume = tegra_gpio_resume,
+};
 
 #ifdef	CONFIG_DEBUG_FS
 
@@ -573,10 +574,6 @@ static inline void tegra_gpio_debuginit(struct tegra_gpio_info *tgi)
 
 #endif
 
-static const struct dev_pm_ops tegra_gpio_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(tegra_gpio_suspend, tegra_gpio_resume)
-};
-
 /*
  * This lock class tells lockdep that GPIO irqs are in a different category
  * than their parents, so it won't report false recursion.
@@ -603,6 +600,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	tgi = devm_kzalloc(&pdev->dev, sizeof(*tgi), GFP_KERNEL);
 	if (!tgi)
 		return -ENODEV;
+	gpio_info = tgi;
 
 	tgi->soc = config;
 	tgi->dev = &pdev->dev;
@@ -715,6 +713,8 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 
 	tegra_gpio_debuginit(tgi);
 
+	register_syscore_ops(&tegra_gpio_syscore_ops);
+
 	return 0;
 }
 
@@ -744,7 +744,6 @@ static const struct of_device_id tegra_gpio_of_match[] = {
 static struct platform_driver tegra_gpio_driver = {
 	.driver		= {
 		.name	= "tegra-gpio",
-		.pm	= &tegra_gpio_pm_ops,
 		.of_match_table = tegra_gpio_of_match,
 	},
 	.probe		= tegra_gpio_probe,

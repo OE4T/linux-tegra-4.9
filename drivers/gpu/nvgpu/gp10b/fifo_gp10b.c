@@ -49,7 +49,7 @@ static void gp10b_set_pdb_fault_replay_flags(struct gk20a *g,
 	gk20a_dbg_fn("done");
 }
 
-static int channel_gp10b_commit_userd(struct channel_gk20a *c)
+int channel_gp10b_commit_userd(struct channel_gk20a *c)
 {
 	u32 addr_lo;
 	u32 addr_hi;

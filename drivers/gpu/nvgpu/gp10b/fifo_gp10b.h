@@ -17,4 +17,5 @@
 #define FIFO_GP10B_H
 struct gpu_ops;
 void gp10b_init_fifo(struct gpu_ops *gops);
+int channel_gp10b_commit_userd(struct channel_gk20a *c);
 #endif

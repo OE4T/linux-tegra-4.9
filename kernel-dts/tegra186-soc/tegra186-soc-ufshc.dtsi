@@ -54,6 +54,9 @@
 		nvidia,mask-fast-auto-mode;
 		nvidia,max-hs-gear = <3>;
 		nvidia,max-pwm-gear = <4>;
+		vcc-max-microamp = <0>;
+		vccq-max-microamp = <0>;
+		vccq2-max-microamp = <0>;
 		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_UFS>;
 		pad-names = "ufs";
 		status = "disabled";

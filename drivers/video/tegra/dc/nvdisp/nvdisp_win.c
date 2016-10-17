@@ -235,8 +235,8 @@ static int tegra_nvdisp_scaling(struct tegra_dc_win *win)
 	min_width = (dfixed_trunc(win->w) < win->out_w) ?
 		dfixed_trunc(win->w) : win->out_w;
 
-	win_capc = win->precomp_capc;
-	win_cape = win->precomp_cape;
+	win_capc = nvdisp_win_read(win, win_precomp_wgrp_capc_r());
+	win_cape = nvdisp_win_read(win, win_precomp_wgrp_cape_r());
 
 	if (min_width < win_precomp_wgrp_capc_max_pixels_5tap444_v(win_capc)) {
 		nvdisp_win_write(win, win_scaler_input_h_taps_5_f() |

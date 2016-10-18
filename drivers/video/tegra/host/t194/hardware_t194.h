@@ -28,8 +28,7 @@
 #include "host1x/hw_host1x5_actmon.h"
 
 /* sync registers */
-#define NV_HOST1X_SYNCPT_NB_PTS 576
-#define NV_HOST1X_SYNCPT_NB_BASES 16
+#define NV_HOST1X_SYNCPT_NB_PTS 704
 #define NV_HOST1X_NB_MLOCKS 24
 
 #define NV_HOST1X_MLOCK_ID_NVCSI	7

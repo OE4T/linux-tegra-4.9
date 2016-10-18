@@ -442,7 +442,8 @@ int atvr_ts_sensor_set(struct hid_device *hdev, bool enable)
 	ret =  hdev->hid_output_raw_report(hdev, report,
 			TS_HOSTCMD_REPORT_SIZE, HID_OUTPUT_REPORT);
 	if (ret < 0)
-		hid_info(hdev, "failed to send ts sensor ctrl report, err=%d\n", ret);
+		hid_info(hdev, "failed to send ts sensor ctrl report, err=%d\n",
+				ret);
 	else
 		ret = 0;
 

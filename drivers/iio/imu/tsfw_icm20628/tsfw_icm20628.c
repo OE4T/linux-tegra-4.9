@@ -19,6 +19,7 @@
 #include <linux/hid.h>
 #include <linux/iio/imu/tsfw_icm20628.h>
 #include <linux/module.h>
+#include <linux/byteorder/generic.h>
 
 /* #define DEBUG_TSFW_ICM */
 
@@ -79,6 +80,7 @@ static struct sensor_cfg tsfw_icm20628_cfg_dflt[] = {
 			.fval		= 598550,
 		},
 		.uuid			= "ts_accel",
+		.matrix                 = { 0, -1, 0, 1, 0, 0, 0, 0, 1 },
 	},
 	{
 		.name			= "gyroscope",
@@ -119,6 +121,7 @@ static struct sensor_cfg tsfw_icm20628_cfg_dflt[] = {
 			.fval		= 1064225,
 		},
 		.uuid			= "ts_gyro",
+		.matrix                 = { 0, 1, 0, -1, 0, 0, 0, 0, 1 },
 	},
 	{
 		.name			= "magnetic_field",
@@ -177,6 +180,7 @@ static void pr_debugg_buffer(u8 *data, size_t len)
 	pr_info("%s", qwerty);
 }
 #else
+/* TODO: do {} while (0) */
 #define pr_debugg(...)		\
 ({				\
   if (0)			\
@@ -200,43 +204,58 @@ static inline void pr_debugg_buffer(u8 *data, size_t len)
  * report_id=7 (=syn=1), 2 full sets (36B)
  * report_id=7 (=syn=1), 2 full sets + 1 partial set (41B)
  */
+
+/* only accepts full 18B buffers */
+static void pass_to_nvs(struct tsfw_icm20628_state *st, u8 *data)
+{
+	u16 t4[SNSR_N * AXIS_N];
+	size_t i;
+	s64 ts;
+	ts = nvs_timestamp(); /* ns */
+	pr_debugg("Passing sensor data to nvs ts=%lld\n", ts);
+	pr_debugg_buffer(data, SENSOR_DATA_SET_SIZE);
+
+	/* TODO: st->nvs->nvs_mutex_lock(st->nvs_st); */
+	memcpy(t4, data, SENSOR_DATA_SET_SIZE);
+	/* swap endianness */
+	for (i = 0; i < SNSR_N * AXIS_N; i++)
+		t4[i] = ntohs(t4[i]);
+
+	/* pass to nvs */
+	for (i = 0; i < SNSR_N; i++)
+		st->nvs->handler(st->snsr[i].nvs_st, t4+(AXIS_N*i), ts);
+	/* TODO: st->nvs->nvs_mutex_unlock(st->nvs_st); */
+}
+
 static int handle_sensor_data(struct tsfw_icm20628_state *st,
 		u8 report_counter, bool syn, u16 header,
 		u8 *data, size_t len)
 {
-	size_t i;
-	s64 ts;
-	pr_debugg("%s #%d len=%zu syn=%d\n", __func__, report_counter, len, syn);
+	u8 rem, *tmp;
+	pr_debugg("%s #%d ln=%zu syn=%d\n", __func__, report_counter, len, syn);
 	pr_debugg_buffer(data, len);
-	if (syn) {
-		u8 rem, *tmp = data;
-		while (tmp + SENSOR_DATA_SET_SIZE <= data + len) {
-			u8 t2[SENSOR_DATA_SET_SIZE];
-			pr_debugg("Passing sensor data to nvs ts=%ld\n", ts);
-			pr_debugg_buffer(tmp, SENSOR_DATA_SET_SIZE);
 
-			ts = nvs_timestamp(); /* ns */
-			/* TODO: st->nvs->nvs_mutex_lock(st->nvs_st); */
-			for (i = 0; i < 17; i += 2) {
-				/* Adjust for endianness */
-				t2[i] = tmp[i+1];
-				t2[i+1] = tmp[i];
-			}
-			st->nvs->handler(st->snsr[ID_ACCEL].nvs_st, t2, ts);
-			st->nvs->handler(st->snsr[ID_GYRO].nvs_st, t2+6, ts);
-			st->nvs->handler(st->snsr[ID_MAG].nvs_st, t2+12, ts);
-			/* TODO: st->nvs->nvs_mutex_unlock(st->nvs_st); */
-			tmp += SENSOR_DATA_SET_SIZE;
-		}
-		rem = data + len - tmp;
-		pr_debugg("Copying remainder to buffer\n");
-		pr_debugg_buffer(tmp, rem);
-		memcpy(st->buffered_data, tmp, rem);
-		st->buffered_cnt = rem;
-		/* TODO: st->prev_report_counter = report_counter; */
+	/* handle initial partial data if any */
+	if (syn) {
+		tmp = data;
 	} else {
-		/* TODO: need to do something with non-sync packets */
+		/* TODO: handle first half-packet */
+		tmp = data + (SENSOR_DATA_SET_SIZE - st->buffered_cnt);
 	}
+
+	/* pass full sets of data to nvs */
+	while (tmp + SENSOR_DATA_SET_SIZE <= data + len) {
+		pass_to_nvs(st, tmp);
+		tmp += SENSOR_DATA_SET_SIZE;
+	}
+
+	/* copy remainder to buffer */
+	rem = data + len - tmp;
+	pr_debugg("Copying remaining %d bytes to buffer\n", rem);
+	pr_debugg_buffer(tmp, rem);
+	memcpy(st->buffered_data, tmp, rem);
+	st->buffered_cnt = rem;
+	/* TODO: st->prev_report_counter = report_counter; */
 	return 0;
 }
 
@@ -304,7 +323,6 @@ static int recv(struct tsfw_icm20628_state *st, u8 *data, size_t size)
 				len = RPT1A_DATA_MAX_LEN;
 		} else {
 			pr_debugg("Detected sensor packet #1b\n");
-			/* TODO: might be able to just (u16) data[21] */
 			sensor_header = (data[22] << 8) | data[21];
 			sensor_data = data + RPT1B_DATA_OFFSET;
 			if (len > RPT1B_DATA_MAX_LEN)
@@ -324,7 +342,6 @@ static int recv(struct tsfw_icm20628_state *st, u8 *data, size_t size)
 	} else if (report_id == SENSOR_REPORT_ID_SYN) {
 		pr_debugg("Detected sensor packet #3\n");
 		syn = true;
-		/* TODO: might be able to just (u16) data[3] */
 		sensor_header = (data[4] << 8) | data[3];
 		sensor_data = data + RPT3_DATA_OFFSET;
 		len = data[2];
@@ -339,7 +356,6 @@ static int recv(struct tsfw_icm20628_state *st, u8 *data, size_t size)
 	return 0;
 }
 
-/* TODO: rename, struct device_node *dn needed? */
 static int of_dt(struct tsfw_icm20628_state *st)
 {
 	size_t i;
@@ -442,9 +458,8 @@ static int probe(struct hid_device *hdev, struct tsfw_icm20628_state **pst)
 	for (i = 0; i < SNSR_N; i++) {
 		ret = st->nvs->probe(&st->snsr[i].nvs_st, st, &hdev->dev,
 				&tsfw_icm20628_fn_dev, &st->snsr[i].cfg);
-		if (ret) {
+		if (ret)
 			goto nvs_probe_failed;
-		}
 	}
 
 	return 0;

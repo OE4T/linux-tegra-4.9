@@ -952,49 +952,80 @@ static struct cpufreq_driver tegra_cpufreq_driver = {
 	.active_cycle_cnt = get_coreclk_count,
 };
 
+static int update_policy(const struct cpumask *cpus)
+{
+	struct cpufreq_policy *policy;
+	struct cpumask updated_cpus;
+	int cpu, ret = 0;
+
+	cpumask_clear(&updated_cpus);
+
+	for_each_cpu(cpu, cpus) {
+		if (!cpu_online(cpu))
+			continue;
+
+		/* Skip CPUs already covered by a previous update */
+		if (cpumask_test_cpu(cpu, &updated_cpus))
+			continue;
+
+		policy = cpufreq_cpu_get(cpu);
+		if (!policy)
+			continue;
+
+		ret = cpufreq_update_policy(policy->cpu);
+		if (ret) {
+			cpufreq_cpu_put(policy);
+			break;
+		}
+		cpumask_or(&updated_cpus, &updated_cpus, policy->cpus);
+		cpufreq_cpu_put(policy);
+	}
+
+	return notifier_from_errno(ret);
+}
+
 static int cluster0_freq_notify(struct notifier_block *b,
 			unsigned long l, void *v)
 {
-	struct cpufreq_policy *policy;
-	u32 qmin, qmax, cpu;
-
-	qmin = (u32)pm_qos_read_min_bound(PM_QOS_CLUSTER0_FREQ_BOUNDS);
-	qmax = (u32)pm_qos_read_max_bound(PM_QOS_CLUSTER0_FREQ_BOUNDS);
-
-	for_each_cpu(cpu, &tfreq_data.pcluster[0].cpu_mask) {
-		if (cpu_online(cpu)) {
-			policy = cpufreq_cpu_get(cpu);
-			if (!policy)
-				return -EINVAL;
-			policy->user_policy.min = qmin;
-			policy->user_policy.max = qmax;
-			cpufreq_update_policy(policy->cpu);
-			cpufreq_cpu_put(policy);
-			}
-		}
-	return NOTIFY_OK;
+	return update_policy(&tfreq_data.pcluster[0].cpu_mask);
 }
 
 static int cluster1_freq_notify(struct notifier_block *b,
 			unsigned long l, void *v)
 {
-	struct cpufreq_policy *policy;
-	u32 qmin, qmax, cpu;
+	return update_policy(&tfreq_data.pcluster[1].cpu_mask);
+}
 
-	qmin = (u32)pm_qos_read_min_bound(PM_QOS_CLUSTER1_FREQ_BOUNDS);
-	qmax = (u32)pm_qos_read_max_bound(PM_QOS_CLUSTER1_FREQ_BOUNDS);
+/* Clipping policy object's min/max to pmqos limits */
+static int tegra_boundaries_policy_notifier(struct notifier_block *nb,
+					unsigned long event, void *data)
+{
+	struct cpufreq_policy *policy = data;
+	unsigned int qmin = 0;
+	unsigned int qmax = UINT_MAX;
 
-	for_each_cpu(cpu, &tfreq_data.pcluster[1].cpu_mask) {
-		if (cpu_online(cpu)) {
-			policy = cpufreq_cpu_get(cpu);
-			if (!policy)
-				return -EINVAL;
-			policy->user_policy.min = qmin;
-			policy->user_policy.max = qmax;
-			cpufreq_update_policy(policy->cpu);
-			cpufreq_cpu_put(policy);
-			}
-		}
+	if (event != CPUFREQ_ADJUST)
+		return NOTIFY_OK;
+
+	if (tegra18_is_cpu_arm(policy->cpu)) {
+		qmin = pm_qos_read_min_bound(PM_QOS_CLUSTER1_FREQ_BOUNDS);
+		qmax = pm_qos_read_max_bound(PM_QOS_CLUSTER1_FREQ_BOUNDS);
+	} else if (tegra18_is_cpu_denver(policy->cpu)) {
+		qmin = pm_qos_read_min_bound(PM_QOS_CLUSTER0_FREQ_BOUNDS);
+		qmax = pm_qos_read_max_bound(PM_QOS_CLUSTER0_FREQ_BOUNDS);
+	}
+
+	/* Clamp pmqos to stay within sysfs limits */
+	qmin = min(qmin, policy->user_policy.max);
+	qmax = max(qmax, policy->user_policy.min);
+
+	/* Apply pmqos limits on top of existing limits */
+	policy->min = max(policy->min, qmin);
+	policy->max = min(policy->max, qmax);
+
+	if (policy->min > policy->max)
+		policy->min = policy->max;
+
 	return NOTIFY_OK;
 }
 
@@ -1004,6 +1035,10 @@ static struct notifier_block cluster0_freq_nb = {
 
 static struct notifier_block cluster1_freq_nb = {
 	.notifier_call = cluster1_freq_notify,
+};
+
+static struct notifier_block tegra_boundaries_cpufreq_nb = {
+	.notifier_call = tegra_boundaries_policy_notifier,
 };
 
 static void pm_qos_register_notifier(void)
@@ -1382,6 +1417,8 @@ static int __init tegra_cpufreq_init(void)
 
 	pm_qos_register_notifier();
 
+	cpufreq_register_notifier(&tegra_boundaries_cpufreq_nb,
+					CPUFREQ_POLICY_NOTIFIER);
 	goto exit_out;
 err_free_res:
 	free_allocated_res_init();
@@ -1395,6 +1432,8 @@ err_out:
 
 static void __exit tegra_cpufreq_exit(void)
 {
+	cpufreq_unregister_notifier(&tegra_boundaries_cpufreq_nb,
+					CPUFREQ_POLICY_NOTIFIER);
 #ifdef CONFIG_DEBUG_FS
 	tegra_cpufreq_debug_exit();
 #endif

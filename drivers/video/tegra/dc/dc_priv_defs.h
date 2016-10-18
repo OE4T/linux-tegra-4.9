@@ -178,12 +178,20 @@ struct tegra_dc_tg_req {
 	u32	tgs[DC_N_WINDOWS];
 };
 
+struct tegra_dc_pool_allocation {
+	bool	program_cursor;
+	u32	cursor_entry;
+	size_t	num_wins;
+	u32	win_ids[DC_N_WINDOWS];
+	u32	win_entries[DC_N_WINDOWS];
+};
+
 struct tegra_dc_imp_settings {
 	struct tegra_dc_ext_imp_settings	ext_settings;
 
 	struct tegra_dc_tg_req 			tg_reqs[DC_N_WINDOWS];
-	bool					update_mempool[TEGRA_MAX_DC];
-	bool					program_mempool_before_update;
+	struct tegra_dc_pool_allocation		decreasing_pool[TEGRA_MAX_DC];
+	struct tegra_dc_pool_allocation		increasing_pool[TEGRA_MAX_DC];
 	struct list_head			imp_node;
 	u64					session_id;
 	u32					owner;

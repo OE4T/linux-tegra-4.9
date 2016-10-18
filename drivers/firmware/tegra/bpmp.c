@@ -25,6 +25,7 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/syscore_ops.h>
+#include <linux/tegra-soc.h>
 #include <linux/uaccess.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include <linux/tegra-firmwares.h>
@@ -394,6 +395,10 @@ DEFINE_SIMPLE_ATTRIBUTE(bpmp_mount_fops, bpmp_mount_show, NULL, "%lld\n");
 
 static __init int bpmp_init_mount(void)
 {
+	/* mirroring takes a while */
+	if (!tegra_platform_is_silicon())
+		return 0;
+
 	return bpmp_fwdebug_init(bpmp_root);
 }
 late_initcall(bpmp_init_mount);

@@ -2280,29 +2280,31 @@ static void tegra_nvdisp_notify_common_channel_promoted(struct tegra_dc *dc)
 }
 
 static void tegra_nvdisp_program_dc_mempool(struct tegra_dc *dc,
-	struct tegra_dc_ext_imp_head_results *res)
+				struct tegra_dc_pool_allocation *head_alloc)
 {
-	u32 entries;
+	u32 entries = 0;
 	int i;
 
 	if (!dc || !dc->enabled)
 		return;
 
 	/* program cursor mempool */
-	entries = res->pool_config_entries_cursor;
-	tegra_dc_writel(dc,
-		nvdisp_ihub_cursor_pool_config_entries_f(entries),
-		nvdisp_ihub_cursor_pool_config_r());
+	if (head_alloc->program_cursor) {
+		entries = head_alloc->cursor_entry;
+		tegra_dc_writel(dc,
+			nvdisp_ihub_cursor_pool_config_entries_f(entries),
+			nvdisp_ihub_cursor_pool_config_r());
+	}
 
-	for (i = 0; i < res->num_windows; i++) {
-		struct tegra_dc_win *win;
+	/* program wgrp mempool */
+	for (i = 0; i < head_alloc->num_wins; i++) {
+		struct tegra_dc_win *win = NULL;
 
-		win = tegra_dc_get_window(dc, res->win_ids[i]);
+		win = tegra_dc_get_window(dc, head_alloc->win_ids[i]);
 		if (!win)
 			continue;
 
-		/* program wgrp mempool */
-		entries = res->pool_config_entries_win[i];
+		entries = head_alloc->win_entries[i];
 		nvdisp_win_write(win,
 			win_ihub_pool_config_entries_f(entries),
 			win_ihub_pool_config_r());
@@ -2312,26 +2314,34 @@ static void tegra_nvdisp_program_dc_mempool(struct tegra_dc *dc,
 	tegra_nvdisp_wait_for_common_channel_to_promote(dc);
 }
 
-static void tegra_nvdisp_program_all_needed_mempool(struct tegra_dc *dc,
-				struct tegra_dc_imp_settings *imp_settings)
+static void tegra_nvdisp_program_other_mempool(struct tegra_dc *dc,
+				struct tegra_dc_imp_settings *imp_settings,
+				bool before_win_update)
 {
 	int i;
 
 	for (i = 0; i < TEGRA_MAX_DC; i++) {
-		struct tegra_dc *other_dc = tegra_dc_get_dc(i);
-		struct tegra_dc_ext_imp_head_results *head_results =
-			imp_settings->ext_settings.imp_results;
+		struct tegra_dc_pool_allocation *head_alloc = NULL;
+		struct tegra_dc *other_dc = NULL;
+		u32 ctrl_num = 0;
 
-		if (other_dc &&
-			imp_settings->update_mempool[other_dc->ctrl_num])
-			tegra_nvdisp_program_dc_mempool(other_dc,
-					&head_results[other_dc->ctrl_num]);
+		other_dc = tegra_dc_get_dc(i);
+		if (!other_dc)
+			continue;
+		ctrl_num = other_dc->ctrl_num;
+
+		if (before_win_update)
+			head_alloc = &imp_settings->decreasing_pool[ctrl_num];
+		else
+			head_alloc = &imp_settings->increasing_pool[ctrl_num];
+
+		if (head_alloc->program_cursor || head_alloc->num_wins > 0)
+			tegra_nvdisp_program_dc_mempool(other_dc, head_alloc);
 	}
 }
 
 static void tegra_nvdisp_generate_mempool_ordering(struct tegra_dc *dc,
-				struct tegra_dc_imp_settings *imp_settings,
-				struct tegra_dc_imp_settings *last_imp_settings)
+				struct tegra_dc_imp_settings *imp_settings)
 {
 	/*
 	 * Per the register manual, SW must follow these rules in order to
@@ -2344,104 +2354,83 @@ static void tegra_nvdisp_generate_mempool_ordering(struct tegra_dc *dc,
 	 *     done first, then once the decreases are all effective, the
 	 *     increases can be done lest an intermediate state occur which
 	 *     violates the first rule above."
-	 *
-	 * For the following scenario, assume that the state of a head refers to
-	 * its head-specific state and the state of any windows that it owns.
-	 * Suppose we have three active heads - H0, H1, H2 - and the state of H0
-	 * is changing in a manner that affects the mempool allocation for some
-	 * subset of the windows on all three heads. Only one HEAD can update
-	 * the current IMP settings at any given time, which means that the
-	 * state of H1 and H2 cannot be updated during this period.
-	 *
-	 * Since the state of H1 and H2 isn't being updated, the mempool for
-	 * their windows will either all decrease or all increase:
-	 * - In the first case, we will promote the mempool for these windows
-	 *   before the new window and common channel state for H0 is updated.
-	 * - In the second case, we will phase in the mempool for these windows
-	 *   after the new window and common channel state for H0 has already
-	 *   been activated.
-	 *
-	 * Note that it doesn't matter if we're reducing the mempool for some of
-	 * H0's windows while increasing the mempool for its other windows since
-	 * these updates are all contained to H0 and will be promoted together
-	 * on its next vblank.
 	 */
-	bool mempool_all_decreasing = false;
+
 	int i, j;
 
 	for (i = 0; i < TEGRA_MAX_DC; i++) {
-		struct tegra_dc_ext_imp_head_results *old_result = NULL;
-		struct tegra_dc_ext_imp_head_results *new_result = NULL;
-		struct tegra_dc *other_dc;
+		struct tegra_dc_ext_imp_head_results *head_result = NULL;
+		struct tegra_dc_pool_allocation *head_alloc = NULL;
+		struct tegra_dc *other_dc = NULL;
 		u32 old_val = 0, new_val = 0;
-		u32 ctrl_num;
+		u32 ctrl_num = 0;
 
 		other_dc = tegra_dc_get_dc(i);
 		if (!other_dc || !other_dc->enabled || other_dc == dc)
 			continue;
 
 		ctrl_num = other_dc->ctrl_num;
-		if (last_imp_settings) {
-			old_result =
-			&last_imp_settings->ext_settings.imp_results[ctrl_num];
-			old_val = old_result->pool_config_entries_cursor;
-		} else if (other_dc->cursor.enabled) {
-			/*
-			 * If this cursor is currently enabled, take the active
-			 * mempool value into account. Else, treat this cursor
-			 * as having no mempool entries.
-			 */
+		head_result = &imp_settings->ext_settings.imp_results[ctrl_num];
+
+		/*
+		 * If this cursor is currently enabled, take the active mempool
+		 * value into account. Else, treat this cursor as having no
+		 * mempool entries.
+		 */
+		if (other_dc->cursor.enabled)
 			old_val = nvdisp_ihub_cursor_pool_config_entries_f(
 					tegra_dc_readl(other_dc,
 					nvdisp_ihub_cursor_pool_config_r()));
+		new_val = head_result->pool_config_entries_cursor;
+
+		if (new_val < old_val)
+			head_alloc = &imp_settings->decreasing_pool[ctrl_num];
+		else if (new_val > old_val)
+			head_alloc = &imp_settings->increasing_pool[ctrl_num];
+
+		if (head_alloc) {
+			head_alloc->program_cursor = true;
+			head_alloc->cursor_entry = new_val;
 		}
-		new_result = &imp_settings->ext_settings.imp_results[ctrl_num];
-		new_val = new_result->pool_config_entries_cursor;
 
-		if (new_val != old_val) {
-			imp_settings->update_mempool[ctrl_num] = true;
-			mempool_all_decreasing = (new_val < old_val);
-			continue;
-		}
+		for (j = 0; j < head_result->num_windows; j++) {
+			struct tegra_dc_win *win = NULL;
+			u32 win_id = 0;
 
-		for (j = 0; j < new_result->num_windows; j++) {
-			struct tegra_dc_win *win;
-			int win_id;
-
-			win_id = new_result->win_ids[j];
+			win_id = head_result->win_ids[j];
 			win = tegra_dc_get_window(other_dc, win_id);
 			if (!win)
 				continue;
 
-			/*
-			 * It's valid to use the index j across both cases since
-			 * the window state for the other heads isn't changing
-			 * here.
-			 */
+			head_alloc = NULL;
 			old_val = 0;
-			if (old_result)
-				old_val =
-					old_result->pool_config_entries_win[j];
-			else if (WIN_IS_ENABLED(win))
-				/*
-				 * If this window is currently enabled, take the
-				 * active mempool value into account. Else,
-				 * treat this window as having no mempool
-				 * entries.
-				 */
+
+			/*
+			 * If this window is currently enabled, take the active
+			 * mempool value into account. Else, treat this window
+			 * as having no mempool entries.
+			 */
+			if (WIN_IS_ENABLED(win))
 				old_val = win_ihub_pool_config_entries_f(
 						nvdisp_win_read(win,
 						win_ihub_pool_config_r()));
-			new_val = new_result->pool_config_entries_win[j];
-			if (new_val != old_val) {
-				imp_settings->update_mempool[ctrl_num] = true;
-				mempool_all_decreasing = (new_val < old_val);
-				break;
+			new_val = head_result->pool_config_entries_win[j];
+			if (new_val < old_val)
+				head_alloc =
+				&imp_settings->decreasing_pool[ctrl_num];
+			else if (new_val > old_val)
+				head_alloc =
+				&imp_settings->increasing_pool[ctrl_num];
+
+			if (head_alloc) {
+				int cur_win = head_alloc->num_wins;
+
+				head_alloc->win_ids[cur_win] = win_id;
+				head_alloc->win_entries[cur_win] = new_val;
+				head_alloc->num_wins += 1;
 			}
 		}
 	}
-
-	imp_settings->program_mempool_before_update = mempool_all_decreasing;
 }
 
 static void tegra_nvdisp_fill_tg_lookup_tables(int *dep_left,
@@ -2795,7 +2784,6 @@ void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 {
 	struct tegra_dc_imp_settings *imp_settings = NULL;
 	struct tegra_dc_ext_imp_settings *ext_settings = NULL;
-	bool program_mempool = false;
 
 	mutex_lock(&tegra_nvdisp_lock);
 
@@ -2804,8 +2792,6 @@ void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 		mutex_unlock(&tegra_nvdisp_lock);
 		return;
 	}
-	program_mempool = !(before_win_update ^
-				imp_settings->program_mempool_before_update);
 
 	/* Make sure bw and LA/PTSA are set correctly. */
 	ext_settings = &imp_settings->ext_settings;
@@ -2820,8 +2806,10 @@ void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 	/* Make sure there's no pending change on the current head. */
 	tegra_nvdisp_wait_for_common_channel_to_promote(dc);
 
-	if (program_mempool)
-		tegra_nvdisp_program_all_needed_mempool(dc, imp_settings);
+	if (before_win_update)
+		tegra_nvdisp_generate_mempool_ordering(dc, imp_settings);
+
+	tegra_nvdisp_program_other_mempool(dc, imp_settings, before_win_update);
 	tegra_nvdisp_program_thread_groups(dc, imp_settings, before_win_update);
 
 	if (!before_win_update) {
@@ -2988,17 +2976,14 @@ int tegra_dc_handle_imp_propose(struct tegra_dc *dc,
 	mutex_lock(&tegra_nvdisp_lock);
 
 	/*
-	 * We need to compare the new proposed mempool and thread group values
-	 * with the previous configuration. It's always valid to check the last
-	 * pending item since IMP settings only get queued if they pass PROPOSE,
-	 * and the settings are programmed in their queued order. If the queue
-	 * is empty, we will read back the active values of the registers
+	 * We need to compare the new proposed thread group values with the
+	 * previous configuration. It's always valid to check the last pending
+	 * item since IMP settings only get queued if they pass PROPOSE, and the
+	 * settings are programmed in their queued order. If the queue is
+	 * empty, we will read back the active values of the registers
 	 * instead.
 	 */
 	last_imp_settings = tegra_nvdisp_get_last_imp_settings();
-	tegra_nvdisp_generate_mempool_ordering(dc,
-					imp_settings,
-					last_imp_settings);
 	ret = tegra_nvdisp_generate_tg_ordering(dc,
 					imp_settings,
 					last_imp_settings);

@@ -363,15 +363,10 @@
 				sid-list = <TEGRA_SID_UFSHC>;
 				sid-list-len = <1>;
 			};
-			rce_domain {
-				address-space = <&common_as>;
-				sid-list = <TEGRA_SID_RCE>;
-				sid-list-len = <1>;
-			};
-			ape_cam_domain {
-				address-space = <&common_as>;
-				sid-list = <TEGRA_SID_APE_CAM>;
-				sid-list-len = <1>;
+			rtcpu_domain {
+				address-space = <&camera_as>;
+				sid-list = <TEGRA_SID_RCE TEGRA_SID_APE_CAM>;
+				sid-list-len = <2>;
 			};
 		};
 
@@ -399,6 +394,13 @@
 			};
 			ape_as: ape {
 				iova-start = <0x0 0x40000000>;
+				iova-size = <0x0 0x20000000>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			camera_as: camera {
+				iova-start = <0x0 0xA0000000>;
 				iova-size = <0x0 0x20000000>;
 				alignment = <0xFFFFF>;
 				num-pf-page = <0>;

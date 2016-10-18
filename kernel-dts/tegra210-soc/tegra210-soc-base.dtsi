@@ -627,6 +627,12 @@
 		dmas = <&apbdma 15>, <&apbdma 15>;
 		dma-names = "rx", "tx";
 		nvidia,clk-parents = "pll_p", "clk_m";
+		clocks = <&tegra_car TEGRA210_CLK_SBC1>,
+			<&tegra_car TEGRA210_CLK_PLL_P>,
+			<&tegra_car TEGRA210_CLK_CLK_M>;
+		clock-names = "spi", "pll_p", "clk_m";
+		resets = <&tegra_car TEGRA210_CLK_SBC1>;
+		reset-names = "spi";
 		status = "disabled";
 	};
 
@@ -641,6 +647,12 @@
 		dmas = <&apbdma 16>, <&apbdma 16>;
 		dma-names = "rx", "tx";
 		nvidia,clk-parents = "pll_p", "clk_m";
+		clocks = <&tegra_car TEGRA210_CLK_SBC2>,
+			<&tegra_car TEGRA210_CLK_PLL_P>,
+			<&tegra_car TEGRA210_CLK_CLK_M>;
+		clock-names = "spi", "pll_p", "clk_m";
+		resets = <&tegra_car TEGRA210_CLK_SBC2>;
+		reset-names = "spi";
 		status = "disabled";
 	};
 
@@ -655,6 +667,12 @@
 		dmas = <&apbdma 17>, <&apbdma 17>;
 		dma-names = "rx", "tx";
 		nvidia,clk-parents = "pll_p", "clk_m";
+		clocks = <&tegra_car TEGRA210_CLK_SBC3>,
+			<&tegra_car TEGRA210_CLK_PLL_P>,
+			<&tegra_car TEGRA210_CLK_CLK_M>;
+		clock-names = "spi", "pll_p", "clk_m";
+		resets = <&tegra_car TEGRA210_CLK_SBC3>;
+		reset-names = "spi";
 		status = "disabled";
 	};
 
@@ -669,6 +687,12 @@
 		dmas = <&apbdma 18>, <&apbdma 18>;
 		dma-names = "rx", "tx";
 		nvidia,clk-parents = "pll_p", "clk_m";
+		clocks = <&tegra_car TEGRA210_CLK_SBC4>,
+			<&tegra_car TEGRA210_CLK_PLL_P>,
+			<&tegra_car TEGRA210_CLK_CLK_M>;
+		clock-names = "spi", "pll_p", "clk_m";
+		resets = <&tegra_car TEGRA210_CLK_SBC4>;
+		reset-names = "spi";
 		status = "disabled";
 	};
 

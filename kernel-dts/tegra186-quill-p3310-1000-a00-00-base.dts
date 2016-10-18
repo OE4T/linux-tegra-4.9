@@ -125,7 +125,7 @@
 
 	i2c@3160000 {
 		lp8557-backlight-s-wuxga-8-0@2c {
-			status = "okay";
+			status = "disabled";
 		};
 	};
 

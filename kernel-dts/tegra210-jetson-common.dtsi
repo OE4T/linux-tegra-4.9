@@ -36,17 +36,17 @@
 		sqa-automation-port;
 		enable-rx-poll-timer;
 		status = "okay";
-		clocks = <&tegra_car TEGRA210_CLK_UARTA>;
-		clock-names = "serial";
+	};
+
+	serial@70006040 {
+		status = "okay";
 	};
 
 	serial@70006200 {
-		compatible = "nvidia,tegra114-hsuart";
 		status = "okay";
 	};
 
 	serial@70006300 {
-		compatible = "nvidia,tegra114-hsuart";
 		status = "okay";
 	};
 

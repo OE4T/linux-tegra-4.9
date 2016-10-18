@@ -789,7 +789,7 @@ static struct notifier_block tegra_dvfs_nb = {
 	.priority = 1,
 };
 
-int tegra_setup_dvfs(struct clk *c, struct dvfs *d)
+static void cleanup_dvfs_table(struct dvfs *d)
 {
 	int i;
 
@@ -804,7 +804,14 @@ int tegra_setup_dvfs(struct clk *c, struct dvfs *d)
 		if (d->freqs[i] == 0 && i > 1)
 			d->freqs[i] = d->freqs[i - 1];
 	}
+
 	d->num_freqs = i;
+}
+
+int tegra_setup_dvfs(struct clk *c, struct dvfs *d)
+{
+	cleanup_dvfs_table(d);
+
 	d->clk = c;
 
 	mutex_lock(&dvfs_lock);

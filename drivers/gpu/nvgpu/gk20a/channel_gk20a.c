@@ -47,6 +47,19 @@
 #define NVGPU_CHANNEL_MIN_TIMESLICE_US 1000
 #define NVGPU_CHANNEL_MAX_TIMESLICE_US 50000
 
+/*
+ * Although channels do have pointers back to the gk20a struct that they were
+ * created under in cases where the driver is killed that pointer can be bad.
+ * The channel memory can be freed before the release() function for a given
+ * channel is called. This happens when the driver dies and userspace doesn't
+ * get a chance to call release() until after the entire gk20a driver data is
+ * unloaded and freed.
+ */
+struct channel_priv {
+	struct gk20a *g;
+	struct channel_gk20a *c;
+};
+
 static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f);
 static void free_channel(struct fifo_gk20a *f, struct channel_gk20a *c);
 
@@ -392,7 +405,6 @@ void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a)
 
 	gk20a_dbg_fn("");
 
-	
 	if (atomic_cmpxchg(&ch_gk20a->bound, true, false)) {
 		gk20a_writel(g, ccsr_channel_inst_r(ch_gk20a->hw_chid),
 			ccsr_channel_inst_ptr_f(0) |
@@ -1123,16 +1135,31 @@ void gk20a_channel_close(struct channel_gk20a *ch)
 	gk20a_free_channel(ch);
 }
 
+struct channel_gk20a *gk20a_get_channel_from_file(int fd)
+{
+	struct channel_priv *priv;
+	struct file *f = fget(fd);
+
+	if (!f)
+		return NULL;
+
+	if (f->f_op != &gk20a_channel_ops) {
+		fput(f);
+		return NULL;
+	}
+
+	priv = (struct channel_priv *)f->private_data;
+	fput(f);
+	return priv->c;
+}
+
 int gk20a_channel_release(struct inode *inode, struct file *filp)
 {
-	struct channel_gk20a *ch = (struct channel_gk20a *)filp->private_data;
-	struct gk20a *g = ch ? ch->g : NULL;
+	struct channel_priv *priv = filp->private_data;
+	struct channel_gk20a *ch = priv->c;
+	struct gk20a *g = priv->g;
+
 	int err;
-
-	if (!ch)
-		return 0;
-
-	trace_gk20a_channel_release(dev_name(g->dev));
 
 	err = gk20a_busy(g->dev);
 	if (err) {
@@ -1140,6 +1167,9 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 			ch->hw_chid);
 		return err;
 	}
+
+	trace_gk20a_channel_release(dev_name(g->dev));
+
 	gk20a_channel_close(ch);
 	gk20a_idle(g->dev);
 
@@ -1279,15 +1309,20 @@ static int __gk20a_channel_open(struct gk20a *g, struct file *filp, s32 runlist_
 {
 	int err;
 	struct channel_gk20a *ch;
+	struct channel_priv *priv;
 
 	gk20a_dbg_fn("");
 
 	trace_gk20a_channel_open(dev_name(g->dev));
 
+	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+	if (!priv)
+		return -ENOMEM;
+
 	err = gk20a_busy(g->dev);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g), "failed to power on, %d", err);
-		return err;
+		goto fail_busy;
 	}
 	/* All the user space channel should be non privilege */
 	ch = gk20a_open_new_channel(g, runlist_id, false);
@@ -1295,14 +1330,22 @@ static int __gk20a_channel_open(struct gk20a *g, struct file *filp, s32 runlist_
 	if (!ch) {
 		gk20a_err(dev_from_gk20a(g),
 			"failed to get f");
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto fail_busy;
 	}
 
 	gk20a_channel_trace_sched_param(
 		trace_gk20a_channel_sched_defaults, ch);
 
-	filp->private_data = ch;
+	priv->g = g;
+	priv->c = ch;
+
+	filp->private_data = priv;
 	return 0;
+
+fail_busy:
+	kfree(priv);
+	return err;
 }
 
 int gk20a_channel_open(struct inode *inode, struct file *filp)
@@ -3421,7 +3464,8 @@ void gk20a_init_channel(struct gpu_ops *gops)
 long gk20a_channel_ioctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
-	struct channel_gk20a *ch = filp->private_data;
+	struct channel_priv *priv = filp->private_data;
+	struct channel_gk20a *ch = priv->c;
 	struct device *dev = ch->g->dev;
 	u8 buf[NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE] = {0};
 	int err = 0;

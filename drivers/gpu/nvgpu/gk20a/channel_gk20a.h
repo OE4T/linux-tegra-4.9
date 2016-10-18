@@ -39,6 +39,7 @@ struct gk20a_fence;
 #include "fence_gk20a.h"
 
 extern const struct file_operations gk20a_event_id_ops;
+extern const struct file_operations gk20a_channel_ops;
 
 struct notification {
 	struct {

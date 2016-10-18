@@ -168,7 +168,7 @@ static inline void set_gk20a(struct platform_device *pdev, struct gk20a *gk20a)
 	gk20a_get_platform(&pdev->dev)->g = gk20a;
 }
 
-static const struct file_operations gk20a_channel_ops = {
+const struct file_operations gk20a_channel_ops = {
 	.owner = THIS_MODULE,
 	.release = gk20a_channel_release,
 	.open = gk20a_channel_open,
@@ -1278,23 +1278,6 @@ int gk20a_user_init(struct device *dev, const char *interface_name,
 fail:
 	gk20a_user_deinit(dev, &nvgpu_class);
 	return err;
-}
-
-struct channel_gk20a *gk20a_get_channel_from_file(int fd)
-{
-	struct channel_gk20a *ch;
-	struct file *f = fget(fd);
-	if (!f)
-		return NULL;
-
-	if (f->f_op != &gk20a_channel_ops) {
-		fput(f);
-		return NULL;
-	}
-
-	ch = (struct channel_gk20a *)f->private_data;
-	fput(f);
-	return ch;
 }
 
 static int gk20a_pm_railgate(struct device *dev)

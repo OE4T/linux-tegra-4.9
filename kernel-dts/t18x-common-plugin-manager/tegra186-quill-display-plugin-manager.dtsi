@@ -40,6 +40,17 @@
 					};
 				};
 			};
+			overrides@3 {
+                                target = <&{/i2c@3160000}>;
+                                _overlay_ {
+                                        gpio@21 {
+                                                status = "okay";
+                                        };
+                                        lp8557-backlight-s-wuxga-8-0@2c {
+                                                status = "okay";
+                                        };
+                                };
+                        };
 		};
 
 		fragment-e3320-a01@1 {
@@ -76,6 +87,17 @@
 					};
 				};
 			};
+                        overrides@4 {
+                                target = <&{/i2c@3160000}>;
+                                _overlay_ {
+                                        gpio@21 {
+                                                status = "okay";
+                                        };
+                                        lp8557-backlight-s-wuxga-8-0@2c {
+                                                status = "okay";
+                                        };
+                                };
+                        };
 		};
 
 		fragment-e1639-sharp-25x16@2 {

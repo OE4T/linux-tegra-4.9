@@ -92,6 +92,7 @@
 
 		gpio_i2c_0_21: gpio@21 {
 			compatible = "ti,tca6408";
+			status = "disabled";
 			reg = <0x21>;
 			gpio-controller;
 			#gpio-cells = <2>;

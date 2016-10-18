@@ -3238,11 +3238,6 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 			smmu->num_context_irqs++;
 	}
 
-	if (!smmu->num_context_irqs) {
-		dev_err(dev, "found %d interrupts but expected at least %d\n",
-			num_irqs, smmu->num_global_irqs + 1);
-	}
-
 	smmu->irqs = devm_kzalloc(dev, sizeof(*smmu->irqs) * num_irqs,
 				  GFP_KERNEL);
 	if (!smmu->irqs) {
@@ -3286,13 +3281,6 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 	dev_notice(dev, "registered %d master devices\n", i);
 
 	parse_driver_options(smmu);
-
-	if (smmu->version > ARM_SMMU_V1 &&
-	    smmu->num_context_banks != smmu->num_context_irqs) {
-		dev_info(dev,
-			"found only %d context interrupt(s) but %d required\n",
-			smmu->num_context_irqs, smmu->num_context_banks);
-	}
 
 	for (i = 0; i < smmu->num_global_irqs; ++i) {
 		err = request_irq(smmu->irqs[i],

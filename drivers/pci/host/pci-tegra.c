@@ -96,11 +96,6 @@
 #define AFI_FPCI_BAR4							0x40
 #define AFI_FPCI_BAR5							0x44
 
-#define AFI_CACHE_BAR0_SZ						0x48
-#define AFI_CACHE_BAR0_ST						0x4c
-#define AFI_CACHE_BAR1_SZ						0x50
-#define AFI_CACHE_BAR1_ST						0x54
-
 #define AFI_MSI_BAR_SZ							0x60
 #define AFI_MSI_FPCI_BAR_ST						0x64
 #define AFI_MSI_AXI_BAR_ST						0x68
@@ -1372,12 +1367,6 @@ static void tegra_pcie_setup_translations(struct tegra_pcie *pcie)
 	afi_writel(pcie, 0, AFI_AXI_BAR5_START);
 	afi_writel(pcie, 0, AFI_AXI_BAR5_SZ);
 	afi_writel(pcie, 0, AFI_FPCI_BAR5);
-
-	/* map all upstream transactions as uncached */
-	afi_writel(pcie, PHYS_OFFSET, AFI_CACHE_BAR0_ST);
-	afi_writel(pcie, 0, AFI_CACHE_BAR0_SZ);
-	afi_writel(pcie, 0, AFI_CACHE_BAR1_ST);
-	afi_writel(pcie, 0, AFI_CACHE_BAR1_SZ);
 
 	/* MSI translations are setup only when needed */
 	afi_writel(pcie, 0, AFI_MSI_FPCI_BAR_ST);

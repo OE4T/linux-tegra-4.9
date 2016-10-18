@@ -1450,7 +1450,7 @@ static struct iommu_domain *arm_smmu_domain_alloc(unsigned type)
 
 	smmu_domain->arm_dummy_page = alloc_page(GFP_KERNEL | __GFP_ZERO);
 	if (!smmu_domain->arm_dummy_page) {
-		free_pages(pgd, order);
+		free_pages((ulong)pgd, order);
 		goto out_free_domain;
 	}
 

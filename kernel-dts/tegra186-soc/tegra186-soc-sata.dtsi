@@ -43,16 +43,17 @@
 			<0x0 0x03501000 0x0 0x00006000>, /* SATA Config */
 			<0x0 0x03500000 0x0 0x00001000>, /* SATA IPFS */
 			<0x0 0x03A90000 0x0 0x00010000>; /* SATA AUX */
+		reg-names = "sata-ahci", "sata-config", "sata-ipfs", "sata-aux";
 		interrupts = <0 TEGRA186_IRQ_SATA 0x04>;
 		#stream-id-cells = <1>;
 		clocks = <&tegra_car TEGRA186_CLK_SATA>,
 			<&tegra_car TEGRA186_CLK_SATA_OOB>,
 			<&tegra_car TEGRA186_CLK_PLLP>,
 			<&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "sata", "sata_oob", "pllp", "pllp_uphy";
+		clock-names = "sata", "sata-oob", "pllp", "pllp-uphy";
 		resets = <&tegra_car TEGRA186_RESET_SATA>,
 			<&tegra_car TEGRA186_RESET_SATACOLD>;
-		reset-names = "sata", "satacold";
+		reset-names = "sata", "sata-cold";
 		pinctrl-names = "devslp_active", "devslp_pullup";
 		pinctrl-0 = <&devslp_active_state>;
 		pinctrl-1 = <&devslp_pullup_state>;

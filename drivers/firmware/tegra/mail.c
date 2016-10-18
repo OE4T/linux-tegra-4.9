@@ -26,8 +26,10 @@
 #include <soc/tegra/tegra_bpmp.h>
 #include "bpmp.h"
 
-#define CHANNEL_TIMEOUT		USEC_PER_SEC
-#define THREAD_CH_TIMEOUT	USEC_PER_SEC
+static unsigned int timeout_mul = 1;
+
+#define CHANNEL_TIMEOUT		(timeout_mul * USEC_PER_SEC)
+#define THREAD_CH_TIMEOUT	(timeout_mul * USEC_PER_SEC)
 
 struct channel_data channel_area[NR_CHANNELS];
 static struct completion completion[NR_THREAD_CH];
@@ -363,6 +365,9 @@ int bpmp_mail_init(struct platform_device *pdev)
 
 	r = bpmp_connect(pdev);
 	pr_info("bpmp: connect returned %d\n", r);
+
+	if (!tegra_platform_is_silicon())
+		timeout_mul = 600;
 
 	mail_inited = 1;
 	return r;

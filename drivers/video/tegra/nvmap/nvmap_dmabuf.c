@@ -672,6 +672,8 @@ static struct dma_buf *__dma_buf_export(struct nvmap_handle_info *info,
 	exp_info.ops = &nvmap_dma_buf_ops;
 	exp_info.size = size;
 	exp_info.flags = O_RDWR;
+	exp_info.exp_flags = DMABUF_CAN_DEFER_UNMAP |
+				DMABUF_SKIP_CACHE_SYNC;
 
 	return dma_buf_export(&exp_info);
 }

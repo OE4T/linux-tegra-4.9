@@ -314,6 +314,7 @@ int tegra_set_latency_allowance(enum tegra_la_id id, unsigned int bw_mbps)
 		return cs.set_dynamic_la(id, bw_mbps);
 	return 0;
 }
+EXPORT_SYMBOL(tegra_set_latency_allowance);
 
 int tegra_set_camera_ptsa(enum tegra_la_id id,
 			unsigned int bw_mbps,

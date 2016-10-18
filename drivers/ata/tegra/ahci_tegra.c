@@ -36,6 +36,8 @@ static int tegra_ahci_quirks(struct ahci_host_priv *hpriv);
 static int tegra_ahci_disable_features(struct ahci_host_priv *hpriv);
 static struct ahci_host_priv *
 tegra_ahci_platform_get_resources(struct tegra_ahci_priv *);
+static int tegra186_ahci_platform_get_resources(struct tegra_ahci_priv *tegra);
+static int tegra210_ahci_platform_get_resources(struct tegra_ahci_priv *tegra);
 #ifdef CONFIG_PM
 static int tegra_ahci_runtime_suspend(struct device *dev);
 static int tegra_ahci_runtime_resume(struct device *dev);
@@ -49,7 +51,7 @@ static void tegra_ahci_shutdown(struct platform_device *pdev);
 
 static char * const tegra_rail_names[] = {};
 
-static const struct tegra_ahci_soc_data tegra_ahci_data = {
+static const struct tegra_ahci_soc_data tegra186_ahci_data = {
 	.sata_regulator_names = tegra_rail_names,
 	.num_sata_regulators = ARRAY_SIZE(tegra_rail_names),
 	.ops = {
@@ -57,16 +59,32 @@ static const struct tegra_ahci_soc_data tegra_ahci_data = {
 		.tegra_ahci_power_off = tegra_ahci_power_off,
 		.tegra_ahci_quirks = tegra_ahci_quirks,
 		.tegra_ahci_platform_get_resources =
-			tegra_ahci_platform_get_resources,
+			tegra186_ahci_platform_get_resources,
+	},
+};
+
+static const struct tegra_ahci_soc_data tegra210_ahci_data = {
+	.sata_regulator_names = tegra_rail_names,
+	.num_sata_regulators = ARRAY_SIZE(tegra_rail_names),
+	.ops = {
+		.tegra_ahci_power_on = tegra_ahci_power_on,
+		.tegra_ahci_power_off = tegra_ahci_power_off,
+		.tegra_ahci_quirks = tegra_ahci_quirks,
+		.tegra_ahci_platform_get_resources =
+			tegra210_ahci_platform_get_resources,
 	},
 };
 
 static const struct of_device_id tegra_ahci_of_match[] = {
 	{ .compatible = "nvidia,tegra186-ahci-sata",
-		.data = &tegra_ahci_data,
+		.data = &tegra186_ahci_data,
+	},
+	{ .compatible = "nvidia,tegra210-ahci-sata",
+		.data = &tegra210_ahci_data,
 	},
 	{}
 };
+
 MODULE_DEVICE_TABLE(of, tegra_ahci_of_match);
 
 static void tegra_ahci_host_stop(struct ata_host *host)
@@ -712,6 +730,8 @@ static int tegra_ahci_power_on(struct ahci_host_priv *hpriv)
 		return ret;
 
 	reset_control_assert(tegra->sata_rst);
+	if (tegra->sata_oob_rst)
+		reset_control_assert(tegra->sata_oob_rst);
 	reset_control_assert(tegra->sata_cold_rst);
 
 	/* set SATA clk and SATA_OOB clk source */
@@ -745,6 +765,8 @@ static int tegra_ahci_power_on(struct ahci_host_priv *hpriv)
 		goto disable_power;
 
 	reset_control_deassert(tegra->sata_rst);
+	if (tegra->sata_oob_rst)
+		reset_control_deassert(tegra->sata_oob_rst);
 	reset_control_deassert(tegra->sata_cold_rst);
 
 	return 0;
@@ -768,6 +790,8 @@ static void tegra_ahci_power_off(struct ahci_host_priv *hpriv)
 	ahci_platform_disable_resources(hpriv);
 
 	reset_control_assert(tegra->sata_rst);
+	if (tegra->sata_oob_rst)
+		reset_control_assert(tegra->sata_oob_rst);
 	reset_control_assert(tegra->sata_cold_rst);
 
 	clk_disable_unprepare(tegra->sata_clk);
@@ -1039,7 +1063,7 @@ tegra_ahci_platform_get_clks_resets(struct tegra_ahci_priv *tegra)
 		goto err_out;
 	}
 
-	tegra->sata_oob_clk = devm_clk_get(&pdev->dev, "sata_oob");
+	tegra->sata_oob_clk = devm_clk_get(&pdev->dev, "sata-oob");
 	if (IS_ERR(tegra->sata_oob_clk)) {
 		dev_err(&pdev->dev, "Failed to get sata_oob clock\n");
 		ret = PTR_ERR(tegra->sata_oob_clk);
@@ -1053,13 +1077,6 @@ tegra_ahci_platform_get_clks_resets(struct tegra_ahci_priv *tegra)
 		goto err_out;
 	}
 
-	tegra->pllp_uphy_clk = devm_clk_get(&pdev->dev, "pllp_uphy");
-	if (IS_ERR(tegra->pllp_uphy_clk)) {
-		dev_err(&pdev->dev, "Failed to get pllp_uphy clock\n");
-		ret = PTR_ERR(tegra->pllp_uphy_clk);
-		goto err_out;
-	}
-
 	tegra->sata_rst = devm_reset_control_get(&pdev->dev, "sata");
 	if (IS_ERR(tegra->sata_rst)) {
 		dev_err(&pdev->dev, "Failed to get sata reset\n");
@@ -1067,7 +1084,7 @@ tegra_ahci_platform_get_clks_resets(struct tegra_ahci_priv *tegra)
 		goto err_out;
 	}
 
-	tegra->sata_cold_rst = devm_reset_control_get(&pdev->dev, "satacold");
+	tegra->sata_cold_rst = devm_reset_control_get(&pdev->dev, "sata-cold");
 	if (IS_ERR(tegra->sata_cold_rst)) {
 		dev_err(&pdev->dev, "Failed to get sata-cold reset\n");
 		ret = PTR_ERR(tegra->sata_cold_rst);
@@ -1086,7 +1103,7 @@ tegra_ahci_platform_get_memory_resources(struct tegra_ahci_priv *tegra)
 	struct resource *res;
 	int ret = 0;
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "sata-ahci");
 	tegra->base_list[TEGRA_SATA_AHCI] = devm_ioremap_resource(&pdev->dev,
 			res);
 	if (IS_ERR(tegra->base_list[TEGRA_SATA_AHCI])) {
@@ -1095,7 +1112,7 @@ tegra_ahci_platform_get_memory_resources(struct tegra_ahci_priv *tegra)
 	}
 	tegra->res[TEGRA_SATA_AHCI] = res;
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "sata-config");
 	tegra->base_list[TEGRA_SATA_CONFIG] =
 		devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(tegra->base_list[TEGRA_SATA_CONFIG])) {
@@ -1104,7 +1121,7 @@ tegra_ahci_platform_get_memory_resources(struct tegra_ahci_priv *tegra)
 	}
 	tegra->res[TEGRA_SATA_CONFIG] = res;
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 2);
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "sata-ipfs");
 	tegra->base_list[TEGRA_SATA_IPFS] = devm_ioremap_resource(&pdev->dev,
 			res);
 	if (IS_ERR(tegra->base_list[TEGRA_SATA_IPFS])) {
@@ -1113,7 +1130,7 @@ tegra_ahci_platform_get_memory_resources(struct tegra_ahci_priv *tegra)
 	}
 	tegra->res[TEGRA_SATA_IPFS] = res;
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 3);
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "sata-aux");
 	tegra->base_list[TEGRA_SATA_AUX] = devm_ioremap_resource(&pdev->dev,
 			res);
 	if (IS_ERR(tegra->base_list[TEGRA_SATA_AUX])) {
@@ -1166,6 +1183,33 @@ static int tegra_ahci_set_lpm(struct ahci_host_priv *hpriv)
 	return ret;
 }
 
+static int tegra186_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
+{
+	struct platform_device *pdev = tegra->pdev;
+
+	tegra->pllp_uphy_clk = devm_clk_get(&pdev->dev, "pllp-uphy");
+	if (IS_ERR(tegra->pllp_uphy_clk)) {
+		dev_err(&pdev->dev, "Failed to get pllp_uphy clock\n");
+		return PTR_ERR(tegra->pllp_uphy_clk);
+	}
+	tegra->sata_oob_rst = NULL;
+
+	return 0;
+}
+
+static int tegra210_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
+{
+	struct platform_device *pdev = tegra->pdev;
+
+	tegra->pllp_uphy_clk = tegra->pllp_clk;
+	tegra->sata_oob_rst = devm_reset_control_get(&pdev->dev, "sata-oob");
+	if (IS_ERR(tegra->sata_oob_rst)) {
+		dev_err(&pdev->dev, "Failed to get sata-oob reset\n");
+		return PTR_ERR(tegra->sata_oob_rst);
+	}
+
+	return 0;
+}
 
 static	struct ahci_host_priv *
 tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
@@ -1187,30 +1231,23 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 	hpriv->plat_data = tegra;
 
 	tegra->devslp_pin = devm_pinctrl_get(dev);
-	 if (IS_ERR(tegra->devslp_pin)) {
-		dev_warn(dev, "Missing devslp pinctrl\n");
+
+	tegra->devslp_active = pinctrl_lookup_state(tegra->devslp_pin,
+			"devslp_active");
+	if (IS_ERR(tegra->devslp_active)) {
+		dev_info(dev, "Missing devslp-active state\n");
 		tegra->devslp_pin = NULL;
-	}
-
-	if (tegra->devslp_pin) {
-		tegra->devslp_active = pinctrl_lookup_state(tegra->devslp_pin,
-						"devslp_active");
-		if (IS_ERR(tegra->devslp_active)) {
-			dev_err(dev, "Missing devslp-active state\n");
-			ret = PTR_ERR(tegra->devslp_active);
-			goto err_out;
-		}
+	} else {
 		tegra->devslp_pullup = pinctrl_lookup_state(tegra->devslp_pin,
-						"devslp_pullup");
+				"devslp_pullup");
 		if (IS_ERR(tegra->devslp_pullup)) {
-			dev_err(dev, "Missing devslp-pullup state\n");
-			ret = PTR_ERR(tegra->devslp_pullup);
-			goto err_out;
+			dev_info(dev, "Missing devslp-pullup state\n");
+			tegra->devslp_pin = NULL;
 		}
-
-		tegra->devslp_gpio =
-				of_get_named_gpio(dev->of_node, "gpios", 0);
 	}
+
+	tegra->devslp_gpio =
+		of_get_named_gpio(dev->of_node, "gpios", 0);
 
 	ret = tegra_ahci_platform_get_memory_resources(tegra);
 	if (ret)
@@ -1277,6 +1314,10 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 		goto err_out;
 	}
 
+	ret = tegra->soc_data->ops.tegra_ahci_platform_get_resources(tegra);
+	if (ret)
+		goto err_out;
+
 	tegra->prod_list = devm_tegra_prod_get(dev);
 	if (IS_ERR(tegra->prod_list)) {
 		dev_err(dev, "Prod Init failed\n");
@@ -1324,7 +1365,7 @@ static int tegra_ahci_probe(struct platform_device *pdev)
 	tegra->soc_data =
 		(struct tegra_ahci_soc_data *)match->data;
 
-	hpriv = tegra->soc_data->ops.tegra_ahci_platform_get_resources(tegra);
+	hpriv = tegra_ahci_platform_get_resources(tegra);
 	if (IS_ERR(hpriv))
 		return PTR_ERR(hpriv);
 

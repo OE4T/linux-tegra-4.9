@@ -104,8 +104,13 @@
 #define T_SATA_CFG_PHY_0_USE_7BIT_ALIGN_DET_FOR_SPD	BIT(11)
 
 #define T_SATA0_NVOOB					0x114
+#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+#define T_SATA0_NVOOB_COMMA_CNT_MASK			(0X7 << 28)
+#define T_SATA0_NVOOB_COMMA_CNT				(0x7 << 28)
+#else
 #define T_SATA0_NVOOB_COMMA_CNT_MASK			(0XFF << 16)
 #define T_SATA0_NVOOB_COMMA_CNT				(0x07 << 16)
+#endif
 #define T_SATA0_NVOOB_SQUELCH_FILTER_LENGTH_MASK	(0x3 << 26)
 #define T_SATA0_NVOOB_SQUELCH_FILTER_LENGTH		(0x3 << 26)
 #define T_SATA0_NVOOB_SQUELCH_FILTER_MODE_MASK		(0x3 << 24)
@@ -200,6 +205,7 @@ struct tegra_ahci_priv {
 	void			   *pg_save;
 	struct reset_control	   *sata_rst;
 	struct reset_control	   *sata_cold_rst;
+	struct reset_control	   *sata_oob_rst;
 	struct clk		   *sata_clk;
 	struct clk		   *sata_oob_clk;
 	struct clk		   *pllp_clk; /* sata_oob clk parent */
@@ -219,7 +225,7 @@ struct tegra_ahci_ops {
 	int (*tegra_ahci_power_on)(struct ahci_host_priv *);
 	void (*tegra_ahci_power_off)(struct ahci_host_priv *);
 	int (*tegra_ahci_quirks)(struct ahci_host_priv *);
-	struct ahci_host_priv * (*tegra_ahci_platform_get_resources)
+	int (*tegra_ahci_platform_get_resources)
 					(struct tegra_ahci_priv *);
 };
 

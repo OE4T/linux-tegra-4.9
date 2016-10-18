@@ -454,7 +454,7 @@ static struct gk20a_page_alloc *__do_gk20a_alloc_pages(
 
 	while (pages) {
 		u64 chunk_addr = 0;
-		u64 chunk_pages = 1 << __fls(pages);
+		u64 chunk_pages = (u64)1 << __fls(pages);
 		u64 chunk_len = chunk_pages << a->page_shift;
 
 		/*

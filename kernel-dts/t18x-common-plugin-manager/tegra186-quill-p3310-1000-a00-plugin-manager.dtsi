@@ -219,5 +219,27 @@
 				};
 			};
 		};
+
+		fragment-p3310-c01-ldo6 {
+			ids = ">=3310-1000-900";
+			override@0 {
+				target = <&{/bpmp_i2c/spmic@3c/regulators/ldo6}>;
+				_overlay_ {
+					regulator-boot-on;
+					regulator-always-on;
+				};
+			};
+			override@1 {
+				target = <&{/bpmp_i2c/spmic@3c/pinmux@0}>;
+				_overlay_ {
+					pin_gpio2 {
+						status = "disabled";
+					};
+					pin_gpio3 {
+						status = "disabled";
+					};
+				};
+			};
+		};
 	};
 };

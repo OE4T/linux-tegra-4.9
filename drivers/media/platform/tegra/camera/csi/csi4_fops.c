@@ -287,7 +287,7 @@ int csi4_power_on(struct tegra_csi_device *csi)
 
 	err = nvhost_module_busy(csi->pdev);
 	if (err)
-		dev_err(csi->dev, "%s:nvhost module is busy\n", __func__);
+		dev_err(csi->dev, "%s:cannot enable csi\n", __func__);
 
 	return err;
 }
@@ -322,7 +322,7 @@ static int csi4_tpg_start_streaming(struct tegra_csi_channel *chan,
 	csi_port = port->num;
 	csi_lanes = port->lanes;
 	dev_dbg(csi->dev, "%s CSI port=%d, # lanes=%d\n",
-			__func__, port_num, chan->numlanes);
+			__func__, csi_port, csi_lanes);
 
 	csi4_stream_write(chan, csi_port, PH_CHK_CTRL, 0);
 	csi4_stream_write(chan, csi_port, INTR_MASK, PH_ECC_MULTI_BIT_ERR |

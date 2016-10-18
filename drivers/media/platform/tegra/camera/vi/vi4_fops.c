@@ -22,10 +22,12 @@
 #include "vi4_registers.h"
 #include "vi/vi_notify.h"
 
-#define FRAMERATE	30
+#define DEFAULT_FRAMERATE	30
+#define DEFAULT_CSI_FREQ	204000000
 #define BPP_MEM		2
 #define MAX_VI_CHANNEL 12
-
+#define NUM_PPC		8
+#define VI_CSI_CLK_SCALE	110
 #define SOF_SYNCPT_IDX	0
 #define FE_SYNCPT_IDX	1
 
@@ -36,7 +38,6 @@ void tegra_channel_ring_buffer(struct tegra_channel *chan,
 		struct vb2_v4l2_buffer *vb,
 		struct timespec *ts, int state);
 struct tegra_channel_buffer *dequeue_buffer(struct tegra_channel *chan);
-int update_clk(struct tegra_mc_vi *vi);
 void tegra_channel_init_ring_buffer(struct tegra_channel *chan);
 void free_ring_buffers(struct tegra_channel *chan, int frames);
 int tegra_channel_set_power(struct tegra_channel *chan, bool on);
@@ -226,7 +227,6 @@ static int tegra_channel_notify_enable(
 			break;
 		}
 	}
-
 	if (chan->vnc_id[index] < 0) {
 		dev_err(chan->vi->dev, "No VI channel available!\n");
 		return -EFAULT;
@@ -524,13 +524,51 @@ static void tegra_channel_stop_kthreads(struct tegra_channel *chan)
 static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 {
 	int ret = 0;
+	unsigned long request_pixelrate;
+	struct v4l2_subdev_frame_interval fie;
+	unsigned long csi_freq = 0;
 
-	/* width * height * fps * KBytes write to memory
-	 * WAR: Using fix fps until we have a way to set it
-	 */
+	fie.interval.denominator = DEFAULT_FRAMERATE;
+	fie.interval.numerator = 1;
+
+	if (v4l2_subdev_has_op(chan->subdev_on_csi,
+				video, g_frame_interval))
+		v4l2_subdev_call(chan->subdev_on_csi, video,
+				g_frame_interval, &fie);
+	if (on) {
+		/**
+		 * TODO: use real sensor pixelrate
+		 * See PowerService code
+		 */
+		request_pixelrate = (long long)(chan->format.width
+				* chan->format.height
+				* fie.interval.denominator / 100)
+				* VI_CSI_CLK_SCALE;
+		ret = nvhost_module_get_rate(chan->vi->csi->pdev, &csi_freq, 0);
+		csi_freq = ret ? DEFAULT_CSI_FREQ : csi_freq;
+
+		/* VI clk should be slightly faster than CSI clk*/
+		ret = nvhost_module_set_rate(chan->vi->ndev, &chan->video,
+				max(request_pixelrate,
+				csi_freq * VI_CSI_CLK_SCALE * NUM_PPC / 100),
+				0, NVHOST_PIXELRATE);
+		if (ret) {
+			dev_err(chan->vi->dev, "Fail to update vi clk\n");
+			return ret;
+		}
+	} else {
+		ret = nvhost_module_set_rate(chan->vi->ndev, &chan->video, 0, 0,
+				NVHOST_PIXELRATE);
+		if (ret) {
+			dev_err(chan->vi->dev, "Fail to update vi clk\n");
+			return ret;
+		}
+	}
+
 	chan->requested_kbyteps = (on > 0 ? 1 : -1) *
 		((long long)(chan->format.width * chan->format.height
-		* FRAMERATE * BPP_MEM) * 115 / 100) / 1000;
+		* fie.interval.denominator * BPP_MEM) * 115 / 100) / 1000;
+
 	mutex_lock(&chan->vi->bw_update_lock);
 	chan->vi->aggregated_kbyteps += chan->requested_kbyteps;
 	ret = vi_v4l2_update_isobw(chan->vi->aggregated_kbyteps, 0);
@@ -550,7 +588,6 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	struct media_pipeline *pipe = chan->video.entity.pipe;
 	int ret = 0, i;
-	unsigned long request_pixelrate;
 	unsigned long flags;
 	struct v4l2_ctrl *override_ctrl;
 
@@ -597,14 +634,6 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 			"No override control\n");
 
 	/* Update clock and bandwidth based on the format */
-	mutex_lock(&chan->vi->bw_update_lock);
-	request_pixelrate = (long long)(chan->format.width * chan->format.height
-			 * FRAMERATE / 100) * 115;
-	ret = nvhost_module_set_rate(chan->vi->ndev, &chan->video,
-			request_pixelrate, 0, NVHOST_PIXELRATE);
-	mutex_unlock(&chan->vi->bw_update_lock);
-	if (ret)
-		goto error_capture_setup;
 	ret = tegra_channel_update_clknbw(chan, 1);
 	if (ret)
 		goto error_capture_setup;
@@ -715,9 +744,10 @@ int vi4_power_on(struct tegra_channel *chan)
 		return ret;
 	tegra_vi4_power_on(vi);
 
-	if (!chan->pg_mode &&
-		(atomic_add_return(1, &chan->power_on_refcnt) == 1)) {
+	if (atomic_add_return(1, &chan->power_on_refcnt) == 1) {
 		ret = tegra_channel_set_power(chan, 1);
+		if (ret < 0)
+			dev_err(vi->dev, "Failed to power on subdevices\n");
 	}
 
 	return ret;
@@ -732,8 +762,7 @@ void vi4_power_off(struct tegra_channel *chan)
 	vi = chan->vi;
 	csi = vi->csi;
 
-	if (!chan->pg_mode &&
-		atomic_dec_and_test(&chan->power_on_refcnt)) {
+	if (atomic_dec_and_test(&chan->power_on_refcnt)) {
 		ret = tegra_channel_set_power(chan, 0);
 		if (ret < 0)
 			dev_err(vi->dev, "Failed to power off subdevices\n");

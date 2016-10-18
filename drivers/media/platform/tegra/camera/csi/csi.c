@@ -160,7 +160,7 @@ EXPORT_SYMBOL(tegra_csi_power);
 
 int tegra_csi_s_power(struct v4l2_subdev *subdev, int enable)
 {
-	int err;
+	int err = 0;
 	struct tegra_csi_device *csi = to_csi(subdev);
 
 	err = tegra_csi_power(csi, enable);

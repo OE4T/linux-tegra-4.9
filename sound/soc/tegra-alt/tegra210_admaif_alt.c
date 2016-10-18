@@ -319,7 +319,7 @@ static int tegra210_admaif_hw_params(struct snd_pcm_substream *substream,
 	struct device *dev = dai->dev;
 	struct tegra210_admaif *admaif = snd_soc_dai_get_drvdata(dai);
 	struct tegra210_xbar_cif_conf cif_conf;
-	unsigned int reg, fifo_ctrl, fifo_size;
+	unsigned int reg;
 	int valid_bit;
 
 	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
@@ -360,28 +360,13 @@ static int tegra210_admaif_hw_params(struct snd_pcm_substream *substream,
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		reg = TEGRA210_ADMAIF_CHAN_ACIF_TX_CTRL +
 			(dai->id * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE);
-		fifo_ctrl = TEGRA210_ADMAIF_XBAR_TX_FIFO_CTRL +
-			(dai->id * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE);
-		fifo_size = 3;
 	} else {
 		reg = TEGRA210_ADMAIF_CHAN_ACIF_RX_CTRL +
 			(dai->id * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE);
-		fifo_ctrl = TEGRA210_ADMAIF_XBAR_RX_FIFO_CTRL +
-			(dai->id * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE);
-		fifo_size = 3;
 	}
 
 	tegra210_admaif_set_pack_mode(admaif->regmap, reg, valid_bit);
 	admaif->soc_data->set_audio_cif(admaif->regmap, reg, &cif_conf);
-
-	regmap_update_bits(admaif->regmap, fifo_ctrl,
-			TEGRA210_ADMAIF_XBAR_DMA_FIFO_SIZE_MASK,
-			fifo_size << TEGRA210_ADMAIF_XBAR_DMA_FIFO_SIZE_SHIFT);
-
-	regmap_update_bits(admaif->regmap, fifo_ctrl,
-		TEGRA210_ADMAIF_XBAR_DMA_FIFO_START_ADDR_MASK,
-		(0x4 * dai->id)
-			<< TEGRA210_ADMAIF_XBAR_DMA_FIFO_START_ADDR_SHIFT);
 
 	return 0;
 }

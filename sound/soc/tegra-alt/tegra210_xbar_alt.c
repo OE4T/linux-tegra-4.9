@@ -105,7 +105,17 @@ static int tegra210_xbar_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM_SLEEP
 static int tegra210_xbar_child_suspend(struct device *dev, void *data)
 {
-	return platform_pm_suspend(dev);
+	struct device_driver *drv = dev->driver;
+	int ret = 0;
+
+	if (!drv)
+		return 0;
+
+	if (drv->pm)
+		if (drv->pm->suspend)
+			ret = drv->pm->suspend(dev);
+
+	return ret;
 }
 
 static int tegra210_xbar_suspend(struct device *dev)

@@ -74,7 +74,6 @@ static inline int bpmp_fwdebug_init(struct dentry *root) { return -ENODEV; }
 #ifdef CONFIG_ARCH_TEGRA_21x_SOC
 int bpmp_linear_map_init(struct device *device);
 int bpmp_init_cpuidle_debug(struct dentry *root);
-int bpmp_platdbg_init(struct dentry *root, struct platform_device *pdev);
 int bpmp_clk_init(struct platform_device *pdev);
 #else
 void bpmp_setup_allocator(struct device *dev);
@@ -82,8 +81,6 @@ void *bpmp_get_virt_for_alloc(void *virt, dma_addr_t phys);
 void *bpmp_get_virt_for_free(void *virt, dma_addr_t phys);
 static inline int bpmp_linear_map_init(struct device *device) { return 0; }
 static inline int bpmp_init_cpuidle_debug(struct dentry *root) { return 0; }
-static inline int bpmp_platdbg_init(struct dentry *root,
-		struct platform_device *pdev) { return 0; }
 static inline int bpmp_clk_init(struct platform_device *pdev) { return 0; }
 #endif
 

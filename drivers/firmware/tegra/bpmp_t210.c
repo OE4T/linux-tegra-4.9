@@ -29,25 +29,13 @@
 #include <mach/clk.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/tegra_pasr.h>
-
-#include "../../../arch/arm/mach-tegra/iomap.h"
 #include "bpmp.h"
-
-#define BPMP_FIRMWARE_NAME		"bpmp.bin"
-
-#define FLOW_CTRL_HALT_COP_EVENTS	IO_ADDRESS(TEGRA_FLOW_CTRL_BASE + 0x4)
-#define FLOW_MODE_STOP			(0x2 << 29)
-#define FLOW_MODE_NONE			0x0
-#define TEGRA_NVAVP_RESET_VECTOR_ADDR	IO_ADDRESS(TEGRA_EXCEPTION_VECTORS_BASE + 0x200)
 
 static struct reset_control *cop_reset;
 static struct clk *sclk;
 static struct clk *emc_clk;
 
 #ifdef CONFIG_DEBUG_FS
-static phys_addr_t loadfw_phys;
-static void *loadfw_virt;
-
 static struct bpmp_cpuidle_state plat_cpuidle_state[] = {
 	{ TEGRA_PM_CC4, "CC4" },
 	{ TEGRA_PM_CC6, "CC6" },
@@ -58,150 +46,6 @@ static struct bpmp_cpuidle_state plat_cpuidle_state[] = {
 	{ TEGRA_PM_SC7, "SC7" },
 	{ 0, NULL }
 };
-
-struct fw_header {
-	uint32_t magic;
-	uint32_t version;
-	uint32_t chip_id;
-	uint32_t mem_size;
-	uint32_t reset_offset;
-	uint8_t reserved2[124];
-	uint8_t md5sum[32];
-	uint8_t common_head[40];
-	uint8_t platform_head[40];
-} __PACKED;
-
-struct platform_config {
-	u32 magic;
-	u32 version;
-	u32 chip_id;
-	u32 chip_version;
-	u32 sku;
-	u32 pmic_id;
-	u32 pmic_sku;
-};
-
-static void bpmp_stop(void)
-{
-	writel(FLOW_MODE_STOP, FLOW_CTRL_HALT_COP_EVENTS);
-}
-
-static void bpmp_reset(u32 addr)
-{
-	bpmp_stop();
-	writel(addr, TEGRA_NVAVP_RESET_VECTOR_ADDR);
-
-	reset_control_reset(cop_reset);
-
-	writel(FLOW_MODE_NONE, FLOW_CTRL_HALT_COP_EVENTS);
-}
-
-static void bpmp_loadfw(struct device *device, const void *data, int size)
-{
-	struct fw_header *h;
-	struct platform_config bpmp_config;
-	unsigned int cfgsz = sizeof(bpmp_config);
-	u32 reset_addr;
-	int r;
-	const int sz = sizeof(h->md5sum);
-	char fwtag[sz + 1];
-
-	if (!data || !size) {
-		dev_err(device, "no data to load\n");
-		return;
-	}
-
-	dev_info(device, "firmware ready: %d bytes\n", size);
-
-	h = (struct fw_header *)data;
-	reset_addr = loadfw_phys + h->reset_offset;
-
-	memcpy(fwtag, h->md5sum, sz);
-	fwtag[sz] = 0;
-
-	dev_info(device, "magic     : %x\n", h->magic);
-	dev_info(device, "version   : %x\n", h->version);
-	dev_info(device, "chip      : %x\n", h->chip_id);
-	dev_info(device, "memsize   : %u bytes\n", h->mem_size);
-	dev_info(device, "reset off : %x\n", h->reset_offset);
-	dev_info(device, "reset addr: %x\n", reset_addr);
-	dev_info(device, "fwtag     : %s\n", fwtag);
-
-	if (size > h->mem_size || h->mem_size + cfgsz > SZ_256K) {
-		dev_err(device, "firmware too big\n");
-		return;
-	}
-
-	bpmp_stop();
-	bpmp_detach();
-
-	/* TODO */
-	memset(&bpmp_config, 0, cfgsz);
-
-	memcpy(loadfw_virt, data, size);
-	memset(loadfw_virt + size, 0, SZ_256K - size);
-	memcpy(loadfw_virt + h->mem_size, &bpmp_config, cfgsz);
-
-	bpmp_reset(reset_addr);
-	r = bpmp_attach();
-	if (r) {
-		dev_err(device, "attach failed with error %d\n", r);
-		return;
-	}
-
-	bpmp_get_fwtag();
-	dev_info(device, "firmware load done\n");
-}
-
-static void bpmp_fwready(const struct firmware *fw, void *context)
-{
-	struct platform_device *pdev = context;
-	struct device *device = &pdev->dev;
-
-	if (!fw) {
-		dev_err(device, "firmware not ready\n");
-		return;
-	}
-
-	if (!loadfw_virt) {
-		loadfw_virt = dma_alloc_coherent(device, SZ_256K,
-				&loadfw_phys, GFP_KERNEL);
-		dev_info(device, "loadfw_phys: 0x%llx\n", loadfw_phys);
-		dev_info(device, "loadfw_virt: 0x%p\n", loadfw_virt);
-		if (!loadfw_virt || !loadfw_phys) {
-			dev_err(device, "out of memory\n");
-			return;
-		}
-	}
-
-	mutex_lock(&bpmp_lock);
-	bpmp_cleanup_modules();
-	bpmp_init_modules(pdev);
-	bpmp_loadfw(device, fw->data, fw->size);
-	mutex_unlock(&bpmp_lock);
-
-	release_firmware(fw);
-}
-
-static int bpmp_reset_store(void *data, u64 val)
-{
-	struct platform_device *pdev = data;
-
-	return request_firmware_nowait(THIS_MODULE, false, BPMP_FIRMWARE_NAME,
-			&pdev->dev, GFP_KERNEL, pdev, bpmp_fwready);
-}
-
-DEFINE_SIMPLE_ATTRIBUTE(bpmp_reset_fops, NULL, bpmp_reset_store, "%lld\n");
-
-static const struct fops_entry platdbg_attrs[] = {
-	{ "reset", &bpmp_reset_fops, S_IWUSR },
-	{ NULL, NULL, 0 }
-};
-
-int bpmp_platdbg_init(struct dentry *root, struct platform_device *pdev)
-{
-	return bpmp_create_attrs(platdbg_attrs, root, pdev);
-}
 
 static int bpmp_cpuidle_name_show(struct seq_file *file, void *data)
 {
@@ -317,19 +161,11 @@ int bpmp_init_cpuidle_debug(struct dentry *root)
 
 	return 0;
 }
-
 #else
-
-int bpmp_platdbg_init(struct dentry *root, struct platform_device *pdev)
-{
-	return -ENODEV;
-}
-
 int bpmp_init_cpuidle_debug(struct dentry *root)
 {
 	return -ENODEV;
 }
-
 #endif
 
 int bpmp_linear_map_init(struct device *device)
@@ -392,4 +228,3 @@ int bpmp_clk_init(struct platform_device *pdev)
 
 	return 0;
 }
-

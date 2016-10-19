@@ -68,6 +68,9 @@
 			"sce-nreset",
 			"sce-nsysporeset";
 
+		interrupts = <0 16 0x4>;
+		interrupt-names = "wdt-remote";
+
 		nvidia,trace = <&tegra_rtcpu_trace 4 0x70100000 0x100000>;
 		nvidia,ivc-channels = <&tegra_sce_ivc 2 0x90000000 0x10000>;
 
@@ -168,6 +171,9 @@
 		reset-names =
 			"adsp-all";
 
+		interrupts = <0 17 0x4>;
+		interrupt-names = "wdt-remote";
+
 		nvidia,trace = <&tegra_rtcpu_trace 4 0x40200000 0x80000>;
 		nvidia,ivc-channels = <&tegra_ape_ivc 2 0x40000000 0x10000>;
 
@@ -228,5 +234,4 @@
 	tegra_rtcpu_trace:tegra-rtcpu-trace {
 		nvidia,interval-ms = <50>;
 	};
-
 };

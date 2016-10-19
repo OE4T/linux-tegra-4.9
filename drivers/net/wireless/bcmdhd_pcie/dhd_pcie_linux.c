@@ -59,6 +59,7 @@
 #endif /* CONFIG_PCI_MSM */
 #endif /* CONFIG_ARCH_MSM */
 #if IS_ENABLED(CONFIG_PCI_TEGRA)
+#include <linux/phy/phy.h>
 #include <linux/pci-tegra.h>
 #endif
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA

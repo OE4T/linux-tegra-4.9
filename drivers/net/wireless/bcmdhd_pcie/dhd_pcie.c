@@ -67,6 +67,7 @@
 #endif /* PCIE_OOB */
 
 #if IS_ENABLED(CONFIG_PCI_TEGRA)
+#include <linux/phy/phy.h>
 #include <linux/pci-tegra.h>
 #endif
 

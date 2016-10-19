@@ -237,7 +237,9 @@ static ssize_t bpmp_module_load_store(struct file *file,
 
 	mutex_lock(&bpmp_lock);
 
-	strncpy(m->name, strim(buf), sizeof(m->name));
+	strncpy(m->name, strim(buf), sizeof(m->name) - 1);
+	m->name[sizeof(m->name) - 1] = 0;
+
 	if (bpmp_find_module(m->name)) {
 		dev_err(device, "module %s exist\n", m->name);
 		r = -EEXIST;

@@ -14,10 +14,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/device.h>
+#include <linux/interrupt.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/platform_device.h>
 #include <linux/slab.h>
-#include <linux/device.h>
 
 #include <linux/tegra-camera-rtcpu.h>
 #include <linux/tegra-rtcpu-monitor.h>
@@ -29,6 +31,8 @@ struct tegra_camrtc_mon {
 	struct device *rce_dev;
 	struct vi_notify_msg_ex *msg;
 	u32 msg_size;
+	int wdt_irq;
+	struct work_struct wdt_work;
 };
 
 int tegra_camrtc_mon_restore_rtcpu(struct tegra_camrtc_mon *cam_rtcpu_mon)
@@ -83,7 +87,53 @@ int tegra_camrtc_mon_restore_rtcpu(struct tegra_camrtc_mon *cam_rtcpu_mon)
 }
 EXPORT_SYMBOL(tegra_camrtc_mon_restore_rtcpu);
 
-/* TODO: ISR setup for SCE WDT RemoteIRQ */
+static void tegra_camrtc_mon_wdt_worker(struct work_struct *work)
+{
+	struct tegra_camrtc_mon *cam_rtcpu_mon = container_of(work,
+					struct tegra_camrtc_mon, wdt_work);
+
+	dev_info(cam_rtcpu_mon->rce_dev,
+		"Alert: Camera RTCPU gone bad! restore it immediately!!\n");
+
+	tegra_camrtc_mon_restore_rtcpu(cam_rtcpu_mon);
+
+	/* Enable WDT IRQ */
+	enable_irq(cam_rtcpu_mon->wdt_irq);
+}
+
+static irqreturn_t tegra_camrtc_mon_wdt_remote_isr(int irq, void *data)
+{
+	struct tegra_camrtc_mon *cam_rtcpu_mon = data;
+
+	disable_irq_nosync(irq);
+
+	schedule_work(&cam_rtcpu_mon->wdt_work);
+
+	return IRQ_HANDLED;
+}
+
+static int tegra_camrtc_mon_wdt_irq_setup(
+		struct tegra_camrtc_mon *cam_rtcpu_mon)
+{
+	struct platform_device *pdev =
+			to_platform_device(cam_rtcpu_mon->rce_dev);
+	int ret;
+
+	cam_rtcpu_mon->wdt_irq = platform_get_irq_byname(pdev, "wdt-remote");
+	if (IS_ERR_VALUE(cam_rtcpu_mon->wdt_irq))
+		return -ENODEV;
+
+	ret = devm_request_threaded_irq(&pdev->dev, cam_rtcpu_mon->wdt_irq,
+			NULL, tegra_camrtc_mon_wdt_remote_isr, IRQF_ONESHOT,
+			dev_name(cam_rtcpu_mon->rce_dev), cam_rtcpu_mon);
+	if (ret)
+		return ret;
+
+	dev_info(&pdev->dev, "using cam RTCPU IRQ (%d)\n",
+			cam_rtcpu_mon->wdt_irq);
+
+	return 0;
+}
 
 struct tegra_camrtc_mon *tegra_camrtc_mon_create(struct device *dev)
 {
@@ -103,6 +153,11 @@ struct tegra_camrtc_mon *tegra_camrtc_mon_create(struct device *dev)
 		dev_err(dev, "failed to allocate vi_notify_msg_ex struct\n");
 		return ERR_PTR(-ENOMEM);
 	}
+
+	/* Initialize wdt_work */
+	INIT_WORK(&cam_rtcpu_mon->wdt_work, tegra_camrtc_mon_wdt_worker);
+
+	tegra_camrtc_mon_wdt_irq_setup(cam_rtcpu_mon);
 
 	dev_info(dev, "tegra_camrtc_mon_create is successful\n");
 

@@ -193,6 +193,8 @@ static int bpmp_read_ch(int ch, void *data, int sz)
 	int r;
 
 	tchi = bpmp_thread_ch_index(ch);
+	if (tchi < 0)
+		return -EINVAL;
 
 	spin_lock_irqsave(&lock, flags);
 	r = __bpmp_read_ch(ch, data, sz);

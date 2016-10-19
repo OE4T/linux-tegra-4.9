@@ -22,6 +22,8 @@
 #include "dt-bindings/clock/tegra186-clock.h"
 #include "dt-bindings/reset/tegra186-reset.h"
 #include "dt-bindings/soc/tegra186-powergate.h"
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/gpio/tegra186-gpio.h>
 
 / {
 	compatible = "nvidia,tegra186";
@@ -421,31 +423,55 @@
 		status = "disabled";
 	};
 
-	pinmux: pinmux@2430000 {
-		compatible = "nvidia,tegra186-pinmux";
-		reg = <0x0 0x2430000 0x0 0x15000
+	tegra_pinctrl: pinmux: pinmux@2430000 {
+                compatible = "nvidia,tegra186-pinmux";
+                reg = <0x0 0x2430000 0x0 0x15000
 			0x0 0xc300000 0x0 0x4000>;
 		#gpio-range-cells = <3>;
-		status = "disabled";
-	};
+                status = "disabled";
+        };
 
-	tegra_gpio: gpio@2200000 {
+	tegra_main_gpio: gpio@2200000 {
 		compatible = "nvidia,tegra186-gpio";
 		reg-names = "security", "gpio";
 		reg =
 			<0x0 0x2200000 0x0 0x10000>,
 			<0x0 0x2210000 0x0 0x10000>;
-		interrupts = <0 47 0x04
-			0 50 0x04
-			0 53 0x04
-			0 56 0x04
-			0 59 0x04
-			0 180 0x04>;
-		status = "disabled";
-		gpio-ranges = <&pinmux 0 0 253>;
-		#gpio-cells = <2>;
+		interrupts =
+			<0 47 IRQ_TYPE_LEVEL_HIGH>,
+			<0 50 IRQ_TYPE_LEVEL_HIGH>,
+			<0 53 IRQ_TYPE_LEVEL_HIGH>,
+			<0 56 IRQ_TYPE_LEVEL_HIGH>,
+			<0 59 IRQ_TYPE_LEVEL_HIGH>,
+			<0 180 IRQ_TYPE_LEVEL_HIGH>;
 		gpio-controller;
-		#interrupt-cells = <2>;
+		#gpio-cells = <2>;
 		interrupt-controller;
+		#interrupt-cells = <2>;
+		gpio-ranges =
+			<&tegra_pinctrl  TEGRA_MAIN_GPIO_BASE(A) TEGRA_PIN_BASE(A) TEGRA_MAIN_GPIO_RANGE(A, R)>,
+			<&tegra_pinctrl TEGRA_MAIN_GPIO_BASE(T) TEGRA_PIN_BASE(T) TEGRA_MAIN_GPIO_RANGE(T, T)>,
+			<&tegra_pinctrl TEGRA_MAIN_GPIO_BASE(X) TEGRA_PIN_BASE(X) TEGRA_MAIN_GPIO_RANGE(X, Y)>,
+			<&tegra_pinctrl TEGRA_MAIN_GPIO_BASE(BB) TEGRA_PIN_BASE(BB) TEGRA_MAIN_GPIO_RANGE(BB, DD) >;
+		status = "disabled";
+	};
+
+	tegra_aon_gpio: gpio@c2f0000 {
+		compatible = "nvidia,tegra186-gpio-aon";
+		reg-names = "security", "gpio";
+		reg = 	<0x0 0xc2f0000 0x0 0x1000>,
+			<0x0 0xc2f1000 0x0 0x1000>;
+		interrupts =
+			<0 60 IRQ_TYPE_LEVEL_HIGH>;
+		status = "disabled";
+		gpio-controller;
+		#gpio-cells = <2>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+		gpio-ranges =
+			<&tegra_pinctrl TEGRA_AON_GPIO_BASE(S) TEGRA_PIN_BASE(S) TEGRA_AON_GPIO_RANGE(S, S)>,
+			<&tegra_pinctrl TEGRA_AON_GPIO_BASE(U) TEGRA_PIN_BASE(U) TEGRA_AON_GPIO_RANGE(U, W)>,
+			<&tegra_pinctrl TEGRA_AON_GPIO_BASE(Z) TEGRA_PIN_BASE(Z) TEGRA_AON_GPIO_RANGE(Z, AA)>,
+			<&tegra_pinctrl TEGRA_AON_GPIO_BASE(EE) TEGRA_PIN_BASE(EE) TEGRA_AON_GPIO_RANGE(EE, FF)>;
 	};
 };

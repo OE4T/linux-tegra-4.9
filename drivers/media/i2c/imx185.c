@@ -32,25 +32,13 @@
 
 #define IMX185_DEFAULT_MODE	IMX185_MODE_1920X1080_CROP_30FPS
 #define IMX185_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SRGGB12_1X12
-#define IMX185_DEFAULT_CLK_FREQ	37125000
-#define IMX185_DEFAULT_WIDTH	1920
-#define IMX185_DEFAULT_HEIGHT	1080
 
 #define IMX185_MIN_FRAME_LENGTH	(1125)
 #define IMX185_MAX_FRAME_LENGTH	(0x1FFFF)
-#define IMX185_DEFAULT_FRAME_LENGTH	(1125)
 #define IMX185_MIN_EXPOSURE_COARSE_1080P_HDR_SHS1	(5)
 #define IMX185_MAX_EXPOSURE_COARSE_1080P_HDR_SHS1	(70)
 #define IMX185_MIN_EXPOSURE_COARSE_1080P_HDR_SHS2	(80)
 #define IMX185_MAX_EXPOSURE_COARSE_1080P_HDR_SHS2	(1120)
-
-#define IMX185_EEPROM_SIZE		128
-#define IMX185_EEPROM_STR_SIZE		(IMX185_EEPROM_SIZE * 2)
-#define IMX185_OTP_STR_SIZE (IMX185_EEPROM_STR_SIZE)
-
-#define IMX185_FUSE_ID_ADDR	0x3382
-#define IMX185_FUSE_ID_SIZE	6
-#define IMX185_FUSE_ID_STR_SIZE	(IMX185_FUSE_ID_SIZE * 2)
 
 #define IMX185_FRAME_LENGTH_ADDR_MSB		0x301A
 #define IMX185_FRAME_LENGTH_ADDR_MID		0x3019
@@ -64,6 +52,12 @@
 #define IMX185_GAIN_ADDR					0x3014
 #define IMX185_GROUP_HOLD_ADDR				0x3001
 
+#define IMX185_FUSE_ID_ADDR	0x3382
+#define IMX185_FUSE_ID_SIZE	6
+#define IMX185_FUSE_ID_STR_SIZE	(IMX185_FUSE_ID_SIZE * 2)
+#define IMX185_DEFAULT_WIDTH	1920
+#define IMX185_DEFAULT_HEIGHT	1080
+#define IMX185_DEFAULT_CLK_FREQ	37125000
 
 struct imx185 {
 	struct camera_common_power_rail	power;
@@ -104,7 +98,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 		.name = "Gain",
 		.type = V4L2_CTRL_TYPE_INTEGER64,
 		.flags = V4L2_CTRL_FLAG_SLIDER,
-		.min = 0 * FIXED_POINT_SCALING_FACTOR,/*dB*/
+		.min = 0 * FIXED_POINT_SCALING_FACTOR,
 		.max = 48 * FIXED_POINT_SCALING_FACTOR,
 		.def = 0 * FIXED_POINT_SCALING_FACTOR,
 		.step = 1,
@@ -152,26 +146,6 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 		.menu_skip_mask = 0,
 		.def = 0,
 		.qmenu_int = switch_ctrl_qmenu,
-	},
-	{
-		.ops = &imx185_ctrl_ops,
-		.id = V4L2_CID_EEPROM_DATA,
-		.name = "EEPROM Data",
-		.type = V4L2_CTRL_TYPE_STRING,
-		.flags = V4L2_CTRL_FLAG_VOLATILE,
-		.min = 0,
-		.max = IMX185_EEPROM_STR_SIZE,
-		.step = 2,
-	},
-	{
-		.ops = &imx185_ctrl_ops,
-		.id = V4L2_CID_OTP_DATA,
-		.name = "OTP Data",
-		.type = V4L2_CTRL_TYPE_STRING,
-		.flags = V4L2_CTRL_FLAG_READ_ONLY,
-		.min = 0,
-		.max = IMX185_OTP_STR_SIZE,
-		.step = 2,
 	},
 	{
 		.ops = &imx185_ctrl_ops,
@@ -596,8 +570,6 @@ static int imx185_set_frame_rate(struct imx185 *priv, s64 val)
 	struct camera_common_data *s_data = priv->s_data;
 	int i = 0;
 
-	/* hack clk as 74250000 until the clk issue fixed*/
-	mode[s_data->mode].pixel_clock = 74250000;
 	frame_length = mode[s_data->mode].pixel_clock *
 		FIXED_POINT_SCALING_FACTOR /
 		mode[s_data->mode].line_length / val;
@@ -647,9 +619,6 @@ static int imx185_set_exposure(struct imx185 *priv, s64 val)
 			"could not find device ctrl.\n");
 		return err;
 	}
-
-	/* hack clk as 74250000 until the clk issue fixed*/
-	mode[s_data->mode].pixel_clock = 74250000;
 
 	coarse_time = mode[s_data->mode].pixel_clock * val /
 		mode[s_data->mode].line_length / FIXED_POINT_SCALING_FACTOR;
@@ -956,12 +925,14 @@ static struct camera_common_pdata *imx185_parse_dt(struct imx185 *priv,
 		return NULL;
 	}
 
-	of_property_read_string(np, "use_sensor_mode_id", &str);
-	if (!strcmp(str, "true"))
-		s_data->use_sensor_mode_id = true;
-	else
-		s_data->use_sensor_mode_id = false;
-
+	err = of_property_read_string(np, "use_sensor_mode_id", &str);
+	if (!err)
+	{
+		if (!strcmp(str, "true"))
+			s_data->use_sensor_mode_id = true;
+		else
+			s_data->use_sensor_mode_id = false;
+	}
 	board_priv_pdata = devm_kzalloc(&client->dev,
 			   sizeof(*board_priv_pdata), GFP_KERNEL);
 
@@ -1063,7 +1034,6 @@ static int imx185_probe(struct i2c_client *client,
 	priv->subdev = &common_data->subdev;
 	priv->subdev->dev = &client->dev;
 	priv->s_data->dev = &client->dev;
-	priv->frame_length = IMX185_MIN_FRAME_LENGTH;
 
 	err = imx185_power_get(priv);
 	if (err)

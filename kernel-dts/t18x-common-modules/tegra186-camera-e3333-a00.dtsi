@@ -376,34 +376,6 @@
 						max_exp_time = "358733";
 					};
 
-					// HDR Modes
-					mode3 { //OV5693_MODE_2592X1944_HDR
-						mclk_khz = "24000";
-						num_lanes = "2";
-						tegra_sinterface = "serial_a";
-						discontinuous_clk = "no";
-						dpcm_enable = "false";
-						cil_settletime = "0";
-
-						active_w = "2592";
-						active_h = "1944";
-						pixel_t = "hdr_bggr";
-						readout_orientation = "90";
-						line_length = "3696";
-						inherent_gain = "1";
-						mclk_multiplier = "7.33";
-						pix_clk_hz = "200000000";
-
-						min_gain_val = "1.0";
-						max_gain_val = "16";
-						min_hdr_ratio = "1";
-						max_hdr_ratio = "64";
-						min_framerate = "1.453262";
-						max_framerate = "24";
-						min_exp_time = "42";
-						max_exp_time = "687981";
-					};
-
 					ports {
 						#address-cells = <1>;
 						#size-cells = <0>;
@@ -588,34 +560,6 @@
 						max_framerate = "120";
 						min_exp_time = "22";
 						max_exp_time = "358733";
-					};
-
-					// HDR Modes
-					mode3 { //OV5693_MODE_2592X1944_HDR
-						mclk_khz = "24000";
-						num_lanes = "2";
-						tegra_sinterface = "serial_b";
-						discontinuous_clk = "no";
-						dpcm_enable = "false";
-						cil_settletime = "0";
-
-						active_w = "2592";
-						active_h = "1944";
-						pixel_t = "hdr_bggr";
-						readout_orientation = "90";
-						line_length = "3696";
-						inherent_gain = "1";
-						mclk_multiplier = "7.33";
-						pix_clk_hz = "200000000";
-
-						min_gain_val = "1.0";
-						max_gain_val = "16";
-						min_hdr_ratio = "1";
-						max_hdr_ratio = "64";
-						min_framerate = "1.453262";
-						max_framerate = "24";
-						min_exp_time = "42";
-						max_exp_time = "687981";
 					};
 
 					ports {
@@ -804,34 +748,6 @@
 						max_exp_time = "358733";
 					};
 
-					// HDR Modes
-					mode3 { //OV5693_MODE_2592X1944_HDR
-						mclk_khz = "24000";
-						num_lanes = "2";
-						tegra_sinterface = "serial_c";
-						discontinuous_clk = "no";
-						dpcm_enable = "false";
-						cil_settletime = "0";
-
-						active_w = "2592";
-						active_h = "1944";
-						pixel_t = "hdr_bggr";
-						readout_orientation = "90";
-						line_length = "3696";
-						inherent_gain = "1";
-						mclk_multiplier = "7.33";
-						pix_clk_hz = "200000000";
-
-						min_gain_val = "1.0";
-						max_gain_val = "16";
-						min_hdr_ratio = "1";
-						max_hdr_ratio = "64";
-						min_framerate = "1.453262";
-						max_framerate = "24";
-						min_exp_time = "42";
-						max_exp_time = "687981";
-					};
-
 					ports {
 						#address-cells = <1>;
 						#size-cells = <0>;
@@ -1016,34 +932,6 @@
 						max_framerate = "120";
 						min_exp_time = "22";
 						max_exp_time = "358733";
-					};
-
-					// HDR Modes
-					mode3 { //OV5693_MODE_2592X1944_HDR
-						mclk_khz = "24000";
-						num_lanes = "2";
-						tegra_sinterface = "serial_d";
-						discontinuous_clk = "no";
-						dpcm_enable = "false";
-						cil_settletime = "0";
-
-						active_w = "2592";
-						active_h = "1944";
-						pixel_t = "hdr_bggr";
-						readout_orientation = "90";
-						line_length = "3696";
-						inherent_gain = "1";
-						mclk_multiplier = "7.33";
-						pix_clk_hz = "200000000";
-
-						min_gain_val = "1.0";
-						max_gain_val = "16";
-						min_hdr_ratio = "1";
-						max_hdr_ratio = "64";
-						min_framerate = "1.453262";
-						max_framerate = "24";
-						min_exp_time = "42";
-						max_exp_time = "687981";
 					};
 
 					ports {
@@ -1232,34 +1120,6 @@
 						max_exp_time = "358733";
 					};
 
-					// HDR Modes
-					mode3 { //OV5693_MODE_2592X1944_HDR
-						mclk_khz = "24000";
-						num_lanes = "2";
-						tegra_sinterface = "serial_e";
-						discontinuous_clk = "no";
-						dpcm_enable = "false";
-						cil_settletime = "0";
-
-						active_w = "2592";
-						active_h = "1944";
-						pixel_t = "hdr_bggr";
-						readout_orientation = "90";
-						line_length = "3696";
-						inherent_gain = "1";
-						mclk_multiplier = "7.33";
-						pix_clk_hz = "200000000";
-
-						min_gain_val = "1.0";
-						max_gain_val = "16";
-						min_hdr_ratio = "1";
-						max_hdr_ratio = "64";
-						min_framerate = "1.453262";
-						max_framerate = "24";
-						min_exp_time = "42";
-						max_exp_time = "687981";
-					};
-
 					ports {
 						#address-cells = <1>;
 						#size-cells = <0>;
@@ -1444,34 +1304,6 @@
 						max_framerate = "120";
 						min_exp_time = "22";
 						max_exp_time = "358733";
-					};
-
-					// HDR Modes
-					mode3 { //OV5693_MODE_2592X1944_HDR
-						mclk_khz = "24000";
-						num_lanes = "2";
-						tegra_sinterface = "serial_f";
-						discontinuous_clk = "no";
-						dpcm_enable = "false";
-						cil_settletime = "0";
-
-						active_w = "2592";
-						active_h = "1944";
-						pixel_t = "hdr_bggr";
-						readout_orientation = "90";
-						line_length = "3696";
-						inherent_gain = "1";
-						mclk_multiplier = "7.33";
-						pix_clk_hz = "200000000";
-
-						min_gain_val = "1.0";
-						max_gain_val = "16";
-						min_hdr_ratio = "1";
-						max_hdr_ratio = "64";
-						min_framerate = "1.453262";
-						max_framerate = "24";
-						min_exp_time = "42";
-						max_exp_time = "687981";
 					};
 
 					ports {

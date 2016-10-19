@@ -2446,16 +2446,16 @@ static void tegra_pcie_enable_rp_features(struct tegra_pcie_port *port)
 				&(port->pcie->pads),
 				"prod_c_pad",
 				port->pcie->prod_list)) {
-			dev_info(port->pcie->dev,
-					"pad prod settings are not found in DT\n");
+			dev_dbg(port->pcie->dev,
+				"pad prod settings are not found in DT\n");
 		}
 
 		if (tegra_prod_set_by_name(
 				&(port->base),
 				"prod_c_rp",
 				port->pcie->prod_list)) {
-			dev_info(port->pcie->dev,
-					"RP prod settings are not found in DT\n");
+			dev_dbg(port->pcie->dev,
+				"RP prod settings are not found in DT\n");
 		}
 	}
 

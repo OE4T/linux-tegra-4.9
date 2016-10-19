@@ -368,6 +368,11 @@
 		status = "disabled";
 	};
 
+	flow-controller@60007000 {
+		compatible = "nvidia,tegra210-flowctrl";
+		reg = <0x0 0x60007000 0x0 0x1000>;
+	};
+
 	tegra_agic: agic-controller {
 		compatible = "nvidia,tegra210-agic";
 		interrupt-controller;

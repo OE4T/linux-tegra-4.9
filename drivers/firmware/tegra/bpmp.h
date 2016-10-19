@@ -89,7 +89,6 @@ extern int connected;
 
 int bpmp_mail_init_prepare(void);
 int bpmp_mail_init(struct platform_device *pdev);
-int bpmp_get_fwtag(void);
 int __bpmp_do_ping(void);
 int bpmp_init_modules(struct platform_device *pdev);
 void bpmp_cleanup_modules(void);

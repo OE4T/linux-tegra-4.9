@@ -139,6 +139,8 @@ void flowctrl_cpu_suspend_exit(unsigned int cpuid)
 }
 
 static const struct of_device_id matches[] __initconst = {
+	{ .compatible = "nvidia,tegra210-flowctrl" },
+	{ .compatible = "nvidia,tegra132-flowctrl" },
 	{ .compatible = "nvidia,tegra124-flowctrl" },
 	{ .compatible = "nvidia,tegra114-flowctrl" },
 	{ .compatible = "nvidia,tegra30-flowctrl" },
@@ -148,9 +150,8 @@ static const struct of_device_id matches[] __initconst = {
 
 static int __init tegra_flowctrl_init(void)
 {
-	/* hardcoded fallback if device tree node is missing */
-	unsigned long base = 0x60007000;
-	unsigned long size = SZ_4K;
+	unsigned long base;
+	unsigned long size;
 	struct device_node *np;
 
 	if (!soc_is_tegra())
@@ -166,7 +167,8 @@ static int __init tegra_flowctrl_init(void)
 		}
 
 		of_node_put(np);
-	}
+	} else
+		goto out;
 
 	tegra_flowctrl_base = ioremap_nocache(base, size);
 out:

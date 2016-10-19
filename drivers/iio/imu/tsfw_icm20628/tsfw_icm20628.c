@@ -27,10 +27,6 @@
 #define TSFW_SENSOR_VENDOR	"Invensense"
 #define TSFW_SENSOR_VERSION	1
 
-#define ID_ACCEL		0
-#define ID_GYRO			1
-#define ID_MAG			2
-
 #define AXIS_N			3 /* 3 channels of data (X, Y, Z) */
 #define SENSOR_REPORT_SYN_MASK	0x80
 
@@ -137,7 +133,10 @@ static struct sensor_cfg tsfw_icm20628_cfg_dflt[] = {
 		.delay_us_max		= 14222,
 		.flags			= DYNAMIC_SENSOR_MASK,
 		.float_significance	= NVS_FLOAT_NANO,
-		/* TODO: milliamp */
+		.milliamp		= {
+			.ival		= 2,
+			.fval		= 800000,
+		},
 		.max_range		= {
 			.ival		= 4912,
 			.fval		= 0,
@@ -159,6 +158,7 @@ static struct sensor_cfg tsfw_icm20628_cfg_dflt[] = {
 			.fval		= 600000,
 		},
 		.uuid			= "ts_mag",
+		.matrix                 = { -1, 0, 0, 0, -1, 0, 0, 0, 1 },
 	}
 };
 
@@ -180,13 +180,7 @@ static void pr_debugg_buffer(u8 *data, size_t len)
 	pr_info("%s", qwerty);
 }
 #else
-/* TODO: do {} while (0) */
-#define pr_debugg(...)		\
-({				\
-  if (0)			\
-	pr_info(__VA_ARGS__);	\
-  0;				\
-})
+#define pr_debugg(...) do {} while (0)
 static inline void pr_debugg_buffer(u8 *data, size_t len)
 {
 }
@@ -208,7 +202,7 @@ static inline void pr_debugg_buffer(u8 *data, size_t len)
 /* only accepts full 18B buffers */
 static void pass_to_nvs(struct tsfw_icm20628_state *st, u8 *data)
 {
-	u16 t4[SNSR_N * AXIS_N];
+	u16 tmp[SNSR_N * AXIS_N];
 	size_t i;
 	s64 ts;
 	ts = nvs_timestamp(); /* ns */
@@ -216,14 +210,14 @@ static void pass_to_nvs(struct tsfw_icm20628_state *st, u8 *data)
 	pr_debugg_buffer(data, SENSOR_DATA_SET_SIZE);
 
 	/* TODO: st->nvs->nvs_mutex_lock(st->nvs_st); */
-	memcpy(t4, data, SENSOR_DATA_SET_SIZE);
+	memcpy(tmp, data, SENSOR_DATA_SET_SIZE);
 	/* swap endianness */
 	for (i = 0; i < SNSR_N * AXIS_N; i++)
-		t4[i] = ntohs(t4[i]);
+		tmp[i] = ntohs(tmp[i]);
 
 	/* pass to nvs */
 	for (i = 0; i < SNSR_N; i++)
-		st->nvs->handler(st->snsr[i].nvs_st, t4+(AXIS_N*i), ts);
+		st->nvs->handler(st->snsr[i].nvs_st, tmp+(AXIS_N*i), ts);
 	/* TODO: st->nvs->nvs_mutex_unlock(st->nvs_st); */
 }
 
@@ -251,9 +245,11 @@ static int handle_sensor_data(struct tsfw_icm20628_state *st,
 
 	/* copy remainder to buffer */
 	rem = data + len - tmp;
-	pr_debugg("Copying remaining %d bytes to buffer\n", rem);
-	pr_debugg_buffer(tmp, rem);
-	memcpy(st->buffered_data, tmp, rem);
+	if (rem) {
+		pr_debugg("Copying remaining %d bytes to buffer\n", rem);
+		pr_debugg_buffer(tmp, rem);
+		memcpy(st->buffered_data, tmp, rem);
+	}
 	st->buffered_cnt = rem;
 	/* TODO: st->prev_report_counter = report_counter; */
 	return 0;
@@ -263,43 +259,43 @@ static int handle_sensor_data(struct tsfw_icm20628_state *st,
  * data[0]: report id = 0x05
  * data[1]: report counter
  * data[2-18]: HID button data
- * data[19]: syn flag (= 0)
- * data[20]: length of sensor data
- * data[21-45]: up to 25 bytes of sensor data
+ * data[18] & 0x80: syn flag (= 0)
+ * data[19]: length of sensor data
+ * data[20-44]: up to 25 bytes of sensor data
  */
-#define RPT1A_DATA_OFFSET	21
+#define RPT1A_DATA_OFFSET	20
 #define RPT1A_DATA_MAX_LEN	25
 
 /* Report #1b
  * data[0]: report id = 0x05
  * data[1]: report counter
  * data[2-18]: HID button data
- * data[19]: syn flag (= 1)
- * data[20]: length of sensor data
- * data[21-22]: header of which sensors enabled
- * data[23-45]: up to 23 bytes of sensor data
+ * data[18] & 0x80: syn flag (= 1)
+ * data[19]: length of sensor data
+ * data[20-21]: header of which sensors enabled
+ * data[22-44]: up to 23 bytes of sensor data
  */
-#define RPT1B_DATA_OFFSET	23
+#define RPT1B_DATA_OFFSET	22
 #define RPT1B_DATA_MAX_LEN	23
 
 /* Report #2
  * data[0]: report id = 0x06 (syn = 0)
  * data[1]: report counter
  * data[2]: length of sensor data
- * data[3-45]: up to 43 bytes of sensor data
+ * data[3-44]: up to 42 bytes of sensor data
  */
 #define RPT2_DATA_OFFSET	3
-#define RPT2_DATA_MAX_LEN	43
+#define RPT2_DATA_MAX_LEN	42
 
 /* Report #3
  * data[0]: report id = 0x07 (syn = 1)
  * data[1]: report counter
  * data[2]: length of sensor data
  * data[3-4]:  header of which sensors enabled
- * data[5-45]: up to 41 bytes of sensor data
+ * data[5-44]: up to 40 bytes of sensor data
  */
 #define RPT3_DATA_OFFSET	5
-#define RPT3_DATA_MAX_LEN	41
+#define RPT3_DATA_MAX_LEN	40
 
 static int recv(struct tsfw_icm20628_state *st, u8 *data, size_t size)
 {
@@ -307,51 +303,50 @@ static int recv(struct tsfw_icm20628_state *st, u8 *data, size_t size)
 	u8 report_counter = data[1];
 	u16 sensor_header = 0;
 	u8 *sensor_data;
-	u8 len;
+	u8 len, len_max;
 	bool syn;
 
 	pr_debugg("%s received %zu bytes\n", __func__, size);
 	pr_debugg_buffer(data, size);
 
 	if (report_id == SENSOR_REPORT_ID_COMBINED) {
-		syn = data[19] & SENSOR_REPORT_SYN_MASK;
-		len = data[20];
+		syn = data[18] & SENSOR_REPORT_SYN_MASK;
+		len = data[19];
 		if (!syn) {
 			pr_debugg("Detected sensor packet #1a\n");
 			sensor_data = data + RPT1A_DATA_OFFSET;
-			if (len > RPT1A_DATA_MAX_LEN)
-				len = RPT1A_DATA_MAX_LEN;
+			len_max = RPT1A_DATA_MAX_LEN;
 		} else {
 			pr_debugg("Detected sensor packet #1b\n");
 			sensor_header = (data[22] << 8) | data[21];
 			sensor_data = data + RPT1B_DATA_OFFSET;
-			if (len > RPT1B_DATA_MAX_LEN)
-				len = RPT1B_DATA_MAX_LEN;
+			len_max = RPT1B_DATA_MAX_LEN;
 		}
-		handle_sensor_data(st, report_counter, syn, sensor_header,
-				sensor_data, len);
 	} else if (report_id == SENSOR_REPORT_ID) {
 		pr_debugg("Detected sensor packet #2\n");
 		syn = false;
 		sensor_data = data + RPT2_DATA_OFFSET;
 		len = data[2];
-		if (len > RPT2_DATA_MAX_LEN)
-			len = RPT2_DATA_MAX_LEN;
-		handle_sensor_data(st, report_counter, syn, sensor_header,
-				sensor_data, len);
+		len_max = RPT2_DATA_MAX_LEN;
 	} else if (report_id == SENSOR_REPORT_ID_SYN) {
 		pr_debugg("Detected sensor packet #3\n");
 		syn = true;
 		sensor_header = (data[4] << 8) | data[3];
 		sensor_data = data + RPT3_DATA_OFFSET;
 		len = data[2];
-		if (len > RPT3_DATA_MAX_LEN)
-			len = RPT3_DATA_MAX_LEN;
-		handle_sensor_data(st, report_counter, syn, sensor_header,
-				sensor_data, len);
+		len_max = RPT3_DATA_MAX_LEN;
 	} else {
 		pr_err("unexpected sensor report data\n");
+		return -EINVAL;
 	}
+
+	if (len > len_max) {
+		pr_err("invalid len %d sensor report", len);
+		return -EINVAL;
+	}
+
+	handle_sensor_data(st, report_counter, syn, sensor_header, sensor_data,
+			len);
 	/* TODO: return error code if fail */
 	return 0;
 }
@@ -386,11 +381,9 @@ static int disable_hw(struct tsfw_icm20628_state *st)
 /* TODO: needed?
 static int set_rate_hw(struct tsfw_icm20628_state *st, unsigned int period)
 { return 0; }
-static int read_hw(struct tsfw_icm20628_state *st, int32_t data)
-{ return 0; }
  */
 
-static int enable(void *client, int snsr_id, int enable)
+static int tsfw_icm_enable(void *client, int snsr_id, int enable)
 {
 	struct tsfw_icm20628_state *st = (struct tsfw_icm20628_state *)client;
 	int ret;
@@ -411,8 +404,8 @@ static int enable(void *client, int snsr_id, int enable)
 	return ret;
 }
 
-static int batch(void *client, int snsr_id, int flags, unsigned int period,
-		unsigned int timeout)
+static int tsfw_icm_batch(void *client, int snsr_id, int flags,
+		unsigned int period, unsigned int timeout)
 {
 	pr_info("%s\n", __func__);
 	/* TODO: remove?
@@ -423,8 +416,8 @@ static int batch(void *client, int snsr_id, int flags, unsigned int period,
 }
 
 static struct nvs_fn_dev tsfw_icm20628_fn_dev = {
-	.enable	= enable,
-	.batch	= batch,
+	.enable	= tsfw_icm_enable,
+	.batch	= tsfw_icm_batch,
 };
 
 static int probe(struct hid_device *hdev, struct tsfw_icm20628_state **pst)
@@ -433,6 +426,7 @@ static int probe(struct hid_device *hdev, struct tsfw_icm20628_state **pst)
 	int ret;
 	size_t i;
 
+	pr_info("tsfw_icm %s\n", __func__);
 	/* TODO: use devm_kzalloc? */
 	*pst = kzalloc(sizeof(struct tsfw_icm20628_state), GFP_KERNEL);
 	st = *pst;

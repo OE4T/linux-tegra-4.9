@@ -1678,11 +1678,7 @@ static int atvr_raw_event(struct hid_device *hdev, struct hid_report *report,
 			report->id == SENSOR_REPORT_ID_COMBINED) &&
 			shdr_dev->snsr_fns && shdr_dev->snsr_fns->recv) {
 		shdr_dev->snsr_fns->recv(shdr_dev->st, data, size);
-		/* TODO: check ret */
-		/* TODO: TEST data goes to hid_report_raw_event */
-		/* combined data report also has button data
-		 * call hid_report_raw_event to handle button data
-		 */
+		/* TODO: ret check */
 		if (report->id == SENSOR_REPORT_ID_COMBINED)
 			hid_report_raw_event(hdev, 0, data,
 					     TS_BUTTON_REPORT_SIZE, 0);

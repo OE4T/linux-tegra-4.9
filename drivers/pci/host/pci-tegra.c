@@ -67,9 +67,7 @@
 #include <asm/io.h>
 
 #include <mach/io_dpd.h>
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 #include <linux/phy/phy.h>
-#endif
 #include <linux/pci-tegra.h>
 
 #define PCI_CFG_SPACE_SIZE		256

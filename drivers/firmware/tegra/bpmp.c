@@ -627,9 +627,6 @@ static int bpmp_init_debug(struct platform_device *pdev)
 	if (bpmp_init_cpuidle_debug(root))
 		goto clean;
 
-	if (bpmp_platdbg_init(root, pdev))
-		goto clean;
-
 	bpmp_root = root;
 	return 0;
 

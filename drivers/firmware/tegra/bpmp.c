@@ -33,14 +33,10 @@
 #include "bpmp.h"
 
 #define BPMP_MODULE_MAGIC		0x646f6d
-#define SHARED_SIZE			512
 
 static struct device *device;
-static void *shared_virt;
-static uint32_t shared_phys;
-
 static char firmware_tag[32];
-static DEFINE_SPINLOCK(shared_lock);
+
 #if IS_ENABLED(CONFIG_DEBUG_FS)
 struct dentry *bpmp_root;
 static struct dentry *module_root;
@@ -641,25 +637,29 @@ int bpmp_init_modules(struct platform_device *pdev) { return 0; }
 int __bpmp_do_ping(void) { return 0; }
 #endif
 
-int bpmp_get_fwtag(void)
+static int bpmp_get_fwtag(void)
 {
-	unsigned long flags;
+	const size_t sz = sizeof(firmware_tag) + 1;
+	dma_addr_t phys;
+	char *virt;
 	int r;
-	size_t sz = sizeof(firmware_tag);
-	char fmt[sz + 1];
 
-	spin_lock(&shared_lock);
-        local_irq_save(flags);
-	r = tegra_bpmp_send_receive_atomic(MRQ_QUERY_TAG,
-			&shared_phys, sizeof(shared_phys), NULL, 0);
-	local_irq_restore(flags);
-	if (!r) {
-		memcpy(firmware_tag, shared_virt, sz);
-		memcpy(fmt, firmware_tag, sz);
-		fmt[sz] = 0;
-		dev_info(device, "firmware tag is %s\n", fmt);
-	}
-	spin_unlock(&shared_lock);
+	virt = tegra_bpmp_alloc_coherent(sz, &phys, GFP_KERNEL);
+	if (!virt)
+		return -ENOMEM;
+
+	r = tegra_bpmp_send_receive(MRQ_QUERY_TAG,
+			&phys, sizeof(phys), NULL, 0);
+	if (r)
+		goto exit;
+
+	memcpy(firmware_tag, virt, sz - 1);
+
+	virt[sz - 1] = 0;
+	dev_info(device, "firmware tag is %s\n", virt);
+
+exit:
+	tegra_bpmp_free_coherent(sz, virt, phys);
 
 	return r;
 }
@@ -711,19 +711,6 @@ void tegra_bpmp_free_coherent(size_t size, void *vaddr,
 	dma_free_coherent(device, size, vaddr, phys);
 }
 
-static int bpmp_mem_init(void)
-{
-	dma_addr_t phys;
-
-	shared_virt = tegra_bpmp_alloc_coherent(SHARED_SIZE, &phys,
-			GFP_KERNEL);
-	if (!shared_virt)
-		return -ENOMEM;
-
-	shared_phys = phys;
-	return 0;
-}
-
 static struct syscore_ops bpmp_syscore_ops = {
 	.resume = tegra_bpmp_resume,
 };
@@ -761,7 +748,6 @@ static int bpmp_probe(struct platform_device *pdev)
 	device = &pdev->dev;
 
 	r = bpmp_linear_map_init(device);
-	r = r ?: bpmp_mem_init();
 	r = r ?: bpmp_clk_init(pdev);
 	r = r ?: bpmp_init_debug(pdev);
 	r = r ?: bpmp_init_modules(pdev);

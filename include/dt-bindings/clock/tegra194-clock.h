@@ -1,193 +1,501 @@
 /*
  * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
  *
- * NVIDIA CORPORATION and its licensors retain all intellectual property
- * and proprietary rights in and to this software, related documentation
- * and any modifications thereto.  Any use, reproduction, disclosure or
- * distribution of this software and related documentation without an express
- * license agreement from NVIDIA CORPORATION is strictly prohibited.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __ABI_MACH_T194_CLOCK_H
 #define __ABI_MACH_T194_CLOCK_H
 
+/** @brief output of mux controlled by TEGRA194_CLK_SOC_ACTMON */
 #define TEGRA194_CLK_ACTMON			1
+/** @brief output of gate CLK_ENB_ADSP */
 #define TEGRA194_CLK_ADSP			2
+/** @brief output of gate CLK_ENB_ADSPNEON */
 #define TEGRA194_CLK_ADSPNEON			3
+/** output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_AHUB */
 #define TEGRA194_CLK_AHUB			4
+/** @brief output of gate CLK_ENB_APB2APE */
 #define TEGRA194_CLK_APB2APE			5
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_APE */
 #define TEGRA194_CLK_APE			6
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_AUD_MCLK */
 #define TEGRA194_CLK_AUD_MCLK			7
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_AXI_CBB */
 #define TEGRA194_CLK_AXI_CBB			8
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_CAN1 */
 #define TEGRA194_CLK_CAN1			9
+/** @brief output of gate CLK_ENB_CAN1_HOST */
 #define TEGRA194_CLK_CAN1_HOST			10
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_CAN2 */
 #define TEGRA194_CLK_CAN2			11
+/** @brief output of gate CLK_ENB_CAN2_HOST */
 #define TEGRA194_CLK_CAN2_HOST			12
+/** @brief output of gate CLK_ENB_CEC */
 #define TEGRA194_CLK_CEC			13
+/** @brief output of divider CLK_RST_CONTROLLER_CLK_M_DIVIDE */
 #define TEGRA194_CLK_CLK_M			14
-#define TEGRA194_CLK_DBGAPB			15
-#define TEGRA194_CLK_DMIC1			16
-#define TEGRA194_CLK_DMIC2			17
-#define TEGRA194_CLK_DMIC3			18
-#define TEGRA194_CLK_DMIC4			19
-#define TEGRA194_CLK_DPAUX			20
-#define TEGRA194_CLK_DPAUX1			21
-#define TEGRA194_CLK_DSI			22
-#define TEGRA194_CLK_DSIA_LP			23
-#define TEGRA194_CLK_DSIB			24
-#define TEGRA194_CLK_DSIB_LP			25
-#define TEGRA194_CLK_DSIC			26
-#define TEGRA194_CLK_DSIC_LP			27
-#define TEGRA194_CLK_DSID			28
-#define TEGRA194_CLK_DSID_LP			29
-#define TEGRA194_CLK_DSPK1			30
-#define TEGRA194_CLK_DSPK2			31
-#define TEGRA194_CLK_EMC			32
-#define TEGRA194_CLK_EQOS_AXI			33
-#define TEGRA194_CLK_EQOS_PTP_REF		34
-#define TEGRA194_CLK_EQOS_RX			35
-#define TEGRA194_CLK_EQOS_TX			36
-#define TEGRA194_CLK_EXTPERIPH1			37
-#define TEGRA194_CLK_EXTPERIPH2			38
-#define TEGRA194_CLK_EXTPERIPH3			39
-#define TEGRA194_CLK_EXTPERIPH4			40
-#define TEGRA194_CLK_FUSE			41
-#define TEGRA194_CLK_GPCCLK			42
-#define TEGRA194_CLK_GPU_PWR			43
-#define TEGRA194_CLK_HDA			44
-#define TEGRA194_CLK_HDA2CODEC_2X		45
-#define TEGRA194_CLK_HDA2HDMICODEC		46
-#define TEGRA194_CLK_HOST1X			47
-#define TEGRA194_CLK_HSIC_TRK			48
-#define TEGRA194_CLK_I2C1			49
-#define TEGRA194_CLK_I2C2			50
-#define TEGRA194_CLK_I2C3			51
-#define TEGRA194_CLK_I2C4			52
-#define TEGRA194_CLK_I2C6			53
-#define TEGRA194_CLK_I2C7			54
-#define TEGRA194_CLK_I2C8			55
-#define TEGRA194_CLK_I2C9			56
-#define TEGRA194_CLK_I2S1			57
-#define TEGRA194_CLK_I2S1_SYNC_INPUT		58
-#define TEGRA194_CLK_I2S2			59
-#define TEGRA194_CLK_I2S2_SYNC_INPUT		60
-#define TEGRA194_CLK_I2S3			61
-#define TEGRA194_CLK_I2S3_SYNC_INPUT		62
-#define TEGRA194_CLK_I2S4			63
-#define TEGRA194_CLK_I2S4_SYNC_INPUT		64
-#define TEGRA194_CLK_I2S5			65
-#define TEGRA194_CLK_I2S5_SYNC_INPUT		66
-#define TEGRA194_CLK_I2S6			67
-#define TEGRA194_CLK_I2S6_SYNC_INPUT		68
-#define TEGRA194_CLK_IQC1			69
-#define TEGRA194_CLK_ISP			70
-#define TEGRA194_CLK_KFUSE			71
-#define TEGRA194_CLK_MAUD			72
-#define TEGRA194_CLK_MIPI_CAL			73
-#define TEGRA194_CLK_MPHY_CORE_PLL_FIXED	74
-#define TEGRA194_CLK_MPHY_L0_RX_ANA		75
-#define TEGRA194_CLK_MPHY_L0_RX_LS_BIT		76
-#define TEGRA194_CLK_MPHY_L0_RX_SYMB		77
-#define TEGRA194_CLK_MPHY_L0_TX_LS_3XBIT	78
-#define TEGRA194_CLK_MPHY_L0_TX_SYMB		79
-#define TEGRA194_CLK_MPHY_L1_RX_ANA		80
-#define TEGRA194_CLK_MPHY_TX_1MHZ_REF		81
-#define TEGRA194_CLK_NVCSI			82
-#define TEGRA194_CLK_NVCSILP			83
-#define TEGRA194_CLK_NVDEC			84
-#define TEGRA194_CLK_NVDISPLAYHUB		85
-#define TEGRA194_CLK_NVDISPLAY_DISP		86
-#define TEGRA194_CLK_NVDISPLAY_P0		87
-#define TEGRA194_CLK_NVDISPLAY_P1		88
-#define TEGRA194_CLK_NVDISPLAY_P2		89
-#define TEGRA194_CLK_NVENC			90
-#define TEGRA194_CLK_NVJPG			91
-#define TEGRA194_CLK_OSC			92
-#define TEGRA194_CLK_PCIE			93
-#define TEGRA194_CLK_PLLA			94
-#define TEGRA194_CLK_PLLAON			95
-#define TEGRA194_CLK_PLLD			96
-#define TEGRA194_CLK_PLLD2			97
-#define TEGRA194_CLK_PLLD3			98
-#define TEGRA194_CLK_PLLDP			99
-#define TEGRA194_CLK_PLLD_OUT1			100
-#define TEGRA194_CLK_PLLE			101
-#define TEGRA194_CLK_PLLP			102
-#define TEGRA194_CLK_PLLP_OUT0			103
-#define TEGRA194_CLK_PLLU			104
-#define TEGRA194_CLK_PLL_A_OUT0			105
-#define TEGRA194_CLK_PWM1			106
-#define TEGRA194_CLK_PWM2			107
-#define TEGRA194_CLK_PWM3			108
-#define TEGRA194_CLK_PWM4			109
-#define TEGRA194_CLK_PWM5			110
-#define TEGRA194_CLK_PWM6			111
-#define TEGRA194_CLK_PWM7			112
-#define TEGRA194_CLK_PWM8			113
-#define TEGRA194_CLK_QSPI			114
-#define TEGRA194_CLK_QSPI_OUT			115
-#define TEGRA194_CLK_SATA			116
-#define TEGRA194_CLK_SATA_OOB			117
-#define TEGRA194_CLK_SCE_APB			118
-#define TEGRA194_CLK_SCE_CPU_NIC		119
-#define TEGRA194_CLK_SCE_NIC			120
-#define TEGRA194_CLK_SDMMC1			121
-#define TEGRA194_CLK_SDMMC2			122
-#define TEGRA194_CLK_SDMMC3			123
-#define TEGRA194_CLK_SDMMC4			124
-#define TEGRA194_CLK_SE				125
-#define TEGRA194_CLK_SOR0			126
-#define TEGRA194_CLK_SOR0_OUT			127
-#define TEGRA194_CLK_SOR0_PAD_CLKOUT		128
-#define TEGRA194_CLK_SOR1			129
-#define TEGRA194_CLK_SOR1_OUT			130
-#define TEGRA194_CLK_SOR1_PAD_CLKOUT		131
-#define TEGRA194_CLK_SOR_SAFE			132
-#define TEGRA194_CLK_SPDIF_DOUBLER		133
-#define TEGRA194_CLK_SPDIF_IN			134
-#define TEGRA194_CLK_SPDIF_OUT			135
-#define TEGRA194_CLK_SPI1			136
-#define TEGRA194_CLK_SPI2			137
-#define TEGRA194_CLK_SPI3			138
-#define TEGRA194_CLK_SPI4			139
-#define TEGRA194_CLK_SYNC_DMIC1			140
-#define TEGRA194_CLK_SYNC_DMIC2			141
-#define TEGRA194_CLK_SYNC_DMIC3			142
-#define TEGRA194_CLK_SYNC_DMIC4			143
-#define TEGRA194_CLK_SYNC_DSPK1			144
-#define TEGRA194_CLK_SYNC_DSPK2			145
-#define TEGRA194_CLK_SYNC_I2S1			146
-#define TEGRA194_CLK_SYNC_I2S2			147
-#define TEGRA194_CLK_SYNC_I2S3			148
-#define TEGRA194_CLK_SYNC_I2S4			149
-#define TEGRA194_CLK_SYNC_I2S5			150
-#define TEGRA194_CLK_SYNC_I2S6			151
-#define TEGRA194_CLK_SYNC_SPDIF			152
-#define TEGRA194_CLK_TACH			153
-#define TEGRA194_CLK_TSEC			154
-#define TEGRA194_CLK_TSECB			155
-#define TEGRA194_CLK_UARTA			156
-#define TEGRA194_CLK_UARTB			157
-#define TEGRA194_CLK_UARTC			158
-#define TEGRA194_CLK_UARTD			159
-#define TEGRA194_CLK_UARTE			160
-#define TEGRA194_CLK_UARTF			161
-#define TEGRA194_CLK_UARTG			162
-#define TEGRA194_CLK_UART_FST_MIPI_CAL		163
-#define TEGRA194_CLK_UFSDEV_REF			164
-#define TEGRA194_CLK_UFSHC			165
-#define TEGRA194_CLK_USB2_TRK			166
-#define TEGRA194_CLK_VI				167
-#define TEGRA194_CLK_VIC			168
-#define TEGRA194_CLK_PVA0_AXI			169
-#define TEGRA194_CLK_PVA0_VPS0			170
-#define TEGRA194_CLK_PVA0_VPS1			171
-#define TEGRA194_CLK_PVA1_AXI			172
-#define TEGRA194_CLK_PVA1_VPS0			173
-#define TEGRA194_CLK_PVA1_VPS1			174
-#define TEGRA194_CLK_DLA0_FALCON		175
-#define TEGRA194_CLK_DLA0_CORE			176
-#define TEGRA194_CLK_DLA1_FALCON		177
-#define TEGRA194_CLK_DLA1_CORE			178
-
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_DMIC1 */
+#define TEGRA194_CLK_DMIC1			15
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_DMIC2 */
+#define TEGRA194_CLK_DMIC2			16
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_DMIC3 */
+#define TEGRA194_CLK_DMIC3			17
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_DMIC4 */
+#define TEGRA194_CLK_DMIC4			18
+/** @brief output of gate CLK_ENB_DPAUX1 */
+#define TEGRA194_CLK_DPAUX			19
+/** @brief output of gate CLK_ENB_DPAUX1 */
+#define TEGRA194_CLK_DPAUX1			20
+/** @brief output of gate CLK_ENB_DSI */
+#define TEGRA194_CLK_DSI			21
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_DSIA_LP */
+#define TEGRA194_CLK_DSIA_LP			22
+/** @brief output of gate CLK_ENB_DSIB */
+#define TEGRA194_CLK_DSIB			23
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_DSIB_LP */
+#define TEGRA194_CLK_DSIB_LP			24
+/** @brief output of gate CLK_ENB_DSIC */
+#define TEGRA194_CLK_DSIC			25
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_DSIC_LP */
+#define TEGRA194_CLK_DSIC_LP			26
+/** @brief output of gate CLK_ENB_DSID */
+#define TEGRA194_CLK_DSID			27
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_DSID_LP */
+#define TEGRA194_CLK_DSID_LP			28
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_DSPK1 */
+#define TEGRA194_CLK_DSPK1			29
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_DSPK2 */
+#define TEGRA194_CLK_DSPK2			30
+/**
+ * @brief controls the EMC clock frequency.
+ * @details Doing a clk_set_rate on this clock will select the
+ * appropriate clock source, program the source rate and execute a
+ * specific sequence to switch to the new clock source for both memory
+ * controllers. This can be used to control the balance between memory
+ * throughput and memory controller power.
+ */
+#define TEGRA194_CLK_EMC			31
+/** @brief output of gate CLK_ENB_EQOS */
+#define TEGRA194_CLK_EQOS_AXI			32
+/**
+ * @brief output of the divider
+ * CLK_RST_CONTROLLER_CLK_SOURCE_EQOS_PTP_REF_CLK_0
+ */
+#define TEGRA194_CLK_EQOS_PTP_REF		33
+/** @brief output of gate CLK_ENB_EQOS_RX */
+#define TEGRA194_CLK_EQOS_RX			34
+/** @brief output of the divider CLK_RST_CONTROLLER_CLK_SOURCE_EQOS_TX_CLK */
+#define TEGRA194_CLK_EQOS_TX			35
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_CLK_SOURCE_EXTPERIPH1
+ */
+#define TEGRA194_CLK_EXTPERIPH1			36
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_CLK_SOURCE_EXTPERIPH2
+ */
+#define TEGRA194_CLK_EXTPERIPH2			37
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_CLK_SOURCE_EXTPERIPH3
+ */
+#define TEGRA194_CLK_EXTPERIPH3			38
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_CLK_SOURCE_EXTPERIPH4
+ */
+#define TEGRA194_CLK_EXTPERIPH4			39
+/** @brief output of gate CLK_ENB_FUSE */
+#define TEGRA194_CLK_FUSE			40
+/** @brief GPC2CLK-div-2 */
+#define TEGRA194_CLK_GPCCLK			41
+/** @brief TODO */
+#define TEGRA194_CLK_GPU_PWR			42
+/** output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_HDA2CODEC_2X */
+#define TEGRA194_CLK_HDA			43
+/** output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_HDA2CODEC_2X */
+#define TEGRA194_CLK_HDA2CODEC_2X		44
+/** @brief output of gate CLK_ENB_HDA2HDMICODEC */
+#define TEGRA194_CLK_HDA2HDMICODEC		45
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_HOST1X */
+#define TEGRA194_CLK_HOST1X			46
+/** @brief output of gate CLK_ENB_HSIC_TRK */
+#define TEGRA194_CLK_HSIC_TRK			47
+/** @clkdesc{i2c_clks, out, mux, CLK_RST_CONTROLLER_CLK_SOURCE_I2C1} */
+#define TEGRA194_CLK_I2C1			48
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2C2 */
+#define TEGRA194_CLK_I2C2			49
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2C3 */
+#define TEGRA194_CLK_I2C3			50
+/** output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2C4 */
+#define TEGRA194_CLK_I2C4			51
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2C6 */
+#define TEGRA194_CLK_I2C6			52
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2C7 */
+#define TEGRA194_CLK_I2C7			53
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2C8 */
+#define TEGRA194_CLK_I2C8			54
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2C9 */
+#define TEGRA194_CLK_I2C9			55
+/** output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2S1 */
+#define TEGRA194_CLK_I2S1			56
+/** @brief clock recovered from I2S1 input */
+#define TEGRA194_CLK_I2S1_SYNC_INPUT		57
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2S2 */
+#define TEGRA194_CLK_I2S2			58
+/** @brief clock recovered from I2S2 input */
+#define TEGRA194_CLK_I2S2_SYNC_INPUT		59
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2S3 */
+#define TEGRA194_CLK_I2S3			60
+/** @brief clock recovered from I2S3 input */
+#define TEGRA194_CLK_I2S3_SYNC_INPUT		61
+/** output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2S4 */
+#define TEGRA194_CLK_I2S4			62
+/** @brief clock recovered from I2S4 input */
+#define TEGRA194_CLK_I2S4_SYNC_INPUT		63
+/** output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2S5 */
+#define TEGRA194_CLK_I2S5			64
+/** @brief clock recovered from I2S5 input */
+#define TEGRA194_CLK_I2S5_SYNC_INPUT		65
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2C6 */
+#define TEGRA194_CLK_I2S6			66
+/** @brief clock recovered from I2S6 input */
+#define TEGRA194_CLK_I2S6_SYNC_INPUT		67
+/** @brief output of gate CLK_ENB_IQC1 */
+#define TEGRA194_CLK_IQC1			68
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_ISP */
+#define TEGRA194_CLK_ISP			69
+/**
+ * @brief A fake clock which must be enabled during
+ * KFUSE read operations to ensure adequate VDD_CORE voltage
+ */
+#define TEGRA194_CLK_KFUSE			70
+/** output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_MAUD */
+#define TEGRA194_CLK_MAUD			71
+/** @brief output of gate CLK_ENB_MIPI_CAL */
+#define TEGRA194_CLK_MIPI_CAL			72
+/**
+ * @brief output of the divider
+ * CLK_RST_CONTROLLER_CLK_SOURCE_MPHY_CORE_PLL_FIXED
+ */
+#define TEGRA194_CLK_MPHY_CORE_PLL_FIXED	73
+/** @brief output of gate CLK_ENB_MPHY_L0_RX_ANA */
+#define TEGRA194_CLK_MPHY_L0_RX_ANA		74
+/** @brief output of gate CLK_ENB_MPHY_L0_RX_LS_BIT */
+#define TEGRA194_CLK_MPHY_L0_RX_LS_BIT		75
+/**
+ * @brief output of the divider
+ * CLK_RST_CONTROLLER_CLK_SOURCE_MPHY_L0_RX_LS_SYMB
+ */
+#define TEGRA194_CLK_MPHY_L0_RX_SYMB		76
+/** @brief output of gate CLK_ENB_MPHY_L0_TX_LS_3XBIT */
+#define TEGRA194_CLK_MPHY_L0_TX_LS_3XBIT	77
+/**
+ * @brief output of the divider
+ * CLK_RST_CONTROLLER_CLK_SOURCE_MPHY_L0_TX_LS_SYMB
+ */
+#define TEGRA194_CLK_MPHY_L0_TX_SYMB		78
+/** @brief output of gate CLK_ENB_MPHY_L1_RX_ANA */
+#define TEGRA194_CLK_MPHY_L1_RX_ANA		79
+/**
+ * @brief output of the divider
+ * CLK_RST_CONTROLLER_CLK_SOURCE_MPHY_TX_1MHZ_REF
+ */
+#define TEGRA194_CLK_MPHY_TX_1MHZ_REF		80
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_NVCSI */
+#define TEGRA194_CLK_NVCSI			81
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_NVCSILP */
+#define TEGRA194_CLK_NVCSILP			82
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_NVDEC */
+#define TEGRA194_CLK_NVDEC			83
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_CLK_SOURCE_NVDISPLAYHUB
+ */
+#define TEGRA194_CLK_NVDISPLAYHUB		84
+/**
+ * @brief output of the NVDISPLAY_DISP_CLK_SRC mux in
+ * CLK_RST_CONTROLLER_CLK_SOURCE_NVDISPLAY_DISP
+ */
+#define TEGRA194_CLK_NVDISPLAY_DISP		85
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_CLK_SOURCE_NVDISPLAY_P0
+ */
+#define TEGRA194_CLK_NVDISPLAY_P0		86
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_CLK_SOURCE_NVDISPLAY_P1
+ */
+#define TEGRA194_CLK_NVDISPLAY_P1		87
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_CLK_SOURCE_NVDISPLAY_P2
+ */
+#define TEGRA194_CLK_NVDISPLAY_P2		88
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_CLK_SOURCE_NVENC
+ */
+#define TEGRA194_CLK_NVENC			89
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_NVJPG */
+#define TEGRA194_CLK_NVJPG			90
+/** @brief input from Tegra's XTAL_IN */
+#define TEGRA194_CLK_OSC			91
+/** @brief output of gate CLK_ENB_PCIE */
+#define TEGRA194_CLK_PCIE			92
+/** PLL controlled by CLK_RST_CONTROLLER_PLLA_BASE for use by audio clocks */
+#define TEGRA194_CLK_PLLA			93
+/**
+ * @brief PLL controlled by CLK_RST_CONTROLLER_PLLAON_BASE
+ * for use by IP blocks in the AON domain
+ */
+#define TEGRA194_CLK_PLLAON			94
+/** @brief PLL controlled by CLK_RST_CONTROLLER_PLLD_BASE for use by DSI */
+#define TEGRA194_CLK_PLLD			95
+/**
+ * @brief PLL controlled by
+ * CLK_RST_CONTROLLER_PLLD2_BASE for use by HDMI or DP
+ */
+#define TEGRA194_CLK_PLLD2			96
+/**
+ * @brief PLL controlled by
+ * CLK_RST_CONTROLLER_PLLD3_BASE for use by HDMI or DP
+ */
+#define TEGRA194_CLK_PLLD3			97
+/**
+ * @brief PLL controlled by CLK_RST_CONTROLLER_PLLDP_BASE
+ * for use as the DP link clock
+ */
+#define TEGRA194_CLK_PLLDP			98
+/** @brief TODO */
+#define TEGRA194_CLK_PLLD_OUT1			99
+/** Fixed 100MHz PLL for PCIe, SATA and superspeed USB */
+#define TEGRA194_CLK_PLLE			100
+/** @brief output of the divider PLLP_DIVP in CLK_RST_CONTROLLER_PLLP_BASE */
+#define TEGRA194_CLK_PLLP			101
+/** @brief output of the divider PLLP_DIVP in CLK_RST_CONTROLLER_PLLP_BASE */
+#define TEGRA194_CLK_PLLP_OUT0			102
+/** Fixed frequency 960MHz PLL for USB and EAVB */
+#define TEGRA194_CLK_PLLU			103
+/** @brief output of the divider CLK_RST_CONTROLLER_PLLA_OUT */
+#define TEGRA194_CLK_PLL_A_OUT0			104
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_PWM1 */
+#define TEGRA194_CLK_PWM1			105
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_PWM2 */
+#define TEGRA194_CLK_PWM2			106
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_PWM3 */
+#define TEGRA194_CLK_PWM3			107
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_PWM4 */
+#define TEGRA194_CLK_PWM4			108
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_PWM5 */
+#define TEGRA194_CLK_PWM5			109
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_PWM6 */
+#define TEGRA194_CLK_PWM6			110
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_PWM7 */
+#define TEGRA194_CLK_PWM7			111
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_PWM8 */
+#define TEGRA194_CLK_PWM8			112
+/**
+ * @brief output of the QSPI_CLK_SRC mux in
+ * CLK_RST_CONTROLLER_CLK_SOURCE_QSPI
+ */
+#define TEGRA194_CLK_QSPI			113
+/**
+ * @brief output of the divider QSPI_CLK_DIV2_SEL in
+ * CLK_RST_CONTROLLER_CLK_SOURCE_QSPI
+ */
+#define TEGRA194_CLK_QSPI_OUT			114
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SATA */
+#define TEGRA194_CLK_SATA			115
+/** @brief output of gate CLK_ENB_SATA_OOB */
+#define TEGRA194_CLK_SATA_OOB			116
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SCE_APB */
+#define TEGRA194_CLK_SCE_APB			117
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_CLK_SOURCE_SCE_CPU_NIC
+ */
+#define TEGRA194_CLK_SCE_CPU_NIC		118
+/** @brief output of divider CLK_RST_CONTROLLER_SCE_NIC_RATE */
+#define TEGRA194_CLK_SCE_NIC			119
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SDMMC1 */
+#define TEGRA194_CLK_SDMMC1			120
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SDMMC2 */
+#define TEGRA194_CLK_SDMMC2			121
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SDMMC3 */
+#define TEGRA194_CLK_SDMMC3			122
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SDMMC4 */
+#define TEGRA194_CLK_SDMMC4			123
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SE */
+#define TEGRA194_CLK_SE				124
+/**
+ * @brief output of the SOR0_CLK_SRC mux in
+ * CLK_RST_CONTROLLER_CLK_SOURCE_SOR0
+ */
+#define TEGRA194_CLK_SOR0			125
+/**
+ * @brief output of mux controlled by SOR0_CLK_SEL0 and
+ * SOR0_CLK_SEL1 in CLK_RST_CONTROLLER_CLK_SOURCE_SOR0
+ */
+#define TEGRA194_CLK_SOR0_OUT			126
+/**
+ * @brief SOR0 brick output which feeds into
+ * SOR0_CLK_SEL mux in CLK_RST_CONTROLLER_CLK_SOURCE_SOR0
+ */
+#define TEGRA194_CLK_SOR0_PAD_CLKOUT		127
+/**
+ * @brief output of the SOR1_CLK_SRC mux in
+ * CLK_RST_CONTROLLER_CLK_SOURCE_SOR1
+ */
+#define TEGRA194_CLK_SOR1			128
+/**
+ * @brief output of mux controlled by SOR1_CLK_SEL0
+ * and SOR1_CLK_SEL1 in CLK_RST_CONTROLLER_CLK_SOURCE_SOR1
+ */
+#define TEGRA194_CLK_SOR1_OUT			129
+/**
+ * @brief SOR1 brick output which feeds into SOR1_CLK_SEL
+ * mux in CLK_RST_CONTROLLER_CLK_SOURCE_SOR1
+ */
+#define TEGRA194_CLK_SOR1_PAD_CLKOUT		130
+/** @brief output of gate CLK_ENB_SOR_SAFE */
+#define TEGRA194_CLK_SOR_SAFE			131
+/** @brief output of gate CLK_ENB_SPDIF_DOUBLER */
+#define TEGRA194_CLK_SPDIF_DOUBLER		132
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SPDF_IN */
+#define TEGRA194_CLK_SPDIF_IN			133
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_CLK_SOURCE_SPDIF_OUT
+ */
+#define TEGRA194_CLK_SPDIF_OUT			134
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SPI1 */
+#define TEGRA194_CLK_SPI1			135
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SPI2 */
+#define TEGRA194_CLK_SPI2			136
+/**  @clkdesc{spi_clks, out, mux, CLK_RST_CONTROLLER_CLK_SOURCE_SPI3} */
+#define TEGRA194_CLK_SPI3			137
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SPI4 */
+#define TEGRA194_CLK_SPI4			138
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DMIC1
+ */
+#define TEGRA194_CLK_SYNC_DMIC1			139
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DMIC2
+ */
+#define TEGRA194_CLK_SYNC_DMIC2			140
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DMIC3
+ */
+#define TEGRA194_CLK_SYNC_DMIC3			141
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DMIC4
+ */
+#define TEGRA194_CLK_SYNC_DMIC4			142
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DSPK1
+ */
+#define TEGRA194_CLK_SYNC_DSPK1			143
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_DSPK2
+ */
+#define TEGRA194_CLK_SYNC_DSPK2			144
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_I2S1 */
+#define TEGRA194_CLK_SYNC_I2S1			145
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_I2S2 */
+#define TEGRA194_CLK_SYNC_I2S2			146
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_I2S3 */
+#define TEGRA194_CLK_SYNC_I2S3			147
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_I2S4 */
+#define TEGRA194_CLK_SYNC_I2S4			148
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_I2S5 */
+#define TEGRA194_CLK_SYNC_I2S5			149
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_I2S6 */
+#define TEGRA194_CLK_SYNC_I2S6			150
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_AUDIO_SYNC_CLK_SPDIF
+ */
+#define TEGRA194_CLK_SYNC_SPDIF			151
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_TACH */
+#define TEGRA194_CLK_TACH			152
+/** output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_TSEC */
+#define TEGRA194_CLK_TSEC			153
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_TSECB */
+#define TEGRA194_CLK_TSECB			154
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_UARTA */
+#define TEGRA194_CLK_UARTA			155
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_UARTB */
+#define TEGRA194_CLK_UARTB			156
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_UARTC */
+#define TEGRA194_CLK_UARTC			157
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_UARTD */
+#define TEGRA194_CLK_UARTD			158
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_UARTE */
+#define TEGRA194_CLK_UARTE			159
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_UARTF */
+#define TEGRA194_CLK_UARTF			160
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_UARTG */
+#define TEGRA194_CLK_UARTG			161
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_CLK_SOURCE_UART_FST_MIPI_CAL
+ */
+#define TEGRA194_CLK_UART_FST_MIPI_CAL		162
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_CLK_SOURCE_UFSDEV_REF
+ */
+#define TEGRA194_CLK_UFSDEV_REF			163
+/**
+ * @brief output of mux controlled by
+ * CLK_RST_CONTROLLER_CLK_SOURCE_UFSHC_CG_SYS
+ */
+#define TEGRA194_CLK_UFSHC			164
+/** @brief output of gate CLK_ENB_USB2_TRK */
+#define TEGRA194_CLK_USB2_TRK			165
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_VI */
+#define TEGRA194_CLK_VI				166
+/** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_VIC */
+#define TEGRA194_CLK_VIC			167
+/** @brief PVA0_axi_clk */
+#define TEGRA194_CLK_PVA0_AXI			168
+/** @brief PVA0_vps0_clk */
+#define TEGRA194_CLK_PVA0_VPS0			169
+/** @brief PVA0_vps1_clk */
+#define TEGRA194_CLK_PVA0_VPS1			170
+/** @brief PVA1_axi_clk */
+#define TEGRA194_CLK_PVA1_AXI			171
+/** @brief PVA1_vps0_clk */
+#define TEGRA194_CLK_PVA1_VPS0			172
+/** @brief PVA1_vps1_clk */
+#define TEGRA194_CLK_PVA1_VPS1			173
+/** @brief DLA0_falcon_clk */
+#define TEGRA194_CLK_DLA0_FALCON		174
+/** @brief DLA0_core_clk */
+#define TEGRA194_CLK_DLA0_CORE			175
+/** @brief DLA1_falcon_clk */
+#define TEGRA194_CLK_DLA1_FALCON		176
+/** @brief DLA1_core_clk */
+#define TEGRA194_CLK_DLA1_CORE			177
 #endif

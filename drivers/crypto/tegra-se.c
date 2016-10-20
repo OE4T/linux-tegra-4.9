@@ -1460,7 +1460,8 @@ static int tegra_se_rng_drbg_init(struct crypto_tfm *tfm)
 }
 
 static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
-	u8 *rdata, u32 dlen)
+		const u8 *src, unsigned int slen,
+		u8 *rdata, unsigned int dlen)
 {
 	struct tegra_se_rng_context *rng_ctx = crypto_rng_ctx(tfm);
 	struct tegra_se_dev *se_dev = rng_ctx->se_dev;
@@ -1527,7 +1528,8 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 	return dlen;
 }
 
-static int tegra_se_rng_drbg_reset(struct crypto_rng *tfm, u8 *seed, u32 slen)
+static int tegra_se_rng_drbg_reset(struct crypto_rng *tfm, const u8 *seed,
+			unsigned int slen)
 {
 	return 0;
 }

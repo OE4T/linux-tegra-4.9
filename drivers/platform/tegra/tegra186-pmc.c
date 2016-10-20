@@ -111,8 +111,8 @@
 
 static DEFINE_SPINLOCK(tegra186_pmc_access_lock);
 
-void __iomem *tegra186_pmc_base;
-void __iomem *tegra186_pmc_base_reboot;
+static void __iomem *tegra186_pmc_base;
+static void __iomem *tegra186_pmc_base_reboot;
 
 static inline u32 tegra186_pmc_readl(u32 reg)
 {

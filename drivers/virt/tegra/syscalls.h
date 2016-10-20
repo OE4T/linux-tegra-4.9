@@ -48,6 +48,8 @@
 #define GUEST_PRIMARY		0
 #define GUEST_IVC_SERVER	0
 
+#define NGUESTS_MAX 16
+
 #ifndef __ASSEMBLY__
 
 #if defined(__KERNEL__)
@@ -114,6 +116,39 @@ struct hyp_ipa_pa_info {
 	uint64_t offset;     /* offset for requested ipa address */
 	uint64_t size;       /* size of pa region */
 };
+
+#define HVC_MAX_VCPU 128
+
+struct trapped_access {
+	uint64_t ipa;
+	uint32_t size;
+	int32_t write_not_read;
+	uint64_t data;
+	uint32_t guest_id;
+};
+
+struct hyp_server_page {
+	/* guest reset protocol */
+	uint32_t guest_reset_virq;
+	/* boot delay offsets per VM needed by monitor partition */
+	uint32_t boot_delay[NGUESTS_MAX];
+
+	uint32_t trap_virq;
+
+	/*
+	 * Bitmap of VCPU indices in vcpu_trapped_accesses containing active
+	 * trap information.
+	 */
+	uint32_t trapped_vcpus[HVC_MAX_VCPU / 32];
+	struct trapped_access vcpu_trapped_accesses[HVC_MAX_VCPU];
+
+	/* hypervisor trace log */
+	uint64_t log_ipa;
+	uint64_t log_size;
+};
+
+/* For backwards compatibility, alias the old name for hyp_server_name. */
+#define hyp_info_page hyp_server_page
 
 #ifdef CONFIG_ARM64
 

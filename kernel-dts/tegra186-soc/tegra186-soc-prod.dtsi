@@ -129,6 +129,9 @@
 			autocal-pu-pd-offset-hs400-1v8 {
 				prod = <0x00001E4 0x00007F7F 0x0505>;
 			};
+			autocal-pu-pd-offset-hs200-1v8 {
+				prod = <0x00001E4 0x00007F7F 0x0505>;
+			};
 			autocal-pu-pd-offset-default-1v8 {
 				prod = <0x00001E4 0x00007F7F 0x0000>;
 			};

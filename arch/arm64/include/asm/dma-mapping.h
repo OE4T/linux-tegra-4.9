@@ -118,8 +118,8 @@ dma_map_linear_attrs(struct device *dev, phys_addr_t pa, size_t size,
 	struct dma_map_ops *ops = get_dma_ops(dev);
 	dma_addr_t addr;
 
-	if (ops && ops->linear_map)
-		return ops->linear_map(dev, pa, size, dir, attrs);
+	if (ops && ops->map_at)
+		return ops->map_at(dev, pa, pa, size, dir, attrs);
 
 	da = dma_iova_alloc_at(dev, &req, size, attrs);
 	if (da == DMA_ERROR_CODE) {

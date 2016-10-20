@@ -109,9 +109,10 @@ struct dma_map_ops {
 			       enum dma_data_direction dir,
 			       unsigned long attrs);
 
-	dma_addr_t (*linear_map)(struct device *dev, phys_addr_t phys,
-				 size_t size, enum dma_data_direction dir,
-				 unsigned long attrs);
+	dma_addr_t (*map_at)(struct device *dev, dma_addr_t dma_handle,
+			     phys_addr_t phys, size_t size,
+			     enum dma_data_direction dir,
+			     unsigned long attrs);
 
 	void (*unmap_page)(struct device *dev, dma_addr_t dma_handle,
 			   size_t size, enum dma_data_direction dir,

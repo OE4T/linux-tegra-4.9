@@ -724,14 +724,16 @@ static dma_addr_t __iommu_map_page(struct device *dev, struct page *page,
 	return dev_addr;
 }
 
-dma_addr_t __iommu_linear_map(struct device *dev, phys_addr_t phys,
-			      size_t size, enum dma_data_direction dir,
-			      struct dma_attrs *attrs)
+
+static dma_addr_t __iommu_map_at(struct device *dev, dma_addr_t dma_addr,
+				 phys_addr_t phys, size_t size,
+				 enum dma_data_direction dir,
+				 struct dma_attrs *attrs)
 {
 	bool coherent = is_device_dma_coherent(dev);
 	int prot = dma_direction_to_prot(dir, coherent);
 
-	return iommu_dma_map_linear(dev, phys, size, prot);
+	return iommu_dma_map_at(dev, dma_addr, phys, size, prot);
 }
 
 
@@ -813,7 +815,7 @@ static struct dma_map_ops iommu_dma_ops = {
 	.dma_supported = iommu_dma_supported,
 	.mapping_error = iommu_dma_mapping_error,
 
-	.linear_map = __iommu_linear_map,
+	.map_at = __iommu_map_at,
 };
 
 /*

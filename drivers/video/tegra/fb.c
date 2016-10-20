@@ -743,6 +743,11 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 	struct tegra_dc *dc = fb_info->win.dc;
 	struct fb_videomode fb_mode;
 
+	if (fb_info == NULL) {
+		pr_err("%s(): invalid operation\n", __func__);
+		return;
+	}
+
 	mutex_lock(&fb_info->info->lock);
 	fb_destroy_modedb(fb_info->info->monspecs.modedb);
 
@@ -1245,4 +1250,5 @@ void tegra_fb_unregister(struct tegra_fb_info *fb_info)
 	unregister_framebuffer(info);
 	iounmap(info->screen_base);
 	framebuffer_release(info);
+	dev_info(dev, "fb unregistered\n");
 }

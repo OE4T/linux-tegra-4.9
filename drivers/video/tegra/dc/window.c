@@ -267,32 +267,6 @@ static void tegra_dc_blend_sequential(struct tegra_dc *dc,
 }
 #endif	/* TEGRA_NVDISPLAY */
 
-static void tegra_dc_vdk_int_war(struct tegra_dc_win *windows[], int n)
-{
-	u32 val, i;
-	unsigned long int_mask = (FRAME_END_INT | V_BLANK_INT);
-	unsigned long valid_win_mask = 0, clear_win_mask = 0;
-	struct tegra_dc *dc = windows[0]->dc;
-
-	for (i = 0; i < n; i++)
-		valid_win_mask |= 1 << windows[i]->idx;
-
-	while (1) {
-		val = tegra_dc_readl(dc, DC_CMD_INT_STATUS) & int_mask;
-		if (val != int_mask) {
-			mdelay(16);
-		} else {
-			val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
-			for_each_set_bit(i, &valid_win_mask, DC_N_WINDOWS)
-				if (!(val & (WIN_A_ACT_REQ << i)))
-					clear_win_mask |= 1 << i;
-
-			if (valid_win_mask == clear_win_mask)
-				break;
-		}
-	}
-}
-
 /* does not support syncing windows on multiple dcs in one call */
 int tegra_dc_sync_windows(struct tegra_dc_win *windows[], int n)
 {
@@ -311,14 +285,6 @@ int tegra_dc_sync_windows(struct tegra_dc_win *windows[], int n)
 	trace_sync_windows(dc);
 	mutex_lock(&dc->lock);
 
-	/* WAR till display interrupts are working on VDK */
-	if (tegra_platform_is_vdk()) {
-		tegra_dc_vdk_int_war(windows, n);
-
-		mutex_unlock(&dc->lock);
-		tegra_dc_irq(dc->irq, (void *)dc);
-		mutex_lock(&dc->lock);
-	}
 	/*
 	 * Putting the task state as TASK_UINTERRUPTIBLE makes
 	 * task wait till windows status promoted or timeout occurred

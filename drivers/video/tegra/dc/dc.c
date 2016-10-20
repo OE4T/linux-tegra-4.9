@@ -4401,7 +4401,7 @@ bool tegra_dc_does_vsync_separate(struct tegra_dc *dc, s64 new_ts, s64 old_ts)
 				dc->frametime_ns)));
 }
 
-irqreturn_t tegra_dc_irq(int irq, void *ptr)
+static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 {
 	ktime_t timestamp = ktime_get();
 	struct tegra_dc *dc = ptr;

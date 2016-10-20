@@ -386,18 +386,6 @@
 #define pin_pex_l1_clkreq	"pex_l1_clkreq_n_pa4"
 #endif
 
-#define PCIE_LANES_X4_X0_X1 0x401
-#define PCIE_LANES_X2_X1_X1 0x211
-#define PCIE_LANES_X1_X1_X1 0x111
-
-#if !defined(CONFIG_ARCH_TEGRA_21x_SOC)
-static u32 lane_map_configs[] = {
-	PCIE_LANES_X4_X0_X1,
-	PCIE_LANES_X2_X1_X1,
-	PCIE_LANES_X1_X1_X1
-};
-#endif
-
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 static u32 rp_to_lane_map[2][4] = { {1, 2, 3, 4}, {0} };
 #else
@@ -458,6 +446,7 @@ struct tegra_pcie {
 #endif
 
 	struct list_head ports;
+	u32 xbar_config;
 	int num_ports;
 
 	int power_rails_enabled;
@@ -1491,33 +1480,6 @@ static void tegra_pcie_enable_wrap(void)
 #endif
 }
 
-static void tegra_pcie_config_xbar(struct tegra_pcie *pcie)
-{
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-	u32 val = afi_readl(pcie, AFI_PCIE_CONFIG);
-
-	val &= ~AFI_PCIE_CONFIG_XBAR_CONFIG_MASK;
-	/* T210 supports only X4_X1 configuration */
-	val |= AFI_PCIE_CONFIG_XBAR_CONFIG_X4_X1;
-#else
-	u32 i = 0, val = 0;
-
-	val = afi_readl(pcie, AFI_PCIE_CONFIG);
-	val &= ~AFI_PCIE_CONFIG_XBAR_CONFIG_MASK;
-	for (i = 0; i < ARRAY_SIZE(lane_map_configs); i++)
-		if (lane_map_configs[i] == pcie->plat_data->lane_map)
-			break;
-	if (i < ARRAY_SIZE(lane_map_configs))
-		val |= (i << 20);
-	else {
-		dev_info(pcie->dev, "using default lane_map config : 0x%0x\n",
-			PCIE_LANES_X2_X1_X1);
-		val |= AFI_PCIE_CONFIG_XBAR_CONFIG_X2_X1_X1;
-	}
-#endif
-	afi_writel(pcie, val, AFI_PCIE_CONFIG);
-}
-
 static int tegra_pcie_enable_controller(struct tegra_pcie *pcie)
 {
 	u32 val;
@@ -1554,9 +1516,12 @@ static int tegra_pcie_enable_controller(struct tegra_pcie *pcie)
 		val &= ~(1 << (port->index + 1));
 		val &= ~(1 << (port->index + 29));
 	}
-	afi_writel(pcie, val, AFI_PCIE_CONFIG);
 
-	tegra_pcie_config_xbar(pcie);
+	/* Configure pcie mode */
+	val &= ~AFI_PCIE_CONFIG_XBAR_CONFIG_MASK;
+	val |= pcie->xbar_config;
+
+	afi_writel(pcie, val, AFI_PCIE_CONFIG);
 
 	/* Enable Gen 2 capability of PCIE */
 	val = afi_readl(pcie, AFI_FUSE) & ~AFI_FUSE_PCIE_T0_GEN2_DIS;
@@ -2278,7 +2243,7 @@ static void tegra_pcie_apply_sw_war(struct tegra_pcie_port *port,
 	/* T210 WAR for perf bugs required when LPDDR4 */
 	/* memory is used with both ctlrs in X4_X1 config */
 	if (pcie->plat_data->has_memtype_lpddr4 &&
-		(pcie->plat_data->lane_map == PCIE_LANES_X4_X1) &&
+		(pcie->xbar_config == AFI_PCIE_CONFIG_XBAR_CONFIG_X4_X1) &&
 		(pcie->num_ports == pcie->soc_data->num_ports))
 		t210_war = 1;
 #endif
@@ -2570,8 +2535,8 @@ static void tegra_pcie_check_ports(struct tegra_pcie *pcie)
 #endif
 
 	list_for_each_entry_safe(port, tmp, &pcie->ports, list) {
-		dev_info(pcie->dev, "probing port %u, using %u lanes and lane map as 0x%x\n",
-			 port->index, port->lanes, pcie->plat_data->lane_map);
+		dev_info(pcie->dev, "probing port %u, using %u lanes\n",
+			 port->index, port->lanes);
 
 		tegra_pcie_port_enable(port);
 		tegra_pcie_enable_rp_features(port);
@@ -3236,6 +3201,69 @@ static int tegra_pcie_disable_msi(struct tegra_pcie *pcie)
 	return 0;
 }
 
+static void update_rp_lanes(struct tegra_pcie *pcie, u32 lanes)
+{
+	struct tegra_pcie_port *port = NULL;
+
+	list_for_each_entry(port, &pcie->ports, list)
+		port->lanes = (lanes >> (port->index << 3)) & 0xFF;
+
+}
+
+static int tegra_pcie_get_xbar_config(struct tegra_pcie *pcie, u32 lanes,
+				      u32 *xbar)
+{
+	struct device_node *np = pcie->dev->of_node;
+
+	if (of_device_is_compatible(np, "nvidia,tegra124-pcie") |
+		of_device_is_compatible(np, "nvidia,tegra210-pcie")) {
+		switch (lanes) {
+		case 0x0104:
+			dev_info(pcie->dev, "4x1, 1x1 configuration\n");
+			*xbar = AFI_PCIE_CONFIG_XBAR_CONFIG_X4_X1;
+			return 0;
+
+		case 0x0102:
+			dev_info(pcie->dev, "2x1, 1x1 configuration\n");
+			*xbar = AFI_PCIE_CONFIG_XBAR_CONFIG_X2_X1;
+			return 0;
+		default:
+			dev_info(pcie->dev, "wrong configuration updated in DT, "
+				"switching to default 4x1, 1x1 configuration\n");
+			*xbar = AFI_PCIE_CONFIG_XBAR_CONFIG_X4_X1;
+			update_rp_lanes(pcie, 0x0104);
+			return 0;
+		}
+	} else if (of_device_is_compatible(np, "nvidia,tegra186-pcie")) {
+		switch (lanes) {
+		case 0x010004:
+			dev_info(pcie->dev, "4x1, 1x1 configuration\n");
+			*xbar = AFI_PCIE_CONFIG_XBAR_CONFIG_X4_X0_X1;
+			return 0;
+
+		case 0x010102:
+			dev_info(pcie->dev, "2x1, 1x1, 1x1 configuration\n");
+			*xbar = AFI_PCIE_CONFIG_XBAR_CONFIG_X2_X1_X1;
+			return 0;
+
+		case 0x010101:
+			dev_info(pcie->dev, "1x1, 1x1, 1x1 configuration\n");
+			*xbar = AFI_PCIE_CONFIG_XBAR_CONFIG_X1_X1_X1;
+			return 0;
+		default:
+			dev_info(pcie->dev, "wrong configuration updated in DT,"
+				" switching to default 2x1, 1x1, 1x1 "
+				"configuration\n");
+			*xbar = AFI_PCIE_CONFIG_XBAR_CONFIG_X2_X1_X1;
+			update_rp_lanes(pcie, 0x010102);
+			return 0;
+		}
+	}
+
+	return -EINVAL;
+}
+
+
 static void tegra_pcie_read_plat_data(struct tegra_pcie *pcie)
 {
 	struct device_node *node = pcie->dev->of_node;
@@ -3251,16 +3279,6 @@ static void tegra_pcie_read_plat_data(struct tegra_pcie *pcie)
 		of_get_named_gpio(node, "nvidia,x1-slot-gpio", 0);
 	pcie->plat_data->has_memtype_lpddr4 =
 		of_property_read_bool(node, "nvidia,has_memtype_lpddr4");
-	if (of_property_read_u32(node, "nvidia,lane-map",
-			&pcie->plat_data->lane_map)) {
-		dev_info(pcie->dev,
-			"PCIE lane map attribute missing, using default\n");
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-		pcie->plat_data->lane_map = PCIE_LANES_X4_X1;
-#else
-		pcie->plat_data->lane_map = PCIE_LANES_X2_X1_X1;
-#endif
-	}
 }
 
 static char *t124_rail_names[] = {"hvdd-pex", "hvdd-pex-pll-e", "dvddio-pex",
@@ -3314,8 +3332,7 @@ static int tegra_pcie_parse_dt(struct tegra_pcie *pcie)
 	struct device_node *np = pcie->dev->of_node, *port;
 	struct of_pci_range_parser parser;
 	struct of_pci_range range;
-	u32 lanes = 0, mask = 0;
-	unsigned int lane = 0;
+	u32 lanes = 0;
 	struct resource res;
 	int i, err;
 
@@ -3394,12 +3411,8 @@ static int tegra_pcie_parse_dt(struct tegra_pcie *pcie)
 		lanes |= value << (index << 3);
 
 		if (!of_device_is_available(port)) {
-			lane += value;
 			continue;
 		}
-
-		mask |= ((1 << value) - 1) << lane;
-		lane += value;
 
 		rp = devm_kzalloc(pcie->dev, sizeof(*rp), GFP_KERNEL);
 		if (!rp)
@@ -3508,6 +3521,11 @@ static int tegra_pcie_parse_dt(struct tegra_pcie *pcie)
 			}
 		}
 		list_add_tail(&rp->list, &pcie->ports);
+	}
+	err = tegra_pcie_get_xbar_config(pcie, lanes, &pcie->xbar_config);
+	if (err < 0) {
+		dev_err(pcie->dev, "invalid lane configuration\n");
+		return err;
 	}
 
 	return 0;

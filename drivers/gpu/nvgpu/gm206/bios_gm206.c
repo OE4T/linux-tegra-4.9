@@ -882,7 +882,7 @@ static int gm206_bios_init(struct gk20a *g)
 		return err;
 
 	gk20a_dbg_info("read bios");
-	for (i = 0; i < g->bios.size; i++) {
+	for (i = 0; i < g->bios.size - 6; i++) {
 		if (gm206_bios_rdu16(g, i) == BIT_HEADER_ID &&
 		    gm206_bios_rdu32(g, i+2) ==  BIT_HEADER_SIGNATURE) {
 			gm206_bios_parse_bit(g, i);

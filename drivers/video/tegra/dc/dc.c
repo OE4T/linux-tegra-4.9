@@ -6182,7 +6182,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	else if (dc->out->type == TEGRA_DC_OUT_DP)
 		dc->hotplug_supported = tegra_dc_is_ext_dp_panel(dc);
 	else
-		dc->hotplug_supported = dc->out->hotplug_gpio >= 0;
+		dc->hotplug_supported = dc->out->hotplug_gpio > 0;
 
 	if ((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
 			dc->out && dc->out->type == TEGRA_DC_OUT_LVDS) {

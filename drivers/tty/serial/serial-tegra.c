@@ -489,6 +489,7 @@ static char tegra_uart_decode_rx_error(struct tegra_uart_port *tup,
 		} else if (lsr & UART_LSR_FE) {
 			flag = TTY_FRAME;
 			tup->uport.icount.frame++;
+			tegra_uart_flush_fifo(tup, UART_FCR_CLEAR_RCVR);
 			dev_dbg(tup->uport.dev, "Got frame errors\n");
 		} else if (lsr & UART_LSR_OE) {
 			/* Overrrun error */

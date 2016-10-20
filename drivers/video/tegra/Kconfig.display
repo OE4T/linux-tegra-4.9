@@ -198,6 +198,15 @@ config TEGRA_LVDS2FPDL_DS90UB947
 	help
 		Enable support for TI DS90UB947-Q1 LVDS-to-FPD-Link Serializer driver.
 
+config TEGRA_EDP2LVDS_PS8625
+	bool "Enable EDP2LVDS PS8625 bridge."
+	default n
+	help
+	  Say Y here to enable the EDP2LVDS PS8625 bridge.
+	  Disabled by default. PS8625 is i2c slave chip which has EDP to LVDS
+	  support. For L4T, the display head will be treated as EDP, this
+	  chip takes care of converting edp to lvds signals.
+
 config TEGRA_DP
 	bool "Enable eDP panel."
 	default  y

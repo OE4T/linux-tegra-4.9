@@ -29,6 +29,8 @@ struct gk20a_scale_profile {
 	struct devfreq_dev_profile	devfreq_profile;
 	struct devfreq_dev_status	dev_stat;
 	struct notifier_block		qos_notify_block;
+	unsigned long			qos_min_freq;
+	unsigned long			qos_max_freq;
 	void				*private_data;
 };
 

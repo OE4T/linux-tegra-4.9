@@ -50,28 +50,25 @@ int gk20a_scale_qos_notify(struct notifier_block *nb,
 			qos_notify_block);
 	struct gk20a *g = get_gk20a(profile->dev);
 	struct devfreq *devfreq = g->devfreq;
-	s32 min_qos_freq, max_qos_freq;
 
 	if (!devfreq)
 		return NOTIFY_OK;
 
-	/* check for pm_qos min and max frequency requirement */
-	min_qos_freq = pm_qos_read_min_bound(PM_QOS_GPU_FREQ_BOUNDS) * 1000;
-	max_qos_freq = pm_qos_read_max_bound(PM_QOS_GPU_FREQ_BOUNDS) * 1000;
-
 	mutex_lock(&devfreq->lock);
+	/* check for pm_qos min and max frequency requirement */
+	profile->qos_min_freq =
+		pm_qos_read_min_bound(PM_QOS_GPU_FREQ_BOUNDS) * 1000;
+	profile->qos_max_freq =
+		pm_qos_read_max_bound(PM_QOS_GPU_FREQ_BOUNDS) * 1000;
 
-	devfreq->min_freq = max_t(u32, g->devfreq_min_freq, min_qos_freq);
-	devfreq->max_freq = min_t(u32, g->devfreq_max_freq, max_qos_freq);
+	if (profile->qos_min_freq > profile->qos_max_freq) {
+		gk20a_err(g->dev,
+			"QoS: setting invalid limit, min_freq=%lu max_freq=%lu\n",
+			profile->qos_min_freq, profile->qos_max_freq);
+		profile->qos_min_freq = profile->qos_max_freq;
+	}
 
-	WARN_ON(devfreq->min_freq > devfreq->max_freq);
-
-	/*
-	 * update_devfreq() will adjust the current (or newly estimated)
-	 * frequency based on devfreq->min_freq/max_freq
-	 */
 	update_devfreq(devfreq);
-
 	mutex_unlock(&devfreq->lock);
 
 	return NOTIFY_OK;
@@ -143,8 +140,49 @@ static int gk20a_scale_target(struct device *dev, unsigned long *freq,
 			      u32 flags)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	unsigned long rounded_rate =
-		platform->clk_round_rate(dev, *freq);
+	struct gk20a *g = platform->g;
+	struct gk20a_scale_profile *profile = g->scale_profile;
+	struct devfreq *devfreq = g->devfreq;
+	unsigned long local_freq = *freq;
+	unsigned long rounded_rate;
+	unsigned long min_freq = 0, max_freq = 0;
+
+	/*
+	 * Calculate floor and cap frequency values
+	 *
+	 * Policy :
+	 * We have two APIs to clip the frequency
+	 *  1. devfreq
+	 *  2. pm_qos
+	 *
+	 * To calculate floor (min) freq, we select MAX of floor frequencies
+	 * requested from both APIs
+	 * To get cap (max) freq, we select MIN of max frequencies
+	 *
+	 * In case we have conflict (min_freq > max_freq) after above
+	 * steps, we ensure that devfreq->min_freq wins over
+	 * qos_max_freq
+	 */
+	min_freq = max_t(u32, devfreq->min_freq, profile->qos_min_freq);
+	max_freq = min_t(u32, devfreq->max_freq, profile->qos_max_freq);
+
+	if (min_freq > max_freq) {
+		if (min_freq == devfreq->min_freq &&
+		    max_freq != devfreq->max_freq) {
+			max_freq = min_t(u32, min_freq, devfreq->max_freq);
+		}
+		min_freq = max_freq;
+	}
+
+	/* Clip requested frequency */
+	if (local_freq < min_freq)
+		local_freq = min_freq;
+
+	if (local_freq > max_freq)
+		local_freq = max_freq;
+
+	/* set the final frequency */
+	rounded_rate = platform->clk_round_rate(dev, local_freq);
 
 	if (platform->clk_get_rate(dev) == rounded_rate)
 		*freq = rounded_rate;
@@ -332,6 +370,9 @@ void gk20a_scale_init(struct device *dev)
 	if (err || !profile->devfreq_profile.max_state)
 		goto err_get_freqs;
 
+	profile->qos_min_freq = 0;
+	profile->qos_max_freq = UINT_MAX;
+
 	/* Store device profile so we can access it if devfreq governor
 	 * init needs that */
 	g->scale_profile = profile;
@@ -354,8 +395,6 @@ void gk20a_scale_init(struct device *dev)
 			devfreq = NULL;
 
 		g->devfreq = devfreq;
-		g->devfreq_max_freq = devfreq->max_freq;
-		g->devfreq_min_freq = devfreq->min_freq;
 	}
 
 	/* Should we register QoS callback for this device? */

@@ -536,6 +536,11 @@
                 nvidia,dma-request-selector = <&apbdma 8>;
                 dmas = <&apbdma 8>, <&apbdma 8>;
                 dma-names = "rx", "tx";
+		clocks = <&tegra_car TEGRA210_CLK_UARTA>,
+			<&tegra_car TEGRA210_CLK_PLL_P>;
+		clock-names = "serial", "parent";
+		resets = <&tegra_car TEGRA210_CLK_UARTA>;
+		reset-names = "serial";
 		status = "disabled";
 	};
 
@@ -548,6 +553,11 @@
                 nvidia,dma-request-selector = <&apbdma 9>;
                 dmas = <&apbdma 9>, <&apbdma 9>;
                 dma-names = "rx", "tx";
+		clocks = <&tegra_car TEGRA210_CLK_UARTB>,
+			<&tegra_car TEGRA210_CLK_PLL_P>;
+		clock-names = "serial", "parent";
+		resets = <&tegra_car TEGRA210_CLK_UARTB>;
+		reset-names = "serial";
 		status = "disabled";
 	};
 
@@ -560,6 +570,11 @@
 		iommus = <&smmu TEGRA_SWGROUP_PPCS>;
 		dmas = <&apbdma 10>, <&apbdma 10>;
 		dma-names = "rx", "tx";
+		clocks = <&tegra_car TEGRA210_CLK_UARTC>,
+			<&tegra_car TEGRA210_CLK_PLL_P>;
+		clock-names = "serial", "parent";
+		resets = <&tegra_car TEGRA210_CLK_UARTC>;
+		reset-names = "serial";
 		status = "disabled";
 	};
 
@@ -572,6 +587,11 @@
 		iommus = <&smmu TEGRA_SWGROUP_PPCS>;
 		dmas = <&apbdma 19>, <&apbdma 19>;
 		dma-names = "rx", "tx";
+		clocks = <&tegra_car TEGRA210_CLK_UARTD>,
+			<&tegra_car TEGRA210_CLK_PLL_P>;
+		clock-names = "serial", "parent";
+		resets = <&tegra_car TEGRA210_CLK_UARTD>;
+		reset-names = "serial";
 		status = "disabled";
 	};
 

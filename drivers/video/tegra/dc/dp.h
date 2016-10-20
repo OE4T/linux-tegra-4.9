@@ -77,6 +77,7 @@ struct tegra_dc_dp_data {
 	struct resource *res;
 	struct resource *aux_base_res;
 	void __iomem *aux_base;
+	void *out_data;
 	struct tegra_dc_sor_data *sor;
 
 	struct tegra_dc *dc;
@@ -140,6 +141,25 @@ extern const struct file_operations test_settings_fops;
 };
 #endif
 
+struct tegra_dp_out_ops {
+	/* initialize output */
+	int (*init)(struct tegra_dc_dp_data *);
+	/* destroy output */
+	void (*destroy)(struct tegra_dc_dp_data *);
+	/* enable output */
+	int (*enable)(struct tegra_dc_dp_data *);
+	/* disable output */
+	void (*disable)(struct tegra_dc_dp_data *);
+	/* suspend output */
+	void (*suspend)(struct tegra_dc_dp_data *);
+	/* resume output */
+	void (*resume)(struct tegra_dc_dp_data *);
+	/* output postpoweron, called at the end of dc out_ops postpoweron.
+	 * usually used for bridge devices.
+	 */
+	void (*postpoweron)(struct tegra_dc_dp_data *);
+};
+
 enum {
 	VSC_RGB = 0,
 	VSC_YUV444 = 1,
@@ -183,6 +203,17 @@ void tegra_dp_tpg(struct tegra_dc_dp_data *dp, u32 tp, u32 n_lanes);
 bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 				const struct tegra_dc_mode *mode,
 				struct tegra_dc_dp_link_config *cfg);
+
+static inline void *tegra_dp_get_outdata(struct tegra_dc_dp_data *dp)
+{
+	return dp->out_data;
+}
+
+static inline void tegra_dp_set_outdata(struct tegra_dc_dp_data *dp,
+								void *data)
+{
+	dp->out_data = data;
+}
 
 /* DPCD definitions */
 #define NV_DPCD_REV					(0x00000000)

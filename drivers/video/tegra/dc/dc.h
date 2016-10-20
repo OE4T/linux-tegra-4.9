@@ -1281,6 +1281,7 @@ struct tegra_dp_out {
 	int lanes;
 	u8 link_bw;
 	bool hdmi2fpd_bridge_enable;
+	int edp2lvds_i2c_bus_no;
 	struct tegra_dc_lt_data *lt_data;
 	int n_lt_data;
 };

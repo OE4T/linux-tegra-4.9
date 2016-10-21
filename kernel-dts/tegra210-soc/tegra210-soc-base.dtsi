@@ -1667,6 +1667,8 @@
 	kfuse@7000fc00 {
 		compatible = "nvidia,tegra210-kfuse";
 		reg = <0x0 0x7000fc00 0x0 0x400>;
+		clocks = <&tegra_car TEGRA210_CLK_KFUSE>;
+		clock-names = "kfuse";
 		status = "okay";
 	};
 

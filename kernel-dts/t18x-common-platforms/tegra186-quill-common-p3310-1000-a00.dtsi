@@ -51,20 +51,32 @@
 	};
 
 	gpio@2200000 {
-		wifi_over_pcie: wifi_over_pcie {
-			gpio-output-low = <TEGRA_GPIO(R, 4)>;
+		wifi_over_pcie {
+			gpio-hog;
+			gpios = <TEGRA_GPIO(R, 4) 0>;
+			output-low;
+			label = "wifi-over-pcie";
 			status = "disabled";
 		};
-		pcie0_lane2_mux: pcie0_lane2_mux {
-			gpio-output-low = <TEGRA_GPIO(R, 3)>;
+		pcie0_lane2_mux {
+			gpio-hog;
+			gpios = <TEGRA_GPIO(R, 3) 0>;
+			output-low;
+			label = "pcie-lane2-mux";
 			status = "disabled";
 		};
 		e3325_sdio_rst {
-			gpio-output-high = <TEGRA_GPIO(B, 6)>;
+			gpio-hog;
+			gpios = <TEGRA_GPIO(B, 6) 0>;
+			output-high;
+			label = "e3325-sdio-rst";
 			status = "disabled";
 		};
 		e3325_lane0_mux {
-			gpio-output-low = <TEGRA_GPIO(B, 4)>;
+			gpio-hog;
+			gpios = <TEGRA_GPIO(B, 4) 0>;
+			output-low;
+			label = "e3325-lane0-mux";
 			status = "disabled";
 		};
 	};

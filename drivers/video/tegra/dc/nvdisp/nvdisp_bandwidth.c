@@ -296,9 +296,7 @@ static void tegra_nvdisp_bandwidth_renegotiate(void *p, u32 avail_bw)
 	data.avail_bw = avail_bw;
 	data.resvd_bw = bw_info->reserved_bw_kbps;
 
-#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_dc_ext_process_bandwidth_renegotiate(NVDISP_BW_OUTPUT_ID, &data);
-#endif
 
 	bw_info->available_bw = avail_bw;
 unlock_and_exit:

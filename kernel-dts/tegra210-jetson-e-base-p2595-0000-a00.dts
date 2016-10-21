@@ -589,6 +589,11 @@
 			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>,
 			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
 		phy-names = "utmi-2", "usb3-1", "utmi-1", "usb3-0", "utmi-0";
+		nvidia,pmc-wakeup =
+			<&tegra_pmc
+				PMC_WAKE_TYPE_EVENT 41 PMC_TRIGGER_TYPE_HIGH>,
+			<&tegra_pmc
+				PMC_WAKE_TYPE_EVENT 44 PMC_TRIGGER_TYPE_HIGH>;
 	};
 
 	xudc@700d0000 {
@@ -614,6 +619,8 @@
 			gpios = <&gpio TEGRA_GPIO(X, 7) GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_POWER>;
 			gpio-key,wakeup;
+			nvidia,pmc-wakeup = <&tegra_pmc
+				PMC_WAKE_TYPE_GPIO 26 PMC_TRIGGER_TYPE_NONE>;
 		};
 
 		sw_lid {

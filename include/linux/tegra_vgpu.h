@@ -348,6 +348,7 @@ enum {
 
 struct tegra_vgpu_channel_set_ctxsw_mode {
 	u64 handle;
+	u64 gpu_va;
 	u32 mode;
 };
 
@@ -436,6 +437,7 @@ struct tegra_vgpu_constants_params {
 	 * TEGRA_VGPU_MAX_TPC_COUNT_PER_GPC
 	 */
 	u16 gpc_tpc_mask[TEGRA_VGPU_MAX_GPC_COUNT];
+	u32 hwpm_ctx_size;
 };
 
 struct tegra_vgpu_channel_cyclestats_snapshot_params {

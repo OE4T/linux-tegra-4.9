@@ -588,6 +588,7 @@ struct gpu_ops {
 		int (*init_therm_setup_hw)(struct gk20a *g);
 		int (*elcg_init_idle_filters)(struct gk20a *g);
 		void (*therm_debugfs_init)(struct gk20a *g);
+		int (*get_internal_sensor_curr_temp)(struct gk20a *g, u32 *temp_f24_8);
 	} therm;
 	struct {
 		bool (*is_pmu_supported)(struct gk20a *g);

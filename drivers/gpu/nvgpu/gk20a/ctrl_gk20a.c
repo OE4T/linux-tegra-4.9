@@ -1063,7 +1063,6 @@ static int nvgpu_gpu_clk_set_info(struct gk20a *g,
 	return ret;
 }
 
-
 static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 		struct gk20a_ctrl_priv *priv,
 		struct nvgpu_gpu_clk_get_info_args *args)
@@ -1171,6 +1170,119 @@ static int nvgpu_gpu_clk_get_event_fd(struct gk20a *g,
 		return -EINVAL;
 
 	return nvgpu_clk_arb_install_event_fd(g, session, &args->event_fd);
+}
+
+static int nvgpu_gpu_get_voltage(struct gk20a *g,
+		struct nvgpu_gpu_get_voltage_args *args)
+{
+	int err = -EINVAL;
+
+	gk20a_dbg_fn("");
+
+	if (args->reserved)
+		return -EINVAL;
+
+	if (!(g->gpu_characteristics.flags & NVGPU_GPU_FLAGS_SUPPORT_GET_VOLTAGE))
+		return -EINVAL;
+
+	err = gk20a_busy(g->dev);
+	if (err)
+	    return err;
+
+	switch (args->which) {
+	case NVGPU_GPU_VOLTAGE_CORE:
+		err = volt_get_voltage(g, CTRL_VOLT_DOMAIN_LOGIC, &args->voltage);
+		break;
+	case NVGPU_GPU_VOLTAGE_SRAM:
+		err = volt_get_voltage(g, CTRL_VOLT_DOMAIN_SRAM, &args->voltage);
+		break;
+	case NVGPU_GPU_VOLTAGE_BUS:
+		err = pmgr_pwr_devices_get_voltage(g, &args->voltage);
+		break;
+	default:
+		err = -EINVAL;
+	}
+
+	gk20a_idle(g->dev);
+
+	return err;
+}
+
+static int nvgpu_gpu_get_current(struct gk20a *g,
+		struct nvgpu_gpu_get_current_args *args)
+{
+	int err;
+
+	gk20a_dbg_fn("");
+
+	if (args->reserved[0] || args->reserved[1] || args->reserved[2])
+		return -EINVAL;
+
+	if (!(g->gpu_characteristics.flags & NVGPU_GPU_FLAGS_SUPPORT_GET_CURRENT))
+		return -EINVAL;
+
+	err = gk20a_busy(g->dev);
+	if (err)
+		return err;
+
+	err = pmgr_pwr_devices_get_current(g, &args->currnt);
+
+	gk20a_idle(g->dev);
+
+	return err;
+}
+
+static int nvgpu_gpu_get_power(struct gk20a *g,
+		struct nvgpu_gpu_get_power_args *args)
+{
+	int err;
+
+	gk20a_dbg_fn("");
+
+	if (args->reserved[0] || args->reserved[1] || args->reserved[2])
+		return -EINVAL;
+
+	if (!(g->gpu_characteristics.flags & NVGPU_GPU_FLAGS_SUPPORT_GET_POWER))
+		return -EINVAL;
+
+	err = gk20a_busy(g->dev);
+	if (err)
+		return err;
+
+	err = pmgr_pwr_devices_get_power(g, &args->power);
+
+	gk20a_idle(g->dev);
+
+	return err;
+}
+
+static int nvgpu_gpu_get_temperature(struct gk20a *g,
+		struct nvgpu_gpu_get_temperature_args *args)
+{
+	int err;
+	u32 temp_f24_8;
+
+	gk20a_dbg_fn("");
+
+	if (args->reserved[0] || args->reserved[1] || args->reserved[2])
+		return -EINVAL;
+
+	if (!g->ops.therm.get_internal_sensor_curr_temp)
+		return -EINVAL;
+
+	err = gk20a_busy(g->dev);
+	if (err)
+		return err;
+
+	err = g->ops.therm.get_internal_sensor_curr_temp(g, &temp_f24_8);
+
+	gk20a_idle(g->dev);
+
+	/* Convert from standard S24.8 fixed point to mC */
+	if (!err)
+		args->temperature = (temp_f24_8 * 1000) / 256;
+
+	return err;
 }
 #endif
 
@@ -1460,6 +1572,26 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	case NVGPU_GPU_IOCTL_CLK_GET_EVENT_FD:
 		err = nvgpu_gpu_clk_get_event_fd(g, priv,
 			(struct nvgpu_gpu_clk_get_event_fd_args *)buf);
+		break;
+
+	case NVGPU_GPU_IOCTL_GET_VOLTAGE:
+		err = nvgpu_gpu_get_voltage(g,
+			(struct nvgpu_gpu_get_voltage_args *)buf);
+		break;
+
+	case NVGPU_GPU_IOCTL_GET_CURRENT:
+		err = nvgpu_gpu_get_current(g,
+			(struct nvgpu_gpu_get_current_args *)buf);
+		break;
+
+	case NVGPU_GPU_IOCTL_GET_POWER:
+		err = nvgpu_gpu_get_power(g,
+			(struct nvgpu_gpu_get_power_args *)buf);
+		break;
+
+	case NVGPU_GPU_IOCTL_GET_TEMPERATURE:
+		err = nvgpu_gpu_get_temperature(g,
+			(struct nvgpu_gpu_get_temperature_args *)buf);
 		break;
 #endif
 

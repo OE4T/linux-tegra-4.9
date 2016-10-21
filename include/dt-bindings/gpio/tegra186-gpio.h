@@ -12,41 +12,47 @@
 
 #include <dt-bindings/gpio/gpio.h>
 
-/* Nomral Non-AON GPIOs */
-#define TEGRA_GPIO_BANK_ID_A 0
-#define TEGRA_GPIO_BANK_ID_B 1
-#define TEGRA_GPIO_BANK_ID_C 2
-#define TEGRA_GPIO_BANK_ID_D 3
-#define TEGRA_GPIO_BANK_ID_E 4
-#define TEGRA_GPIO_BANK_ID_F 5
-#define TEGRA_GPIO_BANK_ID_G 6
-#define TEGRA_GPIO_BANK_ID_H 7
-#define TEGRA_GPIO_BANK_ID_I 8
-#define TEGRA_GPIO_BANK_ID_J 9
-#define TEGRA_GPIO_BANK_ID_K 10
-#define TEGRA_GPIO_BANK_ID_L 11
-#define TEGRA_GPIO_BANK_ID_M 12
-#define TEGRA_GPIO_BANK_ID_N 13
-#define TEGRA_GPIO_BANK_ID_O 14
-#define TEGRA_GPIO_BANK_ID_P 15
-#define TEGRA_GPIO_BANK_ID_Q 16
-#define TEGRA_GPIO_BANK_ID_R 17
-#define TEGRA_GPIO_BANK_ID_T 18
-#define TEGRA_GPIO_BANK_ID_X 19
-#define TEGRA_GPIO_BANK_ID_Y 20
-#define TEGRA_GPIO_BANK_ID_BB 21
-#define TEGRA_GPIO_BANK_ID_CC 22
-#define TEGRA_GPIO_BANK_ID_DD 23
+/* GPIOs implemented by main GPIO controller */
+#define TEGRA_MAIN_GPIO_PORT_A 0
+#define TEGRA_MAIN_GPIO_PORT_B 1
+#define TEGRA_MAIN_GPIO_PORT_C 2
+#define TEGRA_MAIN_GPIO_PORT_D 3
+#define TEGRA_MAIN_GPIO_PORT_E 4
+#define TEGRA_MAIN_GPIO_PORT_F 5
+#define TEGRA_MAIN_GPIO_PORT_G 6
+#define TEGRA_MAIN_GPIO_PORT_H 7
+#define TEGRA_MAIN_GPIO_PORT_I 8
+#define TEGRA_MAIN_GPIO_PORT_J 9
+#define TEGRA_MAIN_GPIO_PORT_K 10
+#define TEGRA_MAIN_GPIO_PORT_L 11
+#define TEGRA_MAIN_GPIO_PORT_M 12
+#define TEGRA_MAIN_GPIO_PORT_N 13
+#define TEGRA_MAIN_GPIO_PORT_O 14
+#define TEGRA_MAIN_GPIO_PORT_P 15
+#define TEGRA_MAIN_GPIO_PORT_Q 16
+#define TEGRA_MAIN_GPIO_PORT_R 17
+#define TEGRA_MAIN_GPIO_PORT_T 18
+#define TEGRA_MAIN_GPIO_PORT_X 19
+#define TEGRA_MAIN_GPIO_PORT_Y 20
+#define TEGRA_MAIN_GPIO_PORT_BB 21
+#define TEGRA_MAIN_GPIO_PORT_CC 22
+#define TEGRA_MAIN_GPIO_PORT_DD 23
 
-/* AON GPIOs */
-#define TEGRA_AON_GPIO_BANK_ID_S 0
-#define TEGRA_AON_GPIO_BANK_ID_U 1
-#define TEGRA_AON_GPIO_BANK_ID_V 2
-#define TEGRA_AON_GPIO_BANK_ID_W 3
-#define TEGRA_AON_GPIO_BANK_ID_Z 4
-#define TEGRA_AON_GPIO_BANK_ID_AA 5
-#define TEGRA_AON_GPIO_BANK_ID_EE 6
-#define TEGRA_AON_GPIO_BANK_ID_FF 7
+#define TEGRA_MAIN_GPIO(port, offset) \
+	((TEGRA_MAIN_GPIO_PORT_##port * 8) + offset)
+
+/* GPIOs implemented by AON GPIO controller */
+#define TEGRA_AON_GPIO_PORT_S 0
+#define TEGRA_AON_GPIO_PORT_U 1
+#define TEGRA_AON_GPIO_PORT_V 2
+#define TEGRA_AON_GPIO_PORT_W 3
+#define TEGRA_AON_GPIO_PORT_Z 4
+#define TEGRA_AON_GPIO_PORT_AA 5
+#define TEGRA_AON_GPIO_PORT_EE 6
+#define TEGRA_AON_GPIO_PORT_FF 7
+
+#define TEGRA_AON_GPIO(port, offset) \
+	((TEGRA_AON_GPIO_PORT_##port * 8) + offset)
 
 /* All pins */
 #define TEGRA_PIN_BASE_ID_A 0
@@ -82,19 +88,20 @@
 #define TEGRA_PIN_BASE_ID_EE 30
 #define TEGRA_PIN_BASE_ID_FF 31
 
-#define TEGRA_GPIO_RANGE(st, end) \
-	((TEGRA_GPIO_BANK_ID_##end - TEGRA_GPIO_BANK_ID_##st + 1) * 8)
 #define TEGRA_PIN_BASE(port) (TEGRA_PIN_BASE_ID_##port * 8)
-#define TEGRA_GPIO_BASE(port) (TEGRA_GPIO_BANK_ID_##port * 8)
+
+#define TEGRA_MAIN_GPIO_RANGE(st, end) \
+	((TEGRA_MAIN_GPIO_PORT_##end - TEGRA_MAIN_GPIO_PORT_##st + 1) * 8)
+#define TEGRA_MAIN_GPIO_BASE(port) (TEGRA_MAIN_GPIO_PORT_##port * 8)
 
 #define TEGRA_AON_GPIO_RANGE(st, end) \
-	((TEGRA_AON_GPIO_BANK_ID_##end - TEGRA_AON_GPIO_BANK_ID_##st + 1) * 8)
-#define TEGRA_AON_GPIO_BASE(port) (TEGRA_AON_GPIO_BANK_ID_##port * 8)
+	((TEGRA_AON_GPIO_PORT_##end - TEGRA_AON_GPIO_PORT_##st + 1) * 8)
+#define TEGRA_AON_GPIO_BASE(port) (TEGRA_AON_GPIO_PORT_##port * 8)
 
-#define TEGRA_GPIO(bank, offset) \
-	((TEGRA_GPIO_BANK_ID_##bank * 8) + offset)
+#define TEGRA_GPIO_RANGE(st, end) TEGRA_MAIN_GPIO_RANGE(st, end)
+#define TEGRA_GPIO_BASE(port) TEGRA_MAIN_GPIO_BASE(port)
 
-#define TEGRA_GPIO_AON(bank, offset) \
-	((TEGRA_AON_GPIO_BANK_ID_##bank * 8) + offset)
+#define TEGRA_GPIO(port, offset) TEGRA_MAIN_GPIO(port, offset)
+#define TEGRA_GPIO_AON(port, offset) TEGRA_AON_GPIO(port, offset)
 
 #endif

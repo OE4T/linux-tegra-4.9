@@ -40,9 +40,19 @@
 	};
 
 	gpio@2200000 {
-		gpio_sdmmc_wake_support: sdmmc-wake-support {
-			gpio-input = <TEGRA_GPIO(P, 5)>;
-			gpio-output-low = <TEGRA_GPIO(P, 6)>;
+		sdmmc-wake-support-input {
+			gpio-hog;
+			gpios = <TEGRA_GPIO(P, 5) 0>;
+			input;
+			label = "sdmmc-wake-input";
+			status = "disabled";
+		};
+
+		sdmmc-wake-support-output {
+			gpio-hog;
+			gpios = <TEGRA_GPIO(P, 6) 0>;
+			output-low;
+			label = "sdmmc-wake-output";
 			status = "disabled";
 		};
 	};
@@ -64,9 +74,14 @@
 			};
 
 			override@101 {
-				target = <&gpio_sdmmc_wake_support>;
+				target = <&tegra_gpio>;
 				_overlay_ {
-					status = "okay";
+					sdmmc-wake-support-input {
+						status = "okay";
+					};
+					sdmmc-wake-support-output {
+						status = "okay";
+					};
 				};
 			};
 

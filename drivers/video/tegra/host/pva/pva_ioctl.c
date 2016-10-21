@@ -130,6 +130,10 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 			struct pva_parameter_ext);
 	ALLOC_FIELD(task->postfences_ext, task->num_postfences,
 			struct pva_parameter_ext);
+	ALLOC_FIELD(task->prefences_sema_ext, task->num_prefences,
+			struct pva_parameter_ext);
+	ALLOC_FIELD(task->postfences_sema_ext, task->num_postfences,
+			struct pva_parameter_ext);
 	ALLOC_FIELD(task->input_surfaces_ext, task->num_input_surfaces,
 			struct pva_parameter_ext);
 	ALLOC_FIELD(task->input_surface_rois_ext, task->num_input_surfaces,

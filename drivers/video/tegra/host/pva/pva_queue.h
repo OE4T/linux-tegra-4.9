@@ -94,6 +94,8 @@ struct pva_submit_task {
 	/* External data that is added by the KMD */
 	struct pva_parameter_ext *prefences_ext;
 	struct pva_parameter_ext *postfences_ext;
+	struct pva_parameter_ext *prefences_sema_ext;
+	struct pva_parameter_ext *postfences_sema_ext;
 	struct pva_parameter_ext *input_surfaces_ext;
 	struct pva_parameter_ext *input_surface_rois_ext;
 	struct pva_parameter_ext input_scalars_ext;

@@ -22,6 +22,7 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
+#include <linux/errno.h>
 
 #include <uapi/linux/nvhost_pva_ioctl.h>
 
@@ -204,6 +205,20 @@ static void pva_task_unpin_mem(struct pva_submit_task *task)
 			task->output_surfaces[i].roi_handle);
 	}
 
+	for (i = 0; i < task->num_prefences; i++) {
+		if ((task->prefences[i].type == PVA_FENCE_TYPE_SEMAPHORE)
+			&& task->prefences[i].semaphore_handle)
+			UNPIN_MEMORY(task->prefences_sema_ext[i],
+				task->prefences[i].semaphore_handle);
+	}
+
+	for (i = 0; i < task->num_postfences; i++) {
+		if ((task->postfences[i].type == PVA_FENCE_TYPE_SEMAPHORE)
+			&& task->postfences[i].semaphore_handle)
+			UNPIN_MEMORY(task->postfences_sema_ext[i],
+				task->postfences[i].semaphore_handle);
+	}
+
 	UNPIN_MEMORY(task->input_scalars_ext, task->input_scalars.handle);
 	UNPIN_MEMORY(task->input_rois_ext, task->input_rois.handle);
 	UNPIN_MEMORY(task->input_2dpoint_ext, task->input_2dpoint.handle);
@@ -253,6 +268,23 @@ static int pva_task_pin_mem(struct pva_submit_task *task)
 			task->output_surfaces[i].surface_handle);
 		PIN_MEMORY(task->output_surface_rois_ext[i],
 			task->output_surfaces[i].roi_handle);
+	}
+
+	/* check fence semaphore_type before memory pin */
+	for (i = 0; i < task->num_prefences; i++) {
+		if ((task->prefences[i].type == PVA_FENCE_TYPE_SEMAPHORE)
+			&& task->prefences[i].semaphore_handle) {
+			PIN_MEMORY(task->prefences_sema_ext[i],
+				task->prefences[i].semaphore_handle);
+		}
+	}
+
+	for (i = 0; i < task->num_postfences; i++) {
+		if ((task->postfences[i].type == PVA_FENCE_TYPE_SEMAPHORE)
+			&& task->postfences[i].semaphore_handle) {
+			PIN_MEMORY(task->postfences_sema_ext[i],
+				task->postfences[i].semaphore_handle);
+		}
 	}
 
 	/* Pin rest */
@@ -348,6 +380,14 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 				fence->syncpoint_value);
 			break;
 		}
+		case PVA_FENCE_TYPE_SEMAPHORE: {
+			ptr += pva_task_write_ptr_op(&hw_preactions[ptr],
+				TASK_ACT_PTR_BLK_GTREQL,
+				task->prefences_sema_ext[i].dma_addr  +
+					fence->semaphore_offset,
+				fence->semaphore_value);
+			break;
+		}
 		default:
 			return -ENOSYS;
 		}
@@ -372,9 +412,27 @@ static void pva_task_write_postactions(struct pva_submit_task *task,
 		u16 *offset)
 {
 	dma_addr_t syncpt_addr = nvhost_syncpt_address(task->pva->pdev,
-			task->queue->syncpt_id);
+				task->queue->syncpt_id);
 	u8 *hw_postactions = (void *)((u8 *)task->va + *offset);
-	int ptr = 0;
+	int ptr = 0, i = 0;
+
+	/* Add postactions list for semaphore */
+	for (i = 0; i < task->num_postfences; i++) {
+		struct pva_fence *fence = task->postfences + i;
+
+		switch (fence->type) {
+		case PVA_FENCE_TYPE_SEMAPHORE: {
+			ptr += pva_task_write_ptr_op(&hw_postactions[ptr],
+				TASK_ACT_PTR_WRITE_VAL,
+				task->postfences_sema_ext[i].dma_addr  +
+					fence->semaphore_offset,
+				fence->semaphore_value);
+			break;
+		}
+		default:
+			break;
+		}
+	}
 
 	/* Make a syncpoint increment */
 	ptr += pva_task_write_ptr_op(&hw_postactions[ptr],
@@ -514,7 +572,7 @@ static int pva_task_write(struct pva_submit_task *task, bool atomic)
 	hw_task->output_parameters = offset;
 	offset += sizeof(*hw_output_parameters) * PVA_PARAM_LAST;
 
-	/* Write the postaction list */
+	/* Write the preaction list */
 	err = pva_task_write_preactions(task, hw_preaction_list, &offset);
 	if (err < 0)
 		return err;
@@ -617,6 +675,18 @@ void pva_task_remove(struct pva_submit_task *task)
 	kfree(task->input_task_status);
 	kfree(task->output_task_status);
 
+	/* free all spaces for extensions */
+	kfree(task->prefences_ext);
+	kfree(task->postfences_ext);
+	kfree(task->prefences_sema_ext);
+	kfree(task->postfences_sema_ext);
+	kfree(task->input_surfaces_ext);
+	kfree(task->input_surface_rois_ext);
+	kfree(task->output_surfaces_ext);
+	kfree(task->output_surface_rois_ext);
+	kfree(task->input_task_status_ext);
+	kfree(task->output_task_status_ext);
+
 	memset(task, 0, sizeof(*task));
 }
 
@@ -709,6 +779,8 @@ static int pva_task_submit(struct pva_submit_task *task)
 			fence->syncpoint_value = thresh;
 			break;
 		}
+		case PVA_FENCE_TYPE_SEMAPHORE:
+			break;
 		default:
 			err = -ENOSYS;
 			goto err_write_fences;

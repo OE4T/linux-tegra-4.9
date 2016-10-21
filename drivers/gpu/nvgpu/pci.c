@@ -62,7 +62,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.railgate_delay		= 500,
 	.can_railgate		= false,
 	.can_elpg = false,
-	.enable_elcg = true,
+	.enable_elcg = false,
 	.enable_slcg = true,
 	.enable_blcg = true,
 
@@ -90,7 +90,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.railgate_delay		= 500,
 	.can_railgate		= false,
 	.can_elpg = false,
-	.enable_elcg = true,
+	.enable_elcg = false,
 	.enable_slcg = true,
 	.enable_blcg = true,
 
@@ -118,7 +118,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.railgate_delay		= 500,
 	.can_railgate		= false,
 	.can_elpg = false,
-	.enable_elcg = true,
+	.enable_elcg = false,
 	.enable_slcg = true,
 	.enable_blcg = true,
 

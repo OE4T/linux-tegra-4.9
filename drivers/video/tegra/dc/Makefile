@@ -2,7 +2,6 @@ GCOV_PROFILE := y
 subdir-ccflags-y := -Werror
 EXTRA_CFLAGS += -I../nvhost/drivers/video/tegra/host
 EXTRA_CFLAGS += -Idrivers/video/tegra/host
-ccflags-$(CONFIG_ADF_TEGRA) += -Idrivers/video/tegra -Idrivers/staging/android
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 ccflags-y += -I$(srctree)/../t18x/drivers/video/tegra/dc
 ccflags-y += -I$(srctree)/drivers/video/tegra/dc

@@ -269,9 +269,6 @@ struct tegra_dc {
 
 	struct resource			*fb_mem;
 	struct tegra_fb_info		*fb;
-#ifdef CONFIG_ADF_TEGRA
-	struct tegra_adf_info		*adf;
-#endif
 
 	u32				vblank_syncpt;
 

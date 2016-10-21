@@ -76,10 +76,6 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #include "dpaux.h"
 #include "nvsr.h"
 
-#ifdef CONFIG_ADF_TEGRA
-#include "tegra_adf.h"
-#endif
-
 #include "edid.h"
 
 #ifdef CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT
@@ -1104,18 +1100,6 @@ static ssize_t dbg_dc_event_inject_write(struct file *file,
 	 * We map event 0x0, and 0x1 for them accordingly.  For DC_EXT,
 	 * both events map to HOTPLUG.
 	 */
-#ifdef CONFIG_ADF_TEGRA
-	if (event == 0x0)
-		tegra_adf_process_hotplug_connected(dc->adf, NULL);
-	else if (event == 0x1)
-		tegra_adf_process_hotplug_disconnected(dc->adf);
-	else if (event == 0x2)
-		tegra_adf_process_bandwidth_renegotiate(dc->adf, 0);
-	else {
-		dev_err(&dc->ndev->dev, "Unknown event 0x%lx\n", event);
-		return -EINVAL; /* unknown event number */
-	}
-#endif
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	if (event == 0x0 || event == 0x1) /* TEGRA_DC_EXT_EVENT_HOTPLUG */
 		tegra_dc_ext_process_hotplug(dc->ndev->id);
@@ -4290,9 +4274,6 @@ static void tegra_dc_process_vblank(struct tegra_dc *dc, ktime_t timestamp)
 		complete(&dc->out->user_vblank_comp);
 	}
 	if (test_bit(V_BLANK_USER, &dc->vblank_ref_count)) {
-#ifdef CONFIG_ADF_TEGRA
-		tegra_adf_process_vblank(dc->adf, timestamp);
-#endif
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
 		tegra_dc_ext_process_vblank(dc->ndev->id, timestamp);
 #endif
@@ -6299,23 +6280,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			dc->pdata->fb->yres = mode->v_active;
 		}
 
-#ifdef CONFIG_ADF_TEGRA
-		tegra_dc_io_start(dc);
-		dc->adf = tegra_adf_init(ndev, dc, dc->pdata->fb, fb_mem);
-		tegra_dc_io_end(dc);
-
-		if (IS_ERR(dc->adf)) {
-			tegra_dc_io_start(dc);
-			dc->fb = tegra_fb_register(ndev, dc, dc->pdata->fb,
-				fb_mem);
-			tegra_dc_io_end(dc);
-			if (IS_ERR_OR_NULL(dc->fb)) {
-				dc->fb = NULL;
-				dev_err(&ndev->dev, "failed to register fb\n");
-				goto err_remove_debugfs;
-			}
-		}
-#endif
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
 		tegra_dc_get(dc);
 		dc->fb = tegra_fb_register(ndev, dc, dc->pdata->fb, fb_mem,
@@ -6465,10 +6429,6 @@ static int tegra_dc_remove(struct platform_device *ndev)
 		}
 	}
 
-#ifdef CONFIG_ADF_TEGRA
-	if (dc->adf)
-		tegra_adf_unregister(dc->adf);
-#endif
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	if (dc->ext) {
 		tegra_dc_ext_disable(dc->ext);

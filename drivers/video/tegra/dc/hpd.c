@@ -23,10 +23,6 @@
 #include <video/tegrafb.h>
 #include "dc_priv.h"
 
-#ifdef CONFIG_ADF_TEGRA
-#include "tegra_adf.h"
-#endif
-
 #include "hpd.h"
 
 #define MAX_EDID_READ_ATTEMPTS 5
@@ -70,13 +66,8 @@ static void hpd_disable(struct tegra_hpd_data *data)
 		tegra_dc_disable(data->dc);
 	}
 
-#ifdef CONFIG_ADF_TEGRA
-	if (data->dc->adf)
-		tegra_adf_process_hotplug_disconnected(data->dc->adf);
-#else
 	if (data->dc->fb)
 		tegra_fb_update_monspecs(data->dc->fb, NULL, NULL);
-#endif
 
 	if (data->ops->disable)
 		data->ops->disable(data->drv_data);
@@ -166,9 +157,6 @@ static int recheck_edid(struct tegra_hpd_data *data, int *match)
 
 static void edid_read_notify(struct tegra_hpd_data *data)
 {
-#ifdef CONFIG_ADF_TEGRA
-	tegra_adf_process_hotplug_connected(data->dc->adf, &data->mon_spec);
-#endif
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_fb_update_monspecs(data->dc->fb, &data->mon_spec,
 				(data->ops->get_mode_filter) ?

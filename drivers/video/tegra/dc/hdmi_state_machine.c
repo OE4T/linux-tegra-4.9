@@ -30,10 +30,6 @@
 #include <video/tegrafb.h>
 #include "dc_priv.h"
 
-#ifdef CONFIG_ADF_TEGRA
-#include "tegra_adf.h"
-#endif
-
 #include "hdmi_state_machine.h"
 
 /************************************************************
@@ -187,11 +183,7 @@ static void hdmi_disable_l(struct tegra_dc_hdmi_data *hdmi)
 		tegra_dc_disable(hdmi->dc);
 	}
 	hdmi->dc->connected = false;
-#ifdef CONFIG_ADF_TEGRA
-	tegra_adf_process_hotplug_disconnected(hdmi->dc->adf);
-#else
 	tegra_fb_update_monspecs(hdmi->dc->fb, NULL, NULL);
-#endif
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
 #endif
@@ -279,9 +271,6 @@ static void handle_check_edid_l(struct tegra_dc_hdmi_data *hdmi)
 
 	hdmi->dvi = !(specs.misc & FB_MISC_HDMI);
 
-#ifdef CONFIG_ADF_TEGRA
-	tegra_adf_process_hotplug_connected(hdmi->dc->adf, &specs);
-#endif
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_fb_update_monspecs(hdmi->dc->fb, &specs,
 		tegra_dc_hdmi_mode_filter);

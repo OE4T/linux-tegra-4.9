@@ -45,9 +45,6 @@
 #include "hdmi2.0.h"
 #include "hdmihdcp.h"
 #include "dpaux.h"
-#ifdef CONFIG_ADF_TEGRA
-#include "tegra_adf.h"
-#endif
 #include "hda_dc.h"
 #include "hdmivrr.h"
 
@@ -553,10 +550,6 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 	else
 		mon_spec = NULL;
 
-#ifdef CONFIG_ADF_TEGRA
-	if (dc->adf)
-		tegra_adf_process_hotplug_connected(hdmi->dc->adf, mon_spec);
-#else
 	n_display_timings = 0;
 	/*
 	 * If display timing with non-zero pclk is specified in DT,
@@ -573,7 +566,6 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 					tegra_hdmi_fb_mode_filter);
 		tegra_fb_update_fix(hdmi->dc->fb, mon_spec);
 	}
-#endif
 
 	dc->connected = is_asserted;
 	tegra_dc_ext_process_hotplug(dc->ndev->id);

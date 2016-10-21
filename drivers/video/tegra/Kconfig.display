@@ -177,24 +177,9 @@ config FB_TEGRA
 	help
 	  Framebuffer device support for the Tegra display controller.
 
-config ADF_TEGRA
-	tristate "Tegra ADF driver"
-	depends on TEGRA_DC && ADF
-	default ADF
-	select ADF_FBDEV
-	select ADF_MEMBLOCK
-	help
-	  ADF device support for the Tegra display controller.
-
-config ADF_TEGRA_FBDEV
-	bool "Tegra ADF fbdev support"
-	depends on ADF_TEGRA
-	help
-	  Enables fbdev compatibility in the ADF Tegra driver.
-
 config TEGRA_DC_EXTENSIONS
 	bool "Tegra Display Controller Extensions"
-	depends on TEGRA_DC && ADF_TEGRA = n
+	depends on TEGRA_DC
 	default y
 	help
 	  Provides additional IOCTLs exposing display controller specific features

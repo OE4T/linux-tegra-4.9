@@ -36,9 +36,6 @@
 #include "dc_reg.h"
 #include "dc_config.h"
 #include "dc_priv.h"
-#ifdef CONFIG_ADF_TEGRA
-#include "tegra_adf.h"
-#endif
 
 static int use_dynamic_emc = 1;
 
@@ -527,9 +524,6 @@ static void calc_disp_params(struct tegra_dc *dc,
 static void tegra_dc_process_bandwidth_renegotiate(struct tegra_dc *dc,
 						struct tegra_dc_bw_data *bw)
 {
-#ifdef CONFIG_ADF_TEGRA
-	tegra_adf_process_bandwidth_renegotiate(dc->adf, bw);
-#endif
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_dc_ext_process_bandwidth_renegotiate(dc->ctrl_num, bw);
 #endif

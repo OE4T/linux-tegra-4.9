@@ -15,10 +15,8 @@
 #include <linux/debugfs.h>
 #include "hw_therm_gp106.h"
 
-#ifdef CONFIG_DEBUG_FS
-static int therm_get_internal_sensor_curr_temp(void *data, u64 *val)
+static int gp106_get_internal_sensor_curr_temp(struct gk20a *g, u32 *temp_f24_8)
 {
-	struct gk20a *g = (struct gk20a *)data;
 	int err = 0;
 	u32 readval;
 
@@ -38,7 +36,21 @@ static int therm_get_internal_sensor_curr_temp(void *data, u64 *val)
 	// Convert from F9.5 -> F27.5 -> F24.8.
 	readval &= therm_temp_sensor_tsense_fixed_point_m();
 
-	*val = readval;
+	*temp_f24_8 = readval;
+
+	return err;
+}
+
+#ifdef CONFIG_DEBUG_FS
+static int therm_get_internal_sensor_curr_temp(void *data, u64 *val)
+{
+	struct gk20a *g = (struct gk20a *)data;
+	u32 readval;
+	int err;
+
+	err = gp106_get_internal_sensor_curr_temp(g, &readval);
+	if (!err)
+		*val = readval;
 
 	return err;
 }
@@ -104,4 +116,5 @@ void gp106_init_therm_ops(struct gpu_ops *gops) {
 	gops->therm.therm_debugfs_init = gp106_therm_debugfs_init;
 #endif
 	gops->therm.elcg_init_idle_filters = gp106_elcg_init_idle_filters;
+	gops->therm.get_internal_sensor_curr_temp = gp106_get_internal_sensor_curr_temp;
 }

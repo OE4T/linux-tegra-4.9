@@ -16,12 +16,10 @@
 #include "pmgrpmu.h"
 #include <linux/debugfs.h>
 
-#ifdef CONFIG_DEBUG_FS
-static int pmgr_pwr_devices_get_current_power(void *data, u64 *val)
+int pmgr_pwr_devices_get_power(struct gk20a *g, u32 *val)
 {
 	struct nv_pmu_pmgr_pwr_devices_query_payload payload;
 	int status;
-	struct gk20a *g = (struct gk20a *)data;
 
 	status = pmgr_pmu_pwr_devices_query_blocking(g, 1, &payload);
 	if (status)
@@ -34,11 +32,10 @@ static int pmgr_pwr_devices_get_current_power(void *data, u64 *val)
 	return status;
 }
 
-static int pmgr_pwr_devices_get_current(void *data, u64 *val)
+int pmgr_pwr_devices_get_current(struct gk20a *g, u32 *val)
 {
 	struct nv_pmu_pmgr_pwr_devices_query_payload payload;
 	int status;
-	struct gk20a *g = (struct gk20a *)data;
 
 	status = pmgr_pmu_pwr_devices_query_blocking(g, 1, &payload);
 	if (status)
@@ -51,11 +48,10 @@ static int pmgr_pwr_devices_get_current(void *data, u64 *val)
 	return status;
 }
 
-static int pmgr_pwr_devices_get_current_voltage(void *data, u64 *val)
+int pmgr_pwr_devices_get_voltage(struct gk20a *g, u32 *val)
 {
 	struct nv_pmu_pmgr_pwr_devices_query_payload payload;
 	int status;
-	struct gk20a *g = (struct gk20a *)data;
 
 	status = pmgr_pmu_pwr_devices_query_blocking(g, 1, &payload);
 	if (status)
@@ -68,14 +64,51 @@ static int pmgr_pwr_devices_get_current_voltage(void *data, u64 *val)
 	return status;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(
-		pmgr_power_ctrl_fops, pmgr_pwr_devices_get_current_power, NULL, "%llu\n");
+#ifdef CONFIG_DEBUG_FS
+int pmgr_pwr_devices_get_power_u64(void *data, u64 *p)
+{
+	struct gk20a *g = (struct gk20a *)data;
+	int err;
+	u32 val;
+
+	err = pmgr_pwr_devices_get_power(g, &val);
+	*p = val;
+
+	return err;
+}
+
+int pmgr_pwr_devices_get_current_u64(void *data, u64 *p)
+{
+	struct gk20a *g = (struct gk20a *)data;
+	int err;
+	u32 val;
+
+	err = pmgr_pwr_devices_get_current(g, &val);
+	*p = val;
+
+	return err;
+}
+
+int pmgr_pwr_devices_get_voltage_u64(void *data, u64 *p)
+{
+	struct gk20a *g = (struct gk20a *)data;
+	int err;
+	u32 val;
+
+	err = pmgr_pwr_devices_get_voltage(g, &val);
+	*p = val;
+
+	return err;
+}
 
 DEFINE_SIMPLE_ATTRIBUTE(
-		pmgr_current_ctrl_fops, pmgr_pwr_devices_get_current, NULL, "%llu\n");
+		pmgr_power_ctrl_fops, pmgr_pwr_devices_get_power_u64, NULL, "%llu\n");
 
 DEFINE_SIMPLE_ATTRIBUTE(
-		pmgr_voltage_ctrl_fops, pmgr_pwr_devices_get_current_voltage, NULL, "%llu\n");
+		pmgr_current_ctrl_fops, pmgr_pwr_devices_get_current_u64, NULL, "%llu\n");
+
+DEFINE_SIMPLE_ATTRIBUTE(
+		pmgr_voltage_ctrl_fops, pmgr_pwr_devices_get_voltage_u64, NULL, "%llu\n");
 
 static void pmgr_debugfs_init(struct gk20a *g) {
 	struct gk20a_platform *platform = dev_get_drvdata(g->dev);

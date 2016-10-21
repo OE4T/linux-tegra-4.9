@@ -187,6 +187,24 @@ static int gp106_get_litter_value(struct gk20a *g, int value)
 	return ret;
 }
 
+int gp106_init_gpu_characteristics(struct gk20a *g)
+{
+	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
+
+	int err;
+
+	err = gk20a_init_gpu_characteristics(g);
+	if (err)
+		return err;
+
+	gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_GET_VOLTAGE |
+			NVGPU_GPU_FLAGS_SUPPORT_GET_CURRENT |
+			NVGPU_GPU_FLAGS_SUPPORT_GET_POWER |
+			NVGPU_GPU_FLAGS_SUPPORT_GET_TEMPERATURE;
+
+	return 0;
+}
+
 int gp106_init_hal(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
@@ -224,7 +242,7 @@ int gp106_init_hal(struct gk20a *g)
 
 	gops->name = "gp10x";
 	gops->get_litter_value = gp106_get_litter_value;
-	gops->chip_init_gpu_characteristics = gk20a_init_gpu_characteristics;
+	gops->chip_init_gpu_characteristics = gp106_init_gpu_characteristics;
 	gops->gr_ctx.use_dma_for_fw_bootstrap = true;
 	gops->read_ptimer = gk20a_read_ptimer;
 

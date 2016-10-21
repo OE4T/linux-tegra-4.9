@@ -17,6 +17,6 @@
 u32 volt_pmu_send_load_cmd_to_pmu(struct gk20a *g);
 u32 volt_set_voltage(struct gk20a *g, u32 logic_voltage_uv,
 		u32 sram_voltage_uv);
-u32 volt_get_voltage(struct gk20a *g, u32 volt_domain);
+u32 volt_get_voltage(struct gk20a *g, u32 volt_domain, u32 *voltage_uv);
 
 #endif

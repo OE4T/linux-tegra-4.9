@@ -227,17 +227,7 @@ u32 volt_set_voltage(struct gk20a *g, u32 logic_voltage_uv, u32 sram_voltage_uv)
 
 }
 
-u32 volt_get_voltage(struct gk20a *g, u32 volt_domain)
+u32 volt_get_voltage(struct gk20a *g, u32 volt_domain, u32 *voltage_uv)
 {
-	u32 status = 0;
-	u32 voltage_uv = 0;
-
-	status = volt_rail_get_voltage(g, volt_domain, &voltage_uv);
-	if (status) {
-		gk20a_err(dev_from_gk20a(g),
-			"CTRL_VOLT_DOMAIN_LOGIC get voltage failed");
-		return 0;
-	}
-
-	return voltage_uv;
+	return volt_rail_get_voltage(g, volt_domain, voltage_uv);
 }

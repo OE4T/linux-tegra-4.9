@@ -1678,7 +1678,7 @@ static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 	int ret;
 	struct shdr_device *shdr_dev;
 	struct snd_card *shdr_card;
-	struct tsfw_icm20628_state *st;
+	struct tsfw_icm20628_state *st = NULL;
 
 	shdr_dev = kzalloc(sizeof(*shdr_dev), GFP_KERNEL);
 	if (shdr_dev == NULL) {
@@ -1734,7 +1734,8 @@ static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 
 	mutex_unlock(&snd_cards_lock);
 
-	shdr_dev->snsr_fns = tsfw_icm20628_fns();
+	if (hdev->product == USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE)
+		shdr_dev->snsr_fns = tsfw_icm20628_fns();
 	if (shdr_dev->snsr_fns && shdr_dev->snsr_fns->probe)
 		shdr_dev->snsr_fns->probe(hdev, &st);
 	/* TODO: ret check */

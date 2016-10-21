@@ -44,11 +44,11 @@
 	};
 
 	gpio@2200000 {
-		camera-control {
-			gpio-output-low = <
-				CAM0_RST_L
-				CAM0_PWDN
-				>;
+		camera-control-output-low {
+			gpio-hog;
+			output-low;
+			gpios = <CAM0_RST_L 0 CAM0_PWDN 0>;
+			label = "cam0-rst", "cam0-pwdn";
 		};
 	};
 };

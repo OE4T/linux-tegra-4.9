@@ -23,11 +23,19 @@
 /* camera control gpio definitions */
 / {
 	gpio@2200000 {
-		camera-control {
-			gpio-input = <>;
-			gpio-output-low = <>;
-			gpio-output-high = <
-				CAM0_RST_L>;
+		camera-control-output-high {
+			gpio-hog;
+			output-high;
+			gpios = <CAM0_RST_L 0>;
+			label = "cam0-rst";
+		};
+
+		camera-control-output-low {
+			status = "disabled";
+		};
+
+		camera-control-input {
+			status = "disabled";
 		};
 	};
 

@@ -184,9 +184,7 @@ static void hdmi_disable_l(struct tegra_dc_hdmi_data *hdmi)
 	}
 	hdmi->dc->connected = false;
 	tegra_fb_update_monspecs(hdmi->dc->fb, NULL, NULL);
-#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
-#endif
 }
 
 static void handle_reset_l(struct tegra_dc_hdmi_data *hdmi)
@@ -271,10 +269,8 @@ static void handle_check_edid_l(struct tegra_dc_hdmi_data *hdmi)
 
 	hdmi->dvi = !(specs.misc & FB_MISC_HDMI);
 
-#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_fb_update_monspecs(hdmi->dc->fb, &specs,
 		tegra_dc_hdmi_mode_filter);
-#endif
 #ifdef CONFIG_SWITCH
 	state = tegra_edid_audio_supported(hdmi->edid) ? 1 : 0;
 	switch_set_state(&hdmi->audio_switch, state);
@@ -284,9 +280,7 @@ static void handle_check_edid_l(struct tegra_dc_hdmi_data *hdmi)
 #endif
 	hdmi->dc->connected = true;
 
-#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
-#endif
 
 	if (unlikely(tegra_dc_is_clk_enabled(hdmi->clk))) {
 		/* the only time this should happen is on boot, where the

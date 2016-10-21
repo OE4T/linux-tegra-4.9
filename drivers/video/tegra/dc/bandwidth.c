@@ -524,9 +524,7 @@ static void calc_disp_params(struct tegra_dc *dc,
 static void tegra_dc_process_bandwidth_renegotiate(struct tegra_dc *dc,
 						struct tegra_dc_bw_data *bw)
 {
-#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_dc_ext_process_bandwidth_renegotiate(dc->ctrl_num, bw);
-#endif
 }
 #endif
 

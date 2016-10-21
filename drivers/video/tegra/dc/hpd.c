@@ -72,9 +72,7 @@ static void hpd_disable(struct tegra_hpd_data *data)
 	if (data->ops->disable)
 		data->ops->disable(data->drv_data);
 
-#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_dc_ext_process_hotplug(data->dc->ndev->id);
-#endif
 }
 
 static const char *get_hpd_switch_name(struct tegra_hpd_data *data)
@@ -157,13 +155,11 @@ static int recheck_edid(struct tegra_hpd_data *data, int *match)
 
 static void edid_read_notify(struct tegra_hpd_data *data)
 {
-#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_fb_update_monspecs(data->dc->fb, &data->mon_spec,
 				(data->ops->get_mode_filter) ?
 				(data->ops->get_mode_filter(data->drv_data)) :
 				NULL);
 	tegra_fb_update_fix(data->dc->fb, &data->mon_spec);
-#endif
 #ifdef CONFIG_SWITCH
 	if (data->hpd_switch.name) {
 		switch_set_state(&data->hpd_switch, 1);
@@ -172,9 +168,7 @@ static void edid_read_notify(struct tegra_hpd_data *data)
 #endif
 	data->dc->connected = true;
 
-#ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_dc_ext_process_hotplug(data->dc->ndev->id);
-#endif
 
 	if (data->ops->edid_notify)
 		data->ops->edid_notify(data->drv_data);

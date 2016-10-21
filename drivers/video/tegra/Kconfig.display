@@ -177,17 +177,9 @@ config FB_TEGRA
 	help
 	  Framebuffer device support for the Tegra display controller.
 
-config TEGRA_DC_EXTENSIONS
-	bool "Tegra Display Controller Extensions"
-	depends on TEGRA_DC
-	default y
-	help
-	  Provides additional IOCTLs exposing display controller specific features
-	  to user space applications.
-
 config TEGRA_DC_SCREEN_CAPTURE
 	bool "Tegra Display Screen Capture"
-	depends on TEGRA_DC && TEGRA_DC_EXTENSIONS
+	depends on TEGRA_DC
 	default n
 	help
 	  Say Y here to enable the Tegra Screen Capture support.

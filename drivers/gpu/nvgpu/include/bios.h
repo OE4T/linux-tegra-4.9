@@ -788,4 +788,58 @@ struct vbios_voltage_policy_table_1x_entry {
 #define NV_VBIOS_VPT_ENTRY_PARAM1_SR_SETTLE_TIME_INTERMEDIATE_SHIFT \
 		0
 
+#define VBIOS_THERM_DEVICE_VERSION_1X                                      0x10
+
+#define VBIOS_THERM_DEVICE_1X_HEADER_SIZE_04                         0x00000004
+
+struct therm_device_1x_header {
+	u8 version;
+	u8 header_size;
+	u8 table_entry_size;
+	u8 num_table_entries;
+} ;
+
+struct therm_device_1x_entry {
+	u8 class_id;
+	u8 param0;
+	u8 flags;
+} ;
+
+#define NV_VBIOS_THERM_DEVICE_1X_ENTRY_CLASS_GPU                               0x01
+
+#define NV_VBIOS_THERM_DEVICE_1X_ENTRY_PARAM0_I2C_DEVICE_INDEX_MASK        0xFF
+#define NV_VBIOS_THERM_DEVICE_1X_ENTRY_PARAM0_I2C_DEVICE_INDEX_SHIFT          0
+
+#define VBIOS_THERM_CHANNEL_VERSION_1X                                     0x10
+
+#define VBIOS_THERM_CHANNEL_1X_HEADER_SIZE_09                        0x00000009
+
+struct therm_channel_1x_header {
+	u8 version;
+	u8 header_size;
+	u8 table_entry_size;
+	u8 num_table_entries;
+	u8 gpu_avg_pri_ch_idx;
+	u8 gpu_max_pri_ch_idx;
+	u8 board_pri_ch_idx;
+	u8 mem_pri_ch_idx;
+	u8 pwr_supply_pri_ch_idx;
+};
+
+struct therm_channel_1x_entry {
+	u8 class_id;
+	u8 param0;
+	u8 param1;
+	u8 param2;
+	u8 flags;
+};
+
+#define NV_VBIOS_THERM_CHANNEL_1X_ENTRY_CLASS_DEVICE                       0x01
+
+#define NV_VBIOS_THERM_CHANNEL_1X_ENTRY_PARAM0_DEVICE_INDEX_MASK           0xFF
+#define NV_VBIOS_THERM_CHANNEL_1X_ENTRY_PARAM0_DEVICE_INDEX_SHIFT             0
+
+#define NV_VBIOS_THERM_CHANNEL_1X_ENTRY_PARAM1_DEVICE_PROVIDER_INDEX_MASK  0xFF
+#define NV_VBIOS_THERM_CHANNEL_1X_ENTRY_PARAM1_DEVICE_PROVIDER_INDEX_SHIFT    0
+
 #endif

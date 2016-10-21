@@ -19,6 +19,7 @@
 #include "pmgr/pmgr.h"
 #include "include/bios.h"
 #include "pstate/pstate.h"
+#include "therm/thrm.h"
 
 static int pstate_sw_setup(struct gk20a *g);
 
@@ -46,6 +47,10 @@ int gk20a_init_pstate_support(struct gk20a *g)
 		return err;
 
 	err = clk_fll_sw_setup(g);
+	if (err)
+		return err;
+
+	err = therm_domain_sw_setup(g);
 	if (err)
 		return err;
 
@@ -103,6 +108,10 @@ int gk20a_init_pstate_pmu_support(struct gk20a *g)
 			err);
 		return err;
 	}
+
+	err = therm_domain_pmu_setup(g);
+	if (err)
+		return err;
 
 	err = vfe_var_pmu_setup(g);
 	if (err)

@@ -54,7 +54,11 @@ nvgpu-y += \
 	$(nvgpu-t18x)/volt/volt_rail.o \
 	$(nvgpu-t18x)/volt/volt_dev.o \
 	$(nvgpu-t18x)/volt/volt_policy.o \
-	$(nvgpu-t18x)/volt/volt_pmu.o
+	$(nvgpu-t18x)/volt/volt_pmu.o \
+	$(nvgpu-t18x)/therm/thrm.o \
+	$(nvgpu-t18x)/therm/thrmdev.o \
+	$(nvgpu-t18x)/therm/thrmchannel.o \
+	$(nvgpu-t18x)/therm/thrmpmu.o
 
 nvgpu-$(CONFIG_TEGRA_GK20A) += $(nvgpu-t18x)/gp10b/platform_gp10b_tegra.o
 

@@ -181,6 +181,7 @@ struct pmu_ucode_desc_v1 {
 #define PMU_UNIT_RC		(0x1F)
 #define PMU_UNIT_FECS_MEM_OVERRIDE      (0x1E)
 #define PMU_UNIT_CLK             (0x0D)
+#define PMU_UNIT_THERM           (0x14)
 #define PMU_UNIT_PMGR            (0x18)
 #define PMU_UNIT_VOLT            (0x0E)
 

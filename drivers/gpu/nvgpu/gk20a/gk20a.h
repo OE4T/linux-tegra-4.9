@@ -58,6 +58,7 @@ struct acr_desc;
 #include "clk/clk.h"
 #include "perf/perf.h"
 #include "pmgr/pmgr.h"
+#include "therm/thrm.h"
 #endif
 #include "gm206/bios_gm206.h"
 
@@ -793,6 +794,7 @@ struct gk20a {
 	struct clk_pmupstate clk_pmu;
 	struct perf_pmupstate perf_pmu;
 	struct pmgr_pmupstate pmgr_pmu;
+	struct therm_pmupstate therm_pmu;
 #endif
 
 #ifdef CONFIG_DEBUG_FS

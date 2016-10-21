@@ -1,7 +1,7 @@
 /*
  * GP10B Tegra Platform Interface
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,8 +35,12 @@
 #include "gp10b_sysfs.h"
 #include <linux/platform/tegra/emc_bwmgr.h>
 
-#define GP10B_MAX_SUPPORTED_FREQS 11
-static unsigned long gp10b_freq_table[GP10B_MAX_SUPPORTED_FREQS];
+/* Select every GP10B_FREQ_SELECT_STEP'th frequency from h/w table */
+#define GP10B_FREQ_SELECT_STEP	8
+/* Max number of freq supported in h/w */
+#define GP10B_MAX_SUPPORTED_FREQS 120
+static unsigned long
+gp10b_freq_table[GP10B_MAX_SUPPORTED_FREQS / GP10B_FREQ_SELECT_STEP];
 
 #define TEGRA_GP10B_BW_PER_FREQ 64
 #define TEGRA_DDR4_BW_PER_FREQ 16
@@ -340,22 +344,39 @@ static int gp10b_clk_get_freqs(struct device *dev,
 				unsigned long **freqs, int *num_freqs)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
-	unsigned long min_rate, max_rate, freq_step, rate;
-	int i;
+	unsigned long max_rate;
+	unsigned long new_rate = 0, prev_rate = 0;
+	int i = 0, freq_counter = 0;
 
-	min_rate = clk_round_rate(platform->clk[0], 0);
 	max_rate = clk_round_rate(platform->clk[0], (UINT_MAX - 1));
-	freq_step = (max_rate - min_rate)/(GP10B_MAX_SUPPORTED_FREQS - 1);
-	gk20a_dbg_info("min rate: %ld max rate: %ld freq step %ld\n",
-						min_rate, max_rate, freq_step);
 
-	for (i = 0; i < GP10B_MAX_SUPPORTED_FREQS; i++) {
-		rate = min_rate + i * freq_step;
-		gp10b_freq_table[i] = clk_round_rate(platform->clk[0], rate);
+	/*
+	 * Walk the h/w frequency table and only select
+	 * GP10B_FREQ_SELECT_STEP'th frequencies and
+	 * add MAX freq to last
+	 */
+	for (; i < GP10B_MAX_SUPPORTED_FREQS; ++i) {
+		prev_rate = new_rate;
+		new_rate = clk_round_rate(platform->clk[0], prev_rate + 1);
+
+		if (i % GP10B_FREQ_SELECT_STEP == 0 ||
+				new_rate == max_rate) {
+			gp10b_freq_table[freq_counter++] = new_rate;
+
+			if (new_rate == max_rate)
+				break;
+		}
 	}
+
+	WARN_ON(i == GP10B_MAX_SUPPORTED_FREQS);
+
 	/* Fill freq table */
 	*freqs = gp10b_freq_table;
-	*num_freqs = GP10B_MAX_SUPPORTED_FREQS;
+	*num_freqs = freq_counter;
+
+	gk20a_dbg_info("min rate: %ld max rate: %ld num_of_freq %d\n",
+				gp10b_freq_table[0], max_rate, *num_freqs);
+
 	return 0;
 }
 

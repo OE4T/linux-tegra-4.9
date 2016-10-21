@@ -51,6 +51,7 @@
 #define SENSOR_CONFIG1_TEN_COUNT_SHIFT		24
 #define SENSOR_CONFIG1_TEMP_ENABLE		BIT(31)
 
+#define TS_TEMP_SW_OVERRIDE			0x1d8
 /*
  * SENSOR_CONFIG2 is defined in soctherm.h
  * because, it will be used by tegra_soctherm_fuse.c
@@ -298,6 +299,36 @@ static void enable_tsensor(struct tegra_soctherm *tegra, unsigned int i)
 	writel(val, base + SENSOR_CONFIG1);
 
 	writel(tegra->calib[i], base + SENSOR_CONFIG2);
+}
+
+/**
+ * translate_temp_reverse() - Translates the given temperature from two's
+ * complement to the signed magnitude form used in SOC_THERM registers
+ * @temp:	The temperature to be translated
+ *
+ * The register value returned will have the following bit assignment:
+ * 15:7 magnitude of temperature in (1/2 or 1 degree precision) centigrade
+ * 0 the sign bit of the temperature
+ *
+ * This function is the inverse of the temp_translate() function
+ *
+ * Return: The register value.
+ */
+static u32 translate_temp_reverse(u32 temp)
+{
+	int sign, low_bit;
+	u32 lsb = 0, abs = 0, reg = 0;
+
+	sign = (temp > 0 ? 1 : -1);
+	low_bit = (sign > 0 ? 0 : 1);
+	temp *= sign;
+
+	lsb = ((temp % 1000) > 0) ? 1 : 0;
+	abs = (temp - 500 * lsb) / 1000;
+	abs &= 0xff;
+	reg = ((abs << 8) | (lsb << 7) | low_bit);
+
+	return reg;
 }
 
 /*
@@ -974,6 +1005,49 @@ static const struct file_operations regs_fops = {
 	.release	= single_release,
 };
 
+static int temp_get(void *data, u64 *val)
+{
+	int temp;
+
+	tegra_thermctl_get_temp(data, &temp);
+	*val = temp;
+
+	return 0;
+}
+
+static int temp_set(void *data, u64 val)
+{
+	struct tegra_thermctl_zone *t = data;
+	u32 r;
+
+	r = readl(t->reg);
+	val = translate_temp_reverse((u32)val);
+	r = REG_SET_MASK(r, t->sg->sensor_temp_mask, val);
+	writel(r, t->reg);
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(temp_fops, temp_get, temp_set, "%lld\n");
+
+static int tempoverride_get(void *data, u64 *val)
+{
+	struct tegra_soctherm *tegra = data;
+
+	*val = readl(tegra->regs + TS_TEMP_SW_OVERRIDE);
+	return 0;
+}
+
+static int tempoverride_set(void *data, u64 val)
+{
+	struct tegra_soctherm *tegra = data;
+
+	val = (val) ? 1 : 0;
+	writel(val, tegra->regs + TS_TEMP_SW_OVERRIDE);
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(tempoverride_fops, tempoverride_get,
+		tempoverride_set, "%lld\n");
+
 static void soctherm_debug_init(struct platform_device *pdev)
 {
 	struct tegra_soctherm *tegra = platform_get_drvdata(pdev);
@@ -987,16 +1061,30 @@ static void soctherm_debug_init(struct platform_device *pdev)
 
 	tegra->debugfs_dir = root;
 
-	file = debugfs_create_file("reg_contents", 0644, root,
-				   pdev, &regs_fops);
+	file = debugfs_create_file("reg_contents", 0644, root, pdev,
+			&regs_fops);
+
+	file = (file) ? debugfs_create_file("tempoverride", 0644,
+			root, tegra, &tempoverride_fops) : file;
+
 	if (!file) {
 		dev_err(&pdev->dev, "failed to create debugfs file\n");
 		debugfs_remove_recursive(tegra->debugfs_dir);
 		tegra->debugfs_dir = NULL;
 	}
 }
+
+static void soctherm_debug_temp_add(struct tegra_thermctl_zone *z)
+{
+	char n[32];
+
+	snprintf(n, sizeof(n), "%stemp", z->sg->name);
+	debugfs_create_file(n, 0644, z->ts->debugfs_dir, z, &temp_fops);
+}
+
 #else
-static inline void soctherm_debug_init(struct platform_device *pdev) {}
+static inline void soctherm_debug_temp_add(struct platform_device *pdev) {}
+static void soctherm_tempoverride_init(struct tegra_thermctl_zone *z) {}
 #endif
 
 static int soctherm_clk_enable(struct platform_device *pdev, bool enable)
@@ -1502,6 +1590,8 @@ static int tegra_soctherm_probe(struct platform_device *pdev)
 
 	soctherm_init(pdev);
 
+	soctherm_debug_init(pdev);
+
 	for (i = 0; i < soc->num_ttgs; ++i) {
 		struct tegra_thermctl_zone *zone =
 			devm_kzalloc(&pdev->dev, sizeof(*zone), GFP_KERNEL);
@@ -1514,6 +1604,7 @@ static int tegra_soctherm_probe(struct platform_device *pdev)
 		zone->dev = &pdev->dev;
 		zone->sg = soc->ttgs[i];
 		zone->ts = tegra;
+		soctherm_debug_temp_add(zone);
 
 		z = devm_thermal_zone_of_sensor_register(&pdev->dev,
 							 soc->ttgs[i]->id, zone,
@@ -1533,8 +1624,6 @@ static int tegra_soctherm_probe(struct platform_device *pdev)
 		if (err)
 			goto disable_clocks;
 	}
-
-	soctherm_debug_init(pdev);
 
 	tegra->thermal_irq = platform_get_irq(pdev, 0);
 	if (tegra->thermal_irq < 0) {

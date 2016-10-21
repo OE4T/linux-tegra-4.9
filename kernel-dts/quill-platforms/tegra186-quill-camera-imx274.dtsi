@@ -79,18 +79,21 @@
 	};
 
 	gpio@2200000 {
-		camera-control {
-			gpio-output-low = <
-				CAM1_RST_L
-				>;
+		camera-control-output-low {
+			gpio-hog;
+			gpios = <CAM1_RST_L 0>;
+			output-low;
+			label = "cam1-rst";
 		};
 	};
 
 	gpio@c2f0000 {
-		camera-control {
-			gpio-input = <
-				TEGRA_GPIO_AON(AA, 2)
-				>;
+		camera-control-input {
+			gpio-hog;
+			gpios = <TEGRA_GPIO_AON(AA, 2) 0>;
+			input;
+			label = "cam-input-aa2";
+			status = "okay";
 		};
 	};
 

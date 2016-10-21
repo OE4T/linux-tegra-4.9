@@ -20,20 +20,27 @@
 / {
 	/* Need to enable wifi_en pin during boot for PCIe enumeration */
 	gpio@2200000 {
-		gpio-init-1 = <&wlan_default>;
+		wifi-enable {
+			gpio-hog;
+			gpios = <TEGRA_GPIO(N, 0) 0>;
+			output-high;
+			line-name = "wifi-enable";
+		};
 
-		wlan_default: wlan-default {
-			gpio-output-high = <
-				TEGRA_GPIO(N, 0)
-				>;
+		wifi-wake-ap {
+			gpio-hog;
+			input;
+			label = "wifi-wake-ap";
+			status = "disabled";
 		};
 	};
 
 	gpio@c2f0000 {
-		wlan-default_aon {
-			gpio-input = <
-				TEGRA_GPIO_AON(FF, 3)
-				>;
+		wifi-wake-ap {
+			gpio-hog;
+			gpios = <TEGRA_GPIO_AON(FF, 3) 0>;
+			input;
+			label = "wifi-wake-ap";
 		};
 	};
 

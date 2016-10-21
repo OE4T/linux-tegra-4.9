@@ -137,14 +137,25 @@
 				};
 			};
 			override@1 {
-				target = <&wlan_default>;
+				target = <&tegra_gpio>;
 				_overlay_ {
-					 gpio-input = <
-						 TEGRA_GPIO(C, 0)
-						 >;
-					 gpio-output-high = <
-						 TEGRA_GPIO(B, 6)
-						 >;
+					wifi-wake-ap {
+						status = "okay";
+						gpios = <TEGRA_GPIO(C, 0) 0>;
+					};
+
+					wifi-enable {
+						gpios = <TEGRA_GPIO(B, 6) 0>;
+					};
+				};
+			};
+
+			override@3 {
+				target = <&tegra_gpio_aon>;
+				_overlay_ {
+					wifi-wake-ap {
+						status = "disabled";
+					};
 				};
 			};
 		};

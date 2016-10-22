@@ -3628,13 +3628,19 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 	xudc->usb3_phy = devm_phy_optional_get(&pdev->dev, "usb3");
 	if (IS_ERR(xudc->usb3_phy)) {
 		err = PTR_ERR(xudc->usb3_phy);
-		dev_err(xudc->dev, "failed to get usb3 phy %d\n", err);
+		if (err == -EPROBE_DEFER)
+			dev_info(xudc->dev, "usb3 phy is not available yet\n");
+		else
+			dev_err(xudc->dev, "failed to get usb3 phy %d\n", err);
 		goto disable_regulator;
 	}
 	xudc->utmi_phy = devm_phy_optional_get(&pdev->dev, "usb2");
 	if (IS_ERR(xudc->utmi_phy)) {
 		err = PTR_ERR(xudc->utmi_phy);
-		dev_err(xudc->dev, "failed to get usb2 phy %d\n", err);
+		if (err == -EPROBE_DEFER)
+			dev_info(xudc->dev, "usb2 phy is not available yet\n");
+		else
+			dev_err(xudc->dev, "failed to get usb2 phy %d\n", err);
 		goto disable_regulator;
 	}
 

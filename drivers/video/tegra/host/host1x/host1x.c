@@ -87,6 +87,10 @@ struct nvhost_capability_node {
 	int (*store_func)(struct nvhost_syncpt *sp, const char *buf);
 };
 
+static LIST_HEAD(nvhost_masters);
+static DEFINE_MUTEX(nvhost_masters_lock);
+static bool vhost_init_done;
+
 static int nvhost_ctrlrelease(struct inode *inode, struct file *filp)
 {
 	struct nvhost_ctrl_userctx *priv = filp->private_data;
@@ -144,10 +148,12 @@ static int nvhost_ioctl_ctrl_syncpt_read(struct nvhost_ctrl_userctx *ctx,
 static int nvhost_ioctl_ctrl_syncpt_incr(struct nvhost_ctrl_userctx *ctx,
 	struct nvhost_ctrl_syncpt_incr_args *args)
 {
-	if (!nvhost_syncpt_is_valid_pt(&ctx->dev->syncpt, args->id))
+	struct nvhost_master *host = nvhost_get_syncpt_owner(args->id);
+
+	if (!host)
 		return -EINVAL;
 	trace_nvhost_ioctl_ctrl_syncpt_incr(args->id);
-	nvhost_syncpt_incr(&ctx->dev->syncpt, args->id);
+	nvhost_syncpt_incr(&host->syncpt, args->id);
 	return 0;
 }
 
@@ -900,6 +906,31 @@ int nvhost_update_characteristics(struct platform_device *dev)
 	return 0;
 }
 
+struct nvhost_master *nvhost_get_syncpt_owner(u32 id)
+{
+	struct nvhost_master *host;
+
+	mutex_lock(&nvhost_masters_lock);
+	list_for_each_entry(host, &nvhost_masters, list)
+		if (nvhost_syncpt_is_valid_pt(&host->syncpt, id)) {
+			mutex_unlock(&nvhost_masters_lock);
+			return host;
+		}
+	mutex_unlock(&nvhost_masters_lock);
+	return NULL;
+}
+
+struct nvhost_syncpt *nvhost_get_syncpt_owner_struct(u32 id,
+	struct nvhost_syncpt *default_syncpt)
+{
+	struct nvhost_master *host = nvhost_get_syncpt_owner(id);
+
+	if (!host)
+		return default_syncpt;
+
+	return &host->syncpt;
+}
+
 static int nvhost_probe(struct platform_device *dev)
 {
 	struct nvhost_master *host;
@@ -980,7 +1011,9 @@ static int nvhost_probe(struct platform_device *dev)
 		return err;
 	}
 
-	if (pdata->virtual_dev || host->info.vmserver_owns_engines) {
+	if ((pdata->virtual_dev || host->info.vmserver_owns_engines) &&
+		!vhost_init_done) {
+		vhost_init_done = true;
 		err = nvhost_virt_init(dev, NVHOST_MODULE_NONE);
 		if (err) {
 			dev_err(&dev->dev, "failed to init virt support\n");
@@ -1066,6 +1099,11 @@ static int nvhost_probe(struct platform_device *dev)
 	nvhost_update_characteristics(dev);
 
 	nvhost_vm_init(dev);
+
+	INIT_LIST_HEAD(&host->list);
+	mutex_lock(&nvhost_masters_lock);
+	list_add_tail(&host->list, &nvhost_masters);
+	mutex_unlock(&nvhost_masters_lock);
 
 	dev_info(&dev->dev, "initialized\n");
 	return 0;

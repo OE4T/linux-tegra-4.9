@@ -120,6 +120,9 @@ struct nvhost_master {
 	struct list_head vm_list;
 	struct mutex vm_mutex;
 	struct mutex vm_alloc_mutex;
+
+	/* for nvhost_masters list */
+	struct list_head list;
 };
 
 #ifdef CONFIG_DEBUG_FS
@@ -204,5 +207,9 @@ static inline struct platform_device *nvhost_get_parent(
 	return (_dev->dev.parent && _dev->dev.parent != &platform_bus)
 		? to_platform_device(_dev->dev.parent) : NULL;
 }
+
+struct nvhost_master *nvhost_get_syncpt_owner(u32 id);
+struct nvhost_syncpt *nvhost_get_syncpt_owner_struct(u32 id,
+	struct nvhost_syncpt *default_syncpt);
 
 #endif

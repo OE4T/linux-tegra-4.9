@@ -221,11 +221,14 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 	struct nvhost_waitlist *waiter = NULL;
 	int err = 0, check_count = 0, low_timeout = 0;
 	u32 val, old_val, new_val;
-	struct nvhost_master *host = syncpt_to_dev(sp);
+	struct nvhost_master *host;
 	bool syncpt_poll = false;
 	bool (*syncpt_is_expired)(struct nvhost_syncpt *sp,
 			u32 id,
 			u32 thresh);
+
+	sp = nvhost_get_syncpt_owner_struct(id, sp);
+	host = syncpt_to_dev(sp);
 
 	if (!id || !nvhost_syncpt_is_valid_hw_pt(sp, id))
 		return -EINVAL;
@@ -630,6 +633,8 @@ const char *nvhost_syncpt_get_name_from_id(struct nvhost_syncpt *sp, int id)
 {
 	const char *name = NULL;
 
+	sp = nvhost_get_syncpt_owner_struct(id, sp);
+
 	name = sp->syncpt_names[id];
 
 	return name ? name : "";
@@ -642,6 +647,8 @@ const char *nvhost_syncpt_get_name(struct platform_device *pdev, int id)
 	struct nvhost_syncpt *sp = &host->syncpt;
 	const char *name = NULL;
 
+	sp = nvhost_get_syncpt_owner_struct(id, sp);
+
 	name = sp->syncpt_names[id];
 
 	return name ? name : "";
@@ -651,14 +658,17 @@ EXPORT_SYMBOL_GPL(nvhost_syncpt_get_name);
 static ssize_t syncpt_type_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
+	struct nvhost_syncpt *sp;
 	struct nvhost_syncpt_attr *syncpt_attr =
 		container_of(attr, struct nvhost_syncpt_attr, attr);
+
+	sp = nvhost_get_syncpt_owner_struct(syncpt_attr->id,
+				&syncpt_attr->host->syncpt);
 
 	if (syncpt_attr->id < 0)
 		return snprintf(buf, PAGE_SIZE, "non_client_managed\n");
 
-	if (nvhost_syncpt_client_managed(&syncpt_attr->host->syncpt,
-			syncpt_attr->id))
+	if (nvhost_syncpt_client_managed(sp, syncpt_attr->id))
 		return snprintf(buf, PAGE_SIZE, "%s\n", "client_managed");
 	else
 		return snprintf(buf, PAGE_SIZE, "%s\n", "non_client_managed");
@@ -667,14 +677,17 @@ static ssize_t syncpt_type_show(struct kobject *kobj,
 static ssize_t syncpt_is_assigned(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
+	struct nvhost_syncpt *sp;
 	struct nvhost_syncpt_attr *syncpt_attr =
 		container_of(attr, struct nvhost_syncpt_attr, attr);
+
+	sp = nvhost_get_syncpt_owner_struct(syncpt_attr->id,
+				&syncpt_attr->host->syncpt);
 
 	if (syncpt_attr->id < 0)
 		return snprintf(buf, PAGE_SIZE, "not_assigned\n");
 
-	if (nvhost_is_syncpt_assigned(&syncpt_attr->host->syncpt,
-			syncpt_attr->id))
+	if (nvhost_is_syncpt_assigned(sp, syncpt_attr->id))
 		return snprintf(buf, PAGE_SIZE, "%s\n", "assigned");
 	else
 		return snprintf(buf, PAGE_SIZE, "%s\n", "not_assigned");
@@ -684,43 +697,53 @@ static ssize_t syncpt_is_assigned(struct kobject *kobj,
 static ssize_t syncpt_name_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
+	struct nvhost_master *host;
 	struct nvhost_syncpt_attr *syncpt_attr =
 		container_of(attr, struct nvhost_syncpt_attr, attr);
+
+	host = nvhost_get_syncpt_owner(syncpt_attr->id);
+	if (!host)
+		host = syncpt_attr->host;
 
 	if (syncpt_attr->id < 0)
 		return snprintf(buf, PAGE_SIZE, "\n");
 
 	return snprintf(buf, PAGE_SIZE, "%s\n",
-		nvhost_syncpt_get_name(syncpt_attr->host->dev,
-				       syncpt_attr->id));
+		nvhost_syncpt_get_name(host->dev, syncpt_attr->id));
 }
 
 static ssize_t syncpt_min_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
+	struct nvhost_syncpt *sp;
 	struct nvhost_syncpt_attr *syncpt_attr =
 		container_of(attr, struct nvhost_syncpt_attr, attr);
+
+	sp = nvhost_get_syncpt_owner_struct(syncpt_attr->id,
+				&syncpt_attr->host->syncpt);
 
 	if (syncpt_attr->id < 0)
 		return snprintf(buf, PAGE_SIZE, "0\n");
 
 	return snprintf(buf, PAGE_SIZE, "%u\n",
-			nvhost_syncpt_read(&syncpt_attr->host->syncpt,
-				syncpt_attr->id));
+			nvhost_syncpt_read(sp, syncpt_attr->id));
 }
 
 static ssize_t syncpt_max_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
+	struct nvhost_syncpt *sp;
 	struct nvhost_syncpt_attr *syncpt_attr =
 		container_of(attr, struct nvhost_syncpt_attr, attr);
+
+	sp = nvhost_get_syncpt_owner_struct(syncpt_attr->id,
+				&syncpt_attr->host->syncpt);
 
 	if (syncpt_attr->id < 0)
 		return snprintf(buf, PAGE_SIZE, "0\n");
 
 	return snprintf(buf, PAGE_SIZE, "%u\n",
-			nvhost_syncpt_read_max(&syncpt_attr->host->syncpt,
-				syncpt_attr->id));
+			nvhost_syncpt_read_max(sp, syncpt_attr->id));
 }
 
 #define SYSFS_SP_TIMELINE_ATTR(var, sysfs_name, func) \
@@ -1317,7 +1340,8 @@ void nvhost_syncpt_set_manager(struct nvhost_syncpt *sp, int id, bool client)
 u32 nvhost_syncpt_incr_max_ext(struct platform_device *dev, u32 id, u32 incrs)
 {
 	struct nvhost_master *master = nvhost_get_host(dev);
-	struct nvhost_syncpt *sp = &master->syncpt;
+	struct nvhost_syncpt *sp =
+		nvhost_get_syncpt_owner_struct(id, &master->syncpt);
 	return nvhost_syncpt_incr_max(sp, id, incrs);
 }
 EXPORT_SYMBOL(nvhost_syncpt_incr_max_ext);
@@ -1325,7 +1349,8 @@ EXPORT_SYMBOL(nvhost_syncpt_incr_max_ext);
 void nvhost_syncpt_cpu_incr_ext(struct platform_device *dev, u32 id)
 {
 	struct nvhost_master *master = nvhost_get_host(dev);
-	struct nvhost_syncpt *sp = &master->syncpt;
+	struct nvhost_syncpt *sp =
+		nvhost_get_syncpt_owner_struct(id, &master->syncpt);
 
 	mutex_lock(&sp->cpu_increment_mutex);
 	nvhost_syncpt_cpu_incr(sp, id);
@@ -1336,7 +1361,8 @@ EXPORT_SYMBOL(nvhost_syncpt_cpu_incr_ext);
 int nvhost_syncpt_read_ext_check(struct platform_device *dev, u32 id, u32 *val)
 {
 	struct nvhost_master *master = nvhost_get_host(dev);
-	struct nvhost_syncpt *sp = &master->syncpt;
+	struct nvhost_syncpt *sp =
+		nvhost_get_syncpt_owner_struct(id, &master->syncpt);
 	return nvhost_syncpt_read_check(sp, id, val);
 }
 EXPORT_SYMBOL(nvhost_syncpt_read_ext_check);
@@ -1345,7 +1371,8 @@ int nvhost_syncpt_is_expired_ext(struct platform_device *dev,
 				 u32 id, u32 thresh)
 {
 	struct nvhost_master *master = nvhost_get_host(dev);
-	struct nvhost_syncpt *sp = &master->syncpt;
+	struct nvhost_syncpt *sp =
+		nvhost_get_syncpt_owner_struct(id, &master->syncpt);
 	return nvhost_syncpt_is_expired(sp, id, thresh);
 }
 EXPORT_SYMBOL(nvhost_syncpt_is_expired_ext);
@@ -1354,7 +1381,8 @@ int nvhost_syncpt_wait_timeout_ext(struct platform_device *dev, u32 id,
 	u32 thresh, u32 timeout, u32 *value, struct timespec *ts)
 {
 	struct nvhost_master *master = nvhost_get_host(dev);
-	struct nvhost_syncpt *sp = &master->syncpt;
+	struct nvhost_syncpt *sp =
+		nvhost_get_syncpt_owner_struct(id, &master->syncpt);
 	return nvhost_syncpt_wait_timeout(sp, id, thresh, timeout, value, ts,
 			false);
 }
@@ -1381,7 +1409,8 @@ EXPORT_SYMBOL(nvhost_syncpt_create_fence_single_ext);
 void nvhost_syncpt_set_min_eq_max_ext(struct platform_device *dev, u32 id)
 {
 	struct nvhost_master *master = nvhost_get_host(dev);
-	struct nvhost_syncpt *sp = &master->syncpt;
+	struct nvhost_syncpt *sp =
+		nvhost_get_syncpt_owner_struct(id, &master->syncpt);
 	atomic_set(&sp->min_val[id], atomic_read(&sp->max_val[id]));
 	syncpt_op().reset(sp, id);
 }
@@ -1411,6 +1440,7 @@ EXPORT_SYMBOL(nvhost_syncpt_nb_pts_ext);
 
 void nvhost_syncpt_set_min_eq_max(struct nvhost_syncpt *sp, u32 id)
 {
+	sp = nvhost_get_syncpt_owner_struct(id, sp);
 	atomic_set(&sp->min_val[id], atomic_read(&sp->max_val[id]));
 	syncpt_op().reset(sp, id);
 }
@@ -1420,6 +1450,7 @@ int nvhost_channel_set_syncpoint_name(struct nvhost_syncpt *sp,
 {
 	int ret = 0;
 
+	sp = nvhost_get_syncpt_owner_struct(syncpt_id, sp);
 	mutex_lock(&sp->syncpt_mutex);
 	kfree(sp->syncpt_names[syncpt_id]);
 	ret = nvhost_syncpt_assign_name(sp, syncpt_id, syncpt_name);

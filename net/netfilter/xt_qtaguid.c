@@ -1584,9 +1584,11 @@ static struct sock *qtaguid_find_sk(const struct sk_buff *skb,
 		return NULL;
 
 	switch (par->family) {
+#if defined(CONFIG_IPV6) || defined(CONFIG_IPV6_MODULE)
 	case NFPROTO_IPV6:
 		sk = xt_socket_lookup_slow_v6(dev_net(skb->dev), skb, par->in);
 		break;
+#endif
 	case NFPROTO_IPV4:
 		sk = xt_socket_lookup_slow_v4(dev_net(skb->dev), skb, par->in);
 		break;

@@ -1171,7 +1171,7 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 {
 	char rst_name[6];
 	int err = 0;
-	char vblank_name[32];
+	char syncpt_name[32];
 
 	/* Only need init once no matter how many dc objects */
 	if (!dc->ndev->id) {
@@ -1203,9 +1203,19 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 	nvdisp_pg[dc->ctrl_num].valid_windows = dc->valid_windows;
 
 	/* Allocate a syncpoint for vblank on each head */
-	snprintf(vblank_name, sizeof(vblank_name), "vblank%u", dc->ctrl_num);
+	snprintf(syncpt_name, sizeof(syncpt_name), "vblank%u", dc->ctrl_num);
 	dc->vblank_syncpt = nvhost_get_syncpt_client_managed(dc->ndev,
-								vblank_name);
+								syncpt_name);
+	dev_info(&dc->ndev->dev, "vblank syncpt # %d for dc %d\n",
+		 dc->vblank_syncpt, dc->ctrl_num);
+
+	/* Allocate a syncpoint for vpulse3 on each head */
+	snprintf(syncpt_name, sizeof(syncpt_name), "disp%u.vpulse3",
+			dc->ctrl_num);
+	dc->vpulse3_syncpt = nvhost_get_syncpt_client_managed(dc->ndev,
+								syncpt_name);
+	dev_info(&dc->ndev->dev, "vpulse3 syncpt # %d for dc %d\n",
+		 dc->vpulse3_syncpt, dc->ctrl_num);
 
 #ifdef CONFIG_TEGRA_ISOMGR
 	/* Save reference to isohub bw info */
@@ -1327,6 +1337,10 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 	tegra_nvdisp_set_control(dc);
 
 	tegra_nvdisp_set_color_control(dc);
+
+	/* Enable Vpulse3 scanline signal */
+	tegra_dc_writel(dc, nvdisp_disp_signal_option_v_pulse3_enable_f(),
+			nvdisp_disp_signal_option_r());
 
 	tegra_dc_enable_general_act(dc);
 

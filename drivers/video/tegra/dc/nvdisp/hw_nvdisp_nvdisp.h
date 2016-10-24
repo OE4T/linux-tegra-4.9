@@ -618,6 +618,22 @@ static inline u32 nvdisp_disp_signal_option_r(void)
 {
 	return 0x00000400;
 }
+static inline u32 nvdisp_disp_signal_option_v_pulse2_enable_f(void)
+{
+	return 0x80000;
+}
+static inline u32 nvdisp_disp_signal_option_v_pulse2_enable_v(u32 r)
+{
+	return (r >> 19) & 0x1;
+}
+static inline u32 nvdisp_disp_signal_option_v_pulse3_enable_f(void)
+{
+	return 0x100000;
+}
+static inline u32 nvdisp_disp_signal_option_v_pulse3_enable_v(u32 r)
+{
+	return (r >> 20) & 0x1;
+}
 static inline u32 nvdisp_win_options_r(void)
 {
 	return 0x00000402;

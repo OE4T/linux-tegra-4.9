@@ -1,0 +1,29 @@
+/*
+ * tegra186-quill-kenrel-4.9.dtsi: Quill dts overlay for kernel 4.9 bringup
+ *
+ * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+/ {
+	serial@3100000 {
+		compatible = "nvidia,tegra210-uart", "nvidia,tegra186-hsuart", "nvidia,tegra20-uart";
+		clock-frequency = <408000000>;
+	};
+
+	serial@3110000 {
+		status = "disabled";
+	};
+
+	serial@3130000 {
+		status = "disabled";
+	};
+};

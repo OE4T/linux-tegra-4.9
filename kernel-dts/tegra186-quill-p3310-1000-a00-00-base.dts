@@ -173,5 +173,8 @@
                 tx-config = <8 8 0 64>;
                 rx-config = <64 64 64>;
         };
-
 };
+
+#ifdef KERNEL_VERSION_4_9
+#include "quill-platforms/tegra186-quill-kernel-4.9.dtsi"
+#endif

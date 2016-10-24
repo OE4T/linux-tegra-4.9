@@ -1768,7 +1768,7 @@ static int tegra_spi_probe(struct platform_device *pdev)
 
 	tspi->prod_list = devm_tegra_prod_get(tspi->dev);
 	if (IS_ERR(tspi->prod_list)) {
-		dev_err(&pdev->dev, "Prod settings list not initialized\n");
+		dev_dbg(&pdev->dev, "Prod settings list not initialized\n");
 		tspi->prod_list = NULL;
 	}
 

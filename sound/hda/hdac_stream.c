@@ -70,9 +70,8 @@ EXPORT_SYMBOL_GPL(snd_hdac_stream_start);
  */
 void snd_hdac_stream_clear(struct hdac_stream *azx_dev)
 {
-	snd_hdac_stream_updateb(azx_dev, SD_CTL,
-				SD_CTL_DMA_START | SD_INT_MASK, 0);
-	snd_hdac_stream_writeb(azx_dev, SD_STS, SD_INT_MASK); /* to be sure */
+	snd_hdac_stream_updatel(azx_dev, SD_CTL,
+				SD_CTL_DMA_START | SD_INT_MASK, (SD_INT_MASK << 24));
 	azx_dev->running = false;
 }
 EXPORT_SYMBOL_GPL(snd_hdac_stream_clear);

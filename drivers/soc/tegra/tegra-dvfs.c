@@ -216,7 +216,9 @@ static int dvfs_rail_set_voltage(struct dvfs_rail *rail, int millivolts)
 	rail->resolving_to = true;
 	jmp_to_zero = rail->jmp_to_zero &&
 			((millivolts == 0) || (rail->millivolts == 0));
-	steps = jmp_to_zero ? 1 :
+	if (jmp_to_zero || (rail->in_band_pm && rail->stats.off))
+		steps = 1;
+	else
 		DIV_ROUND_UP(abs(millivolts - rail->millivolts), step);
 
 	for (i = 0; i < steps; i++) {
@@ -342,6 +344,9 @@ static int dvfs_rail_update(struct dvfs_rail *rail)
 	/* Apply offset and min/max limits if any clock is requesting voltage */
 	if (millivolts)
 		millivolts = dvfs_rail_apply_limits(rail, millivolts);
+	/* Keep current voltage if regulator is to be disabled via explicitly */
+	else if (rail->in_band_pm)
+		return 0;
 	/* Keep current voltage if regulator must not be disabled at run time */
 	else if (!rail->jmp_to_zero) {
 		WARN(1, "%s cannot be turned off by dvfs\n", rail->reg_id);
@@ -387,7 +392,7 @@ static int dvfs_rail_connect_to_regulator(struct device *dev,
 		rail->reg = reg;
 	}
 
-	if (!rail->leave_disabled_at_boot) {
+	if (!rail->in_band_pm) {
 		v = regulator_enable(rail->reg);
 		if (v < 0) {
 			pr_err("tegra_dvfs: failed on enabling regulator %s\n, err %d",
@@ -1210,12 +1215,15 @@ bool tegra_dvfs_is_rail_up(struct dvfs_rail *rail)
 	if (!rail)
 		return false;
 
+	if (!rail->in_band_pm)
+		return true;
+
 	return regulator_is_enabled(rail->reg);
 }
 
 int tegra_dvfs_rail_power_up(struct dvfs_rail *rail)
 {
-	if (!rail)
+	if (!rail || !rail->in_band_pm)
 		return -EINVAL;
 
 	return regulator_enable(rail->reg);
@@ -1223,7 +1231,7 @@ int tegra_dvfs_rail_power_up(struct dvfs_rail *rail)
 
 int tegra_dvfs_rail_power_down(struct dvfs_rail *rail)
 {
-	if (!rail)
+	if (!rail || !rail->in_band_pm)
 		return -EINVAL;
 
 	return regulator_disable(rail->reg);

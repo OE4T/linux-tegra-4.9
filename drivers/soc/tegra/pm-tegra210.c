@@ -50,6 +50,25 @@ static struct tegra210_pm_data t210_pm_data;
 static DEFINE_RWLOCK(tegra210_cpu_pm_lock);
 static RAW_NOTIFIER_HEAD(tegra210_cpu_pm_chain);
 
+static void tegra210_bpmp_enable_suspend(int mode, int flags)
+{
+	s32 mb[] = { cpu_to_le32(mode), cpu_to_le32(flags) };
+
+	tegra_bpmp_send(MRQ_ENABLE_SUSPEND, &mb, sizeof(mb));
+}
+
+static int tegra210_bpmp_suspend(void)
+{
+	tegra210_bpmp_enable_suspend(TEGRA_PM_SC7, 0);
+
+	return 0;
+}
+
+static struct syscore_ops bpmp_sc7_suspend_ops = {
+	.suspend = tegra210_bpmp_suspend,
+	.save = tegra210_bpmp_suspend,
+};
+
 static int tegra_of_idle_state_idx_from_name(char *state_name)
 {
 	struct device_node *state_node, *cpu_node;
@@ -351,6 +370,7 @@ static int __init tegra210_pm_init(void)
 
 	tegra210_cpu_pm_register_notifier(&tegra210_cpu_pm_nb);
 	register_cpu_notifier(&tegra210_cpu_nb);
+	register_syscore_ops(&bpmp_sc7_suspend_ops);
 
 out:
 	return 0;

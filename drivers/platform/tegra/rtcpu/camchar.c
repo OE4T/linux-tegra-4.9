@@ -29,6 +29,7 @@
 #include <linux/tegra-ivc-bus.h>
 #include <linux/tegra-ivc-instance.h>
 #include <linux/wait.h>
+#include <linux/sched.h>
 #include <asm/ioctls.h>
 #include <asm/uaccess.h>
 

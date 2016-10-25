@@ -22,7 +22,11 @@
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #include <linux/clk/tegra.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+#include <soc/tegra/fuse.h>
+#else
 #include <linux/tegra-fuse.h>
+#endif
 
 #include "gk20a/gk20a.h"
 #include "hw_trim_gm20b.h"
@@ -239,6 +243,51 @@ found_match:
 }
 
 /* GPCPLL NA/DVFS mode methods */
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+#define FUSE_RESERVED_CALIB 0x204
+
+static inline int fuse_get_gpcpll_adc_rev(u32 val)
+{
+	return (val >> 30) & 0x3;
+}
+
+static inline int fuse_get_gpcpll_adc_slope_uv(u32 val)
+{
+	/*      Integer part in mV  * 1000 + fractional part in uV */
+	return ((val >> 24) & 0x3f) * 1000 + ((val >> 14) & 0x3ff);
+}
+
+static inline int fuse_get_gpcpll_adc_intercept_uv(u32 val)
+{
+	/*      Integer part in mV  * 1000 + fractional part in 100uV */
+	return ((val >> 4) & 0x3ff) * 1000 + ((val >> 0) & 0xf) * 100;
+}
+
+static int tegra_fuse_calib_gpcpll_get_adc(int *slope_uv, int *intercept_uv)
+{
+	u32 val;
+	int ret;
+
+	ret = tegra_fuse_readl(FUSE_RESERVED_CALIB, &val);
+	if (ret)
+		return ret;
+
+	if (!fuse_get_gpcpll_adc_rev(val))
+		return -EINVAL;
+
+	*slope_uv = fuse_get_gpcpll_adc_slope_uv(val);
+	*intercept_uv = fuse_get_gpcpll_adc_intercept_uv(val);
+	return 0;
+}
+
+#ifdef CONFIG_TEGRA_USE_NA_GPCPLL
+static bool tegra_fuse_can_use_na_gpcpll(void)
+{
+	return tegra_sku_info.gpu_speedo_id;
+}
+#endif
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)) */
 
 /*
  * Read ADC characteristic parmeters from fuses.

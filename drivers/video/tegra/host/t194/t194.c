@@ -394,7 +394,7 @@ struct nvhost_device_data t19_nvdla0_info = {
 	.finalize_poweron	= nvhost_nvdla_finalize_poweron,
 	.prepare_poweroff	= nvhost_nvdla_prepare_poweroff,
 	.flcn_isr               = nvhost_nvdla_flcn_isr,
-	.firmware_name		= "nvdla.bin",
+	.firmware_name		= "nvhost_nvdla010.fw",
 	.autosuspend_delay      = 500,
 	.keepalive		= true,
 	.poweron_reset		= true,
@@ -409,7 +409,8 @@ struct nvhost_device_data t19_nvdla1_info = {
 	.devfs_name		= "nvdla1",
 	.class			= NV_DLA1_CLASS_ID,
 	.clocks			= {
-		{"nvdla", UINT_MAX},
+		{"nvdla1", UINT_MAX},
+		{"nvdla1_flcn", UINT_MAX},
 		{"emc", HOST_EMC_FLOOR,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
@@ -418,6 +419,7 @@ struct nvhost_device_data t19_nvdla1_info = {
 	.finalize_poweron	= nvhost_nvdla_finalize_poweron,
 	.prepare_poweroff	= nvhost_nvdla_prepare_poweroff,
 	.flcn_isr               = nvhost_nvdla_flcn_isr,
+	.firmware_name		= "nvhost_nvdla010.fw",
 	.autosuspend_delay      = 500,
 	.keepalive		= true,
 	.poweron_reset		= true,
@@ -425,6 +427,7 @@ struct nvhost_device_data t19_nvdla1_info = {
 	.push_work_done		= true,
 	.ctrl_ops		= &tegra_nvdla_ctrl_ops,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
+	.module_irq		= 1,
 };
 #endif
 

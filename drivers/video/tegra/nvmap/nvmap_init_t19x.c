@@ -22,9 +22,11 @@
 #include <linux/of.h>
 #include <linux/of_reserved_mem.h>
 #include <linux/platform_device.h>
+#include <linux/nvmap_t19x.h>
 
-#include "../../../../include/linux/nvmap_t19x.h"
 #include "nvmap_priv.h"
+
+bool nvmap_version_t19x;
 
 int nvmap_register_cvsram_carveout(struct device *dma_dev,
 		phys_addr_t base, size_t size)
@@ -171,6 +173,24 @@ static int nvmap_gosmem_notifier(struct notifier_block *nb,
 	if ((event != BUS_NOTIFY_BOUND_DRIVER) &&
 		(event != BUS_NOTIFY_UNBIND_DRIVER))
 		return NOTIFY_DONE;
+
+	if ((event == BUS_NOTIFY_BOUND_DRIVER) &&
+		nvmap_dev && (dev == nvmap_dev->dev_user.parent)) {
+		struct of_device_id nvmap_t19x_of_ids[] = {
+			{.compatible = "nvidia,tegra194-carveouts"},
+			{ }
+		};
+
+		/*
+		 * user space IOCTL and dmabuf ops happen much later in boot
+		 * flow. So, setting the version here to ensure all of those
+		 * callbacks can safely query the proper version of nvmap
+		 */
+		if (of_match_node((struct of_device_id *)&nvmap_t19x_of_ids,
+				dev->of_node))
+			nvmap_version_t19x = 1;
+		return NOTIFY_DONE;
+	}
 
 	for (i = 0; i < count; i++)
 		if (cvdev_info[i].np == dev->of_node)

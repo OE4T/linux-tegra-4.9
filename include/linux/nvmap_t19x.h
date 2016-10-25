@@ -41,4 +41,10 @@ struct cv_dev_info {
 
 struct cv_dev_info *nvmap_fetch_cv_dev_info(struct device *dev);
 
+struct nvmap_handle_t19x {
+	atomic_t nc_pin; /* no. of pins from non io coherent devices */
+};
+
+extern bool nvmap_version_t19x;
+
 #endif /* _LINUX_NVMAP_T19x_H */

@@ -2575,7 +2575,15 @@ struct tegra_dc_platform_data
 						pdata->default_out->hdmi_out->
 						hdmi2fpd_bridge_enable);
 			}
+			if (!of_property_read_u32(np_target_disp,
+					"nvidia,edp-lvds-bridge", &temp)) {
+				pdata->default_out->dp_out->
+					edp2lvds_bridge_enable = (bool)temp;
 
+				OF_DC_LOG("edp2lvds_bridge_enabled %d\n",
+						pdata->default_out->dp_out->
+						edp2lvds_bridge_enable);
+			}
 			/* enable/disable ops for DP monitors */
 			if (!pdata->default_out->enable &&
 				!pdata->default_out->disable) {

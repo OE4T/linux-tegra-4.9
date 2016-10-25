@@ -409,6 +409,14 @@ out:
 	return 0;
 }
 
+static void nvmap_handle_get_cacheability(struct nvmap_handle *h,
+		bool *inner, bool *outer)
+{
+	*inner = h->flags == NVMAP_HANDLE_CACHEABLE ||
+		 h->flags == NVMAP_HANDLE_INNER_CACHEABLE;
+	*outer = h->flags == NVMAP_HANDLE_CACHEABLE;
+}
+
 int __nvmap_do_cache_maint(struct nvmap_client *client,
 			struct nvmap_handle *h,
 			unsigned long start, unsigned long end,
@@ -438,9 +446,7 @@ int __nvmap_do_cache_maint(struct nvmap_client *client,
 	cache_op.start = start;
 	cache_op.end = end;
 	cache_op.op = op;
-	cache_op.inner = h->flags == NVMAP_HANDLE_CACHEABLE ||
-			 h->flags == NVMAP_HANDLE_INNER_CACHEABLE;
-	cache_op.outer = h->flags == NVMAP_HANDLE_CACHEABLE;
+	nvmap_handle_get_cacheability(h, &cache_op.inner, &cache_op.outer);
 	cache_op.clean_only_dirty = clean_only_dirty;
 
 	nvmap_stats_inc(NS_CFLUSH_RQ, end - start);
@@ -525,11 +531,19 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
 	if (nvmap_cache_maint_by_set_ways)
 		thresh = cache_maint_inner_threshold;
 
-	for (i = 0; i < nr; i++)
+	for (i = 0; i < nr; i++) {
+		bool inner, outer;
+
+		nvmap_handle_get_cacheability(handles[i], &inner, &outer);
+
+		if (!inner && !outer)
+			continue;
+
 		if ((op == NVMAP_CACHE_OP_WB) && nvmap_handle_track_dirty(handles[i]))
 			total += atomic_read(&handles[i]->pgalloc.ndirty);
 		else
 			total += sizes[i] ? sizes[i] : handles[i]->size;
+	}
 
 	if (!total)
 		return 0;

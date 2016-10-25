@@ -38,6 +38,21 @@
 					nvdisplay@15220000 {
 						status = "okay";
 					};
+					dsi {
+						status = "okay";
+						panel-s-wuxga-8-0 {
+							status = "okay";
+						};
+					};
+					sor {
+						status = "okay";
+						dp-display {
+							status = "okay";
+						};
+					};
+					dpaux@155c0000 {
+						status = "okay";
+					};
 				};
 			};
 			overrides@3 {
@@ -83,6 +98,21 @@
 						status = "okay";
 					};
 					nvdisplay@15220000 {
+						status = "okay";
+					};
+					dsi {
+						status = "okay";
+						panel-s-wuxga-8-0 {
+							status = "okay";
+						};
+					};
+					sor {
+						status = "okay";
+						dp-display {
+							status = "okay";
+						};
+					};
+					dpaux@155c0000 {
 						status = "okay";
 					};
 				};

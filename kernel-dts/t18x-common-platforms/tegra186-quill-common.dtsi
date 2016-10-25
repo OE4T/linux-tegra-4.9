@@ -283,9 +283,9 @@
 
 		dsi {	/* dsi@15300000 */
 			nvidia,dsi-controller-vs = <DSI_VS_1>;
-			status = "okay";
+			status = "disabled";
 			panel-s-wuxga-8-0 {
-				status = "okay";
+				status = "disabled";
 				nvidia,panel-rst-gpio = <&tegra_gpio TEGRA_GPIO(P, 3) 1>; /* PP3 */
 				nvidia,panel-bl-pwm-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(U, 0) 1>; /* PU0 */
 				nvidia,panel-bl-en-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(U, 3) 1>; /* PU3 */
@@ -544,7 +544,7 @@
 		};
 
 		sor{
-			status = "okay";
+			status = "disabled";
 			nvidia,xbar-ctrl = <0 1 2 3 4>;
 			nvidia,audio-switch-name = "dp_audio";
 			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 0) GPIO_ACTIVE_LOW>;
@@ -572,7 +572,7 @@
 			};
 		};
 		dpaux@155c0000 {
-			status = "okay";
+			status = "disabled";
 		};
 		dpaux@15040000 {
 			status = "okay";

@@ -412,27 +412,6 @@ static int gk20a_init_clk_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-struct clk *gk20a_clk_get(struct gk20a *g)
-{
-	if (!g->clk.tegra_clk) {
-		struct clk *clk;
-		char clk_dev_id[32];
-		struct device *dev = dev_from_gk20a(g);
-
-		snprintf(clk_dev_id, 32, "tegra_%s", dev_name(dev));
-
-		clk = clk_get_sys(clk_dev_id, "gpu");
-		if (IS_ERR(clk)) {
-			gk20a_err(dev, "fail to get tegra gpu clk %s/gpu\n",
-				  clk_dev_id);
-			return NULL;
-		}
-		g->clk.tegra_clk = clk;
-	}
-
-	return g->clk.tegra_clk;
-}
-
 static int gk20a_init_clk_setup_sw(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
@@ -707,26 +686,6 @@ void gk20a_init_clk_ops(struct gpu_ops *gops)
 	gops->clk.disable_slowboot = gk20a_clk_disable_slowboot;
 	gops->clk.init_clk_support = gk20a_init_clk_support;
 	gops->clk.suspend_clk_support = gk20a_suspend_clk_support;
-}
-
-unsigned long gk20a_clk_get_rate(struct gk20a *g)
-{
-	struct clk_gk20a *clk = &g->clk;
-	return rate_gpc2clk_to_gpu(clk->gpc_pll.freq);
-}
-
-long gk20a_clk_round_rate(struct gk20a *g, unsigned long rate)
-{
-	/* make sure the clock is available */
-	if (!gk20a_clk_get(g))
-		return rate;
-
-	return clk_round_rate(clk_get_parent(g->clk.tegra_clk), rate);
-}
-
-int gk20a_clk_set_rate(struct gk20a *g, unsigned long rate)
-{
-	return clk_set_rate(g->clk.tegra_clk, rate);
 }
 
 #ifdef CONFIG_DEBUG_FS

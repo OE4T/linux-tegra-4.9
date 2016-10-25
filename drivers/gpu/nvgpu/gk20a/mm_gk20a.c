@@ -914,13 +914,13 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 	int err;
 
 	static struct gk20a_alloc_carveout wpr_co =
-		GK20A_CARVEOUT("wpr-region",
-			       NVGPU_VIDMEM_BOOTSTRAP_ALLOCATOR_BASE, SZ_16M);
+		GK20A_CARVEOUT("wpr-region", 0, SZ_16M);
 
 	if (!size)
 		return 0;
 
-	bootstrap_base = NVGPU_VIDMEM_BOOTSTRAP_ALLOCATOR_BASE;
+	wpr_co.base = size - SZ_256M;
+	bootstrap_base = wpr_co.base;
 	bootstrap_size = SZ_16M;
 	base = default_page_size;
 

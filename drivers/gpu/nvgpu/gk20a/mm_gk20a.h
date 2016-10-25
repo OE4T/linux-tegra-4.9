@@ -51,8 +51,6 @@ enum gk20a_aperture {
 	APERTURE_VIDMEM
 };
 
-#define NVGPU_VIDMEM_BOOTSTRAP_ALLOCATOR_BASE	0x18000000
-
 static inline const char *gk20a_aperture_str(enum gk20a_aperture aperture)
 {
 	switch (aperture) {

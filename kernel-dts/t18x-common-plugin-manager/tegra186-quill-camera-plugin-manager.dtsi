@@ -73,7 +73,8 @@
 				target = <&cam_module0_drivernode1>;
 				_overlay_ {
 					status = "okay";
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
+					proc-device-tree = "/proc/device-tree/e3326_lens_ov5693@P5V27C/";
 				};
 			};
 			/* Enable VI ports */
@@ -550,7 +551,8 @@
 				target = <&cam_module0_drivernode1>;
 				_overlay_ {
 					status = "okay";
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
+					proc-device-tree = "/proc/device-tree/e3333_lens_ov5693@P5V27C/";
 				};
 			};
 			/* Camera 0: VI */
@@ -633,7 +635,8 @@
 				target = <&cam_module1_drivernode1>;
 				_overlay_ {
 					status = "okay";
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
+					proc-device-tree = "/proc/device-tree/e3333_lens_ov5693@P5V27C/";
 				};
 			};
 			/* Camera 1: VI */
@@ -716,7 +719,8 @@
 				target = <&cam_module2_drivernode1>;
 				_overlay_ {
 					status = "okay";
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
+					proc-device-tree = "/proc/device-tree/e3333_lens_ov5693@P5V27C/";
 				};
 			};
 			/* Camera 2: VI */
@@ -799,7 +803,8 @@
 				target = <&cam_module3_drivernode1>;
 				_overlay_ {
 					status = "okay";
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
+					proc-device-tree = "/proc/device-tree/e3333_lens_ov5693@P5V27C/";
 				};
 			};
 			/* Camera 3: VI */
@@ -882,7 +887,8 @@
 				target = <&cam_module4_drivernode1>;
 				_overlay_ {
 					status = "okay";
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
+					proc-device-tree = "/proc/device-tree/e3333_lens_ov5693@P5V27C/";
 				};
 			};
 			/* Camera 4: VI */
@@ -965,7 +971,8 @@
 				target = <&cam_module5_drivernode1>;
 				_overlay_ {
 					status = "okay";
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
+					proc-device-tree = "/proc/device-tree/e3333_lens_ov5693@P5V27C/";
 				};
 			};
 			/* Camera 5: VI */
@@ -1149,7 +1156,7 @@
 				target = <&cam_module0_drivernode1>;
 				_overlay_ {
 					status = "okay";
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
 				};
 			};
 			/* Camera 0: VI */
@@ -1232,7 +1239,7 @@
 				target = <&cam_module1_drivernode1>;
 				_overlay_ {
 					status = "okay";
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
 				};
 			};
 			/* Camera 1: VI */
@@ -1315,7 +1322,7 @@
 				target = <&cam_module2_drivernode1>;
 				_overlay_ {
 					status = "okay";
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
 				};
 			};
 			/* Camera 2: VI */
@@ -1398,7 +1405,7 @@
 				target = <&cam_module3_drivernode1>;
 				_overlay_ {
 					status = "okay";
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
 				};
 			};
 			/* Camera 3: VI */
@@ -1481,7 +1488,7 @@
 				target = <&cam_module4_drivernode1>;
 				_overlay_ {
 					status = "okay";
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
 				};
 			};
 			/* Camera 4: VI */
@@ -1564,7 +1571,7 @@
 				target = <&cam_module5_drivernode1>;
 				_overlay_ {
 					status = "okay";
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
 				};
 			};
 			/* Camera 5: VI */
@@ -1709,7 +1716,7 @@
 				target = <&cam_module0_drivernode1>;
 				_overlay_ {
 					status = "okay";
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
 				};
 			};
 			/* Enable VI ports */

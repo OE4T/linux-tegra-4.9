@@ -1324,6 +1324,14 @@
 		};
 	};
 
+	e3333_lens_ov5693@P5V27C {
+		min_focus_distance = "0.0";
+		hyper_focal = "0.0";
+		focal_length = "2.67";
+		f_number = "2.0";
+		aperture = "2.0";
+	};
+
 	tegra-camera-platform {
 		compatible = "nvidia, tegra-camera-platform";
 		/**
@@ -1382,7 +1390,8 @@
 					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@0/ov5693_a@36";
 				};
 				drivernode1 {
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
+					proc-device-tree = "/proc/device-tree/e3333_lens_ov5693@P5V27C/";
 				};
 			};
 			module1 {
@@ -1395,7 +1404,8 @@
 					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@1/ov5693_b@36";
 				};
 				drivernode1 {
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
+					proc-device-tree = "/proc/device-tree/e3333_lens_ov5693@P5V27C/";
 				};
 			};
 			module2 {
@@ -1408,7 +1418,8 @@
 					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@2/ov5693_c@36";
 				};
 				drivernode1 {
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
+					proc-device-tree = "/proc/device-tree/e3333_lens_ov5693@P5V27C/";
 				};
 			};
 			module3 {
@@ -1421,7 +1432,8 @@
 					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@3/ov5693_d@36";
 				};
 				drivernode1 {
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
+					proc-device-tree = "/proc/device-tree/e3333_lens_ov5693@P5V27C/";
 				};
 			};
 			module4 {
@@ -1434,7 +1446,8 @@
 					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@4/ov5693_d@36";
 				};
 				drivernode1 {
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
+					proc-device-tree = "/proc/device-tree/e3333_lens_ov5693@P5V27C/";
 				};
 			};
 			module5 {
@@ -1447,7 +1460,8 @@
 					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@5/ov5693_e@36";
 				};
 				drivernode1 {
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
+					proc-device-tree = "/proc/device-tree/e3333_lens_ov5693@P5V27C/";
 				};
 			};
 		};

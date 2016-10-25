@@ -250,6 +250,14 @@
 		};
 	};
 
+	e3326_lens_ov5693@P5V27C {
+		min_focus_distance = "0.0";
+		hyper_focal = "0.0";
+		focal_length = "2.67";
+		f_number = "2.0";
+		aperture = "2.0";
+	};
+
 	tegra-camera-platform {
 		compatible = "nvidia, tegra-camera-platform";
 		/**
@@ -310,7 +318,8 @@
 				};
 				drivernode1 {
 					/* Declare PCL support driver (classically known as guid)  */
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
+					proc-device-tree = "/proc/device-tree/e3326_lens_ov5693@P5V27C/";
 				};
 			};
 		};

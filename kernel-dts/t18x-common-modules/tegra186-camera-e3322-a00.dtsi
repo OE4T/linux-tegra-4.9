@@ -600,7 +600,7 @@
 					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@0/imx219_a@10";
 				};
 				drivernode1 {
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
 				};
 			};
 			module1 {
@@ -613,7 +613,7 @@
 					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@1/imx219_b@10";
 				};
 				drivernode1 {
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
 				};
 			};
 			module2 {
@@ -626,7 +626,7 @@
 					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@2/imx219_c@10";
 				};
 				drivernode1 {
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
 				};
 			};
 			module3 {
@@ -639,7 +639,7 @@
 					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@3/imx219_d@10";
 				};
 				drivernode1 {
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
 				};
 			};
 			module4 {
@@ -652,7 +652,7 @@
 					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@4/imx219_e@10";
 				};
 				drivernode1 {
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
 				};
 			};
 			module5 {
@@ -665,7 +665,7 @@
 					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@5/imx219_f@10";
 				};
 				drivernode1 {
-					pcl_id = "v4l2_focuser_stub";
+					pcl_id = "v4l2_lens";
 				};
 			};
 		};

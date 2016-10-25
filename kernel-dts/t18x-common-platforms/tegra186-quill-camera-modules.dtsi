@@ -277,8 +277,7 @@
 				};
 				cam_module0_drivernode1: drivernode1 {
 					status = "disabled";
-					pcl_id = "v4l2_focuser_stub";
-					proc-device-tree = "";
+					pcl_id = "v4l2_lens";
 				};
 			};
 			cam_module1: module1 {
@@ -288,8 +287,7 @@
 				};
 				cam_module1_drivernode1: drivernode1 {
 					status = "disabled";
-					pcl_id = "v4l2_focuser_stub";
-					proc-device-tree = "";
+					pcl_id = "v4l2_lens";
 				};
 			};
 			cam_module2: module2 {
@@ -299,8 +297,7 @@
 				};
 				cam_module2_drivernode1: drivernode1 {
 					status = "disabled";
-					pcl_id = "v4l2_focuser_stub";
-					proc-device-tree = "";
+					pcl_id = "v4l2_lens";
 				};
 			};
 			cam_module3: module3 {
@@ -310,8 +307,7 @@
 				};
 				cam_module3_drivernode1: drivernode1 {
 					status = "disabled";
-					pcl_id = "v4l2_focuser_stub";
-					proc-device-tree = "";
+					pcl_id = "v4l2_lens";
 				};
 			};
 			cam_module4: module4 {
@@ -321,8 +317,7 @@
 				};
 				cam_module4_drivernode1: drivernode1 {
 					status = "disabled";
-					pcl_id = "v4l2_focuser_stub";
-					proc-device-tree = "";
+					pcl_id = "v4l2_lens";
 				};
 			};
 			cam_module5: module5 {
@@ -332,8 +327,7 @@
 				};
 				cam_module5_drivernode1: drivernode1 {
 					status = "disabled";
-					pcl_id = "v4l2_focuser_stub";
-					proc-device-tree = "";
+					pcl_id = "v4l2_lens";
 				};
 			};
 		};

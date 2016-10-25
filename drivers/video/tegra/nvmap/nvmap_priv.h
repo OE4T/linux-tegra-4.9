@@ -193,6 +193,12 @@ struct nvmap_handle {
 	int peer;		/* Peer VM number */
 };
 
+struct nvmap_handle_info {
+	struct nvmap_handle *handle;
+	struct list_head maps;
+	struct mutex maps_lock;
+};
+
 struct nvmap_tag_entry {
 	struct rb_node node;
 	atomic_t ref;		/* reference count (i.e., # of duplications) */
@@ -415,6 +421,8 @@ struct nvmap_handle_ref *nvmap_try_duplicate_by_ivmid(
 struct nvmap_handle_ref *nvmap_create_handle_from_fd(
 			struct nvmap_client *client, int fd);
 
+void nvmap_handle_get_cacheability(struct nvmap_handle *h,
+		bool *inner, bool *outer);
 void inner_cache_maint(unsigned int op, void *vaddr, size_t size);
 void outer_cache_maint(unsigned int op, phys_addr_t paddr, size_t size);
 
@@ -443,6 +451,16 @@ struct nvmap_handle *nvmap_handle_get_from_dmabuf_fd(
 				struct nvmap_client *client, int fd);
 int nvmap_dmabuf_duplicate_gen_fd(struct nvmap_client *client,
 		struct dma_buf *dmabuf);
+struct sg_table *nvmap_dmabuf_map_dma_buf(
+	struct dma_buf_attachment *attach, enum dma_data_direction dir);
+struct sg_table *_nvmap_dmabuf_map_dma_buf(
+	struct dma_buf_attachment *attach, enum dma_data_direction dir);
+void nvmap_dmabuf_unmap_dma_buf(struct dma_buf_attachment *attach,
+				       struct sg_table *sgt,
+				       enum dma_data_direction dir);
+void _nvmap_dmabuf_unmap_dma_buf(struct dma_buf_attachment *attach,
+				       struct sg_table *sgt,
+				       enum dma_data_direction dir);
 
 int nvmap_get_handle_param(struct nvmap_client *client,
 		struct nvmap_handle_ref *ref, u32 param, u64 *result);

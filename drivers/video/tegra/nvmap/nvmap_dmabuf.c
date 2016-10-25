@@ -45,12 +45,6 @@
 #define nvmap_masid_mapping(attach)   NULL
 #endif
 
-struct nvmap_handle_info {
-	struct nvmap_handle *handle;
-	struct list_head maps;
-	struct mutex maps_lock;
-};
-
 /**
  * List node for maps of nvmap handles via the dma_buf API. These store the
  * necessary info for stashing mappings.
@@ -365,7 +359,7 @@ static struct sg_table *__nvmap_dmabuf_get_sgt_locked(
 /*
  * If stashing is disabled then the stash related ops become no-ops.
  */
-static struct sg_table *nvmap_dmabuf_map_dma_buf(
+struct sg_table *_nvmap_dmabuf_map_dma_buf(
 	struct dma_buf_attachment *attach, enum dma_data_direction dir)
 {
 	struct nvmap_handle_info *info = attach->dmabuf->priv;
@@ -430,7 +424,13 @@ err_map:
 	return ERR_PTR(-ENOMEM);
 }
 
-static void nvmap_dmabuf_unmap_dma_buf(struct dma_buf_attachment *attach,
+__weak struct sg_table *nvmap_dmabuf_map_dma_buf(
+	struct dma_buf_attachment *attach, enum dma_data_direction dir)
+{
+	return _nvmap_dmabuf_map_dma_buf(attach, dir);
+}
+
+void _nvmap_dmabuf_unmap_dma_buf(struct dma_buf_attachment *attach,
 				       struct sg_table *sgt,
 				       enum dma_data_direction dir)
 {
@@ -446,6 +446,13 @@ static void nvmap_dmabuf_unmap_dma_buf(struct dma_buf_attachment *attach,
 	}
 	__nvmap_dmabuf_stash_sgt_locked(attach, dir, sgt);
 	mutex_unlock(&info->maps_lock);
+}
+
+__weak void nvmap_dmabuf_unmap_dma_buf(struct dma_buf_attachment *attach,
+				       struct sg_table *sgt,
+				       enum dma_data_direction dir)
+{
+	_nvmap_dmabuf_unmap_dma_buf(attach, sgt, dir);
 }
 
 static void nvmap_dmabuf_release(struct dma_buf *dmabuf)

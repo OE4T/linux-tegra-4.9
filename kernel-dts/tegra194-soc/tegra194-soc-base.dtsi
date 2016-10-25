@@ -242,6 +242,18 @@
 			#stream-id-cells = <1>;
 		};
 
+		nvdla1@158c0000 {
+			compatible = "nvidia,tegra194-nvdla";
+			reg = <0x0 0x158c0000 0x0 0x00040000>;
+			interrupts = <0 237 0x04>;
+
+			clocks = <&bpmp_clks TEGRA194_CLK_DLA1_CORE>,
+				 <&bpmp_clks TEGRA194_CLK_DLA1_FALCON>;
+			clock-names = "nvdla1", "nvdla1_flcn";
+
+			#stream-id-cells = <1>;
+		};
+
 		nvdisplay@15200000 {
 			compatible = "nvidia,tegra186-dc";
 			reg = <0x0 0x15200000 0x0 0x10000>;

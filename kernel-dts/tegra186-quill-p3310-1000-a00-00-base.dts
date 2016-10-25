@@ -135,7 +135,10 @@
 
 	host1x {
 		sor {
-			status = "okay";
+			status = "disabled";
+			dp-display {
+				status = "disabled";
+			};
 			hdmi-display {
 				status = "disabled";
 			};

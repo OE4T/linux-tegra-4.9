@@ -969,6 +969,9 @@ struct gk20a {
 	/* PCIe power states. */
 	bool xve_l0s;
 	bool xve_l1;
+
+	/* Current warning temp in sfxp24.8 */
+	s32 curr_warn_temp;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)

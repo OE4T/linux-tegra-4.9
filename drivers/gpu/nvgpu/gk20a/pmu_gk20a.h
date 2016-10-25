@@ -28,6 +28,7 @@
 #include "pmuif/gpmuifperf.h"
 #include "pmuif/gpmuifpmgr.h"
 #include "pmuif/gpmuifvolt.h"
+#include "pmuif/gpmuiftherm.h"
 
 /* defined by pmu hw spec */
 #define GK20A_PMU_VA_SIZE		(512 * 1024 * 1024)
@@ -365,6 +366,7 @@ struct pmu_cmd {
 		struct nv_pmu_volt_cmd volt;
 		struct nv_pmu_clk_cmd clk;
 		struct nv_pmu_pmgr_cmd pmgr;
+		struct nv_pmu_therm_cmd therm;
 	} cmd;
 };
 
@@ -382,6 +384,7 @@ struct pmu_msg {
 		struct nv_pmu_volt_msg volt;
 		struct nv_pmu_clk_msg clk;
 		struct nv_pmu_pmgr_msg pmgr;
+		struct nv_pmu_therm_msg therm;
 	} msg;
 };
 

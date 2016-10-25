@@ -117,10 +117,12 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/gm20b/vgpu_hal_gm20b.o \
 	vgpu/gm20b/vgpu_gr_gm20b.o
 
-nvgpu-$(CONFIG_TEGRA_CLK_FRAMEWORK) += \
-	gm20b/clk_gm20b.o \
-	gk20a/clk_gk20a.o \
-	clk/clk_common.o
+nvgpu-$(CONFIG_TEGRA_CLK_FRAMEWORK) += gk20a/clk_gk20a.o
+ifneq (,$filter y,$(CONFIG_TEGRA_CLK_FRAMEWORK),$(CONFIG_COMMON_CLK))
+nvgpu-y += \
+	clk/clk_common.o \
+	gm20b/clk_gm20b.o
+endif
 
 nvgpu-$(CONFIG_GK20A_DEVFREQ) += \
 	gk20a/gk20a_scale.o

@@ -629,11 +629,13 @@ static int tegra_dc_dp_i2c_write(struct tegra_dc_dp_data *dp, u32 i2c_addr,
 		return ret;
 
 	mutex_lock(&dp->dpaux_lock);
+	tegra_dc_io_start(dp->dc);
 
 	ret = tegra_dc_dpaux_write_chunk_locked(dp,
 			DPAUX_DP_AUXCTL_CMD_MOTWR,
 			i2c_addr, data, size, aux_stat);
 
+	tegra_dc_io_end(dp->dc);
 	mutex_unlock(&dp->dpaux_lock);
 
 	return ret;

@@ -1190,8 +1190,6 @@ struct nvgpu_preemption_mode_args {
 	_IOWR(NVGPU_IOCTL_MAGIC, 18, struct nvgpu_set_timeout_ex_args)
 #define NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO	\
 	_IOW(NVGPU_IOCTL_MAGIC,  100, struct nvgpu_alloc_gpfifo_args)
-#define NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO_EX	\
-	_IOW(NVGPU_IOCTL_MAGIC,  101, struct nvgpu_alloc_gpfifo_ex_args)
 #define NVGPU_IOCTL_CHANNEL_WAIT		\
 	_IOWR(NVGPU_IOCTL_MAGIC, 102, struct nvgpu_wait_args)
 #define NVGPU_IOCTL_CHANNEL_CYCLE_STATS	\
@@ -1228,9 +1226,11 @@ struct nvgpu_preemption_mode_args {
 	_IOW(NVGPU_IOCTL_MAGIC, 121, struct nvgpu_timeslice_args)
 #define NVGPU_IOCTL_CHANNEL_SET_PREEMPTION_MODE \
 	_IOW(NVGPU_IOCTL_MAGIC, 122, struct nvgpu_preemption_mode_args)
+#define NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO_EX	\
+	_IOW(NVGPU_IOCTL_MAGIC, 123, struct nvgpu_alloc_gpfifo_ex_args)
 
 #define NVGPU_IOCTL_CHANNEL_LAST	\
-	_IOC_NR(NVGPU_IOCTL_CHANNEL_SET_PREEMPTION_MODE)
+	_IOC_NR(NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO_EX)
 #define NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvgpu_alloc_gpfifo_ex_args)
 
 /*

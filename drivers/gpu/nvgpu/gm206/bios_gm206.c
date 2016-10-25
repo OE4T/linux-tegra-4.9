@@ -704,7 +704,7 @@ static int gm206_bios_devinit(struct gk20a *g)
 {
 	int retries = PMU_BOOT_TIMEOUT_MAX / PMU_BOOT_TIMEOUT_DEFAULT;
 	int err = 0;
-	int val;
+	int devinit_completed;
 
 	gk20a_dbg_fn("");
 	g->ops.pmu.reset(g);
@@ -752,10 +752,12 @@ static int gm206_bios_devinit(struct gk20a *g)
 
 	retries = PMU_BOOT_TIMEOUT_MAX / PMU_BOOT_TIMEOUT_DEFAULT;
 	do {
-		val = top_scratch1_devinit_completed_v(
+		devinit_completed = pwr_falcon_cpuctl_halt_intr_v(
+				gk20a_readl(g, pwr_falcon_cpuctl_r())) &&
+				    top_scratch1_devinit_completed_v(
 				gk20a_readl(g, top_scratch1_r()));
 		udelay(PMU_BOOT_TIMEOUT_DEFAULT);
-	} while (!val && retries--);
+	} while (!devinit_completed && retries--);
 
 	gk20a_writel(g, pwr_falcon_irqsclr_r(),
 	     pwr_falcon_irqstat_halt_true_f());

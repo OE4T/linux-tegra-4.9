@@ -504,16 +504,30 @@ cleanup:
 static int plugin_manager_get_fabid(const char *id_str)
 {
 	int fabid = 0;
+	int id;
 	int i;
 
 	if (strlen(id_str) < 13)
 		return -EINVAL;
 
 	for (i = 0; i < 3; ++i) {
-		if ((id_str[10 + i] >= '0') && (id_str[10 + i] <= '9'))
-			fabid = fabid * 10 + id_str[10 + i] - '0';
-		else
+		id = id_str[10 + i];
+		switch (id) {
+		case 48 ... 57: /* 0 to 9 */
+			id = id - 48;
+			break;
+		case 65 ... 90: /* A to Z */
+			id = id - 65 + 10;
+			break;
+		case 97 ... 122: /* a to z */
+			id = id - 97 + 10;
+			break;
+		default:
 			return -EINVAL;
+		}
+
+		/* Make digit position to 100x to avoid carry */
+		fabid = fabid * 100  + id;
 	}
 
 	return fabid;

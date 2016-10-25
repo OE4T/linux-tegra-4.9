@@ -40,7 +40,7 @@ typedef int (*get_ucode_details)(struct gk20a *g,
 /* Both size and address of WPR need to be 128K-aligned */
 #define WPR_ALIGNMENT	0x20000
 #define GP106_DGPU_NONWPR NVGPU_VIDMEM_BOOTSTRAP_ALLOCATOR_BASE
-#define GP106_DGPU_WPR (GP106_DGPU_NONWPR + 0x400000)
+#define GP106_DGPU_WPR_OFFSET 0x400000
 #define DGPU_WPR_SIZE 0x100000
 
 /*Externs*/
@@ -79,8 +79,8 @@ static get_ucode_details pmu_acr_supp_ucode_list[] = {
 
 static void gp106_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf)
 {
-	inf->wpr_base = GP106_DGPU_WPR;
-	inf->nonwpr_base = GP106_DGPU_NONWPR;
+	inf->nonwpr_base = g->mm.vidmem.bootstrap_base;
+	inf->wpr_base = inf->nonwpr_base + GP106_DGPU_WPR_OFFSET;
 	inf->size = DGPU_WPR_SIZE;
 }
 

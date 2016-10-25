@@ -402,9 +402,13 @@
 	};
 
 	apbdma: dma@60020000 {
-		compatible = "nvidia,tegra124-apbdma";
+		compatible = "nvidia,tegra148-apbdma";
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x60020000 0x0 0x1400>;
+		clocks = <&tegra_car TEGRA210_CLK_APBDMA>;
+		clock-names = "dma";
+		resets = <&tegra_car TEGRA210_CLK_APBDMA>;
+		reset-names = "dma";
 		interrupts = <0 104 0x04
 			      0 105 0x04
 			      0 106 0x04

@@ -24,7 +24,7 @@
 			regulator-name = "vdd_lcd_bl_en";
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
-			gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(U, 3) 0>; /* GPIO_DIS3 for eDP */
+			gpio = <&tegra_aon_gpio TEGRA_AON_GPIO(U, 3) 0>; /* GPIO_DIS3 for eDP */
 			enable-active-high;
 			regulator-boot-on;
 		};
@@ -36,7 +36,7 @@
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
 			enable-active-high;
-			gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(U, 0) 1>; /* GPIO_DIS0 for eDP */
+			gpio = <&tegra_aon_gpio TEGRA_AON_GPIO(U, 0) 1>; /* GPIO_DIS0 for eDP */
 			regulator-boot-on;
 			regulator-always-on;
 		};
@@ -61,7 +61,7 @@
 
 			panel-s-edp-uhdtv-15-6 {
 				status = "okay";
-				nvidia,panel-rst-gpio = <&tegra_gpio TEGRA_GPIO(P, 3) 1>; /* PP3 */
+				nvidia,panel-rst-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(P, 3) 1>; /* PP3 */
 				nvidia,en-vmm-vpp-with-i2c-config;
 				nvidia,is_ext_dp_panel = <0>;
 

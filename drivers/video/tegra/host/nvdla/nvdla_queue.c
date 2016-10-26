@@ -28,6 +28,7 @@
 #include "chip_support.h"
 #include "nvhost_acm.h"
 #include "nvhost_queue.h"
+#include "nvhost_syncpt_unit_interface.h"
 
 #include "nvdla/nvdla.h"
 #include "nvdla/nvdla_debug.h"
@@ -195,27 +196,6 @@ static void nvdla_queue_update(void *priv, int nr_completed)
 
 	mutex_unlock(&queue->list_lock);
 }
-
-#if 1
-/* this is HACK/unreliable way to validate sem read/write operation on parker
- * this will be used until we move to pre-silicon
- */
-dma_addr_t get_semaphore_pa(struct platform_device *pdev)
-{
-	int *buffer_va;
-	dma_addr_t buffer_pa;
-	DEFINE_DMA_ATTRS(attrs);
-
-	buffer_va = dma_alloc_attrs(&pdev->dev, 8,
-				&buffer_pa, GFP_KERNEL, &attrs);
-
-
-	*buffer_va = 0;
-
-	return buffer_pa;
-
-}
-#endif
 
 static int nvdla_map_task_memory(struct nvhost_buffers *buffers,
 			struct nvdla_ctrl_ioctl_submit_task *user_task,
@@ -587,8 +567,7 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 			((char *)opcode + sizeof(struct dla_action_opcode));
 
 		/* update action */
-		/* TODO: remove temp hack */
-		preaction->address = get_semaphore_pa(pdev);
+		preaction->address = nvhost_syncpt_address(pdev, task->prefences[i].id);
 		preaction->value = task->prefences[i].val;
 	}
 
@@ -618,8 +597,7 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 			((char *)opcode + sizeof(struct dla_action_opcode));
 
 		/* update action */
-		/* TODO: remove temp hack */
-		postaction->address = get_semaphore_pa(pdev);
+		postaction->address = nvhost_syncpt_address(pdev, queue->syncpt_id);
 	}
 
 	if (user_task->num_operations) {
@@ -653,12 +631,6 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 	/* get pm refcount */
 	if (nvhost_module_busy(pdev))
 		return -EINVAL;
-
-	/* enable slice syncpoint increment from THI
-	 * required for debugging in T18x
-	 * TODO: remove this hack when moved to t19x platform
-	 */
-	host1x_writel(pdev, 0x2c, queue->syncpt_id | (1 << 10));
 
 	mutex_lock(&queue->list_lock);
 

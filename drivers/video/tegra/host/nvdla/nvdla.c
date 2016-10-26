@@ -32,6 +32,7 @@
 #include "nvhost_buffer.h"
 #include "flcn/flcn.h"
 #include "flcn/hw_flcn.h"
+#include "nvhost_syncpt_unit_interface.h"
 
 #include "t194/t194.h"
 #include "nvhost_queue.h"
@@ -351,11 +352,16 @@ static int nvdla_probe(struct platform_device *pdev)
 		err = PTR_ERR(nvdla_dev->pool);
 		goto err_queue_init;
 	}
+	err = nvhost_syncpt_unit_interface_init(pdev);
+	if (err)
+		goto err_mss_init;
 
 	nvdla_dbg_info(pdev, "%s: pdata:%p\n", __func__, pdata);
 
 	return 0;
 
+err_mss_init:
+	nvhost_queue_deinit(nvdla_dev->pool);
 err_queue_init:
 	nvhost_client_device_release(pdev);
 err_client_device_init:

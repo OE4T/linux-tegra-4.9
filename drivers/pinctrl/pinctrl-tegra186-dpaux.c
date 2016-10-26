@@ -39,7 +39,6 @@
 	{					\
 	NVHOST_MODULE_NO_POWERGATE_ID,		\
 	.clocks = {{#aux_name, UINT_MAX},	\
-			{"plldp", UINT_MAX},	\
 			{} },			\
 	.devfs_name	= "pinctrl-dpaux",	\
 	.can_powergate	= false,		\

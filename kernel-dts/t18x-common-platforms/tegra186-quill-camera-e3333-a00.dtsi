@@ -44,10 +44,8 @@
 			gpio-controller;
 			#gpio-cells = <2>;
 			reg = <0x21>;
-			gpio-init-names = "default";
-			gpio-init-0 = <&tca6408_21_default>;
 			vcc-supply = <&en_vdd_cam>;
-			tca6408_21_default: default {
+			tca6408_21_outlow {
 				/*
 				 * GPIO-0 : PWDN_CAM2
 				 * GPIO-1 : RST_CAM2
@@ -58,8 +56,23 @@
 				 * GPIO-6 : PWDN_CAM5
 				 * GPIO-7 : RST_CAM5
 				 */
-
-				gpio-output-low = <0 1 2 3 4 5 6 7>;
+				gpio-hog;
+				gpios = <0 0 1 0 2 0 3 0 4 0 5 0 6 0 7 0>;
+				output-low;
+				label = "tca6408_21_outlow_0",
+					"tca6408_21_outlow_1",
+					"tca6408_21_outlow_2",
+					"tca6408_21_outlow_3",
+					"tca6408_21_outlow_4",
+					"tca6408_21_outlow_5",
+					"tca6408_21_outlow_6",
+					"tca6408_21_outlow_7";
+			};
+			tca6408_21_outhigh {
+				status = "disabled";
+			};
+			tca6408_21_input {
+				status = "disabled";
 			};
 		};
 

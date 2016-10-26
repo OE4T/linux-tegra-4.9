@@ -1049,11 +1049,29 @@
 			};
 			/* TCA6408 default */
 			override@72 {
-				target = <&tca6408_21_default>;
+				target = <&tca6408_21>;
 				_overlay_ {
-					gpio-input = <>;
-					gpio-output-low = <0 1 2 3 4 5 6 7>;
-					gpio-output-high = <>;
+					tca6408_21_input {
+						status = "disabled";
+					};
+					tca6408_21_outlow {
+						gpio-hog;
+						gpios = <0 0 1 0 2 0 3 0 4 0
+							 5 0 6 0 7 0>;
+						output-low;
+						label = "tca6408_21_outlow_0",
+							"tca6408_21_outlow_1",
+							"tca6408_21_outlow_2",
+							"tca6408_21_outlow_3",
+							"tca6408_21_outlow_4",
+							"tca6408_21_outlow_5",
+							"tca6408_21_outlow_6",
+							"tca6408_21_outlow_7";
+						status = "okay";
+					};
+					tca6408_21_outhigh {
+						status = "disabled";
+					};
 				};
 			};
 		};
@@ -1632,11 +1650,31 @@
 			};
 			/* TCA6408 default */
 			override@72 {
-				target = <&tca6408_21_default>;
+				target = <&tca6408_21>;
 				_overlay_ {
-					gpio-input = <6 7>;
-					gpio-output-low = <0 1 2 3 4 5>;
-					gpio-output-high= <>;
+					tca6408_21_input {
+						gpio-hog;
+						gpios = <6 0 7 0>;
+						input;
+						label = "tca6408_21_input_6",
+							"tca6408_21_input_7";
+						status = "okay";
+					};
+					tca6408_21_outlow {
+						gpio-hog;
+						gpios = <0 0 1 0 2 0 3 0 4 0 5 0>;
+						output-low;
+						label = "tca6408_21_outlow_0",
+							"tca6408_21_outlow_1",
+							"tca6408_21_outlow_2",
+							"tca6408_21_outlow_3",
+							"tca6408_21_outlow_4",
+							"tca6408_21_outlow_5";
+						status = "okay";
+					};
+					tca6408_21_outhigh {
+						status = "disabled";
+					};
 				};
 			};
 		};

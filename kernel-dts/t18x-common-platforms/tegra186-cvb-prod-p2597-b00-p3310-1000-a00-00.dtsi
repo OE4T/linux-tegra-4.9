@@ -77,8 +77,11 @@
 			#gpio-cells = <2>;
 		};
 		gpio@74 {
-			enable-touch-rails {
-				gpio-output-high = <1 2>;
+			touch-rails {
+				gpio-hog;
+				gpios = <1 0 2 0>;
+				output-high;
+				label = "touch-rail-1", "touch-rail-2";
 			};
 		};
 

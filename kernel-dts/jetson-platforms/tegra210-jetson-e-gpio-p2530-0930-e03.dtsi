@@ -19,64 +19,71 @@
 #include <dt-bindings/gpio/tegra-gpio.h>
 
 / {
-	gpio: gpio@6000d000 {
-		gpio-init-names = "default";
-		gpio-init-0 = <&gpio_default>;
+	gpio@6000d000 {
+		boot-default-input {
+			gpio-hog;
+			input;
+			gpios = <
+				TEGRA_GPIO(E, 6) 0
+				TEGRA_GPIO(A, 5) 0
+				TEGRA_GPIO(X, 3) 0
+				TEGRA_GPIO(X, 4) 0
+				TEGRA_GPIO(X, 2) 0
+				TEGRA_GPIO(X, 1) 0
+				TEGRA_GPIO(X, 0) 0
+				TEGRA_GPIO(X, 5) 0
+				TEGRA_GPIO(X, 6) 0
+				TEGRA_GPIO(X, 7) 0
+				TEGRA_GPIO(Y, 1) 0
+				TEGRA_GPIO(Z, 0) 0
+				TEGRA_GPIO(G, 0) 0
+				TEGRA_GPIO(K, 4) 0
+				TEGRA_GPIO(K, 6) 0
+				TEGRA_GPIO(H, 2) 0
+				TEGRA_GPIO(H, 5) 0
+				TEGRA_GPIO(I, 1) 0
+				TEGRA_GPIO(CC, 6) 0
+				TEGRA_GPIO(CC, 1) 0
+				>;
+			line-name = "boot-default-input";
+		};
 
-		gpio_default: default {
-			gpio-input = <
-				TEGRA_GPIO(E, 6)
-				TEGRA_GPIO(A, 5)
-				TEGRA_GPIO(X, 3)
-				TEGRA_GPIO(X, 4)
-				TEGRA_GPIO(X, 2)
-				TEGRA_GPIO(X, 1)
-				TEGRA_GPIO(X, 0)
-				TEGRA_GPIO(X, 5)
-				TEGRA_GPIO(X, 6)
-				TEGRA_GPIO(X, 7)
-				TEGRA_GPIO(Y, 1)
-				TEGRA_GPIO(Z, 0)
-				TEGRA_GPIO(G, 0)
-				TEGRA_GPIO(K, 4)
-				TEGRA_GPIO(K, 6)
-				TEGRA_GPIO(H, 2)
-				TEGRA_GPIO(H, 5)
-				TEGRA_GPIO(I, 1)
-				TEGRA_GPIO(CC, 6)
-				TEGRA_GPIO(CC, 1)
+		boot-default-output-low {
+			gpio-hog;
+			output-low;
+			gpios = <
+				TEGRA_GPIO(BB, 2) 0
+				TEGRA_GPIO(BB, 3) 0
+				TEGRA_GPIO(E, 4) 0
+				TEGRA_GPIO(S, 4) 0
+				TEGRA_GPIO(S, 5) 0
+				TEGRA_GPIO(S, 6) 0
+				TEGRA_GPIO(S, 7) 0
+				TEGRA_GPIO(T, 0) 0
+				TEGRA_GPIO(T, 1) 0
+				TEGRA_GPIO(V, 6) 0
+				TEGRA_GPIO(V, 5) 0
+				TEGRA_GPIO(Z, 4) 0
+				TEGRA_GPIO(G, 3) 0
+				TEGRA_GPIO(K, 5) 0
+				TEGRA_GPIO(K, 7) 0
+				TEGRA_GPIO(L, 0) 0
+				TEGRA_GPIO(H, 0) 0
+				TEGRA_GPIO(H, 3) 0
+				TEGRA_GPIO(H, 4) 0
+				TEGRA_GPIO(H, 6) 0
+				TEGRA_GPIO(H, 7) 0
+				TEGRA_GPIO(I, 0) 0
+				TEGRA_GPIO(I, 2) 0
+				TEGRA_GPIO(I, 3) 0
+				TEGRA_GPIO(CC, 7) 0
 				>;
-			gpio-output-low = <
-				TEGRA_GPIO(BB, 2)
-				TEGRA_GPIO(BB, 3)
-				TEGRA_GPIO(E, 4)
-				TEGRA_GPIO(S, 4)
-				TEGRA_GPIO(S, 5)
-				TEGRA_GPIO(S, 6)
-				TEGRA_GPIO(S, 7)
-				TEGRA_GPIO(T, 0)
-				TEGRA_GPIO(T, 1)
-				TEGRA_GPIO(V, 6)
-				TEGRA_GPIO(V, 5)
-				TEGRA_GPIO(Z, 4)
-				TEGRA_GPIO(G, 3)
-				TEGRA_GPIO(K, 5)
-				TEGRA_GPIO(K, 7)
-				TEGRA_GPIO(L, 0)
-				TEGRA_GPIO(H, 0)
-				TEGRA_GPIO(H, 3)
-				TEGRA_GPIO(H, 4)
-				TEGRA_GPIO(H, 6)
-				TEGRA_GPIO(H, 7)
-				TEGRA_GPIO(I, 0)
-				TEGRA_GPIO(I, 2)
-				TEGRA_GPIO(I, 3)
-				TEGRA_GPIO(CC, 7)
-				>;
-			gpio-output-high = <
-				>;
-			gpio-suspend-output-low = <
-				TEGRA_GPIO(V, 4)
+			line-name = "boot-default-output-low";
+		};
+
+		suspend-output-low {
+			gpios = <
+				TEGRA_GPIO(V, 4) 0
 				>;
 		};
 	};

@@ -27,11 +27,12 @@
 			interrupts = <TEGRA_GPIO(X, 0) 0x0>;
 			#interrupt-cells = <2>;
 			interrupt-controller;
-			gpio-init-names = "default";
-			gpio-init-0 = <&tca6416_20_default>;
 			status = "disabled";
-			tca6416_20_default: default {
-				gpio-output-low = <1>;
+			default {
+				gpio-hog;
+				output-low;
+				gpios = <1 0>;
+				label = "boot-default";
 			};
 		};
 

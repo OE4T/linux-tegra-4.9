@@ -1,18 +1,27 @@
 #include <dt-bindings/gpio/tegra-gpio.h>
 
 / {
-	gpio: gpio@6000d000 {
-		gpio-init-1 = <&wlan_default>;
+	gpio@6000d000 {
+		wlan-default-input {
+			gpio-hog;
+			input;
+			gpios = <
+				TEGRA_GPIO(H, 2) 0
+				TEGRA_GPIO(I, 1) 0
+				>;
+			label = "wlan-default-input-h2",
+				"wlan-default-input-i1";
+		};
 
-		wlan_default: wlan-default {
-			gpio-input = <
-				TEGRA_GPIO(H, 2)
-				TEGRA_GPIO(I, 1)
+		wlan-default-output-high {
+			gpio-hog;
+			output-high;
+			gpios = <
+				TEGRA_GPIO(H, 0) 0
+				TEGRA_GPIO(I, 0) 0
 				>;
-			gpio-output-high = <
-				TEGRA_GPIO(H, 0)
-				TEGRA_GPIO(I, 0)
-				>;
+			label = "wlan-default-output-high-h0",
+				"wlan-default-output-high-i0";
 		};
 	};
 

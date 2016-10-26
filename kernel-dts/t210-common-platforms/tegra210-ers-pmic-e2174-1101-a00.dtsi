@@ -86,9 +86,6 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&max77620_default>;
 
-			gpio-init-names = "default";
-			gpio-init-0 = <&max77620_gpio_default>;
-
 			max77620_default: pinmux@0 {
 				pin_gpio0 {
 					pins = "gpio0";
@@ -123,8 +120,11 @@
 				};
 			};
 
-			max77620_gpio_default:gpio_default {
-				gpio-output-high = <2 7>;
+			spmic-default-output-high {
+				gpio-hog;
+				output-high;
+				gpios = <2 0 7 0>;
+				line-name = "spmic-default-output-high";
 			};
 
 			watchdog {

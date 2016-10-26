@@ -38,8 +38,8 @@
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x3160000 0x0 0x100>;
 		interrupts = <0 TEGRA186_IRQ_I2C1 0x04>;
-		scl-gpio = <&tegra_gpio TEGRA_GPIO(C, 5) 0>;
-		sda-gpio = <&tegra_gpio TEGRA_GPIO(C, 6) 0>;
+		scl-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(C, 5) 0>;
+		sda-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(C, 6) 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C1
@@ -58,8 +58,8 @@
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0xc240000 0x0 0x100>;
 		interrupts = <0 TEGRA186_IRQ_I2C2 0x04>;
-		scl-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(EE, 0) 0>;
-		sda-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(EE, 1) 0>;
+		scl-gpio = <&tegra_aon_gpio TEGRA_AON_GPIO(EE, 0) 0>;
+		sda-gpio = <&tegra_aon_gpio TEGRA_AON_GPIO(EE, 1) 0>;
 		status = "okay";
 		clock-frequency = <100000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C2
@@ -78,8 +78,8 @@
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x3180000 0x0 0x100>;
 		interrupts = <0 TEGRA186_IRQ_I2C3 0x04>;
-		scl-gpio = <&tegra_gpio TEGRA_GPIO(O, 2) 0>;
-		sda-gpio = <&tegra_gpio TEGRA_GPIO(O, 3) 0>;
+		scl-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(O, 2) 0>;
+		sda-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(O, 3) 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C3
@@ -142,8 +142,8 @@
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x31c0000 0x0 0x100>;
 		interrupts = <0 TEGRA186_IRQ_I2C7 0x04>;
-		scl-gpio = <&tegra_gpio TEGRA_GPIO(L, 0) 0>;
-		sda-gpio = <&tegra_gpio TEGRA_GPIO(L, 1) 0>;
+		scl-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(L, 0) 0>;
+		sda-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(L, 1) 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C7
@@ -162,8 +162,8 @@
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0xc250000 0x0 0x100>;
 		interrupts = <0 TEGRA186_IRQ_I2C8 0x04>;
-		scl-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(W, 0) 0>;
-		sda-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(W, 1) 0>;
+		scl-gpio = <&tegra_aon_gpio TEGRA_AON_GPIO(W, 0) 0>;
+		sda-gpio = <&tegra_aon_gpio TEGRA_AON_GPIO(W, 1) 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C8
@@ -182,8 +182,8 @@
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x31e0000 0x0 0x100>;
 		interrupts = <0 TEGRA186_IRQ_I2C9 0x04>;
-		scl-gpio = <&tegra_gpio TEGRA_GPIO(L, 2) 0>;
-		sda-gpio = <&tegra_gpio TEGRA_GPIO(L, 3) 0>;
+		scl-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(L, 2) 0>;
+		sda-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(L, 3) 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C9

@@ -1328,7 +1328,7 @@
                 status = "disabled";
         };
 
-	tegra_gpio: gpio@2200000 {
+	tegra_main_gpio: gpio@2200000 {
 		compatible = "nvidia,tegra186-gpio";
 		reg-names = "security", "gpio";
 		reg =
@@ -1346,27 +1346,27 @@
 		interrupt-controller;
 		#interrupt-cells = <2>;
 		gpio-ranges =
-			<&tegra_pinctrl TEGRA_GPIO_BASE(A) TEGRA_PIN_BASE(A) TEGRA_GPIO_RANGE(A, R)>,
-			<&tegra_pinctrl TEGRA_GPIO_BASE(T) TEGRA_PIN_BASE(T) TEGRA_GPIO_RANGE(T, T)>,
-			<&tegra_pinctrl TEGRA_GPIO_BASE(X) TEGRA_PIN_BASE(X) TEGRA_GPIO_RANGE(X, Y)>,
-			<&tegra_pinctrl TEGRA_GPIO_BASE(BB) TEGRA_PIN_BASE(BB) TEGRA_GPIO_RANGE(BB, DD) >;
-                status = "disabled";
+			<&tegra_pinctrl TEGRA_MAIN_GPIO_BASE(A) TEGRA_PIN_BASE(A) TEGRA_MAIN_GPIO_RANGE(A, R)>,
+			<&tegra_pinctrl TEGRA_MAIN_GPIO_BASE(T) TEGRA_PIN_BASE(T) TEGRA_MAIN_GPIO_RANGE(T, T)>,
+			<&tegra_pinctrl TEGRA_MAIN_GPIO_BASE(X) TEGRA_PIN_BASE(X) TEGRA_MAIN_GPIO_RANGE(X, Y)>,
+			<&tegra_pinctrl TEGRA_MAIN_GPIO_BASE(BB) TEGRA_PIN_BASE(BB) TEGRA_MAIN_GPIO_RANGE(BB, DD) >;
+		status = "disabled";
 	};
 
-	tegra_gpio_aon: gpio@c2f0000 {
+	tegra_aon_gpio: gpio@c2f0000 {
 		compatible = "nvidia,tegra186-gpio-aon";
 		reg-names = "security", "gpio";
 		reg = 	<0x0 0xc2f0000 0x0 0x1000>,
 			<0x0 0xc2f1000 0x0 0x1000>;
 		interrupts =
 			<0 60 IRQ_TYPE_LEVEL_HIGH>;
-                status = "disabled";
+		status = "disabled";
 		gpio-controller;
 		#gpio-cells = <2>;
 		interrupt-controller;
 		#interrupt-cells = <2>;
 		gpio-ranges =
-			<&tegra_pinctrl  TEGRA_AON_GPIO_BASE(S) TEGRA_PIN_BASE(S) TEGRA_AON_GPIO_RANGE(S, S)>,
+			<&tegra_pinctrl TEGRA_AON_GPIO_BASE(S) TEGRA_PIN_BASE(S) TEGRA_AON_GPIO_RANGE(S, S)>,
 			<&tegra_pinctrl TEGRA_AON_GPIO_BASE(U) TEGRA_PIN_BASE(U) TEGRA_AON_GPIO_RANGE(U, W)>,
 			<&tegra_pinctrl TEGRA_AON_GPIO_BASE(Z) TEGRA_PIN_BASE(Z) TEGRA_AON_GPIO_RANGE(Z, AA)>,
 			<&tegra_pinctrl TEGRA_AON_GPIO_BASE(EE) TEGRA_PIN_BASE(EE) TEGRA_AON_GPIO_RANGE(EE, FF)>;

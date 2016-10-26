@@ -818,13 +818,13 @@ struct nvgpu_gpu_get_temperature_args {
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 33, \
 			struct nvgpu_gpu_get_memory_state_args)
 #define NVGPU_GPU_IOCTL_GET_VOLTAGE \
-	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 33, struct nvgpu_gpu_get_voltage_args)
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 34, struct nvgpu_gpu_get_voltage_args)
 #define NVGPU_GPU_IOCTL_GET_CURRENT \
-	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 34, struct nvgpu_gpu_get_current_args)
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 35, struct nvgpu_gpu_get_current_args)
 #define NVGPU_GPU_IOCTL_GET_POWER \
-	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 35, struct nvgpu_gpu_get_power_args)
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 36, struct nvgpu_gpu_get_power_args)
 #define NVGPU_GPU_IOCTL_GET_TEMPERATURE \
-	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 36, struct nvgpu_gpu_get_temperature_args)
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 37, struct nvgpu_gpu_get_temperature_args)
 #define NVGPU_GPU_IOCTL_GET_FBP_L2_MASKS \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 38, struct nvgpu_gpu_get_fbp_l2_masks_args)
 #define NVGPU_GPU_IOCTL_LAST		\

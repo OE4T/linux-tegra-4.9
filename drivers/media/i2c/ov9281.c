@@ -1,7 +1,7 @@
 /*
  * ov9281.c - ov9281 sensor driver
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -59,8 +59,8 @@
 
 #define OV9281_TIMING_VTS_HIGH_ADDR	0x380E
 #define OV9281_TIMING_VTS_LOW_ADDR	0x380F
-#define OV9281_TIMING_TC_R_HIGH_ADDR	0x3830
-#define OV9281_TIMING_TC_R_LOW_ADDR	0x3831
+#define OV9281_TIMING_RST_FSIN_HIGH_ADDR	0x3826
+#define OV9281_TIMING_RST_FSIN_LOW_ADDR	0x3827
 
 #define OV9281_OTP_BUFFER_ADDR		0x3D00
 #define OV9281_OTP_BUFFER_SIZE		32
@@ -101,7 +101,7 @@
 struct ov9281 {
 	struct camera_common_power_rail	power;
 	int				num_ctrls;
-	bool				master;
+	int				fsync;
 	int				cam_sid_gpio;
 	int				mcu_boot_gpio;
 	int				mcu_reset_gpio;
@@ -425,9 +425,17 @@ fail:
 
 static int ov9281_set_frame_length(struct ov9281 *priv, s32 val)
 {
-	ov9281_reg regs[3];
+	ov9281_reg regs[5];
 	u16 frame_length;
 	int err;
+
+	/*
+	 * This is a workaround for nvbug 1865041, where setting the VTS
+	 * timing registers when the sensor is set up for fsync master or
+	 * slave leads to streaming instability.
+	 */
+	if (priv->fsync != OV9281_FSYNC_NONE)
+		return 0;
 
 	frame_length = (u16)val;
 
@@ -440,6 +448,15 @@ static int ov9281_set_frame_length(struct ov9281 *priv, s32 val)
 	regs[1].val = (frame_length) & 0xff;
 	regs[2].addr = OV9281_TABLE_END;
 	regs[2].val = 0;
+
+	if (priv->fsync == OV9281_FSYNC_SLAVE) {
+		regs[2].addr = OV9281_TIMING_RST_FSIN_HIGH_ADDR;
+		regs[2].val = ((frame_length - 4) >> 8) & 0xff;
+		regs[3].addr = OV9281_TIMING_RST_FSIN_LOW_ADDR;
+		regs[3].val = (frame_length - 4) & 0xff;
+		regs[4].addr = OV9281_TABLE_END;
+		regs[4].val = 0;
+	}
 
 	ov9281_set_group_hold(priv);
 	err = ov9281_write_table(priv, regs);
@@ -601,6 +618,14 @@ static int ov9281_s_stream(struct v4l2_subdev *sd, int enable)
 	if (err)
 		goto exit;
 
+	if (ov9281_fsync_table[priv->fsync]) {
+		dev_dbg(&client->dev, "%s: write fsync table %d\n", __func__,
+			priv->fsync);
+		err = ov9281_write_table(priv, ov9281_fsync_table[priv->fsync]);
+		if (err)
+			goto exit;
+	}
+
 	if (s_data->override_enable) {
 		/* write list of override regs for the asking frame length, */
 		/* coarse integration time, and gain. Failures to write */
@@ -639,6 +664,19 @@ static int ov9281_s_stream(struct v4l2_subdev *sd, int enable)
 		ov9281_mode_table[OV9281_MODE_START_STREAM]);
 	if (err)
 		goto exit;
+
+	/*
+	 * If the sensor is in fsync slave mode, and is in the middle of
+	 * sending a frame when it gets a strobe on the fsin pin, it may
+	 * prematurely end the frame, resulting in a short frame on our
+	 * camera host.  So, after starting streaming, we assume fsync
+	 * master has already been told to start streaming, and we wait some
+	 * amount of time in order to skip the possible short frame.  The
+	 * length of time to wait should be at least our sample period.
+	 * Assume worse case of 120fps (8.3ms), and add a bit more.
+	 */
+	if (priv->fsync == OV9281_FSYNC_SLAVE)
+		msleep_range(10);
 
 	return 0;
 
@@ -906,16 +944,23 @@ static const struct media_entity_operations ov9281_media_ops = {
 static int ov9281_parse_dt(struct i2c_client *client, struct ov9281 *priv)
 {
 	struct device_node *np = client->dev.of_node;
+	char *fsync_str;
 	int gpio;
 	int err;
-
-	priv->master = of_property_read_bool(np, "master");
 
 	err = of_property_read_string(np, "mclk", &priv->pdata->mclk_name);
 	if (err) {
 		dev_err(&client->dev, "mclk not in DT\n");
 		return -EINVAL;
 	}
+
+	err = of_property_read_string(np, "fsync", &fsync_str);
+	if (!err && fsync_str && (strcmp(fsync_str, "master") == 0))
+		priv->fsync = OV9281_FSYNC_MASTER;
+	else if (!err && fsync_str && (strcmp(fsync_str, "slave") == 0))
+		priv->fsync = OV9281_FSYNC_SLAVE;
+	else
+		priv->fsync = OV9281_FSYNC_NONE;
 
 	gpio = of_get_named_gpio(np, "pwdn-gpios", 0);
 	if (!gpio_is_valid(gpio)) {

@@ -1,7 +1,7 @@
 /*
  * ov9281.c - ov9281 sensor driver
  *
- * Copyright (c) 2016, NVIDIA CORPORATION, All Rights Reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION, All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -32,8 +32,12 @@ enum {
 	OV9281_MODE_640X400,
 	OV9281_MODE_START_STREAM,
 	OV9281_MODE_STOP_STREAM,
-	OV9281_MODE_FSYNC_MASTER,
-	OV9281_MODE_FSYNC_SLAVE,
+};
+
+enum {
+	OV9281_FSYNC_NONE,
+	OV9281_FSYNC_MASTER,
+	OV9281_FSYNC_SLAVE,
 };
 
 static const ov9281_reg ov9281_start[] = {
@@ -47,17 +51,15 @@ static const ov9281_reg ov9281_stop[] = {
 };
 
 static const ov9281_reg ov9281_fsync_master[] = {
-	{0x3006, 0x06}, /* fsin pin out */
+	{0x3006, 0x02}, /* fsin pin out */
 	{0x3823, 0x00},
-	{0x3027, 0x00}, /* auto (not manual) fsin */
 	{OV9281_TABLE_WAIT_MS, 66},
 	{OV9281_TABLE_END, 0x00}
 };
 
 static const ov9281_reg ov9281_fsync_slave[] = {
-	{0x3006, 0x04}, /* fsin pin in */
+	{0x3006, 0x00}, /* fsin pin in */
 	{0x3823, 0x30}, /* ext_vs_en, r_init_man */
-	{0x3027, 0x00}, /* auto (not manual) fsin */
 	{OV9281_TABLE_WAIT_MS, 66},
 	{OV9281_TABLE_END, 0x00}
 };
@@ -399,8 +401,12 @@ static const ov9281_reg *ov9281_mode_table[] = {
 	[OV9281_MODE_640X400] = ov9281_mode_640x400_26MhzMCLK,
 	[OV9281_MODE_START_STREAM] = ov9281_start,
 	[OV9281_MODE_STOP_STREAM] = ov9281_stop,
-	[OV9281_MODE_FSYNC_MASTER] = ov9281_fsync_master,
-	[OV9281_MODE_FSYNC_SLAVE] = ov9281_fsync_slave,
+};
+
+static const ov9281_reg *ov9281_fsync_table[] = {
+	[OV9281_FSYNC_NONE] = NULL,
+	[OV9281_FSYNC_MASTER] = ov9281_fsync_master,
+	[OV9281_FSYNC_SLAVE] = ov9281_fsync_slave,
 };
 
 static const int ov9281_120fps[] = {

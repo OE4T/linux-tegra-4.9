@@ -23,11 +23,22 @@
 
 #include "nvmap_priv.h"
 
+struct static_key nvmap_updated_cache_config;
+
 void nvmap_handle_get_cacheability(struct nvmap_handle *h,
 		bool *inner, bool *outer)
 {
 	struct nvmap_handle_t19x *handle_t19x;
 	struct device *dev = nvmap_dev->dev_user.parent;
+
+	if (static_key_false(&nvmap_updated_cache_config)) {
+		if (nvmap_version_t19x) {
+			/* FIX ME: Update correct value after evaluation */
+			nvmap_cache_maint_by_set_ways = 0;
+			cache_maint_inner_threshold = SZ_2M;
+		}
+		static_key_slow_dec(&nvmap_updated_cache_config);
+	}
 
 	handle_t19x = dma_buf_get_drvdata(h->dmabuf, dev);
 	if (handle_t19x && atomic_read(&handle_t19x->nc_pin)) {

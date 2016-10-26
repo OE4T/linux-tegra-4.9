@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 - 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Mikko Perttunen <mperttunen@nvidia.com>
@@ -126,78 +126,20 @@ static int tegra_bpmp_thermal_get_trend(void *data, int trip,
 	return 0;
 }
 
-
-static int tegra_bpmp_thermal_program_trips(int zone, int low, int high)
+static int tegra_bpmp_set_trips(void *data, int low, int high)
 {
+	struct tegra_bpmp_thermal_zone *zone = data;
 	struct mrq_thermal_host_to_bpmp_request req;
 	int ret;
 
 	req.type = CMD_THERMAL_SET_TRIP;
-	req.set_trip.zone = zone;
+	req.set_trip.zone = zone->idx;
 	req.set_trip.enabled = true;
 	req.set_trip.low = low;
 	req.set_trip.high = high;
 
-	ret = tegra_bpmp_send_receive(MRQ_THERMAL, &req, sizeof(req),
-				      NULL, 0);
+	ret = tegra_bpmp_send_receive(MRQ_THERMAL, &req, sizeof(req), NULL, 0);
 	return ret;
-}
-
-static int
-tegra_bpmp_thermal_calculate_trips(struct tegra_bpmp_thermal_zone *zone,
-				   int *low, int *high)
-{
-	struct thermal_zone_device *tzd = zone->tzd;
-	temp_t trip_temp, hysteresis;
-	temp_t temp;
-	int i, err;
-
-	err = tegra_bpmp_thermal_get_temp(zone, &temp);
-
-	*low = INT_MIN;
-	*high = INT_MAX;
-
-	if (err) {
-		dev_err(zone->tegra->dev,
-			"tegra_bpmp_thermal_get_temp failed: %d\n", err);
-		return err;
-	}
-
-	for (i = 0; i < tzd->trips; i++) {
-		int trip_low;
-		tzd->ops->get_trip_temp(tzd, i, &trip_temp);
-		tzd->ops->get_trip_hyst(tzd, i, &hysteresis);
-
-		trip_low = trip_temp - hysteresis;
-
-		if (trip_low < temp && trip_low > *low)
-			*low = trip_low;
-
-		/*
-		 * TODO: *high doesn't allways need to be reset depending on
-		 * whether we are coming from higher or lower temperature.
-		 */
-		if (trip_temp > temp && trip_temp < *high)
-			*high = trip_temp;
-	}
-
-	dev_dbg(&tzd->device, "new temperature boundaries: %d < x < %d\n",
-		*low, *high);
-	return 0;
-}
-
-static int tegra_bpmp_thermal_trip_update(void *data, int trip)
-{
-	struct tegra_bpmp_thermal_zone *zone = data;
-	int low, high, ret;
-
-	if (!zone->tzd)
-		return 0;
-
-	ret = tegra_bpmp_thermal_calculate_trips(zone, &low, &high);
-	if (ret)
-		return ret;
-	return tegra_bpmp_thermal_program_trips(zone->idx, low, high);
 }
 
 static void tz_device_update_work_fn(struct work_struct *work)
@@ -224,7 +166,6 @@ static void tz_device_update_work_fn(struct work_struct *work)
 #endif
 			trace_bpmp_thermal_zone_trip(zone->tzd,
 						     zone->tzd->temperature);
-			tegra_bpmp_thermal_trip_update(zone, 0);
 		}
 	}
 }
@@ -317,8 +258,8 @@ static int tegra_bpmp_thermal_abi_probe(void)
 
 static sensor_ops_t tegra_of_thermal_ops = {
 	.get_temp = tegra_bpmp_thermal_get_temp,
-	.trip_update = tegra_bpmp_thermal_trip_update,
 	.get_trend = tegra_bpmp_thermal_get_trend,
+	.set_trips = tegra_bpmp_set_trips,
 };
 
 static const struct of_device_id tegra_bpmp_thermal_of_match[] = {

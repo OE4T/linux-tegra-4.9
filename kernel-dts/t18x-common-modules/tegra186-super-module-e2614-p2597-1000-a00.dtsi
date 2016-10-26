@@ -139,7 +139,7 @@
 					status = "disabled";
 
 					/* gpio for jack detection */
-					gpios = <&tegra_gpio TEGRA_GPIO(J , 5) GPIO_ACTIVE_HIGH>;
+					gpios = <&tegra_main_gpio TEGRA_MAIN_GPIO(J , 5) GPIO_ACTIVE_HIGH>;
 
 					/* refer include/sound/rt5659.h for the values to be used */
 					realtek,jd-src = <1>; /* RT5659_JD3 */
@@ -159,8 +159,8 @@
                 e2614_icm20628: icm20628@68 {
                         compatible = "invensense,mpu6xxx";
                         reg = <0x68>;
-                        interrupt-parent = <&tegra_gpio_aon>;
-                        interrupts = <TEGRA_GPIO_AON(AA, 2) 0x01>;
+                        interrupt-parent = <&tegra_aon_gpio>;
+                        interrupts = <TEGRA_AON_GPIO(AA, 2) 0x01>;
                         accelerometer_matrix	= [01 00 00 00 01 00 00 00 01];
                         gyroscope_matrix	= [01 00 00 00 01 00 00 00 01];
 			status = "disabled";
@@ -182,7 +182,7 @@
                 e2614_cm32180: cm32180@48 {
                         compatible = "capella,cm3218x";
                         reg = <0x48>;
-                        gpio_irq = <&tegra_gpio TEGRA_GPIO(I, 4) GPIO_ACTIVE_LOW>;
+                        gpio_irq = <&tegra_main_gpio TEGRA_MAIN_GPIO(I, 4) GPIO_ACTIVE_LOW>;
                         light_uncalibrated_lo = <1>;
                         light_calibrated_lo = <150>;
                         light_uncalibrated_hi = <95000>;
@@ -200,7 +200,7 @@
 			status = "disabled";
 
 			/* gpio for jack detection */
-			gpios = <&tegra_gpio TEGRA_GPIO(J , 5) GPIO_ACTIVE_HIGH>;
+			gpios = <&tegra_main_gpio TEGRA_MAIN_GPIO(J , 5) GPIO_ACTIVE_HIGH>;
 
 			/* refer include/sound/rt5659.h for the values to be used */
 			realtek,jd-src = <1>; /* RT5659_JD3 */
@@ -225,9 +225,9 @@
 		compatible = "nvidia,tegra-gps-wake";
 		id = <0>;
 		gps-en = <&e2614_gpio_i2c_1_20 8 0>;
-		gps-host-wake = <&tegra_gpio TEGRA_GPIO(Q, 5) 0>;
-		interrupt-parent = <&tegra_gpio>;
-		interrupts = <TEGRA_GPIO(Q, 5) 0x01>;
+		gps-host-wake = <&tegra_main_gpio TEGRA_MAIN_GPIO(Q, 5) 0>;
+		interrupt-parent = <&tegra_main_gpio>;
+		interrupts = <TEGRA_MAIN_GPIO(Q, 5) 0x01>;
 		status = "disabled";
 	};
 

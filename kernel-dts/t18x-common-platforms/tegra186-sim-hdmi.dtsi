@@ -25,7 +25,7 @@
 		sor1 {
 			status = "okay";
 			/*nvidia,ddc-i2c-bus = <&hdmi_ddc>;*/
-			/*nvidia,hpd-gpio = <&tegra_gpio 0xFFFFFFFF 1>;*/ /* hotplug less */
+			/*nvidia,hpd-gpio = <&tegra_main_gpio 0xFFFFFFFF 1>;*/ /* hotplug less */
 			hdmi-display {
 				status = "okay";
 				compatible = "hdmi,display";

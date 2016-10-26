@@ -186,7 +186,7 @@
 			regulator-name = "vdd-usb0-5v-con";
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
-			gpio = <&tegra_gpio TEGRA_GPIO(L, 4) 0>;
+			gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(L, 4) 0>;
 			enable-active-high;
 		};
 	};
@@ -197,20 +197,20 @@
 
 		power {
 			label = "Power";
-			gpios = <&tegra_gpio_aon TEGRA_GPIO_AON(FF, 0) GPIO_ACTIVE_LOW>;
+			gpios = <&tegra_aon_gpio TEGRA_AON_GPIO(FF, 0) GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_POWER>;
 			gpio-key,wakeup;
 		};
 
 		volume_up {
 			label = "Volume Up";
-			gpios = <&tegra_gpio_aon TEGRA_GPIO_AON(FF, 1) GPIO_ACTIVE_LOW>;
+			gpios = <&tegra_aon_gpio TEGRA_AON_GPIO(FF, 1) GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_VOLUMEUP>;
 		};
 
 		volume_down {
 			label = "Volume Down";
-			gpios = <&tegra_gpio_aon TEGRA_GPIO_AON(FF, 2) GPIO_ACTIVE_LOW>;
+			gpios = <&tegra_aon_gpio TEGRA_AON_GPIO(FF, 2) GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_VOLUMEDOWN>;
 		};
 	};

@@ -42,7 +42,7 @@
 	gpio@2200000 {
 		sdmmc-wake-support-input {
 			gpio-hog;
-			gpios = <TEGRA_GPIO(P, 5) 0>;
+			gpios = <TEGRA_MAIN_GPIO(P, 5) 0>;
 			input;
 			label = "sdmmc-wake-input";
 			status = "disabled";
@@ -50,7 +50,7 @@
 
 		sdmmc-wake-support-output {
 			gpio-hog;
-			gpios = <TEGRA_GPIO(P, 6) 0>;
+			gpios = <TEGRA_MAIN_GPIO(P, 6) 0>;
 			output-low;
 			label = "sdmmc-wake-output";
 			status = "disabled";
@@ -74,7 +74,7 @@
 			};
 
 			override@101 {
-				target = <&tegra_gpio>;
+				target = <&tegra_main_gpio>;
 				_overlay_ {
 					sdmmc-wake-support-input {
 						status = "okay";
@@ -88,14 +88,14 @@
 			override@102 {
 				target = <&en_vdd_sdcard1>;
 				_overlay_ {
-					gpio = <&tegra_gpio TEGRA_GPIO(P, 6) 0>;
+					gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(P, 6) 0>;
 				};
 			};
 
 			override@103 {
 				target = <&sdmmc1>;
 				_overlay_ {
-					cd-gpios = <&tegra_gpio TEGRA_GPIO(P, 5) 0>;
+					cd-gpios = <&tegra_main_gpio TEGRA_MAIN_GPIO(P, 5) 0>;
 					nvidia,cd-wakeup-capable;
 				};
 			};

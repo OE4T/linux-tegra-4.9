@@ -141,7 +141,7 @@
 			overrides@1 {
 				target = <&vdd_bl_en>;
 				_overlay_ {
-					gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(U, 3) 1>;
+					gpio = <&tegra_aon_gpio TEGRA_AON_GPIO(U, 3) 1>;
 					enable-active-high;
 					regulator-boot-on;
 					regulator-always-on;

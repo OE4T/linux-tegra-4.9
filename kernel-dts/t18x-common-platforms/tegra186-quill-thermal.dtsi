@@ -20,7 +20,7 @@
 #include "t18x-common-platforms/tegra186-balanced-throttle-te770d-ucm1.dtsi"
 
 /* THERMAL gpio definitions */
-#define TEMP_ALERT		TEGRA_GPIO_AON(V, 0)
+#define TEMP_ALERT		TEGRA_AON_GPIO(V, 0)
 
 / {
 	i2c@c250000 {
@@ -37,9 +37,9 @@
 			conv-rate = <0x06>;
 			extended-rage = <1>;
 
-			interrupt-parent = <&tegra_gpio_aon>;
+			interrupt-parent = <&tegra_aon_gpio>;
 			interrupts = <TEMP_ALERT IRQ_TYPE_LEVEL_LOW>;
-			temp-alert-gpio = <&tegra_gpio_aon TEMP_ALERT 0>;
+			temp-alert-gpio = <&tegra_aon_gpio TEMP_ALERT 0>;
 
 			/* vdd-supply configured in power tree */
 

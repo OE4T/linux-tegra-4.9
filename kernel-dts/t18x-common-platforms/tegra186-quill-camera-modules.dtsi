@@ -18,10 +18,10 @@
 #include "t18x-common-platforms/tegra186-quill-camera-e3322-a00.dtsi"
 #include "t18x-common-platforms/tegra186-quill-camera-li-mipi-adpt-a00.dtsi"
 
-#define CAM0_RST_L	TEGRA_GPIO(R, 5)
-#define CAM0_PWDN	TEGRA_GPIO(R, 0)
-#define CAM1_RST_L	TEGRA_GPIO(R, 1)
-#define CAM1_PWDN	TEGRA_GPIO(L, 6)
+#define CAM0_RST_L	TEGRA_MAIN_GPIO(R, 5)
+#define CAM0_PWDN	TEGRA_MAIN_GPIO(R, 0)
+#define CAM1_RST_L	TEGRA_MAIN_GPIO(R, 1)
+#define CAM1_PWDN	TEGRA_MAIN_GPIO(L, 6)
 
 / {
 	/* set camera gpio direction to output */

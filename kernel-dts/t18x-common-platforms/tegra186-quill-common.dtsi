@@ -286,9 +286,9 @@
 			status = "disabled";
 			panel-s-wuxga-8-0 {
 				status = "disabled";
-				nvidia,panel-rst-gpio = <&tegra_gpio TEGRA_GPIO(P, 3) 1>; /* PP3 */
-				nvidia,panel-bl-pwm-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(U, 0) 1>; /* PU0 */
-				nvidia,panel-bl-en-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(U, 3) 1>; /* PU3 */
+				nvidia,panel-rst-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(P, 3) 1>; /* PP3 */
+				nvidia,panel-bl-pwm-gpio = <&tegra_aon_gpio TEGRA_AON_GPIO(U, 0) 1>; /* PU0 */
+				nvidia,panel-bl-en-gpio = <&tegra_aon_gpio TEGRA_AON_GPIO(U, 3) 1>; /* PU3 */
 				nvidia,panel-en-gpio = <&gpio_i2c_0_77 4 1>; /* tca9539 0x77 Pin 4 */
 				nvidia,en-vmm-vpp-with-i2c-config;
 				nvidia,default_color_space = <0>;
@@ -523,8 +523,8 @@
 			};
 			panel-s-wqxga-10-1 {
 				status = "disabled";
-				nvidia,panel-rst-gpio = <&tegra_gpio TEGRA_GPIO(P, 3) 1>; /* PP3 */
-				nvidia,panel-bl-pwm-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(U, 0) 1>; /* PU0 */
+				nvidia,panel-rst-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(P, 3) 1>; /* PP3 */
+				nvidia,panel-bl-pwm-gpio = <&tegra_aon_gpio TEGRA_AON_GPIO(U, 0) 1>; /* PU0 */
 				disp-default-out {
 					nvidia,out-parent-clk = "pll_d";
 					nvidia,out-rotation = <180>;
@@ -547,9 +547,9 @@
 			status = "disabled";
 			nvidia,xbar-ctrl = <0 1 2 3 4>;
 			nvidia,audio-switch-name = "dp_audio";
-			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 0) GPIO_ACTIVE_LOW>;
+			nvidia,hpd-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(P, 0) GPIO_ACTIVE_LOW>;
 			panel-s-edp-uhdtv-15-6 {
-				nvidia,panel-bl-pwm-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(U, 5) 0>;
+				nvidia,panel-bl-pwm-gpio = <&tegra_aon_gpio TEGRA_AON_GPIO(U, 5) 0>;
 			};
 
 			dp-display {
@@ -562,7 +562,7 @@
 			status = "okay";
 			nvidia,xbar-ctrl = <0 1 2 3 4>;
 			nvidia,audio-switch-name = "hdmi_audio";
-			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 1) GPIO_ACTIVE_LOW>;
+			nvidia,hpd-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(P, 1) GPIO_ACTIVE_LOW>;
 			hdmi-display {
 				status = "okay";
 			};
@@ -598,8 +598,8 @@
 	};
 
 	sdhci@3400000 {
-		cd-gpios = <&tegra_gpio TEGRA_GPIO(P, 6) 0>;
-		wp-gpios = <&tegra_gpio TEGRA_GPIO(P, 4) 0>;
+		cd-gpios = <&tegra_main_gpio TEGRA_MAIN_GPIO(P, 6) 0>;
+		wp-gpios = <&tegra_main_gpio TEGRA_MAIN_GPIO(P, 4) 0>;
 		cd-inverted;
 		wp-inverted;
 		uhs-mask = <0x8>;

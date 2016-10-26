@@ -12,10 +12,10 @@
  *
  */
 
-#define CAM0_RST_L	TEGRA_GPIO(R, 5)
-#define CAM0_PWDN	TEGRA_GPIO(R, 0)
-#define CAM1_RST_L	TEGRA_GPIO(R, 1)
-#define CAM1_PWDN	TEGRA_GPIO(L, 6)
+#define CAM0_RST_L	TEGRA_MAIN_GPIO(R, 5)
+#define CAM0_PWDN	TEGRA_MAIN_GPIO(R, 0)
+#define CAM1_RST_L	TEGRA_MAIN_GPIO(R, 1)
+#define CAM1_PWDN	TEGRA_MAIN_GPIO(L, 6)
 
 / {
 	gpio@2200000 {
@@ -453,7 +453,7 @@
 			override@1 {
 				target = <&{/i2c@c240000/ov23850_c@36}>;
 				_overlay_ {
-					pwdn-gpios = <&tegra_gpio TEGRA_GPIO(N, 2) GPIO_ACTIVE_HIGH>;
+					pwdn-gpios = <&tegra_main_gpio TEGRA_MAIN_GPIO(N, 2) GPIO_ACTIVE_HIGH>;
 				};
 			};
 			override@2 {
@@ -461,10 +461,10 @@
 				_overlay_ {
 					camera-control-output-low {
 						gpio-hog;
-						gpios = <TEGRA_GPIO(R, 5) 0
-							 TEGRA_GPIO(R, 0) 0
-							 TEGRA_GPIO(R, 1) 0
-							 TEGRA_GPIO(N, 2) 0>;
+						gpios = <TEGRA_MAIN_GPIO(R, 5) 0
+							 TEGRA_MAIN_GPIO(R, 0) 0
+							 TEGRA_MAIN_GPIO(R, 1) 0
+							 TEGRA_MAIN_GPIO(N, 2) 0>;
 						label = "cam0-rst", "cam0-pwdn",
 							"cam1-rst", "cam1-pwdn";
 						output-low;

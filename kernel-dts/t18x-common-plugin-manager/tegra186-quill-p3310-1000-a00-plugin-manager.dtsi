@@ -99,7 +99,7 @@
 				};
 			};
 			override@2 {
-				target = <&tegra_gpio>;
+				target = <&tegra_main_gpio>;
 				_overlay_ {
 					e3325_sdio_rst {
 						status = "okay";
@@ -132,26 +132,26 @@
 				_overlay_ {
 					sdhci-host = <&sdmmc3>;
 					pwr-retry-cnt = <0>;
-					interrupts = <TEGRA_GPIO(C, 0) 0x14>;
+					interrupts = <TEGRA_MAIN_GPIO(C, 0) 0x14>;
 					delete-target-property = "wlan-pwr-gpio";
 				};
 			};
 			override@1 {
-				target = <&tegra_gpio>;
+				target = <&tegra_main_gpio>;
 				_overlay_ {
 					wifi-wake-ap {
 						status = "okay";
-						gpios = <TEGRA_GPIO(C, 0) 0>;
+						gpios = <TEGRA_MAIN_GPIO(C, 0) 0>;
 					};
 
 					wifi-enable {
-						gpios = <TEGRA_GPIO(B, 6) 0>;
+						gpios = <TEGRA_MAIN_GPIO(B, 6) 0>;
 					};
 				};
 			};
 
 			override@3 {
-				target = <&tegra_gpio_aon>;
+				target = <&tegra_aon_gpio>;
 				_overlay_ {
 					wifi-wake-ap {
 						status = "disabled";
@@ -201,7 +201,7 @@
 			};
 
 			override@2 {
-				target = <&tegra_gpio>;
+				target = <&tegra_main_gpio>;
 				_overlay_ {
 					pcie0_lane2_mux {
 						status = "okay";
@@ -215,7 +215,7 @@
 			override@0 {
 				target = <&{/bluedroid_pm}>;
 				_overlay_ {
-					bluedroid_pm,reset-gpio = <&tegra_gpio TEGRA_GPIO(H, 5) 0>;
+					bluedroid_pm,reset-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(H, 5) 0>;
 				};
 			};
 		};

@@ -210,7 +210,7 @@ static int vblk_send_config_cmd(struct vblk_dev *vblkdev)
 	}
 	ivc_blk_req = (struct ivc_blk_request *)
 		tegra_hv_ivc_write_get_next_frame(vblkdev->ivck);
-	if (IS_ERR(ivc_blk_req)) {
+	if (IS_ERR_OR_NULL(ivc_blk_req)) {
 		dev_err(vblkdev->device, "no empty frame for write\n");
 		return -EIO;
 	}
@@ -341,6 +341,18 @@ static int vblk_get_configinfo(struct vblk_dev *vblkdev)
 	return 0;
 }
 
+static void io_error_handler(struct vblk_dev *vblkdev)
+{
+	spin_lock(vblkdev->queue->queue_lock);
+	__blk_end_request_all(vblkdev->req, -EIO);
+	spin_unlock(vblkdev->queue->queue_lock);
+	vblkdev->cur_sector = 0;
+	vblkdev->cur_nsect = 0;
+	vblkdev->cur_buffer = NULL;
+	vblkdev->cur_transfer_cmd = UNKNOWN_CMD;
+	vblkdev->req = NULL;
+}
+
 static void vblk_fetch_request(struct vblk_dev *vblkdev)
 {
 	if (vblkdev->queue != NULL) {
@@ -350,9 +362,7 @@ static void vblk_fetch_request(struct vblk_dev *vblkdev)
 		if (vblkdev->req != NULL) {
 			if (vblkdev->req->cmd_type != REQ_TYPE_FS) {
 				dev_err(vblkdev->device, "Skip non-fs request\n");
-				spin_lock(vblkdev->queue->queue_lock);
-				__blk_end_request_all(vblkdev->req, -EIO);
-				spin_unlock(vblkdev->queue->queue_lock);
+				io_error_handler(vblkdev);
 			} else
 				return;
 		}
@@ -372,7 +382,7 @@ static int next_transfer(struct vblk_dev *vblkdev)
 
 	ivc_blk_req = (struct ivc_blk_request *)
 		tegra_hv_ivc_write_get_next_frame(vblkdev->ivck);
-	if (IS_ERR(ivc_blk_req)) {
+	if (IS_ERR_OR_NULL(ivc_blk_req)) {
 		dev_err(vblkdev->device, "can't get empty frame for write\n");
 		return -EIO;
 	}
@@ -423,6 +433,54 @@ exit:
 	return 0;
 }
 
+static void ioctl_handler(struct vblk_dev *vblkdev)
+{
+	struct combo_info_t *combo_info;
+	uint8_t *frame_ptr;
+
+	if (vblkdev->ioctl_status == IOCTL_WAIT_BUS && vblkdev->req == NULL) {
+		frame_ptr = tegra_hv_ivc_write_get_next_frame(vblkdev->ivck);
+		if (IS_ERR_OR_NULL(frame_ptr)) {
+			vblkdev->ioctl_status = IOCTL_FAILURE;
+			complete(&vblkdev->ioctl_complete);
+			dev_err(vblkdev->device,
+				"no empty frame to send ioctl request\n");
+			return;
+		}
+
+		vblkdev->ioctl_status = IOCTL_PROGRESS;
+		memcpy((void *)frame_ptr, (void *)vblkdev->cmd_frame,
+			vblkdev->ivck->frame_size);
+
+		if (tegra_hv_ivc_write_advance(vblkdev->ivck))  {
+			vblkdev->ioctl_status = IOCTL_FAILURE;
+			complete(&vblkdev->ioctl_complete);
+			dev_err(vblkdev->device, "send combo_cmd failed\n");
+		}
+	} else if (vblkdev->ioctl_status == IOCTL_PROGRESS) {
+		combo_info = (struct combo_info_t *)
+			tegra_hv_ivc_read_get_next_frame(vblkdev->ivck);
+
+		if (IS_ERR_OR_NULL(combo_info))
+			return;
+
+		if (combo_info->cmd == CMD_PASS_THROUGH) {
+			if (combo_info->result) {
+				vblkdev->ioctl_status = IOCTL_FAILURE;
+				goto out;
+			}
+
+			memcpy((void *)vblkdev->cmd_frame, (void *)combo_info,
+				 vblkdev->ivck->frame_size);
+
+			vblkdev->ioctl_status = IOCTL_IDLE;
+out:
+			tegra_hv_ivc_read_advance(vblkdev->ivck);
+			complete(&vblkdev->ioctl_complete);
+		}
+	}
+}
+
 static int get_data_from_io_server(struct vblk_dev *vblkdev)
 {
 	struct ivc_blk_result *ivc_blk_res;
@@ -433,7 +491,7 @@ static int get_data_from_io_server(struct vblk_dev *vblkdev)
 
 	ivc_blk_res = (struct ivc_blk_result *)
 		tegra_hv_ivc_read_get_next_frame(vblkdev->ivck);
-	if (IS_ERR(ivc_blk_res)) {
+	if (IS_ERR_OR_NULL(ivc_blk_res)) {
 		dev_err(vblkdev->device, "ivc read failed\n");
 		return -EIO;
 	}
@@ -459,7 +517,7 @@ static int get_data_from_io_server(struct vblk_dev *vblkdev)
 					size = (vblkdev->cur_nsect *
 						vblkdev->config.hardsect_size) -
 						total_size;
-				memcpy(vblkdev->cur_buffer ,
+				memcpy(vblkdev->cur_buffer,
 					vblkdev->shared_buffer + total_size,
 					size);
 
@@ -496,9 +554,7 @@ static int fetch_next_req(struct vblk_dev *vblkdev)
 			"Request size over I/O limit. 0x%x > 0x%x\n",
 			blk_rq_sectors(vblkdev->req),
 			vblkdev->config.max_sectors_per_io);
-		spin_lock(vblkdev->queue->queue_lock);
-		__blk_end_request_all(vblkdev->req, -EIO);
-		spin_unlock(vblkdev->queue->queue_lock);
+		io_error_handler(vblkdev);
 		return -EINVAL;
 	}
 
@@ -515,17 +571,12 @@ static void do_next_bio(struct vblk_dev *vblkdev)
 		vblkdev->config.nsectors) {
 		dev_err(vblkdev->device, "Beyond-end write (%lld %d)\n",
 			(long long int)vblkdev->cur_sector, vblkdev->cur_nsect);
-		spin_lock(vblkdev->queue->queue_lock);
-		__blk_end_request_all(vblkdev->req, -EIO);
-		spin_unlock(vblkdev->queue->queue_lock);
+		io_error_handler(vblkdev);
 		return;
 	}
 
-	if (next_transfer(vblkdev)) {
-		spin_lock(vblkdev->queue->queue_lock);
-		__blk_end_request_all(vblkdev->req, -EIO);
-		spin_unlock(vblkdev->queue->queue_lock);
-	}
+	if (next_transfer(vblkdev))
+		io_error_handler(vblkdev);
 
 	if (timer_pending(&vblkdev->ivc_timer))
 		del_timer_sync(&vblkdev->ivc_timer);
@@ -542,13 +593,17 @@ static void vblk_request_work(struct work_struct *ws)
 	if (tegra_hv_ivc_channel_notified(vblkdev->ivck) != 0)
 		return;
 
+	if (vblkdev->ioctl_status != IOCTL_IDLE) {
+		ioctl_handler(vblkdev);
+		if (vblkdev->ioctl_status == IOCTL_PROGRESS)
+			return;
+	}
+
 	if (vblkdev->req != NULL) {
 		if (tegra_hv_ivc_can_read(vblkdev->ivck)) {
 			del_timer_sync(&vblkdev->ivc_timer);
 			if (get_data_from_io_server(vblkdev)) {
-				spin_lock(vblkdev->queue->queue_lock);
-				__blk_end_request_all(vblkdev->req, -EIO);
-				spin_unlock(vblkdev->queue->queue_lock);
+				io_error_handler(vblkdev);
 				return;
 			}
 			vblkdev->ready_to_receive = false;
@@ -560,6 +615,7 @@ static void vblk_request_work(struct work_struct *ws)
 				vblkdev->cur_nsect *
 				vblkdev->config.hardsect_size)) {
 				spin_unlock(vblkdev->queue->queue_lock);
+
 				if (fetch_next_req(vblkdev))
 					return;
 				do_next_bio(vblkdev);
@@ -579,15 +635,8 @@ void ivc_timeout_func(unsigned long ldev)
 {
 	struct vblk_dev *vblkdev = (struct vblk_dev *)ldev;
 
-	spin_lock(vblkdev->queue->queue_lock);
 	dev_err(vblkdev->device, "timeout!!!\n");
-	__blk_end_request_all(vblkdev->req, -EIO);
-	spin_unlock(vblkdev->queue->queue_lock);
-	vblkdev->cur_sector = 0;
-	vblkdev->cur_nsect = 0;
-	vblkdev->cur_buffer = NULL;
-	vblkdev->cur_transfer_cmd = UNKNOWN_CMD;
-	vblkdev->req = NULL;
+	io_error_handler(vblkdev);
 }
 
 /* The simple form of the request function. */
@@ -633,7 +682,7 @@ int vblk_getgeo(struct block_device *device, struct hd_geometry *geo)
 	return 0;
 }
 
-static int vblk_ioctl_combo_cmd(struct block_device *bdev,
+static int vblk_ioctl_cmd(struct block_device *bdev,
 		unsigned int cmd, void __user *user)
 {
 	struct vblk_dev *vblkdev = bdev->bd_disk->private_data;
@@ -738,7 +787,7 @@ int vblk_ioctl(struct block_device *bdev, fmode_t mode,
 	switch (cmd) {
 	case MMC_COMBO_IOC_CMD:
 	case MMC_IOC_CMD:
-		ret = vblk_ioctl_combo_cmd(bdev,
+		ret = vblk_ioctl_cmd(bdev,
 			cmd, (void __user *)arg);
 		break;
 

@@ -39,6 +39,10 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/mmc/ioctl.h>
+#include <linux/mutex.h>
+#include <linux/delay.h>
+#include <asm/uaccess.h>
 
 #define DRV_NAME "tegra_hv_vblk"
 
@@ -59,6 +63,7 @@ enum cmd_mode {
 	R_CONFIG,
 	R_TRANSFER_SHARED_BUF,
 	W_TRANSFER_SHARED_BUF,
+	CMD_PASS_THROUGH = 0x55aaaa55,
 	UNKNOWN_CMD = 0xffffffff,
 };
 
@@ -87,10 +92,46 @@ struct virtual_storage_configinfo {
 	uint32_t virtual_storage_ver;     /* Version of virtual storage */
 	uint32_t shared_buffer_offset;    /* Storage offset of shared buffer*/
 };
+
+struct combo_cmd_t {
+	uint32_t cmd;
+	uint32_t arg;
+	uint32_t response[4];
+	uint32_t buf_offset;
+	uint32_t data_len;
+};
+
+struct combo_info_t {
+	enum     cmd_mode cmd;
+	uint32_t count;
+	int32_t  result;
+};
 #pragma pack(pop)
 
 static struct tegra_hv_ivm_cookie *ivmk;
 static void *shared_buffer;
+
+enum IOCTL_STATUS {
+	IOCTL_SUCCESS = 0,
+	IOCTL_FAILURE,
+	IOCTL_IDLE,
+	IOCTL_WAIT_BUS,
+	IOCTL_PROGRESS,
+	IOCTL_UNKNOWN = 0xffffffff,
+};
+
+/*
+ * ToDo:
+ * we should replace mmc_combo_cmd_info and MMC_COMBO_IOC_CMD
+ * with mmc_ioc_multi_cmd and MMC_IOC_MULTI_CMD _IOWR if mnand
+ * tools use kernel-4.4 default command mmc_ioc_multi_cmd
+ */
+struct mmc_combo_cmd_info {
+	uint8_t  num_of_combo_cmds;
+	struct mmc_ioc_cmd *mmc_ioc_cmd_list;
+};
+#define MMC_COMBO_IOC_CMD _IOWR(MMC_BLOCK_MAJOR, 1, struct mmc_combo_cmd_info)
+
 /*
 * The drvdata of virtual device.
 */
@@ -123,7 +164,32 @@ struct vblk_dev {
 	struct workqueue_struct *wq;
 	struct device *device;
 	void *shared_buffer;
+	uint8_t *cmd_frame;
+	struct mmc_combo_cmd_info mcci;
+	struct mutex ioctl_lock;
+	spinlock_t queue_lock;
+	enum IOCTL_STATUS ioctl_status;
+	struct completion ioctl_complete;
 };
+
+/* MMCSD passthrough commands used */
+#define MMC_SEND_CID                2
+#define MMC_SWITCH                  6
+#define MMC_SEND_EXT_CSD            8
+#define MMC_IF_COND                 8
+#define MMC_SEND_STATUS             13
+#define MMC_READ_SINGLE_BLOCK       17     /* read single block */
+#define MMC_READ_MULTIPLE_BLOCK     18     /* read multiple blocks */
+#define MMC_WRITE_BLOCK             24     /* write single block */
+#define MMC_WRITE_MULTIPLE_BLOCK    25     /* write multiple blocks */
+#define MMC_GEN_CMD                 56     /* Hynix F26/Toshiba specific */
+#define MMC_MANF0_CMD               60     /* Hynix F20 specific */
+#define MMC_STOP_TRANSMISSION       12
+#define MMC_SECTOR_START            32     /* S */
+#define MMC_SECTOR_END              33     /* S */
+#define MMC_ERASE_GROUP_START       35     /* S */
+#define MMC_ERASE_GROUP_END         36     /* S */
+#define MMC_ERASE                   38     /* S */
 
 static int vblk_send_config_cmd(struct vblk_dev *vblkdev)
 {
@@ -162,6 +228,94 @@ static int vblk_send_config_cmd(struct vblk_dev *vblkdev)
 	}
 
 	return 0;
+}
+
+static int vblk_prepare_passthrough_cmd(struct vblk_dev *vblkdev,
+	void __user *user, uint8_t combo)
+{
+	int err = 0;
+	struct combo_info_t *combo_info;
+	struct combo_cmd_t *combo_cmd;
+	int i = 0;
+	u8 num_cmd;
+	struct mmc_combo_cmd_info mcci = {0};
+	struct mmc_ioc_cmd ic;
+	struct mmc_ioc_cmd __user *usr_ptr;
+	uint32_t combo_cmd_size;
+	unsigned long remainingbytes;
+	uint8_t *tmpaddr;
+
+	combo_info = (struct combo_info_t *)vblkdev->cmd_frame;
+
+	if (combo) {
+		tmpaddr = (uint8_t *)&mcci;
+		if (copy_from_user((void *)tmpaddr, user,
+			sizeof(struct mmc_combo_cmd_info))) {
+			err = -EFAULT;
+			goto out;
+		}
+
+		num_cmd = mcci.num_of_combo_cmds;
+		if (num_cmd < 1) {
+			err = -EINVAL;
+			goto out;
+		}
+
+		usr_ptr = (void * __user)mcci.mmc_ioc_cmd_list;
+	} else {
+		num_cmd = 1;
+		usr_ptr = (void * __user)user;
+	}
+	combo_info->cmd = CMD_PASS_THROUGH;
+	combo_info->count = num_cmd;
+
+	combo_cmd = (struct combo_cmd_t *)(vblkdev->cmd_frame +
+		sizeof(struct combo_info_t));
+
+	combo_cmd_size = sizeof(struct combo_info_t) +
+		sizeof(struct combo_cmd_t) * combo_info->count;
+
+	tmpaddr = (uint8_t *)&ic;
+	for (i = 0; i < combo_info->count; i++) {
+		if (copy_from_user((void *)tmpaddr, usr_ptr, sizeof(ic))) {
+			err = -EFAULT;
+			goto out;
+		}
+		combo_cmd->cmd = ic.opcode;
+		combo_cmd->arg = ic.arg;
+		combo_cmd->data_len = (uint32_t)(ic.blksz * ic.blocks);
+		combo_cmd_size += combo_cmd->data_len;
+		if (combo_cmd_size > vblkdev->ivck->frame_size) {
+			dev_err(vblkdev->device,
+				" ivc frame has no enough space to serve ioctl\n");
+			err = -EFAULT;
+			goto out;
+		}
+		combo_cmd->buf_offset = combo_cmd_size - combo_cmd->data_len;
+
+		if (ic.write_flag && combo_cmd->data_len) {
+			remainingbytes = copy_from_user((
+				(void *)vblkdev->cmd_frame +
+				combo_cmd->buf_offset),
+				(void __user *)(unsigned long)ic.data_ptr,
+				(u64)combo_cmd->data_len);
+			if (remainingbytes) {
+				dev_err(vblkdev->device,
+					"copy from user remainingbytes = %ld\n",
+					remainingbytes);
+				err = -EFAULT;
+				goto out;
+			}
+		}
+		combo_cmd++;
+		usr_ptr++;
+	}
+
+	vblkdev->ioctl_status = IOCTL_WAIT_BUS;
+	queue_work_on(WORK_CPU_UNBOUND, vblkdev->wq, &vblkdev->work);
+
+out:
+	return err;
 }
 
 static int vblk_get_configinfo(struct vblk_dev *vblkdev)
@@ -479,16 +633,122 @@ int vblk_getgeo(struct block_device *device, struct hd_geometry *geo)
 	return 0;
 }
 
-/* The ioctl() implementation */
-int vblk_ioctl(struct block_device *device, fmode_t mode,
-	unsigned int cmd, unsigned long arg)
+static int vblk_ioctl_combo_cmd(struct block_device *bdev,
+		unsigned int cmd, void __user *user)
 {
-	switch (cmd) {
-	default:  /* unknown command */
-		return -ENOTTY;
+	struct vblk_dev *vblkdev = bdev->bd_disk->private_data;
+	u8 num_cmd;
+	struct mmc_combo_cmd_info mcci = {0};
+	struct mmc_ioc_cmd ic;
+	struct mmc_ioc_cmd *ic_ptr = &ic;
+	struct mmc_ioc_cmd __user *usr_ptr = NULL;
+	struct combo_cmd_t *combo_cmd;
+	uint32_t i;
+	int err = 0;
+	unsigned long remainingbytes;
+
+	/*
+	 * The caller must have CAP_SYS_RAWIO, and must be calling this on the
+	 * whole block device, not on a partition.  This prevents overspray
+	 * between sibling partitions.
+	 */
+	if ((!capable(CAP_SYS_RAWIO)) || (bdev != bdev->bd_contains))
+		return -EPERM;
+
+	reinit_completion(&vblkdev->ioctl_complete);
+
+	if (vblk_prepare_passthrough_cmd(vblkdev, user, cmd)) {
+		err = -EINVAL;
+		goto out;
 	}
 
-	return 0;
+	/* waiting for storage server to complete this ioctl request */
+	wait_for_completion(&vblkdev->ioctl_complete);
+
+	if (vblkdev->ioctl_status == IOCTL_FAILURE) {
+		vblkdev->ioctl_status = IOCTL_IDLE;
+		err = -EIO;
+		goto out;
+	}
+
+	if (cmd == MMC_COMBO_IOC_CMD) {
+		if (copy_from_user(&mcci, user,
+			sizeof(struct mmc_combo_cmd_info))) {
+			err = -EFAULT;
+			goto out;
+		}
+
+		num_cmd = mcci.num_of_combo_cmds;
+		if (num_cmd < 1) {
+			err = -EINVAL;
+			goto out;
+		}
+
+		usr_ptr = (void * __user)mcci.mmc_ioc_cmd_list;
+	} else {
+		usr_ptr = (void * __user)user;
+		num_cmd = 1;
+	}
+
+	combo_cmd = (struct combo_cmd_t *)(vblkdev->cmd_frame +
+		sizeof(struct combo_info_t));
+
+	for (i = 0; i < num_cmd; i++) {
+		if (copy_from_user((void *)ic_ptr, usr_ptr,
+			sizeof(struct mmc_ioc_cmd))) {
+			err = -EFAULT;
+			goto out;
+		}
+
+		if (copy_to_user(&(usr_ptr->response), combo_cmd->response,
+			sizeof(combo_cmd->response))) {
+			err = -EFAULT;
+			goto out;
+		}
+
+		if (!ic.write_flag && combo_cmd->data_len) {
+			remainingbytes = copy_to_user(
+				(void __user *)(unsigned long)ic.data_ptr,
+				(vblkdev->cmd_frame + combo_cmd->buf_offset),
+				(u64)combo_cmd->data_len);
+			if (remainingbytes) {
+				dev_err(vblkdev->device,
+					"copy to user remainingbytes = %ld\n",
+					remainingbytes);
+				err = -EFAULT;
+				goto out;
+			}
+		}
+		combo_cmd++;
+		usr_ptr++;
+	}
+
+out:
+	return err;
+}
+
+/* The ioctl() implementation */
+int vblk_ioctl(struct block_device *bdev, fmode_t mode,
+	unsigned int cmd, unsigned long arg)
+{
+	int ret;
+	struct vblk_dev *vblkdev = bdev->bd_disk->private_data;
+
+	mutex_lock(&vblkdev->ioctl_lock);
+	switch (cmd) {
+	case MMC_COMBO_IOC_CMD:
+	case MMC_IOC_CMD:
+		ret = vblk_ioctl_combo_cmd(bdev,
+			cmd, (void __user *)arg);
+		break;
+
+	default:  /* unknown command */
+		ret = -ENOTTY;
+		break;
+	}
+	mutex_unlock(&vblkdev->ioctl_lock);
+
+	return ret;
 }
 
 /* The device operations structure. */
@@ -507,12 +767,14 @@ static void setup_device(struct vblk_dev *vblkdev)
 		vblkdev->config.nsectors * vblkdev->config.hardsect_size;
 
 	spin_lock_init(&vblkdev->lock);
+	spin_lock_init(&vblkdev->queue_lock);
+	mutex_init(&vblkdev->ioctl_lock);
 
 	init_timer(&vblkdev->ivc_timer);
 	vblkdev->ivc_timer.data = (unsigned long) vblkdev;
 	vblkdev->ivc_timer.function = ivc_timeout_func;
 
-	vblkdev->queue = blk_init_queue(vblk_request, &vblkdev->lock);
+	vblkdev->queue = blk_init_queue(vblk_request, &vblkdev->queue_lock);
 	if (vblkdev->queue == NULL) {
 		dev_err(vblkdev->device, "failed to init blk queue\n");
 		return;
@@ -663,6 +925,16 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 	}
 
 	vblkdev->ivmk = ivmk;
+
+	vblkdev->cmd_frame = kzalloc(vblkdev->ivck->frame_size, GFP_KERNEL);
+	if (vblkdev->cmd_frame == NULL) {
+		ret = -ENOMEM;
+		goto free_drvdata;
+	}
+
+	vblkdev->cur_transfer_cmd = UNKNOWN_CMD;
+	vblkdev->ioctl_status = IOCTL_IDLE;
+	init_completion(&vblkdev->ioctl_complete);
 	vblkdev->initialized = false;
 
 	vblkdev->wq = alloc_workqueue("vblk_req_wq%d",
@@ -671,7 +943,7 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 	if (vblkdev->wq == NULL) {
 		dev_err(dev, "Failed to allocate workqueue\n");
 		ret = -ENOMEM;
-		goto free_drvdata;
+		goto free_cmd_frame;
 	}
 	INIT_WORK(&vblkdev->init, vblk_init_device);
 	INIT_WORK(&vblkdev->work, vblk_request_work);
@@ -698,6 +970,9 @@ free_irq:
 free_wq:
 	destroy_workqueue(vblkdev->wq);
 
+free_cmd_frame:
+	kfree(vblkdev->cmd_frame);
+
 free_drvdata:
 	platform_set_drvdata(pdev, NULL);
 	kfree(vblkdev);
@@ -721,6 +996,7 @@ static int tegra_hv_vblk_remove(struct platform_device *pdev)
 	free_irq(vblkdev->ivck->irq, vblkdev);
 	tegra_hv_ivc_unreserve(vblkdev->ivck);
 	platform_set_drvdata(pdev, NULL);
+	kfree(vblkdev->cmd_frame);
 	kfree(vblkdev);
 
 	return 0;

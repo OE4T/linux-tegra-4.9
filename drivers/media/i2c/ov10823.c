@@ -1,7 +1,7 @@
 /*
  * ov10823.c - ov10823 sensor driver
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -64,7 +64,7 @@
 struct ov10823 {
 	struct camera_common_power_rail	power;
 	int				num_ctrls;
-	bool				master;
+	int				fsync;
 	int				cam_sid_gpio;
 	int				mcu_boot_gpio;
 	int				mcu_reset_gpio;
@@ -198,22 +198,22 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 };
 
 static inline void ov10823_get_frame_length_regs(ov10823_reg *regs,
-				u16 frame_length, bool master)
+				u16 frame_length, int fsync)
 {
 	/* 2 registers for FL, i.e., 2-byte FL */
 	regs->addr = 0x380e;
 	regs->val = (frame_length >> 8) & 0xff;
 	(regs + 1)->addr = 0x380f;
 	(regs + 1)->val = (frame_length) & 0xff;
-	if (master) {
-		(regs + 2)->addr = 0x3830;
-		(regs + 2)->val = ((frame_length - 4) >> 8) & 0xff;
-		(regs + 3)->addr = 0x3831;
-		(regs + 3)->val = (frame_length - 4) & 0xff;
-	} else {
+	if (fsync == OV10823_FSYNC_SLAVE) {
 		(regs + 2)->addr = 0x3826;
 		(regs + 2)->val = ((frame_length - 4) >> 8) & 0xff;
 		(regs + 3)->addr = 0x3827;
+		(regs + 3)->val = (frame_length - 4) & 0xff;
+	} else {
+		(regs + 2)->addr = 0x3830;
+		(regs + 2)->val = ((frame_length - 4) >> 8) & 0xff;
+		(regs + 3)->addr = 0x3831;
 		(regs + 3)->val = (frame_length - 4) & 0xff;
 	}
 	(regs + 4)->addr = OV10823_TABLE_END;
@@ -413,12 +413,14 @@ static int ov10823_s_stream(struct v4l2_subdev *sd, int enable)
 	dev_dbg(&client->dev, "%s: write mode table %d\n",
 		__func__, s_data->mode);
 	err = ov10823_write_table(priv, mode_table[s_data->mode]);
-	dev_dbg(&client->dev, "%s: write fsync table %d\n", __func__,
-		priv->master);
-	err = ov10823_write_table(priv, fsync_table[priv->master]);
-	if (err)
-		goto exit;
 
+	if (fsync_table[priv->fsync]) {
+		dev_dbg(&client->dev, "%s: write fsync table %d\n", __func__,
+			priv->fsync);
+		err = ov10823_write_table(priv, fsync_table[priv->fsync]);
+		if (err)
+			goto exit;
+	}
 
 	if (s_data->override_enable) {
 		/* write list of override regs for the asking frame length, */
@@ -450,6 +452,19 @@ static int ov10823_s_stream(struct v4l2_subdev *sd, int enable)
 	err = ov10823_write_table(priv, mode_table[OV10823_MODE_START_STREAM]);
 	if (err)
 		goto exit;
+
+	/*
+	 * If the sensor is in fsync slave mode, and is in the middle of
+	 * sending a frame when it gets a strobe on the fsin pin, it may
+	 * prematurely end the frame, resulting in a short frame on our
+	 * camera host.  So, after starting streaming, we assume fsync
+	 * master has already been told to start streaming, and we wait some
+	 * amount of time in order to skip the possible short frame.  The
+	 * length of time to wait should be at least our sample period.
+	 * Assume worse case of 30fps (33.3ms), and add a bit more.
+	 */
+	if (priv->fsync == OV10823_FSYNC_SLAVE)
+		msleep(40);
 
 	return 0;
 exit:
@@ -591,12 +606,20 @@ static int ov10823_set_frame_length(struct ov10823 *priv, s32 val)
 	int err;
 	u16 frame_length;
 
+	/*
+	 * This is a workaround for nvbug 1865041, where setting the VTS
+	 * timing registers when the sensor is set up for fsync master or
+	 * slave leads to streaming instability.
+	 */
+	if (priv->fsync != OV10823_FSYNC_NONE)
+		return 0;
+
 	frame_length = (u16)val;
 
 	dev_dbg(&priv->i2c_client->dev,
 		 "%s: frame_length: %d\n", __func__, frame_length);
 
-	ov10823_get_frame_length_regs(reg_list, frame_length, priv->master);
+	ov10823_get_frame_length_regs(reg_list, frame_length, priv->fsync);
 	ov10823_set_group_hold(priv);
 	err = ov10823_write_table(priv, reg_list);
 	if (err)
@@ -850,16 +873,23 @@ MODULE_DEVICE_TABLE(of, ov10823_of_match);
 static int ov10823_parse_dt(struct i2c_client *client, struct ov10823 *priv)
 {
 	struct device_node *np = client->dev.of_node;
+	const char *fsync_str;
 	int gpio;
 	int err;
-
-	priv->master = of_property_read_bool(np, "master");
 
 	err = of_property_read_string(np, "mclk", &priv->pdata->mclk_name);
 	if (err) {
 		dev_err(&client->dev, "mclk not in DT\n");
 		return -EINVAL;
 	}
+
+	err = of_property_read_string(np, "fsync", &fsync_str);
+	if (!err && fsync_str && (strcmp(fsync_str, "master") == 0))
+		priv->fsync = OV10823_FSYNC_MASTER;
+	else if (!err && fsync_str && (strcmp(fsync_str, "slave") == 0))
+		priv->fsync = OV10823_FSYNC_SLAVE;
+	else
+		priv->fsync = OV10823_FSYNC_NONE;
 
 	gpio = of_get_named_gpio(np, "pwdn-gpios", 0);
 	if (gpio < 0) {

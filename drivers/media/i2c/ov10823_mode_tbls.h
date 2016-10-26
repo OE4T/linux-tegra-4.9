@@ -1,7 +1,7 @@
 /*
  * ov10823.c - ov10823 sensor driver
  *
- * Copyright (c) 2016, NVIDIA CORPORATION, All Rights Reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION, All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1601,13 +1601,15 @@ static ov10823_reg *mode_table[] = {
 };
 
 enum {
-	OV10823_MODE_Master,
-	OV10823_MODE_Slave,
+	OV10823_FSYNC_NONE,
+	OV10823_FSYNC_MASTER,
+	OV10823_FSYNC_SLAVE,
 };
 
 static ov10823_reg *fsync_table[] = {
-	[OV10823_MODE_Master] = fsync_master,
-	[OV10823_MODE_Slave] = fsync_slave,
+	[OV10823_FSYNC_NONE] = NULL,
+	[OV10823_FSYNC_MASTER] = fsync_master,
+	[OV10823_FSYNC_SLAVE] = fsync_slave,
 };
 
 static const int ov10823_30fps[] = {

@@ -30,6 +30,7 @@ nvgpu-y += \
 	$(nvgpu-t18x)/gp106/ltc_gp106.o \
 	$(nvgpu-t18x)/gp106/fb_gp106.o \
 	$(nvgpu-t18x)/gp106/bios_gp106.o \
+	$(nvgpu-t18x)/gp106/regops_gp106.o \
 	$(nvgpu-t18x)/clk/clk_mclk.o \
 	$(nvgpu-t18x)/pstate/pstate.o \
 	$(nvgpu-t18x)/clk/clk_vin.o \

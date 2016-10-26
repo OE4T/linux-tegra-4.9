@@ -26,7 +26,7 @@
 #include "gp10b/mm_gp10b.h"
 #include "gp10b/ce_gp10b.h"
 #include "gp106/fifo_gp106.h"
-#include "gp10b/regops_gp10b.h"
+#include "gp106/regops_gp106.h"
 #include "gp10b/cde_gp10b.h"
 #include "gp106/therm_gp106.h"
 #include "gp106/xve_gp106.h"
@@ -205,7 +205,7 @@ int gp106_init_hal(struct gk20a *g)
 	gk20a_init_debug_ops(gops);
 	gk20a_init_dbg_session_ops(gops);
 	gp106_init_clk_ops(gops);
-	gp10b_init_regops(gops);
+	gp106_init_regops(gops);
 	gp10b_init_cde_ops(gops);
 	gk20a_init_tsg_ops(gops);
 #if defined(CONFIG_GK20A_CYCLE_STATS)

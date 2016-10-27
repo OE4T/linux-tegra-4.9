@@ -1278,9 +1278,7 @@ static int nvgpu_gpu_get_temperature(struct gk20a *g,
 
 	gk20a_idle(g->dev);
 
-	/* Convert from standard S24.8 fixed point to mC */
-	if (!err)
-		args->temperature = (temp_f24_8 * 1000) / 256;
+	args->temp_f24_8 = (s32)temp_f24_8;
 
 	return err;
 }

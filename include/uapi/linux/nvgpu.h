@@ -743,7 +743,10 @@ struct nvgpu_gpu_get_power_args {
 
 struct nvgpu_gpu_get_temperature_args {
 	__u32 reserved[3];
-	__u32 temperature;	/* mC */
+	/* Temperature in signed fixed point format SFXP24.8
+	 *    Celsius = temp_f24_8 / 256.
+	 */
+	__s32 temp_f24_8;
 };
 
 #define NVGPU_GPU_IOCTL_ZCULL_GET_CTX_SIZE \

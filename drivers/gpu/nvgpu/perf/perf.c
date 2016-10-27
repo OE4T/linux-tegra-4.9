@@ -16,6 +16,7 @@
 #include "pmuif/gpmuifperf.h"
 #include "pmuif/gpmuifperfvfe.h"
 #include "gk20a/pmu_gk20a.h"
+#include "clk/clk_arb.h"
 
 struct perfrpc_pmucmdhandler_params {
 	struct nv_pmu_perf_rpc *prpccall;
@@ -41,6 +42,22 @@ static void perfrpc_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 		phandlerparams->success = 1;
 }
 
+static int pmu_handle_perf_event(struct gk20a *g, void *pmu_msg)
+{
+	struct nv_pmu_perf_msg *msg = (struct nv_pmu_perf_msg *)pmu_msg;
+
+	gk20a_dbg_fn("");
+	switch (msg->msg_type) {
+	case NV_PMU_PERF_MSG_ID_VFE_CALLBACK:
+		nvgpu_clk_arb_schedule_vf_table_update(g);
+		break;
+	default:
+		WARN_ON(1);
+		break;
+	}
+	return 0;
+}
+
 u32 perf_pmu_vfe_load(struct gk20a *g)
 {
 	struct pmu_cmd cmd;
@@ -50,6 +67,9 @@ u32 perf_pmu_vfe_load(struct gk20a *g)
 	u32 seqdesc;
 	struct nv_pmu_perf_rpc rpccall = {0};
 	struct perfrpc_pmucmdhandler_params handler = {0};
+
+	/*register call back for future VFE updates*/
+	g->ops.perf.handle_pmu_perf_event = pmu_handle_perf_event;
 
 	rpccall.function = NV_PMU_PERF_RPC_ID_VFE_LOAD;
 	rpccall.params.vfe_load.b_load = true;

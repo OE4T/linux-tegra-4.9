@@ -921,7 +921,7 @@ static u32 devinit_get_vfe_var_table(struct gk20a *g,
 
 		case VBIOS_VFE_3X_VAR_ENTRY_TYPE_SINGLE_SENSED_TEMP:
 			var_type = CTRL_PERF_VFE_VAR_TYPE_SINGLE_SENSED_TEMP;
-			var_data.single_sensed_temp.temp_default = 105;
+			var_data.single_sensed_temp.temp_default = 0x9600;
 			var_data.single_sensed_temp.therm_channel_index =
 				(u8)BIOS_GET_FIELD(var.param0,
 					VBIOS_VFE_3X_VAR_ENTRY_PAR0_SSTEMP_TH_CH_IDX);

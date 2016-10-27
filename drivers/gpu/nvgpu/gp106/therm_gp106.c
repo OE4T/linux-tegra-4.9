@@ -15,6 +15,12 @@
 #include <linux/debugfs.h>
 #include "hw_therm_gp106.h"
 
+static void gp106_get_internal_sensor_limits(s32 *max_24_8, s32 *min_24_8)
+{
+	*max_24_8 = (0x87 << 8);
+	*min_24_8 = ((-216) << 8);
+}
+
 static int gp106_get_internal_sensor_curr_temp(struct gk20a *g, u32 *temp_f24_8)
 {
 	int err = 0;
@@ -117,4 +123,6 @@ void gp106_init_therm_ops(struct gpu_ops *gops) {
 #endif
 	gops->therm.elcg_init_idle_filters = gp106_elcg_init_idle_filters;
 	gops->therm.get_internal_sensor_curr_temp = gp106_get_internal_sensor_curr_temp;
+	gops->therm.get_internal_sensor_limits =
+			gp106_get_internal_sensor_limits;
 }

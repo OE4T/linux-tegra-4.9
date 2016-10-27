@@ -1677,6 +1677,59 @@ static void gr_gv11b_detect_sm_arch(struct gk20a *g)
 
 }
 
+static int gr_gv11b_commit_global_timeslice(struct gk20a *g,
+					struct channel_gk20a *c, bool patch)
+{
+	struct channel_ctx_gk20a *ch_ctx = NULL;
+	u32 pd_ab_dist_cfg0;
+	u32 ds_debug;
+	u32 mpc_vtg_debug;
+	u32 pe_vaf;
+	u32 pe_vsc_vpc;
+
+	gk20a_dbg_fn("");
+
+	pd_ab_dist_cfg0 = gk20a_readl(g, gr_pd_ab_dist_cfg0_r());
+	ds_debug = gk20a_readl(g, gr_ds_debug_r());
+	mpc_vtg_debug = gk20a_readl(g, gr_gpcs_tpcs_mpc_vtg_debug_r());
+
+	if (patch) {
+		int err;
+
+		ch_ctx = &c->ch_ctx;
+		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
+		if (err)
+			return err;
+	}
+
+	pe_vaf = gk20a_readl(g, gr_gpcs_tpcs_pe_vaf_r());
+	pe_vsc_vpc = gk20a_readl(g, gr_gpcs_tpcs_pes_vsc_vpc_r());
+
+	pe_vaf = gr_gpcs_tpcs_pe_vaf_fast_mode_switch_true_f() | pe_vaf;
+	pe_vsc_vpc = gr_gpcs_tpcs_pes_vsc_vpc_fast_mode_switch_true_f() |
+								pe_vsc_vpc;
+	pd_ab_dist_cfg0 = gr_pd_ab_dist_cfg0_timeslice_enable_en_f() |
+							pd_ab_dist_cfg0;
+	ds_debug = gr_ds_debug_timeslice_mode_enable_f() | ds_debug;
+	mpc_vtg_debug = gr_gpcs_tpcs_mpc_vtg_debug_timeslice_mode_enabled_f() |
+							mpc_vtg_debug;
+
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_pe_vaf_r(), pe_vaf,
+									patch);
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_pes_vsc_vpc_r(),
+							pe_vsc_vpc, patch);
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg0_r(),
+							pd_ab_dist_cfg0, patch);
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_ds_debug_r(), ds_debug, patch);
+	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_mpc_vtg_debug_r(),
+							mpc_vtg_debug, patch);
+
+	if (patch)
+		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
+
+	return 0;
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -1719,4 +1772,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.setup_rop_mapping = gr_gv11b_setup_rop_mapping;
 	gops->gr.init_sw_veid_bundle = gr_gv11b_init_sw_veid_bundle;
 	gops->gr.program_zcull_mapping = gr_gv11b_program_zcull_mapping;
+	gops->gr.commit_global_timeslice = gr_gv11b_commit_global_timeslice;
 }

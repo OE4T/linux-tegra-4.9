@@ -292,7 +292,7 @@
 
 		sor {
 			compatible = "nvidia,tegra186-sor";
-			reg = <0x0 0x15540000 0x0 0x40000>;
+			reg = <0x0 0x15B00000 0x0 0x40000>;
 
 			nvidia,xbar-ctrl = <0x2 0x1 0x0 0x3 0x4>;
 
@@ -320,7 +320,7 @@
 
 		dpaux@155c0000 {
 			compatible = "nvidia,tegra186-dpaux";
-			reg = <0x0 0x155c0000 0x0 0x00040000>;
+			reg = <0x0 0x155c0000 0x0 0x00010000>;
 			interrupts = <0 159 4>;
 
 			clocks = <&clk32k_in>,

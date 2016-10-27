@@ -21,7 +21,13 @@
 #include "pmu_gv11b.h"
 #include "hw_pwr_gv11b.h"
 
+static bool gv11b_is_pmu_supported(struct gk20a *g)
+{
+	return false;
+}
+
 void gv11b_init_pmu_ops(struct gpu_ops *gops)
 {
 	gp10b_init_pmu_ops(gops);
+	gops->pmu.is_pmu_supported = gv11b_is_pmu_supported;
 }

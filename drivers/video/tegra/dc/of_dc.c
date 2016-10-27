@@ -2007,6 +2007,13 @@ static struct device_node *parse_dp_settings(struct platform_device *ndev,
 		dpout->lanes = 4;
 		OF_DC_LOG("default lanes %d\n", dpout->lanes);
 	}
+
+	dpout->enhanced_framing_disable =
+			of_property_read_bool(np_dp_panel,
+			"nvidia,enhanced-framing-disable");
+	OF_DC_LOG("enhanced-framing-disable %d\n",
+			!!dpout->enhanced_framing_disable);
+
 	if (!of_property_read_u32(np_dp_panel,
 			"nvidia,link-bw", &temp)) {
 		dpout->link_bw = (u8)temp;

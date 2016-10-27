@@ -1688,7 +1688,10 @@ static int tegra_dp_init_max_link_cfg(struct tegra_dc_dp_data *dp,
 
 	cfg->link_bw = cfg->max_link_bw;
 
-	cfg->enhanced_framing = cfg->support_enhanced_framing;
+	cfg->enhanced_framing = cfg->only_enhanced_framing ?
+				cfg->support_enhanced_framing :
+				(dp->pdata->enhanced_framing_disable ?
+				false : cfg->support_enhanced_framing);
 
 	tegra_dc_dp_calc_config(dp, dp->mode, cfg);
 

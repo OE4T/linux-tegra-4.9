@@ -160,6 +160,17 @@ struct tegra_rng_req_32 {
 		_IOWR(0x98, 103, struct tegra_rng_req_32)
 #endif
 
+enum tegra_rsa_op_mode {
+	RSA_INIT,
+	RSA_SET_PUB,
+	RSA_SET_PRIV,
+	RSA_ENCRYPT,
+	RSA_DECRYPT,
+	RSA_SIGN,
+	RSA_VERIFY,
+	RSA_EXIT,
+};
+
 struct tegra_rsa_req {
 	char *key;
 	char *message;
@@ -171,6 +182,7 @@ struct tegra_rsa_req {
 	int pub_explen;
 	int prv_explen;
 	int skip_key;
+	enum tegra_rsa_op_mode op_mode;
 };
 #define TEGRA_CRYPTO_IOCTL_RSA_REQ	\
 		_IOWR(0x98, 105, struct tegra_rsa_req)

@@ -310,6 +310,9 @@ struct gpu_ops {
 		int (*init_sw_veid_bundle)(struct gk20a *g);
 		void (*program_zcull_mapping)(struct gk20a *g,
 				u32 zcull_alloc_num, u32 *zcull_map_tiles);
+		int (*commit_global_timeslice)(struct gk20a *g,
+					struct channel_gk20a *c, bool patch);
+
 	} gr;
 	const char *name;
 	struct {

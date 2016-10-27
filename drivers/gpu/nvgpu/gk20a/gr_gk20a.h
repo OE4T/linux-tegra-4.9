@@ -659,6 +659,9 @@ int gr_gk20a_resume_contexts(struct gk20a *g,
 			      int *ctx_resident_ch_fd);
 void gk20a_gr_enable_gpc_exceptions(struct gk20a *g);
 
+int gr_gk20a_commit_global_timeslice(struct gk20a *g,
+					struct channel_gk20a *c, bool patch);
+
 static inline const char *gr_gk20a_graphics_preempt_mode_name(u32 graphics_preempt_mode)
 {
 	switch (graphics_preempt_mode) {

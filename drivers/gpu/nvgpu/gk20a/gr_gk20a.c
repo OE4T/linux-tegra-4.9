@@ -954,7 +954,8 @@ static void gr_gk20a_commit_global_bundle_cb(struct gk20a *g,
 
 }
 
-static int gr_gk20a_commit_global_timeslice(struct gk20a *g, struct channel_gk20a *c, bool patch)
+int gr_gk20a_commit_global_timeslice(struct gk20a *g, struct channel_gk20a *c,
+								bool patch)
 {
 	struct gr_gk20a *gr = &g->gr;
 	struct channel_ctx_gk20a *ch_ctx = NULL;
@@ -1607,7 +1608,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 		goto clean_up;
 
 	/* override a few ctx state registers */
-	gr_gk20a_commit_global_timeslice(g, c, false);
+	g->ops.gr.commit_global_timeslice(g, c, false);
 
 	/* floorsweep anything left */
 	g->ops.gr.init_fs_state(g);
@@ -4666,7 +4667,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 		gr_fe_go_idle_timeout_count_disabled_f());
 
 	/* override a few ctx state registers */
-	gr_gk20a_commit_global_timeslice(g, NULL, false);
+	g->ops.gr.commit_global_timeslice(g, NULL, false);
 
 	/* floorsweep anything left */
 	err = g->ops.gr.init_fs_state(g);
@@ -9119,4 +9120,5 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 					gr_gk20a_split_ltc_broadcast_addr_stub;
 	gops->gr.setup_rop_mapping = gr_gk20a_setup_rop_mapping;
 	gops->gr.program_zcull_mapping = gr_gk20a_program_zcull_mapping;
+	gops->gr.commit_global_timeslice = gr_gk20a_commit_global_timeslice;
 }

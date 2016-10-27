@@ -450,7 +450,7 @@ static ssize_t aon_version_show(struct device *dev, char *buf, size_t size)
 	if (ret < 0)
 		ret = snprintf(buf, size, "error retrieving version: %d", ret);
 	else
-		ret = snprintf(buf, size, "%s", data);
+		ret = snprintf(buf, size, "%s", data ? data : "unavailable");
 	mutex_unlock(&aon_mutex);
 
 	return ret;

@@ -364,7 +364,7 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 		u16 *offset)
 {
 	u8 *hw_preactions = (void *)((u8 *)task->va + *offset);
-	int i = 0, ptr = 0;
+	int i = 0, j = 0, ptr = 0;
 
 	/* Add waits to preactions list */
 	for (i = 0; i < task->num_prefences; i++) {
@@ -386,6 +386,53 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 				task->prefences_sema_ext[i].dma_addr  +
 					fence->semaphore_offset,
 				fence->semaphore_value);
+			break;
+		}
+		case PVA_FENCE_TYPE_SYNC_FD: {
+			int thresh, id;
+			dma_addr_t syncpt_addr;
+			struct sync_fence *syncfd_fence;
+			struct sync_pt *pt;
+			struct nvhost_master *host = nvhost_get_host(
+							task->pva->pdev);
+			struct nvhost_syncpt *sp = &host->syncpt;
+
+			if (!fence->sync_fd)
+				break;
+
+			syncfd_fence = nvhost_sync_fdget(fence->sync_fd);
+			if (!syncfd_fence)
+				break;
+
+			for (j = 0; j < syncfd_fence->num_fences; j++) {
+				pt = sync_pt_from_fence(
+					syncfd_fence->cbs[j].sync_pt);
+				if (!pt)
+					break;
+
+				id = nvhost_sync_pt_id(pt);
+				thresh = nvhost_sync_pt_thresh(pt);
+
+				/* validate the synpt ids */
+				if (!id ||
+				!nvhost_syncpt_is_valid_hw_pt(sp, id)) {
+					sync_fence_put(syncfd_fence);
+					break;
+				}
+
+				if (nvhost_syncpt_is_expired(sp,
+							id, thresh))
+					continue;
+
+				syncpt_addr = nvhost_syncpt_address(
+							task->pva->pdev, id);
+
+				ptr += pva_task_write_ptr_op(
+						&hw_preactions[ptr],
+						TASK_ACT_PTR_BLK_GTREQL,
+						syncpt_addr, thresh);
+
+			}
 			break;
 		}
 		default:
@@ -420,17 +467,12 @@ static void pva_task_write_postactions(struct pva_submit_task *task,
 	for (i = 0; i < task->num_postfences; i++) {
 		struct pva_fence *fence = task->postfences + i;
 
-		switch (fence->type) {
-		case PVA_FENCE_TYPE_SEMAPHORE: {
+		if (fence->type == PVA_FENCE_TYPE_SEMAPHORE) {
 			ptr += pva_task_write_ptr_op(&hw_postactions[ptr],
 				TASK_ACT_PTR_WRITE_VAL,
 				task->postfences_sema_ext[i].dma_addr  +
 					fence->semaphore_offset,
 				fence->semaphore_value);
-			break;
-		}
-		default:
-			break;
 		}
 	}
 
@@ -777,6 +819,21 @@ static int pva_task_submit(struct pva_submit_task *task)
 		case PVA_FENCE_TYPE_SYNCPT: {
 			fence->syncpoint_index = task->queue->syncpt_id;
 			fence->syncpoint_value = thresh;
+			break;
+		}
+		case PVA_FENCE_TYPE_SYNC_FD: {
+			struct nvhost_ctrl_sync_fence_info pts;
+
+			/* Fail if any previous sync_create_fence_fd failed */
+			if (err < 0)
+				break;
+
+			pts.id = task->queue->syncpt_id;
+			pts.thresh = thresh;
+
+			err = nvhost_sync_create_fence_fd(host1x_pdev,
+					&pts, 1, "fence_pva", &fence->sync_fd);
+
 			break;
 		}
 		case PVA_FENCE_TYPE_SEMAPHORE:

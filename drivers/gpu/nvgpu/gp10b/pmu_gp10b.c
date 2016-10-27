@@ -449,8 +449,14 @@ static void pmu_dump_security_fuses_gp10b(struct gk20a *g)
 			val);
 }
 
+static bool gp10b_is_pmu_supported(struct gk20a *g)
+{
+	return true;
+}
+
 void gp10b_init_pmu_ops(struct gpu_ops *gops)
 {
+	gops->pmu.is_pmu_supported = gp10b_is_pmu_supported;
 	if (gops->privsecurity) {
 		gm20b_init_secure_pmu(gops);
 		gops->pmu.init_wpr_region = gm20b_pmu_init_acr;

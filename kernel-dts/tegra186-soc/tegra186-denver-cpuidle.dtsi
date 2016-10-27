@@ -34,7 +34,7 @@
 				compatible = "nvidia,tegra186-cpuidle-denver";
 				state-name = "Virtual core powergate";
 				wakeup-latency-us = <190>;
-				min-residency-us = <1000>;
+				min-residency-us = <0xffffffff>;
 				power = <60>;
 				pmstate = <0x6>;
 				arm,psci-suspend-param= <0x6>;

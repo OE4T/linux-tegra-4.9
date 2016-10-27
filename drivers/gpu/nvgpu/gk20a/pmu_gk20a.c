@@ -3976,13 +3976,21 @@ static int pmu_handle_perfmon_event(struct pmu_gk20a *pmu,
 static int pmu_handle_event(struct pmu_gk20a *pmu, struct pmu_msg *msg)
 {
 	int err = 0;
+	struct gk20a *g = gk20a_from_pmu(pmu);
 
 	gk20a_dbg_fn("");
-
 	switch (msg->hdr.unit_id) {
 	case PMU_UNIT_PERFMON:
 	case PMU_UNIT_PERFMON_T18X:
 		err = pmu_handle_perfmon_event(pmu, &msg->msg.perfmon);
+		break;
+	case PMU_UNIT_PERF:
+		if (g->ops.perf.handle_pmu_perf_event != NULL) {
+			err = g->ops.perf.handle_pmu_perf_event(g,
+				(void *)&msg->msg.perf);
+		} else {
+			WARN_ON(1);
+		}
 		break;
 	default:
 		break;

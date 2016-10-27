@@ -589,6 +589,8 @@ struct gpu_ops {
 		int (*elcg_init_idle_filters)(struct gk20a *g);
 		void (*therm_debugfs_init)(struct gk20a *g);
 		int (*get_internal_sensor_curr_temp)(struct gk20a *g, u32 *temp_f24_8);
+		void (*get_internal_sensor_limits)(s32 *max_24_8,
+							s32 *min_24_8);
 	} therm;
 	struct {
 		bool (*is_pmu_supported)(struct gk20a *g);
@@ -642,6 +644,9 @@ struct gpu_ops {
 		int (*get_arbiter_clk_default)(struct gk20a *g, u32 api_domain,
 				u16 *default_mhz);
 	} clk_arb;
+	struct {
+		int (*handle_pmu_perf_event)(struct gk20a *g, void *pmu_msg);
+	} perf;
 	bool privsecurity;
 	bool securegpccs;
 	bool pmupstate;

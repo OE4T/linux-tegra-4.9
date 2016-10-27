@@ -87,6 +87,7 @@ struct nv_pmu_perf_rpc {
 #define NV_PMU_PERF_MSG_ID_RPC                                      (0x00000003)
 #define NV_PMU_PERF_MSG_ID_BOARDOBJ_GRP_SET                         (0x00000004)
 #define NV_PMU_PERF_MSG_ID_BOARDOBJ_GRP_GET_STATUS                  (0x00000006)
+#define NV_PMU_PERF_MSG_ID_VFE_CALLBACK                             (0x00000005)
 
 /*!
 * Message carrying the result of the perf RPC execution.

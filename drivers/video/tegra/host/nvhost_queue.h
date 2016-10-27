@@ -30,6 +30,7 @@
  * @id:		Queue id
  * @list_lock	mutex for tasks lists control
  * @tasklist	Head of tasks list
+ * @sequence	monotonically incrementing task id per queue
  *
  */
 struct nvhost_queue {
@@ -39,6 +40,7 @@ struct nvhost_queue {
 	u32 id;
 	struct mutex list_lock;
 	struct list_head tasklist;
+	u32 sequence;
 };
 
 /**

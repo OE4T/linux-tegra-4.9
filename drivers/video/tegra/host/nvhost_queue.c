@@ -138,8 +138,9 @@ struct nvhost_queue *nvhost_queue_alloc(struct nvhost_queue_pool *pool)
 		goto err_alloc_syncpt;
 	}
 
-	/* initialize queue ref count */
+	/* initialize queue ref count and sequence*/
 	kref_init(&queue->kref);
+	queue->sequence = 0;
 
 	/* initialize task list */
 	INIT_LIST_HEAD(&queue->tasklist);

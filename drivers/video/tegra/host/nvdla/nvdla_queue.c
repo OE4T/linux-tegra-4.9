@@ -496,6 +496,13 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 	task_desc->engine_id = DLA_ENGINE_ID;
 	task_desc->size = buf_size;
 
+	/* update current task sequeue, make sure wrap around condition */
+	queue->sequence = queue->sequence + 1;
+	if (unlikely(queue->sequence >= (UINT_MAX - 1)))
+		queue->sequence = 0;
+
+	task_desc->sequence = queue->sequence;
+
 	/* below are actual number of action lists
 	 * DLA has one preaction list and one postaction list
 	 */
@@ -621,6 +628,7 @@ fail_to_alloc_task:
 static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 {
 	struct nvdla_task *task = (struct nvdla_task *)in_task;
+	struct nvdla_task *last_task = NULL;
 	struct platform_device *pdev = queue->pool->pdev;
 	uint32_t method_data;
 	uint32_t method_id;
@@ -636,7 +644,14 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 
 	/* get task ref and add to list */
 	nvdla_task_get(task);
-	list_add_tail(&task->list, &task->queue->tasklist);
+
+	/* update last task desc's next */
+	if (!list_empty(&queue->tasklist)) {
+		last_task = list_last_entry(&queue->tasklist,
+						struct nvdla_task, list);
+		last_task->task_desc->next = (uint64_t)task->task_desc_pa;
+	}
+	list_add_tail(&task->list, &queue->tasklist);
 
 	nvdla_dbg_info(pdev, "task[%p] added to list", task);
 

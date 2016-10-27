@@ -3131,6 +3131,8 @@ static const struct of_device_id pmc_match[] __initconst = {
 };
 
 static struct tegra_clk_init_table init_table[] __initdata = {
+	{ TEGRA210_CLK_HDA2CODEC_2X, TEGRA210_CLK_PLL_P, 48000000, 0},
+	{ TEGRA210_CLK_HDA, TEGRA210_CLK_PLL_P, 51000000, 0},
 	{ TEGRA210_CLK_UARTA, TEGRA210_CLK_PLL_P, 408000000, 0 },
 	{ TEGRA210_CLK_UARTB, TEGRA210_CLK_PLL_P, 408000000, 0 },
 	{ TEGRA210_CLK_UARTC, TEGRA210_CLK_PLL_P, 408000000, 0 },

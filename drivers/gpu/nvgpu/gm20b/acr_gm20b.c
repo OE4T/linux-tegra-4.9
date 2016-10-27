@@ -94,8 +94,14 @@ static void gm20b_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf)
 	inf->size = mem_inf.size;
 }
 
+static bool gm20b_is_pmu_supported(struct gk20a *g)
+{
+	return true;
+}
+
 void gm20b_init_secure_pmu(struct gpu_ops *gops)
 {
+	gops->pmu.is_pmu_supported = gm20b_is_pmu_supported;
 	gops->pmu.prepare_ucode = prepare_ucode_blob;
 	gops->pmu.pmu_setup_hw_and_bootstrap = gm20b_bootstrap_hs_flcn;
 	gops->pmu.is_lazy_bootstrap = gm20b_is_lazy_bootstrap;

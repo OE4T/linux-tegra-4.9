@@ -3266,8 +3266,14 @@ int gk20a_pmu_reset(struct gk20a *g)
 	return err;
 }
 
+static bool gk20a_is_pmu_supported(struct gk20a *g)
+{
+	return true;
+}
+
 void gk20a_init_pmu_ops(struct gpu_ops *gops)
 {
+	gops->pmu.is_pmu_supported = gk20a_is_pmu_supported;
 	gops->pmu.prepare_ucode = gk20a_prepare_ucode;
 	gops->pmu.pmu_setup_hw_and_bootstrap = gk20a_init_pmu_setup_hw1;
 	gops->pmu.pmu_nsbootstrap = pmu_bootstrap;

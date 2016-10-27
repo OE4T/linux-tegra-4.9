@@ -584,6 +584,7 @@ struct gpu_ops {
 		void (*therm_debugfs_init)(struct gk20a *g);
 	} therm;
 	struct {
+		bool (*is_pmu_supported)(struct gk20a *g);
 		int (*prepare_ucode)(struct gk20a *g);
 		int (*pmu_setup_hw_and_bootstrap)(struct gk20a *g);
 		int (*pmu_nsbootstrap)(struct pmu_gk20a *pmu);

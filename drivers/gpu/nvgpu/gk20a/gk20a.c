@@ -955,11 +955,13 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		goto done;
 	}
 
-	if (g->ops.pmu.prepare_ucode)
-		err = g->ops.pmu.prepare_ucode(g);
-	if (err) {
-		gk20a_err(dev, "failed to init pmu ucode");
-		goto done;
+	if (g->ops.pmu.is_pmu_supported(g)) {
+		if (g->ops.pmu.prepare_ucode)
+			err = g->ops.pmu.prepare_ucode(g);
+		if (err) {
+			gk20a_err(dev, "failed to init pmu ucode");
+			goto done;
+		}
 	}
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
@@ -972,10 +974,12 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	}
 #endif
 
-	err = gk20a_init_pmu_support(g);
-	if (err) {
-		gk20a_err(dev, "failed to init gk20a pmu");
-		goto done;
+	if (g->ops.pmu.is_pmu_supported(g)) {
+		err = gk20a_init_pmu_support(g);
+		if (err) {
+			gk20a_err(dev, "failed to init gk20a pmu");
+			goto done;
+		}
 	}
 
 	err = gk20a_init_gr_support(g);

@@ -129,9 +129,15 @@ int gm206_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 	return 0;
 }
 
+static bool gm206_is_pmu_supported(struct gk20a *g)
+{
+	return true;
+}
+
 
 void gm206_init_pmu_ops(struct gpu_ops *gops)
 {
+	gops->pmu.is_pmu_supported = gm206_is_pmu_supported;
 	if (gops->privsecurity) {
 		gm206_init_secure_pmu(gops);
 		gops->pmu.init_wpr_region = gm20b_pmu_init_acr;

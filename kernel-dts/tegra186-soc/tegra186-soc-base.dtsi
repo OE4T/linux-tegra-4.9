@@ -2419,9 +2419,15 @@
 	efuse@3820000 {
 		compatible = "nvidia,tegra186-efuse";
 		reg = <0x0 0x03820000 0x0 0x600>;
-		clocks = <&tegra_car TEGRA186_CLK_FUSE>,
-		       <&tegra_car TEGRA186_CLK_CLK_M>;
-		clock-names = "fuse", "clk_m";
+		clocks = <&tegra_car TEGRA186_CLK_FUSE>;
+		clock-names = "fuse";
+		status = "disabled";
+	};
+
+	efuse-burn {
+		compatible = "nvidia,tegra186-efuse-burn";
+		clocks = <&tegra_car TEGRA186_CLK_CLK_M>;
+		clock-names = "clk_m";
 		status = "disabled";
 	};
 

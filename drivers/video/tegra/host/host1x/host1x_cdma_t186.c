@@ -565,12 +565,12 @@ static void cdma_handle_timeout(struct nvhost_cdma *cdma, bool skip_reset)
 	/* stop HW, resetting channel/module */
 	cdma_op().timeout_teardown_begin(cdma, skip_reset);
 
+	/* ensure that mlocks get released */
+	cdma_timeout_release_mlock(cdma);
+
 	nvhost_cdma_update_sync_queue(cdma, sp, ch->dev);
 	mutex_unlock(&cdma->lock);
 	mutex_unlock(&dev->timeout_mutex);
-
-	/* ensure that mlocks get released */
-	cdma_timeout_release_mlock(cdma);
 }
 
 /**

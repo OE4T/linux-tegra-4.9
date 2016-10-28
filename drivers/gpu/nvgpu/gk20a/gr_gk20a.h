@@ -351,6 +351,7 @@ struct gr_gk20a {
 	struct gr_t18x t18x;
 #endif
 	u32 fbp_en_mask;
+	u32 *fbp_rop_l2_en_mask;
 	u32 no_of_sm;
 	struct sm_info *sm_to_cluster;
 	struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_states;

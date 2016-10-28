@@ -1028,8 +1028,15 @@ static int gr_gm20b_update_pc_sampling(struct channel_gk20a *c,
 static u32 gr_gm20b_get_fbp_en_mask(struct gk20a *g)
 {
 	u32 fbp_en_mask, opt_fbio;
-	opt_fbio = gk20a_readl(g,  fuse_status_opt_fbio_r());
-	fbp_en_mask = fuse_status_opt_fbio_data_v(opt_fbio);
+	u32 tmp, max_fbps_count;
+
+	tmp = gk20a_readl(g, top_num_fbps_r());
+	max_fbps_count = top_num_fbps_value_v(tmp);
+
+	opt_fbio = gk20a_readl(g, fuse_status_opt_fbio_r());
+	fbp_en_mask =
+		((1 << max_fbps_count) - 1) ^
+		fuse_status_opt_fbio_data_v(opt_fbio);
 	return fbp_en_mask;
 }
 
@@ -1051,16 +1058,22 @@ static u32 gr_gm20b_get_max_lts_per_ltc(struct gk20a *g)
 
 static u32 *gr_gm20b_rop_l2_en_mask(struct gk20a *g)
 {
-	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
-	u32 i, tmp, max_fbps_count;
+	struct gr_gk20a *gr = &g->gr;
+	u32 i, tmp, max_fbps_count, max_ltc_per_fbp;
+	u32 rop_l2_all_en;
+
 	tmp = gk20a_readl(g, top_num_fbps_r());
 	max_fbps_count = top_num_fbps_value_v(tmp);
+	max_ltc_per_fbp = gr_gm20b_get_max_ltc_per_fbp(g);
+	rop_l2_all_en = (1 << max_ltc_per_fbp) - 1;
 
 	/* mask of Rop_L2 for each FBP */
-	for (i = 0; i < max_fbps_count; i++)
-		gpu->rop_l2_en_mask[i] = fuse_status_opt_rop_l2_fbp_r(i);
+	for (i = 0; i < max_fbps_count; i++) {
+		tmp = gk20a_readl(g, fuse_status_opt_rop_l2_fbp_r(i));
+		gr->fbp_rop_l2_en_mask[i] = rop_l2_all_en ^ tmp;
+	}
 
-	return gpu->rop_l2_en_mask;
+	return gr->fbp_rop_l2_en_mask;
 }
 
 static u32 gr_gm20b_get_max_fbps_count(struct gk20a *g)

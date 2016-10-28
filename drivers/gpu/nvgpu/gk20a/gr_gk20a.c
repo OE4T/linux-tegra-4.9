@@ -3257,6 +3257,7 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	kfree(gr->sm_to_cluster);
 	kfree(gr->gpc_skip_mask);
 	kfree(gr->map_tiles);
+	kfree(gr->fbp_rop_l2_en_mask);
 	gr->gpc_tpc_count = NULL;
 	gr->gpc_zcb_count = NULL;
 	gr->gpc_ppc_count = NULL;
@@ -3266,6 +3267,7 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	gr->pes_tpc_mask[1] = NULL;
 	gr->gpc_skip_mask = NULL;
 	gr->map_tiles = NULL;
+	gr->fbp_rop_l2_en_mask = NULL;
 
 	gr->ctx_vars.valid = false;
 	kfree(gr->ctx_vars.ucode.fecs.inst.l);
@@ -3335,6 +3337,11 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	gr->max_fbps_count = top_num_fbps_value_v(tmp);
 
 	gr->fbp_en_mask = g->ops.gr.get_fbp_en_mask(g);
+
+	gr->fbp_rop_l2_en_mask =
+		kzalloc(gr->max_fbps_count * sizeof(u32), GFP_KERNEL);
+	if (!gr->fbp_rop_l2_en_mask)
+		goto clean_up;
 
 	tmp = gk20a_readl(g, top_tpc_per_gpc_r());
 	gr->max_tpc_per_gpc_count = top_tpc_per_gpc_value_v(tmp);

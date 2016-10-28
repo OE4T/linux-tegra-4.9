@@ -171,7 +171,7 @@ struct nvgpu_gpu_characteristics {
 	__u32 max_tex_per_tpc;
 	__u32 max_gpc_count;
 	/* mask of Rop_L2 for each FBP */
-	__u32 rop_l2_en_mask[2];
+	__u32 rop_l2_en_mask_DEPRECATED[2];
 
 
 	__u8 chipname[8];
@@ -522,6 +522,22 @@ struct nvgpu_gpu_get_memory_state_args {
 	__u64 reserved[4];
 };
 
+struct nvgpu_gpu_get_fbp_l2_masks_args {
+	/* [in]  L2 mask buffer size reserved by userspace. Should be
+		 at least sizeof(__u32) * fls(fbp_en_mask) to receive LTC
+		 mask for each FBP.
+	   [out] full kernel buffer size
+	*/
+	__u32 mask_buf_size;
+	__u32 reserved;
+
+	/* [in]  pointer to L2 mask buffer. It will receive one
+		 32-bit L2 mask per FBP or 0 if FBP is not enabled or
+		 not present. This parameter is ignored if
+		 mask_buf_size is 0. */
+	__u64 mask_buf_addr;
+};
+
 #define NVGPU_GPU_IOCTL_ZCULL_GET_CTX_SIZE \
 	_IOR(NVGPU_GPU_IOCTL_MAGIC, 1, struct nvgpu_gpu_zcull_get_ctx_size_args)
 #define NVGPU_GPU_IOCTL_ZCULL_GET_INFO \
@@ -583,8 +599,10 @@ struct nvgpu_gpu_get_memory_state_args {
 #define NVGPU_GPU_IOCTL_GET_MEMORY_STATE \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 33, \
 			struct nvgpu_gpu_get_memory_state_args)
+#define NVGPU_GPU_IOCTL_GET_FBP_L2_MASKS \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 38, struct nvgpu_gpu_get_fbp_l2_masks_args)
 #define NVGPU_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_GPU_IOCTL_GET_MEMORY_STATE)
+	_IOC_NR(NVGPU_GPU_IOCTL_GET_FBP_L2_MASKS)
 #define NVGPU_GPU_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_gpu_get_cpu_time_correlation_info_args)
 

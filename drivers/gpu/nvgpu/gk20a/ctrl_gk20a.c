@@ -246,6 +246,30 @@ static int gk20a_ctrl_get_tpc_masks(struct gk20a *g,
 	return err;
 }
 
+static int gk20a_ctrl_get_fbp_l2_masks(
+	struct gk20a *g, struct nvgpu_gpu_get_fbp_l2_masks_args *args)
+{
+	struct gr_gk20a *gr = &g->gr;
+	int err = 0;
+	const u32 fbp_l2_mask_size = sizeof(u32) * gr->max_fbps_count;
+
+	if (args->mask_buf_size > 0) {
+		size_t write_size = fbp_l2_mask_size;
+
+		if (write_size > args->mask_buf_size)
+			write_size = args->mask_buf_size;
+
+		err = copy_to_user((void __user *)(uintptr_t)
+				   args->mask_buf_addr,
+				   gr->fbp_rop_l2_en_mask, write_size);
+	}
+
+	if (err == 0)
+		args->mask_buf_size = fbp_l2_mask_size;
+
+	return err;
+}
+
 static int nvgpu_gpu_ioctl_l2_fb_ops(struct gk20a *g,
 		struct nvgpu_gpu_l2_fb_args *args)
 {
@@ -935,6 +959,10 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	case NVGPU_GPU_IOCTL_GET_TPC_MASKS:
 		err = gk20a_ctrl_get_tpc_masks(g,
 			(struct nvgpu_gpu_get_tpc_masks_args *)buf);
+		break;
+	case NVGPU_GPU_IOCTL_GET_FBP_L2_MASKS:
+		err = gk20a_ctrl_get_fbp_l2_masks(g,
+			(struct nvgpu_gpu_get_fbp_l2_masks_args *)buf);
 		break;
 	case NVGPU_GPU_IOCTL_OPEN_CHANNEL:
 		/* this arg type here, but ..gpu_open_channel_args in nvgpu.h

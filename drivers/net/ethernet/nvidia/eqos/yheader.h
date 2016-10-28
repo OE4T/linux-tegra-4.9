@@ -1558,6 +1558,7 @@ struct eqos_prv_data {
 	tegra_isomgr_handle isomgr_handle;
 	struct tegra_prod       *prod_list;
 	void __iomem *pads;
+	bool mtu_changed;
 };
 
 typedef enum {

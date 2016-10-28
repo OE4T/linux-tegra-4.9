@@ -1734,7 +1734,7 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 		vlan_tag |= (skb->priority << 13);
 		ptx_ring->vlan_tag_present = 1;
 		if (vlan_tag != ptx_ring->vlan_tag_id ||
-		    ptx_ring->context_setup == 1) {
+		    ptx_ring->context_setup == 1 || pdata->mtu_changed) {
 			ptx_ring->vlan_tag_id = vlan_tag;
 			if (Y_TRUE == ptx_ring->tx_vlan_tag_via_reg) {
 				pr_err("VLAN control info update via reg\n");
@@ -1747,6 +1747,7 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 				    (tx_pkt_features->vlan_tag, vlan_tag);
 			}
 		}
+		pdata->mtu_changed = false;
 		pdata->xstats.tx_vlan_pkt_n++;
 	}
 #endif
@@ -4074,6 +4075,8 @@ static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 	if (!(pdata->hw_state_flgs & (1 << HW_STOPPED)))
 		eqos_start_dev(pdata);
 	clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
+
+	pdata->mtu_changed = true;
 
 	DBGPR("<--eqos_change_mtu\n");
 

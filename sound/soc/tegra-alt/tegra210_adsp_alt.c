@@ -654,7 +654,7 @@ static int tegra210_adsp_send_state_msg(struct tegra210_adsp_app *app,
 
 	/* Spike ADSP freq to max when app transitions to active */
 	/* state; DFS will thereafter find appropriate rate      */
-	if (state == nvfx_state_active)
+	if ((state == nvfx_state_active) && (app->override_freq_work != NULL))
 		schedule_work(app->override_freq_work);
 
 	return tegra210_adsp_send_msg(app, &apm_msg, flags);

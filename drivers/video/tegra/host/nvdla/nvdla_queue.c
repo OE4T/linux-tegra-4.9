@@ -132,12 +132,18 @@ static void task_free(struct kref *ref)
 
 void nvdla_task_put(struct nvdla_task *task)
 {
+	/* release queue refcnt */
+	nvhost_queue_put(task->queue);
+
 	kref_put(&task->ref, task_free);
 }
 
 void nvdla_task_get(struct nvdla_task *task)
 {
 	kref_get(&task->ref);
+
+	/* update queue refcnt */
+	nvhost_queue_get(task->queue);
 }
 
 static void nvdla_task_free_locked(struct nvdla_task *task)

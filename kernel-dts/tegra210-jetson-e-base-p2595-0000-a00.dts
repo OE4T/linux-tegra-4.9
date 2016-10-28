@@ -267,7 +267,6 @@
 
 	pcie-controller@1003000 {
 		nvidia,wake-gpio = <&gpio TEGRA_GPIO(A, 2) 0>;
-		nvidia,lane-map = <0x14>;
 		dvdd-pex-pll-supply = <&max77620_ldo1>;
 		l0-dvddio-pex-supply = <&max77620_ldo1>;
 		l1-dvddio-pex-supply = <&max77620_ldo1>;
@@ -288,10 +287,12 @@
 		status = "okay";
 
 		pci@1,0 {
+			nvidia,num-lanes = <4>;
 			status = "okay";
 		};
 
 		pci@2,0 {
+			nvidia,num-lanes = <1>;
 			status = "okay";
 		};
 	};

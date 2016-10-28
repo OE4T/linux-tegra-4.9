@@ -67,6 +67,8 @@ static const struct vivid_fmt formats_ovl[] = {
 /* The number of discrete webcam frameintervals */
 #define VIVID_WEBCAM_IVALS (VIVID_WEBCAM_SIZES * 2)
 
+#define VIVID_HDMI_SIZES 3
+
 /* Sizes must be in increasing order */
 static const struct v4l2_frmsize_discrete webcam_sizes[VIVID_WEBCAM_SIZES] = {
 	{  320, 180 },
@@ -88,6 +90,12 @@ static const struct v4l2_fract webcam_intervals[VIVID_WEBCAM_IVALS] = {
 	{  1, 30 },
 	{  1, 50 },
 	{  1, 60 },
+};
+
+static const struct v4l2_frmsize_discrete hdmi_sizes[VIVID_HDMI_SIZES] = {
+	{ 1280, 720 },
+	{ 1920, 1080 },
+	{ 3840, 2160 },
 };
 
 static const struct v4l2_discrete_probe webcam_probe = {
@@ -1749,6 +1757,13 @@ int vidioc_enum_framesizes(struct file *file, void *fh,
 			return -EINVAL;
 		fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
 		fsize->discrete = webcam_sizes[fsize->index];
+		return 0;
+	}
+	if (vivid_is_hdmi_cap(dev)) {
+		if (fsize->index >= ARRAY_SIZE(hdmi_sizes))
+			return -EINVAL;
+		fsize->type = V4L2_FRMSIZE_TYPE_DISCRETE;
+		fsize->discrete = hdmi_sizes[fsize->index];
 		return 0;
 	}
 	if (fsize->index)

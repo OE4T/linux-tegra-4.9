@@ -110,15 +110,17 @@
 		};
 	};
 	pcie-controller@10003000 {
-		nvidia,lane-map = <0x211>;
 		status = "okay";
 		pci@1,0 {
+			nvidia,num-lanes = <2>;
 			status = "okay";
 		};
 		pci@2,0 {
+			nvidia,num-lanes = <1>;
 			status = "disabled";
 		};
 		pci@3,0 {
+			nvidia,num-lanes = <1>;
 			status = "okay";
 		};
 	};

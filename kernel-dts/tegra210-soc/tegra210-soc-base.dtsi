@@ -748,14 +748,14 @@
 			interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
 			iommus = <&smmu TEGRA_SWGROUP_VI>;
 			status = "disabled";
-			clocks = <&tegra_car TEGRA210_CLK_ID_VI>,
-				 <&tegra_car TEGRA210_CLK_ID_CSI>,
-				 <&tegra_car TEGRA210_CLK_ID_CILAB>,
-				 <&tegra_car TEGRA210_CLK_ID_CILCD>,
-				 <&tegra_car TEGRA210_CLK_ID_CILE>,
-				 <&tegra_car TEGRA210_CLK_ID_VII2C>,
-				 <&tegra_car TEGRA210_CLK_ID_I2CSLOW>,
-				 <&tegra_car TEGRA210_CLK_ID_EMC>;
+			clocks = <&tegra_car TEGRA210_CLK_VI>,
+				 <&tegra_car TEGRA210_CLK_CSI>,
+				 <&tegra_car TEGRA210_CLK_CILAB>,
+				 <&tegra_car TEGRA210_CLK_CILCD>,
+				 <&tegra_car TEGRA210_CLK_CILE>,
+				 <&tegra_car TEGRA210_CLK_VI_I2C>,
+				 <&tegra_car TEGRA210_CLK_I2CSLOW>,
+				 <&tegra_car TEGRA210_CLK_EMC>;
 			clock-names = "vi", "csi", "cilab", "cilcd",
 					"cile", "vii2c", "i2cslow", "emc";
 			resets = <&tegra_car 20>;
@@ -980,6 +980,12 @@
 			scl-gpio = <&gpio TEGRA_GPIO(S, 2) 0>;
 			sda-gpio = <&gpio TEGRA_GPIO(S, 3) 0>;
 			status = "disabled";
+			clocks = <&tegra_car TEGRA210_CLK_VI_I2C>,
+				<&tegra_car TEGRA210_CLK_I2CSLOW>,
+				<&tegra_car TEGRA210_CLK_HOST1X>;
+			clock-names = "vii2c", "i2cslow", "host1x";
+			resets = <&tegra_car 208>;
+			reset-names = "vii2c";
 			clock-frequency = <400000>;
 		};
 	};

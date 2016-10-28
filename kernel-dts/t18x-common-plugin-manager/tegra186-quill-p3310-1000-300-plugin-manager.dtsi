@@ -101,7 +101,7 @@
 			};
 		};
 
-		fragement-power-monitor-p3310-1000-300 {
+		fragement-pmon-p3310-1000-300 {
 			ids = ">=3310-1000-300", "3310-1000-200-F";
 			override@0 {
 				target = <&ina3221x_40>;
@@ -130,7 +130,7 @@
 				};
 			};
 		};
-		fragement-power-monitor-p3310-1000-800 {
+		fragement-pmon-p3310-1000-800 {
 			ids = ">=3310-1000-800";
 			override@0 {
 				target = <&ina3221x_41>;

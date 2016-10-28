@@ -69,7 +69,7 @@
 
 	rtc@c2a0000 {
 		compatible = "nvidia,tegra18-rtc";
-		reg = <0x0 0x0c2a0000 0x0 0x100>;
+		reg = <0x0 0x0c2a0000 0x0 0x00010000>;
 		interrupts = <0 10 0x04>;
 		status = "disabled";
 	};

@@ -23,7 +23,8 @@
 #include <linux/anon_inodes.h>
 
 #include "gk20a.h"
-#include "hw_ccsr_gk20a.h"
+
+#include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
 
 #define NVGPU_TSG_MIN_TIMESLICE_US 1000
 #define NVGPU_TSG_MAX_TIMESLICE_US 50000

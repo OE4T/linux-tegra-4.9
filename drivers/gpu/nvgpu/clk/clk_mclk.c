@@ -16,7 +16,8 @@
 #include "pmuif/gpmuifseq.h"
 #include "gm206/bios_gm206.h"
 #include "gk20a/pmu_gk20a.h"
-#include "gk20a/hw_pwr_gk20a.h"
+
+#include <nvgpu/hw/gk20a/hw_pwr_gk20a.h>
 #include "gp106/hw_fb_gp106.h"
 
 #include "include/bios.h"

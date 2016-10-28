@@ -28,9 +28,10 @@
 #include "gr_gk20a.h"
 #include "dbg_gpu_gk20a.h"
 #include "regops_gk20a.h"
-#include "hw_therm_gk20a.h"
-#include "hw_gr_gk20a.h"
-#include "hw_perf_gk20a.h"
+
+#include <nvgpu/hw/gk20a/hw_therm_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_perf_gk20a.h>
 
 /*
  * API to get first channel from the list of all channels

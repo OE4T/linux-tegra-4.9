@@ -28,8 +28,9 @@
 #include "fecs_trace_gk20a.h"
 #include "gk20a.h"
 #include "gr_gk20a.h"
-#include "hw_ctxsw_prog_gk20a.h"
-#include "hw_gr_gk20a.h"
+
+#include <nvgpu/hw/gk20a/hw_ctxsw_prog_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
 
 /*
  * If HW circular buffer is getting too many "buffer full" conditions,

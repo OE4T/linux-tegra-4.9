@@ -29,10 +29,11 @@
 #include "clk_gk20a.h"
 #include "regops_gk20a.h"
 #include "therm_gk20a.h"
-#include "hw_proj_gk20a.h"
 #include "tsg_gk20a.h"
 #include "dbg_gpu_gk20a.h"
 #include "css_gr_gk20a.h"
+
+#include <nvgpu/hw/gk20a/hw_proj_gk20a.h>
 
 static struct gpu_ops gk20a_ops = {
 	.clock_gating = {

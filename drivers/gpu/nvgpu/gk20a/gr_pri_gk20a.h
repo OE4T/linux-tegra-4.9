@@ -23,6 +23,8 @@
  * of the context state store for gr/compute contexts.
  */
 
+#include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
+
 /*
  * GPC pri addressing
  */

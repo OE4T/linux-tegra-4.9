@@ -36,11 +36,11 @@
 #include "fence_gk20a.h"
 #include "semaphore_gk20a.h"
 
-#include "hw_ram_gk20a.h"
-#include "hw_fifo_gk20a.h"
-#include "hw_pbdma_gk20a.h"
-#include "hw_ccsr_gk20a.h"
-#include "hw_ltc_gk20a.h"
+#include <nvgpu/hw/gk20a/hw_ram_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_fifo_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
 
 #define NVMAP_HANDLE_PARAM_SIZE 1
 

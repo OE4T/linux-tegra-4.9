@@ -38,17 +38,17 @@
 #include "gk20a.h"
 #include "mm_gk20a.h"
 #include "fence_gk20a.h"
-#include "hw_gmmu_gk20a.h"
-#include "hw_fb_gk20a.h"
-#include "hw_bus_gk20a.h"
-#include "hw_ram_gk20a.h"
-#include "hw_pram_gk20a.h"
-#include "hw_mc_gk20a.h"
-#include "hw_flush_gk20a.h"
-#include "hw_ltc_gk20a.h"
-
 #include "kind_gk20a.h"
 #include "semaphore_gk20a.h"
+
+#include <nvgpu/hw/gk20a/hw_gmmu_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_fb_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_bus_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_ram_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_pram_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_flush_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
 
 /*
  * Flip this to force all gk20a_mem* accesses via PRAMIN from the start of the

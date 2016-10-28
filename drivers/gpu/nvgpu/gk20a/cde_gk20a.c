@@ -34,8 +34,8 @@
 #include "semaphore_gk20a.h"
 #include "nvgpu_common.h"
 
-#include "hw_ccsr_gk20a.h"
-#include "hw_pbdma_gk20a.h"
+#include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 
 static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx);
 static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct gk20a *g);

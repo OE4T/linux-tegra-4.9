@@ -28,8 +28,9 @@
 #include "ctxsw_trace_gk20a.h"
 #include "gk20a.h"
 #include "gr_gk20a.h"
-#include "hw_ctxsw_prog_gk20a.h"
-#include "hw_gr_gk20a.h"
+
+#include <nvgpu/hw/gk20a/hw_ctxsw_prog_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
 
 #define GK20A_CTXSW_TRACE_MAX_VM_RING_SIZE	(128*PAGE_SIZE)
 

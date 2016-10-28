@@ -23,12 +23,13 @@
 #include "vgpu/fecs_trace_vgpu.h"
 #include "gk20a/debug_gk20a.h"
 #include "gk20a/hal_gk20a.h"
-#include "gk20a/hw_mc_gk20a.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
 #include "gk20a/tsg_gk20a.h"
 #include "gk20a/gk20a_scale.h"
 #include "gk20a/channel_gk20a.h"
 #include "gm20b/hal_gm20b.h"
+
+#include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "nvgpu_gpuid_t18x.h"

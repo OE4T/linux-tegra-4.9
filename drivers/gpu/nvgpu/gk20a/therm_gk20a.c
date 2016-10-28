@@ -20,8 +20,9 @@
  */
 
 #include "gk20a.h"
-#include "hw_gr_gk20a.h"
-#include "hw_therm_gk20a.h"
+
+#include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_therm_gk20a.h>
 
 static int gk20a_init_therm_reset_enable_hw(struct gk20a *g)
 {

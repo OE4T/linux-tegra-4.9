@@ -21,8 +21,9 @@
 #include <linux/bitops.h>
 #include <linux/compiler.h>
 
-#include "hw_gmmu_gk20a.h"
 #include "kind_gk20a.h"
+
+#include <nvgpu/hw/gk20a/hw_gmmu_gk20a.h>
 
 /* TBD: generate these from kind_macros.h */
 

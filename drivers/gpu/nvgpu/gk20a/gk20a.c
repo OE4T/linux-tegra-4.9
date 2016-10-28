@@ -51,14 +51,6 @@
 #include "ctrl_gk20a.h"
 #include "channel_sync_gk20a.h"
 
-#include "hw_mc_gk20a.h"
-#include "hw_timer_gk20a.h"
-#include "hw_bus_gk20a.h"
-#include "hw_sim_gk20a.h"
-#include "hw_top_gk20a.h"
-#include "hw_ltc_gk20a.h"
-#include "hw_gr_gk20a.h"
-#include "hw_fb_gk20a.h"
 #include "gk20a_scale.h"
 #include "ctxsw_trace_gk20a.h"
 #include "dbg_gpu_gk20a.h"
@@ -80,6 +72,16 @@
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "nvgpu_gpuid_t19x.h"
 #endif
+
+#include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_timer_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_bus_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_sim_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_top_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_fb_gk20a.h>
+
 
 #ifdef CONFIG_ARM64
 #define __cpuc_flush_dcache_area __flush_dcache_area

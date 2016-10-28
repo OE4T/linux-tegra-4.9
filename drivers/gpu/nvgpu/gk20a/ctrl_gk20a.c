@@ -27,9 +27,10 @@
 #include "gr_gk20a.h"
 #include "fence_gk20a.h"
 #include "regops_gk20a.h"
-#include "hw_gr_gk20a.h"
-#include "hw_fb_gk20a.h"
-#include "hw_timer_gk20a.h"
+
+#include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_fb_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_timer_gk20a.h>
 
 
 #define HZ_TO_MHZ(a) ((a > 0xF414F9CD7) ? 0xffff : (a >> 32) ? \

@@ -18,7 +18,8 @@
 
 #include "gk20a.h"
 #include "mc_gk20a.h"
-#include "hw_mc_gk20a.h"
+
+#include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 
 irqreturn_t mc_gk20a_isr_stall(struct gk20a *g)
 {

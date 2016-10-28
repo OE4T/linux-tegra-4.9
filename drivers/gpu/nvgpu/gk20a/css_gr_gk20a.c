@@ -23,9 +23,10 @@
 #include <linux/vmalloc.h>
 
 #include "gk20a.h"
-#include "hw_perf_gk20a.h"
-#include "hw_mc_gk20a.h"
 #include "css_gr_gk20a.h"
+
+#include <nvgpu/hw/gk20a/hw_perf_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 
 /* check client for pointed perfmon ownership */
 #define CONTAINS_PERFMON(cl, pm)				\

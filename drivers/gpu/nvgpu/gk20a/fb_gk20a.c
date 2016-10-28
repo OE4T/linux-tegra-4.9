@@ -17,9 +17,10 @@
 
 #include "gk20a.h"
 #include "kind_gk20a.h"
-#include "hw_mc_gk20a.h"
-#include "hw_fb_gk20a.h"
 #include "fb_gk20a.h"
+
+#include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_fb_gk20a.h>
 
 void fb_gk20a_reset(struct gk20a *g)
 {

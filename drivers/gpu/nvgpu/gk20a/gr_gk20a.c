@@ -34,24 +34,6 @@
 #include "gk20a.h"
 #include "kind_gk20a.h"
 #include "gr_ctx_gk20a.h"
-#include "nvgpu_common.h"
-
-#include "hw_ccsr_gk20a.h"
-#include "hw_ctxsw_prog_gk20a.h"
-#include "hw_fifo_gk20a.h"
-#include "hw_gr_gk20a.h"
-#include "hw_gmmu_gk20a.h"
-#include "hw_mc_gk20a.h"
-#include "hw_ram_gk20a.h"
-#include "hw_pri_ringmaster_gk20a.h"
-#include "hw_pri_ringstation_sys_gk20a.h"
-#include "hw_pri_ringstation_gpc_gk20a.h"
-#include "hw_pri_ringstation_fbp_gk20a.h"
-#include "hw_top_gk20a.h"
-#include "hw_ltc_gk20a.h"
-#include "hw_fb_gk20a.h"
-#include "hw_therm_gk20a.h"
-#include "hw_pbdma_gk20a.h"
 #include "gr_pri_gk20a.h"
 #include "regops_gk20a.h"
 #include "dbg_gpu_gk20a.h"
@@ -59,6 +41,24 @@
 #include "semaphore_gk20a.h"
 #include "platform_gk20a.h"
 #include "ctxsw_trace_gk20a.h"
+#include "nvgpu_common.h"
+
+#include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_ctxsw_prog_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_fifo_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_gmmu_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_ram_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_pri_ringmaster_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_pri_ringstation_sys_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_pri_ringstation_gpc_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_pri_ringstation_fbp_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_top_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_fb_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_therm_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 
 #define BLK_SIZE (256)
 #define NV_PMM_FBP_STRIDE	0x1000

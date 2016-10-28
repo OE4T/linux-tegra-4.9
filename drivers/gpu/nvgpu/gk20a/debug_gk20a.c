@@ -27,10 +27,10 @@
 #include "debug_gk20a.h"
 #include "semaphore_gk20a.h"
 
-#include "hw_ram_gk20a.h"
-#include "hw_fifo_gk20a.h"
-#include "hw_ccsr_gk20a.h"
-#include "hw_pbdma_gk20a.h"
+#include <nvgpu/hw/gk20a/hw_ram_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_fifo_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 
 unsigned int gk20a_debug_trace_cmdbuf;
 

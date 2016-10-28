@@ -19,9 +19,10 @@
 #include <linux/delay.h>	/* for mdelay */
 
 #include "gk20a.h"
-#include "hw_mc_gk20a.h"
-#include "hw_pri_ringmaster_gk20a.h"
-#include "hw_pri_ringstation_sys_gk20a.h"
+
+#include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_pri_ringmaster_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_pri_ringstation_sys_gk20a.h>
 
 void gk20a_reset_priv_ring(struct gk20a *g)
 {
@@ -97,4 +98,3 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	gk20a_dbg_info("ringmaster intr status0: 0x%08x,"
 		" status1: 0x%08x", status0, status1);
 }
-

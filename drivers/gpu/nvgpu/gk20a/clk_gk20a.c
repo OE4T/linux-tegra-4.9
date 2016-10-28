@@ -23,8 +23,9 @@
 #include <linux/clk/tegra.h>
 
 #include "gk20a.h"
-#include "hw_trim_gk20a.h"
-#include "hw_timer_gk20a.h"
+
+#include <nvgpu/hw/gk20a/hw_trim_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_timer_gk20a.h>
 
 #define gk20a_dbg_clk(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_clk, fmt, ##arg)

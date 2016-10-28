@@ -19,8 +19,9 @@
 #include <linux/kernel.h>
 #include <trace/events/gk20a.h>
 
-#include "hw_ltc_gk20a.h"
 #include "gk20a.h"
+
+#include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
 
 #include "ltc_common.c"
 

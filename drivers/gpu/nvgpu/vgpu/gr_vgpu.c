@@ -14,8 +14,9 @@
  */
 
 #include "vgpu/vgpu.h"
-#include "gk20a/hw_gr_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
+
+#include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
 
 static void vgpu_gr_detect_sm_arch(struct gk20a *g)
 {

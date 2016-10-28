@@ -62,6 +62,8 @@ static irqreturn_t isc_mgr_isr(int irq, void *data)
 					isc_mgr->t);
 			if (ret < 0) {
 				pr_err("error sending signal\n");
+				spin_unlock_irqrestore(&isc_mgr->spinlock,
+							flags);
 				return IRQ_HANDLED;
 			}
 		}
@@ -480,7 +482,6 @@ static int isc_mgr_open(struct inode *inode, struct file *file)
 static int isc_mgr_release(struct inode *inode, struct file *file)
 {
 	struct isc_mgr_priv *isc_mgr = file->private_data;
-	unsigned long flags;
 
 	isc_mgr_misc_ctrl(isc_mgr, false);
 
@@ -493,11 +494,9 @@ static int isc_mgr_release(struct inode *inode, struct file *file)
 		isc_mgr_power_down(isc_mgr, 0xffffffff);
 
 	/* clear sinfo to prevent report error after handler is closed */
-	spin_lock_irqsave(&isc_mgr->spinlock, flags);
 	memset(&isc_mgr->sinfo, 0, sizeof(struct siginfo));
 	isc_mgr->t = NULL;
 	WARN_ON(!atomic_xchg(&isc_mgr->in_use, 0));
-	spin_unlock_irqrestore(&isc_mgr->spinlock, flags);
 
 	return 0;
 }

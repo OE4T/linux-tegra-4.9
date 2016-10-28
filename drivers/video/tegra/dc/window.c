@@ -770,30 +770,13 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 			tegra_dc_update_scaling(dc, win, Bpp, Bpp_bw,
 								scan_column);
 
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
-		tegra_dc_writel(dc, 0, DC_WIN_BUF_STRIDE);
-		tegra_dc_writel(dc, 0, DC_WIN_UV_BUF_STRIDE);
-#endif
-
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
-	defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
-		tegra_dc_writel(dc, win->phys_addr, DC_WINBUF_START_ADDR);
-#else
 		tegra_dc_writel(dc, tegra_dc_reg_l32(win->phys_addr),
 			DC_WINBUF_START_ADDR);
 		tegra_dc_writel(dc, tegra_dc_reg_h32(win->phys_addr),
 			DC_WINBUF_START_ADDR_HI);
-#endif
 		if (!yuvp && !yuvsp) {
 			tegra_dc_writel(dc, win->stride, DC_WIN_LINE_STRIDE);
 		} else if (yuvp) {
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
-	defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
-			tegra_dc_writel(dc, win->phys_addr_u,
-				DC_WINBUF_START_ADDR_U);
-			tegra_dc_writel(dc, win->phys_addr_v,
-				DC_WINBUF_START_ADDR_V);
-#else
 			tegra_dc_writel(dc, tegra_dc_reg_l32(win->phys_addr_u),
 				DC_WINBUF_START_ADDR_U);
 			tegra_dc_writel(dc, tegra_dc_reg_h32(win->phys_addr_u),
@@ -802,22 +785,15 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 				DC_WINBUF_START_ADDR_V);
 			tegra_dc_writel(dc, tegra_dc_reg_h32(win->phys_addr_v),
 				DC_WINBUF_START_ADDR_HI_V);
-#endif
 			tegra_dc_writel(dc,
 				LINE_STRIDE(win->stride) |
 				UV_LINE_STRIDE(win->stride_uv),
 				DC_WIN_LINE_STRIDE);
 		} else {
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
-	defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
-			tegra_dc_writel(dc, win->phys_addr_u,
-					DC_WINBUF_START_ADDR_U);
-#else
 			tegra_dc_writel(dc, tegra_dc_reg_l32(win->phys_addr_u),
 				DC_WINBUF_START_ADDR_U);
 			tegra_dc_writel(dc, tegra_dc_reg_h32(win->phys_addr_u),
 				DC_WINBUF_START_ADDR_HI_U);
-#endif
 			tegra_dc_writel(dc,
 					LINE_STRIDE(win->stride) |
 					UV_LINE_STRIDE(win->stride_uv),
@@ -847,30 +823,11 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 			win->phys_addr2 = win->phys_addr;
 	}
 
-	if (tegra_dc_feature_has_interlace(dc, win->idx) &&
-		(dc->mode.vmode == FB_VMODE_INTERLACED)) {
-
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
-			tegra_dc_writel(dc, tegra_dc_reg_l32
-				(win->phys_addr2),
+	if ((tegra_dc_feature_has_interlace(dc, win->idx)) &&
+	    (dc->mode.vmode == FB_VMODE_INTERLACED)) {
+		tegra_dc_writel(dc, win->phys_addr2,
 				DC_WINBUF_START_ADDR_FIELD2);
-			tegra_dc_writel(dc, tegra_dc_reg_h32
-				(win->phys_addr2),
-				DC_WINBUF_START_ADDR_FIELD2_HI);
-#else
-			tegra_dc_writel(dc,
-				win->phys_addr2,
-				DC_WINBUF_START_ADDR_FIELD2);
-#endif
 		if (yuvp) {
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
-	defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
-			tegra_dc_writel(dc, win->phys_addr_u2,
-				DC_WINBUF_START_ADDR_FIELD2_U);
-
-			tegra_dc_writel(dc, win->phys_addr_v2,
-				DC_WINBUF_START_ADDR_FIELD2_V);
-#else
 			tegra_dc_writel(dc, tegra_dc_reg_l32(win->phys_addr_u2),
 				DC_WINBUF_START_ADDR_FIELD2_U);
 			tegra_dc_writel(dc, tegra_dc_reg_h32(win->phys_addr_u2),
@@ -880,18 +837,11 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 				DC_WINBUF_START_ADDR_FIELD2_V);
 			tegra_dc_writel(dc, tegra_dc_reg_h32(win->phys_addr_v2),
 				DC_WINBUF_START_ADDR_FIELD2_HI_V);
-#endif
 		} else if (yuvsp) {
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
-	defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
-			tegra_dc_writel(dc, win->phys_addr_u2,
-				DC_WINBUF_START_ADDR_FIELD2_U);
-#else
 			tegra_dc_writel(dc, tegra_dc_reg_l32(win->phys_addr_u2),
 				DC_WINBUF_START_ADDR_FIELD2_U);
 			tegra_dc_writel(dc, tegra_dc_reg_h32(win->phys_addr_u2),
 				DC_WINBUF_START_ADDR_FIELD2_HI_U);
-#endif
 		}
 		tegra_dc_writel(dc, dfixed_trunc(h_offset),
 			DC_WINBUF_ADDR_H_OFFSET_FIELD2);
@@ -958,7 +908,6 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 		 * for in-order blending settings. */
 		dc->blend.alpha[win->idx] = win->global_alpha;
 		if (!tegra_dc_feature_is_gen2_blender(dc, win->idx)) {
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
 			/* Update global alpha if blender is gen1. */
 			if (win->global_alpha == 255) {
 				tegra_dc_writel(dc, 0, DC_WIN_GLOBAL_ALPHA);
@@ -967,8 +916,6 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 					win->global_alpha, DC_WIN_GLOBAL_ALPHA);
 				win_options |= CP_ENABLE;
 			}
-#endif
-
 #if !defined(CONFIG_TEGRA_DC_BLENDER_GEN2)
 			if (win->flags &
 					TEGRA_WIN_FLAG_BLEND_COVERAGE) {
@@ -1027,9 +974,7 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 
 	tegra_dc_set_dynamic_emc(dc);
 
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC) \
-	|| defined(CONFIG_ARCH_TEGRA_14x_SOC) \
-	|| defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	/* prevent FIFO from taking in stale data after a reset */
 	tegra_dc_writel(dc, MEMFETCH_RESET, DC_WINBUF_MEMFETCH_CONTROL);
 #endif
@@ -1049,10 +994,8 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 		set_bit(V_BLANK_FLIP, &dc->vblank_ref_count);
 		tegra_dc_unmask_interrupt(dc,
 			FRAME_END_INT | V_BLANK_INT | ALL_UF_INT());
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 		set_bit(V_PULSE2_FLIP, &dc->vpulse2_ref_count);
 		tegra_dc_unmask_interrupt(dc, V_PULSE2_INT);
-#endif
 	}
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {

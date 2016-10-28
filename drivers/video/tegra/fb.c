@@ -247,11 +247,7 @@ static int tegra_fb_set_par(struct fb_info *info)
 		 * client requests it
 		 */
 		stereo = !!(var->vmode & info->mode->vmode &
-#ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
 					FB_VMODE_STEREO_FRAME_PACK);
-#else
-					FB_VMODE_STEREO_LEFT_RIGHT);
-#endif
 
 		/* Configure DC with new mode */
 		if (tegra_dc_set_fb_mode(dc, info->mode, stereo)) {
@@ -669,11 +665,7 @@ static int tegra_fb_set_mode(struct tegra_dc *dc, int fps)
 	if (best_mode) {
 		info->mode = best_mode;
 		stereo = !!(info->var.vmode & info->mode->vmode &
-#ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
 				FB_VMODE_STEREO_FRAME_PACK);
-#else
-				FB_VMODE_STEREO_LEFT_RIGHT);
-#endif
 		return tegra_dc_set_fb_mode(dc, best_mode, stereo);
 	}
 	return -EIO;

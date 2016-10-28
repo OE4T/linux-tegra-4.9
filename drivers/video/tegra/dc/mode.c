@@ -556,19 +556,10 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 	/* SW WAR for bug 1045373. To make the shift clk dividor effect under
 	 * all circumstances, write N+2 to SHIFT_CLK_DIVIDER and activate it.
 	 * After 2us delay, write the target values to it. */
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
-	tegra_dc_writel(dc, PIXEL_CLK_DIVIDER_PCD1 | SHIFT_CLK_DIVIDER(div + 2),
-			DC_DISP_DISP_CLOCK_CONTROL);
-	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 
-	udelay(2);
-#endif
-
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	/* Deprecated on t11x and t14x. */
 	tegra_dc_writel(dc, 0x00010001,
 			DC_DISP_SHIFT_CLOCK_OPTIONS);
-#endif
 
 	tegra_dc_writel(dc, PIXEL_CLK_DIVIDER_PCD1 | SHIFT_CLK_DIVIDER(div),
 			DC_DISP_DISP_CLOCK_CONTROL);
@@ -683,7 +674,6 @@ int tegra_dc_to_fb_videomode(struct fb_videomode *fbmode,
 	fbmode->yres = mode->v_active;
 	fbmode->vmode = mode->vmode;
 	if (mode->stereo_mode) {
-#ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
 		/* Double the pixel clock and update v_active only for
 		 * frame packed mode */
 		mode_pclk /= 2;
@@ -691,9 +681,6 @@ int tegra_dc_to_fb_videomode(struct fb_videomode *fbmode,
 		fbmode->yres = (mode->v_active - mode->v_sync_width -
 			mode->v_back_porch - mode->v_front_porch) / 2;
 		fbmode->vmode |= FB_VMODE_STEREO_FRAME_PACK;
-#else
-		fbmode->vmode |= FB_VMODE_STEREO_LEFT_RIGHT;
-#endif
 	}
 
 	if (!(mode->flags & TEGRA_DC_MODE_FLAG_NEG_H_SYNC))
@@ -754,7 +741,6 @@ int tegra_dc_set_drm_mode(struct tegra_dc *dc,
 	if (!check_mode_timings(dc, &mode, true))
 		return -EINVAL;
 
-#ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
 	/* Double the pixel clock and update v_active only for
 	 * frame packed mode */
 	if (mode.stereo_mode) {
@@ -762,7 +748,6 @@ int tegra_dc_set_drm_mode(struct tegra_dc *dc,
 		/* total v_active = yres*2 + activespace */
 		mode.v_active = dmode->vtotal + dmode->vdisplay;
 	}
-#endif
 
 	mode.flags = 0;
 
@@ -812,7 +797,6 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 	if (!check_mode_timings(dc, &mode, true))
 		return -EINVAL;
 
-#ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
 	/* Double the pixel clock and update v_active only for
 	 * frame packed mode */
 	if (mode.stereo_mode) {
@@ -823,7 +807,6 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 				fbmode->upper_margin +
 				fbmode->lower_margin;
 	}
-#endif
 
 	mode.flags = 0;
 

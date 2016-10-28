@@ -143,12 +143,7 @@ struct tegra_dc_dsi_data {
 };
 
 /* Max number of data lanes supported */
-#if defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
-	defined(CONFIG_ARCH_TEGRA_2x_SOC)
-#define MAX_DSI_DATA_LANES	2
-#else
 #define MAX_DSI_DATA_LANES	8
-#endif
 
 /* Default Peripheral reset timeout */
 #define DSI_PR_TO_VALUE		0x2000

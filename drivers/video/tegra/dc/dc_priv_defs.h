@@ -52,11 +52,7 @@ static inline u32 ALL_UF_INT(void)
 {
 	if (tegra_platform_is_fpga())
 		return 0;
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || \
-	defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
-	defined(CONFIG_ARCH_TEGRA_11x_SOC)
-	return WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT;
-#elif defined(CONFIG_TEGRA_NVDISPLAY)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	return NVDISP_UF_INT;
 #else
 	return WIN_A_UF_INT | WIN_B_UF_INT | WIN_C_UF_INT | HC_UF_INT |

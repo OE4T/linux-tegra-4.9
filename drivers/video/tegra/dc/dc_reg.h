@@ -85,9 +85,11 @@
 #define  GPIO_0_INT		(1 << 18)
 #define  GPIO_1_INT		(1 << 19)
 #define  GPIO_2_INT		(1 << 20)
+
 #ifdef CONFIG_TEGRA_NVDISPLAY
 #define  SMARTDIM_INT		(1 << 24)
 #endif
+
 #define  NVDISP_UF_INT		(1 << 23)
 #define  HC_UF_INT		(1 << 23) /* Cursor or WinH */
 #define  WIN_D_UF_INT		(1 << 24)
@@ -492,11 +494,13 @@
 #define  BASE_COLOR_SIZE888		(8 << 0)
 #define  DITHER_CONTROL_DISABLE		(0 << 8)
 #define  DITHER_CONTROL_ORDERED		(2 << 8)
+
 #ifdef CONFIG_TEGRA_DC_TEMPORAL_DITHER
 #define  DITHER_CONTROL_TEMPORAL	(3 << 8)
 #else
 #define  DITHER_CONTROL_ERRDIFF		(3 << 8)
 #endif
+
 #define  CMU_DISABLE			(0 << 20)
 #define  CMU_ENABLE			(1 << 20)
 
@@ -527,6 +531,7 @@
 #define DC_DISP_CURSOR_START_ADDR_NS		0x43f
 #define CURSOR_START_ADDR_MASK	(((1 << 22) - 1) << 10)
 #define CURSOR_START_ADDR(_addr)	((_addr) >> 10)
+
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
 #define	CURSOR_START_ADDR_LOW(_addr) ((_addr & 0xffffffff) >> 10)
 #define	CURSOR_START_ADDR_HI(_addr) ((_addr >> 32) & 0x3)
@@ -745,10 +750,8 @@
 
 #endif
 
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
 #define DC_WIN_GLOBAL_ALPHA			0x715
 #define  GLOBAL_ALPHA_ENABLE		0x10000
-#endif
 
 #define DC_WINBUF_START_ADDR			0x800
 #define DC_WINBUF_START_ADDR_NS			0x801

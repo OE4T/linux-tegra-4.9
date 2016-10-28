@@ -41,13 +41,8 @@ static int use_dynamic_emc = 1;
 
 module_param_named(use_dynamic_emc, use_dynamic_emc, int, S_IRUGO | S_IWUSR);
 
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 static unsigned int tegra_dcs_total_bw[TEGRA_MAX_DC] = {0};
 DEFINE_MUTEX(tegra_dcs_total_bw_lock);
-#endif
 
 /* windows A, B, C for first and second display */
 static const enum tegra_la_id la_id_tab[2][DC_N_WINDOWS] = {
@@ -56,37 +51,17 @@ static const enum tegra_la_id la_id_tab[2][DC_N_WINDOWS] = {
 		TEGRA_LA_DISPLAY_0A,
 		TEGRA_LA_DISPLAY_0B,
 		TEGRA_LA_DISPLAY_0C,
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_11x_SOC)
 		TEGRA_LA_DISPLAYD,
-#endif
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
-		TEGRA_LA_DISPLAY_HC,
-#endif
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 		TEGRA_LA_DISPLAY_T,
-#endif
 	},
 	/* second display */
 	{
 		TEGRA_LA_DISPLAY_0AB,
 		TEGRA_LA_DISPLAY_0BB,
 		TEGRA_LA_DISPLAY_0CB,
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
-		0,
-		TEGRA_LA_DISPLAY_HCB,
-#endif
 	},
 };
 
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 static bool is_internal_win(enum tegra_la_id id)
 {
 	return ((id == TEGRA_LA_DISPLAY_0A) || (id == TEGRA_LA_DISPLAY_0B) ||
@@ -513,7 +488,6 @@ static void calc_disp_params(struct tegra_dc *dc,
 	disp_params->total_dc1_bw = tegra_dcs_total_bw[1];
 	mutex_unlock(&tegra_dcs_total_bw_lock);
 }
-#endif
 
 /*
  * tegra_dc_process_bandwidth_renegotiate() is only called in code
@@ -535,46 +509,20 @@ static int tegra_dc_handle_latency_allowance(struct tegra_dc *dc,
 	int ret = 0;
 	unsigned long bw;
 	struct dc_to_la_params disp_params;
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
-	/* window B V-filter tap for first and second display. */
-	static const enum tegra_la_id vfilter_tab[2] = {
-		TEGRA_LA_DISPLAY_1B, TEGRA_LA_DISPLAY_1BB,
-	};
-#endif
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	struct clk *emc_clk = NULL;
 	unsigned long emc_freq_hz = 0;
-#endif
-
 
 	BUG_ON(dc->ctrl_num >= ARRAY_SIZE(la_id_tab));
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
-	BUG_ON(dc->ctrl_num >= ARRAY_SIZE(vfilter_tab));
-#endif
 	BUG_ON(w->idx >= ARRAY_SIZE(*la_id_tab));
 	BUG_ON(w->dc->ndev->id >= ARRAY_SIZE(la_id_tab));
 
 	bw = max(w->bandwidth, w->new_bandwidth);
-
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
-	/* tegra_dc_get_bandwidth() treats V filter windows as double
-	 * bandwidth, but LA has a seperate client for V filter */
-	if (w->idx == 1 && win_use_v_filter(dc, w))
-		bw /= 2;
-#endif
 
 	/* our bandwidth is in kbytes/sec, but LA takes MBps.
 	 * round up bandwidth to next 1MBps */
 	if (bw != ULONG_MAX)
 		bw = bw / 1000 + 1;
 
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	/* use clk_round_rate on root emc clock instead to get correct rate */
 	emc_clk = clk_get_sys("tegra_emc", "emc");
 	emc_freq_hz = set_la ?
@@ -613,17 +561,6 @@ static int tegra_dc_handle_latency_allowance(struct tegra_dc *dc,
 
 		emc_freq_hz = next_freq;
 	}
-#else
-	tegra_set_disp_latency_allowance(la_id_tab[dc->ctrl_num][w->idx],
-						emc_freq_hz,
-						bw,
-						disp_params);
-#endif
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC)
-	/* if window B, also set the 1B client for the 2-tap V filter. */
-	if (w->idx == 1)
-		tegra_set_latency_allowance(vfilter_tab[dc->ctrl_num], bw);
-#endif
 
 	return ret;
 }
@@ -745,36 +682,20 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 	 * is of the luma plane's size only. */
 	bpp = tegra_dc_is_yuv_planar(w->fmt) ?
 		2 * tegra_dc_fmt_bpp(w->fmt) : tegra_dc_fmt_bpp(w->fmt);
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	if (tegra_dc_is_yuv420(w->fmt))
 		bpp = 16;
-#endif
+
 	ret = (dc->mode.pclk / 1000UL) * (bpp / 8);
 	ret *= in_w;
 	ret = div_u64(ret, out_w * (WIN_IS_TILED(w) ?
 		      tiled_windows_bw_multiplier : 1));
 
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || \
-	defined(CONFIG_ARCH_TEGRA_3x_SOC)
-	ret *= (win_use_v_filter(dc, w) ? 2 : 1);
-#else
 	if (in_h > out_h) {
 		/* vertical downscaling enabled  */
 		ret *= in_h;
 		ret = div_u64(ret, out_h);
 	}
-#endif
 
-#ifdef CONFIG_ARCH_TEGRA_2x_SOC
-	/*
-	 * Assuming 60% efficiency: i.e. if we calculate we need 70MBps, we
-	 * will request 117MBps from EMC.
-	 */
-	ret = ret + (17 * div_u64(ret, 25));
-#endif
 	return ret;
 }
 
@@ -954,9 +875,7 @@ long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
 	pclk = tegra_dc_get_out_max_pixclock(dc);
 	if (!pclk) {
 		 if (dc->out->type == TEGRA_DC_OUT_HDMI) {
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_12x_SOC)
-			pclk = KHZ2PICOS(300000); /* 300MHz max */
-#elif defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 			pclk = KHZ2PICOS(600000); /* 600MHz max */
 #else
 			pclk = KHZ2PICOS(150000); /* 150MHz max */

@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -323,12 +323,9 @@
 #define HDMI_NV_PDISP_AUDIO_PULSE_WIDTH				0x89
 #define HDMI_NV_PDISP_AUDIO_THRESHOLD				0x8a
 #define HDMI_NV_PDISP_AUDIO_CNTRL0				0x8b
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
 #define HDMI_NV_PDISP_SOR_AUDIO_CNTRL0_0		0xac
-#if !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 #define HDMI_NV_PDISP_SOR_AUDIO_SPARE0_0		0xae
 #define HDMI_AUDIO_HBR_ENABLE_SHIFT		27
-#endif
 #define HDMI_NV_PDISP_SOR_AUDIO_HDA_ELD_BUFWR_0		0xbc
 #define HDMI_NV_PDISP_SOR_AUDIO_HDA_PRESENSE_0		0xbd
 #define HDMI_NV_PDISP_SOR_AUDIO_AVAL_0320_0			0xbf
@@ -339,7 +336,6 @@
 #define HDMI_NV_PDISP_SOR_AUDIO_AVAL_0960_0			0xc4
 #define HDMI_NV_PDISP_SOR_AUDIO_AVAL_1920_0			0xc5
 #define HDMI_NV_PDISP_SOR_AUDIO_AVAL_DEFAULT_0			0xc6
-#endif
 #define  AUDIO_CNTRL0_ERROR_TOLERANCE(x)	(((x) & 0xff) << 0)
 #define  AUDIO_CNTRL0_SOFT_RESET		(1 << 8)
 #define  AUDIO_CNTRL0_SOFT_RESET_ALL		(1 << 12)
@@ -401,7 +397,6 @@
 #define HDMI_NV_PDISP_KEY_SKEY_INDEX				0xa3
 
 /* registers for ARCH_TEGRA_11x_SOC and later */
-#if !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 #define HDMI_NV_PDISP_SOR_IO_PEAK_CURRENT			0xd1
 /* 31:24 - PEAK_CURRENT_LANE3
  * 23:16 - PEAK_CURRENT_LANE2
@@ -412,10 +407,8 @@
 #define HDMI_NV_PDISP_SOR_PAD_CTLS0				0xd2
 #define  DRIVE_CURRENT_FUSE_OVERRIDE_T11x	(1 << 31)
 #define HDMI_NV_PDISP_SOR_PAD_CTLS1				0xd3
-#endif
 
 /* registers for ARCH_TEGRA_12x_SOC and later */
-#if !defined(CONFIG_ARCH_TEGRA_3x_SOC) && !defined(CONFIG_ARCH_TEGRA_11x_SOC)
 #define HDMI_NV_PDISP_HDMI_VSI_INFOFRAME_CTRL			0xd6
 #define HDMI_NV_PDISP_HDMI_VSI_INFOFRAME_STATUS			0xd7
 #define HDMI_NV_PDISP_HDMI_VSI_INFOFRAME_HEADER			0xd8
@@ -427,6 +420,5 @@
 #define HDMI_NV_PDISP_HDMI_VSI_INFOFRAME_SUBPACK2_HIGH	0xde
 #define HDMI_NV_PDISP_HDMI_VSI_INFOFRAME_SUBPACK3_LOW	0xdf
 #define HDMI_NV_PDISP_HDMI_VSI_INFOFRAME_SUBPACK3_HIGH	0xe0
-#endif
 
 #endif

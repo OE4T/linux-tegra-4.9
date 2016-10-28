@@ -39,19 +39,9 @@ config TEGRA_DC_CDE
 	  but compression bit tags are used to indicate if a block contains
 	  infomation on a larger number of pixels.
 
-config TEGRA_DC_WIN_H
-	bool "Use Window H instead of Cursor"
-	depends on TEGRA_DC && ARCH_TEGRA_14x_SOC
-	default y if ANDROID
-	help
-	  Say Y here to default to using the cursor hardware as a simple window.
-	  This window is labeled H for Hybrid.
-	  It is useful to enable for environments that need to blend multiple windows.
-	  For environments that are mouse oriented, the mouse cursor is the preferred mode.
-
 config TEGRA_DC_SCAN_COLUMN
 	bool
-	depends on TEGRA_DC && (ARCH_TEGRA_11x_SOC || ARCH_TEGRA_12x_SOC || ARCH_TEGRA_21x_SOC || TEGRA_NVDISPLAY)
+	depends on TEGRA_DC
 	default y
 	help
 	  Enables access to scan column mode for providing 90 and 270 rotation.
@@ -66,7 +56,7 @@ config TEGRA_DC_BLENDER_GEN2
 
 config TEGRA_DC_BLENDER_DEPTH
 	bool "Program blender depth for overlays"
-	depends on TEGRA_DC && (ARCH_TEGRA_12x_SOC || ARCH_TEGRA_21x_SOC || TEGRA_NVDISPLAY)
+	depends on TEGRA_DC
 	default y
 	help
 	  This option is required for chips that support it.
@@ -76,7 +66,7 @@ config TEGRA_DC_BLENDER_DEPTH
 
 config TEGRA_DC_BLOCK_LINEAR
 	bool "Support Block Linear encoding"
-	depends on TEGRA_DC && (ARCH_TEGRA_12x_SOC || ARCH_TEGRA_21x_SOC || TEGRA_NVDISPLAY)
+	depends on TEGRA_DC
 	default y
 	help
 	  A swizzled format that makes vertical walks of a surface
@@ -86,7 +76,7 @@ config TEGRA_DC_BLOCK_LINEAR
 
 config TEGRA_DC_INTERLACE
 	bool
-	depends on TEGRA_DC && (ARCH_TEGRA_12x_SOC || ARCH_TEGRA_21x_SOC || TEGRA_NVDISPLAY)
+	depends on TEGRA_DC
 	default y
 	help
 	  Support output in interlaced formats on chips that support it.
@@ -97,20 +87,13 @@ config TEGRA_DC_INTERLACE
 
 config TEGRA_DC_64BIT_SUPPORT
 	bool "64-bit addressing in DC"
-	depends on TEGRA_DC && (ARCH_TEGRA_13x_SOC || ARCH_TEGRA_21x_SOC)
+	depends on TEGRA_DC && ARCH_TEGRA_21x_SOC
 	default y
 	help
 	  T12x/T21x LPAE support in dc driver.
 	  This is needed to support buffers whose physical address does
 	  not fit into 32-bits.
 	  Default is to enable it on 64-bit platforms.
-
-config TEGRA_DC_CLOCK_GEN2
-	bool
-	depends on TEGRA_DC
-	default y if ARCH_TEGRA_12x_SOC
-	help
-	  T12x redefined pll usages for pll_d and pll_d2.
 
 config TEGRA_CSC
 	bool "Tegra Color Space Converter (version 1)"
@@ -248,26 +231,6 @@ config TEGRA_HDA_DC
 	  Removes redundancy of HDA code, so it doesn't get duplicated for each client.
 	  Supported for T21x and later chips only which have HDMI2_0 or DP enabled.
 
-config TEGRA_LVDS
-	bool "Enable LVDS panel."
-	depends on ARCH_TEGRA_12x_SOC
-	default n
-	help
-	  Say Y here to enable LVDS panel.
-	  This option is for the T12x/T13x family of SOR controllers. And provide single link LVDS.
-	  It is different from the RGB output on Tegra2/3.
-	  Default is to disable it, as it is rarely used.
-
-config TEGRA_HDMI
-	bool "Enable HDMI support."
-	depends on TEGRA_DC && (ARCH_TEGRA_11x_SOC || ARCH_TEGRA_12x_SOC || ARCH_TEGRA_14x_SOC)
-	default y
-	help
-	  Say Y here to enable HDMI output
-	  This option is for the Tegra2/3/12x/13x family of HDMI output resource.
-	  It is not for the newer Tegra21x family of HDMI, which uses sor/dp instead.
-	  Default is to enable it for chips that support it.
-
 config TEGRA_HDMI2FPD
 	bool
 
@@ -301,17 +264,6 @@ config TEGRA_HDMIVRR
 	  refresh rate so that the display scanout matches graphics rendering
 	  speed. It is enabled to improve user experience for games and videos.
 
-config TEGRA_NVHDCP
-	bool "Support NVHDCP content protection on HDMI"
-	depends on TEGRA_HDMI
-	help
-	  Say Y here to support NVHDCP upstream and downstream protocols, this
-	  requires a correctly fused chip to negotiate keys.
-	  It is only needed if you have an application that cares about checking
-	  for HDCP security while playing protected content. You do not need this
-	  option to simply display a GUI on an HDMI TV. An HDMI TV will display
-	  unprotected content just fine.
-
 config TEGRA_HDMIHDCP
 	bool "Support HDCP content protection on HDMI2_0"
 	depends on TEGRA_HDMI2_0
@@ -331,13 +283,6 @@ config TEGRA_DEBUG_HDCP
 	  Say Y here to expose debugfs nodes for HDCP content protection on HDMI2_0.
 	  It is only required if you need to modify the number of retries for HDCP
 	  authentication.
-
-config TEGRA_HDMI_74MHZ_LIMIT
-	bool "Support only up to 74.25 MHz HDMI pixel frequency"
-	depends on TEGRA_HDMI
-	help
-	  Say Y here to make kernel report only low bandwidth modes.
-	  Useful only for boards which can't deliver 148.50 MHz.
 
 config TEGRA_YUV_BYPASS_MODE_FILTER
 	bool "Filter-out YUV bypass modes"

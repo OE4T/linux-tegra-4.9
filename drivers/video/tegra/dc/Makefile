@@ -15,8 +15,6 @@ obj-$(CONFIG_TEGRA_LUT) += lut.o
 obj-y += cursor.o
 obj-y += rgb.o
 obj-y += of_dc.o
-obj-$(CONFIG_TEGRA_HDMI) += hdmi.o
-obj-$(CONFIG_TEGRA_HDMI) += hdmi_state_machine.o
 obj-$(CONFIG_TEGRA_HDMI2FPD_DS90UH949) += hdmi2fpd_ds90uh949.o
 #obj-y += dsi2lvds.o
 obj-$(CONFIG_TEGRA_DSI2EDP_TC358767) += tc358767_dsi2edp.o
@@ -30,7 +28,6 @@ else
 obj-$(CONFIG_TEGRA_MIPI_CAL) += mipi_cal.o
 endif
 
-obj-$(CONFIG_TEGRA_NVHDCP) += nvhdcp.o
 ifneq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 obj-$(CONFIG_TEGRA_HDMIHDCP) += hdmihdcp.o
 obj-$(CONFIG_TEGRA_HDMIHDCP) += nvhdcp_hdcp22_methods.o
@@ -59,7 +56,6 @@ obj-$(CONFIG_TEGRA_DP) += dp.o
 obj-$(CONFIG_TEGRA_DP) += dp_lt.o
 obj-$(CONFIG_TEGRA_DP) += dp_auto.o
 obj-$(CONFIG_TEGRA_DP) += hpd.o
-obj-$(CONFIG_TEGRA_LVDS) += lvds.o
 obj-$(CONFIG_TEGRA_NVSR) += nvsr.o
 obj-$(CONFIG_TEGRA_DC) += ext/
 obj-$(CONFIG_TEGRA_HDMI2_0) += hdmi2.0.o

@@ -39,12 +39,7 @@
 
 #define WIN_IS_INTERLACE(win) ((win)->flags & TEGRA_WIN_FLAG_INTERLACE)
 
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
-#define WIN_ALL_ACT_REQ (WIN_A_ACT_REQ | WIN_B_ACT_REQ | WIN_C_ACT_REQ | \
-	WIN_D_ACT_REQ | WIN_H_ACT_REQ)
-#else
 #define WIN_ALL_ACT_REQ (WIN_A_ACT_REQ | WIN_B_ACT_REQ | WIN_C_ACT_REQ)
-#endif
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 int tegra_nvdisp_powergate_partition(int pg_id);
@@ -465,8 +460,7 @@ static inline void tegra_disp_clk_disable_unprepare(struct clk *clk)
 		clk_disable_unprepare(clk);
 }
 
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC) \
-	&& IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 static inline void tegra_dc_powergate_locked(struct tegra_dc *dc)
 {
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
@@ -501,14 +495,14 @@ static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
 
 void tegra_dc_powergate_locked(struct tegra_dc *dc);
 void tegra_dc_unpowergate_locked(struct tegra_dc *dc);
-#else
+#else /* !CONFIG_PM_GENERIC_DOMAINS */
 static inline void tegra_dc_powergate_locked(struct tegra_dc *dc) { }
 static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc) { }
 static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
 {
 	return true;
 }
-#endif
+#endif /* CONFIG_PM_GENERIC_DOMAINS */
 
 static inline void tegra_dc_set_edid(struct tegra_dc *dc,
 	struct tegra_edid *edid)
@@ -543,15 +537,10 @@ extern struct tegra_dc_out_ops tegra_dc_dsi_ops;
 
 #if defined(CONFIG_TEGRA_HDMI2_0)
 extern struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops;
-#elif defined(CONFIG_TEGRA_HDMI)
-extern struct tegra_dc_out_ops tegra_dc_hdmi_ops;
 #endif
 
 #ifdef CONFIG_TEGRA_DP
 extern struct tegra_dc_out_ops tegra_dc_dp_ops;
-#endif
-#ifdef CONFIG_TEGRA_LVDS
-extern struct tegra_dc_out_ops tegra_dc_lvds_ops;
 #endif
 #ifdef CONFIG_TEGRA_NVSR
 extern struct tegra_dc_out_ops tegra_dc_nvsr_ops;

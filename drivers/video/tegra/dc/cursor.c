@@ -42,14 +42,12 @@ static inline int cursor_size_value(enum tegra_dc_cursor_size size, u32 *val)
 	case TEGRA_DC_CURSOR_SIZE_64X64:
 		*val |= CURSOR_SIZE_64;
 		return 0;
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	case TEGRA_DC_CURSOR_SIZE_128X128:
 		*val |= CURSOR_SIZE_128;
 		return 0;
 	case TEGRA_DC_CURSOR_SIZE_256X256:
 		*val |= CURSOR_SIZE_256;
 		return 0;
-#endif
 	}
 	*val = 0;
 	return -EINVAL;
@@ -70,29 +68,20 @@ static inline u32 cursor_blendfmt_value
 		/* MODE_SELECT_LEGACY */
 		*val |= CURSOR_MODE_SELECT(0);
 		return 0;
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_3x_SOC)
 	case TEGRA_DC_CURSOR_FORMAT_RGBA_NON_PREMULT_ALPHA:
 # if !defined(CONFIG_TEGRA_NVDISPLAY)
 		/* MODE_SELECT_NORMAL */
 		*val |= CURSOR_MODE_SELECT(1);
 #endif
-# if !defined(CONFIG_ARCH_TEGRA_11x_SOC)
 		/* K1_TIMES_SRC, NEG_K1_TIMES_SRC */
 		*val |= CURSOR_DST_BLEND_FACTOR_SELECT(2);
 		*val |= CURSOR_SRC_BLEND_FACTOR_SELECT(1);
-# endif
 		return 0;
-#endif
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_11x_SOC)
 	case TEGRA_DC_CURSOR_FORMAT_RGBA_PREMULT_ALPHA:
 		*val |= CURSOR_MODE_SELECT(1);
 		*val |= CURSOR_DST_BLEND_FACTOR_SELECT(2);
 		*val |= CURSOR_SRC_BLEND_FACTOR_SELECT(0);
 		return 0;
-#endif
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 	case TEGRA_DC_CURSOR_FORMAT_RGBA_XOR:
 		/* MODE_SELECT_NORMAL */
@@ -150,32 +139,19 @@ static unsigned int set_cursor_start_addr(struct tegra_dc *dc,
 
 	clip_win = dc->cursor.clip_win;
 	val |= CURSOR_CLIP_SHIFT_BITS(clip_win);
-#if defined(CONFIG_ARCH_TEGRA_2x_SOC) || defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
-	defined(CONFIG_ARCH_TEGRA_11x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
-	tegra_dc_writel(dc, val | CURSOR_START_ADDR(((unsigned long)phys_addr)),
-			DC_DISP_CURSOR_START_ADDR);
-#else
 	/* TODO: check calculation with HW */
 	tegra_dc_writel(dc, (u32)(CURSOR_START_ADDR_HI(phys_addr)),
 			DC_DISP_CURSOR_START_ADDR_HI);
 	tegra_dc_writel(dc, (u32)(val | CURSOR_START_ADDR_LOW(phys_addr)),
 			DC_DISP_CURSOR_START_ADDR);
-#endif
 
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 	WARN_ON((phys_addr & 0x3FF) != 0);
 #endif
 
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	tegra_dc_writel(dc, CURSOR_UPDATE, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, CURSOR_ACT_REQ, DC_CMD_STATE_CONTROL);
 	return 0;
-#else
-	return 1;
-#endif
 }
 
 static int set_cursor_position(struct tegra_dc *dc, s16 x, s16 y)
@@ -186,25 +162,14 @@ static int set_cursor_position(struct tegra_dc *dc, s16 x, s16 y)
 	tegra_dc_writel(dc, CURSOR_POSITION(x, y), DC_DISP_CURSOR_POSITION);
 #endif
 
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	tegra_dc_writel(dc, CURSOR_UPDATE, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, CURSOR_ACT_REQ, DC_CMD_STATE_CONTROL);
 	return 0;
-#else
-	return 1;
-#endif
 }
 
 static int set_cursor_activation_control(struct tegra_dc *dc)
 {
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_14x_SOC) && \
-	!defined(CONFIG_TEGRA_NVDISPLAY)
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
 	u32 reg = tegra_dc_readl(dc, DC_CMD_REG_ACT_CONTROL);
 
 	if ((reg & (1 << CURSOR_ACT_CNTR_SEL)) ==
@@ -284,15 +249,8 @@ static int set_cursor_fg_bg(struct tegra_dc *dc, u32 fg, u32 bg)
 static void tegra_dc_cursor_do_update(struct tegra_dc *dc,
 	bool need_general_update)
 {
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_3x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	tegra_dc_writel(dc, CURSOR_UPDATE, DC_CMD_STATE_CONTROL);
 	tegra_dc_writel(dc, CURSOR_ACT_REQ, DC_CMD_STATE_CONTROL);
-#else
-	need_general_update = true;
-#endif
 	if (need_general_update) {
 		tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
 		tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);

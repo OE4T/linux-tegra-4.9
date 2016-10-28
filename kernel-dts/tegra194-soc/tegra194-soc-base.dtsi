@@ -175,7 +175,7 @@
 	uarta: serial@3100000 {
 		compatible = "nvidia,tegra210-uart";
 		#stream-id-cells = <1>;
-		reg = <0x0 0x03100000 0x0 0x40>;
+		reg = <0x0 0x03100000 0x0 0x00010000>;
 		reg-shift = <2>;
 		interrupts = <0 TEGRA186_IRQ_UARTA 0x04>;
 		nvidia,memory-clients = <14>;

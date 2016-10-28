@@ -1419,7 +1419,6 @@
 			  0x82000000 0 0x50100000 0x0 0x50100000 0 0x07F00000   /* non-prefetchable memory (127 MiB) */
 			  0xc2000000 0 0x58000000 0x0 0x58000000 0 0x28000000>; /* prefetchable memory (640 MiB) */
 
-		nvidia,lane-map = <0x04>;
 		status = "disabled";
 
 		pci@1,0 {

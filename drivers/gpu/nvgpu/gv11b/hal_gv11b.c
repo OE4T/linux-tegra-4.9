@@ -36,6 +36,7 @@
 #include "gv11b/hw_proj_gv11b.h"
 
 #include "gm20b/gr_gm20b.h"
+#include "gk20a/dbg_gpu_gk20a.h"
 
 static struct gpu_ops gv11b_ops;
 
@@ -136,6 +137,7 @@ int gv11b_init_hal(struct gk20a *g)
 	gv11b_init_mm(gops);
 	gv11b_init_pmu_ops(gops);
 	gk20a_init_debug_ops(gops);
+	gk20a_init_dbg_session_ops(gops);
 	gv11b_init_therm_ops(gops);
 	gk20a_init_tsg_ops(gops);
 	gops->name = "gv11b";

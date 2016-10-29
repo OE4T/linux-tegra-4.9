@@ -692,6 +692,7 @@ void *tegra_bpmp_alloc_coherent(size_t size, dma_addr_t *phys,
 
 	return virt;
 }
+EXPORT_SYMBOL(tegra_bpmp_alloc_coherent);
 
 void *__weak bpmp_get_virt_for_free(void *virt, dma_addr_t phys)
 {
@@ -710,6 +711,7 @@ void tegra_bpmp_free_coherent(size_t size, void *vaddr,
 
 	dma_free_coherent(device, size, vaddr, phys);
 }
+EXPORT_SYMBOL(tegra_bpmp_free_coherent);
 
 static struct syscore_ops bpmp_syscore_ops = {
 	.resume = tegra_bpmp_resume,

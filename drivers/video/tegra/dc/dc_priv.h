@@ -737,9 +737,10 @@ int nvdisp_register_backlight_notifier(struct tegra_dc *dc);
 void tegra_nvdisp_set_vrr_mode(struct tegra_dc *dc);
 void tegra_nvdisp_stop_display(struct tegra_dc *dc);
 #ifdef CONFIG_TEGRA_ISOMGR
-void tegra_nvdisp_isomgr_attach(struct tegra_dc *dc);
-int tegra_nvdisp_isomgr_register(enum tegra_iso_client client, u32 udedi_bw);
-void tegra_nvdisp_isomgr_unregister(void);
+void tegra_nvdisp_bandwidth_attach(struct tegra_dc *dc);
+int tegra_nvdisp_bandwidth_register(enum tegra_iso_client iso_client,
+				enum tegra_bwmgr_client_id bwmgr_client);
+void tegra_nvdisp_bandwidth_unregister(void);
 #endif
 #if defined(CONFIG_TEGRA_CSC_V2)
 void tegra_nvdisp_init_csc_defaults(struct tegra_dc_csc_v2 *csc);

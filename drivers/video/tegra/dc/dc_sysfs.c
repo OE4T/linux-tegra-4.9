@@ -420,7 +420,7 @@ static ssize_t reserved_bw_show(struct device *dev,
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	if (dc->ihub_bw_info)
-		reserved_bw = dc->ihub_bw_info->reserved_bw_kbps;
+		reserved_bw = dc->ihub_bw_info->reserved_bw;
 #else
 	reserved_bw = dc->reserved_bw;
 #endif

@@ -6162,7 +6162,7 @@ static int tegra_dc_remove(struct platform_device *ndev)
 	free_irq(dc->irq, dc);
 #if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_ISOMGR)
 	if (!tegra_platform_is_vdk())
-		tegra_nvdisp_isomgr_unregister();
+		tegra_nvdisp_bandwidth_unregister();
 #elif defined(CONFIG_TEGRA_ISOMGR)
 	if (dc->isomgr_handle) {
 		tegra_isomgr_unregister(dc->isomgr_handle);

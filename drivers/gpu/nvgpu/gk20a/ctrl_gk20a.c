@@ -927,6 +927,7 @@ static int nvgpu_gpu_clk_get_range(struct gk20a *g,
 
 	u32 clk_domains = 0;
 	u32 num_domains;
+	u32 num_entries;
 	u32 i;
 	int bit;
 	int err;
@@ -936,10 +937,10 @@ static int nvgpu_gpu_clk_get_range(struct gk20a *g,
 	if (!session)
 		return -EINVAL;
 
-	if (!args->flags) {
-		clk_domains = nvgpu_clk_arb_get_arbiter_clk_domains(g);
-		num_domains = hweight_long(clk_domains);
+	clk_domains = nvgpu_clk_arb_get_arbiter_clk_domains(g);
+	num_domains = hweight_long(clk_domains);
 
+	if (!args->flags) {
 		if (!args->num_entries) {
 			args->num_entries = num_domains;
 			return 0;
@@ -949,18 +950,21 @@ static int nvgpu_gpu_clk_get_range(struct gk20a *g,
 			return -EINVAL;
 
 		args->num_entries = 0;
+		num_entries = num_domains;
 
 	} else {
 		if (args->flags != NVGPU_GPU_CLK_FLAG_SPECIFIC_DOMAINS)
 			return -EINVAL;
 
-		num_domains = args->num_entries;
+		num_entries = args->num_entries;
+		if (num_entries > num_domains)
+			return -EINVAL;
 	}
 
 	entry = (struct nvgpu_gpu_clk_range __user *)
 			(uintptr_t)args->clk_range_entries;
 
-	for (i = 0; i < num_domains; i++, entry++) {
+	for (i = 0; i < num_entries; i++, entry++) {
 
 		if (args->flags == NVGPU_GPU_CLK_FLAG_SPECIFIC_DOMAINS) {
 			if (copy_from_user(&clk_range, (void __user *)entry,
@@ -984,7 +988,7 @@ static int nvgpu_gpu_clk_get_range(struct gk20a *g,
 			return -EFAULT;
 	}
 
-	args->num_entries = num_domains;
+	args->num_entries = num_entries;
 
 	return 0;
 }
@@ -1051,6 +1055,7 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 	struct nvgpu_clk_session *session = priv->clk_session;
 	u32 clk_domains = 0;
 	u32 num_domains;
+	u32 num_entries;
 	u32 i;
 	int err;
 	int bit;
@@ -1060,10 +1065,10 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 	if (!session)
 		return -EINVAL;
 
-	if (!args->flags) {
-		clk_domains = nvgpu_clk_arb_get_arbiter_clk_domains(g);
-		num_domains = hweight_long(clk_domains);
+	clk_domains = nvgpu_clk_arb_get_arbiter_clk_domains(g);
+	num_domains = hweight_long(clk_domains);
 
+	if (!args->flags) {
 		if (!args->num_entries) {
 			args->num_entries = num_domains;
 			return 0;
@@ -1073,18 +1078,21 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 			return -EINVAL;
 
 		args->num_entries = 0;
+		num_entries = num_domains;
 
 	} else {
 		if (args->flags != NVGPU_GPU_CLK_FLAG_SPECIFIC_DOMAINS)
 			return -EINVAL;
 
-		num_domains = args->num_entries;
+		num_entries = args->num_entries;
+		if (num_entries > num_domains * 3)
+			return -EINVAL;
 	}
 
 	entry = (struct nvgpu_gpu_clk_info __user *)
 			(uintptr_t)args->clk_info_entries;
 
-	for (i = 0; i < num_domains; i++, entry++) {
+	for (i = 0; i < num_entries; i++, entry++) {
 
 		if (args->flags == NVGPU_GPU_CLK_FLAG_SPECIFIC_DOMAINS) {
 			if (copy_from_user(&clk_info, (void __user *)entry,
@@ -1125,7 +1133,7 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 			return -EFAULT;
 	}
 
-	args->num_entries = num_domains;
+	args->num_entries = num_entries;
 
 	return 0;
 }

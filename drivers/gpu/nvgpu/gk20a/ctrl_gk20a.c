@@ -30,19 +30,20 @@
 #include "hw_gr_gk20a.h"
 #include "hw_fb_gk20a.h"
 #include "hw_timer_gk20a.h"
-#include "clk/clk_arb.h"
 
 
 struct gk20a_ctrl_priv {
 	struct device *dev;
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct nvgpu_clk_session *clk_session;
+#endif
 };
 
 int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 {
 	struct gk20a *g;
 	struct gk20a_ctrl_priv *priv;
-	int err;
+	int err = 0;
 
 	gk20a_dbg_fn("");
 
@@ -64,19 +65,23 @@ int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 		gk20a_idle(g->dev);
 	}
 
-	return nvgpu_clk_arb_init_session(g, &priv->clk_session);
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	err = nvgpu_clk_arb_init_session(g, &priv->clk_session);
+#endif
+	return err;
 }
 
 int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)
 {
 	struct gk20a_ctrl_priv *priv = filp->private_data;
-	struct gk20a *g = gk20a_from_dev(priv->dev);
-	struct nvgpu_clk_session *clk_session = priv->clk_session;
 
 	gk20a_dbg_fn("");
 
-	if (clk_session)
-		nvgpu_clk_arb_release_session(g, clk_session);
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	if (priv->clk_session)
+		nvgpu_clk_arb_release_session(gk20a_from_dev(priv->dev),
+				priv->clk_session);
+#endif
 	kfree(priv);
 
 	return 0;
@@ -820,6 +825,7 @@ static int nvgpu_gpu_get_memory_state(struct gk20a *g,
 	return err;
 }
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 static int nvgpu_gpu_clk_get_vf_points(struct gk20a *g,
 		struct gk20a_ctrl_priv *priv,
 		struct nvgpu_gpu_clk_vf_points_args *args)
@@ -1137,6 +1143,7 @@ static int nvgpu_gpu_clk_get_event_fd(struct gk20a *g,
 
 	return nvgpu_clk_arb_install_event_fd(g, session, &args->event_fd);
 }
+#endif
 
 long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
@@ -1400,6 +1407,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 			(struct nvgpu_gpu_get_memory_state_args *)buf);
 		break;
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	case NVGPU_GPU_IOCTL_CLK_GET_RANGE:
 		err = nvgpu_gpu_clk_get_range(g, priv,
 			(struct nvgpu_gpu_clk_range_args *)buf);
@@ -1424,6 +1432,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		err = nvgpu_gpu_clk_get_event_fd(g, priv,
 			(struct nvgpu_gpu_clk_get_event_fd_args *)buf);
 		break;
+#endif
 
 	default:
 		dev_dbg(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x", cmd);

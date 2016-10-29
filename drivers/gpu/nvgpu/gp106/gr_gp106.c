@@ -13,14 +13,14 @@
  * more details.
  */
 
-#include "gk20a/gk20a.h" /* FERMI and MAXWELL classes defined here */
-
+#include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
-
-#include "gm20b/gr_gm20b.h" /* for MAXWELL classes */
+#include "gm20b/gr_gm20b.h"
 #include "gp10b/gr_gp10b.h"
+
 #include "gr_gp106.h"
-#include "hw_gr_gp106.h"
+
+#include <nvgpu/hw/gp106/hw_gr_gp106.h>
 
 static bool gr_gp106_is_valid_class(struct gk20a *g, u32 class_num)
 {

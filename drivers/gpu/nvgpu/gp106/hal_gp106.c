@@ -19,37 +19,42 @@
 #include <linux/types.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/dbg_gpu_gk20a.h"
+#include "gk20a/css_gr_gk20a.h"
 
 #include "gp10b/gr_gp10b.h"
 #include "gp10b/fecs_trace_gp10b.h"
 #include "gp10b/mc_gp10b.h"
-#include "gp106/ltc_gp106.h"
 #include "gp10b/mm_gp10b.h"
 #include "gp10b/ce_gp10b.h"
+#include "gp10b/regops_gp10b.h"
+#include "gp10b/cde_gp10b.h"
+
 #include "gp106/fifo_gp106.h"
 #include "gp106/regops_gp106.h"
-#include "gp10b/cde_gp10b.h"
-#include "gp106/therm_gp106.h"
-#include "gp106/xve_gp106.h"
-
-#include "gp106/bios_gp106.h"
 
 #include "gm20b/gr_gm20b.h"
 #include "gm20b/fifo_gm20b.h"
 #include "gm20b/pmu_gm20b.h"
+
 #include "gp106/clk_gp106.h"
 #include "gp106/clk_arb_gp106.h"
-
+#include "gp106/bios_gp106.h"
+#include "gp106/therm_gp106.h"
+#include "gp106/xve_gp106.h"
+#include "gp106/fifo_gp106.h"
+#include "gp106/ltc_gp106.h"
+#include "gp106/clk_gp106.h"
 #include "gp106/mm_gp106.h"
 #include "gp106/pmu_gp106.h"
 #include "gp106/gr_ctx_gp106.h"
 #include "gp106/gr_gp106.h"
 #include "gp106/fb_gp106.h"
 #include "gp106/gp106_gating_reglist.h"
+
 #include "nvgpu_gpuid_t18x.h"
-#include "hw_proj_gp106.h"
-#include "gk20a/dbg_gpu_gk20a.h"
-#include "gk20a/css_gr_gk20a.h"
+
+#include <nvgpu/hw/gp106/hw_proj_gp106.h>
 
 static struct gpu_ops gp106_ops = {
 	.clock_gating = {

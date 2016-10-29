@@ -13,8 +13,10 @@
 
 #include "gk20a/gk20a.h"
 #include "gm206/bios_gm206.h"
+
 #include "bios_gp106.h"
-#include "hw_gc6_gp106.h"
+
+#include <nvgpu/hw/gp106/hw_gc6_gp106.h>
 
 static void gp106_init_xmemsel_zm_nv_reg_array(struct gk20a *g, bool *condition,
 	u32 reg, u32 stride, u32 count, u32 data_table_offset)

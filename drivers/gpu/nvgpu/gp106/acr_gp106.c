@@ -22,14 +22,17 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "gk20a/semaphore_gk20a.h"
-#include "gp106/hw_psec_gp106.h"
-#include "gp106/hw_pwr_gp106.h"
+
 #include "gm206/acr_gm206.h"
 #include "gm20b/acr_gm20b.h"
 #include "gm206/pmu_gm206.h"
+
 #include "sec2_gp106.h"
 #include "nvgpu_gpuid_t18x.h"
 #include "nvgpu_common.h"
+
+#include <nvgpu/hw/gp106/hw_psec_gp106.h>
+#include <nvgpu/hw/gp106/hw_pwr_gp106.h>
 
 /*Defines*/
 #define gp106_dbg_pmu(fmt, arg...) \

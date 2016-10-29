@@ -12,17 +12,25 @@
  */
 
 #include "gk20a/gk20a.h"
-#include "clk.h"
-#include "clk_vin.h"
+
 #include "include/bios.h"
+
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
+
 #include "pmuif/gpmuifboardobj.h"
 #include "pmuif/gpmuifclk.h"
-#include "gm206/bios_gm206.h"
+
 #include "ctrl/ctrlvolt.h"
+
+#include "gm206/bios_gm206.h"
 #include "gk20a/pmu_gk20a.h"
-#include "gp106/hw_fuse_gp106.h"
+
+#include "clk.h"
+#include "clk_vin.h"
+
+
+#include <nvgpu/hw/gp106/hw_fuse_gp106.h>
 
 static u32 devinit_get_vin_device_table(struct gk20a *g,
 		struct avfsvinobjs *pvinobjs);

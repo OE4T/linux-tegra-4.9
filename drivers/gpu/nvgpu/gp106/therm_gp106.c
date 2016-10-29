@@ -13,8 +13,9 @@
 
 #include "therm_gp106.h"
 #include <linux/debugfs.h>
-#include "hw_therm_gp106.h"
 #include "therm/thrmpmu.h"
+
+#include <nvgpu/hw/gp106/hw_therm_gp106.h>
 
 static void gp106_get_internal_sensor_limits(s32 *max_24_8, s32 *min_24_8)
 {

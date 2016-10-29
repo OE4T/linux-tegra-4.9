@@ -16,7 +16,8 @@
 
 #include "gk20a/gk20a.h"
 #include "gp10b/fb_gp10b.h"
-#include "hw_fb_gp106.h"
+
+#include <nvgpu/hw/gp106/hw_fb_gp106.h>
 
 #define HW_SCRUB_TIMEOUT_DEFAULT	100 /* usec */
 #define HW_SCRUB_TIMEOUT_MAX		2000000 /* usec */

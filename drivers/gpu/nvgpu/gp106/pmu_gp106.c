@@ -12,20 +12,24 @@
  */
 
 #include <linux/delay.h>	/* for udelay */
+
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 
-#include "gm206/pmu_gm206.h"
 #include "gm20b/pmu_gm20b.h"
+#include "gm206/pmu_gm206.h"
 #include "gp10b/pmu_gp10b.h"
 #include "gp106/pmu_gp106.h"
 #include "gp106/acr_gp106.h"
-#include "gp106/hw_psec_gp106.h"
+
 #include "clk/clk_mclk.h"
-#include "hw_mc_gp106.h"
-#include "hw_pwr_gp106.h"
+
 #include "lpwr/lpwr.h"
 #include "lpwr/rppg.h"
+
+#include <nvgpu/hw/gp106/hw_psec_gp106.h>
+#include <nvgpu/hw/gp106/hw_mc_gp106.h>
+#include <nvgpu/hw/gp106/hw_pwr_gp106.h>
 
 #define PMU_MEM_SCRUBBING_TIMEOUT_MAX 1000
 #define PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT 10

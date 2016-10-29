@@ -25,9 +25,11 @@
 #include <linux/tegra-fuse.h>
 
 #include "gk20a/gk20a.h"
-#include "hw_trim_gp106.h"
+
 #include "clk_gp106.h"
 #include "clk/clk_arb.h"
+
+#include <nvgpu/hw/gp106/hw_trim_gp106.h>
 
 #define gk20a_dbg_clk(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_clk, fmt, ##arg)
@@ -270,4 +272,3 @@ void gp106_init_clk_ops(struct gpu_ops *gops) {
 	gops->clk.get_crystal_clk_hz = gp106_crystal_clk_hz;
 	gops->clk.get_rate = gp106_clk_get_rate;
 }
-

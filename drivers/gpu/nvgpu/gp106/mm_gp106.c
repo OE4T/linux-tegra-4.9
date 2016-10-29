@@ -17,7 +17,7 @@
 #include "gp10b/mm_gp10b.h"
 #include "gp106/mm_gp106.h"
 
-#include "hw_fb_gp106.h"
+#include <nvgpu/hw/gp106/hw_fb_gp106.h>
 
 static size_t gp106_mm_get_vidmem_size(struct gk20a *g)
 {

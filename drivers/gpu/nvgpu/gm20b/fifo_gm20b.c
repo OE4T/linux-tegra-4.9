@@ -14,13 +14,16 @@
  */
 
 #include <linux/delay.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
+
 #include "fifo_gm20b.h"
-#include "hw_ccsr_gm20b.h"
-#include "hw_ram_gm20b.h"
-#include "hw_fifo_gm20b.h"
-#include "hw_top_gm20b.h"
+
+#include <nvgpu/hw/gm20b/hw_ccsr_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_ram_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_fifo_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_top_gm20b.h>
 
 static void channel_gm20b_bind(struct channel_gk20a *c)
 {

@@ -19,9 +19,9 @@
 #include "gk20a/kind_gk20a.h"
 #include "gk20a/fb_gk20a.h"
 
-#include "hw_fb_gm20b.h"
-#include "hw_top_gm20b.h"
-#include "hw_gmmu_gm20b.h"
+#include <nvgpu/hw/gm20b/hw_fb_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_top_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_gmmu_gm20b.h>
 
 static void fb_gm20b_init_fs_state(struct gk20a *g)
 {

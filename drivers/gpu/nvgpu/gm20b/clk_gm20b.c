@@ -31,11 +31,12 @@
 #endif
 
 #include "gk20a/gk20a.h"
-#include "hw_trim_gm20b.h"
-#include "hw_timer_gm20b.h"
-#include "hw_therm_gm20b.h"
-#include "hw_fuse_gm20b.h"
 #include "clk_gm20b.h"
+
+#include <nvgpu/hw/gm20b/hw_trim_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_timer_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_therm_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_fuse_gm20b.h>
 
 #define gk20a_dbg_clk(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_clk, fmt, ##arg)

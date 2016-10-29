@@ -14,7 +14,7 @@
  */
 
 #include <linux/types.h>
-#include <linux/delay.h>	/* for mdelay */
+#include <linux/delay.h>
 #include <linux/io.h>
 #include <linux/tegra-fuse.h>
 #include <linux/vmalloc.h>
@@ -26,15 +26,16 @@
 #include "gk20a/gr_gk20a.h"
 
 #include "gr_gm20b.h"
-#include "hw_gr_gm20b.h"
-#include "hw_fifo_gm20b.h"
-#include "hw_fb_gm20b.h"
-#include "hw_top_gm20b.h"
-#include "hw_ltc_gm20b.h"
-#include "hw_ctxsw_prog_gm20b.h"
-#include "hw_fuse_gm20b.h"
 #include "pmu_gm20b.h"
 #include "acr_gm20b.h"
+
+#include <nvgpu/hw/gm20b/hw_gr_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_fifo_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_fb_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_top_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_ltc_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_ctxsw_prog_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_fuse_gm20b.h>
 
 static void gr_gm20b_init_gpc_mmu(struct gk20a *g)
 {

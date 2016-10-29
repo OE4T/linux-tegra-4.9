@@ -15,13 +15,16 @@
 
 #include <linux/pm_runtime.h>
 #include <linux/delay.h>
+
 #include "gk20a/gk20a.h"
+
 #include "mm_gm20b.h"
-#include "hw_gmmu_gm20b.h"
-#include "hw_fb_gm20b.h"
-#include "hw_gr_gm20b.h"
-#include "hw_ram_gm20b.h"
-#include "hw_bus_gm20b.h"
+
+#include <nvgpu/hw/gm20b/hw_gmmu_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_fb_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_gr_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_ram_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_bus_gm20b.h>
 
 static int gm20b_mm_mmu_vpr_info_fetch_wait(struct gk20a *g,
 		const unsigned int msec)

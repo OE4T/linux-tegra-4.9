@@ -15,13 +15,16 @@
 
 #include <linux/delay.h>	/* for udelay */
 #include <linux/tegra-fuse.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
+
 #include "acr_gm20b.h"
 #include "pmu_gm20b.h"
-#include "hw_gr_gm20b.h"
-#include "hw_pwr_gm20b.h"
-#include "hw_fuse_gm20b.h"
+
+#include <nvgpu/hw/gm20b/hw_gr_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_pwr_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_fuse_gm20b.h>
 
 /*!
  * Structure/object which single register write need to be done during PG init

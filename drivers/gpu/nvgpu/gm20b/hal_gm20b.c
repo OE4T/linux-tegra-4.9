@@ -15,8 +15,11 @@
 
 #include <linux/types.h>
 #include <linux/version.h>
+#include <linux/tegra-fuse.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/dbg_gpu_gk20a.h"
+#include "gk20a/css_gr_gk20a.h"
 
 #include "ltc_gm20b.h"
 #include "ce2_gm20b.h"
@@ -30,14 +33,12 @@
 #include "pmu_gm20b.h"
 #include "clk_gm20b.h"
 #include "mc_gm20b.h"
-#include <linux/tegra-fuse.h>
 #include "regops_gm20b.h"
 #include "debug_gm20b.h"
 #include "cde_gm20b.h"
 #include "therm_gm20b.h"
-#include "hw_proj_gm20b.h"
-#include "gk20a/dbg_gpu_gk20a.h"
-#include "gk20a/css_gr_gk20a.h"
+
+#include <nvgpu/hw/gm20b/hw_proj_gm20b.h>
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 #define FUSE_OPT_PRIV_SEC_DIS_0 0x264

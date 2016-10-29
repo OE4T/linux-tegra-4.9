@@ -17,12 +17,12 @@
 #include <linux/jiffies.h>
 #include <trace/events/gk20a.h>
 
-#include "hw_mc_gm20b.h"
-#include "hw_ltc_gm20b.h"
-#include "hw_top_gm20b.h"
-#include "hw_pri_ringmaster_gm20b.h"
-
 #include "gk20a/gk20a.h"
+
+#include <nvgpu/hw/gm20b/hw_mc_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_ltc_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_top_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_pri_ringmaster_gm20b.h>
 
 #include "gk20a/ltc_common.c"
 

@@ -12,10 +12,11 @@
  */
 
 #include "vgpu/vgpu.h"
-#include "vgpu_gr_gp10b.h"
 #include "vgpu/gm20b/vgpu_gr_gm20b.h"
 
-#include "gp10b/hw_gr_gp10b.h"
+#include "vgpu_gr_gp10b.h"
+
+#include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
 
 static void vgpu_gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 				struct gr_ctx_desc *gr_ctx)

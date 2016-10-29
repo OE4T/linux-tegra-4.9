@@ -15,14 +15,17 @@
 
 #include <linux/pm_runtime.h>
 #include <linux/dma-mapping.h>
+
 #include "gk20a/gk20a.h"
+#include "gk20a/semaphore_gk20a.h"
+
 #include "mm_gp10b.h"
 #include "rpfb_gp10b.h"
-#include "hw_fb_gp10b.h"
-#include "hw_ram_gp10b.h"
-#include "hw_bus_gp10b.h"
-#include "hw_gmmu_gp10b.h"
-#include "gk20a/semaphore_gk20a.h"
+
+#include <nvgpu/hw/gp10b/hw_fb_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_ram_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_bus_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_gmmu_gp10b.h>
 
 static u32 gp10b_mm_get_physical_addr_bits(struct gk20a *g)
 {

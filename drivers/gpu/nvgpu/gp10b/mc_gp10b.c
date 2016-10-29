@@ -16,8 +16,10 @@
 #include <linux/types.h>
 
 #include "gk20a/gk20a.h"
+
 #include "mc_gp10b.h"
-#include "hw_mc_gp10b.h"
+
+#include <nvgpu/hw/gp10b/hw_mc_gp10b.h>
 
 void mc_gp10b_intr_enable(struct gk20a *g)
 {

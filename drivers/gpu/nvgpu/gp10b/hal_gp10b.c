@@ -16,10 +16,12 @@
 #include <linux/types.h>
 #include <linux/printk.h>
 #include <linux/version.h>
-
 #include <linux/types.h>
+#include <linux/tegra-fuse.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/dbg_gpu_gk20a.h"
+#include "gk20a/css_gr_gk20a.h"
 
 #include "gp10b/gr_gp10b.h"
 #include "gp10b/fecs_trace_gp10b.h"
@@ -40,12 +42,10 @@
 #include "gm20b/fifo_gm20b.h"
 #include "gm20b/pmu_gm20b.h"
 #include "gm20b/clk_gm20b.h"
-#include <linux/tegra-fuse.h>
 
 #include "gp10b.h"
-#include "hw_proj_gp10b.h"
-#include "gk20a/dbg_gpu_gk20a.h"
-#include "gk20a/css_gr_gk20a.h"
+
+#include <nvgpu/hw/gp10b/hw_proj_gp10b.h>
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 #define FUSE_OPT_PRIV_SEC_EN_0 0x264

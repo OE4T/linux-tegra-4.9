@@ -15,15 +15,17 @@
 
 #include <linux/delay.h>	/* for udelay */
 #include <linux/tegra-fuse.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "gm20b/acr_gm20b.h"
 #include "gm20b/pmu_gm20b.h"
 
 #include "pmu_gp10b.h"
-#include "hw_pwr_gp10b.h"
-#include "hw_fuse_gp10b.h"
 #include "gp10b_sysfs.h"
+
+#include <nvgpu/hw/gp10b/hw_pwr_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
 
 #define gp10b_dbg_pmu(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)

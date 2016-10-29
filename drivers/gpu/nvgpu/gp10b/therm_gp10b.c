@@ -16,7 +16,8 @@
  */
 
 #include "gk20a/gk20a.h"
-#include "hw_therm_gp10b.h"
+
+#include <nvgpu/hw/gp10b/hw_therm_gp10b.h>
 
 static int gp10b_init_therm_setup_hw(struct gk20a *g)
 {

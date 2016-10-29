@@ -17,8 +17,9 @@
  */
 
 #include "gk20a/gk20a.h"
-#include "hw_fuse_gp10b.h"
-#include "hw_gr_gp10b.h"
+
+#include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
 
 static u64 gp10b_detect_ecc_enabled_units(struct gk20a *g)
 {

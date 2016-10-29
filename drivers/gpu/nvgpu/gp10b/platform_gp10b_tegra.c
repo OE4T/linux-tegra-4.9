@@ -18,22 +18,28 @@
 #include <linux/debugfs.h>
 #include <linux/tegra-powergate.h>
 #include <linux/platform_data/tegra_edp.h>
-#include <uapi/linux/nvgpu.h>
 #include <linux/dma-buf.h>
 #include <linux/nvmap.h>
 #include <linux/reset.h>
-#include <soc/tegra/tegra_bpmp.h>
 #include <linux/hashtable.h>
+
+#include <linux/platform/tegra/emc_bwmgr.h>
+
+#include <uapi/linux/nvgpu.h>
+
+#include <soc/tegra/tegra_bpmp.h>
+
 #include "gk20a/platform_gk20a.h"
 #include "gk20a/gk20a.h"
 #include "gk20a/gk20a_scale.h"
+
 #include "platform_tegra.h"
 #include "gr_gp10b.h"
 #include "ltc_gp10b.h"
-#include "hw_gr_gp10b.h"
-#include "hw_ltc_gp10b.h"
 #include "gp10b_sysfs.h"
-#include <linux/platform/tegra/emc_bwmgr.h>
+
+#include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_ltc_gp10b.h>
 
 /* Select every GP10B_FREQ_SELECT_STEP'th frequency from h/w table */
 #define GP10B_FREQ_SELECT_STEP	8

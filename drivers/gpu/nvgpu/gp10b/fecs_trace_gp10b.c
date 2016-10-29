@@ -15,8 +15,9 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fecs_trace_gk20a.h"
-#include "gp10b/hw_ctxsw_prog_gp10b.h"
-#include "gp10b/hw_gr_gp10b.h"
+
+#include <nvgpu/hw/gp10b/hw_ctxsw_prog_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
 
 #ifdef CONFIG_GK20A_CTXSW_TRACE
 static int gp10b_fecs_trace_flush(struct gk20a *g)

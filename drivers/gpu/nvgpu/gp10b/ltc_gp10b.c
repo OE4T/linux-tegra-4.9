@@ -19,8 +19,9 @@
 
 #include "gk20a/gk20a.h"
 #include "gm20b/ltc_gm20b.h"
-#include "hw_mc_gp10b.h"
-#include "hw_ltc_gp10b.h"
+
+#include <nvgpu/hw/gp10b/hw_mc_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_ltc_gp10b.h>
 
 #include "gk20a/ltc_common.c"
 

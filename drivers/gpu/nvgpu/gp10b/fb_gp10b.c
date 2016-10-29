@@ -19,7 +19,7 @@
 #include "gm20b/fb_gm20b.h"
 #include "gk20a/kind_gk20a.h"
 
-#include "hw_gmmu_gp10b.h"
+#include <nvgpu/hw/gp10b/hw_gmmu_gp10b.h>
 
 static void gp10b_init_uncompressed_kind_map(void)
 {

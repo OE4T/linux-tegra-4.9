@@ -16,9 +16,11 @@
  * this program.
  */
 
-#include "gk20a/gk20a.h" /* FERMI and MAXWELL classes defined here */
-#include "hw_ce_gp10b.h"
+#include "gk20a/gk20a.h"
+
 #include "ce_gp10b.h"
+
+#include <nvgpu/hw/gp10b/hw_ce_gp10b.h>
 
 static void ce_nonblockpipe_isr(struct gk20a *g, u32 fifo_intr)
 {

@@ -13,27 +13,28 @@
  * more details.
  */
 
-#include "gk20a/gk20a.h" /* FERMI and MAXWELL classes defined here */
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/tegra-fuse.h>
 #include <linux/version.h>
+#include <linux/vmalloc.h>
 
 #include <dt-bindings/soc/gm20b-fuse.h>
 #include <dt-bindings/soc/gp10b-fuse.h>
 
+#include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
 #include "gk20a/semaphore_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 
-#include "gm20b/gr_gm20b.h" /* for MAXWELL classes */
+#include "gm20b/gr_gm20b.h"
 #include "gp10b/gr_gp10b.h"
-#include "hw_gr_gp10b.h"
-#include "hw_fifo_gp10b.h"
-#include "hw_ctxsw_prog_gp10b.h"
-#include "hw_mc_gp10b.h"
 #include "gp10b_sysfs.h"
-#include <linux/vmalloc.h>
+
+#include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_fifo_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_ctxsw_prog_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_mc_gp10b.h>
 
 #define NVGPU_GFXP_WFI_TIMEOUT_US	100LL
 

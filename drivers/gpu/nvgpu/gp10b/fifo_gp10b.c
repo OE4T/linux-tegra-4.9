@@ -16,14 +16,16 @@
 #include <linux/delay.h>
 #include <linux/types.h>
 
+#include "fifo_gp10b.h"
+
 #include "gk20a/gk20a.h"
 #include "gm20b/fifo_gm20b.h"
-#include "hw_pbdma_gp10b.h"
-#include "fifo_gp10b.h"
-#include "hw_ccsr_gp10b.h"
-#include "hw_fifo_gp10b.h"
-#include "hw_ram_gp10b.h"
-#include "hw_top_gp10b.h"
+
+#include <nvgpu/hw/gp10b/hw_pbdma_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_ccsr_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_fifo_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_ram_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_top_gp10b.h>
 
 static void gp10b_set_pdb_fault_replay_flags(struct gk20a *g,
 				struct mem_desc *mem)
@@ -145,7 +147,7 @@ static int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
 
 static u32 gp10b_fifo_get_pbdma_signature(struct gk20a *g)
 {
-	return g->gpu_characteristics.gpfifo_class 
+	return g->gpu_characteristics.gpfifo_class
 		| pbdma_signature_sw_zero_f();
 }
 

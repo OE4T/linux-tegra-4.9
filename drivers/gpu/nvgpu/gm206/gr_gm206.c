@@ -23,8 +23,9 @@
 
 #include "gm20b/gr_gm20b.h"
 #include "gr_gm206.h"
-#include "hw_fb_gm206.h"
-#include "hw_gr_gm206.h"
+
+#include <nvgpu/hw/gm206/hw_fb_gm206.h>
+#include <nvgpu/hw/gm206/hw_gr_gm206.h>
 
 static void gr_gm206_init_gpc_mmu(struct gk20a *g)
 {

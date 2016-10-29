@@ -11,7 +11,8 @@
  * more details.
  */
 
-#include <linux/delay.h>	/* for udelay */
+#include <linux/delay.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "gk20a/pmu_gk20a.h"
@@ -19,9 +20,9 @@
 #include "gm206/acr_gm206.h"
 #include "gm20b/pmu_gm20b.h"
 #include "gm206/pmu_gm206.h"
-#include "hw_gr_gm206.h"
-#include "hw_pwr_gm206.h"
 
+#include <nvgpu/hw/gm206/hw_gr_gm206.h>
+#include <nvgpu/hw/gm206/hw_pwr_gm206.h>
 
 #define gm206_dbg_pmu(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
@@ -166,4 +167,3 @@ void gm206_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.dump_secure_fuses = NULL;
 	gops->pmu.reset = gk20a_pmu_reset;
 }
-

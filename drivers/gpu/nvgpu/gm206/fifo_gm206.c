@@ -14,11 +14,13 @@
 #include <linux/delay.h>
 #include <linux/types.h>
 
+#include "fifo_gm206.h"
+
 #include "gk20a/gk20a.h"
 #include "gm20b/fifo_gm20b.h"
-#include "fifo_gm206.h"
-#include "hw_ccsr_gm206.h"
-#include "hw_fifo_gm206.h"
+
+#include <nvgpu/hw/gm206/hw_ccsr_gm206.h>
+#include <nvgpu/hw/gm206/hw_fifo_gm206.h>
 
 static u32 gm206_fifo_get_num_fifos(struct gk20a *g)
 {

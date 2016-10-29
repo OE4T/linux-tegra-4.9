@@ -17,8 +17,8 @@
 #include "gm20b/mm_gm20b.h"
 #include "gm206/mm_gm206.h"
 
-#include "hw_fbpa_gm206.h"
-#include "hw_top_gm206.h"
+#include <nvgpu/hw/gm206/hw_fbpa_gm206.h>
+#include <nvgpu/hw/gm206/hw_top_gm206.h>
 
 static size_t gm206_mm_get_vidmem_size(struct gk20a *g)
 {

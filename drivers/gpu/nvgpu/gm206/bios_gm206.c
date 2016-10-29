@@ -19,12 +19,13 @@
 #include "gk20a/gk20a.h"
 #include "gm20b/fifo_gm20b.h"
 #include "fifo_gm206.h"
-#include "hw_pwr_gm206.h"
-#include "hw_mc_gm206.h"
-#include "hw_xve_gm206.h"
-#include "hw_top_gm206.h"
 #include "bios_gm206.h"
 #include "nvgpu_common.h"
+
+#include <nvgpu/hw/gm206/hw_pwr_gm206.h>
+#include <nvgpu/hw/gm206/hw_mc_gm206.h>
+#include <nvgpu/hw/gm206/hw_xve_gm206.h>
+#include <nvgpu/hw/gm206/hw_top_gm206.h>
 
 #define BIT_HEADER_ID 0xb8ff
 #define BIT_HEADER_SIGNATURE 0x00544942

@@ -13,21 +13,22 @@
 
 #include <linux/types.h>
 #include <linux/printk.h>
-
 #include <linux/types.h>
 
-#include "gk20a/gk20a.h"
+#include "ce_gm206.h"
+#include "fifo_gm206.h"
+#include "bios_gm206.h"
+#include "gr_gm206.h"
 
+#include "gk20a/gk20a.h"
+#include "gk20a/dbg_gpu_gk20a.h"
+#include "gk20a/css_gr_gk20a.h"
 #include "gm20b/mc_gm20b.h"
 #include "gm20b/ltc_gm20b.h"
 #include "gm20b/mm_gm20b.h"
-#include "gm206/mm_gm206.h"
-#include "ce_gm206.h"
 #include "gm20b/fb_gm20b.h"
 #include "gm20b/pmu_gm20b.h"
 #include "gm20b/gr_gm20b.h"
-#include "gm206/pmu_gm206.h"
-#include "gm206/acr_gm206.h"
 #include "gm20b/gr_ctx_gm20b.h"
 #include "gm20b/gm20b_gating_reglist.h"
 #include "gm20b/regops_gm20b.h"
@@ -35,13 +36,11 @@
 #include "gm20b/therm_gm20b.h"
 #include "gm20b/clk_gm20b.h"
 #include "gm20b/debug_gm20b.h"
+#include "gm206/mm_gm206.h"
+#include "gm206/pmu_gm206.h"
+#include "gm206/acr_gm206.h"
 
-#include "fifo_gm206.h"
-#include "bios_gm206.h"
-#include "gr_gm206.h"
-#include "hw_proj_gm206.h"
-#include "gk20a/dbg_gpu_gk20a.h"
-#include "gk20a/css_gr_gk20a.h"
+#include <nvgpu/hw/gm206/hw_proj_gm206.h>
 
 static struct gpu_ops gm206_ops = {
 	.clock_gating = {

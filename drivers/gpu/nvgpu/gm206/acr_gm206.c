@@ -22,10 +22,12 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "gk20a/semaphore_gk20a.h"
-#include "hw_pwr_gm206.h"
+
 #include "acr.h"
 #include "acr_gm206.h"
 #include "nvgpu_common.h"
+
+#include <nvgpu/hw/gm206/hw_pwr_gm206.h>
 
 /*Defines*/
 #define gm206_dbg_pmu(fmt, arg...) \

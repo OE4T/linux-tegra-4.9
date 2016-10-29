@@ -30,13 +30,14 @@
 
 #include "gk20a/debug_gk20a.h"
 #include "gk20a/semaphore_gk20a.h"
-#include "hw_ce2_gm206.h"
-#include "hw_pbdma_gm206.h"
-#include "hw_ccsr_gm206.h"
-#include "hw_ram_gm206.h"
-#include "hw_top_gm206.h"
-#include "hw_mc_gm206.h"
-#include "hw_gr_gm206.h"
+
+#include <nvgpu/hw/gm206/hw_ce2_gm206.h>
+#include <nvgpu/hw/gm206/hw_pbdma_gm206.h>
+#include <nvgpu/hw/gm206/hw_ccsr_gm206.h>
+#include <nvgpu/hw/gm206/hw_ram_gm206.h>
+#include <nvgpu/hw/gm206/hw_top_gm206.h>
+#include <nvgpu/hw/gm206/hw_mc_gm206.h>
+#include <nvgpu/hw/gm206/hw_gr_gm206.h>
 
 /* TODO: We need generic way for query the intr_status register offset.
  * As of now, there is no way to query this information from dev_ceN_pri.h */

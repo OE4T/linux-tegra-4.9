@@ -44,9 +44,17 @@ static void nvgpu_clk_arb_free_session(struct kref *refcount);
 static int nvgpu_clk_arb_change_vf_point(struct gk20a *g, u16 gpc2clk_target,
 	u16 sys2clk_target, u16 xbar2clk_target, u16 mclk_target, u32 voltuv,
 	u32 voltuv_sram);
+static int nvgpu_clk_arb_change_vf_point_prefix(struct gk20a *g,
+	u16 gpc2clk_target, u16 sys2clk_target, u16 xbar2clk_target,
+	u16 mclk_target, u32 voltuv, u32 voltuv_sram, u32 nuvmin,
+	u32 nuvmin_sram);
+static int nvgpu_clk_arb_change_vf_point_postfix(struct gk20a *g,
+	u16 gpc2clk_target, u16 sys2clk_target, u16 xbar2clk_target,
+	u16 mclk_target, u32 voltuv, u32 voltuv_sram, u32 nuvmin,
+	u32 nuvmin_sram);
 static u8 nvgpu_clk_arb_find_vf_point(struct nvgpu_clk_arb *arb,
-		u16 *gpc2clk_target, u16 *sys2clk_target, u16 *xbar2clk_target,
-		u16 *mclk_target, u32 *voltuv, u32 *voltuv_sram);
+	u16 *gpc2clk, u16 *sys2clk, u16 *xbar2clk, u16 *mclk,
+	u32 *voltuv, u32 *voltuv_sram, u32 *nuvmin, u32 *nuvmin_sram);
 
 #define VF_POINT_INVALID_PSTATE ~0U
 #define VF_POINT_SET_PSTATE_SUPPORTED(a, b) ((a)->pstates |= (1UL << (b)))
@@ -797,6 +805,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	u32 pstate = VF_POINT_INVALID_PSTATE;
 	u32 voltuv, voltuv_sram;
 	bool mclk_set, gpc2clk_set;
+	u32 nuvmin, nuvmin_sram;
 
 	int status = 0;
 
@@ -879,7 +888,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	/* Query the table for the closest vf point to program */
 	pstate = nvgpu_clk_arb_find_vf_point(arb, &gpc2clk_target,
 		&sys2clk_target, &xbar2clk_target, &mclk_target, &voltuv,
-		&voltuv_sram);
+		&voltuv_sram, &nuvmin, &nuvmin_sram);
 
 	if (pstate == VF_POINT_INVALID_PSTATE) {
 		arb->status = -EINVAL;
@@ -897,6 +906,17 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	/* Program clocks */
 	/* A change in both mclk of gpc2clk may require a change in voltage */
 
+	status = nvgpu_clk_arb_change_vf_point_prefix(g, gpc2clk_target,
+		sys2clk_target, xbar2clk_target, mclk_target, voltuv,
+		voltuv_sram, nuvmin, nuvmin_sram);
+
+	if (status < 0) {
+		arb->status = status;
+		/* make status visible */
+		smp_mb();
+		goto exit_arb;
+	}
+
 	status = nvgpu_clk_arb_change_vf_point(g, gpc2clk_target,
 		sys2clk_target, xbar2clk_target, mclk_target, voltuv,
 		voltuv_sram);
@@ -905,9 +925,20 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 		arb->status = status;
 		/* make status visible */
 		smp_mb();
-
 		goto exit_arb;
 	}
+
+	status = nvgpu_clk_arb_change_vf_point_postfix(g, gpc2clk_target,
+		sys2clk_target, xbar2clk_target, mclk_target, voltuv,
+		voltuv_sram, nuvmin, nuvmin_sram);
+
+	if (status < 0) {
+		arb->status = status;
+		/* make status visible */
+		smp_mb();
+		goto exit_arb;
+	}
+
 	actual = ACCESS_ONCE(arb->actual) == &arb->actual_pool[0] ?
 			&arb->actual_pool[1] : &arb->actual_pool[0];
 
@@ -1189,7 +1220,7 @@ int nvgpu_clk_arb_get_arbiter_clk_f_points(struct gk20a *g,
 
 static u8 nvgpu_clk_arb_find_vf_point(struct nvgpu_clk_arb *arb,
 		u16 *gpc2clk, u16 *sys2clk, u16 *xbar2clk, u16 *mclk,
-		u32 *voltuv, u32 *voltuv_sram)
+		u32 *voltuv, u32 *voltuv_sram, u32 *nuvmin, u32 *nuvmin_sram)
 {
 	u16 gpc2clk_target, mclk_target;
 	u32 gpc2clk_voltuv, gpc2clk_voltuv_sram;
@@ -1301,10 +1332,36 @@ find_exit:
 	*voltuv = gpc2clk_voltuv > mclk_voltuv ? gpc2clk_voltuv : mclk_voltuv;
 	*voltuv_sram = gpc2clk_voltuv_sram > mclk_voltuv_sram ?
 		gpc2clk_voltuv_sram : mclk_voltuv_sram;
-
+	/* noise unaware vmin */
+	*nuvmin = mclk_voltuv;
+	*nuvmin_sram = mclk_voltuv_sram;
 	*gpc2clk = gpc2clk_target;
 	*mclk = mclk_target;
 	return pstate;
+}
+
+static int nvgpu_clk_arb_change_vf_point_prefix(struct gk20a *g,
+	u16 gpc2clk_target, u16 sys2clk_target, u16 xbar2clk_target,
+	u16 mclk_target, u32 voltuv, u32 voltuv_sram, u32 nuvmin,
+	u32 nuvmin_sram)
+{
+
+	int status;
+
+	status = clk_pmu_freq_controller_load(g, false);
+	if (status < 0)
+		return status;
+
+	status = volt_set_noiseaware_vmin(g, nuvmin, nuvmin_sram);
+	return status;
+}
+
+static int nvgpu_clk_arb_change_vf_point_postfix(struct gk20a *g,
+	u16 gpc2clk_target, u16 sys2clk_target, u16 xbar2clk_target,
+	u16 mclk_target, u32 voltuv, u32 voltuv_sram, u32 nuvmin,
+	u32 nuvmin_sram)
+{
+	return clk_pmu_freq_controller_load(g, true);
 }
 
 static int nvgpu_clk_arb_change_vf_point(struct gk20a *g, u16 gpc2clk_target,

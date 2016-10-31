@@ -61,6 +61,8 @@ struct voltage_rail_metadata {
 	u8 volt_domain_hal;
 	u8 pct_delta;
 	u32 ext_rel_delta_uv[CTRL_VOLT_RAIL_VOLT_DELTA_MAX_ENTRIES];
+	u8 logic_rail_idx;
+	u8 sram_rail_idx;
 	struct boardobjgrp_e32 volt_rails;
 };
 

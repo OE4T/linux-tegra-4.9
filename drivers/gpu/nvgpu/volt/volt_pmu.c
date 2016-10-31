@@ -231,3 +231,46 @@ u32 volt_get_voltage(struct gk20a *g, u32 volt_domain, u32 *voltage_uv)
 {
 	return volt_rail_get_voltage(g, volt_domain, voltage_uv);
 }
+
+static int volt_policy_set_noiseaware_vmin(struct gk20a *g,
+		struct ctrl_volt_volt_rail_list *prail_list)
+{
+	struct nv_pmu_volt_rpc rpc_call = { 0 };
+	u32 status = 0;
+
+	/* Set RPC parameters. */
+	rpc_call.function = NV_PMU_VOLT_RPC_ID_VOLT_RAIL_SET_NOISE_UNAWARE_VMIN;
+	rpc_call.params.volt_rail_set_noise_unaware_vmin.num_rails =
+			prail_list->num_rails;
+	memcpy(&rpc_call.params.volt_rail_set_noise_unaware_vmin.rail_list,
+		prail_list, (sizeof(struct ctrl_volt_volt_rail_list)));
+
+	/* Execute the voltage change request via PMU RPC. */
+	status = volt_pmu_rpc_execute(g, &rpc_call);
+	if (status) {
+		gk20a_err(dev_from_gk20a(g),
+			"Error while executing VOLT_POLICY_SET_VOLTAGE RPC");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+int volt_set_noiseaware_vmin(struct gk20a *g, u32 logic_voltage_uv,
+	u32 sram_voltage_uv)
+{
+	int status = 0;
+	struct ctrl_volt_volt_rail_list rail_list = { 0 };
+
+	rail_list.num_rails = RAIL_COUNT;
+	rail_list.rails[0].rail_idx = 0;
+	rail_list.rails[0].voltage_uv = logic_voltage_uv;
+	rail_list.rails[1].rail_idx = 1;
+	rail_list.rails[1].voltage_uv = sram_voltage_uv;
+
+	status = volt_policy_set_noiseaware_vmin(g, &rail_list);
+
+	return status;
+
+}
+

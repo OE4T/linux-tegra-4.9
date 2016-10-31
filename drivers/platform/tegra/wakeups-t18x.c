@@ -18,8 +18,6 @@
 #include <linux/io.h>
 #include <linux/irqchip/tegra.h>
 
-#include <mach/irqs.h>
-
 #include "iomap.h"
 
 #define TEGRA_GPIO_BANK_ID_A 0

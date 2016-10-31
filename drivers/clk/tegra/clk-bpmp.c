@@ -21,6 +21,7 @@
 #include <linux/mutex.h>
 #include <linux/slab.h>
 #include <linux/err.h>
+#include <linux/version.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/bpmp_abi.h>
 
@@ -333,8 +334,10 @@ struct clk *tegra_clk_register_bpmp(const char *name, int parent,
 
 	init.name = name;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	if (bpmp_flags & BPMP_CLK_IS_ROOT)
 		flags |= CLK_IS_ROOT;
+#endif
 	init.flags = flags;
 
 	init.parent_names = parent_names;
@@ -433,8 +436,12 @@ static int clk_bpmp_init(int clk_num)
 
 	if (flags & BPMP_CLK_IS_ROOT && !(flags & BPMP_CLK_HAS_SET_RATE)) {
 		int64_t rate;
+		unsigned long clk_flags = 0;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+		clk_flags |= CLK_IS_ROOT;
+#endif
 		rate = clk_bpmp_get_rate_clk_num(clk_num);
-		clk = clk_register_fixed_rate(NULL, name, NULL, CLK_IS_ROOT,
+		clk = clk_register_fixed_rate(NULL, name, NULL, clk_flags,
 					      rate);
 	} else if (num_parents == 1) {
 		clk = tegra_clk_register_bpmp(name, parent, parent_names, NULL,

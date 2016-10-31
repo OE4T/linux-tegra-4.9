@@ -388,11 +388,12 @@ struct tegra_dc_ext_imp_head_results {
 
 struct tegra_dc_ext_imp_settings {
 	struct tegra_dc_ext_imp_head_results imp_results[TEGRA_DC_EXT_N_HEADS];
-	__u64 total_latency;
 	__u64 hubclk;
 	__u32 window_slots_value;
 	__u32 cursor_slots_value;
 	__u64 required_total_bw_kbps;
+	__u64 total_display_iso_bw_kbps;
+	__u64 proposed_emc_hz;
 	__u64 __user session_id_ptr; /* out - ptr to unsigned 64-bit val */
 };
 #undef TEGRA_DC_EXT_N_WINDOWS

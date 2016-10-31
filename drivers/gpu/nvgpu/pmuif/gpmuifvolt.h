@@ -240,9 +240,16 @@ struct nv_pmu_volt_rail_get_voltage {
 	u32 voltage_uv;
 };
 
+struct nv_pmu_volt_volt_rail_set_noise_unaware_vmin {
+	u8 num_rails;
+	struct ctrl_volt_volt_rail_list
+	rail_list;
+};
+
 #define NV_PMU_VOLT_CMD_ID_BOARDOBJ_GRP_SET	(0x00000000)
 #define NV_PMU_VOLT_CMD_ID_RPC				(0x00000001)
 #define NV_PMU_VOLT_CMD_ID_BOARDOBJ_GRP_GET_STATUS	(0x00000002)
+#define NV_PMU_VOLT_RPC_ID_VOLT_RAIL_SET_NOISE_UNAWARE_VMIN (0x00000004)
 
 /*!
 * PMU VOLT RPC calls.
@@ -277,6 +284,8 @@ struct nv_pmu_volt_rpc {
 	union {
 		struct nv_pmu_volt_policy_voltage_data volt_policy_voltage_data;
 		struct nv_pmu_volt_rail_get_voltage volt_rail_get_voltage;
+		struct nv_pmu_volt_volt_rail_set_noise_unaware_vmin
+			volt_rail_set_noise_unaware_vmin;
 	} params;
 };
 

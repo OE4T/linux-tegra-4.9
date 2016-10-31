@@ -932,14 +932,6 @@ struct gk20a {
 	struct nvgpu_dbg_gpu_reg_op *dbg_regops_tmp_buf;
 	u32 dbg_regops_tmp_buf_ops;
 
-	/*
-	 * When set subsequent VMAs will separate fixed and non-fixed
-	 * allocations. This avoids conflicts with fixed and non-fixed allocs
-	 * for some tests. The value in separate_fixed_allocs is used to
-	 * determine the split boundary.
-	 */
-	u64 separate_fixed_allocs;
-
 	void (*remove_support)(struct device *);
 
 	u64 pg_ingating_time_us;

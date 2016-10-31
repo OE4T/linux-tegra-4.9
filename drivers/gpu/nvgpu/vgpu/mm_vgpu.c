@@ -231,8 +231,6 @@ static void vgpu_vm_remove_support(struct vm_gk20a *vm)
 		nvgpu_alloc_destroy(&vm->kernel);
 	if (nvgpu_alloc_initialized(&vm->user))
 		nvgpu_alloc_destroy(&vm->user);
-	if (nvgpu_alloc_initialized(&vm->fixed))
-		nvgpu_alloc_destroy(&vm->fixed);
 
 	mutex_unlock(&vm->update_gmmu_lock);
 

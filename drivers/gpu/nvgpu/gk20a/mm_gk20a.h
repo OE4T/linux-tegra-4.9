@@ -270,9 +270,6 @@ struct vm_gk20a {
 
 	struct gk20a_mm_entry pdb;
 
-	/* If necessary, split fixed from non-fixed. */
-	struct nvgpu_allocator fixed;
-
 	struct nvgpu_allocator *vma[gmmu_nr_page_sizes];
 	struct nvgpu_allocator kernel;
 	struct nvgpu_allocator user;

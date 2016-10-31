@@ -4437,31 +4437,6 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 		goto clean_up_page_tables;
 	}
 
-	/*
-	 * Attempt to make a separate VM for fixed allocations.
-	 */
-	if (g->separate_fixed_allocs &&
-	    user_vma_start < user_vma_limit) {
-		if (g->separate_fixed_allocs >= user_vma_limit)
-			goto clean_up_page_tables;
-
-		snprintf(alloc_name, sizeof(alloc_name),
-			 "gk20a_%s-fixed", name);
-
-		err = __nvgpu_buddy_allocator_init(g, &vm->fixed,
-						   vm, alloc_name,
-						   user_vma_start,
-						   g->separate_fixed_allocs,
-						   SZ_4K,
-						   GPU_BALLOC_MAX_ORDER,
-						   GPU_ALLOC_GVA_SPACE);
-		if (err)
-			goto clean_up_page_tables;
-
-		/* Make sure to update the user vma size. */
-		user_vma_start = g->separate_fixed_allocs;
-	}
-
 	if (user_vma_start < user_vma_limit) {
 		snprintf(alloc_name, sizeof(alloc_name), "gk20a_%s", name);
 		if (!gk20a_big_pages_possible(vm, user_vma_start,
@@ -4631,18 +4606,15 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 	}
 
 	vma = vm->vma[pgsz_idx];
-	if (args->flags & NVGPU_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET) {
-		if (nvgpu_alloc_initialized(&vm->fixed))
-			vma = &vm->fixed;
+	if (args->flags & NVGPU_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET)
 		vaddr_start = nvgpu_alloc_fixed(vma, args->o_a.offset,
 						(u64)args->pages *
 						(u64)args->page_size,
 						args->page_size);
-	} else {
+	else
 		vaddr_start = nvgpu_alloc(vma,
 					  (u64)args->pages *
 					  (u64)args->page_size);
-	}
 
 	if (!vaddr_start) {
 		kfree(va_node);
@@ -4710,10 +4682,7 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 	pgsz_idx = __get_pte_size(vm, args->offset,
 				  args->page_size * args->pages);
 
-	if (nvgpu_alloc_initialized(&vm->fixed))
-		vma = &vm->fixed;
-	else
-		vma = vm->vma[pgsz_idx];
+	vma = vm->vma[pgsz_idx];
 	nvgpu_free(vma, args->offset);
 
 	mutex_lock(&vm->update_gmmu_lock);
@@ -4902,8 +4871,6 @@ void gk20a_deinit_vm(struct vm_gk20a *vm)
 		nvgpu_alloc_destroy(&vm->kernel);
 	if (nvgpu_alloc_initialized(&vm->user))
 		nvgpu_alloc_destroy(&vm->user);
-	if (nvgpu_alloc_initialized(&vm->fixed))
-		nvgpu_alloc_destroy(&vm->fixed);
 
 	gk20a_vm_free_entries(vm, &vm->pdb, 0);
 }
@@ -5466,9 +5433,6 @@ void gk20a_mm_debugfs_init(struct device *dev)
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct dentry *gpu_root = platform->debugfs;
 	struct gk20a *g = gk20a_get_platform(dev)->g;
-
-	debugfs_create_x64("separate_fixed_allocs", 0664, gpu_root,
-			   &g->separate_fixed_allocs);
 
 	debugfs_create_bool("force_pramin", 0664, gpu_root,
 			   &g->mm.force_pramin);

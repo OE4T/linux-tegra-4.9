@@ -314,5 +314,5 @@ static void __exit nvcsi_exit(void)
 	platform_driver_unregister(&nvcsi_driver);
 }
 
-module_init(nvcsi_init);
+late_initcall(nvcsi_init);
 module_exit(nvcsi_exit);

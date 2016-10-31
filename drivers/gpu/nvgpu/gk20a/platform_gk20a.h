@@ -71,6 +71,9 @@ struct gk20a_platform {
 	/* set if ASPM should be disabled on boot; only makes sense for PCI */
 	bool disable_aspm;
 
+	/* Set if the platform can unify the small/large address spaces. */
+	bool unify_address_spaces;
+
 	/* Should be populated by probe. */
 	struct dentry *debugfs;
 	struct dentry *debugfs_alias;

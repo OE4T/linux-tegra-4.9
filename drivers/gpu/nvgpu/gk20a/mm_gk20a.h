@@ -270,9 +270,16 @@ struct vm_gk20a {
 
 	struct gk20a_mm_entry pdb;
 
+	/*
+	 * These structs define the address spaces. In some cases it's possible
+	 * to merge address spaces (user and user_lp) and in other cases it's
+	 * not. vma[] allows the code to be agnostic to this by always using
+	 * address spaces through this pointer array.
+	 */
 	struct nvgpu_allocator *vma[gmmu_nr_page_sizes];
 	struct nvgpu_allocator kernel;
 	struct nvgpu_allocator user;
+	struct nvgpu_allocator user_lp;
 
 	struct rb_root mapped_buffers;
 
@@ -433,40 +440,18 @@ static inline int bar1_aperture_size_mb_gk20a(void)
 /* The default kernel-reserved GPU VA size */
 #define NV_MM_DEFAULT_KERNEL_SIZE (1ULL << 32)
 
+/*
+ * When not using unified address spaces the bottom 16GB of the space are used
+ * for small pages and the remaining high memory is used for large pages.
+ */
+static inline u64 __nv_gmmu_va_small_page_limit(void)
+{
+	return ((u64)SZ_1G * 16);
+}
+
 enum gmmu_pgsz_gk20a __get_pte_size_fixed_map(struct vm_gk20a *vm,
 					      u64 base, u64 size);
-
-/*
- * This determines the PTE size for a given alloc. Used by both the GVA space
- * allocator and the mm core code so that agreement can be reached on how to
- * map allocations.
- *
- * The page size of a buffer is this:
- *
- *   o  If the VM doesn't support large pages then obviously small pages
- *      must be used.
- *   o  If the base address is non-zero (fixed address map):
- *      - Attempt to find a reserved memory area and use the page size
- *        based on that.
- *      - If no reserved page size is available, default to small pages.
- *   o  If the base is zero:
- *      - If the size is greater than or equal to the big page size, use big
- *        pages.
- *      - Otherwise use small pages.
- */
-static inline enum gmmu_pgsz_gk20a __get_pte_size(struct vm_gk20a *vm,
-						  u64 base, u64 size)
-{
-	if (!vm->big_pages)
-		return gmmu_page_size_small;
-
-	if (base)
-		return __get_pte_size_fixed_map(vm, base, size);
-
-	if (size >= vm->gmmu_page_sizes[gmmu_page_size_big])
-		return gmmu_page_size_big;
-	return gmmu_page_size_small;
-}
+enum gmmu_pgsz_gk20a __get_pte_size(struct vm_gk20a *vm, u64 base, u64 size);
 
 /*
  * Buffer accessors - wrap between begin() and end() if there is no permanent

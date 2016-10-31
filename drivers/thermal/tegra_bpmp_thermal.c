@@ -216,7 +216,12 @@ static void tz_device_update_work_fn(struct work_struct *work)
 		dev_dbg(tegra->dev, "tzs_to_update[%d]: %d\n", i,
 			atomic_read(&zone->needs_update));
 		if (atomic_cmpxchg(&zone->needs_update, true, false)) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 			thermal_zone_device_update(zone->tzd);
+#else
+			thermal_zone_device_update(zone->tzd,
+						   THERMAL_EVENT_UNSPECIFIED);
+#endif
 			trace_bpmp_thermal_zone_trip(zone->tzd,
 						     zone->tzd->temperature);
 			tegra_bpmp_thermal_trip_update(zone, 0);

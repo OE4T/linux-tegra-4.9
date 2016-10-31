@@ -464,5 +464,5 @@ static void __exit tegra_vi4_exit(void)
 	platform_driver_unregister(&tegra_vi4_driver);
 }
 
-module_init(tegra_vi4_init);
+late_initcall(tegra_vi4_init);
 module_exit(tegra_vi4_exit);

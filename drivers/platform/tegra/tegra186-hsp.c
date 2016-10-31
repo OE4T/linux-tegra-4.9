@@ -162,7 +162,7 @@ static int tegra_hsp_get_shared_irq(struct device *dev, irq_handler_t handler,
 
 		sprintf(irqname, "shared%X", i);
 		hi->irq = platform_get_irq_byname(pdev, irqname);
-		if (IS_ERR_VALUE(hi->irq))
+		if (hi->irq < 0)
 			continue;
 
 		hi->si_index = i;
@@ -198,7 +198,7 @@ static int tegra_hsp_get_sm_irq(struct device *dev, bool empty,
 	/* Look for dedicated internal IRQ */
 	sprintf(name, empty ? "empty%X" : "full%X", hi->index);
 	hi->irq = platform_get_irq_byname(pdev, name);
-	if (!IS_ERR_VALUE(hi->irq)) {
+	if (!(hi->irq < 0)) {
 		hi->si_index = 0xff;
 
 		if (request_threaded_irq(hi->irq, NULL, handler, flags,

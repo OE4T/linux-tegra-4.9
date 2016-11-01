@@ -544,8 +544,17 @@ static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 				* chan->format.height
 				* fie.interval.denominator / 100)
 				* VI_CSI_CLK_SCALE;
-		ret = nvhost_module_get_rate(chan->vi->csi->pdev, &csi_freq, 0);
-		csi_freq = ret ? DEFAULT_CSI_FREQ : csi_freq;
+		/* for PG, get csi frequency from nvhost */
+		if (chan->pg_mode) {
+			ret = nvhost_module_get_rate(
+					chan->vi->csi->pdev, &csi_freq, 0);
+			csi_freq = ret ? DEFAULT_CSI_FREQ : csi_freq;
+		} else
+			/* Use default csi4 frequency for t186 for now
+			 * We can't get the frequency from nvhost because
+			 * vi4 does not has access to csi4
+			 */
+			csi_freq = DEFAULT_CSI_FREQ;
 
 		/* VI clk should be slightly faster than CSI clk*/
 		ret = nvhost_module_set_rate(chan->vi->ndev, &chan->video,

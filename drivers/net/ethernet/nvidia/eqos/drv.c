@@ -393,7 +393,7 @@ void handle_mac_intrs(struct eqos_prv_data *pdata, ULONG dma_isr)
 			pdata->xstats.pmt_irq_n++;
 			eqos_status = S_MAC_ISR_PMTIS;
 			MAC_PMTCSR_RD(mac_pmtcsr);
-			pr_info("commonisr: PMTCSR : %#lx\n", mac_pmtcsr);
+			pr_debug("commonisr: PMTCSR : %#lx\n", mac_pmtcsr);
 			if (pdata->power_down)
 				eqos_powerup(pdata->dev, EQOS_IOCTL_CONTEXT);
 		}
@@ -402,7 +402,7 @@ void handle_mac_intrs(struct eqos_prv_data *pdata, ULONG dma_isr)
 		if (GET_VALUE
 		    (mac_isr, MAC_ISR_RGSMIIS_LPOS, MAC_ISR_RGSMIIS_HPOS) & 1) {
 			MAC_PCS_RD(mac_pcs);
-			pr_info("RGMII/SMII interrupt: MAC_PCS = %#lx\n",
+			pr_debug("RGMII/SMII interrupt: MAC_PCS = %#lx\n",
 			       mac_pcs);
 #ifdef HWA_NV_1637630
 

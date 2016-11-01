@@ -673,6 +673,11 @@ static int pva_task_write(struct pva_submit_task *task, bool atomic)
 	hw_task->operation = task->operation;
 	hw_task->timeout = task->timeout;
 
+	/* This should be delivered from userspace - hard-code
+	 * until the mechanism is in place.
+	 */
+	hw_task->operation_version = 1;
+
 	for (i = 0; i < roundup(offset, 16) / 16; i++) {
 		u8 *task_va = task->va;
 		u32 base = i * 16;

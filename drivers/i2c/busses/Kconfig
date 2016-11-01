@@ -1214,4 +1214,6 @@ config I2C_OPAL
 	  This driver can also be built as a module. If so, the module will be
 	  called as i2c-opal.
 
+trysource "../t18x/drivers/i2c/busses/Kconfig.t18x"
+
 endmenu

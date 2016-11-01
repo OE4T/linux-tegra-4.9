@@ -1349,9 +1349,14 @@
 
 	hda@70030000 {
 		compatible = "nvidia,tegra30-hda";
-		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x70030000 0x0 0x10000>;
 		interrupts = <0 81 0x04>;
+		clocks = <&tegra_car TEGRA210_CLK_HDA>,
+			     <&tegra_car TEGRA210_CLK_HDA2HDMI>,
+			     <&tegra_car TEGRA210_CLK_HDA2CODEC_2X>,
+			     <&tegra_car TEGRA210_CLK_MAUD>;
+		clock-names = "hda", "hda2hdmi",
+					  "hda2codec_2x", "maud";
 		status = "disabled";
 	};
 

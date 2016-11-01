@@ -486,6 +486,7 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 	{
 		.dev			= DEV_GYR,
 		.buf_n			= 12,
+		.buf_shft		= -15,
 		.int_ctl		= GYRO_CALIBR_SET,
 		.odr_cfg		= ODR_GYRO_CALIBR,
 		.odr_cntr		= ODR_CNTR_GYRO_CALIBR,

@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(336)
+#define NVI_DRIVER_VERSION		(337)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"

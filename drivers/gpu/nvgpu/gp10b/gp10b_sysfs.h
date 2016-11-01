@@ -16,8 +16,12 @@
 #ifndef _GP10B_SYSFS_H_
 #define _GP10B_SYSFS_H_
 
+#include <linux/version.h>
+
 /*ECC Fuse*/
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 #define FUSE_OPT_ECC_EN  0x358
+#endif
 
 void gp10b_create_sysfs(struct device *dev);
 void gp10b_remove_sysfs(struct device *dev);

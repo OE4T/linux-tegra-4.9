@@ -15,6 +15,7 @@
 
 #include <linux/types.h>
 #include <linux/printk.h>
+#include <linux/version.h>
 
 #include <linux/types.h>
 
@@ -46,7 +47,9 @@
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 #define FUSE_OPT_PRIV_SEC_EN_0 0x264
+#endif
 #define PRIV_SECURITY_ENABLED 0x01
 
 static struct gpu_ops gp10b_ops = {

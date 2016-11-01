@@ -14,6 +14,7 @@
  */
 
 #include <linux/types.h>
+#include <linux/version.h>
 
 #include "gk20a/gk20a.h"
 
@@ -38,7 +39,10 @@
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 #define FUSE_OPT_PRIV_SEC_DIS_0 0x264
+#endif
+
 #define PRIV_SECURITY_DISABLE 0x01
 
 static struct gpu_ops gm20b_ops = {

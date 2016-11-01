@@ -18,6 +18,7 @@
 #include <linux/io.h>
 #include <linux/tegra-fuse.h>
 #include <linux/vmalloc.h>
+#include <linux/version.h>
 
 #include <dt-bindings/soc/gm20b-fuse.h>
 
@@ -513,8 +514,13 @@ static void gr_gm20b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 	tegra_clk_writel(CLK_RST_CONTROLLER_MISC_CLK_ENB_0_ALL_VISIBLE,
 			CLK_RST_CONTROLLER_MISC_CLK_ENB_0);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 	tegra_fuse_writel(0x1, FUSE_FUSEBYPASS_0);
 	tegra_fuse_writel(0x0, FUSE_WRITE_ACCESS_SW_0);
+#else
+	tegra_fuse_control_write(0x1, FUSE_FUSEBYPASS_0);
+	tegra_fuse_control_write(0x0, FUSE_WRITE_ACCESS_SW_0);
+#endif
 
 	if (g->gr.gpc_tpc_mask[gpc_index] == 0x1) {
 		tegra_fuse_writel(0x0, FUSE_OPT_GPU_TPC0_DISABLE_0);

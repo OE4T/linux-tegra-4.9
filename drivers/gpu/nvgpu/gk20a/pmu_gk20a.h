@@ -21,6 +21,7 @@
 #ifndef __PMU_GK20A_H__
 #define __PMU_GK20A_H__
 
+#include <linux/version.h>
 #include "pmu_api.h"
 #include "pmu_common.h"
 #include "pmuif/gpmuifboardobj.h"
@@ -55,7 +56,9 @@
 #define APP_VERSION_0 16856675
 
 /*Fuse defines*/
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 #define FUSE_GCPLEX_CONFIG_FUSE_0           0x2C8
+#endif
 #define PMU_MODE_MISMATCH_STATUS_MAILBOX_R  6
 #define PMU_MODE_MISMATCH_STATUS_VAL        0xDEADDEAD
 

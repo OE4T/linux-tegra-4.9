@@ -1677,7 +1677,7 @@ static int tegra186_cdp_phy_set_cdp(struct phy *phy, bool enable)
 
 		reg = padctl_readl(padctl,
 				   XUSB_PADCTL_USB2_OTG_PADX_CTL0(port));
-		reg &= ~USB2_OTG_PD2_OVRD_EN;
+		reg &= ~(USB2_OTG_PD2 | USB2_OTG_PD2_OVRD_EN);
 		padctl_writel(padctl, reg,
 			      XUSB_PADCTL_USB2_OTG_PADX_CTL0(port));
 
@@ -3320,7 +3320,7 @@ void tegra_phy_xusb_utmi_pad_charger_detect_off(struct phy *phy)
 	padctl_writel(padctl, reg, USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
 
 	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL0(port));
-	reg &= ~USB2_OTG_PD2_OVRD_EN;
+	reg &= ~(USB2_OTG_PD2 | USB2_OTG_PD2_OVRD_EN);
 	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL0(port));
 
 	tegra_phy_xusb_utmi_pad_power_down(phy);

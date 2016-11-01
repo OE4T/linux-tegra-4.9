@@ -855,16 +855,16 @@ static int tegra_channel_setup_controls(struct tegra_channel *chan)
 	/* Add new custom controls */
 	for (i = 0; i < ARRAY_SIZE(custom_ctrl_list); i++) {
 		/* don't create override control for pg mode */
-		if (!(chan->vi->pg_mode &&
-			  custom_ctrl_list[i].id == V4L2_CID_OVERRIDE_ENABLE)) {
-			v4l2_ctrl_new_custom(&chan->ctrl_handler,
-				&custom_ctrl_list[i], NULL);
-			if (chan->ctrl_handler.error) {
-				dev_err(chan->vi->dev,
-					"Failed to add %s ctrl\n",
-					custom_ctrl_list[i].name);
-				return chan->ctrl_handler.error;
-			}
+		if (custom_ctrl_list[i].id == V4L2_CID_OVERRIDE_ENABLE &&
+				chan->pg_mode)
+			continue;
+		v4l2_ctrl_new_custom(&chan->ctrl_handler,
+			&custom_ctrl_list[i], NULL);
+		if (chan->ctrl_handler.error) {
+			dev_err(chan->vi->dev,
+				"Failed to add %s ctrl\n",
+				custom_ctrl_list[i].name);
+			return chan->ctrl_handler.error;
 		}
 	}
 

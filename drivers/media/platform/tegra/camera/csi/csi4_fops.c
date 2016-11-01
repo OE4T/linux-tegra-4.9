@@ -319,6 +319,11 @@ static int csi4_tpg_start_streaming(struct tegra_csi_channel *chan,
 	struct tegra_csi_device *csi = chan->csi;
 	unsigned int val, csi_port, csi_lanes;
 
+	if (!port->core_format) {
+		dev_err(csi->dev, "Fail to find tegra video fmt");
+		return -EINVAL;
+	}
+
 	csi_port = port->num;
 	csi_lanes = port->lanes;
 	dev_dbg(csi->dev, "%s CSI port=%d, # lanes=%d\n",

@@ -83,6 +83,7 @@ struct nvgpu_clk_arb {
 	struct llist_head requests;
 
 	struct gk20a *g;
+	int status;
 
 	struct nvgpu_clk_arb_target actual_pool[2];
 	struct nvgpu_clk_arb_target *actual;
@@ -269,7 +270,8 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 			atomic_read(&arb->req_nr));
 	} while (!atomic_read(&arb->req_nr));
 
-	return 0;
+
+	return arb->status;
 
 init_fail:
 
@@ -533,6 +535,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 			clk_cur = table->mclk_points[j].mhz;
 			j++;
 			num_points++;
+
 		}
 	}
 	table->mclk_num_points = num_points;
@@ -605,7 +608,7 @@ static void nvgpu_clk_arb_run_vf_table_cb(struct work_struct *work)
 	err = clk_vf_point_cache(g);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g),
-			"failed to get GPC2CLK SRAM voltage");
+			"failed to cache VF table");
 		return;
 	}
 	nvgpu_clk_arb_update_vf_table(arb);
@@ -625,7 +628,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	u32 voltuv, voltuv_sram;
 	bool mclk_set, gpc2clk_set;
 
-	int status;
+	int status = 0;
 
 	/* Temporary variables for checking target frequency */
 	u16 gpc2clk_target, mclk_target;
@@ -742,15 +745,21 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	actual->gpc2clk = gpc2clk_target;
 	actual->mclk = mclk_target;
 	arb->voltuv_actual = voltuv;
+	arb->status = status;
 
 	/* Make changes visible to other threads */
 	smp_wmb();
 	xchg(&arb->actual, actual);
 
+	/* status must be visible before atomic inc */
+	smp_wmb();
 	atomic_inc(&arb->req_nr);
 
 	wake_up_interruptible(&arb->request_wq);
 
+	if (status < 0)
+		gk20a_err(dev_from_gk20a(g),
+			"Error in arbiter update");
 
 #ifdef CONFIG_DEBUG_FS
 	g->ops.read_ptimer(g, &t1);
@@ -1016,20 +1025,23 @@ static void nvgpu_clk_arb_find_vf_point(struct nvgpu_clk_arb *arb,
 	struct nvgpu_clk_vf_table *table;
 	u32 index;
 
-	gpc2clk_target = *gpc2clk;
-	mclk_target = *mclk;
-	gpc2clk_voltuv = 0;
-	gpc2clk_voltuv_sram = 0;
-	mclk_voltuv = 0;
-	mclk_voltuv_sram = 0;
-
 	do {
+		gpc2clk_target = *gpc2clk;
+		mclk_target = *mclk;
+		gpc2clk_voltuv = 0;
+		gpc2clk_voltuv_sram = 0;
+		mclk_voltuv = 0;
+		mclk_voltuv_sram = 0;
+
 		table = ACCESS_ONCE(arb->current_vf_table);
 		/* pointer to table can be updated by callback */
 		smp_rmb();
 
 		if (!table)
 			continue;
+		if ((!table->gpc2clk_num_points) || (!table->mclk_num_points))
+			goto find_exit;
+
 		/* round up the freq requests */
 		for (index = 0; index < table->gpc2clk_num_points; index++) {
 			if (table->gpc2clk_points[index].mhz >=
@@ -1045,10 +1057,10 @@ static void nvgpu_clk_arb_find_vf_point(struct nvgpu_clk_arb *arb,
 		}
 
 		if (index == table->gpc2clk_num_points) {
-			gpc2clk_target = table->gpc2clk_points[index].mhz;
-			gpc2clk_voltuv = table->gpc2clk_points[index].uvolt;
+			gpc2clk_target = table->gpc2clk_points[index-1].mhz;
+			gpc2clk_voltuv = table->gpc2clk_points[index-1].uvolt;
 			gpc2clk_voltuv_sram =
-				table->gpc2clk_points[index].uvolt_sram;
+				table->gpc2clk_points[index-1].uvolt_sram;
 		}
 
 		for (index = 0; index < table->mclk_num_points; index++) {
@@ -1061,14 +1073,15 @@ static void nvgpu_clk_arb_find_vf_point(struct nvgpu_clk_arb *arb,
 			}
 		}
 		if (index == table->mclk_num_points) {
-			mclk_target = table->mclk_points[index].mhz;
-			mclk_voltuv = table->mclk_points[index].uvolt;
+			mclk_target = table->mclk_points[index-1].mhz;
+			mclk_voltuv = table->mclk_points[index-1].uvolt;
 			mclk_voltuv_sram =
-				table->mclk_points[index].uvolt_sram;
+				table->mclk_points[index-1].uvolt_sram;
 		}
 	} while (!table ||
 		(ACCESS_ONCE(arb->current_vf_table) != table));
 
+find_exit:
 	*voltuv = gpc2clk_voltuv > mclk_voltuv ? gpc2clk_voltuv : mclk_voltuv;
 	*voltuv_sram = gpc2clk_voltuv_sram > mclk_voltuv_sram ?
 		gpc2clk_voltuv_sram : mclk_voltuv_sram;
@@ -1136,7 +1149,6 @@ static int nvgpu_clk_arb_change_vf_point(struct gk20a *g, u16 gpc2clk_target,
 		status = clk_program_fll_clks(g, &fllclk);
 		if (status < 0)
 			return status;
-
 	}
 
 	return 0;

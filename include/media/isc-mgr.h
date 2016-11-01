@@ -24,6 +24,8 @@
 #define ISC_MGR_IOCTL_DEV_ADD		_IOW('o', 5, struct isc_mgr_new_dev)
 #define ISC_MGR_IOCTL_DEV_DEL		_IOW('o', 6, int)
 #define ISC_MGR_IOCTL_PWR_INFO		_IOW('o', 7, struct isc_mgr_pwr_info)
+#define ISC_MGR_IOCTL_PWM_ENABLE	_IOW('o', 8, int)
+#define ISC_MGR_IOCTL_PWM_CONFIG	_IOW('o', 9, struct isc_mgr_pwm_info)
 
 #define ISC_MGR_POWER_ALL	5
 #define MAX_ISC_NAME_LENGTH	32
@@ -44,6 +46,16 @@ struct isc_mgr_sinfo {
 struct isc_mgr_pwr_info {
 	__s32 pwr_gpio;
 	__s32 pwr_status;
+};
+
+struct isc_mgr_pwm_info {
+	__u64 duty_ns;
+	__u64 period_ns;
+};
+
+enum {
+	ISC_MGR_PWM_DISABLE = 0,
+	ISC_MGR_PWM_ENABLE,
 };
 
 enum {

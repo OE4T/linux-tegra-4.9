@@ -390,6 +390,49 @@ misc_ctrl_err:
 	return -EBUSY;
 }
 
+static int isc_mgr_pwm_enable(
+	struct isc_mgr_priv *isc_mgr, unsigned long arg)
+{
+	int err = 0;
+
+	if (!isc_mgr || !isc_mgr->pwm)
+		return -EINVAL;
+
+	switch (arg) {
+	case ISC_MGR_PWM_ENABLE:
+		err = pwm_enable(isc_mgr->pwm);
+		break;
+	case ISC_MGR_PWM_DISABLE:
+		pwm_disable(isc_mgr->pwm);
+		break;
+	default:
+		dev_err(isc_mgr->pdev, "%s unrecognized command: %lx\n",
+			__func__, arg);
+	}
+
+	return err;
+}
+
+static int isc_mgr_pwm_config(
+	struct isc_mgr_priv *isc_mgr, const void __user *arg)
+{
+	struct isc_mgr_pwm_info pwm_cfg;
+	int err = 0;
+
+	if (!isc_mgr || !isc_mgr->pwm)
+		return -EINVAL;
+
+	if (copy_from_user(&pwm_cfg, arg, sizeof(pwm_cfg))) {
+		dev_err(isc_mgr->pdev,
+			"%s: failed to copy from user\n", __func__);
+		return -EFAULT;
+	}
+
+	err = pwm_config(isc_mgr->pwm, pwm_cfg.duty_ns, pwm_cfg.period_ns);
+
+	return err;
+}
+
 static long isc_mgr_ioctl(
 	struct file *file, unsigned int cmd, unsigned long arg)
 {
@@ -444,6 +487,12 @@ static long isc_mgr_ioctl(
 		break;
 	case ISC_MGR_IOCTL_PWR_INFO:
 		err = isc_mgr_get_pwr_info(isc_mgr, (void __user *)arg);
+		break;
+	case ISC_MGR_IOCTL_PWM_ENABLE:
+		err = isc_mgr_pwm_enable(isc_mgr, arg);
+		break;
+	case ISC_MGR_IOCTL_PWM_CONFIG:
+		err = isc_mgr_pwm_config(isc_mgr, (const void __user *)arg);
 		break;
 	default:
 		dev_err(isc_mgr->pdev, "%s unsupported ioctl: %x\n",
@@ -733,7 +782,6 @@ static int isc_mgr_probe(struct platform_device *pdev)
 	struct isc_mgr_priv *isc_mgr;
 	struct isc_mgr_platform_data *pd;
 	unsigned int i;
-	u32 period, duty;
 
 	dev_info(&pdev->dev, "%sing...\n", __func__);
 
@@ -763,21 +811,19 @@ static int isc_mgr_probe(struct platform_device *pdev)
 		return -EFAULT;
 	}
 
-	isc_mgr->pwm = devm_pwm_get(&pdev->dev, NULL);
-	if (!IS_ERR(isc_mgr->pwm)) {
-		period = pwm_get_period(isc_mgr->pwm);
-		err = of_property_read_u32(pdev->dev.of_node,
-					  "pwm-duty", &duty);
-		if (err) {
-			dev_err(&pdev->dev, "%s: missing pwm-duty # DT %s\n",
-				__func__, pdev->dev.of_node->full_name);
+	if (of_property_read_bool(pdev->dev.of_node, "pwms")) {
+		isc_mgr->pwm = devm_pwm_get(&pdev->dev, NULL);
+		if (!IS_ERR(isc_mgr->pwm)) {
+			dev_info(&pdev->dev,
+				"%s: success to get PWM\n", __func__);
+			pwm_disable(isc_mgr->pwm);
+		} else {
+			err = PTR_ERR(isc_mgr->pwm);
+			if (err != -EPROBE_DEFER)
+				dev_err(&pdev->dev,
+					"%s: fail to get PWM\n", __func__);
 			return err;
 		}
-
-		dev_info(&pdev->dev, "%s: enabling pwm period:%d duty:%d\n",
-			__func__, period, duty);
-		pwm_config(isc_mgr->pwm, duty, period);
-		pwm_enable(isc_mgr->pwm);
 	}
 
 	isc_mgr->adap = i2c_get_adapter(pd->bus);

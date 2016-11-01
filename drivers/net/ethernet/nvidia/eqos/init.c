@@ -99,12 +99,12 @@ irqreturn_t EQOS_ISR_SW_EQOS_POWER(int irq, void *device_id)
 		CLK_CRTL0_RD(clk_ctrl);
 
 	if (clk_ctrl & BIT(31)) {
-		pr_info("power_isr: phy_intr received\n");
+		pr_debug("power_isr: phy_intr received\n");
 		return IRQ_NONE;
 	} else {
 		MAC_ISR_RD(mac_isr);
 		MAC_IMR_RD(mac_imr);
-		pr_info("power_isr: power_intr received, MAC_ISR =%#lx, MAC_IMR =%#lx\n",
+		pr_debug("power_isr: power_intr received, MAC_ISR =%#lx, MAC_IMR =%#lx\n",
 				mac_isr, mac_imr);
 
 		mac_isr = (mac_isr & mac_imr);
@@ -118,7 +118,7 @@ irqreturn_t EQOS_ISR_SW_EQOS_POWER(int irq, void *device_id)
 			& 1) {
 			pdata->xstats.pmt_irq_n++;
 			MAC_PMTCSR_RD(mac_pmtcsr);
-			pr_info("power_isr: PMTCSR : %#lx\n", mac_pmtcsr);
+			pr_debug("power_isr: PMTCSR : %#lx\n", mac_pmtcsr);
 			if (pdata->power_down)
 				eqos_powerup(pdata->dev, EQOS_IOCTL_CONTEXT);
 		}
@@ -126,7 +126,7 @@ irqreturn_t EQOS_ISR_SW_EQOS_POWER(int irq, void *device_id)
 		/* RxLPI exit EEE interrupts */
 		if (GET_VALUE(mac_isr, MAC_ISR_LPI_LPOS, MAC_ISR_LPI_HPOS)
 			& 1) {
-			pr_info("power_isr: LPI intr received\n");
+			pr_debug("power_isr: LPI intr received\n");
 			eqos_handle_eee_interrupt(pdata);
 #ifdef HWA_NV_1650337
 		/* FIXME: remove once root cause of HWA_NV_1650337 is known */
@@ -135,7 +135,7 @@ irqreturn_t EQOS_ISR_SW_EQOS_POWER(int irq, void *device_id)
 			 * MAC_ISR and need to still read MAC_LPI_CONTROL_STS
 			 * register to get rid of interrupt storm issue.
 			 */
-			pr_info("power_isr: LPIIS not set in MAC_ISR but still"
+			pr_debug("power_isr: LPIIS not set in MAC_ISR but still"
 				" reading MAC_LPI_CONTROL_STS\n");
 			eqos_handle_eee_interrupt(pdata);
 #endif
@@ -583,7 +583,7 @@ static int tegra_eqos_max_state(struct thermal_cooling_device *tcd,
 {
 	struct eqos_prv_data *pdata = tcd->devdata;
 
-	pr_info("%s state=%d\n", __func__, pdata->therm_state.counter);
+	pr_debug("%s state=%d\n", __func__, pdata->therm_state.counter);
 	*state = TEGRA_EQOS_THERM_MAX_STATE;
 
 	return 0;
@@ -594,7 +594,7 @@ static int tegra_eqos_cur_state(struct thermal_cooling_device *tcd,
 {
 	struct eqos_prv_data *pdata = tcd->devdata;
 
-	pr_info("%s state=%d\n", __func__, pdata->therm_state.counter);
+	pr_debug("%s state=%d\n", __func__, pdata->therm_state.counter);
 	*state = (unsigned long)atomic_read(&pdata->therm_state);
 
 	return 0;
@@ -618,7 +618,7 @@ static int tegra_eqos_set_state(struct thermal_cooling_device *tcd,
 		return -ENODEV;
 	}
 
-	pr_info("%s cur state=%d new state=%ld, recalibrating eqos pads\n",
+	pr_debug("%s cur state=%d new state=%ld, recalibrating eqos pads\n",
 		__func__, pdata->therm_state.counter, state);
 	atomic_set(&pdata->therm_state, state);
 
@@ -657,7 +657,7 @@ static int eqos_therm_init(struct eqos_prv_data *pdata)
 	if (pdata->cdev == NULL)
 		return -ENODEV;
 
-	pr_info("EQOS cooling dev registered\n");
+	pr_debug("EQOS cooling dev registered\n");
 #endif
 	return 0;
 }

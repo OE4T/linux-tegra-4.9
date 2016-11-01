@@ -199,6 +199,7 @@ struct tegra_cam_rtcpu {
 		wait_queue_head_t empty_waitq;
 		atomic_t response;
 		atomic_t emptied;
+		u32 timeout;
 	} cmd;
 	u32 fw_version;
 	u32 ivc_version;
@@ -855,6 +856,11 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 
 	/* set resume state */
 	pm_runtime_get_sync(dev);
+
+	ret = of_property_read_u32(dev->of_node, NV(cmd-timeout),
+				&rtcpu->cmd.timeout);
+	if (ret)
+		rtcpu->cmd.timeout = 2 * HZ;
 
 	mutex_init(&rtcpu->cmd.mutex);
 	init_waitqueue_head(&rtcpu->cmd.response_waitq);

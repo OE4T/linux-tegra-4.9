@@ -164,7 +164,7 @@ static int pva_init_fw(struct platform_device *pdev)
 	/* Wait PVA to report itself as ready */
 	timeout = wait_event_interruptible_timeout(pva->mailbox_waitqueue,
 		pva->mailbox_status == PVA_MBOX_STATUS_DONE,
-		msecs_to_jiffies(10000));
+		msecs_to_jiffies(60000));
 	if (timeout <= 0)
 		err = -ETIMEDOUT;
 

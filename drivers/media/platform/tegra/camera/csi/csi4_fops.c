@@ -390,7 +390,7 @@ int csi4_start_streaming(struct tegra_csi_channel *chan,
 		csi4_stream_init(chan, csi_port);
 		csi4_stream_config(chan, csi_port);
 		/* enable DPHY */
-		csi4_phy_config(chan, (csi_port & 0x6) >> 1, csi_lanes, true);
+		csi4_phy_config(chan, csi_port, csi_lanes, true);
 
 		csi4_stream_write(chan, csi_port, PP_EN_CTRL, CFG_PP_EN);
 	}
@@ -413,7 +413,7 @@ void csi4_stop_streaming(struct tegra_csi_channel *chan,
 		csi4_tpg_stop_streaming(chan, port_num);
 	else {
 		/* disable DPHY */
-		csi4_phy_config(chan, (csi_port & 0x6) >> 1, csi_lanes, false);
+		csi4_phy_config(chan, csi_port, csi_lanes, false);
 		csi4_stream_check_status(chan, csi_port);
 		csi4_cil_check_status(chan, csi_port);
 	}

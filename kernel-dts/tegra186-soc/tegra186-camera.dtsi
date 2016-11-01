@@ -43,29 +43,30 @@
 			<&tegra_car TEGRA186_CLK_SCE_NIC>;
 		clock-names = "sce-apb", "sce-cpu-nic", "sce-nic";
 		resets =
-			<&tegra_car TEGRA186_RESET_SCE_NSYSPORESET>,
-			<&tegra_car TEGRA186_RESET_SCE_NRESET>,
+			<&tegra_car TEGRA186_RESET_TSCTNSCE>,
+			<&tegra_car TEGRA186_RESET_SCE_PM>,
 			<&tegra_car TEGRA186_RESET_SCE_DBGRESETN>,
 			<&tegra_car TEGRA186_RESET_SCE_PRESETDBGN>,
 			<&tegra_car TEGRA186_RESET_SCE_ACTMON>,
-			<&tegra_car TEGRA186_RESET_SCE_PM>,
 			<&tegra_car TEGRA186_RESET_SCE_DMA>,
-			<&tegra_car TEGRA186_RESET_TSCTNSCE>,
 			<&tegra_car TEGRA186_RESET_SCE_TKE>,
 			<&tegra_car TEGRA186_RESET_SCE_GTE>,
-			<&tegra_car TEGRA186_RESET_SCE_CFG>;
+			<&tegra_car TEGRA186_RESET_SCE_CFG>,
+			<&tegra_car TEGRA186_RESET_SCE_NRESET>,
+			<&tegra_car TEGRA186_RESET_SCE_NSYSPORESET>;
+
 		reset-names =
-			"sce-nsysporeset",
-			"sce-nreset",
+			"tsctnsce",
+			"sce-pm",
 			"sce-dbgresetn",
 			"sce-presetdbgn",
 			"sce-actmon",
-			"sce-pm",
 			"sce-dma",
-			"tsctnsce",
 			"sce-tke",
 			"sce-gte",
-			"sce-cfg";
+			"sce-cfg",
+			"sce-nreset",
+			"sce-nsysporeset";
 
 		nvidia,trace = <&tegra_rtcpu_trace 4 0x70100000 0x100000>;
 		nvidia,ivc-channels = <&tegra_camera_ivc 2 0x90000000 0x10000>;

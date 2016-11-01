@@ -314,20 +314,20 @@ static void pva_task_write_surfaces(struct pva_task_surface *hw_surface,
 	int i;
 
 	for (i = 0; i < count; i++) {
-		hw_surface->address = surface_ext->dma_addr;
-		hw_surface->surface_size = surface_ext->size;
-		hw_surface->roi_addr = roi_ext->dma_addr;
-		hw_surface->roi_size = roi_ext->size;
-		hw_surface->format = surface->format;
-		hw_surface->width = surface->width;
-		hw_surface->height = surface->height;
-		hw_surface->line_stride = surface->line_stride;
-		hw_surface->plane_stride = surface->surface_stride;
-		hw_surface->num_planes = surface->depth;
-		hw_surface->layout = surface->layout;
+		hw_surface[i].address = surface_ext[i].dma_addr;
+		hw_surface[i].surface_size = surface_ext[i].size;
+		hw_surface[i].roi_addr = roi_ext[i].dma_addr;
+		hw_surface[i].roi_size = roi_ext[i].size;
+		hw_surface[i].format = surface[i].format;
+		hw_surface[i].width = surface[i].width;
+		hw_surface[i].height = surface[i].height;
+		hw_surface[i].line_stride = surface[i].line_stride;
+		hw_surface[i].plane_stride = surface[i].surface_stride;
+		hw_surface[i].num_planes = surface[i].depth;
+		hw_surface[i].layout = surface[i].layout;
 
 		/* Only DRAM is supported currently */
-		hw_surface->memory = 0;
+		hw_surface[i].memory = 0;
 	}
 }
 

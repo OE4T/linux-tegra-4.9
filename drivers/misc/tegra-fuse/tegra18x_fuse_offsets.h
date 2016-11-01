@@ -16,13 +16,12 @@
  * 51 franklin street, fifth floor, boston, ma  02110-1301, usa.
  */
 
-/* This file is used only for kernel-3.18 */
-#if (LINUX_VERSION_CODE == KERNEL_VERSION(3, 18, 0))
+#ifndef __TEGRA18x_FUSE_OFFSETS_H
+#define __TEGRA18x_FUSE_OFFSETS_H
+
 #include <linux/tegra-soc.h>
 #include <linux/tegra-pmc.h>
 
-#ifndef __TEGRA18x_FUSE_OFFSETS_H
-#define __TEGRA18x_FUSE_OFFSETS_H
 
 /* private_key4 */
 #define DEVKEY_START_OFFSET		0x2A
@@ -238,5 +237,4 @@ static int tegra_fuse_ch_sysfs_perm(struct device *dev, struct kobject *kobj)
 
 	return 0;
 }
-#endif
 #endif /* __TEGRA18x_FUSE_OFFSETS_H */

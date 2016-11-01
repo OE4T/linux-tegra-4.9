@@ -97,11 +97,4 @@
 #define TEGRA_AON_GPIO_RANGE(st, end) \
 	((TEGRA_AON_GPIO_PORT_##end - TEGRA_AON_GPIO_PORT_##st + 1) * 8)
 #define TEGRA_AON_GPIO_BASE(port) (TEGRA_AON_GPIO_PORT_##port * 8)
-
-#define TEGRA_GPIO_RANGE(st, end) TEGRA_MAIN_GPIO_RANGE(st, end)
-#define TEGRA_GPIO_BASE(port) TEGRA_MAIN_GPIO_BASE(port)
-
-#define TEGRA_GPIO(port, offset) TEGRA_MAIN_GPIO(port, offset)
-#define TEGRA_GPIO_AON(port, offset) TEGRA_AON_GPIO(port, offset)
-
 #endif

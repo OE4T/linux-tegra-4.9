@@ -724,11 +724,16 @@ static ssize_t store_##file_name					\
 	if (ret != 1)							\
 		return -EINVAL;						\
 									\
+	if (new_policy.object < policy->cpuinfo.min_freq)		\
+		new_policy.object = policy->cpuinfo.min_freq;		\
+	else if (new_policy.object > policy->cpuinfo.max_freq)		\
+		new_policy.object = policy->cpuinfo.max_freq;		\
+									\
 	temp = new_policy.object;					\
 	new_policy.user_policy.object = temp;				\
 	new_policy.min = new_policy.user_policy.min;			\
 	new_policy.max = new_policy.user_policy.max;			\
-	ret = cpufreq_set_policy(policy, &new_policy);		\
+	ret = cpufreq_set_policy(policy, &new_policy);			\
 	if (!ret)							\
 		policy->user_policy.object = temp;			\
 									\

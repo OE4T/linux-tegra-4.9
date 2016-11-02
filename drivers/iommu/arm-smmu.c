@@ -76,10 +76,12 @@
 /* Maximum number of mapping groups per SMMU */
 #define ARM_SMMU_MAX_SMRS		128
 
+#define MAX_SMMUS			4
+
 /* SMMU global address space */
-#define ARM_SMMU_GR0(smmu)		((smmu)->base)
-#define ARM_SMMU_GR1(smmu)		((smmu)->base + (1 << (smmu)->pgshift))
-#define ARM_SMMU_PME(smmu)		((smmu)->base + (3 << (smmu)->pgshift))
+#define ARM_SMMU_GR0(smmu)		((smmu)->base[0])
+#define ARM_SMMU_GR1(smmu)		((smmu)->base[0] + (1 << (smmu)->pgshift))
+#define ARM_SMMU_PME(smmu)		((smmu)->base[0] + (3 << (smmu)->pgshift))
 
 /*
  * SMMU global address space with conditional offset to access secure
@@ -87,7 +89,7 @@
  * nsGFSYNR0: 0x450)
  */
 #define ARM_SMMU_GR0_NS(smmu)						\
-	((smmu)->base +							\
+	((smmu)->base[0] +						\
 		((smmu->options & ARM_SMMU_OPT_SECURE_CFG_ACCESS)	\
 			? 0x400 : 0))
 
@@ -277,7 +279,7 @@
 #define CBA2R_RW64_64BIT		(1 << 0)
 
 /* Translation context bank */
-#define ARM_SMMU_CB_BASE(smmu)		((smmu)->base + ((smmu)->size >> 1))
+#define ARM_SMMU_CB_BASE(smmu)		((smmu)->base[0] + ((smmu)->size >> 1))
 #define ARM_SMMU_CB(smmu, n)		((n) * (1 << (smmu)->pgshift))
 
 #define ARM_SMMU_CB_SCTLR		0x0
@@ -418,8 +420,9 @@ struct arm_smmu_master {
 struct arm_smmu_device {
 	struct device			*dev;
 
-	void __iomem			*base;
-	void __iomem			*base1;
+	void __iomem			*base[MAX_SMMUS];
+	u32				num_smmus;
+
 	unsigned long			size;
 	unsigned long			pgshift;
 
@@ -496,26 +499,18 @@ static bool arm_smmu_gr0_tlbiallnsnh; /* Insert TLBIALLNSNH at all */
 static bool arm_smmu_tlb_inv_by_addr = 1; /* debugfs: tlb inv context by default */
 static bool arm_smmu_tlb_inv_at_map;	/* debugfs: tlb inv at map additionally */
 
-static inline void *convert_to_instance1(volatile void __iomem *virt_addr)
-{
-	return smmu_handle->base1 ?
-	       smmu_handle->base1 + (virt_addr - smmu_handle->base) : NULL;
-}
-
 static inline void writel_single(u32 val, volatile void __iomem *virt_addr)
 {
 	writel(val, virt_addr);
 }
 
-#define INST1 convert_to_instance1
 #define WRITEL_FN(fn, call, type) \
 static inline void fn(type val, volatile void __iomem *virt_addr) \
 { \
-	volatile void __iomem *virt_addr2; \
-	call(val, virt_addr); \
-	virt_addr2 = INST1(virt_addr); \
-	if (virt_addr2) \
-		call(val, virt_addr2); \
+	int smmu_id, offset; \
+	offset = virt_addr - smmu_handle->base[0]; \
+	for (smmu_id = 0; smmu_id < smmu_handle->num_smmus; smmu_id++) \
+		call(val, smmu_handle->base[smmu_id] + offset); \
 }
 
 WRITEL_FN(writel_relaxed_all, writel_relaxed, u32);
@@ -559,7 +554,7 @@ static inline void writel(u32 val, volatile void __iomem *virt_addr)
 	}
 
 	ctl_addr = mc_base + ARM_SMMU_CONTROL_ADDRESS;
-	offset = virt_addr - smmu_handle->base;
+	offset = virt_addr - smmu_handle->base[0];
 	__writel(offset, ctl_addr);
 	pr_debug("Indirect write(ADDRESS) offset=%08x ctl_addr=%p\n",
 		 offset, ctl_addr);
@@ -579,7 +574,7 @@ static inline u32 readl_relaxed(const volatile void __iomem *virt_addr)
 		return __readl_relaxed(virt_addr);
 
 	ctl_addr = mc_base + ARM_SMMU_CONTROL_ADDRESS;
-	offset = virt_addr - smmu_handle->base;
+	offset = virt_addr - smmu_handle->base[0];
 	__writel(offset, ctl_addr);
 	pr_debug("Indirect read(ADDRESS) offset=%08x ctl_addr=%p\n",
 		 offset, ctl_addr);
@@ -852,31 +847,29 @@ static void __arm_smmu_free_bitmap(unsigned long *map, int idx)
 /* Wait for any pending TLB invalidations to complete */
 static void arm_smmu_tlb_sync(struct arm_smmu_device *smmu)
 {
-	int count = 0;
+	int count = 0, smmu_id = 0;
 	void __iomem *gr0_base = ARM_SMMU_GR0(smmu);
-	bool sec_inst = true;
+	u32 gr0_offset = gr0_base - smmu->base[0];
 
 	if (tegra_platform_is_sim() || arm_smmu_gr0_tlbiallnsnh)
 		writel_relaxed(0, gr0_base + ARM_SMMU_GR0_TLBIALLNSNH);
 
 	writel_relaxed(0, gr0_base + ARM_SMMU_GR0_sTLBGSYNC);
-repeat:
-	while (readl_relaxed(gr0_base + ARM_SMMU_GR0_sTLBGSTATUS)
-	       & sTLBGSTATUS_GSACTIVE) {
-		cpu_relax();
-		if (++count == TLB_LOOP_TIMEOUT) {
-			dev_err_ratelimited(smmu->dev,
-			"TLB sync timed out -- SMMU may be deadlocked\n");
-			return;
-		}
-		udelay(1);
-	}
 
-	if (sec_inst) {
-		sec_inst = false;
-		gr0_base = INST1(gr0_base);
-		if (gr0_base)
-			goto repeat;
+	while (smmu_id < smmu->num_smmus) {
+		gr0_base = smmu->base[smmu_id] + gr0_offset;
+
+		while (readl_relaxed(gr0_base + ARM_SMMU_GR0_sTLBGSTATUS)
+		       & sTLBGSTATUS_GSACTIVE) {
+			cpu_relax();
+			if (++count == TLB_LOOP_TIMEOUT) {
+				dev_err_ratelimited(smmu->dev,
+				"TLB sync timed out -- SMMU may be deadlocked\n");
+				return;
+			}
+			udelay(1);
+		}
+		smmu_id++;
 	}
 }
 
@@ -1027,38 +1020,37 @@ static irqreturn_t arm_smmu_context_fault(int irq, void *dev)
 	for (i = 0; i < smmu->num_context_banks; i++) {
 		void __iomem *cb_base, *gr1;
 		struct iommu_domain *domain;
-		u32 fsr, fsr_offset;
-		bool sec_inst = true;
+		u32 fsr, fsr_offset, cb_offset;
+		int smmu_id = 0;
 
 		cb_base = ARM_SMMU_CB_BASE(smmu);
+		cb_offset = cb_base - smmu->base[0];
 		fsr_offset = ARM_SMMU_CB(smmu, i) + ARM_SMMU_CB_FSR;
 		gr1 = ARM_SMMU_GR1(smmu);
 
-repeat:
-		fsr = readl_relaxed(cb_base + fsr_offset);
-		if (fsr & FSR_FAULT) {
-			domain = iommu_domains[i];
-			if (!domain) {
-				pr_err("%s: domain(%d) doesn't exist\n",
-				       __func__, i);
-				continue;
-			}
-			__arm_smmu_context_fault(irq, domain, cb_base, gr1);
-			return IRQ_HANDLED;
-		}
+		while (smmu_id < smmu->num_smmus) {
+			cb_base = smmu->base[smmu_id] + cb_offset;
 
-		if (sec_inst && smmu->base1) {
-			sec_inst = false;
-			cb_base = INST1(cb_base);
-			gr1 = INST1(gr1);
-			goto repeat;
+			fsr = readl_relaxed(cb_base + fsr_offset);
+			if (fsr & FSR_FAULT) {
+				domain = iommu_domains[i];
+				if (!domain) {
+					pr_err("%s: domain(%d) doesn't exist\n",
+					       __func__, i);
+					continue;
+				}
+				__arm_smmu_context_fault(irq, domain,
+								cb_base, gr1);
+				return IRQ_HANDLED;
+			}
+			smmu_id++;
 		}
 	}
 	return IRQ_NONE;
 }
 
 static void arm_smmu_global_fault_printinfo(struct arm_smmu_device *smmu,
-				void __iomem *gr0_base, char *str)
+				void __iomem *gr0_base, int smmu_id)
 {
 	u32 gfsr, gfsynr0, gfsynr1, gfsynr2;
 
@@ -1068,12 +1060,12 @@ static void arm_smmu_global_fault_printinfo(struct arm_smmu_device *smmu,
 	gfsynr2 = readl_relaxed(gr0_base + ARM_SMMU_GR0_sGFSYNR2);
 
 	dev_err_ratelimited(smmu->dev,
-		"%s: Unexpected {global,context} fault, this could be serious\n", str);
+		"SMMU%d: Unexpected {global,context} fault, this could be serious\n", smmu_id);
 	dev_err_ratelimited(smmu->dev,
 		"\tGFSR 0x%08x, GFSYNR0 0x%08x, GFSYNR1 0x%08x, GFSYNR2 0x%08x\n",
 		gfsr, gfsynr0, gfsynr1, gfsynr2);
 
-	trace_printk("%s: Unexpected {global,context} fault, this could be serious\n", str);
+	trace_printk("SMMU%d: Unexpected {global,context} fault, this could be serious\n", smmu_id);
 	trace_printk("\tGFSR 0x%08x, GFSYNR0 0x%08x, GFSYNR1 0x%08x, GFSYNR2 0x%08x\n",
 		gfsr, gfsynr0, gfsynr1, gfsynr2);
 
@@ -1082,36 +1074,37 @@ static void arm_smmu_global_fault_printinfo(struct arm_smmu_device *smmu,
 
 static irqreturn_t arm_smmu_global_fault(int irq, void *dev)
 {
-	u32 gfsr;
+	u32 gfsr, gr0_offset, cb_offset;
 	struct arm_smmu_device *smmu = dev;
 	void __iomem *cb_base = ARM_SMMU_CB_BASE(smmu);
 	void __iomem *gr0_base = ARM_SMMU_GR0_NS(smmu);
-	bool sec_inst = true;
+	int smmu_id = 0;
 
-repeat:
-	gfsr = readl_relaxed(gr0_base + ARM_SMMU_GR0_sGFSR);
+	cb_offset = cb_base - smmu->base[0];
+	gr0_offset = gr0_base - smmu->base[0];
 
-	if (!gfsr) {
-		int ret;
+	while (smmu_id < smmu->num_smmus) {
 
-		ret = __arm_smmu_context_fault(irq, dev, gr0_base, cb_base);
-		if (ret == IRQ_HANDLED)
-			return ret;
+		gr0_base = smmu->base[smmu_id] + gr0_offset;
+		cb_base = smmu->base[smmu_id] + cb_offset;
+
+		gfsr = readl_relaxed(gr0_base + ARM_SMMU_GR0_sGFSR);
+		if (!gfsr) {
+			int ret;
+
+			ret = __arm_smmu_context_fault(irq, dev,
+							gr0_base, cb_base);
+			if (ret == IRQ_HANDLED)
+				return ret;
+		}
+		smmu_id++;
 	}
 
-	if (sec_inst && smmu->base1) {
-		sec_inst = false;
-		gr0_base = INST1(gr0_base);
-		cb_base = INST1(cb_base);
-		goto repeat;
-	}
-
-	gr0_base = ARM_SMMU_GR0_NS(smmu);
-	arm_smmu_global_fault_printinfo(smmu, gr0_base, "SMMU0");
-
-	if (smmu->base1) {
-		gr0_base = INST1(gr0_base);
-		arm_smmu_global_fault_printinfo(smmu, gr0_base, "SMMU1");
+	smmu_id = 0;
+	while (smmu_id < smmu->num_smmus) {
+		gr0_base = smmu->base[smmu_id] + gr0_offset;
+		arm_smmu_global_fault_printinfo(smmu, gr0_base, smmu_id);
+		smmu_id++;
 	}
 
 	return IRQ_HANDLED;
@@ -1838,7 +1831,7 @@ static void debugfs_create_smmu_cb(struct iommu_domain *domain,
 	cb = smmu->regset + 1 + cbndx;
 	cb->regs = arm_smmu_cb_regs;
 	cb->nregs = ARRAY_SIZE(arm_smmu_cb_regs);
-	cb->base = smmu->base + (smmu->size >> 1) +
+	cb->base = smmu->base[0] + (smmu->size >> 1) +
 		cbndx * (1 << smmu->pgshift);
 	debugfs_create_regset32("regdump", S_IRUGO, dent, cb);
 	debugfs_create_file("ptdump", S_IRUGO, dent, smmu_domain,
@@ -2522,21 +2515,21 @@ static const struct iommu_ops arm_smmu_ops = {
 
 static void arm_smmu_device_reset(struct arm_smmu_device *smmu)
 {
-	void __iomem *gr0_base = ARM_SMMU_GR0(smmu);
+	void __iomem *gr0_base = ARM_SMMU_GR0_NS(smmu);
 	void __iomem *cb_base;
-	int i = 0;
+	int i = 0, smmu_id = 0;
 	u32 reg;
+	u32 gr0_offset = gr0_base - smmu->base[0];
 
 	/* clear global FSR */
-	reg = readl_relaxed(ARM_SMMU_GR0_NS(smmu) + ARM_SMMU_GR0_sGFSR);
-	writel_single(reg, ARM_SMMU_GR0_NS(smmu) + ARM_SMMU_GR0_sGFSR);
-
-	if (smmu->base1) {
-		reg = readl_relaxed(INST1(ARM_SMMU_GR0_NS(smmu)) +
-					ARM_SMMU_GR0_sGFSR);
-		writel_single(reg, INST1(ARM_SMMU_GR0_NS(smmu)) +
-					ARM_SMMU_GR0_sGFSR);
+	while (smmu_id < smmu->num_smmus) {
+		gr0_base = smmu->base[smmu_id] + gr0_offset;
+		reg = readl_relaxed(gr0_base + ARM_SMMU_GR0_sGFSR);
+		writel_single(reg, gr0_base + ARM_SMMU_GR0_sGFSR);
+		smmu_id++;
 	}
+
+	gr0_base = ARM_SMMU_GR0(smmu);
 
 	/* Mark all SMRn as invalid and all S2CRn as bypass */
 	for (i = 0; i < smmu->num_mapping_groups; ++i) {
@@ -2894,7 +2887,7 @@ static int smmu_reg32_debugfs_set(void *data, u64 val)
 {
 	struct debugfs_reg32 *regs = (struct debugfs_reg32 *)data;
 
-	writel(val, (smmu_handle->base + regs->offset));
+	writel(val, (smmu_handle->base[0] + regs->offset));
 	return 0;
 }
 
@@ -2902,7 +2895,7 @@ static int smmu_reg32_debugfs_get(void *data, u64 *val)
 {
 	struct debugfs_reg32 *regs = (struct debugfs_reg32 *)data;
 
-	*val = readl(smmu_handle->base + regs->offset);
+	*val = readl(smmu_handle->base[0] + regs->offset);
 	return 0;
 }
 
@@ -2988,7 +2981,7 @@ static void arm_smmu_debugfs_create(struct arm_smmu_device *smmu)
 	if (!smmu->regset)
 		goto err_out;
 
-	smmu->regset->base = smmu->base;
+	smmu->regset->base = smmu->base[0];
 	smmu->regset->nregs = ARRAY_SIZE(arm_smmu_gr0_regs) +
 		4 * smmu->num_context_banks;
 	smmu->regset->regs = (struct debugfs_reg32 *)(smmu->regset +
@@ -3058,7 +3051,7 @@ static void arm_smmu_debugfs_create(struct arm_smmu_device *smmu)
 	 * perf_regset base address is placed at offset (3 * smmu_pagesize)
 	 * from smmu->base address
 	 */
-	smmu->perf_regset->base = smmu->base + 3 * (1 << smmu->pgshift);
+	smmu->perf_regset->base = smmu->base[0] + 3 * (1 << smmu->pgshift);
 	smmu->perf_regset->nregs = ARRAY_SIZE(arm_smmu_gnsr0_regs) +
 		2 * PMCG_SIZE + 2 * PMEV_SIZE;
 	smmu->perf_regset->regs =
@@ -3164,17 +3157,28 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	smmu->base = devm_ioremap_resource(dev, res);
-	if (IS_ERR(smmu->base))
-		return PTR_ERR(smmu->base);
+	for (i = 0; i < MAX_SMMUS; i++) {
+		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
+		if (!res)
+			break;
 
-	smmu->size = resource_size(res);
+		smmu->base[i] = devm_ioremap_resource(dev, res);
+		if (IS_ERR(smmu->base[i])) {
+			if (i == 0)
+				return PTR_ERR(smmu->base[i]);
+			break;
+		}
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	smmu->base1 = devm_ioremap_resource(dev, res);
-	if (IS_ERR(smmu->base1))
-		smmu->base1 = NULL;
+		if (i == 0)
+			smmu->size = resource_size(res);
+	}
+
+	if (i == 0)
+		return -ENODEV;
+
+	smmu->num_smmus = i;
+
+	dev_info(dev, "found %d SMMUs\n", smmu->num_smmus);
 
 	if (of_property_read_u32(dev->of_node, "#global-interrupts",
 				 &smmu->num_global_irqs)) {

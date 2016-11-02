@@ -62,4 +62,15 @@
 			status = "disabled";
 		};
 	};
+	core_dvfs_floor: core_dvfs_cdev_floor {
+		compatible = "nvidia,tegra-core-cdev-action";
+		cdev-type = "CORE-floor";
+		#cooling-cells = <2>; /* min followed by max */
+	};
+
+	core_dvfs_cap: core_dvfs_cdev_cap {
+		compatible = "nvidia,tegra-core-cdev-action";
+		cdev-type = "CORE-cap";
+		#cooling-cells = <2>; /* min followed by max */
+	};
 };

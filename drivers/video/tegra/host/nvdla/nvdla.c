@@ -229,6 +229,7 @@ static void nvdla_free_dump_region(struct platform_device *pdev)
 int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 {
 	int ret = 0;
+	uint32_t fw_ver_read_bin;
 
 	nvdla_dbg_fn(pdev, "");
 
@@ -237,6 +238,21 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 		dev_err(&pdev->dev, "%s: failed to poweron\n", __func__);
 		return ret;
 	}
+
+	fw_ver_read_bin = host1x_readl(pdev, NV_DLA_OS_VERSION);
+	if (FIRMWARE_VERSION != fw_ver_read_bin) {
+		nvdla_dbg_err(pdev,
+		"Fw version of kernel [%u.%u.%u] doesn't match with actual version[%u.%u.%u]",
+		(FIRMWARE_VERSION >> 16) & 0xff, (FIRMWARE_VERSION >> 8) & 0xff, FIRMWARE_VERSION & 0xff,
+		(fw_ver_read_bin >> 16 ) & 0xff, (fw_ver_read_bin >> 8) & 0xff, fw_ver_read_bin & 0xff);
+
+		return -EINVAL;
+	}
+
+	nvdla_dbg_info(pdev, "Fw version : [%u.%u.%u]\n",
+		(fw_ver_read_bin >> 16) & 0xff,
+		(fw_ver_read_bin >> 8) & 0xff,
+		fw_ver_read_bin & 0xff);
 
 	ret = nvdla_alloc_dump_region(pdev);
 	if (ret)

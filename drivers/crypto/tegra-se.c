@@ -88,6 +88,7 @@ struct tegra_se_prev_req_config {
 	enum tegra_se_aes_op_mode mode; /* Security Engine operation mode */
 	bool encrypt;	/* Operation type */
 	bool called; /* To Know if cofiguration is set for atleast once */
+	u32 key_len;	/* Key length */
 };
 static struct tegra_se_prev_req_config *prev_cfg;
 
@@ -349,6 +350,7 @@ static void tegra_se_config_algo(struct tegra_se_dev *se_dev,
 	prev_cfg->mode = mode;
 	prev_cfg->encrypt = encrypt;
 	prev_cfg->called = true;
+	prev_cfg->key_len = key_len;
 
 	switch (mode) {
 	case SE_AES_OP_MODE_CBC:
@@ -1019,8 +1021,10 @@ static void tegra_se_process_new_req(struct crypto_async_request *async_req)
 	}
 	tegra_se_setup_ablk_req(se_dev, req);
 
-	if (prev_cfg->mode != req_ctx->op_mode ||
-		prev_cfg->encrypt != req_ctx->encrypt || !prev_cfg->called) {
+	if ((prev_cfg->mode != req_ctx->op_mode) ||
+		(prev_cfg->encrypt != req_ctx->encrypt) ||
+		(prev_cfg->key_len != aes_ctx->keylen) ||
+		!prev_cfg->called) {
 		tegra_se_config_algo(se_dev, req_ctx->op_mode,
 				req_ctx->encrypt, aes_ctx->keylen);
 		tegra_se_config_crypto(se_dev, req_ctx->op_mode,

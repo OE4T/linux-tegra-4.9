@@ -18,6 +18,7 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
+#include <linux/reset.h>
 #include <linux/io.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -65,6 +66,7 @@ struct sdhci_tegra {
 	struct gpio_desc *power_gpio;
 	bool ddr_signaling;
 	bool pad_calib_required;
+	struct reset_control *rst;
 };
 
 static u16 tegra_sdhci_readw(struct sdhci_host *host, int reg)
@@ -431,7 +433,20 @@ static const struct sdhci_tegra_soc_data soc_data_tegra210 = {
 	.pdata = &sdhci_tegra210_pdata,
 };
 
+static const struct sdhci_pltfm_data sdhci_tegra186_pdata = {
+	.quirks = SDHCI_QUIRK_SINGLE_POWER_WRITE |
+		  SDHCI_QUIRK_NO_HISPD_BIT |
+		  SDHCI_QUIRK_BROKEN_ADMA_ZEROLEN_DESC,
+	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN,
+	.ops  = &tegra114_sdhci_ops,
+};
+
+static const struct sdhci_tegra_soc_data soc_data_tegra186 = {
+	.pdata = &sdhci_tegra186_pdata,
+};
+
 static const struct of_device_id sdhci_tegra_dt_match[] = {
+	{ .compatible = "nvidia,tegra186-sdhci", .data = &soc_data_tegra186 },
 	{ .compatible = "nvidia,tegra210-sdhci", .data = &soc_data_tegra210 },
 	{ .compatible = "nvidia,tegra124-sdhci", .data = &soc_data_tegra124 },
 	{ .compatible = "nvidia,tegra114-sdhci", .data = &soc_data_tegra114 },
@@ -480,13 +495,20 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 		goto err_power_req;
 	}
 
-	clk = devm_clk_get(mmc_dev(host->mmc), NULL);
+	clk = devm_clk_get(&pdev->dev, "sdmmc");
 	if (IS_ERR(clk)) {
 		dev_err(mmc_dev(host->mmc), "clk err\n");
 		rc = PTR_ERR(clk);
 		goto err_clk_get;
 	}
 	clk_prepare_enable(clk);
+
+	tegra_host->rst = devm_reset_control_get(&pdev->dev, "sdmmc");
+	if (IS_ERR(tegra_host->rst))
+		dev_err(mmc_dev(host->mmc), "reset err\n");
+	else
+		reset_control_reset(tegra_host->rst);
+
 	pltfm_host->clk = clk;
 
 	rc = sdhci_add_host(host);

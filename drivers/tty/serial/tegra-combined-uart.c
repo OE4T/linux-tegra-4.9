@@ -28,8 +28,8 @@
 #define FIRST_PKT_BIT		30
 #define INTR_TRIGGER_BIT	31
 
-static volatile u32 __iomem *top0_mbox_reg;
-static volatile u32 __iomem *spe_mbox_reg;
+static u32 __iomem *top0_mbox_reg;
+static u32 __iomem *spe_mbox_reg;
 
 static struct uart_port tegra_combined_uart_port;
 static struct console tegra_combined_uart_console;
@@ -108,17 +108,17 @@ static void tegra_combined_uart_console_write(struct console *co,
 			reg_val |= s[i*3 + j] << (j * 8);
 
 		/* Send current packet to SPE */
-		*spe_mbox_reg = reg_val;
+		writel(reg_val, spe_mbox_reg);
 
 		/*
 		 * Wait for SPE to ACK that it received the current packet.
 		 * TODO: Add support for interrupt based operation.
 		 */
-		while ((*top0_mbox_reg & BIT(PKT_RCVD_BIT)) == 0) {
-		}
+		while ((readl(top0_mbox_reg) & BIT(PKT_RCVD_BIT)) == 0)
+			cpu_relax();
 
 		/* Clear the ACK */
-		*top0_mbox_reg = 0;
+		writel(0, top0_mbox_reg);
 	}
 }
 

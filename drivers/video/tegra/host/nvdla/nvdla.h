@@ -72,6 +72,7 @@ struct nvdla_device {
 	int waiting;
 	u32 dbg_mask;
 	u32 en_trace;
+	u32 fw_version;
 };
 
 /**

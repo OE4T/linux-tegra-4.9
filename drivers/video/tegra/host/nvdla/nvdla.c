@@ -230,6 +230,8 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 {
 	int ret = 0;
 	uint32_t fw_ver_read_bin;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
 
 	nvdla_dbg_fn(pdev, "");
 
@@ -253,6 +255,8 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 		(fw_ver_read_bin >> 16) & 0xff,
 		(fw_ver_read_bin >> 8) & 0xff,
 		fw_ver_read_bin & 0xff);
+
+	nvdla_dev->fw_version = fw_ver_read_bin;
 
 	ret = nvdla_alloc_dump_region(pdev);
 	if (ret)

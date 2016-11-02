@@ -200,7 +200,7 @@ static struct tegra_se_slot srk_slot = {
 
 /* Security Engine Linked List */
 struct tegra_se_ll {
-	dma_addr_t addr; /* DMA buffer address */
+	u32 addr; /* DMA buffer address */
 	u32 data_len; /* Data length in DMA buffer */
 };
 
@@ -787,7 +787,7 @@ static int tegra_map_sg(struct device *dev, struct scatterlist *sg,
 
 		while (sg) {
 			dma_map_sg(dev, sg, 1, dir);
-			se_ll->addr = sg_dma_address(sg);
+			se_ll->addr = (u32)sg_dma_address(sg);
 			se_ll->data_len = min(sg->length, total_loop);
 			total_loop -= min(sg->length, total_loop);
 				sg = sg_next(sg);
@@ -1796,7 +1796,7 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 				dev_err(se_dev->dev, "dma_map_sg() error\n");
 				goto out;
 			}
-			src_ll->addr = sg_dma_address(src_sg);
+			src_ll->addr = (u32)sg_dma_address(src_sg);
 			if (total > src_sg->length)
 				src_ll->data_len = src_sg->length;
 			else
@@ -2306,7 +2306,7 @@ static int tegra_se_rsa_digest(struct ahash_request *req)
 			dev_err(se_dev->dev, "dma_map_sg() error\n");
 			goto out;
 		}
-		src_ll->addr = sg_dma_address(src_sg);
+		src_ll->addr = (u32)sg_dma_address(src_sg);
 		src_ll->data_len = src_sg->length;
 
 		total -= src_sg->length;
@@ -2932,7 +2932,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 		goto irq_fail;
 	}
 
-	se_dev->dev->coherent_dma_mask = DMA_BIT_MASK(64);
+	se_dev->dev->coherent_dma_mask = DMA_BIT_MASK(32);
 
 	err = tegra_se_alloc_ll_buf(se_dev, SE_MAX_SRC_SG_COUNT,
 		SE_MAX_DST_SG_COUNT);

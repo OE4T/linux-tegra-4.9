@@ -108,6 +108,12 @@
 #define TEGRA210_DMIC_DBG_CTRL_SC_ENABLE		BIT(1)
 #define TEGRA210_DMIC_DBG_CTRL_BYPASS			BIT(0)
 
+enum tegra_dmic_ch_select {
+	DMIC_CH_SELECT_NONE,
+	DMIC_CH_SELECT_LEFT,
+	DMIC_CH_SELECT_RIGHT,
+	DMIC_CH_SELECT_STEREO,
+};
 struct tegra210_dmic_soc_data {
 	void (*set_audio_cif)(struct regmap *map,
 			unsigned int reg,

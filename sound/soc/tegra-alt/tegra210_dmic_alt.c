@@ -158,10 +158,13 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 	srate = params_rate(params);
 	dmic_clk = (1 << (6+osr)) * srate;
 
-	if (channels < 2)
+	if (dmic->ch_select == DMIC_CH_SELECT_NONE) {
+		channels = 2;
+		channel_select = DMIC_CH_SELECT_STEREO;
+	} else {
+		channels = 1;
 		channel_select = dmic->ch_select;
-	else
-		channel_select = (1 << channels) - 1;
+	}
 
 	if ((tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		program_dmic_gpio();

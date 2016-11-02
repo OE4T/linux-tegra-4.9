@@ -466,4 +466,944 @@ static inline u32 fb_niso_flush_sysmem_addr_r(void)
 {
 	return 0x00100c10;
 }
+static inline u32 fb_niso_intr_r(void)
+{
+	return 0x00100a20;
+}
+static inline u32 fb_niso_intr_hub_access_counter_notify_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 fb_niso_intr_hub_access_counter_notify_pending_f(void)
+{
+	return 0x1;
+}
+static inline u32 fb_niso_intr_hub_access_counter_error_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 fb_niso_intr_hub_access_counter_error_pending_f(void)
+{
+	return 0x2;
+}
+static inline u32 fb_niso_intr_mmu_replayable_fault_notify_f(u32 v)
+{
+	return (v & 0x1) << 27;
+}
+static inline u32 fb_niso_intr_mmu_replayable_fault_notify_pending_f(void)
+{
+	return 0x8000000;
+}
+static inline u32 fb_niso_intr_mmu_replayable_fault_overflow_f(u32 v)
+{
+	return (v & 0x1) << 28;
+}
+static inline u32 fb_niso_intr_mmu_replayable_fault_overflow_pending_f(void)
+{
+	return 0x10000000;
+}
+static inline u32 fb_niso_intr_mmu_nonreplayable_fault_notify_f(u32 v)
+{
+	return (v & 0x1) << 29;
+}
+static inline u32 fb_niso_intr_mmu_nonreplayable_fault_notify_pending_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 fb_niso_intr_mmu_nonreplayable_fault_overflow_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 fb_niso_intr_mmu_nonreplayable_fault_overflow_pending_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 fb_niso_intr_mmu_other_fault_notify_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 fb_niso_intr_mmu_other_fault_notify_pending_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 fb_niso_intr_en_r(u32 i)
+{
+	return 0x00100a24 + i*4;
+}
+static inline u32 fb_niso_intr_en__size_1_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 fb_niso_intr_en_hub_access_counter_notify_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 fb_niso_intr_en_hub_access_counter_notify_enabled_f(void)
+{
+	return 0x1;
+}
+static inline u32 fb_niso_intr_en_hub_access_counter_error_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 fb_niso_intr_en_hub_access_counter_error_enabled_f(void)
+{
+	return 0x2;
+}
+static inline u32 fb_niso_intr_en_mmu_replayable_fault_notify_f(u32 v)
+{
+	return (v & 0x1) << 27;
+}
+static inline u32 fb_niso_intr_en_mmu_replayable_fault_notify_enabled_f(void)
+{
+	return 0x8000000;
+}
+static inline u32 fb_niso_intr_en_mmu_replayable_fault_overflow_f(u32 v)
+{
+	return (v & 0x1) << 28;
+}
+static inline u32 fb_niso_intr_en_mmu_replayable_fault_overflow_enabled_f(void)
+{
+	return 0x10000000;
+}
+static inline u32 fb_niso_intr_en_mmu_nonreplayable_fault_notify_f(u32 v)
+{
+	return (v & 0x1) << 29;
+}
+static inline u32 fb_niso_intr_en_mmu_nonreplayable_fault_notify_enabled_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 fb_niso_intr_en_mmu_nonreplayable_fault_overflow_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 fb_niso_intr_en_mmu_nonreplayable_fault_overflow_enabled_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 fb_niso_intr_en_mmu_other_fault_notify_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 fb_niso_intr_en_mmu_other_fault_notify_enabled_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 fb_niso_intr_en_set_r(u32 i)
+{
+	return 0x00100a2c + i*4;
+}
+static inline u32 fb_niso_intr_en_set__size_1_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 fb_niso_intr_en_set_hub_access_counter_notify_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 fb_niso_intr_en_set_hub_access_counter_notify_set_f(void)
+{
+	return 0x1;
+}
+static inline u32 fb_niso_intr_en_set_hub_access_counter_error_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 fb_niso_intr_en_set_hub_access_counter_error_set_f(void)
+{
+	return 0x2;
+}
+static inline u32 fb_niso_intr_en_set_mmu_replayable_fault_notify_f(u32 v)
+{
+	return (v & 0x1) << 27;
+}
+static inline u32 fb_niso_intr_en_set_mmu_replayable_fault_notify_set_f(void)
+{
+	return 0x8000000;
+}
+static inline u32 fb_niso_intr_en_set_mmu_replayable_fault_overflow_f(u32 v)
+{
+	return (v & 0x1) << 28;
+}
+static inline u32 fb_niso_intr_en_set_mmu_replayable_fault_overflow_set_f(void)
+{
+	return 0x10000000;
+}
+static inline u32 fb_niso_intr_en_set_mmu_nonreplayable_fault_notify_f(u32 v)
+{
+	return (v & 0x1) << 29;
+}
+static inline u32 fb_niso_intr_en_set_mmu_nonreplayable_fault_notify_set_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 fb_niso_intr_en_set_mmu_nonreplayable_fault_overflow_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 fb_niso_intr_en_set_mmu_nonreplayable_fault_overflow_set_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 fb_niso_intr_en_set_mmu_other_fault_notify_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 fb_niso_intr_en_set_mmu_other_fault_notify_set_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 fb_niso_intr_en_clr_r(u32 i)
+{
+	return 0x00100a34 + i*4;
+}
+static inline u32 fb_niso_intr_en_clr__size_1_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 fb_niso_intr_en_clr_hub_access_counter_notify_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 fb_niso_intr_en_clr_hub_access_counter_notify_set_f(void)
+{
+	return 0x1;
+}
+static inline u32 fb_niso_intr_en_clr_hub_access_counter_error_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 fb_niso_intr_en_clr_hub_access_counter_error_set_f(void)
+{
+	return 0x2;
+}
+static inline u32 fb_niso_intr_en_clr_mmu_replayable_fault_notify_f(u32 v)
+{
+	return (v & 0x1) << 27;
+}
+static inline u32 fb_niso_intr_en_clr_mmu_replayable_fault_notify_set_f(void)
+{
+	return 0x8000000;
+}
+static inline u32 fb_niso_intr_en_clr_mmu_replayable_fault_overflow_f(u32 v)
+{
+	return (v & 0x1) << 28;
+}
+static inline u32 fb_niso_intr_en_clr_mmu_replayable_fault_overflow_set_f(void)
+{
+	return 0x10000000;
+}
+static inline u32 fb_niso_intr_en_clr_mmu_nonreplayable_fault_notify_f(u32 v)
+{
+	return (v & 0x1) << 29;
+}
+static inline u32 fb_niso_intr_en_clr_mmu_nonreplayable_fault_notify_set_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 fb_niso_intr_en_clr_mmu_nonreplayable_fault_overflow_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 fb_niso_intr_en_clr_mmu_nonreplayable_fault_overflow_set_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 fb_niso_intr_en_clr_mmu_other_fault_notify_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 fb_niso_intr_en_clr_mmu_other_fault_notify_set_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 fb_niso_intr_en_clr_mmu_non_replay_fault_buffer_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fb_niso_intr_en_clr_mmu_replay_fault_buffer_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_buffer_lo_r(u32 i)
+{
+	return 0x00100e24 + i*20;
+}
+static inline u32 fb_mmu_fault_buffer_lo__size_1_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 fb_mmu_fault_buffer_lo_addr_mode_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 fb_mmu_fault_buffer_lo_addr_mode_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 fb_mmu_fault_buffer_lo_addr_mode_virtual_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fb_mmu_fault_buffer_lo_addr_mode_virtual_f(void)
+{
+	return 0x0;
+}
+static inline u32 fb_mmu_fault_buffer_lo_addr_mode_physical_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_buffer_lo_addr_mode_physical_f(void)
+{
+	return 0x1;
+}
+static inline u32 fb_mmu_fault_buffer_lo_phys_aperture_f(u32 v)
+{
+	return (v & 0x3) << 1;
+}
+static inline u32 fb_mmu_fault_buffer_lo_phys_aperture_v(u32 r)
+{
+	return (r >> 1) & 0x3;
+}
+static inline u32 fb_mmu_fault_buffer_lo_phys_aperture_sys_coh_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 fb_mmu_fault_buffer_lo_phys_aperture_sys_coh_f(void)
+{
+	return 0x4;
+}
+static inline u32 fb_mmu_fault_buffer_lo_phys_aperture_sys_nocoh_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 fb_mmu_fault_buffer_lo_phys_aperture_sys_nocoh_f(void)
+{
+	return 0x6;
+}
+static inline u32 fb_mmu_fault_buffer_lo_phys_vol_f(u32 v)
+{
+	return (v & 0x1) << 3;
+}
+static inline u32 fb_mmu_fault_buffer_lo_phys_vol_v(u32 r)
+{
+	return (r >> 3) & 0x1;
+}
+static inline u32 fb_mmu_fault_buffer_lo_addr_f(u32 v)
+{
+	return (v & 0xfffff) << 12;
+}
+static inline u32 fb_mmu_fault_buffer_lo_addr_v(u32 r)
+{
+	return (r >> 12) & 0xfffff;
+}
+static inline u32 fb_mmu_fault_buffer_hi_r(u32 i)
+{
+	return 0x00100e28 + i*20;
+}
+static inline u32 fb_mmu_fault_buffer_hi__size_1_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 fb_mmu_fault_buffer_hi_addr_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 fb_mmu_fault_buffer_hi_addr_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
+}
+static inline u32 fb_mmu_fault_buffer_get_r(u32 i)
+{
+	return 0x00100e2c + i*20;
+}
+static inline u32 fb_mmu_fault_buffer_get__size_1_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 fb_mmu_fault_buffer_get_ptr_f(u32 v)
+{
+	return (v & 0xfffff) << 0;
+}
+static inline u32 fb_mmu_fault_buffer_get_ptr_v(u32 r)
+{
+	return (r >> 0) & 0xfffff;
+}
+static inline u32 fb_mmu_fault_buffer_get_getptr_corrupted_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 fb_mmu_fault_buffer_get_getptr_corrupted_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
+static inline u32 fb_mmu_fault_buffer_get_getptr_corrupted_yes_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_buffer_get_getptr_corrupted_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_buffer_get_getptr_corrupted_clear_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 fb_mmu_fault_buffer_get_overflow_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 fb_mmu_fault_buffer_get_overflow_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 fb_mmu_fault_buffer_get_overflow_yes_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_buffer_get_overflow_yes_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 fb_mmu_fault_buffer_get_overflow_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_buffer_get_overflow_clear_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 fb_mmu_fault_buffer_put_r(u32 i)
+{
+	return 0x00100e30 + i*20;
+}
+static inline u32 fb_mmu_fault_buffer_put__size_1_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 fb_mmu_fault_buffer_put_ptr_f(u32 v)
+{
+	return (v & 0xfffff) << 0;
+}
+static inline u32 fb_mmu_fault_buffer_put_ptr_v(u32 r)
+{
+	return (r >> 0) & 0xfffff;
+}
+static inline u32 fb_mmu_fault_buffer_put_getptr_corrupted_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 fb_mmu_fault_buffer_put_getptr_corrupted_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
+static inline u32 fb_mmu_fault_buffer_put_getptr_corrupted_yes_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_buffer_put_getptr_corrupted_yes_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 fb_mmu_fault_buffer_put_getptr_corrupted_no_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fb_mmu_fault_buffer_put_getptr_corrupted_no_f(void)
+{
+	return 0x0;
+}
+static inline u32 fb_mmu_fault_buffer_put_overflow_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 fb_mmu_fault_buffer_put_overflow_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 fb_mmu_fault_buffer_put_overflow_yes_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_buffer_put_overflow_yes_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 fb_mmu_fault_buffer_size_r(u32 i)
+{
+	return 0x00100e34 + i*20;
+}
+static inline u32 fb_mmu_fault_buffer_size__size_1_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 fb_mmu_fault_buffer_size_val_f(u32 v)
+{
+	return (v & 0xfffff) << 0;
+}
+static inline u32 fb_mmu_fault_buffer_size_val_v(u32 r)
+{
+	return (r >> 0) & 0xfffff;
+}
+static inline u32 fb_mmu_fault_buffer_size_overflow_intr_f(u32 v)
+{
+	return (v & 0x1) << 29;
+}
+static inline u32 fb_mmu_fault_buffer_size_overflow_intr_v(u32 r)
+{
+	return (r >> 29) & 0x1;
+}
+static inline u32 fb_mmu_fault_buffer_size_overflow_intr_enable_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_buffer_size_overflow_intr_enable_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 fb_mmu_fault_buffer_size_set_default_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 fb_mmu_fault_buffer_size_set_default_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
+static inline u32 fb_mmu_fault_buffer_size_set_default_yes_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_buffer_size_set_default_yes_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 fb_mmu_fault_buffer_size_enable_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 fb_mmu_fault_buffer_size_enable_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 fb_mmu_fault_buffer_size_enable_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_buffer_size_enable_true_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 fb_mmu_fault_addr_lo_r(void)
+{
+	return 0x00100e4c;
+}
+static inline u32 fb_mmu_fault_addr_lo_phys_aperture_f(u32 v)
+{
+	return (v & 0x3) << 0;
+}
+static inline u32 fb_mmu_fault_addr_lo_phys_aperture_v(u32 r)
+{
+	return (r >> 0) & 0x3;
+}
+static inline u32 fb_mmu_fault_addr_lo_phys_aperture_sys_coh_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 fb_mmu_fault_addr_lo_phys_aperture_sys_coh_f(void)
+{
+	return 0x2;
+}
+static inline u32 fb_mmu_fault_addr_lo_phys_aperture_sys_nocoh_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 fb_mmu_fault_addr_lo_phys_aperture_sys_nocoh_f(void)
+{
+	return 0x3;
+}
+static inline u32 fb_mmu_fault_addr_lo_addr_f(u32 v)
+{
+	return (v & 0xfffff) << 12;
+}
+static inline u32 fb_mmu_fault_addr_lo_addr_v(u32 r)
+{
+	return (r >> 12) & 0xfffff;
+}
+static inline u32 fb_mmu_fault_addr_hi_r(void)
+{
+	return 0x00100e50;
+}
+static inline u32 fb_mmu_fault_addr_hi_addr_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 fb_mmu_fault_addr_hi_addr_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
+}
+static inline u32 fb_mmu_fault_inst_lo_r(void)
+{
+	return 0x00100e54;
+}
+static inline u32 fb_mmu_fault_inst_lo_engine_id_v(u32 r)
+{
+	return (r >> 0) & 0x1ff;
+}
+static inline u32 fb_mmu_fault_inst_lo_aperture_v(u32 r)
+{
+	return (r >> 10) & 0x3;
+}
+static inline u32 fb_mmu_fault_inst_lo_aperture_sys_coh_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 fb_mmu_fault_inst_lo_aperture_sys_nocoh_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 fb_mmu_fault_inst_lo_addr_v(u32 r)
+{
+	return (r >> 12) & 0xfffff;
+}
+static inline u32 fb_mmu_fault_inst_hi_r(void)
+{
+	return 0x00100e58;
+}
+static inline u32 fb_mmu_fault_inst_hi_addr_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
+}
+static inline u32 fb_mmu_fault_info_r(void)
+{
+	return 0x00100e5c;
+}
+static inline u32 fb_mmu_fault_info_fault_type_v(u32 r)
+{
+	return (r >> 0) & 0x1f;
+}
+static inline u32 fb_mmu_fault_info_replayable_fault_v(u32 r)
+{
+	return (r >> 7) & 0x1;
+}
+static inline u32 fb_mmu_fault_info_client_v(u32 r)
+{
+	return (r >> 8) & 0x7f;
+}
+static inline u32 fb_mmu_fault_info_access_type_v(u32 r)
+{
+	return (r >> 16) & 0xf;
+}
+static inline u32 fb_mmu_fault_info_client_type_v(u32 r)
+{
+	return (r >> 20) & 0x1;
+}
+static inline u32 fb_mmu_fault_info_gpc_id_v(u32 r)
+{
+	return (r >> 24) & 0x1f;
+}
+static inline u32 fb_mmu_fault_info_protected_mode_v(u32 r)
+{
+	return (r >> 29) & 0x1;
+}
+static inline u32 fb_mmu_fault_info_replayable_fault_en_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
+static inline u32 fb_mmu_fault_info_info_valid_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_r(void)
+{
+	return 0x00100e60;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar1_phys_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar1_phys_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar1_phys_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar1_phys_set_f(void)
+{
+	return 0x1;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar1_phys_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar1_phys_clear_f(void)
+{
+	return 0x1;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar1_virt_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar1_virt_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar1_virt_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar1_virt_set_f(void)
+{
+	return 0x2;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar1_virt_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar1_virt_clear_f(void)
+{
+	return 0x2;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar2_phys_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar2_phys_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar2_phys_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar2_phys_set_f(void)
+{
+	return 0x4;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar2_phys_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar2_phys_clear_f(void)
+{
+	return 0x4;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar2_virt_f(u32 v)
+{
+	return (v & 0x1) << 3;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar2_virt_v(u32 r)
+{
+	return (r >> 3) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar2_virt_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar2_virt_set_f(void)
+{
+	return 0x8;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar2_virt_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_dropped_bar2_virt_clear_f(void)
+{
+	return 0x8;
+}
+static inline u32 fb_mmu_fault_status_dropped_ifb_phys_f(u32 v)
+{
+	return (v & 0x1) << 4;
+}
+static inline u32 fb_mmu_fault_status_dropped_ifb_phys_v(u32 r)
+{
+	return (r >> 4) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_dropped_ifb_phys_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_dropped_ifb_phys_set_f(void)
+{
+	return 0x10;
+}
+static inline u32 fb_mmu_fault_status_dropped_ifb_phys_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_dropped_ifb_phys_clear_f(void)
+{
+	return 0x10;
+}
+static inline u32 fb_mmu_fault_status_dropped_ifb_virt_f(u32 v)
+{
+	return (v & 0x1) << 5;
+}
+static inline u32 fb_mmu_fault_status_dropped_ifb_virt_v(u32 r)
+{
+	return (r >> 5) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_dropped_ifb_virt_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_dropped_ifb_virt_set_f(void)
+{
+	return 0x20;
+}
+static inline u32 fb_mmu_fault_status_dropped_ifb_virt_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_dropped_ifb_virt_clear_f(void)
+{
+	return 0x20;
+}
+static inline u32 fb_mmu_fault_status_dropped_other_phys_f(u32 v)
+{
+	return (v & 0x1) << 6;
+}
+static inline u32 fb_mmu_fault_status_dropped_other_phys_v(u32 r)
+{
+	return (r >> 6) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_dropped_other_phys_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_dropped_other_phys_set_f(void)
+{
+	return 0x40;
+}
+static inline u32 fb_mmu_fault_status_dropped_other_phys_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_dropped_other_phys_clear_f(void)
+{
+	return 0x40;
+}
+static inline u32 fb_mmu_fault_status_dropped_other_virt_f(u32 v)
+{
+	return (v & 0x1) << 7;
+}
+static inline u32 fb_mmu_fault_status_dropped_other_virt_v(u32 r)
+{
+	return (r >> 7) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_dropped_other_virt_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_dropped_other_virt_set_f(void)
+{
+	return 0x80;
+}
+static inline u32 fb_mmu_fault_status_dropped_other_virt_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_dropped_other_virt_clear_f(void)
+{
+	return 0x80;
+}
+static inline u32 fb_mmu_fault_status_replayable_f(u32 v)
+{
+	return (v & 0x1) << 8;
+}
+static inline u32 fb_mmu_fault_status_replayable_v(u32 r)
+{
+	return (r >> 8) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_f(u32 v)
+{
+	return (v & 0x1) << 9;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_v(u32 r)
+{
+	return (r >> 9) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_replayable_error_f(u32 v)
+{
+	return (v & 0x1) << 10;
+}
+static inline u32 fb_mmu_fault_status_replayable_error_v(u32 r)
+{
+	return (r >> 10) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_error_f(u32 v)
+{
+	return (v & 0x1) << 11;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_error_v(u32 r)
+{
+	return (r >> 11) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_replayable_overflow_f(u32 v)
+{
+	return (v & 0x1) << 12;
+}
+static inline u32 fb_mmu_fault_status_replayable_overflow_v(u32 r)
+{
+	return (r >> 12) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_overflow_f(u32 v)
+{
+	return (v & 0x1) << 13;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_overflow_v(u32 r)
+{
+	return (r >> 13) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_replayable_getptr_corrupted_f(u32 v)
+{
+	return (v & 0x1) << 14;
+}
+static inline u32 fb_mmu_fault_status_replayable_getptr_corrupted_v(u32 r)
+{
+	return (r >> 14) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_getptr_corrupted_f(u32 v)
+{
+	return (v & 0x1) << 15;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_getptr_corrupted_v(u32 r)
+{
+	return (r >> 15) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_busy_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 fb_mmu_fault_status_busy_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_busy_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_busy_true_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 fb_mmu_fault_status_valid_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 fb_mmu_fault_status_valid_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_valid_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_valid_set_f(void)
+{
+	return 0x80000000;
+}
 #endif

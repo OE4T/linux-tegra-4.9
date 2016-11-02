@@ -250,6 +250,70 @@ static inline u32 ctxsw_prog_local_priv_register_ctl_offset_v(u32 r)
 {
 	return (r >> 0) & 0xffff;
 }
+static inline u32 ctxsw_prog_main_image_global_cb_ptr_o(void)
+{
+	return 0x000000b8;
+}
+static inline u32 ctxsw_prog_main_image_global_cb_ptr_v_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 ctxsw_prog_main_image_global_cb_ptr_hi_o(void)
+{
+	return 0x000000bc;
+}
+static inline u32 ctxsw_prog_main_image_global_cb_ptr_hi_v_f(u32 v)
+{
+	return (v & 0x1ffff) << 0;
+}
+static inline u32 ctxsw_prog_main_image_global_pagepool_ptr_o(void)
+{
+	return 0x000000c0;
+}
+static inline u32 ctxsw_prog_main_image_global_pagepool_ptr_v_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 ctxsw_prog_main_image_global_pagepool_ptr_hi_o(void)
+{
+	return 0x000000c4;
+}
+static inline u32 ctxsw_prog_main_image_global_pagepool_ptr_hi_v_f(u32 v)
+{
+	return (v & 0x1ffff) << 0;
+}
+static inline u32 ctxsw_prog_main_image_control_block_ptr_o(void)
+{
+	return 0x000000c8;
+}
+static inline u32 ctxsw_prog_main_image_control_block_ptr_v_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 ctxsw_prog_main_image_control_block_ptr_hi_o(void)
+{
+	return 0x000000cc;
+}
+static inline u32 ctxsw_prog_main_image_control_block_ptr_hi_v_f(u32 v)
+{
+	return (v & 0x1ffff) << 0;
+}
+static inline u32 ctxsw_prog_main_image_context_ramchain_buffer_addr_lo_o(void)
+{
+	return 0x000000e0;
+}
+static inline u32 ctxsw_prog_main_image_context_ramchain_buffer_addr_lo_v_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 ctxsw_prog_main_image_context_ramchain_buffer_addr_hi_o(void)
+{
+	return 0x000000e4;
+}
+static inline u32 ctxsw_prog_main_image_context_ramchain_buffer_addr_hi_v_f(u32 v)
+{
+	return (v & 0x1ffff) << 0;
+}
 static inline u32 ctxsw_prog_local_image_ppc_info_o(void)
 {
 	return 0x000000f4;

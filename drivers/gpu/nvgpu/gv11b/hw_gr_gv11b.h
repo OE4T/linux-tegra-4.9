@@ -522,9 +522,9 @@ static inline u32 gr_pipe_bundle_address_veid_f(u32 v)
 {
 	return (v & 0x3f) << 20;
 }
-static inline u32 gr_pipe_bundle_address_veid_v(u32 r)
+static inline u32 gr_pipe_bundle_address_veid_w(void)
 {
-	return (r >> 20) & 0x3f;
+	return 0;
 }
 static inline u32 gr_pipe_bundle_data_r(void)
 {

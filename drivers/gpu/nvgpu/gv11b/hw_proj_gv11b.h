@@ -146,6 +146,10 @@ static inline u32 proj_scal_litter_num_zcull_banks_v(void)
 {
 	return 0x00000004;
 }
+static inline u32 proj_scal_litter_num_sm_per_tpc_v(void)
+{
+	return 0x00000002;
+}
 static inline u32 proj_scal_max_gpcs_v(void)
 {
 	return 0x00000020;

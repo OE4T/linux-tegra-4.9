@@ -46,6 +46,9 @@
 		};
 
 		sor {
+			panel-s-edp-uhdtv-15-6 {
+				status = "disabled";
+			};
 			prod-settings {
 				status = "disabled";
 			};

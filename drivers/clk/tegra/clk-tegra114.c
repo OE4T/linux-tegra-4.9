@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1349,6 +1349,7 @@ static void __init tegra114_clock_init(struct device_node *np)
 		return;
 	}
 
+	has_ccplex_therm_control = true;
 	clks = tegra_clk_init(clk_base, TEGRA114_CLK_CLK_MAX,
 				TEGRA114_CLK_PERIPH_BANKS);
 	if (!clks)

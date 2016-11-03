@@ -6567,6 +6567,13 @@ static int gr_gk20a_decode_priv_addr(struct gk20a *g, u32 addr,
 		else if (g->ops.gr.is_ltcn_ltss_addr(g, addr))
 			*broadcast_flags |= PRI_BROADCAST_FLAGS_LTSS;
 		return 0;
+	} else if (pri_is_fbpa_addr(g, addr)) {
+		*addr_type = CTXSW_ADDR_TYPE_FBPA;
+		if (pri_is_fbpa_addr_shared(g, addr)) {
+			*broadcast_flags |= PRI_BROADCAST_FLAGS_FBPA;
+			return 0;
+		}
+		return 0;
 	} else {
 		*addr_type = CTXSW_ADDR_TYPE_SYS;
 		return 0;
@@ -6609,6 +6616,7 @@ static int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 	u32 broadcast_flags;
 	u32 t;
 	int err;
+	u32 fbpa_num;
 
 	t = 0;
 	*num_registers = 0;
@@ -6669,6 +6677,12 @@ static int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 	} else if (broadcast_flags & PRI_BROADCAST_FLAGS_LTCS) {
 		g->ops.gr.split_ltc_broadcast_addr(g, addr,
 							priv_addr_table, &t);
+	} else if (broadcast_flags & PRI_BROADCAST_FLAGS_FBPA) {
+		for (fbpa_num = 0;
+		     fbpa_num < nvgpu_get_litter_value(g, GPU_LIT_NUM_FBPAS);
+		     fbpa_num++)
+			priv_addr_table[t++] = pri_fbpa_addr(g,
+					pri_fbpa_addr_mask(g, addr), fbpa_num);
 	} else if (!(broadcast_flags & PRI_BROADCAST_FLAGS_GPC)) {
 		if (broadcast_flags & PRI_BROADCAST_FLAGS_TPC)
 			for (tpc_num = 0;

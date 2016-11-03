@@ -109,6 +109,10 @@ static inline u32 pri_tpccs_addr_mask(u32 addr)
 {
 	return addr & ((1 << pri_tpccs_addr_width()) - 1);
 }
+static inline u32 pri_fbpa_addr_mask(struct gk20a *g, u32 addr)
+{
+	return addr & (nvgpu_get_litter_value(g, GPU_LIT_FBPA_STRIDE) - 1);
+}
 static inline u32 pri_tpc_addr(struct gk20a *g, u32 addr, u32 gpc, u32 tpc)
 {
 	u32 gpc_base = nvgpu_get_litter_value(g, GPU_LIT_GPC_BASE);
@@ -127,7 +131,27 @@ static inline bool pri_is_tpc_addr_shared(struct gk20a *g, u32 addr)
 		(addr < (tpc_in_gpc_shared_base +
 			 tpc_in_gpc_stride));
 }
-
+static inline u32 pri_fbpa_addr(struct gk20a *g, u32 addr, u32 fbpa)
+{
+	return (nvgpu_get_litter_value(g, GPU_LIT_FBPA_BASE) + addr +
+			(fbpa * nvgpu_get_litter_value(g, GPU_LIT_FBPA_STRIDE)));
+}
+static inline bool pri_is_fbpa_addr_shared(struct gk20a *g, u32 addr)
+{
+	u32 fbpa_shared_base = nvgpu_get_litter_value(g, GPU_LIT_FBPA_SHARED_BASE);
+	u32 fbpa_stride = nvgpu_get_litter_value(g, GPU_LIT_FBPA_STRIDE);
+	return ((addr >= fbpa_shared_base) &&
+		(addr < (fbpa_shared_base + fbpa_stride)));
+}
+static inline bool pri_is_fbpa_addr(struct gk20a *g, u32 addr)
+{
+	u32 fbpa_base = nvgpu_get_litter_value(g, GPU_LIT_FBPA_BASE);
+	u32 fbpa_stride = nvgpu_get_litter_value(g, GPU_LIT_FBPA_STRIDE);
+	u32 num_fbpas = nvgpu_get_litter_value(g, GPU_LIT_NUM_FBPAS);
+	return (((addr >= fbpa_base) &&
+		(addr < (fbpa_base + num_fbpas * fbpa_stride)))
+		|| pri_is_fbpa_addr_shared(g, addr));
+}
 /*
  * BE pri addressing
  */
@@ -209,7 +233,8 @@ enum ctxsw_addr_type {
 	CTXSW_ADDR_TYPE_TPC  = 2,
 	CTXSW_ADDR_TYPE_BE   = 3,
 	CTXSW_ADDR_TYPE_PPC  = 4,
-	CTXSW_ADDR_TYPE_LTCS = 5
+	CTXSW_ADDR_TYPE_LTCS = 5,
+	CTXSW_ADDR_TYPE_FBPA = 6,
 };
 
 #define PRI_BROADCAST_FLAGS_NONE  0
@@ -219,5 +244,6 @@ enum ctxsw_addr_type {
 #define PRI_BROADCAST_FLAGS_PPC   BIT(3)
 #define PRI_BROADCAST_FLAGS_LTCS  BIT(4)
 #define PRI_BROADCAST_FLAGS_LTSS  BIT(5)
+#define PRI_BROADCAST_FLAGS_FBPA  BIT(6)
 
 #endif /* GR_PRI_GK20A_H */

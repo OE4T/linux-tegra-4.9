@@ -70,13 +70,25 @@ static inline u32 proj_lts_stride_v(void)
 {
 	return 0x00000200;
 }
+static inline u32 proj_fbpa_base_v(void)
+{
+	return 0x00110000;
+}
+static inline u32 proj_fbpa_shared_base_v(void)
+{
+	return 0x0010f000;
+}
 static inline u32 proj_fbpa_stride_v(void)
 {
-	return 0x00004000;
+	return 0x00001000;
 }
 static inline u32 proj_ppc_in_gpc_base_v(void)
 {
 	return 0x00003000;
+}
+static inline u32 proj_ppc_in_gpc_shared_base_v(void)
+{
+	return 0x00003e00;
 }
 static inline u32 proj_ppc_in_gpc_stride_v(void)
 {

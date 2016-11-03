@@ -469,12 +469,16 @@ struct device_node *tegra_primary_panel_get_dt_node(
 	struct tegra_dc_out *dc_out = NULL;
 	struct device_node *np_primary;
 
-	if (pdata)
-		dc_out = pdata->default_out;
+	if (!pdata) {
+		pr_err("platform data not available\n");
+		return NULL;
+	}
+
+	dc_out = pdata->default_out;
 
 	if (tegra_platform_is_silicon()) {
 
-		np_primary = of_find_node_by_path(dc_or_node_names[0]);
+		np_primary = of_find_node_by_path(pdata->dc_or_node_name);
 
 		if (of_device_is_available(np_primary)) {
 			/* DSI */
@@ -537,7 +541,7 @@ struct device_node *tegra_primary_panel_get_dt_node(
 		np_panel = of_get_child_by_name(np_primary, "panel-nvidia-sim");
 	}
 
-	if (!np_panel && *dc_or_node_names[0])
+	if (!np_panel && !strcmp(pdata->dc_or_node_name, ""))
 		pr_err("Could not find panel for primary node\n");
 
 	return of_device_is_available(np_panel) ? np_panel : NULL;
@@ -550,11 +554,15 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 	struct tegra_dc_out *dc_out = NULL;
 	struct device_node *np_secondary;
 
-	if (pdata)
-		dc_out = pdata->default_out;
+	if (!pdata) {
+		pr_err("platform data not available\n");
+		return NULL;
+	}
+
+	dc_out = pdata->default_out;
 
 	if (tegra_platform_is_silicon()) {
-		np_secondary = of_find_node_by_path(dc_or_node_names[1]);
+		np_secondary = of_find_node_by_path(pdata->dc_or_node_name);
 		if (of_device_is_available(np_secondary)) {
 			/* HDMI */
 			np_panel = of_get_child_by_name(np_secondary,
@@ -603,7 +611,7 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 		np_panel = of_get_child_by_name(np_secondary, "panel-nvidia-sim");
 	}
 
-	if (!np_panel && *dc_or_node_names[1])
+	if (!np_panel && !strcmp(pdata->dc_or_node_name, ""))
 		pr_err("Could not find panel for secondary node\n");
 
 	return of_device_is_available(np_panel) ? np_panel : NULL;
@@ -616,11 +624,15 @@ struct device_node *tegra_tertiary_panel_get_dt_node(
 	struct tegra_dc_out *dc_out = NULL;
 	struct device_node *np_tertiary;
 
-	if (pdata)
-		dc_out = pdata->default_out;
+	if (!pdata) {
+		pr_err("platform data not available\n");
+		return NULL;
+	}
+
+	dc_out = pdata->default_out;
 
 	if (tegra_platform_is_silicon()) {
-		np_tertiary = of_find_node_by_path(dc_or_node_names[2]);
+		np_tertiary = of_find_node_by_path(pdata->dc_or_node_name);
 		if (of_device_is_available(np_tertiary)) {
 			/* DP */
 			np_panel = of_get_child_by_name(np_tertiary,
@@ -640,11 +652,11 @@ struct device_node *tegra_tertiary_panel_get_dt_node(
 		}
 	} else {
 		/* HDMI for non-silicon */
-		np_tertiary = of_find_node_by_path(HDMI_NODE);
+		np_tertiary = of_find_node_by_path(SOR1_NODE);
 		np_panel = of_get_child_by_name(np_tertiary, "hdmi-display");
 	}
 
-	if (!np_panel && *dc_or_node_names[2])
+	if (!np_panel && !strcmp(pdata->dc_or_node_name, ""))
 		pr_err("Could not find panel for tertiary node\n");
 
 	return (of_device_is_available(np_panel) ? np_panel : NULL);

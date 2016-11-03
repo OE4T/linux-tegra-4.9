@@ -1231,6 +1231,7 @@ static int tegra_nvdisp_set_control(struct tegra_dc *dc)
 {
 	u32 protocol = nvdisp_sor_control_protocol_custom_f();
 	u32 reg      = nvdisp_sor_control_r();
+	int sor_num = tegra_dc_which_sor(dc);
 
 	/* Set the protocol type in DT and use from there
 	 * Current setting are default ones.
@@ -1238,9 +1239,9 @@ static int tegra_nvdisp_set_control(struct tegra_dc *dc)
 
 	if (dc->out->type == TEGRA_DC_OUT_HDMI)	{
 		protocol = nvdisp_sor1_control_protocol_tmdsa_f();
-		if(!strcmp(dc_or_node_names[dc->ndev->id], "/host1x/sor1"))
+		if (sor_num)
 			reg = nvdisp_sor1_control_r();
-		else if(!strcmp(dc_or_node_names[dc->ndev->id], "/host1x/sor"))
+		else
 			reg = nvdisp_sor_control_r();
 	} else if ((dc->out->type == TEGRA_DC_OUT_DP) ||
 		(dc->out->type == TEGRA_DC_OUT_NVSR_DP) ||

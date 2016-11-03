@@ -61,7 +61,6 @@ EXPORT_SYMBOL(tegra_ioremap_byname);
 
 /* TEGRA_APS_AST_REGION_<x>_CONTROL register fields */
 #define AST_RGN_CTRL_VM_INDEX		15
-#define AST_RGN_CTRL_NON_SECURE		0x8
 #define AST_RGN_CTRL_SNOOP		0x4
 
 #define AST_MAX_VMINDEX			15
@@ -151,7 +150,7 @@ struct tegra_ast_region {
 static void tegra_ast_region_enable(struct tegra_ast_region *region)
 {
 	struct tegra_ast *ast = to_tegra_ast(region->dev.parent);
-	u32 ast_sid = AST_STREAMID(region->stream_id);
+	u32 sid_ctl = AST_STREAMID(region->stream_id) | AST_STREAMID_CTL_ENABLE;
 	unsigned i;
 
 	for (i = 0; i < ARRAY_SIZE(ast->bases); i++) {
@@ -163,12 +162,12 @@ static void tegra_ast_region_enable(struct tegra_ast_region *region)
 			continue;
 
 		/*
-		 * TODO: MB1 should set stream_id to one VM, and this would no
+		 * Warmboot/mb2 should set stream_ids, and this would no
 		 * longer be necessary.
 		 */
 		r = readl(base + TEGRA_APS_AST_STREAMID_CTL + (4 * vmidx));
-		if ((r & 0x0000ff00) != ast_sid)
-			writel(ast_sid | AST_STREAMID_CTL_ENABLE, base +
+		if ((r & 0x0000ff01) != sid_ctl)
+			writel(sid_ctl, base +
 				TEGRA_APS_AST_STREAMID_CTL + (4 * vmidx));
 
 		base += region->ast_id * TEGRA_APS_AST_REGION_STRIDE;
@@ -181,8 +180,7 @@ static void tegra_ast_region_enable(struct tegra_ast_region *region)
 		writel(region->dma & AST_ADDR_MASK,
 			base + TEGRA_APS_AST_REGION_0_MASTER_BASE_LO);
 
-		writel(AST_RGN_CTRL_NON_SECURE | AST_RGN_CTRL_SNOOP |
-				(vmidx << AST_RGN_CTRL_VM_INDEX),
+		writel(AST_RGN_CTRL_SNOOP | (vmidx << AST_RGN_CTRL_VM_INDEX),
 			base + TEGRA_APS_AST_REGION_0_CONTROL);
 
 		writel(0, base + TEGRA_APS_AST_REGION_0_SLAVE_BASE_HI);
@@ -297,8 +295,8 @@ struct tegra_ast_region *tegra_ast_region_map(struct tegra_ast *ast,
 				u32 r = readl(base +
 						TEGRA_APS_AST_STREAMID_CTL +
 						(4 * vmidx));
-				/* find empty register to use */
-				if (!(r & 0x0000ff01))
+				/* find disabled register to use */
+				if ((r & 1) == 0)
 					break;
 			}
 		}

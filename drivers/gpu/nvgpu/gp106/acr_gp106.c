@@ -22,7 +22,8 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "gk20a/semaphore_gk20a.h"
-#include "gm20b/hw_pwr_gm20b.h"
+#include "gp106/hw_psec_gp106.h"
+#include "gp106/hw_pwr_gp106.h"
 #include "gm206/acr_gm206.h"
 #include "gm20b/acr_gm20b.h"
 #include "gm206/pmu_gm206.h"
@@ -1150,6 +1151,14 @@ static int gp106_bootstrap_hs_flcn(struct gk20a *g)
 		err = status;
 		goto err_free_ucode_map;
 	}
+
+	/* sec2 reset - to keep it idle */
+	gk20a_writel(g, psec_falcon_engine_r(),
+		pwr_falcon_engine_reset_true_f());
+	udelay(10);
+	gk20a_writel(g, psec_falcon_engine_r(),
+		pwr_falcon_engine_reset_false_f());
+
 	return 0;
 err_free_ucode_map:
 	gk20a_gmmu_unmap_free(vm, &acr->acr_ucode);

@@ -88,6 +88,7 @@
 #define     PORT_CAP_HOST			(0x1)
 #define     PORT_CAP_DEVICE			(0x2)
 #define     PORT_CAP_OTG			(0x3)
+#define   PORT_REVERSE_ID(x)			(1 << ((x) * 4 + 3))
 
 #define XUSB_PADCTL_USB2_OC_MAP			(0x10)
 #define XUSB_PADCTL_SS_OC_MAP			(0x14)
@@ -208,10 +209,28 @@
 #define   HSIC_PD_TRK				(1 << 19)
 
 #define USB2_VBUS_ID				(0x360)
+#define   OTG_VBUS_SESS_VLD			(1 << 0)
+#define   OTG_VBUS_SESS_VLD_ST_CHNG		(1 << 1)
+#define   OTG_VBUS_SESS_VLD_CHNG_INTR_EN	(1 << 2)
+#define   VBUS_VALID				(1 << 3)
+#define   VBUS_VALID_ST_CHNG			(1 << 4)
+#define   VBUS_VALID_CHNG_INTR_EN		(1 << 5)
+#define   IDDIG					(1 << 6)
+#define   IDDIG_A				(1 << 7)
+#define   IDDIG_B				(1 << 8)
+#define   IDDIG_C				(1 << 9)
+#define   RID_MASK				(0xf << 6)
+#define   IDDIG_ST_CHNG				(1 << 10)
+#define   IDDIG_CHNG_INTR_EN			(1 << 11)
 #define   VBUS_OVERRIDE				(1 << 14)
+#define   ID_OVERRIDE_SHIFT			18
+#define   ID_OVERRIDE_MASK			0xf
 #define   ID_OVERRIDE(x)			(((x) & 0xf) << 18)
 #define   ID_OVERRIDE_FLOATING			ID_OVERRIDE(8)
 #define   ID_OVERRIDE_GROUNDED			ID_OVERRIDE(0)
+#define   VBUS_WAKEUP				(1 << 22)
+#define   VBUS_WAKEUP_ST_CHNG			(1 << 23)
+#define   VBUS_WAKEUP_CHNG_INTR_EN		(1 << 24)
 
 /* XUSB AO registers */
 #define XUSB_AO_USB_DEBOUNCE_DEL		(0x4)
@@ -449,9 +468,6 @@ struct tegra_padctl {
 	struct regulator *vbus[TEGRA_UTMI_PHYS];
 	struct regulator *vddio_hsic;
 
-	/* vbus/id based OTG */
-	struct work_struct otg_vbus_work;
-	bool otg_vbus_on;
 	bool otg_vbus_alwayson;
 
 	struct regulator_bulk_data *supplies;
@@ -2652,40 +2668,6 @@ static int tegra_xusb_select_vbus_en_state(struct tegra_padctl *padctl,
 	return err;
 }
 
-static void tegra_xusb_otg_vbus_work(struct work_struct *work)
-{
-	struct tegra_padctl *padctl =
-		container_of(work, struct tegra_padctl, otg_vbus_work);
-	struct device *dev = padctl->dev;
-	int port = padctl->utmi_otg_port_base_1 - 1;
-	u32 reg;
-	int err;
-
-	if (!padctl->utmi_otg_port_base_1)
-		return; /* nothing to do if there is no UTMI otg port */
-
-	reg = padctl_readl(padctl, USB2_VBUS_ID);
-	dev_dbg(dev, "USB2_VBUS_ID 0x%x otg_vbus_on was %d\n", reg,
-		padctl->otg_vbus_on);
-	if ((reg & ID_OVERRIDE(~0)) == ID_OVERRIDE_GROUNDED) {
-		/* entering host mode role */
-		if (!padctl->otg_vbus_on) {
-			err = tegra18x_phy_xusb_utmi_vbus_power_on(
-					padctl->utmi_phys[port]);
-			if (!err)
-				padctl->otg_vbus_on = true;
-		}
-	} else if ((reg & ID_OVERRIDE(~0)) == ID_OVERRIDE_FLOATING) {
-		/* leaving host mode role */
-		if (padctl->otg_vbus_on) {
-			err = tegra18x_phy_xusb_utmi_vbus_power_off(
-					padctl->utmi_phys[port]);
-			if (!err)
-				padctl->otg_vbus_on = false;
-		}
-	}
-}
-
 static int tegra_xusb_setup_usb(struct tegra_padctl *padctl)
 {
 	struct phy *phy;
@@ -3068,7 +3050,6 @@ static int tegra186_padctl_probe(struct platform_device *pdev)
 		goto assert_padctl_rst;
 	}
 
-	INIT_WORK(&padctl->otg_vbus_work, tegra_xusb_otg_vbus_work);
 	INIT_WORK(&padctl->mbox_req_work, tegra_xusb_phy_mbox_work);
 	padctl->mbox_client.dev = dev;
 	padctl->mbox_client.tx_block = true;
@@ -3263,15 +3244,11 @@ static int tegra186_padctl_vbus_override(struct tegra_padctl *padctl,
 	u32 reg;
 
 	reg = padctl_readl(padctl, USB2_VBUS_ID);
-	if (on) {
+	if (on)
 		reg |= VBUS_OVERRIDE;
-		reg &= ~ID_OVERRIDE(~0);
-		reg |= ID_OVERRIDE_FLOATING;
-	} else
+	else
 		reg &= ~VBUS_OVERRIDE;
 	padctl_writel(padctl, reg, USB2_VBUS_ID);
-
-	schedule_work(&padctl->otg_vbus_work);
 
 	return 0;
 }
@@ -3309,14 +3286,6 @@ static int tegra186_padctl_id_override(struct tegra_padctl *padctl,
 
 	reg = padctl_readl(padctl, USB2_VBUS_ID);
 	if (grounded) {
-		if (reg & VBUS_OVERRIDE) {
-			reg &= ~VBUS_OVERRIDE;
-			padctl_writel(padctl, reg, USB2_VBUS_ID);
-			usleep_range(1000, 2000);
-
-			reg = padctl_readl(padctl, USB2_VBUS_ID);
-		}
-
 		reg &= ~ID_OVERRIDE(~0);
 		reg |= ID_OVERRIDE_GROUNDED;
 	} else {
@@ -3324,8 +3293,6 @@ static int tegra186_padctl_id_override(struct tegra_padctl *padctl,
 		reg |= ID_OVERRIDE_FLOATING;
 	}
 	padctl_writel(padctl, reg, USB2_VBUS_ID);
-
-	schedule_work(&padctl->otg_vbus_work);
 
 	return 0;
 }
@@ -3355,6 +3322,24 @@ int tegra18x_phy_xusb_clear_id_override(struct phy *phy)
 	return tegra186_padctl_id_override(padctl, false);
 }
 EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_clear_id_override);
+
+static enum tegra_xusb_vbus_rid tegra_phy_xusb_parse_rid(u32 rid_value)
+{
+	rid_value &= RID_MASK;
+
+	if (rid_value == IDDIG)
+		return VBUS_ID_RID_FLOAT;
+	else if (rid_value == IDDIG_A)
+		return VBUS_ID_RID_A;
+	else if (rid_value == IDDIG_B)
+		return VBUS_ID_RID_B;
+	else if (rid_value == IDDIG_C)
+		return VBUS_ID_RID_C;
+	else if (rid_value == 0)
+		return VBUS_ID_RID_GND;
+
+	return VBUS_ID_RID_UNDEFINED;
+}
 
 bool tegra18x_phy_xusb_has_otg_cap(struct phy *phy)
 {
@@ -4126,6 +4111,317 @@ void tegra18x_phy_xusb_handle_overcurrent(struct phy *phy)
 	mutex_unlock(&padctl->lock);
 }
 EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_handle_overcurrent);
+
+static int tegra186_usb3_phy_reverse_id(struct tegra_padctl *padctl,
+					int port, bool enable)
+{
+	u32 reg;
+
+	mutex_lock(&padctl->lock);
+	reg = padctl_readl(padctl, XUSB_PADCTL_SS_PORT_CAP);
+	if (enable)
+		reg |= PORT_REVERSE_ID(port);
+	else
+		reg &= ~PORT_REVERSE_ID(port);
+	padctl_writel(padctl, reg, XUSB_PADCTL_SS_PORT_CAP);
+	mutex_unlock(&padctl->lock);
+
+	return 0;
+}
+
+static int tegra186_utmi_phy_reverse_id(struct tegra_padctl *padctl,
+					int port, bool enable)
+{
+	u32 reg;
+
+	mutex_lock(&padctl->lock);
+	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_PORT_CAP);
+	if (enable)
+		reg |= PORT_REVERSE_ID(port);
+	else
+		reg &= ~PORT_REVERSE_ID(port);
+	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_PORT_CAP);
+	mutex_unlock(&padctl->lock);
+
+	return 0;
+}
+
+int tegra18x_phy_xusb_set_reverse_id(struct phy *phy)
+{
+	struct tegra_padctl *padctl;
+	int port;
+
+	if (!phy)
+		return -EINVAL;
+
+	padctl = phy_get_drvdata(phy);
+
+	/* applicable to SS/UTMI only */
+	if (is_utmi_phy(phy)) {
+		port = utmi_phy_to_port(phy);
+		if (port < 0)
+			return -EINVAL;
+		return tegra186_utmi_phy_reverse_id(padctl, port, true);
+	} else if (is_usb3_phy(phy)) {
+		port = usb3_phy_to_port(phy);
+		if (port < 0)
+			return -EINVAL;
+		return tegra186_usb3_phy_reverse_id(padctl, port, true);
+	}
+
+	return -EINVAL;
+}
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_set_reverse_id);
+
+int tegra18x_phy_xusb_clear_reverse_id(struct phy *phy)
+{
+	struct tegra_padctl *padctl;
+	int port;
+
+	if (!phy)
+		return -EINVAL;
+
+	padctl = phy_get_drvdata(phy);
+
+	/* applicable to SS/UTMI only */
+	if (is_utmi_phy(phy)) {
+		port = utmi_phy_to_port(phy);
+		if (port < 0)
+			return -EINVAL;
+		return tegra186_utmi_phy_reverse_id(padctl, port, false);
+	} else if (is_usb3_phy(phy)) {
+		port = usb3_phy_to_port(phy);
+		if (port < 0)
+			return -EINVAL;
+		return tegra186_usb3_phy_reverse_id(padctl, port, false);
+	}
+
+	return -EINVAL;
+}
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_clear_reverse_id);
+
+int tegra18x_phy_xusb_generate_srp(struct phy *phy)
+{
+	struct tegra_padctl *padctl;
+	u32 reg;
+	int port;
+
+	if (!phy)
+		return -EINVAL;
+
+	padctl = phy_get_drvdata(phy);
+
+	/* applicable only to UTMI */
+	if (is_utmi_phy(phy)) {
+		port = utmi_phy_to_port(phy);
+		if (port < 0)
+			return -EINVAL;
+		mutex_lock(&padctl->lock);
+		reg = padctl_readl(padctl,
+				   USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
+		reg |= GENERATE_SRP;
+		padctl_writel(padctl, reg,
+			      USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
+		mutex_unlock(&padctl->lock);
+
+		return 0;
+	}
+
+	return -EINVAL;
+}
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_generate_srp);
+
+static int tegra186_utmi_phy_srp_detect(struct tegra_padctl *padctl,
+					int port, bool enable)
+{
+	u32 reg;
+
+	reg = padctl_readl(padctl, USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
+	if (enable)
+		reg |= SRP_DETECT_EN | SRP_INTR_EN;
+	else
+		reg &= ~(SRP_DETECT_EN | SRP_INTR_EN);
+	padctl_writel(padctl, reg, USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
+
+	return 0;
+}
+
+int tegra18x_phy_xusb_enable_srp_detect(struct phy *phy)
+{
+	struct tegra_padctl *padctl;
+	int port;
+
+	if (!phy)
+		return -EINVAL;
+
+	padctl = phy_get_drvdata(phy);
+
+	/* applicable only to UTMI */
+	if (is_utmi_phy(phy)) {
+		port = utmi_phy_to_port(phy);
+		if (port < 0)
+			return -EINVAL;
+		return tegra186_utmi_phy_srp_detect(padctl, port, true);
+	}
+
+	return -EINVAL;
+}
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_enable_srp_detect);
+
+int tegra18x_phy_xusb_disable_srp_detect(struct phy *phy)
+{
+	struct tegra_padctl *padctl;
+	int port;
+
+	if (!phy)
+		return -EINVAL;
+
+	padctl = phy_get_drvdata(phy);
+
+	/* applicable only to UTMI */
+	if (is_utmi_phy(phy)) {
+		port = utmi_phy_to_port(phy);
+		if (port < 0)
+			return -EINVAL;
+		return tegra186_utmi_phy_srp_detect(padctl, port, false);
+	}
+
+	return -EINVAL;
+}
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_disable_srp_detect);
+
+bool tegra18x_phy_xusb_srp_detected(struct phy *phy)
+{
+	struct tegra_padctl *padctl;
+	u32 reg;
+	int port;
+
+	if (!phy)
+		return false;
+
+	padctl = phy_get_drvdata(phy);
+
+	/* applicable only to UTMI */
+	if (is_utmi_phy(phy)) {
+		port = utmi_phy_to_port(phy);
+		if (port < 0)
+			return false;
+
+		reg = padctl_readl(padctl,
+				   USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
+		dev_dbg(padctl->dev, "USB2_BATTERY_CHRG_OTGPADX_CTL0:%#x\n",
+			reg);
+		if (reg & SRP_DETECTED) {
+			padctl_writel(padctl, reg,
+					USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
+			return true;
+		}
+	}
+
+	return false;
+}
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_srp_detected);
+
+int tegra18x_phy_xusb_enable_otg_int(struct phy *phy)
+{
+	struct tegra_padctl *padctl;
+	u32 reg;
+
+	if (!phy)
+		return -EINVAL;
+
+	padctl = phy_get_drvdata(phy);
+
+	mutex_lock(&padctl->lock);
+	reg = padctl_readl(padctl, USB2_VBUS_ID);
+	reg |= VBUS_VALID_CHNG_INTR_EN | OTG_VBUS_SESS_VLD_CHNG_INTR_EN |
+		IDDIG_CHNG_INTR_EN | VBUS_WAKEUP_CHNG_INTR_EN;
+	padctl_writel(padctl, reg, USB2_VBUS_ID);
+	mutex_unlock(&padctl->lock);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_enable_otg_int);
+
+int tegra18x_phy_xusb_disable_otg_int(struct phy *phy)
+{
+	struct tegra_padctl *padctl;
+	u32 reg;
+
+	if (!phy)
+		return -EINVAL;
+
+	padctl = phy_get_drvdata(phy);
+
+	mutex_lock(&padctl->lock);
+	reg = padctl_readl(padctl, USB2_VBUS_ID);
+	reg &= ~(VBUS_VALID_CHNG_INTR_EN | OTG_VBUS_SESS_VLD_CHNG_INTR_EN |
+		 IDDIG_CHNG_INTR_EN | VBUS_WAKEUP_CHNG_INTR_EN);
+	padctl_writel(padctl, reg, USB2_VBUS_ID);
+	mutex_unlock(&padctl->lock);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_disable_otg_int);
+
+int tegra18x_phy_xusb_ack_otg_int(struct phy *phy)
+{
+	struct tegra_padctl *padctl;
+	u32 reg;
+
+	if (!phy)
+		return -EINVAL;
+
+	padctl = phy_get_drvdata(phy);
+
+	reg = padctl_readl(padctl, USB2_VBUS_ID);
+	padctl_writel(padctl, reg, USB2_VBUS_ID);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_ack_otg_int);
+
+int tegra18x_phy_xusb_get_otg_vbus_id(struct phy *phy,
+		struct tegra_xusb_otg_vbus_id *info)
+{
+	struct tegra_padctl *padctl;
+	u32 reg;
+
+	if (!phy || !info)
+		return -EINVAL;
+
+	padctl = phy_get_drvdata(phy);
+
+	reg = padctl_readl(padctl, USB2_VBUS_ID);
+
+	info->iddig_chg = !!(reg & IDDIG_ST_CHNG);
+	info->iddig = tegra_phy_xusb_parse_rid(reg);
+	dev_dbg(padctl->dev, "%s: iddig_chg=%d, iddig=%d\n",
+		__func__, info->iddig_chg, info->iddig);
+
+	info->vbus_sess_vld_chg = !!(reg & OTG_VBUS_SESS_VLD_ST_CHNG);
+	info->vbus_sess_vld = !!(reg & OTG_VBUS_SESS_VLD);
+	dev_dbg(padctl->dev, "%s: vbus_sess_vld_chg=%d, vbus_sess_vld=%d\n",
+		__func__, info->vbus_sess_vld_chg, info->vbus_sess_vld);
+
+	info->vbus_vld_chg = !!(reg & VBUS_VALID_ST_CHNG);
+	info->vbus_vld = !!(reg & VBUS_VALID);
+	dev_dbg(padctl->dev, "%s: vbus_vld_chg=%d, vbus_vld=%d\n",
+		__func__, info->vbus_vld_chg, info->vbus_vld);
+
+	info->vbus_wakeup_chg = !!(reg & VBUS_WAKEUP_ST_CHNG);
+	info->vbus_wakeup = !!(reg & VBUS_WAKEUP);
+	dev_dbg(padctl->dev, "%s: vbus_wakeup_chg=%d, vbus_wakeup=%d\n",
+		__func__, info->vbus_wakeup_chg, info->vbus_wakeup);
+
+	info->vbus_override = !!(reg & VBUS_OVERRIDE);
+	info->id_override = (reg >> ID_OVERRIDE_SHIFT) & ID_OVERRIDE_MASK;
+	dev_dbg(padctl->dev, "%s: vbus_override=%d, id_override=%d\n",
+		__func__, info->vbus_override, info->id_override);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_get_otg_vbus_id);
 
 MODULE_AUTHOR("JC Kuo <jckuo@nvidia.com>");
 MODULE_DESCRIPTION("Tegra 186 XUSB PADCTL driver");

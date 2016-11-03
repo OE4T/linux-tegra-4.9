@@ -249,7 +249,8 @@ int gp10b_pg_gr_init(struct gk20a *g, u32 pg_engine_id)
 
 	return 0;
 }
-static void gp10b_pmu_elpg_statistics(struct gk20a *g,
+
+void gp10b_pmu_elpg_statistics(struct gk20a *g,
 		u32 *ingating_time, u32 *ungating_time, u32 *gating_cnt)
 {
 	struct pmu_gk20a *pmu = &g->pmu;

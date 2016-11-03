@@ -24,6 +24,7 @@
 #include "clk/clk_mclk.h"
 #include "hw_mc_gp106.h"
 #include "hw_pwr_gp106.h"
+#include "lpwr/rppg.h"
 
 #define PMU_MEM_SCRUBBING_TIMEOUT_MAX 1000
 #define PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT 10
@@ -174,6 +175,67 @@ static bool gp106_is_pmu_supported(struct gk20a *g)
 	return true;
 }
 
+static u32 gp106_pmu_pg_feature_list(struct gk20a *g, u32 pg_engine_id)
+{
+	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
+		return PMU_PG_FEATURE_GR_RPPG_ENABLED;
+
+	return 0;
+}
+
+static u32 gp106_pmu_pg_engines_list(struct gk20a *g)
+{
+	return BIT(PMU_PG_ELPG_ENGINE_ID_GRAPHICS);
+}
+
+static void pmu_handle_param_msg(struct gk20a *g, struct pmu_msg *msg,
+			void *param, u32 handle, u32 status)
+{
+	gk20a_dbg_fn("");
+
+	if (status != 0) {
+		gk20a_err(dev_from_gk20a(g), "PG PARAM cmd aborted");
+		return;
+	}
+
+	gp106_dbg_pmu("PG PARAM is acknowledged from PMU %x",
+			msg->msg.pg.msg_type);
+}
+
+static int gp106_pg_param_init(struct gk20a *g, u32 pg_engine_id)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	struct pmu_cmd cmd;
+	u32 seq;
+	u32 status;
+
+	memset(&cmd, 0, sizeof(struct pmu_cmd));
+	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS) {
+
+		status = init_rppg(g);
+		if (status != 0) {
+			gk20a_err(dev_from_gk20a(g), "RPPG init Failed");
+			return -1;
+		}
+
+		cmd.hdr.unit_id = PMU_UNIT_PG;
+		cmd.hdr.size = PMU_CMD_HDR_SIZE +
+				sizeof(struct pmu_pg_cmd_gr_init_param);
+		cmd.cmd.pg.gr_init_param.cmd_type =
+				PMU_PG_CMD_ID_PG_PARAM;
+		cmd.cmd.pg.gr_init_param.sub_cmd_id =
+				PMU_PG_PARAM_CMD_GR_INIT_PARAM;
+		cmd.cmd.pg.gr_init_param.featuremask =
+				PMU_PG_FEATURE_GR_RPPG_ENABLED;
+
+		gp106_dbg_pmu("cmd post GR PMU_PG_CMD_ID_PG_PARAM");
+		gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
+				pmu_handle_param_msg, pmu, &seq, ~0);
+	}
+
+	return 0;
+}
+
 void gp106_init_pmu_ops(struct gpu_ops *gops)
 {
 	gk20a_dbg_fn("");
@@ -195,10 +257,10 @@ void gp106_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.lspmuwprinitdone = 0;
 	gops->pmu.fecsbootstrapdone = false;
 	gops->pmu.write_dmatrfbase = gp10b_write_dmatrfbase;
-	gops->pmu.pmu_elpg_statistics = NULL;
-	gops->pmu.pmu_pg_init_param = NULL;
-	gops->pmu.pmu_pg_supported_engines_list = NULL;
-	gops->pmu.pmu_pg_engines_feature_list = NULL;
+	gops->pmu.pmu_elpg_statistics = gp10b_pmu_elpg_statistics;
+	gops->pmu.pmu_pg_init_param = gp106_pg_param_init;
+	gops->pmu.pmu_pg_supported_engines_list = gp106_pmu_pg_engines_list;
+	gops->pmu.pmu_pg_engines_feature_list = gp106_pmu_pg_feature_list;
 	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd = NULL;
 	gops->pmu.dump_secure_fuses = NULL;
 	gops->pmu.reset = gp106_falcon_reset;

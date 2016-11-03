@@ -10,13 +10,8 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
+#ifndef _RPPG_H_
+#define _RPPG_H_
 
-#ifndef __PMU_GP106_H_
-#define __PMU_GP106_H_
-
-#define gp106_dbg_pmu(fmt, arg...) \
-	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
-
-void gp106_init_pmu_ops(struct gpu_ops *gops);
-
-#endif /*__PMU_GP106_H_*/
+u32 init_rppg(struct gk20a *g);
+#endif

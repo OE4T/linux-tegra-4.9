@@ -29,7 +29,11 @@
 
 #include "fuse.h"
 
-struct tegra_sku_info tegra_sku_info;
+struct tegra_sku_info tegra_sku_info = {
+	.cpu_iddq_value = -ENOTSUPP,
+	.gpu_iddq_value = -ENOTSUPP,
+	.soc_iddq_value = -ENOTSUPP,
+};
 EXPORT_SYMBOL(tegra_sku_info);
 
 static const char *tegra_revision_name[TEGRA_REVISION_MAX] = {
@@ -218,6 +222,30 @@ void tegra_fuse_control_write(u32 value, unsigned long offset)
 		return;
 
 	fuse->control_write(fuse, value, offset);
+}
+
+int tegra_fuse_get_cpu_iddq(void)
+{
+	if (!fuse->soc || !fuse->base)
+		return -ENODEV;
+
+	return tegra_sku_info.cpu_iddq_value;
+}
+
+int tegra_fuse_get_gpu_iddq(void)
+{
+	if (!fuse->soc || !fuse->base)
+		return -ENODEV;
+
+	return tegra_sku_info.gpu_iddq_value;
+}
+
+int tegra_fuse_get_soc_iddq(void)
+{
+	if (!fuse->soc || !fuse->base)
+		return -ENODEV;
+
+	return tegra_sku_info.soc_iddq_value;
 }
 
 static void tegra_enable_fuse_clk(void __iomem *base)

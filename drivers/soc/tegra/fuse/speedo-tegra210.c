@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -113,7 +113,7 @@ static int get_process_id(int value, const u32 *speedos, unsigned int num)
 
 void __init tegra210_init_speedo_data(struct tegra_sku_info *sku_info)
 {
-	int cpu_speedo[3], soc_speedo[3], cpu_iddq, gpu_iddq, soc_iddq;
+	int cpu_speedo[3], soc_speedo[3];
 	unsigned int index;
 	u8 speedo_revision;
 
@@ -133,9 +133,9 @@ void __init tegra210_init_speedo_data(struct tegra_sku_info *sku_info)
 	soc_speedo[1] = tegra_fuse_read_early(FUSE_SOC_SPEEDO_1);
 	soc_speedo[2] = tegra_fuse_read_early(FUSE_CPU_SPEEDO_2);
 
-	cpu_iddq = tegra_fuse_read_early(FUSE_CPU_IDDQ) * 4;
-	soc_iddq = tegra_fuse_read_early(FUSE_SOC_IDDQ) * 4;
-	gpu_iddq = tegra_fuse_read_early(FUSE_GPU_IDDQ) * 5;
+	sku_info->cpu_iddq_value = tegra_fuse_read_early(FUSE_CPU_IDDQ) * 4;
+	sku_info->soc_iddq_value = tegra_fuse_read_early(FUSE_SOC_IDDQ) * 4;
+	sku_info->gpu_iddq_value = tegra_fuse_read_early(FUSE_GPU_IDDQ) * 5;
 
 	/*
 	 * Determine CPU, GPU and SoC speedo values depending on speedo fusing

@@ -115,37 +115,42 @@ static int pva_init_fw(struct platform_device *pdev)
 
 		switch (useg->type) {
 
-		case PVA_UCODE_SEG_EVP:
-		{
+		case PVA_UCODE_SEG_EVP: {
 			/* First 32 bytes of the EVP payload are zeros.
 			 * so skip first 32 bytes
 			 */
+			u32 *evpmem =
+				(u32 *)((u8 *)ucode_ptr + useg->offset + 32);
 			u32 i;
-			u32 *evpmem =  (u32 *)((void *)ucode_ptr
-						+ useg->offset + 32);
+
 			for (i = 0; i < EVP_REG_NUM; i++)
-				host1x_writel(pdev,
-					pva_get_evp_reg(i), evpmem[i]);
+				host1x_writel(pdev, pva_get_evp_reg(i),
+					      evpmem[i]);
+			break;
 		}
-		break;
-		case PVA_UCODE_SEG_R5:
-		{
-			/* R5 segment - Program PRIV1 segment regs*/
-			/* Subracting PRIV1 start for R5PRIV1 address*/
-			u64 seg_addr = (fw_info->ucode_phys - useg->addr);
 
-			host1x_writel(pdev, cfg_priv_ar1_start_r(),
-						useg->addr);
-			host1x_writel(pdev, cfg_priv_ar1_end_r(),
-				useg->addr + useg->size);
+		case PVA_UCODE_SEG_R5: {
+			/* Subracting PRIV1 start for R5PRIV1 address */
+			const u64 seg_addr = fw_info->ucode_phys - useg->addr;
+			/* Calculate segment start address */
+			const u64 useg_addr = seg_addr + useg->offset;
+			const u32 useg_addr_low = PVA_LOW32(useg_addr);
+			const u32 useg_addr_high =
+				PVA_EXTRACT64((useg_addr), 39, 32, u32);
+			/* Calculate ar1 base and limit */
+			const u32 ar1_start = useg->addr;
+			const u32 ar1_end =
+				useg->addr + fw_info->size - useg->offset;
+
+			host1x_writel(pdev, cfg_priv_ar1_start_r(), ar1_start);
+			host1x_writel(pdev, cfg_priv_ar1_end_r(), ar1_end);
 			host1x_writel(pdev, cfg_priv_ar1_lsegreg_r(),
-				PVA_LOW32((seg_addr + useg->offset)));
+				      useg_addr_low);
 			host1x_writel(pdev, cfg_priv_ar1_usegreg_r(),
-				PVA_EXTRACT64((seg_addr + useg->offset),
-						39, 32, u32));
-		}
-		break;
+				      useg_addr_high);
 
+			break;
+		}
 		}
 	}
 

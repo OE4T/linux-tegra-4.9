@@ -51,6 +51,7 @@ static int tegra_reset_probe(struct platform_device *pdev)
 
 static const struct of_device_id tegra_reset_match[] = {
 	{ .compatible = "nvidia,tegra18x-car", .data = tegra18x_reset_probe },
+	{ .compatible = "nvidia,bpmp-resets", .data = tegra18x_reset_probe },
 	{ },
 };
 

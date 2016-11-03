@@ -27,6 +27,7 @@
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/slot-gpio.h>
 #include <linux/gpio/consumer.h>
+#include <linux/sysfs.h>
 
 #include "sdhci-pltfm.h"
 
@@ -37,6 +38,7 @@
 #define SDHCI_CLOCK_CTRL_SDR50_TUNING_OVERRIDE		BIT(5)
 #define SDHCI_CLOCK_CTRL_PADPIPE_CLKEN_OVERRIDE		BIT(3)
 #define SDHCI_CLOCK_CTRL_SPI_MODE_CLKEN_OVERRIDE	BIT(2)
+#define SDHCI_CLOCK_CTRL_SDMMC_CLK			BIT(0)
 
 #define SDHCI_TEGRA_VENDOR_MISC_CTRL		0x120
 #define SDHCI_MISC_CTRL_ENABLE_SDR104		0x8
@@ -56,17 +58,33 @@
 #define NVQUIRK_ENABLE_DDR50		BIT(5)
 #define NVQUIRK_HAS_PADCALIB		BIT(6)
 
+#define MAX_CLK_PARENTS 5
+#define MAX_DIVISOR_VALUE 128
+
 struct sdhci_tegra_soc_data {
 	const struct sdhci_pltfm_data *pdata;
 	u32 nvquirks;
 };
 
+struct sdhci_tegra_clk_src_data {
+	struct clk *parent_clk[MAX_CLK_PARENTS];
+	const char *parent_clk_name[MAX_CLK_PARENTS];
+	unsigned long parent_clk_rate[MAX_CLK_PARENTS];
+	u8 parent_clk_src_cnt;
+	u8 curr_parent_clk_idx;
+};
+
 struct sdhci_tegra {
 	const struct sdhci_tegra_soc_data *soc_data;
 	struct gpio_desc *power_gpio;
+	struct reset_control *rst;
 	bool ddr_signaling;
 	bool pad_calib_required;
-	struct reset_control *rst;
+	struct sdhci_tegra_clk_src_data *clk_src_data;
+	bool is_clk_enabled;
+	unsigned long curr_clk_rate;
+	unsigned long max_clk_limit;
+	unsigned long max_ddr_clk_limit;
 };
 
 static u16 tegra_sdhci_readw(struct sdhci_host *host, int reg)
@@ -219,24 +237,177 @@ static void tegra_sdhci_pad_autocalib(struct sdhci_host *host)
 	sdhci_writel(host,val, SDHCI_TEGRA_AUTO_CAL_CONFIG);
 }
 
-static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
+static unsigned long get_nearest_clock_freq(unsigned long parent_rate,
+	unsigned long desired_rate)
+{
+	unsigned long result, result_frac_div;
+	int div, rem;
+
+	if (parent_rate <= desired_rate)
+		return parent_rate;
+
+	div = parent_rate / desired_rate;
+	div = (div > MAX_DIVISOR_VALUE) ? MAX_DIVISOR_VALUE : div;
+	rem = parent_rate % div;
+	if (div == MAX_DIVISOR_VALUE || !rem)
+		return (parent_rate / div);
+	else {
+		result_frac_div = (parent_rate << 1) / ((div << 1) + 1);
+		if (result_frac_div > desired_rate)
+			return (parent_rate / (div + 1));
+		else
+			return result_frac_div;
+	}
+
+	return result;
+}
+
+static void tegra_sdhci_set_clk_parent(struct sdhci_host *host,
+	unsigned long desired_rate)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+	struct sdhci_tegra_clk_src_data *clk_src_data;
+	unsigned long parent_clk_rate, rate, nearest_freq_rate = 0;
+	int rc;
+	u8 i, sel_parent_idx;
+
+	clk_src_data = tegra_host->clk_src_data;
+	if (!clk_src_data) {
+		dev_err(mmc_dev(host->mmc), "clk src data NULL");
+		return;
+	}
+
+	for (i = 0; i < clk_src_data->parent_clk_src_cnt; i++) {
+		parent_clk_rate = clk_src_data->parent_clk_rate[i];
+		rate = get_nearest_clock_freq(parent_clk_rate, desired_rate);
+		if (rate > nearest_freq_rate) {
+			nearest_freq_rate = rate;
+			sel_parent_idx = i;
+		}
+	}
+
+	dev_dbg(mmc_dev(host->mmc), "chosen clk parent %s, parent rate %lu\n",
+		clk_src_data->parent_clk_name[sel_parent_idx],
+		clk_src_data->parent_clk_rate[sel_parent_idx]);
+	/* Do nothing if the desired parent is already set */
+	if (clk_src_data->curr_parent_clk_idx == sel_parent_idx)
+		return;
+	else {
+		rc = clk_set_parent(pltfm_host->clk,
+			clk_src_data->parent_clk[sel_parent_idx]);
+		if (rc)
+			dev_err(mmc_dev(host->mmc),
+				"Failed to set parent pll %d\n", rc);
+		else
+			clk_src_data->curr_parent_clk_idx = sel_parent_idx;
+	}
+}
+
+static void tegra_sdhci_set_clk_rate(struct sdhci_host *host,
+	unsigned long host_clk)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+	int rc;
+
+	if (host_clk == tegra_host->curr_clk_rate)
+		return;
+
+	/* Set the required clock parent based on the desired rate */
+	tegra_sdhci_set_clk_parent(host, host_clk);
+
+	/*
+	 * Proceed irrespective of parent selection as the interface could
+	 * work at a lower frequency too. Parent clk selection would report
+	 * errors in the logs.
+	 */
+	rc = clk_set_rate(pltfm_host->clk, host_clk);
+	if (rc)
+		dev_err(mmc_dev(host->mmc),
+			"Failed to set %lu clk rate\n", host_clk);
+	else {
+		/*
+		 * Clock frequency actually set would be slightly different from
+		 * desired rate. Next request would again come for the desired
+		 * rate. Hence, store the desired rate in curr_clk_rate.
+		 */
+		tegra_host->curr_clk_rate = host_clk;
+	}
+}
+
+static unsigned long tegra_sdhci_apply_clk_limits(struct sdhci_host *host,
+	unsigned int clock)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 	unsigned long host_clk;
 
-	if (!clock)
-		return sdhci_set_clock(host, clock);
+	if (tegra_host->ddr_signaling)
+		host_clk = (tegra_host->max_ddr_clk_limit) ?
+			tegra_host->max_ddr_clk_limit * 2 : clock * 2;
+	else
+		host_clk = tegra_host->max_clk_limit ?
+			tegra_host->max_clk_limit : clock;
 
-	host_clk = tegra_host->ddr_signaling ? clock * 2 : clock;
-	clk_set_rate(pltfm_host->clk, host_clk);
-	host->max_clk = clk_get_rate(pltfm_host->clk);
+	dev_dbg(mmc_dev(host->mmc), "Setting clk limit %lu\n", host_clk);
+	return host_clk;
+}
 
-	sdhci_set_clock(host, clock);
+static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+	unsigned long host_clk;
+	int rc;
+	u8 vndr_ctrl;
 
-	if (tegra_host->pad_calib_required) {
-		tegra_sdhci_pad_autocalib(host);
-		tegra_host->pad_calib_required = false;
+	host_clk = tegra_sdhci_apply_clk_limits(host, clock);
+
+	if (clock) {
+		/* Enable SDMMC host CAR clock */
+		if (!tegra_host->is_clk_enabled) {
+			rc = clk_prepare_enable(pltfm_host->clk);
+			if (rc) {
+				dev_err(mmc_dev(host->mmc),
+					"clk enable failed %d\n", rc);
+				return;
+			}
+			tegra_host->is_clk_enabled = true;
+			vndr_ctrl = sdhci_readb(host,
+				SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
+			vndr_ctrl |= SDHCI_CLOCK_CTRL_SDMMC_CLK;
+			sdhci_writeb(host, vndr_ctrl,
+				SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
+		}
+
+		/* Set the desired clk freq rate */
+		tegra_sdhci_set_clk_rate(host, host_clk);
+		host->max_clk = clk_get_rate(pltfm_host->clk);
+
+		/* Run auto calibration if required */
+		if (tegra_host->pad_calib_required) {
+			tegra_sdhci_pad_autocalib(host);
+			tegra_host->pad_calib_required = false;
+		}
+
+		/* Enable SDMMC internal and card clocks */
+		sdhci_set_clock(host, clock);
+	} else {
+		/* Disable the card and internal clocks first */
+		sdhci_set_clock(host, clock);
+
+		/* Disable SDMMC host CAR clock */
+		if (tegra_host->is_clk_enabled) {
+			vndr_ctrl = sdhci_readb(host,
+				SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
+			vndr_ctrl &= ~SDHCI_CLOCK_CTRL_SDMMC_CLK;
+			sdhci_writeb(host, vndr_ctrl,
+				SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
+			clk_disable_unprepare(pltfm_host->clk);
+			tegra_host->is_clk_enabled = false;
+		}
+
 	}
 }
 
@@ -315,6 +486,53 @@ static void tegra_sdhci_voltage_switch(struct sdhci_host *host)
 
 	if (soc_data->nvquirks & NVQUIRK_HAS_PADCALIB)
 		tegra_host->pad_calib_required = true;
+}
+
+static int sdhci_tegra_get_parent_pll_from_dt(struct sdhci_host *host,
+	struct platform_device *pdev)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+	struct device_node *np = pdev->dev.of_node;
+	struct sdhci_tegra_clk_src_data *clk_src_data;
+	struct clk *parent_clk;
+	const char *pll_str;
+	int i, cnt, j = 0;
+
+	if (!np || !tegra_host)
+		return -EINVAL;
+
+	if (!of_find_property(np, "pll_source", NULL))
+		return -ENXIO;
+
+	clk_src_data = tegra_host->clk_src_data;
+	cnt = of_property_count_strings(np, "pll_source");
+	if (!cnt)
+		return -EINVAL;
+
+	if (cnt > MAX_CLK_PARENTS) {
+		dev_warn(mmc_dev(host->mmc),
+			"Parent sources list exceeded limit\n");
+		cnt = MAX_CLK_PARENTS;
+	}
+
+	for (i = 0; i < cnt; i++) {
+		of_property_read_string_index(np, "pll_source", i, &pll_str);
+		parent_clk = devm_clk_get(&pdev->dev, pll_str);
+		if (IS_ERR(parent_clk))
+			dev_err(mmc_dev(host->mmc), "Failed to get %s clk\n",
+				pll_str);
+		else {
+			clk_src_data->parent_clk_name[j] = pll_str;
+			clk_src_data->parent_clk_rate[j] = clk_get_rate(parent_clk);
+			clk_src_data->parent_clk[j++] = parent_clk;
+		}
+	}
+
+	/* Count valid parent clock sources with clk structures */
+	clk_src_data->parent_clk_src_cnt = j;
+
+	return 0;
 }
 
 static const struct sdhci_ops tegra_sdhci_ops = {
@@ -456,6 +674,23 @@ static const struct of_device_id sdhci_tegra_dt_match[] = {
 };
 MODULE_DEVICE_TABLE(of, sdhci_tegra_dt_match);
 
+static int sdhci_tegra_parse_dt(struct platform_device *pdev)
+{
+	struct device_node *np = pdev->dev.of_node;
+	struct sdhci_host *host = platform_get_drvdata(pdev);
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+
+	if (!np)
+		return -EINVAL;
+
+	of_property_read_u32(np, "max-clk-limit", (u32 *)&tegra_host->max_clk_limit);
+	of_property_read_u32(np, "ddr-clk-limit",
+		(u32 *)&tegra_host->max_ddr_clk_limit);
+
+	return 0;
+}
+
 static int sdhci_tegra_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *match;
@@ -464,6 +699,7 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 	struct sdhci_pltfm_host *pltfm_host;
 	struct sdhci_tegra *tegra_host;
 	struct clk *clk;
+	struct sdhci_tegra_clk_src_data *clk_src_data;
 	int rc;
 
 	match = of_match_device(sdhci_tegra_dt_match, &pdev->dev);
@@ -484,6 +720,20 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 	rc = mmc_of_parse(host->mmc);
 	if (rc)
 		goto err_parse_dt;
+	sdhci_tegra_parse_dt(pdev);
+
+	clk_src_data = devm_kzalloc(&pdev->dev, sizeof(clk_src_data),
+		GFP_KERNEL);
+	if (IS_ERR_OR_NULL(clk_src_data)) {
+		dev_err(mmc_dev(host->mmc),
+			"Insufficient memory for clk source data\n");
+		return -ENOMEM;
+	}
+	tegra_host->clk_src_data = clk_src_data;
+	rc = sdhci_tegra_get_parent_pll_from_dt(host, pdev);
+	if (rc)
+		dev_err(mmc_dev(host->mmc),
+			"Failed to find parent clocks\n");
 
 	if (tegra_host->soc_data->nvquirks & NVQUIRK_ENABLE_DDR50)
 		host->mmc->caps |= MMC_CAP_1_8V_DDR;

@@ -70,6 +70,14 @@ static inline u32 proj_lts_stride_v(void)
 {
 	return 0x00000200;
 }
+static inline u32 proj_fbpa_base_v(void)
+{
+	return 0x00900000;
+}
+static inline u32 proj_fbpa_shared_base_v(void)
+{
+	return 0x009a0000;
+}
 static inline u32 proj_fbpa_stride_v(void)
 {
 	return 0x00004000;

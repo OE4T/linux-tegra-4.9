@@ -178,6 +178,12 @@ static int gp10b_get_litter_value(struct gk20a *g, int value)
 	case GPU_LIT_FBPA_STRIDE:
 		ret = proj_fbpa_stride_v();
 		break;
+	case GPU_LIT_FBPA_BASE:
+		ret = proj_fbpa_base_v();
+		break;
+	case GPU_LIT_FBPA_SHARED_BASE:
+		ret = proj_fbpa_shared_base_v();
+		break;
 	default:
 		gk20a_err(dev_from_gk20a(g), "Missing definition %d", value);
 		BUG();

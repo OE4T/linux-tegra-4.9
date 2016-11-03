@@ -27,7 +27,8 @@
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/slot-gpio.h>
 #include <linux/gpio/consumer.h>
-#include <linux/sysfs.h>
+#include <linux/debugfs.h>
+#include <linux/stat.h>
 
 #include "sdhci-pltfm.h"
 
@@ -86,6 +87,8 @@ struct sdhci_tegra {
 	unsigned long max_clk_limit;
 	unsigned long max_ddr_clk_limit;
 };
+
+static void sdhci_tegra_debugfs_init(struct sdhci_host *host);
 
 static u16 tegra_sdhci_readw(struct sdhci_host *host, int reg)
 {
@@ -765,6 +768,9 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 	if (rc)
 		goto err_add_host;
 
+	/* Initialize debugfs */
+	sdhci_tegra_debugfs_init(host);
+
 	return 0;
 
 err_add_host:
@@ -774,6 +780,43 @@ err_power_req:
 err_parse_dt:
 	sdhci_pltfm_free(pdev);
 	return rc;
+}
+
+static void sdhci_tegra_debugfs_init(struct sdhci_host *host)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+	struct sdhci_tegra_clk_src_data *clk_src_data;
+	struct dentry *sdhcidir, *clkdir, *retval;
+
+	clk_src_data = tegra_host->clk_src_data;
+	sdhcidir = debugfs_create_dir(dev_name(mmc_dev(host->mmc)), NULL);
+	if (!sdhcidir) {
+		dev_err(mmc_dev(host->mmc), "Failed to create debugfs\n");
+		return;
+	}
+
+	/* Create clock debugfs dir under sdhci debugfs dir */
+	clkdir = debugfs_create_dir("clock_data", sdhcidir);
+	if (!clkdir)
+		goto err;
+
+	retval = debugfs_create_ulong("curr_clk_rate", S_IRUGO, clkdir,
+		&tegra_host->curr_clk_rate);
+	if (!retval)
+		goto err;
+
+	retval = debugfs_create_ulong("parent_clk_rate", S_IRUGO, clkdir,
+		&clk_src_data->parent_clk_rate[
+			clk_src_data->curr_parent_clk_idx]);
+	if (!retval)
+		goto err;
+
+	return;
+err:
+	debugfs_remove_recursive(sdhcidir);
+	sdhcidir = NULL;
+	return;
 }
 
 static struct platform_driver sdhci_tegra_driver = {

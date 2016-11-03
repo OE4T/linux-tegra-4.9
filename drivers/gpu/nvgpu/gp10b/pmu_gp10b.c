@@ -222,26 +222,30 @@ static void pmu_handle_gr_param_msg(struct gk20a *g, struct pmu_msg *msg,
 	return;
 }
 
-int gp10b_pg_gr_init(struct gk20a *g, u8 grfeaturemask)
+int gp10b_pg_gr_init(struct gk20a *g, u32 pg_engine_id)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq;
 
-	memset(&cmd, 0, sizeof(struct pmu_cmd));
-	cmd.hdr.unit_id = PMU_UNIT_PG;
-	cmd.hdr.size = PMU_CMD_HDR_SIZE +
-			sizeof(struct pmu_pg_cmd_gr_init_param);
-	cmd.cmd.pg.gr_init_param.cmd_type =
-			PMU_PG_CMD_ID_PG_PARAM;
-	cmd.cmd.pg.gr_init_param.sub_cmd_id =
-			PMU_PG_PARAM_CMD_GR_INIT_PARAM;
-	cmd.cmd.pg.gr_init_param.featuremask =
-			grfeaturemask;
+	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS) {
+		memset(&cmd, 0, sizeof(struct pmu_cmd));
+		cmd.hdr.unit_id = PMU_UNIT_PG;
+		cmd.hdr.size = PMU_CMD_HDR_SIZE +
+				sizeof(struct pmu_pg_cmd_gr_init_param);
+		cmd.cmd.pg.gr_init_param.cmd_type =
+				PMU_PG_CMD_ID_PG_PARAM;
+		cmd.cmd.pg.gr_init_param.sub_cmd_id =
+				PMU_PG_PARAM_CMD_GR_INIT_PARAM;
+		cmd.cmd.pg.gr_init_param.featuremask =
+				PMU_PG_FEATURE_GR_POWER_GATING_ENABLED;
 
-	gp10b_dbg_pmu("cmd post PMU_PG_CMD_ID_PG_PARAM %x", grfeaturemask);
-	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
-			pmu_handle_gr_param_msg, pmu, &seq, ~0);
+		gp10b_dbg_pmu("cmd post PMU_PG_CMD_ID_PG_PARAM ");
+		gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
+				pmu_handle_gr_param_msg, pmu, &seq, ~0);
+
+	} else
+		return -EINVAL;
 
 	return 0;
 }
@@ -474,7 +478,9 @@ void gp10b_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.fecsbootstrapdone = false;
 	gops->pmu.write_dmatrfbase = gp10b_write_dmatrfbase;
 	gops->pmu.pmu_elpg_statistics = gp10b_pmu_elpg_statistics;
-	gops->pmu.pmu_pg_grinit_param = gp10b_pg_gr_init;
+	gops->pmu.pmu_pg_init_param = gp10b_pg_gr_init;
+	gops->pmu.pmu_pg_supported_engines_list = gk20a_pmu_pg_engines_list;
+	gops->pmu.pmu_pg_engines_feature_list = gk20a_pmu_pg_feature_list;
 	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd =
 			send_ecc_overide_en_dis_cmd;
 	gops->pmu.reset = gk20a_pmu_reset;

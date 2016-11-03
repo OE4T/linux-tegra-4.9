@@ -482,6 +482,9 @@ void gp10b_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_pg_init_param = gp10b_pg_gr_init;
 	gops->pmu.pmu_pg_supported_engines_list = gk20a_pmu_pg_engines_list;
 	gops->pmu.pmu_pg_engines_feature_list = gk20a_pmu_pg_feature_list;
+	gops->pmu.pmu_lpwr_enable_pg = NULL;
+	gops->pmu.pmu_lpwr_disable_pg = NULL;
+	gops->pmu.pmu_pg_param_post_init = NULL;
 	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd =
 			send_ecc_overide_en_dis_cmd;
 	gops->pmu.reset = gk20a_pmu_reset;

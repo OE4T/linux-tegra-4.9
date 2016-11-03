@@ -48,6 +48,9 @@ struct pstate {
 struct pstates {
 	struct boardobjgrp_e32 super;
 	u32  num_levels;
+	wait_queue_head_t pstate_notifier_wq;
+	u32 is_pstate_switch_on;
+	struct mutex pstate_mutex; /* protect is_pstate_switch_on */
 };
 
 int gk20a_init_pstate_support(struct gk20a *g);
@@ -55,5 +58,6 @@ int gk20a_init_pstate_pmu_support(struct gk20a *g);
 
 struct clk_set_info *pstate_get_clk_set_info(struct gk20a *g, u32 pstate_num,
 		enum nv_pmu_clk_clkwhich clkwhich);
+struct pstate *pstate_find(struct gk20a *g, u32 num);
 
 #endif /* __PSTATE_H__ */

@@ -925,4 +925,68 @@ struct vbios_fct_1x_entry {
 #define NV_VBIOS_FCT_1X_ENTRY_PARAM8_FREQ_HYST_NEG_MASK GENMASK(31, 16)
 #define NV_VBIOS_FCT_1X_ENTRY_PARAM8_FREQ_HYST_NEG_SHIFT 16
 
+/* LPWR Index Table */
+struct nvgpu_bios_lpwr_idx_table_1x_header {
+	u8 version;
+	u8 header_size;
+	u8 entry_size;
+	u8 entry_count;
+	u16 base_sampling_period;
+} __packed;
+
+struct nvgpu_bios_lpwr_idx_table_1x_entry {
+	u8 pcie_idx;
+	u8 gr_idx;
+	u8 ms_idx;
+	u8 di_idx;
+	u8 gc6_idx;
+} __packed;
+
+/* LPWR MS Table*/
+struct nvgpu_bios_lpwr_ms_table_1x_header {
+	u8 version;
+	u8 header_size;
+	u8 entry_size;
+	u8 entry_count;
+	u8 default_entry_idx;
+	u16 idle_threshold_us;
+} __packed;
+
+struct nvgpu_bios_lpwr_ms_table_1x_entry {
+	u32 feautre_mask;
+	u16 dynamic_current_logic;
+	u16 dynamic_current_sram;
+} __packed;
+
+#define NV_VBIOS_LPWR_MS_FEATURE_MASK_MS_MASK    GENMASK(0, 0)
+#define NV_VBIOS_LPWR_MS_FEATURE_MASK_MS_SHIFT    0
+#define NV_VBIOS_LPWR_MS_FEATURE_MASK_MS_SWASR_MASK    GENMASK(2, 2)
+#define NV_VBIOS_LPWR_MS_FEATURE_MASK_MS_SWASR_SHIFT    2
+#define NV_VBIOS_LPWR_MS_FEATURE_MASK_MS_CLOCK_GATING_MASK    \
+			GENMASK(3, 3)
+#define NV_VBIOS_LPWR_MS_FEATURE_MASK_MS_CLOCK_GATING_SHIFT    3
+#define NV_VBIOS_LPWR_MS_FEATURE_MASK_MS_RPPG_MASK    GENMASK(5, 5)
+#define NV_VBIOS_LPWR_MS_FEATURE_MASK_MS_RPPG_SHIFT    5
+
+/* LPWR GR Table */
+struct nvgpu_bios_lpwr_gr_table_1x_header {
+	u8 version;
+	u8 header_size;
+	u8 entry_size;
+	u8 entry_count;
+	u8 default_entry_idx;
+	u16 idle_threshold_us;
+	u8 adaptive_gr_multiplier;
+} __packed;
+
+struct nvgpu_bios_lpwr_gr_table_1x_entry {
+	u32 feautre_mask;
+} __packed;
+
+#define NV_VBIOS_LPWR_GR_FEATURE_MASK_GR_MASK GENMASK(0, 0)
+#define NV_VBIOS_LPWR_GR_FEATURE_MASK_GR_SHIFT 0
+
+#define NV_VBIOS_LPWR_GR_FEATURE_MASK_GR_RPPG_MASK GENMASK(4, 4)
+#define NV_VBIOS_LPWR_GR_FEATURE_MASK_GR_RPPG_SHIFT 4
+
 #endif

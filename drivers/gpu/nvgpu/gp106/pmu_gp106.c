@@ -24,6 +24,7 @@
 #include "clk/clk_mclk.h"
 #include "hw_mc_gp106.h"
 #include "hw_pwr_gp106.h"
+#include "lpwr/lpwr.h"
 #include "lpwr/rppg.h"
 
 #define PMU_MEM_SCRUBBING_TIMEOUT_MAX 1000
@@ -180,12 +181,16 @@ static u32 gp106_pmu_pg_feature_list(struct gk20a *g, u32 pg_engine_id)
 	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
 		return PMU_PG_FEATURE_GR_RPPG_ENABLED;
 
+	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS)
+		return NVGPU_PMU_MS_FEATURE_MASK_ALL;
+
 	return 0;
 }
 
 static u32 gp106_pmu_pg_engines_list(struct gk20a *g)
 {
-	return BIT(PMU_PG_ELPG_ENGINE_ID_GRAPHICS);
+	return BIT(PMU_PG_ELPG_ENGINE_ID_GRAPHICS) |
+			BIT(PMU_PG_ELPG_ENGINE_ID_MS);
 }
 
 static void pmu_handle_param_msg(struct gk20a *g, struct pmu_msg *msg,
@@ -231,6 +236,23 @@ static int gp106_pg_param_init(struct gk20a *g, u32 pg_engine_id)
 		gp106_dbg_pmu("cmd post GR PMU_PG_CMD_ID_PG_PARAM");
 		gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 				pmu_handle_param_msg, pmu, &seq, ~0);
+	} else if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS) {
+		cmd.hdr.unit_id = PMU_UNIT_PG;
+		cmd.hdr.size = PMU_CMD_HDR_SIZE +
+			sizeof(struct pmu_pg_cmd_ms_init_param);
+		cmd.cmd.pg.ms_init_param.cmd_type =
+			PMU_PG_CMD_ID_PG_PARAM;
+		cmd.cmd.pg.ms_init_param.cmd_id =
+			PMU_PG_PARAM_CMD_MS_INIT_PARAM;
+		cmd.cmd.pg.ms_init_param.support_mask =
+			NVGPU_PMU_MS_FEATURE_MASK_CLOCK_GATING |
+			NVGPU_PMU_MS_FEATURE_MASK_SW_ASR |
+			NVGPU_PMU_MS_FEATURE_MASK_RPPG |
+			NVGPU_PMU_MS_FEATURE_MASK_FB_TRAINING;
+
+		gp106_dbg_pmu("cmd post MS PMU_PG_CMD_ID_PG_PARAM");
+		gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
+			pmu_handle_param_msg, pmu, &seq, ~0);
 	}
 
 	return 0;
@@ -261,6 +283,9 @@ void gp106_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_pg_init_param = gp106_pg_param_init;
 	gops->pmu.pmu_pg_supported_engines_list = gp106_pmu_pg_engines_list;
 	gops->pmu.pmu_pg_engines_feature_list = gp106_pmu_pg_feature_list;
+	gops->pmu.pmu_lpwr_enable_pg = nvgpu_lpwr_enable_pg;
+	gops->pmu.pmu_lpwr_disable_pg = nvgpu_lpwr_disable_pg;
+	gops->pmu.pmu_pg_param_post_init = nvgpu_lpwr_post_init;
 	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd = NULL;
 	gops->pmu.dump_secure_fuses = NULL;
 	gops->pmu.reset = gp106_falcon_reset;

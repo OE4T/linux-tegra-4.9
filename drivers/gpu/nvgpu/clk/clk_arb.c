@@ -44,14 +44,6 @@ static void nvgpu_clk_arb_free_session(struct kref *refcount);
 static int nvgpu_clk_arb_change_vf_point(struct gk20a *g, u16 gpc2clk_target,
 	u16 sys2clk_target, u16 xbar2clk_target, u16 mclk_target, u32 voltuv,
 	u32 voltuv_sram);
-static int nvgpu_clk_arb_change_vf_point_prefix(struct gk20a *g,
-	u16 gpc2clk_target, u16 sys2clk_target, u16 xbar2clk_target,
-	u16 mclk_target, u32 voltuv, u32 voltuv_sram, u32 nuvmin,
-	u32 nuvmin_sram);
-static int nvgpu_clk_arb_change_vf_point_postfix(struct gk20a *g,
-	u16 gpc2clk_target, u16 sys2clk_target, u16 xbar2clk_target,
-	u16 mclk_target, u32 voltuv, u32 voltuv_sram, u32 nuvmin,
-	u32 nuvmin_sram);
 static u8 nvgpu_clk_arb_find_vf_point(struct nvgpu_clk_arb *arb,
 	u16 *gpc2clk, u16 *sys2clk, u16 *xbar2clk, u16 *mclk,
 	u32 *voltuv, u32 *voltuv_sram, u32 *nuvmin, u32 *nuvmin_sram);
@@ -105,6 +97,7 @@ struct nvgpu_clk_arb {
 	spinlock_t sessions_lock;
 	spinlock_t users_lock;
 
+	struct mutex pstate_lock;
 	struct list_head users;
 	struct list_head sessions;
 	struct llist_head requests;
@@ -235,6 +228,7 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 	g->clk_arb = arb;
 	arb->g = g;
 
+	mutex_init(&arb->pstate_lock);
 	spin_lock_init(&arb->sessions_lock);
 	spin_lock_init(&arb->users_lock);
 
@@ -943,12 +937,23 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	/* Program clocks */
 	/* A change in both mclk of gpc2clk may require a change in voltage */
 
-	status = nvgpu_clk_arb_change_vf_point_prefix(g, gpc2clk_target,
-		sys2clk_target, xbar2clk_target, mclk_target, voltuv,
-		voltuv_sram, nuvmin, nuvmin_sram);
+	mutex_lock(&arb->pstate_lock);
+	status = nvgpu_lpwr_disable_pg(g, false);
 
+	status = clk_pmu_freq_controller_load(g, false);
 	if (status < 0) {
 		arb->status = status;
+		mutex_unlock(&arb->pstate_lock);
+
+		/* make status visible */
+		smp_mb();
+		goto exit_arb;
+	}
+	status = volt_set_noiseaware_vmin(g, nuvmin, nuvmin_sram);
+	if (status < 0) {
+		arb->status = status;
+		mutex_unlock(&arb->pstate_lock);
+
 		/* make status visible */
 		smp_mb();
 		goto exit_arb;
@@ -957,20 +962,30 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	status = nvgpu_clk_arb_change_vf_point(g, gpc2clk_target,
 		sys2clk_target, xbar2clk_target, mclk_target, voltuv,
 		voltuv_sram);
-
 	if (status < 0) {
 		arb->status = status;
+		mutex_unlock(&arb->pstate_lock);
+
 		/* make status visible */
 		smp_mb();
 		goto exit_arb;
 	}
 
-	status = nvgpu_clk_arb_change_vf_point_postfix(g, gpc2clk_target,
-		sys2clk_target, xbar2clk_target, mclk_target, voltuv,
-		voltuv_sram, nuvmin, nuvmin_sram);
-
+	status = clk_pmu_freq_controller_load(g, true);
 	if (status < 0) {
 		arb->status = status;
+		mutex_unlock(&arb->pstate_lock);
+
+		/* make status visible */
+		smp_mb();
+		goto exit_arb;
+	}
+
+	status = nvgpu_lwpr_mclk_change(g, pstate);
+	if (status < 0) {
+		arb->status = status;
+		mutex_unlock(&arb->pstate_lock);
+
 		/* make status visible */
 		smp_mb();
 		goto exit_arb;
@@ -991,15 +1006,24 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	smp_wmb();
 	xchg(&arb->actual, actual);
 
+	status = nvgpu_lpwr_enable_pg(g, false);
+	if (status < 0) {
+		arb->status = status;
+		mutex_unlock(&arb->pstate_lock);
+
+		/* make status visible */
+		smp_mb();
+		goto exit_arb;
+	}
+
 	/* status must be visible before atomic inc */
 	smp_wmb();
 	atomic_inc(&arb->req_nr);
 
-	wake_up_interruptible(&arb->request_wq);
+	/* Unlock pstate change for PG */
+	mutex_unlock(&arb->pstate_lock);
 
-	if (status < 0)
-		gk20a_err(dev_from_gk20a(g),
-			"Error in arbiter update");
+	wake_up_interruptible(&arb->request_wq);
 
 #ifdef CONFIG_DEBUG_FS
 	g->ops.read_ptimer(g, &t1);
@@ -1036,6 +1060,9 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 #endif
 
 exit_arb:
+	if (status < 0)
+		gk20a_err(dev_from_gk20a(g),
+				"Error in arbiter update");
 
 	/* notify completion for all requests */
 	head = llist_del_all(&arb->requests);
@@ -1300,6 +1327,7 @@ recalculate_vf_point:
 		}
 		if (index == table->mclk_num_points) {
 			mclk_vf = &table->mclk_points[index-1];
+			index = table->mclk_num_points - 1;
 		}
 		index_mclk = index;
 
@@ -1378,28 +1406,11 @@ find_exit:
 	return pstate;
 }
 
-static int nvgpu_clk_arb_change_vf_point_prefix(struct gk20a *g,
-	u16 gpc2clk_target, u16 sys2clk_target, u16 xbar2clk_target,
-	u16 mclk_target, u32 voltuv, u32 voltuv_sram, u32 nuvmin,
-	u32 nuvmin_sram)
+/* This function is inherently unsafe to call while arbiter is running
+ * arbiter must be blocked before calling this function */
+int nvgpu_clk_arb_get_current_pstate(struct gk20a *g)
 {
-
-	int status;
-
-	status = clk_pmu_freq_controller_load(g, false);
-	if (status < 0)
-		return status;
-
-	status = volt_set_noiseaware_vmin(g, nuvmin, nuvmin_sram);
-	return status;
-}
-
-static int nvgpu_clk_arb_change_vf_point_postfix(struct gk20a *g,
-	u16 gpc2clk_target, u16 sys2clk_target, u16 xbar2clk_target,
-	u16 mclk_target, u32 voltuv, u32 voltuv_sram, u32 nuvmin,
-	u32 nuvmin_sram)
-{
-	return clk_pmu_freq_controller_load(g, true);
+	return ACCESS_ONCE(g->clk_arb->actual->pstate);
 }
 
 static int nvgpu_clk_arb_change_vf_point(struct gk20a *g, u16 gpc2clk_target,
@@ -1454,6 +1465,17 @@ static int nvgpu_clk_arb_change_vf_point(struct gk20a *g, u16 gpc2clk_target,
 	}
 
 	return 0;
+}
+
+void nvgpu_clk_arb_pstate_change_lock(struct gk20a *g, bool lock)
+{
+	struct nvgpu_clk_arb *arb = g->clk_arb;
+
+	if (lock)
+		mutex_lock(&arb->pstate_lock);
+	else
+		mutex_unlock(&arb->pstate_lock);
+
 }
 
 #ifdef CONFIG_DEBUG_FS

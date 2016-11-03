@@ -83,6 +83,10 @@ int gk20a_init_pstate_support(struct gk20a *g)
 		return err;
 
 	err = clk_freq_controller_sw_setup(g);
+	if (err)
+		return err;
+
+	err = nvgpu_lpwr_pg_setup(g);
 
 	return err;
 }
@@ -327,6 +331,9 @@ static int pstate_sw_setup(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
+	init_waitqueue_head(&g->perf_pmu.pstatesobjs.pstate_notifier_wq);
+	mutex_init(&g->perf_pmu.pstatesobjs.pstate_mutex);
+
 	err = boardobjgrpconstruct_e32(&g->perf_pmu.pstatesobjs.super);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g),
@@ -361,7 +368,7 @@ done:
 	return err;
 }
 
-static struct pstate *pstate_find(struct gk20a *g, u32 num)
+struct pstate *pstate_find(struct gk20a *g, u32 num)
 {
 	struct pstates *pstates = &(g->perf_pmu.pstatesobjs);
 	struct pstate *pstate;

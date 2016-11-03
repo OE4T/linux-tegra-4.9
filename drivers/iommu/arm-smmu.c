@@ -885,7 +885,7 @@ static void arm_smmu_tlb_inv_context(struct arm_smmu_domain *smmu_domain)
 	u64 time_before = 0;
 	struct arm_smmu_cfg *cfg = &smmu_domain->cfg;
 	struct arm_smmu_device *smmu = smmu_domain->smmu;
-	void __iomem *base = ARM_SMMU_GR0(smmu);
+	void __iomem *base;
 	bool stage1 = cfg->cbar != CBAR_TYPE_S2_TRANS;
 
 #ifdef CONFIG_TRACEPOINTS
@@ -1077,7 +1077,7 @@ static void arm_smmu_global_fault_printinfo(struct arm_smmu_device *smmu,
 	trace_printk("\tGFSR 0x%08x, GFSYNR0 0x%08x, GFSYNR1 0x%08x, GFSYNR2 0x%08x\n",
 		gfsr, gfsynr0, gfsynr1, gfsynr2);
 
-	writel(gfsr, gr0_base + ARM_SMMU_GR0_sGFSR);
+	writel_single(gfsr, gr0_base + ARM_SMMU_GR0_sGFSR);
 }
 
 static irqreturn_t arm_smmu_global_fault(int irq, void *dev)

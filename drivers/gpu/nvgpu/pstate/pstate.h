@@ -41,6 +41,7 @@ struct clk_set_info_list {
 struct pstate {
 	struct boardobj super;
 	u32 num;
+	u8 lpwr_entry_idx;
 	struct clk_set_info_list clklist;
 };
 

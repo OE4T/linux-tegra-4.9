@@ -177,6 +177,7 @@ int pstate_construct_super(struct gk20a *g, struct boardobj **ppboardobj,
 
 	pstate->num = ptmppstate->num;
 	pstate->clklist = ptmppstate->clklist;
+	pstate->lpwr_entry_idx = ptmppstate->lpwr_entry_idx;
 
 	return 0;
 }
@@ -236,6 +237,7 @@ static int parse_pstate_entry_5x(struct gk20a *g,
 	pstate->super.type = CTRL_PERF_PSTATE_TYPE_3X;
 	pstate->num = 0x0F - entry->pstate_level;
 	pstate->clklist.num_info = hdr->clock_entry_count;
+	pstate->lpwr_entry_idx = entry->lpwr_entry_idx;
 
 	gk20a_dbg_info("pstate P%u", pstate->num);
 

@@ -75,16 +75,6 @@ static void hpd_disable(struct tegra_hpd_data *data)
 	tegra_dc_ext_process_hotplug(data->dc->ndev->id);
 }
 
-static const char *get_hpd_switch_name(struct tegra_hpd_data *data)
-{
-	const char *name = NULL;
-
-	if (data->hpd_switch_name)
-		name = data->hpd_switch_name;
-
-	return name;
-}
-
 /* returns bytes read, or negative error */
 static int read_edid_into_buffer(struct tegra_hpd_data *data,
 				 u8 *edid_data, size_t edid_data_len)
@@ -486,8 +476,6 @@ void tegra_hpd_shutdown(struct tegra_hpd_data *data)
 	tegra_edid_destroy(data->edid);
 
 #ifdef CONFIG_SWITCH
-	data->hpd_switch.name = get_hpd_switch_name(data);
-
 	if (data->hpd_switch.name) {
 		switch_dev_unregister(&data->hpd_switch);
 	}
@@ -537,8 +525,6 @@ void tegra_hpd_init(struct tegra_hpd_data *data,
 			void *drv_data,
 			struct tegra_hpd_ops *ops)
 {
-	int err;
-
 	BUG_ON(!dc || !data || !ops ||
 		!ops->get_hpd_state ||
 		!ops->edid_read);
@@ -564,15 +550,6 @@ void tegra_hpd_init(struct tegra_hpd_data *data,
 	data->edid_reads = 0;
 
 	memset(&data->mon_spec, 0, sizeof(data->mon_spec));
-
-#ifdef CONFIG_SWITCH
-	data->hpd_switch.name = get_hpd_switch_name(data);
-
-	if (data->hpd_switch.name) {
-		err = switch_dev_register(&data->hpd_switch);
-		BUG_ON(err);
-	}
-#endif
 
 	rt_mutex_init(&data->lock);
 

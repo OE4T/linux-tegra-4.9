@@ -59,6 +59,8 @@ static bool tegra_dp_debug = true;
 module_param(tegra_dp_debug, bool, 0644);
 MODULE_PARM_DESC(tegra_dp_debug, "Enable to print all link configs");
 
+#define BUF_SIZE_MAX 50
+
 /*
  * WAR for DPR-120 firmware v1.9[r6] limitation for CTS 400.3.2.*
  * The analyzer issues IRQ_EVENT while we are still link training.
@@ -73,20 +75,10 @@ MODULE_PARM_DESC(no_lt_at_unblank, "DP enabled but link not trained");
 
 static struct tegra_hpd_ops hpd_ops;
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-/* DP/SOR0 is the primary config for DP on T18x. */
-static char *audio_switch_name_array[TEGRA_MAX_DC]
-	= {"dp_audio", "dp_audio1"};
-static char *hpd_switch_name_array[TEGRA_MAX_DC]
-	= {"dp", "dp1"};
-#else
-/* DP/SOR1 is the primary config for DP on T210. */
-static char *audio_switch_name_array[TEGRA_MAX_DC]
-	= {"dp_audio1", "dp_audio"};
-static char *hpd_switch_name_array[TEGRA_MAX_DC]
-	= {"dp1", "dp"};
-#endif
+static int dp_instance;
 
+static inline void tegra_dc_dp_debugfs_create(struct tegra_dc_dp_data *dp);
+static inline void tegra_dc_dp_debugfs_remove(struct tegra_dc_dp_data *dp);
 static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp);
 static inline void tegra_dp_default_int(struct tegra_dc_dp_data *dp,
 					bool enable);
@@ -1277,55 +1269,72 @@ free_out:
 	return retval;
 }
 
-static struct dentry *dpdir;
-
-static void tegra_dc_dp_debug_create(struct tegra_dc_dp_data *dp)
+static void tegra_dc_dp_debugfs_create(struct tegra_dc_dp_data *dp)
 {
 	struct dentry *retval;
+	char debug_dirname[BUF_SIZE_MAX] = "tegra_dp";
 
-	dp->debug_dir_name = tegra_dc_update_base_name(dp->dc, "tegra_dp");
-	dpdir = debugfs_create_dir(dp->debug_dir_name, NULL);
-	if (!dpdir)
+	if (dp_instance) {
+		snprintf(debug_dirname, sizeof(debug_dirname),
+			"tegra_dp%d", dp_instance);
+	}
+
+	dp->debugdir = debugfs_create_dir(debug_dirname, NULL);
+	if (!dp->debugdir) {
+		dev_err(&dp->dc->ndev->dev, "could not create dp%d debugfs\n",
+			dp_instance);
 		return;
-	retval = debugfs_create_file("regs", S_IRUGO, dpdir, dp, &dbg_fops);
+	}
+	retval = debugfs_create_file("regs", S_IRUGO, dp->debugdir, dp,
+		&dbg_fops);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("lanes", S_IRUGO, dpdir, dp,
+	retval = debugfs_create_file("lanes", S_IRUGO, dp->debugdir, dp,
 		&lane_count_fops);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("linkspeed", S_IRUGO, dpdir, dp,
+	retval = debugfs_create_file("linkspeed", S_IRUGO, dp->debugdir, dp,
 		&link_speed_fops);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("bitsperpixel", S_IRUGO, dpdir, dp,
+	retval = debugfs_create_file("bitsperpixel", S_IRUGO, dp->debugdir, dp,
 		&bits_per_pixel_fops);
 	if (!retval)
 		goto free_out;
-	retval = debugfs_create_file("test_settings", S_IRUGO, dpdir, dp,
+	retval = debugfs_create_file("test_settings", S_IRUGO, dp->debugdir, dp,
 		&test_settings_fops);
 	if (!retval)
 		goto free_out;
-	retval = tegra_dpaux_i2c_dir_create(dp, dpdir);
+	retval = tegra_dpaux_i2c_dir_create(dp, dp->debugdir);
 	if (!retval)
 		goto free_out;
 
 	/* hotplug not allowed for eDP */
 	if (is_hotplug_supported(dp)) {
-		retval = debugfs_create_file("hotplug", S_IRUGO, dpdir, dp,
-			&dbg_hotplug_fops);
+		retval = debugfs_create_file("hotplug", S_IRUGO, dp->debugdir,
+			dp, &dbg_hotplug_fops);
 		if (!retval)
 			goto free_out;
 	}
 
 	return;
 free_out:
-	debugfs_remove_recursive(dpdir);
-	dpdir = NULL;
+	dev_err(&dp->dc->ndev->dev, "could not create dp%d debugfs\n",
+		dp_instance);
+	tegra_dc_dp_debugfs_remove(dp);
 	return;
 }
+
+static void tegra_dc_dp_debugfs_remove(struct tegra_dc_dp_data *dp)
+{
+	debugfs_remove_recursive(dp->debugdir);
+	dp->debugdir = NULL;
+}
+
 #else
-static inline void tegra_dc_dp_debug_create(struct tegra_dc_dp_data *dp)
+static inline void tegra_dc_dp_debugfs_create(struct tegra_dc_dp_data *dp)
+{ }
+static inline void tegra_dc_dp_debugfs_remove(struct tegra_dc_dp_data *dp)
 { }
 #endif
 
@@ -2048,7 +2057,6 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	int err;
 	u32 irq;
 	struct device_node *np = dc->ndev->dev.of_node;
-
 	int dp_num = tegra_dc_which_sor(dc);
 	struct device_node *np_dp =
 		dp_num ? of_find_node_by_path(DPAUX1_NODE)
@@ -2061,6 +2069,20 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		return -ENOMEM;
 	}
 
+	dp->hpd_switch_name = devm_kzalloc(&dc->ndev->dev,
+		BUF_SIZE_MAX, GFP_KERNEL);
+	if (!dp->hpd_switch_name) {
+		err = -ENOMEM;
+		goto err_free_dp;
+	}
+
+	dp->audio_switch_name = devm_kzalloc(&dc->ndev->dev,
+		BUF_SIZE_MAX, GFP_KERNEL);
+	if (!dp->audio_switch_name) {
+		err = -ENOMEM;
+		goto err_hpd_switch;
+	}
+
 	dp->edid_src = EDID_SRC_PANEL;
 	if (np) {
 		if (np_dp && (of_device_is_available(np_dp) ||
@@ -2068,7 +2090,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 			irq = of_irq_to_resource(np_dp, 0, NULL);
 			if (!irq) {
 				err = -ENOENT;
-				goto err_free_dp;
+				goto err_audio_switch;
 			}
 			of_address_to_resource(np_dp, 0, &of_dp_res);
 			res = &of_dp_res;
@@ -2081,14 +2103,14 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 			}
 		} else {
 			err = -EINVAL;
-			goto err_free_dp;
+			goto err_audio_switch;
 		}
 	} else {
 		irq = platform_get_irq_byname(dc->ndev, "irq_dp");
 		if (irq <= 0) {
 			dev_err(&dc->ndev->dev, "dp: no irq\n");
 			err = -ENOENT;
-			goto err_free_dp;
+			goto err_audio_switch;
 		}
 		res = platform_get_resource_byname(dc->ndev,
 			IORESOURCE_MEM, "dpaux");
@@ -2096,7 +2118,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	if (!res) {
 		dev_err(&dc->ndev->dev, "dp: no mem resources for dpaux\n");
 		err = -EFAULT;
-		goto err_free_dp;
+		goto err_audio_switch;
 	}
 
 	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP && dc->out_data &&
@@ -2192,6 +2214,17 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	dp->dpaux_clk = clk;
 	dp->parent_clk = parent_clk;
 	dp->mode = &dc->mode;
+	dp->hpd_data.hpd_switch.name = "dp";
+	dp->audio_switch.name = "dp_audio";
+
+	if (dp_instance) {
+		snprintf(dp->hpd_switch_name, BUF_SIZE_MAX,
+			"dp%d", dp_instance);
+		snprintf(dp->audio_switch_name, BUF_SIZE_MAX,
+			"dp%d_audio", dp_instance);
+		dp->hpd_data.hpd_switch.name = dp->hpd_switch_name;
+		dp->audio_switch.name = dp->audio_switch_name;
+	}
 
 	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP && dc->out_data &&
 		 ((struct tegra_dc_dp_data *)dc->out_data)->sor) {
@@ -2238,19 +2271,26 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 #endif
 
 #ifdef CONFIG_SWITCH
+	if (tegra_dc_is_ext_dp_panel(dc)) {
+		err = switch_dev_register(&dp->hpd_data.hpd_switch);
+		if (err)
+			dev_err(&dc->ndev->dev,
+				"dp: failed to register hpd switch %d, err=%d\n",
+				dp_num, err);
+	}
+
 	if (tegra_dc_is_ext_dp_panel(dc) &&
 		dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
-		if (dp->sor->audio_switch_name == NULL)
-			dp->audio_switch.name = audio_switch_name_array[dp_num];
-		else
-			dp->audio_switch.name = dp->sor->audio_switch_name;
-
 		err = switch_dev_register(&dp->audio_switch);
-		BUG_ON(err);
+		if (err)
+			dev_err(&dc->ndev->dev,
+				"dp: failed to register audio switch %d, err=%d\n",
+				dp_num, err);
 	}
 #endif
 
-	tegra_dc_dp_debug_create(dp);
+	tegra_dc_dp_debugfs_create(dp);
+	dp_instance++;
 	of_node_put(np_dp);
 
 	return 0;
@@ -2268,6 +2308,10 @@ err_release_resource_reg:
 
 	if (!np_dp || !of_device_is_available(np_dp))
 		release_resource(res);
+err_audio_switch:
+	devm_kfree(&dc->ndev->dev, dp->audio_switch_name);
+err_hpd_switch:
+	devm_kfree(&dc->ndev->dev, dp->hpd_switch_name);
 err_free_dp:
 	devm_kfree(&dc->ndev->dev, dp);
 	of_node_put(np_dp);
@@ -2804,6 +2848,8 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 		(dp->sor && dp->sor->instance) ? of_find_node_by_path(DPAUX1_NODE) :
 		of_find_node_by_path(DPAUX_NODE);
 
+	tegra_dc_dp_debugfs_remove(dp);
+
 	if (dp->pdata->hdmi2fpd_bridge_enable)
 		hdmi2fpd_destroy(dc);
 
@@ -2823,15 +2869,17 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 		resource_size(dp->res));
 	if (!np_dp || !of_device_is_available(np_dp))
 		release_resource(dp->res);
-	devm_kfree(&dc->ndev->dev, dp);
-	dp->prod_list = NULL;
 
+	dp->prod_list = NULL;
 	dp->dpaux_prod_list = NULL;
 
 #ifdef CONFIG_SWITCH
 	switch_dev_unregister(&dp->audio_switch);
 #endif
-	kfree(dp->debug_dir_name);
+
+	kfree(dp->hpd_switch_name);
+	kfree(dp->audio_switch_name);
+	devm_kfree(&dc->ndev->dev, dp);
 	of_node_put(np_dp);
 }
 
@@ -3191,18 +3239,6 @@ static bool tegra_dp_hpd_op_get_hpd_state(void *drv_data)
 	return tegra_dc_hpd(dp->dc);
 }
 
-static void tegra_dp_hpd_op_init(void *drv_data)
-{
-	struct tegra_dc_dp_data *dp = drv_data;
-	int dp_num = tegra_dc_which_sor(dp->dc);
-
-#ifdef CONFIG_SWITCH
-	if (tegra_dc_is_ext_dp_panel(dp->dc)) {
-		dp->hpd_data.hpd_switch_name = hpd_switch_name_array[dp_num];
-	}
-#endif
-}
-
 static bool tegra_dp_hpd_op_edid_read_prepare(void *drv_data)
 {
 	struct tegra_dc_dp_data *dp = drv_data;
@@ -3252,7 +3288,6 @@ static struct tegra_hpd_ops hpd_ops = {
 	.edid_recheck = tegra_dp_hpd_op_edid_recheck,
 	.get_mode_filter = tegra_dp_op_get_mode_filter,
 	.get_hpd_state = tegra_dp_hpd_op_get_hpd_state,
-	.init = tegra_dp_hpd_op_init,
 	.edid_read_prepare = tegra_dp_hpd_op_edid_read_prepare,
 };
 

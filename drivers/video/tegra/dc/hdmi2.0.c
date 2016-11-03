@@ -62,18 +62,7 @@ static struct of_device_id tegra_sor_pd[] = {
 };
 #endif
 
-static ssize_t hdmi_ddc_power_toggle(struct kobject *kobj,
-	struct kobj_attribute *attr, const char *buf, size_t count);
-
-static ssize_t hdmi_ddc_power_show(struct kobject *kobj,
-	struct kobj_attribute *attr, char *buf);
-
-static struct kobj_attribute hdmi_ddc_power_config_array[TEGRA_MAX_DC] = {
-	__ATTR(config, 0640, hdmi_ddc_power_show, hdmi_ddc_power_toggle),
-	__ATTR(config, 0640, hdmi_ddc_power_show, hdmi_ddc_power_toggle)
-};
-
-static struct kobject *hdmi_ddc_array[TEGRA_MAX_DC];
+#define BUF_SIZE_MAX 50
 
 struct tmds_prod_pair {
 	int clk;
@@ -107,20 +96,14 @@ static struct tmds_prod_pair tmds_config_modes[] = {
 	}
 };
 
-static char *hpd_switch_name_array[TEGRA_MAX_DC] = {"hdmi0", "hdmi1"};
-static char *hpd_switch_name_first_link = "hdmi";
-static char *audio_switch_name_array[TEGRA_MAX_DC]
-	= {"hdmi0_audio", "hdmi1_audio"};
-static char *hdmi_ddc_name_array[TEGRA_MAX_DC]
-	= {"hdmi0_ddc_power_toggle", "hdmi1_ddc_power_toggle"};
-static char *hdmi_ddc_name_first_link = "hdmi_ddc_power_toggle";
-static struct tegra_hdmi *dc_hdmi_array[TEGRA_MAX_DC];
+static int hdmi_instance;
 
 static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi);
 static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type);
 static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk);
 static void tegra_hdmi_scdc_worker(struct work_struct *work);
 static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi);
+static void tegra_hdmi_debugfs_remove(struct tegra_hdmi *hdmi);
 static void tegra_hdmi_hdr_worker(struct work_struct *work);
 
 
@@ -401,43 +384,6 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 	}
 
 	return true;
-}
-
-static void tegra_hdmi_ddc_power_toggle(struct tegra_hdmi *dc_hdmi, int value)
-{
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
-
-	int partition_id = tegra_pd_get_powergate_id(tegra_sor_pd);
-	if (partition_id < 0)
-		return;
-#endif
-
-	if (dc_hdmi == NULL)
-		return;
-
-	if (value == 0) {
-		_tegra_hdmi_ddc_disable(dc_hdmi);
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC) && \
-	IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
-		tegra_powergate_partition(partition_id);
-#else
-		/* No specific powerdomain for SORs */
-		tegra_dc_powergate_locked(dc_hdmi->dc);
-#endif
-
-
-	} else if (value == 1) {
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC) && \
-	IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
-		tegra_unpowergate_partition(partition_id);
-#else
-		/* No specific powerdomain for SORs */
-		tegra_dc_unpowergate_locked(dc_hdmi->dc);
-#endif
-		_tegra_hdmi_ddc_enable(dc_hdmi);
-	}
-
-	return;
 }
 
 static int tegra_hdmi_get_mon_spec(struct tegra_hdmi *hdmi)
@@ -956,9 +902,6 @@ static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 	return -EINVAL;
 }
 
-
-#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_210_SOC)
-
 static int tegra_hdmi_dpaux_init(struct tegra_hdmi *hdmi)
 {
 	struct resource of_dpaux_res;
@@ -1038,7 +981,6 @@ err_free_dpaux:
 
 	return err;
 }
-#endif
 
 static int tegra_hdmi_hdr_init(struct tegra_hdmi *hdmi)
 {
@@ -1048,18 +990,15 @@ static int tegra_hdmi_hdr_init(struct tegra_hdmi *hdmi)
 
 static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 {
-	static int s_hdmi_init_count;
 	struct tegra_hdmi *hdmi;
 	int err;
 	struct device_node *np = dc->ndev->dev.of_node;
 	int sor_num = tegra_dc_which_sor(dc);
-#ifdef CONFIG_OF
-	struct device_node *np_hdmi = of_find_node_by_path(
-			sor_num ? SOR1_NODE : SOR_NODE);
-#else
 	struct device_node *np_hdmi = NULL;
-#endif
 	struct device_node *np_panel = NULL;
+
+	np_hdmi = of_find_node_by_path(
+			sor_num ? SOR1_NODE : SOR_NODE);
 
 	hdmi = devm_kzalloc(&dc->ndev->dev, sizeof(*hdmi), GFP_KERNEL);
 	if (!hdmi) {
@@ -1067,20 +1006,31 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		goto fail_np_hdmi;
 	}
 
+	hdmi->hpd_switch_name = devm_kzalloc(&dc->ndev->dev,
+		BUF_SIZE_MAX, GFP_KERNEL);
+	if (!hdmi->hpd_switch_name) {
+		err = -ENOMEM;
+		goto fail_hdmi;
+	}
+
+	hdmi->audio_switch_name = devm_kzalloc(&dc->ndev->dev,
+		BUF_SIZE_MAX, GFP_KERNEL);
+	if (!hdmi->audio_switch_name) {
+		err = -ENOMEM;
+		goto fail_hpd_switch;
+	}
+
 	hdmi->dc = dc;
 	hdmi->edid_src = EDID_SRC_PANEL;
-	dc_hdmi_array[sor_num] = hdmi;
 
-#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	err = tegra_hdmi_dpaux_init(hdmi);
 	if (err) {
-		goto fail_hdmi;
+		goto fail_audio_switch;
 	}
 
 	hdmi->res          = hdmi->hdmi_dpaux_res[sor_num];
 	hdmi->aux_base_res = hdmi->hdmi_dpaux_base_res[sor_num];
 	hdmi->aux_base     = hdmi->hdmi_dpaux_base[sor_num];
-#endif
 
 	hdmi->sor = tegra_dc_sor_init(dc, NULL);
 	if (IS_ERR_OR_NULL(hdmi->sor)) {
@@ -1111,6 +1061,18 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi->mon_spec_valid = false;
 	hdmi->eld_valid = false;
 	hdmi->device_shutdown = false;
+	hdmi->hpd_switch.name = "hdmi";
+	hdmi->audio_switch.name = "hdmi_audio";
+
+	if (hdmi_instance) {
+		snprintf(hdmi->hpd_switch_name, BUF_SIZE_MAX,
+			"hdmi%d", hdmi_instance);
+		snprintf(hdmi->audio_switch_name, BUF_SIZE_MAX,
+			"hdmi%d_audio", hdmi_instance);
+		hdmi->hpd_switch.name = hdmi->hpd_switch_name;
+		hdmi->audio_switch.name = hdmi->audio_switch_name;
+	}
+
 	if (0) {
 		/* TODO: seamless boot mode needs initialize the state */
 	} else {
@@ -1180,18 +1142,12 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, false);
 	}
 
-	hdmi->hpd_switch.name = hpd_switch_name_array[sor_num];
+#ifdef CONFIG_SWITCH
 	err = switch_dev_register(&hdmi->hpd_switch);
 	if (err)
 		dev_err(&dc->ndev->dev,
 			"hdmi: failed to register hpd switch %d, err=%d\n",
 			sor_num, err);
-
-#ifdef CONFIG_SWITCH
-	if (hdmi->sor->audio_switch_name == NULL)
-		hdmi->audio_switch.name = audio_switch_name_array[sor_num];
-	else
-		hdmi->audio_switch.name = hdmi->sor->audio_switch_name;
 
 	err = switch_dev_register(&hdmi->audio_switch);
 	if (err)
@@ -1200,45 +1156,23 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			sor_num, err);
 #endif
 
-	hdmi_ddc_array[sor_num] = kobject_create_and_add
-		(hdmi_ddc_name_array[sor_num], kernel_kobj);
-	if (!hdmi_ddc_array[sor_num]) {
-		pr_warn("%s: kobject create_and_add \"%s\" failed\n",
-			__func__, hdmi_ddc_name_array[sor_num]);
-		err = -ENOMEM;
-		goto fail_np_panel;
-	}
-	err = sysfs_create_file(hdmi_ddc_array[sor_num],
-		&hdmi_ddc_power_config_array[sor_num].attr);
-	if (err) {
-		pr_warn("%s: sysfs create file hdmi_ddc_power_toggle failed\n",
-			__func__);
-		err = -ENOENT;
-		goto fail_hdmi_ddc_array;
-	}
-	if (0 == s_hdmi_init_count) {
-		err = sysfs_create_link(hdmi->hpd_switch.dev->kobj.parent,
-			&(hdmi->hpd_switch.dev->kobj),
-			hpd_switch_name_first_link);
-		err = sysfs_create_link(kernel_kobj, hdmi_ddc_array[sor_num],
-			hdmi_ddc_name_first_link);
-	}
-	s_hdmi_init_count++;
+	hdmi_instance++;
 	of_node_put(np_hdmi);
 	return 0;
-
-fail_hdmi_ddc_array:
-	kobject_put(hdmi_ddc_array[sor_num]);
+#ifdef CONFIG_HDCP
 fail_np_panel:
 	of_node_put(np_panel);
+#endif
 fail_tegra_hdmi_dpaux_init:
-#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	devm_iounmap(&dc->ndev->dev, hdmi->hdmi_dpaux_base[sor_num]);
 	devm_release_mem_region(&dc->ndev->dev,
 		hdmi->hdmi_dpaux_res[sor_num]->start,
 		resource_size(hdmi->hdmi_dpaux_res[sor_num]));
+fail_audio_switch:
+	devm_kfree(&dc->ndev->dev, hdmi->audio_switch_name);
+fail_hpd_switch:
+	devm_kfree(&dc->ndev->dev, hdmi->hpd_switch_name);
 fail_hdmi:
-#endif
 	devm_kfree(&dc->ndev->dev, hdmi);
 fail_np_hdmi:
 	of_node_put(np_hdmi);
@@ -1249,6 +1183,7 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 
+	tegra_hdmi_debugfs_remove(hdmi);
 	if (hdmi->pdata->hdmi2fpd_bridge_enable)
 		hdmi2fpd_destroy(dc);
 	if (NULL != hdmi->out_ops && NULL != hdmi->out_ops->destroy)
@@ -1262,11 +1197,12 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 	gpio_free(dc->out->hotplug_gpio);
 	hdmi->prod_list = NULL;
 	hdmi->dpaux_prod_list = NULL;
-
-	switch_dev_unregister(&hdmi->hpd_switch);
 #ifdef CONFIG_SWITCH
+	switch_dev_unregister(&hdmi->hpd_switch);
 	switch_dev_unregister(&hdmi->audio_switch);
 #endif
+	devm_kfree(&dc->ndev->dev, hdmi->hpd_switch_name);
+	devm_kfree(&dc->ndev->dev, hdmi->audio_switch_name);
 	devm_kfree(&dc->ndev->dev, hdmi);
 }
 
@@ -2749,6 +2685,95 @@ static const struct file_operations tegra_hdmi_hotplug_dbg_ops = {
 	.release = single_release,
 };
 
+static void tegra_hdmi_ddc_power_toggle(struct tegra_hdmi *dc_hdmi, int value)
+{
+
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	int partition_id = tegra_pd_get_powergate_id(tegra_sor_pd);
+
+	if (partition_id < 0)
+		return;
+#endif
+
+	if (dc_hdmi == NULL)
+		return;
+
+	if (value == 0) {
+		_tegra_hdmi_ddc_disable(dc_hdmi);
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC) && \
+	IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
+		tegra_powergate_partition(partition_id);
+#else
+		/* No specific powerdomain for SORs */
+		tegra_dc_powergate_locked(dc_hdmi->dc);
+#endif
+
+
+	} else if (value == 1) {
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC) && \
+	IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
+		tegra_unpowergate_partition(partition_id);
+#else
+		/* No specific powerdomain for SORs */
+		tegra_dc_unpowergate_locked(dc_hdmi->dc);
+#endif
+		_tegra_hdmi_ddc_enable(dc_hdmi);
+	}
+
+}
+
+static int tegra_hdmi_ddc_power_toggle_dbg_show(struct seq_file *m,
+					void *unused)
+{
+	struct tegra_hdmi *hdmi = m->private;
+	struct tegra_dc *dc = hdmi->dc;
+
+	if (WARN_ON(!hdmi || !dc || !dc->out))
+		return -EINVAL;
+	/* make sure we see updated ddc_refcount value */
+	rmb();
+	seq_printf(m, "ddc_refcount: %d\n", hdmi->ddc_refcount);
+
+	return 0;
+}
+
+static ssize_t tegra_hdmi_ddc_power_toggle_dbg_write(struct file *file,
+					const char __user *addr,
+					size_t len, loff_t *pos)
+{
+	struct seq_file *m = file->private_data;
+	struct tegra_hdmi *hdmi = m->private;
+	struct tegra_dc *dc = hdmi->dc;
+	long value;
+	int ret;
+
+	if (WARN_ON(!hdmi || !dc || !dc->out))
+		return -EINVAL;
+
+	ret = kstrtol_from_user(addr, len, 10, &value);
+	if (ret < 0)
+		return ret;
+
+	tegra_hdmi_ddc_power_toggle(hdmi, value);
+
+	return len;
+}
+
+static int tegra_hdmi_ddc_power_toggle_dbg_open(struct inode *inode,
+					struct file *file)
+{
+	return single_open(file, tegra_hdmi_ddc_power_toggle_dbg_show,
+		inode->i_private);
+}
+
+static const struct file_operations tegra_hdmi_ddc_power_toggle_dbg_ops = {
+	.open = tegra_hdmi_ddc_power_toggle_dbg_open,
+	.read = seq_read,
+	.write = tegra_hdmi_ddc_power_toggle_dbg_write,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static int tegra_hdmi_status_dbg_show(struct seq_file *m, void *unused)
 {
 	struct tegra_hdmi *hdmi = m->private;
@@ -2787,66 +2812,56 @@ static const struct file_operations tegra_hdmi_status_dbg_ops = {
 
 static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi)
 {
-	struct dentry *dir, *ret;
+	struct dentry *ret;
+	char debug_dirname[BUF_SIZE_MAX] = "tegra_hdmi";
 
-	dir = debugfs_create_dir("tegra_hdmi",  NULL);
-	if (IS_ERR_OR_NULL(dir))
+	if (hdmi_instance) {
+		snprintf(debug_dirname, sizeof(debug_dirname),
+			"tegra_hdmi%d", hdmi_instance);
+	}
+
+	hdmi->debugdir = debugfs_create_dir(debug_dirname, NULL);
+	if (IS_ERR_OR_NULL(hdmi->debugdir)) {
+		dev_err(&hdmi->dc->ndev->dev, "could not create hdmi%d debugfs\n",
+			hdmi_instance);
 		return;
-
-	ret = debugfs_create_file("hotplug", S_IRUGO, dir,
+	}
+	ret = debugfs_create_file("hotplug", S_IRUGO, hdmi->debugdir,
 				hdmi, &tegra_hdmi_hotplug_dbg_ops);
 	if (IS_ERR_OR_NULL(ret))
 		goto fail;
-	ret = debugfs_create_file("hdmi_status", S_IRUGO, dir,
+	ret = debugfs_create_file("hdmi_status", S_IRUGO, hdmi->debugdir,
 				hdmi, &tegra_hdmi_status_dbg_ops);
+	if (IS_ERR_OR_NULL(ret))
+		goto fail;
+	ret = debugfs_create_file("ddc_power_toggle", S_IRUGO, hdmi->debugdir,
+				hdmi, &tegra_hdmi_ddc_power_toggle_dbg_ops);
 	if (IS_ERR_OR_NULL(ret))
 		goto fail;
 	return;
 fail:
-	debugfs_remove_recursive(dir);
+	dev_err(&hdmi->dc->ndev->dev, "could not create hdmi%d debugfs\n",
+		hdmi_instance);
+	tegra_hdmi_debugfs_remove(hdmi);
 	return;
 }
+
+static void tegra_hdmi_debugfs_remove(struct tegra_hdmi *hdmi)
+{
+	debugfs_remove_recursive(hdmi->debugdir);
+	hdmi->debugdir = NULL;
+}
+
 #else
 static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi)
 {
 	return;
 }
+static void tegra_hdmi_debugfs_remove(struct tegra_hdmi *hdmi)
+{
+	return;
+}
 #endif
-
-static int hdmi_get_index_for_ddc_kobj(struct kobject *kobj)
-{
-	int result;
-
-	for (result = 0; result < TEGRA_MAX_DC; result++) {
-		if (kobj == hdmi_ddc_array[result])
-			return result;
-	}
-	return -1;
-}
-
-static ssize_t hdmi_ddc_power_toggle(struct kobject *kobj,
-		struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	int value, index;
-
-	index = hdmi_get_index_for_ddc_kobj(kobj);
-	if (0 > index)
-		return 0;
-	sscanf(buf, "%du", &value);
-	tegra_hdmi_ddc_power_toggle(dc_hdmi_array[index], value);
-	return count;
-}
-
-static ssize_t hdmi_ddc_power_show(struct kobject *kobj,
-		struct kobj_attribute *attr, char *buf)
-{
-	int index;
-
-	index = hdmi_get_index_for_ddc_kobj(kobj);
-	if (0 > index)
-		return 0;
-	return sprintf(buf, "%d\n", dc_hdmi_array[index]->ddc_refcount);
-}
 
 static bool tegra_dc_hdmi_hpd_state(struct tegra_dc *dc)
 {

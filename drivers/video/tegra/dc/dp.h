@@ -103,7 +103,8 @@ struct tegra_dc_dp_data {
 #ifdef CONFIG_SWITCH
 	struct switch_dev audio_switch;
 #endif
-
+	char *hpd_switch_name;
+	char *audio_switch_name;
 	struct delayed_work irq_evt_dwork;
 
 	struct tegra_dphdcp *dphdcp;
@@ -118,15 +119,15 @@ struct tegra_dc_dp_data {
 	struct tegra_prod *prod_list;
 
 	struct tegra_prod *dpaux_prod_list;
-
+#ifdef CONFIG_DEBUG_FS
+	struct dentry *debugdir;
+#endif
 	u8 sink_cap[DP_DPCD_SINK_CAP_SIZE];
 	bool sink_cap_valid;
 	u8 sink_cnt_cp_ready;
 
 	u16 dpaux_i2c_dbg_addr;
 	u32 dpaux_i2c_dbg_num_bytes;
-
-	const char *debug_dir_name;
 
 #ifdef CONFIG_DEBUG_FS
 	struct tegra_dp_test_settings test_settings;

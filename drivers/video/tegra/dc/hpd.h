@@ -80,7 +80,6 @@ struct tegra_hpd_data {
 	struct rt_mutex lock;
 
 #ifdef CONFIG_SWITCH
-	const char *hpd_switch_name;
 	struct switch_dev hpd_switch;
 #endif
 

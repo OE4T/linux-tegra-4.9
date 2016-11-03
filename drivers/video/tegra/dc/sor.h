@@ -121,7 +121,6 @@ struct tegra_dc_sor_data {
 
 	u8	clk_type;
 	u32  xbar_ctrl[5];
-	u8 *audio_switch_name;
 };
 
 #define TEGRA_SOR_TIMEOUT_MS		1000

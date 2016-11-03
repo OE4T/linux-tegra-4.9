@@ -467,6 +467,14 @@
 		status = "disabled";
 	};
 
+	tegra_xotg: xotg {
+		compatible = "nvidia,tegra186-xotg";
+		interrupts = <0 167 0x4>;
+		otg-rev = <0x0300>;
+		adp-disable;
+		status = "disabled";
+	};
+
 	tegra_xhci: xhci@3530000 {
 		compatible = "nvidia,tegra186-xhci";
 		reg = <0x0 0x03530000 0x0 0x8000>,
@@ -491,6 +499,7 @@
 			<&tegra_car TEGRA186_CLK_PLLE>;
 		clock-names = "host", "falcon_src", "ss", "ss_src", "hs_src",
 			"fs_src", "pll_u_480M", "clk_m", "pll_e";
+		otg-controller = <&tegra_xotg>;
 	};
 
 	tegra_xudc: xudc@3550000 {
@@ -506,6 +515,7 @@
 		#stream-id-cells = <1>;
 		status = "disabled";
 		charger-detector = <&tegra_usb_cd>;
+		otg-controller = <&tegra_xotg>;
 	};
 
 	tegra_xusb_padctl: pinctrl@3520000 {

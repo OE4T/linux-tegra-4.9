@@ -3048,9 +3048,6 @@ skip_init:
 	return err;
 }
 
-static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
-			void *param, u32 handle, u32 status);
-
 static void pmu_handle_pg_buf_config_msg(struct gk20a *g, struct pmu_msg *msg,
 			void *param, u32 handle, u32 status)
 {
@@ -3274,6 +3271,19 @@ static bool gk20a_is_pmu_supported(struct gk20a *g)
 	return true;
 }
 
+u32 gk20a_pmu_pg_engines_list(struct gk20a *g)
+{
+	return BIT(PMU_PG_ELPG_ENGINE_ID_GRAPHICS);
+}
+
+u32 gk20a_pmu_pg_feature_list(struct gk20a *g, u32 pg_engine_id)
+{
+	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
+		return PMU_PG_FEATURE_GR_POWER_GATING_ENABLED;
+
+	return 0;
+}
+
 void gk20a_init_pmu_ops(struct gpu_ops *gops)
 {
 	gops->pmu.is_pmu_supported = gk20a_is_pmu_supported;
@@ -3285,7 +3295,9 @@ void gk20a_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.load_lsfalcon_ucode = NULL;
 	gops->pmu.write_dmatrfbase = gk20a_write_dmatrfbase;
 	gops->pmu.pmu_elpg_statistics = gk20a_pmu_elpg_statistics;
-	gops->pmu.pmu_pg_grinit_param = NULL;
+	gops->pmu.pmu_pg_init_param = NULL;
+	gops->pmu.pmu_pg_supported_engines_list = gk20a_pmu_pg_engines_list;
+	gops->pmu.pmu_pg_engines_feature_list = gk20a_pmu_pg_feature_list;
 	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd = NULL;
 	gops->pmu.dump_secure_fuses = NULL;
 	gops->pmu.is_lazy_bootstrap = NULL;
@@ -3330,6 +3342,7 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 {
 	struct pmu_gk20a *pmu = param;
 	struct pmu_pg_msg_elpg_msg *elpg_msg = &msg->msg.pg.elpg_msg;
+	u32 *ack_status = param;
 
 	gk20a_dbg_fn("");
 
@@ -3341,18 +3354,32 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 
 	switch (elpg_msg->msg) {
 	case PMU_PG_ELPG_MSG_INIT_ACK:
-		gk20a_dbg_pmu("INIT_PG is acknowledged from PMU");
+		gk20a_dbg_pmu("INIT_PG is ack from PMU, eng - %d",
+			elpg_msg->engine_id);
 		break;
 	case PMU_PG_ELPG_MSG_ALLOW_ACK:
-		gk20a_dbg_pmu("ALLOW is acknowledged from PMU");
-		pmu->elpg_stat = PMU_ELPG_STAT_ON;
+		gk20a_dbg_pmu("ALLOW is ack from PMU, eng - %d",
+			elpg_msg->engine_id);
+		if (elpg_msg->engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
+			pmu->elpg_stat = PMU_ELPG_STAT_ON;
 		break;
 	case PMU_PG_ELPG_MSG_DISALLOW_ACK:
-		gk20a_dbg_pmu("DISALLOW is acknowledged from PMU");
-		pmu->elpg_stat = PMU_ELPG_STAT_OFF;
+		gk20a_dbg_pmu("DISALLOW is ack from PMU, eng - %d",
+			elpg_msg->engine_id);
+		if (elpg_msg->engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
+			pmu->elpg_stat = PMU_ELPG_STAT_OFF;
+		else if (elpg_msg->engine_id == PMU_PG_ELPG_ENGINE_ID_MS)
+			*ack_status = 1;
 		if (pmu->pmu_state == PMU_STATE_ELPG_BOOTING) {
 			pmu->pmu_state = PMU_STATE_ELPG_BOOTED;
-			schedule_work(&pmu->pg_init);
+			if (g->ops.pmu.pmu_pg_engines_feature_list &&
+				g->ops.pmu.pmu_pg_engines_feature_list(g,
+				PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
+				PMU_PG_FEATURE_GR_POWER_GATING_ENABLED) {
+				pmu->initialized = true;
+				pmu->pmu_state = PMU_STATE_STARTED;
+			} else
+				schedule_work(&pmu->pg_init);
 		}
 		break;
 	default:
@@ -3386,43 +3413,37 @@ static void pmu_handle_pg_stat_msg(struct gk20a *g, struct pmu_msg *msg,
 	}
 }
 
-static int pmu_init_powergating(struct gk20a *g)
+static int pmu_pg_init_send(struct gk20a *g, u32 pg_engine_id)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq;
-	u32 gr_engine_id;
 
 	gk20a_dbg_fn("");
 
-	gr_engine_id = gk20a_fifo_get_gr_engine_id(g);
-
 	if (tegra_cpu_is_asim()) {
 		/* TBD: calculate threshold for silicon */
-		gk20a_writel(g, pwr_pmu_pg_idlefilth_r(gr_engine_id),
-				PMU_PG_IDLE_THRESHOLD_SIM);
-		gk20a_writel(g, pwr_pmu_pg_ppuidlefilth_r(gr_engine_id),
-				PMU_PG_POST_POWERUP_IDLE_THRESHOLD_SIM);
+		gk20a_writel(g, pwr_pmu_pg_idlefilth_r(pg_engine_id),
+			PMU_PG_IDLE_THRESHOLD_SIM);
+		gk20a_writel(g, pwr_pmu_pg_ppuidlefilth_r(pg_engine_id),
+			PMU_PG_POST_POWERUP_IDLE_THRESHOLD_SIM);
 	} else {
 		/* TBD: calculate threshold for silicon */
-		gk20a_writel(g, pwr_pmu_pg_idlefilth_r(gr_engine_id),
-				PMU_PG_IDLE_THRESHOLD);
-		gk20a_writel(g, pwr_pmu_pg_ppuidlefilth_r(gr_engine_id),
-				PMU_PG_POST_POWERUP_IDLE_THRESHOLD);
+		gk20a_writel(g, pwr_pmu_pg_idlefilth_r(pg_engine_id),
+			PMU_PG_IDLE_THRESHOLD);
+		gk20a_writel(g, pwr_pmu_pg_ppuidlefilth_r(pg_engine_id),
+			PMU_PG_POST_POWERUP_IDLE_THRESHOLD);
 	}
 
-	gk20a_gr_wait_initialized(g);
-
-	if (g->ops.pmu.pmu_pg_grinit_param)
-		g->ops.pmu.pmu_pg_grinit_param(g,
-			PMU_PG_FEATURE_GR_POWER_GATING_ENABLED);
+	if (g->ops.pmu.pmu_pg_init_param)
+		g->ops.pmu.pmu_pg_init_param(g, pg_engine_id);
 
 	/* init ELPG */
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_elpg_cmd);
 	cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_ID_ELPG_CMD;
-	cmd.cmd.pg.elpg_cmd.engine_id = gr_engine_id;
+	cmd.cmd.pg.elpg_cmd.engine_id = pg_engine_id;
 	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_INIT;
 
 	gk20a_dbg_pmu("cmd post PMU_PG_ELPG_CMD_INIT");
@@ -3435,7 +3456,7 @@ static int pmu_init_powergating(struct gk20a *g)
 	cmd.hdr.unit_id = PMU_UNIT_PG;
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_stat);
 	cmd.cmd.pg.stat.cmd_type = PMU_PG_CMD_ID_PG_STAT;
-	cmd.cmd.pg.stat.engine_id = gr_engine_id;
+	cmd.cmd.pg.stat.engine_id = pg_engine_id;
 	cmd.cmd.pg.stat.sub_cmd_id = PMU_PG_STAT_CMD_ALLOC_DMEM;
 	cmd.cmd.pg.stat.data = 0;
 
@@ -3445,20 +3466,45 @@ static int pmu_init_powergating(struct gk20a *g)
 
 	/* disallow ELPG initially
 	   PMU ucode requires a disallow cmd before allow cmd */
-	pmu->elpg_stat = PMU_ELPG_STAT_OFF; /* set for wait_event PMU_ELPG_STAT_OFF */
+	/* set for wait_event PMU_ELPG_STAT_OFF */
+	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
+		pmu->elpg_stat = PMU_ELPG_STAT_OFF;
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_elpg_cmd);
 	cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_ID_ELPG_CMD;
-	cmd.cmd.pg.elpg_cmd.engine_id = gr_engine_id;
+	cmd.cmd.pg.elpg_cmd.engine_id = pg_engine_id;
 	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_DISALLOW;
 
 	gk20a_dbg_pmu("cmd post PMU_PG_ELPG_CMD_DISALLOW");
 	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
-			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
+		pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
 
-	if (pmu->pmu_state == PMU_STATE_INIT_RECEIVED)
-		pmu->pmu_state = PMU_STATE_ELPG_BOOTING;
+	return 0;
+}
+static int pmu_init_powergating(struct gk20a *g)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	u32 pg_engine_id;
+	u32 pg_engine_id_list = 0;
+
+	gk20a_dbg_fn("");
+
+	if (g->ops.pmu.pmu_pg_supported_engines_list)
+		pg_engine_id_list = g->ops.pmu.pmu_pg_supported_engines_list(g);
+
+	gk20a_gr_wait_initialized(g);
+
+	for (pg_engine_id = PMU_PG_ELPG_ENGINE_ID_GRAPHICS;
+		pg_engine_id < PMU_PG_ELPG_ENGINE_ID_INVALID_ENGINE;
+			pg_engine_id++) {
+
+		if (BIT(pg_engine_id) & pg_engine_id_list) {
+			pmu_pg_init_send(g, pg_engine_id);
+			if (pmu->pmu_state == PMU_STATE_INIT_RECEIVED)
+				pmu->pmu_state = PMU_STATE_ELPG_BOOTING;
+		}
+	}
 
 	return 0;
 }
@@ -4652,28 +4698,39 @@ static int gk20a_pmu_enable_elpg_locked(struct gk20a *g)
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq, status;
-	u32 gr_engine_id;
+	u32 pg_engine_id;
+	u32 pg_engine_id_list = 0;
 
 	gk20a_dbg_fn("");
 
-	gr_engine_id = gk20a_fifo_get_gr_engine_id(g);
+	if (g->ops.pmu.pmu_pg_supported_engines_list)
+		pg_engine_id_list = g->ops.pmu.pmu_pg_supported_engines_list(g);
+	for (pg_engine_id = PMU_PG_ELPG_ENGINE_ID_GRAPHICS;
+		pg_engine_id < PMU_PG_ELPG_ENGINE_ID_INVALID_ENGINE;
+		pg_engine_id++) {
 
-	memset(&cmd, 0, sizeof(struct pmu_cmd));
-	cmd.hdr.unit_id = PMU_UNIT_PG;
-	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_elpg_cmd);
-	cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_ID_ELPG_CMD;
-	cmd.cmd.pg.elpg_cmd.engine_id = gr_engine_id;
-	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_ALLOW;
+		if (BIT(pg_engine_id) & pg_engine_id_list) {
+			memset(&cmd, 0, sizeof(struct pmu_cmd));
+			cmd.hdr.unit_id = PMU_UNIT_PG;
+			cmd.hdr.size = PMU_CMD_HDR_SIZE +
+				sizeof(struct pmu_pg_cmd_elpg_cmd);
+			cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_ID_ELPG_CMD;
+			cmd.cmd.pg.elpg_cmd.engine_id = pg_engine_id;
+			cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_ALLOW;
 
-	/* no need to wait ack for ELPG enable but set pending to sync
-	   with follow up ELPG disable */
-	pmu->elpg_stat = PMU_ELPG_STAT_ON_PENDING;
+		   /* no need to wait ack for ELPG enable but set
+		    * pending to sync with follow up ELPG disable
+		    */
+			if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
+				pmu->elpg_stat = PMU_ELPG_STAT_ON_PENDING;
 
-	gk20a_dbg_pmu("cmd post PMU_PG_ELPG_CMD_ALLOW");
-	status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
-			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
-
-	BUG_ON(status != 0);
+			gk20a_dbg_pmu("cmd post PMU_PG_ELPG_CMD_ALLOW");
+			status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL,
+				PMU_COMMAND_QUEUE_HPQ, pmu_handle_pg_elpg_msg,
+				pmu, &seq, ~0);
+			WARN_ON(status != 0);
+		}
+	}
 
 	gk20a_dbg_fn("done");
 	return 0;
@@ -4729,11 +4786,17 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 	struct pmu_cmd cmd;
 	u32 seq;
 	int ret = 0;
-	u32 gr_engine_id;
+	u32 pg_engine_id;
+	u32 pg_engine_id_list = 0;
+	u32 ack_status = 0;
+	u32 *wait_msg_cond_ptr = NULL;
+	u32 wait_msg_cond = 0;
+	void *cb_param = NULL;
 
 	gk20a_dbg_fn("");
 
-	gr_engine_id = gk20a_fifo_get_gr_engine_id(g);
+	if (g->ops.pmu.pmu_pg_supported_engines_list)
+		pg_engine_id_list = g->ops.pmu.pmu_pg_supported_engines_list(g);
 
 	if (!support_gk20a_pmu(g->dev))
 		return ret;
@@ -4778,28 +4841,49 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 		goto exit_reschedule;
 	}
 
-	memset(&cmd, 0, sizeof(struct pmu_cmd));
-	cmd.hdr.unit_id = PMU_UNIT_PG;
-	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_elpg_cmd);
-	cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_ID_ELPG_CMD;
-	cmd.cmd.pg.elpg_cmd.engine_id = gr_engine_id;
-	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_DISALLOW;
+	for (pg_engine_id = PMU_PG_ELPG_ENGINE_ID_GRAPHICS;
+		pg_engine_id < PMU_PG_ELPG_ENGINE_ID_INVALID_ENGINE;
+		pg_engine_id++) {
 
-	pmu->elpg_stat = PMU_ELPG_STAT_OFF_PENDING;
+		if (BIT(pg_engine_id) & pg_engine_id_list) {
+			memset(&cmd, 0, sizeof(struct pmu_cmd));
+			cmd.hdr.unit_id = PMU_UNIT_PG;
+			cmd.hdr.size = PMU_CMD_HDR_SIZE +
+				sizeof(struct pmu_pg_cmd_elpg_cmd);
+			cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_ID_ELPG_CMD;
+			cmd.cmd.pg.elpg_cmd.engine_id = pg_engine_id;
+			cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_DISALLOW;
 
-	gk20a_dbg_pmu("cmd post PMU_PG_ELPG_CMD_DISALLOW");
-	gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
-			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
+			if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
+				pmu->elpg_stat = PMU_ELPG_STAT_OFF_PENDING;
 
-	pmu_wait_message_cond(pmu, gk20a_get_gr_idle_timeout(g),
-			      &pmu->elpg_stat, PMU_ELPG_STAT_OFF);
-	if (pmu->elpg_stat != PMU_ELPG_STAT_OFF) {
-		gk20a_err(dev_from_gk20a(g),
-			"ELPG_DISALLOW_ACK failed");
-		pmu_dump_elpg_stats(pmu);
-		pmu_dump_falcon_stats(pmu);
-		ret = -EBUSY;
-		goto exit_unlock;
+			if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS) {
+				wait_msg_cond_ptr = &pmu->elpg_stat;
+				wait_msg_cond = PMU_ELPG_STAT_OFF;
+				cb_param = pmu;
+			} else if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS) {
+				wait_msg_cond_ptr = &ack_status;
+				wait_msg_cond = 0x1;
+				cb_param = &ack_status;
+			}
+
+			gk20a_dbg_pmu("cmd post PMU_PG_ELPG_CMD_DISALLOW");
+			gk20a_pmu_cmd_post(g, &cmd, NULL, NULL,
+				PMU_COMMAND_QUEUE_HPQ, pmu_handle_pg_elpg_msg,
+				cb_param, &seq, ~0);
+
+			pmu_wait_message_cond(pmu,
+				gk20a_get_gr_idle_timeout(g),
+				wait_msg_cond_ptr, wait_msg_cond);
+			if (*wait_msg_cond_ptr != wait_msg_cond) {
+				gk20a_err(dev_from_gk20a(g),
+					"ELPG_DISALLOW_ACK failed");
+					pmu_dump_elpg_stats(pmu);
+					pmu_dump_falcon_stats(pmu);
+				ret = -EBUSY;
+				goto exit_unlock;
+			}
+		}
 	}
 
 exit_reschedule:

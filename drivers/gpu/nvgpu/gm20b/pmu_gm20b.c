@@ -285,7 +285,9 @@ void gm20b_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.fecsbootstrapdone = false;
 	gops->pmu.write_dmatrfbase = gm20b_write_dmatrfbase;
 	gops->pmu.pmu_elpg_statistics = gk20a_pmu_elpg_statistics;
-	gops->pmu.pmu_pg_grinit_param = NULL;
+	gops->pmu.pmu_pg_init_param = NULL;
+	gops->pmu.pmu_pg_supported_engines_list = gk20a_pmu_pg_engines_list;
+	gops->pmu.pmu_pg_engines_feature_list = gk20a_pmu_pg_feature_list;
 	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd = NULL;
 	gops->pmu.dump_secure_fuses = pmu_dump_security_fuses_gm20b;
 	gops->pmu.reset = gk20a_pmu_reset;

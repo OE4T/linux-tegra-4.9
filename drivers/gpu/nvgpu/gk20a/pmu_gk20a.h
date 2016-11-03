@@ -615,6 +615,10 @@ struct pmu_pg_stats {
 #define PMU_PG_IDLE_THRESHOLD			15000
 #define PMU_PG_POST_POWERUP_IDLE_THRESHOLD	1000000
 
+#define PMU_PG_ELPG_ENGINE_ID_GRAPHICS (0x00000000)
+#define PMU_PG_ELPG_ENGINE_ID_MS       (0x00000004)
+#define PMU_PG_ELPG_ENGINE_ID_INVALID_ENGINE (0x00000005)
+
 /* state transition :
     OFF => [OFF_ON_PENDING optional] => ON_PENDING => ON => OFF
     ON => OFF is always synchronized */
@@ -770,6 +774,9 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd, struct pmu_msg *msg
 
 int gk20a_pmu_enable_elpg(struct gk20a *g);
 int gk20a_pmu_disable_elpg(struct gk20a *g);
+
+u32 gk20a_pmu_pg_engines_list(struct gk20a *g);
+u32 gk20a_pmu_pg_feature_list(struct gk20a *g, u32 pg_engine_id);
 
 void gk20a_pmu_save_zbc(struct gk20a *g, u32 entries);
 

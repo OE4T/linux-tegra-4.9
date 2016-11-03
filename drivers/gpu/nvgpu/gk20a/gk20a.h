@@ -606,8 +606,10 @@ struct gpu_ops {
 		void (*pmu_elpg_statistics)(struct gk20a *g,
 			u32 *ingating_time, u32 *ungating_time,
 			u32 *gating_cnt);
-		int (*pmu_pg_grinit_param)(struct gk20a *g,
-			u8 grfeaturemask);
+		int (*pmu_pg_init_param)(struct gk20a *g, u32 pg_engine_id);
+		u32 (*pmu_pg_supported_engines_list)(struct gk20a *g);
+		u32 (*pmu_pg_engines_feature_list)(struct gk20a *g,
+			u32 pg_engine_id);
 		int (*send_lrf_tex_ltc_dram_overide_en_dis_cmd)
 			(struct gk20a *g, u32 mask);
 		void (*dump_secure_fuses)(struct gk20a *g);

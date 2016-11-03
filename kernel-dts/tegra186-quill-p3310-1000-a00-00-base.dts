@@ -60,6 +60,12 @@
 		phy-names = "otg-phy";
 	};
 
+	xotg {
+		status = "okay";
+		phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
+		phy-names = "otg-usb2";
+	};
+
 	xudc@3550000 {
 		status = "okay";
 		phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;

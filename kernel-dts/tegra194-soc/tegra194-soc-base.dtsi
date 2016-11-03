@@ -20,7 +20,6 @@
 #include <dt-bindings/reset/tegra194-reset.h>
 #include "dt-bindings/display/tegra-dc.h"
 #include "dt-bindings/interrupt/tegra186-irq.h"
-#include "dt-bindings/clock/tegra186-clock.h"
 #include "dt-bindings/soc/tegra186-powergate.h"
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/gpio/tegra186-gpio.h>
@@ -320,16 +319,16 @@
 				      "pllp_display", "plld2", "plld3",
 				      "pll_d", "pll_d_out1", "emc", "emc_latency";
 			clocks = <&clk32k_in>,
-				 <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
-				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
-				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P0>,
-				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
-				 <&tegra_car TEGRA186_CLK_PLLD2>,
-				 <&tegra_car TEGRA186_CLK_PLLD3>,
-				 <&tegra_car TEGRA186_CLK_PLLD>,
-				 <&tegra_car TEGRA186_CLK_PLLD_OUT1>,
-				 <&tegra_car TEGRA186_CLK_EMC>,
-				 <&tegra_car TEGRA186_CLK_CLK_M>;
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAYHUB>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P0>,
+				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
+				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				 <&bpmp_clks TEGRA194_CLK_PLLD3>,
+				 <&bpmp_clks TEGRA194_CLK_PLLD>,
+				 <&bpmp_clks TEGRA194_CLK_PLLD_OUT1>,
+				 <&bpmp_clks TEGRA194_CLK_EMC>,
+				 <&bpmp_clks TEGRA194_CLK_CLK_M>;
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
 				      "wgrp3", "wgrp4", "wgrp5", "head0";
 			resets = <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_MISC>,
@@ -349,15 +348,15 @@
 			nvidia,xbar-ctrl = <0x2 0x1 0x0 0x3 0x4>;
 
 			clocks = <&clk32k_in>,
-				 <&tegra_car TEGRA186_CLK_SOR0>,
-				 <&tegra_car TEGRA186_CLK_SOR_SAFE>,
-				 <&tegra_car TEGRA186_CLK_SOR0_PAD_CLKOUT>,
-				 <&tegra_car TEGRA186_CLK_SOR0_OUT>,
-				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
-				 <&tegra_car TEGRA186_CLK_MAUD>,
-				 <&tegra_car TEGRA186_CLK_HDA>,
-				 <&tegra_car TEGRA186_CLK_HDA2CODEC_2X>,
-				 <&tegra_car TEGRA186_CLK_HDA2HDMICODEC>;
+				 <&bpmp_clks TEGRA194_CLK_SOR0>,
+				 <&bpmp_clks TEGRA194_CLK_SOR_SAFE>,
+				 <&bpmp_clks TEGRA194_CLK_SOR0_PAD_CLKOUT>,
+				 <&bpmp_clks TEGRA194_CLK_SOR0_OUT>,
+				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
+				 <&bpmp_clks TEGRA194_CLK_MAUD>,
+				 <&bpmp_clks TEGRA194_CLK_HDA>,
+				 <&bpmp_clks TEGRA194_CLK_HDA2CODEC_2X>,
+				 <&bpmp_clks TEGRA194_CLK_HDA2HDMICODEC>;
 			clock-names = "clk32k_in", "sor0", "sor_safe",
 				      "sor0_pad_clkout", "sor0_out",
 				      "pllp_out0", "maud", "hda",
@@ -376,8 +375,8 @@
 			interrupts = <0 159 4>;
 
 			clocks = <&clk32k_in>,
-				 <&tegra_car TEGRA186_CLK_DPAUX>,
-				 <&tegra_car TEGRA186_CLK_PLLDP>;
+				 <&bpmp_clks TEGRA194_CLK_DPAUX>,
+				 <&bpmp_clks TEGRA194_CLK_PLLDP>;
 			clock-names = "clk32k_in", "dpaux", "plldp";
 			resets = <&bpmp_resets TEGRA194_RESET_DPAUX>;
 			reset-names = "dpaux";
@@ -414,13 +413,6 @@
 		};
 
 	}; // host1x
-
-	tegra_car: clock@20000000 {
-		compatible = "nvidia,tegra18x-car";
-		reg = <0x0 0x20000000 0x0 0x02000000>;
-		#clock-cells = <1>;
-		#reset-cells = <1>;
-	};
 
 	clocks {
 		compatible = "simple-bus";

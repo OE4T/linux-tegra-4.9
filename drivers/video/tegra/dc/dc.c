@@ -598,9 +598,9 @@ static void tegra_dc_sor_instance(struct tegra_dc *dc, int out_type)
 {
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	/* check the dc_or_node to set the instance */
-	if (!strcmp(dc_or_node_names[dc->ndev->id], "/host1x/sor"))
+	if (!strcmp(dc->pdata->dc_or_node_name, "/host1x/sor"))
 		dc->sor_instance = 0;
-	else if (!strcmp(dc_or_node_names[dc->ndev->id], "/host1x/sor1"))
+	else if (!strcmp(dc->pdata->dc_or_node_name, "/host1x/sor1"))
 		dc->sor_instance = 1;
 	else if (out_type == TEGRA_DC_OUT_FAKE_DP)
 		/* Assign default instance to fake DP if
@@ -5588,11 +5588,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	}
 
 	if (np) {
-#ifdef CONFIG_OF
 		irq = of_irq_to_resource(np, 0, NULL);
 		if (!irq)
 			goto err_free;
-#endif
 
 		ret = of_address_to_resource(np, 0, &dt_res);
 		if (ret)

@@ -85,16 +85,6 @@ static struct regulator *of_edp_sec_mode;
 static struct regulator *of_dp_pad;
 static struct regulator *of_dp_hdmi_5v0;
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)  || defined(CONFIG_ARCH_TEGRA_210_SOC)
-/* The dc_or_node_name should be saved as per
- * dc id based on probe.
- * /host1x/sor, /host1x/sor1 and
- * /host1x/dsi are only valid entries, any
- * other values should fail
- */
-char dc_or_node_names[TEGRA_MAX_DC][14];
-#endif
-
 static bool os_l4t;
 
 #ifdef CONFIG_TEGRA_DC_CMU
@@ -168,25 +158,24 @@ static int out_type_from_pn(struct device_node *panel_node)
 
 static int parse_dc_out_type(struct device_node *np,
 		struct platform_device *ndev,
-		struct tegra_dc_out *default_out)
+		struct tegra_dc_platform_data *pdata)
 {
 	struct device_node *np_target_disp = NULL;
 	int out_type;
 
 	if (ndev->id == 0)
-		np_target_disp = tegra_primary_panel_get_dt_node(NULL);
+		np_target_disp = tegra_primary_panel_get_dt_node(pdata);
 	else if (ndev->id == 1)
-		np_target_disp = tegra_secondary_panel_get_dt_node(NULL);
-#if defined(CONFIG_TEGRA_NVDISPLAY)
+		np_target_disp = tegra_secondary_panel_get_dt_node(pdata);
 	else if (ndev->id == 2)
-		np_target_disp = tegra_tertiary_panel_get_dt_node(NULL);
-#endif
+		np_target_disp = tegra_tertiary_panel_get_dt_node(pdata);
+
 	out_type = out_type_from_pn(np_target_disp);
 
 	of_node_put(np_target_disp);
 
 	if (out_type >= 0) {
-		default_out->type = out_type;
+		pdata->default_out->type = out_type;
 		return 0;
 	}
 	pr_err("can not determine display type\n");
@@ -286,10 +275,8 @@ static bool is_dc_default_out_flag(u32 flag)
 		return false;
 }
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
-static struct device_node *dc_get_or_node_name(struct device *dev)
+static char *dc_get_or_node_name(struct device *dev)
 {
-	struct device_node *np = NULL;
 	const struct platform_device *pdev;
 	struct tegra_dc *dc;
 
@@ -298,21 +285,18 @@ static struct device_node *dc_get_or_node_name(struct device *dev)
 	dc = platform_get_drvdata(pdev);
 	BUG_ON(!dc);
 
-	np = of_find_node_by_path(dc_or_node_names[dc->ndev->id]);
-	return np;
+	return dc->pdata->dc_or_node_name;
 }
-#endif
 
 static int parse_disp_default_out(struct platform_device *ndev,
 		struct device_node *np,
-		struct tegra_dc_out *default_out,
+		struct tegra_dc_platform_data *pdata,
 		struct tegra_fb_data *fb)
 {
 	u32 temp;
 	int hotplug_gpio = 0;
 	enum of_gpio_flags flags;
 	struct device_node *ddc;
-	struct device_node *np_hdmi = NULL;
 	struct device_node *np_sor = NULL;
 	struct property *prop;
 	const __be32 *p;
@@ -322,35 +306,28 @@ static int parse_disp_default_out(struct platform_device *ndev,
 	u8 *addr;
 	int err = 0;
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
-	np_hdmi = of_find_node_by_path(dc_or_node_names[ndev->id]);
-	np_sor = of_find_node_by_path(dc_or_node_names[ndev->id]);
-#else
-	np_hdmi = of_find_node_by_path(HDMI_NODE);
-	np_sor = (ndev->id) ? of_find_node_by_path(SOR1_NODE) :
-		of_find_node_by_path(SOR_NODE);
-#endif
+	np_sor = of_find_node_by_path(pdata->dc_or_node_name);
 
 	/*
 	 * construct default_out
 	 */
 	if (!of_property_read_u32(np, "nvidia,out-width", &temp)) {
-		default_out->width = (unsigned) temp;
+		pdata->default_out->width = (unsigned) temp;
 		OF_DC_LOG("out_width %d\n", default_out->width);
 	}
 	if (!of_property_read_u32(np, "nvidia,out-height", &temp)) {
-		default_out->height = (unsigned) temp;
+		pdata->default_out->height = (unsigned) temp;
 		OF_DC_LOG("out_height %d\n", default_out->height);
 	}
 	if (!of_property_read_u32(np, "nvidia,out-rotation", &temp)) {
-		default_out->rotation = (unsigned) temp;
+		pdata->default_out->rotation = (unsigned) temp;
 		OF_DC_LOG("out_rotation %d\n", temp);
 	}
-	if (np_hdmi && of_device_is_available(np_hdmi) &&
-		(default_out->type == TEGRA_DC_OUT_HDMI) &&
+	if (np_sor && of_device_is_available(np_sor) &&
+		(pdata->default_out->type == TEGRA_DC_OUT_HDMI) &&
 		!(tegra_platform_is_linsim() ||	tegra_platform_is_vdk())) {
 		int id;
-		ddc = of_parse_phandle(np_hdmi, "nvidia,ddc-i2c-bus", 0);
+		ddc = of_parse_phandle(np_sor, "nvidia,ddc-i2c-bus", 0);
 
 		if (!ddc) {
 			pr_err("No ddc device node\n");
@@ -362,7 +339,7 @@ static int parse_disp_default_out(struct platform_device *ndev,
 		of_node_put(ddc);
 
 		if (id >= 0) {
-			default_out->dcc_bus = id;
+			pdata->default_out->dcc_bus = id;
 			OF_DC_LOG("out_dcc bus %d\n", id);
 		} else {
 			pr_err("Invalid i2c id\n");
@@ -370,33 +347,33 @@ static int parse_disp_default_out(struct platform_device *ndev,
 			goto parse_disp_defout_fail;
 		}
 
-		hotplug_gpio = of_get_named_gpio_flags(np_hdmi,
+		hotplug_gpio = of_get_named_gpio_flags(np_sor,
 				"nvidia,hpd-gpio", 0, &flags);
 		if (hotplug_gpio == -EPROBE_DEFER) {
 			err = -EPROBE_DEFER;
 			goto parse_disp_defout_fail;
 		}
-		default_out->hotplug_gpio = hotplug_gpio;
+		pdata->default_out->hotplug_gpio = hotplug_gpio;
 	}
 	if (np_sor && of_device_is_available(np_sor) &&
-		((default_out->type == TEGRA_DC_OUT_DP) ||
-		(default_out->type == TEGRA_DC_OUT_NVSR_DP))) {
+		((pdata->default_out->type == TEGRA_DC_OUT_DP) ||
+		(pdata->default_out->type == TEGRA_DC_OUT_NVSR_DP))) {
 		hotplug_gpio = of_get_named_gpio_flags(np_sor,
 				"nvidia,hpd-gpio", 0, &flags);
 		if (hotplug_gpio != 0)
-			default_out->hotplug_gpio = hotplug_gpio;
+			pdata->default_out->hotplug_gpio = hotplug_gpio;
 	}
 
 	if (!of_property_read_u32(np, "nvidia,out-max-pixclk", &temp)) {
-		default_out->max_pixclock = (unsigned)temp;
+		pdata->default_out->max_pixclock = (unsigned)temp;
 		OF_DC_LOG("%u max_pixclock in pico second unit\n",
-			default_out->max_pixclock);
+			pdata->default_out->max_pixclock);
 	}
 
 	if (!of_property_read_u32(np, "nvidia,dither", &temp)) {
-		default_out->dither = (unsigned)temp;
+		pdata->default_out->dither = (unsigned)temp;
 		OF_DC_LOG("dither option %d\n",
-			default_out->dither);
+			pdata->default_out->dither);
 	}
 
 	of_property_for_each_u32(np, "nvidia,out-flags", prop, p, u) {
@@ -405,24 +382,25 @@ static int parse_disp_default_out(struct platform_device *ndev,
 			err = -EINVAL;
 			goto parse_disp_defout_fail;
 		}
-		default_out->flags |= (unsigned) u;
+		pdata->default_out->flags |= (unsigned) u;
 	}
 
 	if (!of_property_read_u32(np, "nvidia,out-hdcp-policy", &temp)) {
-		default_out->hdcp_policy = (unsigned)temp;
+		pdata->default_out->hdcp_policy = (unsigned)temp;
 		OF_DC_LOG("hdcp_policy = %u\n", default_out->hdcp_policy);
 	} else {
-		default_out->hdcp_policy = TEGRA_DC_HDCP_POLICY_ALWAYS_ON;
+		pdata->default_out->hdcp_policy =
+			TEGRA_DC_HDCP_POLICY_ALWAYS_ON;
 	}
 
 	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
-		default_out->hotplug_gpio = -1;
+		pdata->default_out->hotplug_gpio = -1;
 
 	/* if hotplug not supported clear TEGRA_DC_OUT_HOTPLUG_WAKE_LP0 */
-	if (default_out->hotplug_gpio < 0)
-		default_out->flags &= ~TEGRA_DC_OUT_HOTPLUG_WAKE_LP0;
+	if (pdata->default_out->hotplug_gpio < 0)
+		pdata->default_out->flags &= ~TEGRA_DC_OUT_HOTPLUG_WAKE_LP0;
 
-	OF_DC_LOG("default_out flag %u\n", default_out->flags);
+	OF_DC_LOG("default_out flag %u\n", pdata->default_out->flags);
 
 	if (!of_property_read_u32(np, "nvidia,out-align", &temp)) {
 		if (temp == TEGRA_DC_ALIGN_MSB)
@@ -434,7 +412,7 @@ static int parse_disp_default_out(struct platform_device *ndev,
 			err = -EINVAL;
 			goto parse_disp_defout_fail;
 		}
-		default_out->align = (unsigned)temp;
+		pdata->default_out->align = (unsigned)temp;
 	}
 
 	if (!of_property_read_u32(np, "nvidia,out-order", &temp)) {
@@ -447,7 +425,7 @@ static int parse_disp_default_out(struct platform_device *ndev,
 			err = -EINVAL;
 			goto parse_disp_defout_fail;
 		}
-		default_out->order = (unsigned)temp;
+		pdata->default_out->order = (unsigned)temp;
 	}
 
 	of_property_for_each_u32(np, "nvidia,out-pins", prop, p, u)
@@ -459,19 +437,19 @@ static int parse_disp_default_out(struct platform_device *ndev,
 		goto parse_disp_defout_fail;
 	}
 	n_outpins = n_outpins/2;
-	default_out->n_out_pins = (unsigned)n_outpins;
+	pdata->default_out->n_out_pins = (unsigned)n_outpins;
 	if (n_outpins)
-		default_out->out_pins = devm_kzalloc(&ndev->dev,
+		pdata->default_out->out_pins = devm_kzalloc(&ndev->dev,
 			n_outpins * sizeof(struct tegra_dc_out_pin),
 			GFP_KERNEL);
 
-	if (n_outpins && !default_out->out_pins) {
+	if (n_outpins && !pdata->default_out->out_pins) {
 		dev_err(&ndev->dev, "not enough memory\n");
 		err = -ENOMEM;
 		goto parse_disp_defout_fail;
 	}
 	n_outpins = 0;
-	addr = (u8 *)default_out->out_pins;
+	addr = (u8 *)pdata->default_out->out_pins;
 
 	/*
 	 * There's no below iteration in case of NULL addr
@@ -488,19 +466,19 @@ static int parse_disp_default_out(struct platform_device *ndev,
 
 	if (!of_property_read_string(np, "nvidia,out-parent-clk",
 		&temp_str0)) {
-		default_out->parent_clk = temp_str0;
+		pdata->default_out->parent_clk = temp_str0;
 		OF_DC_LOG("parent clk %s\n",
-			default_out->parent_clk);
+			pdata->default_out->parent_clk);
 	} else
 		pr_info("%s: No parent clk. dft clk will be used.\n",
 			__func__);
 
-	if (default_out->type == TEGRA_DC_OUT_HDMI) {
-		default_out->depth = 0;
+	if (pdata->default_out->type == TEGRA_DC_OUT_HDMI) {
+		pdata->default_out->depth = 0;
 		if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)) {
 			if (!of_property_read_u32(np,
 				"nvidia,out-depth", &temp)) {
-				default_out->depth = (unsigned) temp;
+				pdata->default_out->depth = (unsigned) temp;
 				OF_DC_LOG("out-depth for HDMI FB console %d\n", temp);
 			}
 		}
@@ -511,17 +489,17 @@ static int parse_disp_default_out(struct platform_device *ndev,
 		 * default_out->type == TEGRA_DC_OUT_LVDS
 		 */
 		if (!of_property_read_u32(np,
-			"nvidia,out-depth", &temp)) {
-			default_out->depth = (unsigned) temp;
+				"nvidia,out-depth", &temp)) {
+			pdata->default_out->depth = (unsigned) temp;
 			OF_DC_LOG("out-depth for DSI display %d\n", temp);
 		}
 	}
 
 	if (!of_property_read_u32(np,
 			"nvidia,out-hotplug-state", &temp)) {
-			default_out->hotplug_state = (unsigned) temp;
-			wmb();
-			OF_DC_LOG("out-hotplug-state %d\n", temp);
+		pdata->default_out->hotplug_state = (unsigned) temp;
+		wmb();
+		OF_DC_LOG("out-hotplug-state %d\n", temp);
 	}
 
 	/*
@@ -538,7 +516,6 @@ static int parse_disp_default_out(struct platform_device *ndev,
 		OF_DC_LOG("framebuffer yres %d\n", fb->yres);
 	}
 parse_disp_defout_fail:
-	of_node_put(np_hdmi);
 	of_node_put(np_sor);
 
 	return err;
@@ -2161,11 +2138,7 @@ static int dc_dp_out_hotplug_init(struct device *dev)
 	int gpio;
 	struct device_node *np_dp = NULL;
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
-	np_dp = dc_get_or_node_name(dev);
-#else
-	np_dp =	of_find_node_by_path(SOR1_NODE);
-#endif
+	np_dp = of_find_node_by_path(dc_get_or_node_name(dev));
 
 	pdev = container_of(dev, struct platform_device, dev);
 	BUG_ON(!pdev);
@@ -2228,11 +2201,8 @@ static int dc_hdmi_out_enable(struct device *dev)
 	int err = 0;
 	struct device_node *np_hdmi = NULL;
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
-	np_hdmi = dc_get_or_node_name(dev);
-#else
-	np_hdmi = of_find_node_by_path(HDMI_NODE);
-#endif
+	np_hdmi = of_find_node_by_path(dc_get_or_node_name(dev));
+
 	if (!np_hdmi || !of_device_is_available(np_hdmi)) {
 		pr_info("%s: no valid hdmi node\n", __func__);
 		goto dc_hdmi_out_en_fail;
@@ -2312,11 +2282,7 @@ static int dc_hdmi_hotplug_init(struct device *dev)
 	int err = 0;
 	struct device_node *np_hdmi = NULL;
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
-	np_hdmi = dc_get_or_node_name(dev);
-#else
-	np_hdmi = of_find_node_by_path(HDMI_NODE);
-#endif
+	np_hdmi = of_find_node_by_path(dc_get_or_node_name(dev));
 
 	if (!np_hdmi || !of_device_is_available(np_hdmi)) {
 		pr_info("%s: no valid hdmi node\n", __func__);
@@ -2354,37 +2320,7 @@ static int dc_hdmi_postsuspend(void)
 	}
 	return 0;
 }
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC) ||	\
-	defined(CONFIG_ARCH_TEGRA_12x_SOC)
-static void dc_hdmi_hotplug_report(bool state)
-{
-	static struct pinctrl_dev *pctl_dev = NULL;
-	unsigned val = (state) ? TEGRA_PIN_PULL_DOWN : TEGRA_PIN_PULL_NONE;
-	unsigned long conf;
-	int ret;
 
-	if (!pctl_dev)
-		pctl_dev = pinctrl_get_dev_from_of_compatible(
-			"nvidia,tegra124-pinmux");
-
-	if (!pctl_dev) {
-		pr_err("%s(): tegra pincontrol does not found\n", __func__);
-		return;
-	}
-
-	conf = TEGRA_PINCONF_PACK(TEGRA_PINCONF_PARAM_PULL, val);
-
-	ret = pinctrl_set_config_for_group_name(pctl_dev, "ddc_sda_pv5", conf);
-	if (ret < 0)
-		pr_err("%s(): ddc_sda_pv5 pinconfig failed: %d\n",
-			__func__, ret);
-
-	ret = pinctrl_set_config_for_group_name(pctl_dev, "ddc_scl_pv4", conf);
-	if (ret < 0)
-		pr_err("%s(): ddc_scl_pv4 pinconfig failed: %d\n",
-			__func__, ret);
-}
-#endif
 struct device_node *tegra_get_panel_node_out_type_check
 	(struct tegra_dc *dc, u32 out_type)
 {
@@ -2397,12 +2333,12 @@ struct device_node *tegra_get_panel_node_out_type_check
 		return NULL;
 
 	if (dc->ndev->id == 0)
-		np_panel = tegra_primary_panel_get_dt_node(NULL);
+		np_panel = tegra_primary_panel_get_dt_node(dc->pdata);
 	else if (dc->ndev->id == 1)
-		np_panel = tegra_secondary_panel_get_dt_node(NULL);
+		np_panel = tegra_secondary_panel_get_dt_node(dc->pdata);
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 	else if (dc->ndev->id == 2)
-		np_panel = tegra_tertiary_panel_get_dt_node(NULL);
+		np_panel = tegra_tertiary_panel_get_dt_node(dc->pdata);
 #endif
 
 	if (!np_panel) {
@@ -2457,7 +2393,6 @@ struct tegra_dc_platform_data
 	struct device_node *np_dsi = NULL;
 	struct device_node *np_dsi_panel = NULL;
 	struct device_node *np_sor = NULL;
-	struct device_node *np_hdmi = NULL;
 	struct device_node *np_dp_panel = NULL;
 	struct device_node *timings_np = NULL;
 	struct device_node *vrr_np = NULL;
@@ -2473,9 +2408,8 @@ struct tegra_dc_platform_data
 	const __be32 *p;
 	int err;
 	u32 temp;
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)  || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	const char *dc_or_node;
-#endif
+
 #if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
 	int check_val;
 #endif
@@ -2506,7 +2440,6 @@ struct tegra_dc_platform_data
 		goto fail_parse;
 	}
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	/* Check the OR node connected to each Display
 	 * Controller. To enable this feature nvidia,dc_or_node
 	 * has to set a valid OR name in the DT file.
@@ -2519,19 +2452,14 @@ struct tegra_dc_platform_data
 	if ((!strcmp(dc_or_node, "/host1x/sor")) ||
 		(!strcmp(dc_or_node, "/host1x/sor1")) ||
 		(!strcmp(dc_or_node, "/host1x/dsi"))) {
-		strcpy(dc_or_node_names[ndev->id], dc_or_node);
-		pr_info("found %s\n", dc_or_node);
+		strcpy(pdata->dc_or_node_name, dc_or_node);
+		OF_DC_LOG("dc or node %s\n", pdata->dc_or_node_name);
 	} else {
-		pr_info("WRONG OR_TYPE - found %s\n", dc_or_node);
-		/* TODO: Faile the parsing here.
-		 * Since this a new change to DT, till it is reflected in all
-		 * needed DT files. Hard Coding the following assumption
-		 */
-		strcpy(dc_or_node_names[0], "/host1x/dsi");
-		strcpy(dc_or_node_names[1], "/host1x/sor1");
-		strcpy(dc_or_node_names[2], "/host1x/sor");
+		pr_err("WRONG OR_TYPE - found %s\n", dc_or_node);
 	}
-#endif
+
+	BUG_ON(!pdata->dc_or_node_name);
+
 	/*
 	 * determine dc out type,
 	 * dc node defines nvidia,out-type to indicate
@@ -2539,7 +2467,7 @@ struct tegra_dc_platform_data
 	 * current dc id.
 	 */
 
-	err = parse_dc_out_type(np, ndev, pdata->default_out);
+	err = parse_dc_out_type(np, ndev, pdata);
 	if (err) {
 		pr_err("parse_dc_out_type err\n");
 		goto fail_parse;
@@ -2592,12 +2520,8 @@ struct tegra_dc_platform_data
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_DP ||
 		pdata->default_out->type == TEGRA_DC_OUT_NVSR_DP ||
 		   pdata->default_out->type == TEGRA_DC_OUT_FAKE_DP) {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
-		np_sor = of_find_node_by_path(dc_or_node_names[ndev->id]);
-#else
-		np_sor = (ndev->id) ? of_find_node_by_path(SOR1_NODE) :
-			of_find_node_by_path(SOR_NODE);
-#endif
+		np_sor = of_find_node_by_path(pdata->dc_or_node_name);
+
 		if (!np_sor) {
 			pr_err("%s: could not find sor node\n", __func__);
 			goto fail_parse;
@@ -2636,12 +2560,7 @@ struct tegra_dc_platform_data
 			}
 		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_HDMI) {
-		bool hotplug_report = false;
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
-		np_hdmi = of_find_node_by_path(dc_or_node_names[ndev->id]);
-#else
-		np_hdmi = of_find_node_by_path(HDMI_NODE);
-#endif
+		np_sor = of_find_node_by_path(pdata->dc_or_node_name);
 
 		if (ndev->id == 0)
 			np_target_disp
@@ -2696,29 +2615,13 @@ struct tegra_dc_platform_data
 			!pdata->default_out->hotplug_init &&
 			!pdata->default_out->postsuspend &&
 			!pdata->default_out->hotplug_report) {
-			if (np_hdmi && of_device_is_available(np_hdmi)) {
-				if (!of_property_read_u32(np_hdmi,
-					"nvidia,hotplug-report", &temp)) {
-					hotplug_report = (bool)temp;
-				}
-			}
 			pdata->default_out->enable = dc_hdmi_out_enable;
 			pdata->default_out->disable = dc_hdmi_out_disable;
 			pdata->default_out->hotplug_init = dc_hdmi_hotplug_init;
 			pdata->default_out->postsuspend = dc_hdmi_postsuspend;
-#if defined(CONFIG_ARCH_TEGRA_11x_SOC) ||       \
-        defined(CONFIG_ARCH_TEGRA_12x_SOC)
-			if (hotplug_report)
-				pdata->default_out->hotplug_report =
-				dc_hdmi_hotplug_report;
-#endif
 		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_LVDS) {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-		np_sor = of_find_node_by_path(dc_or_node_names[ndev->id]);
-#else
-		np_sor = of_find_node_by_path(SOR_NODE);
-#endif
+		np_sor = of_find_node_by_path(pdata->dc_or_node_name);
 
 		if (!np_sor) {
 			pr_err("%s: could not find sor node\n", __func__);
@@ -2745,7 +2648,7 @@ struct tegra_dc_platform_data
 		goto fail_parse;
 	} else {
 		err = parse_disp_default_out(ndev, default_out_np,
-			pdata->default_out, pdata->fb);
+			pdata, pdata->fb);
 		if (err == -EPROBE_DEFER) {
 			of_node_put(sd_np);
 #if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
@@ -2754,7 +2657,6 @@ struct tegra_dc_platform_data
 #endif
 			of_node_put(np_dsi);
 			of_node_put(np_sor);
-			of_node_put(np_hdmi);
 			return ERR_PTR(err);
 		}
 		if (err)
@@ -3031,7 +2933,6 @@ struct tegra_dc_platform_data
 	of_node_put(np_target_disp);
 	of_node_put(np_dsi);
 	of_node_put(np_sor);
-	of_node_put(np_hdmi);
 	return pdata;
 
 fail_parse:
@@ -3042,7 +2943,6 @@ fail_parse:
 #endif
 	of_node_put(np_dsi);
 	of_node_put(np_sor);
-	of_node_put(np_hdmi);
 	return NULL;
 }
 #else

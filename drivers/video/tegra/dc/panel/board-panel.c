@@ -821,7 +821,7 @@ struct device_node *tegra_primary_panel_get_dt_node(
 	struct device_node *np_panel = NULL;
 	struct tegra_dc_out *dc_out = NULL;
 	struct device_node *np_hdmi =
-		of_find_node_by_path(HDMI_NODE);
+		of_find_node_by_path(SOR1_NODE);
 
 	if (pdata)
 		dc_out = pdata->default_out;
@@ -890,7 +890,7 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 	}
 
 	of_node_put(np_display);
-	np_display = of_find_node_by_path(HDMI_NODE);
+	np_display = of_find_node_by_path(SOR1_NODE);
 	np_panel = of_get_child_by_name(np_display, "hdmi-display");
 
 success:

@@ -15,6 +15,7 @@
 #define __PMU_API_H__
 
 #include "pmu_common.h"
+#include "pmuif/gpmuif_pg_rppg.h"
 
 /* PMU Command/Message Interfaces for Adaptive Power */
 /* Macro to get Histogram index */
@@ -447,6 +448,7 @@ struct pmu_pg_msg {
 		struct pmu_pg_msg_eng_buf_stat eng_buf_stat;
 		/* TBD: other pg messages */
 		union pmu_ap_msg ap_msg;
+		struct nv_pmu_rppg_msg rppg_msg;
 	};
 };
 
@@ -478,7 +480,8 @@ enum {
 	PMU_PG_CMD_ID_ZBC_TABLE_UPDATE,
 	PMU_PG_CMD_ID_PWR_RAIL_GATE_DISABLE = 0x20,
 	PMU_PG_CMD_ID_PWR_RAIL_GATE_ENABLE,
-	PMU_PG_CMD_ID_PWR_RAIL_SMU_MSG_DISABLE
+	PMU_PG_CMD_ID_PWR_RAIL_SMU_MSG_DISABLE,
+	PMU_PMU_PG_CMD_ID_RPPG = 0x24,
 };
 
 struct pmu_pg_cmd_elpg_cmd {
@@ -526,6 +529,7 @@ enum {
 
 #define PMU_PG_FEATURE_GR_SDIV_SLOWDOWN_ENABLED	(1 << 0)
 #define PMU_PG_FEATURE_GR_POWER_GATING_ENABLED	(1 << 2)
+#define PMU_PG_FEATURE_GR_RPPG_ENABLED		(1 << 3)
 
 struct pmu_pg_cmd_gr_init_param {
 	u8 cmd_type;
@@ -551,6 +555,7 @@ struct pmu_pg_cmd {
 		struct pmu_pg_cmd_gr_init_param gr_init_param;
 		/* TBD: other pg commands */
 		union pmu_ap_cmd ap_cmd;
+		struct nv_pmu_rppg_cmd rppg_cmd;
 	};
 };
 

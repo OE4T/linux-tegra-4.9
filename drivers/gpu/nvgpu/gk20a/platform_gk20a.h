@@ -93,6 +93,9 @@ struct gk20a_platform {
 	/* Adaptative ELPG: true = enable flase = disable */
 	bool enable_aelpg;
 
+	/* Memory System Clock Gating: true = enable flase = disable*/
+	bool enable_mscg;
+
 	/* Timeout for per-channel watchdog (in mS) */
 	u32 ch_wdt_timeout_ms;
 

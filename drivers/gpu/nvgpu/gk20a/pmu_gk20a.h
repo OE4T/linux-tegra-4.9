@@ -629,6 +629,9 @@ struct pmu_pg_stats {
 #define PMU_ELPG_STAT_OFF_ON_PENDING	4   /* elpg is off, caller has requested on, but ALLOW
 					       cmd hasn't been sent due to ENABLE_ALLOW delay */
 
+#define PMU_MSCG_DISABLED 0
+#define PMU_MSCG_ENABLED 1
+
 /* Falcon Register index */
 #define PMU_FALCON_REG_R0		(0)
 #define PMU_FALCON_REG_R1		(1)
@@ -716,10 +719,13 @@ struct pmu_gk20a {
 
 	u32 elpg_stat;
 
+	u32 mscg_stat;
+
 	int pmu_state;
 
 #define PMU_ELPG_ENABLE_ALLOW_DELAY_MSEC	1 /* msec */
 	struct work_struct pg_init;
+	struct mutex pg_mutex; /* protect pg-RPPG/MSCG enable/disable */
 	struct mutex elpg_mutex; /* protect elpg enable/disable */
 	int elpg_refcnt; /* disable -1, enable +1, <=0 elpg disabled, > 0 elpg enabled */
 
@@ -774,6 +780,7 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd, struct pmu_msg *msg
 
 int gk20a_pmu_enable_elpg(struct gk20a *g);
 int gk20a_pmu_disable_elpg(struct gk20a *g);
+int gk20a_pmu_pg_global_enable(struct gk20a *g, u32 enable_pg);
 
 u32 gk20a_pmu_pg_engines_list(struct gk20a *g);
 u32 gk20a_pmu_pg_feature_list(struct gk20a *g, u32 pg_engine_id);

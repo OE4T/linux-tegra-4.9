@@ -1364,6 +1364,7 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 	struct pmu_v *pv = &g->ops.pmu_ver;
 
 	mutex_init(&pmu->elpg_mutex);
+	mutex_init(&pmu->pg_mutex);
 	mutex_init(&pmu->isr_mutex);
 	mutex_init(&pmu->pmu_copy_lock);
 	mutex_init(&pmu->pmu_seq_lock);
@@ -3298,6 +3299,9 @@ void gk20a_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_pg_init_param = NULL;
 	gops->pmu.pmu_pg_supported_engines_list = gk20a_pmu_pg_engines_list;
 	gops->pmu.pmu_pg_engines_feature_list = gk20a_pmu_pg_feature_list;
+	gops->pmu.pmu_lpwr_enable_pg = NULL;
+	gops->pmu.pmu_lpwr_disable_pg = NULL;
+	gops->pmu.pmu_pg_param_post_init = NULL;
 	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd = NULL;
 	gops->pmu.dump_secure_fuses = NULL;
 	gops->pmu.is_lazy_bootstrap = NULL;
@@ -3378,6 +3382,7 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 				PMU_PG_FEATURE_GR_POWER_GATING_ENABLED) {
 				pmu->initialized = true;
 				pmu->pmu_state = PMU_STATE_STARTED;
+				pmu->mscg_stat = PMU_MSCG_DISABLED;
 			} else
 				schedule_work(&pmu->pg_init);
 		}
@@ -3505,6 +3510,9 @@ static int pmu_init_powergating(struct gk20a *g)
 				pmu->pmu_state = PMU_STATE_ELPG_BOOTING;
 		}
 	}
+
+	if (g->ops.pmu.pmu_pg_param_post_init)
+		g->ops.pmu.pmu_pg_param_post_init(g);
 
 	return 0;
 }
@@ -4693,44 +4701,62 @@ clean_up:
 	return err;
 }
 
-static int gk20a_pmu_enable_elpg_locked(struct gk20a *g)
+int gk20a_pmu_pg_global_enable(struct gk20a *g, u32 enable_pg)
+{
+	u32 status = 0;
+
+	if (enable_pg == true) {
+		if (g->ops.pmu.pmu_pg_engines_feature_list &&
+			g->ops.pmu.pmu_pg_engines_feature_list(g,
+			PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
+			PMU_PG_FEATURE_GR_POWER_GATING_ENABLED) {
+			if (g->ops.pmu.pmu_lpwr_enable_pg)
+				status = g->ops.pmu.pmu_lpwr_enable_pg(g,
+						true);
+		} else if (support_gk20a_pmu(g->dev))
+			status = gk20a_pmu_enable_elpg(g);
+	} else if (enable_pg == false) {
+		if (g->ops.pmu.pmu_pg_engines_feature_list &&
+			g->ops.pmu.pmu_pg_engines_feature_list(g,
+			PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
+			PMU_PG_FEATURE_GR_POWER_GATING_ENABLED) {
+			if (g->ops.pmu.pmu_lpwr_disable_pg)
+				status = g->ops.pmu.pmu_lpwr_disable_pg(g,
+						true);
+		} else if (support_gk20a_pmu(g->dev))
+			status = gk20a_pmu_disable_elpg(g);
+	}
+
+	return status;
+}
+
+static int gk20a_pmu_enable_elpg_locked(struct gk20a *g, u32 pg_engine_id)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq, status;
-	u32 pg_engine_id;
-	u32 pg_engine_id_list = 0;
 
 	gk20a_dbg_fn("");
 
-	if (g->ops.pmu.pmu_pg_supported_engines_list)
-		pg_engine_id_list = g->ops.pmu.pmu_pg_supported_engines_list(g);
-	for (pg_engine_id = PMU_PG_ELPG_ENGINE_ID_GRAPHICS;
-		pg_engine_id < PMU_PG_ELPG_ENGINE_ID_INVALID_ENGINE;
-		pg_engine_id++) {
+	memset(&cmd, 0, sizeof(struct pmu_cmd));
+	cmd.hdr.unit_id = PMU_UNIT_PG;
+	cmd.hdr.size = PMU_CMD_HDR_SIZE +
+		sizeof(struct pmu_pg_cmd_elpg_cmd);
+	cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_ID_ELPG_CMD;
+	cmd.cmd.pg.elpg_cmd.engine_id = pg_engine_id;
+	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_ALLOW;
 
-		if (BIT(pg_engine_id) & pg_engine_id_list) {
-			memset(&cmd, 0, sizeof(struct pmu_cmd));
-			cmd.hdr.unit_id = PMU_UNIT_PG;
-			cmd.hdr.size = PMU_CMD_HDR_SIZE +
-				sizeof(struct pmu_pg_cmd_elpg_cmd);
-			cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_ID_ELPG_CMD;
-			cmd.cmd.pg.elpg_cmd.engine_id = pg_engine_id;
-			cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_ALLOW;
+   /* no need to wait ack for ELPG enable but set
+	* pending to sync with follow up ELPG disable
+	*/
+	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
+		pmu->elpg_stat = PMU_ELPG_STAT_ON_PENDING;
 
-		   /* no need to wait ack for ELPG enable but set
-		    * pending to sync with follow up ELPG disable
-		    */
-			if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
-				pmu->elpg_stat = PMU_ELPG_STAT_ON_PENDING;
-
-			gk20a_dbg_pmu("cmd post PMU_PG_ELPG_CMD_ALLOW");
-			status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL,
-				PMU_COMMAND_QUEUE_HPQ, pmu_handle_pg_elpg_msg,
-				pmu, &seq, ~0);
-			WARN_ON(status != 0);
-		}
-	}
+	gk20a_dbg_pmu("cmd post PMU_PG_ELPG_CMD_ALLOW");
+	status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL,
+		PMU_COMMAND_QUEUE_HPQ, pmu_handle_pg_elpg_msg,
+		pmu, &seq, ~0);
+	WARN_ON(status != 0);
 
 	gk20a_dbg_fn("done");
 	return 0;
@@ -4740,11 +4766,12 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct gr_gk20a *gr = &g->gr;
+	u32 pg_engine_id;
+	u32 pg_engine_id_list = 0;
 
 	int ret = 0;
 
 	gk20a_dbg_fn("");
-
 
 	if (!support_gk20a_pmu(g->dev))
 		return ret;
@@ -4772,7 +4799,20 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 	if (pmu->elpg_stat != PMU_ELPG_STAT_OFF)
 		goto exit_unlock;
 
-	ret = gk20a_pmu_enable_elpg_locked(g);
+	if (g->ops.pmu.pmu_pg_supported_engines_list)
+		pg_engine_id_list = g->ops.pmu.pmu_pg_supported_engines_list(g);
+
+	for (pg_engine_id = PMU_PG_ELPG_ENGINE_ID_GRAPHICS;
+		pg_engine_id < PMU_PG_ELPG_ENGINE_ID_INVALID_ENGINE;
+		pg_engine_id++) {
+
+		if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS &&
+			pmu->mscg_stat == PMU_MSCG_DISABLED)
+			continue;
+
+		if (BIT(pg_engine_id) & pg_engine_id_list)
+			ret = gk20a_pmu_enable_elpg_locked(g, pg_engine_id);
+	}
 
 exit_unlock:
 	mutex_unlock(&pmu->elpg_mutex);
@@ -4844,6 +4884,10 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 	for (pg_engine_id = PMU_PG_ELPG_ENGINE_ID_GRAPHICS;
 		pg_engine_id < PMU_PG_ELPG_ENGINE_ID_INVALID_ENGINE;
 		pg_engine_id++) {
+
+		if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS &&
+			pmu->mscg_stat == PMU_MSCG_DISABLED)
+			continue;
 
 		if (BIT(pg_engine_id) & pg_engine_id_list) {
 			memset(&cmd, 0, sizeof(struct pmu_cmd));

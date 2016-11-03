@@ -526,15 +526,75 @@ enum {
 };
 
 #define PMU_PG_PARAM_CMD_GR_INIT_PARAM  0x0
+#define PMU_PG_PARAM_CMD_MS_INIT_PARAM  0x01
+#define PMU_PG_PARAM_CMD_MCLK_CHANGE  0x04
+#define PMU_PG_PARAM_CMD_POST_INIT  0x06
 
 #define PMU_PG_FEATURE_GR_SDIV_SLOWDOWN_ENABLED	(1 << 0)
 #define PMU_PG_FEATURE_GR_POWER_GATING_ENABLED	(1 << 2)
 #define PMU_PG_FEATURE_GR_RPPG_ENABLED		(1 << 3)
 
+#define NVGPU_PMU_GR_FEATURE_MASK_RPPG	(1 << 3)
+#define NVGPU_PMU_GR_FEATURE_MASK_ALL	\
+	(	\
+		NVGPU_PMU_GR_FEATURE_MASK_RPPG   \
+	)
+
+#define NVGPU_PMU_MS_FEATURE_MASK_CLOCK_GATING  (1 << 0)
+#define NVGPU_PMU_MS_FEATURE_MASK_SW_ASR        (1 << 1)
+#define NVGPU_PMU_MS_FEATURE_MASK_RPPG          (1 << 8)
+#define NVGPU_PMU_MS_FEATURE_MASK_FB_TRAINING   (1 << 5)
+
+#define NVGPU_PMU_MS_FEATURE_MASK_ALL	\
+	(	\
+		NVGPU_PMU_MS_FEATURE_MASK_CLOCK_GATING  |\
+		NVGPU_PMU_MS_FEATURE_MASK_SW_ASR        |\
+		NVGPU_PMU_MS_FEATURE_MASK_RPPG          |\
+		NVGPU_PMU_MS_FEATURE_MASK_FB_TRAINING   \
+	)
+
+#define PG_REQUEST_TYPE_GLOBAL 0x0
+#define PG_REQUEST_TYPE_PSTATE 0x1
+
 struct pmu_pg_cmd_gr_init_param {
 	u8 cmd_type;
 	u16 sub_cmd_id;
 	u8 featuremask;
+};
+
+struct pmu_pg_cmd_ms_init_param {
+	u8 cmd_type;
+	u16 cmd_id;
+	u8 psi;
+	u8 idle_flipped_test_enabled;
+	u16 psiSettleTimeUs;
+	u8 rsvd[2];
+	u32 support_mask;
+	u32 abort_timeout_us;
+};
+
+struct pmu_pg_cmd_mclk_change {
+	u8 cmd_type;
+	u16 cmd_id;
+	u8 rsvd;
+	u32 data;
+};
+
+#define PG_VOLT_RAIL_IDX_MAX 2
+
+struct pmu_pg_volt_rail {
+	u8    volt_rail_idx;
+	u8    sleep_volt_dev_idx;
+	u8    sleep_vfe_idx;
+	u32   sleep_voltage_uv;
+	u32   therm_vid0_cache;
+	u32   therm_vid1_cache;
+};
+
+struct pmu_pg_cmd_post_init_param {
+	u8 cmd_type;
+	u16 cmd_id;
+	struct pmu_pg_volt_rail pg_volt_rail[PG_VOLT_RAIL_IDX_MAX];
 };
 
 struct pmu_pg_cmd_stat {
@@ -553,6 +613,9 @@ struct pmu_pg_cmd {
 		struct pmu_pg_cmd_eng_buf_load_v2 eng_buf_load_v2;
 		struct pmu_pg_cmd_stat stat;
 		struct pmu_pg_cmd_gr_init_param gr_init_param;
+		struct pmu_pg_cmd_ms_init_param ms_init_param;
+		struct pmu_pg_cmd_mclk_change mclk_change;
+		struct pmu_pg_cmd_post_init_param post_init;
 		/* TBD: other pg commands */
 		union pmu_ap_cmd ap_cmd;
 		struct nv_pmu_rppg_cmd rppg_cmd;

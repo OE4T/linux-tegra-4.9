@@ -32,7 +32,7 @@
 			reg = <0x0 0x0>;
 			enable-method = "psci";
 			cpu-idle-states = <&DENVER_C6 &DENVER_C7>;
-			cpu-capacity = <1024>;
+			cpu-ipc = <1024>;
 			next-level-cache = <&L2_DENVER>;
 		};
 
@@ -42,7 +42,7 @@
 			reg = <0x0 0x1>;
 			enable-method = "psci";
 			cpu-idle-states = <&DENVER_C6 &DENVER_C7>;
-			cpu-capacity = <1024>;
+			cpu-ipc = <1024>;
 			next-level-cache = <&L2_DENVER>;
 		};
 
@@ -52,7 +52,7 @@
 			reg = <0x0 0x100>;
 			enable-method = "psci";
 			cpu-idle-states = <&A57_C7>;
-			cpu-capacity = <752>;
+			cpu-ipc = <752>;
 			next-level-cache = <&L2_A57>;
 		};
 
@@ -62,7 +62,7 @@
 			reg = <0x0 0x101>;
 			enable-method = "psci";
 			cpu-idle-states = <&A57_C7>;
-			cpu-capacity = <752>;
+			cpu-ipc = <752>;
 			next-level-cache = <&L2_A57>;
 		};
 
@@ -72,7 +72,7 @@
 			reg = <0x0 0x102>;
 			enable-method = "psci";
 			cpu-idle-states = <&A57_C7>;
-			cpu-capacity = <752>;
+			cpu-ipc = <752>;
 			next-level-cache = <&L2_A57>;
 		};
 
@@ -82,7 +82,7 @@
 			reg = <0x0 0x103>;
 			enable-method = "psci";
 			cpu-idle-states = <&A57_C7>;
-			cpu-capacity = <752>;
+			cpu-ipc = <752>;
 			next-level-cache = <&L2_A57>;
 		};
 

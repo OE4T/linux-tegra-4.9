@@ -53,6 +53,7 @@ arch_initcall(display_tegra_dt_info);
 #define CONSOLE_MEM_SIZE SZ_512K
 #define FTRACE_MEM_SIZE SZ_512K
 #define RTRACE_MEM_SIZE SZ_512K
+#define PMSG_MEM_SIZE SZ_256K
 
 static struct ramoops_platform_data ramoops_data;
 
@@ -77,6 +78,10 @@ static int __init ramoops_init(struct reserved_mem *rmem)
 #ifdef CONFIG_PSTORE_RTRACE
 	ramoops_data.rtrace_size = RTRACE_MEM_SIZE;
 #endif
+#ifdef CONFIG_PSTORE_PMSG
+	ramoops_data.pmsg_size = PMSG_MEM_SIZE;
+#endif
+
 	ramoops_data.dump_oops = 1;
 	return 0;
 }

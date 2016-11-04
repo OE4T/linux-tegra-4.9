@@ -5340,6 +5340,7 @@ static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	/* Fix me: Revert bpmp check once bpmp FW is fixed */
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	if (tegra_bpmp_running() && base_clk && rate != clk_get_rate(base_clk)) {
+		tegra_nvdisp_test_and_set_compclk(rate, dc);
 #else
 	if (rate != clk_get_rate(base_clk)) {
 #endif

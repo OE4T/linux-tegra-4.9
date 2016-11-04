@@ -714,6 +714,8 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc,
 			struct tegra_dc_mode *mode);
 void tegra_nvdisp_underflow_handler(struct tegra_dc *dc);
 int tegra_nvdisp_set_compclk(struct tegra_dc *dc);
+int tegra_nvdisp_test_and_set_compclk(unsigned long rate,
+					struct tegra_dc *dc);
 void reg_dump(struct tegra_dc *dc, void *data,
 	void (*print)(void *data, const char *str));
 

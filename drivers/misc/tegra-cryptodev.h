@@ -187,6 +187,21 @@ struct tegra_rsa_req {
 #define TEGRA_CRYPTO_IOCTL_RSA_REQ	\
 		_IOWR(0x98, 105, struct tegra_rsa_req)
 
+struct tegra_rsa_req_ahash {
+	char *key;
+	char *message;
+	char *result;
+	int algo;
+	int keylen;
+	int msg_len;
+	int modlen;
+	int pub_explen;
+	int prv_explen;
+	int skip_key;
+};
+#define TEGRA_CRYPTO_IOCTL_RSA_REQ_AHASH	\
+		_IOWR(0x98, 110, struct tegra_rsa_req_ahash)
+
 #ifdef CONFIG_COMPAT
 struct tegra_rsa_req_32 {
 	__u32 key;

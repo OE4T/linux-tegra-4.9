@@ -46,6 +46,7 @@ enum nv_pmu_clk_clkwhich {
 #define NV_PMU_CLK_BOARDOBJGRP_CLASS_ID_VIN_DEVICE                          0x02
 #define NV_PMU_CLK_BOARDOBJGRP_CLASS_ID_FLL_DEVICE                          0x03
 #define NV_PMU_CLK_BOARDOBJGRP_CLASS_ID_CLK_VF_POINT                        0x04
+#define NV_PMU_CLK_BOARDOBJGRP_CLASS_ID_CLK_FREQ_CONTROLLER                 0x05
 
 /*!
 * CLK_DOMAIN BOARDOBJGRP Header structure.  Describes global state about the
@@ -309,6 +310,48 @@ struct nv_pmu_clk_load {
 		struct nv_pmu_clk_load_payload_freq_controllers freq_controllers;
 	} payload;
 };
+/* CLK_FREQ_CONTROLLER */
+#define NV_NV_PMU_CLK_LOAD_FEATURE_FREQ_CONTROLLER (0x00000003)
+
+#define NV_NV_PMU_CLK_LOAD_ACTION_MASK_FREQ_CONTROLLER_CALLBACK_NO  (0x00000000)
+#define NV_NV_PMU_CLK_LOAD_ACTION_MASK_FREQ_CONTROLLER_CALLBACK_YES (0x00000002)
+
+struct nv_pmu_clk_clk_freq_controller_boardobjgrp_set_header {
+	struct nv_pmu_boardobjgrp_e32  super;
+	u32 sampling_period_ms;
+	u8 volt_policy_idx;
+};
+
+struct nv_pmu_clk_clk_freq_controller_boardobj_set {
+	struct nv_pmu_boardobj super;
+	u8   controller_id;
+	u8   parts_freq_mode;
+	bool bdisable;
+	u32  clk_domain;
+	s16  freq_cap_noise_unaware_vmin_above;
+	s16  freq_cap_noise_unaware_vmin_below;
+	s16  freq_hyst_pos_mhz;
+	s16  freq_hyst_neg_mhz;
+};
+
+struct nv_pmu_clk_clk_freq_controller_pi_boardobj_set {
+	struct nv_pmu_clk_clk_freq_controller_boardobj_set super;
+	s32 prop_gain;
+	s32 integ_gain;
+	s32 integ_decay;
+	s32 volt_delta_min;
+	s32 volt_delta_max;
+	u8  slowdown_pct_min;
+	bool bpoison;
+};
+
+union nv_pmu_clk_clk_freq_controller_boardobj_set_union {
+	struct nv_pmu_boardobj board_obj;
+	struct nv_pmu_clk_clk_freq_controller_boardobj_set super;
+	struct nv_pmu_clk_clk_freq_controller_pi_boardobj_set pi;
+};
+
+NV_PMU_BOARDOBJ_GRP_SET_MAKE_E32(clk, clk_freq_controller);
 
 /* CLK CMD ID definitions.  */
 #define NV_PMU_CLK_CMD_ID_BOARDOBJ_GRP_SET                          (0x00000000)

@@ -824,9 +824,7 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 		fb_notifier_call_chain(FB_EVENT_BLANK, &event);
 		console_unlock();
 	} else {
-		console_lock();
 		fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);
-		console_unlock();
 	}
 	mutex_unlock(&fb_info->info->lock);
 }

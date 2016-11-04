@@ -838,6 +838,7 @@ static int tegra_mipi_parse_config(struct platform_device *pdev,
 static const struct of_device_id tegra_mipi_of_match[] = {
 	{ .compatible = "nvidia,tegra210-mipical"},
 	{ .compatible = "nvidia, tegra186-mipical"},
+	{ .compatible = "nvidia, tegra186-mipical-shared-multi-os"},
 	{ },
 };
 
@@ -992,6 +993,17 @@ static int tegra_mipi_probe(struct platform_device *pdev)
 		regmap_update_bits(mipi->regmap, MIPI_BIAS_PAD_CFG2,
 				PDVREG, 1 << PDVREG_SHIFT);
 		tegra_mipi_clk_disable(mipi);
+	} else if (of_device_is_compatible(np, "nvidia, tegra186-mipical-shared-multi-os")) {
+		mipi->mipi_cal_fixed = devm_clk_get(&pdev->dev,
+				"uart_fs_mipi_cal");
+		if (IS_ERR(mipi->mipi_cal_fixed))
+			return PTR_ERR(mipi->mipi_cal_fixed);
+		mipi->ops->parse_cfg = &tegra_prod_get_config;
+		mipi->ops->calibrate = &tegra_mipical_using_prod;
+		mipi->ops->pad_enable = &_t18x_tegra_mipi_bias_pad_enable;
+		mipi->ops->pad_disable = &_t18x_tegra_mipi_bias_pad_disable;
+		mipi->rst = devm_reset_control_get(mipi->dev, "mipi_cal");
+		reset_control_deassert(mipi->rst);
 	}
 
 	if (mipi->ops->parse_cfg)

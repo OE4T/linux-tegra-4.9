@@ -181,6 +181,10 @@ static int gk20a_scale_target(struct device *dev, unsigned long *freq,
 	if (local_freq > max_freq)
 		local_freq = max_freq;
 
+	/* Check for duplicate request */
+	if (local_freq == g->devfreq->previous_freq)
+		return 0;
+
 	/* set the final frequency */
 	rounded_rate = platform->clk_round_rate(dev, local_freq);
 

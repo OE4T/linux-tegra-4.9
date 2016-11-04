@@ -85,6 +85,7 @@ static struct of_device_id nvdisp_disc_pd[] = {
 static struct nvdisp_pd_info nvdisp_pg[NVDISP_PD_COUNT];
 static struct nvdisp_compclk_client clk_client[TEGRA_MAX_DC];
 static bool compclk_already_on = false, hubclk_already_on = false;
+static int cur_clk_client_index;
 
 static unsigned int default_srgb_regamma_lut[] = {
 		0x6000, 0x60CE, 0x619D, 0x626C, 0x632D, 0x63D4,
@@ -820,13 +821,20 @@ int tegra_nvdisp_set_compclk(struct tegra_dc *dc)
 
 	if (rate == 0) {
 		/* none of the pclks is on. disable compclk */
-		tegra_disp_clk_disable_unprepare(compclk);
-		compclk_already_on = false;
+		if (compclk_already_on) {
+			tegra_disp_clk_disable_unprepare(compclk);
+			compclk_already_on = false;
+		}
+
 		mutex_unlock(&tegra_nvdisp_lock);
 		return 0;
 	}
 
 	pr_info(" rate get on compclk %ld\n", rate);
+
+	/* save current clock client index */
+	cur_clk_client_index = index;
+
 	/* Set parent for Display clock */
 	clk_set_parent(compclk, clk_client[index].dc->clk);
 
@@ -834,6 +842,40 @@ int tegra_nvdisp_set_compclk(struct tegra_dc *dc)
 	if (!compclk_already_on) {
 		tegra_disp_clk_prepare_enable(compclk);
 		compclk_already_on = true;
+	}
+
+	mutex_unlock(&tegra_nvdisp_lock);
+	return 0;
+}
+
+int tegra_nvdisp_test_and_set_compclk(unsigned long rate, struct tegra_dc *dc)
+{
+	bool inuse_state;
+
+	mutex_lock(&tegra_nvdisp_lock);
+
+	/* check if current dc->clk is the source of compclk and whether
+	*  rate to which dc->clk is going to be changed is less than current
+	*  compclk rate. If yes, it is necessary to switch compclk source to
+	*  next highest dc->clk. Otherwise current dc->clk acting as parent to
+	*  compclk will lower its rate causing compclk rate to get lowered
+	*  and head will underflow for brief period before compclk is again
+	*  set to highest of all dc->clks
+	*/
+	if (cur_clk_client_index == dc->ctrl_num &&
+		rate < clk_get_rate(compclk)) {
+		inuse_state = clk_client[dc->ctrl_num].inuse;
+
+		/* set inuse flag to false to make sure current
+		*  dc->clk will not be used as source for compclk
+		*/
+		clk_client[dc->ctrl_num].inuse = false;
+
+		mutex_unlock(&tegra_nvdisp_lock);
+
+		tegra_nvdisp_set_compclk(dc);
+		clk_client[dc->ctrl_num].inuse = inuse_state;
+		return 0;
 	}
 
 	mutex_unlock(&tegra_nvdisp_lock);
@@ -1397,7 +1439,7 @@ int tegra_nvdisp_head_disable(struct tegra_dc *dc)
 	tegra_nvdisp_set_compclk(dc);
 
 	/* Disable DC clock */
-	tegra_disp_clk_disable_unprepare(dc->clk);
+	tegra_dc_put(dc);
 
 	/* check if any of head is using hub clock */
 	mutex_lock(&tegra_nvdisp_lock);
@@ -1407,7 +1449,7 @@ int tegra_nvdisp_head_disable(struct tegra_dc *dc)
 	}
 
 	/* disable hub clock if none of the heads is using it and clear bw */
-	if (idx == TEGRA_MAX_DC) {
+	if (idx == TEGRA_MAX_DC && hubclk_already_on) {
 		tegra_nvdisp_clear_bandwidth(dc);
 		tegra_disp_clk_disable_unprepare(hubclk);
 		hubclk_already_on = false;
@@ -1494,11 +1536,10 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 		pclk = dc->out_ops->setup_clk(dc, dc->clk);
 
 	/* Enable DC clock */
-	tegra_disp_clk_prepare_enable(dc->clk);
+	tegra_dc_get(dc);
 
 	pr_info(" dc clk %ld\n", clk_get_rate(dc->clk));
 
-	tegra_nvdisp_set_compclk(dc);
 
 	tegra_dc_get(dc);
 
@@ -1546,6 +1587,8 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 
 	if (dc->out_ops && dc->out_ops->postpoweron)
 		dc->out_ops->postpoweron(dc);
+
+	tegra_nvdisp_set_compclk(dc);
 
 	tegra_log_resume_time();
 	/*

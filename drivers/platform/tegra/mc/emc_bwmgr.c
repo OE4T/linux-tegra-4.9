@@ -17,8 +17,13 @@
 #include <linux/module.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/platform/tegra/isomgr.h>
-#include <linux/platform/tegra/bwmgr_mc.h>
 #include <linux/debugfs.h>
+
+u8 bwmgr_dram_efficiency;
+u32 *bwmgr_dram_iso_eff_table;
+int bwmgr_iso_bw_percentage;
+enum bwmgr_dram_types bwmgr_dram_type;
+int emc_to_dram_freq_factor;
 
 #define IS_HANDLE_VALID(x) ((x >= bwmgr.bwmgr_client) && \
 		(x < bwmgr.bwmgr_client + TEGRA_BWMGR_CLIENT_COUNT))
@@ -83,6 +88,11 @@ static void purge_client(struct tegra_bwmgr_client *handle)
 	handle->floor = 0;
 	handle->refcount = 0;
 }
+
+static unsigned long bwmgr_apply_efficiency(
+		unsigned long total_bw, unsigned long iso_bw,
+		unsigned long max_rate, u64 usage_flags,
+		unsigned long *iso_bw_min);
 
 /* call with bwmgr lock held */
 static int bwmgr_update_clk(void)
@@ -185,20 +195,18 @@ void tegra_bwmgr_unregister(struct tegra_bwmgr_client *handle)
 }
 EXPORT_SYMBOL_GPL(tegra_bwmgr_unregister);
 
-unsigned long tegra_bwmgr_get_emc_rate(void)
-{
-	if (bwmgr.emc_clk)
-		return clk_get_rate(bwmgr.emc_clk);
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(tegra_bwmgr_get_emc_rate);
-
 unsigned long tegra_bwmgr_get_max_emc_rate(void)
 {
 	return bwmgr.emc_max_rate;
 }
 EXPORT_SYMBOL_GPL(tegra_bwmgr_get_max_emc_rate);
+
+/* Returns the ratio between dram and emc freq based on the type of dram */
+int bwmgr_get_emc_to_dram_freq_factor(void)
+{
+	return emc_to_dram_freq_factor;
+}
+EXPORT_SYMBOL_GPL(bwmgr_get_emc_to_dram_freq_factor);
 
 /* Returns the actual emc frequency calculated using the dram
  * frequency and emc_to_dram conversion factor
@@ -326,6 +334,55 @@ int tegra_bwmgr_notifier_unregister(struct notifier_block *nb)
 		return -ENODEV;
 }
 EXPORT_SYMBOL_GPL(tegra_bwmgr_notifier_unregister);
+
+/* Should be overrided always */
+void __weak bwmgr_eff_init(void)
+{
+	BUG();
+}
+
+int get_iso_bw_table_idx(unsigned long iso_bw);
+
+unsigned long tegra_bwmgr_get_emc_rate(void)
+{
+	if (bwmgr.emc_clk)
+		return clk_get_rate(bwmgr.emc_clk);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra_bwmgr_get_emc_rate);
+
+static unsigned long bwmgr_apply_efficiency(
+		unsigned long total_bw, unsigned long iso_bw,
+		unsigned long max_rate, u64 usage_flags,
+		unsigned long *iso_bw_min)
+{
+	u8 efficiency = bwmgr_dram_efficiency;
+	if (total_bw && efficiency && (efficiency < 100)) {
+		total_bw = total_bw / efficiency;
+		total_bw = (total_bw < max_rate / 100) ?
+				(total_bw * 100) : max_rate;
+	}
+
+	efficiency = bwmgr_dram_iso_eff_table[get_iso_bw_table_idx(iso_bw)];
+	WARN_ON(efficiency == 1);
+	if (iso_bw && efficiency && (efficiency < 100)) {
+		iso_bw /= efficiency;
+		iso_bw = (iso_bw < max_rate / 100) ?
+			(iso_bw * 100) : max_rate;
+	}
+
+	if (iso_bw_min)
+		*iso_bw_min = iso_bw;
+
+	return max(total_bw, iso_bw);
+}
+
+int bwmgr_iso_bw_percentage_max(void)
+{
+	return bwmgr_iso_bw_percentage;
+}
+EXPORT_SYMBOL_GPL(bwmgr_iso_bw_percentage_max);
 
 int __init bwmgr_init(void)
 {

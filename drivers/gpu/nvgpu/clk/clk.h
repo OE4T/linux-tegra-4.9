@@ -35,7 +35,6 @@ struct clk_pmupstate {
 	struct clk_progs clk_progobjs;
 	struct clk_vf_points clk_vf_pointobjs;
 	struct clk_mclk_state clk_mclk;
-	struct mutex changeclkmutex;
 };
 
 struct clockentry {
@@ -43,12 +42,6 @@ struct clockentry {
 		u8 clk_which;
 		u8 perf_index;
 		u32 api_clk_domain;
-};
-
-struct change_fll_clk {
-		u32 api_clk_domain;
-		u16 clkmhz;
-		u32 voltuv;
 };
 
 struct set_fll_clk {
@@ -119,5 +112,7 @@ u32 clk_domain_get_f_points(
 	u32 *fpointscount,
 	u16 *freqpointsinmhz
 );
-int clk_program_fll_clks(struct gk20a *g, struct change_fll_clk *fllclk);
+int clk_get_fll_clks(struct gk20a *g, struct set_fll_clk *fllclk);
+int clk_set_fll_clks(struct gk20a *g, struct set_fll_clk *fllclk);
+
 #endif

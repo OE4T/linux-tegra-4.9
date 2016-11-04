@@ -20,6 +20,7 @@
 #include "volt/volt.h"
 #include "gk20a/pmu_gk20a.h"
 
+#define BOOT_GPC2CLK_MHZ  2581
 #define BOOT_MCLK_MHZ     3003
 
 struct clkrpc_pmucmdhandler_params {
@@ -255,7 +256,61 @@ static int get_regime_id(struct gk20a *g, u32 domain, u32 *regimeid)
 	return -EINVAL;
 }
 
-int clk_program_fll_clks(struct gk20a *g, struct change_fll_clk *fllclk)
+int clk_set_fll_clks(struct gk20a *g, struct set_fll_clk *setfllclk)
+{
+	int status = -EINVAL;
+
+	/*set regime ids */
+	status = get_regime_id(g, CTRL_CLK_DOMAIN_GPC2CLK,
+			&setfllclk->current_regime_id_gpc);
+	if (status)
+		goto done;
+
+	setfllclk->target_regime_id_gpc = find_regime_id(g,
+			CTRL_CLK_DOMAIN_GPC2CLK, setfllclk->gpc2clkmhz);
+
+	status = get_regime_id(g, CTRL_CLK_DOMAIN_SYS2CLK,
+			&setfllclk->current_regime_id_sys);
+	if (status)
+		goto done;
+
+	setfllclk->target_regime_id_sys = find_regime_id(g,
+			CTRL_CLK_DOMAIN_SYS2CLK, setfllclk->sys2clkmhz);
+
+	status = get_regime_id(g, CTRL_CLK_DOMAIN_XBAR2CLK,
+			&setfllclk->current_regime_id_xbar);
+	if (status)
+		goto done;
+
+	setfllclk->target_regime_id_xbar = find_regime_id(g,
+			CTRL_CLK_DOMAIN_XBAR2CLK, setfllclk->xbar2clkmhz);
+
+	status = clk_pmu_vf_inject(g, setfllclk);
+
+	if (status)
+		gk20a_err(dev_from_gk20a(g),
+			"vf inject to change clk failed");
+
+	/* save regime ids */
+	status = set_regime_id(g, CTRL_CLK_DOMAIN_XBAR2CLK,
+			setfllclk->target_regime_id_xbar);
+	if (status)
+		goto done;
+
+	status = set_regime_id(g, CTRL_CLK_DOMAIN_GPC2CLK,
+			setfllclk->target_regime_id_gpc);
+	if (status)
+		goto done;
+
+	status = set_regime_id(g, CTRL_CLK_DOMAIN_SYS2CLK,
+			setfllclk->target_regime_id_sys);
+	if (status)
+		goto done;
+done:
+	return status;
+}
+
+int clk_get_fll_clks(struct gk20a *g, struct set_fll_clk *setfllclk)
 {
 	int status = -EINVAL;
 	struct clk_domain *pdomain;
@@ -265,25 +320,14 @@ int clk_program_fll_clks(struct gk20a *g, struct change_fll_clk *fllclk)
 	struct clk_domain_3x_master *p3xmaster;
 	struct clk_domain_3x_slave *p3xslave;
 	unsigned long slaveidxmask;
-	struct set_fll_clk setfllclk;
-	bool foundxbar2clk = false;
-	bool foundsys2clk = false;
 
-	memset(&setfllclk, 0, sizeof(setfllclk));
-	if (fllclk->api_clk_domain != CTRL_CLK_DOMAIN_GPC2CLK)
+	if (setfllclk->gpc2clkmhz == 0)
 		return -EINVAL;
-	if (fllclk->voltuv == 0)
-		return -EINVAL;
-	if (fllclk->clkmhz == 0)
-		return -EINVAL;
-
-	setfllclk.voltuv = fllclk->voltuv;
-	setfllclk.gpc2clkmhz = fllclk->clkmhz;
 
 	BOARDOBJGRP_FOR_EACH(&(pclk->clk_domainobjs.super.super),
 			struct clk_domain *, pdomain, i) {
 
-		if (pdomain->api_domain == fllclk->api_clk_domain) {
+		if (pdomain->api_domain == CTRL_CLK_DOMAIN_GPC2CLK) {
 
 			if (!pdomain->super.implements(g, &pdomain->super,
 				CTRL_CLK_CLK_DOMAIN_TYPE_3X_MASTER)) {
@@ -305,74 +349,20 @@ int clk_program_fll_clks(struct gk20a *g, struct change_fll_clk *fllclk)
 						pclk,
 						(struct clk_domain *)p3xslave,
 						&clkmhz,
-						fllclk->clkmhz);
+						setfllclk->gpc2clkmhz);
 				if (status) {
 					status = -EINVAL;
 					goto done;
 				}
 				if (p3xslave->super.super.super.api_domain ==
-					CTRL_CLK_DOMAIN_XBAR2CLK) {
-					setfllclk.xbar2clkmhz = clkmhz;
-					foundxbar2clk = true;
-				}
+				     CTRL_CLK_DOMAIN_XBAR2CLK)
+					setfllclk->xbar2clkmhz = clkmhz;
 				if (p3xslave->super.super.super.api_domain ==
-					CTRL_CLK_DOMAIN_SYS2CLK) {
-					setfllclk.sys2clkmhz = clkmhz;
-					foundsys2clk = true;
-				}
+				     CTRL_CLK_DOMAIN_SYS2CLK)
+					setfllclk->sys2clkmhz = clkmhz;
 			}
 		}
 	}
-	if (!(foundxbar2clk && foundsys2clk)) {
-		status = -EINVAL;
-		goto done;
-	}
-	/*set regime ids */
-	status = get_regime_id(g, CTRL_CLK_DOMAIN_GPC2CLK,
-			&setfllclk.current_regime_id_gpc);
-	if (status)
-		goto done;
-
-	setfllclk.target_regime_id_gpc = find_regime_id(g,
-			CTRL_CLK_DOMAIN_GPC2CLK, setfllclk.gpc2clkmhz);
-
-	status = get_regime_id(g, CTRL_CLK_DOMAIN_SYS2CLK,
-			&setfllclk.current_regime_id_sys);
-	if (status)
-		goto done;
-
-	setfllclk.target_regime_id_sys = find_regime_id(g,
-			CTRL_CLK_DOMAIN_SYS2CLK, setfllclk.sys2clkmhz);
-
-	status = get_regime_id(g, CTRL_CLK_DOMAIN_XBAR2CLK,
-			&setfllclk.current_regime_id_xbar);
-	if (status)
-		goto done;
-
-	setfllclk.target_regime_id_xbar = find_regime_id(g,
-			CTRL_CLK_DOMAIN_XBAR2CLK, setfllclk.xbar2clkmhz);
-
-	status = clk_pmu_vf_inject(g, &setfllclk);
-
-	if (status)
-		gk20a_err(dev_from_gk20a(g),
-			"vf inject to change clk failed");
-
-	/* save regime ids */
-	status = set_regime_id(g, CTRL_CLK_DOMAIN_XBAR2CLK,
-			setfllclk.target_regime_id_xbar);
-	if (status)
-		goto done;
-
-	status = set_regime_id(g, CTRL_CLK_DOMAIN_GPC2CLK,
-			setfllclk.target_regime_id_gpc);
-	if (status)
-		goto done;
-
-	status = set_regime_id(g, CTRL_CLK_DOMAIN_SYS2CLK,
-			setfllclk.target_regime_id_sys);
-	if (status)
-		goto done;
 done:
 	return status;
 }

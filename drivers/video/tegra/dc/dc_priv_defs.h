@@ -287,6 +287,7 @@ struct tegra_dc {
 	struct tegra_fb_info		*fb;
 
 	u32				vblank_syncpt;
+	u32				vpulse3_syncpt;
 
 	unsigned long int		valid_windows;
 

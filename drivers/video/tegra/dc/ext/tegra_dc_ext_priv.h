@@ -88,6 +88,13 @@ struct tegra_dc_ext {
 
 	bool				enabled;
 	bool				vblank_enabled;
+
+	/* scanline trigger */
+	int			scanline_trigger;
+	/* scanline work queue */
+	struct workqueue_struct	*scanline_wq;
+	/* scanline work queue lock */
+	struct mutex		scanline_lock;
 };
 
 #define TEGRA_DC_EXT_EVENT_MASK_ALL		\
@@ -193,5 +200,8 @@ static inline int  tegra_dc_scrncapt_exit(void)
 static inline void  tegra_dc_scrncapt_disp_pause_lock(struct tegra_dc *dc) {}
 static inline void  tegra_dc_scrncapt_disp_pause_unlock(struct tegra_dc *dc) {}
 #endif
+
+extern int tegra_dc_ext_vpulse3(struct tegra_dc_ext *dc,
+				struct tegra_dc_ext_scanline_info *args);
 
 #endif /* __TEGRA_DC_EXT_PRIV_H */

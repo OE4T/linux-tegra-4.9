@@ -852,6 +852,27 @@ struct tegra_dc_ext_scrncapt_dup_fbuf  {
 	__u32 reserved[16];
 };
 
+/* Scanline sync ioctl */
+#define TEGRA_DC_EXT_SCANLINE_FLAG_ENABLE (1U << 0)
+#define TEGRA_DC_EXT_SCANLINE_FLAG_DISABLE (0U << 0)
+#define TEGRA_DC_EXT_SCANLINE_FLAG_RAW_SYNCPT (1U << 1)
+#define TEGRA_DC_EXT_SCANLINE_FLAG_SYNCFD (0U << 1)
+/* unused flags are reserved and must be 0 */
+
+struct tegra_dc_ext_scanline_info {
+	__u8 id; /* 0 = VPULSE3 */
+	__u8 frame; /* a.k.a. swap_interval, a.k.a. min_present. typically 0 */
+	__u16 flags; /* select between fd and id:val */
+	__u32 triggered_line;
+	union {
+		struct {
+			__u32 id;
+			__u32 val;
+		} raw_syncpt; /* used only is RAW_SYNCPT */
+
+		__u32 syncfd;
+	};
+};
 
 #define TEGRA_DC_EXT_SET_NVMAP_FD \
 	_IOW('D', 0x00, __s32)
@@ -957,6 +978,9 @@ struct tegra_dc_ext_scrncapt_dup_fbuf  {
 
 #define TEGRA_DC_EXT_GET_SCANLINE \
 	_IOR('D', 0x24, __u32)
+
+#define TEGRA_DC_EXT_SET_SCANLINE \
+	_IOWR('D', 0x25, struct tegra_dc_ext_scanline_info)
 
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,

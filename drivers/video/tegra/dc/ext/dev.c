@@ -126,6 +126,12 @@ struct tegra_dc_ext_flip_data {
 	u64 imp_session_id;
 };
 
+struct tegra_dc_ext_scanline_data {
+	struct tegra_dc_ext		*ext;
+	struct work_struct		work;
+	int				triggered_line;
+};
+
 static int tegra_dc_ext_set_vblank(struct tegra_dc_ext *ext, bool enable);
 static void tegra_dc_ext_unpin_window(struct tegra_dc_ext_win *win);
 
@@ -651,6 +657,153 @@ static int tegra_dc_ext_set_vblank(struct tegra_dc_ext *ext, bool enable)
 		return 0;
 	}
 	return 1;
+}
+
+static void tegra_dc_ext_setup_vpulse3(struct tegra_dc_ext *ext,
+					unsigned int scanline_num)
+{
+	struct tegra_dc *dc = ext->dc;
+	u32 old_state;
+
+	tegra_dc_get(dc);
+	mutex_lock(&dc->lock);
+	old_state = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
+
+	/* write active version; this updates assembly as well */
+	tegra_dc_writel(dc, WRITE_MUX_ACTIVE | READ_MUX_ACTIVE,
+			DC_CMD_STATE_ACCESS);
+	tegra_dc_writel(dc, scanline_num, DC_DISP_V_PULSE3_POSITION_A);
+
+	tegra_dc_writel(dc, old_state, DC_CMD_STATE_ACCESS);
+	tegra_dc_readl(dc, DC_CMD_STATE_ACCESS); /* flush */
+	mutex_unlock(&dc->lock);
+	tegra_dc_put(dc);
+}
+
+static void tegra_dc_ext_incr_vpulse3(struct tegra_dc_ext *ext)
+{
+	struct tegra_dc *dc = ext->dc;
+	unsigned int vpulse3_sync_id = dc->vpulse3_syncpt;
+
+	/* Request vpulse3 syncpt increment */
+	tegra_dc_writel(dc, VPULSE3_COND | vpulse3_sync_id,
+				DC_CMD_GENERAL_INCR_SYNCPT);
+}
+
+static void tegra_dc_ext_scanline_worker(struct work_struct *work)
+{
+	struct tegra_dc_ext_scanline_data *data =
+		container_of(work, struct tegra_dc_ext_scanline_data, work);
+	struct tegra_dc_ext *ext = data->ext;
+	struct tegra_dc *dc = ext->dc;
+
+	/* Allow only one scanline operation at a time */
+	mutex_lock(&ext->scanline_lock);
+
+	if (data->triggered_line >= 0) {
+		/* Wait for frame end before programming new request */
+		_tegra_dc_wait_for_frame_end(dc,
+			div_s64(dc->frametime_ns, 1000000ll) * 2);
+
+		if (ext->scanline_trigger != data->triggered_line) {
+			dev_dbg(&dc->ndev->dev, "vp3 sl#: %d\n",
+					data->triggered_line);
+
+			/* Setup vpulse3 trigger line */
+			tegra_dc_ext_setup_vpulse3(ext, data->triggered_line);
+
+			/* Save new scanline trigger state */
+			ext->scanline_trigger = data->triggered_line;
+		}
+
+		/* Request vpulse3 increment */
+		tegra_dc_ext_incr_vpulse3(ext);
+	} else {
+		/* Clear scanline trigger state */
+		ext->scanline_trigger = -1;
+	}
+
+	/* Free arg allocated in the ioctl call */
+	kfree(data);
+
+	/* Release lock */
+	mutex_unlock(&ext->scanline_lock);
+}
+
+int tegra_dc_ext_vpulse3(struct tegra_dc_ext *ext,
+				struct tegra_dc_ext_scanline_info *args)
+{
+	int ret = -EFAULT;
+	struct tegra_dc *dc = ext->dc;
+	struct tegra_dc_ext_scanline_data *data;
+	unsigned int vpulse3_sync_id = dc->vpulse3_syncpt;
+	unsigned int vpulse3_sync_max_val = 0;
+
+	/* If display has been disconnected OR
+	 * Vpulse3 syncpt is invalid OR
+	 * scanline workqueue is not setup, return error
+	 */
+	if (!dc->connected ||
+		vpulse3_sync_id == NVSYNCPT_INVALID ||
+		!ext->scanline_wq) {
+		dev_err(&dc->ndev->dev, "DC not setup\n");
+		return -EACCES;
+	}
+
+	/* TODO: Support id != 0, frame != 0 and raw syncpt */
+	if (args->id ||
+		args->frame ||
+		args->flags & TEGRA_DC_EXT_SCANLINE_FLAG_RAW_SYNCPT) {
+		dev_err(&dc->ndev->dev, "Invalid args\n");
+		return -EINVAL;
+	}
+
+	dev_dbg(&dc->ndev->dev, "vp3 id : %d\n", vpulse3_sync_id);
+
+	/* Allocate arg for workqueue */
+	data = kzalloc(sizeof(*data), GFP_KERNEL);
+	if (!data)
+		return -ENOMEM;
+
+	if (args->flags & TEGRA_DC_EXT_SCANLINE_FLAG_ENABLE) {
+		/* Increment max_val by 1 */
+		vpulse3_sync_max_val =
+		    nvhost_syncpt_incr_max_ext(dc->ndev, vpulse3_sync_id, 1);
+
+		dev_dbg(&dc->ndev->dev, "vp3 max: %d\n", vpulse3_sync_max_val);
+
+		/* Create a fencefd */
+		ret = nvhost_syncpt_create_fence_single_ext(dc->ndev,
+				vpulse3_sync_id, vpulse3_sync_max_val,
+				"vpulse3-fence", &args->syncfd);
+
+		if (ret) {
+			dev_err(&dc->ndev->dev,
+				"Failed creating vpulse3 fence err: %d\n", ret);
+
+			kfree(data);
+			return ret;
+		}
+
+		/* Pass trigger line value */
+		data->triggered_line = args->triggered_line;
+	} else {
+		/* Clear trigger line value */
+		data->triggered_line = -1;
+
+		/* As a safeguard, update min val all the way to max.
+		 * Typically, they would match as
+		 * user-requests are serialized.
+		 */
+		nvhost_syncpt_set_min_eq_max_ext(dc->ndev, vpulse3_sync_id);
+	}
+
+	/* Queue work to setup/increment/remove scanline trigger */
+	data->ext = ext;
+	INIT_WORK(&data->work, tegra_dc_ext_scanline_worker);
+	queue_work(ext->scanline_wq, &data->work);
+
+	return 0;
 }
 
 static void tegra_dc_ext_unpin_handles(struct tegra_dc_dmabuf *unpin_handles[],
@@ -2767,6 +2920,23 @@ free_and_ret:
 		return 0;
 	}
 
+	case TEGRA_DC_EXT_SET_SCANLINE:
+	{
+		struct tegra_dc_ext_scanline_info args;
+
+		dev_dbg(&user->ext->dc->ndev->dev, "SET SCANLN IOCTL\n");
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		ret = tegra_dc_ext_vpulse3(user->ext, &args);
+
+		if (copy_to_user(user_arg, &args, sizeof(args)))
+			return -EFAULT;
+
+		return ret;
+	}
+
 	default:
 		return -EINVAL;
 	}
@@ -2870,6 +3040,7 @@ struct tegra_dc_ext *tegra_dc_ext_register(struct platform_device *ndev,
 	int ret;
 	struct tegra_dc_ext *ext;
 	dev_t devno;
+	char name[16];
 
 	ext = kzalloc(sizeof(*ext), GFP_KERNEL);
 	if (!ext)
@@ -2906,6 +3077,17 @@ struct tegra_dc_ext *tegra_dc_ext_register(struct platform_device *ndev,
 
 	mutex_init(&ext->cursor.lock);
 
+	/* Setup scanline workqueues */
+	ext->scanline_trigger = -1;
+	snprintf(name, sizeof(name), "tegradc.%d/sl", dc->ndev->id);
+	ext->scanline_wq = create_singlethread_workqueue(name);
+	if (!ext->scanline_wq) {
+		ret = -ENOMEM;
+		goto cleanup_device;
+	}
+	/* Setup scanline mutex */
+	mutex_init(&ext->scanline_lock);
+
 	head_count++;
 
 	return ext;
@@ -2932,6 +3114,16 @@ void tegra_dc_ext_unregister(struct tegra_dc_ext *ext)
 		flush_workqueue(win->flip_wq);
 		destroy_workqueue(win->flip_wq);
 	}
+
+	/* Remove scanline workqueues */
+	flush_workqueue(ext->scanline_wq);
+	destroy_workqueue(ext->scanline_wq);
+	ext->scanline_wq = NULL;
+	/* Clear trigger line value */
+	ext->scanline_trigger = -1;
+	/* Udate min val all the way to max. */
+	nvhost_syncpt_set_min_eq_max_ext(ext->dc->ndev,
+					ext->dc->vpulse3_syncpt);
 
 	device_del(ext->dev);
 	cdev_del(&ext->cdev);

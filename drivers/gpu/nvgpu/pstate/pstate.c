@@ -79,6 +79,11 @@ int gk20a_init_pstate_support(struct gk20a *g)
 		return err;
 
 	err = pmgr_domain_sw_setup(g);
+	if (err)
+		return err;
+
+	err = clk_freq_controller_sw_setup(g);
+
 	return err;
 }
 
@@ -138,6 +143,10 @@ int gk20a_init_pstate_pmu_support(struct gk20a *g)
 		return err;
 
 	err = clk_vf_point_pmu_setup(g);
+	if (err)
+		return err;
+
+	err = clk_freq_controller_pmu_setup(g);
 	if (err)
 		return err;
 

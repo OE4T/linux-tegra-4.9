@@ -47,6 +47,78 @@ static void clkrpc_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 		phandlerparams->success = 1;
 }
 
+int clk_pmu_freq_controller_load(struct gk20a *g, bool bload)
+{
+	struct pmu_cmd cmd;
+	struct pmu_msg msg;
+	struct pmu_payload payload = { {0} };
+	u32 status;
+	u32 seqdesc;
+	struct nv_pmu_clk_rpc rpccall = {0};
+	struct clkrpc_pmucmdhandler_params handler = {0};
+	struct nv_pmu_clk_load *clkload;
+	struct clk_freq_controllers *pclk_freq_controllers;
+	struct ctrl_boardobjgrp_mask_e32 *load_mask;
+
+	pclk_freq_controllers = &g->clk_pmu.clk_freq_controllers;
+	rpccall.function = NV_PMU_CLK_RPC_ID_LOAD;
+	clkload = &rpccall.params.clk_load;
+	clkload->feature = NV_NV_PMU_CLK_LOAD_FEATURE_FREQ_CONTROLLER;
+	clkload->action_mask = bload ?
+		NV_NV_PMU_CLK_LOAD_ACTION_MASK_FREQ_CONTROLLER_CALLBACK_YES :
+		NV_NV_PMU_CLK_LOAD_ACTION_MASK_FREQ_CONTROLLER_CALLBACK_NO;
+
+	load_mask = &rpccall.params.clk_load.payload.freq_controllers.load_mask;
+
+	status = boardobjgrpmask_export(
+		&pclk_freq_controllers->freq_ctrl_load_mask.super,
+		pclk_freq_controllers->freq_ctrl_load_mask.super.bitcount,
+		&load_mask->super);
+
+	cmd.hdr.unit_id = PMU_UNIT_CLK;
+	cmd.hdr.size =  (u32)sizeof(struct nv_pmu_clk_cmd) +
+			(u32)sizeof(struct pmu_hdr);
+
+	cmd.cmd.clk.cmd_type = NV_PMU_CLK_CMD_ID_RPC;
+	msg.hdr.size = sizeof(struct pmu_msg);
+
+	payload.in.buf = (u8 *)&rpccall;
+	payload.in.size = (u32)sizeof(struct nv_pmu_clk_rpc);
+	payload.in.fb_size = PMU_CMD_SUBMIT_PAYLOAD_PARAMS_FB_SIZE_UNUSED;
+	payload.in.offset = NV_PMU_CLK_CMD_RPC_ALLOC_OFFSET;
+
+	payload.out.buf = (u8 *)&rpccall;
+	payload.out.size = (u32)sizeof(struct nv_pmu_clk_rpc);
+	payload.out.fb_size = PMU_CMD_SUBMIT_PAYLOAD_PARAMS_FB_SIZE_UNUSED;
+	payload.out.offset = NV_PMU_CLK_MSG_RPC_ALLOC_OFFSET;
+
+	handler.prpccall = &rpccall;
+	handler.success = 0;
+	status = gk20a_pmu_cmd_post(g, &cmd, NULL, &payload,
+			PMU_COMMAND_QUEUE_LPQ,
+			clkrpc_pmucmdhandler, (void *)&handler,
+			&seqdesc, ~0);
+
+	if (status) {
+		gk20a_err(dev_from_gk20a(g),
+			"unable to post clk RPC cmd %x",
+			cmd.cmd.clk.cmd_type);
+		goto done;
+	}
+
+	pmu_wait_message_cond(&g->pmu,
+			gk20a_get_gr_idle_timeout(g),
+			&handler.success, 1);
+
+	if (handler.success == 0) {
+		gk20a_err(dev_from_gk20a(g), "rpc call to load freq cntlr cal failed");
+		status = -EINVAL;
+	}
+
+done:
+	return status;
+}
+
 u32 clk_pmu_vin_load(struct gk20a *g)
 {
 	struct pmu_cmd cmd;

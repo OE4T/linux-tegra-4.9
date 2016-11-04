@@ -21,6 +21,7 @@
 #include "clk_prog.h"
 #include "clk_vf_point.h"
 #include "clk_mclk.h"
+#include "clk_freq_controller.h"
 #include "gk20a/gk20a.h"
 
 #define NV_PERF_DOMAIN_4X_CLOCK_DOMAIN_SKIP 0x10
@@ -35,6 +36,7 @@ struct clk_pmupstate {
 	struct clk_progs clk_progobjs;
 	struct clk_vf_points clk_vf_pointobjs;
 	struct clk_mclk_state clk_mclk;
+	struct clk_freq_controllers clk_freq_controllers;
 };
 
 struct clockentry {
@@ -114,5 +116,5 @@ u32 clk_domain_get_f_points(
 );
 int clk_get_fll_clks(struct gk20a *g, struct set_fll_clk *fllclk);
 int clk_set_fll_clks(struct gk20a *g, struct set_fll_clk *fllclk);
-
+int clk_pmu_freq_controller_load(struct gk20a *g, bool bload);
 #endif

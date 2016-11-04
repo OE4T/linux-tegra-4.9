@@ -553,14 +553,6 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 		}
 	}
 
-	/* SW WAR for bug 1045373. To make the shift clk dividor effect under
-	 * all circumstances, write N+2 to SHIFT_CLK_DIVIDER and activate it.
-	 * After 2us delay, write the target values to it. */
-
-	/* Deprecated on t11x and t14x. */
-	tegra_dc_writel(dc, 0x00010001,
-			DC_DISP_SHIFT_CLOCK_OPTIONS);
-
 	tegra_dc_writel(dc, PIXEL_CLK_DIVIDER_PCD1 | SHIFT_CLK_DIVIDER(div),
 			DC_DISP_DISP_CLOCK_CONTROL);
 

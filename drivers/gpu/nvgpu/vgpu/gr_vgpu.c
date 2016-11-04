@@ -91,10 +91,8 @@ int vgpu_gr_init_ctx_state(struct gk20a *g)
 
 	g->gr.ctx_vars.golden_image_size = priv->constants.golden_ctx_size;
 	g->gr.ctx_vars.zcull_ctxsw_image_size = priv->constants.zcull_ctx_size;
-	g->gr.ctx_vars.pm_ctxsw_image_size = priv->constants.hwpm_ctx_size;
 	if (!g->gr.ctx_vars.golden_image_size ||
-		!g->gr.ctx_vars.zcull_ctxsw_image_size ||
-		!g->gr.ctx_vars.pm_ctxsw_image_size)
+		!g->gr.ctx_vars.zcull_ctxsw_image_size)
 		return -ENXIO;
 
 	gr->ctx_vars.buffer_size = g->gr.ctx_vars.golden_image_size;
@@ -392,13 +390,12 @@ static void vgpu_gr_free_channel_pm_ctx(struct channel_gk20a *c)
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_free_hwpm_ctx *p = &msg.params.free_hwpm_ctx;
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
-	struct pm_ctx_desc *pm_ctx = &ch_ctx->pm_ctx;
 	int err;
 
 	gk20a_dbg_fn("");
 
 	/* check if hwpm was ever initialized. If not, nothing to do */
-	if (pm_ctx->mem.gpu_va == 0)
+	if (ch_ctx->pm_ctx.ctx_was_enabled == false)
 		return;
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_FREE_HWPM_CTX;
@@ -407,8 +404,7 @@ static void vgpu_gr_free_channel_pm_ctx(struct channel_gk20a *c)
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
 
-	gk20a_vm_free_va(c->vm, pm_ctx->mem.gpu_va, pm_ctx->mem.size, 0);
-	pm_ctx->mem.gpu_va = 0;
+	ch_ctx->pm_ctx.ctx_was_enabled = false;
 }
 
 static void vgpu_gr_free_channel_ctx(struct channel_gk20a *c)
@@ -1044,34 +1040,27 @@ static int vgpu_gr_update_smpc_ctxsw_mode(struct gk20a *g,
 static int vgpu_gr_update_hwpm_ctxsw_mode(struct gk20a *g,
 	struct channel_gk20a *ch, bool enable)
 {
-	struct channel_ctx_gk20a *ch_ctx = &ch->ch_ctx;
-	struct pm_ctx_desc *pm_ctx = &ch_ctx->pm_ctx;
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_set_ctxsw_mode *p = &msg.params.set_ctxsw_mode;
 	int err;
 
 	gk20a_dbg_fn("");
 
-	if (enable) {
-		p->mode = TEGRA_VGPU_CTXSW_MODE_CTXSW;
-
-		/* Allocate buffer if necessary */
-		if (pm_ctx->mem.gpu_va == 0) {
-			pm_ctx->mem.gpu_va = gk20a_vm_alloc_va(ch->vm,
-					g->gr.ctx_vars.pm_ctxsw_image_size,
-					gmmu_page_size_kernel);
-
-			if (!pm_ctx->mem.gpu_va)
-				return -ENOMEM;
-			pm_ctx->mem.size = g->gr.ctx_vars.pm_ctxsw_image_size;
-		}
-	} else
-		p->mode = TEGRA_VGPU_CTXSW_MODE_NO_CTXSW;
-
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SET_HWPM_CTXSW_MODE;
 	msg.handle = vgpu_get_handle(g);
 	p->handle = ch->virt_ctx;
-	p->gpu_va = pm_ctx->mem.gpu_va;
+
+	/* If we just enabled HWPM context switching, flag this
+	 * so we know we need to free the buffer when channel contexts
+	 * are cleaned up.
+	 */
+	if (enable) {
+		struct channel_ctx_gk20a *ch_ctx = &ch->ch_ctx;
+		ch_ctx->pm_ctx.ctx_was_enabled = true;
+
+		p->mode = TEGRA_VGPU_CTXSW_MODE_CTXSW;
+	} else
+		p->mode = TEGRA_VGPU_CTXSW_MODE_NO_CTXSW;
 
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);

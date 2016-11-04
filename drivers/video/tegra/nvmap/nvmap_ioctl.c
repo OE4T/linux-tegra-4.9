@@ -62,6 +62,33 @@ struct nvmap_handle *nvmap_handle_get_from_fd(int fd)
 	return NULL;
 }
 
+static int nvmap_install_fd(struct nvmap_client *client,
+	struct nvmap_handle *handle, int fd, void __user *arg,
+	void *op, size_t op_size, bool free)
+{
+	int err = 0;
+
+	if (IS_ERR_VALUE(fd)) {
+		err = fd;
+		goto fd_fail;
+	}
+
+	if (copy_to_user(arg, op, op_size)) {
+		err = -EFAULT;
+		goto copy_fail;
+	}
+
+	fd_install(fd, handle->dmabuf->file);
+	return err;
+
+copy_fail:
+	put_unused_fd(fd);
+fd_fail:
+	if (free)
+		nvmap_free_handle(client, handle);
+	return err;
+}
+
 int nvmap_ioctl_getfd(struct file *filp, void __user *arg)
 {
 	struct nvmap_handle *handle;
@@ -75,18 +102,13 @@ int nvmap_ioctl_getfd(struct file *filp, void __user *arg)
 	if (handle) {
 		op.fd = nvmap_get_dmabuf_fd(client, handle);
 		nvmap_handle_put(handle);
-	} else
+	} else {
 		/* if we get an error, the fd might be non-nvmap dmabuf fd */
 		op.fd = nvmap_dmabuf_duplicate_gen_fd(client, op.handle);
-
-	if (op.fd < 0)
-		return op.fd;
-
-	if (copy_to_user(arg, &op, sizeof(op))) {
-		sys_close(op.fd);
-		return -EFAULT;
 	}
-	return 0;
+
+	return nvmap_install_fd(client, handle,
+				op.fd, arg, &op, sizeof(op), 0);
 }
 
 int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
@@ -164,7 +186,6 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 	struct nvmap_create_handle op;
 	struct nvmap_handle_ref *ref = NULL;
 	struct nvmap_client *client = filp->private_data;
-	int err = 0;
 	int fd;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
@@ -202,19 +223,9 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 		return PTR_ERR(ref);
 
 	fd = nvmap_get_dmabuf_fd(client, ref->handle);
-	if (IS_ERR_VALUE(fd))
-		err = fd;
-
 	op.handle = fd;
-
-	if (copy_to_user(arg, &op, sizeof(op))) {
-		err = -EFAULT;
-		nvmap_free_handle(client, ref->handle);
-	}
-
-	if (err && fd > 0)
-		sys_close(fd);
-	return err;
+	return nvmap_install_fd(client, ref->handle, fd,
+				arg, &op, sizeof(op), 1);
 }
 
 int nvmap_ioctl_create_from_va(struct file *filp, void __user *arg)
@@ -237,29 +248,15 @@ int nvmap_ioctl_create_from_va(struct file *filp, void __user *arg)
 
 	err = nvmap_alloc_handle_from_va(client, ref->handle,
 					 op.va, op.flags);
-	if (err)
-		goto alloc_fail;
+	if (err) {
+		nvmap_free_handle(client, ref->handle);
+		return err;
+	}
 
 	fd = nvmap_get_dmabuf_fd(client, ref->handle);
 	op.handle = fd;
-
-	if (IS_ERR_VALUE(fd)) {
-		err = fd;
-		goto fd_fail;
-	}
-
-	if (copy_to_user(arg, &op, sizeof(op))) {
-		err = -EFAULT;
-		goto copy_fail;
-	}
-
-	return err;
-copy_fail:
-	sys_close(fd);
-fd_fail:
-alloc_fail:
-	nvmap_free_handle(client, ref->handle);
-	return err;
+	return nvmap_install_fd(client, ref->handle, fd,
+				arg, &op, sizeof(op), 1);
 }
 
 int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
@@ -492,7 +489,6 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 	struct nvmap_create_handle op;
 	struct nvmap_handle_ref *ref;
 	struct nvmap_client *client = filp->private_data;
-	int err = 0;
 	int fd;
 	phys_addr_t offs;
 	size_t size = 0;
@@ -546,20 +542,9 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 	}
 
 	fd = nvmap_get_dmabuf_fd(client, ref->handle);
-	if (IS_ERR_VALUE(fd))
-		err = fd;
-
 	op.handle = fd;
-
-	if (copy_to_user(arg, &op, sizeof(op))) {
-		err = -EFAULT;
-		nvmap_free_handle(client, ref->handle);
-	}
-
-	if (err && fd > 0)
-		sys_close(fd);
-
-	return err;
+	return nvmap_install_fd(client, ref->handle, fd,
+				arg, &op, sizeof(op), 1);
 }
 
 int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,

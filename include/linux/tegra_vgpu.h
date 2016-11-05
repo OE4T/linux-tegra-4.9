@@ -98,6 +98,7 @@ enum {
 	TEGRA_VGPU_CMD_SET_GPU_CLK_RATE = 61,
 	TEGRA_VGPU_CMD_GET_CONSTANTS = 62,
 	TEGRA_VGPU_CMD_CHANNEL_CYCLESTATS_SNAPSHOT = 63,
+	TEGRA_VGPU_CMD_TSG_OPEN = 64,
 };
 
 struct tegra_vgpu_connect_params {
@@ -387,6 +388,10 @@ struct tegra_vgpu_tsg_timeslice_params {
 	u32 timeslice_us;
 };
 
+struct tegra_vgpu_tsg_open_params {
+	u32 tsg_id;
+};
+
 /* level follows nvgpu.h definitions */
 struct tegra_vgpu_tsg_runlist_interleave_params {
 	u32 tsg_id;
@@ -486,6 +491,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_channel_bind_gr_ctx_params ch_bind_gr_ctx;
 		struct tegra_vgpu_tsg_bind_gr_ctx_params tsg_bind_gr_ctx;
 		struct tegra_vgpu_tsg_bind_unbind_channel_params tsg_bind_unbind_channel;
+		struct tegra_vgpu_tsg_open_params tsg_open;
 		struct tegra_vgpu_tsg_preempt_params tsg_preempt;
 		struct tegra_vgpu_tsg_timeslice_params tsg_timeslice;
 		struct tegra_vgpu_tsg_runlist_interleave_params tsg_interleave;

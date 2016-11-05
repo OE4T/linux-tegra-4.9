@@ -23,6 +23,28 @@
 #include "gk20a/tsg_gk20a.h"
 #include "vgpu.h"
 
+static int vgpu_tsg_open(struct tsg_gk20a *tsg)
+{
+	struct tegra_vgpu_cmd_msg msg = {};
+	struct tegra_vgpu_tsg_open_params *p =
+				&msg.params.tsg_open;
+	int err;
+
+	gk20a_dbg_fn("");
+
+	msg.cmd = TEGRA_VGPU_CMD_TSG_OPEN;
+	msg.handle = vgpu_get_handle(tsg->g);
+	p->tsg_id = tsg->tsgid;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	err = err ? err : msg.ret;
+	if (err) {
+		gk20a_err(dev_from_gk20a(tsg->g),
+			"vgpu_tsg_open failed, tsgid %d", tsg->tsgid);
+	}
+
+	return err;
+}
+
 static int vgpu_tsg_bind_channel(struct tsg_gk20a *tsg,
 			struct channel_gk20a *ch)
 {
@@ -101,4 +123,5 @@ void vgpu_init_tsg_ops(struct gpu_ops *gops)
 	gops->fifo.tsg_bind_channel = vgpu_tsg_bind_channel;
 	gops->fifo.tsg_unbind_channel = vgpu_tsg_unbind_channel;
 	gops->fifo.tsg_set_timeslice = vgpu_tsg_set_timeslice;
+	gops->fifo.tsg_open = vgpu_tsg_open;
 }

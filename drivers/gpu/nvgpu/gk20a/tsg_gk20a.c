@@ -402,6 +402,7 @@ int gk20a_tsg_open(struct gk20a *g, struct file *filp)
 {
 	struct tsg_gk20a *tsg;
 	struct device *dev;
+	int err;
 
 	dev  = dev_from_gk20a(g);
 
@@ -426,11 +427,24 @@ int gk20a_tsg_open(struct gk20a *g, struct file *filp)
 
 	filp->private_data = tsg;
 
+	if (g->ops.fifo.tsg_open) {
+		err = g->ops.fifo.tsg_open(tsg);
+		if (err) {
+			gk20a_err(dev, "tsg %d fifo open failed %d",
+				tsg->tsgid, err);
+			goto clean_up;
+		}
+	}
+
 	gk20a_dbg(gpu_dbg_fn, "tsg opened %d\n", tsg->tsgid);
 
 	gk20a_sched_ctrl_tsg_added(g, tsg);
 
 	return 0;
+
+clean_up:
+	kref_put(&tsg->refcount, gk20a_tsg_release);
+	return err;
 }
 
 int gk20a_tsg_dev_open(struct inode *inode, struct file *filp)

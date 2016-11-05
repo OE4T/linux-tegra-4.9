@@ -110,7 +110,6 @@ struct zcull_ctx_desc {
 struct pm_ctx_desc {
 	struct mem_desc mem;
 	u32 pm_mode;
-	bool ctx_was_enabled;	/* Used in the virtual case only */
 };
 
 struct gk20a;

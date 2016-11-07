@@ -51,6 +51,8 @@ static void nvgpu_init_vars(struct gk20a *g)
 	g->dev->dma_parms = &g->dma_parms;
 	dma_set_max_seg_size(g->dev, UINT_MAX);
 
+	INIT_LIST_HEAD(&g->pending_sema_waits);
+	raw_spin_lock_init(&g->pending_sema_waits_lock);
 }
 
 static void nvgpu_init_timeout(struct gk20a *g)
@@ -219,4 +221,3 @@ const struct firmware *nvgpu_request_firmware(struct gk20a *g,
 
 	return fw;
 }
-

@@ -16,6 +16,8 @@
  */
 
 #include <linux/gk20a.h>
+
+#include <linux/list.h>
 #include <linux/version.h>
 
 #include "channel_sync_gk20a.h"
@@ -396,9 +398,81 @@ struct gk20a_channel_semaphore {
 #ifdef CONFIG_SYNC
 struct wait_fence_work {
 	struct sync_fence_waiter waiter;
+	struct sync_fence *fence;
 	struct channel_gk20a *ch;
 	struct gk20a_semaphore *sema;
+	struct gk20a *g;
+	struct list_head entry;
 };
+
+/*
+ * Keep track of all the pending waits on semaphores that exist for a GPU. This
+ * has to be done because the waits on fences backed by semaphores are
+ * asynchronous so it's impossible to otherwise know when they will fire. During
+ * driver cleanup this list can be checked and all existing waits can be
+ * canceled.
+ */
+static void gk20a_add_pending_sema_wait(struct gk20a *g,
+					struct wait_fence_work *work)
+{
+	raw_spin_lock(&g->pending_sema_waits_lock);
+	list_add(&work->entry, &g->pending_sema_waits);
+	raw_spin_unlock(&g->pending_sema_waits_lock);
+}
+
+/*
+ * Copy the list head from the pending wait list to the passed list and
+ * then delete the entire pending list.
+ */
+static void gk20a_start_sema_wait_cancel(struct gk20a *g,
+					 struct list_head *list)
+{
+	raw_spin_lock(&g->pending_sema_waits_lock);
+	list_replace_init(&g->pending_sema_waits, list);
+	raw_spin_unlock(&g->pending_sema_waits_lock);
+}
+
+/*
+ * During shutdown this should be called to make sure that any pending sema
+ * waits are canceled. This is a fairly delicate and tricky bit of code. Here's
+ * how it works.
+ *
+ * Every time a semaphore wait is initiated in SW the wait_fence_work struct is
+ * added to the pending_sema_waits list. When the semaphore launcher code runs
+ * it checks the pending_sema_waits list. If this list is non-empty that means
+ * that the wait_fence_work struct must be present and can be removed.
+ *
+ * When the driver shuts down one of the steps is to cancel pending sema waits.
+ * To do this the entire list of pending sema waits is removed (and stored in a
+ * separate local list). So now, if the semaphore launcher code runs it will see
+ * that the pending_sema_waits list is empty and knows that it no longer owns
+ * the wait_fence_work struct.
+ */
+void gk20a_channel_cancel_pending_sema_waits(struct gk20a *g)
+{
+	struct wait_fence_work *work;
+	struct list_head local_pending_sema_waits;
+
+	gk20a_start_sema_wait_cancel(g, &local_pending_sema_waits);
+
+	while (!list_empty(&local_pending_sema_waits)) {
+		int ret;
+
+		work = list_first_entry(&local_pending_sema_waits,
+					struct wait_fence_work,
+					entry);
+
+		list_del_init(&work->entry);
+
+		/*
+		 * Only kfree() work if the cancel is successful. Otherwise it's
+		 * in use by the gk20a_channel_semaphore_launcher() code.
+		 */
+		ret = sync_fence_cancel_async(work->fence, &work->waiter);
+		if (ret == 0)
+			kfree(work);
+	}
+}
 
 static void gk20a_channel_semaphore_launcher(
 		struct sync_fence *fence,
@@ -407,7 +481,16 @@ static void gk20a_channel_semaphore_launcher(
 	int err;
 	struct wait_fence_work *w =
 		container_of(waiter, struct wait_fence_work, waiter);
-	struct gk20a *g = w->ch->g;
+	struct gk20a *g = w->g;
+
+	/*
+	 * This spinlock must protect a _very_ small critical section -
+	 * otherwise it's possible that the deterministic submit path suffers.
+	 */
+	raw_spin_lock(&g->pending_sema_waits_lock);
+	if (!list_empty(&g->pending_sema_waits))
+		list_del_init(&w->entry);
+	raw_spin_unlock(&g->pending_sema_waits_lock);
 
 	gk20a_dbg_info("waiting for pre fence %p '%s'",
 			fence, fence->name);
@@ -631,6 +714,8 @@ static int gk20a_channel_semaphore_wait_fd(
 	}
 
 	sync_fence_waiter_init(&w->waiter, gk20a_channel_semaphore_launcher);
+	w->fence = sync_fence;
+	w->g = c->g;
 	w->ch = c;
 	w->sema = gk20a_semaphore_alloc(c);
 	if (!w->sema) {
@@ -657,6 +742,7 @@ static int gk20a_channel_semaphore_wait_fd(
 		goto clean_up_sema;
 
 	ret = sync_fence_wait_async(sync_fence, &w->waiter);
+	gk20a_add_pending_sema_wait(c->g, w);
 
 	/*
 	 * If the sync_fence has already signaled then the above async_wait

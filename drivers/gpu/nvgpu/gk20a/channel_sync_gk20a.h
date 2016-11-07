@@ -25,6 +25,7 @@ struct priv_cmd_entry;
 struct channel_gk20a;
 struct gk20a_semaphore;
 struct gk20a_fence;
+struct gk20a;
 
 struct gk20a_channel_sync {
 	atomic_t refcount;
@@ -102,5 +103,6 @@ struct gk20a_channel_sync {
 void gk20a_channel_sync_destroy(struct gk20a_channel_sync *sync);
 struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c);
 bool gk20a_channel_sync_needs_sync_framework(struct channel_gk20a *c);
+void gk20a_channel_cancel_pending_sema_waits(struct gk20a *g);
 
 #endif

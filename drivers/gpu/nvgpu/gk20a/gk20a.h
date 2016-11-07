@@ -874,6 +874,10 @@ struct gk20a {
 	 */
 	struct gk20a_semaphore_sea *sema_sea;
 
+	/* List of pending SW semaphore waits. */
+	struct list_head pending_sema_waits;
+	raw_spinlock_t pending_sema_waits_lock;
+
 	/* held while manipulating # of debug/profiler sessions present */
 	/* also prevents debug sessions from attaching until released */
 	struct mutex dbg_sessions_lock;

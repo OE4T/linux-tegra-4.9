@@ -246,7 +246,9 @@
 			     <0 263 0x04>;
 
 		wakeup_capable;
-
+		resets = <&bpmp_resets TEGRA194_RESET_HOST1X>;
+		clocks = <&bpmp_clks TEGRA194_CLK_HOST1X>,
+			 <&bpmp_clks TEGRA194_CLK_ACTMON>;
 		nvidia,vmid = <1>;
 
 		#stream-id-cells = <9>;
@@ -258,6 +260,9 @@
 		vic@15340000 {
 			compatible = "nvidia,tegra194-vic";
 			reg = <0x0 0x15340000 0x0 0x00040000>;
+			resets = <&bpmp_resets TEGRA194_RESET_VIC>;
+			clocks = <&bpmp_clks TEGRA194_CLK_VIC>;
+			clock-names = "vic";
 
 			#stream-id-cells = <1>;
 		};
@@ -265,6 +270,9 @@
 		nvjpg@15380000 {
 			compatible = "nvidia,tegra194-nvjpg";
 			reg = <0x0 0x15380000 0x0 0x00040000>;
+			resets = <&bpmp_resets TEGRA194_RESET_NVJPG>;
+			clocks = <&bpmp_clks TEGRA194_CLK_NVJPG>;
+			clock-names = "nvjpg";
 
 			#stream-id-cells = <1>;
 		};
@@ -272,6 +280,10 @@
 		nvdec@15480000 {
 			compatible = "nvidia,tegra194-nvdec";
 			reg = <0x0 0x15480000 0x0 0x00040000>;
+			resets = <&bpmp_resets TEGRA194_RESET_NVDEC>;
+			clocks = <&bpmp_clks TEGRA194_CLK_NVDEC>,
+				 <&bpmp_clks TEGRA194_CLK_KFUSE>;
+			clock-names = "nvdec", "kfuse";
 
 			#stream-id-cells = <1>;
 		};
@@ -279,6 +291,9 @@
 		nvenc@154c0000 {
 			compatible = "nvidia,tegra194-nvenc";
 			reg = <0x0 0x154c0000 0x0 0x00040000>;
+			resets = <&bpmp_resets TEGRA194_RESET_NVENC>;
+			clocks = <&bpmp_clks TEGRA194_CLK_NVENC>;
+			clock-names = "nvenc";
 
 			#stream-id-cells = <1>;
 		};
@@ -288,6 +303,7 @@
 			reg = <0x0 0x15880000 0x0 0x00040000>;
 			interrupts = <0 236 0x04>;
 
+			resets = <&bpmp_resets TEGRA194_RESET_DLA0>;
 			clocks = <&bpmp_clks TEGRA194_CLK_DLA0_CORE>,
 				 <&bpmp_clks TEGRA194_CLK_DLA0_FALCON>;
 			clock-names = "nvdla0", "nvdla0_flcn";
@@ -300,6 +316,7 @@
 			reg = <0x0 0x158c0000 0x0 0x00040000>;
 			interrupts = <0 237 0x04>;
 
+			resets = <&bpmp_resets TEGRA194_RESET_DLA1>;
 			clocks = <&bpmp_clks TEGRA194_CLK_DLA1_CORE>,
 				 <&bpmp_clks TEGRA194_CLK_DLA1_FALCON>;
 			clock-names = "nvdla1", "nvdla1_flcn";
@@ -387,12 +404,11 @@
 			reg = <0x0 0x16000000 0x0 0x800000>;
 			interrupts = <0 234 0x04>;
 
+			resets = <&bpmp_resets TEGRA194_RESET_PVA0_ALL>;
 			clocks = <&bpmp_clks TEGRA194_CLK_PVA0_AXI>,
 				 <&bpmp_clks TEGRA194_CLK_PVA0_VPS0>,
 				 <&bpmp_clks TEGRA194_CLK_PVA0_VPS1>;
-			clock-names = "pva0", "pva0_vps0", "pva0_vps1";
-			resets = <&bpmp_resets TEGRA194_RESET_PVA0_ALL>;
-			reset-names = "pva0_rst";
+			clock-names = "axi", "vps0", "vps1";
 
 			#stream-id-cells = <1>;
 		};
@@ -402,12 +418,11 @@
 			reg = <0x0 0x16800000 0x0 0x800000>;
 			interrupts = <0 235 0x04>;
 
+			resets = <&bpmp_resets TEGRA194_RESET_PVA1_ALL>;
 			clocks = <&bpmp_clks TEGRA194_CLK_PVA1_AXI>,
 				 <&bpmp_clks TEGRA194_CLK_PVA1_VPS0>,
 				 <&bpmp_clks TEGRA194_CLK_PVA1_VPS1>;
-			clock-names = "pva1", "pva1_vps0", "pva1_vps1";
-			resets = <&bpmp_resets TEGRA194_RESET_PVA1_ALL>;
-			reset-names = "pva1_rst";
+			clock-names = "axi", "vps0", "vps1";
 
 			#stream-id-cells = <1>;
 		};

@@ -4029,6 +4029,24 @@ static int pmu_handle_perfmon_event(struct pmu_gk20a *pmu,
 }
 
 
+static int pmu_handle_therm_event(struct pmu_gk20a *pmu,
+			struct nv_pmu_therm_msg *msg)
+{
+	gk20a_dbg_fn("");
+
+	switch (msg->msg_type) {
+	case NV_PMU_THERM_MSG_ID_EVENT_HW_SLOWDOWN_NOTIFICATION:
+		gk20a_dbg_pmu("received asserted event mask %d",
+			msg->hw_slct_msg.mask);
+		break;
+	default:
+		gk20a_dbg_pmu("unkown therm event received %d", msg->msg_type);
+		break;
+	}
+
+	return 0;
+}
+
 static int pmu_handle_event(struct pmu_gk20a *pmu, struct pmu_msg *msg)
 {
 	int err = 0;
@@ -4047,6 +4065,9 @@ static int pmu_handle_event(struct pmu_gk20a *pmu, struct pmu_msg *msg)
 		} else {
 			WARN_ON(1);
 		}
+		break;
+	case PMU_UNIT_THERM:
+		err = pmu_handle_therm_event(pmu, &msg->msg.therm);
 		break;
 	default:
 		break;

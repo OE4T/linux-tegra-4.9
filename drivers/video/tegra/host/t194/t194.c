@@ -343,7 +343,9 @@ struct nvhost_device_data t19_vic_info = {
 struct nvhost_device_data t19_pva1_info = {
 	.num_channels		= 1,
 	.clocks			= {
-		{"pva"},
+		{"axi", UINT_MAX,},
+		{"vps0", UINT_MAX,},
+		{"vps1", UINT_MAX,},
 	},
 	.ctrl_ops		= &tegra_pva_ctrl_ops,
 	.devfs_name		= "pva1",
@@ -362,7 +364,9 @@ struct nvhost_device_data t19_pva1_info = {
 struct nvhost_device_data t19_pva0_info = {
 	.num_channels		= 1,
 	.clocks			= {
-		{"pva"},
+		{"axi", UINT_MAX,},
+		{"vps0", UINT_MAX,},
+		{"vps1", UINT_MAX,},
 	},
 	.ctrl_ops		= &tegra_pva_ctrl_ops,
 	.devfs_name		= "pva0",

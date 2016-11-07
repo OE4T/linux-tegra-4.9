@@ -108,43 +108,6 @@ static int bpmp_tty_write_msg(const unsigned char *data, uint32_t len)
 	return resp.write.len;
 }
 
-static int bpmp_tty_get_fifo(struct platform_device *pdev)
-{
-	struct bpmp_tty_buffer *buffer = &bpmp_tty_buffer;
-	struct mrq_ringbuf_console_host_to_bpmp_request req;
-	union mrq_ringbuf_console_bpmp_to_host_response resp;
-	int ret;
-
-	req.type = CMD_RINGBUF_CONSOLE_GET_FIFO;
-
-	ret = tegra_bpmp_send_receive(MRQ_RINGBUF_CONSOLE, &req, sizeof(req),
-				      &resp, sizeof(resp));
-	if (ret)
-		return ret;
-
-	buffer->bpmp_tx_buf = devm_ioremap(&pdev->dev,
-					   resp.get_fifo.bpmp_tx_buf_addr,
-					   resp.get_fifo.bpmp_tx_buf_len);
-	if (IS_ERR(buffer->bpmp_tx_buf))
-		return PTR_ERR(buffer->bpmp_tx_buf);
-
-	buffer->bpmp_tx_head = devm_ioremap(&pdev->dev,
-					    resp.get_fifo.bpmp_tx_head_addr,
-					    sizeof(uint64_t));
-	if (IS_ERR(buffer->bpmp_tx_head))
-		return PTR_ERR(buffer->bpmp_tx_head);
-
-	buffer->bpmp_tx_tail = devm_ioremap(&pdev->dev,
-					    resp.get_fifo.bpmp_tx_tail_addr,
-					    sizeof(uint64_t));
-	if (IS_ERR(buffer->bpmp_tx_tail))
-		return PTR_ERR(buffer->bpmp_tx_tail);
-
-	buffer->bpmp_tx_buf_sz = resp.get_fifo.bpmp_tx_buf_len;
-
-	return 0;
-}
-
 static int bpmp_tty_mrq_abi_probe(void)
 {
 	struct mrq_query_abi_request req;
@@ -294,6 +257,43 @@ static const struct file_operations bpmp_tty_dump_fops = {
 	.llseek = seq_lseek,
 	.release = single_release,
 };
+
+static int bpmp_tty_get_fifo(struct platform_device *pdev)
+{
+	struct bpmp_tty_buffer *buffer = &bpmp_tty_buffer;
+	struct mrq_ringbuf_console_host_to_bpmp_request req;
+	union mrq_ringbuf_console_bpmp_to_host_response resp;
+	int ret;
+
+	req.type = CMD_RINGBUF_CONSOLE_GET_FIFO;
+
+	ret = tegra_bpmp_send_receive(MRQ_RINGBUF_CONSOLE, &req, sizeof(req),
+				      &resp, sizeof(resp));
+	if (ret)
+		return ret;
+
+	buffer->bpmp_tx_buf = devm_ioremap(&pdev->dev,
+					   resp.get_fifo.bpmp_tx_buf_addr,
+					   resp.get_fifo.bpmp_tx_buf_len);
+	if (IS_ERR(buffer->bpmp_tx_buf))
+		return PTR_ERR(buffer->bpmp_tx_buf);
+
+	buffer->bpmp_tx_head = devm_ioremap(&pdev->dev,
+					    resp.get_fifo.bpmp_tx_head_addr,
+					    sizeof(uint64_t));
+	if (IS_ERR(buffer->bpmp_tx_head))
+		return PTR_ERR(buffer->bpmp_tx_head);
+
+	buffer->bpmp_tx_tail = devm_ioremap(&pdev->dev,
+					    resp.get_fifo.bpmp_tx_tail_addr,
+					    sizeof(uint64_t));
+	if (IS_ERR(buffer->bpmp_tx_tail))
+		return PTR_ERR(buffer->bpmp_tx_tail);
+
+	buffer->bpmp_tx_buf_sz = resp.get_fifo.bpmp_tx_buf_len;
+
+	return 0;
+}
 
 static void bpmp_tty_create_debugfs(struct platform_device *pdev)
 {

@@ -41,8 +41,14 @@ struct hmm_dmirror_write {
 	uint64_t		dpages;
 };
 
+struct hmm_dmirror_migrate {
+	uint64_t		addr;
+	uint64_t		npages;
+};
+
 /* Expose the address space of the calling process through hmm dummy dev file */
 #define HMM_DMIRROR_READ		_IOWR('H', 0x00, struct hmm_dmirror_read)
 #define HMM_DMIRROR_WRITE		_IOWR('H', 0x01, struct hmm_dmirror_write)
+#define HMM_DMIRROR_MIGRATE		_IOWR('H', 0x02, struct hmm_dmirror_migrate)
 
 #endif /* _UAPI_LINUX_HMM_DMIRROR_H */

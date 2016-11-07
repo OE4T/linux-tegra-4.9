@@ -819,7 +819,7 @@
 				<&tegra_car TEGRA210_CLK_PLL_P_OUT3>;
 			clock-names = "disp1", "timer", "disp1_emc", "disp1_la_emc", "pll_p_out3";
 			resets = <&tegra_car TEGRA210_CLK_DISP1>;
-			reset-names = "dc_rst";
+			reset-names = "dc_rst1";
 			status = "disabled";
 			nvidia,dc-ctrlnum = <0>;
 
@@ -842,7 +842,7 @@
 				<&tegra_car TEGRA210_CLK_DISP2_LA_EMC>;
 			clock-names = "disp2", "timer", "disp2_emc", "disp2_la_emc";
 			resets = <&tegra_car TEGRA210_CLK_DISP2>;
-			reset-names = "dc_rst";
+			reset-names = "dc_rst2";
 
 			rgb {
 				status = "disabled";
@@ -931,16 +931,20 @@
 		sor {
 			compatible = "nvidia,tegra210-sor";
 			reg = <0x0 0x54540000 0x0 0x00040000>;
+			reg-names = "sor";
 			status = "disabled";
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
 			clocks = <&tegra_car TEGRA210_CLK_SOR0>,
 				<&tegra_car TEGRA210_CLK_SOR_SAFE>;
 			clock-names = "sor0", "sor_safe";
+			resets = <&tegra_car TEGRA210_CLK_SOR0>;
+			reset-names = "sor0";
 		};
 
 		sor1 {
 			compatible = "nvidia,tegra210-sor1";
 			reg = <0x0 0x54580000 0x0 0x00040000>;
+			reg-names = "sor";
 			interrupts = <0 76 0x4>; /* INT_SOR_1 */
 			status = "disabled";
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
@@ -953,7 +957,7 @@
 			    <&tegra_car TEGRA210_CLK_HDA2HDMI>;
 			clock-names = "sor1", "sor_safe", "sor1_brick", "sor1_src",
 			    "hda", "hda2codec_2x", "hda2hdmi";
-			resets = <&tegra_car 183>,
+			resets = <&tegra_car TEGRA210_CLK_SOR1>,
 			       <&tegra_car TEGRA210_CLK_HDA>,
 			       <&tegra_car TEGRA210_CLK_HDA2CODEC_2X>,
 			       <&tegra_car TEGRA210_CLK_HDA2HDMI>;
@@ -972,8 +976,9 @@
 			reg = <0x0 0x545c0000 0x0 0x00040000>;
 			interrupts = <0 159 0x4>; /* INT_DPAUX */
 			status = "disabled";
-			clocks = <&tegra_car TEGRA210_CLK_DPAUX>;
-			clock-names = "dpaux";
+			clocks = <&tegra_car TEGRA210_CLK_DPAUX>,
+				<&tegra_car TEGRA210_CLK_PLL_DP>;
+			clock-names = "dpaux", "pll_dp";
 			resets = <&tegra_car TEGRA210_CLK_DPAUX>;
 			reset-names = "dpaux";
 		};
@@ -983,8 +988,9 @@
 			reg = <0x0 0x54040000 0x0 0x00040000>;
 			interrupts = <0 11 0x4>; /* INT_DPAUX_1 */
 			status = "disabled";
-			clocks = <&tegra_car TEGRA210_CLK_DPAUX1>;
-			clock-names = "dpaux1";
+			clocks = <&tegra_car TEGRA210_CLK_DPAUX1>,
+				<&tegra_car TEGRA210_CLK_PLL_DP>;
+			clock-names = "dpaux1", "pll_dp";
 			resets = <&tegra_car TEGRA210_CLK_DPAUX1>;
 			reset-names = "dpaux1";
 		};

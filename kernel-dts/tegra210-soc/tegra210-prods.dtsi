@@ -235,7 +235,7 @@
 
 				prod_c_dpaux_dp {
 					prod = <
-						0x00000124 0x000037fe 0x00002462
+						0x00000124 0x000037fe 0x000024c2
 						>;
 					};
 				prod_c_dpaux_hdmi {
@@ -252,7 +252,7 @@
 				mask-one-style;
 				prod_c_dpaux_dp {
 					prod = <
-						0x00000124 0x000037fe 0x00002462
+						0x00000124 0x000037fe 0x000024c2
 						>;
 					};
 				prod_c_dpaux_hdmi {

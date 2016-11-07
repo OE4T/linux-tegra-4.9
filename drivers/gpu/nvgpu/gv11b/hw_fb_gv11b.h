@@ -1110,7 +1110,7 @@ static inline u32 fb_mmu_fault_info_replayable_fault_en_v(u32 r)
 {
 	return (r >> 30) & 0x1;
 }
-static inline u32 fb_mmu_fault_info_info_valid_v(u32 r)
+static inline u32 fb_mmu_fault_info_valid_v(u32 r)
 {
 	return (r >> 31) & 0x1;
 }
@@ -1318,6 +1318,14 @@ static inline u32 fb_mmu_fault_status_replayable_v(u32 r)
 {
 	return (r >> 8) & 0x1;
 }
+static inline u32 fb_mmu_fault_status_replayable_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_replayable_set_f(void)
+{
+	return 0x100;
+}
 static inline u32 fb_mmu_fault_status_non_replayable_f(u32 v)
 {
 	return (v & 0x1) << 9;
@@ -1325,6 +1333,14 @@ static inline u32 fb_mmu_fault_status_non_replayable_f(u32 v)
 static inline u32 fb_mmu_fault_status_non_replayable_v(u32 r)
 {
 	return (r >> 9) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_set_f(void)
+{
+	return 0x200;
 }
 static inline u32 fb_mmu_fault_status_replayable_error_f(u32 v)
 {
@@ -1334,6 +1350,14 @@ static inline u32 fb_mmu_fault_status_replayable_error_v(u32 r)
 {
 	return (r >> 10) & 0x1;
 }
+static inline u32 fb_mmu_fault_status_replayable_error_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_replayable_error_set_f(void)
+{
+	return 0x400;
+}
 static inline u32 fb_mmu_fault_status_non_replayable_error_f(u32 v)
 {
 	return (v & 0x1) << 11;
@@ -1341,6 +1365,14 @@ static inline u32 fb_mmu_fault_status_non_replayable_error_f(u32 v)
 static inline u32 fb_mmu_fault_status_non_replayable_error_v(u32 r)
 {
 	return (r >> 11) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_error_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_error_set_f(void)
+{
+	return 0x800;
 }
 static inline u32 fb_mmu_fault_status_replayable_overflow_f(u32 v)
 {
@@ -1350,6 +1382,14 @@ static inline u32 fb_mmu_fault_status_replayable_overflow_v(u32 r)
 {
 	return (r >> 12) & 0x1;
 }
+static inline u32 fb_mmu_fault_status_replayable_overflow_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_replayable_overflow_set_f(void)
+{
+	return 0x1000;
+}
 static inline u32 fb_mmu_fault_status_non_replayable_overflow_f(u32 v)
 {
 	return (v & 0x1) << 13;
@@ -1357,6 +1397,14 @@ static inline u32 fb_mmu_fault_status_non_replayable_overflow_f(u32 v)
 static inline u32 fb_mmu_fault_status_non_replayable_overflow_v(u32 r)
 {
 	return (r >> 13) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_overflow_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_overflow_set_f(void)
+{
+	return 0x2000;
 }
 static inline u32 fb_mmu_fault_status_replayable_getptr_corrupted_f(u32 v)
 {
@@ -1366,6 +1414,14 @@ static inline u32 fb_mmu_fault_status_replayable_getptr_corrupted_v(u32 r)
 {
 	return (r >> 14) & 0x1;
 }
+static inline u32 fb_mmu_fault_status_replayable_getptr_corrupted_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_replayable_getptr_corrupted_set_f(void)
+{
+	return 0x4000;
+}
 static inline u32 fb_mmu_fault_status_non_replayable_getptr_corrupted_f(u32 v)
 {
 	return (v & 0x1) << 15;
@@ -1373,6 +1429,14 @@ static inline u32 fb_mmu_fault_status_non_replayable_getptr_corrupted_f(u32 v)
 static inline u32 fb_mmu_fault_status_non_replayable_getptr_corrupted_v(u32 r)
 {
 	return (r >> 15) & 0x1;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_getptr_corrupted_set_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_getptr_corrupted_set_f(void)
+{
+	return 0x8000;
 }
 static inline u32 fb_mmu_fault_status_busy_f(u32 v)
 {
@@ -1403,6 +1467,14 @@ static inline u32 fb_mmu_fault_status_valid_set_v(void)
 	return 0x00000001;
 }
 static inline u32 fb_mmu_fault_status_valid_set_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 fb_mmu_fault_status_valid_clear_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_fault_status_valid_clear_f(void)
 {
 	return 0x80000000;
 }

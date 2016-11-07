@@ -1158,9 +1158,9 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 	return 0;
 }
 
-static int nvgpu_gpu_clk_get_event_fd(struct gk20a *g,
+static int nvgpu_gpu_get_event_fd(struct gk20a *g,
 	struct gk20a_ctrl_priv *priv,
-	struct nvgpu_gpu_clk_get_event_fd_args *args)
+	struct nvgpu_gpu_get_event_fd_args *args)
 {
 	struct nvgpu_clk_session *session = priv->clk_session;
 
@@ -1567,9 +1567,9 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 			(struct nvgpu_gpu_clk_get_info_args *)buf);
 		break;
 
-	case NVGPU_GPU_IOCTL_CLK_GET_EVENT_FD:
-		err = nvgpu_gpu_clk_get_event_fd(g, priv,
-			(struct nvgpu_gpu_clk_get_event_fd_args *)buf);
+	case NVGPU_GPU_IOCTL_GET_EVENT_FD:
+		err = nvgpu_gpu_get_event_fd(g, priv,
+			(struct nvgpu_gpu_get_event_fd_args *)buf);
 		break;
 
 	case NVGPU_GPU_IOCTL_GET_VOLTAGE:

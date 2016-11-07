@@ -126,6 +126,10 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_GET_POWER		(1ULL << 12)
 /* NVGPU_GPU_IOCTL_GET_TEMPERATURE is available */
 #define NVGPU_GPU_FLAGS_SUPPORT_GET_TEMPERATURE		(1ULL << 13)
+/* NVGPU_GPU_IOCTL_SET_THERM_ALERT_LIMIT is available */
+#define NVGPU_GPU_FLAGS_SUPPORT_SET_THERM_ALERT_LIMIT	(1ULL << 14)
+/* NVGPU_GPU_IOCTL_GET_EVENT_FD is available */
+#define NVGPU_GPU_FLAGS_SUPPORT_DEVICE_EVENTS		(1ULL << 15)
 
 struct nvgpu_gpu_characteristics {
 	__u32 arch;
@@ -223,6 +227,8 @@ struct nvgpu_gpu_characteristics {
 	   - If the last field is reserved/padding, it is not
 	     generally safe to repurpose the field in future revisions.
 	*/
+	__s16 event_ioctl_nr_last;
+	__u16 pad[3];
 };
 
 struct nvgpu_gpu_get_characteristics {
@@ -684,12 +690,18 @@ struct nvgpu_gpu_clk_set_info_args {
 	__s32 completion_fd;
 };
 
-struct nvgpu_gpu_clk_get_event_fd_args {
+struct nvgpu_gpu_get_event_fd_args {
 
 	/* in: Flags (not currently used). */
 	__u32 flags;
 
-	/* out: File descriptor for events, i.e. any clock update. */
+	/* out: File descriptor for events, i.e. clock update.
+	 * On successful polling of this event_fd, application is
+	 * expected to read status (nvgpu_gpu_event_info),
+	 * which provides detailed event information
+	 * For a poll operation, alarms will be reported with POLLPRI,
+	 * and GPU shutdown will be reported with POLLHUP.
+	 */
 	__s32 event_fd;
 };
 
@@ -815,8 +827,8 @@ struct nvgpu_gpu_get_temperature_args {
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 30, struct nvgpu_gpu_clk_get_info_args)
 #define NVGPU_GPU_IOCTL_CLK_SET_INFO \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 31, struct nvgpu_gpu_clk_set_info_args)
-#define NVGPU_GPU_IOCTL_CLK_GET_EVENT_FD \
-	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 32, struct nvgpu_gpu_clk_get_event_fd_args)
+#define NVGPU_GPU_IOCTL_GET_EVENT_FD \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 32, struct nvgpu_gpu_get_event_fd_args)
 #define NVGPU_GPU_IOCTL_GET_MEMORY_STATE \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 33, \
 			struct nvgpu_gpu_get_memory_state_args)
@@ -834,6 +846,63 @@ struct nvgpu_gpu_get_temperature_args {
 	_IOC_NR(NVGPU_GPU_IOCTL_GET_FBP_L2_MASKS)
 #define NVGPU_GPU_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_gpu_get_cpu_time_correlation_info_args)
+
+/*
+ * Event session
+ *
+ * NVGPU_GPU_IOCTL_GET_EVENT_FD opens an event session.
+ * Below ioctls can be used on these sessions fds.
+ */
+#define NVGPU_EVENT_IOCTL_MAGIC	'E'
+
+/* Normal events (POLLIN) */
+/* Event associated to a VF update */
+#define NVGPU_GPU_EVENT_VF_UPDATE				0
+
+/* Recoverable alarms (POLLPRI) */
+/* Alarm when target frequency on any session is not possible */
+#define NVGPU_GPU_EVENT_ALARM_TARGET_VF_NOT_POSSIBLE		2
+/* Alarm when target frequency on current session is not possible */
+#define NVGPU_GPU_EVENT_ALARM_LOCAL_TARGET_VF_NOT_POSSIBLE	3
+/* Alarm when Clock Arbiter failed */
+#define NVGPU_GPU_EVENT_ALARM_CLOCK_ARBITER_FAILED		4
+/* Alarm when VF table update failed */
+#define NVGPU_GPU_EVENT_ALARM_VF_TABLE_UPDATE_FAILED		5
+/* Alarm on thermal condition */
+#define NVGPU_GPU_EVENT_ALARM_THERMAL_ABOVE_THRESHOLD		6
+/* Alarm on power condition */
+#define NVGPU_GPU_EVENT_ALARM_POWER_ABOVE_THRESHOLD		7
+
+/* Non recoverable alarm (POLLUP) */
+/* Alarm on GPU shutdown/fall from bus */
+#define NVGPU_GPU_EVENT_ALARM_GPU_LOST				8
+
+struct nvgpu_gpu_event_info {
+	__u32 event_id;		/* NVGPU_GPU_EVENT_* */
+	__u32 reserved;
+	__u64 timestamp;	/* GPU timestamp */
+};
+
+struct nvgpu_gpu_set_event_filter_args {
+
+	/* in: Flags (not currently used). */
+	__u32 flags;
+
+	/* in: Size of event filter in 32-bit words */
+	__u32 size;
+
+	/* in: Address of buffer containing bit mask of events.
+	 * Bit #n is set if event #n should be monitored.
+	 */
+	__u64 buffer;
+};
+
+#define NVGPU_EVENT_IOCTL_SET_FILTER \
+	_IOW(NVGPU_EVENT_IOCTL_MAGIC, 1, struct nvgpu_gpu_set_event_filter_args)
+#define NVGPU_EVENT_IOCTL_LAST		\
+	_IOC_NR(NVGPU_EVENT_IOCTL_SET_FILTER)
+#define NVGPU_EVENT_IOCTL_MAX_ARG_SIZE	\
+	sizeof(struct nvgpu_gpu_set_event_filter_args)
 
 /*
  * /dev/nvhost-tsg-gpu device

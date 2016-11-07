@@ -2,7 +2,7 @@
  * Cryptographic API.
  * drivers/crypto/tegra-se-elp.c
  *
- * Support for Tegra Security Engine hardware crypto algorithms.
+ * Support for Tegra Security Engine Elliptic crypto algorithms.
  *
  * Copyright (c) 2015-2016, NVIDIA Corporation. All Rights Reserved.
  *
@@ -30,6 +30,10 @@
 #include <linux/errno.h>
 #include <linux/tegra-soc.h>
 #include <crypto/internal/rng.h>
+#include <crypto/internal/kpp.h>
+#include <crypto/kpp.h>
+#include <linux/fips.h>
+#include <crypto/ecdh.h>
 
 #include "tegra-se-elp.h"
 
@@ -45,6 +49,8 @@
 #define RAND_128			16	/*bytes*/
 #define RAND_256			32	/*bytes*/
 #define ADV_STATE_FREQ			3
+#define ECC_MAX_WORDS	20
+#define WORD_SIZE_BYTES	4
 
 enum tegra_se_pka_rsa_type {
 	RSA_EXP_MOD,
@@ -64,24 +70,6 @@ enum tegra_se_elp_precomp_vals {
 	PRECOMP_RINV,
 	PRECOMP_M,
 	PRECOMP_R2,
-};
-
-/* Security Engine operation modes */
-enum tegra_se_elp_op_mode {
-	SE_ELP_OP_MODE_RSA512,
-	SE_ELP_OP_MODE_RSA768,
-	SE_ELP_OP_MODE_RSA1024,
-	SE_ELP_OP_MODE_RSA1536,
-	SE_ELP_OP_MODE_RSA2048,
-	SE_ELP_OP_MODE_RSA3072,
-	SE_ELP_OP_MODE_RSA4096,
-	SE_ELP_OP_MODE_ECC160,
-	SE_ELP_OP_MODE_ECC192,
-	SE_ELP_OP_MODE_ECC224,
-	SE_ELP_OP_MODE_ECC256,
-	SE_ELP_OP_MODE_ECC384,
-	SE_ELP_OP_MODE_ECC512,
-	SE_ELP_OP_MODE_ECC521,
 };
 
 enum tegra_se_elp_rng1_cmd {
@@ -175,6 +163,125 @@ static LIST_HEAD(key_slot);
 
 static u32 pka_op_size[16] = {512, 768, 1024, 1536, 2048, 3072, 4096, 160, 192,
 				224, 256, 384, 512, 640};
+
+struct tegra_se_ecdh_context {
+	struct tegra_se_elp_dev *se_dev;
+	unsigned int curve_id;
+	u32 private_key[ECC_MAX_WORDS];
+	u32 public_key[2 * ECC_MAX_WORDS];
+	u32 shared_secret[ECC_MAX_WORDS];
+};
+
+static struct tegra_se_ecc_point *tegra_se_ecc_alloc_point(
+				struct tegra_se_elp_dev *se_dev, int nwords)
+{
+	struct tegra_se_ecc_point *p = devm_kzalloc(se_dev->dev,
+					sizeof(struct tegra_se_ecc_point),
+					GFP_KERNEL);
+	int len = nwords * WORD_SIZE_BYTES;
+
+	if (!p)
+		return NULL;
+
+	p->x = devm_kzalloc(se_dev->dev, len, GFP_KERNEL);
+	if (!p->x)
+		goto free_pt;
+
+	p->y = devm_kzalloc(se_dev->dev, len, GFP_KERNEL);
+	if (!p->y)
+		goto exit;
+
+	return p;
+exit:
+	devm_kfree(se_dev->dev, p->x);
+free_pt:
+	devm_kfree(se_dev->dev, p);
+	return NULL;
+}
+
+static void tegra_se_ecc_free_point(struct tegra_se_elp_dev *se_dev,
+				    struct tegra_se_ecc_point *p)
+{
+	if (!p)
+		return;
+
+	devm_kfree(se_dev->dev, p->x);
+	devm_kfree(se_dev->dev, p->y);
+	devm_kfree(se_dev->dev, p);
+}
+
+const struct tegra_se_ecc_curve *tegra_se_ecc_get_curve(unsigned int curve_id)
+{
+	switch (curve_id) {
+	/* In FIPS mode only allow P256 and higher */
+	case ECC_CURVE_NIST_P192:
+		return fips_enabled ? NULL : &curve_p192;
+	case ECC_CURVE_NIST_P224:
+		return fips_enabled ? NULL : &curve_p224;
+	case ECC_CURVE_NIST_P256:
+		return &curve_p256;
+	case ECC_CURVE_NIST_P384:
+		return &curve_p384;
+	case ECC_CURVE_NIST_P521:
+		return &curve_p521;
+	default:
+		return NULL;
+	}
+}
+
+static inline void tegra_se_ecc_swap(const u32 *in, u32 *out, int nwords)
+{
+	int i;
+
+	for (i = 0; i < nwords; i++)
+		out[i] = swab32(in[nwords - 1 - i]);
+}
+
+static bool tegra_se_ecc_vec_is_zero(const u32 *vec, int nbytes)
+{
+	unsigned int zerobuf[ECC_MAX_WORDS * WORD_SIZE_BYTES] = {0};
+
+	return !memcmp((u8 *)vec, zerobuf, nbytes);
+}
+
+static bool tegra_se_ecdh_params_is_valid(struct ecdh *params)
+{
+	const u32 *private_key = (const u32 *)params->key;
+	int private_key_len = params->key_size;
+	const struct tegra_se_ecc_curve *curve = tegra_se_ecc_get_curve(
+							params->curve_id);
+	const u32 *order = curve->n;
+	int nbytes = curve->nbytes;
+
+	if (!nbytes || !private_key)
+		return false;
+
+	if (private_key_len != nbytes)
+		return false;
+
+	if (tegra_se_ecc_vec_is_zero(private_key, nbytes))
+		return false;
+
+	/* Make sure the private key is in the range [1, n-1]. */
+	if (memcmp((u8 *)order, (u8 *)private_key, nbytes) <= 0)
+		return false;
+
+	return true;
+}
+
+static int tegra_se_ecdh_set_params(struct tegra_se_ecdh_context *ctx,
+				    struct ecdh *params)
+{
+	if (!tegra_se_ecdh_params_is_valid(params))
+		return -EINVAL;
+
+	ctx->curve_id = params->curve_id;
+
+	memcpy(ctx->private_key, params->key, params->key_size);
+
+	return 0;
+}
+
 static inline u32 num_words(int mode)
 {
 	u32 words = 0;
@@ -678,11 +785,10 @@ static void tegra_se_read_pka_result(struct tegra_se_elp_dev *se_dev,
 	case SE_ELP_OP_MODE_RSA3072:
 	case SE_ELP_OP_MODE_RSA4096:
 		for (i = 0; i < req->size / 4; i++) {
-			val = se_elp_readl(se_dev, PKA1, reg_bank_offset(
+			*RES = se_elp_readl(se_dev, PKA1, reg_bank_offset(
 					   TEGRA_SE_ELP_PKA_RSA_RESULT_BANK,
 					   TEGRA_SE_ELP_PKA_RSA_RESULT_ID,
 					   req->op_mode) + (i * 4));
-			*RES = be32_to_cpu(val);
 			RES++;
 		}
 		break;
@@ -703,40 +809,36 @@ static void tegra_se_read_pka_result(struct tegra_se_elp_dev *se_dev,
 				req->pv_ok = false;
 		} else if (req->ecc_type == ECC_POINT_DOUBLE) {
 			for (i = 0; i < req->size / 4; i++) {
-				val = se_elp_readl(se_dev, PKA1,
+				*QX = se_elp_readl(se_dev, PKA1,
 						   reg_bank_offset(
 						   TEGRA_SE_ELP_PKA_ECC_XP_BANK,
 						   TEGRA_SE_ELP_PKA_ECC_XP_ID,
 						   req->op_mode) + (i * 4));
-				*QX = be32_to_cpu(val);
 				QX++;
 			}
 			for (i = 0; i < req->size / 4; i++) {
-				val = se_elp_readl(se_dev, PKA1,
+				*QY = se_elp_readl(se_dev, PKA1,
 						   reg_bank_offset(
 						   TEGRA_SE_ELP_PKA_ECC_YP_BANK,
 						   TEGRA_SE_ELP_PKA_ECC_YP_ID,
 						   req->op_mode) + (i * 4));
-				*QY = be32_to_cpu(val);
 				QY++;
 			}
 		} else {
 			for (i = 0; i < req->size / 4; i++) {
-				val = se_elp_readl(se_dev, PKA1,
+				*QX = se_elp_readl(se_dev, PKA1,
 						   reg_bank_offset(
 						   TEGRA_SE_ELP_PKA_ECC_XQ_BANK,
 						   TEGRA_SE_ELP_PKA_ECC_XQ_ID,
 						   req->op_mode) + (i * 4));
-				*QX = be32_to_cpu(val);
 				QX++;
 			}
 			for (i = 0; i < req->size / 4; i++) {
-				val = se_elp_readl(se_dev, PKA1,
+				*QY = se_elp_readl(se_dev, PKA1,
 						   reg_bank_offset(
 						   TEGRA_SE_ELP_PKA_ECC_YQ_BANK,
 						   TEGRA_SE_ELP_PKA_ECC_YQ_ID,
 						   req->op_mode) + (i * 4));
-				*QY = be32_to_cpu(val);
 				QY++;
 			}
 		}
@@ -947,7 +1049,6 @@ static int tegra_se_elp_pka_precomp(struct tegra_se_elp_dev *se_dev,
 				      TEGRA_SE_ELP_PKA_MOD_ID,
 				      req->op_mode) + (i * 4));
 		}
-
 		se_elp_writel(se_dev, PKA1,
 			      TEGRA_SE_ELP_PKA_RSA_RINV_PRG_ENTRY_VAL,
 			      TEGRA_SE_ELP_PKA_PRG_ENTRY_OFFSET);
@@ -1607,6 +1708,7 @@ int tegra_se_elp_pka_op(struct tegra_se_elp_pka_request *req)
 		dev_err(se_dev->dev, "set_trng_op Failed\n");
 		goto exit;
 	}
+
 	ret = tegra_se_elp_pka_precomp(se_dev, req, PRECOMP_RINV);
 	if (ret) {
 		dev_err(se_dev->dev,
@@ -1636,6 +1738,220 @@ clk_dis:
 	return ret;
 }
 EXPORT_SYMBOL(tegra_se_elp_pka_op);
+
+static int tegra_se_ecc_point_mult(struct tegra_se_ecc_point *result,
+				   const struct tegra_se_ecc_point *point,
+				   const u32 *private,
+				   const struct tegra_se_ecc_curve *curve,
+				   int nbytes)
+{
+	struct tegra_se_elp_pka_request ecc_req;
+	int ret;
+
+	ecc_req.op_mode = curve->mode;
+	ecc_req.size = nbytes;
+	ecc_req.ecc_type = ECC_POINT_MUL;
+	ecc_req.curve_param_a = curve->a;
+	ecc_req.modulus = curve->p;
+	ecc_req.base_pt_x = point->x;
+	ecc_req.base_pt_y = point->y;
+	ecc_req.res_pt_x = result->x;
+	ecc_req.res_pt_y = result->y;
+	ecc_req.key = (u32 *)private;
+
+	ret = tegra_se_elp_pka_op(&ecc_req);
+
+	return ret;
+}
+
+static int tegra_se_ecdh_compute_shared_secret(struct tegra_se_elp_dev *se_dev,
+					       unsigned int cid,
+					       const u32 *private_key,
+					       const u32 *public_key,
+					       u32 *secret)
+{
+	struct tegra_se_ecc_point *product, *pk;
+	const struct tegra_se_ecc_curve *curve = tegra_se_ecc_get_curve(cid);
+	int nbytes = curve->nbytes;
+	int nwords = nbytes / WORD_SIZE_BYTES;
+	int ret = -ENOMEM;
+	u32 priv[ECC_MAX_WORDS];
+
+	if (!private_key || !public_key)
+		return -EINVAL;
+
+	pk = tegra_se_ecc_alloc_point(se_dev, nwords);
+	if (!pk)
+		return ret;
+
+	product = tegra_se_ecc_alloc_point(se_dev, nwords);
+	if (!product)
+		goto exit;
+
+	tegra_se_ecc_swap(public_key, pk->x, nwords);
+	tegra_se_ecc_swap(&public_key[nwords], pk->y, nwords);
+	tegra_se_ecc_swap(private_key, priv, nwords);
+
+	ret = tegra_se_ecc_point_mult(product, pk, priv, curve, nbytes);
+	if (ret)
+		goto err_pt_mult;
+
+	tegra_se_ecc_swap(product->x, secret, nwords);
+
+	if (tegra_se_ecc_vec_is_zero(product->x, nbytes) ||
+	    tegra_se_ecc_vec_is_zero(product->y, nbytes))
+		ret = -ENODATA;
+err_pt_mult:
+	tegra_se_ecc_free_point(se_dev, product);
+exit:
+	tegra_se_ecc_free_point(se_dev, pk);
+
+	return ret;
+}
+
+static int tegra_se_ecdh_gen_pub_key(struct tegra_se_elp_dev *se_dev,
+				     unsigned int cid, const u32 *private_key,
+				     u32 *public_key)
+{
+	struct tegra_se_ecc_point *G;
+	int ret;
+	const struct tegra_se_ecc_curve *curve = tegra_se_ecc_get_curve(cid);
+	int nbytes = curve->nbytes;
+	int nwords = nbytes / WORD_SIZE_BYTES;
+	u32 priv[ECC_MAX_WORDS];
+
+	if (!private_key)
+		return -EINVAL;
+
+	tegra_se_ecc_swap(private_key, priv, nwords);
+
+	G = tegra_se_ecc_alloc_point(se_dev, nwords);
+	if (!G)
+		return -ENOMEM;
+
+	ret = tegra_se_ecc_point_mult(G, &curve->g, priv, curve, nbytes);
+	if (ret)
+		goto err_pt_mult;
+
+	if (tegra_se_ecc_vec_is_zero(G->x, nbytes) ||
+	    tegra_se_ecc_vec_is_zero(G->y, nbytes))
+		ret = -ENODATA;
+
+	tegra_se_ecc_swap(G->x, public_key, nwords);
+	tegra_se_ecc_swap(G->y, &public_key[nwords], nwords);
+
+err_pt_mult:
+	tegra_se_ecc_free_point(se_dev, G);
+	return ret;
+}
+
+static int tegra_se_ecdh_compute_value(struct kpp_request *req)
+{
+	struct crypto_kpp *tfm;
+	struct tegra_se_ecdh_context *ctx;
+	int nbytes, ret, cnt;
+	void *buffer;
+	const struct tegra_se_ecc_curve *curve;
+
+	if (!req)
+		return -EINVAL;
+
+	tfm = crypto_kpp_reqtfm(req);
+	if (!tfm)
+		return -ENODATA;
+
+	ctx = kpp_tfm_ctx(tfm);
+	if (!ctx)
+		return -ENODATA;
+
+	ctx->se_dev = elp_dev;
+
+	curve = tegra_se_ecc_get_curve(ctx->curve_id);
+	if (!curve)
+		return -ENOTSUPP;
+
+	nbytes = curve->nbytes;
+
+	if (req->src) {
+		cnt = sg_copy_to_buffer(req->src, 1, ctx->public_key,
+					2 * nbytes);
+		if (cnt != 2 * nbytes)
+			return -ENODATA;
+
+		ret = tegra_se_ecdh_compute_shared_secret(ctx->se_dev,
+							  ctx->curve_id,
+							  ctx->private_key,
+							  ctx->public_key,
+							  ctx->shared_secret);
+		if (ret < 0)
+			return ret;
+
+		buffer = ctx->shared_secret;
+
+		cnt = sg_copy_from_buffer(req->dst, 1, buffer, nbytes);
+		if (cnt != nbytes)
+			return -ENODATA;
+	} else {
+		ret = tegra_se_ecdh_gen_pub_key(ctx->se_dev, ctx->curve_id,
+						ctx->private_key,
+						ctx->public_key);
+		if (ret < 0)
+			return ret;
+
+		buffer = ctx->public_key;
+
+		cnt = sg_copy_from_buffer(req->dst, 1, buffer, 2 * nbytes);
+		if (cnt != 2 * nbytes)
+			return -ENODATA;
+	}
+
+	return 0;
+}
+
+static int tegra_se_ecdh_set_secret(struct crypto_kpp *tfm, void *buf,
+				    unsigned int len)
+{
+	struct tegra_se_ecdh_context *ctx = kpp_tfm_ctx(tfm);
+	struct ecdh params;
+	int ret;
+
+	ret = crypto_ecdh_decode_key(buf, len, &params);
+	if (ret)
+		return ret;
+
+	ret = tegra_se_ecdh_set_params(ctx, &params);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+
+static int tegra_se_ecdh_max_size(struct crypto_kpp *tfm)
+{
+	struct tegra_se_ecdh_context *ctx = kpp_tfm_ctx(tfm);
+	const struct tegra_se_ecc_curve *curve =
+			tegra_se_ecc_get_curve(ctx->curve_id);
+	int nbytes = curve->nbytes;
+
+	/* Public key is made of two coordinates */
+	return 2 * nbytes;
+}
+
+static struct kpp_alg ecdh_algs[] = {
+	{
+	.set_secret = tegra_se_ecdh_set_secret,
+	.generate_public_key = tegra_se_ecdh_compute_value,
+	.compute_shared_secret = tegra_se_ecdh_compute_value,
+	.max_size = tegra_se_ecdh_max_size,
+	.base = {
+		.cra_name = "ecdh",
+		.cra_driver_name = "tegra-se-ecdh",
+		.cra_priority = 300,
+		.cra_module = THIS_MODULE,
+		.cra_ctxsize = sizeof(struct tegra_se_ecdh_context),
+		}
+	}
+};
 
 static struct tegra_se_chipdata tegra18_se_chipdata = {
 	.use_key_slot = false,
@@ -1687,13 +2003,21 @@ static int tegra_se_elp_probe(struct platform_device *pdev)
 	elp_dev = se_dev;
 
 	err = tegra_se_pka_init_key_slot(se_dev);
-	if (err)
+	if (err) {
 		dev_err(se_dev->dev, "tegra_se_pka_init_key_slot failed\n");
+		goto exit;
+	}
+
+	err = crypto_register_kpp(&ecdh_algs[0]);
+	if (err)
+		dev_err(se_dev->dev, "kpp registeration failed for ECDH\n");
 exit:
 	clk_disable_unprepare(se_dev->c);
 
 	if (!err)
 		dev_info(se_dev->dev, "%s: complete", __func__);
+	else
+		crypto_unregister_kpp(&ecdh_algs[0]);
 
 	return err;
 }

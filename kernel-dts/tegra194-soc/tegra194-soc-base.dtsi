@@ -243,7 +243,7 @@
 		       0x0 0x60000000 0x0 0x00400000>;
 		interrupts = <0 265 0x04>,
 			     <0 263 0x04>;
-
+		nvidia,ignore-dt-update;
 		wakeup_capable;
 		resets = <&bpmp_resets TEGRA194_RESET_HOST1X>;
 		clocks = <&bpmp_clks TEGRA194_CLK_HOST1X>,

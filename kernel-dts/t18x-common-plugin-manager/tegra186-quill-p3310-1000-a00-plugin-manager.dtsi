@@ -236,7 +236,7 @@
 			};
 		};
 
-		fragment-p3310-c01-ldo6 {
+		fragment-p3310-c01 {
 			ids = ">=3310-1000-900";
 			override@0 {
 				target = <&{/bpmp_i2c/spmic@3c/regulators/ldo6}>;
@@ -254,6 +254,47 @@
 					pin_gpio3 {
 						status = "disabled";
 					};
+				};
+			};
+		};
+
+		fragment-p3310-c03 {
+			ids = ">=3310-1000-B00";
+			override@0 {
+				target = <&{/xudc@3550000}>;
+				_overlay_ {
+					dvdd-pex-supply = <&spmic_ldo8>;
+					dvdd-pex-pll-supply = <&spmic_ldo8>;
+				};
+			};
+
+			override@1 {
+				target = <&{/pinctrl@3520000}>;
+				_overlay_ {
+					dvdd_pex-supply = <&spmic_ldo8>;
+				};
+			};
+
+			override@2 {
+				target = <&{/pcie-controller@10003000}>;
+				_overlay_ {
+					dvdd-pex-supply = <&spmic_ldo8>;
+				};
+			};
+
+			override@3 {
+				target = <&spmic_ldo8>;
+				_overlay_ {
+					regulator-name = "dvdd-pex";
+					regulator-min-microvolt = <1050000>;
+					regulator-max-microvolt = <1050000>;
+				};
+			};
+
+			override@4 {
+				target = <&spmic_ldo0>;
+				_overlay_ {
+					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
 				};
 			};
 		};

@@ -14,6 +14,7 @@
 #include "therm_gp106.h"
 #include <linux/debugfs.h>
 #include "hw_therm_gp106.h"
+#include "therm/thrmpmu.h"
 
 static void gp106_get_internal_sensor_limits(s32 *max_24_8, s32 *min_24_8)
 {
@@ -117,6 +118,18 @@ static int gp106_elcg_init_idle_filters(struct gk20a *g)
 	return 0;
 }
 
+static u32 gp106_configure_therm_alert(struct gk20a *g, s32 curr_warn_temp)
+{
+	u32 err = 0;
+
+	if (g->curr_warn_temp != curr_warn_temp) {
+		g->curr_warn_temp = curr_warn_temp;
+		err = therm_configure_therm_alert(g);
+	}
+
+	return err;
+}
+
 void gp106_init_therm_ops(struct gpu_ops *gops) {
 #ifdef CONFIG_DEBUG_FS
 	gops->therm.therm_debugfs_init = gp106_therm_debugfs_init;
@@ -125,4 +138,5 @@ void gp106_init_therm_ops(struct gpu_ops *gops) {
 	gops->therm.get_internal_sensor_curr_temp = gp106_get_internal_sensor_curr_temp;
 	gops->therm.get_internal_sensor_limits =
 			gp106_get_internal_sensor_limits;
+	gops->therm.configure_therm_alert = gp106_configure_therm_alert;
 }

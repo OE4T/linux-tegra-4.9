@@ -134,8 +134,7 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	 * nearest integer during division.
 	 */
 	c *= (1 << PWM_DUTY_WIDTH);
-	c += period_ns / 2;
-	do_div(c, period_ns);
+	c = DIV_ROUND_CLOSEST_ULL(c, period_ns);
 
 	val = (u32)c << PWM_DUTY_SHIFT;
 
@@ -152,10 +151,8 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	rate = clk_get_rate(pc->clk) >> PWM_DUTY_WIDTH;
 
 	/* Consider two digit precision in PWM_SCALE_WIDTH rate calculation */
-	hz = ns100 * precision;
-	hz += period_ns / 2;
-	do_div(hz, period_ns);
-
+	ns100 *= precision;
+	hz = DIV_ROUND_CLOSEST_ULL(ns100, period_ns);
 	rate = DIV_ROUND_CLOSEST((rate * precision), hz);
 
 	/*

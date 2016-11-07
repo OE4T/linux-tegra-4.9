@@ -288,9 +288,9 @@ static u32 find_regime_id(struct gk20a *g, u32 domain, u16 clkmhz)
 		if (pflldev->clk_domain == domain) {
 			if (pflldev->regime_desc.fixed_freq_regime_limit_mhz >=
 							clkmhz)
-				return CTRL_CLK_FLL_REGIME_ID_FR;
-			else
 				return CTRL_CLK_FLL_REGIME_ID_FFR;
+			else
+				return CTRL_CLK_FLL_REGIME_ID_FR;
 		}
 	}
 	return CTRL_CLK_FLL_REGIME_ID_INVALID;

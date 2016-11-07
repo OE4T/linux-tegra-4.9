@@ -514,8 +514,8 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 		while (tmp_get != put) {
 			job = &ch->joblist.pre_alloc.jobs[tmp_get];
 			if (job->post_fence->semaphore) {
-				gk20a_semaphore_release(
-						job->post_fence->semaphore);
+				__gk20a_semaphore_release(
+					job->post_fence->semaphore, true);
 				released_job_semaphore = true;
 			}
 			tmp_get = (tmp_get + 1) % ch->joblist.pre_alloc.length;
@@ -524,8 +524,8 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 		list_for_each_entry_safe(job, n,
 				&ch->joblist.dynamic.jobs, list) {
 			if (job->post_fence->semaphore) {
-				gk20a_semaphore_release(
-						job->post_fence->semaphore);
+				__gk20a_semaphore_release(
+					job->post_fence->semaphore, true);
 				released_job_semaphore = true;
 			}
 		}

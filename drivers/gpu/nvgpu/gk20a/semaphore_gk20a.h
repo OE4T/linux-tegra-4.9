@@ -249,9 +249,11 @@ static inline u32 gk20a_semaphore_next_value(struct gk20a_semaphore *s)
 }
 
 /*
- * Note - if you call this then any prior semaphores will also be released.
+ * If @force is set then this will not wait for the underlying semaphore to
+ * catch up to the passed semaphore.
  */
-static inline void gk20a_semaphore_release(struct gk20a_semaphore *s)
+static inline void __gk20a_semaphore_release(struct gk20a_semaphore *s,
+					     bool force)
 {
 	u32 current_val;
 	u32 val = gk20a_semaphore_get_value(s);
@@ -264,6 +266,8 @@ static inline void gk20a_semaphore_release(struct gk20a_semaphore *s)
 	 * TODO: tune the wait a little better.
 	 */
 	while ((current_val = gk20a_semaphore_read(s)) < (val - 1)) {
+		if (force)
+			break;
 		msleep(100);
 		attempts += 1;
 		if (attempts > 100) {
@@ -283,6 +287,11 @@ static inline void gk20a_semaphore_release(struct gk20a_semaphore *s)
 
 	gpu_sema_verbose_dbg("(c=%d) WRITE %u",
 			     s->hw_sema->ch->hw_chid, val);
+}
+
+static inline void gk20a_semaphore_release(struct gk20a_semaphore *s)
+{
+	__gk20a_semaphore_release(s, false);
 }
 
 /*

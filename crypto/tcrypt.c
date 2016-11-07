@@ -1517,6 +1517,10 @@ static int do_test(const char *alg, u32 type, u32 mask, int m)
 		ret += tcrypt_test("sha3-512");
 		break;
 
+	case 52:
+		ret += tcrypt_test("ecdh");
+		break;
+
 	case 100:
 		ret += tcrypt_test("hmac(md5)");
 		break;

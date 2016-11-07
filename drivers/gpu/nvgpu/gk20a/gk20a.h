@@ -34,6 +34,7 @@ struct acr_desc;
 #include <linux/irqreturn.h>
 #include <linux/tegra-soc.h>
 #include <linux/version.h>
+#include <linux/atomic.h>
 
 #include "../../../arch/arm/mach-tegra/iomap.h"
 
@@ -784,6 +785,8 @@ struct gk20a {
 	struct device *dev;
 	struct platform_device *host1x_dev;
 
+	atomic_t usage_count;
+	int driver_is_dying;
 
 	struct resource *reg_mem;
 	void __iomem *regs;
@@ -1237,6 +1240,9 @@ int gk20a_do_idle(void);
 int gk20a_do_unidle(void);
 int __gk20a_do_idle(struct device *dev, bool force_reset);
 int __gk20a_do_unidle(struct device *dev);
+
+void gk20a_driver_start_unload(struct gk20a *g);
+int gk20a_wait_for_idle(struct device *dev);
 
 #define NVGPU_GPU_ARCHITECTURE_SHIFT 4
 

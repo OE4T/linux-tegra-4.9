@@ -1732,16 +1732,67 @@ void gk20a_busy_noresume(struct device *dev)
 	pm_runtime_get_noresume(dev);
 }
 
+/*
+ * Start the process for unloading the driver. Set g->driver_is_dying.
+ */
+void gk20a_driver_start_unload(struct gk20a *g)
+{
+	g->driver_is_dying = 1;
+}
+
+int gk20a_wait_for_idle(struct device *dev)
+{
+	struct gk20a *g = get_gk20a(dev);
+	int wait_length = 150; /* 3 second overall max wait. */
+
+	if (!g)
+		return -ENODEV;
+
+	while (atomic_read(&g->usage_count) && wait_length-- >= 0)
+		msleep(20);
+
+	if (wait_length < 0) {
+		pr_warn("%s: Timed out waiting for idle (%d)!\n",
+			__func__, atomic_read(&g->usage_count));
+		return -ETIMEDOUT;
+	}
+
+	return 0;
+}
+
+/*
+ * Check if the device can go busy. Basically if the driver is currently
+ * in the process of dying then do not let new places make the driver busy.
+ */
+static int gk20a_can_busy(struct gk20a *g)
+{
+	if (g->driver_is_dying)
+		return 0;
+	return 1;
+}
+
 int gk20a_busy(struct device *dev)
 {
 	int ret = 0;
 	struct gk20a *g = get_gk20a(dev);
+	struct gk20a_platform *platform;
+
+	if (!dev)
+		return -ENODEV;
+
+	platform = gk20a_get_platform(dev);
+
+	if (!g || !gk20a_can_busy(g))
+		return -ENODEV;
+
+	atomic_inc(&g->usage_count);
 
 	down_read(&g->busy_lock);
 	if (pm_runtime_enabled(dev)) {
 		ret = pm_runtime_get_sync(dev);
 		if (ret < 0) {
 			pm_runtime_put_noidle(dev);
+			atomic_dec(&g->usage_count);
 			goto fail;
 		}
 	} else {
@@ -1749,8 +1800,10 @@ int gk20a_busy(struct device *dev)
 			ret = gk20a_gpu_is_virtual(dev) ?
 				vgpu_pm_finalize_poweron(dev)
 				: gk20a_pm_finalize_poweron(dev);
-			if (ret)
+			if (ret) {
+				atomic_dec(&g->usage_count);
 				goto fail;
+			}
 		}
 	}
 
@@ -1769,6 +1822,17 @@ void gk20a_idle_nosuspend(struct device *dev)
 
 void gk20a_idle(struct device *dev)
 {
+	struct gk20a_platform *platform;
+	struct gk20a *g;
+
+	if (!dev)
+		return;
+
+	g = get_gk20a(dev);
+	platform = gk20a_get_platform(dev);
+
+	atomic_dec(&g->usage_count);
+
 	if (pm_runtime_enabled(dev)) {
 #ifdef CONFIG_PM
 		if (atomic_read(&dev->power.usage_count) == 1)

@@ -157,9 +157,8 @@ static void csi4_phy_config(
 	if (!enable)
 		return;
 
-	/* power on de-serializer if no sensor is active*/
-	if (!(cil_config & (DATA_LANE_A | DATA_LANE_B)))
-		csi4_phy_write(chan, phy_num, NVCSI_CIL_PAD_CONFIG, 0);
+	/* power on de-serializer */
+	csi4_phy_write(chan, phy_num, NVCSI_CIL_PAD_CONFIG, 0);
 
 	if (cil_a) {
 		/* set CSI lane number */

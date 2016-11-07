@@ -81,7 +81,6 @@ static bool vi4_init(struct tegra_channel *chan)
 	vi4_write(chan, CFG_INTERRUPT_STATUS, 0x3f000001);
 	vi4_write(chan, NOTIFY_ERROR, 0x1);
 	vi4_write(chan, NOTIFY_TAG_CLASSIFY_0, 0xe39c08e3);
-
 	return true;
 }
 
@@ -474,11 +473,40 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 	struct timespec ts;
 	struct tegra_channel_buffer *buf;
 	int state = VB2_BUF_STATE_DONE;
+	u32 thresh[TEGRA_CSI_BLOCKS];
+	int i, err;
 
 	/* dequeue buffer and return if no buffer exists */
 	buf = dequeue_buffer(chan);
 	if (!buf)
 		return;
+
+	/* make sure to read the last frame out before exit */
+	for (i = 0; i < chan->valid_ports; i++) {
+		tegra_channel_surface_setup(chan, buf, i);
+		vi4_channel_write(chan, chan->vnc_id[i], CHANNEL_COMMAND, LOAD);
+		vi4_channel_write(chan, chan->vnc_id[i],
+			CONTROL, SINGLESHOT | MATCH_STATE_EN);
+	}
+
+	for (i = 0; i < chan->valid_ports; i++) {
+		err = nvhost_syncpt_read_ext_check(chan->vi->ndev,
+				chan->syncpt[i][FE_SYNCPT_IDX], &thresh[i]);
+		/* Get current ATOMP_FE syncpt min value */
+		if (!err) {
+			/* Wait for ATOMP_FE syncpt
+			 *
+			 * This is to make sure we don't exit the capture thread
+			 * before the last frame is done writing to memory
+			 */
+			err = nvhost_syncpt_wait_timeout_ext(chan->vi->ndev,
+					chan->syncpt[i][FE_SYNCPT_IDX],
+					thresh[i] + 1,
+					250, NULL, &ts);
+			if (err < 0)
+				dev_err(chan->vi->dev, "ATOMP_FE syncpt timeout!\n");
+		}
+	}
 
 	/* Mark capture state to IDLE as capture is finished */
 	chan->capture_state = CAPTURE_IDLE;

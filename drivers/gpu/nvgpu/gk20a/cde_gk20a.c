@@ -399,7 +399,7 @@ static int gk20a_cde_patch_params(struct gk20a_cde_ctx *cde_ctx)
 			new_data = gk20a_mm_gpuva_to_iova_base(cde_ctx->vm,
 							cde_ctx->surf_vaddr);
 			if (new_data == 0)
-				err = -EINVAL;
+				return -EINVAL;
 			break;
 		case TYPE_PARAM_BACKINGSTORE_BASE_HW:
 			new_data = g->gr.compbit_store.base_hw;

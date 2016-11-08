@@ -24,12 +24,11 @@
 #include <linux/of_address.h>
 #include <linux/version.h>
 
-#include <mach/dc.h>
-#include <mach/fb.h>
 #include <mach/irqs.h>
 
 #include <linux/regulator/consumer.h>
 
+#include "dc.h"
 #include "sor.h"
 #include "dp.h"
 #include "dsi.h"

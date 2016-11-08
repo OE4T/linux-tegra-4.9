@@ -49,12 +49,11 @@
 #include <video/tegra_hdmi_audio.h>
 
 #include <linux/clk/tegra.h>
-#include <mach/dc.h>
-#include <mach/fb.h>
 
 #include <linux/platform/tegra/latency_allowance.h>
 #include <linux/platform/tegra/mc.h>
 
+#include "dc.h"
 #include "dc_reg.h"
 #include "dc_config.h"
 #include "dc_priv.h"

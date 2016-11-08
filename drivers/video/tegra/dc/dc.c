@@ -56,8 +56,6 @@
 EXPORT_TRACEPOINT_SYMBOL(display_writel);
 EXPORT_TRACEPOINT_SYMBOL(display_readl);
 
-#include <mach/dc.h>
-#include <mach/fb.h>
 #include <linux/nvhost.h>
 #include <linux/nvhost_ioctl.h>
 
@@ -65,6 +63,7 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #include <linux/platform/tegra/mc.h>
 #include <soc/tegra/tegra_bpmp.h>
 
+#include "dc.h"
 #include "dc_reg.h"
 #include "dc_config.h"
 #include "dc_priv.h"

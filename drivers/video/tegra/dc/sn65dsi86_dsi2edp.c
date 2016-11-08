@@ -26,7 +26,8 @@
 #include <linux/module.h>
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
-#include <mach/dc.h>
+
+#include "dc.h"
 #include "dc_priv.h"
 #include "sn65dsi86_dsi2edp.h"
 #include "dsi.h"

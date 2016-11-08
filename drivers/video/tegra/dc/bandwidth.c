@@ -22,8 +22,6 @@
 #include <linux/clk/tegra.h>
 #include <linux/math64.h>
 
-#include <mach/dc.h>
-#include <mach/fb.h>
 #include <linux/nvhost.h>
 #include <trace/events/display.h>
 
@@ -33,6 +31,7 @@
 #endif
 #include <linux/platform/tegra/mc.h>
 
+#include "dc.h"
 #include "dc_reg.h"
 #include "dc_config.h"
 #include "dc_priv.h"

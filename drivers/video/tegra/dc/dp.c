@@ -32,11 +32,9 @@
 #include <linux/switch.h>
 #endif
 
-#include <mach/dc.h>
-#include <mach/fb.h>
-
 #include <asm/uaccess.h>
 
+#include "dc.h"
 #include "dp.h"
 #include "sor.h"
 #include "sor_regs.h"

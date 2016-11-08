@@ -15,13 +15,13 @@
  */
 
 #include <linux/kernel.h>
-#include <mach/dc.h>
 #include <linux/types.h>
 #include <linux/string.h>
 #include <linux/slab.h>
 #include <linux/backlight.h>
 #include <linux/stat.h>
 
+#include "dc.h"
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "nvsd.h"

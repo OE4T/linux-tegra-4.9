@@ -41,10 +41,7 @@
 #include <linux/padctrl/padctrl.h>
 #include <linux/tegra_prod.h>
 
-#include <mach/dc.h>
-#include <mach/fb.h>
-#include <mach/csi.h>
-
+#include "dc.h"
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "dev.h"

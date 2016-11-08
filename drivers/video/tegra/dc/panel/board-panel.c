@@ -27,8 +27,7 @@
 #include <linux/of_address.h>
 #include <soc/tegra/common.h>
 
-#include <mach/dc.h>
-
+#include "../dc.h"
 #include "board-panel.h"
 #include "tegra-board-id.h"
 #include "board.h"

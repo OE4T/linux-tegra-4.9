@@ -24,9 +24,10 @@
 #if defined(CONFIG_ARCH_TEGRA_210_SOC)
 #include <soc/tegra/fuse.h>
 #endif
-#include <mach/dc.h>
 #include <trace/events/display.h>
 #include <linux/fb.h>
+
+#include "dc.h"
 #include "dc_reg.h"
 #include "dc_config.h"
 #include "dc_priv.h"

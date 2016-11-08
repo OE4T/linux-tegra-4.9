@@ -16,10 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <mach/dc.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
 #include <linux/regulator/consumer.h>
+
+#include "../dc.h"
 #include "board.h"
 #include "board-panel.h"
 

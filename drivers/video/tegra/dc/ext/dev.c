@@ -25,15 +25,12 @@
 #include <linux/workqueue.h>
 #include <linux/export.h>
 #include <linux/delay.h>
-#include <mach/fb.h>
 #include <linux/fb.h>
-#include <mach/dc.h>
 #include <video/tegra_dc_ext.h>
-
-#include <mach/tegra_dc_ext.h>
 #include <trace/events/display.h>
 
 /* XXX ew */
+#include "../dc.h"
 #include "../dc_priv.h"
 #include "../dc_config.h"
 /* XXX ew 2 */

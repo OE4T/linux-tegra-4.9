@@ -22,11 +22,12 @@
 
 #include "dc_priv_defs.h"
 #ifndef CREATE_TRACE_POINTS
-# include <trace/events/display.h>
+#include <trace/events/display.h>
 #define WIN_IS_BLOCKLINEAR(win)	((win)->flags & TEGRA_WIN_FLAG_BLOCKLINEAR)
 #endif
 #include <linux/tegra-powergate.h>
 #include <video/tegra_dc_ext.h>
+#include <video/tegra_dc_ext_kernel.h>
 #include <soc/tegra/tegra_bpmp.h>
 
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
@@ -590,8 +591,6 @@ void tegra_dc_clear_bandwidth(struct tegra_dc *dc);
 void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new);
 int tegra_dc_set_dynamic_emc(struct tegra_dc *dc);
 #ifdef CONFIG_TEGRA_ISOMGR
-int tegra_dc_bandwidth_negotiate_bw(struct tegra_dc *dc,
-			struct tegra_dc_win *windows[], int n);
 void tegra_dc_bandwidth_renegotiate(void *p, u32 avail_bw);
 #endif
 unsigned long tegra_dc_get_bandwidth(struct tegra_dc_win *windows[], int n);

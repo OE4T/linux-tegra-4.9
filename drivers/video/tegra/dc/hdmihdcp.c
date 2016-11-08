@@ -29,7 +29,6 @@
 #include <linux/delay.h>
 #include <linux/tsec.h>
 
-#include <mach/dc.h>
 #include <linux/platform/tegra/tegra_kfuse.h>
 #if (defined(CONFIG_TRUSTY))
 #include <linux/trusty/trusty_ipc.h>
@@ -37,6 +36,7 @@
 
 #include <video/nvhdcp.h>
 
+#include "dc.h"
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "edid.h"

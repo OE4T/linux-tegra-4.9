@@ -32,11 +32,9 @@
 #endif
 #include <linux/of_address.h>
 #include <linux/tegra_pm_domains.h>
-
-#include <mach/dc.h>
-#include <mach/fb.h>
 #include <linux/tegra-powergate.h>
 
+#include "dc.h"
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "sor.h"

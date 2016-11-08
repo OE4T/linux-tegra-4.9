@@ -24,12 +24,11 @@
 #include <linux/clk/tegra.h>
 
 #include <drm/drm_mode.h>
-
-#include <mach/dc.h>
 #include <trace/events/display.h>
 
 #include <linux/platform/tegra/mc.h>
 
+#include "dc.h"
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "dsi.h"

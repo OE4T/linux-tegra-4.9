@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dc_config.c
  *
- * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,8 +22,7 @@
 #define __DRIVERS_VIDEO_TEGRA_DC_DC_CONFIG_H
 
 #include <linux/errno.h>
-#include <mach/dc.h>
-
+#include "dc.h"
 #include "dc_priv.h"
 
 #define ENTRY_SIZE	4	/* Size of feature entry args */

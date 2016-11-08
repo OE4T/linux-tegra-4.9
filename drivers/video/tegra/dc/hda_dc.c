@@ -20,9 +20,9 @@
 #include <linux/switch.h>
 #endif
 
-#include <mach/dc.h>
 #include <video/tegra_hdmi_audio.h>
 
+#include "dc.h"
 #include "dc_priv.h"
 #include "sor.h"
 #include "sor_regs.h"

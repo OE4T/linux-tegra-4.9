@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/panel-a-1080p-11-6.c
  *
- * Copyright (c) 2012-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2012-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,7 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <mach/dc.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
 #include <linux/tegra_pwm_bl.h>
@@ -27,6 +26,7 @@
 #include <linux/ioport.h>
 #include <linux/export.h>
 
+#include "../dc.h"
 #include "board.h"
 #include "board-panel.h"
 #include "gpio-names.h"

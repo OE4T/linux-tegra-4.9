@@ -27,9 +27,9 @@
 #include <linux/tegra_prod.h>
 #include <linux/uaccess.h>
 
-#include <mach/dc.h>
 #include <linux/platform/tegra/io-dpd.h>
 
+#include "dc.h"
 #include "sor.h"
 #include "sor_regs.h"
 #include "dc_priv.h"

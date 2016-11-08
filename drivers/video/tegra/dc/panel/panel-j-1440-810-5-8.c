@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/panel-j-1440-810-5-8.c
  *
- * Copyright (c) 2013-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,11 +25,10 @@
 #include <linux/backlight.h>
 #include <linux/pwm_backlight.h>
 
-#include <mach/dc.h>
 #include <asm/mach-types.h>
 
+#include "../dc.h"
 #include "board-panel.h"
-
 #include "gpio-names.h"
 
 #define DSI_PANEL_EN_GPIO	TEGRA_GPIO_PQ2

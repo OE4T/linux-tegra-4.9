@@ -24,10 +24,9 @@
 #include <linux/wait.h>
 #include <linux/uaccess.h>
 #include <linux/tsec.h>
-
-#include <mach/dc.h>
 #include <linux/platform/tegra/tegra_kfuse.h>
 
+#include "dc.h"
 #include "dphdcp.h"
 #include "dp.h"
 #include "edid.h"

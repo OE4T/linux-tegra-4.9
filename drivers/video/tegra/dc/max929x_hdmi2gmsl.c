@@ -25,7 +25,7 @@
 #include <linux/module.h>
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
-#include <mach/dc.h>
+#include "dc.h"
 #include "dc_priv.h"
 #include "max929x_hdmi2gmsl.h"
 #include "edid.h"

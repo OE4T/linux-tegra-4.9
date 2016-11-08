@@ -25,14 +25,11 @@
 #include <linux/delay.h>
 #include <linux/timer.h>
 #include <linux/memblock.h>
-#include <mach/fb.h>
 #include <linux/fb.h>
-#include <mach/dc.h>
 #include <video/tegra_dc_ext.h>
-
-#include <mach/tegra_dc_ext.h>
 #include <trace/events/display.h>
 
+#include "../dc.h"
 #include "../dc_priv.h"
 #include "../dc_config.h"
 #include "dev.h"

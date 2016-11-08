@@ -15,14 +15,13 @@
  */
 
 #include <linux/kernel.h>
-#include <mach/dc.h>
-#include <mach/fb.h>
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif
 #include <video/tegrafb.h>
 #include "dc_priv.h"
 
+#include "dc.h"
 #include "hpd.h"
 
 #define MAX_EDID_READ_ATTEMPTS 5

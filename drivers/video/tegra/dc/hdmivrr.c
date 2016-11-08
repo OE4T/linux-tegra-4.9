@@ -30,9 +30,7 @@
 #include <linux/random.h>
 #include <linux/ote_protocol.h>
 
-#include <mach/dc.h>
-#include <mach/fb.h>
-
+#include "dc.h"
 #include "dc_priv.h"
 #include "edid.h"
 #include "hdmi2.0.h"

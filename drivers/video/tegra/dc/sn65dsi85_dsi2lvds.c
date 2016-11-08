@@ -27,7 +27,8 @@
 #include <linux/of_gpio.h>
 #include <linux/uaccess.h>	/*copy_from_user*/
 #include <linux/debugfs.h>
-#include <mach/dc.h>
+
+#include "dc.h"
 #include "dc_priv.h"
 #include "sn65dsi85_dsi2lvds.h"
 #include "dsi.h"

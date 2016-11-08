@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvsr.h
  *
- * Copyright (c) 2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -17,7 +17,7 @@
 #ifndef __DRIVER_VIDEO_TEGRA_DC_NVSR_H__
 #define __DRIVER_VIDEO_TEGRA_DC_NVSR_H__
 
-#include <mach/dc.h>
+#include "dc.h"
 #include "dc_priv.h"
 #include "lvds.h"
 #include "dp.h"

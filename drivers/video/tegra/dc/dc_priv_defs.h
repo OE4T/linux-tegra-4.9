@@ -31,13 +31,10 @@
 #include <linux/clk/tegra.h>
 #include <linux/tegra-soc.h>
 #include <linux/reset.h>
-
-#include <mach/dc.h>
-
-#include <mach/tegra_dc_ext.h>
 #include <video/tegra_dc_ext.h>
 #include <linux/platform/tegra/isomgr.h>
 
+#include "dc.h"
 #include "dc_reg.h"
 
 #define NEED_UPDATE_EMC_ON_EVERY_FRAME (windows_idle_detection_time == 0)

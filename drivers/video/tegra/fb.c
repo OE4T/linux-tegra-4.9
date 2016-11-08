@@ -31,20 +31,17 @@
 #include <linux/file.h>
 #include <linux/workqueue.h>
 #include <linux/console.h>
+#include <linux/nvhost.h>
+#include <linux/nvmap.h>
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 #include <linux/iommu.h>
 #endif
 
 #include <asm/atomic.h>
-
 #include <video/tegrafb.h>
 
-#include <mach/dc.h>
-#include <mach/fb.h>
-#include <linux/nvhost.h>
-#include <linux/nvmap.h>
-
+#include "dc/dc.h"
 #include "dev.h"
 #include "dc/dc_priv.h"
 #include "dc/edid.h"

@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-loki-panel.c
  *
- * Copyright (c) 2011-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,9 +30,9 @@
 #include <linux/pinctrl/pinconf-tegra.h>
 
 #include <mach/irqs.h>
-#include <mach/dc.h>
 #include <linux/platform/tegra/io-dpd.h>
 
+#include "../dc.h"
 #include "board.h"
 #include "gpio-names.h"
 #include "iomap.h"

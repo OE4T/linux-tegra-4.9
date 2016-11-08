@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/panel-lgd-wxga-7-0.c
  *
- * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,8 +20,7 @@
 #include <linux/gpio.h>
 #include <linux/regulator/consumer.h>
 
-#include <mach/dc.h>
-
+#include "../dc.h"
 #include "board.h"
 #include "board-panel.h"
 

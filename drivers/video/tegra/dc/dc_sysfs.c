@@ -22,9 +22,7 @@
 #include <linux/platform_device.h>
 #include <linux/kernel.h>
 
-#include <mach/dc.h>
-#include <mach/fb.h>
-
+#include "dc.h"
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "nvsd.h"

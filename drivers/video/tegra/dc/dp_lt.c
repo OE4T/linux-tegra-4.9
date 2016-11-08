@@ -20,7 +20,7 @@
 #include <linux/completion.h>
 #include <linux/kernel.h>
 
-#include <mach/dc.h>
+#include "dc.h"
 
 #include "dp_lt.h"
 #include "dp.h"

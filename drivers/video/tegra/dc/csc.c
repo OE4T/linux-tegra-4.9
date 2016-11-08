@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/csc.c
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -17,8 +17,7 @@
 #include <linux/err.h>
 #include <linux/types.h>
 #include <linux/export.h>
-#include <mach/dc.h>
-
+#include "dc.h"
 #include "dc_reg.h"
 #include "dc_priv.h"
 

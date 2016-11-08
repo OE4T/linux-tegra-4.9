@@ -24,10 +24,9 @@
 #include <linux/list.h>
 #include <linux/mutex.h>
 #include <linux/poll.h>
-
-#include <mach/dc.h>
-
 #include <video/tegra_dc_ext.h>
+
+#include "../dc.h"
 
 struct tegra_dc_ext;
 

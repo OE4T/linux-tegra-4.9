@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,8 +22,7 @@
 #include <linux/swab.h>
 #include <linux/module.h>
 
-#include <mach/dc.h>
-
+#include "dc.h"
 #include "dc_priv.h"
 #include "tc358767_dsi2edp.h"
 #include "dsi.h"

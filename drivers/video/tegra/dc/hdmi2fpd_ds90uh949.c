@@ -26,7 +26,7 @@
 #include <linux/regmap.h>
 #include <linux/list.h>
 
-#include <mach/dc.h>
+#include "dc.h"
 
 #include "dc_priv.h"
 #include "hdmi2fpd_ds90uh949.h"

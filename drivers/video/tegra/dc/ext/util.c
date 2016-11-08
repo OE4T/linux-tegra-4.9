@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/util.c
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -18,11 +18,11 @@
 
 #include <linux/err.h>
 #include <linux/types.h>
-
-#include <mach/dc.h>
 #include <linux/dma-buf.h>
 
+#include "../dc.h"
 #include "tegra_dc_ext_priv.h"
+
 
 int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 fd,
 			    struct tegra_dc_dmabuf **dc_buf,

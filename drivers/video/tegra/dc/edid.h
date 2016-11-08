@@ -22,7 +22,7 @@
 
 #include <linux/i2c.h>
 #include <linux/wait.h>
-#include <mach/dc.h>
+#include "dc.h"
 
 #define TEGRA_DC_Y420_30	1	/* YCbCr 4:2:0 deep color 30bpp */
 #define TEGRA_DC_Y420_36	2	/* YCbCr 4:2:0 deep color 36bpp */

@@ -1,7 +1,11 @@
 /*
  * drivers/video/tegra/dc/null_or.c
  *
+<<<<<<< HEAD
  * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
+=======
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
+>>>>>>> 5740f8b... video: tegra: dc: display kernel unification
  * Author: Aron Wong <awong@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -17,8 +21,9 @@
 
 #include <linux/kernel.h>
 #include <linux/version.h>
-#include <mach/dc.h>
-#include <mach/irqs.h>/*for INT_DISPLAY_GENERAL, INT_DPAUX*/
+#include <linux/of_irq.h> /*for INT_DISPLAY_GENERAL, INT_DPAUX*/
+
+#include "dc.h"
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "null_or.h"

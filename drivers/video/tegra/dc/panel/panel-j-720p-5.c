@@ -25,12 +25,12 @@
 #include <linux/backlight.h>
 #include <linux/pwm_backlight.h>
 
-#include <mach/dc.h>
 #include <asm/mach-types.h>
 
+#include "../dc.h"
 #include "board-panel.h"
-
 #include "gpio-names.h"
+
 #define DSI_PANEL_EN_GPIO	TEGRA_GPIO_PQ2
 #define DSI_PANEL_RESET		1
 #define DC_CTRL_MODE	TEGRA_DC_OUT_CONTINUOUS_MODE

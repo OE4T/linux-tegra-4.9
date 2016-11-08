@@ -3160,8 +3160,7 @@ static int gk20a_channel_event_id_ctrl(struct channel_gk20a *ch,
 	int err = 0;
 	int fd = -1;
 
-	if (args->event_id < 0 ||
-	    args->event_id >= NVGPU_IOCTL_CHANNEL_EVENT_ID_MAX)
+	if (args->event_id >= NVGPU_IOCTL_CHANNEL_EVENT_ID_MAX)
 		return -EINVAL;
 
 	if (gk20a_is_channel_marked_as_tsg(ch))

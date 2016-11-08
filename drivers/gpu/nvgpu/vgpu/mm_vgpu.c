@@ -436,8 +436,7 @@ clean_up_share:
 	msg.cmd = TEGRA_VGPU_CMD_AS_FREE_SHARE;
 	msg.handle = vgpu_get_handle(g);
 	p->handle = vm->handle;
-	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
-	WARN_ON(err || msg.ret);
+	WARN_ON(vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg)) || msg.ret);
 clean_up:
 	kfree(vm);
 	as_share->vm = NULL;

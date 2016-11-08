@@ -143,13 +143,12 @@ int nvdla_send_cmd(struct platform_device *pdev,
 	return ret;
 }
 
-static int nvdla_alloc_dump_region(struct platform_device *pdev)
+static int nvdla_alloc_trace_region(struct platform_device *pdev)
 {
 	int err = 0;
 	struct flcn *m;
-	dma_addr_t region_pa;
-	struct dla_region_printf *region;
-	u32 timeout = FLCN_IDLE_TIMEOUT_DEFAULT * 5;
+	dma_addr_t tregion_pa;
+	struct dla_region_printf *trace_region = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 
 	if (!pdata->flcn_isr)
@@ -158,6 +157,80 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 	nvdla_dbg_fn(pdev, "");
 
 	m = get_flcn(pdev);
+	if (!m)
+		return -ENXIO;
+
+	/* Trace buffer allocation must be done at once only. */
+	if (!m->trace_dump_va) {
+		/* allocate trace region */
+		m->trace_dump_va = dma_alloc_attrs(&pdev->dev,
+				   TRACE_BUFFER_SIZE, &m->trace_dump_pa,
+				   GFP_KERNEL, &attrs);
+
+		if (!m->trace_dump_va) {
+			nvdla_dbg_err(pdev,
+				"dma trace memory allocation failed");
+			return -ENOMEM;
+		}
+	}
+
+	/* allocate memory for trace command */
+	trace_region = (struct dla_region_printf *)
+			dma_alloc_attrs(&pdev->dev,
+			sizeof(struct dla_region_printf),
+			&tregion_pa, GFP_KERNEL, &attrs);
+	if (!trace_region) {
+		nvdla_dbg_err(pdev,
+			"dma allocation failed for trace command.");
+		err = -ENOMEM;
+		goto alloc_trace_cmd_failed;
+	}
+
+	trace_region->region = DLA_REGION_TRACE;
+	trace_region->address = m->trace_dump_pa;
+	trace_region->size = TRACE_BUFFER_SIZE;
+
+	err = nvdla_send_cmd(pdev, DLA_CMD_SET_REGIONS,
+	       ALIGNED_DMA(tregion_pa), true);
+
+	/* free memory allocated for trace command */
+	dma_free_attrs(&pdev->dev, sizeof(struct dla_region_printf),
+		trace_region, tregion_pa, &attrs);
+
+	if (err != 0) {
+		nvdla_dbg_err(pdev, "failed to send trace command");
+		goto trace_send_cmd_failed;
+	}
+
+	return err;
+
+trace_send_cmd_failed:
+alloc_trace_cmd_failed:
+	dma_free_attrs(&pdev->dev, TRACE_BUFFER_SIZE,
+	       m->trace_dump_va, m->trace_dump_pa, &attrs);
+	m->trace_dump_va = NULL;
+	m->trace_dump_pa = 0;
+
+	return err;
+}
+
+static int nvdla_alloc_dump_region(struct platform_device *pdev)
+{
+	int err = 0;
+	struct flcn *m;
+	dma_addr_t region_pa;
+	struct dla_region_printf *region;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+
+	if (!pdata->flcn_isr)
+		return 0;
+
+	nvdla_dbg_fn(pdev, "");
+
+	m = get_flcn(pdev);
+	if (!m)
+		return -ENXIO;
+
 	/* allocate dump region */
 	m->debug_dump_va = dma_alloc_attrs(&pdev->dev,
 				   DEBUG_BUFFER_SIZE, &m->debug_dump_pa,
@@ -182,25 +255,27 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 	region->size = DEBUG_BUFFER_SIZE;
 
 	/* pass dump region to falcon */
-	nvdla_send_cmd(pdev, DLA_CMD_SET_REGIONS,
-			       ALIGNED_DMA(region_pa), false);
+	err = nvdla_send_cmd(pdev, DLA_CMD_SET_REGIONS,
+			       ALIGNED_DMA(region_pa), true);
 
-	/* wait for falcon to idle */
-	err = flcn_wait_idle(pdev, &timeout);
-	if (err != 0)
-		dev_err(&pdev->dev, "failed for wait for idle in timeout");
 
-	/* free memory allocated for command */
+	/* free memory allocated for debug print command */
 	dma_free_attrs(&pdev->dev, sizeof(struct dla_region_printf),
-		       region, region_pa,
-		       &attrs);
+	       region, region_pa, &attrs);
+
+	if (err != 0) {
+		nvdla_dbg_err(pdev, "failed to send printf command");
+		goto region_send_cmd_failed;
+	}
 
 	return 0;
 
+region_send_cmd_failed:
 set_region_failed:
 	dma_free_attrs(&pdev->dev, DEBUG_BUFFER_SIZE,
-		       m->debug_dump_va, m->debug_dump_pa,
-		       &attrs);
+	       m->debug_dump_va, m->debug_dump_pa, &attrs);
+	m->debug_dump_va = NULL;
+	m->debug_dump_pa = 0;
 
 	return err;
 }
@@ -216,7 +291,7 @@ static void nvdla_free_dump_region(struct platform_device *pdev)
 		return;
 
 	m = get_flcn(pdev);
-	if (m->debug_dump_pa) {
+	if (m && m->debug_dump_pa) {
 		dma_free_attrs(&pdev->dev, DEBUG_BUFFER_SIZE,
 			       m->debug_dump_va, m->debug_dump_pa,
 			       &attrs);
@@ -259,6 +334,10 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 	nvdla_dev->fw_version = fw_ver_read_bin;
 
 	ret = nvdla_alloc_dump_region(pdev);
+	if (ret)
+		nvhost_nvdla_prepare_poweroff(pdev);
+
+	ret = nvdla_alloc_trace_region(pdev);
 	if (ret)
 		nvhost_nvdla_prepare_poweroff(pdev);
 
@@ -402,9 +481,22 @@ static int __exit nvdla_remove(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvdla_device *nvdla_dev = pdata->private_data;
+	struct flcn *m;
 
 	nvhost_queue_deinit(nvdla_dev->pool);
 	nvhost_client_device_release(pdev);
+
+	m = get_flcn(pdev);
+	if (!m)
+		return -ENXIO;
+
+	if (m->trace_dump_pa) {
+		dma_free_attrs(&pdev->dev, TRACE_BUFFER_SIZE,
+			       m->trace_dump_va, m->trace_dump_pa,
+			       &attrs);
+		m->trace_dump_va = NULL;
+		m->trace_dump_pa = 0;
+	}
 
 	nvdla_dbg_fn(pdev, "");
 

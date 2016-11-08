@@ -157,6 +157,7 @@ struct dla_action_semaphore {
 enum dla_regions_e {
 	DLA_REGION_PRINTF = 1,
 	DLA_REGION_GOS = 2,
+	DLA_REGION_TRACE = 3,
 };
 
 /**

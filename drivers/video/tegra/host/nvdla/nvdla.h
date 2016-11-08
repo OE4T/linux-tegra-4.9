@@ -55,13 +55,17 @@
 #define MAX_NVDLA_QUEUE_COUNT	16
 
 /**
+ * Trace Buffer Size
+ */
+#define TRACE_BUFFER_SIZE		0x100000
+
+/**
  * data structure to keep per DLA engine device data
  *
  * @pdev		pointer to platform device
  * @pool		pointer to queue table
  * @dbg_mask		debug mask for print level
  * @en_trace		flag to enable tracing
- *
  */
 struct nvdla_device {
 	struct platform_device *pdev;

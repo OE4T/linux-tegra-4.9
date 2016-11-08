@@ -303,8 +303,6 @@ static ssize_t railgate_enable_store(struct device *dev,
 		platform->can_railgate = false;
 		platform->user_railgate_disabled = true;
 	}
-	if (err)
-		return err;
 
 	dev_info(dev, "railgate is %s.\n", platform->can_railgate ?
 		"enabled" : "disabled");

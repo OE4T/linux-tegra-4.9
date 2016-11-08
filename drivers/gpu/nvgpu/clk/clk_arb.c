@@ -34,7 +34,12 @@ static int nvgpu_clk_arb_release_event_dev(struct inode *inode,
 		struct file *filp);
 static int nvgpu_clk_arb_release_completion_dev(struct inode *inode,
 		struct file *filp);
-static unsigned int nvgpu_clk_arb_poll_dev(struct file *filp, poll_table *wait);
+static unsigned int nvgpu_clk_arb_poll_completion_dev(struct file *filp, poll_table *wait);
+static unsigned int nvgpu_clk_arb_poll_event_dev(struct file *filp, poll_table *wait);
+static ssize_t nvgpu_clk_arb_read_event_dev(struct file *filp,
+		char __user *buf, size_t size, loff_t *off);
+long nvgpu_clk_arb_ioctl_event_dev(struct file *filp, unsigned int cmd,
+		unsigned long arg);
 
 static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work);
 static void nvgpu_clk_arb_run_vf_table_cb(struct work_struct *work);
@@ -147,6 +152,9 @@ struct nvgpu_clk_dev {
 	atomic_t poll_mask;
 	u16 gpc2clk_target_mhz;
 	u16 mclk_target_mhz;
+	spinlock_t event_lock;
+	u32 event_status;
+	u32 event_mask;
 	struct kref refcount;
 };
 
@@ -164,13 +172,18 @@ struct nvgpu_clk_session {
 static const struct file_operations completion_dev_ops = {
 	.owner = THIS_MODULE,
 	.release = nvgpu_clk_arb_release_completion_dev,
-	.poll = nvgpu_clk_arb_poll_dev,
+	.poll = nvgpu_clk_arb_poll_completion_dev,
 };
 
 static const struct file_operations event_dev_ops = {
 	.owner = THIS_MODULE,
 	.release = nvgpu_clk_arb_release_event_dev,
-	.poll = nvgpu_clk_arb_poll_dev,
+	.poll = nvgpu_clk_arb_poll_event_dev,
+	.read = nvgpu_clk_arb_read_event_dev,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = nvgpu_clk_arb_ioctl_event_dev,
+#endif
+	.unlocked_ioctl = nvgpu_clk_arb_ioctl_event_dev,
 };
 
 int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
@@ -350,7 +363,10 @@ static int nvgpu_clk_arb_install_fd(struct gk20a *g,
 	fd_install(fd, file);
 
 	init_waitqueue_head(&dev->readout_wq);
-	atomic_set(&dev->poll_mask, 0);
+
+	spin_lock_init(&dev->event_lock);
+	dev->event_status = 0;
+	dev->event_mask = ~0;
 
 	dev->session = session;
 	kref_init(&dev->refcount);
@@ -1080,7 +1096,9 @@ exit_arb:
 	/* notify event for all users */
 	rcu_read_lock();
 	list_for_each_entry_rcu(dev, &arb->users, link) {
-		atomic_set(&dev->poll_mask, POLLIN | POLLRDNORM);
+		spin_lock(&dev->event_lock);
+		dev->event_status |= (1UL << NVGPU_GPU_EVENT_VF_UPDATE);
+		spin_unlock(&dev->event_lock);
 		wake_up_interruptible(&dev->readout_wq);
 	}
 	rcu_read_unlock();
@@ -1117,7 +1135,28 @@ fdput_fd:
 	return err;
 }
 
-static unsigned int nvgpu_clk_arb_poll_dev(struct file *filp, poll_table *wait)
+static inline int __pending_event(struct nvgpu_clk_dev *dev,
+		struct nvgpu_gpu_event_info *info)
+{
+	struct gk20a *g = dev->session->g;
+	u32 status;
+
+	spin_lock(&dev->event_lock);
+	status = dev->event_status & dev->event_mask;
+	if (status && info)
+	{
+		/* TODO: retrieve oldest event_id based on timestamp */
+		info->event_id = ffs(status) - 1;
+		g->ops.read_ptimer(g, &info->timestamp);
+
+		dev->event_status &= ~(1UL << info->event_id);
+	}
+	spin_unlock(&dev->event_lock);
+	return status;
+}
+
+static unsigned int nvgpu_clk_arb_poll_completion_dev(struct file *filp,
+		poll_table *wait)
 {
 	struct nvgpu_clk_dev *dev = filp->private_data;
 
@@ -1125,6 +1164,111 @@ static unsigned int nvgpu_clk_arb_poll_dev(struct file *filp, poll_table *wait)
 
 	poll_wait(filp, &dev->readout_wq, wait);
 	return atomic_xchg(&dev->poll_mask, 0);
+}
+
+static unsigned int nvgpu_clk_arb_poll_event_dev(struct file *filp,
+		poll_table *wait)
+{
+	struct nvgpu_clk_dev *dev = filp->private_data;
+
+	gk20a_dbg_fn("");
+
+	poll_wait(filp, &dev->readout_wq, wait);
+	return __pending_event(dev, NULL);
+}
+
+static ssize_t nvgpu_clk_arb_read_event_dev(struct file *filp,
+		char __user *buf, size_t size, loff_t *off)
+{
+	struct nvgpu_clk_dev *dev = filp->private_data;
+	struct nvgpu_gpu_event_info info;
+	int err;
+
+	gk20a_dbg(gpu_dbg_fn, "filp=%p buf=%p size=%zu", filp, buf, size);
+
+	if (size < sizeof(info))
+		return 0;
+
+	memset(&info, 0, sizeof(info));
+	while (!__pending_event(dev, &info)) {
+		if (filp->f_flags & O_NONBLOCK)
+			return -EAGAIN;
+		err = wait_event_interruptible(dev->readout_wq,
+				__pending_event(dev, &info));
+		if (err)
+			return err;
+	}
+
+	if (copy_to_user(buf, &info, sizeof(info)))
+		return -EFAULT;
+
+	*off += sizeof(info);
+
+	return sizeof(info);
+}
+
+static int nvgpu_clk_arb_set_event_filter(struct nvgpu_clk_dev *dev,
+		struct nvgpu_gpu_set_event_filter_args *args)
+{
+	u32 mask;
+
+	gk20a_dbg(gpu_dbg_fn, "");
+
+	if (args->flags)
+		return -EINVAL;
+
+	if (args->size != 1)
+		return -EINVAL;
+
+	if (copy_from_user(&mask, (void __user *) args->buffer,
+			args->size * sizeof(u32)))
+		return -EFAULT;
+
+	spin_lock(&dev->event_lock);
+	/* update event mask */
+	dev->event_mask = mask;
+	spin_unlock(&dev->event_lock);
+
+	return 0;
+}
+
+long nvgpu_clk_arb_ioctl_event_dev(struct file *filp, unsigned int cmd,
+		unsigned long arg)
+{
+	struct nvgpu_clk_dev *dev = filp->private_data;
+	struct gk20a *g = dev->session->g;
+	u8 buf[NVGPU_EVENT_IOCTL_MAX_ARG_SIZE];
+	int err = 0;
+
+	gk20a_dbg(gpu_dbg_fn, "nr=%d", _IOC_NR(cmd));
+
+	if ((_IOC_TYPE(cmd) != NVGPU_EVENT_IOCTL_MAGIC) || (_IOC_NR(cmd) == 0)
+		|| (_IOC_NR(cmd) > NVGPU_EVENT_IOCTL_LAST))
+		return -EINVAL;
+
+	BUG_ON(_IOC_SIZE(cmd) > NVGPU_EVENT_IOCTL_MAX_ARG_SIZE);
+
+	memset(buf, 0, sizeof(buf));
+	if (_IOC_DIR(cmd) & _IOC_WRITE) {
+		if (copy_from_user(buf, (void __user *) arg, _IOC_SIZE(cmd)))
+			return -EFAULT;
+	}
+
+	switch (cmd) {
+	case NVGPU_EVENT_IOCTL_SET_FILTER:
+		err = nvgpu_clk_arb_set_event_filter(dev,
+				(struct nvgpu_gpu_set_event_filter_args *)buf);
+		break;
+	default:
+		dev_dbg(dev_from_gk20a(g),
+				"unrecognized event ioctl cmd: 0x%x", cmd);
+		err = -ENOTTY;
+	}
+
+	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ))
+		err = copy_to_user((void __user *) arg, buf, _IOC_SIZE(cmd));
+
+	return err;
 }
 
 static int nvgpu_clk_arb_release_completion_dev(struct inode *inode,
@@ -1159,8 +1303,8 @@ static int nvgpu_clk_arb_release_event_dev(struct inode *inode,
 	list_del_rcu(&dev->link);
 	spin_unlock(&arb->users_lock);
 
-	kref_put(&session->refcount, nvgpu_clk_arb_free_session);
 	synchronize_rcu();
+	kref_put(&session->refcount, nvgpu_clk_arb_free_session);
 	kfree(dev);
 
 	return 0;
@@ -1529,7 +1673,6 @@ void nvgpu_clk_arb_pstate_change_lock(struct gk20a *g, bool lock)
 		mutex_lock(&arb->pstate_lock);
 	else
 		mutex_unlock(&arb->pstate_lock);
-
 }
 
 #ifdef CONFIG_DEBUG_FS

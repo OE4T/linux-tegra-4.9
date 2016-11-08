@@ -74,16 +74,15 @@ static void gm20b_fifo_trigger_mmu_fault(struct gk20a *g,
 
 	/* trigger faults for all bad engines */
 	for_each_set_bit(engine_id, &engine_ids, 32) {
-		u32 engine_mmu_fault_id;
-
 		if (!gk20a_fifo_is_valid_engine_id(g, engine_id)) {
 			gk20a_err(dev_from_gk20a(g),
 				  "faulting unknown engine %ld", engine_id);
 		} else {
-			engine_mmu_fault_id = gm20b_engine_id_to_mmu_id(g,
+			u32 mmu_id = gm20b_engine_id_to_mmu_id(g,
 								engine_id);
-			gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_id),
-				     fifo_trigger_mmu_fault_enable_f(1));
+			if (mmu_id != ~0)
+				gk20a_writel(g, fifo_trigger_mmu_fault_r(mmu_id),
+					     fifo_trigger_mmu_fault_enable_f(1));
 		}
 	}
 

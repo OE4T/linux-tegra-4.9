@@ -1557,15 +1557,18 @@ static void gk20a_fifo_trigger_mmu_fault(struct gk20a *g,
 
 	/* trigger faults for all bad engines */
 	for_each_set_bit(engine_id, &engine_ids, 32) {
+		u32 mmu_id;
+
 		if (!gk20a_fifo_is_valid_engine_id(g, engine_id)) {
 			WARN_ON(true);
 			break;
 		}
 
-		gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_id),
-			     fifo_trigger_mmu_fault_id_f(
-			     gk20a_engine_id_to_mmu_id(g, engine_id)) |
-			     fifo_trigger_mmu_fault_enable_f(1));
+		mmu_id = gk20a_engine_id_to_mmu_id(g, engine_id);
+		if (mmu_id != ~0)
+			gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_id),
+				     fifo_trigger_mmu_fault_id_f(mmu_id) |
+				     fifo_trigger_mmu_fault_enable_f(1));
 	}
 
 	/* Wait for MMU fault to trigger */
@@ -1707,8 +1710,10 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 		/* atleast one engine will get passed during sched err*/
 		engine_ids |= __engine_ids;
 		for_each_set_bit(engine_id, &engine_ids, 32) {
-			mmu_fault_engines |=
-				BIT(gk20a_engine_id_to_mmu_id(g, engine_id));
+			u32 mmu_id = gk20a_engine_id_to_mmu_id(g, engine_id);
+
+			if (mmu_id != ~0)
+				mmu_fault_engines |= BIT(mmu_id);
 		}
 	} else {
 		/* store faulted engines in advance */
@@ -1728,9 +1733,11 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 
 				gk20a_fifo_get_faulty_id_type(g, active_engine_id, &id, &type);
 				if (ref_type == type && ref_id == id) {
+					u32 mmu_id = gk20a_engine_id_to_mmu_id(g, active_engine_id);
+
 					engine_ids |= BIT(active_engine_id);
-					mmu_fault_engines |=
-					BIT(gk20a_engine_id_to_mmu_id(g, active_engine_id));
+					if (mmu_id != ~0)
+						mmu_fault_engines |= BIT(mmu_id);
 				}
 			}
 		}

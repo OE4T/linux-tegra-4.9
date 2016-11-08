@@ -1107,11 +1107,18 @@ do {									\
 
 #endif
 
-#define gk20a_err(d, fmt, arg...) \
-	dev_err(d, "%s: " fmt "\n", __func__, ##arg)
+#define gk20a_err(d, fmt, arg...)					\
+	do {								\
+		if (d)							\
+			dev_err(d, "%s: " fmt "\n", __func__, ##arg);	\
+	} while (0)
 
-#define gk20a_warn(d, fmt, arg...) \
-	dev_warn(d, "%s: " fmt "\n", __func__, ##arg)
+#define gk20a_warn(d, fmt, arg...)					\
+	do {								\
+		if (d)							\
+			dev_warn(d, "%s: " fmt "\n", __func__, ##arg);	\
+	} while (0)
+
 
 #define gk20a_dbg_fn(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_fn, fmt, ##arg)
@@ -1126,44 +1133,74 @@ int gk20a_lockout_registers(struct gk20a *g);
 int gk20a_restore_registers(struct gk20a *g);
 
 void __nvgpu_check_gpu_state(struct gk20a *g);
+void __gk20a_warn_on_no_regs(void);
 
 static inline void gk20a_writel(struct gk20a *g, u32 r, u32 v)
 {
-	gk20a_dbg(gpu_dbg_reg, " r=0x%x v=0x%x", r, v);
-	writel_relaxed(v, g->regs + r);
-	wmb();
+	if (unlikely(!g->regs)) {
+		__gk20a_warn_on_no_regs();
+		gk20a_dbg(gpu_dbg_reg, "r=0x%x v=0x%x (failed)", r, v);
+	} else {
+		writel_relaxed(v, g->regs + r);
+		wmb();
+		gk20a_dbg(gpu_dbg_reg, "r=0x%x v=0x%x", r, v);
+	}
 }
 static inline u32 gk20a_readl(struct gk20a *g, u32 r)
 {
-	u32 v = readl(g->regs + r);
 
-	if (v == 0xffffffff)
-		__nvgpu_check_gpu_state(g);
+	u32 v = 0xffffffff;
 
-	gk20a_dbg(gpu_dbg_reg, " r=0x%x v=0x%x", r, v);
+	if (unlikely(!g->regs)) {
+		__gk20a_warn_on_no_regs();
+		gk20a_dbg(gpu_dbg_reg, "r=0x%x v=0x%x (failed)", r, v);
+	} else {
+		v = readl(g->regs + r);
+		if (v == 0xffffffff)
+			__nvgpu_check_gpu_state(g);
+		gk20a_dbg(gpu_dbg_reg, "r=0x%x v=0x%x", r, v);
+	}
 
 	return v;
 }
 static inline void gk20a_writel_check(struct gk20a *g, u32 r, u32 v)
 {
-	gk20a_dbg(gpu_dbg_reg, " r=0x%x v=0x%x", r, v);
-	wmb();
-	do {
-		writel_relaxed(v, g->regs + r);
-	} while (readl(g->regs + r) != v);
+	if (unlikely(!g->regs)) {
+		__gk20a_warn_on_no_regs();
+		gk20a_dbg(gpu_dbg_reg, "r=0x%x v=0x%x (failed)", r, v);
+	} else {
+		wmb();
+		do {
+			writel_relaxed(v, g->regs + r);
+		} while (readl(g->regs + r) != v);
+		gk20a_dbg(gpu_dbg_reg, "r=0x%x v=0x%x", r, v);
+	}
 }
 
 static inline void gk20a_bar1_writel(struct gk20a *g, u32 b, u32 v)
 {
-	gk20a_dbg(gpu_dbg_reg, " b=0x%x v=0x%x", b, v);
-	wmb();
-	writel_relaxed(v, g->bar1 + b);
+	if (unlikely(!g->bar1)) {
+		__gk20a_warn_on_no_regs();
+		gk20a_dbg(gpu_dbg_reg, "b=0x%x v=0x%x (failed)", b, v);
+	} else {
+		wmb();
+		writel_relaxed(v, g->bar1 + b);
+		gk20a_dbg(gpu_dbg_reg, "b=0x%x v=0x%x", b, v);
+	}
 }
 
 static inline u32 gk20a_bar1_readl(struct gk20a *g, u32 b)
 {
-	u32 v = readl(g->bar1 + b);
-	gk20a_dbg(gpu_dbg_reg, " b=0x%x v=0x%x", b, v);
+	u32 v = 0xffffffff;
+
+	if (unlikely(!g->bar1)) {
+		__gk20a_warn_on_no_regs();
+		gk20a_dbg(gpu_dbg_reg, "b=0x%x v=0x%x (failed)", b, v);
+	} else {
+		v = readl(g->bar1 + b);
+		gk20a_dbg(gpu_dbg_reg, "b=0x%x v=0x%x", b, v);
+	}
+
 	return v;
 }
 
@@ -1174,6 +1211,9 @@ static inline struct device *dev_from_gk20a(struct gk20a *g)
 }
 static inline struct gk20a *gk20a_from_dev(struct device *dev)
 {
+	if (!dev)
+		return NULL;
+
 	return ((struct gk20a_platform *)dev_get_drvdata(dev))->g;
 }
 static inline struct gk20a *gk20a_from_as(struct gk20a_as *as)

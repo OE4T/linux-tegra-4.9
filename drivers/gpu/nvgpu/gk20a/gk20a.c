@@ -309,6 +309,11 @@ int gk20a_restore_registers(struct gk20a *g)
 	return 0;
 }
 
+void __gk20a_warn_on_no_regs(void)
+{
+	WARN_ONCE(1, "Attempted access to GPU regs after unmapping!");
+}
+
 static void kunmap_and_free_iopage(void **kvaddr, struct page **page)
 {
 	if (*kvaddr) {

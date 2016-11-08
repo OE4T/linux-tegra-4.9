@@ -590,7 +590,7 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 	struct device *d = dev_from_gk20a(g);
 	s32 runlist_id = -1;
 	u32 i;
-	u64 runlist_size;
+	size_t runlist_size;
 
 	gk20a_dbg_fn("");
 
@@ -619,7 +619,7 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 			goto clean_up_runlist;
 
 		runlist_size  = f->runlist_entry_size * f->num_runlist_entries;
-		gk20a_dbg_info("runlist_entries %d runlist size %llu\n",
+		gk20a_dbg_info("runlist_entries %d runlist size %zu\n",
 					f->num_runlist_entries, runlist_size);
 
 		for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {

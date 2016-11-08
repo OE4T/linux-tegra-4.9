@@ -420,7 +420,6 @@ clean_up:
 		kfree(g->gr.ctx_vars.ctxsw_regs.gpc_router.l);
 		kfree(g->gr.ctx_vars.ctxsw_regs.pm_ltc.l);
 		kfree(g->gr.ctx_vars.ctxsw_regs.pm_fbpa.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.pm_fbpa.l);
 		kfree(g->gr.ctx_vars.ctxsw_regs.perf_sys_router.l);
 		kfree(g->gr.ctx_vars.ctxsw_regs.perf_pma.l);
 		kfree(g->gr.ctx_vars.ctxsw_regs.pm_rop.l);

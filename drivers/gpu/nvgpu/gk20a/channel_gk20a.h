@@ -226,6 +226,7 @@ int gk20a_init_channel_support(struct gk20a *, u32 chid);
 
 /* must be inside gk20a_busy()..gk20a_idle() */
 void gk20a_channel_close(struct channel_gk20a *ch);
+void __gk20a_channel_kill(struct channel_gk20a *ch);
 
 bool gk20a_channel_update_and_check_timeout(struct channel_gk20a *ch,
 		u32 timeout_delta_ms, bool *progress);

@@ -910,10 +910,8 @@ static void gk20a_wait_until_counter_is_N(
 	}
 }
 
-
-
 /* call ONLY when no references to the channel exist: after the last put */
-static void gk20a_free_channel(struct channel_gk20a *ch)
+static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 {
 	struct gk20a *g = ch->g;
 	struct fifo_gk20a *f = &g->fifo;
@@ -935,9 +933,10 @@ static void gk20a_free_channel(struct channel_gk20a *ch)
 	gk20a_disable_channel(ch);
 
 	/* wait until there's only our ref to the channel */
-	gk20a_wait_until_counter_is_N(
-		ch, &ch->ref_count, 1, &ch->ref_count_dec_wq,
-		__func__, "references");
+	if (!force)
+		gk20a_wait_until_counter_is_N(
+			ch, &ch->ref_count, 1, &ch->ref_count_dec_wq,
+			__func__, "references");
 
 	/* wait until all pending interrupts for recently completed
 	 * jobs are handled */
@@ -959,9 +958,10 @@ static void gk20a_free_channel(struct channel_gk20a *ch)
 	atomic_dec(&ch->ref_count);
 
 	/* wait until no more refs to the channel */
-	gk20a_wait_until_counter_is_N(
-		ch, &ch->ref_count, 0, &ch->ref_count_dec_wq,
-		__func__, "references");
+	if (!force)
+		gk20a_wait_until_counter_is_N(
+			ch, &ch->ref_count, 0, &ch->ref_count_dec_wq,
+			__func__, "references");
 
 	/* if engine reset was deferred, perform it now */
 	mutex_lock(&f->deferred_reset_mutex);
@@ -1132,7 +1132,17 @@ void _gk20a_channel_put(struct channel_gk20a *ch, const char *caller)
 
 void gk20a_channel_close(struct channel_gk20a *ch)
 {
-	gk20a_free_channel(ch);
+	gk20a_free_channel(ch, false);
+}
+
+/*
+ * Be careful with this - it is meant for terminating channels when we know the
+ * driver is otherwise dying. Ref counts and the like are ignored by this
+ * version of the cleanup.
+ */
+void __gk20a_channel_kill(struct channel_gk20a *ch)
+{
+	gk20a_free_channel(ch, true);
 }
 
 struct channel_gk20a *gk20a_get_channel_from_file(int fd)

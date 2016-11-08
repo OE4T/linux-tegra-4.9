@@ -374,7 +374,7 @@ static int gk20a_cde_patch_params(struct gk20a_cde_ctx *cde_ctx)
 			new_data = g->gr.comptags_per_cacheline;
 			break;
 		case TYPE_PARAM_GPU_CONFIGURATION:
-			new_data = g->ltc_count * g->gr.slices_per_ltc *
+			new_data = (u64)g->ltc_count * g->gr.slices_per_ltc *
 				g->gr.cacheline_size;
 			break;
 		case TYPE_PARAM_FIRSTPAGEOFFSET:

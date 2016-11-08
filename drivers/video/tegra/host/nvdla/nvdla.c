@@ -54,7 +54,7 @@
 
 #define ALIGNED_DMA(x) ((x >> 8) & 0xffffffff)
 
-#define CMD_TIMEOUT	5 * USEC_PER_SEC
+#define CMD_TIMEOUT	500 * USEC_PER_SEC
 
 static DEFINE_DMA_ATTRS(attrs);
 

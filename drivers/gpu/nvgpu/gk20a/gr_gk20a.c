@@ -6212,6 +6212,8 @@ int gk20a_gr_isr(struct gk20a *g)
 		return 0;
 
 	gr_engine_id = gk20a_fifo_get_gr_engine_id(g);
+	if (gr_engine_id != FIFO_INVAL_ENGINE_ID)
+		gr_engine_id = BIT(gr_engine_id);
 
 	grfifo_ctl = gk20a_readl(g, gr_gpfifo_ctl_r());
 	grfifo_ctl &= ~gr_gpfifo_ctl_semaphore_access_f(1);
@@ -6371,13 +6373,13 @@ int gk20a_gr_isr(struct gk20a *g)
 
 	if (need_reset) {
 		if (tsgid != NVGPU_INVALID_TSG_ID)
-			gk20a_fifo_recover(g, BIT(gr_engine_id),
+			gk20a_fifo_recover(g, gr_engine_id,
 					   tsgid, true, true, true);
 		else if (ch)
-			gk20a_fifo_recover(g, BIT(gr_engine_id),
+			gk20a_fifo_recover(g, gr_engine_id,
 					   ch->hw_chid, false, true, true);
 		else
-			gk20a_fifo_recover(g, BIT(gr_engine_id),
+			gk20a_fifo_recover(g, gr_engine_id,
 					   0, false, false, true);
 	}
 

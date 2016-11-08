@@ -421,7 +421,6 @@ static void vgpu_gr_free_channel_ctx(struct channel_gk20a *c)
 
 	memset(&c->ch_ctx, 0, sizeof(struct channel_ctx_gk20a));
 
-	c->num_objects = 0;
 	c->first_init = false;
 }
 
@@ -586,8 +585,6 @@ static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 		c->first_init = true;
 	}
 
-	c->num_objects++;
-
 	gk20a_dbg_fn("done");
 	return 0;
 out:
@@ -597,24 +594,6 @@ out:
 	   they pass, no need to undo. */
 	gk20a_err(dev_from_gk20a(g), "fail");
 	return err;
-}
-
-static int vgpu_gr_free_obj_ctx(struct channel_gk20a  *c,
-				struct nvgpu_free_obj_ctx_args *args)
-{
-	gk20a_dbg_fn("");
-
-	if (c->num_objects == 0)
-		return 0;
-
-	c->num_objects--;
-
-	if (c->num_objects == 0) {
-		c->first_init = false;
-		gk20a_disable_channel(c);
-	}
-
-	return 0;
 }
 
 static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
@@ -1073,7 +1052,6 @@ void vgpu_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.detect_sm_arch = vgpu_gr_detect_sm_arch;
 	gops->gr.free_channel_ctx = vgpu_gr_free_channel_ctx;
 	gops->gr.alloc_obj_ctx = vgpu_gr_alloc_obj_ctx;
-	gops->gr.free_obj_ctx = vgpu_gr_free_obj_ctx;
 	gops->gr.alloc_gr_ctx = vgpu_gr_alloc_gr_ctx;
 	gops->gr.free_gr_ctx = vgpu_gr_free_gr_ctx;
 	gops->gr.bind_ctxsw_zcull = vgpu_gr_bind_ctxsw_zcull;

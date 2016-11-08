@@ -2957,7 +2957,6 @@ void gk20a_free_channel_ctx(struct channel_gk20a *c)
 
 	memset(&c->ch_ctx, 0, sizeof(struct channel_ctx_gk20a));
 
-	c->num_objects = 0;
 	c->first_init = false;
 }
 
@@ -3169,8 +3168,6 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		c->first_init = true;
 	}
 
-	c->num_objects++;
-
 	gk20a_dbg_fn("done");
 	return 0;
 out:
@@ -3180,25 +3177,6 @@ out:
 	   they pass, no need to undo. */
 	gk20a_err(dev_from_gk20a(g), "fail");
 	return err;
-}
-
-int gk20a_free_obj_ctx(struct channel_gk20a  *c,
-		       struct nvgpu_free_obj_ctx_args *args)
-{
-	gk20a_dbg_fn("");
-
-	if (c->num_objects == 0)
-		return 0;
-
-	c->num_objects--;
-
-	if (c->num_objects == 0) {
-		c->first_init = false;
-		gk20a_disable_channel(c);
-		gr_gk20a_free_channel_patch_ctx(c);
-	}
-
-	return 0;
 }
 
 int gk20a_comptag_allocator_init(struct gk20a_comptag_allocator *allocator,
@@ -9082,7 +9060,6 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.get_gpc_tpc_mask = gr_gk20a_get_gpc_tpc_mask;
 	gops->gr.free_channel_ctx = gk20a_free_channel_ctx;
 	gops->gr.alloc_obj_ctx = gk20a_alloc_obj_ctx;
-	gops->gr.free_obj_ctx = gk20a_free_obj_ctx;
 	gops->gr.bind_ctxsw_zcull = gr_gk20a_bind_ctxsw_zcull;
 	gops->gr.get_zcull_info = gr_gk20a_get_zcull_info;
 	gops->gr.is_tpc_addr = gr_gk20a_is_tpc_addr;

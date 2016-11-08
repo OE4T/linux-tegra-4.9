@@ -973,10 +973,6 @@ struct nvgpu_alloc_obj_ctx_args {
 	__u64 obj_id;    /* output, used to free later       */
 };
 
-struct nvgpu_free_obj_ctx_args {
-	__u64 obj_id; /* obj ctx to free */
-};
-
 struct nvgpu_alloc_gpfifo_args {
 	__u32 num_entries;
 #define NVGPU_ALLOC_GPFIFO_FLAGS_VPR_ENABLED	(1 << 0) /* set owner channel of this gpfifo as a vpr channel */
@@ -1216,8 +1212,6 @@ struct nvgpu_preemption_mode_args {
 	_IOWR(NVGPU_IOCTL_MAGIC, 107, struct nvgpu_submit_gpfifo_args)
 #define NVGPU_IOCTL_CHANNEL_ALLOC_OBJ_CTX	\
 	_IOWR(NVGPU_IOCTL_MAGIC, 108, struct nvgpu_alloc_obj_ctx_args)
-#define NVGPU_IOCTL_CHANNEL_FREE_OBJ_CTX	\
-	_IOR(NVGPU_IOCTL_MAGIC,  109, struct nvgpu_free_obj_ctx_args)
 #define NVGPU_IOCTL_CHANNEL_ZCULL_BIND		\
 	_IOWR(NVGPU_IOCTL_MAGIC, 110, struct nvgpu_zcull_bind_args)
 #define NVGPU_IOCTL_CHANNEL_SET_ERROR_NOTIFIER  \

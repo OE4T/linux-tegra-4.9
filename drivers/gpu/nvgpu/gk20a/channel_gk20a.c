@@ -3467,18 +3467,6 @@ long gk20a_channel_ioctl(struct file *filp,
 				(struct nvgpu_alloc_obj_ctx_args *)buf);
 		gk20a_idle(dev);
 		break;
-	case NVGPU_IOCTL_CHANNEL_FREE_OBJ_CTX:
-		err = gk20a_busy(dev);
-		if (err) {
-			dev_err(dev,
-				"%s: failed to host gk20a for ioctl cmd: 0x%x",
-				__func__, cmd);
-			break;
-		}
-		err = ch->g->ops.gr.free_obj_ctx(ch,
-				(struct nvgpu_free_obj_ctx_args *)buf);
-		gk20a_idle(dev);
-		break;
 	case NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO_EX:
 	{
 		struct nvgpu_alloc_gpfifo_ex_args *alloc_gpfifo_ex_args =

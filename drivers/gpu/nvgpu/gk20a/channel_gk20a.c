@@ -1038,6 +1038,8 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	ch->update_fn_data = NULL;
 	spin_unlock(&ch->update_fn_lock);
 	cancel_work_sync(&ch->update_fn_work);
+	cancel_delayed_work_sync(&ch->clean_up.wq);
+	cancel_delayed_work_sync(&ch->timeout.wq);
 
 	/* make sure we don't have deferred interrupts pending that
 	 * could still touch the channel */
@@ -1177,8 +1179,7 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 
 	err = gk20a_busy(g->dev);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g), "failed to release channel %d",
-			ch->hw_chid);
+		gk20a_err(dev_from_gk20a(g), "failed to release a channel!");
 		return err;
 	}
 
@@ -2108,6 +2109,11 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 
 	g = ch->g;
 
+	if (gk20a_busy(dev_from_gk20a(g))) {
+		gk20a_channel_put(ch);
+		return;
+	}
+
 	/* Need global lock since multiple channels can timeout at a time */
 	mutex_lock(&g->ch_wdt_lock);
 
@@ -2139,6 +2145,7 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 fail_unlock:
 	mutex_unlock(&g->ch_wdt_lock);
 	gk20a_channel_put(ch);
+	gk20a_idle(dev_from_gk20a(g));
 }
 
 int gk20a_free_priv_cmdbuf(struct channel_gk20a *c, struct priv_cmd_entry *e)

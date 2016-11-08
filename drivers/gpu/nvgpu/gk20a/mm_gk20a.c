@@ -219,6 +219,11 @@ static inline void pramin_access_batch_rd_n(struct gk20a *g, u32 start,
 {
 	u32 r = start, *dest_u32 = *arg;
 
+	if (!g->regs) {
+		__gk20a_warn_on_no_regs();
+		return;
+	}
+
 	while (words--) {
 		*dest_u32++ = gk20a_readl(g, r);
 		r += sizeof(u32);
@@ -232,6 +237,11 @@ static inline void pramin_access_batch_wr_n(struct gk20a *g, u32 start,
 {
 	u32 r = start, *src_u32 = *arg;
 
+	if (!g->regs) {
+		__gk20a_warn_on_no_regs();
+		return;
+	}
+
 	while (words--) {
 		writel_relaxed(*src_u32++, g->regs + r);
 		r += sizeof(u32);
@@ -244,6 +254,11 @@ static inline void pramin_access_batch_set(struct gk20a *g, u32 start,
 		u32 words, u32 **arg)
 {
 	u32 r = start, repeat = **arg;
+
+	if (!g->regs) {
+		__gk20a_warn_on_no_regs();
+		return;
+	}
 
 	while (words--) {
 		writel_relaxed(repeat, g->regs + r);

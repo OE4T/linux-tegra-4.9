@@ -301,7 +301,7 @@ int tegra_dc_ext_disable(struct tegra_dc_ext *ext)
 		}
 
 		tegra_dc_blank_wins(ext->dc, windows);
-		if (!(fb_console_mapped())) {
+		if (!IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)) {
 			for_each_set_bit(i, &windows, DC_N_WINDOWS) {
 				tegra_dc_ext_unpin_window(&ext->win[i]);
 			}

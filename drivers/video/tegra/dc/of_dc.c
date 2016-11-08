@@ -95,7 +95,6 @@ static struct regulator *of_dp_hdmi_5v0;
 char dc_or_node_names[TEGRA_MAX_DC][14];
 #endif
 
-static int first_fb_console_map = -1;
 static bool os_l4t;
 
 #ifdef CONFIG_TEGRA_DC_CMU
@@ -498,7 +497,7 @@ static int parse_disp_default_out(struct platform_device *ndev,
 
 	if (default_out->type == TEGRA_DC_OUT_HDMI) {
 		default_out->depth = 0;
-		if (fb_console_mapped()) {
+		if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)) {
 			if (!of_property_read_u32(np,
 				"nvidia,out-depth", &temp)) {
 				default_out->depth = (unsigned) temp;
@@ -2805,7 +2804,7 @@ struct tegra_dc_platform_data
 				goto fail_parse;
 			}
 		} else {
-			if (fb_console_mapped()) {
+			if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)) {
 				/*
 				 * Should never happen !
 				 */
@@ -3064,7 +3063,6 @@ static int __init check_fb_console_map_default(void)
 	if (np_l4t) {
 		pp_l4t = of_find_property(np_l4t, "l4t", &len);
 		if (pp_l4t) {
-			first_fb_console_map = 0;
 			os_l4t = true;
 			res = 1;
 		}
@@ -3074,10 +3072,6 @@ static int __init check_fb_console_map_default(void)
 }
 core_initcall(check_fb_console_map_default);
 
-bool fb_console_mapped(void)
-{
-	return first_fb_console_map != -1;
-}
 bool is_os_l4t(void)
 {
 	return os_l4t;

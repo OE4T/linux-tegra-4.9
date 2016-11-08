@@ -398,7 +398,7 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 		if (dc->enabled)
 			tegra_fb->curr_xoffset = -1;
 		dc->blanked = true;
-		if (fb_console_mapped())
+		if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE))
 			tegra_dc_cursor_suspend(dc);
 		tegra_dc_blank_wins(dc, BLANK_ALL);
 		return 0;
@@ -413,8 +413,9 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 
 		if (dc->enabled)
 			tegra_dc_disable(dc);
-		if (fb_console_mapped())
+		if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE))
 			dc->blanked = true;
+
 		return 0;
 
 	default:
@@ -763,14 +764,14 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 		 */
 		fb_info->info->mode = (struct fb_videomode*) NULL;
 
-		if (fb_console_mapped()) {
+		if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)) {
 			blank = FB_BLANK_POWERDOWN;
 			console_lock();
 			fb_add_videomode(&tegra_dc_vga_mode, &fb_info->info->modelist);
 			fb_videomode_to_var(&fb_info->info->var, &tegra_dc_vga_mode);
 			fb_notifier_call_chain(FB_EVENT_BLANK, &event);
 			console_unlock();
-		 } else {
+		} else {
 			/* For L4T - After the next hotplug, framebuffer console will
 			 * use the old variable screeninfo by default, only video-mode
 			 * settings will be overwritten as per monitor connected.
@@ -813,7 +814,7 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 	event.info = fb_info->info;
 	/* Restoring to state running. */
 	fb_info->info->state =  FBINFO_STATE_RUNNING;
-	if (fb_console_mapped()) {
+	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)) {
 		console_lock();
 		tegra_dc_set_fb_mode(fb_info->win.dc, &fb_mode, false);
 		fb_videomode_to_var(&fb_info->info->var, &fb_mode);

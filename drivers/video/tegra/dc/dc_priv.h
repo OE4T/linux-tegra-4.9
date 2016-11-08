@@ -751,7 +751,5 @@ int tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc);
 int tegra_nvdisp_set_ocsc(struct tegra_dc *dc, struct tegra_dc_mode *mode);
 #endif
 
-bool fb_console_mapped(void);
-
 int tegra_fb_release_fbmem(struct tegra_fb_info *);
 #endif

@@ -356,10 +356,25 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 	struct gk20a_platform *platform = gk20a_get_platform(&pdev->dev);
 	struct gk20a *g = get_gk20a(&pdev->dev);
 
-	if (g->remove_support)
-		g->remove_support(g->dev);
+	gk20a_dbg(gpu_dbg_shutdown, "Removing nvgpu driver!\n");
+	gk20a_driver_start_unload(g);
+
+	disable_irq(g->irq_stall);
+	devm_free_irq(&pdev->dev, g->irq_stall, g);
+	gk20a_dbg(gpu_dbg_shutdown, "IRQs disabled.\n");
+
+	/*
+	 * Wait for the driver to finish up all the IOCTLs it's working on
+	 * before cleaning up the driver's data structures.
+	 */
+	gk20a_wait_for_idle(&pdev->dev);
+	gk20a_dbg(gpu_dbg_shutdown, "Driver idle.\n");
 
 	gk20a_user_deinit(g->dev, &nvgpu_pci_class);
+	gk20a_dbg(gpu_dbg_shutdown, "User de-init done.\b");
+
+	if (g->remove_support)
+		g->remove_support(g->dev);
 
 	debugfs_remove_recursive(platform->debugfs);
 	debugfs_remove_recursive(platform->debugfs_alias);
@@ -368,6 +383,7 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 
 	if (platform->remove)
 		platform->remove(g->dev);
+	gk20a_dbg(gpu_dbg_shutdown, "Platform remove done.\b");
 
 	kfree(g);
 }

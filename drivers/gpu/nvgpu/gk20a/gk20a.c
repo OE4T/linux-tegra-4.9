@@ -47,6 +47,8 @@
 #include "nvgpu_common.h"
 #include "debug_gk20a.h"
 #include "ctrl_gk20a.h"
+#include "channel_sync_gk20a.h"
+
 #include "hw_mc_gk20a.h"
 #include "hw_timer_gk20a.h"
 #include "hw_bus_gk20a.h"
@@ -65,6 +67,7 @@
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "pstate/pstate.h"
 #endif
+
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/gk20a.h>
@@ -707,6 +710,10 @@ void gk20a_remove_support(struct device *dev)
 #endif
 	if (g->dbg_regops_tmp_buf)
 		kfree(g->dbg_regops_tmp_buf);
+
+	nvgpu_wait_for_deferred_interrupts(g);
+
+	gk20a_channel_cancel_pending_sema_waits(g);
 
 	if (g->pmu.remove_support)
 		g->pmu.remove_support(&g->pmu);
@@ -1740,6 +1747,7 @@ void gk20a_busy_noresume(struct device *dev)
  */
 void gk20a_driver_start_unload(struct gk20a *g)
 {
+	gk20a_dbg(gpu_dbg_shutdown, "Driver is now going down!\n");
 	g->driver_is_dying = 1;
 }
 

@@ -1081,6 +1081,7 @@ enum gk20a_dbg_categories {
 	gpu_dbg_sema_v	= BIT(16), /* verbose semaphore debugging */
 	gpu_dbg_pmu_pstate = BIT(17), /* p state controlled by pmu */
 	gpu_dbg_xv      = BIT(18), /* XVE debugging */
+	gpu_dbg_shutdown = BIT(19), /* GPU shutdown tracing */
 	gpu_dbg_mem     = BIT(31), /* memory accesses, very verbose */
 };
 

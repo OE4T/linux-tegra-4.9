@@ -777,6 +777,14 @@ struct nvgpu_gpu_get_temperature_args {
 	__s32 temp_f24_8;
 };
 
+struct nvgpu_gpu_set_therm_alert_limit_args {
+	__u32 reserved[3];
+	/* Temperature in signed fixed point format SFXP24.8
+	 *    Celsius = temp_f24_8 / 256.
+	 */
+	__s32 temp_f24_8;
+};
+
 #define NVGPU_GPU_IOCTL_ZCULL_GET_CTX_SIZE \
 	_IOR(NVGPU_GPU_IOCTL_MAGIC, 1, struct nvgpu_gpu_zcull_get_ctx_size_args)
 #define NVGPU_GPU_IOCTL_ZCULL_GET_INFO \
@@ -858,8 +866,11 @@ struct nvgpu_gpu_get_temperature_args {
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 37, struct nvgpu_gpu_get_temperature_args)
 #define NVGPU_GPU_IOCTL_GET_FBP_L2_MASKS \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 38, struct nvgpu_gpu_get_fbp_l2_masks_args)
+#define NVGPU_GPU_IOCTL_SET_THERM_ALERT_LIMIT \
+		_IOWR(NVGPU_GPU_IOCTL_MAGIC, 39, \
+			struct nvgpu_gpu_set_therm_alert_limit_args)
 #define NVGPU_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_GPU_IOCTL_GET_FBP_L2_MASKS)
+	_IOC_NR(NVGPU_GPU_IOCTL_SET_THERM_ALERT_LIMIT)
 #define NVGPU_GPU_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_gpu_get_cpu_time_correlation_info_args)
 

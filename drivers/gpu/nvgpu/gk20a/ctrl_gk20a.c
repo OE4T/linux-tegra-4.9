@@ -1298,6 +1298,30 @@ static int nvgpu_gpu_get_temperature(struct gk20a *g,
 }
 #endif
 
+static int nvgpu_gpu_set_therm_alert_limit(struct gk20a *g,
+		struct nvgpu_gpu_set_therm_alert_limit_args *args)
+{
+	int err;
+
+	gk20a_dbg_fn("");
+
+	if (args->reserved[0] || args->reserved[1] || args->reserved[2])
+		return -EINVAL;
+
+	if (!g->ops.therm.configure_therm_alert)
+		return -EINVAL;
+
+	err = gk20a_busy(g->dev);
+	if (err)
+		return err;
+
+	err = g->ops.therm.configure_therm_alert(g, args->temp_f24_8);
+
+	gk20a_idle(g->dev);
+
+	return err;
+}
+
 long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct gk20a_ctrl_priv *priv = filp->private_data;
@@ -1605,6 +1629,11 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 			(struct nvgpu_gpu_get_temperature_args *)buf);
 		break;
 #endif
+
+	case NVGPU_GPU_IOCTL_SET_THERM_ALERT_LIMIT:
+		err = nvgpu_gpu_set_therm_alert_limit(g,
+			(struct nvgpu_gpu_set_therm_alert_limit_args *)buf);
+		break;
 
 	default:
 		dev_dbg(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x", cmd);

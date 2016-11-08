@@ -286,8 +286,8 @@
 				target = <&spmic_ldo8>;
 				_overlay_ {
 					regulator-name = "dvdd-pex";
-					regulator-min-microvolt = <1050000>;
-					regulator-max-microvolt = <1050000>;
+					regulator-min-microvolt = <1000000>;
+					regulator-max-microvolt = <1000000>;
 				};
 			};
 
@@ -295,6 +295,14 @@
 				target = <&spmic_ldo0>;
 				_overlay_ {
 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
+				};
+			};
+
+			override@5 {
+				target = <&spmic_ldo7>;
+				_overlay_ {
+					regulator-min-microvolt = <1000000>;
+					regulator-max-microvolt = <1000000>;
 				};
 			};
 		};

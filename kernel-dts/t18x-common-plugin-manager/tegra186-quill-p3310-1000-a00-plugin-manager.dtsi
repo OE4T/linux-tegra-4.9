@@ -1,7 +1,7 @@
 /*
  * tegra186-quill-p3310-1000-a00-plugin-manager.dtsi: P3310 plugin manager
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -262,28 +262,13 @@
 		fragment-p3310-c03 {
 			ids = ">=3310-1000-B00";
 			override@0 {
-				target = <&{/xudc@3550000}>;
-				_overlay_ {
-					dvdd-pex-supply = <&spmic_ldo8>;
-					dvdd-pex-pll-supply = <&spmic_ldo8>;
-				};
-			};
-
-			override@1 {
-				target = <&{/pinctrl@3520000}>;
-				_overlay_ {
-					dvdd_pex-supply = <&spmic_ldo8>;
-				};
-			};
-
-			override@2 {
 				target = <&{/pcie-controller@10003000}>;
 				_overlay_ {
 					dvdd-pex-supply = <&spmic_ldo8>;
 				};
 			};
 
-			override@3 {
+			override@1 {
 				target = <&spmic_ldo8>;
 				_overlay_ {
 					regulator-name = "dvdd-pex";
@@ -292,14 +277,14 @@
 				};
 			};
 
-			override@4 {
+			override@2 {
 				target = <&spmic_ldo0>;
 				_overlay_ {
 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
 				};
 			};
 
-			override@5 {
+			override@3 {
 				target = <&spmic_ldo7>;
 				_overlay_ {
 					regulator-min-microvolt = <1000000>;

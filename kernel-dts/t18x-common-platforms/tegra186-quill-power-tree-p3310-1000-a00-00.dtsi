@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -101,10 +101,6 @@
 
 	xudc@3550000 {
 		avdd-usb-supply = <&spmic_sd3>;
-		dvdd-pex-supply = <&spmic_ldo7>;
-		hvdd-pex-supply =  <&spmic_sd2>;
-		dvdd-pex-pll-supply = <&spmic_ldo7>;
-		hvdd-pex-pll-supply = <&spmic_sd2>;
 	};
 
 	pinctrl@3520000 {
@@ -113,9 +109,6 @@
 		vbus-2-supply = <&vdd_usb2_5v>;
 		vbus-3-supply = <&battery_reg>;
 		vddio-hsic-supply = <&battery_reg>;
-		hvdd_pex_pll-supply = <&spmic_sd2>;
-		hvdd_pex-supply = <&spmic_sd2>;
-		dvdd_pex-supply = <&spmic_ldo7>;
 		avdd_usb-supply = <&spmic_sd3>;
 		vclamp_usb-supply = <&spmic_sd2>;
 		avdd_pll_erefeut-supply = <&spmic_sd2>;

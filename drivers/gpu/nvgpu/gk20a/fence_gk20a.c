@@ -245,7 +245,8 @@ int gk20a_fence_from_semaphore(
 	gk20a_init_fence(f, &gk20a_semaphore_fence_ops, sync_fence, wfi);
 	if (!f) {
 #ifdef CONFIG_SYNC
-		sync_fence_put(sync_fence);
+		if (sync_fence)
+			sync_fence_put(sync_fence);
 #endif
 		return -EINVAL;
 	}

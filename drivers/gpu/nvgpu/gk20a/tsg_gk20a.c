@@ -28,6 +28,11 @@
 #define NVGPU_TSG_MIN_TIMESLICE_US 1000
 #define NVGPU_TSG_MAX_TIMESLICE_US 50000
 
+struct tsg_private {
+	struct gk20a *g;
+	struct tsg_gk20a *tsg;
+};
+
 bool gk20a_is_channel_marked_as_tsg(struct channel_gk20a *ch)
 {
 	return !(ch->tsgid == NVGPU_INVALID_TSG_ID);
@@ -400,6 +405,7 @@ static struct tsg_gk20a *acquire_unused_tsg(struct fifo_gk20a *f)
 
 int gk20a_tsg_open(struct gk20a *g, struct file *filp)
 {
+	struct tsg_private *priv;
 	struct tsg_gk20a *tsg;
 	struct device *dev;
 	int err;
@@ -408,9 +414,15 @@ int gk20a_tsg_open(struct gk20a *g, struct file *filp)
 
 	gk20a_dbg(gpu_dbg_fn, "tsg: %s", dev_name(dev));
 
-	tsg = acquire_unused_tsg(&g->fifo);
-	if (!tsg)
+	priv = kmalloc(sizeof(*priv), GFP_KERNEL);
+	if (!priv)
 		return -ENOMEM;
+
+	tsg = acquire_unused_tsg(&g->fifo);
+	if (!tsg) {
+		kfree(priv);
+		return -ENOMEM;
+	}
 
 	tsg->g = g;
 	tsg->num_active_channels = 0;
@@ -425,7 +437,9 @@ int gk20a_tsg_open(struct gk20a *g, struct file *filp)
 	tsg->runlist_id = ~0;
 	tsg->tgid = current->tgid;
 
-	filp->private_data = tsg;
+	priv->g = g;
+	priv->tsg = tsg;
+	filp->private_data = priv;
 
 	if (g->ops.fifo.tsg_open) {
 		err = g->ops.fifo.tsg_open(tsg);
@@ -495,7 +509,13 @@ void gk20a_tsg_release(struct kref *ref)
 
 int gk20a_tsg_dev_release(struct inode *inode, struct file *filp)
 {
-	struct tsg_gk20a *tsg = filp->private_data;
+	struct tsg_private *priv = filp->private_data;
+	struct tsg_gk20a *tsg = priv->tsg;
+	struct gk20a *g = priv->g;
+
+	if (g->driver_is_dying)
+		return -ENODEV;
+
 	kref_put(&tsg->refcount, gk20a_tsg_release);
 	return 0;
 }
@@ -578,7 +598,8 @@ done:
 long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 			     unsigned long arg)
 {
-	struct tsg_gk20a *tsg = filp->private_data;
+	struct tsg_private *priv = filp->private_data;
+	struct tsg_gk20a *tsg = priv->tsg;
 	struct gk20a *g = tsg->g;
 	u8 __maybe_unused buf[NVGPU_TSG_IOCTL_MAX_ARG_SIZE];
 	int err = 0;

@@ -486,8 +486,23 @@ void gk20a_fifo_delete_runlist(struct fifo_gk20a *f)
 static void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 {
 	struct gk20a *g = f->g;
+	unsigned int i = 0;
 
 	gk20a_dbg_fn("");
+
+	/*
+	 * Make sure all channels are closed before deleting them.
+	 */
+	for (; i < f->num_channels; i++) {
+		struct channel_gk20a *c = f->channel + i;
+
+		/*
+		 * Could race but worst that happens is we get an error message
+		 * from gk20a_free_channel() complaining about multiple closes.
+		 */
+		if (c->referenceable)
+			__gk20a_channel_kill(c);
+	}
 
 	vfree(f->channel);
 	vfree(f->tsg);

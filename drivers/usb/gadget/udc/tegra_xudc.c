@@ -2608,7 +2608,7 @@ static void tegra_xudc_handle_transfer_completion(struct tegra_xudc *xudc,
 
 		tegra_xudc_req_done(ep, req, 0);
 
-		if (usb_endpoint_xfer_control(ep->desc))
+		if (ep->desc && usb_endpoint_xfer_control(ep->desc))
 			tegra_xudc_ep0_req_done(xudc);
 
 		/*

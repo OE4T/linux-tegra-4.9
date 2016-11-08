@@ -1,7 +1,7 @@
 /*
  * GP106 HAL interface
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -202,7 +202,8 @@ int gp106_init_gpu_characteristics(struct gk20a *g)
 			NVGPU_GPU_FLAGS_SUPPORT_GET_CURRENT |
 			NVGPU_GPU_FLAGS_SUPPORT_GET_POWER |
 			NVGPU_GPU_FLAGS_SUPPORT_GET_TEMPERATURE |
-			NVGPU_GPU_FLAGS_SUPPORT_DEVICE_EVENTS;
+			NVGPU_GPU_FLAGS_SUPPORT_DEVICE_EVENTS |
+			NVGPU_GPU_FLAGS_SUPPORT_SET_THERM_ALERT_LIMIT;
 
 	return 0;
 }

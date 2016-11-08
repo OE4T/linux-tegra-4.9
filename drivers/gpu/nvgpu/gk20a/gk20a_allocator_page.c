@@ -629,6 +629,9 @@ static void gk20a_page_free(struct gk20a_allocator *__a, u64 base)
 
 	a->nr_frees++;
 
+	palloc_dbg(a, "Free  0x%llx id=0x%010llx\n",
+		   alloc->length, alloc->base);
+
 	/*
 	 * Frees *alloc.
 	 */
@@ -638,9 +641,6 @@ static void gk20a_page_free(struct gk20a_allocator *__a, u64 base)
 		a->pages_freed += (alloc->length >> a->page_shift);
 		__gk20a_free_pages(a, alloc, true);
 	}
-
-	palloc_dbg(a, "Free  0x%llx id=0x%010llx\n",
-		   alloc->length, alloc->base);
 
 done:
 	alloc_unlock(__a);
@@ -740,10 +740,10 @@ static void gk20a_page_free_fixed(struct gk20a_allocator *__a,
 	 * allocs. This would have to be updated if the underlying
 	 * allocator were to change.
 	 */
-	__gk20a_free_pages(a, alloc, true);
-
 	palloc_dbg(a, "Free  [fixed] 0x%010llx + 0x%llx\n",
 		   alloc->base, alloc->length);
+	__gk20a_free_pages(a, alloc, true);
+
 	a->nr_fixed_frees++;
 	a->pages_freed += (alloc->length >> a->page_shift);
 

@@ -871,31 +871,6 @@ static void gk20a_free_error_notifiers(struct channel_gk20a *ch)
 	mutex_unlock(&ch->error_notifier_mutex);
 }
 
-/* Returns delta of cyclic integers a and b. If a is ahead of b, delta
- * is positive */
-static int cyclic_delta(int a, int b)
-{
-	return a - b;
-}
-
-static void gk20a_wait_for_deferred_interrupts(struct gk20a *g)
-{
-	int stall_irq_threshold = atomic_read(&g->hw_irq_stall_count);
-	int nonstall_irq_threshold = atomic_read(&g->hw_irq_nonstall_count);
-
-	/* wait until all stalling irqs are handled */
-	wait_event(g->sw_irq_stall_last_handled_wq,
-		   cyclic_delta(stall_irq_threshold,
-				atomic_read(&g->sw_irq_stall_last_handled))
-		   <= 0);
-
-	/* wait until all non-stalling irqs are handled */
-	wait_event(g->sw_irq_nonstall_last_handled_wq,
-		   cyclic_delta(nonstall_irq_threshold,
-				atomic_read(&g->sw_irq_nonstall_last_handled))
-		   <= 0);
-}
-
 static void gk20a_wait_until_counter_is_N(
 	struct channel_gk20a *ch, atomic_t *counter, int wait_value,
 	wait_queue_head_t *wq, const char *caller, const char *counter_name)
@@ -944,7 +919,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 
 	/* wait until all pending interrupts for recently completed
 	 * jobs are handled */
-	gk20a_wait_for_deferred_interrupts(g);
+	nvgpu_wait_for_deferred_interrupts(g);
 
 	/* prevent new refs */
 	spin_lock(&ch->ref_obtain_lock);
@@ -1043,7 +1018,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 
 	/* make sure we don't have deferred interrupts pending that
 	 * could still touch the channel */
-	gk20a_wait_for_deferred_interrupts(g);
+	nvgpu_wait_for_deferred_interrupts(g);
 
 unbind:
 	if (gk20a_is_channel_marked_as_tsg(ch))

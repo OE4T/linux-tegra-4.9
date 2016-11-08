@@ -1384,6 +1384,8 @@ static inline void gk20a_channel_trace_sched_param(
 			ch->ch_ctx.gr_ctx->compute_preempt_mode : 0));
 }
 
+void nvgpu_wait_for_deferred_interrupts(struct gk20a *g);
+
 #ifdef CONFIG_DEBUG_FS
 int gk20a_railgating_debugfs_init(struct device *dev);
 #endif

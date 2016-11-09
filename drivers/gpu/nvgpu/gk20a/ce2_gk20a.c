@@ -211,10 +211,10 @@ static void gk20a_ce_delete_gpu_context(struct gk20a_gpu_ctx *ce_ctx)
 	kfree(ce_ctx);
 }
 
-static inline int gk20a_ce_get_method_size(int request_operation)
+static inline unsigned int gk20a_ce_get_method_size(int request_operation)
 {
 	/* failure size */
-	int methodsize = ~0;
+	unsigned int methodsize = UINT_MAX;
 
 	if (request_operation & NVGPU_CE_PHYS_MODE_TRANSFER)
 		methodsize = 10 * 2 * sizeof(u32);
@@ -518,7 +518,7 @@ u32 gk20a_ce_create_context_with_cb(struct device *dev,
 	ce_ctx->gpu_ctx_state = NVGPU_CE_GPU_CTX_ALLOCATED;
 
 end:
-	if (ctx_id == ~0) {
+	if (ctx_id == (u32)~0) {
 		mutex_lock(&ce_app->app_mutex);
 		gk20a_ce_delete_gpu_context(ce_ctx);
 		mutex_unlock(&ce_app->app_mutex);

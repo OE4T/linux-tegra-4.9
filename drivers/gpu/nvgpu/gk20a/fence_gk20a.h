@@ -67,7 +67,7 @@ int gk20a_fence_from_syncpt(
 
 int gk20a_alloc_fence_pool(
 		struct channel_gk20a *c,
-		int size);
+		unsigned int count);
 
 void gk20a_free_fence_pool(
 		struct channel_gk20a *c);

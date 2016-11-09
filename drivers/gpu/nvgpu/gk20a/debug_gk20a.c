@@ -177,7 +177,7 @@ void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	u32 chid;
-	int i;
+	unsigned int i;
 
 	struct ch_state **ch_state;
 

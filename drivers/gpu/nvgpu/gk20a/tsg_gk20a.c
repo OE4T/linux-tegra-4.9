@@ -65,7 +65,7 @@ static bool gk20a_is_channel_active(struct gk20a *g, struct channel_gk20a *ch)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct fifo_runlist_info_gk20a *runlist;
-	int i;
+	unsigned int i;
 
 	for (i = 0; i < f->max_runlists; ++i) {
 		runlist = &f->runlist_info[i];
@@ -112,7 +112,7 @@ int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg,
 	ch->tsgid = tsg->tsgid;
 
 	/* all the channel part of TSG should need to be same runlist_id */
-	if (tsg->runlist_id == ~0)
+	if (tsg->runlist_id == FIFO_INVAL_TSG_ID)
 		tsg->runlist_id = ch->runlist_id;
 	else if (tsg->runlist_id != ch->runlist_id) {
 		gk20a_err(dev_from_gk20a(tsg->g),
@@ -154,7 +154,7 @@ int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid)
 {
 	struct tsg_gk20a *tsg = NULL;
 
-	if (tsgid < 0 || tsgid >= g->fifo.num_channels)
+	if (tsgid >= g->fifo.num_channels)
 		return -EINVAL;
 
 	tsg = &g->fifo.tsg[tsgid];
@@ -198,7 +198,7 @@ static int gk20a_tsg_set_priority(struct gk20a *g, struct tsg_gk20a *tsg,
 }
 
 static int gk20a_tsg_get_event_data_from_id(struct tsg_gk20a *tsg,
-				int event_id,
+				unsigned int event_id,
 				struct gk20a_event_id_data **event_id_data)
 {
 	struct gk20a_event_id_data *local_event_id_data;
@@ -383,7 +383,7 @@ static void release_used_tsg(struct fifo_gk20a *f, struct tsg_gk20a *tsg)
 static struct tsg_gk20a *acquire_unused_tsg(struct fifo_gk20a *f)
 {
 	struct tsg_gk20a *tsg = NULL;
-	int tsgid;
+	unsigned int tsgid;
 
 	mutex_lock(&f->tsg_inuse_mutex);
 	for (tsgid = 0; tsgid < f->num_channels; tsgid++) {

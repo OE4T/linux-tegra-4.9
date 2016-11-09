@@ -789,10 +789,10 @@ static void gk20a_remove_mm_ce_support(struct mm_gk20a *mm)
 	struct gk20a *g = gk20a_from_mm(mm);
 	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 
-	if (mm->vidmem.ce_ctx_id != ~0)
+	if (mm->vidmem.ce_ctx_id != (u32)~0)
 		gk20a_ce_delete_context(g->dev, mm->vidmem.ce_ctx_id);
 
-	mm->vidmem.ce_ctx_id = ~0;
+	mm->vidmem.ce_ctx_id = (u32)~0;
 
 	if (platform->has_ce)
 		gk20a_vm_remove_support_nofree(&mm->ce.vm);
@@ -836,7 +836,7 @@ static int gk20a_vidmem_clear_all(struct gk20a *g)
 	u64 region2_base = 0;
 	int err = 0;
 
-	if (mm->vidmem.ce_ctx_id == ~0)
+	if (mm->vidmem.ce_ctx_id == (u32)~0)
 		return -EINVAL;
 
 	err = gk20a_ce_execute_ops(g->dev,
@@ -989,7 +989,7 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 
 	gk20a_init_pramin(mm);
 
-	mm->vidmem.ce_ctx_id = ~0;
+	mm->vidmem.ce_ctx_id = (u32)~0;
 
 	err = gk20a_init_vidmem(mm);
 	if (err)
@@ -1119,7 +1119,7 @@ int gk20a_init_mm_support(struct gk20a *g)
 void gk20a_init_mm_ce_context(struct gk20a *g)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
-	if (g->mm.vidmem.size && (g->mm.vidmem.ce_ctx_id == ~0)) {
+	if (g->mm.vidmem.size && (g->mm.vidmem.ce_ctx_id == (u32)~0)) {
 		g->mm.vidmem.ce_ctx_id =
 			gk20a_ce_create_context_with_cb(g->dev,
 				gk20a_fifo_get_fast_ce_runlist_id(g),
@@ -1128,7 +1128,7 @@ void gk20a_init_mm_ce_context(struct gk20a *g)
 				-1,
 				NULL);
 
-		if (g->mm.vidmem.ce_ctx_id == ~0)
+		if (g->mm.vidmem.ce_ctx_id == (u32)~0)
 			gk20a_err(g->dev,
 				"Failed to allocate CE context for vidmem page clearing support");
 	}
@@ -3021,7 +3021,7 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct mem_desc *mem)
 	struct page_alloc_chunk *chunk = NULL;
 	int err = 0;
 
-	if (g->mm.vidmem.ce_ctx_id == ~0)
+	if (g->mm.vidmem.ce_ctx_id == (u32)~0)
 		return -EINVAL;
 
 	alloc = get_vidmem_page_alloc(mem->sgt->sgl);

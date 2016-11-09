@@ -26,7 +26,9 @@
 
 #define MAX_RUNLIST_BUFFERS	2
 
-#define FIFO_INVAL_ENGINE_ID	~0
+#define FIFO_INVAL_ENGINE_ID	((u32)~0)
+#define FIFO_INVAL_CHANNEL_ID	((u32)~0)
+#define FIFO_INVAL_TSG_ID	((u32)~0)
 
 /* generally corresponds to the "pbdma" engine */
 
@@ -96,11 +98,11 @@ struct fifo_engine_info_gk20a {
 
 struct fifo_gk20a {
 	struct gk20a *g;
-	int num_channels;
-	int runlist_entry_size;
-	int num_runlist_entries;
+	unsigned int num_channels;
+	unsigned int runlist_entry_size;
+	unsigned int num_runlist_entries;
 
-	int num_pbdma;
+	unsigned int num_pbdma;
 	u32 *pbdma_map;
 
 	struct fifo_engine_info_gk20a *engine_info;
@@ -114,7 +116,7 @@ struct fifo_gk20a {
 	struct mem_desc userd;
 	u32 userd_entry_size;
 
-	int used_channels;
+	unsigned int used_channels;
 	struct channel_gk20a *channel;
 	/* zero-kref'd channels here */
 	struct list_head free_chs;

@@ -192,7 +192,7 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 				       bool need_sync_fence)
 {
 	u32 thresh;
-	int incr_cmd_size;
+	size_t incr_cmd_size;
 	int off;
 	int err;
 	struct gk20a_channel_syncpt *sp =

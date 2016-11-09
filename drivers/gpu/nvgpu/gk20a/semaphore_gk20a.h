@@ -222,7 +222,7 @@ static inline bool gk20a_semaphore_is_released(struct gk20a_semaphore *s)
 	 * the value of the semaphore then the semaphore has been signaled
 	 * (a.k.a. released).
 	 */
-	return sema_val >= atomic_read(&s->value);
+	return (int)sema_val >= atomic_read(&s->value);
 }
 
 static inline bool gk20a_semaphore_is_acquired(struct gk20a_semaphore *s)
@@ -240,12 +240,12 @@ static inline u32 gk20a_semaphore_read(struct gk20a_semaphore *s)
 
 static inline u32 gk20a_semaphore_get_value(struct gk20a_semaphore *s)
 {
-	return atomic_read(&s->value);
+	return (u32)atomic_read(&s->value);
 }
 
 static inline u32 gk20a_semaphore_next_value(struct gk20a_semaphore *s)
 {
-	return atomic_read(&s->hw_sema->next_value);
+	return (u32)atomic_read(&s->hw_sema->next_value);
 }
 
 /*

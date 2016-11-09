@@ -114,14 +114,14 @@ int gk20a_fence_install_fd(struct gk20a_fence *f)
 #endif
 }
 
-int gk20a_alloc_fence_pool(struct channel_gk20a *c, int count)
+int gk20a_alloc_fence_pool(struct channel_gk20a *c, unsigned int count)
 {
 	int err;
 	size_t size;
 	struct gk20a_fence *fence_pool = NULL;
 
 	size = sizeof(struct gk20a_fence);
-	if (count <= ULONG_MAX / size) {
+	if (count <= UINT_MAX / size) {
 		size = count * size;
 		fence_pool = vzalloc(size);
 	}

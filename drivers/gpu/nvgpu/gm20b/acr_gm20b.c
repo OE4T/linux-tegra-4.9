@@ -1185,7 +1185,7 @@ int acr_ucode_patch_sig(struct gk20a *g,
 		unsigned int *p_patch_loc,
 		unsigned int *p_patch_ind)
 {
-	int i, *p_sig;
+	unsigned int i, *p_sig;
 	gm20b_dbg_pmu("");
 
 	if (!pmu_is_debug_mode_en(g)) {

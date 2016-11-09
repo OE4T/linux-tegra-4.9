@@ -67,8 +67,8 @@ struct gk20a_cde_hdr_replace {
 	u32 source_buf;
 	s32 shift;
 	u32 type;
-	s64 target_byte_offset;
-	s64 source_byte_offset;
+	u64 target_byte_offset;
+	u64 source_byte_offset;
 	u64 mask;
 };
 
@@ -113,7 +113,7 @@ struct gk20a_cde_hdr_param {
 	s32 shift;
 	u32 type;
 	s64 data_offset;
-	s64 target_byte_offset;
+	u64 target_byte_offset;
 	u64 mask;
 };
 
@@ -223,11 +223,11 @@ struct gk20a_cde_ctx {
 
 	/* buf converter configuration */
 	struct mem_desc mem[MAX_CDE_BUFS];
-	int num_bufs;
+	unsigned int num_bufs;
 
 	/* buffer patching params (where should patching be done) */
 	struct gk20a_cde_hdr_param params[MAX_CDE_PARAMS];
-	int num_params;
+	unsigned int num_params;
 
 	/* storage for user space parameter values */
 	u32 user_param_values[MAX_CDE_USER_PARAMS];

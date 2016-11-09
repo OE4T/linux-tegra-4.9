@@ -80,7 +80,7 @@ static void gm20b_fifo_trigger_mmu_fault(struct gk20a *g,
 		} else {
 			u32 mmu_id = gm20b_engine_id_to_mmu_id(g,
 								engine_id);
-			if (mmu_id != ~0)
+			if (mmu_id != (u32)~0)
 				gk20a_writel(g, fifo_trigger_mmu_fault_r(mmu_id),
 					     fifo_trigger_mmu_fault_enable_f(1));
 		}

@@ -212,7 +212,8 @@ static int gm206_bootstrap_hs_flcn(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
-	int i, err = 0;
+	unsigned int i;
+	int err = 0;
 	u64 *acr_dmem;
 	u32 img_size_in_bytes = 0;
 	u32 status;

@@ -51,12 +51,12 @@ static void gk20a_fb_set_mmu_page_size(struct gk20a *g)
 	gk20a_writel(g, fb_mmu_ctrl_r(), fb_mmu_ctrl);
 }
 
-static int gk20a_fb_compression_page_size(struct gk20a *g)
+static unsigned int gk20a_fb_compression_page_size(struct gk20a *g)
 {
 	return SZ_128K;
 }
 
-static int gk20a_fb_compressible_page_size(struct gk20a *g)
+static unsigned int gk20a_fb_compressible_page_size(struct gk20a *g)
 {
 	return SZ_64K;
 }

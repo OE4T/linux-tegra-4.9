@@ -140,7 +140,7 @@ static int gk20a_sched_dev_ioctl_get_tsgs_by_pid(struct gk20a_sched_ctrl *sched,
 	struct fifo_gk20a *f = &sched->g->fifo;
 	struct tsg_gk20a *tsg;
 	u64 *bitmap;
-	int tsgid;
+	unsigned int tsgid;
 	/* pid at user level corresponds to kernel tgid */
 	pid_t tgid = (pid_t)arg->pid;
 	int err = 0;
@@ -492,7 +492,7 @@ int gk20a_sched_dev_release(struct inode *inode, struct file *filp)
 	struct gk20a *g = sched->g;
 	struct fifo_gk20a *f = &g->fifo;
 	struct tsg_gk20a *tsg;
-	int tsgid;
+	unsigned int tsgid;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "sched: %p", sched);
 

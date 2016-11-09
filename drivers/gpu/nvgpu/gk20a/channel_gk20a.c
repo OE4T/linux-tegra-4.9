@@ -223,7 +223,7 @@ u32 channel_gk20a_pbdma_acquire_val(struct channel_gk20a *c)
 {
 	u32 val, exp, man;
 	u64 timeout;
-	int val_len;
+	unsigned int val_len;
 
 	val = pbdma_acquire_retry_man_2_f() |
 		pbdma_acquire_retry_exp_2_f();
@@ -238,7 +238,7 @@ u32 channel_gk20a_pbdma_acquire_val(struct channel_gk20a *c)
 	val_len = fls(timeout >> 32) + 32;
 	if (val_len == 32)
 		val_len = fls(timeout);
-	if (val_len > 16 + pbdma_acquire_timeout_exp_max_v()) { /* man: 16bits */
+	if (val_len > 16U + pbdma_acquire_timeout_exp_max_v()) { /* man: 16bits */
 		exp = pbdma_acquire_timeout_exp_max_v();
 		man = pbdma_acquire_timeout_man_max_v();
 	} else if (val_len > 16) {
@@ -1618,7 +1618,8 @@ bool channel_gk20a_is_prealloc_enabled(struct channel_gk20a *c)
 static int channel_gk20a_prealloc_resources(struct channel_gk20a *c,
 	       unsigned int num_jobs)
 {
-	int i, err;
+	unsigned int i;
+	int err;
 	size_t size;
 	struct priv_cmd_entry *entries = NULL;
 
@@ -3044,7 +3045,7 @@ const struct file_operations gk20a_event_id_ops = {
 };
 
 static int gk20a_channel_get_event_data_from_id(struct channel_gk20a *ch,
-				int event_id,
+				u32 event_id,
 				struct gk20a_event_id_data **event_id_data)
 {
 	struct gk20a_event_id_data *local_event_id_data;
@@ -3069,7 +3070,7 @@ static int gk20a_channel_get_event_data_from_id(struct channel_gk20a *ch,
 }
 
 void gk20a_channel_event_id_post_event(struct channel_gk20a *ch,
-				       int event_id)
+				       u32 event_id)
 {
 	struct gk20a_event_id_data *event_id_data;
 	int err = 0;

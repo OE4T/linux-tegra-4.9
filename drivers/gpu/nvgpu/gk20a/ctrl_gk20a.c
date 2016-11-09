@@ -581,7 +581,7 @@ static inline int get_timestamps_zipper(struct gk20a *g,
 		struct nvgpu_gpu_get_cpu_time_correlation_info_args *args)
 {
 	int err = 0;
-	int i = 0;
+	unsigned int i = 0;
 	u32 gpu_timestamp_hi_new = 0;
 	u32 gpu_timestamp_hi_old = 0;
 

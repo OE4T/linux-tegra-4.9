@@ -928,7 +928,7 @@ struct nvgpu_dbg_gpu_suspend_resume_contexts_args {
  */
 
 #define NVGPU_IOCTL_MAGIC 'H'
-#define NVGPU_NO_TIMEOUT (-1)
+#define NVGPU_NO_TIMEOUT ((u32)~0)
 #define NVGPU_PRIORITY_LOW 50
 #define NVGPU_PRIORITY_MEDIUM 100
 #define NVGPU_PRIORITY_HIGH 150

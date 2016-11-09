@@ -445,7 +445,7 @@ static int gk20a_sync_fill_driver_data(struct sync_pt *sync_pt,
 {
 	struct gk20a_sync_pt_info info;
 
-	if (size < sizeof(info))
+	if (size < (int)sizeof(info))
 		return -ENOMEM;
 
 	info.hw_op_ns = ktime_to_ns(gk20a_sync_pt_duration(sync_pt));

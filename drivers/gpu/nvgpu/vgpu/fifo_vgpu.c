@@ -184,7 +184,7 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 {
 	struct fifo_runlist_info_gk20a *runlist;
 	struct device *d = dev_from_gk20a(g);
-	s32 runlist_id = -1;
+	unsigned int runlist_id = -1;
 	u32 i;
 	u64 runlist_size;
 
@@ -238,7 +238,8 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 	struct fifo_gk20a *f = &g->fifo;
 	struct device *d = dev_from_gk20a(g);
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
-	int chid, err = 0;
+	unsigned int chid;
+	int err = 0;
 
 	gk20a_dbg_fn("");
 
@@ -486,7 +487,7 @@ static int vgpu_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 
 	/* valid channel, add/remove it from active list.
 	   Otherwise, keep active list untouched for suspend/resume. */
-	if (hw_chid != ~0) {
+	if (hw_chid != (u32)~0) {
 		if (add) {
 			if (test_and_set_bit(hw_chid,
 				runlist->active_channels) == 1)
@@ -498,7 +499,7 @@ static int vgpu_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 		}
 	}
 
-	if (hw_chid != ~0 || /* add/remove a valid channel */
+	if (hw_chid != (u32)~0 || /* add/remove a valid channel */
 	    add /* resume to add all channels back */) {
 		u32 chid;
 

@@ -334,8 +334,8 @@ struct gr_gk20a {
 	s32 max_default_color_index;
 	s32 max_default_depth_index;
 
-	s32 max_used_color_index;
-	s32 max_used_depth_index;
+	u32 max_used_color_index;
+	u32 max_used_depth_index;
 
 #define GR_CHANNEL_MAP_TLB_SIZE		2 /* must of power of 2 */
 	struct gr_channel_map_tlb_entry chid_tlb[GR_CHANNEL_MAP_TLB_SIZE];

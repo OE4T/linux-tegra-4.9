@@ -830,7 +830,7 @@ static int gm206_bios_preos(struct gk20a *g)
 
 static int gm206_bios_init(struct gk20a *g)
 {
-	int i;
+	unsigned int i;
 	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	struct dentry *d;
 	const struct firmware *bios_fw;

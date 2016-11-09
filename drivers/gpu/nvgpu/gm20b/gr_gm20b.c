@@ -548,11 +548,11 @@ static void gr_gm20b_load_tpc_mask(struct gk20a *g)
 
 	fuse_tpc_mask = g->ops.gr.get_gpc_tpc_mask(g, 0);
 	if (g->tpc_fs_mask_user && g->tpc_fs_mask_user != fuse_tpc_mask &&
-		fuse_tpc_mask == (0x1 << g->gr.max_tpc_count) - 1) {
+		fuse_tpc_mask == (0x1U << g->gr.max_tpc_count) - 1U) {
 		u32 val = g->tpc_fs_mask_user;
-		val &= (0x1 << g->gr.max_tpc_count) - 1;
+		val &= (0x1U << g->gr.max_tpc_count) - 1U;
 		/* skip tpc to disable the other tpc cause channel timeout */
-		val = (0x1 << hweight32(val)) - 1;
+		val = (0x1U << hweight32(val)) - 1U;
 		gk20a_writel(g, gr_fe_tpc_fs_r(), val);
 	} else {
 		gk20a_writel(g, gr_fe_tpc_fs_r(), pes_tpc_mask);

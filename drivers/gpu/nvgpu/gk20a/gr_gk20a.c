@@ -124,7 +124,7 @@ int gr_gk20a_get_ctx_id(struct gk20a *g,
 
 void gk20a_fecs_dump_falcon_stats(struct gk20a *g)
 {
-	int i;
+	unsigned int i;
 
 	gk20a_err(dev_from_gk20a(g), "gr_fecs_os_r : %d",
 		gk20a_readl(g, gr_fecs_os_r()));
@@ -1395,9 +1395,9 @@ int gr_gk20a_init_fs_state(struct gk20a *g)
 
 	fuse_tpc_mask = g->ops.gr.get_gpc_tpc_mask(g, 0);
 	if (g->tpc_fs_mask_user &&
-		fuse_tpc_mask == (0x1 << gr->max_tpc_count) - 1) {
+		fuse_tpc_mask == (0x1U << gr->max_tpc_count) - 1U) {
 		u32 val = g->tpc_fs_mask_user;
-		val &= (0x1 << gr->max_tpc_count) - 1;
+		val &= (0x1U << gr->max_tpc_count) - 1U;
 		gk20a_writel(g, gr_cwd_fs_r(),
 			gr_cwd_fs_num_gpcs_f(gr->gpc_count) |
 			gr_cwd_fs_num_tpcs_f(hweight32(val)));
@@ -1444,7 +1444,7 @@ static u32 gk20a_init_sw_bundle(struct gk20a *g)
 	struct av_list_gk20a *sw_bundle_init = &g->gr.ctx_vars.sw_bundle_init;
 	u32 last_bundle_data = 0;
 	u32 err = 0;
-	int i;
+	unsigned int i;
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 
@@ -2110,7 +2110,7 @@ static int gr_gk20a_copy_ctxsw_ucode_segments(
 	u32 *bootimage,
 	u32 *code, u32 *data)
 {
-	int i;
+	unsigned int i;
 
 	gk20a_mem_wr_n(g, dst, segments->boot.offset, bootimage,
 			segments->boot.size);
@@ -4048,7 +4048,8 @@ int gr_gk20a_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
 
 static int gr_gk20a_load_zbc_table(struct gk20a *g, struct gr_gk20a *gr)
 {
-	int i, ret;
+	unsigned int i;
+	int ret;
 
 	for (i = 0; i < gr->max_used_color_index; i++) {
 		struct zbc_color_table *c_tbl = &gr->zbc_col_tbl[i];
@@ -4898,7 +4899,7 @@ static int gr_gk20a_init_access_map(struct gk20a *g)
 		DIV_ROUND_UP(gr->ctx_vars.priv_access_map_size,
 			     PAGE_SIZE);
 	u32 *whitelist = NULL;
-	int num_entries = 0;
+	unsigned int num_entries = 0;
 
 	if (gk20a_mem_begin(g, mem)) {
 		gk20a_err(dev_from_gk20a(g),
@@ -6996,7 +6997,7 @@ static void gr_gk20a_access_smpc_reg(struct gk20a *g, u32 quad, u32 offset)
 	gk20a_writel(g, gpc_tpc_addr, reg);
 }
 
-#define ILLEGAL_ID (~0)
+#define ILLEGAL_ID ((u32)~0)
 
 static inline bool check_main_image_header_magic(u8 *context)
 {
@@ -8762,7 +8763,8 @@ int gr_gk20a_set_sm_debug_mode(struct gk20a *g,
 	struct channel_gk20a *ch, u64 sms, bool enable)
 {
 	struct nvgpu_dbg_gpu_reg_op *ops;
-	int i = 0, sm_id, err;
+	unsigned int i = 0, sm_id;
+	int err;
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
 

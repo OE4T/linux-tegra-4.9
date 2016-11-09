@@ -47,7 +47,7 @@ static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct gk20a *g);
 
 static void gk20a_deinit_cde_img(struct gk20a_cde_ctx *cde_ctx)
 {
-	int i;
+	unsigned int i;
 
 	for (i = 0; i < cde_ctx->num_bufs; i++) {
 		struct mem_desc *mem = cde_ctx->mem + i;
@@ -361,7 +361,8 @@ static int gk20a_cde_patch_params(struct gk20a_cde_ctx *cde_ctx)
 	struct mem_desc *target_mem;
 	u32 *target_mem_ptr;
 	u64 new_data;
-	int user_id = 0, i, err;
+	int user_id = 0, err;
+	unsigned int i;
 
 	for (i = 0; i < cde_ctx->num_params; i++) {
 		struct gk20a_cde_hdr_param *param = cde_ctx->params + i;
@@ -456,7 +457,7 @@ static int gk20a_init_cde_param(struct gk20a_cde_ctx *cde_ctx,
 	}
 
 	target_mem = cde_ctx->mem + param->target_buf;
-	if (target_mem->size< (param->target_byte_offset + 3)) {
+	if (target_mem->size < (param->target_byte_offset + 3)) {
 		gk20a_warn(cde_ctx->dev, "cde: invalid buffer parameter. param idx = %d, target_buf_offs=%lld, target_buf_size=%zu",
 			   cde_ctx->num_params, param->target_byte_offset,
 			   target_mem->size);
@@ -515,7 +516,7 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 {
 	struct nvgpu_gpfifo **gpfifo, *gpfifo_elem;
 	u32 *num_entries;
-	int i;
+	unsigned int i;
 
 	/* check command type */
 	if (op == TYPE_BUF_COMMAND_INIT) {
@@ -615,7 +616,7 @@ static int gk20a_init_cde_img(struct gk20a_cde_ctx *cde_ctx,
 	struct gk20a_cde_hdr_elem *elem;
 	u32 min_size = 0;
 	int err = 0;
-	int i;
+	unsigned int i;
 
 	min_size += 2 * sizeof(u32);
 	if (img->size < min_size) {

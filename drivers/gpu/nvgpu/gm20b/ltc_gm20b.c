@@ -198,7 +198,7 @@ void gm20b_ltc_init_fs_state(struct gk20a *g)
 void gm20b_ltc_isr(struct gk20a *g)
 {
 	u32 mc_intr, ltc_intr;
-	int ltc, slice;
+	unsigned int ltc, slice;
 	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
 	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
 
@@ -227,8 +227,8 @@ void gm20b_ltc_g_elpg_flush_locked(struct gk20a *g)
 	u32 data;
 	bool done[g->ltc_count];
 	s32 retry = 100;
-	int i;
-	int num_done = 0;
+	unsigned int i;
+	unsigned int num_done = 0;
 	u32 ltc_d = ltc_ltc1_ltss_g_elpg_r() - ltc_ltc0_ltss_g_elpg_r();
 
 	gk20a_dbg_fn("");
@@ -289,7 +289,7 @@ u32 gm20b_ltc_cbc_fix_config(struct gk20a *g, int base)
 void gm20b_flush_ltc(struct gk20a *g)
 {
 	unsigned long timeout;
-	int ltc;
+	unsigned int ltc;
 	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
 
 #define __timeout_init()				\

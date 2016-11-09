@@ -58,8 +58,8 @@
 extern struct device tegra_vpr_dev;
 
 struct gk20a_emc_params {
-	long bw_ratio;
-	long freq_last_set;
+	unsigned long bw_ratio;
+	unsigned long freq_last_set;
 };
 
 static void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
@@ -217,7 +217,7 @@ static void gk20a_tegra_postscale(struct device *dev,
 	struct clk *emc_clk = platform->clk[2];
 	enum tegra_chipid chip_id = tegra_get_chip_id();
 	unsigned long emc_target;
-	long emc_freq_lower, emc_freq_upper, emc_freq_rounded;
+	unsigned long emc_freq_lower, emc_freq_upper, emc_freq_rounded;
 
 	emc_target = gk20a_tegra_get_emc_rate(g, emc_params);
 
@@ -234,8 +234,10 @@ static void gk20a_tegra_postscale(struct device *dev,
 		break;
 
 	case TEGRA_CHIPID_TEGRA21:
-		emc_freq_lower = tegra_emc_round_rate_updown(emc_target, false);
-		emc_freq_upper = tegra_emc_round_rate_updown(emc_target, true);
+		emc_freq_lower = (unsigned long)
+			tegra_emc_round_rate_updown(emc_target, false);
+		emc_freq_upper = (unsigned long)
+			tegra_emc_round_rate_updown(emc_target, true);
 
 		/* round to the nearest frequency step */
 		if (emc_target < (emc_freq_lower + emc_freq_upper) / 2)
@@ -645,7 +647,7 @@ static int gk20a_tegra_get_clocks(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	char devname[16];
-	int i;
+	unsigned int i;
 	int ret = 0;
 
 	BUG_ON(GK20A_CLKS_MAX < ARRAY_SIZE(tegra_gk20a_clocks));

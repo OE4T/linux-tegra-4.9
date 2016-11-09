@@ -30,9 +30,9 @@ static int vgpu_exec_regops(struct dbg_session_gk20a *dbg_s,
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_reg_ops_params *p = &msg.params.reg_ops;
 	void *oob;
-	size_t oob_size;
+	size_t oob_size, ops_size;
 	void *handle = NULL;
-	int ops_size, err = 0;
+	int err = 0;
 
 	gk20a_dbg_fn("");
 	BUG_ON(sizeof(*ops) != sizeof(struct tegra_vgpu_reg_op));

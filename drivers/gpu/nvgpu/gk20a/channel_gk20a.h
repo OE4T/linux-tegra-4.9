@@ -188,7 +188,7 @@ struct channel_gk20a {
 	bool has_timedout;
 	u32 timeout_ms_max;
 	bool timeout_debug_dump;
-	u32 timeslice_us;
+	unsigned int timeslice_us;
 
 	struct dma_buf *error_notifier_ref;
 	struct nvgpu_notification *error_notifier;
@@ -309,11 +309,11 @@ int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 		int timeslice_period,
 		int *__timeslice_timeout, int *__timeslice_scale);
 int gk20a_channel_set_priority(struct channel_gk20a *ch, u32 priority);
-int gk20a_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice);
+int gk20a_channel_set_timeslice(struct channel_gk20a *ch, unsigned int timeslice);
 int gk20a_channel_set_runlist_interleave(struct channel_gk20a *ch,
 		u32 level);
 void gk20a_channel_event_id_post_event(struct channel_gk20a *ch,
-				       int event_id);
+				       u32 event_id);
 
 void gk20a_channel_setup_ramfc_for_privileged_channel(struct channel_gk20a *c);
 

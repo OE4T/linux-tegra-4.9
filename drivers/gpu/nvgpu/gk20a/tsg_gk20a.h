@@ -43,9 +43,9 @@ struct tsg_gk20a {
 	int num_active_channels;
 	struct mutex ch_list_lock;
 
-	int timeslice_us;
-	int timeslice_timeout;
-	int timeslice_scale;
+	unsigned int timeslice_us;
+	unsigned int timeslice_timeout;
+	unsigned int timeslice_scale;
 
 	struct gr_ctx_desc *tsg_gr_ctx;
 

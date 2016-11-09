@@ -101,12 +101,12 @@ static bool gm20b_fb_set_use_full_comp_tag_line(struct gk20a *g)
 	return true;
 }
 
-static int gm20b_fb_compression_page_size(struct gk20a *g)
+static unsigned int gm20b_fb_compression_page_size(struct gk20a *g)
 {
 	return SZ_128K;
 }
 
-static int gm20b_fb_compressible_page_size(struct gk20a *g)
+static unsigned int gm20b_fb_compressible_page_size(struct gk20a *g)
 {
 	return SZ_64K;
 }

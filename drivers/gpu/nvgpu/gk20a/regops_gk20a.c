@@ -35,7 +35,7 @@ static int regop_bsearch_range_cmp(const void *pkey, const void *pelem)
 	if (key < prange->base)
 		return -1;
 	else if (prange->base <= key && key < (prange->base +
-					       (prange->count * 4)))
+					       (prange->count * 4U)))
 		return 0;
 	return 1;
 }
@@ -379,7 +379,8 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 		      struct nvgpu_dbg_gpu_reg_op *ops,
 		      u64 num_ops)
 {
-	int err = 0, i;
+	int err = 0;
+	unsigned int i;
 	struct channel_gk20a *ch = NULL;
 	struct gk20a *g = dbg_s->g;
 	/*struct gr_gk20a *gr = &g->gr;*/
@@ -799,7 +800,8 @@ static int gk20a_apply_smpc_war(struct dbg_session_gk20a *dbg_s)
 	 * it was already swapped out in/out once or not, etc.
 	 */
 	struct nvgpu_dbg_gpu_reg_op ops[4];
-	int i;
+	unsigned int i;
+
 	for (i = 0; i < ARRAY_SIZE(ops); i++) {
 		ops[i].op     = REGOP(WRITE_32);
 		ops[i].type   = REGOP(TYPE_GR_CTX);

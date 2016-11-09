@@ -842,7 +842,7 @@ static const struct gk20a_allocator_ops page_ops = {
 static int gk20a_page_alloc_init_slabs(struct gk20a_page_allocator *a)
 {
 	size_t nr_slabs = ilog2(a->page_size >> 12);
-	int i;
+	unsigned int i;
 
 	a->slabs = kcalloc(nr_slabs,
 			   sizeof(struct page_alloc_slab),

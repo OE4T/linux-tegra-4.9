@@ -56,7 +56,7 @@ struct gk20a_platform {
 	bool has_syncpoints;
 
 	/* channel limit after which to start aggressive sync destroy */
-	int aggressive_sync_destroy_thresh;
+	unsigned int aggressive_sync_destroy_thresh;
 
 	/* flag to set sync destroy aggressiveness */
 	bool aggressive_sync_destroy;

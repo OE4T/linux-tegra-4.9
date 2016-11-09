@@ -2709,7 +2709,7 @@ static bool pmu_queue_has_room(struct pmu_gk20a *pmu,
 {
 	u32 head, tail;
 	bool rewind = false;
-	int free;
+	unsigned int free;
 
 	size = ALIGN(size, QUEUE_ALIGNMENT);
 
@@ -2955,7 +2955,8 @@ static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct device *d = dev_from_gk20a(g);
-	int i, err = 0;
+	unsigned int i;
+	int err = 0;
 	u8 *ptr;
 
 	gk20a_dbg_fn("");
@@ -4128,7 +4129,7 @@ static void pmu_dump_elpg_stats(struct pmu_gk20a *pmu)
 void pmu_dump_falcon_stats(struct pmu_gk20a *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
-	int i;
+	unsigned int i;
 
 	gk20a_err(dev_from_gk20a(g), "pwr_falcon_os_r : %d",
 		gk20a_readl(g, pwr_falcon_os_r()));

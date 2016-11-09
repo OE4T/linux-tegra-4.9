@@ -1971,7 +1971,7 @@ static void tegra_hv_vse_rng_drbg_exit(struct crypto_tfm *tfm)
 }
 
 static int tegra_hv_vse_rng_drbg_get_random(struct crypto_rng *tfm,
-	u8 *rdata, u32 dlen)
+	const u8 *src, unsigned int slen, u8 *rdata, unsigned int dlen)
 {
 	struct tegra_virtual_se_rng_context *rng_ctx = crypto_rng_ctx(tfm);
 	struct tegra_virtual_se_dev *se_dev = rng_ctx->se_dev;
@@ -2047,7 +2047,7 @@ exit:
 }
 
 static int tegra_hv_vse_rng_drbg_reset(struct crypto_rng *tfm,
-	u8 *seed, u32 slen)
+	const u8 *seed, unsigned int slen)
 {
 	return 0;
 }
@@ -2225,21 +2225,21 @@ static struct ahash_alg cmac_alg = {
 	}
 };
 
-static struct crypto_alg aes_rng = {
-	.cra_name = "rng_drbg",
-	.cra_driver_name = "rng_drbg-aes-tegra",
-	.cra_priority = 100,
-	.cra_flags = CRYPTO_ALG_TYPE_RNG,
-	.cra_ctxsize = sizeof(struct tegra_virtual_se_rng_context),
-	.cra_type = &crypto_rng_type,
-	.cra_module = THIS_MODULE,
-	.cra_init = tegra_hv_vse_rng_drbg_init,
-	.cra_exit = tegra_hv_vse_rng_drbg_exit,
-	.cra_u = {
-		.rng = {
-			.rng_make_random = tegra_hv_vse_rng_drbg_get_random,
-			.rng_reset = tegra_hv_vse_rng_drbg_reset,
-			.seedsize = TEGRA_VIRTUAL_SE_RNG_SEED_SIZE,
+static struct rng_alg rng_alg[] = {
+	{
+		.generate	= tegra_hv_vse_rng_drbg_get_random,
+		.seed		= tegra_hv_vse_rng_drbg_reset,
+		.seedsize	= TEGRA_VIRTUAL_SE_RNG_SEED_SIZE,
+		.base		= {
+			.cra_name = "rng_drbg",
+			.cra_driver_name = "rng_drbg-aes-tegra",
+			.cra_priority = 100,
+			.cra_flags = CRYPTO_ALG_TYPE_RNG,
+			.cra_ctxsize =
+				sizeof(struct tegra_virtual_se_rng_context),
+			.cra_module = THIS_MODULE,
+			.cra_init = tegra_hv_vse_rng_drbg_init,
+			.cra_exit = tegra_hv_vse_rng_drbg_exit,
 		}
 	}
 };
@@ -2490,7 +2490,7 @@ static int tegra_hv_vse_probe(struct platform_device *pdev)
 
 	if (engine_id == VIRTUAL_SE_AES0) {
 		mutex_init(&se_dev->mtx);
-		err = crypto_register_alg(&aes_rng);
+		err = crypto_register_rng(&rng_alg[0]);
 		if (err) {
 			dev_err(&pdev->dev,
 				"rng alg register failed. Err %d\n", err);

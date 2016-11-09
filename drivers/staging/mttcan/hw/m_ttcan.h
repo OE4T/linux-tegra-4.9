@@ -197,6 +197,15 @@ struct ttcanfd_frame {
 	u32 tstamp;
 };
 
+struct __attribute__((__packed__)) ivc_ttcanfd_frame {
+	u16 cmdid;
+	u16 ext_cmdid;
+	union {
+		struct ttcanfd_frame frame;
+		u32 data[19];
+	} payload;
+};
+
 struct ttcan_element_size {
 	u16 rx_fifo0;
 	u16 rx_fifo1;
@@ -285,8 +294,6 @@ struct ttcan_controller {
 	void __iomem *xbase;    /* extra registers are mapped */
 	void __iomem *mram_vbase;
 	size_t mram_base;
-	unsigned long tx_object;
-	unsigned long tx_obj_cancelled;
 	u8 tx_buf_dlc[32];
 	u32 id;
 	u32 proto_state;
@@ -294,12 +301,19 @@ struct ttcan_controller {
 	u32 intr_tt_enable_reg;
 	u32 ts_prescalar;
 	u32 tt_mem_elements;
+	unsigned long tx_object;
+	unsigned long tx_obj_cancelled;
 	int rxq0_mem;
 	int rxq1_mem;
 	int rxb_mem;
 	int evt_mem;
 	u16 list_status;	/* bit 0: 1=Full; */
 	u16 resv0;
+};
+
+struct ttcan_ivc_msg {
+	int length;
+	void *data;
 };
 
 static inline u8 ttcan_dlc2len(u8 dlc)
@@ -407,7 +421,7 @@ int ttcan_set_baudrate(struct ttcan_controller *ttcan, int fdflags);
 int ttcan_read_txevt_ram(struct ttcan_controller *ttcan,
 	u32 read_addr, struct mttcan_tx_evt_element *txevt);
 int ttcan_read_rx_msg_ram(struct ttcan_controller *ttcan,
-			  u32 addr_in_msg_ram,
+			  u64 addr_in_msg_ram,
 			  struct ttcanfd_frame *ttcanfd);
 int ttcan_write_tx_msg_ram(struct ttcan_controller *ttcan,
 			   u32 addr_in_msg_ram,

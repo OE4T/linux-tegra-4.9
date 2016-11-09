@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -28,7 +28,7 @@ int ttcan_read_txevt_ram(struct ttcan_controller *ttcan, u32 read_addr,
 	return 0;
 }
 
-int ttcan_read_rx_msg_ram(struct ttcan_controller *ttcan, u32 read_addrs,
+int ttcan_read_rx_msg_ram(struct ttcan_controller *ttcan, u64 read_addrs,
 			  struct ttcanfd_frame *ttcanfd)
 {
 	int i = 0, byte_index;

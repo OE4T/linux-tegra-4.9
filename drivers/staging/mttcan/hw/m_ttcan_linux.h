@@ -43,11 +43,13 @@
 #include <linux/spinlock.h>
 #include <linux/clocksource.h>
 #include <linux/platform/tegra/ptp-notifier.h>
+#include <linux/mailbox_client.h>
 #ifdef CONFIG_CLK_SRC_TEGRA18_US_TIMER
 #include <linux/tegra-us-timer.h>
 #endif
 
 #include <asm/io.h>
+#include "m_ttcan_ivc.h"
 
 #define MTTCAN_RX_FIFO_INTR     (0xFF)
 #define MTTCAN_RX_HP_INTR       (0x1 << 8)
@@ -63,6 +65,11 @@
 #define MTT_CAN_MAX_MRAM_ELEMS	9
 #define MTT_MAX_TX_CONF		4
 #define MTT_MAX_RX_CONF		3
+
+#define MTTCAN_POLL_TIME	50
+#define MTTCAN_HWTS_ROLLOVER	250
+/* block period in ms */
+#define TX_BLOCK_PERIOD 200
 
 struct can_gpio {
 	int gpio;
@@ -84,6 +91,9 @@ struct mttcan_priv {
 	struct timecounter tc;
 	struct hwtstamp_config hwtstamp_config;
 	struct notifier_block ttcan_nb;
+	struct mbox_client cl;
+	struct completion xfer_completion;
+	struct mbox_chan *mbox;
 	spinlock_t tc_lock;
 	spinlock_t tslock;
 	void __iomem *regs;
@@ -105,6 +115,7 @@ struct mttcan_priv {
 	u32 rx_conf[MTT_MAX_RX_CONF]; /*<rxb_dsize, rxq0_dsize, rxq1_dsize>*/
 	bool poll;
 	bool hwts_rx_en;
+	u32 resp;
 };
 
 int mttcan_create_sys_files(struct device *dev);

@@ -785,6 +785,7 @@ unsigned int ttcan_read_hp_mesgs(struct ttcan_controller *ttcan,
 	}
 	return 1;
 }
+
 /* Rx Buff Section */
 void ttcan_set_rx_buffers_elements(struct ttcan_controller *ttcan)
 {

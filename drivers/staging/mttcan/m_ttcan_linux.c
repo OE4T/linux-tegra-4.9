@@ -1,5 +1,5 @@
 /*
- * "drivers/net/can/m_ttcan/m_ttcan_linux.c"
+ * "drivers/staging/mttcan/m_ttcan_linux.c"
  *
  * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
  *
@@ -21,9 +21,6 @@
 
 #include "hw/m_ttcan.h"
 #include <linux/platform_device.h>
-
-#define MTTCAN_POLL_TIME 50
-#define MTTCAN_HWTS_ROLLOVER 250
 
 static __init int mttcan_hw_init(struct mttcan_priv *priv)
 {
@@ -702,12 +699,16 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 		/* Handle RX Fifo interrupt */
 		if (ir & MTTCAN_RX_FIFO_INTR) {
 			if (ir & MTT_IR_RF1L_MASK) {
+				netdev_warn(dev, "%s: some msgs lost on in Q1\n",
+					__func__);
 				ack = MTT_IR_RF1L_MASK;
 				ttcan_ir_write(priv->ttcan, ack);
 				mttcan_handle_lost_frame(dev, 1);
 				work_done++;
 			}
 			if (ir & MTT_IR_RF0L_MASK) {
+				netdev_warn(dev, "%s: some msgs lost on in Q0\n",
+					__func__);
 				ack = MTT_IR_RF0L_MASK;
 				ttcan_ir_write(priv->ttcan, ack);
 				mttcan_handle_lost_frame(dev, 0);
@@ -742,24 +743,6 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 							 FIFO_0, rec_msgs,
 							 quota - work_done);
 				pr_debug("%s: msg received in Q0\n", __func__);
-			}
-
-			if (ir & MTT_IR_RF0L_MASK) {
-				if (printk_ratelimit())
-					netdev_warn(dev,
-						"%s: some msgs lost in Q0\n",
-						__func__);
-				ack = MTT_IR_RF0L_MASK;
-				ttcan_ir_write(priv->ttcan, ack);
-			}
-
-			if (ir & MTT_IR_RF1L_MASK) {
-				if (printk_ratelimit())
-					netdev_warn(dev,
-						"%s: some msgs lost in Q1\n",
-						__func__);
-				ack = MTT_IR_RF1L_MASK;
-				ttcan_ir_write(priv->ttcan, ack);
 			}
 		}
 
@@ -958,7 +941,7 @@ static void mttcan_controller_config(struct net_device *dev)
 }
 
 /* Adjust the timer by resetting the timecounter structure periodically */
-void mttcan_timer_cb(unsigned long data)
+static void mttcan_timer_cb(unsigned long data)
 {
 	unsigned long flags;
 	u64 tref;
@@ -1417,8 +1400,7 @@ static void mttcan_unprepare_clock(struct mttcan_priv *priv)
 	clk_disable_unprepare(priv->cclk);
 }
 
-
-void unregister_mttcan_dev(struct net_device *dev)
+static void unregister_mttcan_dev(struct net_device *dev)
 {
 	struct mttcan_priv *priv = netdev_priv(dev);
 
@@ -1426,7 +1408,7 @@ void unregister_mttcan_dev(struct net_device *dev)
 	mttcan_pm_runtime_disable(priv);
 }
 
-void free_mttcan_dev(struct net_device *dev)
+static void free_mttcan_dev(struct net_device *dev)
 {
 	struct mttcan_priv *priv = netdev_priv(dev);
 	netif_napi_del(&priv->napi);

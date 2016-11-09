@@ -1,2 +1,3 @@
 
 obj-$(CONFIG_MTTCAN) += mttcan/
+obj-$(CONFIG_MTTCAN_IVC) += mttcan/

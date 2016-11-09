@@ -67,7 +67,7 @@ static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 	u32 target_vco_f, vco_f;
 	u32 ref_clk_f, target_clk_f, u_f;
 	u32 delta, lwv, best_delta = ~0;
-	int pl;
+	unsigned int pl;
 
 	BUG_ON(target_freq == NULL);
 
@@ -160,7 +160,7 @@ static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 	}
 
 found_match:
-	BUG_ON(best_delta == ~0);
+	BUG_ON(best_delta == ~0U);
 
 	if (best_fit && best_delta != 0)
 		gk20a_dbg_clk("no best match for target @ %dMHz on gpc_pll",

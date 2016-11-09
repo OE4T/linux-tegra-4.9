@@ -6620,7 +6620,7 @@ static int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 	u32 broadcast_flags;
 	u32 t;
 	int err;
-	u32 fbpa_num;
+	int fbpa_num;
 
 	t = 0;
 	*num_registers = 0;

@@ -221,7 +221,7 @@ static int clk_config_pll(struct clk_gk20a *clk, struct pll *pll,
 	}
 
 found_match:
-	BUG_ON(best_delta == ~0);
+	BUG_ON(best_delta == ~0U);
 
 	if (best_fit && best_delta != 0)
 		gk20a_dbg_clk("no best match for target @ %dMHz on gpc_pll",
@@ -363,7 +363,7 @@ static void clk_config_dvfs_ndiv(int mv, u32 n_eff, struct na_dvfs *d)
 	det_delta = det_delta * d->dfs_coeff;
 
 	n = (int)(n_eff << DFS_DET_RANGE) - det_delta;
-	BUG_ON((n < 0) || (n > (p->max_N << DFS_DET_RANGE)));
+	BUG_ON((n < 0) || (n > (int)(p->max_N << DFS_DET_RANGE)));
 	d->n_int = ((u32)n) >> DFS_DET_RANGE;
 
 	rem = ((u32)n) & ((1 << DFS_DET_RANGE) - 1);

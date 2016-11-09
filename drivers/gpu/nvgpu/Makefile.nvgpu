@@ -9,7 +9,9 @@ ccflags-y += -I../nvgpu/drivers/gpu/nvgpu/include
 ccflags-y += -Wno-multichar
 ccflags-y += -Werror
 ccflags-y += -Wno-error=cpp
-ccflags-y += -Wno-duplicate-decl-specifier
+ifeq ($(VERSION),4)
+ccflags-y += -Wextra -Wno-unused-parameter -Wno-missing-field-initializers
+endif
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 ccflags-y += -I$(srctree)/../nvgpu-t18x/drivers/gpu/nvgpu

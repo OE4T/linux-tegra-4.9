@@ -382,6 +382,7 @@ struct tegra_dc_ext_imp_head_results {
 	__u32	pipe_meter_value_win[TEGRA_DC_EXT_N_WINDOWS];
 	__u32	pool_config_entries_win[TEGRA_DC_EXT_N_WINDOWS];
 	__u32	metering_slots_value_cursor;
+	__u32	thresh_lwm_dvfs_cursor;
 	__u32	pipe_meter_value_cursor;
 	__u32	pool_config_entries_cursor;
 };

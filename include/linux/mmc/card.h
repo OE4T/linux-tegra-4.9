@@ -14,6 +14,7 @@
 #include <linux/mmc/core.h>
 #include <linux/mod_devicetable.h>
 
+#define MMC_CARD_CMDQ_BLK_SIZE 512
 struct mmc_cid {
 	unsigned int		manfid;
 	char			prod_name[8];
@@ -119,6 +120,9 @@ struct mmc_ext_csd {
 	u8			raw_pwr_cl_ddr_200_360;	/* 253 */
 	u8			raw_bkops_status;	/* 246 */
 	u8			raw_sectors[4];		/* 212 - 4 bytes */
+	u8			cmdq_mode_en;		/* 15 */
+	u8			cmdq_depth;		/* 307 */
+	u8			cmdq_support;		/* 308 */
 
 	unsigned int            feature_support;
 #define MMC_DISCARD_FEATURE	BIT(0)                  /* CMD38 feature */
@@ -264,6 +268,9 @@ struct mmc_card {
 #define MMC_CARD_REMOVED	(1<<4)		/* card has been removed */
 #define MMC_STATE_DOING_BKOPS	(1<<5)		/* card is doing BKOPS */
 #define MMC_STATE_SUSPENDED	(1<<6)		/* card is suspended */
+#define MMC_STATE_CMDQ		(1<<8)		/* card is in cmd queue mode */
+#define MMC_STATE_CMDQ_HALT	(1<<10)		/* card is in cmd queue halt mode */
+#define MMC_STATE_CMDQ_PAUSE	(1<<11)
 	unsigned int		quirks; 	/* card quirks */
 #define MMC_QUIRK_LENIENT_FN0	(1<<0)		/* allow SDIO FN0 writes outside of the VS CCCR range */
 #define MMC_QUIRK_BLKSZ_FOR_BYTE_MODE (1<<1)	/* use func->cur_blksize */
@@ -316,6 +323,7 @@ struct mmc_card {
 	struct dentry		*debugfs_root;
 	struct mmc_part	part[MMC_NUM_PHY_PARTITION]; /* physical partitions */
 	unsigned int    nr_parts;
+	bool			cmdq_init;	/* cmdq init done */
 };
 
 /*
@@ -453,6 +461,9 @@ static inline void __maybe_unused remove_quirk(struct mmc_card *card, int data)
 #define mmc_card_removed(c)	((c) && ((c)->state & MMC_CARD_REMOVED))
 #define mmc_card_doing_bkops(c)	((c)->state & MMC_STATE_DOING_BKOPS)
 #define mmc_card_suspended(c)	((c)->state & MMC_STATE_SUSPENDED)
+#define mmc_card_cmdq(c)   ((c)->state & MMC_STATE_CMDQ)
+#define mmc_card_cmdq_halt(c)   ((c)->state & MMC_STATE_CMDQ_HALT)
+#define mmc_card_cmdq_pause(c)   ((c)->state & MMC_STATE_CMDQ_PAUSE)
 
 #define mmc_card_set_present(c)	((c)->state |= MMC_STATE_PRESENT)
 #define mmc_card_set_readonly(c) ((c)->state |= MMC_STATE_READONLY)
@@ -463,6 +474,12 @@ static inline void __maybe_unused remove_quirk(struct mmc_card *card, int data)
 #define mmc_card_clr_doing_bkops(c)	((c)->state &= ~MMC_STATE_DOING_BKOPS)
 #define mmc_card_set_suspended(c) ((c)->state |= MMC_STATE_SUSPENDED)
 #define mmc_card_clr_suspended(c) ((c)->state &= ~MMC_STATE_SUSPENDED)
+#define mmc_card_set_cmdq(c)       ((c)->state |= MMC_STATE_CMDQ)
+#define mmc_card_clr_cmdq(c)       ((c)->state &= ~MMC_STATE_CMDQ)
+#define mmc_card_set_cmdq_halt(c)       ((c)->state |= MMC_STATE_CMDQ_HALT)
+#define mmc_card_clr_cmdq_halt(c)       ((c)->state &= ~MMC_STATE_CMDQ_HALT)
+#define mmc_card_set_cmdq_pause(c)       ((c)->state |= MMC_STATE_CMDQ_PAUSE)
+#define mmc_card_clr_cmdq_pause(c)       ((c)->state &= ~MMC_STATE_CMDQ_PAUSE)
 
 /*
  * Quirk add/remove for MMC products.
@@ -558,5 +575,4 @@ extern void mmc_unregister_driver(struct mmc_driver *);
 
 extern void mmc_fixup_device(struct mmc_card *card,
 			     const struct mmc_fixup *table);
-
 #endif /* LINUX_MMC_CARD_H */

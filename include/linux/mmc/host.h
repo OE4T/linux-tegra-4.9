@@ -1,6 +1,8 @@
 /*
  *  linux/include/linux/mmc/host.h
  *
+ *  Copyright (c) 2013-2016, NVIDIA CORPORATION. All Rights Reserved.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
@@ -22,6 +24,7 @@
 #include <linux/mmc/card.h>
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/pm.h>
+#include <linux/semaphore.h>
 
 struct mmc_ios {
 	unsigned int	clock;			/* clock rate */
@@ -81,6 +84,17 @@ struct mmc_ios {
 #define MMC_SET_DRIVER_TYPE_D	3
 
 	bool enhanced_strobe;			/* hs400es selection */
+};
+
+struct mmc_cmdq_host_ops {
+	int (*enable)(struct mmc_host *host);
+	void (*disable)(struct mmc_host *host, bool soft);
+	int (*request)(struct mmc_host *host, struct mmc_request *mrq);
+	int (*halt)(struct mmc_host *host, bool halt);
+	void (*post_req)(struct mmc_host *host, struct mmc_request *mrq,
+			int err);
+	int (*discard_task)(struct mmc_host *mmc, u32 tag, bool all);
+	void (*wait_cq_empty)(struct mmc_host *mmc);
 };
 
 struct mmc_host_ops {
@@ -163,10 +177,33 @@ struct mmc_host_ops {
 	int	(*multi_io_quirk)(struct mmc_card *card,
 				  unsigned int direction, int blk_size);
 	void	(*post_init)(struct mmc_host *host);
+	void	(*clear_cqe_intr)(struct mmc_host *host, u32 intmask);
+	void	(*discard_cqe_task)(struct mmc_host *host, u8 tag, bool all);
+	void	(*enable_host_int)(struct mmc_host *host, bool enable);
 };
 
 struct mmc_card;
 struct device;
+
+struct mmc_cmdq_req {
+	unsigned int cmd_flags;
+	u32 blk_addr;
+	/* active mmc request */
+	struct mmc_request	mrq;
+	struct mmc_command	task_mgmt;
+	struct mmc_data		data;
+	struct mmc_command	cmd;
+#define DCMD	(1 << 0)
+#define QBR	(1 << 1)
+#define DIR	(1 << 2)
+#define PRIO	(1 << 3)
+#define REL_WR	(1 << 4)
+#define DAT_TAG	(1 << 5)
+#define FORCED_PRG (1 << 6)
+	unsigned int		cmdq_req_flags;
+	int			tag; /* used for command queuing */
+	u8			ctx_id;
+};
 
 struct mmc_async_req {
 	/* active mmc request */
@@ -210,6 +247,36 @@ struct mmc_context_info {
 	spinlock_t		lock;
 };
 
+enum cmdq_states {
+		CMDQ_STATE_HALT = 1,
+		CMDQ_STATE_ERR,
+};
+
+/**
+ * mmc_cmdq_context_info - describes the contexts of cmdq
+ * @active_reqs		requests being processed
+ * @active_dcmd		dcmd in progress, don't issue any
+ *			more dcmd requests
+ * @rpmb_in_wait	do not pull any more reqs till rpmb is handled
+ * @cmdq_state		state of cmdq engine
+ * @req_starved		completion should invoke the request_fn since
+ *			no tags were available
+ * @cmdq_ctx_lock	acquire this before accessing this structure
+ */
+struct mmc_cmdq_context_info {
+	unsigned long	active_reqs; /* in-flight requests */
+	bool		active_dcmd;
+	bool		rpmb_in_wait;
+	bool		active_ncqcmd; /* Non CQ command like CMD8 */
+	bool		active_qbr;
+	enum cmdq_states curr_state;
+
+	/* no free tag available */
+	unsigned long	req_starved;
+	spinlock_t	cmdq_ctx_lock;
+	struct semaphore	thread_sem;
+};
+
 struct regulator;
 struct mmc_pwrseq;
 
@@ -224,6 +291,7 @@ struct mmc_host {
 	int			index;
 	const struct mmc_host_ops *ops;
 	struct mmc_pwrseq	*pwrseq;
+	const struct mmc_cmdq_host_ops *cmdq_ops;
 	unsigned int		f_min;
 	unsigned int		f_max;
 	unsigned int		f_init;
@@ -316,6 +384,8 @@ struct mmc_host {
 #define MMC_CAP2_NO_MMC		(1 << 22)	/* Do not send (e)MMC commands during initialization */
 #define MMC_CAP2_HS533		(1 << 23)	/* Can support HS533 */
 #define MMC_CAP2_NO_EXTENDED_GP	(1 << 24)	/* Do not support extended GP */
+#define MMC_CAP2_HW_CQ		(1 << 25)	/* support eMMC command queue */
+#define MMC_CAP2_CMDQ_QBR	(1 << 26)	/* CMDQ Queue barrier supported */
 
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
 
@@ -399,6 +469,16 @@ struct mmc_host {
 
 	unsigned int		slotno;	/* used for sdio acpi binding */
 
+	unsigned int	cmdq_slots;
+	struct mmc_cmdq_context_info	cmdq_ctx;
+	/*
+	 * several cmdq supporting host controllers are extensions
+	 * of legacy controllers. This variable can be used to store
+	 * a reference to the cmdq extension of the existing host
+	 * controller.
+	 */
+	void *cmdq_private;
+
 	int			dsr_req;	/* DSR value is valid */
 	u32			dsr;	/* optional driver stage (DSR) value */
 
@@ -432,6 +512,11 @@ extern void mmc_set_embedded_sdio_data(struct mmc_host *host,
 				       struct sdio_embedded_func *funcs,
 				       int num_funcs);
 #endif
+
+static inline void *mmc_cmdq_private(struct mmc_host *host)
+{
+	return host->cmdq_private;
+}
 
 static inline void *mmc_priv(struct mmc_host *host)
 {

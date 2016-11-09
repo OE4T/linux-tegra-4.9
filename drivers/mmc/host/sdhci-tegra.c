@@ -1260,7 +1260,7 @@ static const struct sdhci_pltfm_data sdhci_tegra186_pdata = {
 	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN |
 		SDHCI_QUIRK2_USE_64BIT_ADDR |
 		SDHCI_QUIRK2_HOST_OFF_CARD_ON,
-	.ops  = &tegra114_sdhci_ops,
+	.ops  = &tegra_sdhci_ops,
 };
 
 static const struct sdhci_tegra_soc_data soc_data_tegra186 = {

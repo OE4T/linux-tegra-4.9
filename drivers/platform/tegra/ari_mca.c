@@ -1170,19 +1170,21 @@ static int ari_serr_hook(struct pt_regs *regs, int reason,
 	u64 status;
 	struct ari_mca_bank *bank;
 	unsigned long flags;
+	bool clear_srr = 0;
 
 	/* Iterate through the banks looking for one with an error */
 	raw_spin_lock_irqsave(&ari_mca_lock, flags);
 	list_for_each_entry(bank, &ari_mca_list, node) {
 	    if (read_bank_status(bank, &status, 0) != 0)
 			continue;
-		if ((status & SERRi_STATUS_VAL) &&
-		    !bank->processed) {
+		if (status & SERRi_STATUS_VAL) {
 			save_bank(bank, 0);
 			print_bank(bank);
-			bank->processed = 1;
+			clear_srr = 1;
 		}
 	}
+	if (clear_srr)
+		tegra18_clear_serr();
 	raw_spin_unlock_irqrestore(&ari_mca_lock, flags);
 	return 0;	/* Not handled */
 }

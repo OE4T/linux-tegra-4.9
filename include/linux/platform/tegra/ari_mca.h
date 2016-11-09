@@ -242,3 +242,5 @@ enum {
  */
 #define get_mca_addr_type(_x_)		MCA_ARI_EXTRACT(_x_, 41, 40)
 #define get_mca_addr_addr(_x_)		MCA_ARI_EXTRACT(_x_, 39, 0)
+
+void tegra18_clear_serr(void);

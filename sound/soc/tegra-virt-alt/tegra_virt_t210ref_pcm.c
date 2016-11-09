@@ -1,7 +1,7 @@
 /*
  * tegra_virt_t210ref_pcm.c - Tegra T210 reference virtual PCM driver
  *
- * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1878,6 +1878,45 @@ static int tegra186_virt_arad_get_lane_ratio(
 }
 #endif
 
+static int tegra_virt_t210_amx_get_input_stream_enable(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	return 0;
+}
+
+static int tegra_virt_t210_amx_set_input_stream_enable(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_AMX_SET_INPUT_STREAM_ENABLE;
+	msg.params.amx_info.amx_id = (((int) reg) >>
+				MIXER_CONFIG_SHIFT_VALUE) & 0xFFFF;
+	msg.params.amx_info.amx_stream_id = ((int) reg) & 0xFFFF;
+	msg.params.amx_info.amx_stream_enable =
+		ucontrol->value.integer.value[0];
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+
 static const struct soc_enum tegra_virt_t210ref_source =
 	SOC_ENUM_SINGLE_EXT(NUM_MUX_INPUT, tegra_virt_t210ref_source_text);
 
@@ -2050,6 +2089,12 @@ static int32_t tegra210_adsp_hv_req_adsp_assignment(
 	tegra186_virt_arad_get_lane_ratio, NULL)
 
 #endif
+
+#define AMX_ENABLE_CTRL_DECL(ename, reg1, reg2) \
+	SOC_SINGLE_EXT(ename, REG_PACK(reg1, reg2),  \
+	0, 1, 0,	\
+	tegra_virt_t210_amx_get_input_stream_enable,	\
+	tegra_virt_t210_amx_set_input_stream_enable)
 
 static const struct snd_kcontrol_new tegra_virt_t210ref_controls[] = {
 MUX_ENUM_CTRL_DECL("ADMAIF1 Mux", 0x00),
@@ -2304,6 +2349,25 @@ ARAD_LANE_RATIO_CTRL_DECL("Lane3 Ratio", 0x02),
 ARAD_LANE_RATIO_CTRL_DECL("Lane4 Ratio", 0x03),
 ARAD_LANE_RATIO_CTRL_DECL("Lane5 Ratio", 0x04),
 ARAD_LANE_RATIO_CTRL_DECL("Lane6 Ratio", 0x05),
+#endif
+
+AMX_ENABLE_CTRL_DECL("AMX1-1 Enable", 0x01, 0x01),
+AMX_ENABLE_CTRL_DECL("AMX1-2 Enable", 0x01, 0x02),
+AMX_ENABLE_CTRL_DECL("AMX1-3 Enable", 0x01, 0x03),
+AMX_ENABLE_CTRL_DECL("AMX1-4 Enable", 0x01, 0x04),
+AMX_ENABLE_CTRL_DECL("AMX2-1 Enable", 0x02, 0x01),
+AMX_ENABLE_CTRL_DECL("AMX2-2 Enable", 0x02, 0x02),
+AMX_ENABLE_CTRL_DECL("AMX2-3 Enable", 0x02, 0x03),
+AMX_ENABLE_CTRL_DECL("AMX2-4 Enable", 0x02, 0x04),
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+AMX_ENABLE_CTRL_DECL("AMX3-1 Enable", 0x03, 0x01),
+AMX_ENABLE_CTRL_DECL("AMX3-2 Enable", 0x03, 0x02),
+AMX_ENABLE_CTRL_DECL("AMX3-3 Enable", 0x03, 0x03),
+AMX_ENABLE_CTRL_DECL("AMX3-4 Enable", 0x03, 0x04),
+AMX_ENABLE_CTRL_DECL("AMX4-1 Enable", 0x04, 0x01),
+AMX_ENABLE_CTRL_DECL("AMX4-2 Enable", 0x04, 0x02),
+AMX_ENABLE_CTRL_DECL("AMX4-3 Enable", 0x04, 0x03),
+AMX_ENABLE_CTRL_DECL("AMX4-4 Enable", 0x04, 0x04),
 #endif
 };
 

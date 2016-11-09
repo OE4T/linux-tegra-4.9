@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -82,6 +82,7 @@ enum nvaudio_ivc_cmd_t {
 	NVAUDIO_ARAD_GET_LANE_RATIO,
 #endif
 	NVAUDIO_ADSP_REQUEST_ASSIGNMENT,
+	NVAUDIO_AMX_SET_INPUT_STREAM_ENABLE,
 	NVAUDIO_CMD_MAX,
 };
 
@@ -91,6 +92,12 @@ struct nvaudio_ivc_t124_dam_info {
 	uint32_t	out_srate;
 	uint32_t	channel_reg;
 	uint32_t	gain;
+};
+
+struct nvaudio_ivc_t210_amx_info {
+	int32_t		amx_id;
+	uint32_t	amx_stream_id;
+	uint32_t	amx_stream_enable;
 };
 
 struct nvaudio_ivc_t210_amixer_info {
@@ -159,6 +166,7 @@ struct nvaudio_ivc_msg {
 		struct nvaudio_ivc_t186_asrc_info	asrc_info;
 		struct nvaudio_ivc_t186_arad_info	arad_info;
 #endif
+		struct nvaudio_ivc_t210_amx_info	amx_info;
 		struct nvaudio_ivc_xbar_link		xbar_info;
 	} params;
 	bool			ack_required;

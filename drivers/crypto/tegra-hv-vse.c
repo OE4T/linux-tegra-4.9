@@ -488,7 +488,7 @@ static int tegra_hv_vse_prepare_ivc_linked_list(
 			i++;
 		}
 		total_len -= len;
-		src_sg = scatterwalk_sg_next(src_sg);
+		src_sg = sg_next(src_sg);
 	}
 	*num_lists = i;
 
@@ -497,7 +497,7 @@ exit:
 	src_sg = sg;
 	while (src_sg && sg_count--) {
 		dma_unmap_sg(se_dev->dev, src_sg, 1, dir);
-		src_sg = scatterwalk_sg_next(src_sg);
+		src_sg = sg_next(src_sg);
 	}
 
 	return err;
@@ -509,7 +509,7 @@ static int tegra_hv_vse_count_sgs(struct scatterlist *sl, u32 nbytes)
 	int sg_nents = 0;
 
 	while (sg) {
-		sg = scatterwalk_sg_next(sg);
+		sg = sg_next(sg);
 		sg_nents++;
 		nbytes -= min(sl->length, nbytes);
 		if (!nbytes)
@@ -705,7 +705,7 @@ static int  tegra_hv_vse_sha_final(struct ahash_request *req)
 	sg = req->src;
 	while (sg) {
 		dma_unmap_sg(se_dev->dev, sg, 1, DMA_TO_DEVICE);
-		sg = scatterwalk_sg_next(sg);
+		sg = sg_next(sg);
 	}
 
 exit:
@@ -1126,10 +1126,10 @@ static void tegra_hv_vse_copy_to_dst_sg(struct tegra_virtual_se_dev *se_dev,
 		total_len -= len;
 
 		if (src_len == 0)
-			src_sg = scatterwalk_sg_next(src_sg);
+			src_sg = sg_next(src_sg);
 
 		if (dst_len == 0)
-			dst_sg = scatterwalk_sg_next(dst_sg);
+			dst_sg = sg_next(dst_sg);
 	}
 }
 
@@ -1256,7 +1256,7 @@ exit:
 		num_lists = se_dev->num_sg[k];
 		while (dst_sg && num_lists--) {
 			dma_unmap_sg(se_dev->dev, dst_sg, 1, DMA_BIDIRECTIONAL);
-			dst_sg = scatterwalk_sg_next(dst_sg);
+			dst_sg = sg_next(dst_sg);
 		}
 	}
 err_exit:
@@ -1712,7 +1712,7 @@ unmap_exit:
 	src_sg = req->src;
 	while (src_sg) {
 		dma_unmap_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE);
-		src_sg = scatterwalk_sg_next(src_sg);
+		src_sg = sg_next(src_sg);
 	}
 exit:
 	if (cmac_buffer)

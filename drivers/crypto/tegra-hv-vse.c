@@ -133,7 +133,7 @@ union tegra_virtual_se_aes_args {
 };
 
 union tegra_virtual_se_rsa_args {
-	struct key {
+	struct tegra_virtual_key {
 		u8 slot;
 		u32 length;
 		u8 data[256];

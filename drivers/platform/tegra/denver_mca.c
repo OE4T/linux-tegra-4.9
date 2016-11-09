@@ -206,6 +206,7 @@ static int denver_mca_handler(void)
 	u64 bank_count;
 	struct denver_mca_bank *bank;
 	unsigned long flags;
+	int retval = 1;
 
 	/* Ask the hardware how many banks exist */
 	asm volatile("mrs %0, s3_0_c15_c3_0" : "=r" (bank_count) : );
@@ -216,12 +217,14 @@ static int denver_mca_handler(void)
 	list_for_each_entry(bank, &denver_mca_list, node) {
 		if ((bank->bank <= bank_count) && (bank->bank != 1)) {
 			status = bank->stat();
-			if (status & SERRi_STATUS_VAL)
+			if (status & SERRi_STATUS_VAL) {
 				print_bank(bank, status, -1);
+				retval = 0;
+			}
 		}
 	}
 	raw_spin_unlock_irqrestore(&denver_mca_lock, flags);
-	return 0;	/* Not handled */
+	return retval;
 }
 
 /* MCA assert register dump */
@@ -231,26 +234,28 @@ static int denver_assert_mca_handler(void)
 	struct denver_mca_bank *bank;
 	unsigned long flags;
 	int cpu;
+	int retval = 1;
 
 	/* Find the other Denver cores */
 	for_each_online_cpu(cpu) {
-	    if (tegra18_is_cpu_denver(cpu)) {
-	        raw_spin_lock_irqsave(&denver_mca_lock, flags);
-		list_for_each_entry(bank, &denver_mca_list, node) {
-		    if (bank->bank == 1) {
-		        if (read_denver_bank_status(bank, cpu, &status) != 0)
-		            continue;
-		        if ((status & SERRi_STATUS_VAL) && !bank->processed) {
-			    print_bank(bank, status, cpu);
-			    bank->processed = 1;
-		        }
-		    }
+		if (tegra18_is_cpu_denver(cpu)) {
+			raw_spin_lock_irqsave(&denver_mca_lock, flags);
+			list_for_each_entry(bank, &denver_mca_list, node) {
+				if (bank->bank == 1) {
+					if (read_denver_bank_status(
+						bank, cpu, &status) != 0)
+						continue;
+					if (status & SERRi_STATUS_VAL) {
+						print_bank(bank, status, cpu);
+						retval = 0;
+					}
+				}
+			}
+			raw_spin_unlock_irqrestore(&denver_mca_lock, flags);
 		}
-		raw_spin_unlock_irqrestore(&denver_mca_lock, flags);
-	    }
 	}
 
-	return 0;
+	return retval;
 }
 
 /* Handle SError for Denver cores */
@@ -258,20 +263,19 @@ static int denver_serr_hook(struct pt_regs *regs, int reason,
 			unsigned int esr, void *priv)
 {
 	u64 serr_status;
-	int ret;
+	int ret = 1;
 
 	/* Check that this is a Denver CPU */
 	if (read_cpuid_implementor() != ARM_CPU_IMP_NVIDIA)
-		return 0;
+		return 1;
 
 	asm volatile("mrs %0, s3_0_c15_c3_1" : "=r" (serr_status));
 	if (serr_status & 4) {
 		ret = denver_mca_handler();
 		serr_status = 0;
 		asm volatile("msr s3_0_c15_c3_1, %0" : : "r" (serr_status));
-		return ret;
 	}
-	return 0;	/* Not handled */
+	return ret;
 }
 
 /*
@@ -285,11 +289,11 @@ static int denver_serr_hook(struct pt_regs *regs, int reason,
 static int denver_assert_serr_hook(struct pt_regs *regs, int reason,
 			unsigned int esr, void *priv)
 {
-	int ret;
+	int ret = 1;
 
 	/* Run the denver_assert_mca_handler() only on A57 */
 	if (read_cpuid_implementor() == ARM_CPU_IMP_NVIDIA)
-		return 0;
+		return ret;
 
 	ret = denver_assert_mca_handler();
 	return ret;

@@ -18,7 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#define pr_fmt(fmt) "ecc-err: " fmt
+#define pr_fmt(fmt) "dram-ecc: " fmt
 
 #include <linux/kernel.h>
 #include <linux/uaccess.h>
@@ -33,7 +33,6 @@
 #include <linux/platform/tegra/mcerr_ecc_t18x.h>
 #include <linux/platform/tegra/tegra18_emc.h>
 #include <linux/platform/tegra/tegra_emc_err.h>
-#include <linux/tegra-pmc.h>
 
 static struct mc_ecc_err_log ecc_log;
 static u32 mc_emem_arb_misc1;
@@ -45,9 +44,6 @@ static u32 emc_int_status[MAX_CHANNELS];
 static u32 gbl_int_status;
 u32 ecc_int_mask;
 static u32 ecc_err_silenced;
-
-#define PMC_IMPL_CNTRL_0                          0x00
-#define MAIN_RST_MASK                             (1<<0x4)
 
 #define ecc_err_pr(fmt, ...)					\
 	do {							\
@@ -308,10 +304,6 @@ static void mc_check_ecc_err(struct mc_ecc_err_log *pecclog, u32 ch)
 		ecc_err_pr("------DBE ERR, addr:0x%016llx\n", addr);
 		err = true;
 		mc_ecc_dump_regs(pecclog);
-		ecc_err_pr("------Rebooting for DBE-----\n");
-		/* Trigger L1C Reset at PMC */
-		tegra186_pmc_register_update(PMC_IMPL_CNTRL_0, MAIN_RST_MASK,
-							MAIN_RST_MASK);
 	}
 
 	if (err)
@@ -620,6 +612,36 @@ static int mc_ecc_debugfs_init(struct dentry *mc_parent)
 	return 0;
 }
 
+static u32 mc_ecc_check_err_handling(void)
+{
+	struct device_node *rtcpu_sce = of_find_node_by_path("/rtcpu@b000000");
+	u32 handle_ecc_err;
+
+	if (!rtcpu_sce) {
+		pr_err("Unable to get rtcpu_sce node, Handle DRAM ECC Errors in Kernel\n");
+		handle_ecc_err = 1;
+		goto exit;
+	}
+
+	if (of_device_is_available(rtcpu_sce)) {
+		/*
+		 * if rtcpu@b000000 is enabled SCE is booted with Camera FW
+		 * ,So we handle DRAM ECC errors @ CCPLEX from Kernel
+		*/
+		pr_info("DRAM ECC interrupts handled in Kernel\n");
+		handle_ecc_err = 1;
+	} else {
+		/*
+		 * if rtcpu@b000000 is disabled SCE is booted with sample
+		 * safety FW, so we handle DRAM ECC errors @ SCE
+		*/
+		pr_info("DRAM ECC interrupts handled in SCE FW\n");
+		handle_ecc_err = 0;
+	}
+exit:
+	return handle_ecc_err;
+}
+
 static int mc_ecc_err_init(struct dentry *mc_parent,
 				struct platform_device *pdev)
 {
@@ -701,13 +723,16 @@ void tegra_emcerr_init(struct dentry *mc_parent, struct platform_device *pdev)
 	u32 mc_ecc_control = mc_readl(MC_ECC_CONTROL);
 
 	if (mc_ecc_control & 1) {
-		pr_info("dram ecc enabled-MC_ECC_CONTROL:0x%08x\n",
+		pr_info("DRAM ECC enabled-MC_ECC_CONTROL:0x%08x\n",
 							mc_ecc_control);
-		if (mc_ecc_err_init(mc_parent, pdev))
-			pr_err("ecc error init failed\n");
+
+		if (mc_ecc_check_err_handling()) {
+			if (mc_ecc_err_init(mc_parent, pdev))
+				pr_err("ecc error init failed\n");
+		}
 
 	} else {
-		pr_info("dram ecc disabled-MC_ECC_CONTROL:0x%08x\n",
+		pr_info("DRAM ECC disabled-MC_ECC_CONTROL:0x%08x\n",
 							mc_ecc_control);
 	}
 }

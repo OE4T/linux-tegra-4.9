@@ -946,6 +946,54 @@ static inline u32 nvdisp_cursor_cropped_size_in_height_range_v(u32 r)
 {
 	return (r >> 16) & 0xffff;
 }
+static inline u32 nvdisp_ihub_cursor_latency_ctla_r(void)
+{
+	return 0x00000382;
+}
+static inline u32 nvdisp_ihub_cursor_latency_ctla_submode_v(u32 r)
+{
+	return (r >> 0) & 0x3;
+}
+static inline u32 nvdisp_ihub_cursor_latency_ctla_submode_watermark_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_ihub_cursor_latency_ctla_submode_vblank_f(void)
+{
+	return 0x1;
+}
+static inline u32 nvdisp_ihub_cursor_latency_ctla_submode_watermark_and_vblank_f(void)
+{
+	return 0x2;
+}
+static inline u32 nvdisp_ihub_cursor_latency_ctla_ctl_mode_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 nvdisp_ihub_cursor_latency_ctla_ctl_mode_enable_f(void)
+{
+	return 0x4;
+}
+static inline u32 nvdisp_ihub_cursor_latency_ctlb_r(void)
+{
+	return 0x00000383;
+}
+static inline u32 nvdisp_ihub_cursor_latency_ctlb_status_above_watermark_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 nvdisp_ihub_cursor_latency_ctlb_status_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 nvdisp_ihub_cursor_latency_ctlb_status_above_watermark_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 nvdisp_ihub_cursor_latency_ctlb_watermark_f(u32 v)
+{
+	return (v & 0x1fffffff) << 0;
+}
 static inline u32 nvdisp_cursor_pipe_meter_r(void)
 {
 	return 0x00000450;

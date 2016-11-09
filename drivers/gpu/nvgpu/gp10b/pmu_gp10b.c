@@ -250,13 +250,14 @@ int gp10b_pg_gr_init(struct gk20a *g, u32 pg_engine_id)
 	return 0;
 }
 
-void gp10b_pmu_elpg_statistics(struct gk20a *g,
+void gp10b_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 		u32 *ingating_time, u32 *ungating_time, u32 *gating_cnt)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_pg_stats_v1 stats;
 
-	pmu_copy_from_dmem(pmu, pmu->stat_dmem_offset,
+	pmu_copy_from_dmem(pmu,
+		pmu->stat_dmem_offset[pg_engine_id],
 		(u8 *)&stats, sizeof(struct pmu_pg_stats_v1), 0);
 
 	*ingating_time = stats.total_sleep_timeus;

@@ -151,6 +151,7 @@ struct mrq_response {
 #define MRQ_EMC_DVFS_LATENCY	31
 #define MRQ_TRACE_ITER		64
 #define MRQ_RINGBUF_CONSOLE	65
+#define MRQ_PG			66
 
 /** @} */
 
@@ -159,7 +160,7 @@ struct mrq_response {
  * @brief Maximum MRQ code to be sent by CPU software to
  * BPMP. Subject to change in future
  */
-#define MAX_CPU_MRQ_ID		65
+#define MAX_CPU_MRQ_ID		66
 
 /**
  * @addtogroup MRQ_Payloads Message Payloads
@@ -1132,7 +1133,9 @@ struct mrq_pg_read_state_response {
 /**
  * @ingroup MRQ_Codes
  * @def MRQ_PG_UPDATE_STATE
- * @brief modify the power-gating state of a partition
+ * @brief modify the power-gating state of a partition. In contrast to
+ * MRQ_PG calls, the operations that change state (on/off) of power
+ * partition are reference counted.
  *
  * * Platforms: T186
  * * Initiators: Any
@@ -1175,6 +1178,171 @@ struct mrq_pg_update_state_request {
 	uint32_t clock_state;
 } __ABI_PACKED;
 /** @} */
+
+/**
+ * @ingroup MRQ_Codes
+ * @def MRQ_PG
+ * @brief Control power-gating state of a partition. In contrast to
+ * MRQ_PG_UPDATE_STATE, operations that change the power partition
+ * state are NOT reference counted
+ *
+ * * Platforms: T186
+ * * Initiators: Any
+ * * Targets: BPMP
+ * * Request Payload: @ref mrq_pg_request
+ * * Response Payload: @ref mrq_pg_response
+ * @addtogroup Powergating
+ * @{
+ */
+
+/**
+ * @name MRQ_PG sub-commands
+ * @{
+ */
+enum mrq_pg_cmd {
+	/**
+	 * @brief Check whether the BPMP driver supports the specified
+	 * request type
+	 *
+	 * mrq_response::err is 0 if the specified request is
+	 * supported and -#BPMP_ENODEV otherwise.
+	 */
+	CMD_PG_QUERY_ABI = 0,
+
+	/**
+	 * @brief Set the current state of specified power domain. The
+	 * possible values for power domains are defined in enum
+	 * pg_states
+	 *
+	 * mrq_response:err is
+	 * 0: Success
+	 * -#BPMP_EINVAL: Invalid request parameters
+	 */
+	CMD_PG_SET_STATE = 1,
+
+	/**
+	 * @brief Get the current state of specified power domain. The
+	 * possible values for power domains are defined in enum
+	 * pg_states
+	 *
+	 * mrq_response:err is
+	 * 0: Success
+	 * -#BPMP_EINVAL: Invalid request parameters
+	 */
+	CMD_PG_GET_STATE = 2,
+
+	/**
+	 * @brief get the name string of specified power domain id.
+	 *
+	 * mrq_response:err is
+	 * 0: Success
+	 * -#BPMP_EINVAL: Invalid request parameters
+	 */
+	CMD_PG_GET_NAME = 3,
+
+
+	/**
+	 * @brief get the highest power domain id in the system. Not
+	 * all IDs between 0 and max_id are valid IDs.
+	 *
+	 * mrq_response:err is
+	 * 0: Success
+	 * -#BPMP_EINVAL: Invalid request parameters
+	 */
+	CMD_PG_GET_MAX_ID = 4,
+};
+/** @} */
+
+#define MRQ_PG_NAME_MAXLEN	40
+
+/**
+ * @brief possible power domain states in
+ * cmd_pg_set_state_request:state and cmd_pg_get_state_response:state.
+ *  PG_STATE_OFF: power domain is OFF
+ *  PG_STATE_ON: power domain is ON
+ *  PG_STATE_RUNNING: power domain is ON and made into directly usable
+ *                    state by turning on the clocks associated with
+ *                    the domain
+ */
+enum pg_states {
+	PG_STATE_OFF = 0,
+	PG_STATE_ON = 1,
+	PG_STATE_RUNNING = 2,
+};
+
+struct cmd_pg_query_abi_request {
+	uint32_t type; /* enum mrq_pg_cmd */
+} __ABI_PACKED;
+
+struct cmd_pg_set_state_request {
+	uint32_t state; /* enum pg_states */
+} __ABI_PACKED;
+
+struct cmd_pg_get_state_response {
+	uint32_t state; /* enum pg_states */
+} __ABI_PACKED;
+
+struct cmd_pg_get_name_response {
+	uint8_t name[MRQ_PG_NAME_MAXLEN];
+} __ABI_PACKED;
+
+struct cmd_pg_get_max_id_response {
+	uint32_t max_id;
+} __ABI_PACKED;
+
+/**
+ * @ingroup Powergating
+ * @brief request with #MRQ_PG
+ *
+ * Used by the sender of an #MRQ_PG message to control power
+ * partitions. The pg_request is split into several sub-commands. Some
+ * sub-commands require no additional data. Others have a sub-command
+ * specific payload
+ *
+ * |sub-command                 |payload                |
+ * |----------------------------|-----------------------|
+ * |CMD_PG_QUERY_ABI            | query_abi             |
+ * |CMD_PG_SET_STATE            | set_state             |
+ * |CMD_PG_GET_STATE            | -                     |
+ * |CMD_PG_GET_NAME             | -                     |
+ * |CMD_PG_GET_MAX_ID           | -                     |
+ *
+ */
+
+struct mrq_pg_request {
+	uint32_t cmd;
+	uint32_t id;
+	union {
+		struct cmd_pg_query_abi_request query_abi;
+		struct cmd_pg_set_state_request set_state;
+	} __UNION_ANON;
+} __ABI_PACKED;
+
+/**
+ * @ingroup Powergating
+ * @brief response to MRQ_PG
+ *
+ * Each sub-command supported by @ref mrq_pg_request may return
+ * sub-command-specific data. Some do and some do not as indicated in
+ * the following table
+ *
+ * |sub-command                 |payload                |
+ * |----------------------------|-----------------------|
+ * |CMD_PG_QUERY_ABI            | -                     |
+ * |CMD_PG_SET_STATE            | -                     |
+ * |CMD_PG_GET_STATE            | get_state             |
+ * |CMD_PG_GET_NAME             | get_name              |
+ * |CMD_PG_GET_MAX_ID           | get_max_id            |
+ *
+ */
+
+struct mrq_pg_response {
+	union {
+		struct cmd_pg_get_state_response get_state;
+		struct cmd_pg_get_name_response get_name;
+		struct cmd_pg_get_max_id_response get_max_id;
+	} __UNION_ANON;
+} __ABI_PACKED;
 
 /**
  * @ingroup MRQ_Codes

@@ -75,6 +75,7 @@
 			reg = <0x74>;
 			gpio-controller;
 			#gpio-cells = <2>;
+			vcc-supply = <&battery_reg>;
 		};
 		gpio@74 {
 			touch-rails {
@@ -90,6 +91,7 @@
 			reg = <0x77>;
 			gpio-controller;
 			#gpio-cells = <2>;
+			vcc-supply = <&battery_reg>;
 		};
 
 
@@ -99,6 +101,7 @@
 			reg = <0x21>;
 			gpio-controller;
 			#gpio-cells = <2>;
+			vcc-supply = <&battery_reg>;
 		};
 
 		/* outp,outn enable gpios set through plugin manager dt */

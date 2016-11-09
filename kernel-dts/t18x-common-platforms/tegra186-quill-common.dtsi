@@ -67,6 +67,8 @@
 			compatible = "ti,lp8557";
 			reg = <0x2c>;
 
+			power-supply = <&battery_reg>;
+
 			bl-name = "pwm-backlight"; /* Match liblights naming expectations */
 			init-brt = /bits/ 8 <0xFF>; /* Max brightness */
 			dev-ctrl = /bits/ 8 <0x80>; /* PWM, enable standby mode */

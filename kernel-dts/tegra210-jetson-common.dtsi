@@ -23,6 +23,8 @@
 #include <dt-bindings/clock/tegra210-car.h>
 #include <dt-bindings/reset/tegra210-car.h>
 #include <dt-bindings/soc/tegra-pmc.h>
+#include <dt-bindings/thermal/tegra124-soctherm.h>
+#include <dt-bindings/thermal/tegra210-trips.h>
 #include <tegra210-soc/tegra210-prods.dtsi>
 #include <t210-common-platforms/tegra210-ers-touch-e1937-1000-a00.dtsi>
 #include <tegra210-soc/tegra210-modem-common.dtsi>
@@ -285,4 +287,81 @@
 		#mc-client-cells = <1>;
         };
 
+	dfll_cap: dfll-cdev-cap {
+		compatible = "nvidia,tegra-dfll-cdev-action";
+		act-dev = <&dfll>;
+		cdev-type = "DFLL-cap";
+		#cooling-cells = <2>; /* min followed by max */
+	};
+
+	dfll_floor: dfll-cdev-floor {
+		compatible = "nvidia,tegra-dfll-cdev-action";
+		act-dev = <&dfll>;
+		cdev-type = "DFLL-floor";
+		#cooling-cells = <2>; /* min followed by max */
+	};
+
+	thermal-zones {
+		CPU-therm {
+			trips {
+				dfll_floor_trip0: dfll-floor-trip0 {
+					temperature = <TEGRA210_DFLL_THERMAL_FLOOR_0>; /* millicelsius */
+					hysteresis = <1000>; /* millicelsius */
+					type = "active";
+				};
+				dfll_floor_trip1: dfll-floor-trip1 {
+					temperature = <TEGRA210_DFLL_THERMAL_FLOOR_1>; /* millicelsius */
+					hysteresis = <1000>; /* millicelsius */
+					type = "active";
+				};
+				dfll_floor_trip2: dfll-floor-trip2 {
+					temperature = <TEGRA210_DFLL_THERMAL_FLOOR_2>; /* millicelsius */
+					hysteresis = <1000>; /* millicelsius */
+					type = "active";
+				};
+				dfll_floor_trip3: dfll-floor-trip3 {
+					temperature = <TEGRA210_DFLL_THERMAL_FLOOR_3>; /* millicelsius */
+					hysteresis = <1000>; /* millicelsius */
+					type = "active";
+				};
+				dfll_cap_trip0: dfll-cap-trip0 {
+					temperature = <TEGRA210_DFLL_THERMAL_CAP_0>; /* millicelsius */
+					hysteresis = <1000>; /* millicelsius */
+					type = "active";
+				};
+				dfll_cap_trip1: dfll-cap-trip1 {
+					temperature = <TEGRA210_DFLL_THERMAL_CAP_1>; /* millicelsius */
+					hysteresis = <1000>; /* millicelsius */
+					type = "active";
+				};
+			};
+
+			cooling-maps {
+				dfll_map0 {
+					trip = <&dfll_floor_trip0>;
+					cooling-device = <&dfll_floor 1 1>;
+				};
+				dfll_map1 {
+					trip = <&dfll_floor_trip1>;
+					cooling-device = <&dfll_floor 2 2>;
+				};
+				dfll_map2 {
+					trip = <&dfll_floor_trip2>;
+					cooling-device = <&dfll_floor 3 3>;
+				};
+				dfll_map3 {
+					trip = <&dfll_floor_trip3>;
+					cooling-device = <&dfll_floor 4 4>;
+				};
+				dfll_map5 {
+					trip = <&dfll_cap_trip0>;
+					cooling-device = <&dfll_cap 1 1>;
+				};
+				dfll_map6 {
+					trip = <&dfll_cap_trip1>;
+					cooling-device = <&dfll_cap 2 2>;
+				};
+			};
+		};
+	};
 };

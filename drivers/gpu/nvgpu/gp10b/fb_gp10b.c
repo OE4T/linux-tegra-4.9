@@ -87,12 +87,12 @@ static void gp10b_init_kind_attr(void)
 	}
 }
 
-static int gp10b_fb_compression_page_size(struct gk20a *g)
+static unsigned int gp10b_fb_compression_page_size(struct gk20a *g)
 {
 	return SZ_64K;
 }
 
-static int gp10b_fb_compressible_page_size(struct gk20a *g)
+static unsigned int gp10b_fb_compressible_page_size(struct gk20a *g)
 {
 	return SZ_4K;
 }

@@ -62,7 +62,7 @@ static void gr_gp10b_remove_sysfs(struct device *dev);
 static int gp10b_tegra_get_clocks(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	int i;
+	unsigned int i;
 
 	if (platform->is_fmodel)
 		return 0;

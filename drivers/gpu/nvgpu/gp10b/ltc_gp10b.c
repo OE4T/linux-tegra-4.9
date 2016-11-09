@@ -124,7 +124,7 @@ static int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 static void gp10b_ltc_isr(struct gk20a *g)
 {
 	u32 mc_intr, ltc_intr;
-	int ltc, slice;
+	unsigned int ltc, slice;
 	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
 	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
 

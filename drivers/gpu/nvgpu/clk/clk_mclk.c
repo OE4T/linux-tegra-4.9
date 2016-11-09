@@ -2347,7 +2347,7 @@ int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, enum gk20a_mclk_speed speed)
 		mclk->switch_std = 0;
 	} else {
 		s64 prev_avg;
-		u64 curr = (t1-t0)/1000;
+		s64 curr = (t1-t0)/1000;
 
 		mclk->switch_max = curr > mclk->switch_max ?
 			curr : mclk->switch_max;

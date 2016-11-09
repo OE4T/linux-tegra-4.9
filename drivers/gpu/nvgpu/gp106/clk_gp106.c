@@ -195,7 +195,7 @@ static int clk_gp106_debugfs_init(struct gk20a *g) {
 	struct dentry *gpu_root = platform->debugfs;
 	struct dentry *clocks_root;
 	struct dentry *d;
-	int i;
+	unsigned int i;
 
 	if (NULL == (clocks_root = debugfs_create_dir("clocks", gpu_root)))
 		return -ENOMEM;

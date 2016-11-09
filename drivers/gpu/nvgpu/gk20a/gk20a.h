@@ -603,7 +603,7 @@ struct gpu_ops {
 		int (*init_wpr_region)(struct gk20a *g);
 		int (*load_lsfalcon_ucode)(struct gk20a *g, u32 falconidmask);
 		void (*write_dmatrfbase)(struct gk20a *g, u32 addr);
-		void (*pmu_elpg_statistics)(struct gk20a *g,
+		void (*pmu_elpg_statistics)(struct gk20a *g, u32 pg_engine_id,
 			u32 *ingating_time, u32 *ungating_time,
 			u32 *gating_cnt);
 		int (*pmu_pg_init_param)(struct gk20a *g, u32 pg_engine_id);

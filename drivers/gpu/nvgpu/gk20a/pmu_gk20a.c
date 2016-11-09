@@ -47,7 +47,8 @@
 	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
 
 static int gk20a_pmu_get_elpg_residency_gating(struct gk20a *g,
-		u32 *ingating_time, u32 *ungating_time, u32 *gating_cnt);
+		u32 pg_engine_id, u32 *ingating_time,
+		u32 *ungating_time, u32 *gating_cnt);
 static void ap_callback_init_and_enable_ctrl(
 		struct gk20a *g, struct pmu_msg *msg,
 		void *param, u32 seq_desc, u32 status);
@@ -3411,7 +3412,8 @@ static void pmu_handle_pg_stat_msg(struct gk20a *g, struct pmu_msg *msg,
 	switch (msg->msg.pg.stat.sub_msg_id) {
 	case PMU_PG_STAT_MSG_RESP_DMEM_OFFSET:
 		gk20a_dbg_pmu("ALLOC_DMEM_OFFSET is acknowledged from PMU");
-		pmu->stat_dmem_offset = msg->msg.pg.stat.data;
+		pmu->stat_dmem_offset[msg->msg.pg.stat.engine_id] =
+			msg->msg.pg.stat.data;
 		break;
 	default:
 		break;
@@ -3456,7 +3458,7 @@ static int pmu_pg_init_send(struct gk20a *g, u32 pg_engine_id)
 			pmu_handle_pg_elpg_msg, pmu, &seq, ~0);
 
 	/* alloc dmem for powergating state log */
-	pmu->stat_dmem_offset = 0;
+	pmu->stat_dmem_offset[pg_engine_id] = 0;
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_stat);
@@ -4122,7 +4124,8 @@ static void pmu_dump_elpg_stats(struct pmu_gk20a *pmu)
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_pg_stats stats;
 
-	pmu_copy_from_dmem(pmu, pmu->stat_dmem_offset,
+	pmu_copy_from_dmem(pmu,
+		pmu->stat_dmem_offset[PMU_PG_ELPG_ENGINE_ID_GRAPHICS],
 		(u8 *)&stats, sizeof(struct pmu_pg_stats), 0);
 
 	gk20a_dbg_pmu("pg_entry_start_timestamp : 0x%016llx",
@@ -4965,7 +4968,8 @@ int gk20a_pmu_destroy(struct gk20a *g)
 	/* make sure the pending operations are finished before we continue */
 	cancel_work_sync(&pmu->pg_init);
 
-	gk20a_pmu_get_elpg_residency_gating(g, &elpg_ingating_time,
+	gk20a_pmu_get_elpg_residency_gating(g,
+		PMU_PG_ELPG_ENGINE_ID_GRAPHICS,	&elpg_ingating_time,
 		&elpg_ungating_time, &gating_cnt);
 
 	gk20a_pmu_disable_elpg(g);
@@ -5044,14 +5048,15 @@ void gk20a_pmu_reset_load_counters(struct gk20a *g)
 	gk20a_idle(g->dev);
 }
 
-void gk20a_pmu_elpg_statistics(struct gk20a *g,
+void gk20a_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 		u32 *ingating_time, u32 *ungating_time, u32 *gating_cnt)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_pg_stats stats;
 
-	pmu_copy_from_dmem(pmu, pmu->stat_dmem_offset,
-				(u8 *)&stats, sizeof(struct pmu_pg_stats), 0);
+	pmu_copy_from_dmem(pmu,
+		pmu->stat_dmem_offset[pg_engine_id],
+		(u8 *)&stats, sizeof(struct pmu_pg_stats), 0);
 
 	*ingating_time = stats.pg_ingating_time_us;
 	*ungating_time = stats.pg_ungating_time_us;
@@ -5059,9 +5064,11 @@ void gk20a_pmu_elpg_statistics(struct gk20a *g,
 }
 
 static int gk20a_pmu_get_elpg_residency_gating(struct gk20a *g,
-			u32 *ingating_time, u32 *ungating_time, u32 *gating_cnt)
+		u32 pg_engine_id, u32 *ingating_time,
+		u32 *ungating_time, u32 *gating_cnt)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
+	u32 pg_engine_id_list = 0;
 
 	if (!pmu->initialized) {
 		*ingating_time = 0;
@@ -5070,8 +5077,13 @@ static int gk20a_pmu_get_elpg_residency_gating(struct gk20a *g,
 		return 0;
 	}
 
-	g->ops.pmu.pmu_elpg_statistics(g, ingating_time,
-				ungating_time, gating_cnt);
+	if (g->ops.pmu.pmu_pg_supported_engines_list)
+		pg_engine_id_list = g->ops.pmu.pmu_pg_supported_engines_list(g);
+
+	if (BIT(pg_engine_id) & pg_engine_id_list)
+		g->ops.pmu.pmu_elpg_statistics(g, pg_engine_id,
+			ingating_time,
+			ungating_time, gating_cnt);
 
 	return 0;
 }
@@ -5224,6 +5236,94 @@ int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id)
 }
 
 #ifdef CONFIG_DEBUG_FS
+static int mscg_residency_show(struct seq_file *s, void *data)
+{
+	struct gk20a *g = s->private;
+	u32 ingating_time = 0;
+	u32 ungating_time = 0;
+	u32 gating_cnt;
+	u64 total_ingating, total_ungating, residency, divisor, dividend;
+	int err;
+
+	/* Don't unnecessarily power on the device */
+	if (g->power_on) {
+		err = gk20a_busy(g->dev);
+		if (err)
+			return err;
+
+		gk20a_pmu_get_elpg_residency_gating(g,
+			PMU_PG_ELPG_ENGINE_ID_MS, &ingating_time,
+			&ungating_time, &gating_cnt);
+		gk20a_idle(g->dev);
+	}
+	total_ingating = g->pg_ingating_time_us + (u64)ingating_time;
+	total_ungating = g->pg_ungating_time_us + (u64)ungating_time;
+	divisor = total_ingating + total_ungating;
+
+	/* We compute the residency on a scale of 1000 */
+	dividend = total_ingating * 1000;
+
+	if (divisor)
+		residency = div64_u64(dividend, divisor);
+	else
+		residency = 0;
+
+	seq_printf(s, "Time in MSCG: %llu us\n"
+			"Time out of MSCG: %llu us\n"
+			"MSCG residency ratio: %llu\n",
+			total_ingating, total_ungating, residency);
+	return 0;
+
+}
+
+static int mscg_residency_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, mscg_residency_show, inode->i_private);
+}
+
+static const struct file_operations mscg_residency_fops = {
+	.open		= mscg_residency_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int mscg_transitions_show(struct seq_file *s, void *data)
+{
+	struct gk20a *g = s->private;
+	u32 ingating_time, ungating_time, total_gating_cnt;
+	u32 gating_cnt = 0;
+	int err;
+
+	if (g->power_on) {
+		err = gk20a_busy(g->dev);
+		if (err)
+			return err;
+
+		gk20a_pmu_get_elpg_residency_gating(g,
+			PMU_PG_ELPG_ENGINE_ID_MS, &ingating_time,
+			&ungating_time, &gating_cnt);
+		gk20a_idle(g->dev);
+	}
+	total_gating_cnt = g->pg_gating_cnt + gating_cnt;
+
+	seq_printf(s, "%u\n", total_gating_cnt);
+	return 0;
+
+}
+
+static int mscg_transitions_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, mscg_transitions_show, inode->i_private);
+}
+
+static const struct file_operations mscg_transitions_fops = {
+	.open		= mscg_transitions_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static int elpg_residency_show(struct seq_file *s, void *data)
 {
 	struct gk20a *g = s->private;
@@ -5239,7 +5339,8 @@ static int elpg_residency_show(struct seq_file *s, void *data)
 		if (err)
 			return err;
 
-		gk20a_pmu_get_elpg_residency_gating(g, &ingating_time,
+		gk20a_pmu_get_elpg_residency_gating(g,
+			PMU_PG_ELPG_ENGINE_ID_GRAPHICS, &ingating_time,
 			&ungating_time, &gating_cnt);
 		gk20a_idle(g->dev);
 	}
@@ -5287,7 +5388,8 @@ static int elpg_transitions_show(struct seq_file *s, void *data)
 		if (err)
 			return err;
 
-		gk20a_pmu_get_elpg_residency_gating(g, &ingating_time,
+		gk20a_pmu_get_elpg_residency_gating(g,
+			PMU_PG_ELPG_ENGINE_ID_GRAPHICS, &ingating_time,
 			&ungating_time, &gating_cnt);
 		gk20a_idle(g->dev);
 	}
@@ -5463,6 +5565,18 @@ int gk20a_pmu_debugfs_init(struct device *dev)
 	struct dentry *d;
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a *g = get_gk20a(dev);
+
+	d = debugfs_create_file(
+		"mscg_residency", S_IRUGO|S_IWUSR, platform->debugfs, g,
+						&mscg_residency_fops);
+	if (!d)
+		goto err_out;
+
+	d = debugfs_create_file(
+		"mscg_transitions", S_IRUGO, platform->debugfs, g,
+						&mscg_transitions_fops);
+	if (!d)
+		goto err_out;
 
 	d = debugfs_create_file(
 		"elpg_residency", S_IRUGO|S_IWUSR, platform->debugfs, g,

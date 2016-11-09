@@ -618,6 +618,7 @@ struct pmu_pg_stats {
 #define PMU_PG_ELPG_ENGINE_ID_GRAPHICS (0x00000000)
 #define PMU_PG_ELPG_ENGINE_ID_MS       (0x00000004)
 #define PMU_PG_ELPG_ENGINE_ID_INVALID_ENGINE (0x00000005)
+#define PMU_PG_ELPG_ENGINE_MAX    PMU_PG_ELPG_ENGINE_ID_INVALID_ENGINE
 
 /* state transition :
     OFF => [OFF_ON_PENDING optional] => ON_PENDING => ON => OFF
@@ -715,7 +716,7 @@ struct pmu_gk20a {
 
 	u32 zbc_save_done;
 
-	u32 stat_dmem_offset;
+	u32 stat_dmem_offset[PMU_PG_ELPG_ENGINE_ID_INVALID_ENGINE];
 
 	u32 elpg_stat;
 
@@ -823,7 +824,7 @@ int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout_ms,
 				 u32 *var, u32 val);
 void pmu_handle_fecs_boot_acr_msg(struct gk20a *g, struct pmu_msg *msg,
 				void *param, u32 handle, u32 status);
-void gk20a_pmu_elpg_statistics(struct gk20a *g,
+void gk20a_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 		u32 *ingating_time, u32 *ungating_time, u32 *gating_cnt);
 int gk20a_pmu_reset(struct gk20a *g);
 int pmu_idle(struct pmu_gk20a *pmu);

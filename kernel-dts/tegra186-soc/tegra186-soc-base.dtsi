@@ -2197,6 +2197,7 @@
 		resets = <&tegra_car TEGRA186_RESET_CAN1>;
 		reset-names = "can";
 		status = "disabled";
+		mboxes = <&aon 3>;
 	};
 
 	mttcan1: mttcan@c320000 {
@@ -2214,6 +2215,7 @@
 		resets = <&tegra_car TEGRA186_RESET_CAN2>;
 		reset-names = "can";
 		status = "disabled";
+		mboxes = <&aon 4>;
 	};
 
 	stm@8070000 {
@@ -2590,11 +2592,23 @@
 				nvidia,frame-count = <2>;
 				nvidia,frame-size = <128>;
 			};
-			ivc_aon_spi {
+			ivc_aon_spi@600 {
 				reg = <0x0600>, <0x10600>;
 				reg-names = "rx", "tx";
 				nvidia,frame-count = <2>;
 				nvidia,frame-size = <24704>;
+			};
+			ivc_can0@c780 {
+				reg = <0xc780>, <0x1c780>;
+				reg-names = "rx", "tx";
+				nvidia,frame-count = <16>;
+				nvidia,frame-size = <128>;
+			};
+			ivc_can1@d000 {
+				reg = <0xd000>, <0x1d000>;
+				reg-names = "rx", "tx";
+				nvidia,frame-count = <16>;
+				nvidia,frame-size = <128>;
 			};
 		};
 	};

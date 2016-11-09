@@ -2570,6 +2570,8 @@ void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 	tegra_nvdisp_program_other_mempool(dc, imp_settings, before_win_update);
 
 	if (!before_win_update) {
+		int i;
+
 		mutex_lock(&tegra_nvdisp_lock);
 
 		/*
@@ -2583,11 +2585,19 @@ void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 				(u32)ext_settings->hubclk,
 				before_win_update);
 
-		/* Re-enable ihub latency events. */
-		tegra_dc_writel(dc,
-			tegra_dc_readl(dc, nvdisp_ihub_misc_ctl_r()) |
-			nvdisp_ihub_misc_ctl_latency_event_enable_f(),
-			nvdisp_ihub_misc_ctl_r());
+		/* Re-enable ihub latency events across all heads. */
+		for (i = 0; i < TEGRA_MAX_DC; i++) {
+			struct tegra_dc *other_dc = tegra_dc_get_dc(i);
+
+			if (!other_dc || !other_dc->enabled)
+				continue;
+
+			tegra_dc_writel(other_dc,
+				tegra_dc_readl(other_dc,
+				nvdisp_ihub_misc_ctl_r()) |
+				nvdisp_ihub_misc_ctl_latency_event_enable_f(),
+				nvdisp_ihub_misc_ctl_r());
+		}
 
 		/*
 		 * These IMP settings are no longer pending. Remove them from
@@ -2788,6 +2798,16 @@ static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
 	if (!dc || !dc->enabled)
 		return;
 
+	/*
+	 * The cursor and wgrp latency registers take effect immediately.
+	 * As such, we'll disable them for now and re-enable them after the rest
+	 * of the window channel state has promoted.
+	 */
+	tegra_dc_writel(dc,
+		tegra_dc_readl(dc, nvdisp_ihub_misc_ctl_r()) &
+		~nvdisp_ihub_misc_ctl_latency_event_enable_f(),
+		nvdisp_ihub_misc_ctl_r());
+
 	for (i = 0; i < imp_head_results->num_windows; i++) {
 		win = tegra_dc_get_window(dc, imp_head_results->win_ids[i]);
 		if (!win)
@@ -2799,16 +2819,7 @@ static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
 			win_ihub_fetch_meter_slots_f(val),
 			win_ihub_fetch_meter_r());
 
-		/*
-		 * Since these wgrp latency registers take effect immediately,
-		 * re-enable latency events after the rest of the window channel
-		 * state has promoted.
-		 */
 		val = imp_head_results->thresh_lwm_dvfs_win[i];
-		tegra_dc_writel(dc,
-			tegra_dc_readl(dc, nvdisp_ihub_misc_ctl_r()) &
-			~nvdisp_ihub_misc_ctl_latency_event_enable_f(),
-			nvdisp_ihub_misc_ctl_r());
 		if (val) {
 			nvdisp_win_write(win,
 				win_ihub_latency_ctla_ctl_mode_enable_f() |
@@ -2843,6 +2854,17 @@ static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
 	tegra_dc_writel(dc,
 			nvdisp_ihub_cursor_fetch_meter_slots_f(val),
 			nvdisp_ihub_cursor_fetch_meter_r());
+
+	val = imp_head_results->thresh_lwm_dvfs_cursor;
+	if (val) {
+		tegra_dc_writel(dc,
+			nvdisp_ihub_cursor_latency_ctla_ctl_mode_enable_f() |
+			nvdisp_ihub_cursor_latency_ctla_submode_watermark_f(),
+			nvdisp_ihub_cursor_latency_ctla_r());
+		tegra_dc_writel(dc,
+			nvdisp_ihub_cursor_latency_ctlb_watermark_f(val),
+			nvdisp_ihub_cursor_latency_ctlb_r());
+	}
 
 	/* program cursor pipe meter value */
 	val = imp_head_results->pipe_meter_value_cursor;

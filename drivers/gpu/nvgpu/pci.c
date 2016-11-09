@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -61,10 +61,12 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	/* power management configuration */
 	.railgate_delay		= 500,
 	.can_railgate		= false,
-	.can_elpg = false,
+	.can_elpg = true,
+	.enable_elpg = true,
 	.enable_elcg = false,
 	.enable_slcg = true,
 	.enable_blcg = true,
+	.enable_mscg = false,
 	.default_pri_timeout = 0x3ff,
 
 	.disable_aspm = true,
@@ -92,10 +94,12 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	/* power management configuration */
 	.railgate_delay		= 500,
 	.can_railgate		= false,
-	.can_elpg = false,
+	.can_elpg = true,
+	.enable_elpg = true,
 	.enable_elcg = false,
 	.enable_slcg = true,
 	.enable_blcg = true,
+	.enable_mscg = false,
 	.default_pri_timeout = 0x3ff,
 
 	.disable_aspm = true,
@@ -123,10 +127,12 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	/* power management configuration */
 	.railgate_delay		= 500,
 	.can_railgate		= false,
-	.can_elpg = false,
+	.can_elpg = true,
+	.enable_elpg = true,
 	.enable_elcg = false,
 	.enable_slcg = true,
 	.enable_blcg = true,
+	.enable_mscg = false,
 	.default_pri_timeout = 0x3ff,
 
 	.disable_aspm = true,

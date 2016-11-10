@@ -1457,7 +1457,7 @@ static const struct file_operations nvhost_channelops = {
 	.unlocked_ioctl = nvhost_channelctl
 };
 
-static const char *get_device_name_for_dev(struct platform_device *dev)
+const char *get_device_name_for_dev(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
 

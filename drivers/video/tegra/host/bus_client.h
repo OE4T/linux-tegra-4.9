@@ -43,4 +43,6 @@ struct nvhost_channel *nvhost_find_chan_by_clientid(
 				int clientid);
 
 int validate_max_size(struct platform_device *ndev, u32 size);
+
+const char *get_device_name_for_dev(struct platform_device *dev);
 #endif

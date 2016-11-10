@@ -75,6 +75,7 @@ static irqreturn_t flcn_isr(int irq, void *dev_id)
 int flcn_intr_init(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = nvhost_get_devdata(pdev);
+	const char *dev_name;
 	int ret = 0;
 
 	if (!pdata->module_irq)
@@ -86,9 +87,10 @@ int flcn_intr_init(struct platform_device *pdev)
 		return -ENXIO;
 	}
 
+	dev_name = get_device_name_for_dev(pdev);
 	ret = request_irq(pdata->irq,
 			  flcn_isr, 0,
-			  dev_name(&pdev->dev), pdev);
+			  dev_name, pdev);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to request irq. err %d\n", ret);
 		return ret;

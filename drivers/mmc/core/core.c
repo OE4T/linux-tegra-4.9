@@ -1732,6 +1732,7 @@ int mmc_set_signal_voltage(struct mmc_host *host, int signal_voltage, u32 ocr)
 	 */
 	clock = host->ios.clock;
 	host->ios.clock = 0;
+	host->skip_host_clkgate = true;
 	mmc_set_ios(host);
 
 	if (__mmc_set_signal_voltage(host, signal_voltage)) {
@@ -1740,12 +1741,14 @@ int mmc_set_signal_voltage(struct mmc_host *host, int signal_voltage, u32 ocr)
 		 * sent CMD11, so a power cycle is required anyway
 		 */
 		err = -EAGAIN;
+		host->skip_host_clkgate = false;
 		goto power_cycle;
 	}
 
 	/* Keep clock gated for at least 10 ms, though spec only says 5 ms */
 	mmc_delay(10);
 	host->ios.clock = clock;
+	host->skip_host_clkgate = false;
 	mmc_set_ios(host);
 
 	/* Wait for at least 1 ms according to spec */

@@ -351,6 +351,7 @@ struct mmc_host {
 	struct timer_list	retune_timer;	/* for periodic re-tuning */
 
 	bool			trigger_card_event; /* card_event necessary */
+	bool			skip_host_clkgate; /* Skip host clock gating */
 
 	struct mmc_card		*card;		/* device attached to this host */
 

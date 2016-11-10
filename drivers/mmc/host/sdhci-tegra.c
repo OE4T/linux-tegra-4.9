@@ -251,10 +251,11 @@ static unsigned long get_nearest_clock_freq(unsigned long parent_rate,
 
 	div = parent_rate / desired_rate;
 	div = (div > MAX_DIVISOR_VALUE) ? MAX_DIVISOR_VALUE : div;
-	rem = parent_rate % div;
+	rem = parent_rate % desired_rate;
+	result = parent_rate / div;
 	if (div == MAX_DIVISOR_VALUE || !rem)
 		return (parent_rate / div);
-	else {
+	else if (result > desired_rate) {
 		result_frac_div = (parent_rate << 1) / ((div << 1) + 1);
 		if (result_frac_div > desired_rate)
 			return (parent_rate / (div + 1));
@@ -387,7 +388,8 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 		/* Set the desired clk freq rate */
 		tegra_sdhci_set_clk_rate(host, host_clk);
 		host->max_clk = clk_get_rate(pltfm_host->clk);
-
+		dev_dbg(mmc_dev(host->mmc), "req clk %lu, set clk %lu\n",
+			host_clk, host->max_clk);
 		/* Run auto calibration if required */
 		if (tegra_host->pad_calib_required) {
 			tegra_sdhci_pad_autocalib(host);
@@ -420,7 +422,8 @@ static void tegra_sdhci_set_uhs_signaling(struct sdhci_host *host,
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 
-	if (timing == MMC_TIMING_UHS_DDR50)
+	if ((timing == MMC_TIMING_UHS_DDR50) ||
+		(timing == MMC_TIMING_MMC_DDR52))
 		tegra_host->ddr_signaling = true;
 
 	return sdhci_set_uhs_signaling(host, timing);

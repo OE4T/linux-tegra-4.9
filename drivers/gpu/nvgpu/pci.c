@@ -66,7 +66,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.enable_elcg = false,
 	.enable_slcg = true,
 	.enable_blcg = true,
-	.enable_mscg = false,
+	.enable_mscg = true,
 	.default_pri_timeout = 0x3ff,
 
 	.disable_aspm = true,
@@ -99,7 +99,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.enable_elcg = false,
 	.enable_slcg = true,
 	.enable_blcg = true,
-	.enable_mscg = false,
+	.enable_mscg = true,
 	.default_pri_timeout = 0x3ff,
 
 	.disable_aspm = true,
@@ -132,7 +132,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.enable_elcg = false,
 	.enable_slcg = true,
 	.enable_blcg = true,
-	.enable_mscg = false,
+	.enable_mscg = true,
 	.default_pri_timeout = 0x3ff,
 
 	.disable_aspm = true,

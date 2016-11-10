@@ -64,6 +64,7 @@
 			(1398871) (-931712) (191840) (-11679)
 		>;
 		#cooling-cells = <2>;
+		nvidia,tz = <&cpu_therm>;
 	};
 
 	gpu_edp: gpu_edp {
@@ -97,7 +98,7 @@
 	};
 
 	thermal-zones {
-		CPU-therm {
+		cpu_therm: CPU-therm {
 			trips {
 				MAKE_EDP_TRIP(cpu, 23);
 				MAKE_EDP_TRIP(cpu, 40);

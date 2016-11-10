@@ -124,9 +124,9 @@
 		cpu_ovr_reg: pwm-regulator@0 {
 			status = "okay";
 			reg = <0>;
-			compatible = "regulator-pwm";
+			compatible = "pwm-regulator";
 			pwms = <&pwm_dfll 0 2500>;
-			regulator-name = "vdd_cpu";
+			regulator-name = "vdd-cpu";
 			regulator-min-microvolt = <708000>;
 			regulator-max-microvolt = <1322400>;
 			regulator-init-microvolt = <1000000>;
@@ -139,9 +139,9 @@
 		gpu_ovr_reg: pwm-regulator@1 {
 			status = "okay";
 			reg = <1>;
-			compatible = "regulator-pwm";
+			compatible = "pwm-regulator";
 			pwms = <&tegra_pwm 1 4880>;
-			regulator-name = "vdd_gpu";
+			regulator-name = "vdd-gpu";
 			regulator-min-microvolt = <710000>;
 			regulator-max-microvolt = <1320000>;
 			regulator-init-microvolt = <1000000>;

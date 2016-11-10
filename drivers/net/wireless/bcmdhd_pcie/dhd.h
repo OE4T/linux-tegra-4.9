@@ -1607,5 +1607,5 @@ void dhd_pktid_audit_fail_cb(dhd_pub_t *dhdp);
 extern void tegra_pcie_prepare_l2_exit(dhd_pub_t *dhdp);
 extern void dhdpcie_port_toggle(dhd_pub_t *pub, bool on);
 #endif
-
+extern bool is_es4_module(void);
 #endif /* _dhd_h_ */

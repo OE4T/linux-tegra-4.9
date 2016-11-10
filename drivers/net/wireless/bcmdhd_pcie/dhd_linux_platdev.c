@@ -55,6 +55,10 @@
 #define WIFI_PLAT_NAME2		"bcm4329_wlan"
 #define WIFI_PLAT_EXT		"bcmdhd_wifi_platform"
 
+#define BOARD_SKU	"2382"
+#define BOARD_INITIAL	"699-"
+#define BOARD_SKU_VER	"E"
+
 #ifdef CONFIG_DTS
 struct regulator *wifi_regulator = NULL;
 #endif /* CONFIG_DTS */
@@ -265,6 +269,31 @@ void *wifi_platform_get_country_code(wifi_adapter_info_t *adapter, char *ccode)
 	return NULL;
 }
 
+bool is_es4_module(void)
+{
+	struct device_node *of_chosen;
+	bool ret = false;
+	/*
+	   Put logic to have correct NV here
+	 */
+	of_chosen = of_find_node_by_path("/chosen");
+	if (of_chosen) {
+		const char *sku, *sku_version;
+
+		sku = of_get_property(of_chosen, "nvidia,sku", NULL);
+		sku_version = of_get_property(of_chosen,
+						"nvidia,sku_version", NULL);
+		if (sku && sku_version) {
+			DHD_INFO(("sku= %s, sku_version=%s\n", sku, sku_version));
+			if ((0 == strncmp(BOARD_INITIAL, sku, 4)) &&
+					 (0 == strncmp(BOARD_SKU, sku+5, 4))) {
+				if (0 == strncmp(BOARD_SKU_VER, sku_version, 1))
+					ret = true;
+			}
+		}
+	}
+	return ret;
+}
 static inline bool is_antenna_tuned(void)
 {
 	struct device_node *np;
@@ -310,6 +339,10 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 
 	adapter->fw_path = of_get_property(pdev->dev.of_node, "fw_path", NULL);
 	adapter->nv_path = of_get_property(pdev->dev.of_node, "nv_path", NULL);
+
+	if (is_es4_module())
+		adapter->nv_path = of_get_property(pdev->dev.of_node,
+							"nv_path_es4", NULL);
 
 	if (is_antenna_tuned())
 		adapter->nv_path = of_get_property(pdev->dev.of_node,

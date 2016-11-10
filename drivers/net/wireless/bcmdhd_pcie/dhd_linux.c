@@ -7382,6 +7382,15 @@ bool dhd_update_fw_nv_path(dhd_info_t *dhdinfo)
 		if (is_file_valid(CONFIG_BCMDHD_NVRAM_PATH))
 			nv = CONFIG_BCMDHD_NVRAM_PATH;
 #endif /* CONFIG_BCMDHD_NVRAM_PATH */
+#ifdef CONFIG_BCMDHD_ES4_NVRAM_PATH
+		if (is_es4_module()) {
+			if (is_file_valid(CONFIG_BCMDHD_ES4_NVRAM_PATH)) {
+				nv = CONFIG_BCMDHD_ES4_NVRAM_PATH;
+				DHD_INFO(("ES4 module detected, Nvram \
+					 path updated to %s\n", nv));
+			}
+		}
+#endif
 	}
 
 	/* check if we need to initialize the path */

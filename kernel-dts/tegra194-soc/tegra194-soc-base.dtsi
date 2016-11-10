@@ -544,5 +544,8 @@
 			0x0 0xC390000 0x0 0x2fff>;
 		#padcontroller-cells = <1>;
 		status = "disabled";
+		io-pad-defaults { /* subnode for padctrl */
+			status = "disabled";
+		};
 	};
 };

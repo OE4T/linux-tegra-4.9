@@ -492,6 +492,8 @@ static int gm20b_tegra_railgate(struct device *dev)
 	clk_disable_unprepare(platform->clk_reset);
 	clk_disable_unprepare(platform->clk[0]);
 	clk_disable_unprepare(platform->clk[1]);
+	if (platform->clk[3])
+		clk_disable_unprepare(platform->clk[3]);
 
 	udelay(10);
 
@@ -569,6 +571,14 @@ static int gm20b_tegra_unrailgate(struct device *dev)
 			gk20a_err(dev, "could not turn on pwr clock");
 			goto err_clk_on;
 		}
+
+		if (platform->clk[3]) {
+			ret = clk_prepare_enable(platform->clk[3]);
+			if (ret) {
+				gk20a_err(dev, "could not turn on fuse clock");
+				goto err_clk_on;
+			}
+		}
 	}
 
 	udelay(10);
@@ -617,6 +627,7 @@ static struct {
 	{"gpu_ref", UINT_MAX},
 	{"pll_p_out5", 204000000},
 	{"emc", UINT_MAX},
+	{"fuse", UINT_MAX},
 #endif
 };
 
@@ -635,6 +646,8 @@ static int gk20a_tegra_get_clocks(struct device *dev)
 	char devname[16];
 	int i;
 	int ret = 0;
+
+	BUG_ON(GK20A_CLKS_MAX < ARRAY_SIZE(tegra_gk20a_clocks));
 
 	snprintf(devname, sizeof(devname), "tegra_%s", dev_name(dev));
 

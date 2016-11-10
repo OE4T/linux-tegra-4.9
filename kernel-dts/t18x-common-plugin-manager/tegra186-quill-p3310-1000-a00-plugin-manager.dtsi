@@ -112,13 +112,13 @@
 			override@3 {
 				target = <&tegra_pcie>;
 				_overlay_ {
-					pcie@1,0 {
+					pci@1,0 {
 						nvidia,num-lanes = <2>;
 					};
-					pcie@2,0 {
+					pci@2,0 {
 						nvidia,num-lanes = <1>;
 					};
-					pcie@3,0 {
+					pci@3,0 {
 						nvidia,num-lanes = <1>;
 					};
 				};
@@ -129,13 +129,13 @@
 			override@0 {
 				target = <&tegra_pcie>;
 				_overlay_ {
-					pcie@1,0 {
+					pci@1,0 {
 						nvidia,num-lanes = <4>;
 					};
-					pcie@2,0 {
+					pci@2,0 {
 						nvidia,num-lanes = <0>;
 					};
-					pcie@3,0 {
+					pci@3,0 {
 						nvidia,num-lanes = <1>;
 					};
 				};

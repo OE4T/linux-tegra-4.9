@@ -529,7 +529,7 @@ static void *pmu_allocation_get_fb_addr_v3(
 	return (void *)&pmu_a_ptr->alloc.fb;
 }
 
-u32 pmu_allocation_get_fb_size_v3(
+static u32 pmu_allocation_get_fb_size_v3(
 				struct pmu_gk20a *pmu, void *pmu_alloc_ptr)
 {
 	struct pmu_allocation_v3 *pmu_a_ptr =

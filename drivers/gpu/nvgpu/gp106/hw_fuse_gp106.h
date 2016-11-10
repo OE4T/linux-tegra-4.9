@@ -164,7 +164,7 @@ static inline u32 fuse_vin_cal_gpc1_icpt_sign_f(void)
 }
 static inline u32 fuse_vin_cal_gpc1_slope_sign_f(void)
 {
-	return 0x8000;
+	return 0x800;
 }
 static inline u32 fuse_vin_cal_gpc1_icpt_data_v(u32 r)
 {

@@ -246,12 +246,13 @@ static int tegra_cam_rtcpu_get_resources(struct device *dev)
 		if (!IS_ERR(rtcpu->_res_##s[i])) \
 			continue; \
 		err = PTR_ERR(rtcpu->_res_##s[i]); \
+		rtcpu->_res_##s[i] = NULL; \
 		if (err == -EPROBE_DEFER) { \
 			dev_info(dev, "defer %s probe because %s %s\n", \
 				rtcpu->name, #_res_, pdata->_res_##_names[i]); \
 			return err; \
 		} \
-		if (_warn_ && err != -ENODATA) \
+		if (_warn_ && err != -ENODATA && err != -ENOENT) \
 			dev_err(dev, "%s %s not available: %d\n", #_res_, \
 				pdata->_res_##_names[i], err); \
 	}
@@ -277,7 +278,7 @@ static int tegra_cam_rtcpu_apply_clks(struct device *dev,
 	int i, ret;
 
 	for (i = 0; i < ARRAY_SIZE(rtcpu->clocks); i++) {
-		if (IS_ERR_OR_NULL(rtcpu->clocks[i]))
+		if (rtcpu->clocks[i] == NULL)
 			continue;
 
 		ret = (*func)(rtcpu->clocks[i]);
@@ -297,7 +298,7 @@ static int tegra_cam_rtcpu_apply_resets(struct device *dev,
 	int i, ret;
 
 	for (i = 0; i < ARRAY_SIZE(rtcpu->resets); i++) {
-		if (IS_ERR_OR_NULL(rtcpu->resets[i]))
+		if (rtcpu->resets[i] == NULL)
 			continue;
 
 		ret = (*func)(rtcpu->resets[i]);
@@ -386,8 +387,8 @@ int tegra_camrtc_start(struct device *dev)
 
 	ret = tegra_cam_rtcpu_apply_resets(dev, reset_control_deassert);
 	if (ret) {
-		dev_err(dev, "failed to deassert the resets while starting camrtc: %d",
-			ret);
+		dev_err(dev, "failed to deassert the %s resets: %d",
+			rtcpu->name, ret);
 		return ret;
 	}
 
@@ -522,7 +523,7 @@ void tegra_camrtc_ready(struct device *dev)
 			rtcpu->cfg_base + TEGRA_APS_FRSC_SC_MODEIN_0);
 
 		/* Reset R5 */
-		if (!IS_ERR_OR_NULL(rtcpu->sce_resets.sce_nsysporeset))
+		if (rtcpu->sce_resets.sce_nsysporeset != NULL)
 			reset_control_reset(rtcpu->sce_resets.sce_nsysporeset);
 	}
 }
@@ -743,7 +744,7 @@ static int tegra_cam_rtcpu_runtime_suspend(struct device *dev)
 		return 0;
 
 	for (i = 0; i < ARRAY_SIZE(rtcpu->clocks); i++) {
-		if (IS_ERR_OR_NULL(rtcpu->clocks[i]))
+		if (rtcpu->clocks[i] == NULL)
 			continue;
 		clk_set_rate(rtcpu->clocks[i], pdata->clock_rates[i].slow);
 	}
@@ -761,7 +762,7 @@ static int tegra_cam_rtcpu_runtime_resume(struct device *dev)
 		return 0;
 
 	for (i = 0; i < ARRAY_SIZE(rtcpu->clocks); i++) {
-		if (IS_ERR_OR_NULL(rtcpu->clocks[i]))
+		if (rtcpu->clocks[i] == NULL)
 			continue;
 		clk_set_rate(rtcpu->clocks[i], pdata->clock_rates[i].fast);
 	}

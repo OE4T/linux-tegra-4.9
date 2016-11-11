@@ -20,6 +20,8 @@
 	sysedp-dynamic-capping {
 		/* 671D */
 		compatible = "nvidia,tegra124-sysedp-dynamic-capping";
+		clocks = <&tegra_car TEGRA210_CLK_BATTERY_EMC>;
+		clock-names = "cap-battery-emc";
 		nvidia,gpu_cap_as_mw;
 		nvidia,gpu_supp_freq;
 		nvidia,corecap = <

@@ -1318,7 +1318,13 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 		goto unlock;
 	}
 #ifdef CONFIG_ANDROID
-	work_index = 0;
+	work_index = ffs(ext->dc->valid_windows);
+	if (!work_index) {
+		dev_err(&ext->dc->ndev->dev, "no valid window\n");
+		ret = -EINVAL;
+		goto unlock;
+	}
+	work_index -= 1; /* window index starts from 0 */
 #endif
 
 	if (syncpt_fd) {

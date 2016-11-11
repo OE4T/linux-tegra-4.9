@@ -4537,6 +4537,8 @@ static void pcie_delayed_detect(struct work_struct *work)
 	pcie = container_of(work, struct tegra_pcie, detect_delay.work);
 #ifdef CONFIG_THERMAL
 	if (pcie->is_cooling_dev) {
+		dev_info(pcie->dev,
+			 "Going to wait till end point temp is above 0-C\n");
 		wait_for_completion_interruptible(&pcie->completion);
 		dev_info(pcie->dev,
 			 "proceeding with PCIe hierarchy enumeraton\n");
@@ -4741,13 +4743,6 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 	/* Enable Runtime PM for PCIe, TODO: Need to add PCIe host device */
 	pm_runtime_enable(pcie->dev);
 
-	if (pcie->plat_data->boot_detect_delay) {
-		unsigned long delay =
-			msecs_to_jiffies(pcie->plat_data->boot_detect_delay);
-		schedule_delayed_work(&pcie->detect_delay, delay);
-		return ret;
-	}
-
 #ifdef CONFIG_THERMAL
 	if (pcie->is_cooling_dev) {
 		init_completion(&pcie->completion);
@@ -4759,20 +4754,12 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 				ret);
 			goto release_regulators;
 		}
-		dev_info(pcie->dev,
-			 "Going to wait till dGPU temp is above 0-C\n");
-		schedule_delayed_work(&pcie->detect_delay, 0);
-		return ret;
 	}
 #endif
 
-	ret = tegra_pcie_probe_complete(pcie);
-	if (ret || !pcie->num_ports) {
-		pm_runtime_put_sync(pcie->dev);
-		pm_runtime_disable(pcie->dev);
-		tegra_pd_remove_device(pcie->dev);
-		goto release_regulators;
-	}
+	schedule_delayed_work(&pcie->detect_delay,
+			      msecs_to_jiffies(
+			      pcie->plat_data->boot_detect_delay));
 	return ret;
 
 release_regulators:

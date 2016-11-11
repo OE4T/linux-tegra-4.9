@@ -28,6 +28,9 @@ static int gp106_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
 	enum nv_pmu_clk_clkwhich clkwhich;
 	struct clk_set_info *p0_info;
 	struct clk_set_info *p5_info;
+	struct avfsfllobjs *pfllobjs =  &(g->clk_pmu.avfs_fllobjs);
+
+	u16 limit_min_mhz;
 
 	switch (api_domain) {
 	case CTRL_CLK_DOMAIN_MCLK:
@@ -52,7 +55,14 @@ static int gp106_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
 	if (!p0_info)
 		return -EINVAL;
 
-	*min_mhz = p5_info->min_mhz;
+	limit_min_mhz = p5_info->min_mhz;
+	/* WAR for DVCO min */
+	if (api_domain == CTRL_CLK_DOMAIN_GPC2CLK)
+		if ((pfllobjs->max_min_freq_mhz) &&
+		(pfllobjs->max_min_freq_mhz > limit_min_mhz))
+			limit_min_mhz = pfllobjs->max_min_freq_mhz;
+
+	*min_mhz = limit_min_mhz;
 	*max_mhz = p0_info->max_mhz;
 
 	return 0;

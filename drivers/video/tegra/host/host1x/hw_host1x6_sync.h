@@ -268,7 +268,7 @@ static inline u32 host1x_sync_syncpt_prot_en_0_vm_en_f(u32 v)
 }
 static inline u32 host1x_sync_syncpt_ch_app_0_r(void)
 {
-	return 0x9984;
+	return 0xa604;
 }
 static inline u32 host1x_sync_syncpt_ch_app_0_syncpt_ch_f(u32 v)
 {

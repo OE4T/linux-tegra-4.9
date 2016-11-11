@@ -503,6 +503,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 
 	struct clk_set_info *p5_info, *p0_info;
 
+
 	table = ACCESS_ONCE(arb->current_vf_table);
 	/* make flag visible when all data has resolved in the tables */
 	smp_rmb();
@@ -512,11 +513,18 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 
 	/* Get allowed memory ranges */
 	if (nvgpu_clk_arb_get_arbiter_clk_range(g, NVGPU_GPU_CLK_DOMAIN_GPC2CLK,
-						&gpc2clk_min, &gpc2clk_max) < 0)
+						&gpc2clk_min,
+						&gpc2clk_max) < 0) {
+		gk20a_err(dev_from_gk20a(g),
+			"failed to fetch GPC2CLK range");
 		goto exit_vf_table;
+	}
 	if (nvgpu_clk_arb_get_arbiter_clk_range(g, NVGPU_GPU_CLK_DOMAIN_MCLK,
-						&mclk_min, &mclk_max) < 0)
+						&mclk_min, &mclk_max) < 0) {
+		gk20a_err(dev_from_gk20a(g),
+			"failed to fetch MCLK range");
 		goto exit_vf_table;
+	}
 
 	if (clk_domain_get_f_points(arb->g, NVGPU_GPU_CLK_DOMAIN_GPC2CLK,
 		&table->gpc2clk_num_points, arb->gpc2clk_f_points)) {
@@ -524,10 +532,21 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 			"failed to fetch GPC2CLK frequency points");
 		goto exit_vf_table;
 	}
+
+	table->gpc2clk_num_points = MAX_F_POINTS;
+	table->mclk_num_points = MAX_F_POINTS;
+
 	if (clk_domain_get_f_points(arb->g, NVGPU_GPU_CLK_DOMAIN_MCLK,
 		&table->mclk_num_points, arb->mclk_f_points)) {
 		gk20a_err(dev_from_gk20a(g),
 			"failed to fetch MCLK frequency points");
+		goto exit_vf_table;
+	}
+	if (!table->mclk_num_points || !table->gpc2clk_num_points) {
+		gk20a_err(dev_from_gk20a(g),
+			"empty queries to f points mclk %d gpc2clk %d",
+			table->mclk_num_points, table->gpc2clk_num_points);
+		status = -EINVAL;
 		goto exit_vf_table;
 	}
 
@@ -538,13 +557,18 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 
 	p5_info = pstate_get_clk_set_info(g,
 			CTRL_PERF_PSTATE_P5, clkwhich_mclk);
-	if (!p5_info)
+	if (!p5_info) {
+		gk20a_err(dev_from_gk20a(g),
+			"failed to get MCLK P5 info");
 		goto exit_vf_table;
-
+	}
 	p0_info = pstate_get_clk_set_info(g,
 			CTRL_PERF_PSTATE_P0, clkwhich_mclk);
-	if (!p0_info)
+	if (!p0_info) {
+		gk20a_err(dev_from_gk20a(g),
+			"failed to get MCLK P0 info");
 		goto exit_vf_table;
+	}
 
 	for (i = 0, j = 0, num_points = 0, clk_cur = 0;
 			i < table->mclk_num_points; i++) {
@@ -600,6 +624,8 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 			CTRL_PERF_PSTATE_P5, clkwhich_gpc2clk);
 	if (!p5_info) {
 		status = -EINVAL;
+		gk20a_err(dev_from_gk20a(g),
+			"failed to get GPC2CLK P5 info");
 		goto exit_vf_table;
 	}
 
@@ -607,12 +633,14 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 			CTRL_PERF_PSTATE_P0, clkwhich_gpc2clk);
 	if (!p0_info) {
 		status = -EINVAL;
+		gk20a_err(dev_from_gk20a(g),
+			"failed to get GPC2CLK P0 info");
 		goto exit_vf_table;
 	}
 
 	/* GPC2CLK needs to be checked in two passes. The first determines the
 	 * relationships between GPC2CLK, SYS2CLK and XBAR2CLK, while the
-	 * second verifies that the clocks minimum DVCO is satisfied and sets
+	 * second verifies that the clocks minimum is satisfied and sets
 	 * the voltages
 	 */
 	for (i = 0, j = 0, num_points = 0, clk_cur = 0;
@@ -669,9 +697,12 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 			clkwhich_sys2clk);
 		if (!p5_info) {
 			status = -EINVAL;
+			gk20a_err(dev_from_gk20a(g),
+				"failed to get SYS2CLK P5 info");
 			goto exit_vf_table;
 		}
-		/* sys2clk below DVCO min, need to find correct clock */
+
+		/* sys2clk below clk min, need to find correct clock */
 		if (table->gpc2clk_points[i].sys_mhz < p5_info->min_mhz) {
 			for (j = i + 1; j < table->gpc2clk_num_points; j++) {
 
@@ -693,6 +724,8 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 			}
 			/* no VF exists that satisfies condition */
 			if (j == table->gpc2clk_num_points) {
+				gk20a_err(dev_from_gk20a(g),
+					"NO SYS2CLK VF point possible");
 				status = -EINVAL;
 				goto exit_vf_table;
 			}
@@ -704,10 +737,12 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 			clkwhich_xbar2clk);
 		if (!p5_info) {
 			status = -EINVAL;
+			gk20a_err(dev_from_gk20a(g),
+				"failed to get SYS2CLK P5 info");
 			goto exit_vf_table;
 		}
 
-		/* xbar2clk below DVCO min, need to find correct clock */
+		/* xbar2clk below clk min, need to find correct clock */
 		if (table->gpc2clk_points[i].xbar_mhz < p5_info->min_mhz) {
 			for (j = i; j < table->gpc2clk_num_points; j++) {
 				if (table->gpc2clk_points[j].xbar_mhz >=
@@ -728,6 +763,8 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 			/* no VF exists that satisfies condition */
 			if (j == table->gpc2clk_num_points) {
 				status = -EINVAL;
+				gk20a_err(dev_from_gk20a(g),
+					"NO XBAR2CLK VF point possible");
 
 				goto exit_vf_table;
 			}
@@ -1244,9 +1281,10 @@ static u8 nvgpu_clk_arb_find_vf_point(struct nvgpu_clk_arb *arb,
 
 		if (!table)
 			continue;
-		if ((!table->gpc2clk_num_points) || (!table->mclk_num_points))
+		if ((!table->gpc2clk_num_points) || (!table->mclk_num_points)) {
+			gk20a_err(dev_from_gk20a(arb->g), "found empty table");
 			goto find_exit;
-
+		}
 		/* First we check MCLK to find out which PSTATE we are
 		 * are requesting, and from there try to find the minimum
 		 * GPC2CLK on the same PSTATE that satisfies the request.
@@ -1304,7 +1342,7 @@ recalculate_vf_point:
 				gpc2clk_voltuv_sram =
 					table->gpc2clk_points[index-1].
 						uvolt_sram;
-			} else if (index_mclk == table->mclk_num_points - 1) {
+			} else if (index_mclk >= table->mclk_num_points - 1) {
 				/* There is no available combination of MCLK
 				 * and GPC2CLK, we need to fail this
 				 */

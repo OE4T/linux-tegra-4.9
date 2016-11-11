@@ -454,10 +454,19 @@ static ssize_t elpg_enable_store(struct device *dev,
 		 */
 		if (val && !g->elpg_enabled) {
 			g->elpg_enabled = true;
-			gk20a_pmu_enable_elpg(g);
+			gk20a_pmu_pg_global_enable(g, true);
+
 		} else if (!val && g->elpg_enabled) {
-			g->elpg_enabled = false;
-			gk20a_pmu_disable_elpg(g);
+			if (g->ops.pmu.pmu_pg_engines_feature_list &&
+				g->ops.pmu.pmu_pg_engines_feature_list(g,
+				PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
+				PMU_PG_FEATURE_GR_POWER_GATING_ENABLED) {
+				gk20a_pmu_pg_global_enable(g, false);
+				g->elpg_enabled = false;
+			} else {
+				g->elpg_enabled = false;
+				gk20a_pmu_pg_global_enable(g, false);
+			}
 		}
 		gk20a_idle(g->dev);
 	}
@@ -476,6 +485,64 @@ static ssize_t elpg_enable_read(struct device *dev,
 }
 
 static DEVICE_ATTR(elpg_enable, ROOTRW, elpg_enable_read, elpg_enable_store);
+
+static ssize_t mscg_enable_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct gk20a *g = get_gk20a(dev);
+	struct pmu_gk20a *pmu = &g->pmu;
+	unsigned long val = 0;
+	int err;
+
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	if (!g->power_on) {
+		g->mscg_enabled = val ? true : false;
+	} else {
+		err = gk20a_busy(g->dev);
+		if (err)
+			return -EAGAIN;
+		/*
+		 * Since elpg is refcounted, we should not unnecessarily call
+		 * enable/disable if it is already so.
+		 */
+		if (val && !g->mscg_enabled) {
+			g->mscg_enabled = true;
+			if (g->ops.pmu.pmu_is_lpwr_feature_supported(g,
+					PMU_PG_LPWR_FEATURE_MSCG)) {
+				if (!pmu->mscg_stat)
+					pmu->mscg_stat = PMU_MSCG_ENABLED;
+			}
+
+		} else if (!val && g->mscg_enabled) {
+			if (g->ops.pmu.pmu_is_lpwr_feature_supported(g,
+					PMU_PG_LPWR_FEATURE_MSCG)) {
+				gk20a_pmu_pg_global_enable(g, false);
+				pmu->mscg_stat = PMU_MSCG_DISABLED;
+				g->mscg_enabled = false;
+				if (g->elpg_enabled)
+					gk20a_pmu_pg_global_enable(g, true);
+			}
+			g->mscg_enabled = false;
+		}
+		gk20a_idle(g->dev);
+	}
+	dev_info(dev, "MSCG is %s.\n", g->mscg_enabled ? "enabled" :
+			"disabled");
+
+	return count;
+}
+
+static ssize_t mscg_enable_read(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct gk20a *g = get_gk20a(dev);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", g->mscg_enabled ? 1 : 0);
+}
+
+static DEVICE_ATTR(mscg_enable, ROOTRW, mscg_enable_read, mscg_enable_store);
 
 static ssize_t aelpg_param_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -824,6 +891,7 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_ptimer_ref_freq);
 	device_remove_file(dev, &dev_attr_ptimer_src_freq);
 	device_remove_file(dev, &dev_attr_elpg_enable);
+	device_remove_file(dev, &dev_attr_mscg_enable);
 	device_remove_file(dev, &dev_attr_emc3d_ratio);
 	device_remove_file(dev, &dev_attr_fmax_at_vmin_safe);
 	device_remove_file(dev, &dev_attr_counters);
@@ -866,6 +934,7 @@ void gk20a_create_sysfs(struct device *dev)
 	error |= device_create_file(dev, &dev_attr_ptimer_ref_freq);
 	error |= device_create_file(dev, &dev_attr_ptimer_src_freq);
 	error |= device_create_file(dev, &dev_attr_elpg_enable);
+	error |= device_create_file(dev, &dev_attr_mscg_enable);
 	error |= device_create_file(dev, &dev_attr_emc3d_ratio);
 	error |= device_create_file(dev, &dev_attr_fmax_at_vmin_safe);
 	error |= device_create_file(dev, &dev_attr_counters);

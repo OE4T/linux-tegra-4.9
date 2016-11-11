@@ -1,7 +1,7 @@
 /*
  * imx274.c - imx274 sensor driver
  *
- * Copyright (c) 2016, NVIDIA CORPORATION, All Rights Reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION, All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -133,6 +133,8 @@ static const imx274_reg mode_3840X2160[] = {
 	{0x33A6, 0x01},
 	{0x306B, 0x05},
 
+	/* d gain setting */
+	{0x3012, 0x01},
 	{0x300E, 0x01},
 
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
@@ -216,6 +218,8 @@ static const imx274_reg mode_3840X2160_60fps[] = {
 	{0x33A6, 0x01},
 	{0x306B, 0x05},
 
+	/* d gain setting */
+	{0x3012, 0x01},
 	{0x300E, 0x00},
 
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
@@ -299,6 +303,8 @@ static imx274_reg mode_1920X1080[] = {
 	{0x33A6, 0x01},
 	{0x306B, 0x05},
 
+	/* d gain setting */
+	{0x3012, 0x01},
 	{0x300E, 0x01},
 
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
@@ -381,6 +387,9 @@ static imx274_reg mode_1280X720[] = {
 	{0x366D, 0x17},
 	{0x33A6, 0x01},
 	{0x306B, 0x05},
+
+	/* d gain setting */
+	{0x3012, 0x01},
 
 	{IMX274_TABLE_WAIT_MS, IMX274_WAIT_MS},
 	{IMX274_TABLE_END, 0x0000}

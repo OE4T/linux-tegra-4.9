@@ -1,10 +1,11 @@
 GCOV_PROFILE := y
 
-ccflags-y += -Idrivers/gpu/nvgpu
+ccflags-y += -Idrivers/gpu/nvgpu/include
 ccflags-y += -Idrivers/video/tegra/host
 ccflags-y += -Idrivers/devfreq
 ccflags-y += -I../nvgpu/include
 ccflags-y += -I../nvgpu/include/uapi
+ccflags-y += -I../nvgpu/drivers/gpu/nvgpu/include
 ccflags-y += -Wno-multichar
 ccflags-y += -Werror
 ccflags-y += -Wno-error=cpp
@@ -25,8 +26,9 @@ endif
 obj-$(CONFIG_GK20A) := nvgpu.o
 
 nvgpu-y := \
-	gk20a/gk20a.o \
+	common/linux/timers.o \
 	nvgpu_common.o \
+	gk20a/gk20a.o \
 	gk20a/sched_gk20a.o \
 	gk20a/as_gk20a.o \
 	gk20a/ctrl_gk20a.o \

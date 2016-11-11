@@ -42,6 +42,9 @@ struct camrtc_debug {
 		size_t test_case_size;
 		u32 test_timeout;
 	} parameters;
+	struct ast_regset {
+		struct debugfs_regset32 common, region[8];
+	} ast_regsets[2];
 };
 
 #define NV(x) "nvidia," #x
@@ -505,6 +508,110 @@ static int camrtc_dbgfs_show_test_list(struct seq_file *file, void *data)
 
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_test_list, camrtc_dbgfs_show_test_list);
 
+#define TEGRA_APS_AST_CONTROL			0x0
+#define TEGRA_APS_AST_STREAMID_CTL		0x20
+#define TEGRA_APS_AST_REGION_0_SLAVE_BASE_LO	0x100
+#define TEGRA_APS_AST_REGION_0_SLAVE_BASE_HI	0x104
+#define TEGRA_APS_AST_REGION_0_MASK_LO		0x108
+#define TEGRA_APS_AST_REGION_0_MASK_HI		0x10c
+#define TEGRA_APS_AST_REGION_0_MASTER_BASE_LO	0x110
+#define TEGRA_APS_AST_REGION_0_MASTER_BASE_HI	0x114
+#define TEGRA_APS_AST_REGION_0_CONTROL		0x118
+
+#define TEGRA_APS_AST_REGION_STRIDE		0x20
+
+#define AST_RGN_CTRL_VM_INDEX		15
+#define AST_RGN_CTRL_SNOOP		BIT(2)
+
+#define AST_ADDR_MASK64			(~0xfffULL)
+
+struct tegra_ast_region_info {
+	u8  enabled;
+	u8  lock;
+	u8  snoop;
+	u8  non_secure;
+
+	u8  ns_passthru;
+	u8  carveout_id;
+	u8  carveout_al;
+	u8  vpr_rd;
+
+	u8  vpr_wr;
+	u8  vpr_passthru;
+	u8  vm_index;
+	u8  physical;
+
+	u8  stream_id;
+	u8  stream_id_enabled;
+	u8  pad[2];
+
+	u64 slave;
+	u64 mask;
+	u64 master;
+	u32 control;
+};
+
+static void tegra_ast_get_region_info(void __iomem *base,
+			u32 region,
+			struct tegra_ast_region_info *info)
+{
+	u32 offset = region * TEGRA_APS_AST_REGION_STRIDE;
+	u32 vmidx, stream_id, gcontrol, control;
+	u64 lo, hi;
+
+	control = readl(base + TEGRA_APS_AST_REGION_0_CONTROL + offset);
+	info->control = control;
+
+	info->lock = (control & BIT(0)) != 0;
+	info->snoop = (control & BIT(2)) != 0;
+	info->non_secure = (control & BIT(3)) != 0;
+	info->ns_passthru = (control & BIT(4)) != 0;
+	info->carveout_id = (control >> 5) & (0x1f);
+	info->carveout_al = (control >> 10) & 0x3;
+	info->vpr_rd = (control & BIT(12)) != 0;
+	info->vpr_wr = (control & BIT(13)) != 0;
+	info->vpr_passthru = (control & BIT(14)) != 0;
+	vmidx = (control >> AST_RGN_CTRL_VM_INDEX) & 0xf;
+	info->vm_index = vmidx;
+	info->physical = (control & BIT(19)) != 0;
+
+	if (info->physical) {
+		gcontrol = readl(base + TEGRA_APS_AST_CONTROL);
+		info->stream_id = (gcontrol >> 22) & 0x7F;
+		info->stream_id_enabled = 1;
+	} else {
+		stream_id = readl(base + TEGRA_APS_AST_STREAMID_CTL +
+				(4 * vmidx));
+		info->stream_id = (stream_id >> 8) & 0xFF;
+		info->stream_id_enabled = (stream_id & BIT(0)) != 0;
+	}
+
+	lo = readl(base + TEGRA_APS_AST_REGION_0_SLAVE_BASE_LO + offset);
+	hi = readl(base + TEGRA_APS_AST_REGION_0_SLAVE_BASE_HI + offset);
+
+	info->slave = ((hi << 32U) + lo) & AST_ADDR_MASK64;
+	info->enabled = (lo & BIT(0)) != 0;
+
+	hi = readl(base + TEGRA_APS_AST_REGION_0_MASK_HI + offset);
+	lo = readl(base + TEGRA_APS_AST_REGION_0_MASK_LO + offset);
+
+	info->mask = ((hi << 32) + lo) | ~AST_ADDR_MASK64;
+
+	hi = readl(base + TEGRA_APS_AST_REGION_0_MASTER_BASE_HI + offset);
+	lo = readl(base + TEGRA_APS_AST_REGION_0_MASTER_BASE_LO + offset);
+
+	info->master = ((hi << 32U) + lo) & AST_ADDR_MASK64;
+}
+
+static void __iomem *iomap_byname(struct device *dev, const char *name)
+{
+	int index = of_property_match_string(dev->of_node, "reg-names", name);
+	if (index < 0)
+		return IOMEM_ERR_PTR(-ENOENT);
+
+	return of_iomap(dev->of_node, index);
+}
+
 static void camrtc_dbgfs_show_ast_region(struct seq_file *file,
 						void __iomem *base, u32 index)
 {
@@ -526,7 +633,7 @@ static void camrtc_dbgfs_show_ast_region(struct seq_file *file,
 		"\tcarveout_id=%u carveout_al=%u\n"
 		"\tvpr_rd=%u vpr_wr=%u vpr_passthru=%u\n"
 		"\tvm_index=%u physical=%u\n"
-		"\tstream_id=%u enabled=%u\n",
+		"\tstream_id=%u (enabled=%u)\n",
 		info.slave, info.master, info.mask + 1,
 		info.lock, info.snoop,
 		info.non_secure, info.ns_passthru,
@@ -547,17 +654,10 @@ static int camrtc_dbgfs_show_ast(struct seq_file *file,
 				void *data)
 {
 	struct camrtc_dbgfs_ast_node *node = file->private;
-	struct tegra_ivc_channel *ch = node->ch;
-	struct device *rce_dev = camrtc_get_device(ch);
 	void __iomem *ast;
 	int i;
 
-	i = of_property_match_string(rce_dev->of_node, "reg-names",
-					node->name);
-	if (i < 0)
-		return i;
-
-	ast = of_iomap(rce_dev->of_node, i);
+	ast = iomap_byname(camrtc_get_device(node->ch), node->name);
 	if (ast == NULL)
 		return -ENOMEM;
 
@@ -576,6 +676,74 @@ static int camrtc_dbgfs_show_ast(struct seq_file *file,
 }
 
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_ast, camrtc_dbgfs_show_ast);
+
+static const struct debugfs_reg32 ast_common_regs[] = {
+	{ .name = "control", 0x0 },
+	{ .name = "error_status", 0x4 },
+	{ .name = "error_addr_lo", 0x8 },
+	{ .name = "error_addr_h", 0xC },
+	{ .name = "streamid_ctl_0", 0x20 },
+	{ .name = "streamid_ctl_1", 0x24 },
+	{ .name = "streamid_ctl_2", 0x28 },
+	{ .name = "streamid_ctl_3", 0x2C },
+	{ .name = "streamid_ctl_4", 0x30 },
+	{ .name = "streamid_ctl_5", 0x34 },
+	{ .name = "streamid_ctl_6", 0x38 },
+	{ .name = "streamid_ctl_7", 0x3C },
+	{ .name = "streamid_ctl_8", 0x40 },
+	{ .name = "streamid_ctl_9", 0x44 },
+	{ .name = "streamid_ctl_10", 0x48 },
+	{ .name = "streamid_ctl_11", 0x4C },
+	{ .name = "streamid_ctl_12", 0x50 },
+	{ .name = "streamid_ctl_13", 0x54 },
+	{ .name = "streamid_ctl_14", 0x58 },
+	{ .name = "streamid_ctl_15", 0x5C },
+	{ .name = "write_block_status", 0x60 },
+	{ .name = "read_block_status", 0x64 },
+};
+
+static const struct debugfs_reg32 ast_region_regs[] = {
+	{ .name = "slave_lo", 0x100 },
+	{ .name = "slave_hi", 0x104 },
+	{ .name = "mask_lo", 0x108 },
+	{ .name = "mask_hi", 0x10C },
+	{ .name = "master_lo", 0x110 },
+	{ .name = "master_hi", 0x114 },
+	{ .name = "control", 0x118 },
+};
+
+static int ast_regset_create_files(struct tegra_ivc_channel *ch,
+				struct dentry *dir,
+				struct ast_regset *ars,
+				char const *ast_name)
+{
+	void __iomem *base;
+	int i;
+
+	base = iomap_byname(camrtc_get_device(ch), ast_name);
+	if (IS_ERR_OR_NULL(base))
+		return -ENOMEM;
+
+	ars->common.base = base;
+	ars->common.regs = ast_common_regs;
+	ars->common.nregs = ARRAY_SIZE(ast_common_regs);
+
+	debugfs_create_regset32("regs-common", S_IRUGO, dir, &ars->common);
+
+	for (i = 0; i < ARRAY_SIZE(ars->region); i++) {
+		char name[16];
+
+		snprintf(name, sizeof(name), "regs-region%u", i);
+
+		ars->region[i].base = base + i * TEGRA_APS_AST_REGION_STRIDE;
+		ars->region[i].regs = ast_region_regs;
+		ars->region[i].nregs = ARRAY_SIZE(ast_region_regs);
+
+		debugfs_create_regset32(name, S_IRUGO, dir, &ars->region[i]);
+	}
+
+	return 0;
+}
 
 static int camrtc_debug_populate(struct tegra_ivc_channel *ch)
 {
@@ -656,9 +824,13 @@ static int camrtc_debug_populate(struct tegra_ivc_channel *ch)
 
 	for (dma = 0; dma <= 1; dma++) {
 		const char *ast_name = dma ? "ast-dma" : "ast-cpu";
+
 		dir = debugfs_create_dir(ast_name, crd->root);
 		if (dir == NULL)
 			goto error;
+
+		ast_regset_create_files(ch, dir, &crd->ast_regsets[dma],
+					ast_name);
 
 		ast_nodes->ch = ch;
 		ast_nodes->name = ast_name;

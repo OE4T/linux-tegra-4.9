@@ -57,11 +57,10 @@ EXPORT_SYMBOL(tegra_ioremap_byname);
 
 #define AST_MAX_REGION			7
 #define AST_ADDR_MASK			0xfffff000
-#define AST_ADDR_MASK64			(~0xfffULL)
 
 /* TEGRA_APS_AST_REGION_<x>_CONTROL register fields */
 #define AST_RGN_CTRL_VM_INDEX		15
-#define AST_RGN_CTRL_SNOOP		0x4
+#define AST_RGN_CTRL_SNOOP		BIT(2)
 
 #define AST_MAX_VMINDEX			15
 #define AST_MAX_STREAMID		255
@@ -284,7 +283,7 @@ struct tegra_ast_region *tegra_ast_region_map(struct tegra_ast *ast,
 		if (vmidx > AST_MAX_VMINDEX) {
 			/* Warmboot and mb2 not updated yet */
 			dev_info(&region->dev,
-					"Stream ID %u not in AST %u VM table",
+					"Stream ID %u not in AST %u VM table\n",
 					stream_id, i);
 			/*
 			 * TODO: This is racy. Return an error once MB1 sets
@@ -306,7 +305,7 @@ struct tegra_ast_region *tegra_ast_region_map(struct tegra_ast *ast,
 			goto error;
 		}
 
-		dev_dbg(&region->dev, "stream ID %u using AST %u VM ID %u",
+		dev_dbg(&region->dev, "stream ID %u using AST %u VM ID %u\n",
 			stream_id, i, vmidx);
 		region->vmids[i] = vmidx;
 	}
@@ -363,51 +362,6 @@ struct tegra_ast_region *of_tegra_ast_region_map(struct tegra_ast *ast,
 	return tegra_ast_region_map(ast, id, va, size, sid);
 }
 EXPORT_SYMBOL(of_tegra_ast_region_map);
-
-void tegra_ast_get_region_info(void __iomem *base,
-			u32 region,
-			struct tegra_ast_region_info *info)
-{
-	u32 offset = region * TEGRA_APS_AST_REGION_STRIDE;
-	u32 vmidx, stream_id, control;
-	u64 lo, hi;
-
-	control = readl(base + TEGRA_APS_AST_REGION_0_CONTROL + offset);
-	info->control = control;
-
-	info->lock = (control & BIT(0)) != 0;
-	info->snoop = (control & BIT(2)) != 0;
-	info->non_secure = (control & BIT(3)) != 0;
-	info->ns_passthru = (control & BIT(4)) != 0;
-	info->carveout_id = (control >> 5) & (0x1f);
-	info->carveout_al = (control >> 10) & 0x3;
-	info->vpr_rd = (control & BIT(12)) != 0;
-	info->vpr_wr = (control & BIT(13)) != 0;
-	info->vpr_passthru = (control & BIT(14)) != 0;
-	vmidx = (control >> AST_RGN_CTRL_VM_INDEX) & 0xf;
-	info->vm_index = vmidx;
-	info->physical = (control & BIT(19)) != 0;
-	stream_id = readl(base + TEGRA_APS_AST_STREAMID_CTL + (4 * vmidx));
-	info->stream_id = stream_id >> 8;
-	info->stream_id_enabled = (stream_id & BIT(0)) != 0;
-
-	lo = readl(base + TEGRA_APS_AST_REGION_0_SLAVE_BASE_LO + offset);
-	hi = readl(base + TEGRA_APS_AST_REGION_0_SLAVE_BASE_HI + offset);
-
-	info->slave = ((hi << 32U) + lo) & AST_ADDR_MASK64;
-	info->enabled = (lo & BIT(0)) != 0;
-
-	hi = readl(base + TEGRA_APS_AST_REGION_0_MASK_HI + offset);
-	lo = readl(base + TEGRA_APS_AST_REGION_0_MASK_LO + offset);
-
-	info->mask = ((hi << 32) + lo) | ~AST_ADDR_MASK64;
-
-	hi = readl(base + TEGRA_APS_AST_REGION_0_MASTER_BASE_HI + offset);
-	lo = readl(base + TEGRA_APS_AST_REGION_0_MASTER_BASE_LO + offset);
-
-	info->master = ((hi << 32U) + lo) & AST_ADDR_MASK64;
-}
-EXPORT_SYMBOL(tegra_ast_get_region_info);
 
 MODULE_DESCRIPTION("Tegra Adress Space Translation class driver");
 MODULE_LICENSE("GPL");

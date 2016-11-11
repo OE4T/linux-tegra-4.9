@@ -67,7 +67,8 @@ static u16 gp106_clk_get_rate(struct gk20a *g, u32 api_domain)
 	freq_khz = c->is_counter ? c->scale * gp106_get_rate_cntr(g, c) :
 		0; /* TODO: PLL read */
 
-	return (u16) freq_khz/1000;
+	/* Convert to MHZ */
+	return (u16) (freq_khz/1000);
 }
 
 static int gp106_init_clk_support(struct gk20a *g) {

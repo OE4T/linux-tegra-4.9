@@ -15,7 +15,7 @@
 / {
 	plugin-manager {
 		fragement@0 {
-			ids = "2180-1000-300", "2180-1000-302";
+			ids = ">=2180-1000-300";
 			override@0 {
 				target = <&ina3221x>;
 				_overlay_ {

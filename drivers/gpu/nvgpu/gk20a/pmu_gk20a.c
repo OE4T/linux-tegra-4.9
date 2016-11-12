@@ -24,6 +24,8 @@
 #include <linux/dma-mapping.h>
 #include <linux/uaccess.h>
 
+#include <nvgpu/timers.h>
+
 #include "gk20a.h"
 #include "gr_gk20a.h"
 #include "semaphore_gk20a.h"
@@ -2113,9 +2115,10 @@ void pmu_copy_to_dmem(struct pmu_gk20a *pmu,
 int pmu_idle(struct pmu_gk20a *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(2000);
+	struct nvgpu_timeout timeout;
 	u32 idle_stat;
+
+	nvgpu_timeout_init(g, &timeout, 2000, NVGPU_TIMER_CPU_TIMER);
 
 	/* wait for pmu idle */
 	do {
@@ -2126,12 +2129,11 @@ int pmu_idle(struct pmu_gk20a *pmu)
 			break;
 		}
 
-		if (time_after_eq(jiffies, end_jiffies)) {
-			gk20a_err(dev_from_gk20a(g),
-				"timeout waiting pmu idle : 0x%08x",
-				idle_stat);
+		if (nvgpu_timeout_check_msg(&timeout,
+					    "waiting for pmu idle: 0x%08x",
+					    idle_stat))
 			return -EBUSY;
-		}
+
 		usleep_range(100, 200);
 	} while (1);
 
@@ -3842,9 +3844,6 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 	return 0;
 }
 
-int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout,
-				 u32 *var, u32 val);
-
 static void pmu_handle_zbc_msg(struct gk20a *g, struct pmu_msg *msg,
 			void *param, u32 handle, u32 status)
 {
@@ -4028,17 +4027,20 @@ static int pmu_process_message(struct pmu_gk20a *pmu)
 	return 0;
 }
 
-int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout,
+int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout_ms,
 				 u32 *var, u32 val)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
-	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
+	struct nvgpu_timeout timeout;
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
 	u32 servicedpmuint;
 
 	servicedpmuint = pwr_falcon_irqstat_halt_true_f() |
 				pwr_falcon_irqstat_exterr_true_f() |
 				pwr_falcon_irqstat_swgen0_true_f();
+
+	nvgpu_timeout_init(g, &timeout, (int)timeout_ms, NVGPU_TIMER_CPU_TIMER);
+
 	do {
 		if (*var == val)
 			return 0;
@@ -4048,8 +4050,7 @@ int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout,
 
 		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-	} while (time_before(jiffies, end_jiffies) ||
-			!tegra_platform_is_silicon());
+	} while (!nvgpu_timeout_check(&timeout));
 
 	return -ETIMEDOUT;
 }
@@ -4386,22 +4387,21 @@ invalid_cmd:
 }
 
 static int pmu_write_cmd(struct pmu_gk20a *pmu, struct pmu_cmd *cmd,
-			u32 queue_id, unsigned long timeout)
+			u32 queue_id, unsigned long timeout_ms)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_queue *queue;
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(timeout);
+	struct nvgpu_timeout timeout;
 	int err;
 
 	gk20a_dbg_fn("");
 
 	queue = &pmu->queue[queue_id];
-
+	nvgpu_timeout_init(g, &timeout, (int)timeout_ms, NVGPU_TIMER_CPU_TIMER);
 
 	do {
 		err = pmu_queue_open_write(pmu, queue, cmd->hdr.size);
-		if (err == -EAGAIN && time_before(jiffies, end_jiffies))
+		if (err == -EAGAIN && !nvgpu_timeout_check(&timeout))
 			usleep_range(1000, 2000);
 		else
 			break;

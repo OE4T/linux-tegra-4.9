@@ -805,7 +805,7 @@ int gk20a_pmu_ap_send_command(struct gk20a *g,
 int gk20a_aelpg_init(struct gk20a *g);
 int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id);
 void pmu_enable_irq(struct pmu_gk20a *pmu, bool enable);
-int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout,
+int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout_ms,
 				 u32 *var, u32 val);
 void pmu_handle_fecs_boot_acr_msg(struct gk20a *g, struct pmu_msg *msg,
 				void *param, u32 handle, u32 status);

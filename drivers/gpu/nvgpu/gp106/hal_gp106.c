@@ -98,8 +98,7 @@ static struct gpu_ops gp106_ops = {
 		}
 };
 
-static int gp106_get_litter_value(struct gk20a *g,
-		enum nvgpu_litter_value value)
+static int gp106_get_litter_value(struct gk20a *g, int value)
 {
 	int ret = -EINVAL;
 

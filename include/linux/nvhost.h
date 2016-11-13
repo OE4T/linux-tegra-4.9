@@ -121,6 +121,7 @@ struct nvhost_clock {
 struct nvhost_vm_hwid {
 	u64 addr;
 	bool dynamic;
+	u32 shift;
 };
 
 /*

@@ -70,12 +70,33 @@ static int host1x_vm_init_device(struct platform_device *pdev)
 	if (pdata->virtual_dev)
 		return 0;
 
+	/* Clear the reset value of the StreamID registers in case any of them
+	 * includes multiple StreamIDs
+	 */
 	for (i = 0; i < ARRAY_SIZE(pdata->vm_regs); i++) {
-		if (!pdata->vm_regs[i].addr)
-			return 0;
+		u64 addr = pdata->vm_regs[i].addr;
 
-		/* use physical addressing by default */
-		host1x_writel(pdev, pdata->vm_regs[i].addr, streamid);
+		/* Break if this was the last StreamID */
+		if (!addr)
+			break;
+
+		host1x_writel(pdev, addr, 0);
+	}
+
+	/* Go through the StreamIDs and mask each of them */
+	for (i = 0; i < ARRAY_SIZE(pdata->vm_regs); i++) {
+		u64 addr = pdata->vm_regs[i].addr;
+		u32 shift = pdata->vm_regs[i].shift;
+		u32 val;
+
+		/* Break if this was the last StreamID */
+		if (!addr)
+			break;
+
+		/* Update the StreamID value */
+		val = host1x_readl(pdev, addr);
+		val = val | (streamid << shift);
+		host1x_writel(pdev, addr, val);
 	}
 
 	return 0;

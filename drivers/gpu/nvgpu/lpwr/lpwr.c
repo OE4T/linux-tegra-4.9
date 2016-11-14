@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -362,8 +362,11 @@ int nvgpu_lpwr_enable_pg(struct gk20a *g, bool pstate_lock)
 	is_mscg_supported = nvgpu_lpwr_is_mscg_supported(g,
 			present_pstate);
 	if (is_mscg_supported && g->mscg_enabled) {
-		if (!pmu->mscg_stat)
-			pmu->mscg_stat = PMU_MSCG_ENABLED;
+		if (!ACCESS_ONCE(pmu->mscg_stat)) {
+			WRITE_ONCE(pmu->mscg_stat, PMU_MSCG_ENABLED);
+			/* make status visible */
+			smp_mb();
+		}
 	}
 
 	is_rppg_supported = nvgpu_lpwr_is_rppg_supported(g,
@@ -409,8 +412,11 @@ int nvgpu_lpwr_disable_pg(struct gk20a *g, bool pstate_lock)
 	is_mscg_supported = nvgpu_lpwr_is_mscg_supported(g,
 			present_pstate);
 	if (is_mscg_supported && g->mscg_enabled) {
-		if (pmu->mscg_stat)
-			pmu->mscg_stat = PMU_MSCG_DISABLED;
+		if (ACCESS_ONCE(pmu->mscg_stat)) {
+			WRITE_ONCE(pmu->mscg_stat, PMU_MSCG_DISABLED);
+			/* make status visible */
+			smp_mb();
+		}
 	}
 
 exit_unlock:

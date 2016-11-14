@@ -511,15 +511,21 @@ static ssize_t mscg_enable_store(struct device *dev,
 			g->mscg_enabled = true;
 			if (g->ops.pmu.pmu_is_lpwr_feature_supported(g,
 					PMU_PG_LPWR_FEATURE_MSCG)) {
-				if (!pmu->mscg_stat)
-					pmu->mscg_stat = PMU_MSCG_ENABLED;
+				if (!ACCESS_ONCE(pmu->mscg_stat)) {
+					WRITE_ONCE(pmu->mscg_stat,
+						PMU_MSCG_ENABLED);
+					/* make status visible */
+					smp_mb();
+				}
 			}
 
 		} else if (!val && g->mscg_enabled) {
 			if (g->ops.pmu.pmu_is_lpwr_feature_supported(g,
 					PMU_PG_LPWR_FEATURE_MSCG)) {
 				gk20a_pmu_pg_global_enable(g, false);
-				pmu->mscg_stat = PMU_MSCG_DISABLED;
+				WRITE_ONCE(pmu->mscg_stat, PMU_MSCG_DISABLED);
+				/* make status visible */
+				smp_mb();
 				g->mscg_enabled = false;
 				if (g->elpg_enabled)
 					gk20a_pmu_pg_global_enable(g, true);

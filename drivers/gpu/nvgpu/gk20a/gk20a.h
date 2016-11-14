@@ -64,6 +64,10 @@ struct acr_desc;
 #endif
 #include "gm206/bios_gm206.h"
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0)
+#define WRITE_ONCE(x, val) \
+			x = val
+#endif
 
 /* PTIMER_REF_FREQ_HZ corresponds to a period of 32 nanoseconds.
     32 ns is the resolution of ptimer. */

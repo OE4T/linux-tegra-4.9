@@ -3388,7 +3388,9 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 				PMU_PG_FEATURE_GR_POWER_GATING_ENABLED) {
 				pmu->initialized = true;
 				pmu->pmu_state = PMU_STATE_STARTED;
-				pmu->mscg_stat = PMU_MSCG_DISABLED;
+				WRITE_ONCE(pmu->mscg_stat, PMU_MSCG_DISABLED);
+				/* make status visible */
+				smp_mb();
 			} else {
 				pmu->pmu_state = PMU_STATE_ELPG_BOOTED;
 				schedule_work(&pmu->pg_init);
@@ -4849,7 +4851,7 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 		pg_engine_id++) {
 
 		if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS &&
-			pmu->mscg_stat == PMU_MSCG_DISABLED)
+			ACCESS_ONCE(pmu->mscg_stat) == PMU_MSCG_DISABLED)
 			continue;
 
 		if (BIT(pg_engine_id) & pg_engine_id_list)
@@ -4925,7 +4927,7 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 		pg_engine_id++) {
 
 		if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS &&
-			pmu->mscg_stat == PMU_MSCG_DISABLED)
+			ACCESS_ONCE(pmu->mscg_stat) == PMU_MSCG_DISABLED)
 			continue;
 
 		if (BIT(pg_engine_id) & pg_engine_id_list) {

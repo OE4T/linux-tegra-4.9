@@ -764,12 +764,10 @@ static int tegra_t186ref_bali_driver_probe(struct platform_device *pdev)
 			TEGRA186_DAI_LINK_ADMAIF11 + (2 * i),
 			(struct snd_soc_pcm_stream *)
 			&tegra_t186ref_bali_sse_admaif_params[i]);
-#if defined(CONFIG_SND_SOC_TEGRA186_ADSP_ENABLED)
 		tegra_machine_set_dai_params(
 			TEGRA186_DAI_LINK_ADSP_ADMAIF11 + (2 * i),
 			(struct snd_soc_pcm_stream *)
 			&tegra_t186ref_bali_sse_admaif_params[i]);
-#endif
 	}
 
 	/* The packet from ARAD to ASRC for the ratio update is 24 bit */

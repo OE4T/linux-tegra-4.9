@@ -508,6 +508,7 @@ static int tegra_t186ref_p2382_driver_probe(struct platform_device *pdev)
 	struct snd_soc_codec_conf *tegra_machine_codec_conf = NULL;
 	struct snd_soc_codec_conf *tegra_t186ref_p2382_codec_conf = NULL;
 	int ret = 0, i, j;
+	int adsp_disabled = 0;
 
 	machine = devm_kzalloc(&pdev->dev, sizeof(struct tegra_t186ref_p2382),
 					GFP_KERNEL);
@@ -587,6 +588,12 @@ static int tegra_t186ref_p2382_driver_probe(struct platform_device *pdev)
 	if (!tegra_t186ref_p2382_codec_conf)
 		goto err_alloc_dai_link;
 
+	/* check if adsp node is disabled, if it is, then remove adsp links */
+	adsp_disabled = of_property_read_bool(np, "adsp_disabled");
+	if (adsp_disabled) {
+		dev_info(&pdev->dev, "adsp config is not set\n");
+		tegra_machine_remove_adsp_links_t18x();
+	}
 
 	/* get the xbar dai link/codec conf structure */
 	tegra_machine_dai_links = tegra_machine_get_dai_link_t18x();
@@ -701,9 +708,11 @@ static int tegra_t186ref_p2382_driver_probe(struct platform_device *pdev)
 	card->num_links =
 		tegra_machine_append_dai_link_t18x(tegra186_arad_dai_links,
 			1);
-	card->num_links =
-		tegra_machine_append_dai_link_t18x(tegra186_eavb_dai_links,
-			1);
+	if (!adsp_disabled) {
+		card->num_links =
+			tegra_machine_append_dai_link_t18x(tegra186_eavb_dai_links,
+				1);
+	}
 	tegra_machine_dai_links = tegra_machine_get_dai_link_t18x();
 	card->dai_link = tegra_machine_dai_links;
 

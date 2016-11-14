@@ -21,6 +21,8 @@
 #include "tegra_asoc_machine_alt.h"
 #include "tegra_asoc_machine_alt_t18x.h"
 
+static int num_links = TEGRA186_XBAR_DAI_LINKS;
+
 static struct snd_soc_pcm_stream default_link_params = {
 	.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	.rate_min = 48000,
@@ -499,252 +501,6 @@ static struct snd_soc_dai_link
 		.params = &default_link_params,
 		.ignore_suspend = 1,
 	},
-#if defined(CONFIG_SND_SOC_TEGRA186_ADSP_ENABLED)
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF1] = {
-		.name = "ADSP ADMAIF1",
-		.stream_name = "ADSP ADMAIF1",
-		.cpu_dai_name = "ADSP-ADMAIF1",
-		.codec_dai_name = "ADMAIF1 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF2] = {
-		.name = "ADSP ADMAIF2",
-		.stream_name = "ADSP ADMAIF2",
-		.cpu_dai_name = "ADSP-ADMAIF2",
-		.codec_dai_name = "ADMAIF2 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF3] = {
-		.name = "ADSP ADMAIF3",
-		.stream_name = "ADSP ADMAIF3",
-		.cpu_dai_name = "ADSP-ADMAIF3",
-		.codec_dai_name = "ADMAIF3 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF4] = {
-		.name = "ADSP ADMAIF4",
-		.stream_name = "ADSP ADMAIF4",
-		.cpu_dai_name = "ADSP-ADMAIF4",
-		.codec_dai_name = "ADMAIF4 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF5] = {
-		.name = "ADSP ADMAIF5",
-		.stream_name = "ADSP ADMAIF5",
-		.cpu_dai_name = "ADSP-ADMAIF5",
-		.codec_dai_name = "ADMAIF5 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF6] = {
-		.name = "ADSP ADMAIF6",
-		.stream_name = "ADSP ADMAIF6",
-		.cpu_dai_name = "ADSP-ADMAIF6",
-		.codec_dai_name = "ADMAIF6 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF7] = {
-		.name = "ADSP ADMAIF7",
-		.stream_name = "ADSP ADMAIF7",
-		.cpu_dai_name = "ADSP-ADMAIF7",
-		.codec_dai_name = "ADMAIF7 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF8] = {
-		.name = "ADSP ADMAIF8",
-		.stream_name = "ADSP ADMAIF8",
-		.cpu_dai_name = "ADSP-ADMAIF8",
-		.codec_dai_name = "ADMAIF8 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF9] = {
-		.name = "ADSP ADMAIF9",
-		.stream_name = "ADSP ADMAIF9",
-		.cpu_dai_name = "ADSP-ADMAIF9",
-		.codec_dai_name = "ADMAIF9 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF10] = {
-		.name = "ADSP ADMAIF10",
-		.stream_name = "ADSP ADMAIF10",
-		.cpu_dai_name = "ADSP-ADMAIF10",
-		.codec_dai_name = "ADMAIF10 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF11] = {
-		.name = "ADSP ADMAIF11",
-		.stream_name = "ADSP ADMAIF11",
-		.cpu_dai_name = "ADSP-ADMAIF11",
-		.codec_dai_name = "ADMAIF11 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF12] = {
-		.name = "ADSP ADMAIF12",
-		.stream_name = "ADSP ADMAIF12",
-		.cpu_dai_name = "ADSP-ADMAIF12",
-		.codec_dai_name = "ADMAIF12 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF13] = {
-		.name = "ADSP ADMAIF13",
-		.stream_name = "ADSP ADMAIF13",
-		.cpu_dai_name = "ADSP-ADMAIF13",
-		.codec_dai_name = "ADMAIF13 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF14] = {
-		.name = "ADSP ADMAIF14",
-		.stream_name = "ADSP ADMAIF14",
-		.cpu_dai_name = "ADSP-ADMAIF14",
-		.codec_dai_name = "ADMAIF14 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF15] = {
-		.name = "ADSP ADMAIF15",
-		.stream_name = "ADSP ADMAIF15",
-		.cpu_dai_name = "ADSP-ADMAIF15",
-		.codec_dai_name = "ADMAIF15 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF16] = {
-		.name = "ADSP ADMAIF16",
-		.stream_name = "ADSP ADMAIF16",
-		.cpu_dai_name = "ADSP-ADMAIF16",
-		.codec_dai_name = "ADMAIF16 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF17] = {
-		.name = "ADSP ADMAIF17",
-		.stream_name = "ADSP ADMAIF17",
-		.cpu_dai_name = "ADSP-ADMAIF17",
-		.codec_dai_name = "ADMAIF17 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF18] = {
-		.name = "ADSP ADMAIF18",
-		.stream_name = "ADSP ADMAIF18",
-		.cpu_dai_name = "ADSP-ADMAIF18",
-		.codec_dai_name = "ADMAIF18 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF19] = {
-		.name = "ADSP ADMAIF19",
-		.stream_name = "ADSP ADMAIF19",
-		.cpu_dai_name = "ADSP-ADMAIF19",
-		.codec_dai_name = "ADMAIF19 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_ADMAIF20] = {
-		.name = "ADSP ADMAIF20",
-		.stream_name = "ADSP ADMAIF20",
-		.cpu_dai_name = "ADSP-ADMAIF20",
-		.codec_dai_name = "ADMAIF20 FIFO",
-		.cpu_name = "adsp_audio",
-		.codec_name = "tegra210-admaif",
-		.params = &default_link_params,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_PCM1] = {
-		.name = "ADSP PCM1",
-		.stream_name = "ADSP PCM1",
-		.cpu_dai_name = "ADSP PCM1",
-		.codec_dai_name = "ADSP-FE1",
-		.cpu_name = "adsp_audio",
-		.codec_name = "adsp_audio",
-		.platform_name = "adsp_audio",
-		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_PCM2] = {
-		.name = "ADSP PCM2",
-		.stream_name = "ADSP PCM2",
-		.cpu_dai_name = "ADSP PCM2",
-		.codec_dai_name = "ADSP-FE2",
-		.cpu_name = "adsp_audio",
-		.codec_name = "adsp_audio",
-		.platform_name = "adsp_audio",
-		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_COMPR1] = {
-		.name = "ADSP COMPR1",
-		.stream_name = "ADSP COMPR1",
-		.cpu_dai_name = "ADSP COMPR1",
-		.codec_dai_name = "ADSP-FE3",
-		.cpu_name = "adsp_audio",
-		.codec_name = "adsp_audio",
-		.platform_name = "adsp_audio",
-		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
-	},
-	[TEGRA186_DAI_LINK_ADSP_COMPR2] = {
-		.name = "ADSP COMPR2",
-		.stream_name = "ADSP COMPR2",
-		.cpu_dai_name = "ADSP COMPR2",
-		.codec_dai_name = "ADSP-FE4",
-		.cpu_name = "adsp_audio",
-		.codec_name = "adsp_audio",
-		.platform_name = "adsp_audio",
-		.ignore_pmdown_time = 1,
-		.ignore_suspend = 1,
-	},
-#endif
 	[TEGRA186_DAI_LINK_AMX1_1] = {
 		.name = "AMX1 IN1",
 		.stream_name = "AMX1 IN",
@@ -1685,6 +1441,250 @@ static struct snd_soc_dai_link
 		.params = &default_link_params,
 		.ignore_suspend = 1,
 	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF1] = {
+		.name = "ADSP ADMAIF1",
+		.stream_name = "ADSP ADMAIF1",
+		.cpu_dai_name = "ADSP-ADMAIF1",
+		.codec_dai_name = "ADMAIF1 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF2] = {
+		.name = "ADSP ADMAIF2",
+		.stream_name = "ADSP ADMAIF2",
+		.cpu_dai_name = "ADSP-ADMAIF2",
+		.codec_dai_name = "ADMAIF2 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF3] = {
+		.name = "ADSP ADMAIF3",
+		.stream_name = "ADSP ADMAIF3",
+		.cpu_dai_name = "ADSP-ADMAIF3",
+		.codec_dai_name = "ADMAIF3 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF4] = {
+		.name = "ADSP ADMAIF4",
+		.stream_name = "ADSP ADMAIF4",
+		.cpu_dai_name = "ADSP-ADMAIF4",
+		.codec_dai_name = "ADMAIF4 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF5] = {
+		.name = "ADSP ADMAIF5",
+		.stream_name = "ADSP ADMAIF5",
+		.cpu_dai_name = "ADSP-ADMAIF5",
+		.codec_dai_name = "ADMAIF5 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF6] = {
+		.name = "ADSP ADMAIF6",
+		.stream_name = "ADSP ADMAIF6",
+		.cpu_dai_name = "ADSP-ADMAIF6",
+		.codec_dai_name = "ADMAIF6 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF7] = {
+		.name = "ADSP ADMAIF7",
+		.stream_name = "ADSP ADMAIF7",
+		.cpu_dai_name = "ADSP-ADMAIF7",
+		.codec_dai_name = "ADMAIF7 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF8] = {
+		.name = "ADSP ADMAIF8",
+		.stream_name = "ADSP ADMAIF8",
+		.cpu_dai_name = "ADSP-ADMAIF8",
+		.codec_dai_name = "ADMAIF8 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF9] = {
+		.name = "ADSP ADMAIF9",
+		.stream_name = "ADSP ADMAIF9",
+		.cpu_dai_name = "ADSP-ADMAIF9",
+		.codec_dai_name = "ADMAIF9 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF10] = {
+		.name = "ADSP ADMAIF10",
+		.stream_name = "ADSP ADMAIF10",
+		.cpu_dai_name = "ADSP-ADMAIF10",
+		.codec_dai_name = "ADMAIF10 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF11] = {
+		.name = "ADSP ADMAIF11",
+		.stream_name = "ADSP ADMAIF11",
+		.cpu_dai_name = "ADSP-ADMAIF11",
+		.codec_dai_name = "ADMAIF11 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF12] = {
+		.name = "ADSP ADMAIF12",
+		.stream_name = "ADSP ADMAIF12",
+		.cpu_dai_name = "ADSP-ADMAIF12",
+		.codec_dai_name = "ADMAIF12 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF13] = {
+		.name = "ADSP ADMAIF13",
+		.stream_name = "ADSP ADMAIF13",
+		.cpu_dai_name = "ADSP-ADMAIF13",
+		.codec_dai_name = "ADMAIF13 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF14] = {
+		.name = "ADSP ADMAIF14",
+		.stream_name = "ADSP ADMAIF14",
+		.cpu_dai_name = "ADSP-ADMAIF14",
+		.codec_dai_name = "ADMAIF14 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF15] = {
+		.name = "ADSP ADMAIF15",
+		.stream_name = "ADSP ADMAIF15",
+		.cpu_dai_name = "ADSP-ADMAIF15",
+		.codec_dai_name = "ADMAIF15 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF16] = {
+		.name = "ADSP ADMAIF16",
+		.stream_name = "ADSP ADMAIF16",
+		.cpu_dai_name = "ADSP-ADMAIF16",
+		.codec_dai_name = "ADMAIF16 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF17] = {
+		.name = "ADSP ADMAIF17",
+		.stream_name = "ADSP ADMAIF17",
+		.cpu_dai_name = "ADSP-ADMAIF17",
+		.codec_dai_name = "ADMAIF17 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF18] = {
+		.name = "ADSP ADMAIF18",
+		.stream_name = "ADSP ADMAIF18",
+		.cpu_dai_name = "ADSP-ADMAIF18",
+		.codec_dai_name = "ADMAIF18 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF19] = {
+		.name = "ADSP ADMAIF19",
+		.stream_name = "ADSP ADMAIF19",
+		.cpu_dai_name = "ADSP-ADMAIF19",
+		.codec_dai_name = "ADMAIF19 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_ADMAIF20] = {
+		.name = "ADSP ADMAIF20",
+		.stream_name = "ADSP ADMAIF20",
+		.cpu_dai_name = "ADSP-ADMAIF20",
+		.codec_dai_name = "ADMAIF20 FIFO",
+		.cpu_name = "adsp_audio",
+		.codec_name = "tegra210-admaif",
+		.params = &default_link_params,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_PCM1] = {
+		.name = "ADSP PCM1",
+		.stream_name = "ADSP PCM1",
+		.cpu_dai_name = "ADSP PCM1",
+		.codec_dai_name = "ADSP-FE1",
+		.cpu_name = "adsp_audio",
+		.codec_name = "adsp_audio",
+		.platform_name = "adsp_audio",
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_PCM2] = {
+		.name = "ADSP PCM2",
+		.stream_name = "ADSP PCM2",
+		.cpu_dai_name = "ADSP PCM2",
+		.codec_dai_name = "ADSP-FE2",
+		.cpu_name = "adsp_audio",
+		.codec_name = "adsp_audio",
+		.platform_name = "adsp_audio",
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_COMPR1] = {
+		.name = "ADSP COMPR1",
+		.stream_name = "ADSP COMPR1",
+		.cpu_dai_name = "ADSP COMPR1",
+		.codec_dai_name = "ADSP-FE3",
+		.cpu_name = "adsp_audio",
+		.codec_name = "adsp_audio",
+		.platform_name = "adsp_audio",
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
+	[TEGRA186_DAI_LINK_ADSP_COMPR2] = {
+		.name = "ADSP COMPR2",
+		.stream_name = "ADSP COMPR2",
+		.cpu_dai_name = "ADSP COMPR2",
+		.codec_dai_name = "ADSP-FE4",
+		.cpu_name = "adsp_audio",
+		.codec_name = "adsp_audio",
+		.platform_name = "adsp_audio",
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
+	},
 };
 
 static struct snd_soc_codec_conf
@@ -1831,10 +1831,21 @@ static struct snd_soc_codec_conf
 	},
 };
 
+static int tegra_machine_get_num_links_t18x(void)
+{
+	return num_links;
+}
+
+void tegra_machine_remove_adsp_links_t18x(void)
+{
+	num_links = TEGRA186_DAI_LINK_ADSP_ADMAIF1;
+}
+EXPORT_SYMBOL_GPL(tegra_machine_remove_adsp_links_t18x);
+
 struct snd_soc_dai_link *tegra_machine_get_dai_link_t18x(void)
 {
 	struct snd_soc_dai_link *link = tegra186_xbar_dai_links;
-	unsigned int size = TEGRA186_XBAR_DAI_LINKS;
+	unsigned int size = tegra_machine_get_num_links_t18x();
 	struct snd_soc_dai_link *tegra_asoc_machine_links =
 		tegra_machine_get_machine_links();
 
@@ -1947,7 +1958,7 @@ EXPORT_SYMBOL_GPL(tegra_machine_append_codec_conf_t18x);
 
 unsigned int tegra_machine_get_codec_dai_link_idx_t18x(const char *codec_name)
 {
-	unsigned int idx = TEGRA186_XBAR_DAI_LINKS;
+	unsigned int idx = tegra_machine_get_num_links_t18x();
 	struct snd_soc_dai_link *tegra_asoc_machine_links =
 		tegra_machine_get_machine_links();
 
@@ -1983,7 +1994,7 @@ unsigned int tegra_machine_get_bclk_ratio_t18x(
 	if (!bclk_ratio)
 		goto err;
 
-	idx = idx - TEGRA186_XBAR_DAI_LINKS;
+	idx = idx - tegra_machine_get_num_links_t18x();
 
 	return bclk_ratio[idx];
 
@@ -2007,7 +2018,7 @@ unsigned int tegra_machine_get_rx_mask_t18x(
 	if (!rx_mask)
 		goto err;
 
-	idx = idx - TEGRA186_XBAR_DAI_LINKS;
+	idx = idx - tegra_machine_get_num_links_t18x();
 
 	return rx_mask[idx];
 
@@ -2032,7 +2043,7 @@ unsigned int tegra_machine_get_tx_mask_t18x(
 	if (!tx_mask)
 		goto err;
 
-	idx = idx - TEGRA186_XBAR_DAI_LINKS;
+	idx = idx - tegra_machine_get_num_links_t18x();
 
 	return tx_mask[idx];
 

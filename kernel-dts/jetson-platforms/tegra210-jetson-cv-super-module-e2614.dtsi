@@ -28,6 +28,7 @@
 			#interrupt-cells = <2>;
 			interrupt-controller;
 			status = "disabled";
+			vcc-supply = <&battery_reg>;
 			default {
 				gpio-hog;
 				output-low;

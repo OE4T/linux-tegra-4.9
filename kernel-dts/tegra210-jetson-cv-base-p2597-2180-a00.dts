@@ -668,6 +668,7 @@
 			interrupts = <TEGRA_GPIO(L, 1) 0x0>;
 			#interrupt-cells = <2>;
 			interrupt-controller;
+			vcc-supply = <&battery_reg>;
 		};
 
 		tca9539_77: tca9539@77 {
@@ -679,6 +680,7 @@
 			interrupts = <TEGRA_GPIO(Z, 2) 0x0>;
 			#interrupt-cells = <2>;
 			interrupt-controller;
+			vcc-supply = <&battery_reg>;
 		};
 	};
 

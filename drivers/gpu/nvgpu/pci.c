@@ -21,6 +21,7 @@
 #include "nvgpu_common.h"
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
+#include "clk/clk.h"
 
 #define PCI_INTERFACE_NAME "card-%s%%s"
 
@@ -37,6 +38,16 @@ static int nvgpu_pci_tegra_remove(struct device *dev)
 static bool nvgpu_pci_tegra_is_railgated(struct device *pdev)
 {
 	return false;
+}
+
+static long nvgpu_pci_clk_round_rate(struct device *dev, unsigned long rate)
+{
+	long ret = (long)rate;
+
+	if (rate == UINT_MAX)
+		ret = BOOT_GPC2CLK_MHZ * 1000000UL;
+
+	return ret;
 }
 
 static struct gk20a_platform nvgpu_pci_device[] = {
@@ -57,6 +68,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 
 	/* power management callbacks */
 	.is_railgated = nvgpu_pci_tegra_is_railgated,
+	.clk_round_rate = nvgpu_pci_clk_round_rate,
 
 	.default_big_page_size	= SZ_64K,
 
@@ -84,6 +96,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 
 	/* power management callbacks */
 	.is_railgated = nvgpu_pci_tegra_is_railgated,
+	.clk_round_rate = nvgpu_pci_clk_round_rate,
 
 	.default_big_page_size	= SZ_64K,
 
@@ -111,6 +124,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 
 	/* power management callbacks */
 	.is_railgated = nvgpu_pci_tegra_is_railgated,
+	.clk_round_rate = nvgpu_pci_clk_round_rate,
 
 	.default_big_page_size	= SZ_64K,
 

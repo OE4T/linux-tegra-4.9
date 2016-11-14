@@ -56,7 +56,7 @@ int nvgpu_clk_arb_get_session_target_mhz(struct nvgpu_clk_session *session,
 		u32 api_domain, u16 *target_mhz);
 
 int nvgpu_clk_arb_install_event_fd(struct gk20a *g,
-	struct nvgpu_clk_session *session, int *event_fd);
+	struct nvgpu_clk_session *session, int *event_fd, u32 alarm_mask);
 
 int nvgpu_clk_arb_install_request_fd(struct gk20a *g,
 	struct nvgpu_clk_session *session, int *event_fd);
@@ -67,5 +67,6 @@ int nvgpu_clk_arb_get_current_pstate(struct gk20a *g);
 
 void nvgpu_clk_arb_pstate_change_lock(struct gk20a *g, bool lock);
 
+void nvgpu_clk_arb_schedule_alarm(struct gk20a *g, u32 alarm);
 #endif /* _CLK_ARB_H_ */
 

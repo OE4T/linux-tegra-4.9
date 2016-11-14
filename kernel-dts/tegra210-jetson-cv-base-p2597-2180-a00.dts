@@ -288,11 +288,6 @@
 	sound_card: sound {
 		compatible = "nvidia,tegra-audio-t210ref-mobile-rt565x";
 		nvidia,model = "tegra-snd-t210ref-mobile-rt565x";
-		nvidia,hp-det-gpios = <&gpio TEGRA_GPIO(E, 6) GPIO_ACTIVE_HIGH>;
-
-		/* used when no audio codec on board */
-		nvidia,dummy-codec-dai = <&spdif_dit0>;
-		nvidia,dummy-codec-dai-name = "dit-hifi";
 
 		nvidia,num-codec-link = <5>;
 
@@ -307,6 +302,8 @@
 			"x DMIC L2",		"x Int Mic",
 			"x DMIC R1",		"x Int Mic",
 			"x DMIC R2",		"x Int Mic",
+			"x Headphone",		"x OUT",
+			"x IN",			"x Mic",
 			"y Headphone",		"y OUT",
 			"y IN",			"y Mic",
 			"l IN",			"l OUT",
@@ -315,12 +312,14 @@
 
 		nvidia,xbar = <&tegra_axbar>;
 
+		/* The codec-dai here is initialized to dummy and will be   */
+		/* replaced with rt565x codec-dai on detecting super-module */
 		nvidia,dai-link-1 {
 			link-name = "rt565x-playback";
 			cpu-dai = <&tegra_i2s1>;
-			codec-dai = <&rt5659>;
+			codec-dai = <&spdif_dit4>;
 			cpu-dai-name = "I2S1";
-			codec-dai-name = "rt5659-aif1";
+			codec-dai-name = "dit-hifi";
 			format = "i2s";
 			bitclock-slave;
 			frame-slave;

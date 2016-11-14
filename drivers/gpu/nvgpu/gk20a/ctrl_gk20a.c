@@ -1179,10 +1179,11 @@ static int nvgpu_gpu_get_event_fd(struct gk20a *g,
 
 	gk20a_dbg_fn("");
 
-	if (!session || args->flags)
+	if (!session)
 		return -EINVAL;
 
-	return nvgpu_clk_arb_install_event_fd(g, session, &args->event_fd);
+	return nvgpu_clk_arb_install_event_fd(g, session, &args->event_fd,
+		args->flags);
 }
 
 static int nvgpu_gpu_get_voltage(struct gk20a *g,

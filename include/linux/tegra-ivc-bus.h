@@ -96,6 +96,18 @@ static inline struct tegra_ivc_channel *to_tegra_ivc_channel(
 	return container_of(dev, struct tegra_ivc_channel, dev);
 }
 
+static inline struct device *tegra_ivc_channel_to_camrtc_dev(
+	struct tegra_ivc_channel *ch)
+{
+	if (unlikely(ch == NULL))
+		return NULL;
+
+	BUG_ON(ch->dev.parent == NULL);
+	BUG_ON(ch->dev.parent->parent == NULL);
+
+	return ch->dev.parent->parent;
+}
+
 struct tegra_ivc_channel_ops {
 	int (*probe)(struct tegra_ivc_channel *);
 	void (*remove)(struct tegra_ivc_channel *);

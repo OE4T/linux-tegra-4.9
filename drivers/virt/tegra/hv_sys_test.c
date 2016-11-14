@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * Linux spesific hv syscall tests
  *
@@ -35,7 +35,7 @@
 #include <linux/string.h>
 #include <linux/printk.h>
 
-#include "syscalls.h"
+#include <soc/tegra/virt/syscalls.h>
 
 /* #define TEGRA_HVC_DEBUG	*/
 

@@ -35,6 +35,7 @@
 #define DRV_VERSION "0.1"
 
 #include <linux/tegra-ivc.h>
+#include <soc/tegra/virt/syscalls.h>
 
 /* frame format is
 * 0000: <flags>
@@ -706,8 +707,25 @@ static int tegra_hv_net_probe(struct platform_device *pdev)
 
 	hvn->mac_address = of_get_mac_address(dev->of_node);
 	if (hvn->mac_address == NULL) {
-		eth_hw_addr_random(ndev);
-		dev_warn(dev, "No valid mac-address found, using random\n");
+		unsigned int gid;
+
+		dev_warn(dev, "No valid mac-address found, using fixed local address\n");
+		ndev->dev_addr[0] = 0x0a;
+		ndev->dev_addr[1] = 0x86;
+		ndev->dev_addr[2] = 0x4c;
+		ndev->dev_addr[3] = 0xf8;
+		ndev->dev_addr[4] = (uint8_t)id;
+
+		ret = hyp_read_gid(&gid);
+		if (ret != 0) {
+			dev_err(dev, "Failed to read guest id\n");
+			goto out_unreserve;
+		}
+		ndev->dev_addr[5] = (uint8_t)(gid);
+
+	} else {
+		/* Set the MAC address. */
+		ether_addr_copy(ndev->dev_addr, hvn->mac_address);
 	}
 
 	hvn->xmit_wq = alloc_workqueue("tgvnet-wq-%d",

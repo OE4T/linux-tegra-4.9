@@ -71,8 +71,8 @@ static u32 pva_get_evp_reg(u32 index)
 	return evp_reg[index];
 }
 
-/* Buffer for ucode for application code,data or for logging information */
-#define PVA_PRIV2_BUFFER_SIZE 0x100000
+/* Default buffer size (256 kbytes) used for ucode trace log*/
+#define PVA_PRIV2_TRACE_LOG_BUFFER_SIZE 0x40000
 
 #define R5_USER_SEGREG_OFFSET 0x40000000
 #define R5_PRIV2_SEGREG_OFFSET 0x70000000
@@ -84,28 +84,27 @@ static int pva_init_fw(struct platform_device *pdev)
 	u32 *ucode_ptr = fw_info->ucode_mapped;
 	int err = 0, w;
 	int timeout;
+	u64 ucode_useg_addr;
 
 	nvhost_dbg_fn("");
 
 	/* Set the Ucode Header address for R5 */
 	/* Program user seg subtracting the offset */
+	ucode_useg_addr = fw_info->ucode_phys - R5_USER_SEGREG_OFFSET;
 	host1x_writel(pdev, cfg_r5user_lsegreg_r(),
-		PVA_LOW32((fw_info->ucode_phys - R5_USER_SEGREG_OFFSET)));
+		PVA_LOW32(ucode_useg_addr));
 	host1x_writel(pdev, cfg_r5user_usegreg_r(),
-		PVA_EXTRACT64((fw_info->ucode_phys - R5_USER_SEGREG_OFFSET),
-					39, 32, u32));
+		PVA_EXTRACT64(ucode_useg_addr, 39, 32, u32));
 
-	/* Program the extra memory tobe used by R5 */
+	/* Program the extra memory to be used by R5 */
+	ucode_useg_addr = fw_info->priv2_buffer_phys - R5_PRIV2_SEGREG_OFFSET;
 	host1x_writel(pdev, cfg_priv_ar2_start_r(), R5_PRIV2_SEGREG_OFFSET);
 	host1x_writel(pdev, cfg_priv_ar2_end_r(),
-			R5_PRIV2_SEGREG_OFFSET + PVA_PRIV2_BUFFER_SIZE);
+			R5_PRIV2_SEGREG_OFFSET + fw_info->priv2_buffer_size);
 	host1x_writel(pdev, cfg_priv_ar2_lsegreg_r(),
-	PVA_LOW32((fw_info->priv2_buffer_phys - R5_PRIV2_SEGREG_OFFSET)));
-
+		PVA_LOW32(ucode_useg_addr));
 	host1x_writel(pdev, cfg_priv_ar2_usegreg_r(),
-	PVA_EXTRACT64((fw_info->priv2_buffer_phys - R5_PRIV2_SEGREG_OFFSET),
-			39, 32, u32));
-
+		PVA_EXTRACT64(ucode_useg_addr, 39, 32, u32));
 
 	/* check the type of segments and their offset and address */
 	for (w = 0; w < fw_info->hdr->nsegments; w++) {
@@ -151,6 +150,7 @@ static int pva_init_fw(struct platform_device *pdev)
 
 			break;
 		}
+
 		}
 	}
 
@@ -189,7 +189,7 @@ static int pva_free_fw(struct platform_device *pdev, struct pva *pva)
 		fw_info->ucode_mapped, fw_info->ucode_phys, &fw_info->attrs);
 
 	if (fw_info->priv2_buffer_mapped)
-		dma_free_attrs(&pdev->dev, PVA_PRIV2_BUFFER_SIZE,
+		dma_free_attrs(&pdev->dev, fw_info->priv2_buffer_size,
 		fw_info->priv2_buffer_mapped, fw_info->priv2_buffer_phys,
 		&fw_info->attrs);
 
@@ -218,6 +218,9 @@ static int pva_read_ucode(struct platform_device *pdev,
 		return err;
 	}
 
+	/* set to default size, will add support to modify through debugfs */
+	fw_info->trace_buffer_size = PVA_PRIV2_TRACE_LOG_BUFFER_SIZE;
+
 	fw_info->size = ucode_fw->size;
 	dma_set_attr(DMA_ATTR_READ_ONLY, &fw_info->attrs);
 
@@ -226,16 +229,6 @@ static int pva_read_ucode(struct platform_device *pdev,
 		&fw_info->ucode_phys, GFP_KERNEL, &fw_info->attrs);
 
 	if (!fw_info->ucode_mapped) {
-		err = -ENOMEM;
-		goto clean_up;
-	}
-
-	/* Allocate memory to R5 for app code, data or to log information */
-	fw_info->priv2_buffer_mapped = dma_alloc_attrs(&pdev->dev,
-		PVA_PRIV2_BUFFER_SIZE, &fw_info->priv2_buffer_phys,
-		GFP_KERNEL, &fw_info->attrs);
-
-	if (!fw_info->priv2_buffer_mapped) {
 		err = -ENOMEM;
 		goto clean_up;
 	}
@@ -255,6 +248,41 @@ static int pva_read_ucode(struct platform_device *pdev,
 		dev_err(&pdev->dev, "Wrong PVA uCode header magic/version\n");
 		err = -EINVAL;
 	}
+
+	/* find the size needed for priv2 buffer allocation */
+	/* check the type of segments and their offset and address */
+	for (w = 0; w < fw_info->hdr->nsegments; w++) {
+		struct pva_ucode_seg *useg = (struct pva_ucode_seg *)
+			((void *)ucode_ptr + PVA_UCODE_SEG_HDR_LENGTH
+				+ (PVA_UCODE_SEG_HDR_LENGTH * w));
+
+		switch (useg->type) {
+		case PVA_UCODE_SEG_R5_OVERLAY:
+		case PVA_UCODE_SEG_R5_CRASHDUMP:
+		case PVA_UCODE_SEG_VPU_CRASHDUMP:
+
+			fw_info->priv2_buffer_size += useg->size;
+			break;
+		case PVA_UCODE_SEG_TRACE_LOG:
+			/* set the trace log buffer offset from priv2 start */
+			useg->offset = fw_info->priv2_buffer_size;
+
+			/* set os specified size if uCode passes zero size */
+			if (!useg->size)
+				useg->size = fw_info->trace_buffer_size;
+
+			fw_info->priv2_buffer_size += useg->size;
+			break;
+		}
+	}
+
+	/* Allocate memory to R5 for app code, data or to log information */
+	fw_info->priv2_buffer_mapped = dma_alloc_attrs(&pdev->dev,
+		fw_info->priv2_buffer_size, &fw_info->priv2_buffer_phys,
+		GFP_KERNEL, &fw_info->attrs);
+
+	if (!fw_info->priv2_buffer_mapped)
+		err = -ENOMEM;
 
 clean_up:
 	release_firmware(ucode_fw);

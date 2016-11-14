@@ -44,7 +44,9 @@ extern const struct file_operations tegra_pva_ctrl_ops;
  * @ucode_mapped:	virtual address of dram for ucode image
  * @priv2_buffer_phys:	physical address of extra memory allocated for ucode
  * @priv2_buffer_mapped:virtual address of extra memory allocated for ucode
+ * @priv2_buffer_size:	extra buffer size allocated for ucode
  * @attrs:		dma_attrs struct information
+ * @trace_buffer_size:	buffer size for trace log
  *
  */
 
@@ -57,7 +59,10 @@ struct pva_fw {
 	void *ucode_mapped;
 	dma_addr_t priv2_buffer_phys;
 	void *priv2_buffer_mapped;
+	size_t priv2_buffer_size;
 	struct dma_attrs attrs;
+
+	u32 trace_buffer_size;
 };
 
 /**

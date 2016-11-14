@@ -287,11 +287,11 @@ u32 tegra_core_get_word_count(unsigned int frame_width,
  * given V4L2 media bus format @code, or -1 if no corresponding format can
  * be found.
  */
-int tegra_core_get_idx_by_code(unsigned int code, unsigned offset)
+int tegra_core_get_idx_by_code(unsigned int code)
 {
 	unsigned int i;
 
-	for (i = offset; i < ARRAY_SIZE(tegra_video_formats); ++i) {
+	for (i = 0; i < ARRAY_SIZE(tegra_video_formats); ++i) {
 		if (tegra_video_formats[i].code == code)
 			return i;
 	}
@@ -309,11 +309,11 @@ int tegra_core_get_idx_by_code(unsigned int code, unsigned offset)
  * be found.
  */
 const struct tegra_video_format *
-tegra_core_get_format_by_code(unsigned int code, unsigned offset)
+tegra_core_get_format_by_code(unsigned int code)
 {
 	unsigned int i;
 
-	for (i = offset; i < ARRAY_SIZE(tegra_video_formats); ++i) {
+	for (i = 0; i < ARRAY_SIZE(tegra_video_formats); ++i) {
 		if (tegra_video_formats[i].code == code)
 			return &tegra_video_formats[i];
 	}

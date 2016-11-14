@@ -36,10 +36,10 @@ static void vi_tpg_fmts_bitmap_init(struct tegra_mc_vi *vi)
 
 	bitmap_zero(vi->tpg_fmts_bitmap, MAX_FORMAT_NUM);
 
-	index = tegra_core_get_idx_by_code(MEDIA_BUS_FMT_SRGGB10_1X10, 0);
+	index = tegra_core_get_idx_by_code(MEDIA_BUS_FMT_SRGGB10_1X10);
 	bitmap_set(vi->tpg_fmts_bitmap, index, 1);
 
-	index = tegra_core_get_idx_by_code(MEDIA_BUS_FMT_RGB888_1X32_PADHI, 0);
+	index = tegra_core_get_idx_by_code(MEDIA_BUS_FMT_RGB888_1X32_PADHI);
 	bitmap_set(vi->tpg_fmts_bitmap, index, 1);
 }
 

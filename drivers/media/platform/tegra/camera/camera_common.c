@@ -451,7 +451,8 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	}
 
 	if (mf->code != MEDIA_BUS_FMT_SRGGB8_1X8 &&
-		mf->code != MEDIA_BUS_FMT_SRGGB10_1X10) {
+		mf->code != MEDIA_BUS_FMT_SRGGB10_1X10 &&
+		mf->code != MEDIA_BUS_FMT_SRGGB12_1X12) {
 		mf->code = MEDIA_BUS_FMT_SRGGB10_1X10;
 		err = -EINVAL;
 	}

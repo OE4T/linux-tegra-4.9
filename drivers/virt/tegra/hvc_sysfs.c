@@ -22,7 +22,7 @@
 #include <linux/mm.h>
 #include <linux/bug.h>
 #include <linux/io.h>
-#include "syscalls.h"
+#include <soc/tegra/virt/syscalls.h>
 
 /*
  * This file implements a hypervisor control driver that can be accessed

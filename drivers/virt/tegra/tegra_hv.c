@@ -30,7 +30,7 @@
 #include <linux/tegra-soc.h>
 #include <linux/tegra-ivc.h>
 
-#include "syscalls.h"
+#include <soc/tegra/virt/syscalls.h>
 #include "tegra_hv.h"
 #include <linux/tegra-ivc-instance.h>
 

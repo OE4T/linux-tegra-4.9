@@ -1784,7 +1784,8 @@ static void atvr_remove(struct hid_device *hdev)
 	cards_in_use[atvr_snd->card_index] = false;
 	snd_atvr_dealloc_audio_buffs(atvr_snd);
 	mutex_destroy(&atvr_snd->hdev_lock);
-	snd_card_free(shdr_card);
+	snd_card_disconnect(shdr_card);
+	snd_card_free_when_closed(shdr_card);
 	kfree(shdr_dev);
 	mutex_unlock(&snd_cards_lock);
 }

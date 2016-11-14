@@ -772,6 +772,15 @@ static int tegra_csi_channel_init_one(struct tegra_csi_channel *chan)
 	int numlanes = 0;
 	struct tegra_csi_device *csi = chan->csi;
 	int i, ret;
+	const struct tegra_video_format *vf;
+
+	mutex_init(&chan->format_lock);
+
+	vf = tegra_core_get_format_by_code(TEGRA_VF_DEF, 0);
+	if (vf == NULL) {
+		dev_err(csi->dev, "Fail to find tegra video fmt");
+		return -EINVAL;
+	}
 
 	sd = &chan->subdev;
 	/* Initialize V4L2 subdevice and media entity */
@@ -786,28 +795,14 @@ static int tegra_csi_channel_init_one(struct tegra_csi_channel *chan)
 	if (!chan->ports)
 		return -ENOMEM;
 
-	mutex_init(&chan->format_lock);
-
 	/* Initialize the default format */
 	for (i = 0; i < chan->numports; i++) {
-		const struct tegra_video_format *vf;
-
-		mutex_lock(&chan->format_lock);
 		chan->ports[i].format.code = TEGRA_VF_DEF;
 		chan->ports[i].format.field = V4L2_FIELD_NONE;
 		chan->ports[i].format.colorspace = V4L2_COLORSPACE_SRGB;
 		chan->ports[i].format.width = TEGRA_DEF_WIDTH;
 		chan->ports[i].format.height = TEGRA_DEF_HEIGHT;
-
-		vf = tegra_core_get_format_by_code(chan->ports[i].format.code);
-		if (vf)
-			chan->ports[i].core_format = vf;
-		else {
-			dev_err(csi->dev, "Fail to find tegra video fmt");
-			mutex_unlock(&chan->format_lock);
-			return -EINVAL;
-		}
-		mutex_unlock(&chan->format_lock);
+		chan->ports[i].core_format = vf;
 	}
 	if (chan->pg_mode) {
 		/* If CSI has 2 existing channels, chan->id will start

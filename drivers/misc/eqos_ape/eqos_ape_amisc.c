@@ -17,6 +17,7 @@
  */
 
 
+#include <asm/io.h>
 #include "eqos_ape_global.h"
 #include <linux/module.h>
 

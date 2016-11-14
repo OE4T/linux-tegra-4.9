@@ -20,7 +20,6 @@
 #include "volt/volt.h"
 #include "gk20a/pmu_gk20a.h"
 
-#define BOOT_GPC2CLK_MHZ  2581
 #define BOOT_MCLK_MHZ     3003
 
 struct clkrpc_pmucmdhandler_params {

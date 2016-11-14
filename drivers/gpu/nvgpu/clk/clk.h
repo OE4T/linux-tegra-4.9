@@ -102,6 +102,8 @@ struct vbios_clocks_table_1x_hal_clock_entry {
 #define PERF_CLK_PCIEGENCLK     12
 #define PERF_CLK_NUM            13
 
+#define BOOT_GPC2CLK_MHZ  2581
+
 u32 clk_pmu_vin_load(struct gk20a *g);
 u32 clk_domain_print_vf_table(struct gk20a *g, u32 clkapidomain);
 u32 clk_domain_get_f_or_v(

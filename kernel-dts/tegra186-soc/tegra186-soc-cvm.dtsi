@@ -333,10 +333,9 @@
 
 	efuse@3820000 {
 		status = "okay";
-	};
-
-	efuse-burn {
-		status = "okay";
+		efuse-burn {
+			status = "okay";
+		};
 	};
 
 	cluster_clk_priv@e090000 {

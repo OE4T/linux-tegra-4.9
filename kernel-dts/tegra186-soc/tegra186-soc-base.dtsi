@@ -2421,14 +2421,14 @@
 		clocks = <&tegra_car TEGRA186_CLK_FUSE>;
 		clock-names = "fuse";
 		status = "disabled";
+		efuse-burn {
+			compatible = "nvidia,tegra186-efuse-burn";
+			clocks = <&tegra_car TEGRA186_CLK_CLK_M>;
+			clock-names = "clk_m";
+			status = "disabled";
+		};
 	};
 
-	efuse-burn {
-		compatible = "nvidia,tegra186-efuse-burn";
-		clocks = <&tegra_car TEGRA186_CLK_CLK_M>;
-		clock-names = "clk_m";
-		status = "disabled";
-	};
 
 	aon: aon@c160000 {
 		compatible = "nvidia,tegra186-aon";

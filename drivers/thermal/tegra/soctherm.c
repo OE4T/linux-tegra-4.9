@@ -1454,7 +1454,7 @@ static void soctherm_init(struct platform_device *pdev)
 	hotspot = readl(tegra->regs + SENSOR_HOTSPOT_OFF);
 	for (i = 0; i < tegra->soc->num_ttgs; ++i) {
 		pdiv = REG_SET_MASK(pdiv, ttgs[i]->pdiv_mask,
-				    ttgs[i]->pdiv);
+				    tegra->soc->tsensors[0].config->pdiv);
 		/* hotspot offset from PLLX, doesn't need to configure PLLX */
 		if (ttgs[i]->id == TEGRA124_SOCTHERM_SENSOR_PLLX)
 			continue;
@@ -1569,9 +1569,11 @@ static int tegra_soctherm_probe(struct platform_device *pdev)
 
 	/* calculate tsensor calibaration data */
 	for (i = 0; i < soc->num_tsensors; ++i) {
-		err = tegra_calc_tsensor_calib(&soc->tsensors[i],
-					       &shared_calib,
-					       &tegra->calib[i]);
+		err = tegra_calc_tsensor_calib(soc->tsensors[i].config,
+				       &shared_calib,
+				       &soc->tsensors[i].fuse_corr,
+				       &tegra->calib[i],
+				       soc->tsensors[i].calib_fuse_offset);
 		if (err)
 			return err;
 	}

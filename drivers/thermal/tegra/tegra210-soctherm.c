@@ -46,6 +46,8 @@ static const struct tegra_tsensor_configuration tegra210_tsensor_config = {
 	.ten_count = 1,
 	.tsample = 120,
 	.tsample_ate = 480,
+	.pdiv = 8,
+	.pdiv_ate = 8,
 };
 
 static const struct tegra_tsensor_group tegra210_tsensor_group_cpu = {
@@ -53,8 +55,6 @@ static const struct tegra_tsensor_group tegra210_tsensor_group_cpu = {
 	.name = "cpu",
 	.sensor_temp_offset = SENSOR_TEMP1,
 	.sensor_temp_mask = SENSOR_TEMP1_CPU_TEMP_MASK,
-	.pdiv = 8,
-	.pdiv_ate = 8,
 	.pdiv_mask = SENSOR_PDIV_CPU_MASK,
 	.pllx_hotspot_diff = 10,
 	.pllx_hotspot_mask = SENSOR_HOTSPOT_CPU_MASK,
@@ -72,8 +72,6 @@ static const struct tegra_tsensor_group tegra210_tsensor_group_gpu = {
 	.name = "gpu",
 	.sensor_temp_offset = SENSOR_TEMP1,
 	.sensor_temp_mask = SENSOR_TEMP1_GPU_TEMP_MASK,
-	.pdiv = 8,
-	.pdiv_ate = 8,
 	.pdiv_mask = SENSOR_PDIV_GPU_MASK,
 	.pllx_hotspot_diff = 5,
 	.pllx_hotspot_mask = SENSOR_HOTSPOT_GPU_MASK,
@@ -91,8 +89,6 @@ static const struct tegra_tsensor_group tegra210_tsensor_group_pll = {
 	.name = "pll",
 	.sensor_temp_offset = SENSOR_TEMP2,
 	.sensor_temp_mask = SENSOR_TEMP2_PLLX_TEMP_MASK,
-	.pdiv = 8,
-	.pdiv_ate = 8,
 	.pdiv_mask = SENSOR_PDIV_PLLX_MASK,
 	.thermtrip_any_en_mask = TEGRA210_THERMTRIP_ANY_EN_MASK,
 	.thermtrip_enable_mask = TEGRA210_THERMTRIP_TSENSE_EN_MASK,
@@ -108,8 +104,6 @@ static const struct tegra_tsensor_group tegra210_tsensor_group_mem = {
 	.name = "mem",
 	.sensor_temp_offset = SENSOR_TEMP2,
 	.sensor_temp_mask = SENSOR_TEMP2_MEM_TEMP_MASK,
-	.pdiv = 8,
-	.pdiv_ate = 8,
 	.pdiv_mask = SENSOR_PDIV_MEM_MASK,
 	.pllx_hotspot_diff = 0,
 	.pllx_hotspot_mask = SENSOR_HOTSPOT_MEM_MASK,
@@ -135,64 +129,80 @@ static const struct tegra_tsensor tegra210_tsensors[] = {
 		.base = 0xc0,
 		.config = &tegra210_tsensor_config,
 		.calib_fuse_offset = 0x098,
-		.fuse_corr_alpha = 1085000,
-		.fuse_corr_beta = 3244200,
+		.fuse_corr = {
+			.alpha = 1085000,
+			.beta = 3244200,
+		},
 		.group = &tegra210_tsensor_group_cpu,
 	}, {
 		.name = "cpu1",
 		.base = 0xe0,
 		.config = &tegra210_tsensor_config,
 		.calib_fuse_offset = 0x084,
-		.fuse_corr_alpha = 1126200,
-		.fuse_corr_beta = -67500,
+		.fuse_corr = {
+			.alpha = 1126200,
+			.beta = -67500,
+		},
 		.group = &tegra210_tsensor_group_cpu,
 	}, {
 		.name = "cpu2",
 		.base = 0x100,
 		.config = &tegra210_tsensor_config,
 		.calib_fuse_offset = 0x088,
-		.fuse_corr_alpha = 1098400,
-		.fuse_corr_beta = 2251100,
+		.fuse_corr = {
+			.alpha = 1098400,
+			.beta = 2251100,
+		},
 		.group = &tegra210_tsensor_group_cpu,
 	}, {
 		.name = "cpu3",
 		.base = 0x120,
 		.config = &tegra210_tsensor_config,
 		.calib_fuse_offset = 0x12c,
-		.fuse_corr_alpha = 1108000,
-		.fuse_corr_beta = 602700,
+		.fuse_corr = {
+			.alpha = 1108000,
+			.beta = 602700,
+		},
 		.group = &tegra210_tsensor_group_cpu,
 	}, {
 		.name = "mem0",
 		.base = 0x140,
 		.config = &tegra210_tsensor_config,
 		.calib_fuse_offset = 0x158,
-		.fuse_corr_alpha = 1069200,
-		.fuse_corr_beta = 3549900,
+		.fuse_corr = {
+			.alpha = 1069200,
+			.beta = 3549900,
+		},
 		.group = &tegra210_tsensor_group_mem,
 	}, {
 		.name = "mem1",
 		.base = 0x160,
 		.config = &tegra210_tsensor_config,
 		.calib_fuse_offset = 0x15c,
-		.fuse_corr_alpha = 1173700,
-		.fuse_corr_beta = -6263600,
+		.fuse_corr = {
+			.alpha = 1173700,
+			.beta = -6263600,
+		},
 		.group = &tegra210_tsensor_group_mem,
 	}, {
 		.name = "gpu",
 		.base = 0x180,
 		.config = &tegra210_tsensor_config,
 		.calib_fuse_offset = 0x154,
-		.fuse_corr_alpha = 1074300,
-		.fuse_corr_beta = 2734900,
+		.fuse_corr = {
+			.alpha = 1074300,
+			.beta = 2734900,
+		},
 		.group = &tegra210_tsensor_group_gpu,
 	}, {
 		.name = "pllx",
 		.base = 0x1a0,
 		.config = &tegra210_tsensor_config,
 		.calib_fuse_offset = 0x160,
-		.fuse_corr_alpha = 1039700,
-		.fuse_corr_beta = 6829100,
+		.fuse_corr = {
+			.alpha = 1039700,
+			.beta = 6829100,
+		},
 		.group = &tegra210_tsensor_group_pll,
 	},
 };
@@ -202,7 +212,7 @@ static const struct tegra_tsensor tegra210_tsensors[] = {
  * FUSE_TSENSOR_COMMON, which are described in
  * tegra_soctherm_fuse.c
  */
-static const struct tegra_soctherm_fuse tegra210_soctherm_fuse = {
+static const struct tegra_tsensor_fuse tegra210_soctherm_fuse = {
 	.fuse_base_cp_mask = 0x3ff << 11,
 	.fuse_base_cp_shift = 11,
 	.fuse_base_ft_mask = 0x7ff << 21,

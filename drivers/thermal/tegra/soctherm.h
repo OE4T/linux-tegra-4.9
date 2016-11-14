@@ -15,6 +15,8 @@
 #ifndef __DRIVERS_THERMAL_TEGRA_SOCTHERM_H
 #define __DRIVERS_THERMAL_TEGRA_SOCTHERM_H
 
+#include "tsensor-fuse.h"
+
 #define THERMCTL_LEVEL0_GROUP_CPU               0x0
 #define THERMCTL_LEVEL0_GROUP_GPU		0x4
 #define THERMCTL_LEVEL0_GROUP_MEM		0x8
@@ -65,7 +67,7 @@ struct tegra_tsensor_group {
 	u8 id;
 	u16 sensor_temp_offset;
 	u32 sensor_temp_mask;
-	u32 pdiv, pdiv_ate, pdiv_mask;
+	u32 pdiv_mask;
 	u32 pllx_hotspot_diff, pllx_hotspot_mask;
 	u32 thermtrip_enable_mask;
 	u32 thermtrip_any_en_mask;
@@ -74,10 +76,6 @@ struct tegra_tsensor_group {
 	u32 thermctl_isr_mask;
 	u32 thermctl_lvl0_up_thresh_mask;
 	u32 thermctl_lvl0_dn_thresh_mask;
-};
-
-struct tegra_tsensor_configuration {
-	u32 tall, tiddq_en, ten_count, pdiv, pdiv_ate, tsample, tsample_ate;
 };
 
 struct tegra_tsensor {
@@ -89,20 +87,8 @@ struct tegra_tsensor {
 	 * Correction values used to modify values read from
 	 * calibration fuses
 	 */
-	const s32 fuse_corr_alpha, fuse_corr_beta;
+	const struct fuse_corr_coeff fuse_corr;
 	const struct tegra_tsensor_group *group;
-};
-
-struct tegra_soctherm_fuse {
-	u32 fuse_base_cp_mask, fuse_base_cp_shift;
-	u32 fuse_base_ft_mask, fuse_base_ft_shift;
-	u32 fuse_shift_ft_mask, fuse_shift_ft_shift;
-	u32 fuse_spare_realignment;
-};
-
-struct tsensor_shared_calib {
-	u32 base_cp, base_ft;
-	u32 actual_temp_cp, actual_temp_ft;
 };
 
 struct tegra_soctherm_soc {
@@ -110,17 +96,11 @@ struct tegra_soctherm_soc {
 	const unsigned int num_tsensors;
 	const struct tegra_tsensor_group **ttgs;
 	const unsigned int num_ttgs;
-	const struct tegra_soctherm_fuse *tfuse;
+	const struct tegra_tsensor_fuse *tfuse;
 	const int thresh_grain;
 	const unsigned int bptt;
 	const bool use_ccroc;
 };
-
-int tegra_calc_shared_calib(const struct tegra_soctherm_fuse *tfuse,
-			    struct tsensor_shared_calib *shared);
-int tegra_calc_tsensor_calib(const struct tegra_tsensor *sensor,
-			     const struct tsensor_shared_calib *shared,
-			     u32 *calib);
 
 #ifdef CONFIG_ARCH_TEGRA_124_SOC
 extern const struct tegra_soctherm_soc tegra124_soctherm;

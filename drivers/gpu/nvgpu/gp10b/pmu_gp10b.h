@@ -1,7 +1,7 @@
 /*
  * GP10B PMU
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,7 +20,5 @@ void gp10b_init_pmu_ops(struct gpu_ops *gops);
 int gp10b_load_falcon_ucode(struct gk20a *g, u32 falconidmask);
 int gp10b_pg_gr_init(struct gk20a *g, u32 pg_engine_id);
 void gp10b_write_dmatrfbase(struct gk20a *g, u32 addr);
-void gp10b_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
-		u32 *ingating_time, u32 *ungating_time, u32 *gating_cnt);
 
 #endif /*__PMU_GP10B_H_*/

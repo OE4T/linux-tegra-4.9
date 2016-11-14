@@ -3,7 +3,7 @@
  *
  * GK20A PMU (aka. gPMU outside gk20a context)
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -566,6 +566,33 @@ struct pmu_sequence {
 	void* cb_params;
 };
 
+struct pmu_pg_stats_data {
+	u32 gating_cnt;
+	u32 ingating_time;
+	u32 ungating_time;
+	u32 avg_entry_latency_us;
+	u32 avg_exit_latency_us;
+};
+
+struct pmu_pg_stats_v2 {
+	u32 entry_count;
+	u32 exit_count;
+	u32 abort_count;
+	u32 detection_count;
+	u32 prevention_activate_count;
+	u32 prevention_deactivate_count;
+	u32 powered_up_time_us;
+	u32 entry_latency_us;
+	u32 exit_latency_us;
+	u32 resident_time_us;
+	u32 entry_latency_avg_us;
+	u32 exit_latency_avg_us;
+	u32 entry_latency_max_us;
+	u32 exit_latency_max_us;
+	u32 total_sleep_time_us;
+	u32 total_non_sleep_time_us;
+};
+
 struct pmu_pg_stats_v1 {
 	/* Number of time PMU successfully engaged sleep state */
 	u32 entry_count;
@@ -825,7 +852,7 @@ int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout_ms,
 void pmu_handle_fecs_boot_acr_msg(struct gk20a *g, struct pmu_msg *msg,
 				void *param, u32 handle, u32 status);
 void gk20a_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
-		u32 *ingating_time, u32 *ungating_time, u32 *gating_cnt);
+		struct pmu_pg_stats_data *pg_stat_data);
 int gk20a_pmu_reset(struct gk20a *g);
 int pmu_idle(struct pmu_gk20a *pmu);
 int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable);

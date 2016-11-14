@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -258,6 +258,23 @@ static int gp106_pg_param_init(struct gk20a *g, u32 pg_engine_id)
 	return 0;
 }
 
+static void gp106_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
+		struct pmu_pg_stats_data *pg_stat_data)
+{
+	struct pmu_gk20a *pmu = &g->pmu;
+	struct pmu_pg_stats_v2 stats;
+
+	pmu_copy_from_dmem(pmu,
+		pmu->stat_dmem_offset[pg_engine_id],
+		(u8 *)&stats, sizeof(struct pmu_pg_stats_v2), 0);
+
+	pg_stat_data->ingating_time = stats.total_sleep_time_us;
+	pg_stat_data->ungating_time = stats.total_non_sleep_time_us;
+	pg_stat_data->gating_cnt = stats.entry_count;
+	pg_stat_data->avg_entry_latency_us = stats.entry_latency_avg_us;
+	pg_stat_data->avg_exit_latency_us = stats.exit_latency_avg_us;
+}
+
 void gp106_init_pmu_ops(struct gpu_ops *gops)
 {
 	gk20a_dbg_fn("");
@@ -279,7 +296,7 @@ void gp106_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.lspmuwprinitdone = 0;
 	gops->pmu.fecsbootstrapdone = false;
 	gops->pmu.write_dmatrfbase = gp10b_write_dmatrfbase;
-	gops->pmu.pmu_elpg_statistics = gp10b_pmu_elpg_statistics;
+	gops->pmu.pmu_elpg_statistics = gp106_pmu_elpg_statistics;
 	gops->pmu.pmu_pg_init_param = gp106_pg_param_init;
 	gops->pmu.pmu_pg_supported_engines_list = gp106_pmu_pg_engines_list;
 	gops->pmu.pmu_pg_engines_feature_list = gp106_pmu_pg_feature_list;

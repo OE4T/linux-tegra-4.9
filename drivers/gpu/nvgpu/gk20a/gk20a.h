@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -605,8 +605,7 @@ struct gpu_ops {
 		int (*load_lsfalcon_ucode)(struct gk20a *g, u32 falconidmask);
 		void (*write_dmatrfbase)(struct gk20a *g, u32 addr);
 		void (*pmu_elpg_statistics)(struct gk20a *g, u32 pg_engine_id,
-			u32 *ingating_time, u32 *ungating_time,
-			u32 *gating_cnt);
+			struct pmu_pg_stats_data *pg_stat_data);
 		int (*pmu_pg_init_param)(struct gk20a *g, u32 pg_engine_id);
 		u32 (*pmu_pg_supported_engines_list)(struct gk20a *g);
 		u32 (*pmu_pg_engines_feature_list)(struct gk20a *g,

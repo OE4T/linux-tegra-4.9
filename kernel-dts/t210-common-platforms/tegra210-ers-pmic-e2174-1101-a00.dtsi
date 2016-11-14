@@ -202,24 +202,6 @@
 					regulator-boot-on;
 					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
 					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
-					consumers {
-						c8 {
-							regulator-consumer-supply = "avdd_pll_utmip";
-							regulator-consumer-device = "tegra-ehci.1";
-						};
-						c9 {
-							regulator-consumer-supply = "avdd_pll_utmip";
-							regulator-consumer-device = "tegra-ehci.2";
-						};
-						c18 {
-							regulator-consumer-supply = "vdd";
-							regulator-consumer-device = "2-004c";
-						};
-						c19 {
-							regulator-consumer-supply = "vdd";
-							regulator-consumer-device = "0-004c";
-						};
-					};
 				};
 
 				max77620_ldo0: ldo0 {
@@ -228,16 +210,6 @@
 					regulator-max-microvolt = <1200000>;
 					regulator-boot-on;
 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
-					consumers {
-						c0 {
-							regulator-consumer-supply = "vddio_hsic";
-							regulator-consumer-device = "tegra-ehci.1";
-						};
-						c1 {
-							regulator-consumer-supply = "vddio_hsic";
-							regulator-consumer-device = "tegra-ehci.2";
-						};
-					};
 				};
 
 				max77620_ldo1: ldo1 {
@@ -260,11 +232,6 @@
 					regulator-min-microvolt = <2800000>;
 					regulator-max-microvolt = <2800000>;
 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
-					consumers {
-						c0 {
-							regulator-consumer-supply = "vana";
-						};
-					};
 				};
 
 				max77620_ldo4: ldo4 {
@@ -281,12 +248,6 @@
 					regulator-min-microvolt = <3300000>;
 					regulator-max-microvolt = <3300000>;
 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
-					consumers {
-						c1 {
-							regulator-consumer-supply = "avdd";
-							regulator-consumer-device = "spi3.0";
-						};
-					};
 				};
 
 				max77620_ldo6: ldo6 {
@@ -295,12 +256,6 @@
 					regulator-max-microvolt = <1800000>;
 					regulator-boot-on;
 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
-					consumers {
-						c1 {
-							regulator-consumer-supply = "dvdd";
-							regulator-consumer-device = "spi3.0";
-						};
-					};
 				};
 
 				max77620_ldo7: ldo7 {

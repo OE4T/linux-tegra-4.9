@@ -70,7 +70,7 @@ static int hvc_sysfs_log(struct kobject *kobj)
 	}
 
 	log_ipa = info->log_ipa;
-	log_attr.size = info->log_size;
+	log_attr.size = (size_t)info->log_size;
 
 	iounmap(info);
 

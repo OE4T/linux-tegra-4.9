@@ -159,7 +159,7 @@ struct hyp_server_page {
 
 	/* hypervisor trace log */
 	uint64_t log_ipa;
-	uint64_t log_size;
+	uint32_t log_size;
 };
 
 /* For backwards compatibility, alias the old name for hyp_server_name. */

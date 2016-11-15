@@ -12,13 +12,10 @@
  */
 
 #include <linux/platform/tegra/bwmgr_mc.h>
+#include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/io.h>
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
-
-static u8 bwmgr_dram_efficiency;
-static u32 *bwmgr_dram_iso_eff_table;
-static int bwmgr_iso_bw_percentage;
 
 static u32 bwmgr_t186_iso_bw_table[] = { /* MHz */
 	  5,  10,  20,  30,  40,  60,  80, 100, 120, 140,
@@ -63,20 +60,7 @@ static u32 bwmgr_t186_ddr3_iso_eff[] = {
 	47,  47,   1,   1,   1,   1,   1
 };
 
-enum bwmgr_dram_types {
-	DRAM_TYPE_NONE,
-	DRAM_TYPE_LPDDR4_4CH_ECC,
-	DRAM_TYPE_LPDDR4_2CH_ECC,
-	DRAM_TYPE_LPDDR4_4CH,
-	DRAM_TYPE_LPDDR4_2CH,
-	DRAM_TYPE_LPDDR3_2CH,
-	DRAM_TYPE_DDR3_2CH,
-	DRAM_TYPE_DDR2
-};
-
-static enum bwmgr_dram_types bwmgr_dram_type;
 static struct mrq_emc_dvfs_latency_response bwmgr_emc_dvfs;
-static int emc_to_dram_freq_factor;
 
 #define MC_BASE 0x02c10000
 #define EMC_BASE 0x02c60000
@@ -190,7 +174,7 @@ void bwmgr_eff_init(void)
 			&bwmgr_emc_dvfs, sizeof(bwmgr_emc_dvfs));
 }
 
-static inline int get_iso_bw_table_idx(unsigned long iso_bw)
+int get_iso_bw_table_idx(unsigned long iso_bw)
 {
 	int i = ARRAY_SIZE(bwmgr_t186_iso_bw_table) - 1;
 
@@ -202,33 +186,7 @@ static inline int get_iso_bw_table_idx(unsigned long iso_bw)
 
 	return i;
 }
-
-unsigned long bwmgr_apply_efficiency(
-		unsigned long total_bw, unsigned long iso_bw,
-		unsigned long max_rate, u64 usage_flags,
-		unsigned long *iso_bw_min)
-{
-	u8 efficiency = bwmgr_dram_efficiency;
-	if (total_bw && efficiency && (efficiency < 100)) {
-		total_bw = total_bw / efficiency;
-		total_bw = (total_bw < max_rate / 100) ?
-				(total_bw * 100) : max_rate;
-	}
-
-	efficiency = bwmgr_dram_iso_eff_table[get_iso_bw_table_idx(iso_bw)];
-	WARN_ON(efficiency == 1);
-	if (iso_bw && efficiency && (efficiency < 100)) {
-		iso_bw /= efficiency;
-		iso_bw = (iso_bw < max_rate / 100) ?
-			(iso_bw * 100) : max_rate;
-	}
-
-	if (iso_bw_min)
-		*iso_bw_min = iso_bw;
-
-	return max(total_bw, iso_bw);
-}
-EXPORT_SYMBOL_GPL(bwmgr_apply_efficiency);
+EXPORT_SYMBOL(get_iso_bw_table_idx);
 
 unsigned long bwmgr_freq_to_bw(unsigned long freq)
 {
@@ -276,16 +234,3 @@ u32 bwmgr_dvfs_latency(u32 ufreq)
 	return lt / 1000; /* convert nsec to usec, Bug 1697424 */
 }
 EXPORT_SYMBOL_GPL(bwmgr_dvfs_latency);
-
-int bwmgr_iso_bw_percentage_max(void)
-{
-	return bwmgr_iso_bw_percentage;
-}
-EXPORT_SYMBOL_GPL(bwmgr_iso_bw_percentage_max);
-
-/* Returns the ratio between dram and emc freq based on the type of dram */
-int bwmgr_get_emc_to_dram_freq_factor(void)
-{
-	return emc_to_dram_freq_factor;
-}
-EXPORT_SYMBOL_GPL(bwmgr_get_emc_to_dram_freq_factor);

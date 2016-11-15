@@ -20,13 +20,13 @@
 #include "hw_ce_gp10b.h"
 #include "ce_gp10b.h"
 
-static u32 ce_nonblockpipe_isr(struct gk20a *g, u32 fifo_intr)
+static void ce_nonblockpipe_isr(struct gk20a *g, u32 fifo_intr)
 {
 	gk20a_dbg(gpu_dbg_intr, "ce non-blocking pipe interrupt\n");
 
 	/* wake theads waiting in this channel */
 	gk20a_channel_semaphore_wakeup(g, true);
-	return ce_intr_status_nonblockpipe_pending_f();
+	return;
 }
 
 static u32 ce_blockpipe_isr(struct gk20a *g, u32 fifo_intr)
@@ -64,14 +64,14 @@ static void gp10b_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 static void gp10b_ce_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 {
 	u32 ce_intr = gk20a_readl(g, ce_intr_status_r(inst_id));
-	u32 clear_intr = 0;
 
 	gk20a_dbg(gpu_dbg_intr, "ce nonstall isr %08x %08x\n", ce_intr, inst_id);
 
-	if (ce_intr & ce_intr_status_nonblockpipe_pending_f())
-		clear_intr |= ce_nonblockpipe_isr(g, ce_intr);
-
-	gk20a_writel(g, ce_intr_status_r(inst_id), clear_intr);
+	if (ce_intr & ce_intr_status_nonblockpipe_pending_f()) {
+		gk20a_writel(g, ce_intr_status_r(inst_id),
+			ce_intr_status_nonblockpipe_pending_f());
+		ce_nonblockpipe_isr(g, ce_intr);
+	}
 
 	return;
 }

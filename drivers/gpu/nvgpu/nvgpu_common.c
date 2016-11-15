@@ -155,6 +155,14 @@ int nvgpu_probe(struct gk20a *g,
 	gk20a_create_sysfs(g->dev);
 	gk20a_debug_init(g->dev, debugfs_symlink);
 
+	g->dbg_regops_tmp_buf = kzalloc(SZ_4K, GFP_KERNEL);
+	if (!g->dbg_regops_tmp_buf) {
+		dev_err(g->dev, "couldn't allocate regops tmp buf");
+		return -ENOMEM;
+	}
+	g->dbg_regops_tmp_buf_ops =
+		SZ_4K / sizeof(g->dbg_regops_tmp_buf[0]);
+
 	g->remove_support = gk20a_remove_support;
 
 	return 0;

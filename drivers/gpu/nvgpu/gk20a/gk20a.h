@@ -890,6 +890,10 @@ struct gk20a {
 	int dbg_powergating_disabled_refcount; /*refcount for pg disable */
 	int dbg_timeout_disabled_refcount; /*refcount for timeout disable */
 
+	/* must have dbg_sessions_lock before use */
+	struct nvgpu_dbg_gpu_reg_op *dbg_regops_tmp_buf;
+	u32 dbg_regops_tmp_buf_ops;
+
 	/*
 	 * When set subsequent VMAs will separate fixed and non-fixed
 	 * allocations. This avoids conflicts with fixed and non-fixed allocs

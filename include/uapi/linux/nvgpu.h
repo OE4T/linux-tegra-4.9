@@ -220,6 +220,11 @@ struct nvgpu_gpu_characteristics {
 	__u8  vbios_oem_version;
 	__u32 vbios_version;
 
+	/* NVGPU_DBG_GPU_IOCTL_REG_OPS: the upper limit for the number
+	 * of regops */
+	__u32 reg_ops_limit;
+	__u32 reserved1;
+
 	/* Notes:
 	   - This struct can be safely appended with new fields. However, always
 	     keep the structure size multiple of 8 and make sure that the binary

@@ -191,6 +191,9 @@ static void vgpu_remove_support(struct device *dev)
 	struct tegra_vgpu_intr_msg msg;
 	int err;
 
+	if (g->dbg_regops_tmp_buf)
+		kfree(g->dbg_regops_tmp_buf);
+
 	if (g->pmu.remove_support)
 		g->pmu.remove_support(&g->pmu);
 
@@ -241,6 +244,14 @@ static int vgpu_init_support(struct platform_device *pdev)
 	mutex_init(&g->dbg_sessions_lock);
 	mutex_init(&g->client_lock);
 	mutex_init(&g->ch_wdt_lock);
+
+	g->dbg_regops_tmp_buf = kzalloc(SZ_4K, GFP_KERNEL);
+	if (!g->dbg_regops_tmp_buf) {
+		dev_err(g->dev, "couldn't allocate regops tmp buf");
+		return -ENOMEM;
+	}
+	g->dbg_regops_tmp_buf_ops =
+		SZ_4K / sizeof(g->dbg_regops_tmp_buf[0]);
 
 	g->remove_support = vgpu_remove_support;
 	return 0;

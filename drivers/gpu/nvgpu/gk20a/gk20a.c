@@ -700,6 +700,8 @@ void gk20a_remove_support(struct device *dev)
 #ifdef CONFIG_TEGRA_COMMON
 	tegra_unregister_idle_unidle();
 #endif
+	if (g->dbg_regops_tmp_buf)
+		kfree(g->dbg_regops_tmp_buf);
 
 	if (g->pmu.remove_support)
 		g->pmu.remove_support(&g->pmu);
@@ -2169,6 +2171,8 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->pci_subsystem_device_id = g->pci_subsystem_device_id;
 	gpu->pci_class = g->pci_class;
 	gpu->pci_revision = g->pci_revision;
+
+	gpu->reg_ops_limit = 1024;
 
 	return 0;
 }

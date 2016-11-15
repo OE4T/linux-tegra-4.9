@@ -1042,14 +1042,24 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 
 	struct device *dev = dbg_s->dev;
 	struct gk20a *g = get_gk20a(dbg_s->dev);
-	struct nvgpu_dbg_gpu_reg_op *ops;
 	struct channel_gk20a *ch;
-	u64 ops_size = sizeof(ops[0]) * args->num_ops;
 
-	if (args->num_ops > SZ_4K / sizeof(ops[0]))
+	gk20a_dbg_fn("%d ops, max fragment %d", args->num_ops, g->dbg_regops_tmp_buf_ops);
+
+	if (args->num_ops > g->gpu_characteristics.reg_ops_limit) {
+		gk20a_err(dev, "regops limit exceeded");
 		return -EINVAL;
+	}
 
-	gk20a_dbg_fn("%d ops, total size %llu", args->num_ops, ops_size);
+	if (args->num_ops == 0) {
+		/* Nothing to do */
+		return 0;
+	}
+
+	if (g->dbg_regops_tmp_buf_ops == 0 || !g->dbg_regops_tmp_buf) {
+		gk20a_err(dev, "reg ops work buffer not allocated");
+		return -ENODEV;
+	}
 
 	if (!dbg_s->id) {
 		gk20a_err(dev, "can't call reg_ops on an unbound debugger session");
@@ -1069,21 +1079,6 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 		return -ENODEV;
 	}
 
-	ops = kzalloc(ops_size, GFP_KERNEL);
-	if (!ops) {
-		gk20a_err(dev, "Allocating memory failed!");
-		return -ENOMEM;
-	}
-
-	gk20a_dbg_fn("Copying regops from userspace");
-
-	if (copy_from_user(ops, (void __user *)(uintptr_t)args->ops,
-							ops_size)) {
-		dev_err(dev, "copy_from_user failed!");
-		err = -EFAULT;
-		goto clean_up;
-	}
-
 	/* since exec_reg_ops sends methods to the ucode, it must take the
 	 * global gpu lock to protect against mixing methods from debug sessions
 	 * on other channels */
@@ -1099,8 +1094,47 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 	}
 
 	if (!powergate_err) {
-		err = g->ops.dbg_session_ops.exec_reg_ops(dbg_s, ops,
-							args->num_ops);
+		u64 ops_offset = 0; /* index offset */
+
+		while (ops_offset < args->num_ops && !err) {
+			const u64 num_ops =
+				min(args->num_ops - ops_offset,
+				    (u64)(g->dbg_regops_tmp_buf_ops));
+			const u64 fragment_size =
+				num_ops * sizeof(g->dbg_regops_tmp_buf[0]);
+
+			void __user *const fragment =
+				(void __user *)(uintptr_t)
+				(args->ops +
+				 ops_offset * sizeof(g->dbg_regops_tmp_buf[0]));
+
+			gk20a_dbg_fn("Regops fragment: start_op=%llu ops=%llu",
+				     ops_offset, num_ops);
+
+			gk20a_dbg_fn("Copying regops from userspace");
+
+			if (copy_from_user(g->dbg_regops_tmp_buf,
+					   fragment, fragment_size)) {
+				dev_err(dev, "copy_from_user failed!");
+				err = -EFAULT;
+				break;
+			}
+
+			err = g->ops.dbg_session_ops.exec_reg_ops(
+				dbg_s, g->dbg_regops_tmp_buf, num_ops);
+
+			gk20a_dbg_fn("Copying result to userspace");
+
+			if (copy_to_user(fragment, g->dbg_regops_tmp_buf,
+					 fragment_size)) {
+				dev_err(dev, "copy_to_user failed!");
+				err = -EFAULT;
+				break;
+			}
+
+			ops_offset += num_ops;
+		}
+
 		/* enable powergate, if previously disabled */
 		if (is_pg_disabled) {
 			powergate_err =
@@ -1114,21 +1148,9 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 	if (!err && powergate_err)
 		err = powergate_err;
 
-	if (err) {
+	if (err)
 		gk20a_err(dev, "dbg regops failed");
-		goto clean_up;
-	}
 
-	gk20a_dbg_fn("Copying result to userspace");
-
-	if (copy_to_user((void __user *)(uintptr_t)args->ops, ops, ops_size)) {
-		dev_err(dev, "copy_to_user failed!");
-		err = -EFAULT;
-		goto clean_up;
-	}
-
- clean_up:
-	kfree(ops);
 	return err;
 }
 

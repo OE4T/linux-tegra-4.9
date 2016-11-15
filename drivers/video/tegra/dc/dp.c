@@ -44,6 +44,7 @@
 #include "dpaux.h"
 #include "dc_priv.h"
 #include "edid.h"
+#include "dphdcp.h"
 #include "dp_lt.h"
 #include "dp_auto.h"
 
@@ -2242,6 +2243,17 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		goto err_get_clk;
 	}
 
+#ifdef CONFIG_DPHDCP
+	dp->dphdcp = tegra_dphdcp_create(dp, dc->ndev->id,
+		dc->out->ddc_bus);
+	if (IS_ERR_OR_NULL(dp->dphdcp)) {
+		err = PTR_ERR(dp->dphdcp);
+		goto err_free_dp;
+	}
+	/* create a /d entry to change the max retries */
+	tegra_dphdcp_debugfs_init(dp->dphdcp);
+#endif
+
 	tegra_dp_prods_init(dp);
 
 	init_completion(&dp->aux_tx);
@@ -2814,11 +2826,12 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 				dp->link_cfg.lane_count);
 		tegra_dc_sor_attach(dp->sor);
 	}
-	#if 0
+#ifdef CONFIG_DPHDCP
 	if (tegra_dc_is_ext_dp_panel(dc) &&
-		dc->out->type != TEGRA_DC_OUT_FAKE_DP)
+		dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
 		tegra_dphdcp_set_plug(dp->dphdcp, true);
-	#endif
+	}
+#endif
 	dc->connected = true;
 	tegra_dc_io_end(dc);
 
@@ -2894,11 +2907,12 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 	dp->enabled = false;
 
 	tegra_dc_io_start(dc);
-	#if 0
+
+#ifdef CONFIG_DPHDCP
 	if (tegra_dc_is_ext_dp_panel(dc) &&
 		dc->out->type != TEGRA_DC_OUT_FAKE_DP)
 		tegra_dphdcp_set_plug(dp->dphdcp, false);
-	#endif
+#endif
 	cancel_delayed_work_sync(&dp->irq_evt_dwork);
 
 	if (dc->out->type != TEGRA_DC_OUT_FAKE_DP) {

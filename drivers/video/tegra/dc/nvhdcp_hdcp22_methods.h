@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvhdcp_hdcp22_methods.h
  *
- * Copyright (c) 2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -39,3 +39,4 @@ int tsec_hdcp_rptr_stream_ready(struct hdcp_context_t *hdcp_context);
 int tsec_hdcp_session_ctrl(struct hdcp_context_t *hdcp_context, int flag);
 int tsec_hdcp_revocation_check(struct hdcp_context_t *hdcp_context);
 int tsec_hdcp_rptr_stream_manage(struct hdcp_context_t *hdcp_context);
+int tsec_dp_hdcp_revocation_check(struct hdcp_context_t *hdcp_context);

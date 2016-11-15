@@ -284,6 +284,23 @@ config TEGRA_DEBUG_HDCP
 	  It is only required if you need to modify the number of retries for HDCP
 	  authentication.
 
+config TEGRA_DPHDCP
+	bool "Support HDCP content protection on DP"
+	depends on TEGRA_DP
+	help
+	  Say Y here to support HDCP upstream and downstream protocols for DP,
+	  This requires a correctly fused chip to negotiate keys.
+	  It is needed if you have an application that cares about checking
+	  for HDCP security while playing protected content.
+
+config TEGRA_DEBUG_DP_HDCP
+	bool "Support Debug mode for HDCP on DP"
+	depends on TEGRA_DPHDCP
+	default n
+	help
+	  Say Y here to expose debugfs nodes for HDCP content protection on DP.
+	  It is needed to modify the number of retries for HDCP authentication.
+
 config TEGRA_YUV_BYPASS_MODE_FILTER
 	bool "Filter-out YUV bypass modes"
 	default n

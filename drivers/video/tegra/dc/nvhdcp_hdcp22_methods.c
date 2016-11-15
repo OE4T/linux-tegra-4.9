@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvhdcp_hdcp22_methods.c
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -39,6 +39,8 @@
 		pr_err("hdcp: Error: " __VA_ARGS__)
 
 #define HDCP22_SRM_PATH "etc/hdcpsrm/hdcp2x.srm"
+
+#define HDCP11_SRM_PATH "etc/hdcpsrm/hdcp1x.srm"
 
 static u8 g_seq_num_init;
 
@@ -401,6 +403,28 @@ int tsec_hdcp_revocation_check(struct hdcp_context_t *hdcp_context)
 exit:
 	err = revocation_check_param.ret_code;
 	return err;
+}
+
+int tsec_dp_hdcp_revocation_check(struct hdcp_context_t *hdcp_context)
+{
+	struct file *fp = NULL;
+	unsigned int size = 0;
+	mm_segment_t seg;
+
+	fp = filp_open(HDCP11_SRM_PATH, O_RDONLY, 0);
+	if (IS_ERR(fp) || !fp) {
+		hdcp_err("Opening SRM file failed!\n");
+		return -ENOENT;
+	}
+	seg = get_fs();
+	set_fs(get_ds());
+	/* copy SRM to buffer */
+	fp->f_op->read(fp, (u8 *)hdcp_context->cpuvaddr_srm,
+		HDCP_SRM_SIZE, &fp->f_pos);
+	set_fs(seg);
+	size = fp->f_pos;
+	filp_close(fp, NULL);
+	return size;
 }
 
 int tsec_hdcp_verify_vprime(struct hdcp_context_t *hdcp_context)

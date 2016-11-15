@@ -78,21 +78,20 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 #define HDCP_FALLBACK_1X                0xdeadbeef
 #define HDCP_NON_22_RX                  0x0300
 
-#define HDCP_TA_CMD_CTRL            0
-#define HDCP_TA_CMD_AKSV            1
-#define HDCP_TA_CMD_ENC             2
-#define HDCP_TA_CMD_REP             3
-#define HDCP_TA_CMD_BKSV            4
+#define HDCP_TA_CMD_CTRL		0
+#define HDCP_TA_CMD_AKSV		1
+#define HDCP_TA_CMD_ENC			2
+#define HDCP_TA_CMD_REP			3
+#define HDCP_TA_CMD_BKSV		4
 
-#define PKT_SIZE					256
+#define PKT_SIZE			256
 
-#define HDCP_TA_CTRL_ENABLE			1
+#define HDCP_TA_CTRL_ENABLE		1
 #define HDCP_TA_CTRL_DISABLE		0
 
-#define HDCP_CMD_OFFSET				1
+#define HDCP_CMD_OFFSET			1
 #define HDCP_CMD_BYTE_OFFSET		8
-#define HDCP_AUTH_CMD				0x5
-#define HDCP_AUTH_UUID {0x13F616F9, 0x4A6F8572, 0xAA04F1A1, 0xFFF9059B}
+#define HDCP_AUTH_CMD			0x5
 
 #ifdef VERBOSE_DEBUG
 #define nvhdcp_vdbg(...)	\
@@ -1363,8 +1362,9 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	/* if session successfully opened, launch operations */
 	/* repeater flag in Bskv must be configured before loading fuses */
 	*pkt = HDCP_TA_CMD_REP;
-	*(pkt + 1*HDCP_CMD_OFFSET) = 0;
-	*(pkt + 2*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
+	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
+	*(pkt + 2*HDCP_CMD_OFFSET) = 0;
+	*(pkt + 3*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
 	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
 	if (e) {
 		nvhdcp_err("te launch operation failed with error %d\n", e);
@@ -1379,7 +1379,8 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	}
 	usleep_range(20000, 25000);
 	*pkt = HDCP_TA_CMD_CTRL;
-	*(pkt + HDCP_CMD_OFFSET) = HDCP_TA_CTRL_ENABLE;
+	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
+	*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_ENABLE;
 	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
 	if (e) {
 		nvhdcp_err("te launch operation failed with error %d\n", e);
@@ -1404,6 +1405,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 
 	msleep(25);
 	*pkt = HDCP_TA_CMD_AKSV;
+	*(pkt + 1) = TEGRA_NVHDCP_PORT_HDMI;
 	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
 	if (e) {
 		nvhdcp_err("te launch operation failed with error %d\n", e);
@@ -1504,8 +1506,9 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 
 #if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
 	*pkt = HDCP_TA_CMD_BKSV;
-	*(pkt + 1*HDCP_CMD_OFFSET) = nvhdcp->b_ksv;
-	*(pkt + 2*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
+	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
+	*(pkt + 2*HDCP_CMD_OFFSET) = nvhdcp->b_ksv;
+	*(pkt + 3*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
 	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
 	if (e) {
 		nvhdcp_err("te launch operation failed with error: %d\n", e);
@@ -1566,7 +1569,8 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 
 #if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
 	*pkt = HDCP_TA_CMD_ENC;
-	*(pkt + HDCP_CMD_OFFSET) = b_caps;
+	*(pkt + HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
+	*(pkt + 2*HDCP_CMD_OFFSET) = b_caps;
 	e = te_launch_trusted_oper(pkt, PKT_SIZE/4, ta_cmd, ta_ctx);
 	if (e) {
 		nvhdcp_err("te launch operation failed with error: %d\n", e);
@@ -1623,7 +1627,8 @@ lost_hdmi:
 	nvhdcp->state = STATE_UNAUTHENTICATED;
 #if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
 	*pkt = HDCP_TA_CMD_CTRL;
-	*(pkt + HDCP_CMD_OFFSET) = HDCP_TA_CTRL_DISABLE;
+	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
+	*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_DISABLE;
 	if (enc) {
 		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
 		if (e) {

@@ -31,13 +31,17 @@ endif
 ifneq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 obj-$(CONFIG_TEGRA_HDMIHDCP) += hdmihdcp.o
 obj-$(CONFIG_TEGRA_HDMIHDCP) += nvhdcp_hdcp22_methods.o
+obj-$(CONFIG_TEGRA_DPHDCP) += dphdcp.o
 ccflags-$(CONFIG_TEGRA_HDMIHDCP) += -DCONFIG_HDCP
+ccflags-$(CONFIG_TEGRA_DPHDCP) += -DCONFIG_DPHDCP
 endif
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 ifeq ($(CONFIG_TRUSTY),y)
 obj-$(CONFIG_TEGRA_HDMIHDCP) += hdmihdcp.o
 obj-$(CONFIG_TEGRA_HDMIHDCP) += nvhdcp_hdcp22_methods.o
+obj-$(CONFIG_TEGRA_DPHDCP) += dphdcp.o
 ccflags-$(CONFIG_TEGRA_HDMIHDCP) += -DCONFIG_HDCP
+ccflags-$(CONFIG_TEGRA_DPHDCP) += -DCONFIG_DPHDCP
 endif
 endif
 obj-y += edid.o edid_quirks.o

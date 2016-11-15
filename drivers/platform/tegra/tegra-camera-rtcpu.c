@@ -41,7 +41,6 @@
 #include <linux/wait.h>
 
 #include <dt-bindings/memory/tegra-swgroup.h>
-#include <dt-bindings/memory/tegra186-swgroup.h>
 
 #include "rtcpu/camrtc-commands.h"
 #include "rtcpu/camrtc-ctrl-commands.h"

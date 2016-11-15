@@ -36,7 +36,7 @@
 #include <linux/version.h>
 #include <linux/reset.h>
 #include <linux/platform/tegra/tegra-mc-sid.h>
-#include <dt-bindings/memory/tegra186-swgroup.h>
+#include <dt-bindings/memory/tegra-swgroup.h>
 
 #include "dmaengine.h"
 

@@ -23,6 +23,9 @@ obj-$(CONFIG_ARCH_TEGRA_21x_SOC)        += mc-timing-t21x.o
 endif
 obj-${CONFIG_TEGRA_ISOMGR}              += isomgr.o
 obj-$(CONFIG_TEGRA_BWMGR)               += emc_bwmgr.o pmqos_bwmgr_client.o
+ifeq ($(CONFIG_ARCH_TEGRA_21x_SOC),y)
+obj-$(CONFIG_TEGRA_BWMGR)               += emc_bwmgr-t21x.o
+endif
 
 ifeq ($(CONFIG_TEGRA_MC),y)
 

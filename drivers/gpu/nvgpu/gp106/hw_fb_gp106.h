@@ -602,4 +602,8 @@ static inline u32 fb_niso_scrub_status_flag_v(u32 r)
 {
 	return (r >> 0) & 0x1;
 }
+static inline u32 fb_fbpa_fbio_iref_byte_rx_ctrl_r(void)
+{
+	return 0x009a0eb0;
+}
 #endif

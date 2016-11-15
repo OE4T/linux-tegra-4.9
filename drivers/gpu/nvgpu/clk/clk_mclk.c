@@ -2189,6 +2189,9 @@ int clk_mclkseq_init_mclk_gddr5(struct gk20a *g)
 
 	mutex_init(&mclk->mclk_mutex);
 
+	/* FBPA gain WAR */
+	gk20a_writel(g, fb_fbpa_fbio_iref_byte_rx_ctrl_r(), 0x22222222);
+
 	mclk->speed = gk20a_mclk_low_speed; /* Value from Devinit */
 
 	/* Parse VBIOS */

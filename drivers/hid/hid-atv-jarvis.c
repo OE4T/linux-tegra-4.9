@@ -177,8 +177,8 @@ static int num_remotes;
 static struct mutex snd_cards_lock;
 static int index[SNDRV_CARDS] = SNDRV_DEFAULT_IDX;  /* Index 0-MAX */
 static char *id[SNDRV_CARDS] = SNDRV_DEFAULT_STR;   /* ID for this card */
-/* enable upto 5 sound cards for multiple remotes,controllers */
-static bool enable[SNDRV_CARDS] = {true, true, true, true, true, false};
+/* enable all cards by default */
+static bool enable[SNDRV_CARDS] = SNDRV_DEFAULT_ENABLE_PNP;
 /* remember snd cards already in use */
 static bool cards_in_use[SNDRV_CARDS] = {false};
 /* Linux does not like NULL initialization. */

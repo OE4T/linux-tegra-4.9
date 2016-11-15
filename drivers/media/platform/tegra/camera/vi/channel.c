@@ -202,18 +202,22 @@ static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 			/* no more formats */
 			break;
 
-		pixel_format_index = tegra_core_get_idx_by_code(code.code);
-		if (pixel_format_index >= 0) {
+		pixel_format_index = tegra_core_get_idx_by_code(code.code, 0);
+		while (pixel_format_index >= 0) {
 			bitmap_set(chan->fmts_bitmap, pixel_format_index, 1);
+			/* Set init_code to the first matched format */
 			if (!init_code)
 				init_code = code.code;
+			/* Look for other formats with the same mbus code */
+			pixel_format_index = tegra_core_get_idx_by_code(code.code,
+				pixel_format_index + 1);
 		}
 
 		code.index++;
 	}
 
 	if (!init_code) {
-		pixel_format_index = tegra_core_get_idx_by_code(TEGRA_VF_DEF);
+		pixel_format_index = tegra_core_get_idx_by_code(TEGRA_VF_DEF, 0);
 		if (pixel_format_index >= 0) {
 			bitmap_set(chan->fmts_bitmap, pixel_format_index, 1);
 			init_code = TEGRA_VF_DEF;
@@ -224,7 +228,8 @@ static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 	if (ret)
 		return;
 
-	chan->fmtinfo = tegra_core_get_format_by_code(fmt.format.code);
+	/* Initiate the channel format to the first matched format */
+	chan->fmtinfo = tegra_core_get_format_by_code(fmt.format.code, 0);
 	v4l2_fill_pix_format(&chan->format, &fmt.format);
 	chan->format.pixelformat = chan->fmtinfo->fourcc;
 	chan->format.bytesperline = chan->format.width *
@@ -977,7 +982,7 @@ __tegra_channel_get_format(struct tegra_channel *chan,
 		return -ENOTTY;
 
 	v4l2_fill_pix_format(pix, &fmt.format);
-	vfmt = tegra_core_get_format_by_code(fmt.format.code);
+	vfmt = tegra_core_get_format_by_code(fmt.format.code, 0);
 	if (vfmt != NULL) {
 		pix->pixelformat = vfmt->fourcc;
 		tegra_channel_fmt_align(chan,
@@ -1393,7 +1398,7 @@ int tegra_channel_init(struct tegra_channel *chan)
 	spin_lock_init(&chan->capture_state_lock);
 
 	/* Init video format */
-	chan->fmtinfo = tegra_core_get_format_by_code(TEGRA_VF_DEF);
+	chan->fmtinfo = tegra_core_get_format_by_code(TEGRA_VF_DEF, 0);
 	chan->format.pixelformat = chan->fmtinfo->fourcc;
 	chan->format.colorspace = V4L2_COLORSPACE_SRGB;
 	chan->format.field = V4L2_FIELD_NONE;

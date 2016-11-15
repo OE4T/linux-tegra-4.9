@@ -427,7 +427,8 @@ static int tegra_csi_enum_framesizes(struct v4l2_subdev *sd,
 
 	for (i = 0; i < ARRAY_SIZE(tegra_csi_tpg_fmts); i++) {
 		const struct tegra_video_format *format =
-		      tegra_core_get_format_by_code(tegra_csi_tpg_fmts[i].code);
+		      tegra_core_get_format_by_code(
+				tegra_csi_tpg_fmts[i].code, 0);
 		if (format && format->fourcc == fse->code)
 			break;
 	}
@@ -596,7 +597,7 @@ static int tegra_csi_set_format(struct v4l2_subdev *subdev,
 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY)
 		return 0;
 
-	vf = tegra_core_get_format_by_code(format->code);
+	vf = tegra_core_get_format_by_code(format->code, 0);
 	if (!vf) {
 		dev_err(chan->csi->dev, "Fail to find tegra video fmt");
 		mutex_unlock(&chan->format_lock);

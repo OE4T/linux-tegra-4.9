@@ -3347,7 +3347,6 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 {
 	struct pmu_gk20a *pmu = param;
 	struct pmu_pg_msg_elpg_msg *elpg_msg = &msg->msg.pg.elpg_msg;
-	u32 *ack_status = param;
 
 	gk20a_dbg_fn("");
 
@@ -3367,14 +3366,18 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 			elpg_msg->engine_id);
 		if (elpg_msg->engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
 			pmu->elpg_stat = PMU_ELPG_STAT_ON;
+		else if (elpg_msg->engine_id == PMU_PG_ELPG_ENGINE_ID_MS)
+			pmu->mscg_transition_state = PMU_ELPG_STAT_ON;
 		break;
 	case PMU_PG_ELPG_MSG_DISALLOW_ACK:
 		gk20a_dbg_pmu("DISALLOW is ack from PMU, eng - %d",
 			elpg_msg->engine_id);
+
 		if (elpg_msg->engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
 			pmu->elpg_stat = PMU_ELPG_STAT_OFF;
 		else if (elpg_msg->engine_id == PMU_PG_ELPG_ENGINE_ID_MS)
-			*ack_status = 1;
+			pmu->mscg_transition_state = PMU_ELPG_STAT_OFF;
+
 		if (pmu->pmu_state == PMU_STATE_ELPG_BOOTING) {
 			if (g->ops.pmu.pmu_pg_engines_feature_list &&
 				g->ops.pmu.pmu_pg_engines_feature_list(g,
@@ -3477,6 +3480,8 @@ static int pmu_pg_init_send(struct gk20a *g, u32 pg_engine_id)
 	/* set for wait_event PMU_ELPG_STAT_OFF */
 	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
 		pmu->elpg_stat = PMU_ELPG_STAT_OFF;
+	else if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS)
+		pmu->mscg_transition_state = PMU_ELPG_STAT_OFF;
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_elpg_cmd);
@@ -4783,6 +4788,9 @@ static int gk20a_pmu_enable_elpg_locked(struct gk20a *g, u32 pg_engine_id)
 	if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
 		pmu->elpg_stat = PMU_ELPG_STAT_ON_PENDING;
 
+	else if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS)
+		pmu->mscg_transition_state = PMU_ELPG_STAT_ON_PENDING;
+
 	gk20a_dbg_pmu("cmd post PMU_PG_ELPG_CMD_ALLOW");
 	status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL,
 		PMU_COMMAND_QUEUE_HPQ, pmu_handle_pg_elpg_msg,
@@ -4859,10 +4867,7 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 	int ret = 0;
 	u32 pg_engine_id;
 	u32 pg_engine_id_list = 0;
-	u32 ack_status = 0;
-	u32 *wait_msg_cond_ptr = NULL;
-	u32 wait_msg_cond = 0;
-	void *cb_param = NULL;
+	u32 *ptr = NULL;
 
 	gk20a_dbg_fn("");
 
@@ -4931,26 +4936,24 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 
 			if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
 				pmu->elpg_stat = PMU_ELPG_STAT_OFF_PENDING;
+			else if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS)
+				pmu->mscg_transition_state =
+					PMU_ELPG_STAT_OFF_PENDING;
 
-			if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS) {
-				wait_msg_cond_ptr = &pmu->elpg_stat;
-				wait_msg_cond = PMU_ELPG_STAT_OFF;
-				cb_param = pmu;
-			} else if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS) {
-				wait_msg_cond_ptr = &ack_status;
-				wait_msg_cond = 0x1;
-				cb_param = &ack_status;
-			}
+			if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS)
+				ptr = &pmu->elpg_stat;
+			else if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS)
+				ptr = &pmu->mscg_transition_state;
 
 			gk20a_dbg_pmu("cmd post PMU_PG_ELPG_CMD_DISALLOW");
 			gk20a_pmu_cmd_post(g, &cmd, NULL, NULL,
 				PMU_COMMAND_QUEUE_HPQ, pmu_handle_pg_elpg_msg,
-				cb_param, &seq, ~0);
+				pmu, &seq, ~0);
 
 			pmu_wait_message_cond(pmu,
 				gk20a_get_gr_idle_timeout(g),
-				wait_msg_cond_ptr, wait_msg_cond);
-			if (*wait_msg_cond_ptr != wait_msg_cond) {
+				ptr, PMU_ELPG_STAT_OFF);
+			if (*ptr != PMU_ELPG_STAT_OFF) {
 				gk20a_err(dev_from_gk20a(g),
 					"ELPG_DISALLOW_ACK failed");
 					pmu_dump_elpg_stats(pmu);

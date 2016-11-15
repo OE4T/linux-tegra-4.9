@@ -748,6 +748,7 @@ struct pmu_gk20a {
 	u32 elpg_stat;
 
 	u32 mscg_stat;
+	u32 mscg_transition_state;
 
 	int pmu_state;
 

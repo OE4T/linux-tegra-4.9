@@ -150,7 +150,9 @@
 	combined-uart {
 		compatible = "nvidia,tegra186-combined-uart";
 		reg = <0x0 0x3c10000 0x0 0x4   /* TOP0_HSP_SM_0_1_BASE */
-		       0x0 0xc170000 0x0 0x4>; /* AON_HSP_SM_2_3_BASE */
+		       0x0 0xc170000 0x0 0x4       /* AON_HSP_SM_2_3_BASE */
+		       0x0 0x3c00000 0x0 0x1000>; /* TOP0_HSP_COMMON_BASE */
+		interrupts = <0 120 0x04>;
 		status = "okay";
 	};
 };

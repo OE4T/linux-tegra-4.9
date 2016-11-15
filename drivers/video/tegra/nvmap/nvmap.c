@@ -136,6 +136,9 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 	if (!h)
 		return NULL;
 
+	if (!h->alloc)
+		return NULL;
+
 	if (!(h->heap_type & nvmap_dev->cpu_access_mask))
 		goto put_handle;
 

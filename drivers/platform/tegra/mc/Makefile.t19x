@@ -1,0 +1,3 @@
+ccflags-y += -Werror
+
+obj-$(CONFIG_ARCH_TEGRA_19x_SOC) += tegra194-mc-sid.o

@@ -9,4 +9,7 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
 
+KBUILD_CFLAGS += -I$(srctree)/../t19x/include
+
 obj-y += iommu/
+obj-y += platform/

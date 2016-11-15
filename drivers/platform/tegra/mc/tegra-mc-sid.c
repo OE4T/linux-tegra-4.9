@@ -534,13 +534,10 @@ static void __iomem *mc_base;
 static int smmu_bypass_sid = 0x7f;
 
 static struct of_device_id mc_sid_of_match[] = {
-	{ .compatible = "nvidia,tegra-mc-sid", .data = (void *)0, },
-	{ .compatible = "nvidia,tegra-mc-sid-cl34000094", .data = (void *)1, },
+	{ .compatible = "nvidia,tegra-mc-sid", },
 	{},
 };
 MODULE_DEVICE_TABLE(of, mc_sid_of_match);
-
-static long mc_sid_is_cl34000094; /* support for obsolete cl34000094 */
 
 /*
  * Return the by-pass-smmu StreamID.
@@ -577,33 +574,27 @@ static void __mc_override_sid(int sid, int oid, enum mc_overrides ord)
 
 	BUG_ON(oid >= MAX_OID);
 
-	if (mc_sid_is_cl34000094) {
-		addr = mc_sid_base + offs / 2;
-		val = 0x80010000 | sid;
-		writel_relaxed(val, addr);
-	} else {
-		addr = TO_MC_SID_STREAMID_SECURITY_CONFIG(mc_sid_base + offs);
-		val = readl_relaxed(addr);
+	addr = TO_MC_SID_STREAMID_SECURITY_CONFIG(mc_sid_base + offs);
+	val = readl_relaxed(addr);
 
-		if (!(val & SCEW_STREAMID_OVERRIDE)
-			&& (val & SCEW_STREAMID_WRITE_ACCESS_DISABLED))
-			return;
+	if (!(val & SCEW_STREAMID_OVERRIDE)
+		&& (val & SCEW_STREAMID_WRITE_ACCESS_DISABLED))
+		return;
 
-		/*
-		 * Only valid when kernel runs in secure mode.
-		 * Otherwise, no effect on MC_SID_STREAMID_SECURITY_CONFIG_*.
-		 */
-		if ((ord == OVERRIDE) ||
-		    (tegra_platform_is_sim() && ord == SIM_OVERRIDE))
-			val = SCEW_STREAMID_OVERRIDE | SCEW_NS;
-		else
-			val = SCEW_NS;
+	/*
+	 * Only valid when kernel runs in secure mode.
+	 * Otherwise, no effect on MC_SID_STREAMID_SECURITY_CONFIG_*.
+	 */
+	if ((ord == OVERRIDE) ||
+	    (tegra_platform_is_sim() && ord == SIM_OVERRIDE))
+		val = SCEW_STREAMID_OVERRIDE | SCEW_NS;
+	else
+		val = SCEW_NS;
 
-		writel_relaxed(val, addr);
+	writel_relaxed(val, addr);
 
-		addr = mc_sid_base + offs;
-		writel_relaxed(sid, addr);
-	}
+	addr = mc_sid_base + offs;
+	writel_relaxed(sid, addr);
 
 	pr_debug("override sid=%d oid=%d ord=%d at offset=%x\n",
 		 sid, oid, ord, offs);
@@ -692,10 +683,8 @@ static inline void mc_sid_debugfs(void)
 
 static int mc_sid_probe(struct platform_device *pdev)
 {
-	int i;
 	struct resource *res;
 	static void __iomem *addr;
-	const struct of_device_id *id;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	addr = devm_ioremap_resource(&pdev->dev, res);
@@ -703,22 +692,9 @@ static int mc_sid_probe(struct platform_device *pdev)
 		return PTR_ERR(addr);
 	mc_sid_base = addr;
 
-	id = of_match_device(mc_sid_of_match, &pdev->dev);
-	if (id)
-		mc_sid_is_cl34000094 = (long)id->data;
-
 	/* Read the override SID, if any. */
 	of_property_read_u32(pdev->dev.of_node, "nvidia,by-pass-smmu-streamid",
 			     &smmu_bypass_sid);
-
-	/* Stream Id is set as 0x7F by EL3 secure monotor for the initial
-	 * SMMU Bypass. No need to set the stream Id as 0x7F here.
-	 * When support mc_sid_is_cl34000094 is removed this code should be
-	 * cleaned up as well.
-	 */
-	for (i = 0;
-	     i < ARRAY_SIZE(sid_override_reg) && mc_sid_is_cl34000094; i++)
-		__mc_override_sid(smmu_bypass_sid, i, DONTCARE);
 
 	/* FIXME: wait for MC driver */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
@@ -747,9 +723,6 @@ static int __init mc_sid_init(void)
 	struct platform_device *pdev = NULL;
 
 	np = of_find_compatible_node(NULL, NULL, "nvidia,tegra-mc-sid");
-	if (!np)
-		np = of_find_compatible_node(NULL, NULL,
-					"nvidia,tegra-mc-sid-cl34000094");
 	if (np)
 		pdev = of_platform_device_create(np, NULL,
 						 platform_bus_type.dev_root);

@@ -57,7 +57,8 @@
 
 #define BOARD_SKU	"2382"
 #define BOARD_INITIAL	"699-"
-#define BOARD_SKU_VER	"E"
+#define BOARD_SKU_VER	'E'
+#define BOARD_SKU_VER_MAX	'Z'
 
 #ifdef CONFIG_DTS
 struct regulator *wifi_regulator = NULL;
@@ -287,7 +288,7 @@ bool is_es4_module(void)
 			DHD_INFO(("sku= %s, sku_version=%s\n", sku, sku_version));
 			if ((0 == strncmp(BOARD_INITIAL, sku, 4)) &&
 					 (0 == strncmp(BOARD_SKU, sku+5, 4))) {
-				if (0 == strncmp(BOARD_SKU_VER, sku_version, 1))
+				if (BOARD_SKU_VER <= *sku_version && BOARD_SKU_VER_MAX >= *sku_version )
 					ret = true;
 			}
 		}

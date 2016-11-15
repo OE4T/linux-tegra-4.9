@@ -582,6 +582,7 @@
 		rt5659: rt5659.0-001b@1b {
                         compatible = "realtek,rt5659";
                         reg = <0x1b>;
+			gpios = <&gpio TEGRA_GPIO(E , 6) GPIO_ACTIVE_HIGH>;
                 };
 	};
 

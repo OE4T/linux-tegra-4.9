@@ -1,7 +1,7 @@
 /*
  * Jetson-CV Super Module peripherals
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -139,6 +139,8 @@
 					compatible = "realtek,rt5658";
 					reg = <0x1a>;
 					status = "disabled";
+					/* gpio for jack detection */
+					gpios = <&gpio TEGRA_GPIO(E , 6) GPIO_ACTIVE_HIGH>;
 				};
 			};
 		};
@@ -147,6 +149,7 @@
 			compatible = "realtek,rt5658";
 			reg = <0x1a>;
 			status = "disabled";
+			gpios = <&gpio TEGRA_GPIO(E , 6) GPIO_ACTIVE_HIGH>;
 		};
 	};
 

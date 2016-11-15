@@ -141,6 +141,10 @@
 					status = "disabled";
 					/* gpio for jack detection */
 					gpios = <&gpio TEGRA_GPIO(E , 6) GPIO_ACTIVE_HIGH>;
+
+					/* refer include/sound/rt5659.h for the values to be used */
+					realtek,jd-src = <1>; /* RT5659_JD3 */
+					realtek,dmic1-data-pin = <2>; /* RT5659_DMIC1_DATA_GPIO5 */
 				};
 			};
 		};
@@ -150,6 +154,10 @@
 			reg = <0x1a>;
 			status = "disabled";
 			gpios = <&gpio TEGRA_GPIO(E , 6) GPIO_ACTIVE_HIGH>;
+
+			/* refer include/sound/rt5659.h for the values to be used */
+			realtek,jd-src = <1>; /* RT5659_JD3 */
+			realtek,dmic1-data-pin = <2>; /* RT5659_DMIC1_DATA_GPIO5 */
 		};
 	};
 

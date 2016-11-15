@@ -5272,6 +5272,49 @@ int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id)
 }
 
 #ifdef CONFIG_DEBUG_FS
+static int lpwr_debug_show(struct seq_file *s, void *data)
+{
+	struct gk20a *g = s->private;
+
+	if (g->ops.pmu.pmu_pg_engines_feature_list &&
+		g->ops.pmu.pmu_pg_engines_feature_list(g,
+		PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
+		PMU_PG_FEATURE_GR_POWER_GATING_ENABLED) {
+		seq_printf(s, "PSTATE: %u\n"
+			"RPPG Enabled: %u\n"
+			"RPPG ref count: %u\n"
+			"RPPG state: %u\n"
+			"MSCG Enabled: %u\n"
+			"MSCG pstate state: %u\n"
+			"MSCG transition state: %u\n",
+			g->ops.clk_arb.get_current_pstate(g),
+			g->elpg_enabled, g->pmu.elpg_refcnt,
+			g->pmu.elpg_stat, g->mscg_enabled,
+			g->pmu.mscg_stat, g->pmu.mscg_transition_state);
+
+	} else
+		seq_printf(s, "ELPG Enabled: %u\n"
+			"ELPG ref count: %u\n"
+			"ELPG state: %u\n",
+			g->elpg_enabled, g->pmu.elpg_refcnt,
+			g->pmu.elpg_stat);
+
+	return 0;
+
+}
+
+static int lpwr_debug_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, lpwr_debug_show, inode->i_private);
+}
+
+static const struct file_operations lpwr_debug_fops = {
+	.open		= lpwr_debug_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static int mscg_stat_show(struct seq_file *s, void *data)
 {
 	struct gk20a *g = s->private;
@@ -5612,6 +5655,12 @@ int gk20a_pmu_debugfs_init(struct device *dev)
 	struct dentry *d;
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a *g = get_gk20a(dev);
+
+	d = debugfs_create_file(
+		"lpwr_debug", S_IRUGO|S_IWUSR, platform->debugfs, g,
+						&lpwr_debug_fops);
+	if (!d)
+		goto err_out;
 
 	d = debugfs_create_file(
 		"mscg_residency", S_IRUGO|S_IWUSR, platform->debugfs, g,

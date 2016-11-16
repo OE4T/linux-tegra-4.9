@@ -160,10 +160,10 @@ int tegra_nvdisp_program_bandwidth(struct tegra_dc *dc,
 	 */
 
 	struct nvdisp_bandwidth_config *cur_config = &ihub_bw_info.cur_config;
-	u32 final_iso_bw = cur_config->iso_bw;
-	u32 final_total_bw = cur_config->total_bw;
-	u32 final_emc = cur_config->emc_la_floor;
-	u32 final_hubclk = cur_config->hubclk;
+	u32 final_iso_bw = 0;
+	u32 final_total_bw = 0;
+	u32 final_emc = 0;
+	u32 final_hubclk = 0;
 	bool update_la_ptsa = false;
 	int ret = 0;
 
@@ -172,6 +172,11 @@ int tegra_nvdisp_program_bandwidth(struct tegra_dc *dc,
 		ret = -EINVAL;
 		goto exit;
 	}
+
+	final_iso_bw = cur_config->iso_bw;
+	final_total_bw = cur_config->total_bw;
+	final_emc = cur_config->emc_la_floor;
+	final_hubclk = cur_config->hubclk;
 
 	if (before_win_update) { /* Case A */
 		bool update_bw = false;
@@ -294,11 +299,21 @@ void tegra_nvdisp_init_bandwidth(struct tegra_dc *dc)
 	 * through IMP, if the client supports it.
 	 */
 	struct nvdisp_bandwidth_config *max_bw_config = ihub_bw_info.max_config;
-	u32 new_iso_bw = max_bw_config->iso_bw;
-	u32 new_total_bw = max_bw_config->total_bw;
-	u32 new_emc = max_bw_config->emc_la_floor;
-	u32 new_hubclk = max_bw_config->hubclk;
+	u32 new_iso_bw = 0;
+	u32 new_total_bw = 0;
+	u32 new_emc = 0;
+	u32 new_hubclk = 0;
 	bool before_win_update = true;
+
+	if (IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle) ||
+		IS_ERR_OR_NULL(ihub_bw_info.bwmgr_handle) ||
+		!max_bw_config)
+		return;
+
+	new_iso_bw = max_bw_config->iso_bw;
+	new_total_bw = max_bw_config->total_bw;
+	new_emc = max_bw_config->emc_la_floor;
+	new_hubclk = max_bw_config->hubclk;
 
 	tegra_nvdisp_negotiate_reserved_bw(dc,
 				new_iso_bw,

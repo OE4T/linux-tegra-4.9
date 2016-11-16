@@ -91,10 +91,24 @@ static void tegra18_denver_serr_enable(void)
 {
 	mca_cmd_t cmd;
 	u32 error;
+	u64 data;
+
 	cmd.data = 0;
 	cmd.cmd = TEGRA_ARI_MCA_WRITE_SERR;
 	cmd.idx = TEGRA_ARI_MCA_RD_WR_GLOBAL_CONFIG_REGISTER;
 	tegra_mce_write_uncore_mca(cmd, 1, &error);
+
+	cmd.cmd = TEGRA_ARI_MCA_READ_SERR;
+	cmd.idx = TEGRA_ARI_MCA_RD_WR_CCE;
+	cmd.subidx = TEGRA_ARI_MCA_RD_WR_ASERRX_MISC1;
+	tegra_mce_read_uncore_mca(cmd, &data, &error);
+
+	cmd.cmd = TEGRA_ARI_MCA_WRITE_SERR;
+	/* Disable Error Response (Data abort) on VPR reads.
+	 * set PSN_ERR_CORR_MASK[7] = 1.
+	 */
+	data |= 1 << 19;
+	tegra_mce_write_uncore_mca(cmd, data, &error);
 }
 
 void tegra18_clear_serr(void)

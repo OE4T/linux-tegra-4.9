@@ -70,6 +70,19 @@
 		memory-region = <&generic_reserved &gos_reserved>;
 	};
 
+	tegra-cvnas {
+		compatible = "nvidia,tegra-cvnas";
+		reg = <0x0 0x14000000 0x0 0x10000>, /* CV0_REG0_BASE */
+		      <0x0 0x14020000 0x0 0x10000>, /* CV0_SRAM_BASE */
+		      <0x0 0x21170000 0x0 0x10000>; /* CVSRAM_CAR_BASE */
+		interrupts = <0 238 4>,
+			     <0 239 4>;
+		cvsramslice = <4 0x1000>;
+		cvsram-reg = <0x0 0x50000000 0x0 0x400000>;
+		hsm-reg = <0x0 0x0BA40000 0x0 0x10000>;
+		status = "okay";
+	};
+
 	timer {
 		compatible = "arm,armv8-timer";
 		interrupts = <GIC_PPI 13

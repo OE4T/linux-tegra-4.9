@@ -180,9 +180,17 @@ int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 			new_baseclock = 282240000;
 		else {
 			new_baseclock = data->clk_rates[PLLA_x11025_RATE];
-			clk_out_rate = data->clk_rates[AUD_MCLK_x11025_RATE];
 			mclk = data->clk_rates[PLLA_OUT0_x11025_RATE];
 			ahub_rate = data->clk_rates[AHUB_x11025_RATE];
+
+			if (srate <= 44100) {
+				/* half the pll_a_out0 to support lower
+				 * sampling rate divider
+				 */
+				mclk = mclk >> 1;
+			}
+			/* aud_mclk should be 256*Fs */
+			clk_out_rate = srate << 8;
 			data->clk_out_rate = clk_out_rate;
 		}
 		break;
@@ -202,9 +210,17 @@ int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 			new_baseclock = 368640000;
 		else {
 			new_baseclock = data->clk_rates[PLLA_x8000_RATE];
-			clk_out_rate = data->clk_rates[AUD_MCLK_x8000_RATE];
 			mclk = data->clk_rates[PLLA_OUT0_x8000_RATE];
 			ahub_rate = data->clk_rates[AHUB_x8000_RATE];
+
+			if (srate <= 48000) {
+				/* half the pll_a_out0 to support lower
+				 * sampling rate divider
+				 */
+				mclk = mclk >> 1;
+			}
+			/* aud_mclk should be 256*Fs */
+			clk_out_rate = srate << 8;
 			data->clk_out_rate = clk_out_rate;
 		}
 		break;

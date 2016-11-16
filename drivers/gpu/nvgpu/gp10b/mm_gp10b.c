@@ -81,7 +81,7 @@ static int gb10b_init_bar2_vm(struct gk20a *g)
 	if (err)
 		goto clean_up_va;
 
-	gk20a_init_inst_block(inst_block, vm, big_page_size);
+	g->ops.mm.init_inst_block(inst_block, vm, big_page_size);
 
 	return 0;
 

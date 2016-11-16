@@ -130,6 +130,7 @@ static int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 
 	gk20a_mem_wr32(g, mem, ram_fc_target_w(),
 		pbdma_target_eng_ctx_valid_true_f() |
+		pbdma_target_ce_ctx_valid_true_f() |
 		pbdma_target_engine_sw_f());
 
 	gk20a_mem_wr32(g, mem, ram_fc_acquire_w(),

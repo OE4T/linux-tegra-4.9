@@ -95,32 +95,30 @@ enum gk20a_cbc_op {
 #define MC_INTR_UNIT_DISABLE	false
 #define MC_INTR_UNIT_ENABLE		true
 
-enum nvgpu_litter_value {
-	GPU_LIT_NUM_GPCS,
-	GPU_LIT_NUM_PES_PER_GPC,
-	GPU_LIT_NUM_ZCULL_BANKS,
-	GPU_LIT_NUM_TPC_PER_GPC,
-	GPU_LIT_NUM_SM_PER_TPC,
-	GPU_LIT_NUM_FBPS,
-	GPU_LIT_GPC_BASE,
-	GPU_LIT_GPC_STRIDE,
-	GPU_LIT_GPC_SHARED_BASE,
-	GPU_LIT_TPC_IN_GPC_BASE,
-	GPU_LIT_TPC_IN_GPC_STRIDE,
-	GPU_LIT_TPC_IN_GPC_SHARED_BASE,
-	GPU_LIT_PPC_IN_GPC_BASE,
-	GPU_LIT_PPC_IN_GPC_STRIDE,
-	GPU_LIT_PPC_IN_GPC_SHARED_BASE,
-	GPU_LIT_ROP_BASE,
-	GPU_LIT_ROP_STRIDE,
-	GPU_LIT_ROP_SHARED_BASE,
-	GPU_LIT_HOST_NUM_ENGINES,
-	GPU_LIT_HOST_NUM_PBDMA,
-	GPU_LIT_LTC_STRIDE,
-	GPU_LIT_LTS_STRIDE,
-	GPU_LIT_NUM_FBPAS,
-	GPU_LIT_FBPA_STRIDE,
-};
+#define GPU_LIT_NUM_GPCS	0
+#define GPU_LIT_NUM_PES_PER_GPC 1
+#define GPU_LIT_NUM_ZCULL_BANKS 2
+#define GPU_LIT_NUM_TPC_PER_GPC 3
+#define GPU_LIT_NUM_SM_PER_TPC  4
+#define GPU_LIT_NUM_FBPS	5
+#define GPU_LIT_GPC_BASE	6
+#define GPU_LIT_GPC_STRIDE	7
+#define GPU_LIT_GPC_SHARED_BASE 8
+#define GPU_LIT_TPC_IN_GPC_BASE 9
+#define GPU_LIT_TPC_IN_GPC_STRIDE 10
+#define GPU_LIT_TPC_IN_GPC_SHARED_BASE 11
+#define GPU_LIT_PPC_IN_GPC_BASE	12
+#define GPU_LIT_PPC_IN_GPC_STRIDE 13
+#define GPU_LIT_PPC_IN_GPC_SHARED_BASE 14
+#define GPU_LIT_ROP_BASE	15
+#define GPU_LIT_ROP_STRIDE	16
+#define GPU_LIT_ROP_SHARED_BASE 17
+#define GPU_LIT_HOST_NUM_ENGINES 18
+#define GPU_LIT_HOST_NUM_PBDMA	19
+#define GPU_LIT_LTC_STRIDE	20
+#define GPU_LIT_LTS_STRIDE	21
+#define GPU_LIT_NUM_FBPAS	22
+#define GPU_LIT_FBPA_STRIDE	23
 
 #define nvgpu_get_litter_value(g, v) (g)->ops.get_litter_value((g), v)
 
@@ -312,7 +310,6 @@ struct gpu_ops {
 				u32 zcull_alloc_num, u32 *zcull_map_tiles);
 		int (*commit_global_timeslice)(struct gk20a *g,
 					struct channel_gk20a *c, bool patch);
-
 	} gr;
 	const char *name;
 	struct {
@@ -685,7 +682,7 @@ struct gpu_ops {
 					       size_t scatter_buffer_size);
 	} cde;
 
-	int (*get_litter_value)(struct gk20a *g, enum nvgpu_litter_value value);
+	int (*get_litter_value)(struct gk20a *g, int value);
 	int (*chip_init_gpu_characteristics)(struct gk20a *g);
 	int (*read_ptimer)(struct gk20a *g, u64 *value);
 

@@ -21,6 +21,7 @@
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
 #include <linux/nvhost.h>
+#include <linux/dma-buf.h>
 #include <uapi/linux/nvgpu.h>
 
 #include "gk20a.h"
@@ -789,6 +790,84 @@ nvgpu_dbg_gpu_ioctl_suspend_resume_contexts(struct dbg_session_gk20a *dbg_s,
 	return err;
 }
 
+static int nvgpu_dbg_gpu_ioctl_access_fb_memory(struct dbg_session_gk20a *dbg_s,
+		struct nvgpu_dbg_gpu_access_fb_memory_args *args)
+{
+	struct gk20a *g = dbg_s->g;
+	struct dma_buf *dmabuf;
+	void __user *user_buffer = (void __user *)(uintptr_t)args->buffer;
+	void *buffer;
+	u64 size, access_size, offset;
+	u64 access_limit_size = SZ_4K;
+	int err = 0;
+
+	if ((args->offset & 3) || (!args->size) || (args->size & 3))
+		return -EINVAL;
+
+	dmabuf = dma_buf_get(args->dmabuf_fd);
+	if (IS_ERR(dmabuf))
+		return -EINVAL;
+
+	if ((args->offset > dmabuf->size) ||
+	    (args->size > dmabuf->size) ||
+	    (args->offset + args->size > dmabuf->size)) {
+		err = -EINVAL;
+		goto fail_dmabuf_put;
+	}
+
+	buffer = nvgpu_alloc(access_limit_size, true);
+	if (!buffer) {
+		err = -ENOMEM;
+		goto fail_dmabuf_put;
+	}
+
+	size = args->size;
+	offset = 0;
+
+	err = gk20a_busy(g->dev);
+	if (err)
+		goto fail_free_buffer;
+
+	while (size) {
+		/* Max access size of access_limit_size in one loop */
+		access_size = min(access_limit_size, size);
+
+		if (args->cmd ==
+		    NVGPU_DBG_GPU_IOCTL_ACCESS_FB_MEMORY_CMD_WRITE) {
+			err = copy_from_user(buffer, user_buffer + offset,
+					     access_size);
+			if (err)
+				goto fail_idle;
+		}
+
+		err = gk20a_vidbuf_access_memory(g, dmabuf, buffer,
+					 args->offset + offset, access_size,
+					 args->cmd);
+		if (err)
+			goto fail_idle;
+
+		if (args->cmd ==
+		    NVGPU_DBG_GPU_IOCTL_ACCESS_FB_MEMORY_CMD_READ) {
+			err = copy_to_user(user_buffer + offset,
+					   buffer, access_size);
+			if (err)
+				goto fail_idle;
+		}
+
+		size -= access_size;
+		offset += access_size;
+	}
+
+fail_idle:
+	gk20a_idle(g->dev);
+fail_free_buffer:
+	nvgpu_free(buffer);
+fail_dmabuf_put:
+	dma_buf_put(dmabuf);
+
+	return err;
+}
+
 long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 			     unsigned long arg)
 {
@@ -909,6 +988,11 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 	case NVGPU_DBG_GPU_IOCTL_SUSPEND_RESUME_CONTEXTS:
 		err = nvgpu_dbg_gpu_ioctl_suspend_resume_contexts(dbg_s,
 		      (struct nvgpu_dbg_gpu_suspend_resume_contexts_args *)buf);
+		break;
+
+	case NVGPU_DBG_GPU_IOCTL_ACCESS_FB_MEMORY:
+		err = nvgpu_dbg_gpu_ioctl_access_fb_memory(dbg_s,
+			(struct nvgpu_dbg_gpu_access_fb_memory_args *)buf);
 		break;
 
 	default:

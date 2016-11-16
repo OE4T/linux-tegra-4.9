@@ -917,11 +917,28 @@ struct nvgpu_dbg_gpu_suspend_resume_contexts_args {
 	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 18, struct nvgpu_dbg_gpu_suspend_resume_contexts_args)
 
 
+#define NVGPU_DBG_GPU_IOCTL_ACCESS_FB_MEMORY_CMD_READ	1
+#define NVGPU_DBG_GPU_IOCTL_ACCESS_FB_MEMORY_CMD_WRITE	2
+
+struct nvgpu_dbg_gpu_access_fb_memory_args {
+	__u32 cmd;       /* in: either read or write */
+
+	__s32 dmabuf_fd; /* in: dmabuf fd of the buffer in FB */
+	__u64 offset;    /* in: offset within buffer in FB, should be 4B aligned */
+
+	__u64 buffer;    /* in/out: temp buffer to read/write from */
+	__u64 size;      /* in: size of the buffer i.e. size of read/write in bytes, should be 4B aligned */
+};
+
+#define NVGPU_DBG_GPU_IOCTL_ACCESS_FB_MEMORY	\
+	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 19, struct nvgpu_dbg_gpu_access_fb_memory_args)
+
+
 #define NVGPU_DBG_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_DBG_GPU_IOCTL_SUSPEND_RESUME_CONTEXTS)
+	_IOC_NR(NVGPU_DBG_GPU_IOCTL_ACCESS_FB_MEMORY)
 
 #define NVGPU_DBG_GPU_IOCTL_MAX_ARG_SIZE		\
-	sizeof(struct nvgpu_dbg_gpu_perfbuf_map_args)
+	sizeof(struct nvgpu_dbg_gpu_access_fb_memory_args)
 
 /*
  * /dev/nvhost-gpu device

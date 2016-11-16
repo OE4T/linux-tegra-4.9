@@ -2301,6 +2301,39 @@ int gk20a_vidmem_get_space(struct gk20a *g, u64 *space)
 #endif
 }
 
+int gk20a_vidbuf_access_memory(struct gk20a *g, struct dma_buf *dmabuf,
+		void *buffer, u64 offset, u64 size, u32 cmd)
+{
+#if defined(CONFIG_GK20A_VIDMEM)
+	struct gk20a_vidmem_buf *vidmem_buf;
+	struct mem_desc *mem;
+	int err = 0;
+
+	if (gk20a_dmabuf_aperture(g, dmabuf) != APERTURE_VIDMEM)
+		return -EINVAL;
+
+	vidmem_buf = dmabuf->priv;
+	mem = vidmem_buf->mem;
+
+	switch (cmd) {
+	case NVGPU_DBG_GPU_IOCTL_ACCESS_FB_MEMORY_CMD_READ:
+		gk20a_mem_rd_n(g, mem, offset, buffer, size);
+		break;
+
+	case NVGPU_DBG_GPU_IOCTL_ACCESS_FB_MEMORY_CMD_WRITE:
+		gk20a_mem_wr_n(g, mem, offset, buffer, size);
+		break;
+
+	default:
+		err = -EINVAL;
+	}
+
+	return err;
+#else
+	return -ENOSYS;
+#endif
+}
+
 static u64 gk20a_mm_get_align(struct gk20a *g, struct scatterlist *sgl,
 			      enum gk20a_aperture aperture)
 {

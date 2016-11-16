@@ -53,7 +53,7 @@ static inline bool pri_is_gpc_addr(struct gk20a *g, u32 addr)
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	u32 num_gpcs = nvgpu_get_litter_value(g, GPU_LIT_NUM_GPCS);
 	return	((addr >= gpc_base) &&
-		 (addr < gpc_base) + num_gpcs * gpc_stride) ||
+		 (addr < gpc_base + num_gpcs * gpc_stride)) ||
 		pri_is_gpc_addr_shared(g, addr);
 }
 static inline u32 pri_get_gpc_num(struct gk20a *g, u32 addr)

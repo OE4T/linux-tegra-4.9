@@ -192,4 +192,5 @@ void gm20b_init_mm(struct gpu_ops *gops)
 	gops->mm.init_mm_setup_hw = gk20a_init_mm_setup_hw;
 	gops->mm.bar1_bind = gm20b_mm_bar1_bind;
 	gops->mm.is_bar1_supported = gm20b_mm_is_bar1_supported;
+	gops->mm.init_inst_block = gk20a_init_inst_block;
 }

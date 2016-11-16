@@ -4855,7 +4855,7 @@ static int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	err = gk20a_alloc_inst_block(g, inst_block);
 	if (err)
 		goto clean_up_va;
-	gk20a_init_inst_block(inst_block, vm, big_page_size);
+	g->ops.mm.init_inst_block(inst_block, vm, big_page_size);
 
 	return 0;
 
@@ -4884,7 +4884,7 @@ static int gk20a_init_system_vm(struct mm_gk20a *mm)
 	err = gk20a_alloc_inst_block(g, inst_block);
 	if (err)
 		goto clean_up_va;
-	gk20a_init_inst_block(inst_block, vm, big_page_size);
+	g->ops.mm.init_inst_block(inst_block, vm, big_page_size);
 
 	return 0;
 
@@ -4903,7 +4903,7 @@ static int gk20a_init_hwpm(struct mm_gk20a *mm)
 	err = gk20a_alloc_inst_block(g, inst_block);
 	if (err)
 		return err;
-	gk20a_init_inst_block(inst_block, vm, 0);
+	g->ops.mm.init_inst_block(inst_block, vm, 0);
 
 	return 0;
 }
@@ -5383,5 +5383,6 @@ void gk20a_init_mm(struct gpu_ops *gops)
 	gops->mm.init_pdb = gk20a_mm_init_pdb;
 	gops->mm.init_mm_setup_hw = gk20a_init_mm_setup_hw;
 	gops->mm.bar1_bind = gk20a_mm_bar1_bind;
+	gops->mm.init_inst_block = gk20a_init_inst_block;
 	gops->mm.is_bar1_supported = gk20a_mm_is_bar1_supported;
 }

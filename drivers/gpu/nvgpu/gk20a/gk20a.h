@@ -579,6 +579,8 @@ struct gpu_ops {
 					 u32 flags);
 		int (*bar1_bind)(struct gk20a *g, struct mem_desc *bar1_inst);
 		size_t (*get_vidmem_size)(struct gk20a *g);
+		void (*init_inst_block)(struct mem_desc *inst_block,
+				struct vm_gk20a *vm, u32 big_page_size);
 	} mm;
 	struct {
 		int (*init_therm_setup_hw)(struct gk20a *g);

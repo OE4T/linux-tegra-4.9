@@ -129,9 +129,11 @@ static void free_channel(struct fifo_gk20a *f,
 
 int channel_gk20a_commit_va(struct channel_gk20a *c)
 {
+	struct gk20a *g = c->g;
+
 	gk20a_dbg_fn("");
 
-	gk20a_init_inst_block(&c->inst_block, c->vm,
+	g->ops.mm.init_inst_block(&c->inst_block, c->vm,
 			c->vm->gmmu_page_sizes[gmmu_page_size_big]);
 
 	return 0;

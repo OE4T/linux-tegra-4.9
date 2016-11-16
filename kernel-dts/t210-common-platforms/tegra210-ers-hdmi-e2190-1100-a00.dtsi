@@ -19,6 +19,7 @@
  */
 
 #include <dt-bindings/display/tegra-dc.h>
+#include <dt-bindings/soc/tegra-pmc.h>
 
 / {
 	host1x {
@@ -26,6 +27,8 @@
 			status = "okay";
 			nvidia,ddc-i2c-bus = <&hdmi_ddc>;
 			nvidia,hpd-gpio = <&gpio TEGRA_GPIO(CC, 1) 1>; /* PN7 */
+			nvidia,pmc-wakeup = <&tegra_pmc
+				PMC_WAKE_TYPE_EVENT 53 PMC_TRIGGER_TYPE_LOW>;
 			hdmi-display {
 				status = "okay";
 				compatible = "hdmi,display";

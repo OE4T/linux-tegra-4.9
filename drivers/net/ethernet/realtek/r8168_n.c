@@ -35,6 +35,7 @@
  * This driver is modified from r8169.c in Linux kernel 2.6.18
  */
 
+#include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/version.h>
 #include <linux/pci.h>
@@ -655,6 +656,90 @@ struct rtl8168_counters {
         u16 tx_aborted;
         u16 tx_underun;
 };
+
+/* SysFS node */
+static int power_saver_flag;
+static struct kobject *rt8168_ps_kobj;
+static ssize_t show_power_saver(struct device *dev,
+		struct device_attribute *attr, char *buf) {
+	ssize_t ret;
+	ret = snprintf(buf, PAGE_SIZE, "%u\n", power_saver_flag);
+	return ret;
+}
+
+static ssize_t set_power_saver(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count) {
+	sscanf(buf, "%d", &power_saver_flag);
+
+	if (!power_saver_flag) {
+		pr_debug("rt8168_power mode is set to big spender");
+		aspm = 0;
+		s5wol = 1;
+		eee_enable = 0;
+	} else {
+		pr_debug("rt8168_power mode is set to no waste");
+#ifdef CONFIG_R8168_ASPM
+		aspm = 1;
+#else
+		aspm = 0;
+#endif
+#ifdef CONFIG_R8168_S5WOL
+		s5wol = 1;
+#else
+		s5wol = 0;
+#endif
+#ifdef ENABLE_EEE
+		eee_enable = 1;
+#else
+		eee_enable = 0;
+#endif
+	}
+
+	return count;
+}
+
+static const struct kobj_attribute rt8168_psaver_attr[] = {
+	__ATTR(mode, S_IRUGO | S_IWUGO, show_power_saver, set_power_saver),
+};
+
+static int rtl8168_sysfs_register()
+{
+	int ret, i;
+
+	if (!kernel_kobj) {
+		pr_err("kernel_kobj is NULL\n");
+		return;
+	}
+
+	rt8168_ps_kobj = kobject_create_and_add("rt8168_power", kernel_kobj);
+
+	if (!rt8168_ps_kobj) {
+		pr_err("unable to create rt8168_power_saver kernel object!\n");
+		return;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(rt8168_psaver_attr); i++) {
+		ret = sysfs_create_file(rt8168_ps_kobj,
+				&rt8168_psaver_attr[i].attr);
+
+		if (ret)
+			pr_err("failed to create %s\n",
+					rt8168_psaver_attr[i].attr.name);
+	}
+
+	return ret;
+}
+
+static int rtl8168_sysfs_remove()
+{
+	int i;
+
+	if (!rt8168_ps_kobj)
+		return;
+
+	for (i = 0; i < ARRAY_SIZE(rt8168_psaver_attr); i++)
+		sysfs_remove_file(rt8168_ps_kobj, &rt8168_psaver_attr[i].attr);
+}
 
 #ifdef ENABLE_R8168_PROCFS
 /****************************************************************************
@@ -22570,7 +22655,7 @@ rtl8168_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
         }
 
         printk(KERN_INFO "%s: This product is covered by one or more of the following patents: US6,570,884, US6,115,776, and US6,327,625.\n", MODULENAME);
-
+	rtl8168_sysfs_register();
         netif_carrier_off(dev);
 
         printk("%s", GPL_CLAIM);
@@ -22589,6 +22674,7 @@ void __devexit rtl8168_remove_one(struct pci_dev *pdev)
 #ifdef  CONFIG_R8168_NAPI
         RTL_NAPI_DEL(tp);
 #endif
+	rtl8168_sysfs_remove();
 
         switch (tp->mcfg) {
         case CFG_METHOD_11:

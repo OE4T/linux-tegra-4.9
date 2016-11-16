@@ -25,9 +25,25 @@ static bool gv11b_mm_is_bar1_supported(struct gk20a *g)
 	return false;
 }
 
+static void gv11b_init_inst_block(struct mem_desc *inst_block,
+		struct vm_gk20a *vm, u32 big_page_size)
+{
+	struct gk20a *g = gk20a_from_vm(vm);
+
+	gk20a_dbg_info("inst block phys = 0x%llx, kv = 0x%p",
+		gk20a_mm_inst_block_addr(g, inst_block), inst_block->cpu_va);
+
+	g->ops.mm.init_pdb(g, inst_block, vm);
+
+	if (big_page_size && g->ops.mm.set_big_page_size)
+		g->ops.mm.set_big_page_size(g, inst_block, big_page_size);
+}
+
+
 void gv11b_init_mm(struct gpu_ops *gops)
 {
 	gp10b_init_mm(gops);
 	gops->mm.bar1_bind = NULL;
 	gops->mm.is_bar1_supported = gv11b_mm_is_bar1_supported;
+	gops->mm.init_inst_block = gv11b_init_inst_block;
 }

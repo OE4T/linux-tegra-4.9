@@ -3376,7 +3376,6 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 		else if (elpg_msg->engine_id == PMU_PG_ELPG_ENGINE_ID_MS)
 			*ack_status = 1;
 		if (pmu->pmu_state == PMU_STATE_ELPG_BOOTING) {
-			pmu->pmu_state = PMU_STATE_ELPG_BOOTED;
 			if (g->ops.pmu.pmu_pg_engines_feature_list &&
 				g->ops.pmu.pmu_pg_engines_feature_list(g,
 				PMU_PG_ELPG_ENGINE_ID_GRAPHICS) !=
@@ -3384,8 +3383,10 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 				pmu->initialized = true;
 				pmu->pmu_state = PMU_STATE_STARTED;
 				pmu->mscg_stat = PMU_MSCG_DISABLED;
-			} else
+			} else {
+				pmu->pmu_state = PMU_STATE_ELPG_BOOTED;
 				schedule_work(&pmu->pg_init);
+			}
 		}
 		break;
 	default:

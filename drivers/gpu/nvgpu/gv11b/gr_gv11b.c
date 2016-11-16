@@ -13,6 +13,7 @@
  * more details.
  */
 
+#include <linux/tegra_gpu_t19x.h>
 #include "gk20a/gk20a.h" /* FERMI and MAXWELL classes defined here */
 #include <linux/delay.h>
 #include <linux/tegra-fuse.h>
@@ -24,12 +25,16 @@
 
 #include "gm20b/gr_gm20b.h"
 #include "gv11b/gr_gv11b.h"
+#include "gv11b/mm_gv11b.h"
+#include "gv11b/subctx_gv11b.h"
 #include "hw_gr_gv11b.h"
 #include "hw_fifo_gv11b.h"
 #include "hw_proj_gv11b.h"
 #include "hw_ctxsw_prog_gv11b.h"
 #include "hw_mc_gv11b.h"
 #include "hw_gr_gv11b.h"
+#include "hw_ram_gv11b.h"
+#include "hw_pbdma_gv11b.h"
 #include <linux/vmalloc.h>
 #include <linux/tegra_gpu_t19x.h>
 
@@ -1583,7 +1588,6 @@ static int gr_gv11b_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr)
 	return 0;
 }
 
-
 static void gv11b_write_bundle_veid_state(struct gk20a *g, u32 index)
 {
 	struct av_list_gk20a *sw_veid_bundle_init =
@@ -1766,11 +1770,42 @@ static int gr_gv11b_load_smid_config(struct gk20a *g)
 
 	for (i = 0; i < gr_cwd_sm_id__size_1_v(); i++)
 		gk20a_writel(g, gr_cwd_sm_id_r(i), tpc_sm_id[i]);
-
 	kfree(tpc_sm_id);
 
 	return 0;
 }
+
+static int gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va)
+{
+	u32 addr_lo;
+	u32 addr_hi;
+	struct ctx_header_desc *ctx;
+
+	gk20a_dbg_fn("");
+
+	gv11b_alloc_subctx_header(c);
+
+	gv11b_update_subctx_header(c, gpu_va);
+
+	ctx = &c->ch_ctx.ctx_header;
+	addr_lo = u64_lo32(ctx->mem.gpu_va) >> ram_in_base_shift_v();
+	addr_hi = u64_hi32(ctx->mem.gpu_va);
+
+	/* point this address to engine_wfi_ptr */
+	gk20a_mem_wr32(c->g, &c->inst_block, ram_in_engine_wfi_target_w(),
+		ram_in_engine_cs_wfi_v() |
+		ram_in_engine_wfi_target_f(
+			ram_in_engine_wfi_target_sys_mem_ncoh_v()) |
+		ram_in_engine_wfi_mode_f(ram_in_engine_wfi_mode_virtual_v()) |
+		ram_in_engine_wfi_ptr_lo_f(addr_lo));
+
+	gk20a_mem_wr32(c->g, &c->inst_block, ram_in_engine_wfi_ptr_hi_w(),
+		ram_in_engine_wfi_ptr_hi_f(addr_hi));
+
+	return 0;
+}
+
+
 
 static int gr_gv11b_commit_global_timeslice(struct gk20a *g,
 					struct channel_gk20a *c, bool patch)
@@ -1828,6 +1863,7 @@ static int gr_gv11b_commit_global_timeslice(struct gk20a *g,
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
+	gops->gr.init_preemption_state = NULL;
 	gops->gr.init_fs_state = gr_gv11b_init_fs_state;
 	gops->gr.detect_sm_arch = gr_gv11b_detect_sm_arch;
 	gops->gr.is_valid_class = gr_gv11b_is_valid_class;
@@ -1872,4 +1908,6 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.load_smid_config = gr_gv11b_load_smid_config;
 	gops->gr.program_sm_id_numbering =
 			gr_gv11b_program_sm_id_numbering;
+	gops->gr.commit_inst = gr_gv11b_commit_inst;
+
 }

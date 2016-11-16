@@ -19,6 +19,8 @@
 #include "gp10b/fifo_gp10b.h"
 #include "hw_pbdma_gv11b.h"
 #include "fifo_gv11b.h"
+#include "subctx_gv11b.h"
+#include "gr_gv11b.h"
 #include "hw_fifo_gv11b.h"
 #include "hw_ram_gv11b.h"
 #include "hw_ccsr_gv11b.h"
@@ -200,6 +202,15 @@ static void gv11b_userd_gp_put(struct gk20a *g, struct channel_gk20a *c)
 
 }
 
+static void channel_gv11b_unbind(struct channel_gk20a *ch)
+{
+	gk20a_dbg_fn("");
+
+	gv11b_free_subctx_header(ch);
+
+	channel_gk20a_unbind(ch);
+
+}
 
 static u32 gv11b_fifo_get_num_fifos(struct gk20a *g)
 {
@@ -218,4 +229,5 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.userd_gp_get = gv11b_userd_gp_get;
 	gops->fifo.userd_gp_put = gv11b_userd_gp_put;
 	gops->fifo.setup_ramfc = channel_gv11b_setup_ramfc;
+	gops->fifo.unbind_channel = channel_gv11b_unbind;
 }

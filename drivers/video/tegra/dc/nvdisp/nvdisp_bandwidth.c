@@ -469,6 +469,7 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 {
 	tegra_isomgr_handle isomgr_handle = NULL;
 	u32 max_emc_rate, emc_to_dram_factor;
+	u32 total_iso_bw;
 	int ret = 0, i;
 
 	/* DRAM frequency (Hz) */
@@ -476,6 +477,15 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 
 	/* conversion factor */
 	emc_to_dram_factor = bwmgr_get_emc_to_dram_freq_factor();
+
+	total_iso_bw = tegra_isomgr_get_total_iso_bw();
+
+	/*
+	 * WAR: Return immediately if either the total ISO bw or the max EMC
+	 * clock are reported as 0.
+	 */
+	if (max_emc_rate == 0 || total_iso_bw == 0)
+		return 0;
 
 	/*
 	 * Start with the highest-bw config and continue to fallback until we
@@ -490,7 +500,7 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 		 * Check that our dedicated request doesn't exceed the total ISO
 		 * bw. Both operands are in KB/s.
 		 */
-		if (cfg->iso_bw > tegra_isomgr_get_total_iso_bw()) {
+		if (cfg->iso_bw > total_iso_bw) {
 			ret = -E2BIG;
 			continue;
 		}

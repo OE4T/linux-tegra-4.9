@@ -17,7 +17,7 @@
 #include <linux/printk.h>
 
 #include <linux/types.h>
-
+#include <linux/tegra_gpu_t19x.h>
 #include "gk20a/gk20a.h"
 
 #include "gv11b/hal_gv11b.h"
@@ -40,8 +40,7 @@
 
 static struct gpu_ops gv11b_ops;
 
-static int gv11b_get_litter_value(struct gk20a *g,
-		enum nvgpu_litter_value value)
+static int gv11b_get_litter_value(struct gk20a *g, int value)
 {
 	int ret = EINVAL;
 	switch (value) {
@@ -56,6 +55,9 @@ static int gv11b_get_litter_value(struct gk20a *g,
 		break;
 	case GPU_LIT_NUM_TPC_PER_GPC:
 		ret = proj_scal_litter_num_tpc_per_gpc_v();
+		break;
+	case GPU_LIT_NUM_SM_PER_TPC:
+		ret = proj_scal_litter_num_sm_per_tpc_v();
 		break;
 	case GPU_LIT_NUM_FBPS:
 		ret = proj_scal_litter_num_fbps_v();
@@ -107,6 +109,9 @@ static int gv11b_get_litter_value(struct gk20a *g,
 		break;
 	case GPU_LIT_FBPA_STRIDE:
 		ret = proj_fbpa_stride_v();
+		break;
+	case GPU_LIT_NUM_SUBCTX:
+		ret = proj_litter_num_subctx_v();
 		break;
 	default:
 		break;

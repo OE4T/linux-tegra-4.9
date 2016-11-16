@@ -31,6 +31,7 @@
 #include "hw_mc_gv11b.h"
 #include "hw_gr_gv11b.h"
 #include <linux/vmalloc.h>
+#include <linux/tegra_gpu_t19x.h>
 
 static bool gr_gv11b_is_valid_class(struct gk20a *g, u32 class_num)
 {

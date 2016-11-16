@@ -526,18 +526,6 @@ static int wifi_plat_dev_drv_resume(struct platform_device *pdev)
 	return 0;
 }
 
-static void wifi_plat_dev_drv_shutdown(struct platform_device *pdev)
-{
-	wifi_adapter_info_t *adapter;
-
-	ASSERT(dhd_wifi_platdata != NULL);
-	ASSERT(dhd_wifi_platdata->num_adapters == 1);
-	adapter = &dhd_wifi_platdata->adapters[0];
-
-	adapter->skip_hang_evt = TRUE;
-	wifi_platform_set_power(adapter, FALSE, 0);
-}
-
 static const struct of_device_id wifi_device_dt_match[] = {
 	{ .compatible = "android,bcmdhd_wlan", },
 	{},
@@ -548,7 +536,6 @@ static struct platform_driver wifi_platform_dev_driver = {
 	.remove         = wifi_plat_dev_drv_remove,
 	.suspend        = wifi_plat_dev_drv_suspend,
 	.resume         = wifi_plat_dev_drv_resume,
-	.shutdown       = wifi_plat_dev_drv_shutdown,
 	.driver         = {
 	.name   = WIFI_PLAT_NAME,
 	.of_match_table = wifi_device_dt_match,

@@ -134,6 +134,10 @@ struct gr_ctx_desc {
 #endif
 };
 
+struct ctx_header_desc {
+	struct mem_desc mem;
+};
+
 struct compbit_store_desc {
 	struct mem_desc mem;
 

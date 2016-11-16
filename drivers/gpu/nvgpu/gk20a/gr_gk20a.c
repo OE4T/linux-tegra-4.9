@@ -3253,6 +3253,7 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	kfree(gr->ctx_vars.ucode.gpccs.inst.l);
 	kfree(gr->ctx_vars.ucode.gpccs.data.l);
 	kfree(gr->ctx_vars.sw_bundle_init.l);
+	kfree(gr->ctx_vars.sw_veid_bundle_init.l);
 	kfree(gr->ctx_vars.sw_method_init.l);
 	kfree(gr->ctx_vars.sw_ctx_load.l);
 	kfree(gr->ctx_vars.sw_non_ctx_load.l);

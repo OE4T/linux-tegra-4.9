@@ -30,7 +30,10 @@
 #include <linux/fdtable.h>
 #include <uapi/linux/nvgpu.h>
 #include <trace/events/gk20a.h>
+
 #include <gk20a/page_allocator_priv.h>
+
+#include <nvgpu/timers.h>
 
 #include "gk20a.h"
 #include "mm_gk20a.h"
@@ -5011,8 +5014,8 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	u32 data;
-	s32 retry = 100;
 	int ret = 0;
+	struct nvgpu_timeout timeout;
 
 	gk20a_dbg_fn("");
 
@@ -5021,6 +5024,8 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 		pm_runtime_put_noidle(g->dev);
 		return 0;
 	}
+
+	nvgpu_timeout_init(g, &timeout, 100, NVGPU_TIMER_RETRY_TIMER);
 
 	mutex_lock(&mm->l2_op_lock);
 
@@ -5041,15 +5046,12 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 		    flush_fb_flush_pending_v(data) ==
 			flush_fb_flush_pending_busy_v()) {
 				gk20a_dbg_info("fb_flush 0x%x", data);
-				retry--;
 				udelay(5);
 		} else
 			break;
-	} while (retry >= 0 || !tegra_platform_is_silicon());
+	} while (nvgpu_timeout_check(&timeout));
 
-	if (tegra_platform_is_silicon() && retry < 0) {
-		gk20a_warn(dev_from_gk20a(g),
-			"fb_flush too many retries");
+	if (nvgpu_timeout_peek(&timeout)) {
 		if (g->ops.fb.dump_vpr_wpr_info)
 			g->ops.fb.dump_vpr_wpr_info(g);
 		ret = -EBUSY;
@@ -5067,9 +5069,11 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 {
 	u32 data;
-	s32 retry = 200;
+	struct nvgpu_timeout timeout;
 
 	trace_gk20a_mm_l2_invalidate(dev_name(g->dev));
+
+	nvgpu_timeout_init(g, &timeout, 200, NVGPU_TIMER_RETRY_TIMER);
 
 	/* Invalidate any clean lines from the L2 so subsequent reads go to
 	   DRAM. Dirty lines are not affected by this operation. */
@@ -5085,13 +5089,12 @@ static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 			flush_l2_system_invalidate_pending_busy_v()) {
 				gk20a_dbg_info("l2_system_invalidate 0x%x",
 						data);
-				retry--;
 				udelay(5);
 		} else
 			break;
-	} while (retry >= 0 || !tegra_platform_is_silicon());
+	} while (nvgpu_timeout_check(&timeout));
 
-	if (tegra_platform_is_silicon() && retry < 0)
+	if (nvgpu_timeout_peek(&timeout))
 		gk20a_warn(dev_from_gk20a(g),
 			"l2_system_invalidate too many retries");
 
@@ -5114,13 +5117,15 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 {
 	struct mm_gk20a *mm = &g->mm;
 	u32 data;
-	s32 retry = 2000;
+	struct nvgpu_timeout timeout;
 
 	gk20a_dbg_fn("");
 
 	gk20a_busy_noresume(g->dev);
 	if (!g->power_on)
 		goto hw_was_off;
+
+	nvgpu_timeout_init(g, &timeout, 200, NVGPU_TIMER_RETRY_TIMER);
 
 	mutex_lock(&mm->l2_op_lock);
 
@@ -5139,15 +5144,11 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 		    flush_l2_flush_dirty_pending_v(data) ==
 			flush_l2_flush_dirty_pending_busy_v()) {
 				gk20a_dbg_info("l2_flush_dirty 0x%x", data);
-				retry--;
 				udelay(5);
 		} else
 			break;
-	} while (retry >= 0 || !tegra_platform_is_silicon());
-
-	if (tegra_platform_is_silicon() && retry < 0)
-		gk20a_warn(dev_from_gk20a(g),
-			"l2_flush_dirty too many retries");
+	} while (nvgpu_timeout_check_msg(&timeout,
+					 "l2_flush_dirty too many retries"));
 
 	trace_gk20a_mm_l2_flush_done(dev_name(g->dev));
 
@@ -5164,13 +5165,15 @@ void gk20a_mm_cbc_clean(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	u32 data;
-	s32 retry = 200;
+	struct nvgpu_timeout timeout;
 
 	gk20a_dbg_fn("");
 
 	gk20a_busy_noresume(g->dev);
 	if (!g->power_on)
 		goto hw_was_off;
+
+	nvgpu_timeout_init(g, &timeout, 200, NVGPU_TIMER_RETRY_TIMER);
 
 	mutex_lock(&mm->l2_op_lock);
 
@@ -5186,15 +5189,11 @@ void gk20a_mm_cbc_clean(struct gk20a *g)
 		    flush_l2_clean_comptags_pending_v(data) ==
 			flush_l2_clean_comptags_pending_busy_v()) {
 				gk20a_dbg_info("l2_clean_comptags 0x%x", data);
-				retry--;
 				udelay(5);
 		} else
 			break;
-	} while (retry >= 0 || !tegra_platform_is_silicon());
-
-	if (tegra_platform_is_silicon() && retry < 0)
-		gk20a_warn(dev_from_gk20a(g),
-			"l2_clean_comptags too many retries");
+	} while (nvgpu_timeout_check_msg(&timeout,
+					 "l2_clean_comptags too many retries"));
 
 	mutex_unlock(&mm->l2_op_lock);
 
@@ -5230,9 +5229,10 @@ int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
+	struct nvgpu_timeout timeout;
 	u32 addr_lo;
 	u32 data;
-	s32 retry = 2000;
+
 	static DEFINE_MUTEX(tlb_lock);
 
 	gk20a_dbg_fn("");
@@ -5252,19 +5252,20 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 
 	trace_gk20a_mm_tlb_invalidate(dev_name(g->dev));
 
+	nvgpu_timeout_init(g, &timeout, 1000, NVGPU_TIMER_RETRY_TIMER);
+
 	do {
 		data = gk20a_readl(g, fb_mmu_ctrl_r());
 		if (fb_mmu_ctrl_pri_fifo_space_v(data) != 0)
 			break;
 		udelay(2);
-		retry--;
-	} while (retry >= 0 || !tegra_platform_is_silicon());
+	} while (nvgpu_timeout_check_msg(&timeout,
+					 "wait mmu fifo space"));
 
-	if (tegra_platform_is_silicon() && retry < 0) {
-		gk20a_warn(dev_from_gk20a(g),
-			"wait mmu fifo space too many retries");
+	if (nvgpu_timeout_peek(&timeout))
 		goto out;
-	}
+
+	nvgpu_timeout_init(g, &timeout, 1000, NVGPU_TIMER_RETRY_TIMER);
 
 	gk20a_writel(g, fb_mmu_invalidate_pdb_r(),
 		fb_mmu_invalidate_pdb_addr_f(addr_lo) |
@@ -5281,13 +5282,9 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 		if (fb_mmu_ctrl_pri_fifo_empty_v(data) !=
 			fb_mmu_ctrl_pri_fifo_empty_false_f())
 			break;
-		retry--;
 		udelay(2);
-	} while (retry >= 0 || !tegra_platform_is_silicon());
-
-	if (tegra_platform_is_silicon() && retry < 0)
-		gk20a_warn(dev_from_gk20a(g),
-			"mmu invalidate too many retries");
+	} while (nvgpu_timeout_check_msg(&timeout,
+					 "wait mmu invalidate"));
 
 	trace_gk20a_mm_tlb_invalidate_done(dev_name(g->dev));
 

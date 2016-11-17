@@ -2608,4 +2608,13 @@
 		compatible = "nvidia,tegra186-dpaux1-pinctrl";
 		status = "disabled";
 	};
+
+	tegra-firmwares {
+		status = "okay";
+		mb1 = "unavailable";
+		mb2 = "unavailable";
+		mb1-bct = "unavailable";
+		qb = "unavailable";
+		osl = "unavailable";
+	};
 };

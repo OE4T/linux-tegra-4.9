@@ -108,7 +108,6 @@
 			regulator-max-microvolt = <5000000>;
 			gpio = <&gpio TEGRA_GPIO(CC, 7) 0>;
 			enable-active-high;
-			vin-supply = <&vdd_sys_boost>;
 		};
 
 		en_vdd_cpu_fixed: regulator@8 {

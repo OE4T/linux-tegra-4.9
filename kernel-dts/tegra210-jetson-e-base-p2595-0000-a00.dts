@@ -300,11 +300,12 @@
 	host1x {
 		/* tegradc.0 */
 		dc@54200000 {
-			status = "okay";
+			status = "disabled";
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 			nvidia,emc-clk-rate = <300000000>;
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
+			nvidia,dc-or-node = "/host1x/dsi";
 		};
 
 		/* tegradc.1 */
@@ -315,17 +316,20 @@
 			nvidia,cmu-enable = <1>;
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
+			nvidia,dc-or-node = "/host1x/sor1";
 		};
 
 		dsi {
 			nvidia,dsi-controller-vs = <DSI_VS_1>;
-			status = "okay";
+			status = "disabled";
 			panel-s-wqxga-10-1 {
+				status = "disabled";
 				nvidia,panel-rst-gpio = <&gpio TEGRA_GPIO(V, 2) 0>; /* PV2 */
 				nvidia,panel-bl-pwm-gpio = <&gpio TEGRA_GPIO(V, 0) 0>; /* PV0 */
 				nvidia,dsi-te-gpio = <&gpio TEGRA_GPIO(Y, 2) 0>;
 			};
 			panel-a-wuxga-8-0 {
+				status = "disabled";
 				nvidia,dsi-dpd-pads = <DSIC_DPD_EN DSID_DPD_EN>;
 				nvidia,panel-rst-gpio = <&gpio TEGRA_GPIO(V, 2) 0>; /* PV2 */
 				nvidia,panel-bl-pwm-gpio = <&gpio TEGRA_GPIO(V, 0) 0>; /* PV0 */
@@ -333,6 +337,20 @@
 					nvidia,out-flags = <TEGRA_DC_OUT_CONTINUOUS_MODE TEGRA_DC_OUT_INITIALIZED_MODE>;
 				};
 			};
+		};
+
+		sor {
+			status = "disbaled";
+			panel-s-edp-uhdtv-15-6 {
+				status = "disabled";
+			};
+			prod-settings {
+				status = "disbaled";
+			};
+		};
+
+		dpaux1 {
+			status = "okay";
 		};
 
 		i2c@546c0000 {
@@ -522,7 +540,7 @@
 	};
 
 	gpu-dvfs-rework {
-		status = "disabled";
+		status = "ok";
 	};
 
 	regulators {
@@ -827,4 +845,37 @@
 	serial@70006300 {
 		dma-names = "tx";
 	};
+
+	dfll-max77621@70110000 {
+		dfll-max77621-integration {
+			i2c-fs-rate = <1000000>;
+		};
+
+		dfll-max77621-board-params {
+			sample-rate = <20000>;
+		};
+	};
+
+	soctherm@0x700E2000 {
+		therm_gpu {
+			enable-hw-pllx-offsetting;
+			pllx-offset-max = <4000>;
+			pllx-offset-min = <2000>;
+		};
+	};
+
+	dfll: clock@70110000 {
+		status = "okay";
+		reg = <0x0 0x70110000 0x0 0x400>;
+		vdd-cpu-supply = <&cpu_ovr_reg>;
+		nvidia,pwm-to-pmic;
+		nvidia,init-uv = <1000000>;
+		nvidia,align-step-uv = <19200>;
+		nvidia,sample-rate = <25000>;
+		nvidia,droop-ctrl = <0x00000f00>;
+		nvidia,force-mode = <1>;
+		nvidia,cf = <6>;
+		nvidia,ci = <0>;
+		nvidia,cg = <2>;
+        };
 };

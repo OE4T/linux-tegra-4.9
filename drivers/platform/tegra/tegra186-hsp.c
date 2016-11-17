@@ -121,7 +121,7 @@ static void tegra_hsp_enable_per_sm_irq(struct device *dev,
 		writel(0, reg + TEGRA_HSP_SM_IE_EMPTY + TEGRA_HSP_SM_IE_FULL
 			- hi->per_sm_ie);
 		writel(1, reg + hi->per_sm_ie);
-	} else if (!IS_ERR_VALUE(irq)) {
+	} else if (!(irq < 0)) {
 		enable_irq(irq);
 	}
 }

@@ -46,6 +46,8 @@ struct vi_notify_req {
 				u32 syncpt_ids[3];
 				u32 mask;
 			};
+			u64 status_base_addr;
+			u16 status_entries;
 		};
 		char size[64];
 	};
@@ -58,14 +60,42 @@ enum {
 	TEGRA_IVC_VI_ENABLE_REPORTS,
 };
 
+/* NOTE: vi_status_msg structure should match with
+ * the one declared in RTCPU vi-notifier FW driver.
+ */
+struct vi_status_msg {
+	u8 st;
+	u8 vc;
+	u16 frame;
+	u32 status;
+	u64 sof_ts;
+	u64 eof_ts;
+	u32 data;
+	u32 capture_id;
+};
+
+#define VI_NOTIFY_MAX_VI_CHANS (12)
+/* make sure that status entries always power of 2 */
+#define VI_NOTIFY_STATUS_ENTRIES (1 << 7)
+
 struct tegra_ivc_vi_notify {
 	struct vi_notify_dev *vi_notify;
 	struct platform_device *vi;
 	u32 tags;
-	u16 channels;
+	u16 channels_mask;
 	wait_queue_head_t write_q;
 	struct completion ack;
+	size_t status_mem_size;
+	void __iomem *status_mem;
+	dma_addr_t status_dmaptr;
+	u16 status_entries;
 };
+
+static u64 tegra_ivc_vi_notify_get_status_mem_channel_offset(size_t size,
+					unsigned ch)
+{
+	return (size / VI_NOTIFY_MAX_VI_CHANS) * ch;
+}
 
 static void tegra_ivc_vi_notify_process(struct tegra_ivc_channel *chan,
 					const struct vi_notify_msg_ex *msg,
@@ -124,7 +154,7 @@ static int tegra_ivc_vi_notify_prepare(struct tegra_ivc_channel *chan)
 	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
 	int err = 0;
 
-	if (ivn->tags == 0 && ivn->channels == 0) {
+	if (ivn->tags == 0 && ivn->channels_mask == 0) {
 		err = tegra_ivc_channel_runtime_get(chan);
 		if (err)
 			return err;
@@ -141,7 +171,7 @@ static void tegra_ivc_vi_notify_complete(struct tegra_ivc_channel *chan)
 {
 	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
 
-	if (ivn->tags == 0 && ivn->channels == 0) {
+	if (ivn->tags == 0 && ivn->channels_mask == 0) {
 		nvhost_module_idle(ivn->vi);
 		tegra_ivc_channel_runtime_put(chan);
 	}
@@ -238,7 +268,7 @@ static int tegra_ivc_vi_notify_set_syncpts(struct device *dev, u8 ch,
 
 	err = tegra_ivc_vi_notify_send(chan, &msg);
 	if (likely(err == 0))
-		ivn->channels |= 1u << ch;
+		ivn->channels_mask |= 1u << ch;
 	tegra_ivc_vi_notify_complete(chan);
 
 	return err;
@@ -249,11 +279,18 @@ static int tegra_ivc_vi_notify_enable_reports(struct device *dev, u8 ch,
 {
 	struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
 	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
+
+	u64 status_dmaptr = ivn->status_dmaptr +
+		tegra_ivc_vi_notify_get_status_mem_channel_offset(
+						ivn->status_mem_size,
+						ch);
 	struct vi_notify_req msg = {
 		.type = TEGRA_IVC_VI_ENABLE_REPORTS,
 		.channel = ch,
 		.stream = st,
 		.vc = vc,
+		.status_base_addr = status_dmaptr,
+		.status_entries = ivn->status_entries,
 	};
 	int err;
 
@@ -261,7 +298,7 @@ static int tegra_ivc_vi_notify_enable_reports(struct device *dev, u8 ch,
 
 	err = tegra_ivc_vi_notify_send(chan, &msg);
 	if (likely(err == 0))
-		ivn->channels |= 1u << ch;
+		ivn->channels_mask |= 1u << ch;
 	tegra_ivc_vi_notify_complete(chan);
 
 	return err;
@@ -279,7 +316,7 @@ static void tegra_ivc_vi_notify_reset_channel(struct device *dev, u8 ch)
 
 	err = tegra_ivc_vi_notify_send(chan, &msg);
 	if (likely(err == 0))
-		ivn->channels &= ~(1u << ch);
+		ivn->channels_mask &= ~(1u << ch);
 	tegra_ivc_vi_notify_complete(chan);
 }
 
@@ -352,7 +389,7 @@ int tegra_ivc_vi_notify_report(const struct vi_notify_msg_ex *msg)
 		return -ENODEV;
 	}
 
-	if (!ivn->channels) {
+	if (!ivn->channels_mask) {
 		pr_info("No vi channel is active\n");
 		return 0;
 	}
@@ -364,7 +401,7 @@ int tegra_ivc_vi_notify_report(const struct vi_notify_msg_ex *msg)
 		return -EINVAL;
 	}
 
-	mask = msg->dest & ivn->channels;
+	mask = msg->dest & ivn->channels_mask;
 
 	for (ch = 0; mask; mask >>= 1, ch++) {
 		if (!(mask & 1u))
@@ -380,9 +417,10 @@ EXPORT_SYMBOL(tegra_ivc_vi_notify_report);
 static int tegra_ivc_channel_vi_notify_probe(struct tegra_ivc_channel *chan)
 {
 	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
+	struct device *dev = tegra_ivc_channel_to_camrtc_dev(chan);
 	int err;
 
-	ivn = devm_kmalloc(&chan->dev, sizeof(*ivn), GFP_KERNEL);
+	ivn = devm_kzalloc(&chan->dev, sizeof(*ivn), GFP_KERNEL);
 	if (unlikely(ivn == NULL))
 		return -ENOMEM;
 
@@ -392,14 +430,25 @@ static int tegra_ivc_channel_vi_notify_probe(struct tegra_ivc_channel *chan)
 	if (IS_ERR(ivn->vi))
 		return PTR_ERR(ivn->vi);
 
-	ivn->tags = 0;
-	ivn->channels = 0;
+	ivn->status_mem_size = VI_NOTIFY_STATUS_ENTRIES *
+						sizeof(struct vi_status_msg) *
+						VI_NOTIFY_MAX_VI_CHANS;
+	ivn->status_mem = dma_alloc_coherent(dev,
+		ivn->status_mem_size,
+		&ivn->status_dmaptr, GFP_KERNEL | __GFP_ZERO);
+
+	if (unlikely(ivn->status_mem == NULL))
+		ivn->status_dmaptr = 0;
+	else
+		ivn->status_entries = VI_NOTIFY_STATUS_ENTRIES;
+
 	init_waitqueue_head(&ivn->write_q);
 	init_completion(&ivn->ack);
 
 	tegra_ivc_channel_set_drvdata(chan, ivn);
 
-	err = vi_notify_register(&tegra_ivc_vi_notify_driver, &chan->dev, 12);
+	err = vi_notify_register(&tegra_ivc_vi_notify_driver,
+		 &chan->dev, VI_NOTIFY_MAX_VI_CHANS);
 	if (err)
 		platform_device_put(ivn->vi);
 	return err;
@@ -408,9 +457,15 @@ static int tegra_ivc_channel_vi_notify_probe(struct tegra_ivc_channel *chan)
 static void tegra_ivc_channel_vi_notify_remove(struct tegra_ivc_channel *chan)
 {
 	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
+	struct device *dev = tegra_ivc_channel_to_camrtc_dev(chan);
 
 	WARN_ON(ivn != _ivn);
 	_ivn = NULL;
+
+	if (likely(ivn->status_mem != NULL))
+		dma_free_coherent(dev,
+			ivn->status_mem_size,
+			ivn->status_mem, ivn->status_dmaptr);
 
 	vi_notify_unregister(&tegra_ivc_vi_notify_driver, &chan->dev);
 	platform_device_put(ivn->vi);

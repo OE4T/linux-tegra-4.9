@@ -732,6 +732,7 @@
 		clocks = <&tegra_car TEGRA210_CLK_HOST1X>,
 			<&tegra_car TEGRA210_CLK_ACTMON>;
 		clock-names = "host1x", "actmon";
+		resets = <&tegra_car TEGRA210_CLK_HOST1X>;
 
 		nvidia,ch-base = <0>;
 		nvidia,nb-channels = <12>;
@@ -859,6 +860,7 @@
 				 <&tegra_car TEGRA210_CLK_VIC_SHARED_EMC>;
 			clock-names = "vic03", "emc", "vic_floor",
 				      "emc_shared";
+			resets = <&tegra_car TEGRA210_CLK_VIC03>;
 		};
 
 		nvenc {
@@ -867,6 +869,7 @@
 			reg = <0x0 0x544c0000 0x0 0x00040000>;
 			clocks = <&tegra_car TEGRA210_CLK_NVENC>;
 			clock-names = "msenc";
+			resets = <&tegra_car TEGRA210_CLK_NVENC>;
 			iommus = <&smmu TEGRA_SWGROUP_MPE>;
 			status = "disabled";
 		};
@@ -875,6 +878,7 @@
 			compatible = "nvidia,tegra210-tsec";
 			power-domains = <&tsec_pd>;
 			reg = <0x0 0x54500000 0x0 0x00040000>;
+			resets = <&tegra_car TEGRA210_CLK_TSEC>;
 			iommus = <&smmu TEGRA_SWGROUP_TSEC>;
 			status = "disabled";
 		};
@@ -883,6 +887,7 @@
 			compatible = "nvidia,tegra210-tsec";
 			power-domains = <&tsec_pd>;
 			reg = <0x0 0x54100000 0x0 0x00040000>;
+			resets = <&tegra_car TEGRA210_CLK_TSECB>;
 			iommus = <&smmu TEGRA_SWGROUP_TSECB>;
 			status = "disabled";
 		};
@@ -891,6 +896,7 @@
 			compatible = "nvidia,tegra210-nvdec";
 			power-domains = <&nvdec_pd>;
 			reg = <0x0 0x54480000 0x0 0x00040000>;
+			resets = <&tegra_car TEGRA210_CLK_NVDEC>;
 			iommus = <&smmu TEGRA_SWGROUP_NVDEC>;
 			status = "disabled";
 		};
@@ -899,6 +905,7 @@
 			compatible = "nvidia,tegra210-nvjpg";
 			power-domains = <&nvjpg_pd>;
 			reg = <0x0 0x54380000 0x0 0x00040000>;
+			resets = <&tegra_car TEGRA210_CLK_NVJPG>;
 			iommus = <&smmu TEGRA_SWGROUP_NVJPG>;
 			status = "disabled";
 		};

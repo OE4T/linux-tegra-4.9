@@ -1,4 +1,5 @@
 #include <dt-bindings/gpio/tegra-gpio.h>
+#include <dt-bindings/soc/tegra-pmc.h>
 
 / {
 	gpio@6000d000 {
@@ -26,6 +27,8 @@
 		bluedroid_pm,ext-wake-gpio = <&gpio TEGRA_GPIO(H, 3) 0>;
 		interrupt-parent = <&gpio>;
 		interrupts = <TEGRA_GPIO(H, 5) 0x01>;
+		nvidia,pmc-wakeup = <&tegra_pmc
+			PMC_WAKE_TYPE_EVENT 52 PMC_TRIGGER_TYPE_HIGH>;
 	};
 
 	bcmdhd_wlan {

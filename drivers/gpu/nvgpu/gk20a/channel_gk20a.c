@@ -1809,8 +1809,10 @@ clean_up_prealloc:
 	if (args->num_inflight_jobs)
 		channel_gk20a_free_prealloc_resources(c);
 clean_up_sync:
-	gk20a_channel_sync_destroy(c->sync);
-	c->sync = NULL;
+	if (c->sync) {
+		gk20a_channel_sync_destroy(c->sync);
+		c->sync = NULL;
+	}
 clean_up_unmap:
 	nvgpu_free(c->gpfifo.pipe);
 	gk20a_gmmu_unmap_free(ch_vm, &c->gpfifo.mem);

@@ -20,8 +20,8 @@
 #define BOARD_P1761   0x06E1
 #include "dc_priv_defs.h"
 #include <linux/reset.h>
-#ifdef CONFIG_SYSEDP_FRAMEWORK
-#include <linux/sysedp.h>
+#ifdef CONFIG_TEGRA_SYS_EDP
+#include <soc/tegra/sysedp.h>
 #endif
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 #include "dsi_padctrl.h"

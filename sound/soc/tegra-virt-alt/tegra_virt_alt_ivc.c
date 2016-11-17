@@ -59,12 +59,18 @@ int nvaudio_ivc_send(struct nvaudio_ivc_ctxt *ictxt,
 	int len = 0;
 	unsigned long flags = 0;
 	int err = 0;
+	int dcnt = 50;
 
 	if (!ictxt || !ictxt->ivck || !msg || !size)
 		return -EINVAL;
 
-	while (tegra_hv_ivc_channel_notified(ictxt->ivck) != 0)
+	while (tegra_hv_ivc_channel_notified(ictxt->ivck) != 0) {
 		dev_err(ictxt->dev, "channel notified returns non zero\n");
+		dcnt--;
+		udelay(100);
+		if (!dcnt)
+			return -EIO;
+	}
 
 	spin_lock_irqsave(&ictxt->ivck_tx_lock, flags);
 

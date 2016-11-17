@@ -1552,6 +1552,46 @@ static const struct soc_enum tegra_virt_t186_asrc_source =
 	SOC_ENUM_SINGLE_EXT(NUM_ASRC_SOURCES, tegra186_asrc_ratio_source_text);
 #endif
 
+
+static int32_t tegra210_adsp_hv_req_adsp_assignment(
+					struct snd_soc_card *card)
+{
+	int err = 0;
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	struct nvaudio_ivc_msg msg;
+
+	/* Requesting ack to know if adsp has been assigned or not */
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ADSP_REQUEST_ASSIGNMENT;
+	msg.ack_required = true;
+	msg.err = 0;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+				&msg,
+				sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("error on ivc_send\n");
+		return err;
+	}
+
+	err = nvaudio_ivc_receive(hivc_client,
+				&msg,
+				sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("error on ivc_receive\n");
+		return err;
+	}
+
+	if (msg.err < 0) {
+		dev_err(card->dev, "Error: Adsp assignment failed\n");
+		err = msg.err;
+	}
+
+	return err;
+}
+
+
 #define MUX_REG(id) (TEGRA210_XBAR_RX_STRIDE * (id))
 #define SOC_ENUM_EXT_REG(xname, xcount, xenum, xhandler_get, xhandler_put) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, \
@@ -1915,8 +1955,16 @@ static int tegra_virt_t210ref_pcm_driver_probe(struct platform_device *pdev)
 	adsp_enabled = of_property_read_bool(pdev->dev.of_node,
 		"adsp_enabled");
 
-	if (!adsp_enabled)
-		dev_info(&pdev->dev, "adsp config is not set\n");
+	if (adsp_enabled) {
+		dev_info(&pdev->dev, "virt-alt-pcm: adsp config is set\n");
+		if (tegra210_adsp_hv_req_adsp_assignment(card) < 0) {
+			dev_err(&pdev->dev, "virt-alt-pcm: Failed to get adsp\n");
+			adsp_enabled = false;
+		}
+		dev_info(&pdev->dev, "virt-alt-pcm: adsp access obtained\n");
+	} else {
+		dev_info(&pdev->dev, "virt-alt-pcm: adsp config is not set\n");
+	}
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	if (!adsp_enabled)

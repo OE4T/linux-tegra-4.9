@@ -56,6 +56,9 @@
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 #include "dhd_custom_sysfs_tegra.h"
 #endif
+#ifdef CONFIG_TEGRA_SYS_EDP
+#include <soc/tegra/sysedp.h>
+#endif
 
 #if !defined(CONFIG_WIFI_CONTROL_FUNC)
 struct wifi_platform_data {
@@ -183,7 +186,7 @@ int wifi_platform_set_power(wifi_adapter_info_t *adapter, bool on, unsigned long
 	}
 #endif /* ENABLE_4335BT_WAR */
 
-#ifdef CONFIG_EDP
+#ifdef CONFIG_TEGRA_SYS_EDP
 	if (on)
 		sysedp_set_state(adapter->sysedpc, on);
 #endif
@@ -196,7 +199,7 @@ int wifi_platform_set_power(wifi_adapter_info_t *adapter, bool on, unsigned long
 			gpio_direction_output(adapter->wlan_rst, on);
 	}
 
-#ifdef CONFIG_EDP
+#ifdef CONFIG_TEGRA_SYS_EDP
 	if (!on)
 		sysedp_set_state(adapter->sysedpc, on);
 #endif
@@ -444,13 +447,14 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 			irq_flags = irqd_get_trigger_type(irq_data);
 			adapter->intr_flags = irq_flags & IRQF_TRIGGER_MASK;
 		}
-#ifdef CONFIG_EDP
+#ifdef CONFIG_TEGRA_SYS_EDP
 		if (of_property_read_string(node, "edp-consumer-name", &adapter->edp_name)) {
 			adapter->sysedpc = NULL;
 			DHD_ERROR(("%s: property 'edp-consumer-name' missing or invalid\n",
 									__FUNCTION__));
 		} else {
-			adapter->sysedpc = sysedp_create_consumer("primary-wifi", adapter->edp_name);
+			adapter->sysedpc = sysedp_create_consumer(node,
+							adapter->edp_name);
 		}
 #endif
 #ifdef NV_COUNTRY_CODE
@@ -465,8 +469,9 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 			adapter->irq_num = resource->start;
 			adapter->intr_flags = resource->flags & IRQF_TRIGGER_MASK;
 		}
-#ifdef CONFIG_EDP
-		adapter->sysedpc = sysedp_create_consumer("wifi", "wifi");
+#ifdef CONFIG_TEGRA_SYS_EDP
+		adapter->sysedpc = sysedp_create_consumer(pdev->dev.of_node,
+							  "wifi");
 #endif
 	}
 
@@ -497,7 +502,7 @@ static int wifi_plat_dev_drv_remove(struct platform_device *pdev)
 #ifdef NV_COUNTRY_CODE
 	wifi_platform_free_country_code_map(adapter);
 #endif
-#ifdef CONFIG_EDP
+#ifdef CONFIG_TEGRA_SYS_EDP
 	sysedp_free_consumer(adapter->sysedpc);
 	adapter->sysedpc = NULL;
 #endif

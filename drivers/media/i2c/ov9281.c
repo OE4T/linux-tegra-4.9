@@ -566,21 +566,24 @@ static int ov9281_s_stream(struct v4l2_subdev *sd, int enable)
 	if (err)
 		goto exit;
 
-	/* write list of override regs for the asking frame length, */
-	/* coarse integration time, and gain. Failures to write */
-	/* overrides are non-fatal. */
-	control.id = V4L2_CID_GAIN;
-	err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
-	err |= ov9281_set_gain(priv, control.value);
-	if (err)
-		dev_warn(&client->dev, "%s: error gain override\n", __func__);
+	if (s_data->override_enable) {
+		/* write list of override regs for the asking frame length, */
+		/* coarse integration time, and gain. Failures to write */
+		/* overrides are non-fatal. */
+		control.id = V4L2_CID_GAIN;
+		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
+		err |= ov9281_set_gain(priv, control.value);
+		if (err)
+			dev_warn(&client->dev,
+				 "%s: error gain override\n", __func__);
 
-	control.id = V4L2_CID_COARSE_TIME;
-	err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
-	err |= ov9281_set_coarse_time(priv, control.value);
-	if (err)
-		dev_warn(&client->dev,
-			"%s: error coarse time override\n", __func__);
+		control.id = V4L2_CID_COARSE_TIME;
+		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
+		err |= ov9281_set_coarse_time(priv, control.value);
+		if (err)
+			dev_warn(&client->dev,
+				 "%s: error coarse time override\n", __func__);
+	}
 
 #ifdef TPG
 	err = ov9281_write_reg(priv->s_data, OV9281_PRE_CTRL00_ADDR,

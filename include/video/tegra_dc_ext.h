@@ -955,6 +955,9 @@ struct tegra_dc_ext_scrncapt_dup_fbuf  {
 #define TEGRA_DC_EXT_SCRNCAPT_DUP_FBUF \
 	_IOWR('D', 0x22, struct tegra_dc_ext_scrncapt_dup_fbuf)
 
+#define TEGRA_DC_EXT_GET_SCANLINE \
+	_IOR('D', 0x24, __u32)
+
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,
 	TEGRA_DC_EXT_LVDS,

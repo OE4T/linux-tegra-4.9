@@ -2749,6 +2749,24 @@ free_and_ret:
 #endif
 	}
 
+	case TEGRA_DC_EXT_GET_SCANLINE:
+	{
+		u32 scanln;
+
+		dev_dbg(&user->ext->dc->ndev->dev, "GET SCANLN IOCTL\n");
+
+		/* If display has been disconnected return with error. */
+		if (!user->ext->dc->connected)
+			return -EACCES;
+
+		scanln = tegra_dc_get_v_count(user->ext->dc);
+
+		if (copy_to_user(user_arg, &scanln, sizeof(scanln)))
+			return -EFAULT;
+
+		return 0;
+	}
+
 	default:
 		return -EINVAL;
 	}

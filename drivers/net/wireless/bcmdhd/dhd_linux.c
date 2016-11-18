@@ -517,10 +517,6 @@ typedef struct dhd_info {
 
 #define DHDIF_FWDER(dhdif)      FALSE
 
-int dhd_skip_hang_event(void *dhd) {
-	return (((wifi_adapter_info_t *)(((dhd_info_t *)dhd)->adapter))->skip_hang_evt ? 1:0);
-}
-
 /* Flag to indicate if we should download firmware on driver load */
 uint dhd_download_fw_on_driverload = TRUE;
 
@@ -3949,10 +3945,6 @@ static bool dhd_check_hang(struct net_device *net, dhd_pub_t *dhdp, int error)
 {
 	dhd_info_t *dhd;
 	wifi_adapter_info_t *adapter;
-	char static skip_hang_evt;
-
-	if (skip_hang_evt)
-		return FALSE;
 
 	if (!dhdp) {
 		DHD_ERROR(("%s: dhdp is NULL\n", __FUNCTION__));
@@ -3966,8 +3958,7 @@ static bool dhd_check_hang(struct net_device *net, dhd_pub_t *dhdp, int error)
 	adapter = dhd->adapter;
 
 	if (adapter->skip_hang_evt) {
-		skip_hang_evt=1;
-		DHD_TRACE(("%s: skipping hang evt during shutdown\n", __FUNCTION__));
+		DHD_ERROR(("%s: skipping hang evt during shutdown\n", __FUNCTION__));
 		return FALSE;
 	}
 

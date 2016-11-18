@@ -57,8 +57,6 @@
 				 * round off at the end of buffer
 				 */
 
-extern int dhd_skip_hang_event(void *dhd);
-
 typedef struct dhd_prot {
 	uint16 reqid;
 	uint8 pending;
@@ -273,11 +271,6 @@ dhd_prot_ioctl(dhd_pub_t *dhd, int ifidx, wl_ioctl_t * ioc, void * buf, int len)
 	dhd_prot_t *prot = dhd->prot;
 	int ret = -1;
 	uint8 action;
-
-	if (dhd_skip_hang_event(dhd->info)) {
-		DHD_TRACE(("%s : Skip Hang event during shut down...we have nothing to do\n", __FUNCTION__));
-		goto done;
-	}
 
 	if ((dhd->busstate == DHD_BUS_DOWN) || dhd->hang_was_sent) {
 		DHD_ERROR(("%s : bus is down. we have nothing to do\n", __FUNCTION__));

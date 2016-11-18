@@ -285,8 +285,23 @@ static int isp_probe(struct platform_device *dev)
 			pdata = (struct nvhost_device_data *)match->data;
 
 		if (!IS_ENABLED(CONFIG_ARCH_TEGRA_18x_SOC)) {
-			if (sscanf(dev->name, "isp.%1d", &dev_id) != 1)
+			/*
+			 * For older kernels, we use "isp.0" for ispa
+			 * and "isp.1" for ispb
+			 *
+			 * For newer kernels, we use "54600000.isp" for ispa
+			 * and "54680000.isp" for ispb
+			 *
+			 */
+			if (strcmp(dev->name, "isp.0") == 0 ||
+				strcmp(dev->name, "54600000.isp") == 0)
+				dev_id = ISPA_DEV_ID;
+			else if (strcmp(dev->name, "isp.1") == 0 ||
+				strcmp(dev->name, "54680000.isp") == 0)
+				dev_id = ISPB_DEV_ID;
+			else
 				return -EINVAL;
+
 #if defined(CONFIG_ARCH_TEGRA_210_SOC)
 			switch (tegra_get_chip_id()) {
 			case TEGRA124:

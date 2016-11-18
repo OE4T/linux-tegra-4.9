@@ -139,7 +139,15 @@ struct nvhost_device_data t21_vi_info = {
 	.can_powergate		= true,
 	.moduleid		= NVHOST_MODULE_VI,
 	.clocks = {
+		/*
+		 * for kernel-3.10, we need vi_bypass clock
+		 * for kernel-4.4, we need vi clock
+		 */
+#ifdef CONFIG_COMMON_CLK
+		{"vi", UINT_MAX},
+#else
 		{"vi_bypass", UINT_MAX},
+#endif
 		{"csi", 0},
 		{"cilab", 102000000},
 		{"cilcd", 102000000},

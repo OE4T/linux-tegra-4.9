@@ -18,7 +18,6 @@
 / {
 	dfll-ovr@70110000 {
 		status = "okay";
-		compatible = "nvidia,tegra210-dfll";
 		reg = <0x0 0x70110000 0x0 0x400>;
 		out-clock-name="dfll_cpu";
 		clocks = <&tegra_car TEGRA210_CLK_ID_DFLL_CPU>,
@@ -129,11 +128,22 @@
 			regulator-name = "vdd-cpu";
 			regulator-min-microvolt = <708000>;
 			regulator-max-microvolt = <1322400>;
-			regulator-init-microvolt = <1000000>;
 			regulator-always-on;
 			regulator-boot-on;
 			regulator-n-voltages = <33>;
 			voltage-time-sel = <80>;
+			voltage-table =
+				<708000 0>, <727200 1>, <746400 2>,
+				<765600 3>, <784800 4>, <804000 5>,
+				<823200 6>, <842400 7>, <861600 8>,
+				<880800 9>, <900000 10>, <919200 11>,
+				<938400 12>, <957600 13>, <976800 14>,
+				<996000 15>, <1015200 16>, <1034400 17>,
+				<1053600 18>, <1072800 19>, <1092000 20>,
+				<1111200 21>, <1130400 22>, <1149600 23>,
+				<1168800 24>, <1188000 25>, <1207200 26>,
+				<1226400 27>, <1245600 28>, <1264800 29>,
+				<1284000 30>, <1303200 31>, <1322400 32>;
 		};
 
 		gpu_ovr_reg: pwm-regulator@1 {

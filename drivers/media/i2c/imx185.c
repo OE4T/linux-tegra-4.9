@@ -35,10 +35,10 @@
 
 #define IMX185_MIN_FRAME_LENGTH	(1125)
 #define IMX185_MAX_FRAME_LENGTH	(0x1FFFF)
-#define IMX185_MIN_EXPOSURE_COARSE_1080P_HDR_SHS1	(5)
-#define IMX185_MAX_EXPOSURE_COARSE_1080P_HDR_SHS1	(70)
-#define IMX185_MIN_EXPOSURE_COARSE_1080P_HDR_SHS2	(80)
-#define IMX185_MAX_EXPOSURE_COARSE_1080P_HDR_SHS2	(1120)
+#define IMX185_MIN_SHS1_1080P_HDR	(5)
+#define IMX185_MAX_SHS1_1080P_HDR	(69)
+#define IMX185_MIN_SHS2_1080P_HDR	(82)
+#define IMX185_MAX_SHS2_1080P_HDR	(1106)
 
 #define IMX185_FRAME_LENGTH_ADDR_MSB		0x301A
 #define IMX185_FRAME_LENGTH_ADDR_MID		0x3019
@@ -351,8 +351,8 @@ static int imx185_power_get(struct imx185 *priv)
 	return err;
 }
 
-static int imx185_set_coarse_time_shs1(struct imx185 *priv, u32 val);
-static int imx185_set_coarse_time_hdr_shs2(struct imx185 *priv, u32 val);
+static int imx185_set_coarse_time(struct imx185 *priv, s64 val);
+static int imx185_set_coarse_time_hdr(struct imx185 *priv, s64 val);
 static int imx185_set_gain(struct imx185 *priv, s64 val);
 static int imx185_set_frame_rate(struct imx185 *priv, s64 val);
 static int imx185_set_exposure(struct imx185 *priv, s64 val);
@@ -604,9 +604,6 @@ static int imx185_set_exposure(struct imx185 *priv, s64 val)
 	int err;
 	struct v4l2_control control;
 	int hdr_en;
-	struct camera_common_mode_info *mode = priv->pdata->mode_info;
-	struct camera_common_data *s_data = priv->s_data;
-	s64 coarse_time;
 
 	dev_dbg(&priv->i2c_client->dev,
 		 "%s: val: %lld\n", __func__, val);
@@ -620,70 +617,44 @@ static int imx185_set_exposure(struct imx185 *priv, s64 val)
 		return err;
 	}
 
-	coarse_time = mode[s_data->mode].pixel_clock * val /
-		mode[s_data->mode].line_length / FIXED_POINT_SCALING_FACTOR;
-
-
 	hdr_en = switch_ctrl_qmenu[control.value];
 	if (hdr_en == SWITCH_ON) {
-		/*WDR, update SHS2 as long ET, 16x of short exactly*/
-		coarse_time = coarse_time / 16;
-		err = imx185_set_coarse_time_hdr_shs2(priv,
-					(u32) coarse_time * 16);
+		err = imx185_set_coarse_time_hdr(priv, val);
 		if (err)
 			dev_dbg(&priv->i2c_client->dev,
-			"%s: error coarse time SHS2 override\n", __func__);
+			"%s: error coarse time SHS1 SHS2 override\n", __func__);
+	} else {
+		err = imx185_set_coarse_time(priv, val);
+		if (err)
+			dev_dbg(&priv->i2c_client->dev,
+			"%s: error coarse time SHS1 override\n", __func__);
 	}
-	/*shs1 is short coarse time for wdr*/
-	err = imx185_set_coarse_time_shs1(priv, (u32) coarse_time);
-	if (err)
-		dev_dbg(&priv->i2c_client->dev,
-		"%s: error coarse time SHS1 override\n", __func__);
 	return err;
 }
 
-static int imx185_set_coarse_time_shs1(struct imx185 *priv, u32 val)
+static int imx185_set_coarse_time(struct imx185 *priv, s64 val)
 {
+	struct camera_common_mode_info *mode = priv->pdata->mode_info;
+	struct camera_common_data *s_data = priv->s_data;
 	imx185_reg reg_list[3];
 	int err;
-	u32 coarse_shs1;
-	struct v4l2_control control;
-	int hdr_en;
+	u32 coarse_time_shs1;
+	u32 reg_shs1;
 	int i = 0;
 
-	coarse_shs1 = val;
+	coarse_time_shs1 = mode[s_data->mode].pixel_clock * val /
+		mode[s_data->mode].line_length / FIXED_POINT_SCALING_FACTOR;
 
 	if (priv->frame_length == 0)
 		priv->frame_length = IMX185_MIN_FRAME_LENGTH;
 
-	/* check hdr enable ctrl */
-	control.id = V4L2_CID_HDR_EN;
-	err = camera_common_g_ctrl(priv->s_data, &control);
-	if (err < 0) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
-		return err;
-	}
-
-	hdr_en = switch_ctrl_qmenu[control.value];
-	if (hdr_en == SWITCH_ON) {
-		if (coarse_shs1 < IMX185_MIN_EXPOSURE_COARSE_1080P_HDR_SHS1)
-			coarse_shs1 = IMX185_MIN_EXPOSURE_COARSE_1080P_HDR_SHS1;
-
-		if (coarse_shs1 > IMX185_MAX_EXPOSURE_COARSE_1080P_HDR_SHS1)
-			coarse_shs1 = IMX185_MAX_EXPOSURE_COARSE_1080P_HDR_SHS1;
-
-		priv->frame_length = IMX185_MIN_FRAME_LENGTH;
-	}
+	reg_shs1 = priv->frame_length - coarse_time_shs1 - 1;
 
 	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %d,  shs1=%d, frame_length: %d\n", __func__,
-		 coarse_shs1,
-		 priv->frame_length - coarse_shs1 - 1,
-		 priv->frame_length);
+		 "%s: coarse1:%d, shs1:%d, FL:%d\n", __func__,
+		 coarse_time_shs1, reg_shs1, priv->frame_length);
 
-	imx185_get_coarse_time_regs_shs1(reg_list,
-			priv->frame_length - coarse_shs1 - 1);
+	imx185_get_coarse_time_regs_shs1(reg_list, reg_shs1);
 
 	for (i = 0; i < 3; i++) {
 		err = imx185_write_reg(priv->s_data, reg_list[i].addr,
@@ -696,39 +667,60 @@ static int imx185_set_coarse_time_shs1(struct imx185 *priv, u32 val)
 
 fail:
 	dev_dbg(&priv->i2c_client->dev,
-		 "%s: COARSE_TIME control error\n", __func__);
+		 "%s: set coarse time error\n", __func__);
 	return err;
 }
 
-static int imx185_set_coarse_time_hdr_shs2(struct imx185 *priv, u32 val)
+static int imx185_set_coarse_time_hdr(struct imx185 *priv, s64 val)
 {
-	imx185_reg reg_list[3];
+	struct camera_common_mode_info *mode = priv->pdata->mode_info;
+	struct camera_common_data *s_data = priv->s_data;
+	imx185_reg reg_list_shs1[3];
+	imx185_reg reg_list_shs2[3];
+	u32 coarse_time_shs1;
+	u32 coarse_time_shs2;
+	u32 reg_shs1;
+	u32 reg_shs2;
 	int err;
-	u32 coarse_shs2;
 	int i = 0;
 
-	coarse_shs2 = val;
-	if (coarse_shs2 < IMX185_MIN_EXPOSURE_COARSE_1080P_HDR_SHS2)
-		coarse_shs2 = IMX185_MIN_EXPOSURE_COARSE_1080P_HDR_SHS2;
+	if (priv->frame_length == 0)
+		priv->frame_length = IMX185_MIN_FRAME_LENGTH;
 
-	if (coarse_shs2 > IMX185_MAX_EXPOSURE_COARSE_1080P_HDR_SHS2)
-		coarse_shs2 = IMX185_MAX_EXPOSURE_COARSE_1080P_HDR_SHS2;
+	/*WDR, update SHS1 as short ET, and SHS2 is 16x of short*/
+	coarse_time_shs1 = mode[s_data->mode].pixel_clock * val /
+		mode[s_data->mode].line_length /
+		FIXED_POINT_SCALING_FACTOR / 16;
+	if (coarse_time_shs1 < IMX185_MIN_SHS1_1080P_HDR)
+		coarse_time_shs1 = IMX185_MIN_SHS1_1080P_HDR;
+	if (coarse_time_shs1 > IMX185_MAX_SHS1_1080P_HDR)
+		coarse_time_shs1 = IMX185_MAX_SHS1_1080P_HDR;
 
-	priv->frame_length = IMX185_MIN_FRAME_LENGTH;
+
+	coarse_time_shs2 = (coarse_time_shs1 - IMX185_MIN_SHS1_1080P_HDR) * 16 +
+				IMX185_MIN_SHS2_1080P_HDR;
+
+	reg_shs1 = priv->frame_length - coarse_time_shs1 - 1;
+	reg_shs2 = priv->frame_length - coarse_time_shs2 - 1;
+
+	imx185_get_coarse_time_regs_shs1(reg_list_shs1, reg_shs1);
+	imx185_get_coarse_time_regs_shs2(reg_list_shs2, reg_shs2);
 
 	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %d,  shs2=%d, frame_length: %d\n", __func__,
-		 coarse_shs2,
-		 priv->frame_length - coarse_shs2 - 1,
+		"%s: coarse1:%d, shs1:%d, coarse2:%d, shs2: %d, FL:%d\n",
+		__func__,
+		 coarse_time_shs1, reg_shs1,
+		 coarse_time_shs2, reg_shs2,
 		 priv->frame_length);
 
-
-	imx185_get_coarse_time_regs_shs2(reg_list,
-			priv->frame_length - coarse_shs2 - 1);
-
 	for (i = 0; i < 3; i++) {
-		err = imx185_write_reg(priv->s_data, reg_list[i].addr,
-			 reg_list[i].val);
+		err = imx185_write_reg(priv->s_data, reg_list_shs1[i].addr,
+			 reg_list_shs1[i].val);
+		if (err)
+			goto fail;
+
+		err = imx185_write_reg(priv->s_data, reg_list_shs2[i].addr,
+			 reg_list_shs2[i].val);
 		if (err)
 			goto fail;
 	}
@@ -737,7 +729,7 @@ static int imx185_set_coarse_time_hdr_shs2(struct imx185 *priv, u32 val)
 
 fail:
 	dev_dbg(&priv->i2c_client->dev,
-		 "%s: COARSE_TIME_SHORT control error\n", __func__);
+		 "%s: set WDR coarse time error\n", __func__);
 	return err;
 }
 

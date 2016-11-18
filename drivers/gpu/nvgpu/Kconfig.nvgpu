@@ -57,7 +57,7 @@ config GK20A_CYCLE_STATS
 config GK20A_CTXSW_TRACE
 	bool "Support GK20A Context Switch tracing"
 	depends on GK20A
-	default n
+	default y
 	help
 	  Enable support for the GK20A Context Switch Tracing. In this mode,
 	  FECS collects timestamps for contexts loaded on GR engine. This

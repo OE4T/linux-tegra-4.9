@@ -155,6 +155,9 @@ static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 	char aes_algo[5][10] = {"ecb(aes)", "cbc(aes)", "ofb(aes)", "ctr(aes)"};
 
 	if (crypt_req->op != TEGRA_CRYPTO_CBC) {
+		if (crypt_req->op >= TEGRA_CRYPTO_MAX)
+			return -EINVAL;
+
 		tfm = crypto_alloc_ablkcipher(aes_algo[crypt_req->op],
 			CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC, 0);
 		if (IS_ERR(tfm)) {

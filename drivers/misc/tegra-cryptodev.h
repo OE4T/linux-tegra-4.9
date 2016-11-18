@@ -40,10 +40,18 @@
 #define TEGRA_CRYPTO_RNG_SEED_SIZE	AES_KEYSIZE_128 + DEFAULT_RNG_BLK_SZ
 #define TEGRA_CRYPTO_RNG_SIZE	SZ_16
 
-#define TEGRA_CRYPTO_ECB	0
-#define TEGRA_CRYPTO_CBC	1
-#define TEGRA_CRYPTO_OFB	2
-#define TEGRA_CRYPTO_CTR	3
+enum tegra_se_crypto_dev_mode {
+	/* Electronic Codebook (ECB) mode */
+	TEGRA_CRYPTO_ECB,
+	/* Cipher Block Chaining (CBC) mode */
+	TEGRA_CRYPTO_CBC,
+	/* Output feedback (OFB) mode */
+	TEGRA_CRYPTO_OFB,
+	/* Counter (CTR) mode */
+	TEGRA_CRYPTO_CTR,
+	/* max mode number */
+	TEGRA_CRYPTO_MAX
+};
 
 enum tegra_rsa_op_mode {
 	RSA_INIT,

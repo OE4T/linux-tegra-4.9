@@ -695,7 +695,7 @@ struct nvgpu_gpu_get_event_fd_args {
 	/* in: Flags (not currently used). */
 	__u32 flags;
 
-	/* out: File descriptor for events, i.e. clock update.
+	/* out: File descriptor for events, e.g. clock update.
 	 * On successful polling of this event_fd, application is
 	 * expected to read status (nvgpu_gpu_event_info),
 	 * which provides detailed event information
@@ -873,14 +873,16 @@ struct nvgpu_gpu_get_temperature_args {
 /* Alarm on power condition */
 #define NVGPU_GPU_EVENT_ALARM_POWER_ABOVE_THRESHOLD		6
 
-/* Non recoverable alarm (POLLUP) */
+/* Non recoverable alarm (POLLHUP) */
 /* Alarm on GPU shutdown/fall from bus */
 #define NVGPU_GPU_EVENT_ALARM_GPU_LOST				7
+
+#define NVGPU_GPU_EVENT_LAST	NVGPU_GPU_EVENT_ALARM_GPU_LOST
 
 struct nvgpu_gpu_event_info {
 	__u32 event_id;		/* NVGPU_GPU_EVENT_* */
 	__u32 reserved;
-	__u64 timestamp;	/* GPU timestamp */
+	__u64 timestamp;	/* CPU timestamp (in nanoseconds) */
 };
 
 struct nvgpu_gpu_set_event_filter_args {

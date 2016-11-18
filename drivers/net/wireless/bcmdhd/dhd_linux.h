@@ -70,7 +70,6 @@ typedef struct wifi_adapter_info {
 	int		n_country;
 	struct cntry_locales_custom *country_code_map;
 #endif
-	bool skip_hang_evt;
 } wifi_adapter_info_t;
 
 typedef struct bcmdhd_wifi_platdata {

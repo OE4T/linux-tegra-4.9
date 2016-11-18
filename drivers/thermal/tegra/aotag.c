@@ -43,10 +43,8 @@
 #define MASK(start, end)	\
 	(((0xFFFFFFFF)<<start) & (u32)(((u64)1<<(end+1))-1))
 
-/*
- * Forward declarations
- */
-static int aotag_get_temp_generic(void*, int*);
+#define MAX_THRESHOLD_TEMP	(127000)
+#define MIN_THRESHOLD_TEMP	(-127000)
 
 /*
  * Register definitions
@@ -70,6 +68,10 @@ static int aotag_get_temp_generic(void*, int*);
 #define PMC_AOTAG_THRESH1_CFG		(0x488)
 #define PMC_AOTAG_THRESH2_CFG		(0x48C)
 #define PMC_AOTAG_THRESH3_CFG		(0x490)
+#define THRESH3_CFG_POS_START		(0)
+#define THRESH3_CFG_POS_END		(14)
+#define THRESH3_CFG_MASK		(MASK(THRESH3_CFG_POS_START,\
+						THRESH3_CFG_POS_END))
 #define PMC_AOTAG_STATUS		(0x494)
 #define PMC_AOTAG_SECURITY		(0x498)
 
@@ -215,6 +217,43 @@ struct aotag_sensor_info_t {
 	void __iomem *pmc_base;
 };
 
+static void aotag_thermtrip_enable(struct aotag_sensor_info_t *info, int temp)
+{
+	unsigned long r = 0;
+
+	if (temp > MAX_THRESHOLD_TEMP)
+		temp = MAX_THRESHOLD_TEMP;
+	else if (temp < MIN_THRESHOLD_TEMP)
+		temp = MIN_THRESHOLD_TEMP;
+
+	r = REG_SET(r, THRESH3_CFG, temp/1000);
+	writel(r, info->pmc_base + PMC_AOTAG_THRESH3_CFG);
+
+	r = readl(info->pmc_base + PMC_AOTAG_CFG);
+	set_bit(CFG_THERMTRIP_EN_POS, &r);
+	writel(r, info->pmc_base + PMC_AOTAG_CFG);
+}
+
+static int aotag_set_trip_temp(void *data, int trip, int trip_temp)
+{
+	int ret = 0;
+	enum thermal_trip_type type;
+	struct platform_device *pdev = (struct platform_device *)data;
+	struct aotag_sensor_info_t *ps_info = PDEV2SENSOR_INFO(pdev);
+	struct thermal_zone_device *tz = ps_info->tzd;
+
+	ret = tz->ops->get_trip_type(tz, trip, &type);
+	if (ret)
+		return ret;
+
+	if (type != THERMAL_TRIP_CRITICAL)
+		return 0;
+
+	aotag_thermtrip_enable(ps_info, trip_temp);
+
+	return 0;
+}
+
 static int aotag_get_temp_generic(void *data, int *temp)
 {
 	int ret = 0;
@@ -272,8 +311,8 @@ static int aotag_init(struct platform_device *pdev)
 	 */
 	info->pmc_base = of_iomap(pmc_np, 0);
 	if (!info->pmc_base) {
-		ret = -ENOMEM;
 		dev_err(&pdev->dev, " - unable to map PMC\n");
+		return -ENOMEM;
 	}
 
 	info->config = &tegra_aotag_config;
@@ -301,12 +340,13 @@ static int aotag_parse_sensor_params(struct platform_device *pdev)
 }
 
 static const struct thermal_zone_of_device_ops aotag_of_thermal_ops = {
-	.get_temp = aotag_get_temp_generic
+	.get_temp = aotag_get_temp_generic,
+	.set_trip_temp = aotag_set_trip_temp,
 };
 
 static int aotag_register_sensors(struct platform_device *pdev)
 {
-	int ret = 0;
+	int ret = 0, thermtrip;
 	struct aotag_sensor_info_t *ps_info = PDEV2SENSOR_INFO(pdev);
 	struct thermal_zone_device *ptz = NULL;
 
@@ -319,12 +359,16 @@ static int aotag_register_sensors(struct platform_device *pdev)
 	if (IS_ERR(ptz)) {
 		dev_err(&pdev->dev, "Failed to register aotag sensor\n");
 		ret = PTR_ERR(ptz);
-		goto out;
+		return ret;
 	}
 
 	ps_info->tzd = ptz;
 	dev_err(&pdev->dev, "Bound to TZ : ID %d\n", ps_info->tzd->id);
-out:
+
+	ret = ptz->ops->get_crit_temp(ptz, &thermtrip);
+	if (!ret)
+		aotag_thermtrip_enable(ps_info, thermtrip);
+
 	return ret;
 }
 
@@ -383,9 +427,7 @@ static int aotag_hw_init(struct platform_device *pdev)
 	r = REG_SET(r, TSENSOR_PDIV, i->config->pdiv);
 	writel(r, i->pmc_base + PMC_TSENSOR_PDIV0);
 
-	/* configure therm trip */
-
-	/* Enable AOTAG */
+	/* Enable AOTAG*/
 	r = 0;
 	set_bit(CFG_TAG_EN_POS, &r);
 	clear_bit(CFG_DISABLE_CLK_POS, &r);

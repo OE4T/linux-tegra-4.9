@@ -2084,6 +2084,14 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		goto err_hpd_switch;
 	}
 
+	if (((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
+		 (dc->pdata->flags & TEGRA_DC_FLAG_SET_EARLY_MODE)) &&
+		dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
+		dp->early_enable = true;
+	} else {
+		dp->early_enable = false;
+	}
+
 	dp->edid_src = EDID_SRC_PANEL;
 	if (np) {
 		if (np_dp && (of_device_is_available(np_dp) ||
@@ -2498,6 +2506,28 @@ static void tegra_dp_hpd_op_edid_ready(void *drv_data)
 		if (test_rq == TEST_EDID_READ)
 			tegra_dp_auto_set_edid_checksum(dp);
 	}
+
+	/* Early enables DC with first mode from the monitor specs */
+	if (dp->early_enable) {
+		struct tegra_hpd_data *data = &dp->hpd_data;
+		struct fb_videomode *target_videomode;
+		struct fb_var_screeninfo var;
+
+		/* This function is called only when EDID is read
+		 * successfully. target_videomode should never set
+		 * to default VGA mode unless unexpected issue
+		 * happens and first mode was a null pointer.
+		 */
+		target_videomode = (data->mon_spec.modedb) ?
+			data->mon_spec.modedb : &tegra_dc_vga_mode;
+		memset(&var, 0x0, sizeof(var));
+		fb_videomode_to_var(&var, target_videomode);
+		tegra_fb_set_var(dc, &var);
+		if (!dp->dc->enabled)
+			tegra_dc_enable(dp->dc);
+		dp->early_enable = false;
+	}
+
 	tegra_dc_io_end(dc);
 }
 

@@ -609,6 +609,11 @@ static int tegra_fb_ioctl(struct fb_info *info,
 	return 0;
 }
 
+int tegra_fb_set_var(struct tegra_dc *dc, struct fb_var_screeninfo *var)
+{
+	return fb_set_var(dc->fb->info, var);
+}
+
 int tegra_fb_update_modelist(struct tegra_dc *dc, int fblistindex)
 {
 	struct list_head *pos, *n;

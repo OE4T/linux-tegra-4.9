@@ -172,17 +172,15 @@ static int gp10b_get_litter_value(struct gk20a *g, int value)
 	case GPU_LIT_LTS_STRIDE:
 		ret = proj_lts_stride_v();
 		break;
+	/* GP10B does not have a FBPA unit, despite what's listed in the
+	 * hw headers or read back through NV_PTOP_SCAL_NUM_FBPAS,
+	 * so hardcode all values to 0.
+	 */
 	case GPU_LIT_NUM_FBPAS:
-		ret = proj_scal_litter_num_fbpas_v();
-		break;
 	case GPU_LIT_FBPA_STRIDE:
-		ret = proj_fbpa_stride_v();
-		break;
 	case GPU_LIT_FBPA_BASE:
-		ret = proj_fbpa_base_v();
-		break;
 	case GPU_LIT_FBPA_SHARED_BASE:
-		ret = proj_fbpa_shared_base_v();
+		ret = 0;
 		break;
 	default:
 		gk20a_err(dev_from_gk20a(g), "Missing definition %d", value);

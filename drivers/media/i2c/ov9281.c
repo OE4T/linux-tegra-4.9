@@ -80,6 +80,10 @@
 #define OV9281_MIN_GAIN			0x0001
 #define OV9281_MAX_GAIN			0x1FFF
 
+#define OV9281_DEFAULT_FRAME_LENGTH	0x038E
+#define OV9281_MIN_FRAME_LENGTH		0x0001
+#define OV9281_MAX_FRAME_LENGTH		0xFFFF
+
 #define OV9281_MIN_EXPOSURE_COARSE	0x00000001
 #define OV9281_MAX_EXPOSURE_COARSE	0x000FFFFF
 #define OV9281_DEFAULT_EXPOSURE_COARSE	0x00002A90
@@ -419,6 +423,37 @@ fail:
 	return err;
 }
 
+static int ov9281_set_frame_length(struct ov9281 *priv, s32 val)
+{
+	ov9281_reg regs[3];
+	u16 frame_length;
+	int err;
+
+	frame_length = (u16)val;
+
+	dev_dbg(&priv->i2c_client->dev,
+		"%s: frame_length: %d\n", __func__, frame_length);
+
+	regs[0].addr = OV9281_TIMING_VTS_HIGH_ADDR;
+	regs[0].val = (frame_length >> 8) & 0xff;
+	regs[1].addr = OV9281_TIMING_VTS_LOW_ADDR;
+	regs[1].val = (frame_length) & 0xff;
+	regs[2].addr = OV9281_TABLE_END;
+	regs[2].val = 0;
+
+	ov9281_set_group_hold(priv);
+	err = ov9281_write_table(priv, regs);
+	if (err)
+		goto fail;
+
+	return 0;
+
+fail:
+	dev_dbg(&priv->i2c_client->dev,
+		"%s: FRAME_LENGTH control error\n", __func__);
+	return err;
+}
+
 static int ov9281_set_coarse_time(struct ov9281 *priv, s32 val)
 {
 	ov9281_reg regs[4];
@@ -577,6 +612,13 @@ static int ov9281_s_stream(struct v4l2_subdev *sd, int enable)
 			dev_warn(&client->dev,
 				 "%s: error gain override\n", __func__);
 
+		control.id = V4L2_CID_FRAME_LENGTH;
+		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
+		err |= ov9281_set_frame_length(priv, control.value);
+		if (err)
+			dev_warn(&client->dev,
+				 "%s: error frame length override\n", __func__);
+
 		control.id = V4L2_CID_COARSE_TIME;
 		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
 		err |= ov9281_set_coarse_time(priv, control.value);
@@ -694,6 +736,9 @@ static int ov9281_s_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_GAIN:
 		err = ov9281_set_gain(priv, ctrl->val);
 		break;
+	case V4L2_CID_FRAME_LENGTH:
+		err = ov9281_set_frame_length(priv, ctrl->val);
+		break;
 	case V4L2_CID_COARSE_TIME:
 		err = ov9281_set_coarse_time(priv, ctrl->val);
 		break;
@@ -732,6 +777,17 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 		.min = OV9281_MIN_GAIN,
 		.max = OV9281_MAX_GAIN,
 		.def = OV9281_DEFAULT_GAIN,
+		.step = 1,
+	},
+	{
+		.ops = &ov9281_ctrl_ops,
+		.id = V4L2_CID_FRAME_LENGTH,
+		.name = "Frame Length",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = OV9281_MIN_FRAME_LENGTH,
+		.max = OV9281_MAX_FRAME_LENGTH,
+		.def = OV9281_DEFAULT_FRAME_LENGTH,
 		.step = 1,
 	},
 	{

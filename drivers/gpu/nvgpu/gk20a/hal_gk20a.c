@@ -34,9 +34,6 @@
 #include "dbg_gpu_gk20a.h"
 #include "css_gr_gk20a.h"
 
-#define GK20A_FBPA_BASE        0x00110000
-#define GK20A_FBPA_SHARED_BASE 0x0010F000
-
 static struct gpu_ops gk20a_ops = {
 	.clock_gating = {
 		.slcg_gr_load_gating_prod =
@@ -121,17 +118,15 @@ static int gk20a_get_litter_value(struct gk20a *g, int value)
 	case GPU_LIT_LTS_STRIDE:
 		ret = proj_lts_stride_v();
 		break;
+	/* GK20A does not have a FBPA unit, despite what's listed in the
+	 * hw headers or read back through NV_PTOP_SCAL_NUM_FBPAS,
+	 * so hardcode all values to 0.
+	 */
 	case GPU_LIT_NUM_FBPAS:
-		ret = proj_scal_litter_num_fbpas_v();
-		break;
 	case GPU_LIT_FBPA_STRIDE:
-		ret = proj_fbpa_stride_v();
-		break;
 	case GPU_LIT_FBPA_BASE:
-		ret = GK20A_FBPA_BASE;
-		break;
 	case GPU_LIT_FBPA_SHARED_BASE:
-		ret = GK20A_FBPA_SHARED_BASE;
+		ret = 0;
 		break;
 	default:
 		gk20a_err(dev_from_gk20a(g), "Missing definition %d", value);

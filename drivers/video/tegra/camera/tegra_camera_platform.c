@@ -301,7 +301,6 @@ static int tegra_camera_release(struct inode *inode, struct file *file)
 	tegra_bwmgr_unregister(info->bwmgr_handle);
 #else
 	tegra_camera_emc_clk_disable();
-
 #endif
 	/* nullify isomgr request */
 	ret = tegra_camera_isomgr_release(info);
@@ -356,6 +355,8 @@ int vi_v4l2_update_isobw(u32 vi_kbyteps, u32 is_ioctl)
 	}
 
 	info = dev_get_drvdata(tegra_camera_misc.parent);
+	if (!info)
+		return -ENODEV;
 	mutex_lock(&info->update_bw_lock);
 	if (!is_ioctl)
 		info->vi_mode_isobw = vi_kbyteps;

@@ -36,11 +36,11 @@
 #include "dev.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
-#include "t124/t124.h"
 #include "t210/t210.h"
 #include "vi/vi.h"
 #include "vi/vi_irq.h"
 #include "camera/vi/vi2_fops.h"
+#include "camera/csi/csi2_fops.h"
 
 #include "tegra_camera_dev_mfi.h"
 
@@ -55,15 +55,15 @@ struct vi *tegra_vi_get(void)
 }
 EXPORT_SYMBOL(tegra_vi_get);
 
+static struct tegra_t210_vi_data t21_vi_data = {
+	.info = (struct nvhost_device_data *)&t21_vi_info,
+	.vi_fops = &vi2_fops,
+	.csi_fops = &csi2_fops,
+};
+
 static struct of_device_id tegra_vi_of_match[] = {
-#ifdef TEGRA_12X_OR_HIGHER_CONFIG
-	{ .compatible = "nvidia,tegra124-vi",
-		.data = (struct nvhost_device_data *)&t124_vi_info },
-#endif
-#ifdef TEGRA_21X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra210-vi",
-		.data = (struct nvhost_device_data *)&t21_vi_info },
-#endif
+		.data = (struct tegra_t210_vi_data *)&t21_vi_data },
 	{ },
 };
 
@@ -359,6 +359,7 @@ static int vi_probe(struct platform_device *dev)
 {
 	int err = 0;
 	struct nvhost_device_data *pdata = NULL;
+	struct tegra_t210_vi_data *data = NULL;
 	u8 num_channels;
 
 	if (dev->dev.of_node) {
@@ -366,7 +367,8 @@ static int vi_probe(struct platform_device *dev)
 
 		match = of_match_device(tegra_vi_of_match, &dev->dev);
 		if (match) {
-			pdata = (struct nvhost_device_data *)match->data;
+			data = (struct tegra_t210_vi_data *)match->data;
+			pdata = data->info;
 			dev->dev.platform_data = pdata;
 		}
 		/* DT initializes it to -1, use below WAR to set correct value.
@@ -404,11 +406,8 @@ static int vi_probe(struct platform_device *dev)
 	if (err)
 		goto vi_probe_fail;
 
-#ifdef TEGRA_21X_OR_HIGHER_CONFIG
 	num_channels = 6;
-#else
-	num_channels = 2;
-#endif
+
 	err = tegra_vi_init_mfi(&tegra_vi->mfi_ctx, num_channels);
 	if (err)
 		goto vi_probe_fail;
@@ -480,13 +479,15 @@ static int vi_probe(struct platform_device *dev)
 	if (err)
 		goto camera_unregister;
 
-	err = tegra_csi_init(&tegra_vi->csi, dev);
-	if (err)
-		goto vi_mc_init_error;
-
 	tegra_vi->mc_vi.vi = tegra_vi;
 	tegra_vi->mc_vi.csi = &tegra_vi->csi;
 	tegra_vi->mc_vi.reg = tegra_vi->reg;
+	tegra_vi->mc_vi.fops = data->vi_fops;
+	tegra_vi->csi.fops = data->csi_fops;
+	err = tegra_csi_media_controller_init(&tegra_vi->csi, dev);
+	if (err)
+		goto vi_mc_init_error;
+
 	err = tegra_vi_media_controller_init(&tegra_vi->mc_vi, dev);
 	if (err)
 		goto vi_mc_init_error;
@@ -589,12 +590,8 @@ static struct platform_driver vi_driver = {
 };
 
 static struct of_device_id tegra_vi_domain_match[] = {
-	{.compatible = "nvidia,tegra132-ve-pd",
-	 .data = (struct nvhost_device_data *)&t124_vi_info},
-#ifdef TEGRA_21X_OR_HIGHER_CONFIG
 	{.compatible = "nvidia,tegra210-ve-pd",
-	.data = (struct nvhost_device_data *)&t21_vi_info},
-#endif
+	 .data = (struct nvhost_device_data *)&t21_vi_info},
 	{},
 };
 

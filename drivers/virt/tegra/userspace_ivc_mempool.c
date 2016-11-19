@@ -26,6 +26,7 @@
 #include <linux/fs.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
+#include <linux/tegra-soc.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-instance.h>
 #include <linux/nvhvivc_mempool_ioctl.h>
@@ -134,7 +135,7 @@ static int ivc_mempool_release(struct inode *inode, struct file *filp)
 	/* Unreserve the mempool */
 	ret = tegra_hv_mempool_unreserve(mempooldev->mpool_cookie);
 	if (ret < 0)
-		pr_err("### unable to release mempool during device close\n");
+		pr_err("user_ivc_mempool: ### unable to release mempool\n");
 
 	mempooldev->mpool_cookie = NULL;
 	filp->private_data = NULL;
@@ -263,7 +264,7 @@ static int __init add_ivc_mempool_dev(struct ivc_mempool_dev *mempooldev,
 	cdev_init(&mempooldev->cdev, &ivc_mempool_fops);
 	ret = cdev_add(&mempooldev->cdev, mempooldev->dev, 1);
 	if (ret != 0) {
-		pr_err("### ivc mempool device add failed\n");
+		pr_err("user_ivc_mempool: ### device add failed\n");
 		return ret;
 	}
 	snprintf(mempooldev->name, sizeof(mempooldev->name) - 1,
@@ -271,8 +272,8 @@ static int __init add_ivc_mempool_dev(struct ivc_mempool_dev *mempooldev,
 	mempooldev->device = device_create(ivc_mempool_class, NULL,
 			mempooldev->dev, mempooldev, mempooldev->name);
 	if (IS_ERR(mempooldev->device)) {
-		pr_err("### ivc mempool device create failed for %s\n",
-				mempooldev->name);
+		pr_err("user_ivc_mempool: ### device create failed for %s\n",
+			mempooldev->name);
 		return PTR_ERR(mempooldev->device);
 	}
 
@@ -306,14 +307,14 @@ static int __init setup_ivc_mempool(void)
 	result = alloc_chrdev_region(&ivc_mempool_first_cdev, 0, max_mempool_id,
 			"ivc_mempool");
 	if (result < 0) {
-		pr_err("### ivc mempool alloc_chrdev_region() failed\n");
+		pr_err("user_ivc_mempool: ### alloc_chrdev_region() failed\n");
 		return result;
 	}
 
 	/* register ivc_user class with sysfs */
 	ivc_mempool_class = class_create(THIS_MODULE, "tegra_uivc_mpool");
 	if (IS_ERR(ivc_mempool_class)) {
-		pr_err("### failed to create ivc mempool sysfs class: %ld\n",
+		pr_err("user_ivc_mempool: ### failed create sysfs class: %ld\n",
 				PTR_ERR(ivc_mempool_class));
 		return PTR_ERR(ivc_mempool_class);
 	}
@@ -323,7 +324,7 @@ static int __init setup_ivc_mempool(void)
 	ivc_mempool_dev_array = kcalloc(guest_ivc_info->nr_mempools,
 			sizeof(struct ivc_mempool_dev), GFP_KERNEL);
 	if (!ivc_mempool_dev_array) {
-		pr_err("### ivc mempool device array allocation failure\n");
+		pr_err("user_ivc_mempool: ### device array alloc failure\n");
 		return -ENOMEM;
 	}
 
@@ -372,11 +373,15 @@ static int __init userspace_ivc_mempool_init(void)
 {
 	int result;
 
+	if (is_tegra_hypervisor_mode() == false) {
+		pr_info("user_ivc_mempool: hypervisor not present\n");
+		return -ENODEV;
+	}
+
 	/* get ivc configuration data for this  guest */
 	guest_ivc_info = tegra_hv_get_ivc_info();
-
 	if (IS_ERR(guest_ivc_info)) {
-		pr_err("### failed ivc info hypervisor call\n");
+		pr_err("user_ivc_mempool: ### failed hyp get ivc info\n");
 		return -ENODEV;
 	}
 

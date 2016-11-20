@@ -621,6 +621,13 @@ static int hdmi_hpd_process_edid_match(struct tegra_hdmi *hdmi, int match)
 			hdmi->dc->use_cached_mode = true;
 			hdmi->plug_state = TEGRA_HDMI_MONITOR_ENABLE;
 		} else {
+#ifdef CONFIG_HDCP
+			if ((hdmi->edid_src == EDID_SRC_PANEL)
+					&& !hdmi->dc->vedid) {
+				tegra_nvhdcp_set_plug(hdmi->nvhdcp, false);
+				tegra_nvhdcp_set_plug(hdmi->nvhdcp, true);
+			}
+#endif
 			/*
 			 * Userspace is active. No EDID change. Userspace will
 			 * issue unblank call to enable DC later.

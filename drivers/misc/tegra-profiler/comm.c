@@ -41,7 +41,7 @@ struct quadd_ring_buffer {
 
 	struct quadd_mmap_area *mmap;
 
-	spinlock_t lock;
+	raw_spinlock_t lock;
 };
 
 struct quadd_comm_ctx {
@@ -222,7 +222,7 @@ put_sample(struct quadd_record_data *data,
 
 	rb = &cc->rb;
 
-	spin_lock_irqsave(&rb->lock, flags);
+	raw_spin_lock_irqsave(&rb->lock, flags);
 
 	err = write_sample(rb, data, vec, vec_count);
 	if (err < 0) {
@@ -234,7 +234,7 @@ put_sample(struct quadd_record_data *data,
 			rb_hdr->skipped_samples++;
 	}
 
-	spin_unlock_irqrestore(&rb->lock, flags);
+	raw_spin_unlock_irqrestore(&rb->lock, flags);
 
 	return err;
 }
@@ -319,7 +319,7 @@ init_mmap_hdr(struct quadd_mmap_rb_info *mmap_rb,
 
 	rb = &cc->rb;
 
-	spin_lock_irqsave(&rb->lock, flags);
+	raw_spin_lock_irqsave(&rb->lock, flags);
 
 	mmap->rb = rb;
 
@@ -354,7 +354,7 @@ init_mmap_hdr(struct quadd_mmap_rb_info *mmap_rb,
 
 	rb_hdr->state = QUADD_RB_STATE_ACTIVE;
 
-	spin_unlock_irqrestore(&rb->lock, flags);
+	raw_spin_unlock_irqrestore(&rb->lock, flags);
 
 	pr_info("[cpu: %d] init_mmap_hdr: vma: %#lx - %#lx, data: %p - %p\n",
 		cpu_id,
@@ -394,13 +394,13 @@ static void rb_reset(struct quadd_ring_buffer *rb)
 	if (!rb)
 		return;
 
-	spin_lock_irqsave(&rb->lock, flags);
+	raw_spin_lock_irqsave(&rb->lock, flags);
 
 	rb->mmap = NULL;
 	rb->buf = NULL;
 	rb->rb_hdr = NULL;
 
-	spin_unlock_irqrestore(&rb->lock, flags);
+	raw_spin_unlock_irqrestore(&rb->lock, flags);
 }
 
 static int
@@ -906,7 +906,7 @@ static int comm_init(void)
 		rb->max_fill_count = 0;
 		rb->nr_skipped_samples = 0;
 
-		spin_lock_init(&rb->lock);
+		raw_spin_lock_init(&rb->lock);
 	}
 
 	reset_params_ok_flag();

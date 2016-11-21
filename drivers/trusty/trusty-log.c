@@ -34,7 +34,7 @@ struct trusty_log_state {
 	 * This lock is here to ensure only one consumer will read
 	 * from the log ring buffer at a time.
 	 */
-	spinlock_t lock;
+	raw_spinlock_t lock;
 	struct log_rb *log;
 	uint32_t get;
 
@@ -113,9 +113,9 @@ static int trusty_log_call_notify(struct notifier_block *nb,
 		return NOTIFY_DONE;
 
 	s = container_of(nb, struct trusty_log_state, call_notifier);
-	spin_lock_irqsave(&s->lock, flags);
+	raw_spin_lock_irqsave(&s->lock, flags);
 	trusty_dump_logs(s);
-	spin_unlock_irqrestore(&s->lock, flags);
+	raw_spin_unlock_irqrestore(&s->lock, flags);
 	return NOTIFY_OK;
 }
 
@@ -176,7 +176,7 @@ static int trusty_log_probe(struct platform_device *pdev)
 		goto error_alloc_state;
 	}
 
-	spin_lock_init(&s->lock);
+	raw_spin_lock_init(&s->lock);
 	s->dev = &pdev->dev;
 	s->trusty_dev = s->dev->parent;
 	s->get = 0;

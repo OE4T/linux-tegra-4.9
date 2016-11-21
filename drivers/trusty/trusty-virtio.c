@@ -20,7 +20,6 @@
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/notifier.h>
-#include <linux/workqueue.h>
 #include <linux/remoteproc.h>
 
 #include <linux/platform_device.h>
@@ -34,6 +33,7 @@
 
 #include <linux/atomic.h>
 
+#include "trusty-virtio-work.h"
 #define  RSC_DESCR_VER  1
 
 struct trusty_vdev;
@@ -42,8 +42,8 @@ struct trusty_ctx {
 	struct device		*dev;
 	void			*shared_va;
 	size_t			shared_sz;
-	struct work_struct	check_vqs;
-	struct work_struct	kick_vqs;
+	workitem_t		check_vqs;
+	workitem_t		kick_vqs;
 	struct notifier_block	call_notifier;
 	struct list_head	vdev_list;
 	struct mutex		mlock; /* protects vdev_list */
@@ -79,7 +79,7 @@ struct trusty_vdev {
 
 #define vdev_to_tvdev(vd)  container_of((vd), struct trusty_vdev, vdev)
 
-static void check_all_vqs(struct work_struct *work)
+static void check_all_vqs(workitem_t *work)
 {
 	uint i;
 	struct trusty_ctx *tctx = container_of(work, struct trusty_ctx,
@@ -101,7 +101,7 @@ static int trusty_call_notify(struct notifier_block *nb,
 		return NOTIFY_DONE;
 
 	tctx = container_of(nb, struct trusty_ctx, call_notifier);
-	queue_work(tctx->check_wq, &tctx->check_vqs);
+	schedule_workitem(&tctx->check_vqs);
 
 	return NOTIFY_OK;
 }
@@ -123,7 +123,7 @@ static void kick_vq(struct trusty_ctx *tctx,
 	}
 }
 
-static void kick_vqs(struct work_struct *work)
+static void kick_vqs(workitem_t *work)
 {
 	uint i;
 	struct trusty_vdev *tvdev;
@@ -149,7 +149,7 @@ static bool trusty_virtio_notify(struct virtqueue *vq)
 
 	if (api_ver < TRUSTY_API_VERSION_SMP_NOP) {
 		atomic_set(&tvr->needs_kick, 1);
-		queue_work(tctx->kick_wq, &tctx->kick_vqs);
+		schedule_workitem(&tctx->kick_vqs);
 	} else {
 		trusty_enqueue_nop(tctx->dev->parent, &tvr->kick_nop);
 	}
@@ -627,12 +627,12 @@ static int trusty_virtio_add_devices(struct trusty_ctx *tctx)
 err_start_virtio:
 	trusty_call_notifier_unregister(tctx->dev->parent,
 					&tctx->call_notifier);
-	cancel_work_sync(&tctx->check_vqs);
+	cancel_workitem(&tctx->check_vqs);
 err_register_notifier:
 err_parse_descr:
 	_remove_devices_locked(tctx);
 	mutex_unlock(&tctx->mlock);
-	cancel_work_sync(&tctx->kick_vqs);
+	cancel_workitem(&tctx->kick_vqs);
 	trusty_virtio_stop(tctx, descr_va, descr_sz);
 err_load_descr:
 	free_pages_exact(descr_va, descr_buf_sz);
@@ -656,8 +656,8 @@ static int trusty_virtio_probe(struct platform_device *pdev)
 	tctx->call_notifier.notifier_call = trusty_call_notify;
 	mutex_init(&tctx->mlock);
 	INIT_LIST_HEAD(&tctx->vdev_list);
-	INIT_WORK(&tctx->check_vqs, check_all_vqs);
-	INIT_WORK(&tctx->kick_vqs, kick_vqs);
+	INIT_WORKITEM(&tctx->check_vqs, check_all_vqs);
+	INIT_WORKITEM(&tctx->kick_vqs, kick_vqs);
 	platform_set_drvdata(pdev, tctx);
 
 	tctx->check_wq = alloc_workqueue("trusty-check-wq", WQ_UNBOUND, 0);
@@ -702,11 +702,11 @@ static int trusty_virtio_remove(struct platform_device *pdev)
 	/* unregister call notifier and wait until workqueue is done */
 	trusty_call_notifier_unregister(tctx->dev->parent,
 					&tctx->call_notifier);
-	cancel_work_sync(&tctx->check_vqs);
+	cancel_workitem(&tctx->check_vqs);
 
 	/* remove virtio devices */
 	trusty_virtio_remove_devices(tctx);
-	cancel_work_sync(&tctx->kick_vqs);
+	cancel_workitem(&tctx->kick_vqs);
 
 	/* destroy workqueues */
 	destroy_workqueue(tctx->kick_wq);

@@ -22,6 +22,7 @@
 #include <linux/dma-buf.h>
 #include <linux/dma-mapping.h>
 #include <linux/uaccess.h>
+#include <linux/delay.h>
 
 #include "dev.h"
 #include "bus_client.h"
@@ -34,6 +35,13 @@
 #include "nvdla/nvdla_debug.h"
 #include <linux/nvhost_nvdla_ioctl.h>
 #include "dla_os_interface.h"
+
+/* TODO: 1. revisit timeout post silicon
+ *       2. when silicon and sim tests go live at same time,
+ *          make timeout selection runtime based on platform
+ */
+#define NVDLA_QUEUE_ABORT_TIMEOUT	10000	/* 10 sec */
+#define NVDLA_QUEUE_ABORT_RETRY_PERIOD	500	/* 500 ms */
 
 static DEFINE_DMA_ATTRS(attrs);
 
@@ -214,7 +222,7 @@ static int nvdla_map_task_memory(struct nvhost_buffers *buffers,
 	size_t *dma_size;
 	void *ptr = NULL;
 	dma_addr_t *dma_addr;
-        dma_addr_t *dma_memory;
+	dma_addr_t *dma_memory;
 	struct dma_buf *buf = NULL;
 	struct nvdla_ctrl_mem_handle *addresses;
 
@@ -263,7 +271,7 @@ static int nvdla_map_task_memory(struct nvhost_buffers *buffers,
 		goto fail_to_alloc_dma_addr;
 	}
 
-        dma_memory = dma_addr;
+	dma_memory = dma_addr;
 	dma_size = kcalloc(task->num_handles, sizeof(u32),
 				GFP_KERNEL);
 	if (!dma_size) {
@@ -699,9 +707,58 @@ fail_to_register:
 
 static int nvdla_queue_abort(struct nvhost_queue *queue)
 {
-	/* TBD: Abort pending tasks from the queue */
+	int err;
+	struct nvdla_task *t;
+	struct platform_device *pdev = queue->pool->pdev;
+	int retry = NVDLA_QUEUE_ABORT_TIMEOUT / NVDLA_QUEUE_ABORT_RETRY_PERIOD;
 
-	return 0;
+	nvdla_dbg_fn(pdev, "");
+
+	/* get pm refcount */
+	err = nvhost_module_busy(pdev);
+	if (err) {
+		nvdla_dbg_err(pdev, "failed to poweron, err: %d", err);
+		return err;
+	}
+
+	/* flush engine side queues */
+	do {
+		err = nvdla_send_cmd(pdev, DLA_CMD_QUEUE_FLUSH, queue->id,
+					true);
+		if (err == DLA_ERR_PROCESSOR_BUSY)
+			mdelay(NVDLA_QUEUE_ABORT_RETRY_PERIOD);
+		else
+			break;
+	} while (--retry);
+
+	if (!retry || err) {
+		nvdla_dbg_err(pdev,
+		"Q %d abort fail. err:%d, retry:%d",
+			queue->id, err, retry);
+		goto done;
+	}
+
+	nvdla_dbg_info(pdev, "Engine Q[%d] flush done", queue->id);
+
+	/* if task present free them by reset syncpoint */
+	if (!list_empty(&queue->tasklist)) {
+		t = list_last_entry(&queue->tasklist, struct nvdla_task, list);
+
+		/* reset syncpoint to release all tasks */
+		nvdla_task_syncpt_reset(t->sp, queue->syncpt_id, t->fence);
+
+		/* dump details */
+		nvdla_dbg_info(pdev, "Q id %d reset syncpt[%d] done",
+			queue->id, queue->syncpt_id);
+		nvdla_dbg_info(pdev, "syncpt[%d], min[%u], max[%u]",
+			queue->syncpt_id,
+			nvhost_syncpt_update_min(t->sp, queue->syncpt_id),
+			nvhost_syncpt_read_max(t->sp, queue->syncpt_id));
+	}
+
+done:
+	nvhost_module_idle(pdev);
+	return err;
 }
 
 struct nvhost_queue_ops nvdla_queue_ops = {

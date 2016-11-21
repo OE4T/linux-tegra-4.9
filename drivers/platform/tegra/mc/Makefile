@@ -31,6 +31,6 @@ obj-y += tegra_emc.o
 obj-y 					+= tegra_emc_timers.o
 endif
 
-obj-y                                   += mc-sid.o
+obj-y                                   += tegra-mc-sid.o
 
 endif

@@ -2486,7 +2486,7 @@ int gk20a_fifo_enable_engine_activity(struct gk20a *g,
 	mutex_ret = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	enable = gk20a_readl(g, fifo_sched_disable_r());
-	enable &= ~(fifo_sched_disable_true_v() >> eng_info->runlist_id);
+	enable &= ~(fifo_sched_disable_true_v() << eng_info->runlist_id);
 	gk20a_writel(g, fifo_sched_disable_r(), enable);
 
 	if (!mutex_ret)

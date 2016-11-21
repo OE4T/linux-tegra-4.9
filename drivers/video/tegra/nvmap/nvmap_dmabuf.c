@@ -773,14 +773,10 @@ struct nvmap_handle *nvmap_handle_get_from_dmabuf_fd(
  * using existing code paths to preserve memory accounting behavior, so this
  * function returns -EINVAL on dma_buf fds created by nvmap.
  */
-int nvmap_dmabuf_duplicate_gen_fd(struct nvmap_client *client, int fd)
+int nvmap_dmabuf_duplicate_gen_fd(struct nvmap_client *client,
+		struct dma_buf *dmabuf)
 {
-	struct dma_buf *dmabuf = NULL;
 	int ret = 0;
-
-	dmabuf = dma_buf_get(fd);
-	if (IS_ERR(dmabuf))
-		return PTR_ERR(dmabuf);
 
 	if (dmabuf_is_nvmap(dmabuf)) {
 		ret = -EINVAL;

@@ -520,9 +520,8 @@
 		reset-names = "padctl", "sata_uphy", "pex_uphy";
 		clocks = <&tegra_car TEGRA210_CLK_HSIC_TRK>,
 			 <&tegra_car TEGRA210_CLK_USB2_TRK>,
-			 <&tegra_car TEGRA210_CLK_PLL_E>,
-			 <&tegra_car TEGRA210_CLK_PLL_U>;
-		clock-names = "hsic_trk", "usb2_trk", "pll_e", "pll_u";
+			 <&tegra_car TEGRA210_CLK_PLL_E>;
+		clock-names = "hsic_trk", "usb2_trk", "pll_e";
 		interrupts = <0 49 0x04>;
 		mboxes = <&xusb_mbox>;
 		mbox-names = "xusb";

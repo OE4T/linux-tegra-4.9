@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,6 +23,7 @@
 #include <linux/tegra-mce.h>
 #include <linux/platform/tegra/ari_mca.h>
 #include <linux/platform/tegra/tegra18_cpu_map.h>
+#include <linux/tegra-soc.h>
 
 static struct cpumask denver_cpumask;
 
@@ -335,6 +336,8 @@ static struct dentry *debugfs_node;
 static int __init denver_serr_init(void)
 {
 	int cpu;
+	if (tegra_get_chipid() != TEGRA_CHIPID_TEGRA18)
+		return 0;
 
 	/* Register the SError hook so that this driver is called on SError */
 	register_serr_hook(&hook);

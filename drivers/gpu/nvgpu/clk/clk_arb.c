@@ -617,7 +617,6 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 
 			table->gpc2clk_points[j].gpc_mhz =
 				arb->gpc2clk_f_points[i];
-
 			setfllclk.gpc2clkmhz = arb->gpc2clk_f_points[i];
 			status = clk_get_fll_clks(g, &setfllclk);
 			if (status < 0) {
@@ -625,7 +624,6 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 					"failed to get GPC2CLK slave clocks");
 				goto exit_vf_table;
 			}
-
 
 			table->gpc2clk_points[j].sys_mhz =
 				setfllclk.sys2clkmhz;
@@ -653,7 +651,6 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 
 	/* Second pass */
 	for (i = 0, j = 0; i < table->gpc2clk_num_points; i++) {
-		struct set_fll_clk setfllclk;
 
 		u16 alt_gpc2clk = table->gpc2clk_points[i].gpc_mhz;
 		gpc2clk_voltuv = gpc2clk_voltuv_sram = 0;
@@ -673,9 +670,9 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 				if (table->gpc2clk_points[j].sys_mhz >=
 							p5_info->min_mhz) {
 
+
 					table->gpc2clk_points[i].sys_mhz =
-						table->gpc2clk_points[j].
-									sys_mhz;
+						p5_info->min_mhz;
 
 					alt_gpc2clk = alt_gpc2clk <
 						table->gpc2clk_points[j].
@@ -709,8 +706,8 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 							p5_info->min_mhz) {
 
 					table->gpc2clk_points[i].xbar_mhz =
-						table->gpc2clk_points[j].
-								xbar_mhz;
+						p5_info->min_mhz;
+
 					alt_gpc2clk = alt_gpc2clk <
 						table->gpc2clk_points[j].
 								gpc_mhz ?
@@ -726,24 +723,6 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 
 				goto exit_vf_table;
 			}
-		}
-
-		/* alternate gpc2clk clock has been requested, we need to
-		 * calculate new ratios */
-		if (alt_gpc2clk != table->gpc2clk_points[i].gpc_mhz) {
-			setfllclk.gpc2clkmhz = alt_gpc2clk;
-
-			status = clk_get_fll_clks(g, &setfllclk);
-			if (status < 0) {
-				gk20a_err(dev_from_gk20a(g),
-					"failed to get GPC2CLK slave clocks");
-				goto exit_vf_table;
-			}
-
-			table->gpc2clk_points[i].sys_mhz =
-				setfllclk.sys2clkmhz;
-			table->gpc2clk_points[i].xbar_mhz =
-				setfllclk.xbar2clkmhz;
 		}
 
 		/* Calculate voltages */

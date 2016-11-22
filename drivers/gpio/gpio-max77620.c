@@ -306,7 +306,17 @@ static struct platform_driver max77620_gpio_driver = {
 	.id_table	= max77620_gpio_devtype,
 };
 
-module_platform_driver(max77620_gpio_driver);
+static int __init max77620_gpio_init(void)
+{
+	return platform_driver_register(&max77620_gpio_driver);
+}
+subsys_initcall(max77620_gpio_init);
+
+static void __exit max77620_gpio_exit(void)
+{
+	return platform_driver_unregister(&max77620_gpio_driver);
+}
+module_exit(max77620_gpio_exit);
 
 MODULE_DESCRIPTION("GPIO interface for MAX77620 and MAX20024 PMIC");
 MODULE_AUTHOR("Laxman Dewangan <ldewangan@nvidia.com>");

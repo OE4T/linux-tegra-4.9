@@ -408,6 +408,14 @@ static int dvfs_rail_connect_to_regulator(struct device *dev,
 		return v;
 	}
 
+	if (!rail->min_millivolts) {
+		int min_uv, max_uv;
+
+		if (!regulator_get_constraint_voltages(rail->reg, &min_uv,
+						       &max_uv))
+			rail->min_millivolts = min_uv / 1000;
+	}
+
 	rail->millivolts = v / 1000;
 	rail->new_millivolts = rail->millivolts;
 	dvfs_rail_stats_init(rail, rail->millivolts);
@@ -605,6 +613,11 @@ int tegra_dvfs_predict_millivolts(struct clk *c, unsigned long rate)
 	return ret;
 }
 EXPORT_SYMBOL(tegra_dvfs_predict_millivolts);
+
+int tegra_dvfs_predict_mv_at_hz_cur_tfloor(struct clk *c, unsigned long rate)
+{
+	return tegra_dvfs_predict_millivolts(c, rate);
+}
 
 /**
  * tegra_dvfs_set_rate - update rail voltage due to the clock rate change

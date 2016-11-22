@@ -52,7 +52,7 @@
 
 static inline u32 sec_lic_intr_enable_r(void)
 {
-	return 0x28040;
+	return 0x2804c;
 }
 static inline u32 sec_lic_intr_enable_dma0_f(u32 v)
 {
@@ -80,6 +80,6 @@ static inline u32 sec_lic_intr_enable_wdt_f(u32 v)
 }
 static inline u32 sec_lic_intr_status_r(void)
 {
-	return 0x28048;
+	return 0x28054;
 }
 #endif

@@ -57,7 +57,6 @@
 
 #include "clk.h"
 #include "clk-dfll.h"
-#include "cvb.h"
 
 /*
  * DFLL control registers - access via dfll_{readl,writel}

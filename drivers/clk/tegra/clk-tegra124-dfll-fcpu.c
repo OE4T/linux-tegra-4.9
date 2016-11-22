@@ -23,11 +23,11 @@
 #include <linux/init.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
+#include <soc/tegra/cvb.h>
 #include <soc/tegra/fuse.h>
 
 #include "clk.h"
 #include "clk-dfll.h"
-#include "cvb.h"
 
 struct dfll_fcpu_data {
 	const unsigned long *cpu_max_freq_table;

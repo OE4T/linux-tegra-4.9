@@ -21,7 +21,7 @@
 #include <linux/platform_device.h>
 #include <linux/reset.h>
 #include <linux/types.h>
-#include "cvb.h"
+#include <soc/tegra/cvb.h>
 
 /**
  * struct tegra_dfll_soc_data - SoC-specific hooks/integration for the DFLL driver

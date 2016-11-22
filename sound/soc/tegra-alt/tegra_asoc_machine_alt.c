@@ -1950,7 +1950,7 @@ static int tegra_machine_get_format(u64 *p_formats, char *fmt)
 
 	for (i = 0; i < ARRAY_SIZE(bit_format); i++) {
 		if (strcmp(bit_format[i], fmt) == 0) {
-			*p_formats = 1 << i;
+			*p_formats = (u64)1 << i;
 			return 0;
 		}
 	}

@@ -1521,18 +1521,11 @@ static void kmemleak_scan(void)
 
 }
 
-/*
- * Thread function performing automatic memory scanning. Unreferenced objects
- * at the end of a memory scan are reported but only the first time.
- */
-static int kmemleak_scan_thread(void *arg)
+static void sleep_on_first_run(void)
 {
+#ifdef CONFIG_DEBUG_KMEMLEAK_SCAN_ON
 	static int first_run = 1;
 
-	pr_info("Automatic memory scanning thread started\n");
-	set_user_nice(current, 10);
-
-#ifdef CONFIG_DEBUG_KMEMLEAK_SCAN_ON
 	/*
 	 * Wait before the first scan to allow the system to fully initialize.
 	 */
@@ -1543,6 +1536,18 @@ static int kmemleak_scan_thread(void *arg)
 			timeout = schedule_timeout_interruptible(timeout);
 	}
 #endif
+}
+
+/*
+ * Thread function performing automatic memory scanning. Unreferenced objects
+ * at the end of a memory scan are reported but only the first time.
+ */
+static int kmemleak_scan_thread(void *arg)
+{
+	pr_info("Automatic memory scanning thread started\n");
+	set_user_nice(current, 10);
+
+	sleep_on_first_run();
 
 	while (!kthread_should_stop()) {
 		signed long timeout = jiffies_scan_wait;

@@ -503,6 +503,15 @@ static int mce_coresight_cg_set(void *data, u64 val)
 	return 0;
 }
 
+/* Enable external debug on MCA */
+static int mce_edbgreq_set(void *data, u64 val)
+{
+	struct mce_regs regs;
+	regs.args[0] = TEGRA_ARI_MISC_CCPLEX_EDBGREQ;
+	send_smc(MCE_SMC_MISC_CCPLEX, &regs);
+	return 0;
+}
+
 static int mce_dbg_cstats_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, mce_dbg_cstats_show, inode->i_private);
@@ -522,6 +531,8 @@ DEFINE_SIMPLE_ATTRIBUTE(mce_enable_latic_fops,
 			NULL, mce_enable_latic_set, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(mce_coresight_cg_fops,
 			NULL, mce_coresight_cg_set, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(mce_edbgreq_fops,
+			NULL, mce_edbgreq_set, "%llu\n");
 
 static struct dentry *mce_debugfs_root;
 
@@ -538,6 +549,7 @@ static struct debugfs_entry mce_dbg_attrs[] = {
 	{ "cstats", &mce_cstats_fops, S_IRUGO },
 	{ "enable-latic", &mce_enable_latic_fops, S_IWUSR },
 	{ "coresight_cg_enable", &mce_coresight_cg_fops, S_IWUSR },
+	{ "edbgreq", &mce_edbgreq_fops, S_IWUSR },
 	{ NULL, NULL, 0 }
 };
 

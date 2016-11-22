@@ -177,6 +177,13 @@
 		status = "enabled";
 	};
 
+	bwmgr {
+		compatible = "nvidia,bwmgr";
+		clocks = <&tegra_car TEGRA210_CLK_EMC>;
+		clock-names = "emc";
+		status = "okay";
+	};
+
 	reserved-memory {
 		#address-cells = <2>;
 		#size-cells = <2>;

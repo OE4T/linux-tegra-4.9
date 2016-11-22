@@ -89,6 +89,7 @@
 			compatible = "extcon-gpio-states";
 			reg = <0x1>;
 			extcon-gpio,name = "VBUS";
+			extcon-gpio,wait-for-gpio-scan = <0>;
 			extcon-gpio,cable-states = <0x3 0x0
 						    0x0 0x2
 						    0x1 0x2

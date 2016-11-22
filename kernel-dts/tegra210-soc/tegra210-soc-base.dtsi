@@ -1842,6 +1842,15 @@
 		sensor-params-pdiv       = <8>;
 		sensor-params-tsamp-ate  = <480>;
 		sensor-params-pdiv-ate   = <8>;
+
+		throttle-cfgs {
+			throttle_heavy: heavy {
+				nvidia,priority = <100>;
+				nvidia,cpu-throt-percent = <85>;
+				#cooling-cells = <2>;
+			};
+		};
+
 		fuse_war@fuse_rev_0_1 {
 			device_type = "fuse_war";
 			match_fuse_rev = <0 1>;

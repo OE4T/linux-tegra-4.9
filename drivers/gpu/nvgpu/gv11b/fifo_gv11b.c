@@ -14,11 +14,17 @@
  */
 #include <linux/delay.h>
 #include <linux/types.h>
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+#include <linux/nvhost.h>
+#include <linux/nvhost_t194.h>
+#endif
 
 #include <nvgpu/semaphore.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/log.h>
-
+#include <nvgpu/dma.h>
+#include <nvgpu/nvgpu_mem.h>
+#include <nvgpu/gmmu.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
@@ -1411,6 +1417,123 @@ static unsigned int gv11b_fifo_handle_pbdma_intr_0(struct gk20a *g,
 	return rc_type;
 }
 
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+static int gv11b_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
+			u32 syncpt_id, struct nvgpu_mem *syncpt_buf)
+{
+	struct page **pages;
+	u32 nr_pages;
+	u32 i;
+	int err = 0;
+	struct gk20a *g = c->g;
+
+	/*
+	 * Add rw mapping for entire syncpt shim for current channel vm
+	 * TODO : This needs to replaced with a new mecahnism where
+	 * only current syncpoint range will be rw and other sync
+	 * points range is read only for current channel vm. Also share
+	 * these mapping accross channels if they share same vm
+	*/
+	nr_pages = DIV_ROUND_UP(g->syncpt_unit_size, PAGE_SIZE);
+	pages = nvgpu_kzalloc(g,  sizeof(struct page *) * nr_pages);
+	for (i = 0; i < nr_pages; i++)
+		pages[i] = phys_to_page(g->syncpt_unit_base +
+				PAGE_SIZE * i);
+	__nvgpu_mem_create_from_pages(g, syncpt_buf, pages, nr_pages);
+	nvgpu_kfree(g, pages);
+	syncpt_buf->gpu_va = nvgpu_gmmu_map(c->vm, syncpt_buf,
+			g->syncpt_unit_size, 0, gk20a_mem_flag_none,
+			false, APERTURE_SYSMEM);
+
+	if (!syncpt_buf->gpu_va) {
+		nvgpu_err(c->g, "failed to map syncpt buffer");
+		nvgpu_dma_free(c->g, syncpt_buf);
+		err = -ENOMEM;
+	}
+	return err;
+}
+
+static void gv11b_fifo_free_syncpt_buf(struct channel_gk20a *c,
+					struct nvgpu_mem *syncpt_buf)
+{
+	nvgpu_gmmu_unmap(c->vm, syncpt_buf, syncpt_buf->gpu_va);
+	nvgpu_dma_free(c->g, syncpt_buf);
+}
+
+static void gv11b_fifo_add_syncpt_wait_cmd(struct gk20a *g,
+		struct priv_cmd_entry *cmd, u32 off,
+		u32 id, u32 thresh, u64 gpu_va_base)
+{
+	u64 gpu_va = gpu_va_base +
+		nvhost_syncpt_unit_interface_get_byte_offset(id);
+
+	gk20a_dbg_fn("");
+
+	off = cmd->off + off;
+
+	/* semaphore_a */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010004);
+	nvgpu_mem_wr32(g, cmd->mem, off++,
+			(gpu_va >> 32) & 0xff);
+	/* semaphore_b */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010005);
+	/* offset */
+	nvgpu_mem_wr32(g, cmd->mem, off++, gpu_va & 0xffffffff);
+
+	/* semaphore_c */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010006);
+	/* payload */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x0);
+	/* semaphore_d */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010007);
+	/* operation: acq_geq, switch_en */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x4 | (0x1 << 12));
+}
+
+static u32 gv11b_fifo_get_syncpt_wait_cmd_size(void)
+{
+	return 8;
+}
+
+static void gv11b_fifo_add_syncpt_incr_cmd(struct gk20a *g,
+		bool wfi_cmd, struct priv_cmd_entry *cmd,
+		u32 id, u64 gpu_va_base)
+{
+	u32 off = cmd->off;
+	u64 gpu_va = gpu_va_base +
+		nvhost_syncpt_unit_interface_get_byte_offset(id);
+
+	gk20a_dbg_fn("");
+
+	/* semaphore_a */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010004);
+	nvgpu_mem_wr32(g, cmd->mem, off++,
+			(gpu_va >> 32) & 0xff);
+	/* semaphore_b */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010005);
+	/* offset */
+	nvgpu_mem_wr32(g, cmd->mem, off++, gpu_va & 0xffffffff);
+
+	/* semaphore_c */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010006);
+	/* payload */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x0);
+	/* semaphore_d */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010007);
+
+	/* operation: release, wfi */
+	nvgpu_mem_wr32(g, cmd->mem, off++,
+		0x2 | ((wfi_cmd ? 0x0 : 0x1) << 20));
+	/* ignored */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0);
+}
+
+static u32 gv11b_fifo_get_syncpt_incr_cmd_size(bool wfi_cmd)
+{
+	return 9;
+}
+#endif /* CONFIG_TEGRA_GK20A_NVHOST */
+
 void gv11b_init_fifo(struct gpu_ops *gops)
 {
 	gp10b_init_fifo(gops);
@@ -1446,4 +1569,15 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.handle_ctxsw_timeout = gv11b_fifo_handle_ctxsw_timeout;
 	gops->fifo.handle_pbdma_intr_0 =
 			 gv11b_fifo_handle_pbdma_intr_0;
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+	gops->fifo.alloc_syncpt_buf = gv11b_fifo_alloc_syncpt_buf;
+	gops->fifo.free_syncpt_buf = gv11b_fifo_free_syncpt_buf;
+	gops->fifo.add_syncpt_wait_cmd = gv11b_fifo_add_syncpt_wait_cmd;
+	gops->fifo.get_syncpt_wait_cmd_size =
+				gv11b_fifo_get_syncpt_wait_cmd_size;
+	gops->fifo.add_syncpt_incr_cmd = gv11b_fifo_add_syncpt_incr_cmd;
+	gops->fifo.get_syncpt_incr_cmd_size =
+				gv11b_fifo_get_syncpt_incr_cmd_size;
+#endif
+
 }

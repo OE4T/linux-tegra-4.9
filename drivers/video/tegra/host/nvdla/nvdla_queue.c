@@ -576,12 +576,12 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 
 		/* update end of action list */
 		if (i == user_task->num_prefences) {
-			opcode->value = ACTION_OPCODE_TERMINATE;
+			opcode->value = PREACTION_TERMINATE;
 			break;
 		}
 
 		/* set action type */
-		opcode->value = ACTION_OPCODE_READ_SEM;
+		opcode->value = PREACTION_SEM_GE;
 
 		/* get actual preaction address */
 		preaction = (struct dla_action_semaphore *)
@@ -606,12 +606,12 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 
 		/* update end of list */
 		if (i == user_task->num_postfences) {
-			opcode->value = ACTION_OPCODE_TERMINATE;
+			opcode->value = POSTACTION_TERMINATE;
 			break;
 		}
 
 		/* set action type */
-		opcode->value = ACTION_OPCODE_WRITE_SEM;
+		opcode->value = POSTACTION_SEM;
 
 		/* get actual post action mem */
 		postaction = (struct dla_action_semaphore *)

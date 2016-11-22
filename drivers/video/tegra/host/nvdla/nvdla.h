@@ -36,11 +36,6 @@
 
 #define MAX_NUM_ACTION_LIST	1
 
-/* TODO: Below should come from firmware interface */
-#define ACTION_OPCODE_TERMINATE		0x00
-#define ACTION_OPCODE_WRITE_SEM		0x80
-#define ACTION_OPCODE_READ_SEM		0x90
-
 /**
  * Maximum number of queue's per engine
  */

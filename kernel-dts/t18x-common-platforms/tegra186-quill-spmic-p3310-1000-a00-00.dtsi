@@ -104,11 +104,10 @@
 
 			spmic_gpio_input {
 				gpio-hog;
-				gpios = <5 0 6 0 7 0>;
+				gpios = <5 0 6 0>;
 				input;
 				label = "spmic_gpio_input_5",
-						"spmic_gpio_input_6",
-						"spmic_gpio_input_7";
+						"spmic_gpio_input_6";
 			};
 
 			spmic_wdt:watchdog {

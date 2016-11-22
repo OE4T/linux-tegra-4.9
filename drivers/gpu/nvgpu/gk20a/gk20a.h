@@ -312,6 +312,7 @@ struct gpu_ops {
 				u32 zcull_alloc_num, u32 *zcull_map_tiles);
 		int (*commit_global_timeslice)(struct gk20a *g,
 					struct channel_gk20a *c, bool patch);
+		int (*commit_inst)(struct channel_gk20a *c, u64 gpu_va);
 	} gr;
 	const char *name;
 	struct {

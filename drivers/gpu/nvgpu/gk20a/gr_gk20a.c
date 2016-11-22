@@ -75,7 +75,6 @@
 #define FECS_ARB_CMD_TIMEOUT_DEFAULT 2
 
 static int gk20a_init_gr_bind_fecs_elpg(struct gk20a *g);
-static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va);
 
 /* global ctx buffer */
 static int  gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g);
@@ -633,7 +632,7 @@ int gr_gk20a_halt_pipe(struct gk20a *g)
 }
 
 
-static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
+int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 {
 	u32 addr_lo;
 	u32 addr_hi;
@@ -1690,7 +1689,7 @@ restore_fe_go_idle:
 
 	gk20a_mem_wr(g, gold_mem, ctxsw_prog_main_image_zcull_ptr_o(), 0);
 
-	gr_gk20a_commit_inst(c, ch_ctx->global_ctx_buffer_va[GOLDEN_CTX_VA]);
+	g->ops.gr.commit_inst(c, ch_ctx->global_ctx_buffer_va[GOLDEN_CTX_VA]);
 
 	gr_gk20a_fecs_ctx_image_save(c, gr_fecs_method_push_adr_wfi_golden_save_v());
 
@@ -1709,7 +1708,7 @@ restore_fe_go_idle:
 				gr->ctx_vars.golden_image_size);
 	}
 
-	gr_gk20a_commit_inst(c, gr_mem->gpu_va);
+	g->ops.gr.commit_inst(c, gr_mem->gpu_va);
 
 	gr->ctx_vars.golden_image_initialized = true;
 
@@ -2063,7 +2062,7 @@ static int gr_gk20a_init_ctxsw_ucode_vaspace(struct gk20a *g)
 	if (err)
 		return err;
 
-	gk20a_init_inst_block(&ucode_info->inst_blk_desc, vm, 0);
+	g->ops.mm.init_inst_block(&ucode_info->inst_blk_desc, vm, 0);
 
 	/* Map ucode surface to GMMU */
 	ucode_info->surface_desc.gpu_va = gk20a_gmmu_map(vm,
@@ -3050,7 +3049,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 	ch_ctx->pm_ctx.pm_mode = ctxsw_prog_main_image_pm_mode_no_ctxsw_f();
 
 	/* commit gr ctx buffer */
-	err = gr_gk20a_commit_inst(c, ch_ctx->gr_ctx->mem.gpu_va);
+	err = g->ops.gr.commit_inst(c, ch_ctx->gr_ctx->mem.gpu_va);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g),
 			"fail to commit gr ctx buffer");
@@ -9128,4 +9127,5 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.setup_rop_mapping = gr_gk20a_setup_rop_mapping;
 	gops->gr.program_zcull_mapping = gr_gk20a_program_zcull_mapping;
 	gops->gr.commit_global_timeslice = gr_gk20a_commit_global_timeslice;
+	gops->gr.commit_inst = gr_gk20a_commit_inst;
 }

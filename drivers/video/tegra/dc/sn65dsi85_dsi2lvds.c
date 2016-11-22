@@ -138,8 +138,9 @@ static void sn65dsi85_dsi2lvds_enable(struct tegra_dc_dsi_data *dsi)
 	sn65dsi85_dsi2lvds_en_gpio(dsi2lvds, true);
 	sn65dsi85_reg_write(dsi2lvds, SN65DSI85_PLL_REFCLK_CFG,
 			dsi2lvds->pll_refclk_cfg);
-	sn65dsi85_reg_write(dsi2lvds, SN65DSI85_DIVIDER_MULTIPLIER, 0x10);
-		/* LVDS clk = DSI HS clk / 3 */
+	sn65dsi85_reg_write(dsi2lvds, SN65DSI85_DIVIDER_MULTIPLIER,
+			dsi2lvds->dsi_clk_div_mult);
+		/* LVDS clk = (DSI HS clk * mult) / div */
 	sn65dsi85_reg_write(dsi2lvds, SN65DSI85_DSI_CFG1,
 			dsi2lvds->dsi_cfg1);
 
@@ -165,8 +166,10 @@ static void sn65dsi85_dsi2lvds_enable(struct tegra_dc_dsi_data *dsi)
 			dsi2lvds->cha_vert_disp_size_low);
 	sn65dsi85_reg_write(dsi2lvds, SN65DSI85_CHA_VERT_DISP_SIZE_HIGH,
 			dsi2lvds->cha_vert_disp_size_high);
-	sn65dsi85_reg_write(dsi2lvds, SN65DSI85_CHA_SYNC_DELAY_LOW, 0x20);
-	sn65dsi85_reg_write(dsi2lvds, SN65DSI85_CHA_SYNC_DELAY_HIGH, 0x00);
+	sn65dsi85_reg_write(dsi2lvds, SN65DSI85_CHA_SYNC_DELAY_LOW,
+			dsi2lvds->cha_sync_delay_low);
+	sn65dsi85_reg_write(dsi2lvds, SN65DSI85_CHA_SYNC_DELAY_HIGH,
+			dsi2lvds->cha_sync_delay_high);
 	/* CHA_HSYNC_PULSE_WIDTH */
 	sn65dsi85_reg_write(dsi2lvds, SN65DSI85_CHA_HSYNC_PULSE_WIDTH_LOW,
 			dsi2lvds->h_pulse_width_low);
@@ -299,6 +302,9 @@ static int sn65dsi85_dsi2lvds_regs_show(struct seq_file *s, void *unused)
 	sn65dsi85_reg_read(dsi2lvds, SN65DSI85_DSI_CHB_CLK_RANGE, &val);
 	seq_printf(s, "%40s%#6x%#6x\n", "SN65DSI85_DSI_CHB_CLK_RANGE",
 			SN65DSI85_DSI_CHB_CLK_RANGE, val);
+	sn65dsi85_reg_read(dsi2lvds, SN65DSI85_LVDS_FORMAT, &val);
+	seq_printf(s, "%40s%#6x%#6x\n", "SN65DSI85_LVDS_FORMAT",
+			SN65DSI85_LVDS_FORMAT, val);
 	sn65dsi85_reg_read(dsi2lvds, SN65DSI85_VIDEO_CHA_LINE_LOW, &val);
 	seq_printf(s, "%40s%#6x%#6x\n", "SN65DSI85_VIDEO_CHA_LINE_LOW",
 			SN65DSI85_VIDEO_CHA_LINE_LOW, val);
@@ -437,6 +443,11 @@ static int of_dsi2lvds_parse_platform_data(struct i2c_client *client)
 		dsi2lvds->pll_refclk_cfg = 0x0B;
 			/* 137.5 < LVDS CLK < 154 MHz, HS_CLK_SRC=D-PHY */
 
+	if (!of_property_read_u32(np, "ti,dsi-clk-divider-multiplier", &temp))
+		dsi2lvds->dsi_clk_div_mult = temp;
+	else
+		dsi2lvds->dsi_clk_div_mult = 0x10;
+
 	if (!of_property_read_u32(np, "ti,dsi-cfg1", &temp))
 		dsi2lvds->dsi_cfg1 = temp;
 	else
@@ -493,6 +504,16 @@ static int of_dsi2lvds_parse_platform_data(struct i2c_client *client)
 		dsi2lvds->cha_vert_disp_size_high = temp;
 	else
 		dsi2lvds->cha_vert_disp_size_high = 0x04;
+
+	if (!of_property_read_u32(np, "ti,video-cha-sync-delay-low", &temp))
+		dsi2lvds->cha_sync_delay_low = temp;
+	else
+		dsi2lvds->cha_sync_delay_low = 0x20;
+
+	if (!of_property_read_u32(np, "ti,video-cha-sync-delay-high", &temp))
+		dsi2lvds->cha_sync_delay_high = temp;
+	else
+		dsi2lvds->cha_sync_delay_high = 0x0;
 
 	if (!of_property_read_u32(np, "ti,h-pulse-width-low", &temp))
 		dsi2lvds->h_pulse_width_low = temp;

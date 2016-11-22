@@ -29,6 +29,7 @@ struct tegra_dc_dsi2lvds_data {
 	int en_gpio; /* GPIO */
 	int en_gpio_flags;
 	int pll_refclk_cfg;
+	int dsi_clk_div_mult;
 	int dsi_cfg1;
 	int dsi_cha_clk_range;
 	int dsi_chb_clk_range;
@@ -47,6 +48,8 @@ struct tegra_dc_dsi2lvds_data {
 	int v_back_porch;
 	int h_front_porch;
 	int v_front_porch;
+	int cha_sync_delay_low;
+	int cha_sync_delay_high;
 	struct dentry *debugdir;
 };
 

@@ -19,7 +19,6 @@
  */
 
 #include <dt-bindings/memory/tegra-swgroup.h>
-#include "dt-bindings/memory/tegra186-swgroup.h"
 #include <dt-bindings/display/tegra-dc.h>
 #include "dt-bindings/clock/tegra186-clock.h"
 #include "dt-bindings/reset/tegra186-reset.h"

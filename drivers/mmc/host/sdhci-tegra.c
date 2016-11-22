@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google, Inc.
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -33,6 +34,8 @@
 #include <linux/regulator/consumer.h>
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
+#include <linux/dma-mapping.h>
+#include <linux/mmc/cmdq_hci.h>
 
 #include <linux/tegra_prod.h>
 #include <linux/tegra-soc.h>
@@ -171,6 +174,7 @@ struct sdhci_tegra {
 	bool wake_enable_failed;
 	bool cd_wakeup_capable;
 	int cd_gpio;
+	bool enable_hwcq;
 };
 
 /* Module params */
@@ -1249,9 +1253,14 @@ static const struct sdhci_tegra_soc_data soc_data_tegra210 = {
 static const struct sdhci_pltfm_data sdhci_tegra186_pdata = {
 	.quirks = SDHCI_QUIRK_SINGLE_POWER_WRITE |
 		  SDHCI_QUIRK_NO_HISPD_BIT |
-		  SDHCI_QUIRK_BROKEN_ADMA_ZEROLEN_DESC,
-	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN,
-	.ops  = &tegra_sdhci_ops,
+		SDHCI_QUIRK_DATA_TIMEOUT_USES_SDCLK |
+		SDHCI_QUIRK_NO_HISPD_BIT |
+		SDHCI_QUIRK_BROKEN_ADMA_ZEROLEN_DESC |
+		SDHCI_QUIRK_NO_ENDATTR_IN_NOPDESC,
+	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN |
+		SDHCI_QUIRK2_USE_64BIT_ADDR |
+		SDHCI_QUIRK2_HOST_OFF_CARD_ON,
+	.ops  = &tegra114_sdhci_ops,
 };
 
 static const struct sdhci_tegra_soc_data soc_data_tegra186 = {
@@ -1290,6 +1299,9 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 	tegra_host->cd_gpio = of_get_named_gpio(np, "cd-gpios", 0);
 	tegra_host->cd_wakeup_capable = of_property_read_bool(np,
 		"nvidia,cd-wakeup-capable");
+#ifdef CONFIG_MMC_CQ_HCI
+	tegra_host->enable_hwcq = of_property_read_bool(np, "nvidia,enable-hwcq");
+#endif
 
 	return 0;
 }
@@ -1318,6 +1330,15 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 	tegra_host = sdhci_pltfm_priv(pltfm_host);
 	tegra_host->ddr_signaling = false;
 	tegra_host->pad_calib_required = false;
+
+	/* FIXME: This is for until dma-mask binding is supported in DT.
+	 *        Set coherent_dma_mask for each Tegra SKUs.
+	 *        If dma_mask is NULL, set it to coherent_dma_mask. */
+	pdev->dev.coherent_dma_mask = DMA_BIT_MASK(64);
+
+	if (!pdev->dev.dma_mask)
+		pdev->dev.dma_mask = &pdev->dev.coherent_dma_mask;
+
 	tegra_host->soc_data = soc_data;
 
 	rc = mmc_of_parse(host->mmc);
@@ -1399,6 +1420,16 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 
 	if (tegra_platform_is_vdk())
 		host->mmc->caps |= MMC_CAP2_NO_EXTENDED_GP;
+#ifdef CONFIG_MMC_CQ_HCI
+	if (tegra_host->enable_hwcq) {
+		host->mmc->caps2 |= MMC_CAP2_HW_CQ;
+		host->cq_host = cmdq_pltfm_init(pdev);
+		if (IS_ERR(host->cq_host))
+			pr_err("CMDQ: Error in cmdq_platfm_init function\n");
+		else
+			pr_info("CMDQ: cmdq_platfm_init successful\n");
+	}
+#endif
 
 	rc = sdhci_add_host(host);
 	if (rc)

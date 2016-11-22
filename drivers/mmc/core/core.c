@@ -5,6 +5,7 @@
  *  SD support Copyright (C) 2004 Ian Molton, All Rights Reserved.
  *  Copyright (C) 2005-2008 Pierre Ossman, All Rights Reserved.
  *  MMCv4 support Copyright (C) 2006 Philip Langdale, All Rights Reserved.
+ *  Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -346,6 +347,52 @@ static int mmc_start_request(struct mmc_host *host, struct mmc_request *mrq)
 	return 0;
 }
 
+static void mmc_start_cmdq_request(struct mmc_host *host,
+		struct mmc_request *mrq)
+{
+	if (mrq->data) {
+		pr_debug("%s:     blksz %d blocks %d flags %08x tsac %lu ms nsac %d\n",
+			mmc_hostname(host), mrq->data->blksz,
+			mrq->data->blocks, mrq->data->flags,
+			mrq->data->timeout_ns / NSEC_PER_MSEC,
+			mrq->data->timeout_clks);
+	}
+
+	if (mrq->cmd) {
+		mrq->cmd->error = 0;
+		mrq->cmd->mrq = mrq;
+	}
+	if (mrq->data) {
+		BUG_ON(mrq->data->blksz > host->max_blk_size);
+		BUG_ON(mrq->data->blocks > host->max_blk_count);
+		BUG_ON(mrq->data->blocks * mrq->data->blksz >
+			host->max_req_size);
+
+		if (mrq->cmd)
+			mrq->cmd->data = mrq->data;
+		mrq->data->error = 0;
+		mrq->data->mrq = mrq;
+	}
+
+	led_trigger_event(host->led, LED_FULL);
+
+	host->cmdq_ops->request(host, mrq);
+}
+
+/*
+ * Check if the host can support QBR to handle order between requests
+ * where required. If not, block driver should not issue any new cmds
+ * while a dcmd is in progress.
+ */
+int mmc_cmdq_support_qbr(struct mmc_host *host)
+{
+	if (host->caps2 & MMC_CAP2_CMDQ_QBR)
+		return 1;
+	else
+		return 0;
+}
+EXPORT_SYMBOL(mmc_cmdq_support_qbr);
+
 /**
  *	mmc_start_bkops - start BKOPS for supported cards
  *	@card: MMC card to start BKOPS
@@ -595,6 +642,10 @@ void mmc_wait_for_req_done(struct mmc_host *host, struct mmc_request *mrq)
 		__mmc_start_request(host, mrq);
 	}
 
+	/* Resume CQE operations when eMMC is in CQ Halt state */
+	if (host->card && mmc_card_cmdq_halt(host->card))
+		mmc_cmdq_initiate_halt(host, false);
+
 	mmc_retune_release(host);
 }
 EXPORT_SYMBOL(mmc_wait_for_req_done);
@@ -653,6 +704,158 @@ static void mmc_post_req(struct mmc_host *host, struct mmc_request *mrq,
 	if (host->ops->post_req)
 		host->ops->post_req(host, mrq, err);
 }
+
+/**
+  *	mmc_cmdq_post_req - post process of a completed request
+  *	@host: host instance
+  *	@mrq: the request to be processed
+  *	@err: non-zero is error, success otherwise
+  */
+void mmc_cmdq_post_req(struct mmc_host *host, struct mmc_request *mrq, int err)
+{
+	if (host->cmdq_ops->post_req)
+		host->cmdq_ops->post_req(host, mrq, err);
+}
+EXPORT_SYMBOL(mmc_cmdq_post_req);
+
+/**
+ *	mmc_cmdq_halt - halt/un-halt the command queue engine
+ *	@host: host instance
+ *	@halt: true - halt, un-halt otherwise
+ *
+ *	Host halts the command queue engine. It should complete
+ *	the ongoing transfer and release the SD bus.
+ *	All legacy SD commands can be sent upon successful
+ *	completion of this function.
+ *	Returns 0 on success, negative otherwise
+ */
+int mmc_cmdq_halt(struct mmc_host *host, bool halt)
+{
+	int err = 0;
+
+	if ((halt && (host->cmdq_ctx.curr_state & CMDQ_STATE_HALT)) ||
+	    (!halt && !(host->cmdq_ctx.curr_state & CMDQ_STATE_HALT)))
+		return 1;
+
+	if (host->cmdq_ops->halt) {
+		err = host->cmdq_ops->halt(host, halt);
+		if (!err && halt)
+			host->cmdq_ctx.curr_state |= CMDQ_STATE_HALT;
+		else if (!err && !halt)
+			host->cmdq_ctx.curr_state &= ~CMDQ_STATE_HALT;
+	}
+	return 0;
+}
+EXPORT_SYMBOL(mmc_cmdq_halt);
+
+/**
+ *	mmc_cmdq_discard_task - discard the tasks in command queue engine
+ *	@host: host instance
+ *	@tag: task ID that to be discarded
+ *	@all:	true - discard all tasks in command queue engine and
+ *		       tag vaue is ignored
+ *		false - Only one task (@tag) will be discarded.
+ *
+ *	Host discards the task specified by tag or all the tasks in
+ *	command queue engine.
+ *	Returns 0 on success, error otherwise
+ */
+int mmc_cmdq_discard_task(struct mmc_host *host, u32 tag, bool all)
+{
+	int err = 0;
+
+	if (host->cmdq_ops->discard_task) {
+		err = host->cmdq_ops->discard_task(host, tag, all);
+		if (err)
+			return err;
+		host->cmdq_ctx.curr_state &= ~CMDQ_STATE_HALT;
+		host->cmdq_ctx.curr_state &= ~CMDQ_STATE_ERR;
+	}
+	return err;
+}
+EXPORT_SYMBOL(mmc_cmdq_discard_task);
+
+void mmc_cmdq_pause(struct mmc_card *card, bool pause)
+{
+	struct mmc_host *host = card->host;
+	struct mmc_cmdq_context_info *ctx_info = &host->cmdq_ctx;
+
+	if (pause) {
+		ctx_info->rpmb_in_wait = true;
+		mmc_card_set_cmdq_pause(card);
+		mmc_wait_hw_cmdq_empty(host);
+	} else {
+		ctx_info->rpmb_in_wait = false;
+		mmc_card_clr_cmdq_pause(card);
+	}
+}
+EXPORT_SYMBOL(mmc_cmdq_pause);
+
+int mmc_cmdq_start_req(struct mmc_host *host, struct mmc_cmdq_req *cmdq_req)
+{
+	struct mmc_request *mrq = &cmdq_req->mrq;
+
+	mrq->host = host;
+	if (mmc_card_removed(host->card)) {
+		mrq->cmd->error = -ENOMEDIUM;
+		return -ENOMEDIUM;
+	}
+	mmc_start_cmdq_request(host, mrq);
+	return 0;
+}
+EXPORT_SYMBOL(mmc_cmdq_start_req);
+
+void mmc_wait_hw_cmdq_empty(struct mmc_host *host)
+{
+	if (host->cmdq_ops->wait_cq_empty)
+		host->cmdq_ops->wait_cq_empty(host);
+}
+EXPORT_SYMBOL(mmc_wait_hw_cmdq_empty);
+
+/*
+ *	mmc_cmdq_initiate_halt - Halt/Resume eMMC CQ engine
+ *	@host: MMC host
+ *	@halt: Halt: true | Resume: false
+ *
+ *	Halt and Resume the CQ engine when host issues special commands
+ *	like CMD8 to read eMMC device registers in CQE mode.
+ */
+int mmc_cmdq_initiate_halt(struct mmc_host *host, bool halt)
+{
+	int err = 0;
+
+	mmc_claim_host(host);
+	if (halt) {
+		host->cmdq_ctx.active_ncqcmd = true;
+		mmc_wait_hw_cmdq_empty(host);
+		err = mmc_cmdq_halt(host, true);
+		if (err) {
+			host->cmdq_ctx.active_ncqcmd = false;
+			mmc_release_host(host);
+			return err;
+		}
+		mmc_card_set_cmdq_halt(host->card);
+		host->card->ext_csd.cmdq_mode_en = false;
+		if (host->ops->enable_host_int)
+			host->ops->enable_host_int(host, true);
+		mmc_card_clr_cmdq(host->card);
+	} else {
+		err = mmc_cmdq_halt(host, false);
+		if (err) {
+			mmc_release_host(host);
+			return err;
+		}
+		mmc_card_set_cmdq(host->card);
+		if (host->ops->enable_host_int)
+			host->ops->enable_host_int(host, false);
+		host->card->ext_csd.cmdq_mode_en = true;
+		mmc_card_clr_cmdq_halt(host->card);
+		host->cmdq_ctx.active_ncqcmd = false;
+	}
+	mmc_release_host(host);
+	return err;
+}
+EXPORT_SYMBOL(mmc_cmdq_initiate_halt);
 
 /**
  *	mmc_start_req - start a non-blocking request
@@ -850,6 +1053,14 @@ int mmc_wait_for_cmd(struct mmc_host *host, struct mmc_command *cmd, int retries
 
 	mrq.cmd = cmd;
 	cmd->data = NULL;
+
+	if (host->card && mmc_card_cmdq(host->card)) {
+		if (mmc_cmdq_initiate_halt(host, true)) {
+			pr_err("%s: %s: CQE Halt failed, try again.\n",
+				mmc_hostname(host), __func__);
+			return -EAGAIN;
+		}
+	}
 
 	mmc_wait_for_req(host, &mrq);
 
@@ -2173,6 +2384,147 @@ static unsigned int mmc_erase_timeout(struct mmc_card *card,
 		return mmc_mmc_erase_timeout(card, arg, qty);
 }
 
+static void mmc_wait_hw_cmdq_done(struct mmc_request *mrq)
+{
+	complete(&mrq->completion);
+}
+
+static void mmc_wait_for_hw_cmdq_req_done(struct mmc_host *host,
+		struct mmc_request *mrq)
+{
+	struct mmc_command *cmd;
+	int err = 0;
+
+	err = wait_for_completion_timeout(&mrq->completion, jiffies + 10*HZ);
+	if (err) {
+		cmd = mrq->cmd;
+		if (cmd->error)
+			pr_debug("%s: req failed (CMD%u), err: %d\n",
+				mmc_hostname(host), cmd->opcode, cmd->error);
+	} else {
+		pr_err("%s: Timeout waiting for CQ interrupt, err: %d\n",
+				mmc_hostname(host), err);
+	}
+}
+
+static int mmc_wait_for_dcmd(struct mmc_host *host, struct mmc_command *cmd,
+		int retries)
+{
+	struct mmc_request *mrq;
+
+	WARN_ON(!host->claimed);
+
+	memset(cmd->resp, 0, sizeof(cmd->resp));
+	mrq = devm_kzalloc(host->parent, sizeof(struct mmc_request),
+			GFP_KERNEL);
+	mrq->cmdq_req = devm_kzalloc(host->parent, sizeof(struct mmc_cmdq_req),
+			GFP_KERNEL);
+	cmd->data = NULL;
+	cmd->error = 0;
+
+	mrq->cmd = cmd;
+	mrq->host = host;
+	init_completion(&mrq->completion);
+	mrq->done = mmc_wait_hw_cmdq_done;
+	mrq->cmdq_req->cmdq_req_flags = DCMD;
+	mmc_start_cmdq_request(host, mrq);
+	mmc_wait_for_hw_cmdq_req_done(host, mrq);
+
+	devm_kfree(host->parent, mrq->cmdq_req);
+	devm_kfree(host->parent, mrq);
+
+	return cmd->error;
+}
+
+static int mmc_do_erase_use_cmdq(struct mmc_card *card, unsigned int from,
+			unsigned int to, unsigned int arg)
+{
+	struct mmc_command cmd = {0};
+	unsigned int qty = 0;
+	unsigned long timeout;
+	unsigned int fr, nr;
+	int err;
+
+	fr = from;
+	nr = to - from + 1;
+
+	if (card->erase_shift)
+		qty += ((to >> card->erase_shift) -
+			(from >> card->erase_shift)) + 1;
+	else
+		qty += ((to / card->erase_size) -
+			(from / card->erase_size)) + 1;
+
+	if (!mmc_card_blockaddr(card)) {
+		from <<= 9;
+		to <<= 9;
+	}
+
+	cmd.opcode = MMC_ERASE_GROUP_START;
+	cmd.arg = from;
+	cmd.flags = MMC_RSP_SPI_R1 | MMC_RSP_R1 | MMC_CMD_AC;
+	err = mmc_wait_for_dcmd(card->host, &cmd, 0);
+	if (err) {
+		pr_err("mmc_erase: group start error %d, status %#x\n",
+			err, cmd.resp[0]);
+		err = -EIO;
+		goto out;
+	}
+
+	memset(&cmd, 0, sizeof(struct mmc_command));
+	cmd.opcode = MMC_ERASE_GROUP_END;
+	cmd.arg = to;
+	cmd.flags = MMC_RSP_SPI_R1 | MMC_RSP_R1 | MMC_CMD_AC;
+	err = mmc_wait_for_dcmd(card->host, &cmd, 0);
+	if (err) {
+		pr_err("mmc_erase: group end error %d, status %#x\n",
+		       err, cmd.resp[0]);
+		err = -EIO;
+		goto out;
+	}
+
+	memset(&cmd, 0, sizeof(struct mmc_command));
+	cmd.opcode = MMC_ERASE;
+	cmd.arg = arg;
+	cmd.flags = MMC_RSP_SPI_R1B | MMC_RSP_R1B | MMC_CMD_AC;
+	err = mmc_wait_for_dcmd(card->host, &cmd, 0);
+	if (err) {
+		pr_err("mmc_erase: erase error %d, status %#x\n",
+		       err, cmd.resp[0]);
+		err = -EIO;
+		goto out;
+	}
+
+	timeout = jiffies + msecs_to_jiffies(MMC_CORE_TIMEOUT_MS);
+	do {
+		memset(&cmd, 0, sizeof(struct mmc_command));
+		cmd.opcode = MMC_SEND_STATUS;
+		cmd.arg = card->rca << 16;
+		cmd.flags = MMC_RSP_R1 | MMC_CMD_AC;
+		/* Do not retry else we can't see errors */
+		err = mmc_wait_for_dcmd(card->host, &cmd, 0);
+		if (err || (cmd.resp[0] & 0xFDF92000)) {
+			pr_err("error %d requesting status %#x\n",
+					err, cmd.resp[0]);
+			err = -EIO;
+			goto out;
+		}
+
+		/* Timeout if the device never becomes ready for data and
+		 * never leaves the program state.
+		 */
+		if (time_after(jiffies, timeout)) {
+			pr_err("%s: Card stuck in programming state! %s\n",
+				mmc_hostname(card->host), __func__);
+			err =  -EIO;
+			goto out;
+		}
+	} while (!(cmd.resp[0] & R1_READY_FOR_DATA) ||
+		 (R1_CURRENT_STATE(cmd.resp[0]) == R1_STATE_PRG));
+out:
+	return err;
+}
+
 static int mmc_do_erase(struct mmc_card *card, unsigned int from,
 			unsigned int to, unsigned int arg)
 {
@@ -2426,7 +2778,10 @@ int mmc_erase(struct mmc_card *card, unsigned int from, unsigned int nr,
 			return err;
 	}
 
-	return mmc_do_erase(card, from, to, arg);
+	if (mmc_card_cmdq(card))
+		return mmc_do_erase_use_cmdq(card, from, to, arg);
+	else
+		return mmc_do_erase(card, from, to, arg);
 }
 EXPORT_SYMBOL(mmc_erase);
 

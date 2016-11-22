@@ -950,6 +950,35 @@ static int tegra_dvfs_suspend(void)
 	return ret;
 }
 
+int tegra_dvfs_init_thermal_dvfs_voltages(int *therm_voltages,
+	int *peak_voltages, int freqs_num, int ranges_num, struct dvfs *d)
+{
+	int *millivolts;
+	int freq_idx, therm_idx;
+
+	for (therm_idx = 0; therm_idx < ranges_num; therm_idx++) {
+		millivolts = therm_voltages + therm_idx * MAX_DVFS_FREQS;
+		for (freq_idx = 0; freq_idx < freqs_num; freq_idx++) {
+			int mv = millivolts[freq_idx];
+			if ((mv > d->dvfs_rail->max_millivolts) ||
+			    (mv < d->dvfs_rail->min_millivolts) ||
+			    (freq_idx && (mv < millivolts[freq_idx - 1]))) {
+				WARN(1, "%s: invalid thermal dvfs entry %d(%d, %d)\n",
+				     d->clk_name, mv, freq_idx, therm_idx);
+				return -EINVAL;
+			}
+			if (mv > peak_voltages[freq_idx])
+				peak_voltages[freq_idx] = mv;
+		}
+	}
+
+	d->millivolts = therm_voltages;
+	d->peak_millivolts = peak_voltages;
+	d->therm_dvfs = ranges_num > 1;
+
+	return 0;
+}
+
 static int tegra_dvfs_pm_notifier_event(struct notifier_block *nb,
 				unsigned long event, void *data)
 {

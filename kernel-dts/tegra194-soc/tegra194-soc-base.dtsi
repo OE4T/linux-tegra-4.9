@@ -24,7 +24,6 @@
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/gpio/tegra186-gpio.h>
 #include <dt-bindings/memory/tegra-swgroup.h>
-#include <dt-bindings/memory/tegra186-swgroup.h>
 
 / {
 	compatible = "nvidia,tegra186";

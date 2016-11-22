@@ -20,6 +20,7 @@
 #include <linux/clk-provider.h>
 #include <linux/of_address.h>
 
+#include <soc/tegra/cvb.h>
 #include <soc/tegra/tegra-dvfs.h>
 #include <soc/tegra/fuse.h>
 #include <soc/tegra/tegra_emc.h>
@@ -273,6 +274,150 @@ static struct dvfs cpu_lp_dvfs = {
 	.dvfs_rail	= &tegra210_dvfs_rail_vdd_cpu,
 	.freqs_mult	= KHZ,
 };
+
+/* GPU DVFS tables */
+#define NA_FREQ_CVB_TABLE	\
+	.freqs_mult = KHZ,	\
+	.speedo_scale = 100,	\
+	.thermal_scale = 10,	\
+	.voltage_scale = 1000,	\
+	.cvb_table = {		\
+		/* f	   dfll pll:    c0,       c1,       c2,       c3,       c4,       c5 */    \
+		{   76800, { }, {   814294,     8144,     -940,      808,   -21583,      226 }, }, \
+		{  153600, { }, {   856185,     8144,     -940,      808,   -21583,      226 }, }, \
+		{  230400, { }, {   898077,     8144,     -940,      808,   -21583,      226 }, }, \
+		{  307200, { }, {   939968,     8144,     -940,      808,   -21583,      226 }, }, \
+		{  384000, { }, {   981860,     8144,     -940,      808,   -21583,      226 }, }, \
+		{  460800, { }, {  1023751,     8144,     -940,      808,   -21583,      226 }, }, \
+		{  537600, { }, {  1065642,     8144,     -940,      808,   -21583,      226 }, }, \
+		{  614400, { }, {  1107534,     8144,     -940,      808,   -21583,      226 }, }, \
+		{  691200, { }, {  1149425,     8144,     -940,      808,   -21583,      226 }, }, \
+		{  768000, { }, {  1191317,     8144,     -940,      808,   -21583,      226 }, }, \
+		{  844800, { }, {  1233208,     8144,     -940,      808,   -21583,      226 }, }, \
+		{  921600, { }, {  1275100,     8144,     -940,      808,   -21583,      226 }, }, \
+		{  998400, { }, {  1316991,     8144,     -940,      808,   -21583,      226 }, }, \
+		{ 0,	   { }, { }, }, \
+	}
+
+#define NA_FREQ_CVB_TABLE_XA	\
+	.freqs_mult = KHZ,	\
+	.speedo_scale = 100,	\
+	.thermal_scale = 10,	\
+	.voltage_scale = 1000,	\
+	.cvb_table = {		\
+		/* f	   dfll pll:    c0,       c1,       c2,       c3,       c4,       c5 */    \
+		{   76800, { }, {  1526811,   -59106,      963,      238,   -11292,      185 }, }, \
+		{  153600, { }, {  1543573,   -57798,      910,      179,    -9918,      191 }, }, \
+		{  230400, { }, {  1567838,   -56991,      869,       60,    -8545,      203 }, }, \
+		{  307200, { }, {  1600241,   -56742,      841,        0,    -7019,      209 }, }, \
+		{  384000, { }, {  1635184,   -56501,      813,        0,    -5493,      221 }, }, \
+		{  460800, { }, {  1672308,   -56300,      787,     -119,    -3662,      226 }, }, \
+		{  537600, { }, {  1712114,   -56093,      759,     -179,    -1526,      238 }, }, \
+		{  614400, { }, {  1756009,   -56048,      737,     -298,      610,      244 }, }, \
+		{  691200, { }, {  1790251,   -54860,      687,     -358,     3204,      238 }, }, \
+		{  768000, { }, {  1783830,   -49449,      532,     -477,     6714,      197 }, }, \
+		{  844800, { }, {  1819706,   -45928,      379,     -358,     7019,       89 }, }, \
+		{ 0,	   { }, { }, }, \
+	}
+
+#define FIXED_FREQ_CVB_TABLE	\
+	.freqs_mult = KHZ,	\
+	.speedo_scale = 100,	\
+	.thermal_scale = 10,	\
+	.voltage_scale = 1000,	\
+	.cvb_table = {		\
+		/* f	   dfll pll:    c0,       c1,       c2 */    \
+		{   76800, { }, {  1786666,   -85625,     1632 }, }, \
+		{  153600, { }, {  1846729,   -87525,     1632 }, }, \
+		{  230400, { }, {  1910480,   -89425,     1632 }, }, \
+		{  307200, { }, {  1977920,   -91325,     1632 }, }, \
+		{  384000, { }, {  2049049,   -93215,     1632 }, }, \
+		{  460800, { }, {  2122872,   -95095,     1632 }, }, \
+		{  537600, { }, {  2201331,   -96985,     1632 }, }, \
+		{  614400, { }, {  2283479,   -98885,     1632 }, }, \
+		{  691200, { }, {  2369315,  -100785,     1632 }, }, \
+		{  768000, { }, {  2458841,  -102685,     1632 }, }, \
+		{  844800, { }, {  2550821,  -104555,     1632 }, }, \
+		{  921600, { }, {  2647676,  -106455,     1632 }, }, \
+		{ 0,	   { }, { }, }, \
+	}
+
+static struct dvfs gpu_dvfs = {
+	.clk_name       = "gpcclk",
+	.auto_dvfs      = true,
+	.dvfs_rail      = &tegra210_dvfs_rail_vdd_gpu,
+};
+
+static struct cvb_dvfs gpu_cvb_dvfs_table[] = {
+	{
+		.speedo_id = 4,
+		.process_id = -1,
+		.pll_min_millivolts = 918,
+		.max_mv = 1113,
+		.max_freq = 844800,
+#ifdef CONFIG_TEGRA_USE_NA_GPCPLL
+		NA_FREQ_CVB_TABLE_XA,
+#else
+		FIXED_FREQ_CVB_TABLE,
+#endif
+	},
+
+	{
+		.speedo_id = 3,
+		.process_id = -1,
+		.pll_min_millivolts = 810,
+		.max_mv = 1150,
+		.max_freq = 921600,
+#ifdef CONFIG_TEGRA_USE_NA_GPCPLL
+		NA_FREQ_CVB_TABLE,
+#else
+		FIXED_FREQ_CVB_TABLE,
+#endif
+	},
+
+	{
+		.speedo_id = 2,
+		.process_id = -1,
+		.pll_min_millivolts = 818,
+		.max_mv = 1150,
+		.max_freq = 998400,
+#ifdef CONFIG_TEGRA_USE_NA_GPCPLL
+		NA_FREQ_CVB_TABLE,
+#else
+		FIXED_FREQ_CVB_TABLE,
+#endif
+	},
+
+	{
+		.speedo_id = 1,
+		.process_id = -1,
+		.pll_min_millivolts = 840,
+		.max_mv = 1150,
+		.max_freq = 998400,
+#ifdef CONFIG_TEGRA_USE_NA_GPCPLL
+		NA_FREQ_CVB_TABLE,
+#else
+		FIXED_FREQ_CVB_TABLE,
+#endif
+	},
+
+	{
+		.speedo_id = 0,
+		.process_id = -1,
+		.pll_min_millivolts = 950,
+#ifdef CONFIG_TEGRA_GPU_DVFS
+		.max_mv = 1150,
+#else
+		.max_mv = 1000,
+#endif
+		.max_freq = 921600,
+		FIXED_FREQ_CVB_TABLE,
+	},
+};
+
+static int gpu_vmin[MAX_THERMAL_RANGES];
+static int gpu_peak_millivolts[MAX_DVFS_FREQS];
+static int gpu_millivolts[MAX_THERMAL_RANGES][MAX_DVFS_FREQS];
 
 /* Core DVFS tables */
 static const int core_millivolts[MAX_DVFS_FREQS] = {
@@ -528,7 +673,7 @@ static void init_dvfs_one(struct dvfs *d, int max_freq_index)
 	struct clk *c = clk_get_sys(d->clk_name, d->clk_name);
 
 	if (IS_ERR(c)) {
-		pr_debug("tegra210_dvfs: no clock found for %s\n",
+		pr_info("tegra210_dvfs: no clock found for %s\n",
 			d->clk_name);
 		return;
 	}
@@ -553,16 +698,6 @@ static bool match_dvfs_one(const char *name, int dvfs_speedo_id,
 	return true;
 }
 
-static int round_voltage(int mv, struct rail_alignment *align, bool up)
-{
-	if (align->step_uv) {
-		int uv = max(mv * 1000, align->offset_uv) - align->offset_uv;
-		uv = (uv + (up ? align->step_uv - 1 : 0)) / align->step_uv;
-		return (uv * align->step_uv + align->offset_uv) / 1000;
-	}
-	return mv;
-}
-
 static int set_cpu_dvfs_data(unsigned long max_freq, struct cpu_dvfs *d,
 			     struct dvfs *cpu_dvfs, int *max_freq_index)
 {
@@ -579,8 +714,8 @@ static int set_cpu_dvfs_data(unsigned long max_freq, struct cpu_dvfs *d,
 			 min_dfll_mv, tegra210_dvfs_rail_vdd_cpu.min_millivolts);
 		min_dfll_mv = tegra210_dvfs_rail_vdd_cpu.min_millivolts;
 	}
-	min_dfll_mv = round_voltage(min_dfll_mv, align, true);
-	d->max_mv = round_voltage(d->max_mv, align, false);
+	min_dfll_mv = tegra_round_voltage(min_dfll_mv, align, true);
+	d->max_mv = tegra_round_voltage(d->max_mv, align, false);
 
 	if (tegra_get_cpu_fv_table(&num_freqs, &freqs, &dfll_millivolts))
 		return -EPROBE_DEFER;
@@ -665,9 +800,9 @@ static int set_cpu_lp_dvfs_data(unsigned long max_freq, struct cpu_dvfs *d,
 			 min_mv, tegra210_dvfs_rail_vdd_cpu.min_millivolts);
 		min_mv = tegra210_dvfs_rail_vdd_cpu.min_millivolts;
 	}
-	min_mv = round_voltage(min_mv, align, true);
+	min_mv = tegra_round_voltage(min_mv, align, true);
 
-	d->max_mv = round_voltage(d->max_mv, align, false);
+	d->max_mv = tegra_round_voltage(d->max_mv, align, false);
 	BUG_ON(d->max_mv > tegra210_dvfs_rail_vdd_cpu.max_millivolts);
 	cpu_lp_dvfs->dvfs_rail->nominal_millivolts =
 		max(cpu_lp_dvfs->dvfs_rail->nominal_millivolts, d->max_mv);
@@ -882,6 +1017,229 @@ static void adjust_emc_dvfs_table(struct dvfs *d)
 	}
 }
 
+/*
+ * Find maximum GPU frequency that can be reached at minimum voltage across all
+ * temperature ranges.
+ */
+static unsigned long find_gpu_fmax_at_vmin(
+	struct dvfs *gpu_dvfs, int thermal_ranges, int freqs_num)
+{
+	int i, j;
+	unsigned long fmax = ULONG_MAX;
+
+	/*
+	 * For voltage scaling row in each temperature range, as well as peak
+	 * voltage row find maximum frequency at lowest voltage, and return
+	 * minimax. On Tegra21 all GPU DVFS thermal dependencies are integrated
+	 * into thermal DVFS table (i.e., there is no separate thermal floors
+	 * applied in the rail level). Hence, returned frequency specifies max
+	 * frequency safe at minimum voltage across all temperature ranges.
+	 */
+	for (j = 0; j < thermal_ranges; j++) {
+		for (i = 1; i < freqs_num; i++) {
+			if (gpu_millivolts[j][i] > gpu_millivolts[j][0])
+				break;
+		}
+		fmax = min(fmax, gpu_dvfs->freqs[i - 1]);
+	}
+
+	for (i = 1; i < freqs_num; i++) {
+		if (gpu_peak_millivolts[i] > gpu_peak_millivolts[0])
+			break;
+	}
+	fmax = min(fmax, gpu_dvfs->freqs[i - 1]);
+
+	return fmax;
+}
+
+/*
+ * Determine minimum voltage safe at maximum frequency across all temperature
+ * ranges.
+ */
+static int find_gpu_vmin_at_fmax(
+	struct dvfs *gpu_dvfs, int thermal_ranges, int freqs_num)
+{
+	int j, vmin;
+
+	/*
+	 * For voltage scaling row in each temperature range find minimum
+	 * voltage at maximum frequency and return max Vmin across ranges.
+	 */
+	for (vmin = 0, j = 0; j < thermal_ranges; j++)
+		vmin = max(vmin, gpu_millivolts[j][freqs_num-1]);
+
+	return vmin;
+}
+
+static int init_gpu_rail_thermal_scaling(struct dvfs_rail *rail,
+					 struct cvb_dvfs *d)
+{
+	return 1;
+}
+
+static int init_gpu_rail_thermal_caps(struct dvfs *dvfs,
+		struct dvfs_rail *rail, int thermal_ranges, int freqs_num)
+{
+	if (thermal_ranges <= 1 )
+		return 0;
+
+	WARN_ON(1);
+}
+
+/*
+ * Setup gpu dvfs tables from cvb data, determine nominal voltage for gpu rail,
+ * and gpu maximum frequency. Error when gpu dvfs table can not be constructed
+ * must never happen.
+ */
+static int set_gpu_dvfs_data(unsigned long max_freq,
+	struct cvb_dvfs *d, struct dvfs *gpu_dvfs, int *max_freq_index)
+{
+	int i, j, thermal_ranges, mv, min_mv, err;
+	struct cvb_dvfs_table *table = NULL;
+	int speedo = tegra_sku_info.gpu_speedo_value;
+	struct dvfs_rail *rail = &tegra210_dvfs_rail_vdd_gpu;
+	struct rail_alignment *align = &rail->alignment;
+
+	d->max_mv = tegra_round_voltage(d->max_mv, align, false);
+	min_mv = d->pll_min_millivolts;
+	if (min_mv < rail->min_millivolts) {
+		pr_debug("tegra21_dvfs: gpu min %dmV below rail min %dmV\n",
+			 min_mv, rail->min_millivolts);
+		min_mv = rail->min_millivolts;
+	}
+
+	/*
+	 * Get scaling thermal ranges; 1 range implies no thermal dependency.
+	 * Invalidate scaling cooling device in the latter case.
+	 */
+	thermal_ranges = init_gpu_rail_thermal_scaling(rail, d);
+	if (thermal_ranges == 1)
+		rail->vts_cdev = NULL;
+
+	/*
+	 * Apply fixed thermal floor for each temperature range
+	 */
+	for (j = 0; j < thermal_ranges; j++) {
+		mv = max(min_mv, d->therm_floors_table[j]);
+		gpu_vmin[j] = tegra_round_voltage(mv, align, true);
+	}
+
+	/*
+	 * Use CVB table to fill in gpu dvfs frequencies and voltages. Each
+	 * CVB entry specifies gpu frequency and CVB coefficients to calculate
+	 * the respective voltage.
+	 */
+	for (i = 0; i < MAX_DVFS_FREQS; i++) {
+		table = &d->cvb_table[i];
+		if (!table->freq || (table->freq > max_freq))
+			break;
+
+		mv = tegra_get_cvb_voltage(
+			speedo, d->speedo_scale, &table->cvb_pll_param);
+
+		for (j = 0; j < thermal_ranges; j++) {
+			int mvj = mv;
+			int t = 0;
+
+			if (thermal_ranges > 1)
+				t = d->vts_trips_table[j];
+
+			/* get thermal offset for this trip-point */
+			mvj += tegra_get_cvb_t_voltage(speedo, d->speedo_scale,
+				t, d->thermal_scale, &table->cvb_pll_param);
+			mvj = tegra_round_cvb_voltage(mvj, d->voltage_scale, align);
+
+			/* clip to minimum, abort if above maximum */
+			mvj = max(mvj, gpu_vmin[j]);
+			if (mvj > d->max_mv)
+				break;
+
+			/*
+			 * Update voltage for adjacent ranges bounded by this
+			 * trip-point (cvb & dvfs are transpose matrices, and
+			 * cvb freq row index is column index for dvfs matrix)
+			 */
+			gpu_millivolts[j][i] = mvj;
+			if (j && (gpu_millivolts[j-1][i] < mvj))
+				gpu_millivolts[j-1][i] = mvj;
+		}
+		/* Make sure all voltages for this frequency are below max */
+		if (j < thermal_ranges)
+			break;
+
+		/* fill in gpu dvfs tables */
+		gpu_dvfs->freqs[i] = table->freq;
+	}
+
+	gpu_dvfs->millivolts = &gpu_millivolts[0][0];
+
+	/*
+	 * Table must not be empty, must have at least one entry in range, and
+	 * must specify monotonically increasing voltage on frequency dependency
+	 * in each temperature range.
+	 */
+	err = tegra_dvfs_init_thermal_dvfs_voltages(&gpu_millivolts[0][0],
+			gpu_peak_millivolts, i, thermal_ranges, gpu_dvfs);
+
+	if (err || !i) {
+		pr_err("tegra21_dvfs: invalid gpu dvfs table\n");
+		return -ENOENT;
+	}
+
+	/* Shift out the 1st trip-point */
+	for (j = 1; j < thermal_ranges; j++)
+		d->vts_trips_table[j - 1] = d->vts_trips_table[j];
+
+	/* dvfs tables are successfully populated - fill in the gpu dvfs */
+	gpu_dvfs->speedo_id = d->speedo_id;
+	gpu_dvfs->process_id = d->process_id;
+	gpu_dvfs->freqs_mult = d->freqs_mult;
+
+	*max_freq_index = i - 1;
+
+	gpu_dvfs->dvfs_rail->nominal_millivolts = min(d->max_mv,
+		find_gpu_vmin_at_fmax(gpu_dvfs, thermal_ranges, i));
+
+	gpu_dvfs->fmax_at_vmin_safe_t = d->freqs_mult *
+		find_gpu_fmax_at_vmin(gpu_dvfs, thermal_ranges, i);
+
+	/* Initialize thermal capping */
+	init_gpu_rail_thermal_caps(gpu_dvfs, rail, thermal_ranges, i);
+
+#ifdef CONFIG_TEGRA_USE_NA_GPCPLL
+	/*
+	 * Set NA DVFS flag, if GPCPLL NA mode is enabled. This is necessary to
+	 * make sure that GPCPLL configuration is updated by tegra core DVFS
+	 * when thermal DVFS cooling device state is changed. Since tegra core
+	 * DVFS does not support NA operations for Vmin cooling device, GPU Vmin
+	 * thermal floors have been integrated with thermal DVFS, and no Vmin
+	 * cooling device is installed.
+	 */
+	if (tegra_fuse_can_use_na_gpcpll())
+		gpu_dvfs->na_dvfs = 1;
+#endif
+	return 0;
+}
+
+static void init_gpu_dvfs_table(int *gpu_max_freq_index)
+{
+	int i, ret;
+	int gpu_speedo_id = tegra_sku_info.gpu_speedo_id;
+	int gpu_process_id = tegra_sku_info.gpu_process_id;
+
+	for (ret = 0, i = 0; i < ARRAY_SIZE(gpu_cvb_dvfs_table); i++) {
+		struct cvb_dvfs *d = &gpu_cvb_dvfs_table[i];
+		unsigned long max_freq = d->max_freq;
+		if (match_dvfs_one("gpu cvb", d->speedo_id, d->process_id,
+				   gpu_speedo_id, gpu_process_id)) {
+			ret = set_gpu_dvfs_data(max_freq,
+				d, &gpu_dvfs, gpu_max_freq_index);
+			break;
+		}
+	}
+	BUG_ON((i == ARRAY_SIZE(gpu_cvb_dvfs_table)) || ret);
+}
+
 int tegra210_init_dvfs(void)
 {
 	int soc_speedo_id = tegra_sku_info.soc_speedo_id;
@@ -890,6 +1248,7 @@ int tegra210_init_dvfs(void)
 	int core_nominal_mv_index;
 	int cpu_max_freq_index = 0;
 	int cpu_lp_max_freq_index = 0;
+	int gpu_max_freq_index = 0;
 
 	/*
 	 * Find nominal voltages for core (1st) and cpu rails before rail
@@ -922,6 +1281,12 @@ int tegra210_init_dvfs(void)
 	init_cpu_lp_dvfs_table(&cpu_lp_max_freq_index);
 	if (ret)
 		goto out;
+
+	/*
+	 * Construct GPU DVFS table from CVB data; find GPU maximum frequency,
+	 * and nominal voltage.
+	 */
+	init_gpu_dvfs_table(&gpu_max_freq_index);
 
 	/* Init core thermal floors */
 	tegra_dvfs_init_therm_limits(&tegra210_dvfs_rail_vdd_core);
@@ -959,14 +1324,15 @@ int tegra210_init_dvfs(void)
 	 */
 	init_dvfs_one(&cpu_dvfs, cpu_max_freq_index);
 	init_dvfs_one(&cpu_lp_dvfs, cpu_lp_max_freq_index);
+	init_dvfs_one(&gpu_dvfs, gpu_max_freq_index);
 
-	pr_info("tegra dvfs: VDD_CPU nominal %dmV, scaling %s\n",
-		tegra210_dvfs_rail_vdd_cpu.nominal_millivolts,
-		tegra_dvfs_cpu_disabled ? "disabled" : "enabled");
-	pr_info("tegra dvfs: VDD_CORE nominal %dmV, scaling %s\n",
-		tegra210_dvfs_rail_vdd_core.nominal_millivolts,
-		tegra_dvfs_core_disabled ? "disabled" : "enabled");
-
+	for (i = 0; i < ARRAY_SIZE(tegra210_dvfs_rails); i++) {
+		struct dvfs_rail *rail = tegra210_dvfs_rails[i];
+		pr_info("tegra dvfs: %s: nominal %dmV, offset %duV, step %duV, scaling %s\n",
+			rail->reg_id, rail->nominal_millivolts,
+			rail->alignment.offset_uv, rail->alignment.step_uv,
+			rail->disabled ? "disabled" : "enabled");
+	}
 	return 0;
 out:
 	return ret;

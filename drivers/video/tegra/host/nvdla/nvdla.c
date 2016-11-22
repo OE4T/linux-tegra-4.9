@@ -40,6 +40,7 @@
 #include "nvdla/nvdla.h"
 #include "nvdla/nvdla_debug.h"
 #include <linux/nvhost_nvdla_ioctl.h>
+#include "dla_fw_version.h"
 #include "dla_os_interface.h"
 
 /**
@@ -304,6 +305,7 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 {
 	int ret = 0;
 	uint32_t fw_ver_read_bin;
+	uint32_t firmware_version;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvdla_device *nvdla_dev = pdata->private_data;
 
@@ -316,10 +318,12 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 	}
 
 	fw_ver_read_bin = host1x_readl(pdev, NV_DLA_OS_VERSION);
-	if (FIRMWARE_VERSION != fw_ver_read_bin) {
+	firmware_version = dla_version();
+
+	if (firmware_version != fw_ver_read_bin) {
 		nvdla_dbg_err(pdev,
 		"Fw version of kernel [%u.%u.%u] doesn't match with actual version[%u.%u.%u]",
-		(FIRMWARE_VERSION >> 16) & 0xff, (FIRMWARE_VERSION >> 8) & 0xff, FIRMWARE_VERSION & 0xff,
+		(firmware_version >> 16) & 0xff, (firmware_version >> 8) & 0xff, firmware_version & 0xff,
 		(fw_ver_read_bin >> 16 ) & 0xff, (fw_ver_read_bin >> 8) & 0xff, fw_ver_read_bin & 0xff);
 
 		return -EINVAL;

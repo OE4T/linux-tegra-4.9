@@ -41,14 +41,6 @@
 #define ACTION_OPCODE_WRITE_SEM		0x80
 #define ACTION_OPCODE_READ_SEM		0x90
 
-/* TODO: Get versioning details through firmware interface headers */
-#define FIRMWARE_VERSION_MAJOR          0x00
-#define FIRMWARE_VERSION_MINOR          0x02
-#define FIRMWARE_VERSION_SUBMINOR       0x00
-#define FIRMWARE_VERSION  (((FIRMWARE_VERSION_MAJOR & 0xff) << 16) | \
-			((FIRMWARE_VERSION_MINOR & 0xff) << 8) | \
-			((FIRMWARE_VERSION_SUBMINOR & 0xff)))
-
 /**
  * Maximum number of queue's per engine
  */

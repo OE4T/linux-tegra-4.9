@@ -3517,7 +3517,7 @@ int gk20a_get_sgtable_from_pages(struct device *d, struct sg_table **sgt,
 		goto fail;
 	}
 	err = sg_alloc_table_from_pages(*sgt, pages,
-			DIV_ROUND_UP(size, 4096), 0, size, GFP_KERNEL);
+			DIV_ROUND_UP(size, PAGE_SIZE), 0, size, GFP_KERNEL);
 	if (err) {
 		dev_err(d, "failed to allocate sg_table\n");
 		goto fail;

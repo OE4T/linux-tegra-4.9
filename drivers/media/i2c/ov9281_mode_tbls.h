@@ -403,10 +403,17 @@ static const ov9281_reg *ov9281_mode_table[] = {
 	[OV9281_MODE_FSYNC_SLAVE] = ov9281_fsync_slave,
 };
 
+static const int ov9281_120fps[] = {
+	120,
+};
+
 static const struct camera_common_frmfmt ov9281_frmfmt[] = {
-	{ { 1280, 800 }, 0, OV9281_MODE_1280X800 },
-	{ { 1280, 720 }, 0, OV9281_MODE_1280X720 },
-	{ { 640, 400 }, 0, OV9281_MODE_640X400 },
+	{ { 1280, 800 }, ov9281_120fps, ARRAY_SIZE(ov9281_120fps), 0,
+	  OV9281_MODE_1280X800 },
+	{ { 1280, 720 }, ov9281_120fps, ARRAY_SIZE(ov9281_120fps), 0,
+	  OV9281_MODE_1280X720 },
+	{ { 640, 400 }, ov9281_120fps, ARRAY_SIZE(ov9281_120fps), 0,
+	  OV9281_MODE_640X400 },
 };
 
 #endif  /* __OV9281_I2C_TABLES__ */

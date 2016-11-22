@@ -33,6 +33,13 @@
 	#address-cells = <2>;
 	#size-cells = <2>;
 
+	aliases {
+		sdhci0 = &sdhci0;
+		sdhci1 = &sdhci1;
+		sdhci2 = &sdhci2;
+		sdhci3 = &sdhci3;
+	};
+
 	cpus {
 		#address-cells = <2>;
 		#size-cells = <0>;
@@ -1646,7 +1653,7 @@
                 reset-names = "i2c";
 	};
 
-	sdhci@700b0600 {
+	sdhci3: sdhci@700b0600 {
 		compatible = "nvidia,tegra210-sdhci";
 		reg = <0x0 0x700b0600 0x0 0x200>;
 		interrupts = < 0 31 0x04 >;
@@ -1660,7 +1667,7 @@
 		status = "disabled";
 	};
 
-	sdhci@700b0400 {
+	sdhci2: sdhci@700b0400 {
 		compatible = "nvidia,tegra210-sdhci";
 		reg = <0x0 0x700b0400 0x0 0x200>;
 		interrupts = < 0 19 0x04 >;
@@ -1677,7 +1684,7 @@
 		status = "disabled";
 	};
 
-	sdhci@700b0200 {
+	sdhci1: sdhci@700b0200 {
 		compatible = "nvidia,tegra210-sdhci";
 		reg = <0x0 0x700b0200 0x0 0x200>;
 		interrupts = < 0 15 0x04 >;
@@ -1690,7 +1697,7 @@
 		status = "disabled";
 	};
 
-	sdhci@700b0000 {
+	sdhci0: sdhci@700b0000 {
 		compatible = "nvidia,tegra210-sdhci";
 		reg = <0x0 0x700b0000 0x0 0x200>;
 		interrupts = < 0 14 0x04 >;

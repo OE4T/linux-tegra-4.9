@@ -1294,7 +1294,7 @@ static void nvgpu_clk_arb_queue_notification(struct gk20a *g,
 
 	queue_index = (atomic_inc_return(&queue->tail)) % queue->size;
 	/* get current timestamp */
-	timestamp = (u64) get_cycles();
+	timestamp = (u64) sched_clock();
 
 	queue->notifications[queue_index].timestamp = timestamp;
 	queue->notifications[queue_index].notification = alarm_mask;

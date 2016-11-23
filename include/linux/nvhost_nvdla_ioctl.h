@@ -98,10 +98,7 @@ struct nvdla_mem_handle {
  * @postfences			pointer to post-fence struct table
  * @input_task_status		pointer to input task status struct table
  * @output_task_status		pointer to output task status struct table
- * @num_operations		number of operations for a task
  * @num_addresses		total number of addressed passed in structure
- * @operation_desc		pointer to operation descriptor list
- * @surface_desc		pointer to surface descriptor list
  * @address_list		pointer to address list
  *
  */
@@ -118,16 +115,6 @@ struct nvdla_ioctl_submit_task {
 
 	__u64 input_task_status;
 	__u64 output_task_status;
-
-	__u32 num_operations;
-	__u32 num_luts;
-	struct nvdla_mem_handle operation_desc;
-	struct nvdla_mem_handle surface_desc;
-	struct nvdla_mem_handle lut_data;
-
-	__u8 dynamic_roi;
-	struct nvdla_mem_handle roi_desc_array;
-	struct nvdla_mem_handle surface;
 
 	__u32 num_addresses;
 	struct nvdla_mem_handle address_list;

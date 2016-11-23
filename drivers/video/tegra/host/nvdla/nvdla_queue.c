@@ -229,24 +229,9 @@ static int nvdla_map_task_memory(struct nvhost_buffers *buffers,
 	task->buffers = buffers;
 	task->num_handles = 0;
 
-	/* for operation desc and surface descriptor */
-	if (user_task->operation_desc.handle)
-		task->num_handles++;
-
-	if (user_task->surface_desc.handle)
-		task->num_handles++;
-
-	/* for list of LUT data */
-	if (user_task->num_luts)
-		task->num_handles++;
-
-	/* for roi desc array and surface */
-	if (user_task->dynamic_roi)
-		task->num_handles += 2;
-
 	/* keep address list always last */
 	if (user_task->num_addresses)
-		task->num_handles += user_task->num_addresses + 1;
+		task->num_handles = user_task->num_addresses + 1;
 
 	if (task->num_handles == 0)
 		return err;
@@ -277,21 +262,6 @@ static int nvdla_map_task_memory(struct nvhost_buffers *buffers,
 	if (!dma_size) {
 		err = -ENOMEM;
 		goto fail_to_alloc_dma_size;
-	}
-
-	/* Fill in handles information */
-	if (user_task->operation_desc.handle)
-		*handles++ = user_task->operation_desc.handle;
-
-	if (user_task->surface_desc.handle)
-		*handles++ = user_task->surface_desc.handle;
-
-	if (user_task->num_luts)
-		*handles++ = user_task->lut_data.handle;
-
-	if (user_task->dynamic_roi) {
-		*handles++ = user_task->roi_desc_array.handle;
-		*handles++ = user_task->surface.handle;
 	}
 
 	/*
@@ -337,25 +307,6 @@ static int nvdla_map_task_memory(struct nvhost_buffers *buffers,
 	}
 
 	/* Update IOVA addresses in task descriptor */
-	task_desc->operation_desc = (*dma_addr++) +
-					user_task->operation_desc.offset;
-	task_desc->surface_desc = (*dma_addr++) +
-					user_task->surface_desc.offset;
-	task_desc->num_operations = user_task->num_operations;
-
-	task_desc->num_luts = user_task->num_luts;
-	if (user_task->num_luts)
-		task_desc->lut_data = (*dma_addr++) +
-					user_task->lut_data.offset;
-
-	task_desc->dynamic_roi = user_task->dynamic_roi;
-	if (user_task->dynamic_roi) {
-		task_desc->roi_desc_array = (*dma_addr++) +
-					user_task->roi_desc_array.offset;
-		task_desc->surface = (*dma_addr++) +
-					user_task->surface.offset;
-	}
-
 	task_desc->num_addresses = user_task->num_addresses;
 	if (user_task->num_addresses) {
 		uintptr_t temp;
@@ -621,12 +572,9 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 		postaction->address = nvhost_syncpt_address(pdev, queue->syncpt_id);
 	}
 
-	if (user_task->num_operations) {
-		err = nvdla_map_task_memory(buffers, user_task,
-							task, task_desc);
-		if (err)
-			goto fail_to_dma_alloc;
-	}
+	err = nvdla_map_task_memory(buffers, user_task, task, task_desc);
+	if (err)
+		goto fail_to_dma_alloc;
 
 	nvdla_dbg_info(pdev, "task[%p] initialized", task);
 

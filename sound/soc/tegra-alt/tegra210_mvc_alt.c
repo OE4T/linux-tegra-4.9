@@ -325,7 +325,7 @@ static int tegra210_mvc_put_channels(struct snd_kcontrol *kcontrol,
 	unsigned int val;
 
 	val = ucontrol->value.integer.value[0];
-	if ((val > 0) && (val << 16))
+	if ((val > 0) && (val <= 8))
 		mvc->cif_channels = val;
 	else
 		return -EINVAL;

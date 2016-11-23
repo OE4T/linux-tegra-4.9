@@ -141,6 +141,39 @@ static int tegra210_mixer_write_ram(struct tegra210_mixer *mixer,
 	return 0;
 }
 
+static int tegra210_mixer_put_format(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra210_mixer *mixer = snd_soc_codec_get_drvdata(codec);
+	int value = ucontrol->value.integer.value[0];
+
+	if (strstr(kcontrol->id.name, "Channels")) {
+		if (value > 0 && value <= 8)
+			mixer->channels_via_control[mc->reg - 1] = value;
+		else
+			return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int tegra210_mixer_get_format(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra210_mixer *mixer = snd_soc_codec_get_drvdata(codec);
+
+	if (strstr(kcontrol->id.name, "Channels"))
+		ucontrol->value.integer.value[0] =
+			mixer->channels_via_control[mc->reg - 1];
+
+	return 0;
+}
 static int tegra210_mixer_get_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -189,7 +222,8 @@ static int tegra210_mixer_put_gain(struct snd_kcontrol *kcontrol,
 
 static int tegra210_mixer_set_audio_cif(struct tegra210_mixer *mixer,
 				struct snd_pcm_hw_params *params,
-				unsigned int reg)
+				unsigned int reg,
+				unsigned int id)
 {
 	int channels, audio_bits;
 	struct tegra210_xbar_cif_conf cif_conf;
@@ -197,8 +231,9 @@ static int tegra210_mixer_set_audio_cif(struct tegra210_mixer *mixer,
 	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
 
 	channels = params_channels(params);
-	if (channels < 2)
-		return -EINVAL;
+
+	if (mixer->channels_via_control[id])
+		channels = mixer->channels_via_control[id];
 
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
@@ -230,7 +265,8 @@ static int tegra210_mixer_in_hw_params(struct snd_pcm_substream *substream,
 
 	ret = tegra210_mixer_set_audio_cif(mixer, params,
 				TEGRA210_MIXER_AXBAR_RX1_CIF_CTRL +
-				(dai->id * TEGRA210_MIXER_AXBAR_RX_STRIDE));
+				(dai->id * TEGRA210_MIXER_AXBAR_RX_STRIDE),
+				dai->id);
 
 	/* write the gain config poly coefficients */
 	for (i = 0; i < 14; i++) {
@@ -261,7 +297,8 @@ static int tegra210_mixer_out_hw_params(struct snd_pcm_substream *substream,
 
 	ret = tegra210_mixer_set_audio_cif(mixer, params,
 				TEGRA210_MIXER_AXBAR_TX1_CIF_CTRL +
-				((dai->id-10) * TEGRA210_MIXER_AXBAR_TX_STRIDE));
+				((dai->id-10) * TEGRA210_MIXER_AXBAR_TX_STRIDE),
+				dai->id);
 
 	return ret;
 }
@@ -394,6 +431,36 @@ static const struct snd_kcontrol_new tegra210_mixer_gain_ctls[] = {	\
 		0x20000, 0, tegra210_mixer_get_gain, tegra210_mixer_put_gain),
 	SOC_SINGLE_EXT("RX10 Gain Instant", MIXER_GAIN_CONFIG_RAM_ADDR(9), 0,
 		0x20000, 0, tegra210_mixer_get_gain, tegra210_mixer_put_gain),
+	SOC_SINGLE_EXT("RX1 Channels", 1, 0, 8, 0,
+		tegra210_mixer_get_format, tegra210_mixer_put_format),
+	SOC_SINGLE_EXT("RX2 Channels", 2, 0, 8, 0,
+		tegra210_mixer_get_format, tegra210_mixer_put_format),
+	SOC_SINGLE_EXT("RX3 Channels", 3, 0, 8, 0,
+		tegra210_mixer_get_format, tegra210_mixer_put_format),
+	SOC_SINGLE_EXT("RX4 Channels", 4, 0, 8, 0,
+		tegra210_mixer_get_format, tegra210_mixer_put_format),
+	SOC_SINGLE_EXT("RX5 Channels", 5, 0, 8, 0,
+		tegra210_mixer_get_format, tegra210_mixer_put_format),
+	SOC_SINGLE_EXT("RX6 Channels", 6, 0, 8, 0,
+		tegra210_mixer_get_format, tegra210_mixer_put_format),
+	SOC_SINGLE_EXT("RX7 Channels", 7, 0, 8, 0,
+		tegra210_mixer_get_format, tegra210_mixer_put_format),
+	SOC_SINGLE_EXT("RX8 Channels", 8, 0, 8, 0,
+		tegra210_mixer_get_format, tegra210_mixer_put_format),
+	SOC_SINGLE_EXT("RX9 Channels", 9, 0, 8, 0,
+		tegra210_mixer_get_format, tegra210_mixer_put_format),
+	SOC_SINGLE_EXT("RX10 Channels", 10, 0, 8, 0,
+		tegra210_mixer_get_format, tegra210_mixer_put_format),
+	SOC_SINGLE_EXT("TX1 Channels", 11, 0, 8, 0,
+		tegra210_mixer_get_format, tegra210_mixer_put_format),
+	SOC_SINGLE_EXT("TX2 Channels", 12, 0, 8, 0,
+		tegra210_mixer_get_format, tegra210_mixer_put_format),
+	SOC_SINGLE_EXT("TX3 Channels", 13, 0, 8, 0,
+		tegra210_mixer_get_format, tegra210_mixer_put_format),
+	SOC_SINGLE_EXT("TX4 Channels", 14, 0, 8, 0,
+		tegra210_mixer_get_format, tegra210_mixer_put_format),
+	SOC_SINGLE_EXT("TX5 Channels", 15, 0, 8, 0,
+		tegra210_mixer_get_format, tegra210_mixer_put_format),
 	SOC_SINGLE("Mixer Enable", TEGRA210_MIXER_ENABLE, 0, 1, 0),
 };
 

@@ -301,8 +301,6 @@ static int tegra210_sfc_set_audio_cif(struct tegra210_sfc *sfc,
 	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
 
 	channels = params_channels(params);
-	if (channels < 2)
-		return -EINVAL;
 
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
@@ -314,6 +312,9 @@ static int tegra210_sfc_set_audio_cif(struct tegra210_sfc *sfc,
 	default:
 		return -EINVAL;
 	}
+
+	if (sfc->channels_via_control)
+		channels = sfc->channels_via_control;
 
 	if (sfc->stereo_conv_input > 0 && 2 == channels &&
 		(reg == TEGRA210_SFC_AXBAR_RX_CIF_CTRL)) {
@@ -473,9 +474,10 @@ static int tegra210_sfc_get_format(struct snd_kcontrol *kcontrol,
 	/* get the format control flag */
 	if (strstr(kcontrol->id.name, "input"))
 		ucontrol->value.integer.value[0] = sfc->format_in;
-
-	if (strstr(kcontrol->id.name, "output"))
+	else if (strstr(kcontrol->id.name, "output"))
 		ucontrol->value.integer.value[0] = sfc->format_out;
+	else if (strstr(kcontrol->id.name, "Channels"))
+		ucontrol->value.integer.value[0] = sfc->channels_via_control;
 
 	return 0;
 }
@@ -485,13 +487,19 @@ static int tegra210_sfc_put_format(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_sfc *sfc = snd_soc_codec_get_drvdata(codec);
+	int value = ucontrol->value.integer.value[0];
 
 	/* set the format control flag */
 	if (strstr(kcontrol->id.name, "input"))
-		sfc->format_in = ucontrol->value.integer.value[0];
-
-	if (strstr(kcontrol->id.name, "output"))
-		sfc->format_out = ucontrol->value.integer.value[0];
+		sfc->format_in = value;
+	else if (strstr(kcontrol->id.name, "output"))
+		sfc->format_out = value;
+	else if (strstr(kcontrol->id.name, "Channels")) {
+		if (value > 0 && value <= 2)
+			sfc->channels_via_control = value;
+		else
+			return -EINVAL;
+	}
 
 	return 0;
 }
@@ -657,7 +665,7 @@ static struct snd_soc_dai_driver tegra210_sfc_dais[] = {
 		.capture = {
 			.stream_name = "SFC Transmit",
 			.channels_min = 1,
-			.channels_max = 16,
+			.channels_max = 2,
 			.rates = SNDRV_PCM_RATE_8000_96000,
 			.formats = SNDRV_PCM_FMTBIT_S8 |
 				SNDRV_PCM_FMTBIT_S16_LE |
@@ -718,6 +726,8 @@ static const struct snd_kcontrol_new tegra210_sfc_controls[] = {
 	SOC_ENUM_EXT("input bit format", tegra210_sfc_format_enum,
 		tegra210_sfc_get_format, tegra210_sfc_put_format),
 	SOC_ENUM_EXT("output bit format", tegra210_sfc_format_enum,
+		tegra210_sfc_get_format, tegra210_sfc_put_format),
+	SOC_SINGLE_EXT("Channels", 0, 0, 2, 0,
 		tegra210_sfc_get_format, tegra210_sfc_put_format),
 	SOC_SINGLE_EXT("init", 0, 0, 1, 0,
 		tegra210_sfc_init_get, tegra210_sfc_init_put),

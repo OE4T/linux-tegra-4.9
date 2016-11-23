@@ -320,16 +320,16 @@ static int tegra210_admaif_hw_params(struct snd_pcm_substream *substream,
 	struct tegra210_admaif *admaif = snd_soc_dai_get_drvdata(dai);
 	struct tegra210_xbar_cif_conf cif_conf;
 	unsigned int reg;
-	int valid_bit;
+	int valid_bit, channels;
 
 	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
-	if (admaif->override_channels[dai->id] > 0) {
-		cif_conf.audio_channels = admaif->override_channels[dai->id];
-		cif_conf.client_channels = admaif->override_channels[dai->id];
-	} else {
-		cif_conf.audio_channels = params_channels(params);
-		cif_conf.client_channels = params_channels(params);
-	}
+
+	channels = params_channels(params);
+	if (admaif->override_channels[dai->id] > 0)
+		channels = admaif->override_channels[dai->id];
+
+	cif_conf.audio_channels = channels;
+	cif_conf.client_channels = channels;
 
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S8:
@@ -360,9 +360,27 @@ static int tegra210_admaif_hw_params(struct snd_pcm_substream *substream,
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		reg = TEGRA210_ADMAIF_CHAN_ACIF_TX_CTRL +
 			(dai->id * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE);
+		/* For playback path, the mono input from client channel
+		 * can be converted to stereo using cif controls.
+		*/
+		if (admaif->tx_mono_to_stereo[dai->id] > 0) {
+			cif_conf.mono_conv =
+				admaif->tx_mono_to_stereo[dai->id] - 1;
+			cif_conf.audio_channels = 2;
+			cif_conf.client_channels = 1;
+		}
 	} else {
 		reg = TEGRA210_ADMAIF_CHAN_ACIF_RX_CTRL +
 			(dai->id * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE);
+		/* For capture path, the stereo audio channel can be
+		 * converted to mono using cif controls.
+		*/
+		if (admaif->rx_stereo_to_mono[dai->id] > 0) {
+			cif_conf.stereo_conv =
+				admaif->rx_stereo_to_mono[dai->id] - 1;
+			cif_conf.audio_channels = 2;
+			cif_conf.client_channels = 1;
+		}
 	}
 
 	tegra210_admaif_set_pack_mode(admaif->regmap, reg, valid_bit);
@@ -478,19 +496,40 @@ static struct snd_soc_dai_ops tegra210_admaif_dai_ops = {
 	.prepare	= tegra210_admaif_prepare,
 };
 
-static int tegra210_admaif_get_channels(struct snd_kcontrol *kcontrol,
+static int tegra210_admaif_get_format(struct snd_kcontrol *kcontrol,
 					 struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	struct tegra210_admaif *admaif = snd_soc_codec_get_drvdata(codec);
+	int i;
+	char buf[50];
 
-	ucontrol->value.integer.value[0] = admaif->override_channels[mc->reg];
+	if (strstr(kcontrol->id.name, "Channels"))
+		ucontrol->value.integer.value[0] =
+				admaif->override_channels[mc->reg];
+	else {
+		for (i = 0 ; i < TEGRA210_ADMAIF_CHANNEL_COUNT; i++) {
+			snprintf(buf, 50, "ADMAIF%d RX stereo to mono", i+1);
+			if (strstr(kcontrol->id.name, buf)) {
+				ucontrol->value.integer.value[0] =
+					admaif->rx_stereo_to_mono[i];
+				break;
+			}
+			snprintf(buf, 50, "ADMAIF%d TX mono to stereo", i+1);
+			if (strstr(kcontrol->id.name, buf)) {
+				ucontrol->value.integer.value[0] =
+					admaif->tx_mono_to_stereo[i];
+				break;
+			}
+		}
+	}
+
 	return 0;
 }
 
-static int tegra210_admaif_put_channels(struct snd_kcontrol *kcontrol,
+static int tegra210_admaif_put_format(struct snd_kcontrol *kcontrol,
 					 struct snd_ctl_elem_value *ucontrol)
 {
 	struct soc_mixer_control *mc =
@@ -498,12 +537,30 @@ static int tegra210_admaif_put_channels(struct snd_kcontrol *kcontrol,
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_admaif *admaif = snd_soc_codec_get_drvdata(codec);
 	int value = ucontrol->value.integer.value[0];
+	int i;
+	char buf[50];
 
-	if (value > 0 && value <= 16) {
-		admaif->override_channels[mc->reg] = value;
-		return 0;
-	} else
-		return -EINVAL;
+	if (strstr(kcontrol->id.name, "Channels")) {
+		if (value > 0 && value <= 16)
+			admaif->override_channels[mc->reg] = value;
+		else
+			return -EINVAL;
+	} else {
+		for (i = 0 ; i < TEGRA210_ADMAIF_CHANNEL_COUNT; i++) {
+			snprintf(buf, 50, "ADMAIF%d RX stereo to mono", i+1);
+			if (strstr(kcontrol->id.name, buf)) {
+				admaif->rx_stereo_to_mono[i] = value;
+				break;
+			}
+			snprintf(buf, 50, "ADMAIF%d TX mono to stereo", i+1);
+			if (strstr(kcontrol->id.name, buf)) {
+				admaif->tx_mono_to_stereo[i] = value;
+				break;
+			}
+		}
+	}
+
+	return 0;
 }
 
 static int tegra210_admaif_dai_probe(struct snd_soc_dai *dai)
@@ -728,9 +785,37 @@ static const struct snd_soc_dapm_route tegra210_admaif_routes[] = {
 	ADMAIF_ROUTES(20)
 };
 
+static const char * const tegra_admaif_stereo_conv_text[] = {
+	"None", "CH0", "CH1", "AVG",
+};
+
+static const char * const tegra_admaif_mono_conv_text[] = {
+	"None", "ZERO", "COPY",
+};
+
+static const struct soc_enum tegra_admaif_mono_conv_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
+		ARRAY_SIZE(tegra_admaif_mono_conv_text),
+		tegra_admaif_mono_conv_text);
+
+static const struct soc_enum tegra_admaif_stereo_conv_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
+		ARRAY_SIZE(tegra_admaif_stereo_conv_text),
+		tegra_admaif_stereo_conv_text);
+
 #define TEGRA210_ADMAIF_CHANNEL_CTRL(reg) \
 	SOC_SINGLE_EXT("ADMAIF" #reg " Channels", reg - 1, 0, 16, 0, \
-		tegra210_admaif_get_channels, tegra210_admaif_put_channels)
+		tegra210_admaif_get_format, tegra210_admaif_put_format)
+
+#define TEGRA210_ADMAIF_TX_CIF_CTRL(reg) \
+	SOC_ENUM_EXT("ADMAIF" #reg " TX mono to stereo conv", \
+		 tegra_admaif_mono_conv_enum, tegra210_admaif_get_format, \
+		 tegra210_admaif_put_format)
+
+#define TEGRA210_ADMAIF_RX_CIF_CTRL(reg) \
+	SOC_ENUM_EXT("ADMAIF" #reg " RX stereo to mono conv", \
+		 tegra_admaif_stereo_conv_enum, tegra210_admaif_get_format, \
+		 tegra210_admaif_put_format)
 
 static struct snd_kcontrol_new tegra210_admaif_controls[] = {
 	TEGRA210_ADMAIF_CHANNEL_CTRL(1),
@@ -753,7 +838,51 @@ static struct snd_kcontrol_new tegra210_admaif_controls[] = {
 	TEGRA210_ADMAIF_CHANNEL_CTRL(17),
 	TEGRA210_ADMAIF_CHANNEL_CTRL(18),
 	TEGRA210_ADMAIF_CHANNEL_CTRL(19),
-	TEGRA210_ADMAIF_CHANNEL_CTRL(20)
+	TEGRA210_ADMAIF_CHANNEL_CTRL(20),
+#endif
+	TEGRA210_ADMAIF_RX_CIF_CTRL(1),
+	TEGRA210_ADMAIF_RX_CIF_CTRL(2),
+	TEGRA210_ADMAIF_RX_CIF_CTRL(3),
+	TEGRA210_ADMAIF_RX_CIF_CTRL(4),
+	TEGRA210_ADMAIF_RX_CIF_CTRL(5),
+	TEGRA210_ADMAIF_RX_CIF_CTRL(6),
+	TEGRA210_ADMAIF_RX_CIF_CTRL(7),
+	TEGRA210_ADMAIF_RX_CIF_CTRL(8),
+	TEGRA210_ADMAIF_RX_CIF_CTRL(9),
+	TEGRA210_ADMAIF_RX_CIF_CTRL(10),
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	TEGRA210_ADMAIF_RX_CIF_CTRL(11),
+	TEGRA210_ADMAIF_RX_CIF_CTRL(12),
+	TEGRA210_ADMAIF_RX_CIF_CTRL(13),
+	TEGRA210_ADMAIF_RX_CIF_CTRL(14),
+	TEGRA210_ADMAIF_RX_CIF_CTRL(15),
+	TEGRA210_ADMAIF_RX_CIF_CTRL(16),
+	TEGRA210_ADMAIF_RX_CIF_CTRL(17),
+	TEGRA210_ADMAIF_RX_CIF_CTRL(18),
+	TEGRA210_ADMAIF_RX_CIF_CTRL(19),
+	TEGRA210_ADMAIF_RX_CIF_CTRL(20),
+#endif
+	TEGRA210_ADMAIF_TX_CIF_CTRL(1),
+	TEGRA210_ADMAIF_TX_CIF_CTRL(2),
+	TEGRA210_ADMAIF_TX_CIF_CTRL(3),
+	TEGRA210_ADMAIF_TX_CIF_CTRL(4),
+	TEGRA210_ADMAIF_TX_CIF_CTRL(5),
+	TEGRA210_ADMAIF_TX_CIF_CTRL(6),
+	TEGRA210_ADMAIF_TX_CIF_CTRL(7),
+	TEGRA210_ADMAIF_TX_CIF_CTRL(8),
+	TEGRA210_ADMAIF_TX_CIF_CTRL(9),
+	TEGRA210_ADMAIF_TX_CIF_CTRL(10),
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	TEGRA210_ADMAIF_TX_CIF_CTRL(11),
+	TEGRA210_ADMAIF_TX_CIF_CTRL(12),
+	TEGRA210_ADMAIF_TX_CIF_CTRL(13),
+	TEGRA210_ADMAIF_TX_CIF_CTRL(14),
+	TEGRA210_ADMAIF_TX_CIF_CTRL(15),
+	TEGRA210_ADMAIF_TX_CIF_CTRL(16),
+	TEGRA210_ADMAIF_TX_CIF_CTRL(17),
+	TEGRA210_ADMAIF_TX_CIF_CTRL(18),
+	TEGRA210_ADMAIF_TX_CIF_CTRL(19),
+	TEGRA210_ADMAIF_TX_CIF_CTRL(20),
 #endif
 };
 

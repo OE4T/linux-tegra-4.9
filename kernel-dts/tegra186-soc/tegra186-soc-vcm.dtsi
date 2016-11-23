@@ -34,7 +34,7 @@
 		serial5 = &uartf;
 		serial6 = &uartg;
 		qspi6 = &qspi6;
-		rtc1 = "/rtc";
+		rtc1 = "/rtc@c2a0000";
 		rtc0 = "/bpmp_i2c/spmic@3c";
 	};
 

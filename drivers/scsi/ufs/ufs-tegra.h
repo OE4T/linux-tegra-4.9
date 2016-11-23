@@ -78,6 +78,8 @@
 #define VS_DEBUGSAVECONFIGTIME		0xD0A0
 #define VS_DEBUGSAVECONFIGTIME_TREF	0x6
 #define SET_TREF(x)			(((x) & 0x7) << 2)
+#define VS_DEBUGSAVECONFIGTIME_ST_SCT	0x3
+#define SET_ST_SCT(x)			((x) & 0x3)
 
 #define MPHY_ADDR_RANGE		0x1fc
 #define UFS_AUX_ADDR_RANGE	0x18

@@ -906,8 +906,13 @@ static int ufs_tegra_pwr_change_notify(struct ufs_hba *hba,
 		/* Update VS_DebugSaveConfigTime Tref */
 		ufshcd_dme_get(hba, UIC_ARG_MIB(VS_DEBUGSAVECONFIGTIME),
 			&vs_save_config);
+		/* Update VS_DebugSaveConfigTime st_sct */
+		vs_save_config &= ~SET_ST_SCT(~0);
+		vs_save_config |= SET_ST_SCT(VS_DEBUGSAVECONFIGTIME_ST_SCT);
+		/* Update VS_DebugSaveConfigTime Tref */
 		vs_save_config &= ~SET_TREF(~0);
 		vs_save_config |= SET_TREF(VS_DEBUGSAVECONFIGTIME_TREF);
+
 		ufshcd_dme_set(hba, UIC_ARG_MIB(VS_DEBUGSAVECONFIGTIME),
 				vs_save_config);
 

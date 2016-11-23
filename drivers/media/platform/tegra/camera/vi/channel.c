@@ -1079,7 +1079,6 @@ __tegra_channel_set_format(struct tegra_channel *chan,
 		chan->fmtinfo = vfmt;
 		tegra_channel_fmt_align(chan,
 			&pix->width, &pix->height, &pix->bytesperline);
-		pix->bytesperline = pix->width * chan->fmtinfo->bpp;
 		pix->sizeimage = pix->bytesperline * pix->height;
 		buffer_size_align(&pix->sizeimage);
 		if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)

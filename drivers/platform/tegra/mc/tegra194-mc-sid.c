@@ -26,6 +26,7 @@
 
 #include <linux/platform/tegra/tegra-mc-sid.h>
 #include <dt-bindings/memory/tegra-swgroup.h>
+#include <dt-bindings/memory/tegra194-swgroup.h>
 
 enum override_id {
 	PTCR,
@@ -100,6 +101,16 @@ enum override_id {
 	NVDISPLAYR1,
 	VICSRD1,
 	NVDECSRD1,
+	DLA0RDA,
+	DLA0FALRDB,
+	DLA0WRA,
+	DLA0FALWRB,
+	DLA1RDA,
+	DLA1FALRDB,
+	DLA1WRA,
+	DLA1FALWRB,
+	DLA0RDA1,
+	DLA1RDA1,
 	MAX_OID,
 };
 
@@ -176,6 +187,16 @@ static struct sid_override_reg sid_override_reg[] = {
 	DEFREG(NVDISPLAYR1,	0x508),
 	DEFREG(VICSRD1,		0x510),
 	DEFREG(NVDECSRD1,	0x518),
+	DEFREG(DLA0RDA,		0x5f0),
+	DEFREG(DLA0FALRDB,	0x5f8),
+	DEFREG(DLA0WRA,		0x600),
+	DEFREG(DLA0FALWRB,	0x608),
+	DEFREG(DLA1RDA,		0x610),
+	DEFREG(DLA1FALRDB,	0x618),
+	DEFREG(DLA1WRA,		0x620),
+	DEFREG(DLA1FALWRB,	0x628),
+	DEFREG(DLA0RDA1,	0x748),
+	DEFREG(DLA1RDA1,	0x750),
 };
 
 static struct sid_to_oids sid_to_oids[] = {
@@ -479,6 +500,32 @@ static struct sid_to_oids sid_to_oids[] = {
 		},
 		.ord = SIM_OVERRIDE,
 		.name = "NVJPG",
+	},
+	{
+		.sid	= TEGRA_SID_NVDLA0,
+		.noids	= 5,
+		.oid	= {
+			DLA0RDA,
+			DLA0FALRDB,
+			DLA0WRA,
+			DLA0FALWRB,
+			DLA0RDA1,
+		},
+		.ord = SIM_OVERRIDE,
+		.name = "NVDLA0",
+	},
+	{
+		.sid	= TEGRA_SID_NVDLA1,
+		.noids	= 5,
+		.oid	= {
+			DLA1RDA,
+			DLA1FALRDB,
+			DLA1WRA,
+			DLA1FALWRB,
+			DLA1RDA1,
+		},
+		.ord = SIM_OVERRIDE,
+		.name = "NVDLA1",
 	},
 };
 

@@ -533,68 +533,6 @@ WRITEL_FN(writel_all, writel, u32);
 #define writeq_relaxed writeq_relaxed_all
 #define writel writel_all
 
-#ifdef CONFIG_ARM_SMMU_WAR
-/*
- * linsim hacks: Indirect register accessor
- */
-#undef readl_relaxed
-#undef writel_relaxed
-#undef writel
-#define __readl_relaxed(c)						\
-	({ u32 __v = le32_to_cpu((__force __le32)__raw_readl(c)); __v; })
-#define __writel(v,c)							\
-	({ __iowmb(); ((void)__raw_writel((__force u32)cpu_to_le32(v),(c))); })
-
-static volatile void __iomem *mc_base;
-
-#define MC_BASE				0x22c10000 /* HACK: for c-model */
-#define MC_SIZE				0x00010000
-#define ARM_SMMU_CONTROL_ADDRESS	0x24
-#define ARM_SMMU_CONTROL_DATA		0x28
-
-static inline void writel(u32 val, volatile void __iomem *virt_addr)
-{
-	u32 offset;
-	volatile void __iomem *ctl_addr;
-
-	if (!tegra_platform_is_sim()) {
-		__writel(val, virt_addr);
-		return;
-	}
-
-	ctl_addr = mc_base + ARM_SMMU_CONTROL_ADDRESS;
-	offset = virt_addr - smmu_handle->base[0];
-	__writel(offset, ctl_addr);
-	pr_debug("Indirect write(ADDRESS) offset=%08x ctl_addr=%p\n",
-		 offset, ctl_addr);
-
-	ctl_addr = mc_base + ARM_SMMU_CONTROL_DATA;
-	__writel(val, ctl_addr);
-	pr_debug("Indirect write(DATA) val=%08x ctl_addr=%p\n", val, ctl_addr);
-}
-#define writel_relaxed(v,a) writel(v,a)
-
-static inline u32 readl_relaxed(const volatile void __iomem *virt_addr)
-{
-	u32 val, offset;
-	volatile void __iomem *ctl_addr;
-
-	if (!tegra_platform_is_sim())
-		return __readl_relaxed(virt_addr);
-
-	ctl_addr = mc_base + ARM_SMMU_CONTROL_ADDRESS;
-	offset = virt_addr - smmu_handle->base[0];
-	__writel(offset, ctl_addr);
-	pr_debug("Indirect read(ADDRESS) offset=%08x ctl_addr=%p\n",
-		 offset, ctl_addr);
-
-	ctl_addr = mc_base + ARM_SMMU_CONTROL_DATA;
-	val = __readl_relaxed(ctl_addr);
-	pr_debug("Indirect read(DATA) val=%08x ctl_addr=%p\n", val, ctl_addr);
-	return val;
-}
-#endif
-
 void __weak platform_override_streamid(int streamid)
 {
 }
@@ -618,7 +556,6 @@ static struct arm_smmu_domain *to_smmu_domain(struct iommu_domain *dom)
 {
 	return container_of(dom, struct arm_smmu_domain, domain);
 }
-
 
 static void parse_driver_options(struct arm_smmu_device *smmu)
 {
@@ -1620,28 +1557,6 @@ static void arm_smmu_master_free_smrs(struct arm_smmu_device *smmu,
 	kfree(smrs);
 }
 
-#ifdef CONFIG_ARM_SMMU_WAR
-/* HACK: c-model uses legacy swgroup interface */
-static void tegra_smmu_conf_swgroup(struct arm_smmu_device *smmu, int swgid,
-				    u8 cbndx)
-{
-	size_t offs;
-	u32 val;
-
-	offs = tegra_smmu_of_offset(swgid);
-	val = BIT(31) | swgid; /* swgid == streamID */
-	__writel(val, mc_base + offs);
-
-	pr_info("%s() ASID_0=0x%zx val=0x%08x streamID=%d cbndx=%d\n",
-		__func__, offs, val, swgid, cbndx);
-}
-#else
-static inline void tegra_smmu_conf_swgroup(struct arm_smmu_device *smmu,
-					   int swgid, u8 cbndx)
-{
-}
-#endif
-
 static int arm_smmu_domain_add_master(struct arm_smmu_domain *smmu_domain,
 				      struct arm_smmu_master_cfg *cfg)
 {
@@ -1661,11 +1576,6 @@ static int arm_smmu_domain_add_master(struct arm_smmu_domain *smmu_domain,
 		s2cr = S2CR_TYPE_TRANS |
 		       (smmu_domain->cfg.cbndx << S2CR_CBNDX_SHIFT);
 		writel_relaxed(s2cr, gr0_base + ARM_SMMU_GR0_S2CR(idx));
-
-		if (config_enabled(CONFIG_ARM_SMMU_WAR) &&
-		    tegra_platform_is_sim())
-			tegra_smmu_conf_swgroup(smmu, cfg->streamids[i],
-						smmu_domain->cfg.cbndx);
 	}
 
 	return 0;
@@ -3374,17 +3284,6 @@ static int __init arm_smmu_init(void)
 {
 	int ret;
 
-#ifdef CONFIG_ARM_SMMU_WAR
-	if (tegra_platform_is_sim()) {
-		mc_base = ioremap_nocache(MC_BASE, MC_SIZE);
-		if (!mc_base)
-			return -EINVAL;
-
-		pr_info("%s(): 0x%08x is mapped to %p\n",
-			__func__, MC_BASE, mc_base);
-		__writel(SMMU_CONFIG_ENABLE, mc_base + SMMU_CONFIG);
-	}
-#endif
 	ret = platform_driver_register(&arm_smmu_driver);
 	if (ret)
 		return ret;

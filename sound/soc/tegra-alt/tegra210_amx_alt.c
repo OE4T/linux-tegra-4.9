@@ -319,11 +319,15 @@ static int tegra210_amx_set_audio_cif(struct snd_soc_dai *dai,
 
 	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
 
+	channels = params_channels(params);
+
 	if (strstr(dai->name, "OUT")) {
 		channels = amx->output_channels > 0 ?
-			amx->output_channels : params_channels(params);
-	} else
-		channels = params_channels(params);
+			amx->output_channels : channels;
+	} else {
+		channels = amx->input_channels[dai->id] > 0 ?
+			amx->input_channels[dai->id] : channels;
+	}
 
 	if (channels < 1 || channels > 16)
 		return -EINVAL;
@@ -513,28 +517,49 @@ static int tegra210_amx_put_byte_map(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int tegra210_amx_get_output_channels(struct snd_kcontrol *kcontrol,
+static int tegra210_amx_get_channels(struct snd_kcontrol *kcontrol,
 					 struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
 	struct tegra210_amx *amx = snd_soc_codec_get_drvdata(codec);
+	int reg = mc->reg;
+	char buf[50];
 
-	ucontrol->value.integer.value[0] = amx->output_channels;
+	snprintf(buf, 50, "Input%d Channels", reg);
+	if (strstr(kcontrol->id.name, buf))
+		ucontrol->value.integer.value[0] = amx->input_channels[reg - 1];
+	else if (strstr(kcontrol->id.name, "Output Channels"))
+		ucontrol->value.integer.value[0] = amx->output_channels;
+
 	return 0;
 }
 
-static int tegra210_amx_put_output_channels(struct snd_kcontrol *kcontrol,
+static int tegra210_amx_put_channels(struct snd_kcontrol *kcontrol,
 					 struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
 	struct tegra210_amx *amx = snd_soc_codec_get_drvdata(codec);
+	int reg = mc->reg;
 	int value = ucontrol->value.integer.value[0];
+	char buf[50];
 
-	if (value > 0 && value <= 16) {
-		amx->output_channels = value;
-		return 0;
-	} else
-		return -EINVAL;
+	snprintf(buf, 50, "Input%d Channels", reg);
+	if (strstr(kcontrol->id.name, buf)) {
+		if (value > 0 && value <= 16)
+			amx->input_channels[reg - 1] = value;
+		else
+			return -EINVAL;
+	} else if (strstr(kcontrol->id.name, "Output Channels")) {
+		if (value > 0 && value <= 16)
+			amx->output_channels = value;
+		else
+			return -EINVAL;
+	}
+	return 0;
 }
 
 static int tegra210_amx_codec_probe(struct snd_soc_codec *codec)
@@ -618,8 +643,13 @@ static const struct snd_soc_dapm_route tegra210_amx_routes[] = {
 
 #define TEGRA210_AMX_OUTPUT_CHANNELS_CTRL(reg) \
 	SOC_SINGLE_EXT("Output Channels", reg, 0, 16, 0, \
-		tegra210_amx_get_output_channels, \
-		tegra210_amx_put_output_channels)
+		tegra210_amx_get_channels, \
+		tegra210_amx_put_channels)
+
+#define TEGRA210_AMX_INPUT_CHANNELS_CTRL(reg) \
+	SOC_SINGLE_EXT("Input" #reg " Channels", reg, 0, 16, 0, \
+		tegra210_amx_get_channels, \
+		tegra210_amx_put_channels)
 
 static struct snd_kcontrol_new tegra210_amx_controls[] = {
 	TEGRA210_AMX_BYTE_MAP_CTRL(0),
@@ -688,6 +718,10 @@ static struct snd_kcontrol_new tegra210_amx_controls[] = {
 	TEGRA210_AMX_BYTE_MAP_CTRL(63),
 
 	TEGRA210_AMX_OUTPUT_CHANNELS_CTRL(1),
+	TEGRA210_AMX_INPUT_CHANNELS_CTRL(1),
+	TEGRA210_AMX_INPUT_CHANNELS_CTRL(2),
+	TEGRA210_AMX_INPUT_CHANNELS_CTRL(3),
+	TEGRA210_AMX_INPUT_CHANNELS_CTRL(4),
 };
 
 static struct snd_soc_codec_driver tegra210_amx_codec = {

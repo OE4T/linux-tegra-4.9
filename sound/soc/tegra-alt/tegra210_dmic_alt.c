@@ -154,7 +154,6 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 
 	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
 
-	channels = params_channels(params);
 	srate = params_rate(params);
 	dmic_clk = (1 << (6+osr)) * srate;
 
@@ -164,6 +163,17 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 	} else {
 		channels = 1;
 		channel_select = dmic->ch_select;
+	}
+
+	cif_conf.client_channels = channels;
+	cif_conf.audio_channels = channels;
+
+	/* For capture path, the mono input from client channel
+	 * can be converted to stereo with cif controls.
+	*/
+	if (dmic->tx_mono_to_stereo > 0) {
+		cif_conf.mono_conv = dmic->tx_mono_to_stereo - 1;
+		cif_conf.audio_channels = 2;
 	}
 
 	if ((tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
@@ -241,9 +251,6 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 	regmap_write(dmic->regmap,
 				TEGRA210_DMIC_LP_BIQUAD_1_COEF_4, 0x00000000);
 
-	cif_conf.audio_channels = channels;
-	cif_conf.client_channels = channels;
-
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
 		cif_conf.audio_bits = TEGRA210_AUDIOCIF_BITS_16;
@@ -274,6 +281,9 @@ static int tegra210_dmic_get_control(struct snd_kcontrol *kcontrol,
 		ucontrol->value.integer.value[0] = dmic->boost_gain;
 	else if (strstr(kcontrol->id.name, "Mono"))
 		ucontrol->value.integer.value[0] = dmic->ch_select;
+	else if (strstr(kcontrol->id.name, "TX mono to stereo"))
+		ucontrol->value.integer.value[0] =
+					dmic->tx_mono_to_stereo;
 
 	return 0;
 }
@@ -283,11 +293,14 @@ static int tegra210_dmic_put_control(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_dmic *dmic = snd_soc_codec_get_drvdata(codec);
+	int value = ucontrol->value.integer.value[0];
 
 	if (strstr(kcontrol->id.name, "Boost"))
-		dmic->boost_gain = ucontrol->value.integer.value[0];
+		dmic->boost_gain = value;
 	else if (strstr(kcontrol->id.name, "Mono"))
 		dmic->ch_select = ucontrol->value.integer.value[0];
+	else if (strstr(kcontrol->id.name, "TX mono to stereo"))
+		dmic->tx_mono_to_stereo = value;
 
 	return 0;
 }
@@ -349,16 +362,29 @@ static const struct snd_soc_dapm_route tegra210_dmic_routes[] = {
 static const char * const tegra210_dmic_ch_select[] = {
 	"None", "L", "R",
 };
+
 static const struct soc_enum tegra210_dmic_ch_enum =
 	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
 		ARRAY_SIZE(tegra210_dmic_ch_select),
 		tegra210_dmic_ch_select);
+
+static const char * const tegra210_dmic_mono_conv_text[] = {
+	"None", "ZERO", "COPY",
+};
+
+static const struct soc_enum tegra210_dmic_mono_conv_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
+		ARRAY_SIZE(tegra210_dmic_mono_conv_text),
+		tegra210_dmic_mono_conv_text);
+
 static const struct snd_kcontrol_new tegra210_dmic_controls[] = {
 	SOC_SINGLE_EXT("Boost Gain", 0, 0, 25600, 0,
 		tegra210_dmic_get_control, tegra210_dmic_put_control),
 	SOC_ENUM_EXT("Mono Channel Select", tegra210_dmic_ch_enum,
 		tegra210_dmic_get_control, tegra210_dmic_put_control),
-};
+	SOC_ENUM_EXT("TX mono to stereo conv", tegra210_dmic_mono_conv_enum,
+		tegra210_dmic_get_control, tegra210_dmic_put_control),
+	};
 
 static struct snd_soc_codec_driver tegra210_dmic_codec = {
 	.probe = tegra210_dmic_codec_probe,

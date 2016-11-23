@@ -131,6 +131,7 @@ struct tegra210_dmic {
 	struct pinctrl_state *pin_idle_state;
 	int boost_gain; /* with 100x factor */
 	int ch_select;
+	int tx_mono_to_stereo;
 };
 
 #endif

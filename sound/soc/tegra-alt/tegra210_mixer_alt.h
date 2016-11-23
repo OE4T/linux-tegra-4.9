@@ -1,7 +1,7 @@
 /*
  * tegra210_mixer_alt.h - Definitions for Tegra210 MIXER driver
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -117,6 +117,9 @@
 #define TEGRA210_MIXER_AHUBRAMCTL_GAIN_CONFIG_RAM_CTRL_RAM_ADDR_SHIFT		0
 #define TEGRA210_MIXER_AHUBRAMCTL_GAIN_CONFIG_RAM_CTRL_RAM_ADDR_MASK		(0x1ff << TEGRA210_MIXER_AHUBRAMCTL_GAIN_CONFIG_RAM_CTRL_RAM_ADDR_SHIFT)
 
+#define TEGRA210_MIXER_TOTAL_PATH	(TEGRA210_MIXER_AXBAR_RX_MAX + \
+						TEGRA210_MIXER_AXBAR_TX_MAX)
+
 struct tegra210_mixer_soc_data {
 	void (*set_audio_cif)(struct regmap *map,
 			unsigned int reg,
@@ -128,6 +131,7 @@ struct tegra210_mixer {
 	int gain_coeff[14];
 	int gain_value[TEGRA210_MIXER_AXBAR_RX_MAX];
 	const struct tegra210_mixer_soc_data *soc_data;
+	unsigned int channels_via_control[TEGRA210_MIXER_TOTAL_PATH];
 };
 
 #endif

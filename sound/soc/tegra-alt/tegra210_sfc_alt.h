@@ -109,6 +109,7 @@ struct tegra210_sfc {
 	int stereo_conv_input;
 	int mono_conv_output;
 	const struct tegra210_sfc_soc_data *soc_data;
+	unsigned int channels_via_control;
 };
 
 /* coeff RAM tables required for SFC */

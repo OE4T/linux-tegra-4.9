@@ -3692,6 +3692,9 @@ static int ufshcd_enable_auto_bkops(struct ufs_hba *hba)
 {
 	int err = 0;
 
+	if (!(hba->quirks & UFSHCD_QUIRK_ENABLE_BKOPS))
+		goto out;
+
 	if (hba->auto_bkops_enabled)
 		goto out;
 
@@ -3729,6 +3732,9 @@ out:
 static int ufshcd_disable_auto_bkops(struct ufs_hba *hba)
 {
 	int err = 0;
+
+	if (!(hba->quirks & UFSHCD_QUIRK_ENABLE_BKOPS))
+		goto out;
 
 	if (!hba->auto_bkops_enabled)
 		goto out;
@@ -3775,6 +3781,9 @@ static void  ufshcd_force_reset_auto_bkops(struct ufs_hba *hba)
 
 static inline int ufshcd_get_bkops_status(struct ufs_hba *hba, u32 *status)
 {
+	if (!(hba->quirks & UFSHCD_QUIRK_ENABLE_BKOPS))
+		return 0;
+
 	return ufshcd_query_attr_retry(hba, UPIU_QUERY_OPCODE_READ_ATTR,
 			QUERY_ATTR_IDN_BKOPS_STATUS, 0, 0, status);
 }
@@ -3800,6 +3809,9 @@ static int ufshcd_bkops_ctrl(struct ufs_hba *hba,
 {
 	int err;
 	u32 curr_status = 0;
+
+	if (!(hba->quirks & UFSHCD_QUIRK_ENABLE_BKOPS))
+		return 0;
 
 	err = ufshcd_get_bkops_status(hba, &curr_status);
 	if (err) {
@@ -3833,6 +3845,9 @@ out:
  */
 static int ufshcd_urgent_bkops(struct ufs_hba *hba)
 {
+	if (!(hba->quirks & UFSHCD_QUIRK_ENABLE_BKOPS))
+		return 0;
+
 	return ufshcd_bkops_ctrl(hba, hba->urgent_bkops_lvl);
 }
 

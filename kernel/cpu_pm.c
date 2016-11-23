@@ -22,7 +22,7 @@
 #include <linux/spinlock.h>
 #include <linux/syscore_ops.h>
 
-static raw_spinlock_t cpu_pm_notifier_lock;
+static DEFINE_RAW_SPINLOCK(cpu_pm_notifier_lock);
 static RAW_NOTIFIER_HEAD(cpu_pm_notifier_chain);
 
 static int cpu_pm_notify(enum cpu_pm_event event, int nr_to_call, int *nr_calls)

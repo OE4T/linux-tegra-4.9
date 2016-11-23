@@ -61,6 +61,9 @@ static irqreturn_t flcn_isr(int irq, void *dev_id)
 {
 	struct platform_device *pdev = (struct platform_device *)(dev_id);
 	struct nvhost_device_data *pdata = nvhost_get_devdata(pdev);
+	unsigned long flags;
+
+	spin_lock_irqsave(&pdata->mirq_lock, flags);
 
 	if (pdata->flcn_isr)
 		pdata->flcn_isr(pdev);
@@ -68,6 +71,16 @@ static irqreturn_t flcn_isr(int irq, void *dev_id)
 	host1x_writel(pdev, flcn_irqsclr_r(), flcn_irqsclr_swgen0_set_f() |
 					      flcn_irqsclr_swgen1_set_f());
 	host1x_writel(pdev, flcn_thi_int_stat_r(), flcn_thi_int_stat_clr_f());
+
+	/*
+	 * Interrupt clear is reflected after performing
+	 * the read on THI status register.
+	 *
+	 * TODO: Findout why this read is exactly needed ?
+	 */
+	host1x_readl(pdev, flcn_thi_int_stat_r());
+
+	spin_unlock_irqrestore(&pdata->mirq_lock, flags);
 
 	return IRQ_HANDLED;
 }
@@ -87,6 +100,7 @@ int flcn_intr_init(struct platform_device *pdev)
 		return -ENXIO;
 	}
 
+	spin_lock_init(&pdata->mirq_lock);
 	dev_name = get_device_name_for_dev(pdev);
 	ret = request_irq(pdata->irq,
 			  flcn_isr, 0,

@@ -64,6 +64,7 @@ static int tegra_tachometer_set_winlen(struct tachometer_dev *tach, u8 win_len)
 {
 	struct tegra_tachometer_device *tegra_tach;
 	u8 tach0, wlen;
+	int ret;
 
 	if (hweight8(win_len) != 1) {
 		pr_err("Tachometer: Select winlen from {1, 2, 4 or 8} only\n");
@@ -77,12 +78,20 @@ static int tegra_tachometer_set_winlen(struct tachometer_dev *tach, u8 win_len)
 
 	tegra_tach = (struct tegra_tachometer_device *)tachometer_get_drvdata(tach);
 
+	ret = clk_prepare_enable(tegra_tach->clk);
+	if (ret) {
+		pr_err("%s: clock enable error: %d\n", __func__, ret);
+		return ret;
+	}
+
 	wlen = ffs(win_len) - 1;
 	tach0 = tachometer_readb(tegra_tach, TACH_FAN_TACH0_OVERFLOW);
 	tach0 &= ~TACH_FAN_TACH0_OVERFLOW_WIN_LEN_MASK;
 	tach0 |= (wlen << 1);
 	tachometer_writeb(tegra_tach, tach0, TACH_FAN_TACH0_OVERFLOW);
 	tach->win_len = win_len;
+	clk_disable_unprepare(tegra_tach->clk);
+
 	return 0;
 }
 
@@ -91,10 +100,18 @@ static unsigned long tegra_tachometer_read_rpm(struct tachometer_dev *tach)
 	struct tegra_tachometer_device *tegra_tach;
 	u32 tach0;
 	unsigned long period, rpm, denominator, numerator;
+	int ret;
 
 	tegra_tach = (struct tegra_tachometer_device *)tachometer_get_drvdata(tach);
 
+	ret = clk_prepare_enable(tegra_tach->clk);
+	if (ret) {
+		pr_err("%s: clock enable error: %d\n", __func__, ret);
+		return ret;
+	}
+
 	tach0 = tachometer_readl(tegra_tach, TACH_FAN_TACH0);
+	clk_disable_unprepare(tegra_tach->clk);
 	if (tach0 & TACH_FAN_TACH0_OVERFLOW_MASK) {
 		/* Fan is stalled, clear overflow state */
 		pr_info("Tachometer: Overflow is detected\n");
@@ -103,8 +120,15 @@ static unsigned long tegra_tachometer_read_rpm(struct tachometer_dev *tach)
 		return 0;
 	}
 
-	period = (tach0 & TACH_FAN_TACH0_PERIOD_MASK) + 1; /* Bug 200046190 */
+	period = (tach0 & TACH_FAN_TACH0_PERIOD_MASK);
+	if ((period == TACH_FAN_TACH0_PERIOD_MIN) ||
+			(period == TACH_FAN_TACH0_PERIOD_MAX)) {
+		pr_debug("%s: period set to min/max (0x%lu), not valid to measure RPM value\n",
+				__func__, period);
+		return 0;
+	}
 
+	period = period + 1; /* Bug 200046190 */
 	numerator = 60 * counter_clock * tach->win_len;
 	denominator = period * tach->pulse_per_rev;
 
@@ -169,12 +193,27 @@ static int tegra_tachometer_probe(struct platform_device *pdev)
 
 	tegra_tach->clk = devm_clk_get(&pdev->dev, "tach");
 	if (IS_ERR(tegra_tach->clk)) {
-		dev_err(&pdev->dev, "clock error\n");
+		ret = PTR_ERR(tegra_tach->clk);
+		dev_err(&pdev->dev, "%s: clock error: %d\n", __func__, ret);
 		tegra_tach->clk = NULL;
-		return PTR_ERR(tegra_tach->clk);
+		return ret;
 	}
 	ret = clk_prepare_enable(tegra_tach->clk);
-	clk_set_rate(tegra_tach->clk, counter_clock);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: clock enable error: %d\n",
+			__func__, ret);
+		tegra_tach->clk = NULL;
+		return ret;
+	}
+
+	ret = clk_set_rate(tegra_tach->clk, counter_clock);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to set clk rate: %d\n",
+			__func__, ret);
+		tegra_tach->clk = NULL;
+		clk_disable_unprepare(tegra_tach->clk);
+		return ret;
+	}
 
 	reset_control_reset(tegra_tach->rstc);
 
@@ -184,6 +223,7 @@ static int tegra_tachometer_probe(struct platform_device *pdev)
 	if (IS_ERR(tach_dev)) {
 		ret = PTR_ERR(tach_dev);
 		pr_err("T186 Tachometer driver init failed, err: %d\n", ret);
+		clk_disable_unprepare(tegra_tach->clk);
 		return ret;
 	}
 	tachometer_set_drvdata(tach_dev, tegra_tach);
@@ -200,6 +240,7 @@ static int tegra_tachometer_probe(struct platform_device *pdev)
 	pr_info("Tachometer driver initialized with pulse_per_rev: %d and win_len: %d\n",
 			tach_dev->pulse_per_rev, tach_dev->win_len);
 
+	clk_disable_unprepare(tegra_tach->clk);
 
 	return 0;
 }

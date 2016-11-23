@@ -95,7 +95,7 @@ config TEGRA_USE_NA_GPCPLL
 config GK20A_PCI
 	bool "Support PCIe NVIDIA GPUs on nvgpu"
 	depends on PCI && GK20A
-	default y if ARCH_TEGRA_T18x_SOC
+	default y if ARCH_TEGRA_18x_SOC
 	default n
 	help
 	  Enable support for GPUs on PCIe bus.

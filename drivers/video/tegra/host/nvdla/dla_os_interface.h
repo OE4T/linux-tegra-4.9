@@ -34,8 +34,22 @@
 #define DLA_INT_ON_COMPLETE_SHIFT	8
 #define DLA_INT_ON_ERROR_SHIFT		9
 
+#define PREACTION_TERMINATE	0x0
+#define PREACTION_SEM_EQ	0x90
+#define PREACTION_SEM_GE	0x92
+#define PREACTION_GOS_EQ	0xB0
+#define PREACTION_GOS_GE	0xB2
+#define PREACTION_TASK_STATUS	0xC0
+
+#define POSTACTION_TERMINATE	0x0
+#define POSTACTION_SEM		0x80
+#define POSTACTION_TS_SEM	0x83
+#define POSTACTION_GOS		0xA0
+#define POSTACTION_TASK_STATUS	0xC1
+
 #define PING_DATA_SIZE		4
 #define BUFFER_MULTIPLIER	4
+#define MAX_NUM_GRIDS		6
 
 #define ERR(code) -DLA_ERR_##code
 
@@ -72,6 +86,7 @@ enum dla_errors_e {
 	DLA_ERR_INVALID_ENGINE_ID = 10,
 	DLA_ERR_INVALID_REGION = 11,
 	DLA_ERR_PROCESSOR_BUSY = 12,
+	DLA_ERR_RETRY = 13,
 };
 
 /* Notifications from DLA Falcon to Host */
@@ -141,14 +156,58 @@ struct dla_action_opcode {
 /**
  * Semaphore action structure
  *
- * OPCODE = 0x90/0x80
+ * OPCODE = 0x90/0x80/0x92/0x83
  *
  * @address: Address to read or write value
- * @val: Value to compare
+ * @value: Value to compare
  */
 struct dla_action_semaphore {
 	uint64_t address;
 	uint32_t value;
+} __attribute__ ((packed));
+
+/**
+ * GoS action structure
+ *
+ * OPCODE = 0xA0/0xB0/0xA2
+ *
+ * @index: GoS index
+ * @offset: Offset within grid
+ * @value: Value to compare
+ */
+struct dla_action_gos {
+	uint8_t index;
+	uint16_t offset;
+	uint32_t value;
+} __attribute__ ((packed));
+
+/**
+ * Status notifier action structure
+ *
+ * OPCODE = 0xC0/0xC1
+ *
+ * @address: Address to read or write status notifier
+ * @status: Value to compare
+ */
+struct dla_action_task_status {
+	uint64_t address;
+	uint16_t status;
+} __attribute__ ((packed));
+
+/**
+ * Status notifier structure
+ *
+ * @address: 64-bit timestamp representing the time at which
+ * the notifier was written
+ * @status_engine: status work captured from HW engine
+ * @subframe: NA
+ * @status_task: status word as configured from an action list
+ */
+struct dla_task_status {
+	uint64_t timestamp;
+	uint32_t status_engine;
+	uint16_t subframe;
+	uint16_t status_task;
 } __attribute__ ((packed));
 
 /**
@@ -173,7 +232,24 @@ struct dla_region_printf {
 	uint32_t region;
 	uint64_t address;
 	uint32_t size;
-} __attribute__ ((packed, aligned(64)));
+} __attribute__ ((packed, aligned(8)));
+
+/**
+ * DLA_REGION_GOS
+ *
+ * Command to set GoS regions
+ *
+ * @region: value for DLA_REGION_GOS
+ * @address: IOVA/PA address of region
+ * @num_regions: Number of grids
+ * @grid_size: Size of each grid
+ */
+struct dla_region_gos {
+	uint32_t region;
+	uint16_t num_grids;
+	uint16_t grid_size;
+	uint64_t address[MAX_NUM_GRIDS];
+} __attribute__ ((packed, aligned(8)));
 
 #define MAX_MESSAGE_SIZE	512
 

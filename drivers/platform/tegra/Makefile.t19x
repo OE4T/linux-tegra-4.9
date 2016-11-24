@@ -3,3 +3,4 @@ obj-y += powergate/
 obj-$(CONFIG_TEGRA_CENTRAL_ACTMON) += cactmon_t19x.o
 obj-$(CONFIG_ARCH_TEGRA_19x_SOC) += t19x_mce.o
 obj-$(CONFIG_ARCH_TEGRA_19x_SOC) += t19x_cache.o
+obj-$(CONFIG_ARCH_TEGRA_19x_SOC) += cvnas.o

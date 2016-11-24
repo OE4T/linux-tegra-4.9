@@ -19,13 +19,23 @@
 #include <linux/delay.h>
 #include <linux/completion.h>
 #include <linux/kernel.h>
-
 #include "dc.h"
-
+#include <linux/moduleparam.h>
 #include "dp_lt.h"
 #include "dp.h"
 #include "sor.h"
 #include "sor_regs.h"
+
+/*
+ * By default we do not trigger LT if link is already stable.
+ * However, analyzer tests in their latest firmware are explicitly
+ * checking for LT. Add param to suppress this optimization. It
+ * has no usecase other than analyzer specific requirement.
+ */
+static bool force_trigger_lt;
+module_param(force_trigger_lt, bool, 0644);
+MODULE_PARM_DESC(force_trigger_lt,
+	"Retrigger LT even if link is already stable");
 
 static void set_lt_state(struct tegra_dp_lt_data *lt_data,
 			int target_state, int delay_ms);
@@ -550,7 +560,7 @@ static void lt_reset_state(struct tegra_dp_lt_data *lt_data)
 		goto done;
 	}
 
-	if (!lt_data->force_trigger &&
+	if (!force_trigger_lt && !lt_data->force_trigger &&
 		lt_data->lt_config_valid &&
 		get_lt_status(lt_data)) {
 		pr_info("dp_lt: link stable, do nothing\n");

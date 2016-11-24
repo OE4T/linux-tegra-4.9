@@ -219,6 +219,20 @@ static void pva_task_unpin_mem(struct pva_submit_task *task)
 				task->postfences[i].semaphore_handle);
 	}
 
+	for (i = 0; i < task->num_input_task_status; i++) {
+		if (task->input_task_status[i].handle) {
+			UNPIN_MEMORY(task->input_task_status_ext[i],
+				task->input_task_status[i].handle);
+		}
+	}
+
+	for (i = 0; i < task->num_output_task_status; i++) {
+		if (task->output_task_status[i].handle) {
+			UNPIN_MEMORY(task->output_task_status_ext[i],
+				task->output_task_status[i].handle);
+		}
+	}
+
 	UNPIN_MEMORY(task->input_scalars_ext, task->input_scalars.handle);
 	UNPIN_MEMORY(task->input_rois_ext, task->input_rois.handle);
 	UNPIN_MEMORY(task->input_2dpoint_ext, task->input_2dpoint.handle);
@@ -284,6 +298,21 @@ static int pva_task_pin_mem(struct pva_submit_task *task)
 			&& task->postfences[i].semaphore_handle) {
 			PIN_MEMORY(task->postfences_sema_ext[i],
 				task->postfences[i].semaphore_handle);
+		}
+	}
+
+	/* Pin the input and output action status */
+	for (i = 0; i < task->num_input_task_status; i++) {
+		if (task->input_task_status[i].handle) {
+			PIN_MEMORY(task->input_task_status_ext[i],
+				task->input_task_status[i].handle);
+		}
+	}
+
+	for (i = 0; i < task->num_output_task_status; i++) {
+		if (task->output_task_status[i].handle) {
+			PIN_MEMORY(task->output_task_status_ext[i],
+				task->output_task_status[i].handle);
 		}
 	}
 
@@ -440,6 +469,20 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 		}
 	}
 
+	/* Perform input status checks */
+	for (i = 0; i < task->num_input_task_status; i++) {
+		struct pva_status_handle *input_status =
+					task->input_task_status + i;
+		dma_addr_t input_status_addr =
+				task->input_task_status_ext[i].dma_addr  +
+				input_status->offset;
+
+		ptr += pva_task_write_ptr_op(
+					&hw_preactions[ptr],
+					TASK_ACT_READ_STATUS,
+					input_status_addr, 0);
+	}
+
 	ptr += pva_task_write_atomic_op(&hw_preactions[ptr],
 		TASK_ACT_TERMINATE);
 
@@ -462,6 +505,20 @@ static void pva_task_write_postactions(struct pva_submit_task *task,
 				task->queue->syncpt_id);
 	u8 *hw_postactions = (void *)((u8 *)task->va + *offset);
 	int ptr = 0, i = 0;
+
+	/* Write Output action status */
+	for (i = 0; i < task->num_output_task_status; i++) {
+		struct pva_status_handle *output_status =
+					task->output_task_status + i;
+		dma_addr_t output_status_addr =
+				task->output_task_status_ext[i].dma_addr  +
+				output_status->offset;
+
+		ptr += pva_task_write_ptr_op(
+					&hw_postactions[ptr],
+					TASK_ACT_WRITE_STATUS,
+					output_status_addr, 0);
+	}
 
 	/* Add postactions list for semaphore */
 	for (i = 0; i < task->num_postfences; i++) {

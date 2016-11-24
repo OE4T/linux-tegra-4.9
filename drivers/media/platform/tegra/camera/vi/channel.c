@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra Video Input Device
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -31,6 +31,7 @@
 #include <media/videobuf2-dma-contig.h>
 #include <media/camera_common.h>
 #include <media/tegra_camera_platform.h>
+#include <media/v4l2-dv-timings.h>
 
 #include <linux/clk/tegra.h>
 
@@ -135,7 +136,8 @@ static u32 get_aligned_buffer_size(struct tegra_channel *chan,
 }
 
 static void tegra_channel_fmt_align(struct tegra_channel *chan,
-				     u32 *width, u32 *height, u32 *bytesperline)
+				const struct tegra_video_format *vfmt,
+				u32 *width, u32 *height, u32 *bytesperline)
 {
 	unsigned int min_width;
 	unsigned int max_width;
@@ -144,7 +146,7 @@ static void tegra_channel_fmt_align(struct tegra_channel *chan,
 	unsigned int temp_width;
 	unsigned int align;
 	unsigned int temp_bpl;
-	unsigned int bpp = chan->fmtinfo->bpp;
+	unsigned int bpp = vfmt->bpp;
 
 	/* Init, if un-init */
 	if (!*width || !*height) {
@@ -153,7 +155,7 @@ static void tegra_channel_fmt_align(struct tegra_channel *chan,
 	}
 
 	if (!*bytesperline)
-		*bytesperline = *width * chan->fmtinfo->bpp;
+		*bytesperline = *width * bpp;
 
 	/* The transfer alignment requirements are expressed in bytes. Compute
 	 * the minimum and maximum values, clamp the requested width and convert
@@ -178,11 +180,33 @@ static void tegra_channel_fmt_align(struct tegra_channel *chan,
 	*bytesperline = clamp(temp_bpl, min_bpl, max_bpl);
 }
 
+static void tegra_channel_update_format(struct tegra_channel *chan,
+		u32 width, u32 height, u32 fourcc, u32 bpp,
+		u32 preferred_stride)
+{
+	chan->format.width = width;
+	chan->format.height = height;
+	chan->format.pixelformat = fourcc;
+	chan->format.bytesperline = preferred_stride ?: width * bpp;
+
+	tegra_channel_fmt_align(chan, chan->fmtinfo,
+				&chan->format.width,
+				&chan->format.height,
+				&chan->format.bytesperline);
+
+	/* Calculate the sizeimage per plane */
+	chan->format.sizeimage = get_aligned_buffer_size(chan,
+			chan->format.bytesperline, chan->format.height);
+
+	if (fourcc == V4L2_PIX_FMT_NV16)
+		chan->format.sizeimage *= 2;
+}
+
 static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 {
 	int ret, pixel_format_index = 0, init_code = 0;
 	struct v4l2_subdev *subdev = chan->subdev_on_csi;
-	struct v4l2_subdev_format fmt;
+	struct v4l2_subdev_format fmt = {};
 	struct v4l2_subdev_mbus_code_enum code = {
 		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
 	};
@@ -237,8 +261,8 @@ static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 	chan->format.bytesperline = chan->format.width *
 		chan->fmtinfo->bpp;
 	tegra_channel_fmt_align(chan,
-				&chan->format.width, &chan->format.height,
-				&chan->format.bytesperline);
+			chan->fmtinfo, &chan->format.width,
+			&chan->format.height, &chan->format.bytesperline);
 	chan->format.sizeimage = get_aligned_buffer_size(chan,
 			chan->format.bytesperline, chan->format.height);
 	if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
@@ -688,43 +712,6 @@ tegra_channel_s_edid(struct file *file, void *fh, struct v4l2_edid *edid)
 }
 
 static int
-tegra_channel_s_dv_timings(struct file *file, void *fh,
-		struct v4l2_dv_timings *timings)
-{
-	struct v4l2_fh *vfh = file->private_data;
-	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
-	struct v4l2_bt_timings *bt = &timings->bt;
-	int ret;
-
-	if (!v4l2_subdev_has_op(chan->subdev_on_csi, video, s_dv_timings))
-		return -ENOTTY;
-
-	ret = v4l2_device_call_until_err(chan->video.v4l2_dev,
-			chan->grp_id, video, s_dv_timings, timings);
-
-	if (!ret) {
-		chan->format.width = bt->width;
-		chan->format.height = bt->height;
-		chan->format.bytesperline = bt->width *
-			chan->fmtinfo->bpp;
-		tegra_channel_fmt_align(chan,
-					&chan->format.width,
-					&chan->format.height,
-					&chan->format.bytesperline);
-		chan->format.sizeimage = get_aligned_buffer_size(
-			chan, chan->format.bytesperline,
-			chan->format.height);
-		if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
-			chan->format.sizeimage *= 2;
-	}
-
-	if (chan->total_ports > 1)
-		update_gang_mode(chan);
-
-	return ret;
-}
-
-static int
 tegra_channel_g_dv_timings(struct file *file, void *fh,
 		struct v4l2_dv_timings *timings)
 {
@@ -736,6 +723,42 @@ tegra_channel_g_dv_timings(struct file *file, void *fh,
 
 	return v4l2_device_call_until_err(chan->video.v4l2_dev,
 			chan->grp_id, video, g_dv_timings, timings);
+}
+
+static int
+tegra_channel_s_dv_timings(struct file *file, void *fh,
+		struct v4l2_dv_timings *timings)
+{
+	struct v4l2_fh *vfh = file->private_data;
+	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
+	struct v4l2_bt_timings *bt = &timings->bt;
+	struct v4l2_dv_timings curr_timings;
+	int ret;
+
+	if (!v4l2_subdev_has_op(chan->subdev_on_csi, video, s_dv_timings))
+		return -ENOTTY;
+
+	ret = tegra_channel_g_dv_timings(file, fh, &curr_timings);
+	if (ret)
+		return ret;
+
+	if (v4l2_match_dv_timings(timings, &curr_timings, 0))
+		return 0;
+
+	if (vb2_is_busy(&chan->queue))
+		return -EBUSY;
+
+	ret = v4l2_device_call_until_err(chan->video.v4l2_dev,
+			chan->grp_id, video, s_dv_timings, timings);
+
+	if (!ret)
+		tegra_channel_update_format(chan, bt->width, bt->height,
+			chan->fmtinfo->fourcc, chan->fmtinfo->bpp, 0);
+
+	if (chan->total_ports > 1)
+		update_gang_mode(chan);
+
+	return ret;
 }
 
 static int
@@ -1010,36 +1033,6 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 }
 
 static int
-__tegra_channel_get_format(struct tegra_channel *chan,
-			struct v4l2_pix_format *pix)
-{
-	struct tegra_video_format const *vfmt;
-	struct v4l2_subdev_format fmt;
-	int ret = 0;
-	struct v4l2_subdev *sd = chan->subdev_on_csi;
-
-	memset(&fmt, 0x0, sizeof(fmt));
-	fmt.pad = 0;
-	ret = v4l2_subdev_call(sd, pad, get_fmt, NULL, &fmt);
-	if (ret == -ENOIOCTLCMD)
-		return -ENOTTY;
-
-	v4l2_fill_pix_format(pix, &fmt.format);
-	vfmt = tegra_core_get_format_by_code(fmt.format.code, 0);
-	if (vfmt != NULL) {
-		pix->pixelformat = vfmt->fourcc;
-		tegra_channel_fmt_align(chan,
-			&pix->width, &pix->height, &pix->bytesperline);
-		pix->sizeimage = get_aligned_buffer_size(chan,
-			pix->bytesperline, pix->height);
-		if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
-			pix->sizeimage *= 2;
-	}
-
-	return ret;
-}
-
-static int
 tegra_channel_get_format(struct file *file, void *fh,
 			struct v4l2_format *format)
 {
@@ -1047,7 +1040,9 @@ tegra_channel_get_format(struct file *file, void *fh,
 	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
 	struct v4l2_pix_format *pix = &format->fmt.pix;
 
-	return  __tegra_channel_get_format(chan, pix);
+	*pix = chan->format;
+
+	return 0;
 }
 
 static int
@@ -1076,7 +1071,7 @@ __tegra_channel_try_format(struct tegra_channel *chan,
 
 	v4l2_fill_pix_format(pix, &fmt.format);
 
-	tegra_channel_fmt_align(chan,
+	tegra_channel_fmt_align(chan, vfmt,
 				&pix->width, &pix->height, &pix->bytesperline);
 	pix->sizeimage = get_aligned_buffer_size(chan,
 			pix->bytesperline, pix->height);
@@ -1120,15 +1115,11 @@ __tegra_channel_set_format(struct tegra_channel *chan,
 	if (!ret) {
 		chan->format = *pix;
 		chan->fmtinfo = vfmt;
-		tegra_channel_fmt_align(chan,
-			&pix->width, &pix->height, &pix->bytesperline);
-		pix->sizeimage = get_aligned_buffer_size(chan,
-				pix->bytesperline, pix->height);
-		if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
-			pix->sizeimage *= 2;
-		/* Update sizeimage and byteperline to channel format */
-		chan->format.sizeimage = pix->sizeimage;
-		chan->format.bytesperline = pix->bytesperline;
+		tegra_channel_update_format(chan, pix->width,
+			pix->height, vfmt->fourcc, vfmt->bpp,
+			pix->bytesperline);
+
+		*pix = chan->format;
 
 		if (chan->total_ports > 1)
 			update_gang_mode(chan);
@@ -1210,6 +1201,15 @@ static int tegra_channel_s_input(struct file *file, void *priv, unsigned int i)
 	return 0;
 }
 
+static int tegra_channel_log_status(struct file *file, void *priv)
+{
+	struct v4l2_fh *vfh = file->private_data;
+	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
+
+	v4l2_device_call_all(chan->video.v4l2_dev,
+		chan->grp_id, core, log_status);
+	return 0;
+}
 static const struct v4l2_ioctl_ops tegra_channel_ioctl_ops = {
 	.vidioc_querycap		= tegra_channel_querycap,
 	.vidioc_enum_framesizes		= tegra_channel_enum_framesizes,
@@ -1238,6 +1238,7 @@ static const struct v4l2_ioctl_ops tegra_channel_ioctl_ops = {
 	.vidioc_enum_input		= tegra_channel_enum_input,
 	.vidioc_g_input			= tegra_channel_g_input,
 	.vidioc_s_input			= tegra_channel_s_input,
+	.vidioc_log_status		= tegra_channel_log_status,
 };
 
 static int tegra_channel_open(struct file *fp)

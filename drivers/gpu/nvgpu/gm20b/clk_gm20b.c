@@ -25,6 +25,7 @@
 #include <linux/clk/tegra.h>
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
 #include <soc/tegra/fuse.h>
+#include <soc/tegra/tegra-dvfs.h>
 #else
 #include <linux/tegra-fuse.h>
 #endif
@@ -1310,6 +1311,8 @@ int gm20b_register_gpcclk(struct gk20a *g) {
 	}
 
 	clk->tegra_clk = c;
+	clk_register_clkdev(c, "gpcclk", "gpcclk");
+
 	return 0;
 }
 #endif /* CONFIG_COMMON_CLK */

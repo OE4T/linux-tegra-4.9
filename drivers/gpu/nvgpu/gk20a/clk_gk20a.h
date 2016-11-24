@@ -17,6 +17,7 @@
 #define CLK_GK20A_H
 
 #include <linux/mutex.h>
+#include <linux/clkdev.h>
 #include <linux/clk-provider.h>
 
 #define GPUFREQ_TABLE_END     ~(u32)1

@@ -167,6 +167,7 @@ struct sd_switch_caps {
 #define UHS_SDR50_BUS_SPEED	2
 #define UHS_SDR104_BUS_SPEED	3
 #define UHS_DDR50_BUS_SPEED	4
+#define UHS_HS400_BUS_SPEED	5
 
 #define SD_MODE_HIGH_SPEED	(1 << HIGH_SPEED_BUS_SPEED)
 #define SD_MODE_UHS_SDR12	(1 << UHS_SDR12_BUS_SPEED)
@@ -277,6 +278,8 @@ struct mmc_card {
 #define MMC_STATE_CMDQ		(1<<8)		/* card is in cmd queue mode */
 #define MMC_STATE_CMDQ_HALT	(1<<10)		/* card is in cmd queue halt mode */
 #define MMC_STATE_CMDQ_PAUSE	(1<<11)
+
+#define MMC_STATE_ULTRAHIGHSPEED (1<<12) /* card is in ultra high speed mode*/
 	unsigned int		quirks; 	/* card quirks */
 #define MMC_QUIRK_LENIENT_FN0	(1<<0)		/* allow SDIO FN0 writes outside of the VS CCCR range */
 #define MMC_QUIRK_BLKSZ_FOR_BYTE_MODE (1<<1)	/* use func->cur_blksize */
@@ -466,6 +469,7 @@ static inline void __maybe_unused remove_quirk(struct mmc_card *card, int data)
 #define mmc_card_ext_capacity(c) ((c)->state & MMC_CARD_SDXC)
 #define mmc_card_removed(c)	((c) && ((c)->state & MMC_CARD_REMOVED))
 #define mmc_card_doing_bkops(c)	((c)->state & MMC_STATE_DOING_BKOPS)
+#define mmc_sd_card_uhs(c)  ((c)->state & MMC_STATE_ULTRAHIGHSPEED)
 #define mmc_card_suspended(c)	((c)->state & MMC_STATE_SUSPENDED)
 #define mmc_card_cmdq(c)   ((c)->state & MMC_STATE_CMDQ)
 #define mmc_card_cmdq_halt(c)   ((c)->state & MMC_STATE_CMDQ_HALT)
@@ -482,6 +486,8 @@ static inline void __maybe_unused remove_quirk(struct mmc_card *card, int data)
 #define mmc_card_clr_suspended(c) ((c)->state &= ~MMC_STATE_SUSPENDED)
 #define mmc_card_set_cmdq(c)       ((c)->state |= MMC_STATE_CMDQ)
 #define mmc_card_clr_cmdq(c)       ((c)->state &= ~MMC_STATE_CMDQ)
+#define mmc_card_clr_sleep(c)	((c)->state &= ~MMC_STATE_SLEEP)
+#define mmc_sd_card_set_uhs(c)	((c)->state &= ~MMC_STATE_ULTRAHIGHSPEED)
 #define mmc_card_set_cmdq_halt(c)       ((c)->state |= MMC_STATE_CMDQ_HALT)
 #define mmc_card_clr_cmdq_halt(c)       ((c)->state &= ~MMC_STATE_CMDQ_HALT)
 #define mmc_card_set_cmdq_pause(c)       ((c)->state |= MMC_STATE_CMDQ_PAUSE)

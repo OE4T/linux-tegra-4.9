@@ -1242,18 +1242,190 @@ out_err:
 	       __func__, err);
 	return err;
 }
+int mmc_ddr_to_hs200(struct mmc_card *card)
+{
+	struct mmc_host *host = card->host;
+	int err = 0;
+	int bus_width;
+
+	/* Based on host capability, set card side bus width */
+	if (card->host->caps & MMC_CAP_8_BIT_DATA)
+		bus_width = EXT_CSD_BUS_WIDTH_8;
+	else if (card->host->caps & MMC_CAP_4_BIT_DATA)
+		bus_width = EXT_CSD_BUS_WIDTH_4;
+	else
+		bus_width = EXT_CSD_BUS_WIDTH_1;
+
+	/* Switch HS DDR to HS */
+	err = __mmc_switch(card, EXT_CSD_CMD_SET_NORMAL, EXT_CSD_BUS_WIDTH,
+			   bus_width, card->ext_csd.generic_cmd6_time,
+			   true, true, true);
+	if (err) {
+		pr_err("%s: Switch to High Speed Bus Width Failed, error %d\n",
+			mmc_hostname(card->host), err);
+		goto out_err;
+	}
+
+	mmc_set_timing(host, MMC_TIMING_MMC_HS);
+
+	/* Switch HS to HS200 */
+	err = __mmc_switch(card, EXT_CSD_CMD_SET_NORMAL, EXT_CSD_HS_TIMING,
+			   EXT_CSD_TIMING_HS200,
+			   card->ext_csd.generic_cmd6_time, true, true,
+			   true);
+	if (err) {
+		pr_err("%s: Switch to Hs200 failed, error %d\n",
+			mmc_hostname(card->host), err);
+		goto out_err;
+	}
+
+	mmc_set_timing(host, MMC_TIMING_MMC_HS200);
+
+	mmc_set_bus_speed(card);
+
+	/* End of HS200 Switch */
+
+out_err:
+	return err;
+}
+
+int mmc_hs200_to_ddr(struct mmc_card *card)
+{
+	struct mmc_host *host = card->host;
+	unsigned int max_dtr;
+	int err;
+	int bus_width;
+
+	/* Switch HS200 to HS DDR */
+	err = __mmc_switch(card, EXT_CSD_CMD_SET_NORMAL, EXT_CSD_HS_TIMING,
+			   EXT_CSD_TIMING_HS, card->ext_csd.generic_cmd6_time,
+			   true, true, true);
+	if (err) {
+		pr_err("%s: switch to DDR mode failed, error %d\n",
+			mmc_hostname(card->host), err);
+		return err;
+	}
+
+	/* Based on host capability, set card side bus width */
+	if (card->host->caps & MMC_CAP_8_BIT_DATA)
+		bus_width = EXT_CSD_DDR_BUS_WIDTH_8;
+	else if (card->host->caps & MMC_CAP_4_BIT_DATA)
+		bus_width = EXT_CSD_DDR_BUS_WIDTH_4;
+	else
+		bus_width = EXT_CSD_BUS_WIDTH_1;
+
+	err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
+			EXT_CSD_BUS_WIDTH,
+			bus_width,
+			card->ext_csd.generic_cmd6_time);
+	if (err) {
+		pr_err("%s: switch to bus width failed with error %d\n",
+			mmc_hostname(card->host), err);
+		return err;
+	}
+
+	/* Reduce frequency to HS */
+	max_dtr = card->ext_csd.hs_max_dtr;
+
+	mmc_set_timing(host, MMC_TIMING_MMC_DDR52);
+
+	mmc_set_clock(host, max_dtr);
+
+	return 0;
+}
+
+int mmc_ddr_to_hs400(struct mmc_card *card)
+{
+	int err = 0;
+	/* Switch to HS200 */
+	err = mmc_ddr_to_hs200(card);
+	if (!err)
+		err = mmc_select_hs400(card); /* Switch to HS400 */
+	else
+		return err;
+	if (!err) {
+	/* Controller enable enhanced strobe function */
+		card->host->ios.enhanced_strobe = true;
+		if (card->host->ops->hs400_enhanced_strobe)
+			card->host->ops->hs400_enhanced_strobe(card->host,
+				&card->host->ios);
+	/* Execute DLL calibration since device switched to hs400 mode */
+		if (card->host->ops->post_init)
+			card->host->ops->post_init(card->host);
+	} else {
+		err = mmc_hs200_to_ddr(card);
+	}
+	return err;
+}
+
+int mmc_hs400_to_ddr(struct mmc_card *card)
+{
+	struct mmc_host *host = card->host;
+	unsigned int max_dtr;
+	int err;
+
+	/* Disable enhanced strobe support if supported by both host and card */
+	if (card->ext_csd.strobe_support &&
+		(card->host->ops->hs400_enhanced_strobe)) {
+		host->ios.enhanced_strobe = false;
+		card->host->ops->hs400_enhanced_strobe(card->host, &host->ios);
+	}
+
+	/* Reduce frequency to HS */
+	max_dtr = card->ext_csd.hs_max_dtr;
+	mmc_set_clock(host, max_dtr);
+
+	/* Switch HS400 to HS DDR */
+	err = __mmc_switch(card, EXT_CSD_CMD_SET_NORMAL, EXT_CSD_HS_TIMING,
+			   EXT_CSD_TIMING_HS, card->ext_csd.generic_cmd6_time,
+			   true, true, true);
+	if (err) {
+		pr_err("%s: switch to DDR mode failed, error %d\n",
+			mmc_hostname(card->host), err);
+		return err;
+	}
+
+	mmc_set_timing(host, MMC_TIMING_MMC_DDR52);
+
+	return 0;
+
+}
 
 int mmc_hs200_to_hs400(struct mmc_card *card)
 {
-	return mmc_select_hs400(card);
+	int err;
+
+	err = mmc_select_hs400(card);
+	if (!err) {
+	/* Controller enable enhanced strobe function */
+		card->host->ios.enhanced_strobe = true;
+		if (card->host->ops->hs400_enhanced_strobe)
+			card->host->ops->hs400_enhanced_strobe(card->host,
+				&card->host->ios);
+	/* Execute DLL carlibration since device switched to hs400 mode */
+		if (card->host->ops->post_init)
+			card->host->ops->post_init(card->host);
+	}
+	return err;
 }
 
 int mmc_hs400_to_hs200(struct mmc_card *card)
 {
 	struct mmc_host *host = card->host;
 	unsigned int max_dtr;
+	bool send_status = true;
 	int err;
 	u8 val;
+
+	if (host->caps & MMC_CAP_WAIT_WHILE_BUSY)
+		send_status = false;
+
+	/* Disable enhanced strobe support if supported by both host and card */
+	if (card->ext_csd.strobe_support &&
+		(card->host->ops->hs400_enhanced_strobe)) {
+		host->ios.enhanced_strobe = false;
+		card->host->ops->hs400_enhanced_strobe(card->host, &host->ios);
+	}
 
 	/* Reduce frequency to HS */
 	max_dtr = card->ext_csd.hs_max_dtr;
@@ -1308,6 +1480,12 @@ int mmc_hs400_to_hs200(struct mmc_card *card)
 out_err:
 	pr_err("%s: %s failed, error %d\n", mmc_hostname(card->host),
 	       __func__, err);
+	/* Enable enhanced strobe support if supported by both host and card */
+	if (card->ext_csd.strobe_support &&
+		(card->host->ops->hs400_enhanced_strobe)) {
+		host->ios.enhanced_strobe = true;
+		card->host->ops->hs400_enhanced_strobe(card->host, &host->ios);
+	}
 	return err;
 }
 

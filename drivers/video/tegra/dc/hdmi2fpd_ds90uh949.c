@@ -44,7 +44,7 @@ struct i2c_client_list ds90uh949_i2c;
 
 int hdmi2fpd_enable(struct tegra_dc *dc)
 {
-	struct tegra_dc_hdmi2fpd_data *hdmi2fpd = tegra_hdmi_get_outdata(dc);
+	struct tegra_dc_hdmi2fpd_data *hdmi2fpd = tegra_fpdlink_get_outdata(dc);
 	int err;
 
 	if (hdmi2fpd && hdmi2fpd->hdmi2fpd_enabled)
@@ -65,7 +65,7 @@ int hdmi2fpd_enable(struct tegra_dc *dc)
 
 void hdmi2fpd_disable(struct tegra_dc *dc)
 {
-	struct tegra_dc_hdmi2fpd_data *hdmi2fpd = tegra_hdmi_get_outdata(dc);
+	struct tegra_dc_hdmi2fpd_data *hdmi2fpd = tegra_fpdlink_get_outdata(dc);
 
 	mutex_lock(&hdmi2fpd->lock);
 	/* Turn off serializer chip */
@@ -186,7 +186,7 @@ int hdmi2fpd_init(struct tegra_dc *dc)
 
 	hdmi2fpd->dc = dc;
 
-	tegra_hdmi_set_outdata(dc, hdmi2fpd);
+	tegra_fpdlink_set_outdata(dc, hdmi2fpd);
 
 	mutex_init(&hdmi2fpd->lock);
 
@@ -195,7 +195,7 @@ int hdmi2fpd_init(struct tegra_dc *dc)
 
 void hdmi2fpd_destroy(struct tegra_dc *dc)
 {
-	struct tegra_dc_hdmi2fpd_data *hdmi2fpd = tegra_hdmi_get_outdata(dc);
+	struct tegra_dc_hdmi2fpd_data *hdmi2fpd = tegra_fpdlink_get_outdata(dc);
 
 	if (!hdmi2fpd)
 		return;

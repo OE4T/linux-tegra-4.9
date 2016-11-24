@@ -23,12 +23,12 @@
 #define DS90UH949_SER_REG_RESET_DIGRESET1		BIT(1)
 
 #ifdef CONFIG_TEGRA_HDMI2FPD
-static inline void *tegra_hdmi_get_outdata(struct tegra_dc *dc)
+static inline void *tegra_fpdlink_get_outdata(struct tegra_dc *dc)
 {
 	return dc->fpddata;
 }
 
-static inline void tegra_hdmi_set_outdata(struct tegra_dc *dc,
+static inline void tegra_fpdlink_set_outdata(struct tegra_dc *dc,
 		struct tegra_dc_hdmi2fpd_data *data)
 {
 	dc->fpddata = data;

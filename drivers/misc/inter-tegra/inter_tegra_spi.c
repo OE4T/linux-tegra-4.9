@@ -126,6 +126,8 @@ inter_tegra_send(struct inter_tegra_data *inter_tegra, int type)
 	return 0;
 }
 
+#define USE_SLAVE_WAIT_EXTRA_BYTE	1
+
 static int
 inter_tegra_receive(struct inter_tegra_data *inter_tegra)
 {
@@ -134,11 +136,23 @@ inter_tegra_receive(struct inter_tegra_data *inter_tegra)
 	int err = 0;
 	int pkt_length = 0;
 	u8 rx_check_sum;
+#if (USE_SLAVE_WAIT_EXTRA_BYTE)
+	/*
+	 * Wait extra 4 more byte to prevent get RDY irq before CS_INACTIVE irq
+	 * in case of using variable_length_transfer
+	 */
+	u8 temp_txbuf[sizeof(struct inter_tegra_pkt) + 4];
+	u8 temp_rxbuf[sizeof(struct inter_tegra_pkt) + 4];
 
-	memset(&txbuf, 0, sizeof(txbuf));
-	memset(&rxbuf, 0, sizeof(rxbuf));
+	memset(temp_txbuf, 0, sizeof(struct inter_tegra_pkt) + 4);
+	memset(temp_rxbuf, 0, sizeof(struct inter_tegra_pkt) + 4);
 
-	pkt_length = sizeof(txbuf);
+	pkt_length = sizeof(struct inter_tegra_pkt) + 4;
+#else
+	pkt_length = sizeof(struct inter_tegra_pkt);
+#endif
+	memset(&txbuf, 0, sizeof(struct inter_tegra_pkt));
+	memset(&rxbuf, 0, sizeof(struct inter_tegra_pkt));
 
 	txbuf.head = HEAD;
 	txbuf.cmd = CMD_SUCCESS;
@@ -146,7 +160,23 @@ inter_tegra_receive(struct inter_tegra_data *inter_tegra)
 	txbuf.pkt_data.value = 0;
 	txbuf.check_sum = make_checksum(&txbuf.pkt_data,
 						sizeof(txbuf.pkt_data));
+#if (USE_SLAVE_WAIT_EXTRA_BYTE)
+	/* copy to temp_txbuf buf from txbuf */
+	memcpy(temp_txbuf, &txbuf, sizeof(struct inter_tegra_pkt));
 
+	err = inter_tegra_spi_xfer(inter_tegra->spi,
+					temp_txbuf, temp_rxbuf,
+					pkt_length,
+					inter_tegra->receive_timeout_ms);
+	if (err) {
+		dev_inter_tegra_err(inter_tegra->err_log_enable,
+			&inter_tegra->spi->dev, "rx spi err!\n");
+		return -1;
+	}
+
+	/* copy to rxbuf buf from temp_txbuf */
+	memcpy(&rxbuf, temp_rxbuf, sizeof(struct inter_tegra_pkt));
+#else
 	err = inter_tegra_spi_xfer(inter_tegra->spi,
 					(u8 *)&txbuf, (u8 *)&rxbuf,
 					pkt_length,
@@ -156,6 +186,7 @@ inter_tegra_receive(struct inter_tegra_data *inter_tegra)
 			&inter_tegra->spi->dev, "rx spi err!\n");
 		return -1;
 	}
+#endif
 
 	if (rxbuf.head != HEAD) {
 		dev_inter_tegra_err(inter_tegra->err_log_enable,

@@ -2078,6 +2078,13 @@ static void tegra_pcie_port_enable(struct tegra_pcie_port *port)
 	afi_writel(port->pcie, value, ctrl);
 
 	tegra_pcie_port_reset(port);
+
+	/* On platforms where MXM is not directly connected to Tegra root port,
+	 * 200 ms delay (worst case) is required after reset, to ensure linkup
+	 * between PCIe switch and MXM
+	 */
+	if (port->has_mxm_port)
+		mdelay(200);
 }
 
 static void tegra_pcie_port_disable(struct tegra_pcie_port *port)

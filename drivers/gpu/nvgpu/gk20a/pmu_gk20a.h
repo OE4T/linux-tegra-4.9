@@ -38,6 +38,7 @@
 
 #define ZBC_MASK(i)			(~(~(0) << ((i)+1)) & 0xfffe)
 
+#define APP_VERSION_NC_3	21548462
 #define APP_VERSION_NC_2	20429989
 #define APP_VERSION_NC_1	20313802
 #define APP_VERSION_NC_0	20360931
@@ -264,6 +265,7 @@ struct pmu_init_msg_pmu_v2 {
 	u8 dummy[18];
 };
 
+#define PMU_QUEUE_COUNT_FOR_V4 5
 #define PMU_QUEUE_COUNT_FOR_V3 3
 #define PMU_QUEUE_HPQ_IDX_FOR_V3 0
 #define PMU_QUEUE_LPQ_IDX_FOR_V3 1
@@ -282,11 +284,26 @@ struct pmu_init_msg_pmu_v3 {
 	u8 dummy[18];
 };
 
+struct pmu_init_msg_pmu_v4 {
+	u8 msg_type;
+	u8  queue_index[PMU_QUEUE_COUNT_FOR_V4];
+	u16 queue_size[PMU_QUEUE_COUNT_FOR_V4];
+	u16 queue_offset;
+
+	u16 sw_managed_area_offset;
+	u16 sw_managed_area_size;
+
+	u16  os_debug_entry_point;
+
+	u8 dummy[18];
+};
+
 union pmu_init_msg_pmu {
 	struct pmu_init_msg_pmu_v0 v0;
 	struct pmu_init_msg_pmu_v1 v1;
 	struct pmu_init_msg_pmu_v2 v2;
 	struct pmu_init_msg_pmu_v3 v3;
+	struct pmu_init_msg_pmu_v4 v4;
 };
 
 struct pmu_init_msg {
@@ -296,6 +313,7 @@ struct pmu_init_msg {
 		struct pmu_init_msg_pmu_v0 pmu_init_v0;
 		struct pmu_init_msg_pmu_v2 pmu_init_v2;
 		struct pmu_init_msg_pmu_v3 pmu_init_v3;
+		struct pmu_init_msg_pmu_v4 pmu_init_v4;
 	};
 };
 

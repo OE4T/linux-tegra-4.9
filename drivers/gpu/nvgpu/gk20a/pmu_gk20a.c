@@ -597,9 +597,22 @@ static void pmu_allocation_set_dmem_offset_v0(struct pmu_gk20a *pmu,
 	pmu_a_ptr->alloc.dmem.offset = offset;
 }
 
+static void *get_pmu_msg_pmu_init_msg_ptr_v4(struct pmu_init_msg *init)
+{
+	return (void *)(&(init->pmu_init_v4));
+}
+
 static void *get_pmu_msg_pmu_init_msg_ptr_v3(struct pmu_init_msg *init)
 {
 	return (void *)(&(init->pmu_init_v3));
+}
+
+static u16 get_pmu_init_msg_pmu_sw_mg_off_v4(union pmu_init_msg_pmu *init_msg)
+{
+	struct pmu_init_msg_pmu_v4 *init =
+		(struct pmu_init_msg_pmu_v4 *)(&init_msg->v4);
+
+	return init->sw_managed_area_offset;
 }
 
 static u16 get_pmu_init_msg_pmu_sw_mg_off_v3(union pmu_init_msg_pmu *init_msg)
@@ -608,6 +621,14 @@ static u16 get_pmu_init_msg_pmu_sw_mg_off_v3(union pmu_init_msg_pmu *init_msg)
 		(struct pmu_init_msg_pmu_v3 *)(&init_msg->v3);
 
 	return init->sw_managed_area_offset;
+}
+
+static u16 get_pmu_init_msg_pmu_sw_mg_size_v4(union pmu_init_msg_pmu *init_msg)
+{
+	struct pmu_init_msg_pmu_v4 *init =
+		(struct pmu_init_msg_pmu_v4 *)(&init_msg->v4);
+
+	return init->sw_managed_area_size;
 }
 
 static u16 get_pmu_init_msg_pmu_sw_mg_size_v3(union pmu_init_msg_pmu *init_msg)
@@ -1156,6 +1177,31 @@ static void get_pmu_init_msg_pmu_queue_params_v2(struct pmu_queue *queue,
 	queue->size = init->queue_info[id].size;
 }
 
+static void get_pmu_init_msg_pmu_queue_params_v4(struct pmu_queue *queue,
+	u32 id, void *pmu_init_msg)
+{
+	struct pmu_init_msg_pmu_v4 *init = pmu_init_msg;
+	u32 current_ptr = 0;
+	u8 i;
+	u8 tmp_id = id;
+
+	if (tmp_id == PMU_COMMAND_QUEUE_HPQ)
+		tmp_id = PMU_QUEUE_HPQ_IDX_FOR_V3;
+	else if (tmp_id == PMU_COMMAND_QUEUE_LPQ)
+		tmp_id = PMU_QUEUE_LPQ_IDX_FOR_V3;
+	else if (tmp_id == PMU_MESSAGE_QUEUE)
+		tmp_id = PMU_QUEUE_MSG_IDX_FOR_V3;
+	else
+		return;
+
+	queue->index    = init->queue_index[tmp_id];
+	queue->size = init->queue_size[tmp_id];
+	if (tmp_id != 0) {
+		for (i = 0 ; i < tmp_id; i++)
+			current_ptr += init->queue_size[i];
+	}
+	queue->offset   = init->queue_offset + current_ptr;
+}
 static void get_pmu_init_msg_pmu_queue_params_v3(struct pmu_queue *queue,
 	u32 id, void *pmu_init_msg)
 {
@@ -1476,6 +1522,111 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 			get_pmu_sequence_in_alloc_ptr_v1;
 		g->ops.pmu_ver.get_pmu_seq_out_a_ptr =
 			get_pmu_sequence_out_alloc_ptr_v1;
+		break;
+	case APP_VERSION_NC_3:
+		g->ops.pmu_ver.pg_cmd_eng_buf_load_size =
+				pg_cmd_eng_buf_load_size_v2;
+		g->ops.pmu_ver.pg_cmd_eng_buf_load_set_cmd_type =
+				pg_cmd_eng_buf_load_set_cmd_type_v2;
+		g->ops.pmu_ver.pg_cmd_eng_buf_load_set_engine_id =
+				pg_cmd_eng_buf_load_set_engine_id_v2;
+		g->ops.pmu_ver.pg_cmd_eng_buf_load_set_buf_idx =
+				pg_cmd_eng_buf_load_set_buf_idx_v2;
+		g->ops.pmu_ver.pg_cmd_eng_buf_load_set_pad =
+				pg_cmd_eng_buf_load_set_pad_v2;
+		g->ops.pmu_ver.pg_cmd_eng_buf_load_set_buf_size =
+				pg_cmd_eng_buf_load_set_buf_size_v2;
+		g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_base =
+				pg_cmd_eng_buf_load_set_dma_base_v2;
+		g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_offset =
+				pg_cmd_eng_buf_load_set_dma_offset_v2;
+		g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_idx =
+				pg_cmd_eng_buf_load_set_dma_idx_v2;
+		g->ops.pmu_ver.get_perfmon_cntr_ptr = get_perfmon_cntr_ptr_v2;
+		g->ops.pmu_ver.set_perfmon_cntr_ut = set_perfmon_cntr_ut_v2;
+		g->ops.pmu_ver.set_perfmon_cntr_lt = set_perfmon_cntr_lt_v2;
+		g->ops.pmu_ver.set_perfmon_cntr_valid =
+			set_perfmon_cntr_valid_v2;
+		g->ops.pmu_ver.set_perfmon_cntr_index =
+			set_perfmon_cntr_index_v2;
+		g->ops.pmu_ver.set_perfmon_cntr_group_id =
+			set_perfmon_cntr_group_id_v2;
+		g->ops.pmu_ver.get_perfmon_cntr_sz = pmu_perfmon_cntr_sz_v2;
+		g->ops.pmu_ver.cmd_id_zbc_table_update = 16;
+		g->ops.pmu_ver.get_pmu_cmdline_args_size =
+			pmu_cmdline_size_v5;
+		g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq =
+			set_pmu_cmdline_args_cpufreq_v5;
+		g->ops.pmu_ver.set_pmu_cmdline_args_secure_mode =
+			set_pmu_cmdline_args_secure_mode_v5;
+		g->ops.pmu_ver.set_pmu_cmdline_args_trace_size =
+			set_pmu_cmdline_args_falctracesize_v5;
+		g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_base =
+			set_pmu_cmdline_args_falctracedmabase_v5;
+		g->ops.pmu_ver.set_pmu_cmdline_args_trace_dma_idx =
+			set_pmu_cmdline_args_falctracedmaidx_v5;
+		g->ops.pmu_ver.get_pmu_cmdline_args_ptr =
+			get_pmu_cmdline_args_ptr_v5;
+		g->ops.pmu_ver.get_pmu_allocation_struct_size =
+			get_pmu_allocation_size_v3;
+		g->ops.pmu_ver.set_pmu_allocation_ptr =
+			set_pmu_allocation_ptr_v3;
+		g->ops.pmu_ver.pmu_allocation_set_dmem_size =
+			pmu_allocation_set_dmem_size_v3;
+		g->ops.pmu_ver.pmu_allocation_get_dmem_size =
+			pmu_allocation_get_dmem_size_v3;
+		g->ops.pmu_ver.pmu_allocation_get_dmem_offset =
+			pmu_allocation_get_dmem_offset_v3;
+		g->ops.pmu_ver.pmu_allocation_get_dmem_offset_addr =
+			pmu_allocation_get_dmem_offset_addr_v3;
+		g->ops.pmu_ver.pmu_allocation_set_dmem_offset =
+			pmu_allocation_set_dmem_offset_v3;
+		g->ops.pmu_ver.pmu_allocation_get_fb_addr =
+				pmu_allocation_get_fb_addr_v3;
+		g->ops.pmu_ver.pmu_allocation_get_fb_size =
+				pmu_allocation_get_fb_size_v3;
+		g->ops.pmu_ver.get_pmu_init_msg_pmu_queue_params =
+			get_pmu_init_msg_pmu_queue_params_v4;
+		g->ops.pmu_ver.get_pmu_msg_pmu_init_msg_ptr =
+			get_pmu_msg_pmu_init_msg_ptr_v4;
+		g->ops.pmu_ver.get_pmu_init_msg_pmu_sw_mg_off =
+			get_pmu_init_msg_pmu_sw_mg_off_v4;
+		g->ops.pmu_ver.get_pmu_init_msg_pmu_sw_mg_size =
+			get_pmu_init_msg_pmu_sw_mg_size_v4;
+		g->ops.pmu_ver.get_pmu_perfmon_cmd_start_size =
+			get_pmu_perfmon_cmd_start_size_v3;
+		g->ops.pmu_ver.get_perfmon_cmd_start_offsetofvar =
+			get_perfmon_cmd_start_offsetofvar_v3;
+		g->ops.pmu_ver.perfmon_start_set_cmd_type =
+			perfmon_start_set_cmd_type_v3;
+		g->ops.pmu_ver.perfmon_start_set_group_id =
+			perfmon_start_set_group_id_v3;
+		g->ops.pmu_ver.perfmon_start_set_state_id =
+			perfmon_start_set_state_id_v3;
+		g->ops.pmu_ver.perfmon_start_set_flags =
+			perfmon_start_set_flags_v3;
+		g->ops.pmu_ver.perfmon_start_get_flags =
+			perfmon_start_get_flags_v3;
+		g->ops.pmu_ver.get_pmu_perfmon_cmd_init_size =
+			get_pmu_perfmon_cmd_init_size_v3;
+		g->ops.pmu_ver.get_perfmon_cmd_init_offsetofvar =
+			get_perfmon_cmd_init_offsetofvar_v3;
+		g->ops.pmu_ver.perfmon_cmd_init_set_sample_buffer =
+			perfmon_cmd_init_set_sample_buffer_v3;
+		g->ops.pmu_ver.perfmon_cmd_init_set_dec_cnt =
+			perfmon_cmd_init_set_dec_cnt_v3;
+		g->ops.pmu_ver.perfmon_cmd_init_set_base_cnt_id =
+			perfmon_cmd_init_set_base_cnt_id_v3;
+		g->ops.pmu_ver.perfmon_cmd_init_set_samp_period_us =
+			perfmon_cmd_init_set_samp_period_us_v3;
+		g->ops.pmu_ver.perfmon_cmd_init_set_num_cnt =
+			perfmon_cmd_init_set_num_cnt_v3;
+		g->ops.pmu_ver.perfmon_cmd_init_set_mov_avg =
+			perfmon_cmd_init_set_mov_avg_v3;
+		g->ops.pmu_ver.get_pmu_seq_in_a_ptr =
+			get_pmu_sequence_in_alloc_ptr_v3;
+		g->ops.pmu_ver.get_pmu_seq_out_a_ptr =
+			get_pmu_sequence_out_alloc_ptr_v3;
 		break;
 	case APP_VERSION_GM206:
 	case APP_VERSION_NV_GPU:

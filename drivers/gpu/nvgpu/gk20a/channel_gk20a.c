@@ -2218,7 +2218,6 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 	platform = gk20a_get_platform(g->dev);
 
 	gk20a_channel_cancel_job_clean_up(c, false);
-	gk20a_channel_timeout_stop(c);
 
 	while (1) {
 		bool completed;
@@ -2243,8 +2242,6 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 			gk20a_channel_timeout_start(c, job);
 			break;
 		}
-
-		gk20a_channel_timeout_stop(c);
 
 		WARN_ON(!c->sync);
 
@@ -2317,6 +2314,7 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 	}
 
 	trace_gk20a_channel_update(c->hw_chid);
+	gk20a_channel_timeout_stop(c);
 	gk20a_channel_schedule_job_clean_up(c);
 
 	gk20a_channel_put(c);

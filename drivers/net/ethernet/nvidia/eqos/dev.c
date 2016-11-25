@@ -2530,8 +2530,6 @@ static INT write_phy_regs(INT phy_id, INT phy_reg, INT phy_reg_data,
 static INT read_phy_regs(INT phy_id, INT phy_reg, INT *phy_reg_data,
 				INT mdc_cr)
 {
-	ULONG retry_cnt = 1000;
-	ULONG vy_count;
 	ULONG mac_gmiiar;
 	ULONG mac_gmiidr;
 

@@ -39,6 +39,14 @@
 		prod-settings {
 			#prod-cells = <3>;
 			mask-one-style;
+			eqos_pad_ctrl {
+				prod = <
+					0x00008800 0x9800000F 0x88000007	// ETHER_QOS_SDMEMCOMPPADCTRL_0
+										// 0:3 EQOS2TMC_CFG_SDMEMCOMP_VREF_SEL 0x7
+										// 27:28 COMP_PAD_DRV_TYPE 0x1
+										// 31 PAD_E_INPUT_OR_E_PWRD 0x1
+				>;
+			};
 			tx_tristate_enable {
 				prod = <
 					0x00000018 0x00000050 0x00000010	// PADCTL_SDMMC2_HV_EQOS_TD0_0

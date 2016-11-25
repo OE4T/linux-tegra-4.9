@@ -385,6 +385,7 @@ static void eqos_adjust_link(struct net_device *dev)
 			new_state = 1;
 			pdata->oldlink = 1;
 			pdata->xstats.link_connect_count++;
+#ifndef DISABLE_TRISTATE
 		if (pdata->prod_list) {
 			if (tegra_prod_set_by_name(
 						&pdata->pads,
@@ -395,6 +396,7 @@ static void eqos_adjust_link(struct net_device *dev)
 				}
 				tx_tristate_disable = 1;
 			}
+#endif
 		}
 	} else if (pdata->oldlink) {
 		new_state = 1;
@@ -402,6 +404,7 @@ static void eqos_adjust_link(struct net_device *dev)
 		pdata->speed = 0;
 		pdata->oldduplex = -1;
 		pdata->xstats.link_disconnect_count++;
+#ifndef DISABLE_TRISTATE
 		if (pdata->prod_list) {
 			if (tegra_prod_set_by_name(
 						&pdata->pads,
@@ -411,6 +414,7 @@ static void eqos_adjust_link(struct net_device *dev)
 						"failed to enable pad prod settings\n");
 			}
 		}
+#endif
 	}
 
 	if (new_state)

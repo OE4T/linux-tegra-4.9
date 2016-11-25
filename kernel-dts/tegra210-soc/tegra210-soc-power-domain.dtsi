@@ -9,6 +9,7 @@
 
 		ape_pd: ape-pd {
 			compatible = "nvidia,tegra210-ape-pd";
+			is_off;
 			#power-domain-cells = <0>;
 			power-domains = <&mc_clk_pd>;
 			partition-id = <TEGRA_POWERGATE_APE>;

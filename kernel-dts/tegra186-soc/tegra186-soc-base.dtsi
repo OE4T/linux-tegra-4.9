@@ -231,7 +231,7 @@
 				sid-list-len = <1>;
 			};
 			host1x_client_domain {
-				address-space = <&host1x_as>;
+				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID(VIC) TEGRA_SID(VI)
 					    TEGRA_SID(NVDEC) TEGRA_SID(NVENC) TEGRA_SID(NVJPG)
 					    TEGRA_SID(ISP) TEGRA_SID(TSEC) TEGRA_SID(TSECB)
@@ -242,42 +242,42 @@
 				sid-list-len = <15>;
 			};
 			host1x0_domain {
-				address-space = <&host1x_as>;
+				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX0>;
 				sid-list-len = <1>;
 			};
 			host1x1_domain {
-				address-space = <&host1x_as>;
+				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX1>;
 				sid-list-len = <1>;
 			};
 			host1x2_domain {
-				address-space = <&host1x_as>;
+				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX2>;
 				sid-list-len = <1>;
 			};
 			host1x3_domain {
-				address-space = <&host1x_as>;
+				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX3>;
 				sid-list-len = <1>;
 			};
 			host1x4_domain {
-				address-space = <&host1x_as>;
+				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX4>;
 				sid-list-len = <1>;
 			};
 			host1x5_domain {
-				address-space = <&host1x_as>;
+				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX5>;
 				sid-list-len = <1>;
 			};
 			host1x6_domain {
-				address-space = <&host1x_as>;
+				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX6>;
 				sid-list-len = <1>;
 			};
 			host1x7_domain {
-				address-space = <&host1x_as>;
+				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX7>;
 				sid-list-len = <1>;
 			};
@@ -373,6 +373,13 @@
 			host1x_as: host1x {
 				iova-start = <0x0 0x5a500000>;
 				iova-size = <0x0 0x7FF00000>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			host1x_client_as: host1x_client {
+				iova-start = <0x0 0x5a500000>;
+				iova-size = <0x1 0x00000000>;
 				alignment = <0xFFFFF>;
 				num-pf-page = <0>;
 				gap-page = <1>;

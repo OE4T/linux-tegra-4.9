@@ -885,13 +885,18 @@ int eqos_probe(struct platform_device *pdev)
 	}
 	DBGPR("phyirq = %d\n", phyirq);
 
-#ifndef DISABLE_TRISTATE
 	pdata->prod_list = devm_tegra_prod_get(&pdev->dev);
 	if (IS_ERR(pdata->prod_list)) {
 		dev_info(&pdev->dev, "No prod values found\n");
 		pdata->prod_list = NULL;
 	}
-#endif
+	if (pdata->prod_list) {
+		if (tegra_prod_set_by_name((void *)&eqos_base_addr, "eqos_pad_ctrl",
+					   pdata->prod_list))
+			dev_info(&pdev->dev,
+				 "fail to enable eqos pad ctrl prod settings\n");
+	}
+
 	/* calibrate pad */
 	ret = hw_if->pad_calibrate(pdata);
 	if (ret < 0)
@@ -962,9 +967,10 @@ int eqos_probe(struct platform_device *pdev)
 	pdata->pads = devm_ioremap_nocache(&pdev->dev, pads->start,
 			resource_size(pads));
 	if (!(pdata->pads)) {
-		dev_err(pdata->dev, "Failed to map PAD registers\n");
+		dev_err(&pdev->dev, "Failed to map PAD registers\n");
 		return -EADDRNOTAVAIL;
 	}
+#ifndef DISABLE_TRISTATE
 	if (pdata->prod_list) {
 		if (tegra_prod_set_by_name(&pdata->pads, "tx_tristate_enable",
 							pdata->prod_list)) {
@@ -972,6 +978,7 @@ int eqos_probe(struct platform_device *pdev)
 					"failed to enable pad prod settings\n");
 		}
 	}
+#endif
 	pdata->num_chans = num_chans;
 	pdata->rx_buffer_len = EQOS_RX_BUF_LEN;
 	pdata->rx_max_frame_size = EQOS_MAX_ETH_FRAME_LEN_DEFAULT;

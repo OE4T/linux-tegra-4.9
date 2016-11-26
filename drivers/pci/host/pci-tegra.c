@@ -444,9 +444,7 @@ struct tegra_pcie {
 	struct reset_control *afi_rst;
 	struct reset_control *pcie_rst;
 	struct reset_control *pciex_rst;
-#if defined(CONFIG_COMMON_CLK)
 	struct tegra_bwmgr_client *emc_bwmgr;
-#endif
 
 #ifdef CONFIG_THERMAL
 	struct thermal_cooling_device *cdev;
@@ -1384,39 +1382,6 @@ static int tegra_pcie_get_clocks(struct tegra_pcie *pcie)
 		return error;
 	}
 
-#if !defined(CONFIG_COMMON_CLK)
-	error = pm_clk_add(dev, "pciex");
-	if (error) {
-		dev_err(dev, "unable to get PCIE Xclock\n");
-		return error;
-	}
-	error = pm_clk_add(dev, "afi");
-	if (error) {
-		pm_clk_remove(dev, "pciex");
-		dev_err(dev, "unable to get PCIE afi clock\n");
-		return error;
-	}
-	error = pm_clk_add(dev, "pcie");
-	if (error) {
-		pm_clk_remove(dev, "pciex");
-		pm_clk_remove(dev, "afi");
-		dev_err(dev, "unable to get PCIE pcie clock\n");
-		return error;
-	}
-	error = pm_clk_add(dev, "mselect");
-	if (error) {
-		pm_clk_remove(dev, "pciex");
-		pm_clk_remove(dev, "afi");
-		pm_clk_remove(dev, "pcie");
-		dev_err(dev, "unable to get PCIE mselect clock\n");
-		return error;
-	}
-	error = pm_clk_add(dev, "emc");
-	if (error) {
-		dev_err(dev, "unable to get PCIE emc clock\n");
-		return error;
-	}
-#else
 	error = pm_clk_add(dev, "afi");
 	if (error) {
 		dev_err(dev, "missing afi clock");
@@ -1432,18 +1397,14 @@ static int tegra_pcie_get_clocks(struct tegra_pcie *pcie)
 		dev_err(pcie->dev, "couldn't register with EMC BwMgr\n");
 		return -EINVAL;
 	}
-#endif
 	return 0;
 }
 
 static void tegra_pcie_clocks_put(struct tegra_pcie *pcie)
 {
-#if !defined(CONFIG_COMMON_CLK)
 	pm_clk_destroy(pcie->dev);
-#else
 	tegra_bwmgr_set_emc(pcie->emc_bwmgr, 0, TEGRA_BWMGR_SET_EMC_FLOOR);
 	tegra_bwmgr_unregister(pcie->emc_bwmgr);
-#endif
 }
 
 static int tegra_pcie_enable_pads(struct tegra_pcie *pcie, bool enable)
@@ -1793,11 +1754,6 @@ static int tegra_pcie_module_power_ungate(struct generic_pm_domain *genpd)
 			return ret;
 		}
 	}
-#if !defined(CONFIG_COMMON_CLK)
-	ret = clk_prepare_enable(clk_get_sys("tegra_pcie", "pll_e"));
-	if (ret)
-		return ret;
-#endif
 	ret = tegra_unpowergate_partition_with_clk_on(tpd->partition_id);
 	return ret;
 }
@@ -1904,9 +1860,6 @@ static int tegra_pcie_module_power_gate(struct generic_pm_domain *genpd)
 	if (ret)
 		return ret;
 
-#if !defined(CONFIG_COMMON_CLK)
-	clk_disable(clk_get_sys("tegra_pcie", "pll_e"));
-#endif
 	tegra_pcie_domain = container_of(tpd, struct tegra_pcie_domain, tpd);
 	pcie = tegra_pcie_domain->tegra_pcie;
 	dev = pcie->dev;
@@ -2933,7 +2886,7 @@ static int tegra_pcie_init(struct tegra_pcie *pcie)
 		pci_common_init_dev(pcie->dev, &tegra_pcie_hw);
 	} else {
 		dev_info(pcie->dev, "PCIE: no end points detected\n");
-		goto fail_release_resource;
+		goto fail_power_off;
 	}
 	tegra_pcie_enable_features(pcie);
 	/* register pcie device as wakeup source */

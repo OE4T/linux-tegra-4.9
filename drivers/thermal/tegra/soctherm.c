@@ -640,10 +640,45 @@ static int tegra_thermctl_set_trips(void *data, int lo, int hi)
 	return 0;
 }
 
+static int tegra_thermctl_get_trend(void *data, int trip,
+		enum thermal_trend *trend)
+{
+	struct tegra_thermctl_zone *zone = data;
+	int ret;
+	int trip_temp, temp, last_temp;
+
+	if (!zone->tz)
+		return 0;
+
+	ret = zone->tz->ops->get_trip_temp(zone->tz, trip, &trip_temp);
+	if (ret)
+		return ret;
+
+	mutex_lock(&zone->tz->lock);
+	temp = zone->tz->temperature;
+	last_temp = zone->tz->last_temperature;
+	mutex_unlock(&zone->tz->lock);
+
+	if (temp > trip_temp) {
+		if (temp >= last_temp)
+			*trend = THERMAL_TREND_RAISING;
+		else
+			*trend = THERMAL_TREND_STABLE;
+	} else if (temp < trip_temp) {
+		*trend = THERMAL_TREND_DROPPING;
+	} else {
+		*trend = THERMAL_TREND_STABLE;
+	}
+
+	return 0;
+}
+
+
 static const struct thermal_zone_of_device_ops tegra_of_thermal_ops = {
 	.get_temp = tegra_thermctl_get_temp,
 	.set_trip_temp = tegra_thermctl_set_trip_temp,
 	.set_trips = tegra_thermctl_set_trips,
+	.get_trend = tegra_thermctl_get_trend,
 };
 
 static int get_hot_temp(struct thermal_zone_device *tz, int *trip, int *temp)

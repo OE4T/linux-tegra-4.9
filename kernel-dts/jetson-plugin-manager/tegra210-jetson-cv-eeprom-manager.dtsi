@@ -27,5 +27,12 @@
 			i2c-bus = <&i2c3>;
 			word-address-1-byte-slave-addresses = <0x50 0x57>;
 		};
+		bus@3 {
+			i2c-bus = <&i2c7>;
+			word-address-1-byte-slave-addresses = <0x54>;
+			gpio-node = "/i2c@7000c400/tca9539@77";
+			gpio-pin = <0x9>;
+			bus-type = "i2cvi";
+		};
 	};
 };

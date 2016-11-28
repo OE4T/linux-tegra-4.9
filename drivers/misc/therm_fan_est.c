@@ -49,9 +49,9 @@ struct therm_fan_estimator {
 	struct thermal_zone_device *thz;
 	int current_trip_index;
 	const char *cdev_type;
-	int active_trip_temps[MAX_ACTIVE_STATES];
-	int active_hysteresis[MAX_ACTIVE_STATES];
-	int active_trip_temps_hyst[(MAX_ACTIVE_STATES << 1) + 1];
+	s32 active_trip_temps[MAX_ACTIVE_STATES];
+	s32 active_hysteresis[MAX_ACTIVE_STATES];
+	s32 active_trip_temps_hyst[(MAX_ACTIVE_STATES << 1) + 1];
 	struct thermal_zone_params *tzp;
 	int num_resources;
 	int trip_length;
@@ -260,13 +260,13 @@ static ssize_t set_coeff(struct device *dev,
 {
 	struct therm_fan_estimator *est = dev_get_drvdata(dev);
 	int devid, scount;
-	long coeff[20];
+	s32 coeff[20];
 
 	if (HIST_LEN > 20)
 		return -EINVAL;
 
-	scount = sscanf(buf, "[%d] %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld " \
-			"%ld %ld %ld %ld %ld %ld %ld %ld %ld %ld",
+	scount = sscanf(buf, "[%d] %d %d %d %d %d %d %d %d %d %d " \
+			"%d %d %d %d %d %d %d %d %d %d",
 			&devid,	&coeff[0], &coeff[1], &coeff[2], &coeff[3],
 			&coeff[4], &coeff[5], &coeff[6], &coeff[7], &coeff[8],
 			&coeff[9], &coeff[10], &coeff[11], &coeff[12],
@@ -280,7 +280,7 @@ static ssize_t set_coeff(struct device *dev,
 		return -EINVAL;
 
 	/* This has obvious locking issues but don't worry about it */
-	memcpy(est->devs[devid].coeffs, coeff, sizeof(long) * HIST_LEN);
+	memcpy(est->devs[devid].coeffs, coeff, sizeof(coeff[0]) * HIST_LEN);
 
 	return count;
 }

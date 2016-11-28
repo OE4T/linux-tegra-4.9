@@ -127,7 +127,8 @@ static void therm_est_work_func(struct work_struct *work)
 					therm_est_work);
 	struct therm_est_subdevice *subdevice;
 	struct therm_est_coeffs *coeffs_set;
-	long *thz_coeffs, *hist;
+	s32 *thz_coeffs;
+	long *hist;
 	long temp;
 	int i, j, index, sum = 0;
 
@@ -254,7 +255,7 @@ static ssize_t show_coeff(struct device *dev,
 	struct therm_estimator *est = dev_get_drvdata(dev);
 	struct therm_est_subdevice *subdevice = est->subdevice;
 	struct therm_est_coeffs *coeffs_set;
-	long *coeffs;
+	s32 *coeffs;
 	ssize_t total_len = 0;
 	int i, j, k;
 
@@ -276,7 +277,7 @@ static ssize_t show_coeff(struct device *dev,
 			coeffs = coeffs_set->coeffs[j];
 			for (k = 0; k < HIST_LEN; k++) {
 				total_len += snprintf(buf + total_len,
-						PAGE_SIZE - total_len, " %ld",
+						PAGE_SIZE - total_len, " %d",
 						coeffs[k]);
 			}
 			total_len += snprintf(buf + total_len,
@@ -296,13 +297,13 @@ static ssize_t set_coeff(struct device *dev,
 {
 	struct therm_estimator *est = dev_get_drvdata(dev);
 	int coeffs_index, dev_index, scount;
-	long coeff[20];
+	s32 coeff[20];
 
 	if (HIST_LEN > 20)
 		return -EINVAL;
 
-	scount = sscanf(buf, "[%d][%d] %ld %ld %ld %ld %ld %ld %ld %ld %ld " \
-			"%ld %ld %ld %ld %ld %ld %ld %ld %ld %ld %ld",
+	scount = sscanf(buf, "[%d][%d] %d %d %d %d %d %d %d %d %d " \
+			"%d %d %d %d %d %d %d %d %d %d %d",
 			&coeffs_index, &dev_index,
 			&coeff[0],
 			&coeff[1],
@@ -324,7 +325,6 @@ static ssize_t set_coeff(struct device *dev,
 			&coeff[17],
 			&coeff[18],
 			&coeff[19]);
-
 	if (scount != HIST_LEN + 2)
 		return -1;
 
@@ -375,7 +375,7 @@ static ssize_t show_active_coeffs(struct device *dev,
 	struct therm_estimator *est = dev_get_drvdata(dev);
 	struct therm_est_subdevice *subdevice = est->subdevice;
 	struct therm_est_coeffs *coeffs_set;
-	long *coeffs;
+	s32 *coeffs;
 	ssize_t total_len = 0;
 	int i, j;
 
@@ -390,7 +390,7 @@ static ssize_t show_active_coeffs(struct device *dev,
 		coeffs = coeffs_set->coeffs[i];
 		for (j = 0; j < HIST_LEN; j++) {
 			total_len += snprintf(buf + total_len,
-						PAGE_SIZE - total_len, " %ld",
+						PAGE_SIZE - total_len, " %d",
 						coeffs[j]);
 		}
 		total_len += snprintf(buf + total_len,
@@ -593,11 +593,9 @@ static int therm_est_get_subdev(struct device *dev,
 	struct thermal_zone_device *thz;
 	struct device_node *coeffs_np;
 	char *thz_name;
-	u32 *values;
-	long *coeffs;
 	int num_subdevs;
 	int num_coeffs;
-	int i, j, ret = 0;
+	int i, ret = 0;
 	s32 val;
 
 	num_subdevs = of_property_count_strings(subdev_np, "subdev_names");
@@ -641,28 +639,19 @@ static int therm_est_get_subdev(struct device *dev,
 		subdevice->sub_thz[i].thz = thz;
 	}
 
-	values = kzalloc(sizeof(u32) * num_subdevs * HIST_LEN, GFP_KERNEL);
-	if (!values)
-		return -ENOMEM;
 	i = 0;
 	for_each_child_of_node(subdev_np, coeffs_np) {
 		ret = of_property_read_s32(coeffs_np, "toffset", &val);
 		if (ret)
-			goto err;
+			return ret;
 
 		subdevice->coeffs_set[i].toffset = val;
-		ret = of_property_read_u32_array(coeffs_np, "coeffs", values,
-							num_subdevs * HIST_LEN);
-		if (ret)
-			goto err;
-
-		coeffs = (long*)subdevice->coeffs_set[i].coeffs;
-		for (j = 0; j < num_subdevs * HIST_LEN; j++) {
-			val = values[j];
-			coeffs[j] = (s32)((val & 0x80000000U) ?
-					-((val ^ 0xFFFFFFFFU) + 1) : val);
-		}
-
+		/*
+		 * casting from s32* to u32* is safe here
+		 */
+		ret = of_property_read_u32_array(coeffs_np, "coeffs",
+					(u32 *)subdevice->coeffs_set[i].coeffs,
+					num_subdevs * HIST_LEN);
 		i++;
 	}
 	of_node_put(coeffs_np);
@@ -670,9 +659,7 @@ static int therm_est_get_subdev(struct device *dev,
 	subdevice->num_coeffs = num_coeffs;
 	subdevice->num_devs = num_subdevs;
 
-err:
-	kfree(values);
-	return ret;
+	return 0;
 }
 
 static struct therm_est_data *therm_est_get_pdata(struct device *dev)

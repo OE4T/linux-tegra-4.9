@@ -35,7 +35,7 @@ struct therm_est_sub_thz {
 
 struct therm_est_coeffs {
 	long toffset;
-	long (*coeffs)[HIST_LEN];
+	s32 (*coeffs)[HIST_LEN];
 };
 
 struct therm_est_subdevice {
@@ -100,7 +100,13 @@ struct therm_fan_est_subdevice {
 	const char *dev_data;
 	int (*get_temp)(const char *, long *);
 	int group;
-	long coeffs[HIST_LEN];
+	/*
+	 * as we read coeffs array from the device tree,
+	 * specify type that has known width - 32 bits
+	 *
+	 * 'long' does not work, as its size if arch-dependent
+	 */
+	s32 coeffs[HIST_LEN];
 	int hist[HIST_LEN];
 };
 

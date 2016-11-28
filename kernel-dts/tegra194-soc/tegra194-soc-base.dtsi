@@ -153,13 +153,6 @@
 				num-pf-page = <0>;
 				gap-page = <1>;
 			};
-			gpu_as: gpu {
-				iova-start = <0x0 0x00100000>;
-				iova-size = <0x3 0xFFEFFFFF>;
-				alignment = <0xFFFFF>;
-				num-pf-page = <0>;
-				gap-page = <0>;
-			};
 			ape_as: ape {
 				iova-start = <0x0 0x40000000>;
 				iova-size = <0x0 0x20000000>;

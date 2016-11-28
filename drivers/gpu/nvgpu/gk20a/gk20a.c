@@ -39,7 +39,7 @@
 #include <linux/kthread.h>
 #include <linux/platform/tegra/common.h>
 #include <linux/reset.h>
-
+#include <linux/reboot.h>
 #include <linux/sched.h>
 #include <linux/version.h>
 
@@ -266,8 +266,11 @@ void __nvgpu_check_gpu_state(struct gk20a *g)
 {
 	u32 boot_0 = readl(g->regs + mc_boot_0_r());
 
-	if (boot_0 == 0xffffffff)
+	if (boot_0 == 0xffffffff) {
 		pr_err("nvgpu: GPU has disappeared from bus!!\n");
+		pr_err("nvgpu: Rebooting system!!\n");
+		kernel_restart(NULL);
+	}
 }
 
 static inline void sim_writel(struct gk20a *g, u32 r, u32 v)

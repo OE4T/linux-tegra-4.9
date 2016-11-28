@@ -2852,7 +2852,8 @@ static int pmu_queue_open_write(struct pmu_gk20a *pmu,
 		BUG();
 
 	if (!pmu_queue_has_room(pmu, queue, size, &rewind)) {
-		gk20a_err(dev_from_gk20a(gk20a_from_pmu(pmu)), "queue full");
+		gk20a_dbg_pmu("queue full: queue-id %d: index %d",
+				queue->id, queue->index);
 		pmu_queue_unlock(pmu, queue);
 		return -EAGAIN;
 	}

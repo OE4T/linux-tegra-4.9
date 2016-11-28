@@ -777,11 +777,6 @@ static const struct of_device_id tegra210_xbar_of_match[] = {
 	{},
 };
 
-static const struct {
-	const char *clk_name;
-} configlink_clocks[] = {
-};
-
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 static struct of_dev_auxdata tegra210_xbar_auxdata[] = {
 	OF_DEV_AUXDATA("nvidia,tegra210-admaif", ADMAIF_BASE_ADDR, "tegra210-admaif", NULL),
@@ -863,9 +858,8 @@ static int tegra210_xbar_registration(struct platform_device *pdev)
 
 static int tegra210_xbar_probe(struct platform_device *pdev)
 {
-	struct clk *clk;
 	void __iomem *regs;
-	int ret, i;
+	int ret;
 	const struct of_device_id *match;
 	struct tegra210_xbar_soc_data *soc_data;
 	struct resource *res;
@@ -878,24 +872,6 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 		goto err;
 	}
 	soc_data = (struct tegra210_xbar_soc_data *)match->data;
-
-	/*
-	 * The TEGRA APE XBAR client a register bus: the "configlink".
-	 * For this to operate correctly, all devices on this bus must
-	 * be out of reset.
-	 * Ensure that here.
-	 */
-	for (i = 0; i < ARRAY_SIZE(configlink_clocks); i++) {
-		clk = devm_clk_get(&pdev->dev, configlink_clocks[i].clk_name);
-		if (IS_ERR(clk)) {
-			dev_err(&pdev->dev, "Can't get clock %s\n",
-				configlink_clocks[i].clk_name);
-			ret = PTR_ERR(clk);
-			goto err;
-		}
-		tegra_periph_reset_deassert(clk);
-		devm_clk_put(&pdev->dev, clk);
-	}
 
 	xbar = devm_kzalloc(&pdev->dev, sizeof(*xbar), GFP_KERNEL);
 	if (!xbar) {

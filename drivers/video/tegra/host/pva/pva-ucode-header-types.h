@@ -1,6 +1,5 @@
 /*
- *
- * Copyright (c) 2016 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,10 +35,20 @@
 #define PVA_UCODE_SEG_R5	2	/* R5 code/data */
 #define PVA_UCODE_SEG_VPU_CODE	3	/* VPU code */
 #define PVA_UCODE_SEG_VPU_DATA	4	/* VPU data */
-#define PVA_UCODE_SEG_R5_APPL	5	/* R5 application code/data */
-#define PVA_UCODE_SEG_IN_PARMS	6	/* application input parameter data */
-#define PVA_UCODE_SEG_OUT_PARMS	7	/* application output parameter data */
-#define PVA_UCODE_SEG_NEXT	8	/* must be last */
+#define PVA_UCODE_SEG_IN_PARMS	5	/* application input parameter data */
+#define PVA_UCODE_SEG_OUT_PARMS	6	/* application output parameter data */
+#define PVA_UCODE_SEG_VPU_HDR	7	/* VPU algorithm header */
+#define PVA_UCODE_SEG_R5_APPL_HDR_0	8 /* R5 application header for VPU0 */
+#define PVA_UCODE_SEG_R5_APPL_CODE_0	9 /* R5 application code for VPU0*/
+#define PVA_UCODE_SEG_R5_APPL_DATA_0	10 /* R5 application data for VPU0 */
+#define PVA_UCODE_SEG_R5_APPL_HDR_1	11 /* R5 application header for VPU0 */
+#define PVA_UCODE_SEG_R5_APPL_CODE_1	12 /* R5 application code for VPU1 */
+#define PVA_UCODE_SEG_R5_APPL_DATA_1	13 /* R5 application data for VPU1 */
+#define PVA_UCODE_SEG_R5_OVERLAY	14 /* space for overlays */
+#define PVA_UCODE_SEG_R5_CRASHDUMP	15 /* space for R5 crash dump */
+#define PVA_UCODE_SEG_VPU_CRASHDUMP	16 /* space for a VPU crash dump */
+#define PVA_UCODE_SEG_TRACE_LOG		17 /* space for PVA trace logs */
+#define PVA_UCODE_SEG_NEXT		18 /* must be last */
 
 #define PVA_HDR_MAGIC		0x31415650	/* PVA1 in little endian */
 #define PVA_HDR_VERSION		0x00010000	/* version 1.0 of the header */

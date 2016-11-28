@@ -1,7 +1,5 @@
 /*
- * PVA Interface Header
- *
- * Copyright (c) 2016 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,6 +17,7 @@
 #define _PVA_INTERFACE_H_
 
 #include "pva-bit.h"
+#include "pva-errors.h"
 
 /*
  * Register definition for PVA_SHRD_SMP_STA0
@@ -91,57 +90,6 @@
 #define PVA_AISR_LOGGING_OVERFLOW	PVA_BIT(25)
 #define PVA_AISR_PRINTF_OVERFLOW	PVA_BIT(24)
 #define PVA_AISR_CRASH_LOG		PVA_BIT(23)
-
-
-/*
- * PVA Error codes that will be read from PVA_CCQ_STATUS3
- */
-enum pva_errors {
-	PVA_ERR_NO_ERROR = 0,
-	PVA_ERR_BAD_CMD = 1,
-	PVA_ERR_BAD_STATUS_ID = 2,
-	PVA_ERR_BAD_QUEUE_ID = 3,
-	PVA_ERR_BAD_VPU_ID = 4,
-	PVA_ERR_BUFF_TOO_SMALL = 5,
-	PVA_ERR_FEATURE_NOT_SUPPORTED = 6,
-	PVA_ERR_QUEUE_NOT_SUSPENDED = 7,
-	PVA_ERR_QUEUE_SUSPENDED = 8,
-	PVA_ERR_BAD_ADDRESS = 9,
-	PVA_ERR_BAD_THRESHOLD_ID = 10,
-	PVA_ERR_BAD_ATTR_ID = 11,
-	PVA_ERR_BAD_VMEM_ID = 12,
-	PVA_ERR_BAD_TIME_VALUE = 13,
-	PVA_ERR_BAD_SCHEDULER_ID = 14,
-	PVA_ERR_BAD_SCHEDULER_ATTR = 15,
-	PVA_ERR_BAD_STATUS_REG = 16,
-	PVA_ERR_BAD_REGION_ID = 17,
-	PVA_ERR_BAD_RESET_ID = 18,
-	PVA_ERR_BAD_STAT_ID = 19,
-	PVA_ERR_BAD_INSTANCE = 20,
-	PVA_ERR_BAD_TASK = 21,
-	PVA_ERR_BAD_TASK_ACTION_LIST = 22,
-	PVA_ERR_BAD_TASK_STATE = 23,
-	PVA_ERR_TASK_STATUS_MISMATCH = 24,
-	PVA_ERR_BAD_TASK_OFFSET = 25,
-	PVA_ERR_BAD_PARAMETERS = 26,
-	PVA_ERR_VALUE_MISMATCH = 27,
-	PVA_ERR_NO_VPU_HEADER = 28,
-	PVA_ERR_DMA_NO_BPP = 0x200,
-	PVA_ERR_DMA_INVALID_WIDTH = 0x201,
-	PVA_ERR_DMA_DATA_TOO_LARGE = 0x202,
-	PVA_ERR_DMA_BPP_MISMATCH = 0x203,
-	PVA_ERR_DMA_TRANSFER_TYPE_INVALID = 0x204,
-	PVA_ERR_DMA_TILE_SIZE_MISMATCH = 0x205,
-	PVA_ERR_DMA_SIZE_MISMATCH = 0x206,
-	PVA_ERR_DMA_CHANNEL_TRANSFER = 0x207,
-	PVA_ERR_BAD_DMA_DESC_ID = 0x208,
-	PVA_ERR_BAD_DMA_CHANNEL_ID = 0x209,
-	PVA_ERR_NO_PARM_ARRAY = 995,
-	PVA_ERR_NOT_FOUND = 996,
-	PVA_ERR_NO_TASK = 997,
-	PVA_ERR_MINIMUM_LENGTH = 998,
-	PVA_ERR_LENGTH_PROVIDED = 999,
-};
 
 #define PVA_GET_ERROR_CODE(_s_)		PVA_EXTRACT(_s_, 15, 0, enum pva_errors)
 
@@ -296,7 +244,7 @@ struct pva_sched_attr {
 
 #define PVA_SCHED_ATTR_ACTIVE_ENABLED		PVA_BIT(31)
 #define PVA_SCHED_ATTR_ACTIVE_SCHED_ID(_x_)	\
-	PVA_EXTRACT(_x_, 7, 0, enum pva_sched_id)
+			PVA_EXTRACT(_x_, 7, 0, enum pva_sched_id)
 
 static inline uint32_t
 pva_get_sched_attr_active_enabled(struct pva_sched_attr * const attrs)
@@ -389,10 +337,9 @@ pva_set_sched_attr_fixed(struct pva_sched_attr * const attrs,
 /*
  * Generic fields in a command sent through the command FIFO interface.
  */
+#define PVA_FIFO_GET_COMMAND(_c_)	PVA_EXTRACT64(_c_, 63, 56, enum pva_cmds)
 #define PVA_FIFO_INT_ON_ERR		PVA_BIT64(1)
 #define PVA_FIFO_INT_ON_COMPLETE	PVA_BIT64(0)
-#define PVA_FIFO_GET_COMMAND(_c_)	PVA_EXTRACT64(_c_, 63, 56,	\
-						enum pva_cmds)
 
 /*
  * Structure for managing commands through PVA_SHRD_MBOX*
@@ -583,9 +530,9 @@ pva_cmd_pva_sw_config(struct pva_cmd * const cmd,
 #define PVA_SW_PRINTF_SUPPORTED		PVA_BIT(26)
 #define PVA_SW_CRASHDUMP_SUPPORTED	PVA_BIT(25)
 #define PVA_SW_STATISTICS_SUPPORTED	PVA_BIT(24)
-#define pva_get_sw_num_queues(_x_)	PVA_EXTRACT(23, 16, uint32_t)
-#define pva_get_sw_num_vpus(_x_)	PVA_EXTRACT(7, 4, uint32_t)
-#define pva_get_sw_num_dma_engines(_x_)	PVA_EXTRACT(3, 0, uint32_t)
+#define pva_get_sw_num_queues(_x_)	PVA_EXTRACT(_x_, 23, 16, uint32_t)
+#define pva_get_sw_num_vpus(_x_)	PVA_EXTRACT(_x_, 7, 4, uint32_t)
+#define pva_get_sw_num_dma_engines(_x_)	PVA_EXTRACT(_x_, 3, 0, uint32_t)
 
 /*
  * VPU_UTILIZATION get status command
@@ -667,22 +614,20 @@ pva_cmd_wait_times(struct pva_cmd * const cmd,
  * RUN_TIMES get status command
  */
 #define PVA_CMD_FL_RUN_TIME_TOTALS	PVA_BIT(28)
-struct stats {
-	uint32_t	num;
-	uint32_t	avg;
-	uint32_t	min;
-	uint32_t	max;
-};
-struct totals {
-	uint32_t	num;
-	uint32_t	reserved;
-	uint32_t	total_lo;
-	uint32_t	total_hi;
-};
 
 union pva_status_run_times {
-	struct stats run_stats;
-	struct stats run_totals;
+	struct {
+		uint32_t	num_tasks;
+		uint32_t	avg_run;
+		uint32_t	min_run;
+		uint32_t	max_run;
+	} stats;
+	struct {
+		uint32_t	num_tasks;
+		uint32_t	reserved;
+		uint32_t	total_lo;
+		uint32_t	total_hi;
+	} totals;
 };
 
 static inline uint32_t
@@ -701,8 +646,18 @@ pva_cmd_run_times(struct pva_cmd * const cmd,
 #define PVA_IDLE_TIME_TOTALS		PVA_BIT(28)
 
 union pva_status_idle_time {
-	struct stats idle_stats;
-	struct totals idle_totals;
+	struct {
+		uint32_t	num_idles;
+		uint32_t	avg_idle;
+		uint32_t	min_idle;
+		uint32_t	max_idle;
+	} stats;
+	struct {
+		uint32_t	num_idles;
+		uint32_t	reserved;
+		uint32_t	total_lo;
+		uint32_t	total_hi;
+	} totals;
 };
 
 static inline uint32_t
@@ -1029,9 +984,9 @@ pva_cmd_manage_statistics(struct pva_cmd * const cmd,
 			  const uint32_t flags)
 {
 	cmd->mbox[0] = PVA_CMD_GO | flags
-		| PVA_SET_COMMAND(CMD_MANAGE_STATISTICS)
-		| PVA_INSERT(stat_id, 15, 8)
-		| PVA_INSERT(instance, 23, 16);
+		       | PVA_SET_COMMAND(CMD_MANAGE_STATISTICS)
+		       | PVA_INSERT(stat_id, 15, 8)
+		       | PVA_INSERT(instance, 23, 16);
 	return 1U;
 }
 
@@ -1063,8 +1018,8 @@ pva_cmd_set_region(struct pva_cmd * const cmd,
 	return 3U;
 }
 
-#define pva_get_region_header_len(_x_)	PVA_EXTRACT(_x_, 31, 16, uint32_t)
-#define pva_get_region_element_len(_x_)	PVA_EXTRACT(_x_, 15, 0, uint32_t)
+#define pva_get_region_header_len(_x_)		PVA_EXTRACT(31, 16, uint32_t)
+#define pva_get_region_element_len(_x_)		PVA_EXTRACT(15, 0, uint32_t)
 
 /*
  * CMD_SET_LOGGING
@@ -1269,7 +1224,7 @@ pva_cmd_submit(struct pva_cmd *const cmd,
 	cmd->mbox[0] = PVA_CMD_GO | flags
 		       | PVA_SET_COMMAND(CMD_SUBMIT)
 		       | PVA_INSERT(queue_id, 15, 8)
-		       | PVA_INSERT(PVA_EXTRACT64(addr, 39, 40, uint32_t),
+		       | PVA_INSERT(PVA_EXTRACT64(addr, 39, 32, uint32_t),
 				    23, 16);
 	cmd->mbox[1] = PVA_LOW32(addr);
 	return 2U;
@@ -1347,5 +1302,7 @@ pva_cmd_set_sched_attr(struct pva_cmd * const cmd,
 	cmd->mbox[2] = attrs->attr_b;
 	return 3U;
 }
+
+
 
 #endif

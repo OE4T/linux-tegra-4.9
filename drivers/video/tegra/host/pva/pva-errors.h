@@ -1,0 +1,116 @@
+/*
+ * Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+#ifndef _PVA_ERRORS_H_
+#define _PVA_ERRORS_H_
+
+/*
+ * PVA Error codes that will be read from PVA_CCQ_STATUS3
+ */
+enum pva_errors {
+	/*
+	 * General and interface errors
+	 */
+	PVA_ERR_NO_ERROR		= 0,
+	PVA_ERR_BAD_CMD			= 1,
+	PVA_ERR_BAD_STATUS_ID		= 2,
+	PVA_ERR_BAD_QUEUE_ID		= 3,
+	PVA_ERR_BAD_VPU_ID		= 4,
+	PVA_ERR_BUFF_TOO_SMALL		= 5,
+	PVA_ERR_FEATURE_NOT_SUPPORTED	= 6,
+	PVA_ERR_QUEUE_NOT_SUSPENDED	= 7,
+	PVA_ERR_QUEUE_SUSPENDED		= 8,
+	PVA_ERR_BAD_ADDRESS		= 9,
+	PVA_ERR_BAD_THRESHOLD_ID	= 10,
+	PVA_ERR_BAD_ATTR_ID		= 11,
+	PVA_ERR_BAD_VMEM_ID		= 12,
+	PVA_ERR_BAD_TIME_VALUE		= 13,
+	PVA_ERR_BAD_SCHEDULER_ID	= 14,
+	PVA_ERR_BAD_SCHEDULER_ATTR	= 15,
+	PVA_ERR_BAD_STATUS_REG		= 16,
+	PVA_ERR_BAD_REGION_ID		= 17,
+	PVA_ERR_BAD_RESET_ID		= 18,
+	PVA_ERR_BAD_STAT_ID		= 19,
+	PVA_ERR_BAD_INSTANCE		= 20,
+	PVA_ERR_BAD_TASK		= 21,
+	PVA_ERR_BAD_TASK_ACTION_LIST	= 22,
+	PVA_ERR_BAD_TASK_STATE		= 23,
+	PVA_ERR_TASK_STATUS_MISMATCH	= 24,
+	PVA_ERR_BAD_TASK_OFFSET		= 25,
+	PVA_ERR_BAD_PARAMETERS		= 26,
+	PVA_ERR_VALUE_MISMATCH		= 27,
+	PVA_ERR_NO_VPU_HEADER		= 28,
+	PVA_ERR_BAD_SURFACE_ARRAY	= 29,
+	PVA_ERR_UNKNOWN_VPU_OP		= 30,
+	PVA_ERR_BAD_VPU_OP_VER		= 31,
+	PVA_ERR_UNKNOWN_R5_APP		= 32,
+	PVA_ERR_NO_R5_DATA		= 33,
+	PVA_ERR_NO_R5_HEADER		= 34,
+	PVA_ERR_VPU_TIMEOUT		= 35,
+	PVA_ERR_VPU_RESET		= 36,
+	PVA_ERR_VPU_ERROR_HALT		= 37,
+	PVA_ERR_VPU_ILLEGAL_INSTR	= 38,
+	PVA_ERR_VPU_DIVIDE_BY_0		= 39,
+	PVA_ERR_VPU_BAD_STATE		= 40,
+	PVA_ERR_VPU_DEBUG		= 41,
+	PVA_ERR_VPU_EXIT_ERROR		= 42,
+	PVA_ERR_VPU_RUNTIME_BAD_VERSION	= 43,
+	PVA_ERR_VPU_RUNTIME_BAD_OPCODE	= 44,
+	PVA_ERR_VPU_ABORT		= 45,
+	PVA_ERR_BAD_OVERLAY_SEG		= 46,
+	PVA_ERR_BAD_SEG_START		= 47,
+	PVA_ERR_SEGMENTS_OVERLAP	= 48,
+
+	/*
+	 * DMA errors
+	 */
+	PVA_ERR_DMA_NO_BPP		= 0x200,
+	PVA_ERR_DMA_INVALID_WIDTH	= 0x201,
+	PVA_ERR_DMA_DATA_TOO_LARGE	= 0x202,
+	PVA_ERR_DMA_BPP_MISMATCH	= 0x203,
+	PVA_ERR_DMA_TRANSFER_TYPE_INVALID = 0x204,
+	PVA_ERR_DMA_TILE_SIZE_MISMATCH	= 0x205,
+	PVA_ERR_DMA_SIZE_MISMATCH	= 0x206,
+	PVA_ERR_DMA_CHANNEL_TRANSFER	= 0x207,
+	PVA_ERR_BAD_DMA_DESC_ID		= 0x208,
+	PVA_ERR_BAD_DMA_CHANNEL_ID	= 0x209,
+	PVA_ERR_DMA_TOO_MANY_BUFFERS	= 0x20a,
+	PVA_ERR_DMA_TIMEOUT		= 0x20b,
+	PVA_ERR_DMA_INSUFFICIENT_SPACE	= 0x20c,
+
+	/*
+	 * VPU Errors
+	 */
+	PVA_ERR_VPU_DMA_TIMEOUT		= 0x300,
+	PVA_ERR_VPU_PARAMETER_MISMATCH	= 0x301,
+
+	/*
+	 * R5 Application Errors
+	 */
+	PVA_ERR_R5_APP_ARGS		= 0x800,
+
+	/*
+	 * Informational errors
+	 *
+	 * XXX: TODO move these to another range
+	 */
+	PVA_ERR_NO_PARM_ARRAY		= 995,
+	PVA_ERR_NOT_FOUND		= 996,
+	PVA_ERR_NO_TASK			= 997,
+	PVA_ERR_MINIMUM_LENGTH		= 998,
+	PVA_ERR_LENGTH_PROVIDED		= 999,
+};
+
+#endif

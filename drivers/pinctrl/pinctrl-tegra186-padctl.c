@@ -31,6 +31,7 @@
 #include <soc/tegra/xusb.h>
 #include <linux/tegra_prod.h>
 #include <dt-bindings/pinctrl/pinctrl-tegra-padctl.h>
+#include <linux/version.h>
 
 #define VERBOSE_DEBUG
 #ifdef TRACE
@@ -725,7 +726,12 @@ static const struct pinctrl_ops tegra_xusb_padctl_pinctrl_ops = {
 	.get_group_name = tegra_padctl_get_group_name,
 	.get_group_pins = tegra_padctl_get_group_pins,
 	.dt_node_to_map = tegra_padctl_dt_node_to_map,
+/* API changed after 4.6.0-rc1 */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0)
 	.dt_free_map = pinctrl_utils_dt_free_map,
+#else
+	.dt_free_map = pinctrl_utils_free_map,
+#endif
 };
 
 static int tegra186_padctl_get_functions_count(struct pinctrl_dev *pinctrl)

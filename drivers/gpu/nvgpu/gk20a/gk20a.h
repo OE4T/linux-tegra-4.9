@@ -1111,6 +1111,8 @@ void gk20a_init_clk_ops(struct gpu_ops *gops);
 int gk20a_lockout_registers(struct gk20a *g);
 int gk20a_restore_registers(struct gk20a *g);
 
+void __nvgpu_check_gpu_state(struct gk20a *g);
+
 static inline void gk20a_writel(struct gk20a *g, u32 r, u32 v)
 {
 	gk20a_dbg(gpu_dbg_reg, " r=0x%x v=0x%x", r, v);
@@ -1120,7 +1122,12 @@ static inline void gk20a_writel(struct gk20a *g, u32 r, u32 v)
 static inline u32 gk20a_readl(struct gk20a *g, u32 r)
 {
 	u32 v = readl(g->regs + r);
+
+	if (v == 0xffffffff)
+		__nvgpu_check_gpu_state(g);
+
 	gk20a_dbg(gpu_dbg_reg, " r=0x%x v=0x%x", r, v);
+
 	return v;
 }
 static inline void gk20a_writel_check(struct gk20a *g, u32 r, u32 v)

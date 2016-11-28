@@ -262,6 +262,14 @@ static const struct file_operations gk20a_sched_ops = {
 	.read = gk20a_sched_dev_read,
 };
 
+void __nvgpu_check_gpu_state(struct gk20a *g)
+{
+	u32 boot_0 = readl(g->regs + mc_boot_0_r());
+
+	if (boot_0 == 0xffffffff)
+		pr_err("nvgpu: GPU has disappeared from bus!!\n");
+}
+
 static inline void sim_writel(struct gk20a *g, u32 r, u32 v)
 {
 	writel(v, g->sim.regs+r);

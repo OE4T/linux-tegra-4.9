@@ -855,7 +855,7 @@ next_page:
 			}
 
 			seq_printf(s,
-				"%-18s %-18s %8llx %10zuK %8x %6u %16p "
+				"%-18s %-18s %8llx %10zuK %8x %6u %16pK "
 				"%12s %12s ",
 				"", "",
 				(unsigned long long)base, K(handle->size),

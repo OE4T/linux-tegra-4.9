@@ -84,6 +84,35 @@ static inline void pwm_writel(u32 val, u32 offs)
 	pwm_readl(DFLL_CTRL);
 }
 
+static void dfll_pwm_enable(bool flag)
+{
+	u32 val;
+
+	val = pwm_readl(DFLL_OUTPUT_CFG);
+
+	if (flag)
+		val |= DFLL_OUTPUT_CFG_PWM_ENABLE;
+	else
+		val &= ~DFLL_OUTPUT_CFG_PWM_ENABLE;
+
+	pwm_writel(val, DFLL_OUTPUT_CFG);
+}
+
+/*
+ * Calculate the DIV value and write into DFLL register
+ */
+static void dfll_pwm_init(void)
+{
+	u32 div, val;
+
+	val = pwm_readl(DFLL_OUTPUT_CFG);
+
+	div = DIV_ROUND_UP(tdpc->ref_rate, tdpc->pwm_rate);
+	val |= (div << DFLL_OUTPUT_CFG_PWM_DIV_SHIFT) &
+	      DFLL_OUTPUT_CFG_PWM_DIV_MASK;
+	pwm_writel(val, DFLL_OUTPUT_CFG);
+}
+
 static int tegra_dfll_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 				int duty_ns, int period_ns)
 {
@@ -92,13 +121,7 @@ static int tegra_dfll_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 
 static int tegra_dfll_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 {
-	u32 val;
-
-	val = pwm_readl(DFLL_OUTPUT_CFG);
-	val |= DFLL_OUTPUT_CFG_PWM_ENABLE;
-	pwm_writel(val, DFLL_OUTPUT_CFG);
-
-	dev_info(tdpc->dev, "DFLL_PWM is enabled\n");
+	dev_info(tdpc->dev, "DFLL_PWM regulator is available now\n");
 
 	return 0;
 }
@@ -106,15 +129,7 @@ static int tegra_dfll_pwm_enable(struct pwm_chip *chip, struct pwm_device *pwm)
 static void tegra_dfll_pwm_disable(struct pwm_chip *chip,
 				   struct pwm_device *pwm)
 {
-	u32 val;
-
-	val = pwm_readl(DFLL_OUTPUT_CFG);
-	val &= ~DFLL_OUTPUT_CFG_PWM_ENABLE;
-	pwm_writel(val, DFLL_OUTPUT_CFG);
-
 	dev_info(tdpc->dev, "DFLL_PWM is disabled\n");
-
-	return 0;
 }
 
 /**
@@ -131,6 +146,8 @@ int tegra_dfll_pwm_output_enable(void)
 		dev_err(tdpc->dev, "setting enable state failed\n");
 		return -EINVAL;
 	}
+	dfll_pwm_init();
+	dfll_pwm_enable(true);
 
 	return 0;
 }
@@ -150,6 +167,7 @@ int tegra_dfll_pwm_output_disable(void)
 		dev_err(tdpc->dev, "setting enable state failed\n");
 		return -EINVAL;
 	}
+	dfll_pwm_enable(false);
 
 	return 0;
 }
@@ -199,25 +217,6 @@ static int dt_parse_pwm_regulator(void)
 	val = (NSEC_PER_SEC / val) * (DFLL_MAX_VOLTAGES - 1);
 	tdpc->pwm_rate = val;
 	dev_info(tdpc->dev, "DFLL pwm-rate: %lu\n", val);
-
-	return 0;
-}
-
-/**
- * tegra_dfll_pwm_init - init Tegra DFLL PWM controller
- *
- * Calculate the DIV value and write into DFLL register
- */
-static int tegra_dfll_pwm_init(void)
-{
-	u32 div, val;
-
-	pwm_writel(0, DFLL_OUTPUT_CFG);
-
-	div = DIV_ROUND_UP(tdpc->ref_rate, tdpc->pwm_rate);
-	val = (div << DFLL_OUTPUT_CFG_PWM_DIV_SHIFT) &
-	      DFLL_OUTPUT_CFG_PWM_DIV_MASK;
-	pwm_writel(val, DFLL_OUTPUT_CFG);
 
 	return 0;
 }
@@ -282,12 +281,6 @@ static int tegra_dfll_pwm_probe(struct platform_device *pdev)
 	ret = dt_parse_pwm_regulator();
 	if (ret < 0) {
 		dev_err(tdpc->dev, "failed to parse pwm regulator\n");
-		return ret;
-	}
-
-	ret = tegra_dfll_pwm_init();
-	if (ret < 0) {
-		dev_err(tdpc->dev, "failed to init DFLL pwm\n");
 		return ret;
 	}
 

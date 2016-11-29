@@ -1013,6 +1013,13 @@
 			<&tegra_car TEGRA210_CLK_CLK72MHZ>;
 		clock-names = "mipi_cal", "uart_mipi_cal";
 		status = "disabled";
+
+		dsi {
+			dsix-cfg = <0x00000200>;
+			dsix-cfg2 = <0x00000002>;
+			bias-pad-cfg1 = <0x00000300>;
+			bias-pad-cfg2 = <0x00010010>;
+		};
 	};
 
 	tegra_pmc: pmc@7000e400 {

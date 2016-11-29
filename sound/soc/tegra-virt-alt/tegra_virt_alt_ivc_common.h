@@ -73,6 +73,13 @@ enum nvaudio_ivc_cmd_t {
 	NVAUDIO_ASRC_GET_INPUT_THRESHOLD,
 	NVAUDIO_ASRC_SET_OUTPUT_THRESHOLD,
 	NVAUDIO_ASRC_GET_OUTPUT_THRESHOLD,
+	NVAUDIO_ARAD_SET_LANE_SRC,
+	NVAUDIO_ARAD_GET_LANE_SRC,
+	NVAUDIO_ARAD_SET_PRESCALAR,
+	NVAUDIO_ARAD_GET_PRESCALAR,
+	NVAUDIO_ARAD_SET_LANE_ENABLE,
+	NVAUDIO_ARAD_GET_LANE_ENABLE,
+	NVAUDIO_ARAD_GET_LANE_RATIO,
 #endif
 	NVAUDIO_ADSP_REQUEST_ASSIGNMENT,
 	NVAUDIO_CMD_MAX,
@@ -114,6 +121,18 @@ struct nvaudio_ivc_t186_asrc_info {
 	uint32_t	stream_enable;
 	uint32_t	ratio_source;
 };
+
+struct nvaudio_ivc_t186_arad_info {
+	int32_t		id;
+	uint32_t	lane_id;
+	uint32_t	int_ratio;
+	uint32_t	frac_ratio;
+	int32_t		num_source;
+	int32_t		den_source;
+	int32_t		num_prescalar;
+	int32_t		den_prescalar;
+	uint32_t	lane_enable;
+};
 #endif
 
 struct nvaudio_ivc_xbar_link {
@@ -138,6 +157,7 @@ struct nvaudio_ivc_msg {
 		struct nvaudio_ivc_t210_sfc_info	sfc_info;
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 		struct nvaudio_ivc_t186_asrc_info	asrc_info;
+		struct nvaudio_ivc_t186_arad_info	arad_info;
 #endif
 		struct nvaudio_ivc_xbar_link		xbar_info;
 	} params;

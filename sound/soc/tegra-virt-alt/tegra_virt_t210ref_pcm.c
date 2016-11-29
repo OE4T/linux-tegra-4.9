@@ -41,6 +41,8 @@
 #define CODEC_NAME		NULL
 #define NUM_MUX_INPUT		83
 #define NUM_ASRC_SOURCES	2
+#define NUM_ARAD_SOURCES	11
+#define NUM_ARAD_LANES		6
 #define TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK		0x1F
 #define TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK		0xFFFFFFFF
 #else
@@ -671,6 +673,50 @@ static const char * const tegra_virt_t210ref_source_text[] = {
 #endif
 /* index 54..71 above are inputs of PART3 Mux */
 };
+
+
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+static const char * const tegra186_asrc_ratio_source_text[] = {
+	"ARAD",
+	"SW",
+};
+
+static const int tegra186_arad_mux_value[] = {
+	-1, /* None */
+	0, 1, 2, 3, 4, 5,	/* I2S1~6 */
+	28, 29, 30, 31,	/* SPDIF_RX1,2 & SPDIF_TX1,2 */
+};
+
+static const char * const tegra186_arad_mux_text[] = {
+	"None",
+	"I2S1",
+	"I2S2",
+	"I2S3",
+	"I2S4",
+	"I2S5",
+	"I2S6",
+	"SPDIF1_RX1",
+	"SPDIF1_RX2",
+	"SPDIF1_TX1",
+	"SPDIF1_TX2",
+};
+
+enum {
+	numerator1_enum = 0,
+	numerator2_enum,
+	numerator3_enum,
+	numerator4_enum,
+	numerator5_enum,
+	numerator6_enum,
+	denominator1_enum = NUM_ARAD_LANES,
+	denominator2_enum,
+	denominator3_enum,
+	denominator4_enum,
+	denominator5_enum,
+	denominator6_enum,
+};
+#endif
+
 static int tegra_virt_t210ref_get_route(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -1537,19 +1583,310 @@ static int tegra186_virt_asrc_set_output_threshold(
 
 	return 0;
 }
+
+static int tegra186_virt_arad_get_lane_source(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	uint64_t reg = (uint64_t)kcontrol->tlv.p;
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err, i;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ARAD_GET_LANE_SRC;
+	msg.params.arad_info.id = 0;
+	msg.params.arad_info.lane_id = reg % NUM_ARAD_LANES;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	/* numerator reg 0 to 5, denominator reg 6 to 11 */
+	if (reg/NUM_ARAD_LANES) {
+		for (i = 0; i < NUM_ARAD_SOURCES; i++) {
+			if (tegra186_arad_mux_value[i] ==
+					msg.params.arad_info.den_source)
+				break;
+		}
+		ucontrol->value.integer.value[0] = i;
+	} else {
+		for (i = 0; i < NUM_ARAD_SOURCES; i++) {
+			if (tegra186_arad_mux_value[i] ==
+					msg.params.arad_info.num_source)
+				break;
+		}
+		ucontrol->value.integer.value[0] = i;
+	}
+
+	return 0;
+}
+
+static int tegra186_virt_arad_set_lane_source(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	uint64_t reg = (uint64_t)kcontrol->tlv.p;
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+	int source;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ARAD_SET_LANE_SRC;
+	msg.params.arad_info.id = 0;
+	msg.params.arad_info.lane_id = reg % NUM_ARAD_LANES;
+
+	/* numerator reg 0 to 5, denominator reg 6 to 11 */
+	source = tegra186_arad_mux_value[ucontrol->value.integer.value[0]];
+	if (reg/NUM_ARAD_LANES) {
+		msg.params.arad_info.num_source = -1;
+		msg.params.arad_info.den_source = source;
+	} else {
+		msg.params.arad_info.num_source = source;
+		msg.params.arad_info.den_source = -1;
+	}
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra186_virt_arad_get_lane_prescalar(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ARAD_GET_PRESCALAR;
+	msg.params.arad_info.id = 0;
+	msg.params.arad_info.lane_id = reg % NUM_ARAD_LANES;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	/* numerator reg 0 to 5, denominator reg 6 to 11 */
+	if (reg/NUM_ARAD_LANES)
+		ucontrol->value.integer.value[0] =
+			msg.params.arad_info.den_prescalar;
+	else
+		ucontrol->value.integer.value[0] =
+			msg.params.arad_info.num_prescalar;
+
+	return 0;
+}
+
+static int tegra186_virt_arad_set_lane_prescalar(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ARAD_SET_PRESCALAR;
+	msg.params.arad_info.id = 0;
+	msg.params.arad_info.lane_id = reg % NUM_ARAD_LANES;
+
+	/* numerator reg 0 to 5, denominator reg 6 to 11 */
+	if (reg/NUM_ARAD_LANES) {
+		msg.params.arad_info.num_prescalar = -1;
+		msg.params.arad_info.den_prescalar =
+			ucontrol->value.integer.value[0];
+	} else {
+		msg.params.arad_info.num_prescalar =
+			ucontrol->value.integer.value[0];
+		msg.params.arad_info.den_prescalar = -1;
+	}
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra186_virt_arad_get_lane_enable(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ARAD_GET_LANE_ENABLE;
+	msg.params.arad_info.id = 0;
+	msg.params.arad_info.lane_id = reg;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	ucontrol->value.integer.value[0] =
+			msg.params.arad_info.lane_enable;
+
+	return 0;
+}
+
+static int tegra186_virt_arad_set_lane_enable(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ARAD_SET_LANE_ENABLE;
+	msg.params.arad_info.id = 0;
+	msg.params.arad_info.lane_id = reg;
+	msg.params.arad_info.lane_enable =
+		ucontrol->value.integer.value[0];
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra186_virt_arad_get_lane_ratio(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	int err;
+	uint64_t val;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ARAD_GET_LANE_RATIO;
+	msg.params.arad_info.id = 0;
+	msg.params.arad_info.lane_id = reg;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	val = (uint64_t)msg.params.arad_info.int_ratio << 32;
+	val &= 0xffffffff00000000ULL;
+	val |= (uint64_t)msg.params.arad_info.frac_ratio;
+	ucontrol->value.integer64.value[0] = val;
+
+	return 0;
+}
 #endif
 
 static const struct soc_enum tegra_virt_t210ref_source =
 	SOC_ENUM_SINGLE_EXT(NUM_MUX_INPUT, tegra_virt_t210ref_source_text);
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
-static const char * const tegra186_asrc_ratio_source_text[] = {
-	"ARAD",
-	"SW",
-};
-
 static const struct soc_enum tegra_virt_t186_asrc_source =
 	SOC_ENUM_SINGLE_EXT(NUM_ASRC_SOURCES, tegra186_asrc_ratio_source_text);
+
+static const struct soc_enum tegra_virt_t186_arad_source =
+	SOC_ENUM_SINGLE_EXT(NUM_ARAD_SOURCES, tegra186_arad_mux_text);
 #endif
 
 
@@ -1688,6 +2025,30 @@ static int32_t tegra210_adsp_hv_req_adsp_assignment(
 	0, 3, 0,	\
 	tegra186_virt_asrc_get_output_threshold,	\
 	tegra186_virt_asrc_set_output_threshold)
+
+#define ARAD_LANE_SOURCE_CTRL_DECL(ename, reg) \
+	SOC_ENUM_EXT_REG(ename, reg,	\
+	tegra_virt_t186_arad_source,	\
+	tegra186_virt_arad_get_lane_source,	\
+	tegra186_virt_arad_set_lane_source)
+
+#define ARAD_LANE_PRESCALAR_CTRL_DECL(ename, reg) \
+	SOC_SINGLE_EXT(ename, reg,	\
+	0, 65535, 0,	\
+	tegra186_virt_arad_get_lane_prescalar,	\
+	tegra186_virt_arad_set_lane_prescalar)
+
+#define ARAD_LANE_ENABLE_CTRL_DECL(ename, reg) \
+	SOC_SINGLE_EXT(ename, reg,	\
+	0, 1, 0,	\
+	tegra186_virt_arad_get_lane_enable,	\
+	tegra186_virt_arad_set_lane_enable)
+
+#define ARAD_LANE_RATIO_CTRL_DECL(ename, reg) \
+	SOC_SINGLE_EXT(ename, reg,	\
+	0, 0xFFFFFFFF, 0,	\
+	tegra186_virt_arad_get_lane_ratio, NULL)
+
 #endif
 
 static const struct snd_kcontrol_new tegra_virt_t210ref_controls[] = {
@@ -1901,6 +2262,48 @@ ASRC_STREAM_OUTPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream3 Output Thresh", 0x03),
 ASRC_STREAM_OUTPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream4 Output Thresh", 0x04),
 ASRC_STREAM_OUTPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream5 Output Thresh", 0x05),
 ASRC_STREAM_OUTPUT_THRESHOLD_CTRL_DECL("ASRC1 Stream6 Output Thresh", 0x06),
+
+ARAD_LANE_SOURCE_CTRL_DECL("Numerator1 Mux", numerator1_enum),
+ARAD_LANE_SOURCE_CTRL_DECL("Numerator2 Mux", numerator2_enum),
+ARAD_LANE_SOURCE_CTRL_DECL("Numerator3 Mux", numerator3_enum),
+ARAD_LANE_SOURCE_CTRL_DECL("Numerator4 Mux", numerator4_enum),
+ARAD_LANE_SOURCE_CTRL_DECL("Numerator5 Mux", numerator5_enum),
+ARAD_LANE_SOURCE_CTRL_DECL("Numerator6 Mux", numerator6_enum),
+
+ARAD_LANE_SOURCE_CTRL_DECL("Denominator1 Mux", denominator1_enum),
+ARAD_LANE_SOURCE_CTRL_DECL("Denominator2 Mux", denominator2_enum),
+ARAD_LANE_SOURCE_CTRL_DECL("Denominator3 Mux", denominator3_enum),
+ARAD_LANE_SOURCE_CTRL_DECL("Denominator4 Mux", denominator4_enum),
+ARAD_LANE_SOURCE_CTRL_DECL("Denominator5 Mux", denominator5_enum),
+ARAD_LANE_SOURCE_CTRL_DECL("Denominator6 Mux", denominator6_enum),
+
+ARAD_LANE_PRESCALAR_CTRL_DECL("Numerator1 Prescalar", numerator1_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Numerator2 Prescalar", numerator2_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Numerator3 Prescalar", numerator3_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Numerator4 Prescalar", numerator4_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Numerator5 Prescalar", numerator5_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Numerator6 Prescalar", numerator6_enum),
+
+ARAD_LANE_PRESCALAR_CTRL_DECL("Denominator1 Prescalar", denominator1_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Denominator2 Prescalar", denominator2_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Denominator3 Prescalar", denominator3_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Denominator4 Prescalar", denominator4_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Denominator5 Prescalar", denominator5_enum),
+ARAD_LANE_PRESCALAR_CTRL_DECL("Denominator6 Prescalar", denominator6_enum),
+
+ARAD_LANE_ENABLE_CTRL_DECL("Lane1 enable", 0x00),
+ARAD_LANE_ENABLE_CTRL_DECL("Lane2 enable", 0x01),
+ARAD_LANE_ENABLE_CTRL_DECL("Lane3 enable", 0x02),
+ARAD_LANE_ENABLE_CTRL_DECL("Lane4 enable", 0x03),
+ARAD_LANE_ENABLE_CTRL_DECL("Lane5 enable", 0x04),
+ARAD_LANE_ENABLE_CTRL_DECL("Lane6 enable", 0x05),
+
+ARAD_LANE_RATIO_CTRL_DECL("Lane1 Ratio", 0x00),
+ARAD_LANE_RATIO_CTRL_DECL("Lane2 Ratio", 0x01),
+ARAD_LANE_RATIO_CTRL_DECL("Lane3 Ratio", 0x02),
+ARAD_LANE_RATIO_CTRL_DECL("Lane4 Ratio", 0x03),
+ARAD_LANE_RATIO_CTRL_DECL("Lane5 Ratio", 0x04),
+ARAD_LANE_RATIO_CTRL_DECL("Lane6 Ratio", 0x05),
 #endif
 };
 

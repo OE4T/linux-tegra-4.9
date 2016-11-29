@@ -44,9 +44,6 @@
 
 #define NVMAP_HANDLE_PARAM_SIZE 1
 
-#define NVGPU_CHANNEL_MIN_TIMESLICE_US 1000
-#define NVGPU_CHANNEL_MAX_TIMESLICE_US 50000
-
 /*
  * Although channels do have pointers back to the gk20a struct that they were
  * created under in cases where the driver is killed that pointer can be bad.
@@ -3345,14 +3342,16 @@ int gk20a_channel_set_priority(struct channel_gk20a *ch, u32 priority)
 
 int gk20a_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
 {
+	struct gk20a *g = ch->g;
+
 	if (gk20a_is_channel_marked_as_tsg(ch)) {
 		gk20a_err(dev_from_gk20a(ch->g),
 			"invalid operation for TSG!\n");
 		return -EINVAL;
 	}
 
-	if (timeslice < NVGPU_CHANNEL_MIN_TIMESLICE_US ||
-		timeslice > NVGPU_CHANNEL_MAX_TIMESLICE_US)
+	if (timeslice < g->min_timeslice_us ||
+		timeslice > g->max_timeslice_us)
 		return -EINVAL;
 
 	ch->timeslice_us = timeslice;

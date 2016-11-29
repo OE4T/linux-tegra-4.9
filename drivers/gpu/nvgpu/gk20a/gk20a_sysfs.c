@@ -3,7 +3,7 @@
  *
  * GK20A Graphics
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -756,6 +756,63 @@ static ssize_t tpc_fs_mask_read(struct device *dev,
 
 static DEVICE_ATTR(tpc_fs_mask, ROOTRW, tpc_fs_mask_read, tpc_fs_mask_store);
 
+static ssize_t min_timeslice_us_read(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct gk20a *g = get_gk20a(dev);
+
+	return snprintf(buf, PAGE_SIZE, "%u\n", g->min_timeslice_us);
+}
+
+static ssize_t min_timeslice_us_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct gk20a *g = get_gk20a(dev);
+	unsigned long val;
+
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	if (val > g->max_timeslice_us)
+		return -EINVAL;
+
+	g->min_timeslice_us = val;
+
+	return count;
+}
+
+static DEVICE_ATTR(min_timeslice_us, ROOTRW, min_timeslice_us_read,
+		   min_timeslice_us_store);
+
+static ssize_t max_timeslice_us_read(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct gk20a *g = get_gk20a(dev);
+
+	return snprintf(buf, PAGE_SIZE, "%u\n", g->max_timeslice_us);
+}
+
+static ssize_t max_timeslice_us_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct gk20a *g = get_gk20a(dev);
+	unsigned long val;
+
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	if (val < g->min_timeslice_us)
+		return -EINVAL;
+
+	g->max_timeslice_us = val;
+
+	return count;
+}
+
+static DEVICE_ATTR(max_timeslice_us, ROOTRW, max_timeslice_us_read,
+		   max_timeslice_us_store);
+
+
 void gk20a_remove_sysfs(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
@@ -782,6 +839,8 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_aelpg_enable);
 	device_remove_file(dev, &dev_attr_allow_all);
 	device_remove_file(dev, &dev_attr_tpc_fs_mask);
+	device_remove_file(dev, &dev_attr_min_timeslice_us);
+	device_remove_file(dev, &dev_attr_max_timeslice_us);
 
 	if (g->host1x_dev && (dev->parent != &g->host1x_dev->dev)) {
 		sysfs_remove_link(&g->host1x_dev->dev.kobj, dev_name(dev));
@@ -822,6 +881,8 @@ void gk20a_create_sysfs(struct device *dev)
 	error |= device_create_file(dev, &dev_attr_aelpg_enable);
 	error |= device_create_file(dev, &dev_attr_allow_all);
 	error |= device_create_file(dev, &dev_attr_tpc_fs_mask);
+	error |= device_create_file(dev, &dev_attr_min_timeslice_us);
+	error |= device_create_file(dev, &dev_attr_max_timeslice_us);
 
 	if (g->host1x_dev && (dev->parent != &g->host1x_dev->dev)) {
 		error |= sysfs_create_link(&g->host1x_dev->dev.kobj,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -25,9 +25,6 @@
 #include "gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
-
-#define NVGPU_TSG_MIN_TIMESLICE_US 1000
-#define NVGPU_TSG_MAX_TIMESLICE_US 50000
 
 struct tsg_private {
 	struct gk20a *g;
@@ -367,8 +364,8 @@ int gk20a_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
 {
 	struct gk20a *g = tsg->g;
 
-	if (timeslice < NVGPU_TSG_MIN_TIMESLICE_US ||
-		timeslice > NVGPU_TSG_MAX_TIMESLICE_US)
+	if (timeslice < g->min_timeslice_us ||
+		timeslice > g->max_timeslice_us)
 		return -EINVAL;
 
 	gk20a_channel_get_timescale_from_timeslice(g, timeslice,

@@ -840,6 +840,8 @@ struct gk20a {
 	u32 timeslice_low_priority_us;
 	u32 timeslice_medium_priority_us;
 	u32 timeslice_high_priority_us;
+	u32 min_timeslice_us;
+	u32 max_timeslice_us;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
 	u32 runlist_interleave;
 #else

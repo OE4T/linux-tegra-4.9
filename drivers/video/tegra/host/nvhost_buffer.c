@@ -303,11 +303,12 @@ void nvhost_buffer_unpin(struct nvhost_buffers *nvhost_buffers, u32 *handles,
 
 void nvhost_buffer_put(struct nvhost_buffers *nvhost_buffers)
 {
-	struct nvhost_vm_buffer *vm;
+	struct nvhost_vm_buffer *vm, *n;
 
 	mutex_lock(&nvhost_buffers->buffer_list_mutex);
 
-	list_for_each_entry(vm, &nvhost_buffers->buffer_list, pin_list) {
+	list_for_each_entry_safe(vm, n, &nvhost_buffers->buffer_list,
+				 pin_list) {
 		vm->user_map_count = 0;
 		nvhost_buffer_unmap(vm);
 	}

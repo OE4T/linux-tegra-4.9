@@ -389,12 +389,6 @@
 #define pin_pex_l1_clkreq	"pex_l1_clkreq_n_pa4"
 #endif
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-static u32 rp_to_lane_map[2][4] = { {1, 2, 3, 4}, {0} };
-#else
-static u32 rp_to_lane_map[3][3] = { {4}, {3}, {0} };
-#endif
-
 struct tegra_pcie_soc_data {
 	unsigned int	num_ports;
 	char			**pcie_regulator_names;
@@ -420,9 +414,6 @@ struct tegra_pcie {
 
 	void __iomem *pads;
 	void __iomem *afi;
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	void __iomem *lanes;
-#endif
 	int irq;
 
 	struct list_head buses;
@@ -438,9 +429,6 @@ struct tegra_pcie {
 
 	struct tegra_msi msi;
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	struct reset_control *uphy_rst;
-#endif
 	struct reset_control *afi_rst;
 	struct reset_control *pcie_rst;
 	struct reset_control *pciex_rst;
@@ -559,13 +547,6 @@ static inline unsigned int rp_readl(struct tegra_pcie_port *port,
 	return readl(offset + port->base);
 }
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-static inline u32 lane_readl(struct tegra_pcie *pcie, unsigned lane,
-							unsigned offset)
-{
-	return readl(pcie->lanes + lane * 0x10000 + offset);
-}
-#endif
 /*
  * The configuration space mapping on Tegra is somewhat similar to the ECAM
  * defined by PCIe. However it deviates a bit in how the 4 bits for extended
@@ -1616,22 +1597,6 @@ static int tegra_pcie_map_resources(struct tegra_pcie *pcie)
 		return -EBUSY;
 	}
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	if (pcie->lanes)
-		goto lane_registers_mapped;
-
-	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "lanes");
-	pcie->lanes = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(pcie->lanes)) {
-		int err = PTR_ERR(pcie->lanes);
-
-		pcie->lanes = NULL;
-		dev_err(pcie->dev, "PCIE: Failed to map lanes registers\n");
-		return err;
-	}
-lane_registers_mapped:
-#endif
-
 	return 0;
 }
 
@@ -1913,14 +1878,6 @@ static int tegra_pcie_get_resets(struct tegra_pcie *pcie)
 		return PTR_ERR(pcie->pciex_rst);
 	}
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	pcie->uphy_rst = devm_reset_control_get(pcie->dev, "uphy");
-	if (IS_ERR(pcie->uphy_rst)) {
-		dev_err(pcie->dev, "PCIE : uphy reset is missing\n");
-		return PTR_ERR(pcie->uphy_rst);
-	}
-#endif
-
 	return 0;
 }
 
@@ -2134,64 +2091,53 @@ void tegra_pcie_port_disable_per_pdev(struct pci_dev *pdev)
 }
 EXPORT_SYMBOL(tegra_pcie_port_disable_per_pdev);
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-#define UPHY_LANE_AUX_CTL_1			(0x0)
-#define   AUX_TX_RDET_STATUS			(0x1 << 7)
-
-static bool tegra_pcie_get_lane_rdet(struct tegra_pcie *pcie, u8 lane_num)
-{
-	u32 data;
-
-	reset_control_deassert(pcie->uphy_rst);
-
-	data = lane_readl(pcie, lane_num, UPHY_LANE_AUX_CTL_1);
-	data = data & AUX_TX_RDET_STATUS;
-	return !(!data);
-}
-#endif
-
-static bool get_rdet_status(struct tegra_pcie *pcie, u32 index)
-{
-	u32 i = 0;
-	bool flag = 0;
-
-	for (i = 0; i < ARRAY_SIZE(rp_to_lane_map[index]); i++)
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-		flag |= tegra_pcie_get_lane_rdet(pcie,
-					rp_to_lane_map[index][i]);
-#else
-		flag |= tegra_phy_get_lane_rdet(pcie->u_phy,
-					rp_to_lane_map[index][i]);
-#endif
-	return flag;
-}
-
 /*
  * FIXME: If there are no PCIe cards attached, then calling this function
  * can result in the increase of the bootup time as there are big timeout
  * loops.
  */
-#define TEGRA_PCIE_LINKUP_TIMEOUT	350	/* up to 350 ms */
+#define TEGRA_PCIE_LINKUP_TIMEOUT	200	/* up to 1.2 seconds */
 static bool tegra_pcie_port_check_link(struct tegra_pcie_port *port)
 {
+	struct device *dev = port->pcie->dev;
 	unsigned int retries = 3;
 	unsigned long value;
 
-	PR_FUNC_LINE;
-	if (!get_rdet_status(port->pcie, port->index))
-		return false;
+	/* override presence detection */
+	value = readl(port->base + NV_PCIE2_RP_PRIV_MISC);
+	value &= ~PCIE2_RP_PRIV_MISC_PRSNT_MAP_EP_ABSNT;
+	value |= PCIE2_RP_PRIV_MISC_PRSNT_MAP_EP_PRSNT;
+	writel(value, port->base + NV_PCIE2_RP_PRIV_MISC);
 
 	do {
 		unsigned int timeout = TEGRA_PCIE_LINKUP_TIMEOUT;
 
 		do {
-			value = readl(port->base + RP_LINK_CONTROL_STATUS);
-			if (value & RP_LINK_CONTROL_STATUS_DL_LINK_ACTIVE)
-				return true;
+			value = readl(port->base + RP_VEND_XP);
+
+			if (value & RP_VEND_XP_DL_UP)
+				break;
+
 			usleep_range(1000, 2000);
 		} while (--timeout);
-		dev_info(port->pcie->dev, "link %u down, retrying\n",
-					port->index);
+
+		if (!timeout) {
+			dev_err(dev, "link %u down, retrying\n", port->index);
+			goto retry;
+		}
+
+		timeout = TEGRA_PCIE_LINKUP_TIMEOUT;
+
+		do {
+			value = readl(port->base + RP_LINK_CONTROL_STATUS);
+
+			if (value & RP_LINK_CONTROL_STATUS_DL_LINK_ACTIVE)
+				return true;
+
+			usleep_range(1000, 2000);
+		} while (--timeout);
+
+retry:
 		tegra_pcie_port_reset(port);
 	} while (--retries);
 

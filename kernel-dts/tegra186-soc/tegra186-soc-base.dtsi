@@ -1389,9 +1389,8 @@
 		device_type = "pci";
 		reg = <0x0 0x10003000 0x0 0x00000800   /* PADS registers */
 		       0x0 0x10003800 0x0 0x00000800   /* AFI registers */
-		       0x0 0x40000000 0x0 0x10000000   /* configuration space */
-		       0x0 0x02520000 0x0 0x00060000>; /* UPHY Lane registers */
-		reg-names = "pads", "afi", "cs", "lanes";
+		       0x0 0x40000000 0x0 0x10000000>; /* configuration space */
+		reg-names = "pads", "afi", "cs";
 
 		clocks = <&tegra_car TEGRA186_CLK_AFI>,
 			<&tegra_car TEGRA186_CLK_PCIE>,
@@ -1400,9 +1399,8 @@
 
 		resets = <&tegra_car TEGRA186_RESET_AFI>,
 			<&tegra_car TEGRA186_RESET_PCIE>,
-			<&tegra_car TEGRA186_RESET_PCIEXCLK>,
-			<&tegra_car TEGRA186_RESET_UPHY>;
-		reset-names = "afi", "pcie", "pciex", "uphy";
+			<&tegra_car TEGRA186_RESET_PCIEXCLK>;
+		reset-names = "afi", "pcie", "pciex";
 
 		interrupts = <0 72 0x04>, /* controller interrupt */
 			     <0 73 0x04>; /* MSI interrupt */

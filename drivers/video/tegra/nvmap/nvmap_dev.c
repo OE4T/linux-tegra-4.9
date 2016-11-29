@@ -770,7 +770,7 @@ next_page:
 			}
 
 			seq_printf(s,
-				"%-18s %-18s %8llx %10zuK %8x %6u %6u %6u %6u %6u %6u %8p %s\n",
+				"%-18s %-18s %8llx %10zuK %8x %6u %6u %6u %6u %6u %6u %8pK %s\n",
 				"", "",
 				(unsigned long long)base, size,
 				handle->userflags,

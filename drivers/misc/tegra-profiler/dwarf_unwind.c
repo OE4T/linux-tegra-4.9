@@ -1890,12 +1890,17 @@ unwind_frame(struct ex_region_info *ri,
 			if (!validate_stack_addr(addr, vma_sp, user_reg_size))
 				return -QUADD_URC_SP_INCORRECT;
 
-			if (mode == DW_MODE_ARM32)
-				err = read_user_data(&val, (void __user *)addr,
+			if (mode == DW_MODE_ARM32) {
+				u32 val32;
+
+				err = read_user_data(&val32,
+						     (void __user *)addr,
 						     sizeof(u32));
-			else
+				val = val32;
+			} else {
 				err = read_user_data(&val, (void __user *)addr,
 						     sizeof(unsigned long));
+			}
 
 			if (err < 0)
 				return err;

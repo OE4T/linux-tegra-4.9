@@ -26,6 +26,7 @@
 #include <crypto/aead.h>
 #include <crypto/hash.h>
 #include <crypto/skcipher.h>
+#include <crypto/akcipher.h>
 #include <linux/err.h>
 #include <linux/fips.h>
 #include <linux/init.h>
@@ -48,8 +49,10 @@
 /*
  * Used by test_cipher_speed()
  */
-#define ENCRYPT 1
-#define DECRYPT 0
+#define DECRYPT		0
+#define ENCRYPT		1
+#define SIGN		2
+#define VERIFY		3
 
 #define MAX_DIGEST_SIZE		64
 
@@ -1280,6 +1283,223 @@ static void test_cipher_speed(const char *algo, int enc, unsigned int secs,
 				   false);
 }
 
+static inline int do_one_akcipher_op(struct akcipher_request *r, int ret)
+{
+	if (ret == -EINPROGRESS || ret == -EBUSY) {
+		struct tcrypt_result *tr = r->base.data;
+
+		wait_for_completion(&tr->completion);
+		reinit_completion(&tr->completion);
+		ret = tr->err;
+	}
+	return ret;
+}
+
+static int test_akcipher_jiffies(struct akcipher_request *r, int op, int secs)
+{
+	unsigned long start, end;
+	int count, ret;
+
+	for (start = jiffies, end = start + secs * HZ, count = 0;
+	     time_before(jiffies, end); count++) {
+
+		switch (op) {
+		case SIGN:
+			ret = do_one_akcipher_op(r, crypto_akcipher_sign(r));
+			break;
+		case VERIFY:
+			ret = do_one_akcipher_op(r, crypto_akcipher_verify(r));
+			break;
+		default:
+			ret = -EINVAL;
+			break;
+		}
+		if (ret)
+			return ret;
+	}
+
+	pr_info("%d operations in %d seconds\n", count, secs);
+	return 0;
+}
+
+static int test_akcipher_cycles(struct akcipher_request *r, int op)
+{
+	unsigned long cycles = 0;
+	int ret = 0;
+	int i;
+
+	/* Warm-up run. */
+	for (i = 0; i < 4; i++) {
+		switch (op) {
+		case SIGN:
+			ret = do_one_akcipher_op(r, crypto_akcipher_sign(r));
+			break;
+		case VERIFY:
+			ret = do_one_akcipher_op(r, crypto_akcipher_verify(r));
+			break;
+		default:
+			ret = -EINVAL;
+			break;
+		}
+		if (ret)
+			goto out;
+	}
+
+	/* The real thing. */
+	for (i = 0; i < 8; i++) {
+		cycles_t start, end;
+
+		start = get_cycles();
+		switch (op) {
+		case SIGN:
+			ret = do_one_akcipher_op(r, crypto_akcipher_sign(r));
+			break;
+		case VERIFY:
+			ret = do_one_akcipher_op(r, crypto_akcipher_verify(r));
+			break;
+		default:
+			ret = -EINVAL;
+			break;
+		}
+		end = get_cycles();
+
+		if (ret)
+			goto out;
+
+		cycles += end - start;
+	}
+out:
+	if (ret == 0)
+		pr_info("1 operation in %lu cycles\n", (cycles + 4) / 8);
+
+	return ret;
+}
+
+static void test_akcipher_speed(const char *algo, int op, unsigned int secs,
+				struct akcipher_speed_template *template,
+				unsigned int tcount, u8 *keysize)
+{
+	unsigned int ret, i, j;
+	struct tcrypt_result tresult;
+	const char *key;
+	struct akcipher_request *req;
+	struct crypto_akcipher *tfm;
+	unsigned int m_size = 0;
+	unsigned int nbytes = 0;
+	const char *o;
+
+	if (op == SIGN)
+		o = "sign";
+	else if (op == VERIFY)
+		o = "verify";
+	else
+		return;
+
+	tfm = crypto_alloc_akcipher(algo, 0, 0);
+	if (IS_ERR(tfm)) {
+		pr_err("failed to load transform for %s: %ld\n", algo,
+		       PTR_ERR(tfm));
+		return;
+	}
+
+	req = akcipher_request_alloc(tfm, GFP_KERNEL);
+	if (!req) {
+		pr_err("tcrypt: akcipher: Failed to allocate request for %s\n",
+		       algo);
+		goto out;
+	}
+
+	init_completion(&tresult.completion);
+	akcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+				      tcrypt_complete, &tresult);
+
+	i = 0;
+	do {
+		struct scatterlist sg[TVMEMSIZE];
+
+		memset(tvmem[0], 0xff, PAGE_SIZE);
+
+		/* set key */
+		key = tvmem[0];
+		for (j = 0; j < tcount; j++) {
+			if (template[j].key_len == *keysize) {
+				key = template[j].key;
+				break;
+			}
+		}
+
+		ret = crypto_akcipher_set_pub_key(tfm, key, *keysize);
+		if (ret) {
+			pr_err("set_pub_key() failed\n");
+			goto out_free_req;
+		}
+
+		ret = crypto_akcipher_set_priv_key(tfm, key, *keysize);
+		if (ret) {
+			pr_err("set_priv_key() failed\n");
+			goto out_free_req;
+		}
+
+		/* set up src/dst buffs */
+		sg_init_table(sg, TVMEMSIZE);
+		if (op == SIGN) {
+			m_size = template[j].m_size;
+			nbytes = template[j].c_size / 3;
+
+			memcpy(tvmem[0], template[j].m, m_size);
+
+			sg_set_buf(&sg[0], tvmem[0], m_size);
+			akcipher_request_set_crypt(req, sg, sg,
+						   m_size, PAGE_SIZE);
+		} else if (op == VERIFY) {
+			m_size = template[j].m_size;
+			nbytes = template[j].c_size / 3;
+
+			memcpy(tvmem[0], template[j].m, m_size);
+			memcpy(tvmem[1], (u8 *)(template[j].c) + nbytes,
+			       nbytes);
+			memcpy(tvmem[2], (u8 *)(template[j].c) + 2 * nbytes,
+			       nbytes);
+
+			sg_set_buf(&sg[0], tvmem[0], m_size);
+			sg_set_buf(&sg[1], tvmem[1], nbytes);
+			sg_set_buf(&sg[2], tvmem[2], nbytes);
+
+			akcipher_request_set_crypt(req, sg, sg,
+						   m_size + 2 * nbytes,
+						   PAGE_SIZE);
+		} else {
+			pr_err("invalid op\n");
+			ret = -EINVAL;
+			goto out_free_req;
+		}
+
+
+		pr_info("\ntesting speed of %s (%s) %s with keysize %d\n",
+			algo, get_driver_name(crypto_akcipher, tfm), o,
+			nbytes * 8);
+
+		if (secs)
+			ret = test_akcipher_jiffies(req, op, secs);
+		else
+			ret = test_akcipher_cycles(req, op);
+
+		if (ret) {
+			pr_err("%s() failed\n", o);
+			break;
+		}
+
+		i++;
+		keysize++;
+
+	} while (*keysize);
+
+out_free_req:
+	akcipher_request_free(req);
+out:
+	crypto_free_akcipher(tfm);
+}
+
 static void test_available(void)
 {
 	char **name = check;
@@ -2358,6 +2578,27 @@ static int do_test(const char *alg, u32 type, u32 mask, int m)
 	case 555:
 		if (customized_test_acipher_speed("cbc(aes)", bsize, bcnt))
 			return -EIO;
+		break;
+
+	case 560:
+		ret += tcrypt_test("ecdsa");
+		break;
+
+	case 561:
+#ifndef CONFIG_CRYPTO_FIPS
+		test_akcipher_speed("ecdsa", SIGN, sec,
+				    ecdsa_speed_template, ECDSA_SPEED_VECTORS,
+				    akc_speed_template_P192);
+		test_akcipher_speed("ecdsa", VERIFY, sec,
+				    ecdsa_speed_template, ECDSA_SPEED_VECTORS,
+				    akc_speed_template_P192);
+#endif
+		test_akcipher_speed("ecdsa", SIGN, sec,
+				    ecdsa_speed_template, ECDSA_SPEED_VECTORS,
+				    akc_speed_template_P256);
+		test_akcipher_speed("ecdsa", VERIFY, sec,
+				    ecdsa_speed_template, ECDSA_SPEED_VECTORS,
+				    akc_speed_template_P256);
 		break;
 
 	case 1000:

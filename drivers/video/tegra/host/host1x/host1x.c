@@ -1116,7 +1116,6 @@ static int nvhost_probe(struct platform_device *dev)
 fail:
 	nvhost_virt_deinit(dev);
 	nvhost_free_resources(host);
-	kfree(host);
 	return err;
 }
 

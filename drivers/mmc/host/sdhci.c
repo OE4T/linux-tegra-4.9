@@ -1971,8 +1971,18 @@ static int sdhci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 
 	spin_lock_irqsave(&host->lock, flags);
 
+	if (host->ops->skip_retuning)
+		if (host->ops->skip_retuning(host)) {
+			spin_unlock_irqrestore(&host->lock, flags);
+			return 0;
+		}
+
 	hs400_tuning = host->flags & SDHCI_HS400_TUNING;
 	host->flags &= ~SDHCI_HS400_TUNING;
+
+	if (host->ops->get_max_tuning_loop_counter)
+		tuning_loop_counter =
+			host->ops->get_max_tuning_loop_counter(host);
 
 	if (host->tuning_mode == SDHCI_TUNING_MODE_1)
 		tuning_count = host->tuning_count;

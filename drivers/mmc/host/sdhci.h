@@ -567,6 +567,9 @@ struct sdhci_ops {
 					 struct mmc_card *card,
 					 unsigned int max_dtr, int host_drv,
 					 int card_drv, int *drv_type);
+	int	(*get_max_tuning_loop_counter)(struct sdhci_host *host);
+	bool	(*skip_retuning)(struct sdhci_host *sdhci);
+	void	(*post_tuning)(struct sdhci_host *sdhci);
 };
 
 #ifdef CONFIG_MMC_SDHCI_IO_ACCESSORS

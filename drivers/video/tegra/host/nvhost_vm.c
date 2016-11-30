@@ -199,8 +199,10 @@ struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev,
 
 	/* get room to keep vm */
 	vm = kzalloc(sizeof(*vm), GFP_KERNEL);
-	if (!vm)
+	if (!vm) {
+		mutex_unlock(&host->vm_mutex);
 		goto err_alloc_vm;
+	}
 
 	kref_init(&vm->kref);
 	INIT_LIST_HEAD(&vm->vm_list);

@@ -86,6 +86,9 @@
 				/* Convert Gain to unit of dB (decibel) befor passing to kernel driver */
 				use_decibel_gain = "true";
 
+				/* if true, delay gain setting by one frame to be in sync with exposure */
+				delayed_gain = "true";
+
 				/* enable CID_SENSOR_MODE_ID for sensor modes selection */
 				use_sensor_mode_id = "true";
 

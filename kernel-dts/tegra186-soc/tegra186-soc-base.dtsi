@@ -1133,10 +1133,7 @@
 			     <0 3 4>,
 			     <0 4 4>,
 			     <0 5 4>,
-			     <0 6 4>,
-			     <0 7 4>,
-			     <0 8 4>,
-			     <0 9 4>;
+			     <0 6 4>;
 		clock-frequency = <19200000>;
 		reg = <0x0 0x03010000 0x0 0x000e0000>;
 		tmr-count = <10>;
@@ -2083,7 +2080,7 @@
 		reg = <0x0 0x030c0000 0x0 0x10000>, /* WDT0 */
 		      <0x0 0x03090000 0x0 0x10000>, /* TMR7 */
 		      <0x0 0x03010000 0x0 0x10000>; /* TKE */
-		interrupts = <0 7 0x4>; /* TKE shared int */
+		interrupts = <0 7 0x4 0 8 0x4>; /* TKE shared int */
 		nvidia,expiry-count = <5>;
 		nvidia,enable-on-init;
 		nvidia,extend-watchdog-suspend;

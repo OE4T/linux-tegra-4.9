@@ -237,6 +237,16 @@
 			};
 		};
 
+		fragment-p3310-c00-pmic {
+			ids = ">=3310-1000-800";
+			override@0 {
+				target = <&spmic_ldo6>;
+				_overlay_ {
+					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
+				};
+			};
+		};
+
 		fragment-p3310-c01 {
 			ids = ">=3310-1000-900";
 			override@0 {

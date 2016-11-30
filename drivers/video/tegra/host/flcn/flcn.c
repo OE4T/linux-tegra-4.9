@@ -424,19 +424,22 @@ int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
 	}
 
 	/* setup falcon interrupts and enable interface */
-	host1x_writel(pdev, flcn_irqmset_r(),
+	if (!pdata->flcn_isr) {
+		host1x_writel(pdev, flcn_irqmset_r(),
 			     (flcn_irqmset_ext_f(0xff)    |
 					   flcn_irqmset_swgen1_set_f() |
 					   flcn_irqmset_swgen0_set_f() |
 					   flcn_irqmset_exterr_set_f() |
 					   flcn_irqmset_halt_set_f()   |
 					   flcn_irqmset_wdtmr_set_f()));
-	host1x_writel(pdev, flcn_irqdest_r(),
+		host1x_writel(pdev, flcn_irqdest_r(),
 			     (flcn_irqdest_host_ext_f(0xff) |
 					   flcn_irqdest_host_swgen1_host_f() |
 					   flcn_irqdest_host_swgen0_host_f() |
 					   flcn_irqdest_host_exterr_host_f() |
 					   flcn_irqdest_host_halt_host_f()));
+	}
+
 	host1x_writel(pdev, flcn_itfen_r(),
 			     (flcn_itfen_mthden_enable_f() |
 					flcn_itfen_ctxen_enable_f()));

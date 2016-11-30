@@ -172,7 +172,9 @@ struct shdr_device {
 	struct snd_card *shdr_card;
 	struct tsfw_icm20628_fn_dev *snsr_fns;
 	struct tsfw_icm20628_state *st;
+	struct work_struct snsr_probe_work;
 };
+
 static int num_remotes;
 static struct mutex snd_cards_lock;
 static int index[SNDRV_CARDS] = SNDRV_DEFAULT_IDX;  /* Index 0-MAX */
@@ -1675,13 +1677,24 @@ static int atvr_raw_event(struct hid_device *hdev, struct hid_report *report,
 	return 0;
 }
 
+static void atvr_snsr_probe(struct work_struct *work)
+{
+	struct shdr_device *shdr_dev =
+		container_of(work, struct shdr_device, snsr_probe_work);
+	struct tsfw_icm20628_state *st = NULL;
+
+	if (shdr_dev->snsr_fns && shdr_dev->snsr_fns->probe)
+		shdr_dev->snsr_fns->probe(shdr_dev->hdev, &st);
+		/* TODO: ret check */
+	shdr_dev->st = st;
+}
+
 static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 {
 	struct snd_atvr *atvr_snd;
 	int ret;
 	struct shdr_device *shdr_dev;
 	struct snd_card *shdr_card;
-	struct tsfw_icm20628_state *st = NULL;
 
 	shdr_dev = kzalloc(sizeof(*shdr_dev), GFP_KERNEL);
 	if (shdr_dev == NULL) {
@@ -1724,6 +1737,7 @@ static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 	 * stuff has to be updated every time.
 	 */
 	shdr_dev->shdr_card = shdr_card;
+	shdr_dev->hdev = hdev;
 	hid_set_drvdata(hdev, shdr_dev);
 	atvr_snd = shdr_card->private_data;
 	atvr_snd->hdev = hdev;
@@ -1739,10 +1753,9 @@ static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 
 	if (hdev->product == USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE)
 		shdr_dev->snsr_fns = tsfw_icm20628_fns();
-	if (shdr_dev->snsr_fns && shdr_dev->snsr_fns->probe)
-		shdr_dev->snsr_fns->probe(hdev, &st);
-	/* TODO: ret check */
-	shdr_dev->st = st;
+
+	INIT_WORK(&shdr_dev->snsr_probe_work, atvr_snsr_probe);
+	schedule_work(&shdr_dev->snsr_probe_work);
 
 	return 0;
 err_stop:
@@ -1763,6 +1776,8 @@ static void atvr_remove(struct hid_device *hdev)
 
 	if (shdr_card == NULL)
 		return -EIO;
+
+	cancel_work_sync(&shdr_dev->snsr_probe_work);
 
 	if (shdr_dev->snsr_fns && shdr_dev->snsr_fns->remove)
 		shdr_dev->snsr_fns->remove(shdr_dev->st);

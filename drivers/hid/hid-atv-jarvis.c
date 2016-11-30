@@ -1663,9 +1663,11 @@ static int atvr_raw_event(struct hid_device *hdev, struct hid_report *report,
 			shdr_dev->snsr_fns && shdr_dev->snsr_fns->recv) {
 		shdr_dev->snsr_fns->recv(shdr_dev->st, data, size);
 		/* TODO: ret check */
-		if (report->id == SENSOR_REPORT_ID_COMBINED)
+		if (report->id == SENSOR_REPORT_ID_COMBINED) {
+			data[0] = JAR_BUTTON_REPORT_ID;
 			hid_report_raw_event(hdev, 0, data,
 					     TS_BUTTON_REPORT_SIZE, 0);
+		}
 		/* we've handled the event */
 		return 1;
 	}

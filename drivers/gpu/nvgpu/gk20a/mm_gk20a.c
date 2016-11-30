@@ -4199,10 +4199,8 @@ static int gk20a_init_sema_pool(struct vm_gk20a *vm)
 		return -ENOMEM;
 
 	vm->sema_pool = gk20a_semaphore_pool_alloc(sema_sea);
-	if (!vm->sema_pool) {
-		gk20a_vm_put(vm);
+	if (!vm->sema_pool)
 		return -ENOMEM;
-	}
 
 	/*
 	 * Allocate a chunk of GPU VA space for mapping the semaphores. We will
@@ -4227,7 +4225,7 @@ static int gk20a_init_sema_pool(struct vm_gk20a *vm)
 		gk20a_semaphore_pool_unmap(vm->sema_pool, vm);
 		nvgpu_free(vm->vma[gmmu_page_size_small],
 			   vm->sema_pool->gpu_va);
-		gk20a_vm_put(vm);
+		return err;
 	}
 
 	return 0;
@@ -4632,11 +4630,9 @@ int gk20a_vm_release_share(struct gk20a_as_share *as_share)
 	gk20a_dbg_fn("");
 
 	vm->as_share = NULL;
-
-	/* put as reference to vm */
-	gk20a_vm_put(vm);
-
 	as_share->vm = NULL;
+
+	gk20a_vm_put(vm);
 
 	return 0;
 }
@@ -4792,20 +4788,25 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 	return err;
 }
 
-int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
-			  struct channel_gk20a *ch)
+int __gk20a_vm_bind_channel(struct vm_gk20a *vm, struct channel_gk20a *ch)
 {
 	int err = 0;
-	struct vm_gk20a *vm = as_share->vm;
 
 	gk20a_dbg_fn("");
 
+	gk20a_vm_get(vm);
 	ch->vm = vm;
 	err = channel_gk20a_commit_va(ch);
 	if (err)
 		ch->vm = NULL;
 
 	return err;
+}
+
+int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
+			  struct channel_gk20a *ch)
+{
+	return __gk20a_vm_bind_channel(as_share->vm, ch);
 }
 
 int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev)

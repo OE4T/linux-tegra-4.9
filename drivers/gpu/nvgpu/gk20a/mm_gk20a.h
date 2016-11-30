@@ -707,6 +707,7 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 			struct nvgpu_as_free_space_args *args);
 int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
 			  struct channel_gk20a *ch);
+int __gk20a_vm_bind_channel(struct vm_gk20a *vm, struct channel_gk20a *ch);
 
 /* batching eliminates redundant cache flushes and invalidates */
 void gk20a_vm_mapping_batch_start(struct vm_gk20a_mapping_batch *batch);

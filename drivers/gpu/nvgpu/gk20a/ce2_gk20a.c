@@ -453,9 +453,7 @@ u32 gk20a_ce_create_context_with_cb(struct device *dev,
 	 }
 
 	/* bind the channel to the vm */
-	gk20a_vm_get(&g->mm.ce.vm);
-	ce_ctx->vm = ce_ctx->ch->vm = &g->mm.ce.vm;
-	err = channel_gk20a_commit_va(ce_ctx->ch);
+	err = __gk20a_vm_bind_channel(&g->mm.ce.vm, ce_ctx->ch);
 	if (err) {
 		gk20a_err(ce_ctx->dev, "ce: could not bind vm");
 		goto end;

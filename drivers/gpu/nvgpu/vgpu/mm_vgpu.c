@@ -446,6 +446,9 @@ static int vgpu_vm_bind_channel(struct gk20a_as_share *as_share,
 		err = -ENOMEM;
 	}
 
+	if (ch->vm)
+		gk20a_vm_get(ch->vm);
+
 	return err;
 }
 

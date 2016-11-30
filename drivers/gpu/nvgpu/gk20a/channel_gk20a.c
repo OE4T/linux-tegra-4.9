@@ -1008,11 +1008,10 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	if (ch->hw_sema)
 		gk20a_semaphore_free_hw_sema(ch);
 
-	/* release channel binding to the as_share */
-	if (ch_vm->as_share)
-		gk20a_as_release_share(ch_vm->as_share);
-	else
-		gk20a_vm_put(ch_vm);
+	/*
+	 * When releasing the channel we unbind the VM - so release the ref.
+	 */
+	gk20a_vm_put(ch_vm);
 
 	spin_lock(&ch->update_fn_lock);
 	ch->update_fn = NULL;
@@ -2252,14 +2251,11 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 	int err = 0, num_mapped_buffers = 0;
 	bool pre_alloc_enabled = channel_gk20a_is_prealloc_enabled(c);
 
-	/* job needs reference to this vm (released in channel_update) */
-	gk20a_vm_get(vm);
-
 	if (!skip_buffer_refcounting) {
 		err = gk20a_vm_get_buffers(vm, &mapped_buffers,
 					&num_mapped_buffers);
 		if (err)
-			goto err_put_vm;
+			return err;
 	}
 
 	/* put() is done in gk20a_channel_update() when the job is done */
@@ -2293,8 +2289,6 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 
 err_put_buffers:
 	gk20a_vm_put_buffers(vm, mapped_buffers, num_mapped_buffers);
-err_put_vm:
-	gk20a_vm_put(vm);
 
 	return err;
 }
@@ -2385,8 +2379,6 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 		gk20a_free_priv_cmdbuf(c, job->wait_cmd);
 		gk20a_free_priv_cmdbuf(c, job->incr_cmd);
 
-		/* job is done. release its vm reference (taken in add_job) */
-		gk20a_vm_put(vm);
 		/* another bookkeeping taken in add_job. caller must hold a ref
 		 * so this wouldn't get freed here. */
 		gk20a_channel_put(c);

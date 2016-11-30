@@ -528,18 +528,6 @@ int tegra_channel_set_power(struct tegra_channel *chan, bool on)
 	return ret;
 }
 
-int update_clk(struct tegra_mc_vi *vi)
-{
-	unsigned long max_clk = 0;
-	struct tegra_channel *chan, *chanp;
-
-	list_for_each_entry_safe(chan, chanp, &vi->vi_chans, list) {
-		max_clk = max_clk > chan->requested_hz ?
-			max_clk : chan->requested_hz;
-	}
-	return clk_set_rate(vi->clk, max_clk);
-}
-
 static int tegra_channel_start_streaming(struct vb2_queue *vq, u32 count)
 {
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);

@@ -145,19 +145,6 @@ register_error:
 	return ret;
 }
 
-static int vi_get_clks(struct tegra_mc_vi *vi, struct platform_device *pdev)
-{
-	int ret = 0;
-
-	vi->clk = devm_clk_get(&pdev->dev, "vi");
-	if (IS_ERR(vi->clk)) {
-		dev_err(&pdev->dev, "Failed to get vi clock\n");
-		return PTR_ERR(vi->clk);
-	}
-
-	return ret;
-}
-
 static int vi_parse_dt(struct tegra_mc_vi *vi, struct platform_device *dev)
 {
 	int err = 0;
@@ -269,10 +256,6 @@ int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 	if (!pdata)
 		return -EINVAL;
 	set_vi_register_base(mc_vi, pdata->aperture[0]);
-
-	err = vi_get_clks(mc_vi, pdev);
-	if (err)
-		dev_err(&pdev->dev, "Failed to init vi clks\n");
 
 	mc_vi->ndev = pdev;
 	mc_vi->dev = &pdev->dev;

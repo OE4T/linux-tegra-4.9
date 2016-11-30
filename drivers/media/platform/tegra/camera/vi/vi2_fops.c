@@ -34,7 +34,6 @@ extern void tegra_channel_ring_buffer(struct tegra_channel *chan,
 				struct vb2_v4l2_buffer *vb,
 				struct timespec *ts, int state);
 extern struct tegra_channel_buffer *dequeue_buffer(struct tegra_channel *chan);
-extern int update_clk(struct tegra_mc_vi *vi);
 extern void tegra_channel_init_ring_buffer(struct tegra_channel *chan);
 extern void free_ring_buffers(struct tegra_channel *chan, int frames);
 extern int tegra_channel_set_power(struct tegra_channel *chan, bool on);

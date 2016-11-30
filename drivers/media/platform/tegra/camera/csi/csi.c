@@ -32,42 +32,6 @@
 #include "linux/nvhost.h"
 #include "nvcsi/nvcsi.h"
 
-static int csi_get_clks(struct tegra_csi_device *csi,
-			struct platform_device *pdev)
-{
-	csi->clk = devm_clk_get(&pdev->dev, "csi");
-	if (IS_ERR(csi->clk)) {
-		dev_err(&pdev->dev, "Failed to get csi clock\n");
-		return PTR_ERR(csi->clk);
-	}
-
-	csi->tpg_clk = devm_clk_get(&pdev->dev, "pll_d");
-	if (IS_ERR(csi->tpg_clk)) {
-		dev_err(&pdev->dev, "Failed to get tpg clock\n");
-		return PTR_ERR(csi->tpg_clk);
-	}
-
-	csi->cil[0] = devm_clk_get(&pdev->dev, "cilab");
-	if (IS_ERR(csi->cil[0])) {
-		dev_err(&pdev->dev, "Failed to get cilab clock\n");
-		return PTR_ERR(csi->cil[0]);
-	}
-
-	csi->cil[1] = devm_clk_get(&pdev->dev, "cilcd");
-	if (IS_ERR(csi->cil[1])) {
-		dev_err(&pdev->dev, "Failed to get cilcd clock\n");
-		return PTR_ERR(csi->cil[1]);
-	}
-
-	csi->cil[2] = devm_clk_get(&pdev->dev, "cile");
-	if (IS_ERR(csi->cil[2])) {
-		dev_err(&pdev->dev, "Failed to get cile clock\n");
-		return PTR_ERR(csi->cil[2]);
-	}
-
-	return 0;
-}
-
 static int set_csi_properties(struct tegra_csi_device *csi,
 			struct platform_device *pdev)
 {
@@ -726,10 +690,6 @@ int tegra_csi_init(struct tegra_csi_device *csi,
 		return err;
 
 	csi->iomem_base = pdata->aperture[0];
-
-	err = csi_get_clks(csi, pdev);
-	if (err)
-		dev_err(&pdev->dev, "Failed to get CSI clks\n");
 
 	return err;
 }

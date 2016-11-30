@@ -176,20 +176,20 @@ static int isp_isomgr_request(struct isp *tegra_isp, uint isp_bw, uint lt)
 				lt);	/* usec */
 	if (!ret) {
 		dev_err(&tegra_isp->ndev->dev,
-		"%s: failed to reserve %u KBps\n", __func__, isp_bw);
+			"%s: failed to reserve %u KBps\n", __func__, isp_bw);
 		return -ENOMEM;
 	}
 
 	/* return value of tegra_isomgr_realize is dvfs latency in usec */
 	ret = tegra_isomgr_realize(tegra_isp->isomgr_handle);
-	if (ret)
+	if (ret) {
 		dev_dbg(&tegra_isp->ndev->dev,
-		"%s: tegra_isp isomgr latency is %d usec",
-		__func__, ret);
-	else {
+			"%s: tegra_isp isomgr latency is %d usec",
+			__func__, ret);
+	} else {
 		dev_err(&tegra_isp->ndev->dev,
-		"%s: failed to realize %u KBps\n", __func__, isp_bw);
-			return -ENOMEM;
+			"%s: failed to realize %u KBps\n", __func__, isp_bw);
+		return -ENOMEM;
 	}
 	return 0;
 }

@@ -35,7 +35,8 @@ static void vgpu_gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
 
-	gk20a_vm_free_va(vm, gr_ctx->mem.gpu_va, gr_ctx->mem.size, 0);
+	gk20a_vm_free_va(vm, gr_ctx->mem.gpu_va, gr_ctx->mem.size,
+			gmmu_page_size_kernel);
 
 	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.pagepool_ctxsw_buffer);
 	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.betacb_ctxsw_buffer);

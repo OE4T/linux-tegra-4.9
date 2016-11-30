@@ -111,7 +111,9 @@ static struct dvfs cpu_dvfs = {
 /* CPU DVFS tables */
 static unsigned long cpu_max_freq[] = {
 /* speedo_id	0	 1	  2	   3	    4	     5 */
-		1912500, 1912500, 2218500, 1912500, 1632000, 1912500
+		1912500, 1912500, 2218500, 1785000, 1632000, 1912500,
+/* speedo_id	6	 7	  8	   9	    10 */
+		2014500, 1734000, 1683000, 1555500, 1504500
 };
 
 #define CPU_FV_TABLE		 \
@@ -142,6 +144,76 @@ static unsigned long cpu_max_freq[] = {
 
 static struct cpu_dvfs cpu_fv_dvfs_table[] = {
 	{
+		.speedo_id = 10,
+		.process_id = 0,
+		.min_mv = 840,
+		.max_mv = 1120,
+		CPU_FV_TABLE,
+	},
+	{
+		.speedo_id = 10,
+		.process_id = 1,
+		.min_mv = 840,
+		.max_mv = 1120,
+		CPU_FV_TABLE,
+	},
+	{
+		.speedo_id = 9,
+		.process_id = 0,
+		.min_mv = 900,
+		.max_mv = 1162,
+		CPU_FV_TABLE,
+	},
+	{
+		.speedo_id = 9,
+		.process_id = 1,
+		.min_mv = 900,
+		.max_mv = 1162,
+		CPU_FV_TABLE,
+	},
+	{
+		.speedo_id = 8,
+		.process_id = 0,
+		.min_mv = 900,
+		.max_mv = 1195,
+		CPU_FV_TABLE,
+	},
+	{
+		.speedo_id = 8,
+		.process_id = 1,
+		.min_mv = 900,
+		.max_mv = 1195,
+		CPU_FV_TABLE,
+	},
+	{
+		.speedo_id = 7,
+		.process_id = 0,
+		.min_mv = 841,
+		.max_mv = 1227,
+		CPU_FV_TABLE,
+	},
+	{
+		.speedo_id = 7,
+		.process_id = 1,
+		.min_mv = 841,
+		.max_mv = 1227,
+		CPU_FV_TABLE,
+	},
+	{
+		.speedo_id = 6,
+		.process_id = 0,
+		.min_mv = 870,
+		.max_mv = 1150,
+		CPU_FV_TABLE,
+	},
+	{
+		.speedo_id = 6,
+		.process_id = 1,
+		.min_mv = 870,
+		.max_mv = 1150,
+		CPU_FV_TABLE,
+	},
+	{
 		.speedo_id = 5,
 		.process_id = 0,
 		.min_mv = 818,
@@ -156,31 +228,38 @@ static struct cpu_dvfs cpu_fv_dvfs_table[] = {
 		CPU_FV_TABLE,
 	},
 	{
+		.speedo_id = 4,
+		.process_id = -1,
+		.min_mv = 918,
+		.max_mv = 1113,
+		CPU_FV_TABLE,
+	},
+	{
 		.speedo_id = 3,
 		.process_id = 0,
-		.min_mv = 830,
+		.min_mv = 825,
 		.max_mv = 1227,
 		CPU_FV_TABLE,
 	},
 	{
 		.speedo_id = 3,
 		.process_id = 1,
-		.min_mv = 830,
+		.min_mv = 825,
 		.max_mv = 1227,
 		CPU_FV_TABLE,
 	},
 	{
 		.speedo_id = 2,
 		.process_id = 0,
-		.min_mv = 804,
-		.max_mv = 1170,
+		.min_mv = 870,
+		.max_mv = 1227,
 		CPU_FV_TABLE,
 	},
 	{
 		.speedo_id = 2,
 		.process_id = 1,
-		.min_mv = 804,
-		.max_mv = 1170,
+		.min_mv = 870,
+		.max_mv = 1227,
 		CPU_FV_TABLE,
 	},
 	{
@@ -983,7 +1062,6 @@ static int init_cpu_lp_dvfs_table(int *cpu_lp_max_freq_index)
 	int cpu_lp_speedo_id = tegra_sku_info.cpu_speedo_id;
 	int cpu_lp_process_id = tegra_sku_info.cpu_process_id;
 
-	BUG_ON(cpu_lp_speedo_id >= ARRAY_SIZE(cpu_lp_max_freq));
 	for (ret = 0, i = 0; i <  ARRAY_SIZE(cpu_lp_fv_dvfs_table); i++) {
 		struct cpu_dvfs *d = &cpu_lp_fv_dvfs_table[i];
 		unsigned long max_freq = cpu_lp_max_freq[cpu_lp_speedo_id];
@@ -994,7 +1072,6 @@ static int init_cpu_lp_dvfs_table(int *cpu_lp_max_freq_index)
 			break;
 		}
 	}
-	BUG_ON(i == ARRAY_SIZE(cpu_lp_fv_dvfs_table));
 
 	return ret;
 }

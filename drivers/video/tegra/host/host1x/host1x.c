@@ -427,6 +427,8 @@ static int nvhost_ioctl_ctrl_get_characteristics(struct nvhost_ctrl_userctx *ctx
 		err = copy_to_user((void __user *)(uintptr_t)
 			args->nvhost_characteristics_buf_addr,
 			nvhost_char, write_size);
+		if (err)
+			err = -EFAULT;
 	}
 
 	if (err == 0)
@@ -536,8 +538,11 @@ static long nvhost_ctrlctl(struct file *filp,
 		break;
 	}
 
-	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ))
+	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ)) {
 		err = copy_to_user((void __user *)arg, buf, _IOC_SIZE(cmd));
+		if (err)
+			err = -EFAULT;
+	}
 
 	return err;
 }

@@ -537,8 +537,10 @@ static int submit_add_gathers(struct nvhost_submit_args *args,
 		u32 class_id = class_ids ? local_class_ids[i] : 0;
 
 		err = copy_from_user(&cmdbuf, cmdbufs + i, sizeof(cmdbuf));
-		if (err)
+		if (err) {
+			err = -EINVAL;
 			goto free_local_class_ids;
+		}
 
 		cmdbuf_ext.pre_fence = -1;
 		if (cmdbuf_exts)
@@ -589,18 +591,18 @@ static int submit_copy_relocs(struct nvhost_submit_args *args,
 	err = copy_from_user(job->relocarray,
 			relocs, sizeof(*relocs) * args->num_relocs);
 	if (err)
-		return err;
+		return -EINVAL;
 
 	err = copy_from_user(job->relocshiftarray,
 			reloc_shifts, sizeof(*reloc_shifts) * args->num_relocs);
 	if (err)
-		return err;
+		return -EINVAL;
 
 	if (reloc_types) {
 		err = copy_from_user(job->reloctypearray,
 			reloc_types, sizeof(*reloc_types) * args->num_relocs);
 		if (err)
-			return err;
+			return -EINVAL;
 	}
 
 	return 0;
@@ -639,7 +641,7 @@ static int submit_get_syncpoints(struct nvhost_submit_args *args,
 		/* Copy */
 		err = copy_from_user(&sp, syncpt_incrs + i, sizeof(sp));
 		if (err)
-			return err;
+			return -EINVAL;
 
 		/* Validate the trivial case */
 		if (sp.syncpt_id == 0)
@@ -761,8 +763,10 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	job->num_waitchk = args->num_waitchks;
 	err = copy_from_user(job->waitchk,
 			waitchks, sizeof(*waitchks) * args->num_waitchks);
-	if (err)
+	if (err) {
+		err = -EINVAL;
 		goto put_job;
+	}
 
 	err = submit_get_syncpoints(args, job, ctx);
 	if (err)
@@ -1441,8 +1445,11 @@ static long nvhost_channelctl(struct file *filp,
 
 	mutex_unlock(&priv->ioctl_lock);
 
-	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ))
+	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ)) {
 		err = copy_to_user((void __user *)arg, buf, _IOC_SIZE(cmd));
+		if (err)
+			err = -EFAULT;
+	}
 
 	return err;
 }

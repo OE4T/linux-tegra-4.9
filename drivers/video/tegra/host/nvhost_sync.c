@@ -303,11 +303,6 @@ struct sync_fence *nvhost_sync_fdget(int fd)
 		return fence;
 
 	list_for_each_entry(spt, &fence->pt_list_head, pt_list) {
-		if (spt == NULL) {
-			sync_fence_put(fence);
-			return NULL;
-		}
-
 		t = spt->parent;
 		if (t->ops != &nvhost_sync_timeline_ops) {
 			sync_fence_put(fence);

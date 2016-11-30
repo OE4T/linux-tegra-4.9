@@ -817,8 +817,10 @@
 				<&tegra_car TEGRA210_CLK_TIMER>,
 				<&tegra_car TEGRA210_CLK_DISP1_EMC>,
 				<&tegra_car TEGRA210_CLK_DISP1_LA_EMC>,
-				<&tegra_car TEGRA210_CLK_PLL_P_OUT3>;
-			clock-names = "disp1", "timer", "disp1_emc", "disp1_la_emc", "pll_p_out3";
+				<&tegra_car TEGRA210_CLK_PLL_P_OUT3>,
+				<&tegra_car TEGRA210_CLK_PLL_D_OUT0>,
+				<&tegra_car TEGRA210_CLK_PLL_D>;
+			clock-names = "disp1", "timer", "disp1_emc", "disp1_la_emc", "pll_p_out3", "pll_d_out0", "pll_d";
 			resets = <&tegra_car TEGRA210_CLK_DISP1>;
 			reset-names = "dc_rst1";
 			status = "disabled";
@@ -840,8 +842,10 @@
 			clocks = <&tegra_car TEGRA210_CLK_DISP2>,
 			       <&tegra_car TEGRA210_CLK_TIMER>,
 				<&tegra_car TEGRA210_CLK_DISP2_EMC>,
-				<&tegra_car TEGRA210_CLK_DISP2_LA_EMC>;
-			clock-names = "disp2", "timer", "disp2_emc", "disp2_la_emc";
+				<&tegra_car TEGRA210_CLK_DISP2_LA_EMC>,
+				<&tegra_car TEGRA210_CLK_PLL_D2_OUT0>,
+				<&tegra_car TEGRA210_CLK_PLL_D2>;
+			clock-names = "disp2", "timer", "disp2_emc", "disp2_la_emc", "pll_d2_out0", "pll_d2";
 			resets = <&tegra_car TEGRA210_CLK_DISP2>;
 			reset-names = "dc_rst2";
 

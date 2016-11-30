@@ -3371,9 +3371,6 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 			gr_gpc0_fs_gpc_num_available_zculls_v(tmp);
 		gr->zcb_count += gr->gpc_zcb_count[gpc_index];
 
-		gr->gpc_ppc_count[gpc_index] = gr->pe_count_per_gpc;
-		gr->ppc_count += gr->gpc_ppc_count[gpc_index];
-
 		if (g->ops.gr.get_gpc_tpc_mask)
 			gr->gpc_tpc_mask[gpc_index] =
 				g->ops.gr.get_gpc_tpc_mask(g, gpc_index);
@@ -3398,9 +3395,17 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 			pes_tpc_mask = gr_gpc0_gpm_pd_pes_tpc_id_mask_mask_v(tmp);
 			pes_tpc_count = count_bits(pes_tpc_mask);
 
+			/* detect PES presence by seeing if there are
+			 * TPCs connected to it.
+			 */
+			if (pes_tpc_count != 0)
+				gr->gpc_ppc_count[gpc_index]++;
+
 			gr->pes_tpc_count[pes_index][gpc_index] = pes_tpc_count;
 			gr->pes_tpc_mask[pes_index][gpc_index] = pes_tpc_mask;
 		}
+
+		gr->ppc_count += gr->gpc_ppc_count[gpc_index];
 
 		gpc_new_skip_mask = 0;
 		if (gr->pe_count_per_gpc > 1 &&

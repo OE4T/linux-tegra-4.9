@@ -73,6 +73,8 @@ static void __init rev_t210sku_to_speedo_ids(struct tegra_sku_info *sku_info,
 					     u8 speedo_rev, int *threshold)
 {
 	int sku = sku_info->sku_id;
+	int rev = sku_info->revision;
+	bool a02 = (rev == TEGRA_REVISION_A02) || (rev == TEGRA_REVISION_A02p);
 	bool vcm31_sku = false;
 
 	/* Assign to default */
@@ -88,8 +90,20 @@ static void __init rev_t210sku_to_speedo_ids(struct tegra_sku_info *sku_info,
 	switch (sku) {
 	case 0x00: /* Engineering SKU */
 	case 0x01: /* Engineering SKU */
+	case 0x13:
+		if (a02) {
+			sku_info->cpu_speedo_id = 5;
+			sku_info->gpu_speedo_id = 2;
+			break;
+		}
+		/* fall through for a01 */
 	case 0x07:
 	case 0x17:
+		if (a02) {
+			sku_info->cpu_speedo_id = 7;
+			sku_info->gpu_speedo_id = 2;
+			break;
+		}
 		if (vcm31_sku) {
 			sku_info->cpu_speedo_id = 4;
 			sku_info->soc_speedo_id = 1;
@@ -99,17 +113,39 @@ static void __init rev_t210sku_to_speedo_ids(struct tegra_sku_info *sku_info,
 		}
 		/* fall through for a01 */
 	case 0x27:
-		if (speedo_rev >= 2)
-			sku_info->gpu_speedo_id = 1;
+		if (a02) {
+			sku_info->cpu_speedo_id = 1;
+			sku_info->gpu_speedo_id = 2;
+			break;
+		}
+		sku_info->gpu_speedo_id = 1;
 		break;
-
-	case 0x13:
-		if (speedo_rev >= 2)
-			sku_info->gpu_speedo_id = 1;
-
-		sku_info->cpu_speedo_id = 1;
+	case 0x57:
+		sku_info->cpu_speedo_id = 4;
+		sku_info->soc_speedo_id = 1;
+		sku_info->gpu_speedo_id = 4;
+		*threshold = THRESHOLD_INDEX_1;
 		break;
-
+	case 0x83:
+		if (a02) {
+			sku_info->cpu_speedo_id = 3;
+			sku_info->gpu_speedo_id = 3;
+			break;
+		}
+		/* fall through for a01 */
+	case 0x87:
+		if (a02) {
+			sku_info->cpu_speedo_id = 2;
+			sku_info->gpu_speedo_id = 1;
+			break;
+		}
+		/* fall through for a01 */
+	case 0x8F:
+		if (a02) {
+			sku_info->cpu_speedo_id = 9;
+			sku_info->gpu_speedo_id = 2;
+			break;
+		}
 	default:
 		pr_err("Tegra210: unknown SKU %#04x\n", sku);
 		/* Using the default for the error case */
@@ -205,7 +241,6 @@ void __init tegra210_init_speedo_data(struct tegra_sku_info *sku_info)
 	 * revision. Note that GPU speedo value is fused in CPU_SPEEDO_2.
 	 */
 	speedo_revision = get_speedo_revision();
-	pr_info("Speedo Revision %u\n", speedo_revision);
 	sku_info->speedo_rev = speedo_revision;
 
 	if (is_t210b01_sku(sku_info)) {
@@ -252,6 +287,13 @@ void __init tegra210_init_speedo_data(struct tegra_sku_info *sku_info)
 						  soc_process_speedos[index],
 						  SOC_PROCESS_CORNERS);
 
-	pr_debug("Tegra GPU Speedo ID=%d, Speedo Value=%d\n",
-		 sku_info->gpu_speedo_id, sku_info->gpu_speedo_value);
+	pr_info("Tegra Speedo/IDDQ fuse revision %u\n", speedo_revision);
+	pr_info("Tegra: CPU Speedo ID %d, SoC Speedo ID %d, GPU Speedo ID %d\n",
+		sku_info->cpu_speedo_id, sku_info->soc_speedo_id, sku_info->gpu_speedo_id);
+	pr_info("Tegra: CPU Process ID %d, SoC Process ID %d, GPU Process ID %d\n",
+		sku_info->cpu_process_id, sku_info->soc_process_id, sku_info->gpu_process_id);
+	pr_info("Tegra: CPU Speedo Value %d, SoC Speedo Value %d, GPU Speedo Value %d\n",
+		sku_info->cpu_speedo_value, sku_info->soc_speedo_value, sku_info->gpu_speedo_value);
+	pr_info("Tegra: CPU IDDQ Value %d, SoC IDDQ Value %d, GPU IDDQ Value %d\n",
+		sku_info->cpu_iddq_value, sku_info->soc_iddq_value, sku_info->gpu_iddq_value);
 }

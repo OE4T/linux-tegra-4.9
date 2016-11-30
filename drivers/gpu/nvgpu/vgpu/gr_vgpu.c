@@ -208,7 +208,7 @@ static int vgpu_gr_map_global_ctx_buffers(struct gk20a *g,
 	for (i = 0; i < NR_GLOBAL_CTX_BUF_VA; i++) {
 		if (g_bfr_va[i]) {
 			gk20a_vm_free_va(ch_vm, g_bfr_va[i],
-					g_bfr_size[i], 0);
+					g_bfr_size[i], gmmu_page_size_kernel);
 			g_bfr_va[i] = 0;
 		}
 	}
@@ -238,7 +238,8 @@ static void vgpu_gr_unmap_global_ctx_buffers(struct channel_gk20a *c)
 
 	for (i = 0; i < NR_GLOBAL_CTX_BUF_VA; i++) {
 		if (g_bfr_va[i]) {
-			gk20a_vm_free_va(ch_vm, g_bfr_va[i], g_bfr_size[i], 0);
+			gk20a_vm_free_va(ch_vm, g_bfr_va[i], g_bfr_size[i],
+					gmmu_page_size_kernel);
 			g_bfr_va[i] = 0;
 			g_bfr_size[i] = 0;
 		}
@@ -292,7 +293,7 @@ int vgpu_gr_alloc_gr_ctx(struct gk20a *g,
 	if (unlikely(err)) {
 		gk20a_err(dev_from_gk20a(g), "fail to alloc gr_ctx");
 		gk20a_vm_free_va(vm, gr_ctx->mem.gpu_va,
-				 gr_ctx->mem.size, 0);
+				 gr_ctx->mem.size, gmmu_page_size_kernel);
 		kfree(gr_ctx);
 	} else {
 		gr_ctx->virt_ctx = p->gr_ctx_handle;
@@ -318,7 +319,8 @@ void vgpu_gr_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 		err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 		WARN_ON(err || msg.ret);
 
-		gk20a_vm_free_va(vm, gr_ctx->mem.gpu_va, gr_ctx->mem.size, 0);
+		gk20a_vm_free_va(vm, gr_ctx->mem.gpu_va, gr_ctx->mem.size,
+				gmmu_page_size_kernel);
 		kfree(gr_ctx);
 	}
 }
@@ -356,7 +358,7 @@ static int vgpu_gr_alloc_channel_patch_ctx(struct gk20a *g,
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	if (err || msg.ret) {
 		gk20a_vm_free_va(ch_vm, patch_ctx->mem.gpu_va,
-				 patch_ctx->mem.size, 0);
+				 patch_ctx->mem.size, gmmu_page_size_kernel);
 		err = -ENOMEM;
 	}
 
@@ -382,7 +384,7 @@ static void vgpu_gr_free_channel_patch_ctx(struct channel_gk20a *c)
 		WARN_ON(err || msg.ret);
 
 		gk20a_vm_free_va(ch_vm, patch_ctx->mem.gpu_va,
-				 patch_ctx->mem.size, 0);
+				 patch_ctx->mem.size, gmmu_page_size_kernel);
 		patch_ctx->mem.gpu_va = 0;
 	}
 }
@@ -407,7 +409,8 @@ static void vgpu_gr_free_channel_pm_ctx(struct channel_gk20a *c)
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
 
-	gk20a_vm_free_va(c->vm, pm_ctx->mem.gpu_va, pm_ctx->mem.size, 0);
+	gk20a_vm_free_va(c->vm, pm_ctx->mem.gpu_va, pm_ctx->mem.size,
+			gmmu_page_size_kernel);
 	pm_ctx->mem.gpu_va = 0;
 }
 

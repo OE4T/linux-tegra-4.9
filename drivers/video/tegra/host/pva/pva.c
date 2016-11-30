@@ -447,6 +447,7 @@ static struct of_device_id tegra_pva_domain_match[] = {
 		.compatible = "nvidia,tegra194-cv-pd",
 		.data = (struct nvhost_device_data *)&t19_pva0_info
 	},
+	{ }
 };
 
 /* Register PVA power domains and driver */

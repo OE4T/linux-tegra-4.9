@@ -39,6 +39,9 @@ ecdh_generic-y := ecc.o
 ecdh_generic-y += ecdh.o
 ecdh_generic-y += ecdh_helper.o
 obj-$(CONFIG_CRYPTO_ECDH) += ecdh_generic.o
+ecdsa_generic-y := ecdsa.o
+ecdsa_generic-y += ecdsa_helper.o
+obj-$(CONFIG_CRYPTO_ECDSA) += ecdsa_generic.o
 
 $(obj)/rsapubkey-asn1.o: $(obj)/rsapubkey-asn1.c $(obj)/rsapubkey-asn1.h
 $(obj)/rsaprivkey-asn1.o: $(obj)/rsaprivkey-asn1.c $(obj)/rsaprivkey-asn1.h

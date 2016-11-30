@@ -124,6 +124,16 @@ config CRYPTO_ECDH
 	help
 	  Generic implementation of the ECDH algorithm
 
+config CRYPTO_ECDSA
+	tristate "ECDSA algorithm"
+	select CRYPTO_AKCIPHER
+	select CRYPTO_ECC
+	help
+	  Generic implementation of the ECDSA algorithm. This
+	  is SW implementation use case that internally makes
+	  use of HW blocks like ECC Shamir feature, ECC point
+	  multiplication feature, etc.
+
 config CRYPTO_MANAGER
 	tristate "Cryptographic algorithm manager"
 	select CRYPTO_MANAGER2

@@ -122,14 +122,17 @@ static void update_gang_mode(struct tegra_channel *chan)
 	update_gang_mode_params(chan);
 }
 
-/*
- * nvrm needs size in alignment with a multiple of 128K bytes,
- * see CL http://git-master/r/256468 and bug 1321091.
- */
-#define SIZE_ALIGN (128 * 1024)
-static void buffer_size_align(u32 *size)
+static u32 get_aligned_buffer_size(struct tegra_channel *chan,
+		u32 bytesperline, u32 height)
 {
-	*size = roundup(*size, SIZE_ALIGN);
+	u32 height_aligned;
+	u32 temp_size, size;
+
+	height_aligned = roundup(height, chan->height_align);
+	temp_size = bytesperline * height_aligned;
+	size = roundup(temp_size, chan->size_align);
+
+	return size;
 }
 
 static void tegra_channel_fmt_align(struct tegra_channel *chan,
@@ -164,7 +167,6 @@ static void tegra_channel_fmt_align(struct tegra_channel *chan,
 
 	*width = clamp(temp_width, min_width, max_width) / bpp;
 	*height = clamp(*height, TEGRA_MIN_HEIGHT, TEGRA_MAX_HEIGHT);
-	*height = roundup(*height, chan->line_align);
 
 	/* Clamp the requested bytes per line value. If the maximum bytes per
 	 * line value is zero, the module doesn't support user configurable line
@@ -238,9 +240,8 @@ static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 	tegra_channel_fmt_align(chan,
 				&chan->format.width, &chan->format.height,
 				&chan->format.bytesperline);
-	chan->format.sizeimage = chan->format.bytesperline *
-		chan->format.height;
-	buffer_size_align(&chan->format.sizeimage);
+	chan->format.sizeimage = get_aligned_buffer_size(chan,
+			chan->format.bytesperline, chan->format.height);
 	if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
 		chan->format.sizeimage *= 2;
 
@@ -711,9 +712,9 @@ tegra_channel_s_dv_timings(struct file *file, void *fh,
 					&chan->format.width,
 					&chan->format.height,
 					&chan->format.bytesperline);
-		chan->format.sizeimage = chan->format.bytesperline *
-			chan->format.height;
-		buffer_size_align(&chan->format.sizeimage);
+		chan->format.sizeimage = get_aligned_buffer_size(
+			chan, chan->format.bytesperline,
+			chan->format.height);
 		if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
 			chan->format.sizeimage *= 2;
 	}
@@ -823,6 +824,12 @@ static int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 			}
 		}
 		break;
+	case V4L2_CID_VI_HEIGHT_ALIGN:
+		chan->height_align = ctrl->val;
+		break;
+	case V4L2_CID_VI_SIZE_ALIGN:
+		chan->size_align = size_align_ctrl_qmenu[ctrl->val];
+		break;
 	default:
 		dev_err(&chan->video.dev, "%s:Not valid ctrl\n", __func__);
 		return -EINVAL;
@@ -857,6 +864,27 @@ static const struct v4l2_ctrl_config custom_ctrl_list[] = {
 		.max = ARRAY_SIZE(switch_ctrl_qmenu) - 1,
 		.menu_skip_mask = 0,
 		.qmenu_int = switch_ctrl_qmenu,
+	},
+	{
+		.ops = &channel_ctrl_ops,
+		.id = V4L2_CID_VI_HEIGHT_ALIGN,
+		.name = "Height Align",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.min = 1,
+		.max = 16,
+		.step = 1,
+		.def = 1,
+	},
+	{
+		.ops = &channel_ctrl_ops,
+		.id = V4L2_CID_VI_SIZE_ALIGN,
+		.name = "Size Align",
+		.type = V4L2_CTRL_TYPE_INTEGER_MENU,
+		.def = 0,
+		.min = 0,
+		.max = ARRAY_SIZE(size_align_ctrl_qmenu) - 1,
+		.menu_skip_mask = 0,
+		.qmenu_int = size_align_ctrl_qmenu,
 	},
 };
 
@@ -901,6 +929,19 @@ static int tegra_channel_setup_controls(struct tegra_channel *chan)
 			dev_err(chan->vi->dev,
 				"Failed to add VI controls\n");
 	}
+
+	/* Init video format */
+	chan->fmtinfo = tegra_core_get_format_by_code(TEGRA_VF_DEF, 0);
+	chan->format.pixelformat = chan->fmtinfo->fourcc;
+	chan->format.colorspace = V4L2_COLORSPACE_SRGB;
+	chan->format.field = V4L2_FIELD_NONE;
+	chan->format.width = TEGRA_DEF_WIDTH;
+	chan->format.height = TEGRA_DEF_HEIGHT;
+	chan->format.bytesperline = chan->format.width * chan->fmtinfo->bpp;
+	chan->format.sizeimage = get_aligned_buffer_size(chan,
+		chan->format.bytesperline, chan->format.height);
+	if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
+		chan->format.sizeimage *= 2;
 
 	/* setup the controls */
 	return v4l2_ctrl_handler_setup(&chan->ctrl_handler);
@@ -990,8 +1031,8 @@ __tegra_channel_get_format(struct tegra_channel *chan,
 		pix->pixelformat = vfmt->fourcc;
 		tegra_channel_fmt_align(chan,
 			&pix->width, &pix->height, &pix->bytesperline);
-		pix->sizeimage = pix->height * pix->bytesperline;
-		buffer_size_align(&pix->sizeimage);
+		pix->sizeimage = get_aligned_buffer_size(chan,
+			pix->bytesperline, pix->height);
 		if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
 			pix->sizeimage *= 2;
 	}
@@ -1038,8 +1079,8 @@ __tegra_channel_try_format(struct tegra_channel *chan,
 
 	tegra_channel_fmt_align(chan,
 				&pix->width, &pix->height, &pix->bytesperline);
-	pix->sizeimage = pix->height * pix->bytesperline;
-	buffer_size_align(&pix->sizeimage);
+	pix->sizeimage = get_aligned_buffer_size(chan,
+			pix->bytesperline, pix->height);
 	if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
 		pix->sizeimage *= 2;
 
@@ -1082,8 +1123,8 @@ __tegra_channel_set_format(struct tegra_channel *chan,
 		chan->fmtinfo = vfmt;
 		tegra_channel_fmt_align(chan,
 			&pix->width, &pix->height, &pix->bytesperline);
-		pix->sizeimage = pix->bytesperline * pix->height;
-		buffer_size_align(&pix->sizeimage);
+		pix->sizeimage = get_aligned_buffer_size(chan,
+				pix->bytesperline, pix->height);
 		if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
 			pix->sizeimage *= 2;
 		/* Update sizeimage and byteperline to channel format */
@@ -1344,7 +1385,6 @@ int tegra_channel_init(struct tegra_channel *chan)
 
 	chan->width_align = TEGRA_WIDTH_ALIGNMENT;
 	chan->stride_align = TEGRA_STRIDE_ALIGNMENT;
-	chan->line_align = TEGRA_LINE_ALIGNMENT;
 	chan->num_subdevs = 0;
 	mutex_init(&chan->video_lock);
 	INIT_LIST_HEAD(&chan->capture);
@@ -1355,19 +1395,6 @@ int tegra_channel_init(struct tegra_channel *chan)
 	atomic_set(&chan->is_streaming, DISABLE);
 	spin_lock_init(&chan->capture_state_lock);
 
-	/* Init video format */
-	chan->fmtinfo = tegra_core_get_format_by_code(TEGRA_VF_DEF, 0);
-	chan->format.pixelformat = chan->fmtinfo->fourcc;
-	chan->format.colorspace = V4L2_COLORSPACE_SRGB;
-	chan->format.field = V4L2_FIELD_NONE;
-	chan->format.width = TEGRA_DEF_WIDTH;
-	chan->format.height = TEGRA_DEF_HEIGHT;
-	chan->format.bytesperline = chan->format.width * chan->fmtinfo->bpp;
-	chan->format.sizeimage = chan->format.bytesperline *
-				    chan->format.height;
-	buffer_size_align(&chan->format.sizeimage);
-	if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
-		chan->format.sizeimage *= 2;
 	chan->buffer_offset[0] = 0;
 
 	/* Initialize the media entity... */

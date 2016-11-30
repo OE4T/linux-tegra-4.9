@@ -60,6 +60,8 @@
 
 #define V4L2_CID_VI_BYPASS_MODE		(V4L2_CID_TEGRA_CAMERA_BASE+100)
 #define V4L2_CID_OVERRIDE_ENABLE	(V4L2_CID_TEGRA_CAMERA_BASE+101)
+#define V4L2_CID_VI_HEIGHT_ALIGN	(V4L2_CID_TEGRA_CAMERA_BASE+102)
+#define V4L2_CID_VI_SIZE_ALIGN		(V4L2_CID_TEGRA_CAMERA_BASE+103)
 
 #define MAX_BUFFER_SIZE			32
 #define MAX_CID_CONTROLS		16
@@ -152,6 +154,16 @@ enum switch_state {
 
 static const s64 switch_ctrl_qmenu[] = {
 	SWITCH_OFF, SWITCH_ON
+};
+
+/*
+ * The memory buffers allocated from nvrm are aligned to
+ * fullfill the hardware requirements:
+ * - size in alignment with a multiple of 128K/64K bytes,
+ * see CL http://git-master/r/256468 and bug 1321091.
+ */
+static const s64 size_align_ctrl_qmenu[] = {
+	1, (64 * 1024), (128 * 1024),
 };
 
 struct camera_common_frmfmt {

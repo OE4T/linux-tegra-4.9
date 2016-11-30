@@ -113,8 +113,9 @@ struct tegra_vi_graph_entity {
  *
  * @csi: CSI register bases
  * @stride_align: channel buffer stride alignment, default is 64
- * @line_align: channel buffer line alignment
  * @width_align: image width alignment, default is 4
+ * @height_align: channel buffer height alignment, default is 1
+ * @size_align: channel buffer size alignment, default is 128K bytes
  * @port: CSI port of this video channel
  * @io_id: Tegra IO rail ID of this video channel
  *
@@ -160,8 +161,9 @@ struct tegra_channel {
 
 	void __iomem *csibase[TEGRA_CSI_BLOCKS];
 	unsigned int stride_align;
-	unsigned int line_align;
 	unsigned int width_align;
+	unsigned int height_align;
+	unsigned int size_align;
 	unsigned int valid_ports;
 	unsigned int total_ports;
 	unsigned int numlanes;

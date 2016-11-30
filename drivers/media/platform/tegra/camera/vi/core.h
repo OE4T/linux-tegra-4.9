@@ -24,8 +24,6 @@
 #define TEGRA_WIDTH_ALIGNMENT	1
 /* Stride alignment is 256, for VIC worse case */
 #define TEGRA_STRIDE_ALIGNMENT	256
-/* Worst-case height constraint for VIC pitch linear */
-#define TEGRA_LINE_ALIGNMENT	2
 
 /* 1080p resolution as default resolution for test pattern generator */
 #define TEGRA_DEF_WIDTH		1920

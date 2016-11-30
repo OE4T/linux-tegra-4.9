@@ -1526,7 +1526,7 @@ static u32 gv11b_mask_hww_warp_esr(u32 hww_warp_esr)
 	return hww_warp_esr;
 }
 
-int gr_gv11b_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr)
+static int gr_gv11b_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr)
 {
 	u32 map;
 	u32 i, j, mapregs;

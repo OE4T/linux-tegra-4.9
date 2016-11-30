@@ -839,8 +839,6 @@ fail_autosuspenddelay:
 	kobject_put(pdata->power_kobj);
 
 fail_attrib_alloc:
-	kfree(pdata->power_attrib);
-
 	return err;
 }
 EXPORT_SYMBOL(nvhost_module_init);

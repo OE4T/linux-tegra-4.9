@@ -2240,11 +2240,11 @@ static inline u32 gr_gpc0_ppc0_cbm_beta_cb_size_v_m(void)
 }
 static inline u32 gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v(void)
 {
-	return 0x00000800;
+	return 0x00000400;
 }
 static inline u32 gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v(void)
 {
-	return 0x00001100;
+	return 0x00000d00;
 }
 static inline u32 gr_gpc0_ppc0_cbm_beta_cb_size_v_granularity_v(void)
 {
@@ -2288,7 +2288,7 @@ static inline u32 gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_v_f(u32 v)
 }
 static inline u32 gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_v_default_v(void)
 {
-	return 0x00000800;
+	return 0x00000400;
 }
 static inline u32 gr_gpcs_tpcs_tex_rm_cb_0_r(void)
 {

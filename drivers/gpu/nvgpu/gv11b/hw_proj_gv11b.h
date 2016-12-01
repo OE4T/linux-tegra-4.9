@@ -128,7 +128,7 @@ static inline u32 proj_scal_litter_num_fbps_v(void)
 }
 static inline u32 proj_scal_litter_num_fbpas_v(void)
 {
-	return 0x00000002;
+	return 0x00000001;
 }
 static inline u32 proj_scal_litter_num_gpcs_v(void)
 {

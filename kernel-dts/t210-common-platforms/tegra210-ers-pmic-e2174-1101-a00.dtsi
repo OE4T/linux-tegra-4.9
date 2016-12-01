@@ -167,7 +167,7 @@
 				in-ldo7-8-supply = <&max77620_sd2>;
 
 				max77620_sd0: sd0 {
-					regulator-name = "vdd_core";
+					regulator-name = "vdd-core";
 					regulator-min-microvolt = <600000>;
 					regulator-max-microvolt = <1400000>;
 					regulator-boot-on;

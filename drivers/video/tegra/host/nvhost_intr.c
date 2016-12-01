@@ -30,7 +30,6 @@
 #include <linux/slab.h>
 #include <linux/irq.h>
 #include <trace/events/nvhost.h>
-#include <linux/gk20a.h>
 
 #include "nvhost_channel.h"
 #include "chip_support.h"

@@ -20,7 +20,6 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/uaccess.h>
-#include <linux/gk20a.h>
 #include <linux/nvhost.h>
 
 #include <linux/io.h>

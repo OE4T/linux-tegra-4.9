@@ -1112,6 +1112,9 @@ static void cpu_hyp_reinit(void)
 			cpu_init_hyp_mode(NULL);
 	}
 
+	if (is_kernel_in_hyp_mode())
+		kvm_timer_init_vhe();
+
 	kvm_arm_init_debug();
 }
 

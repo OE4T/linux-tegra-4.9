@@ -273,8 +273,12 @@ static void ov5693_gpio_set(struct ov5693 *priv,
 {
 	if (priv->pdata && priv->pdata->use_cam_gpio)
 		cam_gpio_ctrl(priv->i2c_client, gpio, val, 1);
-	else
-		gpio_set_value_cansleep(gpio, val);
+	else {
+		if (gpio_cansleep(gpio))
+			gpio_set_value_cansleep(gpio, val);
+		else
+			gpio_set_value(gpio, val);
+	}
 }
 
 static int ov5693_power_on(struct camera_common_data *s_data)
@@ -310,10 +314,18 @@ static int ov5693_power_on(struct camera_common_data *s_data)
 	usleep_range(1, 2);
 	if (pw->pwdn_gpio)
 		ov5693_gpio_set(priv, pw->pwdn_gpio, 1);
-	usleep_range(1, 2);
+
+	/*
+	 * datasheet 2.9: reset requires ~2ms settling time
+	 * a power on reset is generated after core power becomes stable
+	 */
+	usleep_range(2000, 2010);
+
 	if (pw->reset_gpio)
-		gpio_set_value_cansleep(pw->reset_gpio, 1);
-	usleep_range(1000, 1110);
+		ov5693_gpio_set(priv, pw->reset_gpio, 1);
+
+	/* datasheet fig 2-9: t3 */
+	usleep_range(1350, 1360);
 
 	pw->state = SWITCH_ON;
 	return 0;
@@ -352,8 +364,10 @@ static int ov5693_power_off(struct camera_common_data *s_data)
 		ov5693_gpio_set(priv, pw->pwdn_gpio, 0);
 	usleep_range(1, 2);
 	if (pw->reset_gpio)
-		gpio_set_value_cansleep(pw->reset_gpio, 0);
-	usleep_range(1, 2);
+		ov5693_gpio_set(priv, pw->reset_gpio, 0);
+
+	/* datasheet 2.9: reset requires ~2ms settling time*/
+	usleep_range(2000, 2010);
 
 	if (pw->iovdd)
 		regulator_disable(pw->iovdd);
@@ -383,8 +397,10 @@ static int ov5693_power_put(struct ov5693 *priv)
 
 	if (priv->pdata && priv->pdata->use_cam_gpio)
 		cam_gpio_deregister(priv->i2c_client, pw->pwdn_gpio);
-	else
+	else {
 		gpio_free(pw->pwdn_gpio);
+		gpio_free(pw->reset_gpio);
+	}
 
 	return 0;
 }
@@ -396,7 +412,7 @@ static int ov5693_power_get(struct ov5693 *priv)
 	const char *mclk_name;
 	const char *parentclk_name;
 	struct clk *parent;
-	int err = 0;
+	int err = 0, ret = 0;
 
 	if (!pdata) {
 		dev_err(&priv->i2c_client->dev, "pdata missing\n");
@@ -442,8 +458,19 @@ static int ov5693_power_get(struct ov5693 *priv)
 			dev_err(&priv->i2c_client->dev,
 				"%s ERR can't register cam gpio %u!\n",
 				 __func__, pw->pwdn_gpio);
-	} else
-		err = gpio_request(pw->pwdn_gpio, "cam_pwdn_gpio");
+	} else {
+		ret = gpio_request(pw->pwdn_gpio, "cam_pwdn_gpio");
+		if (ret < 0)
+			dev_dbg(&priv->i2c_client->dev,
+				"%s can't request pwdn_gpio %d\n",
+				__func__, ret);
+		ret = gpio_request(pw->reset_gpio, "cam_reset_gpio");
+		if (ret < 0)
+			dev_dbg(&priv->i2c_client->dev,
+				"%s can't request reset_gpio %d\n",
+				__func__, ret);
+	}
+
 
 	pw->state = SWITCH_OFF;
 	return err;

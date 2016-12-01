@@ -116,30 +116,149 @@ static unsigned long cpu_max_freq[] = {
 		2014500, 1734000, 1683000, 1555500, 1504500
 };
 
-#define CPU_FV_TABLE		 \
-	.fv_table = {		 \
-		{51000,   950},	 \
-		{102000,  950},	 \
-		{204000,  950},	 \
-		{306000,  950},	 \
-		{408000,  950},	 \
-		{510000,  950},	 \
-		{612000,  950},	 \
-		{714000,  950},	 \
-		{816000,  950},	 \
-		{918000,  950},	 \
-		{1020000, 950},	 \
-		{1122000, 950},	 \
-		{1224000, 950},	 \
-		{1326000, 993},	 \
-		{1428000, 1043}, \
-		{1530000, 1093}, \
-		{1632000, 1150}, \
-		{1734000, 1231}, \
-		{1836000, 1362}, \
-		{1912500, 1362}, \
-		{2014500, 1362}, \
-		{2218500, 1362}, \
+#define CPU_PLL_CVB_TABLE \
+	.pll_min_millivolts = 950, \
+	.speedo_scale = 100,	\
+	.voltage_scale = 1000,	\
+	.cvb_pll_table = {		\
+		{204000000UL,	{        0,        0,        0 } }, \
+		{306000000UL,	{        0,        0,        0 } }, \
+		{408000000UL,	{        0,        0,        0 } }, \
+		{510000000UL,	{        0,        0,        0 } }, \
+		{612000000UL,	{        0,        0,        0 } }, \
+		{714000000UL,	{        0,        0,        0 } }, \
+		{816000000UL,	{        0,        0,        0 } }, \
+		{918000000UL,	{        0,        0,        0 } }, \
+		{1020000000UL,	{ -2875621,   358099,    -8585 } }, \
+		{1122000000UL,	{   -52225,   104159,    -2816 } }, \
+		{1224000000UL,	{  1076868,     8356,     -727 } }, \
+		{1326000000UL,	{  2208191,   -84659,     1240 } }, \
+		{1428000000UL,	{  2519460,  -105063,     1611 } }, \
+		{1530000000UL,	{  2639809,  -108729,     1626 } }, \
+		{1632000000UL,	{  2889664,  -122173,     1834 } }, \
+		{1734000000UL,	{  3386160,  -154021,     2393 } }, \
+		{1836000000UL,	{  5100873,  -279186,     4747 } }, \
+		{1912500000UL,	{  5100873,  -279186,     4747 } }, \
+		{2014500000UL,	{  5100873,  -279186,     4747 } }, \
+		{2218500000UL,	{  5100873,  -279186,     4747 } }, \
+		{0,           	{ } }, \
+	}
+
+#define CPU_PLL_CVB_TABLE_XA \
+	.pll_min_millivolts = 950, \
+	.speedo_scale = 100,	\
+	.voltage_scale = 1000,	\
+	.cvb_pll_table = {		\
+		{204000000UL,	{        0,        0,        0 } }, \
+		{306000000UL,	{        0,        0,        0 } }, \
+		{408000000UL,	{        0,        0,        0 } }, \
+		{510000000UL,	{        0,        0,        0 } }, \
+		{612000000UL,	{        0,        0,        0 } }, \
+		{714000000UL,	{        0,        0,        0 } }, \
+		{816000000UL,	{        0,        0,        0 } }, \
+		{918000000UL,	{        0,        0,        0 } }, \
+		{1020000000UL,	{ -2875621,   358099,    -8585 } }, \
+		{1122000000UL,	{   -52225,   104159,    -2816 } }, \
+		{1224000000UL,	{  1076868,     8356,     -727 } }, \
+		{1326000000UL,	{  2208191,   -84659,     1240 } }, \
+		{1428000000UL,	{  2519460,  -105063,     1611 } }, \
+		{1530000000UL,	{  2639809,  -108729,     1626 } }, \
+		{1606500000UL,	{  2889664,  -122173,     1834 } }, \
+		{1632000000UL,	{  3386160,  -154021,     2393 } }, \
+		{0,           	{      0,      0,   0} }, \
+	}
+
+#define CPU_PLL_CVB_TABLE_EUCM1 \
+	.pll_min_millivolts = 950, \
+	.speedo_scale = 100,	\
+	.voltage_scale = 1000,	\
+	.cvb_pll_table = {		\
+		{204000000UL,	{        0,        0,        0 } }, \
+		{306000000UL,	{        0,        0,        0 } }, \
+		{408000000UL,	{        0,        0,        0 } }, \
+		{510000000UL,	{        0,        0,        0 } }, \
+		{612000000UL,	{        0,        0,        0 } }, \
+		{714000000UL,	{        0,        0,        0 } }, \
+		{816000000UL,	{        0,        0,        0 } }, \
+		{918000000UL,	{        0,        0,        0 } }, \
+		{1020000000UL,	{ -2875621,   358099,    -8585 } }, \
+		{1122000000UL,	{   -52225,   104159,    -2816 } }, \
+		{1224000000UL,	{  1076868,     8356,     -727 } }, \
+		{1326000000UL,	{  2208191,   -84659,     1240 } }, \
+		{1428000000UL,	{  2519460,  -105063,     1611 } }, \
+		{1555500000UL,	{  2639809,  -108729,     1626 } }, \
+		{1632000000UL,	{  2889664,  -122173,     1834 } }, \
+		{1734000000UL,	{  3386160,  -154021,     2393 } }, \
+		{0,           	{ } }, \
+	}
+
+#define CPU_PLL_CVB_TABLE_EUCM2 \
+	.pll_min_millivolts = 950, \
+	.speedo_scale = 100,	\
+	.voltage_scale = 1000,	\
+	.cvb_pll_table = {		\
+		{204000000UL,	{        0,        0,        0 } }, \
+		{306000000UL,	{        0,        0,        0 } }, \
+		{408000000UL,	{        0,        0,        0 } }, \
+		{510000000UL,	{        0,        0,        0 } }, \
+		{612000000UL,	{        0,        0,        0 } }, \
+		{714000000UL,	{        0,        0,        0 } }, \
+		{816000000UL,	{        0,        0,        0 } }, \
+		{918000000UL,	{        0,        0,        0 } }, \
+		{1020000000UL,	{ -2875621,   358099,    -8585 } }, \
+		{1122000000UL,	{   -52225,   104159,    -2816 } }, \
+		{1224000000UL,	{  1076868,     8356,     -727 } }, \
+		{1326000000UL,	{  2208191,   -84659,     1240 } }, \
+		{1479000000UL,	{  2519460,  -105063,     1611 } }, \
+		{1555500000UL,	{  2639809,  -108729,     1626 } }, \
+		{1683000000UL,	{  2889664,  -122173,     1834 } }, \
+		{0,           	{ } }, \
+	}
+
+#define CPU_PLL_CVB_TABLE_EUCM2_JOINT_RAIL \
+	.pll_min_millivolts = 950, \
+	.speedo_scale = 100,	\
+	.voltage_scale = 1000,	\
+	.cvb_pll_table = {		\
+		{204000000UL,	{        0,        0,        0 } }, \
+		{306000000UL,	{        0,        0,        0 } }, \
+		{408000000UL,	{        0,        0,        0 } }, \
+		{510000000UL,	{        0,        0,        0 } }, \
+		{612000000UL,	{        0,        0,        0 } }, \
+		{714000000UL,	{        0,        0,        0 } }, \
+		{816000000UL,	{        0,        0,        0 } }, \
+		{918000000UL,	{        0,        0,        0 } }, \
+		{1020000000UL,	{ -2875621,   358099,    -8585 } }, \
+		{1122000000UL,	{   -52225,   104159,    -2816 } }, \
+		{1224000000UL,	{  1076868,     8356,     -727 } }, \
+		{1326000000UL,	{  2208191,   -84659,     1240 } }, \
+		{1479000000UL,	{  2519460,  -105063,     1611 } }, \
+		{1504500000UL,	{  2639809,  -108729,     1626 } }, \
+		{0,           	{ } }, \
+	}
+
+#define CPU_PLL_CVB_TABLE_ODN \
+	.pll_min_millivolts = 950, \
+	.speedo_scale = 100,	\
+	.voltage_scale = 1000,	\
+	.cvb_pll_table = {		\
+		{204000000UL,	{        0,        0,        0 } }, \
+		{306000000UL,	{        0,        0,        0 } }, \
+		{408000000UL,	{        0,        0,        0 } }, \
+		{510000000UL,	{        0,        0,        0 } }, \
+		{612000000UL,	{        0,        0,        0 } }, \
+		{714000000UL,	{        0,        0,        0 } }, \
+		{816000000UL,	{        0,        0,        0 } }, \
+		{918000000UL,	{        0,        0,        0 } }, \
+		{1020000000UL,	{ -2875621,   358099,    -8585 } }, \
+		{1122000000UL,	{   -52225,   104159,    -2816 } }, \
+		{1224000000UL,	{  1076868,     8356,     -727 } }, \
+		{1326000000UL,	{  2208191,   -84659,     1240 } }, \
+		{1428000000UL,	{  2519460,  -105063,     1611 } }, \
+		{1581000000UL,	{  2889664,  -122173,     1834 } }, \
+		{1683000000UL,	{  5100873,  -279186,     4747 } }, \
+		{1785000000UL,	{  5100873,  -279186,     4747 } }, \
+		{0,           	{ } }, \
 	}
 
 static struct cpu_dvfs cpu_fv_dvfs_table[] = {
@@ -148,147 +267,147 @@ static struct cpu_dvfs cpu_fv_dvfs_table[] = {
 		.process_id = 0,
 		.min_mv = 840,
 		.max_mv = 1120,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE_EUCM2_JOINT_RAIL,
 	},
 	{
 		.speedo_id = 10,
 		.process_id = 1,
 		.min_mv = 840,
 		.max_mv = 1120,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE_EUCM2_JOINT_RAIL,
 	},
 	{
 		.speedo_id = 9,
 		.process_id = 0,
 		.min_mv = 900,
 		.max_mv = 1162,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE_EUCM2,
 	},
 	{
 		.speedo_id = 9,
 		.process_id = 1,
 		.min_mv = 900,
 		.max_mv = 1162,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE_EUCM2,
 	},
 	{
 		.speedo_id = 8,
 		.process_id = 0,
 		.min_mv = 900,
 		.max_mv = 1195,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE_EUCM2,
 	},
 	{
 		.speedo_id = 8,
 		.process_id = 1,
 		.min_mv = 900,
 		.max_mv = 1195,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE_EUCM2,
 	},
 	{
 		.speedo_id = 7,
 		.process_id = 0,
 		.min_mv = 841,
 		.max_mv = 1227,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE_EUCM1,
 	},
 	{
 		.speedo_id = 7,
 		.process_id = 1,
 		.min_mv = 841,
 		.max_mv = 1227,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE_EUCM1,
 	},
 	{
 		.speedo_id = 6,
 		.process_id = 0,
 		.min_mv = 870,
 		.max_mv = 1150,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE,
 	},
 	{
 		.speedo_id = 6,
 		.process_id = 1,
 		.min_mv = 870,
 		.max_mv = 1150,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE,
 	},
 	{
 		.speedo_id = 5,
 		.process_id = 0,
 		.min_mv = 818,
 		.max_mv = 1227,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE,
 	},
 	{
 		.speedo_id = 5,
 		.process_id = 1,
 		.min_mv = 818,
 		.max_mv = 1227,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE,
 	},
 	{
 		.speedo_id = 4,
 		.process_id = -1,
 		.min_mv = 918,
 		.max_mv = 1113,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE_XA,
 	},
 	{
 		.speedo_id = 3,
 		.process_id = 0,
 		.min_mv = 825,
 		.max_mv = 1227,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE_ODN,
 	},
 	{
 		.speedo_id = 3,
 		.process_id = 1,
 		.min_mv = 825,
 		.max_mv = 1227,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE_ODN,
 	},
 	{
 		.speedo_id = 2,
 		.process_id = 0,
 		.min_mv = 870,
 		.max_mv = 1227,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE,
 	},
 	{
 		.speedo_id = 2,
 		.process_id = 1,
 		.min_mv = 870,
 		.max_mv = 1227,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE,
 	},
 	{
 		.speedo_id = 1,
 		.process_id = 0,
 		.min_mv = 837,
 		.max_mv = 1227,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE,
 	},
 	{
 		.speedo_id = 1,
 		.process_id = 1,
 		.min_mv = 837,
 		.max_mv = 1227,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE,
 	},
 	{
 		.speedo_id = 0,
 		.process_id = 0,
 		.min_mv = 850,
 		.max_mv = 1170,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE,
 	},
 	{
 		.speedo_id = 0,
 		.process_id = 1,
 		.min_mv = 850,
 		.max_mv = 1170,
-		CPU_FV_TABLE,
+		CPU_PLL_CVB_TABLE,
 	},
 };
 
@@ -780,12 +899,13 @@ static bool match_dvfs_one(const char *name, int dvfs_speedo_id,
 static int set_cpu_dvfs_data(unsigned long max_freq, struct cpu_dvfs *d,
 			     struct dvfs *cpu_dvfs, int *max_freq_index)
 {
-	int i, mv, dfll_mv, min_dfll_mv, num_freqs;
+	int i, mv, dfll_mv, min_mv, min_dfll_mv, num_freqs;
 	unsigned long fmax_at_vmin = 0;
 	unsigned long fmin_use_dfll = 0;
 	unsigned long *freqs;
 	int *dfll_millivolts;
 	struct rail_alignment *align = &tegra210_dvfs_rail_vdd_cpu.alignment;
+	int speedo = tegra_sku_info.cpu_speedo_value;
 
 	min_dfll_mv = d->min_mv;
 	if (min_dfll_mv < tegra210_dvfs_rail_vdd_cpu.min_millivolts) {
@@ -796,19 +916,23 @@ static int set_cpu_dvfs_data(unsigned long max_freq, struct cpu_dvfs *d,
 	min_dfll_mv = tegra_round_voltage(min_dfll_mv, align, true);
 	d->max_mv = tegra_round_voltage(d->max_mv, align, false);
 
+	min_mv = d->pll_min_millivolts;
+	if (min_mv < tegra210_dvfs_rail_vdd_cpu.min_millivolts) {
+		pr_debug("tegra210_dvfs: pll min %dmV below rail min %dmV\n",
+			 min_mv, tegra210_dvfs_rail_vdd_cpu.min_millivolts);
+		min_mv = tegra210_dvfs_rail_vdd_cpu.min_millivolts;
+	}
+	min_mv = tegra_round_voltage(min_mv, align, true);
+
 	if (tegra_get_cpu_fv_table(&num_freqs, &freqs, &dfll_millivolts))
 		return -EPROBE_DEFER;
 
 	for (i = 0; i < num_freqs; i++) {
-		if (freqs[i] / KHZ != d->fv_table[i].freq) {
+		if (freqs[i] != d->cvb_pll_table[i].freq) {
 			pr_err("Err: DFLL freq ladder does not match PLL's\n");
 			return -EINVAL;
 		}
 
-		if (d->fv_table[i].freq > max_freq)
-			break;
-
-		mv = d->fv_table[i].volt;
 		/*
 		 * Check maximum frequency at minimum voltage for dfll source;
 		 * round down unless all table entries are above Vmin, then use
@@ -823,6 +947,10 @@ static int set_cpu_dvfs_data(unsigned long max_freq, struct cpu_dvfs *d,
 		}
 
 		/* Clip maximum frequency at maximum voltage for pll source */
+		mv = tegra_get_cvb_voltage(speedo, d->speedo_scale,
+					   &d->cvb_pll_table[i].coefficients);
+		mv = tegra_round_cvb_voltage(mv, d->voltage_scale, align);
+		mv = max(mv, min_mv);
 		if ((mv > d->max_mv) && !i) {
 			pr_err("Err: volt of 1st entry is higher than Vmax\n");
 			return -EINVAL;

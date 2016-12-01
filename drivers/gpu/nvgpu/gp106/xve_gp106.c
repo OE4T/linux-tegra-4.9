@@ -139,6 +139,19 @@ static void set_xve_l1_mask(struct gk20a *g, int status)
 }
 
 /**
+ * Disable ASPM permanently.
+ */
+static void xve_disable_aspm_gp106(struct gk20a *g)
+{
+	u32 xve_priv;
+
+	xve_priv = g->ops.xve.xve_readl(g, xve_priv_xv_r());
+
+	set_xve_l0s_mask(g, true);
+	set_xve_l1_mask(g, true);
+}
+
+/**
  * When doing the speed change disable power saving features.
  */
 static void disable_aspm_gp106(struct gk20a *g)
@@ -618,6 +631,7 @@ int gp106_init_xve_ops(struct gpu_ops *gops)
 	gops->xve.available_speeds = xve_available_speeds_gp106;
 	gops->xve.xve_readl        = xve_xve_readl_gp106;
 	gops->xve.xve_writel       = xve_xve_writel_gp106;
+	gops->xve.disable_aspm     = xve_disable_aspm_gp106;
 
 	return 0;
 }

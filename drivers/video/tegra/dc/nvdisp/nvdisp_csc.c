@@ -14,13 +14,11 @@
  *
  */
 
-#include <mach/dc.h>
-
+#include "dc.h"
 #include "nvdisp.h"
 #include "nvdisp_priv.h"
 #include "hw_nvdisp_nvdisp.h"
 #include "hw_win_nvdisp.h"
-
 #include "dc_priv.h"
 
 static struct tegra_dc_csc_v2 unity_matrix = {

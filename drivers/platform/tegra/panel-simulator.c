@@ -16,7 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <mach/dc.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
 #include <linux/tegra_pwm_bl.h>
@@ -28,6 +27,7 @@
 #include <linux/export.h>
 #include <linux/tegra-soc.h>
 
+#include "dc.h"
 #include "board.h"
 #include <board-panel.h>
 

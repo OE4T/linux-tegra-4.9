@@ -16,8 +16,8 @@
 
 
 #include <linux/delay.h>
-#include <mach/dc.h>
 
+#include "dc.h"
 #include "nvdisp.h"
 #include "nvdisp_priv.h"
 #include "hw_nvdisp_nvdisp.h"

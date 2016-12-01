@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisp/nvdisp_cursor.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -15,8 +15,7 @@
  */
 
 
-#include <mach/dc.h>
-
+#include "dc.h"
 #include "nvdisp.h"
 #include "nvdisp_priv.h"
 

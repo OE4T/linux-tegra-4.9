@@ -29,9 +29,9 @@
 #include <linux/bootmem.h>
 
 #include <linux/platform/tegra/latency_allowance.h>
-
 #include <linux/platform/tegra/io-dpd.h>
-#include "mach/dc.h"
+
+#include "dc.h"
 #include "board.h"
 #include "board-panel.h"
 #include "dc_priv.h"

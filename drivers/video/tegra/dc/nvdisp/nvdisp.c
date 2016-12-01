@@ -28,12 +28,10 @@
 #include <linux/debugfs.h>
 #include <linux/ktime.h>
 
-#include <mach/dc.h>
-#include <mach/fb.h>
-
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
 
+#include "dc.h"
 #include "nvdisp.h"
 #include "nvdisp_priv.h"
 #include "dc_config.h"

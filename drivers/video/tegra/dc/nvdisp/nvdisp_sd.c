@@ -15,7 +15,6 @@
  */
 
 #include <linux/kernel.h>
-#include <mach/dc.h>
 #include <linux/types.h>
 #include <linux/string.h>
 #include <linux/slab.h>
@@ -23,6 +22,7 @@
 #include <linux/stat.h>
 #include <linux/delay.h>
 
+#include "dc.h"
 #include "hw_nvdisp_nvdisp.h"
 #include "nvsd2.h"
 #include "nvdisp.h"

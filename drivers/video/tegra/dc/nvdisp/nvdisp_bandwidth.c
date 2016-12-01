@@ -20,9 +20,7 @@
 #include <linux/platform/tegra/isomgr.h>
 #include <linux/platform/tegra/latency_allowance.h>
 
-#include <mach/dc.h>
-#include <mach/tegra_dc_ext.h>
-
+#include "dc.h"
 #include "dc_priv.h"
 #include "nvdisp.h"
 

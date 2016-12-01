@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/null_or.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
  * Author: Aron Wong <awong@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -16,14 +16,18 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/version.h>
 #include <mach/dc.h>
-#include <linux/of_irq.h> /*for INT_DISPLAY_GENERAL, INT_DPAUX*/
-
+#include <mach/irqs.h>/*for INT_DISPLAY_GENERAL, INT_DPAUX*/
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "null_or.h"
 
 #include "../../../../arch/arm/mach-tegra/iomap.h"
+
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+#include "../../../../drivers/platform/tegra/irqs-t21x.h"
+#endif
 
 #define DRIVER_NAME "null_or"
 

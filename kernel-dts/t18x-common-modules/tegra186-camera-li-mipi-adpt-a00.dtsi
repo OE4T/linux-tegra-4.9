@@ -328,11 +328,15 @@
 					embedded_metadata_height = "0";
 
 					/* WDR related settings */
-					num_control_point = "2";
-					control_point_0 = "2048";
-					control_point_1 = "16384";
-					slope_ratio_0 = "16";
-					slope_ratio_1 = "64";
+					num_control_point = "4";
+					control_point_x_0 = "0";
+					control_point_x_1 = "2048";
+					control_point_x_2 = "16384";
+					control_point_x_3 = "65536";
+					control_point_y_0 = "0";
+					control_point_y_1 = "2048";
+					control_point_y_2 = "2944";
+					control_point_y_3 = "3712";
 				};
 				ports {
 					#address-cells = <1>;

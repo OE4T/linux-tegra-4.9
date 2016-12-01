@@ -1084,6 +1084,9 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	if (g->ops.xve.available_speeds) {
 		u32 speed;
 
+		if (platform->disable_aspm && g->ops.xve.disable_aspm)
+			g->ops.xve.disable_aspm(g);
+
 		g->ops.xve.sw_init(dev);
 		g->ops.xve.available_speeds(g, &speed);
 

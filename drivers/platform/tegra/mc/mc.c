@@ -62,6 +62,18 @@ int mc_channels;
 void __iomem *mc;
 void __iomem *mc_regs[MC_MAX_CHANNELS];
 
+u32 tegra_mc_readl(u32 reg)
+{
+	return mc_readl(reg);
+}
+EXPORT_SYMBOL(tegra_mc_readl);
+
+void tegra_mc_writel(u32 val, u32 reg)
+{
+	mc_writel(val, reg);
+}
+EXPORT_SYMBOL(tegra_mc_writel);
+
 /*
  * Return carveout info for @co in @inf. If @nr is non-NULL then the number of
  * carveouts are also place in @*nr. If both @inf and @nr are NULL then the

@@ -26,10 +26,15 @@
 #include <linux/reset.h>
 #include <linux/tegra_soctherm.h>
 #include <linux/platform/tegra/clock.h>
+#if defined(CONFIG_TEGRA_CLK_FRAMEWORK)
 #include <linux/platform/tegra/dvfs.h>
+#endif
 #include <linux/platform/tegra/common.h>
 #include <linux/platform/tegra/mc.h>
 #include <linux/clk/tegra.h>
+#if defined(CONFIG_COMMON_CLK)
+#include <soc/tegra/tegra-dvfs.h>
+#endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
 #include <soc/tegra/fuse.h>
 #endif
@@ -873,7 +878,7 @@ static int gk20a_tegra_suspend(struct device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
+#if defined(CONFIG_TEGRA_CLK_FRAMEWORK) || defined(CONFIG_COMMON_CLK)
 static unsigned long gk20a_get_clk_rate(struct device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
@@ -1022,7 +1027,7 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.reset_deassert = gk20a_tegra_reset_deassert,
 #endif
 
-#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
+#if defined(CONFIG_TEGRA_CLK_FRAMEWORK) || defined(CONFIG_COMMON_CLK)
 	.clk_get_rate = gk20a_get_clk_rate,
 	.clk_round_rate = gk20a_round_clk_rate,
 	.clk_set_rate = gk20a_set_clk_rate,

@@ -1,7 +1,7 @@
 /*
  * Tegra TSEC Module Support
  *
- * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -790,6 +790,8 @@ static int tsec_probe(struct platform_device *dev)
 	int err;
 	struct device_node *node;
 	struct nvhost_device_data *pdata = NULL;
+	u32 carveout_addr;
+	u32 carveout_size;
 
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
@@ -819,19 +821,23 @@ static int tsec_probe(struct platform_device *dev)
 	node = of_find_node_by_name(dev->dev.of_node, "carveout");
 	if (node) {
 		DEFINE_DMA_ATTRS(attrs);
+		/* This is currently used only in T124. carveout_addr and
+		 * carveout_size are 32 bit. */
 		err = of_property_read_u32(node, "carveout_addr",
-					(u32 *)&pdata->carveout_addr);
+						&carveout_addr);
 		if (err) {
 			dev_err(&dev->dev, "invalid carveout_addr\n");
 			return -EINVAL;
 		}
+		pdata->carveout_addr = carveout_addr;
 
 		err = of_property_read_u32(node, "carveout_size",
-					(u32 *)&pdata->carveout_size);
+						&carveout_size);
 		if (err) {
 			dev_err(&dev->dev, "invalid carveout_size\n");
 			return -EINVAL;
 		}
+		pdata->carveout_size = carveout_size;
 
 		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
 		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);

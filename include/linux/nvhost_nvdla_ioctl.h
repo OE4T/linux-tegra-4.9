@@ -29,34 +29,34 @@
 #endif
 
 /**
- * struct nvdla_ctrl_ping_args structure for ping data
+ * struct nvdla_ping_args structure for ping data
  *
  * @in_challenge	challenge data to be sent
  * @out_response	response/CRC on challenge data from engine
  *
  */
-struct nvdla_ctrl_ping_args {
+struct nvdla_ping_args {
 	__u32 in_challenge;
 	__u32 out_response;
 };
 
 
 /**
- * struct nvdla_ctrl_pin_unpin_args strcture args for buffer pin/unpin
+ * struct nvdla_pin_unpin_args strcture args for buffer pin/unpin
  *
  * @buffers		list of buffers to pin/unpin'ed
  * @num_buffers		number of buffers count
  * @reserved		reserved for future use
  *
  */
-struct nvdla_ctrl_pin_unpin_args {
+struct nvdla_pin_unpin_args {
 	__u64 buffers;
 	__u32 num_buffers;
 	__u32 reserved;
 };
 
 /**
- * struct nvdla_ctrl_submit_args structure for task submit
+ * struct nvdla_submit_args structure for task submit
  *
  * @tasks		pointer to task list
  * @num_tasks		number of tasks count
@@ -64,7 +64,7 @@ struct nvdla_ctrl_pin_unpin_args {
  * @version		version of task structure
  *
  */
-struct nvdla_ctrl_submit_args {
+struct nvdla_submit_args {
 	__u64 tasks;
 	__u16 num_tasks;
 #define MAX_TASKS_PER_SUBMIT	32
@@ -74,19 +74,19 @@ struct nvdla_ctrl_submit_args {
 };
 
 /**
- * struct nvdla_ctrl_mem_handle structure for memory handles
+ * struct nvdla_mem_handle structure for memory handles
  *
  * @handle		handle to buffer allocated in userspace
  * @offset		offset in buffer
  *
  */
-struct nvdla_ctrl_mem_handle {
+struct nvdla_mem_handle {
 	__u32 handle;
 	__u32 offset;
 };
 
 /**
- * struct nvdla_ctrl_ioctl_submit_task structure for single task information
+ * struct nvdla_ioctl_submit_task structure for single task information
  *
  * @num_prefences		number of pre-fences in task
  * @num_postfences		number of post-fences in task
@@ -105,7 +105,7 @@ struct nvdla_ctrl_mem_handle {
  * @address_list		pointer to address list
  *
  */
-struct nvdla_ctrl_ioctl_submit_task {
+struct nvdla_ioctl_submit_task {
 	__u8 num_prefences;
 	__u8 num_postfences;
 	__u8 num_input_task_status;
@@ -121,16 +121,16 @@ struct nvdla_ctrl_ioctl_submit_task {
 
 	__u32 num_operations;
 	__u32 num_luts;
-	struct nvdla_ctrl_mem_handle operation_desc;
-	struct nvdla_ctrl_mem_handle surface_desc;
-	struct nvdla_ctrl_mem_handle lut_data;
+	struct nvdla_mem_handle operation_desc;
+	struct nvdla_mem_handle surface_desc;
+	struct nvdla_mem_handle lut_data;
 
 	__u8 dynamic_roi;
-	struct nvdla_ctrl_mem_handle roi_desc_array;
-	struct nvdla_ctrl_mem_handle surface;
+	struct nvdla_mem_handle roi_desc_array;
+	struct nvdla_mem_handle surface;
 
 	__u32 num_addresses;
-	struct nvdla_ctrl_mem_handle address_list;
+	struct nvdla_mem_handle address_list;
 };
 
 /**
@@ -152,18 +152,18 @@ struct nvdla_fence {
 
 #define NVHOST_NVDLA_IOCTL_MAGIC 'D'
 
-#define NVDLA_IOCTL_CTRL_PING		\
-		_IOWR(NVHOST_NVDLA_IOCTL_MAGIC, 1, struct nvdla_ctrl_ping_args)
-#define NVDLA_IOCTL_CTRL_PIN   \
-	_IOW(NVHOST_NVDLA_IOCTL_MAGIC, 2, struct nvdla_ctrl_pin_unpin_args)
-#define NVDLA_IOCTL_CTRL_UNPIN \
-	_IOW(NVHOST_NVDLA_IOCTL_MAGIC, 3, struct nvdla_ctrl_pin_unpin_args)
-#define NVDLA_IOCTL_CTRL_SUBMIT \
-	_IOW(NVHOST_NVDLA_IOCTL_MAGIC, 4, struct nvdla_ctrl_submit_args)
-#define NVDLA_IOCTL_CTRL_LAST		\
-		_IOC_NR(NVDLA_IOCTL_CTRL_SUBMIT)
+#define NVDLA_IOCTL_PING		\
+		_IOWR(NVHOST_NVDLA_IOCTL_MAGIC, 1, struct nvdla_ping_args)
+#define NVDLA_IOCTL_PIN   \
+	_IOW(NVHOST_NVDLA_IOCTL_MAGIC, 2, struct nvdla_pin_unpin_args)
+#define NVDLA_IOCTL_UNPIN \
+	_IOW(NVHOST_NVDLA_IOCTL_MAGIC, 3, struct nvdla_pin_unpin_args)
+#define NVDLA_IOCTL_SUBMIT \
+	_IOW(NVHOST_NVDLA_IOCTL_MAGIC, 4, struct nvdla_submit_args)
+#define NVDLA_IOCTL_LAST		\
+		_IOC_NR(NVDLA_IOCTL_SUBMIT)
 
-#define NVDLA_IOCTL_CTRL_MAX_ARG_SIZE  \
-		sizeof(struct nvdla_ctrl_pin_unpin_args)
+#define NVDLA_IOCTL_MAX_ARG_SIZE  \
+		sizeof(struct nvdla_pin_unpin_args)
 
 #endif /* __LINUX_NVHOST_NVDLA_IOCTL_H */

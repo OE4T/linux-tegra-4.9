@@ -56,12 +56,12 @@ struct nvdla_private {
 	struct nvhost_buffers *buffers;
 };
 
-static int nvdla_ctrl_pin(struct nvdla_private *priv, void *arg)
+static int nvdla_pin(struct nvdla_private *priv, void *arg)
 {
 	u32 *handles;
 	int err = 0;
-	struct nvdla_ctrl_pin_unpin_args *buf_list =
-			(struct nvdla_ctrl_pin_unpin_args *)arg;
+	struct nvdla_pin_unpin_args *buf_list =
+			(struct nvdla_pin_unpin_args *)arg;
 	u32 count = buf_list->num_buffers;
 	struct platform_device *pdev = priv->pdev;
 
@@ -84,12 +84,12 @@ nvdla_buffer_cpy_err:
 	return err;
 }
 
-static int nvdla_ctrl_unpin(struct nvdla_private *priv, void *arg)
+static int nvdla_unpin(struct nvdla_private *priv, void *arg)
 {
 	u32 *handles;
 	int err = 0;
-	struct nvdla_ctrl_pin_unpin_args *buf_list =
-			(struct nvdla_ctrl_pin_unpin_args *)arg;
+	struct nvdla_pin_unpin_args *buf_list =
+			(struct nvdla_pin_unpin_args *)arg;
 	u32 count = buf_list->num_buffers;
 	struct platform_device *pdev = priv->pdev;
 
@@ -112,8 +112,8 @@ nvdla_buffer_cpy_err:
 	return err;
 }
 
-static int nvdla_ctrl_ping(struct platform_device *pdev,
-			   struct nvdla_ctrl_ping_args *args)
+static int nvdla_ping(struct platform_device *pdev,
+			   struct nvdla_ping_args *args)
 {
 	DEFINE_DMA_ATTRS(ping_attrs);
 	dma_addr_t ping_pa;
@@ -171,12 +171,12 @@ fail_to_on:
 	return err;
 }
 
-static int nvdla_ctrl_submit(struct nvdla_private *priv, void *arg)
+static int nvdla_submit(struct nvdla_private *priv, void *arg)
 {
-	struct nvdla_ctrl_submit_args *args =
-			(struct nvdla_ctrl_submit_args *)arg;
-	struct nvdla_ctrl_ioctl_submit_task __user *user_tasks;
-	struct nvdla_ctrl_ioctl_submit_task *local_tasks;
+	struct nvdla_submit_args *args =
+			(struct nvdla_submit_args *)arg;
+	struct nvdla_ioctl_submit_task __user *user_tasks;
+	struct nvdla_ioctl_submit_task *local_tasks;
 	struct platform_device *pdev;
 	struct nvhost_queue *queue;
 	struct nvhost_buffers *buffers;
@@ -194,7 +194,7 @@ static int nvdla_ctrl_submit(struct nvdla_private *priv, void *arg)
 
 	buffers = priv->buffers;
 
-	user_tasks = (struct nvdla_ctrl_ioctl_submit_task __user *)
+	user_tasks = (struct nvdla_ioctl_submit_task __user *)
 			(uintptr_t)args->tasks;
 	num_tasks = args->num_tasks;
 
@@ -257,14 +257,14 @@ static long nvdla_ioctl(struct file *file, unsigned int cmd,
 {
 	struct nvdla_private *priv = file->private_data;
 	struct platform_device *pdev = priv->pdev;
-	u8 buf[NVDLA_IOCTL_CTRL_MAX_ARG_SIZE] __aligned(sizeof(u64));
+	u8 buf[NVDLA_IOCTL_MAX_ARG_SIZE] __aligned(sizeof(u64));
 	int err = 0;
 
 	/* check for valid IOCTL cmd */
 	if ((_IOC_TYPE(cmd) != NVHOST_NVDLA_IOCTL_MAGIC) ||
 	    (_IOC_NR(cmd) == _IOC_NR(0)) ||
-	    (_IOC_NR(cmd) > NVDLA_IOCTL_CTRL_LAST) ||
-	    (_IOC_SIZE(cmd) > NVDLA_IOCTL_CTRL_MAX_ARG_SIZE)) {
+	    (_IOC_NR(cmd) > NVDLA_IOCTL_LAST) ||
+	    (_IOC_SIZE(cmd) > NVDLA_IOCTL_MAX_ARG_SIZE)) {
 		return -ENOIOCTLCMD;
 	}
 
@@ -277,17 +277,17 @@ static long nvdla_ioctl(struct file *file, unsigned int cmd,
 
 	/* handle IOCTL cmd */
 	switch (cmd) {
-	case NVDLA_IOCTL_CTRL_PING:
-		err = nvdla_ctrl_ping(pdev, (void *)buf);
+	case NVDLA_IOCTL_PING:
+		err = nvdla_ping(pdev, (void *)buf);
 		break;
-	case NVDLA_IOCTL_CTRL_PIN:
-		err = nvdla_ctrl_pin(priv, (void *)buf);
+	case NVDLA_IOCTL_PIN:
+		err = nvdla_pin(priv, (void *)buf);
 		break;
-	case NVDLA_IOCTL_CTRL_UNPIN:
-		err = nvdla_ctrl_unpin(priv, (void *)buf);
+	case NVDLA_IOCTL_UNPIN:
+		err = nvdla_unpin(priv, (void *)buf);
 		break;
-	case NVDLA_IOCTL_CTRL_SUBMIT:
-		err = nvdla_ctrl_submit(priv, (void *)buf);
+	case NVDLA_IOCTL_SUBMIT:
+		err = nvdla_submit(priv, (void *)buf);
 		break;
 	default:
 		err = -ENOIOCTLCMD;

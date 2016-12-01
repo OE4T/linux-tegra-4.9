@@ -46,7 +46,7 @@
 static DEFINE_DMA_ATTRS(attrs);
 
 /* task management API's */
-static int nvdla_get_fences(struct nvdla_ctrl_ioctl_submit_task *user_task,
+static int nvdla_get_fences(struct nvdla_ioctl_submit_task *user_task,
 			struct nvdla_task *task)
 {
 	struct nvdla_fence __user *postfences =
@@ -91,7 +91,7 @@ fail:
 }
 
 int nvdla_send_postfences(struct nvdla_task *task,
-			struct nvdla_ctrl_ioctl_submit_task usr_task)
+			struct nvdla_ioctl_submit_task usr_task)
 {
 	struct nvdla_fence __user *postfences =
 		(struct nvdla_fence __user *)(uintptr_t)usr_task.postfences;
@@ -212,7 +212,7 @@ static void nvdla_queue_update(void *priv, int nr_completed)
 }
 
 static int nvdla_map_task_memory(struct nvhost_buffers *buffers,
-			struct nvdla_ctrl_ioctl_submit_task *user_task,
+			struct nvdla_ioctl_submit_task *user_task,
 			struct nvdla_task *task,
 			struct dla_task_descriptor *task_desc)
 {
@@ -224,7 +224,7 @@ static int nvdla_map_task_memory(struct nvhost_buffers *buffers,
 	dma_addr_t *dma_addr;
 	dma_addr_t *dma_memory;
 	struct dma_buf *buf = NULL;
-	struct nvdla_ctrl_mem_handle *addresses;
+	struct nvdla_mem_handle *addresses;
 
 	task->buffers = buffers;
 	task->num_handles = 0;
@@ -322,7 +322,7 @@ static int nvdla_map_task_memory(struct nvhost_buffers *buffers,
 
 		temp = (uintptr_t)(ptr);
 		addresses =
-			(struct nvdla_ctrl_mem_handle *)
+			(struct nvdla_mem_handle *)
 				(temp + user_task->address_list.offset);
 
 		for (i = 0; i < user_task->num_addresses; i++, addresses++)
@@ -365,7 +365,7 @@ static int nvdla_map_task_memory(struct nvhost_buffers *buffers,
 		dma_addr_list = (uint64_t *)
 				(temp + user_task->address_list.offset);
 		addresses =
-			(struct nvdla_ctrl_mem_handle *)
+			(struct nvdla_mem_handle *)
 				(temp + user_task->address_list.offset);
 
 		task_desc->address_list = (*dma_addr++) +
@@ -408,7 +408,7 @@ fail_to_alloc_handles:
 
 struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 			struct nvhost_buffers *buffers,
-			struct nvdla_ctrl_ioctl_submit_task *user_task)
+			struct nvdla_ioctl_submit_task *user_task)
 {
 	struct platform_device *pdev = queue->pool->pdev;
 	u32 num_postfences = user_task->num_postfences;

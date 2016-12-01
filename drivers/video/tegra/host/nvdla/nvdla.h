@@ -211,7 +211,7 @@ void nvdla_task_get(struct nvdla_task *task);
  */
 struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 			struct nvhost_buffers *buffers,
-			struct nvdla_ctrl_ioctl_submit_task *user_task);
+			struct nvdla_ioctl_submit_task *user_task);
 
 /**
  * nvdla_send_postfences()	send back fences to UMD
@@ -224,7 +224,7 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
  * This function send post fences back to UMD after task submit
  */
 int nvdla_send_postfences(struct nvdla_task *task,
-			struct nvdla_ctrl_ioctl_submit_task usr_task);
+			struct nvdla_ioctl_submit_task usr_task);
 
 
 #endif /* End of __NVHOST_NVDLA_H__ */

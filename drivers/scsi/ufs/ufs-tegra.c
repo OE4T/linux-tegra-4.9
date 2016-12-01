@@ -861,6 +861,29 @@ out_disable_ufs_clks:
 }
 
 
+static void ufs_tegra_hibern8_entry_notify(struct ufs_hba *hba)
+{
+	struct ufs_tegra_host *ufs_tegra = hba->priv;
+
+	if (!(ufs_tegra->nvquirks & NVQUIRK_BROKEN_HIBERN8_ENTRY))
+		return;
+
+	ufs_tegra_context_save(ufs_tegra);
+
+	reset_control_assert(ufs_tegra->mphy_l0_rx_rst);
+	if (ufs_tegra->x2config)
+		reset_control_assert(ufs_tegra->mphy_l1_rx_rst);
+
+	udelay(50);
+
+	reset_control_deassert(ufs_tegra->mphy_l0_rx_rst);
+	if (ufs_tegra->x2config)
+		reset_control_deassert(ufs_tegra->mphy_l1_rx_rst);
+
+	ufs_tegra_context_restore(ufs_tegra);
+}
+
+
 static void ufs_tegra_print_power_mode_config(struct ufs_hba *hba,
 			struct ufs_pa_layer_attr *configured_params)
 {
@@ -1103,6 +1126,7 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 	hba->priv = (void *)ufs_tegra;
 
 	ufs_tegra_config_soc_data(ufs_tegra);
+	ufs_tegra->nvquirks |= NVQUIRK_BROKEN_HIBERN8_ENTRY;
 	hba->spm_lvl = UFS_PM_LVL_3;
 	hba->caps |= UFSHCD_CAP_INTR_AGGR;
 
@@ -1215,6 +1239,7 @@ struct ufs_hba_variant_ops ufs_hba_tegra_vops = {
 	.resume			= ufs_tegra_resume,
 	.link_startup_notify	= ufs_tegra_link_startup_notify,
 	.pwr_change_notify      = ufs_tegra_pwr_change_notify,
+	.hibern8_entry_notify   = ufs_tegra_hibern8_entry_notify,
 };
 
 static int ufs_tegra_probe(struct platform_device *pdev)

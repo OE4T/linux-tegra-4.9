@@ -66,6 +66,8 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.enable_slcg = true,
 	.enable_blcg = true,
 
+	.disable_aspm = true,
+
 	/* power management callbacks */
 	.is_railgated = nvgpu_pci_tegra_is_railgated,
 	.clk_round_rate = nvgpu_pci_clk_round_rate,
@@ -94,6 +96,8 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.enable_slcg = true,
 	.enable_blcg = true,
 
+	.disable_aspm = true,
+
 	/* power management callbacks */
 	.is_railgated = nvgpu_pci_tegra_is_railgated,
 	.clk_round_rate = nvgpu_pci_clk_round_rate,
@@ -121,6 +125,8 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.enable_elcg = false,
 	.enable_slcg = true,
 	.enable_blcg = true,
+
+	.disable_aspm = true,
 
 	/* power management callbacks */
 	.is_railgated = nvgpu_pci_tegra_is_railgated,

@@ -275,6 +275,13 @@ struct ufs_tegra_host {
 	struct regulator *vddio_ufs_ap;
 	struct padctrl *ufs_padctrl;
 
+	/* Hibernate entry support is broken
+	   WAR is suggested to fix hibernate entry functionality
+	 */
+	#define NVQUIRK_BROKEN_HIBERN8_ENTRY		UFS_BIT(0)
+
+	/* UFS tegra deviations from standard UFSHCI spec. */
+	unsigned int nvquirks;
 };
 
 extern struct ufs_hba_variant_ops ufs_hba_tegra_vops;

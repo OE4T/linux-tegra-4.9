@@ -810,6 +810,11 @@ static int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 			struct camera_common_data *s_data =
 				to_camera_common_data(client);
 
+			if (!i2c_get_clientdata(client)) {
+				dev_info(&chan->video.dev,
+					 "i2c_client drvdata is NULL\n");
+				break;
+			}
 			if (!s_data)
 				break;
 			if (switch_ctrl_qmenu[ctrl->val] == SWITCH_ON) {

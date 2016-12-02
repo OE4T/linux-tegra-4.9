@@ -1,7 +1,7 @@
 /*
  * NVHOST queue management for T194
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,6 +21,7 @@
 #include <linux/uaccess.h>
 #include <linux/slab.h>
 #include <linux/dma-mapping.h>
+#include <linux/debugfs.h>
 
 #include "dev.h"
 #include "nvhost_queue.h"
@@ -93,10 +94,46 @@ static void nvhost_queue_task_free_pool(struct platform_device *pdev,
 	task_pool->alloc_table = 0;
 }
 
+static int nvhost_queue_dump(struct nvhost_queue_pool *pool,
+		struct nvhost_queue *queue,
+		struct seq_file *s)
+{
+	if (pool->ops && pool->ops->dump)
+		pool->ops->dump(queue, s);
+
+	return 0;
+}
+
+static int queue_dump(struct seq_file *s, void *data)
+{
+	struct nvhost_queue_pool *pool = s->private;
+	unsigned long queue_id;
+
+	mutex_lock(&pool->queue_lock);
+	for_each_set_bit(queue_id, &pool->alloc_table,
+			pool->max_queue_cnt)
+		nvhost_queue_dump(pool, &pool->queues[queue_id], s);
+	mutex_unlock(&pool->queue_lock);
+	return 0;
+}
+
+static int queue_expose_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, queue_dump, inode->i_private);
+}
+
+static const struct file_operations queue_expose_operations = {
+	.open = queue_expose_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 struct nvhost_queue_pool *nvhost_queue_init(struct platform_device *pdev,
 					struct nvhost_queue_ops *ops,
 					unsigned int num_queues)
 {
+	struct nvhost_device_data *pdata;
 	struct nvhost_queue_pool *pool;
 	struct nvhost_queue *queues;
 	struct nvhost_queue *queue;
@@ -123,6 +160,7 @@ struct nvhost_queue_pool *nvhost_queue_init(struct platform_device *pdev,
 		goto fail_alloc_task_pool;
 	}
 
+	pdata = platform_get_drvdata(pdev);
 	/* initialize pool and queues */
 	pool->pdev = pdev;
 	pool->ops = ops;
@@ -131,6 +169,11 @@ struct nvhost_queue_pool *nvhost_queue_init(struct platform_device *pdev,
 	pool->max_queue_cnt = num_queues;
 	pool->queue_task_pool = task_pool;
 	mutex_init(&pool->queue_lock);
+
+	debugfs_create_file("queues", S_IRUGO,
+			pdata->debugfs, pool,
+			&queue_expose_operations);
+
 
 	for (i = 0; i < num_queues; i++) {
 		queue = &queues[i];

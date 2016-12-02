@@ -1,7 +1,7 @@
 /*
  * PVA Task Management
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -840,12 +840,30 @@ static void pva_task_update(void *priv, int nr_completed)
 	/* Drop PM runtime reference of PVA */
 	nvhost_module_idle(task->pva->pdev);
 
+	/* remove the task from the queue */
+	mutex_lock(&queue->list_lock);
+	list_del(&task->node);
+	mutex_unlock(&queue->list_lock);
+
 	/* Remove PVA task data structures */
 	pva_task_remove(task);
+
 	kfree(task);
 
 	/* Drop queue reference to allow reusing it */
 	nvhost_queue_put(queue);
+}
+
+void pva_queue_dump(struct nvhost_queue *queue, struct seq_file *s)
+{
+	struct pva_submit_task *task;
+
+	seq_printf(s, "task | operation\n");
+
+	mutex_lock(&queue->list_lock);
+	list_for_each_entry(task, &queue->tasklist, node)
+		seq_printf(s, "%p | %u\n", task, task->operation);
+	mutex_unlock(&queue->list_lock);
 }
 
 static int pva_task_submit(struct pva_submit_task *task)
@@ -853,6 +871,7 @@ static int pva_task_submit(struct pva_submit_task *task)
 	struct platform_device *host1x_pdev =
 			to_platform_device(task->pva->pdev->dev.parent);
 	struct pva_mailbox_status_regs status;
+	struct nvhost_queue *queue;
 	u32 thresh, flags, nregs;
 	struct pva_cmd cmd;
 	int err = 0;
@@ -890,21 +909,26 @@ static int pva_task_submit(struct pva_submit_task *task)
 	/* Get a reference of the queue to avoid it being reused. It
 	 * gets freed in the callback...
 	 */
-	nvhost_queue_get(task->queue);
+	queue = task->queue;
+	nvhost_queue_get(queue);
 
 	/* ...that is registered here */
 	thresh = nvhost_syncpt_incr_max_ext(host1x_pdev,
-			task->queue->syncpt_id, 1);
+			queue->syncpt_id, 1);
 	err = nvhost_intr_register_notifier(host1x_pdev,
-			task->queue->syncpt_id, thresh,
+			queue->syncpt_id, thresh,
 			pva_task_update, task);
 	if (err < 0) {
-		nvhost_queue_put(task->queue);
+		nvhost_queue_put(queue);
 		goto err_register_isr;
 	}
 
+	mutex_lock(&queue->list_lock);
+	list_add_tail(&task->node, &queue->tasklist);
+	mutex_unlock(&queue->list_lock);
+
 	nvhost_dbg_info("Postfence id=%u, value=%u",
-			task->queue->syncpt_id, thresh);
+			queue->syncpt_id, thresh);
 
 	/* Return post-fences */
 	for (i = 0; i < task->num_postfences; i++) {
@@ -912,7 +936,7 @@ static int pva_task_submit(struct pva_submit_task *task)
 
 		switch (fence->type) {
 		case PVA_FENCE_TYPE_SYNCPT: {
-			fence->syncpoint_index = task->queue->syncpt_id;
+			fence->syncpoint_index = queue->syncpt_id;
 			fence->syncpoint_value = thresh;
 			break;
 		}
@@ -923,7 +947,7 @@ static int pva_task_submit(struct pva_submit_task *task)
 			if (err < 0)
 				break;
 
-			pts.id = task->queue->syncpt_id;
+			pts.id = queue->syncpt_id;
 			pts.thresh = thresh;
 
 			err = nvhost_sync_create_fence_fd(host1x_pdev,
@@ -988,4 +1012,5 @@ struct nvhost_queue_ops pva_queue_ops = {
 	.abort = pva_queue_abort,
 	.submit = pva_queue_submit,
 	.get_task_size = pva_task_get_size,
+	.dump = pva_queue_dump,
 };

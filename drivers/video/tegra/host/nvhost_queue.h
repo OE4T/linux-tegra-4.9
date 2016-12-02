@@ -1,7 +1,7 @@
 /*
  * NVHOST Queue management header for T194
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -73,6 +73,7 @@ struct nvhost_queue {
  *
  */
 struct nvhost_queue_ops {
+	void (*dump)(struct nvhost_queue *queue, struct seq_file *s);
 	int (*abort)(struct nvhost_queue *queue);
 	int (*submit)(struct nvhost_queue *queue, void *task_arg);
 	size_t (*get_task_size)(void);

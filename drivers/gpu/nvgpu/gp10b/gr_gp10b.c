@@ -1896,18 +1896,17 @@ static int gr_gp10b_handle_fecs_error(struct gk20a *g,
 			goto clean_up;
 		}
 
-		if (gk20a_gr_sm_debugger_attached(g)) {
-			gk20a_dbg_gpu_post_events(ch);
+		/* Post events to UMD */
+		gk20a_dbg_gpu_post_events(ch);
 
-			if (gk20a_is_channel_marked_as_tsg(ch)) {
-				struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
+		if (gk20a_is_channel_marked_as_tsg(ch)) {
+			struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
 
-				gk20a_tsg_event_id_post_event(tsg,
-					NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_COMPLETE);
-			} else {
-				gk20a_channel_event_id_post_event(ch,
-					NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_COMPLETE);
-			}
+			gk20a_tsg_event_id_post_event(tsg,
+				NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_COMPLETE);
+		} else {
+			gk20a_channel_event_id_post_event(ch,
+				NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_COMPLETE);
 		}
 
 		gk20a_channel_put(ch);

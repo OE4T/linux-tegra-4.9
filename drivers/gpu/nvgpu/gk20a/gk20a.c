@@ -662,28 +662,28 @@ void gk20a_pbus_isr(struct gk20a *g)
 	if (val & (bus_intr_0_pri_squash_m() |
 			bus_intr_0_pri_fecserr_m() |
 			bus_intr_0_pri_timeout_m())) {
-		gk20a_err(dev_from_gk20a(g), "pmc_enable : 0x%x",
+		gk20a_dbg(gpu_dbg_intr, "pmc_enable : 0x%x",
 			gk20a_readl(g, mc_enable_r()));
-		gk20a_err(dev_from_gk20a(g), "NV_PBUS_INTR_0 : 0x%x", val);
-		gk20a_err(g->dev,
+		gk20a_dbg(gpu_dbg_intr, "NV_PBUS_INTR_0 : 0x%x", val);
+		gk20a_dbg(gpu_dbg_intr,
 			"NV_PTIMER_PRI_TIMEOUT_SAVE_0: 0x%x\n",
 			gk20a_readl(g, timer_pri_timeout_save_0_r()));
-		gk20a_err(g->dev,
+		gk20a_dbg(gpu_dbg_intr,
 			"NV_PTIMER_PRI_TIMEOUT_SAVE_1: 0x%x\n",
 			gk20a_readl(g, timer_pri_timeout_save_1_r()));
 		err_code = gk20a_readl(g, timer_pri_timeout_fecs_errcode_r());
-		gk20a_err(g->dev,
+		gk20a_dbg(gpu_dbg_intr,
 			"NV_PTIMER_PRI_TIMEOUT_FECS_ERRCODE: 0x%x\n",
 			err_code);
 		if (err_code == 0xbadf13)
-			gk20a_err(g->dev,
+			gk20a_dbg(gpu_dbg_intr,
 			"NV_PGRAPH_PRI_GPC0_GPCCS_FS_GPC: 0x%x\n",
 			gk20a_readl(g, gr_gpc0_fs_gpc_r()));
 
 	}
 
 	if (val)
-		gk20a_err(g->dev,
+		gk20a_dbg(gpu_dbg_intr,
 			"Unhandled pending pbus interrupt\n");
 
 	gk20a_writel(g, bus_intr_0_r(), val);
@@ -939,7 +939,10 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	if (tegra_platform_is_silicon()) {
 		gk20a_writel(g,
 			timer_pri_timeout_r(),
-			timer_pri_timeout_period_f(0x186A0) |
+			timer_pri_timeout_period_f(
+				platform->default_pri_timeout ?
+					platform->default_pri_timeout :
+								0x186A0) |
 			timer_pri_timeout_en_en_enabled_f());
 	} else {
 		gk20a_writel(g,

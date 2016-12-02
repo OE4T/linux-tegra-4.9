@@ -1,7 +1,7 @@
 /*
  * drivers/i2c/busses/i2c-tegra-hv.c
  *
- * Copyright (C) 2015 NVIDIA Corporation.  All rights reserved.
+ * Copyright (C) 2015-2016 NVIDIA Corporation.  All rights reserved.
  * Author: Arnab Basu <abasu@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -47,6 +47,7 @@
  * @max_payload_size: maximum packet size supported
  * by this i2c device
  * @completion_timeout: time to wait for reply from server
+ * @bus_clk_rate: current i2c bus clock rate (this is currently a dummy value)
  */
 struct tegra_hv_i2c_dev {
 	struct device *dev;
@@ -56,6 +57,7 @@ struct tegra_hv_i2c_dev {
 	struct completion msg_complete;
 	u32 max_payload_size;
 	u32 completion_timeout;
+	u32 bus_clk_rate;
 };
 
 static void tegra_hv_i2c_isr(void *dev_id)
@@ -181,6 +183,17 @@ static struct tegra_hv_i2c_platform_data *parse_i2c_tegra_dt(
 	return pdata;
 }
 
+static void tegra_i2c_hv_parse_dt(struct tegra_hv_i2c_dev *i2c_dev)
+{
+	struct device_node *np = i2c_dev->dev->of_node;
+	int ret;
+
+	ret = of_property_read_u32(np, "clock-frequency",
+			&i2c_dev->bus_clk_rate);
+	if (ret)
+		i2c_dev->bus_clk_rate = 100000; /* default clock rate */
+}
+
 /* Match table for of_platform binding */
 static const struct of_device_id tegra_hv_i2c_of_match[] = {
 	{ .compatible = "nvidia,tegra124-i2c-hv", .data = NULL},
@@ -234,6 +247,8 @@ static int tegra_hv_i2c_probe(struct platform_device *pdev)
 	i2c_dev->dev = &pdev->dev;
 	i2c_dev->comm_chan = chan;
 
+	tegra_i2c_hv_parse_dt(i2c_dev);
+
 	platform_set_drvdata(pdev, i2c_dev);
 
 	i2c_set_adapdata(&i2c_dev->adapter, i2c_dev);
@@ -245,6 +260,7 @@ static int tegra_hv_i2c_probe(struct platform_device *pdev)
 	i2c_dev->adapter.dev.parent = &pdev->dev;
 	i2c_dev->adapter.nr = bus_num;
 	i2c_dev->adapter.dev.of_node = pdev->dev.of_node;
+	i2c_dev->adapter.bus_clk_rate = i2c_dev->bus_clk_rate;
 
 	if (pdata->retries)
 		i2c_dev->adapter.retries = pdata->retries;

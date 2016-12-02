@@ -1166,21 +1166,21 @@ tegra_channel_enum_input(struct file *file, void *fh, struct v4l2_input *inp)
 	ret = v4l2_device_call_until_err(chan->video.v4l2_dev,
 			chan->grp_id, video, g_input_status, &inp->status);
 
-	if (ret != -ENODEV) {
-		inp->type = V4L2_INPUT_TYPE_CAMERA;
-		if (v4l2_subdev_has_op(sd_on_csi, video, s_dv_timings)) {
-			inp->capabilities = V4L2_IN_CAP_DV_TIMINGS;
-			snprintf(inp->name,
-				sizeof(inp->name), "HDMI %u",
-				chan->port[0]);
-		} else
-			snprintf(inp->name,
-				sizeof(inp->name), "Camera %u",
-				chan->port[0]);
-		return ret;
-	}
+	if (ret == -ENODEV || sd_on_csi == NULL)
+		return -ENODEV;
 
-	return -ENOTTY;
+	inp->type = V4L2_INPUT_TYPE_CAMERA;
+	if (v4l2_subdev_has_op(sd_on_csi, video, s_dv_timings)) {
+		inp->capabilities = V4L2_IN_CAP_DV_TIMINGS;
+		snprintf(inp->name,
+			sizeof(inp->name), "HDMI %u",
+			chan->port[0]);
+	} else
+		snprintf(inp->name,
+			sizeof(inp->name), "Camera %u",
+			chan->port[0]);
+
+	return ret;
 }
 
 static int tegra_channel_g_input(struct file *file, void *priv, unsigned int *i)

@@ -240,66 +240,19 @@ static int __bpmp_debugfs_read(uint32_t physname, int sizename,
 	return r;
 }
 
-static int bpmp_debugfs_read(const char *name, void *data, int sizedata)
-{
-	void *datavirt = NULL;
-	void *namevirt = NULL;
-	dma_addr_t dataphys;
-	dma_addr_t namephys;
-	int sizename = strlen(name) + 1;
-	int ret;
-
-	if (sizedata < 0)
-		return -EINVAL;
-
-	if (sizename > SZ_4K)
-		return -ENAMETOOLONG;
-
-	datavirt = tegra_bpmp_alloc_coherent(sizedata, &dataphys, GFP_KERNEL);
-	if (datavirt == NULL) {
-		ret = -ENOMEM;
-		goto out;
-	}
-
-	namevirt = tegra_bpmp_alloc_coherent(sizename, &namephys, GFP_KERNEL);
-	if (namevirt == NULL) {
-		ret = -ENOMEM;
-		goto out;
-	}
-
-	memcpy(namevirt, name, sizename);
-
-	ret = __bpmp_debugfs_read(namephys, sizename, dataphys, sizedata);
-
-	if (ret >= 0) {
-		if (ret > sizedata) {
-			WARN_ON(1);
-			ret = sizedata;
-		}
-		memcpy(data, datavirt, ret);
-	}
-
-out:
-	if (datavirt != NULL)
-		tegra_bpmp_free_coherent(sizedata, datavirt, dataphys);
-
-	if (namevirt != NULL)
-		tegra_bpmp_free_coherent(sizename, namevirt, namephys);
-
-	return ret;
-}
-
 static int debugfs_show(struct seq_file *m, void *p)
 {
 	struct file *file = m->private;
-	const size_t datasize = SZ_32K;
 	const size_t namesize = SZ_256;
 	char *databuf = NULL;
 	char *namebuf = NULL;
+	dma_addr_t dataphys;
+	dma_addr_t namephys;
 	const char *filename;
+	size_t off;
 	int ret;
 
-	namebuf = kmalloc(namesize, GFP_KERNEL);
+	namebuf = tegra_bpmp_alloc_coherent(namesize, &namephys, GFP_KERNEL);
 	if (!namebuf)
 		return -ENOMEM;
 
@@ -309,19 +262,26 @@ static int debugfs_show(struct seq_file *m, void *p)
 		goto out;
 	}
 
-	databuf = kmalloc(datasize, GFP_KERNEL);
+	databuf = tegra_bpmp_alloc_coherent(m->size, &dataphys, GFP_KERNEL);
 	if (!databuf) {
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	ret = bpmp_debugfs_read(filename, databuf, datasize);
-	if (ret >= 0)
+	off = filename - namebuf;
+	ret = __bpmp_debugfs_read(namephys + off, namesize, dataphys, m->size);
+	if (ret >= 0) {
+		WARN_ON(ret > m->size);
+		ret = min_t(int, ret, m->size);
 		ret = seq_write(m, databuf, ret);
+	}
 
 out:
-	kfree(namebuf);
-	kfree(databuf);
+	tegra_bpmp_free_coherent(namesize, namebuf, namephys);
+
+	if (databuf)
+		tegra_bpmp_free_coherent(m->size, databuf, dataphys);
+
 	return ret;
 }
 

@@ -27,7 +27,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 
-#include <mach/clk.h>
+#include <linux/clk/tegra.h>
 #include <linux/reset.h>
 #include <sound/soc.h>
 

@@ -28,7 +28,7 @@
 #include <linux/slab.h>
 #include <linux/tegra-soc.h>
 #include <sound/soc.h>
-#include <mach/clk.h>
+#include <linux/clk/tegra.h>
 
 #include "tegra210_xbar_alt.h"
 /* TODO: remove DRV_NAME_T18X after registering properly */

@@ -36,7 +36,7 @@
 #include "ahub_unit_fpga_clock.h"
 
 #include <linux/clk.h>
-#include <mach/clk.h>
+#include <linux/clk/tegra.h>
 
 #define DRV_NAME "tegra-snd-grenada"
 

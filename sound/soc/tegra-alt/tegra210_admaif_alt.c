@@ -26,7 +26,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
 #include <linux/slab.h>
-#include <mach/clk.h>
+#include <linux/clk/tegra.h>
 #include <sound/soc.h>
 #include <sound/pcm_params.h>
 

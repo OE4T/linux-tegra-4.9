@@ -1,17 +1,21 @@
 /*
  * Driver for Tegra Security Engine
  *
- * Copyright (c) 2011-2016, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2011-2015, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2, as
- * published by the Free Software Foundation, and may be copied,
- * distributed, and modified under those terms.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 #ifndef _CRYPTO_TEGRA_SE_ELP_H
@@ -35,10 +39,10 @@
 
 #define TEGRA_SE_ELP_PKA_FSTACK_PTR_OFFSET		0xC010
 
-#define ELP_ENABLE		1
-#define ELP_DISABLE		0
-#define ELP_FALSE		0
-#define ELP_TRUE		1
+#define ENABLE		1
+#define DISABLE		0
+#define FALSE		0
+#define TRUE		1
 
 #define TEGRA_SE_ELP_PKA_INT_ENABLE_OFFSET		0xC040
 #define TEGRA_SE_ELP_PKA_INT_ENABLE_IE_IRQ_EN_SHIFT	30
@@ -88,10 +92,10 @@
 #define TEGRA_SE_ELP_RNG_SE_MODE_OFFSET		0xF04
 #define RNG1_MODE_ADDIN_PRESENT_SHIFT		4
 #define RNG1_MODE_ADDIN_PRESENT			\
-				(ELP_TRUE << RNG1_MODE_ADDIN_PRESENT_SHIFT)
+				(TRUE << RNG1_MODE_ADDIN_PRESENT_SHIFT)
 #define RNG1_MODE_SEC_ALG_SHIFT			0
 #define RNG1_MODE_SEC_ALG			\
-					(ELP_TRUE << RNG1_MODE_SEC_ALG_SHIFT)
+					(TRUE << RNG1_MODE_SEC_ALG_SHIFT)
 
 #define TEGRA_SE_ELP_RNG_SE_SMODE_OFFSET		0xF08
 #define TEGRA_SE_ELP_RNG_SE_SMODE_SECURE_SHIFT		1
@@ -125,7 +129,7 @@
 				(x << TEGRA_SE_ELP_PKA_CTRL_SE_STATUS_SHIFT)
 
 #define TEGRA_SE_ELP_PKA_RETURN_CODE_OFFSET			0xC008
-#define TEGRA_SE_ELP_PKA_RETURN_CODE_STOP_REASON_ABNORMAL	0xFF
+#define TEGRA_SE_ELP_PKA_RETURN_CODE_STOP_REASON_NORMAL		0x00
 #define TEGRA_SE_ELP_PKA_RETURN_CODE_STOP_REASON_SHIFT		16
 #define TEGRA_SE_ELP_PKA_RETURN_CODE_STOP_REASON(x)	\
 			(x << TEGRA_SE_ELP_PKA_RETURN_CODE_STOP_REASON_SHIFT)

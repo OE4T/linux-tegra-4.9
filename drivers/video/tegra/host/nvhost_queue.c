@@ -20,9 +20,78 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
+#include <linux/dma-mapping.h>
 
 #include "dev.h"
 #include "nvhost_queue.h"
+
+/**
+ * @brief Describe a task pool struct
+ *
+ * Array of fixed task memory is allocated during queue_alloc call.
+ * The memory will be shared for various task based on availability
+ *
+ * dma_addr	Physical address of task memory pool
+ * va		Virtual address of the task memory pool
+ * lock		Mutex lock for the array access.
+ * alloc_table	Keep track of the index being assigned and freed for a task
+ * max_task_cnt	Maximum task count that can be supported.
+ *
+ */
+struct nvhost_queue_task_pool {
+	dma_addr_t dma_addr;
+	void *va;
+	struct mutex lock;
+
+	unsigned long alloc_table;
+	unsigned long max_task_cnt;
+};
+
+static DEFINE_DMA_ATTRS(task_dma_attrs);
+
+static int nvhost_queue_task_pool_alloc(struct platform_device *pdev,
+					struct nvhost_queue *queue,
+					unsigned int num_tasks)
+{
+	int err = 0;
+	struct nvhost_queue_task_pool *task_pool;
+
+	task_pool = queue->task_pool;
+
+	/* Allocate memory for the task itself */
+	task_pool->va = dma_alloc_attrs(&pdev->dev,
+				queue->task_size * num_tasks,
+				&task_pool->dma_addr, GFP_KERNEL,
+				&task_dma_attrs);
+
+	if (task_pool->va == NULL) {
+		err = -ENOMEM;
+		goto err_alloc_task_pool;
+	}
+	task_pool->max_task_cnt = num_tasks;
+
+	mutex_init(&task_pool->lock);
+
+	return err;
+
+err_alloc_task_pool:
+	kfree(task_pool);
+	return err;
+}
+
+static void nvhost_queue_task_free_pool(struct platform_device *pdev,
+					struct nvhost_queue *queue)
+{
+	struct nvhost_queue_task_pool *task_pool =
+		(struct nvhost_queue_task_pool *)queue->task_pool;
+
+	dma_free_attrs(&pdev->dev,
+			queue->task_size * task_pool->max_task_cnt,
+			task_pool->va, task_pool->dma_addr, &task_dma_attrs);
+
+	task_pool->max_task_cnt = 0;
+	task_pool->alloc_table = 0;
+}
 
 struct nvhost_queue_pool *nvhost_queue_init(struct platform_device *pdev,
 					struct nvhost_queue_ops *ops,
@@ -31,6 +100,7 @@ struct nvhost_queue_pool *nvhost_queue_init(struct platform_device *pdev,
 	struct nvhost_queue_pool *pool;
 	struct nvhost_queue *queues;
 	struct nvhost_queue *queue;
+	struct nvhost_queue_task_pool *task_pool;
 	unsigned int i;
 	int err;
 
@@ -45,22 +115,35 @@ struct nvhost_queue_pool *nvhost_queue_init(struct platform_device *pdev,
 		err = -ENOMEM;
 		goto fail_alloc_queues;
 	}
+
+	task_pool = kcalloc(num_queues,
+			sizeof(struct nvhost_queue_task_pool), GFP_KERNEL);
+	if (task_pool == NULL) {
+		err = -ENOMEM;
+		goto fail_alloc_task_pool;
+	}
+
 	/* initialize pool and queues */
 	pool->pdev = pdev;
 	pool->ops = ops;
 	pool->queues = queues;
 	pool->alloc_table = 0;
 	pool->max_queue_cnt = num_queues;
+	pool->queue_task_pool = task_pool;
 	mutex_init(&pool->queue_lock);
 
 	for (i = 0; i < num_queues; i++) {
 		queue = &queues[i];
 		queue->id = i;
 		queue->pool = pool;
+		queue->task_size = nvhost_queue_get_task_size(queue);
+		queue->task_pool = (void *)&task_pool[i];
 	}
 
 	return pool;
 
+fail_alloc_task_pool:
+	kfree(pool->queues);
 fail_alloc_queues:
 	kfree(pool);
 fail_alloc_pool:
@@ -72,6 +155,7 @@ void nvhost_queue_deinit(struct nvhost_queue_pool *pool)
 	if (!pool)
 		return;
 
+	kfree(pool->queue_task_pool);
 	kfree(pool->queues);
 	kfree(pool);
 	pool = NULL;
@@ -87,6 +171,10 @@ static void nvhost_queue_release(struct kref *ref)
 
 	/* release allocated resources */
 	nvhost_syncpt_put_ref_ext(pool->pdev, queue->syncpt_id);
+
+	/* free the task_pool */
+	if (queue->task_size)
+		nvhost_queue_task_free_pool(pool->pdev, queue);
 
 	/* ..and mark the queue free */
 	mutex_lock(&pool->queue_lock);
@@ -106,7 +194,8 @@ void nvhost_queue_get(struct nvhost_queue *queue)
 	kref_get(&queue->kref);
 }
 
-struct nvhost_queue *nvhost_queue_alloc(struct nvhost_queue_pool *pool)
+struct nvhost_queue *nvhost_queue_alloc(struct nvhost_queue_pool *pool,
+			unsigned int num_tasks)
 {
 	struct platform_device *pdev = pool->pdev;
 	struct nvhost_queue *queues = pool->queues;
@@ -138,6 +227,12 @@ struct nvhost_queue *nvhost_queue_alloc(struct nvhost_queue_pool *pool)
 		goto err_alloc_syncpt;
 	}
 
+	if (queue->task_size) {
+		err = nvhost_queue_task_pool_alloc(pdev, queue, num_tasks);
+		if (err < 0)
+			goto err_alloc_task_pool;
+	}
+
 	/* initialize queue ref count and sequence*/
 	kref_init(&queue->kref);
 	queue->sequence = 0;
@@ -150,6 +245,8 @@ struct nvhost_queue *nvhost_queue_alloc(struct nvhost_queue_pool *pool)
 
 	return queue;
 
+err_alloc_task_pool:
+	nvhost_syncpt_put_ref_ext(pdev, queue->syncpt_id);
 err_alloc_syncpt:
 	clear_bit(queue->id, &pool->alloc_table);
 err_alloc_queue:
@@ -176,4 +273,60 @@ int nvhost_queue_submit(struct nvhost_queue *queue, void *task_arg)
 		return pool->ops->submit(queue, task_arg);
 
 	return 0;
+}
+
+int nvhost_queue_get_task_size(struct nvhost_queue *queue)
+{
+	struct nvhost_queue_pool *pool = queue->pool;
+
+	if (pool->ops && pool->ops->get_task_size)
+		return pool->ops->get_task_size();
+
+	return 0;
+}
+
+int nvhost_queue_alloc_task_memory(
+			struct nvhost_queue *queue,
+			struct nvhost_queue_task_mem_info *task_mem_info)
+{
+	int err = 0;
+	int index, offset;
+	struct platform_device *pdev = queue->pool->pdev;
+	struct nvhost_queue_task_pool *task_pool =
+		(struct nvhost_queue_task_pool *)queue->task_pool;
+
+	mutex_lock(&task_pool->lock);
+
+	index = find_first_zero_bit(&task_pool->alloc_table,
+				    task_pool->max_task_cnt);
+
+	/* quit if pre-allocated task array is not free */
+	if (index >= task_pool->max_task_cnt) {
+		dev_err(&pdev->dev,
+				"failed to get Task Pool Memory\n");
+		err = -EAGAIN;
+		goto err_alloc_task_mem;
+	}
+
+	/* assign the task array */
+	set_bit(index, &task_pool->alloc_table);
+	offset = index * queue->task_size;
+	task_mem_info->va = task_pool->va + offset;
+	task_mem_info->dma_addr = task_pool->dma_addr + offset;
+	task_mem_info->pool_index = index;
+
+err_alloc_task_mem:
+	mutex_unlock(&task_pool->lock);
+
+	return err;
+}
+
+void nvhost_queue_free_task_memory(struct nvhost_queue *queue, int index)
+{
+	struct nvhost_queue_task_pool *task_pool =
+			(struct nvhost_queue_task_pool *)queue->task_pool;
+
+	mutex_lock(&task_pool->lock);
+	clear_bit(index, &task_pool->alloc_table);
+	mutex_unlock(&task_pool->lock);
 }

@@ -42,6 +42,11 @@
 #define MAX_NVDLA_QUEUE_COUNT	16
 
 /**
+ * Maximum number of tasks per queue
+ */
+#define MAX_NVDLA_TASK_COUNT	32
+
+/**
  * Trace Buffer Size
  */
 #define TRACE_BUFFER_SIZE		0x100000

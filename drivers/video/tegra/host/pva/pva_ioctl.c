@@ -430,7 +430,6 @@ static long pva_ioctl(struct file *file, unsigned int cmd,
 	return err;
 }
 
-
 static int pva_open(struct inode *inode, struct file *file)
 {
 	struct nvhost_device_data *pdata = container_of(inode->i_cdev,
@@ -460,7 +459,7 @@ static int pva_open(struct inode *inode, struct file *file)
 		goto err_alloc_buffer;
 	}
 
-	priv->queue = nvhost_queue_alloc(pva->pool);
+	priv->queue = nvhost_queue_alloc(pva->pool, MAX_PVA_TASK_COUNT);
 	if (IS_ERR(priv->queue)) {
 		err = PTR_ERR(priv->queue);
 		goto err_alloc_queue;

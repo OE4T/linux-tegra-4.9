@@ -35,6 +35,11 @@ extern const struct file_operations tegra_pva_ctrl_ops;
 #define MAX_PVA_QUEUE_COUNT 8
 
 /**
+ * Maximum task count that a queue can support
+ */
+#define MAX_PVA_TASK_COUNT	16
+
+/**
  * struct pva_fw - struct to handle the PVA firmware information
  *
  * @hdr:		pointer to the pva_code_hdr struct

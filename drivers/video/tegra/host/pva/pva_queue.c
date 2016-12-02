@@ -16,7 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/dma-mapping.h>
 #include <linux/delay.h>
 #include <asm/ioctls.h>
 #include <linux/fs.h>
@@ -35,8 +34,6 @@
 #include "pva_mailbox.h"
 #include "pva_queue.h"
 #include "dev.h"
-
-static DEFINE_DMA_ATTRS(dma_attrs);
 
 static void pva_task_dump(struct pva_submit_task *task)
 {
@@ -179,9 +176,10 @@ static void pva_task_unpin_mem(struct pva_submit_task *task)
 	int i;
 
 	/* Release memory that was allocated for the task */
-	if (task->va)
-		dma_free_attrs(&task->pva->pdev->dev, pva_task_get_size(),
-			task->va, task->dma_addr, &dma_attrs);
+	nvhost_queue_free_task_memory(task->queue, task->pool_index);
+	task->dma_addr = 0;
+	task->va = 0;
+	task->pool_index = 0;
 
 #define UNPIN_MEMORY(dst_name, src_name)				\
 	do {								\
@@ -245,16 +243,18 @@ static void pva_task_unpin_mem(struct pva_submit_task *task)
 
 static int pva_task_pin_mem(struct pva_submit_task *task)
 {
+	struct nvhost_queue_task_mem_info task_mem_info;
 	int err;
 	int i;
 
 	/* Allocate memory for the task itself */
-	task->va = dma_alloc_attrs(&task->pva->pdev->dev, pva_task_get_size(),
-		&task->dma_addr, GFP_KERNEL, &dma_attrs);
-	if (task->va == NULL) {
-		err = -ENOMEM;
+	err = nvhost_queue_alloc_task_memory(task->queue, &task_mem_info);
+	if (err < 0)
 		goto err_alloc_task_buffer;
-	}
+
+	task->dma_addr = task_mem_info.dma_addr;
+	task->va = task_mem_info.va;
+	task->pool_index = task_mem_info.pool_index;
 
 #define PIN_MEMORY(dst_name, src_name)					\
 	do {								\
@@ -836,7 +836,8 @@ static int pva_task_submit(struct pva_submit_task *task)
 
 	/* Construct submit command */
 	flags = PVA_CMD_INT_ON_ERR | PVA_CMD_INT_ON_COMPLETE;
-	nregs = pva_cmd_submit(&cmd, task->queue->id, task->dma_addr, flags);
+	nregs = pva_cmd_submit(&cmd, task->queue->id,
+				task->dma_addr, flags);
 
 	/* Submit request to PVA and wait for response */
 	err = pva_mailbox_send_cmd_sync(task->pva, &cmd, nregs, &status);
@@ -954,4 +955,5 @@ static int pva_queue_abort(struct nvhost_queue *queue)
 struct nvhost_queue_ops pva_queue_ops = {
 	.abort = pva_queue_abort,
 	.submit = pva_queue_submit,
+	.get_task_size = pva_task_get_size,
 };

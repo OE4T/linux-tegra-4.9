@@ -32,31 +32,39 @@ struct pva_parameter_ext {
 };
 
 /**
- * struct pva_submit_task - Describe a task for PVA
- *
- * @num_prefences: Number of pre-fences in this task
- * @num_postfences: Number of post-fences in this task
- * @num_input_surfaces: Number of input surfaces
- * @num_output_surfaces: Number of output surfaces
- * @num_input_task_status: Number of input task status structures
- * @num_output_task_status: Number of output task status structures
- * @reserved: Reserved for future usage.
- * @timeout: Latest Unix time when the task must complete. 0 if disabled.
- * @prefences: Pointer to pre-fence structures
- * @postfences: Pointer to post-fence structures
- * @input_surfaces: Pointer to input surfaces
- * @input_scalars: Information for input scalars
- * @input_2dpoint: Information for input 2d points
- * @input_rois: Pointer to input ROIs
- * @output_surfaces: Pointer to output surfaces
- * @output_scalars: Information for output scalars
- * @output_2dpoint: Information for output 2d points
- * @output_rois: Pointer to output ROIs
- * @input_task_status: Pointer to input status structure
- * @output_task_status: Pointer to output status structure
+ * @brief	Describe a task for PVA
  *
  * This is an internal representation of the task structure. All
  * pointers refer to kernel memory.
+ *
+ * pva				Pointer to struct pva
+ * buffers			Pointer to struct nvhost_buffers
+ * queue			Pointer to struct nvhost_queue
+ * dma_addr			task dma_addr_t
+ * va				task virtual address
+ * pool_index			task pool index
+ * postfence_va			postfence virtual address
+ * num_prefences		Number of pre-fences in this task
+ * num_postfences		Number of post-fences in this task
+ * num_input_surfaces		Number of input surfaces
+ * num_output_surfaces		Number of output surfaces
+ * num_input_task_status	Number of input task status structures
+ * num_output_task_status	Number of output task status structures
+ * operation			task operation
+ * timeout			Latest Unix time when the task must complete or
+ *				0 if disabled.
+ * prefences			Pointer to pre-fence structures
+ * postfences			Pointer to post-fence structures
+ * input_surfaces		Pointer to input surfaces
+ * input_scalars		Information for input scalars
+ * input_2dpoint		Information for input 2d points
+ * input_rois			Pointer to input ROIs
+ * output_surfaces		Pointer to output surfaces
+ * output_scalars		Information for output scalars
+ * output_2dpoint		Information for output 2d points
+ * output_rois			Pointer to output ROIs
+ * input_task_status		Pointer to input status structure
+ * output_task_status		Pointer to output status structure
  *
  */
 struct pva_submit_task {
@@ -66,6 +74,7 @@ struct pva_submit_task {
 
 	dma_addr_t dma_addr;
 	void *va;
+	int pool_index;
 	u32 *postfence_va;
 
 	u8 num_prefences;
@@ -117,5 +126,4 @@ struct pva_submit_tasks {
 };
 
 void pva_task_remove(struct pva_submit_task *task);
-
 #endif

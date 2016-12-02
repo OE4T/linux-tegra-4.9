@@ -400,11 +400,6 @@ err:
 static int sn65dsi86_i2c_probe(struct i2c_client *client,
 				const struct i2c_device_id *id)
 {
-	struct device_node *np = client->dev.of_node;
-	struct device_node *pri_pn = NULL;
-	struct device_node *sec_pn = NULL;
-	bool pri_bridge = 0;
-	bool sec_bridge = 0;
 	int err = 0;
 
 	sn65dsi86_i2c_client = client;
@@ -430,36 +425,6 @@ static int sn65dsi86_i2c_probe(struct i2c_client *client,
 	err = of_dsi2edp_parse_platform_data(client);
 	if (err)
 		return err;
-
-	if (np) {
-		/* TODO. We don't want probe itself for
-		 * panels which don't use bridge.
-		 * Until this bridge device is registered as a
-		 * sub device of /host1x/dsi/panel in device tree,
-		 * do no operation in probe in case bridge is not used.
-		 * The reason to prepare this step to check with
-		 * dsi2edp-bridge property is to consider
-		 * the case that probe contains any actual operation.
-		 */
-		pri_pn =
-			tegra_primary_panel_get_dt_node(NULL);
-		sec_pn =
-			tegra_secondary_panel_get_dt_node(NULL);
-		if (pri_pn) {
-			pri_bridge =
-				of_property_read_bool(pri_pn,
-				"nvidia,dsi-edp-bridge");
-			of_node_put(pri_pn);
-		}
-		if (sec_pn) {
-			sec_bridge = of_property_read_bool(sec_pn,
-				"nvidia,dsi-edp-bridge");
-			of_node_put(sec_pn);
-		};
-
-		if (!pri_bridge && !sec_bridge)
-			return 0;
-	}
 
 	return 0;
 }

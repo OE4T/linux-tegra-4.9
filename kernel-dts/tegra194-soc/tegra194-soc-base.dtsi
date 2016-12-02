@@ -28,6 +28,7 @@
 #include <dt-bindings/memory/tegra194-swgroup.h>
 #include "tegra194-trusty.dtsi"
 #include "tegra194-soc-uart.dtsi"
+#include "tegra194-soc-ufshc.dtsi"
 
 / {
 	compatible = "nvidia,tegra186";

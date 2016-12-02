@@ -513,9 +513,8 @@
 
 	tegra_padctl_uphy: pinctrl@7009f000 {
 		compatible = "nvidia,tegra21x-padctl-uphy";
-		reg =	<0x0 0x7009f000 0x0 0x1000>,
-			<0x0 0x60006000 0x0 0x1000>;
-		reg-names = "padctl", "car";
+		reg =	<0x0 0x7009f000 0x0 0x1000>;
+		reg-names = "padctl";
 		resets = <&tegra_car 142>, <&tegra_car 204>, <&tegra_car 205>;
 		reset-names = "padctl", "sata_uphy", "pex_uphy";
 		clocks = <&tegra_car TEGRA210_CLK_HSIC_TRK>,

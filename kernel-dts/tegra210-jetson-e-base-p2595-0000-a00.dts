@@ -45,7 +45,7 @@
 #include <tegra210-soc/tegra210-thermal-Tboard-Tdiode.dtsi>
 #include "jetson-platforms/tegra210-jetson-e-powermon-p2530-0930-e03.dtsi"
 #include <tegra210-soc/tegra210-therm-est.dtsi>
-#include "jetson-platforms/tegra210-jetson-cpufreq.dtsi"
+#include <t210-common-platforms/tegra210-cpufreq.dtsi>
 #include <dt-bindings/gpio/tegra-gpio.h>
 #include <dt-bindings/input/input.h>
 

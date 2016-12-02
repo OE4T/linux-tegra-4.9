@@ -43,7 +43,7 @@
 #include <tegra210-soc/tegra210-thermal-Tboard-Tdiode.dtsi>
 #include "jetson-platforms/tegra210-jetson-cv-powermon-p2180-1000-a00.dtsi"
 #include "jetson-platforms/tegra210-jetson-cv-powermon-p2597.dtsi"
-#include "jetson-platforms/tegra210-jetson-cpufreq.dtsi"
+#include <t210-common-platforms/tegra210-cpufreq.dtsi>
 #include "jetson-platforms/tegra210-jetson-cv-super-module-e2614.dtsi"
 #include "jetson-plugin-manager/tegra210-jetson-cv-eeprom-manager.dtsi"
 #include "jetson-plugin-manager/tegra210-jetson-cv-plugin-manager.dtsi"

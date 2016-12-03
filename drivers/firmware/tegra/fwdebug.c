@@ -287,7 +287,7 @@ out:
 
 static int debugfs_open(struct inode *inode, struct file *file)
 {
-	return single_open_size(file, debugfs_show, file, SZ_32K);
+	return single_open_size(file, debugfs_show, file, SZ_128K);
 }
 
 static int bpmp_debugfs_write(const char *name, const void *data, int sizedata)

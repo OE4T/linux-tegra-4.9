@@ -23,7 +23,7 @@
 #include <linux/kernel.h>
 #include <linux/fb.h>
 #include <linux/gk20a.h>
-#include <mach/clk.h>
+#include <linux/clk/tegra.h>
 
 #include "gk20a.h"
 #include "gr_gk20a.h"

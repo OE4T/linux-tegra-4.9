@@ -117,7 +117,11 @@ struct nvhost_device_data t21_ispb_info = {
 	.autosuspend_delay	= 500,
 	.can_powergate		= true,
 	.clocks			= {
+#ifdef CONFIG_COMMON_CLK
+		{ "ispb", UINT_MAX, 0, TEGRA_MC_CLIENT_ISPB },
+#else
 		{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISPB },
+#endif
 		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,

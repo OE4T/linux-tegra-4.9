@@ -2,6 +2,7 @@ GCOV_PROFILE_pinctrl-tegra186-padctl.o := y
 
 ccflags-y += -Werror
 ccflags-y += -I$(srctree)/drivers/pinctrl
+ccflags-y += -I$(srctree)/drivers/pinctrl/tegra
 ccflags-y += -I$(srctree)/../nvhost-t18x/drivers/video/tegra/host
 ccflags-y += -I$(srctree)/drivers/video/tegra/host
 ccflags-y += -I$(srctree)/../nvhost/drivers/video/tegra/host

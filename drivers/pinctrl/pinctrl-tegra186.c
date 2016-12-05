@@ -3773,7 +3773,6 @@ static struct platform_driver tegra186_pinctrl_driver = {
 		.of_match_table = tegra186_pinctrl_of_match,
 	},
 	.probe = tegra186_pinctrl_probe,
-	.remove = tegra_pinctrl_remove,
 };
 
 static int __init tegra186_pinctrl_init(void)

@@ -19,17 +19,57 @@
 #ifndef _DLA_OS_INTERFACE_H_
 #define _DLA_OS_INTERFACE_H_
 
+/**
+ * @ingroup Task
+ * @name Task descriptor version
+ * @brief Jobs to DLA are submitted in form of task and uses @ref dla_task_descriptor
+ * @{
+ */
 #define DLA_DESCRIPTOR_VERSION	1
-#define DLA_ENGINE_ID		0x44
+/** @} */
 
+/**
+ * @ingroup Engine
+ * @name Engine ID
+ * @brief DLA engine ID used to verify version engine
+ * @}
+ */
+#define DLA_ENGINE_ID		0x44
+/** @} */
+
+/**
+ * @ingroup Command
+ * @name Command mask
+ * @brief Command is sent through method registers. bit[15:0] specifies
+ *        command IDs mentioned in @ref Command IDs
+ * @{
+ */
 #define DLA_METHOD_ID_CMD_MASK		0xff
+/** @} */
+
+/**
+ * @ingroup Response
+ * @name Response masks
+ * @brief Response of a command is sent using mailbox registers. Below
+ *        specifies contents in mailbox register for a response
+ * @{
+ */
 #define DLA_RESPONSE_MSG_MASK		0xff
 #define DLA_RESPONSE_CMD_MASK		0xff
 #define DLA_RESPONSE_ERROR_MASK		0xff
+/** @} */
 
+/**
+ * @ingroup Response
+ * @name Response shifts
+ * @brief Response of a command is sent using mailbox registers. Below
+ *        specifies contents in mailbox register for a response
+ * @{
+ */
 #define DLA_RESPONSE_MSG_SHIFT		0
 #define DLA_RESPONSE_CMD_SHIFT		8
 #define DLA_RESPONSE_ERROR_SHIFT	16
+/** @} */
 
 #define DLA_INT_ON_COMPLETE_SHIFT	8
 #define DLA_INT_ON_ERROR_SHIFT		9
@@ -53,52 +93,43 @@
 
 #define ERR(code) -DLA_ERR_##code
 
-/* Commands from host to DLA Falcon */
-enum dla_cmds_e {
-	DLA_CMD_PING = 1,
-	DLA_CMD_GET_STATUS = 2,
-	DLA_CMD_RESET = 3,
-	DLA_CMD_DLA_CONTROL = 4,
-	DLA_CMD_GET_QUEUE_STATUS = 5,
-	DLA_CMD_GET_STATISTICS = 6,
-	DLA_CMD_SUBMIT_TASK = 7,
-	DLA_CMD_SET_SCHEDULER = 8,
-	DLA_CMD_READ_INFO = 9,
-	DLA_CMD_SET_DEBUG = 10,
-	DLA_CMD_SET_REGIONS = 11,
-	DLA_CMD_QUEUE_SUSPEND = 12,
-	DLA_CMD_QUEUE_RESUME = 13,
-	DLA_CMD_QUEUE_FLUSH = 14,
-};
+#define DLA_CMD_PING			1
+#define DLA_CMD_GET_STATUS		2
+#define DLA_CMD_RESET			3
+#define DLA_CMD_DLA_CONTROL		4
+#define DLA_CMD_GET_QUEUE_STATUS	5
+#define DLA_CMD_GET_STATISTICS		6
+#define DLA_CMD_SUBMIT_TASK		7
+#define DLA_CMD_SET_SCHEDULER		8
+#define DLA_CMD_READ_INFO		9
+#define DLA_CMD_SET_DEBUG		10
+#define DLA_CMD_SET_REGIONS		11
+#define DLA_CMD_QUEUE_SUSPEND		12
+#define DLA_CMD_QUEUE_RESUME		13
+#define DLA_CMD_QUEUE_FLUSH		14
 
-/* Error codes */
-enum dla_errors_e {
-	DLA_ERR_NONE = 0,
-	DLA_ERR_INVALID_METHOD = 1,
-	DLA_ERR_INVALID_TASK = 2,
-	DLA_ERR_INVALID_INPUT = 3,
-	DLA_ERR_INVALID_FALC_DMA = 4,
-	DLA_ERR_INVALID_QUEUE = 5,
-	DLA_ERR_INVALID_PREACTION = 6,
-	DLA_ERR_INVALID_POSTACTION = 7,
-	DLA_ERR_NO_MEM = 8,
-	DLA_ERR_INVALID_DESC_VER = 9,
-	DLA_ERR_INVALID_ENGINE_ID = 10,
-	DLA_ERR_INVALID_REGION = 11,
-	DLA_ERR_PROCESSOR_BUSY = 12,
-	DLA_ERR_RETRY = 13,
-};
+#define DLA_ERR_NONE			0
+#define DLA_ERR_INVALID_METHOD		1
+#define DLA_ERR_INVALID_TASK		2
+#define DLA_ERR_INVALID_INPUT		3
+#define DLA_ERR_INVALID_FALC_DMA	4
+#define DLA_ERR_INVALID_QUEUE		5
+#define DLA_ERR_INVALID_PREACTION	6
+#define DLA_ERR_INVALID_POSTACTION	7
+#define DLA_ERR_NO_MEM			8
+#define DLA_ERR_INVALID_DESC_VER	9
+#define DLA_ERR_INVALID_ENGINE_ID	10
+#define DLA_ERR_INVALID_REGION		11
+#define DLA_ERR_PROCESSOR_BUSY		12
+#define DLA_ERR_RETRY			13
 
-/* Notifications from DLA Falcon to Host */
-enum dla_msg_e {
-	DLA_CMD_ERROR = 1,
-	DLA_CMD_COMPLETE = 2,
-	DLA_EXCEPTION = 3,
-	DLA_SWBREAKPT = 4,
-	DLA_UNHANDLED_INTERRUPT = 5,
-	DLA_UNUSED = 6,
-	DLA_DEBUG_PRINT = 7,
-};
+#define DLA_MSG_CMD_ERROR		1
+#define DLA_MSG_CMD_COMPLETE		2
+#define DLA_MSG_EXCEPTION		3
+#define DLA_MSG_SWBREAKPT		4
+#define DLA_MSG_UNHANDLED_INTERRUPT	5
+#define DLA_MSG_UNUSED			6
+#define DLA_MSG_DEBUG_PRINT		7
 
 /**
  * Task descriptor for DLA_CMD_SUBMIT_TASK
@@ -112,15 +143,13 @@ enum dla_msg_e {
  * @num_postactions : Number of postactions
  * @preactions: Offset to preactions list
  * @postactions: Offset to postactions list
- * @operation_desc: IOVA for operation descriptors list
- * @surface_desc: IOVA for surface descriptors list
- * @address_list: IOVA address list for addresses used in surface descriptors
- * @num_operations: Number of operations in operations list
  * @queue_id: ID fo queue to insert this task
+ * @address_list: IOVA address list for addresses used in surface descriptors
+ * @num_addresses: Number of addresses in address list
  * @status: Update task status here after completion
- * @reserved: Reserved for future use and alignment
  */
 struct dla_task_descriptor {
+	/* Common parameters */
 	uint64_t next;
 	uint8_t version;
 	uint8_t engine_id;
@@ -130,6 +159,8 @@ struct dla_task_descriptor {
 	uint8_t num_postactions;
 	uint16_t preactions;
 	uint16_t postactions;
+
+	/* DLA specific parameters */
 	uint8_t queue_id;
 	uint64_t address_list;
 	uint16_t num_addresses;

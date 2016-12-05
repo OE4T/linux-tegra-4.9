@@ -69,15 +69,14 @@ int nvhost_nvdla_flcn_isr(struct platform_device *pdev)
 
 	/* dump falcon data if debug enabled */
 	mailbox0 = host1x_readl(pdev, flcn_mailbox0_r());
-	nvdla_dbg_reg(pdev, "mailbox0=[0x%x]", mailbox0);
 
 	message = mailbox0 & DLA_RESPONSE_MSG_MASK;
 
-	if (message == DLA_DEBUG_PRINT)
-		nvdla_dbg_info(pdev, "falcon: %s", (char *)m->debug_dump_va);
+	if (message == DLA_MSG_DEBUG_PRINT)
+		dev_err(&pdev->dev, "falcon: %s", (char *)m->debug_dump_va);
 
-	if ((message == DLA_CMD_COMPLETE ||
-				message == DLA_CMD_ERROR) &&
+	if ((message == DLA_MSG_CMD_COMPLETE ||
+				message == DLA_MSG_CMD_ERROR) &&
 				nvdla_dev->waiting) {
 		nvdla_dev->cmd_status =
 				(mailbox0 >> DLA_RESPONSE_ERROR_SHIFT) &

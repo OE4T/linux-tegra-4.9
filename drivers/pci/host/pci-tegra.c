@@ -69,7 +69,7 @@
 #include <asm/mach/pci.h>
 #include <asm/io.h>
 
-#include <mach/io_dpd.h>
+#include <linux/platform/tegra/io-dpd.h>
 #include <linux/phy/phy.h>
 #include <linux/pci-tegra.h>
 

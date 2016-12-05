@@ -31,7 +31,7 @@
 
 #include <mach/irqs.h>
 #include <mach/dc.h>
-#include <mach/io_dpd.h>
+#include <linux/platform/tegra/io-dpd.h>
 
 #include "board.h"
 #include "devices.h"

@@ -28,7 +28,7 @@
 #include <linux/uaccess.h>
 
 #include <mach/dc.h>
-#include <mach/io_dpd.h>
+#include <linux/platform/tegra/io-dpd.h>
 
 #include "sor.h"
 #include "sor_regs.h"

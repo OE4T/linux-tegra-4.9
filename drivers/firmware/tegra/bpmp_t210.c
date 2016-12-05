@@ -26,7 +26,7 @@
 #include <linux/platform_device.h>
 #include <linux/reset.h>
 #include <linux/uaccess.h>
-#include <mach/clk.h>
+#include <linux/clk/tegra.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/tegra_pasr.h>
 #include "bpmp.h"

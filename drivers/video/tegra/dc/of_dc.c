@@ -48,7 +48,7 @@
 #endif
 #include <video/tegra_hdmi_audio.h>
 
-#include <mach/clk.h>
+#include <linux/clk/tegra.h>
 #include <mach/dc.h>
 #include <mach/fb.h>
 

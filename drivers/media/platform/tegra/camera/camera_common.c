@@ -18,7 +18,7 @@
 #include <media/camera_common.h>
 #include <linux/of_graph.h>
 #include <linux/string.h>
-#include <mach/io_dpd.h>
+#include <linux/platform/tegra/io-dpd.h>
 
 #define has_s_op(master, op) \
 	(master->ops && master->ops->op)

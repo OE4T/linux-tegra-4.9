@@ -33,7 +33,7 @@
 #include <media/tegra_camera_platform.h>
 
 #include <linux/clk/tegra.h>
-#include <mach/io_dpd.h>
+#include <linux/platform/tegra/io-dpd.h>
 
 #include "mc_common.h"
 #include "vi/vi.h"

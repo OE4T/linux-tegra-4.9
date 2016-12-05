@@ -43,6 +43,7 @@ struct source_info {
 	int supported_events[QUADD_MAX_COUNTERS];
 	int nr_supported_events;
 
+	int is_present;
 	int active;
 };
 

@@ -63,6 +63,7 @@ struct quadd_comm_control_interface {
 	int (*set_extab)(struct quadd_sections *extabs,
 			 struct quadd_mmap_area *mmap);
 	void (*delete_mmap)(struct quadd_mmap_area *mmap);
+	int (*is_cpu_present)(int cpuid);
 };
 
 struct quadd_comm_data_interface {

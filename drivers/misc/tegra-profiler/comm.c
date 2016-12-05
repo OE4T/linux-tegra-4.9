@@ -406,16 +406,21 @@ static void rb_reset(struct quadd_ring_buffer *rb)
 static int
 ready_to_profile(void)
 {
-	int cpuid;
+	int cpuid, is_cpu_present;
+	struct comm_cpu_context *cc;
 
 	if (!comm_ctx.params_ok)
 		return 0;
 
 	for_each_possible_cpu(cpuid) {
-		struct comm_cpu_context *cc = &per_cpu(cpu_ctx, cpuid);
+		is_cpu_present = comm_ctx.control->is_cpu_present(cpuid);
 
-		if (!cc->params_ok)
-			return 0;
+		if (is_cpu_present) {
+			cc = &per_cpu(cpu_ctx, cpuid);
+
+			if (!cc->params_ok)
+				return 0;
+		}
 	}
 
 	return 1;

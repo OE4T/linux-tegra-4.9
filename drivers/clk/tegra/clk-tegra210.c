@@ -240,6 +240,8 @@
 #define CLK_RST_CONTROLLER_RST_DEV_Y_SET 0x2a8
 #define CLK_RST_CONTROLLER_RST_DEV_Y_CLR 0x2ac
 
+#define MISC_CLK_ENB 0x48
+
 /*
  * SDM fractional divisor is 16-bit 2's complement signed number within
  * (-2^12 ... 2^12-1) range. Represented in PLL data structure as unsigned
@@ -3342,6 +3344,10 @@ static void __init tegra210_clock_init(struct device_node *np)
 	value = clk_readl(clk_base + PLLD_BASE);
 	value &= ~BIT(25);
 	clk_writel(value, clk_base + PLLD_BASE);
+
+	value = clk_readl(clk_base + MISC_CLK_ENB);
+	value |= BIT(28);
+	clk_writel(value, clk_base + MISC_CLK_ENB);
 
 	tegra_clk_apply_init_table = tegra210_clock_apply_init_table;
 

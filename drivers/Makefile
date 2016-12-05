@@ -173,3 +173,7 @@ obj-$(CONFIG_STM)		+= hwtracing/stm/
 obj-$(CONFIG_ANDROID)		+= android/
 obj-$(CONFIG_NVMEM)		+= nvmem/
 obj-$(CONFIG_FPGA)		+= fpga/
+
+ifneq ($(wildcard $(srctree)/../t18x/drivers/Makefile.*),)
+obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += ../../t18x/drivers/
+endif

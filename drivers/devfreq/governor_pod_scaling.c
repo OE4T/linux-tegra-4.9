@@ -669,8 +669,10 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 			msecs_to_jiffies(podgov->p_slowdown_delay));
 	}
 
-	if (!(*freq))
+	if (!(*freq)) {
 		*freq = dev_stat.current_frequency;
+		return 0;
+	}
 
 	if (freqlist_up(podgov, *freq, 0) == dev_stat.current_frequency)
 		return 0;

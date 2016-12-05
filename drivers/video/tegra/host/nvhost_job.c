@@ -151,7 +151,7 @@ int nvhost_job_add_client_gather_address(struct nvhost_job *job,
 {
 	nvhost_job_add_gather(job, 0, num_words, 0, class_id, 0);
 
-	job->gathers[0].mem_base = gather_address;
+	job->gathers[job->num_gathers - 1].mem_base = gather_address;
 
 	return 0;
 }

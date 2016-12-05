@@ -1,7 +1,7 @@
 /*
  * imx274.c - imx274 sensor driver
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -49,8 +49,8 @@
 
 #define IMX274_DEFAULT_MODE	IMX274_MODE_3840X2160
 
-#define IMX274_DEFAULT_WIDTH	3840
-#define IMX274_DEFAULT_HEIGHT	2160
+#define IMX274_DEFAULT_WIDTH	3864
+#define IMX274_DEFAULT_HEIGHT	2174
 #define IMX274_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SRGGB10_1X10
 #define IMX274_DEFAULT_CLK_FREQ	24000000
 

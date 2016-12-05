@@ -94,6 +94,15 @@
 			vcc-supply = <&battery_reg>;
 		};
 
+		gpio@77 {
+			lcd-bias-rails {
+				gpio-hog;
+				gpios = <4 0>;
+				output-high;
+				label = "lcd-bias-en-rail";
+			};
+		};
+
 
 		gpio_i2c_0_21: gpio@21 {
 			compatible = "ti,tca6408";
@@ -102,6 +111,15 @@
 			gpio-controller;
 			#gpio-cells = <2>;
 			vcc-supply = <&battery_reg>;
+		};
+
+		gpio@21 {
+			vpp-vmm-rails {
+				gpio-hog;
+				gpios = <2 0 3 0>;
+				output-high;
+				label = "vpp-en-rail", "vmm-en-rail";
+			};
 		};
 
 		/* outp,outn enable gpios set through plugin manager dt */

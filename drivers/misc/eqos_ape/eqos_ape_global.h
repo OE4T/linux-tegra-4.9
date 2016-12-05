@@ -21,7 +21,7 @@
 
 #include <linux/platform_device.h>
 #include <linux/clk.h>
-#include <mach/clk.h>
+#include <linux/clk/tegra.h>
 
 #define AMISC_IDLE_0				             0x54
 

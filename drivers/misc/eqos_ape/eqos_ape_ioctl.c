@@ -23,7 +23,7 @@
 #include <linux/io.h>
 #include <linux/pm_runtime.h>
 #include <linux/tegra_pm_domains.h>
-#include <mach/clk.h>
+#include <linux/clk/tegra.h>
 
 #include "eqos_ape_ioctl.h"
 

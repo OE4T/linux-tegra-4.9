@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/main.c
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -52,7 +52,7 @@ static DEFINE_PER_CPU(struct quadd_comm_cap_for_cpu, per_cpu_caps);
 
 static struct source_info *get_pmu_info_for_current_cpu(void)
 {
-	return &__get_cpu_var(ctx_pmu_info);
+	return &this_cpu_ptr(ctx_pmu_info);
 }
 
 static struct quadd_comm_cap_for_cpu *get_capabilities_for_cpu_int(int cpuid)
@@ -202,6 +202,9 @@ set_parameters_for_cpu(struct quadd_pmu_setup_for_cpu *params)
 	struct source_info *pmu_info = &per_cpu(ctx_pmu_info, cpuid);
 	int pmu_events_id[QUADD_MAX_COUNTERS];
 
+	if (!pmu_info->is_present)
+		return -ENODEV;
+
 	for (i = 0; i < params->nr_events; i++) {
 		int event = params->events[i];
 
@@ -342,8 +345,13 @@ static void
 get_capabilities_for_cpu(int cpuid, struct quadd_comm_cap_for_cpu *cap)
 {
 	int i;
-	struct quadd_events_cap *events_cap = &cap->events_cap;
+	struct quadd_events_cap *events_cap;
 	struct source_info *s = &per_cpu(ctx_pmu_info, cpuid);
+
+	if (!s->is_present)
+		return;
+
+	events_cap = &cap->events_cap;
 
 	cap->cpuid = cpuid;
 	events_cap->cpu_cycles = 0;
@@ -416,11 +424,31 @@ get_capabilities_for_cpu(int cpuid, struct quadd_comm_cap_for_cpu *cap)
 	}
 }
 
+static u32 get_possible_cpu(void)
+{
+	int cpu;
+	u32 mask = 0;
+	struct source_info *s;
+
+	if (ctx.pmu) {
+		for_each_possible_cpu(cpu) {
+			/* since we don't support more than 32 CPUs */
+			if (cpu >= BITS_PER_BYTE * sizeof(mask))
+				break;
+
+			s = &per_cpu(ctx_pmu_info, cpu);
+			if (s->is_present)
+				mask |= (1U << cpu);
+		}
+	}
+
+	return mask;
+}
+
 static void
 get_capabilities(struct quadd_comm_cap *cap)
 {
 	int i;
-	int cpuid;
 	unsigned int extra = 0;
 	struct quadd_events_cap *events_cap = &cap->events_cap;
 
@@ -490,9 +518,7 @@ get_capabilities(struct quadd_comm_cap *cap)
 		extra |= QUADD_COMM_CAP_EXTRA_ARCH_TIMER;
 
 	cap->reserved[QUADD_COMM_CAP_IDX_EXTRA] = extra;
-	cap->reserved[QUADD_COMM_CAP_IDX_CPU_MASK] = 0;
-	for_each_possible_cpu(cpuid)
-		cap->reserved[QUADD_COMM_CAP_IDX_CPU_MASK] |= (1 << cpuid);
+	cap->reserved[QUADD_COMM_CAP_IDX_CPU_MASK] = get_possible_cpu();
 }
 
 void quadd_get_state(struct quadd_module_state *state)
@@ -523,6 +549,14 @@ delete_mmap(struct quadd_mmap_area *mmap)
 	quadd_unwind_delete_mmap(mmap);
 }
 
+static int
+is_cpu_present(int cpuid)
+{
+	struct source_info *s = &per_cpu(ctx_pmu_info, cpuid);
+
+	return s->is_present;
+}
+
 static struct quadd_comm_control_interface control = {
 	.start			= start,
 	.stop			= stop,
@@ -533,6 +567,7 @@ static struct quadd_comm_control_interface control = {
 	.get_state		= quadd_get_state,
 	.set_extab		= set_extab,
 	.delete_mmap		= delete_mmap,
+	.is_cpu_present		= is_cpu_present,
 };
 
 static int __init quadd_module_init(void)
@@ -558,8 +593,10 @@ static int __init quadd_module_init(void)
 	for_each_possible_cpu(cpuid) {
 		struct source_info *pmu_info = &per_cpu(ctx_pmu_info, cpuid);
 
-		pmu_info->active = 1;
+		pmu_info->active = 0;
+		pmu_info->is_present = 0;
 	}
+
 	ctx.pl310_info.active = 0;
 
 #ifdef CONFIG_ARM64
@@ -573,8 +610,15 @@ static int __init quadd_module_init(void)
 	}
 
 	for_each_possible_cpu(cpuid) {
-		struct source_info *pmu_info = &per_cpu(ctx_pmu_info,
-							cpuid);
+		struct quadd_arch_info *arch;
+		struct source_info *pmu_info;
+
+		arch = ctx.pmu->get_arch(cpuid);
+		if (!arch)
+			continue;
+
+		pmu_info = &per_cpu(ctx_pmu_info, cpuid);
+		pmu_info->is_present = 1;
 
 		events = pmu_info->supported_events;
 		nr_events =

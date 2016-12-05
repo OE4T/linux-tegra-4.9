@@ -300,7 +300,7 @@ static void select_counter(unsigned int counter)
 
 static int is_pmu_enabled(void)
 {
-	struct quadd_pmu_ctx *local_pmu_ctx = &__get_cpu_var(pmu_ctx);
+	struct quadd_pmu_ctx *local_pmu_ctx = this_cpu_ptr(&pmu_ctx);
 	u32 pmcr = armv8_pmu_pmcr_read();
 
 	if (pmcr & QUADD_ARMV8_PMCR_E) {
@@ -344,7 +344,7 @@ get_free_counters(unsigned long *bitmap, int nbits, int *ccntr)
 	u32 cntens;
 	unsigned long cntens_bitmap;
 
-	struct quadd_pmu_ctx *local_pmu_ctx = &__get_cpu_var(pmu_ctx);
+	struct quadd_pmu_ctx *local_pmu_ctx = this_cpu_ptr(&pmu_ctx);
 
 	cntens = armv8_pmu_pmcntenset_read();
 	cntens = ~cntens & (local_pmu_ctx->counters_mask | QUADD_ARMV8_CCNT);
@@ -371,7 +371,7 @@ disable_interrupt(int idx)
 static void
 disable_all_interrupts(void)
 {
-	struct quadd_pmu_ctx *local_pmu_ctx = &__get_cpu_var(pmu_ctx);
+	struct quadd_pmu_ctx *local_pmu_ctx = this_cpu_ptr(&pmu_ctx);
 	u32 val = QUADD_ARMV8_CCNT | local_pmu_ctx->counters_mask;
 
 	armv8_pmu_pmintenclr_write(val);
@@ -380,7 +380,7 @@ disable_all_interrupts(void)
 static void
 reset_overflow_flags(void)
 {
-	struct quadd_pmu_ctx *local_pmu_ctx = &__get_cpu_var(pmu_ctx);
+	struct quadd_pmu_ctx *local_pmu_ctx = this_cpu_ptr(&pmu_ctx);
 	u32 val = QUADD_ARMV8_CCNT | local_pmu_ctx->counters_mask;
 
 	armv8_pmu_pmovsclr_write(val);
@@ -397,7 +397,7 @@ static void disable_all_counters(void)
 {
 	u32 val;
 	u32 masked;
-	struct quadd_pmu_ctx *local_pmu_ctx = &__get_cpu_var(pmu_ctx);
+	struct quadd_pmu_ctx *local_pmu_ctx = this_cpu_ptr(&pmu_ctx);
 
 	/* Disable all counters */
 	val = armv8_pmu_pmcr_read();
@@ -441,7 +441,7 @@ static int pmu_enable(void)
 
 static void __pmu_disable(void *arg)
 {
-	struct quadd_pmu_info *pi = &__get_cpu_var(cpu_pmu_info);
+	struct quadd_pmu_info *pi = this_cpu_ptr(&cpu_pmu_info);
 
 	if (!pi->is_already_active) {
 		pr_info("[%d] reset all counters\n",
@@ -474,7 +474,7 @@ static void pmu_start(void)
 	u32 event;
 	struct quadd_pmu_ctx *local_pmu_ctx;
 	DECLARE_BITMAP(free_bitmap, QUADD_MAX_PMU_COUNTERS);
-	struct quadd_pmu_info *pi = &__get_cpu_var(cpu_pmu_info);
+	struct quadd_pmu_info *pi = this_cpu_ptr(&cpu_pmu_info);
 	u32 *prevp = pi->prev_vals;
 	struct quadd_pmu_event_info *ei;
 
@@ -491,7 +491,7 @@ static void pmu_start(void)
 
 	pcntrs = get_free_counters(free_bitmap, QUADD_MAX_PMU_COUNTERS, &ccntr);
 
-	local_pmu_ctx = &__get_cpu_var(pmu_ctx);
+	local_pmu_ctx = this_cpu_ptr(&pmu_ctx);
 	list_for_each_entry(ei, &local_pmu_ctx->used_events, list) {
 		int index;
 
@@ -537,7 +537,7 @@ static void pmu_start(void)
 static void pmu_stop(void)
 {
 	int idx;
-	struct quadd_pmu_info *pi = &__get_cpu_var(cpu_pmu_info);
+	struct quadd_pmu_info *pi = this_cpu_ptr(&cpu_pmu_info);
 
 	if (!pi->is_already_active) {
 		disable_all_counters();
@@ -557,8 +557,8 @@ pmu_read(struct event_data *events, int max_events)
 {
 	u32 val;
 	int idx = 0, i = 0;
-	struct quadd_pmu_info *pi = &__get_cpu_var(cpu_pmu_info);
-	struct quadd_pmu_ctx *local_pmu_ctx = &__get_cpu_var(pmu_ctx);
+	struct quadd_pmu_info *pi = this_cpu_ptr(&cpu_pmu_info);
+	struct quadd_pmu_ctx *local_pmu_ctx = this_cpu_ptr(&pmu_ctx);
 	u32 *prevp = pi->prev_vals;
 	struct quadd_pmu_event_info *ei;
 
@@ -615,11 +615,11 @@ pmu_read_emulate(struct event_data *events, int max_events)
 {
 	int i = 0;
 	static u32 val = 100;
-	struct quadd_pmu_info *pi = &__get_cpu_var(cpu_pmu_info);
+	struct quadd_pmu_info *pi = this_cpu_ptr(&cpu_pmu_info);
 	u32 *prevp = pi->prev_vals;
 	struct quadd_pmu_event_info *ei;
 
-	struct quadd_pmu_ctx *local_pmu_ctx = &__get_cpu_var(pmu_ctx);
+	struct quadd_pmu_ctx *local_pmu_ctx = this_cpu_ptr(&pmu_ctx);
 
 	list_for_each_entry(ei, &local_pmu_ctx->used_events, list) {
 		if (val > 200)
@@ -769,6 +769,9 @@ static int get_supported_events(int cpuid, int *events, int max_events)
 
 	struct quadd_pmu_ctx *local_pmu_ctx = &per_cpu(pmu_ctx, cpuid);
 
+	if (!local_pmu_ctx->current_map)
+		return 0;
+
 	max_events = min_t(int, QUADD_EVENT_TYPE_MAX, max_events);
 
 	for (i = 0; i < max_events; i++) {
@@ -777,6 +780,7 @@ static int get_supported_events(int cpuid, int *events, int max_events)
 		if (event != QUADD_ARMV8_UNSUPPORTED_EVENT)
 			events[nr_events++] = i;
 	}
+
 	return nr_events;
 }
 
@@ -802,7 +806,7 @@ static struct quadd_arch_info *get_arch(int cpuid)
 {
 	struct quadd_pmu_ctx *local_pmu_ctx = &per_cpu(pmu_ctx, cpuid);
 
-	return &local_pmu_ctx->arch;
+	return local_pmu_ctx->current_map ? &local_pmu_ctx->arch : NULL;
 }
 
 static struct quadd_event_source_interface pmu_armv8_int = {
@@ -825,17 +829,13 @@ static struct quadd_event_source_interface pmu_armv8_int = {
 
 static int quadd_armv8_pmu_init_for_cpu(int cpuid)
 {
-	u32 pmcr;
-	u32 idcode = 0;
-	int err = 0;
-	int idx;
+	int idx, err = 0;
+	u32 pmcr, ext_ver, idcode = 0;
+	u64 aa64_dfr;
+	u8 implementer;
 	struct cpuinfo_arm64 *local_cpu_data = &per_cpu(cpu_data, cpuid);
 	struct quadd_pmu_ctx *local_pmu_ctx = &per_cpu(pmu_ctx, cpuid);
 	u32 reg_midr = local_cpu_data->reg_midr;
-	u32 ext_ver;
-	u64 aa64_dfr;
-
-	char implementer = (reg_midr >> 24) & 0xFF;
 
 	strncpy(local_pmu_ctx->arch.name, "Unknown",
 			sizeof(local_pmu_ctx->arch.name));
@@ -843,6 +843,13 @@ static int quadd_armv8_pmu_init_for_cpu(int cpuid)
 	local_pmu_ctx->arch.type = QUADD_AA64_CPU_TYPE_UNKNOWN;
 	local_pmu_ctx->arch.ver = 0;
 	local_pmu_ctx->current_map = NULL;
+
+	INIT_LIST_HEAD(&local_pmu_ctx->used_events);
+
+	if (!reg_midr)
+		return 0;
+
+	implementer = (reg_midr >> 24) & 0xFF;
 
 	aa64_dfr = read_cpuid(ID_AA64DFR0_EL1);
 	aa64_dfr = (aa64_dfr >> 8) & 0x0f;
@@ -929,11 +936,10 @@ static int quadd_armv8_pmu_init_for_cpu(int cpuid)
 	}
 
 	local_pmu_ctx->arch.name[sizeof(local_pmu_ctx->arch.name) - 1] = '\0';
-	pr_info("arch: %s, type: %d, ver: %d\n",
-		local_pmu_ctx->arch.name, local_pmu_ctx->arch.type,
+	pr_info("[%d] arch: %s, type: %d, ver: %d\n",
+		cpuid, local_pmu_ctx->arch.name, local_pmu_ctx->arch.type,
 		local_pmu_ctx->arch.ver);
 
-	INIT_LIST_HEAD(&local_pmu_ctx->used_events);
 	return err;
 }
 
@@ -967,6 +973,7 @@ void quadd_armv8_pmu_deinit(void)
 	for_each_possible_cpu(cpu_id) {
 		struct quadd_pmu_ctx *local_pmu_ctx = &per_cpu(pmu_ctx, cpu_id);
 
-		free_events(&local_pmu_ctx->used_events);
+		if (local_pmu_ctx->current_map)
+			free_events(&local_pmu_ctx->used_events);
 	}
 }

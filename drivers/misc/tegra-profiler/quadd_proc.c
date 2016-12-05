@@ -61,7 +61,6 @@ static int show_capabilities(struct seq_file *f, void *offset)
 	unsigned int extra = cap->reserved[QUADD_COMM_CAP_IDX_EXTRA];
 	struct quadd_arch_info *arch = NULL;
 
-
 	seq_printf(f, "pmu:                                   %s\n",
 		   YES_NO(cap->pmu));
 	seq_printf(f, "tegra 3 LP cluster:                    %s\n",
@@ -99,17 +98,20 @@ static int show_capabilities(struct seq_file *f, void *offset)
 			struct quadd_comm_cap_for_cpu *cpu_cap;
 			struct quadd_events_cap *event;
 
+			arch = ctx->pmu->get_arch(cpuid);
+			if (!arch)
+				continue;
+
 			cpu_cap = ctx->get_capabilities_for_cpu(cpuid);
 			event = &cpu_cap->events_cap;
 
-			arch = ctx->pmu->get_arch(cpuid);
 			seq_printf(f, "\nCPU %d\n", cpuid);
-			if (arch) {
-				seq_printf(f, "pmu arch:                  %s\n",
-						   arch->name);
-				seq_printf(f, "pmu arch version:          %d\n",
-						   arch->ver);
-			}
+
+			seq_printf(f, "pmu arch:                  %s\n",
+					   arch->name);
+			seq_printf(f, "pmu arch version:          %d\n",
+					   arch->ver);
+
 			seq_printf(f, "l2 cache:                  %s\n",
 				   YES_NO(cpu_cap->l2_cache));
 			if (cap->l2_cache) {

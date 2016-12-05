@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -51,6 +51,7 @@ enum tegra_platform tegra_get_platform(void)
 
 	return TEGRA_PLATFORM_SILICON;
 }
+EXPORT_SYMBOL(tegra_get_platform);
 
 bool tegra_cpu_is_asim(void)
 {

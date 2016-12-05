@@ -1,5 +1,5 @@
 /*
- * Driver for Tegra Security Engine
+ * Header file for Tegra Security Elliptic Engine
  *
  * Copyright (c) 2011-2016, NVIDIA Corporation. All Rights Reserved.
  *
@@ -16,6 +16,221 @@
 
 #ifndef _CRYPTO_TEGRA_SE_ELP_H
 #define _CRYPTO_TEGRA_SE_ELP_H
+
+/* Curves IDs */
+/* ECC_CURVE_NIST_P192 and ECC_CURVE_NIST_P256 are
+ * defined in include/crypto/ecdh.h
+ */
+#define ECC_CURVE_NIST_P224	0x0000
+#define ECC_CURVE_NIST_P384	0x0003
+#define ECC_CURVE_NIST_P521	0x0004
+
+/* Security Engine operation modes */
+enum tegra_se_elp_op_mode {
+	SE_ELP_OP_MODE_RSA512,
+	SE_ELP_OP_MODE_RSA768,
+	SE_ELP_OP_MODE_RSA1024,
+	SE_ELP_OP_MODE_RSA1536,
+	SE_ELP_OP_MODE_RSA2048,
+	SE_ELP_OP_MODE_RSA3072,
+	SE_ELP_OP_MODE_RSA4096,
+	SE_ELP_OP_MODE_ECC160,
+	SE_ELP_OP_MODE_ECC192,
+	SE_ELP_OP_MODE_ECC224,
+	SE_ELP_OP_MODE_ECC256,
+	SE_ELP_OP_MODE_ECC384,
+	SE_ELP_OP_MODE_ECC512,
+	SE_ELP_OP_MODE_ECC521,
+};
+
+struct tegra_se_ecc_point {
+	u32 *x;
+	u32 *y;
+};
+
+struct tegra_se_ecc_curve {
+	char *name;
+	struct tegra_se_ecc_point g;
+	u32 *p;
+	u32 *n;
+	u32 *a;
+	int nbytes;
+	int mode;
+};
+
+/* NIST P-192 */
+static u32 nist_p192_x[] = { 0x82FF1012ull, 0xF4FF0AFDull, 0x43A18800ull,
+				0x7CBF20EBull, 0xB03090F6ull, 0x188DA80Eull };
+static u32 nist_p192_y[] = { 0x1E794811ull, 0x73F977A1ull, 0x6B24CDD5ull,
+				0x631011EDull, 0xFFC8DA78ull, 0x07192B95ull };
+static u32 nist_p192_p[] = { 0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFEull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull };
+static u32 nist_p192_n[] = { 0xB4D22831ull, 0x146BC9B1ull, 0x99DEF836ull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull };
+/* TODO: 'a' parameter for P-192 curve is currently unavailable. The below is a
+ * dummy vector, just to avoid kernel panic. Need to replace it with correct
+ * value once available
+ */
+static u32 nist_p192_a[] = { 0xFFFFFFFCull, 0xFFFFFFFFull, 0xFFFFFFFEull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull };
+
+static struct tegra_se_ecc_curve curve_p192 = {
+	.name = "NIST_P-192",
+	.g = {
+		.x = nist_p192_x,
+		.y = nist_p192_y,
+	},
+	.p = nist_p192_p,
+	.n = nist_p192_n,
+	.a = nist_p192_a,
+	.nbytes = 24,
+	.mode = SE_ELP_OP_MODE_ECC192,
+};
+
+/* NIST P-224 */
+static u32 nist_p224_x[] = { 0x115C1D21ull, 0x343280D6ull, 0x56C21122ull,
+				0x4A03C1D3ull, 0x321390B9ull, 0x6BB4BF7Full,
+				0xB70E0CBDull };
+static u32 nist_p224_y[] = { 0x85007E34ull, 0x44D58199ull, 0x5A074764ull,
+				0xCD4375A0ull, 0x4C22DFE6ull, 0xB5F723FBull,
+				0xBD376388ull };
+static u32 nist_p224_p[] = { 0x00000001ull, 0x00000000ull, 0x00000000ull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFFull };
+static u32 nist_p224_n[] = { 0x5C5C2A3Dull, 0x13DD2945ull, 0xE0B8F03Eull,
+				0xFFFF16A2ull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFFull };
+static u32 nist_p224_a[] = { 0xFFFFFFFEull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFEull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFFull };
+
+static struct tegra_se_ecc_curve curve_p224 = {
+	.name = "NIST_P-224",
+	.g = {
+		.x = nist_p224_x,
+		.y = nist_p224_y,
+	},
+	.p = nist_p224_p,
+	.n = nist_p224_n,
+	.a = nist_p224_a,
+	.nbytes = 28,
+	.mode = SE_ELP_OP_MODE_ECC224,
+};
+
+/* NIST P-256 */
+static u32 nist_p256_x[] = { 0xD898C296ull, 0xF4A13945ull, 0x2DEB33A0ull,
+				0x77037D81ull, 0x63A440F2ull, 0xF8BCE6E5ull,
+				0xE12C4247ull, 0x6B17D1F2ull };
+static u32 nist_p256_y[] = { 0x37BF51F5ull, 0xCBB64068ull, 0x6B315ECEull,
+				0x2BCE3357ull, 0x7C0F9E16ull, 0x8EE7EB4Aull,
+				0xFE1A7F9Bull, 0x4FE342E2ull };
+static u32 nist_p256_p[] = { 0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0x00000000ull, 0x00000000ull, 0x00000000ull,
+				0x00000001ull, 0xFFFFFFFFull };
+static u32 nist_p256_n[] = { 0xFC632551ull, 0xF3B9CAC2ull, 0xA7179E84ull,
+				0xBCE6FAADull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0x00000000ull, 0xFFFFFFFFull };
+static u32 nist_p256_a[] = { 0xFFFFFFFCull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0x00000000ull, 0x00000000ull, 0x00000000ull,
+				0x00000001ull, 0xFFFFFFFFull };
+
+static struct tegra_se_ecc_curve curve_p256 = {
+	.name = "NIST_P-256",
+	.g = {
+		.x = nist_p256_x,
+		.y = nist_p256_y,
+	},
+	.p = nist_p256_p,
+	.n = nist_p256_n,
+	.a = nist_p256_a,
+	.nbytes = 32,
+	.mode = SE_ELP_OP_MODE_ECC256,
+};
+
+/* NIST P-384 */
+static u32 nist_p384_x[] = { 0x72760AB7ull, 0x3A545E38ull, 0xBF55296Cull,
+				0x5502F25Dull, 0x82542A38ull, 0x59F741E0ull,
+				0x8BA79B98ull, 0x6E1D3B62ull, 0xF320AD74ull,
+				0x8EB1C71Eull, 0xBE8B0537ull, 0xAA87CA22ull };
+static u32 nist_p384_y[] = { 0x90EA0E5Full, 0x7A431D7Cull, 0x1d7e819dull,
+				0x0A60B1CEull, 0xB5F0B8C0ull, 0xE9DA3113ull,
+				0x289A147Cull, 0xF8F41DBDull, 0x9292DC29ull,
+				0x5D9E98BFull, 0x96262C6Full, 0x3617DE4Aull };
+static u32 nist_p384_p[] = { 0xFFFFFFFFull, 0x00000000ull, 0x00000000ull,
+				0xFFFFFFFFull, 0xFFFFFFFEull, 0xFFFFFFFFull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull };
+static u32 nist_p384_n[] = { 0xCCC52973ull, 0xECEC196Aull, 0x48B0A77Aull,
+				0x581A0DB2ull, 0xF4372DDFull, 0xC7634D81ull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull };
+static u32 nist_p384_a[] = { 0xFFFFFFFCull, 0x00000000ull, 0x00000000ull,
+				0xFFFFFFFFull, 0xFFFFFFFEull, 0xFFFFFFFFull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull };
+
+static struct tegra_se_ecc_curve curve_p384 = {
+	.name = "NIST_P-384",
+	.g = {
+		.x = nist_p384_x,
+		.y = nist_p384_y,
+	},
+	.p = nist_p384_p,
+	.n = nist_p384_n,
+	.a = nist_p384_a,
+	.nbytes = 48,
+	.mode = SE_ELP_OP_MODE_ECC384,
+};
+
+/* NIST P-521 */
+static u32 nist_p521_x[] = { 0x00000000ull, 0x00000000ull, 0x00000000ull,
+				0xBD660000ull, 0x7E31C2E5ull, 0x429BF97Eull,
+				0xB3C1856Aull, 0xA8DE3348ull, 0xC127A2FFull,
+				0x5928FE1Dull, 0x5E77EFE7ull, 0x3DBAA14Bull,
+				0xAF606B4Dull, 0xB521F828ull, 0x8139053Full,
+				0xB4429C64ull, 0xCB662395ull, 0xE9CD9E3Eull,
+				0x06B70404ull, 0x00C6858Eull };
+static u32 nist_p521_y[] = { 0x00000000ull, 0x00000000ull, 0x00000000ull,
+				0x66500000ull, 0x94769FD1ull, 0xC24088BEull,
+				0x7086A272ull, 0x0761353Cull, 0xB9013FADull,
+				0x2640C550ull, 0x72995EF4ull, 0x662C97EEull,
+				0xBD17273Eull, 0x446817AFull, 0x4449579Bull,
+				0x1BD998F5ull, 0x5FB42C7Dull, 0xC0045C8Aull,
+				0x6A789A3Bull, 0x01183929ull };
+static u32 nist_p521_p[] = { 0x00000000ull, 0x00000000ull, 0x00000000ull,
+				0xFFFF0000ull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFFull, 0x01FFFFFFull };
+static u32 nist_p521_n[] = { 0x00000000ull, 0x00000000ull, 0x00000000ull,
+				0x64090000ull, 0xB71E9138ull, 0x47AEBB6Full,
+				0xC9B8899Cull, 0xA5D03BB5ull, 0x0148F709ull,
+				0x966B7FCCull, 0x8783BF2Full, 0xFFFA5186ull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFFull, 0x01FFFFFFull };
+static u32 nist_p521_a[] = { 0x00000000ull, 0x00000000ull, 0x00000000ull,
+				0xFFFC0000ull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+				0xFFFFFFFFull, 0x01FFFFFFull };
+
+static struct tegra_se_ecc_curve curve_p521 = {
+	.name = "NIST_P-521",
+	.g = {
+		.x = nist_p521_x,
+		.y = nist_p521_y,
+	},
+	.p = nist_p521_p,
+	.n = nist_p521_n,
+	.a = nist_p521_a,
+	.nbytes = 80,
+	.mode = SE_ELP_OP_MODE_ECC521,
+};
 
 #define TEGRA_SE_PKA_KEYSLOT_COUNT	4
 

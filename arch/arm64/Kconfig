@@ -115,6 +115,19 @@ config ARM64
 config 64BIT
 	def_bool y
 
+trysource ../t18x/arch/arm64/Kconfig.t18x
+
+config ARCH_TEGRA_18x_SOC
+	bool "Tegra 18x family SOC Kconfig placeholder"
+	select ARCH_TEGRA_18x_SOC_PRIVATE
+	help
+	  Kconfig placeholder for NVIDIA Tegra18x family of SoCs
+
+config ARCH_TEGRA_19x_SOC
+	bool "Tegra 19x family SOC"
+	help
+	  Enable support for NVIDIA Tegra19x family of SoCs
+
 config ARCH_PHYS_ADDR_T_64BIT
 	def_bool y
 
@@ -1099,3 +1112,5 @@ source "arch/arm64/crypto/Kconfig"
 endif
 
 source "lib/Kconfig"
+
+source "drivers/firmware/tegra/Kconfig"

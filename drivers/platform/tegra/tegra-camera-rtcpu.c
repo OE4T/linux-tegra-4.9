@@ -894,7 +894,7 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 
 	rtcpu->monitor = tegra_camrtc_mon_create(dev);
 	/* set idle to slow down clock while idle mode */
-	pm_runtime_idle(dev);
+	pm_runtime_put_sync(dev);
 	rtcpu->state = RTCPU_UP;
 
 	tegra_ivc_bus_ready(rtcpu->ivc);

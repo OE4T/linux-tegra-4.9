@@ -186,6 +186,16 @@ config BATTERY_BQ27441
 	  BQ27441 is fuel-gauge systems for lithium-ion (Li+) batteries
 	  in handheld and portable equipment.
 
+config BATTERY_GPIO
+	tristate "GPIO gas gauge"
+	depends on GPIOLIB
+	help
+	  Say Y to enable support for gas gauges which simply use a gpio to be
+	  notified when they are low and need to shut down.
+
+	  This driver can be built as a module. If so, the module will be
+	  called gpio-gas-gauge.
+
 config BATTERY_DA9030
 	tristate "DA9030 battery driver"
 	depends on PMIC_DA903X

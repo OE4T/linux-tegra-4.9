@@ -1391,7 +1391,6 @@ int tegra_channel_init(struct tegra_channel *chan)
 	init_waitqueue_head(&chan->start_wait);
 	spin_lock_init(&chan->start_lock);
 	mutex_init(&chan->stop_kthread_lock);
-	init_completion(&chan->capture_comp);
 	atomic_set(&chan->is_streaming, DISABLE);
 	spin_lock_init(&chan->capture_state_lock);
 

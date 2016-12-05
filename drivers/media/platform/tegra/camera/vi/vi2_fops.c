@@ -444,10 +444,8 @@ static int tegra_channel_kthread_capture_start(void *data)
 					 !list_empty(&chan->capture) ||
 					 kthread_should_stop());
 
-		if (kthread_should_stop()) {
-			complete(&chan->capture_comp);
+		if (kthread_should_stop())
 			break;
-		}
 
 		/* source is not streaming if error is non-zero */
 		/* wait till kthread stop and dont DeQ buffers */
@@ -470,7 +468,6 @@ static void tegra_channel_stop_kthreads(struct tegra_channel *chan)
 	/* Stop the kthread for capture */
 	if (chan->kthread_capture_start) {
 		kthread_stop(chan->kthread_capture_start);
-		wait_for_completion(&chan->capture_comp);
 		chan->kthread_capture_start = NULL;
 	}
 	mutex_unlock(&chan->stop_kthread_lock);

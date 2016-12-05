@@ -157,7 +157,6 @@ struct tegra_channel {
 	void *alloc_ctx;
 	struct list_head capture;
 	spinlock_t start_lock;
-	struct completion capture_comp;
 
 	void __iomem *csibase[TEGRA_CSI_BLOCKS];
 	unsigned int stride_align;

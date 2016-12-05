@@ -1,8 +1,3 @@
-config TEGRA_HSP
-	bool "Enable Tegra Hardware Synchronization Primitives driver"
-	depends on ARCH_TEGRA_18x_SOC
-	default y
-
 config TEGRA186_PMC
         bool "Tegra Power Management Controller"
 	depends on ARCH_TEGRA_18x_SOC

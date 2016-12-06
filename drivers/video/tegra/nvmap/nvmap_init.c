@@ -315,8 +315,8 @@ static int __init nvmap_co_device_init(struct reserved_mem *rmem,
 			err = 0;
 		} else
 			dev_err(dev,
-				"%s :dma coherent mem declare fail %pa,%zu\n",
-				co->name, &co->base, co->size);
+				"%s :dma coherent mem declare fail %pa,%zu,err:%d\n",
+				co->name, &co->base, co->size, err);
 	} else {
 		/*
 		 * When vpr memory is reserved, kmemleak tries to scan vpr

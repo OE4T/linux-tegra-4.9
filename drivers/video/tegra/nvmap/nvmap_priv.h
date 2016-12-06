@@ -37,6 +37,7 @@
 #include <linux/nvmap.h>
 #include <linux/vmalloc.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 #include <linux/workqueue.h>
 #include <linux/dma-mapping.h>
@@ -688,4 +689,32 @@ static inline pid_t nvmap_client_pid(struct nvmap_client *client)
 {
 	return client->task ? client->task->pid : 0;
 }
+
+static inline int nvmap_get_user_pages(ulong vaddr,
+		                int nr_page, struct page **pages)
+{
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+        return get_user_pages(current, current->mm,
+			      vaddr & PAGE_MASK, nr_page,
+			      1/*write*/, 1, /* force */
+			      pages, NULL);
+#else
+	return get_user_pages(vaddr & PAGE_MASK, nr_page,
+			      FOLL_WRITE | FOLL_FORCE,
+			      pages, NULL);
+#endif
+}
+
+#ifndef DEFINE_DMA_ATTRS
+#define DEFINE_DMA_ATTRS(attrs) unsigned long attrs = 0
+#define dma_set_attr(attr, attrs) (attrs |= attr)
+#define __DMA_ATTR(attrs) attrs
+#define device_node_from_iter(iter) \
+	iter.node
+#else
+#define __DMA_ATTR(attrs) &attrs
+#define device_node_from_iter(iter) \
+	iter.out_args.np
+#endif
+
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

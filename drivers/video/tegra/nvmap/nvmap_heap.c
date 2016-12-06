@@ -112,13 +112,14 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 	DEFINE_DMA_ATTRS(attrs);
 	struct device *dev = h->dma_dev;
 
-	dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, &attrs);
+	dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, __DMA_ATTR(attrs));
 
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
 	if (start && h->is_ivm) {
 		void *ret;
 		pa = h->base + (*start);
-		ret = dma_mark_declared_memory_occupied(dev, pa, len, &attrs);
+		ret = dma_mark_declared_memory_occupied(dev, pa, len,
+					__DMA_ATTR(attrs));
 		if (IS_ERR(ret)) {
 			dev_err(dev, "Failed to reserve (%pa) len(%zu)\n",
 					&pa, len);
@@ -131,7 +132,7 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 #endif
 	{
 		(void)dma_alloc_attrs(dev, len, &pa,
-				DMA_MEMORY_NOMAP, &attrs);
+				DMA_MEMORY_NOMAP, __DMA_ATTR(attrs));
 		if (!dma_mapping_error(dev, pa))
 			dev_dbg(dev, "Allocated addr (%pa) len(%zu)\n",
 					&pa, len);
@@ -146,17 +147,17 @@ static void nvmap_free_mem(struct nvmap_heap *h, phys_addr_t base,
 	struct device *dev = h->dma_dev;
 	DEFINE_DMA_ATTRS(attrs);
 
-	dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, &attrs);
+	dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, __DMA_ATTR(attrs));
 	dev_dbg(dev, "Free base (%pa) size (%zu)\n", &base, len);
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
 	if (h->is_ivm && !h->can_alloc) {
-		dma_mark_declared_memory_unoccupied(dev, base, len, &attrs);
+		dma_mark_declared_memory_unoccupied(dev, base, len, __DMA_ATTR(attrs));
 	} else
 #endif
 	{
 		dma_free_attrs(dev, len,
-				(void *)(uintptr_t)base,
-				(dma_addr_t)base, &attrs);
+			        (void *)(uintptr_t)base,
+			        (dma_addr_t)base, __DMA_ATTR(attrs));
 	}
 }
 
@@ -391,12 +392,12 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	if (!co->enable_static_dma_map)
 		goto finish;
 
-	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
-	dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
+	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, __DMA_ATTR(attrs));
+	dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, __DMA_ATTR(attrs));
 
 #ifdef CONFIG_PLATFORM_ENABLE_IOMMU
 	dma_map_linear_attrs(parent->parent, base, len, DMA_TO_DEVICE,
-				&attrs);
+				__DMA_ATTR(attrs));
 #endif
 finish:
 	if (co->disable_dynamic_dma_map)

@@ -44,9 +44,9 @@
 #include <linux/lzo.h>
 #include <linux/swap.h>
 #include <linux/swapops.h>
-#include <linux/version.h>
 #include <linux/of.h>
 #include <linux/iommu.h>
+#include <linux/version.h>
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
 #include <linux/backing-dev.h>

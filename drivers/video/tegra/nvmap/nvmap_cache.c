@@ -158,7 +158,11 @@ __weak void nvmap_override_cache_ops(void)
 void inner_cache_maint(unsigned int op, void *vaddr, size_t size)
 {
 	if (op == NVMAP_CACHE_OP_WB_INV)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 		__dma_flush_range(vaddr, vaddr + size);
+#else
+		__dma_flush_area(vaddr, size);
+#endif
 	else if (op == NVMAP_CACHE_OP_INV)
 		__dma_map_area(vaddr, size, DMA_FROM_DEVICE);
 	else
@@ -443,8 +447,8 @@ int __nvmap_do_cache_maint(struct nvmap_client *client,
 		clean_only_dirty = false;
 
 	cache_op.h = h;
-	cache_op.start = start;
-	cache_op.end = end;
+	cache_op.start = start ? start : 0;
+	cache_op.end = end ? end : h->size;
 	cache_op.op = op;
 	nvmap_handle_get_cacheability(h, &cache_op.inner, &cache_op.outer);
 	cache_op.clean_only_dirty = clean_only_dirty;
@@ -525,7 +529,7 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
 	u64 total = 0;
 	u64 thresh = ~0;
 
-	WARN(!config_enabled(CONFIG_ARM64),
+	WARN(!IS_ENABLED(CONFIG_ARM64),
 		"cache list operation may not function properly");
 
 	if (nvmap_cache_maint_by_set_ways)

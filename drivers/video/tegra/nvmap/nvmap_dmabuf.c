@@ -33,7 +33,6 @@
 #include <linux/seq_file.h>
 #include <linux/stringify.h>
 #include <linux/of.h>
-#include <linux/version.h>
 
 #include <trace/events/nvmap.h>
 
@@ -230,11 +229,11 @@ static void __nvmap_dmabuf_free_sgt_locked(struct nvmap_handle_sgt *nvmap_sgt)
 			access_vpr_phys(nvmap_sgt->dev)) {
 		sg_dma_address(nvmap_sgt->sgt->sgl) = 0;
 	} else {
-		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
-		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, __DMA_ATTR(attrs));
+		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, __DMA_ATTR(attrs));
 		dma_unmap_sg_attrs(nvmap_sgt->dev,
 				   nvmap_sgt->sgt->sgl, nvmap_sgt->sgt->nents,
-				   nvmap_sgt->dir, &attrs);
+				   nvmap_sgt->dir, __DMA_ATTR(attrs));
 	}
 	__nvmap_free_sg_table(NULL, info->handle, nvmap_sgt->sgt);
 
@@ -401,10 +400,10 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 			access_vpr_phys(attach->dev)) {
 		sg_dma_address(sgt->sgl) = 0;
 	} else {
-		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
-		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, __DMA_ATTR(attrs));
+		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, __DMA_ATTR(attrs));
 		ents = dma_map_sg_attrs(attach->dev, sgt->sgl,
-					sgt->nents, dir, &attrs);
+					sgt->nents, dir, __DMA_ATTR(attrs));
 		if (ents <= 0)
 			goto err_map;
 	}
@@ -423,7 +422,7 @@ cache_hit:
 	return sgt;
 
 err_prep:
-	dma_unmap_sg_attrs(attach->dev, sgt->sgl, sgt->nents, dir, &attrs);
+	dma_unmap_sg_attrs(attach->dev, sgt->sgl, sgt->nents, dir, __DMA_ATTR(attrs));
 err_map:
 	__nvmap_free_sg_table(NULL, info->handle, sgt);
 	atomic_dec(&info->handle->pin);
@@ -478,9 +477,9 @@ static void nvmap_dmabuf_release(struct dma_buf *dmabuf)
 	kfree(info);
 }
 
-static int nvmap_dmabuf_begin_cpu_access(struct dma_buf *dmabuf,
-					  size_t start, size_t len,
-					  enum dma_data_direction dir)
+static int __nvmap_dmabuf_begin_cpu_access(struct dma_buf *dmabuf,
+					   size_t start, size_t len,
+					   enum dma_data_direction dir)
 {
 	struct nvmap_handle_info *info = dmabuf->priv;
 
@@ -489,17 +488,48 @@ static int nvmap_dmabuf_begin_cpu_access(struct dma_buf *dmabuf,
 				      NVMAP_CACHE_OP_WB_INV, false);
 }
 
-static void nvmap_dmabuf_end_cpu_access(struct dma_buf *dmabuf,
-					size_t start, size_t len,
-					enum dma_data_direction dir)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+static int nvmap_dmabuf_begin_cpu_access(struct dma_buf *dmabuf,
+					  size_t start, size_t len,
+					  enum dma_data_direction dir)
+{
+	return __nvmap_dmabuf_begin_cpu_access(dmabuf, start, len, dir);
+}
+#else
+static int nvmap_dmabuf_begin_cpu_access(struct dma_buf *dmabuf,
+					 enum dma_data_direction dir)
+{
+	return __nvmap_dmabuf_begin_cpu_access(dmabuf, 0, 0, dir);
+}
+#endif
+
+static int __nvmap_dmabuf_end_cpu_access(struct dma_buf *dmabuf,
+				         size_t start, size_t len,
+				         enum dma_data_direction dir)
 {
 	struct nvmap_handle_info *info = dmabuf->priv;
 
 	trace_nvmap_dmabuf_end_cpu_access(dmabuf, start, len);
-	__nvmap_do_cache_maint(NULL, info->handle, start, start + len,
+	return __nvmap_do_cache_maint(NULL, info->handle,
+				   start, start + len,
 				   NVMAP_CACHE_OP_WB, false);
 
 }
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+static void nvmap_dmabuf_end_cpu_access(struct dma_buf *dmabuf,
+				       size_t start, size_t len,
+				       enum dma_data_direction dir)
+{
+	(void)__nvmap_dmabuf_end_cpu_access(dmabuf, start, len, dir);
+}
+#else
+static int nvmap_dmabuf_end_cpu_access(struct dma_buf *dmabuf,
+				       enum dma_data_direction dir)
+{
+	return __nvmap_dmabuf_end_cpu_access(dmabuf, 0, 0, dir);
+}
+#endif
 
 static void *nvmap_dmabuf_kmap(struct dma_buf *dmabuf, unsigned long page_num)
 {
@@ -709,7 +739,7 @@ int nvmap_get_dmabuf_fd(struct nvmap_client *client, struct nvmap_handle *h)
 	if (IS_ERR(dmabuf))
 		return PTR_ERR(dmabuf);
 	fd = __nvmap_dmabuf_fd(client, dmabuf, O_CLOEXEC);
-	if (IS_ERR_VALUE(fd))
+	if (IS_ERR_VALUE((uintptr_t)fd))
 		dma_buf_put(dmabuf);
 	return fd;
 }

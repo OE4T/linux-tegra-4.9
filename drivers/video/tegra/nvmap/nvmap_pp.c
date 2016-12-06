@@ -231,6 +231,18 @@ static int nvmap_background_zero_thread(void *arg)
 	return 0;
 }
 
+static void nvmap_pgcount(struct page *page, bool incr)
+{
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+	if (incr)
+		atomic_inc(&page->_count);
+	else
+		atomic_dec(&page->_count);
+#else
+	page_ref_add(page, incr ? 1 : -1);
+#endif
+}
+
 /*
  * This removes a page from the page pool. If ignore_disable is set, then
  * the enable_pp flag is ignored.
@@ -257,10 +269,8 @@ static struct page *nvmap_page_pool_alloc_locked(struct nvmap_page_pool *pool,
 		return NULL;
 
 	/* Sanity check. */
-	if (IS_ENABLED(CONFIG_NVMAP_PAGE_POOL_DEBUG)) {
-		atomic_dec(&page->_count);
-		BUG_ON(atomic_read(&page->_count) != 1);
-	}
+	if (IS_ENABLED(CONFIG_NVMAP_PAGE_POOL_DEBUG))
+		nvmap_pgcount(page, false);
 
 	pp_alloc_add(pool, 1);
 	pp_hit_add(pool, 1);
@@ -296,8 +306,8 @@ int nvmap_page_pool_alloc_lots(struct nvmap_page_pool *pool,
 		page = get_page_list_page(pool);
 		pages[ind++] = page;
 		if (IS_ENABLED(CONFIG_NVMAP_PAGE_POOL_DEBUG)) {
-			atomic_dec(&page->_count);
-			BUG_ON(atomic_read(&page->_count) != 1);
+			nvmap_pgcount(page, false);
+			BUG_ON(page_count(page) != 1);
 		}
 	}
 	mutex_unlock(&pool->lock);
@@ -333,8 +343,8 @@ static int __nvmap_page_pool_fill_lots_locked(struct nvmap_page_pool *pool,
 
 	while (real_nr--) {
 		if (IS_ENABLED(CONFIG_NVMAP_PAGE_POOL_DEBUG)) {
-			atomic_inc(&pages[ind]->_count);
-			BUG_ON(atomic_read(&pages[ind]->_count) != 2);
+			nvmap_pgcount(pages[ind], true);
+			BUG_ON(page_count(pages[ind]) != 2);
 		}
 		list_add_tail(&pages[ind++]->lru, &pool->page_list);
 	}
@@ -364,7 +374,7 @@ int nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
 			 * hold a refcount on the page. These pages can't be
 			 * reused till the additional refs are dropped.
 			 */
-			if (atomic_read(&pages[i]->_count) > 1) {
+			if (page_count(pages[i]) > 1) {
 				__free_page(pages[i]);
 			} else {
 				list_add_tail(&pages[i]->lru, &pool->zero_list);
@@ -386,7 +396,7 @@ int nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
 		 * Need not be efficient.
 		 */
 		for (i = 0; i < nr; i++) {
-			if (atomic_read(&pages[i]->_count) > 1) {
+			if (page_count(pages[i]) > 1) {
 				add_to_pp = false;
 				break;
 			}

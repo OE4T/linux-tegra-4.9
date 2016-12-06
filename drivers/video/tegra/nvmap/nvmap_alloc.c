@@ -228,10 +228,7 @@ static int alloc_handle_from_va(struct nvmap_client *client,
 	if (!pages)
 		return -ENOMEM;
 
-	user_pages = get_user_pages(current, current->mm,
-				      vaddr & PAGE_MASK, nr_page,
-					 1/*write*/, 1, /* force */
-					 pages, NULL);
+	user_pages = nvmap_get_user_pages(vaddr & PAGE_MASK, nr_page, pages);
 	if (user_pages != nr_page)
 		goto fail_get_user_pages;
 

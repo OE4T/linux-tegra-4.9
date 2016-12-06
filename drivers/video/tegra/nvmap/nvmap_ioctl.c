@@ -68,7 +68,7 @@ static int nvmap_install_fd(struct nvmap_client *client,
 {
 	int err = 0;
 
-	if (IS_ERR_VALUE(fd)) {
+	if (IS_ERR_VALUE((uintptr_t)fd)) {
 		err = fd;
 		goto fd_fail;
 	}
@@ -105,7 +105,7 @@ int nvmap_ioctl_getfd(struct file *filp, void __user *arg)
 	if (handle) {
 		op.fd = nvmap_get_dmabuf_fd(client, handle);
 		nvmap_handle_put(handle);
-		dmabuf = IS_ERR_VALUE(op.fd) ? NULL : handle->dmabuf;
+		dmabuf = IS_ERR_VALUE((uintptr_t)op.fd) ? NULL : handle->dmabuf;
 	} else {
 		/* if we get an error, the fd might be non-nvmap dmabuf fd */
 		dmabuf = dma_buf_get(op.handle);
@@ -692,10 +692,7 @@ int nvmap_ioctl_gup_test(struct file *filp, void __user *arg)
 	if (!pages)
 		goto put_handle;
 
-	user_pages = get_user_pages(current, current->mm,
-					op.va & PAGE_MASK, nr_page,
-					1 /*write*/, 1 /* force */,
-					pages, NULL);
+	user_pages = nvmap_get_user_pages(op.va & PAGE_MASK, nr_page, pages);
 	if (user_pages != nr_page)
 		goto put_user_pages;
 

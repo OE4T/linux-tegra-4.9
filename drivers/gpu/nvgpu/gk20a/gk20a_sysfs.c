@@ -18,12 +18,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/version.h>
 #include <linux/device.h>
 #include <linux/pm_runtime.h>
 #include <linux/kernel.h>
 #include <linux/fb.h>
 #include <linux/gk20a.h>
+#include <mach/clk.h>
 #include <linux/clk/tegra.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+#include <soc/tegra/tegra-dvfs.h>
+#endif
 
 #include "gk20a.h"
 #include "gr_gk20a.h"

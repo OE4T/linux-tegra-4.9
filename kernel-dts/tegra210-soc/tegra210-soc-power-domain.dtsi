@@ -13,6 +13,10 @@
 			#power-domain-cells = <0>;
 			power-domains = <&mc_clk_pd>;
 			partition-id = <TEGRA_POWERGATE_APE>;
+			clocks = <&tegra_car TEGRA210_CLK_APE>,
+					<&tegra_car TEGRA210_CLK_APB2APE>,
+					<&tegra_car TEGRA210_CLK_ACLK >;
+			clock-names = "ape", "apb2ape", "adsp";
 		};
 
 		adsp_pd: adsp-pd {

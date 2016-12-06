@@ -1427,6 +1427,9 @@
 				ROUTE_TO_ADSP>,
 			     <GIC_SPI INT_ADMA_EOT19 IRQ_TYPE_LEVEL_HIGH
 				ROUTE_TO_ADSP>;
+		clocks = <&tegra_car TEGRA210_CLK_D_AUDIO>,
+			     <&tegra_car TEGRA210_CLK_APE>;
+		clock-names = "ahub", "ape";
 		status = "disabled";
 	};
 

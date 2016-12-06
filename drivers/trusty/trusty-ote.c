@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2016-2017 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,10 +69,10 @@ static int wait_for_response(struct  tipc_chan_ctx *chan_ctx, int timeout)
 
 	ret = wait_for_completion_interruptible_timeout(&chan_ctx->reply_comp,
 					msecs_to_jiffies(timeout));
-	if (ret)
+	if (ret > 0)
 		/* Received reply */
 		ret = 0;
-	else
+	else if (ret == 0)
 		/* No reply from remote */
 		ret = -ETIMEDOUT;
 

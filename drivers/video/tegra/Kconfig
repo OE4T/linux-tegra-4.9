@@ -1,0 +1,3 @@
+trysource "../nvmap/drivers/video/tegra/nvmap/Kconfig"
+trysource "../nvmap/drivers/video/tegra/nvmap/Kconfig.nvmap"
+trysource "drivers/video/tegra/nvmap/Kconfig.nvmap"

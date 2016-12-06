@@ -1,7 +1,5 @@
 /*
- * drivers/i2c/busses/i2c-bpmp-tegra.c
- *
- * Copyright (C) 2015 NVIDIA Corporation.  All rights reserved.
+ * Copyright (C) 2015-2016 NVIDIA Corporation.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -38,21 +36,11 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/dma-mapping.h>
 #include <soc/tegra/tegra_bpmp.h>
+#include <soc/tegra/bpmp_abi.h>
 #include <linux/i2c-bpmp-tegra.h>
-#include <linux/bpmp_mrq_i2c.h>
-
 #include <asm/unaligned.h>
 
 #define TEGRA_I2C_TIMEOUT			(msecs_to_jiffies(1000))
-
-#define SERIALI2C_TEN		0x0010
-#define SERIALI2C_RD		0x0001
-#define SERIALI2C_STOP		0x8000
-#define SERIALI2C_NOSTART	0x4000
-#define SERIALI2C_REV_DIR_ADDR	0x2000
-#define SERIALI2C_IGNORE_NAK	0x1000
-#define SERIALI2C_NO_RD_ACK	0x0800
-#define SERIALI2C_RECV_LEN	0x0400
 
 static int seriali2c_xlate_flags(u16 *xlated_flags, u16 linux_flags)
 {
@@ -199,10 +187,9 @@ struct tegra_bpmp_i2c_dev {
 	u32 bpmp_adapter_id;
 };
 
-
-static int tegra_bpmp_i2c(struct mrq_i2c_data_in *in,
-			  struct mrq_i2c_data_out *out,
-			  struct tegra_bpmp_i2c_dev *i2c_dev)
+static int tegra_bpmp_i2c(struct mrq_i2c_request *in,
+		struct mrq_i2c_response *out,
+		struct tegra_bpmp_i2c_dev *i2c_dev)
 {
 	unsigned long flags;
 	int ret;
@@ -223,22 +210,22 @@ static int tegra_bpmp_i2c(struct mrq_i2c_data_in *in,
 			      in, sizeof(*in), out, sizeof(*out));
 }
 
-static int tegra_bpmp_i2c_req(u32 adapter, struct mrq_i2c_data_in *in,
-		int data_in_size, struct mrq_i2c_data_out *out,
+static int tegra_bpmp_i2c_req(u32 adapter, struct mrq_i2c_request *in,
+		int data_in_size, struct mrq_i2c_response *out,
 		struct tegra_bpmp_i2c_dev *i2c_dev)
 {
 	int r;
 
-	in->req = MRQ_I2C_DATA_IN_REQ_I2C_REQ;
-	in->data.i2c_req.adapter = adapter;
-	in->data.i2c_req.data_in_size = data_in_size;
+	in->cmd = CMD_I2C_XFER;
+	in->xfer.bus_id = adapter;
+	in->xfer.data_size = data_in_size;
 	r = tegra_bpmp_i2c(in, out, i2c_dev);
 	if (r) {
 		WARN_ON(r > 0);
 		return r;
 	}
 
-	return (int)out->data.i2c_req.data_size;
+	return (int)out->xfer.data_size;
 }
 
 struct tegra_bpmp_i2c_chipdata {
@@ -296,8 +283,8 @@ static int tegra_bpmp_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 	int num)
 {
 	struct tegra_bpmp_i2c_dev *i2c_dev = i2c_get_adapdata(adap);
-	struct mrq_i2c_data_in in;
-	struct mrq_i2c_data_out out;
+	struct mrq_i2c_request in;
+	struct mrq_i2c_response out;
 	int ret = 0;
 	int size;
 
@@ -308,7 +295,7 @@ static int tegra_bpmp_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 		return -EINVAL;
 	}
 
-	size = serialize_i2c(in.data.i2c_req.data_in_buf,
+	size = serialize_i2c(in.xfer.data_buf,
 			TEGRA_I2C_IPC_MAX_IN_BUF_SIZE,
 			msgs, num);
 	if (size < 0) {
@@ -326,7 +313,7 @@ static int tegra_bpmp_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 		return ret;
 	}
 
-	ret = deserialize_i2c(out.data.i2c_req.data_out_buf, ret, msgs, num);
+	ret = deserialize_i2c(out.xfer.data_buf, ret, msgs, num);
 	if (ret < 0) {
 		dev_err(&i2c_dev->adapter.dev, "deserialize_i2c ret %d\n",
 			ret);

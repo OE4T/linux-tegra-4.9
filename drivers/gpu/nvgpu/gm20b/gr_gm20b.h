@@ -28,12 +28,6 @@ enum {
 	MAXWELL_CHANNEL_GPFIFO_A= 0xB06F,
 };
 
-#define tegra_clk_writel(value, offset) \
-	writel(value, IO_ADDRESS(0x60006000 + offset))
-
-#define CLK_RST_CONTROLLER_MISC_CLK_ENB_0		0x48
-#define CLK_RST_CONTROLLER_MISC_CLK_ENB_0_ALL_VISIBLE	BIT(28)
-
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 #define FUSE_FUSEBYPASS_0				0x24
 #define FUSE_WRITE_ACCESS_SW_0				0x30

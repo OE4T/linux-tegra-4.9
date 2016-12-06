@@ -511,9 +511,6 @@ static u32 gr_gm20b_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 
 static void gr_gm20b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
-	tegra_clk_writel(CLK_RST_CONTROLLER_MISC_CLK_ENB_0_ALL_VISIBLE,
-			CLK_RST_CONTROLLER_MISC_CLK_ENB_0);
-
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 	tegra_fuse_writel(0x1, FUSE_FUSEBYPASS_0);
 	tegra_fuse_writel(0x0, FUSE_WRITE_ACCESS_SW_0);

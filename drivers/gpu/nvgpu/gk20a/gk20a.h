@@ -950,6 +950,7 @@ struct gk20a {
 	struct devfreq *devfreq;
 
 	struct gk20a_scale_profile *scale_profile;
+	unsigned long last_freq;
 
 	struct gk20a_ctxsw_trace *ctxsw_trace;
 	struct gk20a_fecs_trace *fecs_trace;

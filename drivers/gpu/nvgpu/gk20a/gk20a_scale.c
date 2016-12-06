@@ -182,7 +182,7 @@ static int gk20a_scale_target(struct device *dev, unsigned long *freq,
 		local_freq = max_freq;
 
 	/* Check for duplicate request */
-	if (local_freq == g->devfreq->previous_freq)
+	if (local_freq == g->last_freq)
 		return 0;
 
 	/* set the final frequency */
@@ -194,6 +194,8 @@ static int gk20a_scale_target(struct device *dev, unsigned long *freq,
 		platform->clk_set_rate(dev, rounded_rate);
 		*freq = platform->clk_get_rate(dev);
 	}
+
+	g->last_freq = *freq;
 
 	/* postscale will only scale emc (dram clock) if evaluating
 	 * gk20a_tegra_get_emc_rate() produces a new or different emc
@@ -259,6 +261,7 @@ void gk20a_scale_resume(struct device *dev)
 	if (!devfreq)
 		return;
 
+	g->last_freq = 0;
 	devfreq_resume_device(devfreq);
 }
 

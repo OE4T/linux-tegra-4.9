@@ -36,9 +36,9 @@
 #define IMX185_MIN_FRAME_LENGTH	(1125)
 #define IMX185_MAX_FRAME_LENGTH	(0x1FFFF)
 #define IMX185_MIN_SHS1_1080P_HDR	(5)
-#define IMX185_MAX_SHS1_1080P_HDR	(69)
 #define IMX185_MIN_SHS2_1080P_HDR	(82)
-#define IMX185_MAX_SHS2_1080P_HDR	(1106)
+#define IMX185_MAX_SHS2_1080P_HDR	(IMX185_MAX_FRAME_LENGTH - 5)
+#define IMX185_MAX_SHS1_1080P_HDR	(IMX185_MAX_SHS2_1080P_HDR / 16)
 
 #define IMX185_FRAME_LENGTH_ADDR_MSB		0x301A
 #define IMX185_FRAME_LENGTH_ADDR_MID		0x3019
@@ -388,7 +388,6 @@ static int imx185_s_stream(struct v4l2_subdev *sd, int enable)
 	if (err)
 		goto exit;
 
-
 	if (s_data->override_enable) {
 		/* write list of override regs for the asking gain, */
 		/* frame rate and exposure time    */
@@ -695,7 +694,6 @@ static int imx185_set_coarse_time_hdr(struct imx185 *priv, s64 val)
 		coarse_time_shs1 = IMX185_MIN_SHS1_1080P_HDR;
 	if (coarse_time_shs1 > IMX185_MAX_SHS1_1080P_HDR)
 		coarse_time_shs1 = IMX185_MAX_SHS1_1080P_HDR;
-
 
 	coarse_time_shs2 = (coarse_time_shs1 - IMX185_MIN_SHS1_1080P_HDR) * 16 +
 				IMX185_MIN_SHS2_1080P_HDR;

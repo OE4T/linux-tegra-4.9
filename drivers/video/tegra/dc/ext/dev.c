@@ -1362,6 +1362,9 @@ static void tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 			data->imp_dirty = true;
 			break;
 #endif
+		case TEGRA_DC_EXT_FLIP_USER_DATA_POST_SYNCPT:
+			/* Already handled in the core FLIP ioctl. */
+			break;
 		default:
 			dev_err(&data->ext->dc->ndev->dev,
 				"Invalid FLIP_USER_DATA_TYPE\n");
@@ -2073,6 +2076,70 @@ static int dev_cpy_to_usr(void *outptr, u32 usr_win_size,
 	return 0;
 }
 
+static int tegra_dc_copy_syncpts_from_user(struct tegra_dc *dc,
+			struct tegra_dc_ext_flip_user_data *flip_user_data,
+			int nr_user_data, u32 **syncpt_id, u32 **syncpt_val,
+			int **syncpt_fd, int *syncpt_idx)
+{
+	struct tegra_dc_ext_flip_user_data *syncpt_user_data = NULL;
+	int i;
+
+	for (i = 0; i < nr_user_data; i++) {
+		if (flip_user_data[i].data_type ==
+				TEGRA_DC_EXT_FLIP_USER_DATA_POST_SYNCPT) {
+			/* Only one allowed. */
+			if (syncpt_user_data) {
+				dev_err(&dc->ndev->dev,
+					"Only one syncpt user data allowed!\n");
+					return -EINVAL;
+			}
+
+			syncpt_user_data = &flip_user_data[i];
+			*syncpt_idx = i;
+		}
+	}
+
+	if (syncpt_user_data) {
+		struct tegra_dc_ext_syncpt *ext_syncpt;
+		u16 syncpt_type;
+
+		syncpt_type = syncpt_user_data->flags &
+				TEGRA_DC_EXT_FLIP_FLAG_POST_SYNCPT_TYPE_MASK;
+		ext_syncpt = &syncpt_user_data->post_syncpt;
+
+		switch (syncpt_type) {
+		case TEGRA_DC_EXT_FLIP_FLAG_POST_SYNCPT_FD:
+			*syncpt_fd = &ext_syncpt->syncpt_fd;
+			break;
+		case TEGRA_DC_EXT_FLIP_FLAG_POST_SYNCPT_RAW:
+			*syncpt_id = &ext_syncpt->syncpt_id;
+			*syncpt_val = &ext_syncpt->syncpt_val;
+			break;
+		default:
+			dev_err(&dc->ndev->dev,
+				"Unrecognized syncpt user data type!\n");
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+
+static int tegra_dc_copy_syncpts_to_user(
+			struct tegra_dc_ext_flip_user_data *flip_user_data,
+			int syncpt_idx,
+			u8 *base_addr)
+{
+	u32 offset = sizeof(*flip_user_data) * syncpt_idx;
+	u8 *dstptr = base_addr + offset;
+
+	if (copy_to_user((void __user *)(uintptr_t)dstptr,
+			&flip_user_data[syncpt_idx], sizeof(*flip_user_data)))
+		return -EFAULT;
+
+	return 0;
+}
+
 static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			   unsigned long arg)
 {
@@ -2294,6 +2361,9 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		struct tegra_dc_ext_flip_windowattr_v2 *win;
 		struct tegra_dc_ext_flip_user_data *flip_user_data;
 		bool bypass;
+		u32 *syncpt_id = NULL, *syncpt_val = NULL;
+		int *syncpt_fd = NULL;
+		int syncpt_idx = -1;
 
 		u32 usr_win_size = sizeof(struct tegra_dc_ext_flip_windowattr);
 
@@ -2332,13 +2402,48 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			if (copy_from_user(flip_user_data,
 				(void __user *) (uintptr_t)args.data,
 				sizeof(*flip_user_data) * nr_user_data)) {
+				kfree(flip_user_data);
 				kfree(win);
 				return -EFAULT;
 			}
 		}
+
+		/*
+		 * Check if the client is explicitly requesting syncpts via flip
+		 * user data. If so, populate the syncpt variables accordingly.
+		 * Else, default to sync fds and use the original post_syncpt_fd
+		 * fence.
+		 */
+		ret = tegra_dc_copy_syncpts_from_user(user->ext->dc,
+			flip_user_data, nr_user_data, &syncpt_id, &syncpt_val,
+			&syncpt_fd, &syncpt_idx);
+		if (ret) {
+			kfree(flip_user_data);
+			kfree(win);
+			return ret;
+		}
+
+		if (syncpt_idx == -1)
+			syncpt_fd = &args.post_syncpt_fd;
+
 		ret = tegra_dc_ext_flip(user, win, win_num,
-			NULL, NULL, &args.post_syncpt_fd, args.dirty_rect,
+			syncpt_id, syncpt_val, syncpt_fd, args.dirty_rect,
 			args.flags, flip_user_data, nr_user_data);
+
+		/*
+		 * If the client requested post syncpt values via user data,
+		 * copy them back.
+		 */
+		if (syncpt_idx > -1) {
+			args.post_syncpt_fd = -1;
+			ret = tegra_dc_copy_syncpts_to_user(flip_user_data,
+					syncpt_idx, (u8 *)(void *)args.data);
+			if (ret) {
+				kfree(flip_user_data);
+				kfree(win);
+				return ret;
+			}
+		}
 
 		if (nr_user_data > 0)
 			kfree(flip_user_data);

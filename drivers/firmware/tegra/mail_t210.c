@@ -233,9 +233,6 @@ static int __bpmp_connect(void)
 int bpmp_connect(struct platform_device *pdev)
 {
 	struct resource *res;
-	/* firmware loaded after boot */
-	if (IS_ENABLED(CONFIG_ARCH_TEGRA_12x_SOC))
-		return 0;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	atomics = devm_ioremap_resource(&pdev->dev, res);

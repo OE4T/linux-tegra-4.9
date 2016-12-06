@@ -20,10 +20,8 @@
 #include <linux/debugfs.h>
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
+#include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
-
-#define MSG_SZ			128
-#define MSG_DATA_SZ		120
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #define NR_CHANNELS		14
@@ -32,10 +30,6 @@
 #define NR_CHANNELS		12
 #define NR_THREAD_CH		4
 #endif
-
-#define NR_MRQS			67
-#define __MRQ_ATTRS		0xff000000
-#define __MRQ_INDEX(id)		((id) & ~__MRQ_ATTRS)
 
 #define DO_ACK			(1 << 0)
 #define RING_DOORBELL		(1 << 1)
@@ -54,7 +48,7 @@ struct bpmp_cpuidle_state {
 struct mb_data {
 	int32_t code;
 	int32_t flags;
-	u8 data[MSG_DATA_SZ];
+	u8 data[MSG_DATA_MIN_SZ];
 } __packed;
 
 struct channel_data {

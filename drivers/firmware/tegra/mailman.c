@@ -21,7 +21,11 @@
 #include <soc/tegra/tegra_bpmp.h>
 #include "bpmp.h"
 
+#define NR_MRQS			67
 #define NUM_MRQ_HANDLERS	8
+
+#define __MRQ_ATTRS		0xff000000
+#define __MRQ_INDEX(id)		((id) & ~__MRQ_ATTRS)
 
 struct mrq_handler_data {
 	bpmp_mrq_handler handler;

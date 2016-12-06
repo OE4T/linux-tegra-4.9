@@ -23,6 +23,7 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <soc/tegra/fuse.h>
+#include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include "bpmp.h"
 
@@ -45,7 +46,7 @@ EXPORT_SYMBOL(tegra_bpmp_mail_readl);
 
 int tegra_bpmp_read_data(unsigned int ch, void *data, size_t sz)
 {
-	if (!data || sz > MSG_DATA_SZ || ch >= NR_CHANNELS)
+	if (!data || sz > MSG_DATA_MIN_SZ || ch >= NR_CHANNELS)
 		return -EINVAL;
 	memcpy_fromio(data, channel_area[ch].ib->data, sz);
 	return 0;
@@ -225,9 +226,9 @@ static int bpmp_wait_ack(int ch)
 static int bpmp_valid_txfer(void *ob_data, int ob_sz, void *ib_data, int ib_sz)
 {
 	return ob_sz >= 0 &&
-			ob_sz <= MSG_DATA_SZ &&
+			ob_sz <= MSG_DATA_MIN_SZ &&
 			ib_sz >= 0 &&
-			ib_sz <= MSG_DATA_SZ &&
+			ib_sz <= MSG_DATA_MIN_SZ &&
 			(!ob_sz || ob_data) &&
 			(!ib_sz || ib_data);
 }

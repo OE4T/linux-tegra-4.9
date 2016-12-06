@@ -526,7 +526,7 @@ static const struct file_operations bpmp_tag_fops = {
 	.release = single_release
 };
 
-#define MSG_NR_FIELDS	((MSG_DATA_SZ + 3) / 4)
+#define MSG_NR_FIELDS	((MSG_DATA_MIN_SZ + 3) / 4)
 #define MSG_DATA_COUNT	(MSG_NR_FIELDS + 1)
 
 static uint32_t inbox_data[MSG_DATA_COUNT];
@@ -568,7 +568,7 @@ static ssize_t bpmp_mrq_write(struct file *file, const char __user *user_buf,
 	}
 
 	ret = tegra_bpmp_send_receive(outbox_data[0], outbox_data + 1,
-			MSG_DATA_SZ, inbox_data + 1, MSG_DATA_SZ);
+			MSG_DATA_MIN_SZ, inbox_data + 1, MSG_DATA_MIN_SZ);
 
 complete:
 	inbox_data[0] = ret;

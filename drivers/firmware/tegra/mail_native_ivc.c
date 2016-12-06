@@ -17,6 +17,7 @@
 #include <linux/tegra-ivc-instance.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-soc.h>
+#include <soc/tegra/bpmp_abi.h>
 #include "bpmp.h"
 #include "mail_t186.h"
 
@@ -161,7 +162,7 @@ static int native_single_init(int ch)
 	size_t hdr_sz;
 	int r;
 
-	msg_sz = tegra_ivc_align(MSG_SZ);
+	msg_sz = tegra_ivc_align(MSG_DATA_MIN_SZ);
 	hdr_sz = tegra_ivc_total_queue_size(0);
 	que_sz = tegra_ivc_total_queue_size(msg_sz);
 

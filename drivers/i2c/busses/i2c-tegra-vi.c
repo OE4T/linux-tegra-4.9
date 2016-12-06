@@ -2079,12 +2079,6 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 			goto disable_clk;
 	}
 
-	ret = tegra_i2c_init(i2c_dev);
-	if (ret) {
-		dev_err(&pdev->dev, "Failed to initialize i2c controller");
-		goto disable_clk;
-	}
-
 	ret = devm_request_irq(&pdev->dev, i2c_dev->irq,
 			tegra_i2c_isr, 0, dev_name(&pdev->dev), i2c_dev);
 	if (ret) {
@@ -2185,8 +2179,6 @@ static int tegra_i2c_resume(struct device *dev)
 	int ret;
 
 	i2c_lock_adapter(&i2c_dev->adapter);
-
-	ret = tegra_i2c_init(i2c_dev);
 
 	if (!i2c_dev->hw->has_powergate) {
 		ret = tegra_i2c_init(i2c_dev);

@@ -205,7 +205,7 @@
 					min_framerate = "1.5";
 					max_framerate = "30";
 					min_exp_time = "30";
-					max_exp_time = "680000";
+					max_exp_time = "660000";
 					embedded_metadata_height = "0";
 				};
 				mode1 {/*mode IMX185_MODE_1920X1080_CROP_10BIT_30FPS*/
@@ -235,7 +235,7 @@
 					min_framerate = "1.5";
 					max_framerate = "30";
 					min_exp_time = "30";
-					max_exp_time = "680000";
+					max_exp_time = "660000";
 					embedded_metadata_height = "0";
 				};
 
@@ -266,7 +266,7 @@
 					min_framerate = "1.5";
 					max_framerate = "60";
 					min_exp_time = "30";
-					max_exp_time = "680000";
+					max_exp_time = "660000";
 					embedded_metadata_height = "0";
 				};
 
@@ -297,7 +297,7 @@
 					min_framerate = "1.5";
 					max_framerate = "60";
 					min_exp_time = "30";
-					max_exp_time = "680000";
+					max_exp_time = "660000";
 					embedded_metadata_height = "0";
 				};
 				mode4 {/*mode IMX185_MODE_1920X1080_CROP_HDR_30FPS*/
@@ -324,10 +324,10 @@
 					max_gain_val = "12";
 					min_hdr_ratio = "16";
 					max_hdr_ratio = "16";
-					min_framerate = "1";
+					min_framerate = "1.5";
 					max_framerate = "30";
 					min_exp_time = "30";
-					max_exp_time = "33000";
+					max_exp_time = "660000";
 					embedded_metadata_height = "0";
 
 					/* WDR related settings */

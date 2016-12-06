@@ -91,7 +91,7 @@ void tegra_bpmp_mail_return_data(int ch, int code, void *data, int sz)
 	struct mb_data *frame;
 	int r;
 
-	if (sz > MSG_DATA_SZ) {
+	if (sz > MSG_DATA_MIN_SZ) {
 		WARN_ON(1);
 		return;
 	}

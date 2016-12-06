@@ -17,6 +17,7 @@
 #include <linux/of_address.h>
 #include <linux/of_platform.h>
 #include <linux/tegra-ivc.h>
+#include <soc/tegra/bpmp_abi.h>
 #include "bpmp.h"
 #include "mail_t186.h"
 
@@ -144,7 +145,7 @@ static int virt_init_io(void)
 		/* There is no compile time check for this and it's not really
 		 * safe to proceed
 		 */
-		if (cookie->frame_size < MSG_SZ) {
+		if (cookie->frame_size < MSG_DATA_MIN_SZ) {
 			pr_err("%s: Frame size is too small\n", __func__);
 			goto cleanup;
 		}

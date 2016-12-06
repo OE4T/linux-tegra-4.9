@@ -69,6 +69,7 @@ struct imx185 {
 	u32				frame_length;
 	s32	group_hold_prev;
 	bool	group_hold_en;
+	s64 last_wdr_et_val;
 	struct regmap	*regmap;
 	struct camera_common_data	*s_data;
 	struct camera_common_pdata	*pdata;
@@ -567,6 +568,8 @@ static int imx185_set_frame_rate(struct imx185 *priv, s64 val)
 	s64 frame_length;
 	struct camera_common_mode_info *mode = priv->pdata->mode_info;
 	struct camera_common_data *s_data = priv->s_data;
+	struct v4l2_control control;
+	int hdr_en;
 	int i = 0;
 
 	frame_length = mode[s_data->mode].pixel_clock *
@@ -590,6 +593,24 @@ static int imx185_set_frame_rate(struct imx185 *priv, s64 val)
 		if (err)
 			goto fail;
 	}
+
+	/* check hdr enable ctrl */
+	control.id = V4L2_CID_HDR_EN;
+	err = camera_common_g_ctrl(priv->s_data, &control);
+	if (err < 0) {
+		dev_err(&priv->i2c_client->dev,
+			"could not find device ctrl.\n");
+		return err;
+	}
+
+	hdr_en = switch_ctrl_qmenu[control.value];
+	if ((hdr_en == SWITCH_ON) && (priv->last_wdr_et_val != 0)) {
+		err = imx185_set_coarse_time_hdr(priv, priv->last_wdr_et_val);
+		if (err)
+			dev_dbg(&priv->i2c_client->dev,
+			"%s: error coarse time SHS1 SHS2 override\n", __func__);
+	}
+
 	return 0;
 
 fail:
@@ -685,6 +706,8 @@ static int imx185_set_coarse_time_hdr(struct imx185 *priv, s64 val)
 
 	if (priv->frame_length == 0)
 		priv->frame_length = IMX185_MIN_FRAME_LENGTH;
+
+	priv->last_wdr_et_val = val;
 
 	/*WDR, update SHS1 as short ET, and SHS2 is 16x of short*/
 	coarse_time_shs1 = mode[s_data->mode].pixel_clock * val /
@@ -1024,6 +1047,7 @@ static int imx185_probe(struct i2c_client *client,
 	priv->subdev = &common_data->subdev;
 	priv->subdev->dev = &client->dev;
 	priv->s_data->dev = &client->dev;
+	priv->last_wdr_et_val = 0;
 
 	err = imx185_power_get(priv);
 	if (err)

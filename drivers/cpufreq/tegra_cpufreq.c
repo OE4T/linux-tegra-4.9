@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -939,12 +939,18 @@ static int tegra_cpu_exit(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *ftbl;
 	struct mutex *mlock;
+	int cl;
 
 	mlock = &per_cpu(pcpu_mlock, policy->cpu);
 	mutex_lock(mlock);
 
 	ftbl = get_freqtable(policy->cpu);
 	cpufreq_frequency_table_cpuinfo(policy, ftbl);
+
+	cl = tegra18_logical_to_cluster(policy->cpu);
+	if (tfreq_data.pcluster[cl].bwmgr)
+		tegra_bwmgr_set_emc(tfreq_data.pcluster[cl].bwmgr, 0,
+			TEGRA_BWMGR_SET_EMC_FLOOR);
 
 	mutex_unlock(mlock);
 	return 0;

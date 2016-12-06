@@ -161,7 +161,7 @@ struct tegra_se_slot {
 
 static LIST_HEAD(key_slot);
 
-static u32 pka_op_size[16] = {512, 768, 1024, 1536, 2048, 3072, 4096, 160, 192,
+static u32 pka_op_size[] = {512, 768, 1024, 1536, 2048, 3072, 4096, 160, 192,
 				224, 256, 384, 512, 640};
 
 struct tegra_se_ecdh_context {
@@ -472,7 +472,9 @@ static void tegra_se_fill_pka_opmem_addr(struct tegra_se_elp_dev *se_dev,
 					 struct tegra_se_elp_pka_request *req)
 {
 	u32 i;
-	int len = req->size;
+	int len = 0;
+	int nwords = req->size / 4;
+	int nwords_521 = pka_op_size[SE_ELP_OP_MODE_ECC521] / 32;
 	u32 *MOD, *M, *R2, *EXP, *MSG;
 	u32 *A, *B, *PX, *PY, *K, *QX, *QY;
 
@@ -494,7 +496,7 @@ static void tegra_se_fill_pka_opmem_addr(struct tegra_se_elp_dev *se_dev,
 		EXP = req->exponent;
 		MSG = req->message;
 
-		for (i = 0; i < req->size / 4; i++) {
+		for (i = 0; i < nwords; i++) {
 			se_elp_writel(se_dev, PKA1, *EXP++, reg_bank_offset(
 				      TEGRA_SE_ELP_PKA_RSA_EXP_BANK,
 				      TEGRA_SE_ELP_PKA_RSA_EXP_ID,
@@ -516,24 +518,40 @@ static void tegra_se_fill_pka_opmem_addr(struct tegra_se_elp_dev *se_dev,
 		A = req->curve_param_a;
 
 		if (req->op_mode == SE_ELP_OP_MODE_ECC521) {
-			for (i = 0; i < req->size / 4; i++)
+			for (i = 0; i < nwords; i++)
 				se_elp_writel(se_dev, PKA1, *MOD++,
+					      reg_bank_offset(
+						TEGRA_SE_ELP_PKA_MOD_BANK,
+						TEGRA_SE_ELP_PKA_MOD_ID,
+						req->op_mode) + (i * 4));
+
+			for (i = nwords; i < nwords_521; i++)
+				se_elp_writel(se_dev, PKA1, 0x0,
 					      reg_bank_offset(
 						TEGRA_SE_ELP_PKA_MOD_BANK,
 						TEGRA_SE_ELP_PKA_MOD_ID,
 						req->op_mode) + (i * 4));
 		}
 
-		for (i = 0; i < req->size / 4; i++)
+		for (i = 0; i < nwords; i++)
 			se_elp_writel(se_dev, PKA1, *A++, reg_bank_offset(
 					TEGRA_SE_ELP_PKA_ECC_A_BANK,
 					TEGRA_SE_ELP_PKA_ECC_A_ID,
 					req->op_mode) + (i * 4));
 
+		if (req->op_mode == SE_ELP_OP_MODE_ECC521) {
+			for (i = nwords; i < nwords_521; i++)
+				se_elp_writel(se_dev, PKA1, 0x0,
+					      reg_bank_offset(
+						TEGRA_SE_ELP_PKA_ECC_A_BANK,
+						TEGRA_SE_ELP_PKA_ECC_A_ID,
+						req->op_mode) + (i * 4));
+		}
+
 		if (req->ecc_type != ECC_POINT_DOUBLE) {
 			PX = req->base_pt_x;
 			PY = req->base_pt_y;
-			for (i = 0; i < req->size / 4; i++) {
+			for (i = 0; i < nwords; i++) {
 				se_elp_writel(se_dev, PKA1, *PX++,
 					      reg_bank_offset(
 						TEGRA_SE_ELP_PKA_ECC_XP_BANK,
@@ -546,6 +564,20 @@ static void tegra_se_fill_pka_opmem_addr(struct tegra_se_elp_dev *se_dev,
 						TEGRA_SE_ELP_PKA_ECC_YP_ID,
 						req->op_mode) + (i * 4));
 			}
+			if (req->op_mode == SE_ELP_OP_MODE_ECC521) {
+				for (i = nwords; i < nwords_521; i++) {
+					se_elp_writel(se_dev, PKA1, 0x0,
+						       reg_bank_offset(
+						TEGRA_SE_ELP_PKA_ECC_XP_BANK,
+						TEGRA_SE_ELP_PKA_ECC_XP_ID,
+						req->op_mode) + (i * 4));
+					se_elp_writel(se_dev, PKA1, 0x0,
+						       reg_bank_offset(
+						TEGRA_SE_ELP_PKA_ECC_YP_BANK,
+						TEGRA_SE_ELP_PKA_ECC_YP_ID,
+						req->op_mode) + (i * 4));
+				}
+			}
 		}
 
 		if (req->ecc_type == ECC_POINT_VER ||
@@ -553,12 +585,23 @@ static void tegra_se_fill_pka_opmem_addr(struct tegra_se_elp_dev *se_dev,
 			/* For shamir trick, curve_param_b is parameter k
 			 * and k should be of size CTRL_BASE_RADIX
 			 */
-			if (req->ecc_type == ECC_SHAMIR_TRICK)
-				len = (num_words(req->op_mode)) * 4;
-
 			B = req->curve_param_b;
-			for (i = 0; i < len / 4; i++)
+			for (i = 0; i < nwords; i++)
 				se_elp_writel(se_dev, PKA1, *B++,
+							  reg_bank_offset(
+						TEGRA_SE_ELP_PKA_ECC_B_BANK,
+						TEGRA_SE_ELP_PKA_ECC_B_ID,
+						req->op_mode) + (i * 4));
+
+			if (req->ecc_type == ECC_SHAMIR_TRICK)
+				len = num_words(req->op_mode);
+
+			if (req->ecc_type == ECC_POINT_VER &&
+			    req->op_mode == SE_ELP_OP_MODE_ECC521)
+				len = nwords_521;
+
+			for (i = nwords; i < len; i++)
+				se_elp_writel(se_dev, PKA1, 0x0,
 					      reg_bank_offset(
 						TEGRA_SE_ELP_PKA_ECC_B_BANK,
 						TEGRA_SE_ELP_PKA_ECC_B_ID,
@@ -570,7 +613,7 @@ static void tegra_se_fill_pka_opmem_addr(struct tegra_se_elp_dev *se_dev,
 		    req->ecc_type == ECC_POINT_DOUBLE) {
 			QX = req->res_pt_x;
 			QY = req->res_pt_y;
-			for (i = 0; i < req->size / 4; i++) {
+			for (i = 0; i < nwords; i++) {
 				se_elp_writel(se_dev, PKA1, *QX++,
 					      reg_bank_offset(
 						TEGRA_SE_ELP_PKA_ECC_XQ_BANK,
@@ -583,6 +626,21 @@ static void tegra_se_fill_pka_opmem_addr(struct tegra_se_elp_dev *se_dev,
 						TEGRA_SE_ELP_PKA_ECC_YQ_ID,
 						req->op_mode) + (i * 4));
 			}
+			if (req->op_mode == SE_ELP_OP_MODE_ECC521) {
+				for (i = nwords; i < nwords_521; i++) {
+					se_elp_writel(se_dev, PKA1, 0x0,
+						       reg_bank_offset(
+						TEGRA_SE_ELP_PKA_ECC_XQ_BANK,
+						TEGRA_SE_ELP_PKA_ECC_XQ_ID,
+						req->op_mode) + (i * 4));
+
+					se_elp_writel(se_dev, PKA1, 0x0,
+						       reg_bank_offset(
+						TEGRA_SE_ELP_PKA_ECC_YQ_BANK,
+						TEGRA_SE_ELP_PKA_ECC_YQ_ID,
+						req->op_mode) + (i * 4));
+				}
+			}
 		}
 
 		if (req->ecc_type == ECC_POINT_MUL ||
@@ -591,11 +649,17 @@ static void tegra_se_fill_pka_opmem_addr(struct tegra_se_elp_dev *se_dev,
 			 * and k for ECC_POINT_MUL and l for ECC_SHAMIR_TRICK
 			 * should be of size CTRL_BASE_RADIX
 			 */
-			len = (num_words(req->op_mode)) * 4;
 			K = req->key;
-			for (i = 0; i < len / 4; i++)
+			for (i = 0; i < nwords; i++)
 				se_elp_writel(se_dev, PKA1, *K++,
 					      reg_bank_offset(
+						TEGRA_SE_ELP_PKA_ECC_K_BANK,
+						TEGRA_SE_ELP_PKA_ECC_K_ID,
+						req->op_mode) + (i * 4));
+
+			for (i = nwords; i < num_words(req->op_mode); i++)
+				se_elp_writel(se_dev, PKA1, 0x0,
+							reg_bank_offset(
 						TEGRA_SE_ELP_PKA_ECC_K_BANK,
 						TEGRA_SE_ELP_PKA_ECC_K_ID,
 						req->op_mode) + (i * 4));
@@ -663,7 +727,8 @@ static void tegra_se_program_pka_regs(struct tegra_se_elp_dev *se_dev,
 
 		val =
 		TEGRA_SE_ELP_PKA_CTRL_BASE_RADIX(pka_ctrl_base(req->op_mode))
-			| TEGRA_SE_ELP_PKA_CTRL_PARTIAL_RADIX(req->size / 4);
+			| TEGRA_SE_ELP_PKA_CTRL_PARTIAL_RADIX(
+					pka_op_size[req->op_mode] / 32);
 		val |= TEGRA_SE_ELP_PKA_CTRL_GO(TEGRA_SE_ELP_PKA_CTRL_GO_START);
 		se_elp_writel(se_dev, PKA1, val, TEGRA_SE_ELP_PKA_CTRL_OFFSET);
 		break;
@@ -721,7 +786,7 @@ static void tegra_se_program_pka_regs(struct tegra_se_elp_dev *se_dev,
 			      TEGRA_SE_ELP_PKA_CTRL_BASE_RADIX
 				(pka_ctrl_base(req->op_mode)) |
 			      TEGRA_SE_ELP_PKA_CTRL_PARTIAL_RADIX
-				(req->size / 4) |
+				(pka_op_size[req->op_mode] / 32) |
 			      TEGRA_SE_ELP_PKA_CTRL_GO
 				(TEGRA_SE_ELP_PKA_CTRL_GO_START),
 			      TEGRA_SE_ELP_PKA_CTRL_OFFSET);

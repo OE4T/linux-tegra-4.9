@@ -116,6 +116,13 @@
 /* Flag for HDR_DATA handling */
 #define TEGRA_DC_EXT_FLIP_FLAG_HDR_ENABLE	(1 << 0)
 #define TEGRA_DC_EXT_FLIP_FLAG_HDR_DATA_UPDATED (1 << 1)
+/* Flags for post-syncpt handling */
+/* Bits 1:0 are reserved for the post-syncpt type */
+#define TEGRA_DC_EXT_FLIP_FLAG_POST_SYNCPT_TYPE_SHIFT	0
+#define TEGRA_DC_EXT_FLIP_FLAG_POST_SYNCPT_TYPE_MASK \
+			(0x3 << TEGRA_DC_EXT_FLIP_FLAG_POST_SYNCPT_TYPE_SHIFT)
+#define TEGRA_DC_EXT_FLIP_FLAG_POST_SYNCPT_FD	(0 << 0)
+#define TEGRA_DC_EXT_FLIP_FLAG_POST_SYNCPT_RAW	(1 << 0)
 
 struct tegra_timespec {
 	__s32	tv_sec; /* seconds */
@@ -332,6 +339,7 @@ enum tegra_dc_ext_flip_data_type {
 	TEGRA_DC_EXT_FLIP_USER_DATA_HDR_DATA,
 	TEGRA_DC_EXT_FLIP_USER_DATA_IMP_DATA, /* only valid during PROPOSE */
 	TEGRA_DC_EXT_FLIP_USER_DATA_IMP_TAG, /* only valid during FLIP */
+	TEGRA_DC_EXT_FLIP_USER_DATA_POST_SYNCPT,
 };
 
 /*
@@ -419,6 +427,40 @@ struct tegra_dc_ext_imp_flip_tag {
 	__u16 reserved[9]; /* unused - must be 0 */
 };
 
+/*
+ * syncpt_id and syncpt_val are used for raw syncpts. syncpt_fd is used for the
+ * fd variant.
+ * reserved is padding so that the total struct size is 26 bytes.
+ *
+ * Users can explicitly request post-syncpts as part of the flip user data by
+ * doing the following:
+ * 1) Set the flip user data type to TEGRA_DC_EXT_FLIP_USER_DATA_POST_SYNCPT.
+ * 2) Set the flip user data flags to select the requested syncpt type. See the
+ *    TEGRA_DC_EXT_FLIP_FLAG_POST_SYNCPT_* flags for the supported options.
+ *
+ * The kernel will fill in the actual struct fields based on the requested
+ * syncpt type.
+ *
+ * There are a few caveats to this mechanism that users should be aware of:
+ * 1) The original post-syncpt fence in whatever FLIP ioctl struct is being used
+ *    will NOT be honored. This is a MUTUALLY EXCLUSIVE option.
+ * 2) The requested post-syncpt type will be enforced for the window pre-syncpts
+ *    as well, so it's up to the user to make sure these fields are specified in
+ *    a consistent manner.
+ * 3) Only one flip user data of this type is allowed. If more than one is
+ *    specified, the FLIP ioctl will return failure.
+ */
+struct tegra_dc_ext_syncpt {
+	union {
+		struct {
+			__u32 syncpt_id;
+			__u32 syncpt_val;
+		};
+		__s32 syncpt_fd;
+	};
+	__u16 reserved[9]; /* unused - must be 0 */
+};
+
 /* size of the this struct is 32 bytes */
 struct tegra_dc_ext_flip_user_data {
 	__u8 data_type;
@@ -431,6 +473,7 @@ struct tegra_dc_ext_flip_user_data {
 		struct tegra_dc_ext_hdr hdr_info;
 		struct tegra_dc_ext_imp_ptr imp_ptr;
 		struct tegra_dc_ext_imp_flip_tag imp_tag;
+		struct tegra_dc_ext_syncpt post_syncpt; /* out */
 	};
 };
 

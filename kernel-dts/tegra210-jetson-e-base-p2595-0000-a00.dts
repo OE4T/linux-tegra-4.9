@@ -497,6 +497,87 @@
 		status = "okay";
 	};
 
+	mailbox@70098000 {
+		status = "okay";
+	};
+
+	usb_cd {
+		status = "okay";
+		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
+		phy-names = "otg-phy";
+	};
+
+	pinctrl@7009f000 {
+		status = "okay";
+		pinctrl-0 = <&tegra_padctl_uphy_pinmux_default>;
+		pinctrl-names = "default";
+		tegra_padctl_uphy_pinmux_default: pinmux {
+			usb2-micro-AB-xusb {
+				nvidia,lanes = "otg-0";
+				nvidia,function = "xusb";
+				nvidia,port-cap =
+					<TEGRA_PADCTL_PORT_OTG_CAP>;
+			};
+			usb3-for-dev-mode {
+				nvidia,lanes = "uphy-lane-0";
+				nvidia,function = "usb3";
+				nvidia,usb3-port = <2>;
+				nvidia,usb2-map = <0>;
+				nvidia,port-cap =
+					<TEGRA_PADCTL_PORT_OTG_CAP>;
+			};
+			usb2-micro-AB-snps {
+				nvidia,lanes = "otg-0";
+				nvidia,function = "snps";
+				status = "disabled";
+			};
+			usb2-std-A-port0 {
+				 nvidia,lanes = "otg-2";
+				 nvidia,function = "xusb";
+				 nvidia,port-cap =
+					<TEGRA_PADCTL_PORT_HOST_ONLY>;
+			};
+			usb3-std-A-port0 {
+				 nvidia,lanes = "uphy-lane-5";
+				 nvidia,function = "usb3";
+				 nvidia,usb3-port = <1>;
+				 nvidia,usb2-map = <2>;
+				 nvidia,port-cap =
+					<TEGRA_PADCTL_PORT_HOST_ONLY>;
+			};
+			usb2-eth {
+				 nvidia,lanes = "otg-1";
+				 nvidia,function = "xusb";
+				 nvidia,port-cap =
+					<TEGRA_PADCTL_PORT_HOST_ONLY>;
+			};
+			usb3-eth {
+				 nvidia,lanes = "uphy-lane-6";
+				 nvidia,function = "usb3";
+				 nvidia,usb3-port = <0>;
+				 nvidia,usb2-map = <1>;
+				 nvidia,port-cap =
+						<TEGRA_PADCTL_PORT_HOST_ONLY>;
+			};
+			hsic {
+				 nvidia,lanes = "hsic-0";
+				 nvidia,function = "hsic";
+			};
+			pcie {
+				 nvidia,lanes =	"uphy-lane-1", "uphy-lane-2",
+						"uphy-lane-3", "uphy-lane-4";
+				 nvidia,function = "pcie";
+				 nvidia,pcie-controller = <0>;
+				 nvidia,pcie-lane-select =
+					<TEGRA_PADCTL_PCIE_LANE_X4>;
+			};
+			sata {
+				 nvidia,lanes = "uphy-lane-7";
+				 nvidia,function = "sata";
+			};
+		};
+	};
+
 	xusb_pad_ctl: xusb_padctl { /* Put common control config here */
 		nvidia,lane-map = <0x14>;
 		nvidia,enable-sata-port;
@@ -508,13 +589,16 @@
 	};
 
 	xusb@70090000 {
-		/* nvidia,uses_external_pmic;
-		/* nvidia,gpio_controls_muxed_ss_lanes; */
-		nvidia,gpio_ss1_sata = <0>;
-		nvidia,ulpicap = <0>; /* No ulpi support. can we remove */
-		nvidia,portmap = <0x0e02>;
-		nvidia,common_padctl = <&xusb_pad_ctl>;
 		status = "okay";
+		extcon-cables = <&vbus_gpio_extcon 1>;
+		extcon-cable-names = "id";
+		#extcon-cells = <1>;
+		phys =	<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
+		phy-names = "utmi-2", "usb3-1", "utmi-1", "usb3-0", "utmi-0";
 	};
 
 	xudc@700d0000 {

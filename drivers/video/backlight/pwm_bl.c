@@ -1,7 +1,7 @@
 /*
  * linux/drivers/video/backlight/pwm_bl.c
  *
- * Copyright (c) 2013-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * simple PWM based backlight control, board code has to setup
  * 1) pin configuration so PWM waveforms can output
@@ -27,7 +27,7 @@
 #include <linux/pwm_backlight.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
-#include "../../../arch/arm/mach-tegra/board.h"
+#include "../../../../display/drivers/video/tegra/dc/panel/board-panel.h"
 
 static void pwm_backlight_power_on(struct pwm_bl_data *pb, int brightness)
 {
@@ -304,6 +304,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 
 	if (np) {
 		struct pwm_bl_data_dt_ops *pops;
+		tegra_pwm_bl_ops_register(&pdev->dev);
 		pops = (struct pwm_bl_data_dt_ops *)platform_get_drvdata(pdev);
 		memset(&defdata, 0, sizeof(defdata));
 		if (pops) {

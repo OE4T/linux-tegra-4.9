@@ -734,6 +734,14 @@ static int tegra_se_channel_submit_gather(struct tegra_se_dev *se_dev,
 		}
 	}
 
+	if (!se_dev->channel) {
+		err = nvhost_channel_map(pdata, &se_dev->channel, pdata);
+		if (err) {
+			dev_err(se_dev->dev, "Nvhost Channel map failed\n");
+			goto exit;
+		}
+	}
+
 	job = nvhost_job_alloc(se_dev->channel, 1, 0, 0, 1);
 	if (!job) {
 		dev_err(se_dev->dev, "Nvhost Job allocation failed\n");
@@ -741,6 +749,16 @@ static int tegra_se_channel_submit_gather(struct tegra_se_dev *se_dev,
 		goto exit;
 	}
 
+	if (!se_dev->syncpt_id) {
+		se_dev->syncpt_id = nvhost_get_syncpt_host_managed(se_dev->pdev,
+							0, se_dev->pdev->name);
+		if (!se_dev->syncpt_id) {
+			dev_err(se_dev->dev, "Cannot get syncpt_id for SE(%s)\n",
+					se_dev->pdev->name);
+			err = -ENOMEM;
+			goto error;
+		}
+	}
 	syncpt_id = se_dev->syncpt_id;
 
 	/* initialize job data */
@@ -2926,6 +2944,22 @@ static struct akcipher_alg rsa_algs[] = {
 	}
 };
 
+static int tegra_se_nvhost_prepare_poweroff(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct tegra_se_dev *se_dev = pdata->private_data;
+
+	if (se_dev->channel) {
+		nvhost_putchannel(se_dev->channel, 1);
+		se_dev->channel = NULL;
+
+		/* syncpt will be released along with channel */
+		se_dev->syncpt_id = 0;
+	}
+
+	return 0;
+}
+
 static struct tegra_se_chipdata tegra18_se_chipdata = {
 	.aes_freq = 600000000,
 	.cpu_freq_mhz = 2400,
@@ -2946,6 +2980,7 @@ static struct nvhost_device_data nvhost_se1_info = {
 	.vm_regs		= {{SE_STREAMID_REG_OFFSET, true} },
 	.kernel_only = true,
 	.bwmgr_client_id = TEGRA_BWMGR_CLIENT_SE1,
+	.prepare_poweroff = tegra_se_nvhost_prepare_poweroff,
 };
 
 static struct nvhost_device_data nvhost_se2_info = {
@@ -2963,6 +2998,7 @@ static struct nvhost_device_data nvhost_se2_info = {
 	.vm_regs		= {{SE_STREAMID_REG_OFFSET, true} },
 	.kernel_only = true,
 	.bwmgr_client_id = TEGRA_BWMGR_CLIENT_SE2,
+	.prepare_poweroff = tegra_se_nvhost_prepare_poweroff,
 };
 
 static struct nvhost_device_data nvhost_se3_info = {
@@ -2980,6 +3016,7 @@ static struct nvhost_device_data nvhost_se3_info = {
 	.vm_regs		= {{SE_STREAMID_REG_OFFSET, true} },
 	.kernel_only = true,
 	.bwmgr_client_id = TEGRA_BWMGR_CLIENT_SE3,
+	.prepare_poweroff = tegra_se_nvhost_prepare_poweroff,
 };
 
 static struct nvhost_device_data nvhost_se4_info = {
@@ -2997,6 +3034,7 @@ static struct nvhost_device_data nvhost_se4_info = {
 	.vm_regs		= {{SE_STREAMID_REG_OFFSET, true} },
 	.kernel_only = true,
 	.bwmgr_client_id = TEGRA_BWMGR_CLIENT_SE4,
+	.prepare_poweroff = tegra_se_nvhost_prepare_poweroff,
 };
 
 static struct of_device_id tegra_se_of_match[] = {
@@ -3367,7 +3405,6 @@ static int tegra_se_remove(struct platform_device *pdev)
 
 	mutex_destroy(&se_dev->mtx);
 
-	nvhost_syncpt_put_ref_ext(se_dev->pdev, se_dev->syncpt_id);
 	nvhost_client_device_release(pdev);
 
 	mutex_destroy(&pdata->lock);

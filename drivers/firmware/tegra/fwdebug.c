@@ -24,53 +24,12 @@
 #include <soc/tegra/tegra_bpmp.h>
 #include "bpmp.h"
 
-static int bpmp_debugfs_write(uint32_t name, size_t sz_name,
-		uint32_t data, size_t sz_data)
-{
-	struct mrq_debugfs_request rq;
-
-	if (sz_name < 0 || sz_data < 0)
-		return -EINVAL;
-
-	rq.cmd = cpu_to_le32(CMD_DEBUGFS_WRITE);
-	rq.fop.fnameaddr = cpu_to_le32(name);
-	rq.fop.fnamelen = cpu_to_le32(sz_name);
-	rq.fop.dataaddr = cpu_to_le32(data);
-	rq.fop.datalen = cpu_to_le32(sz_data);
-
-	return tegra_bpmp_send_receive(MRQ_DEBUGFS, &rq, sizeof(rq),
-			NULL, 0);
-}
-
-#ifndef CONFIG_ARCH_TEGRA_21x_SOC
-static int bpmp_debugfs_dumpdir(uint32_t addr, size_t size, uint32_t *nbytes)
-{
-	struct mrq_debugfs_request rq;
-	struct mrq_debugfs_response re;
-	int r;
-
-	rq.cmd = cpu_to_le32(CMD_DEBUGFS_DUMPDIR);
-	rq.dumpdir.dataaddr = cpu_to_le32(addr);
-	rq.dumpdir.datalen = cpu_to_le32(size);
-
-	r = tegra_bpmp_send_receive(MRQ_DEBUGFS, &rq, sizeof(rq),
-			&re, sizeof(re));
-	if (r)
-		return r;
-
-	*nbytes = re.dumpdir.nbytes;
-
-	return 0;
-}
-#endif
-
 struct seqbuf {
 	char *buf;
 	size_t pos;
 	size_t size;
 };
 
-#ifndef CONFIG_ARCH_TEGRA_21x_SOC
 static void seqbuf_init(struct seqbuf *seqbuf, void *buf, size_t size)
 {
 	seqbuf->buf = buf;
@@ -127,7 +86,6 @@ static int seqbuf_seek(struct seqbuf *seqbuf, ssize_t offset)
 	seqbuf->pos += offset;
 	return seqbuf_status(seqbuf);
 }
-#endif
 
 static const char *root_path;
 
@@ -224,6 +182,24 @@ static int debugfs_open(struct inode *inode, struct file *file)
 	return single_open_size(file, debugfs_show, file, SZ_128K);
 }
 
+static int bpmp_debugfs_write(uint32_t name, size_t sz_name,
+		uint32_t data, size_t sz_data)
+{
+	struct mrq_debugfs_request rq;
+
+	if (sz_name < 0 || sz_data < 0)
+		return -EINVAL;
+
+	rq.cmd = cpu_to_le32(CMD_DEBUGFS_WRITE);
+	rq.fop.fnameaddr = cpu_to_le32(name);
+	rq.fop.fnamelen = cpu_to_le32(sz_name);
+	rq.fop.dataaddr = cpu_to_le32(data);
+	rq.fop.datalen = cpu_to_le32(sz_data);
+
+	return tegra_bpmp_send_receive(MRQ_DEBUGFS, &rq, sizeof(rq),
+			NULL, 0);
+}
+
 static int bpmp_debugfs_store(const char *name, const void *data, int sizedata)
 {
 	void *datavirt = NULL;
@@ -309,7 +285,6 @@ static const struct file_operations debugfs_fops = {
 	.release	= single_release,
 };
 
-#ifndef CONFIG_ARCH_TEGRA_21x_SOC
 static int bpmp_populate_dir(struct seqbuf *seqbuf, struct dentry *parent,
 		u32 depth)
 {
@@ -358,11 +333,8 @@ static int bpmp_populate_dir(struct seqbuf *seqbuf, struct dentry *parent,
 
 	return 0;
 }
-#endif
 
 static DEFINE_MUTEX(lock);
-
-#ifndef CONFIG_ARCH_TEGRA_21x_SOC
 static struct dentry *bpmp_debugfs_root;
 static char root_path_buf[256];
 
@@ -405,14 +377,27 @@ clean:
 	mutex_unlock(&lock);
 	return err;
 }
-#endif
 
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
-int bpmp_fwdebug_init(struct dentry *root)
+static int bpmp_debugfs_dumpdir(uint32_t addr, size_t size, uint32_t *nbytes)
 {
+	struct mrq_debugfs_request rq;
+	struct mrq_debugfs_response re;
+	int r;
+
+	rq.cmd = cpu_to_le32(CMD_DEBUGFS_DUMPDIR);
+	rq.dumpdir.dataaddr = cpu_to_le32(addr);
+	rq.dumpdir.datalen = cpu_to_le32(size);
+
+	r = tegra_bpmp_send_receive(MRQ_DEBUGFS, &rq, sizeof(rq),
+			&re, sizeof(re));
+	if (r)
+		return r;
+
+	*nbytes = re.dumpdir.nbytes;
+
 	return 0;
 }
-#else
+
 int bpmp_fwdebug_init(struct dentry *root)
 {
 	dma_addr_t phys;
@@ -448,4 +433,3 @@ out:
 	tegra_bpmp_free_coherent(sz, virt, phys);
 	return ret;
 }
-#endif

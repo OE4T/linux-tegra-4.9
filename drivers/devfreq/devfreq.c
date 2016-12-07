@@ -1089,6 +1089,10 @@ static ssize_t min_freq_store(struct device *dev, struct device_attribute *attr,
 		goto unlock;
 	}
 
+	/* can't drop below supported MIN */
+	if (value < df->profile->freq_table[0])
+		value = df->profile->freq_table[0];
+
 	df->min_freq = value;
 	update_devfreq(df);
 	ret = count;
@@ -1104,6 +1108,7 @@ static ssize_t max_freq_store(struct device *dev, struct device_attribute *attr,
 	unsigned long value;
 	int ret;
 	unsigned long min;
+	unsigned int max_states;
 
 	ret = sscanf(buf, "%lu", &value);
 	if (ret != 1)
@@ -1115,6 +1120,11 @@ static ssize_t max_freq_store(struct device *dev, struct device_attribute *attr,
 		ret = -EINVAL;
 		goto unlock;
 	}
+
+	/* can't exceed supported MAX */
+	max_states = df->profile->max_state;
+	if (value > df->profile->freq_table[max_states - 1])
+		value = df->profile->freq_table[max_states - 1];
 
 	df->max_freq = value;
 	update_devfreq(df);

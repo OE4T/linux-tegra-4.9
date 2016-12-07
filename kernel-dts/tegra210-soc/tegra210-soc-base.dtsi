@@ -223,7 +223,7 @@
 		#asids = <128>;
 		dma-window = <0x0 0x80000000 0x0 0x7ff00000>;
 		#iommu-cells = <1>;
-		swgid-mask = <0x00000fff 0xfffccdcf>;
+		swgid-mask = <0x00100fff 0xfffccdcf>;
 		#num-translation-enable = <5>;
 		#num-asid-security = <8>;
 

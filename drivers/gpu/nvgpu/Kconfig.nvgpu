@@ -85,7 +85,7 @@ config TEGRA_ACR
 
 config TEGRA_USE_NA_GPCPLL
 	bool "Enable noise aware mode of GM20B GPCPLL on Tegra"
-	depends on TEGRA_CLK_FRAMEWORK
+	depends on TEGRA_CLK_FRAMEWORK || COMMON_CLK
 	default n
 	help
 	  Enable noise aware (NA) mode of GM20b GPCPLL. In this mode PLL output

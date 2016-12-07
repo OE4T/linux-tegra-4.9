@@ -13,6 +13,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/delay.h>
 #include <linux/of.h>
 #include <linux/clk.h>
 #include <linux/platform_device.h>
@@ -109,7 +110,7 @@ static unsigned long tegra_tachometer_read_rpm(struct tachometer_dev *tach)
 		pr_err("%s: clock enable error: %d\n", __func__, ret);
 		return ret;
 	}
-
+	mdelay(100);
 	tach0 = tachometer_readl(tegra_tach, TACH_FAN_TACH0);
 	clk_disable_unprepare(tegra_tach->clk);
 	if (tach0 & TACH_FAN_TACH0_OVERFLOW_MASK) {

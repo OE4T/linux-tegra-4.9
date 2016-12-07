@@ -103,6 +103,7 @@ static const char *get_filename(const struct file *file, char *buf, int size)
 		return NULL;
 
 	filename += root_len;
+
 	return filename;
 }
 
@@ -143,6 +144,7 @@ static int debugfs_show(struct seq_file *m, void *p)
 	const char *filename;
 	size_t off;
 	uint32_t nbytes;
+	int len;
 	int ret;
 
 	namebuf = tegra_bpmp_alloc_coherent(namesize, &namephys, GFP_KERNEL);
@@ -162,7 +164,9 @@ static int debugfs_show(struct seq_file *m, void *p)
 	}
 
 	off = filename - namebuf;
-	ret = bpmp_debugfs_read(namephys + off, namesize, dataphys,
+	len = strlen(filename);
+
+	ret = bpmp_debugfs_read(namephys + off, len, dataphys,
 			m->size, &nbytes);
 
 	if (!ret)
@@ -200,79 +204,50 @@ static int bpmp_debugfs_write(uint32_t name, size_t sz_name,
 			NULL, 0);
 }
 
-static int bpmp_debugfs_store(const char *name, const void *data, int sizedata)
-{
-	void *datavirt = NULL;
-	void *namevirt = NULL;
-	dma_addr_t dataphys;
-	dma_addr_t namephys;
-	int sizename = strlen(name) + 1;
-	int ret;
-
-	if (sizedata < 0)
-		return -EINVAL;
-
-	if (sizename > SZ_4K)
-		return -ENAMETOOLONG;
-
-	datavirt = tegra_bpmp_alloc_coherent(sizedata, &dataphys, GFP_KERNEL);
-	if (datavirt == NULL) {
-		ret = -ENOMEM;
-		goto out;
-	}
-
-	namevirt = tegra_bpmp_alloc_coherent(sizename, &namephys, GFP_KERNEL);
-	if (namevirt == NULL) {
-		ret = -ENOMEM;
-		goto out;
-	}
-
-	memcpy(namevirt, name, sizename);
-	memcpy(datavirt, data, sizedata);
-
-	ret = bpmp_debugfs_write(namephys, sizename, dataphys, sizedata);
-
-out:
-	if (datavirt != NULL)
-		tegra_bpmp_free_coherent(sizedata, datavirt, dataphys);
-
-	if (namevirt != NULL)
-		tegra_bpmp_free_coherent(sizename, namevirt, namephys);
-
-	return ret;
-}
-
 static ssize_t debugfs_store(struct file *file, const char __user *buf,
 		size_t count, loff_t *f_pos)
 {
-	const size_t datasize = SZ_4K;
 	const size_t namesize = SZ_256;
 	char *databuf = NULL;
 	char *namebuf = NULL;
 	const char *filename;
 	ssize_t ret;
+	dma_addr_t phys_data;
+	dma_addr_t phys_name;
+	size_t off;
+	int len;
 
-	if (count > datasize)
+	databuf = tegra_bpmp_alloc_coherent(count, &phys_data, GFP_KERNEL);
+	if (!databuf)
 		return -ENOMEM;
-	namebuf = kmalloc(namesize, GFP_KERNEL);
-	databuf = kmalloc(datasize, GFP_KERNEL);
-	if (!namebuf || !databuf) {
+
+	namebuf = tegra_bpmp_alloc_coherent(namesize, &phys_name, GFP_KERNEL);
+	if (!namebuf) {
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	if (copy_from_user(databuf, buf, count))
-		return -EFAULT;
+	if (copy_from_user(databuf, buf, count)) {
+		ret = -EFAULT;
+		goto out;
+	}
 
 	filename = get_filename(file, namebuf, namesize);
-	if (!filename)
-		return -EFAULT;
+	if (!filename) {
+		ret = -EFAULT;
+		goto out;
+	}
 
-	ret = bpmp_debugfs_store(filename, databuf, count);
+	off = filename - namebuf;
+	len = strlen(filename);
+
+	ret = bpmp_debugfs_write(phys_name + off, len, phys_data, count);
 
 out:
-	kfree(namebuf);
-	kfree(databuf);
+	tegra_bpmp_free_coherent(namesize, namebuf, phys_name);
+
+	if (databuf)
+		tegra_bpmp_free_coherent(count, databuf, phys_data);
 
 	return ret ?: count;
 }
@@ -431,5 +406,6 @@ int bpmp_fwdebug_init(struct dentry *root)
 
 out:
 	tegra_bpmp_free_coherent(sz, virt, phys);
+
 	return ret;
 }

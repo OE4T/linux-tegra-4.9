@@ -29,6 +29,8 @@
 #include <linux/gpio/consumer.h>
 #include <linux/debugfs.h>
 #include <linux/stat.h>
+#include <linux/padctrl/padctrl.h>
+#include <linux/regulator/consumer.h>
 
 #include <linux/tegra_prod.h>
 #include "sdhci-pltfm.h"
@@ -135,6 +137,10 @@ struct sdhci_tegra {
 	int dqs_trim_delay;
 	int timing;
 	bool set_1v8_calib_offsets;
+	int current_voltage;
+	struct padctrl *sdmmc_padctrl;
+	bool config_pad_ctrl;
+	bool pwrdet_support;
 };
 
 static void sdhci_tegra_debugfs_init(struct sdhci_host *host);
@@ -837,6 +843,63 @@ static int tegra_sdhci_execute_tuning(struct sdhci_host *host, u32 opcode)
 	return mmc_send_tuning(host->mmc, opcode, NULL);
 }
 
+static void tegra_sdhci_set_padctrl(struct sdhci_host *host, int voltage)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+	int ret;
+
+	if (tegra_host->pwrdet_support && tegra_host->sdmmc_padctrl) {
+		ret = padctrl_set_voltage(tegra_host->sdmmc_padctrl, voltage);
+		if (ret)
+			dev_err(mmc_dev(host->mmc),
+				"Failed to set sdmmc padctrl %d\n", ret);
+	}
+}
+
+static void tegra_sdhci_signal_voltage_switch_pre(struct sdhci_host *host,
+	int signal_voltage)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+
+	if (IS_ERR_OR_NULL(host->mmc->supply.vqmmc)) {
+		dev_err(mmc_dev(host->mmc), "vqmmc supply missing\n");
+		return;
+	}
+
+	tegra_host->current_voltage =
+		regulator_get_voltage(host->mmc->supply.vqmmc);
+
+	/* For 3.3V, pwrdet should be set before setting the voltage */
+	if (signal_voltage == MMC_SIGNAL_VOLTAGE_330) {
+		if (tegra_host->current_voltage < 2700000)
+			tegra_sdhci_set_padctrl(host, 3300000);
+	}
+	tegra_host->config_pad_ctrl = true;
+}
+
+static void tegra_sdhci_signal_voltage_switch_post(struct sdhci_host *host,
+	int signal_voltage)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+	int voltage;
+	bool set;
+
+	if (IS_ERR_OR_NULL(host->mmc->supply.vqmmc)) {
+		dev_err(mmc_dev(host->mmc), "vqmmc supply missing\n");
+		return;
+	}
+
+	set = (signal_voltage == MMC_SIGNAL_VOLTAGE_180) ? true : false;
+	if (tegra_host->config_pad_ctrl) {
+		voltage = regulator_get_voltage(host->mmc->supply.vqmmc);
+		if ((voltage < tegra_host->current_voltage) && set)
+			tegra_sdhci_set_padctrl(host, 1800000);
+	}
+}
+
 static void tegra_sdhci_voltage_switch(struct sdhci_host *host)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
@@ -907,6 +970,8 @@ static const struct sdhci_ops tegra_sdhci_ops = {
 	.get_max_tuning_loop_counter = tegra_sdhci_get_max_tuning_loop_counter,
 	.skip_retuning = tegra_sdhci_skip_retuning,
 	.post_tuning = tegra_sdhci_post_tuning,
+	.voltage_switch_pre = tegra_sdhci_signal_voltage_switch_pre,
+	.voltage_switch_post = tegra_sdhci_signal_voltage_switch_post,
 };
 
 static const struct sdhci_pltfm_data sdhci_tegra20_pdata = {
@@ -1051,6 +1116,7 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 	of_property_read_u32(np, "max-clk-limit", (u32 *)&tegra_host->max_clk_limit);
 	of_property_read_u32(np, "ddr-clk-limit",
 		(u32 *)&tegra_host->max_ddr_clk_limit);
+	tegra_host->pwrdet_support = of_property_read_bool(np, "pwrdet-support");
 
 	return 0;
 }
@@ -1103,6 +1169,13 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 	if (IS_ERR_OR_NULL(tegra_host->prods)) {
 		dev_err(mmc_dev(host->mmc), "Prod-setting not available\n");
 		tegra_host->prods = NULL;
+	}
+
+	tegra_host->sdmmc_padctrl = devm_padctrl_get(&pdev->dev, "sdmmc");
+	if (IS_ERR(tegra_host->sdmmc_padctrl)) {
+		dev_err(mmc_dev(host->mmc), "Pad control not found %ld\n",
+			PTR_ERR(tegra_host->sdmmc_padctrl));
+		tegra_host->sdmmc_padctrl = NULL;
 	}
 
 	if (tegra_host->soc_data->nvquirks & NVQUIRK_ENABLE_DDR50)

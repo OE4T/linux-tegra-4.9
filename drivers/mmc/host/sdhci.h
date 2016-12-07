@@ -568,8 +568,12 @@ struct sdhci_ops {
 					 unsigned int max_dtr, int host_drv,
 					 int card_drv, int *drv_type);
 	int	(*get_max_tuning_loop_counter)(struct sdhci_host *host);
-	bool	(*skip_retuning)(struct sdhci_host *sdhci);
-	void	(*post_tuning)(struct sdhci_host *sdhci);
+	bool	(*skip_retuning)(struct sdhci_host *host);
+	void	(*post_tuning)(struct sdhci_host *host);
+	void	(*voltage_switch_pre)(struct sdhci_host *host,
+		int signal_voltage);
+	void	(*voltage_switch_post)(struct sdhci_host *host,
+		int signal_voltage);
 };
 
 #ifdef CONFIG_MMC_SDHCI_IO_ACCESSORS

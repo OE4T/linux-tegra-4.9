@@ -61,7 +61,9 @@ static inline void fdt_reserved_mem_save_node(unsigned long node,
  * of_reserved_mem_device_init() - assign reserved memory region to given device
  * @dev:	Pointer to the device to configure
  *
- * This function assigns respective DMA-mapping operations based on the first
+ * FIXME: Deviated the behavior from upstream.
+ *
+ * This function assigns respective DMA-mapping operations based on the all
  * reserved memory region specified by 'memory-region' property in device tree
  * node of the given device.
  *
@@ -69,7 +71,12 @@ static inline void fdt_reserved_mem_save_node(unsigned long node,
  */
 static inline int of_reserved_mem_device_init(struct device *dev)
 {
-	return of_reserved_mem_device_init_by_idx(dev, dev->of_node, 0);
+	int ret, idx = 0;
+
+	do {
+		ret = of_reserved_mem_device_init_by_idx(dev, dev->of_node, idx++);
+	} while (!ret);
+	return ret;
 }
 
 #endif /* __OF_RESERVED_MEM_H */

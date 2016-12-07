@@ -1401,7 +1401,7 @@ static int nvgpu_clk_arb_change_vf_point(struct gk20a *g, u16 gpc2clk_target,
 		status = clk_set_fll_clks(g, &fllclk);
 		if (status < 0)
 			return status;
-	} else if (voltuv > arb->voltuv_actual) {
+	} else {
 		status = clk_set_fll_clks(g, &fllclk);
 		if (status < 0)
 			return status;
@@ -1411,14 +1411,6 @@ static int nvgpu_clk_arb_change_vf_point(struct gk20a *g, u16 gpc2clk_target,
 			return status;
 
 		status = g->clk_pmu.clk_mclk.change(g, mclk_target);
-		if (status < 0)
-			return status;
-	} else {
-		status = g->clk_pmu.clk_mclk.change(g, mclk_target);
-		if (status < 0)
-			return status;
-
-		status = clk_set_fll_clks(g, &fllclk);
 		if (status < 0)
 			return status;
 	}

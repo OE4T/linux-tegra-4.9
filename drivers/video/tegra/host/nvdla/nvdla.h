@@ -72,23 +72,6 @@ struct nvdla_device {
 };
 
 /**
- * struct nvdla_task_fence: structure to hold fence info
- *
- * @fence_type		type: Linux fd, syncpoint
- * @syncpt_type		type: GoS, legacy syncpoint
- * @id			syncpoint index
- * @val			syncpoint current val
- * @fence		syncpoint expected thresh
- */
-struct nvdla_task_fence {
-	u32 fence_type;
-	u32 syncpt_type;
-	u32 id;
-	u32 val;
-	u32 fence;
-};
-
-/**
  * struct nvdla_task:	structure for task info
  *
  * @queue		Queue in which task submitted
@@ -110,8 +93,8 @@ struct nvdla_task {
 	struct nvhost_queue *queue;
 	struct nvhost_buffers *buffers;
 	struct nvhost_syncpt *sp;
-	struct nvdla_task_fence *prefences;
-	struct nvdla_task_fence *postfences;
+	struct nvdla_fence *prefences;
+	struct nvdla_fence *postfences;
 	u32 fence;
 	struct kref ref;
 	struct list_head list;

@@ -49,68 +49,53 @@ static DEFINE_DMA_ATTRS(attrs);
 static int nvdla_get_fences(struct nvdla_ioctl_submit_task *user_task,
 			struct nvdla_task *task)
 {
-	struct nvdla_fence __user *postfences =
-		(struct nvdla_fence __user *)(uintptr_t)user_task->postfences;
-	struct nvdla_fence __user *prefences =
-		(struct nvdla_fence __user *)(uintptr_t)user_task->prefences;
-	u32 num_postfences = user_task->num_postfences;
-	u32 num_prefences = user_task->num_prefences;
-	struct nvdla_fence fence;
 	int err = 0;
-	u32 i = 0;
+	struct platform_device *pdev = task->queue->pool->pdev;
+
+	nvdla_dbg_fn(pdev, "copying fences");
 
 	/* get pre fences */
-	for (i = 0; i < num_prefences; i++, prefences++) {
-		err = copy_from_user(&fence, prefences,
-			sizeof(struct nvdla_fence));
-		if (err)
-			goto fail;
-
-		if (fence.syncpoint_index == 0)
-			goto fail;
-
-		task->prefences[i].fence_type = fence.type;
-		task->prefences[i].id = fence.syncpoint_index;
-		task->prefences[i].val = fence.syncpoint_value;
+	if (copy_from_user(task->prefences,
+		(void __user *)user_task->prefences,
+		(user_task->num_prefences * sizeof(struct nvdla_fence)))) {
+		err = -EFAULT;
+		nvdla_dbg_err(pdev, "failed to copy prefences");
+		goto fail;
 	}
 
 	/* get post fences */
-	for (i = 0; i < num_postfences; i++, postfences++) {
-		err = copy_from_user(&fence, postfences,
-			sizeof(struct nvdla_fence));
-		if (err)
-			goto fail;
-
-		if (fence.syncpoint_index == 0)
-			goto fail;
-
-		task->postfences[i].fence_type = fence.type;
+	if (copy_from_user(task->postfences,
+		(void __user *)user_task->postfences,
+		(user_task->num_postfences * sizeof(struct nvdla_fence)))) {
+		err = -EFAULT;
+		nvdla_dbg_err(pdev, "failed to copy postfences");
+		goto fail;
 	}
+
+	nvdla_dbg_info(pdev, "copying fences done");
+
 fail:
 	return err;
 }
 
 int nvdla_send_postfences(struct nvdla_task *task,
-			struct nvdla_ioctl_submit_task usr_task)
+			struct nvdla_ioctl_submit_task user_task)
 {
-	struct nvdla_fence __user *postfences =
-		(struct nvdla_fence __user *)(uintptr_t)usr_task.postfences;
-	u32 num_postfences = usr_task.num_postfences;
-	struct nvdla_fence fence;
 	int err = 0;
-	int i;
+	struct platform_device *pdev = task->queue->pool->pdev;
+	struct nvdla_fence __user *postfences =
+		(struct nvdla_fence __user *)(uintptr_t)user_task.postfences;
 
+	nvdla_dbg_fn(pdev, "sending post fences");
 	/* send post fences */
-	for (i = 0; i < num_postfences; i++, postfences++) {
-		fence.syncpoint_index = task->postfences[i].id;
-		fence.syncpoint_value = task->postfences[i].fence;
-		fence.type = task->postfences[i].fence_type;
-
-		err = copy_to_user(postfences, &fence,
-				sizeof(struct nvdla_fence));
-		if (err)
-			goto fail;
+	if (copy_to_user(postfences, task->postfences,
+		(user_task.num_postfences * sizeof(struct nvdla_fence)))) {
+		err = -EFAULT;
+		nvdla_dbg_err(pdev, "failed to send postfences");
+		goto fail;
 	}
+	nvdla_dbg_info(pdev, "postfences sent");
+
 fail:
 	return err;
 }
@@ -390,7 +375,7 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 	/* allocate task resource */
 	task_size = sizeof(struct nvdla_task) +
 			(num_prefences + num_postfences) *
-			sizeof(struct nvdla_task_fence);
+			sizeof(struct nvdla_fence);
 
 	task = kzalloc(task_size, GFP_KERNEL);
 	if (!task) {
@@ -408,7 +393,7 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 	mem = task;
 	mem += sizeof(struct nvdla_task);
 	task->prefences = mem;
-	mem += num_prefences * sizeof(struct nvdla_task_fence);
+	mem += num_prefences * sizeof(struct nvdla_fence);
 	task->postfences = mem;
 
 	/* update local fences into task*/
@@ -539,8 +524,9 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 			((char *)opcode + sizeof(struct dla_action_opcode));
 
 		/* update action */
-		preaction->address = nvhost_syncpt_address(pdev, task->prefences[i].id);
-		preaction->value = task->prefences[i].val;
+		preaction->address = nvhost_syncpt_address(pdev,
+					task->prefences[i].syncpoint_index);
+		preaction->value = task->prefences[i].syncpoint_value;
 	}
 
 	/* fill all postactions */
@@ -639,8 +625,8 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 		goto fail_to_register;
 
 	/* Pass fence as through 0th postfences */
-	task->postfences[0].id = queue->syncpt_id;
-	task->postfences[0].fence = task->fence;
+	task->postfences[0].syncpoint_index = queue->syncpt_id;
+	task->postfences[0].syncpoint_value = task->fence;
 
 	/* submit task to engine */
 	err = nvdla_send_cmd(pdev, method_id, method_data, true);

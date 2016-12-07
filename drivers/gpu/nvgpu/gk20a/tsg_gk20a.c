@@ -517,6 +517,7 @@ int gk20a_tsg_dev_release(struct inode *inode, struct file *filp)
 		return -ENODEV;
 
 	kref_put(&tsg->refcount, gk20a_tsg_release);
+	kfree(priv);
 	return 0;
 }
 

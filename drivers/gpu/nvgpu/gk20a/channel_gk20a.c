@@ -1183,6 +1183,7 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 	gk20a_channel_close(ch);
 	gk20a_idle(g->dev);
 
+	kfree(filp->private_data);
 	filp->private_data = NULL;
 	return 0;
 }

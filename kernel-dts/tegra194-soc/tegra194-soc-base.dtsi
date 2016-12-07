@@ -118,7 +118,9 @@
 			      <&{/host1x/nvenc@154c0000}	TEGRA_SID_NVENC>,
 			      <&{/host1x/nvjpg@15380000}	TEGRA_SID_NVJPG>,
 			      <&{/host1x/nvdla0@15880000}	TEGRA_SID_NVDLA0>,
-			      <&{/host1x/nvdla1@158c0000}	TEGRA_SID_NVDLA1>;
+			      <&{/host1x/nvdla1@158c0000}	TEGRA_SID_NVDLA1>,
+			      <&{/host1x/pva0}			TEGRA_SID_PVA0>,
+			      <&{/host1x/pva1}			TEGRA_SID_PVA1>;
 
 		domains {
 			host1x_domain {
@@ -133,8 +135,10 @@
 					    TEGRA_SID(NVENC)
 					    TEGRA_SID(NVJPG)
 					    TEGRA_SID(NVDLA0)
-					    TEGRA_SID(NVDLA1)>;
-				sid-list-len = <6>;
+					    TEGRA_SID(NVDLA1)
+					    TEGRA_SID(PVA0)
+					    TEGRA_SID(PVA1)>;
+				sid-list-len = <8>;
 			};
 		};
 

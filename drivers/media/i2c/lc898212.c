@@ -552,10 +552,16 @@ static int lc898212_probe(struct i2c_client *client,
 		priv->support_mfi = !strcmp(p_mfi_str, "true") ? true : false;
 
 		if (priv->support_mfi) {
-			strcat(dev_id, "lc898212");
+			int remain;
+
+			memset(dev_id, 0, sizeof(dev_id));
+			strncpy(dev_id, "lc898212", (sizeof(dev_id) - 1));
+			/* calculate how many bytes remaining in dev_id[] */
+			remain = sizeof(dev_id) - strlen(dev_id) - 1;
+			/* strncat most of 'remain' bytes from dev_name[] */
+			strncat(dev_id, dev_name(&client->dev), remain);
 			err = tegra_camera_dev_mfi_add_regmap(&priv->cmfi_dev16,
-				strcat(dev_id, &dev_name(&client->dev)[0]),
-				priv->regmap16);
+				dev_id, priv->regmap16);
 			if (err < 0) {
 				dev_err(&client->dev,
 					"%s unable to add to mfi regmap\n",

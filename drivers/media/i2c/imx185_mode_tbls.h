@@ -1,7 +1,7 @@
 /*
  * imx185_mode_tbls.h - imx185 sensor mode tables
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -831,10 +831,12 @@ static imx185_reg imx185_1920x1080_hdr_crop_30fps[] = {
 	{0x3044, 0xe1},
 	{0x3048, 0x33},
 #ifdef INIT_ET_INSETTING
-	{0x3020, 0x70},
-	{0x3021, 0x00},
-	{0x3023, 0x20},
-	{0x3024, 0x11},
+	{0x3020, 0x1F},/*SHS1 1055, coarse 69*/
+	{0x3021, 0x04},
+	{0x3022, 0x00},
+	{0x3023, 0x12},/*SHS2 18, coarse 1106*/
+	{0x3024, 0x00},
+	{0x3025, 0x00},
 #endif
 	{0x3056, 0xc9},
 	{0x3057, 0x64},
@@ -982,10 +984,10 @@ static imx185_reg imx185_1920x1080_hdr_crop_30fps[] = {
 	{0x334f, 0x01},
 
 #ifdef INIT_ET_INSETTING
-	{0x3020, 0x05},/*SHS1 short LSB*/
-	{0x3021, 0x00},
+	{0x3020, 0x1F},
+	{0x3021, 0x04},
 	{0x3022, 0x00},
-	{0x3023, 0x50},/*SHS2 long LSB*/
+	{0x3023, 0x12},
 	{0x3024, 0x00},
 	{0x3025, 0x00},
 #endif

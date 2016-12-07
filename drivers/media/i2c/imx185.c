@@ -1,7 +1,7 @@
 /*
  * imx185.c - imx185 sensor driver
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -51,6 +51,7 @@
 #define IMX185_COARSE_TIME_SHS2_ADDR_LSB	0x3023
 #define IMX185_GAIN_ADDR					0x3014
 #define IMX185_GROUP_HOLD_ADDR				0x3001
+#define IMX185_SW_RESET_ADDR			0x3003
 
 #define IMX185_FUSE_ID_ADDR	0x3382
 #define IMX185_FUSE_ID_SIZE	6
@@ -375,6 +376,9 @@ static int imx185_s_stream(struct v4l2_subdev *sd, int enable)
 
 		if (err)
 			return err;
+
+		/* SW_RESET will have no ACK */
+		regmap_write(priv->regmap, IMX185_SW_RESET_ADDR, 0x01);
 
 		/* Wait for one frame to make sure sensor is set to
 		 * software standby in V-blank

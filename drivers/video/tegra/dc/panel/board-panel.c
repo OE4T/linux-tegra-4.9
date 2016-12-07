@@ -30,6 +30,7 @@
 #include <mach/dc.h>
 
 #include "board-panel.h"
+#include "tegra-board-id.h"
 #include "board.h"
 #include "iomap.h"
 #include <linux/platform/tegra/dvfs.h>

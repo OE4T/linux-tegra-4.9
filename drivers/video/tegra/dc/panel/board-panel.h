@@ -22,7 +22,6 @@
 #include <linux/platform_device.h>
 #include <linux/pwm_backlight.h>
 #include <mach/dc.h>
-#include <mach/tegra-board-id.h>
 
 struct tegra_panel {
 	void (*init_sd_settings)(struct tegra_dc_sd_settings *);

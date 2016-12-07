@@ -39,6 +39,7 @@
 #include "iomap.h"
 #include "tegra12_host1x_devices.h"
 #include "board-panel.h"
+#include "tegra-board-id.h"
 #include "board-common.h"
 #include <linux/platform/tegra/common.h>
 #include "tegra-board-id.h"

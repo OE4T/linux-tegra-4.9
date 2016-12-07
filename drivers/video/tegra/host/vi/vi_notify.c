@@ -1,7 +1,7 @@
 /*
  * VI NOTIFY driver for T186
  *
- * Copyright (c) 2015-2016 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -40,6 +40,8 @@
 	_IOW(NVHOST_VI_IOCTL_MAGIC, 14, struct tegra_vi4_syncpts_req)
 #define NVHOST_VI_RESET_CHANNEL \
 	_IOW(NVHOST_VI_IOCTL_MAGIC, 15, struct tegra_vi4_syncpts_req)
+#define NVHOST_VI_GET_CAPTURE_STATUS \
+	_IOWR(NVHOST_VI_IOCTL_MAGIC, 16, struct vi_capture_status)
 
 struct vi_notify_dev {
 	struct vi_notify_driver *driver;
@@ -331,6 +333,9 @@ int vi_notify_channel_enable_reports(unsigned channel,
 				req->stream, req->vc, req->syncpt_ids);
 	mutex_unlock(&vnd->lock);
 
+	dev_dbg(vnd->device, "vi_notify_channel_enable_reports: ch:%d",
+		channel);
+
 	return err;
 }
 EXPORT_SYMBOL(vi_notify_channel_enable_reports);
@@ -354,6 +359,30 @@ int vi_notify_channel_reset(unsigned channel,
 	return 0;
 }
 EXPORT_SYMBOL(vi_notify_channel_reset);
+
+int vi_notify_get_capture_status(struct vi_notify_channel *chan,
+			unsigned channel,
+			u64 index,
+			struct vi_capture_status *status)
+{
+	struct vi_notify_dev *vnd = chan->vnd;
+	int err = 0;
+
+	if (!vnd->driver->get_capture_status)
+		return -ENOTSUPP;
+	if (mutex_lock_interruptible(&vnd->lock))
+		return -ERESTARTSYS;
+
+	err = vnd->driver->get_capture_status(vnd->device,
+						channel, index, status);
+	mutex_unlock(&vnd->lock);
+
+	dev_dbg(vnd->device, "vi_notify_get_capture_status: ch:%2d sof_ts:%llu eof_ts:%llu idx:%llu\n",
+		channel, status->sof_ts, status->eof_ts, index);
+
+	return err;
+}
+EXPORT_SYMBOL(vi_notify_get_capture_status);
 
 static long vi_notify_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
@@ -404,6 +433,26 @@ static long vi_notify_ioctl(struct file *file, unsigned int cmd,
 			return -EFAULT;
 
 		return vi_notify_channel_reset(channel, chan, &req);
+	}
+
+	case NVHOST_VI_GET_CAPTURE_STATUS: {
+		int err = 0;
+		u64 index = 0;
+		struct vi_capture_status status;
+
+		if (copy_from_user(&index, (void __user *)arg, sizeof(u64)))
+			return -EFAULT;
+
+		err = vi_notify_get_capture_status(chan, channel,
+					index, &status);
+
+		if (likely(err == 0)) {
+			if (copy_to_user((void __user *)arg, &status,
+								sizeof(status)))
+				return -EFAULT;
+		}
+
+		return err;
 	}
 	}
 

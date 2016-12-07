@@ -1,7 +1,7 @@
 /*
  * VI NOTIFY driver for T186
  *
- * Copyright (c) 2015-2016 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -62,7 +62,7 @@ struct nvhost_vi_notify_dev {
 	u32 ld_mask;
 	int prio_irq;
 	int norm_irq;
-	struct nvhost_vi_ch_incrs incr[12];
+	struct nvhost_vi_ch_incrs incr[VI_NOTIFY_MAX_VI_CHANS];
 };
 
 static void nvhost_vi_notify_dump_status(struct platform_device *pdev)
@@ -156,7 +156,7 @@ static irqreturn_t nvhost_vi_notify_isr(int irq, void *dev_id)
 		case VI_NOTIFY_TAG_ATOMP_FS:
 		case VI_NOTIFY_TAG_ISPBUF_FS:
 			ch = VI_NOTIFY_TAG_CHANNEL(msg.tag);
-			if (ch >= 12)
+			if (ch >= VI_NOTIFY_MAX_VI_CHANS)
 				break;
 			hvnd->ld_mask &= ~(1 << ch);
 			break;
@@ -164,7 +164,7 @@ static irqreturn_t nvhost_vi_notify_isr(int irq, void *dev_id)
 		case VI_NOTIFY_TAG_ATOMP_FE:
 		case VI_NOTIFY_TAG_ISPBUF_FE:
 			ch = VI_NOTIFY_TAG_CHANNEL(msg.tag);
-			if (ch >= 12)
+			if (ch >= VI_NOTIFY_MAX_VI_CHANS)
 				break;
 
 			v = host1x_readl(pdev, VI_CH_CONTROL(ch));
@@ -382,12 +382,21 @@ static void nvhost_vi_notify_reset(struct device *dev, u8 ch)
 	nvhost_vi_notify_set_mask(pdev, mask);
 }
 
+static int nvhost_vi_notify_get_capture_status(struct device *dev,
+				unsigned ch,
+				u64 index,
+				struct vi_capture_status *status)
+{
+	return -ENOSYS;
+}
+
 struct vi_notify_driver nvhost_vi_notify_driver = {
 	.owner = THIS_MODULE,
 	.probe = nvhost_vi_notify_probe,
 	.classify = nvhost_vi_notify_classify,
 	.set_syncpts = nvhost_vi_notify_set_syncpts,
 	.reset_channel = nvhost_vi_notify_reset,
+	.get_capture_status = nvhost_vi_notify_get_capture_status,
 };
 
 void nvhost_vi_notify_error(struct platform_device *pdev)

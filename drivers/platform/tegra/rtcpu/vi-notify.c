@@ -58,25 +58,8 @@ enum {
 	TEGRA_IVC_VI_SET_SYNCPTS,
 	TEGRA_IVC_VI_RESET_CHANNEL,
 	TEGRA_IVC_VI_ENABLE_REPORTS,
+	TEGRA_IVC_VI_ENABLE_REPORTS_2,
 };
-
-/* NOTE: vi_status_msg structure should match with
- * the one declared in RTCPU vi-notifier FW driver.
- */
-struct vi_status_msg {
-	u8 st;
-	u8 vc;
-	u16 frame;
-	u32 status;
-	u64 sof_ts;
-	u64 eof_ts;
-	u32 data;
-	u32 capture_id;
-};
-
-#define VI_NOTIFY_MAX_VI_CHANS (12)
-/* make sure that status entries always power of 2 */
-#define VI_NOTIFY_STATUS_ENTRIES (1 << 7)
 
 struct tegra_ivc_vi_notify {
 	struct vi_notify_dev *vi_notify;
@@ -285,7 +268,7 @@ static int tegra_ivc_vi_notify_enable_reports(struct device *dev, u8 ch,
 						ivn->status_mem_size,
 						ch);
 	struct vi_notify_req msg = {
-		.type = TEGRA_IVC_VI_ENABLE_REPORTS,
+		.type = TEGRA_IVC_VI_ENABLE_REPORTS_2,
 		.channel = ch,
 		.stream = st,
 		.vc = vc,
@@ -340,6 +323,30 @@ static bool tegra_ivc_vi_notify_has_notifier_backend(struct device *dev)
 	return tegra_camrtc_is_rtcpu_alive(rce_dev);
 }
 
+static int tegra_ivc_vi_notify_get_capture_status(struct device *dev,
+				unsigned ch,
+				u64 index,
+				struct vi_capture_status *status)
+{
+	struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
+	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
+	struct vi_capture_status *status_mem =
+		(struct vi_capture_status *)(((u8 *)ivn->status_mem) +
+		tegra_ivc_vi_notify_get_status_mem_channel_offset(
+						ivn->status_mem_size,
+						ch));
+	u64 tail = 0;
+	int err = 0;
+
+	if (ivn->status_entries) {
+		tail = index & (VI_NOTIFY_STATUS_ENTRIES - 1);
+		*status = *(status_mem + tail);
+	} else {
+		err = -ENOTSUPP;
+	}
+	return err;
+}
+
 static struct vi_notify_driver tegra_ivc_vi_notify_driver = {
 	.owner		= THIS_MODULE,
 	.probe		= tegra_ivc_vi_notify_probe,
@@ -348,6 +355,7 @@ static struct vi_notify_driver tegra_ivc_vi_notify_driver = {
 	.enable_reports = tegra_ivc_vi_notify_enable_reports,
 	.reset_channel	= tegra_ivc_vi_notify_reset_channel,
 	.has_notifier_backend = tegra_ivc_vi_notify_has_notifier_backend,
+	.get_capture_status = tegra_ivc_vi_notify_get_capture_status,
 };
 
 /* Platform device */
@@ -431,8 +439,8 @@ static int tegra_ivc_channel_vi_notify_probe(struct tegra_ivc_channel *chan)
 		return PTR_ERR(ivn->vi);
 
 	ivn->status_mem_size = VI_NOTIFY_STATUS_ENTRIES *
-						sizeof(struct vi_status_msg) *
-						VI_NOTIFY_MAX_VI_CHANS;
+				sizeof(struct vi_capture_status) *
+				VI_NOTIFY_MAX_VI_CHANS;
 	ivn->status_mem = dma_alloc_coherent(dev,
 		ivn->status_mem_size,
 		&ivn->status_dmaptr, GFP_KERNEL | __GFP_ZERO);

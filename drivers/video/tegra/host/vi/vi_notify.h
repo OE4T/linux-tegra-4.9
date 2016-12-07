@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2015-2016 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,6 +23,10 @@
 
 #include <linux/kfifo.h>
 
+#define VI_NOTIFY_MAX_VI_CHANS (12)
+/* make sure that status entries always power of 2 */
+#define VI_NOTIFY_STATUS_ENTRIES (1 << 7)
+
 struct vi_notify_msg {
 	u32 tag;  /* LSB=1 */
 	u32 stamp;
@@ -35,6 +39,9 @@ struct vi_notify_msg {
 #define VI_NOTIFY_TAG_CHANNEL(tag)	(((tag) >> 8) & 0xff)
 #define VI_NOTIFY_TAG_FRAME(tag)	(((tag) >> 16) & 0xffff)
 
+/* NOTE: vi_capture_status structure should match with
+ * the one declared in RTCPU vi-notifier FW driver.
+ */
 struct vi_capture_status {
 	u8 st;
 	u8 vc;
@@ -58,6 +65,8 @@ struct vi_notify_driver {
 			u8 st, u8 vc, const u32 ids[3]);
 	void (*reset_channel)(struct device *, u8);
 	bool (*has_notifier_backend)(struct device *);
+	int (*get_capture_status)(struct device *, unsigned,
+			u64, struct vi_capture_status *);
 };
 
 void vi_notify_dev_error(struct vi_notify_dev *);
@@ -117,5 +126,9 @@ void vi_notify_channel_set_notify_funcs(struct vi_notify_channel *,
 			vi_notify_status_callback,
 			vi_notify_error_callback,
 			void *);
+int vi_notify_get_capture_status(struct vi_notify_channel *,
+			unsigned,
+			u64,
+			struct vi_capture_status *);
 
 #endif

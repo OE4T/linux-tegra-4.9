@@ -29,7 +29,7 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 
-#include <mach/tegra_vcm30t124_pdata.h>
+#include <linux/platform_data/tegra_vcm30t124_pdata.h>
 
 #include "../codecs/wm8731.h"
 #include "../codecs/ad193x.h"

@@ -29,7 +29,7 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 
-#include <mach/tegra_vcm30t124_pdata.h>
+#include <linux/platform_data/tegra_vcm30t124_pdata.h>
 
 #include "tegra_asoc_utils_alt.h"
 #include "tegra_asoc_machine_alt.h"

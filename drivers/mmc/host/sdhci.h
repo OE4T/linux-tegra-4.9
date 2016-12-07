@@ -574,6 +574,8 @@ struct sdhci_ops {
 		int signal_voltage);
 	void	(*voltage_switch_post)(struct sdhci_host *host,
 		int signal_voltage);
+	void	(*hs400_enhanced_strobe)(struct sdhci_host *host, bool enable);
+	void	(*post_init)(struct sdhci_host *host);
 };
 
 #ifdef CONFIG_MMC_SDHCI_IO_ACCESSORS

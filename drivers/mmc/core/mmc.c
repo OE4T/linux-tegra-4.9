@@ -1770,6 +1770,10 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		}
 	}
 
+	/* Execute post init if exists */
+	if (mmc_card_hs400(card) && host->ops->post_init)
+		host->ops->post_init(host);
+
 	if (!oldcard)
 		host->card = card;
 

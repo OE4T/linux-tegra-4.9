@@ -44,6 +44,9 @@
 #define SDHCI_CLOCK_CTRL_SPI_MODE_CLKEN_OVERRIDE	BIT(2)
 #define SDHCI_CLOCK_CTRL_SDMMC_CLK			BIT(0)
 
+#define SDHCI_TEGRA_VENDOR_SYS_SW_CTRL		0x104
+#define SDHCI_SYS_SW_CTRL_STROBE_EN		0x80000000
+
 #define SDHCI_TEGRA_VENDOR_CAP_OVERRIDES	0x10C
 #define SDHCI_VENDOR_CAP_DQS_TRIM_SHIFT		0x8
 #define SDHCI_VENDOR_CAP_DQS_TRIM_MASK		0x3F
@@ -56,6 +59,12 @@
 
 #define SDMMC_VNDR_IO_TRIM_CTRL_0		0x1AC
 #define SDMMC_VNDR_IO_TRIM_CTRL_0_SEL_VREG_MASK	0x4
+
+#define SDHCI_TEGRA_VENDOR_DLLCAL_CFG		0x1B0
+#define SDHCI_DLLCAL_CFG_EN_CALIBRATE		0x80000000
+
+#define SDHCI_DLLCAL_CFG_STATUS			0x1BC
+#define SDHCI_DLLCAL_CFG_STATUS_DLL_ACTIVE	0x80000000
 
 #define SDHCI_VNDR_TUN_CTRL0_0			0x1c0
 #define SDHCI_VNDR_TUN_CTRL0_TUN_HW_TAP		0x20000
@@ -215,6 +224,41 @@ static void tegra_sdhci_writel(struct sdhci_host *host, u32 val, int reg)
 static unsigned int tegra_sdhci_get_ro(struct sdhci_host *host)
 {
 	return mmc_gpio_get_ro(host->mmc);
+}
+
+static void tegra_sdhci_post_init(struct sdhci_host *host)
+{
+	int reg, timeout = 5;
+
+	reg = sdhci_readl(host, SDHCI_TEGRA_VENDOR_DLLCAL_CFG);
+	reg |= SDHCI_DLLCAL_CFG_EN_CALIBRATE;
+	sdhci_writel(host, reg, SDHCI_TEGRA_VENDOR_DLLCAL_CFG);
+
+	mdelay(1);
+
+	/* Wait until DLL calibration is done */
+	do {
+		if (!(sdhci_readl(host, SDHCI_DLLCAL_CFG_STATUS) &
+			SDHCI_DLLCAL_CFG_STATUS_DLL_ACTIVE))
+			break;
+		mdelay(1);
+		timeout--;
+	} while (timeout);
+
+	if (!timeout)
+		dev_err(mmc_dev(host->mmc), "DLL calibration timed out\n");
+}
+
+static void tegra_sdhci_hs400_enhanced_strobe(struct sdhci_host *host, bool enable)
+{
+	int reg;
+
+	reg = sdhci_readl(host, SDHCI_TEGRA_VENDOR_SYS_SW_CTRL);
+	if (enable)
+		reg |= SDHCI_SYS_SW_CTRL_STROBE_EN;
+	else
+		reg &= ~SDHCI_SYS_SW_CTRL_STROBE_EN;
+	sdhci_writel(host, reg, SDHCI_TEGRA_VENDOR_SYS_SW_CTRL);
 }
 
 static int tegra_sdhci_get_max_tuning_loop_counter(struct sdhci_host *host)
@@ -496,7 +540,7 @@ static void tegra_sdhci_set_clk_parent(struct sdhci_host *host,
 	struct sdhci_tegra_clk_src_data *clk_src_data;
 	unsigned long parent_clk_rate, rate, nearest_freq_rate = 0;
 	int rc;
-	u8 i, sel_parent_idx;
+	u8 i, sel_parent_idx = 0;
 
 	clk_src_data = tegra_host->clk_src_data;
 	if (!clk_src_data) {
@@ -753,7 +797,7 @@ static void tegra_sdhci_set_tap(struct sdhci_host *host, unsigned int tap,
 	const struct sdhci_tegra_soc_data *soc_data = tegra_host->soc_data;
 	u32 reg;
 	u16 clk;
-	bool card_clk_enabled;
+	bool card_clk_enabled = false;
 	const char *tap_type;
 	int err;
 
@@ -804,6 +848,7 @@ static void tegra_sdhci_set_tap(struct sdhci_host *host, unsigned int tap,
 		card_clk_enabled) {
 		udelay(1);
 		sdhci_reset(host, SDHCI_RESET_CMD | SDHCI_RESET_DATA);
+		clk = sdhci_readw(host, SDHCI_CLOCK_CONTROL);
 		clk |= SDHCI_CLOCK_CARD_EN;
 		sdhci_writew(host, clk, SDHCI_CLOCK_CONTROL);
 	}
@@ -972,6 +1017,8 @@ static const struct sdhci_ops tegra_sdhci_ops = {
 	.post_tuning = tegra_sdhci_post_tuning,
 	.voltage_switch_pre = tegra_sdhci_signal_voltage_switch_pre,
 	.voltage_switch_post = tegra_sdhci_signal_voltage_switch_post,
+	.hs400_enhanced_strobe = tegra_sdhci_hs400_enhanced_strobe,
+	.post_init = tegra_sdhci_post_init,
 };
 
 static const struct sdhci_pltfm_data sdhci_tegra20_pdata = {

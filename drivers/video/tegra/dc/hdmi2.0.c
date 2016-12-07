@@ -35,7 +35,7 @@
 
 #include <mach/dc.h>
 #include <mach/fb.h>
-#include <mach/powergate.h>
+#include <linux/tegra-powergate.h>
 
 #include "dc_reg.h"
 #include "dc_priv.h"

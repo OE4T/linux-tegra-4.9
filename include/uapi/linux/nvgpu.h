@@ -383,6 +383,11 @@ struct nvgpu_gpu_num_vsms {
 	__u32 reserved;
 };
 
+struct nvgpu_gpu_vsms_mapping_entry {
+	__u8 gpc_index;
+	__u8 tpc_index;
+};
+
 struct nvgpu_gpu_vsms_mapping {
 	__u64 vsms_map_buf_addr;
 };

@@ -582,11 +582,24 @@ static int gk20a_ctrl_vsm_mapping(struct gk20a *g,
 {
 	int err = 0;
 	struct gr_gk20a *gr = &g->gr;
-	size_t write_size = gr->no_of_sm * sizeof(struct sm_info);
+	size_t write_size = gr->no_of_sm *
+				sizeof(struct nvgpu_gpu_vsms_mapping_entry);
+	struct nvgpu_gpu_vsms_mapping_entry *vsms_buf;
+	u32 i;
+
+	vsms_buf = kzalloc(write_size, GFP_KERNEL);
+	if (vsms_buf == NULL)
+		return -ENOMEM;
+
+	for (i = 0; i < gr->no_of_sm; i++) {
+		vsms_buf[i].gpc_index = gr->sm_to_cluster[i].gpc_index;
+		vsms_buf[i].tpc_index = gr->sm_to_cluster[i].tpc_index;
+	}
 
 	err = copy_to_user((void __user *)(uintptr_t)
 			   args->vsms_map_buf_addr,
-			   gr->sm_to_cluster, write_size);
+			   vsms_buf, write_size);
+	kfree(vsms_buf);
 
 	return err;
 }

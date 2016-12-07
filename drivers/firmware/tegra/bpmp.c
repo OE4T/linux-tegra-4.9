@@ -21,19 +21,25 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_address.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/syscore_ops.h>
+#include <linux/tegra-firmwares.h>
+#include <linux/tegra-ivc.h>
 #include <linux/tegra-soc.h>
 #include <linux/uaccess.h>
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
-#include <linux/tegra-firmwares.h>
 #include "../../../arch/arm/mach-tegra/iomap.h"
 #include "bpmp.h"
 
-#define BPMP_MODULE_MAGIC		0x646f6d
+#define BPMP_MODULE_MAGIC	0x646f6d
+#define VIRT_BPMP_COMPAT	"nvidia,tegra186-bpmp-hv"
+
+static void *virt_base;
+static bool is_virt;
 
 static struct device *device;
 static char firmware_tag[32];
@@ -672,10 +678,12 @@ static ssize_t bpmp_version(struct device *dev, char *data, size_t size)
 		 firmware_tag);
 }
 
-
-void *__weak bpmp_get_virt_for_alloc(void *virt, dma_addr_t phys)
+static void *bpmp_get_virt_for_alloc(void *virt, dma_addr_t phys)
 {
-	return virt;
+	if (is_virt)
+		return virt_base + phys;
+	else
+		return virt;
 }
 
 void *tegra_bpmp_alloc_coherent(size_t size, dma_addr_t *phys,
@@ -695,9 +703,12 @@ void *tegra_bpmp_alloc_coherent(size_t size, dma_addr_t *phys,
 }
 EXPORT_SYMBOL(tegra_bpmp_alloc_coherent);
 
-void *__weak bpmp_get_virt_for_free(void *virt, dma_addr_t phys)
+static void *bpmp_get_virt_for_free(void *virt, dma_addr_t phys)
 {
-	return virt;
+	if (is_virt)
+		return (void *)(virt - virt_base);
+	else
+		return virt;
 }
 
 void tegra_bpmp_free_coherent(size_t size, void *vaddr,
@@ -717,10 +728,6 @@ EXPORT_SYMBOL(tegra_bpmp_free_coherent);
 static struct syscore_ops bpmp_syscore_ops = {
 	.resume = tegra_bpmp_resume,
 };
-
-void __weak bpmp_setup_allocator(struct device *dev)
-{
-}
 
 static int bpmp_do_ping(void)
 {
@@ -756,6 +763,62 @@ static int bpmp_init_powergate(struct platform_device *pdev)
 	}
 
 	return tegra_bpmp_init_powergate(pdev);
+}
+
+static struct tegra_hv_ivm_cookie *virt_get_mempool(uint32_t *mempool)
+{
+	struct device_node *of_node;
+	struct tegra_hv_ivm_cookie *ivm;
+	int err;
+
+	of_node = of_find_compatible_node(NULL, NULL, VIRT_BPMP_COMPAT);
+	if (!of_node)
+		return ERR_PTR(-ENODEV);
+
+	if (!of_device_is_available(of_node)) {
+		of_node_put(of_node);
+		return ERR_PTR(-ENODEV);
+	}
+
+	err = of_property_read_u32_index(of_node, "mempool", 0, mempool);
+	if (err != 0) {
+		pr_err("%s: Failed to read mempool id\n", __func__);
+		of_node_put(of_node);
+		return NULL;
+	}
+
+	ivm = tegra_hv_mempool_reserve(of_node, *mempool);
+	of_node_put(of_node);
+
+	return ivm;
+}
+
+static void bpmp_setup_allocator(struct device *dev)
+{
+	uint32_t mempool_id;
+	int ret;
+	struct tegra_hv_ivm_cookie *ivm;
+
+	ivm = virt_get_mempool(&mempool_id);
+
+	if (IS_ERR_OR_NULL(ivm)) {
+		if (!IS_ERR(ivm))
+			dev_err(dev, "No mempool found\n");
+
+		return;
+	}
+
+	dev_info(dev, "Found mempool with id %u\n", mempool_id);
+	dev_info(dev, "ivm %pa\n", &ivm->ipa);
+
+	virt_base = ioremap_cache(ivm->ipa, ivm->size);
+
+	ret = dma_declare_coherent_memory(dev, ivm->ipa, 0, ivm->size,
+			DMA_MEMORY_NOMAP | DMA_MEMORY_EXCLUSIVE);
+	if (!(ret & DMA_MEMORY_NOMAP))
+		dev_err(dev, "dma_declare_coherent_memory failed\n");
+
+	is_virt = true;
 }
 
 static int bpmp_probe(struct platform_device *pdev)

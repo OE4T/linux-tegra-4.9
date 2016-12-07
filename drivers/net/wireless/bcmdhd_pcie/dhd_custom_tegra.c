@@ -15,7 +15,6 @@
 */
 
 #include <linux/types.h>
-#include <mach/nct.h>
 #include <linux/err.h>
 #include <linux/fs.h>
 #include <linux/file.h>
@@ -31,34 +30,6 @@
 #define WIFI_MAC_ADDR_FILE "/mnt/factory/wifi/wifi_mac.txt"
 
 extern void dhd_set_ampdu_rx_tid(struct net_device *dev, int ampdu_rx_tid);
-
-#ifdef CONFIG_TEGRA_USE_NCT
-static int wifi_get_mac_addr_nct(unsigned char *buf)
-{
-	int ret = -ENODATA;
-	union nct_item_type *entry = NULL;
-	entry = kmalloc(sizeof(union nct_item_type), GFP_KERNEL);
-	if (entry) {
-		if (!tegra_nct_read_item(NCT_ID_WIFI_MAC_ADDR, entry)) {
-			memcpy(buf, entry->wifi_mac_addr.addr,
-					sizeof(struct nct_mac_addr_type));
-			ret = 0;
-		}
-		kfree(entry);
-		if (!is_valid_ether_addr(buf)) {
-			DHD_ERROR(("%s: invalid mac %02x:%02x:%02x:%02x:%02x:%02x\n",
-				__FUNCTION__,
-				buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]));
-			ret = -EINVAL;
-		}
-	}
-
-	if (ret)
-		DHD_ERROR(("%s: Couldn't find MAC address from NCT\n", __FUNCTION__));
-
-	return ret;
-}
-#endif
 
 static int wifi_get_mac_addr_file(unsigned char *buf)
 {
@@ -182,12 +153,6 @@ int wifi_get_mac_addr(unsigned char *buf)
 	 * File (FCT/rootfs)
 	*/
 	ret = wifi_get_mac_address_dtb("/chosen", "nvidia,wifi-mac", buf);
-
-#ifdef CONFIG_TEGRA_USE_NCT
-	if (ret)
-		ret = wifi_get_mac_addr_nct(buf);
-#endif
-
 	if (ret)
 		ret = wifi_get_mac_addr_file(buf);
 

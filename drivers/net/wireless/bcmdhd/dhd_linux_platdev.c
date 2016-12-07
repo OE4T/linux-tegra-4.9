@@ -49,7 +49,6 @@
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/irq.h>
-#include <mach/nct.h>
 #include <linux/gpio.h>
 #include <linux/mmc/host.h>
 #include <host/sdhci.h>

@@ -2185,7 +2185,6 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		err = -EFAULT;
 		goto err_iounmap_reg;
 	}
-
 	if (!tegra_platform_is_fpga()) {
 		if (request_threaded_irq(irq, NULL, tegra_dp_irq,
 					IRQF_ONESHOT, "tegra_dp", dp)) {
@@ -2825,6 +2824,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	tegra_dc_sor_set_link_bandwidth(sor, dp->link_cfg.link_bw ? :
 			NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G1_62);
 #else
+	clk_set_parent(sor->sor_clk, dp->parent_clk);
 	tegra_dp_clk_enable(dp);
 	tegra_sor_config_dp_clk(dp->sor);
 	tegra_dc_setup_clk(dc, dc->clk);

@@ -104,13 +104,6 @@
 #define T_SATA_CFG_PHY_0_USE_7BIT_ALIGN_DET_FOR_SPD	BIT(11)
 
 #define T_SATA0_NVOOB					0x114
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
-#define T_SATA0_NVOOB_COMMA_CNT_MASK			(0X7 << 28)
-#define T_SATA0_NVOOB_COMMA_CNT				(0x7 << 28)
-#else
-#define T_SATA0_NVOOB_COMMA_CNT_MASK			(0XFF << 16)
-#define T_SATA0_NVOOB_COMMA_CNT				(0x07 << 16)
-#endif
 #define T_SATA0_NVOOB_SQUELCH_FILTER_LENGTH_MASK	(0x3 << 26)
 #define T_SATA0_NVOOB_SQUELCH_FILTER_LENGTH		(0x3 << 26)
 #define T_SATA0_NVOOB_SQUELCH_FILTER_MODE_MASK		(0x3 << 24)
@@ -234,6 +227,10 @@ struct tegra_ahci_soc_data {
 	int     num_sata_regulators;
 	struct tegra_ahci_ops ops;
 	void	*data;
+	struct reg {
+		u32 t_satao_nvoob_comma_cnt_mask;
+		u32 t_satao_nvoob_comma_cnt;
+	} reg;
 };
 
 #ifdef CONFIG_DEBUG_FS

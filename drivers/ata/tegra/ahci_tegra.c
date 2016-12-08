@@ -61,6 +61,10 @@ static const struct tegra_ahci_soc_data tegra186_ahci_data = {
 		.tegra_ahci_platform_get_resources =
 			tegra186_ahci_platform_get_resources,
 	},
+	.reg = {
+		.t_satao_nvoob_comma_cnt_mask = (0XFF << 16),
+		.t_satao_nvoob_comma_cnt = (0X07 << 16),
+	},
 };
 
 static const struct tegra_ahci_soc_data tegra210_ahci_data = {
@@ -72,6 +76,10 @@ static const struct tegra_ahci_soc_data tegra210_ahci_data = {
 		.tegra_ahci_quirks = tegra_ahci_quirks,
 		.tegra_ahci_platform_get_resources =
 			tegra210_ahci_platform_get_resources,
+	},
+	.reg = {
+		.t_satao_nvoob_comma_cnt_mask = (0X7 << 28),
+		.t_satao_nvoob_comma_cnt = (0X7 << 28),
 	},
 };
 
@@ -1015,6 +1023,10 @@ static int tegra_ahci_quirks(struct ahci_host_priv *hpriv)
 	struct tegra_ahci_priv *tegra = hpriv->plat_data;
 	struct platform_device *pdev = tegra->pdev;
 	struct device *dev = &pdev->dev;
+	u32 t_satao_nvoob_comma_cnt_mask =
+			tegra->soc_data->reg.t_satao_nvoob_comma_cnt_mask;
+	u32 t_satao_nvoob_comma_cnt =
+			tegra->soc_data->reg.t_satao_nvoob_comma_cnt;
 	unsigned int val;
 	unsigned int mask;
 	int ret = 0;
@@ -1028,10 +1040,10 @@ static int tegra_ahci_quirks(struct ahci_host_priv *hpriv)
 	val &= ~T_SATA_CFG_PHY_0_USE_7BIT_ALIGN_DET_FOR_SPD;
 	tegra_ahci_scfg_update(hpriv, val, mask, T_SATA_CFG_PHY_0);
 
-	mask = (T_SATA0_NVOOB_COMMA_CNT_MASK |
+	mask = (t_satao_nvoob_comma_cnt_mask |
 		T_SATA0_NVOOB_SQUELCH_FILTER_LENGTH_MASK |
 		T_SATA0_NVOOB_SQUELCH_FILTER_MODE_MASK);
-	val = (T_SATA0_NVOOB_COMMA_CNT | T_SATA0_NVOOB_SQUELCH_FILTER_LENGTH |
+	val = (t_satao_nvoob_comma_cnt | T_SATA0_NVOOB_SQUELCH_FILTER_LENGTH |
 			T_SATA0_NVOOB_SQUELCH_FILTER_MODE);
 	tegra_ahci_scfg_update(hpriv, val, mask, T_SATA0_NVOOB);
 

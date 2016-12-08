@@ -19,7 +19,12 @@
 #include <linux/i2c.h>
 #include <linux/module.h>
 #include <linux/of_platform.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0)
+#include <linux/platform_data/tegra_asoc_pdata.h>
+#else
 #include <mach/tegra_asoc_pdata.h>
+#endif
 
 #include <sound/pcm_params.h>
 #include <sound/soc.h>

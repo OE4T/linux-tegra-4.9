@@ -32,7 +32,11 @@
 #endif
 #include <linux/pm_runtime.h>
 #include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0)
+#include <linux/platform_data/tegra_asoc_pdata.h>
+#else
 #include <mach/tegra_asoc_pdata.h>
+#endif
 
 #include <sound/core.h>
 #include <sound/jack.h>

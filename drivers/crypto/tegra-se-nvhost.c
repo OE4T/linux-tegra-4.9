@@ -3048,7 +3048,8 @@ static int tegra_se_probe(struct platform_device *pdev)
 	int err = 0, i = 0;
 	struct device_node *node = NULL;
 
-	se_dev = kzalloc(sizeof(struct tegra_se_dev), GFP_KERNEL);
+	se_dev = devm_kzalloc(&pdev->dev, sizeof(struct tegra_se_dev),
+				GFP_KERNEL);
 	if (!se_dev) {
 		dev_err(&pdev->dev, "memory allocation failed\n");
 		return -ENOMEM;
@@ -3059,7 +3060,6 @@ static int tegra_se_probe(struct platform_device *pdev)
 				&pdev->dev);
 		if (!match) {
 			dev_err(&pdev->dev, "Error: No device match found\n");
-			kfree(se_dev);
 			return -ENODEV;
 		}
 		pdata = (struct nvhost_device_data *)match->data;
@@ -3268,8 +3268,10 @@ static int tegra_se_probe(struct platform_device *pdev)
 		goto reg_fail;
 	}
 
-	se_dev->src_ll = kzalloc(sizeof(struct tegra_se_ll), GFP_KERNEL);
-	se_dev->dst_ll = kzalloc(sizeof(struct tegra_se_ll), GFP_KERNEL);
+	se_dev->src_ll = devm_kzalloc(&pdev->dev, sizeof(struct tegra_se_ll),
+						GFP_KERNEL);
+	se_dev->dst_ll = devm_kzalloc(&pdev->dev, sizeof(struct tegra_se_ll),
+						GFP_KERNEL);
 
 	if (is_algo_supported(node, "drbg") || is_algo_supported(node, "aes") ||
 		is_algo_supported(node, "cmac")) {
@@ -3289,10 +3291,6 @@ static int tegra_se_probe(struct platform_device *pdev)
 	return 0;
 
 cmd_buf_alloc_fail:
-	if (se_dev->src_ll)
-		kfree(se_dev->src_ll);
-	if (se_dev->dst_ll)
-		kfree(se_dev->dst_ll);
 	nvhost_syncpt_put_ref_ext(se_dev->pdev, se_dev->syncpt_id);
 reg_fail:
 	tegra_se_free_ll_buf(se_dev);
@@ -3301,7 +3299,6 @@ ll_alloc_fail:
 		destroy_workqueue(se_dev->se_work_q);
 fail:
 	platform_set_drvdata(pdev, NULL);
-	kfree(se_dev);
 
 	return err;
 }
@@ -3375,7 +3372,6 @@ static int tegra_se_remove(struct platform_device *pdev)
 
 	mutex_destroy(&pdata->lock);
 
-	kfree(se_dev);
 	return 0;
 }
 

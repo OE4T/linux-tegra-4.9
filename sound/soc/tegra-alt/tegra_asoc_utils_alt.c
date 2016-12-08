@@ -133,14 +133,9 @@ struct clk *tegra_alt_asoc_utils_get_clk(struct device *dev,
 					 const char *clk_name)
 {
 	struct clk *clk;
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-	if (dev_id)
-		clk = clk_get_sys(clk_name, NULL);
-	else
-		clk = clk_get_sys(NULL, clk_name);
-#else
+
 	clk = devm_clk_get(dev, clk_name);
-#endif
+
 	return clk;
 }
 EXPORT_SYMBOL_GPL(tegra_alt_asoc_utils_get_clk);

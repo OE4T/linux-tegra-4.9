@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This header is BSD licensed so anyone can use the definitions to implement
  * compatible drivers/servers.
@@ -32,6 +32,7 @@
 #ifndef __TEGRA_IVC_H
 #define __TEGRA_IVC_H
 
+#include <linux/err.h>
 #include <linux/types.h>
 
 struct device_node;
@@ -57,6 +58,30 @@ struct tegra_hv_ivc_ops {
 
 struct ivc;
 
+struct tegra_hv_ivm_cookie {
+	uint64_t ipa;
+	uint64_t size;
+	unsigned peer_vmid;
+	void *reserved;
+};
+
+int tegra_ivc_write(struct ivc *ivc, const void *buf, size_t size);
+int tegra_ivc_read(struct ivc *ivc, void *buf, size_t size);
+int tegra_ivc_can_read(struct ivc *ivc);
+int tegra_ivc_can_write(struct ivc *ivc);
+uint32_t tegra_ivc_tx_frames_available(struct ivc *ivc);
+int tegra_ivc_tx_empty(struct ivc *ivc);
+int tegra_ivc_read_peek(struct ivc *ivc, void *buf, size_t off, size_t count);
+void *tegra_ivc_read_get_next_frame(struct ivc *ivc);
+int tegra_ivc_read_advance(struct ivc *ivc);
+int tegra_ivc_write_poke(struct ivc *ivc, const void *buf, size_t off,
+		size_t count);
+void *tegra_ivc_write_get_next_frame(struct ivc *ivc);
+int tegra_ivc_write_advance(struct ivc *ivc);
+int tegra_ivc_channel_notified(struct ivc *ivc);
+void tegra_ivc_channel_reset(struct ivc *ivc);
+
+#ifdef CONFIG_TEGRA_HV_MANAGER
 /**
  * tegra_hv_ivc_reserve - Reserve an IVC queue for use
  * @dn:		Device node pointer to the queue in the DT
@@ -99,7 +124,6 @@ int tegra_hv_ivc_unreserve(struct tegra_hv_ivc_cookie *ivck);
  */
 int tegra_hv_ivc_write(struct tegra_hv_ivc_cookie *ivck, const void *buf,
 		int size);
-int tegra_ivc_write(struct ivc *ivc, const void *buf, size_t size);
 
 /**
  * ivc_hv_ivc_read - Reads a frame from the IVC queue
@@ -112,7 +136,6 @@ int tegra_ivc_write(struct ivc *ivc, const void *buf, size_t size);
  * Returns size on success and an error code otherwise
  */
 int tegra_hv_ivc_read(struct tegra_hv_ivc_cookie *ivck, void *buf, int size);
-int tegra_ivc_read(struct ivc *ivc, void *buf, size_t size);
 
 /**
  * ivc_hv_ivc_can_read - Test whether data are available
@@ -123,7 +146,6 @@ int tegra_ivc_read(struct ivc *ivc, void *buf, size_t size);
  * Returns 1 if data are available in the rx queue, 0 if not
  */
 int tegra_hv_ivc_can_read(struct tegra_hv_ivc_cookie *ivck);
-int tegra_ivc_can_read(struct ivc *ivc);
 
 /**
  * ivc_hv_ivc_can_write - Test whether data can be written
@@ -134,7 +156,6 @@ int tegra_ivc_can_read(struct ivc *ivc);
  * Returns 1 if data are can be written to the tx queue, 0 if not
  */
 int tegra_hv_ivc_can_write(struct tegra_hv_ivc_cookie *ivck);
-int tegra_ivc_can_write(struct ivc *ivc);
 
 /**
  * tegra_ivc_tx_frames_available - gets number of free entries in tx queue
@@ -146,7 +167,6 @@ int tegra_ivc_can_write(struct ivc *ivc);
  *
  */
 uint32_t tegra_hv_ivc_tx_frames_avilable(struct tegra_hv_ivc_cookie *ivck);
-uint32_t tegra_ivc_tx_frames_available(struct ivc *ivc);
 
 /**
  * ivc_hv_ivc_tx_empty - Test whether the tx queue is empty
@@ -157,7 +177,6 @@ uint32_t tegra_ivc_tx_frames_available(struct ivc *ivc);
  * Returns 1 if the queue is empty, zero otherwise
  */
 int tegra_hv_ivc_tx_empty(struct tegra_hv_ivc_cookie *ivck);
-int tegra_ivc_tx_empty(struct ivc *ivc);
 
 /**
  * ivc_hv_ivc_loopback - Sets (or clears) loopback mode
@@ -191,7 +210,6 @@ int tegra_hv_ivc_dump(struct tegra_hv_ivc_cookie *ivck);
  */
 int tegra_hv_ivc_read_peek(struct tegra_hv_ivc_cookie *ivck,
 		void *buf, int off, int count);
-int tegra_ivc_read_peek(struct ivc *ivc, void *buf, size_t off, size_t count);
 
 /**
  * ivc_hv_ivc_read_get_next_frame - Peek at the next frame to receive
@@ -203,7 +221,6 @@ int tegra_ivc_read_peek(struct ivc *ivc, void *buf, size_t off, size_t count);
  * Returns a pointer to the frame, or an error encoded pointer.
  */
 void *tegra_hv_ivc_read_get_next_frame(struct tegra_hv_ivc_cookie *ivck);
-void *tegra_ivc_read_get_next_frame(struct ivc *ivc);
 
 /**
  * ivc_hv_ivc_read_advance - Advance the read queue
@@ -214,7 +231,6 @@ void *tegra_ivc_read_get_next_frame(struct ivc *ivc);
  * Returns 0, or a negative error value if failed.
  */
 int tegra_hv_ivc_read_advance(struct tegra_hv_ivc_cookie *ivck);
-int tegra_ivc_read_advance(struct ivc *ivc);
 
 /**
  * ivc_hv_ivc_write_poke - Poke data to a frame to be transmitted
@@ -230,8 +246,6 @@ int tegra_ivc_read_advance(struct ivc *ivc);
  */
 int tegra_hv_ivc_write_poke(struct tegra_hv_ivc_cookie *ivck,
 		const void *buf, int off, int count);
-int tegra_ivc_write_poke(struct ivc *ivc, const void *buf, size_t off,
-		size_t count);
 
 /**
  * ivc_hv_ivc_write_get_next_frame - Poke at the next frame to transmit
@@ -242,7 +256,6 @@ int tegra_ivc_write_poke(struct ivc *ivc, const void *buf, size_t off,
  * Returns a pointer to the frame, or an error encoded pointer.
  */
 void *tegra_hv_ivc_write_get_next_frame(struct tegra_hv_ivc_cookie *ivck);
-void *tegra_ivc_write_get_next_frame(struct ivc *ivc);
 
 /**
  * ivc_hv_ivc_write_advance - Advance the write queue
@@ -253,14 +266,6 @@ void *tegra_ivc_write_get_next_frame(struct ivc *ivc);
  * Returns 0, or a negative error value if failed.
  */
 int tegra_hv_ivc_write_advance(struct tegra_hv_ivc_cookie *ivck);
-int tegra_ivc_write_advance(struct ivc *ivc);
-
-struct tegra_hv_ivm_cookie {
-	uint64_t ipa;
-	uint64_t size;
-	unsigned peer_vmid;
-	void *reserved;
-};
 
 /**
  * tegra_hv_mempool_reserve - reserve a mempool for use
@@ -291,7 +296,6 @@ int tegra_hv_mempool_unreserve(struct tegra_hv_ivm_cookie *ck);
  * reset is in progress.
  */
 int tegra_hv_ivc_channel_notified(struct tegra_hv_ivc_cookie *ivck);
-int tegra_ivc_channel_notified(struct ivc *ivc);
 
 /**
  * ivc_channel_reset - initiates a reset of the shared memory state
@@ -302,8 +306,125 @@ int tegra_ivc_channel_notified(struct ivc *ivc);
  * to ivc_channel_notified() returns 0.
  */
 void tegra_hv_ivc_channel_reset(struct tegra_hv_ivc_cookie *ivck);
-void tegra_ivc_channel_reset(struct ivc *ivc);
 
 struct ivc *tegra_hv_ivc_convert_cookie(struct tegra_hv_ivc_cookie *ivck);
+#else
+static inline struct tegra_hv_ivc_cookie *tegra_hv_ivc_reserve(
+		struct device_node *dn, int id,
+		const struct tegra_hv_ivc_ops *ops)
+{
+	return ERR_PTR(-ENODEV);
+}
+
+static inline int tegra_hv_ivc_unreserve(struct tegra_hv_ivc_cookie *ivck)
+{
+	return -ENODEV;
+}
+
+static inline int tegra_hv_ivc_write(struct tegra_hv_ivc_cookie *ivck,
+		const void *buf, int size)
+{
+	return -ENODEV;
+}
+
+static inline int tegra_hv_ivc_read(struct tegra_hv_ivc_cookie *ivck,
+		void *buf, int size)
+{
+	return -ENODEV;
+}
+
+static inline int tegra_hv_ivc_can_read(struct tegra_hv_ivc_cookie *ivck)
+{
+	return 0;
+}
+
+static inline int tegra_hv_ivc_can_write(struct tegra_hv_ivc_cookie *ivck)
+{
+	return 0;
+}
+
+static inline uint32_t tegra_hv_ivc_tx_frames_avilable(
+		struct tegra_hv_ivc_cookie *ivck)
+{
+	return 0;
+}
+
+static inline int tegra_hv_ivc_tx_empty(struct tegra_hv_ivc_cookie *ivck)
+{
+	return 0;
+}
+
+static inline int tegra_hv_ivc_set_loopback(struct tegra_hv_ivc_cookie *ivck,
+		int mode)
+{
+	return -ENODEV;
+}
+
+static inline int tegra_hv_ivc_dump(struct tegra_hv_ivc_cookie *ivck)
+{
+	return -ENODEV;
+}
+
+static inline int tegra_hv_ivc_read_peek(struct tegra_hv_ivc_cookie *ivck,
+		void *buf, int off, int count)
+{
+	return -ENODEV;
+}
+
+static inline void *tegra_hv_ivc_read_get_next_frame(
+		struct tegra_hv_ivc_cookie *ivck)
+{
+	return ERR_PTR(-ENODEV);
+}
+
+static inline int tegra_hv_ivc_read_advance(struct tegra_hv_ivc_cookie *ivck)
+{
+	return -ENODEV;
+}
+
+static inline int tegra_hv_ivc_write_poke(struct tegra_hv_ivc_cookie *ivck,
+		const void *buf, int off, int count)
+{
+	return -ENODEV;
+}
+
+static inline void *tegra_hv_ivc_write_get_next_frame(
+		struct tegra_hv_ivc_cookie *ivck)
+{
+	return ERR_PTR(-ENODEV);
+}
+
+static inline int tegra_hv_ivc_write_advance(struct tegra_hv_ivc_cookie *ivck)
+{
+	return -ENODEV;
+}
+
+static inline struct tegra_hv_ivm_cookie *tegra_hv_mempool_reserve(
+		struct device_node *dn,	unsigned id)
+{
+	return ERR_PTR(-ENODEV);
+}
+
+static inline int tegra_hv_mempool_unreserve(struct tegra_hv_ivm_cookie *ck)
+{
+	return -ENODEV;
+}
+
+static inline int tegra_hv_ivc_channel_notified(
+		struct tegra_hv_ivc_cookie *ivck)
+{
+	return -ENODEV;
+}
+
+static inline void tegra_hv_ivc_channel_reset(struct tegra_hv_ivc_cookie *ivck)
+{
+}
+
+static inline struct ivc *tegra_hv_ivc_convert_cookie(
+		struct tegra_hv_ivc_cookie *ivck)
+{
+	return ERR_PTR(-ENODEV);
+}
+#endif
 
 #endif

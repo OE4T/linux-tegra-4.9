@@ -26,6 +26,7 @@ struct lp88xx {
 	struct pwm_device *pwm;
 	unsigned int period;
 	u16 max_dev_brt;
+	u32 max_input_brt;
 };
 
 extern int lp88xx_common_probe(struct device *dev, struct lp88xx *lp);

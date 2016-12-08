@@ -189,9 +189,11 @@ static int lp88xx_bl_update_status(struct backlight_device *bldev)
 {
 	struct lp88xx_bl *bl = bl_get_data(bldev);
 	struct lp88xx *lp = bl->lp;
-	u16 val = bldev->props.brightness;
+	u32 val = bldev->props.brightness;
 	int duty;
 	int ret;
+
+	val = val * lp->max_dev_brt / lp->max_input_brt;
 
 	if (val > 0)
 		lp88xx_bl_on(lp, 1);
@@ -234,6 +236,7 @@ static int lp88xx_add_bl_device(struct lp88xx *lp, int id)
 	struct device *dev = lp->dev;
 	struct backlight_properties props;
 	char name[64];
+	const char *pname;
 	unsigned int reg_brt[] = {
 		[LP88XX_REGION_BASE] = LP88XX_REG_BRT_BASE,
 		[LP88XX_REGION_LED1] = LP88XX_REG_BRT_LED1,
@@ -252,10 +255,16 @@ static int lp88xx_add_bl_device(struct lp88xx *lp, int id)
 	bl->is_db_used = lp88xx_is_db_used(id);
 
 	memset(name, 0, sizeof(name));
-	snprintf(name, sizeof(name), "%s:%d", DEFAULT_BL_NAME, id);
+	if (!of_property_read_string_index(dev->of_node, "names",
+		id, &pname))
+		snprintf(name, sizeof(name), "%s", pname);
+	else
+		snprintf(name, sizeof(name), "%s:%d", DEFAULT_BL_NAME, id);
+
 	props.type = BACKLIGHT_PLATFORM;
-	props.max_brightness = lp->max_dev_brt;
+	props.max_brightness = lp->max_input_brt;
 	props.brightness = 0;
+	of_property_read_s32(dev->of_node, "init-brt", &props.brightness);
 
 	bl->bldev = devm_backlight_device_register(dev, name, dev, bl,
 						   &lp88xx_bl_ops, &props);
@@ -397,6 +406,10 @@ int lp88xx_common_probe(struct device *dev, struct lp88xx *lp)
 		val = (val & LP88XX_CAP2_MASK) >> LP88XX_CAP2_SHIFT;
 		lp->max_dev_brt = (1U << val) - 1;
 	}
+
+	if (of_property_read_u32(dev->of_node, "max-input-brt",
+		&lp->max_input_brt))
+		lp->max_input_brt = lp->max_dev_brt;
 
 	for (i = 0; i < size; i++) {
 		if (!lp88xx_is_valid_region(region[i])) {

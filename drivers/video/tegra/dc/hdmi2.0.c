@@ -137,7 +137,7 @@ tegra_hdmi_hpd_asserted(struct tegra_hdmi *hdmi)
 
 static inline void tegra_hdmi_reset(struct tegra_hdmi *hdmi)
 {
-	if (tegra_platform_is_linsim())
+	if (tegra_platform_is_sim())
 		return;
 
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
@@ -269,6 +269,9 @@ static int tegra_hdmi_scdc_init(struct tegra_hdmi *hdmi)
 		.type = "tegra_hdmi_scdc",
 		.addr = 0x54,
 	};
+
+	if (tegra_platform_is_sim())
+		return 0;
 
 	i2c_adap = i2c_get_adapter(dc->out->ddc_bus);
 	if (!i2c_adap) {
@@ -891,9 +894,6 @@ static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 	int i;
 	int err = 0;
 
-	if (tegra_platform_is_linsim())
-		return 0;
-
 	tmds_len = ARRAY_SIZE(tmds_config_modes);
 
 	/* Select mode with smallest clk freq > pclk */
@@ -1092,14 +1092,16 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	}
 	atomic_set(&hdmi->suspended, 0);
 #ifdef CONFIG_HDCP
-	hdmi->nvhdcp = tegra_nvhdcp_create(hdmi, dc->ndev->id,
+	if (!tegra_platform_is_sim()) {
+		hdmi->nvhdcp = tegra_nvhdcp_create(hdmi, dc->ndev->id,
 			dc->out->ddc_bus);
-	if (IS_ERR_OR_NULL(hdmi->nvhdcp)) {
-		err = PTR_ERR(hdmi->nvhdcp);
-		dev_err(&dc->ndev->dev,
-			"hdmi hdcp creation failed with err %d\n", err);
-	} else {
-		tegra_nvhdcp_debugfs_init(hdmi->nvhdcp);
+		if (IS_ERR_OR_NULL(hdmi->nvhdcp)) {
+			err = PTR_ERR(hdmi->nvhdcp);
+			dev_err(&dc->ndev->dev,
+				"hdmi hdcp creation failed with err %d\n", err);
+		} else {
+			tegra_nvhdcp_debugfs_init(hdmi->nvhdcp);
+		}
 	}
 #endif
 
@@ -1226,9 +1228,6 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 	u32 hblank, max_ac, rekey;
 	unsigned long val;
 	u32 dispclk_div_8_2;
-
-	if (tegra_platform_is_linsim())
-		return;
 
 	tegra_sor_write_field(sor, NV_SOR_INPUT_CONTROL,
 			NV_SOR_INPUT_CONTROL_ARM_VIDEO_RANGE_LIMITED |
@@ -1523,9 +1522,6 @@ static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 
 	memset(&hdmi->avi, 0, sizeof(hdmi->avi));
 
-	if (tegra_platform_is_linsim())
-		return;
-
 	avi->scan = HDMI_AVI_UNDERSCAN;
 	avi->bar_valid = HDMI_AVI_BAR_INVALID;
 	avi->act_fmt_valid = HDMI_AVI_ACTIVE_FORMAT_INVALID;
@@ -1567,9 +1563,6 @@ static void tegra_hdmi_avi_infoframe(struct tegra_hdmi *hdmi)
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 
 	if (hdmi->dvi)
-		return;
-
-	if (tegra_platform_is_linsim())
 		return;
 
 	/* disable avi infoframe before configuring except for seamless case */
@@ -1675,9 +1668,6 @@ static void tegra_hdmi_hdr_infoframe_update(struct tegra_hdmi *hdmi)
 	struct hdmi_hdr_infoframe *hdr = &hdmi->hdr;
 
 	memset(&hdmi->hdr, 0, sizeof(hdmi->hdr));
-
-	if (tegra_platform_is_linsim())
-		return;
 
 	hdr->eotf = hdmi->dc->hdr.eotf;
 	hdr->static_metadata_id = hdmi->dc->hdr.static_metadata_id;
@@ -2148,9 +2138,6 @@ static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 	if (clk_type == hdmi->clk_type)
 		return;
 
-	if (tegra_platform_is_linsim())
-		return;
-
 	if (clk_type == TEGRA_HDMI_BRICK_CLK) {
 
 		struct tegra_dc_sor_data *sor = hdmi->sor;
@@ -2462,7 +2449,7 @@ static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 	unsigned long delay = msecs_to_jiffies(HDMI_HPD_DEBOUNCE_DELAY_MS);
 
-	if (tegra_platform_is_linsim())
+	if (tegra_platform_is_sim())
 		return true;
 
 	if (dc->out->hotplug_state != TEGRA_HPD_STATE_NORMAL)
@@ -2892,6 +2879,9 @@ static bool tegra_dc_hdmi_hpd_state(struct tegra_dc *dc)
 
 	if (WARN_ON(!dc || !dc->out))
 		return false;
+
+	if (tegra_platform_is_sim())
+		return true;
 
 	level = gpio_get_value_cansleep(dc->out->hotplug_gpio);
 

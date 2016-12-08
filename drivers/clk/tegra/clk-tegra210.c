@@ -2530,6 +2530,7 @@ static struct tegra_devclk devclks[] __initdata = {
 	{ .con_id = "pll_c4_out1", .dt_id = TEGRA210_CLK_PLL_C4_OUT1 },
 	{ .con_id = "pll_c4_out2", .dt_id = TEGRA210_CLK_PLL_C4_OUT2 },
 	{ .con_id = "pll_c4_out3", .dt_id = TEGRA210_CLK_PLL_C4_OUT3 },
+	{ .con_id = "mipi-cal", .dt_id = TEGRA210_CLK_MIPI_CAL },
 	{ .con_id = "dpaux", .dt_id = TEGRA210_CLK_DPAUX },
 	{ .con_id = "dpaux1", .dt_id = TEGRA210_CLK_DPAUX1 },
 	{ .con_id = "sor0", .dt_id = TEGRA210_CLK_SOR0 },

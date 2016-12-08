@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * Hypervisor interfaces
  *
@@ -132,7 +132,7 @@ struct hyp_ipa_pa_info {
 	uint64_t size;       /* size of pa region */
 };
 
-#define HVC_MAX_VCPU 128
+#define HVC_MAX_VCPU 64
 
 struct trapped_access {
 	uint64_t ipa;

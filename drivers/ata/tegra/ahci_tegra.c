@@ -313,6 +313,59 @@ static int tegra_ahci_softreset(struct ata_link *link, unsigned int *class,
 
 }
 
+static int tegra_ahci_umh(unsigned long long block, char *block_dev)
+{
+	char *envp[] = {
+		"HOME=/",
+		"PATH=/sbin:/vendor/bin:/system/sbin:/system/bin:/system/xbin",
+		NULL };
+	char *argv[TEGRA_BADBLK_MAX_ARGUMENTS + 1];
+	char buf1[TEGRA_BADBLK_STRING_LENGTH] = { };
+	char buf2[TEGRA_BADBLK_STRING_LENGTH] = { };
+	int ret = 0;
+
+	snprintf(buf1, sizeof(buf1), "%llu", block);
+	snprintf(buf2, sizeof(buf2), "%s", block_dev);
+	argv[TEGRA_BADBLK_COMMAND] = "/system/bin/badblk.sh";
+	argv[TEGRA_BADBLK_COMMAND_PARAM1] = buf1;
+	argv[TEGRA_BADBLK_COMMAND_PARAM2] = buf2;
+	argv[TEGRA_BADBLK_MAX_ARGUMENTS] = NULL;
+
+	ret = call_usermodehelper(argv[TEGRA_BADBLK_COMMAND],
+					argv, envp, UMH_WAIT_PROC);
+	if (ret == -ENOENT) {
+		argv[TEGRA_BADBLK_COMMAND] = "/home/ubuntu/badblk.sh";
+		envp[1] = "PATH=/sbin:/bin:/usr/sbin:/usr/bin";
+		ret = call_usermodehelper(argv[TEGRA_BADBLK_COMMAND],
+						argv, envp, UMH_WAIT_PROC);
+	}
+	return ret;
+}
+
+static void tegra_ahci_badblk_manage(struct work_struct *work)
+{
+	struct tegra_ahci_badblk_priv *badblk =
+		container_of(work, struct tegra_ahci_badblk_priv, badblk_work);
+	struct tegra_ahci_priv *tegra =
+		container_of(badblk, struct tegra_ahci_priv, badblk);
+	struct tegra_ahci_badblk_info *temp = NULL;
+	struct platform_device *pdev = tegra->pdev;
+	int ret = 0;
+
+	spin_lock(&tegra->badblk.badblk_lock);
+	temp = tegra->badblk.head;
+	if (!temp) {
+		spin_unlock(&tegra->badblk.badblk_lock);
+		return;
+	}
+	tegra->badblk.head = temp->next;
+
+	spin_unlock(&tegra->badblk.badblk_lock);
+
+	ret = tegra_ahci_umh(temp->block, temp->block_dev);
+	devm_kfree(&pdev->dev, temp);
+}
+
 static void tegra_ahci_unbind(struct work_struct *work)
 {
 	struct tegra_ahci_priv *tegra =
@@ -326,8 +379,65 @@ static void tegra_ahci_unbind(struct work_struct *work)
 	pdev->dev.driver->shutdown  = NULL;
 }
 
+static char *tegra_ahci_get_disk_name(struct scsi_cmnd *scsicmd)
+{
+	if (scsicmd && scsicmd->request && scsicmd->request->rq_disk)
+		return scsicmd->request->rq_disk->disk_name;
+	else
+		return NULL;
+}
+
+static void tegra_ahci_schedule_badblk_work(struct ata_queued_cmd *qc,
+		struct ata_device *dev)
+{
+
+	unsigned long long sector;
+	unsigned long long block;
+	char *disk_name = NULL;
+	struct tegra_ahci_badblk_info *temp = NULL;
+	struct ata_host *host = qc->ap->host;
+	struct ahci_host_priv *hpriv = host->private_data;
+	struct tegra_ahci_priv *tegra = hpriv->plat_data;
+	struct platform_device *pdev = tegra->pdev;
+
+	disk_name = tegra_ahci_get_disk_name(qc->scsicmd);
+	sector = ata_tf_read_block(&qc->tf, dev);
+	block = (sector * 512) / 4096;
+	if (spin_trylock(&tegra->badblk.badblk_lock)) {
+		temp = devm_kzalloc(&pdev->dev,
+					sizeof(struct tegra_ahci_badblk_info),
+					GFP_ATOMIC);
+		if (temp) {
+			temp->block = block;
+			if (disk_name)
+				strncpy(temp->block_dev, disk_name, 99);
+			temp->next = tegra->badblk.head;
+			tegra->badblk.head = temp;
+			schedule_work(&tegra->badblk.badblk_work);
+		}
+		spin_unlock(&tegra->badblk.badblk_lock);
+	}
+}
+
 static void tegra_ahci_error_handler(struct ata_port *ap)
 {
+	int tag;
+
+	for (tag = 0; tag < ATA_MAX_QUEUE; tag++) {
+		struct ata_queued_cmd *qc = __ata_qc_from_tag(ap, tag);
+
+		if ((qc->flags & ATA_QCFLAG_FAILED)
+			&& (qc->result_tf.feature & (ATA_UNC | ATA_AMNF))) {
+			struct ata_link *link;
+			struct ata_device *dev;
+
+			ata_for_each_link(link, qc->ap, PMP_FIRST)
+				ata_for_each_dev(dev, link, ENABLED)
+					tegra_ahci_schedule_badblk_work(qc,
+									dev);
+		}
+	}
+
 	ahci_ops.error_handler(ap);
 	if (!ata_dev_enabled(ap->link.device)) {
 		if (!(ap->pflags & ATA_PFLAG_SUSPENDED)) {
@@ -1430,6 +1540,9 @@ static int tegra_ahci_probe(struct platform_device *pdev)
 	if (ret)
 		goto poweroff_controller;
 
+	INIT_WORK(&tegra->badblk.badblk_work, tegra_ahci_badblk_manage);
+	tegra->badblk.head = NULL;
+	spin_lock_init(&tegra->badblk.badblk_lock);
 
 	ret = ahci_platform_init_host(pdev, hpriv, &ahci_tegra_port_info,
 							&ahci_platform_sht);

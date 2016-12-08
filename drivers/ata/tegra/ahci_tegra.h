@@ -1,7 +1,7 @@
 /*
  * drivers/ata/ahci_tegra.h
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -173,6 +173,16 @@
 
 #define TEGRA_AHCI_READ_LOG_EXT_NOENTRY			0x80
 
+/* Badblock Management */
+#define TEGRA_BADBLK_STRING_LENGTH			100
+
+enum tegra_badblk_arguments {
+	TEGRA_BADBLK_COMMAND,
+	TEGRA_BADBLK_COMMAND_PARAM1,
+	TEGRA_BADBLK_COMMAND_PARAM2,
+	TEGRA_BADBLK_MAX_ARGUMENTS,
+};
+
 enum tegra_sata_bars {
 	TEGRA_SATA_IPFS = 0,
 	TEGRA_SATA_CONFIG,
@@ -186,6 +196,18 @@ enum tegra_ahci_port_runtime_status {
 	TEGRA_AHCI_PORT_RUNTIME_PARTIAL	= 2,
 	TEGRA_AHCI_PORT_RUNTIME_SLUMBER	= 6,
 	TEGRA_AHCI_PORT_RUNTIME_DEVSLP	= 8,
+};
+
+struct tegra_ahci_badblk_info {
+	unsigned long long block;
+	char block_dev[TEGRA_BADBLK_STRING_LENGTH];
+	struct tegra_ahci_badblk_info *next;
+};
+
+struct tegra_ahci_badblk_priv {
+	struct work_struct badblk_work;
+	struct tegra_ahci_badblk_info *head;
+	spinlock_t badblk_lock;
 };
 
 struct tegra_ahci_priv {
@@ -207,6 +229,7 @@ struct tegra_ahci_priv {
 	struct pinctrl_state	   *devslp_pullup;
 	struct tegra_prod	   *prod_list;
 	struct work_struct	   work;
+	struct tegra_ahci_badblk_priv badblk;
 	int			   devslp_gpio;
 	bool			   devslp_override;
 	bool			   devslp_pinmux_override;
@@ -395,4 +418,6 @@ static inline void tegra_ahci_aux_update(struct ahci_host_priv *hpriv, u32 val,
 	writel(rval, tegra->base_list[TEGRA_SATA_AUX] + offset);
 	rval = readl(tegra->base_list[TEGRA_SATA_AUX] + offset);
 }
+
+u64 ata_tf_read_block(struct ata_taskfile *tf, struct ata_device *dev);
 #endif

@@ -31,7 +31,7 @@
 #include <linux/switch.h>
 #endif
 #include <linux/pm_runtime.h>
-#include <mach/tegra_asoc_pdata.h>
+#include <linux/platform_data/tegra_asoc_pdata.h>
 
 #ifdef CONFIG_NVS_IQS2X3
 #include <linux/nvs_iqs2x3.h>

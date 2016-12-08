@@ -30,7 +30,7 @@
 #include <linux/switch.h>
 #endif
 #include <linux/pm_runtime.h>
-#include <mach/tegra_asoc_pdata.h>
+#include <linux/platform_data/tegra_asoc_pdata.h>
 
 #include <sound/core.h>
 #include <sound/jack.h>

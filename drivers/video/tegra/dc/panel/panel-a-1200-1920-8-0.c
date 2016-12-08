@@ -22,7 +22,6 @@
 #include <linux/regulator/consumer.h>
 #include "board.h"
 #include "board-panel.h"
-#include "devices.h"
 
 #define DSI_PANEL_RESET		1
 

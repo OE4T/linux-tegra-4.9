@@ -28,7 +28,6 @@
 #include <mach/dc.h>
 #include <asm/mach-types.h>
 
-#include "devices.h"
 #include "board-panel.h"
 
 #define DSI_PANEL_RESET		1

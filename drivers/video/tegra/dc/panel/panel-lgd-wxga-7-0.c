@@ -24,7 +24,6 @@
 
 #include "board.h"
 #include "board-panel.h"
-#include "devices.h"
 
 static bool reg_requested;
 static struct regulator *avdd_lcd_3v3;

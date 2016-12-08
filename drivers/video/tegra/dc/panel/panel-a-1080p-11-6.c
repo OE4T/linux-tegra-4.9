@@ -29,7 +29,6 @@
 
 #include "board.h"
 #include "board-panel.h"
-#include "devices.h"
 #include "gpio-names.h"
 #include "tegra11_host1x_devices.h"
 

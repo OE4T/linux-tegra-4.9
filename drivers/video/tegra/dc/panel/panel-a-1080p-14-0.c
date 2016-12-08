@@ -22,7 +22,6 @@
 #include <linux/regulator/consumer.h>
 #include "board.h"
 #include "board-panel.h"
-#include "devices.h"
 
 #define DC_CTRL_MODE    TEGRA_DC_OUT_CONTINUOUS_MODE
 #define DSI_PANEL_RESET		1

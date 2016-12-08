@@ -27,7 +27,6 @@
 #include <linux/ioport.h>
 #include "board.h"
 #include "board-panel.h"
-#include "devices.h"
 #include "gpio-names.h"
 #include "tegra12_host1x_devices.h"
 

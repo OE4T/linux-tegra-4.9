@@ -34,7 +34,6 @@
 #include <linux/platform/tegra/io-dpd.h>
 
 #include "board.h"
-#include "devices.h"
 #include "gpio-names.h"
 #include "iomap.h"
 #include "tegra12_host1x_devices.h"

@@ -235,7 +235,6 @@ config TEGRA_FIRMWARES_INVENTORY
 
 config TEGRA_HSP
 	bool "Enable Tegra Hardware Synchronization Primitives driver"
-	depends on ARCH_TEGRA_18x_SOC
 	default y
 
 config POWERGATE_TEGRA_BPMP

@@ -1858,8 +1858,8 @@ static int voltage_get(void *data, u64 *val)
 
 	det_out = gk20a_readl(g, trim_sys_gpcpll_cfg3_r());
 	det_out = trim_sys_gpcpll_cfg3_dfs_testout_v(det_out);
-	*val = (det_out * gpc_pll_params.uvdet_slope +
-		gpc_pll_params.uvdet_offs) / 1000;
+	*val = div64_u64((u64)det_out * gpc_pll_params.uvdet_slope +
+		gpc_pll_params.uvdet_offs, 1000ULL);
 
 	mutex_unlock(&g->clk.clk_mutex);
 

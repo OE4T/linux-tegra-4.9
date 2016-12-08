@@ -278,7 +278,7 @@ static unsigned long m_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
 	else if (cpu_rate >= 450000)
 		return  408000000;	/* cpu >= 450 MHz, emc 408 MHz */
 	else
-		return  100000000;	/* emc 100 MHz */
+		return  0;		/* no freq request */
 }
 
 /* Arm cluster cpu_to_emc freq */
@@ -291,7 +291,7 @@ static unsigned long b_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
 	else if (cpu_rate >= 450000)
 		return  408000000;	/* cpu >= 450 MHz, emc 408 MHz */
 	else
-		return  100000000;	/* emc 100 MHz */
+		return  0;		/* no freq request */
 }
 
 /**

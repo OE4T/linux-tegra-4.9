@@ -2307,6 +2307,9 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	}
 #endif
 
+	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE))
+		tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, false);
+
 	tegra_dc_dp_debugfs_create(dp);
 	dp_instance++;
 	of_node_put(np_dp);

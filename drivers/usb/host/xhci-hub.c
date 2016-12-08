@@ -2,6 +2,7 @@
  * xHCI host controller driver
  *
  * Copyright (C) 2008 Intel Corp.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Sarah Sharp
  * Some code borrowed from the Linux EHCI driver.
@@ -899,6 +900,8 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 	u16 wake_mask = 0;
 	u16 timeout = 0;
 	u16 test_selector = 0;
+	int i = 0;
+	unsigned long end;
 
 	max_ports = xhci_get_ports(hcd, &port_array);
 	bus_state = &xhci->bus_state[hcd_index(hcd)];
@@ -1161,8 +1164,39 @@ int xhci_hub_control(struct usb_hcd *hcd, u16 typeReq, u16 wValue,
 			if (!test_selector || test_selector > 5)
 				goto error;
 
-			if (xhci_halt(xhci))
+			/* put all ports in disabled state */
+			for (i = 0; i < max_ports; i++) {
+				temp = readl(port_array[i]);
+				temp = xhci_port_state_to_neutral(temp);
+				writel(temp & ~PORT_POWER, port_array[i]);
+			}
+
+			/* check all ports in disabled state */
+			end = jiffies + msecs_to_jiffies(2000);
+			i = 0;
+			while (time_is_after_jiffies(end) && i < max_ports) {
+				temp = readl(port_array[i]);
+				if ((temp & PORT_POWER) == 0) {
+					i++;
+					continue;
+				}
+
+				spin_unlock_irqrestore(
+					&xhci->lock, flags);
+				msleep(200);
+				spin_lock_irqsave(&xhci->lock,
+							flags);
+			}
+
+			if (i < max_ports) {
+				xhci_warn(xhci, "Clear PP error, port %d\n", i);
 				goto error;
+			}
+
+			if (xhci_halt(xhci)) {
+				xhci_warn(xhci, "XHCI Halt error\n");
+				goto error;
+			}
 
 			/* Start test mode in PORTPMSC */
 			temp = readl(port_array[wIndex] + 1);

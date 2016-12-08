@@ -382,13 +382,6 @@
 #define PR_FUNC_LINE	do {} while (0)
 #endif
 
-/* Pinctrl configuration paramaters */
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-#define pinctrl_compatible	"nvidia,tegra210-pinmux"
-#define pin_pex_l0_clkreq	"pex_l0_clkreq_n_pa1"
-#define pin_pex_l1_clkreq	"pex_l1_clkreq_n_pa4"
-#endif
-
 struct tegra_pcie_soc_data {
 	unsigned int	num_ports;
 	char			**pcie_regulator_names;
@@ -936,37 +929,39 @@ static void tegra_pcie_enable_ltr_support(void)
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 static void tegra_pcie_config_clkreq(struct tegra_pcie *pcie, u32 index)
 {
-	static struct pinctrl_dev *pctl_dev;
-	unsigned long od_conf, tr_conf;
+	struct pinctrl		   *clkreq_pin = NULL;
+	struct pinctrl_state	   *clkreq_bi_dir = NULL;
+	int ret = 0;
 
 	PR_FUNC_LINE;
 
-	if (!pctl_dev)
-		pctl_dev = pinctrl_get_dev_from_of_compatible(
-				pinctrl_compatible);
-	if (!pctl_dev) {
-		dev_err(pcie->dev,
-			"%s(): tegra pincontrol does not found\n", __func__);
+	clkreq_pin = devm_pinctrl_get(pcie->dev);
+	if (IS_ERR(clkreq_pin)) {
+		dev_err(pcie->dev, "config clkreq as a bi-dir failed: %ld\n",
+			PTR_ERR(clkreq_pin));
 		return;
 	}
 
-	od_conf = TEGRA_PINCONF_PACK(TEGRA_PINCONF_PARAM_OPEN_DRAIN,
-				TEGRA_PIN_ENABLE);
-	tr_conf = TEGRA_PINCONF_PACK(TEGRA_PINCONF_PARAM_TRISTATE,
-				TEGRA_PIN_DISABLE);
-
-	/* Make CLKREQ# bi-directional if L1PM SS are enabled */
-	if (index) {
-		pinctrl_set_config_for_group_name(pctl_dev,
-				pin_pex_l1_clkreq, tr_conf);
-		pinctrl_set_config_for_group_name(pctl_dev,
-				pin_pex_l1_clkreq, od_conf);
-	} else {
-		pinctrl_set_config_for_group_name(pctl_dev,
-				pin_pex_l0_clkreq, tr_conf);
-		pinctrl_set_config_for_group_name(pctl_dev,
-				pin_pex_l0_clkreq, od_conf);
+	switch (index) {
+	case 0:
+		clkreq_bi_dir = pinctrl_lookup_state(clkreq_pin,
+						     "clkreq-0-bi-dir-enable");
+		break;
+	case 1:
+		clkreq_bi_dir = pinctrl_lookup_state(clkreq_pin,
+						     "clkreq-1-bi-dir-enable");
+		break;
 	}
+
+	if (IS_ERR(clkreq_bi_dir)) {
+		dev_err(pcie->dev, "missing clkreq_bi_dir_enable state: %ld\n",
+			PTR_ERR(clkreq_bi_dir));
+		return;
+	}
+	ret = pinctrl_select_state(clkreq_pin, clkreq_bi_dir);
+	if (ret < 0)
+		dev_err(pcie->dev,
+			"setting clkreq pin bi-dir state failed: %d\n", ret);
 }
 #endif
 

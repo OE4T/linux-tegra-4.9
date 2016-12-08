@@ -52,6 +52,12 @@
 #define TRACE_BUFFER_SIZE		0x100000
 
 /**
+ * Max number of fences supported
+ */
+#define MAX_NUM_NVDLA_PREFENCES		4
+#define MAX_NUM_NVDLA_POSTFENCES	4
+
+/**
  * data structure to keep per DLA engine device data
  *
  * @pdev		pointer to platform device

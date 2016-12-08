@@ -43,6 +43,18 @@
 #define NVDLA_QUEUE_ABORT_TIMEOUT	10000	/* 10 sec */
 #define NVDLA_QUEUE_ABORT_RETRY_PERIOD	500	/* 500 ms */
 
+#define NVDLA_MAX_PREACTION_SIZE (MAX_NUM_NVDLA_PREFENCES * \
+				sizeof(struct dla_action_opcode) + \
+				MAX_NUM_NVDLA_PREFENCES * \
+				sizeof(struct dla_action_semaphore) + \
+				sizeof(struct dla_action_opcode))
+
+#define NVDLA_MAX_POSTACTION_SIZE (MAX_NUM_NVDLA_POSTFENCES * \
+				sizeof(struct dla_action_opcode) + \
+				MAX_NUM_NVDLA_POSTFENCES * \
+				sizeof(struct dla_action_semaphore) + \
+				sizeof(struct dla_action_opcode))
+
 static DEFINE_DMA_ATTRS(attrs);
 
 /* task management API's */
@@ -342,6 +354,138 @@ fail_to_alloc_handles:
 	return err;
 }
 
+static size_t nvdla_get_task_desc_size(void)
+{
+
+	size_t size = 0;
+
+	/* calculate size of task desc, actions and its list, buffers
+	 * this is max possible size for updating task desc and
+	 * and allocated mem size can be more than required size
+	 */
+	size += sizeof(struct dla_task_descriptor);
+	size += (2 * MAX_NUM_ACTION_LIST * sizeof(struct dla_action_list));
+	size +=	NVDLA_MAX_PREACTION_SIZE;
+	size +=	NVDLA_MAX_POSTACTION_SIZE;
+
+	return size;
+
+}
+
+static int nvdla_fill_postactions(struct nvdla_ioctl_submit_task *user_task,
+			struct nvdla_task *task)
+{
+	struct dla_task_descriptor *task_desc = task->task_desc;
+	struct nvhost_queue *queue = task->queue;
+	struct platform_device *pdev = queue->pool->pdev;
+	struct dla_action_semaphore *postaction;
+	struct dla_action_list *postactionl;
+	struct dla_action_opcode *opcode;
+	uint16_t postactionlist_of;
+	void *mem;
+	int i;
+
+	/* update postaction list offset */
+	postactionlist_of = task_desc->postactions +
+		sizeof(struct dla_action_list) + NVDLA_MAX_PREACTION_SIZE;
+
+	/* fill all postactions */
+	for (i = 0; i < user_task->num_postfences; i++, postaction++) {
+		void *next = NULL;
+
+		/* get next post action base */
+		next = (char *)task_desc + postactionlist_of +
+		 i * (sizeof(struct dla_action_opcode) +
+			sizeof(struct dla_action_semaphore));
+
+		/* get base opcode */
+		opcode = (struct dla_action_opcode *)next;
+
+		/* update end of list */
+		if (i == user_task->num_postfences) {
+			opcode->value = POSTACTION_TERMINATE;
+			break;
+		}
+
+		/* set action type */
+		opcode->value = POSTACTION_SEM;
+
+		/* get actual post action mem */
+		postaction = (struct dla_action_semaphore *)
+			((char *)opcode + sizeof(struct dla_action_opcode));
+
+		/* update action */
+		postaction->address = nvhost_syncpt_address(pdev, queue->syncpt_id);
+	}
+
+	mem = (char *)task_desc + task_desc->postactions;
+	postactionl = (struct dla_action_list *)mem;
+	postactionl->offset = postactionlist_of;
+	postactionl->size = i * (sizeof(struct dla_action_opcode) +
+			sizeof(struct dla_action_semaphore)) +
+			sizeof(struct dla_action_opcode);
+
+	return 0;
+}
+
+static int nvdla_fill_preactions(struct nvdla_ioctl_submit_task *user_task,
+			struct nvdla_task *task)
+{
+	struct dla_task_descriptor *task_desc = task->task_desc;
+	struct nvhost_queue *queue = task->queue;
+	struct platform_device *pdev = queue->pool->pdev;
+	struct dla_action_semaphore *preaction;
+	struct dla_action_list *preactionl;
+	struct dla_action_opcode *opcode;
+	uint16_t preactionlist_of;
+	void *mem;
+	int i;
+
+	/* preaction list offset update */
+	preactionlist_of = task_desc->postactions + sizeof(struct dla_action_list);
+
+	/* fill all preactions */
+	for (i = 0; i <= user_task->num_prefences; i++) {
+		void *next = NULL;
+
+		/* get next preaction base */
+		next = (char *)task_desc + preactionlist_of +
+		  i * (sizeof(struct dla_action_opcode) +
+			sizeof(struct dla_action_semaphore));
+
+		/* get base opcode */
+		opcode = (struct dla_action_opcode *)next;
+
+		/* update end of action list */
+		if (i == user_task->num_prefences) {
+			opcode->value = PREACTION_TERMINATE;
+			break;
+		}
+
+		/* set action type */
+		opcode->value = PREACTION_SEM_GE;
+
+		/* get actual preaction address */
+		preaction = (struct dla_action_semaphore *)
+			((char *)opcode + sizeof(struct dla_action_opcode));
+
+		/* update action */
+		preaction->address = nvhost_syncpt_address(pdev,
+					task->prefences[i].syncpoint_index);
+		preaction->value = task->prefences[i].syncpoint_value;
+	}
+
+	/* actually update lists data */
+	mem = (char *)task_desc + task_desc->preactions;
+	preactionl = (struct dla_action_list *)mem;
+	preactionl->offset = preactionlist_of;
+	preactionl->size = i * (sizeof(struct dla_action_opcode) +
+			sizeof(struct dla_action_semaphore)) +
+			sizeof(struct dla_action_opcode);
+
+	return 0;
+}
+
 struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 			struct nvhost_buffers *buffers,
 			struct nvdla_ioctl_submit_task *user_task)
@@ -349,26 +493,14 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 	struct platform_device *pdev = queue->pool->pdev;
 	u32 num_postfences = user_task->num_postfences;
 	u32 num_prefences = user_task->num_prefences;
-	struct dla_action_semaphore *postaction;
-	struct dla_action_semaphore *preaction;
 	struct dla_task_descriptor *task_desc;
-	struct dla_action_list *postactionl;
-	struct dla_action_list *preactionl;
-	struct dla_action_opcode *opcode;
 	struct nvdla_task *task = NULL;
-	uint16_t postactionlist_of;
-	size_t postactionlist_size;
-	uint16_t preactionlist_of;
-	size_t preactionlist_size;
-	uint16_t postactionl_of;
-	uint16_t preactionl_of;
 	dma_addr_t buffer_pa;
 	size_t task_size;
 	size_t buf_size;
 	u32 *buffer_va;
 	void *mem;
 	int err;
-	int i;
 
 	nvdla_dbg_fn(pdev, "");
 
@@ -396,35 +528,10 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 	mem += num_prefences * sizeof(struct nvdla_fence);
 	task->postfences = mem;
 
-	/* update local fences into task*/
+	/* update local fences into task */
 	nvdla_get_fences(user_task, task);
 
-	/* calculate size of task desc, actions and its list, buffers
-	 * this is max possible size for updating task desc and
-	 * and allocated mem size can be more than required size
-	 */
-	preactionlist_size =
-			num_prefences * sizeof(struct dla_action_opcode) +
-			num_prefences * sizeof(struct dla_action_semaphore) +
-			sizeof(struct dla_action_opcode);
-
-	postactionlist_size =
-			num_postfences * sizeof(struct dla_action_opcode) +
-			num_postfences * sizeof(struct dla_action_semaphore) +
-			sizeof(struct dla_action_opcode);
-
-	buf_size = sizeof(struct dla_task_descriptor) +
-		(2 * MAX_NUM_ACTION_LIST * sizeof(struct dla_action_list)) +
-		preactionlist_size +
-		postactionlist_size;
-
-	nvdla_dbg_info(pdev, "num of prefences[%d] num of postfences[%d]",
-			num_prefences, num_postfences);
-	nvdla_dbg_info(pdev, "preaction list size[%zu]",
-			preactionlist_size);
-	nvdla_dbg_info(pdev, "postaction list size[%zu]",
-			postactionlist_size);
-	nvdla_dbg_info(pdev, "Total task desc size[%zu]", buf_size);
+	buf_size = nvdla_get_task_desc_size();
 
 	/* allocate task descriptor */
 	buffer_va = dma_alloc_attrs(&pdev->dev, buf_size, &buffer_pa,
@@ -468,96 +575,16 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 	 * - postactions list HEAD followed after preaction list head offset
 	 * - DLA has only one list of actions for each of pre and post
 	 */
-	preactionl_of = sizeof(struct dla_task_descriptor);
-	postactionl_of = preactionl_of + sizeof(struct dla_action_list);
+	task_desc->preactions = sizeof(struct dla_task_descriptor);
+	task_desc->postactions = task_desc->preactions + sizeof(struct dla_action_list);
 
-	nvdla_dbg_info(pdev, "preaction meta offset[%d]", preactionl_of);
-	nvdla_dbg_info(pdev, "postaction meta offset[%d]", postactionl_of);
+	/* fill pre actions */
+	nvdla_fill_preactions(user_task, task);
 
-	/* ..and send those through descriptor */
-	task_desc->preactions = preactionl_of;
-	task_desc->postactions = postactionl_of;
+	/* fill post actions */
+	nvdla_fill_postactions(user_task, task);
 
-	/* actual preaction list offset update */
-	preactionlist_of = postactionl_of + sizeof(struct dla_action_list);
-
-	/* actual postaction list offset update */
-	postactionlist_of = preactionlist_of + preactionlist_size;
-
-	nvdla_dbg_info(pdev, "preaction list offset[%d]", preactionlist_of);
-	nvdla_dbg_info(pdev, "postaction list offset[%d]", postactionlist_of);
-
-	/* actually update lists data */
-	mem = (char *)task_desc + preactionl_of;
-	preactionl = (struct dla_action_list *)mem;
-	preactionl->offset = preactionlist_of;
-	preactionl->size = preactionlist_size;
-
-	mem = (char *)task_desc + postactionl_of;
-	postactionl = (struct dla_action_list *)mem;
-	postactionl->offset = postactionlist_of;
-	postactionl->size = postactionlist_size;
-
-	/* fill all preactions */
-	for (i = 0; i <= user_task->num_prefences; i++) {
-		void *next = NULL;
-
-		/* get next preaction base */
-		next = (char *)task_desc + preactionlist_of +
-		  i * (sizeof(struct dla_action_opcode) +
-			sizeof(struct dla_action_semaphore));
-
-		/* get base opcode */
-		opcode = (struct dla_action_opcode *)next;
-
-		/* update end of action list */
-		if (i == user_task->num_prefences) {
-			opcode->value = PREACTION_TERMINATE;
-			break;
-		}
-
-		/* set action type */
-		opcode->value = PREACTION_SEM_GE;
-
-		/* get actual preaction address */
-		preaction = (struct dla_action_semaphore *)
-			((char *)opcode + sizeof(struct dla_action_opcode));
-
-		/* update action */
-		preaction->address = nvhost_syncpt_address(pdev,
-					task->prefences[i].syncpoint_index);
-		preaction->value = task->prefences[i].syncpoint_value;
-	}
-
-	/* fill all postactions */
-	for (i = 0; i < user_task->num_postfences; i++, postaction++) {
-		void *next = NULL;
-
-		/* get next post action base */
-		next = (char *)task_desc + postactionlist_of +
-		 i * (sizeof(struct dla_action_opcode) +
-			sizeof(struct dla_action_semaphore));
-
-		/* get base opcode */
-		opcode = (struct dla_action_opcode *)next;
-
-		/* update end of list */
-		if (i == user_task->num_postfences) {
-			opcode->value = POSTACTION_TERMINATE;
-			break;
-		}
-
-		/* set action type */
-		opcode->value = POSTACTION_SEM;
-
-		/* get actual post action mem */
-		postaction = (struct dla_action_semaphore *)
-			((char *)opcode + sizeof(struct dla_action_opcode));
-
-		/* update action */
-		postaction->address = nvhost_syncpt_address(pdev, queue->syncpt_id);
-	}
-
+	/* ping user memory before submit to engine */
 	err = nvdla_map_task_memory(buffers, user_task, task, task_desc);
 	if (err)
 		goto fail_to_dma_alloc;

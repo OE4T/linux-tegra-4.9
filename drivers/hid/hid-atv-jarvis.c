@@ -1655,7 +1655,7 @@ static int atvr_raw_event(struct hid_device *hdev, struct hid_report *report,
 		}
 		*((char *)(debug_info + size)) = '\0';
 		memcpy(debug_info, data, size);
-		pr_info("Report ID 10: PID: %d, report %s", hdev->product,
+		pr_debug("Report ID 10: PID: %d, report %s", hdev->product,
 			(char *)debug_info);
 		kfree(debug_info);
 	} else if (hdev->product == USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE &&

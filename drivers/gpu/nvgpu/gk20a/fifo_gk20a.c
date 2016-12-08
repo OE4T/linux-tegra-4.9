@@ -1261,7 +1261,7 @@ bool gk20a_fifo_set_ctx_mmu_error_tsg(struct gk20a *g,
 	gk20a_err(dev_from_gk20a(g),
 		"TSG %d generated a mmu fault", tsg->tsgid);
 
-	mutex_lock(&tsg->ch_list_lock);
+	down_read(&tsg->ch_list_lock);
 	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
 		if (gk20a_channel_get(ch)) {
 			if (!gk20a_fifo_set_ctx_mmu_error(g, ch))
@@ -1269,7 +1269,7 @@ bool gk20a_fifo_set_ctx_mmu_error_tsg(struct gk20a *g,
 			gk20a_channel_put(ch);
 		}
 	}
-	mutex_unlock(&tsg->ch_list_lock);
+	up_read(&tsg->ch_list_lock);
 
 	return ret;
 }
@@ -1286,7 +1286,7 @@ void gk20a_fifo_abort_tsg(struct gk20a *g, u32 tsgid, bool preempt)
 	if (preempt)
 		g->ops.fifo.preempt_tsg(g, tsgid);
 
-	mutex_lock(&tsg->ch_list_lock);
+	down_read(&tsg->ch_list_lock);
 	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
 		if (gk20a_channel_get(ch)) {
 			ch->has_timedout = true;
@@ -1294,7 +1294,7 @@ void gk20a_fifo_abort_tsg(struct gk20a *g, u32 tsgid, bool preempt)
 			gk20a_channel_put(ch);
 		}
 	}
-	mutex_unlock(&tsg->ch_list_lock);
+	up_read(&tsg->ch_list_lock);
 }
 
 int gk20a_fifo_deferred_reset(struct gk20a *g, struct channel_gk20a *ch)
@@ -1793,7 +1793,7 @@ int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch,
 	if (gk20a_is_channel_marked_as_tsg(ch)) {
 		tsg = &g->fifo.tsg[ch->tsgid];
 
-		mutex_lock(&tsg->ch_list_lock);
+		down_read(&tsg->ch_list_lock);
 
 		list_for_each_entry(ch_tsg, &tsg->ch_list, ch_entry) {
 			if (gk20a_channel_get(ch_tsg)) {
@@ -1802,7 +1802,7 @@ int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch,
 			}
 		}
 
-		mutex_unlock(&tsg->ch_list_lock);
+		up_read(&tsg->ch_list_lock);
 		gk20a_fifo_recover_tsg(g, ch->tsgid, verbose);
 	} else {
 		gk20a_set_error_notifier(ch, err_code);
@@ -1910,7 +1910,7 @@ static bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 	*verbose = false;
 	*ms = GRFIFO_TIMEOUT_CHECK_PERIOD_US / 1000;
 
-	mutex_lock(&tsg->ch_list_lock);
+	down_read(&tsg->ch_list_lock);
 
 	/* check if there was some progress on any of the TSG channels.
 	 * fifo recovery is needed if at least one channel reached the
@@ -1966,7 +1966,7 @@ static bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 	 * of them has reached the timeout, there is nothing more to do:
 	 * timeout_accumulated_ms has been updated for all of them.
 	 */
-	mutex_unlock(&tsg->ch_list_lock);
+	up_read(&tsg->ch_list_lock);
 	return recover;
 }
 
@@ -2256,7 +2256,7 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 			struct tsg_gk20a *tsg = &f->tsg[id];
 			struct channel_gk20a *ch = NULL;
 
-			mutex_lock(&tsg->ch_list_lock);
+			down_read(&tsg->ch_list_lock);
 			list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
 				if (gk20a_channel_get(ch)) {
 					gk20a_set_error_notifier(ch,
@@ -2264,7 +2264,7 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 					gk20a_channel_put(ch);
 				}
 			}
-			mutex_unlock(&tsg->ch_list_lock);
+			up_read(&tsg->ch_list_lock);
 			gk20a_fifo_recover_tsg(g, id, true);
 		}
 	}
@@ -2395,7 +2395,7 @@ static int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 			gk20a_err(dev_from_gk20a(g),
 				"preempt TSG %d timeout\n", id);
 
-			mutex_lock(&tsg->ch_list_lock);
+			down_read(&tsg->ch_list_lock);
 			list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
 				if (!gk20a_channel_get(ch))
 					continue;
@@ -2403,7 +2403,7 @@ static int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 					NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
 				gk20a_channel_put(ch);
 			}
-			mutex_unlock(&tsg->ch_list_lock);
+			up_read(&tsg->ch_list_lock);
 			gk20a_fifo_recover_tsg(g, id, true);
 		} else {
 			struct channel_gk20a *ch = &g->fifo.channel[id];
@@ -2797,7 +2797,7 @@ static u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 		count++;
 		(*entries_left)--;
 
-		mutex_lock(&tsg->ch_list_lock);
+		down_read(&tsg->ch_list_lock);
 		/* add runnable channels bound to this TSG */
 		list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
 			if (!test_bit(ch->hw_chid,
@@ -2805,7 +2805,7 @@ static u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 				continue;
 
 			if (!(*entries_left)) {
-				mutex_unlock(&tsg->ch_list_lock);
+				up_read(&tsg->ch_list_lock);
 				return NULL;
 			}
 
@@ -2819,7 +2819,7 @@ static u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 			runlist_entry += runlist_entry_words;
 			(*entries_left)--;
 		}
-		mutex_unlock(&tsg->ch_list_lock);
+		up_read(&tsg->ch_list_lock);
 	}
 
 	/* append entries from higher level if this level is empty */

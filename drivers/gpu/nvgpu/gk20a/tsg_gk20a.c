@@ -43,11 +43,11 @@ int gk20a_enable_tsg(struct tsg_gk20a *tsg)
 	struct gk20a *g = tsg->g;
 	struct channel_gk20a *ch;
 
-	mutex_lock(&tsg->ch_list_lock);
+	down_read(&tsg->ch_list_lock);
 	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
 		g->ops.fifo.enable_channel(ch);
 	}
-	mutex_unlock(&tsg->ch_list_lock);
+	up_read(&tsg->ch_list_lock);
 
 	return 0;
 }
@@ -57,11 +57,11 @@ int gk20a_disable_tsg(struct tsg_gk20a *tsg)
 	struct gk20a *g = tsg->g;
 	struct channel_gk20a *ch;
 
-	mutex_lock(&tsg->ch_list_lock);
+	down_read(&tsg->ch_list_lock);
 	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
 		g->ops.fifo.disable_channel(ch);
 	}
-	mutex_unlock(&tsg->ch_list_lock);
+	up_read(&tsg->ch_list_lock);
 
 	return 0;
 }
@@ -126,9 +126,9 @@ int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg,
 		return -EINVAL;
 	}
 
-	mutex_lock(&tsg->ch_list_lock);
+	down_write(&tsg->ch_list_lock);
 	list_add_tail(&ch->ch_entry, &tsg->ch_list);
-	mutex_unlock(&tsg->ch_list_lock);
+	up_write(&tsg->ch_list_lock);
 
 	kref_get(&tsg->refcount);
 
@@ -144,9 +144,9 @@ int gk20a_tsg_unbind_channel(struct channel_gk20a *ch)
 	struct fifo_gk20a *f = &ch->g->fifo;
 	struct tsg_gk20a *tsg = &f->tsg[ch->tsgid];
 
-	mutex_lock(&tsg->ch_list_lock);
+	down_write(&tsg->ch_list_lock);
 	list_del_init(&ch->ch_entry);
-	mutex_unlock(&tsg->ch_list_lock);
+	up_write(&tsg->ch_list_lock);
 
 	kref_put(&tsg->refcount, gk20a_tsg_release);
 
@@ -168,7 +168,7 @@ int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid)
 	tsg->tsgid = tsgid;
 
 	INIT_LIST_HEAD(&tsg->ch_list);
-	mutex_init(&tsg->ch_list_lock);
+	init_rwsem(&tsg->ch_list_lock);
 
 	INIT_LIST_HEAD(&tsg->event_id_list);
 	mutex_init(&tsg->event_id_list_lock);

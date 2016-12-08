@@ -65,6 +65,7 @@
 	};
 
 	i2c@3180000 {
+		compatible = "nvidia,tegra186-i2c-single";
 		status = "okay";
 	};
 

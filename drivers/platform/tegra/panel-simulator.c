@@ -30,16 +30,12 @@
 
 #include "board.h"
 #include <board-panel.h>
-#include "gpio-names.h"
 
 #define TEGRA_DSI_GANGED_MODE	0
 
 #define DSI_PANEL_RESET		1
 
 #define DC_CTRL_MODE	TEGRA_DC_OUT_CONTINUOUS_MODE
-
-#define en_vdd_bl	TEGRA_GPIO_PG0
-#define lvds_en		TEGRA_GPIO_PG3
 
 static bool reg_requested;
 /* static bool gpio_requested; */
@@ -49,9 +45,6 @@ static struct regulator *vdd_lcd_bl;
 static struct regulator *vdd_lcd_bl_en;
 static struct regulator *dvdd_lcd_1v8;
 static struct regulator *vdd_ds_1v8;
-
-#define en_vdd_bl	TEGRA_GPIO_PG0
-#define lvds_en		TEGRA_GPIO_PG3
 
 static struct tegra_dc_sd_settings panel_sim_sd_settings = {
 	.enable = 1, /* enabled by default. */
@@ -559,7 +552,7 @@ static struct platform_pwm_backlight_data panel_sim_bl_data = {
 	.dft_brightness	= 224,
 	.pwm_period_ns	= 1000000,
 	.bl_measured    = panel_sim_bl_output_measured,
-	.pwm_gpio	= TEGRA_GPIO_INVALID,
+	.pwm_gpio	= UINT_MAX,
 	.notify		= panel_sim_bl_notify,
 	/* Only toggle backlight on fb blank notifications for disp1 */
 	.check_fb	= panel_sim_check_fb,

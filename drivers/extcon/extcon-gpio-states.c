@@ -84,6 +84,7 @@ static void gpio_extcon_scan_work(struct work_struct *work)
 					struct gpio_extcon_info, work);
 	int gstate = 0;
 	int i;
+	unsigned int id = 0;
 
 	for (i = 0; i < gpex->pdata->n_gpio; ++i) {
 		state = gpio_get_value_cansleep(gpex->pdata->gpios[i].gpio);
@@ -94,6 +95,7 @@ static void gpio_extcon_scan_work(struct work_struct *work)
 	for (i = 0; i < gpex->pdata->n_cable_states; ++i) {
 		if (gpex->pdata->cable_states[i].gstate == gstate) {
 			cstate = gpex->pdata->cable_states[i].cstate;
+			id = gpex->pdata->out_cable_name[i];
 			break;
 		}
 	}
@@ -104,7 +106,7 @@ static void gpio_extcon_scan_work(struct work_struct *work)
 	}
 
 	dev_info(gpex->dev, "Cable state %d\n", cstate);
-	extcon_set_state(gpex->edev, cstate);
+	extcon_set_state_sync(gpex->edev, id, cstate);
 }
 
 static void gpio_extcon_notifier_timer(unsigned long _data)
@@ -253,8 +255,10 @@ static int gpio_extcon_probe(struct platform_device *pdev)
 
 	if (!pdata && pdev->dev.of_node) {
 		pdata = of_get_platform_data(pdev);
-		if (IS_ERR(pdata))
+		if (IS_ERR(pdata)) {
+			dev_err(&pdev->dev, "extcon probe failed: %ld\n", PTR_ERR(pdata));
 			return PTR_ERR(pdata);
+		}
 	}
 	if (!pdata)
 		return -EINVAL;
@@ -337,11 +341,14 @@ static int gpio_extcon_probe(struct platform_device *pdev)
 	} else {
 		if (pdata->init_state < 0) {
 			dev_info(gpex->dev, "No Cable connected on boot\n");
-			extcon_set_state(gpex->edev, 0);
+			extcon_set_state_sync(gpex->edev,
+				pdata->out_cable_name[0], false);
 		} else {
 			dev_info(gpex->dev, "Cable %d connected on boot\n",
 				pdata->out_cable_name[pdata->init_state]);
-			extcon_set_state(gpex->edev, BIT(pdata->init_state));
+			extcon_set_state_sync(gpex->edev,
+				pdata->out_cable_name[pdata->init_state],
+				BIT(pdata->init_state));
 		}
 	}
 

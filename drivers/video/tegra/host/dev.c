@@ -27,8 +27,6 @@
 #include <linux/list.h>
 #include <linux/slab.h>
 
-#include <mach/gpufuse.h>
-
 #include "dev.h"
 
 #if defined(NVHOST_DEBUG)

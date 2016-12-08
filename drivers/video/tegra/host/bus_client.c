@@ -39,8 +39,6 @@
 #include <linux/nvhost.h>
 #include <linux/nvhost_ioctl.h>
 
-#include <mach/gpufuse.h>
-
 #include "debug.h"
 #include "bus_client.h"
 #include "dev.h"

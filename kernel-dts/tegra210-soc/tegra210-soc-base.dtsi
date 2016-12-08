@@ -26,6 +26,7 @@
 #include "tegra210-soc-power-domain.dtsi"
 #include <dt-bindings/usb/tegra_xhci.h>
 #include <dt-bindings/pinctrl/pinctrl-tegra21x-padctl-uphy.h>
+#include <dt-bindings/pinctrl/pinctrl-tegra.h>
 
 / {
 	compatible = "nvidia,tegra210";
@@ -1468,6 +1469,21 @@
 	     status = "disabled";
 	};
 
+	pinmux@700008d4 {
+		clkreq_0_bi_dir_state: clkreq_0_bi_dir {
+			clkreq0 {
+				nvidia,pins = "pex_l0_clkreq_n_pa1";
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+			};
+		};
+		clkreq_1_bi_dir_state: clkreq_1_bi_dir {
+			clkreq1 {
+				nvidia,pins = "pex_l1_clkreq_n_pa4";
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+			};
+		};
+	};
+
 	pcie-controller@1003000 {
 		compatible = "nvidia,tegra210-pcie", "nvidia,tegra124-pcie";
 		power-domains = <&pcie_pd>;
@@ -1495,6 +1511,10 @@
 
 		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_PCIE_P(0)>;
 		phy-names = "pcie-phy";
+
+		pinctrl-names = "clkreq-0-bi-dir-enable", "clkreq-1-bi-dir-enable";
+		pinctrl-0 = <&clkreq_0_bi_dir_state>;
+		pinctrl-1 = <&clkreq_1_bi_dir_state>;
 
 		bus-range = <0x00 0xff>;
 		#address-cells = <3>;

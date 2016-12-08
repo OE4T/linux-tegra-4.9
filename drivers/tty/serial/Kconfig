@@ -1663,6 +1663,17 @@ config SERIAL_MVEBU_CONSOLE
 	  and warnings and which allows logins in single user mode)
 	  Otherwise, say 'N'.
 
+config SERIAL_UBLOX_GPS_SPI
+	tristate "u-blox SPI GPS support"
+	depends on SPI
+	default n
+	help
+	  This driver uses SPI to communicate with the u-blox GPS module
+	  and has a serial tty device interface to the user-space, making
+	  it easy to read/write data from/to the GPS.
+
+	  If unsure, say N.
+
 config TEGRA_HV_COMM
 	tristate "Tegra Hypervisor Communication"
 	depends on TEGRA_HV_MANAGER

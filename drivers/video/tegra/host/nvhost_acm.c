@@ -153,6 +153,7 @@ static void do_module_reset_locked(struct platform_device *dev)
 		return;
 	}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	/* assert module and mc client reset */
 	if (pdata->clk[0] && pdata->clocks[0].reset) {
 		ret = tegra_mc_flush(pdata->clocks[0].reset);
@@ -184,6 +185,7 @@ static void do_module_reset_locked(struct platform_device *dev)
 		tegra_periph_reset_deassert(pdata->clk[1]);
 		tegra_mc_flush_done(pdata->clocks[1].reset);
 	}
+#endif
 }
 
 static unsigned long nvhost_emc_bw_to_freq_req(unsigned long rate)

@@ -28,6 +28,7 @@
 		step_time = <100>; /* mesecs */
 		state_cap = <7>;
 		active_pwm_max = <256>;
+		tach_period = <1000>;
 		pwm_gpio = <&tegra_aon_gpio TEGRA_AON_GPIO(V, 6) GPIO_ACTIVE_LOW>; /* TEGRA_MAIN_GPIO_PV6 */
 	};
 	pwm-fan {

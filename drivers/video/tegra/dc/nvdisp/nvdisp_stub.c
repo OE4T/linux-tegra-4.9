@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/nvdisplay/nvdis_stub.c
+ * drivers/video/tegra/dc/nvdisplay/nvdisp_stub.c
  *
  * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
  *
@@ -292,78 +292,74 @@ struct device_node *tegra_primary_panel_get_dt_node(
 
 	dc_out = pdata->default_out;
 
-	if (tegra_platform_is_silicon()) {
+	np_primary = of_find_node_by_path(pdata->dc_or_node_name);
 
-		np_primary = of_find_node_by_path(pdata->dc_or_node_name);
+	if (of_device_is_available(np_primary)) {
+		/* DSI */
+		/* SHARP 19x12 panel is being used */
 
-		if (of_device_is_available(np_primary)) {
-			/* DSI */
-			/* SHARP 19x12 panel is being used */
+		np_panel = of_get_child_by_name(np_primary,
+			"panel-s-wuxga-8-0");
+		if (of_device_is_available(np_panel) && dc_out)
+			tegra_panel_register_ops(dc_out,
+				&dsi_s_wuxga_8_0_ops);
 
+		/* SHARP 2160x3840 panel is being used */
+		if (!of_device_is_available(np_panel)) {
 			np_panel = of_get_child_by_name(np_primary,
-				"panel-s-wuxga-8-0");
+					"panel-s-4kuhd-5-46");
 			if (of_device_is_available(np_panel) && dc_out)
 				tegra_panel_register_ops(dc_out,
-					&dsi_s_wuxga_8_0_ops);
-
-			/* SHARP 2160x3840 panel is being used */
-			if (!of_device_is_available(np_panel)) {
-				np_panel = of_get_child_by_name(np_primary,
-						"panel-s-4kuhd-5-46");
-				if (of_device_is_available(np_panel) && dc_out)
-					tegra_panel_register_ops(dc_out,
-							&dsi_s_4kuhd_5_46_ops);
-			}
-
-			/* P2393 DSI2DP Bridge */
-			if (!of_device_is_available(np_panel))
-				np_panel = of_get_child_by_name(np_primary,
-					"panel-dsi-1080p-p2382");
-			if (!of_device_is_available(np_panel)) {
-				np_panel = of_get_child_by_name(np_primary,
-					"panel-s-wqxga-10-1");
-				if (of_device_is_available(np_panel) && dc_out)
-					tegra_panel_register_ops(dc_out,
-						&dsi_s_wqxga_10_1_ops);
-			}
-
-			/* 62681 */
-			if (!of_device_is_available(np_panel))
-				np_panel = of_get_child_by_name(np_primary,
-					"panel-a-2820x720-10-1_8-6");
-
-			/* HDMI */
-			if (!of_device_is_available(np_panel))
-				np_panel = of_get_child_by_name(np_primary,
-					"hdmi-display");
-			/* DP */
-			if (!of_device_is_available(np_panel))
-				np_panel = of_get_child_by_name(np_primary,
-					"dp-display");
-			/* eDP */
-			if (!of_device_is_available(np_panel)) {
-				np_panel = of_get_child_by_name(np_primary,
-					"panel-s-edp-uhdtv-15-6");
-				if (of_device_is_available(np_panel) && dc_out)
-					tegra_panel_register_ops(dc_out,
-					&edp_s_uhdtv_15_6_ops);
-			}
-			/* MODS - DSI to fakeDP - Bug 1734772*/
-			if (!of_device_is_available(np_panel)) {
-				np_panel = of_get_child_by_name(np_primary,
-					"panel-s-wuxga-8-0-mods");
-				if (of_device_is_available(np_panel) && dc_out)
-					tegra_panel_register_mods_ops(dc_out);
-			}
+						&dsi_s_4kuhd_5_46_ops);
 		}
-	} else {/* for linsim or no display panel case */
-		/*  use fake dp or fake dsi */
-		np_primary = of_find_node_by_path(SOR_NODE);
 
-		if (dc_out)
-			tegra_panel_register_ops(dc_out, &panel_sim_ops);
+		/* P2393 DSI2DP Bridge */
+		if (!of_device_is_available(np_panel))
+			np_panel = of_get_child_by_name(np_primary,
+				"panel-dsi-1080p-p2382");
+		if (!of_device_is_available(np_panel)) {
+			np_panel = of_get_child_by_name(np_primary,
+				"panel-s-wqxga-10-1");
+			if (of_device_is_available(np_panel) && dc_out)
+				tegra_panel_register_ops(dc_out,
+					&dsi_s_wqxga_10_1_ops);
+		}
 
-		np_panel = of_get_child_by_name(np_primary, "panel-nvidia-sim");
+		/* 62681 */
+		if (!of_device_is_available(np_panel))
+			np_panel = of_get_child_by_name(np_primary,
+				"panel-a-2820x720-10-1_8-6");
+
+		/* HDMI */
+		if (!of_device_is_available(np_panel))
+			np_panel = of_get_child_by_name(np_primary,
+				"hdmi-display");
+		/* DP */
+		if (!of_device_is_available(np_panel))
+			np_panel = of_get_child_by_name(np_primary,
+				"dp-display");
+		/* eDP */
+		if (!of_device_is_available(np_panel)) {
+			np_panel = of_get_child_by_name(np_primary,
+				"panel-s-edp-uhdtv-15-6");
+			if (of_device_is_available(np_panel) && dc_out)
+				tegra_panel_register_ops(dc_out,
+				&edp_s_uhdtv_15_6_ops);
+		}
+		/* MODS - DSI to fakeDP - Bug 1734772*/
+		if (!of_device_is_available(np_panel)) {
+			np_panel = of_get_child_by_name(np_primary,
+				"panel-s-wuxga-8-0-mods");
+			if (of_device_is_available(np_panel) && dc_out)
+				tegra_panel_register_mods_ops(dc_out);
+		}
+		/* simulation panel */
+		if (!of_device_is_available(np_panel)) {
+			np_panel = of_get_child_by_name(
+				np_primary, "panel-nvidia-sim");
+			if (of_device_is_available(np_panel) && dc_out)
+				tegra_panel_register_ops(dc_out, &panel_sim_ops);
+		}
 	}
 
 	if (!np_panel && !strcmp(pdata->dc_or_node_name, ""))
@@ -386,62 +382,59 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 
 	dc_out = pdata->default_out;
 
-	if (tegra_platform_is_silicon()) {
-		np_secondary = of_find_node_by_path(pdata->dc_or_node_name);
-		if (of_device_is_available(np_secondary)) {
-			/* HDMI */
+	np_secondary = of_find_node_by_path(pdata->dc_or_node_name);
+	if (of_device_is_available(np_secondary)) {
+		/* HDMI */
+		np_panel = of_get_child_by_name(np_secondary,
+			"hdmi-display");
+		/* DP */
+		if (!of_device_is_available(np_panel))
 			np_panel = of_get_child_by_name(np_secondary,
-				"hdmi-display");
-			/* DP */
-			if (!of_device_is_available(np_panel))
-				np_panel = of_get_child_by_name(np_secondary,
-					"dp-display");
-			/* eDP */
-			if (!of_device_is_available(np_panel)) {
-				np_panel = of_get_child_by_name(np_secondary,
-					"panel-s-edp-uhdtv-15-6");
-				if (of_device_is_available(np_panel) && dc_out)
-					tegra_panel_register_ops(dc_out,
-						&edp_s_uhdtv_15_6_ops);
-			}
-			/* DSI */
-			/* SHARP 19x12 panel */
-			if (!of_device_is_available(np_panel)) {
-				np_panel = of_get_child_by_name(np_secondary,
-					"panel-s-wuxga-8-0");
-				if (of_device_is_available(np_panel) && dc_out)
-					tegra_panel_register_ops(dc_out,
-						&dsi_s_wuxga_8_0_ops);
-			}
-			/* SHARP 2160x3840 panel is being used */
-			if (!of_device_is_available(np_panel)) {
-				np_panel = of_get_child_by_name(np_secondary,
-						"panel-s-4kuhd-5-46");
-				if (of_device_is_available(np_panel) && dc_out)
-					tegra_panel_register_ops(dc_out,
-							&dsi_s_4kuhd_5_46_ops);
-			}
-			/* P2393 DSI2DP Bridge */
-			if (!of_device_is_available(np_panel))
-				np_panel = of_get_child_by_name(
-					np_secondary, "panel-dsi-1080p-p2382");
-			if (!of_device_is_available(np_panel))
-				np_panel = of_get_child_by_name(np_secondary,
-					"panel-s-wqxga-10-1");
-
-			/* 62681 */
-			if (!of_device_is_available(np_panel))
-				np_panel = of_get_child_by_name(
-					np_secondary, "panel-a-2820x720-10-1_8-6");
+				"dp-display");
+		/* eDP */
+		if (!of_device_is_available(np_panel)) {
+			np_panel = of_get_child_by_name(np_secondary,
+				"panel-s-edp-uhdtv-15-6");
+			if (of_device_is_available(np_panel) && dc_out)
+				tegra_panel_register_ops(dc_out,
+					&edp_s_uhdtv_15_6_ops);
 		}
-	} else { /* for linsim or no display panel case */
+		/* DSI */
+		/* SHARP 19x12 panel */
+		if (!of_device_is_available(np_panel)) {
+			np_panel = of_get_child_by_name(np_secondary,
+				"panel-s-wuxga-8-0");
+			if (of_device_is_available(np_panel) && dc_out)
+				tegra_panel_register_ops(dc_out,
+					&dsi_s_wuxga_8_0_ops);
+		}
+		/* SHARP 2160x3840 panel is being used */
+		if (!of_device_is_available(np_panel)) {
+			np_panel = of_get_child_by_name(np_secondary,
+					"panel-s-4kuhd-5-46");
+			if (of_device_is_available(np_panel) && dc_out)
+				tegra_panel_register_ops(dc_out,
+						&dsi_s_4kuhd_5_46_ops);
+		}
+		/* P2393 DSI2DP Bridge */
+		if (!of_device_is_available(np_panel))
+			np_panel = of_get_child_by_name(
+				np_secondary, "panel-dsi-1080p-p2382");
+		if (!of_device_is_available(np_panel))
+			np_panel = of_get_child_by_name(np_secondary,
+				"panel-s-wqxga-10-1");
 
-		np_secondary = of_find_node_by_path(SOR_NODE);
-
-		if (dc_out)
-			tegra_panel_register_ops(dc_out, &panel_sim_ops);
-
-		np_panel = of_get_child_by_name(np_secondary, "panel-nvidia-sim");
+		/* 62681 */
+		if (!of_device_is_available(np_panel))
+			np_panel = of_get_child_by_name(
+				np_secondary, "panel-a-2820x720-10-1_8-6");
+		/* simulation panel */
+		if (!of_device_is_available(np_panel)) {
+			np_panel = of_get_child_by_name(
+				np_secondary, "panel-nvidia-sim");
+			if (of_device_is_available(np_panel) && dc_out)
+				tegra_panel_register_ops(dc_out, &panel_sim_ops);
+		}
 	}
 
 	if (!np_panel && !strcmp(pdata->dc_or_node_name, ""))
@@ -464,29 +457,30 @@ struct device_node *tegra_tertiary_panel_get_dt_node(
 
 	dc_out = pdata->default_out;
 
-	if (tegra_platform_is_silicon()) {
-		np_tertiary = of_find_node_by_path(pdata->dc_or_node_name);
-		if (of_device_is_available(np_tertiary)) {
-			/* DP */
+	np_tertiary = of_find_node_by_path(pdata->dc_or_node_name);
+	if (of_device_is_available(np_tertiary)) {
+		/* DP */
+		np_panel = of_get_child_by_name(np_tertiary,
+				"dp-display");
+		/* eDP */
+		if (!of_device_is_available(np_panel)) {
 			np_panel = of_get_child_by_name(np_tertiary,
-					"dp-display");
-			/* eDP */
-			if (!of_device_is_available(np_panel)) {
-				np_panel = of_get_child_by_name(np_tertiary,
-					"panel-s-edp-uhdtv-15-6");
-				if (of_device_is_available(np_panel) && dc_out)
-					tegra_panel_register_ops(dc_out,
-						&edp_s_uhdtv_15_6_ops);
-			}
-			/* HDMI */
-			if (!of_device_is_available(np_panel))
-				np_panel = of_get_child_by_name(np_tertiary,
-					"hdmi-display");
+				"panel-s-edp-uhdtv-15-6");
+			if (of_device_is_available(np_panel) && dc_out)
+				tegra_panel_register_ops(dc_out,
+					&edp_s_uhdtv_15_6_ops);
 		}
-	} else {
-		/* HDMI for non-silicon */
-		np_tertiary = of_find_node_by_path(SOR1_NODE);
-		np_panel = of_get_child_by_name(np_tertiary, "hdmi-display");
+		/* HDMI */
+		if (!of_device_is_available(np_panel))
+			np_panel = of_get_child_by_name(np_tertiary,
+				"hdmi-display");
+		/* simulation panel */
+		if (!of_device_is_available(np_panel)) {
+			np_panel = of_get_child_by_name(
+				np_tertiary, "panel-nvidia-sim");
+			if (of_device_is_available(np_panel) && dc_out)
+				tegra_panel_register_ops(dc_out, &panel_sim_ops);
+		}
 	}
 
 	if (!np_panel && !strcmp(pdata->dc_or_node_name, ""))

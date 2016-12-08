@@ -63,9 +63,7 @@ static int tegra210_xbar_runtime_suspend(struct device *dev)
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		clk_disable_unprepare(xbar->clk);
 		clk_disable_unprepare(xbar->clk_ape);
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 		clk_disable_unprepare(xbar->clk_apb2ape);
-#endif
 	}
 
 	return 0;
@@ -82,13 +80,12 @@ static int tegra210_xbar_runtime_resume(struct device *dev)
 			return ret;
 		}
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 		ret = clk_prepare_enable(xbar->clk_apb2ape);
 		if (ret) {
 			dev_err(dev, "clk_prepare_enable failed: %d\n", ret);
 			return ret;
 		}
-#endif
+
 		ret = clk_prepare_enable(xbar->clk);
 		if (ret) {
 			dev_err(dev, "clk_prepare_enable failed: %d\n", ret);
@@ -917,25 +914,13 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 			goto err;
 		}
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-		xbar->clk_parent = clk_get_sys(NULL, "pll_a_out0");
-#else
 		xbar->clk_parent = devm_clk_get(&pdev->dev, "pll_a_out0");
-#endif
 		if (IS_ERR(xbar->clk_parent)) {
 			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
 			ret = PTR_ERR(xbar->clk_parent);
 			goto err_clk_put;
 		}
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-		xbar->clk_ape = clk_get_sys(NULL, "xbar.ape");
-		if (IS_ERR(xbar->clk_ape)) {
-			dev_err(&pdev->dev, "Can't retrieve ape clock\n");
-			ret = PTR_ERR(xbar->clk_ape);
-			goto err_clk_put_parent;
-		}
-#else
 		xbar->clk_apb2ape = devm_clk_get(&pdev->dev, "apb2ape");
 		if (IS_ERR(xbar->clk_apb2ape)) {
 			dev_err(&pdev->dev, "Can't retrieve apb2ape clock\n");
@@ -949,7 +934,6 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 			ret = PTR_ERR(xbar->clk_ape);
 			goto err_clk_put_apb2ape;
 		}
-#endif
 	}
 
 	parent_clk = clk_get_parent(xbar->clk);
@@ -1017,13 +1001,6 @@ err_pm_disable:
 	tegra_pd_remove_device(&pdev->dev);
 err_clk_set_parent:
 	clk_set_parent(xbar->clk, parent_clk);
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-err_clk_put_ape:
-	clk_put(xbar->clk_ape);
-err_clk_put_parent:
-	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
-		clk_put(xbar->clk_parent);
-#else
 err_clk_put_ape:
 	devm_clk_put(&pdev->dev, xbar->clk_ape);
 err_clk_put_apb2ape:
@@ -1031,7 +1008,6 @@ err_clk_put_apb2ape:
 err_clk_put_parent:
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
 		devm_clk_put(&pdev->dev, xbar->clk_parent);
-#endif
 err_clk_put:
 	devm_clk_put(&pdev->dev, xbar->clk);
 err:
@@ -1049,14 +1025,9 @@ static int tegra210_xbar_remove(struct platform_device *pdev)
 	tegra_pd_remove_device(&pdev->dev);
 
 	devm_clk_put(&pdev->dev, xbar->clk);
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-	clk_put(xbar->clk_parent);
-	clk_put(xbar->clk_ape);
-#else
 	devm_clk_put(&pdev->dev, xbar->clk_parent);
 	devm_clk_put(&pdev->dev, xbar->clk_ape);
 	devm_clk_put(&pdev->dev, xbar->clk_apb2ape);
-#endif
 
 	return 0;
 }

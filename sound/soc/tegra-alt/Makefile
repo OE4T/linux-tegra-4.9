@@ -86,6 +86,7 @@ obj-$(CONFIG_SND_SOC_TEGRA_P1889REF_ALT) += snd-soc-tegra-alt-machine.o
 obj-$(CONFIG_SND_SOC_TEGRA_GRENADA_ALT) += snd-soc-tegra-alt-grenada.o
 obj-$(CONFIG_SND_SOC_TEGRA_GRENADA_ALT) += snd-soc-tegra-alt-machine.o
 obj-$(CONFIG_SND_SOC_TEGRA_T210REF_MOBILE_ALT) += snd-soc-tegra-alt-t210ref-mobile.o
+obj-$(CONFIG_SND_SOC_TEGRA_T210REF_MOBILE_ALT) += snd-soc-tegra-alt-machine.o
 obj-$(CONFIG_SND_SOC_TEGRA_T210REF_ALT) += snd-soc-tegra-alt-t210ref.o
 obj-$(CONFIG_SND_SOC_TEGRA_T210REF_ALT) += snd-soc-tegra-alt-machine.o
 obj-$(CONFIG_SND_SOC_TEGRA_T210REF_P2382_ALT) += snd-soc-tegra-alt-t210ref-p2382.o

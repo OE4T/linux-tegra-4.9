@@ -26,12 +26,12 @@
 #include <linux/i2c.h>
 #include <linux/regulator/consumer.h>
 #include <linux/delay.h>
-#include <linux/sysedp.h>
 #include <linux/tegra-pmc.h>
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif
 #include <linux/pm_runtime.h>
+#include <linux/version.h>
 #include <linux/platform_data/tegra_asoc_pdata.h>
 
 #include <sound/core.h>
@@ -118,8 +118,12 @@ static int tegra_t210ref_jack_notifier(struct notifier_block *self,
 {
 	/* FIXME - headset button detection*/
 	struct snd_soc_jack *jack = dev;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
 	struct snd_soc_codec *codec = jack->codec;
 	struct snd_soc_card *card = codec->component.card;
+#else
+	struct snd_soc_card *card = jack->card;
+#endif
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	enum headset_state state = BIT_NO_HEADSET;
 	int idx = 0;
@@ -132,8 +136,6 @@ static int tegra_t210ref_jack_notifier(struct notifier_block *self,
 	/* check if idx has valid number */
 	if (idx == -EINVAL)
 		return idx;
-
-	codec = card->rtd[idx].codec;
 
 	dev_dbg(card->dev, "jack status = %d", jack->status);
 	if (jack->status & (SND_JACK_BTN_0 | SND_JACK_BTN_1 |
@@ -180,9 +182,7 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 					int channels,
 					u64 formats)
 {
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
-	struct snd_soc_card *card = codec->component.card;
+	struct snd_soc_card *card = rtd->card;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_pcm_stream *dai_params;
 	unsigned int idx, mclk, clk_out_rate;
@@ -331,9 +331,7 @@ static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
 					struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
-	struct snd_soc_card *card = codec->component.card;
+	struct snd_soc_card *card = rtd->card;
 	int err;
 
 	err = tegra_t210ref_dai_init(rtd, params_rate(params),
@@ -347,6 +345,7 @@ static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
+#if defined(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
 static int tegra_t210ref_compr_set_params(struct snd_compr_stream *cstream)
 {
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
@@ -377,19 +376,21 @@ static int tegra_t210ref_compr_set_params(struct snd_compr_stream *cstream)
 
 	return 0;
 }
+#endif
 
 static int tegra_t210ref_init(struct snd_soc_pcm_runtime *rtd)
 {
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
-	struct snd_soc_dapm_context *dapm = &codec->dapm;
-	struct snd_soc_card *card = codec->component.card;
+	struct snd_soc_card *card = rtd->card;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct tegra_asoc_platform_data *pdata = machine->pdata;
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	unsigned int srate;
 	int err;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+#endif
 
 	srate = dai_params->rate_min;
 
@@ -403,8 +404,20 @@ static int tegra_t210ref_init(struct snd_soc_pcm_runtime *rtd)
 	tegra_t210ref_hp_jack_gpio.gpio = pdata->gpio_hp_det;
 	tegra_t210ref_hp_jack_gpio.invert =
 		!pdata->gpio_hp_det_active_high;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
 	snd_soc_jack_new(codec, "Headphone Jack", SND_JACK_HEADPHONE,
-			&tegra_t210ref_hp_jack);
+		&tegra_t210ref_hp_jack);
+
+#else
+	err = snd_soc_card_jack_new(card, "Headphone Jack", SND_JACK_HEADPHONE,
+				    &tegra_t210ref_hp_jack, NULL, 0);
+	if (err) {
+		dev_err(card->dev, "Headset Jack creation failed %d\n", err);
+		return err;
+	}
+#endif
+
 #ifndef CONFIG_SWITCH
 	snd_soc_jack_add_pins(&tegra_t210ref_hp_jack,
 				ARRAY_SIZE(tegra_t210ref_hp_jack_pins),
@@ -423,7 +436,7 @@ static int tegra_t210ref_init(struct snd_soc_pcm_runtime *rtd)
 		SND_JACK_BTN_1, KEY_MEDIA);
 	/* FIXME: map other button events too */
 
-	snd_soc_dapm_sync(dapm);
+	snd_soc_dapm_sync(&card->dapm);
 
 	return 0;
 }
@@ -535,9 +548,11 @@ static struct snd_soc_ops tegra_t210ref_ops = {
 	.shutdown = tegra_t210ref_shutdown,
 };
 
+#if defined(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
 static struct snd_soc_compr_ops tegra_t210ref_compr_ops = {
 	.set_params = tegra_t210ref_compr_set_params,
 };
+#endif
 
 static const struct snd_soc_dapm_widget tegra_t210ref_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("x Headphone Jack", tegra_rt565x_event_hp),
@@ -768,6 +783,7 @@ static void dai_link_setup(struct platform_device *pdev)
 	tegra_machine_set_dai_init(TEGRA210_DAI_LINK_SFC1_RX,
 		&tegra_t210ref_sfc_init);
 
+#if defined(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
 	/* set ADSP PCM */
 	for (i = TEGRA210_DAI_LINK_ADSP_PCM1;
 		i <= TEGRA210_DAI_LINK_ADSP_PCM2; i++) {
@@ -781,6 +797,7 @@ static void dai_link_setup(struct platform_device *pdev)
 		tegra_machine_set_dai_compr_ops(i,
 			&tegra_t210ref_compr_ops);
 	}
+#endif
 
 	/* append t210ref specific dai_links */
 	card->num_links =
@@ -795,6 +812,7 @@ static void dai_link_setup(struct platform_device *pdev)
 			machine->num_codec_links);
 	tegra_machine_codec_conf = tegra_machine_get_codec_conf();
 	card->codec_conf = tegra_machine_codec_conf;
+
 	return;
 
 err_alloc_dai_link:

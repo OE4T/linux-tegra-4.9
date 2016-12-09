@@ -27,14 +27,6 @@
 		status = "disabled";
 	};
 
-	sdhci@3460000 {
-		/delete-property/ mmc-ddr-1_8v;
-		/delete-property/ mmc-hs400-1_8v;
-	};
-
-	sdhci@3440000 { status = "disabled"; };
-	sdhci@3400000 { status = "disabled"; };
-
 	miscreg@00100000 {
 		compatible = "nvidia,tegra186-miscreg";
 		reg = <0x0 0x00100000 0x0 0xf000>, /* Chipid */

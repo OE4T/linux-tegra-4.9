@@ -30,6 +30,7 @@
 				nvidia,dsi-n-data-lanes = <8>;
 				nvidia,dsi-pixel-format = <TEGRA_DSI_PIXEL_FORMAT_8BIT_DSC>;
 				nvidia,dsi-refresh-rate = <60>;
+				nvidia,dsi-refresh-rate-adj = <1>;
 				nvidia,dsi-video-data-type = <TEGRA_DSI_VIDEO_TYPE_COMMAND_MODE>;
 				nvidia,dsi-video-clock-mode = <TEGRA_DSI_VIDEO_CLOCK_TX_ONLY>;
 				nvidia,dsi-ganged-type = <TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT>;
@@ -65,11 +66,15 @@
 							<TEGRA_DSI_DELAY_MS 10>,
 							<TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_1_PARAM 0x03 0x01 0x0>,
 							<TEGRA_DSI_DELAY_MS 10>,
+							<TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_1_PARAM 0x35 0x00 0x0>,
+							<TEGRA_DSI_DELAY_MS 10>,
+							<TEGRA_DSI_PACKET_CMD DSI_DCS_LONG_WRITE 0x03 0x0 0x0 0x44 0x0A 0x00 0x0 0x0>,
+							<TEGRA_DSI_DELAY_MS 10>,
 							<TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_0_PARAM DSI_DCS_EXIT_SLEEP_MODE 0x0 0x0>,
 							/* Followed from 8 inch sharp. */
 							<TEGRA_DSI_SEND_FRAME 10>,
 							<TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_0_PARAM DSI_DCS_SET_DISPLAY_ON 0x0 0x0>;
-				nvidia,dsi-n-init-cmd = <17>;
+				nvidia,dsi-n-init-cmd = <21>;
 				nvidia,dsi-early-suspend-cmd =
 							<TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_0_PARAM DSI_DCS_SET_DISPLAY_OFF 0x0 0x0>,
 							<TEGRA_DSI_DELAY_MS 10>,
@@ -94,14 +99,14 @@
 				};
 				display-timings {
 					2160x3840-32-60Hz {
-						clock-frequency = <688705920>;
+						clock-frequency = <594283200>;
 						hactive = <2160>;
 						vactive = <3840>;
-						hfront-porch = <800>;
+						hfront-porch = <400>;
 						hback-porch = <8>;
 						hsync-len = <8>;
-						vfront-porch = <6>;
-						vback-porch = <10>;
+						vfront-porch = <2>;
+						vback-porch = <2>;
 						vsync-len = <1>;
 						nvidia,h-ref-to-sync = <4>;
 						nvidia,v-ref-to-sync = <1>;

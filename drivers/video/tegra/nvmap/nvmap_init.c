@@ -36,8 +36,13 @@
 #include "iomap.h"
 #include "board.h"
 #include <linux/platform/tegra/common.h>
+
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+#include <soc/tegra/virt/syscalls.h>
+#else
 #include "../../../drivers/virt/tegra/syscalls.h"
+#endif
 #endif
 
 phys_addr_t __weak tegra_carveout_start;

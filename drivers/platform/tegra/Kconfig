@@ -246,6 +246,5 @@ config TEGRA_FIRMWARES_INVENTORY
 	help
 	  Register version readers for firmwares
 
-trysource "../t18x/drivers/platform/tegra/Kconfig"
 trysource "../t18x/drivers/platform/tegra/Kconfig.t18x"
 trysource "drivers/platform/tegra/Kconfig.t18x"

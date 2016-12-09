@@ -202,4 +202,10 @@ source "drivers/hwtracing/intel_th/Kconfig"
 
 source "drivers/fpga/Kconfig"
 
+trysource "../t18x/drivers/staging/mttcan/Kconfig.t18x"
+trysource "drivers/staging/mttcan/Kconfig.t18x"
+
+trysource "../t18x/drivers/tachometer/Kconfig.t18x"
+trysource "drivers/tachometer/Kconfig.t18x"
+
 endmenu

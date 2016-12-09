@@ -21,7 +21,6 @@
 #include <linux/kernel.h>
 #include <linux/notifier.h>
 #include <linux/of_irq.h>
-#include <mach/irqs.h>
 #include <soc/tegra/doorbell.h>
 #include "../../../arch/arm/mach-tegra/iomap.h"
 #include "bpmp.h"

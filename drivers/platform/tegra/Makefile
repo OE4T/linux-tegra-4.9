@@ -62,6 +62,7 @@ obj-$(CONFIG_TEGRA_CENTRAL_ACTMON) += cactmon_t19x.o
 obj-y += tegra19x-mce.o
 obj-y += t19x_cache.o
 obj-y += cvnas.o
+obj-$(CONFIG_ARCH_TEGRA_210_SOC) += mselect.o
 obj-$(CONFIG_TEGRA_19X_RAS) += carmel_ras.o
 obj-$(CONFIG_TEGRA_CBB_NOC) += tegra_cbb.o
 

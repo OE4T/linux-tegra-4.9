@@ -14,7 +14,6 @@ subdir-ccflags-y += -I$(srctree)/drivers/platform/tegra/include \
 ifeq ($(CONFIG_ARCH_TEGRA_21x_SOC),y)
 obj-$(CONFIG_USB_SUPPORT)		+= tegra_usb_pmc.o
 endif
-obj-$(CONFIG_TEGRA_FIQ_DEBUGGER)        += tegra_fiq_debugger.o
 obj-$(CONFIG_OF_TEGRA_IOMMU_SMMU)       += iommu.o
 obj-$(CONFIG_TEGRA_BOOTLOADER_DEBUG)    += tegra_bootloader_debug.o
 obj-$(CONFIG_TEGRA_BOOTLOADER_DEBUG_INIT) += tegra_bootloader_debug_init.o
@@ -55,7 +54,6 @@ endif
 obj-$(CONFIG_TEGRA_CLUSTER_CONTROL) += sysfs-cluster.o
 obj-$(CONFIG_TEGRA_HMP_CLUSTER_CONTROL) += sysfs-cluster.o
 
-obj-y += io.o
 ifneq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 obj-y += ahb.o
 endif
@@ -66,8 +64,6 @@ ifeq ($(CONFIG_PM_SLEEP),y)
 obj-y += tegra-wakeups.o
 endif
 
-ifneq ($(CONFIG_ARM64),)
-
 ccflags-y += -I$(srctree)/arch/arm/mach-tegra/include \
              -I$(srctree)/arch/arm/mach-tegra
 asflags-y += -I$(srctree)/arch/arm/mach-tegra/include \
@@ -75,7 +71,6 @@ asflags-y += -I$(srctree)/arch/arm/mach-tegra/include \
 
 
 
-obj-$(CONFIG_COMMON_CLK) += common_clock.o
 
 
 obj-$(CONFIG_TEGRA_KFUSE) += tegra_kfuse.o
@@ -85,11 +80,8 @@ obj-y += bond_out.o
 
 obj-$(CONFIG_TEGRA_HMP_CLUSTER_CONTROL)      += cluster-control.o
 
-endif
-
 obj-$(CONFIG_TEGRA_IVC)			+= tegra-ivc.o
 
-obj-y					+= asim.o
 obj-y					+= mselect.o
 
 obj-$(CONFIG_TEGRA_WDT_RECOVERY)        += wdt-recovery.o

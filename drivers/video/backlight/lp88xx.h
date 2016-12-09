@@ -25,6 +25,7 @@ struct lp88xx {
 	unsigned long region_used;	/* Bit mask for LED region map */
 	struct pwm_device *pwm;
 	unsigned int period;
+	u16 max_dev_brt;
 };
 
 extern int lp88xx_common_probe(struct device *dev, struct lp88xx *lp);

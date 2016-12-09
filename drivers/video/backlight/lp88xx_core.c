@@ -27,6 +27,10 @@
 #define LP88XX_MAX_INT_STATUS		3
 #define LP88XX_INT_REG_OFFSET		2
 
+#define LP88XX_REG_CAP2		0x06
+#define LP88XX_CAP2_MASK		(BIT(12) | BIT(13) | BIT(14) | BIT(15))
+#define LP88XX_CAP2_SHIFT		12
+
 #define LP88XX_REG_BL_MODE		0x20
 #define LP88XX_BL_MODE_MASK		(BIT(0) | BIT(1))
 #define LP88XX_PWM_MODE			0
@@ -45,6 +49,7 @@
 #define LP88XX_SLOPE_MASK		(BIT(5) | BIT(6) | BIT(7))
 #define LP88XX_SLOPE_SHIFT		5
 
+#define LP88XX_SLOPE_SHIFT		5
 #define LP88XX_INT_STATUS1		0x54
 #define LP88XX_INT_STATUS2		0x56
 #define LP88XX_INT_STATUS3		0x58
@@ -249,7 +254,7 @@ static int lp88xx_add_bl_device(struct lp88xx *lp, int id)
 	memset(name, 0, sizeof(name));
 	snprintf(name, sizeof(name), "%s:%d", DEFAULT_BL_NAME, id);
 	props.type = BACKLIGHT_PLATFORM;
-	props.max_brightness = MAX_BRIGHTNESS;
+	props.max_brightness = lp->max_dev_brt;
 	props.brightness = 0;
 
 	bl->bldev = devm_backlight_device_register(dev, name, dev, bl,
@@ -344,6 +349,7 @@ int lp88xx_common_probe(struct device *dev, struct lp88xx *lp)
 	u32 *region;
 	u32 slope_ms;
 	u8 index = 0;
+	u16 val = 0;
 	int en_gpio, irq_gpio;
 	int i, ret, size;
 
@@ -381,6 +387,15 @@ int lp88xx_common_probe(struct device *dev, struct lp88xx *lp)
 	if (ret) {
 		dev_err(dev, "Failed to get region map: %d\n", ret);
 		return ret;
+	}
+
+	ret = lp88xx_reg_read(lp, LP88XX_REG_CAP2, &val);
+	if (ret) {
+		dev_warn(dev, "warning: using default max brightness\n");
+		lp->max_dev_brt = MAX_BRIGHTNESS;
+	} else {
+		val = (val & LP88XX_CAP2_MASK) >> LP88XX_CAP2_SHIFT;
+		lp->max_dev_brt = (1U << val) - 1;
 	}
 
 	for (i = 0; i < size; i++) {

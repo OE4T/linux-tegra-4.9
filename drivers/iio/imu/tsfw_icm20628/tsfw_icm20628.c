@@ -216,8 +216,10 @@ static void pass_to_nvs(struct tsfw_icm20628_state *st, u8 *data)
 		tmp[i] = ntohs(tmp[i]);
 
 	/* pass to nvs */
-	for (i = 0; i < SNSR_N; i++)
-		st->nvs->handler(st->snsr[i].nvs_st, tmp+(AXIS_N*i), ts);
+	if (st && st->nvs && st->nvs->handler)
+		for (i = 0; i < SNSR_N; i++)
+			st->nvs->handler(st->snsr[i].nvs_st, tmp+(AXIS_N*i),
+					ts);
 	/* TODO: st->nvs->nvs_mutex_unlock(st->nvs_st); */
 }
 
@@ -305,6 +307,9 @@ static int recv(struct tsfw_icm20628_state *st, u8 *data, size_t size)
 	u8 *sensor_data;
 	u8 len, len_max;
 	bool syn;
+
+	if (!st)
+		return -ENODEV;
 
 	pr_debugg("%s received %zu bytes\n", __func__, size);
 	pr_debugg_buffer(data, size);

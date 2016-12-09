@@ -18,7 +18,6 @@
 #define __SOC_TEGRA_FUSE_H__
 
 #include <linux/tegra-soc.h>
-#include <linux/tegra-fuse.h>
 
 #define TEGRA20		0x20
 #define TEGRA30		0x30
@@ -41,7 +40,6 @@ u32 tegra_read_ram_code(void);
 u32 tegra_read_chipid(void);
 enum tegra_chipid tegra_get_chipid(void);
 
-#if !defined(CONFIG_TEGRA_FUSE)
 int tegra_fuse_readl(unsigned long offset, u32 *value);
 u8 tegra_get_chip_id(void);
 enum tegra_revision tegra_chip_get_revision(void);
@@ -53,7 +51,6 @@ static inline int tegra_get_sku_override(void)
 { return 0; }
 static inline u32 tegra_get_sku_id(void)
 { return 0; }
-#endif
 
 #endif /* __ASSEMBLY__ */
 

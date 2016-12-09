@@ -257,6 +257,7 @@ int __weak bpmp_init_cpuidle_debug(struct dentry *root)
 }
 
 struct pconfig {
+	const struct channel_cfg *chcfg;
 	const struct mail_ops *ops;
 	uint8_t clk;
 	uint8_t cpuidle;
@@ -337,7 +338,28 @@ err_out:
 	return r;
 }
 
+static const struct channel_cfg t210_chcfg = {
+	.nr_channels = 12,
+	.per_cpu_ch_0 = 0,
+	.per_cpu_ch_cnt = 4,
+	.thread_ch_0 = 4,
+	.thread_ch_cnt = 4,
+	.ib_ch_0 = 8,
+	.ib_ch_cnt = 4
+};
+
+static const struct channel_cfg t186_chcfg = {
+	.nr_channels = 14,
+	.per_cpu_ch_0 = 0,
+	.per_cpu_ch_cnt = 6,
+	.thread_ch_0 = 6,
+	.thread_ch_cnt = 7,
+	.ib_ch_0 = 13,
+	.ib_ch_cnt = 1
+};
+
 static const struct pconfig t210_cfg = {
+	.chcfg = &t210_chcfg,
 	.ops = &t210_mail_ops,
 	.clk = 1,
 	.cpuidle = 1,
@@ -345,10 +367,12 @@ static const struct pconfig t210_cfg = {
 };
 
 static const struct pconfig t186_native_cfg = {
+	.chcfg = &t186_chcfg,
 	.ops = &t186_native_mail_ops
 };
 
 static const struct pconfig t186_hv_cfg = {
+	.chcfg = &t186_chcfg,
 	.ops = &t186_hv_mail_ops,
 	.hv = 1
 };
@@ -384,7 +408,7 @@ static __init int bpmp_init(void)
 
 	cfg = (struct pconfig *)m->data;
 
-	r = bpmp_mail_init(cfg->ops, np);
+	r = bpmp_mail_init(cfg->chcfg, cfg->ops, np);
 	if (r)
 		goto out;
 

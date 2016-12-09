@@ -26,25 +26,9 @@
 #include <soc/tegra/bpmp_abi.h>
 #include "bpmp.h"
 
-#define CPU_0_TO_BPMP_CH	0
-#define CPU_1_TO_BPMP_CH	1
-#define CPU_2_TO_BPMP_CH	2
-#define CPU_3_TO_BPMP_CH	3
-#define CPU_4_TO_BPMP_CH	4
-#define CPU_5_TO_BPMP_CH	5
-#define CPU_NA_0_TO_BPMP_CH	6
-#define CPU_NA_1_TO_BPMP_CH	7
-#define CPU_NA_2_TO_BPMP_CH	8
-#define CPU_NA_3_TO_BPMP_CH	9
-#define CPU_NA_4_TO_BPMP_CH	10
-#define CPU_NA_5_TO_BPMP_CH	11
-#define CPU_NA_6_TO_BPMP_CH	12
-#define BPMP_TO_CPU_CH		13
-
 #define HSP_SHRD_SEM_1_STA	0x1b0000
 
-static struct ivc ivc_channels[NR_CHANNELS];
-
+static struct ivc *ivc_channels[NR_MAX_CHANNELS];
 static int hv_bpmp_first_queue = -1;
 static uint32_t num_ivc_queues;
 static struct tegra_hv_ivc_cookie **hv_bpmp_ivc_cookies;
@@ -59,11 +43,13 @@ static int hv_bpmp_get_cookie_index(uint32_t queue_id)
 
 static irqreturn_t hv_bpmp_irq_handler(int irq, void *dev_id)
 {
-	bpmp_handle_irq(BPMP_TO_CPU_CH);
+	bpmp_handle_irq(0);
+
 	return IRQ_HANDLED;
 }
 
-static int virt_channel_init(struct device_node *of_node)
+static int virt_channel_init(const struct channel_cfg *cfg,
+		struct device_node *of_node)
 {
 	struct device_node *hv_of_node;
 	int err;
@@ -127,7 +113,7 @@ static int virt_channel_init(struct device_node *of_node)
 			goto cleanup;
 		}
 
-		if (index >= CPU_NA_0_TO_BPMP_CH) {
+		if (index >= cfg->thread_ch_0) {
 			err = request_threaded_irq(
 					cookie->irq,
 					hv_bpmp_irq_handler, NULL, 0,
@@ -201,11 +187,12 @@ static void virt_synchronize(void)
 	}
 }
 
-static int virt_connect(const struct mail_ops *ops, struct device_node *of_node)
+static int virt_connect(const struct channel_cfg *cfg,
+		const struct mail_ops *ops, struct device_node *of_node)
 {
 	int r;
 
-	r = virt_channel_init(of_node);
+	r = virt_channel_init(cfg, of_node);
 	if (r)
 		return r;
 
@@ -221,12 +208,13 @@ static int native_init_prepare(void)
 
 static void native_inbox_irq(void *data)
 {
-	bpmp_handle_irq(BPMP_TO_CPU_CH);
+	bpmp_handle_irq(0);
 }
 
-static int native_init_irq(void)
+static int native_init_irq(unsigned int cnt)
 {
 	tegra_hsp_db_add_handler(HSP_MASTER_BPMP, native_inbox_irq, NULL);
+
 	tegra_hsp_db_enable_master(HSP_MASTER_BPMP);
 
 	return 0;
@@ -239,12 +227,17 @@ static void native_ring_doorbell(int ch)
 
 static void native_synchronize(void)
 {
+	struct ivc *ivc;
 	int i;
 
 	pr_info("bpmp: synchronizing channels\n");
 
-	for (i = 0; i < NR_CHANNELS; i++) {
-		while (tegra_ivc_channel_notified(ivc_channels + i)) {
+	for (i = 0; i < NR_MAX_CHANNELS; i++) {
+		ivc = ivc_channels[i];
+		if (!ivc)
+			continue;
+
+		while (tegra_ivc_channel_notified(ivc)) {
 			native_ring_doorbell(i);
 			if (tegra_platform_is_vdk())
 				msleep(100);
@@ -289,6 +282,7 @@ next:
 
 static void native_resume(void)
 {
+	struct ivc *ivc;
 	int i;
 
 	tegra_hsp_db_enable_master(HSP_MASTER_BPMP);
@@ -297,8 +291,11 @@ static void native_resume(void)
 	while (!tegra_hsp_db_can_ring(HSP_DB_BPMP))
 		;
 
-	for (i = 0; i < NR_CHANNELS; i++)
-		tegra_ivc_channel_reset(ivc_channels + i);
+	for (i = 0; i < NR_MAX_CHANNELS; i++) {
+		ivc = ivc_channels[i];
+		if (ivc)
+			tegra_ivc_channel_reset(ivc);
+	}
 
 	native_synchronize();
 }
@@ -325,7 +322,10 @@ static int native_single_init(int ch,
 	rx_base = (uintptr_t)(sl_page + ch * que_sz);
 	tx_base = (uintptr_t)(ma_page + ch * que_sz);
 
-	ivc = ivc_channels + ch;
+	ivc = kzalloc(sizeof(*ivc), GFP_KERNEL);
+	if (!ivc)
+		return -ENOMEM;
+
 	r = tegra_ivc_init(ivc, rx_base, tx_base,
 			1, msg_sz, NULL, native_notify);
 	if (r) {
@@ -334,18 +334,21 @@ static int native_single_init(int ch,
 		return r;
 	}
 
+	ivc_channels[ch] = ivc;
+
 	tegra_ivc_channel_reset(ivc);
 	native_ring_doorbell(ch);
 
 	return 0;
 }
 
-static int native_channel_init(void __iomem *ma_page, void __iomem *sl_page)
+static int native_channel_init(unsigned int nr_channels,
+		void __iomem *ma_page, void __iomem *sl_page)
 {
-	int i;
+	unsigned int i;
 	int r;
 
-	for (i = 0; i < NR_CHANNELS; i++) {
+	for (i = 0; i < nr_channels; i++) {
 		r = native_single_init(i, ma_page, sl_page);
 		if (r)
 			return r;
@@ -358,11 +361,11 @@ static int native_channel_init(void __iomem *ma_page, void __iomem *sl_page)
 
 static struct ivc *native_ivc_obj(int ch)
 {
-	return ivc_channels + ch;
+	return ivc_channels[ch];
 }
 
-static int native_connect(const struct mail_ops *ops,
-		struct device_node *of_node)
+static int native_connect(const struct channel_cfg *cfg,
+		const struct mail_ops *ops, struct device_node *of_node)
 {
 	void __iomem *bpmp_base;
 	void __iomem *ma_page;
@@ -385,7 +388,7 @@ static int native_connect(const struct mail_ops *ops,
 	if (r)
 		return r;
 
-	return native_channel_init(ma_page, sl_page);
+	return native_channel_init(cfg->nr_channels, ma_page, sl_page);
 }
 
 static bool ivc_rx_ready(const struct mail_ops *ops, int ch)
@@ -479,29 +482,9 @@ static void bpmp_return_data(const struct mail_ops *ops,
 		ops->ring_doorbell(ch);
 }
 
-static int bpmp_thread_ch_index(int ch)
-{
-	if (ch < CPU_NA_0_TO_BPMP_CH || ch > CPU_NA_6_TO_BPMP_CH)
-		return -1;
-	return ch - CPU_NA_0_TO_BPMP_CH;
-}
-
-static int bpmp_thread_ch(int idx)
-{
-	return CPU_NA_0_TO_BPMP_CH + idx;
-}
-
-static int bpmp_ob_channel(void)
-{
-	return smp_processor_id() + CPU_0_TO_BPMP_CH;
-}
-
 const struct mail_ops t186_hv_mail_ops = {
 	.connect = virt_connect,
 	.ivc_obj = virt_ivc_obj,
-	.ob_channel = bpmp_ob_channel,
-	.thread_ch = bpmp_thread_ch,
-	.thread_ch_index = bpmp_thread_ch_index,
 	.master_free = bpmp_master_free,
 	.free_master = bpmp_free_master,
 	.master_acked = bpmp_master_acked,
@@ -516,9 +499,6 @@ const struct mail_ops t186_native_mail_ops = {
 	.connect = native_connect,
 	.resume = native_resume,
 	.ivc_obj = native_ivc_obj,
-	.ob_channel = bpmp_ob_channel,
-	.thread_ch = bpmp_thread_ch,
-	.thread_ch_index = bpmp_thread_ch_index,
 	.master_free = bpmp_master_free,
 	.free_master = bpmp_free_master,
 	.master_acked = bpmp_master_acked,

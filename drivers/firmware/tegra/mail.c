@@ -16,19 +16,21 @@
 
 #include <linux/interrupt.h>
 #include <linux/io.h>
+#include <linux/semaphore.h>
+#include <linux/slab.h>
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/fuse.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include "bpmp.h"
 
-static unsigned int timeout_mul = 1;
-
 #define CHANNEL_TIMEOUT		(timeout_mul * USEC_PER_SEC)
 #define THREAD_CH_TIMEOUT	(timeout_mul * USEC_PER_SEC)
 
-struct channel_data channel_area[NR_CHANNELS];
-static struct completion completion[NR_THREAD_CH];
+static unsigned int timeout_mul = 1;
+struct channel_data channel_area[NR_MAX_CHANNELS];
+static struct completion *completion;
 static DEFINE_SPINLOCK(lock);
+static const struct channel_cfg *channel_cfg;
 static const struct mail_ops *mail_ops;
 
 uint32_t tegra_bpmp_mail_readl(int ch, int offset)
@@ -40,9 +42,11 @@ EXPORT_SYMBOL(tegra_bpmp_mail_readl);
 
 int tegra_bpmp_read_data(unsigned int ch, void *data, size_t sz)
 {
-	if (!data || sz > MSG_DATA_MIN_SZ || ch >= NR_CHANNELS)
+	if (!data || sz > MSG_DATA_MIN_SZ || ch >= channel_cfg->nr_channels)
 		return -EINVAL;
+
 	memcpy_fromio(data, channel_area[ch].ib->data, sz);
+
 	return 0;
 }
 EXPORT_SYMBOL(tegra_bpmp_read_data);
@@ -60,9 +64,41 @@ void tegra_bpmp_mail_return(int ch, int code, int v)
 }
 EXPORT_SYMBOL(tegra_bpmp_mail_return);
 
+static int bpmp_thread_ch_index(unsigned int ch)
+{
+	unsigned int n;
+
+	n = ch - channel_cfg->thread_ch_0;
+
+	if (n >= channel_cfg->thread_ch_cnt)
+		return -EINVAL;
+
+	return n;
+}
+
+static int bpmp_thread_ch(int idx)
+{
+	return channel_cfg->thread_ch_0 + idx;
+}
+
+static int bpmp_ob_channel(void)
+{
+	unsigned int cpu;
+
+	cpu = smp_processor_id();
+
+	if (cpu >= channel_cfg->per_cpu_ch_cnt)
+		return -EINVAL;
+
+	return channel_cfg->per_cpu_ch_0 + cpu;
+}
+
 static struct completion *bpmp_completion_obj(int ch)
 {
-	int i = mail_ops->thread_ch_index(ch);
+	int i;
+
+	i = bpmp_thread_ch_index(ch);
+
 	return i < 0 ? NULL : completion + i;
 }
 
@@ -86,20 +122,26 @@ static void bpmp_signal_thread(int ch)
 /* bit mask of thread channels waiting for completion */
 static unsigned int to_complete;
 
-void bpmp_handle_irq(int ch)
+void bpmp_handle_irq(unsigned int chidx)
 {
+	int ch;
 	int i;
 
 	if (!mail_ops)
 		return;
+
+	if (WARN_ON_ONCE(chidx >= channel_cfg->ib_ch_cnt))
+		return;
+
+	ch = channel_cfg->ib_ch_0 + chidx;
 
 	if (mail_ops->slave_signalled(mail_ops, ch))
 		bpmp_handle_mail(channel_area[ch].ib->code, ch);
 
 	spin_lock(&lock);
 
-	for (i = 0; i < NR_THREAD_CH && to_complete; i++) {
-		ch = mail_ops->thread_ch(i);
+	for (i = 0; i < channel_cfg->thread_ch_cnt && to_complete; i++) {
+		ch = bpmp_thread_ch(i);
 		if (mail_ops->master_acked(mail_ops, ch) &&
 				(to_complete & 1 << ch)) {
 			to_complete &= ~(1 << ch);
@@ -151,9 +193,8 @@ static int bpmp_write_ch(int ch, int mrq, int flags, void *data, int sz)
 	return 0;
 }
 
-static int tch_free = (1 << NR_THREAD_CH) - 1;
-static struct semaphore tch_sem =
-		__SEMAPHORE_INITIALIZER(tch_sem, NR_THREAD_CH);
+static int tch_free;
+static struct semaphore tch_sem;
 
 static int bpmp_write_threaded_ch(int *ch, int mrq, void *data, int sz)
 {
@@ -168,7 +209,7 @@ static int bpmp_write_threaded_ch(int *ch, int mrq, void *data, int sz)
 	spin_lock_irqsave(&lock, flags);
 
 	i = __ffs(tch_free);
-	*ch = mail_ops->thread_ch(i);
+	*ch = bpmp_thread_ch(i);
 
 	ret = mail_ops->master_free(mail_ops, *ch) ? 0 : -EFAULT;
 	if (!ret) {
@@ -198,7 +239,7 @@ static int bpmp_read_ch(int ch, void *data, int sz)
 	int tchi;
 	int r;
 
-	tchi = mail_ops->thread_ch_index(ch);
+	tchi = bpmp_thread_ch_index(ch);
 	if (tchi < 0)
 		return -EINVAL;
 
@@ -252,7 +293,9 @@ int tegra_bpmp_send(int mrq, void *data, int sz)
 
 	raw_local_irq_save(flags);
 
-	ch = mail_ops->ob_channel();
+	ch = bpmp_ob_channel();
+	if (ch < 0)
+		return ch;
 
 	r = bpmp_write_ch(ch, mrq, 0, data, sz);
 
@@ -280,7 +323,9 @@ int tegra_bpmp_send_receive_atomic(int mrq, void *ob_data, int ob_sz,
 	if (!mail_ops)
 		return -ENODEV;
 
-	ch = mail_ops->ob_channel();
+	ch = bpmp_ob_channel();
+	if (ch < 0)
+		return ch;
 
 	r = bpmp_write_ch(ch, mrq, DO_ACK, ob_data, ob_sz);
 	if (r)
@@ -342,14 +387,22 @@ void tegra_bpmp_resume(void)
 		mail_ops->resume();
 }
 
-static void bpmp_init_completion(void)
+static int bpmp_init_completion(int cnt)
 {
 	int i;
-	for (i = 0; i < NR_THREAD_CH; i++)
+
+	completion = kcalloc(cnt, sizeof(*completion), GFP_KERNEL);
+	if (!completion)
+		return -ENOMEM;
+
+	for (i = 0; i < cnt; i++)
 		init_completion(completion + i);
+
+	return 0;
 }
 
-int bpmp_mail_init(const struct mail_ops *ops, struct device_node *of_node)
+int bpmp_mail_init(const struct channel_cfg *cfg, const struct mail_ops *ops,
+		struct device_node *of_node)
 {
 	int r;
 
@@ -359,9 +412,15 @@ int bpmp_mail_init(const struct mail_ops *ops, struct device_node *of_node)
 		return r;
 	}
 
-	bpmp_init_completion();
+	tch_free = (1 << cfg->thread_ch_cnt) - 1;
 
-	r = ops->init_irq ? ops->init_irq() : 0;
+	sema_init(&tch_sem, cfg->thread_ch_cnt);
+
+	r = bpmp_init_completion(cfg->thread_ch_cnt);
+	if (r)
+		return r;
+
+	r = ops->init_irq ? ops->init_irq(cfg->ib_ch_cnt) : 0;
 	if (r) {
 		pr_err("bpmp: irq init failed (%d)\n", r);
 		return r;
@@ -373,7 +432,7 @@ int bpmp_mail_init(const struct mail_ops *ops, struct device_node *of_node)
 		return r;
 	}
 
-	r = ops->connect(ops, of_node);
+	r = ops->connect(cfg, ops, of_node);
 	if (r) {
 		pr_err("bpmp: connect failed (%d)\n", r);
 		return r;
@@ -381,6 +440,8 @@ int bpmp_mail_init(const struct mail_ops *ops, struct device_node *of_node)
 
 	if (!tegra_platform_is_silicon())
 		timeout_mul = 600;
+
+	channel_cfg = cfg;
 
 	mail_ops = ops;
 

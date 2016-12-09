@@ -23,16 +23,20 @@
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-#define NR_CHANNELS		14
-#define NR_THREAD_CH		7
-#else
-#define NR_CHANNELS		12
-#define NR_THREAD_CH		4
-#endif
+#define NR_MAX_CHANNELS		14
 
 #define DO_ACK			(1 << 0)
 #define RING_DOORBELL		(1 << 1)
+
+struct channel_cfg {
+	unsigned int nr_channels;
+	unsigned int per_cpu_ch_0;
+	unsigned int per_cpu_ch_cnt;
+	unsigned int thread_ch_0;
+	unsigned int thread_ch_cnt;
+	unsigned int ib_ch_0;
+	unsigned int ib_ch_cnt;
+};
 
 struct fops_entry {
 	char *name;
@@ -53,14 +57,13 @@ struct channel_data {
 
 struct mail_ops {
 	int (*init_prepare)(void);
-	int (*init_irq)(void);
-	int (*connect)(const struct mail_ops *ops, struct device_node *of_node);
+	int (*init_irq)(unsigned int cnt);
+	int (*connect)(const struct channel_cfg *cfg,
+			const struct mail_ops *ops,
+			struct device_node *of_node);
 	void (*resume)(void);
 
 	struct ivc *(*ivc_obj)(int ch);
-	int (*ob_channel)(void);
-	int (*thread_ch)(int idx);
-	int (*thread_ch_index)(int ch);
 
 	bool (*master_free)(const struct mail_ops *ops, int ch);
 	void (*free_master)(const struct mail_ops *ops, int ch);
@@ -76,18 +79,19 @@ extern const struct mail_ops t210_mail_ops;
 extern const struct mail_ops t186_native_mail_ops;
 extern const struct mail_ops t186_hv_mail_ops;
 
-extern struct channel_data channel_area[NR_CHANNELS];
+extern struct channel_data channel_area[NR_MAX_CHANNELS];
 extern char firmware_tag[32];
 
 struct dentry *bpmp_init_debug(struct platform_device *pdev);
 int bpmp_init_cpuidle_debug(struct dentry *root);
-int bpmp_mail_init(const struct mail_ops *ops, struct device_node *of_node);
+int bpmp_mail_init(const struct channel_cfg *cfg,
+		const struct mail_ops *ops, struct device_node *of_node);
 int __bpmp_do_ping(void);
 int bpmp_create_attrs(const struct fops_entry *fent, struct dentry *parent,
 		void *data);
 int bpmp_mailman_init(void);
 void bpmp_handle_mail(int mrq, int ch);
 void tegra_bpmp_resume(void);
-void bpmp_handle_irq(int ch);
+void bpmp_handle_irq(unsigned int chidx);
 
 #endif

@@ -30,9 +30,9 @@
 extern const struct file_operations tegra_pva_ctrl_ops;
 
 /**
- * Queue count of 16 is maintained per PVA.
+ * Queue count of 8 is maintained per PVA.
  */
-#define MAX_PVA_QUEUE_COUNT 16
+#define MAX_PVA_QUEUE_COUNT 8
 
 /**
  * struct pva_fw - struct to handle the PVA firmware information

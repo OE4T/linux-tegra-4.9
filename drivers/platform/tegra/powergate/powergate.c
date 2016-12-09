@@ -33,7 +33,6 @@
 #include <linux/spinlock.h>
 #include <linux/tegra-powergate.h>
 #include <soc/tegra/fuse.h>
-#include <soc/tegra/reset.h>
 #include <trace/events/power.h>
 #include <asm/atomic.h>
 
@@ -278,37 +277,6 @@ void get_clk_info(struct powergate_partition_info *pg_info)
 				pg_info->clk_info[idx].clk_name,
 				pg_info->name);
 	}
-}
-
-void powergate_partition_assert_reset(struct powergate_partition_info *pg_info)
-{
-	tegra_rst_assertv(&pg_info->reset_id[0], pg_info->reset_id_num);
-}
-
-void powergate_partition_deassert_reset(struct powergate_partition_info *pg_info)
-{
-	tegra_rst_deassertv(&pg_info->reset_id[0], pg_info->reset_id_num);
-}
-
-int tegra_powergate_reset_module(struct powergate_partition_info *pg_info)
-{
-	int ret;
-
-	powergate_partition_assert_reset(pg_info);
-
-	udelay(10);
-
-	ret = partition_clk_enable(pg_info);
-	if (ret)
-		return ret;
-
-	udelay(10);
-
-	powergate_partition_deassert_reset(pg_info);
-
-	partition_clk_disable(pg_info);
-
-	return 0;
 }
 
 int slcg_clk_enable(struct powergate_partition_info *pg_info)

@@ -14,8 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/tegra-fuse.h>
-
 void tegra_init_speedo_data(void)
 {
 	/* TODO: Implement this function. */

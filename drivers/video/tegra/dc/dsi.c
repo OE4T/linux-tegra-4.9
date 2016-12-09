@@ -1437,11 +1437,7 @@ static void tegra_dsi_set_sol_delay(struct tegra_dc *dc,
 				dsi->pixel_scaler_div * dsi->info.n_data_lanes)
 				+ FIFO_RD_BYTE_CLK_DELAY;
 
-		h_width_pixels = dc->mode.h_sync_width +
-					dc->mode.h_back_porch +
-					dc->mode.h_active +
-					dc->mode.h_front_porch;
-
+		h_width_pixels = dc->mode.h_active;
 		h_width_byte_clk = DIV_ROUND_UP(h_width_pixels *
 					dsi->pixel_scaler_mul,
 					dsi->pixel_scaler_div *
@@ -1491,11 +1487,15 @@ static void tegra_dsi_set_timeout(struct tegra_dc_dsi_data *dsi)
 	u32 bytes_per_frame;
 	u32 timeout = 0;
 
-	/* TODO: verify the following equation */
-	bytes_per_frame = dsi->current_dsi_clk_khz * 1000 * 2 /
+	if (dsi->info.set_max_timeout) {
+		timeout = 0xffff;
+	} else {
+		/* TODO: verify the following equation */
+		bytes_per_frame = dsi->current_dsi_clk_khz * 1000 * 2 /
 						(dsi->info.refresh_rate * 8);
-	timeout = bytes_per_frame / DSI_CYCLE_COUNTER_VALUE;
-	timeout = (timeout + DSI_HTX_TO_MARGIN) & 0xffff;
+		timeout = bytes_per_frame / DSI_CYCLE_COUNTER_VALUE;
+		timeout = (timeout + DSI_HTX_TO_MARGIN) & 0xffff;
+	}
 
 	val = DSI_TIMEOUT_0_LRXH_TO(DSI_LRXH_TO_VALUE) |
 			DSI_TIMEOUT_0_HTX_TO(timeout);

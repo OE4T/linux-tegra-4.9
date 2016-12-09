@@ -1310,6 +1310,13 @@ static struct device_node *parse_dsi_settings(struct platform_device *ndev,
 			dsi->enable_hs_clock_on_lp_cmd_mode);
 	}
 
+	if (of_property_read_bool(np_dsi,
+			"nvidia,set-max-dsi-timeout")) {
+		dsi->set_max_timeout = true;
+		OF_DC_LOG("Set max DSI timeout %d\n",
+			dsi->set_max_timeout);
+	}
+
 	if (!of_property_read_u32(np_dsi_panel,
 			"nvidia,dsi-n-data-lanes", &temp)) {
 		dsi->n_data_lanes = (u8)temp;

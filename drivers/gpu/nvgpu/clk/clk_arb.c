@@ -461,7 +461,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 	struct gk20a *g = arb->g;
 	struct nvgpu_clk_vf_table *table;
 
-	int i, j;
+	u32 i, j;
 	int status = 0;
 	u32 gpc2clk_voltuv = 0, mclk_voltuv = 0;
 	u32 gpc2clk_voltuv_sram = 0, mclk_voltuv_sram = 0;
@@ -484,14 +484,14 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 						&mclk_min, &mclk_max) < 0)
 		goto exit_vf_table;
 
-	if (!clk_domain_get_f_points(arb->g, NVGPU_GPU_CLK_DOMAIN_GPC2CLK,
-		&table->gpc2clk_num_points, arb->gpc2clk_f_points) < 0) {
+	if (clk_domain_get_f_points(arb->g, NVGPU_GPU_CLK_DOMAIN_GPC2CLK,
+		&table->gpc2clk_num_points, arb->gpc2clk_f_points)) {
 		gk20a_err(dev_from_gk20a(g),
 			"failed to fetch GPC2CLK frequency points");
 		goto exit_vf_table;
 	}
 	if (clk_domain_get_f_points(arb->g, NVGPU_GPU_CLK_DOMAIN_MCLK,
-		&table->mclk_num_points, arb->mclk_f_points) < 0) {
+		&table->mclk_num_points, arb->mclk_f_points)) {
 		gk20a_err(dev_from_gk20a(g),
 			"failed to fetch MCLK frequency points");
 		goto exit_vf_table;
@@ -767,7 +767,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 		debug->switch_std = 0;
 	} else {
 		s64 prev_avg;
-		u64 curr = (t1-t0)/1000;
+		s64 curr = (t1-t0)/1000;
 
 		debug->switch_max = curr > debug->switch_max ?
 			curr : debug->switch_max;
@@ -1014,7 +1014,7 @@ static void nvgpu_clk_arb_find_vf_point(struct nvgpu_clk_arb *arb,
 	u32 gpc2clk_voltuv, gpc2clk_voltuv_sram;
 	u32 mclk_voltuv, mclk_voltuv_sram;
 	struct nvgpu_clk_vf_table *table;
-	int index;
+	u32 index;
 
 	gpc2clk_target = *gpc2clk;
 	mclk_target = *mclk;

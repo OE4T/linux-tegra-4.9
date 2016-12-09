@@ -51,7 +51,7 @@ static u16 gp106_clk_get_rate(struct gk20a *g, u32 api_domain)
 {
 	struct clk_gk20a *clk = &g->clk;
 	u32 freq_khz;
-	int i;
+	u32 i;
 	struct namemap_cfg *c = NULL;
 
 	for (i = 0; i < clk->namemap_num; i++) {

@@ -143,10 +143,6 @@
 #define CIL_ERR_INTR_MASK				0x40c
 
 /* NVCSI_PHY registers */
-#define NVCSI_PHY_0_BASE				0x018000
-#define NVCSI_PHY_1_BASE				0x028000
-#define NVCSI_PHY_2_BASE				0x038000
-
 #define NVCSI_CIL_PHY_CTRL			0x00
 #define CFG_PHY_MODE				(0x1 << 0)
 #define DPHY						(0)

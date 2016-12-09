@@ -30,7 +30,6 @@
 #include "camera/vi/mc_common.h"
 #include "mipical/mipi_cal.h"
 #include "linux/nvhost.h"
-#include "nvcsi/nvcsi.h"
 
 static int set_csi_properties(struct tegra_csi_device *csi,
 			struct platform_device *pdev)
@@ -123,171 +122,6 @@ void tegra_csi_stop_streaming(struct tegra_csi_channel *chan,
 }
 EXPORT_SYMBOL(tegra_csi_stop_streaming);
 
-int csi_mipi_cal(struct tegra_channel *chan, char is_bypass)
-{
-	unsigned int lanes, cur_lanes;
-	unsigned int cila, cilb;
-	struct tegra_csi_device *csi;
-	int j;
-
-	csi = NULL; /* WAR: will be removed after CHWI-401 */
-	if (!csi)
-		return -EINVAL;
-
-	lanes = 0;
-
-	if (chan->numlanes == 2 && chan->total_ports == 1) {
-		cila =  (0x01 << E_INPUT_LP_IO0_SHIFT) |
-			(0x01 << E_INPUT_LP_IO1_SHIFT) |
-			(0x01 << E_INPUT_LP_CLK_SHIFT) |
-			(0x00 << PD_CLK_SHIFT) |
-			(0x00 << PD_IO0_SHIFT) |
-			(0x00 << PD_IO1_SHIFT);
-		cilb = cila;
-		switch (chan->port[0]) {
-		case PORT_A:
-			lanes = CSIA;
-			host1x_writel(csi->pdev, NVCSI_PHY_0_BASE +
-					NVCSI_CIL_A_BASE + PAD_CONFIG_0,
-					cila);
-			break;
-		case PORT_B:
-			lanes = CSIB;
-			host1x_writel(csi->pdev, NVCSI_PHY_0_BASE +
-					NVCSI_CIL_B_BASE + PAD_CONFIG_0,
-					cilb);
-			break;
-		case PORT_C:
-			lanes = CSIC;
-			host1x_writel(csi->pdev, NVCSI_PHY_1_BASE +
-					NVCSI_CIL_A_BASE + PAD_CONFIG_0,
-					cila);
-			break;
-		case PORT_D:
-			lanes = CSID;
-			host1x_writel(csi->pdev, NVCSI_PHY_1_BASE +
-					NVCSI_CIL_B_BASE + PAD_CONFIG_0,
-					cilb);
-			break;
-		case PORT_E:
-			lanes = CSIE;
-			host1x_writel(csi->pdev, NVCSI_PHY_2_BASE +
-					NVCSI_CIL_A_BASE + PAD_CONFIG_0,
-					cila);
-			break;
-		case PORT_F:
-			lanes = CSIF;
-			host1x_writel(csi->pdev, NVCSI_PHY_2_BASE +
-					NVCSI_CIL_B_BASE + PAD_CONFIG_0,
-					cilb);
-			break;
-		}
-	} else if (chan->numlanes == 4 && chan->total_ports == 1) {
-		cila =  (0x01 << E_INPUT_LP_IO0_SHIFT) |
-			(0x01 << E_INPUT_LP_IO1_SHIFT) |
-			(0x01 << E_INPUT_LP_CLK_SHIFT) |
-			(0x00 << PD_CLK_SHIFT) |
-			(0x00 << PD_IO0_SHIFT) |
-			(0x00 << PD_IO1_SHIFT);
-		cilb =  (0x01 << E_INPUT_LP_IO0_SHIFT) |
-			(0x01 << E_INPUT_LP_IO1_SHIFT) |
-			(0x01 << PD_CLK_SHIFT) |
-			(0x00 << PD_IO0_SHIFT) |
-			(0x00 << PD_IO1_SHIFT);
-		switch (chan->port[0]) {
-		case PORT_A:
-		case PORT_B:
-			lanes = CSIA|CSIB;
-			host1x_writel(csi->pdev, NVCSI_PHY_0_BASE +
-					NVCSI_CIL_A_BASE + PAD_CONFIG_0,
-					cila);
-			host1x_writel(csi->pdev, NVCSI_PHY_0_BASE +
-					NVCSI_CIL_B_BASE + PAD_CONFIG_0,
-					cilb);
-			break;
-		case PORT_C:
-		case PORT_D:
-			lanes = CSIC|CSID;
-			host1x_writel(csi->pdev, NVCSI_PHY_1_BASE +
-					NVCSI_CIL_A_BASE + PAD_CONFIG_0,
-					cila);
-			host1x_writel(csi->pdev, NVCSI_PHY_1_BASE +
-					NVCSI_CIL_B_BASE + PAD_CONFIG_0,
-					cilb);
-			break;
-		case PORT_E:
-		case PORT_F:
-			lanes = CSIE|CSIF;
-			host1x_writel(csi->pdev, NVCSI_PHY_2_BASE +
-					NVCSI_CIL_A_BASE + PAD_CONFIG_0,
-					cila);
-			host1x_writel(csi->pdev, NVCSI_PHY_2_BASE +
-					NVCSI_CIL_B_BASE + PAD_CONFIG_0,
-					cilb);
-			break;
-		}
-	} else if (chan->numlanes == 8) {
-		cila =  (0x01 << E_INPUT_LP_IO0_SHIFT) |
-			(0x01 << E_INPUT_LP_IO1_SHIFT) |
-			(0x01 << E_INPUT_LP_CLK_SHIFT) |
-			(0x00 << PD_CLK_SHIFT) |
-			(0x00 << PD_IO0_SHIFT) |
-			(0x00 << PD_IO1_SHIFT);
-		cilb =  (0x01 << E_INPUT_LP_IO0_SHIFT) |
-			(0x01 << E_INPUT_LP_IO1_SHIFT) |
-			(0x01 << PD_CLK_SHIFT) |
-			(0x00 << PD_IO0_SHIFT) |
-			(0x00 << PD_IO1_SHIFT);
-		cur_lanes = 0;
-		for (j = 0; j < chan->valid_ports; ++j) {
-			switch (chan->port[j]) {
-			case PORT_A:
-			case PORT_B:
-				cur_lanes = CSIA|CSIB;
-				host1x_writel(csi->pdev, NVCSI_PHY_0_BASE +
-						NVCSI_CIL_A_BASE + PAD_CONFIG_0,
-						cila);
-				host1x_writel(csi->pdev, NVCSI_PHY_0_BASE +
-						NVCSI_CIL_B_BASE + PAD_CONFIG_0,
-						cilb);
-				break;
-			case PORT_C:
-			case PORT_D:
-				cur_lanes = CSIC|CSID;
-				host1x_writel(csi->pdev, NVCSI_PHY_1_BASE +
-						NVCSI_CIL_A_BASE + PAD_CONFIG_0,
-						cila);
-				host1x_writel(csi->pdev, NVCSI_PHY_1_BASE +
-						NVCSI_CIL_B_BASE + PAD_CONFIG_0,
-						cilb);
-				break;
-			case PORT_E:
-			case PORT_F:
-				cur_lanes = CSIE|CSIF;
-				host1x_writel(csi->pdev, NVCSI_PHY_2_BASE +
-						NVCSI_CIL_A_BASE + PAD_CONFIG_0,
-						cila);
-				host1x_writel(csi->pdev, NVCSI_PHY_2_BASE +
-						NVCSI_CIL_B_BASE + PAD_CONFIG_0,
-						cilb);
-				break;
-			default:
-				dev_err(csi->dev, "csi_port number: %d",
-						chan->port[0]);
-				break;
-			}
-			lanes |= cur_lanes;
-		}
-	}
-
-	if (!lanes) {
-		dev_err(csi->dev, "Selected no CSI lane, can't do calibration");
-		return -EINVAL;
-	}
-	return tegra_mipi_calibration(lanes);
-}
-EXPORT_SYMBOL(csi_mipi_cal);
-
 static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 {
 	struct tegra_csi_device *csi;
@@ -295,12 +129,17 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 	struct tegra_channel *tegra_chan = v4l2_get_subdev_hostdata(subdev);
 	int i, ret = 0;
 
-	if (tegra_chan->bypass)
-		return 0;
-
 	csi = to_csi(subdev);
 	if (!csi)
 		return -EINVAL;
+	if (enable) {
+		tegra_mipi_bias_pad_enable();
+		csi->fops->mipical(chan);
+	} else
+		tegra_mipi_bias_pad_disable();
+
+	if (tegra_chan->bypass)
+		return 0;
 
 	for (i = 0; i < tegra_chan->valid_ports; i++) {
 		if (enable) {
@@ -310,7 +149,6 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 		} else
 			tegra_csi_stop_streaming(chan, i);
 	}
-
 	return ret;
 }
 
@@ -690,7 +528,7 @@ int tegra_csi_init(struct tegra_csi_device *csi,
 		return err;
 
 	csi->iomem_base = pdata->aperture[0];
-
+	csi->fops->hw_init(csi);
 	return err;
 }
 

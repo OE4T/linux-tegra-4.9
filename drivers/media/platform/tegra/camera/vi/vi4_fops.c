@@ -18,7 +18,6 @@
 #include "linux/nvhost_ioctl.h"
 #include "vi/vi4.h"
 #include "mc_common.h"
-#include "mipical/mipi_cal.h"
 #include "vi4_registers.h"
 #include "vi/vi_notify.h"
 
@@ -650,14 +649,9 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 		ret = tegra_channel_set_stream(chan, true);
 		if (ret < 0)
 			goto error_set_stream;
-		tegra_mipi_bias_pad_enable();
-		mutex_lock(&chan->vi->mipical_lock);
-		csi_mipi_cal(chan, 1);
-		mutex_unlock(&chan->vi->mipical_lock);
 		return ret;
 	}
 
-	tegra_mipi_bias_pad_enable();
 	spin_lock_irqsave(&chan->capture_state_lock, flags);
 	chan->capture_state = CAPTURE_IDLE;
 	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
@@ -701,7 +695,6 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	return 0;
 
 error_capture_setup:
-	tegra_mipi_bias_pad_disable();
 	if (!chan->pg_mode)
 		tegra_channel_set_stream(chan, false);
 error_set_stream:
@@ -740,7 +733,6 @@ int vi4_channel_stop_streaming(struct vb2_queue *vq)
 
 	tegra_channel_set_stream(chan, false);
 	media_entity_pipeline_stop(&chan->video.entity);
-	tegra_mipi_bias_pad_disable();
 
 	if (!chan->bypass)
 		tegra_channel_update_clknbw(chan, 0);

@@ -136,6 +136,7 @@
 #define TEGRA_CSI_CSI_SW_SENSOR_RESET                   0x020
 
 /* CSI PHY registers */
+/* CSI_PHY_CIL_COMMAND_0 offset 0x0d0 from TEGRA_CSI_PIXEL_PARSER_0_BASE */
 #define TEGRA_CSI_PHY_CIL_COMMAND                       0x0d0
 #define CSI_A_PHY_CIL_ENABLE				0x1
 #define CSI_B_PHY_CIL_ENABLE				(0x1 << 8)

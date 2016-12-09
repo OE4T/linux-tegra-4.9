@@ -498,17 +498,24 @@ void tegra_channel_queued_buf_done(struct tegra_channel *chan,
  */
 int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 {
-	int err = 0;
+	int num_sd;
+	int ret = 0;
 
 	if (atomic_read(&chan->is_streaming) == on)
 		return 0;
 
-	err = tegra_channel_device_call_all(chan->video.v4l2_dev,
-			chan->grp_id, video, s_stream, on);
+	for (num_sd = chan->num_subdevs - 1; num_sd >= 0; num_sd--) {
+		struct v4l2_subdev *sd = chan->subdev[num_sd];
+		int err = 0;
+
+		err = v4l2_subdev_call(sd, video, s_stream, on);
+		if (!ret && err < 0 && err != -ENOIOCTLCMD)
+			ret = err;
+	}
 
 	atomic_set(&chan->is_streaming, on);
 
-	return err;
+	return ret;
 }
 
 int tegra_channel_set_power(struct tegra_channel *chan, bool on)

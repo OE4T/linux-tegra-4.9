@@ -158,15 +158,6 @@ static int tegra_channel_enable_stream(struct tegra_channel *chan)
 		if (ret < 0)
 			return ret;
 	}
-	/* perform calibration as sensor started streaming */
-#if 0
-	tegra_mipi_bias_pad_enable();
-	if (!chan->vi->pg_mode) {
-		mutex_lock(&chan->vi->mipical_lock);
-		tegra_channel_mipi_cal(chan, 0);
-		mutex_unlock(&chan->vi->mipical_lock);
-	}
-#endif
 	return ret;
 }
 
@@ -584,14 +575,6 @@ int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
 		ret = tegra_channel_set_stream(chan, true);
 		if (ret < 0)
 			goto error_set_stream;
-#if 0
-		nvhost_module_enable_clk(chan->vi->dev);
-		tegra_mipi_bias_pad_enable();
-		mutex_lock(&chan->vi->mipical_lock);
-		tegra_channel_mipi_cal(chan, 1);
-		mutex_unlock(&chan->vi->mipical_lock);
-		nvhost_module_disable_clk(chan->vi->dev);
-#endif
 		return ret;
 	}
 	chan->capture_state = CAPTURE_IDLE;

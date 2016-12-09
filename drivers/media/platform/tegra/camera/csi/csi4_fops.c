@@ -14,6 +14,7 @@
 #include "camera/csi/csi.h"
 #include "camera/csi/csi4_registers.h"
 #include "camera/vi/core.h"
+#include "mipical/mipi_cal.h"
 
 static void csi4_stream_write(struct tegra_csi_channel *chan,
 		unsigned int index, unsigned int addr, u32 val)
@@ -371,22 +372,22 @@ static int csi4_tpg_start_streaming(struct tegra_csi_channel *chan,
 			((chan->pg_mode - 1) << PG_MODE_OFFSET) | PG_ENABLE);
 	return 0;
 }
+void csi4_hw_init(struct tegra_csi_device *csi)
+{
+	csi->iomem[0] = csi->iomem_base + TEGRA_CSI_STREAM_0_BASE;
+	csi->iomem[1] = csi->iomem_base + TEGRA_CSI_STREAM_2_BASE;
+	csi->iomem[2] = csi->iomem_base + TEGRA_CSI_STREAM_4_BASE;
+}
 int csi4_start_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num)
 {
 	struct tegra_csi_device *csi = chan->csi;
 	int csi_port, csi_lanes, ret = 0;
 
-	dev_dbg(csi->dev, "%s ports index=%d, lanes=%d\n",
-			__func__, port_num, chan->numlanes);
-
 	csi_port = chan->ports[port_num].num;
 	csi_lanes = chan->ports[port_num].lanes;
-
-	/* TODO - add fops for iomem setting */
-	csi->iomem[0] = csi->iomem_base + TEGRA_CSI_STREAM_0_BASE;
-	csi->iomem[1] = csi->iomem_base + TEGRA_CSI_STREAM_2_BASE;
-	csi->iomem[2] = csi->iomem_base + TEGRA_CSI_STREAM_4_BASE;
+	dev_dbg(csi->dev, "%s ports index=%d, lanes=%d\n",
+			__func__, csi_port, csi_lanes);
 
 	if (chan->pg_mode)
 		ret = csi4_tpg_start_streaming(chan, port_num);
@@ -395,7 +396,6 @@ int csi4_start_streaming(struct tegra_csi_channel *chan,
 		csi4_stream_config(chan, csi_port);
 		/* enable DPHY */
 		csi4_phy_config(chan, csi_port, csi_lanes, true);
-
 		csi4_stream_write(chan, csi_port, PP_EN_CTRL, CFG_PP_EN);
 	}
 	return ret;
@@ -445,4 +445,56 @@ void csi4_override_format(struct tegra_csi_channel *chan,
 
 	csi_port = chan->ports[port_num].num;
 	csi4_stream_write(chan, csi_port, PG_IMAGE_SIZE, val);
+}
+
+int csi4_mipi_cal(struct tegra_csi_channel *chan)
+{
+	unsigned int lanes, num_ports, port, addr;
+	unsigned int cila, cilb;
+	struct tegra_csi_device *csi = chan->csi;
+
+	lanes = 0;
+	num_ports = 0;
+	port = 0;
+	while (num_ports < chan->numports) {
+		port = chan->ports[num_ports].num;
+		dev_dbg(csi->dev, "csi port:%d\n", port);
+
+		if (chan->numlanes == 2) {
+			lanes |= CSIA << port;
+			cila =  (0x01 << E_INPUT_LP_IO0_SHIFT) |
+				(0x01 << E_INPUT_LP_IO1_SHIFT) |
+				(0x01 << E_INPUT_LP_CLK_SHIFT) |
+				(0x00 << PD_CLK_SHIFT) |
+				(0x00 << PD_IO0_SHIFT) |
+				(0x00 << PD_IO1_SHIFT);
+			addr = (port % 2 == 0 ?
+				NVCSI_CIL_A_BASE : NVCSI_CIL_B_BASE)
+				+ PAD_CONFIG_0;
+			csi4_phy_write(chan, port >> 1, addr, cila);
+		} else {
+			lanes |= (CSIA | CSIB) << port;
+			cila =  (0x01 << E_INPUT_LP_IO0_SHIFT) |
+				(0x01 << E_INPUT_LP_IO1_SHIFT) |
+				(0x01 << E_INPUT_LP_CLK_SHIFT) |
+				(0x00 << PD_CLK_SHIFT) |
+				(0x00 << PD_IO0_SHIFT) |
+				(0x00 << PD_IO1_SHIFT);
+			cilb =  (0x01 << E_INPUT_LP_IO0_SHIFT) |
+				(0x01 << E_INPUT_LP_IO1_SHIFT) |
+				(0x01 << PD_CLK_SHIFT) |
+				(0x00 << PD_IO0_SHIFT) |
+				(0x00 << PD_IO1_SHIFT);
+			csi4_phy_write(chan, port >> 1,
+				NVCSI_CIL_A_BASE + PAD_CONFIG_0, cila);
+			csi4_phy_write(chan, port >> 1,
+				NVCSI_CIL_B_BASE + PAD_CONFIG_0, cilb);
+		}
+		num_ports++;
+	}
+	if (!lanes) {
+		dev_err(csi->dev, "Selected no CSI lane, cannot do calibration");
+		return -EINVAL;
+	}
+	return tegra_mipi_calibration(lanes);
 }

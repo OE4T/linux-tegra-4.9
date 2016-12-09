@@ -14,8 +14,8 @@
 #include <linux/clk/tegra.h>
 #include "camera/csi/csi.h"
 #include "camera/vi/mc_common.h"
-
-
+#include "mipical/mipi_cal.h"
+#include "nvhost_acm.h"
 
 static void csi_write(struct tegra_csi_channel *chan, unsigned int addr,
 			u32 val, u8 port)
@@ -217,15 +217,6 @@ int csi2_start_streaming(struct tegra_csi_channel *chan,
 	csi_port = chan->ports[port_num].num;
 	csi_lanes = chan->ports[port_num].lanes;
 
-	csi->iomem[0] = (csi->iomem_base + TEGRA_CSI_PIXEL_PARSER_0_BASE);
-	csi->iomem[1] = (csi->iomem_base + TEGRA_CSI_PIXEL_PARSER_2_BASE);
-	csi->iomem[2] = (csi->iomem_base + TEGRA_CSI_PIXEL_PARSER_4_BASE);
-
-	port->pixel_parser = csi->iomem[csi_port >> 1] +
-			(csi_port % 2) * TEGRA_CSI_PORT_OFFSET;
-	port->cil = port->pixel_parser + TEGRA_CSI_CIL_OFFSET;
-	port->tpg = port->pixel_parser + TEGRA_CSI_TPG_OFFSET;
-
 	csi_write(chan, TEGRA_CSI_CLKEN_OVERRIDE, 0, csi_port >> 1);
 
 	/* Clean up status */
@@ -278,7 +269,6 @@ int csi2_start_streaming(struct tegra_csi_channel *chan,
 		csi_write(chan, TEGRA_CSI_PHY_CIL_COMMAND, val,
 				csi_port >> 1);
 	}
-
 	/* CSI pixel parser registers setup */
 	pp_write(port, TEGRA_CSI_PIXEL_STREAM_PP_COMMAND,
 			(0xF << CSI_PP_START_MARKER_FRAME_MAX_OFFSET) |
@@ -414,11 +404,76 @@ int csi2_power_off(struct tegra_csi_device *csi)
 
 	return err;
 }
+void csi2_hw_init(struct tegra_csi_device *csi)
+{
+	int i, csi_port;
+	struct tegra_csi_channel *it;
+	struct tegra_csi_port *port;
+
+	csi->iomem[0] = (csi->iomem_base + TEGRA_CSI_PIXEL_PARSER_0_BASE);
+	csi->iomem[1] = (csi->iomem_base + TEGRA_CSI_PIXEL_PARSER_2_BASE);
+	csi->iomem[2] = (csi->iomem_base + TEGRA_CSI_PIXEL_PARSER_4_BASE);
+	list_for_each_entry(it, &csi->csi_chans, list) {
+		for (i = 0; i < it->numports; i++) {
+			port = &it->ports[i];
+			csi_port = it->ports[i].num;
+			port->pixel_parser = csi->iomem[csi_port >> 1] +
+				(csi_port % 2) * TEGRA_CSI_PORT_OFFSET;
+			port->cil = port->pixel_parser + TEGRA_CSI_CIL_OFFSET;
+			port->tpg = port->pixel_parser + TEGRA_CSI_TPG_OFFSET;
+		}
+	}
+}
+
+int csi2_mipi_cal(struct tegra_csi_channel *chan)
+{
+	unsigned int lanes, num_ports, val, csi_port;
+	struct tegra_csi_port *port;
+	struct tegra_csi_device *csi = chan->csi;
+
+	lanes = 0;
+	num_ports = 0;
+
+	nvhost_module_enable_clk(csi->dev);
+	while (num_ports < chan->numports) {
+		port = &chan->ports[num_ports];
+		csi_port = port->num;
+		dev_dbg(csi->dev, "Calibrate csi port %d\n", port->num);
+
+		if (chan->numlanes == 2) {
+			lanes |= CSIA << csi_port;
+			val = csi_read(chan, TEGRA_CSI_PHY_CIL_COMMAND,
+					csi_port >> 1);
+			csi_write(chan,
+				TEGRA_CSI_CIL_OFFSET +
+				TEGRA_CSI_CIL_PAD_CONFIG0, 0x0, csi_port >> 1);
+			val |= ((csi_port & 0x1) == PORT_A) ?
+				CSI_A_PHY_CIL_ENABLE : CSI_B_PHY_CIL_ENABLE;
+			csi_write(chan, TEGRA_CSI_PHY_CIL_COMMAND, val,
+				csi_port >> 1);
+		} else {
+			lanes |= (CSIA | CSIB) << port->num;
+			csi_write(chan, TEGRA_CSI_PHY_CIL_COMMAND,
+				CSI_A_PHY_CIL_ENABLE | CSI_B_PHY_CIL_ENABLE,
+				csi_port >> 1);
+		}
+		num_ports++;
+	}
+	if (!lanes) {
+		dev_err(csi->dev,
+			"Selected no CSI lane, cannot do calibration");
+		return -EINVAL;
+	}
+	nvhost_module_disable_clk(csi->dev);
+	return tegra_mipi_calibration(lanes);
+}
 
 const struct tegra_csi_fops csi2_fops = {
 	.csi_power_on = csi2_power_on,
 	.csi_power_off = csi2_power_off,
 	.csi_start_streaming = csi2_start_streaming,
 	.csi_stop_streaming = csi2_stop_streaming,
+	.mipical = csi2_mipi_cal,
+	.hw_init = csi2_hw_init,
 };
 EXPORT_SYMBOL(csi2_fops);

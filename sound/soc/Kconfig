@@ -76,5 +76,11 @@ source "sound/soc/codecs/Kconfig"
 # generic frame-work
 source "sound/soc/generic/Kconfig"
 
+trysource "../t18x/sound/soc/Kconfig.t18x"
+trysource "sound/soc/Kconfig.t18x"
+
+trysource "../t18x/sound/soc/tegra-alt/Kconfig.t18x"
+trysource "sound/soc/tegra-alt/Kconfig.t18x"
+
 endif	# SND_SOC
 

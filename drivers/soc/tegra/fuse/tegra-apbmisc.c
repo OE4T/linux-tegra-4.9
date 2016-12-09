@@ -27,6 +27,7 @@
 
 #define FUSE_SKU_INFO	0x10
 #define TEGRA_APBMISC_EMU_REVID 0x60
+#define TEGRA_MISCREG_EMU_REVID 0x3160
 
 #define PMC_STRAPPING_OPT_A_RAM_CODE_SHIFT	4
 #define PMC_STRAPPING_OPT_A_RAM_CODE_MASK_LONG	\
@@ -34,12 +35,22 @@
 #define PMC_STRAPPING_OPT_A_RAM_CODE_MASK_SHORT	\
 	(0x3 << PMC_STRAPPING_OPT_A_RAM_CODE_SHIFT)
 
+struct apbmisc_data {
+	u32 emu_revid_offset;
+};
+
 static void __iomem *apbmisc_base;
 static void __iomem *strapping_base;
 static bool long_ram_code;
+static const struct apbmisc_data *apbmisc_data;
 
 u32 tegra_read_chipid(void)
 {
+	if (!apbmisc_base) {
+		WARN(1, "Tegra Chip ID not yet available\n");
+		return 0;
+	}
+
 	return readl_relaxed(apbmisc_base + 4);
 }
 
@@ -60,7 +71,7 @@ u32 tegra_read_emu_revid(void)
 		return 0;
 	}
 
-	return readl_relaxed(apbmisc_base + TEGRA_APBMISC_EMU_REVID);
+	return readl_relaxed(apbmisc_base + apbmisc_data->emu_revid_offset);
 }
 
 enum tegra_revision tegra_chip_get_revision(void)
@@ -91,8 +102,23 @@ u32 tegra_read_ram_code(void)
 	return straps >> PMC_STRAPPING_OPT_A_RAM_CODE_SHIFT;
 }
 
+const static struct apbmisc_data tegra20_apbmisc_data = {
+	.emu_revid_offset = TEGRA_APBMISC_EMU_REVID
+};
+
+const static struct apbmisc_data tegra186_apbmisc_data = {
+	.emu_revid_offset = TEGRA_MISCREG_EMU_REVID
+};
+
 static const struct of_device_id apbmisc_match[] __initconst = {
-	{ .compatible = "nvidia,tegra20-apbmisc", },
+	{
+		.compatible = "nvidia,tegra20-apbmisc",
+		.data = &tegra20_apbmisc_data,
+	},
+	{
+		.compatible = "nvidia,tegra186-miscreg",
+		.data = &tegra186_apbmisc_data,
+	},
 	{},
 };
 
@@ -135,8 +161,9 @@ void __init tegra_init_apbmisc(void)
 {
 	struct resource apbmisc, straps;
 	struct device_node *np;
+	const struct of_device_id *match;
 
-	np = of_find_matching_node(NULL, apbmisc_match);
+	np = of_find_matching_node_and_match(NULL, apbmisc_match, &match);
 	if (!np) {
 		/*
 		 * Fall back to legacy initialization for 32-bit ARM only. All
@@ -187,6 +214,8 @@ void __init tegra_init_apbmisc(void)
 			pr_err("failed to get strapping options registers\n");
 			return;
 		}
+
+		apbmisc_data = match->data;
 	}
 
 	apbmisc_base = ioremap_nocache(apbmisc.start, resource_size(&apbmisc));

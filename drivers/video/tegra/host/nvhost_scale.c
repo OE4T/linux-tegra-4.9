@@ -169,22 +169,7 @@ static int nvhost_scale_target(struct device *dev, unsigned long *freq,
 	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
 	struct nvhost_device_profile *profile = pdata->power_profile;
 
-#ifdef CONFIG_ARCH_TEGRA
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
-	if(!__clk_get_enable_count(profile->clk)) {
-#else
-	if (!tegra_is_clk_enabled(profile->clk)) {
-#endif
-		*freq = profile->devfreq_profile.freq_table[0];
-		return 0;
-	}
-#endif
-
-#if defined(CONFIG_PLATFORM_TEGRA) && !defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	*freq = clk_round_rate(clk_get_parent(profile->clk), *freq);
-#else
 	*freq = clk_round_rate(profile->clk, *freq);
-#endif
 	if (clk_get_rate(profile->clk) == *freq)
 		return 0;
 

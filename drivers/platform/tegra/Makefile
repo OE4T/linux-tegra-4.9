@@ -79,3 +79,4 @@ obj-$(CONFIG_PM_SLEEP) += tegra-wakeups.o
 obj-$(CONFIG_TEGRA_FIRMWARES_CLASS)    += firmwares.o
 obj-$(CONFIG_TEGRA_FIRMWARES_INVENTORY)    += firmwares-all.o
 obj-$(CONFIG_NV_TEGRA_IVC)		+= tegra-ivc.o
+obj-$(CONFIG_TEGRA_FIQ_DEBUGGER)        += tegra_fiq_debugger.o

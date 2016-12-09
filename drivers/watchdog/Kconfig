@@ -1894,4 +1894,6 @@ config WATCHDOG_PRETIMEOUT_GOV_PANIC
 
 endif # WATCHDOG_PRETIMEOUT_GOV
 
+trysource "../t18x/drivers/watchdog/Kconfig.t18x"
+trysource "drivers/watchdog/Kconfig.t18x"
 endif # WATCHDOG

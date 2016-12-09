@@ -1,1 +1,2 @@
 obj-y += mc/
+obj-$(CONFIG_ARCH_TEGRA_19x_SOC) += cactmon_t19x.o

@@ -165,4 +165,11 @@
 	spi@7000d600 {
 		status = "disabled";
 	};
+
+	e2614_gps_wake: gps_wake {
+		compatible = "gps-wake";
+		gps-enable-gpio = <&tca6416_20 8 0>;
+		gps-wakeup-gpio = <&gpio TEGRA_GPIO(H, 7) 0>;
+		status = "disabled";
+	};
 };

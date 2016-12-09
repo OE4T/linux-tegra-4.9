@@ -4,7 +4,7 @@
  * Author:
  *	Colin Cross <ccross@google.com>
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1398,6 +1398,16 @@ int tegra_dvfs_rail_power_down(struct dvfs_rail *rail)
 		return -EINVAL;
 
 	return regulator_disable(rail->reg);
+}
+
+unsigned long tegra_dvfs_get_fmax_at_vmin_safe_t(struct clk *c)
+{
+	struct dvfs *d = tegra_clk_to_dvfs(c);
+
+	if (!d)
+		return 0;
+
+	return d->fmax_at_vmin_safe_t;
 }
 
 /*

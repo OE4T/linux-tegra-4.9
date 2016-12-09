@@ -21,24 +21,6 @@
 
 static void __iomem *arb_sema;
 
-/* CPU to BPMP atomic channels */
-#define CPU0_OB_CH0		0
-#define CPU1_OB_CH0		1
-#define CPU2_OB_CH0		2
-#define CPU3_OB_CH0		3
-
-/* CPU to BPMP non-atomic channels */
-#define CPU0_OB_CH1		4
-#define CPU1_OB_CH1		5
-#define CPU2_OB_CH1		6
-#define CPU3_OB_CH1		7
-
-/* BPMP to CPU channels */
-#define CPU0_IB_CH		8
-#define CPU1_IB_CH		9
-#define CPU2_IB_CH		10
-#define CPU3_IB_CH		11
-
 #define CPU_OB_DOORBELL		4
 
 #define TRIGGER_OFFSET		0x000
@@ -49,8 +31,6 @@ static void __iomem *arb_sema;
 #define STA_OFFSET		0
 #define SET_OFFSET		4
 #define CLR_OFFSET		8
-
-#define PER_CPU_IB_CH(i)	(CPU0_IB_CH + i)
 
 /*
  * How the token bits are interpretted
@@ -142,40 +122,23 @@ static void bpmp_return_data(const struct mail_ops *ops,
 		bpmp_ring_doorbell(ch);
 }
 
-static int bpmp_thread_ch_index(int ch)
-{
-	if (ch < CPU0_OB_CH1 || ch > CPU3_OB_CH1)
-		return -1;
-	return ch - CPU0_OB_CH1;
-}
-
-static int bpmp_thread_ch(int idx)
-{
-	return CPU0_OB_CH1 + idx;
-}
-
-static int bpmp_ob_channel(void)
-{
-	return smp_processor_id() + CPU0_OB_CH0;
-}
-
 static void bpmp_doorbell_handler(void *data)
 {
-	int ch = (long)data;
+	unsigned int chidx = (long)data;
 
-	bpmp_handle_irq(ch);
+	bpmp_handle_irq(chidx);
 }
 
-static int bpmp_init_irq(void)
+static int bpmp_init_irq(unsigned int cnt)
 {
-	long ch;
+	unsigned int i;
+	long chidx;
 	int r;
-	int i;
 
-	for (i = 0; i < 4; i++) {
-		ch = PER_CPU_IB_CH(i);
+	for (i = 0; i < cnt; i++) {
+		chidx = i;
 		r = tegra_register_doorbell_handler(i, bpmp_doorbell_handler,
-						   (void *)ch);
+						   (void *)chidx);
 		if (r)
 			return r;
 	}
@@ -195,10 +158,11 @@ static u32 bpmp_channel_area(void __iomem *atomics, int ch)
 	return a;
 }
 
-static int bpmp_connect(const struct mail_ops *ops, struct device_node *of_node)
+static int bpmp_connect(const struct channel_cfg *cfg,
+		const struct mail_ops *ops, struct device_node *of_node)
 {
-	uint32_t channel_hwaddr[NR_CHANNELS];
 	void __iomem *atomics;
+	uint32_t area;
 	void *p;
 	int i;
 
@@ -214,14 +178,14 @@ static int bpmp_connect(const struct mail_ops *ops, struct device_node *of_node)
 	if (!readl(arb_sema + STA_OFFSET))
 		return -ENODEV;
 
-	for (i = 0; i < NR_CHANNELS; i++) {
-		channel_hwaddr[i] = bpmp_channel_area(atomics, i);
-		if (!channel_hwaddr[i])
+	for (i = 0; i < cfg->nr_channels; i++) {
+		area = bpmp_channel_area(atomics, i);
+		if (!area)
 			return -EFAULT;
-	}
 
-	for (i = 0; i < NR_CHANNELS; i++) {
-		p = ioremap(channel_hwaddr[i], 0x80);
+		p = ioremap(area, 0x80);
+		if (!p)
+			return -ENOMEM;
 
 		channel_area[i].ib = p;
 		channel_area[i].ob = p;
@@ -233,9 +197,6 @@ static int bpmp_connect(const struct mail_ops *ops, struct device_node *of_node)
 const struct mail_ops t210_mail_ops = {
 	.init_irq = bpmp_init_irq,
 	.connect = bpmp_connect,
-	.ob_channel = bpmp_ob_channel,
-	.thread_ch = bpmp_thread_ch,
-	.thread_ch_index = bpmp_thread_ch_index,
 	.master_free = bpmp_master_free,
 	.free_master = bpmp_free_master,
 	.master_acked = bpmp_master_acked,

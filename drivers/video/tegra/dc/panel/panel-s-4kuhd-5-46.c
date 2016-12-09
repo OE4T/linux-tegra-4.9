@@ -178,25 +178,6 @@ static int dsi_s_4kuhd_5_46_enable(struct device *dev)
 
 	usleep_range(15000, 15500);
 
-#if DSI_PANEL_RESET
-	if (!tegra_dc_initialized(dev)) {
-		err = gpio_direction_output(en_panel_rst, 1);
-		if (err < 0) {
-			pr_err("setting display reset gpio value failed\n");
-			goto fail;
-		}
-		err = gpio_direction_output(en_panel_rst, 0);
-		if (err < 0) {
-			pr_err("setting display reset gpio value 0 failed\n");
-			goto fail;
-		}
-		err = gpio_direction_output(en_panel_rst, 1);
-		if (err < 0) {
-			pr_err("setting display reset gpio value 1 failed\n");
-			goto fail;
-		}
-	}
-#endif
 	dc_dev = dev;
 	return 0;
 fail:
@@ -279,6 +260,41 @@ static int dsi_s_4kuhd_5_46_check_fb(struct device *dev,
 	return info->device == &pdev->dev;
 }
 
+static int dsi_s_4kuhs_5_46_postpoweron(struct device *dev)
+{
+	int err;
+
+#if DSI_PANEL_RESET
+	err = gpio_direction_output(en_panel_rst, 1);
+	if (err < 0) {
+		pr_err("setting display reset gpio value failed\n");
+		goto fail;
+	}
+
+	mdelay(10);
+
+	err = gpio_direction_output(en_panel_rst, 0);
+	if (err < 0) {
+		pr_err("setting display reset gpio value 0 failed\n");
+		goto fail;
+	}
+
+	mdelay(15);
+
+	err = gpio_direction_output(en_panel_rst, 1);
+	if (err < 0) {
+		pr_err("setting display reset gpio value 1 failed\n");
+		goto fail;
+	}
+
+	mdelay(20);
+#endif
+	return 0;
+fail:
+	pr_err("%s: Panel reset seq failed %d\n", __func__, err);
+	return err;
+}
+
 static struct pwm_bl_data_dt_ops dsi_s_4kuhd_5_46_pwm_bl_ops = {
 	.notify = dsi_s_4kuhd_5_46_bl_notify,
 	.check_fb = dsi_s_4kuhd_5_46_check_fb,
@@ -289,4 +305,5 @@ struct tegra_panel_ops dsi_s_4kuhd_5_46_ops = {
 	.disable = dsi_s_4kuhd_5_46_disable,
 	.postsuspend = dsi_s_4kuhd_5_46_postsuspend,
 	.pwm_bl_ops = &dsi_s_4kuhd_5_46_pwm_bl_ops,
+	.postpoweron = dsi_s_4kuhs_5_46_postpoweron,
 };

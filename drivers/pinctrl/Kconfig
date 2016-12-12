@@ -273,6 +273,8 @@ source "drivers/pinctrl/uniphier/Kconfig"
 source "drivers/pinctrl/vt8500/Kconfig"
 source "drivers/pinctrl/mediatek/Kconfig"
 
+trysource "../t18x/drivers/pinctrl/Kconfig.t18x"
+
 config PINCTRL_XWAY
 	bool
 	depends on SOC_TYPE_XWAY

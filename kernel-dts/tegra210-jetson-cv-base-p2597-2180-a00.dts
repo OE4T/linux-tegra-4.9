@@ -328,6 +328,14 @@
         clock-names = "pll_p_out1", "pll_a", "pll_a_out0", "ahub",
                        "clk_m", "extern1";
 
+
+		assigned-clocks = <&tegra_car TEGRA210_CLK_PLL_A>,
+			<&tegra_car TEGRA210_CLK_PLL_A_OUT0>,
+			<&tegra_car TEGRA210_CLK_D_AUDIO>,
+			<&tegra_car TEGRA210_CLK_EXTERN1>;
+		assigned-clock-rates = <368640000>, <36864000>,
+			<36864000>, <12288000>;
+
 		nvidia,num-codec-link = <5>;
 
 		nvidia,audio-routing =

@@ -1594,6 +1594,9 @@ int tegra_nvdisp_head_disable(struct tegra_dc *dc)
 	mutex_unlock(&tegra_nvdisp_lock);
 	tegra_nvdisp_set_compclk(dc);
 
+	if (dc->out->dsc_en)
+		tegra_dc_en_dis_dsc(dc, false);
+
 	/* Disable DC clock */
 	tegra_disp_clk_disable_unprepare(dc->clk);
 
@@ -1725,6 +1728,11 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 		goto failed_enable;
 	}
 
+	tegra_dc_dsc_init(dc);
+
+	if (dc->out->dsc_en)
+		tegra_dc_en_dis_dsc(dc, true);
+
 	if (dc->out_ops && dc->out_ops->enable)
 		dc->out_ops->enable(dc);
 
@@ -1734,8 +1742,6 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 
 	tegra_dc_ext_enable(dc->ext);
 	trace_display_enable(dc);
-
-	tegra_dc_dsc_init(dc);
 
 	if (dc->out->postpoweron)
 		dc->out->postpoweron(&dc->ndev->dev);

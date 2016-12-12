@@ -3371,7 +3371,8 @@ void tegra_phy_xusb_utmi_pad_disable_detect_filters(struct phy *phy)
 }
 EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_disable_detect_filters);
 
-void tegra_phy_xusb_utmi_pad_set_protection_level(struct phy *phy, int level)
+void tegra_phy_xusb_utmi_pad_set_protection_level(struct phy *phy, int level,
+						  enum tegra_vbus_dir dir)
 {
 	struct tegra_padctl *padctl;
 	int port;
@@ -3393,16 +3394,12 @@ void tegra_phy_xusb_utmi_pad_set_protection_level(struct phy *phy, int level)
 		reg &= ~PD_VREG;
 
 		reg &= ~VREG_DIR(~0);
-		if (padctl->utmi_ports[port].port_cap == OTG) {
-			if (VBUS_OVERRIDE & padctl_readl(padctl, USB2_VBUS_ID))
-				reg |= VREG_DIR_IN;
-			else
-				reg |= VREG_DIR_OUT;
-		} else if (padctl->utmi_ports[port].port_cap == HOST_ONLY)
+		if (padctl->utmi_ports[port].port_cap == HOST_ONLY ||
+				dir == TEGRA_VBUS_SOURCE)
 			reg |= VREG_DIR_OUT;
-		else if (padctl->utmi_ports[port].port_cap == DEVICE_ONLY)
+		else if (padctl->utmi_ports[port].port_cap == DEVICE_ONLY ||
+				dir == TEGRA_VBUS_SINK)
 			reg |= VREG_DIR_IN;
-
 		reg &= ~VREG_LEV(~0);
 		reg |= VREG_LEV(level);
 	}

@@ -197,6 +197,9 @@ static int tegra_fuse_pre_burn_process(struct tegra_fuse_burn_dev *fuse_dev)
 		tegra_fuse_control_write(fuse_dev->pgm_width,
 				      TEGRA_FUSE_TIME_PGM2);
 
+	if (fuse_dev->hw->mirroring_support)
+		tegra_pmc_fuse_disable_mirroring();
+
 	tegra_pmc_fuse_control_ps18_latch_set();
 	fuse_cmd_sense();
 
@@ -234,6 +237,9 @@ static void tegra_fuse_post_burn_process(struct tegra_fuse_burn_dev *fuse_dev)
 		tegra_fuse_control_write(reg, TEGRA_FUSE_CTRL);
 	}
 	tegra_pmc_fuse_control_ps18_latch_clear();
+
+	if (fuse_dev->hw->mirroring_support)
+		tegra_pmc_fuse_enable_mirroring();
 
 	/* Disable fuse register write access */
 	tegra_fuse_control_write(1, TEGRA_FUSE_WRITE_ACCESS_SW);
@@ -390,10 +396,36 @@ static struct tegra_fuse_hw_feature tegra210_fuse_chip_data = {
 	},
 };
 
+static struct tegra_fuse_hw_feature tegra186_fuse_chip_data = {
+	.power_down_mode = true,
+	.mirroring_support = true,
+	.pgm_time = 5,
+	.burn_data = {
+		FUSE_BURN_DATA(odm_reserved, 0x2, 2, 256, 0xc8, true),
+		FUSE_BURN_DATA(odm_lock, 0, 6, 4, 0x8, true),
+		FUSE_BURN_DATA(arm_jtag_disable, 0x0, 12, 1, 0xb8, true),
+		FUSE_BURN_DATA(odm_production_mode, 0x0, 11, 1, 0xa0, true),
+		FUSE_BURN_DATA(debug_authentication, 0x5a, 0, 5, 0x1e4, true),
+		FUSE_BURN_DATA(boot_security_info, 0x0, 16, 6, 0x168, true),
+		FUSE_BURN_DATA(secure_boot_key, 0x4b, 23, 128, 0xa4, false),
+		FUSE_BURN_DATA(public_key, 0x43, 23, 256, 0x64, false),
+		FUSE_BURN_DATA(kek0, 0x59, 22, 128, 0x2c0, false),
+		FUSE_BURN_DATA(kek1, 0x5d, 22, 128, 0x2d0, false),
+		FUSE_BURN_DATA(kek2, 0x61, 22, 128, 0x2e0, false),
+		FUSE_BURN_DATA(odm_info, 0x50, 31, 16, 0x19c, false),
+		FUSE_BURN_DATA(odm_h2, 0x67, 31, 14, 0x33c, false),
+		{},
+	},
+};
+
 static const struct of_device_id tegra_fuse_burn_match[] = {
 	{
 		.compatible = "nvidia,tegra210-efuse-burn",
 		.data = &tegra210_fuse_chip_data,
+	},
+	{
+		.compatible = "nvidia,tegra186-efuse-burn",
+		.data = &tegra186_fuse_chip_data,
 	}, {},
 };
 

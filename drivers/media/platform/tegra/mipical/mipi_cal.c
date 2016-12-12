@@ -817,7 +817,7 @@ static int tegra_mipi_parse_config(struct platform_device *pdev,
 	if (!np)
 		return -ENODEV;
 
-	if (of_device_is_compatible(np, "nvidia, tegra210-mipical"))
+	if (of_device_is_compatible(np, "nvidia,tegra210-mipical"))
 		parse_prod(np, mipi);
 
 	if (of_device_is_compatible(np, "nvidia, tegra186-mipical")) {

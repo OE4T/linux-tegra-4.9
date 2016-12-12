@@ -74,10 +74,10 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 	/* FIXME: add support for sparse mappings */
 
 	if (WARN_ON(!sgt) || WARN_ON(!g->mm.bypass_smmu))
-		return -EINVAL;
+		return 0;
 
 	if (space_to_skip & (page_size - 1))
-		return -EINVAL;
+		return 0;
 
 	/* Allocate (or validate when map_offset != 0) the virtual address. */
 	if (!map_offset) {
@@ -182,4 +182,7 @@ void vgpu_gp10b_init_mm_ops(struct gpu_ops *gops)
 
 	gops->mm.gmmu_map = vgpu_gp10b_locked_gmmu_map;
 	gops->mm.init_mm_setup_hw = vgpu_gp10b_init_mm_setup_hw;
+
+	/* FIXME: add support for sparse mappings */
+	gops->mm.support_sparse = NULL;
 }

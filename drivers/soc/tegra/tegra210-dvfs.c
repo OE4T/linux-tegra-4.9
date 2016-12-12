@@ -1445,7 +1445,7 @@ static void init_gpu_dvfs_table(int *gpu_max_freq_index)
 	BUG_ON((i == ARRAY_SIZE(gpu_cvb_dvfs_table)) || ret);
 }
 
-int tegra210_init_dvfs(void)
+int tegra210_init_dvfs(struct device_node *node)
 {
 	int soc_speedo_id = tegra_sku_info.soc_speedo_id;
 	int core_process_id = tegra_sku_info.soc_process_id;

@@ -1938,7 +1938,7 @@ static int dvfs_debugfs_init(void)
 
 #endif
 
-typedef int (*dvfs_init_cb_t)(void);
+typedef int (*dvfs_init_cb_t)(struct device_node *);
 
 static const struct of_device_id tegra_dvfs_of_match[] = {
 	{ .compatible = "nvidia,tegra124-dvfs", .data = tegra124_init_dvfs },
@@ -1958,7 +1958,7 @@ static int tegra_dvfs_probe(struct platform_device *pdev)
 		goto out;
 
 	dvfs_init_cb = (dvfs_init_cb_t)match->data;
-	ret = dvfs_init_cb();
+	ret = dvfs_init_cb(pdev->dev.of_node);
 	if (ret)
 		goto out;
 

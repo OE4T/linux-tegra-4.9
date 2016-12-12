@@ -2129,7 +2129,7 @@ int pmu_idle(struct pmu_gk20a *pmu)
 			break;
 		}
 
-		if (nvgpu_timeout_check_msg(&timeout,
+		if (nvgpu_timeout_expired_msg(&timeout,
 					    "waiting for pmu idle: 0x%08x",
 					    idle_stat))
 			return -EBUSY;
@@ -4058,7 +4058,7 @@ int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout_ms,
 
 		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-	} while (!nvgpu_timeout_check(&timeout));
+	} while (!nvgpu_timeout_expired(&timeout));
 
 	return -ETIMEDOUT;
 }
@@ -4409,7 +4409,7 @@ static int pmu_write_cmd(struct pmu_gk20a *pmu, struct pmu_cmd *cmd,
 
 	do {
 		err = pmu_queue_open_write(pmu, queue, cmd->hdr.size);
-		if (err == -EAGAIN && !nvgpu_timeout_check(&timeout))
+		if (err == -EAGAIN && !nvgpu_timeout_expired(&timeout))
 			usleep_range(1000, 2000);
 		else
 			break;

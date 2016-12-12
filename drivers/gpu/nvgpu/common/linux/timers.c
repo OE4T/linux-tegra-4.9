@@ -71,7 +71,7 @@ int nvgpu_timeout_init(struct gk20a *g, struct nvgpu_timeout *timeout,
 	return 0;
 }
 
-static int __nvgpu_timeout_check_msg_cpu(struct nvgpu_timeout *timeout,
+static int __nvgpu_timeout_expired_msg_cpu(struct nvgpu_timeout *timeout,
 					 void *caller,
 					 const char *fmt, va_list args)
 {
@@ -97,7 +97,7 @@ static int __nvgpu_timeout_check_msg_cpu(struct nvgpu_timeout *timeout,
 	return 0;
 }
 
-static int __nvgpu_timeout_check_msg_retry(struct nvgpu_timeout *timeout,
+static int __nvgpu_timeout_expired_msg_retry(struct nvgpu_timeout *timeout,
 					   void *caller,
 					   const char *fmt, va_list args)
 {
@@ -125,7 +125,7 @@ static int __nvgpu_timeout_check_msg_retry(struct nvgpu_timeout *timeout,
 }
 
 /**
- * __nvgpu_timeout_check_msg - Check if a timeout has expired.
+ * __nvgpu_timeout_expired_msg - Check if a timeout has expired.
  *
  * @timeout - The timeout to check.
  * @caller  - Address of the caller of this function.
@@ -136,7 +136,7 @@ static int __nvgpu_timeout_check_msg_retry(struct nvgpu_timeout *timeout,
  * If a timeout occurs and %NVGPU_TIMER_SILENT_TIMEOUT is not set in the timeout
  * then a message is printed based on %fmt.
  */
-int __nvgpu_timeout_check_msg(struct nvgpu_timeout *timeout,
+int __nvgpu_timeout_expired_msg(struct nvgpu_timeout *timeout,
 			      void *caller, const char *fmt, ...)
 {
 	int ret;
@@ -144,10 +144,10 @@ int __nvgpu_timeout_check_msg(struct nvgpu_timeout *timeout,
 
 	va_start(args, fmt);
 	if (timeout->flags & NVGPU_TIMER_RETRY_TIMER)
-		ret = __nvgpu_timeout_check_msg_retry(timeout, caller, fmt,
+		ret = __nvgpu_timeout_expired_msg_retry(timeout, caller, fmt,
 						      args);
 	else
-		ret = __nvgpu_timeout_check_msg_cpu(timeout, caller, fmt,
+		ret = __nvgpu_timeout_expired_msg_cpu(timeout, caller, fmt,
 						    args);
 	va_end(args);
 
@@ -155,7 +155,7 @@ int __nvgpu_timeout_check_msg(struct nvgpu_timeout *timeout,
 }
 
 /**
- * nvgpu_timeout_peek - Check the status of a timeout.
+ * nvgpu_timeout_peek_expired - Check the status of a timeout.
  *
  * @timeout - The timeout to check.
  *
@@ -165,7 +165,7 @@ int __nvgpu_timeout_check_msg(struct nvgpu_timeout *timeout,
  *
  * This function honors the pre-Si check as well.
  */
-int nvgpu_timeout_peek(struct nvgpu_timeout *timeout)
+int nvgpu_timeout_peek_expired(struct nvgpu_timeout *timeout)
 {
 	if (nvgpu_timeout_is_pre_silicon(timeout))
 		return 0;

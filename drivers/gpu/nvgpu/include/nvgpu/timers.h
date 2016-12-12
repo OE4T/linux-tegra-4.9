@@ -74,21 +74,21 @@ struct nvgpu_timeout {
 
 int nvgpu_timeout_init(struct gk20a *g, struct nvgpu_timeout *timeout,
 		       int duration, unsigned long flags);
-int nvgpu_timeout_peek(struct nvgpu_timeout *timeout);
+int nvgpu_timeout_peek_expired(struct nvgpu_timeout *timeout);
 
-#define nvgpu_timeout_check(__timeout)					\
-	__nvgpu_timeout_check_msg(__timeout,				\
+#define nvgpu_timeout_expired(__timeout)				\
+	__nvgpu_timeout_expired_msg(__timeout,				\
 				  __builtin_return_address(0), "")
 
-#define nvgpu_timeout_check_msg(__timeout, fmt, args...)		\
-	__nvgpu_timeout_check_msg(__timeout,				\
+#define nvgpu_timeout_expired_msg(__timeout, fmt, args...)		\
+	__nvgpu_timeout_expired_msg(__timeout,				\
 				  __builtin_return_address(0),		\
 				  fmt, ##args)
 
 /*
  * Don't use this directly.
  */
-int __nvgpu_timeout_check_msg(struct nvgpu_timeout *timeout,
+int __nvgpu_timeout_expired_msg(struct nvgpu_timeout *timeout,
 			      void *caller, const char *fmt, ...);
 
 #endif

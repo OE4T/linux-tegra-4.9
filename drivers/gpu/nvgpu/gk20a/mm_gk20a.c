@@ -5049,9 +5049,9 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 				udelay(5);
 		} else
 			break;
-	} while (!nvgpu_timeout_check(&timeout));
+	} while (!nvgpu_timeout_expired(&timeout));
 
-	if (nvgpu_timeout_peek(&timeout)) {
+	if (nvgpu_timeout_peek_expired(&timeout)) {
 		if (g->ops.fb.dump_vpr_wpr_info)
 			g->ops.fb.dump_vpr_wpr_info(g);
 		ret = -EBUSY;
@@ -5092,9 +5092,9 @@ static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 				udelay(5);
 		} else
 			break;
-	} while (!nvgpu_timeout_check(&timeout));
+	} while (!nvgpu_timeout_expired(&timeout));
 
-	if (nvgpu_timeout_peek(&timeout))
+	if (nvgpu_timeout_peek_expired(&timeout))
 		gk20a_warn(dev_from_gk20a(g),
 			"l2_system_invalidate too many retries");
 
@@ -5147,7 +5147,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 				udelay(5);
 		} else
 			break;
-	} while (!nvgpu_timeout_check_msg(&timeout,
+	} while (!nvgpu_timeout_expired_msg(&timeout,
 					 "l2_flush_dirty too many retries"));
 
 	trace_gk20a_mm_l2_flush_done(dev_name(g->dev));
@@ -5192,7 +5192,7 @@ void gk20a_mm_cbc_clean(struct gk20a *g)
 				udelay(5);
 		} else
 			break;
-	} while (!nvgpu_timeout_check_msg(&timeout,
+	} while (!nvgpu_timeout_expired_msg(&timeout,
 					 "l2_clean_comptags too many retries"));
 
 	mutex_unlock(&mm->l2_op_lock);
@@ -5259,10 +5259,10 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 		if (fb_mmu_ctrl_pri_fifo_space_v(data) != 0)
 			break;
 		udelay(2);
-	} while (!nvgpu_timeout_check_msg(&timeout,
+	} while (!nvgpu_timeout_expired_msg(&timeout,
 					 "wait mmu fifo space"));
 
-	if (nvgpu_timeout_peek(&timeout))
+	if (nvgpu_timeout_peek_expired(&timeout))
 		goto out;
 
 	nvgpu_timeout_init(g, &timeout, 1000, NVGPU_TIMER_RETRY_TIMER);
@@ -5283,7 +5283,7 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 			fb_mmu_ctrl_pri_fifo_empty_false_f())
 			break;
 		udelay(2);
-	} while (!nvgpu_timeout_check_msg(&timeout,
+	} while (!nvgpu_timeout_expired_msg(&timeout,
 					 "wait mmu invalidate"));
 
 	trace_gk20a_mm_tlb_invalidate_done(dev_name(g->dev));

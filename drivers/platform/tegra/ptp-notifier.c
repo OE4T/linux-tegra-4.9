@@ -1,7 +1,7 @@
 /*
  * drivers/platform/tegra/ptp-notifier.c
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -79,7 +79,7 @@ u64 get_ptp_hwtime(void)
 	if (get_systime)
 		ns = get_systime();
 	else
-		ns = ktime_to_ns(ktime_get_real());
+		ns = ktime_to_ns(ktime_get_raw());
 	spin_unlock_irqrestore(&ptp_notifier_lock, flags);
 
 	return ns;

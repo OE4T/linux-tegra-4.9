@@ -1,7 +1,7 @@
 /*
  * include/linux/platform/tegra/ptp-notifier.h
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -73,7 +73,7 @@ static inline int tegra_hwtime_notifier_call_chain(unsigned int val, void *v)
  */
 static inline u64 get_ptp_hwtime(void)
 {
-	return ktime_to_ns(ktime_get_real());
+	return ktime_to_ns(ktime_get_raw());
 }
 
 #endif /* CONFIG_TEGRA_PTP_NOTIFIER */

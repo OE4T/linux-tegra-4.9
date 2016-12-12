@@ -31,7 +31,8 @@
 #include <linux/irqchip/tegra.h>
 #include <linux/tegra-pmc.h>
 #include <linux/tegra-soc.h>
-#include <linux/tegra-fuse.h>
+
+#include <soc/tegra/fuse.h>
 
 #include "tegra186-aowake.h"
 

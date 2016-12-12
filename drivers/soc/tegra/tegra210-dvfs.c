@@ -19,6 +19,7 @@
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
 #include <linux/of_address.h>
+#include <linux/thermal.h>
 
 #include <soc/tegra/cvb.h>
 #include <soc/tegra/tegra-dvfs.h>
@@ -35,13 +36,13 @@ static int cpu_millivolts[MAX_DVFS_FREQS];
 static int cpu_dfll_millivolts[MAX_DVFS_FREQS];
 static int cpu_lp_millivolts[MAX_DVFS_FREQS];
 
-static const struct dvfs_therm_limits
+static struct dvfs_therm_limits
 tegra210_core_therm_floors[MAX_THERMAL_LIMITS] = {
 	{15, 950},
 	{0, 0},
 };
 
-static const struct dvfs_therm_limits
+static struct dvfs_therm_limits
 tegra210_core_therm_caps[MAX_THERMAL_LIMITS] = {
 	{86, 1132},
 	{0, 0},
@@ -80,6 +81,9 @@ static struct dvfs_rail tegra210_dvfs_rail_vdd_core = {
 	.is_ready = false,
 };
 
+static struct dvfs_therm_limits gpu_therm_floors[MAX_THERMAL_LIMITS];
+static struct dvfs_therm_limits gpu_therm_caps[MAX_THERMAL_LIMITS];
+
 static struct dvfs_rail tegra210_dvfs_rail_vdd_gpu = {
 	.reg_id = "vdd-gpu",
 	.max_millivolts = 1300,
@@ -92,6 +96,8 @@ static struct dvfs_rail tegra210_dvfs_rail_vdd_gpu = {
 		.bin_uv = 6250, /* 6.25mV */
 	},
 	.in_band_pm = true,
+	.therm_floors = gpu_therm_floors,
+	.therm_caps = gpu_therm_caps,
 };
 
 static struct dvfs_rail *tegra210_dvfs_rails[] = {
@@ -616,6 +622,10 @@ static struct cvb_dvfs gpu_cvb_dvfs_table[] = {
 static int gpu_vmin[MAX_THERMAL_RANGES];
 static int gpu_peak_millivolts[MAX_DVFS_FREQS];
 static int gpu_millivolts[MAX_THERMAL_RANGES][MAX_DVFS_FREQS];
+static int vdd_gpu_vmax_trips_table[MAX_THERMAL_LIMITS];
+static struct dvfs_therm_limits vdd_gpu_therm_caps_table[MAX_THERMAL_LIMITS];
+static unsigned long gpu_cap_rates[MAX_THERMAL_LIMITS];
+static struct clk *vgpu_cap_clk;
 
 /* Core DVFS tables */
 static const int core_millivolts[MAX_DVFS_FREQS] = {
@@ -1276,19 +1286,187 @@ static int find_gpu_vmin_at_fmax(
 	return vmin;
 }
 
-static int init_gpu_rail_thermal_scaling(struct dvfs_rail *rail,
-					 struct cvb_dvfs *d)
+static int of_parse_dvfs_rail_cdev_trips(struct device_node *node,
+		int *therm_trips_table,
+		struct dvfs_therm_limits *therm_limits_table,
+		struct rail_alignment *align, bool up)
 {
-	return 1;
+	struct of_phandle_iter iter;
+	int cells_num, i = 0, t;
+
+	/* 1 cell per trip-point, if constraint is specified */
+	cells_num = !!of_property_read_bool(node, "nvidia,constraint");
+
+	of_property_for_each_phandle_with_args(iter, node, "nvidia,trips",
+					       NULL, cells_num) {
+		struct device_node *trip_dn = iter.out_args.np;
+
+		if (i >= MAX_THERMAL_LIMITS) {
+			pr_err("tegra_dvfs: list of scaling cdev trips exceeds max limit\n");
+			return -EINVAL;
+		}
+
+		if (of_property_read_s32(trip_dn, "temperature", &t)) {
+			pr_err("tegra_dvfs: failed to read scalings cdev trip %d\n", i);
+			return -ENODATA;
+		}
+
+		therm_trips_table[i] = t / 1000; /* convert mC to C */
+		if (cells_num && therm_limits_table) {
+			int mv = iter.out_args.args[0];
+			mv = tegra_round_voltage(mv, align, up);
+			therm_limits_table[i].temperature = t / 1000;
+			therm_limits_table[i].mv = mv;
+		}
+		i++;
+	}
+
+	return i;
 }
 
-static int init_gpu_rail_thermal_caps(struct dvfs *dvfs,
-		struct dvfs_rail *rail, int thermal_ranges, int freqs_num)
+static int init_gpu_rail_thermal_scaling(struct device_node *node,
+					 struct dvfs_rail *rail,
+					 struct cvb_dvfs *d)
 {
+	int thermal_ranges;
+	struct device_node *cdev_node;
+
+	cdev_node = of_find_compatible_node(node, NULL,
+				"nvidia,tegra210-rail-scaling-cdev");
+
+	rail->vts_of_node = cdev_node;
+
+	if (!cdev_node)
+		return 1;
+
+	thermal_ranges = of_parse_dvfs_rail_cdev_trips(cdev_node,
+		&rail->vts_trips_table[0], &rail->therm_floors[0],
+		&rail->alignment, true);
+
+	if (thermal_ranges <= 0)
+		return 1;
+
+	rail->vts_number_of_trips = thermal_ranges - 1;
+
+	return thermal_ranges;
+}
+
+/* cooling device to limit GPU frequenct based on the vmax thermal profile */
+#define GPU_MAX_RATE 1300000000UL
+static int gpu_dvfs_rail_get_vmax_cdev_max_state(
+	struct thermal_cooling_device *cdev, unsigned long *max_state)
+{
+	struct dvfs_rail *rail = cdev->devdata;
+
+	*max_state = rail->therm_caps_size;
+
+	return 0;
+}
+
+static int gpu_dvfs_rail_get_vmax_cdev_cur_state(
+	struct thermal_cooling_device *cdev, unsigned long *cur_state)
+{
+	struct dvfs_rail *rail = cdev->devdata;
+
+	*cur_state = rail->therm_cap_idx;
+
+	return 0;
+}
+
+static int gpu_dvfs_rail_set_vmax_cdev_cur_state(
+	struct thermal_cooling_device *cdev, unsigned long cur_state)
+{
+	struct dvfs_rail *rail = cdev->devdata;
+	int level = 0, err = -EINVAL;
+	unsigned long cap_rate = GPU_MAX_RATE;
+
+	if (cur_state)
+		level = rail->therm_caps[cur_state - 1].mv;
+
+	if (level) {
+		if (rail->vts_cdev && gpu_dvfs.therm_dvfs)
+			cap_rate = gpu_cap_rates[cur_state - 1];
+		else
+			cap_rate =
+				tegra_dvfs_predict_hz_at_mv_max_tfloor(vgpu_cap_clk,
+									gpu_dvfs.clk);
+	}
+
+	if (!IS_ERR_VALUE(cap_rate))
+		err = clk_set_max_rate(vgpu_cap_clk, cap_rate);
+	else
+		pr_err("tegra21_dvfs: Failed to find GPU cap rate for %dmV\n",
+				level);
+
+	rail->therm_cap_idx = cur_state;
+
+	return err;
+}
+
+static struct thermal_cooling_device_ops gpu_dvfs_rail_vmax_cooling_ops = {
+	.get_max_state = gpu_dvfs_rail_get_vmax_cdev_max_state,
+	.get_cur_state = gpu_dvfs_rail_get_vmax_cdev_cur_state,
+	.set_cur_state = gpu_dvfs_rail_set_vmax_cdev_cur_state,
+};
+
+#define CAP_TRIP_ON_SCALING_MARGIN 5
+
+static int init_gpu_rail_thermal_caps(struct device_node *node,
+		struct dvfs *dvfs, struct dvfs_rail *rail, int thermal_ranges,
+		int freqs_num)
+{
+	struct device_node *cdev_node;
+	int num_trips, i, j, k;
+
 	if (thermal_ranges <= 1 )
 		return 0;
 
-	WARN_ON(1);
+	cdev_node = of_find_compatible_node(node, NULL,
+				"nvidia,tegra210-rail-vmax-cdev");
+	rail->vmax_of_node = cdev_node;
+
+	if (!cdev_node)
+		return 0;
+
+	vgpu_cap_clk = of_clk_get_by_name(cdev_node, "cap-clk");
+	if (IS_ERR(vgpu_cap_clk))
+		return 0;
+
+	num_trips = of_parse_dvfs_rail_cdev_trips(cdev_node,
+			vdd_gpu_vmax_trips_table, vdd_gpu_therm_caps_table, &rail->alignment,
+			false);
+	if (num_trips <= 0)
+		return 0;
+
+	rail->therm_caps = vdd_gpu_therm_caps_table;
+	rail->vmax_trips = vdd_gpu_vmax_trips_table;
+	rail->vmax_trips_num = num_trips;
+	rail->therm_caps_size = num_trips;
+
+	for (k = 0; k < num_trips; k++) {
+		int cap_tempr = vdd_gpu_therm_caps_table[k].temperature;
+		int cap_level = vdd_gpu_therm_caps_table[k].mv;
+		unsigned long cap_freq = GPU_MAX_RATE;
+
+		for (j = 0; j < thermal_ranges; j++) {
+			if ((j < thermal_ranges - 1) &&	/* vts trips=ranges-1 */
+			    (rail->vts_trips_table[j] +
+			    CAP_TRIP_ON_SCALING_MARGIN < cap_tempr))
+				continue;
+
+			for (i = 1; i < freqs_num; i++) {
+				if (gpu_millivolts[j][i] > cap_level)
+					break;
+			}
+			cap_freq = min(cap_freq, dvfs->freqs[i - 1]);
+		}
+		gpu_cap_rates[k] = cap_freq * dvfs->freqs_mult;
+	}
+
+	thermal_of_cooling_device_register(rail->vmax_of_node, "vdd-gpu vmax",
+			rail, &gpu_dvfs_rail_vmax_cooling_ops);
+
+	return num_trips;
 }
 
 /*
@@ -1296,7 +1474,7 @@ static int init_gpu_rail_thermal_caps(struct dvfs *dvfs,
  * and gpu maximum frequency. Error when gpu dvfs table can not be constructed
  * must never happen.
  */
-static int set_gpu_dvfs_data(unsigned long max_freq,
+static int set_gpu_dvfs_data(struct device_node *node, unsigned long max_freq,
 	struct cvb_dvfs *d, struct dvfs *gpu_dvfs, int *max_freq_index)
 {
 	int i, j, thermal_ranges, mv, min_mv, err;
@@ -1317,7 +1495,7 @@ static int set_gpu_dvfs_data(unsigned long max_freq,
 	 * Get scaling thermal ranges; 1 range implies no thermal dependency.
 	 * Invalidate scaling cooling device in the latter case.
 	 */
-	thermal_ranges = init_gpu_rail_thermal_scaling(rail, d);
+	thermal_ranges = init_gpu_rail_thermal_scaling(node, rail, d);
 	if (thermal_ranges == 1)
 		rail->vts_cdev = NULL;
 
@@ -1325,7 +1503,7 @@ static int set_gpu_dvfs_data(unsigned long max_freq,
 	 * Apply fixed thermal floor for each temperature range
 	 */
 	for (j = 0; j < thermal_ranges; j++) {
-		mv = max(min_mv, d->therm_floors_table[j]);
+		mv = max(min_mv, rail->therm_floors_table[j]);
 		gpu_vmin[j] = tegra_round_voltage(mv, align, true);
 	}
 
@@ -1347,7 +1525,7 @@ static int set_gpu_dvfs_data(unsigned long max_freq,
 			int t = 0;
 
 			if (thermal_ranges > 1)
-				t = d->vts_trips_table[j];
+				t = rail->vts_trips_table[j];
 
 			/* get thermal offset for this trip-point */
 			mvj += tegra_get_cvb_t_voltage(speedo, d->speedo_scale,
@@ -1393,7 +1571,7 @@ static int set_gpu_dvfs_data(unsigned long max_freq,
 
 	/* Shift out the 1st trip-point */
 	for (j = 1; j < thermal_ranges; j++)
-		d->vts_trips_table[j - 1] = d->vts_trips_table[j];
+		rail->vts_trips_table[j - 1] = rail->vts_trips_table[j];
 
 	/* dvfs tables are successfully populated - fill in the gpu dvfs */
 	gpu_dvfs->speedo_id = d->speedo_id;
@@ -1409,7 +1587,7 @@ static int set_gpu_dvfs_data(unsigned long max_freq,
 		find_gpu_fmax_at_vmin(gpu_dvfs, thermal_ranges, i);
 
 	/* Initialize thermal capping */
-	init_gpu_rail_thermal_caps(gpu_dvfs, rail, thermal_ranges, i);
+	init_gpu_rail_thermal_caps(node, gpu_dvfs, rail, thermal_ranges, i);
 
 #ifdef CONFIG_TEGRA_USE_NA_GPCPLL
 	/*
@@ -1420,13 +1598,14 @@ static int set_gpu_dvfs_data(unsigned long max_freq,
 	 * thermal floors have been integrated with thermal DVFS, and no Vmin
 	 * cooling device is installed.
 	 */
-	if (tegra_fuse_can_use_na_gpcpll())
+	if (tegra_sku_info.gpu_speedo_id)
 		gpu_dvfs->na_dvfs = 1;
 #endif
 	return 0;
 }
 
-static void init_gpu_dvfs_table(int *gpu_max_freq_index)
+static void init_gpu_dvfs_table(struct device_node *node,
+				int *gpu_max_freq_index)
 {
 	int i, ret;
 	int gpu_speedo_id = tegra_sku_info.gpu_speedo_id;
@@ -1437,7 +1616,7 @@ static void init_gpu_dvfs_table(int *gpu_max_freq_index)
 		unsigned long max_freq = d->max_freq;
 		if (match_dvfs_one("gpu cvb", d->speedo_id, d->process_id,
 				   gpu_speedo_id, gpu_process_id)) {
-			ret = set_gpu_dvfs_data(max_freq,
+			ret = set_gpu_dvfs_data(node, max_freq,
 				d, &gpu_dvfs, gpu_max_freq_index);
 			break;
 		}
@@ -1491,7 +1670,7 @@ int tegra210_init_dvfs(struct device_node *node)
 	 * Construct GPU DVFS table from CVB data; find GPU maximum frequency,
 	 * and nominal voltage.
 	 */
-	init_gpu_dvfs_table(&gpu_max_freq_index);
+	init_gpu_dvfs_table(node, &gpu_max_freq_index);
 
 	/* Init core thermal floors */
 	tegra_dvfs_init_therm_limits(&tegra210_dvfs_rail_vdd_core);

@@ -308,11 +308,10 @@ void tegra_ivc_rpc_channel_notify(struct tegra_ivc_channel *chan)
 {
 	struct tegra_ivc_rpc_data *rpc = chan->rpc_priv;
 
-	/* This notify handler is called on both full and empty interrupts
+	/* This notify handler is called on full interrupts
 	 * of the underlying shared mailbox.
 	 */
-	if (tegra_ivc_can_read(&chan->ivc))
-		tasklet_schedule(&rpc->rx_tasklet);
+	tasklet_schedule(&rpc->rx_tasklet);
 }
 EXPORT_SYMBOL(tegra_ivc_rpc_channel_notify);
 

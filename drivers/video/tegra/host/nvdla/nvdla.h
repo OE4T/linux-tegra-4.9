@@ -101,6 +101,8 @@ struct nvdla_task {
 	struct nvhost_syncpt *sp;
 	struct nvdla_fence *prefences;
 	struct nvdla_fence *postfences;
+	u32 num_prefences;
+	u32 num_postfences;
 	u32 fence;
 	struct kref ref;
 	struct list_head list;
@@ -108,6 +110,8 @@ struct nvdla_task {
 	dma_addr_t task_desc_pa;
 	size_t buf_size;
 	int timeout;
+	u32 num_addresses;
+	struct nvdla_mem_handle address_list;
 	u32 *memory_handles;
 	u32 num_handles;
 };
@@ -194,18 +198,14 @@ void nvdla_task_get(struct nvdla_task *task);
 /**
  * nvdla_task_alloc()	allocate task for a give queue
  *
- * @queue		Pointer to nvhost queue
- * @buffers		Pointer to nvhost buffers
- * @user_task		Pointer to user task passed from UMD
+ * @task		Pointer to nvdla_task
  *
  * Return		allocated task in success, otherwise pointer to err
  *
- * This function allocates task and fills up initial task descriptor as UMD
- * parameter detais
+ * This function allocates task desc and fills up initial task descriptor as
+ * task parameter detais
  */
-struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
-			struct nvhost_buffers *buffers,
-			struct nvdla_ioctl_submit_task *user_task);
+int nvdla_fill_task_desc(struct nvdla_task *task);
 
 /**
  * nvdla_send_postfences()	send back fences to UMD

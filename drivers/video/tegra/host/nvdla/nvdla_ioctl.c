@@ -41,6 +41,10 @@
 #define FLCN_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define ALIGNED_DMA(x) ((x >> 8) & 0xffffffff)
 
+#define MAX_NVDLA_TASK_SIZE sizeof(struct nvdla_task) + \
+		(MAX_NUM_NVDLA_PREFENCES + MAX_NUM_NVDLA_POSTFENCES) * \
+		sizeof(struct nvdla_fence)
+
 static DEFINE_DMA_ATTRS(attrs);
 
 /**
@@ -171,6 +175,121 @@ fail_to_on:
 	return err;
 }
 
+/* task management API's */
+static int nvdla_get_fences(struct nvdla_ioctl_submit_task *user_task,
+			struct nvdla_task *task)
+{
+	int err = 0;
+	struct platform_device *pdev = task->queue->pool->pdev;
+
+	nvdla_dbg_fn(pdev, "copying fences");
+
+	/* get pre fences */
+	if (copy_from_user(task->prefences,
+		(void __user *)user_task->prefences,
+		(task->num_prefences * sizeof(struct nvdla_fence)))) {
+		err = -EFAULT;
+		nvdla_dbg_err(pdev, "failed to copy prefences");
+		goto fail;
+	}
+
+	/* get post fences */
+	if (copy_from_user(task->postfences,
+		(void __user *)user_task->postfences,
+		(task->num_postfences * sizeof(struct nvdla_fence)))) {
+		err = -EFAULT;
+		nvdla_dbg_err(pdev, "failed to copy postfences");
+		goto fail;
+	}
+
+	nvdla_dbg_info(pdev, "copying fences done");
+
+fail:
+	return err;
+}
+
+int nvdla_send_postfences(struct nvdla_task *task,
+			struct nvdla_ioctl_submit_task user_task)
+{
+	int err = 0;
+	struct platform_device *pdev = task->queue->pool->pdev;
+	struct nvdla_fence __user *postfences =
+		(struct nvdla_fence __user *)(uintptr_t)user_task.postfences;
+
+	nvdla_dbg_fn(pdev, "sending post fences");
+	/* send post fences */
+	if (copy_to_user(postfences, task->postfences,
+		(task->num_postfences * sizeof(struct nvdla_fence)))) {
+		err = -EFAULT;
+		nvdla_dbg_err(pdev, "failed to send postfences");
+		goto fail;
+	}
+	nvdla_dbg_info(pdev, "postfences sent");
+
+fail:
+	return err;
+}
+
+
+static int nvdla_fill_task(struct nvhost_queue *queue,
+				struct nvhost_buffers *buffers,
+				struct nvdla_ioctl_submit_task *local_task,
+				struct nvdla_task **ptask)
+{
+	void *mem;
+	int err = 0;
+	struct nvdla_task *task = NULL;
+	struct platform_device *pdev = queue->pool->pdev;
+
+	nvdla_dbg_fn(pdev, "");
+
+	 /* allocate task resource */
+	task = kzalloc(MAX_NVDLA_TASK_SIZE, GFP_KERNEL);
+	if (!task) {
+		err = -ENOMEM;
+		nvdla_dbg_err(pdev, "KMD task allocation failed");
+		goto fail_to_alloc_task;
+	}
+
+	 /* initialize task parameters */
+	kref_init(&task->ref);
+	task->queue = queue;
+	task->buffers = buffers;
+	task->sp = &nvhost_get_host(pdev)->syncpt;
+
+	task->num_prefences = local_task->num_prefences;
+	task->num_postfences = local_task->num_postfences;
+
+	/* assign memory for local pre and post action lists */
+	mem = task;
+	mem += sizeof(struct nvdla_task);
+	task->prefences = mem;
+	mem += task->num_prefences * sizeof(struct nvdla_fence);
+	task->postfences = mem;
+
+	/* update local fences into task */
+	err = nvdla_get_fences(local_task, task);
+	if (err) {
+		nvdla_dbg_err(pdev, "failed to get fences");
+		goto fail_to_get_fences;
+	}
+
+	task->num_addresses = local_task->num_addresses;
+	task->address_list = local_task->address_list;
+
+	*ptask = task;
+
+	nvdla_dbg_info(pdev, "local task %p param filled with args", task);
+
+	return 0;
+
+fail_to_get_fences:
+	kfree(task);
+fail_to_alloc_task:
+	*ptask = NULL;
+	return err;
+}
+
 static int nvdla_submit(struct nvdla_private *priv, void *arg)
 {
 	struct nvdla_submit_args *args =
@@ -203,9 +322,8 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 
 	nvdla_dbg_info(pdev, "num of tasks [%d]", num_tasks);
 
-	/* copy descriptors */
-	local_tasks = kcalloc(num_tasks, sizeof(*local_tasks),
-			  GFP_KERNEL);
+	/* IOCTL copy descriptors*/
+	local_tasks = kcalloc(num_tasks, sizeof(*local_tasks), GFP_KERNEL);
 	if (!local_tasks)
 		return -ENOMEM;
 
@@ -219,22 +337,33 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 
 		nvdla_dbg_info(pdev, "submit [%d]th task", i + 1);
 
-		/* allocate per task and update fields */
-		task = nvdla_task_alloc(queue, buffers, &local_tasks[i]);
-		if (IS_ERR(task)) {
-			err = PTR_ERR(task);
-			goto fail_to_task_alloc;
+		/* fill local task param from user args */
+		err = nvdla_fill_task(queue, buffers, local_tasks + i, &task);
+		if (err) {
+			nvdla_dbg_err(pdev, "failed to fill task[%d]", i + 1);
+			goto fail_to_fill_task;
 		}
 
-		/* send job to engine */
+		/* update task desc fields */
+		err = nvdla_fill_task_desc(task);
+		if (err) {
+			nvdla_dbg_err(pdev, "fail to fill task desc%d", i + 1);
+			goto fail_to_fill_task_desc;
+		}
+
+		/* send job to engine through queue framework */
 		err = nvhost_queue_submit(queue, task);
-		if (err)
+		if (err) {
+			nvdla_dbg_err(pdev, "fail to submit task: %d", i + 1);
 			goto fail_to_submit_task;
+		}
 
 		/* send fences to user */
 		err = nvdla_send_postfences(task, user_tasks[i]);
-		if (err)
+		if (err) {
+			nvdla_dbg_err(pdev, "fail to send postfence%d", i + 1);
 			goto fail_to_send_postfences;
+		}
 	}
 
 	kfree(local_tasks);
@@ -244,7 +373,8 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 
 fail_to_send_postfences:
 fail_to_submit_task:
-fail_to_task_alloc:
+fail_to_fill_task_desc:
+fail_to_fill_task:
 	/*TODO: traverse list in reverse and delete jobs */
 fail_to_copy_task:
 	kfree(local_tasks);

@@ -33,7 +33,6 @@
 
 #include "nvdla/nvdla.h"
 #include "nvdla/nvdla_debug.h"
-#include <linux/nvhost_nvdla_ioctl.h>
 #include "dla_os_interface.h"
 
 /* TODO: 1. revisit timeout post silicon
@@ -58,60 +57,6 @@
 static DEFINE_DMA_ATTRS(attrs);
 
 /* task management API's */
-static int nvdla_get_fences(struct nvdla_ioctl_submit_task *user_task,
-			struct nvdla_task *task)
-{
-	int err = 0;
-	struct platform_device *pdev = task->queue->pool->pdev;
-
-	nvdla_dbg_fn(pdev, "copying fences");
-
-	/* get pre fences */
-	if (copy_from_user(task->prefences,
-		(void __user *)user_task->prefences,
-		(user_task->num_prefences * sizeof(struct nvdla_fence)))) {
-		err = -EFAULT;
-		nvdla_dbg_err(pdev, "failed to copy prefences");
-		goto fail;
-	}
-
-	/* get post fences */
-	if (copy_from_user(task->postfences,
-		(void __user *)user_task->postfences,
-		(user_task->num_postfences * sizeof(struct nvdla_fence)))) {
-		err = -EFAULT;
-		nvdla_dbg_err(pdev, "failed to copy postfences");
-		goto fail;
-	}
-
-	nvdla_dbg_info(pdev, "copying fences done");
-
-fail:
-	return err;
-}
-
-int nvdla_send_postfences(struct nvdla_task *task,
-			struct nvdla_ioctl_submit_task user_task)
-{
-	int err = 0;
-	struct platform_device *pdev = task->queue->pool->pdev;
-	struct nvdla_fence __user *postfences =
-		(struct nvdla_fence __user *)(uintptr_t)user_task.postfences;
-
-	nvdla_dbg_fn(pdev, "sending post fences");
-	/* send post fences */
-	if (copy_to_user(postfences, task->postfences,
-		(user_task.num_postfences * sizeof(struct nvdla_fence)))) {
-		err = -EFAULT;
-		nvdla_dbg_err(pdev, "failed to send postfences");
-		goto fail;
-	}
-	nvdla_dbg_info(pdev, "postfences sent");
-
-fail:
-	return err;
-}
-
 static void task_free(struct kref *ref)
 {
 	struct nvdla_task *task = container_of(ref, struct nvdla_task, ref);
@@ -208,10 +153,7 @@ static void nvdla_queue_update(void *priv, int nr_completed)
 	mutex_unlock(&queue->list_lock);
 }
 
-static int nvdla_map_task_memory(struct nvhost_buffers *buffers,
-			struct nvdla_ioctl_submit_task *user_task,
-			struct nvdla_task *task,
-			struct dla_task_descriptor *task_desc)
+static int nvdla_map_task_memory(struct nvdla_task *task)
 {
 	int i;
 	int err = 0;
@@ -222,13 +164,14 @@ static int nvdla_map_task_memory(struct nvhost_buffers *buffers,
 	dma_addr_t *dma_memory;
 	struct dma_buf *buf = NULL;
 	struct nvdla_mem_handle *addresses;
+	struct nvhost_buffers *buffers = task->buffers;
+	struct dla_task_descriptor *task_desc = task->task_desc;
 
-	task->buffers = buffers;
 	task->num_handles = 0;
 
 	/* keep address list always last */
-	if (user_task->num_addresses)
-		task->num_handles = user_task->num_addresses + 1;
+	if (task->num_addresses)
+		task->num_handles = task->num_addresses + 1;
 
 	if (task->num_handles == 0)
 		return err;
@@ -266,12 +209,12 @@ static int nvdla_map_task_memory(struct nvhost_buffers *buffers,
 	 * address list buffer in kernel and update same buffer
 	 * with DMA addresses obtained.
 	 */
-	if (user_task->num_addresses) {
+	if (task->num_addresses) {
 		uintptr_t temp;
 
-		*handles++ = user_task->address_list.handle;
+		*handles++ = task->address_list.handle;
 
-		buf = dma_buf_get(user_task->address_list.handle);
+		buf = dma_buf_get(task->address_list.handle);
 		if (IS_ERR(buf)) {
 			err = PTR_ERR(buf);
 			goto fail_to_pin_mem;
@@ -283,16 +226,16 @@ static int nvdla_map_task_memory(struct nvhost_buffers *buffers,
 			goto fail_to_pin_mem;
 		}
 
-		dma_buf_begin_cpu_access(buf, user_task->address_list.offset,
-				sizeof(uint64_t) * user_task->num_addresses,
+		dma_buf_begin_cpu_access(buf, task->address_list.offset,
+				sizeof(uint64_t) * task->num_addresses,
 				DMA_TO_DEVICE);
 
 		temp = (uintptr_t)(ptr);
 		addresses =
 			(struct nvdla_mem_handle *)
-				(temp + user_task->address_list.offset);
+				(temp + task->address_list.offset);
 
-		for (i = 0; i < user_task->num_addresses; i++, addresses++)
+		for (i = 0; i < task->num_addresses; i++, addresses++)
 			*handles++ = addresses->handle;
 	}
 
@@ -304,22 +247,22 @@ static int nvdla_map_task_memory(struct nvhost_buffers *buffers,
 	}
 
 	/* Update IOVA addresses in task descriptor */
-	task_desc->num_addresses = user_task->num_addresses;
-	if (user_task->num_addresses) {
+	task_desc->num_addresses = task->num_addresses;
+	if (task->num_addresses) {
 		uintptr_t temp;
 		uint64_t *dma_addr_list;
 
 		temp = (uintptr_t)(ptr);
 		dma_addr_list = (uint64_t *)
-				(temp + user_task->address_list.offset);
+				(temp + task->address_list.offset);
 		addresses =
 			(struct nvdla_mem_handle *)
-				(temp + user_task->address_list.offset);
+				(temp + task->address_list.offset);
 
 		task_desc->address_list = (*dma_addr++) +
-					user_task->address_list.offset;
+					task->address_list.offset;
 
-		for (i = 0; i < user_task->num_addresses; i++, addresses++) {
+		for (i = 0; i < task->num_addresses; i++, addresses++) {
 			uint64_t offset = (uint64_t)addresses->offset;
 
 			*dma_addr_list++ = (uint64_t)(*dma_addr++) + offset;
@@ -327,8 +270,8 @@ static int nvdla_map_task_memory(struct nvhost_buffers *buffers,
 
 		dma_buf_vunmap(buf, ptr);
 
-		dma_buf_end_cpu_access(buf, user_task->address_list.offset,
-				sizeof(uint64_t) * user_task->num_addresses,
+		dma_buf_end_cpu_access(buf, task->address_list.offset,
+				sizeof(uint64_t) * task->num_addresses,
 				DMA_TO_DEVICE);
 
 		dma_buf_put(buf);
@@ -372,8 +315,7 @@ static size_t nvdla_get_task_desc_size(void)
 
 }
 
-static int nvdla_fill_postactions(struct nvdla_ioctl_submit_task *user_task,
-			struct nvdla_task *task)
+static int nvdla_fill_postactions(struct nvdla_task *task)
 {
 	struct dla_task_descriptor *task_desc = task->task_desc;
 	struct nvhost_queue *queue = task->queue;
@@ -390,7 +332,7 @@ static int nvdla_fill_postactions(struct nvdla_ioctl_submit_task *user_task,
 		sizeof(struct dla_action_list) + NVDLA_MAX_PREACTION_SIZE;
 
 	/* fill all postactions */
-	for (i = 0; i < user_task->num_postfences; i++, postaction++) {
+	for (i = 0; i < task->num_postfences; i++, postaction++) {
 		void *next = NULL;
 
 		/* get next post action base */
@@ -402,7 +344,7 @@ static int nvdla_fill_postactions(struct nvdla_ioctl_submit_task *user_task,
 		opcode = (struct dla_action_opcode *)next;
 
 		/* update end of list */
-		if (i == user_task->num_postfences) {
+		if (i == task->num_postfences) {
 			opcode->value = POSTACTION_TERMINATE;
 			break;
 		}
@@ -415,7 +357,8 @@ static int nvdla_fill_postactions(struct nvdla_ioctl_submit_task *user_task,
 			((char *)opcode + sizeof(struct dla_action_opcode));
 
 		/* update action */
-		postaction->address = nvhost_syncpt_address(pdev, queue->syncpt_id);
+		postaction->address = nvhost_syncpt_address(pdev,
+						queue->syncpt_id);
 	}
 
 	mem = (char *)task_desc + task_desc->postactions;
@@ -428,8 +371,7 @@ static int nvdla_fill_postactions(struct nvdla_ioctl_submit_task *user_task,
 	return 0;
 }
 
-static int nvdla_fill_preactions(struct nvdla_ioctl_submit_task *user_task,
-			struct nvdla_task *task)
+static int nvdla_fill_preactions(struct nvdla_task *task)
 {
 	struct dla_task_descriptor *task_desc = task->task_desc;
 	struct nvhost_queue *queue = task->queue;
@@ -442,10 +384,11 @@ static int nvdla_fill_preactions(struct nvdla_ioctl_submit_task *user_task,
 	int i;
 
 	/* preaction list offset update */
-	preactionlist_of = task_desc->postactions + sizeof(struct dla_action_list);
+	preactionlist_of = task_desc->postactions +
+					sizeof(struct dla_action_list);
 
 	/* fill all preactions */
-	for (i = 0; i <= user_task->num_prefences; i++) {
+	for (i = 0; i <= task->num_prefences; i++) {
 		void *next = NULL;
 
 		/* get next preaction base */
@@ -457,7 +400,7 @@ static int nvdla_fill_preactions(struct nvdla_ioctl_submit_task *user_task,
 		opcode = (struct dla_action_opcode *)next;
 
 		/* update end of action list */
-		if (i == user_task->num_prefences) {
+		if (i == task->num_prefences) {
 			opcode->value = PREACTION_TERMINATE;
 			break;
 		}
@@ -486,50 +429,17 @@ static int nvdla_fill_preactions(struct nvdla_ioctl_submit_task *user_task,
 	return 0;
 }
 
-struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
-			struct nvhost_buffers *buffers,
-			struct nvdla_ioctl_submit_task *user_task)
+int nvdla_fill_task_desc(struct nvdla_task *task)
 {
-	struct platform_device *pdev = queue->pool->pdev;
-	u32 num_postfences = user_task->num_postfences;
-	u32 num_prefences = user_task->num_prefences;
-	struct dla_task_descriptor *task_desc;
-	struct nvdla_task *task = NULL;
-	dma_addr_t buffer_pa;
-	size_t task_size;
-	size_t buf_size;
-	u32 *buffer_va;
-	void *mem;
 	int err;
+	u32 *buffer_va;
+	size_t buf_size;
+	dma_addr_t buffer_pa;
+	struct dla_task_descriptor *task_desc;
+	struct nvhost_queue *queue = task->queue;
+	struct platform_device *pdev = queue->pool->pdev;
 
 	nvdla_dbg_fn(pdev, "");
-
-	/* allocate task resource */
-	task_size = sizeof(struct nvdla_task) +
-			(num_prefences + num_postfences) *
-			sizeof(struct nvdla_fence);
-
-	task = kzalloc(task_size, GFP_KERNEL);
-	if (!task) {
-		err = -ENOMEM;
-		dev_err(&pdev->dev, "task allocation failed");
-		goto fail_to_alloc_task;
-	}
-
-	/* initialize task parameters */
-	kref_init(&task->ref);
-	task->queue = queue;
-	task->sp = &nvhost_get_host(pdev)->syncpt;
-
-	/* assign memory for local pre and post action lists */
-	mem = task;
-	mem += sizeof(struct nvdla_task);
-	task->prefences = mem;
-	mem += num_prefences * sizeof(struct nvdla_fence);
-	task->postfences = mem;
-
-	/* update local fences into task */
-	nvdla_get_fences(user_task, task);
 
 	buf_size = nvdla_get_task_desc_size();
 
@@ -538,7 +448,7 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 				GFP_KERNEL, &attrs);
 
 	if (!buffer_va) {
-		dev_err(&pdev->dev, "dma memory allocation failed for task");
+		nvdla_dbg_err(pdev, "dma memory allocation failed for task");
 		err = -ENOMEM;
 		goto fail_to_dma_alloc;
 	}
@@ -576,27 +486,30 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 	 * - DLA has only one list of actions for each of pre and post
 	 */
 	task_desc->preactions = sizeof(struct dla_task_descriptor);
-	task_desc->postactions = task_desc->preactions + sizeof(struct dla_action_list);
+	task_desc->postactions = task_desc->preactions +
+					sizeof(struct dla_action_list);
 
 	/* fill pre actions */
-	nvdla_fill_preactions(user_task, task);
+	nvdla_fill_preactions(task);
 
 	/* fill post actions */
-	nvdla_fill_postactions(user_task, task);
+	nvdla_fill_postactions(task);
 
 	/* ping user memory before submit to engine */
-	err = nvdla_map_task_memory(buffers, user_task, task, task_desc);
-	if (err)
-		goto fail_to_dma_alloc;
+	err = nvdla_map_task_memory(task);
+	if (err) {
+		nvdla_dbg_err(pdev, "fail to pin mem");
+		goto fail_to_map_mem;
+	}
 
 	nvdla_dbg_info(pdev, "task[%p] initialized", task);
 
-	return task;
-
+	return 0;
+fail_to_map_mem:
+	/* TODO: free dma mem.
+	 * Fixme after task static alloc */
 fail_to_dma_alloc:
-	kfree(task);
-fail_to_alloc_task:
-	return ERR_PTR(err);
+	return err;
 }
 
 /* Queue management API */
@@ -658,7 +571,8 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 	/* submit task to engine */
 	err = nvdla_send_cmd(pdev, method_id, method_data, true);
 	if (err)
-		nvdla_task_syncpt_reset(task->sp, queue->syncpt_id, task->fence);
+		nvdla_task_syncpt_reset(task->sp, queue->syncpt_id,
+				task->fence);
 
 fail_to_register:
 	mutex_unlock(&queue->list_lock);

@@ -40,6 +40,7 @@
 
 struct dvfs_rail *tegra_cpu_rail;
 struct dvfs_rail *tegra_core_rail;
+static struct dvfs_rail *tegra_gpu_rail;
 
 bool core_dvfs_started;
 
@@ -104,6 +105,8 @@ int tegra_dvfs_init_rails(struct dvfs_rail *rails[], int n)
 			tegra_cpu_rail = rails[i];
 		else if (!strcmp("vdd-core", rails[i]->reg_id))
 			tegra_core_rail = rails[i];
+		else if (!strcmp("vdd-gpu", rails[i]->reg_id))
+			tegra_gpu_rail = rails[i];
 	}
 
 	mutex_unlock(&dvfs_lock);
@@ -1643,6 +1646,78 @@ static const struct file_operations rail_stats_fops = {
 	.release	= single_release,
 };
 
+static int gpu_dvfs_t_show(struct seq_file *s, void *data)
+{
+	int i, j;
+	int num_ranges = 1;
+	int *trips = NULL;
+	struct dvfs *d;
+	struct dvfs_rail *rail = tegra_gpu_rail;
+	int max_mv[MAX_DVFS_FREQS] = {};
+
+	if (!tegra_gpu_rail) {
+		seq_printf(s, "Only supported for T124 or higher\n");
+		return -ENOSYS;
+	}
+
+	mutex_lock(&dvfs_lock);
+
+	d = list_first_entry(&rail->dvfs, struct dvfs, reg_node);
+	if (rail->vts_cdev && d->therm_dvfs) {
+		num_ranges = rail->vts_number_of_trips + 1;
+		trips = rail->vts_trips_table;
+	}
+
+	seq_printf(s, "%-11s", "T(C)\\F(kHz)");
+	for (i = 0; i < d->num_freqs; i++) {
+		unsigned int f = d->freqs[i]/1000;
+		seq_printf(s, " %7u", f);
+	}
+	seq_printf(s, "\n");
+
+	for (j = 0; j < num_ranges; j++) {
+		seq_printf(s, "%s", j == rail->therm_scale_idx ? ">" : " ");
+
+		if (!trips || (num_ranges == 1))
+			seq_printf(s, "%4s..%-4s", "", "");
+		else if (j == 0)
+			seq_printf(s, "%4s..%-4d", "", trips[j]);
+		else if (j == num_ranges - 1)
+			seq_printf(s, "%4d..%-4s", trips[j], "");
+		else
+			seq_printf(s, "%4d..%-4d", trips[j-1], trips[j]);
+
+		for (i = 0; i < d->num_freqs; i++) {
+			int mv = *(d->millivolts + j * MAX_DVFS_FREQS + i);
+			seq_printf(s, " %7d", mv);
+			max_mv[i] = max(max_mv[i], mv);
+		}
+		seq_printf(s, " mV\n");
+	}
+
+	seq_printf(s, "%3s%-8s\n", "", "------");
+	seq_printf(s, "%3s%-8s", "", "max(T)");
+	for (i = 0; i < d->num_freqs; i++)
+		seq_printf(s, " %7d", max_mv[i]);
+	seq_printf(s, " mV\n");
+
+	mutex_unlock(&dvfs_lock);
+
+	return 0;
+}
+
+static int gpu_dvfs_t_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, gpu_dvfs_t_show, NULL);
+}
+
+static const struct file_operations gpu_dvfs_t_fops = {
+	.open           = gpu_dvfs_t_open,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = single_release,
+};
+
 static int dvfs_debugfs_init(void)
 {
 	struct dentry *d_root, *d;
@@ -1663,6 +1738,11 @@ static int dvfs_debugfs_init(void)
 
 	d = debugfs_create_file("rails", S_IRUGO, d_root, NULL,
 		&rail_stats_fops);
+	if (!d)
+		return -ENOMEM;
+
+	d = debugfs_create_file("gpu_dvfs_t", S_IRUGO | S_IWUSR, d_root, NULL,
+				&gpu_dvfs_t_fops);
 	if (!d)
 		return -ENOMEM;
 

@@ -25,7 +25,6 @@
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/gpio/tegra186-gpio.h>
 #include <dt-bindings/memory/tegra-swgroup.h>
-#include <dt-bindings/memory/tegra194-swgroup.h>
 #include "tegra194-trusty.dtsi"
 
 / {
@@ -116,9 +115,7 @@
 			      <&{/host1x/vic@15340000}		TEGRA_SID_VIC>,
 			      <&{/host1x/nvdec@15480000}	TEGRA_SID_NVDEC>,
 			      <&{/host1x/nvenc@154c0000}	TEGRA_SID_NVENC>,
-			      <&{/host1x/nvjpg@15380000}	TEGRA_SID_NVJPG>,
-			      <&{/host1x/nvdla0@15880000}	TEGRA_SID_NVDLA0>,
-			      <&{/host1x/nvdla1@158c0000}	TEGRA_SID_NVDLA1>;
+			      <&{/host1x/nvjpg@15380000}	TEGRA_SID_NVJPG>;
 
 		domains {
 			host1x_domain {
@@ -131,10 +128,8 @@
 				sid-list = <TEGRA_SID(VIC)
 					    TEGRA_SID(NVDEC)
 					    TEGRA_SID(NVENC)
-					    TEGRA_SID(NVJPG)
-					    TEGRA_SID(NVDLA0)
-					    TEGRA_SID(NVDLA1)>;
-				sid-list-len = <6>;
+					    TEGRA_SID(NVJPG)>;
+				sid-list-len = <4>;
 			};
 		};
 

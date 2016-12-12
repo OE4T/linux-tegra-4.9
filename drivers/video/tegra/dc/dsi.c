@@ -1959,9 +1959,6 @@ static void tegra_dsi_stop_dc_stream_at_frame_end(struct tegra_dc *dc,
 		dev_err(&dsi->dc->ndev->dev,
 			"dc timeout waiting for DC to stop\n");
 
-	if (dc->out->dsc_en)
-		tegra_dc_en_dis_dsc(dc, false);
-
 	tegra_dsi_soft_reset(dsi);
 
 	tegra_dsi_reset_underflow_overflow(dsi);
@@ -1995,9 +1992,6 @@ static void tegra_dsi_start_dc_stream(struct tegra_dc *dc,
 
 	/* TODO: clean up */
 	tegra_dc_power_on(dc);
-
-	if (dc->out->dsc_en)
-		tegra_dc_en_dis_dsc(dc, true);
 
 	/* Configure one-shot mode or continuous mode */
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {

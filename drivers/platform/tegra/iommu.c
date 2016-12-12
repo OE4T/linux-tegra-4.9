@@ -23,6 +23,7 @@
 
 #include <dt-bindings/memory/tegra-swgroup.h>
 
+#include <soc/tegra/memory-carveout.h>
 #include <linux/platform/tegra/common.h>
 #include <soc/tegra/common.h>
 

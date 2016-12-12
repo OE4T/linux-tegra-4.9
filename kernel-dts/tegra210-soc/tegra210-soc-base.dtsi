@@ -1228,6 +1228,9 @@
 					<&tegra_car TEGRA210_CLK_AUDIO0_MUX>;
 			clock-names = "i2s0", "pll_a_out0", "ext_audio_sync",
 				"audio_sync";
+
+			assigned-clocks = <&tegra_car TEGRA210_CLK_I2S0>;
+			assigned-clock-rates = <1536000>;
 		};
 
 		tegra_i2s2: i2s@702d1100 {
@@ -1241,6 +1244,9 @@
 					<&tegra_car TEGRA210_CLK_AUDIO1_MUX>;
 			clock-names = "i2s1", "pll_a_out0", "ext_audio_sync",
 				"audio_sync";
+
+			assigned-clocks = <&tegra_car TEGRA210_CLK_I2S1>;
+			assigned-clock-rates = <1536000>;
 		};
 
 		tegra_i2s3: i2s@702d1200 {
@@ -1254,6 +1260,9 @@
 					<&tegra_car TEGRA210_CLK_AUDIO2_MUX>;
 			clock-names = "i2s2", "pll_a_out0", "ext_audio_sync",
 				"audio_sync";
+
+			assigned-clocks = <&tegra_car TEGRA210_CLK_I2S2>;
+			assigned-clock-rates = <1536000>;
 		};
 
 		tegra_i2s4: i2s@702d1300 {
@@ -1267,6 +1276,9 @@
 					<&tegra_car TEGRA210_CLK_AUDIO3_MUX>;
 			clock-names = "i2s3", "pll_a_out0", "ext_audio_sync",
 				"audio_sync";
+
+			assigned-clocks = <&tegra_car TEGRA210_CLK_I2S3>;
+			assigned-clock-rates = <1536000>;
 		};
 
 		tegra_i2s5: i2s@702d1400 {
@@ -1280,6 +1292,9 @@
 					<&tegra_car TEGRA210_CLK_AUDIO4_MUX>;
 			clock-names = "i2s4", "pll_a_out0", "ext_audio_sync",
 				"audio_sync";
+
+			assigned-clocks = <&tegra_car TEGRA210_CLK_I2S4>;
+			assigned-clock-rates = <1536000>;
 		};
 
 		tegra_amx1: amx@702d3000 {
@@ -1318,6 +1333,9 @@
 			clocks = <&tegra_car TEGRA210_CLK_DMIC1>,
 					<&tegra_car TEGRA210_CLK_PLL_A_OUT0>;
 			clock-names = "dmic1", "pll_a_out0";
+
+			assigned-clocks = <&tegra_car TEGRA210_CLK_DMIC1>;
+			assigned-clock-rates = <3072000>;
 		};
 
 		tegra_dmic2: dmic@702d4100 {
@@ -1328,6 +1346,9 @@
 			clocks = <&tegra_car TEGRA210_CLK_DMIC2>,
 					<&tegra_car TEGRA210_CLK_PLL_A_OUT0>;
 			clock-names = "dmic2", "pll_a_out0";
+
+			assigned-clocks = <&tegra_car TEGRA210_CLK_DMIC2>;
+			assigned-clock-rates = <3072000>;
 		};
 
 		tegra_dmic3: dmic@702d4200 {
@@ -1338,6 +1359,9 @@
 			clocks = <&tegra_car TEGRA210_CLK_DMIC3>,
 					<&tegra_car TEGRA210_CLK_PLL_A_OUT0>;
 			clock-names = "dmic3", "pll_a_out0";
+
+			assigned-clocks = <&tegra_car TEGRA210_CLK_DMIC3>;
+			assigned-clock-rates = <3072000>;
 		};
 
 		tegra_afc1: afc@702d7000 {

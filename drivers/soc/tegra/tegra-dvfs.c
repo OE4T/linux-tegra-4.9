@@ -112,7 +112,7 @@ int tegra_dvfs_init_rails(struct dvfs_rail *rails[], int n)
 	mutex_unlock(&dvfs_lock);
 
 	return 0;
-};
+}
 
 static int dvfs_solve_relationship(struct dvfs_relationship *rel)
 {

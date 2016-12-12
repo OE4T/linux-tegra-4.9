@@ -1212,3 +1212,5 @@ config GPIO_VIPERBOARD
 endmenu
 
 endif
+
+trysource "../t18x/drivers/gpio/Kconfig.t18x"

@@ -30,6 +30,7 @@
 #include <linux/module.h>
 #include <linux/regulator/consumer.h>
 #include <linux/suspend.h>
+#include <linux/thermal.h>
 #include <linux/reboot.h>
 #include <linux/platform_device.h>
 #include <linux/of.h>
@@ -426,12 +427,34 @@ static int dvfs_rail_connect_to_regulator(struct device *dev,
 	return 0;
 }
 
+static inline const int *dvfs_get_millivolts_pll(struct dvfs *d)
+{
+	if (d->therm_dvfs) {
+		int therm_idx = d->dvfs_rail->therm_scale_idx;
+
+		return d->millivolts + therm_idx * MAX_DVFS_FREQS;
+	}
+
+	return d->millivolts;
+}
+
 static inline const int *dvfs_get_millivolts(struct dvfs *d, unsigned long rate)
 {
 	if (tegra_dvfs_is_dfll_scale(d, rate))
 		return d->dfll_millivolts;
 
-	return d->millivolts;
+	return dvfs_get_millivolts_pll(d);
+}
+
+static inline const int *dvfs_get_peak_millivolts(struct dvfs *d, unsigned long rate)
+{
+	if (tegra_dvfs_is_dfll_scale(d, rate))
+		return d->dfll_millivolts;
+
+	if (d->peak_millivolts)
+		return d->peak_millivolts;
+
+	return dvfs_get_millivolts_pll(d);
 }
 
 static unsigned long *dvfs_get_freqs(struct dvfs *d)
@@ -526,6 +549,36 @@ static int predict_millivolts(struct dvfs *d, const int *millivolts,
 	return millivolts[i];
 }
 
+static int dvfs_rail_get_thermal_floor(struct dvfs_rail *rail)
+{
+	if (rail->therm_floors &&
+		rail->therm_floor_idx < rail->therm_floors_size)
+		return rail->therm_floors[rail->therm_floor_idx].mv;
+
+	return 0;
+}
+
+static int predict_mv_at_hz_no_tfloor(struct dvfs *d, unsigned long rate)
+{
+	const int *millivolts;
+
+	millivolts = dvfs_get_millivolts(d, rate);
+
+	return predict_millivolts(d, millivolts, rate);
+}
+
+static int predict_mv_at_hz_cur_tfloor(struct dvfs *d, unsigned long rate)
+{
+	int mv;
+
+	mv = predict_mv_at_hz_no_tfloor(d, rate);
+
+	if (mv < 0)
+		return mv;
+
+	return max(mv, dvfs_rail_get_thermal_floor(d->dvfs_rail));
+}
+
 int opp_millivolts[MAX_DVFS_FREQS];
 unsigned long opp_frequencies[MAX_DVFS_FREQS];
 
@@ -588,38 +641,86 @@ EXPORT_SYMBOL(tegra_get_cpu_fv_table);
  */
 int tegra_dvfs_predict_millivolts(struct clk *c, unsigned long rate)
 {
-	int ret;
-	const int *millivolts;
+	int mv;
 	struct dvfs *d;
+
+	d = tegra_clk_to_dvfs(c);
+	if (d == NULL)
+		return -EINVAL;
+
+	if (!rate)
+		return 0;
 
 	mutex_lock(&dvfs_lock);
 
-	d = tegra_clk_to_dvfs(c);
-	if (d == NULL) {
-		mutex_unlock(&dvfs_lock);
-		return -EINVAL;
-	}
-
-	if (!rate) {
-		mutex_unlock(&dvfs_lock);
-		return 0;
-	}
-
-	millivolts = dvfs_is_dfll_range(d, rate) ?
-			d->dfll_millivolts :
-			d->millivolts;
-
-	ret = predict_millivolts(d, millivolts, rate);
+	mv = predict_mv_at_hz_no_tfloor(d, rate);
 
 	mutex_unlock(&dvfs_lock);
 
-	return ret;
+	return mv;
 }
 EXPORT_SYMBOL(tegra_dvfs_predict_millivolts);
 
 int tegra_dvfs_predict_mv_at_hz_cur_tfloor(struct clk *c, unsigned long rate)
 {
-	return tegra_dvfs_predict_millivolts(c, rate);
+	int mv;
+	struct dvfs *d;
+
+	d = tegra_clk_to_dvfs(c);
+	if (d == NULL)
+		return -EINVAL;
+
+	if (!rate)
+		return 0;
+
+	mutex_lock(&dvfs_lock);
+
+	mv = predict_mv_at_hz_cur_tfloor(d, rate);
+
+	mutex_unlock(&dvfs_lock);
+
+	return mv;
+}
+EXPORT_SYMBOL(tegra_dvfs_predict_mv_at_hz_cur_tfloor);
+
+long tegra_dvfs_predict_hz_at_mv_max_tfloor(struct clk *c, int mv)
+{
+	int mv_at_f = 0, i;
+	struct dvfs *d;
+	const int *millivolts;
+	unsigned long rate = -EINVAL;
+
+	d = tegra_clk_to_dvfs(c);
+	if (d == NULL)
+		return -EINVAL;
+
+	mutex_lock(&dvfs_lock);
+
+	if (d->alt_freqs)
+		goto out;
+
+	for (i = 0; i < d->num_freqs; i++) {
+		rate = d->freqs[i];
+		millivolts = dvfs_get_peak_millivolts(d, rate);
+		if (!millivolts)
+			goto out;
+
+		if (d->dvfs_rail->therm_floors)
+			mv_at_f = d->dvfs_rail->therm_floors[0].mv;
+		mv_at_f = max(millivolts[i], mv_at_f);
+		if (mv < mv_at_f)
+			break;
+	}
+
+	if (i)
+		rate = d->freqs[i - 1];
+	if (!i || (rate <= d->freqs_mult))
+		rate = -ENOENT;
+
+out:
+	mutex_unlock(&dvfs_lock);
+
+	return rate;
 }
 
 /**
@@ -778,6 +879,7 @@ static int tegra_dvfs_clk_event(struct notifier_block *this,
 {
 	struct clk_notifier_data *cnd = ptr;
 	struct dvfs *d;
+	int new_mv;
 
 	d = tegra_clk_to_dvfs(cnd->clk);
 	if (d == NULL)
@@ -789,18 +891,34 @@ static int tegra_dvfs_clk_event(struct notifier_block *this,
 	if (!__clk_is_enabled(cnd->clk) && !__clk_is_prepared(cnd->clk))
 		return NOTIFY_DONE;
 
+	if (!d->na_therm_update)
+		mutex_lock(&dvfs_lock);
+
 	switch (event) {
 	case PRE_RATE_CHANGE:
 		if (cnd->old_rate < cnd->new_rate)
-			tegra_dvfs_set_rate(cnd->clk, cnd->new_rate);
+			__tegra_dvfs_set_rate(d, cnd->new_rate);
+		else if (cnd->old_rate == cnd->new_rate) {
+			new_mv = predict_mv_at_hz_cur_tfloor(d, cnd->new_rate);
+			if (new_mv > d->cur_millivolts)
+				dvfs_rail_update(d->dvfs_rail);
+		}
 		break;
 	case POST_RATE_CHANGE:
 		if (cnd->old_rate > cnd->new_rate)
-			tegra_dvfs_set_rate(cnd->clk, cnd->new_rate);
+			__tegra_dvfs_set_rate(d, cnd->new_rate);
+		else if (cnd->old_rate == cnd->new_rate) {
+			new_mv = predict_mv_at_hz_cur_tfloor(d, cnd->new_rate);
+			if (new_mv < d->cur_millivolts)
+				dvfs_rail_update(d->dvfs_rail);
+		}
 		break;
 	case ABORT_RATE_CHANGE:
 		break;
 	}
+
+	if (!d->na_therm_update)
+		mutex_unlock(&dvfs_lock);
 
 	return NOTIFY_DONE;
 }
@@ -1413,6 +1531,75 @@ static int tegra_dvfs_regulator_init(struct device *dev)
 	return 0;
 }
 
+static int tegra_vts_get_max_state(struct thermal_cooling_device *cdev,
+					unsigned long *max_state)
+{
+	struct dvfs_rail *rail = cdev->devdata;
+
+	*max_state = rail->vts_number_of_trips;
+
+	return 0;
+}
+
+static int tegra_vts_get_cur_state(struct thermal_cooling_device *cdev,
+					unsigned long *cur_state)
+{
+	struct dvfs_rail *rail = cdev->devdata;
+
+	*cur_state = rail->therm_scale_idx;
+
+	return 0;
+}
+
+static int tegra_vts_set_cur_state(struct thermal_cooling_device *cdev,
+					 unsigned long cur_state)
+{
+	struct dvfs_rail *rail = cdev->devdata;
+	struct dvfs *d, *first;
+	int ret = 0;
+
+	mutex_lock(&dvfs_lock);
+
+	if (rail->therm_scale_idx == cur_state)
+		goto out;
+
+	rail->therm_scale_idx = cur_state;
+
+	first = list_first_entry(&rail->dvfs, struct dvfs, reg_node);
+	if (first->therm_dvfs && first->na_dvfs && first->cur_rate) {
+		/* only GPU thermal DVFS can be noise aware and this
+		 * rail has only a single clock. Therefor we can just
+		 * update the NA DVFS config by doing a set rate and
+		 * leave the normal DVFS notifier to handle the voltage
+		 * update. We are still holding dvfs_lock however, so
+		 * indicate this by setting a flag in the GPU DVFS
+		 * struct.
+		 */
+		first->na_therm_update = true;
+		ret = clk_set_rate_nocache(first->clk, first->cur_rate);
+		first->na_therm_update = false;
+	} else if ((!first->therm_dvfs || !first->na_dvfs) &&
+			first->dvfs_rail) {
+		list_for_each_entry(d, &rail->dvfs, reg_node) {
+			if (d->therm_dvfs)
+				d->cur_millivolts =
+				predict_mv_at_hz_cur_tfloor(d, d->cur_rate);
+		}
+		ret = dvfs_rail_update(first->dvfs_rail);
+	}
+
+out:
+	mutex_unlock(&dvfs_lock);
+
+	return ret;
+}
+
+static struct thermal_cooling_device_ops tegra_vts_cooling_ops = {
+	.get_max_state = tegra_vts_get_max_state,
+	.get_cur_state = tegra_vts_get_cur_state,
+	.set_cur_state = tegra_vts_set_cur_state,
+};
+
 #ifdef CONFIG_DEBUG_FS
 static int dvfs_tree_sort_cmp(void *p, struct list_head *a, struct list_head *b)
 {
@@ -1781,6 +1968,15 @@ static int tegra_dvfs_probe(struct platform_device *pdev)
 
 	list_for_each_entry(rail, &dvfs_rail_list, node) {
 		rail->is_ready = true;
+		if (rail->vts_of_node) {
+			char *name;
+
+			name = kasprintf(GFP_KERNEL, "%s vts", rail->reg_id);
+			rail->vts_cdev =
+				thermal_of_cooling_device_register(
+					rail->vts_of_node, name, rail,
+					&tegra_vts_cooling_ops);
+		}
 	}
 
 #ifdef CONFIG_DEBUG_FS

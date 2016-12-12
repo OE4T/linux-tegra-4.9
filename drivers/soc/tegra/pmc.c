@@ -2391,7 +2391,9 @@ static int __init tegra_pmc_early_init(void)
 	if (np) {
 		pmc->soc = match->data;
 
+#ifndef CONFIG_TEGRA_POWERGATE
 		tegra_powergate_init(pmc, np);
+#endif
 
 		/*
 		 * Invert the interrupt polarity if a PMC device tree node

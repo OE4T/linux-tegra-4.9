@@ -136,7 +136,12 @@ void tegra_set_fixed_panel_ops(bool is_primary,
 
 void tegra_set_fixed_pwm_bl_ops(struct pwm_bl_data_dt_ops *p_ops);
 
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+static inline void tegra_pwm_bl_ops_register(struct device *dev)
+{ return; }
+#else
 void tegra_pwm_bl_ops_register(struct device *dev);
+#endif
 
 void ti_lp855x_bl_ops_register(struct device *dev);
 #endif /* __MACH_TEGRA_BOARD_PANEL_H */

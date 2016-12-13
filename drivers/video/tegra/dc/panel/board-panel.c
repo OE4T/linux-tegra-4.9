@@ -499,6 +499,7 @@ void tegra_pwm_bl_ops_register(struct device *dev)
 	if (!ret)
 		tegra_pwm_bl_ops_reg_based_on_disp_board_id(dev);
 }
+EXPORT_SYMBOL(tegra_pwm_bl_ops_register);
 
 void ti_lp855x_bl_ops_register(struct device *dev)
 {

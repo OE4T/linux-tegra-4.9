@@ -39,6 +39,8 @@
 / {
 	cpu_edp: cpu_edp {
 		compatible = "nvidia,tegra124-cpu-edp-capping";
+		clocks = <&tegra_car TEGRA210_CLK_CCLK_G>;
+		clock-names = "cpu-edp";
 		nvidia,freq_step = <19200000>;
 		nvidia,edp_clk = "cpu_g";
 		nvidia,tegra-ppm-cdyn = <950000 1425000 2650000 3125000>;

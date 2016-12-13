@@ -14,6 +14,23 @@
  */
 
 / {
+
+	reserved-memory {
+		generic_carveout {
+			size = <0x0 0x40000000>; /* 1GB generic carveout */
+			status = "okay";
+		};
+
+		vpr-carveout {
+			alloc-ranges = <0x0 0x0 0x2 0x00000000>;
+			status = "okay";
+		};
+	};
+
+	tegra-carveouts {
+		status = "okay";
+	};
+
 	serial@3100000 {
 		compatible = "nvidia,tegra210-uart", "nvidia,tegra186-hsuart", "nvidia,tegra20-uart";
 		clock-frequency = <408000000>;

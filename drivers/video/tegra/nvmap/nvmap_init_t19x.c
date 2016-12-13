@@ -81,7 +81,7 @@ static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
 	struct reserved_mem_ops *rmem_ops =
 		(struct reserved_mem_ops *)rmem->ops;
 
-	dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, &attrs);
+	dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, __DMA_ATTR(attrs));
 
 	np = of_find_compatible_node(NULL, NULL, rmem->name);
 	if (!np) {
@@ -94,7 +94,7 @@ static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
 		count++;
 
 	(void)dma_alloc_attrs(gosmem.dma_dev, count * SZ_4K,
-				&pa, DMA_MEMORY_NOMAP, &attrs);
+				&pa, DMA_MEMORY_NOMAP, __DMA_ATTR(attrs));
 	if (dma_mapping_error(dev, pa)) {
 		pr_err("Failed to allocate from Gos mem carveout\n");
 		return -ENOMEM;
@@ -112,10 +112,9 @@ static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
 	idx = 0;
 	of_property_for_each_phandle_with_args(iter, np, "cvdevs",
 			NULL, 0) {
-		struct of_phandle_args *ret = &iter.out_args;
+		struct device_node *temp = device_node_from_iter(iter);
 
-		BUG_ON(!ret);
-		cvdev_info[idx].np = of_node_get(ret->np);
+		cvdev_info[idx].np = of_node_get(temp);
 		if (!cvdev_info[idx].np)
 			continue;
 		cvdev_info[idx].count = count;
@@ -139,7 +138,7 @@ static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
 free:
 	kfree(cvdev_info);
 unmap_dma:
-	dma_free_attrs(gosmem.dma_dev, SZ_4K, NULL, pa, &attrs);
+	dma_free_attrs(gosmem.dma_dev, SZ_4K, NULL, pa, __DMA_ATTR(attrs));
 	return ret;
 }
 
@@ -183,17 +182,17 @@ map_gosmem:
 		enum dma_data_direction dir;
 
 		dir = DMA_BIDIRECTIONAL;
-		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
-		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, __DMA_ATTR(attrs));
+		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, __DMA_ATTR(attrs));
 		if (cvdev_info[i].np != dev->of_node) {
-			dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
+			dma_set_attr(DMA_ATTR_READ_ONLY, __DMA_ATTR(attrs));
 			dir = DMA_TO_DEVICE;
 		}
 
 		switch (event) {
 		case BUS_NOTIFY_BOUND_DRIVER:
 			ents = dma_map_sg_attrs(dev, cvdev_info[i].sgt->sgl,
-					cvdev_info[i].sgt->nents, dir, &attrs);
+					cvdev_info[i].sgt->nents, dir, __DMA_ATTR(attrs));
 			if (ents != 1) {
 				pr_err("mapping gosmem chunk %d for %s failed\n",
 					i, dev_name(dev));
@@ -202,7 +201,7 @@ map_gosmem:
 			break;
 		case BUS_NOTIFY_UNBIND_DRIVER:
 			dma_unmap_sg_attrs(dev, cvdev_info[i].sgt->sgl,
-					cvdev_info[i].sgt->nents, dir, &attrs);
+					cvdev_info[i].sgt->nents, dir, __DMA_ATTR(attrs));
 		default:
 			return NOTIFY_DONE;
 		};

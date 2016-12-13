@@ -276,7 +276,7 @@ static long tegra_dc_ext_control_ioctl(struct file *filp, unsigned int cmd,
 		return set_event_mask(user, (u32) arg);
 	case TEGRA_DC_EXT_CONTROL_GET_CAPABILITIES:
 	{
-		struct tegra_dc_ext_control_capabilities args;
+		struct tegra_dc_ext_control_capabilities args = {0};
 		int ret;
 
 		ret = get_capabilities(&args);

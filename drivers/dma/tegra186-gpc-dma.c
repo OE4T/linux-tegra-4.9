@@ -1,7 +1,7 @@
 /*
  * DMA driver for Nvidia's Tegra186 GPC DMA controller.
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -238,7 +238,7 @@ struct tegra_dma_channel {
 	int			id;
 	int			irq;
 	unsigned long		chan_base_offset;
-	spinlock_t		lock;
+	raw_spinlock_t		lock;
 	bool			busy;
 	bool			cyclic;
 	struct tegra_dma	*tdma;
@@ -327,12 +327,12 @@ static void tegra_dma_desc_put(struct tegra_dma_channel *tdc,
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&tdc->lock, flags);
+	raw_spin_lock_irqsave(&tdc->lock, flags);
 	if (!list_empty(&dma_desc->tx_list))
 		list_splice_init(&dma_desc->tx_list, &tdc->free_sg_req);
 	dma_desc->txd.flags = DMA_CTRL_ACK;
 	list_add_tail(&dma_desc->node, &tdc->free_dma_desc);
-	spin_unlock_irqrestore(&tdc->lock, flags);
+	raw_spin_unlock_irqrestore(&tdc->lock, flags);
 }
 
 static struct tegra_dma_desc *tegra_dma_desc_alloc(
@@ -364,19 +364,19 @@ static struct tegra_dma_desc *tegra_dma_desc_get(
 	struct tegra_dma_desc *dma_desc;
 	unsigned long flags;
 
-	spin_lock_irqsave(&tdc->lock, flags);
+	raw_spin_lock_irqsave(&tdc->lock, flags);
 
 	/* Do not allocate if desc are waiting for ack */
 	list_for_each_entry(dma_desc, &tdc->free_dma_desc, node) {
 		if (async_tx_test_ack(&dma_desc->txd)) {
 			list_del(&dma_desc->node);
-			spin_unlock_irqrestore(&tdc->lock, flags);
+			raw_spin_unlock_irqrestore(&tdc->lock, flags);
 			dma_desc->txd.flags = 0;
 			return dma_desc;
 		}
 	}
 
-	spin_unlock_irqrestore(&tdc->lock, flags);
+	raw_spin_unlock_irqrestore(&tdc->lock, flags);
 
 	return tegra_dma_desc_alloc(tdc, false);
 }
@@ -389,10 +389,10 @@ static void tegra_dma_sg_req_put(
 	unsigned long flags;
 
 	if (lock)
-		spin_lock_irqsave(&tdc->lock, flags);
+		raw_spin_lock_irqsave(&tdc->lock, flags);
 	list_add_tail(&sgreq->node, &tdc->free_sg_req);
 	if (lock)
-		spin_unlock_irqrestore(&tdc->lock, flags);
+		raw_spin_unlock_irqrestore(&tdc->lock, flags);
 }
 
 static struct tegra_dma_sg_req *tegra_dma_sg_req_alloc(
@@ -416,15 +416,15 @@ static struct tegra_dma_sg_req *tegra_dma_sg_req_get(
 	struct tegra_dma_sg_req *sg_req = NULL;
 	unsigned long flags;
 
-	spin_lock_irqsave(&tdc->lock, flags);
+	raw_spin_lock_irqsave(&tdc->lock, flags);
 	if (!list_empty(&tdc->free_sg_req)) {
 		sg_req = list_first_entry(&tdc->free_sg_req,
 					typeof(*sg_req), node);
 		list_del(&sg_req->node);
-		spin_unlock_irqrestore(&tdc->lock, flags);
+		raw_spin_unlock_irqrestore(&tdc->lock, flags);
 		return sg_req;
 	}
-	spin_unlock_irqrestore(&tdc->lock, flags);
+	raw_spin_unlock_irqrestore(&tdc->lock, flags);
 
 	return tegra_dma_sg_req_alloc(tdc, false);
 }
@@ -680,7 +680,7 @@ static irqreturn_t tegra_dma_bh(int irq, void *data)
 	unsigned long flags;
 	int cb_count;
 
-	spin_lock_irqsave(&tdc->lock, flags);
+	raw_spin_lock_irqsave(&tdc->lock, flags);
 	while (!list_empty(&tdc->cb_desc)) {
 		dma_desc  = list_first_entry(&tdc->cb_desc,
 					typeof(*dma_desc), cb_node);
@@ -689,12 +689,12 @@ static irqreturn_t tegra_dma_bh(int irq, void *data)
 		callback_param = dma_desc->txd.callback_param;
 		cb_count = dma_desc->cb_count;
 		dma_desc->cb_count = 0;
-		spin_unlock_irqrestore(&tdc->lock, flags);
+		raw_spin_unlock_irqrestore(&tdc->lock, flags);
 		while (cb_count-- && callback)
 			callback(callback_param);
-		spin_lock_irqsave(&tdc->lock, flags);
+		raw_spin_lock_irqsave(&tdc->lock, flags);
 	}
-	spin_unlock_irqrestore(&tdc->lock, flags);
+	raw_spin_unlock_irqrestore(&tdc->lock, flags);
 	return IRQ_HANDLED;
 }
 
@@ -739,7 +739,7 @@ static irqreturn_t tegra_dma_isr(int irq, void *dev_id)
 	unsigned long flags;
 	unsigned int err_status;
 
-	spin_lock_irqsave(&tdc->lock, flags);
+	raw_spin_lock_irqsave(&tdc->lock, flags);
 
 	status = tdc_read(tdc, TEGRA_GPCDMA_CHAN_STATUS);
 	err_status = tdc_read(tdc, TEGRA_GPCDMA_CHAN_ERR_STATUS);
@@ -760,12 +760,12 @@ static irqreturn_t tegra_dma_isr(int irq, void *dev_id)
 				tdc->id, status);
 			tegra_dma_dump_chan_regs(tdc);
 		}
-		spin_unlock_irqrestore(&tdc->lock, flags);
+		raw_spin_unlock_irqrestore(&tdc->lock, flags);
 
 		return IRQ_WAKE_THREAD;
 	}
 
-	spin_unlock_irqrestore(&tdc->lock, flags);
+	raw_spin_unlock_irqrestore(&tdc->lock, flags);
 	return IRQ_NONE;
 }
 
@@ -776,11 +776,11 @@ static dma_cookie_t tegra_dma_tx_submit(struct dma_async_tx_descriptor *txd)
 	unsigned long flags;
 	dma_cookie_t cookie;
 
-	spin_lock_irqsave(&tdc->lock, flags);
+	raw_spin_lock_irqsave(&tdc->lock, flags);
 	dma_desc->dma_status = DMA_IN_PROGRESS;
 	cookie = dma_cookie_assign(&dma_desc->txd);
 	list_splice_tail_init(&dma_desc->tx_list, &tdc->pending_sg_req);
-	spin_unlock_irqrestore(&tdc->lock, flags);
+	raw_spin_unlock_irqrestore(&tdc->lock, flags);
 	return cookie;
 }
 
@@ -791,7 +791,7 @@ static void tegra_dma_issue_pending(struct dma_chan *dc)
 	unsigned long status;
 	int count;
 
-	spin_lock_irqsave(&tdc->lock, flags);
+	raw_spin_lock_irqsave(&tdc->lock, flags);
 	if (list_empty(&tdc->pending_sg_req)) {
 		dev_err(tdc2dev(tdc), "No DMA request\n");
 		goto end;
@@ -821,7 +821,7 @@ static void tegra_dma_issue_pending(struct dma_chan *dc)
 	}
 
 end:
-	spin_unlock_irqrestore(&tdc->lock, flags);
+	raw_spin_unlock_irqrestore(&tdc->lock, flags);
 	return;
 }
 
@@ -846,7 +846,7 @@ static int tegra_dma_terminate_all(struct dma_chan *dc)
 	unsigned long wcount = 0;
 	bool was_busy;
 
-	spin_lock_irqsave(&tdc->lock, flags);
+	raw_spin_lock_irqsave(&tdc->lock, flags);
 	if (list_empty(&tdc->pending_sg_req))
 		goto empty_cblist;
 
@@ -910,7 +910,7 @@ empty_cblist:
 		list_del(&dma_desc->cb_node);
 		dma_desc->cb_count = 0;
 	}
-	spin_unlock_irqrestore(&tdc->lock, flags);
+	raw_spin_unlock_irqrestore(&tdc->lock, flags);
 	return 0;
 }
 
@@ -924,7 +924,7 @@ static enum dma_status tegra_dma_tx_status(struct dma_chan *dc,
 	unsigned long flags;
 	unsigned int residual;
 
-	spin_lock_irqsave(&tdc->lock, flags);
+	raw_spin_lock_irqsave(&tdc->lock, flags);
 
 	ret = dma_cookie_status(dc, cookie, txstate);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
@@ -932,7 +932,7 @@ static enum dma_status tegra_dma_tx_status(struct dma_chan *dc,
 #else
 	if (ret == DMA_COMPLETE) {
 #endif
-		spin_unlock_irqrestore(&tdc->lock, flags);
+		raw_spin_unlock_irqrestore(&tdc->lock, flags);
 		return ret;
 	}
 
@@ -944,7 +944,7 @@ static enum dma_status tegra_dma_tx_status(struct dma_chan *dc,
 						dma_desc->bytes_requested);
 			dma_set_residue(txstate, residual);
 			ret = dma_desc->dma_status;
-			spin_unlock_irqrestore(&tdc->lock, flags);
+			raw_spin_unlock_irqrestore(&tdc->lock, flags);
 			return ret;
 		}
 	}
@@ -958,13 +958,13 @@ static enum dma_status tegra_dma_tx_status(struct dma_chan *dc,
 						dma_desc->bytes_requested);
 			dma_set_residue(txstate, residual);
 			ret = dma_desc->dma_status;
-			spin_unlock_irqrestore(&tdc->lock, flags);
+			raw_spin_unlock_irqrestore(&tdc->lock, flags);
 			return ret;
 		}
 	}
 
 	dev_dbg(tdc2dev(tdc), "cookie %d does not found\n", cookie);
-	spin_unlock_irqrestore(&tdc->lock, flags);
+	raw_spin_unlock_irqrestore(&tdc->lock, flags);
 	return ret;
 }
 
@@ -1624,7 +1624,7 @@ static void tegra_dma_free_chan_resources(struct dma_chan *dc)
 
 	if (tdc->busy)
 		tegra_dma_terminate_all(dc);
-	spin_lock_irqsave(&tdc->lock, flags);
+	raw_spin_lock_irqsave(&tdc->lock, flags);
 	list_splice_init(&tdc->pending_sg_req, &sg_req_list);
 	list_splice_init(&tdc->free_sg_req, &sg_req_list);
 	list_splice_init(&tdc->free_dma_desc, &dma_desc_list);
@@ -1632,7 +1632,7 @@ static void tegra_dma_free_chan_resources(struct dma_chan *dc)
 	tdc->config_init = false;
 	tdc->isr_handler = NULL;
 	tdc->slave_id = -1;
-	spin_unlock_irqrestore(&tdc->lock, flags);
+	raw_spin_unlock_irqrestore(&tdc->lock, flags);
 }
 
 static struct dma_chan *tegra_dma_of_xlate(struct of_phandle_args *dma_spec,
@@ -1818,7 +1818,7 @@ static int tegra_dma_probe(struct platform_device *pdev)
 		tdc->id = i;
 		tdc->slave_id = -1;
 
-		spin_lock_init(&tdc->lock);
+		raw_spin_lock_init(&tdc->lock);
 
 		INIT_LIST_HEAD(&tdc->pending_sg_req);
 		INIT_LIST_HEAD(&tdc->free_sg_req);

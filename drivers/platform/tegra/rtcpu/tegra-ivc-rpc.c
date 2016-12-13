@@ -51,6 +51,7 @@
 #include <linux/slab.h>
 #include <linux/interrupt.h>
 #include <linux/debugfs.h>
+#include <linux/time.h>
 
 /*
  * Configuration
@@ -86,6 +87,8 @@ struct tegra_ivc_rpc_data {
 	unsigned int count_rx_non_rpc;
 	unsigned int count_rx_unexpected;
 	unsigned int count_rx_wrong_rsp;
+	u64 travel_sum;
+	u64 travel_min, travel_max;
 };
 
 /*
@@ -107,6 +110,7 @@ struct tegra_ivc_rpc_tx_desc {
 	void *response;
 	tegra_ivc_rpc_call_callback callback;
 	void *callback_param;
+	u64 sent_time;
 	/* response collected by RX handler (synchronous) */
 	int32_t ret_code;
 };
@@ -236,6 +240,19 @@ static void tegra_ivc_rpc_rx_tasklet_rpc(
 	 */
 	tx_desc->ret_code = rsp->hdr.ret_code;
 	if (rsp->hdr.response_id == tx_desc->response_id) {
+		u64 travel_time = local_clock() - tx_desc->sent_time;
+
+		if (rpc->count_rx_good == 0) {
+			rpc->travel_sum = travel_time;
+			rpc->travel_min = travel_time;
+			rpc->travel_max = travel_time;
+		} else {
+			rpc->travel_sum += travel_time;
+			if (travel_time < rpc->travel_min)
+				rpc->travel_min = travel_time;
+			if (travel_time > rpc->travel_max)
+				rpc->travel_max = travel_time;
+		}
 		++rpc->count_rx_good;
 
 		if (tx_desc->ret_code >= 0 && tx_desc->response_len > 0) {
@@ -385,6 +402,7 @@ int tegra_ivc_rpc_call(
 	tx_desc->callback_param = param->callback_param;
 	if (tx_desc->callback == NULL)
 		init_completion(&tx_desc->rx_complete);
+	tx_desc->sent_time = local_clock();
 
 	/* Get a pointer to write buffer */
 	for (;;) {
@@ -488,6 +506,11 @@ static int tegra_ivc_rpc_debugfs_stats_read(
 	seq_printf(file, "  Unexpected: %u\n", rpc->count_rx_unexpected);
 	seq_printf(file, "  Wrong: %u\n", rpc->count_rx_wrong_rsp);
 	seq_printf(file, "Timeouts: %u\n", rpc->count_rx_timeout);
+	seq_puts(file, "Travel time:\n");
+	seq_printf(file, "  Average: %llu us\n",
+		rpc->travel_sum / (rpc->count_rx_good * 1000));
+	seq_printf(file, "  Min: %llu us\n", rpc->travel_min / 1000);
+	seq_printf(file, "  Max: %llu us\n", rpc->travel_max / 1000);
 
 	return 0;
 }

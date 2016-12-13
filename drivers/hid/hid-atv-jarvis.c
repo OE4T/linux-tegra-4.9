@@ -173,6 +173,9 @@ struct shdr_device {
 	struct tsfw_icm20628_fn_dev *snsr_fns;
 	struct tsfw_icm20628_state *st;
 	struct work_struct snsr_probe_work;
+	struct delayed_work hid_miss_war_work;
+	struct mutex hid_miss_war_lock;
+	int hid_miss_war_timeout;
 };
 
 static int num_remotes;
@@ -1514,10 +1517,25 @@ __nodev:
 
 #define TS_BUTTON_REPORT_SIZE 19
 
+#define PEP_BUTTON_REPORT_ID	0x2
+#define PEP_BUTTON_REPORT_SIZE	3
+
+static void atvr_pepper_button_release(struct work_struct *work)
+{
+	struct shdr_device *shdr_dev =
+		container_of(work, struct shdr_device, hid_miss_war_work.work);
+	u8 fake_button_up[PEP_BUTTON_REPORT_SIZE] = {
+		PEP_BUTTON_REPORT_ID, 0x0, 0x0 };
+
+	hid_report_raw_event(shdr_dev->hdev, 0, fake_button_up,
+			     sizeof(fake_button_up), 0);
+}
+
 static int atvr_jarvis_break_events(struct hid_device *hdev,
 				    struct hid_report *report,
 				    u8 *data, int size)
 {
+	struct shdr_device *shdr_dev = hid_get_drvdata(hdev);
 	unsigned int button_report_id = JAR_BUTTON_REPORT_ID;
 	unsigned int button_report_size = JAR_BUTTON_REPORT_SIZE;
 	unsigned int audio_report_id = JAR_AUDIO_REPORT_ID;
@@ -1532,6 +1550,30 @@ static int atvr_jarvis_break_events(struct hid_device *hdev,
 	 */
 	if (hdev->product == USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE)
 		button_report_size = TS_HOSTCMD_REPORT_SIZE;
+
+	if (hdev->product == USB_DEVICE_ID_NVIDIA_PEPPER &&
+	    report->id == PEP_BUTTON_REPORT_ID) {
+		int timeout;
+
+		mutex_lock(&shdr_dev->hid_miss_war_lock);
+		timeout = shdr_dev->hid_miss_war_timeout;
+		mutex_unlock(&shdr_dev->hid_miss_war_lock);
+		if (timeout <= 0)
+			return 0;
+
+		/*
+		 * data[1] & data[2] will be set whenever a button is pressed
+		 * and will be all zero when no button is pressed
+		 */
+		if (data[1] == 0 && data[2] == 0)
+			cancel_delayed_work_sync(&shdr_dev->hid_miss_war_work);
+		else {
+			cancel_delayed_work_sync(&shdr_dev->hid_miss_war_work);
+			schedule_delayed_work(&shdr_dev->hid_miss_war_work,
+					      msecs_to_jiffies(timeout));
+		}
+		return 0;
+	}
 
 	if (!((report->id == button_report_id &&
 	       size >= button_report_size) ||
@@ -1677,6 +1719,37 @@ static int atvr_raw_event(struct hid_device *hdev, struct hid_report *report,
 	return 0;
 }
 
+static ssize_t atvr_show_hid_miss_war_timeout(struct device *dev,
+				 struct device_attribute *attr, char *buf)
+{
+	struct hid_device *hdev =
+		container_of(dev, struct hid_device, dev);
+	struct shdr_device *shdr_dev = hid_get_drvdata(hdev);
+
+	return sprintf(buf, "%d\n", shdr_dev->hid_miss_war_timeout);
+}
+
+static ssize_t atvr_store_hid_miss_war_timeout(struct device *dev,
+				  struct device_attribute *attr,
+				  const char *buf, size_t count)
+{
+	struct hid_device *hdev =
+		container_of(dev, struct hid_device, dev);
+	struct shdr_device *shdr_dev = hid_get_drvdata(hdev);
+	int val;
+
+	if (!kstrtoint(buf, 0, &val)) {
+		mutex_lock(&shdr_dev->hid_miss_war_lock);
+		shdr_dev->hid_miss_war_timeout = val;
+		mutex_unlock(&shdr_dev->hid_miss_war_lock);
+	}
+
+	return count;
+}
+
+static DEVICE_ATTR(timeout, S_IRUGO | S_IWUSR,
+	atvr_show_hid_miss_war_timeout, atvr_store_hid_miss_war_timeout);
+
 static void atvr_snsr_probe(struct work_struct *work)
 {
 	struct shdr_device *shdr_dev =
@@ -1751,6 +1824,21 @@ static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 
 	mutex_unlock(&snd_cards_lock);
 
+	if (hdev->product == USB_DEVICE_ID_NVIDIA_PEPPER) {
+		shdr_dev->hid_miss_war_timeout = -1;
+		mutex_init(&shdr_dev->hid_miss_war_lock);
+		INIT_DELAYED_WORK(&shdr_dev->hid_miss_war_work,
+				  atvr_pepper_button_release);
+
+		ret = device_create_file(&hdev->dev,
+			&dev_attr_timeout);
+		if (ret) {
+			hid_err(hdev,
+				"cannot create sysfs timeout attribute\n");
+			goto err_stop;
+		}
+	}
+
 	if (hdev->product == USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE)
 		shdr_dev->snsr_fns = tsfw_icm20628_fns();
 
@@ -1783,6 +1871,11 @@ static void atvr_remove(struct hid_device *hdev)
 		shdr_dev->snsr_fns->remove(shdr_dev->st);
 	/* TODO: ret check */
 
+	if (hdev->product == USB_DEVICE_ID_NVIDIA_PEPPER) {
+		cancel_delayed_work_sync(&shdr_dev->hid_miss_war_work);
+		device_remove_file(&hdev->dev, &dev_attr_timeout);
+	}
+
 	mutex_lock(&snd_cards_lock);
 	atvr_snd = shdr_card->private_data;
 	mutex_lock(&atvr_snd->hdev_lock);
@@ -1803,6 +1896,7 @@ static void atvr_remove(struct hid_device *hdev)
 	mutex_destroy(&atvr_snd->hdev_lock);
 	snd_card_disconnect(shdr_card);
 	snd_card_free_when_closed(shdr_card);
+	mutex_destroy(&shdr_dev->hid_miss_war_lock);
 	kfree(shdr_dev);
 	mutex_unlock(&snd_cards_lock);
 }

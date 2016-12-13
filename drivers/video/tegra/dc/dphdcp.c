@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dphdcp.c
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1151,9 +1151,11 @@ lost_dp:
 	dphdcp_info("lost dp connection\n");
 	dphdcp->state = STATE_UNAUTHENTICATED;
 #if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
-	*pkt = HDCP_TA_CMD_CTRL;
-	*(pkt + HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
-	*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_DISABLE;
+	if (pkt) {
+		*pkt = HDCP_TA_CMD_CTRL;
+		*(pkt + HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
+		*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_DISABLE;
+	}
 	if (enc) {
 		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
 		if (e) {

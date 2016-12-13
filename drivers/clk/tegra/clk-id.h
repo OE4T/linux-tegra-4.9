@@ -324,6 +324,7 @@ enum clk_id {
 	tegra_clk_pll_a_out0_out_adsp,
 	tegra_clk_adsp,
 	tegra_clk_adsp_neon,
+	tegra_clk_se_8,
 	tegra_clk_max,
 };
 

@@ -57,7 +57,6 @@ void tegra_pm_update_gpio_wakeup_table(int base, int *gpio_wakeup_list,
 	}
 }
 
-#ifndef CONFIG_ARCH_TEGRA_210_SOC
 void tegra_irq_to_wake(int irq, int *wak_list, int *wak_size)
 {
 	int i;
@@ -71,7 +70,6 @@ void tegra_irq_to_wake(int irq, int *wak_list, int *wak_size)
 		}
 	}
 }
-#endif
 
 int tegra_wake_to_gpio(int wake)
 {

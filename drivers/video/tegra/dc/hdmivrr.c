@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/hdmivrr.c
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -490,23 +490,23 @@ static int tegra_hdmivrr_driver_unlock(struct tegra_hdmi *hdmi,
 	int status = 0;
 	u8 digest[32];
 
-	tegra_hdmivrr_auth_setup(hdmi, vrr);
+	status = tegra_hdmivrr_auth_setup(hdmi, vrr);
 	if (status)
 		return status;
 
-	hdmivrr_dpcd_write_u8(hdmi, DPAUX_AUTH_CMD, AUTH_CMD_RESET);
+	status = hdmivrr_dpcd_write_u8(hdmi, DPAUX_AUTH_CMD, AUTH_CMD_RESET);
 	if (status)
 		return status;
 
-	tegra_hdmivrr_auth_sts_ready(hdmi);
+	status = tegra_hdmivrr_auth_sts_ready(hdmi);
 	if (status)
 		return status;
 
-	hdmivrr_dpcd_write_u8(hdmi, DPAUX_AUTH_CMD, AUTH_CMD_MONAUTH);
+	status = hdmivrr_dpcd_write_u8(hdmi, DPAUX_AUTH_CMD, AUTH_CMD_MONAUTH);
 	if (status)
 		return status;
 
-	tegra_hdmivrr_auth_sts_ready(hdmi);
+	status = tegra_hdmivrr_auth_sts_ready(hdmi);
 	if (status)
 		return status;
 
@@ -523,7 +523,7 @@ static int tegra_hdmivrr_driver_unlock(struct tegra_hdmi *hdmi,
 	if (status)
 		return status;
 
-	tegra_hdmivrr_auth_sts_ready(hdmi);
+	status = tegra_hdmivrr_auth_sts_ready(hdmi);
 	if (status)
 		return status;
 

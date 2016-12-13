@@ -551,7 +551,7 @@ static int tegra_hdmivrr_monitor_unlock(struct tegra_hdmi *hdmi,
 	int status = 0;
 	u8 val8;
 
-	tegra_hdmivrr_auth_setup(hdmi, vrr);
+	status = tegra_hdmivrr_auth_setup(hdmi, vrr);
 	if (status)
 		return status;
 
@@ -564,19 +564,19 @@ static int tegra_hdmivrr_monitor_unlock(struct tegra_hdmi *hdmi,
 		return status;
 	}
 
-	hdmivrr_dpcd_write_u8(hdmi, DPAUX_AUTH_CMD, AUTH_CMD_RESET);
+	status = hdmivrr_dpcd_write_u8(hdmi, DPAUX_AUTH_CMD, AUTH_CMD_RESET);
 	if (status)
 		return status;
 
-	tegra_hdmivrr_auth_sts_ready(hdmi);
+	status = tegra_hdmivrr_auth_sts_ready(hdmi);
 	if (status)
 		return status;
 
-	hdmivrr_dpcd_write_u8(hdmi, DPAUX_AUTH_CMD, AUTH_CMD_DRVAUTH);
+	status = hdmivrr_dpcd_write_u8(hdmi, DPAUX_AUTH_CMD, AUTH_CMD_DRVAUTH);
 	if (status)
 		return status;
 
-	tegra_hdmivrr_auth_sts_ready(hdmi);
+	status = tegra_hdmivrr_auth_sts_ready(hdmi);
 	if (status)
 		return status;
 
@@ -593,7 +593,7 @@ static int tegra_hdmivrr_monitor_unlock(struct tegra_hdmi *hdmi,
 	vrr->challenge_src = HDMIVRR_CHLNG_SRC_MON;
 	tegra_hdmivrr_mac(hdmi, vrr);
 
-	tegra_hdmivrr_auth_sts_ready(hdmi);
+	status = tegra_hdmivrr_auth_sts_ready(hdmi);
 	if (status)
 		return status;
 
@@ -606,7 +606,7 @@ static int tegra_hdmivrr_monitor_unlock(struct tegra_hdmi *hdmi,
 	if (status)
 		return status;
 
-	tegra_hdmivrr_auth_sts_ready(hdmi);
+	status = tegra_hdmivrr_auth_sts_ready(hdmi);
 	if (status)
 		return status;
 

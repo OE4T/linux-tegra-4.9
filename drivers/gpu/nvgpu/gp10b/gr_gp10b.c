@@ -1543,20 +1543,15 @@ static void gr_gp10b_init_cyclestats(struct gk20a *g)
 
 static void gr_gp10b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
-	tegra_fuse_writel(0x1, FUSE_FUSEBYPASS_0);
-	tegra_fuse_writel(0x0, FUSE_WRITE_ACCESS_SW_0);
-#else
 	tegra_fuse_control_write(0x1, FUSE_FUSEBYPASS_0);
 	tegra_fuse_control_write(0x0, FUSE_WRITE_ACCESS_SW_0);
-#endif
 
 	if (g->gr.gpc_tpc_mask[gpc_index] == 0x1)
-		tegra_fuse_writel(0x2, FUSE_OPT_GPU_TPC0_DISABLE_0);
+		tegra_fuse_control_write(0x2, FUSE_OPT_GPU_TPC0_DISABLE_0);
 	else if (g->gr.gpc_tpc_mask[gpc_index] == 0x2)
-		tegra_fuse_writel(0x1, FUSE_OPT_GPU_TPC0_DISABLE_0);
+		tegra_fuse_control_write(0x1, FUSE_OPT_GPU_TPC0_DISABLE_0);
 	else
-		tegra_fuse_writel(0x0, FUSE_OPT_GPU_TPC0_DISABLE_0);
+		tegra_fuse_control_write(0x0, FUSE_OPT_GPU_TPC0_DISABLE_0);
 }
 
 static void gr_gp10b_get_access_map(struct gk20a *g,

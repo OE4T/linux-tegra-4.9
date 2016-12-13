@@ -1038,6 +1038,10 @@
 		clock-names = "mipi_cal", "uart_mipi_cal";
 		status = "disabled";
 
+		assigned-clocks = <&tegra_car TEGRA210_CLK_CLK72MHZ>;
+		assigned-clock-parents = <&tegra_car TEGRA210_CLK_PLL_P>;
+		assigned-clock-rates = <68000000>;
+
 		dsi {
 			dsix-cfg = <0x00000200>;
 			dsix-cfg2 = <0x00000002>;

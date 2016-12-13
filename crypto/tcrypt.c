@@ -7,7 +7,7 @@
  * Copyright (c) 2002 James Morris <jmorris@intercode.com.au>
  * Copyright (c) 2002 Jean-Francois Dive <jef@linuxbe.org>
  * Copyright (c) 2007 Nokia Siemens Networks
- * Copyright (c) 2017, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation. All Rights Reserved.
  *
  * Updated RFC4106 AES-GCM testing.
  *    Authors: Aidan O'Mahony (aidan.o.mahony@intel.com)
@@ -914,6 +914,9 @@ out:
 		CUSTOMIZED_ACIPHER_SPEED_TEST_BLOCK_SIZE)
 #define CUSTOMIZED_ACIPHER_SPEED_TEST_KEY_SIZE 16
 #define CUSTOMIZED_ACIPHER_SPEED_TEST_MAX_OUTSTANDING_BLOCKS 1024
+#define CUSTOMIZED_ACIPHER_SPEED_TEST_NO_RUNS 3
+#define CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_ENCRYPT_SPEED 280
+#define CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_DECRYPT_SPEED 300
 
 static atomic_t atomic_counter;
 
@@ -954,10 +957,10 @@ static unsigned int customized_blocks[] = {
 		1024 * 64
 };
 
-static void customized_test_acipher_speed(const char *algo, int enc,
-					unsigned int bsize, unsigned int bcnt)
+static unsigned int acipher_speed(const char *algo, int enc,
+				unsigned int bsize, unsigned int bcnt)
 {
-	unsigned int ret, k;
+	unsigned int ret, k, perf = 0;
 	const char *e;
 	struct crypto_skcipher *tfm;
 	u8 keysize = CUSTOMIZED_ACIPHER_SPEED_TEST_KEY_SIZE;
@@ -970,7 +973,7 @@ static void customized_test_acipher_speed(const char *algo, int enc,
 	unsigned long blocks_to_test =
 		CUSTOMIZED_ACIPHER_SPEED_TEST_BLOCK_AMOUNT * bcnt;
 	unsigned long bytes_tested = blocks_to_test * blocksize;
-	unsigned long bytes_per_ms;
+	unsigned long bytes_per_ms = 0;
 	u32 val = 0;
 
 	atomic_set(&atomic_counter, 0);
@@ -987,7 +990,7 @@ static void customized_test_acipher_speed(const char *algo, int enc,
 	if (IS_ERR(tfm)) {
 		pr_err("failed to load transform for %s: %ld\n", algo,
 				PTR_ERR(tfm));
-		return;
+		return PTR_ERR(tfm);
 	}
 
 	pr_info("testing speed of async %s (%s) %s\n", algo,
@@ -1071,7 +1074,7 @@ static void customized_test_acipher_speed(const char *algo, int enc,
 			/* error */
 		default:
 			pr_err("error detected\n");
-			return;
+			return ret;
 		}
 	}
 
@@ -1089,11 +1092,45 @@ static void customized_test_acipher_speed(const char *algo, int enc,
 		bytes_tested % 1024);
 
 	bytes_per_ms = bytes_tested / diff_in_ms;
+	perf = (bytes_per_ms * 1000) / (1024 * 1024);
 	pr_info("Test speed: %ld.%03ld(MB/s)\n",
 		(bytes_per_ms * 1000) / (1024 * 1024),
 		((bytes_per_ms * 1000) / 1024) % 1024);
 out:
 	crypto_free_skcipher(tfm);
+
+	return perf;
+}
+
+static int customized_test_acipher_speed(const char *algo, unsigned int bsize,
+		unsigned int bcnt)
+{
+	int i, no_runs, target_enc_speed, target_dec_speed;
+	int max_enc_speed = 0, max_dec_speed = 0, speed;
+
+	no_runs = CUSTOMIZED_ACIPHER_SPEED_TEST_NO_RUNS;
+	target_enc_speed = CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_ENCRYPT_SPEED;
+	target_dec_speed = CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_DECRYPT_SPEED;
+
+	for (i = 0; i < no_runs; i++) {
+		speed = acipher_speed("cbc(aes)", ENCRYPT, bsize, bcnt);
+		if (max_enc_speed < speed)
+			max_enc_speed = speed;
+		speed = acipher_speed("cbc(aes)", DECRYPT, bsize, bcnt);
+		if (max_dec_speed < speed)
+			max_dec_speed = speed;
+	}
+
+	pr_info("Target Encrypt speed: %d(MB/s) Decrypt speed: %d(MB/s)\n",
+		target_enc_speed, target_dec_speed);
+	pr_info("Test Encrypt speed: %d(MB/s) Decrypt speed: %d(MB/s)\n",
+		max_enc_speed, max_dec_speed);
+
+	if (max_enc_speed > target_enc_speed &&
+		       max_dec_speed > target_dec_speed)
+		return 0;
+	else
+		return 1;
 }
 
 static void test_skcipher_speed(const char *algo, int enc, unsigned int secs,
@@ -2310,8 +2347,8 @@ static int do_test(const char *alg, u32 type, u32 mask, int m)
 		break;
 
 	case 555:
-		customized_test_acipher_speed("cbc(aes)", ENCRYPT, bsize, bcnt);
-		customized_test_acipher_speed("cbc(aes)", DECRYPT, bsize, bcnt);
+		if (customized_test_acipher_speed("cbc(aes)", bsize, bcnt))
+			return -EIO;
 		break;
 
 	case 1000:

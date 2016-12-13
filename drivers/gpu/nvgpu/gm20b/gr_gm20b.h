@@ -29,6 +29,7 @@ enum {
 };
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
+#define tegra_fuse_control_write tegra_fuse_writel
 #define FUSE_FUSEBYPASS_0				0x24
 #define FUSE_WRITE_ACCESS_SW_0				0x30
 #define FUSE_OPT_GPU_TPC0_DISABLE_0			0x30C

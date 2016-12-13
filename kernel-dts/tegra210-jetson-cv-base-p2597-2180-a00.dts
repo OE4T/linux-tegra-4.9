@@ -61,6 +61,7 @@
 
 	chosen {
 		board-has-eeprom;
+		stdout-path = &uarta;
 	};
 
 	reserved-memory {

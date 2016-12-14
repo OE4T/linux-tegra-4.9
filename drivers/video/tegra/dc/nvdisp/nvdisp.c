@@ -1437,7 +1437,7 @@ int tegra_nvdisp_head_disable(struct tegra_dc *dc)
 	tegra_nvdisp_set_compclk(dc);
 
 	/* Disable DC clock */
-	tegra_dc_put(dc);
+	tegra_disp_clk_disable_unprepare(dc->clk);
 
 	/* check if any of head is using hub clock */
 	mutex_lock(&tegra_nvdisp_lock);
@@ -1534,10 +1534,9 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 		pclk = dc->out_ops->setup_clk(dc, dc->clk);
 
 	/* Enable DC clock */
-	tegra_dc_get(dc);
+	tegra_disp_clk_prepare_enable(dc->clk);
 
 	pr_info(" dc clk %ld\n", clk_get_rate(dc->clk));
-
 
 	tegra_dc_get(dc);
 

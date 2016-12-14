@@ -21,6 +21,7 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/uaccess.h>
+#include <linux/cpu_pm.h>
 #include <linux/cpufreq.h>
 #include <linux/slab.h>
 #include <linux/of.h>
@@ -119,6 +120,7 @@ struct tegra_cpufreq_data {
 	struct mutex mlock; /* lock protecting below params */
 	uint32_t freq_compute_delay; /* delay in reading clock counters */
 	uint32_t cpu_freq[CONFIG_NR_CPUS];
+	uint32_t last_hint[CONFIG_NR_CPUS];
 	unsigned long emc_max_rate; /* Hz */
 };
 
@@ -129,6 +131,7 @@ static struct freq_attr *tegra_cpufreq_attr[] = {
 };
 
 static DEFINE_PER_CPU(struct mutex, pcpu_mlock);
+static DEFINE_PER_CPU(spinlock_t, pcpu_slock);
 
 static bool debug_fs_only;
 
@@ -360,6 +363,7 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 	int cur_cl;
 	uint16_t ndiv;
 	int8_t vindx;
+	spinlock_t *slock = &per_cpu(pcpu_slock, cpu);
 
 	cur_cl = tegra18_logical_to_cluster(cpu);
 	vhtbl = &tfreq_data.pcluster[cur_cl].dvfs_tbl;
@@ -394,8 +398,11 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 	val |= (vindx << EDVD_COREX_VINDEX_VAL_SHIFT);
 	phy_cpu = logical_to_phys_map(cpu);
 
+	spin_lock(slock);
 	tcpufreq_writel(val, tfreq_data.pcluster[cur_cl].edvd_pub +
 		EDVD_CL_NDIV_VHINT_OFFSET, phy_cpu);
+	tfreq_data.last_hint[cpu] = val;
+	spin_unlock(slock);
 }
 
 /**
@@ -604,10 +611,14 @@ static int set_hint(void *data, u64 val)
 	/* Take hotplug lock before taking tegra cpufreq lock */
 	get_online_cpus();
 	if (cpu_online(cpu)) {
+		spinlock_t *slock = &per_cpu(pcpu_slock, cpu);
 		cur_cl = tegra18_logical_to_cluster(cpu);
 		cpu = logical_to_phys_map(cpu);
+		spin_lock(slock);
 		tcpufreq_writel(hint, tfreq_data.pcluster[cur_cl].edvd_pub +
 			EDVD_CL_NDIV_VHINT_OFFSET, cpu);
+		tfreq_data.last_hint[cpu] = hint;
+		spin_unlock(slock);
 	}
 	put_online_cpus();
 	return 0;
@@ -1029,6 +1040,43 @@ static int tegra_boundaries_policy_notifier(struct notifier_block *nb,
 	return NOTIFY_OK;
 }
 
+#ifdef CONFIG_CPU_PM
+static int tegra_cpu_pm_notifier(struct notifier_block *nb,
+		unsigned long cmd, void *v)
+{
+	unsigned int cpu = smp_processor_id();
+
+	switch (cmd) {
+	case CPU_PM_EXIT:
+		/*
+		 * Only Denver can enter CC6 and lose the subsequent
+		 * VF request at runtime. So no need to do this for
+		 * ARM cores for now.
+		 */
+		if (!tegra18_is_cpu_denver(cpu))
+			break;
+
+		if (tfreq_data.last_hint[cpu]) {
+			int cur_cl, phy_cpu;
+			spinlock_t *slock = &per_cpu(pcpu_slock, cpu);
+
+			cur_cl = tegra18_logical_to_cluster(cpu);
+			phy_cpu = logical_to_phys_map(cpu);
+
+			if (spin_trylock(slock)) {
+				tcpufreq_writel(tfreq_data.last_hint[cpu],
+						tfreq_data.pcluster[cur_cl].edvd_pub +
+						EDVD_CL_NDIV_VHINT_OFFSET, phy_cpu);
+				spin_unlock(slock);
+			}
+		}
+		break;
+	}
+
+	return NOTIFY_OK;
+}
+#endif
+
 static struct notifier_block cluster0_freq_nb = {
 	.notifier_call = cluster0_freq_notify,
 };
@@ -1040,6 +1088,12 @@ static struct notifier_block cluster1_freq_nb = {
 static struct notifier_block tegra_boundaries_cpufreq_nb = {
 	.notifier_call = tegra_boundaries_policy_notifier,
 };
+
+#ifdef CONFIG_CPU_PM
+static struct notifier_block tegra_cpu_pm_nb = {
+	.notifier_call = tegra_cpu_pm_notifier,
+};
+#endif
 
 static void pm_qos_register_notifier(void)
 {
@@ -1379,6 +1433,7 @@ static int __init tegra_cpufreq_init(void)
 
 	for_each_possible_cpu(cpu) {
 		mutex_init(&per_cpu(pcpu_mlock, cpu));
+		spin_lock_init(&per_cpu(pcpu_slock, cpu));
 	}
 
 #ifdef CONFIG_DEBUG_FS
@@ -1419,6 +1474,11 @@ static int __init tegra_cpufreq_init(void)
 
 	cpufreq_register_notifier(&tegra_boundaries_cpufreq_nb,
 					CPUFREQ_POLICY_NOTIFIER);
+
+#ifdef CONFIG_CPU_PM
+	cpu_pm_register_notifier(&tegra_cpu_pm_nb);
+#endif
+
 	goto exit_out;
 err_free_res:
 	free_allocated_res_init();

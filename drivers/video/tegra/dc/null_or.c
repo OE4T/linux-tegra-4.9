@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/null_or.c
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
  * Author: Aron Wong <awong@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -260,7 +260,6 @@ static long tegra_dc_null_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	/* configure the clock rate to something low before we switch to it. */
 	if (clk != dc->clk) {
 		base_clk = clk_get_parent(parent_clk);
-		rate = 100800000;
 		clk_set_rate(base_clk, dc->mode.pclk);
 		if (clk_get_parent(clk) != parent_clk)
 			clk_set_parent(clk, parent_clk);

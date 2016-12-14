@@ -814,6 +814,15 @@ static void print_mca_roc_cce(struct seq_file *file,
 
 	if (psn_err) {
 		psn_info = get_mca_roc_cce_more_info_poison_info_d1(more_info);
+		mca_bank->clear_serr = false;
+		if (psn_info & MCA_ARI_ROC_CCE_PSN_VPR_READ_FAIL ||
+		    psn_info & MCA_ARI_ROC_CCE_PSN_VPR_WRITE_FAIL ||
+		    psn_info & MCA_ARI_ROC_CCE_PSN_GSC_READ_FAIL ||
+		    psn_info & MCA_ARI_ROC_CCE_PSN_GSC_WRITE_FAIL ||
+		    psn_info & MCA_ARI_ROC_CCE_PSN_TZDRAM_READ_FAIL ||
+		    psn_info & MCA_ARI_ROC_CCE_PSN_TZDRAM_WRITE_FAIL ||
+		    psn_info & MCA_ARI_ROC_CCE_PSN_ILL_MTS_ACCESS)
+			mca_bank->clear_serr = true;
 		print_mca(file, "\t\tPoison Info = 0x%llx\n", psn_info);
 		print_mca_bits(file, roc_cce_psn_bits, psn_info);
 	}
@@ -1170,7 +1179,8 @@ static int ari_serr_hook(struct pt_regs *regs, int reason,
 	u64 status;
 	struct ari_mca_bank *bank;
 	unsigned long flags;
-	bool clear_srr = 0;
+	int clear_serr = 0;
+	int retval = 1;
 
 	/* Iterate through the banks looking for one with an error */
 	raw_spin_lock_irqsave(&ari_mca_lock, flags);
@@ -1180,13 +1190,14 @@ static int ari_serr_hook(struct pt_regs *regs, int reason,
 		if (status & SERRi_STATUS_VAL) {
 			save_bank(bank, 0);
 			print_bank(bank);
-			clear_srr = 1;
+			clear_serr = bank->clear_serr;
+			retval = clear_serr;
 		}
 	}
-	if (clear_srr)
+	if (clear_serr)
 		tegra18_clear_serr();
 	raw_spin_unlock_irqrestore(&ari_mca_lock, flags);
-	return 0;	/* Not handled */
+	return retval;
 }
 
 static struct serr_hook hook = {

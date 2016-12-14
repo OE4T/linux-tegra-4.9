@@ -26,6 +26,7 @@ struct ari_mca_bank {
 	u64 saved_addr;
 	u64 saved_msc1;
 	u64 saved_msc2;
+	u8 clear_serr;
 	void (*print_mca)(struct seq_file *file, struct ari_mca_bank *bank);
 	struct ari_mca_error *errors;
 };

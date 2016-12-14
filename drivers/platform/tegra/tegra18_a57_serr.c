@@ -216,6 +216,7 @@ static int a57_serr_hook(struct pt_regs *regs, int reason,
 	int corrected;
 	unsigned long flags;
 	struct cpuinfo_arm64 *cpuinfo;
+	int retval = 1;
 
 	raw_spin_lock_irqsave(&a57_mca_lock, flags);
 	cpu = smp_processor_id();
@@ -235,6 +236,7 @@ static int a57_serr_hook(struct pt_regs *regs, int reason,
 
 			print_a57_merrsr(NULL, cpu_syndrome, l2_syndrome);
 			pr_crit("**************************************\n");
+			retval = 0;
 		}
 
 		if (cpu_syndrome & A57_CPUMERRSR_VALID) {
@@ -253,7 +255,7 @@ static int a57_serr_hook(struct pt_regs *regs, int reason,
 	}
 
 	raw_spin_unlock_irqrestore(&a57_mca_lock, flags);
-	return 0;
+	return retval;
 }
 
 static DEFINE_MUTEX(a57_serr_mutex);

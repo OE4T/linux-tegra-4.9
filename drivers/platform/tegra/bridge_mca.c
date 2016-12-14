@@ -334,13 +334,15 @@ static int bridge_serr_hook(struct pt_regs *regs, int reason,
 			unsigned int esr, void *priv)
 {
 	struct bridge_mca_bank *bank = priv;
+	int retval = 1;
 
 	if (!bank->seen_error &&
 	    bank->error_fifo_count(bank->vaddr)) {
 		print_bank(bank);
 		bank->seen_error = 1;
+		retval = 0;
 	}
-	return 0;
+	return retval;
 }
 
 #ifdef CONFIG_DEBUG_FS

@@ -32,7 +32,7 @@
 #include <asm/cpu.h>
 #include <asm/smp_plat.h>
 
-#include <mach/hardware.h>
+#include <soc/tegra/chip-id.h>
 
 #include "denver-knobs.h"
 

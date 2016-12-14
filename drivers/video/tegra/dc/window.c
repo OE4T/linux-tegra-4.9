@@ -25,7 +25,6 @@
 #include <soc/tegra/fuse.h>
 #endif
 #include <mach/dc.h>
-#include <mach/hardware.h>
 #include <trace/events/display.h>
 #include <linux/fb.h>
 #include "dc_reg.h"

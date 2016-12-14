@@ -712,6 +712,7 @@ static int trusty_virtio_remove(struct platform_device *pdev)
 static const struct of_device_id trusty_of_match[] = {
 	{
 		.compatible = "android,trusty-virtio-v1",
+	}, {
 	},
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -55,7 +55,7 @@ static int dsi_i2c_panel_volt_en(struct i2c_client *client)
 	u32 cnt;
 	int err;
 
-	i2c_msg_transfer = kzalloc(num_of_xfers * sizeof(i2c_msg_transfer),
+	i2c_msg_transfer = kcalloc(num_of_xfers, sizeof(struct i2c_msg),
 		GFP_KERNEL);
 	if (!i2c_msg_transfer)
 		return -ENOMEM;

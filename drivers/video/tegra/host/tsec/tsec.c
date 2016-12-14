@@ -31,7 +31,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/tegra_pm_domains.h>
 
-#include <mach/hardware.h>
+#include <soc/tegra/chip-id.h>
 
 #include "dev.h"
 #include "tsec.h"

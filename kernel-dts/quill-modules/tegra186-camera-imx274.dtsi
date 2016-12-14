@@ -254,7 +254,7 @@
 					tc358840_out0: endpoint {
 						csi-port = <2>;
 						bus-width = <8>;
-						remote-endpoint = <&csi_in0>;
+						remote-endpoint = <&tc358840_csi_in0>;
 					};
 				};
 			};

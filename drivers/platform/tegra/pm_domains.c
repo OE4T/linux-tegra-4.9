@@ -28,7 +28,6 @@
 #include <linux/slab.h>
 #include <linux/wakelock.h>
 
-#ifdef CONFIG_TEGRA_MC_DOMAINS
 #define TEGRA_PD_DEV_CALLBACK(callback, dev)			\
 ({								\
 	int (*__routine)(struct device *__d);			\
@@ -77,61 +76,6 @@ static int tegra_mc_clk_power_on(struct generic_pm_domain *genpd)
 
 	return 0;
 }
-#endif
-
-#ifdef CONFIG_MMC_PM_DOMAIN
-static void suspend_devices_in_domain(struct generic_pm_domain *genpd)
-{
-	struct pm_domain_data *pdd;
-	struct device *dev;
-
-	list_for_each_entry(pdd, &genpd->dev_list, list_node) {
-		dev = pdd->dev;
-
-		if (dev->pm_domain && dev->pm_domain->ops.suspend)
-			dev->pm_domain->ops.suspend(dev);
-	}
-}
-
-static void resume_devices_in_domain(struct generic_pm_domain *genpd)
-{
-	struct pm_domain_data *pdd;
-	struct device *dev;
-	list_for_each_entry(pdd, &genpd->dev_list, list_node) {
-		dev = pdd->dev;
-
-		if (dev->pm_domain && dev->pm_domain->ops.resume)
-			dev->pm_domain->ops.resume(dev);
-	}
-}
-
-static int tegra_core_power_on(struct generic_pm_domain *genpd)
-{
-	struct pm_domain_data *pdd;
-	struct gpd_link *link;
-
-	list_for_each_entry(link, &genpd->master_links, master_node)
-		resume_devices_in_domain(link->slave);
-
-	list_for_each_entry(pdd, &genpd->dev_list, list_node)
-		TEGRA_PD_DEV_CALLBACK(resume, pdd->dev);
-	return 0;
-}
-
-static int tegra_core_power_off(struct generic_pm_domain *genpd)
-{
-	struct pm_domain_data *pdd;
-	struct gpd_link *link;
-
-	list_for_each_entry(link, &genpd->master_links, master_node)
-		suspend_devices_in_domain(link->slave);
-
-	list_for_each_entry(pdd, &genpd->dev_list, list_node)
-		TEGRA_PD_DEV_CALLBACK(suspend, pdd->dev);
-
-	return 0;
-}
-
 #endif
 
 #if defined(CONFIG_ARCH_TEGRA_APE)
@@ -348,37 +292,38 @@ static int __init tegra_init_ape(struct generic_pm_domain *pd)
 }
 #endif
 
-#ifdef CONFIG_MMC_PM_DOMAIN
-static int __init tegra_init_sdhci(struct generic_pm_domain *pd)
-{
-	pd->power_off = tegra_core_power_off;
-	pd->power_on = tegra_core_power_on;
-
-	return 0;
-}
-#else
-static inline int __init tegra_init_sdhci(struct generic_pm_domain *pd)
-{
-	return 0;
-}
-#endif
-
+/* Do not add to this list */
 static const struct of_device_id tegra_pd_match[] __initconst = {
-	{.compatible = "nvidia,tegra132-mc-clk-pd", .data = tegra_init_mc_clk},
-	{.compatible = "nvidia,tegra132-nvavp-pd", .data = NULL},
-	{.compatible = "nvidia,tegra132-sdhci-pd", .data = tegra_init_sdhci},
 	{.compatible = "nvidia,tegra210-mc-clk-pd", .data = tegra_init_mc_clk},
 	{.compatible = "nvidia,tegra210-ape-pd", .data = tegra_init_ape },
 	{.compatible = "nvidia,tegra210-adsp-pd", .data = NULL},
-	{.compatible = "nvidia,tegra210-sdhci3-pd", .data = tegra_init_sdhci},
-	{.compatible = "nvidia,tegra210-sdhci2-pd", .data = tegra_init_sdhci},
-	{.compatible = "nvidia,tegra186-mc-clk-pd", .data = tegra_init_mc_clk},
 	{.compatible = "nvidia,tegra186-ape-pd", .data = tegra_init_ape },
 	{.compatible = "nvidia,tegra186-adsp-pd", .data = NULL},
-	{.compatible = "nvidia,tegra186-sdhci3-pd", .data = tegra_init_sdhci},
-	{.compatible = "nvidia,tegra186-sdhci2-pd", .data = tegra_init_sdhci},
 	{},
 };
+
+/* node: device tree node of the child power domain */
+static int attach_subdomain(struct device_node *node)
+{
+	int ret;
+	struct of_phandle_args master_phandle, child_phandle;
+
+	child_phandle.np = node;
+	child_phandle.args_count = 0;
+
+	ret = of_parse_phandle_with_args(node, "power-domains",
+					 "#power-domain-cells", 0,
+					 &master_phandle);
+
+	if (ret < 0)
+		return ret;
+
+	pr_info("Adding domain %s to PM domain %s\n",
+		node->name, master_phandle.np->name);
+	of_genpd_add_subdomain(&master_phandle, &child_phandle);
+
+	return 0;
+}
 
 static int __init tegra_init_pd(struct device_node *np)
 {
@@ -408,13 +353,9 @@ static int __init tegra_init_pd(struct device_node *np)
 
 	pm_genpd_init(gpd, &simple_qos_governor, is_off);
 
-	if (tegra_init_mc_clk != match->data)
-		pm_genpd_set_poweroff_delay(gpd, 3000);
-
 	of_genpd_add_provider_simple(np, gpd);
-	gpd->of_node = of_node_get(np);
 
-	genpd_pm_subdomain_attach(gpd);
+	attach_subdomain(np);
 	return 0;
 }
 
@@ -432,48 +373,6 @@ static int __init tegra_init_pm_domain(void)
 	return ret;
 }
 core_initcall(tegra_init_pm_domain);
-
-void tegra_pd_add_device(struct device *dev)
-{
-	struct device_node *dn = of_node_get(dev->of_node);
-
-	if (of_property_read_bool(dn, "wakeup-disable"))
-		device_set_wakeup_capable(dev, 0);
-	else
-		device_set_wakeup_capable(dev, 1);
-
-	of_node_put(dev->of_node);
-}
-EXPORT_SYMBOL(tegra_pd_add_device);
-
-void tegra_sdhci_add_device(struct device *dev)
-{
-	device_set_wakeup_capable(dev, 1);
-}
-EXPORT_SYMBOL(tegra_sdhci_add_device);
-
-void tegra_pd_remove_device(struct device *dev)
-{
-}
-EXPORT_SYMBOL(tegra_pd_remove_device);
-
-void tegra_pd_add_sd(struct generic_pm_domain *sd)
-{
-	int ret;
-	ret = genpd_pm_subdomain_attach(sd);
-	if (ret)
-		pr_err("Failure to add %s domain\n", sd->name);
-}
-EXPORT_SYMBOL(tegra_pd_add_sd);
-
-void tegra_pd_remove_sd(struct generic_pm_domain *sd)
-{
-	int ret;
-	ret = genpd_pm_subdomain_detach(sd);
-	if (ret)
-		pr_err("Failure to remove %s domain\n", sd->name);
-}
-EXPORT_SYMBOL(tegra_pd_remove_sd);
 
 int tegra_pd_get_powergate_id(struct of_device_id *dev_id)
 {
@@ -508,8 +407,6 @@ int tegra_pd_add_domain(struct of_device_id *dev_id,
 			return -ENOMEM;
 
 		gpd->name = (char *)dn->name;
-		if (pm_genpd_lookup_name(gpd->name))
-			return 0;
 
 		if (of_property_read_bool(dn, "is_off"))
 			tpd->is_off = true;
@@ -518,20 +415,10 @@ int tegra_pd_add_domain(struct of_device_id *dev_id,
 			return -EINVAL;
 		pm_genpd_init(gpd, NULL, tpd->is_off);
 		of_genpd_add_provider_simple(dn, gpd);
-		gpd->of_node = of_node_get(dn);
 
-		genpd_pm_subdomain_attach(gpd);
+		attach_subdomain(dn);
 	}
 #endif
 	return 0;
 }
 EXPORT_SYMBOL(tegra_pd_add_domain);
-#else
-
-struct tegra_pm_domain tegra_mc_clk;
-EXPORT_SYMBOL(tegra_mc_clk);
-struct tegra_pm_domain tegra_mc_chain_a;
-EXPORT_SYMBOL(tegra_mc_chain_a);
-struct tegra_pm_domain tegra_mc_chain_b;
-EXPORT_SYMBOL(tegra_mc_chain_b);
-#endif

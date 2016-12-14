@@ -674,7 +674,7 @@ static ssize_t set_power_saver(struct device *dev,
 	if (!power_saver_flag) {
 		pr_debug("rt8168_power mode is set to big spender");
 		aspm = 0;
-		s5wol = 1;
+		s5wol = 0;
 		eee_enable = 0;
 	} else {
 		pr_debug("rt8168_power mode is set to no waste");

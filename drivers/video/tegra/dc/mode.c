@@ -627,6 +627,9 @@ int _tegra_dc_set_mode(struct tegra_dc *dc,
 		tegra_dsi_init_clock_param(dc);
 	}
 
+	/* Update cached mode */
+	memcpy(&dc->cached_mode, &dc->mode, sizeof(dc->mode));
+
 	print_mode(dc, &new_mode, __func__);
 	dc->frametime_ns = calc_frametime_ns(&new_mode);
 

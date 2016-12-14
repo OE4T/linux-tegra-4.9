@@ -2607,7 +2607,8 @@ static struct of_device_id tegra_se_of_match[] = {
 	{
 		.compatible = "nvidia,tegra210-se",
 		.data = &tegra21_se_chipdata,
-	},
+	}, {
+	}
 };
 MODULE_DEVICE_TABLE(of, tegra_se_of_match);
 

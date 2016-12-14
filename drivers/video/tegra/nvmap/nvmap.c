@@ -60,6 +60,9 @@ void *__nvmap_kmap(struct nvmap_handle *h, unsigned int pagenum)
 	if (!h)
 		return NULL;
 
+	if (!h->alloc)
+		goto put_handle;
+
 	if (!(h->heap_type & nvmap_dev->cpu_access_mask))
 		goto put_handle;
 
@@ -92,7 +95,7 @@ void __nvmap_kunmap(struct nvmap_handle *h, unsigned int pagenum,
 	phys_addr_t paddr;
 	struct vm_struct *area = NULL;
 
-	if (!h ||
+	if (!h || !h->alloc ||
 	    WARN_ON(!virt_addr_valid(h)) ||
 	    WARN_ON(!addr) ||
 	    !(h->heap_type & nvmap_dev->cpu_access_mask))
@@ -137,7 +140,7 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 		return NULL;
 
 	if (!h->alloc)
-		return NULL;
+		goto put_handle;
 
 	if (!(h->heap_type & nvmap_dev->cpu_access_mask))
 		goto put_handle;
@@ -201,7 +204,7 @@ put_handle:
 
 void __nvmap_munmap(struct nvmap_handle *h, void *addr)
 {
-	if (!h ||
+	if (!h || !h->alloc ||
 	    WARN_ON(!virt_addr_valid(h)) ||
 	    WARN_ON(!addr) ||
 	    !(h->heap_type & nvmap_dev->cpu_access_mask))
@@ -239,6 +242,11 @@ struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
 	if (!h)
 		return ERR_PTR(-EINVAL);
 
+	if (!h->alloc) {
+		err = -EINVAL;
+		goto put_handle;
+	}
+
 	npages = PAGE_ALIGN(h->size) >> PAGE_SHIFT;
 	sgt = kzalloc(sizeof(*sgt), GFP_KERNEL);
 	if (!sgt) {
@@ -268,6 +276,7 @@ struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
 
 err:
 	kfree(sgt);
+put_handle:
 	nvmap_handle_put(h);
 	return ERR_PTR(err);
 }

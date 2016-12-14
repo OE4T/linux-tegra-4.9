@@ -434,7 +434,6 @@ struct arm_smmu_device {
 	u32				features;
 
 #define ARM_SMMU_OPT_SECURE_CFG_ACCESS (1 << 0)
-#define ARM_SMMU_OPT_BROKEN_SIM_IRQ    (1 << 1)
 	u32				options;
 	enum arm_smmu_arch_version	version;
 
@@ -479,7 +478,6 @@ struct arm_smmu_cfg {
 struct arm_smmu_domain {
 	struct arm_smmu_device		*smmu;
 	struct arm_smmu_cfg		cfg;
-	struct page *arm_dummy_page;   /* dummy page for faulted address*/
 	spinlock_t			lock;
 
 	dma_addr_t			inquired_iova;
@@ -548,7 +546,6 @@ struct arm_smmu_option_prop {
 static struct arm_smmu_option_prop arm_smmu_options[] = {
 	{ ARM_SMMU_OPT_SECURE_CFG_ACCESS, "calxeda,smmu-secure-config-access" },
 	{ ARM_SMMU_OPT_SECURE_CFG_ACCESS, "-calxeda,smmu-secure-config-access" },
-	{ ARM_SMMU_OPT_BROKEN_SIM_IRQ, "linsim,smmu-broken-sim-irq" },
 	{ 0, NULL},
 };
 
@@ -576,8 +573,6 @@ static void parse_driver_options(struct arm_smmu_device *smmu)
 	/* FIXME: remove if linsim is fixed */
 	if (tegra_platform_is_sim())
 		smmu->options |= ARM_SMMU_OPT_SECURE_CFG_ACCESS;
-	else
-		smmu->options &= ~ARM_SMMU_OPT_BROKEN_SIM_IRQ;
 }
 
 static struct device_node *dev_get_dev_node(struct device *dev)
@@ -1385,12 +1380,6 @@ static struct iommu_domain *arm_smmu_domain_alloc(unsigned type)
 	if (!pgd)
 		goto out_free_domain;
 
-	smmu_domain->arm_dummy_page = alloc_page(GFP_KERNEL | __GFP_ZERO);
-	if (!smmu_domain->arm_dummy_page) {
-		free_pages((ulong)pgd, order);
-		goto out_free_domain;
-	}
-
 	smmu_domain->cfg.pgd = pgd;
 
 	spin_lock_init(&smmu_domain->lock);
@@ -1475,7 +1464,6 @@ static void arm_smmu_domain_free(struct iommu_domain *domain)
 	 */
 	arm_smmu_destroy_domain_context(domain);
 	arm_smmu_free_pgtables(smmu_domain);
-	__free_page(smmu_domain->arm_dummy_page);
 	kfree(smmu_domain);
 }
 
@@ -2350,28 +2338,6 @@ static int __arm_smmu_get_pci_sid(struct pci_dev *pdev, u16 alias, void *data)
 	return 0; /* Continue walking */
 }
 
-static int arm_iommu_fault(struct iommu_domain *domain, struct device *dev,
-		unsigned long iova, int flags, void *token)
-{
-	struct arm_smmu_domain *smmu_domain = to_smmu_domain(domain);
-	phys_addr_t dummy = page_to_phys(smmu_domain->arm_dummy_page);
-	phys_addr_t pa = arm_smmu_iova_to_phys(domain, iova);
-
-	dev_err(dev, "%s: iova=0x%lx pa=%pa flags=0x%x cb=%d\n",
-		__func__, iova, &pa, flags, smmu_domain->cfg.cbndx);
-
-	if (arm_smmu_skip_mapping)
-		arm_smmu_skip_mapping = 0;
-
-	dev_err(dev, "%s: iova=0x%lx dummy=%pa flags=0x%x cb=%d\n",
-		__func__, iova, &dummy, flags, smmu_domain->cfg.cbndx);
-
-	arm_smmu_handle_mapping(smmu_domain, iova, dummy, PAGE_SIZE, 0);
-	arm_smmu_tlb_inv_context(smmu_domain);
-
-	return 0;
-}
-
 static int arm_smmu_add_device(struct device *dev)
 {
 	struct arm_smmu_device *smmu;
@@ -2431,9 +2397,6 @@ static int arm_smmu_add_device(struct device *dev)
 	ret = arm_iommu_attach_device(dev, mapping);
 	if (ret)
 		goto err_attach_dev;
-
-	if (smmu->options & ARM_SMMU_OPT_BROKEN_SIM_IRQ)
-		iommu_set_fault_handler(mapping->domain, arm_iommu_fault, 0);
 
 	pr_debug("Device added to SMMU: %s\n", dev_name(dev));
 	return 0;

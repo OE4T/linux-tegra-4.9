@@ -3383,6 +3383,117 @@ static int rt5659_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	return 0;
 }
 
+void rt565x_parse_codec_pll_source(struct platform_device *pdev,
+	int *pll_source_id, bool *is_mclk_enabled)
+{
+	const char *pll_source;
+	struct device_node *sound_node = pdev->dev.of_node;
+
+	if (of_property_read_string(sound_node, "rt565x,codec-pll-source",
+		&pll_source) < 0) {
+		dev_info(&pdev->dev,
+			"pll source property is missing - using MCLK\n");
+		*is_mclk_enabled = true;
+		*pll_source_id = RT5659_PLL1_S_INVALID;
+		return;
+	}
+
+	if (!strcmp(pll_source, "mclk")) {
+		*pll_source_id = RT5659_PLL1_S_MCLK;
+		*is_mclk_enabled = true;
+		return;
+	} else if (!strcmp(pll_source, "bclk1"))
+		*pll_source_id = RT5659_PLL1_S_BCLK1;
+	else if (!strcmp(pll_source, "bclk2"))
+		*pll_source_id = RT5659_PLL1_S_BCLK2;
+	else if (!strcmp(pll_source, "bclk3"))
+		*pll_source_id = RT5659_PLL1_S_BCLK3;
+	else if (!strcmp(pll_source, "bclk4"))
+		*pll_source_id = RT5659_PLL1_S_BCLK4;
+	else {
+		dev_info(&pdev->dev,
+			"Unsupported codec pll source, fall back to MCLK\n");
+		*is_mclk_enabled = true;
+		*pll_source_id = RT5659_PLL1_S_INVALID;
+		return;
+	}
+
+	*is_mclk_enabled = false;
+}
+EXPORT_SYMBOL_GPL(rt565x_parse_codec_pll_source);
+
+int rt565x_manage_codec_sysclk(struct snd_soc_pcm_stream *dai_params,
+	struct snd_soc_dai *dai, int pll_source_id)
+{
+	int err, sysclk_source;
+	unsigned int srate, sysclk_rate;
+
+	srate = dai_params->rate_min;
+	sysclk_rate = srate << 8; /* 256 times the sample rate */
+
+	switch (pll_source_id) {
+	case RT5659_PLL1_S_BCLK1: {
+		unsigned int bclk_rate, format_bps, channels;
+
+		channels = dai_params->channels_min;
+
+		switch (dai_params->formats) {
+		case SNDRV_PCM_FMTBIT_S8:
+			format_bps = 8;
+			break;
+		case SNDRV_PCM_FMTBIT_S16_LE:
+			format_bps = 16;
+			break;
+		case SNDRV_PCM_FMTBIT_S24_LE:
+			format_bps = 24;
+			break;
+		case SNDRV_PCM_FMTBIT_S32_LE:
+			format_bps = 32;
+			break;
+		default:
+			dev_err(dai->codec->dev, "wrong format = %llu\n",
+				dai_params->formats);
+			return -EINVAL;
+		}
+
+		bclk_rate = srate * format_bps * channels;
+		err = snd_soc_dai_set_pll(dai, 0, RT5659_PLL1_S_BCLK1,
+			bclk_rate, sysclk_rate);
+		if (err < 0) {
+			dev_err(dai->codec->dev,
+				"not able to set codec pll\n");
+			return err;
+		}
+		sysclk_source = RT5659_SCLK_S_PLL1;
+		break;
+	}
+
+	/* TODO: support for below pll sources */
+	case RT5659_PLL1_S_MCLK:
+	case RT5659_PLL1_S_BCLK2:
+	case RT5659_PLL1_S_BCLK3:
+	case RT5659_PLL1_S_BCLK4:
+		dev_err(dai->codec->dev,
+			"pll source - %d not yet implemented\n",
+			pll_source_id);
+		return -EINVAL;
+
+	default:
+		sysclk_source = RT5659_SCLK_S_MCLK;
+		break;
+	}
+
+	err = snd_soc_dai_set_sysclk(dai, sysclk_source,
+			sysclk_rate, SND_SOC_CLOCK_IN);
+	if (err < 0) {
+		dev_err(dai->codec->dev, "not able to set sysclk for codec\n");
+		return err;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(rt565x_manage_codec_sysclk);
+
 static int rt5659_set_dai_sysclk(struct snd_soc_dai *dai,
 		int clk_id, unsigned int freq, int dir)
 {

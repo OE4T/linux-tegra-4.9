@@ -24,6 +24,8 @@
 #include <linux/uaccess.h>
 #include <linux/delay.h>
 
+#include "../drivers/staging/android/sync.h"
+
 #include "dev.h"
 #include "bus_client.h"
 #include "chip_support.h"
@@ -376,46 +378,105 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 	struct dla_task_descriptor *task_desc = task->task_desc;
 	struct nvhost_queue *queue = task->queue;
 	struct platform_device *pdev = queue->pool->pdev;
+	struct nvhost_master *host = nvhost_get_host(pdev);
+	struct nvhost_syncpt *sp = &host->syncpt;
 	struct dla_action_semaphore *preaction;
 	struct dla_action_list *preactionl;
 	struct dla_action_opcode *opcode;
 	uint16_t preactionlist_of;
+	void *next = NULL;
 	void *mem;
-	int i;
+	int i, pre_cnt = 0;
 
 	/* preaction list offset update */
 	preactionlist_of = task_desc->postactions +
 					sizeof(struct dla_action_list);
 
+#define UPDATE_PREACTION(_index, _opcode, _addr, _val)			\
+	do {								\
+		/* get next preaction base */				\
+		next = (char *)task_desc + preactionlist_of +		\
+		  _index * (sizeof(struct dla_action_opcode) +		\
+			sizeof(struct dla_action_semaphore));		\
+									\
+		/* get base opcode */					\
+		opcode = (struct dla_action_opcode *)next;		\
+									\
+		/* set action type */					\
+		opcode->value = _opcode;				\
+									\
+		/* get actual preaction address */			\
+		preaction = (struct dla_action_semaphore *)		\
+			((char *)opcode +				\
+			sizeof(struct dla_action_opcode));		\
+									\
+		/* update action */					\
+		preaction->address = _addr;				\
+		preaction->value = _val;				\
+		nvdla_dbg_info(pdev, "PRE opcode[%d] a[%llu] v[%d]",	\
+				_opcode, _addr, _val);			\
+	} while (0)
+
 	/* fill all preactions */
 	for (i = 0; i <= task->num_prefences; i++) {
-		void *next = NULL;
-
-		/* get next preaction base */
-		next = (char *)task_desc + preactionlist_of +
-		  i * (sizeof(struct dla_action_opcode) +
-			sizeof(struct dla_action_semaphore));
-
-		/* get base opcode */
-		opcode = (struct dla_action_opcode *)next;
 
 		/* update end of action list */
 		if (i == task->num_prefences) {
-			opcode->value = PREACTION_TERMINATE;
+			UPDATE_PREACTION(pre_cnt++, PREACTION_TERMINATE,
+						(dma_addr_t)0x0, 0);
 			break;
 		}
 
-		/* set action type */
-		opcode->value = PREACTION_SEM_GE;
+		switch (task->prefences[i].type) {
+		case NVDLA_FENCE_TYPE_SYNC_FD: {
+			struct sync_fence *f;
+			struct sync_pt *pt;
+			u32 id, thresh, j;
 
-		/* get actual preaction address */
-		preaction = (struct dla_action_semaphore *)
-			((char *)opcode + sizeof(struct dla_action_opcode));
+			f = nvhost_sync_fdget(task->prefences[i].sync_fd);
+			if (!f) {
+				nvdla_dbg_err(pdev, "failed to get sync fd");
+				break;
+			}
 
-		/* update action */
-		preaction->address = nvhost_syncpt_address(pdev,
-					task->prefences[i].syncpoint_index);
-		preaction->value = task->prefences[i].syncpoint_value;
+			j = id = thresh = 0;
+
+			for (j = 0; j < f->num_fences; j++) {
+				pt = sync_pt_from_fence(f->cbs[j].sync_pt);
+				id = nvhost_sync_pt_id(pt);
+				thresh = nvhost_sync_pt_thresh(pt);
+
+				if (!id ||
+				     !nvhost_syncpt_is_valid_hw_pt(sp, id)) {
+					nvdla_dbg_err(pdev, "Invalid sync_fd");
+					sync_fence_put(f);
+					break;
+				}
+
+				UPDATE_PREACTION(pre_cnt++,
+					PREACTION_SEM_GE,
+					nvhost_syncpt_address(pdev, id),
+					thresh);
+			}
+			break;
+		}
+		case NVDLA_FENCE_TYPE_SYNCPT: {
+			nvdla_dbg_info(pdev, "i[%d] id[%d] val[%d]",
+					i,
+					task->prefences[i].syncpoint_index,
+					task->prefences[i].syncpoint_value);
+
+			UPDATE_PREACTION(pre_cnt++, PREACTION_SEM_GE,
+				nvhost_syncpt_address(pdev,
+					task->prefences[i].syncpoint_index),
+					task->prefences[i].syncpoint_value);
+			break;
+		}
+		default:
+			nvdla_dbg_err(pdev, "Invalid sync_type[%d]",
+				task->prefences[i].type);
+			return -EINVAL;
+		}
 	}
 
 	/* actually update lists data */

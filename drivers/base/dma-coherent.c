@@ -76,7 +76,7 @@ static void release_from_contiguous_heap(struct heap_info *h, phys_addr_t base,
 static int update_vpr_config(struct heap_info *h);
 #define RESIZE_DEFAULT_SHRINK_AGE 3
 
-static bool dma_is_coherent_dev(struct device *dev)
+bool dma_is_coherent_dev(struct device *dev)
 {
 	struct heap_info *h;
 
@@ -89,6 +89,8 @@ static bool dma_is_coherent_dev(struct device *dev)
 		return false;
 	return true;
 }
+EXPORT_SYMBOL(dma_is_coherent_dev);
+
 static void dma_debugfs_init(struct device *dev, struct heap_info *heap)
 {
 	if (!heap->dma_debug_root) {
@@ -571,6 +573,14 @@ static int update_vpr_config(struct heap_info *h)
 	return 0;
 }
 
+static inline struct page **kvzalloc_pages(u32 count)
+{
+	if (count * sizeof(struct page *) <= PAGE_SIZE)
+		return kzalloc(count * sizeof(struct page *), GFP_KERNEL);
+	else
+		return vzalloc(count * sizeof(struct page *));
+}
+
 /* retval: !0 on success, 0 on failure */
 static int dma_alloc_from_coherent_dev_at(struct device *dev, ssize_t size,
 				       dma_addr_t *dma_handle, void **ret,
@@ -579,10 +589,12 @@ static int dma_alloc_from_coherent_dev_at(struct device *dev, ssize_t size,
 	struct dma_coherent_mem *mem;
 	int order;
 	unsigned long flags;
-	int pageno;
+	int pageno, i = 0;
 	int dma_memory_map = 0;
 	unsigned int count;
+	unsigned int alloc_size;
 	unsigned long align;
+	struct page **pages = NULL;
 
 	if (!dev)
 		return 0;
@@ -590,17 +602,37 @@ static int dma_alloc_from_coherent_dev_at(struct device *dev, ssize_t size,
 	if (!mem)
 		return 0;
 
+	order = get_order(size << PAGE_SHIFT >> mem->alloc_shift);
+	if (dma_get_attr(DMA_ATTR_ALLOC_EXACT_SIZE, attrs))
+		count = ALIGN(size, 1 << mem->alloc_shift) >> mem->alloc_shift;
+	else
+		count = 1 << order;
+
+	if (!count)
+		return 0;
+
+	if ((mem->flags & DMA_MEMORY_NOMAP) &&
+	    dma_get_attr(DMA_ATTR_ALLOC_SINGLE_PAGES, attrs)) {
+		alloc_size = 1;
+		pages = kvzalloc_pages(count);
+		if (!pages)
+			return 0;
+	} else {
+		alloc_size = count;
+	}
+
 	*dma_handle = DMA_ERROR_CODE;
 	*ret = NULL;
-	order = get_order(size << PAGE_SHIFT >> mem->alloc_shift);
 	spin_lock_irqsave(&mem->spinlock, flags);
 
 	if (unlikely(size > (mem->size << mem->alloc_shift)))
 		goto err;
 
-	if (attrs & DMA_ATTR_ALLOC_EXACT_SIZE) {
+	if ((mem->flags & DMA_MEMORY_NOMAP) &&
+	    dma_get_attr(DMA_ATTR_ALLOC_SINGLE_PAGES, attrs)) {
 		align = 0;
-		count = PAGE_ALIGN(size) >> PAGE_SHIFT;
+	} else if (attrs & DMA_ATTR_ALLOC_EXACT_SIZE) {
+		align = 0;
 	} else  {
 		if (order > DMA_BUF_ALIGNMENT)
 			align = (1 << DMA_BUF_ALIGNMENT) - 1;
@@ -608,18 +640,18 @@ static int dma_alloc_from_coherent_dev_at(struct device *dev, ssize_t size,
 			align = (1 << order) - 1;
 	}
 
-	if (DMA_ATTR_ALLOC_EXACT_SIZE & attrs)
-		count = ALIGN(size, 1 << mem->alloc_shift) >> mem->alloc_shift;
-	else
-		count = 1 << order;
+	while (count) {
+		pageno = bitmap_find_next_zero_area(mem->bitmap, mem->size,
+				start, alloc_size, align);
 
-	pageno = bitmap_find_next_zero_area(mem->bitmap, mem->size,
-			start, count, align);
+		if (pageno >= mem->size)
+			goto err;
 
-	if (pageno >= mem->size)
-		goto err;
-
-	bitmap_set(mem->bitmap, pageno, count);
+		count -= alloc_size;
+		if (pages)
+			pages[i++] = pfn_to_page(mem->pfn_base + pageno);
+		bitmap_set(mem->bitmap, pageno, alloc_size);
+	}
 
 	/*
 	 * Memory was found in the per-device area.
@@ -628,9 +660,13 @@ static int dma_alloc_from_coherent_dev_at(struct device *dev, ssize_t size,
 	if (!(mem->flags & DMA_MEMORY_NOMAP)) {
 		*ret = mem->virt_base + (pageno << mem->alloc_shift);
 		dma_memory_map = (mem->flags & DMA_MEMORY_MAP);
+	} else if (dma_get_attr(DMA_ATTR_ALLOC_SINGLE_PAGES, attrs)) {
+		*ret = pages;
 	}
 	spin_unlock_irqrestore(&mem->spinlock, flags);
-	if (dma_memory_map)
+	if (mem->flags & DMA_MEMORY_NOMAP)
+		/* Do nothing */;
+	else if (dma_memory_map)
 		memset(*ret, 0, size);
 	else if (*ret)
 		memset_io(*ret, 0, size);
@@ -638,7 +674,11 @@ static int dma_alloc_from_coherent_dev_at(struct device *dev, ssize_t size,
 	return 1;
 
 err:
+	while (i--)
+		bitmap_clear(mem->bitmap, page_to_pfn(pages[i]) -
+					mem->pfn_base, alloc_size);
 	spin_unlock_irqrestore(&mem->spinlock, flags);
+	kvfree(pages);
 	/*
 	 * In the case where the allocation can not be satisfied from the
 	 * per-device area, try to fall back to generic memory if the
@@ -669,9 +709,28 @@ int dma_release_from_coherent_dev(struct device *dev, size_t size, void *vaddr,
 	void *mem_addr;
 	unsigned int count;
 	unsigned int pageno;
+	unsigned long flags;
 
 	if (!mem)
 		return 0;
+
+	if ((mem->flags & DMA_MEMORY_NOMAP) &&
+	    dma_get_attr(DMA_ATTR_ALLOC_SINGLE_PAGES, attrs)) {
+		struct page **pages = vaddr;
+		int i;
+
+		spin_lock_irqsave(&mem->spinlock, flags);
+		for (i = 0; i < (size >> PAGE_SHIFT); i++) {
+			pageno = page_to_pfn(pages[i]) - mem->pfn_base;
+			if (WARN_ONCE(pageno > mem->size,
+				"invalid pageno:%d\n", pageno))
+				continue;
+			bitmap_clear(mem->bitmap, pageno, 1);
+		}
+		spin_unlock_irqrestore(&mem->spinlock, flags);
+		kvfree(pages);
+		return 1;
+	}
 
 	if (mem->flags & DMA_MEMORY_NOMAP)
 		mem_addr =  (void *)(uintptr_t)mem->device_base;
@@ -759,18 +818,19 @@ static int dma_release_from_coherent_heap_dev(struct device *dev, size_t len,
 		return 1;
 
 	mutex_lock(&h->resize_lock);
-	if ((uintptr_t)base < h->curr_base || len > h->curr_len ||
-	    (uintptr_t)base - h->curr_base > h->curr_len - len) {
-		BUG();
-		mutex_unlock(&h->resize_lock);
-		return 1;
+	if (!dma_get_attr(DMA_ATTR_ALLOC_SINGLE_PAGES, attrs)) {
+		if ((uintptr_t)base < h->curr_base || len > h->curr_len ||
+		    (uintptr_t)base - h->curr_base > h->curr_len - len) {
+			BUG();
+			mutex_unlock(&h->resize_lock);
+			return 1;
+		}
+
+		idx = div_u64((uintptr_t)base - h->cma_base, h->cma_chunk_size);
+		dev_dbg(&h->dev, "req free addr (%p) size (0x%zx) idx (%d)\n",
+			base, len, idx);
 	}
-
 	attrs |= DMA_ATTR_ALLOC_EXACT_SIZE;
-
-	idx = div_u64((uintptr_t)base - h->cma_base, h->cma_chunk_size);
-	dev_dbg(&h->dev, "req free addr (%p) size (0x%zx) idx (%d)\n",
-		base, len, idx);
 	err = dma_release_from_coherent_dev(&h->dev, len, base, attrs);
 	/* err = 0 on failure, !0 on successful release */
 	if (err && h->task)

@@ -41,6 +41,8 @@ unsigned long dma_get_coherent_memory_alloc_shift(struct device *dev);
 
 void dma_release_declared_memory(struct device *dev);
 
+bool dma_is_coherent_dev(struct device *dev);
+
 #else
 #define dma_alloc_from_coherent_attr(dev, size, handle, ret, attr) (0)
 #define dma_release_from_coherent_attr(dev, size, vaddr, attr, dma_handle) (0)
@@ -48,6 +50,7 @@ void dma_release_declared_memory(struct device *dev);
 #define dma_release_from_coherent(dev, order, vaddr) (0)
 #define dma_mmap_from_coherent(dev, vma, vaddr, order, ret) (0)
 #define dma_declare_coherent_resizable_cma_memory(dev, dma_info) (0)
+#define dma_is_coherent_dev(dev) (0)
 #endif
 
 #endif

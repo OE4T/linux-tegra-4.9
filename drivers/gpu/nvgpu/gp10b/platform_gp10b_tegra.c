@@ -328,9 +328,17 @@ static unsigned long gp10b_get_clk_rate(struct device *dev)
 
 static long gp10b_round_clk_rate(struct device *dev, unsigned long rate)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a *g = get_gk20a(dev);
+	struct gk20a_scale_profile *profile = g->scale_profile;
+	unsigned long *freq_table = profile->devfreq_profile.freq_table;
+	int max_states = profile->devfreq_profile.max_state;
+	int i;
 
-	return clk_round_rate(platform->clk[0], rate);
+	for (i = 0; i < max_states; ++i)
+		if (freq_table[i] > rate)
+			return freq_table[i];
+
+	return freq_table[max_states - 1];
 }
 
 static int gp10b_set_clk_rate(struct device *dev, unsigned long rate)

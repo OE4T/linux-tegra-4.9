@@ -1,7 +1,7 @@
 /*
  * GP10B GPU GR
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -31,9 +31,11 @@ enum {
 #define NVC097_SET_GO_IDLE_TIMEOUT		0x022c
 #define NVC097_SET_ALPHA_CIRCULAR_BUFFER_SIZE	0x02dc
 #define NVC097_SET_COALESCE_BUFFER_SIZE		0x1028
+#define NVC097_SET_RD_COALESCE			0x102c
 #define NVC097_SET_CIRCULAR_BUFFER_SIZE		0x1280
 #define NVC097_SET_SHADER_EXCEPTIONS		0x1528
 #define NVC0C0_SET_SHADER_EXCEPTIONS		0x1528
+#define NVC0C0_SET_RD_COALESCE			0x0228
 
 void gp10b_init_gr(struct gpu_ops *ops);
 int gr_gp10b_init_fs_state(struct gk20a *g);

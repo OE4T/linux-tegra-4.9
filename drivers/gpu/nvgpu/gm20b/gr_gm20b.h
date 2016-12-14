@@ -1,7 +1,7 @@
 /*
  * GM20B GPC MMU
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -39,7 +39,9 @@ enum {
 #define NVB197_SET_ALPHA_CIRCULAR_BUFFER_SIZE	0x02dc
 #define NVB197_SET_CIRCULAR_BUFFER_SIZE		0x1280
 #define NVB197_SET_SHADER_EXCEPTIONS		0x1528
+#define NVB197_SET_RD_COALESCE			0x102c
 #define NVB1C0_SET_SHADER_EXCEPTIONS		0x1528
+#define NVB1C0_SET_RD_COALESCE			0x0228
 
 #define NVA297_SET_SHADER_EXCEPTIONS_ENABLE_FALSE 0
 void gm20b_init_gr(struct gpu_ops *gops);
@@ -48,5 +50,6 @@ void gr_gm20b_commit_global_attrib_cb(struct gk20a *g,
 				      u64 addr, bool patch);
 int gr_gm20b_init_fs_state(struct gk20a *g);
 int gm20b_gr_tpc_disable_override(struct gk20a *g, u32 mask);
+void gr_gm20b_set_rd_coalesce(struct gk20a *g, u32 data);
 
 #endif

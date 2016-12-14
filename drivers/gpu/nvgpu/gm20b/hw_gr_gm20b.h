@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2253,6 +2253,18 @@ static inline u32 gr_gpc0_ppc0_cbm_alpha_cb_size_v_granularity_v(void)
 static inline u32 gr_gpc0_ppc0_cbm_alpha_cb_offset_r(void)
 {
 	return 0x005030f8;
+}
+static inline u32 gr_gpcs_tpcs_tex_m_dbg2_r(void)
+{
+	return 0x00419a3c;
+}
+static inline u32 gr_gpcs_tpcs_tex_m_dbg2_lg_rd_coalesce_en_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 gr_gpcs_tpcs_tex_m_dbg2_lg_rd_coalesce_en_m(void)
+{
+	return 0x1 << 2;
 }
 static inline u32 gr_gpccs_falcon_addr_r(void)
 {

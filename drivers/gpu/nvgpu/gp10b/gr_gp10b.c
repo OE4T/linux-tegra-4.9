@@ -1,7 +1,7 @@
 /*
  * GP10B GPU GR
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -629,6 +629,9 @@ static int gr_gp10b_handle_sw_method(struct gk20a *g, u32 addr,
 		case NVC0C0_SET_SHADER_EXCEPTIONS:
 			gk20a_gr_set_shader_exceptions(g, data);
 			break;
+		case NVC0C0_SET_RD_COALESCE:
+			gr_gm20b_set_rd_coalesce(g, data);
+			break;
 		default:
 			goto fail;
 		}
@@ -650,6 +653,9 @@ static int gr_gp10b_handle_sw_method(struct gk20a *g, u32 addr,
 			break;
 		case NVC097_SET_COALESCE_BUFFER_SIZE:
 			gr_gp10b_set_coalesce_buffer_size(g, data);
+			break;
+		case NVC097_SET_RD_COALESCE:
+			gr_gm20b_set_rd_coalesce(g, data);
 			break;
 		default:
 			goto fail;

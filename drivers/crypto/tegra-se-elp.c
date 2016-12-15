@@ -244,6 +244,22 @@ static bool tegra_se_ecc_vec_is_zero(const u32 *vec, int nbytes)
 	return !memcmp((u8 *)vec, zerobuf, nbytes);
 }
 
+/* Returns true if vec1 > vec2 */
+static bool tegra_se_ecc_vec_cmp(const u8 *vec1, const u8 *vec2,
+				 unsigned int nbytes)
+{
+	int i;
+
+	for (i = nbytes - 1; i >= 0; i--) {
+		if (vec1[i] > vec2[i])
+			return true;
+		else if (vec1[i] < vec2[i])
+			return false;
+	}
+
+	return false;
+}
+
 static bool tegra_se_ecdh_params_is_valid(struct ecdh *params)
 {
 	const u32 *private_key = (const u32 *)params->key;
@@ -263,7 +279,7 @@ static bool tegra_se_ecdh_params_is_valid(struct ecdh *params)
 		return false;
 
 	/* Make sure the private key is in the range [1, n-1]. */
-	if (memcmp((u8 *)order, (u8 *)private_key, nbytes) <= 0)
+	if (!tegra_se_ecc_vec_cmp((u8 *)order, (u8 *)private_key, nbytes))
 		return false;
 
 	return true;

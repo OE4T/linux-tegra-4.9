@@ -2135,6 +2135,7 @@ static const struct of_device_id tegra_se_elp_of_match[] = {
 	{
 		.compatible = "nvidia,tegra186-se-elp",
 		.data = &tegra18_se_chipdata,
+	}, {
 	},
 };
 MODULE_DEVICE_TABLE(of, tegra_se_elp_of_match);

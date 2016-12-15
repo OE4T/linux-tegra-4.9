@@ -3571,6 +3571,8 @@ static struct platform_device_id tegra_dev_se_devtype[] = {
 	{
 		.name = "tegra21-se",
 		.driver_data = (unsigned long)&tegra21_se_chipdata,
+	},
+	{
 	}
 };
 

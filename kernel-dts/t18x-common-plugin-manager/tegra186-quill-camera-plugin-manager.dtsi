@@ -475,9 +475,12 @@
 						output-low;
 					};
 				};
-
-
-
+			};
+			override@3 {
+				target = <&{/i2c@3180000/tca9548@77/i2c@1/ov5693_b@36}>;
+				_overlay_ {
+					pwdn-gpios = <&tegra_main_gpio TEGRA_MAIN_GPIO(N, 2) GPIO_ACTIVE_HIGH>;
+				};
 			};
 		};
 

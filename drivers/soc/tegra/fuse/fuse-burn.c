@@ -58,6 +58,8 @@
 #define TEGRA_FUSE_BURN_MAX_FUSES		15
 
 #define TEGRA_FUSE_ODM_PRODUCTION_MODE		0xa0
+#define H2_START_MACRO_BIT_INDEX		2167
+#define H2_END_MACRO_BIT_INDEX			3326
 
 struct fuse_burn_data {
 	char *name;
@@ -139,6 +141,16 @@ static void fuse_cmd_sense(void)
 	reg |= TEGRA_FUSE_CTRL_CMD_SENSE;
 	tegra_fuse_control_write(reg, TEGRA_FUSE_CTRL);
 	fuse_state_wait_for_idle();
+}
+
+static u32 tegra_fuse_calculate_parity(u32 val)
+{
+	u32 i, p = 0;
+
+	for (i = 0; i < 32; i++)
+		p ^= ((val >> i) & 1);
+
+	return p;
 }
 
 static bool tegra_fuse_is_fuse_burn_allowed(struct fuse_burn_data *data)
@@ -388,6 +400,46 @@ static ssize_t tegra_fuse_store(struct device *dev,
 	return count;
 }
 
+static ssize_t tegra_fuse_calc_h2_code(struct device *dev,
+	struct device_attribute *attr,
+	char *buf)
+{
+	u32 startrowindex, startbitindex;
+	u32 endrowindex, endbitindex;
+	u32 bitindex;
+	u32 rowindex;
+	u32 rowdata;
+	u32 hammingvalue = 0;
+	u32 pattern = 0x7ff;
+	u32 parity;
+	u32 hammingcode;
+
+	startrowindex = H2_START_MACRO_BIT_INDEX / 32;
+	startbitindex = H2_START_MACRO_BIT_INDEX % 32;
+	endrowindex = H2_END_MACRO_BIT_INDEX / 32;
+	endbitindex = H2_END_MACRO_BIT_INDEX % 32;
+
+	for (rowindex = startrowindex; rowindex <= endrowindex; rowindex++) {
+		rowdata = fuse_cmd_read(rowindex);
+		for (bitindex = 0; bitindex < 32; bitindex++) {
+			pattern++;
+			if ((rowindex == startrowindex) &&
+			    (bitindex < startbitindex))
+				continue;
+			if ((rowindex == endrowindex) &&
+			    (bitindex > endbitindex))
+				continue;
+			if ((rowdata >> bitindex) & 0x1)
+				hammingvalue ^= pattern;
+		}
+	}
+	parity = tegra_fuse_calculate_parity(hammingvalue);
+	hammingcode = hammingvalue | (1 << 12) | ((parity ^ 1) << 13);
+	sprintf(buf, "0x%08x\n", hammingcode);
+
+	return strlen(buf);
+}
+
 #define FUSE_BURN_DATA(fname, m_off, sbit, size, c_off, is_red)	\
 	{							\
 		.name = #fname,					\
@@ -398,6 +450,14 @@ static ssize_t tegra_fuse_store(struct device *dev,
 		.is_redundant = is_red,				\
 		.attr.show = tegra_fuse_show,			\
 		.attr.store = tegra_fuse_store,			\
+		.attr.attr.name = #fname,			\
+		.attr.attr.mode = 0660,				\
+	}
+#define FUSE_SYSFS_DATA(fname, show_func, store_func)		\
+	{							\
+		.name = #fname,					\
+		.attr.show = show_func,				\
+		.attr.store = store_func,			\
 		.attr.attr.name = #fname,			\
 		.attr.attr.mode = 0660,				\
 	}
@@ -440,6 +500,7 @@ static struct tegra_fuse_hw_feature tegra186_fuse_chip_data = {
 		FUSE_BURN_DATA(kek2, 0x61, 22, 128, 0x2e0, false),
 		FUSE_BURN_DATA(odm_info, 0x50, 31, 16, 0x19c, false),
 		FUSE_BURN_DATA(odm_h2, 0x67, 31, 14, 0x33c, false),
+		FUSE_SYSFS_DATA(calc_h2, tegra_fuse_calc_h2_code, NULL),
 		{},
 	},
 };

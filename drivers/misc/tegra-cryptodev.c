@@ -641,11 +641,9 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 {
 	struct tegra_crypto_ctx *ctx = filp->private_data;
 	struct crypto_rng *tfm = NULL;
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct tegra_se_elp_pka_request elp_rsa_req;
 	struct tegra_se_elp_pka_request ecc_req;
 	struct tegra_se_elp_rng_request elp_rng_req;
-#endif
 	struct tegra_crypt_req crypt_req;
 	struct tegra_rng_req rng_req;
 	struct tegra_sha_req sha_req;
@@ -911,7 +909,6 @@ rng_out:
 		ret = tegra_crypt_rsa(filp, ctx, &rsa_req);
 		break;
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	case TEGRA_CRYPTO_IOCTL_ELP_RSA_REQ:
 		if (copy_from_user(&elp_rsa_req, (void __user *)arg,
 			sizeof(elp_rsa_req))) {
@@ -985,7 +982,6 @@ rng_out:
 			return ret;
 		}
 		break;
-#endif
 	default:
 		pr_debug("invalid ioctl code(%d)", ioctl_num);
 		return -EINVAL;

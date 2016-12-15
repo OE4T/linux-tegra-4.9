@@ -211,20 +211,52 @@ fail:
 int nvdla_send_postfences(struct nvdla_task *task,
 			struct nvdla_ioctl_submit_task user_task)
 {
-	int err = 0;
-	struct platform_device *pdev = task->queue->pool->pdev;
+	int err = 0, i;
+	struct platform_device *dla_pdev = task->queue->pool->pdev;
+	struct platform_device *host_pdev =
+				to_platform_device(dla_pdev->dev.parent);
 	struct nvdla_fence __user *postfences =
 		(struct nvdla_fence __user *)(uintptr_t)user_task.postfences;
+	char fence_name[32];
 
-	nvdla_dbg_fn(pdev, "sending post fences");
+	nvdla_dbg_fn(dla_pdev, "sending post fences");
+
+	for (i = 0; i < task->num_postfences; i++) {
+		if (task->postfences[i].type == NVDLA_FENCE_TYPE_SYNC_FD) {
+			struct nvhost_ctrl_sync_fence_info info;
+
+			info.id = task->postfences[i].syncpoint_index;
+			info.thresh = task->postfences[i].syncpoint_value;
+
+			nvdla_dbg_info(dla_pdev,
+					"creating post sync fd [%d]:[%d]\n",
+					info.id, info.thresh);
+
+			/* create fence name format example: nvdla0_1_fence */
+			snprintf(fence_name, sizeof(fence_name),
+				"%s_%d_fence", dev_name(&dla_pdev->dev),
+				task->postfences[i].syncpoint_index);
+
+			err = nvhost_sync_create_fence_fd(host_pdev,
+				&info, 1, fence_name,
+				&task->postfences[i].sync_fd);
+
+			if (err) {
+				nvdla_dbg_err(dla_pdev,
+					"fail to create postfence syncfd\n");
+				goto fail;
+			}
+		}
+	}
+
 	/* send post fences */
 	if (copy_to_user(postfences, task->postfences,
 		(task->num_postfences * sizeof(struct nvdla_fence)))) {
 		err = -EFAULT;
-		nvdla_dbg_err(pdev, "failed to send postfences");
+		nvdla_dbg_err(dla_pdev, "failed to send postfences");
 		goto fail;
 	}
-	nvdla_dbg_info(pdev, "postfences sent");
+	nvdla_dbg_info(dla_pdev, "postfences sent");
 
 fail:
 	return err;

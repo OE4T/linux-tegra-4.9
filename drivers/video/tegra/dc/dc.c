@@ -2801,8 +2801,10 @@ static int tegra_dc_set(struct tegra_dc *dc, int index)
 {
 	if ((index == -1) && (dc != NULL)) /* DT register case */
 		return tegra_dc_set_next(dc);
-	else /* non DT, unregister case */
+	else if (index > -1)	/* non DT, register/unregister case */
 		return tegra_dc_set_idx(dc, index);
+	else
+		return -EINVAL;
 }
 
 unsigned int tegra_dc_has_multiple_dc(void)

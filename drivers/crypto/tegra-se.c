@@ -1273,177 +1273,6 @@ static void tegra_se_aes_cra_exit(struct crypto_tfm *tfm)
 	ctx->slot = NULL;
 }
 
-#ifdef CONFIG_ARCH_TEGRA_3x_SOC
-static int tegra_se_rng_init(struct crypto_tfm *tfm)
-{
-	struct tegra_se_rng_context *rng_ctx = crypto_tfm_ctx(tfm);
-	struct tegra_se_dev *se_dev = sg_tegra_se_dev;
-
-	rng_ctx->se_dev = se_dev;
-	rng_ctx->dt_buf = dma_alloc_coherent(se_dev->dev, TEGRA_SE_RNG_DT_SIZE,
-		&rng_ctx->dt_buf_adr, GFP_KERNEL);
-	if (!rng_ctx->dt_buf) {
-		dev_err(se_dev->dev, "can not allocate rng dma buffer");
-		return -ENOMEM;
-	}
-
-	rng_ctx->rng_buf = dma_alloc_coherent(rng_ctx->se_dev->dev,
-		TEGRA_SE_RNG_DT_SIZE, &rng_ctx->rng_buf_adr, GFP_KERNEL);
-	if (!rng_ctx->rng_buf) {
-		dev_err(se_dev->dev, "can not allocate rng dma buffer");
-		dma_free_coherent(rng_ctx->se_dev->dev, TEGRA_SE_RNG_DT_SIZE,
-					rng_ctx->dt_buf, rng_ctx->dt_buf_adr);
-		return -ENOMEM;
-	}
-
-	rng_ctx->slot = tegra_se_alloc_key_slot();
-
-	if (!rng_ctx->slot) {
-		dev_err(rng_ctx->se_dev->dev, "no free slot\n");
-		dma_free_coherent(rng_ctx->se_dev->dev, TEGRA_SE_RNG_DT_SIZE,
-					rng_ctx->dt_buf, rng_ctx->dt_buf_adr);
-		dma_free_coherent(rng_ctx->se_dev->dev, TEGRA_SE_RNG_DT_SIZE,
-					rng_ctx->rng_buf, rng_ctx->rng_buf_adr);
-		return -ENOMEM;
-	}
-
-	return 0;
-}
-
-static void tegra_se_rng_exit(struct crypto_tfm *tfm)
-{
-	struct tegra_se_rng_context *rng_ctx = crypto_tfm_ctx(tfm);
-
-	if (rng_ctx->dt_buf) {
-		dma_free_coherent(rng_ctx->se_dev->dev, TEGRA_SE_RNG_DT_SIZE,
-			rng_ctx->dt_buf, rng_ctx->dt_buf_adr);
-	}
-
-	if (rng_ctx->rng_buf) {
-		dma_free_coherent(rng_ctx->se_dev->dev, TEGRA_SE_RNG_DT_SIZE,
-			rng_ctx->rng_buf, rng_ctx->rng_buf_adr);
-	}
-
-	tegra_se_free_key_slot(rng_ctx->slot);
-	rng_ctx->slot = NULL;
-	rng_ctx->se_dev = NULL;
-}
-
-static int tegra_se_rng_get_random(struct crypto_rng *tfm, u8 *rdata, u32 dlen)
-{
-	struct tegra_se_rng_context *rng_ctx = crypto_rng_ctx(tfm);
-	struct tegra_se_dev *se_dev = rng_ctx->se_dev;
-	struct tegra_se_ll *src_ll, *dst_ll;
-	unsigned char *dt_buf = (unsigned char *)rng_ctx->dt_buf;
-	u8 *rdata_addr;
-	int ret = 0, i, j, num_blocks, data_len = 0;
-
-	num_blocks = (dlen / TEGRA_SE_RNG_DT_SIZE);
-
-	data_len = (dlen % TEGRA_SE_RNG_DT_SIZE);
-	if (data_len == 0)
-		num_blocks = num_blocks - 1;
-
-	/* take access to the hw */
-	mutex_lock(&se_hw_lock);
-	pm_runtime_get_sync(se_dev->dev);
-
-	*se_dev->src_ll_buf = 0;
-	*se_dev->dst_ll_buf = 0;
-	src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
-	dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf + 1);
-	src_ll->addr = rng_ctx->dt_buf_adr;
-	src_ll->data_len = TEGRA_SE_RNG_DT_SIZE;
-	dst_ll->addr = rng_ctx->rng_buf_adr;
-	dst_ll->data_len = TEGRA_SE_RNG_DT_SIZE;
-
-	tegra_se_config_algo(se_dev, SE_AES_OP_MODE_RNG_X931, true,
-		TEGRA_SE_KEY_128_SIZE);
-	tegra_se_config_crypto(se_dev, SE_AES_OP_MODE_RNG_X931, true,
-				rng_ctx->slot->slot_num, rng_ctx->use_org_iv);
-	for (j = 0; j <= num_blocks; j++) {
-
-		ret = tegra_se_start_operation(se_dev,
-				TEGRA_SE_RNG_DT_SIZE, false, true);
-
-		if (!ret) {
-			rdata_addr = (rdata + (j * TEGRA_SE_RNG_DT_SIZE));
-
-			if (data_len && num_blocks == j) {
-				memcpy(rdata_addr, rng_ctx->rng_buf, data_len);
-			} else {
-				memcpy(rdata_addr,
-					rng_ctx->rng_buf, TEGRA_SE_RNG_DT_SIZE);
-			}
-
-			/* update DT vector */
-			for (i = TEGRA_SE_RNG_DT_SIZE - 1; i >= 0; i--) {
-				dt_buf[i] += 1;
-				if (dt_buf[i] != 0)
-					break;
-			}
-		} else {
-			dlen = 0;
-		}
-		if (rng_ctx->use_org_iv) {
-			rng_ctx->use_org_iv = false;
-			tegra_se_config_crypto(se_dev,
-				SE_AES_OP_MODE_RNG_X931, true,
-				rng_ctx->slot->slot_num, rng_ctx->use_org_iv);
-		}
-
-	}
-
-	pm_runtime_put(se_dev->dev);
-	mutex_unlock(&se_hw_lock);
-
-	return dlen;
-}
-
-static int tegra_se_rng_reset(struct crypto_rng *tfm, u8 *seed, u32 slen)
-{
-	struct tegra_se_rng_context *rng_ctx = crypto_rng_ctx(tfm);
-	struct tegra_se_dev *se_dev = rng_ctx->se_dev;
-	u8 *iv = seed;
-	u8 *key = (u8 *)(seed + TEGRA_SE_RNG_IV_SIZE);
-	u8 *dt = key + TEGRA_SE_RNG_KEY_SIZE;
-	struct timespec ts;
-	u64 nsec, tmp[2];
-
-	BUG_ON(!seed);
-
-	/* take access to the hw */
-	mutex_lock(&se_hw_lock);
-	pm_runtime_get_sync(se_dev->dev);
-
-	tegra_se_write_key_table(key, TEGRA_SE_RNG_KEY_SIZE,
-		rng_ctx->slot->slot_num, SE_KEY_TABLE_TYPE_KEY);
-
-	tegra_se_write_key_table(iv, TEGRA_SE_RNG_IV_SIZE,
-		rng_ctx->slot->slot_num, SE_KEY_TABLE_TYPE_ORGIV);
-
-	pm_runtime_put(se_dev->dev);
-	mutex_unlock(&se_hw_lock);
-
-	if (slen < TEGRA_SE_RNG_SEED_SIZE) {
-		getnstimeofday(&ts);
-		nsec = timespec_to_ns(&ts);
-		do_div(nsec, 1000);
-		nsec ^= se_dev->ctr << 56;
-		se_dev->ctr++;
-		tmp[0] = nsec;
-		tmp[1] = tegra_chip_uid();
-		memcpy(rng_ctx->dt_buf, (u8 *)tmp, TEGRA_SE_RNG_DT_SIZE);
-	} else {
-		memcpy(rng_ctx->dt_buf, dt, TEGRA_SE_RNG_DT_SIZE);
-	}
-
-	rng_ctx->use_org_iv = true;
-
-	return 0;
-}
-#endif
-
 static int tegra_se_rng_drbg_init(struct crypto_tfm *tfm)
 {
 	struct tegra_se_rng_context *rng_ctx = crypto_tfm_ctx(tfm);
@@ -2475,26 +2304,6 @@ static struct crypto_alg aes_algs[] = {
 			.geniv = "eseqiv",
 		}
 	},
-#ifdef CONFIG_ARCH_TEGRA_3x_SOC
-	{
-		.cra_name = "ansi_cprng",
-		.cra_driver_name = "rng-aes-tegra",
-		.cra_priority = 100,
-		.cra_flags = CRYPTO_ALG_TYPE_RNG,
-		.cra_ctxsize = sizeof(struct tegra_se_rng_context),
-		.cra_type = &crypto_rng_type,
-		.cra_module = THIS_MODULE,
-		.cra_init = tegra_se_rng_init,
-		.cra_exit = tegra_se_rng_exit,
-		.cra_u = {
-			.rng = {
-				.rng_make_random = tegra_se_rng_get_random,
-				.rng_reset = tegra_se_rng_reset,
-				.seedsize = TEGRA_SE_RNG_SEED_SIZE,
-			}
-		}
-	}
-#endif
 };
 
 static struct ahash_alg hash_algs[] = {
@@ -2809,10 +2618,8 @@ static int tegra_se_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	int err = 0, i = 0, j = 0, k = 0;
 
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
 	if (tegra_bonded_out_dev(BOND_OUT_SE))
 		return -ENODEV;
-#endif
 
 	se_dev = kzalloc(sizeof(struct tegra_se_dev), GFP_KERNEL);
 	if (!se_dev) {

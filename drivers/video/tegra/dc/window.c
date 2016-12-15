@@ -1079,7 +1079,8 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 	if (no_vsync)
 		wait_for_vblank = 0;
 
-	BUG_ON(!wait_for_vblank && dirty_rect);
+	WARN_ONCE((!wait_for_vblank && dirty_rect),
+		"Can't do partial window update without vsync!");
 
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 	e = tegra_nvdisp_update_windows(dc, windows, n, dirty_rect,
@@ -1094,7 +1095,6 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 	 */
 	tegra_dc_io_end(dc);
 
-	BUG_ON(e);
 	if (WARN_ONCE(e, "horrible failure")) /* horrible failure */
 		goto done;
 
@@ -1107,7 +1107,7 @@ done:
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		mutex_unlock(&dc->one_shot_lock);
 
-	return 0;
+	return e;
 }
 EXPORT_SYMBOL(tegra_dc_update_windows);
 

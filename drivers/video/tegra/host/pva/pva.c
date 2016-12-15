@@ -154,8 +154,6 @@ static int pva_init_fw(struct platform_device *pdev)
 		}
 	}
 
-	/* TODO: Add stream ID */
-
 	/* Indicate the OS is waiting for PVA ready Interrupt */
 	pva->mailbox_status = PVA_MBOX_STATUS_WFI;
 	host1x_writel(pdev, hsp_ss0_set_r(), PVA_BOOT_INT);
@@ -222,7 +220,6 @@ static int pva_read_ucode(struct platform_device *pdev,
 	fw_info->trace_buffer_size = PVA_PRIV2_TRACE_LOG_BUFFER_SIZE;
 
 	fw_info->size = ucode_fw->size;
-	dma_set_attr(DMA_ATTR_READ_ONLY, &fw_info->attrs);
 
 	/* Allocate the Memory area to load the firmware */
 	fw_info->ucode_mapped = dma_alloc_attrs(&pdev->dev, fw_info->size,

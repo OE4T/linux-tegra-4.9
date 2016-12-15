@@ -57,6 +57,8 @@
 #define TEGRA_FUSE_ENABLE_PRGM_REDUND_OFFSET	1
 #define TEGRA_FUSE_BURN_MAX_FUSES		15
 
+#define TEGRA_FUSE_ODM_PRODUCTION_MODE		0xa0
+
 struct fuse_burn_data {
 	char *name;
 	u32 start_offset;
@@ -137,6 +139,25 @@ static void fuse_cmd_sense(void)
 	reg |= TEGRA_FUSE_CTRL_CMD_SENSE;
 	tegra_fuse_control_write(reg, TEGRA_FUSE_CTRL);
 	fuse_state_wait_for_idle();
+}
+
+static bool tegra_fuse_is_fuse_burn_allowed(struct fuse_burn_data *data)
+{
+	u32 reg = 0;
+
+	/* If odm_production_mode(security mode) fuse is burnt, then
+	 * only allow odm reserved/lock to burn
+	 */
+	tegra_fuse_readl(TEGRA_FUSE_ODM_PRODUCTION_MODE, &reg);
+	if (reg) {
+		if (!strcmp(data->name, "odm_reserved"))
+			return true;
+		if (!strcmp(data->name, "odm_lock"))
+			return true;
+		return false;
+	}
+
+	return true;
 }
 
 static int tegra_fuse_form_burn_data(struct fuse_burn_data *data,
@@ -325,6 +346,11 @@ static ssize_t tegra_fuse_store(struct device *dev,
 	int ret;
 
 	fuse_data = container_of(attr, struct fuse_burn_data, attr);
+	if (!tegra_fuse_is_fuse_burn_allowed(fuse_data)) {
+		dev_err(dev, "security mode fuse is burnt, burn not allowed\n");
+		return -EPERM;
+	}
+
 	num_nibbles = DIV_ROUND_UP(fuse_data->size_bits, 4);
 
 	if (*buf == 'x') {

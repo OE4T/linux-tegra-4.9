@@ -1673,6 +1673,7 @@ static struct platform_device_id tegra_dma_devtype[] = {
 	{
 		.name = "tegra186-gpcdma",
 		.driver_data = (unsigned long)&tegra186_dma_chip_data,
+	}, {
 	},
 };
 

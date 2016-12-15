@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dsi.c
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -2837,15 +2837,15 @@ static struct dsi_status *tegra_dsi_save_state_switch_to_host_cmd_mode(
 	struct dsi_status *init_status = NULL;
 	int err;
 
+	init_status = kzalloc(sizeof(*init_status), GFP_KERNEL);
+	if (!init_status)
+		return ERR_PTR(-ENOMEM);
+
 	if (dsi->status.init != DSI_MODULE_INIT ||
 		dsi->status.lphs == DSI_LPHS_NOT_INIT) {
 		err = -EPERM;
 		goto fail;
 	}
-
-	init_status = kzalloc(sizeof(*init_status), GFP_KERNEL);
-	if (!init_status)
-		return ERR_PTR(-ENOMEM);
 
 	*init_status = dsi->status;
 

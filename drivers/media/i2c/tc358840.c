@@ -55,6 +55,7 @@ MODULE_PARM_DESC(debug, "debug level (0-3)");
 
 #define EDID_NUM_BLOCKS_MAX 8
 #define EDID_BLOCK_SIZE 128
+#define DELAY_ENABLE_INTERRUPT_MS 10000
 
 static u8 edid[] = {
 	0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00,
@@ -123,6 +124,7 @@ struct tc358840_state {
 	/* work queues */
 	struct workqueue_struct *work_queues;
 	struct delayed_work delayed_work_enable_hotplug;
+	struct delayed_work delayed_work_enable_interrupt;
 	struct work_struct process_isr;
 	struct mutex isr_lock;
 
@@ -148,6 +150,8 @@ static int tc358840_s_dv_timings(
 	struct v4l2_subdev *sd, struct v4l2_dv_timings *timings);
 static void tc358840_set_csi(struct v4l2_subdev *sd);
 static void tc358840_set_splitter(struct v4l2_subdev *sd);
+static int tc358840_s_edid(struct v4l2_subdev *sd,
+	struct v4l2_subdev_edid *edid);
 
 /* --------------- I2C --------------- */
 
@@ -493,6 +497,26 @@ static void tc358840_enable_edid(struct v4l2_subdev *sd)
 
 	tc358840_enable_interrupts(sd, true);
 	tc358840_s_ctrl_detect_tx_5v(sd);
+}
+
+static void tc358840_delayed_work_enable_interrupt(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct tc358840_state *state = container_of(dwork,
+		struct tc358840_state, delayed_work_enable_interrupt);
+	struct v4l2_subdev *sd = &state->sd;
+
+	struct v4l2_subdev_edid sd_edid = {
+		.blocks = 2,
+		.edid = edid,
+	};
+
+	v4l2_dbg(2, debug, sd, "%s:\n", __func__);
+
+	tc358840_enable_interrupts(sd, tx_5v_power_present(sd));
+
+	/* Temporary EDID. Should be set by userspace */
+	tc358840_s_edid(sd, &sd_edid);
 }
 
 static void tc358840_erase_bksv(struct v4l2_subdev *sd)
@@ -2233,10 +2257,6 @@ static const struct media_entity_operations tc358840_media_ops = {
 
 static int tc358840_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
-	struct v4l2_subdev_edid sd_edid = {
-		.blocks = 2,
-		.edid = edid,
-	};
 	struct tc358840_state *state;
 	struct v4l2_subdev *sd;
 	int err;
@@ -2334,6 +2354,8 @@ static int tc358840_probe(struct i2c_client *client, const struct i2c_device_id 
 	}
 	INIT_DELAYED_WORK(&state->delayed_work_enable_hotplug,
 			tc358840_delayed_work_enable_hotplug);
+	INIT_DELAYED_WORK(&state->delayed_work_enable_interrupt,
+			tc358840_delayed_work_enable_interrupt);
 	INIT_WORK(&state->process_isr, tc358840_process_isr);
 	mutex_init(&state->isr_lock);
 
@@ -2356,7 +2378,9 @@ static int tc358840_probe(struct i2c_client *client, const struct i2c_device_id 
 		}
 	}
 
-	tc358840_enable_interrupts(sd, tx_5v_power_present(sd));
+	queue_delayed_work(state->work_queues,
+		&state->delayed_work_enable_interrupt,
+		msecs_to_jiffies(DELAY_ENABLE_INTERRUPT_MS));
 
 	/*
 	 * FIXME: Don't know what MASK_CSITX0_INT and MASK_CSITX1_INT do.
@@ -2387,9 +2411,6 @@ static int tc358840_probe(struct i2c_client *client, const struct i2c_device_id 
 		return err;
 	}
 #endif
-
-	/* Temporary EDID. Should be set by userspace */
-	tc358840_s_edid(sd, &sd_edid);
 
 	err = v4l2_async_register_subdev(sd);
 	if (err == 0)

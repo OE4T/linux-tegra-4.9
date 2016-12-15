@@ -15,26 +15,6 @@
  */
 
 / {
-	udc@7d000000 {
-		status = "disabled";
-		dt-override-status-odm-data = <0x01000000 0x00000000>;
-	};
-
-        otg@7d000000 {
-		status = "disabled";
-		dt-override-status-odm-data = <0x01000000 0x00000000>;
-	};
-
-	xudc@700d0000 {
-		status = "disabled";
-		dt-override-status-odm-data = <0x01000000 0x01000000>;
-	};
-
-	xotg {
-		status = "disabled";
-		dt-override-status-odm-data = <0x01000000 0x01000000>;
-	};
-
 	host1x {
 		dsi {
 			panel-s-wqxga-10-1 {

@@ -489,12 +489,12 @@
 		nvidia,port-otg;
 		nvidia,charging-supported;
 		#extcon-cells = <1>;
-		status = "okay";
+		status = "disabled";
 	};
 
         otg@7d000000 {
 		#extcon-cells = <1>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	mailbox@70098000 {
@@ -578,16 +578,6 @@
 		};
 	};
 
-	xusb_pad_ctl: xusb_padctl { /* Put common control config here */
-		nvidia,lane-map = <0x14>;
-		nvidia,enable-sata-port;
-		nvidia,ss_ports = < TEGRA_XHCI_SS_P0 TEGRA_XHCI_USB2_P1 TEGRA_XHCI_LANE_6 TEGRA_XHCI_PORT_STD
-				    TEGRA_XHCI_SS_P1 TEGRA_XHCI_USB2_P2 TEGRA_XHCI_LANE_5 TEGRA_XHCI_PORT_STD
-				    TEGRA_XHCI_SS_P2 TEGRA_XHCI_USB2_P0 TEGRA_XHCI_UNUSED_LANE TEGRA_XHCI_PORT_OTG
-				    TEGRA_XHCI_SS_P3 TEGRA_XHCI_UNUSED_PORT TEGRA_XHCI_UNUSED_LANE TEGRA_XHCI_PORT_STD>;
-		status = "okay";
-	};
-
 	xusb@70090000 {
 		status = "okay";
 		extcon-cables = <&vbus_gpio_extcon 1>;
@@ -602,15 +592,16 @@
 	};
 
 	xudc@700d0000 {
-		nvidia,common_padctl = <&xusb_pad_ctl>;
 		nvidia,portmap = <0x0108>;
 		#extcon-cells = <1>;
-		status = "disabled";
+		status = "okay";
+		phys =  <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(2)>;
+		phy-names = "usb2", "usb3";
 	};
 
 	xotg {
 		#extcon-cells = <1>;
-		nvidia,common_padctl = <&xusb_pad_ctl>;
 		status = "disabled";
 	};
 

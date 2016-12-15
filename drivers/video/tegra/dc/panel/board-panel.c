@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -823,13 +823,33 @@ struct device_node *tegra_primary_panel_get_dt_node(
 	struct tegra_dc_out *dc_out = NULL;
 	struct device_node *np_hdmi =
 		of_find_node_by_path(SOR1_NODE);
+	struct device_node *np_display = NULL;
+	struct device_node *np_sor = NULL;
+	const char *sor1_output_type;
 
 	if (pdata)
 		dc_out = pdata->default_out;
 
+	if (pdata && !strcmp(pdata->dc_or_node_name, "/host1x/sor"))
+		np_sor = of_find_node_by_path(SOR_NODE);
+
+	if (np_sor) {
+		if (!of_property_read_string(np_sor,
+			"nvidia,sor1-output-type", &sor1_output_type)) {
+			if (strcmp(sor1_output_type, "dp") == 0) {
+				np_display = of_get_child_by_name(np_sor,
+							"dp-display");
+				of_node_put(np_sor);
+				of_node_put(np_hdmi);
+				return of_device_is_available(np_display) ?
+							np_display : NULL;
+			}
+		}
+	}
+
 	np_panel =
 		internal_panel_select_by_disp_board_id(pdata);
-	if (np_panel) {
+	if (np_panel && of_device_is_available(np_panel)) {
 		/*
 		 * legacy method to select internal panel
 		 * based on disp board id.
@@ -841,7 +861,7 @@ struct device_node *tegra_primary_panel_get_dt_node(
 	np_panel =
 		available_internal_panel_select(pdata);
 
-	if (np_panel) {
+	if (np_panel && of_device_is_available(np_panel)) {
 		/*
 		 * search internal panel node by
 		 * status property.

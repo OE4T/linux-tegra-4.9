@@ -153,13 +153,13 @@ error:
 	return -ENOMEM;
 }
 
-static int tpg_probe_t18x(void)
+static int __init tpg_probe_t18x(void)
 {
 	struct tegra_csi_device *mc_csi = tegra_get_mc_csi();
 	struct tegra_mc_vi *mc_vi = tegra_get_mc_vi();
 	int err;
 
-	dev_dbg(mc_csi->dev, "%s\n", __func__);
+	dev_info(mc_csi->dev, "%s\n", __func__);
 	mc_vi->csi = mc_csi;
 	/* Init CSI related media controller interface */
 	mc_csi->tpg_frmfmt_table = tegra18x_csi_tpg_frmfmt;
@@ -183,28 +183,17 @@ vi_init_err:
 	dev_err(mc_csi->dev, "%s error\n", __func__);
 	return err;
 }
-static int __exit tpg_remove_t18x(void)
+static void __exit tpg_remove_t18x(void)
 {
 	struct tegra_csi_device *mc_csi = tegra_get_mc_csi();
 	struct tegra_mc_vi *mc_vi = tegra_get_mc_vi();
 
+	dev_info(mc_csi->dev, "%s\n", __func__);
 	tpg_remove_debugfs(mc_csi);
 	tpg_csi_media_controller_cleanup(mc_csi);
 	tpg_vi_media_controller_cleanup(mc_vi);
-
-	return 0;
 }
 
-static int __init tpg_init(void)
-{
-	return tpg_probe_t18x();
-}
-
-static void __exit tpg_exit(void)
-{
-	tpg_remove_t18x();
-}
-
-module_init(tpg_init);
-module_exit(tpg_exit);
+module_init(tpg_probe_t18x);
+module_exit(tpg_remove_t18x);
 MODULE_LICENSE("GPL v2");

@@ -192,9 +192,6 @@ struct tegra_xusb {
 	struct clk *clk_m;
 	struct clk *pll_e;
 
-	struct reset_control *host_rst;
-	struct reset_control *ss_rst;
-
 	struct phy **phys;
 	unsigned int num_phys;
 
@@ -932,20 +929,6 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 	tegra->padctl = tegra_xusb_padctl_get(&pdev->dev);
 	if (IS_ERR(tegra->padctl))
 		return PTR_ERR(tegra->padctl);
-
-	tegra->host_rst = devm_reset_control_get(&pdev->dev, "xusb_host");
-	if (IS_ERR(tegra->host_rst)) {
-		err = PTR_ERR(tegra->host_rst);
-		dev_err(&pdev->dev, "failed to get xusb_host reset: %d\n", err);
-		goto put_padctl;
-	}
-
-	tegra->ss_rst = devm_reset_control_get(&pdev->dev, "xusb_ss");
-	if (IS_ERR(tegra->ss_rst)) {
-		err = PTR_ERR(tegra->ss_rst);
-		dev_err(&pdev->dev, "failed to get xusb_ss reset: %d\n", err);
-		goto put_padctl;
-	}
 
 	tegra->host_clk = devm_clk_get(&pdev->dev, "xusb_host");
 	if (IS_ERR(tegra->host_clk)) {

@@ -17,8 +17,6 @@
 
 #include "csi.h"
 
-int csi2_power_on(struct tegra_csi_device *csi);
-int csi2_power_off(struct tegra_csi_device *csi);
 int csi2_start_streaming(struct tegra_csi_channel *chan,
 		enum tegra_csi_port_num port_num);
 void csi2_stop_streaming(struct tegra_csi_channel *chan,

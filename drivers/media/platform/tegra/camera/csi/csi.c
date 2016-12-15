@@ -700,6 +700,7 @@ int tpg_csi_media_controller_init(struct tegra_csi_device *csi, int pg_mode)
 		if (err)
 			goto channel_init_error;
 	}
+	csi->fops->hw_init(csi);
 	csi->num_channels += TPG_CHANNELS;
 
 	return err;
@@ -738,6 +739,7 @@ int tegra_csi_media_controller_init(struct tegra_csi_device *csi,
 	csi->dev = &pdev->dev;
 	csi->pdev = pdev;
 	atomic_set(&csi->power_ref, 0);
+	atomic_set(&csi->tpg_enabled, 0);
 	INIT_LIST_HEAD(&csi->csi_chans);
 	ret = csi_parse_dt(csi, pdev);
 	if (ret < 0)

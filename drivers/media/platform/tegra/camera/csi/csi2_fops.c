@@ -16,6 +16,7 @@
 #include "camera/vi/mc_common.h"
 #include "mipical/mipi_cal.h"
 #include "nvhost_acm.h"
+#include <linux/clk/tegra.h>
 
 static void csi_write(struct tegra_csi_channel *chan, unsigned int addr,
 			u32 val, u8 port)
@@ -180,13 +181,52 @@ void tegra_csi_error_recover(struct tegra_csi_channel *chan,
 }
 
 
-static int csi2_tpg_start_streaming(struct tegra_csi_device *csi,
+static int tpg_clk_enable(struct tegra_csi_device *csi)
+{
+	int err = 0;
+
+	if (atomic_inc_return(&csi->tpg_enabled) != 1)
+		return 0;
+
+	clk_set_rate(csi->plld, TEGRA_CLOCK_TPG);
+	err = clk_prepare_enable(csi->plld);
+	if (err) {
+		dev_err(csi->dev, "pll_d enable failed");
+		return err;
+	}
+
+	err = clk_prepare_enable(csi->plld_dsi);
+	if (err) {
+		dev_err(csi->dev, "pll_d enable failed");
+		goto plld_dsi_err;
+	}
+	tegra210_csi_source_from_plld();
+	return err;
+plld_dsi_err:
+	clk_disable_unprepare(csi->plld);
+	return err;
+}
+
+static int tpg_clk_disable(struct tegra_csi_device *csi)
+{
+	int err = 0;
+
+	if (!atomic_dec_and_test(&csi->tpg_enabled))
+		return 0;
+	tegra210_csi_source_from_brick();
+	clk_disable_unprepare(csi->plld_dsi);
+	clk_disable_unprepare(csi->plld);
+
+	return err;
+}
+
+static int csi2_tpg_start_streaming(struct tegra_csi_channel *chan,
 			      enum tegra_csi_port_num port_num)
 {
-	struct tegra_csi_port *port = &csi->ports[port_num];
+	struct tegra_csi_port *port = &chan->ports[port_num];
 
 	tpg_write(port, TEGRA_CSI_PATTERN_GENERATOR_CTRL,
-		       ((csi->pg_mode - 1) << PG_MODE_OFFSET) |
+		       ((chan->pg_mode - 1) << PG_MODE_OFFSET) |
 		       PG_ENABLE);
 	tpg_write(port, TEGRA_CSI_PG_BLANK,
 			port->v_blank << PG_VBLANK_OFFSET |
@@ -210,7 +250,6 @@ static int csi2_tpg_start_streaming(struct tegra_csi_device *csi,
 int csi2_start_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num)
 {
-	struct tegra_csi_device *csi = chan->csi;
 	struct tegra_csi_port *port = &chan->ports[port_num];
 	int csi_port, csi_lanes;
 
@@ -292,8 +331,10 @@ int csi2_start_streaming(struct tegra_csi_channel *chan,
 			(0x3f << CSI_SKIP_PACKET_THRESHOLD_OFFSET) |
 			(csi_lanes - 1));
 
-	if (chan->pg_mode)
-		csi2_tpg_start_streaming(csi, port_num);
+	if (chan->pg_mode) {
+		tpg_clk_enable(chan->csi);
+		csi2_tpg_start_streaming(chan, port_num);
+	}
 
 	pp_write(port, TEGRA_CSI_PIXEL_STREAM_PP_COMMAND,
 			(0xF << CSI_PP_START_MARKER_FRAME_MAX_OFFSET) |
@@ -307,8 +348,10 @@ void csi2_stop_streaming(struct tegra_csi_channel *chan,
 	struct tegra_csi_port *port = &chan->ports[port_num];
 
 
-	if (chan->pg_mode)
+	if (chan->pg_mode) {
 		tpg_write(port, TEGRA_CSI_PATTERN_GENERATOR_CTRL, PG_DISABLE);
+		tpg_clk_disable(chan->csi);
+	}
 	if (!port) {
 		pr_err("%s:no port\n", __func__);
 		return;
@@ -318,93 +361,7 @@ void csi2_stop_streaming(struct tegra_csi_channel *chan,
 			CSI_PP_DISABLE);
 }
 
-static int clock_start(struct tegra_csi_device *csi,
-			struct clk *clk, unsigned int freq)
-{
-	int err = 0;
-
-	err = clk_prepare_enable(clk);
-	if (err)
-		dev_err(csi->dev, "csi clk enable error %d\n", err);
-	err = clk_set_rate(clk, freq);
-	if (err)
-		dev_err(csi->dev, "csi clk set rate error %d\n", err);
-
-	return err;
-}
-
-int tegra_csi_channel_power(struct tegra_csi_device *csi,
-				unsigned char *port_num, int enable)
-{
-	int err = 0;
-	int i, cil_num, port;
-
-	if (enable) {
-		for (i = 0; csi_port_is_valid(port_num[i]); i++) {
-			port = port_num[i];
-			cil_num = port >> 1;
-			err = clock_start(csi,
-				csi->cil[cil_num], csi->clk_freq);
-			if (err)
-				dev_err(csi->dev, "cil clk start error\n");
-		}
-	} else {
-		for (i = 0; csi_port_is_valid(port_num[i]); i++) {
-			port = port_num[i];
-			cil_num = port >> 1;
-			clk_disable_unprepare(csi->cil[cil_num]);
-		}
-	}
-
-	return err;
-}
-EXPORT_SYMBOL(tegra_csi_channel_power);
-
-int csi2_power_on(struct tegra_csi_device *csi)
-{
-	int err = 0;
-
-	/* set clk and power */
-	err = clk_prepare_enable(csi->clk);
-	if (err)
-		dev_err(csi->dev, "csi clk enable error\n");
-
-	if (csi->pg_mode) {
-		err = clock_start(csi, csi->tpg_clk,
-					TEGRA_CLOCK_TPG_MAX);
-		if (err)
-			dev_err(csi->dev, "tpg clk start error\n");
-		else {
-			tegra_clk_cfg_ex(csi->tpg_clk,
-				TEGRA_CLK_PLLD_CSI_OUT_ENB, 1);
-			tegra_clk_cfg_ex(csi->tpg_clk,
-				TEGRA_CLK_PLLD_DSI_OUT_ENB, 1);
-			tegra_clk_cfg_ex(csi->tpg_clk,
-				TEGRA_CLK_MIPI_CSI_OUT_ENB, 0);
-		}
-	}
-
-	return err;
-}
-
-int csi2_power_off(struct tegra_csi_device *csi)
-{
-	int err = 0;
-
-	if (csi->pg_mode) {
-		tegra_clk_cfg_ex(csi->tpg_clk,
-				 TEGRA_CLK_MIPI_CSI_OUT_ENB, 1);
-		tegra_clk_cfg_ex(csi->tpg_clk,
-				 TEGRA_CLK_PLLD_CSI_OUT_ENB, 0);
-		tegra_clk_cfg_ex(csi->tpg_clk,
-				 TEGRA_CLK_PLLD_DSI_OUT_ENB, 0);
-		clk_disable_unprepare(csi->tpg_clk);
-	}
-	clk_disable_unprepare(csi->clk);
-
-	return err;
-}
-void csi2_hw_init(struct tegra_csi_device *csi)
+int csi2_hw_init(struct tegra_csi_device *csi)
 {
 	int i, csi_port;
 	struct tegra_csi_channel *it;
@@ -423,6 +380,17 @@ void csi2_hw_init(struct tegra_csi_device *csi)
 			port->tpg = port->pixel_parser + TEGRA_CSI_TPG_OFFSET;
 		}
 	}
+	csi->plld = devm_clk_get(csi->dev, "pll_d");
+	if (IS_ERR(csi->plld)) {
+		dev_err(csi->dev, "Fail to get pll_d\n");
+		return PTR_ERR(csi->plld);
+	}
+	csi->plld_dsi = devm_clk_get(csi->dev, "pll_d_dsi_out");
+	if (IS_ERR(csi->plld_dsi)) {
+		dev_err(csi->dev, "Fail to get pll_d_dsi_out\n");
+		return PTR_ERR(csi->plld_dsi);
+	}
+	return 0;
 }
 
 int csi2_mipi_cal(struct tegra_csi_channel *chan)
@@ -468,6 +436,14 @@ int csi2_mipi_cal(struct tegra_csi_channel *chan)
 	return tegra_mipi_calibration(lanes);
 }
 
+int csi2_power_on(struct tegra_csi_device *csi)
+{
+	return 0;
+}
+int csi2_power_off(struct tegra_csi_device *csi)
+{
+	return 0;
+}
 const struct tegra_csi_fops csi2_fops = {
 	.csi_power_on = csi2_power_on,
 	.csi_power_off = csi2_power_off,

@@ -302,7 +302,7 @@ struct tegra_csi_fops {
 	void (*csi_override_format)(struct tegra_csi_channel *chan,
 		enum tegra_csi_port_num port_num);
 	int (*mipical)(struct tegra_csi_channel *chan);
-	void (*hw_init)(struct tegra_csi_device *csi);
+	int (*hw_init)(struct tegra_csi_device *csi);
 };
 
 struct tegra_t210_vi_data {

@@ -372,11 +372,13 @@ static int csi4_tpg_start_streaming(struct tegra_csi_channel *chan,
 			((chan->pg_mode - 1) << PG_MODE_OFFSET) | PG_ENABLE);
 	return 0;
 }
-void csi4_hw_init(struct tegra_csi_device *csi)
+int csi4_hw_init(struct tegra_csi_device *csi)
 {
 	csi->iomem[0] = csi->iomem_base + TEGRA_CSI_STREAM_0_BASE;
 	csi->iomem[1] = csi->iomem_base + TEGRA_CSI_STREAM_2_BASE;
 	csi->iomem[2] = csi->iomem_base + TEGRA_CSI_STREAM_4_BASE;
+
+	return 0;
 }
 int csi4_start_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num)

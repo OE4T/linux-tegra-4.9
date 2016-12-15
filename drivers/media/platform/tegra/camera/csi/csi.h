@@ -79,9 +79,8 @@ struct tegra_csi_device {
 	char devname[32];
 	void __iomem *iomem_base;
 	void __iomem *iomem[3];
-	struct clk *clk;
-	struct clk *tpg_clk;
-	struct clk *cil[3];
+	struct clk *plld_dsi;
+	struct clk *plld;
 
 	struct camera_common_data s_data[6];
 	struct tegra_csi_port *ports;
@@ -90,7 +89,6 @@ struct tegra_csi_device {
 	unsigned int clk_freq;
 	int num_ports;
 	int num_channels;
-	unsigned int pg_mode;
 	struct list_head csi_chans;
 	struct tegra_csi_channel *tpg_start;
 	struct tegra_csi_fops *fops;
@@ -99,6 +97,7 @@ struct tegra_csi_device {
 	atomic_t power_ref;
 
 	struct dentry *debugdir;
+	atomic_t tpg_enabled;
 };
 
 /*
@@ -147,12 +146,6 @@ void tegra_csi_stop_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num);
 void tegra_csi_error_recover(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num);
-int tegra_csi_channel_power(struct tegra_csi_device *csi,
-				unsigned char *port, int enable);
-#define tegra_csi_channel_power_on(csi, port) \
-	tegra_csi_channel_power(csi, port, 1)
-#define tegra_csi_channel_power_off(csi, port) \
-	tegra_csi_channel_power(csi, port, 0)
 int tegra_csi_power(struct tegra_csi_device *csi, int enable);
 #define tegra_csi_power_on(csi) tegra_csi_power(csi, 1)
 #define tegra_csi_power_off(csi) tegra_csi_power(csi, 0)

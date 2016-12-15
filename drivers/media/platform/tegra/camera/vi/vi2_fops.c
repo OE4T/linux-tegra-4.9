@@ -117,7 +117,7 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan)
 		word_count = tegra_core_get_word_count(width, chan->fmtinfo);
 	}
 
-	if (chan->vi->pg_mode ||
+	if (chan->pg_mode ||
 	   (chan->fmtinfo->vf_code == TEGRA_VF_YUV422) ||
 	   (chan->fmtinfo->vf_code == TEGRA_VF_RGB888))
 		bypass_pixel_transform = 0;
@@ -138,7 +138,7 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan)
 
 static int tegra_channel_enable_stream(struct tegra_channel *chan)
 {
-	int ret = 0, i;
+	int ret = 0;
 	struct tegra_csi_channel *csi_chan = NULL;
 	struct tegra_csi_device *csi = chan->vi->csi;
 	/*
@@ -149,15 +149,7 @@ static int tegra_channel_enable_stream(struct tegra_channel *chan)
 	csi_chan = find_linked_csi_channel(chan, csi);
 
 	/* start streaming */
-	if (chan->pg_mode) {
-		for (i = 0; i < chan->valid_ports; i++)
-			tegra_csi_start_streaming(csi_chan, i);
-		atomic_set(&chan->is_streaming, ENABLE);
-	} else {
-		ret = tegra_channel_set_stream(chan, true);
-		if (ret < 0)
-			return ret;
-	}
+	ret = tegra_channel_set_stream(chan, true);
 	return ret;
 }
 
@@ -356,7 +348,7 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 		}
 	}
 
-	if (!err && !chan->vi->pg_mode) {
+	if (!err && !chan->pg_mode) {
 		/* Marking error frames and resume capture */
 		/* TODO: TPG has frame height short error always set */
 		err = tegra_channel_error_status(chan);
@@ -561,12 +553,10 @@ int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
 
 	tegra_channel_ec_init(chan);
 
-	if (!chan->vi->pg_mode) {
-		/* Start the pipeline. */
-		ret = media_entity_pipeline_start(&chan->video.entity, pipe);
-		if (ret < 0)
-			goto error_pipeline_start;
-	}
+	/* Start the pipeline. */
+	ret = media_entity_pipeline_start(&chan->video.entity, pipe);
+	if (ret < 0)
+		goto error_pipeline_start;
 
 	if (chan->bypass) {
 		ret = tegra_channel_set_stream(chan, true);
@@ -623,10 +613,10 @@ int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	return 0;
 
 error_capture_setup:
-	if (!chan->vi->pg_mode)
+	if (!chan->pg_mode)
 		tegra_channel_set_stream(chan, false);
 error_set_stream:
-	if (!chan->vi->pg_mode)
+	if (!chan->pg_mode)
 		media_entity_pipeline_stop(&chan->video.entity);
 error_pipeline_start:
 	vq->start_streaming_called = 0;
@@ -669,10 +659,8 @@ void vi2_channel_stop_streaming(struct vb2_queue *vq)
 		tegra_channel_write(chan, TEGRA_VI_CFG_CG_CTRL, ENABLE);
 	}
 
-	if (!chan->pg_mode) {
-		tegra_channel_set_stream(chan, false);
-		media_entity_pipeline_stop(&chan->video.entity);
-	}
+	tegra_channel_set_stream(chan, false);
+	media_entity_pipeline_stop(&chan->video.entity);
 
 	if (!chan->bypass)
 		tegra_channel_update_clknbw(chan, 0);
@@ -728,19 +716,14 @@ int vi2_power_on(struct tegra_channel *chan)
 
 	if (atomic_add_return(1, &vi->power_on_refcnt) == 1) {
 		tegra_vi2_power_on(vi);
-		tegra_csi_power_on(csi);
-		if (vi->pg_mode)
+		if (chan->pg_mode)
 			tegra_vi->tpg_opened = true;
 		else
 			tegra_vi->sensor_opened = true;
 	}
 
-	if (!vi->pg_mode &&
-		(atomic_add_return(1, &chan->power_on_refcnt) == 1)) {
-		/* power on sensors connected in channel */
-		tegra_csi_channel_power_on(csi, chan->port);
+	if ((atomic_add_return(1, &chan->power_on_refcnt) == 1))
 		ret = tegra_channel_set_power(chan, 1);
-	}
 
 	return ret;
 }
@@ -756,10 +739,7 @@ void vi2_power_off(struct tegra_channel *chan)
 	tegra_vi = vi->vi;
 	csi = vi->csi;
 
-	if (!vi->pg_mode &&
-		atomic_dec_and_test(&chan->power_on_refcnt)) {
-		/* power off sensors connected in channel */
-		tegra_csi_channel_power_off(csi, chan->port);
+	if (atomic_dec_and_test(&chan->power_on_refcnt)) {
 		ret = tegra_channel_set_power(chan, 0);
 		if (ret < 0)
 			dev_err(vi->dev, "Failed to power off subdevices\n");
@@ -767,7 +747,6 @@ void vi2_power_off(struct tegra_channel *chan)
 
 	/* The last release then turn off power */
 	if (atomic_dec_and_test(&vi->power_on_refcnt)) {
-		tegra_csi_power_off(csi);
 		tegra_vi2_power_off(vi);
 		if (vi->pg_mode)
 			tegra_vi->tpg_opened = false;

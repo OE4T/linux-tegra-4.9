@@ -156,8 +156,11 @@ static int nvdla_alloc_trace_region(struct platform_device *pdev)
 	nvdla_dbg_fn(pdev, "");
 
 	m = get_flcn(pdev);
-	if (!m)
-		return -ENXIO;
+	if (!m) {
+		nvdla_dbg_err(pdev, "falcon is not booted!");
+		err = -ENXIO;
+		goto falcon_not_booted;
+	}
 
 	/* Trace buffer allocation must be done at once only. */
 	if (!m->trace_dump_va) {
@@ -169,7 +172,8 @@ static int nvdla_alloc_trace_region(struct platform_device *pdev)
 		if (!m->trace_dump_va) {
 			nvdla_dbg_err(pdev,
 				"dma trace memory allocation failed");
-			return -ENOMEM;
+			err = -ENOMEM;
+			goto fail_alloc_trace_dma;
 		}
 	}
 
@@ -205,10 +209,14 @@ static int nvdla_alloc_trace_region(struct platform_device *pdev)
 
 trace_send_cmd_failed:
 alloc_trace_cmd_failed:
-	dma_free_attrs(&pdev->dev, TRACE_BUFFER_SIZE,
-	       m->trace_dump_va, m->trace_dump_pa, &attrs);
-	m->trace_dump_va = NULL;
-	m->trace_dump_pa = 0;
+	if (m->trace_dump_pa) {
+		dma_free_attrs(&pdev->dev, TRACE_BUFFER_SIZE,
+			m->trace_dump_va, m->trace_dump_pa, &attrs);
+		m->trace_dump_va = NULL;
+		m->trace_dump_pa = 0;
+	}
+fail_alloc_trace_dma:
+falcon_not_booted:
 
 	return err;
 }
@@ -227,16 +235,22 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 	nvdla_dbg_fn(pdev, "");
 
 	m = get_flcn(pdev);
-	if (!m)
-		return -ENXIO;
+	if (!m) {
+		nvdla_dbg_err(pdev, "falcon is not booted!");
+		err = -ENXIO;
+		goto fal_not_booted;
+	}
 
-	/* allocate dump region */
-	m->debug_dump_va = dma_alloc_attrs(&pdev->dev,
+	/* allocate dump region only once */
+	if (!m->debug_dump_va) {
+		m->debug_dump_va = dma_alloc_attrs(&pdev->dev,
 				   DEBUG_BUFFER_SIZE, &m->debug_dump_pa,
 				   GFP_KERNEL, &attrs);
-	if (!m->debug_dump_va) {
-		dev_err(&pdev->dev, "dma memory allocation failed");
-		return -ENOMEM;
+		if (!m->debug_dump_va) {
+			nvdla_dbg_err(pdev, "debug dump dma alloc failed");
+			err = -ENOMEM;
+			goto fail_to_alloc_debug_dump;
+		}
 	}
 
 	/* allocate memory for command */
@@ -244,7 +258,7 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 					sizeof(struct dla_region_printf),
 					&region_pa, GFP_KERNEL, &attrs);
 	if (!region) {
-		dev_err(&pdev->dev, "dma memory allocation failed");
+		nvdla_dbg_err(pdev, "command region dma alloc failed");
 		err = -ENOMEM;
 		goto set_region_failed;
 	}
@@ -271,38 +285,22 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 
 region_send_cmd_failed:
 set_region_failed:
-	dma_free_attrs(&pdev->dev, DEBUG_BUFFER_SIZE,
-	       m->debug_dump_va, m->debug_dump_pa, &attrs);
-	m->debug_dump_va = NULL;
-	m->debug_dump_pa = 0;
-
-	return err;
-}
-
-static void nvdla_free_dump_region(struct platform_device *pdev)
-{
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	struct flcn *m;
-
-	nvdla_dbg_fn(pdev, "");
-
-	if (!pdata->flcn_isr)
-		return;
-
-	m = get_flcn(pdev);
-	if (m && m->debug_dump_pa) {
+	if (m->debug_dump_pa) {
 		dma_free_attrs(&pdev->dev, DEBUG_BUFFER_SIZE,
-			       m->debug_dump_va, m->debug_dump_pa,
-			       &attrs);
+			m->debug_dump_va, m->debug_dump_pa, &attrs);
 		m->debug_dump_va = NULL;
 		m->debug_dump_pa = 0;
 	}
+fail_to_alloc_debug_dump:
+fal_not_booted:
+
+	return err;
 }
 
 /* power management API */
 int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 {
-	int ret = 0;
+	int ret;
 	uint32_t fw_ver_read_bin;
 	uint32_t firmware_version;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
@@ -312,8 +310,8 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 
 	ret = nvhost_flcn_finalize_poweron(pdev);
 	if (ret) {
-		dev_err(&pdev->dev, "%s: failed to poweron\n", __func__);
-		return ret;
+		nvdla_dbg_err(pdev, "%s: failed to poweron\n", __func__);
+		goto fail;
 	}
 
 	fw_ver_read_bin = host1x_readl(pdev, NV_DLA_OS_VERSION);
@@ -325,7 +323,8 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 		(firmware_version >> 16) & 0xff, (firmware_version >> 8) & 0xff, firmware_version & 0xff,
 		(fw_ver_read_bin >> 16 ) & 0xff, (fw_ver_read_bin >> 8) & 0xff, fw_ver_read_bin & 0xff);
 
-		return -EINVAL;
+		ret = -EINVAL;
+		goto fail_to_val_ver;
 	}
 
 	nvdla_dbg_info(pdev, "Fw version : [%u.%u.%u]\n",
@@ -336,13 +335,24 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 	nvdla_dev->fw_version = fw_ver_read_bin;
 
 	ret = nvdla_alloc_dump_region(pdev);
-	if (ret)
-		nvhost_nvdla_prepare_poweroff(pdev);
+	if (ret) {
+		nvdla_dbg_err(pdev, "%s: fail alloc dump region\n", __func__);
+		goto fail_to_alloc_dump_reg;
+	}
 
 	ret = nvdla_alloc_trace_region(pdev);
-	if (ret)
-		nvhost_nvdla_prepare_poweroff(pdev);
+	if (ret) {
+		nvdla_dbg_err(pdev, "%s: fail alloc trace region\n", __func__);
+		goto fail_to_alloc_trace;
+	}
 
+	return 0;
+
+fail_to_alloc_trace:
+fail_to_alloc_dump_reg:
+fail_to_val_ver:
+	nvhost_nvdla_prepare_poweroff(pdev);
+fail:
 	return ret;
 }
 
@@ -352,16 +362,11 @@ int nvhost_nvdla_prepare_poweroff(struct platform_device *pdev)
 
 	nvdla_dbg_fn(pdev, "");
 
-	/* free dump region */
-	nvdla_free_dump_region(pdev);
-
 	ret = nvhost_flcn_prepare_poweroff(pdev);
-	if (ret) {
-		dev_err(&pdev->dev, "%s: failed to poweroff\n", __func__);
-		return ret;
-	}
+	if (ret)
+		nvdla_dbg_err(pdev, "failed to poweroff\n");
 
-	return 0;
+	return ret;
 }
 
 /* driver probe and init */
@@ -498,6 +503,14 @@ static int __exit nvdla_remove(struct platform_device *pdev)
 			       &attrs);
 		m->trace_dump_va = NULL;
 		m->trace_dump_pa = 0;
+	}
+
+	if (m->debug_dump_pa) {
+		dma_free_attrs(&pdev->dev, DEBUG_BUFFER_SIZE,
+			       m->debug_dump_va, m->debug_dump_pa,
+			       &attrs);
+		m->debug_dump_va = NULL;
+		m->debug_dump_pa = 0;
 	}
 
 	nvdla_dbg_fn(pdev, "");

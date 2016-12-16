@@ -169,10 +169,7 @@ config AHCI_SUNXI
 
 	  If unsure, say N.
 
-config ARCH_TEGRA_HAS_SATA
-	bool
-
-config SATA_AHCI_TEGRA
+config AHCI_TEGRA_DOWNSTREAM
 	tristate "TEGRA AHCI SATA support"
 	select ARCH_TEGRA_HAS_SATA
 	help

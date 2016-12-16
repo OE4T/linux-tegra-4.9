@@ -41,6 +41,7 @@
 #include <dt-bindings/hsp/tegra-hsp.h>
 #include "tegra186-soc/tegra186-soc-thermal.dtsi"
 #include "tegra186-soc/tegra186-camera.dtsi"
+#include "tegra186-soc/tegra186-safety-sce.dtsi"
 #include "tegra186-soc/tegra186-soc-actmon.dtsi"
 #include <dt-bindings/soc/gp10b-fuse.h>
 #include <dt-bindings/linux/driver-info.h>
@@ -188,6 +189,7 @@
 			      <&{/ahci-sata@3507000}	TEGRA_SID_SATA2>,
 			      <&{/aon@c160000}		TEGRA_SID_AON>,
 			      <&{/rtcpu@b000000}	TEGRA_SID_RCE>,
+			      <&{/sce@b000000}		TEGRA_SID_SCE>,
 			      <&{/bpmp}			TEGRA_SID_BPMP>,
 			      <&{/dma@2600000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/spi@3210000}		TEGRA_SID_GPCDMA_0>,

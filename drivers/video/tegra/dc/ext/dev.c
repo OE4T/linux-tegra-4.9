@@ -1074,8 +1074,8 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 }
 
 static int lock_windows_for_flip(struct tegra_dc_ext_user *user,
-				 struct tegra_dc_ext_flip_windowattr_v2 *win,
-				 int win_num)
+			struct tegra_dc_ext_flip_windowattr_v2 *win_attr,
+			int win_num)
 {
 	struct tegra_dc_ext *ext = user->ext;
 	u8 idx_mask = 0;
@@ -1083,7 +1083,7 @@ static int lock_windows_for_flip(struct tegra_dc_ext_user *user,
 
 	BUG_ON(win_num > DC_N_WINDOWS);
 	for (i = 0; i < win_num; i++) {
-		int index = win[i].index;
+		int index = win_attr[i].index;
 
 		if (index < 0 || !test_bit(index, &ext->dc->valid_windows))
 			continue;

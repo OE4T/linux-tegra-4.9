@@ -234,11 +234,11 @@ int nvhost_buffer_pin(struct nvhost_buffers *nvhost_buffers, u32 *handles,
 
 		vm = kzalloc(sizeof(struct nvhost_vm_buffer), GFP_KERNEL);
 		if (!vm)
-			goto buf_alloc_err;
+			goto unpin;
 
 		err = nvhost_buffer_map(nvhost_buffers->pdev, handles[i], vm);
 		if (err)
-			goto nvhost_pin_err;
+			goto free_vm;
 
 		list_add_tail(&vm->pin_list, &nvhost_buffers->buffer_list);
 	}
@@ -246,8 +246,9 @@ int nvhost_buffer_pin(struct nvhost_buffers *nvhost_buffers, u32 *handles,
 	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
 	return err;
 
-buf_alloc_err:
-nvhost_pin_err:
+free_vm:
+	kfree(vm);
+unpin:
 	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
 
 	/* free pinned buffers */

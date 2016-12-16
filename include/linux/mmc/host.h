@@ -315,6 +315,7 @@ struct mmc_host {
 #define MMC_CAP2_NO_SD		(1 << 21)	/* Do not send SD commands during initialization */
 #define MMC_CAP2_NO_MMC		(1 << 22)	/* Do not send (e)MMC commands during initialization */
 #define MMC_CAP2_HS533		(1 << 23)	/* Can support HS533 */
+#define MMC_CAP2_NO_EXTENDED_GP	(1 << 24)	/* Do not support extended GP */
 
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
 

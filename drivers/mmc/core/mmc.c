@@ -314,6 +314,12 @@ static void mmc_manage_gp_partitions(struct mmc_card *card, u8 *ext_csd)
 	unsigned int part_size;
 
 	/*
+	 * Bail out in case the host doesn't support extended GP.
+	 */
+	if (card->host->caps2 & MMC_CAP2_NO_EXTENDED_GP)
+		return;
+
+	/*
 	 * General purpose partition feature support --
 	 * If ext_csd has the size of general purpose partitions,
 	 * set size, part_cfg, partition name in mmc_part.

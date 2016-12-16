@@ -33,6 +33,7 @@
 #include <linux/regulator/consumer.h>
 
 #include <linux/tegra_prod.h>
+#include <linux/tegra-soc.h>
 #include "sdhci-pltfm.h"
 
 /* Tegra SDHOST controller vendor register definitions */
@@ -567,6 +568,9 @@ static void tegra_sdhci_set_clk_parent(struct sdhci_host *host,
 	int rc;
 	u8 i, sel_parent_idx = 0;
 
+	if (tegra_platform_is_fpga())
+		return;
+
 	clk_src_data = tegra_host->clk_src_data;
 	if (!clk_src_data) {
 		dev_err(mmc_dev(host->mmc), "clk src data NULL");
@@ -656,6 +660,9 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 	unsigned long host_clk;
 	int rc;
 	u8 vndr_ctrl;
+
+	if (tegra_platform_is_vdk())
+		return;
 
 	host_clk = tegra_sdhci_apply_clk_limits(host, clock);
 
@@ -1266,7 +1273,8 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 	if (IS_ERR(clk)) {
 		dev_err(mmc_dev(host->mmc), "clk err\n");
 		rc = PTR_ERR(clk);
-		goto err_clk_get;
+		if (!tegra_platform_is_vdk())
+			goto err_clk_get;
 	}
 	clk_prepare_enable(clk);
 
@@ -1280,6 +1288,9 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 
 	if (!en_boot_part_access)
 		host->mmc->caps2 |= MMC_CAP2_BOOTPART_NOACC;
+
+	if (tegra_platform_is_vdk())
+		host->mmc->caps |= MMC_CAP2_NO_EXTENDED_GP;
 
 	rc = sdhci_add_host(host);
 	if (rc)

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/hdmihdcp.c
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1020,7 +1020,7 @@ static int nvhdcp_poll(struct tegra_nvhdcp *nvhdcp, int timeout, int status)
 	while (1) {
 		ktime_get_ts(&tm);
 		end_time = timespec_to_ns(&tm);
-		if ((end_time - start_time)/1000 >= timeout*1000)
+		if ((end_time - start_time)/1000 >= (s64)timeout*1000)
 			return -ETIMEDOUT;
 		else {
 			e = nvhdcp_i2c_read(nvhdcp, 0x70, 2, &val);

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dp_auto.c
  *
- * Copyright (c) 2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -81,13 +81,14 @@ void tegra_dp_auto_set_edid_checksum(struct tegra_dc_dp_data *dp)
 	struct tegra_dc *dc = dp->dc;
 	struct tegra_dc_edid *edid = tegra_dc_get_edid(dc);
 
-	if (edid->len) {
-		tegra_dc_dp_dpcd_write(dp, NV_DPCD_TEST_EDID_CHECKSUM,
-				edid->buf[edid->len - 1]);
-		tegra_dc_dp_dpcd_write(dp, NV_DPCD_TEST_RESPONSE,
-				NV_DPCD_TEST_EDID_CHECKSUM_WR);
-	}
+	if (edid) {
+		if (edid->len) {
+			tegra_dc_dp_dpcd_write(dp, NV_DPCD_TEST_EDID_CHECKSUM,
+					edid->buf[edid->len - 1]);
+			tegra_dc_dp_dpcd_write(dp, NV_DPCD_TEST_RESPONSE,
+					NV_DPCD_TEST_EDID_CHECKSUM_WR);
+		}
 
-	if (edid)
 		tegra_dc_put_edid(edid);
+	}
 }

@@ -536,6 +536,11 @@ int tegra_dc_program_mode(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 
 	rate = tegra_dc_clk_get_rate(dc);
 	pclk = tegra_dc_pclk_round_rate(dc, mode->pclk);
+
+	if (pclk == 0)  {
+		dev_err(&dc->ndev->dev, "pclk is zero!\n");
+		return -ERANGE;
+	}
 	div = (rate * 2 / pclk) - 2;
 	dev_info(&dc->ndev->dev,
 		"nominal-pclk:%d parent:%lu div:%lu.%lu pclk:%lu %d~%d\n",

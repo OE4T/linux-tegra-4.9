@@ -89,6 +89,7 @@
 #define NVQUIRK_HW_TAP_CONFIG		BIT(7)
 #define NVQUIRK_DIS_CARD_CLK_CONFIG_TAP	BIT(8)
 #define NVQUIRK_USE_PLATFORM_TUNING	BIT(9)
+#define NVQUIRK_READ_REG_AFTER_WRITE	BIT(10)
 
 #define MAX_CLK_PARENTS	5
 #define MAX_DIVISOR_VALUE	128
@@ -152,6 +153,9 @@ struct sdhci_tegra {
 	bool pwrdet_support;
 };
 
+/* Module params */
+static unsigned int en_boot_part_access;
+
 static void sdhci_tegra_debugfs_init(struct sdhci_host *host);
 static void tegra_sdhci_vendor_trim_clear_sel_vreg(struct sdhci_host *host,
 	bool enable);
@@ -173,9 +177,22 @@ static u16 tegra_sdhci_readw(struct sdhci_host *host, int reg)
 	return readw(host->ioaddr + reg);
 }
 
+static void tegra_sdhci_writeb(struct sdhci_host *host, u8 val, int reg)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+	const struct sdhci_tegra_soc_data *soc_data = tegra_host->soc_data;
+
+	writeb(val, host->ioaddr + reg);
+	if (soc_data->nvquirks & NVQUIRK_READ_REG_AFTER_WRITE)
+		readb(host->ioaddr + reg);
+}
+
 static void tegra_sdhci_writew(struct sdhci_host *host, u16 val, int reg)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+	const struct sdhci_tegra_soc_data *soc_data = tegra_host->soc_data;
 
 	switch (reg) {
 	case SDHCI_TRANSFER_MODE:
@@ -188,10 +205,14 @@ static void tegra_sdhci_writew(struct sdhci_host *host, u16 val, int reg)
 	case SDHCI_COMMAND:
 		writel((val << 16) | pltfm_host->xfer_mode_shadow,
 			host->ioaddr + SDHCI_TRANSFER_MODE);
+		if (soc_data->nvquirks & NVQUIRK_READ_REG_AFTER_WRITE)
+			readl(host->ioaddr + SDHCI_TRANSFER_MODE);
 		return;
 	}
 
 	writew(val, host->ioaddr + reg);
+	if (soc_data->nvquirks & NVQUIRK_READ_REG_AFTER_WRITE)
+		readw(host->ioaddr + reg);
 }
 
 static void tegra_sdhci_writel(struct sdhci_host *host, u32 val, int reg)
@@ -208,6 +229,8 @@ static void tegra_sdhci_writel(struct sdhci_host *host, u32 val, int reg)
 		val &= ~(SDHCI_INT_TIMEOUT|SDHCI_INT_CRC);
 
 	writel(val, host->ioaddr + reg);
+	if (soc_data->nvquirks & NVQUIRK_READ_REG_AFTER_WRITE)
+		readl(host->ioaddr + reg);
 
 	if (unlikely((soc_data->nvquirks & NVQUIRK_ENABLE_BLOCK_GAP_DET) &&
 			(reg == SDHCI_INT_ENABLE))) {
@@ -218,6 +241,8 @@ static void tegra_sdhci_writel(struct sdhci_host *host, u32 val, int reg)
 		else
 			gap_ctrl &= ~0x8;
 		writeb(gap_ctrl, host->ioaddr + SDHCI_BLOCK_GAP_CONTROL);
+		if (soc_data->nvquirks & NVQUIRK_READ_REG_AFTER_WRITE)
+			readb(host->ioaddr + SDHCI_BLOCK_GAP_CONTROL);
 	}
 }
 
@@ -1058,6 +1083,7 @@ static const struct sdhci_tegra_soc_data soc_data_tegra30 = {
 static const struct sdhci_ops tegra114_sdhci_ops = {
 	.get_ro     = tegra_sdhci_get_ro,
 	.read_w     = tegra_sdhci_readw,
+	.write_b    = tegra_sdhci_writeb,
 	.write_w    = tegra_sdhci_writew,
 	.write_l    = tegra_sdhci_writel,
 	.set_clock  = tegra_sdhci_set_clock,
@@ -1123,7 +1149,8 @@ static const struct sdhci_pltfm_data sdhci_tegra210_pdata = {
 static const struct sdhci_tegra_soc_data soc_data_tegra210 = {
 	.pdata = &sdhci_tegra210_pdata,
 	.nvquirks = NVQUIRK_HW_TAP_CONFIG |
-		    NVQUIRK_DIS_CARD_CLK_CONFIG_TAP,
+		    NVQUIRK_DIS_CARD_CLK_CONFIG_TAP |
+		    NVQUIRK_READ_REG_AFTER_WRITE,
 };
 
 static const struct sdhci_pltfm_data sdhci_tegra186_pdata = {
@@ -1251,6 +1278,9 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 
 	pltfm_host->clk = clk;
 
+	if (!en_boot_part_access)
+		host->mmc->caps2 |= MMC_CAP2_BOOTPART_NOACC;
+
 	rc = sdhci_add_host(host);
 	if (rc)
 		goto err_add_host;
@@ -1317,6 +1347,8 @@ static struct platform_driver sdhci_tegra_driver = {
 };
 
 module_platform_driver(sdhci_tegra_driver);
+
+module_param(en_boot_part_access, uint, 0444);
 
 MODULE_DESCRIPTION("SDHCI driver for Tegra");
 MODULE_AUTHOR("Google, Inc.");

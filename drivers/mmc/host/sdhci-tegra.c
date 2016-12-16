@@ -91,6 +91,7 @@
 #define NVQUIRK_DIS_CARD_CLK_CONFIG_TAP	BIT(8)
 #define NVQUIRK_USE_PLATFORM_TUNING	BIT(9)
 #define NVQUIRK_READ_REG_AFTER_WRITE	BIT(10)
+#define NVQUIRK_SHADOW_XFER_MODE_WRITE	BIT(11)
 
 #define MAX_CLK_PARENTS	5
 #define MAX_DIVISOR_VALUE	128
@@ -195,20 +196,22 @@ static void tegra_sdhci_writew(struct sdhci_host *host, u16 val, int reg)
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 	const struct sdhci_tegra_soc_data *soc_data = tegra_host->soc_data;
 
-	switch (reg) {
-	case SDHCI_TRANSFER_MODE:
-		/*
-		 * Postpone this write, we must do it together with a
-		 * command write that is down below.
-		 */
-		pltfm_host->xfer_mode_shadow = val;
-		return;
-	case SDHCI_COMMAND:
-		writel((val << 16) | pltfm_host->xfer_mode_shadow,
-			host->ioaddr + SDHCI_TRANSFER_MODE);
-		if (soc_data->nvquirks & NVQUIRK_READ_REG_AFTER_WRITE)
-			readl(host->ioaddr + SDHCI_TRANSFER_MODE);
-		return;
+	if (soc_data->nvquirks & NVQUIRK_SHADOW_XFER_MODE_WRITE) {
+		switch (reg) {
+		case SDHCI_TRANSFER_MODE:
+			/*
+			 * Postpone this write, we must do it together with a
+			 * command write that is down below.
+			 */
+			pltfm_host->xfer_mode_shadow = val;
+			return;
+		case SDHCI_COMMAND:
+			writel((val << 16) | pltfm_host->xfer_mode_shadow,
+				host->ioaddr + SDHCI_TRANSFER_MODE);
+			if (soc_data->nvquirks & NVQUIRK_READ_REG_AFTER_WRITE)
+				readl(host->ioaddr + SDHCI_TRANSFER_MODE);
+			return;
+		}
 	}
 
 	writew(val, host->ioaddr + reg);
@@ -1037,6 +1040,8 @@ static int sdhci_tegra_get_parent_pll_from_dt(struct sdhci_host *host,
 static const struct sdhci_ops tegra_sdhci_ops = {
 	.get_ro     = tegra_sdhci_get_ro,
 	.read_w     = tegra_sdhci_readw,
+	.write_b    = tegra_sdhci_writeb,
+	.write_w    = tegra_sdhci_writew,
 	.write_l    = tegra_sdhci_writel,
 	.set_clock  = tegra_sdhci_set_clock,
 	.set_bus_width = tegra_sdhci_set_bus_width,
@@ -1144,13 +1149,12 @@ static const struct sdhci_tegra_soc_data soc_data_tegra124 = {
 
 static const struct sdhci_pltfm_data sdhci_tegra210_pdata = {
 	.quirks = SDHCI_QUIRK_BROKEN_TIMEOUT_VAL |
-		  SDHCI_QUIRK_DATA_TIMEOUT_USES_SDCLK |
 		  SDHCI_QUIRK_SINGLE_POWER_WRITE |
 		  SDHCI_QUIRK_NO_HISPD_BIT |
 		  SDHCI_QUIRK_BROKEN_ADMA_ZEROLEN_DESC |
 		  SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN,
 	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN,
-	.ops  = &tegra114_sdhci_ops,
+	.ops  = &tegra_sdhci_ops,
 };
 
 static const struct sdhci_tegra_soc_data soc_data_tegra210 = {

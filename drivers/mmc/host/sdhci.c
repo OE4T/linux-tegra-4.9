@@ -2176,6 +2176,9 @@ out:
 		err = 0;
 	}
 
+	if (host->ops->post_tuning)
+		host->ops->post_tuning(host);
+
 	host->mmc->retune_period = err ? 0 : tuning_count;
 
 	sdhci_writel(host, host->ier, SDHCI_INT_ENABLE);

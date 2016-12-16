@@ -734,18 +734,19 @@ static void gk20a_page_free_fixed(struct gk20a_allocator *__a,
 		alloc = (struct gk20a_page_alloc *) (uintptr_t) base;
 	}
 
+	palloc_dbg(a, "Free  [fixed] 0x%010llx + 0x%llx\n",
+		   alloc->base, alloc->length);
+
+	a->nr_fixed_frees++;
+	a->pages_freed += (alloc->length >> a->page_shift);
+
 	/*
 	 * This works for the time being since the buddy allocator
 	 * uses the same free function for both fixed and regular
 	 * allocs. This would have to be updated if the underlying
 	 * allocator were to change.
 	 */
-	palloc_dbg(a, "Free  [fixed] 0x%010llx + 0x%llx\n",
-		   alloc->base, alloc->length);
 	__gk20a_free_pages(a, alloc, true);
-
-	a->nr_fixed_frees++;
-	a->pages_freed += (alloc->length >> a->page_shift);
 
 done:
 	alloc_unlock(__a);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,7 +16,6 @@
 #include <linux/kthread.h>
 #include <linux/circ_buf.h>
 #include <linux/delay.h>
-#include <linux/jiffies.h>
 #include <linux/wait.h>
 #include <linux/ktime.h>
 #include <linux/nvgpu.h>

@@ -270,8 +270,8 @@ struct gpu_ops {
 		u32 (*get_max_lts_per_ltc)(struct gk20a *g);
 		u32* (*get_rop_l2_en_mask)(struct gk20a *g);
 		void (*init_sm_dsm_reg_info)(void);
-		int (*wait_empty)(struct gk20a *g, unsigned long end_jiffies,
-		       u32 expect_delay);
+		int (*wait_empty)(struct gk20a *g, unsigned long duration_ms,
+				  u32 expect_delay);
 		void (*init_cyclestats)(struct gk20a *g);
 		void (*enable_cde_in_fecs)(struct gk20a *g,
 				struct mem_desc *mem);

@@ -36,6 +36,8 @@
 #include "fence_gk20a.h"
 #include "semaphore_gk20a.h"
 
+#include <nvgpu/timers.h>
+
 #include <nvgpu/hw/gk20a/hw_ram_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_fifo_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
@@ -557,8 +559,10 @@ void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt)
 int gk20a_wait_channel_idle(struct channel_gk20a *ch)
 {
 	bool channel_idle = false;
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(gk20a_get_gr_idle_timeout(ch->g));
+	struct nvgpu_timeout timeout;
+
+	nvgpu_timeout_init(ch->g, &timeout, gk20a_get_gr_idle_timeout(ch->g),
+			   NVGPU_TIMER_CPU_TIMER);
 
 	do {
 		channel_gk20a_joblist_lock(ch);
@@ -568,8 +572,7 @@ int gk20a_wait_channel_idle(struct channel_gk20a *ch)
 			break;
 
 		usleep_range(1000, 3000);
-	} while (time_before(jiffies, end_jiffies)
-			|| !tegra_platform_is_silicon());
+	} while (!nvgpu_timeout_expired(&timeout));
 
 	if (!channel_idle) {
 		gk20a_err(dev_from_gk20a(ch->g), "jobs not freed for channel %d\n",

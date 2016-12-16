@@ -44,6 +44,7 @@
 #include <linux/version.h>
 
 #include <nvgpu/allocator.h>
+#include <nvgpu/timers.h>
 
 #include "gk20a.h"
 #include "nvgpu_common.h"
@@ -1923,8 +1924,7 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 {
 	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	unsigned long timeout = jiffies +
-		msecs_to_jiffies(GK20A_WAIT_FOR_IDLE_MS);
+	struct nvgpu_timeout timeout;
 	int ref_cnt;
 	int target_ref_cnt = 0;
 	bool is_railgated;
@@ -1958,11 +1958,14 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 		target_ref_cnt = 1;
 	mutex_lock(&platform->railgate_lock);
 
+	nvgpu_timeout_init(g, &timeout, GK20A_WAIT_FOR_IDLE_MS,
+			   NVGPU_TIMER_CPU_TIMER);
+
 	/* check and wait until GPU is idle (with a timeout) */
 	do {
 		msleep(1);
 		ref_cnt = atomic_read(&dev->power.usage_count);
-	} while (ref_cnt != target_ref_cnt && time_before(jiffies, timeout));
+	} while (ref_cnt != target_ref_cnt && !nvgpu_timeout_expired(&timeout));
 
 	if (ref_cnt != target_ref_cnt) {
 		gk20a_err(dev, "failed to idle - refcount %d != 1\n",
@@ -1972,6 +1975,9 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 
 	/* check if global force_reset flag is set */
 	force_reset |= platform->force_reset_in_do_idle;
+
+	nvgpu_timeout_init(g, &timeout, GK20A_WAIT_FOR_IDLE_MS,
+			   NVGPU_TIMER_CPU_TIMER);
 
 	if (platform->can_railgate && !force_reset) {
 		/*
@@ -1985,13 +1991,11 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 		/* add sufficient delay to allow GPU to rail gate */
 		msleep(platform->railgate_delay);
 
-		timeout = jiffies + msecs_to_jiffies(GK20A_WAIT_FOR_IDLE_MS);
-
 		/* check in loop if GPU is railgated or not */
 		do {
 			msleep(1);
 			is_railgated = platform->is_railgated(dev);
-		} while (!is_railgated && time_before(jiffies, timeout));
+		} while (!is_railgated && !nvgpu_timeout_expired(&timeout));
 
 		if (is_railgated) {
 			return 0;

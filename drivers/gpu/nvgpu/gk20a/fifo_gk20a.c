@@ -16,12 +16,15 @@
  * this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
 #include <trace/events/gk20a.h>
 #include <linux/dma-mapping.h>
 #include <linux/nvhost.h>
+
+#include <nvgpu/timers.h>
 
 #include "gk20a.h"
 #include "debug_gk20a.h"
@@ -1570,11 +1573,9 @@ static void gk20a_fifo_get_faulty_id_type(struct gk20a *g, int engine_id,
 static void gk20a_fifo_trigger_mmu_fault(struct gk20a *g,
 		unsigned long engine_ids)
 {
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+	struct nvgpu_timeout timeout;
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
 	unsigned long engine_id;
-	int ret;
 
 	/* trigger faults for all bad engines */
 	for_each_set_bit(engine_id, &engine_ids, 32) {
@@ -1593,21 +1594,16 @@ static void gk20a_fifo_trigger_mmu_fault(struct gk20a *g,
 	}
 
 	/* Wait for MMU fault to trigger */
-	ret = -EBUSY;
+	nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
+			   NVGPU_TIMER_CPU_TIMER);
 	do {
 		if (gk20a_readl(g, fifo_intr_0_r()) &
-				fifo_intr_0_mmu_fault_pending_f()) {
-			ret = 0;
+				fifo_intr_0_mmu_fault_pending_f())
 			break;
-		}
 
 		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-	} while (time_before(jiffies, end_jiffies) ||
-			!tegra_platform_is_silicon());
-
-	if (ret)
-		gk20a_err(dev_from_gk20a(g), "mmu fault timeout");
+	} while (!nvgpu_timeout_expired_msg(&timeout, "mmu fault timeout"));
 
 	/* release mmu fault trigger */
 	for_each_set_bit(engine_id, &engine_ids, 32)
@@ -2366,9 +2362,8 @@ void gk20a_fifo_issue_preempt(struct gk20a *g, u32 id, bool is_tsg)
 
 static int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 {
+	struct nvgpu_timeout timeout;
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
-	unsigned long end_jiffies = jiffies
-		+ msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 ret = 0;
 
 	gk20a_dbg_fn("%d", id);
@@ -2379,6 +2374,8 @@ static int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 	gk20a_dbg_fn("%d", id);
 	/* wait for preempt */
 	ret = -EBUSY;
+	nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
+			   NVGPU_TIMER_CPU_TIMER);
 	do {
 		if (!(gk20a_readl(g, fifo_preempt_r()) &
 			fifo_preempt_pending_true_f())) {
@@ -2388,8 +2385,7 @@ static int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 
 		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-	} while (time_before(jiffies, end_jiffies) ||
-			!tegra_platform_is_silicon());
+	} while (!nvgpu_timeout_expired(&timeout));
 
 	gk20a_dbg_fn("%d", id);
 	if (ret) {
@@ -2668,10 +2664,12 @@ static void gk20a_fifo_runlist_reset_engines(struct gk20a *g, u32 runlist_id)
 static int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id)
 {
 	struct fifo_runlist_info_gk20a *runlist;
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+	struct nvgpu_timeout timeout;
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
 	int ret = -ETIMEDOUT;
+
+	nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
+			   NVGPU_TIMER_CPU_TIMER);
 
 	runlist = &g->fifo.runlist_info[runlist_id];
 	do {
@@ -2683,8 +2681,7 @@ static int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id)
 
 		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-	} while (time_before(jiffies, end_jiffies) ||
-		 !tegra_platform_is_silicon());
+	} while (!nvgpu_timeout_expired(&timeout));
 
 	return ret;
 }
@@ -3106,13 +3103,15 @@ bool gk20a_fifo_is_engine_busy(struct gk20a *g)
 
 int gk20a_fifo_wait_engine_idle(struct gk20a *g)
 {
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+	struct nvgpu_timeout timeout;
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
 	int ret = -ETIMEDOUT;
 	u32 i;
 
 	gk20a_dbg_fn("");
+
+	nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
+			   NVGPU_TIMER_CPU_TIMER);
 
 	for (i = 0; i < fifo_engine_status__size_1_v(); i++) {
 		do {
@@ -3125,8 +3124,8 @@ int gk20a_fifo_wait_engine_idle(struct gk20a *g)
 			usleep_range(delay, delay * 2);
 			delay = min_t(unsigned long,
 					delay << 1, GR_IDLE_CHECK_MAX);
-		} while (time_before(jiffies, end_jiffies) ||
-				!tegra_platform_is_silicon());
+		} while (!nvgpu_timeout_expired(&timeout));
+
 		if (ret) {
 			gk20a_dbg_info("cannot idle engine %u", i);
 			break;

@@ -1,7 +1,7 @@
 /*
  * Color decompression engine support
  *
- * Copyright (c) 2014-2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,6 +23,8 @@
 #include <linux/dma-buf.h>
 
 #include <trace/events/gk20a.h>
+
+#include <nvgpu/timers.h>
 
 #include "gk20a.h"
 #include "channel_gk20a.h"
@@ -864,7 +866,10 @@ __acquires(&cde_app->mutex)
 {
 	struct gk20a_cde_app *cde_app = &g->cde_app;
 	struct gk20a_cde_ctx *cde_ctx = NULL;
-	unsigned long end = jiffies + msecs_to_jiffies(MAX_CTX_RETRY_TIME);
+	struct nvgpu_timeout timeout;
+
+	nvgpu_timeout_init(g, &timeout, MAX_CTX_RETRY_TIME,
+			   NVGPU_TIMER_CPU_TIMER);
 
 	do {
 		cde_ctx = gk20a_cde_do_get_context(g);
@@ -875,7 +880,7 @@ __acquires(&cde_app->mutex)
 		mutex_unlock(&cde_app->mutex);
 		cond_resched();
 		mutex_lock(&cde_app->mutex);
-	} while (time_before(jiffies, end));
+	} while (!nvgpu_timeout_expired(&timeout));
 
 	return cde_ctx;
 }

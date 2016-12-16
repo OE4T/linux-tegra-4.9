@@ -1,7 +1,7 @@
 /*
  * GK20A memory management
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -894,14 +894,17 @@ static int gk20a_vidmem_clear_all(struct gk20a *g)
 	}
 
 	if (gk20a_fence_out) {
-		unsigned long end_jiffies = jiffies +
-			msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+		struct nvgpu_timeout timeout;
+
+		nvgpu_timeout_init(g, &timeout,
+				   gk20a_get_gr_idle_timeout(g),
+				   NVGPU_TIMER_CPU_TIMER);
 
 		do {
-			unsigned int timeout = jiffies_to_msecs(end_jiffies - jiffies);
 			err = gk20a_fence_wait(gk20a_fence_out,
-					timeout);
-		} while ((err == -ERESTARTSYS) && time_before(jiffies, end_jiffies));
+					       gk20a_get_gr_idle_timeout(g));
+		} while (err == -ERESTARTSYS &&
+			 !nvgpu_timeout_expired(&timeout));
 
 		gk20a_fence_put(gk20a_fence_out);
 		if (err) {
@@ -3103,14 +3106,17 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct mem_desc *mem)
 	}
 
 	if (gk20a_last_fence) {
-		unsigned long end_jiffies = jiffies +
-			msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+		struct nvgpu_timeout timeout;
+
+		nvgpu_timeout_init(g, &timeout,
+				   gk20a_get_gr_idle_timeout(g),
+				   NVGPU_TIMER_CPU_TIMER);
 
 		do {
-			unsigned int timeout = jiffies_to_msecs(end_jiffies - jiffies);
 			err = gk20a_fence_wait(gk20a_last_fence,
-					timeout);
-		} while ((err == -ERESTARTSYS) && time_before(jiffies, end_jiffies));
+					       gk20a_get_gr_idle_timeout(g));
+		} while (err == -ERESTARTSYS &&
+			 !nvgpu_timeout_expired(&timeout));
 
 		gk20a_fence_put(gk20a_last_fence);
 		if (err)

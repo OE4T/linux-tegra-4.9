@@ -600,7 +600,7 @@ int gr_gk20a_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 int _gk20a_gr_zbc_set_table(struct gk20a *g, struct gr_gk20a *gr,
 			struct zbc_entry *zbc_val);
 void gr_gk20a_pmu_save_zbc(struct gk20a *g, u32 entries);
-int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
+int gr_gk20a_wait_idle(struct gk20a *g, unsigned long duration_ms,
 		       u32 expect_delay);
 int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		bool *post_event, struct channel_gk20a *fault_ch,
@@ -662,8 +662,8 @@ int gr_gk20a_get_ctx_id(struct gk20a *g,
 
 u32 gk20a_mask_hww_warp_esr(u32 hww_warp_esr);
 
-int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long end_jiffies,
-			u32 expect_delay);
+int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long duration_ms,
+			  u32 expect_delay);
 
 bool gr_gk20a_suspend_context(struct channel_gk20a *ch);
 bool gr_gk20a_resume_context(struct channel_gk20a *ch);

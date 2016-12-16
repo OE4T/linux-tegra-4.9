@@ -31,6 +31,8 @@
 #include "gp10b/gr_gp10b.h"
 #include "gp10b_sysfs.h"
 
+#include <nvgpu/timers.h>
+
 #include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fifo_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_ctxsw_prog_gp10b.h>
@@ -1353,8 +1355,8 @@ static bool gr_activity_empty_or_preempted(u32 val)
 	return true;
 }
 
-static int gr_gp10b_wait_empty(struct gk20a *g, unsigned long end_jiffies,
-		       u32 expect_delay)
+static int gr_gp10b_wait_empty(struct gk20a *g, unsigned long duration_ms,
+			       u32 expect_delay)
 {
 	u32 delay = expect_delay;
 	bool gr_enabled;
@@ -1362,8 +1364,11 @@ static int gr_gp10b_wait_empty(struct gk20a *g, unsigned long end_jiffies,
 	bool gr_busy;
 	u32 gr_status;
 	u32 activity0, activity1, activity2, activity4;
+	struct nvgpu_timeout timeout;
 
 	gk20a_dbg_fn("");
+
+	nvgpu_timeout_init(g, &timeout, duration_ms, NVGPU_TIMER_CPU_TIMER);
 
 	do {
 		/* fmodel: host gets fifo_engine_status(gr) from gr
@@ -1392,9 +1397,7 @@ static int gr_gp10b_wait_empty(struct gk20a *g, unsigned long end_jiffies,
 
 		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-
-	} while (time_before(jiffies, end_jiffies)
-			|| !tegra_platform_is_silicon());
+	} while (!nvgpu_timeout_expired(&timeout));
 
 	gk20a_err(dev_from_gk20a(g),
 		"timeout, ctxsw busy : %d, gr busy : %d, %08x, %08x, %08x, %08x",

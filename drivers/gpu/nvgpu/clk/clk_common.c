@@ -45,6 +45,7 @@ unsigned long gk20a_clk_get_rate(struct gk20a *g)
 	return rate_gpc2clk_to_gpu(clk->gpc_pll.freq);
 }
 
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 long gk20a_clk_round_rate(struct gk20a *g, unsigned long rate)
 {
 	/* make sure the clock is available */
@@ -53,6 +54,17 @@ long gk20a_clk_round_rate(struct gk20a *g, unsigned long rate)
 
 	return clk_round_rate(clk_get_parent(g->clk.tegra_clk), rate);
 }
+
+#else
+long gk20a_clk_round_rate(struct gk20a *g, unsigned long rate)
+{
+	/* make sure the clock is available */
+	if (!gk20a_clk_get(g))
+		return rate;
+
+	return clk_round_rate(g->clk.tegra_clk, rate);
+}
+#endif
 
 int gk20a_clk_set_rate(struct gk20a *g, unsigned long rate)
 {

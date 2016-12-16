@@ -3774,6 +3774,11 @@ int tegra_dc_wait_for_vsync(struct tegra_dc *dc)
 		goto out;
 	}
 	refresh = tegra_dc_calc_refresh(&dc->mode);
+	if (refresh == 0) {
+		dev_err(&dc->ndev->dev, "dc:refresh is %lu\n", refresh);
+		ret = -ERANGE;
+		goto out;
+	}
 	/* time out if waiting took more than 2 frames */
 	timeout_ms = DIV_ROUND_UP(2 * 1000000, refresh);
 	_tegra_dc_user_vsync_enable(dc, true);

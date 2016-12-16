@@ -1197,6 +1197,8 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 	of_property_read_u32(np, "max-clk-limit", (u32 *)&tegra_host->max_clk_limit);
 	of_property_read_u32(np, "ddr-clk-limit",
 		(u32 *)&tegra_host->max_ddr_clk_limit);
+	of_property_read_u32(np, "dqs-trim-delay",
+		(u32 *)&tegra_host->dqs_trim_delay);
 	tegra_host->pwrdet_support = of_property_read_bool(np, "pwrdet-support");
 
 	return 0;

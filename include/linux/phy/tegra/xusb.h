@@ -26,5 +26,7 @@ int tegra_xusb_padctl_hsic_set_idle(struct tegra_xusb_padctl *padctl,
 				    unsigned int port, bool idle);
 int tegra_xusb_padctl_usb3_set_lfps_detect(struct tegra_xusb_padctl *padctl,
 					   unsigned int port, bool enable);
+int tegra_xusb_padctl_set_vbus_override(struct tegra_xusb_padctl *padctl);
+int tegra_xusb_padctl_clear_vbus_override(struct tegra_xusb_padctl *padctl);
 
 #endif /* PHY_TEGRA_XUSB_H */

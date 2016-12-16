@@ -877,6 +877,15 @@ static int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 		   (compute_preempt_mode == NVGPU_COMPUTE_PREEMPTION_MODE_CILP))
 		return -EINVAL;
 
+	/* Do not allow lower preemption modes than current ones */
+	if (graphics_preempt_mode &&
+	   (graphics_preempt_mode < gr_ctx->graphics_preempt_mode))
+		return -EINVAL;
+
+	if (compute_preempt_mode &&
+	   (compute_preempt_mode < gr_ctx->compute_preempt_mode))
+		return -EINVAL;
+
 	/* set preemption modes */
 	switch (graphics_preempt_mode) {
 	case NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP:
@@ -2062,10 +2071,6 @@ static int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 
 	class = ch->obj_class;
 	if (!class)
-		return -EINVAL;
-
-	/* preemption already set ? */
-	if (gr_ctx->graphics_preempt_mode || gr_ctx->compute_preempt_mode)
 		return -EINVAL;
 
 	if (gk20a_is_channel_marked_as_tsg(ch)) {

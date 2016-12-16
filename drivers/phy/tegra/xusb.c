@@ -561,8 +561,19 @@ static int tegra_xusb_usb2_port_parse_dt(struct tegra_xusb_usb2_port *usb2)
 {
 	struct tegra_xusb_port *port = &usb2->base;
 	struct device_node *np = port->dev.of_node;
+	const char *prop_string;
 
 	usb2->internal = of_property_read_bool(np, "nvidia,internal");
+
+	usb2->port_cap = USB_PORT_DISABLED; /* default */
+	if (!of_property_read_string(np, "mode", &prop_string)) {
+		if (!strcmp("host", prop_string))
+			usb2->port_cap = USB_HOST_CAP;
+		else if (!strcmp("device", prop_string))
+			usb2->port_cap = USB_DEVICE_CAP;
+		else if (!strcmp("otg", prop_string))
+			usb2->port_cap = USB_OTG_CAP;
+	}
 
 	usb2->supply = devm_regulator_get(&port->dev, "vbus");
 	if (IS_ERR(usb2->supply))

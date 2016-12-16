@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  * Copyright (c) 2015, Google Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -267,11 +267,19 @@ struct tegra_xusb_port *
 tegra_xusb_find_port(struct tegra_xusb_padctl *padctl, const char *type,
 		     unsigned int index);
 
+enum tegra_xusb_usb_port_cap {
+	USB_PORT_DISABLED = 0,
+	USB_HOST_CAP,
+	USB_DEVICE_CAP,
+	USB_OTG_CAP,
+};
+
 struct tegra_xusb_usb2_port {
 	struct tegra_xusb_port base;
 
 	struct regulator *supply;
 	bool internal;
+	enum tegra_xusb_usb_port_cap port_cap;
 };
 
 static inline struct tegra_xusb_usb2_port *

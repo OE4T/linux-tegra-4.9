@@ -96,7 +96,11 @@ struct nvhost_device_data t21_isp_info = {
 	.autosuspend_delay	= 500,
 	.can_powergate		= true,
 	.clocks			= {
+#ifdef CONFIG_COMMON_CLK
+		{ "ispa", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP },
+#else
 		{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP },
+#endif
 		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
@@ -148,7 +152,7 @@ struct nvhost_device_data t21_vi_info = {
 		 * for kernel-4.4, we need vi clock
 		 */
 #ifdef CONFIG_COMMON_CLK
-		{"vi", UINT_MAX},
+		{"vi_v4l2", UINT_MAX},
 #else
 		{"vi_bypass", UINT_MAX},
 #endif

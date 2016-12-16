@@ -124,8 +124,8 @@ struct gr_ctx_buffer_desc {
 struct gr_ctx_desc {
 	struct mem_desc mem;
 
-	int graphics_preempt_mode;
-	int compute_preempt_mode;
+	u32 graphics_preempt_mode;
+	u32 compute_preempt_mode;
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct gr_ctx_desc_t18x t18x;
 #endif

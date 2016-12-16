@@ -30,6 +30,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/phy/phy.h>
+#include <linux/phy/tegra/xusb.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
@@ -39,8 +40,6 @@
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
 #include <linux/workqueue.h>
-
-#include <soc/tegra/xusb.h>
 
 /* XUSB_DEV registers */
 #define SPARAM 0x000
@@ -448,6 +447,7 @@ struct tegra_xudc_save_regs {
 struct tegra_xudc {
 	struct device *dev;
 	const struct tegra_xudc_soc_data *soc;
+	struct tegra_xusb_padctl *padctl;
 
 	spinlock_t lock;
 
@@ -618,7 +618,7 @@ static void tegra_xudc_device_mode_on(struct tegra_xudc *xudc)
 
 	spin_lock_irqsave(&xudc->lock, flags);
 	dev_info(xudc->dev, "device mode on\n");
-	tegra_phy_xusb_set_vbus_override(xudc->utmi_phy);
+	tegra_xusb_padctl_set_vbus_override(xudc->padctl);
 
 	xudc->device_mode = true;
 	spin_unlock_irqrestore(&xudc->lock, flags);
@@ -641,7 +641,7 @@ static void tegra_xudc_device_mode_off(struct tegra_xudc *xudc)
 	connected = !!(xudc_readl(xudc, PORTSC) & PORTSC_CCS);
 	reinit_completion(&xudc->disconnect_complete);
 
-	tegra_phy_xusb_clear_vbus_override(xudc->utmi_phy);
+	tegra_xusb_padctl_clear_vbus_override(xudc->padctl);
 
 	pls = (xudc_readl(xudc, PORTSC) >> PORTSC_PLS_SHIFT) &
 		PORTSC_PLS_MASK;
@@ -3277,10 +3277,15 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 		dev_err(xudc->dev, "failed to request regulators %d\n", err);
 		return err;
 	}
+
+	xudc->padctl = tegra_xusb_padctl_get(&pdev->dev);
+	if (IS_ERR(xudc->padctl))
+		return PTR_ERR(xudc->padctl);
+
 	err = regulator_bulk_enable(xudc->soc->num_supplies, xudc->supplies);
 	if (err) {
 		dev_err(xudc->dev, "failed to enable regulators %d\n", err);
-		return err;
+		goto put_padctl;
 	}
 
 	xudc->pll_u_480M = devm_clk_get(&pdev->dev, "pll_u_480M");
@@ -3422,6 +3427,8 @@ powergate_xusba:
 	tegra_powergate_partition_with_clk_off(partition_id_xusba);
 disable_regulator:
 	regulator_bulk_disable(xudc->soc->num_supplies, xudc->supplies);
+put_padctl:
+	tegra_xusb_padctl_put(xudc->padctl);
 	return err;
 }
 
@@ -3460,6 +3467,8 @@ static int tegra_xudc_remove(struct platform_device *pdev)
 
 	pm_runtime_disable(xudc->dev);
 	pm_runtime_put(xudc->dev);
+
+	tegra_xusb_padctl_put(xudc->padctl);
 
 	return 0;
 }

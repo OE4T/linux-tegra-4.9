@@ -1457,6 +1457,12 @@ static void tegra_dsi_set_sol_delay(struct tegra_dc *dc,
 			n_data_lanes_ganged = dsi->info.n_data_lanes;
 		}
 
+		if (n_data_lanes_ganged == 0) {
+			dev_err(&dc->ndev->dev,
+			"n_data_lanes_ganged is %d\n", n_data_lanes_ganged);
+			return;
+		}
+
 		h_width_ganged_byte_clk = DIV_ROUND_UP(
 					n_data_lanes_this_cont *
 					h_width_byte_clk,

@@ -5883,11 +5883,13 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 	/* For HDMI|DP, hotplug always supported
 	 * For eDP, hotplug is never supported
+	 * For fake DP, SW hotplug is supported
 	 * Else GPIO# determines if hotplug supported
 	 */
 	if (dc->out->type == TEGRA_DC_OUT_HDMI)
 		dc->hotplug_supported = true;
-	else if (dc->out->type == TEGRA_DC_OUT_DP)
+	else if (dc->out->type == TEGRA_DC_OUT_DP ||
+			dc->out->type == TEGRA_DC_OUT_FAKE_DP)
 		dc->hotplug_supported = tegra_dc_is_ext_dp_panel(dc);
 	else
 		dc->hotplug_supported = dc->out->hotplug_gpio > 0;

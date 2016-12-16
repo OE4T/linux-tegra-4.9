@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dp.c
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -169,8 +169,7 @@ static inline void tegra_dp_disable_irq(u32 irq)
 	!tegra_platform_is_fpga() && \
 	!tegra_platform_is_linsim() && \
 	!tegra_platform_is_vdk() && \
-	tegra_dc_is_ext_dp_panel(dp->dc) && \
-	dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP; \
+	tegra_dc_is_ext_dp_panel(dp->dc); \
 })
 
 static inline void tegra_dp_pending_hpd(struct tegra_dc_dp_data *dp)

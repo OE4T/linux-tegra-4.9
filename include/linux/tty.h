@@ -90,6 +90,7 @@ struct tty_bufhead {
 	atomic_t	   mem_used;    /* In-use buffers excluding free list */
 	int		   mem_limit;
 	struct tty_buffer *tail;	/* Active buffer */
+	int		  current_data_count;
 };
 /*
  * When a break, frame error, or parity error happens, these codes are

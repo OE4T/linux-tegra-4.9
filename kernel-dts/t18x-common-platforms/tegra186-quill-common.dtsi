@@ -38,7 +38,7 @@
         #size-cells = <2>;
 
 	serial@3100000 {
-		compatible = "nvidia,tegra210-uart", "nvidia,tegra186-hsuart";
+		compatible = "nvidia,tegra20-uart", "nvidia,tegra186-hsuart";
 		console-port;
 		sqa-automation-port;
 		status = "okay";

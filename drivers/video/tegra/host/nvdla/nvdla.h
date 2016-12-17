@@ -114,6 +114,7 @@ struct nvdla_task {
 	struct nvdla_mem_handle address_list;
 	u32 *memory_handles;
 	u32 num_handles;
+	int pool_index;
 };
 
 extern const struct file_operations tegra_nvdla_ctrl_ops;

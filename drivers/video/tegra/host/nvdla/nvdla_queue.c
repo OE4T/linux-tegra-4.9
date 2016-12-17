@@ -56,23 +56,42 @@
 				sizeof(struct dla_action_semaphore) + \
 				sizeof(struct dla_action_opcode))
 
-static DEFINE_DMA_ATTRS(attrs);
-
 /* task management API's */
+static int nvdla_assign_task_desc_mem(struct nvdla_task *task)
+{
+	int err;
+	struct nvhost_queue_task_mem_info task_desc_mem;
+
+	/* assign mem task descriptor from task pool memory */
+	err = nvhost_queue_alloc_task_memory(task->queue, &task_desc_mem);
+	if (err)
+		goto fail_to_assign_pool;
+
+	task->task_desc = task_desc_mem.va;
+	task->task_desc_pa = task_desc_mem.dma_addr;
+	task->pool_index = task_desc_mem.pool_index;
+
+fail_to_assign_pool:
+	return err;
+}
+
+static void nvdla_release_task_desc_mem(struct nvdla_task *task)
+{
+	/* release allocated task desc mem */
+	nvhost_queue_free_task_memory(task->queue, task->pool_index);
+
+	task->task_desc = NULL;
+	task->task_desc_pa = 0;
+	task->pool_index = 0;
+}
+
 static void task_free(struct kref *ref)
 {
 	struct nvdla_task *task = container_of(ref, struct nvdla_task, ref);
 	struct platform_device *pdev = task->queue->pool->pdev;
 
 	nvdla_dbg_info(pdev, "freeing task[%p]", task);
-
-	/* free allocated task desc */
-	if (task->task_desc) {
-		dma_free_attrs(&pdev->dev, task->buf_size,
-			task->task_desc, task->task_desc_pa,
-			&attrs);
-		task->task_desc = NULL;
-	}
+	nvdla_release_task_desc_mem(task);
 
 	/* free operation descriptor handle */
 	if (task->memory_handles)
@@ -301,7 +320,6 @@ fail_to_alloc_handles:
 
 static size_t nvdla_get_task_desc_size(void)
 {
-
 	size_t size = 0;
 
 	/* calculate size of task desc, actions and its list, buffers
@@ -314,7 +332,6 @@ static size_t nvdla_get_task_desc_size(void)
 	size +=	NVDLA_MAX_POSTACTION_SIZE;
 
 	return size;
-
 }
 
 static int nvdla_fill_postactions(struct nvdla_task *task)
@@ -493,36 +510,24 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 int nvdla_fill_task_desc(struct nvdla_task *task)
 {
 	int err;
-	u32 *buffer_va;
-	size_t buf_size;
-	dma_addr_t buffer_pa;
 	struct dla_task_descriptor *task_desc;
 	struct nvhost_queue *queue = task->queue;
 	struct platform_device *pdev = queue->pool->pdev;
 
 	nvdla_dbg_fn(pdev, "");
 
-	buf_size = nvdla_get_task_desc_size();
-
-	/* allocate task descriptor */
-	buffer_va = dma_alloc_attrs(&pdev->dev, buf_size, &buffer_pa,
-				GFP_KERNEL, &attrs);
-
-	if (!buffer_va) {
-		nvdla_dbg_err(pdev, "dma memory allocation failed for task");
-		err = -ENOMEM;
-		goto fail_to_dma_alloc;
+	/* assign mem task descriptor*/
+	err = nvdla_assign_task_desc_mem(task);
+	if (err) {
+		nvdla_dbg_err(pdev, "fail to get mem for task desc");
+		goto fail_assign_task_desc;
 	}
 
-	task->task_desc = (struct dla_task_descriptor *)(buffer_va);
-	task_desc = task->task_desc;
-	task->task_desc_pa = buffer_pa;
-	task->buf_size = buf_size;
-
 	/* update task desc fields */
+	task_desc = task->task_desc;
 	task_desc->version = DLA_DESCRIPTOR_VERSION;
 	task_desc->engine_id = DLA_ENGINE_ID;
-	task_desc->size = buf_size;
+	task_desc->size = nvdla_get_task_desc_size();
 
 	/* update current task sequeue, make sure wrap around condition */
 	queue->sequence = queue->sequence + 1;
@@ -567,9 +572,8 @@ int nvdla_fill_task_desc(struct nvdla_task *task)
 
 	return 0;
 fail_to_map_mem:
-	/* TODO: free dma mem.
-	 * Fixme after task static alloc */
-fail_to_dma_alloc:
+	nvdla_release_task_desc_mem(task);
+fail_assign_task_desc:
 	return err;
 }
 
@@ -700,4 +704,5 @@ done:
 struct nvhost_queue_ops nvdla_queue_ops = {
 	.abort = nvdla_queue_abort,
 	.submit = nvdla_queue_submit,
+	.get_task_size =  nvdla_get_task_desc_size,
 };

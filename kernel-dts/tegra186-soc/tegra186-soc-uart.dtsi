@@ -15,7 +15,7 @@
 
 / {
 	uarta: serial@3100000 {
-		compatible = "nvidia,tegra210-uart";
+		compatible = "nvidia,tegra20-uart";
 		#stream-id-cells = <1>;
 		reg = <0x0 0x03100000 0x0 0x40>;
 		reg-shift = <2>;

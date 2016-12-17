@@ -31,6 +31,8 @@
 #include <linux/stat.h>
 #include <linux/padctrl/padctrl.h>
 #include <linux/regulator/consumer.h>
+#include <linux/gpio.h>
+#include <linux/of_gpio.h>
 
 #include <linux/tegra_prod.h>
 #include <linux/tegra-soc.h>
@@ -151,8 +153,12 @@ struct sdhci_tegra {
 	bool set_1v8_calib_offsets;
 	int current_voltage;
 	struct padctrl *sdmmc_padctrl;
+	unsigned int cd_irq;
 	bool config_pad_ctrl;
 	bool pwrdet_support;
+	bool wake_enable_failed;
+	bool cd_wakeup_capable;
+	int cd_gpio;
 };
 
 /* Module params */
@@ -163,6 +169,9 @@ static void tegra_sdhci_vendor_trim_clear_sel_vreg(struct sdhci_host *host,
 	bool enable);
 static void tegra_sdhci_set_tap(struct sdhci_host *host, unsigned int tap,
 	int type);
+static int tegra_sdhci_suspend(struct sdhci_host *host);
+static int tegra_sdhci_resume(struct sdhci_host *host);
+static void tegra_sdhci_post_resume(struct sdhci_host *host);
 
 static u16 tegra_sdhci_readw(struct sdhci_host *host, int reg)
 {
@@ -250,6 +259,19 @@ static void tegra_sdhci_writel(struct sdhci_host *host, u32 val, int reg)
 	}
 }
 
+static void tegra_sdhci_card_event(struct sdhci_host *host)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+	int present = mmc_gpio_get_cd(host->mmc);
+
+	if (!present) {
+		tegra_host->tuning_status = TUNING_STATUS_RETUNE;
+	} else {
+		tegra_host->set_1v8_calib_offsets = false;
+	}
+}
+
 static unsigned int tegra_sdhci_get_ro(struct sdhci_host *host)
 {
 	return mmc_gpio_get_ro(host->mmc);
@@ -331,6 +353,7 @@ static bool tegra_sdhci_skip_retuning(struct sdhci_host *host)
 				tegra_host->tuned_tap_delay);
 		tegra_sdhci_set_tap(host, tegra_host->tuned_tap_delay,
 			SET_REQ_TAP);
+		pr_err("%s: %s: returning true\n", mmc_hostname(host->mmc), __func__);
 		return true;
 	}
 
@@ -344,10 +367,9 @@ static void tegra_sdhci_post_tuning(struct sdhci_host *host)
 	u32 reg;
 
 	reg = sdhci_readl(host, SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
-	tegra_host->tuned_tap_delay = ((reg >> SDHCI_CLOCK_CTRL_TAP_SHIFT) &
-		SDHCI_CLOCK_CTRL_TAP_MASK);
+	tegra_host->tuned_tap_delay = ((reg & SDHCI_CLOCK_CTRL_TAP_MASK) >>
+		SDHCI_CLOCK_CTRL_TAP_SHIFT);
 	tegra_host->tuning_status = TUNING_STATUS_DONE;
-
 }
 
 static void tegra_sdhci_vendor_trim_clear_sel_vreg(struct sdhci_host *host,
@@ -1056,6 +1078,10 @@ static const struct sdhci_ops tegra_sdhci_ops = {
 	.voltage_switch_post = tegra_sdhci_signal_voltage_switch_post,
 	.hs400_enhanced_strobe = tegra_sdhci_hs400_enhanced_strobe,
 	.post_init = tegra_sdhci_post_init,
+	.suspend = tegra_sdhci_suspend,
+	.resume = tegra_sdhci_resume,
+	.platform_resume = tegra_sdhci_post_resume,
+	.card_event = tegra_sdhci_card_event,
 };
 
 static const struct sdhci_pltfm_data sdhci_tegra20_pdata = {
@@ -1203,7 +1229,11 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 		(u32 *)&tegra_host->max_ddr_clk_limit);
 	of_property_read_u32(np, "dqs-trim-delay",
 		(u32 *)&tegra_host->dqs_trim_delay);
-	tegra_host->pwrdet_support = of_property_read_bool(np, "pwrdet-support");
+	tegra_host->pwrdet_support = of_property_read_bool(np,
+		"pwrdet-support");
+	tegra_host->cd_gpio = of_get_named_gpio(np, "cd-gpios", 0);
+	tegra_host->cd_wakeup_capable = of_property_read_bool(np,
+		"nvidia,cd-wakeup-capable");
 
 	return 0;
 }
@@ -1292,6 +1322,22 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 
 	pltfm_host->clk = clk;
 
+	if (gpio_is_valid(tegra_host->cd_gpio) &&
+			tegra_host->cd_wakeup_capable) {
+		tegra_host->cd_irq = gpio_to_irq(tegra_host->cd_gpio);
+		if (tegra_host->cd_irq <= 0) {
+			dev_err(mmc_dev(host->mmc),
+				"failed to get gpio irq %d\n",
+				tegra_host->cd_irq);
+			tegra_host->cd_irq = 0;
+		} else {
+			device_init_wakeup(&pdev->dev, 1);
+			dev_info(mmc_dev(host->mmc),
+				"wakeup init done, cdirq %d\n",
+				tegra_host->cd_irq);
+		}
+	}
+
 	if (!en_boot_part_access)
 		host->mmc->caps2 |= MMC_CAP2_BOOTPART_NOACC;
 
@@ -1314,6 +1360,59 @@ err_power_req:
 err_parse_dt:
 	sdhci_pltfm_free(pdev);
 	return rc;
+}
+
+static int tegra_sdhci_suspend(struct sdhci_host *host)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+	struct platform_device *pdev = to_platform_device(mmc_dev(host->mmc));
+
+	/* Enable wake irq at end of suspend */
+	if (device_may_wakeup(&pdev->dev)) {
+		if (enable_irq_wake(tegra_host->cd_irq)) {
+			dev_err(mmc_dev(host->mmc),
+				"Failed to enable wake irq %u\n",
+				tegra_host->cd_irq);
+			tegra_host->wake_enable_failed = true;
+		}
+	}
+
+	return 0;
+}
+
+static int tegra_sdhci_resume(struct sdhci_host *host)
+{
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+	struct platform_device *pdev = to_platform_device(mmc_dev(host->mmc));
+	int ret = 0;
+
+	if (device_may_wakeup(&pdev->dev)) {
+		if (!tegra_host->wake_enable_failed) {
+			ret = disable_irq_wake(tegra_host->cd_irq);
+			if (ret)
+				dev_err(mmc_dev(host->mmc),
+					"Failed to disable wakeirq %u,err %d\n",
+					tegra_host->cd_irq, ret);
+		}
+	}
+
+	/* Set min identificaion clock of 400 KHz */
+	tegra_sdhci_set_clock(host, 400000);
+
+	return ret;
+}
+
+static void tegra_sdhci_post_resume(struct sdhci_host *host)
+{
+	bool dll_calib_req = false;
+
+	dll_calib_req = (host->mmc->card && mmc_card_mmc(host->mmc->card) &&
+		(host->mmc->ios.timing == MMC_TIMING_MMC_HS400));
+	if (dll_calib_req)
+		tegra_sdhci_post_init(host);
+
 }
 
 static void sdhci_tegra_debugfs_init(struct sdhci_host *host)

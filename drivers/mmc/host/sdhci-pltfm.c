@@ -212,13 +212,35 @@ EXPORT_SYMBOL_GPL(sdhci_pltfm_unregister);
 static int sdhci_pltfm_suspend(struct device *dev)
 {
 	struct sdhci_host *host = dev_get_drvdata(dev);
+	int ret = 0;
 
-	return sdhci_suspend_host(host);
+	ret = sdhci_suspend_host(host);
+	if (ret) {
+		dev_err(dev, "suspend failed err %d\n", ret);
+		return ret;
+	}
+
+	if (host->ops && host->ops->suspend) {
+		ret = host->ops->suspend(host);
+		if (ret) {
+			dev_err(dev, "platform suspend failed %d\n", ret);
+			sdhci_resume_host(host);
+		}
+	}
+
+	return ret;
 }
 
 static int sdhci_pltfm_resume(struct device *dev)
 {
 	struct sdhci_host *host = dev_get_drvdata(dev);
+	int ret = 0;
+
+	if (host->ops && host->ops->resume) {
+		ret = host->ops->resume(host);
+		if (ret)
+			dev_err(dev, "platform resume failed %d\n", ret);
+	}
 
 	return sdhci_resume_host(host);
 }

@@ -2162,6 +2162,9 @@ static int sdhci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	if (!(ctrl & SDHCI_CTRL_TUNED_CLK)) {
 		pr_info(DRIVER_NAME ": Tuning procedure failed, falling back to fixed sampling clock\n");
 		err = -EIO;
+	} else {
+		if (host->ops->post_tuning)
+			host->ops->post_tuning(host);
 	}
 
 out:
@@ -2176,8 +2179,6 @@ out:
 		err = 0;
 	}
 
-	if (host->ops->post_tuning)
-		host->ops->post_tuning(host);
 
 	host->mmc->retune_period = err ? 0 : tuning_count;
 
@@ -2931,6 +2932,9 @@ int sdhci_resume_host(struct sdhci_host *host)
 		sdhci_disable_irq_wakeups(host);
 		disable_irq_wake(host->irq);
 	}
+
+	if (host->ops->platform_resume)
+		host->ops->platform_resume(host);
 
 	sdhci_enable_card_detection(host);
 

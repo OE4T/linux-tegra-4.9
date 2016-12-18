@@ -1623,11 +1623,9 @@ void eqos_fbe_work(struct work_struct *work);
 #define DRV_NAME "eqos_drv.c"
 
 #ifdef YDEBUG
-#define DBGPR(x...) printk(KERN_ALERT x)
 #define DBGPR_REGS() dbgpr_regs()
 #define DBGPHY_REGS(x...) dump_phy_registers(x)
 #else
-#define DBGPR(x...) do { } while (0)
 #define DBGPR_REGS() do { } while (0)
 #define DBGPHY_REGS(x...) do { } while (0)
 #endif

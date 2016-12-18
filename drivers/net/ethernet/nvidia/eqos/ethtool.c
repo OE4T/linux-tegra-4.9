@@ -338,7 +338,7 @@ static void eqos_get_pauseparam(struct net_device *dev,
 	struct phy_device *phydev = pdata->phydev;
 	unsigned int data;
 
-	DBGPR("-->eqos_get_pauseparam\n");
+	pr_debug("-->eqos_get_pauseparam\n");
 
 	pause->rx_pause = 0;
 	pause->tx_pause = 0;
@@ -363,7 +363,7 @@ static void eqos_get_pauseparam(struct net_device *dev,
 	if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_TX) == EQOS_FLOW_CTRL_TX)
 		pause->tx_pause = 1;
 
-	DBGPR("<--eqos_get_pauseparam\n");
+	pr_debug("<--eqos_get_pauseparam\n");
 }
 
 /*!
@@ -388,7 +388,7 @@ static int eqos_set_pauseparam(struct net_device *dev,
 	unsigned int data;
 	int ret = 0;
 
-	DBGPR("-->eqos_set_pauseparam: "
+	pr_debug("-->eqos_set_pauseparam: "
 	      "autoneg = %d tx_pause = %d rx_pause = %d\n",
 	      pause->autoneg, pause->tx_pause, pause->rx_pause);
 
@@ -425,7 +425,7 @@ static int eqos_set_pauseparam(struct net_device *dev,
 		}
 	}
 
-	DBGPR("<--eqos_set_pauseparam\n");
+	pr_debug("<--eqos_set_pauseparam\n");
 
 	return ret;
 }
@@ -435,7 +435,7 @@ void eqos_configure_flow_ctrl(struct eqos_prv_data *pdata)
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	UINT qinx;
 
-	DBGPR("-->eqos_configure_flow_ctrl\n");
+	pr_debug("-->eqos_configure_flow_ctrl\n");
 
 	if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_RX) == EQOS_FLOW_CTRL_RX)
 		hw_if->enable_rx_flow_ctrl();
@@ -455,7 +455,7 @@ void eqos_configure_flow_ctrl(struct eqos_prv_data *pdata)
 
 	pdata->oldflow_ctrl = pdata->flow_ctrl;
 
-	DBGPR("<--eqos_configure_flow_ctrl\n");
+	pr_debug("<--eqos_configure_flow_ctrl\n");
 }
 
 /*!
@@ -481,7 +481,7 @@ static int eqos_getsettings(struct net_device *dev, struct ethtool_cmd *cmd)
 	unsigned int lp_pause, lp_duplex;
 	int ret = 0;
 
-	DBGPR("-->eqos_getsettings\n");
+	pr_debug("-->eqos_getsettings\n");
 
 	if (pdata->hw_feat.pcs_sel) {
 		if (!pdata->pcs_link) {
@@ -559,7 +559,7 @@ static int eqos_getsettings(struct net_device *dev, struct ethtool_cmd *cmd)
 		spin_unlock_irq(&pdata->lock);
 	}
 
-	DBGPR("<--eqos_getsettings\n");
+	pr_debug("<--eqos_getsettings\n");
 
 	return ret;
 }
@@ -637,7 +637,7 @@ static void eqos_get_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 
-	DBGPR("-->eqos_get_wol\n");
+	pr_debug("-->eqos_get_wol\n");
 
 	wol->supported = 0;
 	spin_lock_irq(&pdata->lock);
@@ -650,7 +650,7 @@ static void eqos_get_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
 	}
 	spin_unlock_irq(&pdata->lock);
 
-	DBGPR("<--eqos_get_wol\n");
+	pr_debug("<--eqos_get_wol\n");
 
 	return;
 }
@@ -673,7 +673,7 @@ static int eqos_set_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
 	u32 support = WAKE_MAGIC | WAKE_UCAST;
 	int ret = 0;
 
-	DBGPR("-->eqos_set_wol\n");
+	pr_debug("-->eqos_set_wol\n");
 
 	/* By default almost all GMAC devices support the WoL via
 	 * magic frame but we can disable it if the HW capability
@@ -704,7 +704,7 @@ static int eqos_set_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
 	pdata->wolopts = wol->wolopts;
 	spin_unlock_irq(&pdata->lock);
 
-	DBGPR("<--eqos_set_wol\n");
+	pr_debug("<--eqos_set_wol\n");
 
 	return ret;
 }
@@ -713,7 +713,7 @@ u32 eqos_usec2riwt(u32 usec, struct eqos_prv_data *pdata)
 {
 	u32 ret = 0;
 
-	DBGPR("-->eqos_usec2riwt\n");
+	pr_debug("-->eqos_usec2riwt\n");
 
 	/* Eg:
 	 * System clock is 62.5MHz, each clock cycle would then be 16ns
@@ -726,7 +726,7 @@ u32 eqos_usec2riwt(u32 usec, struct eqos_prv_data *pdata)
 
 	ret = (usec * (EQOS_SYSCLOCK / 1000000)) / 256;
 
-	DBGPR("<--eqos_usec2riwt\n");
+	pr_debug("<--eqos_usec2riwt\n");
 
 	return ret;
 }
@@ -735,12 +735,12 @@ static u32 eqos_riwt2usec(u32 riwt, struct eqos_prv_data *pdata)
 {
 	u32 ret = 0;
 
-	DBGPR("-->eqos_riwt2usec\n");
+	pr_debug("-->eqos_riwt2usec\n");
 
 	/* using formula from 'eqos_usec2riwt' */
 	ret = (riwt * 256) / (EQOS_SYSCLOCK / 1000000);
 
-	DBGPR("<--eqos_riwt2usec\n");
+	pr_debug("<--eqos_riwt2usec\n");
 
 	return ret;
 }
@@ -766,14 +766,14 @@ static int eqos_get_coalesce(struct net_device *dev,
 	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(0);
 
-	DBGPR("-->eqos_get_coalesce\n");
+	pr_debug("-->eqos_get_coalesce\n");
 
 	memset(ec, 0, sizeof(struct ethtool_coalesce));
 
 	ec->rx_coalesce_usecs = eqos_riwt2usec(prx_ring->rx_riwt, pdata);
 	ec->rx_max_coalesced_frames = prx_ring->rx_coal_frames;
 
-	DBGPR("<--eqos_get_coalesce\n");
+	pr_debug("<--eqos_get_coalesce\n");
 
 	return 0;
 }
@@ -801,7 +801,7 @@ static int eqos_set_coalesce(struct net_device *dev,
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	unsigned int rx_riwt, rx_usec, local_use_riwt, qinx;
 
-	DBGPR("-->eqos_set_coalesce\n");
+	pr_debug("-->eqos_set_coalesce\n");
 
 	/* Check for not supported parameters  */
 	if ((ec->rx_coalesce_usecs_irq) ||
@@ -860,7 +860,7 @@ static int eqos_set_coalesce(struct net_device *dev,
 		hw_if->config_rx_watchdog(qinx, prx_ring->rx_riwt);
 	}
 
-	DBGPR("<--eqos_set_coalesce\n");
+	pr_debug("<--eqos_set_coalesce\n");
 
 	return 0;
 }
@@ -882,7 +882,7 @@ static void eqos_get_ethtool_stats(struct net_device *dev,
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	int i, j = 0;
 
-	DBGPR("-->eqos_get_ethtool_stats\n");
+	pr_debug("-->eqos_get_ethtool_stats\n");
 
 	if (pdata->hw_feat.mmc_sel) {
 		eqos_mmc_read(&pdata->mmc);
@@ -901,7 +901,7 @@ static void eqos_get_ethtool_stats(struct net_device *dev,
 			     sizeof(u64)) ? (*(u64 *) p) : (*(u32 *) p);
 	}
 
-	DBGPR("<--eqos_get_ethtool_stats\n");
+	pr_debug("<--eqos_get_ethtool_stats\n");
 }
 
 /*!
@@ -920,7 +920,7 @@ static void eqos_get_strings(struct net_device *dev, u32 stringset, u8 *data)
 	int i;
 	u8 *p = data;
 
-	DBGPR("-->eqos_get_strings\n");
+	pr_debug("-->eqos_get_strings\n");
 
 	switch (stringset) {
 	case ETH_SS_STATS:
@@ -942,7 +942,7 @@ static void eqos_get_strings(struct net_device *dev, u32 stringset, u8 *data)
 		WARN_ON(1);
 	}
 
-	DBGPR("<--eqos_get_strings\n");
+	pr_debug("<--eqos_get_strings\n");
 }
 
 /*!
@@ -962,7 +962,7 @@ static int eqos_get_sset_count(struct net_device *dev, int sset)
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	int len = 0;
 
-	DBGPR("-->eqos_get_sset_count\n");
+	pr_debug("-->eqos_get_sset_count\n");
 
 	switch (sset) {
 	case ETH_SS_STATS:
@@ -974,7 +974,7 @@ static int eqos_get_sset_count(struct net_device *dev, int sset)
 		len = -EOPNOTSUPP;
 	}
 
-	DBGPR("<--eqos_get_sset_count\n");
+	pr_debug("<--eqos_get_sset_count\n");
 
 	return len;
 }
@@ -995,7 +995,7 @@ static int eqos_set_tso(struct net_device *dev, u32 data)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 
-	DBGPR("-->eqos_set_tso\n");
+	pr_debug("-->eqos_set_tso\n");
 
 	if (pdata->hw_feat.tso_en == 0)
 		return -EOPNOTSUPP;
@@ -1005,7 +1005,7 @@ static int eqos_set_tso(struct net_device *dev, u32 data)
 	else
 		dev->features &= ~NETIF_F_TSO;
 
-	DBGPR("<--eqos_set_tso\n");
+	pr_debug("<--eqos_set_tso\n");
 
 	return 0;
 }
@@ -1025,12 +1025,12 @@ static u32 eqos_get_tso(struct net_device *dev)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 
-	DBGPR("-->eqos_get_tso\n");
+	pr_debug("-->eqos_get_tso\n");
 
 	if (pdata->hw_feat.tso_en == 0)
 		return 0;
 
-	DBGPR("<--eqos_get_tso\n");
+	pr_debug("<--eqos_get_tso\n");
 
 	return ((dev->features & NETIF_F_TSO) != 0);
 }

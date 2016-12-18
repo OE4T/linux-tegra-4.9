@@ -312,7 +312,7 @@ static int eqos_clock_init(struct eqos_prv_data *pdata)
 	if (ret < 0)
 		goto tx_en_fail;
 
-	DBGPR("%s(): axi_cbb/axi/rx/ptp/tx = %ld/%ld/%ld/%ld/%ld\n",
+	pr_debug("%s(): axi_cbb/axi/rx/ptp/tx = %ld/%ld/%ld/%ld/%ld\n",
 		__func__,
 		clk_get_rate(pdata->axi_cbb_clk),
 		clk_get_rate(pdata->axi_clk), clk_get_rate(pdata->rx_clk),
@@ -726,7 +726,7 @@ int eqos_probe(struct platform_device *pdev)
 	bool	use_multi_q;
 	uint	num_chans;
 
-	DBGPR("-->%s()\n", __func__);
+	pr_debug("-->%s()\n", __func__);
 
 	match = of_match_device(eqos_of_match, &pdev->dev);
 	if (!match)
@@ -768,25 +768,25 @@ int eqos_probe(struct platform_device *pdev)
 	}
 
 #if defined(CONFIG_PHYS_ADDR_T_64BIT)
-	DBGPR("res->start = 0x%lx\n", (unsigned long)res->start);
-	DBGPR("res->end = 0x%lx\n", (unsigned long)res->end);
+	pr_debug("res->start = 0x%lx\n", (unsigned long)res->start);
+	pr_debug("res->end = 0x%lx\n", (unsigned long)res->end);
 #else
-	DBGPR("res->start = 0x%x\n", (unsigned int)res->start);
-	DBGPR("res->end = 0x%x\n", (unsigned int)res->end);
+	pr_debug("res->start = 0x%x\n", (unsigned int)res->start);
+	pr_debug("res->end = 0x%x\n", (unsigned int)res->end);
 #endif
-	DBGPR("irq = %d\n", irq);
-	DBGPR("power_irq = %d\n", power_irq);
+	pr_debug("irq = %d\n", irq);
+	pr_debug("power_irq = %d\n", power_irq);
 
 	for (j = 0; j < MAX_CHANS; j++)
-		DBGPR("rx_irq[%d]=%d, tx_irq[%d]=%d\n",
+		pr_debug("rx_irq[%d]=%d, tx_irq[%d]=%d\n",
 			j, rx_irqs[j], j, tx_irqs[j]);
 
-	DBGPR("============================================================\n");
-	DBGPR("Sizeof rx context desc %lu\n", sizeof(struct s_rx_context_desc));
-	DBGPR("Sizeof tx context desc %lu\n", sizeof(struct s_tx_context_desc));
-	DBGPR("Sizeof rx normal desc %lu\n", sizeof(struct s_rx_desc));
-	DBGPR("Sizeof tx normal desc %lu\n\n", sizeof(struct s_tx_desc));
-	DBGPR("============================================================\n");
+	pr_debug("============================================================\n");
+	pr_debug("Sizeof rx context desc %lu\n", sizeof(struct s_rx_context_desc));
+	pr_debug("Sizeof tx context desc %lu\n", sizeof(struct s_tx_context_desc));
+	pr_debug("Sizeof rx normal desc %lu\n", sizeof(struct s_rx_desc));
+	pr_debug("Sizeof tx normal desc %lu\n\n", sizeof(struct s_tx_desc));
+	pr_debug("============================================================\n");
 
 	/* remap base address */
 	eqos_base_addr = (ULONG) devm_ioremap_nocache(&pdev->dev,
@@ -883,7 +883,7 @@ int eqos_probe(struct platform_device *pdev)
 		/* issue CAR reset to device */
 		hw_if->car_reset(pdata);
 	}
-	DBGPR("phyirq = %d\n", phyirq);
+	pr_debug("phyirq = %d\n", phyirq);
 
 	pdata->prod_list = devm_tegra_prod_get(&pdev->dev);
 	if (IS_ERR(pdata->prod_list)) {
@@ -997,7 +997,7 @@ int eqos_probe(struct platform_device *pdev)
 	if (pdata->csr_clock_speed <= 0) {
 		dev_err(&pdev->dev, "fail to read axi_cbb_clk rate\n");
 	} else {
-		DBGPR("setting MAC_1US_TIC to %d MHz\n",
+		pr_debug("setting MAC_1US_TIC to %d MHz\n",
 			pdata->csr_clock_speed);
 			MAC_1US_TIC_WR(pdata->csr_clock_speed - 1);
 	}
@@ -1101,7 +1101,7 @@ int eqos_probe(struct platform_device *pdev)
 		goto err_out_netdev_failed;
 	}
 
-	DBGPR("<-- eqos_probe\n");
+	pr_debug("<-- eqos_probe\n");
 
 	netif_carrier_off(ndev);
 
@@ -1228,10 +1228,10 @@ int eqos_remove(struct platform_device *pdev)
 	int i, ret_val = 0;
 	struct eqos_cfg *pdt_cfg;
 
-	DBGPR("--> eqos_remove\n");
+	pr_debug("--> eqos_remove\n");
 
 	if (pdev == NULL) {
-		DBGPR("Remove called on invalid device\n");
+		pr_debug("Remove called on invalid device\n");
 		return -1;
 	}
 
@@ -1289,7 +1289,7 @@ int eqos_remove(struct platform_device *pdev)
 
 	devm_iounmap(&pdev->dev, (void *) eqos_base_addr);
 
-	DBGPR("<-- eqos_remove\n");
+	pr_debug("<-- eqos_remove\n");
 
 	return ret_val;
 }
@@ -1451,20 +1451,20 @@ static int eqos_init_module(void)
 {
 	INT ret = 0;
 
-	DBGPR("-->eqos_init_module\n");
+	pr_debug("-->eqos_init_module\n");
 
 	ret = platform_driver_register(&eqos_driver);
 	if (ret < 0) {
-		DBGPR("eqos:driver registration failed\n");
+		pr_debug("eqos:driver registration failed\n");
 		return ret;
 	}
-	DBGPR("eqos:driver registration sucessful\n");
+	pr_debug("eqos:driver registration sucessful\n");
 
 #ifdef EQOS_CONFIG_DEBUGFS
 	create_debug_files();
 #endif
 
-	DBGPR("<--eqos_init_module\n");
+	pr_debug("<--eqos_init_module\n");
 
 	return ret;
 }
@@ -1480,7 +1480,7 @@ static int eqos_init_module(void)
 
 static void __exit eqos_exit_module(void)
 {
-	DBGPR("-->eqos_exit_module\n");
+	pr_debug("-->eqos_exit_module\n");
 
 #ifdef EQOS_CONFIG_DEBUGFS
 	remove_debug_files();
@@ -1488,7 +1488,7 @@ static void __exit eqos_exit_module(void)
 
 	platform_driver_unregister(&eqos_driver);
 
-	DBGPR("<--eqos_exit_module\n");
+	pr_debug("<--eqos_exit_module\n");
 }
 
 /*!

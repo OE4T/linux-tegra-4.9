@@ -89,12 +89,12 @@ void eqos_stop_all_ch_tx_dma(struct eqos_prv_data *pdata)
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	UINT qinx;
 
-	DBGPR("-->eqos_stop_all_ch_tx_dma\n");
+	pr_debug("-->eqos_stop_all_ch_tx_dma\n");
 
 	for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++)
 		hw_if->stop_dma_tx(pdata, qinx);
 
-	DBGPR("<--eqos_stop_all_ch_tx_dma\n");
+	pr_debug("<--eqos_stop_all_ch_tx_dma\n");
 }
 
 static int is_ptp_addr(char *addr)
@@ -144,12 +144,12 @@ static void eqos_stop_all_ch_rx_dma(struct eqos_prv_data *pdata)
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	UINT qinx;
 
-	DBGPR("-->eqos_stop_all_ch_rx_dma\n");
+	pr_debug("-->eqos_stop_all_ch_rx_dma\n");
 
 	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++)
 		hw_if->stop_dma_rx(qinx);
 
-	DBGPR("<--eqos_stop_all_ch_rx_dma\n");
+	pr_debug("<--eqos_stop_all_ch_rx_dma\n");
 }
 
 static void eqos_start_all_ch_tx_dma(struct eqos_prv_data *pdata)
@@ -157,12 +157,12 @@ static void eqos_start_all_ch_tx_dma(struct eqos_prv_data *pdata)
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	UINT i;
 
-	DBGPR("-->eqos_start_all_ch_tx_dma\n");
+	pr_debug("-->eqos_start_all_ch_tx_dma\n");
 
 	for (i = 0; i < EQOS_TX_QUEUE_CNT; i++)
 		hw_if->start_dma_tx(i);
 
-	DBGPR("<--eqos_start_all_ch_tx_dma\n");
+	pr_debug("<--eqos_start_all_ch_tx_dma\n");
 }
 
 static void eqos_start_all_ch_rx_dma(struct eqos_prv_data *pdata)
@@ -170,12 +170,12 @@ static void eqos_start_all_ch_rx_dma(struct eqos_prv_data *pdata)
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	UINT i;
 
-	DBGPR("-->eqos_start_all_ch_rx_dma\n");
+	pr_debug("-->eqos_start_all_ch_rx_dma\n");
 
 	for (i = 0; i < EQOS_RX_QUEUE_CNT; i++)
 		hw_if->start_dma_rx(i);
 
-	DBGPR("<--eqos_start_all_ch_rx_dma\n");
+	pr_debug("<--eqos_start_all_ch_rx_dma\n");
 }
 
 static void eqos_napi_enable_mq(struct eqos_prv_data *pdata)
@@ -183,14 +183,14 @@ static void eqos_napi_enable_mq(struct eqos_prv_data *pdata)
 	struct eqos_rx_queue *rx_queue = NULL;
 	int qinx;
 
-	DBGPR("-->eqos_napi_enable_mq\n");
+	pr_debug("-->eqos_napi_enable_mq\n");
 
 	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
 		rx_queue = GET_RX_QUEUE_PTR(qinx);
 		napi_enable(&rx_queue->napi);
 	}
 
-	DBGPR("<--eqos_napi_enable_mq\n");
+	pr_debug("<--eqos_napi_enable_mq\n");
 }
 
 static void eqos_all_ch_napi_disable(struct eqos_prv_data *pdata)
@@ -198,14 +198,14 @@ static void eqos_all_ch_napi_disable(struct eqos_prv_data *pdata)
 	struct eqos_rx_queue *rx_queue = NULL;
 	int qinx;
 
-	DBGPR("-->eqos_napi_disable\n");
+	pr_debug("-->eqos_napi_disable\n");
 
 	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
 		rx_queue = GET_RX_QUEUE_PTR(qinx);
 		napi_disable(&rx_queue->napi);
 	}
 
-	DBGPR("<--eqos_napi_disable\n");
+	pr_debug("<--eqos_napi_disable\n");
 }
 
 void eqos_disable_all_ch_rx_interrpt(struct eqos_prv_data *pdata)
@@ -213,12 +213,12 @@ void eqos_disable_all_ch_rx_interrpt(struct eqos_prv_data *pdata)
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	UINT qinx;
 
-	DBGPR("-->eqos_disable_all_ch_rx_interrpt\n");
+	pr_debug("-->eqos_disable_all_ch_rx_interrpt\n");
 
 	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++)
 		hw_if->disable_rx_interrupt(qinx, pdata);
 
-	DBGPR("<--eqos_disable_all_ch_rx_interrpt\n");
+	pr_debug("<--eqos_disable_all_ch_rx_interrpt\n");
 }
 
 void eqos_enable_all_ch_rx_interrpt(struct eqos_prv_data *pdata)
@@ -226,12 +226,12 @@ void eqos_enable_all_ch_rx_interrpt(struct eqos_prv_data *pdata)
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	UINT qinx;
 
-	DBGPR("-->eqos_enable_all_ch_rx_interrpt\n");
+	pr_debug("-->eqos_enable_all_ch_rx_interrpt\n");
 
 	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++)
 		hw_if->enable_rx_interrupt(qinx, pdata);
 
-	DBGPR("<--eqos_enable_all_ch_rx_interrpt\n");
+	pr_debug("<--eqos_enable_all_ch_rx_interrpt\n");
 }
 
 void handle_non_ti_ri_chan_intrs(struct eqos_prv_data *pdata, int qinx)
@@ -239,13 +239,13 @@ void handle_non_ti_ri_chan_intrs(struct eqos_prv_data *pdata, int qinx)
 	ULONG dma_sr;
 	ULONG dma_ier;
 
-	DBGPR("-->%s(), chan=%d\n", __func__, qinx);
+	pr_debug("-->%s(), chan=%d\n", __func__, qinx);
 
 	DMA_SR_RD(qinx, dma_sr);
 
 	DMA_IER_RD(qinx, dma_ier);
 
-	DBGPR("DMA_SR[%d] = %#lx, DMA_IER= %#lx\n", qinx, dma_sr, dma_ier);
+	pr_debug("DMA_SR[%d] = %#lx, DMA_IER= %#lx\n", qinx, dma_sr, dma_ier);
 
 	/*on ufpga, update of DMA_IER is really slow, such that interrupt
 	 * would happen, but read of IER returns old value.  This would
@@ -296,7 +296,7 @@ void handle_non_ti_ri_chan_intrs(struct eqos_prv_data *pdata, int qinx)
 		queue_work(pdata->fbe_wq, &pdata->fbe_work);
 	}
 
-	DBGPR("<--%s()\n", __func__);
+	pr_debug("<--%s()\n", __func__);
 }
 
 void handle_ti_ri_chan_intrs(struct eqos_prv_data *pdata,
@@ -310,7 +310,7 @@ void handle_ti_ri_chan_intrs(struct eqos_prv_data *pdata,
 
 	struct eqos_rx_queue *rx_queue = NULL;
 
-	DBGPR("-->%s(), chan=%d\n", __func__, qinx);
+	pr_debug("-->%s(), chan=%d\n", __func__, qinx);
 
 	rx_queue = GET_RX_QUEUE_PTR(qinx);
 
@@ -320,9 +320,9 @@ void handle_ti_ri_chan_intrs(struct eqos_prv_data *pdata,
 	VIRT_INTR_CH_STAT_RD(qinx, ch_stat_reg);
 	VIRT_INTR_CH_CRTL_RD(qinx, ch_crtl_reg);
 
-	DBGPR("DMA_SR[%d] = %#lx, DMA_IER= %#lx\n", qinx, dma_sr, dma_ier);
+	pr_debug("DMA_SR[%d] = %#lx, DMA_IER= %#lx\n", qinx, dma_sr, dma_ier);
 
-	DBGPR("VIRT_INTR_CH_STAT[%d] = %#lx, VIRT_INTR_CH_CRTL= %#lx\n",
+	pr_debug("VIRT_INTR_CH_STAT[%d] = %#x, VIRT_INTR_CH_CRTL= %#x\n",
 	      qinx, ch_stat_reg, ch_crtl_reg);
 
 	/*on ufpga, update of DMA_IER is really slow, such that interrupt
@@ -361,7 +361,7 @@ void handle_ti_ri_chan_intrs(struct eqos_prv_data *pdata,
 		/* Do nothing here. */
 		pr_alert("Ethernet Interrupt while in poll!\n");
 	}
-	DBGPR("<--%s()\n", __func__);
+	pr_debug("<--%s()\n", __func__);
 }
 
 void handle_mac_intrs(struct eqos_prv_data *pdata, ULONG dma_isr)
@@ -373,7 +373,7 @@ void handle_mac_intrs(struct eqos_prv_data *pdata, ULONG dma_isr)
 	ULONG mac_isr;
 	struct net_device *dev = pdata->dev;
 
-	DBGPR("-->%s()\n", __func__);
+	pr_debug("-->%s()\n", __func__);
 
 	MAC_ISR_RD(mac_isr);
 
@@ -474,7 +474,7 @@ void handle_mac_intrs(struct eqos_prv_data *pdata, ULONG dma_isr)
 		}
 	}
 
-	DBGPR("<--%s()\n", __func__);
+	pr_debug("<--%s()\n", __func__);
 }
 
 
@@ -488,13 +488,13 @@ irqreturn_t eqos_common_isr(int irq, void *device_id)
 	struct eqos_prv_data *pdata = (struct eqos_prv_data *)device_id;
 	UINT qinx;
 
-	DBGPR("-->%s()\n", __func__);
+	pr_debug("-->%s()\n", __func__);
 
 	DMA_ISR_RD(dma_isr);
 	if (dma_isr == 0x0)
 		return IRQ_NONE;
 
-	DBGPR("DMA_ISR = %#lx\n", dma_isr);
+	pr_debug("DMA_ISR = %#lx\n", dma_isr);
 
 	if (dma_isr & 0xf)
 		for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++)
@@ -502,7 +502,7 @@ irqreturn_t eqos_common_isr(int irq, void *device_id)
 
 	handle_mac_intrs(pdata, dma_isr);
 
-	DBGPR("<--%s()\n", __func__);
+	pr_debug("<--%s()\n", __func__);
 
 	return IRQ_HANDLED;
 
@@ -529,12 +529,12 @@ irqreturn_t eqos_ch_isr(int irq, void *device_id)
 	else if ((irq == pdata->rx_irqs[3]) || (irq == pdata->tx_irqs[3]))
 		qinx = 3;
 
-	DBGPR("-->%s(): cpu=%d, chan=%d\n", __func__, i, qinx);
+	pr_debug("-->%s(): cpu=%d, chan=%d\n", __func__, i, qinx);
 
 	if (qinx != -1) {
 		handle_ti_ri_chan_intrs(pdata, qinx, &napi_sched);
 	} else {
-		DBGPR("%(): irq %d not handled\n", __func__, irq);
+		pr_debug("%s(): irq %d not handled\n", __func__, irq);
 		return IRQ_NONE;
 	}
 
@@ -542,7 +542,7 @@ irqreturn_t eqos_ch_isr(int irq, void *device_id)
 	handle_ti_ri_chan_intrs(pdata, qinx, &napi_sched);
 	spin_unlock(&pdata->chinfo[qinx].irq_lock);
 
-	DBGPR("<--%s()\n", __func__);
+	pr_debug("<--%s()\n", __func__);
 
 	return IRQ_HANDLED;
 
@@ -565,7 +565,7 @@ void eqos_get_all_hw_features(struct eqos_prv_data *pdata)
 	unsigned int mac_hfr1;
 	unsigned int mac_hfr2;
 
-	DBGPR("-->eqos_get_all_hw_features\n");
+	pr_debug("-->eqos_get_all_hw_features\n");
 
 	MAC_HFR0_RD(mac_hfr0);
 	MAC_HFR1_RD(mac_hfr1);
@@ -654,7 +654,7 @@ void eqos_get_all_hw_features(struct eqos_prv_data *pdata)
 		break;
 	}
 
-	DBGPR("<--eqos_get_all_hw_features\n");
+	pr_debug("<--eqos_get_all_hw_features\n");
 }
 
 /*!
@@ -671,7 +671,7 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
 {
 	char *str = NULL;
 
-	DBGPR("-->eqos_print_all_hw_features\n");
+	pr_debug("-->eqos_print_all_hw_features\n");
 
 	pr_err("\n");
 	pr_err("=====================================================/\n");
@@ -930,7 +930,7 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
 	pr_err("\n");
 	pr_err("=====================================================/\n");
 
-	DBGPR("<--eqos_print_all_hw_features\n");
+	pr_debug("<--eqos_print_all_hw_features\n");
 }
 
 /*!
@@ -953,7 +953,7 @@ static int eqos_alloc_rx_buf(struct eqos_prv_data *pdata,
 {
 	struct sk_buff *skb = prx_swcx_desc->skb;
 
-	DBGPR("-->eqos_alloc_rx_buf\n");
+	pr_debug("-->eqos_alloc_rx_buf\n");
 
 	if (skb) {
 		skb_trim(skb, 0);
@@ -984,7 +984,7 @@ static int eqos_alloc_rx_buf(struct eqos_prv_data *pdata,
 skip_mapping:
 	prx_swcx_desc->mapped_as_page = Y_FALSE;
 
-	DBGPR("<--eqos_alloc_rx_buf\n");
+	pr_debug("<--eqos_alloc_rx_buf\n");
 
 	return 0;
 }
@@ -1003,12 +1003,12 @@ skip_mapping:
 
 static void eqos_configure_rx_fun_ptr(struct eqos_prv_data *pdata)
 {
-	DBGPR("-->eqos_configure_rx_fun_ptr\n");
+	pr_debug("-->eqos_configure_rx_fun_ptr\n");
 
 	pdata->process_rx_completions = process_rx_completions;
 	pdata->alloc_rx_buf = eqos_alloc_rx_buf;
 
-	DBGPR("<--eqos_configure_rx_fun_ptr\n");
+	pr_debug("<--eqos_configure_rx_fun_ptr\n");
 }
 
 /*!
@@ -1024,7 +1024,7 @@ static void eqos_configure_rx_fun_ptr(struct eqos_prv_data *pdata)
 
 static void eqos_default_common_confs(struct eqos_prv_data *pdata)
 {
-	DBGPR("-->eqos_default_common_confs\n");
+	pr_debug("-->eqos_default_common_confs\n");
 
 	pdata->drop_tx_pktburstcnt = 1;
 	pdata->mac_enable_count = 0;
@@ -1043,7 +1043,7 @@ static void eqos_default_common_confs(struct eqos_prv_data *pdata)
 	pdata->eee_active = 0;
 	pdata->one_nsec_accuracy = 1;
 
-	DBGPR("<--eqos_default_common_confs\n");
+	pr_debug("<--eqos_default_common_confs\n");
 }
 
 /*!
@@ -1065,7 +1065,7 @@ static void eqos_default_tx_confs_single_q(struct eqos_prv_data *pdata,
 	struct tx_ring *ptx_ring =
 	    GET_TX_WRAPPER_DESC(qinx);
 
-	DBGPR("-->eqos_default_tx_confs_single_q\n");
+	pr_debug("-->eqos_default_tx_confs_single_q\n");
 
 	queue_data->q_op_mode = q_op_mode[qinx];
 
@@ -1079,7 +1079,7 @@ static void eqos_default_tx_confs_single_q(struct eqos_prv_data *pdata,
 	ptx_ring->context_setup = 0;
 	ptx_ring->default_mss = 0;
 
-	DBGPR("<--eqos_default_tx_confs_single_q\n");
+	pr_debug("<--eqos_default_tx_confs_single_q\n");
 }
 
 /*!
@@ -1100,7 +1100,7 @@ static void eqos_default_rx_confs_single_q(struct eqos_prv_data *pdata,
 	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(qinx);
 
-	DBGPR("-->eqos_default_rx_confs_single_q\n");
+	pr_debug("-->eqos_default_rx_confs_single_q\n");
 
 	prx_ring->rx_threshold_val = EQOS_RX_THRESHOLD_64;
 	prx_ring->rsf_on = EQOS_RSF_DISABLE;
@@ -1108,40 +1108,40 @@ static void eqos_default_rx_confs_single_q(struct eqos_prv_data *pdata,
 	prx_ring->rx_outer_vlan_strip = EQOS_RX_VLAN_STRIP_ALWAYS;
 	prx_ring->rx_inner_vlan_strip = EQOS_RX_VLAN_STRIP_ALWAYS;
 
-	DBGPR("<--eqos_default_rx_confs_single_q\n");
+	pr_debug("<--eqos_default_rx_confs_single_q\n");
 }
 
 static void eqos_default_tx_confs(struct eqos_prv_data *pdata)
 {
 	UINT qinx;
 
-	DBGPR("-->eqos_default_tx_confs\n");
+	pr_debug("-->eqos_default_tx_confs\n");
 
 	for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++) {
 		eqos_default_tx_confs_single_q(pdata, qinx);
 	}
 
-	DBGPR("<--eqos_default_tx_confs\n");
+	pr_debug("<--eqos_default_tx_confs\n");
 }
 
 static void eqos_default_rx_confs(struct eqos_prv_data *pdata)
 {
 	UINT qinx;
 
-	DBGPR("-->eqos_default_rx_confs\n");
+	pr_debug("-->eqos_default_rx_confs\n");
 
 	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
 		eqos_default_rx_confs_single_q(pdata, qinx);
 	}
 
-	DBGPR("<--eqos_default_rx_confs\n");
+	pr_debug("<--eqos_default_rx_confs\n");
 }
 
 void free_txrx_irqs(struct eqos_prv_data *pdata)
 {
 	uint i;
 
-	DBGPR("-->%s()\n", __func__);
+	pr_debug("-->%s()\n", __func__);
 
 	free_irq(pdata->common_irq, pdata);
 
@@ -1156,7 +1156,7 @@ void free_txrx_irqs(struct eqos_prv_data *pdata)
 		}
 	}
 
-	DBGPR("<--%s()\n", __func__);
+	pr_debug("<--%s()\n", __func__);
 }
 
 int request_txrx_irqs(struct eqos_prv_data *pdata)
@@ -1166,7 +1166,7 @@ int request_txrx_irqs(struct eqos_prv_data *pdata)
 	struct chan_data *pchinfo;
 	struct platform_device *pdev = pdata->pdev;
 
-	DBGPR("-->%s()\n", __func__);
+	pr_debug("-->%s()\n", __func__);
 
 	pdata->irq_number = pdata->dev->irq;
 
@@ -1206,7 +1206,7 @@ int request_txrx_irqs(struct eqos_prv_data *pdata)
 				      cpumask_of(pchinfo->cpu));
 		pdata->tx_irq_alloc_mask |= (1 << i);
 	}
-	DBGPR("<--%s()\n", __func__);
+	pr_debug("<--%s()\n", __func__);
 
 	return ret;
 
@@ -1215,7 +1215,7 @@ int request_txrx_irqs(struct eqos_prv_data *pdata)
 	free_irq(pdata->common_irq, pdata);
 
  err_common_irq:
-	DBGPR("<--%s(): error\n", __func__);
+	pr_debug("<--%s(): error\n", __func__);
 	return ret;
 }
 
@@ -1242,7 +1242,7 @@ static int eqos_open(struct net_device *dev)
 	struct desc_if_struct *desc_if = &pdata->desc_if;
 	struct eqos_cfg *pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
 
-	DBGPR("-->eqos_open\n");
+	pr_debug("-->eqos_open\n");
 
 	if (!is_valid_ether_addr(dev->dev_addr))
 		return -EADDRNOTAVAIL;
@@ -1283,7 +1283,7 @@ static int eqos_open(struct net_device *dev)
 
 	pdata->hw_state_flgs &= ~(1 << HW_STOPPED);
 
-	DBGPR("<--%s()\n", __func__);
+	pr_debug("<--%s()\n", __func__);
 	return Y_SUCCESS;
 
  err_isomgr_fail:
@@ -1294,7 +1294,7 @@ static int eqos_open(struct net_device *dev)
 	free_txrx_irqs(pdata);
 
  err_irq_0:
-	DBGPR("<--%s()\n", __func__);
+	pr_debug("<--%s()\n", __func__);
 	return ret;
 }
 
@@ -1317,7 +1317,7 @@ static int eqos_close(struct net_device *dev)
 	struct desc_if_struct *desc_if = &pdata->desc_if;
 	int	hw_chg_count = EQOS_HW_CHG_MAX_COUNT;
 
-	DBGPR("-->%s\n", __func__);
+	pr_debug("-->%s\n", __func__);
 
 	while (test_and_set_bit(HW_CHANGING, &pdata->hw_state_flgs) &&
 	       hw_chg_count--)
@@ -1331,7 +1331,7 @@ static int eqos_close(struct net_device *dev)
 	pdata->hw_state_flgs |= (1 << HW_STOPPED);
 	clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 
-	DBGPR("<--%s\n", __func__);
+	pr_debug("<--%s\n", __func__);
 	return Y_SUCCESS;
 }
 
@@ -1667,7 +1667,7 @@ static void eqos_set_rx_mode(struct net_device *dev)
 
 	spin_unlock(&pdata->lock);
 
-	DBGPR("<--eqos_set_rx_mode\n");
+	pr_debug("<--eqos_set_rx_mode\n");
 }
 
 
@@ -1700,7 +1700,7 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	INT retval = NETDEV_TX_OK;
 	int tso;
 
-	DBGPR("-->eqos_start_xmit: skb->len = %d, qinx = %u\n", skb->len, qinx);
+	pr_debug("-->eqos_start_xmit: skb->len = %d, qinx = %u\n", skb->len, qinx);
 
 	if (ptx_ring->tx_pkt_queued > (TX_DESC_CNT >> 2))
 		process_tx_completions(pdata->dev, pdata, qinx);
@@ -1786,7 +1786,7 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 		if (cnt == 0) {
 			ptx_ring->queue_stopped = 1;
 			netif_stop_subqueue(dev, qinx);
-			DBGPR("%s(): TX ring full for queue %d\n",
+			pr_debug("%s(): TX ring full for queue %d\n",
 			      __func__, qinx);
 			retval = NETDEV_TX_BUSY;
 			goto tx_netdev_return;
@@ -1824,7 +1824,7 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
  tx_netdev_return:
 	spin_unlock(&pdata->chinfo[qinx].chan_tx_lock);
 
-	DBGPR("<--eqos_start_xmit\n");
+	pr_debug("<--eqos_start_xmit\n");
 
 	return retval;
 }
@@ -2084,7 +2084,7 @@ static void process_tx_completions(struct net_device *dev,
 	int err_incremented;
 	unsigned int tstamp_taken = 0;
 
-	DBGPR("-->%s(): ptx_ring->tx_pkt_queued = %d"
+	pr_debug("-->%s(): ptx_ring->tx_pkt_queued = %d"
 	      " dirty_tx = %d, qinx = %u\n",
 	      __func__,
 	      ptx_ring->tx_pkt_queued, ptx_ring->dirty_tx, qinx);
@@ -2197,7 +2197,7 @@ static void process_tx_completions(struct net_device *dev,
 
 	spin_unlock(&pdata->chinfo[qinx].chan_tx_lock);
 
-	DBGPR("<--%s(): ptx_ring->tx_pkt_queued = %d\n",
+	pr_debug("<--%s(): ptx_ring->tx_pkt_queued = %d\n",
 	      __func__, ptx_ring->tx_pkt_queued);
 }
 
@@ -2354,7 +2354,7 @@ static int process_rx_completions(struct eqos_prv_data *pdata,
 
 	int ret;
 
-	DBGPR("-->%s(): qinx = %u, quota = %d\n", __func__, qinx, quota);
+	pr_debug("-->%s(): qinx = %u, quota = %d\n", __func__, qinx, quota);
 
 	hw_cur_rx_desc_addr = prx_ring->hw_last_rx_desc_addr;
 	while (received < quota) {
@@ -2490,7 +2490,7 @@ static int process_rx_completions(struct eqos_prv_data *pdata,
 				dump_rx_desc(qinx, prx_desc,
 					     prx_ring->cur_rx);
 				if (!(prx_desc->rdes3 & EQOS_RDESC3_LD))
-					DBGPR("Received oversized pkt,"
+					pr_debug("Received oversized pkt,"
 					      "spanned across multiple desc\n");
 
 				/* recycle skb */
@@ -2517,7 +2517,7 @@ static int process_rx_completions(struct eqos_prv_data *pdata,
 	if (prx_ring->dirty_rx)
 		desc_if->realloc_skb(pdata, qinx);
 
-	DBGPR("<--%s(): received = %d, qinx=%d\n", __func__, received, qinx);
+	pr_debug("<--%s(): received = %d, qinx=%d\n", __func__, received, qinx);
 
 	return received;
 }
@@ -2536,7 +2536,7 @@ static int process_rx_completions(struct eqos_prv_data *pdata,
 
 void eqos_update_rx_errors(struct net_device *dev, unsigned int rx_status)
 {
-	DBGPR("-->eqos_update_rx_errors\n");
+	pr_debug("-->eqos_update_rx_errors\n");
 
 	/* received pkt with crc error */
 	if ((rx_status & 0x1000000))
@@ -2550,7 +2550,7 @@ void eqos_update_rx_errors(struct net_device *dev, unsigned int rx_status)
 	if ((rx_status & 0x200000))
 		dev->stats.rx_fifo_errors++;
 
-	DBGPR("<--eqos_update_rx_errors\n");
+	pr_debug("<--eqos_update_rx_errors\n");
 }
 
 static int handle_txrx_completions(struct eqos_prv_data *pdata, int qinx)
@@ -2559,7 +2559,7 @@ static int handle_txrx_completions(struct eqos_prv_data *pdata, int qinx)
 	int received = 0;
 	int budget = pdata->dt_cfg.chan_napi_quota[qinx];
 
-	DBGPR("-->%s(): chan=%d\n", __func__, qinx);
+	pr_debug("-->%s(): chan=%d\n", __func__, qinx);
 
 	rx_queue = GET_RX_QUEUE_PTR(qinx);
 
@@ -2575,7 +2575,7 @@ static int handle_txrx_completions(struct eqos_prv_data *pdata, int qinx)
 	if (rx_queue->lro_flush_needed)
 		lro_flush_all(&rx_queue->lro_mgr);
 
-	DBGPR("<--%s():\n", __func__);
+	pr_debug("<--%s():\n", __func__);
 
 	return received;
 }
@@ -2588,7 +2588,7 @@ static void do_txrx_post_processing(struct eqos_prv_data *pdata,
 	int qinx = 0;
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 
-	DBGPR("-->%s():\n", __func__);
+	pr_debug("-->%s():\n", __func__);
 
 	/* If we processed all pkts, we are done;
 	 * tell the kernel & re-enable interrupt
@@ -2614,7 +2614,7 @@ static void do_txrx_post_processing(struct eqos_prv_data *pdata,
 			spin_unlock(&pdata->lock);
 		}
 	}
-	DBGPR("<--%s():\n", __func__);
+	pr_debug("<--%s():\n", __func__);
 }
 
 
@@ -2627,7 +2627,7 @@ int eqos_napi_mq(struct napi_struct *napi, int budget)
 	int qinx = rx_queue->chan_num;
 	int received = 0;
 
-	DBGPR("-->%s(): budget = %d\n", __func__, budget);
+	pr_debug("-->%s(): budget = %d\n", __func__, budget);
 
 	pdata->xstats.napi_poll_n++;
 	received = handle_txrx_completions(pdata, qinx);
@@ -2635,7 +2635,7 @@ int eqos_napi_mq(struct napi_struct *napi, int budget)
 	do_txrx_post_processing(pdata, napi, received,
 				pdata->dt_cfg.chan_napi_quota[qinx]);
 
-	DBGPR("<--%s()\n", __func__);
+	pr_debug("<--%s()\n", __func__);
 
 	return received;
 }
@@ -2684,7 +2684,7 @@ static int eqos_set_features(struct net_device *dev, netdev_features_t features)
 #ifdef EQOS_ENABLE_VLAN_TAG
 	UINT dev_rxvlan_enable, dev_txvlan_enable;
 #endif
-	DBGPR("-->eqos_set_features\n");
+	pr_debug("-->eqos_set_features\n");
 
 	if (pdata->hw_feat.rx_coe_sel) {
 		dev_rxcsum_enable = !!(pdata->dev_state & NETIF_F_RXCSUM);
@@ -2728,7 +2728,7 @@ static int eqos_set_features(struct net_device *dev, netdev_features_t features)
 	}
 #endif				/* EQOS_ENABLE_VLAN_TAG */
 
-	DBGPR("<--eqos_set_features\n");
+	pr_debug("<--eqos_set_features\n");
 
 	return 0;
 }
@@ -3153,7 +3153,7 @@ static int eqos_config_mac_loopback_mode(struct net_device *dev,
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	int ret = 0;
 
-	DBGPR("-->eqos_config_mac_loopback_mode\n");
+	pr_debug("-->eqos_config_mac_loopback_mode\n");
 
 	if (flags && pdata->mac_loopback_mode) {
 		pr_err("MAC loopback mode is already enabled\n");
@@ -3169,7 +3169,7 @@ static int eqos_config_mac_loopback_mode(struct net_device *dev,
 	pr_err("Succesfully %s MAC loopback mode\n",
 	       (flags ? "enabled" : "disabled"));
 
-	DBGPR("<--eqos_config_mac_loopback_mode\n");
+	pr_debug("<--eqos_config_mac_loopback_mode\n");
 
 	return ret;
 }
@@ -3180,7 +3180,7 @@ static VOID eqos_config_timer_registers(struct eqos_prv_data *pdata)
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	u64 temp;
 
-	DBGPR("-->eqos_config_timer_registers\n");
+	pr_debug("-->eqos_config_timer_registers\n");
 
 	/* program Sub Second Increment Reg */
 	hw_if->config_sub_second_increment(EQOS_SYSCLOCK);
@@ -3207,7 +3207,7 @@ static VOID eqos_config_timer_registers(struct eqos_prv_data *pdata)
 	getnstimeofday(&now);
 	hw_if->init_systime(now.tv_sec, now.tv_nsec);
 
-	DBGPR("-->eqos_config_timer_registers\n");
+	pr_debug("-->eqos_config_timer_registers\n");
 }
 
 /*!
@@ -3309,7 +3309,7 @@ static int eqos_config_pfc(struct net_device *dev, unsigned int flags)
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	int ret = 0;
 
-	DBGPR("-->eqos_config_pfc\n");
+	pr_debug("-->eqos_config_pfc\n");
 
 	if (!pdata->hw_feat.dcb_en) {
 		pr_err("PFC is not supported\n");
@@ -3321,7 +3321,7 @@ static int eqos_config_pfc(struct net_device *dev, unsigned int flags)
 	pr_err("Succesfully %s PFC(Priority Based Flow Control)\n",
 	       (flags ? "enabled" : "disabled"));
 
-	DBGPR("<--eqos_config_pfc\n");
+	pr_debug("<--eqos_config_pfc\n");
 
 	return ret;
 }
@@ -3356,7 +3356,7 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 	struct net_device *dev = pdata->dev;
 	int ret = 0;
 
-	DBGPR("-->eqos_handle_prv_ioctl\n");
+	pr_debug("-->eqos_handle_prv_ioctl\n");
 
 	if (qinx > EQOS_QUEUE_CNT) {
 		pr_err("Queue number %d is invalid\n"
@@ -3681,7 +3681,7 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 		pr_err("Unsupported command call\n");
 	}
 
-	DBGPR("<--eqos_handle_prv_ioctl\n");
+	pr_debug("<--eqos_handle_prv_ioctl\n");
 
 	return ret;
 }
@@ -3953,10 +3953,10 @@ static int eqos_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 	unsigned int reg_val = 0;
 	int ret = 0;
 
-	DBGPR("-->eqos_ioctl\n");
+	pr_debug("-->eqos_ioctl\n");
 
 	if ((!netif_running(dev)) || (!pdata->phydev)) {
-		DBGPR("<--eqos_ioctl - error\n");
+		pr_debug("<--eqos_ioctl - error\n");
 		return -EINVAL;
 	}
 
@@ -3998,7 +3998,7 @@ static int eqos_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 	}
 	spin_unlock(&pdata->lock);
 
-	DBGPR("<--eqos_ioctl\n");
+	pr_debug("<--eqos_ioctl\n");
 
 	return ret;
 }
@@ -4027,7 +4027,7 @@ static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 	int max_frame = (new_mtu + ETH_HLEN + ETH_FCS_LEN + VLAN_HLEN);
 	int	hw_chg_count;
 
-	DBGPR("-->eqos_change_mtu: new_mtu:%d\n", new_mtu);
+	pr_debug("-->eqos_change_mtu: new_mtu:%d\n", new_mtu);
 
 #ifdef EQOS_CONFIG_PGTEST
 	dev_err(&pdev->dev, "jumbo frames not supported with PG test\n");
@@ -4075,7 +4075,7 @@ static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 		eqos_start_dev(pdata);
 	clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 
-	DBGPR("<--eqos_change_mtu\n");
+	pr_debug("<--eqos_change_mtu\n");
 
 	return 0;
 }
@@ -4090,7 +4090,7 @@ u16 eqos_select_queue(struct net_device *dev,
 	struct eqos_cfg *pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
 	UINT i;
 
-	DBGPR("-->eqos_select_queue\n");
+	pr_debug("-->eqos_select_queue\n");
 
 	for (i = 0; i <= EQOS_TX_QUEUE_CNT; i++) {
 		if (pdt_cfg->q_prio[i] == skb->priority) {
@@ -4102,7 +4102,7 @@ u16 eqos_select_queue(struct net_device *dev,
 	if (txqueue_select < 0)
 		txqueue_select = 0;
 
-	DBGPR("<--eqos_select_queue txqueue-select:%d\n", txqueue_select);
+	pr_debug("<--eqos_select_queue txqueue-select:%d\n", txqueue_select);
 
 	return txqueue_select;
 }
@@ -4274,14 +4274,14 @@ INT eqos_powerdown(struct net_device *dev, UINT wakeup_type, UINT caller)
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 
-	DBGPR("-->eqos_powerdown\n");
+	pr_debug("-->eqos_powerdown\n");
 
 	if (!dev || !netif_running(dev) ||
 	    (caller == EQOS_IOCTL_CONTEXT && pdata->power_down)) {
 		pr_err
 		    ("Device is already powered down and will powerup for %s\n",
 		     EQOS_POWER_DOWN_TYPE(pdata));
-		DBGPR("<--eqos_powerdown\n");
+		pr_debug("<--eqos_powerdown\n");
 		return -EINVAL;
 	}
 
@@ -4312,7 +4312,7 @@ INT eqos_powerdown(struct net_device *dev, UINT wakeup_type, UINT caller)
 
 	spin_unlock(&pdata->pmt_lock);
 
-	DBGPR("<--eqos_powerdown\n");
+	pr_debug("<--eqos_powerdown\n");
 
 	return 0;
 }
@@ -4343,7 +4343,7 @@ INT eqos_powerup(struct net_device *dev, UINT caller)
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 
-	DBGPR("-->eqos_powerup\n");
+	pr_debug("-->eqos_powerup\n");
 
 	if (!dev || !netif_running(dev) ||
 	    (caller == EQOS_IOCTL_CONTEXT && !pdata->power_down)) {
@@ -4384,7 +4384,7 @@ INT eqos_powerup(struct net_device *dev, UINT caller)
 
 	spin_unlock(&pdata->pmt_lock);
 
-	DBGPR("<--eqos_powerup\n");
+	pr_debug("<--eqos_powerup\n");
 
 	return 0;
 }
@@ -4444,7 +4444,7 @@ static void eqos_config_rx_pbl(struct eqos_prv_data *pdata,
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	UINT pblx8_val = 0;
 
-	DBGPR("-->eqos_config_rx_pbl: %d\n", rx_pbl);
+	pr_debug("-->eqos_config_rx_pbl: %d\n", rx_pbl);
 
 	switch (rx_pbl) {
 	case EQOS_PBL_1:
@@ -4480,7 +4480,7 @@ static void eqos_config_rx_pbl(struct eqos_prv_data *pdata,
 		break;
 	}
 
-	DBGPR("<--eqos_config_rx_pbl\n");
+	pr_debug("<--eqos_config_rx_pbl\n");
 }
 
 /*!
@@ -4502,7 +4502,7 @@ static void eqos_config_tx_pbl(struct eqos_prv_data *pdata,
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	UINT pblx8_val = 0;
 
-	DBGPR("-->eqos_config_tx_pbl: %d\n", tx_pbl);
+	pr_debug("-->eqos_config_tx_pbl: %d\n", tx_pbl);
 
 	switch (tx_pbl) {
 	case EQOS_PBL_1:
@@ -4538,7 +4538,7 @@ static void eqos_config_tx_pbl(struct eqos_prv_data *pdata,
 		break;
 	}
 
-	DBGPR("<--eqos_config_tx_pbl\n");
+	pr_debug("<--eqos_config_tx_pbl\n");
 }
 
 /*!
@@ -4560,7 +4560,7 @@ static void eqos_program_dcb_algorithm(struct eqos_prv_data *pdata,
 	    (struct eqos_dcb_algorithm *)req->ptr;
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 
-	DBGPR("-->eqos_program_dcb_algorithm\n");
+	pr_debug("-->eqos_program_dcb_algorithm\n");
 
 	if (copy_from_user(&l_dcb_struct, u_dcb_struct,
 			   sizeof(struct eqos_dcb_algorithm)))
@@ -4571,7 +4571,7 @@ static void eqos_program_dcb_algorithm(struct eqos_prv_data *pdata,
 	hw_if->set_dcb_algorithm(l_dcb_struct.algorithm);
 	hw_if->set_dcb_queue_weight(l_dcb_struct.qinx, l_dcb_struct.weight);
 
-	DBGPR("<--eqos_program_dcb_algorithm\n");
+	pr_debug("<--eqos_program_dcb_algorithm\n");
 
 	return;
 }
@@ -4596,7 +4596,7 @@ static void eqos_program_avb_algorithm(struct eqos_prv_data *pdata,
 	    (struct eqos_avb_algorithm *)req->ptr;
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 
-	DBGPR("-->eqos_program_avb_algorithm\n");
+	pr_debug("-->eqos_program_avb_algorithm\n");
 
 	if (copy_from_user(&l_avb_struct, u_avb_struct,
 			   sizeof(struct eqos_avb_algorithm)))
@@ -4611,7 +4611,7 @@ static void eqos_program_avb_algorithm(struct eqos_prv_data *pdata,
 	hw_if->config_high_credit(l_avb_struct.qinx, l_avb_struct.hi_credit);
 	hw_if->config_low_credit(l_avb_struct.qinx, l_avb_struct.low_credit);
 
-	DBGPR("<--eqos_program_avb_algorithm\n");
+	pr_debug("<--eqos_program_avb_algorithm\n");
 
 	return;
 }
@@ -4640,7 +4640,7 @@ void dbgpr_regs(void)
 	MMC_RXTCP_GD_OCTETS_RD(val4);
 	MMC_RXUDP_ERR_OCTETS_RD(val5);
 
-	DBGPR("dbgpr_regs: MAC_PMTCSR:%#x\n"
+	pr_debug("dbgpr_regs: MAC_PMTCSR:%#x\n"
 	      "dbgpr_regs: MMC_RXICMP_ERR_OCTETS:%#x\n"
 	      "dbgpr_regs: MMC_RXICMP_GD_OCTETS:%#x\n"
 	      "dbgpr_regs: MMC_RXTCP_ERR_OCTETS:%#x\n"
@@ -4655,7 +4655,7 @@ void dbgpr_regs(void)
 	MMC_RXIPV4_UDSBL_OCTETS_RD(val4);
 	MMC_RXIPV4_FRAG_OCTETS_RD(val5);
 
-	DBGPR("dbgpr_regs: MMC_RXUDP_GD_OCTETS:%#x\n"
+	pr_debug("dbgpr_regs: MMC_RXUDP_GD_OCTETS:%#x\n"
 	      "dbgpr_regs: MMC_RXIPV6_NOPAY_OCTETS:%#x\n"
 	      "dbgpr_regs: MMC_RXIPV6_HDRERR_OCTETS:%#x\n"
 	      "dbgpr_regs: MMC_RXIPV6_GD_OCTETS:%#x\n"
@@ -4670,7 +4670,7 @@ void dbgpr_regs(void)
 	MMC_RXICMP_GD_PKTS_RD(val4);
 	MMC_RXTCP_ERR_PKTS_RD(val5);
 
-	DBGPR("dbgpr_regs: MMC_RXIPV4_NOPAY_OCTETS:%#x\n"
+	pr_debug("dbgpr_regs: MMC_RXIPV4_NOPAY_OCTETS:%#x\n"
 	      "dbgpr_regs: MMC_RXIPV4_HDRERR_OCTETS:%#x\n"
 	      "dbgpr_regs: MMC_RXIPV4_GD_OCTETS:%#x\n"
 	      "dbgpr_regs: MMC_RXICMP_ERR_PKTS:%#x\n"
@@ -4685,7 +4685,7 @@ void dbgpr_regs(void)
 	MMC_RXIPV6_HDRERR_PKTS_RD(val4);
 	MMC_RXIPV6_GD_PKTS_RD(val5);
 
-	DBGPR("dbgpr_regs: MMC_RXTCP_GD_PKTS:%#x\n"
+	pr_debug("dbgpr_regs: MMC_RXTCP_GD_PKTS:%#x\n"
 	      "dbgpr_regs: MMC_RXUDP_ERR_PKTS:%#x\n"
 	      "dbgpr_regs: MMC_RXUDP_GD_PKTS:%#x\n"
 	      "dbgpr_regs: MMC_RXIPV6_NOPAY_PKTS:%#x\n"
@@ -4700,7 +4700,7 @@ void dbgpr_regs(void)
 	MMC_RXIPV4_GD_PKTS_RD(val4);
 	MMC_RXCTRLPACKETS_G_RD(val5);
 
-	DBGPR("dbgpr_regs: MMC_RXIPV4_UBSBL_PKTS:%#x\n"
+	pr_debug("dbgpr_regs: MMC_RXIPV4_UBSBL_PKTS:%#x\n"
 	      "dbgpr_regs: MMC_RXIPV4_FRAG_PKTS:%#x\n"
 	      "dbgpr_regs: MMC_RXIPV4_NOPAY_PKTS:%#x\n"
 	      "dbgpr_regs: MMC_RXIPV4_HDRERR_PKTS:%#x\n"
@@ -4715,7 +4715,7 @@ void dbgpr_regs(void)
 	MMC_RXPAUSEPACKETS_RD(val4);
 	MMC_RXOUTOFRANGETYPE_RD(val5);
 
-	DBGPR("dbgpr_regs: MMC_RXRCVERROR:%#x\n"
+	pr_debug("dbgpr_regs: MMC_RXRCVERROR:%#x\n"
 	      "dbgpr_regs: MMC_RXWATCHDOGERROR:%#x\n"
 	      "dbgpr_regs: MMC_RXVLANPACKETS_GB:%#x\n"
 	      "dbgpr_regs: MMC_RXFIFOOVERFLOW:%#x\n"
@@ -4730,7 +4730,7 @@ void dbgpr_regs(void)
 	MMC_RX256TO511OCTETS_GB_RD(val4);
 	MMC_RX128TO255OCTETS_GB_RD(val5);
 
-	DBGPR("dbgpr_regs: MMC_RXLENGTHERROR:%#x\n"
+	pr_debug("dbgpr_regs: MMC_RXLENGTHERROR:%#x\n"
 	      "dbgpr_regs: MMC_RXUNICASTPACKETS_G:%#x\n"
 	      "dbgpr_regs: MMC_RX1024TOMAXOCTETS_GB:%#x\n"
 	      "dbgpr_regs: MMC_RX512TO1023OCTETS_GB:%#x\n"
@@ -4745,7 +4745,7 @@ void dbgpr_regs(void)
 	MMC_RXJABBERERROR_RD(val4);
 	MMC_RXRUNTERROR_RD(val5);
 
-	DBGPR("dbgpr_regs: MMC_RX65TO127OCTETS_GB:%#x\n"
+	pr_debug("dbgpr_regs: MMC_RX65TO127OCTETS_GB:%#x\n"
 	      "dbgpr_regs: MMC_RX64OCTETS_GB:%#x\n"
 	      "dbgpr_regs: MMC_RXOVERSIZE_G:%#x\n"
 	      "dbgpr_regs: MMC_RXUNDERSIZE_G:%#x\n"
@@ -4760,7 +4760,7 @@ void dbgpr_regs(void)
 	MMC_RXOCTETCOUNT_G_RD(val4);
 	MMC_RXOCTETCOUNT_GB_RD(val5);
 
-	DBGPR("dbgpr_regs: MMC_RXALIGNMENTERROR:%#x\n"
+	pr_debug("dbgpr_regs: MMC_RXALIGNMENTERROR:%#x\n"
 	      "dbgpr_regs: MMC_RXCRCERROR:%#x\n"
 	      "dbgpr_regs: MMC_RXMULTICASTPACKETS_G:%#x\n"
 	      "dbgpr_regs: MMC_RXBROADCASTPACKETS_G:%#x\n"
@@ -4775,7 +4775,7 @@ void dbgpr_regs(void)
 	MMC_TXEXCESSDEF_RD(val4);
 	MMC_TXPACKETSCOUNT_G_RD(val5);
 
-	DBGPR("dbgpr_regs: MMC_RXPACKETCOUNT_GB:%#x\n"
+	pr_debug("dbgpr_regs: MMC_RXPACKETCOUNT_GB:%#x\n"
 	      "dbgpr_regs: MMC_TXOVERSIZE_G:%#x\n"
 	      "dbgpr_regs: MMC_TXVLANPACKETS_G:%#x\n"
 	      "dbgpr_regs: MMC_TXPAUSEPACKETS:%#x\n"
@@ -4790,7 +4790,7 @@ void dbgpr_regs(void)
 	MMC_TXDEFERRED_RD(val4);
 	MMC_TXMULTICOL_G_RD(val5);
 
-	DBGPR("dbgpr_regs: MMC_TXOCTETCOUNT_G:%#x\n"
+	pr_debug("dbgpr_regs: MMC_TXOCTETCOUNT_G:%#x\n"
 	      "dbgpr_regs: MMC_TXCARRIERERROR:%#x\n"
 	      "dbgpr_regs: MMC_TXEXESSCOL:%#x\n"
 	      "dbgpr_regs: MMC_TXLATECOL:%#x\n"
@@ -4805,7 +4805,7 @@ void dbgpr_regs(void)
 	MMC_TXUNICASTPACKETS_GB_RD(val4);
 	MMC_TX1024TOMAXOCTETS_GB_RD(val5);
 
-	DBGPR("dbgpr_regs: MMC_TXSINGLECOL_G:%#x\n"
+	pr_debug("dbgpr_regs: MMC_TXSINGLECOL_G:%#x\n"
 	      "dbgpr_regs: MMC_TXUNDERFLOWERROR:%#x\n"
 	      "dbgpr_regs: MMC_TXBROADCASTPACKETS_GB:%#x\n"
 	      "dbgpr_regs: MMC_TXMULTICASTPACKETS_GB:%#x\n"
@@ -4820,7 +4820,7 @@ void dbgpr_regs(void)
 	MMC_TX64OCTETS_GB_RD(val4);
 	MMC_TXMULTICASTPACKETS_G_RD(val5);
 
-	DBGPR("dbgpr_regs: MMC_TX512TO1023OCTETS_GB:%#x\n"
+	pr_debug("dbgpr_regs: MMC_TX512TO1023OCTETS_GB:%#x\n"
 	      "dbgpr_regs: MMC_TX256TO511OCTETS_GB:%#x\n"
 	      "dbgpr_regs: MMC_TX128TO255OCTETS_GB:%#x\n"
 	      "dbgpr_regs: MMC_TX65TO127OCTETS_GB:%#x\n"
@@ -4835,7 +4835,7 @@ void dbgpr_regs(void)
 	MMC_IPC_INTR_MASK_RX_RD(val4);
 	MMC_INTR_MASK_TX_RD(val5);
 
-	DBGPR("dbgpr_regs: MMC_TXBROADCASTPACKETS_G:%#x\n"
+	pr_debug("dbgpr_regs: MMC_TXBROADCASTPACKETS_G:%#x\n"
 	      "dbgpr_regs: MMC_TXPACKETCOUNT_GB:%#x\n"
 	      "dbgpr_regs: MMC_TXOCTETCOUNT_GB:%#x\n"
 	      "dbgpr_regs: MMC_IPC_INTR_RX:%#x\n"
@@ -4850,7 +4850,7 @@ void dbgpr_regs(void)
 	MAC_MA1LR_RD(val4);
 	MAC_MA1HR_RD(val5);
 
-	DBGPR("dbgpr_regs: MMC_INTR_MASK_RX:%#x\n"
+	pr_debug("dbgpr_regs: MMC_INTR_MASK_RX:%#x\n"
 	      "dbgpr_regs: MMC_INTR_TX:%#x\n"
 	      "dbgpr_regs: MMC_INTR_RX:%#x\n"
 	      "dbgpr_regs: MMC_CNTRL:%#x\n"
@@ -4865,7 +4865,7 @@ void dbgpr_regs(void)
 	MAC_GMIIAR_RD(val4);
 	MAC_HFR2_RD(val5);
 
-	DBGPR("dbgpr_regs: MAC_MA0LR:%#x\n"
+	pr_debug("dbgpr_regs: MAC_MA0LR:%#x\n"
 	      "dbgpr_regs: MAC_MA0HR:%#x\n"
 	      "dbgpr_regs: MAC_GPIOR:%#x\n"
 	      "dbgpr_regs: MAC_GMIIDR:%#x\n"
@@ -4879,7 +4879,7 @@ void dbgpr_regs(void)
 	MAC_HTR7_RD(val4);
 	MAC_HTR6_RD(val5);
 
-	DBGPR("dbgpr_regs: MAC_HFR1:%#x\n"
+	pr_debug("dbgpr_regs: MAC_HFR1:%#x\n"
 	      "dbgpr_regs: MAC_HFR0:%#x\n"
 	      "dbgpr_regs: MAC_MDR:%#x\n"
 	      "dbgpr_regs: MAC_VR:%#x\n"
@@ -4893,7 +4893,7 @@ void dbgpr_regs(void)
 	MAC_HTR1_RD(val4);
 	MAC_HTR0_RD(val5);
 
-	DBGPR("dbgpr_regs: MAC_HTR5:%#x\n"
+	pr_debug("dbgpr_regs: MAC_HTR5:%#x\n"
 	      "dbgpr_regs: MAC_HTR4:%#x\n"
 	      "dbgpr_regs: MAC_HTR3:%#x\n"
 	      "dbgpr_regs: MAC_HTR2:%#x\n"
@@ -4907,7 +4907,7 @@ void dbgpr_regs(void)
 	DMA_RIWTR3_RD(val4);
 	DMA_RIWTR2_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_RIWTR7:%#x\n"
+	pr_debug("dbgpr_regs: DMA_RIWTR7:%#x\n"
 	      "dbgpr_regs: DMA_RIWTR6:%#x\n"
 	      "dbgpr_regs: DMA_RIWTR5:%#x\n"
 	      "dbgpr_regs: DMA_RIWTR4:%#x\n"
@@ -4922,7 +4922,7 @@ void dbgpr_regs(void)
 	DMA_RDRLR5_RD(val4);
 	DMA_RDRLR4_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_RIWTR1:%#x\n"
+	pr_debug("dbgpr_regs: DMA_RIWTR1:%#x\n"
 	      "dbgpr_regs: DMA_RIWTR0:%#x\n"
 	      "dbgpr_regs: DMA_RDRLR7:%#x\n"
 	      "dbgpr_regs: DMA_RDRLR6:%#x\n"
@@ -4937,7 +4937,7 @@ void dbgpr_regs(void)
 	DMA_TDRLR7_RD(val4);
 	DMA_TDRLR6_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_RDRLR3:%#x\n"
+	pr_debug("dbgpr_regs: DMA_RDRLR3:%#x\n"
 	      "dbgpr_regs: DMA_RDRLR2:%#x\n"
 	      "dbgpr_regs: DMA_RDRLR1:%#x\n"
 	      "dbgpr_regs: DMA_RDRLR0:%#x\n"
@@ -4952,7 +4952,7 @@ void dbgpr_regs(void)
 	DMA_TDRLR1_RD(val4);
 	DMA_TDRLR0_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_TDRLR5:%#x\n"
+	pr_debug("dbgpr_regs: DMA_TDRLR5:%#x\n"
 	      "dbgpr_regs: DMA_TDRLR4:%#x\n"
 	      "dbgpr_regs: DMA_TDRLR3:%#x\n"
 	      "dbgpr_regs: DMA_TDRLR2:%#x\n"
@@ -4967,7 +4967,7 @@ void dbgpr_regs(void)
 	DMA_RDTP_RPDR3_RD(val4);
 	DMA_RDTP_RPDR2_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_RDTP_RPDR7:%#x\n"
+	pr_debug("dbgpr_regs: DMA_RDTP_RPDR7:%#x\n"
 	      "dbgpr_regs: DMA_RDTP_RPDR6:%#x\n"
 	      "dbgpr_regs: DMA_RDTP_RPDR5:%#x\n"
 	      "dbgpr_regs: DMA_RDTP_RPDR4:%#x\n"
@@ -4982,7 +4982,7 @@ void dbgpr_regs(void)
 	DMA_TDTP_TPDR5_RD(val4);
 	DMA_TDTP_TPDR4_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_RDTP_RPDR1:%#x\n"
+	pr_debug("dbgpr_regs: DMA_RDTP_RPDR1:%#x\n"
 	      "dbgpr_regs: DMA_RDTP_RPDR0:%#x\n"
 	      "dbgpr_regs: DMA_TDTP_TPDR7:%#x\n"
 	      "dbgpr_regs: DMA_TDTP_TPDR6:%#x\n"
@@ -4997,7 +4997,7 @@ void dbgpr_regs(void)
 	DMA_RDLAR7_RD(val4);
 	DMA_RDLAR6_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_TDTP_TPDR3:%#x\n"
+	pr_debug("dbgpr_regs: DMA_TDTP_TPDR3:%#x\n"
 	      "dbgpr_regs: DMA_TDTP_TPDR2:%#x\n"
 	      "dbgpr_regs: DMA_TDTP_TPDR1:%#x\n"
 	      "dbgpr_regs: DMA_TDTP_TPDR0:%#x\n"
@@ -5012,7 +5012,7 @@ void dbgpr_regs(void)
 	DMA_RDLAR1_RD(val4);
 	DMA_RDLAR0_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_RDLAR5:%#x\n"
+	pr_debug("dbgpr_regs: DMA_RDLAR5:%#x\n"
 	      "dbgpr_regs: DMA_RDLAR4:%#x\n"
 	      "dbgpr_regs: DMA_RDLAR3:%#x\n"
 	      "dbgpr_regs: DMA_RDLAR2:%#x\n"
@@ -5027,7 +5027,7 @@ void dbgpr_regs(void)
 	DMA_TDLAR3_RD(val4);
 	DMA_TDLAR2_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_TDLAR7:%#x\n"
+	pr_debug("dbgpr_regs: DMA_TDLAR7:%#x\n"
 	      "dbgpr_regs: DMA_TDLAR6:%#x\n"
 	      "dbgpr_regs: DMA_TDLAR5:%#x\n"
 	      "dbgpr_regs: DMA_TDLAR4:%#x\n"
@@ -5042,7 +5042,7 @@ void dbgpr_regs(void)
 	DMA_IER5_RD(val4);
 	DMA_IER4_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_TDLAR1:%#x\n"
+	pr_debug("dbgpr_regs: DMA_TDLAR1:%#x\n"
 	      "dbgpr_regs: DMA_TDLAR0:%#x\n"
 	      "dbgpr_regs: DMA_IER7:%#x\n"
 	      "dbgpr_regs: DMA_IER6:%#x\n"
@@ -5056,7 +5056,7 @@ void dbgpr_regs(void)
 	MAC_IMR_RD(val4);
 	MAC_ISR_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_IER3:%#x\n"
+	pr_debug("dbgpr_regs: DMA_IER3:%#x\n"
 	      "dbgpr_regs: DMA_IER2:%#x\n"
 	      "dbgpr_regs: DMA_IER1:%#x\n"
 	      "dbgpr_regs: DMA_IER0:%#x\n"
@@ -5070,7 +5070,7 @@ void dbgpr_regs(void)
 	DMA_SR4_RD(val4);
 	DMA_SR3_RD(val5);
 
-	DBGPR("dbgpr_regs: MTL_ISR:%#x\n"
+	pr_debug("dbgpr_regs: MTL_ISR:%#x\n"
 	      "dbgpr_regs: DMA_SR7:%#x\n"
 	      "dbgpr_regs: DMA_SR6:%#x\n"
 	      "dbgpr_regs: DMA_SR5:%#x\n"
@@ -5084,7 +5084,7 @@ void dbgpr_regs(void)
 	DMA_DSR2_RD(val4);
 	DMA_DSR1_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_SR2:%#x\n"
+	pr_debug("dbgpr_regs: DMA_SR2:%#x\n"
 	      "dbgpr_regs: DMA_SR1:%#x\n"
 	      "dbgpr_regs: DMA_SR0:%#x\n"
 	      "dbgpr_regs: DMA_ISR:%#x\n"
@@ -5098,7 +5098,7 @@ void dbgpr_regs(void)
 	DMA_CHRBAR7_RD(val4);
 	DMA_CHRBAR6_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_DSR0:%#x\n"
+	pr_debug("dbgpr_regs: DMA_DSR0:%#x\n"
 	      "dbgpr_regs: MTL_Q0RDR:%#x\n"
 	      "dbgpr_regs: MTL_Q0ESR:%#x\n"
 	      "dbgpr_regs: MTL_Q0TDR:%#x\n"
@@ -5113,7 +5113,7 @@ void dbgpr_regs(void)
 	DMA_CHRBAR1_RD(val4);
 	DMA_CHRBAR0_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_CHRBAR5:%#x\n"
+	pr_debug("dbgpr_regs: DMA_CHRBAR5:%#x\n"
 	      "dbgpr_regs: DMA_CHRBAR4:%#x\n"
 	      "dbgpr_regs: DMA_CHRBAR3:%#x\n"
 	      "dbgpr_regs: DMA_CHRBAR2:%#x\n"
@@ -5128,7 +5128,7 @@ void dbgpr_regs(void)
 	DMA_CHTBAR3_RD(val4);
 	DMA_CHTBAR2_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_CHTBAR7:%#x\n"
+	pr_debug("dbgpr_regs: DMA_CHTBAR7:%#x\n"
 	      "dbgpr_regs: DMA_CHTBAR6:%#x\n"
 	      "dbgpr_regs: DMA_CHTBAR5:%#x\n"
 	      "dbgpr_regs: DMA_CHTBAR4:%#x\n"
@@ -5143,7 +5143,7 @@ void dbgpr_regs(void)
 	DMA_CHRDR5_RD(val4);
 	DMA_CHRDR4_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_CHTBAR1:%#x\n"
+	pr_debug("dbgpr_regs: DMA_CHTBAR1:%#x\n"
 	      "dbgpr_regs: DMA_CHTBAR0:%#x\n"
 	      "dbgpr_regs: DMA_CHRDR7:%#x\n"
 	      "dbgpr_regs: DMA_CHRDR6:%#x\n"
@@ -5158,7 +5158,7 @@ void dbgpr_regs(void)
 	DMA_CHTDR7_RD(val4);
 	DMA_CHTDR6_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_CHRDR3:%#x\n"
+	pr_debug("dbgpr_regs: DMA_CHRDR3:%#x\n"
 	      "dbgpr_regs: DMA_CHRDR2:%#x\n"
 	      "dbgpr_regs: DMA_CHRDR1:%#x\n"
 	      "dbgpr_regs: DMA_CHRDR0:%#x\n"
@@ -5173,7 +5173,7 @@ void dbgpr_regs(void)
 	DMA_CHTDR1_RD(val4);
 	DMA_CHTDR0_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_CHTDR5:%#x\n"
+	pr_debug("dbgpr_regs: DMA_CHTDR5:%#x\n"
 	      "dbgpr_regs: DMA_CHTDR4:%#x\n"
 	      "dbgpr_regs: DMA_CHTDR3:%#x\n"
 	      "dbgpr_regs: DMA_CHTDR2:%#x\n"
@@ -5188,7 +5188,7 @@ void dbgpr_regs(void)
 	DMA_SFCSR3_RD(val4);
 	DMA_SFCSR2_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_SFCSR7:%#x\n"
+	pr_debug("dbgpr_regs: DMA_SFCSR7:%#x\n"
 	      "dbgpr_regs: DMA_SFCSR6:%#x\n"
 	      "dbgpr_regs: DMA_SFCSR5:%#x\n"
 	      "dbgpr_regs: DMA_SFCSR4:%#x\n"
@@ -5203,7 +5203,7 @@ void dbgpr_regs(void)
 	MAC_VLANHTR_RD(val4);
 	MAC_VLANTR_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_SFCSR1:%#x\n"
+	pr_debug("dbgpr_regs: DMA_SFCSR1:%#x\n"
 	      "dbgpr_regs: DMA_SFCSR0:%#x\n"
 	      "dbgpr_regs: MAC_IVLANTIRR:%#x\n"
 	      "dbgpr_regs: MAC_VLANTIRR:%#x\n"
@@ -5218,7 +5218,7 @@ void dbgpr_regs(void)
 	MTL_Q0ROMR_RD(val4);
 	MTL_Q0QR_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_SBUS:%#x\n"
+	pr_debug("dbgpr_regs: DMA_SBUS:%#x\n"
 	      "dbgpr_regs: DMA_BMR:%#x\n"
 	      "dbgpr_regs: MTL_Q0RCR:%#x\n"
 	      "dbgpr_regs: MTL_Q0OCR:%#x\n"
@@ -5232,7 +5232,7 @@ void dbgpr_regs(void)
 	MTL_RQDCM0R_RD(val4);
 	MTL_FDDR_RD(val5);
 
-	DBGPR("dbgpr_regs: MTL_Q0ECR:%#x\n"
+	pr_debug("dbgpr_regs: MTL_Q0ECR:%#x\n"
 	      "dbgpr_regs: MTL_Q0UCR:%#x\n"
 	      "dbgpr_regs: MTL_Q0TOMR:%#x\n"
 	      "dbgpr_regs: MTL_RQDCM1R:%#x\n"
@@ -5246,7 +5246,7 @@ void dbgpr_regs(void)
 	MAC_TQPM1R_RD(val4);
 	MAC_TQPM0R_RD(val5);
 
-	DBGPR("dbgpr_regs: MTL_FDACS:%#x\n"
+	pr_debug("dbgpr_regs: MTL_FDACS:%#x\n"
 	      "dbgpr_regs: MTL_OMR:%#x\n"
 	      "dbgpr_regs: MAC_RQC1R:%#x\n"
 	      "dbgpr_regs: MAC_RQC0R:%#x\n"
@@ -5261,7 +5261,7 @@ void dbgpr_regs(void)
 	MAC_QTFCR4_RD(val4);
 	MAC_QTFCR3_RD(val5);
 
-	DBGPR("dbgpr_regs: MAC_RFCR:%#x\n"
+	pr_debug("dbgpr_regs: MAC_RFCR:%#x\n"
 	      "dbgpr_regs: MAC_QTFCR7:%#x\n"
 	      "dbgpr_regs: MAC_QTFCR6:%#x\n"
 	      "dbgpr_regs: MAC_QTFCR5:%#x\n"
@@ -5276,7 +5276,7 @@ void dbgpr_regs(void)
 	DMA_AXI4CR6_RD(val4);
 	DMA_AXI4CR5_RD(val5);
 
-	DBGPR("dbgpr_regs: MAC_QTFCR2:%#x\n"
+	pr_debug("dbgpr_regs: MAC_QTFCR2:%#x\n"
 	      "dbgpr_regs: MAC_QTFCR1:%#x\n"
 	      "dbgpr_regs: MAC_Q0TFCR:%#x\n"
 	      "dbgpr_regs: DMA_AXI4CR7:%#x\n"
@@ -5291,7 +5291,7 @@ void dbgpr_regs(void)
 	DMA_AXI4CR0_RD(val4);
 	DMA_RCR7_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_AXI4CR4:%#x\n"
+	pr_debug("dbgpr_regs: DMA_AXI4CR4:%#x\n"
 	      "dbgpr_regs: DMA_AXI4CR3:%#x\n"
 	      "dbgpr_regs: DMA_AXI4CR2:%#x\n"
 	      "dbgpr_regs: DMA_AXI4CR1:%#x\n"
@@ -5305,7 +5305,7 @@ void dbgpr_regs(void)
 	DMA_RCR2_RD(val4);
 	DMA_RCR1_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_RCR6:%#x\n"
+	pr_debug("dbgpr_regs: DMA_RCR6:%#x\n"
 	      "dbgpr_regs: DMA_RCR5:%#x\n"
 	      "dbgpr_regs: DMA_RCR4:%#x\n"
 	      "dbgpr_regs: DMA_RCR3:%#x\n"
@@ -5319,7 +5319,7 @@ void dbgpr_regs(void)
 	DMA_TCR4_RD(val4);
 	DMA_TCR3_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_RCR0:%#x\n"
+	pr_debug("dbgpr_regs: DMA_RCR0:%#x\n"
 	      "dbgpr_regs: DMA_TCR7:%#x\n"
 	      "dbgpr_regs: DMA_TCR6:%#x\n"
 	      "dbgpr_regs: DMA_TCR5:%#x\n"
@@ -5333,7 +5333,7 @@ void dbgpr_regs(void)
 	DMA_CR6_RD(val4);
 	DMA_CR5_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_TCR2:%#x\n"
+	pr_debug("dbgpr_regs: DMA_TCR2:%#x\n"
 	      "dbgpr_regs: DMA_TCR1:%#x\n"
 	      "dbgpr_regs: DMA_TCR0:%#x\n"
 	      "dbgpr_regs: DMA_CR7:%#x\n"
@@ -5347,7 +5347,7 @@ void dbgpr_regs(void)
 	DMA_CR0_RD(val4);
 	MAC_WTR_RD(val5);
 
-	DBGPR("dbgpr_regs: DMA_CR4:%#x\n"
+	pr_debug("dbgpr_regs: DMA_CR4:%#x\n"
 	      "dbgpr_regs: DMA_CR3:%#x\n"
 	      "dbgpr_regs: DMA_CR2:%#x\n"
 	      "dbgpr_regs: DMA_CR1:%#x\n"
@@ -5358,7 +5358,7 @@ void dbgpr_regs(void)
 	MAC_MECR_RD(val1);
 	MAC_MCR_RD(val2);
 
-	DBGPR("dbgpr_regs: MAC_MPFR:%#x\n"
+	pr_debug("dbgpr_regs: MAC_MPFR:%#x\n"
 	      "dbgpr_regs: MAC_MECR:%#x\n"
 	      "dbgpr_regs: MAC_MCR:%#x\n", val0, val1, val2);
 
@@ -5505,7 +5505,7 @@ void eqos_init_rx_coalesce(struct eqos_prv_data *pdata)
 	struct rx_ring *prx_ring = NULL;
 	UINT i;
 
-	DBGPR("-->eqos_init_rx_coalesce\n");
+	pr_debug("-->eqos_init_rx_coalesce\n");
 
 	for (i = 0; i < EQOS_RX_QUEUE_CNT; i++) {
 		prx_ring = GET_RX_WRAPPER_DESC(i);
@@ -5516,7 +5516,7 @@ void eqos_init_rx_coalesce(struct eqos_prv_data *pdata)
 		    eqos_usec2riwt(EQOS_OPTIMAL_DMA_RIWT_USEC, pdata);
 	}
 
-	DBGPR("<--eqos_init_rx_coalesce\n");
+	pr_debug("<--eqos_init_rx_coalesce\n");
 }
 
 /*!
@@ -5530,14 +5530,14 @@ void eqos_init_rx_coalesce(struct eqos_prv_data *pdata)
 
 static void eqos_mmc_setup(struct eqos_prv_data *pdata)
 {
-	DBGPR("-->eqos_mmc_setup\n");
+	pr_debug("-->eqos_mmc_setup\n");
 
 	if (pdata->hw_feat.mmc_sel) {
 		memset(&pdata->mmc, 0, sizeof(struct eqos_mmc_counters));
 	} else
 		pr_err("No MMC/RMON module available in the HW\n");
 
-	DBGPR("<--eqos_mmc_setup\n");
+	pr_debug("<--eqos_mmc_setup\n");
 }
 
 inline unsigned int eqos_reg_read(volatile ULONG *ptr)
@@ -5563,7 +5563,7 @@ inline unsigned int eqos_reg_read(volatile ULONG *ptr)
 
 void eqos_mmc_read(struct eqos_mmc_counters *mmc)
 {
-	DBGPR("-->eqos_mmc_read\n");
+	pr_debug("-->eqos_mmc_read\n");
 
 	/* MMC TX counter registers */
 	mmc->mmc_tx_octetcount_gb += eqos_reg_read(MMC_TXOCTETCOUNT_GB_OFFSET);
@@ -5696,14 +5696,14 @@ void eqos_mmc_read(struct eqos_mmc_counters *mmc)
 	mmc->mmc_rx_icmp_err_octets +=
 	    eqos_reg_read(MMC_RXICMP_ERR_OCTETS_OFFSET);
 
-	DBGPR("<--eqos_mmc_read\n");
+	pr_debug("<--eqos_mmc_read\n");
 }
 
 phy_interface_t eqos_get_phy_interface(struct eqos_prv_data *pdata)
 {
 	phy_interface_t ret = PHY_INTERFACE_MODE_MII;
 
-	DBGPR("-->eqos_get_phy_interface\n");
+	pr_debug("-->eqos_get_phy_interface\n");
 
 	if (pdata->hw_feat.act_phy_sel == EQOS_GMII_MII) {
 		if (pdata->hw_feat.gmii_sel)
@@ -5728,7 +5728,7 @@ phy_interface_t eqos_get_phy_interface(struct eqos_prv_data *pdata)
 		ret = PHY_INTERFACE_MODE_NA;
 	}
 
-	DBGPR("<--eqos_get_phy_interface\n");
+	pr_debug("<--eqos_get_phy_interface\n");
 
 	return ret;
 }
@@ -5761,7 +5761,7 @@ static void eqos_disable_all_irqs(struct eqos_prv_data *pdata)
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 	int i;
 
-	DBGPR("-->%s()\n", __func__);
+	pr_debug("-->%s()\n", __func__);
 
 	for (i = 0; i < pdata->num_chans; i++)
 		hw_if->disable_chan_interrupts(i, pdata);
@@ -5778,7 +5778,7 @@ static void eqos_disable_all_irqs(struct eqos_prv_data *pdata)
 			synchronize_irq(pdata->tx_irqs[i]);
 	}
 
-	DBGPR("<--%s()\n", __func__);
+	pr_debug("<--%s()\n", __func__);
 }
 
 void eqos_stop_dev(struct eqos_prv_data *pdata)
@@ -5787,7 +5787,7 @@ void eqos_stop_dev(struct eqos_prv_data *pdata)
 	struct desc_if_struct *desc_if = &pdata->desc_if;
 	int i;
 
-	DBGPR("-->%s()\n", __func__);
+	pr_debug("-->%s()\n", __func__);
 
 #ifdef CONFIG_TEGRA_PTP_NOTIFIER
 	/* Unregister broadcasting MAC timestamp to clients */
@@ -5838,7 +5838,7 @@ void eqos_stop_dev(struct eqos_prv_data *pdata)
 	/* free rx skb's */
 	desc_if->rx_skb_free_mem(pdata, pdata->num_chans);
 
-	DBGPR("<--%s()\n", __func__);
+	pr_debug("<--%s()\n", __func__);
 }
 
 void eqos_start_dev(struct eqos_prv_data *pdata)
@@ -5846,7 +5846,7 @@ void eqos_start_dev(struct eqos_prv_data *pdata)
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 	struct desc_if_struct *desc_if = &pdata->desc_if;
 
-	DBGPR("-->%s()\n", __func__);
+	pr_debug("-->%s()\n", __func__);
 
 	if (pdata->phydev->drv->low_power_mode) {
 		/* reset the PHY Broadcom PHY needs minimum of 2us delay */
@@ -5909,7 +5909,7 @@ void eqos_start_dev(struct eqos_prv_data *pdata)
 	if (pdata->phydev)
 		netif_tx_start_all_queues(pdata->dev);
 
-	DBGPR("<--%s()\n", __func__);
+	pr_debug("<--%s()\n", __func__);
 }
 
 void eqos_fbe_work(struct work_struct *work)
@@ -5920,7 +5920,7 @@ void eqos_fbe_work(struct work_struct *work)
 	u32 dma_sr_reg;
 	int	hw_chg_count = EQOS_HW_CHG_MAX_COUNT;
 
-	DBGPR("-->%s()\n", __func__);
+	pr_debug("-->%s()\n", __func__);
 
 	while (test_and_set_bit(HW_CHANGING, &pdata->hw_state_flgs) &&
 	       hw_chg_count--)
@@ -5947,5 +5947,5 @@ void eqos_fbe_work(struct work_struct *work)
 	eqos_start_dev(pdata);
 	clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 
-	DBGPR("<--%s()\n", __func__);
+	pr_debug("<--%s()\n", __func__);
 }

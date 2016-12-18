@@ -874,7 +874,7 @@ void get_reg_name(char *regname, char *buffer, unsigned long buffer_size)
 	int i = 0, j = 0;
 	unsigned long cnt = buffer_size;
 
-	DBGPR("--> get_reg_name\n");
+	pr_debug("--> get_reg_name\n");
 
 	while (cnt > 0) {
 		if ((buffer[j] == '\t') || (buffer[j]) == ' ')
@@ -888,7 +888,7 @@ void get_reg_name(char *regname, char *buffer, unsigned long buffer_size)
 	}
 	regname[i] = '\0';
 
-	DBGPR("<-- get_reg_name\n");
+	pr_debug("<-- get_reg_name\n");
 }
 
 /*!
@@ -910,7 +910,7 @@ void get_reg_value(char *value, char *buffer, unsigned long buffer_size)
 	int cnt = buffer_size;
 	bool value_present = 0;
 
-	DBGPR("--> get_reg_value\n");
+	pr_debug("--> get_reg_value\n");
 
 	while (cnt) {
 		if ((buffer[j] == ' ') || (buffer[j] == '\t'))
@@ -926,7 +926,7 @@ void get_reg_value(char *value, char *buffer, unsigned long buffer_size)
 	}
 	value[i] = '\0';
 
-	DBGPR("<-- get_reg_value\n");
+	pr_debug("<-- get_reg_value\n");
 }
 
 /*!
@@ -952,7 +952,7 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 	char reg_value[25];
 	unsigned long integer_value;
 
-	DBGPR("--> eqos_write\n");
+	pr_debug("--> eqos_write\n");
 
 	if (count > DEBUGFS_MAX_SIZE)
 		return -EINVAL;
@@ -2722,7 +2722,7 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 		}
 	}
 
-	DBGPR("<-- eqos_write\n");
+	pr_debug("<-- eqos_write\n");
 
 	return ret;
 }
@@ -2730,9 +2730,9 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 static ssize_t registers_write(struct file *file, const char __user *buf,
 			       size_t count, loff_t *ppos)
 {
-	DBGPR("--> registers_write\n");
+	pr_debug("--> registers_write\n");
 	pr_info("Error: Invalid file name\n");
-	DBGPR("<-- registers_write\n");
+	pr_debug("<-- registers_write\n");
 
 	return -1;
 }
@@ -2744,7 +2744,7 @@ static ssize_t registers_read(struct file *file, char __user *userbuf,
 
 	char *debug_buf = NULL;
 
-	DBGPR("--> registers_read\n");
+	pr_debug("--> registers_read\n");
 
 	MAC_MA32_127LR_RD(127, MAC_MA32_127LR127_val);
 	MAC_MA32_127LR_RD(126, MAC_MA32_127LR126_val);
@@ -5049,7 +5049,7 @@ static ssize_t registers_read(struct file *file, char __user *userbuf,
 	    simple_read_from_buffer(userbuf, count, ppos, debug_buf,
 				    strlen(debug_buf));
 	kfree(debug_buf);
-	DBGPR("<-- registers_read\n");
+	pr_debug("<-- registers_read\n");
 
 	return ret;
 }
@@ -5062,10 +5062,10 @@ static const struct file_operations registers_fops = {
 static ssize_t descriptor_write(struct file *file, const char __user *buf,
 				size_t count, loff_t *ppos)
 {
-	DBGPR("--> registers_write\n");
+	pr_debug("--> registers_write\n");
 	pr_info(
 	       "write operation not supported for descrptors: write error\n");
-	DBGPR("<-- registers_write\n");
+	pr_debug("<-- registers_write\n");
 
 	return -1;
 }
@@ -19960,7 +19960,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read0(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> RX_NORMAL_DESC_descriptor_read0\n");
+	pr_debug("--> RX_NORMAL_DESC_descriptor_read0\n");
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
 		return -ENOMEM;
@@ -19993,7 +19993,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read0(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- RX_NORMAL_DESC_descriptor_read0\n");
+	pr_debug("<-- RX_NORMAL_DESC_descriptor_read0\n");
 	return ret;
 }
 
@@ -20012,7 +20012,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read1(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> RX_NORMAL_DESC_descriptor_read1\n");
+	pr_debug("--> RX_NORMAL_DESC_descriptor_read1\n");
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
 		return -ENOMEM;
@@ -20045,7 +20045,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read1(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- RX_NORMAL_DESC_descriptor_read1\n");
+	pr_debug("<-- RX_NORMAL_DESC_descriptor_read1\n");
 	return ret;
 }
 
@@ -20064,7 +20064,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read2(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> RX_NORMAL_DESC_descriptor_read2\n");
+	pr_debug("--> RX_NORMAL_DESC_descriptor_read2\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -20098,7 +20098,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read2(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- RX_NORMAL_DESC_descriptor_read2\n");
+	pr_debug("<-- RX_NORMAL_DESC_descriptor_read2\n");
 	return ret;
 }
 
@@ -20117,7 +20117,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read3(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> RX_NORMAL_DESC_descriptor_read3\n");
+	pr_debug("--> RX_NORMAL_DESC_descriptor_read3\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -20151,7 +20151,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read3(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- RX_NORMAL_DESC_descriptor_read3\n");
+	pr_debug("<-- RX_NORMAL_DESC_descriptor_read3\n");
 	return ret;
 }
 
@@ -20170,7 +20170,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read4(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> RX_NORMAL_DESC_descriptor_read4\n");
+	pr_debug("--> RX_NORMAL_DESC_descriptor_read4\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -20204,7 +20204,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read4(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- RX_NORMAL_DESC_descriptor_read4\n");
+	pr_debug("<-- RX_NORMAL_DESC_descriptor_read4\n");
 	return ret;
 }
 
@@ -20223,7 +20223,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read5(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> RX_NORMAL_DESC_descriptor_read5\n");
+	pr_debug("--> RX_NORMAL_DESC_descriptor_read5\n");
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
 		return -ENOMEM;
@@ -20257,7 +20257,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read5(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- RX_NORMAL_DESC_descriptor_read5\n");
+	pr_debug("<-- RX_NORMAL_DESC_descriptor_read5\n");
 	return ret;
 }
 
@@ -20276,7 +20276,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read6(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> RX_NORMAL_DESC_descriptor_read6\n");
+	pr_debug("--> RX_NORMAL_DESC_descriptor_read6\n");
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
 		return -ENOMEM;
@@ -20310,7 +20310,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read6(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- RX_NORMAL_DESC_descriptor_read6\n");
+	pr_debug("<-- RX_NORMAL_DESC_descriptor_read6\n");
 	return ret;
 }
 
@@ -20329,7 +20329,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read7(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> RX_NORMAL_DESC_descriptor_read7\n");
+	pr_debug("--> RX_NORMAL_DESC_descriptor_read7\n");
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
 		return -ENOMEM;
@@ -20363,7 +20363,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read7(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- RX_NORMAL_DESC_descriptor_read7\n");
+	pr_debug("<-- RX_NORMAL_DESC_descriptor_read7\n");
 	return ret;
 }
 
@@ -20382,7 +20382,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read8(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> RX_NORMAL_DESC_descriptor_read8\n");
+	pr_debug("--> RX_NORMAL_DESC_descriptor_read8\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -20417,7 +20417,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read8(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- RX_NORMAL_DESC_descriptor_read8\n");
+	pr_debug("<-- RX_NORMAL_DESC_descriptor_read8\n");
 	return ret;
 }
 
@@ -20436,7 +20436,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read9(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> RX_NORMAL_DESC_descriptor_read9\n");
+	pr_debug("--> RX_NORMAL_DESC_descriptor_read9\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -20471,7 +20471,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read9(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- RX_NORMAL_DESC_descriptor_read9\n");
+	pr_debug("<-- RX_NORMAL_DESC_descriptor_read9\n");
 	return ret;
 }
 
@@ -20490,7 +20490,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read10(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> RX_NORMAL_DESC_descriptor_read10\n");
+	pr_debug("--> RX_NORMAL_DESC_descriptor_read10\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -20525,7 +20525,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read10(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- RX_NORMAL_DESC_descriptor_read10\n");
+	pr_debug("<-- RX_NORMAL_DESC_descriptor_read10\n");
 	return ret;
 }
 
@@ -20544,7 +20544,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read11(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> RX_NORMAL_DESC_descriptor_read11\n");
+	pr_debug("--> RX_NORMAL_DESC_descriptor_read11\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -20579,7 +20579,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read11(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- RX_NORMAL_DESC_descriptor_read11\n");
+	pr_debug("<-- RX_NORMAL_DESC_descriptor_read11\n");
 	return ret;
 }
 
@@ -20598,7 +20598,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read12(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> RX_NORMAL_DESC_descriptor_read12\n");
+	pr_debug("--> RX_NORMAL_DESC_descriptor_read12\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -20633,7 +20633,7 @@ static ssize_t RX_NORMAL_DESC_descriptor_read12(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- RX_NORMAL_DESC_descriptor_read12\n");
+	pr_debug("<-- RX_NORMAL_DESC_descriptor_read12\n");
 	return ret;
 }
 
@@ -20651,7 +20651,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read0(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> TX_NORMAL_DESC_descriptor_read0\n");
+	pr_debug("--> TX_NORMAL_DESC_descriptor_read0\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -20685,7 +20685,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read0(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- TX_NORMAL_DESC_descriptor_read0\n");
+	pr_debug("<-- TX_NORMAL_DESC_descriptor_read0\n");
 	return ret;
 }
 
@@ -20703,7 +20703,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read1(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> TX_NORMAL_DESC_descriptor_read1\n");
+	pr_debug("--> TX_NORMAL_DESC_descriptor_read1\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -20737,7 +20737,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read1(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- TX_NORMAL_DESC_descriptor_read1\n");
+	pr_debug("<-- TX_NORMAL_DESC_descriptor_read1\n");
 	return ret;
 }
 
@@ -20755,7 +20755,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read2(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> TX_NORMAL_DESC_descriptor_read2\n");
+	pr_debug("--> TX_NORMAL_DESC_descriptor_read2\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -20789,7 +20789,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read2(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- TX_NORMAL_DESC_descriptor_read2\n");
+	pr_debug("<-- TX_NORMAL_DESC_descriptor_read2\n");
 	return ret;
 }
 
@@ -20807,7 +20807,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read3(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> TX_NORMAL_DESC_descriptor_read3\n");
+	pr_debug("--> TX_NORMAL_DESC_descriptor_read3\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -20841,7 +20841,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read3(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- TX_NORMAL_DESC_descriptor_read3\n");
+	pr_debug("<-- TX_NORMAL_DESC_descriptor_read3\n");
 	return ret;
 }
 
@@ -20859,7 +20859,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read4(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> TX_NORMAL_DESC_descriptor_read4\n");
+	pr_debug("--> TX_NORMAL_DESC_descriptor_read4\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -20893,7 +20893,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read4(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- TX_NORMAL_DESC_descriptor_read4\n");
+	pr_debug("<-- TX_NORMAL_DESC_descriptor_read4\n");
 	return ret;
 }
 
@@ -20911,7 +20911,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read5(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> TX_NORMAL_DESC_descriptor_read5\n");
+	pr_debug("--> TX_NORMAL_DESC_descriptor_read5\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -20945,7 +20945,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read5(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- TX_NORMAL_DESC_descriptor_read5\n");
+	pr_debug("<-- TX_NORMAL_DESC_descriptor_read5\n");
 	return ret;
 }
 
@@ -20963,7 +20963,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read6(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> TX_NORMAL_DESC_descriptor_read6\n");
+	pr_debug("--> TX_NORMAL_DESC_descriptor_read6\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -20997,7 +20997,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read6(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- TX_NORMAL_DESC_descriptor_read6\n");
+	pr_debug("<-- TX_NORMAL_DESC_descriptor_read6\n");
 	return ret;
 }
 
@@ -21015,7 +21015,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read7(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> TX_NORMAL_DESC_descriptor_read7\n");
+	pr_debug("--> TX_NORMAL_DESC_descriptor_read7\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -21049,7 +21049,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read7(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- TX_NORMAL_DESC_descriptor_read7\n");
+	pr_debug("<-- TX_NORMAL_DESC_descriptor_read7\n");
 	return ret;
 }
 
@@ -21067,7 +21067,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read8(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> TX_NORMAL_DESC_descriptor_read8\n");
+	pr_debug("--> TX_NORMAL_DESC_descriptor_read8\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -21101,7 +21101,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read8(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- TX_NORMAL_DESC_descriptor_read8\n");
+	pr_debug("<-- TX_NORMAL_DESC_descriptor_read8\n");
 	return ret;
 }
 
@@ -21119,7 +21119,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read9(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> TX_NORMAL_DESC_descriptor_read9\n");
+	pr_debug("--> TX_NORMAL_DESC_descriptor_read9\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -21153,7 +21153,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read9(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- TX_NORMAL_DESC_descriptor_read9\n");
+	pr_debug("<-- TX_NORMAL_DESC_descriptor_read9\n");
 	return ret;
 }
 
@@ -21171,7 +21171,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read10(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> TX_NORMAL_DESC_descriptor_read10\n");
+	pr_debug("--> TX_NORMAL_DESC_descriptor_read10\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -21205,7 +21205,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read10(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- TX_NORMAL_DESC_descriptor_read10\n");
+	pr_debug("<-- TX_NORMAL_DESC_descriptor_read10\n");
 	return ret;
 }
 
@@ -21223,7 +21223,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read11(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> TX_NORMAL_DESC_descriptor_read11\n");
+	pr_debug("--> TX_NORMAL_DESC_descriptor_read11\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -21257,7 +21257,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read11(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- TX_NORMAL_DESC_descriptor_read11\n");
+	pr_debug("<-- TX_NORMAL_DESC_descriptor_read11\n");
 	return ret;
 }
 
@@ -21275,7 +21275,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read12(struct file *file,
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
-	DBGPR("--> TX_NORMAL_DESC_descriptor_read12\n");
+	pr_debug("--> TX_NORMAL_DESC_descriptor_read12\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -21309,7 +21309,7 @@ static ssize_t TX_NORMAL_DESC_descriptor_read12(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- TX_NORMAL_DESC_descriptor_read12\n");
+	pr_debug("<-- TX_NORMAL_DESC_descriptor_read12\n");
 	return ret;
 }
 
@@ -21337,7 +21337,7 @@ static ssize_t TX_NORMAL_DESC_status_read(struct file *file,
 	unsigned int tmp_cur_tx = 0;
 	unsigned int tmp_dirty_tx = 0;
 
-	DBGPR("--> TX_NORMAL_DESC_status_read\n");
+	pr_debug("--> TX_NORMAL_DESC_status_read\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -21472,7 +21472,7 @@ static ssize_t TX_NORMAL_DESC_status_read(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<-- TX_NORMAL_DESC_status_read\n");
+	pr_debug("<-- TX_NORMAL_DESC_status_read\n");
 	return ret;
 }
 
@@ -21498,7 +21498,7 @@ static ssize_t RX_NORMAL_DESC_status_read(struct file *file,
 	UINT dev_desc_cnt = 0;
 	unsigned int cur_rx = prx_ring->cur_rx;
 
-	DBGPR("-->RX_NORMAL_DESC_status_read\n");
+	pr_debug("-->RX_NORMAL_DESC_status_read\n");
 
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
@@ -21557,7 +21557,7 @@ static ssize_t RX_NORMAL_DESC_status_read(struct file *file,
 	kfree(tmp_buf);
 	kfree(debug_buf);
 
-	DBGPR("<--RX_NORMAL_DESC_status_read\n");
+	pr_debug("<--RX_NORMAL_DESC_status_read\n");
 	return ret;
 }
 
@@ -22669,7 +22669,7 @@ int create_debug_files(void)
 	struct dentry *BCM_REGS;
 	struct dentry *pre_padcal_err_counters;
 
-	DBGPR("--> create_debug_files\n");
+	pr_debug("--> create_debug_files\n");
 
 	dir = debugfs_create_dir("2490000.eqos", NULL);
 	if (dir == NULL) {
@@ -30004,13 +30004,13 @@ int create_debug_files(void)
 		goto remove_debug_file;
 	}
 
-	DBGPR("<-- create_debug_files\n");
+	pr_debug("<-- create_debug_files\n");
 
 	return ret;
 
  remove_debug_file:
 	remove_debug_files();
-	DBGPR("<-- create_debug_files\n");
+	pr_debug("<-- create_debug_files\n");
 	return ret;
 }
 
@@ -30027,9 +30027,9 @@ int create_debug_files(void)
 
 void remove_debug_files(void)
 {
-	DBGPR("--> remove_debug_files\n");
+	pr_debug("--> remove_debug_files\n");
 	debugfs_remove_recursive(dir);
-	DBGPR("<-- remove_debug_files\n");
+	pr_debug("<-- remove_debug_files\n");
 }
 
 /* test function to send a packet with buffer aligned to from 0-63.
@@ -30055,7 +30055,7 @@ static void do_transmit_alignment_test(struct eqos_prv_data *pdata)
 	u32 *psrc, *pdst;
 	uint pkt_size = 0x40;
 
-	DBGPR("-->%s()\n", __func__);
+	pr_debug("-->%s()\n", __func__);
 	pr_err("-->%s(): ptxd=%4p\n", __func__, ptxd);
 
 	for (i = 0; i < 2048; i++)
@@ -30107,6 +30107,6 @@ static void do_transmit_alignment_test(struct eqos_prv_data *pdata)
 	else
 		spin_unlock_irqrestore(&pdata->tx_lock, flags);
 
-	DBGPR("<--%s()\n", __func__);
+	pr_debug("<--%s()\n", __func__);
 #endif
 }

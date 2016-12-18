@@ -2716,7 +2716,7 @@ static INT tx_descriptor_reset(UINT idx, struct eqos_prv_data *pdata, UINT qinx)
 {
 	struct s_tx_desc *ptx_desc = GET_TX_DESC_PTR(qinx, idx);
 
-	DBGPR("-->tx_descriptor_reset\n");
+	pr_debug("-->tx_descriptor_reset\n");
 
 	/* update buffer 1 address pointer to zero */
 	TX_NORMAL_DESC_TDES0_WR(ptx_desc->tdes0, 0);
@@ -2727,7 +2727,7 @@ static INT tx_descriptor_reset(UINT idx, struct eqos_prv_data *pdata, UINT qinx)
 	/* set all other control bits (OWN, CTXT, FD, LD, CPC, CIC etc) to zero */
 	TX_NORMAL_DESC_TDES3_WR(ptx_desc->tdes3, 0);
 
-	DBGPR("<--tx_descriptor_reset\n");
+	pr_debug("<--tx_descriptor_reset\n");
 
 	return Y_SUCCESS;
 }
@@ -2746,7 +2746,7 @@ static void rx_descriptor_reset(UINT idx,
 	struct rx_swcx_desc *prx_swcx_desc = GET_RX_BUF_PTR(qinx, idx);
 	struct s_rx_desc *prx_desc = GET_RX_DESC_PTR(qinx, idx);
 
-	DBGPR("-->rx_descriptor_reset\n");
+	pr_debug("-->rx_descriptor_reset\n");
 
 	memset(prx_desc, 0, sizeof(struct s_rx_desc));
 	/* update buffer 1 address pointer */
@@ -2767,7 +2767,7 @@ static void rx_descriptor_reset(UINT idx,
 					(0x81000000 | inte));
 	}
 
-	DBGPR("<--rx_descriptor_reset\n");
+	pr_debug("<--rx_descriptor_reset\n");
 }
 
 /*!
@@ -2787,7 +2787,7 @@ static void rx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 	INT start_index = prx_ring->cur_rx;
 	INT last_index;
 
-	DBGPR("-->rx_descriptor_init\n");
+	pr_debug("-->rx_descriptor_init\n");
 
 	/* initialize all desc */
 
@@ -2835,7 +2835,7 @@ static void rx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 	prx_ring->hw_last_rx_desc_addr =
 		GET_RX_DESC_DMA_ADDR(qinx, start_index);
 
-	DBGPR("<--rx_descriptor_init\n");
+	pr_debug("<--rx_descriptor_init\n");
 }
 
 /*!
@@ -2852,7 +2852,7 @@ static void tx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 	INT i;
 	INT start_index = ptx_ring->cur_tx;
 
-	DBGPR("-->tx_descriptor_init\n");
+	pr_debug("-->tx_descriptor_init\n");
 
 	/* initialze all descriptors. */
 
@@ -2874,7 +2874,7 @@ static void tx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 	/* update the starting address of desc chain/ring */
 	DMA_TDLAR_WR(qinx, GET_TX_DESC_DMA_ADDR(qinx, start_index));
 
-	DBGPR("<--tx_descriptor_init\n");
+	pr_debug("<--tx_descriptor_init\n");
 }
 
 /*!
@@ -2911,7 +2911,7 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 	UINT varptp_enable = 0;
 	uint desc_cnt = tx_pkt_features->desc_cnt;
 
-	DBGPR("-->pre_transmit: qinx = %u\n", qinx);
+	pr_debug("-->pre_transmit: qinx = %u\n", qinx);
 
 #ifdef EQOS_ENABLE_VLAN_TAG
 	TX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_RD(tx_pkt_features->
@@ -3073,7 +3073,7 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 			  EQOS_LPI_TIMER(EQOS_DEFAULT_LPI_TIMER));
 	}
 
-	DBGPR("<--pre_transmit\n");
+	pr_debug("<--pre_transmit\n");
 }
 
 static void update_rx_tail_ptr(unsigned int qinx, unsigned int dma_addr)
@@ -3218,7 +3218,7 @@ static INT eqos_pad_calibrate(struct eqos_prv_data *pdata)
 	if (tegra_platform_is_unit_fpga())
 		return 0;
 
-	DBGPR("-->%s()\n", __func__);
+	pr_debug("-->%s()\n", __func__);
 
 	/* 1. Set field PAD_E_INPUT_OR_E_PWRD in
 	 * reg ETHER_QOS_SDMEMCOMPPADCTRL_0
@@ -3265,7 +3265,7 @@ static INT eqos_pad_calibrate(struct eqos_prv_data *pdata)
 	 */
 	PAD_CRTL_E_INPUT_OR_E_PWRD_WR(0);
 
-	DBGPR("<--%s()\n", __func__);
+	pr_debug("<--%s()\n", __func__);
 
 	return ret;
 }
@@ -3313,7 +3313,7 @@ static INT eqos_yexit(void)
 	volatile ULONG dma_bmr;
 	int i, j;
 
-	DBGPR("-->eqos_yexit\n");
+	pr_debug("-->eqos_yexit\n");
 
 	/* issue a software reset */
 	DMA_BMR_SWR_WR(0x1);
@@ -3345,7 +3345,7 @@ static INT eqos_yexit(void)
 		VIRT_INTR_CH_STAT_WR(j, i);
 	}
 
-	DBGPR("<--eqos_yexit\n");
+	pr_debug("<--eqos_yexit\n");
 
 	return Y_SUCCESS;
 }
@@ -3485,7 +3485,7 @@ static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 	UINT p_rx_fifo = EQOS_256, p_tx_fifo = EQOS_256;
 	uint i;
 
-	DBGPR("-->configure_mtl_queue\n");
+	pr_debug("-->configure_mtl_queue\n");
 
 	/*Flush Tx Queue */
 	MTL_QTOMR_FTQ_WR(qinx, 0x1);
@@ -3586,7 +3586,7 @@ static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 		}
 	}
 
-	DBGPR("<--configure_mtl_queue\n");
+	pr_debug("<--configure_mtl_queue\n");
 
 	return Y_SUCCESS;
 }
@@ -3598,7 +3598,7 @@ static INT configure_dma_channel(UINT qinx, struct eqos_prv_data *pdata)
 	ULONG p_fifo, pbl;
 	uint rx_buf_size;
 
-	DBGPR("-->configure_dma_channel\n");
+	pr_debug("-->configure_dma_channel\n");
 
 	/*Enable OSF mode */
 	DMA_TCR_OSP_WR(qinx, 0x1);
@@ -3650,7 +3650,7 @@ static INT configure_dma_channel(UINT qinx, struct eqos_prv_data *pdata)
 	/* start RX DMA */
 	DMA_RCR_ST_WR(qinx, 0x1);
 
-	DBGPR("<--configure_dma_channel\n");
+	pr_debug("<--configure_dma_channel\n");
 
 	return Y_SUCCESS;
 }
@@ -3687,7 +3687,7 @@ static INT configure_mac(struct eqos_prv_data *pdata)
 	ULONG mac_mcr;
 	UINT qinx;
 
-	DBGPR("-->configure_mac\n");
+	pr_debug("-->configure_mac\n");
 
 	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
 		MAC_RQC0R_RXQEN_WR(qinx, pdata->dt_cfg.rxq_ctrl[qinx] & 0x3);
@@ -3805,7 +3805,7 @@ static INT configure_mac(struct eqos_prv_data *pdata)
 
 	enable_mac_interrupts();
 
-	DBGPR("<--configure_mac\n");
+	pr_debug("<--configure_mac\n");
 
 	return Y_SUCCESS;
 }
@@ -3822,7 +3822,7 @@ static INT eqos_yinit(struct eqos_prv_data *pdata)
 	UINT qinx;
 	int i, j;
 
-	DBGPR("-->eqos_yinit\n");
+	pr_debug("-->eqos_yinit\n");
 
 	/* reset mmc counters */
 	MMC_CNTRL_WR(0x1);
@@ -3848,7 +3848,7 @@ static INT eqos_yinit(struct eqos_prv_data *pdata)
 		configure_dma_channel(qinx, pdata);
 	}
 
-	DBGPR("<--eqos_yinit\n");
+	pr_debug("<--eqos_yinit\n");
 
 	return Y_SUCCESS;
 }
@@ -3868,7 +3868,7 @@ static INT eqos_yinit(struct eqos_prv_data *pdata)
 void eqos_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 {
 
-	DBGPR("-->eqos_init_function_ptrs_dev\n");
+	pr_debug("-->eqos_init_function_ptrs_dev\n");
 
 	hw_if->tx_complete = tx_complete;
 	hw_if->tx_window_error = NULL;
@@ -4079,5 +4079,5 @@ void eqos_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	/*for PTP channel routingi */
 	hw_if->config_ptp_channel = config_ptp_channel;
 
-	DBGPR("<--eqos_init_function_ptrs_dev\n");
+	pr_debug("<--eqos_init_function_ptrs_dev\n");
 }

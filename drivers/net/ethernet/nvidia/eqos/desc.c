@@ -65,7 +65,7 @@ static void eqos_tx_desc_free_mem(struct eqos_prv_data *pdata,
 	UINT qinx;
 	uint tx_ring_size = sizeof(struct s_tx_desc) * TX_DESC_CNT;
 
-	DBGPR("-->eqos_tx_desc_free_mem: tx_qcnt = %d\n", tx_qcnt);
+	pr_debug("-->eqos_tx_desc_free_mem: tx_qcnt = %d\n", tx_qcnt);
 
 	for (qinx = 0; qinx < tx_qcnt; qinx++) {
 		ptx_ring = GET_TX_WRAPPER_DESC(qinx);
@@ -84,7 +84,7 @@ static void eqos_tx_desc_free_mem(struct eqos_prv_data *pdata,
 		pdata->ptst_buf, (dma_addr_t)pdata->tst_buf_dma_addr);
 #endif
 
-	DBGPR("<--eqos_tx_desc_free_mem\n");
+	pr_debug("<--eqos_tx_desc_free_mem\n");
 }
 
 /*!
@@ -104,7 +104,7 @@ static void eqos_rx_desc_free_mem(struct eqos_prv_data *pdata,
 	UINT qinx = 0;
 	uint rx_ring_size = sizeof(struct s_rx_desc) * RX_DESC_CNT;
 
-	DBGPR("-->eqos_rx_desc_free_mem: rx_qcnt = %d\n", rx_qcnt);
+	pr_debug("-->eqos_rx_desc_free_mem: rx_qcnt = %d\n", rx_qcnt);
 
 	for (qinx = 0; qinx < rx_qcnt; qinx++) {
 		prx_ring = GET_RX_WRAPPER_DESC(qinx);
@@ -118,7 +118,7 @@ static void eqos_rx_desc_free_mem(struct eqos_prv_data *pdata,
 		}
 	}
 
-	DBGPR("<--eqos_rx_desc_free_mem\n");
+	pr_debug("<--eqos_rx_desc_free_mem\n");
 }
 
 /*!
@@ -137,7 +137,7 @@ static int eqos_alloc_queue_struct(struct eqos_prv_data *pdata)
 {
 	int ret = 0;
 
-	DBGPR("-->eqos_alloc_queue_struct: tx_queue_cnt = %d,"\
+	pr_debug("-->eqos_alloc_queue_struct: tx_queue_cnt = %d,"\
 		"rx_queue_cnt = %d\n", pdata->tx_queue_cnt, pdata->rx_queue_cnt);
 
 	pdata->tx_queue =
@@ -158,7 +158,7 @@ static int eqos_alloc_queue_struct(struct eqos_prv_data *pdata)
 		goto err_out_rx_q_alloc_failed;
 	}
 
-	DBGPR("<--eqos_alloc_queue_struct\n");
+	pr_debug("<--eqos_alloc_queue_struct\n");
 
 	return ret;
 
@@ -182,7 +182,7 @@ err_out_tx_q_alloc_failed:
 
 static void eqos_free_queue_struct(struct eqos_prv_data *pdata)
 {
-	DBGPR("-->eqos_free_queue_struct\n");
+	pr_debug("-->eqos_free_queue_struct\n");
 
 	if (pdata->tx_queue != NULL) {
 		kfree(pdata->tx_queue);
@@ -194,7 +194,7 @@ static void eqos_free_queue_struct(struct eqos_prv_data *pdata)
 		pdata->rx_queue = NULL;
 	}
 
-	DBGPR("<--eqos_free_queue_struct\n");
+	pr_debug("<--eqos_free_queue_struct\n");
 }
 
 /*!
@@ -238,7 +238,7 @@ static INT allocate_buffer_and_desc(struct eqos_prv_data *pdata)
 	uint tx_swcx_size = sizeof(struct tx_swcx_desc) * TX_DESC_CNT;
 	uint rx_swcx_size = sizeof(struct rx_swcx_desc) * RX_DESC_CNT;
 
-	DBGPR("-->allocate_buffer_and_desc: TX_QUEUE_CNT = %d, "\
+	pr_debug("-->allocate_buffer_and_desc: TX_QUEUE_CNT = %d, "\
 		"RX_QUEUE_CNT = %d\n", EQOS_TX_QUEUE_CNT,
 		EQOS_RX_QUEUE_CNT);
 
@@ -306,7 +306,7 @@ static INT allocate_buffer_and_desc(struct eqos_prv_data *pdata)
 	}
 #endif
 
-	DBGPR("<--allocate_buffer_and_desc\n");
+	pr_debug("<--allocate_buffer_and_desc\n");
 
 	return ret;
 
@@ -354,7 +354,7 @@ static void eqos_wrapper_tx_descriptor_init_single_q(
 	dma_addr_t desc_dma = GET_TX_DESC_DMA_ADDR(qinx, 0);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 
-	DBGPR("-->eqos_wrapper_tx_descriptor_init_single_q: "\
+	pr_debug("-->eqos_wrapper_tx_descriptor_init_single_q: "\
 		"qinx = %u\n", qinx);
 
 	for (i = 0; i < TX_DESC_CNT; i++) {
@@ -373,7 +373,7 @@ static void eqos_wrapper_tx_descriptor_init_single_q(
 	hw_if->tx_desc_init(pdata, qinx);
 	ptx_ring->cur_tx = 0;
 
-	DBGPR("<--eqos_wrapper_tx_descriptor_init_single_q\n");
+	pr_debug("<--eqos_wrapper_tx_descriptor_init_single_q\n");
 }
 
 /*!
@@ -402,7 +402,7 @@ static void eqos_wrapper_rx_descriptor_init_single_q(
 	dma_addr_t desc_dma = GET_RX_DESC_DMA_ADDR(qinx, 0);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 
-	DBGPR("-->eqos_wrapper_rx_descriptor_init_single_q: "\
+	pr_debug("-->eqos_wrapper_rx_descriptor_init_single_q: "\
 		"qinx = %u\n", qinx);
 
 	memset(prx_swcx_desc, 0, (sizeof(struct rx_swcx_desc) * RX_DESC_CNT));
@@ -429,7 +429,7 @@ static void eqos_wrapper_rx_descriptor_init_single_q(
 	hw_if->rx_desc_init(pdata, qinx);
 	prx_ring->cur_rx = 0;
 
-	DBGPR("<--eqos_wrapper_rx_descriptor_init_single_q\n");
+	pr_debug("<--eqos_wrapper_rx_descriptor_init_single_q\n");
 }
 
 static void eqos_wrapper_tx_descriptor_init(struct eqos_prv_data
@@ -437,13 +437,13 @@ static void eqos_wrapper_tx_descriptor_init(struct eqos_prv_data
 {
 	UINT qinx;
 
-	DBGPR("-->eqos_wrapper_tx_descriptor_init\n");
+	pr_debug("-->eqos_wrapper_tx_descriptor_init\n");
 
 	for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++) {
 		eqos_wrapper_tx_descriptor_init_single_q(pdata, qinx);
 	}
 
-	DBGPR("<--eqos_wrapper_tx_descriptor_init\n");
+	pr_debug("<--eqos_wrapper_tx_descriptor_init\n");
 }
 
 static void eqos_wrapper_rx_descriptor_init(struct eqos_prv_data
@@ -452,7 +452,7 @@ static void eqos_wrapper_rx_descriptor_init(struct eqos_prv_data
 	struct eqos_rx_queue *rx_queue = NULL;
 	UINT qinx;
 
-	DBGPR("-->eqos_wrapper_rx_descriptor_init\n");
+	pr_debug("-->eqos_wrapper_rx_descriptor_init\n");
 
 	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
 		rx_queue = GET_RX_QUEUE_PTR(qinx);
@@ -476,7 +476,7 @@ static void eqos_wrapper_rx_descriptor_init(struct eqos_prv_data
 		eqos_wrapper_rx_descriptor_init_single_q(pdata, qinx);
 	}
 
-	DBGPR("<--eqos_wrapper_rx_descriptor_init\n");
+	pr_debug("<--eqos_wrapper_rx_descriptor_init\n");
 }
 
 /*!
@@ -491,7 +491,7 @@ static void eqos_wrapper_rx_descriptor_init(struct eqos_prv_data
 
 static void eqos_rx_free_mem(struct eqos_prv_data *pdata)
 {
-	DBGPR("-->eqos_rx_free_mem\n");
+	pr_debug("-->eqos_rx_free_mem\n");
 
 	/* free RX descriptor */
 	eqos_rx_desc_free_mem(pdata, EQOS_RX_QUEUE_CNT);
@@ -499,7 +499,7 @@ static void eqos_rx_free_mem(struct eqos_prv_data *pdata)
 	/* free RX wrapper buffer */
 	eqos_rx_buf_free_mem(pdata, EQOS_RX_QUEUE_CNT);
 
-	DBGPR("<--eqos_rx_free_mem\n");
+	pr_debug("<--eqos_rx_free_mem\n");
 }
 
 /*!
@@ -515,7 +515,7 @@ static void eqos_rx_free_mem(struct eqos_prv_data *pdata)
 
 static void eqos_tx_free_mem(struct eqos_prv_data *pdata)
 {
-	DBGPR("-->eqos_tx_free_mem\n");
+	pr_debug("-->eqos_tx_free_mem\n");
 
 	/* free TX descriptor */
 	eqos_tx_desc_free_mem(pdata, EQOS_TX_QUEUE_CNT);
@@ -523,7 +523,7 @@ static void eqos_tx_free_mem(struct eqos_prv_data *pdata)
 	/* free TX buffer */
 	eqos_tx_buf_free_mem(pdata, EQOS_TX_QUEUE_CNT);
 
-	DBGPR("<--eqos_tx_free_mem\n");
+	pr_debug("<--eqos_tx_free_mem\n");
 }
 
 /*!
@@ -541,7 +541,7 @@ static void eqos_tx_skb_free_mem_single_q(struct eqos_prv_data *pdata,
 	struct tx_ring *ptx_ring =
 	    GET_TX_WRAPPER_DESC(qinx);
 
-	DBGPR("-->%s(): qinx = %u\n", __func__, qinx);
+	pr_debug("-->%s(): qinx = %u\n", __func__, qinx);
 
 	/* Unmap and return skb for tx desc/bufs owned by hw.
 	 * Caller ensures that hw is no longer accessing these descriptors
@@ -554,7 +554,7 @@ static void eqos_tx_skb_free_mem_single_q(struct eqos_prv_data *pdata,
 		ptx_ring->free_desc_cnt++;
 		ptx_ring->tx_pkt_queued--;
 	}
-	DBGPR("<--%s()\n", __func__);
+	pr_debug("<--%s()\n", __func__);
 }
 
 /*!
@@ -572,12 +572,12 @@ static void eqos_tx_skb_free_mem(struct eqos_prv_data *pdata,
 {
 	UINT qinx;
 
-	DBGPR("-->eqos_tx_skb_free_mem: tx_qcnt = %d\n", tx_qcnt);
+	pr_debug("-->eqos_tx_skb_free_mem: tx_qcnt = %d\n", tx_qcnt);
 
 	for (qinx = 0; qinx < tx_qcnt; qinx++)
 		eqos_tx_skb_free_mem_single_q(pdata, qinx);
 
-	DBGPR("<--eqos_tx_skb_free_mem\n");
+	pr_debug("<--eqos_tx_skb_free_mem\n");
 }
 
 
@@ -595,12 +595,12 @@ static void eqos_rx_skb_free_mem_single_q(struct eqos_prv_data *pdata,
 {
 	UINT i;
 
-	DBGPR("-->eqos_rx_skb_free_mem_single_q: qinx = %u\n", qinx);
+	pr_debug("-->eqos_rx_skb_free_mem_single_q: qinx = %u\n", qinx);
 
 	for (i = 0; i < RX_DESC_CNT; i++)
 		eqos_unmap_rx_skb(pdata, GET_RX_BUF_PTR(qinx, i));
 
-	DBGPR("<--eqos_rx_skb_free_mem_single_q\n");
+	pr_debug("<--eqos_rx_skb_free_mem_single_q\n");
 }
 
 /*!
@@ -618,12 +618,12 @@ static void eqos_rx_skb_free_mem(struct eqos_prv_data *pdata,
 {
 	UINT qinx;
 
-	DBGPR("-->eqos_rx_skb_free_mem: rx_qcnt = %d\n", rx_qcnt);
+	pr_debug("-->eqos_rx_skb_free_mem: rx_qcnt = %d\n", rx_qcnt);
 
 	for (qinx = 0; qinx < rx_qcnt; qinx++)
 		eqos_rx_skb_free_mem_single_q(pdata, qinx);
 
-	DBGPR("<--eqos_rx_skb_free_mem\n");
+	pr_debug("<--eqos_rx_skb_free_mem\n");
 }
 
 /*!
@@ -641,7 +641,7 @@ static void eqos_tx_buf_free_mem(struct eqos_prv_data *pdata,
 {
 	UINT qinx;
 
-	DBGPR("-->eqos_tx_buf_free_mem: tx_qcnt = %d\n", tx_qcnt);
+	pr_debug("-->eqos_tx_buf_free_mem: tx_qcnt = %d\n", tx_qcnt);
 
 	for (qinx = 0; qinx < tx_qcnt; qinx++) {
 		/* free TX buffer */
@@ -651,7 +651,7 @@ static void eqos_tx_buf_free_mem(struct eqos_prv_data *pdata,
 		}
 	}
 
-	DBGPR("<--eqos_tx_buf_free_mem\n");
+	pr_debug("<--eqos_tx_buf_free_mem\n");
 }
 
 /*!
@@ -669,7 +669,7 @@ static void eqos_rx_buf_free_mem(struct eqos_prv_data *pdata,
 {
 	UINT qinx = 0;
 
-	DBGPR("-->eqos_rx_buf_free_mem: rx_qcnt = %d\n", rx_qcnt);
+	pr_debug("-->eqos_rx_buf_free_mem: rx_qcnt = %d\n", rx_qcnt);
 
 	for (qinx = 0; qinx < rx_qcnt; qinx++) {
 		if (GET_RX_BUF_PTR(qinx, 0)) {
@@ -678,7 +678,7 @@ static void eqos_rx_buf_free_mem(struct eqos_prv_data *pdata,
 		}
 	}
 
-	DBGPR("<--eqos_rx_buf_free_mem\n");
+	pr_debug("<--eqos_rx_buf_free_mem\n");
 }
 
 /*!
@@ -705,7 +705,7 @@ static int eqos_get_skb_hdr(struct sk_buff *skb, void **iph,
 {
 	struct eqos_prv_data *pdata = ptr;
 
-	DBGPR("-->eqos_get_skb_hdr\n");
+	pr_debug("-->eqos_get_skb_hdr\n");
 
 	if (!pdata->tcp_pkt)
 		return -1;
@@ -716,7 +716,7 @@ static int eqos_get_skb_hdr(struct sk_buff *skb, void **iph,
 	*tcph = tcp_hdr(skb);
 	*flags = LRO_IPV4 | LRO_TCP;
 
-	DBGPR("<--eqos_get_skb_hdr\n");
+	pr_debug("<--eqos_get_skb_hdr\n");
 
 	return 0;
 }
@@ -746,14 +746,14 @@ static int eqos_handle_tso(struct net_device *dev,
 	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR(qinx);
 	int ret = 1;
 
-	DBGPR("-->eqos_handle_tso\n");
+	pr_debug("-->eqos_handle_tso\n");
 
 	if (skb_is_gso(skb) == 0) {
-		DBGPR("This is not a TSO/LSO/GSO packet\n");
+		pr_debug("This is not a TSO/LSO/GSO packet\n");
 		return 0;
 	}
 
-	DBGPR("Got TSO packet\n");
+	pr_debug("Got TSO packet\n");
 
 	if (skb_header_cloned(skb)) {
 		ret = pskb_expand_head(skb, 0, 0, GFP_ATOMIC);
@@ -767,12 +767,12 @@ static int eqos_handle_tso(struct net_device *dev,
 	tx_pkt_features->pay_len = (skb->len - tx_pkt_features->hdr_len);
 	tx_pkt_features->tcp_hdr_len = tcp_hdrlen(skb);
 
-	DBGPR("mss         = %lu\n", tx_pkt_features->mss);
-	DBGPR("hdr_len     = %lu\n", tx_pkt_features->hdr_len);
-	DBGPR("pay_len     = %lu\n", tx_pkt_features->pay_len);
-	DBGPR("tcp_hdr_len = %lu\n", tx_pkt_features->tcp_hdr_len);
+	pr_debug("mss         = %lu\n", tx_pkt_features->mss);
+	pr_debug("hdr_len     = %lu\n", tx_pkt_features->hdr_len);
+	pr_debug("pay_len     = %lu\n", tx_pkt_features->pay_len);
+	pr_debug("tcp_hdr_len = %lu\n", tx_pkt_features->tcp_hdr_len);
 
-	DBGPR("<--eqos_handle_tso\n");
+	pr_debug("<--eqos_handle_tso\n");
 
 	return ret;
 }
@@ -782,7 +782,7 @@ static int eqos_map_non_page_buffs_64(struct eqos_prv_data *pdata,
 	struct tx_swcx_desc *ptx_swcx_desc, struct sk_buff *skb,
 	unsigned int offset, unsigned int size)
 {
-	DBGPR("-->eqos_map_non_page_buffs_64");
+	pr_debug("-->eqos_map_non_page_buffs_64");
 
 	if (size > EQOS_MAX_DATA_PER_TX_BUF) {
 		pr_err("failed to allocate buffer(size = %d) with %d size\n",
@@ -803,7 +803,7 @@ static int eqos_map_non_page_buffs_64(struct eqos_prv_data *pdata,
 	ptx_swcx_desc->len = size;
 	ptx_swcx_desc->buf1_mapped_as_page = Y_FALSE;
 
-	DBGPR("<--eqos_map_non_page_buffs_64");
+	pr_debug("<--eqos_map_non_page_buffs_64");
 	return 0;
 }
 
@@ -815,7 +815,7 @@ static int eqos_map_page_buffs_64(struct eqos_prv_data *pdata,
 {
 	unsigned int page_idx = (frag->page_offset + offset) >> PAGE_SHIFT;
 	unsigned int page_offset = (frag->page_offset + offset) & ~PAGE_MASK;
-	DBGPR("-->eqos_map_page_buffs_64\n");
+	pr_debug("-->eqos_map_page_buffs_64\n");
 	/* fill the first buffer pointer in buffer->dma */
 	ptx_swcx_desc->dma = dma_map_page((&pdata->pdev->dev),
 				(frag->page.p + page_idx),
@@ -830,7 +830,7 @@ static int eqos_map_page_buffs_64(struct eqos_prv_data *pdata,
 	ptx_swcx_desc->len = size;
 	ptx_swcx_desc->buf1_mapped_as_page = Y_TRUE;
 
-	DBGPR("<--eqos_map_page_buffs_64\n");
+	pr_debug("<--eqos_map_page_buffs_64\n");
 	return 0;
 }
 
@@ -875,7 +875,7 @@ static int tx_swcx_alloc(struct net_device *dev, struct sk_buff *skb)
 	int ret = -1;
 	bool is_pkt_tso, is_pkt_vlan;
 
-	DBGPR("-->%s(): cur_tx = %d, qinx = %u\n", __func__, idx, qinx);
+	pr_debug("-->%s(): cur_tx = %d, qinx = %u\n", __func__, idx, qinx);
 
 	TX_PKT_FEATURES_PKT_ATTRIBUTES_TSO_ENABLE_RD(
 		ppkt_opts->pkt_attributes, is_pkt_tso);
@@ -900,7 +900,7 @@ static int tx_swcx_alloc(struct net_device *dev, struct sk_buff *skb)
 		len = (skb->len - skb->data_len);
 	}
 
-	DBGPR("%s(): skb->len - skb->data_len = %d, hdr_len = %d\n",
+	pr_debug("%s(): skb->len - skb->data_len = %d, hdr_len = %d\n",
 	      __func__, len, hdr_len);
 
 	totlen += len;
@@ -980,7 +980,7 @@ static int tx_swcx_alloc(struct net_device *dev, struct sk_buff *skb)
 	if (!is_pkt_tso)
 		ppkt_opts->pay_len = totlen;
 
-	DBGPR("<--%s(): ptx_swcx->dma = %#llx\n",
+	pr_debug("<--%s(): ptx_swcx->dma = %#llx\n",
 	      __func__, (ULONG_LONG) ptx_swcx->dma);
 
 	return cnt;
@@ -1004,7 +1004,7 @@ tx_swcx_map_failed:
 static void tx_swcx_free(struct eqos_prv_data *pdata,
 			 struct tx_swcx_desc *ptx_swcx)
 {
-	DBGPR("-->%s()\n", __func__);
+	pr_debug("-->%s()\n", __func__);
 	if (ptx_swcx->dma) {
 		if (ptx_swcx->buf1_mapped_as_page == Y_TRUE)
 			dma_unmap_page((&pdata->pdev->dev), ptx_swcx->dma,
@@ -1025,7 +1025,7 @@ static void tx_swcx_free(struct eqos_prv_data *pdata,
 	}
 	ptx_swcx->len = 0;
 
-	DBGPR("<--%s()\n", __func__);
+	pr_debug("<--%s()\n", __func__);
 }
 
 /*!
@@ -1041,7 +1041,7 @@ static void tx_swcx_free(struct eqos_prv_data *pdata,
 static void eqos_unmap_rx_skb(struct eqos_prv_data *pdata,
 				     struct rx_swcx_desc *prx_swcx_desc)
 {
-	DBGPR("-->eqos_unmap_rx_skb\n");
+	pr_debug("-->eqos_unmap_rx_skb\n");
 
 	/* unmap the first buffer */
 	if (prx_swcx_desc->dma) {
@@ -1066,7 +1066,7 @@ static void eqos_unmap_rx_skb(struct eqos_prv_data *pdata,
 		prx_swcx_desc->skb = NULL;
 	}
 
-	DBGPR("<--eqos_unmap_rx_skb\n");
+	pr_debug("<--eqos_unmap_rx_skb\n");
 }
 
 /*!
@@ -1091,7 +1091,7 @@ static void eqos_re_alloc_skb(struct eqos_prv_data *pdata,
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 	int tail_idx;
 
-	DBGPR("-->%s: prx_ring->skb_realloc_idx = %d qinx=%u\n",
+	pr_debug("-->%s: prx_ring->skb_realloc_idx = %d qinx=%u\n",
 	      __func__, prx_ring->skb_realloc_idx, qinx);
 
 	for (i = 0; i < prx_ring->dirty_rx; i++) {
@@ -1114,7 +1114,7 @@ static void eqos_re_alloc_skb(struct eqos_prv_data *pdata,
 		GET_RX_DESC_DMA_ADDR(qinx, tail_idx));
 	prx_ring->dirty_rx = 0;
 
-	DBGPR("<--eqos_re_alloc_skb\n");
+	pr_debug("<--eqos_re_alloc_skb\n");
 
 	return;
 }
@@ -1133,7 +1133,7 @@ static void eqos_re_alloc_skb(struct eqos_prv_data *pdata,
 void eqos_init_function_ptrs_desc(struct desc_if_struct *desc_if)
 {
 
-	DBGPR("-->eqos_init_function_ptrs_desc\n");
+	pr_debug("-->eqos_init_function_ptrs_desc\n");
 
 	desc_if->alloc_queue_struct = eqos_alloc_queue_struct;
 	desc_if->free_queue_struct = eqos_free_queue_struct;
@@ -1159,5 +1159,5 @@ void eqos_init_function_ptrs_desc(struct desc_if_struct *desc_if)
 
 	desc_if->handle_tso = eqos_handle_tso;
 
-	DBGPR("<--eqos_init_function_ptrs_desc\n");
+	pr_debug("<--eqos_init_function_ptrs_desc\n");
 }

@@ -132,12 +132,13 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 	csi = to_csi(subdev);
 	if (!csi)
 		return -EINVAL;
-	if (enable) {
-		tegra_mipi_bias_pad_enable();
-		csi->fops->mipical(chan);
-	} else
-		tegra_mipi_bias_pad_disable();
-
+	if (!chan->pg_mode) {
+		if (enable) {
+			tegra_mipi_bias_pad_enable();
+			csi->fops->mipical(chan);
+		} else
+			tegra_mipi_bias_pad_disable();
+	}
 	if (tegra_chan->bypass)
 		return 0;
 

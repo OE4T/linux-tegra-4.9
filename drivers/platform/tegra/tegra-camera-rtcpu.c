@@ -108,6 +108,7 @@ struct sce_resets {
 static const char * const sce_reg_names[] = {
 	"sce-cfg",
 	"sce-pm",
+	"sce-fw",
 };
 
 static const char * const ape_clock_names[] = {
@@ -207,6 +208,7 @@ struct tegra_cam_rtcpu {
 		struct {
 			void __iomem *cfg_base;
 			void __iomem *pm_base;
+			void __iomem *fw_base;
 		};
 	};
 	struct clk *clocks[NUM(clock_names)];
@@ -829,6 +831,11 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	ret = tegra_cam_rtcpu_get_resources(dev);
 	if (ret)
 		return ret;
+
+	if (rtcpu->fw_base != NULL && readl(rtcpu->fw_base) == 0) {
+		dev_info(dev, "no firmware");
+		return -ENODEV;
+	}
 
 	if (of_property_read_bool(dev->of_node, "power-domains")) {
 		rtcpu->power_domain = true;

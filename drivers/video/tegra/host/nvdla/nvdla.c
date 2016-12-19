@@ -89,6 +89,87 @@ int nvhost_nvdla_flcn_isr(struct platform_device *pdev)
 }
 
 /* Helper API's */
+static int nvdla_alloc_cmd_memory(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
+	int err = 0;
+
+	/* allocate memory for command */
+	nvdla_dev->cmd_mem_va = dma_alloc_attrs(&pdev->dev,
+			MAX_CMD_SIZE * MAX_COMMANDS_PER_DEVICE,
+			&nvdla_dev->cmd_mem_pa, GFP_KERNEL,
+			&attrs);
+
+	if (nvdla_dev->cmd_mem_va == NULL) {
+		err = -ENOMEM;
+		goto err_alloc_cmd_mem;
+	}
+
+	mutex_init(&nvdla_dev->cmd_mem_lock);
+	nvdla_dev->cmd_alloc_table = 0;
+
+err_alloc_cmd_mem:
+	return err;
+}
+
+static int nvdla_free_cmd_memory(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
+
+	/* free memory for command */
+	dma_free_attrs(&pdev->dev,
+			MAX_CMD_SIZE * MAX_COMMANDS_PER_DEVICE,
+			nvdla_dev->cmd_mem_va, nvdla_dev->cmd_mem_pa, &attrs);
+
+	nvdla_dev->cmd_alloc_table = 0;
+
+	return 0;
+}
+
+int nvdla_get_cmd_memory(struct platform_device *pdev,
+		struct nvdla_cmd_mem_info *cmd_mem_info)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
+	int err = 0, index, offset;
+
+	mutex_lock(&nvdla_dev->cmd_mem_lock);
+
+	index = find_first_zero_bit(&nvdla_dev->cmd_alloc_table,
+			MAX_COMMANDS_PER_DEVICE);
+	if (index >= MAX_COMMANDS_PER_DEVICE) {
+		nvdla_dbg_err(pdev, "failed to get cmd mem from pool\n");
+		err = -EAGAIN;
+		goto err_get_mem;
+	}
+
+	/* assign mem */
+	set_bit(index, &nvdla_dev->cmd_alloc_table);
+
+	offset = NVDLA_CMD_OFFSET(index);
+	cmd_mem_info->va = nvdla_dev->cmd_mem_va + offset;
+	cmd_mem_info->pa = nvdla_dev->cmd_mem_pa + offset;
+	cmd_mem_info->index = index;
+
+err_get_mem:
+	mutex_unlock(&nvdla_dev->cmd_mem_lock);
+	return err;
+}
+
+int nvdla_put_cmd_memory(struct platform_device *pdev, int index)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
+
+	mutex_lock(&nvdla_dev->cmd_mem_lock);
+	clear_bit(index, &nvdla_dev->cmd_alloc_table);
+	mutex_unlock(&nvdla_dev->cmd_mem_lock);
+
+	return 0;
+}
+
 int nvdla_send_cmd(struct platform_device *pdev,
 		   uint32_t method_id, uint32_t method_data, bool wait)
 {
@@ -146,7 +227,7 @@ static int nvdla_alloc_trace_region(struct platform_device *pdev)
 {
 	int err = 0;
 	struct flcn *m;
-	dma_addr_t tregion_pa;
+	struct nvdla_cmd_mem_info trace_cmd_mem_info;
 	struct dla_region_printf *trace_region = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 
@@ -177,28 +258,25 @@ static int nvdla_alloc_trace_region(struct platform_device *pdev)
 		}
 	}
 
-	/* allocate memory for trace command */
-	trace_region = (struct dla_region_printf *)
-			dma_alloc_attrs(&pdev->dev,
-			sizeof(struct dla_region_printf),
-			&tregion_pa, GFP_KERNEL, &attrs);
-	if (!trace_region) {
+	/* assign memory for trace command */
+	err = nvdla_get_cmd_memory(pdev, &trace_cmd_mem_info);
+	if (err) {
 		nvdla_dbg_err(pdev,
 			"dma allocation failed for trace command.");
-		err = -ENOMEM;
 		goto alloc_trace_cmd_failed;
 	}
+
+	trace_region = (struct dla_region_printf *)(trace_cmd_mem_info.va);
 
 	trace_region->region = DLA_REGION_TRACE;
 	trace_region->address = m->trace_dump_pa;
 	trace_region->size = TRACE_BUFFER_SIZE;
 
 	err = nvdla_send_cmd(pdev, DLA_CMD_SET_REGIONS,
-	       ALIGNED_DMA(tregion_pa), true);
+	       ALIGNED_DMA(trace_cmd_mem_info.pa), true);
 
-	/* free memory allocated for trace command */
-	dma_free_attrs(&pdev->dev, sizeof(struct dla_region_printf),
-		trace_region, tregion_pa, &attrs);
+	/* release memory allocated for trace command */
+	nvdla_put_cmd_memory(pdev, trace_cmd_mem_info.index);
 
 	if (err != 0) {
 		nvdla_dbg_err(pdev, "failed to send trace command");
@@ -225,8 +303,8 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 {
 	int err = 0;
 	struct flcn *m;
-	dma_addr_t region_pa;
 	struct dla_region_printf *region;
+	struct nvdla_cmd_mem_info debug_cmd_mem_info;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 
 	if (!pdata->flcn_isr)
@@ -253,28 +331,25 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 		}
 	}
 
-	/* allocate memory for command */
-	region = (struct dla_region_printf *)dma_alloc_attrs(&pdev->dev,
-					sizeof(struct dla_region_printf),
-					&region_pa, GFP_KERNEL, &attrs);
-	if (!region) {
-		nvdla_dbg_err(pdev, "command region dma alloc failed");
-		err = -ENOMEM;
+	/* assign memory for command */
+	err = nvdla_get_cmd_memory(pdev, &debug_cmd_mem_info);
+	if (err) {
+		nvdla_dbg_err(pdev, "dma alloc for command failed");
 		goto set_region_failed;
 	}
 
+	region = (struct dla_region_printf *)debug_cmd_mem_info.va;
 	region->region = DLA_REGION_PRINTF;
 	region->address = ALIGNED_DMA(m->debug_dump_pa);
 	region->size = DEBUG_BUFFER_SIZE;
 
 	/* pass dump region to falcon */
 	err = nvdla_send_cmd(pdev, DLA_CMD_SET_REGIONS,
-			       ALIGNED_DMA(region_pa), true);
+			       ALIGNED_DMA(debug_cmd_mem_info.pa), true);
 
 
-	/* free memory allocated for debug print command */
-	dma_free_attrs(&pdev->dev, sizeof(struct dla_region_printf),
-	       region, region_pa, &attrs);
+	/* release memory allocated for debug print command */
+	nvdla_put_cmd_memory(pdev, debug_cmd_mem_info.index);
 
 	if (err != 0) {
 		nvdla_dbg_err(pdev, "failed to send printf command");
@@ -458,14 +533,19 @@ static int nvdla_probe(struct platform_device *pdev)
 		err = PTR_ERR(nvdla_dev->pool);
 		goto err_queue_init;
 	}
+
 	err = nvhost_syncpt_unit_interface_init(pdev);
 	if (err)
 		goto err_mss_init;
 
+	err = nvdla_alloc_cmd_memory(pdev);
+	if (err)
+		goto err_alloc_cmd_mem;
+
 	nvdla_dbg_info(pdev, "%s: pdata:%p\n", __func__, pdata);
 
 	return 0;
-
+err_alloc_cmd_mem:
 err_mss_init:
 	nvhost_queue_deinit(nvdla_dev->pool);
 err_queue_init:
@@ -512,6 +592,9 @@ static int __exit nvdla_remove(struct platform_device *pdev)
 		m->debug_dump_va = NULL;
 		m->debug_dump_pa = 0;
 	}
+
+	/* free command mem in last */
+	nvdla_free_cmd_memory(pdev);
 
 	nvdla_dbg_fn(pdev, "");
 

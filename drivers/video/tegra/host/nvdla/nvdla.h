@@ -26,6 +26,8 @@
 #include <linux/nvhost_nvdla_ioctl.h>
 #include "nvhost_buffer.h"
 
+#include "dla_os_interface.h"
+
 /**
  * Method ID and Method data THI registers
  */
@@ -58,6 +60,26 @@
 #define MAX_NUM_NVDLA_POSTFENCES	4
 
 /**
+ * keep list of DLA command size here.
+ * max among them will be used to allocate memory
+ *
+ */
+union nvdla_cmd_mem_list {
+	struct dla_region_printf dont_use_me;
+};
+
+#define MAX_COMMANDS_PER_DEVICE		1
+#define MAX_CMD_SIZE			sizeof(union nvdla_cmd_mem_list)
+#define NVDLA_CMD_OFFSET(index)		(MAX_CMD_SIZE * index)
+
+struct nvdla_cmd_mem_info {
+        dma_addr_t pa;
+        void *va;
+        int index;
+};
+
+
+/**
  * data structure to keep per DLA engine device data
  *
  * @pdev		pointer to platform device
@@ -75,6 +97,12 @@ struct nvdla_device {
 	u32 dbg_mask;
 	u32 en_trace;
 	u32 fw_version;
+
+	/* cmd memory fields */
+	dma_addr_t cmd_mem_pa;
+	void *cmd_mem_va;
+	struct mutex cmd_mem_lock;
+	unsigned long cmd_alloc_table;
 };
 
 /**
@@ -221,5 +249,8 @@ int nvdla_fill_task_desc(struct nvdla_task *task);
 int nvdla_send_postfences(struct nvdla_task *task,
 			struct nvdla_ioctl_submit_task usr_task);
 
+int nvdla_get_cmd_memory(struct platform_device *pdev,
+				struct nvdla_cmd_mem_info *cmd_mem_info);
+int nvdla_put_cmd_memory(struct platform_device *pdev, int index);
 
 #endif /* End of __NVHOST_NVDLA_H__ */

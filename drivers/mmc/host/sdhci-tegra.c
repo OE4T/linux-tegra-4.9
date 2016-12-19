@@ -730,7 +730,7 @@ static unsigned long tegra_sdhci_apply_clk_limits(struct sdhci_host *host,
 		host_clk = (tegra_host->max_ddr_clk_limit) ?
 			tegra_host->max_ddr_clk_limit * 2 : clock * 2;
 	else
-		host_clk = tegra_host->max_clk_limit ?
+		host_clk = (clock > tegra_host->max_clk_limit) ?
 			tegra_host->max_clk_limit : clock;
 
 	dev_dbg(mmc_dev(host->mmc), "Setting clk limit %lu\n", host_clk);

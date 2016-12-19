@@ -1,7 +1,7 @@
 /*
  * drivers/ata/ahci_tegra.c
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -29,6 +29,8 @@
 #endif
 
 static int tegra_ahci_power_on(struct ahci_host_priv *hpriv);
+static int tegra_ahci_enable_clks(struct ahci_host_priv *hpriv);
+static void tegra_ahci_disable_clks(struct ahci_host_priv *hpriv);
 static void tegra_ahci_power_off(struct ahci_host_priv *hpriv);
 static int tegra_ahci_controller_init(struct ahci_host_priv *hpriv);
 static void tegra_ahci_controller_deinit(struct ahci_host_priv *hpriv);
@@ -533,7 +535,8 @@ static int tegra_ahci_elpg_enter(struct ata_host *host)
 		tegra_ahci_override_devslp(hpriv, true);
 
 	/* 5. Powergate */
-	ret = tegra_powergate_partition_with_clk_off(TEGRA_POWERGATE_SATA);
+	ret = tegra_powergate_partition(TEGRA_POWERGATE_SATA);
+	tegra_ahci_disable_clks(hpriv);
 
 	return ret;
 }
@@ -548,7 +551,10 @@ static int tegra_ahci_elpg_exit(struct ata_host *host)
 	int i;
 
 	/* 1. unpowergate */
-	ret = tegra_unpowergate_partition_with_clk_on(TEGRA_POWERGATE_SATA);
+	ret = tegra_ahci_enable_clks(hpriv);
+	if (ret)
+		return ret;
+	ret = tegra_unpowergate_partition(TEGRA_POWERGATE_SATA);
 	if (ret)
 		return ret;
 
@@ -727,6 +733,29 @@ static const struct dev_pm_ops tegra_ahci_dev_rt_ops = {
 			tegra_ahci_runtime_resume, NULL)
 };
 
+static int tegra_ahci_enable_clks(struct ahci_host_priv *hpriv)
+{
+	struct tegra_ahci_priv *tegra = hpriv->plat_data;
+	int ret;
+
+	ret = clk_prepare_enable(tegra->sata_clk);
+	if (ret)
+		return ret;
+	ret = clk_prepare_enable(tegra->sata_oob_clk);
+	if (ret)
+		clk_disable_unprepare(tegra->sata_clk);
+
+	return ret;
+}
+
+static void tegra_ahci_disable_clks(struct ahci_host_priv *hpriv)
+{
+	struct tegra_ahci_priv *tegra = hpriv->plat_data;
+
+	clk_disable_unprepare(tegra->sata_oob_clk);
+	clk_disable_unprepare(tegra->sata_clk);
+}
+
 static int tegra_ahci_power_on(struct ahci_host_priv *hpriv)
 {
 	struct tegra_ahci_priv *tegra = hpriv->plat_data;
@@ -756,6 +785,15 @@ static int tegra_ahci_power_on(struct ahci_host_priv *hpriv)
 	if (ret)
 		goto disable_regulators;
 
+	ret = ahci_platform_enable_resources(hpriv);
+	if (ret)
+		goto disable_regulators;
+
+	reset_control_deassert(tegra->sata_rst);
+	if (tegra->sata_oob_rst)
+		reset_control_deassert(tegra->sata_oob_rst);
+	reset_control_deassert(tegra->sata_cold_rst);
+
 	ret = clk_prepare_enable(tegra->sata_clk);
 	if (ret)
 		goto disable_regulators;
@@ -768,19 +806,8 @@ static int tegra_ahci_power_on(struct ahci_host_priv *hpriv)
 	if (ret)
 		goto disable_sata_oob_clk;
 
-	ret = ahci_platform_enable_resources(hpriv);
-	if (ret)
-		goto disable_power;
-
-	reset_control_deassert(tegra->sata_rst);
-	if (tegra->sata_oob_rst)
-		reset_control_deassert(tegra->sata_oob_rst);
-	reset_control_deassert(tegra->sata_cold_rst);
-
 	return 0;
 
-disable_power:
-	tegra_powergate_partition(TEGRA_POWERGATE_SATA);
 disable_sata_oob_clk:
 	clk_disable_unprepare(tegra->sata_oob_clk);
 disable_sata_clk:

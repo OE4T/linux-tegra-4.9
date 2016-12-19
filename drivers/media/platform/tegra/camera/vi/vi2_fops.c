@@ -1,7 +1,7 @@
 /*
  * Tegra Video Input 2 device common APIs
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -84,6 +84,43 @@ static void vi_channel_syncpt_free(struct tegra_channel *chan)
 	for (i = 0; i < chan->total_ports; i++)
 		nvhost_syncpt_put_ref_ext(chan->vi->ndev, chan->syncpt[i][0]);
 }
+
+static const struct v4l2_ctrl_ops vi2_ctrl_ops = {
+	.s_ctrl	= tegra_channel_s_ctrl,
+};
+
+static const struct v4l2_ctrl_config vi2_custom_ctrls[] = {
+	{
+		.ops = &vi2_ctrl_ops,
+		.id = V4L2_CID_WRITE_ISPFORMAT,
+		.name = "Write ISP format",
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.def = 0,
+		.min = 0,
+		.step = 1,
+		.max = 1,
+	},
+};
+
+int vi2_add_ctrls(struct tegra_channel *chan)
+{
+	int i;
+
+	/* Add vi2 custom controls */
+	for (i = 0; i < ARRAY_SIZE(vi2_custom_ctrls); i++) {
+		v4l2_ctrl_new_custom(&chan->ctrl_handler,
+			&vi2_custom_ctrls[i], NULL);
+		if (chan->ctrl_handler.error) {
+			dev_err(chan->vi->dev,
+				"Failed to add %s ctrl\n",
+				vi2_custom_ctrls[i].name);
+			return chan->ctrl_handler.error;
+		}
+	}
+
+	return 0;
+}
+
 static struct tegra_csi_channel *find_linked_csi_channel(
 	struct tegra_channel *chan, struct tegra_csi_device *csi)
 {
@@ -118,6 +155,7 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan)
 	}
 
 	if (chan->pg_mode ||
+	   (chan->write_ispformat == TEGRA_ISP_FORMAT) ||
 	   (chan->fmtinfo->vf_code == TEGRA_VF_YUV422) ||
 	   (chan->fmtinfo->vf_code == TEGRA_VF_RGB888))
 		bypass_pixel_transform = 0;

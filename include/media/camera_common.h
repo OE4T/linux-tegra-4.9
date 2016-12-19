@@ -1,7 +1,7 @@
 /**
  * camera_common.h - utilities for tegra camera driver
  *
- * Copyright (c) 2015-2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -62,6 +62,7 @@
 #define V4L2_CID_OVERRIDE_ENABLE	(V4L2_CID_TEGRA_CAMERA_BASE+101)
 #define V4L2_CID_VI_HEIGHT_ALIGN	(V4L2_CID_TEGRA_CAMERA_BASE+102)
 #define V4L2_CID_VI_SIZE_ALIGN		(V4L2_CID_TEGRA_CAMERA_BASE+103)
+#define V4L2_CID_WRITE_ISPFORMAT	(V4L2_CID_TEGRA_CAMERA_BASE+104)
 
 #define MAX_BUFFER_SIZE			32
 #define MAX_CID_CONTROLS		16

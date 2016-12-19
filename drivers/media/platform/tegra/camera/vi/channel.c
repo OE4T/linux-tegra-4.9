@@ -797,7 +797,7 @@ tegra_channel_dv_timings_cap(struct file *file, void *fh,
 	return v4l2_subdev_call(sd, pad, dv_timings_cap, cap);
 }
 
-static int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
+int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct tegra_channel *chan = container_of(ctrl->handler,
 				struct tegra_channel, ctrl_handler);
@@ -854,6 +854,9 @@ static int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 				chan->format.pixelformat,
 				chan->fmtinfo->bpp, 0);
 		break;
+	case V4L2_CID_WRITE_ISPFORMAT:
+		chan->write_ispformat = ctrl->val;
+		break;
 	default:
 		dev_err(&chan->video.dev, "%s:Not valid ctrl\n", __func__);
 		return -EINVAL;
@@ -866,7 +869,7 @@ static const struct v4l2_ctrl_ops channel_ctrl_ops = {
 	.s_ctrl	= tegra_channel_s_ctrl,
 };
 
-static const struct v4l2_ctrl_config custom_ctrl_list[] = {
+static const struct v4l2_ctrl_config common_custom_ctrls[] = {
 	{
 		.ops = &channel_ctrl_ops,
 		.id = V4L2_CID_VI_BYPASS_MODE,
@@ -916,6 +919,7 @@ static int tegra_channel_setup_controls(struct tegra_channel *chan)
 {
 	int num_sd = 0;
 	struct v4l2_subdev *sd = NULL;
+	struct tegra_mc_vi *vi = chan->vi;
 	int i;
 
 	/* Initialize the subdev and controls here at first open */
@@ -931,20 +935,22 @@ static int tegra_channel_setup_controls(struct tegra_channel *chan)
 	}
 
 	/* Add new custom controls */
-	for (i = 0; i < ARRAY_SIZE(custom_ctrl_list); i++) {
+	for (i = 0; i < ARRAY_SIZE(common_custom_ctrls); i++) {
 		/* don't create override control for pg mode */
-		if (custom_ctrl_list[i].id == V4L2_CID_OVERRIDE_ENABLE &&
-				chan->pg_mode)
+		if (common_custom_ctrls[i].id == V4L2_CID_OVERRIDE_ENABLE &&
+			chan->pg_mode)
 			continue;
 		v4l2_ctrl_new_custom(&chan->ctrl_handler,
-			&custom_ctrl_list[i], NULL);
+			&common_custom_ctrls[i], NULL);
 		if (chan->ctrl_handler.error) {
 			dev_err(chan->vi->dev,
 				"Failed to add %s ctrl\n",
-				custom_ctrl_list[i].name);
+				common_custom_ctrls[i].name);
 			return chan->ctrl_handler.error;
 		}
 	}
+
+	vi->fops->vi_add_ctrls(chan);
 
 	if (chan->pg_mode) {
 		v4l2_ctrl_add_handler(&chan->ctrl_handler,

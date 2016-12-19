@@ -1,7 +1,7 @@
 /*
  * Tegra Video Input 4 device common APIs
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Frank Chen <frank@nvidia.com>
  *
@@ -72,6 +72,42 @@ static void vi4_channel_write(struct tegra_channel *chan,
 {
 	writel(val,
 		chan->vi->iomem + VI4_CHANNEL_OFFSET * (index + 1) + addr);
+}
+
+static const struct v4l2_ctrl_ops vi4_ctrl_ops = {
+	.s_ctrl	= tegra_channel_s_ctrl,
+};
+
+static const struct v4l2_ctrl_config vi4_custom_ctrls[] = {
+	{
+		.ops = &vi4_ctrl_ops,
+		.id = V4L2_CID_WRITE_ISPFORMAT,
+		.name = "Write ISP format",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.def = 1,
+		.min = 1,
+		.max = 1,
+		.step = 1,
+	},
+};
+
+int vi4_add_ctrls(struct tegra_channel *chan)
+{
+	int i;
+
+	/* Add vi4 custom controls */
+	for (i = 0; i < ARRAY_SIZE(vi4_custom_ctrls); i++) {
+		v4l2_ctrl_new_custom(&chan->ctrl_handler,
+			&vi4_custom_ctrls[i], NULL);
+		if (chan->ctrl_handler.error) {
+			dev_err(chan->vi->dev,
+				"Failed to add %s ctrl\n",
+				vi4_custom_ctrls[i].name);
+			return chan->ctrl_handler.error;
+		}
+	}
+
+	return 0;
 }
 
 static bool vi4_init(struct tegra_channel *chan)

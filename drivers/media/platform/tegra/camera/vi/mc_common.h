@@ -3,7 +3,7 @@
  *
  * Tegra Media controller common APIs
  *
- * Copyright (c) 2012-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -39,6 +39,9 @@
 #define	DISABLE		0
 #define MAX_SYNCPT_PER_CHANNEL 3
 #define TPG_CHANNELS 6
+
+#define TEGRA_MEM_FORMAT 0
+#define TEGRA_ISP_FORMAT 1
 
 enum channel_capture_state {
 	CAPTURE_IDLE = 0,
@@ -181,6 +184,7 @@ struct tegra_channel {
 	atomic_t power_on_refcnt;
 	struct v4l2_fh *fh;
 	bool bypass;
+	bool write_ispformat;
 	enum tegra_vi_pg_mode pg_mode;
 	bool bfirst_fstart;
 	enum channel_capture_state capture_state;
@@ -276,6 +280,7 @@ void tegra_vi2_power_off(struct tegra_mc_vi *vi);
 int tegra_vi4_power_on(struct tegra_mc_vi *vi);
 void tegra_vi4_power_off(struct tegra_mc_vi *vi);
 int tegra_clean_unlinked_channels(struct tegra_mc_vi *vi);
+int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl);
 int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 			struct platform_device *pdev);
 void tegra_vi_media_controller_cleanup(struct tegra_mc_vi *mc_vi);
@@ -290,6 +295,7 @@ struct tegra_vi_fops {
 	void (*vi_power_off)(struct tegra_channel *chan);
 	int (*vi_start_streaming)(struct vb2_queue *vq, u32 count);
 	int (*vi_stop_streaming)(struct vb2_queue *vq);
+	int (*vi_add_ctrls)(struct tegra_channel *chan);
 };
 
 struct tegra_csi_fops {

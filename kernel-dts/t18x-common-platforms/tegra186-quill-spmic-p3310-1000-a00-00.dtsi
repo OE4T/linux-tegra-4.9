@@ -42,8 +42,6 @@
 
 			maxim,enable-clock32k-out;
 
-			maxim,avoid-rtc-bulk-register-write;
-
 			maxim,system-pmic-power-off;
 			maxim,avoid-power-off-commands;
 

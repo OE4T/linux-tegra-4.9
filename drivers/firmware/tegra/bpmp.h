@@ -116,4 +116,13 @@ bool bpmp_master_acked(int ch);
 void bpmp_signal_slave(int ch);
 void bpmp_free_master(int ch);
 
+#if IS_ENABLED(CONFIG_POWERGATE_TEGRA_BPMP)
+int tegra_bpmp_init_powergate(struct platform_device *pdev);
+#else
+static inline int tegra_bpmp_init_powergate(struct tegra_bpmp *bpmp)
+{
+	return 0;
+}
+#endif
+
 #endif

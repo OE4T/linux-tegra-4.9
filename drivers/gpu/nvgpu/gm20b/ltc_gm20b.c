@@ -1,7 +1,7 @@
 /*
  * GM20B L2
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,10 +14,11 @@
  */
 
 #include <linux/types.h>
-#include <linux/jiffies.h>
 #include <trace/events/gk20a.h>
 
 #include "gk20a/gk20a.h"
+
+#include <nvgpu/timers.h>
 
 #include <nvgpu/hw/gm20b/hw_mc_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_ltc_gm20b.h>
@@ -103,10 +104,10 @@ static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 		       u32 min, u32 max)
 {
-	int err = 0;
 	struct gr_gk20a *gr = &g->gr;
+	struct nvgpu_timeout timeout;
+	int err = 0;
 	u32 ltc, slice, ctrl1, val, hw_op = 0;
-	s32 retry = 200;
 	u32 slices_per_ltc = ltc_ltcs_ltss_cbc_param_slices_per_ltc_v(
 				gk20a_readl(g, ltc_ltcs_ltss_cbc_param_r()));
 	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
@@ -143,18 +144,16 @@ int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 			ctrl1 = ltc_ltc0_lts0_cbc_ctrl1_r() +
 				ltc * ltc_stride + slice * lts_stride;
 
-			retry = 200;
+			nvgpu_timeout_init(g, &timeout, 200,
+					   NVGPU_TIMER_RETRY_TIMER);
 			do {
 				val = gk20a_readl(g, ctrl1);
 				if (!(val & hw_op))
 					break;
-				retry--;
 				udelay(5);
+			} while (!nvgpu_timeout_expired(&timeout));
 
-			} while (retry >= 0 ||
-					!tegra_platform_is_silicon());
-
-			if (retry < 0 && tegra_platform_is_silicon()) {
+			if (nvgpu_timeout_peek_expired(&timeout)) {
 				gk20a_err(dev_from_gk20a(g),
 					   "comp tag clear timeout\n");
 				err = -EBUSY;
@@ -288,22 +287,9 @@ u32 gm20b_ltc_cbc_fix_config(struct gk20a *g, int base)
  */
 void gm20b_flush_ltc(struct gk20a *g)
 {
-	unsigned long timeout;
+	struct nvgpu_timeout timeout;
 	unsigned int ltc;
 	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
-
-#define __timeout_init()				\
-	do {						\
-		timeout = jiffies + HZ;			\
-	} while (0)
-#define __timeout_check()						\
-	do {								\
-		if (tegra_platform_is_silicon() &&			\
-		    time_after(jiffies, timeout)) {			\
-			gk20a_err(dev_from_gk20a(g), "L2 flush timeout!"); \
-			break;						\
-		}							\
-	} while (0)
 
 	/* Clean... */
 	gk20a_writel(g, ltc_ltcs_ltss_tstg_cmgmt1_r(),
@@ -318,14 +304,33 @@ void gm20b_flush_ltc(struct gk20a *g)
 	for (ltc = 0; ltc < g->ltc_count; ltc++) {
 		u32 op_pending;
 
-		__timeout_init();
+		/*
+		 * Use 5ms - this should be sufficient time to flush the cache.
+		 * On tegra, rough EMC BW available for old tegra chips (newer
+		 * chips are strictly faster) can be estimated as follows:
+		 *
+		 * Lowest reasonable EMC clock speed will be around 102MHz on
+		 * t124 for display enabled boards and generally fixed to max
+		 * for non-display boards (since they are generally plugged in).
+		 *
+		 * Thus, the available BW is 64b * 2 * 102MHz = 1.3GB/s. Of that
+		 * BW the GPU will likely get about half (display and overhead/
+		 * utilization inefficiency eating the rest) so 650MB/s at
+		 * worst. Assuming at most 1MB of GPU L2 cache (less for most
+		 * chips) worst case is we take 1MB/650MB/s = 1.5ms.
+		 *
+		 * So 5ms timeout here should be more than sufficient.
+		 */
+		nvgpu_timeout_init(g, &timeout, 5, NVGPU_TIMER_CPU_TIMER);
+
 		do {
 			int cmgmt1 = ltc_ltc0_ltss_tstg_cmgmt1_r() +
 				     ltc * ltc_stride;
 			op_pending = gk20a_readl(g, cmgmt1);
-			__timeout_check();
-		} while (op_pending &
-			 ltc_ltc0_ltss_tstg_cmgmt1_clean_pending_f());
+		} while ((op_pending &
+			  ltc_ltc0_ltss_tstg_cmgmt1_clean_pending_f()) &&
+			 !nvgpu_timeout_expired_msg(&timeout,
+						    "L2 flush timeout!"));
 	}
 
 	/* And invalidate. */
@@ -339,14 +344,18 @@ void gm20b_flush_ltc(struct gk20a *g)
 	/* Wait on each LTC individually. */
 	for (ltc = 0; ltc < g->ltc_count; ltc++) {
 		u32 op_pending;
-		__timeout_init();
+
+		/* Again, 5ms. */
+		nvgpu_timeout_init(g, &timeout, 5, NVGPU_TIMER_CPU_TIMER);
+
 		do {
 			int cmgmt0 = ltc_ltc0_ltss_tstg_cmgmt0_r() +
 				     ltc * ltc_stride;
 			op_pending = gk20a_readl(g, cmgmt0);
-			__timeout_check();
-		} while (op_pending &
-			 ltc_ltc0_ltss_tstg_cmgmt0_invalidate_pending_f());
+		} while ((op_pending &
+			  ltc_ltc0_ltss_tstg_cmgmt0_invalidate_pending_f()) &&
+			 !nvgpu_timeout_expired_msg(&timeout,
+						    "L2 flush timeout!"));
 	}
 }
 

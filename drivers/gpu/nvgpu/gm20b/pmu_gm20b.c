@@ -22,6 +22,8 @@
 #include "acr_gm20b.h"
 #include "pmu_gm20b.h"
 
+#include <nvgpu/timers.h>
+
 #include <nvgpu/hw/gm20b/hw_gr_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_pwr_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fuse_gm20b.h>
@@ -173,21 +175,24 @@ void pmu_handle_fecs_boot_acr_msg(struct gk20a *g, struct pmu_msg *msg,
 	gk20a_dbg_fn("done");
 }
 
-static int pmu_gm20b_ctx_wait_lsf_ready(struct gk20a *g, u32 timeout, u32 val)
+static int pmu_gm20b_ctx_wait_lsf_ready(struct gk20a *g, u32 timeout_ms,
+					u32 val)
 {
-	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
 	unsigned long delay = GR_FECS_POLL_INTERVAL;
 	u32 reg;
+	struct nvgpu_timeout timeout;
 
 	gk20a_dbg_fn("");
 	reg = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(0));
+
+	nvgpu_timeout_init(g, &timeout, (int)timeout_ms, NVGPU_TIMER_CPU_TIMER);
+
 	do {
 		reg = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(0));
 		if (reg == val)
 			return 0;
 		udelay(delay);
-	} while (time_before(jiffies, end_jiffies) ||
-			!tegra_platform_is_silicon());
+	} while (!nvgpu_timeout_expired(&timeout));
 
 	return -ETIMEDOUT;
 }

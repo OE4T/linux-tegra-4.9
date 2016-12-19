@@ -18,9 +18,12 @@
 #include <linux/debugfs.h>
 #include <linux/dma-mapping.h>
 #include <linux/io.h>
-#include "nvgpu_common.h"
 
 #include <linux/platform/tegra/mc.h>
+
+#include <nvgpu/timers.h>
+
+#include "nvgpu_common.h"
 
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
@@ -1476,64 +1479,69 @@ err_done:
 /*!
 *	Wait for PMU to halt
 *	@param[in]	g		GPU object pointer
-*	@param[in]	timeout		Timeout in msec for PMU to halt
+*	@param[in]	timeout_ms	Timeout in msec for PMU to halt
 *	@return '0' if PMU halts
 */
-static int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout)
+static int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout_ms)
 {
 	u32 data = 0;
-	int completion = -EBUSY;
-	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
+	int ret = -EBUSY;
+	struct nvgpu_timeout timeout;
 
-	while (time_before(jiffies, end_jiffies) ||
-			!tegra_platform_is_silicon()) {
+	nvgpu_timeout_init(g, &timeout, timeout_ms, NVGPU_TIMER_CPU_TIMER);
+
+	do {
 		data = gk20a_readl(g, pwr_falcon_cpuctl_r());
 		if (data & pwr_falcon_cpuctl_halt_intr_m()) {
-			/*CPU is halted break*/
-			completion = 0;
+			/* CPU is halted break */
+			ret = 0;
 			break;
 		}
 		udelay(1);
-	}
-	if (completion)
+	} while (!nvgpu_timeout_expired(&timeout));
+
+	if (ret) {
 		gk20a_err(dev_from_gk20a(g), "ACR boot timed out");
-	else {
-		g->acr.capabilities = gk20a_readl(g, pwr_falcon_mailbox1_r());
-		gm20b_dbg_pmu("ACR capabilities %x\n", g->acr.capabilities);
-		data = gk20a_readl(g, pwr_falcon_mailbox0_r());
-		if (data) {
-			gk20a_err(dev_from_gk20a(g),
-				"ACR boot failed, err %x", data);
-			completion = -EAGAIN;
-		}
+		return ret;
 	}
-	return completion;
+
+	g->acr.capabilities = gk20a_readl(g, pwr_falcon_mailbox1_r());
+	gm20b_dbg_pmu("ACR capabilities %x\n", g->acr.capabilities);
+	data = gk20a_readl(g, pwr_falcon_mailbox0_r());
+	if (data) {
+		gk20a_err(dev_from_gk20a(g),
+			  "ACR boot failed, err %x", data);
+		ret = -EAGAIN;
+	}
+
+	return ret;
 }
 
 /*!
 *	Wait for PMU halt interrupt status to be cleared
 *	@param[in]	g		GPU object pointer
-*	@param[in]	timeout_us	Timeout in msec for halt to clear
+*	@param[in]	timeout_ms	Timeout in msec for halt to clear
 *	@return '0' if PMU halt irq status is clear
 */
-static int clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout)
+static int clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout_ms)
 {
 	u32 data = 0;
-	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
+	struct nvgpu_timeout timeout;
 
-	while (time_before(jiffies, end_jiffies) ||
-			!tegra_platform_is_silicon()) {
+	nvgpu_timeout_init(g, &timeout, timeout_ms, NVGPU_TIMER_CPU_TIMER);
+
+	do {
 		gk20a_writel(g, pwr_falcon_irqsclr_r(),
 			     gk20a_readl(g, pwr_falcon_irqsclr_r()) | (0x10));
 		data = gk20a_readl(g, (pwr_falcon_irqstat_r()));
+
 		if ((data & pwr_falcon_irqstat_halt_true_f()) !=
 			pwr_falcon_irqstat_halt_true_f())
 			/*halt irq is clear*/
-			break;
-		timeout--;
+			return 0;
+
 		udelay(1);
-	}
-	if (timeout == 0)
-		return -EBUSY;
-	return 0;
+	} while (!nvgpu_timeout_expired(&timeout));
+
+	return -ETIMEDOUT;
 }

@@ -1,7 +1,7 @@
 /*
  * GM20B MMU
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,6 +20,8 @@
 
 #include "mm_gm20b.h"
 
+#include <nvgpu/timers.h>
+
 #include <nvgpu/hw/gm20b/hw_gmmu_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fb_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_gr_gm20b.h>
@@ -27,28 +29,23 @@
 #include <nvgpu/hw/gm20b/hw_bus_gm20b.h>
 
 static int gm20b_mm_mmu_vpr_info_fetch_wait(struct gk20a *g,
-		const unsigned int msec)
+					    unsigned int msec)
 {
-	unsigned long timeout;
+	struct nvgpu_timeout timeout;
 
-	if (tegra_platform_is_silicon())
-		timeout = jiffies + msecs_to_jiffies(msec);
-	else
-		timeout = msecs_to_jiffies(msec);
+	nvgpu_timeout_init(g, &timeout, msec, NVGPU_TIMER_CPU_TIMER);
 
-	while (1) {
+	do {
 		u32 val;
+
 		val = gk20a_readl(g, fb_mmu_vpr_info_r());
 		if (fb_mmu_vpr_info_fetch_v(val) ==
-				fb_mmu_vpr_info_fetch_false_v())
-			break;
-		if (tegra_platform_is_silicon()) {
-			if (WARN_ON(time_after(jiffies, timeout)))
-				return -ETIME;
-		} else if (--timeout == 0)
-			return -ETIME;
-	}
-	return 0;
+		    fb_mmu_vpr_info_fetch_false_v())
+			return 0;
+
+	} while (!nvgpu_timeout_expired(&timeout));
+
+	return -ETIMEDOUT;
 }
 
 int gm20b_mm_mmu_vpr_info_fetch(struct gk20a *g)

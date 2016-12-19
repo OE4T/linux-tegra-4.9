@@ -20,6 +20,8 @@
 
 #include "fifo_gm20b.h"
 
+#include <nvgpu/timers.h>
+
 #include <nvgpu/hw/gm20b/hw_ccsr_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_ram_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fifo_gm20b.h>
@@ -69,11 +71,10 @@ static inline u32 gm20b_engine_id_to_mmu_id(struct gk20a *g, u32 engine_id)
 static void gm20b_fifo_trigger_mmu_fault(struct gk20a *g,
 		unsigned long engine_ids)
 {
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
 	unsigned long engine_id;
 	int ret = -EBUSY;
+	struct nvgpu_timeout timeout;
 
 	/* trigger faults for all bad engines */
 	for_each_set_bit(engine_id, &engine_ids, 32) {
@@ -89,6 +90,9 @@ static void gm20b_fifo_trigger_mmu_fault(struct gk20a *g,
 		}
 	}
 
+	nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
+			   NVGPU_TIMER_CPU_TIMER);
+
 	/* Wait for MMU fault to trigger */
 	do {
 		if (gk20a_readl(g, fifo_intr_0_r()) &
@@ -99,8 +103,7 @@ static void gm20b_fifo_trigger_mmu_fault(struct gk20a *g,
 
 		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-	} while (time_before(jiffies, end_jiffies) ||
-			!tegra_platform_is_silicon());
+	} while (!nvgpu_timeout_expired(&timeout));
 
 	if (ret)
 		gk20a_err(dev_from_gk20a(g), "mmu fault timeout");

@@ -292,6 +292,7 @@ struct ttcan_controller {
 	u32 intr_tt_enable_reg;
 	u32 ts_prescalar;
 	u32 tt_mem_elements;
+	u32 tx_object;
 	int rxq0_mem;
 	int rxq1_mem;
 	int rxb_mem;

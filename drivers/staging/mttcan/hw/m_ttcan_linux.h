@@ -97,7 +97,6 @@ struct mttcan_priv {
 	u32 irq_ttflags;
 	u32 tx_next;
 	u32 tx_echo;
-	u32 tx_object;
 	u32 tx_obj_cancelled;
 	u32 irqstatus;
 	u32 tt_irqstatus;

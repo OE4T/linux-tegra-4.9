@@ -440,8 +440,11 @@ int ttcan_tx_msg_buffer_write(struct ttcan_controller *ttcan,
 	txbrp_free &= (1 << ttcan->tx_config.ded_buff_num) - 1;
 
 	/* find first free buffer */
-	cur_index = ffs(txbrp_free);
-
+	while ((cur_index = ffs(txbrp_free)) != 0) {
+		if (!(ttcan->tx_object & (1 << (cur_index - 1))))
+			break;
+		txbrp_free &= ~(1 << (cur_index - 1));
+	}
 	if (!cur_index)
 		return -ENOMEM;
 
@@ -510,7 +513,8 @@ int ttcan_tx_fifo_queue_msg(struct ttcan_controller *ttcan,
 
 	txfqs_reg = ttcan_read32(ttcan, ADR_MTTCAN_TXFQS);
 	put_idx = (txfqs_reg & MTT_TXFQS_TFQPI_MASK) >> MTT_TXFQS_TFQPI_SHIFT;
-	if ((txfqs_reg & MTT_TXFQS_TFQF_MASK) == 0) {
+	if (((txfqs_reg & MTT_TXFQS_TFQF_MASK) == 0) &&
+		(!(ttcan->tx_object & (1 << put_idx)))) {
 		ttcan_tx_ded_msg_write(ttcan, ttcanfd, put_idx, 0);
 		return put_idx;
 	}

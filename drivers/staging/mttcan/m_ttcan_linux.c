@@ -481,14 +481,15 @@ static int mttcan_handle_bus_err(struct net_device *dev,
 	netif_receive_skb(skb);
 	stats->rx_packets++;
 	stats->rx_bytes += cf->can_dlc;
-
-	/* drop all echo_skb cache */
-	while (priv->tx_object) {
-		u32 msg_no = ffs(priv->tx_object) - 1;
+#if 0
+	/* FIXME if buffers are cancelled, drop all echo_skb cache */
+	while (priv->ttcan->tx_object) {
+		u32 msg_no = ffs(priv->ttcan->tx_object) - 1;
 		if (priv->can.echo_skb[msg_no])
 			can_free_echo_skb(dev, msg_no);
-		priv->tx_object &= ~(1 << msg_no);
+		priv->ttcan->tx_object &= ~(1 << msg_no);
 	}
+#endif
 	return 1;
 }
 
@@ -548,25 +549,20 @@ static void mttcan_tx_complete(struct net_device *dev)
 	struct net_device_stats *stats = &dev->stats;
 
 	u32 completed_tx = ttcan_read_tx_complete_reg(priv->ttcan);
+	u32 txbitmap = priv->ttcan->tx_object;
 
-	/*TODO:- fix how to handle wrap around of tx_next and echo */
-	for (; (priv->tx_next - priv->tx_echo) > 0; priv->tx_echo++) {
-		if (completed_tx != 0 && priv->tx_object != 0) {
-			msg_no = ffs(priv->tx_object) - 1;
-			if (completed_tx & (1 << (msg_no))) {
-				/* Tx completed for this object */
-				priv->tx_object &= ~(1 << msg_no);
-				stats->tx_bytes +=
-					priv->ttcan->tx_buf_dlc[msg_no];
-				stats->tx_packets++;
-				if (priv->can.echo_skb[msg_no])
-					can_get_echo_skb(dev, msg_no);
-				can_led_event(dev, CAN_LED_EVENT_TX);
-			}
-		} else {
-			pr_debug("%s TC %x priv->tx_object %x\n",
-				__func__, completed_tx, priv->tx_object);
-			break;
+	while (ffs(txbitmap)) {
+		msg_no = ffs(txbitmap) - 1;
+		txbitmap &= ~(1 << msg_no);
+		if (completed_tx & (1 << (msg_no))) {
+			/* Tx completed for this object */
+			priv->ttcan->tx_object &= ~(1 << msg_no);
+			stats->tx_bytes += priv->ttcan->tx_buf_dlc[msg_no];
+			stats->tx_packets++;
+			if (priv->can.echo_skb[msg_no])
+				can_get_echo_skb(dev, msg_no);
+			priv->tx_echo++;
+			can_led_event(dev, CAN_LED_EVENT_TX);
 		}
 	}
 
@@ -597,14 +593,14 @@ static void mttcan_tx_cancelled(struct net_device *dev)
 
 	while (msg_no) {
 		buff_bit = (1 << (msg_no - 1));
-		if (priv->tx_object & buff_bit) {
-			priv->tx_object &= ~(buff_bit);
+		if (priv->ttcan->tx_object & buff_bit) {
+			priv->ttcan->tx_object &= ~(buff_bit);
 			cancelled_msg &= ~(buff_bit);
 			stats->tx_aborted_errors++;
 			can_free_echo_skb(dev, (msg_no - 1));
 		} else {
-			pr_debug("%s TCF %x priv->tx_object %x\n", __func__,
-					cancelled_msg, priv->tx_object);
+			pr_debug("%s TCF %x priv->ttcan->tx_object %x\n", __func__,
+					cancelled_msg, priv->ttcan->tx_object);
 			break;
 		}
 		priv->tx_echo++;
@@ -1263,7 +1259,7 @@ static netdev_tx_t mttcan_start_xmit(struct sk_buff *skb,
 	can_put_echo_skb(skb, dev, msg_no);
 
 	priv->tx_next++;
-	priv->tx_object |= 1 << msg_no;
+	priv->ttcan->tx_object |= 1 << msg_no;
 	priv->tx_obj_cancelled &= ~(1 << msg_no);
 
 	return NETDEV_TX_OK;

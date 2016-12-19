@@ -12,3 +12,4 @@ obj-$(CONFIG_TEGRA_POWERGATE) += powergate-ops-t1xx.o
 ifeq ($(CONFIG_TEGRA_POWERGATE),y)
 obj-$(CONFIG_ARCH_TEGRA_21x_SOC)        += powergate-t21x.o
 endif
+obj-$(CONFIG_POWERGATE_TEGRA_BPMP)	+= powergate-bpmp.o

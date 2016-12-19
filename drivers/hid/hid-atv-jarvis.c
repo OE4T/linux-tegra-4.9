@@ -380,9 +380,11 @@ struct snd_atvr {
 	/* count of packets received from this device */
 	int packet_counter;
 	spinlock_t s_substream_lock;
+	uint32_t substream_state;
 	bool pcm_stopped;
 };
 
+#define ATVR_REMOVE 1
 #define TS_HOSTCMD_REPORT_SIZE 33
 #define JAR_HOSTCMD_REPORT_SIZE 19
 
@@ -875,6 +877,11 @@ static void audio_dec(struct hid_device *hdev, const uint8_t *raw_input,
 	if (atvr_snd != NULL && atvr_snd->pcm_stopped == false) {
 		spin_lock(&atvr_snd->s_substream_lock);
 
+		if (atvr_snd->substream_state & ATVR_REMOVE) {
+			spin_unlock(&atvr_snd->s_substream_lock);
+			return;
+		}
+
 		/* Write data to a FIFO for decoding by the timer task. */
 		uint writable = atomic_fifo_available_to_write(
 			&atvr_snd->fifo_controller);
@@ -1023,6 +1030,11 @@ static void snd_atvr_timer_callback(unsigned long data)
 	if (!spin_trylock(&atvr_snd->s_substream_lock)) {
 		pr_info("%s: trylock fail\n", __func__);
 		goto lock_err;
+	}
+
+	if (atvr_snd->substream_state & ATVR_REMOVE) {
+		spin_unlock(&atvr_snd->s_substream_lock);
+		return;
 	}
 
 	atvr_snd->timer_callback_count++;
@@ -1452,6 +1464,11 @@ static int atvr_snd_initialize(struct hid_device *hdev,
 	atvr_snd->card_index = dev;
 	mutex_init(&atvr_snd->hdev_lock);
 	spin_lock_init(&atvr_snd->s_substream_lock);
+	atvr_snd->substream_state = 0;
+	err = snd_atvr_alloc_audio_buffs(atvr_snd);
+
+	if (err)
+		goto __nodev;
 	/* dummy initialization */
 	setup_timer(&atvr_snd->decoding_timer,
 		snd_atvr_timer_callback, 0);
@@ -1473,11 +1490,6 @@ static int atvr_snd_initialize(struct hid_device *hdev,
 		atvr_snd->pcm_hw = atvr_pcm_hardware_pepper;
 	else
 		atvr_snd->pcm_hw = atvr_pcm_hardware;
-
-	/* Alloc pcm buffers */
-	err = snd_atvr_alloc_audio_buffs(atvr_snd);
-	if (err)
-		goto __nodev;
 
 	strcpy(shdr_card->driver, "SHIELD Remote Audio");
 	strcpy(shdr_card->shortname, "SHDRAudio");
@@ -1879,6 +1891,11 @@ static void atvr_remove(struct hid_device *hdev)
 
 	mutex_lock(&snd_cards_lock);
 	atvr_snd = shdr_card->private_data;
+
+	spin_lock_irqsave(&atvr_snd->s_substream_lock, flags);
+	atvr_snd->substream_state |= ATVR_REMOVE;
+	spin_unlock_irqrestore(&atvr_snd->s_substream_lock, flags);
+
 	mutex_lock(&atvr_snd->hdev_lock);
 	atvr_snd->hdev = NULL;
 	mutex_unlock(&atvr_snd->hdev_lock);

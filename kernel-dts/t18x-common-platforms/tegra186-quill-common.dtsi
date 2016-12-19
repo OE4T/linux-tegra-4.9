@@ -585,6 +585,7 @@
 		nvidia,en-periodic-cflush;
 		nvidia,periodic-cflush-to = <100>;
 		nvidia,enable-hwcq;
+		mmc-hs400-enhanced-strobe;
 		status = "okay";
 	};
 

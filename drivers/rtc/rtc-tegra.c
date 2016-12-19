@@ -1,7 +1,7 @@
 /*
  * drivers/rtc/rtc-tegra.c
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -160,7 +160,7 @@ static int tegra_rtc_read_time(struct device *dev, struct rtc_time *tm)
 
 	/* Ensure there is no pending write to get latest time */
 	ret = tegra_rtc_wait_while_busy(dev, true);
-	if (ret)
+	if (ret < 0)
 		dev_warn(dev, "Reading old value\n");
 
 	/* RTC hardware copies seconds to shadow seconds when a read
@@ -229,7 +229,7 @@ static int tegra_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *alarm)
 	int ret;
 
 	ret = tegra_rtc_wait_while_busy(dev, true);
-	if (ret)
+	if (ret < 0)
 		dev_warn(dev, "Reading old value\n");
 	sec = readl(info->rtc_base + TEGRA_RTC_REG_SECONDS_ALARM0);
 
@@ -253,8 +253,13 @@ static int tegra_rtc_alarm_irq_enable(struct device *dev, unsigned int enabled)
 	struct tegra_rtc_info *info = dev_get_drvdata(dev);
 	unsigned status;
 	unsigned long sl_irq_flags;
+	int ret;
 
-	tegra_rtc_wait_while_busy(dev, false);
+	ret = tegra_rtc_wait_while_busy(dev, false);
+	if (ret < 0) {
+		dev_err(dev, "Timeout accessing RTC\n");
+		return ret;
+	}
 	spin_lock_irqsave(&info->tegra_rtc_lock, sl_irq_flags);
 
 	/* read the original value, and OR in the flag. */
@@ -279,7 +284,7 @@ static int __tegra_rtc_set_alarm(struct device *dev, unsigned long period,
 	int ret;
 
 	ret = tegra_rtc_wait_while_busy(dev, false);
-	if (ret) {
+	if (ret < 0) {
 		dev_err(dev, "Timeout accessing RTC\n");
 		return ret;
 	}
@@ -343,14 +348,14 @@ static irqreturn_t tegra_rtc_irq_handler(int irq, void *data)
 	if (status) {
 		/* clear the interrupt masks and status on any irq. */
 		ret = tegra_rtc_wait_while_busy(dev, false);
-		if (ret)
-			return ret;
+		if (ret < 0)
+			dev_warn(dev, "Reading old value\n");
 		spin_lock_irqsave(&info->tegra_rtc_lock, sl_irq_flags);
 		writel(mask, info->rtc_base + TEGRA_RTC_REG_INTR_MASK);
 		spin_unlock_irqrestore(&info->tegra_rtc_lock, sl_irq_flags);
 		ret = tegra_rtc_wait_while_busy(dev, false);
-		if (ret)
-			return ret;
+		if (ret < 0)
+			dev_warn(dev, "Reading old value\n");
 		spin_lock_irqsave(&info->tegra_rtc_lock, sl_irq_flags);
 		writel(status, info->rtc_base + TEGRA_RTC_REG_INTR_STATUS);
 		spin_unlock_irqrestore(&info->tegra_rtc_lock, sl_irq_flags);
@@ -394,8 +399,8 @@ void tegra_rtc_set_trigger(unsigned long cycles)
 		msec = 0x80000000UL | (0x0fffffff & msec);
 
 	ret = tegra_rtc_wait_while_busy(dev, true);
-	if (ret)
-		return;
+	if (ret < 0)
+		dev_warn(dev, "Reading old value\n");
 	now = readl(info->rtc_base + TEGRA_RTC_REG_MILLI_SECONDS);
 	now += readl(info->rtc_base + TEGRA_RTC_REG_SHADOW_SECONDS) *
 						MSEC_PER_SEC;
@@ -405,8 +410,8 @@ void tegra_rtc_set_trigger(unsigned long cycles)
 	trace_tegra_rtc_set_alarm(now, tgt);
 
 	ret = tegra_rtc_wait_while_busy(dev, false);
-	if (ret)
-		return;
+	if (ret < 0)
+		dev_warn(dev, "Reading old value\n");
 
 	if (msec)
 		tegra_rtc_msec_alarm_irq_enable(info, 1);
@@ -585,16 +590,16 @@ static int __init tegra_rtc_probe(struct platform_device *pdev)
 
 	/* clear out the hardware. */
 	ret = tegra_rtc_wait_while_busy(&pdev->dev, false);
-	if (ret)
-		return ret;
+	if (ret < 0)
+		dev_warn(&pdev->dev, "Reading old value\n");
 	writel(0, info->rtc_base + TEGRA_RTC_REG_MSEC_CDN_ALARM0);
 	ret = tegra_rtc_wait_while_busy(&pdev->dev, false);
-	if (ret)
-		return ret;
+	if (ret < 0)
+		dev_warn(&pdev->dev, "Reading old value\n");
 	writel(0xffffffff, info->rtc_base + TEGRA_RTC_REG_INTR_STATUS);
 	ret = tegra_rtc_wait_while_busy(&pdev->dev, false);
-	if (ret)
-		return ret;
+	if (ret < 0)
+		dev_warn(&pdev->dev, "Reading old value\n");
 	writel(0, info->rtc_base + TEGRA_RTC_REG_INTR_MASK);
 
 	if(cdata->follow_tsc)
@@ -643,8 +648,13 @@ static int tegra_rtc_remove(struct platform_device *pdev)
 static int tegra_rtc_suspend(struct device *dev)
 {
 	struct tegra_rtc_info *info = dev_get_drvdata(dev);
+	int ret;
 
-	tegra_rtc_wait_while_busy(dev, false);
+	ret = tegra_rtc_wait_while_busy(dev, false);
+	if (ret < 0) {
+		dev_err(dev, "Timeout accessing RTC\n");
+		return ret;
+	}
 
 	dev_vdbg(dev, "Suspend (device_may_wakeup=%d) irq:%d\n",
 		device_may_wakeup(dev), info->tegra_rtc_irq);

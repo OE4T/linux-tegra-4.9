@@ -1271,17 +1271,15 @@ free_out:
 static void tegra_dc_dp_debugfs_create(struct tegra_dc_dp_data *dp)
 {
 	struct dentry *retval;
-	char debug_dirname[BUF_SIZE_MAX] = "tegra_dp";
+	char debug_dirname[BUF_SIZE_MAX];
 
-	if (dp_instance) {
-		snprintf(debug_dirname, sizeof(debug_dirname),
-			"tegra_dp%d", dp_instance);
-	}
+	snprintf(debug_dirname, sizeof(debug_dirname),
+		"tegra_dp%d", dp->dc->ctrl_num);
 
 	dp->debugdir = debugfs_create_dir(debug_dirname, NULL);
 	if (!dp->debugdir) {
-		dev_err(&dp->dc->ndev->dev, "could not create dp%d debugfs\n",
-			dp_instance);
+		dev_err(&dp->dc->ndev->dev, "could not create %s debugfs\n",
+			debug_dirname);
 		return;
 	}
 	retval = debugfs_create_file("regs", S_IRUGO, dp->debugdir, dp,
@@ -1318,8 +1316,8 @@ static void tegra_dc_dp_debugfs_create(struct tegra_dc_dp_data *dp)
 
 	return;
 free_out:
-	dev_err(&dp->dc->ndev->dev, "could not create dp%d debugfs\n",
-		dp_instance);
+	dev_err(&dp->dc->ndev->dev, "could not create %s debugfs\n",
+		debug_dirname);
 	tegra_dc_dp_debugfs_remove(dp);
 	return;
 }

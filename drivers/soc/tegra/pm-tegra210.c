@@ -248,6 +248,8 @@ static int tegra210_cpuidle_cc4_probe(struct platform_device *pdev)
 	uint32_t uv;
 	int r;
 
+	do_cc4_init();
+
 	/* T210 BPMP supports CC4 retention only with max77621 or ovr2. */
 	t210_pm_data.cc4_no_retention = of_property_read_bool(dev->of_node,
 							"cc4-no-retention");
@@ -268,7 +270,6 @@ static int tegra210_cpuidle_cc4_probe(struct platform_device *pdev)
 
 	dev_info(dev, "retention voltage is %u uv\n", uv);
 out:
-	do_cc4_init();
 	register_syscore_ops(&cc4_syscore_ops);
 
 	return 0;
@@ -287,6 +288,22 @@ static struct platform_driver tegra210_cpuidle_driver = {
 		.of_match_table = tegra210_cpuidle_of,
 	}
 };
+
+static int __init tegra210_cpuidle_init(void)
+{
+	if (tegra_get_chip_id() != TEGRA210)
+		goto out;
+
+	/*
+	 * To avoid the race condition between DFLL clock ready
+	 * and CC4 engagement. Put this in late_inticall.
+	 */
+	platform_driver_register(&tegra210_cpuidle_driver);
+
+out:
+	return 0;
+}
+late_initcall(tegra210_cpuidle_init);
 
 static int tegra210_cpu_notify(struct notifier_block *nb, unsigned long action,
 			       void *hcpu)
@@ -316,6 +333,9 @@ static int __init tegra210_pm_init(void)
 	if (tegra_get_chip_id() != TEGRA210)
 		goto out;
 
+	/* Disable CC4 until DFLL clk is ready */
+	t210_pm_data.cc4_no_retention = true;
+
 	t210_pm_data.idle_state_idx[C7_IDX] =
 				tegra_of_idle_state_idx_from_name("c7");
 	t210_pm_data.idle_state_idx[CC6_IDX] =
@@ -331,7 +351,6 @@ static int __init tegra210_pm_init(void)
 
 	tegra210_cpu_pm_register_notifier(&tegra210_cpu_pm_nb);
 	register_cpu_notifier(&tegra210_cpu_nb);
-	platform_driver_register(&tegra210_cpuidle_driver);
 
 out:
 	return 0;

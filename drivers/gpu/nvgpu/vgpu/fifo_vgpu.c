@@ -678,17 +678,20 @@ static int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
 static void vgpu_fifo_set_ctx_mmu_error(struct gk20a *g,
 		struct channel_gk20a *ch)
 {
-	if (ch->error_notifier) {
+	mutex_lock(&ch->error_notifier_mutex);
+	if (ch->error_notifier_ref) {
 		if (ch->error_notifier->status == 0xffff) {
 			/* If error code is already set, this mmu fault
 			 * was triggered as part of recovery from other
 			 * error condition.
 			 * Don't overwrite error flag. */
 		} else {
-			gk20a_set_error_notifier(ch,
+			gk20a_set_error_notifier_locked(ch,
 				NVGPU_CHANNEL_FIFO_ERROR_MMU_ERR_FLT);
 		}
 	}
+	mutex_unlock(&ch->error_notifier_mutex);
+
 	/* mark channel as faulted */
 	ch->has_timedout = true;
 	wmb();

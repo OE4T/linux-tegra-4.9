@@ -827,11 +827,12 @@ static int gk20a_init_error_notifier(struct channel_gk20a *ch,
 	return 0;
 }
 
-void gk20a_set_error_notifier(struct channel_gk20a *ch, __u32 error)
+/**
+ * gk20a_set_error_notifier_locked()
+ * Should be called with ch->error_notifier_mutex held
+ */
+void gk20a_set_error_notifier_locked(struct channel_gk20a *ch, __u32 error)
 {
-	bool notifier_set = false;
-
-	mutex_lock(&ch->error_notifier_mutex);
 	if (ch->error_notifier_ref) {
 		struct timespec time_data;
 		u64 nsec;
@@ -845,13 +846,16 @@ void gk20a_set_error_notifier(struct channel_gk20a *ch, __u32 error)
 		ch->error_notifier->info32 = error;
 		ch->error_notifier->status = 0xffff;
 
-		notifier_set = true;
-	}
-	mutex_unlock(&ch->error_notifier_mutex);
-
-	if (notifier_set)
 		gk20a_err(dev_from_gk20a(ch->g),
 		    "error notifier set to %d for ch %d", error, ch->hw_chid);
+	}
+}
+
+void gk20a_set_error_notifier(struct channel_gk20a *ch, __u32 error)
+{
+	mutex_lock(&ch->error_notifier_mutex);
+	gk20a_set_error_notifier_locked(ch, error);
+	mutex_unlock(&ch->error_notifier_mutex);
 }
 
 static void gk20a_free_error_notifiers(struct channel_gk20a *ch)

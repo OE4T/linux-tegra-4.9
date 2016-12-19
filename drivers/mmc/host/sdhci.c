@@ -100,6 +100,9 @@ static void sdhci_dumpregs(struct sdhci_host *host)
 			       readl(host->ioaddr + SDHCI_ADMA_ADDRESS));
 	}
 
+	if (host->ops->dump_vendor_regs)
+		host->ops->dump_vendor_regs(host);
+
 	pr_err(DRIVER_NAME ": ===========================================\n");
 }
 
@@ -2512,8 +2515,11 @@ static void sdhci_cmd_irq(struct sdhci_host *host, u32 intmask)
 		       SDHCI_INT_END_BIT | SDHCI_INT_INDEX)) {
 		if (intmask & SDHCI_INT_TIMEOUT)
 			host->cmd->error = -ETIMEDOUT;
-		else
+		else {
+			pr_err("%s: CMD CRC or end bit error, int mask %#x\n",
+				mmc_hostname(host->mmc), (unsigned)intmask);
 			host->cmd->error = -EILSEQ;
+		}
 
 		/*
 		 * If this command initiates a data phase and a response
@@ -2633,15 +2639,21 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 		return;
 	}
 
-	if (intmask & SDHCI_INT_DATA_TIMEOUT)
+	if (intmask & SDHCI_INT_DATA_TIMEOUT) {
 		host->data->error = -ETIMEDOUT;
-	else if (intmask & SDHCI_INT_DATA_END_BIT)
+		pr_err("%s: Data timeout error\n", mmc_hostname(host->mmc));
+		sdhci_dumpregs(host);
+	} else if (intmask & SDHCI_INT_DATA_END_BIT) {
 		host->data->error = -EILSEQ;
-	else if ((intmask & SDHCI_INT_DATA_CRC) &&
+		pr_err("%s: Data end bit error\n", mmc_hostname(host->mmc));
+		sdhci_dumpregs(host);
+	} else if ((intmask & SDHCI_INT_DATA_CRC) &&
 		SDHCI_GET_CMD(sdhci_readw(host, SDHCI_COMMAND))
-			!= MMC_BUS_TEST_R)
+			!= MMC_BUS_TEST_R) {
 		host->data->error = -EILSEQ;
-	else if (intmask & SDHCI_INT_ADMA_ERROR) {
+		pr_err("%s: Data CRC error\n", mmc_hostname(host->mmc));
+		sdhci_dumpregs(host);
+	} else if (intmask & SDHCI_INT_ADMA_ERROR) {
 		pr_err("%s: ADMA error\n", mmc_hostname(host->mmc));
 		sdhci_adma_show_error(host);
 		host->data->error = -EIO;

@@ -50,6 +50,8 @@
 #define SDHCI_TEGRA_VENDOR_SYS_SW_CTRL		0x104
 #define SDHCI_SYS_SW_CTRL_STROBE_EN		0x80000000
 
+#define SDHCI_TEGRA_VENDOR_ERR_INTR_STATUS	0x108
+
 #define SDHCI_TEGRA_VENDOR_CAP_OVERRIDES	0x10C
 #define SDHCI_VENDOR_CAP_DQS_TRIM_SHIFT		0x8
 #define SDHCI_VENDOR_CAP_DQS_TRIM_MASK		0x3F
@@ -59,6 +61,10 @@
 #define SDHCI_MISC_CTRL_ENABLE_SDR50		0x10
 #define SDHCI_MISC_CTRL_ENABLE_SDHCI_SPEC_300	0x20
 #define SDHCI_MISC_CTRL_ENABLE_DDR50		0x200
+
+#define SDHCI_TEGRA_VENDOR_MISC_CTRL_1		0x124
+
+#define SDHCI_TEGRA_VENDOR_MISC_CTRL_2		0x128
 
 #define SDMMC_VNDR_IO_TRIM_CTRL_0		0x1AC
 #define SDMMC_VNDR_IO_TRIM_CTRL_0_SEL_VREG_MASK	0x4
@@ -71,6 +77,12 @@
 
 #define SDHCI_VNDR_TUN_CTRL0_0			0x1c0
 #define SDHCI_VNDR_TUN_CTRL0_TUN_HW_TAP		0x20000
+#define SDHCI_TUN_CTRL0_TUNING_ITER_MASK	0x7
+#define SDHCI_TUN_CTRL0_TUNING_ITER_SHIFT	13
+#define SDHCI_TUN_CTRL0_TUNING_WORD_SEL_MASK	0x7
+#define TUNING_WORD_SEL_MASK	0x7
+
+#define SDHCI_TEGRA_VNDR_TUNING_STATUS0		0x1C8
 
 #define SDHCI_TEGRA_SDMEM_COMP_PADCTRL		0x1E0
 #define SDHCI_TEGRA_PAD_E_INPUT_OR_E_PWRD_MASK	0x80000000
@@ -257,6 +269,49 @@ static void tegra_sdhci_writel(struct sdhci_host *host, u32 val, int reg)
 		if (soc_data->nvquirks & NVQUIRK_READ_REG_AFTER_WRITE)
 			readb(host->ioaddr + SDHCI_BLOCK_GAP_CONTROL);
 	}
+}
+
+static void tegra_sdhci_dump_vendor_regs(struct sdhci_host *host)
+{
+	int reg, tuning_status;
+	u8 i;
+
+	pr_err("======= %s: Tuning windows =======\n", mmc_hostname(host->mmc));
+	reg = sdhci_readl(host, SDHCI_VNDR_TUN_CTRL0_0);
+	for (i = 0; i <= TUNING_WORD_SEL_MASK; i++) {
+		reg &= ~SDHCI_TUN_CTRL0_TUNING_WORD_SEL_MASK;
+		reg |= i;
+		sdhci_writel(host, reg, SDHCI_VNDR_TUN_CTRL0_0);
+		tuning_status = sdhci_readl(host, SDHCI_TEGRA_VNDR_TUNING_STATUS0);
+		pr_info("%s: tuning window[%d]: %#x\n",
+			mmc_hostname(host->mmc), i, tuning_status);
+	}
+	pr_err("==================================\n");
+
+	pr_err("Vendor clock ctrl: %#x\n",
+		sdhci_readl(host, SDHCI_TEGRA_VENDOR_CLOCK_CTRL));
+	pr_err("Vendor SysSW ctrl: %#x\n",
+		sdhci_readl(host, SDHCI_TEGRA_VENDOR_SYS_SW_CTRL));
+	pr_err("Vendor Err interrupt status : %#x\n",
+		sdhci_readl(host, SDHCI_TEGRA_VENDOR_ERR_INTR_STATUS));
+	pr_err("Vendor Cap overrides: %#x\n",
+		sdhci_readl(host, SDHCI_TEGRA_VENDOR_CAP_OVERRIDES));
+	pr_err("Vendor Misc ctrl: %#x\n",
+		sdhci_readl(host, SDHCI_TEGRA_VENDOR_MISC_CTRL));
+	pr_err("Vendor Misc ctrl_1: %#x\n",
+		sdhci_readl(host, SDHCI_TEGRA_VENDOR_MISC_CTRL_1));
+	pr_err("Vendor Misc ctrl_2: %#x\n",
+		sdhci_readl(host, SDHCI_TEGRA_VENDOR_MISC_CTRL_2));
+	pr_err("Vendor IO trim ctrl: %#x\n",
+		sdhci_readl(host, SDMMC_VNDR_IO_TRIM_CTRL_0));
+	pr_err("Vendor Tuning ctrl: %#x\n",
+		sdhci_readl(host, SDHCI_VNDR_TUN_CTRL0_0));
+	pr_err("SDMEM comp padctrl: %#x\n",
+		sdhci_readl(host, SDHCI_TEGRA_SDMEM_COMP_PADCTRL));
+	pr_err("Autocal config: %#x\n",
+		sdhci_readl(host, SDHCI_TEGRA_AUTO_CAL_CONFIG));
+	pr_err("Autocal status: %#x\n",
+		sdhci_readl(host, SDHCI_TEGRA_AUTO_CAL_STATUS));
 }
 
 static void tegra_sdhci_card_event(struct sdhci_host *host)
@@ -1082,6 +1137,7 @@ static const struct sdhci_ops tegra_sdhci_ops = {
 	.resume = tegra_sdhci_resume,
 	.platform_resume = tegra_sdhci_post_resume,
 	.card_event = tegra_sdhci_card_event,
+	.dump_vendor_regs = tegra_sdhci_dump_vendor_regs,
 };
 
 static const struct sdhci_pltfm_data sdhci_tegra20_pdata = {

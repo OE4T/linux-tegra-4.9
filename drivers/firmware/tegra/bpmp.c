@@ -739,6 +739,24 @@ static struct platform_device bpmp_tty = {
 	.id = -1,
 };
 
+static int bpmp_init_powergate(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+	struct device_node *np = dev->of_node;
+	u32 pd_cells;
+
+	if (of_property_read_u32(np, "#power-domain-cells", &pd_cells))
+		return 0;
+
+	if (pd_cells != 1) {
+		dev_err(&pdev->dev, "%s #power-domain-cells must be 1\n",
+			np->full_name);
+		return -ENODEV;
+	}
+
+	return tegra_bpmp_init_powergate(pdev);
+}
+
 static int bpmp_probe(struct platform_device *pdev)
 {
 	int r = 0;
@@ -761,9 +779,15 @@ static int bpmp_probe(struct platform_device *pdev)
 
 	register_syscore_ops(&bpmp_syscore_ops);
 
-	if (r == 0)
-		devm_tegrafw_register(device, "bpmp",
-			TFW_NORMAL, bpmp_version, NULL);
+	if (r)
+		goto out;
+
+	devm_tegrafw_register(device, "bpmp", TFW_NORMAL, bpmp_version, NULL);
+
+	if (bpmp_init_powergate(pdev))
+		dev_err(device, "bpmp powergating init failed\n");
+
+out:
 	return r;
 }
 

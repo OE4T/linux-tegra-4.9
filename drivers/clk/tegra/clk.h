@@ -810,4 +810,13 @@ int tegra_pll_wait_for_lock(struct tegra_clk_pll *pll);
 u16 tegra_pll_get_fixed_mdiv(struct clk_hw *hw, unsigned long input_rate);
 int tegra_pll_p_div_to_hw(struct tegra_clk_pll *pll, u8 p_div);
 
+struct tegra_pto_table {
+	int clk_id;
+	int divider;
+	u32 pto_id;
+	u32 presel_value;
+	u32 presel_reg;
+	u32 presel_mask;
+};
+void tegra_register_ptos(struct tegra_pto_table *ptodefs, int num_pto_defs);
 #endif /* TEGRA_CLK_H */

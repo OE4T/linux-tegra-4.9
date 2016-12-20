@@ -17,6 +17,7 @@
 #include <linux/clkdev.h>
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
+#include <linux/delay.h>
 #include <linux/fs.h>
 #include <linux/of.h>
 #include <linux/clk/tegra.h>
@@ -148,6 +149,8 @@ static const struct tegra_clk_periph_regs periph_regs[] = {
 };
 
 static void __iomem *clk_base;
+static DEFINE_MUTEX(pto_lock);
+static DEFINE_SPINLOCK(pto_rmw_lock);
 
 static int tegra_clk_rst_assert(struct reset_controller_dev *rcdev,
 		unsigned long id)
@@ -428,6 +431,80 @@ void __init tegra_add_of_provider(struct device_node *np)
 	rst_ctlr.of_node = np;
 	rst_ctlr.nr_resets = periph_banks * 32 + num_special_reset;
 	reset_controller_register(&rst_ctlr);
+}
+
+static int pto_get(void *data, u64 *output)
+{
+	struct tegra_pto_table *ptodef = (struct tegra_pto_table *)data;
+	unsigned long flags = 0;
+	u64 rate;
+	u32 val, presel_val = 0;
+
+	if (ptodef->presel_reg) {
+		spin_lock_irqsave(&pto_rmw_lock, flags);
+		val = readl(clk_base + ptodef->presel_reg);
+		presel_val = val & ptodef->presel_mask;
+		val &= ~ptodef->presel_mask;
+		val |= ptodef->presel_value;
+		writel(val, clk_base + ptodef->presel_reg);
+		spin_unlock_irqrestore(&pto_rmw_lock, flags);
+	}
+
+	mutex_lock(&pto_lock);
+
+	val = BIT(23) | BIT(13) | GENMASK(3, 0);
+	val |= 	ptodef->pto_id << 14;
+	writel(val, clk_base + 0x60);
+	writel(val | BIT(10), clk_base + 0x60);
+	writel(val, clk_base + 0x60);
+	writel(val | BIT(9), clk_base + 0x60);
+
+	udelay(500);
+
+	while(readl(clk_base + 0x64) & BIT(31))
+		;
+
+	val = readl(clk_base + 0x64);
+	val &= GENMASK(23, 0);
+	val *= ptodef->divider;
+
+	mutex_unlock(&pto_lock);
+
+	rate = (u64)val * 32768 / 16;
+	rate = DIV_ROUND_CLOSEST(rate, 1000) * 1000;
+	*output = rate;
+
+	if (ptodef->presel_reg) {
+		spin_lock_irqsave(&pto_rmw_lock, flags);
+		val = readl(clk_base + ptodef->presel_reg);
+		val &= ~ptodef->presel_mask;
+		val |= presel_val;
+		writel(val, clk_base + ptodef->presel_reg);
+		spin_unlock_irqrestore(&pto_rmw_lock, flags);
+	}
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(pto_fops, pto_get, NULL, "%llu\n");
+
+void tegra_register_ptos(struct tegra_pto_table *ptodefs, int num_pto_defs)
+{
+	int i;
+	struct clk *clk;
+	struct dentry *d;
+
+	for (i = 0; i < num_pto_defs; i++) {
+		clk = clks[ptodefs[i].clk_id];
+		if (IS_ERR(clk))
+			continue;
+
+		d = __clk_debugfs_add_file(clk, "pto_rate", 0400,
+				   &ptodefs[i], &pto_fops);
+		if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
+			pr_err("debugfs pro_counter failed %s\n",
+					__clk_get_name(clk));
+	}
 }
 
 void __init tegra_init_special_resets(unsigned int num,

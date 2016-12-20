@@ -132,9 +132,13 @@ struct nvdla_fence {
 	__u32 type;
 #define NVDLA_FENCE_TYPE_SYNCPT		0
 #define NVDLA_FENCE_TYPE_SYNC_FD	1
+#define NVDLA_FENCE_TYPE_SEMAPHORE	2
 	__u32 syncpoint_index;
 	__u32 syncpoint_value;
 	__u32 sync_fd;
+	__u32 sem_handle;
+	__u32 sem_offset;
+	__u32 sem_val;
 };
 
 #define NVHOST_NVDLA_IOCTL_MAGIC 'D'

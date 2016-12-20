@@ -119,6 +119,7 @@ void nvdla_task_get(struct nvdla_task *task)
 
 static void nvdla_task_free_locked(struct nvdla_task *task)
 {
+	int i;
 	struct nvhost_queue *queue = task->queue;
 	struct platform_device *pdev = queue->pool->pdev;
 
@@ -133,6 +134,14 @@ static void nvdla_task_free_locked(struct nvdla_task *task)
 	if (task->num_handles)
 		nvhost_buffer_submit_unpin(task->buffers,
 			task->memory_handles, task->num_handles);
+
+	for (i = 0; i < task->num_prefences; i++) {
+		if (task->prefences[i].type == NVDLA_FENCE_TYPE_SEMAPHORE &&
+			task->prefences[i].sem_handle) {
+			nvhost_buffer_submit_unpin(task->buffers,
+				&task->prefences[i].sem_handle, 1);
+		}
+	}
 
 	/* update takslist */
 	list_del(&task->list);
@@ -393,6 +402,7 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 static int nvdla_fill_preactions(struct nvdla_task *task)
 {
 	struct dla_task_descriptor *task_desc = task->task_desc;
+	struct nvhost_buffers *buffers = task->buffers;
 	struct nvhost_queue *queue = task->queue;
 	struct platform_device *pdev = queue->pool->pdev;
 	struct nvhost_master *host = nvhost_get_host(pdev);
@@ -487,6 +497,26 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 				nvhost_syncpt_address(pdev,
 					task->prefences[i].syncpoint_index),
 					task->prefences[i].syncpoint_value);
+			break;
+		}
+		case NVDLA_FENCE_TYPE_SEMAPHORE: {
+			dma_addr_t dma_addr;
+			size_t dma_size;
+
+			nvdla_dbg_info(pdev, "i[%d] semh[%u] semo[%u] val[%d]",
+					i,
+					task->prefences[i].sem_handle,
+					task->prefences[i].sem_offset,
+					task->prefences[i].sem_val);
+
+			if (nvhost_buffer_submit_pin(buffers,
+					&task->prefences[i].sem_handle,
+					1, &dma_addr, &dma_size))
+				break;
+
+			UPDATE_PREACTION(pre_cnt++, PREACTION_SEM_GE,
+				dma_addr + task->prefences[i].sem_offset,
+				task->prefences[i].sem_val);
 			break;
 		}
 		default:

@@ -1573,7 +1573,7 @@ static int channel_gk20a_alloc_job(struct channel_gk20a *c,
 	} else {
 		*job_out = kzalloc(sizeof(struct channel_gk20a_job),
 				GFP_KERNEL);
-		if (!job_out)
+		if (!*job_out)
 			err = -ENOMEM;
 	}
 

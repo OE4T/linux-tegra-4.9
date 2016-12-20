@@ -579,6 +579,12 @@
 			"fs_src", "pll_u_480M", "clk_m";
 	};
 
+	tegra_ext_cdp: max16984-cdp {
+		compatible = "maxim,max16984-tegra210-cdp-phy";
+		#phy-cells = <1>;
+		status = "disabled";
+	};
+
 	uarta: serial@70006000 {
 		compatible = "nvidia,tegra114-hsuart";
 		reg = <0x0 0x70006000 0x0 0x40>;

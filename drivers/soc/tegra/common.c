@@ -7,6 +7,7 @@
  */
 
 #include <linux/of.h>
+#include <linux/of_fdt.h>
 #include <linux/ioport.h>
 #include <linux/io.h>
 #include <linux/highmem.h>
@@ -434,3 +435,33 @@ void __tegra_clear_framebuffer(struct platform_device *pdev,
 
 	iounmap(to_io);
 }
+
+static int __init display_tegra_dts_info(void)
+{
+	int ret_d;
+	int ret_t;
+	unsigned long dt_root;
+	const char *dts_fname;
+	const char *dtb_bdate;
+	const char *dtb_btime;
+
+	dt_root = of_get_flat_dt_root();
+
+	dts_fname = of_get_flat_dt_prop(dt_root, "nvidia,dtsfilename", NULL);
+	if (dts_fname)
+		pr_info("DTS File Name: %s\n", dts_fname);
+	else
+		pr_info("DTS File Name: <unknown>\n");
+
+	ret_d = of_property_read_string_index(of_find_node_by_path("/"),
+			"nvidia,dtbbuildtime", 0, &dtb_bdate);
+	ret_t = of_property_read_string_index(of_find_node_by_path("/"),
+			"nvidia,dtbbuildtime", 1, &dtb_btime);
+	if (!ret_d && !ret_t)
+		pr_info("DTB Build time: %s %s\n", dtb_bdate, dtb_btime);
+	else
+		pr_info("DTB Build time: <unknown>\n");
+
+	return 0;
+}
+early_initcall(display_tegra_dts_info);

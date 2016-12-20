@@ -1158,6 +1158,11 @@ static int gm20b_init_gpc_pll(struct gk20a *g)
 
 	clk->gpc_pll.id = GK20A_GPC_PLL;
 	clk->gpc_pll.clk_in = clk_get_rate(ref) / KHZ;
+	if (clk->gpc_pll.clk_in == 0) {
+		gk20a_err(dev_from_gk20a(g),
+			"GPCPLL reference clock is zero");
+		return -EINVAL;
+	}
 
 	gm20b_calc_dvfs_safe_max_freq(c);
 	clk->gpc_pll.PL = (dvfs_safe_max_freq == 0) ? 0 :

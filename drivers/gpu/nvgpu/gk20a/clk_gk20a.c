@@ -439,6 +439,11 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 
 	clk->gpc_pll.id = GK20A_GPC_PLL;
 	clk->gpc_pll.clk_in = ref_rate / KHZ;
+	if (clk->gpc_pll.clk_in == 0) {
+		gk20a_err(dev_from_gk20a(g),
+			"GPCPLL reference clock is zero");
+		return -EINVAL;
+	}
 
 	/* Decide initial frequency */
 	if (!initialized) {

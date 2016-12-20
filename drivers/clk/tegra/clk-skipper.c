@@ -66,14 +66,19 @@ static int clk_skipper_set_rate(struct clk_hw *hw, unsigned long rate,
 	return 0;
 }
 
-static long clk_skipper_round_rate(struct clk_hw *hw, unsigned long rate,
-				   unsigned long *prate)
+static int clk_skipper_determine_rate(struct clk_hw *hw,
+				      struct clk_rate_request *req)
 {
 	int mul;
 
-	mul = calc_skipper_mul(rate, *prate);
+	req->rate = max(req->rate, req->min_rate);
+	req->rate = min(req->rate, req->max_rate);
 
-	return (*prate * mul) / SKIPPER_DIVISOR;
+	mul = calc_skipper_mul(req->rate, req->best_parent_rate);
+
+	req->rate = (req->best_parent_rate * mul) / SKIPPER_DIVISOR;
+
+	return 0;
 }
 
 static unsigned long clk_skipper_recalc_rate(struct clk_hw *hw,
@@ -92,7 +97,7 @@ static unsigned long clk_skipper_recalc_rate(struct clk_hw *hw,
 const struct clk_ops tegra_clk_skipper_ops = {
 	.recalc_rate = clk_skipper_recalc_rate,
 	.set_rate = clk_skipper_set_rate,
-	.round_rate = clk_skipper_round_rate,
+	.determine_rate = clk_skipper_determine_rate,
 };
 
 struct clk *tegra_clk_register_skipper(const char *name,

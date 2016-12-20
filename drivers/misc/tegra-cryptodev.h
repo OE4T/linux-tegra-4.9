@@ -110,7 +110,7 @@ int tegra_se_rng1_op(struct tegra_se_rng1_request *req);
  * TEGRA_CRYPTO_IOCTL_PROCESS_REQ
  */
 struct tegra_crypt_req {
-	int op; /* e.g. TEGRA_CRYPTO_ECB */
+	unsigned int op; /* e.g. TEGRA_CRYPTO_ECB */
 	bool encrypt;
 	char key[TEGRA_CRYPTO_MAX_KEY_SIZE];
 	unsigned int keylen;

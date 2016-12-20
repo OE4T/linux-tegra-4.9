@@ -332,15 +332,17 @@ static int nvgpu_clk_arb_install_fd(struct gk20a *g,
 		return -ENOMEM;
 
 	fd = get_unused_fd_flags(O_RDWR);
-	if (fd < 0)
-		return fd;
+	if (fd < 0) {
+		err = fd;
+		goto fail;
+	}
 
 	name = kasprintf(GFP_KERNEL, "%s-clk-fd%d", dev_name(g->dev), fd);
 	file = anon_inode_getfile(name, fops, dev, O_RDWR);
 	kfree(name);
 	if (IS_ERR(file)) {
 		err = PTR_ERR(file);
-		goto fail;
+		goto fail_fd;
 	}
 
 	fd_install(fd, file);
@@ -357,9 +359,10 @@ static int nvgpu_clk_arb_install_fd(struct gk20a *g,
 
 	return fd;
 
+fail_fd:
+	put_unused_fd(fd);
 fail:
 	kfree(dev);
-	put_unused_fd(fd);
 
 	return err;
 }

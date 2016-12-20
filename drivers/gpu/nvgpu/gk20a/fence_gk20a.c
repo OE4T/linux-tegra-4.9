@@ -49,8 +49,8 @@ static void gk20a_fence_free(struct kref *ref)
 		gk20a_semaphore_put(f->semaphore);
 
 	if (f->allocator) {
-		if (gk20a_alloc_initialized(f->allocator))
-			gk20a_free(f->allocator, (size_t)f);
+		if (nvgpu_alloc_initialized(f->allocator))
+			nvgpu_free(f->allocator, (size_t)f);
 	} else
 		kfree(f);
 }
@@ -129,7 +129,7 @@ int gk20a_alloc_fence_pool(struct channel_gk20a *c, unsigned int count)
 	if (!fence_pool)
 		return -ENOMEM;
 
-	err = gk20a_lockless_allocator_init(c->g, &c->fence_allocator,
+	err = nvgpu_lockless_allocator_init(c->g, &c->fence_allocator,
 				"fence_pool", (size_t)fence_pool, size,
 				sizeof(struct gk20a_fence), 0);
 	if (err)
@@ -144,11 +144,11 @@ fail:
 
 void gk20a_free_fence_pool(struct channel_gk20a *c)
 {
-	if (gk20a_alloc_initialized(&c->fence_allocator)) {
+	if (nvgpu_alloc_initialized(&c->fence_allocator)) {
 		void *base = (void *)(uintptr_t)
-				gk20a_alloc_base(&c->fence_allocator);
+				nvgpu_alloc_base(&c->fence_allocator);
 
-		gk20a_alloc_destroy(&c->fence_allocator);
+		nvgpu_alloc_destroy(&c->fence_allocator);
 		vfree(base);
 	}
 }
@@ -158,9 +158,9 @@ struct gk20a_fence *gk20a_alloc_fence(struct channel_gk20a *c)
 	struct gk20a_fence *fence = NULL;
 
 	if (channel_gk20a_is_prealloc_enabled(c)) {
-		if (gk20a_alloc_initialized(&c->fence_allocator)) {
+		if (nvgpu_alloc_initialized(&c->fence_allocator)) {
 			fence = (struct gk20a_fence *)(uintptr_t)
-				gk20a_alloc(&c->fence_allocator,
+				nvgpu_alloc(&c->fence_allocator,
 					sizeof(struct gk20a_fence));
 
 			/* clear the node and reset the allocator pointer */

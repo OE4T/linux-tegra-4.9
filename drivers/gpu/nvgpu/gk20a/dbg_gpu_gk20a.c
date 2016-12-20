@@ -815,7 +815,7 @@ static int nvgpu_dbg_gpu_ioctl_access_fb_memory(struct dbg_session_gk20a *dbg_s,
 		goto fail_dmabuf_put;
 	}
 
-	buffer = nvgpu_alloc(access_limit_size, true);
+	buffer = nvgpu_kalloc(access_limit_size, true);
 	if (!buffer) {
 		err = -ENOMEM;
 		goto fail_dmabuf_put;
@@ -861,7 +861,7 @@ static int nvgpu_dbg_gpu_ioctl_access_fb_memory(struct dbg_session_gk20a *dbg_s,
 fail_idle:
 	gk20a_idle(g->dev);
 fail_free_buffer:
-	nvgpu_free(buffer);
+	nvgpu_kfree(buffer);
 fail_dmabuf_put:
 	dma_buf_put(dmabuf);
 

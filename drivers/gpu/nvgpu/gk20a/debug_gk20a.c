@@ -477,7 +477,7 @@ void gk20a_debug_init(struct device *dev, const char *debugfs_symlink)
 	gk20a_railgating_debugfs_init(g->dev);
 	gk20a_cde_debugfs_init(g->dev);
 	gk20a_ce_debugfs_init(g->dev);
-	gk20a_alloc_debugfs_init(g->dev);
+	nvgpu_alloc_debugfs_init(g->dev);
 	gk20a_mm_debugfs_init(g->dev);
 	gk20a_fifo_debugfs_init(g->dev);
 	gk20a_sched_debugfs_init(g->dev);

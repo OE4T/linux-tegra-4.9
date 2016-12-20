@@ -31,9 +31,9 @@
 #include <uapi/linux/nvgpu.h>
 #include <trace/events/gk20a.h>
 
-#include <gk20a/page_allocator_priv.h>
-
 #include <nvgpu/timers.h>
+#include <nvgpu/allocator.h>
+#include <nvgpu/page_allocator.h>
 
 #include "gk20a.h"
 #include "mm_gk20a.h"
@@ -74,7 +74,7 @@ is_vidmem_page_alloc(u64 addr)
 	return !!(addr & 1ULL);
 }
 
-static inline struct gk20a_page_alloc *
+static inline struct nvgpu_page_alloc *
 get_vidmem_page_alloc(struct scatterlist *sgl)
 {
 	u64 addr;
@@ -86,7 +86,7 @@ get_vidmem_page_alloc(struct scatterlist *sgl)
 	else
 		WARN_ON(1);
 
-	return (struct gk20a_page_alloc *)(uintptr_t)addr;
+	return (struct nvgpu_page_alloc *)(uintptr_t)addr;
 }
 
 int gk20a_mem_begin(struct gk20a *g, struct mem_desc *mem)
@@ -176,7 +176,7 @@ typedef void (*pramin_access_batch_fn)(struct gk20a *g, u32 start, u32 words,
 static inline void pramin_access_batched(struct gk20a *g, struct mem_desc *mem,
 		u32 offset, u32 size, pramin_access_batch_fn loop, u32 **arg)
 {
-	struct gk20a_page_alloc *alloc = NULL;
+	struct nvgpu_page_alloc *alloc = NULL;
 	struct page_alloc_chunk *chunk = NULL;
 	u32 byteoff, start_reg, until_end, n;
 
@@ -797,8 +797,8 @@ void gk20a_remove_vm(struct vm_gk20a *vm, struct mem_desc *inst_block)
 static void gk20a_vidmem_destroy(struct gk20a *g)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
-	if (gk20a_alloc_initialized(&g->mm.vidmem.allocator))
-		gk20a_alloc_destroy(&g->mm.vidmem.allocator);
+	if (nvgpu_alloc_initialized(&g->mm.vidmem.allocator))
+		nvgpu_alloc_destroy(&g->mm.vidmem.allocator);
 #endif
 }
 
@@ -928,8 +928,8 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 	u64 default_page_size = SZ_64K;
 	int err;
 
-	static struct gk20a_alloc_carveout wpr_co =
-		GK20A_CARVEOUT("wpr-region", 0, SZ_16M);
+	static struct nvgpu_alloc_carveout wpr_co =
+		NVGPU_CARVEOUT("wpr-region", 0, SZ_16M);
 
 	if (!size)
 		return 0;
@@ -944,12 +944,12 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 	 * initialization requires vidmem but we want to use the CE to zero
 	 * out vidmem before allocating it...
 	 */
-	err = gk20a_page_allocator_init(g, &g->mm.vidmem.bootstrap_allocator,
+	err = nvgpu_page_allocator_init(g, &g->mm.vidmem.bootstrap_allocator,
 					"vidmem-bootstrap",
 					bootstrap_base, bootstrap_size,
 					SZ_4K, 0);
 
-	err = gk20a_page_allocator_init(g, &g->mm.vidmem.allocator,
+	err = nvgpu_page_allocator_init(g, &g->mm.vidmem.allocator,
 					"vidmem",
 					base, size - base,
 					default_page_size,
@@ -961,7 +961,7 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 	}
 
 	/* Reserve bootstrap region in vidmem allocator */
-	gk20a_alloc_reserve_carveout(&g->mm.vidmem.allocator, &wpr_co);
+	nvgpu_alloc_reserve_carveout(&g->mm.vidmem.allocator, &wpr_co);
 
 	mm->vidmem.base = base;
 	mm->vidmem.size = size - base;
@@ -1482,7 +1482,7 @@ int gk20a_vm_get_buffers(struct vm_gk20a *vm,
 
 	mutex_lock(&vm->update_gmmu_lock);
 
-	buffer_list = nvgpu_alloc(sizeof(*buffer_list) *
+	buffer_list = nvgpu_kalloc(sizeof(*buffer_list) *
 			      vm->num_user_mapped_buffers, true);
 	if (!buffer_list) {
 		mutex_unlock(&vm->update_gmmu_lock);
@@ -1567,7 +1567,7 @@ void gk20a_vm_put_buffers(struct vm_gk20a *vm,
 	gk20a_vm_mapping_batch_finish_locked(vm, &batch);
 	mutex_unlock(&vm->update_gmmu_lock);
 
-	nvgpu_free(mapped_buffers);
+	nvgpu_kfree(mapped_buffers);
 }
 
 static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
@@ -1623,7 +1623,7 @@ u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
 		      enum gmmu_pgsz_gk20a gmmu_pgsz_idx)
 
 {
-	struct gk20a_allocator *vma = &vm->vma[gmmu_pgsz_idx];
+	struct nvgpu_allocator *vma = &vm->vma[gmmu_pgsz_idx];
 	u64 offset;
 	u64 gmmu_page_size = vm->gmmu_page_sizes[gmmu_pgsz_idx];
 
@@ -1645,7 +1645,7 @@ u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
 	gk20a_dbg_info("size=0x%llx @ pgsz=%dKB", size,
 			vm->gmmu_page_sizes[gmmu_pgsz_idx]>>10);
 
-	offset = gk20a_alloc(vma, size);
+	offset = nvgpu_alloc(vma, size);
 	if (!offset) {
 		gk20a_err(dev_from_vm(vm),
 			  "%s oom: sz=0x%llx", vma->name, size);
@@ -1660,11 +1660,11 @@ int gk20a_vm_free_va(struct vm_gk20a *vm,
 		     u64 offset, u64 size,
 		     enum gmmu_pgsz_gk20a pgsz_idx)
 {
-	struct gk20a_allocator *vma = &vm->vma[pgsz_idx];
+	struct nvgpu_allocator *vma = &vm->vma[pgsz_idx];
 
 	gk20a_dbg_info("%s free addr=0x%llx, size=0x%llx",
 			vma->name, offset, size);
-	gk20a_free(vma, offset);
+	nvgpu_free(vma, offset);
 
 	return 0;
 }
@@ -2302,15 +2302,15 @@ err_kfree:
 int gk20a_vidmem_get_space(struct gk20a *g, u64 *space)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
-	struct gk20a_allocator *allocator = &g->mm.vidmem.allocator;
+	struct nvgpu_allocator *allocator = &g->mm.vidmem.allocator;
 
 	gk20a_dbg_fn("");
 
-	if (!gk20a_alloc_initialized(allocator))
+	if (!nvgpu_alloc_initialized(allocator))
 		return -ENOSYS;
 
 	mutex_lock(&g->mm.vidmem.clear_list_mutex);
-	*space = gk20a_alloc_space(allocator) +
+	*space = nvgpu_alloc_space(allocator) +
 		atomic64_read(&g->mm.vidmem.bytes_pending);
 	mutex_unlock(&g->mm.vidmem.clear_list_mutex);
 	return 0;
@@ -2359,7 +2359,7 @@ static u64 gk20a_mm_get_align(struct gk20a *g, struct scatterlist *sgl,
 	u64 buf_addr;
 
 	if (aperture == APERTURE_VIDMEM) {
-		struct gk20a_page_alloc *alloc = get_vidmem_page_alloc(sgl);
+		struct nvgpu_page_alloc *alloc = get_vidmem_page_alloc(sgl);
 		struct page_alloc_chunk *chunk = NULL;
 
 		list_for_each_entry(chunk, &alloc->alloc_chunks, list_entry) {
@@ -3068,7 +3068,7 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct mem_desc *mem)
 {
 	struct gk20a_fence *gk20a_fence_out = NULL;
 	struct gk20a_fence *gk20a_last_fence = NULL;
-	struct gk20a_page_alloc *alloc = NULL;
+	struct nvgpu_page_alloc *alloc = NULL;
 	struct page_alloc_chunk *chunk = NULL;
 	int err = 0;
 
@@ -3134,15 +3134,15 @@ int gk20a_gmmu_alloc_attr_vid(struct gk20a *g, enum dma_attr attr,
 }
 
 #if defined(CONFIG_GK20A_VIDMEM)
-static u64 __gk20a_gmmu_alloc(struct gk20a_allocator *allocator, dma_addr_t at,
+static u64 __gk20a_gmmu_alloc(struct nvgpu_allocator *allocator, dma_addr_t at,
 				size_t size)
 {
 	u64 addr = 0;
 
 	if (at)
-		addr = gk20a_alloc_fixed(allocator, at, size);
+		addr = nvgpu_alloc_fixed(allocator, at, size);
 	else
-		addr = gk20a_alloc(allocator, size);
+		addr = nvgpu_alloc(allocator, size);
 
 	return addr;
 }
@@ -3154,14 +3154,14 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 #if defined(CONFIG_GK20A_VIDMEM)
 	u64 addr;
 	int err;
-	struct gk20a_allocator *vidmem_alloc = g->mm.vidmem.cleared ?
+	struct nvgpu_allocator *vidmem_alloc = g->mm.vidmem.cleared ?
 		&g->mm.vidmem.allocator :
 		&g->mm.vidmem.bootstrap_allocator;
 	int before_pending;
 
 	gk20a_dbg_fn("");
 
-	if (!gk20a_alloc_initialized(&g->mm.vidmem.allocator))
+	if (!nvgpu_alloc_initialized(&g->mm.vidmem.allocator))
 		return -ENOSYS;
 
 	/* we don't support dma attributes here, except that kernel mappings
@@ -3214,7 +3214,7 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 fail_kfree:
 	kfree(mem->sgt);
 fail_physfree:
-	gk20a_free(&g->mm.vidmem.allocator, addr);
+	nvgpu_free(&g->mm.vidmem.allocator, addr);
 	return err;
 #else
 	return -ENOSYS;
@@ -3241,7 +3241,7 @@ static void gk20a_gmmu_free_attr_vid(struct gk20a *g, enum dma_attr attr,
 		}
 	} else {
 		gk20a_memset(g, mem, 0, 0, mem->size);
-		gk20a_free(mem->allocator,
+		nvgpu_free(mem->allocator,
 			   (u64)get_vidmem_page_alloc(mem->sgt->sgl));
 		gk20a_free_sgtable(&mem->sgt);
 
@@ -3276,7 +3276,7 @@ void gk20a_gmmu_free(struct gk20a *g, struct mem_desc *mem)
 u64 gk20a_mem_get_base_addr(struct gk20a *g, struct mem_desc *mem,
 			    u32 flags)
 {
-	struct gk20a_page_alloc *alloc;
+	struct nvgpu_page_alloc *alloc;
 	u64 addr;
 
 	if (mem->aperture == APERTURE_VIDMEM) {
@@ -3317,7 +3317,7 @@ static void gk20a_vidmem_clear_mem_worker(struct work_struct *work)
 
 	while ((mem = get_pending_mem_desc(mm)) != NULL) {
 		gk20a_gmmu_clear_vidmem_mem(g, mem);
-		gk20a_free(mem->allocator,
+		nvgpu_free(mem->allocator,
 			   (u64)get_vidmem_page_alloc(mem->sgt->sgl));
 		gk20a_free_sgtable(&mem->sgt);
 
@@ -3905,7 +3905,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 	u32 page_size  = vm->gmmu_page_sizes[pgsz_idx];
 	int err;
 	struct scatterlist *sgl = NULL;
-	struct gk20a_page_alloc *alloc = NULL;
+	struct nvgpu_page_alloc *alloc = NULL;
 	struct page_alloc_chunk *chunk = NULL;
 	u64 length;
 
@@ -4251,12 +4251,12 @@ static int gk20a_init_sema_pool(struct vm_gk20a *vm)
 	 *
 	 * !!! TODO: cleanup.
 	 */
-	sema_sea->gpu_va = gk20a_alloc_fixed(&vm->vma[gmmu_page_size_kernel],
+	sema_sea->gpu_va = nvgpu_alloc_fixed(&vm->vma[gmmu_page_size_kernel],
 					     vm->va_limit -
 					     mm->channel.kernel_size,
 					     512 * PAGE_SIZE);
 	if (!sema_sea->gpu_va) {
-		gk20a_free(&vm->vma[gmmu_page_size_small], sema_sea->gpu_va);
+		nvgpu_free(&vm->vma[gmmu_page_size_small], sema_sea->gpu_va);
 		gk20a_vm_put(vm);
 		return -ENOMEM;
 	}
@@ -4264,7 +4264,7 @@ static int gk20a_init_sema_pool(struct vm_gk20a *vm)
 	err = gk20a_semaphore_pool_map(vm->sema_pool, vm);
 	if (err) {
 		gk20a_semaphore_pool_unmap(vm->sema_pool, vm);
-		gk20a_free(&vm->vma[gmmu_page_size_small],
+		nvgpu_free(&vm->vma[gmmu_page_size_small],
 			    vm->sema_pool->gpu_va);
 		gk20a_vm_put(vm);
 	}
@@ -4387,7 +4387,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 		snprintf(alloc_name, sizeof(alloc_name),
 			 "gk20a_%s-fixed", name);
 
-		err = __gk20a_buddy_allocator_init(g, &vm->fixed,
+		err = __nvgpu_buddy_allocator_init(g, &vm->fixed,
 						   vm, alloc_name,
 						   small_vma_start,
 						   g->separate_fixed_allocs,
@@ -4404,7 +4404,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	if (small_vma_start < small_vma_limit) {
 		snprintf(alloc_name, sizeof(alloc_name), "gk20a_%s-%dKB", name,
 			 vm->gmmu_page_sizes[gmmu_page_size_small] >> 10);
-		err = __gk20a_buddy_allocator_init(
+		err = __nvgpu_buddy_allocator_init(
 			g,
 			&vm->vma[gmmu_page_size_small],
 			vm, alloc_name,
@@ -4420,7 +4420,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	if (large_vma_start < large_vma_limit) {
 		snprintf(alloc_name, sizeof(alloc_name), "gk20a_%s-%dKB",
 			 name, vm->gmmu_page_sizes[gmmu_page_size_big] >> 10);
-		err = __gk20a_buddy_allocator_init(
+		err = __nvgpu_buddy_allocator_init(
 			g,
 			&vm->vma[gmmu_page_size_big],
 			vm, alloc_name,
@@ -4438,7 +4438,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	/*
 	 * kernel reserved VMA is at the end of the aperture
 	 */
-	err = __gk20a_buddy_allocator_init(g, &vm->vma[gmmu_page_size_kernel],
+	err = __nvgpu_buddy_allocator_init(g, &vm->vma[gmmu_page_size_kernel],
 					   vm, alloc_name,
 					   kernel_vma_start,
 					   kernel_vma_limit - kernel_vma_start,
@@ -4469,10 +4469,10 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 
 clean_up_big_allocator:
 	if (large_vma_start < large_vma_limit)
-		gk20a_alloc_destroy(&vm->vma[gmmu_page_size_big]);
+		nvgpu_alloc_destroy(&vm->vma[gmmu_page_size_big]);
 clean_up_small_allocator:
 	if (small_vma_start < small_vma_limit)
-		gk20a_alloc_destroy(&vm->vma[gmmu_page_size_small]);
+		nvgpu_alloc_destroy(&vm->vma[gmmu_page_size_small]);
 clean_up_ptes:
 	free_gmmu_pages(vm, &vm->pdb);
 clean_up_pdes:
@@ -4547,7 +4547,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 {
 	int err = -ENOMEM;
 	int pgsz_idx = gmmu_page_size_small;
-	struct gk20a_allocator *vma;
+	struct nvgpu_allocator *vma;
 	struct vm_gk20a *vm = as_share->vm;
 	struct gk20a *g = vm->mm->g;
 	struct vm_reserved_va_node *va_node;
@@ -4579,13 +4579,13 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 
 	vma = &vm->vma[pgsz_idx];
 	if (args->flags & NVGPU_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET) {
-		if (gk20a_alloc_initialized(&vm->fixed))
+		if (nvgpu_alloc_initialized(&vm->fixed))
 			vma = &vm->fixed;
-		vaddr_start = gk20a_alloc_fixed(vma, args->o_a.offset,
+		vaddr_start = nvgpu_alloc_fixed(vma, args->o_a.offset,
 						(u64)args->pages *
 						(u64)args->page_size);
 	} else {
-		vaddr_start = gk20a_alloc(vma,
+		vaddr_start = nvgpu_alloc(vma,
 					  (u64)args->pages *
 					  (u64)args->page_size);
 	}
@@ -4621,7 +4621,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 					 APERTURE_INVALID);
 		if (!map_offset) {
 			mutex_unlock(&vm->update_gmmu_lock);
-			gk20a_free(vma, vaddr_start);
+			nvgpu_free(vma, vaddr_start);
 			kfree(va_node);
 			goto clean_up;
 		}
@@ -4644,7 +4644,7 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 {
 	int err = -ENOMEM;
 	int pgsz_idx;
-	struct gk20a_allocator *vma;
+	struct nvgpu_allocator *vma;
 	struct vm_gk20a *vm = as_share->vm;
 	struct vm_reserved_va_node *va_node;
 	struct gk20a *g = gk20a_from_vm(vm);
@@ -4656,11 +4656,11 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 	pgsz_idx = __nv_gmmu_va_is_big_page_region(vm, args->offset) ?
 			gmmu_page_size_big : gmmu_page_size_small;
 
-	if (gk20a_alloc_initialized(&vm->fixed))
+	if (nvgpu_alloc_initialized(&vm->fixed))
 		vma = &vm->fixed;
 	else
 		vma = &vm->vma[pgsz_idx];
-	gk20a_free(vma, args->offset);
+	nvgpu_free(vma, args->offset);
 
 	mutex_lock(&vm->update_gmmu_lock);
 	va_node = addr_to_reservation(vm, args->offset);
@@ -4844,13 +4844,13 @@ int gk20a_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset,
 
 void gk20a_deinit_vm(struct vm_gk20a *vm)
 {
-	gk20a_alloc_destroy(&vm->vma[gmmu_page_size_kernel]);
-	if (gk20a_alloc_initialized(&vm->vma[gmmu_page_size_big]))
-		gk20a_alloc_destroy(&vm->vma[gmmu_page_size_big]);
-	if (gk20a_alloc_initialized(&vm->vma[gmmu_page_size_small]))
-		gk20a_alloc_destroy(&vm->vma[gmmu_page_size_small]);
-	if (gk20a_alloc_initialized(&vm->fixed))
-		gk20a_alloc_destroy(&vm->fixed);
+	nvgpu_alloc_destroy(&vm->vma[gmmu_page_size_kernel]);
+	if (nvgpu_alloc_initialized(&vm->vma[gmmu_page_size_big]))
+		nvgpu_alloc_destroy(&vm->vma[gmmu_page_size_big]);
+	if (nvgpu_alloc_initialized(&vm->vma[gmmu_page_size_small]))
+		nvgpu_alloc_destroy(&vm->vma[gmmu_page_size_small]);
+	if (nvgpu_alloc_initialized(&vm->fixed))
+		nvgpu_alloc_destroy(&vm->fixed);
 
 	gk20a_vm_free_entries(vm, &vm->pdb, 0);
 }

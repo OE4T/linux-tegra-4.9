@@ -17,20 +17,22 @@
 #include <linux/kernel.h>
 #include <linux/slab.h>
 
-#include "mm_gk20a.h"
-#include "platform_gk20a.h"
-#include "gk20a_allocator.h"
+#include <nvgpu/allocator.h>
+
+#include "gk20a/mm_gk20a.h"
+#include "gk20a/platform_gk20a.h"
+
 #include "buddy_allocator_priv.h"
 
 static struct kmem_cache *buddy_cache;	/* slab cache for meta data. */
 
 /* Some other buddy allocator functions. */
-static struct gk20a_buddy *balloc_free_buddy(struct gk20a_buddy_allocator *a,
+static struct nvgpu_buddy *balloc_free_buddy(struct nvgpu_buddy_allocator *a,
 					     u64 addr);
-static void balloc_coalesce(struct gk20a_buddy_allocator *a,
-			    struct gk20a_buddy *b);
-static void __balloc_do_free_fixed(struct gk20a_buddy_allocator *a,
-				   struct gk20a_fixed_alloc *falloc);
+static void balloc_coalesce(struct nvgpu_buddy_allocator *a,
+			    struct nvgpu_buddy *b);
+static void __balloc_do_free_fixed(struct nvgpu_buddy_allocator *a,
+				   struct nvgpu_fixed_alloc *falloc);
 
 /*
  * This function is not present in older kernel's list.h code.
@@ -64,7 +66,7 @@ static void __balloc_do_free_fixed(struct gk20a_buddy_allocator *a,
  * Hueristic: Just guessing that the best max order is the largest single
  * block that will fit in the address space.
  */
-static void balloc_compute_max_order(struct gk20a_buddy_allocator *a)
+static void balloc_compute_max_order(struct nvgpu_buddy_allocator *a)
 {
 	u64 true_max_order = ilog2(a->blks);
 
@@ -83,7 +85,7 @@ static void balloc_compute_max_order(struct gk20a_buddy_allocator *a)
  * Since we can only allocate in chucks of a->blk_size we need to trim off
  * any excess data that is not aligned to a->blk_size.
  */
-static void balloc_allocator_align(struct gk20a_buddy_allocator *a)
+static void balloc_allocator_align(struct nvgpu_buddy_allocator *a)
 {
 	a->start = ALIGN(a->base, a->blk_size);
 	WARN_ON(a->start != a->base);
@@ -95,17 +97,17 @@ static void balloc_allocator_align(struct gk20a_buddy_allocator *a)
 /*
  * Pass NULL for parent if you want a top level buddy.
  */
-static struct gk20a_buddy *balloc_new_buddy(struct gk20a_buddy_allocator *a,
-					    struct gk20a_buddy *parent,
+static struct nvgpu_buddy *balloc_new_buddy(struct nvgpu_buddy_allocator *a,
+					    struct nvgpu_buddy *parent,
 					    u64 start, u64 order)
 {
-	struct gk20a_buddy *new_buddy;
+	struct nvgpu_buddy *new_buddy;
 
 	new_buddy = kmem_cache_alloc(buddy_cache, GFP_KERNEL);
 	if (!new_buddy)
 		return NULL;
 
-	memset(new_buddy, 0, sizeof(struct gk20a_buddy));
+	memset(new_buddy, 0, sizeof(struct nvgpu_buddy));
 
 	new_buddy->parent = parent;
 	new_buddy->start = start;
@@ -116,8 +118,8 @@ static struct gk20a_buddy *balloc_new_buddy(struct gk20a_buddy_allocator *a,
 	return new_buddy;
 }
 
-static void __balloc_buddy_list_add(struct gk20a_buddy_allocator *a,
-				    struct gk20a_buddy *b,
+static void __balloc_buddy_list_add(struct nvgpu_buddy_allocator *a,
+				    struct nvgpu_buddy *b,
 				    struct list_head *list)
 {
 	if (buddy_is_in_list(b)) {
@@ -141,8 +143,8 @@ static void __balloc_buddy_list_add(struct gk20a_buddy_allocator *a,
 	buddy_set_in_list(b);
 }
 
-static void __balloc_buddy_list_rem(struct gk20a_buddy_allocator *a,
-				    struct gk20a_buddy *b)
+static void __balloc_buddy_list_rem(struct nvgpu_buddy_allocator *a,
+				    struct nvgpu_buddy *b)
 {
 	if (!buddy_is_in_list(b)) {
 		alloc_dbg(balloc_owner(a),
@@ -159,21 +161,21 @@ static void __balloc_buddy_list_rem(struct gk20a_buddy_allocator *a,
  * Add a buddy to one of the buddy lists and deal with the necessary
  * book keeping. Adds the buddy to the list specified by the buddy's order.
  */
-static void balloc_blist_add(struct gk20a_buddy_allocator *a,
-			     struct gk20a_buddy *b)
+static void balloc_blist_add(struct nvgpu_buddy_allocator *a,
+			     struct nvgpu_buddy *b)
 {
 	__balloc_buddy_list_add(a, b, balloc_get_order_list(a, b->order));
 	a->buddy_list_len[b->order]++;
 }
 
-static void balloc_blist_rem(struct gk20a_buddy_allocator *a,
-			     struct gk20a_buddy *b)
+static void balloc_blist_rem(struct nvgpu_buddy_allocator *a,
+			     struct nvgpu_buddy *b)
 {
 	__balloc_buddy_list_rem(a, b);
 	a->buddy_list_len[b->order]--;
 }
 
-static u64 balloc_get_order(struct gk20a_buddy_allocator *a, u64 len)
+static u64 balloc_get_order(struct nvgpu_buddy_allocator *a, u64 len)
 {
 	if (len == 0)
 		return 0;
@@ -184,7 +186,7 @@ static u64 balloc_get_order(struct gk20a_buddy_allocator *a, u64 len)
 	return fls(len);
 }
 
-static u64 __balloc_max_order_in(struct gk20a_buddy_allocator *a,
+static u64 __balloc_max_order_in(struct nvgpu_buddy_allocator *a,
 				 u64 start, u64 end)
 {
 	u64 size = (end - start) >> a->blk_shift;
@@ -198,11 +200,11 @@ static u64 __balloc_max_order_in(struct gk20a_buddy_allocator *a,
 /*
  * Initialize the buddy lists.
  */
-static int balloc_init_lists(struct gk20a_buddy_allocator *a)
+static int balloc_init_lists(struct nvgpu_buddy_allocator *a)
 {
 	int i;
 	u64 bstart, bend, order;
-	struct gk20a_buddy *buddy;
+	struct nvgpu_buddy *buddy;
 
 	bstart = a->start;
 	bend = a->end;
@@ -228,7 +230,7 @@ cleanup:
 	for (i = 0; i < GPU_BALLOC_ORDER_LIST_LEN; i++) {
 		if (!list_empty(balloc_get_order_list(a, i))) {
 			buddy = list_first_entry(balloc_get_order_list(a, i),
-					struct gk20a_buddy, buddy_entry);
+					struct nvgpu_buddy, buddy_entry);
 			balloc_blist_rem(a, buddy);
 			kmem_cache_free(buddy_cache, buddy);
 		}
@@ -240,24 +242,24 @@ cleanup:
 /*
  * Clean up and destroy the passed allocator.
  */
-static void gk20a_buddy_allocator_destroy(struct gk20a_allocator *__a)
+static void nvgpu_buddy_allocator_destroy(struct nvgpu_allocator *__a)
 {
 	int i;
 	struct rb_node *node;
-	struct gk20a_buddy *bud;
-	struct gk20a_fixed_alloc *falloc;
-	struct gk20a_buddy_allocator *a = __a->priv;
+	struct nvgpu_buddy *bud;
+	struct nvgpu_fixed_alloc *falloc;
+	struct nvgpu_buddy_allocator *a = __a->priv;
 
 	alloc_lock(__a);
 
-	gk20a_fini_alloc_debug(__a);
+	nvgpu_fini_alloc_debug(__a);
 
 	/*
 	 * Free the fixed allocs first.
 	 */
 	while ((node = rb_first(&a->fixed_allocs)) != NULL) {
 		falloc = container_of(node,
-				      struct gk20a_fixed_alloc, alloced_entry);
+				      struct nvgpu_fixed_alloc, alloced_entry);
 
 		rb_erase(node, &a->fixed_allocs);
 		__balloc_do_free_fixed(a, falloc);
@@ -267,7 +269,7 @@ static void gk20a_buddy_allocator_destroy(struct gk20a_allocator *__a)
 	 * And now free all outstanding allocations.
 	 */
 	while ((node = rb_first(&a->alloced_buddies)) != NULL) {
-		bud = container_of(node, struct gk20a_buddy, alloced_entry);
+		bud = container_of(node, struct nvgpu_buddy, alloced_entry);
 		balloc_free_buddy(a, bud->start);
 		balloc_blist_add(a, bud);
 		balloc_coalesce(a, bud);
@@ -281,7 +283,7 @@ static void gk20a_buddy_allocator_destroy(struct gk20a_allocator *__a)
 
 		while (!list_empty(balloc_get_order_list(a, i))) {
 			bud = list_first_entry(balloc_get_order_list(a, i),
-					       struct gk20a_buddy, buddy_entry);
+					       struct nvgpu_buddy, buddy_entry);
 			balloc_blist_rem(a, bud);
 			kmem_cache_free(buddy_cache, bud);
 		}
@@ -314,10 +316,10 @@ static void gk20a_buddy_allocator_destroy(struct gk20a_allocator *__a)
  *
  * @a must be locked.
  */
-static void balloc_coalesce(struct gk20a_buddy_allocator *a,
-			    struct gk20a_buddy *b)
+static void balloc_coalesce(struct nvgpu_buddy_allocator *a,
+			    struct nvgpu_buddy *b)
 {
-	struct gk20a_buddy *parent;
+	struct nvgpu_buddy *parent;
 
 	if (buddy_is_alloced(b) || buddy_is_split(b))
 		return;
@@ -355,10 +357,10 @@ static void balloc_coalesce(struct gk20a_buddy_allocator *a,
  *
  * @a must be locked.
  */
-static int balloc_split_buddy(struct gk20a_buddy_allocator *a,
-			      struct gk20a_buddy *b, int pte_size)
+static int balloc_split_buddy(struct nvgpu_buddy_allocator *a,
+			      struct nvgpu_buddy *b, int pte_size)
 {
-	struct gk20a_buddy *left, *right;
+	struct nvgpu_buddy *left, *right;
 	u64 half;
 
 	left = balloc_new_buddy(a, b, b->start, b->order - 1);
@@ -403,14 +405,14 @@ static int balloc_split_buddy(struct gk20a_buddy_allocator *a,
  *
  * @a must be locked.
  */
-static void balloc_alloc_buddy(struct gk20a_buddy_allocator *a,
-			       struct gk20a_buddy *b)
+static void balloc_alloc_buddy(struct nvgpu_buddy_allocator *a,
+			       struct nvgpu_buddy *b)
 {
 	struct rb_node **new = &(a->alloced_buddies.rb_node);
 	struct rb_node *parent = NULL;
 
 	while (*new) {
-		struct gk20a_buddy *bud = container_of(*new, struct gk20a_buddy,
+		struct nvgpu_buddy *bud = container_of(*new, struct nvgpu_buddy,
 						       alloced_entry);
 
 		parent = *new;
@@ -435,14 +437,14 @@ static void balloc_alloc_buddy(struct gk20a_buddy_allocator *a,
  *
  * @a must be locked.
  */
-static struct gk20a_buddy *balloc_free_buddy(struct gk20a_buddy_allocator *a,
+static struct nvgpu_buddy *balloc_free_buddy(struct nvgpu_buddy_allocator *a,
 					     u64 addr)
 {
 	struct rb_node *node = a->alloced_buddies.rb_node;
-	struct gk20a_buddy *bud;
+	struct nvgpu_buddy *bud;
 
 	while (node) {
-		bud = container_of(node, struct gk20a_buddy, alloced_entry);
+		bud = container_of(node, struct nvgpu_buddy, alloced_entry);
 
 		if (addr < bud->start)
 			node = node->rb_left;
@@ -465,10 +467,10 @@ static struct gk20a_buddy *balloc_free_buddy(struct gk20a_buddy_allocator *a,
 /*
  * Find a suitable buddy for the given order and PTE type (big or little).
  */
-static struct gk20a_buddy *__balloc_find_buddy(struct gk20a_buddy_allocator *a,
+static struct nvgpu_buddy *__balloc_find_buddy(struct nvgpu_buddy_allocator *a,
 					       u64 order, int pte_size)
 {
-	struct gk20a_buddy *bud;
+	struct nvgpu_buddy *bud;
 
 	if (order > a->max_order ||
 	    list_empty(balloc_get_order_list(a, order)))
@@ -477,10 +479,10 @@ static struct gk20a_buddy *__balloc_find_buddy(struct gk20a_buddy_allocator *a,
 	if (a->flags & GPU_ALLOC_GVA_SPACE &&
 	    pte_size == gmmu_page_size_big)
 		bud = list_last_entry(balloc_get_order_list(a, order),
-				      struct gk20a_buddy, buddy_entry);
+				      struct nvgpu_buddy, buddy_entry);
 	else
 		bud = list_first_entry(balloc_get_order_list(a, order),
-				       struct gk20a_buddy, buddy_entry);
+				       struct nvgpu_buddy, buddy_entry);
 
 	if (bud->pte_size != BALLOC_PTE_SIZE_ANY &&
 	    bud->pte_size != pte_size)
@@ -498,11 +500,11 @@ static struct gk20a_buddy *__balloc_find_buddy(struct gk20a_buddy_allocator *a,
  *
  * @a must be locked.
  */
-static u64 __balloc_do_alloc(struct gk20a_buddy_allocator *a,
+static u64 __balloc_do_alloc(struct nvgpu_buddy_allocator *a,
 			     u64 order, int pte_size)
 {
 	u64 split_order;
-	struct gk20a_buddy *bud = NULL;
+	struct nvgpu_buddy *bud = NULL;
 
 	split_order = order;
 	while (split_order <= a->max_order &&
@@ -532,17 +534,17 @@ static u64 __balloc_do_alloc(struct gk20a_buddy_allocator *a,
  * TODO: Right now this uses the unoptimal approach of going through all
  * outstanding allocations and checking their base/ends. This could be better.
  */
-static int balloc_is_range_free(struct gk20a_buddy_allocator *a,
+static int balloc_is_range_free(struct nvgpu_buddy_allocator *a,
 				u64 base, u64 end)
 {
 	struct rb_node *node;
-	struct gk20a_buddy *bud;
+	struct nvgpu_buddy *bud;
 
 	node = rb_first(&a->alloced_buddies);
 	if (!node)
 		return 1; /* No allocs yet. */
 
-	bud = container_of(node, struct gk20a_buddy, alloced_entry);
+	bud = container_of(node, struct nvgpu_buddy, alloced_entry);
 
 	while (bud->start < end) {
 		if ((bud->start > base && bud->start < end) ||
@@ -552,21 +554,21 @@ static int balloc_is_range_free(struct gk20a_buddy_allocator *a,
 		node = rb_next(node);
 		if (!node)
 			break;
-		bud = container_of(node, struct gk20a_buddy, alloced_entry);
+		bud = container_of(node, struct nvgpu_buddy, alloced_entry);
 	}
 
 	return 1;
 }
 
-static void balloc_alloc_fixed(struct gk20a_buddy_allocator *a,
-			       struct gk20a_fixed_alloc *f)
+static void balloc_alloc_fixed(struct nvgpu_buddy_allocator *a,
+			       struct nvgpu_fixed_alloc *f)
 {
 	struct rb_node **new = &(a->fixed_allocs.rb_node);
 	struct rb_node *parent = NULL;
 
 	while (*new) {
-		struct gk20a_fixed_alloc *falloc =
-			container_of(*new, struct gk20a_fixed_alloc,
+		struct nvgpu_fixed_alloc *falloc =
+			container_of(*new, struct nvgpu_fixed_alloc,
 				     alloced_entry);
 
 		BUG_ON(!virt_addr_valid(falloc));
@@ -590,15 +592,15 @@ static void balloc_alloc_fixed(struct gk20a_buddy_allocator *a,
  *
  * @a must be locked.
  */
-static struct gk20a_fixed_alloc *balloc_free_fixed(
-	struct gk20a_buddy_allocator *a, u64 addr)
+static struct nvgpu_fixed_alloc *balloc_free_fixed(
+	struct nvgpu_buddy_allocator *a, u64 addr)
 {
 	struct rb_node *node = a->fixed_allocs.rb_node;
-	struct gk20a_fixed_alloc *falloc;
+	struct nvgpu_fixed_alloc *falloc;
 
 	while (node) {
 		falloc = container_of(node,
-				      struct gk20a_fixed_alloc, alloced_entry);
+				      struct nvgpu_fixed_alloc, alloced_entry);
 
 		if (addr < falloc->start)
 			node = node->rb_left;
@@ -620,7 +622,7 @@ static struct gk20a_fixed_alloc *balloc_free_fixed(
  * Find the parent range - doesn't necessarily need the parent to actually exist
  * as a buddy. Finding an existing parent comes later...
  */
-static void __balloc_get_parent_range(struct gk20a_buddy_allocator *a,
+static void __balloc_get_parent_range(struct nvgpu_buddy_allocator *a,
 				      u64 base, u64 order,
 				      u64 *pbase, u64 *porder)
 {
@@ -640,10 +642,10 @@ static void __balloc_get_parent_range(struct gk20a_buddy_allocator *a,
  * Makes a buddy at the passed address. This will make all parent buddies
  * necessary for this buddy to exist as well.
  */
-static struct gk20a_buddy *__balloc_make_fixed_buddy(
-	struct gk20a_buddy_allocator *a, u64 base, u64 order)
+static struct nvgpu_buddy *__balloc_make_fixed_buddy(
+	struct nvgpu_buddy_allocator *a, u64 base, u64 order)
 {
-	struct gk20a_buddy *bud = NULL;
+	struct nvgpu_buddy *bud = NULL;
 	struct list_head *order_list;
 	u64 cur_order = order, cur_base = base;
 
@@ -696,8 +698,8 @@ static struct gk20a_buddy *__balloc_make_fixed_buddy(
 	return bud;
 }
 
-static u64 __balloc_do_alloc_fixed(struct gk20a_buddy_allocator *a,
-				   struct gk20a_fixed_alloc *falloc,
+static u64 __balloc_do_alloc_fixed(struct nvgpu_buddy_allocator *a,
+				   struct nvgpu_fixed_alloc *falloc,
 				   u64 base, u64 len)
 {
 	u64 shifted_base, inc_base;
@@ -725,7 +727,7 @@ static u64 __balloc_do_alloc_fixed(struct gk20a_buddy_allocator *a,
 	while (inc_base < (shifted_base + len)) {
 		u64 order_len = balloc_order_to_len(a, align_order);
 		u64 remaining;
-		struct gk20a_buddy *bud;
+		struct nvgpu_buddy *bud;
 
 		bud = __balloc_make_fixed_buddy(a,
 					balloc_base_unshift(a, inc_base),
@@ -757,8 +759,8 @@ static u64 __balloc_do_alloc_fixed(struct gk20a_buddy_allocator *a,
 
 err_and_cleanup:
 	while (!list_empty(&falloc->buddies)) {
-		struct gk20a_buddy *bud = list_first_entry(&falloc->buddies,
-							   struct gk20a_buddy,
+		struct nvgpu_buddy *bud = list_first_entry(&falloc->buddies,
+							   struct nvgpu_buddy,
 							   buddy_entry);
 
 		__balloc_buddy_list_rem(a, bud);
@@ -769,14 +771,14 @@ err_and_cleanup:
 	return 0;
 }
 
-static void __balloc_do_free_fixed(struct gk20a_buddy_allocator *a,
-				   struct gk20a_fixed_alloc *falloc)
+static void __balloc_do_free_fixed(struct nvgpu_buddy_allocator *a,
+				   struct nvgpu_fixed_alloc *falloc)
 {
-	struct gk20a_buddy *bud;
+	struct nvgpu_buddy *bud;
 
 	while (!list_empty(&falloc->buddies)) {
 		bud = list_first_entry(&falloc->buddies,
-				       struct gk20a_buddy,
+				       struct nvgpu_buddy,
 				       buddy_entry);
 		__balloc_buddy_list_rem(a, bud);
 
@@ -796,13 +798,13 @@ static void __balloc_do_free_fixed(struct gk20a_buddy_allocator *a,
 /*
  * Allocate memory from the passed allocator.
  */
-static u64 gk20a_buddy_balloc(struct gk20a_allocator *__a, u64 len)
+static u64 nvgpu_buddy_balloc(struct nvgpu_allocator *__a, u64 len)
 {
 	u64 order, addr;
 	int pte_size;
-	struct gk20a_buddy_allocator *a = __a->priv;
+	struct nvgpu_buddy_allocator *a = __a->priv;
 
-	gk20a_alloc_trace_func();
+	nvgpu_alloc_trace_func();
 
 	alloc_lock(__a);
 
@@ -811,7 +813,7 @@ static u64 gk20a_buddy_balloc(struct gk20a_allocator *__a, u64 len)
 	if (order > a->max_order) {
 		alloc_unlock(__a);
 		alloc_dbg(balloc_owner(a), "Alloc fail\n");
-		gk20a_alloc_trace_func_done();
+		nvgpu_alloc_trace_func_done();
 		return 0;
 	}
 
@@ -848,22 +850,22 @@ static u64 gk20a_buddy_balloc(struct gk20a_allocator *__a, u64 len)
 
 	alloc_unlock(__a);
 
-	gk20a_alloc_trace_func_done();
+	nvgpu_alloc_trace_func_done();
 	return addr;
 }
 
 /*
  * Requires @__a to be locked.
  */
-static u64 __gk20a_balloc_fixed_buddy(struct gk20a_allocator *__a,
+static u64 __nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *__a,
 				      u64 base, u64 len)
 {
 	u64 ret, real_bytes = 0;
-	struct gk20a_buddy *bud;
-	struct gk20a_fixed_alloc *falloc = NULL;
-	struct gk20a_buddy_allocator *a = __a->priv;
+	struct nvgpu_buddy *bud;
+	struct nvgpu_fixed_alloc *falloc = NULL;
+	struct nvgpu_buddy_allocator *a = __a->priv;
 
-	gk20a_alloc_trace_func();
+	nvgpu_alloc_trace_func();
 
 	/* If base isn't aligned to an order 0 block, fail. */
 	if (base & (a->blk_size - 1))
@@ -905,14 +907,14 @@ static u64 __gk20a_balloc_fixed_buddy(struct gk20a_allocator *__a,
 
 	alloc_dbg(balloc_owner(a), "Alloc (fixed) 0x%llx\n", base);
 
-	gk20a_alloc_trace_func_done();
+	nvgpu_alloc_trace_func_done();
 	return base;
 
 fail_unlock:
 	alloc_unlock(__a);
 fail:
 	kfree(falloc);
-	gk20a_alloc_trace_func_done();
+	nvgpu_alloc_trace_func_done();
 	return 0;
 }
 
@@ -924,14 +926,14 @@ fail:
  *
  * Please do not use this function unless _absolutely_ necessary.
  */
-static u64 gk20a_balloc_fixed_buddy(struct gk20a_allocator *__a,
+static u64 nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *__a,
 				    u64 base, u64 len)
 {
 	u64 alloc;
-	struct gk20a_buddy_allocator *a = __a->priv;
+	struct nvgpu_buddy_allocator *a = __a->priv;
 
 	alloc_lock(__a);
-	alloc = __gk20a_balloc_fixed_buddy(__a, base, len);
+	alloc = __nvgpu_balloc_fixed_buddy(__a, base, len);
 	a->alloc_made = 1;
 	alloc_unlock(__a);
 
@@ -941,16 +943,16 @@ static u64 gk20a_balloc_fixed_buddy(struct gk20a_allocator *__a,
 /*
  * Free the passed allocation.
  */
-static void gk20a_buddy_bfree(struct gk20a_allocator *__a, u64 addr)
+static void nvgpu_buddy_bfree(struct nvgpu_allocator *__a, u64 addr)
 {
-	struct gk20a_buddy *bud;
-	struct gk20a_fixed_alloc *falloc;
-	struct gk20a_buddy_allocator *a = __a->priv;
+	struct nvgpu_buddy *bud;
+	struct nvgpu_fixed_alloc *falloc;
+	struct nvgpu_buddy_allocator *a = __a->priv;
 
-	gk20a_alloc_trace_func();
+	nvgpu_alloc_trace_func();
 
 	if (!addr) {
-		gk20a_alloc_trace_func_done();
+		nvgpu_alloc_trace_func_done();
 		return;
 	}
 
@@ -981,14 +983,14 @@ static void gk20a_buddy_bfree(struct gk20a_allocator *__a, u64 addr)
 done:
 	alloc_unlock(__a);
 	alloc_dbg(balloc_owner(a), "Free 0x%llx\n", addr);
-	gk20a_alloc_trace_func_done();
+	nvgpu_alloc_trace_func_done();
 	return;
 }
 
-static bool gk20a_buddy_reserve_is_possible(struct gk20a_buddy_allocator *a,
-					    struct gk20a_alloc_carveout *co)
+static bool nvgpu_buddy_reserve_is_possible(struct nvgpu_buddy_allocator *a,
+					    struct nvgpu_alloc_carveout *co)
 {
-	struct gk20a_alloc_carveout *tmp;
+	struct nvgpu_alloc_carveout *tmp;
 	u64 co_base, co_end;
 
 	co_base = co->base;
@@ -1013,10 +1015,10 @@ static bool gk20a_buddy_reserve_is_possible(struct gk20a_buddy_allocator *a,
  * Carveouts can only be reserved before any regular allocations have been
  * made.
  */
-static int gk20a_buddy_reserve_co(struct gk20a_allocator *__a,
-				  struct gk20a_alloc_carveout *co)
+static int nvgpu_buddy_reserve_co(struct nvgpu_allocator *__a,
+				  struct nvgpu_alloc_carveout *co)
 {
-	struct gk20a_buddy_allocator *a = __a->priv;
+	struct nvgpu_buddy_allocator *a = __a->priv;
 	u64 addr;
 	int err = 0;
 
@@ -1026,13 +1028,13 @@ static int gk20a_buddy_reserve_co(struct gk20a_allocator *__a,
 
 	alloc_lock(__a);
 
-	if (!gk20a_buddy_reserve_is_possible(a, co)) {
+	if (!nvgpu_buddy_reserve_is_possible(a, co)) {
 		err = -EBUSY;
 		goto done;
 	}
 
 	/* Should not be possible to fail... */
-	addr = __gk20a_balloc_fixed_buddy(__a, co->base, co->length);
+	addr = __nvgpu_balloc_fixed_buddy(__a, co->base, co->length);
 	if (!addr) {
 		err = -ENOMEM;
 		pr_warn("%s: Failed to reserve a valid carveout!\n", __func__);
@@ -1049,50 +1051,50 @@ done:
 /*
  * Carveouts can be release at any time.
  */
-static void gk20a_buddy_release_co(struct gk20a_allocator *__a,
-				   struct gk20a_alloc_carveout *co)
+static void nvgpu_buddy_release_co(struct nvgpu_allocator *__a,
+				   struct nvgpu_alloc_carveout *co)
 {
 	alloc_lock(__a);
 
 	list_del_init(&co->co_entry);
-	gk20a_free(__a, co->base);
+	nvgpu_free(__a, co->base);
 
 	alloc_unlock(__a);
 }
 
-static u64 gk20a_buddy_alloc_length(struct gk20a_allocator *a)
+static u64 nvgpu_buddy_alloc_length(struct nvgpu_allocator *a)
 {
-	struct gk20a_buddy_allocator *ba = a->priv;
+	struct nvgpu_buddy_allocator *ba = a->priv;
 
 	return ba->length;
 }
 
-static u64 gk20a_buddy_alloc_base(struct gk20a_allocator *a)
+static u64 nvgpu_buddy_alloc_base(struct nvgpu_allocator *a)
 {
-	struct gk20a_buddy_allocator *ba = a->priv;
+	struct nvgpu_buddy_allocator *ba = a->priv;
 
 	return ba->start;
 }
 
-static int gk20a_buddy_alloc_inited(struct gk20a_allocator *a)
+static int nvgpu_buddy_alloc_inited(struct nvgpu_allocator *a)
 {
-	struct gk20a_buddy_allocator *ba = a->priv;
+	struct nvgpu_buddy_allocator *ba = a->priv;
 	int inited = ba->initialized;
 
 	rmb();
 	return inited;
 }
 
-static u64 gk20a_buddy_alloc_end(struct gk20a_allocator *a)
+static u64 nvgpu_buddy_alloc_end(struct nvgpu_allocator *a)
 {
-	struct gk20a_buddy_allocator *ba = a->priv;
+	struct nvgpu_buddy_allocator *ba = a->priv;
 
 	return ba->end;
 }
 
-static u64 gk20a_buddy_alloc_space(struct gk20a_allocator *a)
+static u64 nvgpu_buddy_alloc_space(struct nvgpu_allocator *a)
 {
-	struct gk20a_buddy_allocator *ba = a->priv;
+	struct nvgpu_buddy_allocator *ba = a->priv;
 	u64 space;
 
 	alloc_lock(a);
@@ -1108,14 +1110,14 @@ static u64 gk20a_buddy_alloc_space(struct gk20a_allocator *a)
  * stats are printed to the kernel log. This lets this code be used for
  * debugging purposes internal to the allocator.
  */
-static void gk20a_buddy_print_stats(struct gk20a_allocator *__a,
+static void nvgpu_buddy_print_stats(struct nvgpu_allocator *__a,
 				    struct seq_file *s, int lock)
 {
 	int i = 0;
 	struct rb_node *node;
-	struct gk20a_fixed_alloc *falloc;
-	struct gk20a_alloc_carveout *tmp;
-	struct gk20a_buddy_allocator *a = __a->priv;
+	struct nvgpu_fixed_alloc *falloc;
+	struct nvgpu_alloc_carveout *tmp;
+	struct nvgpu_buddy_allocator *a = __a->priv;
 
 	__alloc_pstat(s, __a, "base = %llu, limit = %llu, blk_size = %llu\n",
 		      a->base, a->length, a->blk_size);
@@ -1161,7 +1163,7 @@ static void gk20a_buddy_print_stats(struct gk20a_allocator *__a,
 	     node != NULL;
 	     node = rb_next(node)) {
 		falloc = container_of(node,
-				      struct gk20a_fixed_alloc, alloced_entry);
+				      struct nvgpu_fixed_alloc, alloced_entry);
 
 		__alloc_pstat(s, __a, "Fixed alloc (%d): [0x%llx -> 0x%llx]\n",
 			      i, falloc->start, falloc->end);
@@ -1179,25 +1181,25 @@ static void gk20a_buddy_print_stats(struct gk20a_allocator *__a,
 		alloc_unlock(__a);
 }
 
-static const struct gk20a_allocator_ops buddy_ops = {
-	.alloc		= gk20a_buddy_balloc,
-	.free		= gk20a_buddy_bfree,
+static const struct nvgpu_allocator_ops buddy_ops = {
+	.alloc		= nvgpu_buddy_balloc,
+	.free		= nvgpu_buddy_bfree,
 
-	.alloc_fixed	= gk20a_balloc_fixed_buddy,
+	.alloc_fixed	= nvgpu_balloc_fixed_buddy,
 	/* .free_fixed not needed. */
 
-	.reserve_carveout	= gk20a_buddy_reserve_co,
-	.release_carveout	= gk20a_buddy_release_co,
+	.reserve_carveout	= nvgpu_buddy_reserve_co,
+	.release_carveout	= nvgpu_buddy_release_co,
 
-	.base		= gk20a_buddy_alloc_base,
-	.length		= gk20a_buddy_alloc_length,
-	.end		= gk20a_buddy_alloc_end,
-	.inited		= gk20a_buddy_alloc_inited,
-	.space		= gk20a_buddy_alloc_space,
+	.base		= nvgpu_buddy_alloc_base,
+	.length		= nvgpu_buddy_alloc_length,
+	.end		= nvgpu_buddy_alloc_end,
+	.inited		= nvgpu_buddy_alloc_inited,
+	.space		= nvgpu_buddy_alloc_space,
 
-	.fini		= gk20a_buddy_allocator_destroy,
+	.fini		= nvgpu_buddy_allocator_destroy,
 
-	.print_stats	= gk20a_buddy_print_stats,
+	.print_stats	= nvgpu_buddy_print_stats,
 };
 
 /*
@@ -1218,14 +1220,14 @@ static const struct gk20a_allocator_ops buddy_ops = {
  *             will try and pick a reasonable max order.
  * @flags: Extra flags necessary. See GPU_BALLOC_*.
  */
-int __gk20a_buddy_allocator_init(struct gk20a *g, struct gk20a_allocator *__a,
+int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 				 struct vm_gk20a *vm, const char *name,
 				 u64 base, u64 size, u64 blk_size,
 				 u64 max_order, u64 flags)
 {
 	int err;
 	u64 pde_size;
-	struct gk20a_buddy_allocator *a;
+	struct nvgpu_buddy_allocator *a;
 
 	/* blk_size must be greater than 0 and a power of 2. */
 	if (blk_size == 0)
@@ -1240,11 +1242,11 @@ int __gk20a_buddy_allocator_init(struct gk20a *g, struct gk20a_allocator *__a,
 	if (flags & GPU_ALLOC_GVA_SPACE && !vm)
 		return -EINVAL;
 
-	a = kzalloc(sizeof(struct gk20a_buddy_allocator), GFP_KERNEL);
+	a = kzalloc(sizeof(struct nvgpu_buddy_allocator), GFP_KERNEL);
 	if (!a)
 		return -ENOMEM;
 
-	err = __gk20a_alloc_common_init(__a, name, a, false, &buddy_ops);
+	err = __nvgpu_alloc_common_init(__a, name, a, false, &buddy_ops);
 	if (err)
 		goto fail;
 
@@ -1287,7 +1289,7 @@ int __gk20a_buddy_allocator_init(struct gk20a *g, struct gk20a_allocator *__a,
 
 	/* Shared buddy kmem_cache for all allocators. */
 	if (!buddy_cache)
-		buddy_cache = KMEM_CACHE(gk20a_buddy, 0);
+		buddy_cache = KMEM_CACHE(nvgpu_buddy, 0);
 	if (!buddy_cache) {
 		err = -ENOMEM;
 		goto fail;
@@ -1303,7 +1305,7 @@ int __gk20a_buddy_allocator_init(struct gk20a *g, struct gk20a_allocator *__a,
 	wmb();
 	a->initialized = 1;
 
-	gk20a_init_alloc_debug(g, __a);
+	nvgpu_init_alloc_debug(g, __a);
 	alloc_dbg(__a, "New allocator: type      buddy\n");
 	alloc_dbg(__a, "               base      0x%llx\n", a->base);
 	alloc_dbg(__a, "               size      0x%llx\n", a->length);
@@ -1318,10 +1320,10 @@ fail:
 	return err;
 }
 
-int gk20a_buddy_allocator_init(struct gk20a *g, struct gk20a_allocator *a,
+int nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *a,
 			       const char *name, u64 base, u64 size,
 			       u64 blk_size, u64 flags)
 {
-	return __gk20a_buddy_allocator_init(g, a, NULL, name,
+	return __nvgpu_buddy_allocator_init(g, a, NULL, name,
 					    base, size, blk_size, 0, 0);
 }

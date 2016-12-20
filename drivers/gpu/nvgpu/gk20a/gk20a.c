@@ -43,6 +43,8 @@
 #include <linux/sched.h>
 #include <linux/version.h>
 
+#include <nvgpu/allocator.h>
+
 #include "gk20a.h"
 #include "nvgpu_common.h"
 #include "debug_gk20a.h"
@@ -60,7 +62,6 @@
 #include "gk20a_scale.h"
 #include "ctxsw_trace_gk20a.h"
 #include "dbg_gpu_gk20a.h"
-#include "gk20a_allocator.h"
 #include "hal.h"
 #include "vgpu/vgpu.h"
 #include "pci.h"

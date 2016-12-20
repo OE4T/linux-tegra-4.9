@@ -18,10 +18,11 @@
 #include <linux/list.h>
 #include <linux/delay.h>
 
+#include <nvgpu/allocator.h>
+
 #include "gk20a.h"
 #include "mm_gk20a.h"
 #include "channel_gk20a.h"
-#include "gk20a_allocator.h"
 
 #define gpu_sema_dbg(fmt, args...)		\
 	gk20a_dbg(gpu_dbg_sema, fmt, ##args)

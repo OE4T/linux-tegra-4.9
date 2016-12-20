@@ -20,9 +20,9 @@
 #include <linux/list.h>
 #include <linux/rbtree.h>
 
-#include "gk20a_allocator.h"
+#include <nvgpu/allocator.h>
 
-struct gk20a_allocator;
+struct nvgpu_allocator;
 
 /*
  * This allocator implements the ability to do SLAB style allocation since the
@@ -88,7 +88,7 @@ struct page_alloc_chunk {
  * of the chunks of pages that make up the overall allocation - much like a
  * scatter gather table.
  */
-struct gk20a_page_alloc {
+struct nvgpu_page_alloc {
 	struct list_head alloc_chunks;
 
 	int nr_chunks;
@@ -111,15 +111,15 @@ struct gk20a_page_alloc {
 	struct page_alloc_slab_page *slab_page;
 };
 
-struct gk20a_page_allocator {
-	struct gk20a_allocator *owner;	/* Owner of this allocator. */
+struct nvgpu_page_allocator {
+	struct nvgpu_allocator *owner;	/* Owner of this allocator. */
 
 	/*
 	 * Use a buddy allocator to manage the allocation of the underlying
 	 * pages. This lets us abstract the discontiguous allocation handling
 	 * out of the annoyingly complicated buddy allocator.
 	 */
-	struct gk20a_allocator source_allocator;
+	struct nvgpu_allocator source_allocator;
 
 	/*
 	 * Page params.
@@ -149,14 +149,14 @@ struct gk20a_page_allocator {
 	u64 pages_freed;
 };
 
-static inline struct gk20a_page_allocator *page_allocator(
-	struct gk20a_allocator *a)
+static inline struct nvgpu_page_allocator *page_allocator(
+	struct nvgpu_allocator *a)
 {
-	return (struct gk20a_page_allocator *)(a)->priv;
+	return (struct nvgpu_page_allocator *)(a)->priv;
 }
 
-static inline struct gk20a_allocator *palloc_owner(
-	struct gk20a_page_allocator *a)
+static inline struct nvgpu_allocator *palloc_owner(
+	struct nvgpu_page_allocator *a)
 {
 	return a->owner;
 }

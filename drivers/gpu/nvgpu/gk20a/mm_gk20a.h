@@ -27,7 +27,8 @@
 #include <linux/version.h>
 #include <asm/dma-iommu.h>
 #include <asm/cacheflush.h>
-#include "gk20a_allocator.h"
+
+#include <nvgpu/allocator.h>
 
 #ifdef CONFIG_ARM64
 #define outer_flush_range(a, b)
@@ -70,7 +71,7 @@ struct mem_desc {
 	u64 gpu_va;
 	bool fixed; /* vidmem only */
 	bool user_mem; /* vidmem only */
-	struct gk20a_allocator *allocator; /* vidmem only */
+	struct nvgpu_allocator *allocator; /* vidmem only */
 	struct list_head clear_list_entry; /* vidmem only */
 	bool skip_wmb;
 };
@@ -295,10 +296,10 @@ struct vm_gk20a {
 
 	struct gk20a_mm_entry pdb;
 
-	struct gk20a_allocator vma[gmmu_nr_page_sizes];
+	struct nvgpu_allocator vma[gmmu_nr_page_sizes];
 
 	/* If necessary, split fixed from non-fixed. */
-	struct gk20a_allocator fixed;
+	struct nvgpu_allocator fixed;
 
 	struct rb_root mapped_buffers;
 
@@ -421,8 +422,8 @@ struct mm_gk20a {
 		size_t bootstrap_size;
 		u64 bootstrap_base;
 
-		struct gk20a_allocator allocator;
-		struct gk20a_allocator bootstrap_allocator;
+		struct nvgpu_allocator allocator;
+		struct nvgpu_allocator bootstrap_allocator;
 
 		u32 ce_ctx_id;
 		volatile bool cleared;
@@ -470,13 +471,13 @@ static inline u64 __nv_gmmu_va_small_page_limit(void)
 
 static inline int __nv_gmmu_va_is_big_page_region(struct vm_gk20a *vm, u64 addr)
 {
-	struct gk20a_allocator *a = &vm->vma[gmmu_page_size_big];
+	struct nvgpu_allocator *a = &vm->vma[gmmu_page_size_big];
 
 	if (!vm->big_pages)
 		return 0;
 
-	return addr >= gk20a_alloc_base(a) &&
-		addr < gk20a_alloc_base(a) + gk20a_alloc_length(a);
+	return addr >= nvgpu_alloc_base(a) &&
+		addr < nvgpu_alloc_base(a) + nvgpu_alloc_length(a);
 }
 
 /*
@@ -825,7 +826,7 @@ void gk20a_remove_vm(struct vm_gk20a *vm, struct mem_desc *inst_block);
 extern const struct gk20a_mmu_level gk20a_mm_levels_64k[];
 extern const struct gk20a_mmu_level gk20a_mm_levels_128k[];
 
-static inline void *nvgpu_alloc(size_t size, bool clear)
+static inline void *nvgpu_kalloc(size_t size, bool clear)
 {
 	void *p;
 
@@ -844,7 +845,7 @@ static inline void *nvgpu_alloc(size_t size, bool clear)
 	return p;
 }
 
-static inline void nvgpu_free(void *p)
+static inline void nvgpu_kfree(void *p)
 {
 	if (virt_addr_valid(p))
 		kfree(p);

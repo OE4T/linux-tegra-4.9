@@ -976,7 +976,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	memset(&ch->ramfc, 0, sizeof(struct mem_desc_sub));
 
 	gk20a_gmmu_unmap_free(ch_vm, &ch->gpfifo.mem);
-	nvgpu_free(ch->gpfifo.pipe);
+	nvgpu_kfree(ch->gpfifo.pipe);
 	memset(&ch->gpfifo, 0, sizeof(struct gpfifo_desc));
 
 #if defined(CONFIG_GK20A_CYCLE_STATS)
@@ -1778,7 +1778,7 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	}
 
 	if (c->gpfifo.mem.aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
-		c->gpfifo.pipe = nvgpu_alloc(
+		c->gpfifo.pipe = nvgpu_kalloc(
 				gpfifo_size * sizeof(struct nvgpu_gpfifo),
 				false);
 		if (!c->gpfifo.pipe) {
@@ -1850,7 +1850,7 @@ clean_up_sync:
 		c->sync = NULL;
 	}
 clean_up_unmap:
-	nvgpu_free(c->gpfifo.pipe);
+	nvgpu_kfree(c->gpfifo.pipe);
 	gk20a_gmmu_unmap_free(ch_vm, &c->gpfifo.mem);
 clean_up:
 	memset(&c->gpfifo, 0, sizeof(struct gpfifo_desc));
@@ -1980,12 +1980,12 @@ static void trace_write_pushbuffer_range(struct channel_gk20a *c,
 	if (!g) {
 		size = count * sizeof(struct nvgpu_gpfifo);
 		if (size) {
-			g = nvgpu_alloc(size, false);
+			g = nvgpu_kalloc(size, false);
 			if (!g)
 				return;
 
 			if (copy_from_user(g, user_gpfifo, size)) {
-				nvgpu_free(g);
+				nvgpu_kfree(g);
 				return;
 			}
 		}
@@ -1997,7 +1997,7 @@ static void trace_write_pushbuffer_range(struct channel_gk20a *c,
 		trace_write_pushbuffer(c, gp);
 
 	if (gpfifo_allocated)
-		nvgpu_free(g);
+		nvgpu_kfree(g);
 }
 
 static void gk20a_channel_timeout_start(struct channel_gk20a *ch,

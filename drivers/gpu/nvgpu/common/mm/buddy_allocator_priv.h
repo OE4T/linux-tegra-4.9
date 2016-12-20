@@ -20,17 +20,17 @@
 #include <linux/list.h>
 #include <linux/rbtree.h>
 
-struct gk20a_allocator;
+struct nvgpu_allocator;
 struct vm_gk20a;
 
 /*
  * Each buddy is an element in a binary tree.
  */
-struct gk20a_buddy {
-	struct gk20a_buddy *parent;	/* Parent node. */
-	struct gk20a_buddy *buddy;	/* This node's buddy. */
-	struct gk20a_buddy *left;	/* Lower address sub-node. */
-	struct gk20a_buddy *right;	/* Higher address sub-node. */
+struct nvgpu_buddy {
+	struct nvgpu_buddy *parent;	/* Parent node. */
+	struct nvgpu_buddy *buddy;	/* This node's buddy. */
+	struct nvgpu_buddy *left;	/* Lower address sub-node. */
+	struct nvgpu_buddy *right;	/* Higher address sub-node. */
 
 	struct list_head buddy_entry;	/* List entry for various lists. */
 	struct rb_node alloced_entry;	/* RB tree of allocations. */
@@ -54,31 +54,31 @@ struct gk20a_buddy {
 };
 
 #define __buddy_flag_ops(flag, flag_up)					\
-	static inline int buddy_is_ ## flag(struct gk20a_buddy *b)	\
+	static inline int buddy_is_ ## flag(struct nvgpu_buddy *b)	\
 	{								\
 		return b->flags & BALLOC_BUDDY_ ## flag_up;		\
 	}								\
-	static inline void buddy_set_ ## flag(struct gk20a_buddy *b)	\
+	static inline void buddy_set_ ## flag(struct nvgpu_buddy *b)	\
 	{								\
 		b->flags |= BALLOC_BUDDY_ ## flag_up;			\
 	}								\
-	static inline void buddy_clr_ ## flag(struct gk20a_buddy *b)	\
+	static inline void buddy_clr_ ## flag(struct nvgpu_buddy *b)	\
 	{								\
 		b->flags &= ~BALLOC_BUDDY_ ## flag_up;			\
 	}
 
 /*
- * int  buddy_is_alloced(struct gk20a_buddy *b);
- * void buddy_set_alloced(struct gk20a_buddy *b);
- * void buddy_clr_alloced(struct gk20a_buddy *b);
+ * int  buddy_is_alloced(struct nvgpu_buddy *b);
+ * void buddy_set_alloced(struct nvgpu_buddy *b);
+ * void buddy_clr_alloced(struct nvgpu_buddy *b);
  *
- * int  buddy_is_split(struct gk20a_buddy *b);
- * void buddy_set_split(struct gk20a_buddy *b);
- * void buddy_clr_split(struct gk20a_buddy *b);
+ * int  buddy_is_split(struct nvgpu_buddy *b);
+ * void buddy_set_split(struct nvgpu_buddy *b);
+ * void buddy_clr_split(struct nvgpu_buddy *b);
  *
- * int  buddy_is_in_list(struct gk20a_buddy *b);
- * void buddy_set_in_list(struct gk20a_buddy *b);
- * void buddy_clr_in_list(struct gk20a_buddy *b);
+ * int  buddy_is_in_list(struct nvgpu_buddy *b);
+ * void buddy_set_in_list(struct nvgpu_buddy *b);
+ * void buddy_clr_in_list(struct nvgpu_buddy *b);
  */
 __buddy_flag_ops(alloced, ALLOCED);
 __buddy_flag_ops(split,   SPLIT);
@@ -87,7 +87,7 @@ __buddy_flag_ops(in_list, IN_LIST);
 /*
  * Keeps info for a fixed allocation.
  */
-struct gk20a_fixed_alloc {
+struct nvgpu_fixed_alloc {
 	struct list_head buddies;	/* List of buddies. */
 	struct rb_node alloced_entry;	/* RB tree of fixed allocations. */
 
@@ -105,8 +105,8 @@ struct gk20a_fixed_alloc {
  *
  * order_size is the size of an order 0 buddy.
  */
-struct gk20a_buddy_allocator {
-	struct gk20a_allocator *owner;	/* Owner of this buddy allocator. */
+struct nvgpu_buddy_allocator {
+	struct nvgpu_allocator *owner;	/* Owner of this buddy allocator. */
 	struct vm_gk20a *vm;		/* Parent VM - can be NULL. */
 
 	u64 base;			/* Base address of the space. */
@@ -153,38 +153,38 @@ struct gk20a_buddy_allocator {
 	u64 bytes_freed;
 };
 
-static inline struct gk20a_buddy_allocator *buddy_allocator(
-	struct gk20a_allocator *a)
+static inline struct nvgpu_buddy_allocator *buddy_allocator(
+	struct nvgpu_allocator *a)
 {
-	return (struct gk20a_buddy_allocator *)(a)->priv;
+	return (struct nvgpu_buddy_allocator *)(a)->priv;
 }
 
 static inline struct list_head *balloc_get_order_list(
-	struct gk20a_buddy_allocator *a, int order)
+	struct nvgpu_buddy_allocator *a, int order)
 {
 	return &a->buddy_list[order];
 }
 
-static inline u64 balloc_order_to_len(struct gk20a_buddy_allocator *a,
+static inline u64 balloc_order_to_len(struct nvgpu_buddy_allocator *a,
 				      int order)
 {
 	return (1 << order) * a->blk_size;
 }
 
-static inline u64 balloc_base_shift(struct gk20a_buddy_allocator *a,
+static inline u64 balloc_base_shift(struct nvgpu_buddy_allocator *a,
 				    u64 base)
 {
 	return base - a->start;
 }
 
-static inline u64 balloc_base_unshift(struct gk20a_buddy_allocator *a,
+static inline u64 balloc_base_unshift(struct nvgpu_buddy_allocator *a,
 				      u64 base)
 {
 	return base + a->start;
 }
 
-static inline struct gk20a_allocator *balloc_owner(
-	struct gk20a_buddy_allocator *a)
+static inline struct nvgpu_allocator *balloc_owner(
+	struct nvgpu_buddy_allocator *a)
 {
 	return a->owner;
 }

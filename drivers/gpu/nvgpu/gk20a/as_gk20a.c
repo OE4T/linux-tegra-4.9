@@ -279,17 +279,17 @@ static int gk20a_as_ioctl_get_va_regions(
 
 	for (i = 0; i < write_entries; ++i) {
 		struct nvgpu_as_va_region region;
-		struct gk20a_allocator *vma =
-			gk20a_alloc_initialized(&vm->fixed) ?
+		struct nvgpu_allocator *vma =
+			nvgpu_alloc_initialized(&vm->fixed) ?
 			&vm->fixed : &vm->vma[i];
 
 		memset(&region, 0, sizeof(struct nvgpu_as_va_region));
 
 		region.page_size = vm->gmmu_page_sizes[i];
-		region.offset = gk20a_alloc_base(vma);
+		region.offset = nvgpu_alloc_base(vma);
 		/* No __aeabi_uldivmod() on some platforms... */
-		region.pages = (gk20a_alloc_end(vma) -
-			gk20a_alloc_base(vma)) >> ilog2(region.page_size);
+		region.pages = (nvgpu_alloc_end(vma) -
+			nvgpu_alloc_base(vma)) >> ilog2(region.page_size);
 
 		if (copy_to_user(user_region_ptr + i, &region, sizeof(region)))
 			return -EFAULT;

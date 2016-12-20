@@ -47,7 +47,7 @@ struct gk20a_fence {
 	u32 syncpt_value;
 
 	/* Valid for fences part of a pre-allocated fence pool */
-	struct gk20a_allocator *allocator;
+	struct nvgpu_allocator *allocator;
 };
 
 /* Fences can be created from semaphores or syncpoint (id, value) pairs */

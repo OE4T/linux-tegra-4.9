@@ -23,6 +23,11 @@ obj-$(CONFIG_GK20A) := nvgpu.o
 
 nvgpu-y := \
 	common/linux/timers.o \
+	common/mm/nvgpu_allocator.o \
+	common/mm/bitmap_allocator.o \
+	common/mm/buddy_allocator.o \
+	common/mm/page_allocator.o \
+	common/mm/lockless_allocator.o \
 	nvgpu_common.o \
 	gk20a/gk20a.o \
 	gk20a/sched_gk20a.o \
@@ -51,11 +56,6 @@ nvgpu-y := \
 	gk20a/fb_gk20a.o \
 	gk20a/hal.o \
 	gk20a/hal_gk20a.o \
-	gk20a/gk20a_allocator.o \
-	gk20a/gk20a_allocator_bitmap.o \
-	gk20a/gk20a_allocator_buddy.o \
-	gk20a/gk20a_allocator_page.o \
-	gk20a/gk20a_allocator_lockless.o \
 	gk20a/cde_gk20a.o \
 	gk20a/platform_gk20a_generic.o \
 	gk20a/tsg_gk20a.o \

@@ -18,46 +18,47 @@
 #include <linux/slab.h>
 #include <linux/bitops.h>
 
-#include "gk20a_allocator.h"
+#include <nvgpu/allocator.h>
+
 #include "bitmap_allocator_priv.h"
 
 static struct kmem_cache *meta_data_cache;	/* slab cache for meta data. */
 static DEFINE_MUTEX(meta_data_cache_lock);
 
-static u64 gk20a_bitmap_alloc_length(struct gk20a_allocator *a)
+static u64 nvgpu_bitmap_alloc_length(struct nvgpu_allocator *a)
 {
-	struct gk20a_bitmap_allocator *ba = a->priv;
+	struct nvgpu_bitmap_allocator *ba = a->priv;
 
 	return ba->length;
 }
 
-static u64 gk20a_bitmap_alloc_base(struct gk20a_allocator *a)
+static u64 nvgpu_bitmap_alloc_base(struct nvgpu_allocator *a)
 {
-	struct gk20a_bitmap_allocator *ba = a->priv;
+	struct nvgpu_bitmap_allocator *ba = a->priv;
 
 	return ba->base;
 }
 
-static int gk20a_bitmap_alloc_inited(struct gk20a_allocator *a)
+static int nvgpu_bitmap_alloc_inited(struct nvgpu_allocator *a)
 {
-	struct gk20a_bitmap_allocator *ba = a->priv;
+	struct nvgpu_bitmap_allocator *ba = a->priv;
 	int inited = ba->inited;
 
 	rmb();
 	return inited;
 }
 
-static u64 gk20a_bitmap_alloc_end(struct gk20a_allocator *a)
+static u64 nvgpu_bitmap_alloc_end(struct nvgpu_allocator *a)
 {
-	struct gk20a_bitmap_allocator *ba = a->priv;
+	struct nvgpu_bitmap_allocator *ba = a->priv;
 
 	return ba->base + ba->length;
 }
 
-static u64 gk20a_bitmap_alloc_fixed(struct gk20a_allocator *__a,
+static u64 nvgpu_bitmap_alloc_fixed(struct nvgpu_allocator *__a,
 				    u64 base, u64 len)
 {
-	struct gk20a_bitmap_allocator *a = bitmap_allocator(__a);
+	struct nvgpu_bitmap_allocator *a = bitmap_allocator(__a);
 	u64 blks, offs, ret;
 
 	/* Compute the bit offset and make sure it's aligned to a block.  */
@@ -101,10 +102,10 @@ fail:
  * Note: this function won't do much error checking. Thus you could really
  * confuse the allocator if you misuse this function.
  */
-static void gk20a_bitmap_free_fixed(struct gk20a_allocator *__a,
+static void nvgpu_bitmap_free_fixed(struct nvgpu_allocator *__a,
 				    u64 base, u64 len)
 {
-	struct gk20a_bitmap_allocator *a = bitmap_allocator(__a);
+	struct nvgpu_bitmap_allocator *a = bitmap_allocator(__a);
 	u64 blks, offs;
 
 	offs = base >> a->blk_shift;
@@ -129,15 +130,15 @@ static void gk20a_bitmap_free_fixed(struct gk20a_allocator *__a,
 /*
  * Add the passed alloc to the tree of stored allocations.
  */
-static void insert_alloc_metadata(struct gk20a_bitmap_allocator *a,
-				  struct gk20a_bitmap_alloc *alloc)
+static void insert_alloc_metadata(struct nvgpu_bitmap_allocator *a,
+				  struct nvgpu_bitmap_alloc *alloc)
 {
 	struct rb_node **new = &a->allocs.rb_node;
 	struct rb_node *parent = NULL;
-	struct gk20a_bitmap_alloc *tmp;
+	struct nvgpu_bitmap_alloc *tmp;
 
 	while (*new) {
-		tmp = container_of(*new, struct gk20a_bitmap_alloc,
+		tmp = container_of(*new, struct nvgpu_bitmap_alloc,
 				   alloc_entry);
 
 		parent = *new;
@@ -158,14 +159,14 @@ static void insert_alloc_metadata(struct gk20a_bitmap_allocator *a,
 /*
  * Find and remove meta-data from the outstanding allocations.
  */
-static struct gk20a_bitmap_alloc *find_alloc_metadata(
-	struct gk20a_bitmap_allocator *a, u64 addr)
+static struct nvgpu_bitmap_alloc *find_alloc_metadata(
+	struct nvgpu_bitmap_allocator *a, u64 addr)
 {
 	struct rb_node *node = a->allocs.rb_node;
-	struct gk20a_bitmap_alloc *alloc;
+	struct nvgpu_bitmap_alloc *alloc;
 
 	while (node) {
-		alloc = container_of(node, struct gk20a_bitmap_alloc,
+		alloc = container_of(node, struct nvgpu_bitmap_alloc,
 				     alloc_entry);
 
 		if (addr < alloc->base)
@@ -187,10 +188,10 @@ static struct gk20a_bitmap_alloc *find_alloc_metadata(
 /*
  * Tree of alloc meta data stores the address of the alloc not the bit offset.
  */
-static int __gk20a_bitmap_store_alloc(struct gk20a_bitmap_allocator *a,
+static int __nvgpu_bitmap_store_alloc(struct nvgpu_bitmap_allocator *a,
 				      u64 addr, u64 len)
 {
-	struct gk20a_bitmap_alloc *alloc =
+	struct nvgpu_bitmap_alloc *alloc =
 		kmem_cache_alloc(meta_data_cache, GFP_KERNEL);
 
 	if (!alloc)
@@ -208,11 +209,11 @@ static int __gk20a_bitmap_store_alloc(struct gk20a_bitmap_allocator *a,
  * @len is in bytes. This routine will figure out the right number of bits to
  * actually allocate. The return is the address in bytes as well.
  */
-static u64 gk20a_bitmap_alloc(struct gk20a_allocator *__a, u64 len)
+static u64 nvgpu_bitmap_alloc(struct nvgpu_allocator *__a, u64 len)
 {
 	u64 blks, addr;
 	unsigned long offs, adjusted_offs, limit;
-	struct gk20a_bitmap_allocator *a = bitmap_allocator(__a);
+	struct nvgpu_bitmap_allocator *a = bitmap_allocator(__a);
 
 	blks = len >> a->blk_shift;
 
@@ -255,7 +256,7 @@ static u64 gk20a_bitmap_alloc(struct gk20a_allocator *__a, u64 len)
 	 * allocation.
 	 */
 	if (!(a->flags & GPU_ALLOC_NO_ALLOC_PAGE) &&
-	    __gk20a_bitmap_store_alloc(a, addr, blks * a->blk_size))
+	    __nvgpu_bitmap_store_alloc(a, addr, blks * a->blk_size))
 		goto fail_reset_bitmap;
 
 	alloc_dbg(__a, "Alloc 0x%-10llx 0x%-5llx [bits=0x%llx (%llu)]\n",
@@ -276,10 +277,10 @@ fail:
 	return 0;
 }
 
-static void gk20a_bitmap_free(struct gk20a_allocator *__a, u64 addr)
+static void nvgpu_bitmap_free(struct nvgpu_allocator *__a, u64 addr)
 {
-	struct gk20a_bitmap_allocator *a = bitmap_allocator(__a);
-	struct gk20a_bitmap_alloc *alloc = NULL;
+	struct nvgpu_bitmap_allocator *a = bitmap_allocator(__a);
+	struct nvgpu_bitmap_alloc *alloc = NULL;
 	u64 offs, adjusted_offs, blks;
 
 	alloc_lock(__a);
@@ -312,17 +313,17 @@ done:
 	alloc_unlock(__a);
 }
 
-static void gk20a_bitmap_alloc_destroy(struct gk20a_allocator *__a)
+static void nvgpu_bitmap_alloc_destroy(struct nvgpu_allocator *__a)
 {
-	struct gk20a_bitmap_allocator *a = bitmap_allocator(__a);
-	struct gk20a_bitmap_alloc *alloc;
+	struct nvgpu_bitmap_allocator *a = bitmap_allocator(__a);
+	struct nvgpu_bitmap_alloc *alloc;
 	struct rb_node *node;
 
 	/*
 	 * Kill any outstanding allocations.
 	 */
 	while ((node = rb_first(&a->allocs)) != NULL) {
-		alloc = container_of(node, struct gk20a_bitmap_alloc,
+		alloc = container_of(node, struct nvgpu_bitmap_alloc,
 				     alloc_entry);
 
 		rb_erase(node, &a->allocs);
@@ -333,10 +334,10 @@ static void gk20a_bitmap_alloc_destroy(struct gk20a_allocator *__a)
 	kfree(a);
 }
 
-static void gk20a_bitmap_print_stats(struct gk20a_allocator *__a,
+static void nvgpu_bitmap_print_stats(struct nvgpu_allocator *__a,
 				     struct seq_file *s, int lock)
 {
-	struct gk20a_bitmap_allocator *a = bitmap_allocator(__a);
+	struct nvgpu_bitmap_allocator *a = bitmap_allocator(__a);
 
 	__alloc_pstat(s, __a, "Bitmap allocator params:\n");
 	__alloc_pstat(s, __a, "  start = 0x%llx\n", a->base);
@@ -353,34 +354,34 @@ static void gk20a_bitmap_print_stats(struct gk20a_allocator *__a,
 		      a->bytes_alloced - a->bytes_freed);
 }
 
-static const struct gk20a_allocator_ops bitmap_ops = {
-	.alloc		= gk20a_bitmap_alloc,
-	.free		= gk20a_bitmap_free,
+static const struct nvgpu_allocator_ops bitmap_ops = {
+	.alloc		= nvgpu_bitmap_alloc,
+	.free		= nvgpu_bitmap_free,
 
-	.alloc_fixed	= gk20a_bitmap_alloc_fixed,
-	.free_fixed	= gk20a_bitmap_free_fixed,
+	.alloc_fixed	= nvgpu_bitmap_alloc_fixed,
+	.free_fixed	= nvgpu_bitmap_free_fixed,
 
-	.base		= gk20a_bitmap_alloc_base,
-	.length		= gk20a_bitmap_alloc_length,
-	.end		= gk20a_bitmap_alloc_end,
-	.inited		= gk20a_bitmap_alloc_inited,
+	.base		= nvgpu_bitmap_alloc_base,
+	.length		= nvgpu_bitmap_alloc_length,
+	.end		= nvgpu_bitmap_alloc_end,
+	.inited		= nvgpu_bitmap_alloc_inited,
 
-	.fini		= gk20a_bitmap_alloc_destroy,
+	.fini		= nvgpu_bitmap_alloc_destroy,
 
-	.print_stats	= gk20a_bitmap_print_stats,
+	.print_stats	= nvgpu_bitmap_print_stats,
 };
 
 
-int gk20a_bitmap_allocator_init(struct gk20a *g, struct gk20a_allocator *__a,
+int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 				const char *name, u64 base, u64 length,
 				u64 blk_size, u64 flags)
 {
 	int err;
-	struct gk20a_bitmap_allocator *a;
+	struct nvgpu_bitmap_allocator *a;
 
 	mutex_lock(&meta_data_cache_lock);
 	if (!meta_data_cache)
-		meta_data_cache = KMEM_CACHE(gk20a_bitmap_alloc, 0);
+		meta_data_cache = KMEM_CACHE(nvgpu_bitmap_alloc, 0);
 	mutex_unlock(&meta_data_cache_lock);
 
 	if (!meta_data_cache)
@@ -402,11 +403,11 @@ int gk20a_bitmap_allocator_init(struct gk20a *g, struct gk20a_allocator *__a,
 		length -= blk_size;
 	}
 
-	a = kzalloc(sizeof(struct gk20a_bitmap_allocator), GFP_KERNEL);
+	a = kzalloc(sizeof(struct nvgpu_bitmap_allocator), GFP_KERNEL);
 	if (!a)
 		return -ENOMEM;
 
-	err = __gk20a_alloc_common_init(__a, name, a, false, &bitmap_ops);
+	err = __nvgpu_alloc_common_init(__a, name, a, false, &bitmap_ops);
 	if (err)
 		goto fail;
 
@@ -426,7 +427,7 @@ int gk20a_bitmap_allocator_init(struct gk20a *g, struct gk20a_allocator *__a,
 	wmb();
 	a->inited = true;
 
-	gk20a_init_alloc_debug(g, __a);
+	nvgpu_init_alloc_debug(g, __a);
 	alloc_dbg(__a, "New allocator: type      bitmap\n");
 	alloc_dbg(__a, "               base      0x%llx\n", a->base);
 	alloc_dbg(__a, "               bit_offs  0x%llx\n", a->bit_offs);

@@ -2896,8 +2896,8 @@ void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
 {
 	gk20a_dbg_fn("");
 
-	if (gk20a_alloc_initialized(&pmu->dmem))
-		gk20a_alloc_destroy(&pmu->dmem);
+	if (nvgpu_alloc_initialized(&pmu->dmem))
+		nvgpu_alloc_destroy(&pmu->dmem);
 
 	release_firmware(pmu->fw);
 }
@@ -3607,7 +3607,7 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 	gk20a_writel(g, pwr_pmu_idle_ctrl_r(2), data);
 
 	if (!pmu->sample_buffer)
-		pmu->sample_buffer = gk20a_alloc(&pmu->dmem,
+		pmu->sample_buffer = nvgpu_alloc(&pmu->dmem,
 						  2 * sizeof(u16));
 	if (!pmu->sample_buffer) {
 		gk20a_err(dev_from_gk20a(g),
@@ -3708,7 +3708,7 @@ static int pmu_process_init_msg(struct pmu_gk20a *pmu,
 	for (i = 0; i < PMU_QUEUE_COUNT; i++)
 		pmu_queue_init(pmu, i, init);
 
-	if (!gk20a_alloc_initialized(&pmu->dmem)) {
+	if (!nvgpu_alloc_initialized(&pmu->dmem)) {
 		/* Align start and end addresses */
 		u32 start = ALIGN(pv->get_pmu_init_msg_pmu_sw_mg_off(init),
 				  PMU_DMEM_ALLOC_ALIGNMENT);
@@ -3716,9 +3716,9 @@ static int pmu_process_init_msg(struct pmu_gk20a *pmu,
 			   pv->get_pmu_init_msg_pmu_sw_mg_size(init)) &
 			~(PMU_DMEM_ALLOC_ALIGNMENT - 1);
 		u32 size = end - start;
-		gk20a_bitmap_allocator_init(g, &pmu->dmem, "gk20a_pmu_dmem",
-					   start, size,
-					   PMU_DMEM_ALLOC_ALIGNMENT, 0);
+		nvgpu_bitmap_allocator_init(g, &pmu->dmem, "gk20a_pmu_dmem",
+					    start, size,
+					    PMU_DMEM_ALLOC_ALIGNMENT, 0);
 	}
 
 	pmu->pmu_ready = true;
@@ -3855,12 +3855,12 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 		seq->callback = NULL;
 	if (pv->pmu_allocation_get_dmem_size(pmu,
 			pv->get_pmu_seq_in_a_ptr(seq)) != 0)
-		gk20a_free(&pmu->dmem,
+		nvgpu_free(&pmu->dmem,
 			pv->pmu_allocation_get_dmem_offset(pmu,
 			pv->get_pmu_seq_in_a_ptr(seq)));
 	if (pv->pmu_allocation_get_dmem_size(pmu,
 			pv->get_pmu_seq_out_a_ptr(seq)) != 0)
-		gk20a_free(&pmu->dmem,
+		nvgpu_free(&pmu->dmem,
 			pv->pmu_allocation_get_dmem_offset(pmu,
 			pv->get_pmu_seq_out_a_ptr(seq)));
 
@@ -4601,7 +4601,7 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 			(u16)max(payload->in.size, payload->out.size));
 
 		*(pv->pmu_allocation_get_dmem_offset_addr(pmu, in)) =
-			gk20a_alloc(&pmu->dmem,
+			nvgpu_alloc(&pmu->dmem,
 				     pv->pmu_allocation_get_dmem_size(pmu, in));
 		if (!*(pv->pmu_allocation_get_dmem_offset_addr(pmu, in)))
 			goto clean_up;
@@ -4644,7 +4644,7 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 
 		if (payload->in.buf != payload->out.buf) {
 			*(pv->pmu_allocation_get_dmem_offset_addr(pmu, out)) =
-				gk20a_alloc(&pmu->dmem,
+				nvgpu_alloc(&pmu->dmem,
 				    pv->pmu_allocation_get_dmem_size(pmu, out));
 			if (!*(pv->pmu_allocation_get_dmem_offset_addr(pmu,
 					out)))
@@ -4694,10 +4694,10 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 clean_up:
 	gk20a_dbg_fn("fail");
 	if (in)
-		gk20a_free(&pmu->dmem,
+		nvgpu_free(&pmu->dmem,
 			pv->pmu_allocation_get_dmem_offset(pmu, in));
 	if (out)
-		gk20a_free(&pmu->dmem,
+		nvgpu_free(&pmu->dmem,
 			pv->pmu_allocation_get_dmem_offset(pmu, out));
 
 	pmu_seq_release(pmu, seq);

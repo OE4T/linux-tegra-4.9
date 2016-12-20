@@ -19,9 +19,10 @@
 #include <linux/bitops.h>
 #include <linux/mm.h>
 
-#include "gk20a_allocator.h"
+#include <nvgpu/allocator.h>
+#include <nvgpu/page_allocator.h>
+
 #include "buddy_allocator_priv.h"
-#include "page_allocator_priv.h"
 
 #define palloc_dbg(a, fmt, arg...)			\
 	alloc_dbg(palloc_owner(a), fmt, ##arg)
@@ -81,59 +82,59 @@ static inline void del_slab_page_from_full(struct page_alloc_slab *slab,
 	page->state = SP_NONE;
 }
 
-static u64 gk20a_page_alloc_length(struct gk20a_allocator *a)
+static u64 nvgpu_page_alloc_length(struct nvgpu_allocator *a)
 {
-	struct gk20a_page_allocator *va = a->priv;
+	struct nvgpu_page_allocator *va = a->priv;
 
-	return gk20a_alloc_length(&va->source_allocator);
+	return nvgpu_alloc_length(&va->source_allocator);
 }
 
-static u64 gk20a_page_alloc_base(struct gk20a_allocator *a)
+static u64 nvgpu_page_alloc_base(struct nvgpu_allocator *a)
 {
-	struct gk20a_page_allocator *va = a->priv;
+	struct nvgpu_page_allocator *va = a->priv;
 
-	return gk20a_alloc_base(&va->source_allocator);
+	return nvgpu_alloc_base(&va->source_allocator);
 }
 
-static int gk20a_page_alloc_inited(struct gk20a_allocator *a)
+static int nvgpu_page_alloc_inited(struct nvgpu_allocator *a)
 {
-	struct gk20a_page_allocator *va = a->priv;
+	struct nvgpu_page_allocator *va = a->priv;
 
-	return gk20a_alloc_initialized(&va->source_allocator);
+	return nvgpu_alloc_initialized(&va->source_allocator);
 }
 
-static u64 gk20a_page_alloc_end(struct gk20a_allocator *a)
+static u64 nvgpu_page_alloc_end(struct nvgpu_allocator *a)
 {
-	struct gk20a_page_allocator *va = a->priv;
+	struct nvgpu_page_allocator *va = a->priv;
 
-	return gk20a_alloc_end(&va->source_allocator);
+	return nvgpu_alloc_end(&va->source_allocator);
 }
 
-static u64 gk20a_page_alloc_space(struct gk20a_allocator *a)
+static u64 nvgpu_page_alloc_space(struct nvgpu_allocator *a)
 {
-	struct gk20a_page_allocator *va = a->priv;
+	struct nvgpu_page_allocator *va = a->priv;
 
-	return gk20a_alloc_space(&va->source_allocator);
+	return nvgpu_alloc_space(&va->source_allocator);
 }
 
-static int gk20a_page_reserve_co(struct gk20a_allocator *a,
-				 struct gk20a_alloc_carveout *co)
+static int nvgpu_page_reserve_co(struct nvgpu_allocator *a,
+				 struct nvgpu_alloc_carveout *co)
 {
-	struct gk20a_page_allocator *va = a->priv;
+	struct nvgpu_page_allocator *va = a->priv;
 
-	return gk20a_alloc_reserve_carveout(&va->source_allocator, co);
+	return nvgpu_alloc_reserve_carveout(&va->source_allocator, co);
 }
 
-static void gk20a_page_release_co(struct gk20a_allocator *a,
-				  struct gk20a_alloc_carveout *co)
+static void nvgpu_page_release_co(struct nvgpu_allocator *a,
+				  struct nvgpu_alloc_carveout *co)
 {
-	struct gk20a_page_allocator *va = a->priv;
+	struct nvgpu_page_allocator *va = a->priv;
 
-	gk20a_alloc_release_carveout(&va->source_allocator, co);
+	nvgpu_alloc_release_carveout(&va->source_allocator, co);
 }
 
-static void __gk20a_free_pages(struct gk20a_page_allocator *a,
-			       struct gk20a_page_alloc *alloc,
+static void __nvgpu_free_pages(struct nvgpu_page_allocator *a,
+			       struct nvgpu_page_alloc *alloc,
 			       bool free_buddy_alloc)
 {
 	struct page_alloc_chunk *chunk;
@@ -145,22 +146,22 @@ static void __gk20a_free_pages(struct gk20a_page_allocator *a,
 		list_del(&chunk->list_entry);
 
 		if (free_buddy_alloc)
-			gk20a_free(&a->source_allocator, chunk->base);
+			nvgpu_free(&a->source_allocator, chunk->base);
 		kfree(chunk);
 	}
 
 	kfree(alloc);
 }
 
-static int __insert_page_alloc(struct gk20a_page_allocator *a,
-			       struct gk20a_page_alloc *alloc)
+static int __insert_page_alloc(struct nvgpu_page_allocator *a,
+			       struct nvgpu_page_alloc *alloc)
 {
 	struct rb_node **new = &a->allocs.rb_node;
 	struct rb_node *parent = NULL;
 
 	while (*new) {
-		struct gk20a_page_alloc *tmp =
-			container_of(*new, struct gk20a_page_alloc,
+		struct nvgpu_page_alloc *tmp =
+			container_of(*new, struct nvgpu_page_alloc,
 				     tree_entry);
 
 		parent = *new;
@@ -180,15 +181,15 @@ static int __insert_page_alloc(struct gk20a_page_allocator *a,
 	return 0;
 }
 
-static struct gk20a_page_alloc *__find_page_alloc(
-	struct gk20a_page_allocator *a,
+static struct nvgpu_page_alloc *__find_page_alloc(
+	struct nvgpu_page_allocator *a,
 	u64 addr)
 {
 	struct rb_node *node = a->allocs.rb_node;
-	struct gk20a_page_alloc *alloc;
+	struct nvgpu_page_alloc *alloc;
 
 	while (node) {
-		alloc = container_of(node, struct gk20a_page_alloc, tree_entry);
+		alloc = container_of(node, struct nvgpu_page_alloc, tree_entry);
 
 		if (addr < alloc->base)
 			node = node->rb_left;
@@ -207,7 +208,7 @@ static struct gk20a_page_alloc *__find_page_alloc(
 }
 
 static struct page_alloc_slab_page *alloc_slab_page(
-	struct gk20a_page_allocator *a,
+	struct nvgpu_page_allocator *a,
 	struct page_alloc_slab *slab)
 {
 	struct page_alloc_slab_page *slab_page;
@@ -220,7 +221,7 @@ static struct page_alloc_slab_page *alloc_slab_page(
 
 	memset(slab_page, 0, sizeof(*slab_page));
 
-	slab_page->page_addr = gk20a_alloc(&a->source_allocator, a->page_size);
+	slab_page->page_addr = nvgpu_alloc(&a->source_allocator, a->page_size);
 	if (!slab_page->page_addr) {
 		kfree(slab_page);
 		palloc_dbg(a, "OOM: vidmem is full!\n");
@@ -242,7 +243,7 @@ static struct page_alloc_slab_page *alloc_slab_page(
 	return slab_page;
 }
 
-static void free_slab_page(struct gk20a_page_allocator *a,
+static void free_slab_page(struct nvgpu_page_allocator *a,
 			   struct page_alloc_slab_page *slab_page)
 {
 	palloc_dbg(a, "Freeing slab page @ 0x%012llx\n", slab_page->page_addr);
@@ -251,7 +252,7 @@ static void free_slab_page(struct gk20a_page_allocator *a,
 	       slab_page->nr_objects_alloced != 0 ||
 	       slab_page->bitmap != 0);
 
-	gk20a_free(&a->source_allocator, slab_page->page_addr);
+	nvgpu_free(&a->source_allocator, slab_page->page_addr);
 	a->pages_freed++;
 
 	kmem_cache_free(page_alloc_slab_page_cache, slab_page);
@@ -261,9 +262,9 @@ static void free_slab_page(struct gk20a_page_allocator *a,
  * This expects @alloc to have 1 empty page_alloc_chunk already added to the
  * alloc_chunks list.
  */
-static int __do_slab_alloc(struct gk20a_page_allocator *a,
+static int __do_slab_alloc(struct nvgpu_page_allocator *a,
 			   struct page_alloc_slab *slab,
-			   struct gk20a_page_alloc *alloc)
+			   struct nvgpu_page_alloc *alloc)
 {
 	struct page_alloc_slab_page *slab_page = NULL;
 	struct page_alloc_chunk *chunk;
@@ -317,7 +318,7 @@ static int __do_slab_alloc(struct gk20a_page_allocator *a,
 		BUG(); /* Should be impossible to hit this. */
 
 	/*
-	 * Handle building the gk20a_page_alloc struct. We expect one
+	 * Handle building the nvgpu_page_alloc struct. We expect one
 	 * page_alloc_chunk to be present.
 	 */
 	alloc->slab_page = slab_page;
@@ -336,12 +337,12 @@ static int __do_slab_alloc(struct gk20a_page_allocator *a,
 /*
  * Allocate from a slab instead of directly from the page allocator.
  */
-static struct gk20a_page_alloc *__gk20a_alloc_slab(
-	struct gk20a_page_allocator *a, u64 len)
+static struct nvgpu_page_alloc *__nvgpu_alloc_slab(
+	struct nvgpu_page_allocator *a, u64 len)
 {
 	int err, slab_nr;
 	struct page_alloc_slab *slab;
-	struct gk20a_page_alloc *alloc = NULL;
+	struct nvgpu_page_alloc *alloc = NULL;
 	struct page_alloc_chunk *chunk = NULL;
 
 	/*
@@ -381,8 +382,8 @@ fail:
 	return NULL;
 }
 
-static void __gk20a_free_slab(struct gk20a_page_allocator *a,
-			      struct gk20a_page_alloc *alloc)
+static void __nvgpu_free_slab(struct nvgpu_page_allocator *a,
+			      struct nvgpu_page_alloc *alloc)
 {
 	struct page_alloc_slab_page *slab_page = alloc->slab_page;
 	struct page_alloc_slab *slab = slab_page->owner;
@@ -423,7 +424,7 @@ static void __gk20a_free_slab(struct gk20a_page_allocator *a,
 	/*
 	 * Now handle the page_alloc.
 	 */
-	__gk20a_free_pages(a, alloc, false);
+	__nvgpu_free_pages(a, alloc, false);
 	a->nr_slab_frees++;
 
 	return;
@@ -435,10 +436,10 @@ static void __gk20a_free_slab(struct gk20a_page_allocator *a,
  * fragmentation in the space this allocator will collate smaller non-contiguous
  * allocations together if necessary.
  */
-static struct gk20a_page_alloc *__do_gk20a_alloc_pages(
-	struct gk20a_page_allocator *a, u64 pages)
+static struct nvgpu_page_alloc *__do_nvgpu_alloc_pages(
+	struct nvgpu_page_allocator *a, u64 pages)
 {
-	struct gk20a_page_alloc *alloc;
+	struct nvgpu_page_alloc *alloc;
 	struct page_alloc_chunk *c;
 	u64 max_chunk_len = pages << a->page_shift;
 	int i = 0;
@@ -476,7 +477,7 @@ static struct gk20a_page_alloc *__do_gk20a_alloc_pages(
 		 * allocator (i.e the allocator is OOM).
 		 */
 		do {
-			chunk_addr = gk20a_alloc(&a->source_allocator,
+			chunk_addr = nvgpu_alloc(&a->source_allocator,
 						 chunk_len);
 
 			/* Divide by 2 and try again */
@@ -497,7 +498,7 @@ static struct gk20a_page_alloc *__do_gk20a_alloc_pages(
 
 		c = kmem_cache_alloc(page_alloc_chunk_cache, GFP_KERNEL);
 		if (!c) {
-			gk20a_free(&a->source_allocator, chunk_addr);
+			nvgpu_free(&a->source_allocator, chunk_addr);
 			goto fail_cleanup;
 		}
 
@@ -522,7 +523,7 @@ fail_cleanup:
 		c = list_first_entry(&alloc->alloc_chunks,
 				     struct page_alloc_chunk, list_entry);
 		list_del(&c->list_entry);
-		gk20a_free(&a->source_allocator, c->base);
+		nvgpu_free(&a->source_allocator, c->base);
 		kfree(c);
 	}
 	kfree(alloc);
@@ -530,17 +531,17 @@ fail:
 	return ERR_PTR(-ENOMEM);
 }
 
-static struct gk20a_page_alloc *__gk20a_alloc_pages(
-	struct gk20a_page_allocator *a, u64 len)
+static struct nvgpu_page_alloc *__nvgpu_alloc_pages(
+	struct nvgpu_page_allocator *a, u64 len)
 {
-	struct gk20a_page_alloc *alloc = NULL;
+	struct nvgpu_page_alloc *alloc = NULL;
 	struct page_alloc_chunk *c;
 	u64 pages;
 	int i = 0;
 
 	pages = ALIGN(len, a->page_size) >> a->page_shift;
 
-	alloc = __do_gk20a_alloc_pages(a, pages);
+	alloc = __do_nvgpu_alloc_pages(a, pages);
 	if (IS_ERR(alloc)) {
 		palloc_dbg(a, "Alloc 0x%llx (%llu) (failed)\n",
 			   pages << a->page_shift, pages);
@@ -561,16 +562,16 @@ static struct gk20a_page_alloc *__gk20a_alloc_pages(
  * Allocate enough pages to satisfy @len. Page size is determined at
  * initialization of the allocator.
  *
- * The return is actually a pointer to a struct gk20a_page_alloc pointer. This
+ * The return is actually a pointer to a struct nvgpu_page_alloc pointer. This
  * is because it doesn't make a lot of sense to return the address of the first
  * page in the list of pages (since they could be discontiguous). This has
  * precedent in the dma_alloc APIs, though, it's really just an annoying
- * artifact of the fact that the gk20a_alloc() API requires a u64 return type.
+ * artifact of the fact that the nvgpu_alloc() API requires a u64 return type.
  */
-static u64 gk20a_page_alloc(struct gk20a_allocator *__a, u64 len)
+static u64 nvgpu_page_alloc(struct nvgpu_allocator *__a, u64 len)
 {
-	struct gk20a_page_allocator *a = page_allocator(__a);
-	struct gk20a_page_alloc *alloc = NULL;
+	struct nvgpu_page_allocator *a = page_allocator(__a);
+	struct nvgpu_page_alloc *alloc = NULL;
 	u64 real_len;
 
 	/*
@@ -583,9 +584,9 @@ static u64 gk20a_page_alloc(struct gk20a_allocator *__a, u64 len)
 	alloc_lock(__a);
 	if (a->flags & GPU_ALLOC_4K_VIDMEM_PAGES &&
 	    real_len <= (a->page_size / 2))
-		alloc = __gk20a_alloc_slab(a, real_len);
+		alloc = __nvgpu_alloc_slab(a, real_len);
 	else
-		alloc = __gk20a_alloc_pages(a, real_len);
+		alloc = __nvgpu_alloc_pages(a, real_len);
 
 	if (!alloc) {
 		alloc_unlock(__a);
@@ -606,13 +607,13 @@ static u64 gk20a_page_alloc(struct gk20a_allocator *__a, u64 len)
 }
 
 /*
- * Note: this will remove the gk20a_page_alloc struct from the RB tree
+ * Note: this will remove the nvgpu_page_alloc struct from the RB tree
  * if it's found.
  */
-static void gk20a_page_free(struct gk20a_allocator *__a, u64 base)
+static void nvgpu_page_free(struct nvgpu_allocator *__a, u64 base)
 {
-	struct gk20a_page_allocator *a = page_allocator(__a);
-	struct gk20a_page_alloc *alloc;
+	struct nvgpu_page_allocator *a = page_allocator(__a);
+	struct nvgpu_page_alloc *alloc;
 
 	alloc_lock(__a);
 
@@ -620,7 +621,7 @@ static void gk20a_page_free(struct gk20a_allocator *__a, u64 base)
 		alloc = __find_page_alloc(a, base);
 	else
 		alloc = __find_page_alloc(a,
-			((struct gk20a_page_alloc *)(uintptr_t)base)->base);
+			((struct nvgpu_page_alloc *)(uintptr_t)base)->base);
 
 	if (!alloc) {
 		palloc_dbg(a, "Hrm, found no alloc?\n");
@@ -636,20 +637,20 @@ static void gk20a_page_free(struct gk20a_allocator *__a, u64 base)
 	 * Frees *alloc.
 	 */
 	if (alloc->slab_page) {
-		__gk20a_free_slab(a, alloc);
+		__nvgpu_free_slab(a, alloc);
 	} else {
 		a->pages_freed += (alloc->length >> a->page_shift);
-		__gk20a_free_pages(a, alloc, true);
+		__nvgpu_free_pages(a, alloc, true);
 	}
 
 done:
 	alloc_unlock(__a);
 }
 
-static struct gk20a_page_alloc *__gk20a_alloc_pages_fixed(
-	struct gk20a_page_allocator *a, u64 base, u64 length)
+static struct nvgpu_page_alloc *__nvgpu_alloc_pages_fixed(
+	struct nvgpu_page_allocator *a, u64 base, u64 length)
 {
-	struct gk20a_page_alloc *alloc;
+	struct nvgpu_page_alloc *alloc;
 	struct page_alloc_chunk *c;
 
 	alloc = kmem_cache_alloc(page_alloc_cache, GFP_KERNEL);
@@ -657,9 +658,9 @@ static struct gk20a_page_alloc *__gk20a_alloc_pages_fixed(
 	if (!alloc || !c)
 		goto fail;
 
-	alloc->base = gk20a_alloc_fixed(&a->source_allocator, base, length);
+	alloc->base = nvgpu_alloc_fixed(&a->source_allocator, base, length);
 	if (!alloc->base) {
-		WARN(1, "gk20a: failed to fixed alloc pages @ 0x%010llx", base);
+		WARN(1, "nvgpu: failed to fixed alloc pages @ 0x%010llx", base);
 		goto fail;
 	}
 
@@ -679,11 +680,11 @@ fail:
 	return ERR_PTR(-ENOMEM);
 }
 
-static u64 gk20a_page_alloc_fixed(struct gk20a_allocator *__a,
+static u64 nvgpu_page_alloc_fixed(struct nvgpu_allocator *__a,
 				  u64 base, u64 len)
 {
-	struct gk20a_page_allocator *a = page_allocator(__a);
-	struct gk20a_page_alloc *alloc = NULL;
+	struct nvgpu_page_allocator *a = page_allocator(__a);
+	struct nvgpu_page_alloc *alloc = NULL;
 	struct page_alloc_chunk *c;
 	u64 aligned_len, pages;
 	int i = 0;
@@ -693,7 +694,7 @@ static u64 gk20a_page_alloc_fixed(struct gk20a_allocator *__a,
 
 	alloc_lock(__a);
 
-	alloc = __gk20a_alloc_pages_fixed(a, base, aligned_len);
+	alloc = __nvgpu_alloc_pages_fixed(a, base, aligned_len);
 	if (IS_ERR(alloc)) {
 		alloc_unlock(__a);
 		return 0;
@@ -718,11 +719,11 @@ static u64 gk20a_page_alloc_fixed(struct gk20a_allocator *__a,
 		return (u64) (uintptr_t) alloc;
 }
 
-static void gk20a_page_free_fixed(struct gk20a_allocator *__a,
+static void nvgpu_page_free_fixed(struct nvgpu_allocator *__a,
 				  u64 base, u64 len)
 {
-	struct gk20a_page_allocator *a = page_allocator(__a);
-	struct gk20a_page_alloc *alloc;
+	struct nvgpu_page_allocator *a = page_allocator(__a);
+	struct nvgpu_page_alloc *alloc;
 
 	alloc_lock(__a);
 
@@ -731,7 +732,7 @@ static void gk20a_page_free_fixed(struct gk20a_allocator *__a,
 		if (!alloc)
 			goto done;
 	} else {
-		alloc = (struct gk20a_page_alloc *) (uintptr_t) base;
+		alloc = (struct nvgpu_page_alloc *) (uintptr_t) base;
 	}
 
 	palloc_dbg(a, "Free  [fixed] 0x%010llx + 0x%llx\n",
@@ -746,15 +747,15 @@ static void gk20a_page_free_fixed(struct gk20a_allocator *__a,
 	 * allocs. This would have to be updated if the underlying
 	 * allocator were to change.
 	 */
-	__gk20a_free_pages(a, alloc, true);
+	__nvgpu_free_pages(a, alloc, true);
 
 done:
 	alloc_unlock(__a);
 }
 
-static void gk20a_page_allocator_destroy(struct gk20a_allocator *__a)
+static void nvgpu_page_allocator_destroy(struct nvgpu_allocator *__a)
 {
-	struct gk20a_page_allocator *a = page_allocator(__a);
+	struct nvgpu_page_allocator *a = page_allocator(__a);
 
 	alloc_lock(__a);
 	kfree(a);
@@ -762,10 +763,10 @@ static void gk20a_page_allocator_destroy(struct gk20a_allocator *__a)
 	alloc_unlock(__a);
 }
 
-static void gk20a_page_print_stats(struct gk20a_allocator *__a,
+static void nvgpu_page_print_stats(struct nvgpu_allocator *__a,
 				   struct seq_file *s, int lock)
 {
-	struct gk20a_page_allocator *a = page_allocator(__a);
+	struct nvgpu_page_allocator *a = page_allocator(__a);
 	int i;
 
 	if (lock)
@@ -803,31 +804,31 @@ static void gk20a_page_print_stats(struct gk20a_allocator *__a,
 
 	__alloc_pstat(s, __a, "Source alloc: %s\n",
 		      a->source_allocator.name);
-	gk20a_alloc_print_stats(&a->source_allocator, s, lock);
+	nvgpu_alloc_print_stats(&a->source_allocator, s, lock);
 
 	if (lock)
 		alloc_unlock(__a);
 }
 
-static const struct gk20a_allocator_ops page_ops = {
-	.alloc		= gk20a_page_alloc,
-	.free		= gk20a_page_free,
+static const struct nvgpu_allocator_ops page_ops = {
+	.alloc		= nvgpu_page_alloc,
+	.free		= nvgpu_page_free,
 
-	.alloc_fixed	= gk20a_page_alloc_fixed,
-	.free_fixed	= gk20a_page_free_fixed,
+	.alloc_fixed	= nvgpu_page_alloc_fixed,
+	.free_fixed	= nvgpu_page_free_fixed,
 
-	.reserve_carveout	= gk20a_page_reserve_co,
-	.release_carveout	= gk20a_page_release_co,
+	.reserve_carveout	= nvgpu_page_reserve_co,
+	.release_carveout	= nvgpu_page_release_co,
 
-	.base		= gk20a_page_alloc_base,
-	.length		= gk20a_page_alloc_length,
-	.end		= gk20a_page_alloc_end,
-	.inited		= gk20a_page_alloc_inited,
-	.space		= gk20a_page_alloc_space,
+	.base		= nvgpu_page_alloc_base,
+	.length		= nvgpu_page_alloc_length,
+	.end		= nvgpu_page_alloc_end,
+	.inited		= nvgpu_page_alloc_inited,
+	.space		= nvgpu_page_alloc_space,
 
-	.fini		= gk20a_page_allocator_destroy,
+	.fini		= nvgpu_page_allocator_destroy,
 
-	.print_stats	= gk20a_page_print_stats,
+	.print_stats	= nvgpu_page_print_stats,
 };
 
 /*
@@ -840,7 +841,7 @@ static const struct gk20a_allocator_ops page_ops = {
  *
  * That gives buckets of 1, 2, 4, and 8 pages (i.e 4k, 8k, 16k, 32k).
  */
-static int gk20a_page_alloc_init_slabs(struct gk20a_page_allocator *a)
+static int nvgpu_page_alloc_init_slabs(struct nvgpu_page_allocator *a)
 {
 	size_t nr_slabs = ilog2(a->page_size >> 12);
 	unsigned int i;
@@ -867,17 +868,17 @@ static int gk20a_page_alloc_init_slabs(struct gk20a_page_allocator *a)
 	return 0;
 }
 
-int gk20a_page_allocator_init(struct gk20a *g, struct gk20a_allocator *__a,
+int nvgpu_page_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 			      const char *name, u64 base, u64 length,
 			      u64 blk_size, u64 flags)
 {
-	struct gk20a_page_allocator *a;
+	struct nvgpu_page_allocator *a;
 	char buddy_name[sizeof(__a->name)];
 	int err;
 
 	mutex_lock(&meta_data_cache_lock);
 	if (!page_alloc_cache)
-		page_alloc_cache = KMEM_CACHE(gk20a_page_alloc, 0);
+		page_alloc_cache = KMEM_CACHE(nvgpu_page_alloc, 0);
 	if (!page_alloc_chunk_cache)
 		page_alloc_chunk_cache = KMEM_CACHE(page_alloc_chunk, 0);
 	if (!page_alloc_slab_page_cache)
@@ -891,11 +892,11 @@ int gk20a_page_allocator_init(struct gk20a *g, struct gk20a_allocator *__a,
 	if (blk_size < SZ_4K)
 		return -EINVAL;
 
-	a = kzalloc(sizeof(struct gk20a_page_allocator), GFP_KERNEL);
+	a = kzalloc(sizeof(struct nvgpu_page_allocator), GFP_KERNEL);
 	if (!a)
 		return -ENOMEM;
 
-	err = __gk20a_alloc_common_init(__a, name, a, false, &page_ops);
+	err = __nvgpu_alloc_common_init(__a, name, a, false, &page_ops);
 	if (err)
 		goto fail;
 
@@ -908,19 +909,19 @@ int gk20a_page_allocator_init(struct gk20a *g, struct gk20a_allocator *__a,
 	a->flags = flags;
 
 	if (flags & GPU_ALLOC_4K_VIDMEM_PAGES && blk_size > SZ_4K) {
-		err = gk20a_page_alloc_init_slabs(a);
+		err = nvgpu_page_alloc_init_slabs(a);
 		if (err)
 			goto fail;
 	}
 
 	snprintf(buddy_name, sizeof(buddy_name), "%s-src", name);
 
-	err = gk20a_buddy_allocator_init(g, &a->source_allocator, buddy_name,
+	err = nvgpu_buddy_allocator_init(g, &a->source_allocator, buddy_name,
 					 base, length, blk_size, 0);
 	if (err)
 		goto fail;
 
-	gk20a_init_alloc_debug(g, __a);
+	nvgpu_init_alloc_debug(g, __a);
 	palloc_dbg(a, "New allocator: type      page\n");
 	palloc_dbg(a, "               base      0x%llx\n", a->base);
 	palloc_dbg(a, "               size      0x%llx\n", a->length);

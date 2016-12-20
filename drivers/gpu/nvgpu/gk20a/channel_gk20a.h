@@ -143,7 +143,7 @@ struct channel_gk20a {
 	struct list_head ch_entry; /* channel's entry in TSG */
 
 	struct channel_gk20a_joblist joblist;
-	struct gk20a_allocator fence_allocator;
+	struct nvgpu_allocator fence_allocator;
 
 	struct vm_gk20a *vm;
 

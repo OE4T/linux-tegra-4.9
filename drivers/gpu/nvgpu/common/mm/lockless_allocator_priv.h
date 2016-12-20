@@ -91,10 +91,10 @@
 #ifndef LOCKLESS_ALLOCATOR_PRIV_H
 #define LOCKLESS_ALLOCATOR_PRIV_H
 
-struct gk20a_allocator;
+struct nvgpu_allocator;
 
-struct gk20a_lockless_allocator {
-	struct gk20a_allocator *owner;
+struct nvgpu_lockless_allocator {
+	struct nvgpu_allocator *owner;
 
 	u64 base;		/* Base address of the space. */
 	u64 length;		/* Length of the space. */
@@ -112,10 +112,10 @@ struct gk20a_lockless_allocator {
 	atomic_t nr_allocs;
 };
 
-static inline struct gk20a_lockless_allocator *lockless_allocator(
-	struct gk20a_allocator *a)
+static inline struct nvgpu_lockless_allocator *lockless_allocator(
+	struct nvgpu_allocator *a)
 {
-	return (struct gk20a_lockless_allocator *)(a)->priv;
+	return (struct nvgpu_lockless_allocator *)(a)->priv;
 }
 
 #endif

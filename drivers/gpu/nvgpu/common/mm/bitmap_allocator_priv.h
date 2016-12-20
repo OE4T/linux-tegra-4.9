@@ -19,10 +19,10 @@
 
 #include <linux/rbtree.h>
 
-struct gk20a_allocator;
+struct nvgpu_allocator;
 
-struct gk20a_bitmap_allocator {
-	struct gk20a_allocator *owner;
+struct nvgpu_bitmap_allocator {
+	struct nvgpu_allocator *owner;
 
 	u64 base;			/* Base address of the space. */
 	u64 length;			/* Length of the space. */
@@ -54,16 +54,16 @@ struct gk20a_bitmap_allocator {
 	u64 bytes_freed;
 };
 
-struct gk20a_bitmap_alloc {
+struct nvgpu_bitmap_alloc {
 	u64 base;
 	u64 length;
 	struct rb_node alloc_entry;	/* RB tree of allocations. */
 };
 
-static inline struct gk20a_bitmap_allocator *bitmap_allocator(
-	struct gk20a_allocator *a)
+static inline struct nvgpu_bitmap_allocator *bitmap_allocator(
+	struct nvgpu_allocator *a)
 {
-	return (struct gk20a_bitmap_allocator *)(a)->priv;
+	return (struct nvgpu_bitmap_allocator *)(a)->priv;
 }
 
 

@@ -19,14 +19,15 @@
 #include <linux/kernel.h>
 #include <linux/slab.h>
 
-#include "gk20a.h"
-#include "mm_gk20a.h"
-#include "platform_gk20a.h"
-#include "gk20a_allocator.h"
+#include <nvgpu/allocator.h>
 
-u32 gk20a_alloc_tracing_on;
+#include "gk20a/gk20a.h"
+#include "gk20a/mm_gk20a.h"
+#include "gk20a/platform_gk20a.h"
 
-u64 gk20a_alloc_length(struct gk20a_allocator *a)
+u32 nvgpu_alloc_tracing_on;
+
+u64 nvgpu_alloc_length(struct nvgpu_allocator *a)
 {
 	if (a->ops->length)
 		return a->ops->length(a);
@@ -34,7 +35,7 @@ u64 gk20a_alloc_length(struct gk20a_allocator *a)
 	return 0;
 }
 
-u64 gk20a_alloc_base(struct gk20a_allocator *a)
+u64 nvgpu_alloc_base(struct nvgpu_allocator *a)
 {
 	if (a->ops->base)
 		return a->ops->base(a);
@@ -42,7 +43,7 @@ u64 gk20a_alloc_base(struct gk20a_allocator *a)
 	return 0;
 }
 
-u64 gk20a_alloc_initialized(struct gk20a_allocator *a)
+u64 nvgpu_alloc_initialized(struct nvgpu_allocator *a)
 {
 	if (!a->ops || !a->ops->inited)
 		return 0;
@@ -50,7 +51,7 @@ u64 gk20a_alloc_initialized(struct gk20a_allocator *a)
 	return a->ops->inited(a);
 }
 
-u64 gk20a_alloc_end(struct gk20a_allocator *a)
+u64 nvgpu_alloc_end(struct nvgpu_allocator *a)
 {
 	if (a->ops->end)
 		return a->ops->end(a);
@@ -58,7 +59,7 @@ u64 gk20a_alloc_end(struct gk20a_allocator *a)
 	return 0;
 }
 
-u64 gk20a_alloc_space(struct gk20a_allocator *a)
+u64 nvgpu_alloc_space(struct nvgpu_allocator *a)
 {
 	if (a->ops->space)
 		return a->ops->space(a);
@@ -66,17 +67,17 @@ u64 gk20a_alloc_space(struct gk20a_allocator *a)
 	return 0;
 }
 
-u64 gk20a_alloc(struct gk20a_allocator *a, u64 len)
+u64 nvgpu_alloc(struct nvgpu_allocator *a, u64 len)
 {
 	return a->ops->alloc(a, len);
 }
 
-void gk20a_free(struct gk20a_allocator *a, u64 addr)
+void nvgpu_free(struct nvgpu_allocator *a, u64 addr)
 {
 	a->ops->free(a, addr);
 }
 
-u64 gk20a_alloc_fixed(struct gk20a_allocator *a, u64 base, u64 len)
+u64 nvgpu_alloc_fixed(struct nvgpu_allocator *a, u64 base, u64 len)
 {
 	if (a->ops->alloc_fixed)
 		return a->ops->alloc_fixed(a, base, len);
@@ -84,7 +85,7 @@ u64 gk20a_alloc_fixed(struct gk20a_allocator *a, u64 base, u64 len)
 	return 0;
 }
 
-void gk20a_free_fixed(struct gk20a_allocator *a, u64 base, u64 len)
+void nvgpu_free_fixed(struct nvgpu_allocator *a, u64 base, u64 len)
 {
 	/*
 	 * If this operation is not defined for the allocator then just do
@@ -95,8 +96,8 @@ void gk20a_free_fixed(struct gk20a_allocator *a, u64 base, u64 len)
 		a->ops->free_fixed(a, base, len);
 }
 
-int gk20a_alloc_reserve_carveout(struct gk20a_allocator *a,
-				 struct gk20a_alloc_carveout *co)
+int nvgpu_alloc_reserve_carveout(struct nvgpu_allocator *a,
+				 struct nvgpu_alloc_carveout *co)
 {
 	if (a->ops->reserve_carveout)
 		return a->ops->reserve_carveout(a, co);
@@ -104,25 +105,25 @@ int gk20a_alloc_reserve_carveout(struct gk20a_allocator *a,
 	return -ENODEV;
 }
 
-void gk20a_alloc_release_carveout(struct gk20a_allocator *a,
-				  struct gk20a_alloc_carveout *co)
+void nvgpu_alloc_release_carveout(struct nvgpu_allocator *a,
+				  struct nvgpu_alloc_carveout *co)
 {
 	if (a->ops->release_carveout)
 		a->ops->release_carveout(a, co);
 }
 
-void gk20a_alloc_destroy(struct gk20a_allocator *a)
+void nvgpu_alloc_destroy(struct nvgpu_allocator *a)
 {
 	a->ops->fini(a);
 	memset(a, 0, sizeof(*a));
 }
 
 /*
- * Handle the common init stuff for a gk20a_allocator.
+ * Handle the common init stuff for a nvgpu_allocator.
  */
-int __gk20a_alloc_common_init(struct gk20a_allocator *a,
+int __nvgpu_alloc_common_init(struct nvgpu_allocator *a,
 			      const char *name, void *priv, bool dbg,
-			      const struct gk20a_allocator_ops *ops)
+			      const struct nvgpu_allocator_ops *ops)
 {
 	if (!ops)
 		return -EINVAL;
@@ -145,7 +146,7 @@ int __gk20a_alloc_common_init(struct gk20a_allocator *a,
 	return 0;
 }
 
-void gk20a_alloc_print_stats(struct gk20a_allocator *__a,
+void nvgpu_alloc_print_stats(struct nvgpu_allocator *__a,
 			     struct seq_file *s, int lock)
 {
 	__a->ops->print_stats(__a, s, lock);
@@ -154,9 +155,9 @@ void gk20a_alloc_print_stats(struct gk20a_allocator *__a,
 #ifdef CONFIG_DEBUG_FS
 static int __alloc_show(struct seq_file *s, void *unused)
 {
-	struct gk20a_allocator *a = s->private;
+	struct nvgpu_allocator *a = s->private;
 
-	gk20a_alloc_print_stats(a, s, 1);
+	nvgpu_alloc_print_stats(a, s, 1);
 
 	return 0;
 }
@@ -174,7 +175,7 @@ static const struct file_operations __alloc_fops = {
 };
 #endif
 
-void gk20a_init_alloc_debug(struct gk20a *g, struct gk20a_allocator *a)
+void nvgpu_init_alloc_debug(struct gk20a *g, struct nvgpu_allocator *a)
 {
 #ifdef CONFIG_DEBUG_FS
 	if (!g->debugfs_allocators)
@@ -186,7 +187,7 @@ void gk20a_init_alloc_debug(struct gk20a *g, struct gk20a_allocator *a)
 #endif
 }
 
-void gk20a_fini_alloc_debug(struct gk20a_allocator *a)
+void nvgpu_fini_alloc_debug(struct nvgpu_allocator *a)
 {
 #ifdef CONFIG_DEBUG_FS
 	if (!IS_ERR_OR_NULL(a->debugfs_entry))
@@ -194,7 +195,7 @@ void gk20a_fini_alloc_debug(struct gk20a_allocator *a)
 #endif
 }
 
-void gk20a_alloc_debugfs_init(struct device *dev)
+void nvgpu_alloc_debugfs_init(struct device *dev)
 {
 #ifdef CONFIG_DEBUG_FS
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
@@ -206,6 +207,6 @@ void gk20a_alloc_debugfs_init(struct device *dev)
 		return;
 
 	debugfs_create_u32("tracing", 0664, g->debugfs_allocators,
-			   &gk20a_alloc_tracing_on);
+			   &nvgpu_alloc_tracing_on);
 #endif
 }

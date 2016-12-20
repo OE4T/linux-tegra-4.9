@@ -19,42 +19,43 @@
 #include <linux/vmalloc.h>
 #include <linux/atomic.h>
 
-#include "gk20a_allocator.h"
+#include <nvgpu/allocator.h>
+
 #include "lockless_allocator_priv.h"
 
-static u64 gk20a_lockless_alloc_length(struct gk20a_allocator *a)
+static u64 nvgpu_lockless_alloc_length(struct nvgpu_allocator *a)
 {
-	struct gk20a_lockless_allocator *pa = a->priv;
+	struct nvgpu_lockless_allocator *pa = a->priv;
 
 	return pa->length;
 }
 
-static u64 gk20a_lockless_alloc_base(struct gk20a_allocator *a)
+static u64 nvgpu_lockless_alloc_base(struct nvgpu_allocator *a)
 {
-	struct gk20a_lockless_allocator *pa = a->priv;
+	struct nvgpu_lockless_allocator *pa = a->priv;
 
 	return pa->base;
 }
 
-static int gk20a_lockless_alloc_inited(struct gk20a_allocator *a)
+static int nvgpu_lockless_alloc_inited(struct nvgpu_allocator *a)
 {
-	struct gk20a_lockless_allocator *pa = a->priv;
+	struct nvgpu_lockless_allocator *pa = a->priv;
 	int inited = pa->inited;
 
 	rmb();
 	return inited;
 }
 
-static u64 gk20a_lockless_alloc_end(struct gk20a_allocator *a)
+static u64 nvgpu_lockless_alloc_end(struct nvgpu_allocator *a)
 {
-	struct gk20a_lockless_allocator *pa = a->priv;
+	struct nvgpu_lockless_allocator *pa = a->priv;
 
 	return pa->base + pa->length;
 }
 
-static u64 gk20a_lockless_alloc(struct gk20a_allocator *a, u64 len)
+static u64 nvgpu_lockless_alloc(struct nvgpu_allocator *a, u64 len)
 {
-	struct gk20a_lockless_allocator *pa = a->priv;
+	struct nvgpu_lockless_allocator *pa = a->priv;
 	int head, new_head, ret;
 	u64 addr = 0;
 
@@ -77,9 +78,9 @@ static u64 gk20a_lockless_alloc(struct gk20a_allocator *a, u64 len)
 	return addr;
 }
 
-static void gk20a_lockless_free(struct gk20a_allocator *a, u64 addr)
+static void nvgpu_lockless_free(struct nvgpu_allocator *a, u64 addr)
 {
-	struct gk20a_lockless_allocator *pa = a->priv;
+	struct nvgpu_lockless_allocator *pa = a->priv;
 	int head, ret;
 	u64 cur_idx, rem;
 
@@ -98,20 +99,20 @@ static void gk20a_lockless_free(struct gk20a_allocator *a, u64 addr)
 	}
 }
 
-static void gk20a_lockless_alloc_destroy(struct gk20a_allocator *a)
+static void nvgpu_lockless_alloc_destroy(struct nvgpu_allocator *a)
 {
-	struct gk20a_lockless_allocator *pa = a->priv;
+	struct nvgpu_lockless_allocator *pa = a->priv;
 
-	gk20a_fini_alloc_debug(a);
+	nvgpu_fini_alloc_debug(a);
 
 	vfree(pa->next);
 	kfree(pa);
 }
 
-static void gk20a_lockless_print_stats(struct gk20a_allocator *a,
+static void nvgpu_lockless_print_stats(struct nvgpu_allocator *a,
 				   struct seq_file *s, int lock)
 {
-	struct gk20a_lockless_allocator *pa = a->priv;
+	struct nvgpu_lockless_allocator *pa = a->priv;
 
 	__alloc_pstat(s, a, "Lockless allocator params:\n");
 	__alloc_pstat(s, a, "  start = 0x%llx\n", pa->base);
@@ -125,21 +126,21 @@ static void gk20a_lockless_print_stats(struct gk20a_allocator *a,
 		      pa->nr_nodes - atomic_read(&pa->nr_allocs));
 }
 
-static const struct gk20a_allocator_ops pool_ops = {
-	.alloc		= gk20a_lockless_alloc,
-	.free		= gk20a_lockless_free,
+static const struct nvgpu_allocator_ops pool_ops = {
+	.alloc		= nvgpu_lockless_alloc,
+	.free		= nvgpu_lockless_free,
 
-	.base		= gk20a_lockless_alloc_base,
-	.length		= gk20a_lockless_alloc_length,
-	.end		= gk20a_lockless_alloc_end,
-	.inited		= gk20a_lockless_alloc_inited,
+	.base		= nvgpu_lockless_alloc_base,
+	.length		= nvgpu_lockless_alloc_length,
+	.end		= nvgpu_lockless_alloc_end,
+	.inited		= nvgpu_lockless_alloc_inited,
 
-	.fini		= gk20a_lockless_alloc_destroy,
+	.fini		= nvgpu_lockless_alloc_destroy,
 
-	.print_stats	= gk20a_lockless_print_stats,
+	.print_stats	= nvgpu_lockless_print_stats,
 };
 
-int gk20a_lockless_allocator_init(struct gk20a *g, struct gk20a_allocator *__a,
+int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 			      const char *name, u64 base, u64 length,
 			      u64 blk_size, u64 flags)
 {
@@ -147,7 +148,7 @@ int gk20a_lockless_allocator_init(struct gk20a *g, struct gk20a_allocator *__a,
 	int err;
 	int nr_nodes;
 	u64 count, rem;
-	struct gk20a_lockless_allocator *a;
+	struct nvgpu_lockless_allocator *a;
 
 	if (!blk_size)
 		return -EINVAL;
@@ -161,11 +162,11 @@ int gk20a_lockless_allocator_init(struct gk20a *g, struct gk20a_allocator *__a,
 	if (!base || !count || count > INT_MAX)
 		return -EINVAL;
 
-	a = kzalloc(sizeof(struct gk20a_lockless_allocator), GFP_KERNEL);
+	a = kzalloc(sizeof(struct nvgpu_lockless_allocator), GFP_KERNEL);
 	if (!a)
 		return -ENOMEM;
 
-	err = __gk20a_alloc_common_init(__a, name, a, false, &pool_ops);
+	err = __nvgpu_alloc_common_init(__a, name, a, false, &pool_ops);
 	if (err)
 		goto fail;
 
@@ -191,7 +192,7 @@ int gk20a_lockless_allocator_init(struct gk20a *g, struct gk20a_allocator *__a,
 	wmb();
 	a->inited = true;
 
-	gk20a_init_alloc_debug(g, __a);
+	nvgpu_init_alloc_debug(g, __a);
 	alloc_dbg(__a, "New allocator: type          lockless\n");
 	alloc_dbg(__a, "               base          0x%llx\n", a->base);
 	alloc_dbg(__a, "               nodes         %d\n", a->nr_nodes);

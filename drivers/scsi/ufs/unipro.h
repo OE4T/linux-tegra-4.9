@@ -271,6 +271,13 @@ enum ufs_unipro_ver {
 #undef TRUE
 #endif
 
+/*
+ * DME Attributes
+ */
+#define DME_FC0PROTECTIONTIMEOUTVAL	0xD041
+#define DME_TC0REPLAYTIMEOUTVAL		0xD042
+#define DME_AFC0REQTIMEOUTVAL		0xD043
+
 /* Boolean attribute values */
 enum {
 	FALSE = 0,

@@ -929,6 +929,29 @@ static struct notifier_block tegra_dvfs_nb = {
 	.priority = 1,
 };
 
+static int use_alt_freq_get(void *data, u64 *val)
+{
+	struct clk *c = (struct clk *)data;
+	struct dvfs *d;
+
+	d = tegra_clk_to_dvfs(c);
+	if (!d)
+		*val = 0;
+	else
+		*val = d->use_alt_freqs;
+
+	return 0;
+}
+
+static int use_alt_freq_set(void *data, u64 val)
+{
+	struct clk *c = (struct clk *)data;
+
+	return tegra_dvfs_use_alt_freqs_on_clk(c, !!val);
+}
+DEFINE_SIMPLE_ATTRIBUTE(use_alt_freq_fops,
+			use_alt_freq_get, use_alt_freq_set, "%llu\n");
+
 static void cleanup_dvfs_table(struct dvfs *d)
 {
 	int i;
@@ -977,6 +1000,9 @@ int tegra_dvfs_add_alt_freqs(struct clk *c, struct dvfs *alt_d)
 	cleanup_dvfs_table(alt_d);
 
 	d->alt_freqs = alt_d->freqs;
+
+	__clk_debugfs_add_file(c, "use_alt_freq", S_IRUGO | S_IWUSR, c,
+			       &use_alt_freq_fops);
 
 out:
 	mutex_unlock(&dvfs_lock);

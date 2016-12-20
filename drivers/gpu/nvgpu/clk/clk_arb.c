@@ -296,12 +296,14 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 
 init_fail:
 
-	kfree(arb->gpc2clk_f_points);
-	kfree(arb->mclk_f_points);
+	if (arb) {
+		kfree(arb->gpc2clk_f_points);
+		kfree(arb->mclk_f_points);
 
-	for (index = 0; index < 2; index++) {
-		kfree(arb->vf_table_pool[index].gpc2clk_points);
-		kfree(arb->vf_table_pool[index].mclk_points);
+		for (index = 0; index < 2; index++) {
+			kfree(arb->vf_table_pool[index].gpc2clk_points);
+			kfree(arb->vf_table_pool[index].mclk_points);
+		}
 	}
 
 	kfree(arb);

@@ -18,4 +18,41 @@
 / {
 	nvidia,dtsfilename = __FILE__;
 	nvidia,dtbbuildtime = __DATE__, __TIME__;
+
+        nvidia,boardids = "3310:0000:C03";
+        nvidia,proc-boardid = "3310:0000:C03";
+
+	xudc@3550000 {
+		dvdd-pex-supply = <&spmic_ldo8>;
+		dvdd-pex-pll-supply = <&spmic_ldo8>;
+	};
+
+	pinctrl@3520000 {
+		dvdd_pex-supply = <&spmic_ldo8>;
+	};
+
+	pcie-controller@10003000 {
+		dvdd-pex-supply = <&spmic_ldo8>;
+	};
+
+	bpmp_i2c {
+		spmic@3c {
+			regulators {
+				ldo0 {
+					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
+				};
+
+				ldo7 {
+					regulator-min-microvolt = <1000000>;
+					regulator-max-microvolt = <1000000>;
+				};
+
+				ldo8 {
+					regulator-name = "dvdd-pex";
+					regulator-min-microvolt = <1000000>;
+					regulator-max-microvolt = <1000000>;
+				};
+			};
+		};
+	};
 };

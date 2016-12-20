@@ -236,13 +236,14 @@ static u32 devinit_get_fll_device_table(struct gk20a *g,
 
 	gk20a_dbg_info("");
 
-	if (g->ops.bios.get_perf_table_ptrs) {
-		fll_table_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
-				  g->bios.clock_token, FLL_TABLE);
-		if (fll_table_ptr == NULL) {
-			status = -1;
-			goto done;
-		}
+	if (!g->ops.bios.get_perf_table_ptrs)
+		return -EINVAL;
+
+	fll_table_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+			  g->bios.clock_token, FLL_TABLE);
+	if (fll_table_ptr == NULL) {
+		status = -1;
+		goto done;
 	}
 
 	memcpy(&fll_desc_table_header_sz, fll_table_ptr,

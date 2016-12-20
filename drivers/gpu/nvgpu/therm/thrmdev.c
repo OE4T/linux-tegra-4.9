@@ -81,13 +81,14 @@ static u32 devinit_get_therm_device_table(struct gk20a *g,
 
 	gk20a_dbg_info("");
 
-	if (g->ops.bios.get_perf_table_ptrs) {
-		therm_device_table_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
-				g->bios.perf_token, THERMAL_DEVICE_TABLE);
-		if (therm_device_table_ptr == NULL) {
-			status = -EINVAL;
-			goto done;
-		}
+	if (!g->ops.bios.get_perf_table_ptrs)
+		return -EINVAL;
+
+	therm_device_table_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+			g->bios.perf_token, THERMAL_DEVICE_TABLE);
+	if (therm_device_table_ptr == NULL) {
+		status = -EINVAL;
+		goto done;
 	}
 
 	memcpy(&therm_device_table_header, therm_device_table_ptr,

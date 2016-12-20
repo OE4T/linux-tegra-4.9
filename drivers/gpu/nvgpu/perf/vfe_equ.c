@@ -150,14 +150,16 @@ static u32 devinit_get_vfe_equ_table(struct gk20a *g,
 
 	gk20a_dbg_info("");
 
-	if (g->ops.bios.get_perf_table_ptrs) {
-		vfeequs_tbl_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
-				g->bios.perf_token,
-				CONTINUOUS_VIRTUAL_BINNING_TABLE);
-		if (vfeequs_tbl_ptr == NULL) {
-			status = -EINVAL;
-			goto done;
-		}
+	if (!g->ops.bios.get_perf_table_ptrs)
+		return -EINVAL;
+
+	vfeequs_tbl_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+			g->bios.perf_token,
+			CONTINUOUS_VIRTUAL_BINNING_TABLE);
+
+	if (vfeequs_tbl_ptr == NULL) {
+		status = -EINVAL;
+		goto done;
 	}
 
 	memcpy(&vfeequs_tbl_header, vfeequs_tbl_ptr,

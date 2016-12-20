@@ -339,13 +339,14 @@ static u32 devinit_get_vin_device_table(struct gk20a *g,
 
 	gk20a_dbg_info("");
 
-	if (g->ops.bios.get_perf_table_ptrs) {
-		vin_table_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
-				g->bios.clock_token, VIN_TABLE);
-		if (vin_table_ptr == NULL) {
-			status = -1;
-			goto done;
-		}
+	if (!g->ops.bios.get_perf_table_ptrs)
+		return -EINVAL;
+
+	vin_table_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+			g->bios.clock_token, VIN_TABLE);
+	if (vin_table_ptr == NULL) {
+		status = -1;
+		goto done;
 	}
 
 	memcpy(&vin_desc_table_header, vin_table_ptr,

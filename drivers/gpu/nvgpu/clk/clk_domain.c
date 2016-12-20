@@ -263,13 +263,14 @@ static u32 devinit_get_clocks_table(struct gk20a *g,
 
 	gk20a_dbg_info("");
 
-	if (g->ops.bios.get_perf_table_ptrs) {
-		clocks_table_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
-				g->bios.clock_token, CLOCKS_TABLE);
-		if (clocks_table_ptr == NULL) {
-			status = -EINVAL;
-			goto done;
-		}
+	if (!g->ops.bios.get_perf_table_ptrs)
+		return -EINVAL;
+
+	clocks_table_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+			g->bios.clock_token, CLOCKS_TABLE);
+	if (clocks_table_ptr == NULL) {
+		status = -EINVAL;
+		goto done;
 	}
 
 	memcpy(&clocks_table_header, clocks_table_ptr,

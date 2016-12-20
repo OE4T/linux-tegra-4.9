@@ -187,13 +187,14 @@ static u32 devinit_get_pwr_topology_table(struct gk20a *g,
 
 	gk20a_dbg_info("");
 
-	if (g->ops.bios.get_perf_table_ptrs != NULL) {
-		pwr_topology_table_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
-				g->bios.perf_token, POWER_TOPOLOGY_TABLE);
-		if (pwr_topology_table_ptr == NULL) {
-			status = -EINVAL;
-			goto done;
-		}
+	if (!g->ops.bios.get_perf_table_ptrs)
+		return -EINVAL;
+
+	pwr_topology_table_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+			g->bios.perf_token, POWER_TOPOLOGY_TABLE);
+	if (pwr_topology_table_ptr == NULL) {
+		status = -EINVAL;
+		goto done;
 	}
 
 	memcpy(&pwr_topology_table_header, pwr_topology_table_ptr,

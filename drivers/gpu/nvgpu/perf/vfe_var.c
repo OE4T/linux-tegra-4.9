@@ -182,20 +182,21 @@ u32 dev_init_get_vfield_info(struct gk20a *g,
 	u8 *psegmentcount = NULL;
 	u32 status = 0;
 
-	if (g->ops.bios.get_perf_table_ptrs) {
-		vfieldregtableptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
-				g->bios.virt_token, VP_FIELD_REGISTER);
-		if (vfieldregtableptr == NULL) {
-			status = -EINVAL;
-			goto done;
-		}
+	if (!g->ops.bios.get_perf_table_ptrs)
+		return -EINVAL;
 
-		vfieldtableptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
-				g->bios.virt_token, VP_FIELD_TABLE);
-		if (vfieldtableptr == NULL) {
-			status = -EINVAL;
-			goto done;
-		}
+	vfieldregtableptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+			g->bios.virt_token, VP_FIELD_REGISTER);
+	if (vfieldregtableptr == NULL) {
+		status = -EINVAL;
+		goto done;
+	}
+
+	vfieldtableptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+			g->bios.virt_token, VP_FIELD_TABLE);
+	if (vfieldtableptr == NULL) {
+		status = -EINVAL;
+		goto done;
 	}
 
 	memcpy(&vregheader, vfieldregtableptr, VFIELD_REG_HEADER_SIZE);

@@ -2548,11 +2548,16 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 	 */
 	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT) {
 		job->pre_fence = gk20a_alloc_fence(c);
+		if (!job->pre_fence) {
+			err = -ENOMEM;
+			goto fail;
+		}
+
 		if (!pre_alloc_enabled)
 			job->wait_cmd = kzalloc(sizeof(struct priv_cmd_entry),
 						GFP_KERNEL);
 
-		if (!job->wait_cmd || !job->pre_fence) {
+		if (!job->wait_cmd) {
 			err = -ENOMEM;
 			goto clean_up_pre_fence;
 		}
@@ -2572,7 +2577,7 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 				*wait_cmd = job->wait_cmd;
 			*pre_fence = job->pre_fence;
 		} else
-			goto clean_up_pre_fence;
+			goto clean_up_wait_cmd;
 	}
 
 	if ((flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET) &&
@@ -2585,11 +2590,15 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 	 * sync_pt/semaphore PB is added to the GPFIFO later on in submit.
 	 */
 	job->post_fence = gk20a_alloc_fence(c);
+	if (!job->post_fence) {
+		err = -ENOMEM;
+		goto clean_up_wait_cmd;
+	}
 	if (!pre_alloc_enabled)
 		job->incr_cmd = kzalloc(sizeof(struct priv_cmd_entry),
 					GFP_KERNEL);
 
-	if (!job->incr_cmd || !job->post_fence) {
+	if (!job->incr_cmd) {
 		err = -ENOMEM;
 		goto clean_up_post_fence;
 	}
@@ -2606,25 +2615,27 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 		*incr_cmd = job->incr_cmd;
 		*post_fence = job->post_fence;
 	} else
-		goto clean_up_post_fence;
+		goto clean_up_incr_cmd;
 
 	return 0;
 
-clean_up_post_fence:
-	gk20a_fence_put(job->post_fence);
-	job->post_fence = NULL;
+clean_up_incr_cmd:
 	free_priv_cmdbuf(c, job->incr_cmd);
 	if (!pre_alloc_enabled)
 		job->incr_cmd = NULL;
-clean_up_pre_fence:
-	gk20a_fence_put(job->pre_fence);
-	job->pre_fence = NULL;
+clean_up_post_fence:
+	gk20a_fence_put(job->post_fence);
+	job->post_fence = NULL;
+clean_up_wait_cmd:
 	free_priv_cmdbuf(c, job->wait_cmd);
 	if (!pre_alloc_enabled)
 		job->wait_cmd = NULL;
+clean_up_pre_fence:
+	gk20a_fence_put(job->pre_fence);
+	job->pre_fence = NULL;
+fail:
 	*wait_cmd = NULL;
 	*pre_fence = NULL;
-fail:
 	return err;
 }
 

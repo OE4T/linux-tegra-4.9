@@ -344,19 +344,28 @@ static int parse_disp_default_out(struct platform_device *ndev,
 
 		hotplug_gpio = of_get_named_gpio_flags(np_sor,
 				"nvidia,hpd-gpio", 0, &flags);
-		if (hotplug_gpio == -EPROBE_DEFER) {
-			err = -EPROBE_DEFER;
-			goto parse_disp_defout_fail;
+		if (hotplug_gpio >= 0) {
+			pdata->default_out->hotplug_gpio = hotplug_gpio;
+		} else {
+			if (hotplug_gpio != -ENOENT)
+				pr_warn("sor%d: invalid hpd-gpio %d",
+						ndev->id, hotplug_gpio);
+			if (hotplug_gpio == -EPROBE_DEFER) {
+				err = -EPROBE_DEFER;
+				goto parse_disp_defout_fail;
+			}
 		}
-		pdata->default_out->hotplug_gpio = hotplug_gpio;
 	}
 	if (np_sor && of_device_is_available(np_sor) &&
 		((pdata->default_out->type == TEGRA_DC_OUT_DP) ||
 		(pdata->default_out->type == TEGRA_DC_OUT_NVSR_DP))) {
 		hotplug_gpio = of_get_named_gpio_flags(np_sor,
 				"nvidia,hpd-gpio", 0, &flags);
-		if (hotplug_gpio != 0)
+		if (hotplug_gpio >= 0)
 			pdata->default_out->hotplug_gpio = hotplug_gpio;
+		else if (hotplug_gpio != -ENOENT)
+			pr_warn("sor%d: invalid hpd-gpio %d",
+					ndev->id, hotplug_gpio);
 	}
 
 	if (!of_property_read_u32(np, "nvidia,out-max-pixclk", &temp)) {

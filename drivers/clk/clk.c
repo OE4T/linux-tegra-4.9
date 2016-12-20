@@ -78,6 +78,7 @@ struct clk_core {
 #ifdef CONFIG_DEBUG_FS
 	struct dentry		*dentry;
 	struct hlist_node	debug_node;
+	struct hlist_head	debug_extra_nodes;
 #endif
 #ifdef CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING
 	struct rb_root freq_stats_table;
@@ -100,6 +101,16 @@ struct clk {
 	unsigned long max_rate;
 	struct hlist_node clks_node;
 };
+
+#ifdef CONFIG_DEBUG_FS
+struct debug_extra_node {
+	struct hlist_node	debug_node;
+	char 			*name;
+	umode_t 		mode;
+	void			*data;
+	const struct file_operations *fops;
+};
+#endif
 
 /***           locking             ***/
 static void clk_prepare_lock(void)
@@ -2424,6 +2435,8 @@ static int clk_debug_create_one(struct clk_core *core, struct dentry *pdentry)
 {
 	struct dentry *d;
 	int ret = -ENOMEM;
+	struct debug_extra_node *debug_extra;
+	struct hlist_node *next;
 
 	if (!core || !pdentry) {
 		ret = -EINVAL;
@@ -2492,6 +2505,18 @@ static int clk_debug_create_one(struct clk_core *core, struct dentry *pdentry)
 			goto err_out;
 	}
 
+	hlist_for_each_entry_safe(debug_extra, next, &core->debug_extra_nodes,
+					debug_node) {
+		d = debugfs_create_file(debug_extra->name, debug_extra->mode,
+				core->dentry, debug_extra->data,
+				debug_extra->fops);
+		hlist_del(&debug_extra->debug_node);
+		kfree(debug_extra);
+
+		if (!d)
+			goto err_out;
+	}
+
 	ret = 0;
 	goto out;
 
@@ -2544,6 +2569,23 @@ static void clk_debug_unregister(struct clk_core *core)
 	mutex_unlock(&clk_debug_lock);
 }
 
+static void clk_debug_add_debugfs_extra_node(struct clk_core *core, char *name,
+		umode_t mode, void *data, const struct file_operations *fops)
+{
+	struct debug_extra_node *debugfs_extra;
+
+	debugfs_extra = kzalloc(sizeof(*debugfs_extra), GFP_KERNEL);
+	if (!debugfs_extra)
+		return;
+
+	debugfs_extra->name = name;
+	debugfs_extra->mode = mode;
+	debugfs_extra->data = data;
+	debugfs_extra->fops = fops;
+
+	hlist_add_head(&debugfs_extra->debug_node, &core->debug_extra_nodes);
+}
+
 struct dentry *__clk_debugfs_add_file(struct clk *clk, char *name,
 	umode_t mode, void *data, const struct file_operations *fops)
 {
@@ -2552,6 +2594,11 @@ struct dentry *__clk_debugfs_add_file(struct clk *clk, char *name,
 	if (clk->core->dentry)
 		d = debugfs_create_file(name, mode, clk->core->dentry, data,
 			fops);
+	else {
+		clk_debug_add_debugfs_extra_node(clk->core, name, mode, data,
+						 fops);
+		return ERR_PTR(-EAGAIN);
+	}
 
 	return d;
 }
@@ -2565,6 +2612,11 @@ struct dentry *clk_debugfs_add_file(struct clk_hw *hw, char *name, umode_t mode,
 	if (hw->core->dentry)
 		d = debugfs_create_file(name, mode, hw->core->dentry, data,
 					fops);
+	else {
+		clk_debug_add_debugfs_extra_node(hw->core, name, mode, data,
+						 fops);
+		return ERR_PTR(-EAGAIN);
+	}
 
 	return d;
 }

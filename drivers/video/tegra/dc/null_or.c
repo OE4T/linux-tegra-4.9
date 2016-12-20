@@ -1,11 +1,7 @@
 /*
  * drivers/video/tegra/dc/null_or.c
  *
-<<<<<<< HEAD
  * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
-=======
- * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
->>>>>>> 5740f8b... video: tegra: dc: display kernel unification
  * Author: Aron Wong <awong@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -31,7 +27,14 @@
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
-#include "../../../../drivers/platform/tegra/irqs-t21x.h"
+#define INT_GIC_BASE                    0
+#define INT_PRI_BASE                    (INT_GIC_BASE + 32)
+#define INT_SEC_BASE                    (INT_PRI_BASE + 32)
+#define INT_TRI_BASE                    (INT_SEC_BASE + 32)
+#define INT_QUAD_BASE                   (INT_TRI_BASE + 32)
+#define INT_QUINT_BASE                  (INT_QUAD_BASE + 32)
+#define INT_DISPLAY_GENERAL            (INT_TRI_BASE + 9)
+#define INT_DPAUX                       (INT_QUINT_BASE + 31)
 #endif
 
 #define DRIVER_NAME "null_or"

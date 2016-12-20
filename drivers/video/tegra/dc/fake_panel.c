@@ -19,6 +19,22 @@
 #include <generated/mach-types.h>
 #include "fake_panel.h"
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#define INT_GIC_BASE                    0
+#define INT_PRI_BASE                    (INT_GIC_BASE + 32)
+#define INT_SEC_BASE                    (INT_PRI_BASE + 32)
+#define INT_TRI_BASE                    (INT_SEC_BASE + 32)
+#define INT_QUAD_BASE                   (INT_TRI_BASE + 32)
+#define INT_QUINT_BASE                  (INT_QUAD_BASE + 32)
+#define INT_DISPLAY_GENERAL            (INT_TRI_BASE + 9)
+#define INT_DPAUX                       (INT_QUINT_BASE + 31)
+#endif
+#else
+#include <mach/irqs.h>/*for INT_DISPLAY_GENERAL, INT_DPAUX*/
+#endif
+
+
 #define DSI_PANEL_RESET		1
 
 #define DC_CTRL_MODE	TEGRA_DC_OUT_CONTINUOUS_MODE

@@ -33,7 +33,7 @@ u32 boardobj_construct_super(struct gk20a *g, struct boardobj **ppboardobj,
 
 	if (*ppboardobj == NULL) {
 		*ppboardobj = kzalloc(size, GFP_KERNEL);
-		if (ppboardobj == NULL)
+		if (*ppboardobj == NULL)
 			return -ENOMEM;
 	}
 

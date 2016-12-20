@@ -2410,6 +2410,29 @@ static struct tegra_audio_clk_info tegra210_audio_plls[] = {
 	{ "pll_a1", &pll_a1_params, tegra_clk_pll_a1, "pll_ref" },
 };
 
+static struct tegra_pto_table ptodefs[] = {
+	{ .clk_id = TEGRA210_CLK_PLL_C,  .divider = 2, .pto_id = 1,   .presel_reg = PLLC_MISC0, .presel_value = BIT(3),  .presel_mask = BIT(3) },
+	{ .clk_id = TEGRA210_CLK_PLL_A1, .divider = 2, .pto_id = 85,  .presel_reg = PLLA1_MISC0, .presel_value = BIT(3),  .presel_mask = BIT(3) },
+	{ .clk_id = TEGRA210_CLK_PLL_C2, .divider = 2, .pto_id = 88,  .presel_reg = PLLC2_MISC0, .presel_value = BIT(3),  .presel_mask = BIT(3) },
+	{ .clk_id = TEGRA210_CLK_PLL_C3, .divider = 2, .pto_id = 90,  .presel_reg = PLLC3_MISC0, .presel_value = BIT(3),  .presel_mask = BIT(3) },
+
+	{ .clk_id = TEGRA210_CLK_PLL_A,  .divider = 2, .pto_id = 4,   .presel_reg = PLLA_MISC0, .presel_value = BIT(29), .presel_mask = BIT(29) },
+	{ .clk_id = TEGRA210_CLK_PLL_X,  .divider = 2, .pto_id = 5,   .presel_reg = PLLX_MISC0, .presel_value = BIT(22), .presel_mask = BIT(22) },
+
+	{ .clk_id = TEGRA210_CLK_PLL_D,  .divider = 2, .pto_id = 203, .presel_reg = PLLD_MISC0, .presel_value = BIT(25), .presel_mask = BIT(25) },
+	{ .clk_id = TEGRA210_CLK_PLL_D2, .divider = 2, .pto_id = 205, .presel_reg = PLLD2_BASE, .presel_value = BIT(16), .presel_mask = BIT(16) },
+	{ .clk_id = TEGRA210_CLK_PLL_DP, .divider = 2, .pto_id = 207, .presel_reg = PLLDP_BASE, .presel_value = BIT(16), .presel_mask = BIT(16) },
+	{ .clk_id = TEGRA210_CLK_PLL_C4, .divider = 2, .pto_id = 81,  .presel_reg = PLLC4_BASE, .presel_value = BIT(16), .presel_mask = BIT(16) },
+
+	{ .clk_id = TEGRA210_CLK_PLL_M,  .divider = 2, .pto_id = 2,   .presel_reg = PLLM_MISC2,  .presel_value = BIT(8),  .presel_mask = BIT(8) },
+	{ .clk_id = TEGRA210_CLK_PLL_MB, .divider = 2, .pto_id = 37,  .presel_reg = PLLM_MISC2,  .presel_value = BIT(9),  .presel_mask = BIT(9) },
+
+	{ .clk_id = TEGRA210_CLK_PLL_U, .divider = 2,  .pto_id = 269, .presel_reg = PLLU_MISC0,  .presel_value = BIT(27), .presel_mask = BIT(27) },
+	{ .clk_id = TEGRA210_CLK_PLL_RE_VCO, .divider = 2, .pto_id = 271, .presel_reg = PLLRE_MISC0, .presel_value = BIT(26), .presel_mask = BIT(26) },
+
+	{ .clk_id = TEGRA210_CLK_CCLK_G, .divider = 1,  .pto_id = 18, },
+};
+
 static struct clk **clks;
 
 static const char * const aclk_parents[] = {
@@ -3171,6 +3194,7 @@ static void __init tegra210_clock_init(struct device_node *np)
 				  tegra210_reset_deassert);
 	tegra_add_of_provider(np);
 	tegra_register_devclks(devclks, ARRAY_SIZE(devclks));
+	tegra_register_ptos(ptodefs, ARRAY_SIZE(ptodefs));
 
 	tegra_cpu_car_ops = &tegra210_cpu_car_ops;
 }

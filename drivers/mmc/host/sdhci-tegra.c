@@ -1075,6 +1075,9 @@ static void tegra_sdhci_signal_voltage_switch_post(struct sdhci_host *host,
 		if ((voltage < tegra_host->current_voltage) && set)
 			tegra_sdhci_set_padctrl(host, 1800000);
 	}
+
+	if (tegra_host->pad_calib_required)
+		tegra_sdhci_pad_autocalib(host);
 }
 
 static void tegra_sdhci_voltage_switch(struct sdhci_host *host)
@@ -1263,7 +1266,12 @@ static const struct sdhci_tegra_soc_data soc_data_tegra210 = {
 	.pdata = &sdhci_tegra210_pdata,
 	.nvquirks = NVQUIRK_HW_TAP_CONFIG |
 		    NVQUIRK_DIS_CARD_CLK_CONFIG_TAP |
-		    NVQUIRK_READ_REG_AFTER_WRITE,
+		    NVQUIRK_READ_REG_AFTER_WRITE |
+		    NVQUIRK_ENABLE_SDHCI_SPEC_300 |
+		    NVQUIRK_ENABLE_SDR50 |
+		    NVQUIRK_ENABLE_DDR50 |
+		    NVQUIRK_ENABLE_SDR104 |
+		    SDHCI_MISC_CTRL_ENABLE_SDR50,
 };
 
 static const struct sdhci_pltfm_data sdhci_tegra186_pdata = {
@@ -1281,7 +1289,12 @@ static const struct sdhci_pltfm_data sdhci_tegra186_pdata = {
 
 static const struct sdhci_tegra_soc_data soc_data_tegra186 = {
 	.pdata = &sdhci_tegra186_pdata,
-	.nvquirks = NVQUIRK_HW_TAP_CONFIG,
+	.nvquirks = NVQUIRK_HW_TAP_CONFIG |
+		    NVQUIRK_ENABLE_SDHCI_SPEC_300 |
+		    NVQUIRK_ENABLE_SDR50 |
+		    NVQUIRK_ENABLE_DDR50 |
+		    NVQUIRK_ENABLE_SDR104 |
+		    SDHCI_MISC_CTRL_ENABLE_SDR50,
 };
 
 static const struct of_device_id sdhci_tegra_dt_match[] = {
@@ -1301,6 +1314,7 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 	struct sdhci_host *host = platform_get_drvdata(pdev);
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
+	int val;
 
 	if (!np)
 		return -EINVAL;
@@ -1318,7 +1332,17 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 #ifdef CONFIG_MMC_CQ_HCI
 	tegra_host->enable_hwcq = of_property_read_bool(np, "nvidia,enable-hwcq");
 #endif
-
+	host->ocr_mask = MMC_VDD_27_36 | MMC_VDD_165_195;
+	if (!of_property_read_u32(np, "mmc-ocr-mask", &val)) {
+		if (val == 0)
+			host->ocr_mask &= MMC_VDD_165_195;
+		else if (val == 1)
+			host->ocr_mask &= ~(MMC_VDD_26_27 | MMC_VDD_27_28);
+		else if (val == 2)
+			host->ocr_mask &= (MMC_VDD_32_33 | MMC_VDD_165_195);
+		else if (val == 3)
+			host->ocr_mask &= (MMC_VDD_33_34 | MMC_VDD_165_195);
+	}
 	return 0;
 }
 

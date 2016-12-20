@@ -325,6 +325,12 @@ struct mmc_host {
 #define MMC_VDD_34_35		0x00400000	/* VDD voltage 3.4 ~ 3.5 */
 #define MMC_VDD_35_36		0x00800000	/* VDD voltage 3.5 ~ 3.6 */
 
+#define MMC_VDD_27_36	(MMC_VDD_26_27 | MMC_VDD_27_28 |	\
+	MMC_VDD_28_29 | MMC_VDD_29_30 | MMC_VDD_30_31 |	\
+	MMC_VDD_31_32 | MMC_VDD_32_33 | MMC_VDD_33_34 |	\
+	MMC_VDD_34_35 | MMC_VDD_35_36)
+
+
 	u32			caps;		/* Host capabilities */
 
 #define MMC_CAP_4_BIT_DATA	(1 << 0)	/* Can the host do 4 bit transfers */

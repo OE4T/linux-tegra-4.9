@@ -2,7 +2,7 @@
  *  linux/drivers/mmc/host/sdhci.c - Secure Digital Host Controller Interface driver
  *
  *  Copyright (C) 2005-2008 Pierre Ossman, All Rights Reserved.
- *  Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
+ *  Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2065,8 +2065,10 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 
 		/* 3.3V regulator output should be stable within 5 ms */
 		ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
-		if (!(ctrl & SDHCI_CTRL_VDD_180))
-			return 0;
+		if (!(ctrl & SDHCI_CTRL_VDD_180)) {
+			ret = 0;
+			goto post_voltage_switch;
+		}
 
 		pr_warn("%s: 3.3V regulator output did not became stable\n",
 			mmc_hostname(mmc));
@@ -2097,8 +2099,10 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 
 		/* 1.8V regulator output should be stable within 5 ms */
 		ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
-		if (ctrl & SDHCI_CTRL_VDD_180)
-			return 0;
+		if (ctrl & SDHCI_CTRL_VDD_180) {
+			ret = 0;
+			goto post_voltage_switch;
+		}
 
 		pr_warn("%s: 1.8V regulator output did not became stable\n",
 			mmc_hostname(mmc));
@@ -2121,8 +2125,10 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 		return 0;
 	}
 
+post_voltage_switch:
 	if (host->ops->voltage_switch_post)
-		host->ops->voltage_switch_pre(host, ios->signal_voltage);
+		host->ops->voltage_switch_post(host, ios->signal_voltage);
+	return ret;
 }
 
 static int sdhci_card_busy(struct mmc_host *mmc)

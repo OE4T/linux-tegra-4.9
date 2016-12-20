@@ -16,6 +16,7 @@
 
 #include "boardobj/boardobj.h"
 #include "boardobj/boardobjgrp.h"
+#include "boardobj/boardobjgrp_e32.h"
 #include "clk.h"
 
 struct vin_device;

@@ -17,6 +17,7 @@
 #include "ctrl/ctrlboardobj.h"
 #include "pmuif/gpmuifclk.h"
 #include "boardobj/boardobjgrp_e32.h"
+#include "boardobj/boardobjgrp_e255.h"
 #include "boardobj/boardobjgrpmask.h"
 
 u32 clk_prog_sw_setup(struct gk20a *g);

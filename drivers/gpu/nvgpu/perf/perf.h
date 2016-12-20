@@ -19,6 +19,7 @@
 #include "gk20a/gk20a.h"
 #include "volt/volt.h"
 #include "lpwr/lpwr.h"
+#include "boardobj/boardobjgrp_e255.h"
 
 #define CTRL_PERF_VFE_VAR_TYPE_INVALID                               0x00
 #define CTRL_PERF_VFE_VAR_TYPE_DERIVED                               0x01

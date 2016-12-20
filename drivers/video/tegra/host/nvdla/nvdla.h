@@ -66,6 +66,7 @@
  */
 union nvdla_cmd_mem_list {
 	struct dla_region_printf dont_use_me;
+	u32 ping_dont_use_me;
 };
 
 #define MAX_COMMANDS_PER_DEVICE		1

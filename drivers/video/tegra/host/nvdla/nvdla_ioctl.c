@@ -45,8 +45,6 @@
 		(MAX_NUM_NVDLA_PREFENCES + MAX_NUM_NVDLA_POSTFENCES) * \
 		sizeof(struct nvdla_fence)
 
-static DEFINE_DMA_ATTRS(attrs);
-
 /**
  * struct nvdla_private per unique FD private data
  * @pdev		pointer to platform device
@@ -119,8 +117,7 @@ nvdla_buffer_cpy_err:
 static int nvdla_ping(struct platform_device *pdev,
 			   struct nvdla_ping_args *args)
 {
-	DEFINE_DMA_ATTRS(ping_attrs);
-	dma_addr_t ping_pa;
+	struct nvdla_cmd_mem_info ping_cmd_mem_info;
 	u32 *ping_va;
 	int err = 0;
 
@@ -132,15 +129,13 @@ static int nvdla_ping(struct platform_device *pdev,
 		goto fail_to_on;
 	}
 
-	/* allocate ping buffer */
-	ping_va = dma_alloc_attrs(&pdev->dev,
-				  DEBUG_BUFFER_SIZE, &ping_pa,
-				  GFP_KERNEL, &ping_attrs);
-	if (!ping_va) {
+	/* assign ping cmd buffer */
+	err = nvdla_get_cmd_memory(pdev, &ping_cmd_mem_info);
+	if (err) {
 		nvdla_dbg_err(pdev, "dma memory allocation failed for ping");
-		err = -ENOMEM;
 		goto fail_to_alloc;
 	}
+	ping_va = ping_cmd_mem_info.va;
 
 	/* pass ping value to falcon */
 	*ping_va = args->in_challenge;
@@ -148,7 +143,8 @@ static int nvdla_ping(struct platform_device *pdev,
 	nvdla_dbg_info(pdev, "ping challenge [%d]", *ping_va);
 
 	/* send ping cmd */
-	err = nvdla_send_cmd(pdev, DLA_CMD_PING, ALIGNED_DMA(ping_pa), true);
+	err = nvdla_send_cmd(pdev, DLA_CMD_PING,
+				ALIGNED_DMA(ping_cmd_mem_info.pa), true);
 	if (err) {
 		nvdla_dbg_err(pdev, "failed to send ping command");
 		goto fail_cmd;
@@ -165,9 +161,7 @@ static int nvdla_ping(struct platform_device *pdev,
 	}
 
 fail_cmd:
-	if (ping_va)
-		dma_free_attrs(&pdev->dev, DEBUG_BUFFER_SIZE,
-			       ping_va, ping_pa, &attrs);
+	nvdla_put_cmd_memory(pdev, ping_cmd_mem_info.index);
 fail_to_alloc:
 	nvhost_module_idle(pdev);
 fail_to_on:

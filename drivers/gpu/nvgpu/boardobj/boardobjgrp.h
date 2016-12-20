@@ -350,10 +350,6 @@ boardobjgrp_pmugetstatus     boardobjgrp_pmugetstatus_impl;
 
 void boardobjgrpe32hdrset(struct nv_pmu_boardobjgrp *hdr, u32 objmask);
 
-/* ------------------------ Include Derived Types --------------------------- */
-#include "boardobj/boardobjgrp_e32.h"
-#include "boardobj/boardobjgrp_e255.h"
-
 #define HIGHESTBITIDX_32(n32)   \
 {                               \
 	u32 count = 0;        \

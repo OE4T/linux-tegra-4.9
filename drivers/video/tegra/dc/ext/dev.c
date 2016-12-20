@@ -1334,7 +1334,7 @@ static void tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 	for (i = 0; i < nr_user_data; i++) {
 		struct tegra_dc_hdr *hdr;
 		struct tegra_dc_ext_hdr *info;
-		switch (flip_user_data[0].data_type) {
+		switch (flip_user_data[i].data_type) {
 		case TEGRA_DC_EXT_FLIP_USER_DATA_HDR_DATA:
 			hdr = &data->hdr_data;
 			info = &flip_user_data[i].hdr_info;

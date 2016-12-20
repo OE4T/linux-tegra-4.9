@@ -852,8 +852,10 @@ static int gm206_bios_init(struct gk20a *g)
 		gk20a_dbg_info("using VBIOS overlay");
 		g->bios.size = bios_fw->size - ROM_FILE_PAYLOAD_OFFSET;
 		g->bios.data = vmalloc(g->bios.size);
-		if (!g->bios.data)
-			return -ENOMEM;
+		if (!g->bios.data) {
+			err = -ENOMEM;
+			goto free_firmware;
+		}
 
 		memcpy(g->bios.data, &bios_fw->data[ROM_FILE_PAYLOAD_OFFSET],
 		       g->bios.size);
@@ -929,6 +931,10 @@ static int gm206_bios_init(struct gk20a *g)
 	}
 
 	return 0;
+
+free_firmware:
+	release_firmware(bios_fw);
+	return err;
 }
 
 void gm206_init_bios(struct gpu_ops *gops)

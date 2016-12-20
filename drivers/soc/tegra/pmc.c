@@ -33,6 +33,9 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_platform.h>
+#include <linux/pinctrl/pinctrl.h>
+#include <linux/pinctrl/pinconf-generic.h>
+#include <linux/pinctrl/pinconf.h>
 #include <linux/platform_device.h>
 #include <linux/pm_domain.h>
 #include <linux/psci.h>
@@ -50,6 +53,8 @@
 #include <soc/tegra/pmc.h>
 
 #include <asm/system_misc.h>
+
+#include <dt-bindings/pinctrl/pinctrl-tegra-io-pad.h>
 
 #define PMC_CNTRL			0x0
 #define  PMC_CNTRL_SYSCLK_POLARITY	(1 << 10)  /* sys clk polarity */
@@ -313,11 +318,23 @@ extern int tegra210_pmc_padctrl_init(struct device *dev,
 extern int tegra210_boorom_pmc_init(struct device *dev);
 #endif
 
+struct tegra_pmc_io_pad_soc {
+	const char *name;
+	unsigned int dpd;
+	unsigned int voltage;
+	const unsigned int pins[1];
+	unsigned int npins;
+};
+
 struct tegra_pmc_soc {
 	unsigned int num_powergates;
 	const char *const *powergates;
 	unsigned int num_cpu_powergates;
 	const u8 *cpu_powergates;
+	const struct tegra_pmc_io_pad_soc *io_pads;
+	unsigned int num_io_pads;
+	const struct pinctrl_pin_desc *descs;
+	unsigned int num_descs;
 
 	bool has_tsense_reset;
 	bool has_gpu_clamps;
@@ -346,6 +363,8 @@ struct tegra_pmc_soc {
  * @lp0_vec_size: size of the LP0 warm boot code
  * @powergates_available: Bitmap of available power gates
  * @powergates_lock: mutex for power gate register access
+ * @pctl: pinctrl handle which is returned after registering pinctrl
+ * @pinctrl_desc: Pincontrol descriptor for IO pads
  */
 struct tegra_pmc {
 	struct device *dev;
@@ -372,6 +391,8 @@ struct tegra_pmc {
 	DECLARE_BITMAP(powergates_available, TEGRA_POWERGATE_MAX);
 
 	struct mutex powergates_lock;
+	struct pinctrl_dev *pctl;
+	struct pinctrl_desc pinctrl_desc;
 };
 
 static struct tegra_pmc *pmc = &(struct tegra_pmc) {
@@ -1846,6 +1867,386 @@ void tegra_pmc_enter_suspend_mode(enum tegra_suspend_mode mode)
 }
 #endif
 
+/* IO Pads configurations */
+static int tegra_pmc_io_pad_prepare(const struct tegra_pmc_io_pad_soc *pad,
+				    unsigned long *request,
+				    unsigned long *status, u32 *mask)
+{
+	unsigned long rate, value;
+
+	if (pad->dpd == UINT_MAX)
+		return -ENOTSUPP;
+
+	*mask = BIT(pad->dpd % 32);
+
+	if (pad->dpd < 32) {
+		*status = IO_DPD_STATUS;
+		*request = IO_DPD_REQ;
+	} else {
+		*status = IO_DPD2_STATUS;
+		*request = IO_DPD2_REQ;
+	}
+
+	rate = clk_get_rate(pmc->clk);
+	if (!rate) {
+		dev_err(pmc->dev, "Failed to get clock rate\n");
+		return -ENODEV;
+	}
+
+	tegra_pmc_writel(DPD_SAMPLE_ENABLE, DPD_SAMPLE);
+
+	/* must be at least 200 ns, in APB (PCLK) clock cycles */
+	value = DIV_ROUND_UP(1000000000, rate);
+	value = DIV_ROUND_UP(200, value);
+	tegra_pmc_writel(value, SEL_DPD_TIM);
+
+	return 0;
+}
+
+static int tegra_pmc_io_pad_poll(unsigned long offset, u32 mask,
+				 u32 val, unsigned long timeout)
+{
+	u32 value;
+
+	timeout = jiffies + msecs_to_jiffies(timeout);
+
+	while (time_after(timeout, jiffies)) {
+		value = tegra_pmc_readl(offset);
+		if ((value & mask) == val)
+			return 0;
+
+		usleep_range(250, 1000);
+	}
+
+	return -ETIMEDOUT;
+}
+
+static void tegra_pmc_io_pad_unprepare(void)
+{
+	tegra_pmc_writel(DPD_SAMPLE_DISABLE, DPD_SAMPLE);
+}
+
+/**
+ * tegra_pmc_io_pad_power_enable() - enable power to I/O pad
+ * @pad: Tegra I/O pad SOC data for which to enable power
+ *
+ * Returns: 0 on success or a negative error code on failure.
+ */
+static int tegra_pmc_io_pad_power_enable(const struct tegra_pmc_io_pad_soc *pad)
+{
+	unsigned long request, status;
+	u32 mask;
+	int err;
+
+	mutex_lock(&pmc->powergates_lock);
+
+	err = tegra_pmc_io_pad_prepare(pad, &request, &status, &mask);
+	if (err < 0) {
+		dev_err(pmc->dev, "Failed to prepare I/O pad %s: %d\n",
+			pad->name, err);
+		goto unlock;
+	}
+
+	tegra_pmc_writel(IO_DPD_REQ_CODE_OFF | mask, request);
+
+	err = tegra_pmc_io_pad_poll(status, mask, 0, 250);
+	if (err < 0) {
+		dev_err(pmc->dev, "Failed to enable I/O pad %s: %d\n",
+			pad->name, err);
+		goto unlock;
+	}
+
+	tegra_pmc_io_pad_unprepare();
+
+unlock:
+	mutex_unlock(&pmc->powergates_lock);
+	return err;
+}
+
+/**
+ * tegra_pmc_io_pad_power_disable() - disable power to I/O pad
+ * @pad: Tegra I/O pad SOC data for which to disable power
+ *
+ * Returns: 0 on success or a negative error code on failure.
+ */
+static int tegra_pmc_io_pad_power_disable(
+			const struct tegra_pmc_io_pad_soc *pad)
+{
+	unsigned long request, status;
+	u32 mask;
+	int err;
+
+	mutex_lock(&pmc->powergates_lock);
+
+	err = tegra_pmc_io_pad_prepare(pad, &request, &status, &mask);
+	if (err < 0) {
+		dev_err(pmc->dev, "Failed to prepare I/O pad %s: %d\n",
+			pad->name, err);
+		goto unlock;
+	}
+
+	tegra_pmc_writel(IO_DPD_REQ_CODE_ON | mask, request);
+
+	err = tegra_pmc_io_pad_poll(status, mask, mask, 250);
+	if (err < 0) {
+		dev_err(pmc->dev, "Failed to disable I/O pad %s: %d\n",
+			pad->name, err);
+		goto unlock;
+	}
+
+	tegra_pmc_io_pad_unprepare();
+
+unlock:
+	mutex_unlock(&pmc->powergates_lock);
+	return err;
+}
+
+static int tegra_pmc_io_pad_set_voltage(const struct tegra_pmc_io_pad_soc *pad,
+					int io_pad_uv)
+{
+	u32 value;
+
+	if (pad->voltage == UINT_MAX)
+		return -ENOTSUPP;
+
+	if ((io_pad_uv != TEGRA_IO_PAD_VOLTAGE_1800000UV) &&
+	    (io_pad_uv != TEGRA_IO_PAD_VOLTAGE_3300000UV))
+		return -EINVAL;
+
+	mutex_lock(&pmc->powergates_lock);
+
+	/* write-enable PMC_PWR_DET_VALUE[pad->voltage] */
+	value = tegra_pmc_readl(PMC_PWR_DET_ENABLE);
+	value |= BIT(pad->voltage);
+	tegra_pmc_writel(value, PMC_PWR_DET_ENABLE);
+
+	/* update I/O voltage */
+	value = tegra_pmc_readl(PMC_PWR_DET_VAL);
+
+	if (io_pad_uv == TEGRA_IO_PAD_VOLTAGE_1800000UV)
+		value &= ~BIT(pad->voltage);
+	else
+		value |= BIT(pad->voltage);
+
+	tegra_pmc_writel(value, PMC_PWR_DET_VAL);
+
+	mutex_unlock(&pmc->powergates_lock);
+
+	usleep_range(100, 250);
+
+	return 0;
+}
+
+static int tegra_pmc_io_pad_get_voltage(const struct tegra_pmc_io_pad_soc *pad)
+{
+	u32 value;
+
+	if (pad->voltage == UINT_MAX)
+		return -ENOTSUPP;
+
+	value = tegra_pmc_readl(PMC_PWR_DET_VAL);
+
+	if ((value & BIT(pad->voltage)) == 0)
+		return TEGRA_IO_PAD_VOLTAGE_1800000UV;
+
+	return TEGRA_IO_PAD_VOLTAGE_3300000UV;
+}
+
+/**
+ * tegra_pmc_io_pad_is_powered() - check if IO pad is powered
+ * @pad: Tegra I/O pad SOC data for which power status need to check
+ *
+ * Return 1 if power-ON, 0 if power OFF and error number in
+ * negative if pad ID is not valid or power down not supported
+ * on given IO pad.
+ */
+static int tegra_pmc_io_pad_is_powered(const struct tegra_pmc_io_pad_soc *pad)
+{
+	unsigned long status;
+	u32 value;
+	int bit;
+
+	if (pad->dpd == UINT_MAX)
+		return -ENOTSUPP;
+
+	status = (pad->dpd < 32) ? IO_DPD_STATUS : IO_DPD2_STATUS;
+	bit = pad->dpd % 32;
+	value = tegra_pmc_readl(status);
+
+	return !(value & BIT(bit));
+}
+
+static int tegra_pmc_io_pads_pinctrl_get_groups_count(
+			struct pinctrl_dev *pctldev)
+{
+	struct tegra_pmc *tpmc = pinctrl_dev_get_drvdata(pctldev);
+
+	return tpmc->soc->num_io_pads;
+}
+
+static const char *tegra_pmc_io_pads_pinctrl_get_group_name(
+		struct pinctrl_dev *pctldev, unsigned int group)
+{
+	struct tegra_pmc *tpmc = pinctrl_dev_get_drvdata(pctldev);
+
+	return tpmc->soc->io_pads[group].name;
+}
+
+static int tegra_pmc_io_pads_pinctrl_get_group_pins(struct pinctrl_dev *pctldev,
+						    unsigned int group,
+						    const unsigned int **pins,
+						    unsigned int *num_pins)
+{
+	struct tegra_pmc *tpmc = pinctrl_dev_get_drvdata(pctldev);
+
+	*pins = tpmc->soc->io_pads[group].pins;
+	*num_pins = tpmc->soc->io_pads[group].npins;
+
+	return 0;
+}
+
+enum tegra_io_rail_pads_params {
+	TEGRA_IO_PAD_POWER_SOURCE_VOLTAGE = PIN_CONFIG_END + 1,
+};
+
+static const struct pinconf_generic_params tegra_io_pads_cfg_params[] = {
+	{
+		.property = "nvidia,power-source-voltage",
+		.param = TEGRA_IO_PAD_POWER_SOURCE_VOLTAGE,
+	},
+};
+
+static const struct pinctrl_ops tegra_pmc_io_pads_pinctrl_ops = {
+	.get_groups_count = tegra_pmc_io_pads_pinctrl_get_groups_count,
+	.get_group_name	= tegra_pmc_io_pads_pinctrl_get_group_name,
+	.get_group_pins	= tegra_pmc_io_pads_pinctrl_get_group_pins,
+	.dt_node_to_map	= pinconf_generic_dt_node_to_map_pin,
+	.dt_free_map	= pinconf_generic_dt_free_map,
+};
+
+static int tegra_pmc_io_pads_pinconf_get(struct pinctrl_dev *pctldev,
+					 unsigned int pin,
+					 unsigned long *config)
+{
+	struct tegra_pmc *tpmc = pinctrl_dev_get_drvdata(pctldev);
+	u16 param = pinconf_to_config_param(*config);
+	const struct tegra_pmc_io_pad_soc *pad = &tpmc->soc->io_pads[pin];
+	u16 arg = 0;
+	int ret;
+
+	switch (param) {
+	case PIN_CONFIG_LOW_POWER_MODE:
+		ret = tegra_pmc_io_pad_is_powered(pad);
+		if (ret < 0)
+			return ret;
+		arg = !ret;
+		break;
+
+	case TEGRA_IO_PAD_POWER_SOURCE_VOLTAGE:
+		if (pmc->soc->io_pads[pin].voltage == UINT_MAX)
+			return -EINVAL;
+
+		ret = tegra_pmc_io_pad_get_voltage(pad);
+		if (ret < 0)
+			return ret;
+		arg = ret;
+
+		break;
+
+	default:
+		dev_dbg(tpmc->dev, "I/O pad %s does not support param %d\n",
+			pad->name, param);
+		return -EINVAL;
+	}
+
+	*config = pinconf_to_config_packed(param, arg);
+
+	return 0;
+}
+
+static int tegra_pmc_io_pads_pinconf_set(struct pinctrl_dev *pctldev,
+					 unsigned int pin,
+					 unsigned long *configs,
+					 unsigned int num_configs)
+{
+	struct tegra_pmc *tpmc = pinctrl_dev_get_drvdata(pctldev);
+	const struct tegra_pmc_io_pad_soc *pad = &tpmc->soc->io_pads[pin];
+	unsigned int i;
+
+	for (i = 0; i < num_configs; i++) {
+		int ret;
+		u16 param_val = pinconf_to_config_argument(configs[i]);
+		u16 param = pinconf_to_config_param(configs[i]);
+
+		switch (param) {
+		case PIN_CONFIG_LOW_POWER_MODE:
+			if (param_val)
+				ret = tegra_pmc_io_pad_power_disable(pad);
+			else
+				ret = tegra_pmc_io_pad_power_enable(pad);
+			if (ret < 0) {
+				dev_err(tpmc->dev,
+					"Failed to set low power %s of I/O pad %s: %d\n",
+					(param_val) ? "disable" : "enable",
+					pad->name, ret);
+				return ret;
+			}
+
+			break;
+
+		case TEGRA_IO_PAD_POWER_SOURCE_VOLTAGE:
+			if (pmc->soc->io_pads[pin].voltage == UINT_MAX)
+				return -EINVAL;
+
+			ret = tegra_pmc_io_pad_set_voltage(pad, param_val);
+			if (ret < 0) {
+				dev_err(tpmc->dev,
+					"Failed to set voltage %d of pin %u: %d\n",
+					param_val, pin, ret);
+				return ret;
+			}
+
+			break;
+
+		default:
+			dev_err(tpmc->dev, "I/O pad %s does not support param %d\n",
+				pad->name, param);
+			return -EINVAL;
+		}
+	}
+
+	return 0;
+}
+
+static const struct pinconf_ops tegra_pmc_io_pads_pinconf_ops = {
+	.pin_config_get = tegra_pmc_io_pads_pinconf_get,
+	.pin_config_set = tegra_pmc_io_pads_pinconf_set,
+	.is_generic = true,
+};
+
+static int tegra_pmc_io_pads_pinctrl_init(struct tegra_pmc *pmc)
+{
+	pmc->pinctrl_desc.name = "pinctr-pmc-io-pads";
+	pmc->pinctrl_desc.pctlops = &tegra_pmc_io_pads_pinctrl_ops;
+	pmc->pinctrl_desc.confops = &tegra_pmc_io_pads_pinconf_ops;
+	pmc->pinctrl_desc.pins = pmc->soc->descs;
+	pmc->pinctrl_desc.npins = pmc->soc->num_descs;
+	pmc->pinctrl_desc.custom_params = tegra_io_pads_cfg_params;
+	pmc->pinctrl_desc.num_custom_params =
+				ARRAY_SIZE(tegra_io_pads_cfg_params);
+
+	pmc->pctl = devm_pinctrl_register(pmc->dev, &pmc->pinctrl_desc, pmc);
+	if (IS_ERR(pmc->pctl)) {
+		int ret = PTR_ERR(pmc->pctl);
+
+		dev_err(pmc->dev, "Failed to register pinctrl-io-pad: %d\n",
+			ret);
+		return ret;
+	}
+
+	return 0;
+}
+
 static int tegra_pmc_parse_dt(struct tegra_pmc *pmc, struct device_node *np)
 {
 	u32 value, values[2];
@@ -2096,6 +2497,11 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 		}
 	}
 
+	err = tegra_pmc_io_pads_pinctrl_init(pmc);
+	if (err < 0)
+		return err;
+
+
 #ifdef CONFIG_PADCTRL_TEGRA210_PMC
 	/* Register as pad controller */
 	err = tegra210_pmc_padctrl_init(&pdev->dev, pdev->dev.of_node);
@@ -2301,6 +2707,96 @@ static const u8 tegra210_cpu_powergates[] = {
 	TEGRA_POWERGATE_CPU3,
 };
 
+#define TEGRA_IO_PAD_CONFIG(_pin, _npins, _name, _dpd, _vbit)	\
+	{							\
+		.name =  #_name,				\
+		.pins = {(_pin)},				\
+		.npins = _npins,				\
+		.dpd = _dpd,					\
+		.voltage = _vbit,				\
+	},
+
+/**
+ * All IO pads of Tegra SoCs do not support the low power and multi level
+ * voltage configurations for its pads.
+ * Defining macros for different cases as follows:
+ * TEGRA_IO_PAD_LPONLY : IO pad which support low power state but
+ *			 operate in single level of IO voltage.
+ * TEGRA_IO_PAD_LP_N_PV: IO pad which support low power state as well as
+ *			 it can operate in multi-level voltages.
+ * TEGRA_IO_PAD_PVONLY:  IO pad which does not support low power state but
+ *			 it can operate in multi-level voltages.
+ */
+#define TEGRA_IO_PAD_LPONLY(_pin, _name, _dpd)	\
+	TEGRA_IO_PAD_CONFIG(_pin, 1, _name, _dpd, UINT_MAX)
+
+#define TEGRA_IO_PAD_LP_N_PV(_pin, _name, _dpd, _vbit)  \
+	TEGRA_IO_PAD_CONFIG(_pin, 1, _name, _dpd, _vbit)
+
+#define TEGRA_IO_PAD_PVONLY(_pin, _name, _vbit)	\
+	TEGRA_IO_PAD_CONFIG(_pin, 0, _name, UINT_MAX, _vbit)
+
+#define TEGRA_IO_PAD_DESC_LP(_pin, _name, _dpd)	\
+	{					\
+		.number = _pin,			\
+		.name = #_name,			\
+	},
+#define TEGRA_IO_PAD_DESC_LP_N_PV(_pin, _name, _dpd, _vbit) \
+	TEGRA_IO_PAD_DESC_LP(_pin, _name, _dpd)
+
+#define TEGRA_IO_PAD_DESC_PV(_pin, _name, _vbit) \
+	TEGRA_IO_PAD_DESC_LP(_pin, _name, UINT_MAX)
+
+#define TEGRA210_IO_PAD_TABLE(_lponly_, _pvonly_, _lp_n_pv_)	\
+	_lp_n_pv_(0, audio, 17, 5)	\
+	_lp_n_pv_(1, audio-hv, 61, 18)	\
+	_lp_n_pv_(2, cam, 36, 10)	\
+	_lponly_(3, csia, 0)		\
+	_lponly_(4, csib, 1)		\
+	_lponly_(5, csic, 42)		\
+	_lponly_(6, csid, 43)		\
+	_lponly_(7, csie, 44)		\
+	_lponly_(8, csif, 45)		\
+	_lp_n_pv_(9, dbg, 25, 19)	\
+	_lponly_(10, debug-nonao, 26)	\
+	_lp_n_pv_(11, dmic, 50, 20)	\
+	_lponly_(12, dp, 51)		\
+	_lponly_(13, dsi, 2)		\
+	_lponly_(14, dsib, 39)		\
+	_lponly_(15, dsic, 40)		\
+	_lponly_(16, dsid, 41)		\
+	_lponly_(17, emmc, 35)		\
+	_lponly_(18, emmc2, 37)		\
+	_lp_n_pv_(19, gpio, 27, 21)	\
+	_lponly_(20, hdmi, 28)		\
+	_lponly_(21, hsic, 19)		\
+	_lponly_(22, lvds, 57)		\
+	_lponly_(23, mipi-bias, 3)	\
+	_lponly_(24, pex-bias, 4)	\
+	_lponly_(25, pex-clk1, 5)	\
+	_lponly_(26, pex-clk2, 6)	\
+	_pvonly_(27, pex-ctrl, 11)	\
+	_lp_n_pv_(28, sdmmc1, 33, 12)	\
+	_lp_n_pv_(29, sdmmc3, 34, 13)	\
+	_lp_n_pv_(30, spi, 46, 22)	\
+	_lp_n_pv_(31, spi-hv, 47, 23)	\
+	_lp_n_pv_(32, uart, 14, 2)	\
+	_lponly_(33, usb0, 9)		\
+	_lponly_(34, usb1, 10)		\
+	_lponly_(35, usb2, 11)		\
+	_lponly_(36, usb3, 18)		\
+	_lponly_(37, usb-bias, 12)
+
+static const struct tegra_pmc_io_pad_soc tegra210_io_pads[] = {
+	TEGRA210_IO_PAD_TABLE(TEGRA_IO_PAD_LPONLY, TEGRA_IO_PAD_PVONLY,
+			      TEGRA_IO_PAD_LP_N_PV)
+};
+
+static const struct pinctrl_pin_desc tegra210_io_pads_pinctrl_desc[] = {
+	TEGRA210_IO_PAD_TABLE(TEGRA_IO_PAD_DESC_LP, TEGRA_IO_PAD_DESC_PV,
+			      TEGRA_IO_PAD_DESC_LP_N_PV)
+};
+
 static const struct tegra_pmc_soc tegra210_pmc_soc = {
 	.num_powergates = ARRAY_SIZE(tegra210_powergates),
 	.powergates = tegra210_powergates,
@@ -2309,6 +2805,10 @@ static const struct tegra_pmc_soc tegra210_pmc_soc = {
 	.has_tsense_reset = true,
 	.has_gpu_clamps = true,
 	.has_ps18 = true,
+	.num_io_pads = ARRAY_SIZE(tegra210_io_pads),
+	.io_pads = tegra210_io_pads,
+	.num_descs = ARRAY_SIZE(tegra210_io_pads_pinctrl_desc),
+	.descs = tegra210_io_pads_pinctrl_desc,
 };
 
 static const struct of_device_id tegra_pmc_match[] = {

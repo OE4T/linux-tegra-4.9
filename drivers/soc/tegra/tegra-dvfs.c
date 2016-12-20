@@ -854,7 +854,7 @@ int tegra_dvfs_use_alt_freqs_on_clk(struct clk *c, bool use_alt_freq)
 	mutex_lock(&dvfs_lock);
 
 	d = tegra_clk_to_dvfs(c);
-	if (!d && d->alt_freqs) {
+	if (d && d->alt_freqs) {
 		err = 0;
 		if (d->use_alt_freqs != use_alt_freq) {
 			d->use_alt_freqs = use_alt_freq;

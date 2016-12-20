@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2016, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2010-2017, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -175,12 +175,12 @@ struct tegra_rsa_req {
 	char *key;
 	char *message;
 	char *result;
-	int algo;
-	int keylen;
-	int msg_len;
-	int modlen;
-	int pub_explen;
-	int prv_explen;
+	unsigned int algo;
+	unsigned int keylen;
+	unsigned int msg_len;
+	unsigned int modlen;
+	unsigned int pub_explen;
+	unsigned int prv_explen;
 	int skip_key;
 	enum tegra_rsa_op_mode op_mode;
 };

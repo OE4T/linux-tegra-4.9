@@ -68,6 +68,16 @@
 #define MPHY_RX_APB_VENDOR2_0_RX_CAL_DONE	(1 << 19)
 
 
+/* Unipro Vendor registers */
+
+/*
++ * Vendor Specific Attributes
++ */
+
+#define VS_DEBUGSAVECONFIGTIME		0xD0A0
+#define VS_DEBUGSAVECONFIGTIME_TREF	0x6
+#define SET_TREF(x)			(((x) & 0x7) << 2)
+
 #define MPHY_ADDR_RANGE		0x1fc
 #define UFS_AUX_ADDR_RANGE	0x18
 

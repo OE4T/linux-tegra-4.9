@@ -28,10 +28,70 @@
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
 
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#endif
+
 #include "ufshcd.h"
 #include "unipro.h"
 #include "ufs-tegra.h"
 #include "ufshci.h"
+
+
+#ifdef CONFIG_DEBUG_FS
+static int ufs_tegra_show_configuration(struct seq_file *s, void *data)
+{
+	struct ufs_hba *hba = s->private;
+	u32 major_version;
+	u32 minor_version;
+
+	seq_puts(s, "UFS Configuration:\n");
+	if ((hba->ufs_version == UFSHCI_VERSION_10) ||
+			(hba->ufs_version == UFSHCI_VERSION_11)) {
+		major_version = hba->ufs_version >> 16;
+		minor_version = ((hba->ufs_version) & 0xffff);
+	} else {
+		major_version = ((hba->ufs_version) & 0xff00) >> 8;
+		minor_version = ((hba->ufs_version) & 0xf0) >> 4;
+	}
+
+	seq_puts(s, "\n");
+	seq_puts(s, "UFSHCI Version Information:\n");
+	seq_printf(s, "Major Version Number: %u\n", major_version);
+	seq_printf(s, "Minor Version Number: %u\n", minor_version);
+
+	seq_puts(s, "\n");
+	seq_puts(s, "Number of UTP Transfer Request Slots:\n");
+	seq_printf(s, "NUTRS: %u\n", hba->nutrs);
+
+	seq_puts(s, "\n");
+	seq_puts(s, "UTP Task Management Request Slots:\n");
+	seq_printf(s, "NUTMRS: %u\n", hba->nutmrs);
+
+	return 0;
+}
+
+static int ufs_tegra_open_configuration(struct inode *inode, struct file *file)
+{
+	return single_open(file, ufs_tegra_show_configuration, inode->i_private);
+}
+
+static const struct file_operations ufs_tegra_debugfs_ops = {
+	.open           = ufs_tegra_open_configuration,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = single_release,
+};
+
+void ufs_tegra_init_debugfs(struct ufs_hba *hba)
+{
+	struct dentry *device_root;
+
+	device_root = debugfs_create_dir(dev_name(hba->dev), NULL);
+	debugfs_create_file("configuration", S_IFREG | S_IRUGO,
+			device_root, hba, &ufs_tegra_debugfs_ops);
+}
+#endif
 
 
 /*
@@ -344,6 +404,12 @@ static int ufs_tegra_init_mphy_lane_clks(struct ufs_tegra_host *host)
 		&host->mphy_l0_tx_ls_3xbit);
 	if (err)
 		goto out;
+
+	err = ufs_tegra_host_clk_get(dev, "mphy_l0_rx_ls_bit",
+		&host->mphy_l0_rx_ls_bit);
+	if (err)
+		goto out;
+
 	if (host->x2config)
 		err = ufs_tegra_host_clk_get(dev, "mphy_l1_rx_ana",
 			&host->mphy_l1_rx_ana);
@@ -434,23 +500,23 @@ static int ufs_tegra_ufs_reset_init(struct ufs_tegra_host *ufs_tegra)
 	struct device *dev = ufs_tegra->hba->dev;
 	int ret = 0;
 
-	ufs_tegra->ufs_rst = devm_reset_control_get(dev, "ufs_rst");
+	ufs_tegra->ufs_rst = devm_reset_control_get(dev, "ufs-rst");
 	if (IS_ERR(ufs_tegra->ufs_rst)) {
 		ret = PTR_ERR(ufs_tegra->ufs_rst);
 		dev_err(dev,
-			"Reset control for ufs_rst not found: %d\n", ret);
+			"Reset control for ufs-rst not found: %d\n", ret);
 	}
-	ufs_tegra->ufs_axi_m_rst = devm_reset_control_get(dev, "ufs_axi_m_rst");
+	ufs_tegra->ufs_axi_m_rst = devm_reset_control_get(dev, "ufs-axi-m-rst");
 	if (IS_ERR(ufs_tegra->ufs_axi_m_rst)) {
 		ret = PTR_ERR(ufs_tegra->ufs_axi_m_rst);
 		dev_err(dev,
-			"Reset control for ufs_axi_m_rst not found: %d\n", ret);
+			"Reset control for ufs-axi-m-rst not found: %d\n", ret);
 	}
-	ufs_tegra->ufshc_lp_rst = devm_reset_control_get(dev, "ufshc_lp_rst");
+	ufs_tegra->ufshc_lp_rst = devm_reset_control_get(dev, "ufshc-lp-rst");
 	if (IS_ERR(ufs_tegra->ufshc_lp_rst)) {
 		ret = PTR_ERR(ufs_tegra->ufshc_lp_rst);
 		dev_err(dev,
-			"Reset control for ufshc_lp_rst not found: %d\n", ret);
+			"Reset control for ufshc-lp-rst not found: %d\n", ret);
 	}
 	return ret;
 }
@@ -468,48 +534,48 @@ static int ufs_tegra_mphy_reset_init(struct ufs_tegra_host *ufs_tegra)
 	int ret = 0;
 
 	ufs_tegra->mphy_l0_rx_rst =
-				devm_reset_control_get(dev, "mphy_l0_rx_rst");
+				devm_reset_control_get(dev, "mphy-l0-rx-rst");
 	if (IS_ERR(ufs_tegra->mphy_l0_rx_rst)) {
 		ret = PTR_ERR(ufs_tegra->mphy_l0_rx_rst);
 		dev_err(dev,
-			"Reset control for mphy_l0_rx_rst not found: %d\n",
+			"Reset control for mphy-l0-rx-rst not found: %d\n",
 									ret);
 	}
 
 	ufs_tegra->mphy_l0_tx_rst =
-				devm_reset_control_get(dev, "mphy_l0_tx_rst");
+				devm_reset_control_get(dev, "mphy-l0-tx-rst");
 	if (IS_ERR(ufs_tegra->mphy_l0_tx_rst)) {
 		ret = PTR_ERR(ufs_tegra->mphy_l0_tx_rst);
 		dev_err(dev,
-			"Reset control for mphy_l0_tx_rst not found: %d\n",
+			"Reset control for mphy-l0-tx-rst not found: %d\n",
 									ret);
 	}
 
 	ufs_tegra->mphy_clk_ctl_rst =
-				devm_reset_control_get(dev, "mphy_clk_ctl_rst");
+				devm_reset_control_get(dev, "mphy-clk-ctl-rst");
 	if (IS_ERR(ufs_tegra->mphy_clk_ctl_rst)) {
 		ret = PTR_ERR(ufs_tegra->mphy_clk_ctl_rst);
 		dev_err(dev,
-			"Reset control for mphy_clk_ctl_rst not found: %d\n",
+			"Reset control for mphy-clk-ctl-rst not found: %d\n",
 									ret);
 	}
 
 	if (ufs_tegra->x2config) {
 		ufs_tegra->mphy_l1_rx_rst =
-				devm_reset_control_get(dev, "mphy_l1_rx_rst");
+				devm_reset_control_get(dev, "mphy-l1-rx-rst");
 		if (IS_ERR(ufs_tegra->mphy_l1_rx_rst)) {
 			ret = PTR_ERR(ufs_tegra->mphy_l1_rx_rst);
 			dev_err(dev,
-			"Reset control for mphy_l1_rx_rst not found: %d\n",
+			"Reset control for mphy-l1-rx-rst not found: %d\n",
 									ret);
 		}
 
 		ufs_tegra->mphy_l1_tx_rst =
-				devm_reset_control_get(dev, "mphy_l1_tx_rst");
+				devm_reset_control_get(dev, "mphy-l1-tx-rst");
 		if (IS_ERR(ufs_tegra->mphy_l1_tx_rst)) {
 			ret = PTR_ERR(ufs_tegra->mphy_l1_tx_rst);
 			dev_err(dev,
-			"Reset control for mphy_l0_tx_rst not found: %d\n",
+			"Reset control for mphy_l1_tx_rst not found: %d\n",
 									ret);
 		}
 	}
@@ -689,7 +755,6 @@ void ufs_tegra_ufs_aux_ref_clk_disable(struct ufs_tegra_host *ufs_tegra)
 
 void ufs_tegra_ufs_aux_prog(struct ufs_tegra_host *ufs_tegra)
 {
-	u32 val;
 
 	/*
 	 * Release the reset to UFS device on pin ufs_rst_n
@@ -705,28 +770,13 @@ void ufs_tegra_ufs_aux_prog(struct ufs_tegra_host *ufs_tegra)
 		 * Disable reference clock to Device
 		 */
 		ufs_tegra_ufs_aux_ref_clk_disable(ufs_tegra);
-		/*
-		 * UFSHC clock gating control register programing
-		 */
-		val = 0;
 
 	} else {
 		/*
 		 * Enable reference clock to Device
 		 */
 		ufs_tegra_ufs_aux_ref_clk_enable(ufs_tegra);
-		/*
-		 * UFSHC clock gating control register programing
-		 */
-		val = (UFSHC_CLK_OVR_ON | UFSHC_HCLK_OVR_ON |
-			UFSHC_LP_CLK_T_CLK_OVR_ON | UFSHC_CLK_T_CLK_OVR_ON |
-			UFSHC_CG_SYS_CLK_OVR_ON | UFSHC_TX_SYMBOL_CLK_OVR_ON |
-			UFSHC_RX_SYMBOLCLKSELECTED_CLK_OVR_ON |
-							UFSHC_PCLK_OVR_ON);
 	}
-
-	ufs_aux_writel(ufs_tegra->ufs_aux_base, val,
-				UFSHC_AUX_UFSHC_SW_EN_CLK_SLCG_0);
 }
 
 static void ufs_tegra_context_save(struct ufs_tegra_host *ufs_tegra)
@@ -849,7 +899,6 @@ static int ufs_tegra_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 
 	ufs_tegra_ufs_pwrcntrl_update(false);
 	ufs_tegra_ufs_aux_prog(ufs_tegra);
-	ufs_tegra_disable_mphy_slcg(ufs_tegra);
 	ufs_tegra_context_restore(ufs_tegra);
 	ufs_tegra_mphy_tx_advgran(ufs_tegra);
 	ret = ufs_tegra_mphy_receiver_calibration(ufs_tegra);
@@ -868,12 +917,38 @@ out:
 }
 
 
+static void ufs_tegra_print_power_mode_config(struct ufs_hba *hba,
+			struct ufs_pa_layer_attr *configured_params)
+{
+	u32 rx_gear;
+	u32 tx_gear;
+	const char *freq_series = "";
+
+	rx_gear = configured_params->gear_rx;
+	tx_gear = configured_params->gear_tx;
+
+	if (configured_params->hs_rate) {
+		if (configured_params->hs_rate == PA_HS_MODE_A)
+			freq_series = "RATE_A";
+		else if (configured_params->hs_rate == PA_HS_MODE_B)
+			freq_series = "RATE_B";
+		dev_info(hba->dev,
+			"HS Mode RX_Gear:gear_%u TX_Gear:gear_%u %s series\n",
+				rx_gear, tx_gear, freq_series);
+	} else {
+		dev_info(hba->dev,
+			"PWM Mode RX_Gear:gear_%u TX_Gear:gear_%u\n",
+				rx_gear, tx_gear);
+	}
+}
+
 static int ufs_tegra_pwr_change_notify(struct ufs_hba *hba,
 		enum ufs_notify_change_status status,
 		struct ufs_pa_layer_attr *dev_max_params,
 		struct ufs_pa_layer_attr *dev_req_params)
 {
 	struct ufs_tegra_host *ufs_tegra = hba->priv;
+	u32 vs_save_config;
 	int ret = 0;
 
 	if (!dev_req_params) {
@@ -884,6 +959,14 @@ static int ufs_tegra_pwr_change_notify(struct ufs_hba *hba,
 
 	switch (status) {
 	case PRE_CHANGE:
+		/* Update VS_DebugSaveConfigTime Tref */
+		ufshcd_dme_get(hba, UIC_ARG_MIB(VS_DEBUGSAVECONFIGTIME),
+			&vs_save_config);
+		vs_save_config &= ~SET_TREF(~0);
+		vs_save_config |= SET_TREF(VS_DEBUGSAVECONFIGTIME_TREF);
+		ufshcd_dme_set(hba, UIC_ARG_MIB(VS_DEBUGSAVECONFIGTIME),
+				vs_save_config);
+
 		memcpy(dev_req_params, dev_max_params,
 			sizeof(struct ufs_pa_layer_attr));
 		if ((ufs_tegra->enable_hs_mode) && (dev_max_params->hs_rate)) {
@@ -932,6 +1015,7 @@ static int ufs_tegra_pwr_change_notify(struct ufs_hba *hba,
 		}
 		break;
 	case POST_CHANGE:
+		ufs_tegra_print_power_mode_config(hba, dev_req_params);
 		break;
 	default:
 		break;
@@ -949,6 +1033,17 @@ static void ufs_tegra_unipro_post_linkup(struct ufs_hba *hba)
 	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_TxHsG1SyncLength), 0x4f);
 	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_TxHsG2SyncLength), 0x4f);
 	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_TxHsG3SyncLength), 0x4f);
+
+	/* Local Timer Value Changes */
+	ufshcd_dme_set(hba, UIC_ARG_MIB(DME_FC0PROTECTIONTIMEOUTVAL), 0x1fff);
+	ufshcd_dme_set(hba, UIC_ARG_MIB(DME_TC0REPLAYTIMEOUTVAL), 0xffff);
+	ufshcd_dme_set(hba, UIC_ARG_MIB(DME_AFC0REQTIMEOUTVAL), 0x7fff);
+
+	/* PEER TIMER values changes - PA_PWRModeUserData */
+	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_PWRMODEUSERDATA0), 0x1fff);
+	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_PWRMODEUSERDATA1), 0xffff);
+	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_PWRMODEUSERDATA2), 0x7fff);
+
 }
 
 static void ufs_tegra_unipro_pre_linkup(struct ufs_hba *hba)
@@ -969,6 +1064,8 @@ static int ufs_tegra_link_startup_notify(struct ufs_hba *hba,
 		ufs_tegra_unipro_pre_linkup(hba);
 		break;
 	case POST_CHANGE:
+		/*POST_CHANGE case is called on success of link start-up*/
+		dev_info(hba->dev, "dme-link-startup Successful\n");
 		ufs_tegra_unipro_post_linkup(hba);
 		err = ufs_tegra_mphy_receiver_calibration(ufs_tegra);
 		break;
@@ -1145,6 +1242,9 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 		ufs_tegra_mphy_rx_advgran(ufs_tegra);
 		ufs_tegra_ufs_aux_prog(ufs_tegra);
 		ufs_tegra_cfg_vendor_registers(hba);
+#ifdef CONFIG_DEBUG_FS
+		ufs_tegra_init_debugfs(hba);
+#endif
 	}
 	return err;
 
@@ -1196,3 +1296,6 @@ struct ufs_hba_variant_ops ufs_hba_tegra_vops = {
 	.link_startup_notify	= ufs_tegra_link_startup_notify,
 	.pwr_change_notify      = ufs_tegra_pwr_change_notify,
 };
+
+MODULE_AUTHOR("Naveen Kumar Arepalli <naveenk@nvidia.com>");
+MODULE_AUTHOR("Venkata Jagadish <vjagadish@nvidia.com>");

@@ -143,6 +143,14 @@ static void nvdla_task_free_locked(struct nvdla_task *task)
 		}
 	}
 
+	for (i = 0; i < task->num_postfences; i++) {
+		if (task->postfences[i].type == NVDLA_FENCE_TYPE_SEMAPHORE &&
+			task->postfences[i].sem_handle) {
+			nvhost_buffer_submit_unpin(task->buffers,
+				&task->postfences[i].sem_handle, 1);
+		}
+	}
+
 	/* update takslist */
 	list_del(&task->list);
 
@@ -346,6 +354,7 @@ static size_t nvdla_get_task_desc_size(void)
 static int nvdla_fill_postactions(struct nvdla_task *task)
 {
 	struct dla_task_descriptor *task_desc = task->task_desc;
+	struct nvhost_buffers *buffers = task->buffers;
 	struct nvhost_queue *queue = task->queue;
 	struct platform_device *pdev = queue->pool->pdev;
 	struct dla_action_semaphore *postaction;
@@ -385,8 +394,37 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 			((char *)opcode + sizeof(struct dla_action_opcode));
 
 		/* update action */
-		postaction->address = nvhost_syncpt_address(pdev,
+		switch (task->postfences[i].type) {
+		case NVDLA_FENCE_TYPE_SYNCPT: {
+			postaction->address = nvhost_syncpt_address(pdev,
 						queue->syncpt_id);
+			break;
+		}
+		case NVDLA_FENCE_TYPE_SEMAPHORE: {
+			dma_addr_t dma_addr;
+			size_t dma_size;
+
+			nvdla_dbg_info(pdev, "POST i:%d semh:%u semo:%u v:%d",
+					i,
+					task->postfences[i].sem_handle,
+					task->postfences[i].sem_offset,
+					task->postfences[i].sem_val);
+
+			if (nvhost_buffer_submit_pin(buffers,
+					&task->postfences[i].sem_handle,
+					1, &dma_addr, &dma_size))
+				break;
+
+			postaction->address = dma_addr +
+					task->postfences[i].sem_offset;
+			postaction->value = task->postfences[i].sem_val;
+			break;
+		}
+		default:
+			nvdla_dbg_err(pdev, "Invalid postfence sync type[%d]",
+				task->postfences[i].type);
+			return -EINVAL;
+		}
 	}
 
 	mem = (char *)task_desc + task_desc->postactions;

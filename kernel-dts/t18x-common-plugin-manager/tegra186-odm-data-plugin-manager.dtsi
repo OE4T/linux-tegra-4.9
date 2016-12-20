@@ -154,6 +154,12 @@
 				};
 			};
 
+			override@6 {
+				target = <&sdmmc4>;
+				_overlay_ {
+					delete-target-property = "nvidia,enable-hwcq";
+				};
+			};
 		};
 
 		fragement@7 {

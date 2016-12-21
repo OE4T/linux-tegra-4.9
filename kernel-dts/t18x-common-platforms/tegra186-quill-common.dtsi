@@ -1063,9 +1063,9 @@
 		#extcon-cells = <1>;
 	};
 
-	xhci@3530000 {
-		extcon-cables = <&vbus_id_extcon 1>;
-		extcon-cable-names = "id";
+	xotg {
+		extcon-cables = <&vbus_id_extcon 1>, <&vbus_id_extcon 0>;
+		extcon-cable-names = "id", "vbus";
 		#extcon-cells = <1>;
 	};
 

@@ -773,7 +773,7 @@ static struct quadd_event_source_interface pmu_armv7_int = {
 static int quadd_armv7_pmu_init_for_cpu(int cpu)
 {
 	int err = 0;
-	unsigned long cpu_id, cpu_implementer, part_number;
+	unsigned long cpuid, cpu_implementer, part_number;
 
 	struct cpuinfo_arm *local_cpu_data = &per_cpu(cpu_data, cpu);
 	struct quadd_pmu_ctx *local_pmu_ctx = &per_cpu(pmu_ctx, cpu);
@@ -786,13 +786,13 @@ static int quadd_armv7_pmu_init_for_cpu(int cpu)
 
 	INIT_LIST_HEAD(&local_pmu_ctx->used_events);
 
-	cpu_id = local_cpu_data->cpu;
+	cpuid = local_cpu_data->cpuid;
 
-	if (!cpu_id)
+	if (!cpuid)
 		return 0;
 
-	cpu_implementer = cpu_id >> 24;
-	part_number = cpu_id & 0xFFF0;
+	cpu_implementer = cpuid >> 24;
+	part_number = cpuid & 0xFFF0;
 
 	if (cpu_implementer == ARM_CPU_IMP_ARM) {
 		switch (part_number) {

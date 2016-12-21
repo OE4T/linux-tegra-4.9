@@ -47,11 +47,12 @@
  */
 
 #include <linux/module.h>
-#include <linux/tegra-ivc-rpc.h>
 #include <linux/slab.h>
 #include <linux/interrupt.h>
 #include <linux/debugfs.h>
 #include <linux/time.h>
+
+#include <soc/tegra/tegra-ivc-rpc.h>
 
 /*
  * Configuration

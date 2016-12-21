@@ -11,7 +11,7 @@
 #ifndef INCLUDE_CAMRTC_DBG_MESSAGES_H
 #define INCLUDE_CAMRTC_DBG_MESSAGES_H
 
-#include <camrtc-common.h>
+#include "camrtc-common.h"
 
 /* All the enums and the fields inside the structs described in this header
  * file supports only uintX_t types, where X can be 8,16,32,64.

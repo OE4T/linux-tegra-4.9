@@ -14,8 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "camrtc-dbg-messages.h"
-#include "camrtc-commands.h"
+#include "soc/tegra/camrtc-dbg-messages.h"
+#include "soc/tegra/camrtc-commands.h"
 
 #include <linux/debugfs.h>
 #include <linux/io.h>

@@ -32,7 +32,7 @@
 #include <linux/tegra-rtcpu-trace.h>
 #include <asm/cacheflush.h>
 
-#include "camrtc-trace.h"
+#include "soc/tegra/camrtc-trace.h"
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/tegra_rtcpu.h>

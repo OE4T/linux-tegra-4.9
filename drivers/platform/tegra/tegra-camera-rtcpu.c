@@ -42,8 +42,8 @@
 
 #include <dt-bindings/memory/tegra-swgroup.h>
 
-#include "rtcpu/camrtc-commands.h"
-#include "rtcpu/camrtc-ctrl-commands.h"
+#include "soc/tegra/camrtc-commands.h"
+#include "soc/tegra/camrtc-ctrl-commands.h"
 
 /* Register specifics */
 #define TEGRA_APS_FRSC_SC_CTL_0			0x0

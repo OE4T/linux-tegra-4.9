@@ -20,7 +20,8 @@
 #include <linux/pm_runtime.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-bus.h>
-#include <linux/tegra-ivc-rpc-common.h>
+
+#include <soc/tegra/tegra-ivc-rpc-common.h>
 
 /*
  * RPC over IVC

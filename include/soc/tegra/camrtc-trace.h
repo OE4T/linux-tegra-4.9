@@ -11,7 +11,7 @@
 #ifndef INCLUDE_CAMRTC_TRACE_H
 #define INCLUDE_CAMRTC_TRACE_H
 
-#include <camrtc-common.h>
+#include "camrtc-common.h"
 
 /*
  * Trace memory consists of three part.

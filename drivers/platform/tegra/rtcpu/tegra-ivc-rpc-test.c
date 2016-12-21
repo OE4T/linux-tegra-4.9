@@ -12,8 +12,9 @@
  *
  */
 
+#include <soc/tegra/tegra-ivc-rpc.h>
+
 #include <linux/module.h>
-#include <linux/tegra-ivc-rpc.h>
 #include <linux/debugfs.h>
 
 /*

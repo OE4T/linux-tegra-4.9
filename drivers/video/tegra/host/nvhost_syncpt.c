@@ -844,13 +844,15 @@ static int nvhost_syncpt_assign_name(struct nvhost_syncpt *sp, u32 id,
 	return 0;
 }
 
-static u32 nvhost_get_syncpt(struct nvhost_syncpt *sp, bool client_managed,
-					const char *syncpt_name)
+static u32 nvhost_get_syncpt(struct platform_device *pdev,
+			     bool client_managed,
+			     const char *syncpt_name)
 {
 	u32 id;
 	int err = 0;
 	int ret = 0;
-	struct nvhost_master *host = syncpt_to_dev(sp);
+	struct nvhost_master *host = nvhost_get_host(pdev);
+	struct nvhost_syncpt *sp = &host->syncpt;
 	struct device *d = &host->dev->dev;
 	unsigned long timeout = jiffies + NVHOST_SYNCPT_FREE_WAIT_TIMEOUT;
 
@@ -897,6 +899,9 @@ static u32 nvhost_get_syncpt(struct nvhost_syncpt *sp, bool client_managed,
 		return 0;
 	}
 
+	if (syncpt_op().alloc)
+		syncpt_op().alloc(pdev, id);
+
 	mutex_unlock(&sp->syncpt_mutex);
 
 	return id;
@@ -910,7 +915,6 @@ u32 nvhost_get_syncpt_host_managed(struct platform_device *pdev,
 					const char *syncpt_name)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	struct nvhost_master *nvhost_master = nvhost_get_host(pdev);
 	u32 id;
 
 	if (syncpt_name)
@@ -922,7 +926,7 @@ u32 nvhost_get_syncpt_host_managed(struct platform_device *pdev,
 		syncpt_name = kasprintf(GFP_KERNEL, "%s_%d",
 					dev_name(&pdev->dev), param);
 
-	id = nvhost_get_syncpt(&nvhost_master->syncpt, false, syncpt_name);
+	id = nvhost_get_syncpt(pdev, false, syncpt_name);
 	if (!id) {
 		nvhost_err(&pdev->dev, "failed to get syncpt\n");
 		return 0;
@@ -939,16 +943,15 @@ u32 nvhost_get_syncpt_client_managed(struct platform_device *pdev,
 					const char *syncpt_name)
 {
 	u32 id;
-	struct nvhost_master *host = nvhost_get_host(pdev);
 
 	if (!syncpt_name)
 		syncpt_name = kasprintf(GFP_KERNEL, "client_managed");
 	else
 		syncpt_name = kasprintf(GFP_KERNEL, "%s", syncpt_name);
 
-	id = nvhost_get_syncpt(&host->syncpt, true, syncpt_name);
+	id = nvhost_get_syncpt(pdev, true, syncpt_name);
 	if (!id) {
-		nvhost_err(&host->dev->dev, "failed to get syncpt\n");
+		nvhost_err(&pdev->dev, "failed to get syncpt\n");
 		return 0;
 	}
 
@@ -985,6 +988,9 @@ static void nvhost_free_syncpt(struct nvhost_syncpt *sp, u32 id)
 	}
 
 	mutex_lock(&sp->syncpt_mutex);
+
+	if (syncpt_op().release)
+		syncpt_op().release(sp, id);
 
 	kfree(sp->last_used_by[id]);
 	sp->last_used_by[id] = kasprintf(GFP_KERNEL, "%s",

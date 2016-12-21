@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Chip Support
  *
- * Copyright (c) 2011-2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -110,6 +110,9 @@ struct nvhost_syncpt_ops {
 			    unsigned int *chid);
 	int (*mark_used)(struct nvhost_syncpt *, u32 chid, u32 syncptid);
 	int (*mark_unused)(struct nvhost_syncpt *, u32 syncptid);
+
+	int (*alloc)(struct platform_device *pdev, u32 syncpt_id);
+	int (*release)(struct nvhost_syncpt *sp, u32 syncpt_id);
 };
 
 struct nvhost_intr_ops {

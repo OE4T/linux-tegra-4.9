@@ -148,6 +148,7 @@
 				_overlay_ {
 					sdhci-host = <&sdmmc3>;
 					pwr-retry-cnt = <0>;
+					interrupt-parent = <&tegra_main_gpio>;
 					interrupts = <TEGRA_MAIN_GPIO(C, 0) 0x14>;
 					delete-target-property = "wlan-pwr-gpio";
 				};

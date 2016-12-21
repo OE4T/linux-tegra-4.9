@@ -409,7 +409,8 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 				fence->syncpoint_value);
 			break;
 		}
-		case PVA_FENCE_TYPE_SEMAPHORE: {
+		case PVA_FENCE_TYPE_SEMAPHORE:
+		case PVA_FENCE_TYPE_SEMAPHORE_TS:{
 			ptr += pva_task_write_ptr_op(&hw_preactions[ptr],
 				TASK_ACT_PTR_BLK_GTREQL,
 				task->prefences_sema_ext[i].dma_addr  +
@@ -527,6 +528,17 @@ static void pva_task_write_postactions(struct pva_submit_task *task,
 		if (fence->type == PVA_FENCE_TYPE_SEMAPHORE) {
 			ptr += pva_task_write_ptr_op(&hw_postactions[ptr],
 				TASK_ACT_PTR_WRITE_VAL,
+				task->postfences_sema_ext[i].dma_addr  +
+					fence->semaphore_offset,
+				fence->semaphore_value);
+		} else if (fence->type == PVA_FENCE_TYPE_SEMAPHORE_TS) {
+			/*
+			 * Timestamp will be filled by ucode hence making the
+			 * place holder for timestamp size, sizeof(u64).
+			 */
+			ptr = ptr + sizeof(u64) +
+				pva_task_write_ptr_op(&hw_postactions[ptr],
+				TASK_ACT_PTR_WRITE_VAL_TS,
 				task->postfences_sema_ext[i].dma_addr  +
 					fence->semaphore_offset,
 				fence->semaphore_value);

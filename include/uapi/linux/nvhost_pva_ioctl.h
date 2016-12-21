@@ -156,6 +156,7 @@ struct pva_fence {
 #define PVA_FENCE_TYPE_SYNCPT		0
 #define PVA_FENCE_TYPE_SYNC_FD		1
 #define PVA_FENCE_TYPE_SEMAPHORE	2
+#define PVA_FENCE_TYPE_SEMAPHORE_TS	3
 	__u32 syncpoint_index;
 	__u32 syncpoint_value;
 	__u32 sync_fd;

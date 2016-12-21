@@ -1837,6 +1837,7 @@ static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 				"cannot create sysfs timeout attribute\n");
 			goto err_stop;
 		}
+		ret = kobject_uevent(&hdev->dev.kobj, KOBJ_CHANGE);
 	}
 
 	if (hdev->product == USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE)

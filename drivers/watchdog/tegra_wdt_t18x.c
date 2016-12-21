@@ -155,7 +155,7 @@ static int __tegra_wdt_t18x_ping(struct tegra_wdt_t18x *tegra_wdt_t18x)
 
 	writel(WDT_CMD_START_COUNTER, tegra_wdt_t18x->wdt_source + WDT_CMD);
 
-	dev_dbg(tegra_wdt_t18x->wdt.dev, "wdt cleared\n");
+	pr_debug("Watchdog%d: wdt cleared\n", tegra_wdt_t18x->wdt.id);
 	return 0;
 }
 
@@ -265,6 +265,8 @@ static int tegra_wdt_t18x_disable(struct watchdog_device *wdt)
 static int tegra_wdt_t18x_ping(struct watchdog_device *wdt)
 {
 	struct tegra_wdt_t18x *tegra_wdt_t18x = to_tegra_wdt_t18x(wdt);
+
+	tegra_wdt_t18x_ref(wdt);
 	return __tegra_wdt_t18x_ping(tegra_wdt_t18x);
 }
 
@@ -276,7 +278,8 @@ static int tegra_wdt_t18x_set_timeout(struct watchdog_device *wdt,
 	wdt->timeout = timeout;
 	tegra_wdt_t18x_enable(wdt);
 
-	dev_info(wdt->dev, "wdt timeout set to %u seconds\n", timeout);
+	pr_info("Watchdog(%d): wdt timeout set to %u seconds\n", wdt->id,
+		timeout);
 	return 0;
 }
 
@@ -292,7 +295,6 @@ static const struct watchdog_ops tegra_wdt_t18x_ops = {
 	.stop  = tegra_wdt_t18x_disable,
 	.ping  = tegra_wdt_t18x_ping,
 	.set_timeout = tegra_wdt_t18x_set_timeout,
-	.ref   = tegra_wdt_t18x_ref,
 };
 
 static inline int tegra_wdt_t18x_update_config_bit(struct tegra_wdt_t18x

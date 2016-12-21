@@ -133,6 +133,7 @@ struct nvdla_fence {
 #define NVDLA_FENCE_TYPE_SYNCPT		0
 #define NVDLA_FENCE_TYPE_SYNC_FD	1
 #define NVDLA_FENCE_TYPE_SEMAPHORE	2
+#define NVDLA_FENCE_TYPE_TS_SEMAPHORE	3
 	__u32 syncpoint_index;
 	__u32 syncpoint_value;
 	__u32 sync_fd;

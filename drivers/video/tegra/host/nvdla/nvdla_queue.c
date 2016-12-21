@@ -144,8 +144,9 @@ static void nvdla_task_free_locked(struct nvdla_task *task)
 	}
 
 	for (i = 0; i < task->num_postfences; i++) {
-		if (task->postfences[i].type == NVDLA_FENCE_TYPE_SEMAPHORE &&
-			task->postfences[i].sem_handle) {
+		if ((task->postfences[i].type == NVDLA_FENCE_TYPE_SEMAPHORE ||
+	          task->postfences[i].type == NVDLA_FENCE_TYPE_TS_SEMAPHORE) &&
+		  task->postfences[i].sem_handle) {
 			nvhost_buffer_submit_unpin(task->buffers,
 				&task->postfences[i].sem_handle, 1);
 		}
@@ -399,6 +400,20 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 			postaction->address = nvhost_syncpt_address(pdev,
 						queue->syncpt_id);
 			break;
+		}
+		case NVDLA_FENCE_TYPE_TS_SEMAPHORE: {
+
+			/* TS SEMAPHORE just has extra memory bytes allocated
+			 * to store TS as compared default semaphore.
+			 * override action/opecode type here.
+			 */
+
+			nvdla_dbg_info(pdev, "POST setting TS SEMAPHORE");
+			opcode->value = POSTACTION_TS_SEM;
+
+			/* don't break here and allow to execute semaphore
+			 * action setting
+			 */
 		}
 		case NVDLA_FENCE_TYPE_SEMAPHORE: {
 			dma_addr_t dma_addr;

@@ -2479,9 +2479,12 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 		goto clean_up;
 	}
 
-	bfr.align = gk20a_mm_get_align(g, sgl, aperture);
+	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)
+		map_offset = offset_align;
 
-	bfr.pgsz_idx = -1;
+	bfr.align = gk20a_mm_get_align(g, sgl, aperture);
+	bfr.pgsz_idx = __get_pte_size(vm, map_offset,
+				      min_t(u64, bfr.size, bfr.align));
 	mapping_size = mapping_size ? mapping_size : bfr.size;
 
 	if (vm->big_pages)

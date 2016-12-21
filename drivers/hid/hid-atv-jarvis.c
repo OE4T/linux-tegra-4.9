@@ -874,6 +874,7 @@ static void audio_dec(struct hid_device *hdev, const uint8_t *raw_input,
 
 	atvr_snd = shdr_card->private_data;
 
+	smp_rmb();
 	if (atvr_snd != NULL && atvr_snd->pcm_stopped == false) {
 		spin_lock(&atvr_snd->s_substream_lock);
 
@@ -898,6 +899,7 @@ static void audio_dec(struct hid_device *hdev, const uint8_t *raw_input,
 		} else {
 			dropped_packet = true;
 			atvr_snd->pcm_stopped = true;
+			smp_wmb();
 		}
 		atvr_snd->packet_counter++;
 		spin_unlock(&atvr_snd->s_substream_lock);
@@ -1053,11 +1055,15 @@ static void snd_atvr_timer_callback(unsigned long data)
 
 	case TIMER_STATE_DURING_DECODE:
 		packets_read = snd_atvr_decode_from_fifo(substream);
+
 		if (packets_read > 0) {
 			/* Defer timeout */
 			atvr_snd->previous_jiffies = jiffies;
 			break;
 		}
+
+		smp_rmb();
+
 		if (atvr_snd->pcm_stopped) {
 			atvr_snd->timer_state = TIMER_STATE_AFTER_DECODE;
 			/* Decoder died. Overflowed?
@@ -1100,11 +1106,11 @@ static void snd_atvr_timer_start(struct snd_pcm_substream *substream)
 {
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
 	atvr_snd->timer_enabled = true;
+	smp_wmb();
 	atvr_snd->previous_jiffies = jiffies;
 	atvr_snd->timeout_jiffies =
 		msecs_to_jiffies(SND_ATVR_RUNNING_TIMEOUT_MSEC);
 	atvr_snd->timer_callback_count = 0;
-	smp_wmb();
 	setup_timer(&atvr_snd->decoding_timer,
 		snd_atvr_timer_callback,
 		(unsigned long)substream);
@@ -1114,42 +1120,14 @@ static void snd_atvr_timer_start(struct snd_pcm_substream *substream)
 
 static void snd_atvr_timer_stop(struct snd_pcm_substream *substream)
 {
-	int ret;
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
 
-	/* Tell timer function not to reschedule itself if it runs. */
-	atvr_snd->timer_enabled = false;
-	smp_wmb();
-	if (!in_interrupt()) {
-		/*
-		 * The timer callback could call snd_pcm_period_elapsed()
-		 * which need snd_pcm_stream_lock_irqsave() on the substream,
-		 * while a snd_pcm_suspend() who already holds the same lock
-		 * eventually comes here and wait the timer to finish, forming
-		 * a deadlock.
-		 *
-		 * We could temporarily give up the lock and relock later.
-		 * However, that could break the original purpose of the lock.
-		 * Thus we just try delete the timer but do not block.
-		 * Instead, we check if previous timer is finished in
-		 * snd_atvr_timer_start() where timing has less stress.
-		 * In the rare case it is still not finished, we return EAGAIN
-		 * and let userspace try again later.
-		 */
-		ret = try_to_del_timer_sync(&atvr_snd->decoding_timer);
-		if (ret < 0)
-			pr_err("%s:%d - ERROR del_timer_sync failed, %d\n",
-				__func__, __LINE__, ret);
+	smp_rmb();
+
+	if (atvr_snd->timer_enabled) {
+		atvr_snd->timer_enabled = false;
+		smp_wmb();
 	}
-	/*
-	 * Else if we are in an interrupt then we are being called from the
-	 * middle of the snd_atvr_timer_callback(). The timer will not get
-	 * rescheduled because atvr_snd->timer_enabled will be false
-	 * at the end of snd_atvr_timer_callback().
-	 * We do not need to "delete" the timer.
-	 * The del_timer functions just cancel pending timers.
-	 * There are no resources that need to be cleaned up.
-	 */
 }
 
 /* ===================================================================== */
@@ -1187,8 +1165,8 @@ static int snd_atvr_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 		atvr_snd->seq_index = 0;
 
 		atvr_snd->pcm_stopped = false;
+		smp_wmb();
 		snd_atvr_timer_start(substream);
-		smp_wmb(); /* so other thread will see s_substream_for_btle */
 		return 0;
 
 	case SNDRV_PCM_TRIGGER_STOP:
@@ -1199,7 +1177,7 @@ static int snd_atvr_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 			atvr_snd->packet_counter);
 #endif
 		atvr_snd->pcm_stopped = true;
-		smp_wmb(); /* so other thread will see s_substream_for_btle */
+		smp_wmb();
 		snd_atvr_timer_stop(substream);
 		return 0;
 	}
@@ -1318,9 +1296,8 @@ static int snd_atvr_pcm_close(struct snd_pcm_substream *substream)
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
 	int ret;
 
-	/* Make sure the timer is not running */
-	if (atvr_snd->timer_enabled)
-		snd_atvr_timer_stop(substream);
+	snd_atvr_timer_stop(substream);
+	del_timer_sync(&atvr_snd->decoding_timer);
 
 	if (atvr_snd->timer_callback_count > 0)
 		snd_atvr_log("processed %d packets in %d timer callbacks\n",

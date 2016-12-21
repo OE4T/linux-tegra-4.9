@@ -1,7 +1,7 @@
 /*
  * Engine side synchronization support
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,6 +22,7 @@
 #include <linux/errno.h>
 #include <linux/iommu.h>
 #include <linux/io.h>
+#include <linux/nvmap_t19x.h>
 
 #include "bus_client_t194.h"
 #include "nvhost_syncpt_unit_interface.h"
@@ -29,51 +30,264 @@
 #define SYNCPT_SIZE		0x1000
 #define SYNCPT_APERTURE_SIZE	0x400000
 
+#define MAX_CV_DEVS	6
+static dma_addr_t cv_dev_address_table[MAX_CV_DEVS];
+static int cv_dev_count;
+
 struct syncpt_unit_interface {
 	dma_addr_t start;
 };
 
+struct syncpt_gos_backing {
+	struct list_head syncpt_gos_backing_list_entry; /* list entry */
+
+	u32 syncpt_id;	/* syncpoint id */
+
+	u32 gos_id;	/* GoS id corresponding to syncpt */
+	u32 gos_offset;	/* Byte-offset of syncpt within GoS */
+
+	struct device *offset_dev; /* Device pointer to allocate offset */
+};
+
 /**
- * nvhost_syncpt_gos_supported() - Check if the syncpoint has GoS backing
+ * nvhost_syncpt_cv_dev_address_table_init() - Initialize CV devices address table
  *
  * @engine_pdev:	Pointer to a host1x engine
- * @syncpt_id:		Syncpoint id to be checked
  *
- * Return:		True if syncpoint has a GoS backing. False otherwise
+ * Returns:		0 on success, a negative error code otherwise.
  *
- * This function can be used for checking if the syncpoint has GoS backing
- * to determine the required synchronization method (GoS vs syncpoint).
- *
- * TBD: This function returns currently always false to force the user
- * of the API to use the syncpoint<->MSS interface.
+ * This function will initialize table of all CV devices' addresses.
+ * Table stores base IOVA address of each GoS
  */
-bool nvhost_syncpt_gos_supported(struct platform_device *engine_pdev,
-				 u32 syncpt_id)
+static int
+nvhost_syncpt_cv_dev_address_table_init(struct platform_device *engine_pdev)
 {
-	return false;
+	struct cv_dev_info *cv_dev_info;
+	struct sg_table *sgt;
+	int i;
+
+	if (cv_dev_count)
+		return 0;
+
+	cv_dev_info = nvmap_fetch_cv_dev_info(&engine_pdev->dev);
+	if (!cv_dev_info)
+		return -EFAULT;
+
+	cv_dev_count = cv_dev_info->count;
+	WARN_ON(cv_dev_count > MAX_CV_DEVS);
+
+	for (i = 0; i < cv_dev_count; ++i) {
+		sgt = cv_dev_info->sgt + i;
+		cv_dev_address_table[i] = sg_dma_address(sgt->sgl);
+	}
+
+	return 0;
 }
 
 /**
- * nvhost_syncpt_gos_address() - Retrieve semaphore address in engine IOVA
+ * nvhost_syncpt_get_cv_dev_address_table() - Get details of CV devices address table
+ *
+ * @engine_pdev:	Pointer to a host1x engine
+ * @count:		Pointer for storing count value
+ * @table:		Pointer to address table
+ *
+ * Returns:		0 on success, a negative error code otherwise.
+ *
+ * This function will return details of all CV devices' addresses.
+ * Count is the number of entries in the table with index of array
+ * as GoS ID
+ * Entries in the table store base IOVA address for each GoS
+ */
+int nvhost_syncpt_get_cv_dev_address_table(struct platform_device *engine_pdev,
+				   int *count,
+				   dma_addr_t **table)
+{
+	if (nvhost_syncpt_cv_dev_address_table_init(engine_pdev))
+		return -EFAULT;
+
+	*table = cv_dev_address_table;
+	*count = cv_dev_count;
+
+	return 0;
+}
+
+/**
+ * nvhost_syncpt_find_gos_backing() - Find GoS backing in a global list
+ *
+ * @host:		Pointer to nvhost_master
+ * @syncpt_id:		Syncpoint id to be searched
+ *
+ * Returns:		0 on success, a negative error code otherwise.
+ *
+ * This function will find and return syncpoint backing of a syncpoint
+ * in global list.
+ * Return NULL if no backing is found
+ */
+struct syncpt_gos_backing *
+nvhost_syncpt_find_gos_backing(struct nvhost_master *host, u32 syncpt_id)
+{
+	struct syncpt_gos_backing *syncpt_gos_backing;
+
+	list_for_each_entry(syncpt_gos_backing,
+			    &host->syncpt_backing_list_head,
+			    syncpt_gos_backing_list_entry) {
+		if (syncpt_gos_backing->syncpt_id == syncpt_id)
+			return syncpt_gos_backing;
+	}
+
+	return NULL;
+}
+
+/**
+ * nvhost_syncpt_get_gos() - Get GoS data corresponding to a syncpoint
  *
  * @engine_pdev:	Pointer to a host1x engine
  * @syncpt_id:		Syncpoint id to be checked
- * @gos_base:		Pointer for storing the GoS identifier
+ * @gos_id:		Pointer for storing the GoS identifier
  * @gos_offset:		Pointer for storing the word offset within GoS
  *
  * Returns:		0 on success, a negative error code otherwise.
  *
- * This function determines the GoS that holds the backing for given
- * syncpoint and the offset within the GoS.
- *
- * TBD: This function is not yet implemented.
+ * This function returns GoS ID and offset of semaphore in syncpoint
+ * backing in GoS for a corresponding syncpoint id
+ * GoS ID and offset should be referred only if return value is 0
  */
-int nvhost_syncpt_gos_address(struct platform_device *engine_pdev,
+int nvhost_syncpt_get_gos(struct platform_device *engine_pdev,
 			      u32 syncpt_id,
 			      u32 *gos_id,
 			      u32 *gos_offset)
 {
-	return -ENOSYS;
+	struct nvhost_master *host = nvhost_get_host(engine_pdev);
+	struct syncpt_gos_backing *syncpt_gos_backing;
+
+	syncpt_gos_backing = nvhost_syncpt_find_gos_backing(host, syncpt_id);
+	if (!syncpt_gos_backing)
+		return -EINVAL;
+
+	*gos_id = syncpt_gos_backing->gos_id;
+	*gos_offset = syncpt_gos_backing->gos_offset;
+
+	return 0;
+}
+
+/**
+ * nvhost_syncpt_gos_address() - Get GoS address corresponding to syncpoint id
+ *
+ * @engine_pdev:	Pointer to a host1x engine
+ * @syncpt_id:		syncpoint id
+ *
+ * Return:	IOVA address of syncpoint in GoS
+ *
+ * This function returns IOVA address of the syncpoint backing
+ * in GoS for corresponding syncpoint id
+ * This function returns 0 for all error cases
+ */
+dma_addr_t nvhost_syncpt_gos_address(struct platform_device *engine_pdev,
+				     u32 syncpt_id)
+{
+	u32 gos_id, gos_offset;
+	int err;
+
+	err = nvhost_syncpt_get_gos(engine_pdev, syncpt_id,
+				    &gos_id, &gos_offset);
+	if (err)
+		return 0;
+
+	err = nvhost_syncpt_cv_dev_address_table_init(engine_pdev);
+	if (err)
+		return 0;
+
+	return cv_dev_address_table[gos_id] + gos_offset;
+}
+
+/**
+ * nvhost_syncpt_alloc_gos_backing() - Create GoS backing for a syncpoint
+ *
+ * @engine_pdev:	Pointer to a host1x engine
+ * @syncpt_id:		syncpoint id
+ *
+ * Return:	0 on success, a negative error code otherwise
+ *
+ * This function creates a GoS backing for a give syncpoint id.
+ * GoS backing is then inserted into a global list for
+ * future reference/lookup.
+ */
+int nvhost_syncpt_alloc_gos_backing(struct platform_device *engine_pdev,
+				     u32 syncpt_id)
+{
+	struct nvhost_master *host = nvhost_get_host(engine_pdev);
+	struct syncpt_gos_backing *syncpt_gos_backing;
+	struct cv_dev_info *cv_dev_info;
+	DEFINE_DMA_ATTRS(attrs);
+	dma_addr_t offset;
+	int err;
+
+	/* check if engine supports GoS */
+	cv_dev_info = nvmap_fetch_cv_dev_info(&engine_pdev->dev);
+	if (!cv_dev_info)
+		return -EFAULT;
+
+	/* check if backing already exists */
+	syncpt_gos_backing = nvhost_syncpt_find_gos_backing(host, syncpt_id);
+	if (syncpt_gos_backing)
+		return 0;
+
+	/* Allocate and initialize backing */
+	syncpt_gos_backing = kzalloc(sizeof(*syncpt_gos_backing), GFP_KERNEL);
+	if (!syncpt_gos_backing)
+		return -ENOMEM;
+
+	dma_alloc_attrs(&cv_dev_info->offset_dev, sizeof(u32), &offset,
+			DMA_MEMORY_NOMAP, &attrs);
+	err = dma_mapping_error(&cv_dev_info->offset_dev, offset);
+	if (err) {
+		kfree(syncpt_gos_backing);
+		return -ENOMEM;
+	}
+
+	syncpt_gos_backing->syncpt_id = syncpt_id;
+	syncpt_gos_backing->gos_id = cv_dev_info->idx;
+	syncpt_gos_backing->gos_offset = (u32)offset;
+	syncpt_gos_backing->offset_dev = &cv_dev_info->offset_dev;
+	INIT_LIST_HEAD(&syncpt_gos_backing->syncpt_gos_backing_list_entry);
+
+	list_add_tail(&syncpt_gos_backing->syncpt_gos_backing_list_entry,
+		      &host->syncpt_backing_list_head);
+
+	return 0;
+}
+
+/**
+ * nvhost_syncpt_release_gos_backing() - Release GoS backing for a syncpoint
+ *
+ * @sp:		Pointer to nvhost_syncpt
+ * @syncpt_id:	syncpoint id
+ *
+ * Return:	0 on success, a negative error code otherwise
+ *
+ * This function finds the GoS backing in global list, removes
+ * it from list and then releases the backing
+ */
+int nvhost_syncpt_release_gos_backing(struct nvhost_syncpt *sp,
+				      u32 syncpt_id)
+{
+	struct nvhost_master *host = syncpt_to_dev(sp);
+	struct syncpt_gos_backing *syncpt_gos_backing;
+	DEFINE_DMA_ATTRS(attrs);
+	dma_addr_t offset;
+
+	syncpt_gos_backing = nvhost_syncpt_find_gos_backing(host, syncpt_id);
+	if (!syncpt_gos_backing)
+		return -EINVAL;
+
+	offset = (dma_addr_t)syncpt_gos_backing->gos_offset;
+	dma_free_attrs(syncpt_gos_backing->offset_dev, sizeof(u32),
+			(void *)(uintptr_t)offset, offset, &attrs);
+
+	list_del(&syncpt_gos_backing->syncpt_gos_backing_list_entry);
+	kfree(syncpt_gos_backing);
+
+	return 0;
 }
 
 /**

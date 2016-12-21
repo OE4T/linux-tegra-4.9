@@ -28,6 +28,7 @@
 #include "class_ids.h"
 #include "class_ids_t194.h"
 
+#include "nvhost_syncpt_unit_interface.h"
 #include "t194.h"
 #include "host1x/host1x.h"
 #if defined(CONFIG_TEGRA_GRHOST_TSEC)
@@ -561,6 +562,9 @@ int nvhost_init_t194_support(struct nvhost_master *host,
 	op->vm = host1x_vm_ops;
 	op->actmon = host1x_actmon_ops;
 	op->nvhost_dev.load_gating_regs = t194_init_regs;
+
+	op->syncpt.alloc = nvhost_syncpt_alloc_gos_backing;
+	op->syncpt.release = nvhost_syncpt_release_gos_backing;
 
 	/* WAR to bugs 200094901 and 200082771: enable protection
 	 * only on silicon/emulation */

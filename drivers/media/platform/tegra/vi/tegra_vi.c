@@ -380,12 +380,6 @@ static long vi_ioctl(struct file *file,
 			return -EFAULT;
 		}
 
-		/*
-		 * WAR for http://nvbugs/1847412
-		 * Need to add some overhead to vi clock
-		 */
-		vi_clk_rate += vi_clk_rate / 3;
-
 		return nvhost_module_set_rate(tegra_vi->ndev,
 				tegra_vi, vi_clk_rate, 0, NVHOST_CLOCK);
 	}

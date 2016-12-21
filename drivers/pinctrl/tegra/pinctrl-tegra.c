@@ -1,7 +1,7 @@
 /*
  * Driver for the NVIDIA Tegra pinmux
  *
- * Copyright (c) 2011-2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Derived from code:
  * Copyright (C) 2010 Google, Inc.
@@ -44,6 +44,10 @@ struct tegra_pmx {
 	int nbanks;
 	void __iomem **regs;
 };
+
+static int tegra_pinconf_group_set(struct pinctrl_dev *pctldev,
+		   unsigned group, unsigned long *configs,
+		   unsigned num_configs);
 
 static inline u32 pmx_readl(struct tegra_pmx *pmx, u32 bank, u32 reg)
 {
@@ -104,6 +108,7 @@ static const struct cfg_param {
 	{"nvidia,io-reset",		TEGRA_PINCONF_PARAM_IORESET},
 	{"nvidia,rcv-sel",		TEGRA_PINCONF_PARAM_RCV_SEL},
 	{"nvidia,io-hv",		TEGRA_PINCONF_PARAM_RCV_SEL},
+	{"nvidia,io-high-voltage",	TEGRA_PINCONF_PARAM_E_IO_HV},
 	{"nvidia,high-speed-mode",	TEGRA_PINCONF_PARAM_HIGH_SPEED_MODE},
 	{"nvidia,schmitt",		TEGRA_PINCONF_PARAM_SCHMITT},
 	{"nvidia,low-power-mode",	TEGRA_PINCONF_PARAM_LOW_POWER_MODE},
@@ -264,6 +269,21 @@ static int tegra_pinctrl_get_func_groups(struct pinctrl_dev *pctldev,
 	return 0;
 }
 
+static int tegra_pinconfig_group_set(struct pinctrl_dev *pctldev,
+		unsigned group, unsigned long param, unsigned long arg)
+{
+	unsigned long config;
+	int ret;
+
+	config = TEGRA_PINCONF_PACK(param, arg);
+	ret = tegra_pinconf_group_set(pctldev, group, &config, 1);
+	if (ret < 0)
+		dev_err(pctldev->dev,
+			"Pinctrl group %u tristate config failed: %d\n",
+			group, ret);
+	return ret;
+}
+
 static int tegra_pinctrl_set_mux(struct pinctrl_dev *pctldev,
 				 unsigned function,
 				 unsigned group)
@@ -288,9 +308,89 @@ static int tegra_pinctrl_set_mux(struct pinctrl_dev *pctldev,
 	val = pmx_readl(pmx, g->mux_bank, g->mux_reg);
 	val &= ~(0x3 << g->mux_bit);
 	val |= i << g->mux_bit;
+	/* Set the SFIO/GPIO selection to SFIO when under pinmux control*/
+	if (pmx->soc->is_gpio_reg_support)
+		val |= (1 << g->gpio_bit);
 	pmx_writel(pmx, val, g->mux_bank, g->mux_reg);
 
 	return 0;
+}
+
+static int tegra_pinctrl_gpio_request_enable(struct pinctrl_dev *pctldev,
+				struct pinctrl_gpio_range *range,
+				unsigned pin)
+{
+	struct tegra_pmx *pmx = pinctrl_dev_get_drvdata(pctldev);
+
+	if (pmx->soc->gpio_request_enable)
+		return pmx->soc->gpio_request_enable(pin);
+	return 0;
+}
+
+static int tegra_pinctrl_gpio_set_direction(struct pinctrl_dev *pctldev,
+	struct pinctrl_gpio_range *range, unsigned offset, bool input)
+{
+	struct tegra_pmx *pmx = pinctrl_dev_get_drvdata(pctldev);
+	unsigned  group;
+	const unsigned *pins;
+	unsigned num_pins;
+	int ret;
+
+	for (group = 0; group < pmx->soc->ngroups; ++group) {
+		ret = tegra_pinctrl_get_group_pins(pctldev, group,
+				&pins, &num_pins);
+		if (ret < 0 || num_pins != 1)
+			continue;
+		if (offset ==  pins[0])
+			break;
+	}
+
+	if (group == pmx->soc->ngroups) {
+		dev_err(pctldev->dev,
+			"Pingroup not found for pin %u\n", offset);
+		return -EINVAL;
+	}
+
+	/*
+	 * Set input = 1 for the input direction and
+	 * tristate = 0 for output direction.
+	 */
+	if (input)
+		ret = tegra_pinconfig_group_set(pctldev, group,
+					TEGRA_PINCONF_PARAM_ENABLE_INPUT, 1);
+	else
+		ret = tegra_pinconfig_group_set(pctldev, group,
+					TEGRA_PINCONF_PARAM_TRISTATE, 0);
+
+	if (pmx->soc->is_gpio_reg_support)
+		ret = tegra_pinconfig_group_set(pctldev, group,
+					TEGRA_PINCONF_PARAM_GPIO_MODE, 0);
+	return ret;
+}
+
+static void tegra_pinctrl_gpio_disable_free(struct pinctrl_dev *pctldev,
+	struct pinctrl_gpio_range *range, unsigned offset)
+{
+	struct tegra_pmx *pmx = pinctrl_dev_get_drvdata(pctldev);
+	unsigned group;
+	const unsigned *pins;
+	unsigned num_pins;
+	int ret;
+
+	if (pmx->soc->is_gpio_reg_support) {
+		for (group = 0; group < pmx->soc->ngroups; ++group) {
+			ret = tegra_pinctrl_get_group_pins(pctldev, group,
+					&pins, &num_pins);
+			if (ret < 0 || num_pins != 1)
+				continue;
+			if (offset == pins[0])
+				break;
+		}
+		ret = tegra_pinconfig_group_set(pctldev, group,
+				TEGRA_PINCONF_PARAM_GPIO_MODE, 1);
+		if (ret != 0)
+			dev_err(pctldev->dev, "GPIO/SFIO bit cannot be set\n");
+	}
 }
 
 static const struct pinmux_ops tegra_pinmux_ops = {
@@ -298,13 +398,16 @@ static const struct pinmux_ops tegra_pinmux_ops = {
 	.get_function_name = tegra_pinctrl_get_func_name,
 	.get_function_groups = tegra_pinctrl_get_func_groups,
 	.set_mux = tegra_pinctrl_set_mux,
+	.gpio_request_enable = tegra_pinctrl_gpio_request_enable,
+	.gpio_disable_free = tegra_pinctrl_gpio_disable_free,
+	.gpio_set_direction = tegra_pinctrl_gpio_set_direction,
 };
 
 static int tegra_pinconf_reg(struct tegra_pmx *pmx,
 			     const struct tegra_pingroup *g,
 			     enum tegra_pinconf_param param,
 			     bool report_err,
-			     s8 *bank, s16 *reg, s8 *bit, s8 *width)
+			     s8 *bank, s32 *reg, s8 *bit, s8 *width)
 {
 	switch (param) {
 	case TEGRA_PINCONF_PARAM_PULL:
@@ -347,6 +450,12 @@ static int tegra_pinconf_reg(struct tegra_pmx *pmx,
 		*bank = g->mux_bank;
 		*reg = g->mux_reg;
 		*bit = g->rcv_sel_bit;
+		*width = 1;
+		break;
+	case TEGRA_PINCONF_PARAM_E_IO_HV:
+		*bank = g->mux_bank;
+		*reg = g->mux_reg;
+		*bit = g->e_io_hv_bit;
 		*width = 1;
 		break;
 	case TEGRA_PINCONF_PARAM_HIGH_SPEED_MODE:
@@ -412,6 +521,12 @@ static int tegra_pinconf_reg(struct tegra_pmx *pmx,
 		*bit = g->drvtype_bit;
 		*width = 2;
 		break;
+	case TEGRA_PINCONF_PARAM_GPIO_MODE:
+		*bank = g->mux_bank;
+		*reg = g->mux_reg;
+		*bit = g->gpio_bit;
+		*width = 1;
+		break;
 	default:
 		dev_err(pmx->dev, "Invalid config param %04x\n", param);
 		return -ENOTSUPP;
@@ -463,7 +578,7 @@ static int tegra_pinconf_group_get(struct pinctrl_dev *pctldev,
 	const struct tegra_pingroup *g;
 	int ret;
 	s8 bank, bit, width;
-	s16 reg;
+	s32 reg;
 	u32 val, mask;
 
 	g = &pmx->soc->groups[group];
@@ -492,7 +607,7 @@ static int tegra_pinconf_group_set(struct pinctrl_dev *pctldev,
 	const struct tegra_pingroup *g;
 	int ret, i;
 	s8 bank, bit, width;
-	s16 reg;
+	s32 reg;
 	u32 val, mask;
 
 	g = &pmx->soc->groups[group];
@@ -560,7 +675,7 @@ static void tegra_pinconf_group_dbg_show(struct pinctrl_dev *pctldev,
 	const struct tegra_pingroup *g;
 	int i, ret;
 	s8 bank, bit, width;
-	s16 reg;
+	s32 reg;
 	u32 val;
 
 	g = &pmx->soc->groups[group];

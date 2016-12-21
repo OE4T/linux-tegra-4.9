@@ -47,6 +47,8 @@
 #include <linux/tegra_prod.h>
 #include <linux/tegra-soc.h>
 #include <linux/platform/tegra/io-dpd.h>
+#include <linux/notifier.h>
+#include <linux/regulator/consumer.h>
 
 #include <soc/tegra/common.h>
 #include <soc/tegra/fuse.h>
@@ -318,10 +320,15 @@ extern int tegra210_pmc_padctrl_init(struct device *dev,
 extern int tegra210_boorom_pmc_init(struct device *dev);
 #endif
 
+#define PMC_PWR_NO_IOPOWER	0x44
+
+static DEFINE_SPINLOCK(pwr_lock);
+
 struct tegra_pmc_io_pad_soc {
 	const char *name;
 	unsigned int dpd;
 	unsigned int voltage;
+	unsigned int io_power;
 	const unsigned int pins[1];
 	unsigned int npins;
 };
@@ -339,6 +346,12 @@ struct tegra_pmc_soc {
 	bool has_tsense_reset;
 	bool has_gpu_clamps;
 	bool has_ps18;
+};
+
+struct tegra_io_pad_regulator {
+	const struct tegra_pmc_io_pad_soc *pad;
+	struct regulator *regulator;
+	struct notifier_block nb;
 };
 
 /**
@@ -2707,13 +2720,14 @@ static const u8 tegra210_cpu_powergates[] = {
 	TEGRA_POWERGATE_CPU3,
 };
 
-#define TEGRA_IO_PAD_CONFIG(_pin, _npins, _name, _dpd, _vbit)	\
+#define TEGRA_IO_PAD_CONFIG(_pin, _npins, _name, _dpd, _vbit, _iopower)	\
 	{							\
 		.name =  #_name,				\
 		.pins = {(_pin)},				\
 		.npins = _npins,				\
 		.dpd = _dpd,					\
 		.voltage = _vbit,				\
+		.io_power = _iopower,				\
 	},
 
 /**
@@ -2728,63 +2742,63 @@ static const u8 tegra210_cpu_powergates[] = {
  *			 it can operate in multi-level voltages.
  */
 #define TEGRA_IO_PAD_LPONLY(_pin, _name, _dpd)	\
-	TEGRA_IO_PAD_CONFIG(_pin, 1, _name, _dpd, UINT_MAX)
+	TEGRA_IO_PAD_CONFIG(_pin, 1, _name, _dpd, UINT_MAX, UINT_MAX)
 
-#define TEGRA_IO_PAD_LP_N_PV(_pin, _name, _dpd, _vbit)  \
-	TEGRA_IO_PAD_CONFIG(_pin, 1, _name, _dpd, _vbit)
+#define TEGRA_IO_PAD_LP_N_PV(_pin, _name, _dpd, _vbit, _io)  \
+	TEGRA_IO_PAD_CONFIG(_pin, 1, _name, _dpd, _vbit, _io)
 
-#define TEGRA_IO_PAD_PVONLY(_pin, _name, _vbit)	\
-	TEGRA_IO_PAD_CONFIG(_pin, 0, _name, UINT_MAX, _vbit)
+#define TEGRA_IO_PAD_PVONLY(_pin, _name, _vbit, _io)	\
+	TEGRA_IO_PAD_CONFIG(_pin, 0, _name, UINT_MAX, _vbit, _io)
 
 #define TEGRA_IO_PAD_DESC_LP(_pin, _name, _dpd)	\
 	{					\
 		.number = _pin,			\
 		.name = #_name,			\
 	},
-#define TEGRA_IO_PAD_DESC_LP_N_PV(_pin, _name, _dpd, _vbit) \
+#define TEGRA_IO_PAD_DESC_LP_N_PV(_pin, _name, _dpd, _vbit, _io) \
 	TEGRA_IO_PAD_DESC_LP(_pin, _name, _dpd)
 
-#define TEGRA_IO_PAD_DESC_PV(_pin, _name, _vbit) \
+#define TEGRA_IO_PAD_DESC_PV(_pin, _name, _vbit, _io) \
 	TEGRA_IO_PAD_DESC_LP(_pin, _name, UINT_MAX)
 
 #define TEGRA210_IO_PAD_TABLE(_lponly_, _pvonly_, _lp_n_pv_)	\
-	_lp_n_pv_(0, audio, 17, 5)	\
-	_lp_n_pv_(1, audio-hv, 61, 18)	\
-	_lp_n_pv_(2, cam, 36, 10)	\
-	_lponly_(3, csia, 0)		\
-	_lponly_(4, csib, 1)		\
-	_lponly_(5, csic, 42)		\
-	_lponly_(6, csid, 43)		\
-	_lponly_(7, csie, 44)		\
-	_lponly_(8, csif, 45)		\
-	_lp_n_pv_(9, dbg, 25, 19)	\
-	_lponly_(10, debug-nonao, 26)	\
-	_lp_n_pv_(11, dmic, 50, 20)	\
-	_lponly_(12, dp, 51)		\
-	_lponly_(13, dsi, 2)		\
-	_lponly_(14, dsib, 39)		\
-	_lponly_(15, dsic, 40)		\
-	_lponly_(16, dsid, 41)		\
-	_lponly_(17, emmc, 35)		\
-	_lponly_(18, emmc2, 37)		\
-	_lp_n_pv_(19, gpio, 27, 21)	\
-	_lponly_(20, hdmi, 28)		\
-	_lponly_(21, hsic, 19)		\
-	_lponly_(22, lvds, 57)		\
-	_lponly_(23, mipi-bias, 3)	\
-	_lponly_(24, pex-bias, 4)	\
-	_lponly_(25, pex-clk1, 5)	\
-	_lponly_(26, pex-clk2, 6)	\
-	_pvonly_(27, pex-ctrl, 11)	\
-	_lp_n_pv_(28, sdmmc1, 33, 12)	\
-	_lp_n_pv_(29, sdmmc3, 34, 13)	\
-	_lp_n_pv_(30, spi, 46, 22)	\
-	_lp_n_pv_(31, spi-hv, 47, 23)	\
-	_lp_n_pv_(32, uart, 14, 2)	\
-	_lponly_(33, usb0, 9)		\
-	_lponly_(34, usb1, 10)		\
-	_lponly_(35, usb2, 11)		\
-	_lponly_(36, usb3, 18)		\
+	_lp_n_pv_(0, audio, 17, 5, 5)		\
+	_lp_n_pv_(1, audio-hv, 61, 18, 18)	\
+	_lp_n_pv_(2, cam, 36, 10, 10)		\
+	_lponly_(3, csia, 0)			\
+	_lponly_(4, csib, 1)			\
+	_lponly_(5, csic, 42)			\
+	_lponly_(6, csid, 43)			\
+	_lponly_(7, csie, 44)			\
+	_lponly_(8, csif, 45)			\
+	_lp_n_pv_(9, dbg, 25, 19, 19)		\
+	_lponly_(10, debug-nonao, 26)		\
+	_lp_n_pv_(11, dmic, 50, 20, 20)		\
+	_lponly_(12, dp, 51)			\
+	_lponly_(13, dsi, 2)			\
+	_lponly_(14, dsib, 39)			\
+	_lponly_(15, dsic, 40)			\
+	_lponly_(16, dsid, 41)			\
+	_lponly_(17, emmc, 35)			\
+	_lponly_(18, emmc2, 37)			\
+	_lp_n_pv_(19, gpio, 27, 21, 21)		\
+	_lponly_(20, hdmi, 28)			\
+	_lponly_(21, hsic, 19)			\
+	_lponly_(22, lvds, 57)			\
+	_lponly_(23, mipi-bias, 3)		\
+	_lponly_(24, pex-bias, 4)		\
+	_lponly_(25, pex-clk1, 5)		\
+	_lponly_(26, pex-clk2, 6)		\
+	_pvonly_(27, pex-ctrl, 11, 11)		\
+	_lp_n_pv_(28, sdmmc1, 33, 12, 12)	\
+	_lp_n_pv_(29, sdmmc3, 34, 13, 13)	\
+	_lp_n_pv_(30, spi, 46, 22, 22)		\
+	_lp_n_pv_(31, spi-hv, 47, 23, 23)	\
+	_lp_n_pv_(32, uart, 14, 2, 2)		\
+	_lponly_(33, usb0, 9)			\
+	_lponly_(34, usb1, 10)			\
+	_lponly_(35, usb2, 11)			\
+	_lponly_(36, usb3, 18)			\
 	_lponly_(37, usb-bias, 12)
 
 static const struct tegra_pmc_io_pad_soc tegra210_io_pads[] = {
@@ -2922,3 +2936,187 @@ static int __init tegra_pmc_early_init(void)
 	return 0;
 }
 early_initcall(tegra_pmc_early_init);
+
+static void pmc_iopower_enable(const struct tegra_pmc_io_pad_soc *pad)
+{
+	if (pad->io_power == UINT_MAX)
+		return;
+
+	tegra_pmc_register_update(PMC_PWR_NO_IOPOWER, BIT(pad->io_power), 0);
+}
+
+static void pmc_iopower_disable(const struct tegra_pmc_io_pad_soc *pad)
+{
+	if (pad->io_power == UINT_MAX)
+		return;
+
+	tegra_pmc_register_update(PMC_PWR_NO_IOPOWER, BIT(pad->io_power),
+				  BIT(pad->io_power));
+}
+
+static int pmc_iopower_get_status(const struct tegra_pmc_io_pad_soc *pad)
+{
+	unsigned int no_iopower;
+
+	if (pad->io_power == UINT_MAX)
+		return 1;
+
+	no_iopower = tegra_pmc_readl(PMC_PWR_NO_IOPOWER);
+
+	return !(no_iopower & BIT(pad->io_power));
+}
+
+static int tegra_pmc_io_rail_change_notify_cb(struct notifier_block *nb,
+					      unsigned long event, void *v)
+{
+	struct tegra_io_pad_regulator *tip_reg;
+	const struct tegra_pmc_io_pad_soc *pad;
+	unsigned long flags;
+
+	if (!((event & REGULATOR_EVENT_POST_ENABLE) ||
+	      (event & REGULATOR_EVENT_PRE_DISABLE)))
+		return NOTIFY_OK;
+
+	tip_reg = container_of(nb, struct tegra_io_pad_regulator, nb);
+	pad = tip_reg->pad;
+
+	spin_lock_irqsave(&pwr_lock, flags);
+
+	if (event & REGULATOR_EVENT_POST_ENABLE)
+		pmc_iopower_enable(pad);
+
+	if (event & REGULATOR_EVENT_PRE_DISABLE)
+		pmc_iopower_disable(pad);
+
+	dev_dbg(pmc->dev, "tegra-iopower: %s: event 0x%08lx state: %d\n",
+		pad->name, event, pmc_iopower_get_status(pad));
+
+	spin_unlock_irqrestore(&pwr_lock, flags);
+
+	return NOTIFY_OK;
+}
+
+static int tegra_pmc_io_power_init_one(struct device *dev,
+				       const struct tegra_pmc_io_pad_soc *pad,
+				       u32 *disabled_mask,
+				       bool enable_pad_volt_config)
+{
+	struct tegra_io_pad_regulator *tip_reg;
+	char regname[32]; /* 32 is max size of property name */
+	char *prefix;
+	int curr_io_uv;
+	int ret;
+
+	prefix = "vddio";
+	snprintf(regname, 32, "%s-%s-supply", prefix, pad->name);
+	if (!of_find_property(dev->of_node, regname, NULL)) {
+		prefix = "iopower";
+		snprintf(regname, 32, "%s-%s-supply", prefix, pad->name);
+		if (!of_find_property(dev->of_node, regname, NULL)) {
+			dev_info(dev, "Regulator supply %s not available\n",
+				 regname);
+			return 0;
+		}
+	}
+
+	tip_reg = devm_kzalloc(dev, sizeof(*tip_reg), GFP_KERNEL);
+	if (!tip_reg)
+		return -ENOMEM;
+
+	tip_reg->pad = pad;
+
+	snprintf(regname, 32, "%s-%s", prefix, pad->name);
+	tip_reg->regulator = devm_regulator_get(dev, regname);
+	if (IS_ERR(tip_reg->regulator)) {
+		ret = PTR_ERR(tip_reg->regulator);
+		dev_err(dev, "Failed to get regulator %s: %d\n", regname, ret);
+		return ret;
+	}
+
+	if (!enable_pad_volt_config)
+		goto skip_pad_config;
+
+	ret = regulator_get_voltage(tip_reg->regulator);
+	if (ret < 0) {
+		dev_err(dev, "Failed to get IO rail %s voltage: %d\n",
+			regname, ret);
+		return ret;
+	}
+
+	curr_io_uv = (ret == 1800000) ?  TEGRA_IO_PAD_VOLTAGE_1800000UV :
+				TEGRA_IO_PAD_VOLTAGE_3300000UV;
+
+	ret = tegra_pmc_io_pad_set_voltage(pad, curr_io_uv);
+	if (ret < 0) {
+		dev_err(dev, "Failed to set voltage %duV of I/O pad %s: %d\n",
+			curr_io_uv, pad->name, ret);
+		return ret;
+	}
+
+skip_pad_config:
+	tip_reg->nb.notifier_call = tegra_pmc_io_rail_change_notify_cb;
+	ret = devm_regulator_register_notifier(tip_reg->regulator,
+					       &tip_reg->nb);
+	if (ret < 0) {
+		dev_err(dev, "Failed to register regulator %s notifier: %d\n",
+			regname, ret);
+		return ret;
+	}
+
+	if (regulator_is_enabled(tip_reg->regulator)) {
+		pmc_iopower_enable(pad);
+	} else {
+		*disabled_mask |= BIT(pad->io_power);
+		pmc_iopower_disable(pad);
+	}
+
+	return 0;
+}
+
+static int tegra_pmc_iopower_probe(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+	bool enable_pad_volt_config = false;
+	u32 pwrio_disabled_mask = 0;
+	int i, ret;
+
+	if (!pmc->base) {
+		dev_err(dev, "PMC Driver is not ready\n");
+		return -EPROBE_DEFER;
+	}
+
+	enable_pad_volt_config = of_property_read_bool(dev->of_node,
+					"nvidia,auto-pad-voltage-config");
+
+	for (i = 0; i < pmc->soc->num_io_pads; ++i) {
+		if (pmc->soc->io_pads[i].io_power == UINT_MAX)
+			continue;
+
+		ret = tegra_pmc_io_power_init_one(&pdev->dev,
+						  &pmc->soc->io_pads[i],
+						  &pwrio_disabled_mask,
+						  enable_pad_volt_config);
+		if (ret < 0)
+			dev_info(dev, "io-power cell %s init failed: %d\n",
+				 pmc->soc->io_pads[i].name, ret);
+	}
+
+	dev_info(dev, "NO_IOPOWER setting 0x%x\n", pwrio_disabled_mask);
+	return 0;
+}
+
+static const struct of_device_id tegra_pmc_iopower_match[] = {
+	{ .compatible = "nvidia,tegra210-pmc-iopower", },
+	{ }
+};
+
+static struct platform_driver tegra_pmc_iopower_driver = {
+	.probe   = tegra_pmc_iopower_probe,
+	.driver  = {
+		.name  = "tegra-pmc-iopower",
+		.owner = THIS_MODULE,
+		.of_match_table = tegra_pmc_iopower_match,
+	},
+};
+
+builtin_platform_driver(tegra_pmc_iopower_driver);

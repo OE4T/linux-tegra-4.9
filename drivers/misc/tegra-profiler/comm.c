@@ -313,7 +313,7 @@ init_mmap_hdr(struct quadd_mmap_rb_info *mmap_rb,
 	cpu_id = mmap_rb->cpu_id;
 
 	if (cpu_id >= nr_cpu_ids)
-		return -EIO;
+		return -EINVAL;
 
 	cc = &per_cpu(cpu_ctx, cpu_id);
 
@@ -445,6 +445,7 @@ device_ioctl(struct file *file,
 	     unsigned long ioctl_param)
 {
 	int err = 0;
+	unsigned int cpuid;
 	struct quadd_mmap_area *mmap;
 	struct quadd_parameters *user_params;
 	struct quadd_pmu_setup_for_cpu *cpu_pmu_params;
@@ -492,7 +493,15 @@ device_ioctl(struct file *file,
 			goto error_out;
 		}
 
-		per_cpu(cpu_ctx, cpu_pmu_params->cpuid).params_ok = 0;
+		cpuid = cpu_pmu_params->cpuid;
+
+		if (cpuid >= nr_cpu_ids) {
+			vfree(cpu_pmu_params);
+			err = -EINVAL;
+			goto error_out;
+		}
+
+		per_cpu(cpu_ctx, cpuid).params_ok = 0;
 
 		err = comm_ctx.control->set_parameters_for_cpu(cpu_pmu_params);
 		if (err) {
@@ -501,14 +510,12 @@ device_ioctl(struct file *file,
 			goto error_out;
 		}
 
-		per_cpu(cpu_ctx, cpu_pmu_params->cpuid).params_ok = 1;
+		per_cpu(cpu_ctx, cpuid).params_ok = 1;
 
-		pr_info("setup PMU success for cpu: %d\n",
-			cpu_pmu_params->cpuid);
+		pr_info("setup PMU success for cpu: %d\n", cpuid);
 
 		vfree(cpu_pmu_params);
 		break;
-
 
 	case IOCTL_SETUP:
 		if (atomic_read(&comm_ctx.active)) {
@@ -582,8 +589,16 @@ device_ioctl(struct file *file,
 			err = -EFAULT;
 			goto error_out;
 		}
-		comm_ctx.control->get_capabilities_for_cpu(per_cpu_cap->cpuid,
-							   per_cpu_cap);
+
+		cpuid = per_cpu_cap->cpuid;
+
+		if (cpuid >= nr_cpu_ids) {
+			vfree(per_cpu_cap);
+			err = -EINVAL;
+			goto error_out;
+		}
+
+		comm_ctx.control->get_capabilities_for_cpu(cpuid, per_cpu_cap);
 
 		if (copy_to_user((void __user *)ioctl_param, per_cpu_cap,
 				 sizeof(*per_cpu_cap))) {

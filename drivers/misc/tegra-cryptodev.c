@@ -3,7 +3,7 @@
  *
  * crypto dev node for NVIDIA tegra aes hardware
  *
- * Copyright (c) 2010-2016, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2010-2017, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -305,14 +305,13 @@ static int tegra_crypt_rsa(struct file *filp, struct tegra_crypto_ctx *ctx,
 	int ret = 0;
 	unsigned long *xbuf[XBUFSIZE];
 	struct tegra_crypto_completion rsa_complete;
-	char rsa_algo[4][10] = {"rsa512", "rsa1024", "rsa1536", "rsa2048"};
 
 	if (rsa_req->op_mode == RSA_INIT) {
-		tfm = crypto_alloc_akcipher(rsa_algo[rsa_req->algo],
-						CRYPTO_ALG_TYPE_AKCIPHER, 0);
+		tfm = crypto_alloc_akcipher("rsa-pka0",
+					CRYPTO_ALG_TYPE_AKCIPHER, 0);
 		if (IS_ERR(tfm)) {
-			pr_err("Failed to load transform for %s: %ld\n",
-				rsa_algo[rsa_req->algo], PTR_ERR(tfm));
+			pr_err("Failed to load transform for rsa-pka0: %ld\n",
+					PTR_ERR(tfm));
 			ret = PTR_ERR(tfm);
 			goto out;
 		}

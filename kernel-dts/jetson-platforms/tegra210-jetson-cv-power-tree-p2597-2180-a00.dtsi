@@ -357,6 +357,7 @@
 		iopower-sdmmc4-supply = <&max77620_sd3>;
 		iopower-audio-hv-supply = <&max77620_sd3>;
 		iopower-debug-supply = <&max77620_sd3>;
+		iopower-dbg-supply = <&max77620_sd3>;
 		iopower-dmic-supply = <&max77620_sd3>;
 		iopower-gpio-supply = <&max77620_sd3>;
 		iopower-spi-supply = <&max77620_sd3>;

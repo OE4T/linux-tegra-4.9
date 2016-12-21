@@ -780,9 +780,12 @@
 				 <&tegra_car TEGRA210_CLK_CILE>,
 				 <&tegra_car TEGRA210_CLK_VI_I2C>,
 				 <&tegra_car TEGRA210_CLK_I2CSLOW>,
-				 <&tegra_car TEGRA210_CLK_EMC>;
+				 <&tegra_car TEGRA210_CLK_EMC>,
+				 <&tegra_car TEGRA210_CLK_PLL_D>,
+				 <&tegra_car TEGRA210_CLK_PLL_D_DSI_OUT>;
 			clock-names = "vi_v4l2", "csi", "cilab", "cilcd",
-					"cile", "vii2c", "i2cslow", "emc";
+					"cile", "vii2c", "i2cslow", "emc",
+					"pll_d", "pll_d_dsi_out";
 			resets = <&tegra_car 20>;
 			reset-names = "vi";
 			#address-cells = <1>;

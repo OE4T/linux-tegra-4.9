@@ -632,6 +632,7 @@ int vgpu_probe(struct platform_device *pdev)
 			CONFIG_GK20A_DEFAULT_TIMEOUT;
 	gk20a->timeouts_enabled = true;
 
+	vgpu_create_sysfs(dev);
 	gk20a_init_gr(gk20a);
 
 	return 0;
@@ -650,6 +651,7 @@ int vgpu_remove(struct platform_device *pdev)
 	vgpu_comm_deinit();
 	gk20a_sched_ctrl_cleanup(g);
 	gk20a_user_deinit(dev, &nvgpu_class);
+	vgpu_remove_sysfs(dev);
 	gk20a_get_platform(dev)->g = NULL;
 	kfree(g);
 	return 0;

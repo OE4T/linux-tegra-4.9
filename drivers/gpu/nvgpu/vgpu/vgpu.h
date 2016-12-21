@@ -103,6 +103,9 @@ int vgpu_gk20a_init_hal(struct gk20a *g);
 int vgpu_gm20b_init_hal(struct gk20a *g);
 
 void vgpu_init_dbg_session_ops(struct gpu_ops *gops);
+
+void vgpu_create_sysfs(struct device *dev);
+void vgpu_remove_sysfs(struct device *dev);
 #else
 static inline int vgpu_pm_prepare_poweroff(struct device *dev)
 {

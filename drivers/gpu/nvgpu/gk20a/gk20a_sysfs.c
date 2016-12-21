@@ -24,7 +24,6 @@
 #include <linux/kernel.h>
 #include <linux/fb.h>
 #include <linux/gk20a.h>
-#include <mach/clk.h>
 #include <linux/clk/tegra.h>
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
 #include <soc/tegra/tegra-dvfs.h>

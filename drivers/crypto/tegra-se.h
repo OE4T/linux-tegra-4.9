@@ -1,7 +1,7 @@
 /*
  * Driver for Tegra Security Engine
  *
- * Copyright (c) 2011-2016, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2011-2017, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -253,10 +253,6 @@
 #define SHA256_STATE_SIZE	32
 #define SHA384_STATE_SIZE	64
 #define SHA512_STATE_SIZE	64
-#define RSA512_STATE_SIZE	32
-#define RSA1024_STATE_SIZE	32
-#define RSA1536_STATE_SIZE	32
-#define RSA2048_STATE_SIZE	32
 
 #define TEGRA_SE_KEY_256_SIZE		32
 #define TEGRA_SE_KEY_192_SIZE		24
@@ -272,10 +268,10 @@
 						TEGRA_SE_RNG_KEY_SIZE + \
 						TEGRA_SE_RNG_DT_SIZE)
 #define TEGRA_SE_AES_CMAC_DIGEST_SIZE	16
-#define TEGRA_SE_RSA512_DIGEST_SIZE	64
-#define TEGRA_SE_RSA1024_DIGEST_SIZE	128
-#define TEGRA_SE_RSA1536_DIGEST_SIZE	192
-#define TEGRA_SE_RSA2048_DIGEST_SIZE	256
+#define TEGRA_SE_RSA512_INPUT_SIZE     64
+#define TEGRA_SE_RSA1024_INPUT_SIZE    128
+#define TEGRA_SE_RSA1536_INPUT_SIZE    192
+#define TEGRA_SE_RSA2048_INPUT_SIZE    256
 
 #define SE_KEY_TABLE_ACCESS_REG_OFFSET	0x284
 #define SE_KEY_READ_DISABLE_SHIFT		0

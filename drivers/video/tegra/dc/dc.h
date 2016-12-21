@@ -766,6 +766,7 @@ struct tegra_dc_out {
 	u8		dsc_bpp;
 	bool		en_block_pred;
 	bool		dsc_en;
+	bool		dual_dsc_en;
 
 	u8			*out_sel_configs;
 	unsigned		n_out_sel_configs;

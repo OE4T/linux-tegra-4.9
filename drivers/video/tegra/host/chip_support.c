@@ -21,6 +21,11 @@
 #include <linux/bug.h>
 #include <linux/slab.h>
 #include <linux/tegra-soc.h>
+#include <linux/version.h>
+
+#if defined(CONFIG_ARCH_TEGRA_210_SOC) || LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+#include <soc/tegra/fuse.h>
+#endif
 
 #include "host1x/host1x.h"
 #include "chip_support.h"
@@ -53,4 +58,31 @@ int nvhost_init_chip_support(struct nvhost_master *host)
 	err = host->info.initialize_chip_support(host, nvhost_chip_ops);
 
 	return err;
+}
+
+bool nvhost_is_124() {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0)
+	return false;
+#else
+	return tegra_get_chipid() == TEGRA_CHIPID_TEGRA12 ||
+	       tegra_get_chipid() == TEGRA_CHIPID_TEGRA13;
+#endif
+}
+
+bool nvhost_is_210() {
+#if defined(CONFIG_ARCH_TEGRA_210_SOC) || LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+	return tegra_get_chip_id() == TEGRA210;
+#else
+	return tegra_get_chipid() == TEGRA_CHIPID_TEGRA21;
+#endif
+}
+
+bool nvhost_is_186() {
+#if defined(CONFIG_ARCH_TEGRA_210_SOC) || LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+	return tegra_get_chip_id() == TEGRA186;
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0)
+	return tegra_get_chipid() == TEGRA_CHIPID_TEGRA18;
+#else
+	return false;
+#endif
 }

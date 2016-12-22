@@ -28,8 +28,9 @@
 #include <linux/pm_qos.h>
 #include <trace/events/nvhost.h>
 #include <linux/uaccess.h>
+#include <linux/version.h>
 
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
 #include <soc/tegra/tegra-dvfs.h>
 #include <linux/clk-provider.h>
 #endif
@@ -121,11 +122,13 @@ static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
 	if (!tegra_platform_is_silicon())
 		goto exit;
 
-#if defined(CONFIG_PLATFORM_TEGRA) && !defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	err = tegra_dvfs_get_freqs(clk_get_parent(profile->clk),
-				   &freqs, &num_freqs);
-	if (err)
-		return err;
+#if defined(CONFIG_PLATFORM_TEGRA)
+	if (nvhost_is_124() || nvhost_is_210()) {
+		err = tegra_dvfs_get_freqs(clk_get_parent(profile->clk),
+					&freqs, &num_freqs);
+		if (err)
+			return err;
+	}
 #endif
 	if (!freqs)
 		err = tegra_update_freq_table(profile->clk, pdata, &num_freqs);

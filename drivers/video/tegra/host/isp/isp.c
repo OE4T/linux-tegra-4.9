@@ -32,6 +32,7 @@
 #else
 #include <linux/tegra-fuse.h>
 #endif
+#include <linux/version.h>
 
 #include "dev.h"
 #include "bus_client.h"
@@ -280,19 +281,21 @@ static int isp_probe(struct platform_device *dev)
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
 
-		match = of_match_device(tegra_isp_of_match, &dev->dev);
-		if (match)
-			pdata = (struct nvhost_device_data *)match->data;
-
-		if (!IS_ENABLED(CONFIG_ARCH_TEGRA_18x_SOC)) {
+		if (nvhost_is_186()) {
+			/* T186 only has one ISP */
+			match = of_match_device(tegra_isp_of_match, &dev->dev);
+			if (match)
+				pdata = (struct nvhost_device_data *)
+					match->data;
+		} else {
 			/*
-			 * For older kernels, we use "isp.0" for ispa
-			 * and "isp.1" for ispb
-			 *
-			 * For newer kernels, we use "54600000.isp" for ispa
-			 * and "54680000.isp" for ispb
-			 *
-			 */
+			* For older kernels, we use "isp.0" for ispa
+			* and "isp.1" for ispb
+			*
+			* For newer kernels, we use "54600000.isp" for ispa
+			* and "54680000.isp" for ispb
+			*
+			*/
 			if (strcmp(dev->name, "isp.0") == 0 ||
 				strcmp(dev->name, "54600000.isp") == 0)
 				dev_id = ISPA_DEV_ID;
@@ -302,35 +305,18 @@ static int isp_probe(struct platform_device *dev)
 			else
 				return -EINVAL;
 
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
-			switch (tegra_get_chip_id()) {
-			case TEGRA124:
-			case TEGRA132:
-#else
-			switch (tegra_get_chipid()) {
-			case TEGRA_CHIPID_TEGRA12:
-			case TEGRA_CHIPID_TEGRA13:
-#endif
+			if (nvhost_is_124()) {
 				if (dev_id == ISPB_DEV_ID)
 					pdata = &t124_ispb_info;
 				if (dev_id == ISPA_DEV_ID)
 					pdata = &t124_isp_info;
-				break;
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
-			case TEGRA210:
-#else
-			case TEGRA_CHIPID_TEGRA21:
-#endif
+			} else if (nvhost_is_210()) {
 				if (dev_id == ISPB_DEV_ID)
 					pdata = &t21_ispb_info;
 				if (dev_id == ISPA_DEV_ID)
 					pdata = &t21_isp_info;
-				break;
-			default:
-				return -EINVAL;
 			}
 		}
-
 	} else
 		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
 
@@ -464,15 +450,15 @@ static int isp_set_la(struct isp *tegra_isp, u32 isp_bw, u32 la_client)
 
 	ret = tegra_set_camera_ptsa(la_id, isp_bw, la_client);
 	if (!ret) {
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
-		/* T186 ISP/VI LA programming is changed.
-		 * Check tegra18x_la.c
-		 */
-		ret = tegra_set_latency_allowance(la_id, isp_bw);
-		if (ret)
-			pr_err("%s: set latency failed for ISP %d: %d\n",
-				__func__, tegra_isp->dev_id, ret);
-#endif
+		if (nvhost_is_124() || nvhost_is_210()) {
+			/* T186 ISP/VI LA programming is changed.
+			* Check tegra18x_la.c
+			*/
+			ret = tegra_set_latency_allowance(la_id, isp_bw);
+			if (ret)
+				pr_err("%s: set latency failed for ISP %d: %d\n",
+					__func__, tegra_isp->dev_id, ret);
+		}
 	} else {
 		pr_err("%s: set ptsa failed for ISP %d: %d\n", __func__,
 			tegra_isp->dev_id, ret);

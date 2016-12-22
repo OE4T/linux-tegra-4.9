@@ -132,36 +132,22 @@ static int vhost_client_probe(struct platform_device *dev)
 
 #ifdef CONFIG_TEGRA_GRHOST_ISP
 		/* If ISP, need to differentiate ISP.0 from ISP.1 */
-		if (!IS_ENABLED(CONFIG_ARCH_TEGRA_18x_SOC)) {
+		if (nvhost_is_210() || nvhost_is_124()) {
 			int dev_id = 0;
 			char engine[4];
 
 			if ((sscanf(dev->name, "%x.%3s", &dev_id, engine) == 2)
 				&& (strcmp(engine, "isp") == 0)) {
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
-				switch (tegra_get_chip_id()) {
-				case TEGRA124:
-#else
-				switch (tegra_get_chipid()) {
-				case TEGRA_CHIPID_TEGRA12:
-#endif
+				if (nvhost_is_124()) {
 					if (dev_id == TEGRA_ISP_BASE)
 						pdata = &t124_isp_info;
 					else if (dev_id == TEGRA_ISPB_BASE)
 						pdata = &t124_ispb_info;
-					break;
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
-				case TEGRA210:
-#else
-				case TEGRA_CHIPID_TEGRA21:
-#endif
+				} else if (nvhost_is_210()) {
 					if (dev_id == TEGRA_ISP_BASE)
 						pdata = &t21_isp_info;
 					else if (dev_id == TEGRA_ISPB_BASE)
 						pdata = &t21_ispb_info;
-					break;
-				default:
-					return -EINVAL;
 				}
 			}
 		}

@@ -549,7 +549,7 @@ static struct dvfs cpu_lp_dvfs = {
 	}
 
 static struct dvfs gpu_dvfs = {
-	.clk_name       = "gpcclk",
+	.clk_name       = "gbus",
 	.auto_dvfs      = true,
 	.dvfs_rail      = &tegra210_dvfs_rail_vdd_gpu,
 };

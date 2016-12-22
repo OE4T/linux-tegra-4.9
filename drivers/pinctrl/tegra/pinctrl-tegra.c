@@ -122,6 +122,7 @@ static const struct cfg_param {
 	{"nvidia,pbias-buf",		TEGRA_PINCONF_PARAM_PBIAS_BUF},
 	{"nvidia,preemp",		TEGRA_PINCONF_PARAM_PREEMP},
 	{"nvidia,rfu-in",		TEGRA_PINCONF_PARAM_RFU_IN},
+	{"nvidia,special-function",	TEGRA_PINCONF_PARAM_GPIO_MODE},
 };
 
 static int tegra_pinctrl_dt_subnode_to_map(struct pinctrl_dev *pctldev,

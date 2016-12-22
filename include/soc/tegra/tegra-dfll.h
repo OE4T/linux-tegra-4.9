@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,4 +36,6 @@ extern int tegra_dfll_get_thermal_index(struct tegra_dfll *td,
 			enum tegra_dfll_thermal_type type);
 extern int tegra_dfll_count_thermal_states(struct tegra_dfll *td,
 			enum tegra_dfll_thermal_type type);
+u32 tegra_dfll_get_thermal_floor_mv(void);
+u32 tegra_dfll_get_thermal_cap_mv(void);
 #endif

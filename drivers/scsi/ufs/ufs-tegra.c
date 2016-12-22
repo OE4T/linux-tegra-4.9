@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Authors:
  *      VenkataJagadish.p	<vjagadish@nvidia.com>
@@ -310,6 +310,11 @@ static int ufs_tegra_init_mphy_lane_clks(struct ufs_tegra_host *host)
 
 	err = ufs_tegra_host_clk_get(dev, "mphy_l0_rx_ls_bit",
 		&host->mphy_l0_rx_ls_bit);
+	if (err)
+		goto out;
+
+	err = ufs_tegra_host_clk_get(dev, "mphy_force_ls_mode",
+		&host->mphy_force_ls_mode);
 	if (err)
 		goto out;
 
@@ -998,6 +1003,36 @@ out:
 	return ret;
 }
 
+static int ufs_tegra_hce_enable_notify(const struct ufs_hba *hba,
+		enum ufs_notify_change_status status)
+{
+	const struct ufs_tegra_host *ufs_tegra = hba->priv;
+	const struct device *dev = ufs_tegra->hba->dev;
+	int err = 0;
+
+	switch (status) {
+	case PRE_CHANGE:
+		err = ufs_tegra_host_clk_enable(dev,
+			"mphy_force_ls_mode",
+			ufs_tegra->mphy_force_ls_mode);
+		if (err)
+			return err;
+		udelay(500);
+		ufs_aux_clear_bits(ufs_tegra->ufs_aux_base,
+				UFSHC_DEV_RESET,
+				UFSHC_AUX_UFSHC_DEV_CTRL_0);
+		break;
+	case POST_CHANGE:
+		ufs_tegra_ufs_aux_prog(ufs_tegra);
+		ufs_tegra_cfg_vendor_registers(hba);
+		clk_disable_unprepare(ufs_tegra->mphy_force_ls_mode);
+		break;
+	default:
+		break;
+	}
+	return err;
+}
+
 static void ufs_tegra_unipro_post_linkup(struct ufs_hba *hba)
 {
 	/* set cport connection status = 1 */
@@ -1238,6 +1273,7 @@ struct ufs_hba_variant_ops ufs_hba_tegra_vops = {
 	.exit                   = ufs_tegra_exit,
 	.suspend		= ufs_tegra_suspend,
 	.resume			= ufs_tegra_resume,
+	.hce_enable_notify      = ufs_tegra_hce_enable_notify,
 	.link_startup_notify	= ufs_tegra_link_startup_notify,
 	.pwr_change_notify      = ufs_tegra_pwr_change_notify,
 	.hibern8_entry_notify   = ufs_tegra_hibern8_entry_notify,

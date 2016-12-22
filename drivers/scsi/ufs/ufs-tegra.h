@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Authors:
  *      VenkataJagadish.p	<vjagadish@nvidia.com>
@@ -267,6 +267,7 @@ struct ufs_tegra_host {
 	struct clk *mphy_l0_tx_ls_3xbit;
 	struct clk *mphy_l0_rx_ls_bit;
 	struct clk *mphy_l1_rx_ana;
+	struct clk *mphy_force_ls_mode;
 	struct clk *ufshc_parent;
 	struct clk *ufsdev_parent;
 	struct clk *ufshc_clk;

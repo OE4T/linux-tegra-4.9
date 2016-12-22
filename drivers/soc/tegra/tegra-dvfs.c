@@ -37,6 +37,7 @@
 #include <linux/pm_opp.h>
 #include <linux/cpu.h>
 
+#include <soc/tegra/tegra-dfll.h>
 #include <soc/tegra/tegra-dvfs.h>
 
 struct dvfs_rail *tegra_cpu_rail;
@@ -1664,14 +1665,18 @@ static int dvfs_tree_show(struct seq_file *s, void *data)
 		seq_printf(s, "   nominal    %-7d mV\n",
 			   rail->nominal_millivolts);
 
-		if ((rail->therm_floors) &&
-		    (rail->therm_floor_idx < rail->therm_floors_size)) {
+		if (rail->dfll_mode) {
+			therm_mv = tegra_dfll_get_thermal_floor_mv();
+		} else if ((rail->therm_floors) &&
+			   (rail->therm_floor_idx < rail->therm_floors_size)) {
 			therm_mv = rail->therm_floors[rail->therm_floor_idx].mv;
 		}
 		seq_printf(s, "   therm_floor    %-7d mV\n", therm_mv);
 
-		if ((rail->therm_caps) &&
-		    (rail->therm_cap_idx > 0)) {
+		if (rail->dfll_mode) {
+			therm_mv = tegra_dfll_get_thermal_cap_mv();
+		} else if ((rail->therm_caps) &&
+			   (rail->therm_cap_idx > 0)) {
 			therm_mv = rail->therm_caps[rail->therm_cap_idx - 1].mv;
 		}
 		seq_printf(s, "   therm_cap    %-7d mV\n", therm_mv);

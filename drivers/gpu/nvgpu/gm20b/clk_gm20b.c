@@ -378,9 +378,7 @@ static void clk_config_dvfs(struct gk20a *g, struct pll *gpll)
 	struct clk* clk;
 
 	clk = g->clk.tegra_clk;
-#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 	clk = clk_get_parent(clk);
-#endif
 
 	d->mv = tegra_dvfs_predict_mv_at_hz_cur_tfloor(clk,
 			rate_gpc2clk_to_gpu(gpll->freq));
@@ -1324,7 +1322,6 @@ int gm20b_register_gpcclk(struct gk20a *g) {
 	}
 
 	clk->g = g;
-	clk->tegra_clk = c;
 	clk_register_clkdev(c, "gpcclk", "gpcclk");
 
 	return err;

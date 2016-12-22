@@ -325,8 +325,8 @@
                         <&tegra_car TEGRA210_CLK_D_AUDIO>,
                         <&tegra_car TEGRA210_CLK_CLK_M>,
                         <&tegra_car TEGRA210_CLK_EXTERN1>;
-        clock-names = "pll_p_out1", "pll_a", "pll_a_out0", "ahub",
-                       "clk_m", "extern1";
+		clock-names = "pll_p_out1", "pll_a", "pll_a_out0", "ahub",
+			"clk_m", "extern1";
 
 
 		assigned-clocks = <&tegra_car TEGRA210_CLK_PLL_A>,
@@ -341,9 +341,7 @@
 		nvidia,audio-routing =
 			"x Headphone Jack",	"x HPO L Playback",
 			"x Headphone Jack",	"x HPO R Playback",
-			"x MICBIAS1",		"x Mic Jack",
 			"x IN1P",		"x Mic Jack",
-			"x Mic Det Power",	"x Mic Jack",
 			"x Int Spk",		"x SPO Playback",
 			"x DMIC L1",		"x Int Mic",
 			"x DMIC L2",		"x Int Mic",

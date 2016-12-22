@@ -26,13 +26,6 @@
 /* ioctl arg = 1 if you want to use ssk. arg = 0 to use normal key */
 #define TEGRA_CRYPTO_IOCTL_NEED_SSK		_IOWR(0x98, 100, int)
 
-#define TEGRA_CRYPTO_IOCTL_ELP_RSA_REQ	\
-		_IOWR(0x98, 106, struct tegra_se_elp_pka_request)
-#define TEGRA_CRYPTO_IOCTL_ELP_ECC_REQ	\
-		_IOWR(0x98, 107, struct tegra_se_elp_pka_request)
-#define TEGRA_CRYPTO_IOCTL_ELP_RNG_REQ	\
-		_IOWR(0x98, 108, struct tegra_se_elp_rng_request)
-
 #define TEGRA_CRYPTO_MAX_KEY_SIZE	AES_MAX_KEY_SIZE
 #define RSA_KEY_SIZE		512
 #define TEGRA_CRYPTO_IV_SIZE	AES_BLOCK_SIZE
@@ -52,8 +45,19 @@
 #define TEGRA_CRYPTO_OFB	2
 #define TEGRA_CRYPTO_CTR	3
 
-struct tegra_se_elp_rng_request {
-	int size;
+enum tegra_rsa_op_mode {
+	RSA_INIT,
+	RSA_SET_PUB,
+	RSA_SET_PRIV,
+	RSA_ENCRYPT,
+	RSA_DECRYPT,
+	RSA_SIGN,
+	RSA_VERIFY,
+	RSA_EXIT,
+};
+
+struct tegra_se_rng1_request {
+	unsigned int size;
 	u32 *rdata;
 	u32 *rdata1;
 	u32 *rdata2;
@@ -61,21 +65,20 @@ struct tegra_se_elp_rng_request {
 	bool test_full_cmd_flow;
 	bool adv_state_on;
 };
+#define TEGRA_CRYPTO_IOCTL_RNG1_REQ	\
+		_IOWR(0x98, 108, struct tegra_se_rng1_request)
 
-struct tegra_se_elp_pka_request {
-	struct tegra_se_elp_dev *se_dev;	/* Security Engine device */
-	struct tegra_se_slot *slot;	/* Security Engine key slot */
+struct tegra_se_pka1_ecc_request {
+	struct tegra_se_elp_dev *se_dev;/* Security Engine device */
+	struct tegra_se_pka1_slot *slot;/* Security Engine rsa key slot */
 	char *message;
 	char *result;
-	char *exponent;
 	char *modulus;
 	char *m;
 	char *r2;
-	char *rinv;
-	int op_mode;
-	int size;
-	int ecc_type;
-	int rsa_type;
+	unsigned int size;
+	unsigned int op_mode;
+	unsigned int type;
 	char *curve_param_a;
 	char *curve_param_b;
 	char *order;
@@ -86,9 +89,22 @@ struct tegra_se_elp_pka_request {
 	char *key;
 	bool pv_ok;
 };
+#define TEGRA_CRYPTO_IOCTL_PKA1_ECC_REQ	\
+		_IOWR(0x98, 107, struct tegra_se_pka1_ecc_request)
 
-int tegra_se_elp_pka_op(struct tegra_se_elp_pka_request *req);
-int tegra_se_elp_rng_op(struct tegra_se_elp_rng_request *req);
+struct tegra_pka1_rsa_request {
+	char *key;
+	char *message;
+	char *result;
+	unsigned int keylen;
+	unsigned int algo;
+	enum tegra_rsa_op_mode op_mode;
+};
+#define TEGRA_CRYPTO_IOCTL_PKA1_RSA_REQ	\
+		_IOWR(0x98, 106, struct tegra_pka1_rsa_request)
+
+int tegra_se_pka1_ecc_op(struct tegra_se_pka1_ecc_request *req);
+int tegra_se_rng1_op(struct tegra_se_rng1_request *req);
 
 /* a pointer to this struct needs to be passed to:
  * TEGRA_CRYPTO_IOCTL_PROCESS_REQ
@@ -154,17 +170,6 @@ struct tegra_rng_req_32 {
 #define TEGRA_CRYPTO_IOCTL_GET_RANDOM_32	\
 		_IOWR(0x98, 103, struct tegra_rng_req_32)
 #endif
-
-enum tegra_rsa_op_mode {
-	RSA_INIT,
-	RSA_SET_PUB,
-	RSA_SET_PRIV,
-	RSA_ENCRYPT,
-	RSA_DECRYPT,
-	RSA_SIGN,
-	RSA_VERIFY,
-	RSA_EXIT,
-};
 
 struct tegra_rsa_req {
 	char *key;

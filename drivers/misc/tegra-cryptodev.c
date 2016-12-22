@@ -46,12 +46,14 @@
 #define RNG 0
 
 struct tegra_crypto_ctx {
-	struct crypto_ablkcipher *aes_tfm[4]; /*ecb, cbc, ofb, ctr */
-	struct crypto_akcipher *rsa_tfm[4]; /* rsa512, rsa1024,
-					     * rsa1536, rsa2048
-					     */
-	struct crypto_ahash *sha_tfm[6]; /* sha1, sha224, sha256, sha384,
-						sha512, cmac */
+	/*ecb, cbc, ofb, ctr */
+	struct crypto_ablkcipher *aes_tfm[4];
+	/* rsa512, rsa1024, rsa1536, rsa2048 */
+	struct crypto_akcipher *rsa_tfm[4];
+	/* rsa512, rsa768, rsa1024, rsa1536, rsa2048, rsa3072, rsa4096 */
+	struct crypto_akcipher *pka1_rsa_tfm;
+	/* sha1, sha224, sha256, sha384, sha512, cmac */
+	struct crypto_ahash *sha_tfm[6];
 	struct crypto_rng *rng;
 	struct crypto_rng *rng_drbg;
 	u8 seed[TEGRA_CRYPTO_RNG_SEED_SIZE];
@@ -527,6 +529,144 @@ out:
 	return ret;
 }
 
+static int tegra_crypt_pka1_rsa(struct file *filp, struct tegra_crypto_ctx *ctx,
+				struct tegra_pka1_rsa_request *rsa_req)
+{
+	struct crypto_akcipher *tfm = NULL;
+	struct akcipher_request *req;
+	struct scatterlist sg[2];
+	int ret = 0;
+	int len;
+	unsigned long *xbuf[XBUFSIZE];
+	struct tegra_crypto_completion rsa_complete;
+
+	if (rsa_req->op_mode == RSA_INIT) {
+		tfm = crypto_alloc_akcipher("rsa", CRYPTO_ALG_TYPE_AKCIPHER, 0);
+		if (IS_ERR(tfm)) {
+			pr_err("Failed to load transform for rsa: %ld\n",
+				PTR_ERR(tfm));
+			return PTR_ERR(tfm);
+		}
+		ctx->pka1_rsa_tfm = tfm;
+		filp->private_data = ctx;
+
+		return 0;
+	}
+
+	ctx = filp->private_data;
+	tfm =  ctx->pka1_rsa_tfm;
+
+	if (rsa_req->op_mode == RSA_SET_PUB) {
+		if (!(rsa_req->keylen)) {
+			ret = -EINVAL;
+			goto out;
+		}
+
+		ret = crypto_akcipher_set_pub_key(tfm, rsa_req->key,
+						  rsa_req->keylen);
+		if (ret) {
+			pr_err("alg: pka1:rsa: set_pub_key failed\n");
+			goto out;
+		}
+	} else if (rsa_req->op_mode == RSA_SET_PRIV) {
+		if (!(rsa_req->keylen)) {
+			ret = -EINVAL;
+			goto out;
+		}
+
+		ret = crypto_akcipher_set_priv_key(tfm, rsa_req->key,
+						   rsa_req->keylen);
+		if (ret) {
+			pr_err("alg: pka1:rsa: set_priv_key failed\n");
+			goto out;
+		}
+	} else if (rsa_req->op_mode == RSA_ENCRYPT ||
+		   rsa_req->op_mode == RSA_DECRYPT ||
+		   rsa_req->op_mode == RSA_SIGN ||
+		   rsa_req->op_mode == RSA_VERIFY) {
+		req = akcipher_request_alloc(tfm, GFP_KERNEL);
+		if (!req) {
+			pr_err("alg: rsa: Failed to allocate request: %s\n",
+				__func__);
+			ret = -ENOMEM;
+			goto out;
+		}
+
+		ret = alloc_bufs(xbuf);
+		if (ret < 0) {
+			pr_err("alloc_bufs failed");
+			goto buf_fail;
+		}
+
+		init_completion(&rsa_complete.restart);
+		rsa_complete.req_err = 0;
+
+		len = crypto_akcipher_maxsize(tfm);
+		if (len < 0)
+			return -EINVAL;
+
+		ret = copy_from_user((void *)xbuf[0],
+				     (void __user *)rsa_req->message, len);
+		if (ret) {
+			ret = -EFAULT;
+			pr_debug("%s: copy_from_user failed (%d)\n",
+				 __func__, ret);
+			goto copy_fail;
+		}
+
+		sg_init_one(&sg[0], xbuf[0], len);
+		sg_init_one(&sg[1], xbuf[1], len);
+
+		akcipher_request_set_crypt(req, &sg[0], &sg[1], len, len);
+
+		if (rsa_req->op_mode == RSA_ENCRYPT) {
+			ret = crypto_akcipher_encrypt(req);
+			if (ret) {
+				pr_err("alg: pka1:rsa: encrypt failed\n");
+				goto copy_fail;
+			}
+		} else if (rsa_req->op_mode == RSA_DECRYPT) {
+			ret = crypto_akcipher_decrypt(req);
+			if (ret) {
+				pr_err("alg: pka1:rsa: decrypt failed\n");
+				goto copy_fail;
+			}
+		} else if (rsa_req->op_mode == RSA_SIGN) {
+			ret = crypto_akcipher_sign(req);
+			if (ret) {
+				pr_err("alg: pka1:rsa: sign failed\n");
+				goto copy_fail;
+			}
+		} else if (rsa_req->op_mode == RSA_VERIFY) {
+			ret = crypto_akcipher_verify(req);
+			if (ret) {
+				pr_err("alg: pka1:rsa: verification failed\n");
+				goto copy_fail;
+			}
+		}
+
+		ret = copy_to_user((void __user *)rsa_req->result,
+				   (const void *)xbuf[1], len);
+		if (ret) {
+			ret = -EFAULT;
+			pr_err("alg: pka1:rsa: copy_to_user failed (%d)\n",
+				ret);
+		}
+copy_fail:
+		free_bufs(xbuf);
+buf_fail:
+		akcipher_request_free(req);
+	} else if (rsa_req->op_mode == RSA_EXIT) {
+		crypto_free_akcipher(tfm);
+	} else {
+		pr_err("alg: pka1:rsa: invalid rsa operation\n");
+	}
+out:
+	if (ret)
+		crypto_free_akcipher(tfm);
+	return ret;
+}
+
 static int tegra_crypto_sha(struct file *filp, struct tegra_crypto_ctx *ctx,
 				struct tegra_sha_req *sha_req)
 {
@@ -641,9 +781,9 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 {
 	struct tegra_crypto_ctx *ctx = filp->private_data;
 	struct crypto_rng *tfm = NULL;
-	struct tegra_se_elp_pka_request elp_rsa_req;
-	struct tegra_se_elp_pka_request ecc_req;
-	struct tegra_se_elp_rng_request elp_rng_req;
+	struct tegra_pka1_rsa_request pka1_rsa_req;
+	struct tegra_se_pka1_ecc_request pka1_ecc_req;
+	struct tegra_se_rng1_request rng1_req;
 	struct tegra_crypt_req crypt_req;
 	struct tegra_rng_req rng_req;
 	struct tegra_sha_req sha_req;
@@ -909,76 +1049,64 @@ rng_out:
 		ret = tegra_crypt_rsa(filp, ctx, &rsa_req);
 		break;
 
-	case TEGRA_CRYPTO_IOCTL_ELP_RSA_REQ:
-		if (copy_from_user(&elp_rsa_req, (void __user *)arg,
-			sizeof(elp_rsa_req))) {
+	case TEGRA_CRYPTO_IOCTL_PKA1_RSA_REQ:
+		if (copy_from_user(&pka1_rsa_req, (void __user *)arg,
+			sizeof(pka1_rsa_req))) {
+			pr_err("%s: copy_from_user fail(%d) for pka1_rsa_req\n",
+				__func__, ret);
+			return -EFAULT;
+		}
+
+		ret = tegra_crypt_pka1_rsa(filp, ctx, &pka1_rsa_req);
+		break;
+
+	case TEGRA_CRYPTO_IOCTL_PKA1_ECC_REQ:
+		if (copy_from_user(&pka1_ecc_req, (void __user *)arg,
+				   sizeof(pka1_ecc_req))) {
 			ret = -EFAULT;
-			pr_err("%s: copy_from_user fail(%d) for elp_rsa_req\n",
-					__func__, ret);
+			pr_err("%s: copy_from_user fail(%d) for pka1_ecc_req\n",
+				__func__, ret);
 			return ret;
 		}
-
-		ret = tegra_se_elp_pka_op(&elp_rsa_req);
+		ret = tegra_se_pka1_ecc_op(&pka1_ecc_req);
 		if (ret) {
-			pr_debug("\ntegra_se_elp_pka_op failed(%d) for RSA\n",
-				ret);
+			pr_debug("\ntegra_se_pka1_ecc_op failed(%d) for ECC\n",
+				 ret);
 			return ret;
 		}
 
-		ret = copy_to_user((void __user *)arg, &elp_rsa_req,
-					sizeof(elp_rsa_req));
+		ret = copy_to_user((void __user *)arg, &pka1_ecc_req,
+				   sizeof(pka1_ecc_req));
 		if (ret) {
 			ret = -EFAULT;
 			pr_debug("%s: copy_to_user failed (%d)\n", __func__,
-					ret);
+				 ret);
 			return ret;
 		}
 		break;
 
-	case TEGRA_CRYPTO_IOCTL_ELP_ECC_REQ:
-		if (copy_from_user(&ecc_req, (void __user *)arg,
-			sizeof(ecc_req))) {
+	case TEGRA_CRYPTO_IOCTL_RNG1_REQ:
+		if (copy_from_user(&rng1_req, (void __user *)arg,
+				   sizeof(rng1_req))) {
 			ret = -EFAULT;
-			pr_err("%s: copy_from_user fail(%d) for ecc_req\n",
-					__func__, ret);
-			return ret;
-		}
-		ret = tegra_se_elp_pka_op(&ecc_req);
-		if (ret) {
-			pr_debug("\ntegra_se_elp_pka_op failed(%d) for ECC\n",
-					ret);
+			pr_err("%s: copy_from_user fail(%d) for rng1_req\n",
+				__func__, ret);
 			return ret;
 		}
 
-		ret = copy_to_user((void __user *)arg, &ecc_req,
-					sizeof(ecc_req));
+		ret = tegra_se_rng1_op(&rng1_req);
 		if (ret) {
-			ret = -EFAULT;
-			pr_debug("%s: copy_to_user failed (%d)\n", __func__,
-					ret);
-			return ret;
-		}
-		break;
-
-	case TEGRA_CRYPTO_IOCTL_ELP_RNG_REQ:
-		if (copy_from_user(&elp_rng_req, (void __user *)arg,
-			sizeof(elp_rng_req))) {
-			ret = -EFAULT;
-			pr_err("%s: copy_from_user fail(%d) for elp_rng_req\n",
-					__func__, ret);
+			pr_debug("\ntegra_se_rng1_op failed(%d) for RNG1\n",
+				  ret);
 			return ret;
 		}
 
-		ret = tegra_se_elp_rng_op(&elp_rng_req);
-		if (ret) {
-			pr_debug("\ntegra_se_elp_rng_op failed(%d) for RNG1\n", ret);
-			return ret;
-		}
-
-		ret = copy_to_user((void __user *)arg, &elp_rng_req, sizeof(elp_rng_req));
+		ret = copy_to_user((void __user *)arg, &rng1_req,
+				   sizeof(rng1_req));
 		if (ret) {
 			ret = -EFAULT;
-			pr_debug("%s: copy_to_user failed (%d) for elp_rng_req\n", __func__, ret);
+			pr_debug("%s: copy_to_user failed (%d) for rng1_req\n",
+				 __func__, ret);
 			return ret;
 		}
 		break;

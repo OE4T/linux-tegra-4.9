@@ -289,4 +289,45 @@ int camera_common_get_framesync(struct v4l2_subdev *sd,
 int camera_common_focuser_init(struct camera_common_focuser_data *s_data);
 int camera_common_focuser_s_power(struct v4l2_subdev *sd, int on);
 
+/* Regmap / RTCPU I2C driver interface */
+struct tegra_i2c_rtcpu_sensor;
+struct tegra_i2c_rtcpu_config;
+
+struct camera_common_i2c {
+	struct regmap *regmap;
+	struct tegra_i2c_rtcpu_sensor *rt_sensor;
+};
+
+int camera_common_i2c_init(
+	struct camera_common_i2c *sensor,
+	struct i2c_client *client,
+	struct regmap_config *regmap_config,
+	const struct tegra_i2c_rtcpu_config *rtcpu_config);
+
+int camera_common_i2c_aggregate(
+	struct camera_common_i2c *sensor,
+	bool start);
+
+int camera_common_i2c_set_frame_id(
+	struct camera_common_i2c *sensor,
+	int frame_id);
+
+int camera_common_i2c_read_reg8(
+	struct camera_common_i2c *sensor,
+	unsigned int addr,
+	u8 *data,
+	unsigned int count);
+
+int camera_common_i2c_write_reg8(
+	struct camera_common_i2c *sensor,
+	unsigned int addr,
+	const u8 *data,
+	unsigned int count);
+
+int camera_common_i2c_write_table_8(
+	struct camera_common_i2c *sensor,
+	const struct reg_8 table[],
+	const struct reg_8 override_list[],
+	int num_override_regs, u16 wait_ms_addr, u16 end_addr);
+
 #endif /* __camera_common__ */

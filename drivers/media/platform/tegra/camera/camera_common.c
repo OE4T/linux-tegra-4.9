@@ -24,6 +24,7 @@
 #include <soc/tegra/pmc.h>
 #include <trace/events/camera_common.h>
 #include <soc/tegra/chip-id.h>
+#include <soc/tegra/tegra-i2c-rtcpu.h>
 
 #define has_s_op(master, op) \
 	(master->ops && master->ops->op)
@@ -850,3 +851,95 @@ fail:
 	return err;
 }
 EXPORT_SYMBOL_GPL(camera_common_focuser_init);
+
+/*
+ * Regmap / RTCPU I2C driver interface
+ */
+
+int camera_common_i2c_init(
+	struct camera_common_i2c *sensor,
+	struct i2c_client *client,
+	struct regmap_config *regmap_config,
+	const struct tegra_i2c_rtcpu_config *rtcpu_config)
+{
+	sensor->regmap = devm_regmap_init_i2c(client, regmap_config);
+	if (IS_ERR(sensor->regmap)) {
+		dev_err(&client->dev,
+			"regmap init failed: %ld\n", PTR_ERR(sensor->regmap));
+		return -ENODEV;
+	}
+
+	sensor->rt_sensor = tegra_i2c_rtcpu_register_sensor(
+		client, rtcpu_config);
+
+	return 0;
+}
+EXPORT_SYMBOL(camera_common_i2c_init);
+
+int camera_common_i2c_aggregate(
+	struct camera_common_i2c *sensor,
+	bool start)
+{
+	if (sensor->rt_sensor)
+		return tegra_i2c_rtcpu_aggregate(sensor->rt_sensor, start);
+
+	return 0;
+}
+EXPORT_SYMBOL(camera_common_i2c_aggregate);
+
+int camera_common_i2c_set_frame_id(
+	struct camera_common_i2c *sensor,
+	int frame_id)
+{
+	if (sensor->rt_sensor)
+		return tegra_i2c_rtcpu_set_frame_id(
+			sensor->rt_sensor, frame_id);
+
+	return 0;
+}
+EXPORT_SYMBOL(camera_common_i2c_set_frame_id);
+
+int camera_common_i2c_read_reg8(
+	struct camera_common_i2c *sensor,
+	unsigned int addr,
+	u8 *data,
+	unsigned int count)
+{
+	if (sensor->rt_sensor)
+		return tegra_i2c_rtcpu_read_reg8(sensor->rt_sensor,
+			addr, data, count);
+	else
+		return regmap_bulk_read(sensor->regmap, addr, data, count);
+}
+EXPORT_SYMBOL(camera_common_i2c_read_reg8);
+
+int camera_common_i2c_write_reg8(
+	struct camera_common_i2c *sensor,
+	unsigned int addr,
+	const u8 *data,
+	unsigned int count)
+{
+	if (sensor->rt_sensor)
+		return tegra_i2c_rtcpu_write_reg8(sensor->rt_sensor,
+			addr, data, count);
+	else
+		return regmap_bulk_write(sensor->regmap, addr, data, count);
+}
+EXPORT_SYMBOL(camera_common_i2c_write_reg8);
+
+int camera_common_i2c_write_table_8(
+	struct camera_common_i2c *sensor,
+	const struct reg_8 table[],
+	const struct reg_8 override_list[],
+	int num_override_regs, u16 wait_ms_addr, u16 end_addr)
+{
+	if (sensor->rt_sensor)
+		return tegra_i2c_rtcpu_write_table_8(sensor->rt_sensor,
+			table, override_list, num_override_regs,
+			wait_ms_addr, end_addr);
+	else
+		return regmap_util_write_table_8(sensor->regmap,
+			table, override_list, num_override_regs,
+			wait_ms_addr, end_addr);
+}
+EXPORT_SYMBOL(camera_common_i2c_write_table_8);

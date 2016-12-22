@@ -1357,6 +1357,8 @@ static void gk20a_pm_shutdown(struct platform_device *pdev)
 
 	dev_info(&pdev->dev, "shutting down");
 
+	gk20a_driver_start_unload(platform->g);
+
 	/* If GPU is already railgated,
 	 * just prevent more requests, and return */
 	if (platform->is_railgated && platform->is_railgated(&pdev->dev)) {

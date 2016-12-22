@@ -287,7 +287,8 @@ int tegra_alt_asoc_utils_clk_enable(struct tegra_asoc_audio_clock_info *data)
 	int err;
 
 #if defined(CONFIG_COMMON_CLK)
-	reset_control_reset(data->clk_cdev1_rst);
+	if (data->soc > TEGRA_ASOC_UTILS_SOC_TEGRA210)
+		reset_control_reset(data->clk_cdev1_rst);
 #endif
 	err = clk_prepare_enable(data->clk_cdev1);
 	if (err) {

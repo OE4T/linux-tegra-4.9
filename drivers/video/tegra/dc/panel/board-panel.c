@@ -833,7 +833,6 @@ struct device_node *tegra_primary_panel_get_dt_node(
 	struct device_node *np_display = NULL;
 	struct device_node *np_sor = NULL;
 	const char *sor1_output_type;
-
 	if (pdata)
 		dc_out = pdata->default_out;
 
@@ -848,12 +847,12 @@ struct device_node *tegra_primary_panel_get_dt_node(
 							"dp-display");
 				of_node_put(np_sor);
 				of_node_put(np_hdmi);
-				return of_device_is_available(np_display) ?
-							np_display : NULL;
+				if (np_display &&
+					of_device_is_available(np_display))
+					return np_display;
 			}
 		}
 	}
-
 	np_panel =
 		internal_panel_select_by_disp_board_id(pdata);
 	if (np_panel && of_device_is_available(np_panel)) {

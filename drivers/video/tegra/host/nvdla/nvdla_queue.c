@@ -737,6 +737,9 @@ static int nvdla_queue_abort(struct nvhost_queue *queue)
 
 	nvdla_dbg_fn(pdev, "");
 
+	if (list_empty(&queue->tasklist))
+		return 0;
+
 	/* get pm refcount */
 	err = nvhost_module_busy(pdev);
 	if (err) {

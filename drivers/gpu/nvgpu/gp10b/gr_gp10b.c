@@ -2075,6 +2075,18 @@ static int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 		vm = ch->vm;
 	}
 
+	/* skip setting anything if both modes are already set */
+	if (graphics_preempt_mode &&
+	   (graphics_preempt_mode == gr_ctx->graphics_preempt_mode))
+		graphics_preempt_mode = 0;
+
+	if (compute_preempt_mode &&
+	   (compute_preempt_mode == gr_ctx->compute_preempt_mode))
+		compute_preempt_mode = 0;
+
+	if (graphics_preempt_mode == 0 && compute_preempt_mode == 0)
+		return 0;
+
 	if (g->ops.gr.set_ctxsw_preemption_mode) {
 		err = g->ops.gr.set_ctxsw_preemption_mode(g, gr_ctx, vm, class,
 						graphics_preempt_mode, compute_preempt_mode);

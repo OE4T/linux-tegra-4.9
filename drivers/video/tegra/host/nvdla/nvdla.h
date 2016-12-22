@@ -58,6 +58,7 @@
  */
 #define MAX_NUM_NVDLA_PREFENCES		4
 #define MAX_NUM_NVDLA_POSTFENCES	4
+#define MAX_NUM_NVDLA_IN_TASK_STATUS	4
 
 /**
  * keep list of DLA command size here.
@@ -130,8 +131,10 @@ struct nvdla_task {
 	struct nvhost_syncpt *sp;
 	struct nvdla_fence *prefences;
 	struct nvdla_fence *postfences;
+	struct nvdla_status_notify *in_task_status;
 	u32 num_prefences;
 	u32 num_postfences;
+	u32 num_in_task_status;
 	u32 fence;
 	struct kref ref;
 	struct list_head list;

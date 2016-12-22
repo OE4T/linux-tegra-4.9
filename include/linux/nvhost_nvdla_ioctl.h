@@ -142,6 +142,20 @@ struct nvdla_fence {
 	__u32 sem_val;
 };
 
+/**
+ * struct nvdla_status_notify structure for passing status notify information
+ *
+ * @handle		handle to buffer allocated in userspace
+ * @offset		offset in buffer
+ * @status		status
+ *
+ */
+struct nvdla_status_notify {
+	__u32 handle;
+	__u32 offset;
+	__u32 status;
+};
+
 #define NVHOST_NVDLA_IOCTL_MAGIC 'D'
 
 #define NVDLA_IOCTL_PING		\

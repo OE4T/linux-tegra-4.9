@@ -41,9 +41,10 @@
 #define FLCN_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define ALIGNED_DMA(x) ((x >> 8) & 0xffffffff)
 
-#define MAX_NVDLA_TASK_SIZE sizeof(struct nvdla_task) + \
-		(MAX_NUM_NVDLA_PREFENCES + MAX_NUM_NVDLA_POSTFENCES) * \
-		sizeof(struct nvdla_fence)
+#define MAX_NVDLA_TASK_SIZE (sizeof(struct nvdla_task) + 		\
+		((MAX_NUM_NVDLA_PREFENCES + MAX_NUM_NVDLA_POSTFENCES) *	\
+		sizeof(struct nvdla_fence)) +				\
+		((MAX_NUM_NVDLA_IN_TASK_STATUS) * sizeof(struct nvdla_status_notify)))
 
 /**
  * struct nvdla_private per unique FD private data
@@ -170,13 +171,13 @@ fail_to_on:
 }
 
 /* task management API's */
-static int nvdla_get_fences(struct nvdla_ioctl_submit_task *user_task,
+static int nvdla_get_actions(struct nvdla_ioctl_submit_task *user_task,
 			struct nvdla_task *task)
 {
 	int err = 0;
 	struct platform_device *pdev = task->queue->pool->pdev;
 
-	nvdla_dbg_fn(pdev, "copying fences");
+	nvdla_dbg_fn(pdev, "copying actions");
 
 	/* get pre fences */
 	if (copy_from_user(task->prefences,
@@ -184,6 +185,15 @@ static int nvdla_get_fences(struct nvdla_ioctl_submit_task *user_task,
 		(task->num_prefences * sizeof(struct nvdla_fence)))) {
 		err = -EFAULT;
 		nvdla_dbg_err(pdev, "failed to copy prefences");
+		goto fail;
+	}
+
+	/* get input task status */
+	if (copy_from_user(task->in_task_status,
+		(void __user *)user_task->input_task_status,
+		(task->num_in_task_status * sizeof(struct nvdla_status_notify)))) {
+		err = -EFAULT;
+		nvdla_dbg_err(pdev, "failed to copy input task status");
 		goto fail;
 	}
 
@@ -196,7 +206,7 @@ static int nvdla_get_fences(struct nvdla_ioctl_submit_task *user_task,
 		goto fail;
 	}
 
-	nvdla_dbg_info(pdev, "copying fences done");
+	nvdla_dbg_info(pdev, "copying actions done");
 
 fail:
 	return err;
@@ -285,6 +295,7 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 
 	task->num_prefences = local_task->num_prefences;
 	task->num_postfences = local_task->num_postfences;
+	task->num_in_task_status = local_task->num_input_task_status;
 
 	/* assign memory for local pre and post action lists */
 	mem = task;
@@ -292,12 +303,14 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 	task->prefences = mem;
 	mem += task->num_prefences * sizeof(struct nvdla_fence);
 	task->postfences = mem;
+	mem += task->num_postfences * sizeof(struct nvdla_fence);
+	task->in_task_status = mem;
 
 	/* update local fences into task */
-	err = nvdla_get_fences(local_task, task);
+	err = nvdla_get_actions(local_task, task);
 	if (err) {
-		nvdla_dbg_err(pdev, "failed to get fences");
-		goto fail_to_get_fences;
+		nvdla_dbg_err(pdev, "failed to get actions");
+		goto fail_to_get_actions;
 	}
 
 	task->num_addresses = local_task->num_addresses;
@@ -309,7 +322,7 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 
 	return 0;
 
-fail_to_get_fences:
+fail_to_get_actions:
 	kfree(task);
 fail_to_alloc_task:
 	*ptask = NULL;

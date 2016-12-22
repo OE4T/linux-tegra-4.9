@@ -44,10 +44,10 @@
 #define NVDLA_QUEUE_ABORT_TIMEOUT	10000	/* 10 sec */
 #define NVDLA_QUEUE_ABORT_RETRY_PERIOD	500	/* 500 ms */
 
-#define NVDLA_MAX_PREACTION_SIZE (MAX_NUM_NVDLA_PREFENCES * \
-				sizeof(struct dla_action_opcode) + \
-				MAX_NUM_NVDLA_PREFENCES * \
-				sizeof(struct dla_action_semaphore) + \
+#define NVDLA_MAX_PREACTION_SIZE (((MAX_NUM_NVDLA_PREFENCES + MAX_NUM_NVDLA_IN_TASK_STATUS) *	\
+				sizeof(struct dla_action_opcode)) + 				\
+				((MAX_NUM_NVDLA_PREFENCES + MAX_NUM_NVDLA_IN_TASK_STATUS) *	\
+				sizeof(struct dla_action_semaphore)) + 				\
 				sizeof(struct dla_action_opcode))
 
 #define NVDLA_MAX_POSTACTION_SIZE (MAX_NUM_NVDLA_POSTFENCES * \
@@ -141,6 +141,12 @@ static void nvdla_task_free_locked(struct nvdla_task *task)
 			nvhost_buffer_submit_unpin(task->buffers,
 				&task->prefences[i].sem_handle, 1);
 		}
+	}
+
+	for (i = 0; i < task->num_in_task_status; i++) {
+		if (task->in_task_status[i].handle)
+			nvhost_buffer_submit_unpin(task->buffers,
+				&task->in_task_status[i].handle, 1);
 	}
 
 	for (i = 0; i < task->num_postfences; i++) {
@@ -466,7 +472,7 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 	uint16_t preactionlist_of;
 	void *next = NULL;
 	void *mem;
-	int i, pre_cnt = 0;
+	int i, pre_cnt = 0, j;
 
 	/* preaction list offset update */
 	preactionlist_of = task_desc->postactions +
@@ -497,15 +503,28 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 				_opcode, _addr, _val);			\
 	} while (0)
 
-	/* fill all preactions */
-	for (i = 0; i <= task->num_prefences; i++) {
+	for (j = 0; j < task->num_in_task_status; j++) {
+		dma_addr_t dma_addr;
+		size_t dma_size;
 
-		/* update end of action list */
-		if (i == task->num_prefences) {
-			UPDATE_PREACTION(pre_cnt++, PREACTION_TERMINATE,
-						(dma_addr_t)0x0, 0);
-			break;
-		}
+		nvdla_dbg_info(pdev, "i[%d] h[%u] o[%u] status[%d]",
+					j,
+					task->in_task_status[j].handle,
+					task->in_task_status[j].offset,
+					task->in_task_status[j].status);
+
+			if (nvhost_buffer_submit_pin(buffers,
+					&task->in_task_status[j].handle,
+					1, &dma_addr, &dma_size))
+				break;
+
+			UPDATE_PREACTION(pre_cnt++, PREACTION_TASK_STATUS,
+				dma_addr + task->in_task_status[j].offset,
+				task->in_task_status[j].status);
+	}
+
+	/* fill all preactions */
+	for (i = 0; i < task->num_prefences; i++) {
 
 		switch (task->prefences[i].type) {
 		case NVDLA_FENCE_TYPE_SYNC_FD: {
@@ -579,13 +598,18 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 		}
 	}
 
+	/* update end of action list */
+	UPDATE_PREACTION(pre_cnt++, PREACTION_TERMINATE, (dma_addr_t)0x0, 0);
+
 	/* actually update lists data */
 	mem = (char *)task_desc + task_desc->preactions;
 	preactionl = (struct dla_action_list *)mem;
 	preactionl->offset = preactionlist_of;
-	preactionl->size = i * (sizeof(struct dla_action_opcode) +
-			sizeof(struct dla_action_semaphore)) +
-			sizeof(struct dla_action_opcode);
+	preactionl->size = ((i * (sizeof(struct dla_action_opcode) +
+			sizeof(struct dla_action_semaphore))));
+	preactionl->size += ((j * (sizeof(struct dla_action_opcode) +
+			sizeof(struct dla_action_task_status))));
+	preactionl->size += sizeof(struct dla_action_opcode);
 
 	return 0;
 }

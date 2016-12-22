@@ -109,6 +109,7 @@ static const struct cfg_param {
 	{"nvidia,rcv-sel",		TEGRA_PINCONF_PARAM_RCV_SEL},
 	{"nvidia,io-hv",		TEGRA_PINCONF_PARAM_RCV_SEL},
 	{"nvidia,io-high-voltage",	TEGRA_PINCONF_PARAM_E_IO_HV},
+	{"nvidia,loopback",		TEGRA_PINCONF_PARAM_E_IO_HV},
 	{"nvidia,high-speed-mode",	TEGRA_PINCONF_PARAM_HIGH_SPEED_MODE},
 	{"nvidia,schmitt",		TEGRA_PINCONF_PARAM_SCHMITT},
 	{"nvidia,low-power-mode",	TEGRA_PINCONF_PARAM_LOW_POWER_MODE},
@@ -117,6 +118,10 @@ static const struct cfg_param {
 	{"nvidia,slew-rate-falling",	TEGRA_PINCONF_PARAM_SLEW_RATE_FALLING},
 	{"nvidia,slew-rate-rising",	TEGRA_PINCONF_PARAM_SLEW_RATE_RISING},
 	{"nvidia,drive-type",		TEGRA_PINCONF_PARAM_DRIVE_TYPE},
+	{"nvidia,lpdr",			TEGRA_PINCONF_PARAM_LPDR},
+	{"nvidia,pbias-buf",		TEGRA_PINCONF_PARAM_PBIAS_BUF},
+	{"nvidia,preemp",		TEGRA_PINCONF_PARAM_PREEMP},
+	{"nvidia,rfu-in",		TEGRA_PINCONF_PARAM_RFU_IN},
 };
 
 static int tegra_pinctrl_dt_subnode_to_map(struct pinctrl_dev *pctldev,
@@ -526,6 +531,30 @@ static int tegra_pinconf_reg(struct tegra_pmx *pmx,
 		*reg = g->mux_reg;
 		*bit = g->gpio_bit;
 		*width = 1;
+		break;
+	case TEGRA_PINCONF_PARAM_LPDR:
+		*bank = g->mux_bank;
+		*reg = g->mux_reg;
+		*bit = g->lpdr_bit;
+		*width = 1;
+		break;
+	case TEGRA_PINCONF_PARAM_PBIAS_BUF:
+		*bank = g->mux_bank;
+		*reg = g->mux_reg;
+		*bit = g->pbias_buf_bit;
+		*width = 1;
+		break;
+	case TEGRA_PINCONF_PARAM_PREEMP:
+		*bank = g->mux_bank;
+		*reg = g->mux_reg;
+		*bit = g->preemp_bit;
+		*width = 1;
+		break;
+	case TEGRA_PINCONF_PARAM_RFU_IN:
+		*bank = g->mux_bank;
+		*reg = g->mux_reg;
+		*bit = g->rfu_in_bit;
+		*width = 4;
 		break;
 	default:
 		dev_err(pmx->dev, "Invalid config param %04x\n", param);

@@ -2183,9 +2183,9 @@ static int arm_smmu_alloc_init_pud(struct arm_smmu_device *smmu, pgd_t *pgd,
 
 static int arm_smmu_handle_mapping(struct arm_smmu_domain *smmu_domain,
 				   unsigned long iova, phys_addr_t paddr,
-				   size_t size, unsigned long attrs)
+				   size_t size, unsigned long prot)
 {
-	int ret, stage, prot = IOMMU_WRITE | IOMMU_READ;
+	int ret, stage;
 	unsigned long end, iova_orig = iova;
 	phys_addr_t input_mask, output_mask;
 	struct arm_smmu_device *smmu = smmu_domain->smmu;
@@ -2194,12 +2194,6 @@ static int arm_smmu_handle_mapping(struct arm_smmu_domain *smmu_domain,
 	unsigned long flags;
 
 	u64 time_before = 0;
-
-	/* FIXME: follow the upstream prot */
-	if (dma_get_attr(DMA_ATTR_READ_ONLY, (struct dma_attrs *)attrs))
-		prot &= ~IOMMU_WRITE;
-	else if (dma_get_attr(DMA_ATTR_WRITE_ONLY, (struct dma_attrs *)attrs))
-		prot &= ~IOMMU_READ;
 
 	if (cfg->cbar == CBAR_TYPE_S2_TRANS) {
 		stage = 2;
@@ -2224,7 +2218,7 @@ static int arm_smmu_handle_mapping(struct arm_smmu_domain *smmu_domain,
 		return -ERANGE;
 
 	if (test_bit(cfg->cbndx, smmu->context_filter)) {
-		pr_debug("cbndx=%d iova=%pad paddr=%pap size=%zx prot=%x skip=%d\n",
+		pr_debug("cbndx=%d iova=%pad paddr=%pap size=%zx prot=%lx skip=%d\n",
 			 cfg->cbndx, &iova, &paddr, size, prot,
 			 arm_smmu_skip_mapping);
 	}

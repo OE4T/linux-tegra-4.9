@@ -44,7 +44,8 @@
 #define MAX_NVDLA_TASK_SIZE (sizeof(struct nvdla_task) + 		\
 		((MAX_NUM_NVDLA_PREFENCES + MAX_NUM_NVDLA_POSTFENCES) *	\
 		sizeof(struct nvdla_fence)) +				\
-		((MAX_NUM_NVDLA_IN_TASK_STATUS) * sizeof(struct nvdla_status_notify)))
+		((MAX_NUM_NVDLA_IN_TASK_STATUS) * sizeof(struct nvdla_status_notify)) + \
+		((MAX_NUM_NVDLA_OUT_TASK_STATUS) * sizeof(struct nvdla_status_notify)))
 
 /**
  * struct nvdla_private per unique FD private data
@@ -206,6 +207,15 @@ static int nvdla_get_actions(struct nvdla_ioctl_submit_task *user_task,
 		goto fail;
 	}
 
+	/* get output task status */
+	if (copy_from_user(task->out_task_status,
+		(void __user *)user_task->output_task_status,
+		(task->num_out_task_status * sizeof(struct nvdla_status_notify)))) {
+		err = -EFAULT;
+		nvdla_dbg_err(pdev, "failed to copy output task status");
+		goto fail;
+	}
+
 	nvdla_dbg_info(pdev, "copying actions done");
 
 fail:
@@ -296,6 +306,7 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 	task->num_prefences = local_task->num_prefences;
 	task->num_postfences = local_task->num_postfences;
 	task->num_in_task_status = local_task->num_input_task_status;
+	task->num_out_task_status = local_task->num_output_task_status;
 
 	/* assign memory for local pre and post action lists */
 	mem = task;
@@ -305,6 +316,8 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 	task->postfences = mem;
 	mem += task->num_postfences * sizeof(struct nvdla_fence);
 	task->in_task_status = mem;
+	mem += task->num_in_task_status * sizeof(struct nvdla_status_notify);
+	task->out_task_status = mem;
 
 	/* update local fences into task */
 	err = nvdla_get_actions(local_task, task);

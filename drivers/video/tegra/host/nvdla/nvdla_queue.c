@@ -50,10 +50,10 @@
 				sizeof(struct dla_action_semaphore)) + 				\
 				sizeof(struct dla_action_opcode))
 
-#define NVDLA_MAX_POSTACTION_SIZE (MAX_NUM_NVDLA_POSTFENCES * \
-				sizeof(struct dla_action_opcode) + \
-				MAX_NUM_NVDLA_POSTFENCES * \
-				sizeof(struct dla_action_semaphore) + \
+#define NVDLA_MAX_POSTACTION_SIZE (((MAX_NUM_NVDLA_POSTFENCES + MAX_NUM_NVDLA_OUT_TASK_STATUS) *	\
+				sizeof(struct dla_action_opcode)) + 					\
+				((MAX_NUM_NVDLA_POSTFENCES + MAX_NUM_NVDLA_OUT_TASK_STATUS) *		\
+				sizeof(struct dla_action_semaphore)) +					\
 				sizeof(struct dla_action_opcode))
 
 /* task management API's */
@@ -151,11 +151,17 @@ static void nvdla_task_free_locked(struct nvdla_task *task)
 
 	for (i = 0; i < task->num_postfences; i++) {
 		if ((task->postfences[i].type == NVDLA_FENCE_TYPE_SEMAPHORE ||
-	          task->postfences[i].type == NVDLA_FENCE_TYPE_TS_SEMAPHORE) &&
+		  task->postfences[i].type == NVDLA_FENCE_TYPE_TS_SEMAPHORE) &&
 		  task->postfences[i].sem_handle) {
 			nvhost_buffer_submit_unpin(task->buffers,
 				&task->postfences[i].sem_handle, 1);
 		}
+	}
+
+	for (i = 0; i < task->num_out_task_status; i++) {
+		if (task->out_task_status[i].handle)
+			nvhost_buffer_submit_unpin(task->buffers,
+				&task->out_task_status[i].handle, 1);
 	}
 
 	/* update takslist */
@@ -368,58 +374,73 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 	struct dla_action_list *postactionl;
 	struct dla_action_opcode *opcode;
 	uint16_t postactionlist_of;
+	void *next = NULL;
 	void *mem;
-	int i;
+	int i, j, post_cnt = 0;;
 
 	/* update postaction list offset */
 	postactionlist_of = task_desc->postactions +
 		sizeof(struct dla_action_list) + NVDLA_MAX_PREACTION_SIZE;
 
+#define UPDATE_POSTACTION(_index, _opcode, _addr, _val)			\
+	do {								\
+		/* get next postaction base */				\
+		next = (char *)task_desc + postactionlist_of +		\
+		  _index * (sizeof(struct dla_action_opcode) +		\
+			sizeof(struct dla_action_semaphore));		\
+									\
+		/* get base opcode */					\
+		opcode = (struct dla_action_opcode *)next;		\
+									\
+		/* set action type */					\
+		opcode->value = _opcode;				\
+									\
+		/* get actual postaction address */			\
+		postaction = (struct dla_action_semaphore *)		\
+			((char *)opcode +				\
+			sizeof(struct dla_action_opcode));		\
+									\
+		/* update action */					\
+		postaction->address = _addr;				\
+		postaction->value = _val;				\
+		nvdla_dbg_info(pdev, "POST opcode[%d] a[%llu] v[%d]",	\
+				_opcode, _addr, _val);			\
+	} while (0)
+
 	/* fill all postactions */
-	for (i = 0; i < task->num_postfences; i++, postaction++) {
-		void *next = NULL;
-
-		/* get next post action base */
-		next = (char *)task_desc + postactionlist_of +
-		 i * (sizeof(struct dla_action_opcode) +
-			sizeof(struct dla_action_semaphore));
-
-		/* get base opcode */
-		opcode = (struct dla_action_opcode *)next;
-
-		/* update end of list */
-		if (i == task->num_postfences) {
-			opcode->value = POSTACTION_TERMINATE;
-			break;
-		}
-
-		/* set action type */
-		opcode->value = POSTACTION_SEM;
-
-		/* get actual post action mem */
-		postaction = (struct dla_action_semaphore *)
-			((char *)opcode + sizeof(struct dla_action_opcode));
+	for (i = 0; i < task->num_postfences; i++) {
 
 		/* update action */
 		switch (task->postfences[i].type) {
 		case NVDLA_FENCE_TYPE_SYNCPT: {
-			postaction->address = nvhost_syncpt_address(pdev,
-						queue->syncpt_id);
+			UPDATE_POSTACTION(post_cnt++, POSTACTION_SEM,
+				nvhost_syncpt_address(pdev, queue->syncpt_id),
+				0);
 			break;
 		}
 		case NVDLA_FENCE_TYPE_TS_SEMAPHORE: {
+			dma_addr_t dma_addr;
+			size_t dma_size;
+
+			nvdla_dbg_info(pdev, "POSTTS i:%d semh:%u semo:%u v:%d",
+					i,
+					task->postfences[i].sem_handle,
+					task->postfences[i].sem_offset,
+					task->postfences[i].sem_val);
 
 			/* TS SEMAPHORE just has extra memory bytes allocated
 			 * to store TS as compared default semaphore.
 			 * override action/opecode type here.
 			 */
+			if (nvhost_buffer_submit_pin(buffers,
+					&task->postfences[i].sem_handle,
+					1, &dma_addr, &dma_size))
+				break;
 
-			nvdla_dbg_info(pdev, "POST setting TS SEMAPHORE");
-			opcode->value = POSTACTION_TS_SEM;
-
-			/* don't break here and allow to execute semaphore
-			 * action setting
-			 */
+			UPDATE_POSTACTION(post_cnt++, POSTACTION_TS_SEM,
+				dma_addr + task->postfences[i].sem_offset,
+				task->postfences[i].sem_val);
+			break;
 		}
 		case NVDLA_FENCE_TYPE_SEMAPHORE: {
 			dma_addr_t dma_addr;
@@ -436,9 +457,9 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 					1, &dma_addr, &dma_size))
 				break;
 
-			postaction->address = dma_addr +
-					task->postfences[i].sem_offset;
-			postaction->value = task->postfences[i].sem_val;
+			UPDATE_POSTACTION(post_cnt++, POSTACTION_SEM,
+				dma_addr + task->postfences[i].sem_offset,
+				task->postfences[i].sem_val);
 			break;
 		}
 		default:
@@ -448,12 +469,38 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 		}
 	}
 
+	/* fill output task status */
+	for (j = 0; j < task->num_out_task_status; j++) {
+		dma_addr_t dma_addr;
+		size_t dma_size;
+
+		nvdla_dbg_info(pdev, "i[%d] h[%u] o[%u] status[%d]",
+					j,
+					task->out_task_status[j].handle,
+					task->out_task_status[j].offset,
+					task->out_task_status[j].status);
+
+			if (nvhost_buffer_submit_pin(buffers,
+					&task->out_task_status[j].handle,
+					1, &dma_addr, &dma_size))
+				break;
+
+			UPDATE_POSTACTION(post_cnt++, POSTACTION_TASK_STATUS,
+				dma_addr + task->out_task_status[j].offset,
+				task->out_task_status[j].status);
+	}
+
+	/* update end of action list */
+	UPDATE_POSTACTION(post_cnt++, POSTACTION_TERMINATE, (dma_addr_t)0x0, 0);
+
 	mem = (char *)task_desc + task_desc->postactions;
 	postactionl = (struct dla_action_list *)mem;
 	postactionl->offset = postactionlist_of;
-	postactionl->size = i * (sizeof(struct dla_action_opcode) +
-			sizeof(struct dla_action_semaphore)) +
-			sizeof(struct dla_action_opcode);
+	postactionl->size = ((i * (sizeof(struct dla_action_opcode) +
+			sizeof(struct dla_action_semaphore))));
+	postactionl->size += ((j * (sizeof(struct dla_action_opcode) +
+			sizeof(struct dla_action_task_status))));
+	postactionl->size += sizeof(struct dla_action_opcode);
 
 	return 0;
 }

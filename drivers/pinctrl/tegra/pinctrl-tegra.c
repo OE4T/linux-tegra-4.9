@@ -44,6 +44,7 @@ struct tegra_pmx {
 
 	int nbanks;
 	void __iomem **regs;
+	unsigned int *reg_base;
 	struct tegra_prod *prod_list;
 };
 
@@ -876,8 +877,12 @@ int tegra_pinctrl_probe(struct platform_device *pdev,
 		return -ENOMEM;
 	}
 
+	pmx->reg_base = devm_kzalloc(&pdev->dev,
+			pmx->nbanks * sizeof(*pmx->reg_base), GFP_KERNEL);
+
 	for (i = 0; i < pmx->nbanks; i++) {
 		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
+		pmx->reg_base[i] = res->start;
 		pmx->regs[i] = devm_ioremap_resource(&pdev->dev, res);
 		if (IS_ERR(pmx->regs[i]))
 			return PTR_ERR(pmx->regs[i]);
@@ -915,7 +920,6 @@ int tegra_pinctrl_probe(struct platform_device *pdev,
 }
 EXPORT_SYMBOL_GPL(tegra_pinctrl_probe);
 
-
 int tegra_pinctrl_config_prod(struct device *dev, const char *prod_name)
 {
 	int ret;
@@ -934,3 +938,57 @@ int tegra_pinctrl_config_prod(struct device *dev, const char *prod_name)
 	return ret;
 }
 EXPORT_SYMBOL_GPL(tegra_pinctrl_config_prod);
+
+#ifdef	CONFIG_DEBUG_FS
+
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
+
+static int dbg_reg_pinmux_show(struct seq_file *s, void *unused)
+{
+	int i;
+	u32 offset;
+	u32 reg;
+	int bank;
+
+	for (i = 0; i < pmx->soc->ngroups; i++) {
+		if (pmx->soc->groups[i].mux_reg >= 0) {
+			bank = pmx->soc->groups[i].mux_bank;
+			offset = pmx->soc->groups[i].mux_reg;
+		} else if (pmx->soc->groups[i].drv_reg >= 0) {
+			bank = pmx->soc->groups[i].drv_bank;
+			offset = pmx->soc->groups[i].drv_reg;
+		} else {
+			continue;
+		}
+		reg = pmx_readl(pmx, bank, offset);
+		seq_printf(s, "Bank: %d Reg: 0x%08x Val: 0x%08x -> %s\n",
+			bank, pmx->reg_base[bank] + offset, reg,
+			pmx->soc->groups[i].name);
+	}
+	return 0;
+}
+
+static int dbg_reg_pinmux_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_reg_pinmux_show, &inode->i_private);
+}
+
+static const struct file_operations debug_reg_fops = {
+	.open		= dbg_reg_pinmux_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int __init tegra_pinctrl_debuginit(void)
+{
+	if (!pmx)
+		return 0;
+
+	(void) debugfs_create_file("tegra_pinctrl_reg", 0444,
+					NULL, NULL, &debug_reg_fops);
+	return 0;
+}
+late_initcall(tegra_pinctrl_debuginit);
+#endif

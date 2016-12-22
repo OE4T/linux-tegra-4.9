@@ -3,7 +3,7 @@
  *
  * Tegra PVA header
  *
- * Copyright (c) 2016 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -40,18 +40,18 @@ extern const struct file_operations tegra_pva_ctrl_ops;
 #define MAX_PVA_TASK_COUNT	16
 
 /**
- * struct pva_fw - struct to handle the PVA firmware information
+ * @brief		struct to handle the PVA firmware information
  *
- * @hdr:		pointer to the pva_code_hdr struct
- * @size:		firmware file size
- * @booted:		variable to check whether boot completed
- * @ucode_phys:		physical address of dram for ucode image
- * @ucode_mapped:	virtual address of dram for ucode image
- * @priv2_buffer_phys:	physical address of extra memory allocated for ucode
- * @priv2_buffer_mapped:virtual address of extra memory allocated for ucode
- * @priv2_buffer_size:	extra buffer size allocated for ucode
- * @attrs:		dma_attrs struct information
- * @trace_buffer_size:	buffer size for trace log
+ * hdr			pointer to the pva_code_hdr struct
+ * size			firmware file size
+ * booted		variable to check whether boot completed
+ * ucode_phys		physical address of dram for ucode image
+ * ucode_mapped	virtual address of dram for ucode image
+ * priv2_buffer_phys	physical address of extra memory allocated for ucode
+ * priv2_buffer_mapped	virtual address of extra memory allocated for ucode
+ * priv2_buffer_size	extra buffer size allocated for ucode
+ * attrs		dma_attrs struct information
+ * trace_buffer_size	buffer size for trace log
  *
  */
 
@@ -71,16 +71,16 @@ struct pva_fw {
 };
 
 /**
- * struct pva - Driver private data, shared with all applications
+ * @brief		Driver private data, shared with all applications
  *
- * @pdev:			Pointer to the PVA device
- * @pool:			Pointer to Queue table available for the PVA
- * @fw_info:			firmware information struct
- * @irq:			IRQ number obtained on registering the module
- * @mailbox_mutex:		Mutex to avoid concurrent mailbox accesses
- * @mailbox_waitq:		Mailbox waitqueue for response waiters
- * @mailbox_status_regs:	Response is stored into this structure temporarily
- * @mailbox_status:		Status of the mailbox interface
+ * pdev			Pointer to the PVA device
+ * pool			Pointer to Queue table available for the PVA
+ * fw_info		firmware information struct
+ * irq			IRQ number obtained on registering the module
+ * mailbox_mutex	Mutex to avoid concurrent mailbox accesses
+ * mailbox_waitq	Mailbox waitqueue for response waiters
+ * mailbox_status_regs	Response is stored into this structure temporarily
+ * mailbox_status	Status of the mailbox interface
  *
  */
 struct pva {
@@ -97,40 +97,41 @@ struct pva {
 };
 
 /**
- * pva_finalize_poweron() - Finalize the PVA Power-on-Sequence.
- *
- * @pdev:	Pointer to PVA device
- *
- * Return:	0 on Success or negative error code
+ * @brief	Finalize the PVA Power-on-Sequence.
  *
  * This function called from host subsystem driver after the PVA
  * partition has been brought up, clocks enabled and reset deasserted.
  * In production mode, the function needs to wait until the ready  bit
  * within the PVA aperture has been set. After that enable the PVA IRQ.
  * Register the queue priorities on the PVA.
+ *
+ * @param pdev	Pointer to PVA device
+ * @return:	0 on Success or negative error code
+ *
  */
 int pva_finalize_poweron(struct platform_device *pdev);
 
 /**
- * pva_prepare_poweroff() - Prepare PVA poweroff.
- *
- * @pdev:	Pointer to PVA device
- *
- * Return:	0 on Success or negative error code
+ * @brief	Prepare PVA poweroff.
  *
  * This function called from host subsystem driver before turning off
  * the PVA. The function should turn off the PVA IRQ.
+ *
+ * @param pdev	Pointer to PVA device
+ * @return	0 on Success or negative error code
+ *
  */
 int pva_prepare_poweroff(struct platform_device *pdev);
+
 /**
- * pva_register_isr() - Register PVA ISR.
- *
- * @pdev:	Pointer to PVA device
- *
- * Return:	0 on Success or negative error code
+ * @brief	Register PVA ISR.
  *
  * This function called from driver to register the
  * PVA ISR with IRQ.
+ *
+ * @param pdev	Pointer to PVA device
+ * @return	0 on Success or negative error code
+ *
  */
 int pva_register_isr(struct platform_device *dev);
 #endif

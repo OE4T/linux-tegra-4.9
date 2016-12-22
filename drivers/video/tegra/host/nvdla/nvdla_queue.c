@@ -382,6 +382,12 @@ static size_t nvdla_get_task_desc_size(void)
 	return size;
 }
 
+static void nvdla_get_task_desc_memsize(size_t *dma_size, size_t *kmem_size)
+{
+	*dma_size = nvdla_get_task_desc_size();
+	*kmem_size = 0;
+}
+
 static inline u8 *add_opcode(u8 *mem, uint8_t op)
 {
 	struct dla_action_opcode *opcode = (struct dla_action_opcode *)mem;
@@ -889,5 +895,5 @@ done:
 struct nvhost_queue_ops nvdla_queue_ops = {
 	.abort = nvdla_queue_abort,
 	.submit = nvdla_queue_submit,
-	.get_task_size =  nvdla_get_task_desc_size,
+	.get_task_size =  nvdla_get_task_desc_memsize,
 };

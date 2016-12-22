@@ -188,6 +188,13 @@ static size_t pva_task_get_size(void)
 	return size;
 }
 
+
+static void pva_task_get_memsize(size_t *dma_size, size_t *kmem_size)
+{
+	*dma_size = pva_task_get_size();
+	*kmem_size = sizeof(struct pva_submit_task);
+}
+
 static void pva_task_unpin_mem(struct pva_submit_task *task)
 {
 	int i;
@@ -260,18 +267,8 @@ static void pva_task_unpin_mem(struct pva_submit_task *task)
 
 static int pva_task_pin_mem(struct pva_submit_task *task)
 {
-	struct nvhost_queue_task_mem_info task_mem_info;
 	int err;
 	int i;
-
-	/* Allocate memory for the task itself */
-	err = nvhost_queue_alloc_task_memory(task->queue, &task_mem_info);
-	if (err < 0)
-		goto err_alloc_task_buffer;
-
-	task->dma_addr = task_mem_info.dma_addr;
-	task->va = task_mem_info.va;
-	task->pool_index = task_mem_info.pool_index;
 
 #define PIN_MEMORY(dst_name, src_name)					\
 	do {								\
@@ -347,7 +344,6 @@ static int pva_task_pin_mem(struct pva_submit_task *task)
 
 err_map_handle:
 	pva_task_unpin_mem(task);
-err_alloc_task_buffer:
 	return err;
 }
 
@@ -794,38 +790,6 @@ static int pva_task_write(struct pva_submit_task *task, bool atomic)
 	return 0;
 }
 
-/**
- * pva_task_remove() - Release memory allocated for a task
- *
- * @task: Task to be released.
- *
- * This function releases the resources that were allocated for a given task
- * structure. If the pointer is NULL, the function is no-op.
- */
-void pva_task_remove(struct pva_submit_task *task)
-{
-	kfree(task->input_surfaces);
-	kfree(task->output_surfaces);
-	kfree(task->prefences);
-	kfree(task->postfences);
-	kfree(task->input_task_status);
-	kfree(task->output_task_status);
-
-	/* free all spaces for extensions */
-	kfree(task->prefences_ext);
-	kfree(task->postfences_ext);
-	kfree(task->prefences_sema_ext);
-	kfree(task->postfences_sema_ext);
-	kfree(task->input_surfaces_ext);
-	kfree(task->input_surface_rois_ext);
-	kfree(task->output_surfaces_ext);
-	kfree(task->output_surface_rois_ext);
-	kfree(task->input_task_status_ext);
-	kfree(task->output_task_status_ext);
-
-	memset(task, 0, sizeof(*task));
-}
-
 static void pva_task_update(void *priv, int nr_completed)
 {
 	struct pva_submit_task *task = priv;
@@ -844,11 +808,6 @@ static void pva_task_update(void *priv, int nr_completed)
 	mutex_lock(&queue->list_lock);
 	list_del(&task->node);
 	mutex_unlock(&queue->list_lock);
-
-	/* Remove PVA task data structures */
-	pva_task_remove(task);
-
-	kfree(task);
 
 	/* Drop queue reference to allow reusing it */
 	nvhost_queue_put(queue);
@@ -980,7 +939,7 @@ static int pva_queue_submit(struct nvhost_queue *queue, void *args)
 	int i;
 
 	for (i = 0; i < task_header->num_tasks; i++) {
-		struct pva_submit_task *task = task_header->tasks + i;
+		struct pva_submit_task *task = task_header->tasks[i];
 
 		/* First, dump the task that we are submitting */
 		pva_task_dump(task);
@@ -1011,6 +970,6 @@ static int pva_queue_abort(struct nvhost_queue *queue)
 struct nvhost_queue_ops pva_queue_ops = {
 	.abort = pva_queue_abort,
 	.submit = pva_queue_submit,
-	.get_task_size = pva_task_get_size,
+	.get_task_size = pva_task_get_memsize,
 	.dump = pva_queue_dump,
 };

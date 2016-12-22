@@ -53,18 +53,18 @@ struct pva_parameter_ext {
  * operation			task operation
  * timeout			Latest Unix time when the task must complete or
  *				0 if disabled.
- * prefences			Pointer to pre-fence structures
- * postfences			Pointer to post-fence structures
- * input_surfaces		Pointer to input surfaces
+ * prefences			Pre-fence structures
+ * postfences			Post-fence structures
+ * input_surfaces		Input surfaces structures
  * input_scalars		Information for input scalars
  * input_2dpoint		Information for input 2d points
- * input_rois			Pointer to input ROIs
- * output_surfaces		Pointer to output surfaces
+ * input_rois			Input ROIs
+ * output_surfaces		Output surfaces
  * output_scalars		Information for output scalars
  * output_2dpoint		Information for output 2d points
- * output_rois			Pointer to output ROIs
- * input_task_status		Pointer to input status structure
- * output_task_status		Pointer to output status structure
+ * output_rois			Output ROIs
+ * input_task_status		Input status structure
+ * output_task_status		Output status structure
  *
  */
 struct pva_submit_task {
@@ -89,43 +89,43 @@ struct pva_submit_task {
 	u64 timeout;
 
 	/* Data provided by userspace "as is" */
-	struct pva_fence *prefences;
-	struct pva_fence *postfences;
-	struct pva_surface *input_surfaces;
+	struct pva_fence prefences[PVA_MAX_PREFENCES];
+	struct pva_fence postfences[PVA_MAX_POSTFENCES];
+	struct pva_surface input_surfaces[PVA_MAX_INPUT_SURFACES];
 	struct pva_task_parameter input_scalars;
 	struct pva_task_parameter input_2dpoint;
 	struct pva_task_parameter input_rois;
-	struct pva_surface *output_surfaces;
+	struct pva_surface output_surfaces[PVA_MAX_OUTPUT_SURFACES];
 	struct pva_task_parameter output_scalars;
 	struct pva_task_parameter output_2dpoint;
 	struct pva_task_parameter output_rois;
-	struct pva_status_handle *input_task_status;
-	struct pva_status_handle *output_task_status;
+	struct pva_status_handle input_task_status[PVA_MAX_INPUT_STATUS];
+	struct pva_status_handle output_task_status[PVA_MAX_OUTPUT_STATUS];
 
 	/* External data that is added by the KMD */
-	struct pva_parameter_ext *prefences_ext;
-	struct pva_parameter_ext *postfences_ext;
-	struct pva_parameter_ext *prefences_sema_ext;
-	struct pva_parameter_ext *postfences_sema_ext;
-	struct pva_parameter_ext *input_surfaces_ext;
-	struct pva_parameter_ext *input_surface_rois_ext;
+	struct pva_parameter_ext prefences_ext[PVA_MAX_PREFENCES];
+	struct pva_parameter_ext postfences_ext[PVA_MAX_POSTFENCES];
+	struct pva_parameter_ext prefences_sema_ext[PVA_MAX_PREFENCES];
+	struct pva_parameter_ext postfences_sema_ext[PVA_MAX_POSTFENCES];
+	struct pva_parameter_ext input_surfaces_ext[PVA_MAX_INPUT_SURFACES];
 	struct pva_parameter_ext input_scalars_ext;
 	struct pva_parameter_ext input_2dpoint_ext;
 	struct pva_parameter_ext input_rois_ext;
-	struct pva_parameter_ext *output_surfaces_ext;
-	struct pva_parameter_ext *output_surface_rois_ext;
+	struct pva_parameter_ext output_surfaces_ext[PVA_MAX_OUTPUT_SURFACES];
 	struct pva_parameter_ext output_scalars_ext;
 	struct pva_parameter_ext output_2dpoint_ext;
 	struct pva_parameter_ext output_rois_ext;
-	struct pva_parameter_ext *input_task_status_ext;
-	struct pva_parameter_ext *output_task_status_ext;
+	struct pva_parameter_ext input_task_status_ext[PVA_MAX_INPUT_STATUS];
+	struct pva_parameter_ext output_task_status_ext[PVA_MAX_OUTPUT_STATUS];
+	struct pva_parameter_ext
+			input_surface_rois_ext[PVA_MAX_INPUT_SURFACES];
+	struct pva_parameter_ext
+			output_surface_rois_ext[PVA_MAX_OUTPUT_SURFACES];
 };
 
 struct pva_submit_tasks {
-	struct pva_submit_task *tasks;
+	struct pva_submit_task *tasks[PVA_MAX_TASKS];
 	u16 flags;
 	u16 num_tasks;
 };
-
-void pva_task_remove(struct pva_submit_task *task);
 #endif

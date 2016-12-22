@@ -1,7 +1,7 @@
 /*
  * PVA Ioctl Handling for T194
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -32,11 +32,11 @@
 #include "nvhost_acm.h"
 
 /**
- * struct pva_private - Per-fd specific data
+ * @brief pva_private - Per-fd specific data
  *
- * @pdev:		Pointer the pva device
- * @queue:		Pointer the struct nvhost_queue
- * @buffer:		Pointer to the struct nvhost_buffer
+ * pdev		Pointer the pva device
+ * queue	Pointer the struct nvhost_queue
+ * buffer	Pointer to the struct nvhost_buffer
  */
 struct pva_private {
 	struct pva *pva;
@@ -45,15 +45,18 @@ struct pva_private {
 };
 
 /**
- * pva_copy_task() - Copy a single task from userspace to kernel space
- *
- * @ioctl_task: Pointer to a userspace task that is copied to kernel memory
- * @task: Pointer to a task that should be created
+ * @brief	Copy a single task from userspace to kernel space
  *
  * This function copies fields from ioctl_task and performs a deep copy
  * of the task to kernel memory. At the same time, input values shall
  * be validated. This allows using all the fields without manually performing
  * copies of the structure and performing checks later.
+ *
+ * @param ioctl_task	Pointer to a userspace task that is copied
+ *				to kernel memory
+ * @param task		Pointer to a task that should be created
+ * @return		0 on Success or negative error code
+ *
  */
 static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 			 struct pva_submit_task *task)
@@ -87,18 +90,6 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 	task->output_rois		= ioctl_task->output_rois;
 	task->timeout			= ioctl_task->timeout;
 
-#define ALLOC_FIELD(name, num, type)					\
-	do {								\
-		if ((num) == 0) {					\
-			break;						\
-		}							\
-		(name) = kcalloc((num), sizeof(type), GFP_KERNEL);	\
-		if (!(name)) {						\
-			err = -ENOMEM;					\
-			goto err_out;					\
-		}							\
-	} while (0)
-
 #define COPY_FIELD(dst, src, num, type)					\
 	do {								\
 		if ((num) == 0) {					\
@@ -112,40 +103,6 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 		}							\
 	} while (0)
 
-
-	/* Allocate space for all the fields that are needed */
-	ALLOC_FIELD(task->prefences, task->num_prefences, struct pva_fence);
-	ALLOC_FIELD(task->postfences, task->num_postfences, struct pva_fence);
-	ALLOC_FIELD(task->input_surfaces, task->num_input_surfaces,
-			struct pva_surface);
-	ALLOC_FIELD(task->output_surfaces, task->num_output_surfaces,
-			struct pva_surface);
-	ALLOC_FIELD(task->input_task_status, task->num_input_task_status,
-			struct pva_status_handle);
-	ALLOC_FIELD(task->output_task_status, task->num_output_task_status,
-			struct pva_status_handle);
-
-	/* Allocate space for extensions */
-	ALLOC_FIELD(task->prefences_ext, task->num_prefences,
-			struct pva_parameter_ext);
-	ALLOC_FIELD(task->postfences_ext, task->num_postfences,
-			struct pva_parameter_ext);
-	ALLOC_FIELD(task->prefences_sema_ext, task->num_prefences,
-			struct pva_parameter_ext);
-	ALLOC_FIELD(task->postfences_sema_ext, task->num_postfences,
-			struct pva_parameter_ext);
-	ALLOC_FIELD(task->input_surfaces_ext, task->num_input_surfaces,
-			struct pva_parameter_ext);
-	ALLOC_FIELD(task->input_surface_rois_ext, task->num_input_surfaces,
-			struct pva_parameter_ext);
-	ALLOC_FIELD(task->output_surfaces_ext, task->num_output_surfaces,
-			struct pva_parameter_ext);
-	ALLOC_FIELD(task->output_surface_rois_ext, task->num_output_surfaces,
-			struct pva_parameter_ext);
-	ALLOC_FIELD(task->input_task_status_ext, task->num_input_task_status,
-			struct pva_parameter_ext);
-	ALLOC_FIELD(task->output_task_status_ext, task->num_output_task_status,
-			struct pva_parameter_ext);
 
 	/* Copy the fields */
 	COPY_FIELD(task->input_surfaces, ioctl_task->input_surfaces,
@@ -166,26 +123,23 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 			struct pva_status_handle);
 
 #undef COPY_FIELD
-#undef ALLOC_FIELD
-
-	return 0;
 
 err_out:
-	pva_task_remove(task);
-
 	return err;
 }
 
 /**
- * pva_submit() - Submit a task to PVA
- *
- * @priv: PVA Private data
- * @arg: ioctl data
+ * @brief	Submit a task to PVA
  *
  * This function takes the given list of tasks, converts
  * them into kernel internal representation and submits
  * them to the task queue. On success, it populates
  * the post-fence structures in userspace and returns 0.
+ *
+ * @param priv	PVA Private data
+ * @param arg	ioctl data
+ * @return	0 on Success or negative error code
+ *
  */
 static int pva_submit(struct pva_private *priv, void *arg)
 {
@@ -193,12 +147,13 @@ static int pva_submit(struct pva_private *priv, void *arg)
 		(struct pva_ioctl_submit_args *)arg;
 	struct pva_ioctl_submit_task *ioctl_tasks = NULL;
 	struct pva_submit_tasks tasks_header;
-	struct pva_submit_task *tasks = NULL;
+	struct pva_submit_task *task = NULL;
 	int err = 0;
 	int i;
 
-	/* Sanity checks for the task heaader */
+	memset(&tasks_header, 0, sizeof(tasks_header));
 
+	/* Sanity checks for the task heaader */
 	if (ioctl_tasks_header->num_tasks > PVA_MAX_TASKS) {
 		err = -EINVAL;
 		goto err_check_num_tasks;
@@ -217,14 +172,6 @@ static int pva_submit(struct pva_private *priv, void *arg)
 		goto err_alloc_task_mem;
 	}
 
-	/* Allocate space for KMD representation of the tasks */
-	tasks = kcalloc(ioctl_tasks_header->num_tasks, sizeof(*tasks),
-			GFP_KERNEL);
-	if (!tasks) {
-		err = -ENOMEM;
-		goto err_alloc_task_mem;
-	}
-
 	/* Copy the tasks from userspace */
 	err = copy_from_user(ioctl_tasks,
 			(void __user *)ioctl_tasks_header->tasks,
@@ -236,19 +183,35 @@ static int pva_submit(struct pva_private *priv, void *arg)
 
 	/* Go through the tasks and make a KMD representation of them */
 	for (i = 0; i < ioctl_tasks_header->num_tasks; i++) {
-		err = pva_copy_task(ioctl_tasks + i, tasks + i);
-		if (err < 0) {
-			goto err_copy_tasks;
-		}
 
-		tasks[i].pva = priv->pva;
-		tasks[i].queue = priv->queue;
-		tasks[i].buffers = priv->buffers;
+		struct nvhost_queue_task_mem_info task_mem_info;
+
+		/* Allocate memory for the task and dma */
+		err = nvhost_queue_alloc_task_memory(priv->queue,
+							&task_mem_info);
+		task = task_mem_info.kmem_addr;
+		if ((err < 0) || !task)
+			goto err_get_task_buffer;
+
+		memset(task, 0, sizeof(struct pva_submit_task));
+
+		err = pva_copy_task(ioctl_tasks + i, task);
+		if (err < 0)
+			goto err_copy_tasks;
+
+		task->pva = priv->pva;
+		task->queue = priv->queue;
+		task->buffers = priv->buffers;
+
+		task->dma_addr = task_mem_info.dma_addr;
+		task->va = task_mem_info.va;
+		task->pool_index = task_mem_info.pool_index;
+
+		tasks_header.tasks[i] = task;
+		tasks_header.num_tasks += 1;
 	}
 
 	/* Populate header structure */
-	tasks_header.tasks = tasks;
-	tasks_header.num_tasks = ioctl_tasks_header->num_tasks;
 	tasks_header.flags = ioctl_tasks_header->flags;
 
 	/* ..and submit them */
@@ -264,9 +227,10 @@ static int pva_submit(struct pva_private *priv, void *arg)
 				(struct pva_fence __user *)
 				ioctl_tasks[i].postfences;
 
+		task = tasks_header.tasks[i];
 		err = copy_to_user(postfences,
-				tasks[i].postfences, sizeof(struct pva_fence) *
-				tasks[i].num_postfences);
+				task->postfences, sizeof(struct pva_fence) *
+				task->num_postfences);
 		if (err < 0) {
 			nvhost_warn(&priv->pva->pdev->dev,
 					"Failed to copy fences to userspace");
@@ -274,16 +238,17 @@ static int pva_submit(struct pva_private *priv, void *arg)
 	}
 
 	kfree(ioctl_tasks);
-
 	return 0;
 
 err_submit_task:
+err_get_task_buffer:
 err_copy_tasks:
-	for (i = 0; i < ioctl_tasks_header->num_tasks; i++)
-		pva_task_remove(tasks + i);
-
+	for (i = 0; i < tasks_header.num_tasks; i++) {
+		task = tasks_header.tasks[i];
+		/* Release memory that was allocated for the task */
+		nvhost_queue_free_task_memory(task->queue, task->pool_index);
+	}
 err_alloc_task_mem:
-	kfree(tasks);
 	kfree(ioctl_tasks);
 err_check_version:
 err_check_num_tasks:

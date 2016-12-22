@@ -26,6 +26,7 @@ struct nvhost_queue_task_pool;
 /**
  * @brief	Describe a allocated task mem struct
  *
+ * kmem_addr	Address for the task kernel memory
  * dma_addr	Physical address of task memory
  * va		Virtual address of the task memory
  * pool_index	Index to the allocated task memory
@@ -34,22 +35,24 @@ struct nvhost_queue_task_pool;
  * struct that is being shared between kernel and firmware.
  */
 struct nvhost_queue_task_mem_info {
+	void *kmem_addr;
 	dma_addr_t dma_addr;
 	void *va;
 	int pool_index;
 };
 /**
- * @brief	Information needed in a Queue
+ * @brief		Information needed in a Queue
  *
- * pool		pointer queue pool
- * kref		struct kref for reference count
- * syncpt_id	Host1x syncpt id
- * id		Queue id
- * list_lock	mutex for tasks lists control
- * tasklist	Head of tasks list
- * sequence	monotonically incrementing task id per queue
- * task_pool	pointer to struct for task memory pool
- * task_size	memory size needed for a task
+ * pool			pointer queue pool
+ * kref			struct kref for reference count
+ * syncpt_id		Host1x syncpt id
+ * id			Queue id
+ * list_lock		mutex for tasks lists control
+ * tasklist		Head of tasks list
+ * sequence		monotonically incrementing task id per queue
+ * task_pool		pointer to struct for task memory pool
+ * task_dma_size	dma size used in hardware for a task
+ * task_kmem_size	kernel memory size for a task
  *
  */
 struct nvhost_queue {
@@ -61,22 +64,25 @@ struct nvhost_queue {
 	struct list_head tasklist;
 	u32 sequence;
 	struct nvhost_queue_task_pool *task_pool;
-	size_t task_size;
+	size_t task_dma_size;
+	size_t task_kmem_size;
 };
 
 /**
  * @brief	hardware specific queue callbacks
  *
+ * dump			dump the task information
  * abort		abort all tasks from a queue
  * submit		submit the given list of tasks to hardware
- * get_task_size	get the task size needed for the dma memory alloc
+ * get_task_size	get the dma size needed for the task in hw
+ *			and the kernel memory size needed for task.
  *
  */
 struct nvhost_queue_ops {
 	void (*dump)(struct nvhost_queue *queue, struct seq_file *s);
 	int (*abort)(struct nvhost_queue *queue);
 	int (*submit)(struct nvhost_queue *queue, void *task_arg);
-	size_t (*get_task_size)(void);
+	void (*get_task_size)(size_t *dma_size, size_t *kmem_size);
 };
 
 /**

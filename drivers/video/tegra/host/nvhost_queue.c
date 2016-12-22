@@ -32,16 +32,19 @@
  * Array of fixed task memory is allocated during queue_alloc call.
  * The memory will be shared for various task based on availability
  *
- * dma_addr	Physical address of task memory pool
- * va		Virtual address of the task memory pool
- * lock		Mutex lock for the array access.
- * alloc_table	Keep track of the index being assigned and freed for a task
- * max_task_cnt	Maximum task count that can be supported.
+ * dma_addr		Physical address of task memory pool
+ * va			Virtual address of the task memory pool
+ * kmem_addr		Kernel memory for task struct
+ * lock			Mutex lock for the array access.
+ * alloc_table		Keep track of the index being assigned
+ *			and freed for a task
+ * max_task_cnt		Maximum task count that can be supported.
  *
  */
 struct nvhost_queue_task_pool {
 	dma_addr_t dma_addr;
 	void *va;
+	void *kmem_addr;
 	struct mutex lock;
 
 	unsigned long alloc_table;
@@ -59,9 +62,19 @@ static int nvhost_queue_task_pool_alloc(struct platform_device *pdev,
 
 	task_pool = queue->task_pool;
 
+	/* Allocate the kernel memory needed for the task */
+	if (queue->task_kmem_size) {
+		task_pool->kmem_addr = kcalloc(num_tasks,
+					queue->task_kmem_size, GFP_KERNEL);
+		if (!task_pool->kmem_addr) {
+			err = -ENOMEM;
+			goto err_alloc_task_kmem;
+		}
+	}
+
 	/* Allocate memory for the task itself */
 	task_pool->va = dma_alloc_attrs(&pdev->dev,
-				queue->task_size * num_tasks,
+				queue->task_dma_size * num_tasks,
 				&task_pool->dma_addr, GFP_KERNEL,
 				&task_dma_attrs);
 
@@ -76,7 +89,8 @@ static int nvhost_queue_task_pool_alloc(struct platform_device *pdev,
 	return err;
 
 err_alloc_task_pool:
-	kfree(task_pool);
+	kfree(task_pool->kmem_addr);
+err_alloc_task_kmem:
 	return err;
 }
 
@@ -87,9 +101,10 @@ static void nvhost_queue_task_free_pool(struct platform_device *pdev,
 		(struct nvhost_queue_task_pool *)queue->task_pool;
 
 	dma_free_attrs(&pdev->dev,
-			queue->task_size * task_pool->max_task_cnt,
+			queue->task_dma_size * task_pool->max_task_cnt,
 			task_pool->va, task_pool->dma_addr, &task_dma_attrs);
 
+	kfree(task_pool->kmem_addr);
 	task_pool->max_task_cnt = 0;
 	task_pool->alloc_table = 0;
 }
@@ -179,8 +194,8 @@ struct nvhost_queue_pool *nvhost_queue_init(struct platform_device *pdev,
 		queue = &queues[i];
 		queue->id = i;
 		queue->pool = pool;
-		queue->task_size = nvhost_queue_get_task_size(queue);
 		queue->task_pool = (void *)&task_pool[i];
+		nvhost_queue_get_task_size(queue);
 	}
 
 	return pool;
@@ -216,7 +231,7 @@ static void nvhost_queue_release(struct kref *ref)
 	nvhost_syncpt_put_ref_ext(pool->pdev, queue->syncpt_id);
 
 	/* free the task_pool */
-	if (queue->task_size)
+	if (queue->task_dma_size)
 		nvhost_queue_task_free_pool(pool->pdev, queue);
 
 	/* ..and mark the queue free */
@@ -270,7 +285,7 @@ struct nvhost_queue *nvhost_queue_alloc(struct nvhost_queue_pool *pool,
 		goto err_alloc_syncpt;
 	}
 
-	if (queue->task_size) {
+	if (queue->task_dma_size) {
 		err = nvhost_queue_task_pool_alloc(pdev, queue, num_tasks);
 		if (err < 0)
 			goto err_alloc_task_pool;
@@ -323,7 +338,8 @@ int nvhost_queue_get_task_size(struct nvhost_queue *queue)
 	struct nvhost_queue_pool *pool = queue->pool;
 
 	if (pool->ops && pool->ops->get_task_size)
-		return pool->ops->get_task_size();
+		pool->ops->get_task_size(&queue->task_dma_size,
+						&queue->task_kmem_size);
 
 	return 0;
 }
@@ -333,7 +349,7 @@ int nvhost_queue_alloc_task_memory(
 			struct nvhost_queue_task_mem_info *task_mem_info)
 {
 	int err = 0;
-	int index, offset;
+	int index, hw_offset, sw_offset;
 	struct platform_device *pdev = queue->pool->pdev;
 	struct nvhost_queue_task_pool *task_pool =
 		(struct nvhost_queue_task_pool *)queue->task_pool;
@@ -353,9 +369,12 @@ int nvhost_queue_alloc_task_memory(
 
 	/* assign the task array */
 	set_bit(index, &task_pool->alloc_table);
-	offset = index * queue->task_size;
-	task_mem_info->va = task_pool->va + offset;
-	task_mem_info->dma_addr = task_pool->dma_addr + offset;
+	hw_offset = index * queue->task_dma_size;
+	sw_offset = index * queue->task_kmem_size;
+	task_mem_info->kmem_addr =
+			(void *)((u8 *)task_pool->kmem_addr + sw_offset);
+	task_mem_info->va = (void *)((u8 *)task_pool->va + hw_offset);
+	task_mem_info->dma_addr = task_pool->dma_addr + hw_offset;
 	task_mem_info->pool_index = index;
 
 err_alloc_task_mem:

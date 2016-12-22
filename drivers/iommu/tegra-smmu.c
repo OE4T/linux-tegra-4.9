@@ -935,9 +935,9 @@ static int __smmu_iommu_map_pfn_default(struct smmu_as *as, dma_addr_t iova,
 	}
 	(*count)++;
 
-	if (dma_get_attr(DMA_ATTR_READ_ONLY, (struct dma_attrs *)prot))
+	if ((prot & IOMMU_READ) && (!(prot & IOMMU_WRITE)))
 		attrs &= ~_WRITABLE;
-	else if (dma_get_attr(DMA_ATTR_WRITE_ONLY, (struct dma_attrs *)prot))
+	else if ((prot & IOMMU_WRITE) && (!(prot & IOMMU_READ)))
 		attrs &= ~_READABLE;
 
 	*pte = SMMU_PFN_TO_PTE(pfn, attrs);
@@ -978,9 +978,9 @@ static int __smmu_iommu_map_largepage_default(struct smmu_as *as, dma_addr_t iov
 		return -EINVAL;
 	}
 
-	if (dma_get_attr(DMA_ATTR_READ_ONLY, (struct dma_attrs *)prot))
+	if ((prot & IOMMU_READ) && (!(prot & IOMMU_WRITE)))
 		attrs &= ~_WRITABLE;
-	else if (dma_get_attr(DMA_ATTR_WRITE_ONLY, (struct dma_attrs *)prot))
+	else if ((prot & IOMMU_WRITE) && (!(prot & IOMMU_READ)))
 		attrs &= ~_READABLE;
 
 	pdir[pdn] = pa >> SMMU_PDE_SHIFT | attrs;
@@ -1036,9 +1036,9 @@ static int smmu_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
 	size_t sg_remaining = sg_num_pages(sgl);
 	unsigned long sg_pfn = page_to_pfn(sg_page(sgl));
 
-	if (dma_get_attr(DMA_ATTR_READ_ONLY, (struct dma_attrs *)prot))
+	if ((prot & IOMMU_READ) && (!(prot & IOMMU_WRITE)))
 		attrs &= ~_WRITABLE;
-	else if (dma_get_attr(DMA_ATTR_WRITE_ONLY, (struct dma_attrs *)prot))
+	else if ((prot & IOMMU_WRITE) && (!(prot & IOMMU_READ)))
 		attrs &= ~_READABLE;
 
 	while (total > 0) {

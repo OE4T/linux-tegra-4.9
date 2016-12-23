@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/dc_priv.h
+ * dc_priv.h: dc private interface.
  *
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>

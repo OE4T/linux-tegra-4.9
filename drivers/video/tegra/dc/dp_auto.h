@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/dc/dp_auto.h
+ * dp_auto.h: dp auto function definitions.
  *
- * Copyright (c) 2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public

@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/dsi.c
+ * dsi.c: Functions implementing tegra dsi interface.
  *
  * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
  *

@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/dsi_padctrl.h
+ * dsi_padctrl.h: dsi padcontrol function definitions.
  * 
  * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
  *

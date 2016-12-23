@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/dc/tc358770_dsi2edp.h
+ * tc358770_dsi2edp.h: dsi-edp controller tc358770 driver headers.
  *
- * Copyright (c) 2012, NVIDIA Corporation.
+ * Copyright (c) 2012-2017, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and

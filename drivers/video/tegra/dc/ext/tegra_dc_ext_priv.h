@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/ext/tegra_dc_ext_priv.h
+ * tegra_dc_ext_priv.h: Declarations for tegradc ext interface.
  *
  * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
  *

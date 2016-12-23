@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/dc/dc_shared_isr.c
+ * dc_shared_isr.c: dc shared isr function declarations.
  *
- * Copyright (c) 2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and

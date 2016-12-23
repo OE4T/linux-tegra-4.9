@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/dc/hda_dc.c
+ * hda_dc.c: tegra dc hda dc driver.
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  * Author: Rahul Mittal <rmittal@nvidia.com>
  *

@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/dc/dpaux.c
+ * dpaux.c: dpaux function definitions.
  *
- * Copyright (c) 2014 - 2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public

@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/ext/control.c
+ * control.c: tegradc ext control interface.
  *
  * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
  *

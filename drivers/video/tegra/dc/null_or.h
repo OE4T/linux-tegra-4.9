@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/dc/null_or.h
+ * null_or.h: null or interface.
  *
- * Copyright (c) 2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
  * Author: Aron Wong <awong@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public

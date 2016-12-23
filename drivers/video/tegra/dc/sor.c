@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/sor.c
+ * sor.c: Functions implementing tegra dc sor interface.
  *
  * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *

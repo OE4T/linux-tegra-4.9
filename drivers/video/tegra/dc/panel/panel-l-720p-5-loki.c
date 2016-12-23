@@ -1,7 +1,7 @@
 /*
- * arch/arm/mach-tegra/panel-l-720p-5-loki.c
+ * panel-l-720p-5-loki.c: Panel driver for l-720p-5-loki panel.
  *
- * Copyright (c) 2011-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

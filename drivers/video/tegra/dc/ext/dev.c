@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/ext/dev.c
+ * dev.c: Device interface for tegradc ext.
  *
  * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
  *

@@ -1,6 +1,8 @@
 /*
+ * gpio-names.h: Tegra GPIO definitions used by various panel files.
+ *
  * Copyright (c) 2010 Google, Inc
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Erik Gilling <konkers@google.com>

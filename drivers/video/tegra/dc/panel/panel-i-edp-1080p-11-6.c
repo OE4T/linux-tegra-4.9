@@ -1,7 +1,7 @@
 /*
- * arch/arm/mach-tegra/panel-a-1080p-11-6.c
+ * panel-a-1080p-11-6.c: Panel driver for a-1080p-11-6 panel.
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,

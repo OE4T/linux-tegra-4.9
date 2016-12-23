@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/ext/scrncapt.c
+ * scrncapt.c: Screen capture functionality for tegradc ext interface.
  *
  * Copyright (c) 2016-2017, NVIDIA CORPORATION, All rights reserved.
  *

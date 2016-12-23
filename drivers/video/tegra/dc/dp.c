@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/dp.c
+ * dp.c: tegra dp driver.
  *
  * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
  *

@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/fb.c
+ * fb.c: Implements tegra fb interface
  *
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>

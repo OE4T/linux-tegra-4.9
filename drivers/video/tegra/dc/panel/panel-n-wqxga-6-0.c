@@ -1,4 +1,6 @@
 /*
+ * panel-n-wqxga-6-0.c: Panel driver for n-wqxga-6-0 panel.
+ *
  * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it

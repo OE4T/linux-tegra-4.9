@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/hdmivrr.c
+ * hdmivrr.c: hdmi vrr interface.
  *
  * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
  *

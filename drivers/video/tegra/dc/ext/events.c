@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/ext/events.c
+ * events.c: Event and Queue functions for tegradc ext interface.
  *
  * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
  *

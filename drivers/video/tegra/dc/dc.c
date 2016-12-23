@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/dc.c
+ * dc.c: dc driver.
  *
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>

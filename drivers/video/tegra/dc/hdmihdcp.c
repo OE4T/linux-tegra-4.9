@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/hdmihdcp.c
+ * hdmihdcp.c: hdmi hdcp functions.
  *
  * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
  *

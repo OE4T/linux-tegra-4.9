@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/dc/sn65dsi85_dsi2lvds.c
+ * sn65dsi85_dsi2lvds.c: dsi to lvds sn65dsi85 controller driver.
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * Author:
  *	Tow Wang <toww@nvidia.com>

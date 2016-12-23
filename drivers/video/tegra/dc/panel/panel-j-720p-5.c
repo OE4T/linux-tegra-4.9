@@ -1,7 +1,7 @@
 /*
- * arch/arm/mach-tegra/panel-j-720p-5.c
+ * panel-j-720p-5.c: Panel driver for j-720p-5 panel.
  *
- * Copyright (c) 2013-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/dc/lvds.h
+ * lvds.h: tegra lvds data structure definitions.
  *
- * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and

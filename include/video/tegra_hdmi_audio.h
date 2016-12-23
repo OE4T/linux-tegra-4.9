@@ -1,7 +1,7 @@
 /*
- * arch/arm/mach-tegra/include/mach/hdmi-audio.h
+ * hdmi-audio.h: tegra hdmi audio headers.
  *
- * Copyright (c) 2008-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2008-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

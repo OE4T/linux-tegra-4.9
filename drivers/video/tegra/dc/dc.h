@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-tegra/include/mach/dc.h
+ * dc.h: Headers required for tegra dc and dependent modules.
  *
  * Copyright (C) 2010 Google, Inc.
  *

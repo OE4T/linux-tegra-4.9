@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/dc/nvhdcp_hdcp22_methods.h
+ * nvhdcp_hdcp22_methods.h: hdcp 2.2 driver definitions.
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and

@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/dp_auto.c
+ * dp_auto.c: dp auto functions definitions.
  *
  * Copyright (c) 2016-2017, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>

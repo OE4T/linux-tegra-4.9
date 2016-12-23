@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/bandwidth.c
+ * bandwidth.c: Functions required for dc bandwidth calculations.
  *
  * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
  *

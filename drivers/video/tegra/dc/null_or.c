@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/null_or.c
+ * null_or.c: dc null or interface.
  *
  * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
  * Author: Aron Wong <awong@nvidia.com>

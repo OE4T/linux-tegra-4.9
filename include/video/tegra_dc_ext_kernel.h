@@ -1,5 +1,5 @@
 /*
- * video/inclue/tegra_dc_ext_kernel.h
+ * tegra_dc_ext_kernel.h: tegra dc ext kernel module interface.
  *
  * Copyright (c) 2016-2017, NVIDIA CORPORATION, All rights reserved.
  *

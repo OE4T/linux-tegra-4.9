@@ -1,4 +1,6 @@
 /*
+ * tegra_dc_ext.h: tegra dc ext interface.
+ *
  * Copyright (C) 2011-2017, NVIDIA Corporation. All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>

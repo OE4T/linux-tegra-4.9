@@ -1,9 +1,9 @@
 /*
- * drivers/video/tegra/dc/clock.c
+ * clock.c: Functions required for internal dc clock utility.
  *
  * Copyright (C) 2010 Google, Inc.
  *
- * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and

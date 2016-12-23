@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/dsi_padctrl.c
+ * dsi_padctrl.c: dsi padcontrol driver.
  *
  * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
  *

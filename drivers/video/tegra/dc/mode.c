@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/mode.c
+ * mode.c: dc and fb mode functions.
  *
  * Copyright (C) 2010 Google, Inc.
  *

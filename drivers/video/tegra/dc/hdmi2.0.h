@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/dc/hdmi2.0.h
+ * hdmi2.0.h: hdmi2.0 driver.
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public

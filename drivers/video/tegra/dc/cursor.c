@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/dc/cursor.c
+ * cursor.c: Function required to implement cursor interface.
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * Author:
  *  Robert Morell <rmorell@nvidia.com>

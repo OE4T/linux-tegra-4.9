@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/dc/max929x_hdmi2gmsl.c
+ * max929x_hdmi2gmsl.c: hdmi max929x controller driver.
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Tow Wang <toww@nvidia.com>

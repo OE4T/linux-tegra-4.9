@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/dc/edid_quirks.c
+ * edid_quirks.c: edid specific exceptions.
  *
- * Copyright (c) 2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
  * Author: Anshuman Nath Kar <anshumank@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public

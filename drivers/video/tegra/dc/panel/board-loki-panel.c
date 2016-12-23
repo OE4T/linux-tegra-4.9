@@ -1,7 +1,7 @@
 /*
- * arch/arm/mach-tegra/board-loki-panel.c
+ * board-loki-panel.c: General loki panel related functions.
  *
- * Copyright (c) 2011-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

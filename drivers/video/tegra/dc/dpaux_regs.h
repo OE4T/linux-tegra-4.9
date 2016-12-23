@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/dc/dpaux_regs.h
+ * dpaux_regs.h: dp aux register definitions.
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and

@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/lut.c
+ * lut.c: tegra dc lut functions.
  *
  * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
  *

@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/dc/hpd.h
+ * hpd.h: hotplug detection declarations.
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public

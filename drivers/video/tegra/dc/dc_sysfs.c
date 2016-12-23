@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/dc_sysfs.c
+ * dc_sysfs.c: dc driver sysfs interface.
  *
  * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
  *

@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/window.c
+ * window.c: tegra dc window interface.
  *
  * Copyright (C) 2010 Google, Inc.
  *

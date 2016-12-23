@@ -1109,6 +1109,21 @@
 				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
 			};
 		};
+
+		pex_io_dpd_disable_state: pex_en {
+			pex-io-dpd-signals-dis {
+				pins = "pex-bias", "pex-clk1", "pex-clk2";
+				low-power-disable;
+			};
+		};
+
+		pex_io_dpd_enable_state: pex_dis {
+			pex-io-dpd-signals-en {
+				pins = "pex-bias", "pex-clk1", "pex-clk2";
+				low-power-enable;
+			};
+		};
+
 	};
 
 	adma: adma@702e2000 {
@@ -1614,9 +1629,12 @@
 		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_PCIE_P(0)>;
 		phy-names = "pcie-phy";
 
-		pinctrl-names = "clkreq-0-bi-dir-enable", "clkreq-1-bi-dir-enable";
+		pinctrl-names = "clkreq-0-bi-dir-enable", "clkreq-1-bi-dir-enable",
+						"pex-io-dpd-dis", "pex-io-dpd-en";
 		pinctrl-0 = <&clkreq_0_bi_dir_state>;
 		pinctrl-1 = <&clkreq_1_bi_dir_state>;
+		pinctrl-2 = <&pex_io_dpd_disable_state>;
+		pinctrl-3 = <&pex_io_dpd_enable_state>;
 
 		bus-range = <0x00 0xff>;
 		#address-cells = <3>;

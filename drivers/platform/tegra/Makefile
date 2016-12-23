@@ -36,7 +36,7 @@ obj-$(CONFIG_ARCH_TEGRA_21x_SOC)	+= tegra21-pmc-iopower.o
 endif
 obj-$(CONFIG_PM) += pm.o
 
-obj-$(CONFIG_TEGRA_MC_DOMAINS) += pm_domains.o
+obj-y += pm_domains.o
 
 obj-$(CONFIG_TEGRA_WAKEUP_MONITOR)      += tegra_wakeup_monitor.o
 

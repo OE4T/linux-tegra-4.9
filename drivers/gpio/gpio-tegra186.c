@@ -1,7 +1,7 @@
 /*
  * GPIO driver for NVIDIA Tegra186
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Suresh Mangipudi <smangipudi@nvidia.com>
  *
@@ -29,6 +29,7 @@
 #include <linux/irqchip/tegra.h>
 #include <linux/version.h>
 #include <dt-bindings/gpio/tegra186-gpio.h>
+#include <dt-bindings/gpio/tegra194-gpio.h>
 
 /* GPIO control registers */
 #define GPIO_ENB_CONFIG_REG			0x00
@@ -347,6 +348,65 @@ static struct tegra_gpio_port_soc_info tegra_aon_gpio_cinfo[] = {
 	TEGRA_AON_GPIO_PORT_INFO(AA, 0, 6, 8),
 	TEGRA_AON_GPIO_PORT_INFO(EE, 0, 3, 3),
 	TEGRA_AON_GPIO_PORT_INFO(FF, 0, 0, 5),
+};
+
+#define TEGRA194_MAIN_GPIO_PORT_INFO(port, cid, cind, npins)	\
+[TEGRA194_MAIN_GPIO_PORT_##port] = {				\
+		.port_name = #port,				\
+		.cont_id = cid,					\
+		.port_index = cind,				\
+		.valid_pins = npins,				\
+		.reg_index = 0,					\
+		.scr_offset = cid * 0x1000 + cind * 0x40,	\
+		.reg_offset = cid * 0x1000 + cind * 0x200,	\
+}
+
+#define TEGRA194_AON_GPIO_PORT_INFO(port, cid, cind, npins)	\
+[TEGRA194_AON_GPIO_PORT_##port] = {				\
+		.port_name = #port,				\
+		.cont_id = cid,					\
+		.port_index = cind,				\
+		.valid_pins = npins,				\
+		.reg_index = 1,					\
+		.scr_offset = cind * 0x40,			\
+		.reg_offset = cind * 0x200,			\
+}
+
+static struct tegra_gpio_port_soc_info tegra194_gpio_cinfo[] = {
+	TEGRA194_MAIN_GPIO_PORT_INFO(A, 0, 3, 8),
+	TEGRA194_MAIN_GPIO_PORT_INFO(B, 0, 4, 2),
+	TEGRA194_MAIN_GPIO_PORT_INFO(C, 4, 3, 8),
+	TEGRA194_MAIN_GPIO_PORT_INFO(D, 4, 4, 4),
+	TEGRA194_MAIN_GPIO_PORT_INFO(E, 4, 5, 4),
+	TEGRA194_MAIN_GPIO_PORT_INFO(F, 4, 6, 6),
+	TEGRA194_MAIN_GPIO_PORT_INFO(G, 4, 0, 8),
+	TEGRA194_MAIN_GPIO_PORT_INFO(H, 4, 1, 8),
+	TEGRA194_MAIN_GPIO_PORT_INFO(I, 4, 2, 5),
+	TEGRA194_MAIN_GPIO_PORT_INFO(J, 5, 1, 6),
+	TEGRA194_MAIN_GPIO_PORT_INFO(K, 3, 0, 8),
+	TEGRA194_MAIN_GPIO_PORT_INFO(L, 3, 1, 8),
+	TEGRA194_MAIN_GPIO_PORT_INFO(M, 2, 3, 8),
+	TEGRA194_MAIN_GPIO_PORT_INFO(N, 2, 4, 3),
+	TEGRA194_MAIN_GPIO_PORT_INFO(O, 5, 0, 6),
+	TEGRA194_MAIN_GPIO_PORT_INFO(P, 0, 0, 8),
+	TEGRA194_MAIN_GPIO_PORT_INFO(Q, 0, 1, 8),
+	TEGRA194_MAIN_GPIO_PORT_INFO(R, 0, 2, 6),
+	TEGRA194_MAIN_GPIO_PORT_INFO(S, 3, 2, 8),
+	TEGRA194_MAIN_GPIO_PORT_INFO(T, 3, 3, 8),
+	TEGRA194_MAIN_GPIO_PORT_INFO(U, 3, 4, 1),
+	TEGRA194_MAIN_GPIO_PORT_INFO(V, 1, 0, 8),
+	TEGRA194_MAIN_GPIO_PORT_INFO(W, 1, 1, 2),
+	TEGRA194_MAIN_GPIO_PORT_INFO(X, 2, 0, 8),
+	TEGRA194_MAIN_GPIO_PORT_INFO(Y, 2, 1, 8),
+	TEGRA194_MAIN_GPIO_PORT_INFO(Z, 2, 2, 8),
+};
+
+static struct tegra_gpio_port_soc_info tegra194_aon_gpio_cinfo[] = {
+	TEGRA194_AON_GPIO_PORT_INFO(AA, 0, 3, 8),
+	TEGRA194_AON_GPIO_PORT_INFO(BB, 0, 4, 4),
+	TEGRA194_AON_GPIO_PORT_INFO(CC, 0, 1, 8),
+	TEGRA194_AON_GPIO_PORT_INFO(DD, 0, 2, 3),
+	TEGRA194_AON_GPIO_PORT_INFO(EE, 0, 0, 7),
 };
 
 struct tegra_gpio_info;
@@ -937,9 +997,25 @@ static const struct tegra_gpio_soc_info t186_aon_gpio_soc = {
 	.nwakes = ARRAY_SIZE(tegra186_aon_gpio_wakes),
 };
 
+static const struct tegra_gpio_soc_info t194_gpio_soc = {
+	.name = "tegra-gpio",
+	.debug_fs_name = "tegra_gpio",
+	.port = tegra194_gpio_cinfo,
+	.nports = ARRAY_SIZE(tegra194_gpio_cinfo),
+};
+
+static const struct tegra_gpio_soc_info t194_aon_gpio_soc = {
+	.name = "tegra-gpio-aon",
+	.debug_fs_name = "tegra-gpio-aon",
+	.port = tegra194_aon_gpio_cinfo,
+	.nports = ARRAY_SIZE(tegra194_aon_gpio_cinfo),
+};
+
 static struct of_device_id tegra_gpio_of_match[] = {
 	{ .compatible = "nvidia,tegra186-gpio", .data = &t186_gpio_soc},
 	{ .compatible = "nvidia,tegra186-gpio-aon", .data = &t186_aon_gpio_soc},
+	{ .compatible = "nvidia,tegra194-gpio", .data = &t194_gpio_soc},
+	{ .compatible = "nvidia,tegra194-gpio-aon", .data = &t194_aon_gpio_soc},
 	{ },
 };
 

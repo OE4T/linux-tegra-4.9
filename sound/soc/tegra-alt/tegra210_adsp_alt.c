@@ -1070,21 +1070,23 @@ static status_t tegra210_adsp_msg_handler(uint32_t msg, void *data)
 	}
 	break;
 	case apm_cmd_raw_data_ready: {
-		apm_raw_data_msg_t *msg = kzalloc(sizeof(apm_raw_data_msg_t), GFP_ATOMIC);
-		if (!msg) {
+		apm_raw_data_msg_t *raw_msg =
+			kzalloc(sizeof(apm_raw_data_msg_t), GFP_ATOMIC);
+		if (!raw_msg) {
 			ret = -ENOMEM;
 			break;
 		}
 
-		ret = tegra210_adsp_get_raw_data_msg(app->apm, msg);
+		ret = tegra210_adsp_get_raw_data_msg(app->apm, raw_msg);
 		if (ret < 0) {
 			pr_err("Dequeue failed %d.", ret);
-			kfree(msg);
+			kfree(raw_msg);
 			break;
 		}
-		memcpy(app->read_data.data, msg->msg.fx_raw_data_params.data,
+		memcpy(app->read_data.data,
+				raw_msg->msg.fx_raw_data_params.data,
 				sizeof(app->read_data.data));
-		kfree(msg);
+		kfree(raw_msg);
 		complete(app->msg_complete);
 	}
 	break;
@@ -3407,6 +3409,13 @@ static int tegra210_adsp_tlv_callback(struct snd_kcontrol *kcontrol,
 		}
 
 		call_params = (nvfx_call_params_t *)tlv_data;
+		if (call_params->size <= 0 ||
+			(call_params->size >
+			sizeof(apm_msg->msg.fx_raw_data_params.data))) {
+			ret = -EINVAL;
+			devm_kfree(adsp->dev, apm_msg);
+			goto end;
+		}
 
 		memcpy(&apm_msg->msg.fx_raw_data_params.data,
 			call_params, call_params->size);

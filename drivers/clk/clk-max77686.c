@@ -105,6 +105,7 @@ max77686_hw_clk_info max77620_hw_clks_info[MAX77620_CLKS_NUM] = {
 		.name = "32khz_out0",
 		.clk_reg = MAX77620_REG_CNFG1_32K,
 		.clk_enable_mask = MAX77620_CNFG1_32K_OUT0_EN,
+		.flags = CLK_IGNORE_UNUSED,
 	},
 };
 

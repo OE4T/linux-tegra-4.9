@@ -14,6 +14,31 @@
  */
 
 / {
+
+	aconnect@2a41000 {
+		compatible = "nvidia,tegra210-aconnect";
+		clocks = <&tegra_car TEGRA186_CLK_APE>,
+			 <&tegra_car TEGRA186_CLK_APB2APE>;
+		clock-names = "ape", "apb2ape";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0x02a41000 0x0 0x02a41000 0x4000>;
+		status = "okay";
+
+		agic: agic@2a41000 {
+			compatible = "nvidia,tegra210-agic";
+			#interrupt-cells = <3>;
+			interrupt-controller;
+			reg = <0x02a41000 0x1000>,
+			      <0x02a42000 0x2000>;
+			interrupts = <GIC_SPI 145 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_HIGH)>;
+			clocks = <&tegra_car TEGRA186_CLK_APE>;
+			clock-names = "clk";
+			status = "okay";
+		};
+
+	};
+
 	reserved-memory {
 		generic_carveout {
 			size = <0x0 0x30000000>; /* 1GB generic carveout */

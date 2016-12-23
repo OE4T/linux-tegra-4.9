@@ -197,6 +197,7 @@ struct tegra_xusb {
 	unsigned int num_phys;
 
 	/* Firmware loading related */
+	bool fw_loaded;
 	struct {
 		size_t size;
 		void *virt;
@@ -771,35 +772,13 @@ static int tegra_xusb_load_firmware(struct tegra_xusb *tegra)
 	unsigned int code_tag_blocks, code_size_blocks, code_blocks;
 	struct tegra_xusb_fw_header *header;
 	struct device *dev = tegra->dev;
-	const struct firmware *fw;
 	unsigned long timeout;
 	time_t timestamp;
 	struct tm time;
 	u64 address;
 	u32 value;
-	int err;
-
-	err = request_firmware(&fw, tegra->soc->firmware, tegra->dev);
-	if (err < 0) {
-		dev_err(tegra->dev, "failed to request firmware: %d\n", err);
-		return err;
-	}
-
-	/* Load Falcon controller with its firmware. */
-	header = (struct tegra_xusb_fw_header *)fw->data;
-	tegra->fw.size = le32_to_cpu(header->fwimg_len);
-
-	tegra->fw.virt = dma_alloc_coherent(tegra->dev, tegra->fw.size,
-					    &tegra->fw.phys, GFP_KERNEL);
-	if (!tegra->fw.virt) {
-		dev_err(tegra->dev, "failed to allocate memory for firmware\n");
-		release_firmware(fw);
-		return -ENOMEM;
-	}
 
 	header = (struct tegra_xusb_fw_header *)tegra->fw.virt;
-	memcpy(tegra->fw.virt, fw->data, tegra->fw.size);
-	release_firmware(fw);
 
 	if (csb_readl(tegra, XUSB_CSB_MP_ILOAD_BASE_LO) != 0) {
 		dev_info(dev, "Firmware already loaded, Falcon state %#x\n",
@@ -888,12 +867,133 @@ static int tegra_xusb_load_firmware(struct tegra_xusb *tegra)
 	return 0;
 }
 
+static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
+{
+	struct tegra_xusb *tegra = context;
+	struct device *dev = tegra->dev;
+	struct platform_device *pdev = to_platform_device(dev);
+	struct xhci_hcd *xhci = NULL;
+	struct tegra_xusb_fw_header *header;
+	struct tegra_xusb_mbox_msg msg;
+	struct resource *regs;
+	int ret;
+
+	if (!fw) {
+		dev_err(dev, "cannot find firmware\n");
+		return;
+	}
+
+	/* Load Falcon controller with its firmware. */
+	header = (struct tegra_xusb_fw_header *)fw->data;
+	tegra->fw.size = le32_to_cpu(header->fwimg_len);
+
+	tegra->fw.virt = dma_alloc_coherent(tegra->dev, tegra->fw.size,
+					    &tegra->fw.phys, GFP_KERNEL);
+	if (!tegra->fw.virt) {
+		dev_err(tegra->dev, "failed to allocate memory for firmware\n");
+		release_firmware(fw);
+		return;
+	}
+
+	memcpy(tegra->fw.virt, fw->data, tegra->fw.size);
+	release_firmware(fw);
+
+	ret = tegra_xusb_load_firmware(tegra);
+	if (ret < 0) {
+		dev_err(dev, "can't load firmware (%d)\n", ret);
+		return;
+	}
+
+	tegra->hcd = usb_create_hcd(&tegra_xhci_hc_driver, dev, dev_name(dev));
+	if (!tegra->hcd) {
+		dev_err(dev, "failed to create shared HCD\n");
+		return;
+	}
+
+	/*
+	 * This must happen after usb_create_hcd(), because usb_create_hcd()
+	 * will overwrite the drvdata of the device with the hcd it creates.
+	 */
+	platform_set_drvdata(pdev, tegra);
+
+	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	tegra->hcd->regs = tegra->regs;
+	tegra->hcd->rsrc_start = regs->start;
+	tegra->hcd->rsrc_len = resource_size(regs);
+
+	ret = usb_add_hcd(tegra->hcd, tegra->xhci_irq, IRQF_SHARED);
+	if (ret < 0) {
+		dev_err(dev, "failed to add main HCD: %d\n", ret);
+		goto put_usb2;
+	}
+
+	device_wakeup_enable(tegra->hcd->self.controller);
+
+	xhci = hcd_to_xhci(tegra->hcd);
+
+	xhci->shared_hcd = usb_create_shared_hcd(&tegra_xhci_hc_driver,
+						 dev,
+						 dev_name(dev),
+						 tegra->hcd);
+	if (!xhci->shared_hcd) {
+		dev_err(dev, "failed to create shared HCD\n");
+		goto remove_usb2;
+	}
+
+	ret = usb_add_hcd(xhci->shared_hcd, tegra->xhci_irq, IRQF_SHARED);
+	if (ret < 0) {
+		dev_err(dev, "failed to add shared HCD: %d\n", ret);
+		goto put_usb3;
+	}
+
+	/* Enable wake for both USB2.0 and USB3.0 hub */
+	device_init_wakeup(&tegra->hcd->self.root_hub->dev, true);
+	device_init_wakeup(&xhci->shared_hcd->self.root_hub->dev, true);
+
+	mutex_lock(&tegra->lock);
+
+	/* Enable firmware messages from controller. */
+	msg.cmd = MBOX_CMD_MSG_ENABLED;
+	msg.data = 0;
+
+	ret = tegra_xusb_mbox_send(tegra, &msg);
+	if (ret < 0) {
+		dev_err(dev, "failed to enable messages: %d\n", ret);
+		mutex_unlock(&tegra->lock);
+		goto remove_usb3;
+	}
+
+	mutex_unlock(&tegra->lock);
+
+	ret = devm_request_threaded_irq(dev, tegra->mbox_irq,
+					tegra_xusb_mbox_irq,
+					tegra_xusb_mbox_thread, 0,
+					dev_name(dev), tegra);
+	if (ret < 0) {
+		dev_err(dev, "failed to request IRQ: %d\n", ret);
+		goto remove_usb3;
+	}
+
+	tegra->fw_loaded = true;
+
+	return;
+
+	/* Free up as much as we can and wait to be unbound. */
+remove_usb3:
+	usb_remove_hcd(xhci->shared_hcd);
+put_usb3:
+	usb_put_hcd(xhci->shared_hcd);
+remove_usb2:
+	usb_remove_hcd(tegra->hcd);
+put_usb2:
+	usb_put_hcd(tegra->hcd);
+	tegra->hcd = NULL;
+}
+
 static int tegra_xusb_probe(struct platform_device *pdev)
 {
-	struct tegra_xusb_mbox_msg msg;
 	struct resource *res, *regs;
 	struct tegra_xusb *tegra;
-	struct xhci_hcd *xhci;
 	unsigned int i, j, k;
 	struct phy *phy;
 	int err;
@@ -907,6 +1007,7 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 	tegra->soc = of_device_get_match_data(&pdev->dev);
 	mutex_init(&tegra->lock);
 	tegra->dev = &pdev->dev;
+	platform_set_drvdata(pdev, tegra);
 
 	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	tegra->regs = devm_ioremap_resource(&pdev->dev, regs);
@@ -1067,89 +1168,17 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 
 	tegra_xusb_config(tegra, regs);
 
-	err = tegra_xusb_load_firmware(tegra);
+	err = request_firmware_nowait(THIS_MODULE, true,
+				      tegra->soc->firmware,
+				      tegra->dev, GFP_KERNEL, tegra,
+				      tegra_xusb_probe_finish);
 	if (err < 0) {
-		dev_err(&pdev->dev, "failed to load firmware: %d\n", err);
+		dev_err(&pdev->dev, "can't request firmware(%d)\n", err);
 		goto disable_phy;
-	}
-
-	tegra->hcd = usb_create_hcd(&tegra_xhci_hc_driver, &pdev->dev,
-				    dev_name(&pdev->dev));
-	if (!tegra->hcd) {
-		err = -ENOMEM;
-		goto disable_phy;
-	}
-
-	/*
-	 * This must happen after usb_create_hcd(), because usb_create_hcd()
-	 * will overwrite the drvdata of the device with the hcd it creates.
-	 */
-	platform_set_drvdata(pdev, tegra);
-
-	tegra->hcd->regs = tegra->regs;
-	tegra->hcd->rsrc_start = regs->start;
-	tegra->hcd->rsrc_len = resource_size(regs);
-
-	err = usb_add_hcd(tegra->hcd, tegra->xhci_irq, IRQF_SHARED);
-	if (err < 0) {
-		dev_err(&pdev->dev, "failed to add USB HCD: %d\n", err);
-		goto put_usb2;
-	}
-
-	device_wakeup_enable(tegra->hcd->self.controller);
-
-	xhci = hcd_to_xhci(tegra->hcd);
-
-	xhci->shared_hcd = usb_create_shared_hcd(&tegra_xhci_hc_driver,
-						 &pdev->dev,
-						 dev_name(&pdev->dev),
-						 tegra->hcd);
-	if (!xhci->shared_hcd) {
-		dev_err(&pdev->dev, "failed to create shared HCD\n");
-		err = -ENOMEM;
-		goto remove_usb2;
-	}
-
-	err = usb_add_hcd(xhci->shared_hcd, tegra->xhci_irq, IRQF_SHARED);
-	if (err < 0) {
-		dev_err(&pdev->dev, "failed to add shared HCD: %d\n", err);
-		goto put_usb3;
-	}
-
-	mutex_lock(&tegra->lock);
-
-	/* Enable firmware messages from controller. */
-	msg.cmd = MBOX_CMD_MSG_ENABLED;
-	msg.data = 0;
-
-	err = tegra_xusb_mbox_send(tegra, &msg);
-	if (err < 0) {
-		dev_err(&pdev->dev, "failed to enable messages: %d\n", err);
-		mutex_unlock(&tegra->lock);
-		goto remove_usb3;
-	}
-
-	mutex_unlock(&tegra->lock);
-
-	err = devm_request_threaded_irq(&pdev->dev, tegra->mbox_irq,
-					tegra_xusb_mbox_irq,
-					tegra_xusb_mbox_thread, 0,
-					dev_name(&pdev->dev), tegra);
-	if (err < 0) {
-		dev_err(&pdev->dev, "failed to request IRQ: %d\n", err);
-		goto remove_usb3;
 	}
 
 	return 0;
 
-remove_usb3:
-	usb_remove_hcd(xhci->shared_hcd);
-put_usb3:
-	usb_put_hcd(xhci->shared_hcd);
-remove_usb2:
-	usb_remove_hcd(tegra->hcd);
-put_usb2:
-	usb_put_hcd(tegra->hcd);
 disable_phy:
 	tegra_xusb_phy_disable(tegra);
 disable_regulator:
@@ -1164,12 +1193,15 @@ put_padctl:
 static int tegra_xusb_remove(struct platform_device *pdev)
 {
 	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
-	struct xhci_hcd *xhci = hcd_to_xhci(tegra->hcd);
 
-	usb_remove_hcd(xhci->shared_hcd);
-	usb_put_hcd(xhci->shared_hcd);
-	usb_remove_hcd(tegra->hcd);
-	usb_put_hcd(tegra->hcd);
+	if (tegra->fw_loaded) {
+		struct xhci_hcd *xhci = hcd_to_xhci(tegra->hcd);
+
+		usb_remove_hcd(xhci->shared_hcd);
+		usb_put_hcd(xhci->shared_hcd);
+		usb_remove_hcd(tegra->hcd);
+		usb_put_hcd(tegra->hcd);
+	}
 
 	dma_free_coherent(&pdev->dev, tegra->fw.size, tegra->fw.virt,
 			  tegra->fw.phys);

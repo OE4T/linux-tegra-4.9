@@ -69,7 +69,6 @@
 #include <asm/mach/pci.h>
 #include <asm/io.h>
 
-#include <linux/platform/tegra/io-dpd.h>
 #include <linux/phy/phy.h>
 #include <linux/pci-tegra.h>
 
@@ -386,6 +385,7 @@ struct tegra_pcie_soc_data {
 	unsigned int	num_ports;
 	char			**pcie_regulator_names;
 	int				num_pcie_regulators;
+	bool			config_pex_io_dpd;
 };
 
 struct tegra_msi {
@@ -443,6 +443,10 @@ struct tegra_pcie {
 	struct work_struct hotplug_detect;
 
 	struct regulator	**pcie_regulators;
+
+	struct pinctrl		*pex_pin;
+	struct pinctrl_state	*pex_io_dpd_en_state;
+	struct pinctrl_state	*pex_io_dpd_dis_state;
 
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	struct phy *u_phy;
@@ -1657,24 +1661,6 @@ static void tegra_pcie_pme_turnoff(struct tegra_pcie *pcie)
 	afi_writel(pcie, data, AFI_PLLE_CONTROL);
 }
 
-#ifdef CONFIG_TEGRA3_PM
-static struct tegra_io_dpd pexbias_io = {
-	.name			= "PEX_BIAS",
-	.io_dpd_reg_index	= 0,
-	.io_dpd_bit		= 4,
-};
-static struct tegra_io_dpd pexclk1_io = {
-	.name			= "PEX_CLK1",
-	.io_dpd_reg_index	= 0,
-	.io_dpd_bit		= 5,
-};
-static struct tegra_io_dpd pexclk2_io = {
-	.name			= "PEX_CLK2",
-	.io_dpd_reg_index	= 0,
-	.io_dpd_bit		= 6,
-};
-#endif
-
 static int tegra_pcie_module_power_ungate(struct generic_pm_domain *genpd)
 {
 	int ret;
@@ -1725,14 +1711,16 @@ static int tegra_pcie_restore_device(struct device *dev)
 
 	PR_FUNC_LINE;
 
-#ifdef CONFIG_TEGRA3_PM
-	if (!tegra_platform_is_fpga()) {
-		/* disable PEX IOs DPD mode to turn on pcie */
-		tegra_io_dpd_disable(&pexbias_io);
-		tegra_io_dpd_disable(&pexclk1_io);
-		tegra_io_dpd_disable(&pexclk2_io);
+	if (pcie->soc_data->config_pex_io_dpd) {
+		err = pinctrl_select_state(pcie->pex_pin,
+					   pcie->pex_io_dpd_dis_state);
+		if (err < 0) {
+			dev_err(pcie->dev, "disabling pex-io-dpd failed: %d\n",
+				err);
+			goto err_exit;
+		}
 	}
-#endif
+
 	err = tegra_pcie_map_resources(pcie);
 	if (err) {
 		dev_err(pcie->dev, "PCIE: Failed to map resources\n");
@@ -1754,11 +1742,14 @@ static int tegra_pcie_restore_device(struct device *dev)
 	tegra_pcie_check_ports(pcie);
 	return 0;
 err_map_resource:
-#ifdef CONFIG_TEGRA3_PM
-	tegra_io_dpd_enable(&pexbias_io);
-	tegra_io_dpd_enable(&pexclk1_io);
-	tegra_io_dpd_enable(&pexclk2_io);
-#endif
+	if (pcie->soc_data->config_pex_io_dpd) {
+		err = pinctrl_select_state(pcie->pex_pin,
+					   pcie->pex_io_dpd_en_state);
+		if (err < 0)
+			dev_err(pcie->dev,
+				"enabling pex-io-dpd failed: %d\n", err);
+	}
+err_exit:
 	return err;
 }
 
@@ -1779,6 +1770,7 @@ static int tegra_pcie_save_device(struct device *dev)
 {
 	struct tegra_pcie *pcie = dev_get_drvdata(dev);
 	struct tegra_pcie_port *port;
+	int err = 0;
 
 	PR_FUNC_LINE;
 
@@ -1792,15 +1784,14 @@ static int tegra_pcie_save_device(struct device *dev)
 	tegra_pcie_pme_turnoff(pcie);
 	tegra_pcie_enable_pads(pcie, false);
 	tegra_pcie_unmap_resources(pcie);
-#ifdef CONFIG_TEGRA3_PM
-	if (!tegra_platform_is_fpga()) {
-		/* put PEX pads into DPD mode to save additional power */
-		tegra_io_dpd_enable(&pexbias_io);
-		tegra_io_dpd_enable(&pexclk1_io);
-		tegra_io_dpd_enable(&pexclk2_io);
+	if (pcie->soc_data->config_pex_io_dpd) {
+		err = pinctrl_select_state(pcie->pex_pin,
+					   pcie->pex_io_dpd_en_state);
+		if (err < 0)
+			dev_err(pcie->dev,
+				"enabling pex-io-dpd failed: %d\n", err);
 	}
-#endif
-	return 0;
+	return err;
 }
 
 static int tegra_pcie_module_power_gate(struct generic_pm_domain *genpd)
@@ -3220,6 +3211,7 @@ static const struct tegra_pcie_soc_data tegra210_pcie_data = {
 	.pcie_regulator_names = t210_rail_names,
 	.num_pcie_regulators =
 			sizeof(t210_rail_names) / sizeof(t210_rail_names[0]),
+	.config_pex_io_dpd = true,
 };
 
 static const struct tegra_pcie_soc_data tegra124_pcie_data = {
@@ -4683,6 +4675,33 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 		goto release_platdata;
 	}
 	pcie->soc_data = (struct tegra_pcie_soc_data *)match->data;
+
+	if (pcie->soc_data->config_pex_io_dpd) {
+		pcie->pex_pin = devm_pinctrl_get(pcie->dev);
+		if (IS_ERR(pcie->pex_pin)) {
+			ret = PTR_ERR(pcie->pex_pin);
+			dev_err(pcie->dev, "pex io-dpd config failed: %ld\n",
+				ret);
+			return ret;
+		}
+
+		pcie->pex_io_dpd_en_state = pinctrl_lookup_state(pcie->pex_pin,
+							     "pex-io-dpd-en");
+		if (IS_ERR(pcie->pex_io_dpd_en_state)) {
+			ret = PTR_ERR(pcie->pex_io_dpd_en_state);
+			dev_err(pcie->dev, "missing pex-io-dpd en state: %ld\n",
+				ret);
+			return ret;
+		}
+		pcie->pex_io_dpd_dis_state = pinctrl_lookup_state(pcie->pex_pin,
+							     "pex-io-dpd-dis");
+		if (IS_ERR(pcie->pex_io_dpd_dis_state)) {
+			ret = PTR_ERR(pcie->pex_io_dpd_dis_state);
+			dev_err(pcie->dev, "missing pex-io-dpd dis state:%ld\n",
+				PTR_ERR(pcie->pex_io_dpd_dis_state));
+			return ret;
+		}
+	}
 
 	pcie->pcie_regulators = devm_kzalloc(pcie->dev,
 		pcie->soc_data->num_pcie_regulators

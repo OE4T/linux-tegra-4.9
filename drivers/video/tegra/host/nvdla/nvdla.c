@@ -96,18 +96,18 @@ static int nvdla_alloc_cmd_memory(struct platform_device *pdev)
 	int err = 0;
 
 	/* allocate memory for command */
-	nvdla_dev->cmd_mem_va = dma_alloc_attrs(&pdev->dev,
+	nvdla_dev->cmd_mem.va = dma_alloc_attrs(&pdev->dev,
 			MAX_CMD_SIZE * MAX_COMMANDS_PER_DEVICE,
-			&nvdla_dev->cmd_mem_pa, GFP_KERNEL,
+			&nvdla_dev->cmd_mem.pa, GFP_KERNEL,
 			&attrs);
 
-	if (nvdla_dev->cmd_mem_va == NULL) {
+	if (nvdla_dev->cmd_mem.va == NULL) {
 		err = -ENOMEM;
 		goto err_alloc_cmd_mem;
 	}
 
-	mutex_init(&nvdla_dev->cmd_mem_lock);
-	nvdla_dev->cmd_alloc_table = 0;
+	mutex_init(&nvdla_dev->cmd_mem.lock);
+	nvdla_dev->cmd_mem.alloc_table = 0;
 
 err_alloc_cmd_mem:
 	return err;
@@ -121,9 +121,9 @@ static int nvdla_free_cmd_memory(struct platform_device *pdev)
 	/* free memory for command */
 	dma_free_attrs(&pdev->dev,
 			MAX_CMD_SIZE * MAX_COMMANDS_PER_DEVICE,
-			nvdla_dev->cmd_mem_va, nvdla_dev->cmd_mem_pa, &attrs);
+			nvdla_dev->cmd_mem.va, nvdla_dev->cmd_mem.pa, &attrs);
 
-	nvdla_dev->cmd_alloc_table = 0;
+	nvdla_dev->cmd_mem.alloc_table = 0;
 
 	return 0;
 }
@@ -135,9 +135,9 @@ int nvdla_get_cmd_memory(struct platform_device *pdev,
 	struct nvdla_device *nvdla_dev = pdata->private_data;
 	int err = 0, index, offset;
 
-	mutex_lock(&nvdla_dev->cmd_mem_lock);
+	mutex_lock(&nvdla_dev->cmd_mem.lock);
 
-	index = find_first_zero_bit(&nvdla_dev->cmd_alloc_table,
+	index = find_first_zero_bit(&nvdla_dev->cmd_mem.alloc_table,
 			MAX_COMMANDS_PER_DEVICE);
 	if (index >= MAX_COMMANDS_PER_DEVICE) {
 		nvdla_dbg_err(pdev, "failed to get cmd mem from pool\n");
@@ -146,15 +146,15 @@ int nvdla_get_cmd_memory(struct platform_device *pdev,
 	}
 
 	/* assign mem */
-	set_bit(index, &nvdla_dev->cmd_alloc_table);
+	set_bit(index, &nvdla_dev->cmd_mem.alloc_table);
 
 	offset = NVDLA_CMD_OFFSET(index);
-	cmd_mem_info->va = nvdla_dev->cmd_mem_va + offset;
-	cmd_mem_info->pa = nvdla_dev->cmd_mem_pa + offset;
+	cmd_mem_info->va = nvdla_dev->cmd_mem.va + offset;
+	cmd_mem_info->pa = nvdla_dev->cmd_mem.pa + offset;
 	cmd_mem_info->index = index;
 
 err_get_mem:
-	mutex_unlock(&nvdla_dev->cmd_mem_lock);
+	mutex_unlock(&nvdla_dev->cmd_mem.lock);
 	return err;
 }
 
@@ -163,9 +163,9 @@ int nvdla_put_cmd_memory(struct platform_device *pdev, int index)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvdla_device *nvdla_dev = pdata->private_data;
 
-	mutex_lock(&nvdla_dev->cmd_mem_lock);
-	clear_bit(index, &nvdla_dev->cmd_alloc_table);
-	mutex_unlock(&nvdla_dev->cmd_mem_lock);
+	mutex_lock(&nvdla_dev->cmd_mem.lock);
+	clear_bit(index, &nvdla_dev->cmd_mem.alloc_table);
+	mutex_unlock(&nvdla_dev->cmd_mem.lock);
 
 	return 0;
 }

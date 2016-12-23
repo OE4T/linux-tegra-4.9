@@ -75,12 +75,35 @@ union nvdla_cmd_mem_list {
 #define MAX_CMD_SIZE			sizeof(union nvdla_cmd_mem_list)
 #define NVDLA_CMD_OFFSET(index)		(MAX_CMD_SIZE * index)
 
+/**
+ * data structure to keep command memory
+ *
+ * @pa			IOVA pointing to cmd memory with offset
+ * @va			VA of cmd memory
+ * @index		index pointing command in pool
+ *
+ */
+
 struct nvdla_cmd_mem_info {
-        dma_addr_t pa;
-        void *va;
-        int index;
+	dma_addr_t pa;
+	void *va;
+	int index;
 };
 
+/**
+ * data structure to keep command memory pool
+ *
+ * @pa			IOVA pointing to cmd memory
+ * @va			VA of cmd memory
+ * @lock		mutex lock
+ * @alloc_table		memory usage bitmap table
+ */
+struct nvdla_cmd_mem {
+	dma_addr_t pa;
+	void *va;
+	struct mutex lock;
+	unsigned long alloc_table;
+};
 
 /**
  * data structure to keep per DLA engine device data
@@ -89,6 +112,8 @@ struct nvdla_cmd_mem_info {
  * @pool		pointer to queue table
  * @dbg_mask		debug mask for print level
  * @en_trace		flag to enable tracing
+ * @fw_version		saves current firmware version
+ * @cmd_mem		structure to hold command memory pool
  */
 struct nvdla_device {
 	struct platform_device *pdev;
@@ -100,12 +125,7 @@ struct nvdla_device {
 	u32 dbg_mask;
 	u32 en_trace;
 	u32 fw_version;
-
-	/* cmd memory fields */
-	dma_addr_t cmd_mem_pa;
-	void *cmd_mem_va;
-	struct mutex cmd_mem_lock;
-	unsigned long cmd_alloc_table;
+	struct nvdla_cmd_mem cmd_mem;
 };
 
 /**

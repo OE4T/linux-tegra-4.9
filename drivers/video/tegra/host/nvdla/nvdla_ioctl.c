@@ -41,12 +41,6 @@
 #define FLCN_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define ALIGNED_DMA(x) ((x >> 8) & 0xffffffff)
 
-#define MAX_NVDLA_TASK_SIZE (sizeof(struct nvdla_task) + 		\
-		((MAX_NUM_NVDLA_PREFENCES + MAX_NUM_NVDLA_POSTFENCES) *	\
-		sizeof(struct nvdla_fence)) +				\
-		((MAX_NUM_NVDLA_IN_TASK_STATUS) * sizeof(struct nvdla_status_notify)) + \
-		((MAX_NUM_NVDLA_OUT_TASK_STATUS) * sizeof(struct nvdla_status_notify)))
-
 /**
  * struct nvdla_private per unique FD private data
  * @pdev		pointer to platform device
@@ -192,7 +186,8 @@ static int nvdla_get_actions(struct nvdla_ioctl_submit_task *user_task,
 	/* get input task status */
 	if (copy_from_user(task->in_task_status,
 		(void __user *)user_task->input_task_status,
-		(task->num_in_task_status * sizeof(struct nvdla_status_notify)))) {
+		(task->num_in_task_status *
+			sizeof(struct nvdla_status_notify)))) {
 		err = -EFAULT;
 		nvdla_dbg_err(pdev, "failed to copy input task status");
 		goto fail;
@@ -210,7 +205,8 @@ static int nvdla_get_actions(struct nvdla_ioctl_submit_task *user_task,
 	/* get output task status */
 	if (copy_from_user(task->out_task_status,
 		(void __user *)user_task->output_task_status,
-		(task->num_out_task_status * sizeof(struct nvdla_status_notify)))) {
+		(task->num_out_task_status *
+			sizeof(struct nvdla_status_notify)))) {
 		err = -EFAULT;
 		nvdla_dbg_err(pdev, "failed to copy output task status");
 		goto fail;
@@ -276,6 +272,15 @@ fail:
 	return err;
 }
 
+static inline int nvdla_get_max_task_size(void)
+{
+	return (sizeof(struct nvdla_task) +
+		((MAX_NUM_NVDLA_PREFENCES + MAX_NUM_NVDLA_POSTFENCES) *
+		sizeof(struct nvdla_fence)) +
+		((MAX_NUM_NVDLA_IN_TASK_STATUS +
+			MAX_NUM_NVDLA_OUT_TASK_STATUS) *
+			sizeof(struct nvdla_status_notify)));
+}
 
 static int nvdla_fill_task(struct nvhost_queue *queue,
 				struct nvhost_buffers *buffers,
@@ -290,7 +295,7 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 	nvdla_dbg_fn(pdev, "");
 
 	 /* allocate task resource */
-	task = kzalloc(MAX_NVDLA_TASK_SIZE, GFP_KERNEL);
+	task = kzalloc(nvdla_get_max_task_size(), GFP_KERNEL);
 	if (!task) {
 		err = -ENOMEM;
 		nvdla_dbg_err(pdev, "KMD task allocation failed");

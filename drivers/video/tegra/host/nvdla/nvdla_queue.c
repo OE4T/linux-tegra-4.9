@@ -340,8 +340,10 @@ static inline int nvdla_get_max_preaction_size(void)
 {
 	return (((MAX_NUM_NVDLA_PREFENCES + MAX_NUM_NVDLA_IN_TASK_STATUS) *
 		sizeof(struct dla_action_opcode)) +
-		(MAX_NUM_NVDLA_PREFENCES * sizeof(struct dla_action_semaphore)) +
-		(MAX_NUM_NVDLA_IN_TASK_STATUS * sizeof(struct dla_action_task_status)) +
+		(MAX_NUM_NVDLA_PREFENCES *
+			sizeof(struct dla_action_semaphore)) +
+		(MAX_NUM_NVDLA_IN_TASK_STATUS *
+			sizeof(struct dla_action_task_status)) +
 		sizeof(struct dla_action_opcode));
 }
 
@@ -349,8 +351,10 @@ static inline int nvdla_get_max_postaction_size(void)
 {
 	return (((MAX_NUM_NVDLA_POSTFENCES + MAX_NUM_NVDLA_OUT_TASK_STATUS) *
 		sizeof(struct dla_action_opcode)) +
-		(MAX_NUM_NVDLA_POSTFENCES * sizeof(struct dla_action_semaphore)) +
-		(MAX_NUM_NVDLA_OUT_TASK_STATUS * sizeof(struct dla_action_task_status)) +
+		(MAX_NUM_NVDLA_POSTFENCES *
+			sizeof(struct dla_action_semaphore)) +
+		(MAX_NUM_NVDLA_OUT_TASK_STATUS *
+			sizeof(struct dla_action_task_status)) +
 		sizeof(struct dla_action_opcode));
 }
 

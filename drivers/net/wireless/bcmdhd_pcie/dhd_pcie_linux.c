@@ -1126,7 +1126,6 @@ dhdpcie_disable_device(dhd_bus_t *bus)
 		return BCME_ERROR;
 	}
 
-	pci_restore_state(bus->dev);
 	pci_disable_device(bus->dev);
 
 	return 0;

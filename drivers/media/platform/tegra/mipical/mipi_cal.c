@@ -1,7 +1,7 @@
- /*
+/*
  * mipi_cal.c
  *
- * Copyright (c) 2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -37,21 +37,10 @@
 #include <linux/tegra_prod.h>
 #include <uapi/misc/tegra_mipi_ioctl.h>
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-#include "mipi_cal_t21x.h"
-#elif defined(CONFIG_ARCH_TEGRA_18x_SOC)
-#include "mipi_cal_t18x.h"
-#endif
-
+#include "registers.h"
 #include "mipi_cal.h"
 #define DRV_NAME "tegra_mipi_cal"
 #define MIPI_CAL_TIMEOUT_MSEC 1
-
-#define dump_register(nm)	\
-{				\
-	.name = #nm,		\
-	.offset = nm,		\
-}
 
 struct tegra_mipi_bias {
 	/* BIAS_PAD_CFG0 */
@@ -85,19 +74,6 @@ struct tegra_mipi_prod_dsi {
 };
 
 struct tegra_mipi;
-struct tegra_mipi_ops {
-	int (*pad_enable)(struct tegra_mipi *mipi);
-	int (*pad_disable)(struct tegra_mipi *mipi);
-	int (*calibrate)(struct tegra_mipi *mipi, int lanes);
-	int (*set_mode)(struct tegra_mipi *mipi, int mode);
-	int (*parse_cfg)(struct platform_device *pdev, struct tegra_mipi *mipi);
-};
-
-struct tegra_mipi_data {
-	struct tegra_mipi_prod_csi csi;
-	struct tegra_mipi_prod_dsi dsi;
-};
-
 struct tegra_mipi {
 	struct device *dev;
 	struct clk *mipi_cal_clk;
@@ -111,13 +87,13 @@ struct tegra_mipi {
 	/* If use tegra_prod framework */
 	struct tegra_prod *prod_gr_csi;
 	struct tegra_prod *prod_gr_dsi;
-	struct tegra_mipi_ops *ops;
-	char addr_offset;
+	const struct tegra_mipi_soc *soc;
 	void __iomem *io;
 	atomic_t refcount;
 	struct miscdevice misc_dev;
 };
 
+static struct tegra_mipi *mipi;
 static const struct regmap_config t210_mipi_cal_regmap_config = {
 	.reg_bits = 32,
 	.reg_stride = 4,
@@ -126,29 +102,21 @@ static const struct regmap_config t210_mipi_cal_regmap_config = {
 	.fast_io = 1,
 };
 
-static struct tegra_mipi *get_mipi(void)
-{
-	struct device_node *np;
-	struct platform_device *dev;
-	struct tegra_mipi *mipi;
-
-	np = of_find_node_by_name(NULL, "mipical");
-	if (!np) {
-		pr_err("%s: Can not find mipical node\n", __func__);
-		return NULL;
-	}
-	dev = of_find_device_by_node(np);
-	if (!dev) {
-		pr_err("%s:Can not find device\n", __func__);
-		return NULL;
-	}
-	mipi = platform_get_drvdata(dev);
-	if (!mipi) {
-		pr_err("%s:Can not find driver\n", __func__);
-		return NULL;
-	}
-	return mipi;
+#define ADDR(x) (x + mipi->soc->addr_offset)
+#define dump_register(nm)	\
+{				\
+	.name = #nm,		\
+	.offset = nm,		\
 }
+struct tegra_mipi_soc {
+	unsigned int total_dsilanes;
+	unsigned int total_cillanes;
+	char addr_offset;
+	int (*pad_enable)(struct tegra_mipi *mipi);
+	int (*pad_disable)(struct tegra_mipi *mipi);
+	int (*calibrate)(struct tegra_mipi *mipi, int lanes);
+	int (*parse_cfg)(struct platform_device *pdev, struct tegra_mipi *mipi);
+};
 
 static int tegra_mipi_clk_enable(struct tegra_mipi *mipi)
 {
@@ -195,9 +163,9 @@ static void tegra_mipi_print(struct tegra_mipi *mipi)
 	unsigned long rate;
 #define pr_reg(a)						\
 	do {							\
-		regmap_read(mipi->regmap, a, &val);		\
+		regmap_read(mipi->regmap, ADDR(a), &val);		\
 		dev_info(mipi->dev, "%-30s %#04x %#010x\n",		\
-			#a, a, val);				\
+			#a, a + mipi->soc->addr_offset, val);		\
 	} while (0)
 
 	rate = clk_get_rate(mipi->mipi_cal_fixed);
@@ -230,13 +198,13 @@ static int tegra_mipi_wait(struct tegra_mipi *mipi, int lanes)
 	unsigned long timeout;
 	int val;
 
-	regmap_write(mipi->regmap, CIL_MIPI_CAL_STATUS, 0xffffffff);
-	regmap_write(mipi->regmap, CIL_MIPI_CAL_STATUS_2, 0xffffffff);
-	regmap_write_bits(mipi->regmap, MIPI_CAL_CTRL, STARTCAL, 0x1);
+	regmap_write(mipi->regmap, ADDR(CIL_MIPI_CAL_STATUS), 0xffffffff);
+	regmap_write(mipi->regmap, ADDR(CIL_MIPI_CAL_STATUS_2), 0xffffffff);
+	regmap_write_bits(mipi->regmap, ADDR(MIPI_CAL_CTRL), STARTCAL, 0x1);
 
 	timeout = jiffies + msecs_to_jiffies(MIPI_CAL_TIMEOUT_MSEC);
 	while (time_before(jiffies, timeout)) {
-		regmap_read(mipi->regmap, CIL_MIPI_CAL_STATUS, &val);
+		regmap_read(mipi->regmap, ADDR(CIL_MIPI_CAL_STATUS), &val);
 		if (((val & lanes) == lanes) && ((val & CAL_ACTIVE) == 0))
 			return 0;
 		usleep_range(10, 50);
@@ -246,7 +214,7 @@ static int tegra_mipi_wait(struct tegra_mipi *mipi, int lanes)
 	 * Later status register dump shows no timeout.
 	 * Add another check here in case sleep past the timeout.
 	 */
-	regmap_read(mipi->regmap, CIL_MIPI_CAL_STATUS, &val);
+	regmap_read(mipi->regmap, ADDR(CIL_MIPI_CAL_STATUS), &val);
 	if (((val & lanes) == lanes) && ((val & CAL_ACTIVE) == 0))
 		return 0;
 	dev_err(mipi->dev, "Mipi cal timeout,val:%x, lanes:%x\n", val, lanes);
@@ -263,17 +231,17 @@ static int tegra_mipi_apply_bias_prod(struct regmap *reg,
 
 	val = (bias->pad_pdvclamp << PDVCLAMP_SHIFT) |
 		(bias->e_vclamp_ref << E_VCLAMP_REF_SHIFT);
-	ret = regmap_write(reg, MIPI_BIAS_PAD_CFG0, val);
+	ret = regmap_write(reg, ADDR(MIPI_BIAS_PAD_CFG0), val);
 	if (ret)
 		return ret;
 	val = (bias->pad_driv_up_ref << PAD_DRIV_UP_REF_SHIFT) |
 		(bias->pad_driv_dn_ref << PAD_DRIV_DN_REF_SHIFT);
-	ret = regmap_write(reg, MIPI_BIAS_PAD_CFG1, val);
+	ret = regmap_write(reg, ADDR(MIPI_BIAS_PAD_CFG1), val);
 	if (ret)
 		return ret;
 	val = (bias->pad_vclamp_level << PAD_VCLAMP_LEVEL_SHIFT) |
 		(bias->pad_vauxp_level << PAD_VAUXP_LEVEL_SHIFT);
-	ret = regmap_write(reg, MIPI_BIAS_PAD_CFG2, val);
+	ret = regmap_write(reg, ADDR(MIPI_BIAS_PAD_CFG2), val);
 
 	return ret;
 }
@@ -288,17 +256,17 @@ static void tegra_mipi_apply_csi_prod(struct regmap *reg,
 		(prod_csi->termos_x_clk << TERMOSA_CLK_SHIFT);
 
 	if (lanes & CSIA)
-		regmap_write(reg, CILA_MIPI_CAL_CONFIG, val);
+		regmap_write(reg, ADDR(CILA_MIPI_CAL_CONFIG), val);
 	if (lanes & CSIB)
-		regmap_write(reg, CILB_MIPI_CAL_CONFIG, val);
+		regmap_write(reg, ADDR(CILB_MIPI_CAL_CONFIG), val);
 	if (lanes & CSIC)
-		regmap_write(reg, CILC_MIPI_CAL_CONFIG, val);
+		regmap_write(reg, ADDR(CILC_MIPI_CAL_CONFIG), val);
 	if (lanes & CSID)
-		regmap_write(reg, CILD_MIPI_CAL_CONFIG, val);
+		regmap_write(reg, ADDR(CILD_MIPI_CAL_CONFIG), val);
 	if (lanes & CSIE)
-		regmap_write(reg, CILE_MIPI_CAL_CONFIG, val);
+		regmap_write(reg, ADDR(CILE_MIPI_CAL_CONFIG), val);
 	if (lanes & CSIF)
-		regmap_write(reg, CILF_MIPI_CAL_CONFIG, val);
+		regmap_write(reg, ADDR(CILF_MIPI_CAL_CONFIG), val);
 }
 
 static void tegra_mipi_apply_dsi_prod(struct regmap *reg,
@@ -313,20 +281,20 @@ static void tegra_mipi_apply_dsi_prod(struct regmap *reg,
 	clk_val = (prod_dsi->clk_hspuos_x << HSCLKPUOSDSIA_SHIFT) |
 		(prod_dsi->clk_hstermos_x << HSCLKTERMOSDSIA_SHIFT);
 	if (lanes & DSIA) {
-		regmap_write(reg, DSIA_MIPI_CAL_CONFIG, val);
-		regmap_write(reg, DSIA_MIPI_CAL_CONFIG_2, clk_val);
+		regmap_write(reg, ADDR(DSIA_MIPI_CAL_CONFIG), val);
+		regmap_write(reg, ADDR(DSIA_MIPI_CAL_CONFIG_2), clk_val);
 	}
 	if (lanes & DSIB) {
-		regmap_write(reg, DSIB_MIPI_CAL_CONFIG, val);
-		regmap_write(reg, DSIB_MIPI_CAL_CONFIG_2, clk_val);
+		regmap_write(reg, ADDR(DSIB_MIPI_CAL_CONFIG), val);
+		regmap_write(reg, ADDR(DSIB_MIPI_CAL_CONFIG_2), clk_val);
 	}
 	if (lanes & DSIC) {
-		regmap_write(reg, DSIC_MIPI_CAL_CONFIG, val);
-		regmap_write(reg, DSIC_MIPI_CAL_CONFIG_2, clk_val);
+		regmap_write(reg, ADDR(DSIC_MIPI_CAL_CONFIG), val);
+		regmap_write(reg, ADDR(DSIC_MIPI_CAL_CONFIG_2), clk_val);
 	}
 	if (lanes & DSID) {
-		regmap_write(reg, DSID_MIPI_CAL_CONFIG, val);
-		regmap_write(reg, DSID_MIPI_CAL_CONFIG_2, clk_val);
+		regmap_write(reg, ADDR(DSID_MIPI_CAL_CONFIG), val);
+		regmap_write(reg, ADDR(DSID_MIPI_CAL_CONFIG_2), clk_val);
 	}
 
 }
@@ -339,9 +307,9 @@ static int _t18x_tegra_mipi_bias_pad_enable(struct tegra_mipi *mipi)
 	}
 	if (atomic_inc_return(&mipi->refcount) == 1) {
 		tegra_mipi_clk_enable(mipi);
-		regmap_write_bits(mipi->regmap, MIPI_BIAS_PAD_CFG0,
+		regmap_write_bits(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG0),
 				PDVCLAMP, 0 << PDVCLAMP_SHIFT);
-		regmap_write_bits(mipi->regmap, MIPI_BIAS_PAD_CFG2,
+		regmap_write_bits(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG2),
 				PDVREG, 0 << PDVREG_SHIFT);
 	}
 	return 0;
@@ -354,9 +322,9 @@ static int _t18x_tegra_mipi_bias_pad_disable(struct tegra_mipi *mipi)
 		return -EINVAL;
 	}
 	if (atomic_dec_return(&mipi->refcount) == 0) {
-		regmap_write_bits(mipi->regmap, MIPI_BIAS_PAD_CFG0,
+		regmap_write_bits(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG0),
 				PDVCLAMP, 1 << PDVCLAMP_SHIFT);
-		regmap_write_bits(mipi->regmap, MIPI_BIAS_PAD_CFG2,
+		regmap_write_bits(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG2),
 				PDVREG, 1 << PDVREG_SHIFT);
 		tegra_mipi_clk_disable(mipi);
 	}
@@ -372,22 +340,19 @@ static int _t21x_tegra_mipi_bias_pad_enable(struct tegra_mipi *mipi)
 	if (atomic_inc_return(&mipi->refcount) == 1) {
 		tegra_mipi_clk_enable(mipi);
 		return regmap_write_bits(mipi->regmap,
-				MIPI_BIAS_PAD_CFG2, PDVREG, 0);
+				ADDR(MIPI_BIAS_PAD_CFG2), PDVREG, 0);
 	}
 	return 0;
 }
 
 int tegra_mipi_bias_pad_enable(void)
 {
-	struct tegra_mipi *mipi;
-
-	mipi = get_mipi();
 	if (!mipi)
 		return -EPROBE_DEFER;
 	dev_dbg(mipi->dev, "%s", __func__);
 
-	if (mipi->ops->pad_enable)
-		return mipi->ops->pad_enable(mipi);
+	if (mipi->soc->pad_enable)
+		return mipi->soc->pad_enable(mipi);
 	else
 		return 0;
 }
@@ -401,7 +366,7 @@ static int _t21x_tegra_mipi_bias_pad_disable(struct tegra_mipi *mipi)
 	}
 	if (atomic_dec_return(&mipi->refcount) == 0) {
 		regmap_write_bits(mipi->regmap,
-				MIPI_BIAS_PAD_CFG2, PDVREG, PDVREG);
+				ADDR(MIPI_BIAS_PAD_CFG2), PDVREG, PDVREG);
 		tegra_mipi_clk_disable(mipi);
 	}
 	return 0;
@@ -409,15 +374,12 @@ static int _t21x_tegra_mipi_bias_pad_disable(struct tegra_mipi *mipi)
 
 int tegra_mipi_bias_pad_disable(void)
 {
-	struct tegra_mipi *mipi;
-
-	mipi = get_mipi();
 	if (!mipi)
 		return -ENODEV;
 	dev_dbg(mipi->dev, "%s", __func__);
 
-	if (mipi->ops->pad_disable)
-		return mipi->ops->pad_disable(mipi);
+	if (mipi->soc->pad_disable)
+		return mipi->soc->pad_disable(mipi);
 	else
 		return 0;
 }
@@ -425,62 +387,58 @@ EXPORT_SYMBOL(tegra_mipi_bias_pad_disable);
 
 static void select_lanes(struct tegra_mipi *mipi, int lanes)
 {
-	regmap_write_bits(mipi->regmap, CILA_MIPI_CAL_CONFIG, SELA,
+	regmap_write_bits(mipi->regmap, ADDR(CILA_MIPI_CAL_CONFIG), SELA,
 			((lanes & CSIA) != 0 ? SELA : 0));
-	regmap_write_bits(mipi->regmap, CILB_MIPI_CAL_CONFIG, SELB,
-			((lanes & CSIB) != 0 ? SELB : 0));
-	regmap_write_bits(mipi->regmap, CILC_MIPI_CAL_CONFIG, SELC,
-			((lanes & CSIC) != 0 ? SELC : 0));
-	regmap_write_bits(mipi->regmap, CILD_MIPI_CAL_CONFIG, SELD,
-			((lanes & CSID) != 0 ? SELD : 0));
-	regmap_write_bits(mipi->regmap, CILE_MIPI_CAL_CONFIG, SELE,
-			((lanes & CSIE) != 0 ? SELE : 0));
-	regmap_write_bits(mipi->regmap, CILF_MIPI_CAL_CONFIG, SELF,
-			((lanes & CSIF) != 0 ? SELF : 0));
+	regmap_write_bits(mipi->regmap, ADDR(CILB_MIPI_CAL_CONFIG), SELA,
+			((lanes & CSIB) != 0 ? SELA : 0));
+	regmap_write_bits(mipi->regmap, ADDR(CILC_MIPI_CAL_CONFIG), SELA,
+			((lanes & CSIC) != 0 ? SELA : 0));
+	regmap_write_bits(mipi->regmap, ADDR(CILD_MIPI_CAL_CONFIG), SELA,
+			((lanes & CSID) != 0 ? SELA : 0));
+	regmap_write_bits(mipi->regmap, ADDR(CILE_MIPI_CAL_CONFIG), SELA,
+			((lanes & CSIE) != 0 ? SELA : 0));
+	regmap_write_bits(mipi->regmap, ADDR(CILF_MIPI_CAL_CONFIG), SELA,
+			((lanes & CSIF) != 0 ? SELA : 0));
 
-	regmap_write_bits(mipi->regmap, DSIA_MIPI_CAL_CONFIG, SELDSIA,
+	regmap_write_bits(mipi->regmap, ADDR(DSIA_MIPI_CAL_CONFIG), SELDSIA,
 			((lanes & DSIA) != 0 ? SELDSIA : 0));
-	regmap_write_bits(mipi->regmap, DSIB_MIPI_CAL_CONFIG, SELDSIB,
-			((lanes & DSIB) != 0 ? SELDSIB : 0));
-	regmap_write_bits(mipi->regmap, DSIC_MIPI_CAL_CONFIG, SELDSIC,
-			((lanes & DSIC) != 0 ? SELDSIC : 0));
-	regmap_write_bits(mipi->regmap, DSID_MIPI_CAL_CONFIG, SELDSID,
-			((lanes & DSID) != 0 ? SELDSID : 0));
-	regmap_write_bits(mipi->regmap, DSIA_MIPI_CAL_CONFIG_2, CLKSELDSIA,
-			((lanes & DSIA) != 0 ? CLKSELDSIA : 0));
-	regmap_write_bits(mipi->regmap, DSIB_MIPI_CAL_CONFIG_2, CLKSELDSIB,
-			((lanes & DSIB) != 0 ? CLKSELDSIB : 0));
-	regmap_write_bits(mipi->regmap, DSIC_MIPI_CAL_CONFIG_2, CLKSELDSIC,
-			((lanes & DSIC) != 0 ? CLKSELDSIC : 0));
-	regmap_write_bits(mipi->regmap, DSID_MIPI_CAL_CONFIG_2, CLKSELDSID,
-			((lanes & DSID) != 0 ? CLKSELDSID : 0));
+	regmap_write_bits(mipi->regmap, ADDR(DSIB_MIPI_CAL_CONFIG), SELDSIA,
+			((lanes & DSIB) != 0 ? SELDSIA : 0));
+	regmap_write_bits(mipi->regmap, ADDR(DSIC_MIPI_CAL_CONFIG), SELDSIA,
+			((lanes & DSIC) != 0 ? SELDSIA : 0));
+	regmap_write_bits(mipi->regmap, ADDR(DSID_MIPI_CAL_CONFIG), SELDSIA,
+			((lanes & DSID) != 0 ? SELDSIA : 0));
+	regmap_write_bits(mipi->regmap, ADDR(DSIA_MIPI_CAL_CONFIG_2),
+			CLKSELDSIA, ((lanes & DSIA) != 0 ? CLKSELDSIA : 0));
+	regmap_write_bits(mipi->regmap, ADDR(DSIB_MIPI_CAL_CONFIG_2),
+			CLKSELDSIA, ((lanes & DSIB) != 0 ? CLKSELDSIA : 0));
+	regmap_write_bits(mipi->regmap, ADDR(DSIC_MIPI_CAL_CONFIG_2),
+			CLKSELDSIA, ((lanes & DSIC) != 0 ? CLKSELDSIA : 0));
+	regmap_write_bits(mipi->regmap, ADDR(DSID_MIPI_CAL_CONFIG_2),
+			CLKSELDSIA, ((lanes & DSID) != 0 ? CLKSELDSIA : 0));
 }
 
 static void clear_all(struct tegra_mipi *mipi)
 {
-	regmap_write(mipi->regmap, CILA_MIPI_CAL_CONFIG, 0);
-	regmap_write(mipi->regmap, CILB_MIPI_CAL_CONFIG, 0);
-	regmap_write(mipi->regmap, CILC_MIPI_CAL_CONFIG, 0);
-	regmap_write(mipi->regmap, CILD_MIPI_CAL_CONFIG, 0);
-	regmap_write(mipi->regmap, CILE_MIPI_CAL_CONFIG, 0);
-	regmap_write(mipi->regmap, CILF_MIPI_CAL_CONFIG, 0);
+	regmap_write(mipi->regmap, ADDR(CILA_MIPI_CAL_CONFIG), 0);
+	regmap_write(mipi->regmap, ADDR(CILB_MIPI_CAL_CONFIG), 0);
+	regmap_write(mipi->regmap, ADDR(CILC_MIPI_CAL_CONFIG), 0);
+	regmap_write(mipi->regmap, ADDR(CILD_MIPI_CAL_CONFIG), 0);
+	regmap_write(mipi->regmap, ADDR(CILE_MIPI_CAL_CONFIG), 0);
+	regmap_write(mipi->regmap, ADDR(CILF_MIPI_CAL_CONFIG), 0);
 
-	regmap_write(mipi->regmap, DSIA_MIPI_CAL_CONFIG, 0);
-	regmap_write(mipi->regmap, DSIB_MIPI_CAL_CONFIG, 0);
-	regmap_write(mipi->regmap, DSIC_MIPI_CAL_CONFIG, 0);
-	regmap_write(mipi->regmap, DSID_MIPI_CAL_CONFIG, 0);
-	regmap_write(mipi->regmap, DSIA_MIPI_CAL_CONFIG_2, 0);
-	regmap_write(mipi->regmap, DSIB_MIPI_CAL_CONFIG_2, 0);
-	regmap_write(mipi->regmap, DSIC_MIPI_CAL_CONFIG_2, 0);
-	regmap_write(mipi->regmap, DSID_MIPI_CAL_CONFIG_2, 0);
-
-	regmap_write(mipi->regmap, MIPI_BIAS_PAD_CFG0, 0);
-	regmap_write(mipi->regmap, MIPI_BIAS_PAD_CFG1, 0);
-	regmap_write(mipi->regmap, MIPI_BIAS_PAD_CFG2, 0);
+	regmap_write(mipi->regmap, ADDR(DSIA_MIPI_CAL_CONFIG), 0);
+	regmap_write(mipi->regmap, ADDR(DSIB_MIPI_CAL_CONFIG), 0);
+	regmap_write(mipi->regmap, ADDR(DSIC_MIPI_CAL_CONFIG), 0);
+	regmap_write(mipi->regmap, ADDR(DSID_MIPI_CAL_CONFIG), 0);
+	regmap_write(mipi->regmap, ADDR(DSIA_MIPI_CAL_CONFIG_2), 0);
+	regmap_write(mipi->regmap, ADDR(DSIB_MIPI_CAL_CONFIG_2), 0);
+	regmap_write(mipi->regmap, ADDR(DSIC_MIPI_CAL_CONFIG_2), 0);
+	regmap_write(mipi->regmap, ADDR(DSID_MIPI_CAL_CONFIG_2), 0);
 }
 
 #ifdef CONFIG_DEBUG_FS
-static const struct debugfs_reg32 mipical_regs[] = {
+static struct debugfs_reg32 mipical_regs[] = {
 	dump_register(MIPI_CAL_CTRL),
 	dump_register(MIPI_CAL_AUTOCAL_CTRL0),
 	dump_register(CIL_MIPI_CAL_STATUS),
@@ -550,6 +508,7 @@ static int dbgfs_mipi_init(struct tegra_mipi *mipi)
 {
 	struct dentry *dir;
 	struct dentry *val;
+	int i;
 
 	dir = debugfs_create_dir(DRV_NAME, NULL);
 	if (!dir)
@@ -570,6 +529,9 @@ static int dbgfs_mipi_init(struct tegra_mipi *mipi)
 	if (!val)
 		goto err;
 
+	/* Assign register address with adjusted offset */
+	for (i = 0; i < ARRAY_SIZE(mipical_regs); ++i)
+		mipical_regs[i].offset += mipi->soc->addr_offset;
 	return 0;
 err:
 	dev_err(mipi->dev, "%s:Fail to create debugfs\n", __func__);
@@ -599,7 +561,7 @@ static int _tegra_mipi_calibration(struct tegra_mipi *mipi, int lanes)
 	err = tegra_mipi_wait(mipi, lanes);
 
 #ifdef CONFIG_DEBUG_FS
-	regmap_read(mipi->regmap, CIL_MIPI_CAL_STATUS, &mipical_status);
+	regmap_read(mipi->regmap, ADDR(CIL_MIPI_CAL_STATUS), &mipical_status);
 	counts++;
 	if (err)
 		timeout_ct++;
@@ -633,7 +595,7 @@ static int tegra_mipical_using_prod(struct tegra_mipi *mipi, int lanes)
 	err = tegra_mipi_wait(mipi, lanes);
 
 #ifdef CONFIG_DEBUG_FS
-	regmap_read(mipi->regmap, CIL_MIPI_CAL_STATUS, &mipical_status);
+	regmap_read(mipi->regmap, ADDR(CIL_MIPI_CAL_STATUS), &mipical_status);
 	counts++;
 	if (err)
 		timeout_ct++;
@@ -644,34 +606,16 @@ static int tegra_mipical_using_prod(struct tegra_mipi *mipi, int lanes)
 }
 int tegra_mipi_calibration(int lanes)
 {
-	struct tegra_mipi *mipi;
-
-	mipi = get_mipi();
 	if (!mipi)
 		return -ENODEV;
 	dev_dbg(mipi->dev, "%s", __func__);
-	if (mipi->ops->calibrate)
-		return mipi->ops->calibrate(mipi, lanes);
+	if (mipi->soc->calibrate)
+		return mipi->soc->calibrate(mipi, lanes);
 	else
 		return 0;
 
 }
 EXPORT_SYMBOL(tegra_mipi_calibration);
-
-int tegra_mipi_select_mode(int mode)
-{
-	struct tegra_mipi *mipi;
-
-	mipi = get_mipi();
-	if (!mipi)
-		return -ENODEV;
-	dev_dbg(mipi->dev, "%s", __func__);
-	if (mipi->ops->set_mode)
-		return mipi->ops->set_mode(mipi, mode);
-	else
-		return 0;
-}
-EXPORT_SYMBOL(tegra_mipi_select_mode);
 
 static void parse_bias_prod(struct device_node *np,
 			    struct tegra_mipi_bias *bias)
@@ -834,13 +778,41 @@ static int tegra_mipi_parse_config(struct platform_device *pdev,
 	print_config(mipi);
 	return 0;
 }
+static const struct tegra_mipi_soc tegra21x_mipi_soc = {
+	.total_dsilanes = 4,
+	.total_cillanes = 6,
+	.addr_offset = 0,
+	.pad_enable = &_t21x_tegra_mipi_bias_pad_enable,
+	.pad_disable = &_t21x_tegra_mipi_bias_pad_disable,
+	.calibrate = &_tegra_mipi_calibration,
+	.parse_cfg = &tegra_mipi_parse_config,
+};
+
+static const struct tegra_mipi_soc tegra18x_mipi_soc = {
+	.total_dsilanes = 4,
+	.total_cillanes = 6,
+	.addr_offset = 4,
+	.pad_enable = &_t18x_tegra_mipi_bias_pad_enable,
+	.pad_disable = &_t18x_tegra_mipi_bias_pad_disable,
+	.calibrate = &tegra_mipical_using_prod,
+	.parse_cfg = &tegra_prod_get_config,
+};
+
 
 static const struct of_device_id tegra_mipi_of_match[] = {
-	{ .compatible = "nvidia,tegra210-mipical"},
-	{ .compatible = "nvidia, tegra186-mipical"},
-	{ .compatible = "nvidia, tegra186-mipical-shared-multi-os"},
-	{ },
+	{
+		.compatible = "nvidia,tegra210-mipical",
+		.data = &tegra21x_mipi_soc,
+	}, {
+		.compatible = "nvidia, tegra186-mipical",
+		.data = &tegra18x_mipi_soc,
+	}, {
+		.compatible = "nvidia, tegra186-mipical-shared-multi-os",
+		.data = &tegra18x_mipi_soc,
+	}, {
+	},
 };
+MODULE_DEVICE_TABLE(of, tegra_mipi_of_match);
 
 static int tegra_mipi_open(struct inode *inode, struct file *file)
 {
@@ -894,7 +866,7 @@ static long mipi_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	return 0;
 }
 
-static const struct file_operations tegra_mipi_fops = {
+static const struct file_operations tegra_mipi_miscdev_fops = {
 	.owner = THIS_MODULE,
 	.open = tegra_mipi_open,
 	.release = tegra_mipi_release,
@@ -907,27 +879,26 @@ static const struct file_operations tegra_mipi_fops = {
 static int tegra_mipi_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *match;
-	struct tegra_mipi *mipi;
 	struct resource *mem, *memregion;
 	void __iomem *regs;
-	int err;
+	int err = 0;
 	struct device_node *np;
+	const struct tegra_mipi_soc *cdata = NULL;
 
-	err = 0;
 	np = pdev->dev.of_node;
 	match = of_match_device(tegra_mipi_of_match, &pdev->dev);
 	if (!match) {
 		dev_err(&pdev->dev, "No device match found\n");
 		return -ENODEV;
 	}
-
+	cdata = match->data;
 	mipi = devm_kzalloc(&pdev->dev, sizeof(*mipi), GFP_KERNEL);
 	if (!mipi)
 		return -ENOMEM;
 
-	mipi->ops = devm_kzalloc(&pdev->dev, sizeof(*mipi->ops), GFP_KERNEL);
 	mipi->dev = &pdev->dev;
-
+	mipi->soc = cdata;
+	platform_set_drvdata(pdev, mipi);
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
 		dev_err(&pdev->dev, "No memory resource\n");
@@ -966,29 +937,20 @@ static int tegra_mipi_probe(struct platform_device *pdev)
 				sizeof(*mipi->prod_csi), GFP_KERNEL);
 		mipi->prod_dsi = devm_kzalloc(&pdev->dev,
 				sizeof(*mipi->prod_dsi), GFP_KERNEL);
-		mipi->ops->calibrate = &_tegra_mipi_calibration;
-		mipi->ops->parse_cfg = &tegra_mipi_parse_config;
-		mipi->ops->pad_enable = &_t21x_tegra_mipi_bias_pad_enable;
-		mipi->ops->pad_disable = &_t21x_tegra_mipi_bias_pad_disable;
-
 	} else if (of_device_is_compatible(np, "nvidia, tegra186-mipical")) {
 		mipi->mipi_cal_fixed = devm_clk_get(&pdev->dev,
 				"uart_fs_mipi_cal");
 		if (IS_ERR(mipi->mipi_cal_fixed))
 			return PTR_ERR(mipi->mipi_cal_fixed);
-		mipi->ops->parse_cfg = &tegra_prod_get_config;
-		mipi->ops->calibrate = &tegra_mipical_using_prod;
-		mipi->ops->pad_enable = &_t18x_tegra_mipi_bias_pad_enable;
-		mipi->ops->pad_disable = &_t18x_tegra_mipi_bias_pad_disable;
 		mipi->rst = devm_reset_control_get(mipi->dev, "mipi_cal");
 		reset_control_deassert(mipi->rst);
 		/* Bug 200224083 requires both register fields set to 1
 		 * after de-asserted
 		 */
 		tegra_mipi_clk_enable(mipi);
-		regmap_write_bits(mipi->regmap, MIPI_BIAS_PAD_CFG0,
+		regmap_write_bits(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG0),
 				PDVCLAMP, 1 << PDVCLAMP_SHIFT);
-		regmap_write_bits(mipi->regmap, MIPI_BIAS_PAD_CFG2,
+		regmap_write_bits(mipi->regmap, ADDR(MIPI_BIAS_PAD_CFG2),
 				PDVREG, 1 << PDVREG_SHIFT);
 		tegra_mipi_clk_disable(mipi);
 	} else if (of_device_is_compatible(np, "nvidia, tegra186-mipical-shared-multi-os")) {
@@ -996,26 +958,21 @@ static int tegra_mipi_probe(struct platform_device *pdev)
 				"uart_fs_mipi_cal");
 		if (IS_ERR(mipi->mipi_cal_fixed))
 			return PTR_ERR(mipi->mipi_cal_fixed);
-		mipi->ops->parse_cfg = &tegra_prod_get_config;
-		mipi->ops->calibrate = &tegra_mipical_using_prod;
-		mipi->ops->pad_enable = &_t18x_tegra_mipi_bias_pad_enable;
-		mipi->ops->pad_disable = &_t18x_tegra_mipi_bias_pad_disable;
 		mipi->rst = devm_reset_control_get(mipi->dev, "mipi_cal");
 		reset_control_deassert(mipi->rst);
 	}
 
-	if (mipi->ops->parse_cfg)
-		err = mipi->ops->parse_cfg(pdev, mipi);
+	if (mipi->soc->parse_cfg)
+		err = mipi->soc->parse_cfg(pdev, mipi);
 	if (err)
 		return err;
 
 	mutex_init(&mipi->lock);
 	atomic_set(&mipi->refcount, 0);
 
-	platform_set_drvdata(pdev, mipi);
 	mipi->misc_dev.minor = MISC_DYNAMIC_MINOR;
 	mipi->misc_dev.name = DRV_NAME;
-	mipi->misc_dev.fops = &tegra_mipi_fops;
+	mipi->misc_dev.fops = &tegra_mipi_miscdev_fops;
 	err = misc_register(&mipi->misc_dev);
 	if (err) {
 		dev_err(mipi->dev, "Fail to register misc dev\n");
@@ -1053,7 +1010,6 @@ static void __exit tegra_mipi_module_exit(void)
 subsys_initcall(tegra_mipi_module_init);
 module_exit(tegra_mipi_module_exit);
 
-MODULE_DEVICE_TABLE(of, tegra_mipi_of_match);
 MODULE_AUTHOR("Wenjia Zhou <wenjiaz@nvidia.com>");
 MODULE_DESCRIPTION("Common MIPI calibration driver for CSI and DSI");
 MODULE_LICENSE("GPL v2");

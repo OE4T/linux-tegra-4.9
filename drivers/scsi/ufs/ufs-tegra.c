@@ -364,15 +364,11 @@ static int ufs_tegra_enable_ufs_clks(struct ufs_tegra_host *ufs_tegra)
 	if (err)
 		goto out;
 
+	/* clk_m is the parent for ufsdev_ref
+         * Frequency is 19.2 MHz.
+	 */
 	err = ufs_tegra_host_clk_enable(dev, "ufsdev_ref",
 		ufs_tegra->ufsdev_ref_clk);
-	if (err)
-		goto disable_ufshc;
-	err = clk_set_parent(ufs_tegra->ufsdev_ref_clk,
-				ufs_tegra->ufsdev_parent);
-	if (err)
-		goto disable_ufshc;
-	err = clk_set_rate(ufs_tegra->ufsdev_ref_clk, UFSDEV_CLK_FREQ);
 	if (err)
 		goto disable_ufshc;
 

@@ -1,7 +1,7 @@
 /*
  * pca9570.c - pca9570 IO Expander driver
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,10 +27,24 @@
 #define PCA9570_FORWARD 0
 #define PCA9570_REVERSE 1
 
+#define BA6208_FORWARD	0x02
+#define BA6208_BACKWARD	0x01
+#define BA6208_BREAK	0x03
+#define DRV8838_FORWARD	0x03
+#define DRV8838_BACKWARD	0x02
+#define DRV8838_BREAK	0x00
+
+enum drive_ic {
+	BA6208 = 0,
+	DRV8838,
+};
+
 struct pca9570 {
 	struct i2c_client *i2c_client;
 	struct regmap *regmap;
 	const char *channel;
+	const char *drive_ic_name;
+	int drive_ic;
 };
 
 static int pca9570_write_reg(struct pca9570 *priv,
@@ -54,6 +68,21 @@ static int pca9570_icr_move(struct pca9570 *priv, u32 direction, u32 val)
 	int steps = 0;
 	int err = 0;
 	u8 reg = 0;
+	u8 reg_forward, reg_revert, reg_brake;
+
+	switch (priv->drive_ic) {
+	case DRV8838:
+		reg_forward = DRV8838_FORWARD;
+		reg_revert = DRV8838_BACKWARD;
+		reg_brake = DRV8838_BREAK;
+		break;
+	case BA6208:
+	default:
+		reg_forward = BA6208_FORWARD;
+		reg_revert = BA6208_BACKWARD;
+		reg_brake = BA6208_BREAK;
+		break;
+	}
 
 	steps = val;
 	if (steps < 1)
@@ -62,11 +91,11 @@ static int pca9570_icr_move(struct pca9570 *priv, u32 direction, u32 val)
 	if (direction == PCA9570_FORWARD) {
 		dev_info(&i2c_client->dev, "%s, forward val=%d\n",
 			 __func__, steps);
-		reg = 0x02;
+		reg = reg_forward;
 	} else if (direction == PCA9570_REVERSE) {
 		dev_info(&i2c_client->dev, "%s, reverse val=%d\n",
 			 __func__, steps);
-		reg = 0x01;
+		reg = reg_revert;
 	} else
 		return -ENOMEM;
 
@@ -76,7 +105,8 @@ static int pca9570_icr_move(struct pca9570 *priv, u32 direction, u32 val)
 		err |= pca9570_write_reg(priv, IMX185_PCA9570_I2C_ADDR, reg);
 		usleep_range(1000*100, 1000*110);
 		err |= pca9570_write_reg(priv, IMX185_PCA9570_I2C_ADDR, 0x48);
-		err |= pca9570_write_reg(priv, IMX185_PCA9570_I2C_ADDR, 0x03);
+		err |= pca9570_write_reg(priv, IMX185_PCA9570_I2C_ADDR,
+				reg_brake);
 	}
 	if (err)
 		dev_err(&i2c_client->dev, "%s:i2c write failed\n", __func__);
@@ -242,6 +272,7 @@ static int pca9570_probe(struct i2c_client *client,
 				const struct i2c_device_id *id)
 {
 	struct pca9570 *priv;
+	struct device_node *np = client->dev.of_node;
 	int err = 0;
 
 	priv = devm_kzalloc(&client->dev, sizeof(*priv), GFP_KERNEL);
@@ -254,6 +285,22 @@ static int pca9570_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
+	err = of_property_read_string(np, "drive_ic", &priv->drive_ic_name);
+	if (!err && !IS_ERR(priv->drive_ic_name)) {
+		if (!strcmp(priv->drive_ic_name, "BA6208"))
+			priv->drive_ic = BA6208;
+		else if (!strcmp(priv->drive_ic_name, "DRV8838"))
+			priv->drive_ic = DRV8838;
+		else {
+			priv->drive_ic = BA6208;
+			dev_info(&client->dev,
+				"%s, unsupport driver ic found\n", __func__);
+		}
+	} else {
+		priv->drive_ic = BA6208;
+		dev_info(&client->dev,
+				"%s, drive_ic not found\n", __func__);
+	}
 
 	err = pca9570_debugfs_init(NULL, NULL, NULL, priv);
 	if (err)

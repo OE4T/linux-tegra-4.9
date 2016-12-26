@@ -408,8 +408,13 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 
 		switch (fence->type) {
 		case PVA_FENCE_TYPE_SYNCPT: {
-			dma_addr_t syncpt_addr = nvhost_syncpt_address(
-				task->pva->pdev, fence->syncpoint_index);
+			dma_addr_t syncpt_addr = nvhost_syncpt_gos_address(
+							task->pva->pdev,
+							fence->syncpoint_index);
+			if (!syncpt_addr)
+				syncpt_addr = nvhost_syncpt_address(
+							task->pva->pdev,
+							fence->syncpoint_index);
 
 			ptr += pva_task_write_ptr_op(&hw_preactions[ptr],
 				TASK_ACT_PTR_BLK_GTREQL, syncpt_addr,
@@ -461,7 +466,10 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 							id, thresh))
 					continue;
 
-				syncpt_addr = nvhost_syncpt_address(
+				syncpt_addr = nvhost_syncpt_gos_address(
+							task->pva->pdev, id);
+				if (!syncpt_addr)
+					syncpt_addr = nvhost_syncpt_address(
 							task->pva->pdev, id);
 
 				ptr += pva_task_write_ptr_op(
@@ -511,6 +519,8 @@ static void pva_task_write_postactions(struct pva_submit_task *task,
 {
 	dma_addr_t syncpt_addr = nvhost_syncpt_address(task->pva->pdev,
 				task->queue->syncpt_id);
+	dma_addr_t syncpt_gos_addr = nvhost_syncpt_gos_address(task->pva->pdev,
+				task->queue->syncpt_id);
 	u8 *hw_postactions = (void *)((u8 *)task->va + *offset);
 	int ptr = 0, i = 0;
 
@@ -553,6 +563,9 @@ static void pva_task_write_postactions(struct pva_submit_task *task,
 	}
 
 	/* Make a syncpoint increment */
+	if (syncpt_gos_addr)
+		ptr += pva_task_write_ptr_op(&hw_postactions[ptr],
+			TASK_ACT_PTR_WRITE_VAL, syncpt_gos_addr, 1);
 	ptr += pva_task_write_ptr_op(&hw_postactions[ptr],
 		TASK_ACT_PTR_WRITE_VAL, syncpt_addr, 1);
 	ptr += pva_task_write_atomic_op(&hw_postactions[ptr],

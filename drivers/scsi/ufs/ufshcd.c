@@ -2695,6 +2695,8 @@ static int ufshcd_uic_hibern8_enter(struct ufs_hba *hba)
 			goto out;
 	}
 out:
+	if (!ret)
+		ufshcd_vops_hibern8_entry_notify(hba);
 	return ret;
 }
 

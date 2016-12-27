@@ -1,7 +1,7 @@
 /*
  * VI NOTIFY driver for Tegra186
  *
- * Copyright (c) 2015-2016 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -47,7 +47,7 @@ struct vi_notify_req {
 				u32 mask;
 			};
 		};
-		char size[128];
+		char size[64];
 	};
 };
 

@@ -28,7 +28,6 @@
 #include <linux/printk.h>
 #include <linux/seq_buf.h>
 #include <linux/slab.h>
-#include <linux/tegra_ast.h>
 #include <linux/tegra-camera-rtcpu.h>
 #include <linux/tegra-rtcpu-trace.h>
 #include <linux/workqueue.h>
@@ -100,13 +99,11 @@ struct tegra_rtcpu_trace {
  * Trace memory
  */
 
-static int rtcpu_trace_setup_memory(struct tegra_rtcpu_trace *tracer,
-	struct tegra_ast *ast, u32 sid)
+static int rtcpu_trace_setup_memory(struct tegra_rtcpu_trace *tracer)
 {
 	struct device *dev = tracer->dev;
 	struct of_phandle_args reg_spec;
 	int ret;
-	struct tegra_ast_region *region;
 	void *trace_memory;
 	size_t mem_size;
 	dma_addr_t dma_addr;
@@ -117,21 +114,20 @@ static int rtcpu_trace_setup_memory(struct tegra_rtcpu_trace *tracer,
 		dev_err(dev, "Cannot find trace entry\n");
 		return -EINVAL;
 	}
-	tracer->of_node = reg_spec.np;
 
-	region = of_tegra_ast_region_map(ast, &reg_spec, sid);
-	if (IS_ERR(region)) {
-		ret = PTR_ERR(region);
+	mem_size = reg_spec.args[2];
+	trace_memory = dma_alloc_coherent(dev, mem_size, &dma_addr,
+					GFP_KERNEL | __GFP_ZERO);
+	if (trace_memory == NULL) {
+		ret = -ENOMEM;
 		goto error;
 	}
-
-	trace_memory = tegra_ast_region_get_mapping(region, &mem_size,
-		&dma_addr);
 
 	/* Save the information */
 	tracer->trace_memory = trace_memory;
 	tracer->trace_memory_size = mem_size;
 	tracer->dma_handle = dma_addr;
+	of_node_put(reg_spec.np);
 
 	return 0;
 
@@ -969,8 +965,7 @@ failed_create:
  * Init/Cleanup
  */
 
-struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev,
-	struct tegra_ast *ast, u32 sid)
+struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev)
 {
 	struct tegra_rtcpu_trace *tracer;
 	u32 param;
@@ -983,10 +978,11 @@ struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev,
 	tracer->dev = dev;
 
 	/* Get the trace memory */
-	ret = rtcpu_trace_setup_memory(tracer, ast, sid);
+	ret = rtcpu_trace_setup_memory(tracer);
 	if (ret) {
 		dev_err(dev, "Trace memory setup failed: %d\n", ret);
-		goto memory_setup_error;
+		kfree(tracer);
+		return NULL;
 	}
 
 	/* Initialize the trace memory */
@@ -1005,21 +1001,27 @@ struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev,
 
 	/* Done with initialization */
 	schedule_delayed_work(&tracer->work, 0);
-	return tracer;
 
-memory_setup_error:
-	kfree(tracer);
-	return NULL;
+	dev_info(dev, "Trace buffer configured at IOVA=0x%08x\n",
+		 (u32)tracer->dma_handle);
+
+	return tracer;
 }
 EXPORT_SYMBOL(tegra_rtcpu_trace_create);
+
+int tegra_rtcpu_trace_boot_sync(struct tegra_rtcpu_trace *tracer)
+{
+	return tegra_camrtc_iovm_setup(tracer->dev, tracer->dma_handle);
+}
+EXPORT_SYMBOL(tegra_rtcpu_trace_boot_sync);
 
 void tegra_rtcpu_trace_destroy(struct tegra_rtcpu_trace *tracer)
 {
 	cancel_delayed_work_sync(&tracer->work);
 	flush_delayed_work(&tracer->work);
 	rtcpu_trace_debugfs_deinit(tracer);
-	of_node_put(tracer->of_node);
-
+	dma_free_coherent(tracer->dev, tracer->trace_memory_size,
+			tracer->trace_memory, tracer->dma_handle);
 	kfree(tracer);
 }
 EXPORT_SYMBOL(tegra_rtcpu_trace_destroy);

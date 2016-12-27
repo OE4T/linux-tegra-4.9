@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,18 +20,29 @@
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/tegra-ivc.h>
-#include <linux/tegra_ast.h>
 #include <linux/tegra-ivc-bus.h>
+#include <linux/tegra-camera-rtcpu.h>
+#include <linux/bitops.h>
+#include "soc/tegra/camrtc-channels.h"
+#include "soc/tegra/camrtc-commands.h"
 
 #define NV(p) "nvidia," #p
 
+#define CAMRTC_IVC_CONFIG_SIZE	4096
+
+struct tegra_ivc_region {
+	uintptr_t base;
+	size_t size;
+	dma_addr_t iova;
+	size_t config_size;
+	size_t ivc_size;
+};
+
 struct tegra_ivc_bus {
 	struct device dev;
-	struct tegra_ast *ast;
 	struct tegra_ivc_channel *chans;
-	u32 sid;
 	unsigned num_regions;
-	struct tegra_ast_region *regions[];
+	struct tegra_ivc_region regions[];
 };
 
 static void tegra_hsp_ring(struct device *dev)
@@ -66,50 +77,17 @@ static void tegra_ivc_channel_release(struct device *dev)
 	kfree(chan);
 }
 
-static int tegra_ivc_bus_check_overlap(struct device *dev,
-					const struct tegra_ivc_channel *chan)
-{
-	const struct tegra_ivc_bus *bus =
-		container_of(dev, struct tegra_ivc_bus, dev);
-	const struct tegra_ivc_channel *chan2;
-	uintptr_t tx = (uintptr_t)chan->ivc.tx_channel;
-	uintptr_t rx = (uintptr_t)chan->ivc.rx_channel;
-	unsigned s = tegra_ivc_total_queue_size(chan->ivc.nframes *
-							chan->ivc.frame_size);
-
-	for (chan2 = bus->chans; chan2 != NULL; chan2 = chan2->next) {
-		uintptr_t tx2 = (uintptr_t)chan2->ivc.tx_channel;
-		uintptr_t rx2 = (uintptr_t)chan2->ivc.rx_channel;
-		unsigned s2 = tegra_ivc_total_queue_size(chan2->ivc.nframes *
-							chan2->ivc.frame_size);
-
-		if ((tx < tx2 ? tx + s > tx2 : tx2 + s2 > tx) ||
-			(rx < tx2 ? rx + s > tx2 : tx2 + s2 > rx) ||
-			(rx < rx2 ? rx + s > rx2 : rx2 + s2 > rx) ||
-			(tx < rx2 ? tx + s > rx2 : rx2 + s2 > tx)) {
-			dev_err(dev, "buffers for %s and %s overlap\n",
-				dev_name(&chan->dev), dev_name(&chan2->dev));
-			return -EINVAL;
-		}
-	}
-	return 0;
-}
-
 static struct tegra_ivc_channel *tegra_ivc_channel_create(
 		struct device *dev, struct device_node *ch_node,
-		struct tegra_ast_region *region)
+		struct tegra_ivc_region *region)
 {
-	void *base;
-	dma_addr_t dma_handle;
-	size_t size;
-	union {
-		u32 tab[2];
-		struct {
-			u32 rx;
-			u32 tx;
-		};
+	struct camrtc_tlv_ivc_setup *tlv;
+	struct {
+		u32 rx;
+		u32 tx;
 	} start, end;
-	u32 nframes, frame_size;
+	u32 version, channel_group, nframes, frame_size, queue_size;
+	const char *service;
 	int ret;
 
 	struct tegra_ivc_channel *chan = kzalloc(sizeof(*chan), GFP_KERNEL);
@@ -127,54 +105,62 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 	pm_runtime_no_callbacks(&chan->dev);
 	pm_runtime_enable(&chan->dev);
 
-	ret = of_property_read_u32_array(ch_node, "reg", start.tab,
-						ARRAY_SIZE(start.tab));
+	ret = of_property_read_string(ch_node, NV(service), &service);
 	if (ret) {
-		dev_err(&chan->dev, "missing <%s> property\n", "reg");
+		dev_err(&chan->dev, "missing <%s> property\n",
+			NV(service));
+		goto error;
+	}
+
+	ret = of_property_read_u32(ch_node, NV(version), &version);
+	if (ret)
+		version = 0;
+
+	ret = of_property_read_u32(ch_node, NV(group), &channel_group);
+	if (ret) {
+		dev_err(&chan->dev, "missing <%s> property\n", NV(group));
 		goto error;
 	}
 
 	ret = of_property_read_u32(ch_node, NV(frame-count), &nframes);
-	if (ret) {
+	if (ret || !nframes) {
 		dev_err(&chan->dev, "missing <%s> property\n",
 			NV(frame-count));
 		goto error;
 	}
+	nframes = 1 << fls(nframes - 1); /* Round up to a power of two */
 
 	ret = of_property_read_u32(ch_node, NV(frame-size), &frame_size);
-	if (ret) {
+	if (ret || !frame_size) {
 		dev_err(&chan->dev, "missing <%s> property\n", NV(frame-size));
 		goto error;
 	}
 
-	base = tegra_ast_region_get_mapping(region, &size, &dma_handle);
-	ret = -EINVAL;
-	end.rx = start.rx + tegra_ivc_total_queue_size(nframes * frame_size);
-	end.tx = start.tx + tegra_ivc_total_queue_size(nframes * frame_size);
-
-	if (end.rx > size) {
-		dev_err(&chan->dev, "%s buffer exceeds IVC size\n", "RX");
+	if (region->config_size + sizeof(*tlv) > CAMRTC_IVC_CONFIG_SIZE) {
+		dev_err(&chan->dev, "IVC config size exceeded\n");
+		ret = -ENOSPC;
 		goto error;
 	}
 
-	if (end.tx > size) {
-		dev_err(&chan->dev, "%s buffer exceeds IVC size\n", "TX");
+	queue_size = tegra_ivc_total_queue_size(nframes * frame_size);
+	if (region->ivc_size + 2 * queue_size > region->size) {
+		dev_err(&chan->dev, "buffers exceed IVC region\n");
+		ret = -ENOSPC;
 		goto error;
 	}
 
-	if (start.tx < start.rx ? end.tx > start.rx : end.rx > start.tx) {
-		dev_err(&chan->dev, "RX and TX buffers overlap\n");
-		goto error;
-	}
+	start.rx = region->ivc_size;
+	region->ivc_size += queue_size;
+	end.rx = region->ivc_size;
 
-	ret = tegra_ivc_bus_check_overlap(dev, chan);
-	if (ret)
-		goto error;
+	start.tx = end.rx;
+	region->ivc_size += queue_size;
+	end.tx = region->ivc_size;
 
 	/* Init IVC */
 	ret = tegra_ivc_init_with_dma_handle(&chan->ivc,
-			(uintptr_t)base + start.rx, dma_handle + start.rx,
-			(uintptr_t)base + start.tx, dma_handle + start.tx,
+			region->base + start.rx, region->iova + start.rx,
+			region->base + start.tx, region->iova + start.tx,
 			nframes, frame_size, dev->parent,
 			tegra_ivc_channel_ring);
 	if (ret) {
@@ -182,8 +168,31 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 		goto error;
 	}
 
-	dev_dbg(&chan->dev, "%s: RX: 0x%x-0x%x TX: 0x%x-0x%x\n",
-		ch_node->name, start.rx, end.rx, start.tx, end.tx);
+	/* Fill channel descriptor */
+	tlv = (struct camrtc_tlv_ivc_setup *)
+		(region->base + region->config_size);
+
+	tlv->tag = CAMRTC_TAG_IVC_SETUP;
+	tlv->len = sizeof(*tlv);
+	tlv->rx_iova = region->iova + start.rx;
+	tlv->rx_frame_size = frame_size;
+	tlv->rx_nframes = nframes;
+	tlv->tx_iova = region->iova + start.tx;
+	tlv->tx_frame_size = frame_size;
+	tlv->tx_nframes = nframes;
+	tlv->channel_group = channel_group;
+	tlv->ivc_version = version;
+	if (strscpy(tlv->ivc_service, service, sizeof(tlv->ivc_service)) < 0)
+		dev_warn(&chan->dev, "service name <%s> too long\n", service);
+
+	region->config_size += sizeof(*tlv);
+	(++tlv)->tag = 0; /* terminator */
+
+	dev_info(&chan->dev,
+		"%s: ver=%u grp=%u RX[%ux%u]=0x%x-0x%x TX[%ux%u]=0x%x-0x%x\n",
+		ch_node->name, version, channel_group,
+		nframes, frame_size, start.rx, end.rx,
+		nframes, frame_size, start.tx, end.tx);
 
 	ret = device_add(&chan->dev);
 	if (ret) {
@@ -229,8 +238,19 @@ static void tegra_ivc_bus_release(struct device *dev)
 {
 	struct tegra_ivc_bus *bus =
 		container_of(dev, struct tegra_ivc_bus, dev);
+	int i;
 
 	of_node_put(dev->of_node);
+
+	for (i = 0; i < bus->num_regions; i++) {
+		if (!bus->regions[i].base)
+			continue;
+
+		dma_free_coherent(dev->parent, bus->regions[i].size,
+				(void *)bus->regions[i].base,
+				bus->regions[i].iova);
+	}
+
 	kfree(bus);
 }
 
@@ -274,8 +294,8 @@ static int tegra_ivc_bus_start(struct device *dev)
 		for_each_child_of_node(reg_spec.np, ch_node) {
 			struct tegra_ivc_channel *chan;
 
-			chan = tegra_ivc_channel_create(&bus->dev, ch_node,
-							bus->regions[i]);
+			chan = tegra_ivc_channel_create(dev, ch_node,
+							&bus->regions[i]);
 			if (IS_ERR(chan)) {
 				ret = PTR_ERR(chan);
 				of_node_put(ch_node);
@@ -292,6 +312,27 @@ error:
 	tegra_ivc_bus_stop(dev);
 	return ret;
 }
+
+/*
+ * This is called during RTCPU boot to synchronize
+ * (or re-synchronize in the case of PM resume).
+ */
+int tegra_ivc_bus_boot_sync(struct tegra_ivc_bus *bus)
+{
+	int i;
+
+	for (i = 0; i < bus->num_regions; i++) {
+		int ret = tegra_camrtc_iovm_setup(bus->dev.parent,
+						bus->regions[i].iova);
+		if (ret < 0) {
+			tegra_ivc_bus_stop(&bus->dev);
+			return ret;
+		}
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_ivc_bus_boot_sync);
 
 static int tegra_ivc_bus_probe(struct device *dev)
 {
@@ -360,10 +401,16 @@ static int tegra_ivc_bus_remove(struct device *dev)
 static int tegra_ivc_bus_ready_child(struct device *dev, void *data)
 {
 	struct tegra_ivc_driver *drv = to_tegra_ivc_driver(dev->driver);
+	bool online = (data != NULL) ? *(bool *)data : true;
+
 	int ret;
 
 	if (drv == NULL)
 		return -EINVAL;
+
+	/* TODO: propagate offline status to bus devices */
+	if (!online)
+		return 0;
 
 	if (dev->type == &tegra_ivc_channel_type) {
 		struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
@@ -410,17 +457,58 @@ static int tegra_ivc_bus_parse_regions(struct tegra_ivc_bus *bus,
 		of_parse_phandle_with_fixed_args(dev_node, NV(ivc-channels), 3,
 							i, &reg_spec) == 0;
 		i++) {
-		struct tegra_ast_region *region;
+		struct device_node *ch_node;
+		struct tegra_ivc_region *region = &bus->regions[i];
+		u32 nframes, frame_size, size = CAMRTC_IVC_CONFIG_SIZE;
+		int ret;
 
-		/* Allocate RAM for IVC */
-		region = of_tegra_ast_region_map(bus->ast, &reg_spec,
-							bus->sid);
+		if (reg_spec.args_count < 3) {
+			of_node_put(reg_spec.np);
+			dev_err(&bus->dev, "invalid region specification\n");
+			return -EINVAL;
+		}
+
+		for_each_child_of_node(reg_spec.np, ch_node) {
+			ret = of_property_read_u32(ch_node, NV(frame-count),
+						&nframes);
+			if (ret || !nframes) {
+				dev_err(&bus->dev, "missing <%s> property\n",
+					NV(frame-count));
+				break;
+			}
+			/* Round up to a power of two */
+			nframes = 1 << fls(nframes - 1);
+
+			ret = of_property_read_u32(ch_node, NV(frame-size),
+						&frame_size);
+			if (ret || !frame_size) {
+				dev_err(&bus->dev, "missing <%s> property\n",
+					NV(frame-size));
+				break;
+			}
+
+			size += 2 * tegra_ivc_total_queue_size(nframes *
+							frame_size);
+		}
 		of_node_put(reg_spec.np);
 
-		if (IS_ERR(region))
-			return PTR_ERR(region);
+		if (ret)
+			return ret;
 
-		bus->regions[i] = region;
+		region->base =
+			(uintptr_t)dma_alloc_coherent(bus->dev.parent,
+						size, &region->iova,
+						GFP_KERNEL | __GFP_ZERO);
+		if (!region->base)
+			return -ENOMEM;
+
+		region->size = size;
+		region->config_size = 0;
+		region->ivc_size = CAMRTC_IVC_CONFIG_SIZE;
+
+		dev_info(&bus->dev, "region %u: iova=0x%x-0x%x size=%u\n",
+			i, (u32)region->iova, (u32)region->iova + size - 1,
+			size);
 	}
 
 	return 0;
@@ -437,8 +525,7 @@ static unsigned tegra_ivc_bus_count_regions(const struct device_node *dev_node)
 	return i;
 }
 
-struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev,
-						struct tegra_ast *ast, u32 sid)
+struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev)
 {
 	struct tegra_ivc_bus *bus;
 	unsigned num;
@@ -450,8 +537,6 @@ struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev,
 	if (unlikely(bus == NULL))
 		return ERR_PTR(-ENOMEM);
 
-	bus->ast = ast;
-	bus->sid = sid;
 	bus->num_regions = num;
 	bus->dev.parent = dev;
 	bus->dev.type = &tegra_hsp_type;
@@ -483,9 +568,12 @@ error:
 }
 EXPORT_SYMBOL(tegra_ivc_bus_create);
 
-void tegra_ivc_bus_ready(struct tegra_ivc_bus *bus)
+/*
+ * Communicate RTCPU UP/DOWN state to IVC devices.
+ */
+void tegra_ivc_bus_ready(struct tegra_ivc_bus *bus, bool online)
 {
-	device_for_each_child(&bus->dev, NULL, tegra_ivc_bus_ready_child);
+	device_for_each_child(&bus->dev, &online, tegra_ivc_bus_ready_child);
 }
 EXPORT_SYMBOL(tegra_ivc_bus_ready);
 

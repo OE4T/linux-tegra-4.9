@@ -19,13 +19,13 @@
 extern struct bus_type tegra_ivc_bus_type;
 struct tegra_ivc_bus;
 struct tegra_hsp_ops;
-struct tegra_ast;
 struct tegra_ivc_rpc_data;
 
-struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *, struct tegra_ast *,
-						u32 sid);
-void tegra_ivc_bus_ready(struct tegra_ivc_bus *bus);
-void tegra_ivc_bus_destroy(struct tegra_ivc_bus *ibus);
+struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *);
+
+void tegra_ivc_bus_ready(struct tegra_ivc_bus *bus, bool online);
+void tegra_ivc_bus_destroy(struct tegra_ivc_bus *bus);
+int tegra_ivc_bus_boot_sync(struct tegra_ivc_bus *bus);
 
 struct tegra_ivc_driver {
 	struct device_driver driver;

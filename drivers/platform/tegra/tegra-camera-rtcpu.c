@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,6 +24,7 @@
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/of.h>
+#include <linux/of_address.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
@@ -31,7 +32,6 @@
 #include <linux/sched.h>
 #include <linux/seq_buf.h>
 #include <linux/slab.h>
-#include <linux/tegra_ast.h>
 #include <linux/tegra-firmwares.h>
 #include <linux/tegra-hsp.h>
 #include <linux/tegra-ivc-bus.h>
@@ -44,6 +44,10 @@
 
 #include "soc/tegra/camrtc-commands.h"
 #include "soc/tegra/camrtc-ctrl-commands.h"
+
+#ifndef RTCPU_FW_SM3_VERSION
+#define RTCPU_FW_SM3_VERSION (3)
+#endif
 
 /* Register specifics */
 #define TEGRA_APS_FRSC_SC_CTL_0			0x0
@@ -190,7 +194,6 @@ enum rtcpu_state {
 struct tegra_cam_rtcpu {
 	const char *name;
 	struct tegra_ivc_bus *ivc;
-	struct tegra_ast *ast;
 	struct tegra_hsp_sm_pair *sm_pair;
 	struct tegra_rtcpu_trace *tracer;
 	struct {
@@ -202,7 +205,6 @@ struct tegra_cam_rtcpu {
 		u32 timeout;
 	} cmd;
 	u32 fw_version;
-	u32 ivc_version;
 	u8 fw_hash[RTCPU_FW_HASH_SIZE];
 	union {
 		void __iomem *regs[NUM(reg_names)];
@@ -223,6 +225,8 @@ struct tegra_cam_rtcpu {
 	enum rtcpu_state state;
 };
 
+static int tegra_camrtc_setup_ready(struct device *dev);
+
 struct reset_control *tegra_camrtc_reset_control_get(struct device *dev,
 						const char *id)
 {
@@ -234,6 +238,26 @@ struct reset_control *tegra_camrtc_reset_control_get(struct device *dev,
 	if (of_property_match_string(dev->of_node, "reset-names", id) < 0)
 		return ERR_PTR(-ENOENT);
 	return devm_reset_control_get(dev, id);
+}
+
+static void __iomem *tegra_cam_ioremap(struct device *dev, int index)
+{
+	struct resource mem;
+	int err = of_address_to_resource(dev->of_node, index, &mem);
+	if (err)
+		return IOMEM_ERR_PTR(err);
+
+	/* NOTE: assumes size is large enough for caller */
+	return devm_ioremap_resource(dev, &mem);
+}
+
+static void __iomem *tegra_cam_ioremap_byname(struct device *dev,
+					const char *name)
+{
+	int index = of_property_match_string(dev->of_node, "reg-names", name);
+	if (index < 0)
+		return IOMEM_ERR_PTR(-ENOENT);
+	return tegra_cam_ioremap(dev, index);
 }
 
 static int tegra_cam_rtcpu_get_resources(struct device *dev)
@@ -261,7 +285,7 @@ static int tegra_cam_rtcpu_get_resources(struct device *dev)
 
 	GET_RESOURCES(clock, devm_clk_get, true);
 	GET_RESOURCES(reset, tegra_camrtc_reset_control_get, true);
-	GET_RESOURCES(reg, tegra_ioremap_byname, true);
+	GET_RESOURCES(reg, tegra_cam_ioremap_byname, true);
 
 	return 0;
 }
@@ -399,11 +423,10 @@ int tegra_camrtc_start(struct device *dev)
 		return 0;
 
 	tegra_camrtc_boot(dev);
-	ret = tegra_camrtc_ivc_setup_ready(dev);
-	if (ret) {
-		dev_err(dev, "failed to setup ivc: %d\n", ret);
+
+	ret = tegra_camrtc_setup_ready(dev);
+	if (ret)
 		return ret;
-	}
 
 	rtcpu->state = RTCPU_UP;
 
@@ -635,7 +658,7 @@ int tegra_camrtc_boot(struct device *dev)
 		return -EIO;
 	}
 
-	command = RTCPU_COMMAND(FW_VERSION, RTCPU_FW_SM2_VERSION);
+	command = RTCPU_COMMAND(FW_VERSION, RTCPU_FW_SM3_VERSION);
 	ret = tegra_camrtc_command(dev, command, 0);
 	if (ret < 0)
 		return ret;
@@ -646,39 +669,50 @@ int tegra_camrtc_boot(struct device *dev)
 	}
 
 	rtcpu->fw_version = RTCPU_GET_COMMAND_VALUE(ret);
-
 	return 0;
 }
 EXPORT_SYMBOL(tegra_camrtc_boot);
 
-int tegra_camrtc_ivc_setup_ready(struct device *dev)
+static int tegra_camrtc_setup_ready(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
-	u32 command;
 	int ret;
 
-	if (rtcpu->tracer) {
-		dev_info(dev, "enabling tracing\n");
-		command = RTCPU_COMMAND(IVC_READY, RTCPU_IVC_WITH_TRACE);
-	} else {
-		dev_warn(dev, "disabling tracing\n");
-		command = RTCPU_COMMAND(IVC_READY, RTCPU_IVC_SANS_TRACE);
+	if (rtcpu->fw_version >= RTCPU_FW_SM3_VERSION) {
+		ret = tegra_rtcpu_trace_boot_sync(rtcpu->tracer);
+		if (ret < 0) {
+			dev_err(dev, "trace boot sync failed: %d\n", ret);
+			goto error;
+		}
+		ret = tegra_ivc_bus_boot_sync(rtcpu->ivc);
+		if (ret < 0) {
+			dev_err(dev, "IVC boot sync failed: %d\n", ret);
+			goto error;
+		}
 	}
 
-	ret = tegra_camrtc_command(dev, command, 0);
+	return 0;
+
+error:
+	return ret;
+}
+
+int tegra_camrtc_iovm_setup(struct device *dev, dma_addr_t iova)
+{
+	u32 command = RTCPU_COMMAND(CH_SETUP, iova >> 8);
+	int ret = tegra_camrtc_command(dev, command, 0);
 	if (ret < 0)
 		return ret;
 
-	if (RTCPU_GET_COMMAND_ID(ret) != RTCPU_CMD_IVC_READY) {
-		dev_err(dev, "IVC setup problem (response=0x%08x)\n", ret);
+	if (RTCPU_GET_COMMAND_ID(ret) == RTCPU_CMD_ERROR) {
+		u32 error = RTCPU_GET_COMMAND_VALUE(ret);
+		dev_err(dev, "IOVM setup error: %u\n", error);
 		return -EIO;
 	}
 
-	rtcpu->ivc_version = RTCPU_GET_COMMAND_VALUE(ret);
-
 	return 0;
 }
-EXPORT_SYMBOL(tegra_camrtc_ivc_setup_ready);
+EXPORT_SYMBOL(tegra_camrtc_iovm_setup);
 
 static int tegra_camrtc_get_fw_hash(struct device *dev,
 				u8 hash[RTCPU_FW_HASH_SIZE])
@@ -717,8 +751,8 @@ ssize_t tegra_camrtc_print_version(struct device *dev,
 	int i;
 
 	seq_buf_init(&s, buf, size);
-	seq_buf_printf(&s, "version cpu=%s cmd=%u ivc=%u sha1=",
-		rtcpu->name, rtcpu->fw_version, rtcpu->ivc_version);
+	seq_buf_printf(&s, "version cpu=%s cmd=%u sha1=",
+		rtcpu->name, rtcpu->fw_version);
 
 	for (i = 0; i < RTCPU_FW_HASH_SIZE; i++)
 		seq_buf_printf(&s, "%02x", rtcpu->fw_hash[i]);
@@ -783,7 +817,6 @@ static int tegra_cam_rtcpu_remove(struct platform_device *pdev)
 
 	tegra_cam_rtcpu_mon_destroy(rtcpu->monitor);
 	tegra_ivc_bus_destroy(rtcpu->ivc);
-	tegra_ast_destroy(rtcpu->ast);
 	tegra_hsp_sm_pair_free(rtcpu->sm_pair);
 
 	return 0;
@@ -798,7 +831,6 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	int ret;
 	const struct of_device_id *match;
 	const char *name;
-	u32 stream_id;
 
 	match = of_match_device(tegra_cam_rtcpu_of_match, dev);
 	if (match == NULL) {
@@ -818,16 +850,6 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	rtcpu->pdata = pdata;
 	rtcpu->name = name;
 	platform_set_drvdata(pdev, rtcpu);
-
-	ret = of_property_read_u32(dev->of_node, NV(stream-id), &stream_id);
-	if (ret) {
-		stream_id = iommu_get_hwid(dev->archdata.iommu, dev, 0);
-		if ((int)stream_id < 0) {
-			stream_id = TEGRA_SID_RCE;
-			dev_info(dev, "%s defaults to stream-id %u\n",
-				rtcpu->name, stream_id);
-		}
-	}
 
 	ret = tegra_cam_rtcpu_get_resources(dev);
 	if (ret)
@@ -878,30 +900,24 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
-	rtcpu->ast = tegra_ast_create(dev);
-	if (IS_ERR(rtcpu->ast)) {
-		ret = PTR_ERR(rtcpu->ast);
-		goto fail;
-	}
-
-	rtcpu->tracer = tegra_rtcpu_trace_create(dev, rtcpu->ast, stream_id);
-
 	ret = tegra_camrtc_boot(dev);
 	if (ret)
 		goto fail;
+
+	rtcpu->tracer = tegra_rtcpu_trace_create(dev);
 
 	ret = tegra_camrtc_get_fw_hash(dev, rtcpu->fw_hash);
 	if (ret == 0)
 		devm_tegrafw_register(dev, "camrtc",
 			TFW_NORMAL, tegra_camrtc_print_version, NULL);
 
-	rtcpu->ivc = tegra_ivc_bus_create(dev, rtcpu->ast, stream_id);
+	rtcpu->ivc = tegra_ivc_bus_create(dev);
 	if (IS_ERR(rtcpu->ivc)) {
 		ret = PTR_ERR(rtcpu->ivc);
 		goto fail;
 	}
 
-	ret = tegra_camrtc_ivc_setup_ready(dev);
+	ret = tegra_camrtc_setup_ready(dev);
 	if (ret)
 		goto fail;
 
@@ -910,7 +926,7 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	pm_runtime_put_sync(dev);
 	rtcpu->state = RTCPU_UP;
 
-	tegra_ivc_bus_ready(rtcpu->ivc);
+	tegra_ivc_bus_ready(rtcpu->ivc, true);
 
 	tegra_camrtc_log_fw_version(dev);
 

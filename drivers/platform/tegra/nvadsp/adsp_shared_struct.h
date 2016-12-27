@@ -3,7 +3,7 @@
  *
  * A header file containing shared data structures shared with ADSP OS
  *
- * Copyright (C) 2015-2016 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2015-2017 NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -26,7 +26,7 @@
 
 #define ADSP_OS_LOAD_TIMEOUT		5000 /* 5000 ms */
 
-#define DRAM_DEBUG_LOG_SIZE		0x100000
+#define DRAM_DEBUG_LOG_SIZE		0x4000 /* 16 KB */
 
 #define NVADSP_NAME_SZ			128
 
@@ -102,11 +102,16 @@ union app_complete_status_message {
 
 
 /*ADSP message pool structure */
+#define ADSP_MAX_MSGQ_SIZE		4096
+#define ADSP_MAX_MSGQ_WSIZE		(ADSP_MAX_MSGQ_SIZE / sizeof(int32_t))
+#define ADSP_MSGQ_MAX_QUEUE_WSIZE	\
+	(ADSP_MAX_MSGQ_WSIZE - (int32_t)MSGQ_HEADER_WSIZE)
+
 union app_loader_msgq {
 	msgq_t msgq;
 	struct {
 		int32_t header[MSGQ_HEADER_WSIZE];
-		int32_t queue[MSGQ_MAX_QUEUE_WSIZE];
+		int32_t queue[ADSP_MSGQ_MAX_QUEUE_WSIZE];
 	};
 };
 

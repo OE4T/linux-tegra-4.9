@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1135,6 +1135,8 @@ static int get_core_speedo_mv(void)
 
 	switch (tegra_sku_info.soc_process_id) {
 	case 0:
+		if (tegra_sku_info.soc_speedo_id == 1)
+			return 1100;
 		if (speedo_rev <= 1)
 			return 1000;
 

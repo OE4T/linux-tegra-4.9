@@ -948,6 +948,17 @@ int tegra_edid_get_eld(struct tegra_edid *edid, struct tegra_edid_hdmi_eld *eldd
 	return 0;
 }
 
+int tegra_edid_get_source_physical_address(struct tegra_edid *edid, u8 *phy_address)
+{
+	if ((!phy_address) || (!edid)  || (!edid->data))
+		return -EFAULT;
+
+	phy_address[0] = edid->data->eld.port_id[0];
+	phy_address[1] = edid->data->eld.port_id[1];
+
+	return 0;
+}
+
 struct tegra_edid *tegra_edid_create(struct tegra_dc *dc,
 	i2c_transfer_func_t i2c_func)
 {

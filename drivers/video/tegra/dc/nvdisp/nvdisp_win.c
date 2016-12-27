@@ -248,7 +248,11 @@ static int tegra_nvdisp_scaling(struct tegra_dc_win *win)
 			win_scaler_input_v_taps_2_f(),
 			win_scaler_input_r());
 	} else {
-		dev_err(&win->dc->ndev->dev, "Scaler can't be used\n");
+		dev_err(&win->dc->ndev->dev,
+		"Scaler can't be used. min_w=%d 5tap444_w=%d 2tap444_w=%d\n",
+			min_width,
+			win_precomp_wgrp_capc_max_pixels_5tap444_v(win_capc),
+			win_precomp_wgrp_cape_max_pixels_2tap444_v(win_cape));
 		return -EINVAL;
 	}
 

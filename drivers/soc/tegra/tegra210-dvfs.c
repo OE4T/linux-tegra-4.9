@@ -20,6 +20,7 @@
 #include <linux/clk-provider.h>
 #include <linux/of_address.h>
 #include <linux/thermal.h>
+#include <linux/regulator/consumer.h>
 
 #include <soc/tegra/cvb.h>
 #include <soc/tegra/tegra-dvfs.h>
@@ -1652,6 +1653,25 @@ int tegra210_init_dvfs(struct device_node *node)
 	tegra210_dvfs_rail_vdd_core.min_millivolts =
 		max(tegra210_dvfs_rail_vdd_core.min_millivolts,
 		    core_millivolts[0]);
+
+	for (i = 0; i <  ARRAY_SIZE(tegra210_dvfs_rails); i++) {
+		struct regulator *reg;
+		unsigned int step_uv;
+
+		reg = regulator_get(NULL, tegra210_dvfs_rails[i]->reg_id);
+		if (IS_ERR(reg)) {
+			pr_info("tegra_dvfs: Unable to get %s rail for step info, defering probe\n",
+					tegra210_dvfs_rails[i]->reg_id);
+			return -EPROBE_DEFER;
+		}
+
+		step_uv = regulator_get_linear_step(reg);
+		regulator_put(reg);
+		if (step_uv) {
+			tegra210_dvfs_rails[i]->alignment.step_uv = step_uv;
+			tegra210_dvfs_rails[i]->stats.bin_uv = step_uv;
+		}
+	}
 
 	/*
 	 * Construct fast and slow CPU DVFS tables from FV data; find maximum

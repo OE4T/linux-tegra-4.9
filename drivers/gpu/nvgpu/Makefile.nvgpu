@@ -13,12 +13,6 @@ ifeq ($(VERSION),4)
 ccflags-y += -Wextra -Wno-unused-parameter -Wno-missing-field-initializers
 endif
 
-ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
-ccflags-y += -I$(srctree)/../nvgpu-t18x/drivers/gpu/nvgpu
-ccflags-y += -I$(srctree)/../nvgpu-t18x/include
-ccflags-y += -I$(srctree)/../nvgpu-t18x/include/uapi
-endif
-
 ifeq ($(CONFIG_TEGRA_19x_GPU),y)
 ccflags-y += -I$(srctree)/../nvgpu-t19x/drivers/gpu/nvgpu
 ccflags-y += -I$(srctree)/../nvgpu-t19x/include
@@ -135,12 +129,79 @@ nvgpu-$(CONFIG_GK20A_CYCLE_STATS) += \
 	gk20a/css_gr_gk20a.o
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
-ifneq ($(wildcard $(srctree)/../nvgpu-t18x/drivers/gpu/nvgpu/Makefile),)
-include $(srctree)/../nvgpu-t18x/drivers/gpu/nvgpu/Makefile
-endif
-ifneq ($(wildcard $(srctree)/../nvgpu-t18x/drivers/gpu/nvgpu/Makefile.nvgpu-t18x),)
-include $(srctree)/../nvgpu-t18x/drivers/gpu/nvgpu/Makefile.nvgpu-t18x
-endif
+nvgpu-y += \
+	gp10b/gr_gp10b.o  \
+	gp10b/gr_ctx_gp10b.o  \
+	gp10b/ce_gp10b.o \
+	gp10b/mc_gp10b.o  \
+	gp10b/fifo_gp10b.o  \
+	gp10b/ltc_gp10b.o \
+	gp10b/mm_gp10b.o \
+	gp10b/fb_gp10b.o \
+	gp10b/pmu_gp10b.o \
+	gp10b/hal_gp10b.o \
+	gp10b/rpfb_gp10b.o \
+	gp10b/gp10b_gating_reglist.o \
+	gp10b/regops_gp10b.o \
+	gp10b/cde_gp10b.o \
+	gp10b/therm_gp10b.o \
+	gp10b/fecs_trace_gp10b.o \
+	gp10b/gp10b_sysfs.o \
+	gp10b/gp10b.o \
+	gp106/hal_gp106.o \
+	gp106/mm_gp106.o \
+	gp106/pmu_gp106.o \
+	gp106/gr_gp106.o \
+	gp106/gr_ctx_gp106.o \
+	gp106/acr_gp106.o \
+	gp106/sec2_gp106.o \
+	gp106/fifo_gp106.o \
+	gp106/ltc_gp106.o \
+	gp106/fb_gp106.o \
+	gp106/bios_gp106.o \
+	gp106/regops_gp106.o \
+	clk/clk_mclk.o \
+	pstate/pstate.o \
+	clk/clk_vin.o \
+	clk/clk_fll.o \
+	clk/clk_domain.o \
+	clk/clk_prog.o \
+	clk/clk_vf_point.o \
+	clk/clk_arb.o \
+	clk/clk_freq_controller.o \
+	perf/vfe_var.o \
+	perf/vfe_equ.o \
+	perf/perf.o \
+	clk/clk.o \
+	gp106/clk_gp106.o \
+	gp106/clk_arb_gp106.o \
+	gp106/gp106_gating_reglist.o \
+	gp106/xve_gp106.o \
+	gp106/therm_gp106.o \
+	gp106/xve_gp106.o \
+	pmgr/pwrdev.o \
+	pmgr/pmgr.o \
+	pmgr/pmgrpmu.o \
+	pmgr/pwrmonitor.o \
+	pmgr/pwrpolicy.o \
+	volt/volt_rail.o \
+	volt/volt_dev.o \
+	volt/volt_policy.o \
+	volt/volt_pmu.o \
+	therm/thrm.o \
+	therm/thrmdev.o \
+	therm/thrmchannel.o \
+	therm/thrmpmu.o \
+	lpwr/rppg.o \
+	lpwr/lpwr.o
+
+nvgpu-$(CONFIG_TEGRA_GK20A) += gp10b/platform_gp10b_tegra.o
+
+nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
+	vgpu/gp10b/vgpu_hal_gp10b.o  \
+	vgpu/gp10b/vgpu_gr_gp10b.o  \
+	vgpu/gp10b/vgpu_mm_gp10b.o \
+	vgpu/gp10b/vgpu_fifo_gp10b.o
 endif
 
 ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)

@@ -4,11 +4,6 @@ config TEGRA186_PMC
         help
           Enable Tegra186 PMC.
 
-config TEGRA_AST
-	bool "Enable Tegra Address Space Translation Driver"
-	depends on ARCH_TEGRA_18x_SOC
-	default y
-
 config TEGRA_AON
 	bool "Tegra AON driver"
 	depends on ARCH_TEGRA_18x_SOC
@@ -53,7 +48,6 @@ config TEGRA_CAMERA_RTCPU
 	depends on ARCH_TEGRA_18x_SOC
 	select TEGRA_IVC
 	select TEGRA_HSP
-	select TEGRA_AST
 
 config TEGRA_PTP_NOTIFIER
 	tristate "Enable PTP Notifier"

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2017 NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,7 +26,6 @@
 #include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/string.h>
-#include <linux/tegra_ast.h>
 #include <linux/tegra-camera-rtcpu.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-bus.h>

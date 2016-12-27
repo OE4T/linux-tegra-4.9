@@ -22,7 +22,6 @@
 #include <linux/tegra-ivc-instance.h>
 #include <linux/of_platform.h>
 #include <linux/mailbox_controller.h>
-#include <linux/tegra_ast.h>
 #include <linux/tegra-ivc-bus.h>
 
 #define NV(p) "nvidia," #p

@@ -990,7 +990,7 @@ static void tegra_pcie_configure_aspm(void)
 
 	PR_FUNC_LINE;
 	if (!pcie_aspm_support_enabled()) {
-		dev_info(pcie->dev, "PCIE: ASPM not enabled\n");
+		pr_info("PCIE: ASPM not enabled\n");
 		return;
 	}
 
@@ -2782,6 +2782,7 @@ static int tegra_pcie_disable_msi(struct tegra_pcie *pcie);
 static int tegra_pcie_init(struct tegra_pcie *pcie)
 {
 	int err = 0;
+	void *hw_private[1];
 
 	PR_FUNC_LINE;
 
@@ -2802,24 +2803,24 @@ static int tegra_pcie_init(struct tegra_pcie *pcie)
 		goto fail_power_off;
 	}
 
-	if (pcie->num_ports) {
-		if (IS_ENABLED(CONFIG_PCI_MSI)) {
-			err = tegra_pcie_enable_msi(pcie, false);
-			if (err < 0) {
-				dev_err(pcie->dev,
-					"failed to enable MSI support: %d\n",
-					err);
-				goto fail_release_resource;
-			}
-		}
-		tegra_pcie_hw.private_data = (void **)&pcie;
-		tegra_pcie_hw.ops = &tegra_pcie_ops;
-		tegra_pcie_hw.sys = &pcie->sys;
-		pci_common_init_dev(pcie->dev, &tegra_pcie_hw);
-	} else {
+	if (!pcie->num_ports) {
 		dev_info(pcie->dev, "PCIE: no end points detected\n");
 		goto fail_power_off;
 	}
+	if (IS_ENABLED(CONFIG_PCI_MSI)) {
+		err = tegra_pcie_enable_msi(pcie, false);
+		if (err < 0) {
+			dev_err(pcie->dev,
+				"failed to enable MSI support: %d\n",
+				err);
+			goto fail_release_resource;
+		}
+	}
+	hw_private[0] = pcie;
+	tegra_pcie_hw.private_data = hw_private;
+	tegra_pcie_hw.ops = &tegra_pcie_ops;
+	tegra_pcie_hw.sys = &pcie->sys;
+	pci_common_init_dev(pcie->dev, &tegra_pcie_hw);
 	tegra_pcie_enable_features(pcie);
 	/* register pcie device as wakeup source */
 	device_init_wakeup(pcie->dev, true);

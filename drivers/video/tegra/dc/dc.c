@@ -6273,6 +6273,17 @@ static int tegra_dc_resume(struct platform_device *ndev)
 		dc->enabled = _tegra_dc_enable(dc);
 	}
 
+	/*
+	 * tegra_dc_enable returns without unpowergating dc as
+	 * it is userspace's responsibility to enable DC after
+	 * dc_resume completes.
+	 * When no userspace entity is active, driver needs to
+	 * unpowergate dc during resume so that hpd worker can
+	 * read EDID subsequently.
+	 */
+	if (!tegra_dc_ext_is_userspace_active() && !tegra_dc_is_powered(dc))
+		tegra_dc_unpowergate_locked(dc);
+
 	if (dc->out && dc->out->hotplug_init)
 		dc->out->hotplug_init(&ndev->dev);
 

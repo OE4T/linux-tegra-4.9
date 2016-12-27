@@ -54,8 +54,8 @@ static const u32 __initconst gpu_process_speedos[][GPU_PROCESS_CORNERS] = {
 };
 
 static const u32 __initconst soc_process_speedos[][SOC_PROCESS_CORNERS] = {
-	{ 1950, 2100, UINT_MAX },
-	{ 1950, 2100, UINT_MAX },
+	{ 1950,     2073,     UINT_MAX },
+	{ UINT_MAX, UINT_MAX, UINT_MAX },
 };
 
 static u8 __init get_speedo_revision(void)
@@ -69,18 +69,31 @@ static void __init rev_sku_to_speedo_ids(struct tegra_sku_info *sku_info,
 					 u8 speedo_rev, int *threshold)
 {
 	int sku = sku_info->sku_id;
+	bool vcm31_sku = false;
 
 	/* Assign to default */
 	sku_info->cpu_speedo_id = 0;
 	sku_info->soc_speedo_id = 0;
 	sku_info->gpu_speedo_id = 0;
 	*threshold = THRESHOLD_INDEX_0;
+#ifdef CONFIG_OF
+	vcm31_sku = of_property_read_bool(of_chosen,
+						"nvidia,t210-vcm31-sku");
+#endif
 
 	switch (sku) {
 	case 0x00: /* Engineering SKU */
 	case 0x01: /* Engineering SKU */
 	case 0x07:
 	case 0x17:
+		if (vcm31_sku) {
+			sku_info->cpu_speedo_id = 4;
+			sku_info->soc_speedo_id = 1;
+			sku_info->gpu_speedo_id = 4;
+			*threshold = THRESHOLD_INDEX_1;
+			break;
+		}
+		/* fall through for a01 */
 	case 0x27:
 		if (speedo_rev >= 2)
 			sku_info->gpu_speedo_id = 1;

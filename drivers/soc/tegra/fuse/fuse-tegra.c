@@ -371,7 +371,7 @@ static int __init tegra_init_fuse(void)
 
 	fuse->soc->init(fuse);
 
-	pr_info("Tegra Revision: %s SKU: %d CPU Process: %d SoC Process: %d\n",
+	pr_info("Tegra Revision: %s SKU: 0x%x CPU Process: %d SoC Process: %d\n",
 		tegra_revision_name[tegra_sku_info.revision],
 		tegra_sku_info.sku_id, tegra_sku_info.cpu_process_id,
 		tegra_sku_info.soc_process_id);

@@ -2059,9 +2059,6 @@ static size_t msg_print_text(const struct printk_log *msg, enum log_flags prev,
 static size_t cont_print_text(char *text, size_t size) { return 0; }
 static bool suppress_message_printing(int level) { return false; }
 
-/* Still needs to be defined for users */
-DEFINE_PER_CPU(printk_func_t, printk_func);
-
 #endif /* CONFIG_PRINTK */
 
 #ifdef CONFIG_EARLY_PRINTK

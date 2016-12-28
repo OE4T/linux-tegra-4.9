@@ -95,16 +95,12 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 
 #ifndef CONFIG_TEGRA_NVDISPLAY
 static struct of_device_id tegra_disa_pd[] = {
-	{ .compatible = "nvidia,tegra186-disa-pd", },
 	{ .compatible = "nvidia,tegra210-disa-pd", },
-	{ .compatible = "nvidia,tegra132-disa-pd", },
 	{},
 };
 
 static struct of_device_id tegra_disb_pd[] = {
-	{ .compatible = "nvidia,tegra186-disb-pd", },
 	{ .compatible = "nvidia,tegra210-disb-pd", },
-	{ .compatible = "nvidia,tegra132-disb-pd", },
 	{},
 };
 #endif
@@ -6343,36 +6339,6 @@ static int suspend;
 
 module_param_call(suspend, suspend_set, suspend_get, &suspend, 0644);
 
-
-#ifdef CONFIG_OF
-static struct of_device_id tegra_display_of_match[] = {
-	{.compatible = "nvidia,tegra114-dc", },
-	{.compatible = "nvidia,tegra124-dc", },
-	{.compatible = "nvidia,tegra210-dc", },
-	{.compatible = "nvidia,tegra186-dc", },
-	{ },
-};
-#endif
-
-static struct platform_driver tegra_dc_driver = {
-	.driver = {
-		.name = "tegradc",
-		.owner = THIS_MODULE,
-#ifdef CONFIG_OF
-		.of_match_table =
-			of_match_ptr(tegra_display_of_match),
-#endif
-		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
-	},
-	.probe = tegra_dc_probe,
-	.remove = tegra_dc_remove,
-#ifdef CONFIG_PM
-	.suspend = tegra_dc_suspend,
-	.resume = tegra_dc_resume,
-#endif
-	.shutdown = tegra_dc_shutdown,
-};
-
 #ifndef MODULE
 static int __init parse_disp_params(char *options, struct tegra_dc_mode *mode)
 {
@@ -6589,6 +6555,32 @@ EXPORT_SYMBOL(tegra_dc_unregister_isr_usr_cb);
 
 #endif /* TEGRA_DC_USR_SHARED_IRQ */
 
+#ifdef CONFIG_OF
+static struct of_device_id tegra_display_of_match[] = {
+	{.compatible = "nvidia,tegra210-dc", },
+	{.compatible = "nvidia,tegra186-dc", },
+	{ },
+};
+#endif
+
+static struct platform_driver tegra_dc_driver = {
+	.driver = {
+		.name = "tegradc",
+		.owner = THIS_MODULE,
+#ifdef CONFIG_OF
+		.of_match_table =
+			of_match_ptr(tegra_display_of_match),
+#endif
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
+	},
+	.probe = tegra_dc_probe,
+	.remove = tegra_dc_remove,
+#ifdef CONFIG_PM
+	.suspend = tegra_dc_suspend,
+	.resume = tegra_dc_resume,
+#endif
+	.shutdown = tegra_dc_shutdown,
+};
 
 static int __init tegra_dc_module_init(void)
 {

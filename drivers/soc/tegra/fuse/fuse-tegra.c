@@ -224,6 +224,18 @@ void tegra_fuse_control_write(u32 value, unsigned long offset)
 	fuse->control_write(fuse, value, offset);
 }
 
+u32 tegra_fuse_get_subrevision(void)
+{
+	u32 reg;
+	int ret;
+
+	ret = tegra_fuse_readl(FUSE_OPT_SUBREVISION, &reg);
+	if (ret)
+		return ret;
+
+	return reg & FUSE_OPT_SUBREVISION_MASK;
+}
+
 int tegra_fuse_get_cpu_iddq(void)
 {
 	if (!fuse->soc || !fuse->base)

@@ -32,6 +32,9 @@
 #define TEGRA30_FUSE_SATA_CALIB	0x124
 #define TEGRA_FUSE_USB_CALIB_EXT_0 0x250
 
+#define FUSE_OPT_SUBREVISION		0x148
+#define FUSE_OPT_SUBREVISION_MASK	0xF
+
 #ifndef __ASSEMBLY__
 
 u32 tegra_read_chipid(void);
@@ -53,5 +56,6 @@ static inline u32 tegra_get_sku_id(void)
 { return 0; }
 
 #endif /* __ASSEMBLY__ */
+u32 tegra_fuse_get_subrevision(void);
 
 #endif /* __SOC_TEGRA_FUSE_H__ */

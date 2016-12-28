@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,6 +20,7 @@
 #include <linux/slab.h>
 #include <linux/dma-mapping.h>
 #include <linux/uaccess.h>
+#include <soc/tegra/bpmp_abi.h>
 #include "bpmp.h"
 
 #define DEBUGFS_S_ISDIR		(1 << 9)

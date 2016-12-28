@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/clk.h>
 #include <linux/debugfs.h>
 #include <linux/dma-mapping.h>
 #include <linux/firmware.h>
@@ -32,6 +33,7 @@
 #include <linux/uaccess.h>
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
+#include <soc/tegra/tegra_pasr.h>
 #include "../../../arch/arm/mach-tegra/iomap.h"
 #include "bpmp.h"
 
@@ -820,6 +822,68 @@ static void bpmp_setup_allocator(struct device *dev)
 
 	is_virt = true;
 }
+
+#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+static int bpmp_clk_init(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+	struct clk *sclk;
+	struct clk *emc_clk;
+
+	sclk = devm_clk_get(dev, "sclk");
+	if (IS_ERR(sclk)) {
+		dev_err(dev, "cannot get avp sclk\n");
+		return -ENODEV;
+	}
+
+	emc_clk = devm_clk_get(dev, "emc");
+	if (IS_ERR(emc_clk)) {
+		dev_err(dev, "cannot get avp emc clk\n");
+		return -ENODEV;
+	}
+
+	clk_prepare_enable(sclk);
+	clk_prepare_enable(emc_clk);
+
+	if (tegra21_pasr_init(&pdev->dev))
+		dev_err(&pdev->dev, "PASR init failed\n");
+
+	return 0;
+}
+
+static int bpmp_linear_map_init(struct device *device)
+{
+	struct device_node *node;
+	DEFINE_DMA_ATTRS(attrs);
+	uint32_t of_start;
+	uint32_t of_size;
+	int ret;
+
+	node = of_find_node_by_path("/bpmp");
+	WARN_ON(!node);
+	if (!node)
+		return -ENODEV;
+
+	ret = of_property_read_u32(node, "carveout-start", &of_start);
+	if (ret)
+		return ret;
+
+	ret = of_property_read_u32(node, "carveout-size", &of_size);
+	if (ret)
+		return ret;
+
+	dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
+	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+	ret = dma_map_linear_attrs(device, of_start, of_size, 0, &attrs);
+	if (ret == DMA_ERROR_CODE)
+		return -ENOMEM;
+
+	return 0;
+}
+#else
+static inline int bpmp_clk_init(struct platform_device *pdev) { return 0; }
+static inline int bpmp_linear_map_init(struct device *device) { return 0; }
+#endif
 
 static int bpmp_probe(struct platform_device *pdev)
 {

@@ -66,13 +66,9 @@ static inline int bpmp_fwdebug_init(struct dentry *root) { return -ENODEV; }
 #endif
 
 #ifdef CONFIG_ARCH_TEGRA_21x_SOC
-int bpmp_linear_map_init(struct device *device);
 int bpmp_init_cpuidle_debug(struct dentry *root);
-int bpmp_clk_init(struct platform_device *pdev);
 #else
-static inline int bpmp_linear_map_init(struct device *device) { return 0; }
 static inline int bpmp_init_cpuidle_debug(struct dentry *root) { return 0; }
-static inline int bpmp_clk_init(struct platform_device *pdev) { return 0; }
 #endif
 
 extern struct mutex bpmp_lock;

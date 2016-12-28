@@ -35,6 +35,14 @@
 #define PMC_STRAPPING_OPT_A_RAM_CODE_MASK_SHORT	\
 	(0x3 << PMC_STRAPPING_OPT_A_RAM_CODE_SHIFT)
 
+struct chip_revision {
+	enum tegra_chipid	chipid;
+	unsigned int		major;
+	unsigned int		minor;
+	char			sub_type;
+	enum tegra_revision	revision;
+};
+
 struct apbmisc_data {
 	u32 emu_revid_offset;
 };
@@ -122,38 +130,74 @@ static const struct of_device_id apbmisc_match[] __initconst = {
 	{},
 };
 
+#define CHIP_REVISION(id, maj, min, sub, rev) {	\
+	.chipid = TEGRA_CHIPID_##id,		\
+	.major = maj,				\
+	.minor = min,				\
+	.sub_type = sub,			\
+	.revision = TEGRA_REVISION_##rev }
+
+static struct chip_revision tegra_chip_revisions[] = {
+	CHIP_REVISION(TEGRA21, 1, 1, 0,   A01),
+	CHIP_REVISION(TEGRA21, 1, 1, 'q', A01q),
+	CHIP_REVISION(TEGRA21, 1, 2, 0,   A02),
+	CHIP_REVISION(TEGRA18, 1, 1, 0,   A01),
+	CHIP_REVISION(TEGRA18, 1, 2, 0,   A02),
+	CHIP_REVISION(TEGRA18, 1, 2, 'p', A02p),
+};
+
 void tegra_init_revision(void)
 {
-	u32 id, chip_id, minor_rev;
-	int rev;
+	u32 id, chipid, major, minor, subrev;
+	enum tegra_revision revision = TEGRA_REVISION_UNKNOWN;
+	char sub_type = 0;
+	int i;
 
 	id = tegra_read_chipid();
-	chip_id = (id >> 8) & 0xff;
-	minor_rev = (id >> 16) & 0xf;
+	chipid = tegra_hidrev_get_chipid(id);
+	major = tegra_hidrev_get_majorrev(id);
+	minor = tegra_hidrev_get_minorrev(id);
 
-	switch (minor_rev) {
+	/* For pre-silicon the major is 0, for silicon it is >= 1 */
+	if (major == 0) {
+		switch (minor) {
+		case 1:
+			revision = TEGRA_REVISION_A01;
+			break;
+		case 2:
+			revision = TEGRA_REVISION_QT;
+			break;
+		case 3:
+			revision = TEGRA_REVISION_SIM;
+			break;
+		}
+		goto exit;
+	}
+	subrev = tegra_fuse_get_subrevision();
+	switch (subrev) {
 	case 1:
-		rev = TEGRA_REVISION_A01;
+		sub_type = 'p';
 		break;
 	case 2:
-		rev = TEGRA_REVISION_A02;
+		sub_type = 'q';
 		break;
 	case 3:
-		if (chip_id == TEGRA20 && (tegra_fuse_read_spare(18) ||
-					   tegra_fuse_read_spare(19)))
-			rev = TEGRA_REVISION_A03p;
-		else
-			rev = TEGRA_REVISION_A03;
+		sub_type = 'r';
 		break;
-	case 4:
-		rev = TEGRA_REVISION_A04;
-		break;
-	default:
-		rev = TEGRA_REVISION_UNKNOWN;
 	}
 
-	tegra_sku_info.revision = rev;
+	for (i = 0; i < ARRAY_SIZE(tegra_chip_revisions); i++) {
+		if ((chipid != tegra_chip_revisions[i].chipid) ||
+		    (minor != tegra_chip_revisions[i].minor) ||
+		    (major != tegra_chip_revisions[i].major) ||
+		    (sub_type != tegra_chip_revisions[i].sub_type))
+			continue;
 
+		revision = tegra_chip_revisions[i].revision;
+		break;
+	}
+exit:
+	tegra_sku_info.revision = revision;
 	tegra_sku_info.sku_id = tegra_fuse_read_early(FUSE_SKU_INFO);
 }
 

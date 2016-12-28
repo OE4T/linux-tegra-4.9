@@ -1344,6 +1344,18 @@ static void gr_gk20a_program_sm_id_numbering(struct gk20a *g,
 			gr_gpc0_tpc0_pe_cfg_smid_value_f(sm_id));
 }
 
+/*
+ * Return number of TPCs in a GPC
+ * Return 0 if GPC index is invalid i.e. GPC is disabled
+ */
+static u32 gr_gk20a_get_tpc_count(struct gr_gk20a *gr, u32 gpc_index)
+{
+	if (gpc_index >= gr->gpc_count)
+		return 0;
+
+	return gr->gpc_tpc_count[gpc_index];
+}
+
 int gr_gk20a_init_fs_state(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -1351,6 +1363,7 @@ int gr_gk20a_init_fs_state(struct gk20a *g)
 	u32 sm_id = 0, gpc_id = 0;
 	u32 tpc_per_gpc;
 	u32 fuse_tpc_mask;
+	u32 reg_index;
 
 	gk20a_dbg_fn("");
 
@@ -1367,25 +1380,22 @@ int gr_gk20a_init_fs_state(struct gk20a *g)
 			g->ops.gr.program_active_tpc_counts(g, gpc_index);
 	}
 
-	for (tpc_index = 0, gpc_id = 0;
-	     tpc_index < gr_pd_num_tpc_per_gpc__size_1_v();
-	     tpc_index++, gpc_id += 8) {
-
-		if (gpc_id >= gr->gpc_count)
-			continue;
+	for (reg_index = 0, gpc_id = 0;
+	     reg_index < gr_pd_num_tpc_per_gpc__size_1_v();
+	     reg_index++, gpc_id += 8) {
 
 		tpc_per_gpc =
-			gr_pd_num_tpc_per_gpc_count0_f(gr->gpc_tpc_count[gpc_id + 0]) |
-			gr_pd_num_tpc_per_gpc_count1_f(gr->gpc_tpc_count[gpc_id + 1]) |
-			gr_pd_num_tpc_per_gpc_count2_f(gr->gpc_tpc_count[gpc_id + 2]) |
-			gr_pd_num_tpc_per_gpc_count3_f(gr->gpc_tpc_count[gpc_id + 3]) |
-			gr_pd_num_tpc_per_gpc_count4_f(gr->gpc_tpc_count[gpc_id + 4]) |
-			gr_pd_num_tpc_per_gpc_count5_f(gr->gpc_tpc_count[gpc_id + 5]) |
-			gr_pd_num_tpc_per_gpc_count6_f(gr->gpc_tpc_count[gpc_id + 6]) |
-			gr_pd_num_tpc_per_gpc_count7_f(gr->gpc_tpc_count[gpc_id + 7]);
+			gr_pd_num_tpc_per_gpc_count0_f(gr_gk20a_get_tpc_count(gr, gpc_id + 0)) |
+			gr_pd_num_tpc_per_gpc_count1_f(gr_gk20a_get_tpc_count(gr, gpc_id + 1)) |
+			gr_pd_num_tpc_per_gpc_count2_f(gr_gk20a_get_tpc_count(gr, gpc_id + 2)) |
+			gr_pd_num_tpc_per_gpc_count3_f(gr_gk20a_get_tpc_count(gr, gpc_id + 3)) |
+			gr_pd_num_tpc_per_gpc_count4_f(gr_gk20a_get_tpc_count(gr, gpc_id + 4)) |
+			gr_pd_num_tpc_per_gpc_count5_f(gr_gk20a_get_tpc_count(gr, gpc_id + 5)) |
+			gr_pd_num_tpc_per_gpc_count6_f(gr_gk20a_get_tpc_count(gr, gpc_id + 6)) |
+			gr_pd_num_tpc_per_gpc_count7_f(gr_gk20a_get_tpc_count(gr, gpc_id + 7));
 
-		gk20a_writel(g, gr_pd_num_tpc_per_gpc_r(tpc_index), tpc_per_gpc);
-		gk20a_writel(g, gr_ds_num_tpc_per_gpc_r(tpc_index), tpc_per_gpc);
+		gk20a_writel(g, gr_pd_num_tpc_per_gpc_r(reg_index), tpc_per_gpc);
+		gk20a_writel(g, gr_ds_num_tpc_per_gpc_r(reg_index), tpc_per_gpc);
 	}
 
 	/* gr__setup_pd_mapping stubbed for gk20a */

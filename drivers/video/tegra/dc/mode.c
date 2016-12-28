@@ -23,7 +23,6 @@
 #include <linux/export.h>
 #include <linux/clk/tegra.h>
 
-#include <drm/drm_mode.h>
 #include <trace/events/display.h>
 
 #include <linux/platform/tegra/mc.h>
@@ -705,52 +704,6 @@ int tegra_dc_update_mode(struct tegra_dc *dc)
 #endif
 	return 0;
 }
-
-int tegra_dc_set_drm_mode(struct tegra_dc *dc,
-		const struct drm_mode_modeinfo *dmode, bool stereo_mode)
-{
-	struct tegra_dc_mode mode;
-
-	if (!dmode->clock)
-		return -EINVAL;
-
-	memset(&mode, 0, sizeof(mode));
-	mode.pclk = dmode->clock * 1000;
-	mode.h_sync_width = dmode->hsync_end - dmode->hsync_start;
-	mode.v_sync_width = dmode->vsync_end - dmode->vsync_start;
-	mode.h_back_porch = dmode->htotal - dmode->hsync_end;
-	mode.v_back_porch = dmode->vtotal - dmode->vsync_end;
-	mode.h_active = dmode->hdisplay;
-	mode.v_active = dmode->vdisplay;
-	mode.h_front_porch = dmode->hsync_start - dmode->hdisplay;
-	mode.v_front_porch = dmode->vsync_start - dmode->vdisplay;
-	mode.stereo_mode = stereo_mode;
-	if (dmode->flags & DRM_MODE_FLAG_INTERLACE)
-		mode.vmode |= FB_VMODE_INTERLACED;
-	mode.avi_m = calc_default_avi_m(dc);
-
-	if (!check_mode_timings(dc, &mode, true))
-		return -EINVAL;
-
-	/* Double the pixel clock and update v_active only for
-	 * frame packed mode */
-	if (mode.stereo_mode) {
-		mode.pclk *= 2;
-		/* total v_active = yres*2 + activespace */
-		mode.v_active = dmode->vtotal + dmode->vdisplay;
-	}
-
-	mode.flags = 0;
-
-	if (!(dmode->flags & DRM_MODE_FLAG_PHSYNC))
-		mode.flags |= TEGRA_DC_MODE_FLAG_NEG_H_SYNC;
-
-	if (!(dmode->flags & DRM_MODE_FLAG_PVSYNC))
-		mode.flags |= TEGRA_DC_MODE_FLAG_NEG_V_SYNC;
-
-	return tegra_dc_set_mode(dc, &mode);
-}
-EXPORT_SYMBOL(tegra_dc_set_drm_mode);
 
 int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 		const struct fb_videomode *fbmode, bool stereo_mode)

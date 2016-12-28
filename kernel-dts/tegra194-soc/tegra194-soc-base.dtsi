@@ -137,12 +137,18 @@
 			      <&{/host1x/nvdisplay@15220000}	TEGRA_SID_NVDISPLAY>,
 			      <&{/host1x/nvdisplay@15230000}	TEGRA_SID_NVDISPLAY>,
 			      <&{/host1x/nvenc1@15a80000}	TEGRA_SID_NVENC1>,
+			      <&{/bpmp}				TEGRA_SID_BPMP>,
 			      <&{/host1x/pva0}			TEGRA_SID_PVA0>,
 			      <&{/host1x/pva1}			TEGRA_SID_PVA1>,
 			      <&{/host1x/nvdec1@15140000}	TEGRA_SID_NVDEC1>,
 			      <&{/ahci-sata@3507000}		TEGRA_SID_SATA2>;
 
 		domains {
+			bpmp_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_BPMP>;
+				sid-list-len = <1>;
+			};
 			host1x_domain {
 				address-space = <&host1x_as>;
 				sid-list = <TEGRA_SID(HC)>;

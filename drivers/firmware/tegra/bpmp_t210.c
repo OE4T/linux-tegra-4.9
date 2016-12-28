@@ -14,7 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/clk.h>
 #include <linux/debugfs.h>
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
@@ -24,17 +23,11 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
-#include <linux/reset.h>
 #include <linux/uaccess.h>
 #include <linux/clk/tegra.h>
 #include <soc/tegra/bpmp_t210_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
-#include <soc/tegra/tegra_pasr.h>
 #include "bpmp.h"
-
-static struct reset_control *cop_reset;
-static struct clk *sclk;
-static struct clk *emc_clk;
 
 #ifdef CONFIG_DEBUG_FS
 static struct bpmp_cpuidle_state plat_cpuidle_state[] = {
@@ -168,64 +161,3 @@ int bpmp_init_cpuidle_debug(struct dentry *root)
 	return -ENODEV;
 }
 #endif
-
-int bpmp_linear_map_init(struct device *device)
-{
-	struct device_node *node;
-	DEFINE_DMA_ATTRS(attrs);
-	uint32_t of_start;
-	uint32_t of_size;
-	int ret;
-
-	node = of_find_node_by_path("/bpmp");
-	WARN_ON(!node);
-	if (!node)
-		return -ENODEV;
-
-	ret = of_property_read_u32(node, "carveout-start", &of_start);
-	if (ret)
-		return ret;
-
-	ret = of_property_read_u32(node, "carveout-size", &of_size);
-	if (ret)
-		return ret;
-
-	dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
-	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
-	ret = dma_map_linear_attrs(device, of_start, of_size, 0, &attrs);
-	if (ret == DMA_ERROR_CODE)
-		return -ENOMEM;
-
-	return 0;
-}
-
-int bpmp_clk_init(struct platform_device *pdev)
-{
-	struct device *dev = &pdev->dev;
-
-	cop_reset = devm_reset_control_get(dev, "cop");
-	if (IS_ERR(cop_reset)) {
-		dev_err(dev, "cannot get cop reset\n");
-		return -ENODEV;
-	}
-
-	sclk = devm_clk_get(dev, "sclk");
-	if (IS_ERR(sclk)) {
-		dev_err(dev, "cannot get avp sclk\n");
-		return -ENODEV;
-	}
-
-	emc_clk = devm_clk_get(dev, "emc");
-	if (IS_ERR(emc_clk)) {
-		dev_err(dev, "cannot get avp emc clk\n");
-		return -ENODEV;
-	}
-
-	clk_prepare_enable(sclk);
-	clk_prepare_enable(emc_clk);
-
-	if (tegra21_pasr_init(&pdev->dev))
-		dev_err(&pdev->dev, "PASR init failed\n");
-
-	return 0;
-}

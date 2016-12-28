@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,44 +18,6 @@
 #define _LINUX_TEGRA_BPMP_H
 
 #include <linux/kernel.h>
-
-#define MRQ_PING		0
-#define MRQ_QUERY_TAG		1
-#define MRQ_DO_IDLE		2
-#define MRQ_TOLERATE_IDLE	3
-#define MRQ_MODULE_LOAD		4
-#define MRQ_MODULE_UNLOAD	5
-#define MRQ_SWITCH_CLUSTER	6
-#define MRQ_TRACE_MODIFY	7
-#define MRQ_WRITE_TRACE		8
-#define MRQ_THREADED_PING	9
-#define MRQ_CPUIDLE_USAGE	10
-#define MRQ_MODULE_MAIL		11
-#define MRQ_SCX_ENABLE		12
-#define MRQ_BPMPIDLE_USAGE	14
-#define MRQ_HEAP_USAGE		15
-#define MRQ_SCLK_SKIP_SET_RATE	16
-#define MRQ_ENABLE_SUSPEND	17
-#define MRQ_PASR_MASK		18
-#define MRQ_DEBUGFS		19
-#define MRQ_I2C			21
-#define MRQ_THERMAL		27
-#define MRQ_CPU_VHINT		28
-#define MRQ_MC_FLUSH		24
-#define MRQ_PG_READ_STATE	25
-#define MRQ_PG_UPDATE_STATE	26
-#define MRQ_TRACE_ITER		64
-
-/* Tegra PM states as known to BPMP */
-#define TEGRA_PM_CC1	9
-#define TEGRA_PM_CC4	12
-#define TEGRA_PM_CC6	14
-#define TEGRA_PM_CC7	15
-#define TEGRA_PM_SC1	17
-#define TEGRA_PM_SC2	18
-#define TEGRA_PM_SC3	19
-#define TEGRA_PM_SC4	20
-#define TEGRA_PM_SC7	23
 
 typedef void (*bpmp_mrq_handler)(int mrq, void *data, int ch);
 

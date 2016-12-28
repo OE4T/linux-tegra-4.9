@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -102,12 +102,12 @@ int vgpu_get_attribute(u64 handle, u32 attrib, u32 *value)
 	return 0;
 }
 
-static void vgpu_handle_general_event(struct gk20a *g,
-			struct tegra_vgpu_general_event_info *info)
+static void vgpu_handle_channel_event(struct gk20a *g,
+			struct tegra_vgpu_channel_event_info *info)
 {
 	if (info->id >= g->fifo.num_channels ||
 		info->event_id >= NVGPU_IOCTL_CHANNEL_EVENT_ID_MAX) {
-		gk20a_err(g->dev, "invalid general event");
+		gk20a_err(g->dev, "invalid channel event");
 		return;
 	}
 
@@ -152,29 +152,32 @@ static int vgpu_intr_thread(void *dev_id)
 			break;
 		}
 
-		if (msg->event == TEGRA_VGPU_EVENT_FECS_TRACE) {
+		switch (msg->event) {
+		case TEGRA_VGPU_EVENT_INTR:
+			if (msg->unit == TEGRA_VGPU_INTR_GR)
+				vgpu_gr_isr(g, &msg->info.gr_intr);
+			else if (msg->unit == TEGRA_VGPU_NONSTALL_INTR_GR)
+				vgpu_gr_nonstall_isr(g,
+					&msg->info.gr_nonstall_intr);
+			else if (msg->unit == TEGRA_VGPU_INTR_FIFO)
+				vgpu_fifo_isr(g, &msg->info.fifo_intr);
+			else if (msg->unit == TEGRA_VGPU_NONSTALL_INTR_FIFO)
+				vgpu_fifo_nonstall_isr(g,
+						&msg->info.fifo_nonstall_intr);
+			else if (msg->unit == TEGRA_VGPU_NONSTALL_INTR_CE2)
+				vgpu_ce2_nonstall_isr(g,
+					&msg->info.ce2_nonstall_intr);
+			break;
+		case TEGRA_VGPU_EVENT_FECS_TRACE:
 			vgpu_fecs_trace_data_update(g);
-			tegra_gr_comm_release(handle);
-			continue;
+			break;
+		case TEGRA_VGPU_EVENT_CHANNEL:
+			vgpu_handle_channel_event(g, &msg->info.channel_event);
+			break;
+		default:
+			gk20a_err(g->dev, "unknown event %u", msg->event);
+			break;
 		}
-
-		if (msg->event == TEGRA_VGPU_EVENT_CHANNEL) {
-			vgpu_handle_general_event(g, &msg->info.general_event);
-			tegra_gr_comm_release(handle);
-			continue;
-		}
-
-		if (msg->unit == TEGRA_VGPU_INTR_GR)
-			vgpu_gr_isr(g, &msg->info.gr_intr);
-		else if (msg->unit == TEGRA_VGPU_NONSTALL_INTR_GR)
-			vgpu_gr_nonstall_isr(g, &msg->info.gr_nonstall_intr);
-		else if (msg->unit == TEGRA_VGPU_INTR_FIFO)
-			vgpu_fifo_isr(g, &msg->info.fifo_intr);
-		else if (msg->unit == TEGRA_VGPU_NONSTALL_INTR_FIFO)
-			vgpu_fifo_nonstall_isr(g,
-					&msg->info.fifo_nonstall_intr);
-		else if (msg->unit == TEGRA_VGPU_NONSTALL_INTR_CE2)
-			vgpu_ce2_nonstall_isr(g, &msg->info.ce2_nonstall_intr);
 
 		tegra_gr_comm_release(handle);
 	}

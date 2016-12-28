@@ -1,7 +1,7 @@
 /*
  * Tegra GPU Virtualization Interfaces to Server
  *
- * Copyright (c) 2014-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -554,7 +554,7 @@ struct tegra_vgpu_fecs_trace_event_info {
 	u32 type;
 };
 
-struct tegra_vgpu_general_event_info {
+struct tegra_vgpu_channel_event_info {
 	u32 event_id;
 	u32 is_tsg;
 	u32 id; /* channel id or tsg id */
@@ -587,7 +587,7 @@ struct tegra_vgpu_intr_msg {
 		struct tegra_vgpu_fifo_nonstall_intr_info fifo_nonstall_intr;
 		struct tegra_vgpu_ce2_nonstall_intr_info ce2_nonstall_intr;
 		struct tegra_vgpu_fecs_trace_event_info fecs_trace;
-		struct tegra_vgpu_general_event_info general_event;
+		struct tegra_vgpu_channel_event_info channel_event;
 		char padding[32];
 	} info;
 };

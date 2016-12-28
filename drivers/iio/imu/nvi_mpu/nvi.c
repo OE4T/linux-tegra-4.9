@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(337)
+#define NVI_DRIVER_VERSION		(340)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"
@@ -318,7 +318,7 @@ int nvi_i2c_write_rc(struct nvi_state *st, const struct nvi_br *br, u32 val,
 	rc_bank = br->bank;
 	rc_bank <<= 7; /* registers only go to 0x7F */
 	rc_bank |= br->reg;
-	rc_msk = ((1 << len) - 1) << (rc_bank % 64);
+	rc_msk = ((1ULL << len) - 1) << (rc_bank % 64);
 	rc_bank /= 64;
 	val |= br->dflt;
 	wr = st->rc_dis;
@@ -411,7 +411,7 @@ int nvi_i2c_wr_rc(struct nvi_state *st, const struct nvi_br *br,
 	rc_bank = br->bank;
 	rc_bank <<= 7; /* registers only go to 0x7F */
 	rc_bank |= br->reg;
-	rc_msk = 1 << (rc_bank % 64);
+	rc_msk = 1ULL << (rc_bank % 64);
 	rc_bank /= 64;
 	wr = st->rc_dis;
 	if (!wr) {

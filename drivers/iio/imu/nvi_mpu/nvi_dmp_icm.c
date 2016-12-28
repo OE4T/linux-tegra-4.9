@@ -880,8 +880,7 @@ static int nvi_dmp_period(struct nvi_state *st, u32 *out_ctl,
 	unsigned int src;
 	unsigned int i;
 	unsigned int j;
-	int ret;
-	int ret_t = 0;
+	int ret = 0;
 
 	/* sensor enabled = sensor enabled by HAL (irq_msk)
 	 * sensor active = sensor on as dependency to another sensor
@@ -968,7 +967,7 @@ static int nvi_dmp_period(struct nvi_state *st, u32 *out_ctl,
 		if (period_us_req[src] < st->src[src].period_us_min)
 			period_us_req[src] = st->src[src].period_us_min;
 		st->src[src].period_us_req = period_us_req[src];
-		ret_t |= st->hal->src[src].fn_period(st);
+		ret |= st->hal->src[src].fn_period(st);
 	}
 
 	/* now set each DMP device's ODR based on their period */
@@ -1033,22 +1032,22 @@ static int nvi_dmp_period(struct nvi_state *st, u32 *out_ctl,
 			st->aux.port[dd->aux_port].odr = odr_cfg;
 		else
 			st->snsr[dd->dev].odr = odr_cfg;
-		ret_t |= nvi_mem_wr_be(st, dd->odr_cntr, 2, 0);
-		ret_t |= nvi_mem_wr_be(st, dd->odr_cfg, 2, odr_cfg);
-		ret_t |= nvi_mem_wr_be(st, dd->odr_cntr, 2, 0);
+		ret |= nvi_mem_wr_be(st, dd->odr_cntr, 2, 0);
+		ret |= nvi_mem_wr_be(st, dd->odr_cfg, 2, odr_cfg);
+		ret |= nvi_mem_wr_be(st, dd->odr_cntr, 2, 0);
 	}
 
 	if (j < ARRAY_SIZE(nvi_dmp_devs))
 		int_ctl |= nvi_dmp_devs[j].int_ctl;
 	if (irq_msk & (1 << DEV_STP))
 		int_ctl |= PED_STEPDET_SET;
-	ret_t |= nvi_mem_wr_be_mc(st, DATA_INTR_CTL, 2, int_ctl,
-				  &st->mc.icm.data_intr_ctl);
+	ret |= nvi_mem_wr_be_mc(st, DATA_INTR_CTL, 2, int_ctl,
+				&st->mc.icm.data_intr_ctl);
 	/* WAR: DMPRATE_CNTR only runs off of SRC_ACC.  If SRC_ACC is off then
 	 * timestamps will switch to realtime when DMPRATE_CNTR doesn't tick.
 	 */
 	st->src[SRC_DMP].period_us_src = st->src[SRC_ACC].period_us_src;
-	return ret_t;
+	return ret;
 }
 
 static int nvi_dmp_irq(struct nvi_state *st, unsigned int en_msk)

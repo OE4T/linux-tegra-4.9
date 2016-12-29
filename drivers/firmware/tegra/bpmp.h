@@ -72,13 +72,15 @@ struct mail_ops {
 			int code, void *data, int sz);
 };
 
-extern struct mail_ops chip_mail_ops;
+extern const struct mail_ops t210_mail_ops;
+extern const struct mail_ops t186_native_mail_ops;
+extern const struct mail_ops t186_hv_mail_ops;
+
 extern struct channel_data channel_area[NR_CHANNELS];
 extern char firmware_tag[32];
 
 struct dentry *bpmp_init_debug(struct platform_device *pdev);
 int bpmp_init_cpuidle_debug(struct dentry *root);
-int bpmp_mail_init_prepare(void);
 int bpmp_mail_init(const struct mail_ops *ops, struct device_node *of_node);
 int __bpmp_do_ping(void);
 int bpmp_create_attrs(const struct fops_entry *fent, struct dentry *parent,

@@ -1,17 +1,12 @@
 subdir-ccflags-y			+= -Werror
 
 obj-$(CONFIG_DEBUG_FS)			+= bpmp_t210.o
-obj-$(CONFIG_ARCH_TEGRA_21x_SOC)	+= mail_t210.o
 obj-$(CONFIG_DEBUG_FS)			+= fwdebug.o
-
 obj-y					+= bpmp.o
-obj-y					+= mail.o
-obj-y					+= mailman.o
-
-obj-$(CONFIG_ARCH_TEGRA_18x_SOC)	+= mail_t186.o
-
-ifndef CONFIG_ARCH_TEGRA_21x_SOC
 obj-y					+= bpmp_tty.o
-endif
+obj-y					+= mail.o
+obj-y					+= mail_t186.o
+obj-y					+= mail_t210.o
+obj-y					+= mailman.o
 
 GCOV_PROFILE				:= y

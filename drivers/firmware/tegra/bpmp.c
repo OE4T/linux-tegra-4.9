@@ -264,6 +264,7 @@ int __weak bpmp_init_cpuidle_debug(struct dentry *root)
 }
 
 struct pconfig {
+	const struct mail_ops *ops;
 	uint8_t clk;
 	uint8_t cpuidle;
 	uint8_t hv;
@@ -344,14 +345,18 @@ err_out:
 }
 
 static const struct pconfig t210_cfg = {
+	.ops = &t210_mail_ops,
 	.clk = 1,
 	.cpuidle = 1,
 	.lin_map = 1
 };
 
-static const struct pconfig t186_native_cfg;
+static const struct pconfig t186_native_cfg = {
+	.ops = &t186_native_mail_ops
+};
 
 static const struct pconfig t186_hv_cfg = {
+	.ops = &t186_hv_mail_ops,
 	.hv = 1
 };
 
@@ -373,6 +378,8 @@ static struct platform_driver bpmp_driver = {
 
 static __init int bpmp_init(void)
 {
+	struct pconfig *cfg;
+	const struct of_device_id *m;
 	struct device_node *np;
 	int r = -ENODEV;
 
@@ -380,7 +387,11 @@ static __init int bpmp_init(void)
 	if (!np || !of_device_is_available(np))
 		goto out;
 
-	r = bpmp_mail_init(&chip_mail_ops, np);
+	m = of_match_node(bpmp_of_matches, np);
+
+	cfg = (struct pconfig *)m->data;
+
+	r = bpmp_mail_init(cfg->ops, np);
 	if (r)
 		goto out;
 

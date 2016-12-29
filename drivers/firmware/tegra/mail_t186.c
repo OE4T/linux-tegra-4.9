@@ -47,8 +47,6 @@
 
 #define HSP_SHRD_SEM_1_STA	0x1b0000
 
-#define VIRT_BPMP_COMPAT	"nvidia,tegra186-bpmp-hv"
-
 static struct ivc ivc_channels[NR_CHANNELS];
 
 static int hv_bpmp_first_queue = -1;
@@ -218,19 +216,6 @@ static int virt_connect(const struct mail_ops *ops, struct device_node *of_node)
 	virt_synchronize();
 
 	return 0;
-}
-
-static int virt_mail_ops(void)
-{
-	struct device_node *np;
-
-	np = of_find_compatible_node(NULL, NULL, VIRT_BPMP_COMPAT);
-	if (!np)
-		return 0;
-
-	of_node_put(np);
-
-	return 1;
 }
 
 static int native_init_prepare(void)
@@ -407,21 +392,6 @@ static int native_connect(const struct mail_ops *ops,
 	return native_channel_init(ma_page, sl_page);
 }
 
-static int native_mail_ops(void)
-{
-	/* FIXME: consider using an attr */
-	const char *ofm_native = "nvidia,tegra186-bpmp";
-	struct device_node *np;
-
-	np = of_find_compatible_node(NULL, NULL, ofm_native);
-	if (!np)
-		return 0;
-
-	of_node_put(np);
-
-	return 1;
-}
-
 static bool ivc_rx_ready(const struct mail_ops *ops, int ch)
 {
 	struct ivc *ivc;
@@ -530,39 +500,34 @@ static int bpmp_ob_channel(void)
 	return smp_processor_id() + CPU_0_TO_BPMP_CH;
 }
 
-struct mail_ops chip_mail_ops = {
+const struct mail_ops t186_hv_mail_ops = {
+	.connect = virt_connect,
+	.ivc_obj = virt_ivc_obj,
+	.ob_channel = bpmp_ob_channel,
+	.thread_ch = bpmp_thread_ch,
+	.thread_ch_index = bpmp_thread_ch_index,
+	.master_free = bpmp_master_free,
 	.free_master = bpmp_free_master,
 	.master_acked = bpmp_master_acked,
-	.master_free = bpmp_master_free,
-	.ob_channel = bpmp_ob_channel,
-	.return_data = bpmp_return_data,
 	.signal_slave = bpmp_signal_slave,
 	.slave_signalled = bpmp_slave_signalled,
-	.thread_ch = bpmp_thread_ch,
-	.thread_ch_index = bpmp_thread_ch_index
+	.return_data = bpmp_return_data
 };
 
-int bpmp_mail_init_prepare(void)
-{
-	int native;
-	int virt;
-
-	native = native_mail_ops();
-	virt = virt_mail_ops();
-
-	if (native) {
-		chip_mail_ops.init_prepare = native_init_prepare;
-		chip_mail_ops.init_irq = native_init_irq;
-		chip_mail_ops.connect = native_connect;
-		chip_mail_ops.resume = native_resume;
-		chip_mail_ops.ivc_obj = native_ivc_obj;
-		chip_mail_ops.ring_doorbell = native_ring_doorbell;
-	} else if (virt) {
-		chip_mail_ops.connect = virt_connect;
-		chip_mail_ops.ivc_obj = virt_ivc_obj;
-	} else {
-		return -ENODEV;
-	}
-
-	return 0;
-}
+const struct mail_ops t186_native_mail_ops = {
+	.init_prepare = native_init_prepare,
+	.init_irq = native_init_irq,
+	.connect = native_connect,
+	.resume = native_resume,
+	.ivc_obj = native_ivc_obj,
+	.ob_channel = bpmp_ob_channel,
+	.thread_ch = bpmp_thread_ch,
+	.thread_ch_index = bpmp_thread_ch_index,
+	.master_free = bpmp_master_free,
+	.free_master = bpmp_free_master,
+	.master_acked = bpmp_master_acked,
+	.signal_slave = bpmp_signal_slave,
+	.slave_signalled = bpmp_slave_signalled,
+	.ring_doorbell = native_ring_doorbell,
+	.return_data = bpmp_return_data
+};

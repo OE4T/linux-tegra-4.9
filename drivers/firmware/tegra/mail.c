@@ -339,7 +339,7 @@ static void bpmp_init_completion(void)
 		init_completion(completion + i);
 }
 
-int bpmp_mail_init(struct platform_device *pdev)
+int bpmp_mail_init(struct device_node *of_node)
 {
 	int r;
 
@@ -366,7 +366,7 @@ int bpmp_mail_init(struct platform_device *pdev)
 		return r;
 	}
 
-	r = bpmp_connect(pdev);
+	r = bpmp_connect(of_node);
 	pr_info("bpmp: connect returned %d\n", r);
 
 	if (!tegra_platform_is_silicon())
@@ -375,13 +375,3 @@ int bpmp_mail_init(struct platform_device *pdev)
 	mail_inited = 1;
 	return r;
 }
-
-int early_bpmp_mail_init(void)
-{
-	if (tegra_get_chip_id() != TEGRA210)
-		return bpmp_mail_init(NULL);
-
-	return 0;
-}
-
-postcore_initcall(early_bpmp_mail_init);

@@ -219,7 +219,6 @@ static void bpmp_setup_allocator(struct device *dev)
 	is_virt = true;
 }
 
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
 static int bpmp_clk_init(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -276,10 +275,6 @@ static int bpmp_linear_map_init(struct device *device)
 
 	return 0;
 }
-#else
-static inline int bpmp_clk_init(struct platform_device *pdev) { return 0; }
-static inline int bpmp_linear_map_init(struct device *device) { return 0; }
-#endif
 
 struct dentry * __weak bpmp_init_debug(struct platform_device *pdev)
 {
@@ -291,21 +286,41 @@ int __weak bpmp_init_cpuidle_debug(struct dentry *root)
 	return 0;
 }
 
+struct pconfig {
+	uint8_t clk;
+	uint8_t cpuidle;
+	uint8_t hv;
+	uint8_t lin_map;
+};
+
 static int bpmp_probe(struct platform_device *pdev)
 {
+	const struct pconfig *cfg;
 	struct dentry *root;
 	int r;
 
-	bpmp_setup_allocator(&pdev->dev);
-
-	/*tegra_bpmp_alloc_coherent can be called as soon as "device" is set up
-	 */
 	device = &pdev->dev;
 
-	r = bpmp_linear_map_init(device);
-	r = r ?: bpmp_clk_init(pdev);
-	if (r)
+	cfg = of_device_get_match_data(&pdev->dev);
+	if (!cfg) {
+		r = -ENODEV;
 		goto err_out;
+	}
+
+	if (cfg->hv)
+		bpmp_setup_allocator(&pdev->dev);
+
+	if (cfg->lin_map) {
+		r = bpmp_linear_map_init(device);
+		if (r)
+			goto err_out;
+	}
+
+	if (cfg->clk) {
+		r = bpmp_clk_init(pdev);
+		if (r)
+			goto err_out;
+	}
 
 	root = bpmp_init_debug(pdev);
 	if (!root) {
@@ -313,13 +328,15 @@ static int bpmp_probe(struct platform_device *pdev)
 		goto err_out;
 	}
 
-	r = bpmp_init_cpuidle_debug(root);
-	if (r)
-		goto err_out;
+	if (cfg->cpuidle) {
+		r = bpmp_init_cpuidle_debug(root);
+		if (r)
+			goto err_out;
+	}
 
 	bpmp_tty.dev.platform_data = root;
 
-	r = r ?: bpmp_do_ping();
+	r = bpmp_do_ping();
 	r = r ?: bpmp_get_fwtag();
 	r = r ?: of_platform_populate(device->of_node, NULL, NULL, device);
 	r = r ?: platform_device_register(&bpmp_tty);
@@ -346,10 +363,22 @@ err_out:
 	return r;
 }
 
+static const struct pconfig t210_cfg = {
+	.clk = 1,
+	.cpuidle = 1,
+	.lin_map = 1
+};
+
+static const struct pconfig t186_native_cfg;
+
+static const struct pconfig t186_hv_cfg = {
+	.hv = 1
+};
+
 static const struct of_device_id bpmp_of_matches[] = {
-	{ .compatible = "nvidia,tegra186-bpmp" },
-	{ .compatible = "nvidia,tegra186-bpmp-hv" },
-	{ .compatible = "nvidia,tegra210-bpmp" },
+	{ .compatible = "nvidia,tegra186-bpmp", .data = &t186_native_cfg },
+	{ .compatible = "nvidia,tegra186-bpmp-hv", .data = &t186_hv_cfg },
+	{ .compatible = "nvidia,tegra210-bpmp", .data = &t210_cfg },
 	{}
 };
 

@@ -1874,6 +1874,9 @@ void tegra_pmc_enter_suspend_mode(enum tegra_suspend_mode mode)
 	value |= PMC_CNTRL_CPU_PWRREQ_OE;
 	tegra_pmc_writel(value, PMC_CNTRL);
 }
+
+#else
+static inline void set_core_power_timers(void) { }
 #endif
 
 /* IO Pads configurations */

@@ -1544,6 +1544,7 @@ struct eqos_prv_data {
 
 	struct workqueue_struct *fbe_wq;
 	struct work_struct fbe_work;
+	struct work_struct iso_work;
 	u8	fbe_chan_mask;
 
 #ifdef CONFIG_THERMAL
@@ -1618,6 +1619,7 @@ int eqos_handle_mem_iso_ioctl(struct eqos_prv_data *pdata, void *ptr);
 int eqos_handle_csr_iso_ioctl(struct eqos_prv_data *pdata, void *ptr);
 int eqos_handle_phy_loopback(struct eqos_prv_data *pdata, void *ptr);
 void eqos_fbe_work(struct work_struct *work);
+void eqos_iso_work(struct work_struct *work);
 
 /* For debug prints*/
 #define DRV_NAME "eqos_drv.c"

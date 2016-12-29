@@ -397,6 +397,7 @@ static void eqos_adjust_link(struct net_device *dev)
 				tx_tristate_disable = 1;
 			}
 #endif
+			schedule_work(&pdata->iso_work);
 		}
 	} else if (pdata->oldlink) {
 		new_state = 1;
@@ -415,6 +416,7 @@ static void eqos_adjust_link(struct net_device *dev)
 			}
 		}
 #endif
+		schedule_work(&pdata->iso_work);
 	}
 
 	if (new_state)

@@ -1240,7 +1240,6 @@ static int eqos_open(struct net_device *dev)
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	int ret = Y_SUCCESS;
 	struct desc_if_struct *desc_if = &pdata->desc_if;
-	struct eqos_cfg *pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
 
 	pr_debug("-->eqos_open\n");
 
@@ -1258,37 +1257,12 @@ static int eqos_open(struct net_device *dev)
 		ret = -ENOMEM;
 		goto err_out_desc_buf_alloc_failed;
 	}
-
-	if (pdt_cfg->eth_iso_enable) {
-		/* Latency is set to 0, which means EQOS does not
-		 * care for any latency seen.
-		 */
-		ret = tegra_isomgr_reserve(pdata->isomgr_handle,
-			pdata->dt_cfg.iso_bw, 0);
-		if (ret == 0) {
-			dev_err(&pdata->pdev->dev, "EQOS ISO BW reservation failed\n");
-			ret = -ENOMEM;
-			goto err_isomgr_fail;
-		}
-
-		ret = tegra_isomgr_realize(pdata->isomgr_handle);
-		if (ret == 0) {
-			dev_err(&pdata->pdev->dev, "EQOS ISO BW realize failed\n");
-			ret = -ENOMEM;
-			goto err_isomgr_fail;
-		}
-	}
-
 	eqos_start_dev(pdata);
 
 	pdata->hw_state_flgs &= ~(1 << HW_STOPPED);
 
 	pr_debug("<--%s()\n", __func__);
 	return Y_SUCCESS;
-
- err_isomgr_fail:
-	if (pdt_cfg->eth_iso_enable)
-		desc_if->free_buff_and_desc(pdata);
 
  err_out_desc_buf_alloc_failed:
 	free_txrx_irqs(pdata);
@@ -1331,6 +1305,8 @@ static int eqos_close(struct net_device *dev)
 	pdata->hw_state_flgs |= (1 << HW_STOPPED);
 	clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 
+	/* cancel iso work */
+	cancel_work_sync(&pdata->iso_work);
 	pr_debug("<--%s\n", __func__);
 	return Y_SUCCESS;
 }
@@ -5912,6 +5888,39 @@ void eqos_start_dev(struct eqos_prv_data *pdata)
 	pr_debug("<--%s()\n", __func__);
 }
 
+void eqos_iso_work(struct work_struct *work)
+{
+	struct eqos_prv_data *pdata =
+	    container_of(work, struct eqos_prv_data, iso_work);
+	struct phy_device *phydev = pdata->phydev;
+	struct eqos_cfg *pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
+	int ret;
+	uint iso_bw;
+
+	pr_debug("-->%s()\n", __func__);
+
+	if (pdt_cfg->eth_iso_enable) {
+		if (phydev->link)
+			iso_bw = pdata->dt_cfg.iso_bw;
+		else
+			iso_bw = 0;
+
+		ret = tegra_isomgr_reserve(pdata->isomgr_handle, iso_bw, 0);
+		if (!ret) {
+			dev_err(&pdata->pdev->dev,
+				"EQOS ISO BW %d reservation failed with %d\n",
+				iso_bw, ret);
+			return;
+		}
+
+		ret = tegra_isomgr_realize(pdata->isomgr_handle);
+		if (!ret)
+			dev_err(&pdata->pdev->dev,
+				"EQOS ISO BW realize failed with %d\n", ret);
+	}
+
+	pr_debug("<--%s()\n", __func__);
+}
 void eqos_fbe_work(struct work_struct *work)
 {
 	struct eqos_prv_data *pdata =

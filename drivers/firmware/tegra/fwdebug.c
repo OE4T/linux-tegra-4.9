@@ -15,11 +15,8 @@
  */
 
 #include <linux/debugfs.h>
-#include <linux/dma-mapping.h>
 #include <linux/firmware.h>
-#include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/seq_file.h>
 #include <linux/slab.h>
 #include <linux/tegra-soc.h>
 #include <linux/uaccess.h>

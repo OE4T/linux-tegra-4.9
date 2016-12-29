@@ -15,13 +15,9 @@
  */
 
 #include <linux/delay.h>
-#include <linux/dma-mapping.h>
 #include <linux/interrupt.h>
-#include <linux/kernel.h>
-#include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
-#include <linux/of_platform.h>
 #include <linux/slab.h>
 #include <linux/tegra-hsp.h>
 #include <linux/tegra-ivc-instance.h>

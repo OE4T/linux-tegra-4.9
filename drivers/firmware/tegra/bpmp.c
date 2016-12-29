@@ -15,24 +15,17 @@
  */
 
 #include <linux/clk.h>
-#include <linux/debugfs.h>
 #include <linux/dma-mapping.h>
-#include <linux/io.h>
-#include <linux/kernel.h>
 #include <linux/of.h>
-#include <linux/of_address.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
-#include <linux/slab.h>
 #include <linux/syscore_ops.h>
 #include <linux/tegra-firmwares.h>
 #include <linux/tegra-ivc.h>
-#include <linux/uaccess.h>
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/tegra_pasr.h>
 #include <soc/tegra/tegra_powergate.h>
-#include "../../../arch/arm/mach-tegra/iomap.h"
 #include "bpmp.h"
 
 static void *hv_virt_base;

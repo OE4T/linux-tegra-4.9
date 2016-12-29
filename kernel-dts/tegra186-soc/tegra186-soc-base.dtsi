@@ -1155,6 +1155,7 @@
 		      <0x0 0x03ae0000 0x0 0x10000>;
 		clocks = <&tegra_car TEGRA186_CLK_SE>;
 		clock-names = "se";
+		pka1-rsa-priority = <300>;
 		status = "disabled";
 	};
 

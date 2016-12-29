@@ -18,15 +18,10 @@
 
 struct device;
 
-void tegra_camrtc_ready(struct device *dev);
-int tegra_camrtc_set_halt(struct device *dev, bool halt);
-int tegra_camrtc_get_halt(struct device *dev, bool *halt);
-int tegra_camrtc_reset(struct device *dev);
-int tegra_camrtc_boot(struct device *dev);
 int tegra_camrtc_iovm_setup(struct device *dev, dma_addr_t iova);
 ssize_t tegra_camrtc_print_version(struct device *dev, char *buf, size_t size);
-int tegra_camrtc_start(struct device *dev);
-int tegra_camrtc_stop(struct device *dev);
+int tegra_camrtc_boot(struct device *dev);
+int tegra_camrtc_halt(struct device *dev);
 int tegra_camrtc_restore(struct device *dev);
 bool tegra_camrtc_is_rtcpu_alive(struct device *dev);
 #define TEGRA_CAMRTC_VERSION_LEN 128

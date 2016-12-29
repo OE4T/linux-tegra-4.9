@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2017 NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -66,7 +66,7 @@ int tegra_camrtc_mon_restore_rtcpu(struct tegra_camrtc_mon *cam_rtcpu_mon)
 	memcpy(msg->data, &ev, msg->size);
 
 	/* Stop the rtcpu */
-	tegra_camrtc_stop(cam_rtcpu_mon->rce_dev);
+	tegra_camrtc_halt(cam_rtcpu_mon->rce_dev);
 
 	/* Broadcast rtcpu-down message to all vi channels */
 	err = tegra_ivc_vi_notify_report(msg);
@@ -77,7 +77,7 @@ int tegra_camrtc_mon_restore_rtcpu(struct tegra_camrtc_mon *cam_rtcpu_mon)
 	}
 
 	/* (Re)start the rtcpu */
-	tegra_camrtc_start(cam_rtcpu_mon->rce_dev);
+	tegra_camrtc_boot(cam_rtcpu_mon->rce_dev);
 
 	return 0;
 }

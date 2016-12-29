@@ -95,9 +95,8 @@ static int camrtc_show_reboot(struct seq_file *file, void *data)
 	struct tegra_ivc_channel *ch = file->private;
 	struct device *rce_dev = camrtc_get_device(ch);
 
-	tegra_camrtc_stop(rce_dev);
-
-	tegra_camrtc_start(rce_dev);
+	tegra_camrtc_halt(rce_dev);
+	tegra_camrtc_boot(rce_dev);
 
 	seq_puts(file, "0\n");
 
@@ -105,46 +104,6 @@ static int camrtc_show_reboot(struct seq_file *file, void *data)
 }
 
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_reboot, camrtc_show_reboot);
-
-static int show_halt(void *data, u64 *val)
-{
-	struct tegra_ivc_channel *ch = data;
-	struct device *rce_dev = camrtc_get_device(ch);
-	int ret;
-	bool value;
-
-	ret = tegra_camrtc_get_halt(rce_dev, &value);
-
-	if (likely(ret == 0))
-		*val = value;
-
-	return ret;
-}
-
-static int store_halt(void *data, u64 val)
-{
-	struct tegra_ivc_channel *ch = data;
-	struct device *rce_dev = camrtc_get_device(ch);
-
-	return tegra_camrtc_set_halt(rce_dev, val != 0);
-}
-
-DEFINE_SIMPLE_ATTRIBUTE(camrtc_dbgfs_fops_halt,
-			show_halt, store_halt, "%lld\n");
-
-static int camrtc_show_reset(struct seq_file *file, void *data)
-{
-	struct tegra_ivc_channel *ch = file->private;
-	struct device *rce_dev = camrtc_get_device(ch);
-
-	tegra_camrtc_reset(rce_dev);
-
-	seq_puts(file, "0\n");
-
-	return 0;
-}
-
-DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_reset, camrtc_show_reset);
 
 static void camrtc_debug_notify(struct tegra_ivc_channel *ch)
 {
@@ -760,12 +719,6 @@ static int camrtc_debug_populate(struct tegra_ivc_channel *ch)
 		goto error;
 	if (!debugfs_create_file("reboot", S_IRUGO, dir, ch,
 			&camrtc_dbgfs_fops_reboot))
-		goto error;
-	if (!debugfs_create_file("reset", S_IRUGO, dir, ch,
-			&camrtc_dbgfs_fops_reset))
-		goto error;
-	if (!debugfs_create_file("halt", S_IRUGO | S_IWUSR, dir, ch,
-			&camrtc_dbgfs_fops_halt))
 		goto error;
 	if (!debugfs_create_file("ping", S_IRUGO, dir, ch,
 			&camrtc_dbgfs_fops_ping))

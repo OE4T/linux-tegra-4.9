@@ -34,12 +34,8 @@
 #include "../../../arch/arm/mach-tegra/iomap.h"
 #include "bpmp.h"
 
-#define VIRT_BPMP_COMPAT	"nvidia,tegra186-bpmp-hv"
-
-static void *virt_base;
-static bool is_virt;
+static void *hv_virt_base;
 static struct device *device;
-
 char firmware_tag[32];
 
 static int bpmp_get_fwtag(void)
@@ -78,10 +74,10 @@ static ssize_t bpmp_version(struct device *dev, char *data, size_t size)
 
 static void *bpmp_get_virt_for_alloc(void *virt, dma_addr_t phys)
 {
-	if (is_virt)
-		return virt_base + phys;
-	else
-		return virt;
+	if (hv_virt_base)
+		return hv_virt_base + phys;
+
+	return virt;
 }
 
 void *tegra_bpmp_alloc_coherent(size_t size, dma_addr_t *phys,
@@ -103,10 +99,10 @@ EXPORT_SYMBOL(tegra_bpmp_alloc_coherent);
 
 static void *bpmp_get_virt_for_free(void *virt, dma_addr_t phys)
 {
-	if (is_virt)
-		return (void *)(virt - virt_base);
-	else
-		return virt;
+	if (hv_virt_base)
+		return (void *)(virt - hv_virt_base);
+
+	return virt;
 }
 
 void tegra_bpmp_free_coherent(size_t size, void *vaddr,
@@ -163,47 +159,25 @@ static int bpmp_init_powergate(struct platform_device *pdev)
 	return tegra_bpmp_init_powergate(pdev);
 }
 
-static struct tegra_hv_ivm_cookie *virt_get_mempool(uint32_t *mempool)
-{
-	struct device_node *of_node;
-	struct tegra_hv_ivm_cookie *ivm;
-	int err;
-
-	of_node = of_find_compatible_node(NULL, NULL, VIRT_BPMP_COMPAT);
-	if (!of_node)
-		return ERR_PTR(-ENODEV);
-
-	if (!of_device_is_available(of_node)) {
-		of_node_put(of_node);
-		return ERR_PTR(-ENODEV);
-	}
-
-	err = of_property_read_u32_index(of_node, "mempool", 0, mempool);
-	if (err != 0) {
-		pr_err("%s: Failed to read mempool id\n", __func__);
-		of_node_put(of_node);
-		return NULL;
-	}
-
-	ivm = tegra_hv_mempool_reserve(of_node, *mempool);
-	of_node_put(of_node);
-
-	return ivm;
-}
-
-static void bpmp_setup_allocator(struct device *dev)
+static int bpmp_setup_allocator(struct device *dev)
 {
 	uint32_t mempool_id;
 	int ret;
 	struct tegra_hv_ivm_cookie *ivm;
+	void *virt_base;
 
-	ivm = virt_get_mempool(&mempool_id);
+	ret = of_property_read_u32_index(dev->of_node, "mempool", 0,
+			&mempool_id);
+	if (ret) {
+		dev_err(dev, "failed to read mempool id (%d)\n", ret);
+		return ret;
+	}
 
+	ivm = tegra_hv_mempool_reserve(dev->of_node, mempool_id);
 	if (IS_ERR_OR_NULL(ivm)) {
 		if (!IS_ERR(ivm))
 			dev_err(dev, "No mempool found\n");
-
-		return;
+		return -ENOMEM;
 	}
 
 	dev_info(dev, "Found mempool with id %u\n", mempool_id);
@@ -213,10 +187,15 @@ static void bpmp_setup_allocator(struct device *dev)
 
 	ret = dma_declare_coherent_memory(dev, ivm->ipa, 0, ivm->size,
 			DMA_MEMORY_NOMAP | DMA_MEMORY_EXCLUSIVE);
-	if (!(ret & DMA_MEMORY_NOMAP))
-		dev_err(dev, "dma_declare_coherent_memory failed\n");
 
-	is_virt = true;
+	if (!(ret & DMA_MEMORY_NOMAP)) {
+		dev_err(dev, "dma_declare_coherent_memory failed (%x)\n", ret);
+		return ret;
+	}
+
+	hv_virt_base = virt_base;
+
+	return 0;
 }
 
 static int bpmp_clk_init(struct platform_device *pdev)
@@ -246,7 +225,7 @@ static int bpmp_clk_init(struct platform_device *pdev)
 	return 0;
 }
 
-static int bpmp_linear_map_init(struct device *device)
+static int bpmp_linear_map_init(struct platform_device *pdev)
 {
 	struct device_node *node;
 	DEFINE_DMA_ATTRS(attrs);
@@ -254,10 +233,7 @@ static int bpmp_linear_map_init(struct device *device)
 	uint32_t of_size;
 	int ret;
 
-	node = of_find_node_by_path("/bpmp");
-	WARN_ON(!node);
-	if (!node)
-		return -ENODEV;
+	node = pdev->dev.of_node;
 
 	ret = of_property_read_u32(node, "carveout-start", &of_start);
 	if (ret)
@@ -269,7 +245,7 @@ static int bpmp_linear_map_init(struct device *device)
 
 	dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
 	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
-	ret = dma_map_linear_attrs(device, of_start, of_size, 0, &attrs);
+	ret = dma_map_linear_attrs(&pdev->dev, of_start, of_size, 0, &attrs);
 	if (ret == DMA_ERROR_CODE)
 		return -ENOMEM;
 
@@ -307,11 +283,14 @@ static int bpmp_probe(struct platform_device *pdev)
 		goto err_out;
 	}
 
-	if (cfg->hv)
-		bpmp_setup_allocator(&pdev->dev);
+	if (cfg->hv) {
+		r = bpmp_setup_allocator(&pdev->dev);
+		if (r)
+			goto err_out;
+	}
 
 	if (cfg->lin_map) {
-		r = bpmp_linear_map_init(device);
+		r = bpmp_linear_map_init(pdev);
 		if (r)
 			goto err_out;
 	}

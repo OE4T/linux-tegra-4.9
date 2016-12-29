@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Aapo Vienamo	<avienamo@nvidia.com>
  *
@@ -295,7 +295,8 @@ static int bpmp_tty_get_fifo(struct platform_device *pdev)
 	return 0;
 }
 
-static void bpmp_tty_create_debugfs(struct platform_device *pdev)
+static void bpmp_tty_create_debugfs(struct platform_device *pdev,
+		struct dentry *root)
 {
 	struct bpmp_tty_drvdata *drvdata = platform_get_drvdata(pdev);
 	int err;
@@ -309,7 +310,7 @@ static void bpmp_tty_create_debugfs(struct platform_device *pdev)
 		return;
 
 	drvdata->debugfs_dump_entry =
-		debugfs_create_file("ttyBPMP", 0444, bpmp_root, NULL,
+		debugfs_create_file("ttyBPMP", 0444, root, NULL,
 				    &bpmp_tty_dump_fops);
 	if (IS_ERR_OR_NULL(drvdata->debugfs_dump_entry))
 		dev_warn(&pdev->dev,
@@ -322,24 +323,22 @@ static void bpmp_tty_remove_debugfs(struct bpmp_tty_drvdata *drvdata)
 	debugfs_remove(drvdata->debugfs_dump_entry);
 }
 #else
-static void bpmp_tty_create_debugfs(
-	struct platform_device *pdev) { }
-
-static void bpmp_tty_remove_debugfs(
-	struct bpmp_tty_drvdata *drvdata) { }
+static void bpmp_tty_create_debugfs(struct platform_device *pdev,
+		struct dentry *root) {}
+static void bpmp_tty_remove_debugfs(struct bpmp_tty_drvdata *drvdata) {}
 #endif
 
 static int bpmp_tty_probe(struct platform_device *pdev)
 {
 	struct bpmp_tty_drvdata *drvdata;
+	struct dentry *root;
 	int ret;
 
 	ret = bpmp_tty_mrq_abi_probe();
 	if (ret < 0)
 		return ret;
 
-	ret = bpmp_tty_mrq_cmd_abi_query(
-		CMD_RINGBUF_CONSOLE_WRITE);
+	ret = bpmp_tty_mrq_cmd_abi_query(CMD_RINGBUF_CONSOLE_WRITE);
 	if (ret == 0)
 		write_enable = true;
 
@@ -371,7 +370,9 @@ static int bpmp_tty_probe(struct platform_device *pdev)
 		goto err_put_tty_driver;
 	}
 
-	bpmp_tty_create_debugfs(pdev);
+	root = pdev->dev.platform_data;
+
+	bpmp_tty_create_debugfs(pdev, root);
 
 	return 0;
 

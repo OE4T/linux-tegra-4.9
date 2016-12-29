@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -40,11 +40,6 @@ struct fops_entry {
 	mode_t mode;
 };
 
-struct bpmp_cpuidle_state {
-	int id;
-	const char *name;
-};
-
 struct mb_data {
 	int32_t code;
 	int32_t flags;
@@ -57,27 +52,16 @@ struct channel_data {
 };
 
 extern struct channel_data channel_area[NR_CHANNELS];
-extern struct dentry *bpmp_root;
+extern char firmware_tag[32];
 
-#ifdef CONFIG_DEBUG_FS
-int bpmp_fwdebug_init(struct dentry *root);
-#else
-static inline int bpmp_fwdebug_init(struct dentry *root) { return -ENODEV; }
-#endif
-
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+struct dentry *bpmp_init_debug(struct platform_device *pdev);
 int bpmp_init_cpuidle_debug(struct dentry *root);
-#else
-static inline int bpmp_init_cpuidle_debug(struct dentry *root) { return 0; }
-#endif
 
-extern struct mutex bpmp_lock;
 extern int connected;
 
 int bpmp_mail_init_prepare(void);
 int bpmp_mail_init(struct platform_device *pdev);
 int __bpmp_do_ping(void);
-int bpmp_init_modules(struct platform_device *pdev);
 void bpmp_cleanup_modules(void);
 int bpmp_create_attrs(const struct fops_entry *fent, struct dentry *parent,
 		void *data);

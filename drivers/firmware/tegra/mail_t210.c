@@ -23,10 +23,9 @@
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <soc/tegra/doorbell.h>
-#include "../../../arch/arm/mach-tegra/iomap.h"
 #include "bpmp.h"
 
-static void *arb_sema, *atomics;
+static void __iomem *arb_sema;
 
 /* CPU to BPMP atomic channels */
 #define CPU0_OB_CH0		0
@@ -48,14 +47,14 @@ static void *arb_sema, *atomics;
 
 #define CPU_OB_DOORBELL		4
 
-#define ATOMICS_AP0_TRIGGER	(atomics + 0x000)
-#define ATOMICS_AP0_RESULT(id)	(atomics + 0xc00 + id * 4)
+#define TRIGGER_OFFSET		0x000
+#define RESULT_OFFSET(id)	(0xc00 + id * 4)
 #define TRIGGER_ID_SHIFT	16
 #define TRIGGER_CMD_GET		4
 
-#define RES_SEMA_SHRD_SMP_STA	(arb_sema)
-#define RES_SEMA_SHRD_SMP_SET	(arb_sema + 4)
-#define RES_SEMA_SHRD_SMP_CLR	(arb_sema + 8)
+#define STA_OFFSET		0
+#define SET_OFFSET		4
+#define CLR_OFFSET		8
 
 #define PER_CPU_IB_CH(i)	(CPU0_IB_CH + i)
 
@@ -79,7 +78,7 @@ static void *arb_sema, *atomics;
 
 static u32 bpmp_ch_sta(int ch)
 {
-	return __raw_readl(RES_SEMA_SHRD_SMP_STA) & CH_MASK(ch);
+	return __raw_readl(arb_sema + STA_OFFSET) & CH_MASK(ch);
 }
 
 bool bpmp_master_free(int ch)
@@ -99,12 +98,12 @@ bool bpmp_master_acked(int ch)
 
 void bpmp_signal_slave(int ch)
 {
-	__raw_writel(CH_MASK(ch), RES_SEMA_SHRD_SMP_CLR);
+	__raw_writel(CH_MASK(ch), arb_sema + CLR_OFFSET);
 }
 
 static void bpmp_ack_master(int ch, int flags)
 {
-	__raw_writel(MA_ACKD(ch), RES_SEMA_SHRD_SMP_SET);
+	__raw_writel(MA_ACKD(ch), arb_sema + SET_OFFSET);
 
 	if (flags & DO_ACK)
 		return;
@@ -114,13 +113,13 @@ static void bpmp_ack_master(int ch, int flags)
 	 * moving from SL_QUED to MA_FREE (DO_ACK not set) so that
 	 * the channel won't be in ACKD state forever.
 	 */
-	__raw_writel(MA_ACKD(ch) ^ MA_FREE(ch), RES_SEMA_SHRD_SMP_CLR);
+	__raw_writel(MA_ACKD(ch) ^ MA_FREE(ch), arb_sema + CLR_OFFSET);
 }
 
 /* MA_ACKD to MA_FREE */
 void bpmp_free_master(int ch)
 {
-	__raw_writel(MA_ACKD(ch) ^ MA_FREE(ch), RES_SEMA_SHRD_SMP_CLR);
+	__raw_writel(MA_ACKD(ch) ^ MA_FREE(ch), arb_sema + CLR_OFFSET);
 }
 
 void bpmp_ring_doorbell(int ch)
@@ -191,12 +190,13 @@ int bpmp_init_irq(void)
 }
 
 /* Channel area is setup by BPMP before signalling handshake */
-static u32 bpmp_channel_area(int ch)
+static u32 bpmp_channel_area(void __iomem *atomics, int ch)
 {
 	u32 a;
 
-	writel(ch << TRIGGER_ID_SHIFT | TRIGGER_CMD_GET, ATOMICS_AP0_TRIGGER);
-	a = readl(ATOMICS_AP0_RESULT(ch));
+	writel(ch << TRIGGER_ID_SHIFT | TRIGGER_CMD_GET,
+			atomics + TRIGGER_OFFSET);
+	a = readl(atomics + RESULT_OFFSET(ch));
 
 	return a;
 }
@@ -204,6 +204,7 @@ static u32 bpmp_channel_area(int ch)
 int bpmp_connect(struct device_node *of_node)
 {
 	uint32_t channel_hwaddr[NR_CHANNELS];
+	void __iomem *atomics;
 	void *p;
 	int i;
 
@@ -219,11 +220,11 @@ int bpmp_connect(struct device_node *of_node)
 		return -ENODEV;
 
 	/* handshake */
-	if (!readl(RES_SEMA_SHRD_SMP_STA))
+	if (!readl(arb_sema + STA_OFFSET))
 		return -ENODEV;
 
 	for (i = 0; i < NR_CHANNELS; i++) {
-		channel_hwaddr[i] = bpmp_channel_area(i);
+		channel_hwaddr[i] = bpmp_channel_area(atomics, i);
 		if (!channel_hwaddr[i])
 			return -EFAULT;
 	}

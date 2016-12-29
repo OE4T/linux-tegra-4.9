@@ -161,10 +161,8 @@ static void tegra_bpmp_pg_remove_domain(struct tegra_bpmp_pg *pg, int id)
 	if (!genpd)
 		return;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 	if (pm_genpd_remove(genpd) < 0)
 		dev_err(pg->dev, "failed to remove %s\n", genpd->name);
-#endif
 
 	kfree(genpd->name);
 }

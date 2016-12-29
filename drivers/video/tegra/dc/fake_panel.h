@@ -30,7 +30,6 @@
 #include "sor.h"
 #include "dp.h"
 #include "dsi.h"
-#include "mipi_cal.h"
 
 #ifdef CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT
 int tegra_dc_init_fake_panel_link_cfg(struct tegra_dc_dp_link_config *cfg);

@@ -21,12 +21,8 @@ obj-$(CONFIG_TEGRA_DSI2EDP_TC358767) += tc358767_dsi2edp.o
 obj-$(CONFIG_TEGRA_DSI2EDP_SN65DSI86) += sn65dsi86_dsi2edp.o
 obj-$(CONFIG_TEGRA_DSI2LVDS_SN65DSI85) += sn65dsi85_dsi2lvds.o
 obj-$(CONFIG_TEGRA_LVDS2FPDL_DS90UB947) += ds90ub947-q1.o
-ifeq ($(CONFIG_ARCH_TEGRA_21x_SOC)$(CONFIG_ARCH_TEGRA_18x_SOC), y)
 ccflags-$(CONFIG_TEGRA_MIPI_CAL) +=-DCOMMON_MIPICAL_SUPPORTED\
 				-Idrivers/media/platform/tegra
-else
-obj-$(CONFIG_TEGRA_MIPI_CAL) += mipi_cal.o
-endif
 
 ifneq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 obj-$(CONFIG_TEGRA_HDMIHDCP) += hdmihdcp.o

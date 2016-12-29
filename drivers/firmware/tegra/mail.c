@@ -359,12 +359,6 @@ int bpmp_mail_init(const struct mail_ops *ops, struct device_node *of_node)
 {
 	int r;
 
-	r = bpmp_mail_init_prepare();
-	if (r) {
-		pr_err("bpmp: chip mail init  prepared failed (%d)\n", r);
-		return r;
-	}
-
 	r = ops->init_prepare ? ops->init_prepare() : 0;
 	if (r) {
 		pr_err("bpmp: mail init prepare failed (%d)\n", r);

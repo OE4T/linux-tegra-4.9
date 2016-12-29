@@ -236,7 +236,7 @@ static int bpmp_connect(const struct mail_ops *ops, struct device_node *of_node)
 	return 0;
 }
 
-struct mail_ops chip_mail_ops = {
+const struct mail_ops t210_mail_ops = {
 	.init_irq = bpmp_init_irq,
 	.connect = bpmp_connect,
 	.ob_channel = bpmp_ob_channel,
@@ -250,8 +250,3 @@ struct mail_ops chip_mail_ops = {
 	.slave_signalled = bpmp_slave_signalled,
 	.return_data = bpmp_return_data
 };
-
-int bpmp_mail_init_prepare(void)
-{
-	return 0;
-}

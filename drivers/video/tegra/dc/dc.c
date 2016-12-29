@@ -6555,22 +6555,18 @@ EXPORT_SYMBOL(tegra_dc_unregister_isr_usr_cb);
 
 #endif /* TEGRA_DC_USR_SHARED_IRQ */
 
-#ifdef CONFIG_OF
 static struct of_device_id tegra_display_of_match[] = {
 	{.compatible = "nvidia,tegra210-dc", },
 	{.compatible = "nvidia,tegra186-dc", },
 	{ },
 };
-#endif
 
 static struct platform_driver tegra_dc_driver = {
 	.driver = {
 		.name = "tegradc",
 		.owner = THIS_MODULE,
-#ifdef CONFIG_OF
 		.of_match_table =
 			of_match_ptr(tegra_display_of_match),
-#endif
 		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	},
 	.probe = tegra_dc_probe,

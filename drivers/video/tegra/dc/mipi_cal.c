@@ -149,12 +149,8 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	struct clk *uart_fs_mipi_clk;
 #endif
-#ifdef CONFIG_OF
 	struct device_node *np_mipi_cal =
 		of_find_node_by_path("/mipical");
-#else
-	struct device_node *np_mipi_cal = NULL;
-#endif
 	mipi_cal = devm_kzalloc(&dc->ndev->dev, sizeof(*mipi_cal), GFP_KERNEL);
 	if (!mipi_cal) {
 		dev_err(&dc->ndev->dev, "mipi_cal: memory allocation fail\n");
@@ -271,12 +267,8 @@ EXPORT_SYMBOL(tegra_mipi_cal_init_sw);
 
 void tegra_mipi_cal_destroy(struct tegra_dc *dc)
 {
-#ifdef CONFIG_OF
 	struct device_node *np_mipi_cal =
 		of_find_node_by_path("/mipical");
-#else
-	struct device_node *np_mipi_cal = NULL;
-#endif
 	struct tegra_mipi_cal *mipi_cal =
 		((struct tegra_dc_dsi_data *)
 		(tegra_dc_get_outdata(dc)))->mipi_cal;

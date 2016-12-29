@@ -4452,12 +4452,8 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	char *dsi_fixed_clk_name = "pll_p_out3";
 #endif
 
-#ifdef CONFIG_OF
 	struct device_node *np_dsi =
 		of_find_node_by_path(DSI_NODE);
-#else
-	struct device_node *np_dsi = NULL;
-#endif
 	dsi = kzalloc(sizeof(*dsi), GFP_KERNEL);
 	if (!dsi) {
 		dev_err(&dc->ndev->dev, "dsi: memory allocation failed\n");

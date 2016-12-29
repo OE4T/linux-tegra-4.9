@@ -236,21 +236,17 @@ static const struct i2c_device_id ds90uh949_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, ds90uh949_id);
 
-#ifdef CONFIG_OF
 static struct of_device_id ds90uh949_of_match[] = {
 	{.compatible = "ti,ds90uh949", },
 	{ },
 };
-#endif
 
 static struct i2c_driver ds90uh949_driver = {
 	.driver = {
 		.name = "ds90uh949",
 		.owner	= THIS_MODULE,
-#ifdef CONFIG_OF
 		.of_match_table =
 			of_match_ptr(ds90uh949_of_match),
-#endif
 	},
 	.probe    = ds90uh949_probe,
 	.remove   = ds90uh949_remove,

@@ -346,12 +346,8 @@ int tegra_dc_destroy_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 	char *ganged_reg_name[2] = {"ganged_dsia_regs", "ganged_dsib_regs"};
 #endif
 	struct device_node *np = dc->ndev->dev.of_node;
-#ifdef CONFIG_OF
 	struct device_node *np_dsi =
 		of_find_node_by_path(DSI_NODE);
-#else
-	struct device_node *np_dsi = NULL;
-#endif
 
 	if (!dsi) {
 		dev_err(&dc->ndev->dev, " dsi: allocation deleted\n");
@@ -432,12 +428,8 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 #endif
 
 	struct device_node *np = dc->ndev->dev.of_node;
-#ifdef CONFIG_OF
 	struct device_node *np_dsi =
 		of_find_node_by_path(DSI_NODE);
-#else
-	struct device_node *np_dsi = NULL;
-#endif
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 
 	if (!dsi) {

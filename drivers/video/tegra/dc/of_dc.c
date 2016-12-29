@@ -64,7 +64,6 @@
 #include "hdmi2.0.h"
 #include "dp_lt.h"
 
-#ifdef CONFIG_OF
 /* #define OF_DC_DEBUG */
 
 #undef OF_DC_LOG
@@ -133,9 +132,6 @@ static struct tegra_dc_cmu default_cmu = {
 	}
 };
 #endif
-#endif
-
-#ifdef CONFIG_OF
 
 static int out_type_from_pn(struct device_node *panel_node)
 {
@@ -2970,13 +2966,6 @@ fail_parse:
 	of_node_put(np_sor);
 	return NULL;
 }
-#else
-struct tegra_dc_platform_data
-		*of_dc_parse_platform_data(struct platform_device *ndev)
-{
-	return NULL;
-}
-#endif
 
 static int __init check_fb_console_map_default(void)
 {

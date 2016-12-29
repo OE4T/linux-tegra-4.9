@@ -25,6 +25,9 @@
 #include <linux/reset.h>
 #include <linux/slab.h>
 
+#include <linux/tegra_pm_domains.h>
+#include <linux/tegra-powergate.h>
+
 #include "xhci.h"
 
 #define TEGRA_XHCI_SS_HIGH_SPEED 120000000
@@ -203,9 +206,22 @@ struct tegra_xusb {
 		void *virt;
 		dma_addr_t phys;
 	} fw;
+
+	int pgid_ss;
+	int pgid_host;
 };
 
 static struct hc_driver __read_mostly tegra_xhci_hc_driver;
+
+static const struct of_device_id tegra_xusba_pd[] = {
+	{ .compatible = "nvidia,tegra186-xusba-pd", },
+	{},
+};
+
+static const struct of_device_id tegra_xusbc_pd[] = {
+	{ .compatible = "nvidia,tegra186-xusbc-pd", },
+	{},
+};
 
 static inline u32 fpci_readl(struct tegra_xusb *tegra, unsigned int offset)
 {
@@ -767,6 +783,44 @@ static void tegra_xusb_phy_disable(struct tegra_xusb *tegra)
 	}
 }
 
+static int tegra_xusb_unpowergate_partitions(struct tegra_xusb *tegra)
+{
+	int ret;
+
+	ret = tegra_unpowergate_partition_with_clk_on(tegra->pgid_ss);
+	if (ret) {
+		dev_err(tegra->dev, "can't unpowergate SS partition\n");
+		return ret;
+	}
+
+	ret = tegra_unpowergate_partition_with_clk_on(tegra->pgid_host);
+	if (ret) {
+		dev_err(tegra->dev, "can't unpowergate Host partition\n");
+		tegra_powergate_partition_with_clk_off(tegra->pgid_ss);
+	}
+
+	return ret;
+}
+
+static int tegra_xusb_powergate_partitions(struct tegra_xusb *tegra)
+{
+	int ret;
+
+	ret = tegra_powergate_partition_with_clk_off(tegra->pgid_host);
+	if (ret) {
+		dev_err(tegra->dev, "can't powergate Host partition\n");
+		return ret;
+	}
+
+	ret = tegra_powergate_partition_with_clk_off(tegra->pgid_ss);
+	if (ret) {
+		dev_err(tegra->dev, "can't powergate SS partition\n");
+		tegra_unpowergate_partition_with_clk_on(tegra->pgid_host);
+	}
+
+	return ret;
+}
+
 static int tegra_xusb_load_firmware(struct tegra_xusb *tegra)
 {
 	unsigned int code_tag_blocks, code_size_blocks, code_blocks;
@@ -1026,6 +1080,18 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 			return PTR_ERR(tegra->ipfs_base);
 	}
 
+	tegra->pgid_ss = tegra_pd_get_powergate_id(tegra_xusba_pd);
+	if (tegra->pgid_ss < 0) {
+		dev_err(&pdev->dev, "failed to get SS powergate id\n");
+		return tegra->pgid_ss;
+	}
+
+	tegra->pgid_host = tegra_pd_get_powergate_id(tegra_xusbc_pd);
+	if (tegra->pgid_host < 0) {
+		dev_err(&pdev->dev, "failed to get Host powergate id\n");
+		return tegra->pgid_host;
+	}
+
 	tegra->xhci_irq = platform_get_irq(pdev, 0);
 	if (tegra->xhci_irq < 0)
 		return tegra->xhci_irq;
@@ -1166,6 +1232,12 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 		goto disable_regulator;
 	}
 
+	err = tegra_xusb_unpowergate_partitions(tegra);
+	if (err) {
+		dev_err(&pdev->dev, "failed to unpowergate (%d)\n", err);
+		goto disable_phy;
+	}
+
 	tegra_xusb_config(tegra, regs);
 
 	err = request_firmware_nowait(THIS_MODULE, true,
@@ -1174,11 +1246,13 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 				      tegra_xusb_probe_finish);
 	if (err < 0) {
 		dev_err(&pdev->dev, "can't request firmware(%d)\n", err);
-		goto disable_phy;
+		goto powergate_partitions;
 	}
 
 	return 0;
 
+powergate_partitions:
+	tegra_xusb_powergate_partitions(tegra);
 disable_phy:
 	tegra_xusb_phy_disable(tegra);
 disable_regulator:
@@ -1209,6 +1283,7 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 	tegra_xusb_phy_disable(tegra);
 	regulator_bulk_disable(tegra->soc->num_supplies, tegra->supplies);
 	tegra_xusb_clk_disable(tegra);
+	tegra_xusb_powergate_partitions(tegra);
 
 	tegra_xusb_padctl_put(tegra->padctl);
 

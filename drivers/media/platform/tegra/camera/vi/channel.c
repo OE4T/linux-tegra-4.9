@@ -257,16 +257,10 @@ static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 	/* Initiate the channel format to the first matched format */
 	chan->fmtinfo = tegra_core_get_format_by_code(fmt.format.code, 0);
 	v4l2_fill_pix_format(&chan->format, &fmt.format);
-	chan->format.pixelformat = chan->fmtinfo->fourcc;
-	chan->format.bytesperline = chan->format.width *
-		chan->fmtinfo->bpp;
-	tegra_channel_fmt_align(chan,
-			chan->fmtinfo, &chan->format.width,
-			&chan->format.height, &chan->format.bytesperline);
-	chan->format.sizeimage = get_aligned_buffer_size(chan,
-			chan->format.bytesperline, chan->format.height);
-	if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
-		chan->format.sizeimage *= 2;
+	tegra_channel_update_format(chan, chan->format.width,
+				chan->format.height,
+				chan->fmtinfo->fourcc,
+				chan->fmtinfo->bpp, 0);
 
 	if (chan->total_ports > 1)
 		update_gang_mode(chan);
@@ -848,9 +842,17 @@ static int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_VI_HEIGHT_ALIGN:
 		chan->height_align = ctrl->val;
+		tegra_channel_update_format(chan, chan->format.width,
+				chan->format.height,
+				chan->format.pixelformat,
+				chan->fmtinfo->bpp, 0);
 		break;
 	case V4L2_CID_VI_SIZE_ALIGN:
 		chan->size_align = size_align_ctrl_qmenu[ctrl->val];
+		tegra_channel_update_format(chan, chan->format.width,
+				chan->format.height,
+				chan->format.pixelformat,
+				chan->fmtinfo->bpp, 0);
 		break;
 	default:
 		dev_err(&chan->video.dev, "%s:Not valid ctrl\n", __func__);
@@ -951,19 +953,6 @@ static int tegra_channel_setup_controls(struct tegra_channel *chan)
 			dev_err(chan->vi->dev,
 				"Failed to add VI controls\n");
 	}
-
-	/* Init video format */
-	chan->fmtinfo = tegra_core_get_format_by_code(TEGRA_VF_DEF, 0);
-	chan->format.pixelformat = chan->fmtinfo->fourcc;
-	chan->format.colorspace = V4L2_COLORSPACE_SRGB;
-	chan->format.field = V4L2_FIELD_NONE;
-	chan->format.width = TEGRA_DEF_WIDTH;
-	chan->format.height = TEGRA_DEF_HEIGHT;
-	chan->format.bytesperline = chan->format.width * chan->fmtinfo->bpp;
-	chan->format.sizeimage = get_aligned_buffer_size(chan,
-		chan->format.bytesperline, chan->format.height);
-	if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
-		chan->format.sizeimage *= 2;
 
 	/* setup the controls */
 	return v4l2_ctrl_handler_setup(&chan->ctrl_handler);
@@ -1393,6 +1382,13 @@ int tegra_channel_init(struct tegra_channel *chan)
 	mutex_init(&chan->stop_kthread_lock);
 	atomic_set(&chan->is_streaming, DISABLE);
 	spin_lock_init(&chan->capture_state_lock);
+
+	/* Init video format */
+	chan->fmtinfo = tegra_core_get_format_by_code(TEGRA_VF_DEF, 0);
+	tegra_channel_update_format(chan, TEGRA_DEF_WIDTH,
+				TEGRA_DEF_HEIGHT,
+				chan->fmtinfo->fourcc,
+				chan->fmtinfo->bpp, 0);
 
 	chan->buffer_offset[0] = 0;
 

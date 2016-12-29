@@ -100,21 +100,6 @@ static void fuse_state_wait_for_idle(void)
 				<< TEGRA_FUSE_CTRL_STATE_SHIFT));
 }
 
-static void fuse_cmd_write(u32 value, u32 addr)
-{
-	u32 reg;
-
-	fuse_state_wait_for_idle();
-	tegra_fuse_control_write(addr, TEGRA_FUSE_ADDR);
-	tegra_fuse_control_write(value, TEGRA_FUSE_WDATA);
-
-	tegra_fuse_control_read(TEGRA_FUSE_CTRL, &reg);
-	reg &= ~TEGRA_FUSE_CTRL_CMD_MASK;
-	reg |= TEGRA_FUSE_CTRL_CMD_WRITE;
-	tegra_fuse_control_write(reg, TEGRA_FUSE_CTRL);
-	fuse_state_wait_for_idle();
-}
-
 static u32 fuse_cmd_read(u32 addr)
 {
 	u32 reg;
@@ -131,16 +116,20 @@ static u32 fuse_cmd_read(u32 addr)
 	return reg;
 }
 
-static void fuse_cmd_sense(void)
+static void fuse_cmd_write(u32 value, u32 addr)
 {
 	u32 reg;
 
 	fuse_state_wait_for_idle();
+	tegra_fuse_control_write(addr, TEGRA_FUSE_ADDR);
+	tegra_fuse_control_write(value, TEGRA_FUSE_WDATA);
+
 	tegra_fuse_control_read(TEGRA_FUSE_CTRL, &reg);
 	reg &= ~TEGRA_FUSE_CTRL_CMD_MASK;
-	reg |= TEGRA_FUSE_CTRL_CMD_SENSE;
+	reg |= TEGRA_FUSE_CTRL_CMD_WRITE;
 	tegra_fuse_control_write(reg, TEGRA_FUSE_CTRL);
 	fuse_state_wait_for_idle();
+	fuse_cmd_read(addr);
 }
 
 static u32 tegra_fuse_calculate_parity(u32 val)
@@ -234,7 +223,6 @@ static int tegra_fuse_pre_burn_process(struct tegra_fuse_burn_dev *fuse_dev)
 		tegra_pmc_fuse_disable_mirroring();
 
 	tegra_pmc_fuse_control_ps18_latch_set();
-	fuse_cmd_sense();
 
 	/* Enable fuse program */
 	off_0_val = fuse_cmd_read(TEGRA_FUSE_ENABLE_PRGM_OFFSET);
@@ -243,7 +231,6 @@ static int tegra_fuse_pre_burn_process(struct tegra_fuse_burn_dev *fuse_dev)
 	off_1_val = 0x1 & ~off_1_val;
 	fuse_cmd_write(off_0_val, TEGRA_FUSE_ENABLE_PRGM_OFFSET);
 	fuse_cmd_write(off_1_val, TEGRA_FUSE_ENABLE_PRGM_REDUND_OFFSET);
-	fuse_cmd_sense();
 
 	return 0;
 }
@@ -254,7 +241,6 @@ static void tegra_fuse_post_burn_process(struct tegra_fuse_burn_dev *fuse_dev)
 	u32 sense_done;
 
 	/* burned fuse values can take effect without reset by below steps*/
-	fuse_cmd_sense();
 	reg = TEGRA_FUSE_PRIV2INTFC_SDATA | TEGRA_FUSE_PRIV2INTFC_SKIP_RECORDS;
 	tegra_fuse_control_write(reg, TEGRA_FUSE_PRIV2INTFC_START);
 	fuse_state_wait_for_idle();

@@ -3,7 +3,7 @@
  *
  * structure declarations for nvmem and nvmap user-space ioctls
  *
- * Copyright (c) 2009-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +35,7 @@ int nvmap_register_cvsram_carveout(struct device *dma_dev,
 struct cv_dev_info {
 	struct device_node *np;
 	struct sg_table *sgt;
+	struct device offset_dev; /* used to alloc/free semaphore offsets within GoS */
 	int idx; /* index to use by firmware to identify the client */
 	int count; /* number of sgt */
 };

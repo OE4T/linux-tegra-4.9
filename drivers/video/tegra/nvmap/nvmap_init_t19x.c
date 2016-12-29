@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/nvmap/nvmap_init_t19x.c
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -84,19 +84,30 @@ static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
 	phys_addr_t pa;
 	int ret, i, idx, bytes;
 	struct reserved_mem_ops *rmem_ops =
-		(struct reserved_mem_ops *)rmem->ops;
+		(struct reserved_mem_ops *)rmem->priv;
+	struct sg_table *sgt;
 
 	dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, __DMA_ATTR(attrs));
 
-	np = of_find_compatible_node(NULL, NULL, rmem->name);
+	np = of_find_node_by_phandle(rmem->phandle);
 	if (!np) {
 		pr_err("Can't find the node using compatible\n");
 		return -ENODEV;
 	}
 
+	if (count) {
+		pr_err("Gosmem initialized already\n");
+		return -EBUSY;
+	}
+
 	of_property_for_each_phandle_with_args(iter, np, "cvdevs",
 			NULL, 0)
 		count++;
+
+	if (!count) {
+		pr_err("No cvdevs to use the gosmem!!\n");
+		return -EINVAL;
+	}
 
 	(void)dma_alloc_attrs(gosmem.dma_dev, count * SZ_4K,
 				&pa, DMA_MEMORY_NOMAP, __DMA_ATTR(attrs));
@@ -107,9 +118,9 @@ static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
 
 	bytes = sizeof(*cvdev_info) * count;
 	bytes += sizeof(struct sg_table) * count * count;
-	cvdev_info = kmalloc(bytes, GFP_KERNEL);
+	cvdev_info = kzalloc(bytes, GFP_KERNEL);
 	if (!cvdev_info) {
-		pr_err("kmalloc failed. No memory!!!\n");
+		pr_err("kzalloc failed. No memory!!!\n");
 		ret = -ENOMEM;
 		goto unmap_dma;
 	}
@@ -129,21 +140,30 @@ static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
 		cvdev_info[idx].sgt += idx * count;
 
 		for (i = 0; i < count; i++) {
-			struct sg_table *sgt = cvdev_info[idx].sgt + i;
+			sgt = cvdev_info[idx].sgt + i;
 
+			ret = sg_alloc_table(sgt, 1, GFP_KERNEL);
+			if (ret) {
+				pr_err("sg_alloc_table failed:%d\n", ret);
+				goto free;
+			}
 			sg_set_buf(sgt->sgl,
-				phys_to_virt(pa + SZ_4K * idx), SZ_4K);
+				phys_to_virt(pa + i * SZ_4K), SZ_4K);
 		}
 		idx++;
 	}
+	rmem->priv = &gosmem;
 	ret = rmem_ops->device_init(rmem, dev);
 	if (ret)
 		goto free;
 	return ret;
 free:
+	sgt = (struct sg_table *)(cvdev_info + count);
+	for (i = 0; i < count * count; i++)
+		sg_free_table(sgt++);
 	kfree(cvdev_info);
 unmap_dma:
-	dma_free_attrs(gosmem.dma_dev, SZ_4K, NULL, pa, __DMA_ATTR(attrs));
+	dma_free_attrs(gosmem.dma_dev, count * SZ_4K, NULL, pa, __DMA_ATTR(attrs));
 	return ret;
 }
 
@@ -167,11 +187,14 @@ int __init nvmap_gosmem_setup(struct reserved_mem *rmem)
 }
 RESERVEDMEM_OF_DECLARE(nvmap_co, "nvidia,gosmem", nvmap_gosmem_setup);
 
+struct cv_dev_info *nvmap_fetch_cv_dev_info(struct device *dev);
+
 static int nvmap_gosmem_notifier(struct notifier_block *nb,
 		unsigned long event, void *_dev)
 {
 	struct device *dev = _dev;
-	int ents, i;
+	int ents, i, ret;
+	struct cv_dev_info *gos_owner;
 
 	if ((event != BUS_NOTIFY_BOUND_DRIVER) &&
 		(event != BUS_NOTIFY_UNBIND_DRIVER))
@@ -196,11 +219,17 @@ static int nvmap_gosmem_notifier(struct notifier_block *nb,
 		return NOTIFY_DONE;
 	}
 
-	for (i = 0; i < count; i++)
-		if (cvdev_info[i].np == dev->of_node)
-			goto map_gosmem;
-	return NOTIFY_DONE;
-map_gosmem:
+	gos_owner = nvmap_fetch_cv_dev_info(dev);
+	if (!gos_owner)
+		return NOTIFY_DONE;
+
+	ret = _dma_declare_coherent_memory(&gos_owner->offset_dev, 0, 0, SZ_256,
+				ffs(sizeof(u32)) - ffs(sizeof(u8)), DMA_MEMORY_NOMAP);
+	if (!(ret & DMA_MEMORY_NOMAP)) {
+		dev_err(dev, "declare coherent memory for gosmem chunk failed\n");
+		return NOTIFY_DONE;
+	}
+
 	for (i = 0; i < count; i++) {
 		DEFINE_DMA_ATTRS(attrs);
 		enum dma_data_direction dir;
@@ -215,8 +244,8 @@ map_gosmem:
 
 		switch (event) {
 		case BUS_NOTIFY_BOUND_DRIVER:
-			ents = dma_map_sg_attrs(dev, cvdev_info[i].sgt->sgl,
-					cvdev_info[i].sgt->nents, dir, __DMA_ATTR(attrs));
+			ents = dma_map_sg_attrs(dev, gos_owner->sgt[i].sgl,
+					gos_owner->sgt[i].nents, dir, __DMA_ATTR(attrs));
 			if (ents != 1) {
 				pr_err("mapping gosmem chunk %d for %s failed\n",
 					i, dev_name(dev));
@@ -224,8 +253,9 @@ map_gosmem:
 			}
 			break;
 		case BUS_NOTIFY_UNBIND_DRIVER:
-			dma_unmap_sg_attrs(dev, cvdev_info[i].sgt->sgl,
-					cvdev_info[i].sgt->nents, dir, __DMA_ATTR(attrs));
+			dma_unmap_sg_attrs(dev, gos_owner->sgt[i].sgl,
+					gos_owner->sgt[i].nents, dir, __DMA_ATTR(attrs));
+			break;
 		default:
 			return NOTIFY_DONE;
 		};

@@ -1274,4 +1274,204 @@ static inline u32 gmmu_pte_kind_s8_2s_v(void)
 {
 	return 0x0000002b;
 }
+static inline u32 gmmu_fault_buf_size_v(void)
+{
+	return 0x00000020;
+}
+static inline u32 gmmu_fault_buf_entry_inst_aperture_v(u32 r)
+{
+	return (r >> 8) & 0x3;
+}
+static inline u32 gmmu_fault_buf_entry_inst_aperture_w(void)
+{
+	return 0;
+}
+static inline u32 gmmu_fault_buf_entry_inst_aperture_vid_mem_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 gmmu_fault_buf_entry_inst_aperture_sys_coh_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 gmmu_fault_buf_entry_inst_aperture_sys_nocoh_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 gmmu_fault_buf_entry_inst_lo_f(u32 v)
+{
+	return (v & 0xfffff) << 12;
+}
+static inline u32 gmmu_fault_buf_entry_inst_lo_v(u32 r)
+{
+	return (r >> 12) & 0xfffff;
+}
+static inline u32 gmmu_fault_buf_entry_inst_lo_w(void)
+{
+	return 0;
+}
+static inline u32 gmmu_fault_buf_entry_inst_hi_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
+}
+static inline u32 gmmu_fault_buf_entry_inst_hi_w(void)
+{
+	return 1;
+}
+static inline u32 gmmu_fault_buf_entry_addr_phys_aperture_v(u32 r)
+{
+	return (r >> 0) & 0x3;
+}
+static inline u32 gmmu_fault_buf_entry_addr_phys_aperture_w(void)
+{
+	return 2;
+}
+static inline u32 gmmu_fault_buf_entry_addr_lo_f(u32 v)
+{
+	return (v & 0xfffff) << 12;
+}
+static inline u32 gmmu_fault_buf_entry_addr_lo_v(u32 r)
+{
+	return (r >> 12) & 0xfffff;
+}
+static inline u32 gmmu_fault_buf_entry_addr_lo_w(void)
+{
+	return 2;
+}
+static inline u32 gmmu_fault_buf_entry_addr_hi_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
+}
+static inline u32 gmmu_fault_buf_entry_addr_hi_w(void)
+{
+	return 3;
+}
+static inline u32 gmmu_fault_buf_entry_timestamp_lo_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
+}
+static inline u32 gmmu_fault_buf_entry_timestamp_lo_w(void)
+{
+	return 4;
+}
+static inline u32 gmmu_fault_buf_entry_timestamp_hi_v(u32 r)
+{
+	return (r >> 0) & 0xffffffff;
+}
+static inline u32 gmmu_fault_buf_entry_timestamp_hi_w(void)
+{
+	return 5;
+}
+static inline u32 gmmu_fault_buf_entry_engine_id_v(u32 r)
+{
+	return (r >> 0) & 0x1ff;
+}
+static inline u32 gmmu_fault_buf_entry_engine_id_w(void)
+{
+	return 6;
+}
+static inline u32 gmmu_fault_buf_entry_fault_type_v(u32 r)
+{
+	return (r >> 0) & 0x1f;
+}
+static inline u32 gmmu_fault_buf_entry_fault_type_w(void)
+{
+	return 7;
+}
+static inline u32 gmmu_fault_buf_entry_replayable_fault_v(u32 r)
+{
+	return (r >> 7) & 0x1;
+}
+static inline u32 gmmu_fault_buf_entry_replayable_fault_w(void)
+{
+	return 7;
+}
+static inline u32 gmmu_fault_buf_entry_replayable_fault_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 gmmu_fault_buf_entry_replayable_fault_true_f(void)
+{
+	return 0x80;
+}
+static inline u32 gmmu_fault_buf_entry_client_v(u32 r)
+{
+	return (r >> 8) & 0x7f;
+}
+static inline u32 gmmu_fault_buf_entry_client_w(void)
+{
+	return 7;
+}
+static inline u32 gmmu_fault_buf_entry_access_type_v(u32 r)
+{
+	return (r >> 16) & 0xf;
+}
+static inline u32 gmmu_fault_buf_entry_access_type_w(void)
+{
+	return 7;
+}
+static inline u32 gmmu_fault_buf_entry_mmu_client_type_v(u32 r)
+{
+	return (r >> 20) & 0x1;
+}
+static inline u32 gmmu_fault_buf_entry_mmu_client_type_w(void)
+{
+	return 7;
+}
+static inline u32 gmmu_fault_buf_entry_gpc_id_v(u32 r)
+{
+	return (r >> 24) & 0x1f;
+}
+static inline u32 gmmu_fault_buf_entry_gpc_id_w(void)
+{
+	return 7;
+}
+static inline u32 gmmu_fault_buf_entry_protected_mode_v(u32 r)
+{
+	return (r >> 29) & 0x1;
+}
+static inline u32 gmmu_fault_buf_entry_protected_mode_w(void)
+{
+	return 7;
+}
+static inline u32 gmmu_fault_buf_entry_protected_mode_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 gmmu_fault_buf_entry_protected_mode_true_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 gmmu_fault_buf_entry_replayable_fault_en_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
+static inline u32 gmmu_fault_buf_entry_replayable_fault_en_w(void)
+{
+	return 7;
+}
+static inline u32 gmmu_fault_buf_entry_replayable_fault_en_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 gmmu_fault_buf_entry_replayable_fault_en_true_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 gmmu_fault_buf_entry_valid_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 gmmu_fault_buf_entry_valid_w(void)
+{
+	return 7;
+}
+static inline u32 gmmu_fault_buf_entry_valid_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 gmmu_fault_buf_entry_valid_true_f(void)
+{
+	return 0x80000000;
+}
 #endif

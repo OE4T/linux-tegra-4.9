@@ -502,4 +502,16 @@ static inline u32 fifo_pbdma_status_chsw_in_progress_v(void)
 {
 	return 0x00000001;
 }
+static inline u32 fifo_cfg0_r(void)
+{
+	return 0x00002004;
+}
+static inline u32 fifo_cfg0_num_pbdma_v(u32 r)
+{
+	return (r >> 0) & 0xff;
+}
+static inline u32 fifo_cfg0_pbdma_fault_id_v(u32 r)
+{
+	return (r >> 16) & 0xff;
+}
 #endif

@@ -1062,6 +1062,10 @@ static inline u32 fb_mmu_fault_inst_lo_aperture_sys_nocoh_v(void)
 {
 	return 0x00000003;
 }
+static inline u32 fb_mmu_fault_inst_lo_addr_f(u32 v)
+{
+	return (v & 0xfffff) << 12;
+}
 static inline u32 fb_mmu_fault_inst_lo_addr_v(u32 r)
 {
 	return (r >> 12) & 0xfffff;

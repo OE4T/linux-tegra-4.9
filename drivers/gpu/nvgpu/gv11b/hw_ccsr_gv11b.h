@@ -110,6 +110,22 @@ static inline u32 ccsr_channel_status_v(u32 r)
 {
 	return (r >> 24) & 0xf;
 }
+static inline u32 ccsr_channel_pbdma_faulted_f(u32 v)
+{
+	return (v & 0x1) << 22;
+}
+static inline u32 ccsr_channel_pbdma_faulted_reset_f(void)
+{
+	return 0x400000;
+}
+static inline u32 ccsr_channel_eng_faulted_f(u32 v)
+{
+	return (v & 0x1) << 23;
+}
+static inline u32 ccsr_channel_eng_faulted_reset_f(void)
+{
+	return 0x800000;
+}
 static inline u32 ccsr_channel_busy_v(u32 r)
 {
 	return (r >> 28) & 0x1;

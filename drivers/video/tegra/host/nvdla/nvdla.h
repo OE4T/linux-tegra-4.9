@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host NVDLA
  *
- * Copyright (c) 2016 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -279,5 +279,6 @@ int nvdla_send_postfences(struct nvdla_task *task,
 int nvdla_get_cmd_memory(struct platform_device *pdev,
 				struct nvdla_cmd_mem_info *cmd_mem_info);
 int nvdla_put_cmd_memory(struct platform_device *pdev, int index);
+int nvdla_set_queue_state(struct nvhost_queue *queue, int cmd);
 
 #endif /* End of __NVHOST_NVDLA_H__ */

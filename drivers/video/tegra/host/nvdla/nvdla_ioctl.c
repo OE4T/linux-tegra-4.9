@@ -1,7 +1,7 @@
 /*
  * NVDLA IOCTL for T194
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -53,6 +53,44 @@ struct nvdla_private {
 	struct nvhost_queue *queue;
 	struct nvhost_buffers *buffers;
 };
+
+static int nvdla_set_queue(struct nvdla_private *priv, void *args)
+{
+	struct nvdla_queue_status_args *queue_arg =
+			(struct nvdla_queue_status_args *)args;
+	struct platform_device *pdev = priv->pdev;
+	struct nvhost_queue *queue = priv->queue;
+	int status = queue_arg->status;
+	int err = 0;
+
+	if (!queue) {
+		nvdla_dbg_err(pdev, "invalid queue\n");
+		err = -EINVAL;
+		goto inval_queue;
+	}
+
+	/* allow to send only one command at a time */
+	if (status != (status & -status)) {
+		nvdla_dbg_err(pdev, "incorrect queue cmd set[%d]\n", status);
+		err = -EINVAL;
+		goto inval_input;
+	}
+
+	if (status & NVDLA_QUEUE_FLAGS_SUSPEND) {
+		err = nvdla_set_queue_state(queue, DLA_CMD_QUEUE_SUSPEND);
+	} else if (status & NVDLA_QUEUE_FLAGS_RESUME) {
+		err = nvdla_set_queue_state(queue, DLA_CMD_QUEUE_RESUME);
+	} else {
+		nvdla_dbg_err(pdev, "invalid queue cmd %d\n", status);
+		err = -EINVAL;
+		goto inval_cmd;
+	}
+
+inval_queue:
+inval_input:
+inval_cmd:
+	return err;
+}
 
 static int nvdla_pin(struct nvdla_private *priv, void *arg)
 {
@@ -475,6 +513,9 @@ static long nvdla_ioctl(struct file *file, unsigned int cmd,
 		break;
 	case NVDLA_IOCTL_SUBMIT:
 		err = nvdla_submit(priv, (void *)buf);
+		break;
+	case NVDLA_IOCTL_SET_QUEUE_STATUS:
+		err = nvdla_set_queue(priv, (void *)buf);
 		break;
 	default:
 		err = -ENOIOCTLCMD;

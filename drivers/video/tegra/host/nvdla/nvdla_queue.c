@@ -1,7 +1,7 @@
 /*
  * NVDLA queue and task management for T194
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -784,6 +784,38 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 fail_to_register:
 	mutex_unlock(&queue->list_lock);
 
+	return err;
+}
+
+int nvdla_set_queue_state(struct nvhost_queue *queue, int cmd)
+{
+	struct platform_device *pdev = queue->pool->pdev;
+	int err;
+
+	nvdla_dbg_fn(pdev, "");
+
+	if ((cmd != DLA_CMD_QUEUE_SUSPEND) &&
+		(cmd != DLA_CMD_QUEUE_RESUME)) {
+		nvdla_dbg_err(pdev, "invalid cmd %d", cmd);
+		return -EINVAL;
+	}
+
+	/* get pm refcount */
+	err = nvhost_module_busy(pdev);
+	if (err) {
+		nvdla_dbg_err(pdev, "failed to poweron, err: %d", err);
+		goto fail_to_poweron;
+	}
+
+	err = nvdla_send_cmd(pdev, cmd, queue->id, true);
+	if (err) {
+		nvdla_dbg_err(pdev, "failed to suspend queue %d", err);
+		goto fail_to_suspend;
+	}
+
+fail_to_suspend:
+	nvhost_module_idle(pdev);
+fail_to_poweron:
 	return err;
 }
 

@@ -3,7 +3,7 @@
  *
  * Tegra NvDLA Driver
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,6 +27,18 @@
 #if !defined(__KERNEL__)
 #define __user
 #endif
+
+/**
+ * struct nvdla_queue_stat_args strcture
+ *
+ * @status		queue status flags
+ *
+ */
+struct nvdla_queue_status_args {
+#define NVDLA_QUEUE_FLAGS_SUSPEND	(1 << 0)
+#define NVDLA_QUEUE_FLAGS_RESUME	(1 << 1)
+	__u64 status;
+};
 
 /**
  * struct nvdla_ping_args structure for ping data
@@ -166,8 +178,10 @@ struct nvdla_status_notify {
 	_IOW(NVHOST_NVDLA_IOCTL_MAGIC, 3, struct nvdla_pin_unpin_args)
 #define NVDLA_IOCTL_SUBMIT \
 	_IOW(NVHOST_NVDLA_IOCTL_MAGIC, 4, struct nvdla_submit_args)
+#define NVDLA_IOCTL_SET_QUEUE_STATUS \
+	_IOW(NVHOST_NVDLA_IOCTL_MAGIC, 5, struct nvdla_queue_status_args)
 #define NVDLA_IOCTL_LAST		\
-		_IOC_NR(NVDLA_IOCTL_SUBMIT)
+		_IOC_NR(NVDLA_IOCTL_SET_QUEUE_STATUS)
 
 #define NVDLA_IOCTL_MAX_ARG_SIZE  \
 		sizeof(struct nvdla_pin_unpin_args)

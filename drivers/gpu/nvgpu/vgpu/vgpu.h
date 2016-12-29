@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU Interfaces
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -73,6 +73,8 @@ int vgpu_gr_alloc_gr_ctx(struct gk20a *g,
 			u32 flags);
 void vgpu_gr_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 			struct gr_ctx_desc *gr_ctx);
+void vgpu_gr_handle_sm_esr_event(struct gk20a *g,
+			struct tegra_vgpu_sm_esr_info *info);
 int vgpu_gr_init_ctx_state(struct gk20a *g);
 int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info);
 int vgpu_fifo_nonstall_isr(struct gk20a *g,

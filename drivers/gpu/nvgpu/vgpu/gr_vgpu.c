@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU Graphics
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -837,6 +837,9 @@ static void vgpu_remove_gr_support(struct gr_gk20a *gr)
 
 	gk20a_comptag_allocator_destroy(&gr->comp_tags);
 
+	kfree(gr->sm_error_states);
+	gr->sm_error_states = NULL;
+
 	kfree(gr->gpc_tpc_mask);
 	gr->gpc_tpc_mask = NULL;
 
@@ -882,6 +885,14 @@ static int vgpu_gr_init_gr_setup_sw(struct gk20a *g)
 		goto clean_up;
 
 	mutex_init(&gr->ctx_mutex);
+
+	gr->sm_error_states = kzalloc(
+			sizeof(struct nvgpu_dbg_gpu_sm_error_state_record) *
+			gr->no_of_sm, GFP_KERNEL);
+	if (!gr->sm_error_states) {
+		err = -ENOMEM;
+		goto clean_up;
+	}
 
 	gr->remove_support = vgpu_remove_gr_support;
 	gr->sw_ready = true;
@@ -1061,6 +1072,44 @@ static int vgpu_gr_update_hwpm_ctxsw_mode(struct gk20a *g,
 	return err ? err : msg.ret;
 }
 
+static int vgpu_gr_clear_sm_error_state(struct gk20a *g,
+		struct channel_gk20a *ch, u32 sm_id)
+{
+	struct gr_gk20a *gr = &g->gr;
+
+	mutex_lock(&g->dbg_sessions_lock);
+	memset(&gr->sm_error_states[sm_id], 0, sizeof(*gr->sm_error_states));
+	mutex_unlock(&g->dbg_sessions_lock);
+
+	return 0;
+}
+
+void vgpu_gr_handle_sm_esr_event(struct gk20a *g,
+			struct tegra_vgpu_sm_esr_info *info)
+{
+	struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_states;
+
+	if (info->sm_id >= g->gr.no_of_sm) {
+		gk20a_err(g->dev, "invalid smd_id %d / %d",
+			info->sm_id, g->gr.no_of_sm);
+		return;
+	}
+
+	mutex_lock(&g->dbg_sessions_lock);
+
+	sm_error_states = &g->gr.sm_error_states[info->sm_id];
+
+	sm_error_states->hww_global_esr = info->hww_global_esr;
+	sm_error_states->hww_warp_esr = info->hww_warp_esr;
+	sm_error_states->hww_warp_esr_pc = info->hww_warp_esr_pc;
+	sm_error_states->hww_global_esr_report_mask =
+				info->hww_global_esr_report_mask;
+	sm_error_states->hww_warp_esr_report_mask =
+				info->hww_warp_esr_report_mask;
+
+	mutex_unlock(&g->dbg_sessions_lock);
+}
+
 void vgpu_init_gr_ops(struct gpu_ops *gops)
 {
 	gops->gr.detect_sm_arch = vgpu_gr_detect_sm_arch;
@@ -1082,5 +1131,6 @@ void vgpu_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.set_sm_debug_mode = vgpu_gr_set_sm_debug_mode;
 	gops->gr.update_smpc_ctxsw_mode = vgpu_gr_update_smpc_ctxsw_mode;
 	gops->gr.update_hwpm_ctxsw_mode = vgpu_gr_update_hwpm_ctxsw_mode;
+	gops->gr.clear_sm_error_state = vgpu_gr_clear_sm_error_state;
 	gops->gr.dump_gr_regs = NULL;
 }

@@ -560,6 +560,15 @@ struct tegra_vgpu_channel_event_info {
 	u32 id; /* channel id or tsg id */
 };
 
+struct tegra_vgpu_sm_esr_info {
+	u32 sm_id;
+	u32 hww_global_esr;
+	u32 hww_warp_esr;
+	u64 hww_warp_esr_pc;
+	u32 hww_global_esr_report_mask;
+	u32 hww_warp_esr_report_mask;
+};
+
 enum {
 
 	TEGRA_VGPU_INTR_GR = 0,
@@ -575,6 +584,7 @@ enum {
 	TEGRA_VGPU_EVENT_ABORT = 1,
 	TEGRA_VGPU_EVENT_FECS_TRACE = 2,
 	TEGRA_VGPU_EVENT_CHANNEL = 3,
+	TEGRA_VGPU_EVENT_SM_ESR = 4,
 };
 
 struct tegra_vgpu_intr_msg {
@@ -588,6 +598,7 @@ struct tegra_vgpu_intr_msg {
 		struct tegra_vgpu_ce2_nonstall_intr_info ce2_nonstall_intr;
 		struct tegra_vgpu_fecs_trace_event_info fecs_trace;
 		struct tegra_vgpu_channel_event_info channel_event;
+		struct tegra_vgpu_sm_esr_info sm_esr;
 		char padding[32];
 	} info;
 };

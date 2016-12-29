@@ -128,6 +128,8 @@ static void vgpu_handle_channel_event(struct gk20a *g,
 	}
 }
 
+
+
 static int vgpu_intr_thread(void *dev_id)
 {
 	struct gk20a *g = dev_id;
@@ -173,6 +175,9 @@ static int vgpu_intr_thread(void *dev_id)
 			break;
 		case TEGRA_VGPU_EVENT_CHANNEL:
 			vgpu_handle_channel_event(g, &msg->info.channel_event);
+			break;
+		case TEGRA_VGPU_EVENT_SM_ESR:
+			vgpu_gr_handle_sm_esr_event(g, &msg->info.sm_esr);
 			break;
 		default:
 			gk20a_err(g->dev, "unknown event %u", msg->event);

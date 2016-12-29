@@ -1130,9 +1130,10 @@ static irqreturn_t tegra_i2c_isr(int irq, void *dev_id)
 	unsigned long flags;
 	u32 mask;
 
+	spin_lock_irqsave(&i2c_dev->xfer_lock, flags);
+
 	status = i2c_readl(i2c_dev, I2C_INT_STATUS);
 
-	spin_lock_irqsave(&i2c_dev->xfer_lock, flags);
 	if (status == 0) {
 		dev_warn(i2c_dev->dev, "irq status 0 %08x %08x %08x\n",
 			 i2c_readl(i2c_dev, I2C_PACKET_TRANSFER_STATUS),

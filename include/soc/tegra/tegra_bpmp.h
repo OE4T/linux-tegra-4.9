@@ -41,7 +41,6 @@ void *tegra_bpmp_alloc_coherent(size_t size, dma_addr_t *phys,
 		gfp_t flags);
 void tegra_bpmp_free_coherent(size_t size, void *vaddr,
 		dma_addr_t phys);
-void tegra_bpmp_resume(void);
 #else
 static inline int tegra_bpmp_running(void) { return 0; }
 static inline int tegra_bpmp_send(int mrq, void *data, int sz)
@@ -66,7 +65,6 @@ static inline void *tegra_bpmp_alloc_coherent(size_t size, dma_addr_t *phys,
 		gfp_t flags) { return NULL; }
 static inline void tegra_bpmp_free_coherent(size_t size, void *vaddr,
 		dma_addr_t phys) { }
-static inline void tegra_bpmp_resume(void) {}
 #endif
 
 #endif

@@ -31,6 +31,7 @@
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/tegra_pasr.h>
+#include <soc/tegra/tegra_powergate.h>
 #include "../../../arch/arm/mach-tegra/iomap.h"
 #include "bpmp.h"
 

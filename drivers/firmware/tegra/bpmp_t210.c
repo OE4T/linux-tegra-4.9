@@ -15,16 +15,6 @@
  */
 
 #include <linux/debugfs.h>
-#include <linux/delay.h>
-#include <linux/dma-mapping.h>
-#include <linux/firmware.h>
-#include <linux/io.h>
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/of.h>
-#include <linux/platform_device.h>
-#include <linux/uaccess.h>
-#include <linux/clk/tegra.h>
 #include <soc/tegra/bpmp_t210_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include "bpmp.h"

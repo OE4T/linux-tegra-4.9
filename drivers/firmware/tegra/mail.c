@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -34,8 +34,8 @@ static unsigned int timeout_mul = 1;
 
 struct channel_data channel_area[NR_CHANNELS];
 static struct completion completion[NR_THREAD_CH];
-int connected;
 static DEFINE_SPINLOCK(lock);
+static const struct mail_ops *mail_ops;
 
 uint32_t tegra_bpmp_mail_readl(int ch, int offset)
 {
@@ -53,6 +53,13 @@ int tegra_bpmp_read_data(unsigned int ch, void *data, size_t sz)
 }
 EXPORT_SYMBOL(tegra_bpmp_read_data);
 
+void tegra_bpmp_mail_return_data(int ch, int code, void *data, int sz)
+{
+	if (mail_ops && mail_ops->return_data)
+		mail_ops->return_data(mail_ops, ch, code, data, sz);
+}
+EXPORT_SYMBOL(tegra_bpmp_mail_return_data);
+
 void tegra_bpmp_mail_return(int ch, int code, int v)
 {
 	tegra_bpmp_mail_return_data(ch, code, &v, sizeof(v));
@@ -61,7 +68,7 @@ EXPORT_SYMBOL(tegra_bpmp_mail_return);
 
 static struct completion *bpmp_completion_obj(int ch)
 {
-	int i = bpmp_thread_ch_index(ch);
+	int i = mail_ops->thread_ch_index(ch);
 	return i < 0 ? NULL : completion + i;
 }
 
@@ -89,17 +96,18 @@ void bpmp_handle_irq(int ch)
 {
 	int i;
 
-	if (!connected)
+	if (!mail_ops)
 		return;
 
-	if (bpmp_slave_signalled(ch))
+	if (mail_ops->slave_signalled(mail_ops, ch))
 		bpmp_handle_mail(channel_area[ch].ib->code, ch);
 
 	spin_lock(&lock);
 
 	for (i = 0; i < NR_THREAD_CH && to_complete; i++) {
-		ch = bpmp_thread_ch(i);
-		if (bpmp_master_acked(ch) && (to_complete & 1 << ch)) {
+		ch = mail_ops->thread_ch(i);
+		if (mail_ops->master_acked(mail_ops, ch) &&
+				(to_complete & 1 << ch)) {
 			to_complete &= ~(1 << ch);
 			bpmp_signal_thread(ch);
 		}
@@ -112,13 +120,13 @@ static int bpmp_wait_master_free(int ch)
 {
 	ktime_t start;
 
-	if (bpmp_master_free(ch))
+	if (mail_ops->master_free(mail_ops, ch))
 		return 0;
 
 	start = ktime_get();
 
 	while (ktime_us_delta(ktime_get(), start) < CHANNEL_TIMEOUT) {
-		if (bpmp_master_free(ch))
+		if (mail_ops->master_free(mail_ops, ch))
 			return 0;
 	}
 
@@ -133,7 +141,8 @@ static void __bpmp_write_ch(int ch, int mrq, int flags, void *data, int sz)
 	p->flags = flags;
 	if (data)
 		memcpy_toio(p->data, data, sz);
-	bpmp_signal_slave(ch);
+
+	mail_ops->signal_slave(mail_ops, ch);
 }
 
 static int bpmp_write_ch(int ch, int mrq, int flags, void *data, int sz)
@@ -165,9 +174,9 @@ static int bpmp_write_threaded_ch(int *ch, int mrq, void *data, int sz)
 	spin_lock_irqsave(&lock, flags);
 
 	i = __ffs(tch_free);
-	*ch = bpmp_thread_ch(i);
+	*ch = mail_ops->thread_ch(i);
 
-	ret = bpmp_master_free(*ch) ? 0 : -EFAULT;
+	ret = mail_ops->master_free(mail_ops, *ch) ? 0 : -EFAULT;
 	if (!ret) {
 		tch_free &= ~(1 << i);
 		__bpmp_write_ch(*ch, mrq, DO_ACK | RING_DOORBELL, data, sz);
@@ -183,7 +192,9 @@ static int __bpmp_read_ch(int ch, void *data, int sz)
 	struct mb_data *p = channel_area[ch].ib;
 	if (data)
 		memcpy_fromio(data, p->data, sz);
-	bpmp_free_master(ch);
+
+	mail_ops->free_master(mail_ops, ch);
+
 	return p->code;
 }
 
@@ -193,7 +204,7 @@ static int bpmp_read_ch(int ch, void *data, int sz)
 	int tchi;
 	int r;
 
-	tchi = bpmp_thread_ch_index(ch);
+	tchi = mail_ops->thread_ch_index(ch);
 	if (tchi < 0)
 		return -EINVAL;
 
@@ -210,13 +221,13 @@ static int bpmp_wait_ack(int ch)
 {
 	ktime_t start;
 
-	if (bpmp_master_acked(ch))
+	if (mail_ops->master_acked(mail_ops, ch))
 		return 0;
 
 	start = ktime_get();
 
 	while (ktime_us_delta(ktime_get(), start) < CHANNEL_TIMEOUT) {
-		if (bpmp_master_acked(ch))
+		if (mail_ops->master_acked(mail_ops, ch))
 			return 0;
 	}
 
@@ -242,22 +253,22 @@ int tegra_bpmp_send(int mrq, void *data, int sz)
 	if (!bpmp_valid_txfer(data, sz, NULL, 0))
 		return -EINVAL;
 
-	if (!connected)
+	if (!mail_ops)
 		return -ENODEV;
 
 	raw_local_irq_save(flags);
 
-	ch = bpmp_ob_channel();
+	ch = mail_ops->ob_channel();
+
 	r = bpmp_write_ch(ch, mrq, 0, data, sz);
-	if (!r)
-		bpmp_ring_doorbell(ch);
+
+	if (!r && mail_ops->ring_doorbell)
+		mail_ops->ring_doorbell(ch);
 
 	raw_local_irq_restore(flags);
 	return r;
 }
 EXPORT_SYMBOL(tegra_bpmp_send);
-
-static int mail_inited;
 
 /* should be called with local irqs disabled */
 int tegra_bpmp_send_receive_atomic(int mrq, void *ob_data, int ob_sz,
@@ -272,18 +283,18 @@ int tegra_bpmp_send_receive_atomic(int mrq, void *ob_data, int ob_sz,
 	if (!bpmp_valid_txfer(ob_data, ob_sz, ib_data, ib_sz))
 		return -EINVAL;
 
-	if (!mail_inited)
-		return -EAGAIN;
-
-	if (!connected)
+	if (!mail_ops)
 		return -ENODEV;
 
-	ch = bpmp_ob_channel();
+	ch = mail_ops->ob_channel();
+
 	r = bpmp_write_ch(ch, mrq, DO_ACK, ob_data, ob_sz);
 	if (r)
 		return r;
 
-	bpmp_ring_doorbell(ch);
+	if (mail_ops->ring_doorbell)
+		mail_ops->ring_doorbell(ch);
+
 	r = bpmp_wait_ack(ch);
 	if (r)
 		return r;
@@ -306,17 +317,16 @@ int tegra_bpmp_send_receive(int mrq, void *ob_data, int ob_sz,
 	if (!bpmp_valid_txfer(ob_data, ob_sz, ib_data, ib_sz))
 		return -EINVAL;
 
-	if (!mail_inited)
-		return -EAGAIN;
-
-	if (!connected)
+	if (!mail_ops)
 		return -ENODEV;
 
 	r = bpmp_write_threaded_ch(&ch, mrq, ob_data, ob_sz);
 	if (r)
 		return r;
 
-	bpmp_ring_doorbell(ch);
+	if (mail_ops->ring_doorbell)
+		mail_ops->ring_doorbell(ch);
+
 	w = bpmp_completion_obj(ch);
 	timeout = usecs_to_jiffies(THREAD_CH_TIMEOUT);
 	if (!wait_for_completion_timeout(w, timeout))
@@ -328,9 +338,15 @@ EXPORT_SYMBOL(tegra_bpmp_send_receive);
 
 int tegra_bpmp_running(void)
 {
-	return connected;
+	return mail_ops ? 1 : 0;
 }
 EXPORT_SYMBOL(tegra_bpmp_running);
+
+void tegra_bpmp_resume(void)
+{
+	if (mail_ops->resume)
+		mail_ops->resume();
+}
 
 static void bpmp_init_completion(void)
 {
@@ -339,14 +355,17 @@ static void bpmp_init_completion(void)
 		init_completion(completion + i);
 }
 
-int bpmp_mail_init(struct device_node *of_node)
+int bpmp_mail_init(const struct mail_ops *ops, struct device_node *of_node)
 {
 	int r;
 
-	if (mail_inited)
-		return 0;
-
 	r = bpmp_mail_init_prepare();
+	if (r) {
+		pr_err("bpmp: chip mail init  prepared failed (%d)\n", r);
+		return r;
+	}
+
+	r = ops->init_prepare ? ops->init_prepare() : 0;
 	if (r) {
 		pr_err("bpmp: mail init prepare failed (%d)\n", r);
 		return r;
@@ -354,7 +373,7 @@ int bpmp_mail_init(struct device_node *of_node)
 
 	bpmp_init_completion();
 
-	r = bpmp_init_irq();
+	r = ops->init_irq ? ops->init_irq() : 0;
 	if (r) {
 		pr_err("bpmp: irq init failed (%d)\n", r);
 		return r;
@@ -366,12 +385,18 @@ int bpmp_mail_init(struct device_node *of_node)
 		return r;
 	}
 
-	r = bpmp_connect(of_node);
-	pr_info("bpmp: connect returned %d\n", r);
+	r = ops->connect(ops, of_node);
+	if (r) {
+		pr_err("bpmp: connect failed (%d)\n", r);
+		return r;
+	}
 
 	if (!tegra_platform_is_silicon())
 		timeout_mul = 600;
 
-	mail_inited = 1;
-	return r;
+	mail_ops = ops;
+
+	pr_info("bpmp: mail init ok\n");
+
+	return 0;
 }

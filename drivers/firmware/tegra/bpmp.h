@@ -88,13 +88,4 @@ void bpmp_handle_mail(int mrq, int ch);
 void tegra_bpmp_resume(void);
 void bpmp_handle_irq(int ch);
 
-#if IS_ENABLED(CONFIG_POWERGATE_TEGRA_BPMP)
-int tegra_bpmp_init_powergate(struct platform_device *pdev);
-#else
-static inline int tegra_bpmp_init_powergate(struct tegra_bpmp *bpmp)
-{
-	return 0;
-}
-#endif
-
 #endif

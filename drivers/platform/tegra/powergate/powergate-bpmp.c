@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -28,6 +28,7 @@
 
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
+#include <soc/tegra/tegra_powergate.h>
 
 #define to_tegra_bpmp_pd(domain) \
 	container_of(domain, struct tegra_bpmp_pd, genpd)

@@ -1122,6 +1122,7 @@ int eqos_probe(struct platform_device *pdev)
 		goto err_out_fbe_wq_failed;
 	}
 	INIT_WORK(&pdata->fbe_work, eqos_fbe_work);
+	INIT_WORK(&pdata->iso_work, eqos_iso_work);
 
 	if (pdt_cfg->eth_iso_enable) {
 		/* Bandwidth Negotiation call back is NULL as of now */
@@ -1383,6 +1384,8 @@ static INT eqos_suspend(struct platform_device *pdev, pm_message_t state)
 		clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 	}
 
+	/* cancel iso work */
+	cancel_work_sync(&pdata->iso_work);
 	/* disable clocks */
 	eqos_clock_deinit(pdata);
 	/* disable regulators */

@@ -20,6 +20,7 @@
 #include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/notifier.h>
+#include <linux/of_address.h>
 #include <linux/of_irq.h>
 #include <soc/tegra/doorbell.h>
 #include "../../../arch/arm/mach-tegra/iomap.h"
@@ -230,19 +231,15 @@ static int __bpmp_connect(void)
 	return 0;
 }
 
-int bpmp_connect(struct platform_device *pdev)
+int bpmp_connect(struct device_node *of_node)
 {
-	struct resource *res;
+	atomics = of_iomap(of_node, 0);
+	if (!atomics)
+		return -ENODEV;
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	atomics = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(atomics))
-		return PTR_ERR(atomics);
-
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	arb_sema = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(arb_sema))
-		return PTR_ERR(arb_sema);
+	arb_sema = of_iomap(of_node, 1);
+	if (!arb_sema)
+		return -ENODEV;
 
 	return __bpmp_connect();
 }

@@ -319,7 +319,6 @@ static int bpmp_probe(struct platform_device *pdev)
 
 	bpmp_tty.dev.platform_data = root;
 
-	r = bpmp_mail_init(pdev);
 	r = r ?: bpmp_do_ping();
 	r = r ?: bpmp_get_fwtag();
 	r = r ?: of_platform_populate(device->of_node, NULL, NULL, device);
@@ -365,6 +364,22 @@ static struct platform_driver bpmp_driver = {
 
 static __init int bpmp_init(void)
 {
-	return platform_driver_register(&bpmp_driver);
+	struct device_node *np;
+	int r = -ENODEV;
+
+	np = of_find_matching_node(NULL, bpmp_of_matches);
+	if (!np || !of_device_is_available(np))
+		goto out;
+
+	r = bpmp_mail_init(np);
+	if (r)
+		goto out;
+
+	r = platform_driver_register(&bpmp_driver);
+
+out:
+	of_node_put(np);
+
+	return r;
 }
-core_initcall(bpmp_init);
+postcore_initcall(bpmp_init);

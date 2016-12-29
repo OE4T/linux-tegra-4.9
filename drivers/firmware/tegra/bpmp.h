@@ -60,7 +60,7 @@ int bpmp_init_cpuidle_debug(struct dentry *root);
 extern int connected;
 
 int bpmp_mail_init_prepare(void);
-int bpmp_mail_init(struct platform_device *pdev);
+int bpmp_mail_init(struct device_node *of_node);
 int __bpmp_do_ping(void);
 void bpmp_cleanup_modules(void);
 int bpmp_create_attrs(const struct fops_entry *fent, struct dentry *parent,
@@ -78,7 +78,7 @@ int bpmp_thread_ch_index(int ch);
 int bpmp_ob_channel(void);
 int bpmp_thread_ch(int idx);
 int bpmp_init_irq(void);
-int bpmp_connect(struct platform_device *pdev);
+int bpmp_connect(struct device_node *of_node);
 void tegra_bpmp_resume(void);
 void bpmp_handle_irq(int ch);
 

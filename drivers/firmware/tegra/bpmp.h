@@ -51,36 +51,42 @@ struct channel_data {
 	struct mb_data *ob;
 };
 
+struct mail_ops {
+	int (*init_prepare)(void);
+	int (*init_irq)(void);
+	int (*connect)(const struct mail_ops *ops, struct device_node *of_node);
+	void (*resume)(void);
+
+	struct ivc *(*ivc_obj)(int ch);
+	int (*ob_channel)(void);
+	int (*thread_ch)(int idx);
+	int (*thread_ch_index)(int ch);
+
+	bool (*master_free)(const struct mail_ops *ops, int ch);
+	void (*free_master)(const struct mail_ops *ops, int ch);
+	bool (*master_acked)(const struct mail_ops *ops, int ch);
+	void (*signal_slave)(const struct mail_ops *ops, int ch);
+	bool (*slave_signalled)(const struct mail_ops *ops, int ch);
+	void (*ring_doorbell)(int ch);
+	void (*return_data)(const struct mail_ops *ops, int ch,
+			int code, void *data, int sz);
+};
+
+extern struct mail_ops chip_mail_ops;
 extern struct channel_data channel_area[NR_CHANNELS];
 extern char firmware_tag[32];
 
 struct dentry *bpmp_init_debug(struct platform_device *pdev);
 int bpmp_init_cpuidle_debug(struct dentry *root);
-
-extern int connected;
-
 int bpmp_mail_init_prepare(void);
-int bpmp_mail_init(struct device_node *of_node);
+int bpmp_mail_init(const struct mail_ops *ops, struct device_node *of_node);
 int __bpmp_do_ping(void);
 int bpmp_create_attrs(const struct fops_entry *fent, struct dentry *parent,
 		void *data);
 int bpmp_mailman_init(void);
 void bpmp_handle_mail(int mrq, int ch);
-
-void bpmp_ring_doorbell(int ch);
-int bpmp_thread_ch_index(int ch);
-int bpmp_ob_channel(void);
-int bpmp_thread_ch(int idx);
-int bpmp_init_irq(void);
-int bpmp_connect(struct device_node *of_node);
 void tegra_bpmp_resume(void);
 void bpmp_handle_irq(int ch);
-
-bool bpmp_master_free(int ch);
-bool bpmp_slave_signalled(int ch);
-bool bpmp_master_acked(int ch);
-void bpmp_signal_slave(int ch);
-void bpmp_free_master(int ch);
 
 #if IS_ENABLED(CONFIG_POWERGATE_TEGRA_BPMP)
 int tegra_bpmp_init_powergate(struct platform_device *pdev);

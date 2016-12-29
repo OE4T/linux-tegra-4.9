@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -81,22 +81,22 @@ static u32 bpmp_ch_sta(int ch)
 	return __raw_readl(arb_sema + STA_OFFSET) & CH_MASK(ch);
 }
 
-bool bpmp_master_free(int ch)
+static bool bpmp_master_free(const struct mail_ops *ops, int ch)
 {
 	return bpmp_ch_sta(ch) == MA_FREE(ch);
 }
 
-bool bpmp_slave_signalled(int ch)
+static bool bpmp_slave_signalled(const struct mail_ops *ops, int ch)
 {
 	return bpmp_ch_sta(ch) == SL_SIGL(ch);
 }
 
-bool bpmp_master_acked(int ch)
+static bool bpmp_master_acked(const struct mail_ops *ops, int ch)
 {
 	return bpmp_ch_sta(ch) == MA_ACKD(ch);
 }
 
-void bpmp_signal_slave(int ch)
+static void bpmp_signal_slave(const struct mail_ops *ops, int ch)
 {
 	__raw_writel(CH_MASK(ch), arb_sema + CLR_OFFSET);
 }
@@ -117,17 +117,18 @@ static void bpmp_ack_master(int ch, int flags)
 }
 
 /* MA_ACKD to MA_FREE */
-void bpmp_free_master(int ch)
+static void bpmp_free_master(const struct mail_ops *ops, int ch)
 {
 	__raw_writel(MA_ACKD(ch) ^ MA_FREE(ch), arb_sema + CLR_OFFSET);
 }
 
-void bpmp_ring_doorbell(int ch)
+static void bpmp_ring_doorbell(int ch)
 {
 	tegra_ring_doorbell(CPU_OB_DOORBELL);
 }
 
-void tegra_bpmp_mail_return_data(int ch, int code, void *data, int sz)
+static void bpmp_return_data(const struct mail_ops *ops,
+		int ch, int code, void *data, int sz)
 {
 	struct mb_data *p;
 	int flags;
@@ -146,21 +147,20 @@ void tegra_bpmp_mail_return_data(int ch, int code, void *data, int sz)
 	if (flags & RING_DOORBELL)
 		bpmp_ring_doorbell(ch);
 }
-EXPORT_SYMBOL(tegra_bpmp_mail_return_data);
 
-int bpmp_thread_ch_index(int ch)
+static int bpmp_thread_ch_index(int ch)
 {
 	if (ch < CPU0_OB_CH1 || ch > CPU3_OB_CH1)
 		return -1;
 	return ch - CPU0_OB_CH1;
 }
 
-int bpmp_thread_ch(int idx)
+static int bpmp_thread_ch(int idx)
 {
 	return CPU0_OB_CH1 + idx;
 }
 
-int bpmp_ob_channel(void)
+static int bpmp_ob_channel(void)
 {
 	return smp_processor_id() + CPU0_OB_CH0;
 }
@@ -172,7 +172,7 @@ static void bpmp_doorbell_handler(void *data)
 	bpmp_handle_irq(ch);
 }
 
-int bpmp_init_irq(void)
+static int bpmp_init_irq(void)
 {
 	long ch;
 	int r;
@@ -201,15 +201,12 @@ static u32 bpmp_channel_area(void __iomem *atomics, int ch)
 	return a;
 }
 
-int bpmp_connect(struct device_node *of_node)
+static int bpmp_connect(const struct mail_ops *ops, struct device_node *of_node)
 {
 	uint32_t channel_hwaddr[NR_CHANNELS];
 	void __iomem *atomics;
 	void *p;
 	int i;
-
-	if (connected)
-		return 0;
 
 	atomics = of_iomap(of_node, 0);
 	if (!atomics)
@@ -236,14 +233,23 @@ int bpmp_connect(struct device_node *of_node)
 		channel_area[i].ob = p;
 	}
 
-	connected = 1;
-
 	return 0;
 }
 
-void tegra_bpmp_resume(void)
-{
-}
+struct mail_ops chip_mail_ops = {
+	.init_irq = bpmp_init_irq,
+	.connect = bpmp_connect,
+	.ob_channel = bpmp_ob_channel,
+	.thread_ch = bpmp_thread_ch,
+	.thread_ch_index = bpmp_thread_ch_index,
+	.master_free = bpmp_master_free,
+	.free_master = bpmp_free_master,
+	.master_acked = bpmp_master_acked,
+	.signal_slave = bpmp_signal_slave,
+	.ring_doorbell = bpmp_ring_doorbell,
+	.slave_signalled = bpmp_slave_signalled,
+	.return_data = bpmp_return_data
+};
 
 int bpmp_mail_init_prepare(void)
 {

@@ -379,7 +379,7 @@ static __init int bpmp_init(void)
 	if (!np || !of_device_is_available(np))
 		goto out;
 
-	r = bpmp_mail_init(np);
+	r = bpmp_mail_init(&chip_mail_ops, np);
 	if (r)
 		goto out;
 

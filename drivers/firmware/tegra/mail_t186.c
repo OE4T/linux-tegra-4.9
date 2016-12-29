@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -29,7 +29,6 @@
 #include <linux/tegra-soc.h>
 #include <soc/tegra/bpmp_abi.h>
 #include "bpmp.h"
-#include "mail_t186.h"
 
 #define CPU_0_TO_BPMP_CH	0
 #define CPU_1_TO_BPMP_CH	1
@@ -50,11 +49,7 @@
 
 #define VIRT_BPMP_COMPAT	"nvidia,tegra186-bpmp-hv"
 
-static struct mail_ops *mail_ops;
-
 static struct ivc ivc_channels[NR_CHANNELS];
-static void __iomem *cpu_ma_page;
-static void __iomem *cpu_sl_page;
 
 static int hv_bpmp_first_queue = -1;
 static uint32_t num_ivc_queues;
@@ -74,32 +69,18 @@ static irqreturn_t hv_bpmp_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int virt_init_io(void)
+static int virt_channel_init(struct device_node *of_node)
 {
-	struct device_node *of_node;
 	struct device_node *hv_of_node;
 	int err;
 	uint32_t ivc_queue;
 	int index;
 	struct tegra_hv_ivc_cookie *cookie;
 
-	of_node = of_find_compatible_node(NULL, NULL, VIRT_BPMP_COMPAT);
-	if (!of_node) {
-		pr_err("%s: Unable to find virt bpmp node", __func__);
-		return -ENODEV;
-	}
-
-	if (!of_device_is_available(of_node)) {
-		pr_err("%s: Virt BPMP node disabled", __func__);
-		of_node_put(of_node);
-		return -ENODEV;
-	}
-
 	/* Read ivc queue numbers */
 	hv_of_node = of_parse_phandle(of_node, "ivc_queue", 0);
 	if (!hv_of_node) {
 		pr_err("%s: Unable to find hypervisor node\n", __func__);
-		of_node_put(of_node);
 		return -EINVAL;
 	}
 
@@ -109,7 +90,6 @@ static int virt_init_io(void)
 		pr_err("%s: Failed to read start IVC queue\n",
 				__func__);
 		of_node_put(hv_of_node);
-		of_node_put(of_node);
 		return -EINVAL;
 	}
 
@@ -119,7 +99,6 @@ static int virt_init_io(void)
 		pr_err("%s: Failed to read range of IVC queues\n",
 				__func__);
 		of_node_put(hv_of_node);
-		of_node_put(of_node);
 		return -EINVAL;
 	}
 
@@ -131,7 +110,6 @@ static int virt_init_io(void)
 	if (!hv_bpmp_ivc_cookies) {
 		pr_err("%s: Failed to allocate memory\n", __func__);
 		of_node_put(hv_of_node);
-		of_node_put(of_node);
 		return -ENOMEM;
 	}
 
@@ -180,8 +158,8 @@ static int virt_init_io(void)
 		goto cleanup;
 	}
 
-	of_node_put(of_node);
 	of_node_put(hv_of_node);
+
 	return 0;
 
 cleanup:
@@ -194,7 +172,7 @@ cleanup:
 	}
 	kfree(hv_bpmp_ivc_cookies);
 	of_node_put(hv_of_node);
-	of_node_put(of_node);
+
 	return -ENOMEM;
 }
 
@@ -205,7 +183,7 @@ static struct ivc *virt_ivc_obj(int ch)
 	return tegra_hv_ivc_convert_cookie(cookie);
 }
 
-static int virt_handshake(void)
+static void virt_synchronize(void)
 {
 	int index;
 	struct tegra_hv_ivc_cookie *cookie;
@@ -227,26 +205,32 @@ static int virt_handshake(void)
 
 		pr_debug("%s: cookie %d, channel notified\n", __func__, index);
 	}
+}
+
+static int virt_connect(const struct mail_ops *ops, struct device_node *of_node)
+{
+	int r;
+
+	r = virt_channel_init(of_node);
+	if (r)
+		return r;
+
+	virt_synchronize();
+
 	return 0;
 }
 
-static struct mail_ops t186_hv_mail_ops = {
-	.iomem_init = virt_init_io,
-	.handshake = virt_handshake,
-	.ivc_obj = virt_ivc_obj
-};
-
-static struct mail_ops *virt_mail_ops(void)
+static int virt_mail_ops(void)
 {
 	struct device_node *np;
 
 	np = of_find_compatible_node(NULL, NULL, VIRT_BPMP_COMPAT);
 	if (!np)
-		return NULL;
+		return 0;
 
 	of_node_put(np);
 
-	return &t186_hv_mail_ops;
+	return 1;
 }
 
 static int native_init_prepare(void)
@@ -263,26 +247,6 @@ static int native_init_irq(void)
 {
 	tegra_hsp_db_add_handler(HSP_MASTER_BPMP, native_inbox_irq, NULL);
 	tegra_hsp_db_enable_master(HSP_MASTER_BPMP);
-
-	return 0;
-}
-
-static int native_iomem_init(void)
-{
-	struct device_node *of_node;
-
-	/* FIXME: do not assume DT path */
-	of_node = of_find_node_by_path("/bpmp");
-	if (WARN_ON(!of_device_is_available(of_node)))
-		return -ENODEV;
-
-	cpu_ma_page = of_iomap(of_node, 1);
-	if (!cpu_ma_page)
-		return -ENODEV;
-
-	cpu_sl_page = of_iomap(of_node, 2);
-	if (!cpu_sl_page)
-		return -ENODEV;
 
 	return 0;
 }
@@ -309,21 +273,10 @@ static void native_synchronize(void)
 	pr_info("bpmp: channels synchronized\n");
 }
 
-static int native_handshake(void)
+static int native_handshake(void __iomem *bpmp_base)
 {
-	struct device_node *of_node;
-	void __iomem *bpmp_base;
 	uint32_t sem;
 	int i;
-
-	/* FIXME: do not assume DT path */
-	of_node = of_find_node_by_path("/bpmp");
-	if (WARN_ON(!of_device_is_available(of_node)))
-		return -ENODEV;
-
-	bpmp_base = of_iomap(of_node, 0);
-	if (!bpmp_base)
-		return -ENODEV;
 
 	sem = __raw_readl(bpmp_base + HSP_SHRD_SEM_1_STA);
 	if (sem || !tegra_platform_is_vdk())
@@ -337,8 +290,6 @@ static int native_handshake(void)
 	}
 
 next:
-	iounmap(bpmp_base);
-
 	if (!sem) {
 		pr_info("bpmp: no signs of life\n");
 		return -ENODEV;
@@ -351,6 +302,7 @@ next:
 	}
 
 	pr_info("bpmp: handshake completed\n");
+
 	return 0;
 }
 
@@ -374,7 +326,8 @@ static void native_notify(struct ivc *ivc)
 {
 }
 
-static int native_single_init(int ch)
+static int native_single_init(int ch,
+		void __iomem *ma_page, void __iomem *sl_page)
 {
 	struct ivc *ivc;
 	uintptr_t rx_base;
@@ -388,8 +341,8 @@ static int native_single_init(int ch)
 	hdr_sz = tegra_ivc_total_queue_size(0);
 	que_sz = tegra_ivc_total_queue_size(msg_sz);
 
-	rx_base = (uintptr_t)((uint8_t *)cpu_sl_page + ch * que_sz);
-	tx_base = (uintptr_t)((uint8_t *)cpu_ma_page + ch * que_sz);
+	rx_base = (uintptr_t)(sl_page + ch * que_sz);
+	tx_base = (uintptr_t)(ma_page + ch * que_sz);
 
 	ivc = ivc_channels + ch;
 	r = tegra_ivc_init(ivc, rx_base, tx_base,
@@ -406,13 +359,13 @@ static int native_single_init(int ch)
 	return 0;
 }
 
-static int native_channel_init(void)
+static int native_channel_init(void __iomem *ma_page, void __iomem *sl_page)
 {
 	int i;
 	int r;
 
 	for (i = 0; i < NR_CHANNELS; i++) {
-		r = native_single_init(i);
+		r = native_single_init(i, ma_page, sl_page);
 		if (r)
 			return r;
 	}
@@ -427,18 +380,34 @@ static struct ivc *native_ivc_obj(int ch)
 	return ivc_channels + ch;
 }
 
-static struct mail_ops t186_native_mail_ops = {
-	.init_prepare = native_init_prepare,
-	.ring_doorbell = native_ring_doorbell,
-	.init_irq = native_init_irq,
-	.iomem_init = native_iomem_init,
-	.handshake = native_handshake,
-	.channel_init = native_channel_init,
-	.ivc_obj = native_ivc_obj,
-	.resume = native_resume
-};
+static int native_connect(const struct mail_ops *ops,
+		struct device_node *of_node)
+{
+	void __iomem *bpmp_base;
+	void __iomem *ma_page;
+	void __iomem *sl_page;
+	int r;
 
-static struct mail_ops *native_mail_ops(void)
+	bpmp_base = of_iomap(of_node, 0);
+	if (!bpmp_base)
+		return -ENODEV;
+
+	ma_page = of_iomap(of_node, 1);
+	if (!ma_page)
+		return -ENODEV;
+
+	sl_page = of_iomap(of_node, 2);
+	if (!sl_page)
+		return -ENODEV;
+
+	r = native_handshake(bpmp_base);
+	if (r)
+		return r;
+
+	return native_channel_init(ma_page, sl_page);
+}
+
+static int native_mail_ops(void)
 {
 	/* FIXME: consider using an attr */
 	const char *ofm_native = "nvidia,tegra186-bpmp";
@@ -446,20 +415,20 @@ static struct mail_ops *native_mail_ops(void)
 
 	np = of_find_compatible_node(NULL, NULL, ofm_native);
 	if (!np)
-		return NULL;
+		return 0;
 
 	of_node_put(np);
 
-	return &t186_native_mail_ops;
+	return 1;
 }
 
-static bool ivc_rx_ready(int ch)
+static bool ivc_rx_ready(const struct mail_ops *ops, int ch)
 {
 	struct ivc *ivc;
 	void *frame;
 	bool ready;
 
-	ivc = mail_ops->ivc_obj(ch);
+	ivc = ops->ivc_obj(ch);
 	frame = tegra_ivc_read_get_next_frame(ivc);
 	ready = !IS_ERR_OR_NULL(frame);
 	channel_area[ch].ib = ready ? frame : NULL;
@@ -467,41 +436,41 @@ static bool ivc_rx_ready(int ch)
 	return ready;
 }
 
-bool bpmp_master_acked(int ch)
+static bool bpmp_master_acked(const struct mail_ops *ops, int ch)
 {
-	return ivc_rx_ready(ch);
+	return ivc_rx_ready(ops, ch);
 }
 
-bool bpmp_slave_signalled(int ch)
+static bool bpmp_slave_signalled(const struct mail_ops *ops, int ch)
 {
-	return ivc_rx_ready(ch);
+	return ivc_rx_ready(ops, ch);
 }
 
-void bpmp_free_master(int ch)
+static void bpmp_free_master(const struct mail_ops *ops, int ch)
 {
 	struct ivc *ivc;
 
-	ivc = mail_ops->ivc_obj(ch);
+	ivc = ops->ivc_obj(ch);
 	if (tegra_ivc_read_advance(ivc))
 		WARN_ON(1);
 }
 
-void bpmp_signal_slave(int ch)
+static void bpmp_signal_slave(const struct mail_ops *ops, int ch)
 {
 	struct ivc *ivc;
 
-	ivc = mail_ops->ivc_obj(ch);
+	ivc = ops->ivc_obj(ch);
 	if (tegra_ivc_write_advance(ivc))
 		WARN_ON(1);
 }
 
-bool bpmp_master_free(int ch)
+static bool bpmp_master_free(const struct mail_ops *ops, int ch)
 {
 	struct ivc *ivc;
 	void *frame;
 	bool ready;
 
-	ivc = mail_ops->ivc_obj(ch);
+	ivc = ops->ivc_obj(ch);
 	frame = tegra_ivc_write_get_next_frame(ivc);
 	ready = !IS_ERR_OR_NULL(frame);
 	channel_area[ch].ob = ready ? frame : NULL;
@@ -509,7 +478,8 @@ bool bpmp_master_free(int ch)
 	return ready;
 }
 
-void tegra_bpmp_mail_return_data(int ch, int code, void *data, int sz)
+static void bpmp_return_data(const struct mail_ops *ops,
+		int ch, int code, void *data, int sz)
 {
 	const int flags = channel_area[ch].ib->flags;
 	struct ivc *ivc;
@@ -521,7 +491,7 @@ void tegra_bpmp_mail_return_data(int ch, int code, void *data, int sz)
 		return;
 	}
 
-	ivc = mail_ops->ivc_obj(ch);
+	ivc = ops->ivc_obj(ch);
 	r = tegra_ivc_read_advance(ivc);
 	WARN_ON(r);
 
@@ -539,92 +509,60 @@ void tegra_bpmp_mail_return_data(int ch, int code, void *data, int sz)
 	r = tegra_ivc_write_advance(ivc);
 	WARN_ON(r);
 
-	if (flags & RING_DOORBELL)
-		bpmp_ring_doorbell(ch);
-}
-EXPORT_SYMBOL(tegra_bpmp_mail_return_data);
-
-void bpmp_ring_doorbell(int ch)
-{
-	if (mail_ops->ring_doorbell)
-		mail_ops->ring_doorbell(ch);
+	if ((flags & RING_DOORBELL) && ops->ring_doorbell)
+		ops->ring_doorbell(ch);
 }
 
-int bpmp_thread_ch_index(int ch)
+static int bpmp_thread_ch_index(int ch)
 {
 	if (ch < CPU_NA_0_TO_BPMP_CH || ch > CPU_NA_6_TO_BPMP_CH)
 		return -1;
 	return ch - CPU_NA_0_TO_BPMP_CH;
 }
 
-int bpmp_thread_ch(int idx)
+static int bpmp_thread_ch(int idx)
 {
 	return CPU_NA_0_TO_BPMP_CH + idx;
 }
 
-int bpmp_ob_channel(void)
+static int bpmp_ob_channel(void)
 {
 	return smp_processor_id() + CPU_0_TO_BPMP_CH;
 }
 
-int bpmp_init_irq(void)
-{
-	if (mail_ops->init_irq)
-		return mail_ops->init_irq();
-
-	return 0;
-}
-
-void tegra_bpmp_resume(void)
-{
-	if (mail_ops->resume)
-		mail_ops->resume();
-}
-
-int bpmp_connect(struct device_node *of_node)
-{
-	int ret = 0;
-
-	if (connected)
-		return 0;
-
-	if (mail_ops->iomem_init)
-		ret = mail_ops->iomem_init();
-
-	if (ret) {
-		pr_err("bpmp iomem init failed (%d)\n", ret);
-		return ret;
-	}
-
-	ret = mail_ops->handshake();
-	if (ret) {
-		pr_err("bpmp handshake failed (%d)\n", ret);
-		return ret;
-	}
-
-	if (mail_ops->channel_init)
-		ret = mail_ops->channel_init();
-
-	if (ret) {
-		pr_err("bpmp channel init failed (%d)\n", ret);
-		return ret;
-	}
-
-	connected = 1;
-
-	return ret;
-}
+struct mail_ops chip_mail_ops = {
+	.free_master = bpmp_free_master,
+	.master_acked = bpmp_master_acked,
+	.master_free = bpmp_master_free,
+	.ob_channel = bpmp_ob_channel,
+	.return_data = bpmp_return_data,
+	.signal_slave = bpmp_signal_slave,
+	.slave_signalled = bpmp_slave_signalled,
+	.thread_ch = bpmp_thread_ch,
+	.thread_ch_index = bpmp_thread_ch_index
+};
 
 int bpmp_mail_init_prepare(void)
 {
-	mail_ops = native_mail_ops() ?: virt_mail_ops();
-	if (!mail_ops) {
-		WARN_ON(1);
+	int native;
+	int virt;
+
+	native = native_mail_ops();
+	virt = virt_mail_ops();
+
+	if (native) {
+		chip_mail_ops.init_prepare = native_init_prepare;
+		chip_mail_ops.init_irq = native_init_irq;
+		chip_mail_ops.connect = native_connect;
+		chip_mail_ops.resume = native_resume;
+		chip_mail_ops.ivc_obj = native_ivc_obj;
+		chip_mail_ops.ring_doorbell = native_ring_doorbell;
+	} else if (virt) {
+		chip_mail_ops.connect = virt_connect;
+		chip_mail_ops.ivc_obj = virt_ivc_obj;
+	} else {
 		return -ENODEV;
 	}
-
-	if (mail_ops->init_prepare)
-		return mail_ops->init_prepare();
 
 	return 0;
 }

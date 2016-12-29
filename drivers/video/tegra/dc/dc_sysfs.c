@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dc_sysfs.c
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -818,6 +818,8 @@ void tegra_dc_remove_sysfs(struct device *dev)
 
 	if (dc->out->type == TEGRA_DC_OUT_HDMI)
 		sysfs_remove_group(&dev->kobj, &hdmi_config_attr_group);
+
+	tegra_bw_remove_sysfs(dev);
 }
 
 void tegra_dc_create_sysfs(struct device *dev)
@@ -881,6 +883,8 @@ void tegra_dc_create_sysfs(struct device *dev)
 	if (dc->out->type == TEGRA_DC_OUT_HDMI)
 		error |= sysfs_create_group(&dev->kobj,
 					&hdmi_config_attr_group);
+
+	error |= tegra_bw_create_sysfs(dev);
 
 	if (error)
 		dev_err(&ndev->dev, "Failed to create sysfs attributes!\n");

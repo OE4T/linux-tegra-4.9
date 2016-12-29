@@ -1,6 +1,6 @@
 subdir-ccflags-y			+= -Werror
 
-obj-$(CONFIG_ARCH_TEGRA_21x_SOC)	+= bpmp_t210.o
+obj-$(CONFIG_DEBUG_FS)			+= bpmp_t210.o
 obj-$(CONFIG_ARCH_TEGRA_21x_SOC)	+= mail_t210.o
 obj-$(CONFIG_DEBUG_FS)			+= fwdebug.o
 

@@ -29,7 +29,11 @@
 #include <soc/tegra/tegra_bpmp.h>
 #include "bpmp.h"
 
-#ifdef CONFIG_DEBUG_FS
+struct bpmp_cpuidle_state {
+	int id;
+	const char *name;
+};
+
 static struct bpmp_cpuidle_state plat_cpuidle_state[] = {
 	{ TEGRA_PM_CC4, "CC4" },
 	{ TEGRA_PM_CC6, "CC6" },
@@ -155,9 +159,3 @@ int bpmp_init_cpuidle_debug(struct dentry *root)
 
 	return 0;
 }
-#else
-int bpmp_init_cpuidle_debug(struct dentry *root)
-{
-	return -ENODEV;
-}
-#endif

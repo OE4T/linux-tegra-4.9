@@ -660,19 +660,6 @@ static const struct file_operations bpmp_module_load_fops = {
 	.write = bpmp_module_load_store
 };
 
-void bpmp_cleanup_modules(void)
-{
-	debugfs_remove_recursive(module_root);
-
-	while (!list_empty(&modules)) {
-		struct bpmp_module *m = list_first_entry(&modules,
-				struct bpmp_module,
-				entry);
-		list_del(&m->entry);
-		kfree(m);
-	}
-}
-
 static int bpmp_init_modules(struct platform_device *pdev,
 		struct dentry *parent)
 {

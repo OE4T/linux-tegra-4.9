@@ -201,14 +201,22 @@ static u32 bpmp_channel_area(int ch)
 	return a;
 }
 
-static int __bpmp_connect(void)
+int bpmp_connect(struct device_node *of_node)
 {
+	uint32_t channel_hwaddr[NR_CHANNELS];
 	void *p;
-	u32 channel_hwaddr[NR_CHANNELS];
 	int i;
 
 	if (connected)
 		return 0;
+
+	atomics = of_iomap(of_node, 0);
+	if (!atomics)
+		return -ENODEV;
+
+	arb_sema = of_iomap(of_node, 1);
+	if (!arb_sema)
+		return -ENODEV;
 
 	/* handshake */
 	if (!readl(RES_SEMA_SHRD_SMP_STA))
@@ -228,48 +236,8 @@ static int __bpmp_connect(void)
 	}
 
 	connected = 1;
+
 	return 0;
-}
-
-int bpmp_connect(struct device_node *of_node)
-{
-	atomics = of_iomap(of_node, 0);
-	if (!atomics)
-		return -ENODEV;
-
-	arb_sema = of_iomap(of_node, 1);
-	if (!arb_sema)
-		return -ENODEV;
-
-	return __bpmp_connect();
-}
-
-void bpmp_detach(void)
-{
-	int i;
-
-	connected = 0;
-	writel(0xffffffff, RES_SEMA_SHRD_SMP_CLR);
-
-	for (i = 0; i < NR_CHANNELS; i++) {
-		channel_area[i].ib = NULL;
-		channel_area[i].ob = NULL;
-	}
-}
-
-int bpmp_attach(void)
-{
-	int i;
-
-	WARN_ON(connected);
-
-	for (i = 0; i < MSEC_PER_SEC * 60; i += 20) {
-		if (!__bpmp_connect())
-			return 0;
-		msleep(20);
-	}
-
-	return -ETIMEDOUT;
 }
 
 void tegra_bpmp_resume(void)

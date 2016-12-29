@@ -396,9 +396,10 @@ void tegra_pmc_fuse_disable_mirroring(void)
 	u32 val;
 
 	val = tegra186_pmc_readl(PMC_FUSE_CTRL);
-	if (val & PMC_FUSE_CTRL_ENABLE_REDIRECTION)
-		tegra186_pmc_writel(PMC_FUSE_CTRL_DISABLE_REDIRECTION,
-				PMC_FUSE_CTRL);
+	if (val & PMC_FUSE_CTRL_ENABLE_REDIRECTION) {
+		val &= ~PMC_FUSE_CTRL_ENABLE_REDIRECTION;
+		tegra186_pmc_writel(val, PMC_FUSE_CTRL);
+	}
 }
 EXPORT_SYMBOL(tegra_pmc_fuse_disable_mirroring);
 
@@ -407,9 +408,10 @@ void tegra_pmc_fuse_enable_mirroring(void)
 	u32 val;
 
 	val = tegra186_pmc_readl(PMC_FUSE_CTRL);
-	if (!(val & PMC_FUSE_CTRL_ENABLE_REDIRECTION))
-		tegra186_pmc_writel(PMC_FUSE_CTRL_ENABLE_REDIRECTION,
-				PMC_FUSE_CTRL);
+	if (!(val & PMC_FUSE_CTRL_ENABLE_REDIRECTION)) {
+		val |= PMC_FUSE_CTRL_ENABLE_REDIRECTION;
+		tegra186_pmc_writel(val, PMC_FUSE_CTRL);
+	}
 }
 EXPORT_SYMBOL(tegra_pmc_fuse_enable_mirroring);
 static struct device tegra186_pmc_dev = { };

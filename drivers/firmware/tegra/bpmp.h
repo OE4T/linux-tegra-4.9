@@ -62,18 +62,12 @@ extern int connected;
 int bpmp_mail_init_prepare(void);
 int bpmp_mail_init(struct device_node *of_node);
 int __bpmp_do_ping(void);
-void bpmp_cleanup_modules(void);
 int bpmp_create_attrs(const struct fops_entry *fent, struct dentry *parent,
 		void *data);
-int bpmp_attach(void);
-void bpmp_detach(void);
 int bpmp_mailman_init(void);
 void bpmp_handle_mail(int mrq, int ch);
 
 void bpmp_ring_doorbell(int ch);
-uint32_t bpmp_mail_token(void);
-void bpmp_mail_token_set(uint32_t val);
-void bpmp_mail_token_clr(uint32_t val);
 int bpmp_thread_ch_index(int ch);
 int bpmp_ob_channel(void);
 int bpmp_thread_ch(int idx);

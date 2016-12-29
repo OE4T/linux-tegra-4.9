@@ -356,12 +356,12 @@
 		};
 
 		i2c@546c0000 {
-			status = "okay";
+			status = "disabled";
 			avdd_dsi_csi-supply = <&max77620_gpio7>;
 		};
 
 		vi {
-			status = "okay";
+			status = "disabled";
 			avdd_dsi_csi-supply = <&max77620_gpio7>;
 		};
 	};

@@ -79,6 +79,7 @@ int bpmp_ob_channel(void);
 int bpmp_thread_ch(int idx);
 int bpmp_init_irq(void);
 int bpmp_connect(struct platform_device *pdev);
+void tegra_bpmp_resume(void);
 void bpmp_handle_irq(int ch);
 
 bool bpmp_master_free(int ch);

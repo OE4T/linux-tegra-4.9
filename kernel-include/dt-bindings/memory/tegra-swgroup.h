@@ -73,6 +73,7 @@
 #define TEGRA_SWGROUP_NVDISPLAY	49	/* 0xaf4 */
 #define TEGRA_SWGROUP_BPMP	50	/* 0xaf8 */
 #define TEGRA_SWGROUP_AON	51	/* 0xafc */
+#define TEGRA_SWGROUP_SMMU_TEST	52
 /*	Reserved		50 */
 
 #define TWO_U32_OF_U64(x)	((x) & 0xffffffff) ((x) >> 32)

@@ -63,6 +63,7 @@ struct dma_coherent_mem {
 	unsigned long	pfn_base;
 	size_t		size;
 	int		flags;
+	unsigned long	alloc_shift;
 	unsigned long	*bitmap;
 	spinlock_t	spinlock;
 };
@@ -182,12 +183,12 @@ EXPORT_SYMBOL(dma_set_resizable_heap_floor_size);
 
 static bool dma_init_coherent_memory(
 	phys_addr_t phys_addr, dma_addr_t device_addr, size_t size, int flags,
-	struct dma_coherent_mem **mem)
+	unsigned long alloc_shift, struct dma_coherent_mem **mem)
 {
 	struct dma_coherent_mem *dma_mem = NULL;
 	void __iomem *mem_base = NULL;
-	int pages = size >> PAGE_SHIFT;
-	int bitmap_size = BITS_TO_LONGS(pages) * sizeof(long);
+	int bits = size >> alloc_shift;
+	int bitmap_size = BITS_TO_LONGS(bits) * sizeof(long);
 
 	if ((flags &
 		(DMA_MEMORY_MAP | DMA_MEMORY_IO | DMA_MEMORY_NOMAP)) == 0)
@@ -216,8 +217,9 @@ skip_mapping:
 	dma_mem->virt_base = mem_base;
 	dma_mem->device_base = device_addr;
 	dma_mem->pfn_base = PFN_DOWN(phys_addr);
-	dma_mem->size = pages;
+	dma_mem->size = bits;
 	dma_mem->flags = flags;
+	dma_mem->alloc_shift = alloc_shift;
 	spin_lock_init(&dma_mem->spinlock);
 
 	*mem = dma_mem;
@@ -366,13 +368,14 @@ static int dma_assign_coherent_memory(struct device *dev,
 	return 0;
 }
 
-int dma_declare_coherent_memory(struct device *dev, phys_addr_t phys_addr,
-				dma_addr_t device_addr, size_t size, int flags)
+int _dma_declare_coherent_memory(struct device *dev, phys_addr_t phys_addr,
+				dma_addr_t device_addr, size_t size,
+				unsigned long alloc_shift, int flags)
 {
 	struct dma_coherent_mem *mem;
 
 	if (!dma_init_coherent_memory(phys_addr, device_addr, size, flags,
-				      &mem))
+				      alloc_shift, &mem))
 		return 0;
 
 	if (dma_assign_coherent_memory(dev, mem) == 0)
@@ -382,8 +385,23 @@ int dma_declare_coherent_memory(struct device *dev, phys_addr_t phys_addr,
 	dma_release_coherent_memory(mem);
 	return 0;
 }
-EXPORT_SYMBOL(dma_declare_coherent_memory);
+EXPORT_SYMBOL(_dma_declare_coherent_memory);
 
+unsigned long dma_get_coherent_memory_alloc_shift(struct device *dev)
+{
+	if (dev->dma_mem)
+		return dev->dma_mem->alloc_shift;
+	return -EINVAL;
+}
+EXPORT_SYMBOL(dma_get_coherent_memory_alloc_shift);
+
+int dma_declare_coherent_memory(struct device *dev, phys_addr_t phys_addr,
+				dma_addr_t device_addr, size_t size, int flags)
+{
+	return _dma_declare_coherent_memory(dev, phys_addr, device_addr, size,
+			PAGE_SHIFT, flags);
+}
+EXPORT_SYMBOL(dma_declare_coherent_memory);
 
 static phys_addr_t alloc_from_contiguous_heap(
 				struct heap_info *h,
@@ -552,7 +570,7 @@ static int dma_alloc_from_coherent_dev_at(struct device *dev, ssize_t size,
 				       unsigned long attrs, ulong start)
 {
 	struct dma_coherent_mem *mem;
-	int order = get_order(size);
+	int order;
 	unsigned long flags;
 	int pageno;
 	int dma_memory_map = 0;
@@ -567,9 +585,10 @@ static int dma_alloc_from_coherent_dev_at(struct device *dev, ssize_t size,
 
 	*dma_handle = DMA_ERROR_CODE;
 	*ret = NULL;
+	order = get_order(size << PAGE_SHIFT >> mem->alloc_shift);
 	spin_lock_irqsave(&mem->spinlock, flags);
 
-	if (unlikely(size > (mem->size << PAGE_SHIFT)))
+	if (unlikely(size > (mem->size << mem->alloc_shift)))
 		goto err;
 
 	if (attrs & DMA_ATTR_ALLOC_EXACT_SIZE) {
@@ -583,7 +602,7 @@ static int dma_alloc_from_coherent_dev_at(struct device *dev, ssize_t size,
 	}
 
 	if (DMA_ATTR_ALLOC_EXACT_SIZE & attrs)
-		count = PAGE_ALIGN(size) >> PAGE_SHIFT;
+		count = ALIGN(size, 1 << mem->alloc_shift) >> mem->alloc_shift;
 	else
 		count = 1 << order;
 
@@ -598,9 +617,9 @@ static int dma_alloc_from_coherent_dev_at(struct device *dev, ssize_t size,
 	/*
 	 * Memory was found in the per-device area.
 	 */
-	*dma_handle = mem->device_base + (pageno << PAGE_SHIFT);
+	*dma_handle = mem->device_base + (pageno << mem->alloc_shift);
 	if (!(mem->flags & DMA_MEMORY_NOMAP)) {
-		*ret = mem->virt_base + (pageno << PAGE_SHIFT);
+		*ret = mem->virt_base + (pageno << mem->alloc_shift);
 		dma_memory_map = (mem->flags & DMA_MEMORY_MAP);
 	}
 	spin_unlock_irqrestore(&mem->spinlock, flags);
@@ -1100,7 +1119,7 @@ static int rmem_dma_device_init(struct reserved_mem *rmem, struct device *dev)
 	if (!mem &&
 	    !dma_init_coherent_memory(rmem->base, rmem->base, rmem->size,
 				      DMA_MEMORY_MAP | DMA_MEMORY_EXCLUSIVE,
-				      &mem)) {
+				      PAGE_SHIFT, &mem)) {
 		pr_err("Reserved memory: failed to init DMA memory pool at %pa, size %ld MiB\n",
 			&rmem->base, (unsigned long)rmem->size / SZ_1M);
 		return -ENODEV;

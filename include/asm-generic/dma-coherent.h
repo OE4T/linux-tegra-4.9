@@ -34,6 +34,11 @@ dma_set_resizable_heap_floor_size(struct device *dev, size_t floor_size);
 int dma_declare_coherent_memory(struct device *dev, phys_addr_t phys_addr,
 				dma_addr_t device_addr, size_t size, int flags);
 
+int _dma_declare_coherent_memory(struct device *dev, phys_addr_t phys_addr,
+				dma_addr_t device_addr, size_t size,
+				unsigned long alloc_shift, int flags);
+unsigned long dma_get_coherent_memory_alloc_shift(struct device *dev);
+
 void dma_release_declared_memory(struct device *dev);
 
 #else

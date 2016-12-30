@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisp/nvdisp_bandwidth.c
  *
- * Copyright (c) 2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -228,8 +228,14 @@ int tegra_nvdisp_program_bandwidth(struct tegra_dc *dc,
 		}
 	}
 
-	if (before_win_update && final_hubclk != cur_config->hubclk) {
-		clk_set_rate(hubclk, final_hubclk);
+	if (!before_win_update && final_hubclk != cur_config->hubclk) {
+		ret = clk_set_rate(hubclk, final_hubclk);
+		if (ret) {
+			pr_err("%s: failed to set hubclk=%u Hz\n", __func__,
+				final_hubclk);
+			return ret;
+		}
+
 		cur_config->hubclk = final_hubclk;
 	}
 
@@ -281,8 +287,14 @@ int tegra_nvdisp_program_bandwidth(struct tegra_dc *dc,
 		}
 	}
 
-	if (!before_win_update && final_hubclk != cur_config->hubclk) {
-		clk_set_rate(hubclk, final_hubclk);
+	if (before_win_update && final_hubclk != cur_config->hubclk) {
+		ret = clk_set_rate(hubclk, final_hubclk);
+		if (ret) {
+			pr_err("%s: failed to set hubclk=%u Hz\n", __func__,
+				final_hubclk);
+			return ret;
+		}
+
 		cur_config->hubclk = final_hubclk;
 	}
 
@@ -533,6 +545,8 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 			__func__, cfg->emc_la_floor);
 		pr_info("%s: max config hubclk = %u Hz\n",
 			__func__, cfg->hubclk);
+
+		break;
 	}
 
 	if (ihub_bw_info.max_config)

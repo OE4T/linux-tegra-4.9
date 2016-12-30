@@ -15,7 +15,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  *
  * Copyright (C) 2013 ARM Limited
- * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * Author: Will Deacon <will.deacon@arm.com>
  *
@@ -502,6 +502,12 @@ static bool arm_smmu_tlb_inv_at_map;	/* debugfs: tlb inv at map additionally */
 static inline void writel_single(u32 val, volatile void __iomem *virt_addr)
 {
 	writel(val, virt_addr);
+}
+
+static inline void writel_relaxed_single(u32 val,
+			volatile void __iomem *virt_addr)
+{
+	writel_relaxed(val, virt_addr);
 }
 
 #define WRITEL_FN(fn, call, type) \
@@ -1003,11 +1009,11 @@ static irqreturn_t __arm_smmu_context_fault(int irq, void *dev,
 	}
 
 	/* Clear the faulting FSR */
-	writel(fsr, cb_base + ARM_SMMU_CB_FSR);
+	writel_single(fsr, cb_base + ARM_SMMU_CB_FSR);
 
 	/* Retry or terminate any stalled transactions */
 	if (fsr & FSR_SS)
-		writel_relaxed(resume, cb_base + ARM_SMMU_CB_RESUME);
+		writel_relaxed_single(resume, cb_base + ARM_SMMU_CB_RESUME);
 
 	return ret;
 }
@@ -1092,8 +1098,7 @@ static irqreturn_t arm_smmu_global_fault(int irq, void *dev)
 		if (!gfsr) {
 			int ret;
 
-			ret = __arm_smmu_context_fault(irq, dev,
-							gr0_base, cb_base);
+			ret = arm_smmu_context_fault(irq, dev);
 			if (ret == IRQ_HANDLED)
 				return ret;
 		}

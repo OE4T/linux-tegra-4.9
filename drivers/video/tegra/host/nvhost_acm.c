@@ -638,6 +638,13 @@ int nvhost_module_init(struct platform_device *dev)
 
 	if (nvhost_dev_is_virtual(dev)) {
 		pm_runtime_enable(&dev->dev);
+
+		/* If powergating is disabled, take a reference on the device
+		 * without turning it on
+		 */
+		if (!pdata->can_powergate)
+			nvhost_module_busy_noresume(dev);
+
 		return err;
 	}
 
@@ -781,6 +788,12 @@ int nvhost_module_init(struct platform_device *dev)
 	pm_runtime_enable(&dev->dev);
 	if (!pm_runtime_enabled(&dev->dev))
 		nvhost_module_enable_clk(&dev->dev);
+
+	/* If powergating is disabled, take a reference on the device without
+	 * turning it on
+	 */
+	if (!pdata->can_powergate)
+		nvhost_module_busy_noresume(dev);
 
 	/* if genpd is not available, the domain is powered already.
 	 * just ensure that we load the gating registers now */

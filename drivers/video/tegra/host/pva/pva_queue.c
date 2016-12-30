@@ -710,31 +710,34 @@ static int pva_task_write(struct pva_submit_task *task, bool atomic)
 
 	/* Initialize parameters */
 
-#define COPY_PARAMETER(name, name_ext, param_type, count)	\
-	do {							\
-		if ((name).handle) {				\
-			hw_input_parameters[count].address =	\
-				(name_ext).dma_addr;		\
-			hw_input_parameters[(count)].size =	\
-				(name_ext).size;		\
-			hw_input_parameters[(count)].type =	\
-				param_type;			\
-			(count)++;				\
-		}						\
+#define COPY_PARAMETER(target, name, name_ext, param_type, count)	\
+	do {								\
+		if ((name).handle) {					\
+			target[(count)].address = (name_ext).dma_addr;	\
+			target[(count)].size = (name_ext).size;		\
+			target[(count)].type = (param_type);		\
+			(count)++;					\
+		}							\
 	} while (0)
 
-	COPY_PARAMETER(task->input_scalars, task->input_scalars_ext,
-			PVA_PARAM_SCALAR_LIST, num_input_parameters);
-	COPY_PARAMETER(task->input_rois, task->input_rois_ext,
-			PVA_PARAM_ROI_LIST, num_input_parameters);
-	COPY_PARAMETER(task->input_2dpoint, task->input_2dpoint_ext,
-			PVA_PARAM_2DPOINTS_LIST, num_input_parameters);
-	COPY_PARAMETER(task->output_scalars, task->output_scalars_ext,
-			PVA_PARAM_SCALAR_LIST, num_output_parameters);
-	COPY_PARAMETER(task->output_rois, task->output_rois_ext,
-			PVA_PARAM_ROI_LIST, num_output_parameters);
-	COPY_PARAMETER(task->output_2dpoint, task->output_2dpoint_ext,
-			PVA_PARAM_2DPOINTS_LIST, num_output_parameters);
+	COPY_PARAMETER(hw_input_parameters, task->input_scalars,
+		       task->input_scalars_ext,
+		       PVA_PARAM_SCALAR_LIST, num_input_parameters);
+	COPY_PARAMETER(hw_input_parameters, task->input_rois,
+		       task->input_rois_ext,
+		       PVA_PARAM_ROI_LIST, num_input_parameters);
+	COPY_PARAMETER(hw_input_parameters, task->input_2dpoint,
+		       task->input_2dpoint_ext,
+		       PVA_PARAM_2DPOINTS_LIST, num_input_parameters);
+	COPY_PARAMETER(hw_output_parameters, task->output_scalars,
+		       task->output_scalars_ext,
+		       PVA_PARAM_SCALAR_LIST, num_output_parameters);
+	COPY_PARAMETER(hw_output_parameters, task->output_rois,
+		       task->output_rois_ext,
+		       PVA_PARAM_ROI_LIST, num_output_parameters);
+	COPY_PARAMETER(hw_output_parameters, task->output_2dpoint,
+		       task->output_2dpoint_ext,
+		       PVA_PARAM_2DPOINTS_LIST, num_output_parameters);
 #undef COPY_PARAMETER
 
 	/* Write input surfaces */

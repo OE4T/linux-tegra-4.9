@@ -215,7 +215,7 @@ static void wke_clear_wake_status(void)
 
 static int wke_irq_set_wake(int wake, int enable)
 {
-	if (wake < 0)
+	if (wake < 0 || wake >= WAKE_NR_EVENTS)
 		return -EINVAL;
 
 	if (enable) {
@@ -231,7 +231,7 @@ static int wke_irq_set_wake(int wake, int enable)
 
 static int wke_irq_set_wake_level(int wake, int flow_type)
 {
-	if (wake < 0)
+	if (wake < 0 || wake >= WAKE_NR_EVENTS)
 		return -EINVAL;
 
 	switch (flow_type) {

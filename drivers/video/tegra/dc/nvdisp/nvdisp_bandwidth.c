@@ -24,6 +24,58 @@
 #include "dc_priv.h"
 #include "nvdisp.h"
 
+/* Elements for sysfs access */
+#define BW_ATTR(__name, __show, __store) \
+	static struct kobj_attribute bw_attr_##__name = \
+	__ATTR(__name, S_IRUGO|S_IWUSR, __show, __store)
+#define CORE_BW_ATTR(__name) \
+	BW_ATTR(__name, core_bw_settings_show, core_bw_settings_store)
+#define COMMON_BW_ATTR(__name) \
+	BW_ATTR(__name, common_bw_settings_show, common_bw_settings_store)
+#define BW_ATTRS_ENTRY(__name) (&bw_attr_##__name.attr)
+#define IS_BW_ATTR(__name) (attr == &bw_attr_##__name)
+
+static ssize_t core_bw_settings_show(struct kobject *kobj,
+	struct kobj_attribute *attr, char *buf);
+static ssize_t core_bw_settings_store(struct kobject *kobj,
+	struct kobj_attribute *attr, const char *buf, size_t count);
+
+static ssize_t common_bw_settings_show(struct kobject *kobj,
+	struct kobj_attribute *attr, char *buf);
+static ssize_t common_bw_settings_store(struct kobject *kobj,
+	struct kobj_attribute *attr, const char *buf, size_t count);
+
+CORE_BW_ATTR(activate);
+
+COMMON_BW_ATTR(iso_bw);
+COMMON_BW_ATTR(req_bw);
+COMMON_BW_ATTR(emc_floor);
+COMMON_BW_ATTR(hubclk);
+
+static struct attribute *core_bw_attrs[] = {
+	BW_ATTRS_ENTRY(activate),
+	NULL,
+};
+
+static struct attribute *common_bw_attrs[] = {
+	BW_ATTRS_ENTRY(iso_bw),
+	BW_ATTRS_ENTRY(req_bw),
+	BW_ATTRS_ENTRY(emc_floor),
+	BW_ATTRS_ENTRY(hubclk),
+	NULL,
+};
+
+static struct attribute_group core_bw_attr_group = {
+	.attrs = core_bw_attrs,
+};
+
+static struct attribute_group common_bw_attr_group = {
+	.attrs = common_bw_attrs,
+};
+
+static struct kobject *core_bw_kobj;
+static struct kobject *common_bw_kobj;
+
 #ifdef CONFIG_TEGRA_ISOMGR
 
 /*
@@ -132,6 +184,89 @@ static int tegra_nvdisp_set_latency_allowance(u32 bw, u32 emc_freq)
 					disp_params);
 }
 
+static int tegra_nvdisp_program_final_bw_settings(
+				struct nvdisp_bandwidth_config *cur_config,
+				u32 final_iso_bw,
+				u32 final_total_bw,
+				u32 final_emc,
+				u32 final_hubclk,
+				bool before_win_update)
+{
+	bool update_la_ptsa = false;
+	int ret = 0;
+
+	if (!before_win_update && final_hubclk != cur_config->hubclk) {
+		ret = clk_set_rate(hubclk, final_hubclk);
+		if (ret) {
+			pr_err("%s: failed to set hubclk=%u Hz\n", __func__,
+				final_hubclk);
+			return ret;
+		}
+
+		cur_config->hubclk = final_hubclk;
+	}
+
+	if (final_iso_bw != cur_config->iso_bw) {
+		if (!tegra_isomgr_realize(ihub_bw_info.isomgr_handle)) {
+			pr_err("%s: failed to realize %u KB/s\n", __func__,
+				final_iso_bw);
+			return -EINVAL;
+		}
+
+		cur_config->iso_bw = final_iso_bw;
+		update_la_ptsa = true;
+	}
+
+	if (final_emc != cur_config->emc_la_floor) {
+		/*
+		 * tegra_bwmgr_set_emc() takes in the DRAM frequency. We need
+		 * to use the conversion factor to properly convert the required
+		 * EMC frequency to its corresponding DRAM frequency.
+		 */
+		int freq_factor = bwmgr_get_emc_to_dram_freq_factor();
+
+		ret = tegra_bwmgr_set_emc(ihub_bw_info.bwmgr_handle,
+					final_emc * freq_factor,
+					TEGRA_BWMGR_SET_EMC_FLOOR);
+		if (ret) {
+			pr_err("%s: failed to set EMC floor=%u Hz\n", __func__,
+				final_emc);
+			return ret;
+		}
+
+		cur_config->emc_la_floor = final_emc;
+		update_la_ptsa = true;
+	}
+
+	if (update_la_ptsa) {
+		/*
+		 * If either out ISO bw requirement or the EMC floor has
+		 * changed, we need to update LA/PTSA. The bw value that we pass
+		 * to the LA/PTSA driver should not include the catchup factor.
+		 */
+		ret = tegra_nvdisp_set_latency_allowance(final_total_bw,
+								final_emc);
+		if (ret) {
+			pr_err("%s: LA/PTSA failed w/ bw=%u KB/s,freq=%u Hz\n",
+				__func__, final_total_bw, final_emc);
+			return ret;
+		}
+	}
+
+	if (before_win_update && final_hubclk != cur_config->hubclk) {
+		ret = clk_set_rate(hubclk, final_hubclk);
+		if (ret) {
+			pr_err("%s: failed to set hubclk=%u Hz\n", __func__,
+				final_hubclk);
+			return ret;
+		}
+
+		cur_config->hubclk = final_hubclk;
+	}
+
+	return ret;
+}
+
 int tegra_nvdisp_program_bandwidth(struct tegra_dc *dc,
 				u32 new_iso_bw,
 				u32 new_total_bw,
@@ -162,14 +297,10 @@ int tegra_nvdisp_program_bandwidth(struct tegra_dc *dc,
 	u32 final_total_bw = 0;
 	u32 final_emc = 0;
 	u32 final_hubclk = 0;
-	bool update_la_ptsa = false;
-	int ret = 0;
 
 	if (IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle) ||
-				IS_ERR_OR_NULL(ihub_bw_info.bwmgr_handle)) {
-		ret = -EINVAL;
-		goto exit;
-	}
+				IS_ERR_OR_NULL(ihub_bw_info.bwmgr_handle))
+		return -EINVAL;
 
 	final_iso_bw = cur_config->iso_bw;
 	final_total_bw = cur_config->total_bw;
@@ -212,8 +343,7 @@ int tegra_nvdisp_program_bandwidth(struct tegra_dc *dc,
 						1000)) {
 				pr_err("%s: failed to reserve %u KB/s\n",
 					__func__, new_iso_bw);
-				ret = -EINVAL;
-				goto exit;
+				return -EINVAL;
 			}
 
 			ihub_bw_info.reserved_bw = new_iso_bw;
@@ -228,78 +358,12 @@ int tegra_nvdisp_program_bandwidth(struct tegra_dc *dc,
 		}
 	}
 
-	if (!before_win_update && final_hubclk != cur_config->hubclk) {
-		ret = clk_set_rate(hubclk, final_hubclk);
-		if (ret) {
-			pr_err("%s: failed to set hubclk=%u Hz\n", __func__,
-				final_hubclk);
-			return ret;
-		}
-
-		cur_config->hubclk = final_hubclk;
-	}
-
-	if (final_iso_bw != cur_config->iso_bw) {
-		if (!tegra_isomgr_realize(ihub_bw_info.isomgr_handle)) {
-			pr_err("%s: failed to realize %u KB/s\n", __func__,
-				final_iso_bw);
-			ret = -EINVAL;
-			goto exit;
-		}
-
-		cur_config->iso_bw = final_iso_bw;
-		update_la_ptsa = true;
-	}
-
-	if (final_emc != cur_config->emc_la_floor) {
-		/*
-		 * tegra_bwmgr_set_emc() takes in the DRAM frequency. We need
-		 * to use the conversion factor to properly convert the required
-		 * EMC frequency to its corresponding DRAM frequency.
-		 */
-		int freq_factor = bwmgr_get_emc_to_dram_freq_factor();
-
-		ret = tegra_bwmgr_set_emc(ihub_bw_info.bwmgr_handle,
-					final_emc * freq_factor,
-					TEGRA_BWMGR_SET_EMC_FLOOR);
-		if (ret) {
-			pr_err("%s: failed to set EMC floor=%u Hz\n", __func__,
-				final_emc);
-			goto exit;
-		}
-
-		cur_config->emc_la_floor = final_emc;
-		update_la_ptsa = true;
-	}
-
-	if (update_la_ptsa) {
-		/*
-		 * If either our ISO bw requirement or the EMC floor has
-		 * changed, we need to update LA/PTSA. The bw value that we pass
-		 * to the LA/PTSA driver should not include the catchup factor.
-		 */
-		ret = tegra_nvdisp_set_latency_allowance(final_total_bw,
-								final_emc);
-		if (ret) {
-			pr_err("%s: LA/PTSA failed w/ bw=%u KB/s,freq=%u Hz\n",
-				__func__, final_total_bw, final_emc);
-			goto exit;
-		}
-	}
-
-	if (before_win_update && final_hubclk != cur_config->hubclk) {
-		ret = clk_set_rate(hubclk, final_hubclk);
-		if (ret) {
-			pr_err("%s: failed to set hubclk=%u Hz\n", __func__,
-				final_hubclk);
-			return ret;
-		}
-
-		cur_config->hubclk = final_hubclk;
-	}
-
-exit:
-	return ret;
+	return tegra_nvdisp_program_final_bw_settings(cur_config,
+						final_iso_bw,
+						final_total_bw,
+						final_emc,
+						final_hubclk,
+						before_win_update);
 }
 
 void tegra_nvdisp_init_bandwidth(struct tegra_dc *dc)
@@ -308,7 +372,8 @@ void tegra_nvdisp_init_bandwidth(struct tegra_dc *dc)
 	 * Use the max config settings. These values will eventually be adjusted
 	 * through IMP, if the client supports it.
 	 */
-	struct nvdisp_bandwidth_config *max_bw_config = ihub_bw_info.max_config;
+	struct nvdisp_bandwidth_config *max_bw_config =
+						&ihub_bw_info.max_config;
 	u32 new_iso_bw = 0;
 	u32 new_total_bw = 0;
 	u32 new_emc = 0;
@@ -316,8 +381,7 @@ void tegra_nvdisp_init_bandwidth(struct tegra_dc *dc)
 	bool before_win_update = true;
 
 	if (IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle) ||
-		IS_ERR_OR_NULL(ihub_bw_info.bwmgr_handle) ||
-		!max_bw_config)
+		IS_ERR_OR_NULL(ihub_bw_info.bwmgr_handle))
 		return;
 
 	new_iso_bw = max_bw_config->iso_bw;
@@ -363,12 +427,7 @@ void tegra_nvdisp_clear_bandwidth(struct tegra_dc *dc)
  */
 long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
 {
-	long bw = 0;
-
-	if (ihub_bw_info.max_config)
-		bw = ihub_bw_info.max_config->iso_bw;
-
-	return bw;
+	return ihub_bw_info.max_config.iso_bw;
 }
 
 int tegra_nvdisp_negotiate_reserved_bw(struct tegra_dc *dc,
@@ -480,6 +539,7 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 	tegra_isomgr_handle isomgr_handle = NULL;
 	u32 max_emc_rate, emc_to_dram_factor;
 	u32 total_iso_bw;
+	bool found_max_cfg = false;
 	int ret = 0, i;
 
 	/* DRAM frequency (Hz) */
@@ -501,7 +561,6 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 	 * Start with the highest-bw config and continue to fallback until we
 	 * find one that works.
 	 */
-	ihub_bw_info.max_config = NULL;
 	for (i = ARRAY_SIZE(max_bw_configs) - 1; i >= 0; i--) {
 		struct nvdisp_bandwidth_config *cfg = &max_bw_configs[i];
 		u32 cfg_dram_freq = 0;
@@ -537,7 +596,8 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 		}
 
 		ihub_bw_info.isomgr_handle = isomgr_handle;
-		ihub_bw_info.max_config = cfg;
+		ihub_bw_info.max_config = *cfg;
+		found_max_cfg = true;
 
 		pr_info("%s: max config iso bw = %u KB/s\n",
 			__func__, cfg->iso_bw);
@@ -549,7 +609,7 @@ static int tegra_nvdisp_bandwidth_register_max_config(
 		break;
 	}
 
-	if (ihub_bw_info.max_config)
+	if (found_max_cfg)
 		ret = 0;
 	else
 		pr_err("%s: couldn't find valid max config!\n", __func__);
@@ -629,6 +689,269 @@ long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
 	return -ENOSYS;
 }
 #endif /* CONFIG_TEGRA_ISOMGR */
+
+static ssize_t core_bw_settings_show(struct kobject *kobj,
+	struct kobj_attribute *attr, char *buf)
+{
+	return 0;
+}
+
+#define CORE_BW_SETTINGS_ACTIVATE	1
+static ssize_t core_bw_settings_store(struct kobject *kobj,
+	struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	struct nvdisp_bandwidth_config *usr_config = NULL;
+	ssize_t res = 0;
+	u8 activate_val = 0;
+
+	if (IS_BW_ATTR(activate)) {
+		res = kstrtou8(buf, 10, &activate_val);
+		if (res) {
+			pr_err("%s: unable to parse activate val\n", __func__);
+			res = -EINVAL;
+		}
+
+		if (!res && activate_val != CORE_BW_SETTINGS_ACTIVATE) {
+			pr_err("%s: activate val must be %d\n", __func__,
+				CORE_BW_SETTINGS_ACTIVATE);
+			res = -EINVAL;
+		}
+	} else {
+		pr_err("%s: unrecognized attribute\n", __func__);
+		res = -EINVAL;
+	}
+
+	if (res)
+		return res;
+
+	mutex_lock(&tegra_nvdisp_lock);
+
+	if (IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle) ||
+				IS_ERR_OR_NULL(ihub_bw_info.bwmgr_handle)) {
+		pr_err("%s: bw registration hasn't succeeded yet", __func__);
+		res = -ENODEV;
+		goto core_bw_store_unlock;
+	}
+
+	/*
+	 * When the user toggles this node, the driver will attempt to simply
+	 * override the current bw settings with the user requested ones. As
+	 * such, make sure there are no pending IMP requests before proceeding
+	 * in order to avoid conflicting requirements.
+	 */
+	if (!list_empty(&nvdisp_imp_settings_queue)) {
+		pr_err("%s: pending IMP request(s), try again\n", __func__);
+		res = -EAGAIN;
+		goto core_bw_store_unlock;
+	}
+
+	usr_config = &ihub_bw_info.usr_config;
+	if (usr_config->iso_bw > ihub_bw_info.available_bw) {
+		pr_err("%s: requested %u KB/s > available %u KB/s",
+			__func__, usr_config->iso_bw,
+			ihub_bw_info.available_bw);
+		res = -E2BIG;
+		goto core_bw_store_unlock;
+	}
+
+	if (!tegra_isomgr_reserve(ihub_bw_info.isomgr_handle,
+					usr_config->iso_bw,
+					1000)) {
+		pr_err("%s: failed to reserve %u KB/s\n", __func__,
+			usr_config->iso_bw);
+		res = -EINVAL;
+		goto core_bw_store_unlock;
+	}
+
+	ihub_bw_info.reserved_bw = usr_config->iso_bw;
+	ihub_bw_info.emc_at_res_bw = usr_config->emc_la_floor;
+	ihub_bw_info.hubclk_at_res_bw = usr_config->hubclk;
+	ihub_bw_info.cur_config.total_bw = usr_config->total_bw;
+
+	res = tegra_nvdisp_program_final_bw_settings(&ihub_bw_info.cur_config,
+			usr_config->iso_bw,
+			usr_config->total_bw,
+			usr_config->emc_la_floor,
+			usr_config->hubclk,
+			(usr_config->iso_bw > ihub_bw_info.cur_config.iso_bw));
+	if (!res) {
+		ihub_bw_info.max_config = *usr_config;
+		res = count;
+	}
+
+core_bw_store_unlock:
+	mutex_unlock(&tegra_nvdisp_lock);
+	return res;
+}
+#undef CORE_BW_SETTINGS_ACTIVATE
+
+static ssize_t common_bw_settings_show(struct kobject *kobj,
+	struct kobj_attribute *attr, char *buf)
+{
+	struct nvdisp_bandwidth_config *cur_config = NULL;
+	struct nvdisp_bandwidth_config *usr_config = NULL;
+	ssize_t res = 0;
+
+	mutex_lock(&tegra_nvdisp_lock);
+
+	if (IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle) ||
+				IS_ERR_OR_NULL(ihub_bw_info.bwmgr_handle)) {
+		pr_err("%s: bw registration hasn't succeeded yet\n", __func__);
+		res = -ENODEV;
+		goto common_bw_show_unlock;
+	}
+
+	cur_config = &ihub_bw_info.cur_config;
+	usr_config = &ihub_bw_info.usr_config;
+	if (IS_BW_ATTR(iso_bw))
+		res = snprintf(buf, PAGE_SIZE,
+				"Current active (effective): %u KB/s\n"
+				"User requested (effective): %u KB/s\n",
+				cur_config->iso_bw,
+				usr_config->iso_bw);
+	else if (IS_BW_ATTR(req_bw))
+		res = snprintf(buf, PAGE_SIZE,
+				"Current active (effective): %u KB/s\n"
+				"User requested (effective): %u KB/s\n",
+				cur_config->total_bw,
+				usr_config->total_bw);
+	else if (IS_BW_ATTR(emc_floor))
+		res = snprintf(buf, PAGE_SIZE,
+				"Current active (effective): %u Hz\n"
+				"User requested (effective): %u Hz\n",
+				cur_config->emc_la_floor,
+				usr_config->emc_la_floor);
+	else if (IS_BW_ATTR(hubclk))
+		res = snprintf(buf, PAGE_SIZE,
+				"Current active (effective): %u Hz\n"
+				"User requested (effective): %u Hz\n",
+				cur_config->hubclk,
+				usr_config->hubclk);
+	else
+		res = -EINVAL;
+
+	if (res < 0)
+		pr_err("%s: unable to parse or recognize attr\n", __func__);
+
+common_bw_show_unlock:
+	mutex_unlock(&tegra_nvdisp_lock);
+	return res;
+}
+
+static ssize_t common_bw_settings_store(struct kobject *kobj,
+	struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	struct nvdisp_bandwidth_config *usr_config = NULL;
+	ssize_t res = count;
+	int err = 0;
+
+	mutex_lock(&tegra_nvdisp_lock);
+
+	if (IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle) ||
+				IS_ERR_OR_NULL(ihub_bw_info.bwmgr_handle)) {
+		pr_err("%s: bw registration hasn't succeeded yet\n", __func__);
+		res = -ENODEV;
+		goto common_bw_store_unlock;
+	}
+
+	usr_config = &ihub_bw_info.usr_config;
+	if (IS_BW_ATTR(iso_bw))
+		err = kstrtou32(buf, 10, &usr_config->iso_bw);
+	else if (IS_BW_ATTR(req_bw))
+		err = kstrtou32(buf, 10, &usr_config->total_bw);
+	else if (IS_BW_ATTR(emc_floor))
+		err = kstrtou32(buf, 10, &usr_config->emc_la_floor);
+	else if (IS_BW_ATTR(hubclk))
+		err = kstrtou32(buf, 10, &usr_config->hubclk);
+	else
+		err = -EINVAL;
+
+	if (err) {
+		pr_err("%s: unable to parse or recognize attr\n", __func__);
+		res = err;
+	}
+
+common_bw_store_unlock:
+	mutex_unlock(&tegra_nvdisp_lock);
+	return res;
+}
+
+static int tegra_bw_create_common_sysfs(struct kobject *parent_kobj)
+{
+	int ret = 0;
+
+	common_bw_kobj = kobject_create_and_add("common", parent_kobj);
+	if (!common_bw_kobj) {
+		pr_err("%s: unable to allocate mem\n", __func__);
+		return -ENOMEM;
+	}
+
+	ret = sysfs_create_group(common_bw_kobj, &common_bw_attr_group);
+	if (ret) {
+		pr_err("%s: unable to create attr group\n", __func__);
+		kobject_put(common_bw_kobj);
+	}
+
+	return ret;
+}
+
+void tegra_bw_remove_common_sysfs(void)
+{
+	if (common_bw_kobj) {
+		sysfs_remove_group(common_bw_kobj, &common_bw_attr_group);
+		kobject_put(common_bw_kobj);
+	}
+}
+
+void tegra_bw_remove_sysfs(struct device *dev)
+{
+	struct platform_device *ndev = to_platform_device(dev);
+
+	/* Directory was only created under the first registered DC instance. */
+	if (ndev && ndev->id)
+		return;
+
+	if (core_bw_kobj) {
+		tegra_bw_remove_common_sysfs();
+
+		sysfs_remove_group(core_bw_kobj, &core_bw_attr_group);
+		kobject_put(core_bw_kobj);
+	}
+}
+EXPORT_SYMBOL(tegra_bw_remove_sysfs);
+
+int tegra_bw_create_sysfs(struct device *dev)
+{
+	struct platform_device *ndev = to_platform_device(dev);
+	int ret = 0;
+
+	/* Only create the directory under the first registered DC instance. */
+	if (ndev && ndev->id)
+		return 0;
+
+	core_bw_kobj = kobject_create_and_add("bw_settings", &dev->kobj);
+	if (!core_bw_kobj)
+		return -ENOMEM;
+
+	ret = sysfs_create_group(core_bw_kobj, &core_bw_attr_group);
+	if (ret) {
+		dev_err(dev, "%s: failed to create core attrs\n", __func__);
+		goto create_sysfs_cleanup;
+	}
+
+	ret = tegra_bw_create_common_sysfs(core_bw_kobj);
+	if (ret) {
+		dev_err(dev, "%s: failed to create common attrs\n", __func__);
+		goto create_sysfs_cleanup;
+	}
+
+	return ret;
+
+create_sysfs_cleanup:
+	tegra_bw_remove_sysfs(dev);
+	return ret;
+}
+EXPORT_SYMBOL(tegra_bw_create_sysfs);
 
 /* These functions are all NO-OPs in accordance with the new IMP model. */
 void tegra_dc_clear_bandwidth(struct tegra_dc *dc) {}

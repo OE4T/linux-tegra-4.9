@@ -61,9 +61,6 @@
 #define WAKE_NR_EVENTS	96
 #define WAKE_NR_VECTORS	(WAKE_NR_EVENTS / 32)
 
-#define wk_set_bit(nr, p) (__set_bit(nr, (ulong *)p))
-#define wk_clr_bit(nr, p) (__clear_bit(nr, (ulong *)p))
-
 /* wake level/polarity constants */
 enum {
 	WAKE_LEVEL_LO = 0,
@@ -80,6 +77,20 @@ static u32 wke_wake_irq_count[WAKE_NR_EVENTS];
 #ifdef CONFIG_IRQ_DOMAIN_HIERARCHY
 static struct irq_domain *tegra_pm_irq_domain;
 #endif
+
+static inline void wk_set_bit(int nr, u32 *addr)
+{
+	u32 mask = BIT(nr % 32);
+
+	addr[nr / 32] |= mask;
+}
+
+static inline void wk_clr_bit(int nr, u32 *addr)
+{
+	u32 mask = BIT(nr % 32);
+
+	addr[nr / 32] &= ~mask;
+}
 
 /* ensures that sufficient time is passed for a register write to
  * serialize into the 32KHz domain */

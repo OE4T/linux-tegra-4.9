@@ -693,15 +693,16 @@ static void tegra_dc_ext_scanline_worker(struct work_struct *work)
 		container_of(work, struct tegra_dc_ext_scanline_data, work);
 	struct tegra_dc_ext *ext = data->ext;
 	struct tegra_dc *dc = ext->dc;
+	unsigned int vpulse3_sync_id = dc->vpulse3_syncpt;
 
 	/* Allow only one scanline operation at a time */
 	mutex_lock(&ext->scanline_lock);
 
-	if (data->triggered_line >= 0) {
-		/* Wait for frame end before programming new request */
-		_tegra_dc_wait_for_frame_end(dc,
-			div_s64(dc->frametime_ns, 1000000ll) * 2);
+	/* Wait for frame end before programming new request */
+	_tegra_dc_wait_for_frame_end(dc,
+		div_s64(dc->frametime_ns, 1000000ll) * 2);
 
+	if (data->triggered_line >= 0) {
 		if (ext->scanline_trigger != data->triggered_line) {
 			dev_dbg(&dc->ndev->dev, "vp3 sl#: %d\n",
 					data->triggered_line);
@@ -718,6 +719,9 @@ static void tegra_dc_ext_scanline_worker(struct work_struct *work)
 	} else {
 		/* Clear scanline trigger state */
 		ext->scanline_trigger = -1;
+
+		/* Udate min val all the way to max. */
+		nvhost_syncpt_set_min_eq_max_ext(dc->ndev, vpulse3_sync_id);
 	}
 
 	/* Free arg allocated in the ioctl call */
@@ -747,10 +751,16 @@ int tegra_dc_ext_vpulse3(struct tegra_dc_ext *ext,
 		return -EACCES;
 	}
 
-	/* TODO: Support id != 0, frame != 0 and raw syncpt */
-	if (args->id ||
-		args->frame ||
-		args->flags & TEGRA_DC_EXT_SCANLINE_FLAG_RAW_SYNCPT) {
+	/* TODO: Support id != 0 */
+	if (args->id) {
+		dev_err(&dc->ndev->dev, "Invalid scanline id\n");
+		return -EINVAL;
+	}
+
+	/* TODO: Support frame != 0 and raw syncpt */
+	if ((args->flags & TEGRA_DC_EXT_SCANLINE_FLAG_ENABLE) &&
+		(args->frame ||
+		args->flags & TEGRA_DC_EXT_SCANLINE_FLAG_RAW_SYNCPT)) {
 		dev_err(&dc->ndev->dev, "Invalid args\n");
 		return -EINVAL;
 	}
@@ -787,12 +797,6 @@ int tegra_dc_ext_vpulse3(struct tegra_dc_ext *ext,
 	} else {
 		/* Clear trigger line value */
 		data->triggered_line = -1;
-
-		/* As a safeguard, update min val all the way to max.
-		 * Typically, they would match as
-		 * user-requests are serialized.
-		 */
-		nvhost_syncpt_set_min_eq_max_ext(dc->ndev, vpulse3_sync_id);
 	}
 
 	/* Queue work to setup/increment/remove scanline trigger */

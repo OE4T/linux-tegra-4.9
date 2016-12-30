@@ -388,6 +388,8 @@ static bool tegra_available_pwm_bl_ops_register(struct device *dev)
 		dev_set_drvdata(dev, edp_s_uhdtv_15_6_ops.pwm_bl_ops);
 	} else if (of_device_is_compatible(np_bl, "o,720-1280-6-0-bl")) {
 		dev_set_drvdata(dev, dsi_o_720p_6_0_ops.pwm_bl_ops);
+	} else if (of_device_is_compatible(np_bl, "o,720-1280-6-0-01-bl")) {
+		dev_set_drvdata(dev, dsi_o_720p_6_0_ops.pwm_bl_ops);
 	} else if (of_device_is_compatible(np_bl, "dsi,1080p-bl")) {
 	} else if (of_device_is_compatible(np_bl, "dsi,2820x720-bl")) {
 	} else if (of_device_is_compatible(np_bl, "dsi,25x16-bl")) {
@@ -638,6 +640,9 @@ static struct device_node *available_internal_panel_select(
 		tegra_panel_register_ops(dc_out,
 			&edp_s_uhdtv_15_6_ops);
 	} else if (of_device_is_compatible(np_panel, "o,720-1280-6-0")) {
+		tegra_panel_register_ops(dc_out,
+			&dsi_o_720p_6_0_ops);
+	} else if (of_device_is_compatible(np_panel, "o,720-1280-6-0-01")) {
 		tegra_panel_register_ops(dc_out,
 			&dsi_o_720p_6_0_ops);
 	} else if (of_device_is_compatible(np_panel, "dsi,1080p")) {

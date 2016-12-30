@@ -31,9 +31,10 @@ obj-$(CONFIG_TEGRA_GRHOST) += flcn/
 obj-$(CONFIG_TEGRA_GRHOST) += t210/
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
-ifneq ($(wildcard $(srctree)/../nvhost-t18x/drivers/video/tegra/host/Makefile.nvhost-t18x),)
-obj-$(CONFIG_TEGRA_GRHOST) += $(call tegra-path,nvhost-t18x/,drivers/video/tegra/host/)
-endif
+obj-$(CONFIG_TEGRA_GRHOST) += iommu_context_dev.o
+
+obj-$(CONFIG_TEGRA_GRHOST) += t186/
+obj-$(CONFIG_TEGRA_GRHOST_NVCSI) += nvcsi/
 endif
 
 ifeq ($(CONFIG_TEGRA_T19X_GRHOST),y)

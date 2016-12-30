@@ -137,36 +137,53 @@ static size_t pva_task_get_size(void)
 	/* Add task base structure */
 	size = sizeof(struct pva_task);
 
-	size += PVA_MAX_INPUT_SURFACES * sizeof(struct pva_task_surface);
-	size += PVA_MAX_OUTPUT_SURFACES * sizeof(struct pva_task_surface);
+	/* Allocate room for input action list */
+	size += sizeof(struct pva_action_list);
+	size = roundup(size, sizeof(u64));
 
-	/* Input and output parameters */
-	size += 2 * PVA_PARAM_LAST * sizeof(struct pva_task_parameter_array);
+	/* Allocate room for output action list */
+	size += sizeof(struct pva_action_list);
+	size = roundup(size, sizeof(u64));
 
-	/* Allocate room for input and output action lists */
-	size += 2 * sizeof(struct pva_action_list);
+	/* Allocate space for input parameter list */
+	size += PVA_PARAM_LAST * sizeof(struct pva_task_parameter_array);
 
-	/* Calculate space needed for input waits */
+	/* Allocate space for output parameter list */
+	size += PVA_PARAM_LAST * sizeof(struct pva_task_parameter_array);
+
+	/*
+	 * Calculate space needed for input actions
+	 */
+
+	/* Pre-fences */
 	size += PVA_MAX_PREFENCES *
 		(1 + sizeof(struct pva_task_action_ptr));
-
-	/* Calculate space needed for task done writes */
-	size += PVA_MAX_POSTFENCES *
-		(1 + sizeof(struct pva_task_action_ptr));
-
-	/* Get space for input status checks */
+	/* Input status checks */
 	size += PVA_MAX_INPUT_STATUS *
 		(1 + sizeof(struct pva_task_action_status));
+	/* Action list termination */
+	size += 1;
+	size = roundup(size, sizeof(u64));
 
-	/* Calculate space needed for output status writes */
+	/*
+	 * Calculate space needed for output actions
+	 */
+
+	/* Output status writes */
 	size += PVA_MAX_OUTPUT_STATUS *
 		(1 + sizeof(struct pva_task_action_status));
+	/* Postfences requested by userspace */
+	size += PVA_MAX_POSTFENCES *
+		(1 + sizeof(struct pva_task_action_ptr));
+	/* Syncpoint increment */
+	size += sizeof(struct pva_task_action_ptr);
+	/* Action list termination */
+	size += 1;
+	size = roundup(size, sizeof(u64));
 
-	/* Allocate space for action list termination */
-	size += 2;
-
-	/* Allocate space for done fence */
-	size += sizeof(u32);
+	/* Add space required for the surfaces */
+	size += PVA_MAX_INPUT_SURFACES * sizeof(struct pva_task_surface);
+	size += PVA_MAX_OUTPUT_SURFACES * sizeof(struct pva_task_surface);
 
 	return size;
 }

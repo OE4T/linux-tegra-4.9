@@ -434,7 +434,7 @@ int __init bwmgr_init(void)
 		bwmgr.status = false;
 	return 0;
 }
-subsys_initcall(bwmgr_init);
+subsys_initcall_sync(bwmgr_init);
 
 void __exit bwmgr_exit(void)
 {

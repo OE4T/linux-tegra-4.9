@@ -47,11 +47,18 @@
 			no-map;
 			status = "disabled";
 		};
+
+		gos_reserved: grid-of-semaphores {
+			compatible = "nvidia,gosmem";
+			no-map;
+			status = "okay";
+		};
+
 	};
 
 	tegra-carveouts {
 		compatible = "nvidia,carveouts";
-		memory-region = <&generic_reserved>;
+		memory-region = <&generic_reserved &gos_reserved>;
 	};
 
 	timer {

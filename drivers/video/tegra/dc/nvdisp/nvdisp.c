@@ -2529,11 +2529,17 @@ static void tegra_nvdisp_generate_mempool_ordering(struct tegra_dc *dc,
 		head_result = &imp_settings->ext_settings.imp_results[ctrl_num];
 
 		/*
-		 * If this cursor is currently enabled, take the active mempool
-		 * value into account. Else, treat this cursor as having no
-		 * mempool entries.
+		 * If either the cursor surface or output LUT are currently
+		 * enabled on this head, take the active mempool value into
+		 * account. Else, assume there are no mempool entries asssigned.
+		 *
+		 * The reason why output LUT matters is because it shares both
+		 * the same precomp pipe and FB request port as the
+		 * corresponding cursor pipe. As such, the cursor ihub settings
+		 * would still be programmed in a case where cursor is disabled,
+		 * but output LUT is enabled.
 		 */
-		if (other_dc->cursor.enabled)
+		if (other_dc->cursor.enabled || other_dc->cmu_enabled)
 			old_val = nvdisp_ihub_cursor_pool_config_entries_f(
 					tegra_dc_readl(other_dc,
 					nvdisp_ihub_cursor_pool_config_r()));
@@ -2620,8 +2626,11 @@ void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 	/* Make sure there's no pending change on the current head. */
 	tegra_nvdisp_wait_for_common_channel_to_promote(dc);
 
-	if (before_win_update)
+	if (before_win_update) {
+		mutex_lock(&tegra_nvdisp_lock);
 		tegra_nvdisp_generate_mempool_ordering(dc, imp_settings);
+		mutex_unlock(&tegra_nvdisp_lock);
+	}
 
 	tegra_nvdisp_program_other_mempool(dc, imp_settings, before_win_update);
 

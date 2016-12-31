@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(340)
+#define NVI_DRIVER_VERSION		(341)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"
@@ -1276,7 +1276,9 @@ static int nvi_dmp_fw(struct nvi_state *st)
 			 st->hal->dmp->fw_len,
 			 (u8 *)st->hal->dmp->fw, true);
 	if (ret) {
-		dev_err(&st->i2c->dev, "%s ERR: nvi_mem_wr\n", __func__);
+		if (st->sts & NVI_STS_PART_ID_VALID)
+			dev_err(&st->i2c->dev, "%s ERR: nvi_mem_wr\n",
+				__func__);
 		return ret;
 	}
 
@@ -3954,7 +3956,7 @@ static int nvi_id_dev(struct nvi_state *st,
 		dev_info(&st->i2c->dev, "%s: USING DEVICE TREE: %s\n",
 			 __func__, i2c_dev_id->name);
 	else
-		dev_info(&st->i2c->dev, "%s: FOUND HW ID=%x  USING: %s\n",
+		dev_info(&st->i2c->dev, "%s: FOUND HW ID=0x%X  USING: %s\n",
 			 __func__, hw_id, st->snsr[0].cfg.part);
 	return ret;
 }
@@ -4177,6 +4179,7 @@ static int nvi_init(struct nvi_state *st,
 	if (ret)
 		return ret;
 
+	st->sts |= NVI_STS_PART_ID_VALID;
 	if (st->i2c->dev.of_node) {
 		nvi_of_dt_post(st, st->i2c->dev.of_node);
 	} else {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -74,6 +74,12 @@ DUMP_REG(nvdisp_cursor_startaddr_r());
 DUMP_REG(nvdisp_cursor_position_r());
 DUMP_REG(nvdisp_cursor_cropped_point_in_r());
 DUMP_REG(nvdisp_cursor_cropped_size_in_r());
+DUMP_REG(nvdisp_ihub_cursor_latency_ctla_r());
+DUMP_REG(nvdisp_ihub_cursor_latency_ctlb_r());
+DUMP_REG(nvdisp_cursor_pipe_meter_r());
+DUMP_REG(nvdisp_ihub_common_fetch_meter_r());
+DUMP_REG(nvdisp_ihub_cursor_pool_config_r());
+DUMP_REG(nvdisp_ihub_cursor_fetch_meter_r());
 DUMP_REG(nvdisp_sd_hist_ctrl_r());
 DUMP_REG(nvdisp_sd_hist_luma_r());
 DUMP_REG(nvdisp_sd_hist_over_sat_r());

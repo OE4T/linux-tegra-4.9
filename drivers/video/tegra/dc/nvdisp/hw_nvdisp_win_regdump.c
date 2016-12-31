@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -41,6 +41,8 @@ DUMP_REG(win_precomp_wgrp_capb_r());
 DUMP_REG(win_precomp_wgrp_capc_r());
 DUMP_REG(win_precomp_wgrp_cape_r());
 DUMP_REG(win_act_control_r());
+DUMP_REG(win_ihub_latency_ctla_r());
+DUMP_REG(win_ihub_latency_ctlb_r());
 DUMP_REG(win_precomp_loadv_counter_r());
 DUMP_REG(win_precomp_pipe_meter_r());
 DUMP_REG(win_ihub_pool_config_r());

@@ -49,7 +49,7 @@ struct dsm_state {
 
 static struct dsm_state *dsm_state_local;
 
-int nvs_dsm_push(int dev_id, bool connect, int snsr_id, unsigned char *uuid)
+int nvs_dsm_iio(int dev_id, bool connect, int snsr_id, unsigned char *uuid)
 {
 	struct dsm_state *st = dsm_state_local;
 	int ret;
@@ -96,7 +96,7 @@ static int dsm_nvs_write(void *client, int snsr_id, unsigned int nvs)
 
 	case DSM_DBG_PUSH:
 		st->dbg = true;
-		nvs_dsm_push(0, false, 0, NULL);
+		nvs_dsm_iio(0, false, 0, NULL);
 		st->dbg = false;
 		return 0;
 

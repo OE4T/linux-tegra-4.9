@@ -86,8 +86,6 @@ const char * const iio_chan_type_name_spec[] = {
 	[IIO_GRAVITY] = "gravity",
 	[IIO_LINEAR_ACCEL] = "linearaccel",
 	[IIO_HUMIDITY] = "humidity",
-	[IIO_MAGN_UNCAL] = "magnuncal",
-	[IIO_ANGLVEL_UNCAL] = "anglveluncal",
 	[IIO_GAME_ROT] = "gamerot",
 	[IIO_MOTION] = "motion",
 	[IIO_STEP] = "step",
@@ -1292,10 +1290,10 @@ struct device_type iio_device_type = {
 };
 
 /**
- * iio_device_alloc() - allocate an iio_dev from a driver
+ * nvs_device_alloc() - allocate an iio_dev from a driver
  * @sizeof_priv:	Space to allocate for private structure.
  **/
-struct iio_dev *iio_device_alloc(int sizeof_priv)
+struct iio_dev *nvs_device_alloc(int sizeof_priv, bool multi_link)
 {
 	struct iio_dev *dev;
 	size_t alloc_size;
@@ -1311,15 +1309,6 @@ struct iio_dev *iio_device_alloc(int sizeof_priv)
 	dev = kzalloc(alloc_size, GFP_KERNEL);
 
 	if (dev) {
-		dev->dev.groups = dev->groups;
-		dev->dev.type = &iio_device_type;
-		dev->dev.bus = &iio_bus_type;
-		device_initialize(&dev->dev);
-		dev_set_drvdata(&dev->dev, (void *)dev);
-		mutex_init(&dev->mlock);
-		mutex_init(&dev->info_exist_lock);
-		INIT_LIST_HEAD(&dev->channel_attr_list);
-
 		dev->id = ida_simple_get(&iio_ida, 0, 0, GFP_KERNEL);
 		if (dev->id < 0) {
 			/* cannot use a dev_err as the name isn't available */
@@ -1327,11 +1316,39 @@ struct iio_dev *iio_device_alloc(int sizeof_priv)
 			kfree(dev);
 			return NULL;
 		}
+
+		memcpy(&dev->dev_type, &iio_device_type,
+		       sizeof(dev->dev_type));
+		if (multi_link) {
+			snprintf(dev->link_name, sizeof(dev->link_name),
+				 "iio_device_%d", dev->id);
+			dev->dev_type.name = dev->link_name;
+			dev->dev.type = &dev->dev_type;
+		} else {
+			dev->dev.type = &iio_device_type;
+		}
+		dev->dev.groups = dev->groups;
+		dev->dev.bus = &iio_bus_type;
+		device_initialize(&dev->dev);
+		dev_set_drvdata(&dev->dev, (void *)dev);
+		mutex_init(&dev->mlock);
+		mutex_init(&dev->info_exist_lock);
+		INIT_LIST_HEAD(&dev->channel_attr_list);
 		dev_set_name(&dev->dev, "iio:device%d", dev->id);
 		INIT_LIST_HEAD(&dev->buffer_list);
 	}
 
 	return dev;
+}
+EXPORT_SYMBOL(nvs_device_alloc);
+
+/**
+ * iio_device_alloc() - allocate an iio_dev from a driver
+ * @sizeof_priv:	Space to allocate for private structure.
+ **/
+struct iio_dev *iio_device_alloc(int sizeof_priv)
+{
+	return nvs_device_alloc(sizeof_priv, false);
 }
 EXPORT_SYMBOL(iio_device_alloc);
 
@@ -1575,37 +1592,17 @@ int iio_device_register(struct iio_dev *indio_dev)
 	if (ret < 0)
 		goto error_cdev_del;
 
-	if (indio_dev->multi_link) {
-		indio_dev->link_name = kasprintf(GFP_KERNEL, "iio_device_%u",
-						 indio_dev->dev.devt);
-		if (indio_dev->link_name == NULL) {
-			dev_err(indio_dev->dev.parent,
-				"Failed to create link name\n");
-			goto error_del_device;
-		}
-
-		ret = sysfs_create_link(&indio_dev->dev.parent->kobj,
-					&indio_dev->dev.kobj,
-					indio_dev->link_name);
-		if (ret) {
-			dev_err(indio_dev->dev.parent,
-				"Failed to create link for %s %d\n",
-				indio_dev->link_name, ret);
-			kfree(indio_dev->link_name);
-			goto error_del_device;
-		}
-	} else {
-		ret = sysfs_create_link(&indio_dev->dev.parent->kobj,
-					&indio_dev->dev.kobj, "iio_device");
-		if (ret) {
-			dev_err(indio_dev->dev.parent,
-				"Failed to create link for iio_device %d\n",
-				ret);
-			goto error_del_device;
-		}
+	ret = sysfs_create_link(&indio_dev->dev.parent->kobj,
+				&indio_dev->dev.kobj,
+				indio_dev->dev_type.name);
+	if (ret) {
+		dev_err(indio_dev->dev.parent,
+			"Failed to create link for iio_device %d\n", ret);
+		goto error_del_device;
 	}
 
 	return 0;
+
 error_del_device:
 	device_del(&indio_dev->dev);
 error_cdev_del:
@@ -1629,7 +1626,8 @@ EXPORT_SYMBOL(iio_device_register);
 void iio_device_unregister(struct iio_dev *indio_dev)
 {
 	mutex_lock(&indio_dev->info_exist_lock);
-
+	sysfs_delete_link(&indio_dev->dev.parent->kobj, &indio_dev->dev.kobj,
+			  indio_dev->dev_type.name);
 	device_del(&indio_dev->dev);
 
 	if (indio_dev->chrdev.dev)
@@ -1645,7 +1643,6 @@ void iio_device_unregister(struct iio_dev *indio_dev)
 
 	mutex_unlock(&indio_dev->info_exist_lock);
 
-	kfree(indio_dev->link_name);
 	iio_buffer_free_sysfs_and_mask(indio_dev);
 }
 EXPORT_SYMBOL(iio_device_unregister);

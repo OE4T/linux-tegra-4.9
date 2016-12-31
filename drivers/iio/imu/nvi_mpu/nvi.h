@@ -91,11 +91,12 @@
 #define INV_CLK_INTERNAL		(0)
 #define INV_CLK_PLL			(1)
 
-#define NVI_DBG_SPEW_MSG		(1 << NVS_STS_EXT_N)
-#define NVI_DBG_SPEW_AUX		(1 << (NVS_STS_EXT_N + 1))
-#define NVI_DBG_SPEW_FIFO		(1 << (NVS_STS_EXT_N + 2))
-#define NVI_DBG_SPEW_TS			(1 << (NVS_STS_EXT_N + 3))
-#define NVI_DBG_SPEW_SNSR		(1 << (NVS_STS_EXT_N + 4))
+#define NVI_STS_PART_ID_VALID		(1 << NVS_STS_EXT_N)
+#define NVI_DBG_SPEW_MSG		(1 << (NVS_STS_EXT_N + 1))
+#define NVI_DBG_SPEW_AUX		(1 << (NVS_STS_EXT_N + 2))
+#define NVI_DBG_SPEW_FIFO		(1 << (NVS_STS_EXT_N + 3))
+#define NVI_DBG_SPEW_TS			(1 << (NVS_STS_EXT_N + 4))
+#define NVI_DBG_SPEW_SNSR		(1 << (NVS_STS_EXT_N + 5))
 
 #define NVI_RC_BANK_REG_BANK		(0x7F / 64)
 #define NVI_RC_MSK_REG_BANK		((u64)(1ULL << (0x7F % 64)))

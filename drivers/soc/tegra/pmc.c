@@ -413,24 +413,24 @@ to_powergate(struct generic_pm_domain *domain)
 	return container_of(domain, struct tegra_powergate, genpd);
 }
 
-static u32 tegra_pmc_readl(unsigned long offset)
+static u32 _tegra_pmc_readl(unsigned long offset)
 {
 	return readl(pmc->base + offset);
 }
 
-static void tegra_pmc_writel(u32 value, unsigned long offset)
+static void _tegra_pmc_writel(u32 value, unsigned long offset)
 {
 	writel(value, pmc->base + offset);
 }
 
-static void tegra_pmc_register_update(int offset,
+static void _tegra_pmc_register_update(int offset,
 		unsigned long mask, unsigned long val)
 {
 	u32 pmc_reg;
 
-	pmc_reg = tegra_pmc_readl(offset);
+	pmc_reg = _tegra_pmc_readl(offset);
 	pmc_reg = (pmc_reg & ~mask) | (val & mask);
-	tegra_pmc_writel(pmc_reg, offset);
+	_tegra_pmc_writel(pmc_reg, offset);
 }
 
 #ifndef CONFIG_TEGRA186_PMC
@@ -445,9 +445,9 @@ int tegra_read_wake_status(u32 *wake_status)
 static inline bool tegra_powergate_state(int id)
 {
 	if (id == TEGRA_POWERGATE_3D && pmc->soc->has_gpu_clamps)
-		return (tegra_pmc_readl(GPU_RG_CNTRL) & 0x1) == 0;
+		return (_tegra_pmc_readl(GPU_RG_CNTRL) & 0x1) == 0;
 	else
-		return (tegra_pmc_readl(PWRGATE_STATUS) & BIT(id)) != 0;
+		return (_tegra_pmc_readl(PWRGATE_STATUS) & BIT(id)) != 0;
 }
 
 static inline bool tegra_powergate_is_valid(int id)
@@ -500,7 +500,7 @@ static int tegra_powergate_set(unsigned int id, bool new_state)
 		return 0;
 	}
 
-	tegra_pmc_writel(PWRGATE_TOGGLE_START | id, PWRGATE_TOGGLE);
+	_tegra_pmc_writel(PWRGATE_TOGGLE_START | id, PWRGATE_TOGGLE);
 
 	err = readx_poll_timeout(tegra_powergate_state, id, status,
 				 status == new_state, 10, 100000);
@@ -522,7 +522,7 @@ static int __tegra_powergate_remove_clamping(unsigned int id)
 	 */
 	if (id == TEGRA_POWERGATE_3D) {
 		if (pmc->soc->has_gpu_clamps) {
-			tegra_pmc_writel(0, GPU_RG_CNTRL);
+			_tegra_pmc_writel(0, GPU_RG_CNTRL);
 			goto out;
 		}
 	}
@@ -538,7 +538,7 @@ static int __tegra_powergate_remove_clamping(unsigned int id)
 	else
 		mask = (1 << id);
 
-	tegra_pmc_writel(mask, REMOVE_CLAMPING);
+	_tegra_pmc_writel(mask, REMOVE_CLAMPING);
 
 out:
 	mutex_unlock(&pmc->powergates_lock);
@@ -872,7 +872,7 @@ static void tegra_pmc_program_reboot_reason(const char *cmd)
 {
 	u32 value;
 
-	value = tegra_pmc_readl(PMC_SCRATCH0);
+	value = _tegra_pmc_readl(PMC_SCRATCH0);
 	value &= ~PMC_SCRATCH0_MODE_MASK;
 
 	if (cmd) {
@@ -886,7 +886,7 @@ static void tegra_pmc_program_reboot_reason(const char *cmd)
 			value |= PMC_SCRATCH0_MODE_RCM;
 	}
 
-	tegra_pmc_writel(value, PMC_SCRATCH0);
+	_tegra_pmc_writel(value, PMC_SCRATCH0);
 }
 
 static int tegra_pmc_restart_notify(struct notifier_block *this,
@@ -898,9 +898,9 @@ static int tegra_pmc_restart_notify(struct notifier_block *this,
 	tegra_pmc_program_reboot_reason(cmd);
 
 	/* reset everything but PMC_SCRATCH0 and PMC_RST_STATUS */
-	value = tegra_pmc_readl(PMC_CNTRL);
+	value = _tegra_pmc_readl(PMC_CNTRL);
 	value |= PMC_CNTRL_MAIN_RST;
-	tegra_pmc_writel(value, PMC_CNTRL);
+	_tegra_pmc_writel(value, PMC_CNTRL);
 
 	return NOTIFY_DONE;
 }
@@ -1185,12 +1185,12 @@ static int tegra_io_rail_prepare(unsigned int id, unsigned long *request,
 
 	rate = clk_get_rate(pmc->clk);
 
-	tegra_pmc_writel(DPD_SAMPLE_ENABLE, DPD_SAMPLE);
+	_tegra_pmc_writel(DPD_SAMPLE_ENABLE, DPD_SAMPLE);
 
 	/* must be at least 200 ns, in APB (PCLK) clock cycles */
 	value = DIV_ROUND_UP(1000000000, rate);
 	value = DIV_ROUND_UP(200, value);
-	tegra_pmc_writel(value, SEL_DPD_TIM);
+	_tegra_pmc_writel(value, SEL_DPD_TIM);
 
 	return 0;
 }
@@ -1203,7 +1203,7 @@ static int tegra_io_rail_poll(unsigned long offset, unsigned long mask,
 	timeout = jiffies + msecs_to_jiffies(timeout);
 
 	while (time_after(timeout, jiffies)) {
-		value = tegra_pmc_readl(offset);
+		value = _tegra_pmc_readl(offset);
 		if ((value & mask) == val)
 			return 0;
 
@@ -1215,7 +1215,7 @@ static int tegra_io_rail_poll(unsigned long offset, unsigned long mask,
 
 static void tegra_io_rail_unprepare(void)
 {
-	tegra_pmc_writel(DPD_SAMPLE_DISABLE, DPD_SAMPLE);
+	_tegra_pmc_writel(DPD_SAMPLE_DISABLE, DPD_SAMPLE);
 }
 
 int tegra_io_rail_power_on(unsigned int id)
@@ -1230,7 +1230,7 @@ int tegra_io_rail_power_on(unsigned int id)
 	if (err)
 		goto error;
 
-	tegra_pmc_writel(IO_DPD_REQ_CODE_OFF | BIT(bit), request);
+	_tegra_pmc_writel(IO_DPD_REQ_CODE_OFF | BIT(bit), request);
 
 	err = tegra_io_rail_poll(status, BIT(bit), 0, 250);
 	if (err) {
@@ -1261,7 +1261,7 @@ int tegra_io_rail_power_off(unsigned int id)
 		goto error;
 	}
 
-	tegra_pmc_writel(IO_DPD_REQ_CODE_ON | BIT(bit), request);
+	_tegra_pmc_writel(IO_DPD_REQ_CODE_ON | BIT(bit), request);
 
 	err = tegra_io_rail_poll(status, BIT(bit), BIT(bit), 250);
 	if (err)
@@ -1279,7 +1279,7 @@ EXPORT_SYMBOL(tegra_io_rail_power_off);
 
 void tegra_pmc_write_bootrom_command(u32 command_offset, unsigned long val)
 {
-	tegra_pmc_writel(val, command_offset + PMC_BR_COMMAND_BASE);
+	_tegra_pmc_writel(val, command_offset + PMC_BR_COMMAND_BASE);
 }
 EXPORT_SYMBOL(tegra_pmc_write_bootrom_command);
 
@@ -1287,22 +1287,22 @@ void tegra_pmc_reset_system(void)
 {
 	u32 val;
 
-	val = tegra_pmc_readl(PMC_CNTRL);
+	val = _tegra_pmc_readl(PMC_CNTRL);
 	val |= 0x10;
-	tegra_pmc_writel(val, PMC_CNTRL);
+	_tegra_pmc_writel(val, PMC_CNTRL);
 }
 EXPORT_SYMBOL(tegra_pmc_reset_system);
 
 #ifndef CONFIG_TEGRA186_PMC
 void tegra_pmc_iopower_enable(int reg, u32 bit_mask)
 {
-	tegra_pmc_register_update(reg, bit_mask, 0);
+	_tegra_pmc_register_update(reg, bit_mask, 0);
 }
 EXPORT_SYMBOL(tegra_pmc_iopower_enable);
 
 void  tegra_pmc_iopower_disable(int reg, u32 bit_mask)
 {
-	tegra_pmc_register_update(reg, bit_mask, bit_mask);
+	_tegra_pmc_register_update(reg, bit_mask, bit_mask);
 }
 EXPORT_SYMBOL(tegra_pmc_iopower_disable);
 
@@ -1310,7 +1310,7 @@ int tegra_pmc_iopower_get_status(int reg, u32 bit_mask)
 {
 	unsigned int no_iopower;
 
-	no_iopower = tegra_pmc_readl(reg);
+	no_iopower = _tegra_pmc_readl(reg);
 	if (no_iopower & bit_mask)
 		return 0;
 	else
@@ -1331,13 +1331,13 @@ static void _tegra_io_dpd_enable(struct tegra_io_dpd *hnd)
 	spin_lock(&tegra_io_dpd_lock);
 	dpd_enable_lsb = (hnd->io_dpd_reg_index) ? IO_DPD2_ENABLE_LSB :
 						IO_DPD_ENABLE_LSB;
-	tegra_pmc_writel(0x1, DPD_SAMPLE);
-	tegra_pmc_writel(0x10, SEL_DPD_TIM);
+	_tegra_pmc_writel(0x1, DPD_SAMPLE);
+	_tegra_pmc_writel(0x10, SEL_DPD_TIM);
 	enable_mask = ((1 << hnd->io_dpd_bit) | (2 << dpd_enable_lsb));
-	tegra_pmc_writel(enable_mask, IO_DPD_REQ + hnd->io_dpd_reg_index * 8);
+	_tegra_pmc_writel(enable_mask, IO_DPD_REQ + hnd->io_dpd_reg_index * 8);
 	/* delay pclk * (reset SEL_DPD_TIM value 127 + 5) */
 	udelay(7);
-	dpd_status = tegra_pmc_readl(IO_DPD_STATUS + hnd->io_dpd_reg_index * 8);
+	dpd_status = _tegra_pmc_readl(IO_DPD_STATUS + hnd->io_dpd_reg_index * 8);
 	if (!(dpd_status & (1 << hnd->io_dpd_bit))) {
 		if (!tegra_platform_is_fpga()) {
 			pr_info("Error: dpd%d enable failed, status=%#x\n",
@@ -1345,7 +1345,7 @@ static void _tegra_io_dpd_enable(struct tegra_io_dpd *hnd)
 		}
 	}
 	/* Sample register must be reset before next sample operation */
-	tegra_pmc_writel(0x0, DPD_SAMPLE);
+	_tegra_pmc_writel(0x0, DPD_SAMPLE);
 	spin_unlock(&tegra_io_dpd_lock);
 }
 
@@ -1373,8 +1373,8 @@ static void _tegra_io_dpd_disable(struct tegra_io_dpd *hnd)
 	dpd_enable_lsb = (hnd->io_dpd_reg_index) ? IO_DPD2_ENABLE_LSB :
 						IO_DPD_ENABLE_LSB;
 	enable_mask = ((1 << hnd->io_dpd_bit) | (1 << dpd_enable_lsb));
-	tegra_pmc_writel(enable_mask, IO_DPD_REQ + hnd->io_dpd_reg_index * 8);
-	dpd_status = tegra_pmc_readl(IO_DPD_STATUS + hnd->io_dpd_reg_index * 8);
+	_tegra_pmc_writel(enable_mask, IO_DPD_REQ + hnd->io_dpd_reg_index * 8);
+	dpd_status = _tegra_pmc_readl(IO_DPD_STATUS + hnd->io_dpd_reg_index * 8);
 	if (dpd_status & (1 << hnd->io_dpd_bit)) {
 		if (!tegra_platform_is_fpga()) {
 			pr_info("Error: dpd%d disable failed, status=%#x\n",
@@ -1399,7 +1399,7 @@ int tegra_pmc_io_dpd_get_status(int reg, int bit_pos)
 {
 	unsigned int dpd_status;
 
-	dpd_status = tegra_pmc_readl(IO_DPD_STATUS + reg * 8);
+	dpd_status = _tegra_pmc_readl(IO_DPD_STATUS + reg * 8);
 	if (dpd_status & BIT(bit_pos))
 		return 1;
 	else
@@ -1420,10 +1420,10 @@ static void _tegra_bl_io_dpd_cleanup(void)
 		dpd_mask = ((1 << t3_io_dpd_req_regs[i].dpd_code_lsb) - 1);
 		dpd_mask |= (IO_DPD_CODE_OFF <<
 			t3_io_dpd_req_regs[i].dpd_code_lsb);
-		tegra_pmc_writel(dpd_mask, t3_io_dpd_req_regs[i].req_reg_off);
+		_tegra_pmc_writel(dpd_mask, t3_io_dpd_req_regs[i].req_reg_off);
 		/* dpd status register is next to req reg in tegra3 */
 		dpd_status =
-			tegra_pmc_readl(t3_io_dpd_req_regs[i].req_reg_off + 4);
+			_tegra_pmc_readl(t3_io_dpd_req_regs[i].req_reg_off + 4);
 	}
 	return;
 }
@@ -1439,15 +1439,15 @@ void tegra_pmc_pwr_detect_update(unsigned long mask, unsigned long val)
 	unsigned long flags;
 
 	spin_lock_irqsave(&tegra_pmc_access_lock, flags);
-	tegra_pmc_register_update(PMC_PWR_DET_ENABLE, mask, mask);
-	tegra_pmc_register_update(PMC_PWR_DET_VAL, mask, val);
+	_tegra_pmc_register_update(PMC_PWR_DET_ENABLE, mask, mask);
+	_tegra_pmc_register_update(PMC_PWR_DET_VAL, mask, val);
 	spin_unlock_irqrestore(&tegra_pmc_access_lock, flags);
 }
 EXPORT_SYMBOL(tegra_pmc_pwr_detect_update);
 
 unsigned long tegra_pmc_pwr_detect_get(unsigned long mask)
 {
-	return tegra_pmc_readl(PMC_PWR_DET_VAL);
+	return _tegra_pmc_readl(PMC_PWR_DET_VAL);
 }
 EXPORT_SYMBOL(tegra_pmc_pwr_detect_get);
 
@@ -1460,45 +1460,45 @@ int tegra_pmc_utmi_phy_enable_sleepwalk(int port, enum usb_device_speed speed,
 	pr_info("PMC %s : port %d, speed %d\n", __func__, port, speed);
 
 	/* ensure sleepwalk logic is disabled */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
 	reg &= ~UTMIP_MASTER_ENABLE(port);
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
 
 	/* ensure sleepwalk logics are in low power mode */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_MASTER_CONFIG);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_MASTER_CONFIG);
 	reg |= UTMIP_PWR(port);
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_MASTER_CONFIG);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_MASTER_CONFIG);
 
 	/* set debounce time */
-	reg = tegra_pmc_readl(APBDEV_PMC_USB_DEBOUNCE_DEL);
+	reg = _tegra_pmc_readl(APBDEV_PMC_USB_DEBOUNCE_DEL);
 	reg &= ~UTMIP_LINE_DEB_CNT(~0);
 	reg |= UTMIP_LINE_DEB_CNT(0x1);
-	tegra_pmc_writel(reg, APBDEV_PMC_USB_DEBOUNCE_DEL);
+	_tegra_pmc_writel(reg, APBDEV_PMC_USB_DEBOUNCE_DEL);
 
 	/* ensure fake events of sleepwalk logic are desiabled */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_FAKE(port));
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_FAKE(port));
 	reg &= ~(UTMIP_FAKE_USBOP_VAL(port) | UTMIP_FAKE_USBON_VAL(port) |
 			UTMIP_FAKE_USBOP_EN(port) | UTMIP_FAKE_USBON_EN(port));
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_FAKE(port));
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_FAKE(port));
 
 	/* ensure wake events of sleepwalk logic are not latched */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
 	reg &= ~UTMIP_LINE_WAKEUP_EN(port);
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
 
 	/* disable wake event triggers of sleepwalk logic */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
 	reg &= ~UTMIP_WAKE_VAL(port, ~0);
 	reg |= UTMIP_WAKE_VAL_NONE(port);
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
 
 	/* power down the line state detectors of the pad */
-	reg = tegra_pmc_readl(APBDEV_PMC_USB_AO);
+	reg = _tegra_pmc_readl(APBDEV_PMC_USB_AO);
 	reg |= (USBOP_VAL_PD(port) | USBON_VAL_PD(port));
-	tegra_pmc_writel(reg, APBDEV_PMC_USB_AO);
+	_tegra_pmc_writel(reg, APBDEV_PMC_USB_AO);
 
 	/* save state per speed */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SAVED_STATE(port));
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SAVED_STATE(port));
 	reg &= ~SPEED(port, ~0);
 	if (speed == USB_SPEED_HIGH)
 		reg |= UTMI_HS(port);
@@ -1508,38 +1508,38 @@ int tegra_pmc_utmi_phy_enable_sleepwalk(int port, enum usb_device_speed speed,
 		reg |= UTMI_LS(port);
 	else
 		reg |= UTMI_RST(port);
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SAVED_STATE(port));
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SAVED_STATE(port));
 
 	/* enable the trigger of the sleepwalk logic */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEPWALK_CFG(port));
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEPWALK_CFG(port));
 	reg |= (UTMIP_WAKE_WALK_EN(port) | UTMIP_LINEVAL_WALK_EN(port));
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEPWALK_CFG(port));
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEPWALK_CFG(port));
 
 	/* reset the walk pointer and clear the alarm of the sleepwalk logic,
 	 * as well as capture the configuration of the USB2.0 pad
 	 */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_TRIGGERS);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_TRIGGERS);
 	reg |= (UTMIP_CLR_WALK_PTR(port) | UTMIP_CLR_WAKE_ALARM(port) |
 		UTMIP_CAP_CFG(port));
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_TRIGGERS);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_TRIGGERS);
 
 	/* program electrical parameters read from XUSB PADCTL */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_TERM_PAD_CFG);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_TERM_PAD_CFG);
 	reg &= ~(TCTRL_VAL(~0) | PCTRL_VAL(~0));
 	reg |= (TCTRL_VAL(config->tctrl) | PCTRL_VAL(config->pctrl));
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_TERM_PAD_CFG);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_TERM_PAD_CFG);
 
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_PAD_CFGX(port));
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_PAD_CFGX(port));
 	reg &= ~RPD_CTRL_PX(~0);
 	reg |= RPD_CTRL_PX(config->rpd_ctrl);
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_PAD_CFGX(port));
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_PAD_CFGX(port));
 
 	/* setup the pull-ups and pull-downs of the signals during the four
 	 * stages of sleepwalk.
 	 * if device is connected, program sleepwalk logic to maintain a J and
 	 * keep driving K upon seeing remote wake.
 	 */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_SLEEPWALK_PX(port));
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_SLEEPWALK_PX(port));
 	reg = (UTMIP_USBOP_RPD_A | UTMIP_USBOP_RPD_B | UTMIP_USBOP_RPD_C |
 		UTMIP_USBOP_RPD_D);
 	reg |= (UTMIP_USBON_RPD_A | UTMIP_USBON_RPD_B | UTMIP_USBON_RPD_C |
@@ -1558,40 +1558,40 @@ int tegra_pmc_utmi_phy_enable_sleepwalk(int port, enum usb_device_speed speed,
 		reg |= UTMIP_AN_A;
 		reg |= (UTMIP_AP_B | UTMIP_AP_C | UTMIP_AP_D);
 	}
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_SLEEPWALK_PX(port));
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_SLEEPWALK_PX(port));
 
 	/* power up the line state detectors of the pad */
-	reg = tegra_pmc_readl(APBDEV_PMC_USB_AO);
+	reg = _tegra_pmc_readl(APBDEV_PMC_USB_AO);
 	reg &= ~(USBOP_VAL_PD(port) | USBON_VAL_PD(port));
-	tegra_pmc_writel(reg, APBDEV_PMC_USB_AO);
+	_tegra_pmc_writel(reg, APBDEV_PMC_USB_AO);
 
 	usleep_range(50, 100);
 
 	/* switch the electric control of the USB2.0 pad to PMC */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
 	reg |= (UTMIP_FSLS_USE_PMC(port) | UTMIP_PCTRL_USE_PMC(port) |
 			UTMIP_TCTRL_USE_PMC(port));
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
 
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG1);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG1);
 	reg |= (UTMIP_RPD_CTRL_USE_PMC_PX(port) |
 			UTMIP_RPU_SWITC_LOW_USE_PMC_PX(port));
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG1);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG1);
 
 	/* set the wake signaling trigger events */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
 	reg &= ~UTMIP_WAKE_VAL(port, ~0);
 	reg |= UTMIP_WAKE_VAL_ANY(port);
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
 
 	/* enable the wake detection */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
 	reg |= UTMIP_MASTER_ENABLE(port);
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
 
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
 	reg |= UTMIP_LINE_WAKEUP_EN(port);
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
 
 	return 0;
 }
@@ -1604,40 +1604,40 @@ int tegra_pmc_utmi_phy_disable_sleepwalk(int port)
 	pr_info("PMC %s : port %dn", __func__, port);
 
 	/* disable the wake detection */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
 	reg &= ~UTMIP_MASTER_ENABLE(port);
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
 
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
 	reg &= ~UTMIP_LINE_WAKEUP_EN(port);
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
 
 	/* switch the electric control of the USB2.0 pad to XUSB or USB2 */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
 	reg &= ~(UTMIP_FSLS_USE_PMC(port) | UTMIP_PCTRL_USE_PMC(port) |
 			UTMIP_TCTRL_USE_PMC(port));
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
 
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG1);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG1);
 	reg &= ~(UTMIP_RPD_CTRL_USE_PMC_PX(port) |
 			UTMIP_RPU_SWITC_LOW_USE_PMC_PX(port));
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG1);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG1);
 
 	/* disable wake event triggers of sleepwalk logic */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
 	reg &= ~UTMIP_WAKE_VAL(port, ~0);
 	reg |= UTMIP_WAKE_VAL_NONE(port);
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));
 
 	/* power down the line state detectors of the port */
-	reg = tegra_pmc_readl(APBDEV_PMC_USB_AO);
+	reg = _tegra_pmc_readl(APBDEV_PMC_USB_AO);
 	reg |= (USBOP_VAL_PD(port) | USBON_VAL_PD(port));
-	tegra_pmc_writel(reg, APBDEV_PMC_USB_AO);
+	_tegra_pmc_writel(reg, APBDEV_PMC_USB_AO);
 
 	/* clear alarm of the sleepwalk logic */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_TRIGGERS);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_TRIGGERS);
 	reg |= UTMIP_CLR_WAKE_ALARM(port);
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_TRIGGERS);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_TRIGGERS);
 
 	return 0;
 }
@@ -1650,93 +1650,93 @@ int tegra_pmc_hsic_phy_enable_sleepwalk(int port)
 	pr_info("PMC %s : port %dn", __func__, port);
 
 	/* ensure sleepwalk logic is disabled */
-	reg = tegra_pmc_readl(APBDEV_PMC_UHSIC_SLEEP_CFG);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UHSIC_SLEEP_CFG);
 	reg &= ~UHSIC_MASTER_ENABLE;
-	tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_SLEEP_CFG);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_SLEEP_CFG);
 
 	/* ensure sleepwalk logics are in low power mode */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_MASTER_CONFIG);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_MASTER_CONFIG);
 	reg |= UHSIC_PWR(port);
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_MASTER_CONFIG);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_MASTER_CONFIG);
 
 	/* set debounce time */
-	reg = tegra_pmc_readl(APBDEV_PMC_USB_DEBOUNCE_DEL);
+	reg = _tegra_pmc_readl(APBDEV_PMC_USB_DEBOUNCE_DEL);
 	reg &= ~UHSIC_LINE_DEB_CNT(~0);
 	reg |= UHSIC_LINE_DEB_CNT(0x1);
-	tegra_pmc_writel(reg, APBDEV_PMC_USB_DEBOUNCE_DEL);
+	_tegra_pmc_writel(reg, APBDEV_PMC_USB_DEBOUNCE_DEL);
 
 	/* ensure fake events of sleepwalk logic are desiabled */
-	reg = tegra_pmc_readl(APBDEV_PMC_UHSIC_FAKE);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UHSIC_FAKE);
 	reg &= ~(UHSIC_FAKE_STROBE_VAL | UHSIC_FAKE_DATA_VAL |
 			UHSIC_FAKE_STROBE_EN | UHSIC_FAKE_DATA_EN);
-	tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_FAKE);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_FAKE);
 
 	/* ensure wake events of sleepwalk logic are not latched */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
 	reg &= ~UHSIC_LINE_WAKEUP_EN;
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
 
 	/* disable wake event triggers of sleepwalk logic */
-	reg = tegra_pmc_readl(APBDEV_PMC_UHSIC_SLEEP_CFG);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UHSIC_SLEEP_CFG);
 	reg &= ~UHSIC_WAKE_VAL(~0);
 	reg |= UHSIC_WAKE_VAL_NONE;
-	tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_SLEEP_CFG);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_SLEEP_CFG);
 
 	/* power down the line state detectors of the port */
-	reg = tegra_pmc_readl(APBDEV_PMC_USB_AO);
+	reg = _tegra_pmc_readl(APBDEV_PMC_USB_AO);
 	reg |= (STROBE_VAL_PD(port) | DATA0_VAL_PD(port) | DATA1_VAL_PD);
-	tegra_pmc_writel(reg, APBDEV_PMC_USB_AO);
+	_tegra_pmc_writel(reg, APBDEV_PMC_USB_AO);
 
 	/* save state, HSIC always comes up as HS */
-	reg = tegra_pmc_readl(APBDEV_PMC_UHSIC_SAVED_STATE);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UHSIC_SAVED_STATE);
 	reg &= ~UHSIC_MODE(~0);
 	reg |= UHSIC_HS;
-	tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_SAVED_STATE);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_SAVED_STATE);
 
 	/* enable the trigger of the sleepwalk logic */
-	reg = tegra_pmc_readl(APBDEV_PMC_UHSIC_SLEEPWALK_CFG);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UHSIC_SLEEPWALK_CFG);
 	reg |= (UHSIC_WAKE_WALK_EN | UHSIC_LINEVAL_WALK_EN);
-	tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_SLEEPWALK_CFG);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_SLEEPWALK_CFG);
 
 	/* reset the walk pointer and clear the alarm of the sleepwalk logic,
 	 * as well as capture the configuration of the USB2.0 port
 	 */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_TRIGGERS);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_TRIGGERS);
 	reg |= (UHSIC_CLR_WALK_PTR | UHSIC_CLR_WAKE_ALARM);
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_TRIGGERS);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_TRIGGERS);
 
 	/* setup the pull-ups and pull-downs of the signals during the four
 	 * stages of sleepwalk.
 	 * maintain a HSIC IDLE and keep driving HSIC RESUME upon remote wake
 	 */
-	reg = tegra_pmc_readl(APBDEV_PMC_UHSIC_SLEEPWALK_P0);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UHSIC_SLEEPWALK_P0);
 	reg = (UHSIC_DATA0_RPD_A | UHSIC_DATA0_RPU_B | UHSIC_DATA0_RPU_C |
 		UHSIC_DATA0_RPU_D);
 	reg |= (UHSIC_STROBE_RPU_A | UHSIC_STROBE_RPD_B | UHSIC_STROBE_RPD_C |
 		UHSIC_STROBE_RPD_D);
-	tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_SLEEPWALK_P0);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_SLEEPWALK_P0);
 
 	/* power up the line state detectors of the port */
-	reg = tegra_pmc_readl(APBDEV_PMC_USB_AO);
+	reg = _tegra_pmc_readl(APBDEV_PMC_USB_AO);
 	reg &= ~(STROBE_VAL_PD(port) | DATA0_VAL_PD(port) | DATA1_VAL_PD);
-	tegra_pmc_writel(reg, APBDEV_PMC_USB_AO);
+	_tegra_pmc_writel(reg, APBDEV_PMC_USB_AO);
 
 	usleep_range(50, 100);
 
 	/* set the wake signaling trigger events */
-	reg = tegra_pmc_readl(APBDEV_PMC_UHSIC_SLEEP_CFG);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UHSIC_SLEEP_CFG);
 	reg &= ~UHSIC_WAKE_VAL(~0);
 	reg |= UHSIC_WAKE_VAL_SD10;
-	tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_SLEEP_CFG);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_SLEEP_CFG);
 
 	/* enable the wake detection */
-	reg = tegra_pmc_readl(APBDEV_PMC_UHSIC_SLEEP_CFG);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UHSIC_SLEEP_CFG);
 	reg |= UHSIC_MASTER_ENABLE;
-	tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_SLEEP_CFG);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_SLEEP_CFG);
 
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
 	reg |= UHSIC_LINE_WAKEUP_EN;
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
 
 	return 0;
 }
@@ -1749,29 +1749,30 @@ int tegra_pmc_hsic_phy_disable_sleepwalk(int port)
 	pr_info("PMC %s : port %dn", __func__, port);
 
 	/* disable the wake detection */
-	reg = tegra_pmc_readl(APBDEV_PMC_UHSIC_SLEEP_CFG);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UHSIC_SLEEP_CFG);
 	reg &= ~UHSIC_MASTER_ENABLE;
-	tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_SLEEP_CFG);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_SLEEP_CFG);
 
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
 	reg &= ~UHSIC_LINE_WAKEUP_EN;
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_LINE_WAKEUP);
 
 	/* disable wake event triggers of sleepwalk logic */
-	reg = tegra_pmc_readl(APBDEV_PMC_UHSIC_SLEEP_CFG);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UHSIC_SLEEP_CFG);
 	reg &= ~UHSIC_WAKE_VAL(~0);
 	reg |= UHSIC_WAKE_VAL_NONE;
-	tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_SLEEP_CFG);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UHSIC_SLEEP_CFG);
 
 	/* power down the line state detectors of the port */
-	reg = tegra_pmc_readl(APBDEV_PMC_USB_AO);
+	reg = _tegra_pmc_readl(APBDEV_PMC_USB_AO);
 	reg |= (STROBE_VAL_PD(port) | DATA0_VAL_PD(port) | DATA1_VAL_PD);
-	tegra_pmc_writel(reg, APBDEV_PMC_USB_AO);
+	_tegra_pmc_writel(reg, APBDEV_PMC_USB_AO);
+
 
 	/* clear alarm of the sleepwalk logic */
-	reg = tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_TRIGGERS);
+	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_TRIGGERS);
 	reg |= UHSIC_CLR_WAKE_ALARM;
-	tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_TRIGGERS);
+	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_TRIGGERS);
 
 	return 0;
 }
@@ -1785,12 +1786,12 @@ void tegra_pmc_fuse_control_ps18_latch_set(void)
 	if (!pmc->soc->has_ps18)
 		return;
 
-	val = tegra_pmc_readl(PMC_FUSE_CTRL);
+	val = _tegra_pmc_readl(PMC_FUSE_CTRL);
 	val &= ~(PMC_FUSE_CTRL_PS18_LATCH_CLEAR);
-	tegra_pmc_writel(val, PMC_FUSE_CTRL);
+	_tegra_pmc_writel(val, PMC_FUSE_CTRL);
 	mdelay(1);
 	val |= PMC_FUSE_CTRL_PS18_LATCH_SET;
-	tegra_pmc_writel(val, PMC_FUSE_CTRL);
+	_tegra_pmc_writel(val, PMC_FUSE_CTRL);
 	mdelay(1);
 }
 EXPORT_SYMBOL(tegra_pmc_fuse_control_ps18_latch_set);
@@ -1802,12 +1803,12 @@ void tegra_pmc_fuse_control_ps18_latch_clear(void)
 	if (!pmc->soc->has_ps18)
 		return;
 
-	val = tegra_pmc_readl(PMC_FUSE_CTRL);
+	val = _tegra_pmc_readl(PMC_FUSE_CTRL);
 	val &= ~(PMC_FUSE_CTRL_PS18_LATCH_SET);
-	tegra_pmc_writel(val, PMC_FUSE_CTRL);
+	_tegra_pmc_writel(val, PMC_FUSE_CTRL);
 	mdelay(1);
 	val |= PMC_FUSE_CTRL_PS18_LATCH_CLEAR;
-	tegra_pmc_writel(val, PMC_FUSE_CTRL);
+	_tegra_pmc_writel(val, PMC_FUSE_CTRL);
 	mdelay(1);
 }
 EXPORT_SYMBOL(tegra_pmc_fuse_control_ps18_latch_clear);
@@ -1853,21 +1854,21 @@ void tegra_pmc_enter_suspend_mode(enum tegra_suspend_mode mode)
 
 		ticks = pmc->cpu_good_time * rate + USEC_PER_SEC - 1;
 		do_div(ticks, USEC_PER_SEC);
-		tegra_pmc_writel(ticks, PMC_CPUPWRGOOD_TIMER);
+		_tegra_pmc_writel(ticks, PMC_CPUPWRGOOD_TIMER);
 
 		ticks = pmc->cpu_off_time * rate + USEC_PER_SEC - 1;
 		do_div(ticks, USEC_PER_SEC);
-		tegra_pmc_writel(ticks, PMC_CPUPWROFF_TIMER);
+		_tegra_pmc_writel(ticks, PMC_CPUPWROFF_TIMER);
 
 		wmb();
 
 		pmc->rate = rate;
 	}
 
-	value = tegra_pmc_readl(PMC_CNTRL);
+	value = _tegra_pmc_readl(PMC_CNTRL);
 	value &= ~PMC_CNTRL_SIDE_EFFECT_LP0;
 	value |= PMC_CNTRL_CPU_PWRREQ_OE;
-	tegra_pmc_writel(value, PMC_CNTRL);
+	_tegra_pmc_writel(value, PMC_CNTRL);
 }
 
 #else
@@ -1900,12 +1901,12 @@ static int tegra_pmc_io_pad_prepare(const struct tegra_pmc_io_pad_soc *pad,
 		return -ENODEV;
 	}
 
-	tegra_pmc_writel(DPD_SAMPLE_ENABLE, DPD_SAMPLE);
+	_tegra_pmc_writel(DPD_SAMPLE_ENABLE, DPD_SAMPLE);
 
 	/* must be at least 200 ns, in APB (PCLK) clock cycles */
 	value = DIV_ROUND_UP(1000000000, rate);
 	value = DIV_ROUND_UP(200, value);
-	tegra_pmc_writel(value, SEL_DPD_TIM);
+	_tegra_pmc_writel(value, SEL_DPD_TIM);
 
 	return 0;
 }
@@ -1918,7 +1919,7 @@ static int tegra_pmc_io_pad_poll(unsigned long offset, u32 mask,
 	timeout = jiffies + msecs_to_jiffies(timeout);
 
 	while (time_after(timeout, jiffies)) {
-		value = tegra_pmc_readl(offset);
+		value = _tegra_pmc_readl(offset);
 		if ((value & mask) == val)
 			return 0;
 
@@ -1930,7 +1931,7 @@ static int tegra_pmc_io_pad_poll(unsigned long offset, u32 mask,
 
 static void tegra_pmc_io_pad_unprepare(void)
 {
-	tegra_pmc_writel(DPD_SAMPLE_DISABLE, DPD_SAMPLE);
+	_tegra_pmc_writel(DPD_SAMPLE_DISABLE, DPD_SAMPLE);
 }
 
 /**
@@ -1954,7 +1955,7 @@ static int tegra_pmc_io_pad_power_enable(const struct tegra_pmc_io_pad_soc *pad)
 		goto unlock;
 	}
 
-	tegra_pmc_writel(IO_DPD_REQ_CODE_OFF | mask, request);
+	_tegra_pmc_writel(IO_DPD_REQ_CODE_OFF | mask, request);
 
 	err = tegra_pmc_io_pad_poll(status, mask, 0, 250);
 	if (err < 0) {
@@ -1992,7 +1993,7 @@ static int tegra_pmc_io_pad_power_disable(
 		goto unlock;
 	}
 
-	tegra_pmc_writel(IO_DPD_REQ_CODE_ON | mask, request);
+	_tegra_pmc_writel(IO_DPD_REQ_CODE_ON | mask, request);
 
 	err = tegra_pmc_io_pad_poll(status, mask, mask, 250);
 	if (err < 0) {
@@ -2023,19 +2024,19 @@ static int tegra_pmc_io_pad_set_voltage(const struct tegra_pmc_io_pad_soc *pad,
 	mutex_lock(&pmc->powergates_lock);
 
 	/* write-enable PMC_PWR_DET_VALUE[pad->voltage] */
-	value = tegra_pmc_readl(PMC_PWR_DET_ENABLE);
+	value = _tegra_pmc_readl(PMC_PWR_DET_ENABLE);
 	value |= BIT(pad->voltage);
-	tegra_pmc_writel(value, PMC_PWR_DET_ENABLE);
+	_tegra_pmc_writel(value, PMC_PWR_DET_ENABLE);
 
 	/* update I/O voltage */
-	value = tegra_pmc_readl(PMC_PWR_DET_VAL);
+	value = _tegra_pmc_readl(PMC_PWR_DET_VAL);
 
 	if (io_pad_uv == TEGRA_IO_PAD_VOLTAGE_1800000UV)
 		value &= ~BIT(pad->voltage);
 	else
 		value |= BIT(pad->voltage);
 
-	tegra_pmc_writel(value, PMC_PWR_DET_VAL);
+	_tegra_pmc_writel(value, PMC_PWR_DET_VAL);
 
 	mutex_unlock(&pmc->powergates_lock);
 
@@ -2051,7 +2052,7 @@ static int tegra_pmc_io_pad_get_voltage(const struct tegra_pmc_io_pad_soc *pad)
 	if (pad->voltage == UINT_MAX)
 		return -ENOTSUPP;
 
-	value = tegra_pmc_readl(PMC_PWR_DET_VAL);
+	value = _tegra_pmc_readl(PMC_PWR_DET_VAL);
 
 	if ((value & BIT(pad->voltage)) == 0)
 		return TEGRA_IO_PAD_VOLTAGE_1800000UV;
@@ -2078,7 +2079,7 @@ static int tegra_pmc_io_pad_is_powered(const struct tegra_pmc_io_pad_soc *pad)
 
 	status = (pad->dpd < 32) ? IO_DPD_STATUS : IO_DPD2_STATUS;
 	bit = pad->dpd % 32;
-	value = tegra_pmc_readl(status);
+	value = _tegra_pmc_readl(status);
 
 	return !(value & BIT(bit));
 }
@@ -2372,11 +2373,11 @@ static void tegra_pmc_init(struct tegra_pmc *pmc)
 	u32 value;
 
 	/* Always enable CPU power request */
-	value = tegra_pmc_readl(PMC_CNTRL);
+	value = _tegra_pmc_readl(PMC_CNTRL);
 	value |= PMC_CNTRL_CPU_PWRREQ_OE;
-	tegra_pmc_writel(value, PMC_CNTRL);
+	_tegra_pmc_writel(value, PMC_CNTRL);
 
-	value = tegra_pmc_readl(PMC_CNTRL);
+	value = _tegra_pmc_readl(PMC_CNTRL);
 
 	if (pmc->sysclkreq_high)
 		value &= ~PMC_CNTRL_SYSCLK_POLARITY;
@@ -2384,12 +2385,14 @@ static void tegra_pmc_init(struct tegra_pmc *pmc)
 		value |= PMC_CNTRL_SYSCLK_POLARITY;
 
 	/* configure the output polarity while the request is tristated */
-	tegra_pmc_writel(value, PMC_CNTRL);
+	_tegra_pmc_writel(value, PMC_CNTRL);
 
 	/* now enable the request */
-	value = tegra_pmc_readl(PMC_CNTRL);
+	value = _tegra_pmc_readl(PMC_CNTRL);
 	value |= PMC_CNTRL_SYSCLK_OE;
-	tegra_pmc_writel(value, PMC_CNTRL);
+
+	_tegra_pmc_writel(value, PMC_CNTRL);
+
 }
 
 static void tegra_pmc_init_tsense_reset(struct tegra_pmc *pmc)
@@ -2432,13 +2435,13 @@ static void tegra_pmc_init_tsense_reset(struct tegra_pmc *pmc)
 	if (of_property_read_u32(np, "nvidia,pinmux-id", &pinmux))
 		pinmux = 0;
 
-	value = tegra_pmc_readl(PMC_SENSOR_CTRL);
+	value = _tegra_pmc_readl(PMC_SENSOR_CTRL);
 	value |= PMC_SENSOR_CTRL_SCRATCH_WRITE;
-	tegra_pmc_writel(value, PMC_SENSOR_CTRL);
+	_tegra_pmc_writel(value, PMC_SENSOR_CTRL);
 
 	value = (reg_data << PMC_SCRATCH54_DATA_SHIFT) |
 		(reg_addr << PMC_SCRATCH54_ADDR_SHIFT);
-	tegra_pmc_writel(value, PMC_SCRATCH54);
+	_tegra_pmc_writel(value, PMC_SCRATCH54);
 
 	value = PMC_SCRATCH55_RESET_TEGRA;
 	value |= ctrl_id << PMC_SCRATCH55_CNTRL_ID_SHIFT;
@@ -2456,11 +2459,11 @@ static void tegra_pmc_init_tsense_reset(struct tegra_pmc *pmc)
 
 	value |= checksum << PMC_SCRATCH55_CHECKSUM_SHIFT;
 
-	tegra_pmc_writel(value, PMC_SCRATCH55);
+	_tegra_pmc_writel(value, PMC_SCRATCH55);
 
-	value = tegra_pmc_readl(PMC_SENSOR_CTRL);
+	value = _tegra_pmc_readl(PMC_SENSOR_CTRL);
 	value |= PMC_SENSOR_CTRL_ENABLE_RST;
-	tegra_pmc_writel(value, PMC_SENSOR_CTRL);
+	_tegra_pmc_writel(value, PMC_SENSOR_CTRL);
 
 	dev_info(pmc->dev, "emergency thermal reset enabled\n");
 
@@ -2540,8 +2543,8 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 		} else {
 			dev_info(&pdev->dev,
 				 "POWER_DET: 0x%08x, POWR_VAL: 0x%08x\n",
-				 tegra_pmc_readl(PMC_PWR_DET_ENABLE),
-				 tegra_pmc_readl(PMC_PWR_DET_VAL));
+				 _tegra_pmc_readl(PMC_PWR_DET_ENABLE),
+				 _tegra_pmc_readl(PMC_PWR_DET_VAL));
 		}
 	}
 
@@ -2570,14 +2573,14 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 #if defined(CONFIG_PM_SLEEP) && defined(CONFIG_ARM)
 static int tegra_pmc_suspend(struct device *dev)
 {
-	tegra_pmc_writel(virt_to_phys(tegra_resume), PMC_SCRATCH41);
+	_tegra_pmc_writel(virt_to_phys(tegra_resume), PMC_SCRATCH41);
 
 	return 0;
 }
 
 static int tegra_pmc_resume(struct device *dev)
 {
-	tegra_pmc_writel(0x0, PMC_SCRATCH41);
+	_tegra_pmc_writel(0x0, PMC_SCRATCH41);
 
 	return 0;
 }
@@ -2985,14 +2988,14 @@ static int __init tegra_pmc_early_init(void)
 		 */
 		invert = of_property_read_bool(np, "nvidia,invert-interrupt");
 
-		value = tegra_pmc_readl(PMC_CNTRL);
+		value = _tegra_pmc_readl(PMC_CNTRL);
 
 		if (invert)
 			value |= PMC_CNTRL_INTR_POLARITY;
 		else
 			value &= ~PMC_CNTRL_INTR_POLARITY;
 
-		tegra_pmc_writel(value, PMC_CNTRL);
+		_tegra_pmc_writel(value, PMC_CNTRL);
 
 		of_node_put(np);
 	}
@@ -3006,7 +3009,7 @@ static void pmc_iopower_enable(const struct tegra_pmc_io_pad_soc *pad)
 	if (pad->io_power == UINT_MAX)
 		return;
 
-	tegra_pmc_register_update(PMC_PWR_NO_IOPOWER, BIT(pad->io_power), 0);
+	_tegra_pmc_register_update(PMC_PWR_NO_IOPOWER, BIT(pad->io_power), 0);
 }
 
 static void pmc_iopower_disable(const struct tegra_pmc_io_pad_soc *pad)
@@ -3014,7 +3017,7 @@ static void pmc_iopower_disable(const struct tegra_pmc_io_pad_soc *pad)
 	if (pad->io_power == UINT_MAX)
 		return;
 
-	tegra_pmc_register_update(PMC_PWR_NO_IOPOWER, BIT(pad->io_power),
+	_tegra_pmc_register_update(PMC_PWR_NO_IOPOWER, BIT(pad->io_power),
 				  BIT(pad->io_power));
 }
 
@@ -3025,7 +3028,7 @@ static int pmc_iopower_get_status(const struct tegra_pmc_io_pad_soc *pad)
 	if (pad->io_power == UINT_MAX)
 		return 1;
 
-	no_iopower = tegra_pmc_readl(PMC_PWR_NO_IOPOWER);
+	no_iopower = _tegra_pmc_readl(PMC_PWR_NO_IOPOWER);
 
 	return !(no_iopower & BIT(pad->io_power));
 }

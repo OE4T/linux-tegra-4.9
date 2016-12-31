@@ -227,7 +227,9 @@ struct nvs_fn_dev {
  * sensor_cfg->resolution.  If implemented, it is expected
  * that the resolution value will be device-specific. In other
  * words, only the device layer will understand the value which
- * will typically be used to change the mode.
+ * will typically be used to change the mode.  This will
+ * typically be an index mechanism.  See max_range for an
+ * example.
  */
 	int (*resolution)(void *client, int snsr_id, int resolution);
 /**
@@ -247,7 +249,12 @@ struct nvs_fn_dev {
  * sensor_cfg->max_range.  If implemented, it is expected
  * that the max_range value will be device-specific. In other
  * words, only the device layer will understand the value which
- * will typically be used to change the mode.
+ * will typically be used to change the mode.  This will
+ * typically be an index mechanism.  For example, to select the
+ * range for an accelerometer that can support 2g, 4g, and 16g,
+ * the following values of 0, 1, and 2, can be written
+ * respectively.  Once the index is written, the max_range can
+ * be read to determine the value associated with the index.
  */
 	int (*max_range)(void *client, int snsr_id, int max_range);
 /**
@@ -426,6 +433,6 @@ int nvs_vregs_init(struct device *dev, struct regulator_bulk_data *vregs,
 		   unsigned int vregs_n, char **vregs_name);
 int nvs_vregs_sts(struct regulator_bulk_data *vregs, unsigned int vregs_n);
 s64 nvs_timestamp(void);
-int nvs_dsm_push(int dev_id, bool connect, int snsr_id, unsigned char *uuid);
+int nvs_dsm_iio(int dev_id, bool connect, int snsr_id, unsigned char *uuid);
 
 #endif /* _NVS_H_ */

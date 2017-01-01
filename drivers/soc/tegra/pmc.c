@@ -306,6 +306,47 @@ static struct io_dpd_reg_info t3_io_dpd_req_regs[] = {
 	{0x1c0, 30},
 };
 
+enum pmc_regs {
+	TEGRA_PMC_CNTRL,
+	TEGRA_PMC_WAKE_MASK,
+	TEGRA_PMC_WAKE_LEVEL,
+	TEGRA_PMC_WAKE_STATUS,
+	TEGRA_PMC_WAKE_DELAY,
+	TEGRA_PMC_SW_WAKE_STATUS,
+	TEGRA_PMC_WAKE2_MASK,
+	TEGRA_PMC_WAKE2_LEVEL,
+	TEGRA_PMC_WAKE2_STATUS,
+	TEGRA_PMC_SW_WAKE2_STATUS,
+	TEGRA_PMC_IO_DPD_SAMPLE,
+	TEGRA_PMC_IO_DPD_ENABLE,
+	TEGRA_PMC_IO_DPD_REQ,
+	TEGRA_PMC_IO_DPD_STATUS,
+	TEGRA_PMC_IO_DPD2_REQ,
+	TEGRA_PMC_IO_DPD2_STATUS,
+	TEGRA_PMC_SEL_DPD_TIM,
+	TEGRA_PMC_PWR_NO_IOPOWER,
+	TEGRA_PMC_PWR_DET_ENABLE,
+	TEGRA_PMC_PWR_DET_VAL,
+	TEGRA_PMC_REMOVE_CLAMPING,
+	TEGRA_PMC_PWRGATE_TOGGLE,
+	TEGRA_PMC_PWRGATE_STATUS,
+	TEGRA_PMC_COREPWRGOOD_TIMER,
+	TEGRA_PMC_CPUPWRGOOD_TIMER,
+	TEGRA_PMC_CPUPWROFF_TIMER,
+	TEGRA_PMC_COREPWROFF_TIMER,
+	TEGRA_PMC_SENSOR_CTRL,
+	TEGRA_PMC_GPU_RG_CNTRL,
+	TEGRA_PMC_FUSE_CTRL,
+	TEGRA_PMC_BR_COMMAND_BASE,
+	TEGRA_PMC_SCRATCH0,
+	TEGRA_PMC_SCRATCH1,
+	TEGRA_PMC_SCRATCH41,
+	TEGRA_PMC_SCRATCH54,
+	TEGRA_PMC_SCRATCH55,
+
+	/* Last entry */
+	TEGRA_PMC_MAX_REG,
+};
 static DEFINE_SPINLOCK(tegra_io_dpd_lock);
 static DEFINE_SPINLOCK(tegra_pmc_access_lock);
 static struct tegra_prod *prod_list;
@@ -336,6 +377,7 @@ struct tegra_pmc_soc {
 	unsigned int num_io_pads;
 	const struct pinctrl_pin_desc *descs;
 	unsigned int num_descs;
+	const unsigned long *rmap;
 
 	bool has_tsense_reset;
 	bool has_gpu_clamps;
@@ -413,6 +455,7 @@ to_powergate(struct generic_pm_domain *domain)
 	return container_of(domain, struct tegra_powergate, genpd);
 }
 
+/* PMC register read/write/update with offset from the base */
 static u32 _tegra_pmc_readl(unsigned long offset)
 {
 	return readl(pmc->base + offset);
@@ -431,6 +474,28 @@ static void _tegra_pmc_register_update(int offset,
 	pmc_reg = _tegra_pmc_readl(offset);
 	pmc_reg = (pmc_reg & ~mask) | (val & mask);
 	_tegra_pmc_writel(pmc_reg, offset);
+}
+
+/* PMC register read/write/update with pmc register enums */
+static u32 tegra_pmc_readl(enum pmc_regs reg)
+{
+	return readl(pmc->base + pmc->soc->rmap[reg]);
+}
+
+static void tegra_pmc_writel(u32 value, enum pmc_regs reg)
+{
+	writel(value, pmc->base + pmc->soc->rmap[reg]);
+}
+
+static void tegra_pmc_register_update(enum pmc_regs reg,
+                                      unsigned long mask,
+                                      unsigned long val)
+{
+	u32 pmc_reg;
+
+	pmc_reg = tegra_pmc_readl(reg);
+	pmc_reg = (pmc_reg & ~mask) | (val & mask);
+	tegra_pmc_writel(pmc_reg, reg);
 }
 
 #ifndef CONFIG_TEGRA186_PMC
@@ -2753,6 +2818,45 @@ static const struct tegra_pmc_soc tegra124_pmc_soc = {
 	.has_gpu_clamps = true,
 };
 
+static const unsigned long tegra210_register_map[TEGRA_PMC_MAX_REG] = {
+	[TEGRA_PMC_CNTRL]		=  0x00,
+	[TEGRA_PMC_WAKE_MASK]		=  0x0c,
+	[TEGRA_PMC_WAKE_LEVEL]		=  0x10,
+	[TEGRA_PMC_WAKE_STATUS]		=  0x14,
+	[TEGRA_PMC_WAKE_DELAY]		=  0xe0,
+	[TEGRA_PMC_SW_WAKE_STATUS]	=  0x18,
+	[TEGRA_PMC_WAKE2_MASK]		=  0x160,
+	[TEGRA_PMC_WAKE2_LEVEL]		=  0x164,
+	[TEGRA_PMC_WAKE2_STATUS]	=  0x168,
+	[TEGRA_PMC_SW_WAKE2_STATUS]	=  0x16c,
+	[TEGRA_PMC_IO_DPD_SAMPLE]	=  0x20,
+	[TEGRA_PMC_IO_DPD_ENABLE]	=  0x24,
+	[TEGRA_PMC_IO_DPD_REQ]		=  0x1b8,
+	[TEGRA_PMC_IO_DPD_STATUS]	=  0x1bc,
+	[TEGRA_PMC_IO_DPD2_REQ]		=  0x1c0,
+	[TEGRA_PMC_IO_DPD2_STATUS]	=  0x1c4,
+	[TEGRA_PMC_SEL_DPD_TIM]		=  0x1c8,
+	[TEGRA_PMC_PWR_NO_IOPOWER]	=  0x44,
+	[TEGRA_PMC_PWR_DET_ENABLE]	=  0x48,
+	[TEGRA_PMC_PWR_DET_VAL]		=  0xe4,
+	[TEGRA_PMC_REMOVE_CLAMPING]	=  0x34,
+	[TEGRA_PMC_PWRGATE_TOGGLE]	=  0x30,
+	[TEGRA_PMC_PWRGATE_STATUS]	=  0x38,
+	[TEGRA_PMC_COREPWRGOOD_TIMER]	=  0x3c,
+	[TEGRA_PMC_CPUPWRGOOD_TIMER]	=  0xc8,
+	[TEGRA_PMC_CPUPWROFF_TIMER]	=  0xcc,
+	[TEGRA_PMC_COREPWROFF_TIMER]	=  0xe0,
+	[TEGRA_PMC_SENSOR_CTRL]		=  0x1b0,
+	[TEGRA_PMC_GPU_RG_CNTRL]	=  0x2d4,
+	[TEGRA_PMC_FUSE_CTRL]		=  0x450,
+	[TEGRA_PMC_BR_COMMAND_BASE]	=  0x908,
+	[TEGRA_PMC_SCRATCH0]		=  0x50,
+	[TEGRA_PMC_SCRATCH1]		=  0x54,
+	[TEGRA_PMC_SCRATCH41]		=  0x140,
+	[TEGRA_PMC_SCRATCH54]		=  0x258,
+	[TEGRA_PMC_SCRATCH55]		=  0x25c,
+};
+
 static const char * const tegra210_powergates[] = {
 	[TEGRA_POWERGATE_CPU] = "crail",
 	[TEGRA_POWERGATE_3D] = "3d",
@@ -2890,6 +2994,7 @@ static const struct tegra_pmc_soc tegra210_pmc_soc = {
 	.io_pads = tegra210_io_pads,
 	.num_descs = ARRAY_SIZE(tegra210_io_pads_pinctrl_desc),
 	.descs = tegra210_io_pads_pinctrl_desc,
+	.rmap = tegra210_register_map,
 };
 
 static const struct of_device_id tegra_pmc_match[] = {

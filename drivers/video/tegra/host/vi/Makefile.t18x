@@ -1,0 +1,9 @@
+ccflags-y += -I$(srctree)/../nvhost/drivers/video/tegra/host
+ccflags-y += -I$(srctree)/../t18x/drivers/video/tegra/host
+ccflags-y += -I$(srctree)/drivers/media/platform/tegra
+ccflags-y += -I$(srctree)/drivers/media/platform/tegra/vi
+
+
+obj-y += host_vi_notify.o
+obj-y += vi4.o
+obj-y += vi_notify.o

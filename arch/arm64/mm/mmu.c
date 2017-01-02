@@ -30,6 +30,7 @@
 #include <linux/io.h>
 #include <linux/slab.h>
 #include <linux/stop_machine.h>
+#include <linux/cma.h>
 
 #include <asm/barrier.h>
 #include <asm/cputype.h>
@@ -102,8 +103,7 @@ static void alloc_init_pte(pmd_t *pmd, unsigned long addr,
 {
 	pte_t *pte;
 
-	BUG_ON(pmd_sect(*pmd));
-	if (pmd_none(*pmd)) {
+	if (pmd_none(*pmd) || pmd_sect(*pmd)) {
 		phys_addr_t pte_phys;
 		BUG_ON(!pgtable_alloc);
 		pte_phys = pgtable_alloc();
@@ -133,8 +133,7 @@ static void alloc_init_pmd(pud_t *pud, unsigned long addr, unsigned long end,
 	/*
 	 * Check for initial section mappings in the pgd/pud and remove them.
 	 */
-	BUG_ON(pud_sect(*pud));
-	if (pud_none(*pud)) {
+	if (pud_none(*pud) || pud_sect(*pud)) {
 		phys_addr_t pmd_phys;
 		BUG_ON(!pgtable_alloc);
 		pmd_phys = pgtable_alloc();
@@ -283,7 +282,7 @@ static phys_addr_t pgd_pgtable_alloc(void)
  * without allocating new levels of table. Note that this permits the
  * creation of new section or page entries.
  */
-static void __init create_mapping_noalloc(phys_addr_t phys, unsigned long virt,
+void __init create_mapping_noalloc(phys_addr_t phys, unsigned long virt,
 				  phys_addr_t size, pgprot_t prot)
 {
 	if (virt < VMALLOC_START) {
@@ -462,6 +461,8 @@ static void __init map_kernel(pgd_t *pgd)
  * paging_init() sets up the page tables, initialises the zone memory
  * maps and sets up the zero page.
  */
+void __init dma_contiguous_remap(void);
+
 void __init paging_init(void)
 {
 	phys_addr_t pgd_phys = early_pgtable_alloc();
@@ -491,6 +492,8 @@ void __init paging_init(void)
 	 */
 	memblock_free(__pa(swapper_pg_dir) + PAGE_SIZE,
 		      SWAPPER_DIR_SIZE - PAGE_SIZE);
+	dma_contiguous_remap();
+	local_flush_tlb_all();
 }
 
 /*
@@ -771,4 +774,39 @@ int pmd_clear_huge(pmd_t *pmd)
 		return 0;
 	pmd_clear(pmd);
 	return 1;
+}
+
+struct dma_contig_early_reserve {
+	phys_addr_t base;
+	unsigned long size;
+};
+
+static struct dma_contig_early_reserve dma_mmu_remap[MAX_CMA_AREAS] __initdata;
+
+static int dma_mmu_remap_num __initdata;
+
+void __init dma_contiguous_early_fixup(phys_addr_t base, unsigned long size)
+{
+	dma_mmu_remap[dma_mmu_remap_num].base = base;
+	dma_mmu_remap[dma_mmu_remap_num].size = size;
+	dma_mmu_remap_num++;
+}
+
+void __init dma_contiguous_remap(void)
+{
+	int i;
+	for (i = 0; i < dma_mmu_remap_num; i++) {
+		phys_addr_t start = dma_mmu_remap[i].base;
+		phys_addr_t end = start + dma_mmu_remap[i].size;
+		unsigned long addr;
+
+		if (start >= end)
+			continue;
+
+		for (addr = start; addr < end; addr += PAGE_SIZE)
+			__create_pgd_mapping(pgd_offset_k(addr), addr,
+					     __phys_to_virt(addr),
+					     PAGE_SIZE, PAGE_KERNEL_EXEC,
+					     early_pgtable_alloc, false);
+	}
 }

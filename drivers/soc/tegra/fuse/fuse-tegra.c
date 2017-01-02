@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -286,7 +286,6 @@ static int __init tegra_init_fuse(void)
 	struct device_node *np;
 	struct resource regs;
 
-	tegra_init_apbmisc();
 	tegra_set_tegraid_from_hw();
 
 	np = of_find_matching_node_and_match(NULL, tegra_fuse_match, &match);

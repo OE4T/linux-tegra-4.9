@@ -1272,6 +1272,13 @@
 		status = "disabled";
 	};
 
+	miscreg@00100000 {
+		compatible = "nvidia,tegra186-miscreg";
+		reg = <0x0 0x00100000 0x0 0xf000>, /* Chipid */
+		    <0x0 0x0010f000 0x0 0x1000>; /* Straps */
+		status = "disabled";
+	};
+
 	bpmp {
 		compatible = "nvidia,tegra186-bpmp";
 		#stream-id-cells = <1>;
@@ -2431,7 +2438,6 @@
 			status = "disabled";
 		};
 	};
-
 
 	aon: aon@c160000 {
 		compatible = "nvidia,tegra186-aon";

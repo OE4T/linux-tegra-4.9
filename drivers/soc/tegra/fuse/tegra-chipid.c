@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,6 +18,7 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/tegra-soc.h>
+#include <soc/tegra/fuse.h>
 
 #define TEGRAID_CHIPID_MASK 0xFF00
 #define TEGRAID_CHIPID_SHIFT 8
@@ -51,6 +52,7 @@ static const char *tegra_platform_name[TEGRA_PLATFORM_MAX] = {
 static struct tegra_id tegra_id;
 static const char *tegra_platform_ptr;
 static const char *tegra_cpu_ptr;
+static u32 prod_mode;
 
 static int get_platform(char *val, const struct kernel_param *kp)
 {
@@ -98,6 +100,23 @@ static struct kernel_param_ops tegra_revision_ops = {
 
 module_param_cb(tegra_chip_id, &tegra_chip_id_ops, &tegra_id.chipid, 0444);
 module_param_cb(tegra_chip_rev, &tegra_revision_ops, &tegra_id.revision, 0444);
+
+static int get_prod_mode(char *val, const struct kernel_param *kp)
+{
+	u32 reg = 0;
+
+	if (tegra_get_platform() == TEGRA_PLATFORM_SILICON) {
+		tegra_fuse_readl(TEGRA_FUSE_PRODUCTION_MODE, &reg);
+		prod_mode = reg;
+	}
+	return param_get_uint(val, kp);
+}
+
+static struct kernel_param_ops tegra_prod_mode_ops = {
+	.get = get_prod_mode,
+};
+
+module_param_cb(tegra_prod_mode, &tegra_prod_mode_ops, &prod_mode, 0444);
 
 void tegra_set_tegraid_from_hw(void)
 {

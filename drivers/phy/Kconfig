@@ -492,8 +492,7 @@ config PHY_NS2_PCIE
 	  If unsure, say N.
 
 config PHY_MAX16984_CDP
-	tristate "MAX16984 External CDP support for Tegra USB UTMI ports"
-	depends on ARCH_TEGRA_18x_SOC
+	tristate "MAX16984 External CDP support for USB UTMI ports"
 	select GENERIC_PHY
 	help
 	  Enable this to support Tegra external CDP for USB2.0 host port

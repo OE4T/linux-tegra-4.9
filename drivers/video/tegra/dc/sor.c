@@ -26,8 +26,13 @@
 #include <linux/of_address.h>
 #include <linux/tegra_prod.h>
 #include <linux/uaccess.h>
+#include <linux/version.h>
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+#include <soc/tegra/pmc.h>
+#else
 #include <linux/platform/tegra/io-dpd.h>
+#endif
 
 #include "dc.h"
 #include "sor.h"

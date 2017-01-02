@@ -30,7 +30,13 @@
 #include <linux/pinctrl/pinconf-tegra.h>
 
 #include <mach/irqs.h>
+
+#include <linux/version.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+#include <soc/tegra/pmc.h>
+#else
 #include <linux/platform/tegra/io-dpd.h>
+#endif
 
 #include "../dc.h"
 #include "board.h"
@@ -349,15 +355,16 @@ static struct platform_device loki_disp1_device = {
 };
 
 static struct tegra_io_dpd dsic_io = {
-	.name			= "DSIC",
+	.name			= "dsic",
 	.io_dpd_reg_index	= 1,
 	.io_dpd_bit		= 8,
 };
 static struct tegra_io_dpd dsid_io = {
-	.name			= "DSID",
+	.name			= "dsid",
 	.io_dpd_reg_index	= 1,
 	.io_dpd_bit		= 9,
 };
+
 static struct tegra_dc_mode hdmi_panel_modes[] = {
 	{
 		.pclk = 148500000,

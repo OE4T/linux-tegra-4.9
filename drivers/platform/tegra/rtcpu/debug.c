@@ -877,9 +877,17 @@ static int camrtc_debug_probe(struct tegra_ivc_channel *ch)
 	if (unlikely(crd == NULL))
 		return -ENOMEM;
 
-	crd->parameters.completion_timeout = 50;
 	crd->parameters.mods_loops = 20;
-	crd->parameters.test_timeout = 1000;
+
+	if (of_property_read_u32(dev->of_node,
+			NV(ivc-timeout),
+			&crd->parameters.completion_timeout))
+		crd->parameters.completion_timeout = 50;
+
+	if (of_property_read_u32(dev->of_node,
+			NV(test-timeout),
+			&crd->parameters.test_timeout))
+		crd->parameters.test_timeout = 1000;
 
 	mutex_init(&crd->mutex);
 	init_waitqueue_head(&crd->waitq);

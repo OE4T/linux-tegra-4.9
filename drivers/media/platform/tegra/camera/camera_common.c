@@ -18,7 +18,7 @@
 #include <media/camera_common.h>
 #include <linux/of_graph.h>
 #include <linux/string.h>
-#include <linux/platform/tegra/io-dpd.h>
+#include <soc/tegra/pmc.h>
 
 #define has_s_op(master, op) \
 	(master->ops && master->ops->op)
@@ -47,37 +47,13 @@ static const struct camera_common_colorfmt camera_common_color_fmts[] = {
 	},
 };
 
-static struct tegra_io_dpd camera_common_csi_io[] = {
-	{
-		.name			= "CSIA",
-		.io_dpd_reg_index	= 0,
-		.io_dpd_bit		= 0x0,
-	},
-	{
-		.name			= "CSIB",
-		.io_dpd_reg_index	= 0,
-		.io_dpd_bit		= 0x1,
-	},
-	{
-		.name			= "CSIC",
-		.io_dpd_reg_index	= 1,
-		.io_dpd_bit		= 0xa,
-	},
-	{
-		.name			= "CSID",
-		.io_dpd_reg_index	= 1,
-		.io_dpd_bit		= 0xb,
-	},
-	{
-		.name			= "CSIE",
-		.io_dpd_reg_index	= 1,
-		.io_dpd_bit		= 0xc,
-	},
-	{
-		.name			= "CSIF",
-		.io_dpd_reg_index	= 1,
-		.io_dpd_bit		= 0xd,
-	},
+static const char *camera_common_csi_io_pads[] = {
+	"csia",
+	"csib",
+	"csic",
+	"csid",
+	"csie",
+	"csif",
 };
 
 int camera_common_g_ctrl(struct camera_common_data *s_data,
@@ -635,7 +611,8 @@ void camera_common_dpd_disable(struct camera_common_data *s_data)
 	/* disable CSI IOs DPD mode to turn on camera */
 	for (i = 0; i < numports; i++) {
 		io_idx = s_data->csi_port + i;
-		tegra_io_dpd_disable(&camera_common_csi_io[io_idx]);
+		tegra_pmc_io_pad_low_power_disable(
+				camera_common_csi_io_pads[io_idx]);
 		dev_dbg(s_data->dev,
 			 "%s: csi %d\n", __func__, io_idx);
 	}
@@ -651,7 +628,8 @@ void camera_common_dpd_enable(struct camera_common_data *s_data)
 	/* disable CSI IOs DPD mode to turn on camera */
 	for (i = 0; i < numports; i++) {
 		io_idx = s_data->csi_port + i;
-		tegra_io_dpd_enable(&camera_common_csi_io[io_idx]);
+		tegra_pmc_io_pad_low_power_enable(
+				camera_common_csi_io_pads[io_idx]);
 		dev_dbg(s_data->dev,
 			 "%s: csi %d\n", __func__, io_idx);
 	}

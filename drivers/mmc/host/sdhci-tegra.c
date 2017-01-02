@@ -1050,8 +1050,11 @@ static void tegra_sdhci_signal_voltage_switch_pre(struct sdhci_host *host,
 
 	/* For 3.3V, pwrdet should be set before setting the voltage */
 	if (signal_voltage == MMC_SIGNAL_VOLTAGE_330) {
-		if (tegra_host->current_voltage < 2700000)
+		if (tegra_host->current_voltage < 2700000) {
+			dev_dbg(mmc_dev(host->mmc),
+				"Setting 3.3V padctrl\n");
 			tegra_sdhci_set_padctrl(host, 3300000);
+		}
 	}
 	tegra_host->config_pad_ctrl = true;
 }
@@ -1072,8 +1075,11 @@ static void tegra_sdhci_signal_voltage_switch_post(struct sdhci_host *host,
 	set = (signal_voltage == MMC_SIGNAL_VOLTAGE_180) ? true : false;
 	if (tegra_host->config_pad_ctrl) {
 		voltage = regulator_get_voltage(host->mmc->supply.vqmmc);
-		if ((voltage < tegra_host->current_voltage) && set)
+		if ((voltage <= tegra_host->current_voltage) && set) {
+			dev_dbg(mmc_dev(host->mmc),
+				"Setting 1.8V padctrl\n");
 			tegra_sdhci_set_padctrl(host, 1800000);
+		}
 	}
 
 	if (tegra_host->pad_calib_required)
@@ -1334,9 +1340,7 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 #endif
 	host->ocr_mask = MMC_VDD_27_36 | MMC_VDD_165_195;
 	if (!of_property_read_u32(np, "mmc-ocr-mask", &val)) {
-		if (val == 0)
-			host->ocr_mask &= MMC_VDD_165_195;
-		else if (val == 1)
+		if (val == 1)
 			host->ocr_mask &= ~(MMC_VDD_26_27 | MMC_VDD_27_28);
 		else if (val == 2)
 			host->ocr_mask &= (MMC_VDD_32_33 | MMC_VDD_165_195);

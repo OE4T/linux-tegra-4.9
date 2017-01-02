@@ -393,6 +393,7 @@ struct mmc_host {
 #define MMC_CAP2_NO_EXTENDED_GP	(1 << 24)	/* Do not support extended GP */
 #define MMC_CAP2_HW_CQ		(1 << 25)	/* support eMMC command queue */
 #define MMC_CAP2_CMDQ_QBR	(1 << 26)	/* CMDQ Queue barrier supported */
+#define MMC_CAP2_ONLY_1V8_SIGNAL_VOLTAGE	(1 << 27)	/* Supports only 1V8 voltage */
 
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
 

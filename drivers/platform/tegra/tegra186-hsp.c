@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -114,16 +114,10 @@ static void tegra_hsp_enable_per_sm_irq(struct device *dev,
 					const struct tegra_hsp_irq *hi,
 					int irq)
 {
-	if (hi->per_sm_ie != 0) {
-		void __iomem *reg = tegra_hsp_sm_reg(dev, hi->index);
-
-		/* Disable empty if enable full, disable full if enable empty */
-		writel(0, reg + TEGRA_HSP_SM_IE_EMPTY + TEGRA_HSP_SM_IE_FULL
-			- hi->per_sm_ie);
-		writel(1, reg + hi->per_sm_ie);
-	} else if (!(irq < 0)) {
+	if (hi->per_sm_ie != 0)
+		writel(1, tegra_hsp_sm_reg(dev, hi->index) + hi->per_sm_ie);
+	else if (!(irq < 0))
 		enable_irq(irq);
-	}
 }
 
 static void tegra_hsp_disable_per_sm_irq(struct device *dev,

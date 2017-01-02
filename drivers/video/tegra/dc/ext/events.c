@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/events.c
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -212,6 +212,24 @@ int tegra_dc_ext_queue_vblank(struct tegra_dc_ext_control *control, int output,
 	pack.vblank.handle = output;
 	pack.vblank.reserved = 0;
 	pack.vblank.timestamp_ns = ktime_to_ns(timestamp);
+
+	tegra_dc_ext_queue_event(control, &pack.event);
+
+	return 0;
+}
+
+int tegra_dc_ext_queue_modechange(struct tegra_dc_ext_control *control,
+						int output)
+{
+	struct {
+		struct tegra_dc_ext_event event;
+		struct tegra_dc_ext_control_event_modechange modechange;
+	} __packed pack;
+
+	pack.event.type = TEGRA_DC_EXT_EVENT_MODECHANGE;
+	pack.event.data_size = sizeof(pack.modechange);
+
+	pack.modechange.handle = output;
 
 	tegra_dc_ext_queue_event(control, &pack.event);
 

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/tegra_dc_ext_priv.h
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -100,7 +100,8 @@ struct tegra_dc_ext {
 	(TEGRA_DC_EXT_EVENT_HOTPLUG |		\
 	 TEGRA_DC_EXT_EVENT_VBLANK |		\
 	 TEGRA_DC_EXT_EVENT_BANDWIDTH_INC |	\
-	 TEGRA_DC_EXT_EVENT_BANDWIDTH_DEC)
+	 TEGRA_DC_EXT_EVENT_BANDWIDTH_DEC |	\
+	 TEGRA_DC_EXT_EVENT_MODECHANGE)
 
 #define TEGRA_DC_EXT_EVENT_MAX_SZ	16
 
@@ -159,6 +160,8 @@ extern int tegra_dc_ext_queue_hotplug(struct tegra_dc_ext_control *,
 				      int output);
 extern int tegra_dc_ext_queue_vblank(struct tegra_dc_ext_control *,
 				      int output, ktime_t timestamp);
+extern int tegra_dc_ext_queue_modechange(struct tegra_dc_ext_control *,
+				      int output);
 extern int tegra_dc_ext_queue_bandwidth_renegotiate(
 			struct tegra_dc_ext_control *, int output,
 			struct tegra_dc_bw_data *data);

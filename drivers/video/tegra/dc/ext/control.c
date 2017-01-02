@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/control.c
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -55,6 +55,11 @@ bool tegra_dc_ext_is_userspace_active(void)
 int tegra_dc_ext_process_vblank(int output, ktime_t timestamp)
 {
 	return tegra_dc_ext_queue_vblank(&g_control, output, timestamp);
+}
+
+int tegra_dc_ext_process_modechange(int output)
+{
+	return tegra_dc_ext_queue_modechange(&g_control, output);
 }
 
 static int

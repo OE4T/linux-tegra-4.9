@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2011-2017, NVIDIA Corporation. All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  * Some code based on fbdev extensions written by:
@@ -1097,6 +1097,11 @@ struct tegra_dc_ext_control_event_bandwidth {
 	__u32 total_bw;
 	__u32 avail_bw;
 	__u32 resvd_bw;
+};
+
+#define TEGRA_DC_EXT_EVENT_MODECHANGE      (1 << 4)
+struct tegra_dc_ext_control_event_modechange {
+	__u32 handle;
 };
 
 #define TEGRA_DC_EXT_CAPABILITIES_CURSOR_MODE			(1 << 0)

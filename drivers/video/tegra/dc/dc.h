@@ -6,7 +6,7 @@
  * Author:
  *	Erik Gilling <konkers@google.com>
  *
- * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -999,6 +999,7 @@ int tegra_dc_ext_restore(struct tegra_dc_ext *dc_ext);
 
 int tegra_dc_ext_process_hotplug(int output);
 int tegra_dc_ext_process_vblank(int output, ktime_t timestamp);
+int tegra_dc_ext_process_modechange(int output);
 int tegra_dc_ext_process_bandwidth_renegotiate(int output,
 					struct tegra_dc_bw_data *bw);
 bool tegra_dc_ext_is_userspace_active(void);

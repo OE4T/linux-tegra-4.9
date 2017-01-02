@@ -555,7 +555,7 @@ static int dma_alloc_from_coherent_dev_at(struct device *dev, ssize_t size,
 	int order = get_order(size);
 	unsigned long flags;
 	int pageno;
-	int dma_memory_map;
+	int dma_memory_map = 0;
 	unsigned int count;
 	unsigned long align;
 
@@ -1015,10 +1015,18 @@ EXPORT_SYMBOL(dma_alloc_from_coherent_attr);
  * generic pools.
  */
 int dma_release_from_coherent_attr(struct device *dev, size_t size, void *vaddr,
-				unsigned long attrs)
+				unsigned long attrs, dma_addr_t dma_handle)
 {
 	if (!dev)
 		return 0;
+
+	if (!vaddr)
+		/*
+		 * The only possible valid case where vaddr is NULL is when
+		 * dma_alloc_attrs() is called on coherent dev which was
+		 * initialized with DMA_MEMORY_NOMAP.
+		 */
+		vaddr = (void *)dma_handle;
 
 	if (dev->dma_mem)
 		return dma_release_from_coherent_dev(dev, size, vaddr, attrs);

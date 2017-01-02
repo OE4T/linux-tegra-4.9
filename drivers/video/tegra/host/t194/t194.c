@@ -24,6 +24,8 @@
 
 #include <linux/platform/tegra/tegra18_kfuse.h>
 
+#include <linux/nvhost_ioctl_t194.h>
+
 #include "dev.h"
 #include "class_ids.h"
 #include "class_ids_t194.h"
@@ -241,6 +243,30 @@ struct nvhost_device_data t19_msenc_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_MSENC,
+	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
+};
+
+struct nvhost_device_data t19_nvenc1_info = {
+	.version		= NVHOST_ENCODE_FLCN_VER(7, 0),
+	.devfs_name		= "nvenc1",
+	.class			= NV_VIDEO_ENCODE_NVENC1_CLASS_ID,
+	.modulemutexes		= {NV_HOST1X_MLOCK_ID_NVENC1},
+	.autosuspend_delay      = 500,
+	.clocks			= {
+		{"nvenc", UINT_MAX},
+		{"emc", HOST_EMC_FLOOR,
+		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW}
+	},
+	.poweron_reset		= true,
+	.finalize_poweron	= nvhost_flcn_t194_finalize_poweron,
+	.moduleid		= NVHOST_MODULE_NVENC1,
+	.num_channels		= 1,
+	.firmware_name		= "nvhost_nvenc070.fw",
+	.serialize		= true,
+	.push_work_done		= true,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 };
 #endif

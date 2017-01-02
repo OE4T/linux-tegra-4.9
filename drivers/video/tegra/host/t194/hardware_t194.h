@@ -40,6 +40,7 @@
 #define NV_HOST1X_MLOCK_ID_NVJPG	20
 #define NV_HOST1X_MLOCK_ID_TSEC		21
 #define NV_HOST1X_MLOCK_ID_TSECB	22
+#define NV_HOST1X_MLOCK_ID_NVENC1	28
 
 /* Generic support */
 static inline u32 nvhost_class_host_wait_syncpt(

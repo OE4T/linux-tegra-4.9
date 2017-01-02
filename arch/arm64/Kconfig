@@ -121,6 +121,7 @@ trysource "arch/arm64/Kconfig.t18x"
 config ARCH_TEGRA_18x_SOC
 	bool "Tegra 18x family SOC Kconfig placeholder"
 	select ARCH_TEGRA_18x_SOC_PRIVATE
+	select ARM_GIC_PM
 	help
 	  Kconfig placeholder for NVIDIA Tegra18x family of SoCs
 

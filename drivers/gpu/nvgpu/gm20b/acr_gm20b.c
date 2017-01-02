@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -473,33 +473,32 @@ static int lsfm_discover_ucode_images(struct gk20a *g,
 	/* Obtain the PMU ucode image and add it to the list if required*/
 	memset(&ucode_img, 0, sizeof(ucode_img));
 	status = pmu_ucode_details(g, &ucode_img);
-	if (status == 0) {
-		if (ucode_img.lsf_desc != NULL) {
-			/* The falon_id is formed by grabbing the static base
-			 * falon_id from the image and adding the
-			 * engine-designated falcon instance.*/
-			pmu->pmu_mode |= PMU_SECURE_MODE;
-			falcon_id = ucode_img.lsf_desc->falcon_id +
-				ucode_img.flcn_inst;
+	if (status)
+		return status;
 
-			if (!lsfm_falcon_disabled(g, plsfm, falcon_id)) {
-				pmu->falcon_id = falcon_id;
-				if (lsfm_add_ucode_img(g, plsfm, &ucode_img,
-					pmu->falcon_id) == 0)
-					pmu->pmu_mode |= PMU_LSFM_MANAGED;
+	/* The falon_id is formed by grabbing the static base
+	 * falon_id from the image and adding the
+	 * engine-designated falcon instance.*/
+	pmu->pmu_mode |= PMU_SECURE_MODE;
+	falcon_id = ucode_img.lsf_desc->falcon_id +
+		ucode_img.flcn_inst;
 
-				plsfm->managed_flcn_cnt++;
-			} else {
-				gm20b_dbg_pmu("id not managed %d\n",
-					ucode_img.lsf_desc->falcon_id);
-			}
-		}
+	if (!lsfm_falcon_disabled(g, plsfm, falcon_id)) {
+		pmu->falcon_id = falcon_id;
+		if (lsfm_add_ucode_img(g, plsfm, &ucode_img,
+			pmu->falcon_id) == 0)
+			pmu->pmu_mode |= PMU_LSFM_MANAGED;
 
-		/*Free any ucode image resources if not managing this falcon*/
-		if (!(pmu->pmu_mode & PMU_LSFM_MANAGED)) {
-			gm20b_dbg_pmu("pmu is not LSFM managed\n");
-			lsfm_free_ucode_img_res(&ucode_img);
-		}
+		plsfm->managed_flcn_cnt++;
+	} else {
+		gm20b_dbg_pmu("id not managed %d\n",
+			ucode_img.lsf_desc->falcon_id);
+	}
+
+	/*Free any ucode image resources if not managing this falcon*/
+	if (!(pmu->pmu_mode & PMU_LSFM_MANAGED)) {
+		gm20b_dbg_pmu("pmu is not LSFM managed\n");
+		lsfm_free_ucode_img_res(&ucode_img);
 	}
 
 	/* Enumerate all constructed falcon objects,

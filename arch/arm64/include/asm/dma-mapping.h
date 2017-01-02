@@ -21,6 +21,10 @@
 #include <linux/types.h>
 #include <linux/vmalloc.h>
 
+#include <asm-generic/dma-coherent.h>
+
+#include <asm/dma-iommu.h>
+
 #include <xen/xen.h>
 #include <asm/xen/hypervisor.h>
 
@@ -64,6 +68,14 @@ static inline bool is_device_dma_coherent(struct device *dev)
 	return dev->archdata.dma_coherent;
 }
 
+/* do not use this function in a driver */
+static inline bool skip_device_cache_sync(struct device *dev, unsigned long attrs)
+{
+	if (DMA_ATTR_SKIP_CPU_SYNC & attrs)
+		return true;
+	return is_device_dma_coherent(dev);
+}
+
 static inline dma_addr_t phys_to_dma(struct device *dev, phys_addr_t paddr)
 {
 	dma_addr_t dev_addr = (dma_addr_t)paddr;
@@ -99,79 +111,58 @@ static inline unsigned long dma_max_pfn(struct device *dev)
 }
 #define dma_max_pfn(dev) dma_max_pfn(dev)
 
-static inline dma_addr_t dma_iova_alloc_at(struct device *dev, dma_addr_t *addr,
-					   size_t size, struct dma_attrs *attrs)
+#define dma_alloc_at_coherent(d, s, h, f) dma_alloc_at_attrs(d, s, h, f, 0)
+
+static inline void *dma_alloc_at_attrs(struct device *dev, size_t size,
+				       dma_addr_t *dma_handle, gfp_t flags,
+				       unsigned long attrs)
 {
 	struct dma_map_ops *ops = get_dma_ops(dev);
-	BUG_ON(!ops);
+	void *vaddr;
 
-	return ops->iova_alloc_at(dev, addr, size, attrs);
+	vaddr = ops->alloc(dev, size, dma_handle, flags, attrs);
+	debug_dma_alloc_coherent(dev, size, *dma_handle, vaddr);
+	return vaddr;
 }
 
 static inline dma_addr_t
 dma_map_linear_attrs(struct device *dev, phys_addr_t pa, size_t size,
-			enum dma_data_direction dir, struct dma_attrs *attrs)
+			enum dma_data_direction dir, unsigned long attrs)
 {
-	dma_addr_t da, req = pa;
 	void *va = phys_to_virt(pa);
-	DEFINE_DMA_ATTRS(_attrs);
 	struct dma_map_ops *ops = get_dma_ops(dev);
-	dma_addr_t addr;
+	dma_addr_t addr = DMA_ERROR_CODE;
 
-	if (ops && ops->map_at)
-		return ops->map_at(dev, pa, pa, size, dir, attrs);
-
-	da = dma_iova_alloc_at(dev, &req, size, attrs);
-	if (da == DMA_ERROR_CODE) {
-		struct dma_iommu_mapping *map;
-		dma_addr_t end = pa + size;
-		size_t bytes = 0;
-
-		switch (req) {
-		case -ENXIO:
-			map = to_dma_iommu_mapping(dev);
-			dev_info(dev, "Trying to IOVA linear map %pa-%pa outside of as:%pa-%pa\n",
-				 &pa, &end, &map->base, &map->end);
-
-			if ((pa >= map->base) && (pa < map->end)) {
-				req = pa;
-				bytes = map->end - pa;
-			} else if ((end > map->base) && (end <= map->end)) {
-				req = map->base;
-				bytes = end - map->base;
-			}
-
-			/* Partially reserve within IOVA map */
-			if (bytes) {
-				da = dma_iova_alloc_at(dev, &req, bytes, attrs);
-				if (da == DMA_ERROR_CODE)
-					return DMA_ERROR_CODE;
-
-				if (!dma_get_attr(DMA_ATTR_SKIP_CPU_SYNC, attrs))
-					dma_sync_single_for_device(NULL, da, bytes, dir);
-			}
-
-			/* Allow to map outside of map */
-			if (!attrs)
-				attrs = &_attrs;
-			dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, attrs);
-			da = (dma_addr_t)pa;
-			break;
-		case -EINVAL:
-		default:
-			return DMA_ERROR_CODE;
-		}
+	if (!ops || !ops->map_at) {
+		WARN(1, "map_at is not supported\n");
+		return DMA_ERROR_CODE;
 	}
 
-	kmemcheck_mark_initialized(va, size);
-	BUG_ON(!valid_dma_direction(dir));
-	addr = ops->map_page_at(dev, virt_to_page(va), da,
-			     (unsigned long)va & ~PAGE_MASK, size,
-			     dir, attrs);
-	debug_dma_map_page(dev, virt_to_page(va),
-			   (unsigned long)va & ~PAGE_MASK, size,
-			   dir, addr, true);
+	addr = ops->map_at(dev, pa, pa, size, dir, attrs);
+
+	if (addr != DMA_ERROR_CODE) {
+		kmemcheck_mark_initialized(va, size);
+		debug_dma_map_page(dev, virt_to_page(va),
+				   (unsigned long)va & ~PAGE_MASK, size,
+				   dir, addr, true);
+	}
 	return addr;
+}
+
+#define CONFIG_ARM_DMA_USE_IOMMU
+
+#ifdef CONFIG_ARM_DMA_USE_IOMMU
+extern bool device_is_iommuable(struct device *dev);
+#else
+static inline bool device_is_iommuable(struct device *dev)
+{
+	return false;
+}
+#endif
+
+static inline void set_dma_ops(struct device *dev, struct dma_map_ops *ops)
+{
+	dev->archdata.dma_ops = ops;
 }
 
 #endif	/* __KERNEL__ */

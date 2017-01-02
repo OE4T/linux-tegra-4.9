@@ -192,6 +192,21 @@ int tegra_pmc_io_dpd_enable(int reg, int bit_pos);
 int tegra_pmc_io_dpd_disable(int reg, int bit_pos);
 int tegra_pmc_io_dpd_get_status(int reg, int bit_pos);
 
+#if defined(CONFIG_ARCH_TEGRA)
+int tegra_pmc_io_pad_low_power_enable(const char *pad_name);
+int tegra_pmc_io_pad_low_power_disable(const char *pad_name);
+#else
+static inline int tegra_pmc_io_pad_low_power_enable(const char *pad_name)
+{
+	return 0;
+}
+
+static inline int tegra_pmc_io_pad_low_power_disable(const char *pad_name)
+{
+	return 0;
+}
+#endif
+
 /* T210 USB2 SLEEPWALK APIs */
 struct tegra_utmi_pad_config {
 	u32 tctrl;

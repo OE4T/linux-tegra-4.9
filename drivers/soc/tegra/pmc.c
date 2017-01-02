@@ -1325,7 +1325,7 @@ int tegra_pmc_iopower_get_status(int reg, u32 bit_mask)
 EXPORT_SYMBOL(tegra_pmc_iopower_get_status);
 #endif
 
-void tegra_io_dpd_enable(struct tegra_io_dpd *hnd)
+static void _tegra_io_dpd_enable(struct tegra_io_dpd *hnd)
 {
 	unsigned int enable_mask;
 	unsigned int dpd_status;
@@ -2259,6 +2259,47 @@ static int tegra_pmc_io_pads_pinctrl_init(struct tegra_pmc *pmc)
 
 	return 0;
 }
+
+static const struct tegra_pmc_io_pad_soc *tegra_pmc_get_pad_by_name(
+				const char *pad_name)
+{
+	unsigned int i;
+
+	for (i = 0; i < pmc->soc->num_io_pads; ++i) {
+		if (!strcmp(pad_name, pmc->soc->io_pads[i].name))
+			return &pmc->soc->io_pads[i];
+	}
+
+	return NULL;
+}
+
+int tegra_pmc_io_pad_low_power_enable(const char *pad_name)
+{
+	const struct tegra_pmc_io_pad_soc *pad;
+
+	pad = tegra_pmc_get_pad_by_name(pad_name);
+	if (!pad) {
+		dev_err(pmc->dev, "IO Pad %s not found\n", pad_name);
+		return -EINVAL;
+	}
+
+	return tegra_pmc_io_pad_power_enable(pad);
+}
+EXPORT_SYMBOL(tegra_pmc_io_pad_low_power_enable);
+
+int tegra_pmc_io_pad_low_power_disable(const char *pad_name)
+{
+	const struct tegra_pmc_io_pad_soc *pad;
+
+	pad = tegra_pmc_get_pad_by_name(pad_name);
+	if (!pad) {
+		dev_err(pmc->dev, "IO Pad %s not found\n", pad_name);
+		return -EINVAL;
+	}
+
+	return tegra_pmc_io_pad_power_disable(pad);
+}
+EXPORT_SYMBOL(tegra_pmc_io_pad_low_power_disable);
 
 static int tegra_pmc_parse_dt(struct tegra_pmc *pmc, struct device_node *np)
 {

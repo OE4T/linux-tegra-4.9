@@ -22,6 +22,7 @@
 #include <linux/platform_device.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <linux/of_platform.h>
 #include <linux/io.h>
 
 #include <soc/tegra/common.h>
@@ -160,6 +161,10 @@ static int tegra_fuse_probe(struct platform_device *pdev)
 	if (tegra_fuse_create_sysfs(&pdev->dev, fuse->soc->info->size,
 				    fuse->soc->info))
 		return -ENODEV;
+
+	err = of_platform_default_populate(pdev->dev.of_node, NULL, &pdev->dev);
+	if (err < 0)
+		dev_dbg(&pdev->dev, "fuse child node not available\n");
 
 	/* release the early I/O memory mapping */
 	iounmap(base);

@@ -5,7 +5,7 @@
  * Author: Mike Rapoport <mike@compulab.co.il>
  *
  * Based on NVIDIA PCIe driver
- * Copyright (c) 2008-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2008-2017, NVIDIA Corporation. All rights reserved.
  *
  * Bits taken from arch/arm/mach-dove/pcie.c
  *
@@ -2623,15 +2623,6 @@ static int tegra_pcie_scale_voltage(struct tegra_pcie *pcie)
 			dvfs_data[active_lanes][is_gen2].afi_clk, err);
 		return err;
 	}
-	dev_dbg(pcie->dev, "emc_clk is set @ %u\n",
-		dvfs_data[active_lanes][is_gen2].emc_clk);
-	err = clk_set_rate(clk_get_sys("tegra_pcie", "emc"),
-		dvfs_data[active_lanes][is_gen2].emc_clk);
-	if (err) {
-		dev_err(pcie->dev, "setting emc clk to %u failed : %d\n",
-			dvfs_data[active_lanes][is_gen2].emc_clk, err);
-		return err;
-	}
 #else
 	dev_dbg(pcie->dev, "afi_clk is set @ %u\n",
 		dvfs_data[active_lanes][is_gen2].afi_clk);
@@ -2642,6 +2633,7 @@ static int tegra_pcie_scale_voltage(struct tegra_pcie *pcie)
 			dvfs_data[active_lanes][is_gen2].afi_clk, err);
 		return err;
 	}
+#endif
 	dev_dbg(pcie->dev, "emc_clk is set @ %u\n",
 		dvfs_data[active_lanes][is_gen2].emc_clk);
 	err = tegra_bwmgr_set_emc(pcie->emc_bwmgr,
@@ -2652,7 +2644,7 @@ static int tegra_pcie_scale_voltage(struct tegra_pcie *pcie)
 			dvfs_data[active_lanes][is_gen2].emc_clk, err);
 		return err;
 	}
-#endif
+
 	return err;
 }
 

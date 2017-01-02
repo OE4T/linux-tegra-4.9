@@ -29,7 +29,6 @@
 #include <linux/bootmem.h>
 
 #include <linux/platform/tegra/latency_allowance.h>
-#include <linux/platform/tegra/io-dpd.h>
 
 #include "dc.h"
 #include "board.h"
@@ -299,14 +298,6 @@ int tegra_dvfs_set_rate(struct clk *c, unsigned long rate)
 int tegra_dvfs_use_alt_freqs_on_clk(struct clk *c, bool use_alt_freq)
 {
 	return 0;
-}
-
-void tegra_io_dpd_enable(struct tegra_io_dpd *hnd)
-{
-}
-
-void tegra_io_dpd_disable(struct tegra_io_dpd *hnd)
-{
 }
 
 int tegra_panel_gpio_get_dt(const char *comp_str,

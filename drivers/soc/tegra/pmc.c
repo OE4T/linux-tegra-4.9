@@ -46,7 +46,6 @@
 #include <linux/spinlock.h>
 #include <linux/tegra_prod.h>
 #include <linux/tegra-soc.h>
-#include <linux/platform/tegra/io-dpd.h>
 #include <linux/notifier.h>
 #include <linux/regulator/consumer.h>
 
@@ -1354,7 +1353,6 @@ static void _tegra_io_dpd_enable(struct tegra_io_dpd *hnd)
 	tegra_pmc_writel(0x0, DPD_SAMPLE);
 	spin_unlock(&tegra_io_dpd_lock);
 }
-EXPORT_SYMBOL(tegra_io_dpd_enable);
 
 int tegra_pmc_io_dpd_enable(int reg, int bit_pos)
 {
@@ -1362,12 +1360,12 @@ int tegra_pmc_io_dpd_enable(int reg, int bit_pos)
 
         io_dpd.io_dpd_bit = bit_pos;
         io_dpd.io_dpd_reg_index = reg;
-        tegra_io_dpd_enable(&io_dpd);
+        _tegra_io_dpd_enable(&io_dpd);
         return 0;
 }
 EXPORT_SYMBOL(tegra_pmc_io_dpd_enable);
 
-void tegra_io_dpd_disable(struct tegra_io_dpd *hnd)
+static void _tegra_io_dpd_disable(struct tegra_io_dpd *hnd)
 {
 	unsigned int enable_mask;
 	unsigned int dpd_status;
@@ -1390,7 +1388,6 @@ void tegra_io_dpd_disable(struct tegra_io_dpd *hnd)
 	}
 	spin_unlock(&tegra_io_dpd_lock);
 }
-EXPORT_SYMBOL(tegra_io_dpd_disable);
 
 int tegra_pmc_io_dpd_disable(int reg, int bit_pos)
 {
@@ -1398,7 +1395,7 @@ int tegra_pmc_io_dpd_disable(int reg, int bit_pos)
 
         io_dpd.io_dpd_bit = bit_pos;
         io_dpd.io_dpd_reg_index = reg;
-        tegra_io_dpd_disable(&io_dpd);
+        _tegra_io_dpd_disable(&io_dpd);
         return 0;
 }
 EXPORT_SYMBOL(tegra_pmc_io_dpd_disable);
@@ -1416,7 +1413,7 @@ int tegra_pmc_io_dpd_get_status(int reg, int bit_pos)
 EXPORT_SYMBOL(tegra_pmc_io_dpd_get_status);
 
 /* cleans io dpd settings from bootloader during kernel init */
-void tegra_bl_io_dpd_cleanup(void)
+static void _tegra_bl_io_dpd_cleanup(void)
 {
 	int i;
 	unsigned int dpd_mask;
@@ -1435,11 +1432,10 @@ void tegra_bl_io_dpd_cleanup(void)
 	}
 	return;
 }
-EXPORT_SYMBOL(tegra_bl_io_dpd_cleanup);
 
 void tegra_pmc_io_dpd_clear(void)
 {
-	tegra_bl_io_dpd_cleanup();
+	_tegra_bl_io_dpd_cleanup();
 }
 EXPORT_SYMBOL(tegra_pmc_io_dpd_clear);
 
@@ -2594,6 +2590,39 @@ static int tegra_pmc_resume(struct device *dev)
 
 static SIMPLE_DEV_PM_OPS(tegra_pmc_pm_ops, tegra_pmc_suspend, tegra_pmc_resume);
 
+#endif
+
+#ifdef CONFIG_TEGRA_POWERGATE
+#define TEGRA_POWERGATE_CPU     0
+#define TEGRA_POWERGATE_3D      1
+#define TEGRA_POWERGATE_VENC    2
+#define TEGRA_POWERGATE_PCIE    3
+#define TEGRA_POWERGATE_VDEC    4
+#define TEGRA_POWERGATE_L2      5
+#define TEGRA_POWERGATE_MPE     6
+#define TEGRA_POWERGATE_HEG     7
+#define TEGRA_POWERGATE_SATA    8
+#define TEGRA_POWERGATE_CPU1    9
+#define TEGRA_POWERGATE_CPU2    10
+#define TEGRA_POWERGATE_CPU3    11
+#define TEGRA_POWERGATE_CELP    12
+#define TEGRA_POWERGATE_3D1     13
+#define TEGRA_POWERGATE_CPU0    14
+#define TEGRA_POWERGATE_C0NC    15
+#define TEGRA_POWERGATE_C1NC    16
+#define TEGRA_POWERGATE_SOR     17
+#define TEGRA_POWERGATE_DIS     18
+#define TEGRA_POWERGATE_DISB    19
+#define TEGRA_POWERGATE_XUSBA   20
+#define TEGRA_POWERGATE_XUSBB   21
+#define TEGRA_POWERGATE_XUSBC   22
+#define TEGRA_POWERGATE_VIC     23
+#define TEGRA_POWERGATE_IRAM    24
+#define TEGRA_POWERGATE_NVDEC   25
+#define TEGRA_POWERGATE_NVJPG   26
+#define TEGRA_POWERGATE_AUD     27
+#define TEGRA_POWERGATE_DFD     28
+#define TEGRA_POWERGATE_VE2     29
 #endif
 
 static const char * const tegra20_powergates[] = {

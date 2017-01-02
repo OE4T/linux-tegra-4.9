@@ -43,6 +43,7 @@ int tegra_pmc_cpu_remove_clamping(unsigned int cpuid);
  * powergate and I/O rail APIs
  */
 
+#ifndef CONFIG_TEGRA_POWERGATE
 #define TEGRA_POWERGATE_CPU	0
 #define TEGRA_POWERGATE_3D	1
 #define TEGRA_POWERGATE_VENC	2
@@ -74,6 +75,7 @@ int tegra_pmc_cpu_remove_clamping(unsigned int cpuid);
 #define TEGRA_POWERGATE_DFD	28
 #define TEGRA_POWERGATE_VE2	29
 #define TEGRA_POWERGATE_MAX	TEGRA_POWERGATE_VE2
+#endif 
 
 #define TEGRA_POWERGATE_3D0	TEGRA_POWERGATE_3D
 
@@ -222,4 +224,22 @@ int tegra_pmc_hsic_phy_disable_sleepwalk(int port);
 void tegra_pmc_fuse_control_ps18_latch_set(void);
 void tegra_pmc_fuse_control_ps18_latch_clear(void);
 
+
+/* Legacy APIs for IO DPD enable/disable */
+/* Tegra io dpd entry - for each supported driver */
+struct tegra_io_dpd {
+        const char *name;       /* driver name */
+        u8 io_dpd_reg_index;    /* io dpd register index */
+        u8 io_dpd_bit;          /* bit position for driver in dpd register */
+};
+
+static inline void tegra_io_dpd_enable(struct tegra_io_dpd *hnd)
+{
+	tegra_pmc_io_pad_low_power_enable(hnd->name);
+}
+
+static inline void tegra_io_dpd_disable(struct tegra_io_dpd *hnd)
+{
+	tegra_pmc_io_pad_low_power_disable(hnd->name);
+}
 #endif /* __SOC_TEGRA_PMC_H__ */

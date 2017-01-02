@@ -594,6 +594,7 @@
 
 	sdhci@3440000 {
 		uhs-mask = <0x8>;
+		only-1-8-v;
 		status = "disabled";
 	};
 

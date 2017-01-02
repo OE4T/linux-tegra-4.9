@@ -639,7 +639,11 @@ static struct of_device_id tegra_flcn_of_match[] = {
 #endif
 #if defined(CONFIG_TEGRA_GRHOST_NVENC)
 	{ .compatible = "nvidia,tegra194-nvenc",
-		.data = (struct nvhost_device_data *)&t19_msenc_info },
+		.data = (struct nvhost_device_data *)&t19_msenc_info,
+		.name = "nvenc" },
+	{ .compatible = "nvidia,tegra194-nvenc",
+		.data = (struct nvhost_device_data *)&t19_nvenc1_info,
+		.name = "nvenc1" },
 #endif
 #endif
 	{ },
@@ -768,6 +772,12 @@ static struct of_device_id tegra_flcn_domain_match[] = {
 #if defined(CONFIG_TEGRA_GRHOST_NVJPG)
 	{.compatible = "nvidia,tegra186-nvjpg-pd",
 	 .data = (struct nvhost_device_data *)&t18_nvjpg_info},
+#endif
+#endif
+#ifdef CONFIG_ARCH_TEGRA_19x_SOC
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
+	{.compatible = "nvidia,tegra186-nvenc1-pd",
+	 .data = (struct nvhost_device_data *)&t19_nvenc1_info},
 #endif
 #endif
 	{},

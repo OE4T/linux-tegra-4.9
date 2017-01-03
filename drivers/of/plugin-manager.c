@@ -424,8 +424,8 @@ err_fail_name:
 	return NULL;
 }
 
-static int __init do_property_override_from_overlay(struct device_node *target,
-						    struct device_node *overlay)
+static int do_property_override_from_overlay(struct device_node *target,
+					     struct device_node *overlay)
 {
 	struct property *prop;
 	struct property *tprop;
@@ -624,8 +624,8 @@ match_type_done:
 	return false;
 }
 
-static int __init do_property_overrides(struct device_node *target,
-					struct device_node *overlay)
+static int do_property_overrides(struct device_node *target,
+				 struct device_node *overlay)
 {
 	struct device_node *tchild, *ochild;
 	const char *address_name;

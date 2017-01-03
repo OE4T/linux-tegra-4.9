@@ -12,7 +12,7 @@
  */
 
 #include <linux/padctrl/padctrl.h>
-#include <linux/tegra-pmc.h>
+#include <soc/tegra/pmc.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <dt-bindings/padctrl/tegra186-pads.h>

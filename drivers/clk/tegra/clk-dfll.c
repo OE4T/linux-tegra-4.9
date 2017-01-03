@@ -138,7 +138,6 @@
 
 /* DFLL_MONITOR_CTRL: internal monitor data source control */
 #define DFLL_MONITOR_CTRL		0x28
-#define DFLL_MONITOR_CTRL_FREQ		6
 
 /* DFLL_MONITOR_DATA: internal monitor data output */
 #define DFLL_MONITOR_DATA		0x2c
@@ -373,6 +372,11 @@ struct tegra_dfll {
 
 };
 
+enum dfll_monitor_mode {
+	DFLL_OUTPUT_VALUE = 5,
+	DFLL_FREQ = 6,
+};
+
 #define clk_hw_to_dfll(_hw) container_of(_hw, struct tegra_dfll, dfll_clk_hw)
 
 /* mode_name: map numeric DFLL modes to names for friendly console messages */
@@ -420,6 +424,14 @@ static inline void dfll_i2c_writel(struct tegra_dfll *td, u32 val, u32 offs)
 static inline void dfll_i2c_wmb(struct tegra_dfll *td)
 {
 	dfll_i2c_readl(td, DFLL_I2C_CFG);
+}
+
+static inline void dfll_set_monitor_mode(struct tegra_dfll *td,
+					 enum dfll_monitor_mode mode)
+{
+	dfll_writel(td, mode, DFLL_MONITOR_CTRL);
+	dfll_wmb(td);
+	udelay(1);
 }
 
 /**
@@ -1726,7 +1738,7 @@ static void dfll_set_default_params(struct tegra_dfll *td)
 
 	dfll_tune_low(td);
 	dfll_writel(td, td->droop_ctrl, DFLL_DROOP_CTRL);
-	dfll_writel(td, DFLL_MONITOR_CTRL_FREQ, DFLL_MONITOR_CTRL);
+	dfll_set_monitor_mode(td, DFLL_FREQ);
 }
 
 /**

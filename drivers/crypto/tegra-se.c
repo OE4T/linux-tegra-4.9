@@ -3512,9 +3512,9 @@ static struct platform_driver tegra_se_driver = {
 	.driver = {
 		.name   = "tegra-se",
 		.owner  = THIS_MODULE,
+		.of_match_table = of_match_ptr(tegra_se_of_match),
 #if defined(CONFIG_PM)
 		.pm = &tegra_se_dev_pm_ops,
-		.of_match_table = of_match_ptr(tegra_se_of_match),
 #endif
 	},
 };

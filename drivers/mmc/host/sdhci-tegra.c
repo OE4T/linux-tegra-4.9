@@ -166,6 +166,7 @@ struct sdhci_tegra {
 	unsigned long max_ddr_clk_limit;
 	struct tegra_prod *prods;
 	u8 tuned_tap_delay;
+	bool rate_change_needs_clk;
 	unsigned int tuning_status;
 	#define TUNING_STATUS_DONE	1
 	#define TUNING_STATUS_RETUNE	2
@@ -757,6 +758,8 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 	host_clk = tegra_sdhci_apply_clk_limits(host, clock);
 
 	if (clock) {
+		if (!tegra_host->rate_change_needs_clk)
+			tegra_sdhci_set_clk_rate(host, clock);
 		/* Enable SDMMC host CAR clock */
 		if (!tegra_host->is_clk_enabled) {
 			rc = clk_prepare_enable(pltfm_host->clk);
@@ -776,7 +779,8 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 		}
 
 		/* Set the desired clk freq rate */
-		tegra_sdhci_set_clk_rate(host, host_clk);
+		if (tegra_host->rate_change_needs_clk)
+			tegra_sdhci_set_clk_rate(host, host_clk);
 		host->max_clk = clk_get_rate(pltfm_host->clk);
 		dev_dbg(mmc_dev(host->mmc), "req clk %lu, set clk %d\n",
 			host_clk, host->max_clk);
@@ -1415,6 +1419,9 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 		else if (val == 3)
 			host->ocr_mask &= (MMC_VDD_33_34 | MMC_VDD_165_195);
 	}
+	tegra_host->rate_change_needs_clk = of_property_read_bool(np,
+		"nvidia,rate-change-needs-clock-enabled");
+
 	return 0;
 }
 

@@ -157,12 +157,12 @@
 				vbus-supply = <&vdd_usb2_5v>;
 			};
 			usb3-0 {
-				nvidia,usb2-companion = <1>;
-				status = "okay";
-			};
-			usb3-1 {
 				nvidia,usb2-companion = <2>;
 				status = "disabled";
+			};
+			usb3-1 {
+				nvidia,usb2-companion = <1>;
+				status = "okay";
 			};
 			usb3-2 {
 				status = "disabled";
@@ -179,8 +179,8 @@
 	xhci@3530000 {
 		nvidia,xusb-padctl = <&xusb_padctl>;
 		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
-			<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-0}>;
-		phy-names = "usb2-1", "usb3-0";
+			<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-1}>;
+		phy-names = "usb2-1", "usb3-1";
 	};
 
 	plugin-manager {
@@ -195,7 +195,7 @@
 						usb2-2 {
 							status = "okay";
 						};
-						usb3-1 {
+						usb3-0 {
 							status = "okay";
 						};
 					};
@@ -224,9 +224,19 @@
 					phy-names = "usb2-1", "usb3-0";
 				};
 			};
-
 			override@1 {
-				status = "disabled";
+				target = <&xusb_padctl>;
+				_overlay_ {
+					ports {
+						usb3-1 {
+							status = "disabled";
+						};
+						usb3-0 {
+							nvidia,usb2-companion = <1>;
+							status = "okay";
+						};
+					};
+				};
 			};
 		};
 

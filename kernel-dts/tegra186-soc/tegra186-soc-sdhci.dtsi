@@ -29,6 +29,7 @@
 		interrupts = < 0 65 0x04>;
 		max-clk-limit = <196249804>;
                 ddr-clk-limit = <48000000>;
+		nvidia,rate-change-needs-clock-enabled;
 		tap-delay = <9>;
 		trim-delay = <5>;
 		nvidia,ddr-tap-delay = <9>;

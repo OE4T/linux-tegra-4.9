@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisplay/nvdisp.c
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -3017,3 +3017,12 @@ void reg_dump(struct tegra_dc *dc, void *data,
 	mutex_unlock(&dc->lock);
 }
 
+void tegra_dc_populate_t18x_hw_data(struct tegra_dc_hw_data *hw_data)
+{
+	if (!hw_data)
+		return;
+
+	hw_data->nheads = 4;
+	hw_data->nwins = 6;
+	hw_data->valid = true;
+}

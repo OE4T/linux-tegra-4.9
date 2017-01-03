@@ -4,7 +4,7 @@
  *
  * Support for Tegra Security Engine hardware crypto algorithms.
  *
- * Copyright (c) 2011-2016, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2011-2017, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1320,7 +1320,7 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 
 	if (se_dev->chipdata->drbg_src_entropy_clk_enable) {
 		/* enable clock for entropy */
-		ret = clk_enable(se_dev->enclk);
+		ret = clk_prepare_enable(se_dev->enclk);
 		if (ret) {
 			dev_err(se_dev->dev, "entropy clock enable failed\n");
 			return ret;
@@ -1360,7 +1360,7 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 	}
 
 	if (se_dev->chipdata->drbg_src_entropy_clk_enable)
-		clk_disable(se_dev->enclk);
+		clk_disable_unprepare(se_dev->enclk);
 
 	pm_runtime_put(se_dev->dev);
 	mutex_unlock(&se_hw_lock);
@@ -2969,7 +2969,7 @@ static int tegra_se_generate_srk(struct tegra_se_dev *se_dev)
 
 	if (se_dev->chipdata->drbg_src_entropy_clk_enable) {
 		/* enable clock for entropy */
-		ret = clk_enable(se_dev->enclk);
+		ret = clk_prepare_enable(se_dev->enclk);
 		if (ret) {
 			dev_err(se_dev->dev, "entropy clock enable failed\n");
 			return ret;
@@ -3016,7 +3016,7 @@ static int tegra_se_generate_srk(struct tegra_se_dev *se_dev)
 	ret = tegra_se_start_operation(se_dev, TEGRA_SE_KEY_128_SIZE, false, true);
 
 	if (se_dev->chipdata->drbg_src_entropy_clk_enable)
-		clk_disable(se_dev->enclk);
+		clk_disable_unprepare(se_dev->enclk);
 
 	pm_runtime_put(se_dev->dev);
 	mutex_unlock(&se_hw_lock);
@@ -3035,7 +3035,7 @@ static int tegra_se_lp_generate_random_data(struct tegra_se_dev *se_dev)
 
 	if (se_dev->chipdata->drbg_src_entropy_clk_enable) {
 		/* enable clock for entropy */
-		ret = clk_enable(se_dev->enclk);
+		ret = clk_prepare_enable(se_dev->enclk);
 		if (ret) {
 			dev_err(se_dev->dev, "entropy clock enable failed\n");
 			return ret;
@@ -3072,7 +3072,7 @@ static int tegra_se_lp_generate_random_data(struct tegra_se_dev *se_dev)
 			SE_CONTEXT_SAVE_RANDOM_DATA_SIZE, false, true);
 
 	if (se_dev->chipdata->drbg_src_entropy_clk_enable)
-		clk_disable(se_dev->enclk);
+		clk_disable_unprepare(se_dev->enclk);
 
 	pm_runtime_put(se_dev->dev);
 	mutex_unlock(&se_hw_lock);

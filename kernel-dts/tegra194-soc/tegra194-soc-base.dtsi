@@ -52,6 +52,7 @@
 			compatible = "nvidia,gosmem";
 			no-map;
 			status = "okay";
+			cvdevs = <&nvdla0 &nvdla1 &pva0 &pva1>;
 		};
 
 	};
@@ -324,7 +325,7 @@
 			#stream-id-cells = <1>;
 		};
 
-		nvdla0@15880000 {
+		nvdla0: nvdla0@15880000 {
 			compatible = "nvidia,tegra194-nvdla";
 			reg = <0x0 0x15880000 0x0 0x00040000>;
 			interrupts = <0 236 0x04>;
@@ -337,7 +338,7 @@
 			#stream-id-cells = <1>;
 		};
 
-		nvdla1@158c0000 {
+		nvdla1: nvdla1@158c0000 {
 			compatible = "nvidia,tegra194-nvdla";
 			reg = <0x0 0x158c0000 0x0 0x00040000>;
 			interrupts = <0 237 0x04>;
@@ -515,7 +516,7 @@
 			#stream-id-cells = <1>;
 		};
 
-		pva0 {
+		pva0: pva0 {
 			compatible = "nvidia,tegra194-pva";
 			reg = <0x0 0x16000000 0x0 0x800000>;
 			interrupts = <0 234 0x04>;
@@ -529,7 +530,7 @@
 			#stream-id-cells = <1>;
 		};
 
-		pva1 {
+		pva1: pva1 {
 			compatible = "nvidia,tegra194-pva";
 			reg = <0x0 0x16800000 0x0 0x800000>;
 			interrupts = <0 235 0x04>;

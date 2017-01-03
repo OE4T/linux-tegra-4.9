@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -15,6 +15,7 @@
  */
 
 #include <linux/completion.h>
+#include <linux/debugfs.h>
 #include <linux/dma-mapping.h>
 #include <linux/io.h>
 #include <linux/ioport.h>
@@ -24,12 +25,13 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_reserved_mem.h>
-#include <linux/slab.h>
-#include <linux/workqueue.h>
-#include <linux/tegra_ast.h>
-#include <linux/debugfs.h>
+#include <linux/printk.h>
 #include <linux/seq_buf.h>
+#include <linux/slab.h>
+#include <linux/tegra_ast.h>
+#include <linux/tegra-camera-rtcpu.h>
 #include <linux/tegra-rtcpu-trace.h>
+#include <linux/workqueue.h>
 #include <asm/cacheflush.h>
 
 #include "soc/tegra/camrtc-trace.h"
@@ -89,6 +91,9 @@ struct tegra_rtcpu_trace {
 
 	/* debugfs */
 	struct dentry *debugfs_root;
+
+	u32 printk_used;
+	char printk[EXCEPTION_STR_LENGTH];
 };
 
 /*
@@ -665,7 +670,58 @@ static void rtcpu_trace_array_event(struct camrtc_event_struct *event)
 	}
 }
 
-static void rtcpu_trace_event(struct camrtc_event_struct *event)
+static void trace_rtcpu_log(struct tegra_rtcpu_trace *tracer,
+			struct camrtc_event_struct *event)
+{
+	size_t len, used;
+
+	if (event->header.id != camrtc_trace_type_string)
+		return;
+
+	len = event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE;
+
+	if (len == CAMRTC_TRACE_EVENT_PAYLOAD_SIZE)
+		/* Ignore NULs at the end of buffer */
+		len = strnlen(event->data.data8, len);
+
+	used = tracer->printk_used;
+
+	if (used + len > sizeof(tracer->printk)) {
+		/* Too long concatenated message, print it out now */
+		pr_info("RTCPU: %.*s\n", (int)used, tracer->printk);
+		used = 0;
+	}
+
+	memcpy(tracer->printk + used, event->data.data8, len);
+
+	used += len;
+
+	if (used > 0) {
+		char end = tracer->printk[used - 1];
+
+		/*
+		 * Some messsages from rtcpu consists of multiple
+		 * messages.  If the string does not end with \r or
+		 * \n, do not print it now but rather wait for the
+		 * next piece.
+		 */
+		if (end == '\r' || end == '\n') {
+			while (--used > 0) {
+				end = tracer->printk[used - 1];
+				if (!(end == '\r' || end == '\n'))
+					break;
+			}
+
+			pr_info("RTCPU: %.*s\n", (int)used, tracer->printk);
+			used = 0;
+		}
+	}
+
+	tracer->printk_used = used;
+}
+
+static void rtcpu_trace_event(struct tegra_rtcpu_trace *tracer,
+			struct camrtc_event_struct *event)
 {
 	switch (CAMRTC_EVENT_TYPE_FROM_ID(event->header.id)) {
 	case CAMRTC_EVENT_TYPE_ARRAY:
@@ -686,7 +742,8 @@ static void rtcpu_trace_event(struct camrtc_event_struct *event)
 		    event->header.id,
 			  event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
 			  (char *) event->data.data8);
-		  break;
+		trace_rtcpu_log(tracer, event);
+		break;
 	case CAMRTC_EVENT_TYPE_BULK:
 		trace_rtcpu_bulk(event->header.tstamp,
 		    event->header.id,
@@ -764,7 +821,7 @@ static void rtcpu_trace_worker(struct work_struct *work)
 		event = tracer->event_next;
 
 		while (old_next != new_next) {
-			rtcpu_trace_event(event);
+			rtcpu_trace_event(tracer, event);
 			++tracer->n_events;
 
 			last_event = event;

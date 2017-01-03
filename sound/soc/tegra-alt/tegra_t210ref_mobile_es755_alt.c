@@ -26,7 +26,7 @@
 #include <linux/delay.h>
 #include <linux/sysedp.h>
 #include <linux/input.h>
-#include <linux/tegra-pmc.h>
+#include <soc/tegra/pmc.h>
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif

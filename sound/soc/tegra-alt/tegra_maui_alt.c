@@ -24,7 +24,7 @@
 #include <linux/of_gpio.h>
 #include <linux/i2c.h>
 #include <linux/regulator/consumer.h>
-#include <linux/tegra-pmc.h>
+#include <soc/tegra/pmc.h>
 #include <linux/pm_runtime.h>
 
 #include <sound/core.h>

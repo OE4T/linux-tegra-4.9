@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/scrncapt.c
  *
- * Copyright (c) 2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Sungwook Kim <sungwookk@nvidia.com>
  *
@@ -642,13 +642,13 @@ static void  tegra_dc_scrncapt_timer_cb(unsigned long arg)
 
 int  tegra_dc_scrncapt_init(void)
 {
-	int  i;
+	int  i, heads = tegra_dc_get_max_heads();
 
 	pr_info("scrncapt: init (heads:%d wins:%d planes:%d)\n",
-		TEGRA_MAX_DC, DC_N_WINDOWS, TEGRA_DC_NUM_PLANES);
+		heads, DC_N_WINDOWS, TEGRA_DC_NUM_PLANES);
 	memset(&scrncapt, 0, sizeof(scrncapt));
 	mutex_init(&scrncapt.lock);
-	for (i = 0; i < TEGRA_MAX_DC; i++)
+	for (i = 0; i < heads; i++)
 		init_rwsem(&scrncapt.rwsema_head[i]);
 	init_timer(&scrncapt.tmr_resume);
 	scrncapt.tmr_resume.function = &tegra_dc_scrncapt_timer_cb;

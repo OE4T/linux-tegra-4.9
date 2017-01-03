@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -6555,11 +6555,59 @@ EXPORT_SYMBOL(tegra_dc_unregister_isr_usr_cb);
 
 #endif /* TEGRA_DC_USR_SHARED_IRQ */
 
-static struct of_device_id tegra_display_of_match[] = {
-	{.compatible = "nvidia,tegra210-dc", },
-	{.compatible = "nvidia,tegra186-dc", },
+static struct tegra_dc_hw_data *hw_data;
+static struct tegra_dc_hw_data t21x_hw_data;
+static struct tegra_dc_hw_data t18x_hw_data;
+
+static const struct of_device_id tegra_display_of_match[] = {
+	{.compatible = "nvidia,tegra210-dc", .data = &t21x_hw_data },
+	{.compatible = "nvidia,tegra186-dc", .data = &t18x_hw_data },
 	{ },
 };
+
+inline int tegra_dc_get_max_heads(void)
+{
+	if (!hw_data || !hw_data->valid)
+		return -ENODEV;
+
+	return hw_data->nheads;
+}
+
+static int tegra_dc_assign_hw_data(void)
+{
+	const struct of_device_id *match = NULL;
+
+	if (hw_data) {
+		pr_warn("%s: hw data already assigned\n", __func__);
+		return 0;
+	}
+
+	of_find_matching_node_and_match(NULL, tegra_display_of_match, &match);
+	if (!match) {
+		pr_err("%s: no matching compatible node\n", __func__);
+		return -ENODEV;
+	}
+
+	hw_data = (struct tegra_dc_hw_data *)match->data;
+	if (!hw_data->valid) {
+		hw_data = NULL;
+		pr_err("%s: hw_data is not valid for %s\n", __func__,
+			match->compatible);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+void tegra_dc_populate_t21x_hw_data(struct tegra_dc_hw_data *hw_data)
+{
+	if (!hw_data)
+		return;
+
+	hw_data->nheads = 2;
+	hw_data->nwins = 5;
+	hw_data->valid = true;
+}
 
 static struct platform_driver tegra_dc_driver = {
 	.driver = {
@@ -6580,9 +6628,19 @@ static struct platform_driver tegra_dc_driver = {
 
 static int __init tegra_dc_module_init(void)
 {
-	int ret = tegra_dc_ext_module_init();
+	int ret;
+
+	tegra_dc_populate_t21x_hw_data(&t21x_hw_data);
+	tegra_dc_populate_t18x_hw_data(&t18x_hw_data);
+
+	ret = tegra_dc_assign_hw_data();
 	if (ret)
 		return ret;
+
+	ret = tegra_dc_ext_module_init();
+	if (ret)
+		return ret;
+
 	return platform_driver_register(&tegra_dc_driver);
 }
 

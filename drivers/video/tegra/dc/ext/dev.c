@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/dev.c
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  * Some code based on fbdev extensions written by:
@@ -3237,7 +3237,13 @@ void tegra_dc_ext_unregister(struct tegra_dc_ext *ext)
 
 int __init tegra_dc_ext_module_init(void)
 {
-	int ret;
+	int ret, heads = tegra_dc_get_max_heads();
+
+	if (heads <= 0) {
+		pr_err("%s: max heads:%d cannot be negative or zero\n",
+			__func__, heads);
+		return -EINVAL;
+	}
 
 	tegra_dc_ext_class = class_create(THIS_MODULE, "tegra_dc_ext");
 	if (!tegra_dc_ext_class) {
@@ -3247,7 +3253,7 @@ int __init tegra_dc_ext_module_init(void)
 
 	/* Reserve one character device per head, plus the control device */
 	ret = alloc_chrdev_region(&tegra_dc_ext_devno,
-				  0, TEGRA_MAX_DC + 1,
+				  0, heads + 1,
 				  "tegra_dc_ext");
 	if (ret)
 		goto cleanup_class;
@@ -3261,7 +3267,7 @@ int __init tegra_dc_ext_module_init(void)
 	return 0;
 
 cleanup_region:
-	unregister_chrdev_region(tegra_dc_ext_devno, TEGRA_MAX_DC);
+	unregister_chrdev_region(tegra_dc_ext_devno, heads);
 
 cleanup_class:
 	class_destroy(tegra_dc_ext_class);
@@ -3272,6 +3278,6 @@ cleanup_class:
 void __exit tegra_dc_ext_module_exit(void)
 {
 	tegra_dc_scrncapt_exit();
-	unregister_chrdev_region(tegra_dc_ext_devno, TEGRA_MAX_DC);
+	unregister_chrdev_region(tegra_dc_ext_devno, tegra_dc_get_max_heads());
 	class_destroy(tegra_dc_ext_class);
 }

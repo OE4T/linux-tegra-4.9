@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -751,6 +751,12 @@ void tegra_nvdisp_vrr_work(struct work_struct *work);
 int tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc);
 int tegra_nvdisp_set_ocsc(struct tegra_dc *dc, struct tegra_dc_mode *mode);
 #endif
+
+int tegra_dc_get_max_heads(void);
+void __attribute__((weak)) tegra_dc_populate_t21x_hw_data(
+	struct tegra_dc_hw_data *);
+void __attribute__((weak)) tegra_dc_populate_t18x_hw_data(
+	struct tegra_dc_hw_data *);
 
 int tegra_fb_release_fbmem(struct tegra_fb_info *);
 #endif

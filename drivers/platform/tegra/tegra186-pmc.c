@@ -23,7 +23,7 @@
 #include <linux/of_device.h>
 #include <linux/of_address.h>
 #include <linux/export.h>
-#include <linux/tegra-pmc.h>
+#include <soc/tegra/pmc.h>
 #include <linux/tegra_prod.h>
 #include <iomap.h>
 

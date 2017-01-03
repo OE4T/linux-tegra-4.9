@@ -26,7 +26,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/module.h>
 #include <linux/padctrl/padctrl.h>
-#include <linux/tegra-pmc.h>
+#include <soc/tegra/pmc.h>
 
 #define PMC_PWR_NO_IOPOWER	0x34
 

@@ -28,8 +28,8 @@
 #include <scsi/scsi_device.h>
 #include <scsi/scsi_cmnd.h>
 #include <linux/tegra-powergate.h>
-#include <linux/tegra-pmc.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/pmc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/tegra_prod.h>
 #include <linux/pm.h>
 #include <linux/pm_runtime.h>

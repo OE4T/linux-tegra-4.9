@@ -43,7 +43,6 @@ int tegra_pmc_cpu_remove_clamping(unsigned int cpuid);
  * powergate and I/O rail APIs
  */
 
-#ifndef CONFIG_TEGRA_POWERGATE
 #define TEGRA_POWERGATE_CPU	0
 #define TEGRA_POWERGATE_3D	1
 #define TEGRA_POWERGATE_VENC	2
@@ -75,7 +74,6 @@ int tegra_pmc_cpu_remove_clamping(unsigned int cpuid);
 #define TEGRA_POWERGATE_DFD	28
 #define TEGRA_POWERGATE_VE2	29
 #define TEGRA_POWERGATE_MAX	TEGRA_POWERGATE_VE2
-#endif 
 
 #define TEGRA_POWERGATE_3D0	TEGRA_POWERGATE_3D
 
@@ -167,17 +165,11 @@ static inline int tegra_io_rail_power_off(unsigned int id)
 	return -ENOSYS;
 }
 
-static inline int tegra_pmc_set_reboot_reason(u32 reboot_reason)
-{
-	return -ENOTSUPP;
-}
-
-static inline int tegra_pmc_clear_reboot_reason(u32 reboot_reason)
-{
-	return -ENOTSUPP;
-}
 #endif /* CONFIG_ARCH_TEGRA || CONFIG_PLATFORM_TEGRA */
 #endif /* CONFIG_TEGRA_POWERGATE */
+
+int tegra_pmc_set_reboot_reason(u32 reboot_reason);
+int tegra_pmc_clear_reboot_reason(u32 reboot_reason);
 
 void tegra_pmc_write_bootrom_command(u32 command_offset, unsigned long val);
 void tegra_pmc_reset_system(void);
@@ -224,7 +216,6 @@ int tegra_pmc_hsic_phy_disable_sleepwalk(int port);
 void tegra_pmc_fuse_control_ps18_latch_set(void);
 void tegra_pmc_fuse_control_ps18_latch_clear(void);
 
-
 /* Legacy APIs for IO DPD enable/disable */
 /* Tegra io dpd entry - for each supported driver */
 struct tegra_io_dpd {
@@ -242,4 +233,114 @@ static inline void tegra_io_dpd_disable(struct tegra_io_dpd *hnd)
 {
 	tegra_pmc_io_pad_low_power_disable(hnd->name);
 }
+
+/**
+ * struct tegra_thermtrip_pmic_data - PMIC shutdown command data
+ * @poweroff_reg_data:	The data to write to turn the system off
+ * @poweroff_reg_addr:	The PMU address of poweroff register
+ * @reset_tegra:	Flag indicating whether or not the system
+ *			will shutdown during a thermal trip.
+ * @controller_type:	If this field is set to 0, the PMIC is
+ *			connected via I2C. If it is set to 1,
+ *			it is connected via SPI. If it is set to
+ *			2, it is connected via GPIO.
+ * @i2c_controller_id:	The i2c bus controller id
+ * @pinmux:		An array index used to configure which pins
+ *			on the chip are muxed to the I2C/SPI/GPIO
+ *			controller that is in use. Contact NVIDIA
+ *			for more information on what these index values
+ *			mean for a given chip.
+ * @pmu_16bit_ops:	If 0, sends three bytes from the PMC_SCRATCH54
+ *			register to the PMIC to turn it off; if 1, sends
+ *			four bytes from the PMC_SCRATCH54 register to the PMIC
+ *			to turn it off, plus one other byte. Must be set to
+ *			0 - the current code does not support 16 bit
+ *			operations.
+ * @pmu_i2c_addr:	The address of the PMIC on the I2C bus
+ *
+ * When the SoC temperature gets too high, the SOC_THERM hardware can
+ * reset the SoC, and, by setting a bit in one of its registers, can
+ * instruct the boot ROM to power off the Tegra SoC. This data
+ * structure contains the information that the boot ROM needs to tell
+ * the PMIC to shut down.
+ *
+ * @poweroff_reg_data and @poweroff_reg_addr are written to the PMC SCRATCH54
+ * register.
+ *
+ * @reset_tegra, @controller_type, @i2c_controller_id, @pinmux, @pmu_16bit_ops
+ * and @pmu_i2c_addr are written to the PMC SCRATCH55 register.
+ */
+struct tegra_thermtrip_pmic_data {
+	u8 poweroff_reg_data;
+	u8 poweroff_reg_addr;
+	u8 reset_tegra;
+	u8 controller_type;
+	u8 i2c_controller_id;
+	u8 pinmux;
+	u8 pmu_16bit_ops;
+	u8 pmu_i2c_addr;
+};
+
+void tegra_pmc_config_thermal_trip(struct tegra_thermtrip_pmic_data *data);
+void tegra_pmc_enable_thermal_trip(void);
+void tegra_pmc_lock_thermal_shutdown(void);
+
+int tegra210_pmc_padctrl_init(struct device *dev, struct device_node *np);
+int tegra186_pmc_padctrl_init(struct device *dev, struct device_node *np);
+
+static inline int tegra_pmc_padctrl_init(struct device *dev,
+					 struct device_node *np)
+{
+#ifdef CONFIG_PADCTRL_TEGRA210_PMC
+	return tegra210_pmc_padctrl_init(dev, np);
+#endif
+#ifdef CONFIG_PADCTRL_TEGRA186_PMC
+	return tegra186_pmc_padctrl_init(dev, np);
+#endif
+	return 0;
+}
+
+void tegra186_pmc_register_update(int offset, unsigned long mask,
+				  unsigned long val);
+unsigned long tegra_pmc_register_get(u32 offset);
+
+int tegra186_pmc_io_dpd_enable(int reg, int bit_pos);
+int tegra186_pmc_io_dpd_disable(int reg, int bit_pos);
+int tegra186_pmc_io_dpd_get_status(int reg, int bit_pos);
+
+void tegra_pmc_pad_voltage_update(unsigned int reg,
+		unsigned long mask, unsigned long val);
+unsigned long tegra_pmc_pad_voltage_get(unsigned int reg);
+
+void tegra_pmc_ufs_pwrcntrl_update(unsigned long mask, unsigned long val);
+unsigned long tegra_pmc_ufs_pwrcntrl_get(void);
+
+void tegra_pmc_nvcsi_ab_brick_update(unsigned long mask, unsigned long val);
+unsigned long tegra_pmc_nvcsi_ab_brick_getstatus(void);
+void tegra_pmc_nvcsi_cdef_brick_update(unsigned long mask, unsigned long val);
+unsigned long tegra_pmc_nvcsi_cdef_brick_getstatus(void);
+void tegra186_pmc_disable_nvcsi_brick_dpd(void);
+void tegra186_pmc_enable_nvcsi_brick_dpd(void);
+
+#ifdef CONFIG_TEGRA186_PMC
+extern void tegra_pmc_sata_pwrgt_update(unsigned long mask,
+		unsigned long val);
+extern unsigned long tegra_pmc_sata_pwrgt_get(void);
+extern bool tegra_pmc_is_halt_in_fiq(void);
+#else
+static inline void tegra_pmc_sata_pwrgt_update(unsigned long mask,
+		unsigned long val)
+{
+}
+
+static inline unsigned long tegra_pmc_sata_pwrgt_get(void)
+{
+	return -EINVAL;
+}
+
+static inline bool tegra_pmc_is_halt_in_fiq(void)
+{
+	return false;
+}
+#endif
 #endif /* __SOC_TEGRA_PMC_H__ */

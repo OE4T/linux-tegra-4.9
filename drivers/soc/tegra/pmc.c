@@ -310,11 +310,6 @@ static DEFINE_SPINLOCK(tegra_io_dpd_lock);
 static DEFINE_SPINLOCK(tegra_pmc_access_lock);
 static struct tegra_prod *prod_list;
 
-#ifdef CONFIG_PADCTRL_TEGRA210_PMC
-extern int tegra210_pmc_padctrl_init(struct device *dev,
-				     struct device_node *np);
-#endif
-
 #ifdef CONFIG_TEGRA210_BOOTROM_PMC
 extern int tegra210_boorom_pmc_init(struct device *dev);
 #endif
@@ -2554,14 +2549,10 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 	if (err < 0)
 		return err;
 
-
-#ifdef CONFIG_PADCTRL_TEGRA210_PMC
 	/* Register as pad controller */
-	err = tegra210_pmc_padctrl_init(&pdev->dev, pdev->dev.of_node);
+	err = tegra_pmc_padctrl_init(&pdev->dev, pdev->dev.of_node);
 	if (err)
-		pr_err("ERROR: Pad control driver init failed: %d\n",
-			err);
-#endif
+		pr_err("ERROR: Pad control driver init failed: %d\n", err);
 
 #ifdef CONFIG_TEGRA210_BOOTROM_PMC
 	err = tegra210_boorom_pmc_init(&pdev->dev);

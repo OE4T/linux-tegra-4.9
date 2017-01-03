@@ -831,6 +831,12 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	/* set resume state */
 	pm_runtime_get_sync(dev);
 
+	if (pdata->id == TEGRA_CAM_RTCPU_APE) {
+		/* APE power domain powergates APE block when suspending */
+		/* This won't do */
+		pm_runtime_get(dev);
+	}
+
 	/* Boot RTCPU */
 	ret = tegra_camrtc_boot(dev);
 	if (ret)
@@ -843,7 +849,7 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 			TFW_NORMAL, tegra_camrtc_print_version, NULL);
 
 	/* set idle to slow down clock while idle mode */
-	pm_runtime_put_sync(dev);
+	pm_runtime_put(dev);
 
 	tegra_camrtc_log_fw_version(dev);
 

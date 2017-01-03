@@ -376,8 +376,10 @@ struct tegra_gpio_info {
 	struct tegra_gpio_controller tg_contrlr[MAX_GPIO_CONTROLLERS];
 	struct gpio_chip gc;
 	struct irq_chip ic;
-	struct lock_class_key lock_class;
 };
+
+static struct lock_class_key gpio_lock_class;
+
 
 static int tegra186_gpio_to_wake(struct tegra_gpio_info *tgi, int gpio)
 {
@@ -898,7 +900,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 			tegra_gpio_update(tgi, gpio, GPIO_ENB_CONFIG_REG,
 					  GPIO_INT_FUNC_BIT, 0);
 
-		irq_set_lockdep_class(irq, &tgi->lock_class);
+		irq_set_lockdep_class(irq, &gpio_lock_class);
 		irq_set_chip_data(irq, &tgi->tg_contrlr[cont_id]);
 		irq_set_chip_and_handler(irq, &tgi->ic, handle_simple_irq);
 	}

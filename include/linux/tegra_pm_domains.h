@@ -77,11 +77,11 @@ static inline void tegra_adsp_pd_remove_device(struct device *dev) { }
 #endif /* CONFIG_TEGRA_MC_DOMAINS */
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
-int tegra_pd_get_powergate_id(struct of_device_id *dev_id);
+int tegra_pd_get_powergate_id(const struct of_device_id *dev_id);
 int tegra_pd_add_domain(struct of_device_id *dev_id,
 					struct generic_pm_domain *gpd);
 #else
-static inline int tegra_pd_get_powergate_id(struct of_device_id *dev_id)
+static inline int tegra_pd_get_powergate_id(const struct of_device_id *dev_id)
 {
 	return -EINVAL;
 }

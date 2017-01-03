@@ -374,7 +374,7 @@ static int __init tegra_init_pm_domain(void)
 }
 core_initcall(tegra_init_pm_domain);
 
-int tegra_pd_get_powergate_id(struct of_device_id *dev_id)
+int tegra_pd_get_powergate_id(const struct of_device_id *dev_id)
 {
 	struct device_node *dn = NULL;
 	u32 partition_id;

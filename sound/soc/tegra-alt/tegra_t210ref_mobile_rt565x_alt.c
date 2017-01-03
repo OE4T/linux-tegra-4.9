@@ -26,7 +26,7 @@
 #include <linux/i2c.h>
 #include <linux/regulator/consumer.h>
 #include <linux/delay.h>
-#include <linux/tegra-pmc.h>
+#include <soc/tegra/pmc.h>
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif

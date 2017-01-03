@@ -38,8 +38,8 @@
 #include <linux/uaccess.h>
 #include <linux/watchdog.h>
 #include <linux/tegra-soc.h>
-#include <linux/tegra-pmc.h>
 #include <linux/tegra_wdt_t18x.h>
+#include <soc/tegra/pmc.h>
 
 /* minimum and maximum watchdog trigger periods, in seconds */
 #define MIN_WDT_PERIOD	5

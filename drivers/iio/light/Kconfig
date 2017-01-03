@@ -366,6 +366,20 @@ config VEML6070
 	 To compile this driver as a module, choose M here: the
 	 module will be called veml6070.
 
+config NVS_BH1730FVC
+	tristate "ROHM BH1730FVC ALS"
+	select NVS_IIO
+	select NVS_LIGHT
+	select IIO_BUFFER
+	select IIO_TRIGGERED_BUFFER
+	depends on I2C
+	help
+	  Say Y here for ROHM Co., Ltd. BH1730FVC
+	  Digital 16bit Serial Output Type
+	  Ambient Light Sensor (ALS) support.
+
+	  The driver uses the NVS (NVidia Sensor) IIO, light framework.
+
 config NVS_CM3217
 	tristate "Capella CM3217 ALS"
 	select NVS_IIO

@@ -81,8 +81,7 @@ int hyp_ipa_translate(uint64_t *ipa)
 		ret = hyp_read_ipa_pa_info(&info, gid, *ipa);
 
 		*ipa = info.base + info.offset;
-	} else
-			pr_info("It's not tegra hypervisor mode.\n");
+	}
 
 	return ret;
 }

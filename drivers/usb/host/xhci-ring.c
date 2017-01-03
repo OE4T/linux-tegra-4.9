@@ -1962,49 +1962,55 @@ static int process_ctrl_td(struct xhci_hcd *xhci, struct xhci_td *td,
 	unsigned int slot_id;
 	int ep_index;
 	struct xhci_ep_ctx *ep_ctx;
-	u32 trb_comp_code;
+	u32 trb_comp_code, trb_type;
+	u32 remaining, requested;
 
+	trb_type = TRB_FIELD_TO_TYPE(le32_to_cpu(event_trb->generic.field[3]));
 	slot_id = TRB_TO_SLOT_ID(le32_to_cpu(event->flags));
 	xdev = xhci->devs[slot_id];
 	ep_index = TRB_TO_EP_ID(le32_to_cpu(event->flags)) - 1;
 	ep_ring = xhci_dma_to_transfer_ring(ep, le64_to_cpu(event->buffer));
 	ep_ctx = xhci_get_ep_ctx(xhci, xdev->out_ctx, ep_index);
 	trb_comp_code = GET_COMP_CODE(le32_to_cpu(event->transfer_len));
+	requested = td->urb->transfer_buffer_length;
+	remaining = EVENT_TRB_LEN(le32_to_cpu(event->transfer_len));
 
 	switch (trb_comp_code) {
 	case COMP_SUCCESS:
-		if (event_trb == ep_ring->dequeue) {
-			xhci_warn(xhci, "WARN: Success on ctrl setup TRB "
-					"without IOC set??\n");
+		if (trb_type != TRB_STATUS) {
+			xhci_warn(xhci, "WARN: Success on ctrl %s TRB without IOC set?\n",
+				(trb_type == TRB_DATA) ? "data" : "setup");
 			*status = -ESHUTDOWN;
-		} else if (event_trb != td->last_trb) {
-			xhci_warn(xhci, "WARN: Success on ctrl data TRB "
-					"without IOC set??\n");
-			*status = -ESHUTDOWN;
-		} else {
-			*status = 0;
+			break;
 		}
+		*status = 0;
 		break;
 	case COMP_SHORT_TX:
-		if (td->urb->transfer_flags & URB_SHORT_NOT_OK)
-			*status = -EREMOTEIO;
-		else
-			*status = 0;
+		*status = 0;
 		break;
 	case COMP_STOP_SHORT:
-		if (event_trb == ep_ring->dequeue || event_trb == td->last_trb)
-			xhci_warn(xhci, "WARN: Stopped Short Packet on ctrl setup or status TRB\n");
+		if (trb_type == TRB_DATA || trb_type == TRB_NORMAL)
+			td->urb->actual_length = remaining;
 		else
-			td->urb->actual_length =
-				EVENT_TRB_LEN(le32_to_cpu(event->transfer_len));
+			xhci_warn(xhci, "WARN: Stopped Short Packet on ctrl setup or status TRB\n");
 
 		return finish_td(xhci, td, event_trb, event, ep, status, false);
 	case COMP_STOP:
-		/* Did we stop at data stage? */
-		if (event_trb != ep_ring->dequeue && event_trb != td->last_trb)
-			td->urb->actual_length =
-				td->urb->transfer_buffer_length -
-				EVENT_TRB_LEN(le32_to_cpu(event->transfer_len));
+		switch (trb_type) {
+		case TRB_SETUP:
+			td->urb->actual_length = 0;
+			break;
+		case TRB_DATA:
+		case TRB_NORMAL:
+			td->urb->actual_length = requested - remaining;
+			break;
+		case TRB_STATUS:
+			td->urb->actual_length = requested;
+			break;
+		default:
+			xhci_warn(xhci, "WARN: unexpected TRB Type %d\n",
+				  trb_type);
+		}
 		/* fall through */
 	case COMP_STOP_INVAL:
 		return finish_td(xhci, td, event_trb, event, ep, status, false);
@@ -2018,52 +2024,30 @@ static int process_ctrl_td(struct xhci_hcd *xhci, struct xhci_td *td,
 		/* else fall through */
 	case COMP_STALL:
 		/* Did we transfer part of the data (middle) phase? */
-		if (event_trb != ep_ring->dequeue &&
-				event_trb != td->last_trb)
-			td->urb->actual_length =
-				td->urb->transfer_buffer_length -
-				EVENT_TRB_LEN(le32_to_cpu(event->transfer_len));
+		if (trb_type == TRB_DATA || trb_type == TRB_NORMAL)
+			td->urb->actual_length = requested - remaining;
 		else if (!td->urb_length_set)
 			td->urb->actual_length = 0;
 
 		return finish_td(xhci, td, event_trb, event, ep, status, false);
 	}
+	/* stopped at setup stage, no data transferred */
+	if (trb_type == TRB_SETUP)
+		return finish_td(xhci, td, event_trb, event, ep, status, false);
+
 	/*
-	 * Did we transfer any data, despite the errors that might have
-	 * happened?  I.e. did we get past the setup stage?
+	 * if on data stage then update the actual_length of the URB and flag it
+	 * as set, so it won't be overwritten in the event for the last TRB.
 	 */
-	if (event_trb != ep_ring->dequeue) {
-		/* The event was for the status stage */
-		if (event_trb == td->last_trb) {
-			if (td->urb_length_set) {
-				/* Don't overwrite a previously set error code
-				 */
-				if ((*status == -EINPROGRESS || *status == 0) &&
-						(td->urb->transfer_flags
-						 & URB_SHORT_NOT_OK))
-					/* Did we already see a short data
-					 * stage? */
-					*status = -EREMOTEIO;
-			} else {
-				td->urb->actual_length =
-					td->urb->transfer_buffer_length;
-			}
-		} else {
-			/*
-			 * Maybe the event was for the data stage? If so, update
-			 * already the actual_length of the URB and flag it as
-			 * set, so that it is not overwritten in the event for
-			 * the last TRB.
-			 */
-			td->urb_length_set = true;
-			td->urb->actual_length =
-				td->urb->transfer_buffer_length -
-				EVENT_TRB_LEN(le32_to_cpu(event->transfer_len));
-			xhci_dbg(xhci, "Waiting for status "
-					"stage event\n");
-			return 0;
-		}
+	if (trb_type == TRB_DATA || trb_type == TRB_NORMAL) {
+		td->urb_length_set = true;
+		td->urb->actual_length = requested - remaining;
+		xhci_dbg(xhci, "Waiting for status stage event\n");
+		return 0;
 	}
+	/* at status stage */
+	if (!td->urb_length_set)
+		td->urb->actual_length = requested;
 
 	return finish_td(xhci, td, event_trb, event, ep, status, false);
 }

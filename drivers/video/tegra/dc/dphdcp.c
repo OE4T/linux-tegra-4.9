@@ -821,8 +821,12 @@ static void dphdcp_downstream_worker(struct work_struct *work)
 
 	uint64_t *pkt = kmalloc(PKT_SIZE, GFP_KERNEL);
 
-	if (!pkt)
+	/* If memory unavailable */
+	if (!pkt) {
+		dphdcp_err("Memory allocation failed\n");
+		e = -ENOMEM;
 		goto failure;
+	}
 #else
 	struct tegra_dc_sor_data *sor = dp->sor;
 	u32 tmp;
@@ -1146,6 +1150,11 @@ failure:
 		queue_delayed_work(dphdcp->downstream_wq, &dphdcp->work,
 						msecs_to_jiffies(1000));
 	}
+
+	/* Failed because of lack of memory */
+	if (e == -ENOMEM)
+		return;
+
 
 lost_dp:
 	dphdcp_info("lost dp connection\n");

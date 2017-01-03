@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1028,6 +1028,18 @@ int gr_gk20a_commit_global_timeslice(struct gk20a *g, struct channel_gk20a *c,
 	return 0;
 }
 
+/*
+ * Return map tiles count for given index
+ * Return 0 if index is out-of-bounds
+ */
+static u32 gr_gk20a_get_map_tile_count(struct gr_gk20a *gr, u32 index)
+{
+	if (index >= gr->map_tile_count)
+		return 0;
+
+	return gr->map_tiles[index];
+}
+
 int gr_gk20a_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr)
 {
 	u32 norm_entries, norm_shift;
@@ -1043,43 +1055,43 @@ int gr_gk20a_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr)
 		     gr_crstr_map_table_cfg_row_offset_f(gr->map_row_offset) |
 		     gr_crstr_map_table_cfg_num_entries_f(gr->tpc_count));
 
-	map0 =  gr_crstr_gpc_map0_tile0_f(gr->map_tiles[0]) |
-		gr_crstr_gpc_map0_tile1_f(gr->map_tiles[1]) |
-		gr_crstr_gpc_map0_tile2_f(gr->map_tiles[2]) |
-		gr_crstr_gpc_map0_tile3_f(gr->map_tiles[3]) |
-		gr_crstr_gpc_map0_tile4_f(gr->map_tiles[4]) |
-		gr_crstr_gpc_map0_tile5_f(gr->map_tiles[5]);
+	map0 =  gr_crstr_gpc_map0_tile0_f(gr_gk20a_get_map_tile_count(gr, 0)) |
+		gr_crstr_gpc_map0_tile1_f(gr_gk20a_get_map_tile_count(gr, 1)) |
+		gr_crstr_gpc_map0_tile2_f(gr_gk20a_get_map_tile_count(gr, 2)) |
+		gr_crstr_gpc_map0_tile3_f(gr_gk20a_get_map_tile_count(gr, 3)) |
+		gr_crstr_gpc_map0_tile4_f(gr_gk20a_get_map_tile_count(gr, 4)) |
+		gr_crstr_gpc_map0_tile5_f(gr_gk20a_get_map_tile_count(gr, 5));
 
-	map1 =  gr_crstr_gpc_map1_tile6_f(gr->map_tiles[6]) |
-		gr_crstr_gpc_map1_tile7_f(gr->map_tiles[7]) |
-		gr_crstr_gpc_map1_tile8_f(gr->map_tiles[8]) |
-		gr_crstr_gpc_map1_tile9_f(gr->map_tiles[9]) |
-		gr_crstr_gpc_map1_tile10_f(gr->map_tiles[10]) |
-		gr_crstr_gpc_map1_tile11_f(gr->map_tiles[11]);
+	map1 =  gr_crstr_gpc_map1_tile6_f(gr_gk20a_get_map_tile_count(gr, 6)) |
+		gr_crstr_gpc_map1_tile7_f(gr_gk20a_get_map_tile_count(gr, 7)) |
+		gr_crstr_gpc_map1_tile8_f(gr_gk20a_get_map_tile_count(gr, 8)) |
+		gr_crstr_gpc_map1_tile9_f(gr_gk20a_get_map_tile_count(gr, 9)) |
+		gr_crstr_gpc_map1_tile10_f(gr_gk20a_get_map_tile_count(gr, 10)) |
+		gr_crstr_gpc_map1_tile11_f(gr_gk20a_get_map_tile_count(gr, 11));
 
-	map2 =  gr_crstr_gpc_map2_tile12_f(gr->map_tiles[12]) |
-		gr_crstr_gpc_map2_tile13_f(gr->map_tiles[13]) |
-		gr_crstr_gpc_map2_tile14_f(gr->map_tiles[14]) |
-		gr_crstr_gpc_map2_tile15_f(gr->map_tiles[15]) |
-		gr_crstr_gpc_map2_tile16_f(gr->map_tiles[16]) |
-		gr_crstr_gpc_map2_tile17_f(gr->map_tiles[17]);
+	map2 =  gr_crstr_gpc_map2_tile12_f(gr_gk20a_get_map_tile_count(gr, 12)) |
+		gr_crstr_gpc_map2_tile13_f(gr_gk20a_get_map_tile_count(gr, 13)) |
+		gr_crstr_gpc_map2_tile14_f(gr_gk20a_get_map_tile_count(gr, 14)) |
+		gr_crstr_gpc_map2_tile15_f(gr_gk20a_get_map_tile_count(gr, 15)) |
+		gr_crstr_gpc_map2_tile16_f(gr_gk20a_get_map_tile_count(gr, 16)) |
+		gr_crstr_gpc_map2_tile17_f(gr_gk20a_get_map_tile_count(gr, 17));
 
-	map3 =  gr_crstr_gpc_map3_tile18_f(gr->map_tiles[18]) |
-		gr_crstr_gpc_map3_tile19_f(gr->map_tiles[19]) |
-		gr_crstr_gpc_map3_tile20_f(gr->map_tiles[20]) |
-		gr_crstr_gpc_map3_tile21_f(gr->map_tiles[21]) |
-		gr_crstr_gpc_map3_tile22_f(gr->map_tiles[22]) |
-		gr_crstr_gpc_map3_tile23_f(gr->map_tiles[23]);
+	map3 =  gr_crstr_gpc_map3_tile18_f(gr_gk20a_get_map_tile_count(gr, 18)) |
+		gr_crstr_gpc_map3_tile19_f(gr_gk20a_get_map_tile_count(gr, 19)) |
+		gr_crstr_gpc_map3_tile20_f(gr_gk20a_get_map_tile_count(gr, 20)) |
+		gr_crstr_gpc_map3_tile21_f(gr_gk20a_get_map_tile_count(gr, 21)) |
+		gr_crstr_gpc_map3_tile22_f(gr_gk20a_get_map_tile_count(gr, 22)) |
+		gr_crstr_gpc_map3_tile23_f(gr_gk20a_get_map_tile_count(gr, 23));
 
-	map4 =  gr_crstr_gpc_map4_tile24_f(gr->map_tiles[24]) |
-		gr_crstr_gpc_map4_tile25_f(gr->map_tiles[25]) |
-		gr_crstr_gpc_map4_tile26_f(gr->map_tiles[26]) |
-		gr_crstr_gpc_map4_tile27_f(gr->map_tiles[27]) |
-		gr_crstr_gpc_map4_tile28_f(gr->map_tiles[28]) |
-		gr_crstr_gpc_map4_tile29_f(gr->map_tiles[29]);
+	map4 =  gr_crstr_gpc_map4_tile24_f(gr_gk20a_get_map_tile_count(gr, 24)) |
+		gr_crstr_gpc_map4_tile25_f(gr_gk20a_get_map_tile_count(gr, 25)) |
+		gr_crstr_gpc_map4_tile26_f(gr_gk20a_get_map_tile_count(gr, 26)) |
+		gr_crstr_gpc_map4_tile27_f(gr_gk20a_get_map_tile_count(gr, 27)) |
+		gr_crstr_gpc_map4_tile28_f(gr_gk20a_get_map_tile_count(gr, 28)) |
+		gr_crstr_gpc_map4_tile29_f(gr_gk20a_get_map_tile_count(gr, 29));
 
-	map5 =  gr_crstr_gpc_map5_tile30_f(gr->map_tiles[30]) |
-		gr_crstr_gpc_map5_tile31_f(gr->map_tiles[31]) |
+	map5 =  gr_crstr_gpc_map5_tile30_f(gr_gk20a_get_map_tile_count(gr, 30)) |
+		gr_crstr_gpc_map5_tile31_f(gr_gk20a_get_map_tile_count(gr, 31)) |
 		gr_crstr_gpc_map5_tile32_f(0) |
 		gr_crstr_gpc_map5_tile33_f(0) |
 		gr_crstr_gpc_map5_tile34_f(0) |
@@ -3658,6 +3670,7 @@ static int gr_gk20a_init_map_tiles(struct gk20a *g, struct gr_gk20a *gr)
 	int ret = 0;
 	int num_gpcs = nvgpu_get_litter_value(g, GPU_LIT_NUM_GPCS);
 	int num_tpc_per_gpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_TPC_PER_GPC);
+	int map_tile_count = num_gpcs * num_tpc_per_gpc;
 
 	init_frac = kzalloc(num_gpcs * sizeof(s32), GFP_KERNEL);
 	init_err = kzalloc(num_gpcs * sizeof(s32), GFP_KERNEL);
@@ -3721,7 +3734,8 @@ static int gr_gk20a_init_map_tiles(struct gk20a *g, struct gr_gk20a *gr)
 			delete_map = true;
 
 		for (tile_count = 0; tile_count < gr->map_tile_count; tile_count++) {
-			if ((u32)gr->map_tiles[tile_count] >= gr->tpc_count)
+			if (gr_gk20a_get_map_tile_count(gr, tile_count)
+					>= gr->tpc_count)
 				delete_map = true;
 		}
 
@@ -3733,13 +3747,13 @@ static int gr_gk20a_init_map_tiles(struct gk20a *g, struct gr_gk20a *gr)
 	}
 
 	if (gr->map_tiles == NULL) {
-		gr->map_tile_count = num_gpcs;
-
-		gr->map_tiles = kzalloc(num_gpcs * sizeof(u8), GFP_KERNEL);
+		gr->map_tiles = kzalloc(map_tile_count * sizeof(u8),
+					GFP_KERNEL);
 		if (gr->map_tiles == NULL) {
 			ret = -ENOMEM;
 			goto clean_up;
 		}
+		gr->map_tile_count = map_tile_count;
 
 		for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
 			sorted_num_tpcs[gpc_index] = gr->gpc_tpc_count[gpc_index];
@@ -4508,6 +4522,7 @@ static int gr_gk20a_zcull_init_hw(struct gk20a *g, struct gr_gk20a *gr)
 	u32 num_tpc_per_gpc = nvgpu_get_litter_value(g,
 						GPU_LIT_NUM_TPC_PER_GPC);
 	u32 zcull_alloc_num = num_gpcs * num_tpc_per_gpc;
+	u32 map_tile_count;
 
 	if (!gr->map_tiles)
 		return -1;
@@ -4534,9 +4549,10 @@ static int gr_gk20a_zcull_init_hw(struct gk20a *g, struct gr_gk20a *gr)
 	}
 
 	for (map_counter = 0; map_counter < gr->tpc_count; map_counter++) {
+		map_tile_count = gr_gk20a_get_map_tile_count(gr, map_counter);
 		zcull_map_tiles[map_counter] =
-			zcull_bank_counters[gr->map_tiles[map_counter]];
-		zcull_bank_counters[gr->map_tiles[map_counter]]++;
+			zcull_bank_counters[map_tile_count];
+		zcull_bank_counters[map_tile_count]++;
 	}
 
 	if (g->ops.gr.program_zcull_mapping)

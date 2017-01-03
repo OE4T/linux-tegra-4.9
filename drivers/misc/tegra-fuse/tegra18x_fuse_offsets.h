@@ -20,7 +20,7 @@
 #define __TEGRA18x_FUSE_OFFSETS_H
 
 #include <linux/tegra-soc.h>
-#include <linux/tegra-pmc.h>
+#include <soc/tegra/pmc.h>
 
 
 /* private_key4 */

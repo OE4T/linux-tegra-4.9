@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -75,7 +75,8 @@ static struct tegra_ivc_driver tegra_hsp_mailbox_driver = {
 	.dev_type	= &tegra_hsp_type,
 	.ops.hsp	= &tegra_hsp_mailbox_ops,
 };
-tegra_ivc_module_driver(tegra_hsp_mailbox_driver);
+/* A tegra_hsp_type driver must be registered before ivc bus is created */
+tegra_ivc_subsys_driver(tegra_hsp_mailbox_driver);
 MODULE_AUTHOR("Remi Denis-Courmont <remid@nvidia.com>");
 MODULE_DESCRIPTION("NVIDIA Tegra HSP shared mailbox driver");
 MODULE_LICENSE("GPL");

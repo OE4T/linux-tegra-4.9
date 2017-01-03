@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -49,6 +49,13 @@ void tegra_ivc_driver_unregister(struct tegra_ivc_driver *drv);
 #define tegra_ivc_module_driver(drv) \
 	module_driver(drv, tegra_ivc_driver_register, \
 			tegra_ivc_driver_unregister)
+
+#define tegra_ivc_subsys_driver(__driver) \
+static int __init __driver##_init(void) \
+{ \
+	return tegra_ivc_driver_register(&(__driver)); \
+} \
+subsys_initcall_sync(__driver##_init);
 
 /* Tegra HSP driver support */
 extern struct device_type tegra_hsp_type;

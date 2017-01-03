@@ -116,9 +116,11 @@ struct nvdla_cmd_mem {
  * @pdev		pointer to platform device
  * @pool		pointer to queue table
  * @dbg_mask		debug mask for print level
- * @en_trace		flag to enable tracing
+ * @en_trace		flag to enable kernel tracing
  * @fw_version		saves current firmware version
  * @cmd_mem		structure to hold command memory pool
+ * @trace_enable	to enable/disable the DLA firmware trace
+ * @events_mask		mask to set/reset the different DLA firmware trace event
  */
 struct nvdla_device {
 	struct platform_device *pdev;
@@ -131,6 +133,8 @@ struct nvdla_device {
 	u32 en_trace;
 	u32 fw_version;
 	struct nvdla_cmd_mem cmd_mem;
+	u32 trace_enable;
+	u32 events_mask;
 };
 
 /**

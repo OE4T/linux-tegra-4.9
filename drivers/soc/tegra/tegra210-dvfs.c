@@ -1108,8 +1108,8 @@ static void init_qspi_dvfs(int soc_speedo_id, int core_process_id,
 		init_dvfs_one(qspi_dvfs, core_nominal_mv_index);
 }
 
-static void __init init_sor1_dvfs(int soc_speedo_id, int core_process_id,
-				  int core_nominal_mv_index)
+static void init_sor1_dvfs(int soc_speedo_id, int core_process_id,
+			   int core_nominal_mv_index)
 {
 	struct dvfs *sor1_dp_dvfs = &sor1_dp_dvfs_table[0];
 	struct clk *c;

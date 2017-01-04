@@ -2,6 +2,7 @@
  * OF helpers for the GPIO API
  *
  * Copyright (c) 2007-2008  MontaVista Software, Inc.
+ * Copyright (c) 2017, NVIDIA Corporation. All rights reserved.
  *
  * Author: Anton Vorontsov <avorontsov@ru.mvista.com>
  *
@@ -117,6 +118,21 @@ int of_get_named_gpio_flags(struct device_node *np, const char *list_name,
 }
 EXPORT_SYMBOL(of_get_named_gpio_flags);
 
+static int of_gpio_get_gpio_cells_size(struct device_node *chip_np)
+{
+	u32 ncells;
+	int ret;
+
+	ret = of_property_read_u32(chip_np, "#gpio-cells", &ncells);
+	if (ret)
+		return ret;
+
+	if (ncells > MAX_PHANDLE_ARGS)
+		return -EINVAL;
+
+	return ncells;
+}
+
 struct gpio_desc *of_find_gpio(struct device *dev, const char *con_id,
 			       unsigned int idx,
 			       enum gpio_lookup_flags *flags)
@@ -171,6 +187,7 @@ struct gpio_desc *of_find_gpio(struct device *dev, const char *con_id,
 static struct gpio_desc *of_parse_own_gpio(struct device_node *np,
 					   struct gpio_chip *chip,
 					   const char **name,
+					   int gpio_index,
 					   enum gpio_lookup_flags *lflags,
 					   enum gpiod_flags *dflags)
 {
@@ -178,8 +195,8 @@ static struct gpio_desc *of_parse_own_gpio(struct device_node *np,
 	enum of_gpio_flags xlate_flags;
 	struct of_phandle_args gpiospec;
 	struct gpio_desc *desc;
-	u32 tmp;
-	int ret;
+	int ncells;
+	int i, start_index, ret;
 
 	chip_np = chip->of_node;
 	if (!chip_np)
@@ -189,16 +206,20 @@ static struct gpio_desc *of_parse_own_gpio(struct device_node *np,
 	*lflags = 0;
 	*dflags = 0;
 
-	ret = of_property_read_u32(chip_np, "#gpio-cells", &tmp);
-	if (ret)
-		return ERR_PTR(ret);
+	ncells = of_gpio_get_gpio_cells_size(chip_np);
+	if (ncells < 0)
+		return ERR_PTR(ncells);
 
+	start_index = ncells * gpio_index;
 	gpiospec.np = chip_np;
-	gpiospec.args_count = tmp;
+	gpiospec.args_count = ncells;
 
-	ret = of_property_read_u32_array(np, "gpios", gpiospec.args, tmp);
-	if (ret)
-		return ERR_PTR(ret);
+	for (i = 0; i < ncells; i++) {
+		ret = of_property_read_u32_index(np, "gpios", start_index + i,
+						 &gpiospec.args[i]);
+		if (ret)
+			return ERR_PTR(ret);
+	}
 
 	desc = of_xlate_and_get_gpiod_flags(chip, &gpiospec, &xlate_flags);
 	if (IS_ERR(desc))
@@ -219,7 +240,8 @@ static struct gpio_desc *of_parse_own_gpio(struct device_node *np,
 		return ERR_PTR(-EINVAL);
 	}
 
-	if (name && of_property_read_string(np, "line-name", name))
+	if (name && of_property_read_string_index(np, "line-name",
+						  gpio_index, name))
 		*name = np->name;
 
 	return desc;
@@ -286,18 +308,37 @@ static int of_gpiochip_scan_gpios(struct gpio_chip *chip)
 	enum gpio_lookup_flags lflags;
 	enum gpiod_flags dflags;
 	int ret;
+	int i, ncells, ngpios;
+
+	ncells = of_gpio_get_gpio_cells_size(chip->of_node);
+	if (ncells < 0)
+		return 0;
 
 	for_each_available_child_of_node(chip->of_node, np) {
 		if (!of_property_read_bool(np, "gpio-hog"))
 			continue;
 
-		desc = of_parse_own_gpio(np, chip, &name, &lflags, &dflags);
-		if (IS_ERR(desc))
+		ngpios = of_property_count_u32_elems(np, "gpios");
+		if (ngpios < 0)
 			continue;
 
-		ret = gpiod_hog(desc, name, lflags, dflags);
-		if (ret < 0)
-			return ret;
+		if (ngpios % ncells) {
+			dev_warn(chip->parent, "Invalid GPIO entries at %s\n",
+				 np->name);
+			continue;
+		}
+
+		ngpios /= ncells;
+		for (i = 0; i < ngpios; i++) {
+			desc = of_parse_own_gpio(np, chip, &name, i,
+						 &lflags, &dflags);
+			if (IS_ERR(desc))
+				continue;
+
+			ret = gpiod_hog(desc, name, lflags, dflags);
+			if (ret < 0)
+				return ret;
+		}
 	}
 
 	return 0;

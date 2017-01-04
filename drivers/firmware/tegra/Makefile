@@ -17,4 +17,4 @@ ifndef CONFIG_ARCH_TEGRA_21x_SOC
 obj-y					+= bpmp_tty.o
 endif
 
-GCOV_PORFILE				:= y
+GCOV_PROFILE				:= y

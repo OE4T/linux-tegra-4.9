@@ -1,7 +1,7 @@
 /*
  * GM20B Clocks
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1135,16 +1135,19 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	if (!gk20a_clk_get(g))
 		return -EINVAL;
 
-	c = clk->tegra_clk;
-#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 	/*
 	 * On Tegra GPU clock exposed to frequency governor is a shared user on
 	 * GPCPLL bus (gbus). The latter can be accessed as GPU clock parent.
 	 * Respectively the grandparent is PLL reference clock.
 	 */
-	c = clk_get_parent(c);
+	c = clk_get_parent(clk->tegra_clk);
+
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
+	ref = clk_get_parent(clk_get_parent(c));
+#elif defined (CONFIG_COMMON_CLK)
+	ref = clk_get_sys("gpu_ref", "gpu_ref");
 #endif
-	ref = clk_get_parent(c);
+
 	if (IS_ERR(ref)) {
 		gk20a_err(dev_from_gk20a(g),
 			"failed to get GPCPLL reference clock");
@@ -1297,6 +1300,11 @@ int gm20b_register_gpcclk(struct gk20a *g) {
 	struct clk_gk20a *clk = &g->clk;
 	struct clk_init_data init;
 	struct clk *c;
+	int err = 0;
+
+	err = gm20b_init_clk_setup_sw(g);
+	if (err)
+		return err;
 
 	init.name = "gpcclk";
 	init.ops = &gk20a_clk_ops;
@@ -1313,10 +1321,11 @@ int gm20b_register_gpcclk(struct gk20a *g) {
 		return -EINVAL;
 	}
 
+	clk->g = g;
 	clk->tegra_clk = c;
 	clk_register_clkdev(c, "gpcclk", "gpcclk");
 
-	return 0;
+	return err;
 }
 #endif /* CONFIG_COMMON_CLK */
 
@@ -1520,15 +1529,16 @@ static int gm20b_init_clk_support(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	clk->g = g;
-
 	err = gm20b_init_clk_reset_enable_hw(g);
 	if (err)
 		return err;
 
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
+	clk->g = g;
 	err = gm20b_init_clk_setup_sw(g);
 	if (err)
 		return err;
+#endif
 
 	mutex_lock(&clk->clk_mutex);
 	clk->clk_hw_on = true;

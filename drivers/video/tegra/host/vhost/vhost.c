@@ -287,11 +287,11 @@ int vhost_rdwr_module_regs(struct platform_device *ndev, u32 num_offsets,
 	u32 *vals, *offs;
 	int err;
 
-	vals = kmalloc(num_offsets * block_size, GFP_KERNEL);
+	vals = kmalloc_array(num_offsets, block_size, GFP_KERNEL);
 	if (!vals)
 		return -ENOMEM;
 
-	offs = kmalloc(num_offsets * sizeof(u32), GFP_KERNEL);
+	offs = kmalloc_array(num_offsets, sizeof(u32), GFP_KERNEL);
 	if (!offs) {
 		kfree(vals);
 		return -ENOMEM;

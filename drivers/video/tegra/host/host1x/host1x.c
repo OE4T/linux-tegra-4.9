@@ -226,11 +226,11 @@ static int nvhost_ioctl_ctrl_sync_fence_create(struct nvhost_ctrl_userctx *ctx,
 		name[0] = '\0';
 	}
 
-	pts = kmalloc(sizeof(*pts) * args->num_pts, GFP_KERNEL);
+	pts = kmalloc_array(args->num_pts, sizeof(*pts), GFP_KERNEL);
 	if (!pts)
 		return -ENOMEM;
 
-
+	/* Multiplication overflow would have errored in kmalloc_array */
 	if (copy_from_user(pts, args_pts, sizeof(*pts) * args->num_pts)) {
 		err = -EFAULT;
 		goto out;

@@ -3372,9 +3372,9 @@ static __init void tegra210_shared_clk_init(char *sclk_high_clk)
 						12750000, 1800000000);
 	clks[TEGRA210_CLK_EMC_MASTER] = clk;
 
-	clk = tegra_clk_register_gbus("gbus", "gpcclk", 0,
-					12000000, 1300000000);
-
+	clk = tegra_clk_register_gbus("gbus", "gpcclk",
+				      TEGRA_SHARED_BUS_RETENTION,
+				      12000000, 1300000000);
 	clks[TEGRA210_CLK_GBUS] = clk;
 
 	clk = tegra_clk_register_shared_master("host1x_master", "host1x", 0,
@@ -3385,7 +3385,8 @@ static __init void tegra210_shared_clk_init(char *sclk_high_clk)
 						12000000, 408000000);
 	clks[TEGRA210_CLK_MSELECT_MASTER] = clk;
 
-	clk = tegra_clk_register_shared_master("ape_master", "ape", 0,
+	clk = tegra_clk_register_shared_master("ape_master", "ape",
+						TEGRA_SHARED_BUS_RETENTION,
 						12000000, 408000000);
 	clks[TEGRA210_CLK_APE_MASTER] = clk;
 

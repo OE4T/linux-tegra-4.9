@@ -3,7 +3,7 @@
  *
  * DMA debugging event logging to ftrace.
  *
- * Copyright (c) 2013-2014, NVIDIA Corporation.
+ * Copyright (c) 2013-2017, NVIDIA Corporation.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,6 +32,8 @@
 #include <linux/device.h>
 #include <linux/dma-debug.h>
 #include <asm/io.h>
+
+char *__weak debug_dma_platformdata(struct device *dev);
 
 DECLARE_EVENT_CLASS(dmadebug,
 	TP_PROTO(struct device *dev, dma_addr_t dma_addr, size_t size, \

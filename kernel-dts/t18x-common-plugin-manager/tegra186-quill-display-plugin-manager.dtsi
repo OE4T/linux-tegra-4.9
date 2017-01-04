@@ -161,5 +161,35 @@
 				};
 			};
 		};
+
+		fragment-e1824-a00@3 {
+			ids = "1824-1100-001";
+			overrides@0 {
+				target = <&{/host1x}>;
+				_overlay_ {
+					nvdisplay@15200000 {
+						status = "okay";
+					};
+					sor {
+						status = "okay";
+						panel-s-edp-uhdtv-15-6 {
+							status = "okay";
+							nvidia,panel-rst-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(P, 3) 1>; /* PP3 */
+							nvidia,en-vmm-vpp-with-i2c-config;
+							nvidia,is_ext_dp_panel = <0>;
+							disp-default-out {
+								nvidia,out-parent-clk = "plld3";
+							};
+							smartdimmer {
+								status = "okay";
+							};
+						};
+					};
+					dpaux@155c0000 {
+						status = "okay";
+					};
+				};
+			};
+		};
 	};
 };

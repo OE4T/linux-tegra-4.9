@@ -162,6 +162,12 @@ static int tegra_fuse_probe(struct platform_device *pdev)
 				    fuse->soc->info))
 		return -ENODEV;
 
+	err = clk_prepare_enable(fuse->clk);
+	if (err < 0) {
+		dev_err(fuse->dev, "failed to enable FUSE clock: %d\n", err);
+		return err;
+	}
+
 	err = of_platform_default_populate(pdev->dev.of_node, NULL, &pdev->dev);
 	if (err < 0)
 		dev_dbg(&pdev->dev, "fuse child node not available\n");

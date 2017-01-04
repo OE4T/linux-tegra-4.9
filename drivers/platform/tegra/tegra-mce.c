@@ -22,6 +22,7 @@
 #include <linux/tegra-mce.h>
 #include <linux/tegra-soc.h>
 #include <linux/t18x_ari.h>
+#include <linux/module.h>
 
 #include <asm/smp_plat.h>
 
@@ -553,7 +554,7 @@ static struct debugfs_entry mce_dbg_attrs[] = {
 	{ NULL, NULL, 0 }
 };
 
-static __init int mce_debugfs_init(void)
+static __init int t18x_mce_debugfs_probe(struct platform_device *pdev)
 {
 	struct dentry *dent;
 	struct debugfs_entry *fent;
@@ -577,8 +578,22 @@ abort:
 	debugfs_remove_recursive(mce_debugfs_root);
 	return -EFAULT;
 }
-fs_initcall(mce_debugfs_init);
 
+static const struct of_device_id t18x_mce_debugfs_of[] __initconst = {
+	{ .compatible = "nvidia,tegra186-mce" },
+	{}
+};
+
+static struct platform_driver t18x_mce_debugfs_driver __refdata = {
+	.probe = t18x_mce_debugfs_probe,
+	.driver = {
+		.owner = THIS_MODULE,
+		.name = "t18x_mce_debugfs",
+		.of_match_table = of_match_ptr(t18x_mce_debugfs_of)
+	}
+};
+
+module_platform_driver(t18x_mce_debugfs_driver);
 #endif
 
 static phys_addr_t sregdump_phys; /* secure register addr to access */

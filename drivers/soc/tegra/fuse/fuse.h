@@ -67,8 +67,8 @@ struct tegra_fuse {
 void tegra_init_revision(void);
 void tegra_init_apbmisc(void);
 
-bool __init tegra_fuse_read_spare(unsigned int spare);
-u32 __init tegra_fuse_read_early(unsigned int offset);
+bool tegra_fuse_read_spare(unsigned int spare);
+u32 tegra_fuse_read_early(unsigned int offset);
 int tegra_fuse_control_read(unsigned long offset, u32 *value);
 void tegra_fuse_control_write(u32 value, unsigned long offset);
 

@@ -122,7 +122,7 @@ static const struct of_device_id apbmisc_match[] __initconst = {
 	{},
 };
 
-void __init tegra_init_revision(void)
+void tegra_init_revision(void)
 {
 	u32 id, chip_id, minor_rev;
 	int rev;

@@ -4,7 +4,7 @@
  *
  * Support for Tegra Security Engine hardware crypto algorithms.
  *
- * Copyright (c) 2015-2016, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2015-2017, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2355,24 +2355,12 @@ static int tegra_init_rsa_key_slot(struct tegra_se_dev *se_dev)
 
 static int tegra_se_rsa_max_size(struct crypto_akcipher *tfm)
 {
-	struct akcipher_alg *alg;
-	u32 size = 0;
+	struct tegra_se_aes_rsa_context *ctx = akcipher_tfm_ctx(tfm);
 
-	if (!tfm)
+	if (!ctx)
 		return -EINVAL;
 
-	alg = crypto_akcipher_alg(tfm);
-
-	if (strcmp(alg->base.cra_name, "rsa512") == 0)
-		size = 512;
-	else if (strcmp(alg->base.cra_name, "rsa1024") == 0)
-		size = 1024;
-	else if (strcmp(alg->base.cra_name, "rsa1536") == 0)
-		size = 1536;
-	else if (strcmp(alg->base.cra_name, "rsa2048") == 0)
-		size = 2048;
-
-	return size;
+	return ctx->mod_len;
 }
 
 static int tegra_se_send_rsa_data(struct tegra_se_dev *se_dev,
@@ -2868,79 +2856,21 @@ static struct ahash_alg hash_algs[] = {
 	}
 };
 
-static struct akcipher_alg rsa_algs[] = {
-	{
-		.encrypt = tegra_se_rsa_op,
-		.decrypt = tegra_se_rsa_op,
-		.sign = tegra_se_rsa_op,
-		.verify = tegra_se_rsa_op,
-		.set_priv_key = tegra_se_rsa_setkey,
-		.set_pub_key = tegra_se_rsa_setkey,
-		.max_size = tegra_se_rsa_max_size,
-		.exit = tegra_se_rsa_exit,
-		.base = {
-			.cra_name = "rsa512",
-			.cra_driver_name = "tegra-se-rsa512",
-			.cra_priority = 300,
-			.cra_blocksize = TEGRA_SE_RSA512_INPUT_SIZE,
-			.cra_ctxsize = sizeof(struct tegra_se_aes_rsa_context),
-			.cra_alignmask = 0,
-			.cra_module = THIS_MODULE,
-		}
-	}, {
-		.encrypt = tegra_se_rsa_op,
-		.decrypt = tegra_se_rsa_op,
-		.sign = tegra_se_rsa_op,
-		.verify = tegra_se_rsa_op,
-		.set_priv_key = tegra_se_rsa_setkey,
-		.set_pub_key = tegra_se_rsa_setkey,
-		.max_size = tegra_se_rsa_max_size,
-		.exit = tegra_se_rsa_exit,
-		.base = {
-			.cra_name = "rsa1024",
-			.cra_driver_name = "tegra-se-rsa1024",
-			.cra_priority = 300,
-			.cra_blocksize = TEGRA_SE_RSA1024_INPUT_SIZE,
-			.cra_ctxsize = sizeof(struct tegra_se_aes_rsa_context),
-			.cra_alignmask = 0,
-			.cra_module = THIS_MODULE,
-		}
-	}, {
-		.encrypt = tegra_se_rsa_op,
-		.decrypt = tegra_se_rsa_op,
-		.sign = tegra_se_rsa_op,
-		.verify = tegra_se_rsa_op,
-		.set_priv_key = tegra_se_rsa_setkey,
-		.set_pub_key = tegra_se_rsa_setkey,
-		.max_size = tegra_se_rsa_max_size,
-		.exit = tegra_se_rsa_exit,
-		.base = {
-			.cra_name = "rsa1536",
-			.cra_driver_name = "tegra-se-rsa1536",
-			.cra_priority = 300,
-			.cra_blocksize = TEGRA_SE_RSA1536_INPUT_SIZE,
-			.cra_ctxsize = sizeof(struct tegra_se_aes_rsa_context),
-			.cra_alignmask = 0,
-			.cra_module = THIS_MODULE,
-		}
-	}, {
-		.encrypt = tegra_se_rsa_op,
-		.decrypt = tegra_se_rsa_op,
-		.sign = tegra_se_rsa_op,
-		.verify = tegra_se_rsa_op,
-		.set_priv_key = tegra_se_rsa_setkey,
-		.set_pub_key = tegra_se_rsa_setkey,
-		.max_size = tegra_se_rsa_max_size,
-		.exit = tegra_se_rsa_exit,
-		.base = {
-			.cra_name = "rsa2048",
-			.cra_driver_name = "tegra-se-rsa2048",
-			.cra_priority = 300,
-			.cra_blocksize = TEGRA_SE_RSA2048_INPUT_SIZE,
-			.cra_ctxsize = sizeof(struct tegra_se_aes_rsa_context),
-			.cra_alignmask = 0,
-			.cra_module = THIS_MODULE,
-		}
+static struct akcipher_alg rsa_alg = {
+	.encrypt = tegra_se_rsa_op,
+	.decrypt = tegra_se_rsa_op,
+	.sign = tegra_se_rsa_op,
+	.verify = tegra_se_rsa_op,
+	.set_priv_key = tegra_se_rsa_setkey,
+	.set_pub_key = tegra_se_rsa_setkey,
+	.max_size = tegra_se_rsa_max_size,
+	.exit = tegra_se_rsa_exit,
+	.base = {
+		.cra_name = "rsa-pka0",
+		.cra_driver_name = "tegra-se-pka0-rsa",
+		.cra_priority = 300,
+		.cra_ctxsize = sizeof(struct tegra_se_aes_rsa_context),
+		.cra_module = THIS_MODULE,
 	}
 };
 
@@ -3083,8 +3013,9 @@ static int tegra_se_probe(struct platform_device *pdev)
 	struct tegra_se_dev *se_dev = NULL;
 	struct nvhost_device_data *pdata = NULL;
 	const struct of_device_id *match;
-	int err = 0, i = 0;
+	int val, err = 0, i = 0;
 	struct device_node *node = NULL;
+	const char *rsa_name;
 
 	se_dev = devm_kzalloc(&pdev->dev, sizeof(struct tegra_se_dev),
 				GFP_KERNEL);
@@ -3269,15 +3200,21 @@ static int tegra_se_probe(struct platform_device *pdev)
 		}
 	}
 
+	node = of_node_get(se_dev->dev->of_node);
+	err = of_property_read_u32(node, "pka0-rsa-priority", &val);
+	if (!err)
+		rsa_alg.base.cra_priority = val;
+
+	err = of_property_read_string(node, "pka0-rsa-name", &rsa_name);
+	if (!err)
+		strcpy(rsa_alg.base.cra_name, rsa_name);
+
 	if (is_algo_supported(node, "rsa")) {
-		/* Register all RSA algorithms in hash_algs with SE4 */
-		for (i = 0; i < ARRAY_SIZE(rsa_algs); i++) {
-			err = crypto_register_akcipher(&rsa_algs[i]);
-			if (err) {
-				dev_err(se_dev->dev, "crypto_register_akcipher"
-				"alg failed index[%d]\n", i);
-				goto reg_fail;
-			}
+		/* Register RSA algorithm in rsa_alg with SE4 */
+		err = crypto_register_akcipher(&rsa_alg);
+		if (err) {
+			dev_err(se_dev->dev, "crypto_register_akcipher fail");
+			goto reg_fail;
 		}
 	}
 
@@ -3392,9 +3329,8 @@ static int tegra_se_remove(struct platform_device *pdev)
 	}
 
 	if (is_algo_supported(node, "rsa")) {
-		/* Unregister all 4 RSA algorithms in hash_algs with SE4 */
-		for (i = 0; i < ARRAY_SIZE(rsa_algs); i++)
-			crypto_unregister_akcipher(&rsa_algs[i]);
+		/* Unregister RSA algorithm in rsa_alg with SE4 */
+		crypto_unregister_akcipher(&rsa_alg);
 	}
 
 	tegra_se_free_ll_buf(se_dev);

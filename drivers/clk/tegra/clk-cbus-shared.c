@@ -279,6 +279,16 @@ static unsigned long _clk_cap_shared_bus(struct clk *c, unsigned long rate,
 	return min(rate, rounded_ceiling);
 }
 
+static int clk_cbus_prepare(struct clk_hw *hw)
+{
+	return tegra_dvfs_set_rate(hw->clk, clk_get_rate(hw->clk));
+}
+
+static void clk_cbus_unprepare(struct clk_hw *hw)
+{
+	tegra_dvfs_set_rate(hw->clk, 0);
+}
+
 static bool bus_user_is_slower(struct tegra_clk_cbus_shared *a,
 			       struct tegra_clk_cbus_shared *b)
 {
@@ -1059,6 +1069,8 @@ static const struct clk_ops tegra_clk_cbus_ops = {
 	.recalc_rate = clk_cbus_recalc_rate,
 	.round_rate = clk_cbus_round_rate,
 	.set_rate = clk_cbus_set_rate,
+	.prepare = clk_cbus_prepare,
+	.unprepare = clk_cbus_unprepare,
 	.debug_init = clk_shared_debug,
 };
 

@@ -145,7 +145,7 @@ struct msgbuf_ring; /* ring context for common and flow rings */
 
 #if defined(PCIE_D2H_SYNC)
 #define PCIE_D2H_SYNC_WAIT_TRIES    (512UL)
-#define PCIE_D2H_SYNC_NUM_OF_STEPS	(3UL)
+#define PCIE_D2H_SYNC_NUM_OF_STEPS	(6UL)
 #define PCIE_D2H_SYNC_DELAY			(50UL)	/* in terms of usecs */
 
 /**
@@ -697,10 +697,12 @@ dhd_prot_d2h_sync_seqnum(dhd_pub_t *dhd, msgbuf_ring_t *ring,
 
 			OSL_CACHE_INV(msg, msglen); /* invalidate and try again */
 			OSL_CPU_RELAX(); /* CPU relax for msg_seqnum  value to update */
-#if defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_SOC_EXYNOS8890)
+#if defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_SOC_EXYNOS8890) || \
+	IS_ENABLED(CONFIG_PCI_TEGRA)
 			/* For ARM there is no pause in cpu_relax, so add extra delay */
 			OSL_DELAY(delay * step);
-#endif /* defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_SOC_EXYNOS8890) */
+#endif /* defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_SOC_EXYNOS8890) || \
+	IS_ENABLED(CONFIG_PCI_TEGRA) */
 		} /* for PCIE_D2H_SYNC_WAIT_TRIES */
 	} /* for number of steps */
 
@@ -773,10 +775,12 @@ dhd_prot_d2h_sync_xorcsum(dhd_pub_t *dhd, msgbuf_ring_t *ring,
 
 			OSL_CACHE_INV(msg, msglen); /* invalidate and try again */
 			OSL_CPU_RELAX(); /* CPU relax for msg_seqnum  value to update */
-#if defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_SOC_EXYNOS8890)
+#if defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_SOC_EXYNOS8890) || \
+	IS_ENABLED(CONFIG_PCI_TEGRA)
 			/* For ARM there is no pause in cpu_relax, so add extra delay */
 			OSL_DELAY(delay * step);
-#endif /* defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_SOC_EXYNOS8890) */
+#endif /* defined(CONFIG_ARCH_MSM8996) || defined(CONFIG_SOC_EXYNOS8890) || \
+	IS_ENABLED(CONFIG_PCI_TEGRA) */
 
 		} /* for PCIE_D2H_SYNC_WAIT_TRIES */
 	} /* for number of steps */

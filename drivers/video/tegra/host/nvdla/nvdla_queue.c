@@ -204,7 +204,10 @@ static int nvdla_map_task_memory(struct nvdla_task *task)
 	struct dma_buf *buf = NULL;
 	struct nvdla_mem_handle *addresses;
 	struct nvhost_buffers *buffers = task->buffers;
+	struct platform_device *pdev = task->queue->pool->pdev;
 	struct dla_task_descriptor *task_desc = task->task_desc;
+
+	nvdla_dbg_fn(pdev, "");
 
 	task->num_handles = 0;
 
@@ -223,6 +226,7 @@ static int nvdla_map_task_memory(struct nvdla_task *task)
 				GFP_KERNEL);
 	if (!task->memory_handles) {
 		err = -ENOMEM;
+		nvdla_dbg_err(pdev, "fail to alloc mem handles");
 		goto fail_to_alloc_handles;
 	}
 
@@ -232,6 +236,7 @@ static int nvdla_map_task_memory(struct nvdla_task *task)
 				GFP_KERNEL);
 	if (!dma_addr) {
 		err = -ENOMEM;
+		nvdla_dbg_err(pdev, "fail to alloc dma addr list");
 		goto fail_to_alloc_dma_addr;
 	}
 
@@ -240,6 +245,7 @@ static int nvdla_map_task_memory(struct nvdla_task *task)
 				GFP_KERNEL);
 	if (!dma_size) {
 		err = -ENOMEM;
+		nvdla_dbg_err(pdev, "fail to alloc dma size");
 		goto fail_to_alloc_dma_size;
 	}
 
@@ -262,6 +268,7 @@ static int nvdla_map_task_memory(struct nvdla_task *task)
 		ptr = dma_buf_vmap(buf);
 		if (!ptr) {
 			err = -ENOMEM;
+			nvdla_dbg_err(pdev, "fail to vmap buf");
 			goto fail_to_pin_mem;
 		}
 
@@ -282,6 +289,7 @@ static int nvdla_map_task_memory(struct nvdla_task *task)
 	err = nvhost_buffer_submit_pin(buffers, task->memory_handles,
 				task->num_handles, dma_addr, dma_size);
 	if (err) {
+		nvdla_dbg_err(pdev, "fail to submit pin buffers");
 		goto fail_to_pin_mem;
 	}
 

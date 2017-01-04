@@ -98,9 +98,21 @@ static int nvdla_pin(struct nvdla_private *priv, void *arg)
 	int err = 0;
 	struct nvdla_pin_unpin_args *buf_list =
 			(struct nvdla_pin_unpin_args *)arg;
-	u32 count = buf_list->num_buffers;
+	u32 count;
 	struct platform_device *pdev = priv->pdev;
 
+	if (!buf_list) {
+		nvdla_dbg_err(pdev, "Invalid argument ptr in pin\n");
+		err = -EINVAL;
+		goto fail_to_get_val_arg;
+	}
+
+	count = buf_list->num_buffers;
+	if (count == 0 || !buf_list->buffers) {
+		nvdla_dbg_err(pdev, "Inval cnt arg for pin\n");
+		err = -EINVAL;
+		goto fail_to_get_val_cnt;
+	}
 	nvdla_dbg_info(pdev, "num of buffers [%d]", count);
 
 	handles = kcalloc(count, sizeof(u32), GFP_KERNEL);
@@ -117,6 +129,8 @@ static int nvdla_pin(struct nvdla_private *priv, void *arg)
 
 nvdla_buffer_cpy_err:
 	kfree(handles);
+fail_to_get_val_cnt:
+fail_to_get_val_arg:
 	return err;
 }
 
@@ -126,9 +140,21 @@ static int nvdla_unpin(struct nvdla_private *priv, void *arg)
 	int err = 0;
 	struct nvdla_pin_unpin_args *buf_list =
 			(struct nvdla_pin_unpin_args *)arg;
-	u32 count = buf_list->num_buffers;
+	u32 count;
 	struct platform_device *pdev = priv->pdev;
 
+	if (!buf_list) {
+		nvdla_dbg_err(pdev, "Invalid argument for pointer\n");
+		err = -EINVAL;
+		goto fail_to_get_val_arg;
+	}
+
+	count = buf_list->num_buffers;
+	if (count == 0 || !buf_list->buffers) {
+		nvdla_dbg_err(pdev, "Inval count argument for unpin\n");
+		err = -EINVAL;
+		goto fail_to_get_val_cnt;
+	}
 	nvdla_dbg_info(pdev, "num of buffers [%d]", count);
 
 	handles = kcalloc(count, sizeof(u32), GFP_KERNEL);
@@ -145,6 +171,8 @@ static int nvdla_unpin(struct nvdla_private *priv, void *arg)
 
 nvdla_buffer_cpy_err:
 	kfree(handles);
+fail_to_get_val_cnt:
+fail_to_get_val_arg:
 	return err;
 }
 
@@ -154,6 +182,12 @@ static int nvdla_ping(struct platform_device *pdev,
 	struct nvdla_cmd_mem_info ping_cmd_mem_info;
 	u32 *ping_va;
 	int err = 0;
+
+	if (!args) {
+		nvdla_dbg_err(pdev, "Invalid argument for ping\n");
+		err = -EINVAL;
+		goto fail_to_get_val_arg;
+	}
 
 	/* make sure that device is powered on */
 	err = nvhost_module_busy(pdev);
@@ -199,7 +233,7 @@ fail_cmd:
 fail_to_alloc:
 	nvhost_module_idle(pdev);
 fail_to_on:
-
+fail_to_get_val_arg:
 	return err;
 }
 
@@ -346,6 +380,15 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 	task->buffers = buffers;
 	task->sp = &nvhost_get_host(pdev)->syncpt;
 
+	if (local_task->num_prefences > MAX_NUM_NVDLA_PREFENCES ||
+	    local_task->num_postfences > MAX_NUM_NVDLA_POSTFENCES ||
+	    local_task->num_input_task_status > MAX_NUM_NVDLA_IN_TASK_STATUS ||
+	    local_task->num_output_task_status > MAX_NUM_NVDLA_OUT_TASK_STATUS) {
+		err = -EINVAL;
+		nvdla_dbg_err(pdev, "Invalid input arguments");
+		goto fail_to_get_val_args;
+	}
+
 	task->num_prefences = local_task->num_prefences;
 	task->num_postfences = local_task->num_postfences;
 	task->num_in_task_status = local_task->num_input_task_status;
@@ -379,6 +422,7 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 	return 0;
 
 fail_to_get_actions:
+fail_to_get_val_args:
 	kfree(task);
 fail_to_alloc_task:
 	*ptask = NULL;
@@ -410,8 +454,10 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 
 	user_tasks = (struct nvdla_ioctl_submit_task __user *)
 			(uintptr_t)args->tasks;
-	num_tasks = args->num_tasks;
+	if (!user_tasks)
+		return -EINVAL;
 
+	num_tasks = args->num_tasks;
 	if (num_tasks == 0 || num_tasks > MAX_TASKS_PER_SUBMIT)
 		return -EINVAL;
 
@@ -494,9 +540,12 @@ static long nvdla_ioctl(struct file *file, unsigned int cmd,
 	}
 
 	/* copy from user for read commands */
-	if (_IOC_DIR(cmd) & _IOC_WRITE)
+	if (_IOC_DIR(cmd) & _IOC_WRITE) {
+		if (!arg)
+			return -EINVAL;
 		if (copy_from_user(buf, (void __user *)arg, _IOC_SIZE(cmd)))
 			return -EFAULT;
+	}
 
 	nvdla_dbg_fn(pdev, "priv:%p cmd:%u", priv, cmd);
 

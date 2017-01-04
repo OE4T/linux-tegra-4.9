@@ -134,7 +134,7 @@ int tsec_hdcp_verify_cert(struct hdcp_context_t *hdcp_context)
 	struct hdcp_verify_cert_rx_param verify_cert_rx_param;
 	memset(&verify_cert_rx_param, 0,
 		sizeof(struct hdcp_verify_cert_rx_param));
-	memset(hdcp_context->cpuvaddr_cert, 0, HDCP_CERT_SIZE);
+	memset(hdcp_context->cpuvaddr_cert, 0, HDCP_CERT_SIZE_ALIGNED);
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
 	verify_cert_rx_param.session_id = hdcp_context->session_id;

@@ -2382,15 +2382,15 @@ static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 
 	tegra_dsi_writel(dsi, 0, DSI_PAD_CONTROL_4_VS1);
 
-	/* Calibrate DSI 0 */
-	if (dsi->info.ganged_type || dsi->info.dsi_csi_loopback ||
-		dsi->info.dsi_instance == DSI_INSTANCE_0) {
-		tegra_mipi_calibration(DSIA|DSIB);
-	}
-	/* Calibrate DSI 1 */
-	if (dsi->info.ganged_type || dsi->info.dsi_csi_loopback ||
-		dsi->info.dsi_instance == DSI_INSTANCE_1) {
-		tegra_mipi_calibration(DSIC|DSID);
+	if (dsi->info.ganged_type || dsi->info.dsi_csi_loopback) {
+		tegra_mipi_calibration(DSIA|DSIB|DSIC|DSID);
+	} else {
+		/* Calibrate DSI 0 */
+		if (dsi->info.dsi_instance == DSI_INSTANCE_0)
+			tegra_mipi_calibration(DSIA|DSIB);
+		/* Calibrate DSI 1 */
+		if (dsi->info.dsi_instance == DSI_INSTANCE_1)
+			tegra_mipi_calibration(DSIC|DSID);
 	}
 #if !defined(CONFIG_TEGRA_NVDISPLAY)
 	tegra_disp_clk_disable_unprepare(clk72mhz);

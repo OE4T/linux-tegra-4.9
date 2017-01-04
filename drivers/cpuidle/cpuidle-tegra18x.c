@@ -1,7 +1,7 @@
 /*
  * drivers/cpuidle/cpuidle-tegra18x.c
  *
- * Copyright (C) 2015-2016 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2015-2017 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -87,7 +87,7 @@ static bool check_mce_version(void)
 {
 	u32 mce_version_major, mce_version_minor;
 
-	tegra_mce_read_versions(&mce_version_major, &mce_version_minor);
+	t18x_mce_read_versions(&mce_version_major, &mce_version_minor);
 	if (mce_version_major >= 2)
 		return true;
 	else
@@ -96,8 +96,8 @@ static bool check_mce_version(void)
 static void tegra186_denver_enter_c6(u32 wake_time)
 {
 	cpu_pm_enter();
-	tegra_mce_update_cstate_info(0, 0, 0, 0, CORE_WAKE_MASK, 1);
-	tegra_mce_enter_cstate(TEGRA186_CPUIDLE_C6, wake_time);
+	t18x_mce_update_cstate_info(0, 0, 0, 0, CORE_WAKE_MASK, 1);
+	t18x_mce_enter_cstate(TEGRA186_CPUIDLE_C6, wake_time);
 	asm volatile("wfi\n");
 	cpu_pm_exit();
 }
@@ -143,7 +143,7 @@ static int t18x_denver_enter_state(
 	}
 
 	if (denver_testmode) {
-		tegra_mce_update_cstate_info(denver_cluster_idle_state,
+		t18x_mce_update_cstate_info(denver_cluster_idle_state,
 				0, 0, 0, 0, 0);
 		if (denver_idle_state >= t18x_denver_idle_driver.state_count) {
 			pr_err("%s: Requested invalid forced idle state\n",
@@ -189,7 +189,7 @@ static int t18x_a57_enter_state(
 	}
 
 	if (a57_testmode) {
-		tegra_mce_update_cstate_info(a57_cluster_idle_state,
+		t18x_mce_update_cstate_info(a57_cluster_idle_state,
 				0, 0, 0, 0, 0);
 		if (a57_idle_state >= t18x_a57_idle_driver.state_count) {
 			pr_err("%s: Requested invalid forced idle state\n",
@@ -348,7 +348,7 @@ static int denver_idle_write(void *data, u64 val)
         tick_program_event(sleep, true);
 
 	pmstate = denver_idle_state;
-	tegra_mce_update_cstate_info(denver_cluster_idle_state,0,0,0,0,0);
+	t18x_mce_update_cstate_info(denver_cluster_idle_state,0,0,0,0,0);
 
 	if (pmstate == TEGRA186_DENVER_CPUIDLE_C7)
 		tegra186_denver_enter_c7(wake_time);
@@ -403,7 +403,7 @@ static int a57_idle_write(void *data, u64 val)
         tick_program_event(sleep, true);
 
 	pmstate = a57_idle_state;
-	tegra_mce_update_cstate_info(a57_cluster_idle_state,0,0,0,0,0);
+	t18x_mce_update_cstate_info(a57_cluster_idle_state,0,0,0,0,0);
 
 	if (pmstate == TEGRA186_A57_CPUIDLE_C7)
 		tegra186_a57_enter_c7(wake_time);
@@ -433,7 +433,7 @@ static void program_single_crossover(void *data)
 {
 	struct xover_smp_call_data *xover_data =
 		(struct xover_smp_call_data *)data;
-	tegra_mce_update_crossover_time(xover_data->index,
+	t18x_mce_update_crossover_time(xover_data->index,
 					xover_data->value * tsc_per_usec);
 }
 
@@ -707,7 +707,7 @@ static void cluster_state_init(void *data)
 		power = value;
 		deepest_pmstate = pmstate;
 	}
-	tegra_mce_update_cstate_info(deepest_pmstate, 0, 0, 0, 0, 0);
+	t18x_mce_update_cstate_info(deepest_pmstate, 0, 0, 0, 0, 0);
 
 	if (tegra18_is_cpu_arm(smp_processor_id()))
 		deepest_a57_cluster_state = deepest_pmstate;
@@ -737,7 +737,7 @@ static void send_crossover(void *data)
 		for (i = 0; i < TEGRA_MCE_XOVER_MAX; i++) {
 			if (of_property_read_u32(child,
 				table1[i].name, &value) == 0)
-				tegra_mce_update_crossover_time
+				t18x_mce_update_crossover_time
 					(table1[i].index, value * tsc_per_usec);
 	}
 }
@@ -778,7 +778,7 @@ static int crossover_init(void)
 static void program_cluster_state(void *data)
 {
 	u32 *cluster_state = (u32 *)data;
-	tegra_mce_update_cstate_info(*cluster_state, 0, 0, 0, 0, 0);
+	t18x_mce_update_cstate_info(*cluster_state, 0, 0, 0, 0, 0);
 }
 
 static int tegra_suspend_notify_callback(struct notifier_block *nb,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -95,14 +95,14 @@ static noinline notrace int __send_smc(u8 func, struct mce_regs *regs)
  *
  * Returns 0 if success.
  */
-int tegra_mce_enter_cstate(u32 state, u32 wake_time)
+int t18x_mce_enter_cstate(u32 state, u32 wake_time)
 {
 	struct mce_regs regs;
 	regs.args[0] = state;
 	regs.args[1] = wake_time;
 	return send_smc(MCE_SMC_ENTER_CSTATE, &regs);
 }
-EXPORT_SYMBOL(tegra_mce_enter_cstate);
+EXPORT_SYMBOL(t18x_mce_enter_cstate);
 
 /**
  * Specify deepest cluster/ccplex/system states allowed.
@@ -116,7 +116,7 @@ EXPORT_SYMBOL(tegra_mce_enter_cstate);
  *
  * Returns 0 if success.
  */
-int tegra_mce_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
+int t18x_mce_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
 	u8 force, u32 wake_mask, bool valid)
 {
 	struct mce_regs regs;
@@ -128,7 +128,7 @@ int tegra_mce_update_cstate_info(u32 cluster, u32 ccplex, u32 system,
 	regs.args[5] = valid;
 	return send_smc(MCE_SMC_UPDATE_CSTATE_INFO, &regs);
 }
-EXPORT_SYMBOL(tegra_mce_update_cstate_info);
+EXPORT_SYMBOL(t18x_mce_update_cstate_info);
 
 /**
  * Update threshold for one specific c-state crossover
@@ -138,14 +138,14 @@ EXPORT_SYMBOL(tegra_mce_update_cstate_info);
  *
  * Returns 0 if success.
  */
-int tegra_mce_update_crossover_time(u32 type, u32 time)
+int t18x_mce_update_crossover_time(u32 type, u32 time)
 {
 	struct mce_regs regs;
 	regs.args[0] = type;
 	regs.args[1] = time;
 	return send_smc(MCE_SMC_UPDATE_XOVER_TIME, &regs);
 }
-EXPORT_SYMBOL(tegra_mce_update_crossover_time);
+EXPORT_SYMBOL(t18x_mce_update_crossover_time);
 
 /**
  * Query the runtime stats of a specific cstate
@@ -155,7 +155,7 @@ EXPORT_SYMBOL(tegra_mce_update_crossover_time);
  *
  * Returns 0 if success.
  */
-int tegra_mce_read_cstate_stats(u32 state, u32 *stats)
+int t18x_mce_read_cstate_stats(u32 state, u32 *stats)
 {
 	struct mce_regs regs;
 	regs.args[0] = state;
@@ -163,7 +163,7 @@ int tegra_mce_read_cstate_stats(u32 state, u32 *stats)
 	*stats = (u32)regs.args[2];
 	return 0;
 }
-EXPORT_SYMBOL(tegra_mce_read_cstate_stats);
+EXPORT_SYMBOL(t18x_mce_read_cstate_stats);
 
 /**
  * Overwrite the runtime stats of a specific c-state
@@ -173,14 +173,14 @@ EXPORT_SYMBOL(tegra_mce_read_cstate_stats);
  *
  * Returns 0 if success.
  */
-int tegra_mce_write_cstate_stats(u32 state, u32 stats)
+int t18x_mce_write_cstate_stats(u32 state, u32 stats)
 {
 	struct mce_regs regs;
 	regs.args[0] = state;
 	regs.args[1] = stats;
 	return send_smc(MCE_SMC_WRITE_CSTATE_STATS, &regs);
 }
-EXPORT_SYMBOL(tegra_mce_write_cstate_stats);
+EXPORT_SYMBOL(t18x_mce_write_cstate_stats);
 
 /**
  * Query MCE to determine if SC7 is allowed
@@ -192,7 +192,7 @@ EXPORT_SYMBOL(tegra_mce_write_cstate_stats);
  *
  * Returns 0 if success.
  */
-int tegra_mce_is_sc7_allowed(u32 state, u32 wake, u32 *allowed)
+int t18x_mce_is_sc7_allowed(u32 state, u32 wake, u32 *allowed)
 {
 	struct mce_regs regs;
 	regs.args[0] = state;
@@ -201,7 +201,7 @@ int tegra_mce_is_sc7_allowed(u32 state, u32 wake, u32 *allowed)
 	*allowed = (u32)regs.args[3];
 	return 0;
 }
-EXPORT_SYMBOL(tegra_mce_is_sc7_allowed);
+EXPORT_SYMBOL(t18x_mce_is_sc7_allowed);
 
 /**
  * Bring another offlined core back online to C0 state.
@@ -210,13 +210,13 @@ EXPORT_SYMBOL(tegra_mce_is_sc7_allowed);
  *
  * Returns 0 if success.
  */
-int tegra_mce_online_core(int cpu)
+int t18x_mce_online_core(int cpu)
 {
 	struct mce_regs regs;
 	regs.args[0] = cpu_logical_map(cpu);
 	return send_smc(MCE_SMC_ONLINE_CORE, &regs);
 }
-EXPORT_SYMBOL(tegra_mce_online_core);
+EXPORT_SYMBOL(t18x_mce_online_core);
 
 /**
  * Program Auto-CC3 feature.
@@ -246,7 +246,7 @@ EXPORT_SYMBOL(tegra_mce_cc3_ctrl);
  *
  * Returns 0 if success.
  */
-int tegra_mce_echo_data(u32 data, int *matched)
+int t18x_mce_echo_data(u32 data, int *matched)
 {
 	struct mce_regs regs;
 	regs.args[0] = data;
@@ -254,7 +254,7 @@ int tegra_mce_echo_data(u32 data, int *matched)
 	*matched = (u32)regs.args[2];
 	return 0;
 }
-EXPORT_SYMBOL(tegra_mce_echo_data);
+EXPORT_SYMBOL(t18x_mce_echo_data);
 
 /**
  * Read out MCE API major/minor versions
@@ -264,7 +264,7 @@ EXPORT_SYMBOL(tegra_mce_echo_data);
  *
  * Returns 0 if success.
  */
-int tegra_mce_read_versions(u32 *major, u32 *minor)
+int t18x_mce_read_versions(u32 *major, u32 *minor)
 {
 	struct mce_regs regs;
 	send_smc(MCE_SMC_READ_VERSIONS, &regs);
@@ -272,7 +272,7 @@ int tegra_mce_read_versions(u32 *major, u32 *minor)
 	*minor = (u32)regs.args[2];
 	return 0;
 }
-EXPORT_SYMBOL(tegra_mce_read_versions);
+EXPORT_SYMBOL(t18x_mce_read_versions);
 
 /**
  * Enumerate MCE API features
@@ -445,7 +445,7 @@ static const char * const cstats_table[] = {
 static int mce_echo_set(void *data, u64 val)
 {
 	u32 matched;
-	if (tegra_mce_echo_data((u32)val, &matched))
+	if (t18x_mce_echo_data((u32)val, &matched))
 		return -EINVAL;
 	return 0;
 }
@@ -453,7 +453,7 @@ static int mce_echo_set(void *data, u64 val)
 static int mce_versions_get(void *data, u64 *val)
 {
 	u32 major, minor;
-	int ret = tegra_mce_read_versions(&major, &minor);
+	int ret = t18x_mce_read_versions(&major, &minor);
 	if (!ret)
 		*val = ((u64)major << 32) | minor;
 	return ret;
@@ -473,7 +473,7 @@ static int mce_dbg_cstats_show(struct seq_file *s, void *data)
 	for (st = 1; st <= TEGRA_ARI_CSTATE_STATS_MAX; st++) {
 		if (!cstats_table[st])
 			continue;
-		if (tegra_mce_read_cstate_stats(st, &val))
+		if (t18x_mce_read_cstate_stats(st, &val))
 			pr_err("mce: failed to read cstat: %d\n", st);
 		else
 			seq_printf(s, "%-30s%-10d\n", cstats_table[st], val);

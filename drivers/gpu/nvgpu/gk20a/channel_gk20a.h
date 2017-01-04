@@ -1,7 +1,7 @@
 /*
  * GK20A graphics channel
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,6 +24,7 @@
 #include <linux/semaphore.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/stacktrace.h>
 #include <linux/wait.h>
 #include <uapi/linux/nvgpu.h>
 
@@ -115,6 +116,40 @@ struct channel_gk20a_clean_up {
 	struct delayed_work wq;
 };
 
+/*
+ * Track refcount actions, saving their stack traces. This number specifies how
+ * many most recent actions are stored in a buffer. Set to 0 to disable. 128
+ * should be enough to track moderately hard problems from the start.
+ */
+#define GK20A_CHANNEL_REFCOUNT_TRACKING 0
+/* Stack depth for the saved actions. */
+#define GK20A_CHANNEL_REFCOUNT_TRACKING_STACKLEN 8
+
+/*
+ * Because the puts and gets are not linked together explicitly (although they
+ * should always come in pairs), it's not possible to tell which ref holder to
+ * delete from the list when doing a put. So, just store some number of most
+ * recent gets and puts in a ring buffer, to obtain a history.
+ *
+ * These are zeroed when a channel is closed, so a new one starts fresh.
+ */
+
+enum channel_gk20a_ref_action_type {
+	channel_gk20a_ref_action_get,
+	channel_gk20a_ref_action_put
+};
+
+struct channel_gk20a_ref_action {
+	enum channel_gk20a_ref_action_type type;
+	unsigned long jiffies;
+	/*
+	 * Many of these traces will be similar. Simpler to just capture
+	 * duplicates than to have a separate database for the entries.
+	 */
+	struct stack_trace trace;
+	unsigned long trace_entries[GK20A_CHANNEL_REFCOUNT_TRACKING_STACKLEN];
+};
+
 /* this is the priv element of struct nvhost_channel */
 struct channel_gk20a {
 	struct gk20a *g; /* set only when channel is active */
@@ -125,6 +160,17 @@ struct channel_gk20a {
 	bool referenceable;
 	atomic_t ref_count;
 	wait_queue_head_t ref_count_dec_wq;
+#if GK20A_CHANNEL_REFCOUNT_TRACKING
+	/*
+	 * Ring buffer for most recent refcount gets and puts. Protected by
+	 * ref_actions_lock when getting or putting refs (i.e., adding
+	 * entries), and when reading entries.
+	 */
+	struct channel_gk20a_ref_action ref_actions[
+		GK20A_CHANNEL_REFCOUNT_TRACKING];
+	size_t ref_actions_put; /* index of next write */
+	spinlock_t ref_actions_lock;
+#endif
 
 	struct gk20a_semaphore_int *hw_sema;
 

@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics channel
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -62,6 +62,7 @@ struct channel_priv {
 
 static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f);
 static void free_channel(struct fifo_gk20a *f, struct channel_gk20a *c);
+static void gk20a_channel_dump_ref_actions(struct channel_gk20a *c);
 
 static void free_priv_cmdbuf(struct channel_gk20a *c,
 			     struct priv_cmd_entry *e);
@@ -886,6 +887,8 @@ static void gk20a_wait_until_counter_is_N(
 			   "%s: channel %d, still waiting, %s left: %d, waiting for: %d",
 			   caller, ch->hw_chid, counter_name,
 			   atomic_read(counter), wait_value);
+
+		gk20a_channel_dump_ref_actions(ch);
 	}
 }
 
@@ -1054,6 +1057,11 @@ unbind:
 	if (channel_gk20a_is_prealloc_enabled(ch))
 		channel_gk20a_free_prealloc_resources(ch);
 
+#if GK20A_CHANNEL_REFCOUNT_TRACKING
+	memset(ch->ref_actions, 0, sizeof(ch->ref_actions));
+	ch->ref_actions_put = 0;
+#endif
+
 	/* make sure we catch accesses of unopened channels in case
 	 * there's non-refcounted channel pointers hanging around */
 	ch->g = NULL;
@@ -1061,6 +1069,71 @@ unbind:
 
 	/* ALWAYS last */
 	free_channel(f, ch);
+}
+
+static void gk20a_channel_dump_ref_actions(struct channel_gk20a *ch)
+{
+#if GK20A_CHANNEL_REFCOUNT_TRACKING
+	size_t i, get;
+	unsigned long now = jiffies;
+	unsigned long prev_jiffies = 0;
+	struct device *dev = dev_from_gk20a(ch->g);
+
+	spin_lock(&ch->ref_actions_lock);
+
+	dev_info(d, "ch %d: refs %d. Actions, most recent last:\n",
+			ch->hw_chid, atomic_read(&ch->ref_count));
+
+	/* start at the oldest possible entry. put is next insertion point */
+	get = ch->ref_actions_put;
+
+	/*
+	 * If the buffer is not full, this will first loop to the oldest entry,
+	 * skipping not-yet-initialized entries. There is no ref_actions_get.
+	 */
+	for (i = 0; i < GK20A_CHANNEL_REFCOUNT_TRACKING; i++) {
+		struct channel_gk20a_ref_action *act = &ch->ref_actions[get];
+
+		if (act->trace.nr_entries) {
+			dev_info(d, "%s ref %zu steps ago (age %d ms, diff %d ms)\n",
+				act->type == channel_gk20a_ref_action_get
+					? "GET" : "PUT",
+				GK20A_CHANNEL_REFCOUNT_TRACKING - 1 - i,
+				jiffies_to_msecs(now - act->jiffies),
+				jiffies_to_msecs(act->jiffies - prev_jiffies));
+
+			print_stack_trace(&act->trace, 0);
+			prev_jiffies = act->jiffies;
+		}
+
+		get = (get + 1) % GK20A_CHANNEL_REFCOUNT_TRACKING;
+	}
+
+	spin_unlock(&ch->ref_actions_lock);
+#endif
+}
+
+static void gk20a_channel_save_ref_source(struct channel_gk20a *ch,
+		enum channel_gk20a_ref_action_type type)
+{
+#if GK20A_CHANNEL_REFCOUNT_TRACKING
+	struct channel_gk20a_ref_action *act;
+
+	spin_lock(&ch->ref_actions_lock);
+
+	act = &ch->ref_actions[ch->ref_actions_put];
+	act->type = type;
+	act->trace.max_entries = GK20A_CHANNEL_REFCOUNT_TRACKING_STACKLEN;
+	act->trace.nr_entries = 0;
+	act->trace.skip = 3; /* onwards from the caller of this */
+	act->trace.entries = act->trace_entries;
+	save_stack_trace(&act->trace);
+	act->jiffies = jiffies;
+	ch->ref_actions_put = (ch->ref_actions_put + 1) %
+		GK20A_CHANNEL_REFCOUNT_TRACKING;
+
+	spin_unlock(&ch->ref_actions_lock);
+#endif
 }
 
 /* Try to get a reference to the channel. Return nonzero on success. If fails,
@@ -1082,6 +1155,7 @@ struct channel_gk20a *_gk20a_channel_get(struct channel_gk20a *ch,
 	spin_lock(&ch->ref_obtain_lock);
 
 	if (likely(ch->referenceable)) {
+		gk20a_channel_save_ref_source(ch, channel_gk20a_ref_action_get);
 		atomic_inc(&ch->ref_count);
 		ret = ch;
 	} else
@@ -1097,6 +1171,7 @@ struct channel_gk20a *_gk20a_channel_get(struct channel_gk20a *ch,
 
 void _gk20a_channel_put(struct channel_gk20a *ch, const char *caller)
 {
+	gk20a_channel_save_ref_source(ch, channel_gk20a_ref_action_put);
 	trace_gk20a_channel_put(ch->hw_chid, caller);
 	atomic_dec(&ch->ref_count);
 	wake_up_all(&ch->ref_count_dec_wq);
@@ -2861,6 +2936,9 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	atomic_set(&c->ref_count, 0);
 	c->referenceable = false;
 	init_waitqueue_head(&c->ref_count_dec_wq);
+#if GK20A_CHANNEL_REFCOUNT_TRACKING
+	spin_lock_init(&c->ref_actions_lock);
+#endif
 	mutex_init(&c->ioctl_lock);
 	mutex_init(&c->error_notifier_mutex);
 	spin_lock_init(&c->joblist.dynamic.lock);

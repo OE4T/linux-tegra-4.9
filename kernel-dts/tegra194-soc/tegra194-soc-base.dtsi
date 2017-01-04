@@ -120,6 +120,7 @@
 								TEGRA_SID_HC_VM5
 								TEGRA_SID_HC_VM6
 								TEGRA_SID_HC_VM7>,
+			      <&{/host1x/vi-thi@15f00000}	TEGRA_SID_VI>,
 			      <&{/host1x/vic@15340000}		TEGRA_SID_VIC>,
 			      <&{/host1x/nvdec@15480000}	TEGRA_SID_NVDEC>,
 			      <&{/host1x/nvenc@154c0000}	TEGRA_SID_NVENC>,
@@ -139,6 +140,7 @@
 					    TEGRA_SID(NVDEC)
 					    TEGRA_SID(NVENC)
 					    TEGRA_SID(NVJPG)
+					    TEGRA_SID(VI)
 					    TEGRA_SID(NVDLA0)
 					    TEGRA_SID(NVDLA1)>;
 				sid-list-len = <6>;
@@ -495,6 +497,21 @@
 			resets = <&bpmp_resets TEGRA194_RESET_DPAUX1>;
 			reset-names = "dpaux1";
 		}; //dpaux@15040000
+
+		vi-thi@15f00000 {
+			compatible = "nvidia,tegra194-vi-thi";
+                        reg = <0x0 0x15f00000 0x0 0x00100000>;
+
+			resets = <&bpmp_resets TEGRA194_RESET_VI>,
+				 <&bpmp_resets TEGRA194_RESET_TSCTNVI>;
+			reset-names = "vi", "tsctnvi";
+			clocks = <&bpmp_clks TEGRA194_CLK_VI>,
+				 <&bpmp_clks TEGRA194_CLK_NVCSI>,
+				 <&bpmp_clks TEGRA194_CLK_NVCSILP>;
+			clock-names = "vi", "nvcsi", "nvcsilp";
+
+			#stream-id-cells = <1>;
+		};
 
 		pva0 {
 			compatible = "nvidia,tegra194-pva";

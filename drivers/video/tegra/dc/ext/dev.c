@@ -127,6 +127,7 @@ struct tegra_dc_ext_scanline_data {
 	struct tegra_dc_ext		*ext;
 	struct work_struct		work;
 	int				triggered_line;
+	int				max_val;
 };
 
 static int tegra_dc_ext_set_vblank(struct tegra_dc_ext *ext, bool enable);
@@ -699,6 +700,7 @@ static void tegra_dc_ext_scanline_worker(struct work_struct *work)
 	struct tegra_dc_ext *ext = data->ext;
 	struct tegra_dc *dc = ext->dc;
 	unsigned int vpulse3_sync_id = dc->vpulse3_syncpt;
+	int min_val;
 
 	/* Allow only one scanline operation at a time */
 	mutex_lock(&ext->scanline_lock);
@@ -725,8 +727,17 @@ static void tegra_dc_ext_scanline_worker(struct work_struct *work)
 		/* Clear scanline trigger state */
 		ext->scanline_trigger = -1;
 
-		/* Udate min val all the way to max. */
-		nvhost_syncpt_set_min_eq_max_ext(dc->ndev, vpulse3_sync_id);
+		/* Read current min_val */
+		min_val = nvhost_syncpt_read_minval(dc->ndev, vpulse3_sync_id);
+
+		/* Udate min_val to expected max only if they don't match */
+		if (min_val != data->max_val) {
+			dev_dbg(&dc->ndev->dev, "vp3 mismatch; %d vs %d",
+						min_val, data->max_val);
+
+			nvhost_syncpt_set_minval(dc->ndev, vpulse3_sync_id,
+						data->max_val);
+		}
 	}
 
 	/* Free arg allocated in the ioctl call */
@@ -802,6 +813,10 @@ int tegra_dc_ext_vpulse3(struct tegra_dc_ext *ext,
 	} else {
 		/* Clear trigger line value */
 		data->triggered_line = -1;
+
+		/* Pass current max_val */
+		data->max_val = nvhost_syncpt_read_maxval(dc->ndev,
+							vpulse3_sync_id);
 	}
 
 	/* Queue work to setup/increment/remove scanline trigger */

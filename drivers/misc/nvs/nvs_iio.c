@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -81,6 +81,7 @@
 #include <linux/iio/kfifo_buf.h>
 #include <linux/iio/trigger.h>
 #include <linux/nvs.h>
+#include <linux/version.h>
 
 #define NVS_IIO_DRIVER_VERSION		(220)
 
@@ -173,7 +174,7 @@ struct nvs_state {
 	struct sensor_cfg *cfg;
 	struct iio_trigger *trig;
 	struct iio_chan_spec *ch;
-	struct attribute *attrs[NVS_ATTRS_ARRAY_SIZE];
+	struct attribute *attrs[ARRAY_SIZE(nvs_attrs)];
 	struct attribute_group attr_group;
 	struct iio_info info;
 	bool init;
@@ -922,6 +923,7 @@ static ssize_t nvs_attr_show(struct device *dev,
 			ret = st->fn_dev->self_test(st->client,
 						    st->cfg->snsr_id, buf);
 			mutex_unlock(&indio_dev->mlock);
+			return ret;
 		}
 		break;
 
@@ -1081,16 +1083,12 @@ static ssize_t nvs_info_show(struct device *dev,
 
 static int nvs_attr_rm(struct nvs_state *st, struct attribute *rm_attr)
 {
-	unsigned int n;
 	unsigned int i;
 
-	for (i = 0; i < ARRAY_SIZE(st->attrs); i++) {
+	for (i = 0; i < ARRAY_SIZE(st->attrs) - 1; i++) {
 		if (st->attrs[i] == rm_attr) {
-			do {
-				n = i + 1;
-				st->attrs[i] = st->attrs[n];
-				i++;
-			} while (st->attrs[i] != NULL);
+			for (; i < ARRAY_SIZE(st->attrs) - 1; i++)
+				st->attrs[i] = st->attrs[i + 1];
 			return 0;
 		}
 	}
@@ -1103,7 +1101,6 @@ static int nvs_attr(struct iio_dev *indio_dev)
 	struct nvs_state *st = iio_priv(indio_dev);
 	unsigned int i;
 
-	BUG_ON(NVS_ATTRS_ARRAY_SIZE < ARRAY_SIZE(nvs_attrs));
 	memcpy(st->attrs, nvs_attrs, sizeof(st->attrs));
 	/* test if matrix data */
 	for (i = 0; i < ARRAY_SIZE(st->cfg->matrix); i++) {
@@ -1137,8 +1134,8 @@ static int nvs_read_raw(struct iio_dev *indio_dev,
 
 		*val = 0;
 		n = chan->scan_type.storagebits / 8;
-		if (n > sizeof(val))
-			n = sizeof(val);
+		if (n > sizeof(*val))
+			n = sizeof(*val);
 		memcpy(val, &st->buf[ret], n);
 		return IIO_VAL_INT;
 
@@ -1385,7 +1382,7 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 			if (st->fn_dev->offset) {
 				ret = st->fn_dev->offset(st->client,
 							 st->cfg->snsr_id,
-							 -1 , val);
+							 -1, val);
 				if (ret > 0) {
 					st->cfg->offset.ival = val;
 					st->cfg->offset.fval = val2;
@@ -1608,8 +1605,14 @@ static int nvs_chan(struct iio_dev *indio_dev)
 	}
 
 	/* create IIO channels */
-	ch_type_i = st->cfg->snsr_id;
-	ch_type_i--;
+	ch_type_i = st->cfg->snsr_id; /* st->cfg->snsr_id will be >= 0 */
+	/* Here we have two ways to identify the sensor:
+	 * 1. By name which we try to match to
+	 * 2. By sensor ID (st->cfg->snsr_id).  This method is typically used
+	 *    by the sensor hub so that name strings don't have to be passed
+	 *    and because there are multiple sensors the sensor hub driver has
+	 *    to track via the sensor ID.
+	 */
 	if (st->cfg->name) {
 		/* if st->cfg->name exists then we use that */
 		for (i = 0; i < ARRAY_SIZE(nvs_iio_chs); i++) {

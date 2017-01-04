@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -190,9 +190,10 @@
 
 
 #include <linux/of.h>
+#include <linux/version.h>
 #include <linux/nvs_proximity.h>
 
-#define NVS_PROXIMITY_VERSION		(100)
+#define NVS_PROXIMITY_VERSION		(102)
 #define NVS_FS_NANO			NVS_FLOAT_SIGNIFICANCE_NANO
 #define NVS_FS_MICRO			NVS_FLOAT_SIGNIFICANCE_MICRO
 
@@ -201,31 +202,44 @@ ssize_t nvs_proximity_dbg(struct nvs_proximity *np, char *buf)
 {
 	ssize_t t;
 
-	t = sprintf(buf, "%s v.%u:\n", __func__, NVS_PROXIMITY_VERSION);
-	t += sprintf(buf + t, "timestamp=%lld\n", np->timestamp);
-	t += sprintf(buf + t, "timestamp_report=%lld\n", np->timestamp_report);
-	t += sprintf(buf + t, "proximity=%u\n", np->proximity);
-	t += sprintf(buf + t, "hw=%u\n", np->hw);
-	t += sprintf(buf + t, "hw_mask=%x\n", np->hw_mask);
-	t += sprintf(buf + t, "hw_thresh_lo=%u\n", np->hw_thresh_lo);
-	t += sprintf(buf + t, "hw_thresh_hi=%u\n", np->hw_thresh_hi);
-	t += sprintf(buf + t, "hw_limit_lo=%x\n", np->hw_limit_lo);
-	t += sprintf(buf + t, "hw_limit_hi=%x\n", np->hw_limit_hi);
-	t += sprintf(buf + t, "thresh_valid_lo=%x\n", np->thresh_valid_lo);
-	t += sprintf(buf + t, "thresh_valid_hi=%x\n", np->thresh_valid_hi);
-	t += sprintf(buf + t, "thresholds_valid=%x\n", np->thresholds_valid);
-	t += sprintf(buf + t, "calibration_en=%x\n", np->calibration_en);
-	t += sprintf(buf + t, "dynamic_resolution_dis=%x\n",
-		     np->dynamic_resolution_dis);
-	t += sprintf(buf + t, "proximity_reverse_range_dis=%x\n",
-		     np->proximity_reverse_range_dis);
-	t += sprintf(buf + t, "proximity_binary_en=%x\n",
-		     np->proximity_binary_en);
-	t += sprintf(buf + t, "proximity_binary_hw=%x\n",
-		     np->proximity_binary_hw);
-	t += sprintf(buf + t, "poll_delay_ms=%u\n", np->poll_delay_ms);
-	t += sprintf(buf + t, "delay_us=%u\n", np->delay_us);
-	t += sprintf(buf + t, "report=%u\n", np->report);
+	t = snprintf(buf, PAGE_SIZE, "%s v.%u:\n",
+		     __func__, NVS_PROXIMITY_VERSION);
+	t += snprintf(buf + t, PAGE_SIZE - t, "timestamp=%lld\n",
+		      np->timestamp);
+	t += snprintf(buf + t, PAGE_SIZE - t, "timestamp_report=%lld\n",
+		      np->timestamp_report);
+	t += snprintf(buf + t, PAGE_SIZE - t, "proximity=%u\n", np->proximity);
+	t += snprintf(buf + t, PAGE_SIZE - t, "hw=%u\n", np->hw);
+	t += snprintf(buf + t, PAGE_SIZE - t, "hw_mask=%x\n", np->hw_mask);
+	t += snprintf(buf + t, PAGE_SIZE - t, "hw_thresh_lo=%u\n",
+		      np->hw_thresh_lo);
+	t += snprintf(buf + t, PAGE_SIZE - t, "hw_thresh_hi=%u\n",
+		      np->hw_thresh_hi);
+	t += snprintf(buf + t, PAGE_SIZE - t, "hw_limit_lo=%x\n",
+		      np->hw_limit_lo);
+	t += snprintf(buf + t, PAGE_SIZE - t, "hw_limit_hi=%x\n",
+		      np->hw_limit_hi);
+	t += snprintf(buf + t, PAGE_SIZE - t, "thresh_valid_lo=%x\n",
+		      np->thresh_valid_lo);
+	t += snprintf(buf + t, PAGE_SIZE - t, "thresh_valid_hi=%x\n",
+		      np->thresh_valid_hi);
+	t += snprintf(buf + t, PAGE_SIZE - t, "thresholds_valid=%x\n",
+		      np->thresholds_valid);
+	t += snprintf(buf + t, PAGE_SIZE - t, "calibration_en=%x\n",
+		      np->calibration_en);
+	t += snprintf(buf + t, PAGE_SIZE - t, "dynamic_resolution_dis=%x\n",
+		      np->dynamic_resolution_dis);
+	t += snprintf(buf + t, PAGE_SIZE - t,
+		      "proximity_reverse_range_dis=%x\n",
+		      np->proximity_reverse_range_dis);
+	t += snprintf(buf + t, PAGE_SIZE - t, "proximity_binary_en=%x\n",
+		      np->proximity_binary_en);
+	t += snprintf(buf + t, PAGE_SIZE - t, "proximity_binary_hw=%x\n",
+		      np->proximity_binary_hw);
+	t += snprintf(buf + t, PAGE_SIZE - t, "poll_delay_ms=%u\n",
+		      np->poll_delay_ms);
+	t += snprintf(buf + t, PAGE_SIZE - t, "delay_us=%u\n", np->delay_us);
+	t += snprintf(buf + t, PAGE_SIZE - t, "report=%u\n", np->report);
 	return t;
 }
 
@@ -292,6 +306,7 @@ static int nvs_proximity_poll_delay(struct nvs_proximity *np, int ret,
  */
 int nvs_proximity_read(struct nvs_proximity *np)
 {
+	u64 hw_distance;
 	u64 calc_i;
 	u64 calc_f;
 	s64 calc;
@@ -301,7 +316,6 @@ int nvs_proximity_read(struct nvs_proximity *np)
 	unsigned int poll_delay = 0;
 	unsigned int thresh_lo;
 	unsigned int thresh_hi;
-	unsigned int hw_distance;
 	int ret;
 
 	if (np->calibration_en)
@@ -310,7 +324,7 @@ int nvs_proximity_read(struct nvs_proximity *np)
 	if (np->report < np->cfg->report_n) { /* always report first sample */
 		/* calculate elapsed time for allowed report rate */
 		timestamp_diff = np->timestamp - np->timestamp_report;
-		delay = np->delay_us * 1000;
+		delay = (s64)np->delay_us * 1000;
 		if (timestamp_diff < delay) {
 			/* data changes are happening faster than allowed to
 			 * report so we poll for the next data at an allowed
@@ -456,8 +470,8 @@ int nvs_proximity_read(struct nvs_proximity *np)
 				 * float by multiplying the data with scale.
 				 */
 				if (np->cfg->resolution.fval) {
-					calc_f = (u64)(hw_distance *
-						     np->cfg->resolution.fval);
+					calc_f = hw_distance *
+						 np->cfg->resolution.fval;
 					do_div(calc_f, np->cfg->scale.fval);
 				}
 				if (np->cfg->resolution.ival) {
@@ -466,8 +480,8 @@ int nvs_proximity_read(struct nvs_proximity *np)
 					else
 						calc_i = NVS_FS_MICRO;
 					do_div(calc_i, np->cfg->scale.fval);
-					calc_i *= (u64)(hw_distance *
-						     np->cfg->resolution.ival);
+					calc_i *= hw_distance *
+						  np->cfg->resolution.ival;
 				}
 			}
 			calc = (s64)(calc_i + calc_f);
@@ -570,7 +584,7 @@ int nvs_proximity_of_dt(struct nvs_proximity *np, const struct device_node *dn,
 
 	if (dev_name == NULL)
 		dev_name = NVS_PROXIMITY_STRING;
-	ret = sprintf(str, "%s_binary_hw", dev_name);
+	ret = snprintf(str, sizeof(str), "%s_binary_hw", dev_name);
 	if (ret > 0)
 		of_property_read_s32(dn, str, &binary_hw);
 	if (binary_hw > 0)

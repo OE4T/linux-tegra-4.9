@@ -795,4 +795,5 @@ source "drivers/misc/tegra-profiler/Kconfig"
 trysource "../t18x/drivers/misc/tegra186-ahc/Kconfig.t18x"
 trysource "drivers/misc/tegra186-ahc/Kconfig.t18x"
 source "drivers/misc/nvs-dfsh/Kconfig"
+source "drivers/misc/nvs/Kconfig"
 endmenu

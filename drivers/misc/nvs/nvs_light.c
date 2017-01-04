@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -163,9 +163,10 @@
 
 
 #include <linux/of.h>
+#include <linux/version.h>
 #include <linux/nvs_light.h>
 
-#define NVS_LIGHT_VERSION		(103)
+#define NVS_LIGHT_VERSION		(106)
 
 
 ssize_t nvs_light_dbg(struct nvs_light *nl, char *buf)
@@ -174,29 +175,42 @@ ssize_t nvs_light_dbg(struct nvs_light *nl, char *buf)
 	unsigned int n;
 	unsigned int i;
 
-	t = sprintf(buf, "%s v.%u:\n", __func__, NVS_LIGHT_VERSION);
-	t += sprintf(buf + t, "timestamp=%lld\n", nl->timestamp);
-	t += sprintf(buf + t, "timestamp_report=%lld\n", nl->timestamp_report);
-	t += sprintf(buf + t, "lux=%u\n", nl->lux);
-	t += sprintf(buf + t, "lux_max=%u\n", nl->lux_max);
-	t += sprintf(buf + t, "hw=%u\n", nl->hw);
-	t += sprintf(buf + t, "hw_mask=%x\n", nl->hw_mask);
-	t += sprintf(buf + t, "hw_thresh_lo=%u\n", nl->hw_thresh_lo);
-	t += sprintf(buf + t, "hw_thresh_hi=%u\n", nl->hw_thresh_hi);
-	t += sprintf(buf + t, "hw_limit_lo=%x\n", nl->hw_limit_lo);
-	t += sprintf(buf + t, "hw_limit_hi=%x\n", nl->hw_limit_hi);
-	t += sprintf(buf + t, "thresh_valid_lo=%x\n", nl->thresh_valid_lo);
-	t += sprintf(buf + t, "thresh_valid_hi=%x\n", nl->thresh_valid_hi);
-	t += sprintf(buf + t, "thresholds_valid=%x\n", nl->thresholds_valid);
-	t += sprintf(buf + t, "nld_i_change=%x\n", nl->nld_i_change);
-	t += sprintf(buf + t, "calibration_en=%x\n", nl->calibration_en);
-	t += sprintf(buf + t, "poll_delay_ms=%u\n", nl->poll_delay_ms);
-	t += sprintf(buf + t, "delay_us=%u\n", nl->delay_us);
-	t += sprintf(buf + t, "report=%u\n", nl->report);
-	t += sprintf(buf + t, "nld_i=%u\n", nl->nld_i);
-	t += sprintf(buf + t, "nld_i_lo=%u\n", nl->nld_i_lo);
-	t += sprintf(buf + t, "nld_i_hi=%u\n", nl->nld_i_hi);
-	t += sprintf(buf + t, "nld_tbl_n=%u\n", nl->nld_tbl_n);
+	t = snprintf(buf, PAGE_SIZE, "%s v.%u:\n",
+		     __func__, NVS_LIGHT_VERSION);
+	t += snprintf(buf + t, PAGE_SIZE - t, "timestamp=%lld\n",
+		      nl->timestamp);
+	t += snprintf(buf + t, PAGE_SIZE - t, "timestamp_report=%lld\n",
+		      nl->timestamp_report);
+	t += snprintf(buf + t, PAGE_SIZE - t, "lux=%u\n", nl->lux);
+	t += snprintf(buf + t, PAGE_SIZE - t, "lux_max=%u\n", nl->lux_max);
+	t += snprintf(buf + t, PAGE_SIZE - t, "hw=%u\n", nl->hw);
+	t += snprintf(buf + t, PAGE_SIZE - t, "hw_mask=%x\n", nl->hw_mask);
+	t += snprintf(buf + t, PAGE_SIZE - t, "hw_thresh_lo=%u\n",
+		      nl->hw_thresh_lo);
+	t += snprintf(buf + t, PAGE_SIZE - t, "hw_thresh_hi=%u\n",
+		      nl->hw_thresh_hi);
+	t += snprintf(buf + t, PAGE_SIZE - t, "hw_limit_lo=%x\n",
+		      nl->hw_limit_lo);
+	t += snprintf(buf + t, PAGE_SIZE - t, "hw_limit_hi=%x\n",
+		      nl->hw_limit_hi);
+	t += snprintf(buf + t, PAGE_SIZE - t, "thresh_valid_lo=%x\n",
+		      nl->thresh_valid_lo);
+	t += snprintf(buf + t, PAGE_SIZE - t, "thresh_valid_hi=%x\n",
+		      nl->thresh_valid_hi);
+	t += snprintf(buf + t, PAGE_SIZE - t, "thresholds_valid=%x\n",
+		      nl->thresholds_valid);
+	t += snprintf(buf + t, PAGE_SIZE - t, "nld_i_change=%x\n",
+		      nl->nld_i_change);
+	t += snprintf(buf + t, PAGE_SIZE - t, "calibration_en=%x\n",
+		      nl->calibration_en);
+	t += snprintf(buf + t, PAGE_SIZE - t, "poll_delay_ms=%u\n",
+		      nl->poll_delay_ms);
+	t += snprintf(buf + t, PAGE_SIZE - t, "delay_us=%u\n", nl->delay_us);
+	t += snprintf(buf + t, PAGE_SIZE - t, "report=%u\n", nl->report);
+	t += snprintf(buf + t, PAGE_SIZE - t, "nld_i=%u\n", nl->nld_i);
+	t += snprintf(buf + t, PAGE_SIZE - t, "nld_i_lo=%u\n", nl->nld_i_lo);
+	t += snprintf(buf + t, PAGE_SIZE - t, "nld_i_hi=%u\n", nl->nld_i_hi);
+	t += snprintf(buf + t, PAGE_SIZE - t, "nld_tbl_n=%u\n", nl->nld_tbl_n);
 	if (nl->nld_tbl) {
 		if (nl->nld_tbl_n) {
 			i = 0;
@@ -207,46 +221,52 @@ ssize_t nvs_light_dbg(struct nvs_light *nl, char *buf)
 		}
 		for (; i < n; i++) {
 			if (nl->nld_thr) {
-				t += sprintf(buf + t, "nld_thr[%u].lo=%u\n",
-					     i, nl->nld_thr[i].lo);
-				t += sprintf(buf + t, "nld_thr[%u].hi=%u\n",
-					     i, nl->nld_thr[i].hi);
-				t += sprintf(buf + t, "nld_thr[%u].i_lo=%u\n",
-					     i, nl->nld_thr[i].i_lo);
-				t += sprintf(buf + t, "nld_thr[%u].i_hi=%u\n",
-					     i, nl->nld_thr[i].i_hi);
+				t += snprintf(buf + t, PAGE_SIZE - t,
+					      "nld_thr[%u].lo=%u\n",
+					      i, nl->nld_thr[i].lo);
+				t += snprintf(buf + t, PAGE_SIZE - t,
+					      "nld_thr[%u].hi=%u\n",
+					      i, nl->nld_thr[i].hi);
+				t += snprintf(buf + t, PAGE_SIZE - t,
+					      "nld_thr[%u].i_lo=%u\n",
+					      i, nl->nld_thr[i].i_lo);
+				t += snprintf(buf + t, PAGE_SIZE - t,
+					      "nld_thr[%u].i_hi=%u\n",
+					      i, nl->nld_thr[i].i_hi);
 			}
 			if (nl->cfg->float_significance) {
-				t += sprintf(buf + t,
+				t += snprintf(buf + t, PAGE_SIZE - t,
 					    "nld_tbl[%d].resolution=%d.%09u\n",
 					     i, nl->nld_tbl[i].resolution.ival,
 					     nl->nld_tbl[i].resolution.fval);
-				t += sprintf(buf + t,
+				t += snprintf(buf + t, PAGE_SIZE - t,
 					     "nld_tbl[%d].max_range=%d.%09u\n",
-					     i, nl->nld_tbl[i].max_range.ival,
-					     nl->nld_tbl[i].max_range.fval);
-				t += sprintf(buf + t,
-					     "nld_tbl[%d].milliamp=%d.%09u\n",
-					     i, nl->nld_tbl[i].milliamp.ival,
-					     nl->nld_tbl[i].milliamp.fval);
+					      i, nl->nld_tbl[i].max_range.ival,
+					      nl->nld_tbl[i].max_range.fval);
+				t += snprintf(buf + t, PAGE_SIZE - t,
+					      "nld_tbl[%d].milliamp=%d.%09u\n",
+					      i, nl->nld_tbl[i].milliamp.ival,
+					      nl->nld_tbl[i].milliamp.fval);
 			} else {
-				t += sprintf(buf + t,
+				t += snprintf(buf + t, PAGE_SIZE - t,
 					    "nld_tbl[%d].resolution=%d.%06u\n",
 					     i, nl->nld_tbl[i].resolution.ival,
-					     nl->nld_tbl[i].resolution.fval);
-				t += sprintf(buf + t,
+					      nl->nld_tbl[i].resolution.fval);
+				t += snprintf(buf + t, PAGE_SIZE - t,
 					     "nld_tbl[%d].max_range=%d.%06u\n",
-					     i, nl->nld_tbl[i].max_range.ival,
-					     nl->nld_tbl[i].max_range.fval);
-				t += sprintf(buf + t,
-					     "nld_tbl[%d].milliamp=%d.%06u\n",
-					     i, nl->nld_tbl[i].milliamp.ival,
-					     nl->nld_tbl[i].milliamp.fval);
+					      i, nl->nld_tbl[i].max_range.ival,
+					      nl->nld_tbl[i].max_range.fval);
+				t += snprintf(buf + t, PAGE_SIZE - t,
+					      "nld_tbl[%d].milliamp=%d.%06u\n",
+					      i, nl->nld_tbl[i].milliamp.ival,
+					      nl->nld_tbl[i].milliamp.fval);
 			}
-			t += sprintf(buf + t, "nld_tbl[%d].delay_min_ms=%u\n",
-				     i, nl->nld_tbl[i].delay_min_ms);
-			t += sprintf(buf + t, "nld_tbl[%d].driver_data=%u\n",
-				     i, nl->nld_tbl[i].driver_data);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "nld_tbl[%d].delay_min_ms=%u\n",
+				      i, nl->nld_tbl[i].delay_min_ms);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "nld_tbl[%d].driver_data=%u\n",
+				      i, nl->nld_tbl[i].driver_data);
 		}
 	}
 	return t;
@@ -328,7 +348,7 @@ int nvs_light_read(struct nvs_light *nl)
 	if (nl->report < nl->cfg->report_n) { /* always report first sample */
 		/* calculate elapsed time for allowed report rate */
 		timestamp_diff = nl->timestamp - nl->timestamp_report;
-		delay = nl->delay_us * 1000;
+		delay = (s64)nl->delay_us * 1000;
 		if (timestamp_diff < delay) {
 			/* data changes are happening faster than allowed to
 			 * report so we poll for the next data at an allowed
@@ -426,8 +446,8 @@ int nvs_light_read(struct nvs_light *nl)
 			 * by multiplying the data with scale.
 			 */
 			if (nl->cfg->resolution.fval) {
-				calc_f = (u64)
-					 (nl->hw * nl->cfg->resolution.fval);
+				calc_f = (u64)nl->hw *
+					 nl->cfg->resolution.fval;
 				do_div(calc_f, nl->cfg->scale.fval);
 			}
 			if (nl->cfg->resolution.ival) {
@@ -436,8 +456,8 @@ int nvs_light_read(struct nvs_light *nl)
 				else
 					calc_i = NVS_FLOAT_SIGNIFICANCE_MICRO;
 				do_div(calc_i, nl->cfg->scale.fval);
-				calc_i *= (u64)
-					  (nl->hw * nl->cfg->resolution.ival);
+				calc_i *= (u64)nl->hw *
+					  nl->cfg->resolution.ival;
 			} else {
 				calc_i = 0;
 			}
@@ -554,8 +574,10 @@ int nvs_light_of_dt(struct nvs_light *nl, const struct device_node *np,
 	int ret;
 	int ret_t;
 
-	if (nl->cfg)
-		nl->cfg->flags |= SENSOR_FLAG_ON_CHANGE_MODE;
+	if (!nl->cfg)
+		return -EINVAL;
+
+	nl->cfg->flags |= SENSOR_FLAG_ON_CHANGE_MODE;
 	if (np == NULL)
 		return -EINVAL;
 
@@ -572,14 +594,16 @@ int nvs_light_of_dt(struct nvs_light *nl, const struct device_node *np,
 		for (i = 0; i < nl->nld_tbl_n; i++) {
 			nl->nld_thr[i].lo = nl->cfg->thresh_lo;
 			nl->nld_thr[i].i_lo = nl->cfg->thresh_lo;
-			ret = sprintf(str, "%s_nld_thr_lo_%u", dev_name, i);
+			ret = snprintf(str, sizeof(str), "%s_nld_thr_lo_%u",
+				       dev_name, i);
 			if (ret > 0) {
 				ret = of_property_read_u32(np, str,
 							   &nl->nld_thr[i].lo);
 				if (!ret)
 					nld_thr_disable = false;
 			}
-			ret = sprintf(str, "%s_nld_thr_i_lo_%u", dev_name, i);
+			ret = snprintf(str, sizeof(str), "%s_nld_thr_i_lo_%u",
+				       dev_name, i);
 			if (ret > 0) {
 				ret = of_property_read_u32(np, str,
 							 &nl->nld_thr[i].i_lo);
@@ -588,14 +612,16 @@ int nvs_light_of_dt(struct nvs_light *nl, const struct device_node *np,
 			}
 			nl->nld_thr[i].hi = nl->cfg->thresh_hi;
 			nl->nld_thr[i].i_hi = nl->hw_mask - nl->cfg->thresh_hi;
-			ret = sprintf(str, "%s_nld_thr_hi_%u", dev_name, i);
+			ret = snprintf(str, sizeof(str), "%s_nld_thr_hi_%u",
+				       dev_name, i);
 			if (ret > 0) {
 				ret = of_property_read_u32(np, str,
 							   &nl->nld_thr[i].hi);
 				if (!ret)
 					nld_thr_disable = false;
 			}
-			ret = sprintf(str, "%s_nld_thr_i_hi_%u", dev_name, i);
+			ret = snprintf(str, sizeof(str), "%s_nld_thr_i_hi_%u",
+				       dev_name, i);
 			if (ret > 0) {
 				ret = of_property_read_u32(np, str,
 							 &nl->nld_thr[i].i_hi);
@@ -609,14 +635,16 @@ int nvs_light_of_dt(struct nvs_light *nl, const struct device_node *np,
 			nl->nld_thr = NULL;
 	}
 
-	ret = sprintf(str, "%s_lux_maximum", dev_name);
+	ret = snprintf(str, sizeof(str), "%s_lux_maximum", dev_name);
 	if (ret > 0)
 		of_property_read_u32(np, str, &nl->lux_max);
 	ret_t = -EINVAL;
-	ret = sprintf(str, "%s_dynamic_resolution_index_limit_low", dev_name);
+	ret = snprintf(str, sizeof(str),
+		       "%s_dynamic_resolution_index_limit_low", dev_name);
 	if (ret > 0)
 		ret_t = of_property_read_u32(np, str, &nl->nld_i_lo);
-	ret = sprintf(str, "%s_dynamic_resolution_index_limit_high", dev_name);
+	ret = snprintf(str, sizeof(str),
+		       "%s_dynamic_resolution_index_limit_high", dev_name);
 	if (ret > 0)
 		ret_t |= of_property_read_u32(np, str, &nl->nld_i_hi);
 	if (nl->nld_i_hi < nl->nld_i_lo)

@@ -1302,7 +1302,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		container_of(to_delayed_work(work), struct tegra_nvhdcp, work);
 	struct tegra_hdmi *hdmi = nvhdcp->hdmi;
 	struct tegra_dc *dc = tegra_dc_hdmi_get_dc(hdmi);
-	int e;
+	int e, alloc_err;
 	u8 b_caps;
 #if (defined(CONFIG_TEGRA_NVDISPLAY))
 	int hdcp_ta_ret; /* track returns from TA */
@@ -1311,8 +1311,11 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 
 	uint64_t *pkt = kmalloc(PKT_SIZE, GFP_KERNEL);
 
-	if (!pkt)
+	if (!pkt) {
+		nvhdcp_err("Memory allocation failed\n");
+		alloc_err = -ENOMEM;
 		goto failure;
+	}
 #else
 	u32 tmp;
 	u32 res;
@@ -1621,6 +1624,12 @@ failure:
 			goto lost_hdmi;
 		queue_delayed_work(nvhdcp->downstream_wq, &nvhdcp->work,
 						msecs_to_jiffies(1000));
+	}
+
+	/* Failed because of lack of memory */
+	if (alloc_err == -ENOMEM) {
+		g_fallback = 0;
+		return;
 	}
 
 lost_hdmi:

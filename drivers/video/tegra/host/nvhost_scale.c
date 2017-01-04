@@ -72,13 +72,13 @@ static int tegra_update_freq_table(struct clk *c,
 				   struct nvhost_device_data *pdata,
 				   int *num_freqs)
 {
-	unsigned long max_freq =  clk_round_rate(c, UINT_MAX);
-	unsigned long min_freq =  clk_round_rate(c, 0);
-	unsigned long clk_step, found_rate, last_rate, rate;
+	long max_freq = clk_round_rate(c, UINT_MAX);
+	long min_freq = clk_round_rate(c, 0);
+	long clk_step, found_rate, last_rate, rate;
 	int cnt = 0;
 
 	/* check if clk scaling is available */
-	if (min_freq == 0 || max_freq == 0)
+	if (min_freq <= 0 || max_freq <= 0)
 		return 0;
 
 	/* initial default min freq */
@@ -94,7 +94,7 @@ static int tegra_update_freq_table(struct clk *c,
 	for (rate = min_freq + clk_step; rate <= max_freq; rate += clk_step) {
 		found_rate = clk_round_rate(c, rate);
 		if (found_rate > last_rate) {
-			pdata->freqs[cnt] = found_rate;
+			pdata->freqs[cnt] = (unsigned long)found_rate;
 			last_rate = found_rate;
 			cnt++;
 		}
@@ -104,7 +104,7 @@ static int tegra_update_freq_table(struct clk *c,
 
 	/* fill the remaining table with max_freq */
 	for (; cnt < NVHOST_MODULE_MAX_FREQS; cnt++)
-		pdata->freqs[cnt] = max_freq;
+		pdata->freqs[cnt] = (unsigned long)max_freq;
 
 	*num_freqs = cnt;
 

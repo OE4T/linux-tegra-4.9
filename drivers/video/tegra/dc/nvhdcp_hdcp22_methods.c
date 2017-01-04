@@ -570,7 +570,9 @@ int tsec_hdcp_update_rrx(struct hdcp_context_t *hdcp_context)
 int tsec_hdcp_rptr_stream_manage(struct hdcp_context_t *hdcp_context)
 {
 	int err = 0;
-	struct hdcp_stream_manage_param    stream_manage_param;
+	struct hdcp_stream_manage_param stream_manage_param;
+
+	memset(&stream_manage_param, 0, sizeof(stream_manage_param));
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
 	stream_manage_param.session_id = hdcp_context->session_id;

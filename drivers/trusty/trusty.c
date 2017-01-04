@@ -25,8 +25,8 @@
 #include <linux/trusty/smcall.h>
 #include <linux/trusty/sm_err.h>
 #include <linux/trusty/trusty.h>
+#include <soc/tegra/virt/syscalls.h>
 #include "trusty-workitem.h"
-#include "syscalls.h"
 
 struct trusty_state;
 

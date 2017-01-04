@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -868,14 +868,17 @@ static u32 devinit_get_vfe_var_table(struct gk20a *g,
 
 	gk20a_dbg_info("");
 
-	if (g->ops.bios.get_perf_table_ptrs) {
-		vfevars_tbl_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
-				g->bios.perf_token,
-				CONTINUOUS_VIRTUAL_BINNING_TABLE);
-		if (vfevars_tbl_ptr == NULL) {
-			status = -EINVAL;
-			goto done;
-		}
+	if (!g->ops.bios.get_perf_table_ptrs) {
+		status = -EINVAL;
+		goto done;
+	}
+
+	vfevars_tbl_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+			g->bios.perf_token,
+			CONTINUOUS_VIRTUAL_BINNING_TABLE);
+	if (vfevars_tbl_ptr == NULL) {
+		status = -EINVAL;
+		goto done;
 	}
 
 	memcpy(&vfevars_tbl_header, vfevars_tbl_ptr,

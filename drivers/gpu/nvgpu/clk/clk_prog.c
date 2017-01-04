@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -182,13 +182,16 @@ static u32 devinit_get_clk_prog_table(struct gk20a *g,
 
 	gk20a_dbg_info("");
 
-	if (g->ops.bios.get_perf_table_ptrs) {
-		clkprogs_tbl_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
-				g->bios.clock_token, CLOCK_PROGRAMMING_TABLE);
-		if (clkprogs_tbl_ptr == NULL) {
-			status = -EINVAL;
-			goto done;
-		}
+	if (!g->ops.bios.get_perf_table_ptrs) {
+		status = -EINVAL;
+		goto done;
+	}
+
+	clkprogs_tbl_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+			g->bios.clock_token, CLOCK_PROGRAMMING_TABLE);
+	if (clkprogs_tbl_ptr == NULL) {
+		status = -EINVAL;
+		goto done;
 	}
 
 	memcpy(&header, clkprogs_tbl_ptr, hszfmt);

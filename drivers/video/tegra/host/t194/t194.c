@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Init for T194 Architecture Chips
  *
- * Copyright (c) 2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -96,6 +96,21 @@ static int nvhost_flcn_t194_finalize_poweron(struct platform_device *dev)
 	return nvhost_flcn_finalize_poweron(dev);
 }
 
+#if defined(CONFIG_VIDEO_TEGRA_VI)
+static inline u32 vi_thi_csb_afbif_streamid_ctl(void)
+{
+	return 0x00003408U;
+}
+
+static int nvhost_vi_thi_t194_finalize_poweron(struct platform_device *dev)
+{
+	/* Use THI StreamIDs, not value from StreamID table */
+	host1x_writel(dev, vi_thi_csb_afbif_streamid_ctl(), 0);
+
+	return nvhost_flcn_t194_finalize_poweron(dev);
+}
+#endif
+
 #if defined(CONFIG_TEGRA_GRHOST_NVDEC)
 static int nvhost_nvdec_t194_finalize_poweron(struct platform_device *dev)
 {
@@ -177,6 +192,30 @@ struct nvhost_device_data t19_host1xb_info = {
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	.private_data		= &host1xb04_info,
 };
+
+#if defined(CONFIG_VIDEO_TEGRA_VI)
+struct nvhost_device_data t19_vi_thi_info = {
+	.devfs_name		= "vi-thi",
+	.exclusive		= true,
+	.class			= NV_VIDEO_STREAMING_VI_CLASS_ID,
+	.modulemutexes		= {NV_HOST1X_MLOCK_ID_VI},
+	.keepalive		= true,
+	.autosuspend_delay      = 500,
+	.poweron_reset		= true,
+	.moduleid		= NVHOST_MODULE_VI,
+	.clocks = {
+		{"vi", 408000000},
+		{"nvcsi", 204000000},
+		{"nvcsilp", 204000000},
+	},
+	.num_channels		= 1,
+	.finalize_poweron	= nvhost_vi_thi_t194_finalize_poweron,
+	.vm_regs		= {{0x30, true}, {0x34, false} },
+	.version		= NVHOST_ENCODE_FLCN_VER(0, 0),
+	.firmware_name		= "nvhost_vi10.fw",
+	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
+};
+#endif
 
 #if defined(CONFIG_TEGRA_GRHOST_NVENC)
 struct nvhost_device_data t19_msenc_info = {

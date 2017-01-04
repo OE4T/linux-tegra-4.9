@@ -537,16 +537,16 @@ static int gm20b_tegra_unrailgate(struct device *dev)
 	if (platform->is_fmodel)
 		return 0;
 
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 	if (!platform->gpu_rail) {
 		platform->gpu_rail = tegra_dvfs_get_rail_by_name(GPU_RAIL_NAME);
 		if (IS_ERR_OR_NULL(platform->gpu_rail)) {
 			WARN(1, "No GPU regulator?\n");
 			return -EINVAL;
 		}
-#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 		first = true;
-#endif
 	}
+#endif
 
 	ret = tegra_dvfs_rail_power_up(platform->gpu_rail);
 	if (ret)
@@ -798,6 +798,24 @@ static int gk20a_tegra_probe(struct device *dev)
 	struct platform_device *host1x_pdev = NULL;
 	bool joint_xpu_rail = false;
 	int ret;
+
+#ifdef CONFIG_COMMON_CLK
+	/* DVFS is not guaranteed to be initialized at the time of probe on
+	 * kernels with Common Clock Framework enabled.
+	 */
+	if (!platform->gpu_rail) {
+		platform->gpu_rail = tegra_dvfs_get_rail_by_name(GPU_RAIL_NAME);
+		if (!platform->gpu_rail) {
+			gk20a_dbg_info("deferring probe no gpu_rail\n");
+			return -EPROBE_DEFER;
+		}
+	}
+
+	if (!tegra_dvfs_is_rail_ready(platform->gpu_rail)) {
+		gk20a_dbg_info("deferring probe gpu_rail not ready\n");
+		return -EPROBE_DEFER;
+	}
+#endif
 
 	host1x_ptr = of_get_property(np, "nvidia,host1x", NULL);
 	if (host1x_ptr) {

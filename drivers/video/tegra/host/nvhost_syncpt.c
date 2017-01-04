@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoints
  *
- * Copyright (c) 2010-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1463,3 +1463,44 @@ int nvhost_channel_set_syncpoint_name(struct nvhost_syncpt *sp,
 
 	return ret;
 }
+
+u32 nvhost_syncpt_read_minval(struct platform_device *dev, u32 id)
+{
+	struct nvhost_master *master = nvhost_get_host(dev);
+	struct nvhost_syncpt *sp = &master->syncpt;
+
+	smp_rmb();
+	return (u32)atomic_read(&sp->min_val[id]);
+}
+EXPORT_SYMBOL(nvhost_syncpt_read_minval);
+
+u32 nvhost_syncpt_read_maxval(struct platform_device *dev, u32 id)
+{
+	struct nvhost_master *master = nvhost_get_host(dev);
+	struct nvhost_syncpt *sp = &master->syncpt;
+
+	smp_rmb();
+	return (u32)atomic_read(&sp->max_val[id]);
+}
+EXPORT_SYMBOL(nvhost_syncpt_read_maxval);
+
+void nvhost_syncpt_set_minval(struct platform_device *dev, u32 id, u32 val)
+{
+	struct nvhost_master *master = nvhost_get_host(dev);
+	struct nvhost_syncpt *sp = &master->syncpt;
+
+	atomic_set(&sp->min_val[id], val);
+	smp_wmb();
+	syncpt_op().reset(sp, id);
+}
+EXPORT_SYMBOL(nvhost_syncpt_set_minval);
+
+void nvhost_syncpt_set_maxval(struct platform_device *dev, u32 id, u32 val)
+{
+	struct nvhost_master *master = nvhost_get_host(dev);
+	struct nvhost_syncpt *sp = &master->syncpt;
+
+	atomic_set(&sp->max_val[id], val);
+	smp_wmb();
+}
+EXPORT_SYMBOL(nvhost_syncpt_set_maxval);

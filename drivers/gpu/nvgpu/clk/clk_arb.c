@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1191,6 +1191,10 @@ int nvgpu_clk_arb_set_session_target_mhz(struct nvgpu_clk_session *session,
 		dev->mclk_target_mhz = target_mhz;
 		break;
 
+	case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
+		dev->gpc2clk_target_mhz = target_mhz * 2ULL;
+		break;
+
 	case NVGPU_GPU_CLK_DOMAIN_GPC2CLK:
 		dev->gpc2clk_target_mhz = target_mhz;
 		break;
@@ -1218,6 +1222,10 @@ int nvgpu_clk_arb_get_session_target_mhz(struct nvgpu_clk_session *session,
 		switch (api_domain) {
 		case NVGPU_GPU_CLK_DOMAIN_MCLK:
 			*freq_mhz = target->mclk;
+			break;
+
+		case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
+			*freq_mhz = target->gpc2clk / 2ULL;
 			break;
 
 		case NVGPU_GPU_CLK_DOMAIN_GPC2CLK:
@@ -1249,6 +1257,10 @@ int nvgpu_clk_arb_get_arbiter_actual_mhz(struct gk20a *g,
 			*freq_mhz = actual->mclk;
 			break;
 
+		case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
+			*freq_mhz = actual->gpc2clk / 2ULL;
+			break;
+
 		case NVGPU_GPU_CLK_DOMAIN_GPC2CLK:
 			*freq_mhz = actual->gpc2clk;
 			break;
@@ -1264,27 +1276,64 @@ int nvgpu_clk_arb_get_arbiter_actual_mhz(struct gk20a *g,
 int nvgpu_clk_arb_get_arbiter_effective_mhz(struct gk20a *g,
 		u32 api_domain, u16 *freq_mhz)
 {
-
-	*freq_mhz = g->ops.clk.get_rate(g, api_domain);
+	if (api_domain == NVGPU_GPU_CLK_DOMAIN_GPCCLK)
+		*freq_mhz = g->ops.clk.get_rate(g,
+				NVGPU_GPU_CLK_DOMAIN_GPC2CLK) / 2;
+	else
+		*freq_mhz = g->ops.clk.get_rate(g, api_domain);
 	return 0;
 }
 
 int nvgpu_clk_arb_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
 		u16 *min_mhz, u16 *max_mhz)
 {
-	return g->ops.clk_arb.get_arbiter_clk_range(g, api_domain,
+	int ret;
+
+	if (api_domain == NVGPU_GPU_CLK_DOMAIN_GPCCLK) {
+		ret = g->ops.clk_arb.get_arbiter_clk_range(g,
+				NVGPU_GPU_CLK_DOMAIN_GPC2CLK,
+				min_mhz, max_mhz);
+		if (!ret) {
+			*min_mhz /= 2;
+			*max_mhz /= 2;
+		}
+	} else {
+		ret = g->ops.clk_arb.get_arbiter_clk_range(g, api_domain,
 			min_mhz, max_mhz);
+	}
+
+	return ret;
 }
 
 u32 nvgpu_clk_arb_get_arbiter_clk_domains(struct gk20a *g)
 {
-	return g->ops.clk_arb.get_arbiter_clk_domains(g);
+	u32 clk_domains = g->ops.clk_arb.get_arbiter_clk_domains(g);
+
+	if (clk_domains & CTRL_CLK_DOMAIN_GPC2CLK)
+		clk_domains |= CTRL_CLK_DOMAIN_GPCCLK;
+
+	return clk_domains;
 }
 
 int nvgpu_clk_arb_get_arbiter_clk_f_points(struct gk20a *g,
 	u32 api_domain, u32 *max_points, u16 *fpoints)
 {
-	return (int)clk_domain_get_f_points(g, api_domain, max_points, fpoints);
+	int err;
+	u32 i;
+
+	if (api_domain == NVGPU_GPU_CLK_DOMAIN_GPCCLK) {
+		err = clk_domain_get_f_points(g, NVGPU_GPU_CLK_DOMAIN_GPC2CLK,
+				max_points, fpoints);
+		if (err || !fpoints)
+			return err;
+		for (i = 0; i < *max_points; i++)
+			fpoints[i] /= 2;
+	} else {
+		err = clk_domain_get_f_points(g, api_domain,
+				max_points, fpoints);
+	}
+
+	return err;
 }
 
 static u8 nvgpu_clk_arb_find_vf_point(struct nvgpu_clk_arb *arb,

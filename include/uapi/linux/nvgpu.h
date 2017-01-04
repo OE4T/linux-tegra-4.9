@@ -1,7 +1,7 @@
 /*
  * NVGPU Public Interface Header
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -536,7 +536,13 @@ struct nvgpu_gpu_alloc_vidmem_args {
 	};
 };
 
+/* Main graphics core clock */
+#define NVGPU_GPU_CLK_DOMAIN_GPCCLK                              (0x10000000)
+/* Memory clock */
 #define NVGPU_GPU_CLK_DOMAIN_MCLK                                (0x00000010)
+/* Main graphics core clock x 2
+ *	deprecated, use NVGPU_GPU_CLK_DOMAIN_GPCCLK instead
+ */
 #define NVGPU_GPU_CLK_DOMAIN_GPC2CLK                             (0x00010000)
 
 struct nvgpu_gpu_clk_range {

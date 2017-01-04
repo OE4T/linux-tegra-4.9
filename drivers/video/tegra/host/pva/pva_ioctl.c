@@ -297,6 +297,9 @@ static int pva_pin(struct pva_private *priv, void *arg)
 	struct pva_pin_unpin_args *buf_list = (struct pva_pin_unpin_args *)arg;
 	u32 count = buf_list->num_buffers;
 
+	if (count > PVA_MAX_PIN_BUFFERS)
+		return -EINVAL;
+
 	handles = kcalloc(count, sizeof(u32), GFP_KERNEL);
 	if (!handles)
 		return -ENOMEM;
@@ -320,6 +323,9 @@ static int pva_unpin(struct pva_private *priv, void *arg)
 	int err = 0;
 	struct pva_pin_unpin_args *buf_list = (struct pva_pin_unpin_args *)arg;
 	u32 count = buf_list->num_buffers;
+
+	if (count > PVA_MAX_PIN_BUFFERS)
+		return -EINVAL;
 
 	handles = kcalloc(count, sizeof(u32), GFP_KERNEL);
 	if (!handles)

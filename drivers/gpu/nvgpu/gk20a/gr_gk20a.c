@@ -670,6 +670,12 @@ void gr_gk20a_ctx_patch_write_end(struct gk20a *g,
 					struct channel_ctx_gk20a *ch_ctx)
 {
 	gk20a_mem_end(g, &ch_ctx->patch_ctx.mem);
+	/* Write context count to context image if it is mapped */
+	if (ch_ctx->gr_ctx->mem.cpu_va) {
+		gk20a_mem_wr(g, &ch_ctx->gr_ctx->mem,
+			     ctxsw_prog_main_image_patch_count_o(),
+			     ch_ctx->patch_ctx.data_count);
+	}
 }
 
 void gr_gk20a_ctx_patch_write(struct gk20a *g,

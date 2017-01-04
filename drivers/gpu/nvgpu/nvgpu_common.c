@@ -125,16 +125,18 @@ int nvgpu_probe(struct gk20a *g,
 	nvgpu_init_timeslice(g);
 	nvgpu_init_pm_vars(g);
 
-	err = gk20a_user_init(g->dev, interface_name, class);
-	if (err)
-		return err;
-
 	/* Initialize the platform interface. */
 	err = platform->probe(g->dev);
 	if (err) {
 		dev_err(g->dev, "platform probe failed");
 		return err;
 	}
+
+	/* platform probe can defer do user init only if probe succeeds */
+	err = gk20a_user_init(g->dev, interface_name, class);
+	if (err)
+		return err;
+
 
 	/* Initialise scaling */
 	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))

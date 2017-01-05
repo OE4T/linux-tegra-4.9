@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/hdmi2.0.c
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -1096,9 +1096,11 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			dc->out->ddc_bus);
 	if (IS_ERR_OR_NULL(hdmi->nvhdcp)) {
 		err = PTR_ERR(hdmi->nvhdcp);
-		goto fail_np_panel;
+		dev_err(&dc->ndev->dev,
+			"hdmi hdcp creation failed with err %d\n", err);
+	} else {
+		tegra_nvhdcp_debugfs_init(hdmi->nvhdcp);
 	}
-	tegra_nvhdcp_debugfs_init(hdmi->nvhdcp);
 #endif
 
 	tegra_hdmi_ddc_init(hdmi);
@@ -1170,10 +1172,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi_instance++;
 	of_node_put(np_hdmi);
 	return 0;
-#ifdef CONFIG_HDCP
-fail_np_panel:
-	of_node_put(np_panel);
-#endif
+
 fail_tegra_hdmi_dpaux_init:
 	devm_iounmap(&dc->ndev->dev, hdmi->hdmi_dpaux_base[sor_num]);
 	devm_release_mem_region(&dc->ndev->dev,

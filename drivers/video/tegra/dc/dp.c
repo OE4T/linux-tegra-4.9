@@ -2253,10 +2253,12 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		dc->out->ddc_bus);
 	if (IS_ERR_OR_NULL(dp->dphdcp)) {
 		err = PTR_ERR(dp->dphdcp);
-		goto err_free_dp;
+		dev_err(&dc->ndev->dev,
+			"dp hdcp creation failed with err %d\n", err);
+	} else {
+		/* create a /d entry to change the max retries */
+		tegra_dphdcp_debugfs_init(dp->dphdcp);
 	}
-	/* create a /d entry to change the max retries */
-	tegra_dphdcp_debugfs_init(dp->dphdcp);
 #endif
 
 	tegra_dp_prods_init(dp);

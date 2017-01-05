@@ -56,6 +56,7 @@ static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 	struct gr_ctx_desc *gr_ctx;
 	u32 graphics_preempt_mode = 0;
 	u32 compute_preempt_mode = 0;
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 	int err;
 
 	gk20a_dbg_fn("");
@@ -70,6 +71,14 @@ static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 		graphics_preempt_mode = NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP;
 	if (flags & NVGPU_ALLOC_OBJ_FLAGS_CILP)
 		compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CILP;
+
+	if (priv->constants.force_preempt_mode && !graphics_preempt_mode &&
+		!compute_preempt_mode) {
+		graphics_preempt_mode = PASCAL_A == class ?
+					NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP : 0;
+		compute_preempt_mode = PASCAL_COMPUTE_A == class ?
+					NVGPU_COMPUTE_PREEMPTION_MODE_CTA : 0;
+	}
 
 	if (graphics_preempt_mode || compute_preempt_mode) {
 		if (g->ops.gr.set_ctxsw_preemption_mode) {

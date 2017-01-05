@@ -442,6 +442,7 @@ struct tegra_vgpu_constants_params {
 	 */
 	u16 gpc_tpc_mask[TEGRA_VGPU_MAX_GPC_COUNT];
 	u32 hwpm_ctx_size;
+	u8 force_preempt_mode;
 };
 
 struct tegra_vgpu_channel_cyclestats_snapshot_params {

@@ -30,6 +30,8 @@ struct nvhost_virt_ctx {
 	struct task_struct *syncpt_handler;
 };
 
+#ifdef CONFIG_TEGRA_GRHOST_VHOST
+
 static inline void nvhost_set_virt_data(struct platform_device *dev, void *d)
 {
 	struct nvhost_device_data *data = platform_get_drvdata(dev);
@@ -59,4 +61,47 @@ int nvhost_virt_init(struct platform_device *dev, int moduleid);
 void nvhost_virt_deinit(struct platform_device *dev);
 void vhost_cdma_timeout(struct nvhost_master *dev,
 			struct tegra_vhost_chan_timeout_intr_info *info);
+
+#else
+
+static inline void vhost_init_host1x_intr_ops(struct nvhost_intr_ops *ops)
+{ }
+static inline void vhost_init_host1x_syncpt_ops(struct nvhost_syncpt_ops *ops)
+{ }
+static inline void vhost_init_host1x_cdma_ops(struct nvhost_cdma_ops *ops)
+{ }
+static inline void vhost_init_host1x_debug_ops(struct nvhost_debug_ops *ops)
+{ }
+static inline int vhost_syncpt_get_range(u64 handle, u32 *base, u32 *size)
+{
+	return -ENOTSUPP;
+}
+static inline int vhost_virt_moduleid(int moduleid)
+{
+	return -ENOTSUPP;
+}
+static inline u32 vhost_channel_alloc_clientid(u64 handle, u32 moduleid)
+{
+	return 0;
+}
+static inline int vhost_rdwr_module_regs(struct platform_device *ndev,
+	u32 count, u32 block_size, u32 __user *offsets, u32 __user *values,
+	u32 write)
+{
+	return -ENOTSUPP;
+}
+static inline void *nvhost_get_virt_data(struct platform_device *dev)
+{
+	return NULL;
+}
+static inline int nvhost_virt_init(struct platform_device *dev, int moduleid)
+{
+	return -ENOTSUPP;
+}
+static inline void nvhost_virt_deinit(struct platform_device *dev)
+{
+}
+
+#endif
+
 #endif

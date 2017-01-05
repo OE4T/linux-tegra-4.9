@@ -347,8 +347,7 @@ enum pmc_regs {
 	/* Last entry */
 	TEGRA_PMC_MAX_REG,
 };
-static DEFINE_SPINLOCK(tegra_io_dpd_lock);
-static DEFINE_SPINLOCK(tegra_pmc_access_lock);
+
 static struct tegra_prod *prod_list;
 
 #ifdef CONFIG_TEGRA210_BOOTROM_PMC
@@ -1298,94 +1297,6 @@ int tegra_pmc_iopower_get_status(int reg, u32 bit_mask)
 EXPORT_SYMBOL(tegra_pmc_iopower_get_status);
 #endif
 
-static void _tegra_io_dpd_enable(struct tegra_io_dpd *hnd)
-{
-	unsigned int enable_mask;
-	unsigned int dpd_status;
-	unsigned int dpd_enable_lsb;
-
-	if (!hnd)
-		return;
-
-	spin_lock(&tegra_io_dpd_lock);
-	dpd_enable_lsb = (hnd->io_dpd_reg_index) ? IO_DPD2_ENABLE_LSB :
-						IO_DPD_ENABLE_LSB;
-	tegra_pmc_writel(0x1, TEGRA_PMC_IO_DPD_SAMPLE);
-	tegra_pmc_writel(0x10, TEGRA_PMC_SEL_DPD_TIM);
-	enable_mask = ((1 << hnd->io_dpd_bit) | (2 << dpd_enable_lsb));
-	_tegra_pmc_writel(enable_mask, IO_DPD_REQ + hnd->io_dpd_reg_index * 8);
-	/* delay pclk * (reset SEL_DPD_TIM value 127 + 5) */
-	udelay(7);
-	dpd_status = _tegra_pmc_readl(IO_DPD_STATUS + hnd->io_dpd_reg_index * 8);
-	if (!(dpd_status & (1 << hnd->io_dpd_bit))) {
-		if (!tegra_platform_is_fpga()) {
-			pr_info("Error: dpd%d enable failed, status=%#x\n",
-			(hnd->io_dpd_reg_index + 1), dpd_status);
-		}
-	}
-	/* Sample register must be reset before next sample operation */
-	tegra_pmc_writel(0x0, TEGRA_PMC_IO_DPD_SAMPLE);
-	spin_unlock(&tegra_io_dpd_lock);
-}
-
-int tegra_pmc_io_dpd_enable(int reg, int bit_pos)
-{
-        struct tegra_io_dpd io_dpd;
-
-        io_dpd.io_dpd_bit = bit_pos;
-        io_dpd.io_dpd_reg_index = reg;
-        _tegra_io_dpd_enable(&io_dpd);
-        return 0;
-}
-EXPORT_SYMBOL(tegra_pmc_io_dpd_enable);
-
-static void _tegra_io_dpd_disable(struct tegra_io_dpd *hnd)
-{
-	unsigned int enable_mask;
-	unsigned int dpd_status;
-	unsigned int dpd_enable_lsb;
-
-	if (!hnd)
-		return;
-
-	spin_lock(&tegra_io_dpd_lock);
-	dpd_enable_lsb = (hnd->io_dpd_reg_index) ? IO_DPD2_ENABLE_LSB :
-						IO_DPD_ENABLE_LSB;
-	enable_mask = ((1 << hnd->io_dpd_bit) | (1 << dpd_enable_lsb));
-	_tegra_pmc_writel(enable_mask, IO_DPD_REQ + hnd->io_dpd_reg_index * 8);
-	dpd_status = _tegra_pmc_readl(IO_DPD_STATUS + hnd->io_dpd_reg_index * 8);
-	if (dpd_status & (1 << hnd->io_dpd_bit)) {
-		if (!tegra_platform_is_fpga()) {
-			pr_info("Error: dpd%d disable failed, status=%#x\n",
-			(hnd->io_dpd_reg_index + 1), dpd_status);
-		}
-	}
-	spin_unlock(&tegra_io_dpd_lock);
-}
-
-int tegra_pmc_io_dpd_disable(int reg, int bit_pos)
-{
-        struct tegra_io_dpd io_dpd;
-
-        io_dpd.io_dpd_bit = bit_pos;
-        io_dpd.io_dpd_reg_index = reg;
-        _tegra_io_dpd_disable(&io_dpd);
-        return 0;
-}
-EXPORT_SYMBOL(tegra_pmc_io_dpd_disable);
-
-int tegra_pmc_io_dpd_get_status(int reg, int bit_pos)
-{
-	unsigned int dpd_status;
-
-	dpd_status = _tegra_pmc_readl(IO_DPD_STATUS + reg * 8);
-	if (dpd_status & BIT(bit_pos))
-		return 1;
-	else
-		return 0;
-}
-EXPORT_SYMBOL(tegra_pmc_io_dpd_get_status);
-
 /* cleans io dpd settings from bootloader during kernel init */
 static void _tegra_bl_io_dpd_cleanup(void)
 {
@@ -1412,23 +1323,6 @@ void tegra_pmc_io_dpd_clear(void)
 	_tegra_bl_io_dpd_cleanup();
 }
 EXPORT_SYMBOL(tegra_pmc_io_dpd_clear);
-
-void tegra_pmc_pwr_detect_update(unsigned long mask, unsigned long val)
-{
-	unsigned long flags;
-
-	spin_lock_irqsave(&tegra_pmc_access_lock, flags);
-	tegra_pmc_register_update(TEGRA_PMC_PWR_DET_ENABLE, mask, mask);
-	tegra_pmc_register_update(TEGRA_PMC_PWR_DET_VAL, mask, val);
-	spin_unlock_irqrestore(&tegra_pmc_access_lock, flags);
-}
-EXPORT_SYMBOL(tegra_pmc_pwr_detect_update);
-
-unsigned long tegra_pmc_pwr_detect_get(unsigned long mask)
-{
-	return tegra_pmc_readl(TEGRA_PMC_PWR_DET_VAL);
-}
-EXPORT_SYMBOL(tegra_pmc_pwr_detect_get);
 
 /* T210 USB2 SLEEPWALK APIs */
 int tegra_pmc_utmi_phy_enable_sleepwalk(int port, enum usb_device_speed speed,

@@ -1535,6 +1535,11 @@ unsigned long tegra_dvfs_get_fmax_at_vmin_safe_t(struct clk *c)
 	return d->fmax_at_vmin_safe_t;
 }
 
+bool tegra_dvfs_is_rail_ready(struct dvfs_rail *rail)
+{
+	return rail->is_ready;
+}
+
 /*
  * Validate rail thermal floors/caps, and get its size.
  * Valid floors/caps:

@@ -1228,118 +1228,30 @@ static void tegra_powergate_init(struct tegra_pmc *pmc,
 	of_node_put(np);
 }
 
-static int tegra_io_rail_prepare(unsigned int id, unsigned long *request,
-				 unsigned long *status, unsigned int *bit)
-{
-	unsigned long rate, value;
-
-	*bit = id % 32;
-
-	/*
-	 * There are two sets of 30 bits to select IO rails, but bits 30 and
-	 * 31 are control bits rather than IO rail selection bits.
-	 */
-	if (id > 63 || *bit == 30 || *bit == 31)
-		return -EINVAL;
-
-	if (id < 32) {
-		*status = IO_DPD_STATUS;
-		*request = IO_DPD_REQ;
-	} else {
-		*status = IO_DPD2_STATUS;
-		*request = IO_DPD2_REQ;
-	}
-
-	rate = clk_get_rate(pmc->clk);
-
-	tegra_pmc_writel(DPD_SAMPLE_ENABLE, TEGRA_PMC_IO_DPD_SAMPLE);
-
-	/* must be at least 200 ns, in APB (PCLK) clock cycles */
-	value = DIV_ROUND_UP(1000000000, rate);
-	value = DIV_ROUND_UP(200, value);
-	tegra_pmc_writel(value, TEGRA_PMC_SEL_DPD_TIM);
-
-	return 0;
-}
-
-static int tegra_io_rail_poll(unsigned long offset, unsigned long mask,
-			      unsigned long val, unsigned long timeout)
-{
-	unsigned long value;
-
-	timeout = jiffies + msecs_to_jiffies(timeout);
-
-	while (time_after(timeout, jiffies)) {
-		value = _tegra_pmc_readl(offset);
-		if ((value & mask) == val)
-			return 0;
-
-		usleep_range(250, 1000);
-	}
-
-	return -ETIMEDOUT;
-}
-
-static void tegra_io_rail_unprepare(void)
-{
-	tegra_pmc_writel(DPD_SAMPLE_DISABLE, TEGRA_PMC_IO_DPD_SAMPLE);
-}
-
+/* Legacy APIs for IO pad enable/disable */
 int tegra_io_rail_power_on(unsigned int id)
 {
-	unsigned long request, status;
-	unsigned int bit;
-	int err;
+	switch (id) {
+	case TEGRA_IO_RAIL_LVDS:
+		return tegra_pmc_io_pad_low_power_disable("lvds");
+	case TEGRA_IO_RAIL_HDMI:
+		return tegra_pmc_io_pad_low_power_disable("hdmi");
+	default:
+		return -EINVAL;
 
-	mutex_lock(&pmc->powergates_lock);
-
-	err = tegra_io_rail_prepare(id, &request, &status, &bit);
-	if (err)
-		goto error;
-
-	_tegra_pmc_writel(IO_DPD_REQ_CODE_OFF | BIT(bit), request);
-
-	err = tegra_io_rail_poll(status, BIT(bit), 0, 250);
-	if (err) {
-		pr_info("tegra_io_rail_poll() failed: %d\n", err);
-		goto error;
-	}
-
-	tegra_io_rail_unprepare();
-
-error:
-	mutex_unlock(&pmc->powergates_lock);
-
-	return err;
 }
 EXPORT_SYMBOL(tegra_io_rail_power_on);
 
 int tegra_io_rail_power_off(unsigned int id)
 {
-	unsigned long request, status;
-	unsigned int bit;
-	int err;
 
-	mutex_lock(&pmc->powergates_lock);
-
-	err = tegra_io_rail_prepare(id, &request, &status, &bit);
-	if (err) {
-		pr_info("tegra_io_rail_prepare() failed: %d\n", err);
-		goto error;
-	}
-
-	_tegra_pmc_writel(IO_DPD_REQ_CODE_ON | BIT(bit), request);
-
-	err = tegra_io_rail_poll(status, BIT(bit), BIT(bit), 250);
-	if (err)
-		goto error;
-
-	tegra_io_rail_unprepare();
-
-error:
-	mutex_unlock(&pmc->powergates_lock);
-
-	return err;
+	switch (id) {
+	case TEGRA_IO_RAIL_LVDS:
+		return tegra_pmc_io_pad_low_power_enable("lvds");
+	case TEGRA_IO_RAIL_HDMI:
+		return tegra_pmc_io_pad_low_power_enable("hdmi");
+	default:
+		return -EINVAL;
 }
 EXPORT_SYMBOL(tegra_io_rail_power_off);
 #endif /* CONFIG_TEGRA_POWERGATE */

@@ -126,8 +126,6 @@ int tegra_powergate_remove_clamping(unsigned int id);
 int tegra_powergate_sequence_power_up(unsigned int id, struct clk *clk,
 				      struct reset_control *rst);
 
-int tegra_io_rail_power_on(unsigned int id);
-int tegra_io_rail_power_off(unsigned int id);
 #else
 static inline int tegra_powergate_is_powered(unsigned int id)
 {
@@ -156,16 +154,6 @@ static inline int tegra_powergate_sequence_power_up(unsigned int id,
 	return -ENOSYS;
 }
 
-static inline int tegra_io_rail_power_on(unsigned int id)
-{
-	return -ENOSYS;
-}
-
-static inline int tegra_io_rail_power_off(unsigned int id)
-{
-	return -ENOSYS;
-}
-
 #endif /* CONFIG_ARCH_TEGRA || CONFIG_PLATFORM_TEGRA */
 #endif /* CONFIG_TEGRA_POWERGATE */
 
@@ -190,6 +178,8 @@ int tegra_pmc_io_dpd_get_status(int reg, int bit_pos);
 #if defined(CONFIG_ARCH_TEGRA)
 int tegra_pmc_io_pad_low_power_enable(const char *pad_name);
 int tegra_pmc_io_pad_low_power_disable(const char *pad_name);
+int tegra_io_rail_power_on(int id);
+int tegra_io_rail_power_off(int id);
 #else
 static inline int tegra_pmc_io_pad_low_power_enable(const char *pad_name)
 {
@@ -199,6 +189,16 @@ static inline int tegra_pmc_io_pad_low_power_enable(const char *pad_name)
 static inline int tegra_pmc_io_pad_low_power_disable(const char *pad_name)
 {
 	return 0;
+}
+
+static inline int tegra_io_rail_power_on(int id)
+{
+	return -ENOSYS;
+}
+
+static inline int tegra_io_rail_power_off(int id)
+{
+	return -ENOSYS;
 }
 #endif
 

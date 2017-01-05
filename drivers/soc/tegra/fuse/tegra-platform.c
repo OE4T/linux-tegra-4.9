@@ -23,6 +23,7 @@
 #define MINOR_ASIM_LINSIM	3
 #define MINOR_DSIM_ASIM_LINSIM	4
 #define MINOR_UNIT_FPGA		5
+#define MINOR_VDK		6
 
 #define PRE_SI_QT		1
 #define PRE_SI_FPGA		2
@@ -57,6 +58,8 @@ enum tegra_platform tegra_get_platform(void)
 			return TEGRA_PLATFORM_LINSIM;
 		case MINOR_UNIT_FPGA:
 			return TEGRA_PLATFORM_UNIT_FPGA;
+		case MINOR_VDK:
+			return TEGRA_PLATFORM_VDK;
 		}
 	} else if (pre_si_plat) {
 		switch (pre_si_plat) {
@@ -101,6 +104,7 @@ bool tegra_cpu_is_asim(void)
 		case MINOR_ASIM_LINSIM:
 		case MINOR_DSIM_ASIM_LINSIM:
 		case MINOR_UNIT_FPGA:
+		case MINOR_VDK:
 			return true;
 		}
 	} else if (pre_si_plat) {
@@ -138,6 +142,7 @@ bool tegra_cpu_is_dsim(void)
 		case MINOR_ASIM_QT:
 		case MINOR_ASIM_LINSIM:
 		case MINOR_UNIT_FPGA:
+		case MINOR_VDK:
 			return false;
 		case MINOR_DSIM_ASIM_LINSIM:
 			return true;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -703,14 +703,22 @@ static u32 clk_prog_construct_1x_master_table(struct gk20a *g,
 	pclkprog->p_slave_entries =
 		(struct ctrl_clk_clk_prog_1x_master_table_slave_entry *)
 		kzalloc(slavesize, GFP_KERNEL);
-	if (!pclkprog->p_slave_entries)
-		return -ENOMEM;
+
+	if (!pclkprog->p_slave_entries) {
+		status = -ENOMEM;
+		goto exit;
+	}
 
 	memset(pclkprog->p_slave_entries, CTRL_CLK_CLK_DOMAIN_INDEX_INVALID,
 		slavesize);
 
 	memcpy(pclkprog->p_slave_entries, ptmpprog->p_slave_entries, slavesize);
 
+exit:
+	if (status) {
+		if (*ppboardobj != NULL)
+			(*ppboardobj)->destruct(*ppboardobj);
+	}
 	return status;
 }
 

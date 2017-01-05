@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -668,12 +668,19 @@ static u32 vfe_var_construct_single_sensed_fuse(struct gk20a *g,
 	if (pvfevar->vfield_info.fuse.segment_count == 0) {
 		gk20a_err(dev_from_gk20a(g), "unable to get fuse reg info %x",
 			pvfevar->vfield_info.v_field_id);
-		return -EINVAL;
+		status = -EINVAL;
+		goto exit;
 	}
 	if (pvfevar->vfield_ver_info.fuse.segment_count == 0) {
 		gk20a_err(dev_from_gk20a(g), "unable to get fuse reg info %x",
 			pvfevar->vfield_ver_info.v_field_id_ver);
-		return -EINVAL;
+		status = -EINVAL;
+		goto exit;
+	}
+exit:
+	if (status) {
+		if (*ppboardobj != NULL)
+			(*ppboardobj)->destruct(*ppboardobj);
 	}
 	return status;
 }

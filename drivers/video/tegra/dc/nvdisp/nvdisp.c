@@ -3022,7 +3022,7 @@ void tegra_dc_populate_t18x_hw_data(struct tegra_dc_hw_data *hw_data)
 	if (!hw_data)
 		return;
 
-	hw_data->nheads = 4;
+	hw_data->nheads = 3;
 	hw_data->nwins = 6;
 	hw_data->valid = true;
 }

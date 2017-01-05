@@ -52,6 +52,14 @@ config TEGRA_GRHOST_TSEC
           Driver for the Tegra TSEC is falcon based engine which
           provides security.
 
+config TEGRA_GRHOST_NVCSI
+	bool "Tegra NVCSI support"
+	depends on TEGRA_GRHOST && ARCH_TEGRA_18x_SOC
+	default y
+	help
+	  Enables support for camera CSI support under nvhost
+	  Say N here if not sure.
+
 config TEGRA_GRHOST_DEFAULT_TIMEOUT
         depends on TEGRA_GRHOST
         int "Default timeout for submits"

@@ -1,7 +1,7 @@
 /*
 * Tegra flcn common driver
 *
-* Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify it
 * under the terms and conditions of the GNU General Public License,
@@ -625,6 +625,10 @@ static struct of_device_id tegra_flcn_of_match[] = {
 #endif
 #endif
 #ifdef CONFIG_TEGRA_T19X_GRHOST
+#if defined(CONFIG_VIDEO_TEGRA_VI)
+	{ .compatible = "nvidia,tegra194-vi-thi",
+		.data = (struct nvhost_device_data *)&t19_vi_thi_info },
+#endif
 #if defined(CONFIG_TEGRA_GRHOST_VIC)
 	{ .compatible = "nvidia,tegra194-vic",
 		.data = (struct nvhost_device_data *)&t19_vic_info },

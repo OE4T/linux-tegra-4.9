@@ -9,8 +9,9 @@
 			partition-id = <TEGRA186_POWER_DOMAIN_AUD>;
 			clocks = <&tegra_car TEGRA186_CLK_APE>,
 				<&tegra_car TEGRA186_CLK_APB2APE>,
-				<&tegra_car TEGRA186_CLK_ADSP>;
-			clock-names = "ape", "apb2ape", "adsp";
+				<&tegra_car TEGRA186_CLK_ADSP>,
+				<&tegra_car TEGRA186_CLK_ACLK>;
+			clock-names = "ape", "apb2ape", "adsp", "aclk";
 		};
 
 		adsp_pd: adsp-pd {

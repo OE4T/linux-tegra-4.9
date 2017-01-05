@@ -2118,8 +2118,10 @@
 			<&tegra_car TEGRA186_CLK_APB2APE>,
 			<&tegra_car TEGRA186_CLK_ADSPNEON>,
 			<&tegra_car TEGRA186_CLK_ADSP>,
+			<&tegra_car TEGRA186_CLK_ACLK>,
 			<&tegra_car TEGRA186_CLK_EMC>;
-		clock-names = "adsp.ape", "adsp.apb2ape", "adspneon", "adsp", "adsp.emc";
+		clock-names = "adsp.ape", "adsp.apb2ape", "adspneon",
+				"adsp", "aclk", "adsp.emc";
 		resets = <&tegra_car TEGRA186_RESET_ADSP_ALL>;
 		reset-names = "adspall";
 		#stream-id-cells = <1>;

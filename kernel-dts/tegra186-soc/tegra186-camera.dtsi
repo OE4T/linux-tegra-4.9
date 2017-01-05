@@ -95,6 +95,7 @@
 			<&tegra_car TEGRA186_CLK_APB2APE>,
 			<&tegra_car TEGRA186_CLK_ADSPNEON>,
 			<&tegra_car TEGRA186_CLK_ADSP>,
+			<&tegra_car TEGRA186_CLK_ACLK>,
 			<&tegra_car TEGRA186_CLK_AHUB>,
 			<&tegra_car TEGRA186_CLK_EMC>;
 		clock-names =
@@ -102,6 +103,7 @@
 			"apb2ape",
 			"adspneon",
 			"adsp",
+			"aclk",
 			"ahub",
 			"adsp.emc";
 		resets =

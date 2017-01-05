@@ -193,6 +193,13 @@
 		status = "disabled";
 	};
 
+	miscreg@00100000 {
+		compatible = "nvidia,tegra186-miscreg";
+		reg = <0x0 0x00100000 0x0 0xf000>, /* Chipid */
+		    <0x0 0x0010f000 0x0 0x1000>; /* Straps */
+		status = "disabled";
+	};
+
 	hsp_top: tegra-hsp@3c00000 {
 		compatible = "nvidia,tegra186-hsp";
 		reg = <0x0 0x03c00000 0x0 0x000a0000>;

@@ -79,7 +79,9 @@
 
 		ramoops_reserved: ramoops_carveout {
 			compatible = "nvidia,ramoops";
-			reg = <0x1 0x0 0x0 0x200000>;
+			size = <0x0 0x200000>;
+			alignment = <0x0 0x10000>;
+			alloc-ranges = <0x0 0x0 0x1 0x0>;
 			no-map;
 		};
 

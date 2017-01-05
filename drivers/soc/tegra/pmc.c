@@ -1988,8 +1988,8 @@ unlock:
 	return err;
 }
 
-static int tegra_pmc_io_pad_set_voltage(const struct tegra_pmc_io_pad_soc *pad,
-					int io_pad_uv)
+static int _tegra_pmc_io_pad_set_voltage(const struct tegra_pmc_io_pad_soc *pad,
+					 int io_pad_uv)
 {
 	u32 value;
 
@@ -2024,7 +2024,7 @@ static int tegra_pmc_io_pad_set_voltage(const struct tegra_pmc_io_pad_soc *pad,
 	return 0;
 }
 
-static int tegra_pmc_io_pad_get_voltage(const struct tegra_pmc_io_pad_soc *pad)
+static int _tegra_pmc_io_pad_get_voltage(const struct tegra_pmc_io_pad_soc *pad)
 {
 	u32 value;
 
@@ -2133,7 +2133,7 @@ static int tegra_pmc_io_pads_pinconf_get(struct pinctrl_dev *pctldev,
 		if (pmc->soc->io_pads[pin].voltage == UINT_MAX)
 			return -EINVAL;
 
-		ret = tegra_pmc_io_pad_get_voltage(pad);
+		ret = _tegra_pmc_io_pad_get_voltage(pad);
 		if (ret < 0)
 			return ret;
 		arg = ret;
@@ -2185,7 +2185,7 @@ static int tegra_pmc_io_pads_pinconf_set(struct pinctrl_dev *pctldev,
 			if (pmc->soc->io_pads[pin].voltage == UINT_MAX)
 				return -EINVAL;
 
-			ret = tegra_pmc_io_pad_set_voltage(pad, param_val);
+			ret = _tegra_pmc_io_pad_set_voltage(pad, param_val);
 			if (ret < 0) {
 				dev_err(tpmc->dev,
 					"Failed to set voltage %d of pin %u: %d\n",
@@ -2274,6 +2274,64 @@ int tegra_pmc_io_pad_low_power_disable(const char *pad_name)
 	return tegra_pmc_io_pad_power_enable(pad);
 }
 EXPORT_SYMBOL(tegra_pmc_io_pad_low_power_disable);
+
+int tegra_pmc_io_pad_set_voltage(const char *pad_name, unsigned int pad_uv)
+{
+	int io_pad_uv;
+	const struct tegra_pmc_io_pad_soc *pad;
+
+	pad = tegra_pmc_get_pad_by_name(pad_name);
+	if (!pad) {
+		dev_err(pmc->dev, "IO Pad %s not found\n", pad_name);
+		return -EINVAL;
+	}
+
+	switch (pad_uv) {
+	case 1800000:
+		io_pad_uv = TEGRA_IO_PAD_VOLTAGE_1800000UV;
+		break;
+
+	case 3300000:
+		io_pad_uv = TEGRA_IO_PAD_VOLTAGE_3300000UV;
+		break;
+
+	default:
+		return -EINVAL;
+	}
+
+	return _tegra_pmc_io_pad_set_voltage(pad, io_pad_uv);
+}
+EXPORT_SYMBOL(tegra_pmc_io_pad_set_voltage);
+
+int tegra_pmc_io_pad_get_voltage(const char *pad_name)
+{
+	int io_pad_uv;
+	const struct tegra_pmc_io_pad_soc *pad;
+
+	pad = tegra_pmc_get_pad_by_name(pad_name);
+	if (!pad) {
+		dev_err(pmc->dev, "IO Pad %s not found\n", pad_name);
+		return -EINVAL;
+	}
+
+	io_pad_uv = _tegra_pmc_io_pad_get_voltage(pad);
+	if (io_pad_uv < 0)
+		return -EINVAL;
+
+	switch (io_pad_uv) {
+	case TEGRA_IO_PAD_VOLTAGE_1800000UV:
+		return 1800000;
+
+	case TEGRA_IO_PAD_VOLTAGE_3300000UV:
+		return 3300000;
+
+	default:
+		break;
+	}
+
+	return -EINVAL;
+}
+EXPORT_SYMBOL(tegra_pmc_io_pad_get_voltage);
 
 static int tegra_pmc_parse_dt(struct tegra_pmc *pmc, struct device_node *np)
 {
@@ -3131,7 +3189,7 @@ static int tegra_pmc_io_power_init_one(struct device *dev,
 	curr_io_uv = (ret == 1800000) ?  TEGRA_IO_PAD_VOLTAGE_1800000UV :
 				TEGRA_IO_PAD_VOLTAGE_3300000UV;
 
-	ret = tegra_pmc_io_pad_set_voltage(pad, curr_io_uv);
+	ret = _tegra_pmc_io_pad_set_voltage(pad, curr_io_uv);
 	if (ret < 0) {
 		dev_err(dev, "Failed to set voltage %duV of I/O pad %s: %d\n",
 			curr_io_uv, pad->name, ret);

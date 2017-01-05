@@ -180,6 +180,8 @@ int tegra_pmc_io_pad_low_power_enable(const char *pad_name);
 int tegra_pmc_io_pad_low_power_disable(const char *pad_name);
 int tegra_io_rail_power_on(int id);
 int tegra_io_rail_power_off(int id);
+int tegra_pmc_io_pad_set_voltage(const char *pad_name, unsigned int pad_uv);
+int tegra_pmc_io_pad_get_voltage(const char *pad_name);
 #else
 static inline int tegra_pmc_io_pad_low_power_enable(const char *pad_name)
 {
@@ -197,6 +199,17 @@ static inline int tegra_io_rail_power_on(int id)
 }
 
 static inline int tegra_io_rail_power_off(int id)
+{
+	return -ENOSYS;
+}
+
+static inline int tegra_pmc_io_pad_set_voltage(const char *pad_name,
+					       unsigned int pad_uv)
+{
+	return -ENOSYS;
+}
+
+static inline int tegra_pmc_io_pad_get_voltage(const char *pad_name)
 {
 	return -ENOSYS;
 }

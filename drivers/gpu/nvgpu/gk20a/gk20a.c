@@ -1229,7 +1229,7 @@ void gk20a_user_deinit(struct device *dev, struct class *class)
 	}
 
 	if (g->sched.node) {
-		device_destroy(&nvgpu_class, g->sched.cdev.dev);
+		device_destroy(class, g->sched.cdev.dev);
 		cdev_del(&g->sched.cdev);
 	}
 

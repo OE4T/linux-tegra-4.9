@@ -1657,6 +1657,8 @@
 		pinctrl-2 = <&pex_io_dpd_disable_state>;
 		pinctrl-3 = <&pex_io_dpd_enable_state>;
 
+		iommus = <&smmu TEGRA_SWGROUP_AFI>;
+
 		bus-range = <0x00 0xff>;
 		#address-cells = <3>;
 		#size-cells = <2>;

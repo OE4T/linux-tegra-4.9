@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dsi_padctrl.h
  * 
- * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -24,7 +24,6 @@ struct tegra_dsi_padctrl {
 	struct resource *base_res;
 	u8 pwr_dwn_mask[DSI_MAX_INSTANCES];
 	struct tegra_prod *prod_list;
-	bool prod_settings_updated;
 	bool dsi_pads_enabled;
 	void __iomem *base_addr;
 };

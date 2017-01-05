@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dsi_padctrl.c
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -128,13 +128,11 @@ void tegra_dsi_padctrl_enable(struct tegra_dsi_padctrl *dsi_padctrl)
 	val &=  ~(DSI_PADCTRL_PDVCLAMP_AB | DSI_PADCTRL_PDVCLAMP_CD);
 	tegra_dsi_padctrl_write(dsi_padctrl, val, DSI_PADCTRL_GLOBAL_CNTRLS);
 
-	if (!dsi_padctrl->prod_settings_updated && dsi_padctrl->prod_list) {
+	if (dsi_padctrl->prod_list) {
 		err = tegra_prod_set_by_name(&dsi_padctrl->base_addr,
 			"dsi-padctrl-prod", dsi_padctrl->prod_list);
 		if (err)
 			pr_err("dsi padctl:prod settings failed%d\n", err);
-		else
-			dsi_padctrl->prod_settings_updated = true;
 	}
 
 	/* Clear pwr and pull downs for required data and clock lanes */
@@ -311,7 +309,6 @@ void tegra_dsi_padctrl_shutdown(struct tegra_dc *dc)
 
 	if (dsi_padctrl->prod_list) {
 		dsi_padctrl->prod_list = NULL;
-		dsi_padctrl->prod_settings_updated = false;
 	}
 
 	iounmap(dsi_padctrl->base_addr);

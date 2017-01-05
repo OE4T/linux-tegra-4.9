@@ -1699,6 +1699,7 @@ static int dvfs_tree_show(struct seq_file *s, void *data)
 		}
 		seq_printf(s, "   therm_floor    %-7d mV\n", therm_mv);
 
+		therm_mv = 0;
 		if (rail->dfll_mode) {
 			therm_mv = tegra_dfll_get_thermal_cap_mv();
 		} else if ((rail->therm_caps) &&

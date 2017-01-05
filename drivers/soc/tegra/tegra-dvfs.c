@@ -4,7 +4,7 @@
  * Author:
  *	Colin Cross <ccross@google.com>
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -530,6 +530,35 @@ static struct dvfs *tegra_clk_to_dvfs(struct clk *c)
 	return NULL;
 }
 
+/*
+ *  Using non alt frequencies always results in peak voltage
+ * (enforced by alt_freqs_validate())
+ */
+static int predict_non_alt_millivolts(struct dvfs *d, const int *millivolts,
+				      unsigned long rate)
+{
+	int i;
+	int vmin = d->dvfs_rail->min_millivolts;
+	unsigned long dvfs_unit = 1 * d->freqs_mult;
+
+	if (!millivolts)
+		return -ENODEV;
+
+	if (millivolts == d->dfll_millivolts)
+		vmin = tegra_dfll_get_min_millivolts();
+
+	for (i = 0; i < d->num_freqs; i++) {
+		unsigned long f = d->freqs[i];
+		if ((dvfs_unit < f) && (rate <= f))
+			break;
+	}
+
+	if (i == d->num_freqs)
+		i--;
+
+	return max(millivolts[i], vmin);
+}
+
 static int predict_millivolts(struct dvfs *d, const int *millivolts,
 			      unsigned long rate)
 {
@@ -556,6 +585,17 @@ static int dvfs_rail_get_thermal_floor(struct dvfs_rail *rail)
 		rail->therm_floor_idx < rail->therm_floors_size)
 		return rail->therm_floors[rail->therm_floor_idx].mv;
 
+	return 0;
+}
+
+static int dvfs_get_peak_thermal_floor(struct dvfs *d, unsigned long rate)
+{
+	bool dfll_range = dvfs_is_dfll_range(d, rate);
+
+	if (!dfll_range && d->dvfs_rail->therm_floors)
+		return d->dvfs_rail->therm_floors[0].mv;
+	if (dfll_range)
+		return tegra_dfll_get_thermal_floor(0);
 	return 0;
 }
 
@@ -683,6 +723,45 @@ int tegra_dvfs_predict_mv_at_hz_cur_tfloor(struct clk *c, unsigned long rate)
 	return mv;
 }
 EXPORT_SYMBOL(tegra_dvfs_predict_mv_at_hz_cur_tfloor);
+
+/*
+ * Predict minimum voltage required to run target clock at specified rate.
+ * Evaluate target clock domain V/F relation, and apply proper PLL or
+ * DFLL table depending on specified rate range. Apply maximum thermal floor
+ * across all temperature ranges.
+ */
+static int dvfs_predict_mv_at_hz_max_tfloor(struct dvfs *d, unsigned long rate)
+{
+	int mv;
+	const int *millivolts;
+
+	if (!d)
+		return -ENODATA;
+
+	millivolts = dvfs_get_peak_millivolts(d, rate);
+	mv = predict_non_alt_millivolts(d, millivolts, rate);
+	if (mv < 0)
+		return mv;
+
+	return max(mv, dvfs_get_peak_thermal_floor(d, rate));
+}
+
+int tegra_dvfs_predict_mv_at_hz_max_tfloor(struct clk *c, unsigned long rate)
+{
+	struct dvfs *d;
+	int mv;
+
+	d = tegra_clk_to_dvfs(c);
+	if (d == NULL)
+		return -EINVAL;
+
+	mutex_lock(&dvfs_lock);
+	mv = dvfs_predict_mv_at_hz_max_tfloor(d, rate);
+	mutex_unlock(&dvfs_lock);
+
+	return mv;
+}
+EXPORT_SYMBOL(tegra_dvfs_predict_mv_at_hz_max_tfloor);
 
 long tegra_dvfs_predict_hz_at_mv_max_tfloor(struct clk *c, int mv)
 {

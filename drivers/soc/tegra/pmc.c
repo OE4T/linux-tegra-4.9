@@ -2345,7 +2345,7 @@ int tegra_pmc_io_pad_low_power_enable(const char *pad_name)
 		return -EINVAL;
 	}
 
-	return tegra_pmc_io_pad_power_enable(pad);
+	return tegra_pmc_io_pad_power_disable(pad);
 }
 EXPORT_SYMBOL(tegra_pmc_io_pad_low_power_enable);
 
@@ -2359,7 +2359,7 @@ int tegra_pmc_io_pad_low_power_disable(const char *pad_name)
 		return -EINVAL;
 	}
 
-	return tegra_pmc_io_pad_power_disable(pad);
+	return tegra_pmc_io_pad_power_enable(pad);
 }
 EXPORT_SYMBOL(tegra_pmc_io_pad_low_power_disable);
 

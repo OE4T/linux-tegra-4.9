@@ -5,7 +5,7 @@
  * Copyright (C) 2011 Texas Instruments, Inc.
  * Copyright (C) 2011 Google, Inc.
  *
- * Copyright (C) 2014-2016 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2017, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -27,7 +27,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/firmware.h>
 #include <linux/tegra_nvadsp.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/elf.h>
 #include <linux/device.h>
 #include <linux/clk.h>
@@ -36,6 +36,8 @@
 #include <linux/interrupt.h>
 #include <linux/slab.h>
 #include <linux/pm_runtime.h>
+#include <linux/tegra-firmwares.h>
+#include <linux/reset.h>
 
 #include <asm/uaccess.h>
 
@@ -804,7 +806,7 @@ static int nvadsp_set_ape_freq(struct nvadsp_drv_data *drv_data)
 	return ret;
 }
 
-static int set_adsp_clks_and_timer_prescalar(struct nvadsp_drv_data *drv_data)
+static int nvadsp_t210_set_clks_and_prescalar(struct nvadsp_drv_data *drv_data)
 {
 	struct nvadsp_shared_mem *shared_mem = drv_data->shared_adsp_os_data;
 	struct nvadsp_os_args *os_args = &shared_mem->os_args;
@@ -859,7 +861,7 @@ end:
 	return ret;
 }
 
-static int set_adsp_clks(struct nvadsp_drv_data *drv_data)
+static int nvadsp_set_adsp_clks(struct nvadsp_drv_data *drv_data)
 {
 	struct nvadsp_shared_mem *shared_mem = drv_data->shared_adsp_os_data;
 	struct nvadsp_os_args *os_args = &shared_mem->os_args;
@@ -870,13 +872,16 @@ static int set_adsp_clks(struct nvadsp_drv_data *drv_data)
 	int ret = 0;
 
 	adsp_freq = drv_data->adsp_freq_hz; /* in Hz*/
-	max_adsp_freq = clk_round_rate(drv_data->adsp_clk, ULONG_MAX);
+
+	/* round rate shall be used with adsp parent clk i.e. aclk */
+	max_adsp_freq = clk_round_rate(drv_data->aclk_clk, ULONG_MAX);
 
 	/* Set max adsp boot freq */
 	if (!adsp_freq)
 		adsp_freq = max_adsp_freq;
 
-	ret = clk_set_rate(drv_data->adsp_clk, adsp_freq);
+	/* set rate shall be used with adsp parent clk i.e. aclk */
+	ret = clk_set_rate(drv_data->aclk_clk, adsp_freq);
 	if (ret) {
 		dev_err(dev, "setting adsp_freq:%luHz failed.\n", adsp_freq);
 		dev_err(dev, "max_adsp_freq:%luHz\n", max_adsp_freq);
@@ -892,25 +897,25 @@ end:
 	return ret;
 }
 
-static int __deassert_adsp(struct nvadsp_drv_data *drv_data)
+static int __deassert_adsp(struct nvadsp_drv_data *d)
 {
-	struct device *dev = &priv.pdev->dev;
+	struct platform_device *pdev = d->pdev;
+	struct device *dev = &pdev->dev;
+	int ret = 0;
 
-	if (drv_data->adsp_unit_fpga) {
-		dev_info(dev, "De-asserting ADSP UNIT-FPGA\n");
-		writel(drv_data->unit_fpga_reset[ADSP_DEASSERT],
-				priv.unit_fpga_reset_reg);
-		return 0;
-	}
+	/*
+	 * The ADSP_ALL reset in BPMP-FW is overloaded to de-assert
+	 * all 7 resets i.e. ADSP, ADSPINTF, ADSPDBG, ADSPNEON, ADSPPERIPH,
+	 * ADSPSCU and ADSPWDT resets. The BPMP-FW also takes care
+	 * of specific de-assert sequence and delays between them.
+	 * So de-resetting only ADSP reset is sufficient to de-reset
+	 * all ADSP sub-modules.
+	 */
+	ret = reset_control_deassert(d->adspall_rst);
+	if (ret)
+		dev_err(dev, "failed to deassert adsp\n");
 
-	if (drv_data->adsp_clk) {
-		dev_dbg(dev, "deasserting adsp...\n");
-		tegra_periph_reset_deassert(drv_data->adsp_clk);
-		udelay(200);
-		return 0;
-	}
-
-	return -EINVAL;
+	return ret;
 }
 
 static int nvadsp_deassert_adsp(struct nvadsp_drv_data *drv_data)
@@ -923,26 +928,23 @@ static int nvadsp_deassert_adsp(struct nvadsp_drv_data *drv_data)
 	return ret;
 }
 
-static int __assert_adsp(struct nvadsp_drv_data *drv_data)
+static int __assert_adsp(struct nvadsp_drv_data *d)
 {
-	struct device *dev = &priv.pdev->dev;
+	struct platform_device *pdev = d->pdev;
+	struct device *dev = &pdev->dev;
+	int ret = 0;
 
-	if (drv_data->adsp_unit_fpga) {
-		if (drv_data->unit_fpga_reset[ADSP_ASSERT]) {
-			dev_info(dev, "Asserting ADSP UNIT-FPGA\n");
-			writel(drv_data->unit_fpga_reset[ADSP_ASSERT],
-				priv.unit_fpga_reset_reg);
-		}
-		return 0;
-	}
+	/*
+	 * The ADSP_ALL reset in BPMP-FW is overloaded to assert
+	 * all 7 resets i.e. ADSP, ADSPINTF, ADSPDBG, ADSPNEON,
+	 * ADSPPERIPH, ADSPSCU and ADSPWDT resets. So resetting
+	 * only ADSP reset is sufficient to reset all ADSP sub-modules.
+	 */
+	ret = reset_control_assert(d->adspall_rst);
+	if (ret)
+		dev_err(dev, "failed to assert adsp\n");
 
-	if (drv_data->adsp_clk) {
-		tegra_periph_reset_assert(drv_data->adsp_clk);
-		udelay(200);
-		return 0;
-	}
-
-	return -EINVAL;
+	return ret;
 }
 
 static int nvadsp_assert_adsp(struct nvadsp_drv_data *drv_data)
@@ -967,7 +969,7 @@ static int nvadsp_set_boot_freqs(struct nvadsp_drv_data *drv_data)
 
 	if (of_device_is_compatible(node, "nvidia,tegra210-adsp")) {
 		if (drv_data->adsp_cpu_clk) {
-			ret = set_adsp_clks_and_timer_prescalar(drv_data);
+			ret = nvadsp_t210_set_clks_and_prescalar(drv_data);
 			if (ret)
 				goto end;
 		} else {
@@ -976,7 +978,7 @@ static int nvadsp_set_boot_freqs(struct nvadsp_drv_data *drv_data)
 		}
 	} else {
 		if (drv_data->adsp_clk) {
-			ret = set_adsp_clks(drv_data);
+			ret = nvadsp_set_adsp_clks(drv_data);
 			if (ret)
 				goto end;
 		} else {
@@ -1136,10 +1138,13 @@ static void dump_adsp_logs(void)
 
 static void print_agic_irq_states(void)
 {
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv.pdev);
+	int start_irq = drv_data->chip_data->start_irq;
+	int end_irq = drv_data->chip_data->end_irq;
 	struct device *dev = &priv.pdev->dev;
 	int i;
 
-	for (i = INT_AGIC_START; i < INT_AGIC_END; i++) {
+	for (i = start_irq; i < end_irq; i++) {
 		dev_info(dev, "irq %d is %s and %s\n", i,
 		tegra_agic_irq_is_pending(i) ?
 			"pending" : "not pending",
@@ -1298,10 +1303,12 @@ static void __nvadsp_os_stop(bool reload)
 	}
 #endif
 
-	writel(ENABLE_MBOX2_FULL_INT, priv.hwmailbox_base + HWMBOX2_REG);
+	writel(ENABLE_MBOX2_FULL_INT,
+	       priv.hwmailbox_base + drv_data->chip_data->hwmb.hwmbox2_reg);
 	err = wait_for_completion_interruptible_timeout(&entered_wfi,
 		msecs_to_jiffies(ADSP_WFE_TIMEOUT));
-	writel(DISABLE_MBOX2_FULL_INT, priv.hwmailbox_base + HWMBOX2_REG);
+	writel(DISABLE_MBOX2_FULL_INT,
+	       priv.hwmailbox_base + drv_data->chip_data->hwmb.hwmbox2_reg);
 
 	/*
 	 * ADSP needs to be in WFI/WFE state to properly reset it.
@@ -1366,7 +1373,7 @@ void nvadsp_os_stop(void)
 	priv.os_running = drv_data->adsp_os_running = false;
 
 #ifdef CONFIG_PM
-	if (pm_runtime_put_sync(dev))
+	if (pm_runtime_put_sync(dev) < 0)
 		dev_err(dev, "failed in pm_runtime_put_sync\n");
 #endif
 end:
@@ -1404,7 +1411,7 @@ int nvadsp_os_suspend(void)
 #ifdef CONFIG_PM
 		struct device *dev = &priv.pdev->dev;
 		ret = pm_runtime_put_sync(&priv.pdev->dev);
-		if (ret)
+		if (ret < 0)
 			dev_err(dev, "failed in pm_runtime_put_sync\n");
 #endif
 		priv.os_running = drv_data->adsp_os_running = false;
@@ -1425,20 +1432,21 @@ static void nvadsp_os_restart(struct work_struct *work)
 		container_of(work, struct nvadsp_os_data, restart_os_work);
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(data->pdev);
 	int wdt_virq = drv_data->agic_irqs[WDT_VIRQ];
+	int wdt_irq = drv_data->chip_data->wdt_irq;
 	struct device *dev = &data->pdev->dev;
 
 	disable_irq(wdt_virq);
 	dump_adsp_sys();
 	nvadsp_os_stop();
 
-	if (tegra_agic_irq_is_active(ADSP_WDT_INT)) {
+	if (tegra_agic_irq_is_active(wdt_irq)) {
 		dev_info(dev, "wdt interrupt is active hence clearing\n");
-		tegra_agic_clear_active(ADSP_WDT_INT);
+		tegra_agic_clear_active(wdt_irq);
 	}
 
-	if (tegra_agic_irq_is_pending(ADSP_WDT_INT)) {
+	if (tegra_agic_irq_is_pending(wdt_irq)) {
 		dev_info(dev, "wdt interrupt is pending hence clearing\n");
-		tegra_agic_clear_pending(ADSP_WDT_INT);
+		tegra_agic_clear_pending(wdt_irq);
 	}
 
 	dev_info(dev, "wdt interrupt is not pending or active...enabling\n");
@@ -1546,6 +1554,13 @@ static int adsp_create_os_version(struct dentry *adsp_debugfs_root)
 }
 #endif
 
+static ssize_t tegrafw_read_adsp(struct device *dev,
+				char *data, size_t size)
+{
+	nvadsp_get_os_version(data, size);
+	return strlen(data);
+}
+
 int __init nvadsp_os_probe(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
@@ -1553,11 +1568,10 @@ int __init nvadsp_os_probe(struct platform_device *pdev)
 	int wfi_virq = drv_data->agic_irqs[WFI_VIRQ];
 	uint16_t com_mid = ADSP_COM_MBOX_ID;
 	struct device *dev = &pdev->dev;
-	struct device_node *node = dev->of_node;
 	int ret = 0;
 
 	priv.unit_fpga_reset_reg = drv_data->base_regs[UNIT_FPGA_RST];
-	priv.hwmailbox_base = drv_data->base_regs[HWMB_REG_IDX];
+	priv.hwmailbox_base = drv_data->base_regs[hwmb_reg_idx()];
 	priv.dram_region = drv_data->dram_region;
 
 	priv.adsp_os_addr = drv_data->adsp_mem[ADSP_OS_ADDR];
@@ -1579,19 +1593,18 @@ int __init nvadsp_os_probe(struct platform_device *pdev)
 		goto end;
 	}
 
-	writel(DISABLE_MBOX2_FULL_INT, priv.hwmailbox_base + HWMBOX2_REG);
+	writel(DISABLE_MBOX2_FULL_INT,
+	       priv.hwmailbox_base + drv_data->chip_data->hwmb.hwmbox2_reg);
 
 	if (of_device_is_compatible(dev->of_node, "nvidia,tegra210-adsp")) {
 		drv_data->assert_adsp = __assert_adsp;
 		drv_data->deassert_adsp = __deassert_adsp;
 	}
 
-	if (!of_device_is_compatible(node, "nvidia,tegra18x-adsp-hv")) {
-		ret = nvadsp_os_init(pdev);
-		if (ret) {
-			dev_err(dev, "failed to init os\n");
-			goto end;
-		}
+	ret = nvadsp_os_init(pdev);
+	if (ret) {
+		dev_err(dev, "failed to init os\n");
+		goto end;
 	}
 
 	ret = nvadsp_mbox_open(&adsp_com_mbox, &com_mid, "adsp_com_mbox",
@@ -1622,6 +1635,8 @@ int __init nvadsp_os_probe(struct platform_device *pdev)
 
 #endif /* CONFIG_DEBUG_FS */
 
+	devm_tegrafw_register(dev, "APE", TFW_DONT_CACHE,
+			tegrafw_read_adsp, NULL);
 end:
 	return ret;
 }

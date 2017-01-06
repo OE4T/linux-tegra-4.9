@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,19 +21,6 @@
 
 #include "dev.h"
 
-/*
- * Mailbox 0 is for receiving messages
- * from ADSP i.e. CPU <-- ADSP.
- */
-#define RECV_HWMBOX	HWMBOX0_REG
-#define INT_RECV_HWMBOX	INT_AMISC_MBOX_FULL0
-
-/*
- * Mailbox 1 is for sending messages
- * to ADSP i.e. CPU --> ADSP
- */
-#define SEND_HWMBOX	HWMBOX1_REG
-#define INT_SEND_HWMBOX	INT_AMISC_MBOX_EMPTY1
 
 static struct platform_device *nvadsp_pdev;
 static struct nvadsp_drv_data *nvadsp_drv_data;
@@ -43,15 +30,42 @@ static bool is_hwmbox_busy;
 static int hwmbox_last_msg;
 #endif
 
+/*
+ * Mailbox 0 is for receiving messages
+ * from ADSP i.e. CPU <-- ADSP.
+ */
+#define INT_RECV_HWMBOX	INT_AMISC_MBOX_FULL0
 
-static inline u32 hwmbox_readl(u32 reg)
+static inline u32 recv_hwmbox(void)
 {
-	return readl(nvadsp_drv_data->base_regs[HWMB_REG_IDX] + reg);
+	return nvadsp_drv_data->chip_data->hwmb.hwmbox0_reg;
 }
 
-static inline void hwmbox_writel(u32 val, u32 reg)
+/*
+ * Mailbox 1 is for sending messages
+ * to ADSP i.e. CPU --> ADSP
+ */
+#define INT_SEND_HWMBOX	INT_AMISC_MBOX_EMPTY1
+
+static inline u32 send_hwmbox(void)
 {
-	writel(val, nvadsp_drv_data->base_regs[HWMB_REG_IDX] + reg);
+	return nvadsp_drv_data->chip_data->hwmb.hwmbox1_reg;
+}
+
+
+u32 hwmb_reg_idx(void)
+{
+	return nvadsp_drv_data->chip_data->hwmb.reg_idx;
+}
+
+u32 hwmbox_readl(u32 reg)
+{
+	return readl(nvadsp_drv_data->base_regs[hwmb_reg_idx()] + reg);
+}
+
+void hwmbox_writel(u32 val, u32 reg)
+{
+	writel(val, nvadsp_drv_data->base_regs[hwmb_reg_idx()] + reg);
 }
 
 
@@ -61,8 +75,8 @@ static inline void hwmbox_writel(u32 val, u32 reg)
 void dump_mailbox_regs(void)
 {
 	dev_info(&nvadsp_pdev->dev, "dumping hwmailbox registers ...\n");
-	PRINT_HWMBOX(RECV_HWMBOX);
-	PRINT_HWMBOX(SEND_HWMBOX);
+	PRINT_HWMBOX(recv_hwmbox());
+	PRINT_HWMBOX(send_hwmbox());
 	dev_info(&nvadsp_pdev->dev, "end of dump ....\n");
 }
 
@@ -135,7 +149,7 @@ status_t nvadsp_hwmbox_send_data(uint16_t mid, uint32_t data, uint32_t flags)
 #ifdef CONFIG_MBOX_ACK_HANDLER
 		hwmbox_last_msg = data;
 #endif
-		hwmbox_writel(data, SEND_HWMBOX);
+		hwmbox_writel(data, send_hwmbox());
 	} else {
 		pr_debug("nvadsp_mbox_send: enqueue data\n");
 		ret = hwmboxq_enqueue(&nvadsp_drv_data->hwmbox_send_queue,
@@ -177,7 +191,7 @@ static irqreturn_t hwmbox_send_empty_int_handler(int irq, void *devid)
 
 	spin_lock_irqsave(lock, lockflags);
 
-	data = hwmbox_readl(SEND_HWMBOX);
+	data = hwmbox_readl(send_hwmbox());
 	if (data != PREPARE_HWMBOX_EMPTY_MSG())
 		dev_err(dev, "last mailbox sent failed with 0x%x\n", data);
 
@@ -203,7 +217,7 @@ static irqreturn_t hwmbox_send_empty_int_handler(int irq, void *devid)
 #ifdef CONFIG_MBOX_ACK_HANDLER
 		hwmbox_last_msg = data;
 #endif
-		hwmbox_writel(data, SEND_HWMBOX);
+		hwmbox_writel(data, send_hwmbox());
 		dev_dbg(dev, "Writing 0x%x to SEND_HWMBOX\n", data);
 	} else {
 		is_hwmbox_busy = false;
@@ -218,8 +232,8 @@ static irqreturn_t hwmbox_recv_full_int_handler(int irq, void *devid)
 	uint32_t data;
 	int ret;
 
-	data = hwmbox_readl(RECV_HWMBOX);
-	hwmbox_writel(PREPARE_HWMBOX_EMPTY_MSG(), RECV_HWMBOX);
+	data = hwmbox_readl(recv_hwmbox());
+	hwmbox_writel(PREPARE_HWMBOX_EMPTY_MSG(), recv_hwmbox());
 
 	if (IS_HWMBOX_MSG_SMSG(data)) {
 		uint16_t mboxid = HWMBOX_SMSG_MID(data);

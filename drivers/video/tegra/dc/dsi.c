@@ -4902,9 +4902,11 @@ static int tegra_dsi_host_suspend(struct tegra_dc *dc)
 		goto fail;
 	}
 
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
 	/* Shutting down. Drop any reference to dc clk */
 	while (tegra_platform_is_silicon() && tegra_dc_is_clk_enabled(dc->clk))
 		tegra_dc_put(dc);
+#endif
 
 	pm_runtime_put_sync(&dc->ndev->dev);
 fail:

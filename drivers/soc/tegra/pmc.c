@@ -2882,7 +2882,12 @@ static struct platform_driver tegra_pmc_driver = {
 	},
 	.probe = tegra_pmc_probe,
 };
-builtin_platform_driver(tegra_pmc_driver);
+
+static int __init _tegra_pmc_driver_init(void)
+{
+	return platform_driver_register(&tegra_pmc_driver);
+}
+arch_initcall(_tegra_pmc_driver_init);
 
 /*
  * Early initialization to allow access to registers in the very early boot

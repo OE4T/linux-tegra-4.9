@@ -22,15 +22,124 @@
         nvidia,boardids = "3310:0000:C03";
         nvidia,proc-boardid = "3310:0000:C03";
 
+	pinmux@2430000 {
+		common {
+			gpio_edp2_pp5 {
+				status = "okay";
+			};
+
+			gpio_edp3_pp6 {
+				status = "okay";
+			};
+		};
+	};
+
+	gpio@2200000 {
+		sdmmc-wake-support-input {
+			status = "okay";
+		};
+
+		sdmmc-wake-support-output {
+			status = "okay";
+		};
+	};
+
+	fixed-regulators {
+		regulator@1 {
+			gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(P, 6) 0>;
+                };
+	};
+
+	sdhci@3400000 {
+		cd-gpios = <&tegra_main_gpio TEGRA_MAIN_GPIO(P, 5) 0>;
+		nvidia,cd-wakeup-capable;
+	};
+
+	i2c@3160000 {
+		ina3221x@40 {
+			channel@0 {
+				ti,shunt-resistor-mohm = <10>;
+			};
+			channel@1 {
+				ti,shunt-resistor-mohm = <10>;
+			};
+		};
+		ina3221x@41 {
+			channel@0 {
+				ti,shunt-resistor-mohm = <20>;
+			};
+			channel@1 {
+				ti,shunt-resistor-mohm = <10>;
+			};
+			channel@2 {
+				ti,rail-name = "VDD_SYS_DDR";
+				ti,shunt-resistor-mohm = <10>;
+			};
+		};
+	};
+
+	ahci-sata@3507000 {
+		gpios = <&spmic 7 0>;
+	};
+
+	pcie-controller@10003000 {
+		pci@1,0 {
+			nvidia,num-lanes = <4>;
+		};
+		pci@2,0 {
+			nvidia,num-lanes = <0>;
+		};
+		pci@3,0 {
+			nvidia,num-lanes = <1>;
+		};
+	};
+
+        xhci@3530000 {
+		phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
+			<&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>,
+			<&tegra_xusb_padctl TEGRA_PADCTL_PHY_USB3_P(0)>;
+		phy-names = "utmi-0", "utmi-1", "usb3-0";
+	};
+
+	pinctrl@3520000 {
+		pinmux {
+			usb3-std-A-port2 {
+				nvidia,lanes = "usb3-0";
+			};
+		};
+	};
+
+       bluedroid_pm {
+		bluedroid_pm,reset-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(H, 5) 0>;
+        };
+
 	pcie-controller@10003000 {
 		dvdd-pex-supply = <&spmic_ldo8>;
 	};
 
 	bpmp_i2c {
 		spmic@3c {
+			pinmux@0 {
+				pin_gpio2 {
+					status = "disabled";
+				};
+				pin_gpio3 {
+					status = "disabled";
+				};
+				pin_gpio7 {
+					drive-push-pull = <1>;
+				};
+			};
+
 			regulators {
 				ldo0 {
 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
+				};
+
+				ldo6 {
+					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
+					regulator-boot-on;
+					regulator-always-on;
 				};
 
 				ldo7 {

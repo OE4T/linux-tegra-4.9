@@ -112,6 +112,7 @@ int tegra_pmc_cpu_remove_clamping(unsigned int cpuid);
 /* Define reboot-reset mode */
 #define RECOVERY_MODE           BIT(31)
 #define BOOTLOADER_MODE         BIT(30)
+#define UPDATE_MODE             BIT(29)
 #define FORCED_RECOVERY_MODE    BIT(1)
 
 #ifndef CONFIG_TEGRA_POWERGATE

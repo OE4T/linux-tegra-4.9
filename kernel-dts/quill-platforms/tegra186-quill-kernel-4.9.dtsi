@@ -57,7 +57,7 @@
 		compatible = "nvidia,tegra186-xhci";
 		reg = <0x0 0x03530000 0x0 0x8000>,
 			<0x0 0x03538000 0x0 0x1000>;
-		interrupts = <0 163 0x4>, <0 164 0x4>;
+		interrupts = <0 163 0x4>, <0 164 0x4>, <0 167 0x4>;
 		clocks = <&tegra_car TEGRA186_CLK_XUSB_HOST>,
 			<&tegra_car TEGRA186_CLK_XUSB_FALCON>,
 			<&tegra_car TEGRA186_CLK_XUSB_SS>,
@@ -76,7 +76,8 @@
 
 	xusb_padctl: xusb_padctl@3520000 {
 		compatible = "nvidia,tegra18x-xusb-padctl";
-		reg = <0x0 0x3520000 0x0 0x1000>;
+		reg = <0x0 0x3520000 0x0 0x1000>, <0x0 0x03540000 0x0 0x1000>;
+		reg-names = "padctl", "ao";
 		resets = <&tegra_car TEGRA186_RESET_XUSB_PADCTL>;
 		reset-names = "padctl";
 

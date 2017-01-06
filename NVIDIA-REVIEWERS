@@ -212,11 +212,14 @@ F:	drivers/platform/tegra/tegra186-pmc*.c
 F:	drivers/platform/tegra/wakeups-t18x.c
 
 RTCPU
-M:	Remi Denis-Courmont <remid@nvidia.com>
+M:	Alexander Van Brunt <avanbrunt@nvidia.com>
+M:	Pekka Pessi <ppessi@nvidia.com>
 S:	Supported
 F:	drivers/platform/tegra/rtcpu/
 F:	drivers/platform/tegra/tegra-camera-rtcpu.c
 F:	drivers/platform/tegra/tegra_ast.c
+F:	include/trace/events/freertos.h
+F:	include/trace/events/tegra_rtcpu.h
 
 SECURITY
 M:	Vincent Chen <vinchen@nvidia.com>

@@ -1,7 +1,7 @@
 /*
  * video/inclue/tegra_dc_ext_kernel.h
  *
- * Copyright (c) 2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -195,5 +195,9 @@ int tegra_dc_bandwidth_negotiate_bw(struct tegra_dc *dc,
 int tegra_dc_set_flip_callback(void (*callback)(void));
 int tegra_dc_unset_flip_callback(void);
 int tegra_dc_get_panel_sync_rate(void);
+
+/* needed by tegra-mods */
+unsigned long tegra_dc_readl_exported(struct tegra_dc *, unsigned long);
+void tegra_dc_writel_exported(struct tegra_dc *, unsigned long, unsigned long);
 
 #endif

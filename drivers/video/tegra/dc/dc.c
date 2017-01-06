@@ -578,6 +578,19 @@ int tegra_bw_create_sysfs(struct device *dev)
 void tegra_bw_remove_sysfs(struct device *dev) {}
 #endif
 
+unsigned long tegra_dc_readl_exported(struct tegra_dc *dc, unsigned long reg)
+{
+	return tegra_dc_readl(dc, reg);
+}
+EXPORT_SYMBOL(tegra_dc_readl_exported);
+
+void tegra_dc_writel_exported(struct tegra_dc *dc,
+			unsigned long val, unsigned long reg)
+{
+	tegra_dc_writel(dc, val, reg);
+}
+EXPORT_SYMBOL(tegra_dc_writel_exported);
+
 void tegra_dc_clk_enable(struct tegra_dc *dc)
 {
 	tegra_disp_clk_prepare_enable(dc->clk);

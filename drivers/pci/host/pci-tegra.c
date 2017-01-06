@@ -4673,7 +4673,7 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 		pcie->pex_pin = devm_pinctrl_get(pcie->dev);
 		if (IS_ERR(pcie->pex_pin)) {
 			ret = PTR_ERR(pcie->pex_pin);
-			dev_err(pcie->dev, "pex io-dpd config failed: %ld\n",
+			dev_err(pcie->dev, "pex io-dpd config failed: %d\n",
 				ret);
 			return ret;
 		}
@@ -4682,7 +4682,7 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 							     "pex-io-dpd-en");
 		if (IS_ERR(pcie->pex_io_dpd_en_state)) {
 			ret = PTR_ERR(pcie->pex_io_dpd_en_state);
-			dev_err(pcie->dev, "missing pex-io-dpd en state: %ld\n",
+			dev_err(pcie->dev, "missing pex-io-dpd en state: %d\n",
 				ret);
 			return ret;
 		}

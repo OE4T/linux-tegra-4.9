@@ -1266,13 +1266,16 @@ static long gm20b_round_rate(struct clk_hw *hw, unsigned long rate,
 			     unsigned long *parent_rate)
 {
 	struct clk_gk20a *clk = to_clk_gk20a(hw);
-	u32 freq, old_freq;
+	u32 freq;
 	struct pll tmp_pll;
+	unsigned long maxrate;
+
+	maxrate = tegra_dvfs_get_maxrate(clk_get_parent(clk->tegra_clk));
+	if (rate > maxrate)
+		rate = maxrate;
 
 	mutex_lock(&clk->clk_mutex);
-	old_freq = clk->gpc_pll.freq;
 	freq = rate_gpu_to_gpc2clk(rate);
-
 	if (freq > gpc_pll_params.max_freq)
 		freq = gpc_pll_params.max_freq;
 	else if (freq < gpc_pll_params.min_freq)
@@ -1280,7 +1283,6 @@ static long gm20b_round_rate(struct clk_hw *hw, unsigned long rate,
 
 	tmp_pll = clk->gpc_pll;
 	clk_config_pll(clk, &tmp_pll, &gpc_pll_params, &freq, true);
-
 	mutex_unlock(&clk->clk_mutex);
 
 	return rate_gpc2clk_to_gpu(tmp_pll.freq);

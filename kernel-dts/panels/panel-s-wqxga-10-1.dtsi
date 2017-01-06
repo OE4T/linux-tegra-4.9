@@ -41,6 +41,7 @@
 				nvidia,dsi-panel-reset = <TEGRA_DSI_ENABLE>;
 				nvidia,dsi-power-saving-suspend = <TEGRA_DSI_ENABLE>;
 				nvidia,dsi-lp00-pre-panel-wakeup = <TEGRA_DSI_ENABLE>;
+				nvidia,dsi-suspend-aggr = <DSI_HOST_SUSPEND_LV2>;
 				nvidia,dsi-ulpm-not-support = <TEGRA_DSI_ENABLE>;
 				nvidia,dsi-init-cmd =
 							/* Long  Packet: <PACKETTYPE[u8] COMMANDID[u8] PAYLOADCOUNT[u16] ECC[u8] PAYLOAD[..] CHECKSUM[u16]> */
@@ -76,7 +77,7 @@
 					nvidia,out-type = <TEGRA_DC_OUT_DSI>;
 					nvidia,out-width = <216>;
 					nvidia,out-height = <135>;
-					nvidia,out-flags = <TEGRA_DC_OUT_ONE_SHOT_MODE>;
+					nvidia,out-flags = <TEGRA_DC_OUT_ONE_SHOT_LP_MODE>;
 					nvidia,out-parent-clk = "pll_d_out0";
 					nvidia,out-xres = <2560>;
 					nvidia,out-yres = <1600>;

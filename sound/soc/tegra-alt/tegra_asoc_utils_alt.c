@@ -2,7 +2,7 @@
  * tegra_asoc_utils_alt.c - MCLK and DAP Utility driver
  *
  * Author: Stephen Warren <swarren@nvidia.com>
- * Copyright (c) 2010-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -178,11 +178,12 @@ int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 			mclk = data->clk_rates[PLLA_OUT0_x11025_RATE];
 			ahub_rate = data->clk_rates[AHUB_x11025_RATE];
 
-			if (srate <= 44100) {
+			if (srate <= 11025) {
 				/* half the pll_a_out0 to support lower
 				 * sampling rate divider
 				 */
 				mclk = mclk >> 1;
+				ahub_rate = ahub_rate >> 1;
 			}
 			/* aud_mclk should be 256*Fs */
 			clk_out_rate = srate << 8;
@@ -208,11 +209,12 @@ int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 			mclk = data->clk_rates[PLLA_OUT0_x8000_RATE];
 			ahub_rate = data->clk_rates[AHUB_x8000_RATE];
 
-			if (srate <= 48000) {
+			if (srate <= 8000) {
 				/* half the pll_a_out0 to support lower
 				 * sampling rate divider
 				 */
 				mclk = mclk >> 1;
+				ahub_rate = ahub_rate >> 1;
 			}
 			/* aud_mclk should be 256*Fs */
 			clk_out_rate = srate << 8;

@@ -55,4 +55,6 @@ GPU
 M:      Terje Bergstrom <tbergstrom@nvidia.com>
 L:      sw-mobile-nvgpu-core@exchange.nvidia.com
 S:      Supported
-F:      drivers/gpu/nvgpu/*
+F:      drivers/gpu/nvgpu/
+F:      include/
+

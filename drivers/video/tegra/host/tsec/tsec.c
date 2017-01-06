@@ -134,7 +134,7 @@ int tsec_hdcp_create_context(struct hdcp_context_t *hdcp_context)
 	}
 
 	hdcp_context->cpuvaddr_cert = dma_alloc_attrs(&tsec->dev,
-				HDCP_CERT_SIZE + HDCP_ALIGNMENT_256 - 1,
+				HDCP_CERT_SIZE_ALIGNED,
 				&hdcp_context->dma_handle_cert,
 				GFP_KERNEL,
 				&attrs);

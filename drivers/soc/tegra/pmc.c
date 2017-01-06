@@ -307,6 +307,16 @@ struct tegra_powergate {
 #define PMC_RST_SOURCE_MASK			0x3C
 #define PMC_RST_SOURCE_SHIFT			0x2
 
+#define T186_PMC_IO_DPD_CSIA_MASK		BIT(0)
+#define T186_PMC_IO_DPD_CSIB_MASK		BIT(1)
+#define T186_PMC_IO_DPD_CODE_DPD_OFF		BIT(30)
+#define T186_PMC_IO_DPD_CODE_DPD_ON		BIT(31)
+
+#define T186_PMC_IO_DPD2_CSIC_MASK		BIT(11)
+#define T186_PMC_IO_DPD2_CSID_MASK		BIT(12)
+#define T186_PMC_IO_DPD2_CSIE_MASK		BIT(13)
+#define T186_PMC_IO_DPD2_CSIF_MASK		BIT(14)
+
 struct io_dpd_reg_info {
 	u32 req_reg_off;
 	u8 dpd_code_lsb;
@@ -2324,6 +2334,71 @@ int tegra_pmc_io_pad_get_voltage(const char *pad_name)
 }
 EXPORT_SYMBOL(tegra_pmc_io_pad_get_voltage);
 
+#ifndef CONFIG_TEGRA186_PMC
+void tegra_pmc_nvcsi_ab_brick_update(unsigned long mask, unsigned long val)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&pwr_lock, flags);
+	tegra_pmc_register_update(TEGRA_PMC_IO_DPD_REQ, mask, val);
+	spin_unlock_irqrestore(&pwr_lock, flags);
+}
+EXPORT_SYMBOL(tegra_pmc_nvcsi_ab_brick_update);
+
+unsigned long tegra_pmc_nvcsi_ab_brick_getstatus(void)
+{
+	return tegra_pmc_readl(TEGRA_PMC_IO_DPD_REQ);
+}
+EXPORT_SYMBOL(tegra_pmc_nvcsi_ab_brick_getstatus);
+
+void tegra_pmc_nvcsi_cdef_brick_update(unsigned long mask, unsigned long val)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&pwr_lock, flags);
+	tegra_pmc_register_update(TEGRA_PMC_IO_DPD2_REQ, mask, val);
+	spin_unlock_irqrestore(&pwr_lock, flags);
+}
+EXPORT_SYMBOL(tegra_pmc_nvcsi_cdef_brick_update);
+
+unsigned long tegra_pmc_nvcsi_cdef_brick_getstatus(void)
+{
+	return tegra_pmc_readl(TEGRA_PMC_IO_DPD2_REQ);
+}
+EXPORT_SYMBOL(tegra_pmc_nvcsi_cdef_brick_getstatus);
+
+void tegra186_pmc_enable_nvcsi_brick_dpd(void)
+{
+	u32 val;
+
+	val = tegra_pmc_readl(TEGRA_PMC_IO_DPD_REQ);
+	val |= T186_PMC_IO_DPD_CSIA_MASK;
+	val |= T186_PMC_IO_DPD_CSIB_MASK;
+	tegra_pmc_writel(val, TEGRA_PMC_IO_DPD_REQ);
+
+	val = tegra_pmc_readl(TEGRA_PMC_IO_DPD2_REQ);
+	val |= (T186_PMC_IO_DPD2_CSIC_MASK | T186_PMC_IO_DPD2_CSID_MASK |
+		T186_PMC_IO_DPD2_CSIE_MASK | T186_PMC_IO_DPD2_CSIF_MASK);
+	tegra_pmc_writel(val, TEGRA_PMC_IO_DPD2_REQ);
+}
+EXPORT_SYMBOL(tegra186_pmc_enable_nvcsi_brick_dpd);
+
+void tegra186_pmc_disable_nvcsi_brick_dpd(void)
+{
+	u32 val;
+
+	val = tegra_pmc_readl(TEGRA_PMC_IO_DPD_REQ);
+	val &= ~(T186_PMC_IO_DPD_CSIA_MASK | T186_PMC_IO_DPD_CSIB_MASK);
+	tegra_pmc_writel(val, TEGRA_PMC_IO_DPD_REQ);
+
+	val = tegra_pmc_readl(TEGRA_PMC_IO_DPD2_REQ);
+	val &= ~(T186_PMC_IO_DPD2_CSIC_MASK | T186_PMC_IO_DPD2_CSID_MASK |
+		 T186_PMC_IO_DPD2_CSIE_MASK | T186_PMC_IO_DPD2_CSIF_MASK);
+	tegra_pmc_writel(val, TEGRA_PMC_IO_DPD2_REQ);
+}
+EXPORT_SYMBOL(tegra186_pmc_disable_nvcsi_brick_dpd);
+#endif
+
 static int tegra_pmc_parse_dt(struct tegra_pmc *pmc, struct device_node *np)
 {
 	u32 value, values[2];
@@ -3210,6 +3285,10 @@ static const unsigned long tegra186_register_map[TEGRA_PMC_MAX_REG] = {
 	[TEGRA_PMC_RST_STATUS]			= 0x70,
 	[TEGRA_PMC_SATA_PWRGT_0]		= 0x68,
 	[TEGRA_PMC_UFSHC_PWR_CNTRL_0]		= 0xF4,
+	[TEGRA_PMC_IO_DPD_REQ]			= 0x74,
+	[TEGRA_PMC_IO_DPD_STATUS]		= 0x78,
+	[TEGRA_PMC_IO_DPD2_REQ]			= 0x7C,
+	[TEGRA_PMC_IO_DPD2_STATUS]		= 0x80,
 };
 
 static const struct tegra_pmc_soc tegra186_pmc_soc = {

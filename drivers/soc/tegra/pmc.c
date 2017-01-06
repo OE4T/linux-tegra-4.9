@@ -357,6 +357,7 @@ enum pmc_regs {
 	TEGRA_PMC_RST_STATUS,
 	TEGRA_PMC_IMPL_RAMDUMP_CTL_STATUS,
 	TEGRA_PMC_SATA_PWRGT_0,
+	TEGRA_PMC_UFSHC_PWR_CNTRL_0,
 
 	/* Last entry */
 	TEGRA_PMC_MAX_REG,
@@ -1301,6 +1302,23 @@ void tegra_pmc_reset_system(void)
 EXPORT_SYMBOL(tegra_pmc_reset_system);
 
 #ifndef CONFIG_TEGRA186_PMC
+/* UFS power gate control */
+void tegra_pmc_ufs_pwrcntrl_update(unsigned long mask, unsigned long val)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&pwr_lock, flags);
+	tegra_pmc_register_update(TEGRA_PMC_UFSHC_PWR_CNTRL_0, mask, val);
+	spin_unlock_irqrestore(&pwr_lock, flags);
+}
+EXPORT_SYMBOL(tegra_pmc_ufs_pwrcntrl_update);
+
+unsigned long tegra_pmc_ufs_pwrcntrl_get(void)
+{
+	return tegra_pmc_readl(TEGRA_PMC_UFSHC_PWR_CNTRL_0);
+}
+EXPORT_SYMBOL(tegra_pmc_ufs_pwrcntrl_get);
+
 /* SATA power gate control */
 void tegra_pmc_sata_pwrgt_update(unsigned long mask, unsigned long val)
 {
@@ -3191,6 +3209,7 @@ static const unsigned long tegra186_register_map[TEGRA_PMC_MAX_REG] = {
 	[TEGRA_PMC_IMPL_RAMDUMP_CTL_STATUS]	= 0x10C,
 	[TEGRA_PMC_RST_STATUS]			= 0x70,
 	[TEGRA_PMC_SATA_PWRGT_0]		= 0x68,
+	[TEGRA_PMC_UFSHC_PWR_CNTRL_0]		= 0xF4,
 };
 
 static const struct tegra_pmc_soc tegra186_pmc_soc = {

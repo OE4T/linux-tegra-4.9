@@ -858,6 +858,7 @@ enum shared_bus_users_mode {
 #define TEGRA_SHARED_BUS_RATE_LIMIT	BIT(0)
 #define TEGRA_SHARED_BUS_RETENTION	BIT(1)
 #define TEGRA_SHARED_BUS_RACE_TO_SLEEP	BIT(2)
+#define TEGRA_SHARED_BUS_ROUND_PASS_THRU	BIT(3)
 
 struct clk_div_sel {
 	struct clk_hw *src;
@@ -917,6 +918,9 @@ struct clk *tegra_clk_register_cbus(const char *name,
 		const char *parent, unsigned long flags,
 		const char *backup, unsigned long min_rate,
 		unsigned long max_rate);
+struct clk *tegra_clk_register_gbus(const char *name,
+		const char *parent, unsigned long flags,
+		unsigned long min_rate, unsigned long max_rate);
 struct clk *tegra_clk_register_shared_master(const char *name,
 		const char *parent, unsigned long flags,
 		unsigned long min_rate, unsigned long max_rate);

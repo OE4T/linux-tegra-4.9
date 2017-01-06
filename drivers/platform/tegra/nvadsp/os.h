@@ -3,7 +3,7 @@
  *
  * A header file containing data structures shared with ADSP OS
  *
- * Copyright (C) 2014-2016 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2017 NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -21,11 +21,7 @@
 #include <linux/firmware.h>
 #include "adsp_shared_struct.h"
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-#include "os-t21x.h"
-#else
-#include "os-t18x.h"
-#endif /* CONFIG_ARCH_TEGRA_21x_SOC */
+#include "dev.h"
 
 #define CONFIG_ADSP_DRAM_LOG_WITH_TAG	1
 /* enable profiling of load init start */
@@ -140,8 +136,17 @@ struct app_start_stats {
 	u64 adsp_receive_timestamp;
 };
 
+static inline int nvadsp_os_init(struct platform_device *pdev)
+{
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
+
+	if (drv_data->chip_data->os_init)
+		return drv_data->chip_data->os_init(pdev);
+
+	return -EINVAL;
+}
+
 int nvadsp_os_probe(struct platform_device *);
-int nvadsp_os_init(struct platform_device *pdev);
 int nvadsp_app_module_probe(struct platform_device *);
 int adsp_add_load_mappings(phys_addr_t, void *, int);
 struct elf32_shdr *nvadsp_get_section(const struct firmware *, char *);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,12 +18,6 @@
 #include <linux/platform_device.h>
 #include <linux/completion.h>
 #include <linux/spinlock.h>
-
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-#include "hwmailbox-t21x.h"
-#else
-#include "hwmailbox-t18x.h"
-#endif /* CONFIG_ARCH_TEGRA_21x_SOC */
 
 /*
  * The interpretation of hwmailbox content is:
@@ -109,6 +103,9 @@ struct hwmbox_queue {
 	spinlock_t lock;
 };
 
+u32 hwmb_reg_idx(void);
+u32 hwmbox_readl(u32 reg);
+void hwmbox_writel(u32 val, u32 reg);
 int nvadsp_hwmbox_init(struct platform_device *);
 status_t nvadsp_hwmbox_send_data(uint16_t, uint32_t, uint32_t);
 void dump_mailbox_regs(void);

@@ -3,7 +3,7 @@
  *
  * A device driver for ADSP and APE
  *
- * Copyright (C) 2014-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2017, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -21,6 +21,7 @@
 #include <linux/tegra_nvadsp.h>
 #include <linux/clk/tegra.h>
 #include <linux/delay.h>
+#include <linux/reset.h>
 
 #include "dev.h"
 #include "amc.h"
@@ -31,22 +32,17 @@ static void nvadsp_clocks_disable(struct platform_device *pdev)
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
 
-	if (drv_data->uartape_clk) {
-		clk_disable_unprepare(drv_data->uartape_clk);
-		dev_dbg(dev, "uartape clock disabled\n");
-		drv_data->uartape_clk = NULL;
-	}
-
-	if (drv_data->adsp_cpu_clk) {
-		clk_disable_unprepare(drv_data->adsp_cpu_clk);
-		dev_dbg(dev, "adsp_cpu clock disabled\n");
-		drv_data->adsp_cpu_clk = NULL;
-	}
-
 	if (drv_data->adsp_clk) {
 		clk_disable_unprepare(drv_data->adsp_clk);
 		dev_dbg(dev, "adsp clocks disabled\n");
 		drv_data->adsp_clk = NULL;
+		drv_data->adsp_cpu_clk = NULL;
+	}
+
+	if (drv_data->adsp_neon_clk) {
+		clk_disable_unprepare(drv_data->adsp_neon_clk);
+		dev_info(dev, "adsp_neon clocks disabled\n");
+		drv_data->adsp_neon_clk = NULL;
 	}
 
 	if (drv_data->ape_clk) {
@@ -55,17 +51,16 @@ static void nvadsp_clocks_disable(struct platform_device *pdev)
 		drv_data->ape_clk = NULL;
 	}
 
+	if (drv_data->apb2ape_clk) {
+		clk_disable_unprepare(drv_data->apb2ape_clk);
+		dev_info(dev, "apb2ape clock disabled\n");
+		drv_data->apb2ape_clk = NULL;
+	}
+
 	if (drv_data->ape_emc_clk) {
 		clk_disable_unprepare(drv_data->ape_emc_clk);
 		dev_dbg(dev, "ape.emc clock disabled\n");
 		drv_data->ape_emc_clk = NULL;
-	}
-
-
-	if (drv_data->ahub_clk) {
-		clk_disable_unprepare(drv_data->ahub_clk);
-		dev_dbg(dev, "ahub clock disabled\n");
-		drv_data->ahub_clk = NULL;
 	}
 }
 
@@ -73,36 +68,22 @@ static int nvadsp_clocks_enable(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
-	uint32_t val;
 	int ret = 0;
 
-	drv_data->ahub_clk = clk_get_sys("nvadsp", "ahub");
-	if (IS_ERR_OR_NULL(drv_data->ahub_clk)) {
-		dev_err(dev, "unable to find ahub clock\n");
-		ret = PTR_ERR(drv_data->ahub_clk);
-		goto end;
-	}
-	ret = clk_prepare_enable(drv_data->ahub_clk);
-	if (ret) {
-		dev_err(dev, "unable to enable ahub clock\n");
-		goto end;
-	}
-	dev_dbg(dev, "ahub clock enabled\n");
-
-	drv_data->ape_clk = clk_get_sys(NULL, "adsp.ape");
+	drv_data->ape_clk = devm_clk_get(dev, "adsp.ape");
 	if (IS_ERR_OR_NULL(drv_data->ape_clk)) {
-		dev_err(dev, "unable to find ape clock\n");
+		dev_err(dev, "unable to find adsp.ape clock\n");
 		ret = PTR_ERR(drv_data->ape_clk);
 		goto end;
 	}
 	ret = clk_prepare_enable(drv_data->ape_clk);
 	if (ret) {
-		dev_err(dev, "unable to enable ape clock\n");
+		dev_err(dev, "unable to enable adsp.ape clock\n");
 		goto end;
 	}
 	dev_dbg(dev, "ape clock enabled\n");
 
-	drv_data->adsp_clk = clk_get_sys(NULL, "adsp");
+	drv_data->adsp_clk = devm_clk_get(dev, "adsp");
 	if (IS_ERR_OR_NULL(drv_data->adsp_clk)) {
 		dev_err(dev, "unable to find adsp clock\n");
 		ret = PTR_ERR(drv_data->adsp_clk);
@@ -113,51 +94,50 @@ static int nvadsp_clocks_enable(struct platform_device *pdev)
 		dev_err(dev, "unable to enable adsp clock\n");
 		goto end;
 	}
+	drv_data->adsp_cpu_clk = drv_data->adsp_clk;
 
-	drv_data->adsp_cpu_clk = clk_get_sys(NULL, "adsp_cpu");
-	if (IS_ERR_OR_NULL(drv_data->adsp_cpu_clk)) {
-		dev_err(dev, "unable to find adsp cpu clock\n");
-		ret = PTR_ERR(drv_data->adsp_cpu_clk);
+	drv_data->adsp_neon_clk = devm_clk_get(dev, "adspneon");
+	if (IS_ERR_OR_NULL(drv_data->adsp_neon_clk)) {
+		dev_err(dev, "unable to find adsp neon clock\n");
+		ret = PTR_ERR(drv_data->adsp_neon_clk);
 		goto end;
 	}
-	ret = clk_prepare_enable(drv_data->adsp_cpu_clk);
+	ret = clk_prepare_enable(drv_data->adsp_neon_clk);
 	if (ret) {
-		dev_err(dev, "unable to enable adsp cpu clock\n");
+		dev_err(dev, "unable to enable adsp neon clock\n");
 		goto end;
 	}
 	dev_dbg(dev, "adsp cpu clock enabled\n");
 
-	drv_data->ape_emc_clk = clk_get_sys("ape", "emc");
+	drv_data->ape_emc_clk = devm_clk_get(dev, "adsp.emc");
 	if (IS_ERR_OR_NULL(drv_data->ape_emc_clk)) {
-		dev_err(dev, "unable to find ape.emc clock\n");
+		dev_err(dev, "unable to find adsp.emc clock\n");
 		ret = PTR_ERR(drv_data->ape_emc_clk);
 		goto end;
 	}
 
 	ret = clk_prepare_enable(drv_data->ape_emc_clk);
 	if (ret) {
-		dev_err(dev, "unable to enable ape.emc clock\n");
+		dev_err(dev, "unable to enable adsp.emc clock\n");
 		goto end;
 	}
 	dev_dbg(dev, "ape.emc is enabled\n");
 
-	drv_data->uartape_clk = clk_get_sys("uartape", NULL);
-	if (IS_ERR_OR_NULL(drv_data->uartape_clk)) {
-		dev_err(dev, "unable to find uart ape clk\n");
-		ret = PTR_ERR(drv_data->uartape_clk);
+	drv_data->apb2ape_clk = devm_clk_get(dev, "adsp.apb2ape");
+	if (IS_ERR_OR_NULL(drv_data->apb2ape_clk)) {
+		dev_err(dev, "unable to find adsp.apb2ape clk\n");
+		ret = PTR_ERR(drv_data->apb2ape_clk);
 		goto end;
 	}
-	ret = clk_prepare_enable(drv_data->uartape_clk);
+	ret = clk_prepare_enable(drv_data->apb2ape_clk);
 	if (ret) {
-		dev_err(dev, "unable to enable uartape clock\n");
+		dev_err(dev, "unable to enable adsp.apb2ape clock\n");
 		goto end;
 	}
-	clk_set_rate(drv_data->uartape_clk, UART_BAUD_RATE * 16);
-	dev_dbg(dev, "uartape clock enabled\n");
 
-	/* Set MAXCLKLATENCY value before ADSP deasserting reset */
-	val = readl(drv_data->base_regs[AMISC] + ADSP_CONFIG);
-	writel(val | MAXCLKLATENCY, drv_data->base_regs[AMISC] + ADSP_CONFIG);
+	/* AHUB clock, UART clock  is not being enabled as UART by default is
+	 * disabled on t210
+	 */
 	dev_dbg(dev, "all clocks enabled\n");
 	return 0;
  end:
@@ -301,7 +281,7 @@ static int __nvadsp_runtime_idle(struct device *dev)
 	return 0;
 }
 
-int __init nvadsp_pm_init(struct platform_device *pdev)
+int nvadsp_pm_t21x_init(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 
@@ -313,7 +293,17 @@ int __init nvadsp_pm_init(struct platform_device *pdev)
 }
 #endif /* CONFIG_PM */
 
-int __init nvadsp_reset_init(struct platform_device *pdev)
+int nvadsp_reset_t21x_init(struct platform_device *pdev)
 {
-	return 0;
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
+	struct device *dev = &pdev->dev;
+	int ret = 0;
+
+	drv_data->adspall_rst = devm_reset_control_get(dev, "adspall");
+	if (IS_ERR_OR_NULL(drv_data->adspall_rst)) {
+		ret = PTR_ERR(drv_data->adspall_rst);
+		dev_err(dev, "unable to get adspall reset %d\n", ret);
+	}
+
+	return ret;
 }

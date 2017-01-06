@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2016-2017, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -13,8 +13,9 @@
  */
 
 #include "dev.h"
+#include "dev-t21x.h"
 
-int nvadsp_os_init(struct platform_device *pdev)
+int nvadsp_os_t21x_init(struct platform_device *pdev)
 {
 	return 0;
 }

@@ -3,7 +3,7 @@
  *
  * ADSP OS App management
  *
- * Copyright (C) 2014-2015 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2017 NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -860,6 +860,7 @@ struct adsp_module *load_adsp_dynamic_module(const char *appname,
 	struct elf32_shdr *aram_shdr;
 	struct elf32_shdr *aram_x_shdr;
 	struct app_mem_size *mem_size;
+	void *buf;
 	int ret;
 
 	ret = request_firmware(&fw, appfile, dev);
@@ -870,7 +871,13 @@ struct adsp_module *load_adsp_dynamic_module(const char *appname,
 		return ERR_PTR(ret);
 	}
 
-	info.hdr = (struct elf32_hdr *)fw->data;
+	buf = kzalloc(fw->size, GFP_KERNEL);
+	if (!buf)
+		goto release_firmware;
+
+	memcpy(buf, fw->data, fw->size);
+
+	info.hdr = (struct elf32_hdr *)buf;
 	info.len = fw->size;
 	info.dev = dev;
 	info.name = appname;
@@ -879,13 +886,13 @@ struct adsp_module *load_adsp_dynamic_module(const char *appname,
 	if (ret) {
 		dev_err(dev,
 			"%s is not an elf file\n", appfile);
-		goto error_release_fw;
+		goto error_free_memory;
 	}
 
 	/* Figure out module layout, and allocate all the memory. */
 	mod = layout_and_allocate(&info);
 	if (IS_ERR(mod))
-		goto error_release_fw;
+		goto error_free_memory;
 
 	/* update adsp specific sections */
 	data_shdr = nvadsp_get_section(fw, ".dram_data");
@@ -943,11 +950,14 @@ struct adsp_module *load_adsp_dynamic_module(const char *appname,
 
 	mod->dynamic = true;
 
-error_release_fw:
+ error_free_memory:
+	kfree(buf);
+ release_firmware:
 	release_firmware(fw);
 	return ret ? ERR_PTR(ret) : mod;
 
-unload_module:
+ unload_module:
+	kfree(buf);
 	unload_adsp_module(mod);
 	release_firmware(fw);
 	return ERR_PTR(ret);

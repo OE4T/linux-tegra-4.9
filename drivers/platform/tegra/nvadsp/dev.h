@@ -3,7 +3,7 @@
  *
  * A header file for Host driver for ADSP and APE
  *
- * Copyright (C) 2014-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2017, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -26,15 +26,43 @@
 
 #include <linux/platform/tegra/emc_bwmgr.h>
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-#include "dev-t21x.h"
-#else
-#include "dev-t18x.h"
-#endif /* CONFIG_ARCH_TEGRA_21x_SOC */
-
 #include "hwmailbox.h"
 #include "amc.h"
-#include "os.h"
+
+/*
+ * Note: These enums should be aligned to the regs mentioned in the
+ * device tree
+*/
+enum {
+	AMC,
+	AMISC,
+	ABRIDGE,
+	UNIT_FPGA_RST,
+	AHSP,
+	APE_MAX_REG
+};
+
+enum {
+	ADSP_DRAM1,
+	ADSP_DRAM2,
+	ADSP_MAX_DRAM_MAP
+};
+
+/*
+ * Note: These enums should be aligned to the adsp_mem node mentioned in the
+ * device tree
+*/
+enum adsp_mem_dt {
+	ADSP_OS_ADDR,
+	ADSP_OS_SIZE,
+	ADSP_APP_ADDR,
+	ADSP_APP_SIZE,
+	ARAM_ALIAS_0_ADDR,
+	ARAM_ALIAS_0_SIZE,
+	ACSR_ADDR, /* ACSR: ADSP CPU SHARED REGION */
+	ACSR_SIZE,
+	ADSP_MEM_END,
+};
 
 enum adsp_evp_dt {
 	ADSP_EVP_BASE,
@@ -81,6 +109,37 @@ struct nvadsp_pm_state {
 	void *evp_ptr;
 };
 
+struct nvadsp_hwmb {
+	u32 reg_idx;
+	u32 hwmbox0_reg;
+	u32 hwmbox1_reg;
+	u32 hwmbox2_reg;
+	u32 hwmbox3_reg;
+	u32 hwmbox4_reg;
+	u32 hwmbox5_reg;
+	u32 hwmbox6_reg;
+	u32 hwmbox7_reg;
+};
+
+
+typedef int (*reset_init) (struct platform_device *pdev);
+typedef int (*os_init) (struct platform_device *pdev);
+#ifdef CONFIG_PM
+typedef int (*pm_init) (struct platform_device *pdev);
+#endif
+
+struct nvadsp_chipdata {
+	struct nvadsp_hwmb	hwmb;
+	reset_init		reset_init;
+	os_init			os_init;
+#ifdef CONFIG_PM
+	pm_init			pm_init;
+#endif
+	int			wdt_irq;
+	int			start_irq;
+	int			end_irq;
+};
+
 struct nvadsp_drv_data {
 	void __iomem **base_regs;
 	void __iomem **base_regs_saved;
@@ -100,6 +159,7 @@ struct nvadsp_drv_data {
 	struct clk *ape_clk;
 	struct clk *apb2ape_clk;
 	struct clk *adsp_clk;
+	struct clk *aclk_clk;
 	struct clk *adsp_cpu_clk;
 	struct clk *adsp_neon_clk;
 	struct clk *ape_emc_clk;
@@ -147,6 +207,8 @@ struct nvadsp_drv_data {
 
 	struct tegra_bwmgr_client *bwmgr;
 	u32 evp_base[ADSP_EVP_END];
+
+	const struct nvadsp_chipdata *chip_data;
 };
 
 #define ADSP_CONFIG	0x04
@@ -183,8 +245,24 @@ void emc_dfs_exit(void);
 #endif
 
 #ifdef CONFIG_PM
-int __init nvadsp_pm_init(struct platform_device *pdev);
+static inline int __init nvadsp_pm_init(struct platform_device *pdev)
+{
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
+
+	if (drv_data->chip_data->pm_init)
+		return drv_data->chip_data->pm_init(pdev);
+
+	return -EINVAL;
+}
 #endif
-int __init nvadsp_reset_init(struct platform_device *pdev);
+static inline int __init nvadsp_reset_init(struct platform_device *pdev)
+{
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
+
+	if (drv_data->chip_data->reset_init)
+		return drv_data->chip_data->reset_init(pdev);
+
+	return -EINVAL;
+}
 
 #endif /* __TEGRA_NVADSP_DEV_H */

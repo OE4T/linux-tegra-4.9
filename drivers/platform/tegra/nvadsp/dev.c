@@ -3,7 +3,7 @@
  *
  * A device driver for ADSP and APE
  *
- * Copyright (C) 2014-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2017, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -27,18 +27,22 @@
 #include <linux/moduleparam.h>
 #include <linux/io.h>
 #include <linux/tegra_nvadsp.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/pm_runtime.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/clk/tegra.h>
 #include <linux/delay.h>
 #include <asm/arch_timer.h>
+#include <linux/irqchip/tegra-agic.h>
 
 #include "dev.h"
 #include "os.h"
 #include "amc.h"
 #include "ape_actmon.h"
 #include "aram_manager.h"
+
+#include "dev-t21x.h"
+#include "dev-t18x.h"
 
 static struct nvadsp_drv_data *nvadsp_drv_data;
 
@@ -220,6 +224,7 @@ static int __init nvadsp_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, drv_data);
 	drv_data->pdev = pdev;
+	drv_data->chip_data = of_device_get_match_data(dev);
 
 	ret = nvadsp_parse_dt(pdev);
 	if (ret)
@@ -390,11 +395,58 @@ static int nvadsp_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_OF
+static struct nvadsp_chipdata tegra210_adsp_chipdata = {
+	.hwmb = {
+		.reg_idx = AMISC,
+		.hwmbox0_reg = 0x58,
+		.hwmbox1_reg = 0X5C,
+		.hwmbox2_reg = 0x60,
+		.hwmbox3_reg = 0x64,
+	},
+	.reset_init = nvadsp_reset_t21x_init,
+	.os_init = nvadsp_os_t21x_init,
+#ifdef CONFIG_PM
+	.pm_init = nvadsp_pm_t21x_init,
+#endif
+	.wdt_irq = INT_T210_ADSP_WDT,
+	.start_irq = INT_T210_AGIC_START,
+	.end_irq = INT_T210_AGIC_END,
+};
+
+static struct nvadsp_chipdata tegrat18x_adsp_chipdata = {
+	.hwmb = {
+		.reg_idx = AHSP,
+		.hwmbox0_reg = 0x00000,
+		.hwmbox1_reg = 0X08000,
+		.hwmbox2_reg = 0X10000,
+		.hwmbox3_reg = 0X18000,
+		.hwmbox4_reg = 0X20000,
+		.hwmbox5_reg = 0X28000,
+		.hwmbox6_reg = 0X30000,
+		.hwmbox7_reg = 0X38000,
+	},
+	.reset_init = nvadsp_reset_t18x_init,
+	.os_init = nvadsp_os_t18x_init,
+#ifdef CONFIG_PM
+	.pm_init = nvadsp_pm_t18x_init,
+#endif
+	.wdt_irq = INT_T18x_ATKE_WDT_IRQ,
+	.start_irq = INT_T18x_AGIC_START,
+	.end_irq = INT_T18x_AGIC_END,
+};
+
 static const struct of_device_id nvadsp_of_match[] = {
-	{ .compatible = "nvidia,tegra210-adsp", .data = NULL, },
-	{ .compatible = "nvidia,tegra18x-adsp", .data = NULL, },
-	{ .compatible = "nvidia,tegra18x-adsp-hv", .data = NULL, },
-	{},
+	{
+		.compatible = "nvidia,tegra210-adsp",
+		.data = &tegra210_adsp_chipdata,
+	}, {
+		.compatible = "nvidia,tegra18x-adsp",
+		.data = &tegrat18x_adsp_chipdata,
+	}, {
+		.compatible = "nvidia,tegra18x-adsp-hv",
+		.data = &tegrat18x_adsp_chipdata,
+	}, {
+	},
 };
 #endif
 

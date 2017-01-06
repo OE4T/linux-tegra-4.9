@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2015-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -543,8 +543,6 @@ static int t18x_handle_disp_la(enum tegra_la_id id,
 			       struct dc_to_la_params disp_params,
 			       int write_la)
 {
-	/* NOTE: We may need to divide "emc_freq_hz" with dram_emc_freq_factor
-	   because "emc_freq_hz" may actually be the dram frequency. */
 	int idx = cs->id_to_index[id];
 	struct la_client_info *ci = &cs->la_info_array[idx];
 	struct ptsa_info *p = &cs->ptsa_info;

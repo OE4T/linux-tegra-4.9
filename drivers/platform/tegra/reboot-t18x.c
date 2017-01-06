@@ -28,7 +28,8 @@ static void program_reboot_reason(const char *cmd)
 	u32 reboot_reason;
 
 	/* clean up */
-	reboot_reason = BOOTLOADER_MODE | RECOVERY_MODE | FORCED_RECOVERY_MODE;
+	reboot_reason = (BOOTLOADER_MODE | RECOVERY_MODE | FORCED_RECOVERY_MODE
+			| UPDATE_MODE);
 	tegra_pmc_clear_reboot_reason(reboot_reason);
 
 	/* valid command? */
@@ -39,13 +40,16 @@ static void program_reboot_reason(const char *cmd)
 	 * to register.
 	 */
 	reboot_reason = 0;
-	/* Writing recovery kernel or Bootloader mode in SCRATCH0 31:30:1 */
+	/* Writing recovery kernel or Bootloader mode or update kernel in
+	 * SCRATCH0 31:30:29:1. */
 	if (!strcmp(cmd, "recovery"))
 		reboot_reason |= RECOVERY_MODE;
 	else if (!strcmp(cmd, "bootloader"))
 		reboot_reason |= BOOTLOADER_MODE;
 	else if (!strcmp(cmd, "forced-recovery"))
 		reboot_reason |= FORCED_RECOVERY_MODE;
+	else if (!strcmp(cmd, "update"))
+		reboot_reason |= UPDATE_MODE;
 
 	/* write the restart command */
 	tegra_pmc_set_reboot_reason(reboot_reason);

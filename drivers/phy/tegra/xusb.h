@@ -18,6 +18,7 @@
 #include <linux/io.h>
 #include <linux/mutex.h>
 #include <linux/workqueue.h>
+#include <linux/usb/ch9.h>
 
 /* legacy entry points for backwards-compatibility */
 int tegra_xusb_padctl_legacy_probe(struct platform_device *pdev);
@@ -343,8 +344,9 @@ struct tegra_xusb_usb3_port {
 	struct tegra_xusb_port base;
 	struct regulator *supply;
 	bool context_saved;
-	unsigned int port;
+	unsigned int port; /* port number of companion USB2 port */
 	bool internal;
+	enum tegra_xusb_usb_port_cap port_cap;
 
 	u32 tap1;
 	u32 amp;
@@ -378,7 +380,6 @@ struct tegra_xusb_padctl_ops {
 		(*probe)(struct device *dev,
 			 const struct tegra_xusb_padctl_soc *soc);
 	void (*remove)(struct tegra_xusb_padctl *padctl);
-
 	int (*usb3_save_context)(struct tegra_xusb_padctl *padctl,
 				 unsigned int index);
 	int (*hsic_set_idle)(struct tegra_xusb_padctl *padctl,
@@ -386,6 +387,10 @@ struct tegra_xusb_padctl_ops {
 	int (*usb3_set_lfps_detect)(struct tegra_xusb_padctl *padctl,
 				    unsigned int index, bool enable);
 	int (*vbus_override)(struct tegra_xusb_padctl *padctl, bool set);
+	int (*phy_sleepwalk)(struct tegra_xusb_padctl *padctl, struct phy *phy,
+			     bool enable, enum usb_device_speed speed);
+	int (*phy_wake)(struct tegra_xusb_padctl *padctl, struct phy *phy,
+			bool enable);
 };
 
 struct tegra_xusb_padctl_soc {

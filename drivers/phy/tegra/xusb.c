@@ -1057,6 +1057,48 @@ int tegra_xusb_padctl_clear_vbus_override(struct tegra_xusb_padctl *padctl)
 }
 EXPORT_SYMBOL_GPL(tegra_xusb_padctl_clear_vbus_override);
 
+int tegra_xusb_padctl_enable_phy_sleepwalk(struct tegra_xusb_padctl *padctl,
+					   struct phy *phy,
+					   enum usb_device_speed speed)
+{
+	if (padctl->soc->ops->phy_sleepwalk)
+		return padctl->soc->ops->phy_sleepwalk(padctl, phy, true,
+						       speed);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_enable_phy_sleepwalk);
+
+int tegra_xusb_padctl_disable_phy_sleepwalk(struct tegra_xusb_padctl *padctl,
+					    struct phy *phy)
+{
+	if (padctl->soc->ops->phy_sleepwalk)
+		return padctl->soc->ops->phy_sleepwalk(padctl, phy, false, 0);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_disable_phy_sleepwalk);
+
+int tegra_xusb_padctl_enable_phy_wake(struct tegra_xusb_padctl *padctl,
+				      struct phy *phy)
+{
+	if (padctl->soc->ops->phy_wake)
+		return padctl->soc->ops->phy_wake(padctl, phy, true);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_enable_phy_wake);
+
+int tegra_xusb_padctl_disable_phy_wake(struct tegra_xusb_padctl *padctl,
+				       struct phy *phy)
+{
+	if (padctl->soc->ops->phy_wake)
+		return padctl->soc->ops->phy_wake(padctl, phy, false);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_disable_phy_wake);
+
 MODULE_AUTHOR("Thierry Reding <treding@nvidia.com>");
 MODULE_DESCRIPTION("Tegra XUSB Pad Controller driver");
 MODULE_LICENSE("GPL v2");

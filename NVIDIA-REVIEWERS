@@ -56,4 +56,6 @@ M:      Krishna Reddy <vdumpa@nvidia.com>
 M:      Sri Krishna Chowdary <schowdary@nvidia.com>
 L:      sw-mobile-memory@exchange.nvidia.com
 S:      Supported
-F:      drivers/video/tegra/nvmap/*
+F:      drivers/
+F:      include/
+

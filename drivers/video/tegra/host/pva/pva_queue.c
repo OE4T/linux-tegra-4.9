@@ -813,12 +813,33 @@ static void pva_task_update(void *priv, int nr_completed)
 void pva_queue_dump(struct nvhost_queue *queue, struct seq_file *s)
 {
 	struct pva_submit_task *task;
+	int i = 0;
 
-	seq_printf(s, "task | operation\n");
+	seq_printf(s, "Queue %u, Tasks\n", queue->id);
 
 	mutex_lock(&queue->list_lock);
-	list_for_each_entry(task, &queue->tasklist, node)
-		seq_printf(s, "%p | %u\n", task, task->operation);
+	list_for_each_entry(task, &queue->tasklist, node) {
+		int j;
+
+		seq_printf(s, "    #%u: Operation = %u\n",
+				i++, task->operation);
+
+		for (j = 0; j < task->num_prefences; j++)
+			seq_printf(s, "    prefence %d: \n\t"
+				"syncpoint_index=%u, syncpoint_value=%u\n",
+				j,
+				task->prefences[j].syncpoint_index,
+				task->prefences[j].syncpoint_value);
+
+		for (j = 0; j < task->num_postfences; j++)
+			seq_printf(s, "    postfence %d: \n\t"
+				"syncpoint_index=%u, syncpoint_value=%u\n",
+				j,
+				task->postfences[j].syncpoint_index,
+				task->postfences[j].syncpoint_value);
+
+
+	}
 	mutex_unlock(&queue->list_lock);
 }
 

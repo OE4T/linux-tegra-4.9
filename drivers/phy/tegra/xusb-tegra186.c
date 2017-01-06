@@ -123,6 +123,117 @@
 #define   ID_OVERRIDE_FLOATING			ID_OVERRIDE(8)
 #define   ID_OVERRIDE_GROUNDED			ID_OVERRIDE(0)
 
+/* XUSB AO registers */
+#define XUSB_AO_USB_DEBOUNCE_DEL		(0x4)
+#define   UHSIC_LINE_DEB_CNT(x)			(((x) & 0xf) << 4)
+#define   UTMIP_LINE_DEB_CNT(x)			((x) & 0xf)
+
+#define XUSB_AO_UTMIP_TRIGGERS(x)		(0x40 + (x) * 4)
+#define   CLR_WALK_PTR				(1 << 0)
+#define   CAP_CFG				(1 << 1)
+#define   CLR_WAKE_ALARM			(1 << 3)
+
+#define XUSB_AO_UHSIC_TRIGGERS(x)		(0x60 + (x) * 4)
+#define   HSIC_CLR_WALK_PTR			(1 << 0)
+#define   HSIC_CLR_WAKE_ALARM			(1 << 3)
+#define   HSIC_CAP_CFG				(1 << 4)
+
+#define XUSB_AO_UTMIP_SAVED_STATE(x)		(0x70 + (x) * 4)
+#define   SPEED(x)				((x) & 0x3)
+#define     UTMI_HS				SPEED(0)
+#define     UTMI_FS				SPEED(1)
+#define     UTMI_LS				SPEED(2)
+#define     UTMI_RST				SPEED(3)
+
+#define XUSB_AO_UHSIC_SAVED_STATE(x)		(0x90 + (x) * 4)
+#define   MODE(x)				((x) & 0x1)
+#define   MODE_HS				MODE(1)
+#define   MODE_RST				MODE(0)
+
+#define XUSB_AO_UTMIP_SLEEPWALK_CFG(x)		(0xd0 + (x) * 4)
+#define XUSB_AO_UHSIC_SLEEPWALK_CFG(x)		(0xf0 + (x) * 4)
+#define   FAKE_USBOP_VAL			(1 << 0)
+#define   FAKE_USBON_VAL			(1 << 1)
+#define   FAKE_USBOP_EN				(1 << 2)
+#define   FAKE_USBON_EN				(1 << 3)
+#define   FAKE_STROBE_VAL			(1 << 0)
+#define   FAKE_DATA_VAL				(1 << 1)
+#define   FAKE_STROBE_EN			(1 << 2)
+#define   FAKE_DATA_EN				(1 << 3)
+#define   WAKE_WALK_EN				(1 << 14)
+#define   MASTER_ENABLE				(1 << 15)
+#define   LINEVAL_WALK_EN			(1 << 16)
+#define   WAKE_VAL(x)				(((x) & 0xf) << 17)
+#define     WAKE_VAL_NONE			WAKE_VAL(12)
+#define     WAKE_VAL_ANY			WAKE_VAL(15)
+#define     WAKE_VAL_DS10			WAKE_VAL(2)
+#define   LINE_WAKEUP_EN			(1 << 21)
+#define   MASTER_CFG_SEL			(1 << 22)
+
+#define XUSB_AO_UTMIP_SLEEPWALK(x)		(0x100 + (x) * 4)
+/* phase A */
+#define   USBOP_RPD_A				(1 << 0)
+#define   USBON_RPD_A				(1 << 1)
+#define   AP_A					(1 << 4)
+#define   AN_A					(1 << 5)
+#define   HIGHZ_A				(1 << 6)
+/* phase B */
+#define   USBOP_RPD_B				(1 << 8)
+#define   USBON_RPD_B				(1 << 9)
+#define   AP_B					(1 << 12)
+#define   AN_B					(1 << 13)
+#define   HIGHZ_B				(1 << 14)
+/* phase C */
+#define   USBOP_RPD_C				(1 << 16)
+#define   USBON_RPD_C				(1 << 17)
+#define   AP_C					(1 << 20)
+#define   AN_C					(1 << 21)
+#define   HIGHZ_C				(1 << 22)
+/* phase D */
+#define   USBOP_RPD_D				(1 << 24)
+#define   USBON_RPD_D				(1 << 25)
+#define   AP_D					(1 << 28)
+#define   AN_D					(1 << 29)
+#define   HIGHZ_D				(1 << 30)
+
+#define XUSB_AO_UHSIC_SLEEPWALK(x)		(0x120 + (x) * 4)
+/* phase A */
+#define   RPD_STROBE_A				(1 << 0)
+#define   RPD_DATA0_A				(1 << 1)
+#define   RPU_STROBE_A				(1 << 2)
+#define   RPU_DATA0_A				(1 << 3)
+/* phase B */
+#define   RPD_STROBE_B				(1 << 8)
+#define   RPD_DATA0_B				(1 << 9)
+#define   RPU_STROBE_B				(1 << 10)
+#define   RPU_DATA0_B				(1 << 11)
+/* phase C */
+#define   RPD_STROBE_C				(1 << 16)
+#define   RPD_DATA0_C				(1 << 17)
+#define   RPU_STROBE_C				(1 << 18)
+#define   RPU_DATA0_C				(1 << 19)
+/* phase D */
+#define   RPD_STROBE_D				(1 << 24)
+#define   RPD_DATA0_D				(1 << 25)
+#define   RPU_STROBE_D				(1 << 26)
+#define   RPU_DATA0_D				(1 << 27)
+
+#define XUSB_AO_UTMIP_PAD_CFG(x)		(0x130 + (x) * 4)
+#define   FSLS_USE_XUSB_AO			(1 << 3)
+#define   TRK_CTRL_USE_XUSB_AO			(1 << 4)
+#define   RPD_CTRL_USE_XUSB_AO			(1 << 5)
+#define   RPU_USE_XUSB_AO			(1 << 6)
+#define   VREG_USE_XUSB_AO			(1 << 7)
+#define   USBOP_VAL_PD				(1 << 8)
+#define   USBON_VAL_PD				(1 << 9)
+#define   E_DPD_OVRD_EN				(1 << 10)
+#define   E_DPD_OVRD_VAL			(1 << 11)
+
+#define XUSB_AO_UHSIC_PAD_CFG(x)		(0x150 + (x) * 4)
+#define   STROBE_VAL_PD				(1 << 0)
+#define   DATA0_VAL_PD				(1 << 1)
+#define   USE_XUSB_AO				(1 << 4)
+
 #define TEGRA186_LANE(_name, _offset, _shift, _mask, _type)		\
 	{								\
 		.name = _name,						\
@@ -143,6 +254,8 @@ struct tegra_xusb_fuse_calibration {
 struct tegra186_xusb_padctl {
 	struct tegra_xusb_padctl base;
 
+	void __iomem *ao_regs;
+
 	/* prod settings */
 	struct tegra_prod *prod_list;
 	struct tegra_xusb_fuse_calibration calib;
@@ -151,6 +264,22 @@ struct tegra186_xusb_padctl {
 	struct clk *usb2_trk_clk;
 	unsigned int bias_pad_enable;
 };
+
+static inline void ao_writel(struct tegra186_xusb_padctl *priv, u32 value,
+			     unsigned long offset)
+{
+	dev_dbg(priv->base.dev, "ao %08lx < %08x\n", offset, value);
+	writel(value, priv->ao_regs + offset);
+}
+
+static inline u32 ao_readl(struct tegra186_xusb_padctl *priv,
+			   unsigned long offset)
+{
+	u32 value = readl(priv->ao_regs + offset);
+
+	dev_dbg(priv->base.dev, "ao %08lx > %08x\n", offset, value);
+	return value;
+}
 
 static inline struct tegra186_xusb_padctl *
 to_tegra186_xusb_padctl(struct tegra_xusb_padctl *padctl)
@@ -266,7 +395,6 @@ void tegra_phy_xusb_utmi_pad_power_on(struct phy *phy)
 	struct tegra_xusb_padctl *padctl;
 	unsigned int index;
 	struct device *dev;
-	struct tegra_xusb_usb2_port *port;
 	u32 reg;
 
 	if (!phy)
@@ -279,12 +407,6 @@ void tegra_phy_xusb_utmi_pad_power_on(struct phy *phy)
 	dev = padctl->dev;
 
 	dev_dbg(dev, "power on UTMI pads %d\n", index);
-
-	port = tegra_xusb_find_usb2_port(padctl, index);
-	if (!port) {
-		dev_err(dev, "no port found for USB2 lane %u\n", index);
-		return;
-	}
 
 	if (usb2->powered_on)
 		return;
@@ -326,7 +448,7 @@ void tegra_phy_xusb_utmi_pad_power_down(struct phy *phy)
 	index = lane->index;
 	dev = padctl->dev;
 
-	dev_dbg(dev, "power down UTMI pad %d\n",  index);
+	dev_dbg(dev, "power down UTMI pad %d\n", index);
 
 	if (!usb2->powered_on)
 		return;
@@ -360,7 +482,7 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 	struct tegra_xusb_usb2_port *port;
 	u32 reg;
 
-	dev_dbg(dev, "phy power on UTMI %d\n",  index);
+	dev_dbg(dev, "phy power on UTMI %d\n", index);
 
 	port = tegra_xusb_find_usb2_port(padctl, index);
 	if (!port) {
@@ -447,15 +569,247 @@ static int tegra186_utmi_phy_power_off(struct phy *phy)
 	return 0;
 }
 
+static int tegra186_utmi_phy_enable_sleepwalk(struct phy *phy,
+					      enum usb_device_speed speed)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	struct tegra186_xusb_padctl *priv = to_tegra186_xusb_padctl(padctl);
+	unsigned int index = lane->index;
+	struct device *dev = padctl->dev;
+	u32 reg;
+
+	dev_dbg(dev, "phy enable sleepwalk UTMI %d speed %d\n", index, speed);
+
+	mutex_lock(&padctl->lock);
+
+	/* ensure sleepwalk logic is disabled */
+	reg = ao_readl(priv, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+	reg &= ~MASTER_ENABLE;
+	ao_writel(priv, reg, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+
+	/* ensure sleepwalk logics are in low power mode */
+	reg = ao_readl(priv, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+	reg |= MASTER_CFG_SEL;
+	ao_writel(priv, reg, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+
+	/* set debounce time */
+	reg = ao_readl(priv, XUSB_AO_USB_DEBOUNCE_DEL);
+	reg &= ~UTMIP_LINE_DEB_CNT(~0);
+	reg |= UTMIP_LINE_DEB_CNT(1);
+	ao_writel(priv, reg, XUSB_AO_USB_DEBOUNCE_DEL);
+
+	/* ensure fake events of sleepwalk logic are desiabled */
+	reg = ao_readl(priv, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+	reg &= ~(FAKE_USBOP_VAL | FAKE_USBON_VAL |
+		FAKE_USBOP_EN | FAKE_USBON_EN);
+	ao_writel(priv, reg, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+
+	/* ensure wake events of sleepwalk logic are not latched */
+	reg = ao_readl(priv, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+	reg &= ~LINE_WAKEUP_EN;
+	ao_writel(priv, reg, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+
+	/* disable wake event triggers of sleepwalk logic */
+	reg = ao_readl(priv, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+	reg &= ~WAKE_VAL(~0);
+	reg |= WAKE_VAL_NONE;
+	ao_writel(priv, reg, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+
+	/* power down the line state detectors of the pad */
+	reg = ao_readl(priv, XUSB_AO_UTMIP_PAD_CFG(index));
+	reg |= (USBOP_VAL_PD | USBON_VAL_PD);
+	ao_writel(priv, reg, XUSB_AO_UTMIP_PAD_CFG(index));
+
+	/* save state per speed */
+	reg = ao_readl(priv, XUSB_AO_UTMIP_SAVED_STATE(index));
+	reg &= ~SPEED(~0);
+	if (speed == USB_SPEED_HIGH)
+		reg |= UTMI_HS;
+	else if (speed == USB_SPEED_FULL)
+		reg |= UTMI_FS;
+	else if (speed == USB_SPEED_LOW)
+		reg |= UTMI_LS;
+	else
+		reg |= UTMI_RST;
+	ao_writel(priv, reg, XUSB_AO_UTMIP_SAVED_STATE(index));
+
+	/* enable the trigger of the sleepwalk logic */
+	reg = ao_readl(priv, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+	reg |= LINEVAL_WALK_EN;
+	reg &= ~WAKE_WALK_EN;
+	ao_writel(priv, reg, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+
+	/* reset the walk pointer and clear the alarm of the sleepwalk logic,
+	 * as well as capture the configuration of the USB2.0 pad
+	 */
+	reg = ao_readl(priv, XUSB_AO_UTMIP_TRIGGERS(index));
+	reg |= (CLR_WALK_PTR | CLR_WAKE_ALARM | CAP_CFG);
+	ao_writel(priv, reg, XUSB_AO_UTMIP_TRIGGERS(index));
+
+	/* setup the pull-ups and pull-downs of the signals during the four
+	 * stages of sleepwalk.
+	 * if device is connected, program sleepwalk logic to maintain a J and
+	 * keep driving K upon seeing remote wake.
+	 */
+	reg = (USBOP_RPD_A | USBOP_RPD_B | USBOP_RPD_C | USBOP_RPD_D);
+	reg |= (USBON_RPD_A | USBON_RPD_B | USBON_RPD_C | USBON_RPD_D);
+	if (speed == USB_SPEED_UNKNOWN) {
+		reg |= (HIGHZ_A | HIGHZ_B | HIGHZ_C | HIGHZ_D);
+	} else if ((speed == USB_SPEED_HIGH) || (speed == USB_SPEED_FULL)) {
+		/* J state: D+/D- = high/low, K state: D+/D- = low/high */
+		reg |= HIGHZ_A;
+		reg |= (AP_A);
+		reg |= (AN_B | AN_C | AN_D);
+	} else if (speed == USB_SPEED_LOW) {
+		/* J state: D+/D- = low/high, K state: D+/D- = high/low */
+		reg |= HIGHZ_A;
+		reg |= AN_A;
+		reg |= (AP_B | AP_C | AP_D);
+	}
+	ao_writel(priv, reg, XUSB_AO_UTMIP_SLEEPWALK(index));
+
+	/* power up the line state detectors of the pad */
+	reg = ao_readl(priv, XUSB_AO_UTMIP_PAD_CFG(index));
+	reg &= ~(USBOP_VAL_PD | USBON_VAL_PD);
+	ao_writel(priv, reg, XUSB_AO_UTMIP_PAD_CFG(index));
+
+	usleep_range(150, 200);
+
+	/* switch the electric control of the USB2.0 pad to XUSB_AO */
+	reg = ao_readl(priv, XUSB_AO_UTMIP_PAD_CFG(index));
+	reg |= (FSLS_USE_XUSB_AO | TRK_CTRL_USE_XUSB_AO |
+		RPD_CTRL_USE_XUSB_AO | RPU_USE_XUSB_AO | VREG_USE_XUSB_AO);
+	ao_writel(priv, reg, XUSB_AO_UTMIP_PAD_CFG(index));
+
+	/* set the wake signaling trigger events */
+	reg = ao_readl(priv, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+	reg &= ~WAKE_VAL(~0);
+	reg |= WAKE_VAL_ANY;
+	ao_writel(priv, reg, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+
+	/* enable the wake detection */
+	reg = ao_readl(priv, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+	reg |= (MASTER_ENABLE | LINE_WAKEUP_EN);
+	ao_writel(priv, reg, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+
+	mutex_unlock(&padctl->lock);
+
+	return 0;
+}
+
+static int tegra186_utmi_phy_disable_sleepwalk(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	struct tegra186_xusb_padctl *priv = to_tegra186_xusb_padctl(padctl);
+	unsigned int index = lane->index;
+	struct device *dev = padctl->dev;
+	u32 reg;
+
+	dev_dbg(dev, "phy disable sleepwalk UTMI %d\n", index);
+
+	mutex_lock(&padctl->lock);
+
+	/* disable the wake detection */
+	reg = ao_readl(priv, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+	reg &= ~(MASTER_ENABLE | LINE_WAKEUP_EN);
+	ao_writel(priv, reg, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+
+	/* switch the electric control of the USB2.0 pad to XUSB vcore logic */
+	reg = ao_readl(priv, XUSB_AO_UTMIP_PAD_CFG(index));
+	reg &= ~(FSLS_USE_XUSB_AO | TRK_CTRL_USE_XUSB_AO |
+		RPD_CTRL_USE_XUSB_AO | RPU_USE_XUSB_AO | VREG_USE_XUSB_AO);
+	ao_writel(priv, reg, XUSB_AO_UTMIP_PAD_CFG(index));
+
+	/* disable wake event triggers of sleepwalk logic */
+	reg = ao_readl(priv, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+	reg &= ~WAKE_VAL(~0);
+	reg |= WAKE_VAL_NONE;
+	ao_writel(priv, reg, XUSB_AO_UTMIP_SLEEPWALK_CFG(index));
+
+	/* power down the line state detectors of the port */
+	reg = ao_readl(priv, XUSB_AO_UTMIP_PAD_CFG(index));
+	reg |= (USBOP_VAL_PD | USBON_VAL_PD);
+	ao_writel(priv, reg, XUSB_AO_UTMIP_PAD_CFG(index));
+
+	/* clear alarm of the sleepwalk logic */
+	reg = ao_readl(priv, XUSB_AO_UTMIP_TRIGGERS(index));
+	reg |= CLR_WAKE_ALARM;
+	ao_writel(priv, reg, XUSB_AO_UTMIP_TRIGGERS(index));
+
+	mutex_unlock(&padctl->lock);
+
+	return 0;
+}
+
+static int tegra186_utmi_phy_enable_wake(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	unsigned int index = lane->index;
+	struct device *dev = padctl->dev;
+	u32 reg;
+
+	dev_dbg(dev, "phy enable wake UTMI %d\n", index);
+
+	mutex_lock(&padctl->lock);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+	reg &= ~ALL_WAKE_EVENTS;
+	reg |= USB2_PORT_WAKEUP_EVENT(index);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM);
+
+	usleep_range(10, 20);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+	reg &= ~ALL_WAKE_EVENTS;
+	reg |= USB2_PORT_WAKE_INTERRUPT_ENABLE(index);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM);
+
+	mutex_unlock(&padctl->lock);
+
+	return 0;
+}
+
+static int tegra186_utmi_phy_disable_wake(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	unsigned int index = lane->index;
+	struct device *dev = padctl->dev;
+	u32 reg;
+
+	dev_dbg(dev, "phy disable wake UTMI %d\n", index);
+
+	mutex_lock(&padctl->lock);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+	reg &= ~ALL_WAKE_EVENTS;
+	reg &= ~USB2_PORT_WAKE_INTERRUPT_ENABLE(index);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM);
+
+	usleep_range(10, 20);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+	reg &= ~ALL_WAKE_EVENTS;
+	reg |= USB2_PORT_WAKEUP_EVENT(index);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM);
+
+	mutex_unlock(&padctl->lock);
+
+	return 0;
+}
+
 static int tegra186_utmi_phy_init(struct phy *phy)
 {
 	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
 	unsigned int index = lane->index;
 	struct tegra_xusb_usb2_port *port;
-	int rc;
+	int rc = 0;
 
-	dev_dbg(padctl->dev, "phy init UTMI %d\n",  index);
+	dev_dbg(padctl->dev, "phy init UTMI %d\n", index);
 
 	port = tegra_xusb_find_usb2_port(padctl, index);
 	if (!port) {
@@ -463,16 +817,19 @@ static int tegra186_utmi_phy_init(struct phy *phy)
 		return -ENODEV;
 	}
 
+	mutex_lock(&padctl->lock);
+
 	if (port->supply && port->port_cap == USB_HOST_CAP) {
 		rc = regulator_enable(port->supply);
 		if (rc) {
 			dev_err(padctl->dev, "enable port %d vbus failed %d\n",
 				index, rc);
-			return rc;
 		}
 	}
 
-	return 0;
+	mutex_unlock(&padctl->lock);
+
+	return rc;
 }
 
 static int tegra186_utmi_phy_exit(struct phy *phy)
@@ -481,9 +838,9 @@ static int tegra186_utmi_phy_exit(struct phy *phy)
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
 	unsigned int index = lane->index;
 	struct tegra_xusb_usb2_port *port;
-	int rc;
+	int rc = 0;
 
-	dev_dbg(padctl->dev, "phy exit UTMI %d\n",  index);
+	dev_dbg(padctl->dev, "phy exit UTMI %d\n", index);
 
 	port = tegra_xusb_find_usb2_port(padctl, index);
 	if (!port) {
@@ -491,16 +848,19 @@ static int tegra186_utmi_phy_exit(struct phy *phy)
 		return -ENODEV;
 	}
 
+	mutex_lock(&padctl->lock);
+
 	if (port->supply && port->port_cap == USB_HOST_CAP) {
 		rc = regulator_disable(port->supply);
 		if (rc) {
 			dev_err(padctl->dev, "disable port %d vbus failed %d\n",
 				index, rc);
-			return rc;
 		}
 	}
 
-	return 0;
+	mutex_unlock(&padctl->lock);
+
+	return rc;
 }
 
 static const struct phy_ops utmi_phy_ops = {
@@ -510,6 +870,11 @@ static const struct phy_ops utmi_phy_ops = {
 	.power_off = tegra186_utmi_phy_power_off,
 	.owner = THIS_MODULE,
 };
+
+static inline bool is_utmi_phy(struct phy *phy)
+{
+	return phy->ops == &utmi_phy_ops;
+}
 
 static struct tegra_xusb_pad *
 tegra186_usb2_pad_probe(struct tegra_xusb_padctl *padctl,
@@ -672,10 +1037,9 @@ static int tegra186_usb3_phy_power_on(struct phy *phy)
 	unsigned int index = lane->index;
 	struct device *dev = padctl->dev;
 	struct tegra_xusb_usb3_port *port;
-	struct tegra_xusb_usb2_port *companion_usb2_port;
 	u32 reg;
 
-	dev_dbg(dev, "phy power on USB3 %d\n",  index);
+	dev_dbg(dev, "phy power on USB3 %d\n", index);
 
 	port = tegra_xusb_find_usb3_port(padctl, index);
 	if (!port) {
@@ -683,26 +1047,17 @@ static int tegra186_usb3_phy_power_on(struct phy *phy)
 		return -ENODEV;
 	}
 
-	companion_usb2_port = tegra_xusb_find_usb2_port(padctl, port->port);
-	if (!companion_usb2_port) {
-		dev_err(dev, "no companion port found for USB3 lane %u\n",
-			index);
-		return -ENODEV;
-	}
-	dev_dbg(padctl->dev, "USB3 port %d with usb2 port %d mode %d\n", index,
-		port->port, companion_usb2_port->port_cap);
-
 	mutex_lock(&padctl->lock);
 
 	reg = padctl_readl(padctl, XUSB_PADCTL_SS_PORT_CAP);
 	reg &= ~(PORT_CAP_MASK << PORTX_CAP_SHIFT(index));
-	if (companion_usb2_port->port_cap == USB_PORT_DISABLED)
+	if (port->port_cap == USB_PORT_DISABLED)
 		reg |= (PORT_CAP_DISABLED << PORTX_CAP_SHIFT(index));
-	else if (companion_usb2_port->port_cap == USB_DEVICE_CAP)
+	else if (port->port_cap == USB_DEVICE_CAP)
 		reg |= (PORT_CAP_DEVICE << PORTX_CAP_SHIFT(index));
-	else if (companion_usb2_port->port_cap == USB_HOST_CAP)
+	else if (port->port_cap == USB_HOST_CAP)
 		reg |= (PORT_CAP_HOST << PORTX_CAP_SHIFT(index));
-	else if (companion_usb2_port->port_cap == USB_OTG_CAP)
+	else if (port->port_cap == USB_OTG_CAP)
 		reg |= (PORT_CAP_OTG << PORTX_CAP_SHIFT(index));
 	padctl_writel(padctl, reg, XUSB_PADCTL_SS_PORT_CAP);
 
@@ -733,16 +1088,9 @@ static int tegra186_usb3_phy_power_off(struct phy *phy)
 	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
 	unsigned int index = lane->index;
 	struct device *dev = padctl->dev;
-	struct tegra_xusb_usb3_port *port;
 	u32 reg;
 
-	dev_dbg(dev, "phy power off USB3 %d\n",  index);
-
-	port = tegra_xusb_find_usb3_port(padctl, index);
-	if (!port) {
-		dev_err(dev, "no port found for USB3 lane %u\n", index);
-		return -ENODEV;
-	}
+	dev_dbg(dev, "phy power off USB3 %d\n", index);
 
 	mutex_lock(&padctl->lock);
 
@@ -767,14 +1115,194 @@ static int tegra186_usb3_phy_power_off(struct phy *phy)
 	return 0;
 }
 
+static int tegra186_usb3_phy_enable_sleepwalk(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	unsigned int index = lane->index;
+	struct device *dev = padctl->dev;
+	u32 reg;
+
+	dev_dbg(dev, "phy enable sleepwalk USB3 %d\n", index);
+
+	mutex_lock(&padctl->lock);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
+	reg |= SSPX_ELPG_CLAMP_EN_EARLY(index);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM_1);
+
+	usleep_range(100, 200);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
+	reg |= SSPX_ELPG_CLAMP_EN(index);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM_1);
+
+	usleep_range(250, 350);
+
+	mutex_unlock(&padctl->lock);
+
+	return 0;
+}
+
+static int tegra186_usb3_phy_disable_sleepwalk(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	unsigned int index = lane->index;
+	struct device *dev = padctl->dev;
+	u32 reg;
+
+	dev_dbg(dev, "phy disable sleepwalk USB3 %d\n", index);
+
+	mutex_lock(&padctl->lock);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
+	reg &= ~SSPX_ELPG_CLAMP_EN_EARLY(index);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM_1);
+
+	usleep_range(100, 200);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM_1);
+	reg &= ~SSPX_ELPG_CLAMP_EN(index);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM_1);
+
+	mutex_unlock(&padctl->lock);
+
+	return 0;
+}
+
+static int tegra186_usb3_phy_enable_wake(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	unsigned int index = lane->index;
+	struct device *dev = padctl->dev;
+	u32 reg;
+
+	dev_dbg(dev, "phy enable wake USB3 %d\n", index);
+
+	mutex_lock(&padctl->lock);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+	reg &= ~ALL_WAKE_EVENTS;
+	reg |= SS_PORT_WAKEUP_EVENT(index);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM);
+
+	usleep_range(10, 20);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+	reg &= ~ALL_WAKE_EVENTS;
+	reg |= SS_PORT_WAKE_INTERRUPT_ENABLE(index);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM);
+
+	mutex_unlock(&padctl->lock);
+
+	return 0;
+}
+
+static int tegra186_usb3_phy_disable_wake(struct phy *phy)
+{
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	unsigned int index = lane->index;
+	struct device *dev = padctl->dev;
+	u32 reg;
+
+	dev_dbg(dev, "phy disable wake USB3 %d\n", index);
+
+	mutex_lock(&padctl->lock);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+	reg &= ~ALL_WAKE_EVENTS;
+	reg &= ~SS_PORT_WAKE_INTERRUPT_ENABLE(index);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM);
+
+	usleep_range(10, 20);
+
+	reg = padctl_readl(padctl, XUSB_PADCTL_ELPG_PROGRAM);
+	reg &= ~ALL_WAKE_EVENTS;
+	reg |= SS_PORT_WAKEUP_EVENT(index);
+	padctl_writel(padctl, reg, XUSB_PADCTL_ELPG_PROGRAM);
+
+	mutex_unlock(&padctl->lock);
+
+	return 0;
+}
+
 static int tegra186_usb3_phy_init(struct phy *phy)
 {
-	return 0;
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	struct device *dev = padctl->dev;
+	unsigned int index = lane->index;
+	struct tegra_xusb_usb3_port *port;
+	struct tegra_xusb_usb2_port *companion_usb2_port;
+	int rc = 0;
+
+	dev_dbg(dev, "phy init USB3 %d\n", index);
+
+	port = tegra_xusb_find_usb3_port(padctl, index);
+	if (!port) {
+		dev_err(dev, "no port found for USB3 lane %u\n", index);
+		return -ENODEV;
+	}
+
+	companion_usb2_port = tegra_xusb_find_usb2_port(padctl, port->port);
+	if (!companion_usb2_port) {
+		dev_err(dev, "no companion port found for USB3 lane %u\n",
+			index);
+		return -ENODEV;
+	}
+	dev_dbg(dev, "USB3 port %d companion USB2 port %d mode %d\n", index,
+		port->port, companion_usb2_port->port_cap);
+
+	mutex_lock(&padctl->lock);
+
+	port->port_cap = companion_usb2_port->port_cap;
+
+	if (port->supply && port->port_cap == USB_HOST_CAP) {
+		rc = regulator_enable(port->supply);
+		if (rc) {
+			dev_err(dev, "enable port %d vbus failed %d\n",
+				index, rc);
+		}
+	}
+
+	mutex_unlock(&padctl->lock);
+
+	return rc;
 }
 
 static int tegra186_usb3_phy_exit(struct phy *phy)
 {
-	return 0;
+	struct tegra_xusb_lane *lane = phy_get_drvdata(phy);
+	struct tegra_xusb_padctl *padctl = lane->pad->padctl;
+	unsigned int index = lane->index;
+	struct device *dev = padctl->dev;
+	struct tegra_xusb_usb3_port *port;
+	int rc = 0;
+
+	dev_dbg(dev, "phy exit USB3 %d\n", index);
+
+	port = tegra_xusb_find_usb3_port(padctl, index);
+	if (!port) {
+		dev_err(dev, "no port found for USB3 lane %u\n", index);
+		return -ENODEV;
+	}
+
+	mutex_lock(&padctl->lock);
+
+	if (port->supply && port->port_cap == USB_HOST_CAP) {
+		rc = regulator_disable(port->supply);
+		if (rc) {
+			dev_err(dev, "disable port %d vbus failed %d\n",
+				index, rc);
+		}
+	}
+
+	mutex_unlock(&padctl->lock);
+
+	return rc;
 }
 
 static const struct phy_ops usb3_phy_ops = {
@@ -784,6 +1312,11 @@ static const struct phy_ops usb3_phy_ops = {
 	.power_off = tegra186_usb3_phy_power_off,
 	.owner = THIS_MODULE,
 };
+
+static inline bool is_usb3_phy(struct phy *phy)
+{
+	return phy->ops == &usb3_phy_ops;
+}
 
 static struct tegra_xusb_pad *
 tegra186_usb3_pad_probe(struct tegra_xusb_padctl *padctl,
@@ -900,7 +1433,9 @@ static struct tegra_xusb_padctl *
 tegra186_xusb_padctl_probe(struct device *dev,
 			   const struct tegra_xusb_padctl_soc *soc)
 {
+	struct platform_device *pdev = to_platform_device(dev);
 	struct tegra186_xusb_padctl *priv;
+	struct resource *res;
 	int err;
 
 	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
@@ -909,6 +1444,11 @@ tegra186_xusb_padctl_probe(struct device *dev,
 
 	priv->base.dev = dev;
 	priv->base.soc = soc;
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "ao");
+	priv->ao_regs = devm_ioremap_resource(dev, res);
+	if (IS_ERR(priv->ao_regs))
+		return priv->ao_regs;
 
 	err = tegra186_xusb_read_fuse_calibration(priv);
 	if (err < 0)
@@ -947,10 +1487,57 @@ static int tegra186_xusb_padctl_vbus_override(struct tegra_xusb_padctl *padctl,
 	return 0;
 }
 
+static int tegra186_xusb_padctl_phy_sleepwalk(struct tegra_xusb_padctl *padctl,
+					      struct phy *phy, bool enable,
+					      enum usb_device_speed speed)
+{
+	if (!phy)
+		return 0;
+
+	if (is_usb3_phy(phy)) {
+		if (enable)
+			return tegra186_usb3_phy_enable_sleepwalk(phy);
+		else
+			return tegra186_usb3_phy_disable_sleepwalk(phy);
+	} else if (is_utmi_phy(phy)) {
+		if (enable)
+			return tegra186_utmi_phy_enable_sleepwalk(phy, speed);
+		else
+			return tegra186_utmi_phy_disable_sleepwalk(phy);
+	} else
+		return -EINVAL;
+
+	return 0;
+}
+
+static int tegra186_xusb_padctl_phy_wake(struct tegra_xusb_padctl *padctl,
+					 struct phy *phy, bool enable)
+{
+	if (!phy)
+		return 0;
+
+	if (is_usb3_phy(phy)) {
+		if (enable)
+			return tegra186_usb3_phy_enable_wake(phy);
+		else
+			return tegra186_usb3_phy_disable_wake(phy);
+	} else if (is_utmi_phy(phy)) {
+		if (enable)
+			return tegra186_utmi_phy_enable_wake(phy);
+		else
+			return tegra186_utmi_phy_disable_wake(phy);
+	} else
+		return -EINVAL;
+
+	return 0;
+}
+
 static const struct tegra_xusb_padctl_ops tegra186_xusb_padctl_ops = {
 	.probe = tegra186_xusb_padctl_probe,
 	.remove = tegra186_xusb_padctl_remove,
 	.vbus_override = tegra186_xusb_padctl_vbus_override,
+	.phy_sleepwalk = tegra186_xusb_padctl_phy_sleepwalk,
+	.phy_wake = tegra186_xusb_padctl_phy_wake,
 };
 
 const struct tegra_xusb_padctl_soc tegra186_xusb_padctl_soc = {

@@ -45,7 +45,7 @@ int nvmap_register_cvsram_carveout(struct device *dma_dev,
 	cvsram.base = base;
 	cvsram.size = size;
 
-	if (!dma_dev)
+	if (dma_dev)
 		cvsram.dma_dev = dma_dev;
 	else
 		cvsram.dma_dev = &cvsram.dev;

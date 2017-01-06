@@ -24,7 +24,6 @@
 #include <linux/of_address.h>
 #include <linux/export.h>
 #include <soc/tegra/pmc.h>
-#include <linux/tegra_prod.h>
 #include <iomap.h>
 
 #define PMC_CTRL			0x0
@@ -643,8 +642,6 @@ static void tegra186_pmc_rst_status(void)
 	return;
 }
 
-static struct tegra_prod *prod_list;
-
 static int __init tegra186_pmc_init(void)
 {
 	struct device_node *np;
@@ -683,21 +680,6 @@ static int __init tegra186_pmc_init(void)
 	ret = tegra186_pmc_debugfs_init(np);
 	if (ret < 0)
 		pr_debug("Failed to create PMC debugfs :%d\n", ret);
-
-	/* Prod setting like platform specific rails */
-	prod_list = devm_tegra_prod_get(&tegra186_pmc_dev);
-	if (IS_ERR(prod_list)) {
-		ret = PTR_ERR(prod_list);
-		dev_dbg(&tegra186_pmc_dev, "prod list not found: %d\n", ret);
-		prod_list = NULL;
-	} else {
-		ret = tegra_prod_set_by_name(&tegra186_pmc_base,
-				"prod_c_platform_pad_rail", prod_list);
-		if (ret < 0) {
-			dev_info(&tegra186_pmc_dev,
-				"prod setting for rail not found\n");
-		}
-	}
 
 	/* Register as pad controller */
 	ret = tegra_pmc_padctrl_init(&tegra186_pmc_dev, np);

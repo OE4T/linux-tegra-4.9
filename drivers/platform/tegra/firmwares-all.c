@@ -17,16 +17,8 @@
 #include <linux/tegra-firmwares.h>
 #include <linux/trusty/trusty.h>
 #include <linux/trusty/smcall.h>
-#include <linux/tegra_nvadsp.h>
 #include <linux/cpu.h>
 #include <asm/cpu.h>
-
-static ssize_t tegrafw_read_adsp(struct device *dev,
-				char *data, size_t size)
-{
-	nvadsp_get_os_version(data, size);
-	return strlen(data);
-}
 
 static ssize_t tegrafw_read_trusty(struct device *dev,
 				char *data, size_t size)
@@ -80,8 +72,6 @@ static int __init tegra_firmwares_init(void)
 	*dev++ = tegrafw_register("MTS", TFW_NORMAL, tegrafw_read_denver, NULL);
 	*dev++ = tegrafw_register("trusty", TFW_DONT_CACHE,
 				tegrafw_read_trusty, NULL);
-	*dev++ = tegrafw_register("APE", TFW_DONT_CACHE,
-				tegrafw_read_adsp, NULL);
 	return 0;
 }
 

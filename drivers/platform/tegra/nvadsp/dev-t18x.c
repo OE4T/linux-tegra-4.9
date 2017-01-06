@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -31,6 +31,12 @@ static int nvadsp_t18x_clocks_disable(struct platform_device *pdev)
 		clk_disable_unprepare(drv_data->adsp_clk);
 		dev_dbg(dev, "adsp clocks disabled\n");
 		drv_data->adsp_clk = NULL;
+	}
+
+	if (drv_data->aclk_clk) {
+		clk_disable_unprepare(drv_data->aclk_clk);
+		dev_dbg(dev, "aclk clock disabled\n");
+		drv_data->aclk_clk = NULL;
 	}
 
 	if (drv_data->adsp_neon_clk) {
@@ -87,6 +93,18 @@ static int nvadsp_t18x_clocks_enable(struct platform_device *pdev)
 	ret = clk_prepare_enable(drv_data->adsp_clk);
 	if (ret) {
 		dev_err(dev, "unable to enable adsp clock\n");
+		goto end;
+	}
+
+	drv_data->aclk_clk = devm_clk_get(dev, "aclk");
+	if (IS_ERR_OR_NULL(drv_data->aclk_clk)) {
+		dev_err(dev, "unable to find aclk clock\n");
+		ret = PTR_ERR(drv_data->aclk_clk);
+		goto end;
+	}
+	ret = clk_prepare_enable(drv_data->aclk_clk);
+	if (ret) {
+		dev_err(dev, "unable to enable aclk clock\n");
 		goto end;
 	}
 

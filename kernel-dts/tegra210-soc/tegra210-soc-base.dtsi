@@ -1107,10 +1107,6 @@
 			uart {
 				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
 			};
-
-			bb {
-				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
-			};
 		};
 
 		pex_io_dpd_disable_state: pex_en {

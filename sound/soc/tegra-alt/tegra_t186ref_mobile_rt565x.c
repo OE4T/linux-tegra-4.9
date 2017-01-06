@@ -361,7 +361,7 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	}
 
 	idx = tegra_machine_get_codec_dai_link_idx_t18x("spdif-playback");
-	if ((idx != -EINVAL) && (rate >= 32000)) {
+	if ((idx != -EINVAL) && (clk_rate >= 32000)) {
 		dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 

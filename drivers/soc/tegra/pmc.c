@@ -147,6 +147,8 @@ struct tegra_powergate {
 };
 
 #define PMC_FUSE_CTRL                   0x450
+#define PMC_FUSE_CTRL_ENABLE_REDIRECTION	(1 << 0)
+#define PMC_FUSE_CTRL_DISABLE_REDIRECTION	(1 << 1)
 #define PMC_FUSE_CTRL_PS18_LATCH_SET    (1 << 8)
 #define PMC_FUSE_CTRL_PS18_LATCH_CLEAR  (1 << 9)
 
@@ -394,6 +396,7 @@ struct tegra_pmc_soc {
 	bool has_ps18;
 	bool has_pclk_clock;
 	bool has_interrupt_polarity_support;
+	bool has_fuse_mirroring_sticky_bit;
 	bool has_reboot_base_address;
 	bool show_reset_status;
 	bool skip_lp0_vector_setup;
@@ -1677,6 +1680,36 @@ int tegra_pmc_hsic_phy_disable_sleepwalk(int port)
 EXPORT_SYMBOL(tegra_pmc_hsic_phy_disable_sleepwalk);
 
 #ifndef CONFIG_TEGRA186_PMC
+void tegra_pmc_fuse_disable_mirroring(void)
+{
+	u32 val;
+
+	val = tegra_pmc_readl(TEGRA_PMC_FUSE_CTRL);
+	if (val & PMC_FUSE_CTRL_ENABLE_REDIRECTION) {
+		if (pmc->soc->has_fuse_mirroring_sticky_bit)
+			val &= ~PMC_FUSE_CTRL_ENABLE_REDIRECTION;
+		else
+			val = PMC_FUSE_CTRL_DISABLE_REDIRECTION;
+		tegra_pmc_writel(val, TEGRA_PMC_FUSE_CTRL);
+	}
+}
+EXPORT_SYMBOL(tegra_pmc_fuse_disable_mirroring);
+
+void tegra_pmc_fuse_enable_mirroring(void)
+{
+	u32 val;
+
+	val = tegra_pmc_readl(TEGRA_PMC_FUSE_CTRL);
+	if (!(val & PMC_FUSE_CTRL_ENABLE_REDIRECTION)) {
+		if (pmc->soc->has_fuse_mirroring_sticky_bit)
+			val |= PMC_FUSE_CTRL_ENABLE_REDIRECTION;
+		else
+			val = PMC_FUSE_CTRL_ENABLE_REDIRECTION;
+		tegra_pmc_writel(val, TEGRA_PMC_FUSE_CTRL);
+	}
+}
+EXPORT_SYMBOL(tegra_pmc_fuse_enable_mirroring);
+
 void tegra_pmc_fuse_control_ps18_latch_set(void)
 {
 	u32 val;
@@ -3119,6 +3152,7 @@ static const struct tegra_pmc_soc tegra210_pmc_soc = {
 	.has_ps18 = true,
 	.has_pclk_clock = true,
 	.has_interrupt_polarity_support = true,
+	.has_fuse_mirroring_sticky_bit = false,
 	.show_reset_status = false,
 	.has_reboot_base_address = false,
 	.skip_lp0_vector_setup = false,
@@ -3135,6 +3169,7 @@ static const struct tegra_pmc_soc tegra210_pmc_soc = {
 
 /* Tegra 186 register map */
 static const unsigned long tegra186_register_map[TEGRA_PMC_MAX_REG] = {
+	[TEGRA_PMC_FUSE_CTRL]			= 0x100,
 	[TEGRA_PMC_IMPL_RAMDUMP_CTL_STATUS]	= 0x10C,
 	[TEGRA_PMC_RST_STATUS]			= 0x70,
 };
@@ -3143,6 +3178,7 @@ static const struct tegra_pmc_soc tegra186_pmc_soc = {
 	.has_tsense_reset = false,
 	.has_pclk_clock = false,
 	.has_interrupt_polarity_support = false,
+	.has_fuse_mirroring_sticky_bit = true,
 	.show_reset_status = true,
 	.has_reboot_base_address = true,
 	.skip_lp0_vector_setup = true,

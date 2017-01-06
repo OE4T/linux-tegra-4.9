@@ -330,11 +330,11 @@ unsigned long tegra_pmc_nvcsi_cdef_brick_getstatus(void);
 void tegra186_pmc_disable_nvcsi_brick_dpd(void);
 void tegra186_pmc_enable_nvcsi_brick_dpd(void);
 
+bool tegra_pmc_is_halt_in_fiq(void);
 #ifdef CONFIG_TEGRA186_PMC
 extern void tegra_pmc_sata_pwrgt_update(unsigned long mask,
 		unsigned long val);
 extern unsigned long tegra_pmc_sata_pwrgt_get(void);
-extern bool tegra_pmc_is_halt_in_fiq(void);
 #else
 static inline void tegra_pmc_sata_pwrgt_update(unsigned long mask,
 		unsigned long val)
@@ -344,11 +344,6 @@ static inline void tegra_pmc_sata_pwrgt_update(unsigned long mask,
 static inline unsigned long tegra_pmc_sata_pwrgt_get(void)
 {
 	return -EINVAL;
-}
-
-static inline bool tegra_pmc_is_halt_in_fiq(void)
-{
-	return false;
 }
 #endif
 #endif /* __SOC_TEGRA_PMC_H__ */

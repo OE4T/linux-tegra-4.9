@@ -58,3 +58,16 @@ L:      sw-mobile-platform@exchange.nvidia.com
 S:      Supported
 F:      arch/arm64/boot/dts/
 
+
+MEMORY
+M:      Krishna Reddy <vdumpa@nvidia.com>
+M:      Pritesh Raithatha <praithatha@nvidia.com>
+M:      Sri Krishna Chowdary <schowdary@nvidia.com>
+L:      sw-mobile-memory@exchange.nvidia.com
+S:      Supported
+F:      drivers/iommu/
+F:      drivers/platform/tegra/mc/
+F:      include/dt-bindings/memory/
+
+
+

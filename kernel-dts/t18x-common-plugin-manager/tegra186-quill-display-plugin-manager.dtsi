@@ -160,6 +160,19 @@
 					status = "okay";
 				};
 			};
+
+			overrides@4 {
+				target = <&{/host1x}>;
+				_overlay_ {
+					nvdisplay@15200000 {
+						status = "okay";
+					};
+
+					dsi {
+						status = "okay";
+					};
+				};
+			};
 		};
 
 		fragment-e1824-a00@3 {

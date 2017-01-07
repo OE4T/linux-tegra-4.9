@@ -371,18 +371,6 @@ static void clk_config_dvfs_ndiv(int mv, u32 n_eff, struct na_dvfs *d)
 	d->sdm_din = (d->sdm_din >> BITS_PER_BYTE) & 0xff;
 }
 
-static void gm20b_calc_dvfs_safe_max_freq(struct clk *c)
-{
-	unsigned long safe_rate;
-
-	if (dvfs_safe_max_freq)
-		return;
-
-	safe_rate = tegra_dvfs_get_fmax_at_vmin_safe_t(c);
-	safe_rate = safe_rate * (100 - DVFS_SAFE_MARGIN) / 100;
-	dvfs_safe_max_freq = rate_gpu_to_gpc2clk(safe_rate);
-}
-
 /* Voltage dependent configuration */
 static void clk_config_dvfs(struct gk20a *g, struct pll *gpll)
 {
@@ -394,7 +382,6 @@ static void clk_config_dvfs(struct gk20a *g, struct pll *gpll)
 	clk = clk_get_parent(clk);
 #endif
 
-	gm20b_calc_dvfs_safe_max_freq(clk);
 	d->mv = tegra_dvfs_predict_mv_at_hz_cur_tfloor(clk,
 			rate_gpc2clk_to_gpu(gpll->freq));
 
@@ -1132,23 +1119,32 @@ static int gm20b_init_clk_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
-static int gm20b_init_gpc_pll(struct gk20a *g)
+static int gm20b_init_clk_setup_sw(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
-	struct clk *c, *ref;
+	unsigned long safe_rate;
+	struct clk *ref, *c;
+
+	gk20a_dbg_fn("");
+
+	if (clk->sw_ready) {
+		gk20a_dbg_fn("skip init");
+		return 0;
+	}
 
 	if (!gk20a_clk_get(g))
 		return -EINVAL;
 
+	c = clk->tegra_clk;
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 	/*
 	 * On Tegra GPU clock exposed to frequency governor is a shared user on
 	 * GPCPLL bus (gbus). The latter can be accessed as GPU clock parent.
 	 * Respectively the grandparent is PLL reference clock.
 	 */
-	c = clk_get_parent(clk->tegra_clk);
+	c = clk_get_parent(c);
+#endif
 	ref = clk_get_parent(c);
-
 	if (IS_ERR(ref)) {
 		gk20a_err(dev_from_gk20a(g),
 			"failed to get GPCPLL reference clock");
@@ -1163,7 +1159,9 @@ static int gm20b_init_gpc_pll(struct gk20a *g)
 		return -EINVAL;
 	}
 
-	gm20b_calc_dvfs_safe_max_freq(c);
+	safe_rate = tegra_dvfs_get_fmax_at_vmin_safe_t(c);
+	safe_rate = safe_rate * (100 - DVFS_SAFE_MARGIN) / 100;
+	dvfs_safe_max_freq = rate_gpu_to_gpc2clk(safe_rate);
 	clk->gpc_pll.PL = (dvfs_safe_max_freq == 0) ? 0 :
 		DIV_ROUND_UP(gpc_pll_params.min_vco, dvfs_safe_max_freq);
 
@@ -1175,51 +1173,7 @@ static int gm20b_init_gpc_pll(struct gk20a *g)
 	clk->gpc_pll.freq = clk->gpc_pll.clk_in * clk->gpc_pll.N;
 	clk->gpc_pll.freq /= pl_to_div(clk->gpc_pll.PL);
 
-	return 0;
-}
-
-#else /*COMMON_CLOCK_FRAMEWORK*/
-static int gm20b_init_gpc_pll(struct gk20a *g)
-{
-	struct clk_gk20a *clk = &g->clk;
-	struct clk *ref;
-
-	ref = clk_get_sys("gpu_ref", "gpu_ref");
-	if (IS_ERR(ref)) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to get GPCPLL reference clock");
-		return -EINVAL;
-	}
-	clk->gpc_pll.id = GK20A_GPC_PLL;
-	clk->gpc_pll.clk_in = clk_get_rate(ref) / KHZ;
-
-	/* Initial freq: low enough to be safe at Vmin (default 1/3 VCO min) */
-	clk->gpc_pll.M = 1;
-	clk->gpc_pll.N = DIV_ROUND_UP(gpc_pll_params.min_vco,
-				clk->gpc_pll.clk_in);
-	clk->gpc_pll.PL = 3;
-	clk->gpc_pll.freq = clk->gpc_pll.clk_in * clk->gpc_pll.N;
-	clk->gpc_pll.freq /= pl_to_div(clk->gpc_pll.PL);
-
-	return 0;
-}
-#endif
-
-static int gm20b_init_clk_setup_sw(struct gk20a *g)
-{
-	struct clk_gk20a *clk = &g->clk;
-
-	gk20a_dbg_fn("");
-
-	if (clk->sw_ready) {
-		gk20a_dbg_fn("skip init");
-		return 0;
-	}
-
-	if (gm20b_init_gpc_pll(g))
-		return -EINVAL;
-
-	/*
+	 /*
 	  * All production parts should have ADC fuses burnt. Therefore, check
 	  * ADC fuses always, regardless of whether NA mode is selected; and if
 	  * NA mode is indeed selected, and part can support it, switch to NA
@@ -1237,6 +1191,7 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 #endif
 
 	mutex_init(&clk->clk_mutex);
+
 	clk->sw_ready = true;
 
 	gk20a_dbg_fn("done");
@@ -1346,11 +1301,6 @@ int gm20b_register_gpcclk(struct gk20a *g) {
 	struct clk_gk20a *clk = &g->clk;
 	struct clk_init_data init;
 	struct clk *c;
-	int err = 0;
-
-	err = gm20b_init_clk_setup_sw(g);
-	if (err)
-		return err;
 
 	init.name = "gpcclk";
 	init.ops = &gk20a_clk_ops;
@@ -1370,7 +1320,7 @@ int gm20b_register_gpcclk(struct gk20a *g) {
 	clk->tegra_clk = c;
 	clk_register_clkdev(c, "gpcclk", "gpcclk");
 
-	return err;
+	return 0;
 }
 #endif /* CONFIG_COMMON_CLK */
 
@@ -1580,11 +1530,9 @@ static int gm20b_init_clk_support(struct gk20a *g)
 	if (err)
 		return err;
 
-#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 	err = gm20b_init_clk_setup_sw(g);
 	if (err)
 		return err;
-#endif
 
 	mutex_lock(&clk->clk_mutex);
 	clk->clk_hw_on = true;

@@ -1,0 +1,16 @@
+NVIDIA Tegra18x MCE Debugfs driver
+==================================
+
+This document defines the device-specific binding for the Tegra18x mce
+debugfs driver. The Tegra MCE driver provides a mechanism to communicate
+with the ccplex to obtain various cpu specific information and statistics.
+
+Required properties:
+
+- compatible: Should be "nvidia,tegra186-mce"
+
+Examples:
+
+tegra-mce {
+	compatible = "nvidia,tegra186-mce";
+};

@@ -1,7 +1,7 @@
 /*
  * tegra186-quill-common.dtsi: Quill common dtsi.
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@
 #include "tegra186-platforms-simple-bus.dtsi"
 #include "panels/panel-s-wuxga-8-0.dtsi"
 #include "panels/panel-s-wqxga-10-1.dtsi"
+#include "t18x-common-platforms/mods-simple-bus.dtsi"
 #include "t18x-common-platforms/tegra186-quill-eqos.dtsi"
 #include "tegra186-hdmi.dtsi"
 #include "tegra186-dp.dtsi"

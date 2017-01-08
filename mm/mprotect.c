@@ -25,6 +25,7 @@
 #include <linux/perf_event.h>
 #include <linux/pkeys.h>
 #include <linux/ksm.h>
+#include <linux/tegra_profiler.h>
 #include <asm/uaccess.h>
 #include <asm/pgtable.h>
 #include <asm/cacheflush.h>
@@ -347,6 +348,7 @@ success:
 	vm_stat_account(mm, oldflags, -nrpages);
 	vm_stat_account(mm, newflags, nrpages);
 	perf_event_mmap(vma);
+	quadd_event_mmap(vma);
 	return 0;
 
 fail:

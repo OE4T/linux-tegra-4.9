@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -80,6 +80,7 @@
 #define MSK_PM_LP			((1 << EN_LP) | (1 << DEV_ACC))
 #define MSK_PM_STDBY			((1 << EN_STDBY) | (1 << FW_LOADED))
 #define MSK_PM_ACC_EN			((1 << DEV_ACC) | (1 << DEV_SM))
+#define MSK_PM_GYR_EN			((1 << DEV_GYR) | (1 << DEV_GYU))
 #define NVI_PM_ERR			(0)
 #define NVI_PM_AUTO			(1)
 #define NVI_PM_OFF_FORCE		(2)

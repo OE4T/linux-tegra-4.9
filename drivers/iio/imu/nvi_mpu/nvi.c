@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(341)
+#define NVI_DRIVER_VERSION		(342)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"
@@ -1113,7 +1113,7 @@ static int nvi_pm(struct nvi_state *st, const char *fn, int pm_req)
 		pm2 = 0;
 		if (!(st->en_msk & MSK_PM_ACC_EN))
 			pm2 |= BIT_PWR_ACCEL_STBY;
-		if (!st->snsr[DEV_GYR].enable)
+		if (!(st->en_msk & MSK_PM_GYR_EN))
 			pm2 |= BIT_PWR_GYRO_STBY;
 		if (st->en_msk & MSK_PM_ON_FULL) {
 			pm = NVI_PM_ON_FULL;
@@ -1191,6 +1191,16 @@ static int nvi_pm(struct nvi_state *st, const char *fn, int pm_req)
 		pm1 = INV_CLK_PLL;
 		/* gyro must be turned on before going to PLL clock */
 		pm2 &= ~BIT_PWR_GYRO_STBY;
+		if (pm2 & BIT_PWR_ACCEL_STBY) {
+			for (i = 0; i < DEV_N_AUX; i++) {
+				if (MSK_PM_ACC_EN & (1 << i)) {
+					if (st->snsr[i].enable) {
+						pm2 &= ~BIT_PWR_ACCEL_STBY;
+						break;
+					}
+				}
+			}
+		}
 		break;
 
 	default:
@@ -1500,7 +1510,7 @@ static int nvi_en(struct nvi_state *st)
 
 		ret_t = nvi_pm(st, __func__, NVI_PM_AUTO);
 		if (st->sts & (NVS_STS_SPEW_MSG | NVI_DBG_SPEW_MSG))
-			dev_info(&st->i2c->dev, "%s en_msk=%x err=%d\n",
+			dev_info(&st->i2c->dev, "%s AUTO en_msk=%x err=%d\n",
 				 __func__, st->en_msk, ret_t);
 		return ret_t;
 	}
@@ -1509,7 +1519,7 @@ static int nvi_en(struct nvi_state *st)
 	ret_t |= nvi_user_ctrl_en(st, __func__, false, false, false, false);
 	if (ret_t) {
 		if (st->sts & (NVS_STS_SPEW_MSG | NVI_DBG_SPEW_MSG))
-			dev_err(&st->i2c->dev, "%s en_msk=%x ERR=%d\n",
+			dev_err(&st->i2c->dev, "%s DIS_ERR en_msk=%x ERR=%d\n",
 				__func__, st->en_msk, ret_t);
 		return ret_t;
 	}
@@ -1598,7 +1608,7 @@ static int nvi_en(struct nvi_state *st)
 			ret_t |= nvi_reset(st, __func__, true, false, true);
 	}
 	if (st->sts & (NVS_STS_SPEW_MSG | NVI_DBG_SPEW_MSG))
-		dev_info(&st->i2c->dev, "%s en_msk=%x err=%d\n",
+		dev_info(&st->i2c->dev, "%s EXIT en_msk=%x err=%d\n",
 			 __func__, st->en_msk, ret_t);
 	return ret_t;
 }

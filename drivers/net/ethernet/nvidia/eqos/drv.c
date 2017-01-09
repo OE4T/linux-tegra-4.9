@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -5792,7 +5792,8 @@ void eqos_stop_dev(struct eqos_prv_data *pdata)
 	/* disable MAC TX */
 	hw_if->stop_mac_tx();
 
-	if (pdata->phydev->drv->low_power_mode) {
+	if (pdata->phydev && pdata->phydev->drv &&
+	    pdata->phydev->drv->low_power_mode) {
 		pdata->phydev->drv->low_power_mode(pdata->phydev, true);
 		if (!pdata->suspended)
 			phy_stop_interrupts(pdata->phydev);

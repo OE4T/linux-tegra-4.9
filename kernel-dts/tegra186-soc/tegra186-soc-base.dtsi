@@ -1086,14 +1086,6 @@
 		status = "disabled";
 	};
 
-	tlk {
-		compatible = "nvidia,trusted-little-kernel";
-		logger = "enabled";
-		storage = "enabled";
-
-		status = "disabled";
-	};
-
 	intc: interrupt-controller@3881000 {
 		compatible = "arm,cortex-a15-gic";
 		#interrupt-cells = <3>;

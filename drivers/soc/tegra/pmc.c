@@ -317,6 +317,9 @@ struct tegra_powergate {
 #define T186_PMC_IO_DPD2_CSIE_MASK		BIT(13)
 #define T186_PMC_IO_DPD2_CSIF_MASK		BIT(14)
 
+#define T186_PMC_IO_DPD_REQ			0x74
+#define T186_PMC_IO_DPD_STATUS			0x78
+
 struct io_dpd_reg_info {
 	u32 req_reg_off;
 	u8 dpd_code_lsb;
@@ -2088,6 +2091,80 @@ static int tegra_pmc_io_pad_is_powered(const struct tegra_pmc_io_pad_soc *pad)
 
 	return !(value & BIT(pad->dpd));
 }
+
+#ifndef CONFIG_TEGRA186_PMC
+int tegra186_pmc_io_dpd_enable(int reg, int bit_pos)
+{
+	unsigned int enable_mask;
+	unsigned int dpd_status;
+	unsigned long flags;
+
+	spin_lock_irqsave(&pwr_lock, flags);
+
+	enable_mask = ((1 << bit_pos) | IO_DPD_REQ_CODE_ON);
+
+	_tegra_pmc_writel(enable_mask, (T186_PMC_IO_DPD_REQ + reg * 8));
+	udelay(7);
+
+	dpd_status = _tegra_pmc_readl(T186_PMC_IO_DPD_STATUS + reg * 8);
+	if (!(dpd_status & (1 << bit_pos))) {
+		pr_info("Error: dpd%d enable failed, status=%#x\n",
+				(reg + 1), dpd_status);
+	}
+	spin_unlock_irqrestore(&pwr_lock, flags);
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra186_pmc_io_dpd_enable);
+
+int tegra186_pmc_io_dpd_disable(int reg, int bit_pos)
+{
+	unsigned int enable_mask;
+	unsigned int dpd_status;
+	unsigned long flags;
+
+	spin_lock_irqsave(&pwr_lock, flags);
+
+	enable_mask = ((1 << bit_pos) | IO_DPD_REQ_CODE_OFF);
+
+	_tegra_pmc_writel(enable_mask, T186_PMC_IO_DPD_REQ + reg * 8);
+	udelay(7);
+
+	dpd_status = _tegra_pmc_readl(T186_PMC_IO_DPD_STATUS + reg * 8);
+	if (dpd_status & (1 << bit_pos)) {
+		pr_info("Error: dpd%d disable failed, status=%#x\n",
+				(reg + 1), dpd_status);
+	}
+	spin_unlock_irqrestore(&pwr_lock, flags);
+	return 0;
+}
+EXPORT_SYMBOL(tegra186_pmc_io_dpd_disable);
+
+int tegra186_pmc_io_dpd_get_status(int reg, int bit_pos)
+{
+	unsigned int dpd_status;
+
+	dpd_status = _tegra_pmc_readl(T186_PMC_IO_DPD_STATUS + reg * 8);
+	if (dpd_status & BIT(bit_pos))
+		return 1;
+	else
+		return 0;
+}
+EXPORT_SYMBOL(tegra186_pmc_io_dpd_get_status);
+
+void tegra_pmc_pad_voltage_update(unsigned int reg,
+		unsigned long mask, unsigned long val)
+{
+	_tegra_pmc_register_update_lock(reg, mask, val);
+}
+EXPORT_SYMBOL(tegra_pmc_pad_voltage_update);
+
+unsigned long tegra_pmc_pad_voltage_get(unsigned int reg)
+{
+	return _tegra_pmc_readl(reg);
+}
+EXPORT_SYMBOL(tegra_pmc_pad_voltage_get);
+#endif
 
 static int tegra_pmc_io_pads_pinctrl_get_groups_count(
 			struct pinctrl_dev *pctldev)

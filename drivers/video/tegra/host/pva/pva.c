@@ -170,7 +170,7 @@ static int pva_init_fw(struct platform_device *pdev)
 	nvhost_dbg_fn("Waiting for PVA to be READY");
 
 	/* Wait PVA to report itself as ready */
-	timeout = wait_event_interruptible_timeout(pva->mailbox_waitqueue,
+	timeout = wait_event_timeout(pva->mailbox_waitqueue,
 		pva->mailbox_status == PVA_MBOX_STATUS_DONE,
 		msecs_to_jiffies(60000));
 	if (timeout <= 0)

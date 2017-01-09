@@ -1,7 +1,7 @@
 /*
  * PVA mailbox code
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,6 +20,7 @@
 #include <linux/module.h>
 #include <linux/delay.h>
 #include <linux/wait.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/platform_device.h>
 
 #include "nvhost_acm.h"
@@ -110,7 +111,7 @@ void pva_mailbox_isr(struct pva *pva)
 			host1x_readl(pdev, cfg_ccq_status7_r());
 
 	pva->mailbox_status = PVA_MBOX_STATUS_DONE;
-	wake_up_interruptible(&pva->mailbox_waitqueue);
+	wake_up(&pva->mailbox_waitqueue);
 }
 
 int pva_mailbox_send_cmd_sync(struct pva *pva,
@@ -143,12 +144,17 @@ int pva_mailbox_send_cmd_sync(struct pva *pva,
 		goto err_send_command;
 
 	/* Wait for the event being triggered in ISR */
-	timeout = wait_event_interruptible_timeout(pva->mailbox_waitqueue,
-		pva->mailbox_status == PVA_MBOX_STATUS_DONE,
-		msecs_to_jiffies(10000));
-	if (timeout <= 0) {
-		err = -EBUSY;
-		goto err_wait_response;
+	if (!tegra_platform_is_vdk()) {
+		timeout = wait_event_timeout(pva->mailbox_waitqueue,
+			pva->mailbox_status == PVA_MBOX_STATUS_DONE,
+			msecs_to_jiffies(100));
+		if (timeout <= 0) {
+			err = -EBUSY;
+			goto err_wait_response;
+		}
+	} else {
+		wait_event(pva->mailbox_waitqueue,
+			pva->mailbox_status == PVA_MBOX_STATUS_DONE);
 	}
 
 	/* Return interrupt status back to caller */

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisplay/nvdis_win.c
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -925,8 +925,6 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 		return 0;
 	}
 
-	tegra_dc_reserve_common_channel(dc);
-
 	mutex_lock(&tegra_nvdisp_lock);
 
 	if (win->dc) {	/* window is owned by another head */
@@ -988,8 +986,6 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 			0, 1, NVDISP_TEGRA_POLL_TIMEOUT_MS))
 		dev_err(&dc->ndev->dev,
 			"dc timeout waiting for DC to stop\n");
-
-	tegra_dc_release_common_channel(dc);
 
 	/* set the windows scaler coeff value */
 	if (!win->is_scaler_coeff_set) {

@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/eh_unwind.h
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,17 +19,16 @@
 
 #include <linux/tegra_profiler.h>
 
-struct pt_regs;
 struct quadd_callchain;
 struct quadd_ctx;
 struct quadd_extables;
 struct task_struct;
 struct quadd_mmap_area;
+struct quadd_event_context;
 
 unsigned int
-quadd_get_user_cc_arm32_ehabi(struct pt_regs *regs,
-			      struct quadd_callchain *cc,
-			      struct task_struct *task);
+quadd_get_user_cc_arm32_ehabi(struct quadd_event_context *event_ctx,
+			      struct quadd_callchain *cc);
 
 int quadd_unwind_init(void);
 void quadd_unwind_deinit(void);
@@ -42,9 +41,8 @@ int quadd_unwind_set_extab(struct quadd_sections *extabs,
 void quadd_unwind_delete_mmap(struct quadd_mmap_area *mmap);
 
 int
-quadd_is_ex_entry_exist_arm32_ehabi(struct pt_regs *regs,
-				    unsigned long addr,
-				    struct task_struct *task);
+quadd_is_ex_entry_exist_arm32_ehabi(struct quadd_event_context *event_ctx,
+				    unsigned long addr);
 
 void
 quadd_unwind_set_tail_info(unsigned long vm_start,

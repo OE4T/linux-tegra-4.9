@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/backtrace.h
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -66,13 +66,12 @@ struct quadd_callchain {
 };
 
 struct quadd_ctx;
-struct pt_regs;
+struct quadd_event_context;
 
 unsigned int
-quadd_get_user_callchain(struct pt_regs *regs,
-			 struct quadd_callchain *cc_data,
-			 struct quadd_ctx *ctx,
-			 struct task_struct *task);
+quadd_get_user_callchain(struct quadd_event_context *event_ctx,
+			 struct quadd_callchain *cc,
+			 struct quadd_ctx *ctx);
 
 int
 quadd_callchain_store(struct quadd_callchain *cc,

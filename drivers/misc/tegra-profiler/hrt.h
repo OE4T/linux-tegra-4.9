@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/hrt.h
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -68,11 +68,19 @@ struct quadd_hrt_ctx {
 	int get_stack_offset;
 };
 
+struct task_struct;
+struct pt_regs;
+
+struct quadd_event_context {
+	struct task_struct *task;
+	struct pt_regs *regs;
+	int user_mode;
+};
+
 #define QUADD_HRT_MIN_FREQ	100
 
 #define QUADD_U32_MAX (~(__u32)0)
 
-struct quadd_hrt_ctx;
 struct quadd_record_data;
 struct quadd_module_state;
 struct quadd_iovec;

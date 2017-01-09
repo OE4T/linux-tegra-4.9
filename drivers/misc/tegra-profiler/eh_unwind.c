@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/exh_tables.c
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1165,17 +1165,18 @@ unwind_backtrace(struct quadd_callchain *cc,
 }
 
 unsigned int
-quadd_get_user_cc_arm32_ehabi(struct pt_regs *regs,
-			      struct quadd_callchain *cc,
-			      struct task_struct *task)
+quadd_get_user_cc_arm32_ehabi(struct quadd_event_context *event_ctx,
+			      struct quadd_callchain *cc)
 {
 	long err;
 	int nr_prev = cc->nr, thumbflag;
 	unsigned long ip, sp, lr;
 	struct vm_area_struct *vma, *vma_sp;
-	struct mm_struct *mm = task->mm;
 	struct ex_region_info ri;
 	struct stackframe frame;
+	struct pt_regs *regs = event_ctx->regs;
+	struct task_struct *task = event_ctx->task;
+	struct mm_struct *mm = task->mm;
 
 	if (!regs || !mm)
 		return 0;
@@ -1190,7 +1191,7 @@ quadd_get_user_cc_arm32_ehabi(struct pt_regs *regs,
 
 	cc->urc_ut = QUADD_URC_FAILURE;
 
-	if (nr_prev > 0) {
+	if (cc->curr_sp) {
 		ip = cc->curr_pc;
 		sp = cc->curr_sp;
 		lr = cc->curr_lr;
@@ -1244,16 +1245,16 @@ quadd_get_user_cc_arm32_ehabi(struct pt_regs *regs,
 }
 
 int
-quadd_is_ex_entry_exist_arm32_ehabi(struct pt_regs *regs,
-				    unsigned long addr,
-				    struct task_struct *task)
+quadd_is_ex_entry_exist_arm32_ehabi(struct quadd_event_context *event_ctx,
+				    unsigned long addr)
 {
 	long err;
 	u32 value;
 	const struct unwind_idx *idx;
 	struct ex_region_info ri;
 	struct vm_area_struct *vma;
-	struct mm_struct *mm = task->mm;
+	struct pt_regs *regs = event_ctx->regs;
+	struct mm_struct *mm = event_ctx->task->mm;
 
 	if (!regs || !mm)
 		return 0;

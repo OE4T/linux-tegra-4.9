@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/backtrace.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -113,20 +113,18 @@ quadd_callchain_store(struct quadd_callchain *cc,
 }
 
 static int
-is_ex_entry_exist(struct pt_regs *regs,
-		  unsigned long addr,
-		  struct task_struct *task)
+is_ex_entry_exist(struct quadd_event_context *event_ctx,
+		  unsigned long addr)
 {
-	return quadd_is_ex_entry_exist_dwarf(regs, addr, task) ||
-	       quadd_is_ex_entry_exist_arm32_ehabi(regs, addr, task);
+	return quadd_is_ex_entry_exist_dwarf(event_ctx, addr) ||
+	       quadd_is_ex_entry_exist_arm32_ehabi(event_ctx, addr);
 }
 
 static unsigned long __user *
-user_backtrace(struct pt_regs *regs,
+user_backtrace(struct quadd_event_context *event_ctx,
 	       unsigned long __user *tail,
 	       struct quadd_callchain *cc,
-	       struct vm_area_struct *stack_vma,
-	       struct task_struct *task)
+	       struct vm_area_struct *stack_vma)
 {
 	int nr_added;
 	unsigned long value, value_lr = 0, value_fp = 0;
@@ -182,23 +180,22 @@ user_backtrace(struct pt_regs *regs,
 		return NULL;
 
 	if (is_table_unwinding(cc) &&
-	    is_ex_entry_exist(regs, value_lr, task))
+	    is_ex_entry_exist(event_ctx, value_lr))
 		return NULL;
 
 	return fp_prev;
 }
 
 static unsigned int
-get_user_callchain_fp(struct pt_regs *regs,
-		      struct quadd_callchain *cc,
-		      struct task_struct *task)
+get_user_callchain_fp(struct quadd_event_context *event_ctx,
+		      struct quadd_callchain *cc)
 {
 	unsigned long fp, sp, pc, reg;
 	struct vm_area_struct *vma, *vma_pc = NULL;
 	unsigned long __user *tail = NULL;
-	struct mm_struct *mm = task->mm;
+	struct pt_regs *regs = event_ctx->regs;
+	struct mm_struct *mm = event_ctx->task->mm;
 
-	cc->nr = 0;
 	cc->urc_fp = QUADD_URC_FP_INCORRECT;
 
 	if (!regs || !mm) {
@@ -271,19 +268,18 @@ get_user_callchain_fp(struct pt_regs *regs,
 		tail = (unsigned long __user *)fp;
 
 	while (tail && !((unsigned long)tail & 0x3))
-		tail = user_backtrace(regs, tail, cc, vma, task);
+		tail = user_backtrace(event_ctx, tail, cc, vma);
 
 	return cc->nr;
 }
 
 static unsigned int
-__user_backtrace(struct pt_regs *regs,
-		 struct quadd_callchain *cc,
-		 struct task_struct *task)
+__user_backtrace(struct quadd_event_context *event_ctx,
+		 struct quadd_callchain *cc)
 {
-	struct mm_struct *mm = task->mm;
 	struct vm_area_struct *vma;
 	unsigned long __user *tail;
+	struct mm_struct *mm = event_ctx->task->mm;
 
 	cc->urc_fp = QUADD_URC_FP_INCORRECT;
 
@@ -301,18 +297,17 @@ __user_backtrace(struct pt_regs *regs,
 	tail = (unsigned long __user *)cc->curr_fp;
 
 	while (tail && !((unsigned long)tail & 0x3))
-		tail = user_backtrace(regs, tail, cc, vma, task);
+		tail = user_backtrace(event_ctx, tail, cc, vma);
 
 	return cc->nr;
 }
 
 #ifdef CONFIG_ARM64
 static u32 __user *
-user_backtrace_compat(struct pt_regs *regs,
+user_backtrace_compat(struct quadd_event_context *event_ctx,
 		      u32 __user *tail,
 		      struct quadd_callchain *cc,
-		      struct vm_area_struct *stack_vma,
-		      struct task_struct *task)
+		      struct vm_area_struct *stack_vma)
 {
 	int nr_added;
 	u32 value, value_lr = 0, value_fp = 0;
@@ -368,23 +363,22 @@ user_backtrace_compat(struct pt_regs *regs,
 		return NULL;
 
 	if (is_table_unwinding(cc) &&
-	    is_ex_entry_exist(regs, value_lr, task))
+	    is_ex_entry_exist(event_ctx, value_lr))
 		return NULL;
 
 	return fp_prev;
 }
 
 static unsigned int
-get_user_callchain_fp_compat(struct pt_regs *regs,
-			     struct quadd_callchain *cc,
-			     struct task_struct *task)
+get_user_callchain_fp_compat(struct quadd_event_context *event_ctx,
+			     struct quadd_callchain *cc)
 {
 	u32 fp, sp, pc, reg;
 	struct vm_area_struct *vma, *vma_pc = NULL;
 	u32 __user *tail = NULL;
-	struct mm_struct *mm = task->mm;
+	struct pt_regs *regs = event_ctx->regs;
+	struct mm_struct *mm = event_ctx->task->mm;
 
-	cc->nr = 0;
 	cc->urc_fp = QUADD_URC_FP_INCORRECT;
 
 	if (!regs || !mm) {
@@ -457,17 +451,16 @@ get_user_callchain_fp_compat(struct pt_regs *regs,
 		tail = (u32 __user *)(unsigned long)fp;
 
 	while (tail && !((unsigned long)tail & 0x3))
-		tail = user_backtrace_compat(regs, tail, cc, vma, task);
+		tail = user_backtrace_compat(event_ctx, tail, cc, vma);
 
 	return cc->nr;
 }
 
 static unsigned int
-__user_backtrace_compat(struct pt_regs *regs,
-			struct quadd_callchain *cc,
-			struct task_struct *task)
+__user_backtrace_compat(struct quadd_event_context *event_ctx,
+			struct quadd_callchain *cc)
 {
-	struct mm_struct *mm = task->mm;
+	struct mm_struct *mm = event_ctx->task->mm;
 	struct vm_area_struct *vma;
 	u32 __user *tail;
 
@@ -487,7 +480,7 @@ __user_backtrace_compat(struct pt_regs *regs,
 	tail = (u32 __user *)cc->curr_fp;
 
 	while (tail && !((unsigned long)tail & 0x3))
-		tail = user_backtrace_compat(regs, tail, cc, vma, task);
+		tail = user_backtrace_compat(event_ctx, tail, cc, vma);
 
 	return cc->nr;
 }
@@ -495,21 +488,24 @@ __user_backtrace_compat(struct pt_regs *regs,
 #endif	/* CONFIG_ARM64 */
 
 static unsigned int
-__get_user_callchain_fp(struct pt_regs *regs,
-		      struct quadd_callchain *cc,
-		      struct task_struct *task)
+__get_user_callchain_fp(struct quadd_event_context *event_ctx,
+			struct quadd_callchain *cc)
 {
-	if (cc->nr > 0) {
+#ifdef CONFIG_ARM64
+	struct pt_regs *regs = event_ctx->regs;
+#endif
+
+	if (cc->curr_sp) {
 		if (cc->urc_fp == QUADD_URC_LEVEL_TOO_DEEP)
 			return cc->nr;
 
 #ifdef CONFIG_ARM64
 		if (compat_user_mode(regs))
-			__user_backtrace_compat(regs, cc, task);
+			__user_backtrace_compat(event_ctx, cc);
 		else
-			__user_backtrace(regs, cc, task);
+			__user_backtrace(event_ctx, cc);
 #else
-		__user_backtrace(regs, cc, task);
+		__user_backtrace(event_ctx, cc);
 #endif
 
 		return cc->nr;
@@ -517,53 +513,70 @@ __get_user_callchain_fp(struct pt_regs *regs,
 
 #ifdef CONFIG_ARM64
 	if (compat_user_mode(regs))
-		return get_user_callchain_fp_compat(regs, cc, task);
+		return get_user_callchain_fp_compat(event_ctx, cc);
 #endif
 
-	return get_user_callchain_fp(regs, cc, task);
+	return get_user_callchain_fp(event_ctx, cc);
 }
 
 static unsigned int
-get_user_callchain_mixed(struct pt_regs *regs,
-		      struct quadd_callchain *cc,
-		      struct task_struct *task)
+get_user_callchain_mixed(struct quadd_event_context *event_ctx,
+			 struct quadd_callchain *cc)
 {
-	int nr_prev;
-	unsigned long prev_sp;
+	int nr_prev, nr_added;
+	unsigned long pc, prev_sp, align_mask;
 	struct quadd_unw_methods *um = &cc->um;
+
+	if (!event_ctx->user_mode) {
+		pc = instruction_pointer(event_ctx->regs);
+
+		nr_added = quadd_callchain_store(cc, pc, QUADD_UNW_TYPE_KCTX);
+		if (nr_added == 0)
+			return cc->nr;
+	}
+
+	align_mask = cc->cs_64 ? 0x07 : 0x03;
 
 	do {
 		nr_prev = cc->nr;
 		prev_sp = cc->curr_sp;
 
 		if (um->dwarf)
-			quadd_get_user_cc_dwarf(regs, cc, task);
+			quadd_get_user_cc_dwarf(event_ctx, cc);
 		if (um->ut)
-			quadd_get_user_cc_arm32_ehabi(regs, cc, task);
+			quadd_get_user_cc_arm32_ehabi(event_ctx, cc);
 
 		if (nr_prev != cc->nr) {
-			if (cc->nr > 1 &&
-			    cc->curr_sp <= prev_sp)
+			if (cc->curr_sp <= prev_sp ||
+			    cc->curr_sp & align_mask)
 				break;
 
 			continue;
 		}
 
 		if (um->fp)
-			__get_user_callchain_fp(regs, cc, task);
+			__get_user_callchain_fp(event_ctx, cc);
 	} while (nr_prev != cc->nr &&
-		 (cc->nr <= 1 || cc->curr_sp > prev_sp));
+		 cc->curr_sp > prev_sp &&
+		 !(cc->curr_sp & align_mask));
 
 	return cc->nr;
 }
 
 unsigned int
-quadd_get_user_callchain(struct pt_regs *regs,
+quadd_get_user_callchain(struct quadd_event_context *event_ctx,
 			 struct quadd_callchain *cc,
-			 struct quadd_ctx *ctx,
-			 struct task_struct *task)
+			 struct quadd_ctx *ctx)
 {
+	struct pt_regs *regs = event_ctx->regs;
+
 	cc->nr = 0;
+
+	cc->curr_sp = 0;
+	cc->curr_fp = 0;
+	cc->curr_fp_thumb = 0;
+	cc->curr_pc = 0;
+	cc->curr_lr = 0;
 
 	if (!regs) {
 		cc->urc_fp = QUADD_URC_FAILURE;
@@ -571,12 +584,6 @@ quadd_get_user_callchain(struct pt_regs *regs,
 		cc->urc_dwarf = QUADD_URC_FAILURE;
 		return 0;
 	}
-
-	cc->curr_sp = 0;
-	cc->curr_fp = 0;
-	cc->curr_fp_thumb = 0;
-	cc->curr_pc = 0;
-	cc->curr_lr = 0;
 
 #ifdef CONFIG_ARM64
 	cc->cs_64 = compat_user_mode(regs) ? 0 : 1;
@@ -588,7 +595,7 @@ quadd_get_user_callchain(struct pt_regs *regs,
 	cc->urc_ut = QUADD_URC_NONE;
 	cc->urc_dwarf = QUADD_URC_NONE;
 
-	get_user_callchain_mixed(regs, cc, task);
+	get_user_callchain_mixed(event_ctx, cc);
 
 	return cc->nr;
 }

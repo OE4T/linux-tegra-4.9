@@ -520,6 +520,16 @@ static void _tegra_pmc_register_update(int offset,
 	pmc_reg = (pmc_reg & ~mask) | (val & mask);
 	_tegra_pmc_writel(pmc_reg, offset);
 }
+
+static void _tegra_pmc_register_update_lock(int offset,
+		unsigned long mask, unsigned long val)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&pwr_lock, flags);
+	_tegra_pmc_register_update(offset, mask, val);
+	spin_unlock_irqrestore(&pwr_lock, flags);
+}
 #endif
 
 /* PMC register read/write/update with pmc register enums */
@@ -1382,13 +1392,13 @@ EXPORT_SYMBOL(tegra_pmc_sata_pwrgt_get);
 
 void tegra_pmc_iopower_enable(int reg, u32 bit_mask)
 {
-	_tegra_pmc_register_update(reg, bit_mask, 0);
+	_tegra_pmc_register_update_lock(reg, bit_mask, 0);
 }
 EXPORT_SYMBOL(tegra_pmc_iopower_enable);
 
 void  tegra_pmc_iopower_disable(int reg, u32 bit_mask)
 {
-	_tegra_pmc_register_update(reg, bit_mask, bit_mask);
+	_tegra_pmc_register_update_lock(reg, bit_mask, bit_mask);
 }
 EXPORT_SYMBOL(tegra_pmc_iopower_disable);
 
@@ -3491,6 +3501,7 @@ static int pmc_iopower_get_status(const struct tegra_pmc_io_pad_soc *pad)
 
 	return !(no_iopower & BIT(pad->io_power));
 }
+
 
 static int tegra_pmc_io_rail_change_notify_cb(struct notifier_block *nb,
 					      unsigned long event, void *v)

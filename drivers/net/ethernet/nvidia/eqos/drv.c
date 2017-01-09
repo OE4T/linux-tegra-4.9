@@ -293,7 +293,7 @@ void handle_non_ti_ri_chan_intrs(struct eqos_prv_data *pdata, int qinx)
 		pdata->xstats.fatal_bus_error_irq_n++;
 		pdata->fbe_chan_mask |= (1 << qinx);
 		eqos_status = -E_DMA_SR_FBE;
-		queue_work(pdata->fbe_wq, &pdata->fbe_work);
+		schedule_work(&pdata->fbe_work);
 	}
 
 	pr_debug("<--%s()\n", __func__);
@@ -1307,6 +1307,9 @@ static int eqos_close(struct net_device *dev)
 
 	/* cancel iso work */
 	cancel_work_sync(&pdata->iso_work);
+	/* Cancel FBE handling work */
+	cancel_work_sync(&pdata->fbe_work);
+
 	pr_debug("<--%s\n", __func__);
 	return Y_SUCCESS;
 }

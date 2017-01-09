@@ -229,10 +229,15 @@ static void hda_tegra_init(struct hda_tegra *hda)
 
 static int hda_tegra_enable_clocks(struct hda_tegra *hda)
 {
+	struct device *dev = hda->dev;
 	int rc;
 
 	if (hda->is_power_on == false) {
-		tegra_unpowergate_partition(hda->partition_id);
+		rc = tegra_unpowergate_partition(hda->partition_id);
+		if (rc < 0) {
+			dev_err(dev, "Unpower gating HDA partition Failed\n");
+			return rc;
+		}
 		hda->is_power_on = true;
 	}
 
@@ -252,22 +257,35 @@ disable_codec_2x:
 	clk_disable_unprepare(hda->hda2codec_2x_clk);
 disable_hda:
 	clk_disable_unprepare(hda->hda_clk);
-	if (hda->is_power_on)
-		tegra_powergate_partition(hda->partition_id);
+	if (hda->is_power_on) {
+		rc = tegra_powergate_partition(hda->partition_id);
+		if (rc < 0) {
+			dev_err(dev, "Power gating HDA partition Failed\n");
+			return rc;
+		}
+	}
 	hda->is_power_on = false;
 	return rc;
 }
 
-static void hda_tegra_disable_clocks(struct hda_tegra *hda)
+static int hda_tegra_disable_clocks(struct hda_tegra *hda)
 {
+	struct device *dev = hda->dev;
+	int rc = 0;
+
 	clk_disable_unprepare(hda->hda2hdmi_clk);
 	clk_disable_unprepare(hda->hda2codec_2x_clk);
 	clk_disable_unprepare(hda->hda_clk);
 
 	if (hda->is_power_on) {
-		tegra_powergate_partition(hda->partition_id);
+		rc = tegra_powergate_partition(hda->partition_id);
+		if (rc < 0) {
+			dev_err(dev, "Power gating HDA partition Failed\n");
+			return rc;
+		}
 		hda->is_power_on = false;
 	}
+	return 0;
 }
 
 /*

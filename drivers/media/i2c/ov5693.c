@@ -325,7 +325,7 @@ static int ov5693_power_on(struct camera_common_data *s_data)
 		ov5693_gpio_set(priv, pw->reset_gpio, 1);
 
 	/* datasheet fig 2-9: t3 */
-	usleep_range(1350, 1360);
+	usleep_range(2000, 2010);
 
 	pw->state = SWITCH_ON;
 	return 0;

@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics FIFO (gr host)
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2870,6 +2870,22 @@ int gk20a_fifo_set_runlist_interleave(struct gk20a *g,
 	return 0;
 }
 
+int gk20a_fifo_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
+{
+	struct gk20a *g = tsg->g;
+
+	if (timeslice < g->min_timeslice_us ||
+		timeslice > g->max_timeslice_us)
+		return -EINVAL;
+
+	gk20a_channel_get_timescale_from_timeslice(g, timeslice,
+			&tsg->timeslice_timeout, &tsg->timeslice_scale);
+
+	tsg->timeslice_us = timeslice;
+
+	return g->ops.fifo.update_runlist(g, tsg->runlist_id, ~0, true, true);
+}
+
 static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 					    u32 hw_chid, bool add,
 					    bool wait_for_finish)
@@ -3296,6 +3312,7 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.get_num_fifos = gk20a_fifo_get_num_fifos;
 	gops->fifo.get_pbdma_signature = gk20a_fifo_get_pbdma_signature;
 	gops->fifo.set_runlist_interleave = gk20a_fifo_set_runlist_interleave;
+	gops->fifo.tsg_set_timeslice = gk20a_fifo_tsg_set_timeslice;
 	gops->fifo.force_reset_ch = gk20a_fifo_force_reset_ch;
 	gops->fifo.engine_enum_from_type = gk20a_fifo_engine_enum_from_type;
 	/* gk20a doesn't support device_info_data packet parsing */

@@ -177,27 +177,24 @@ int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid)
 static int gk20a_tsg_set_priority(struct gk20a *g, struct tsg_gk20a *tsg,
 				u32 priority)
 {
+	u32 timeslice_us;
+
 	switch (priority) {
 	case NVGPU_PRIORITY_LOW:
-		tsg->timeslice_us = g->timeslice_low_priority_us;
+		timeslice_us = g->timeslice_low_priority_us;
 		break;
 	case NVGPU_PRIORITY_MEDIUM:
-		tsg->timeslice_us = g->timeslice_medium_priority_us;
+		timeslice_us = g->timeslice_medium_priority_us;
 		break;
 	case NVGPU_PRIORITY_HIGH:
-		tsg->timeslice_us = g->timeslice_high_priority_us;
+		timeslice_us = g->timeslice_high_priority_us;
 		break;
 	default:
 		pr_err("Unsupported priority");
 		return -EINVAL;
 	}
 
-	gk20a_channel_get_timescale_from_timeslice(g, tsg->timeslice_us,
-			&tsg->timeslice_timeout, &tsg->timeslice_scale);
-
-	g->ops.fifo.update_runlist(g, tsg->runlist_id, ~0, true, true);
-
-	return 0;
+	return gk20a_tsg_set_timeslice(tsg, timeslice_us);
 }
 
 static int gk20a_tsg_get_event_data_from_id(struct tsg_gk20a *tsg,
@@ -343,6 +340,8 @@ int gk20a_tsg_set_runlist_interleave(struct tsg_gk20a *tsg, u32 level)
 	struct gk20a *g = tsg->g;
 	int ret;
 
+	gk20a_dbg(gpu_dbg_sched, "tsgid=%u interleave=%u", tsg->tsgid, level);
+
 	switch (level) {
 	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW:
 	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_MEDIUM:
@@ -364,16 +363,9 @@ int gk20a_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
 {
 	struct gk20a *g = tsg->g;
 
-	if (timeslice < g->min_timeslice_us ||
-		timeslice > g->max_timeslice_us)
-		return -EINVAL;
+	gk20a_dbg(gpu_dbg_sched, "tsgid=%u timeslice=%u us", tsg->tsgid, timeslice);
 
-	gk20a_channel_get_timescale_from_timeslice(g, timeslice,
-			&tsg->timeslice_timeout, &tsg->timeslice_scale);
-
-	tsg->timeslice_us = timeslice;
-
-	return g->ops.fifo.update_runlist(g, tsg->runlist_id, ~0, true, true);
+	return g->ops.fifo.tsg_set_timeslice(tsg, timeslice);
 }
 
 static void release_used_tsg(struct fifo_gk20a *f, struct tsg_gk20a *tsg)
@@ -551,6 +543,8 @@ static int gk20a_tsg_ioctl_set_runlist_interleave(struct gk20a *g,
 	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
 	int err;
 
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
+
 	mutex_lock(&sched->control_lock);
 	if (sched->control_locked) {
 		err = -EPERM;
@@ -575,6 +569,8 @@ static int gk20a_tsg_ioctl_set_timeslice(struct gk20a *g,
 {
 	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
 	int err;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
 
 	mutex_lock(&sched->control_lock);
 	if (sched->control_locked) {
@@ -728,5 +724,4 @@ void gk20a_init_tsg_ops(struct gpu_ops *gops)
 {
 	gops->fifo.tsg_bind_channel = gk20a_tsg_bind_channel;
 	gops->fifo.tsg_unbind_channel = gk20a_tsg_unbind_channel;
-	gops->fifo.tsg_set_timeslice = gk20a_tsg_set_timeslice;
 }

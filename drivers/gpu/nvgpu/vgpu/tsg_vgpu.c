@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -114,6 +114,8 @@ static int vgpu_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	err = err ? err : msg.ret;
 	WARN_ON(err);
+	if (!err)
+		tsg->timeslice_us = timeslice;
 
 	return err;
 }

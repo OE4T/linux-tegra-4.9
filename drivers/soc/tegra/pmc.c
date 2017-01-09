@@ -397,6 +397,7 @@ struct tegra_pmc_io_pad_soc {
 	int dpd_status_reg;
 	int dpd_timer_reg;
 	int dpd_sample_reg;
+	bool bdsdmem_cfc;
 	int io_pad_pwr_det_enable_reg;
 	int io_pad_pwr_det_val_reg;
 	int pad_uv_0;
@@ -3280,6 +3281,7 @@ static const u8 tegra210_cpu_powergates[] = {
 		.dpd_status_reg = TEGRA_PMC_IO_##_reg##_STATUS,	\
 		.dpd_timer_reg = TEGRA_PMC_SEL_DPD_TIM,		\
 		.dpd_sample_reg = TEGRA_PMC_IO_DPD_SAMPLE,	\
+		.bdsdmem_cfc = false,				\
 		.io_pad_pwr_det_enable_reg = TEGRA_PMC_PWR_DET_ENABLE, \
 		.io_pad_pwr_det_val_reg = TEGRA_PMC_PWR_DET_VAL, \
 		.pad_uv_0 = TEGRA_IO_PAD_VOLTAGE_1800000UV,	\
@@ -3587,8 +3589,10 @@ static int tegra_pmc_io_rail_change_notify_cb(struct notifier_block *nb,
 	const struct tegra_pmc_io_pad_soc *pad;
 	unsigned long flags;
 
-	if (!((event & REGULATOR_EVENT_POST_ENABLE) ||
-	      (event & REGULATOR_EVENT_PRE_DISABLE)))
+	if (!(event & (REGULATOR_EVENT_POST_ENABLE |
+		       REGULATOR_EVENT_PRE_DISABLE |
+		       REGULATOR_EVENT_PRE_ENABLE |
+		       REGULATOR_EVENT_DISABLE)))
 		return NOTIFY_OK;
 
 	tip_reg = container_of(nb, struct tegra_io_pad_regulator, nb);
@@ -3596,11 +3600,19 @@ static int tegra_pmc_io_rail_change_notify_cb(struct notifier_block *nb,
 
 	spin_lock_irqsave(&pwr_lock, flags);
 
-	if (event & REGULATOR_EVENT_POST_ENABLE)
-		pmc_iopower_enable(pad);
+	if (pad->bdsdmem_cfc) {
+		if (event & REGULATOR_EVENT_PRE_ENABLE)
+			pmc_iopower_enable(pad);
 
-	if (event & REGULATOR_EVENT_PRE_DISABLE)
-		pmc_iopower_disable(pad);
+		if (event & REGULATOR_EVENT_DISABLE)
+			pmc_iopower_disable(pad);
+	} else {
+		if (event & REGULATOR_EVENT_POST_ENABLE)
+			pmc_iopower_enable(pad);
+
+		if (event & REGULATOR_EVENT_PRE_DISABLE)
+			pmc_iopower_disable(pad);
+	}
 
 	dev_dbg(pmc->dev, "tegra-iopower: %s: event 0x%08lx state: %d\n",
 		pad->name, event, pmc_iopower_get_status(pad));

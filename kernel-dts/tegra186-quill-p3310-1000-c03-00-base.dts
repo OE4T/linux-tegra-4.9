@@ -1,7 +1,7 @@
 /*
  * tegra186-quill-p3310-c03-00-base.dts Quill C03 Board
  *
- * Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,15 +21,6 @@
 
         nvidia,boardids = "3310:0000:C03";
         nvidia,proc-boardid = "3310:0000:C03";
-
-	xudc@3550000 {
-		dvdd-pex-supply = <&spmic_ldo8>;
-		dvdd-pex-pll-supply = <&spmic_ldo8>;
-	};
-
-	pinctrl@3520000 {
-		dvdd_pex-supply = <&spmic_ldo8>;
-	};
 
 	pcie-controller@10003000 {
 		dvdd-pex-supply = <&spmic_ldo8>;

@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/hrt.c
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -357,6 +357,7 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 	struct quadd_iovec vec[6];
 	struct hrt_event_value events[QUADD_MAX_COUNTERS];
 	u32 events_extra[QUADD_MAX_COUNTERS];
+	struct quadd_event_context event_ctx;
 
 	struct quadd_record_data record_data;
 	struct quadd_sample_data *s = &record_data.sample;
@@ -396,31 +397,16 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 	vec_idx++;
 
 	s->reserved = 0;
-
 	cc->nr = 0;
-	cc->curr_sp = 0;
-	cc->curr_fp = 0;
-	cc->curr_pc = 0;
-	cc->curr_lr = 0;
+
+	event_ctx.regs = user_regs;
+	event_ctx.task = task;
+	event_ctx.user_mode = user_mode(regs);
 
 	if (ctx->param.backtrace) {
 		cc->um = hrt.um;
 
-		bt_size = quadd_get_user_callchain(user_regs, cc, ctx, task);
-
-		if (!bt_size && !user_mode(regs)) {
-			unsigned long pc = instruction_pointer(user_regs);
-
-			cc->nr = 0;
-#ifdef CONFIG_ARM64
-			cc->cs_64 = compat_user_mode(user_regs) ? 0 : 1;
-#else
-			cc->cs_64 = 0;
-#endif
-			bt_size += quadd_callchain_store(cc, pc,
-							 QUADD_UNW_TYPE_KCTX);
-		}
-
+		bt_size = quadd_get_user_callchain(&event_ctx, cc, ctx);
 		if (bt_size > 0) {
 			int ip_size = cc->cs_64 ? sizeof(u64) : sizeof(u32);
 			int nr_types = DIV_ROUND_UP(bt_size, 8);

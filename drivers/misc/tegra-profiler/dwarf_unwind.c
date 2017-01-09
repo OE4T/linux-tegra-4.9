@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/dwarf_unwind.c
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,6 +26,7 @@
 
 #include <linux/tegra_profiler.h>
 
+#include "hrt.h"
 #include "comm.h"
 #include "backtrace.h"
 #include "eh_unwind.h"
@@ -2035,15 +2036,15 @@ unwind_backtrace(struct quadd_callchain *cc,
 }
 
 int
-quadd_is_ex_entry_exist_dwarf(struct pt_regs *regs,
-			      unsigned long addr,
-			      struct task_struct *task)
+quadd_is_ex_entry_exist_dwarf(struct quadd_event_context *event_ctx,
+			      unsigned long addr)
 {
 	long err;
 	int is_eh, is_debug;
 	struct ex_region_info ri;
 	struct vm_area_struct *vma;
-	struct mm_struct *mm = task->mm;
+	struct pt_regs *regs = event_ctx->regs;
+	struct mm_struct *mm = event_ctx->task->mm;
 
 	if (!regs || !mm)
 		return 0;
@@ -2060,17 +2061,18 @@ quadd_is_ex_entry_exist_dwarf(struct pt_regs *regs,
 }
 
 unsigned int
-quadd_get_user_cc_dwarf(struct pt_regs *regs,
-			struct quadd_callchain *cc,
-			struct task_struct *task)
+quadd_get_user_cc_dwarf(struct quadd_event_context *event_ctx,
+			struct quadd_callchain *cc)
 {
 	long err;
 	int mode, nr_prev = cc->nr;
 	unsigned long ip, lr, sp, fp, fp_thumb;
 	struct vm_area_struct *vma, *vma_sp;
-	struct mm_struct *mm = task->mm;
 	struct ex_region_info ri;
 	struct stackframe *sf;
+	struct pt_regs *regs = event_ctx->regs;
+	struct task_struct *task = event_ctx->task;
+	struct mm_struct *mm = task->mm;
 	struct dwarf_cpu_context *cpu_ctx = this_cpu_ptr(ctx.cpu_ctx);
 
 	if (!regs || !mm)
@@ -2081,7 +2083,7 @@ quadd_get_user_cc_dwarf(struct pt_regs *regs,
 
 	cc->urc_dwarf = QUADD_URC_FAILURE;
 
-	if (nr_prev > 0) {
+	if (cc->curr_sp) {
 		ip = cc->curr_pc;
 		sp = cc->curr_sp;
 		fp = cc->curr_fp;

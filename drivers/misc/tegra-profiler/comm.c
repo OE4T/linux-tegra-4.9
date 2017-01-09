@@ -217,7 +217,7 @@ put_sample(struct quadd_record_data *data,
 	if (!atomic_read(&comm_ctx.active))
 		return -EIO;
 
-	cc = cpu_id < 0 ? &__get_cpu_var(cpu_ctx) :
+	cc = cpu_id < 0 ? this_cpu_ptr(&cpu_ctx) :
 		&per_cpu(cpu_ctx, cpu_id);
 
 	rb = &cc->rb;

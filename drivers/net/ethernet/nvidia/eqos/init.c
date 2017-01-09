@@ -1116,11 +1116,6 @@ int eqos_probe(struct platform_device *pdev)
 		}
 	}
 
-	pdata->fbe_wq = alloc_workqueue("FBE WQ\n", WQ_HIGHPRI|WQ_UNBOUND, 0);
-	if (!pdata->fbe_wq) {
-		dev_err(&pdev->dev, "Work Queue Allocation Failed\n");
-		goto err_out_fbe_wq_failed;
-	}
 	INIT_WORK(&pdata->fbe_work, eqos_fbe_work);
 	INIT_WORK(&pdata->iso_work, eqos_iso_work);
 
@@ -1150,9 +1145,6 @@ int eqos_probe(struct platform_device *pdev)
 		tegra_isomgr_unregister(pdata->isomgr_handle);
 
  err_isomgr_reg_failed:
-	destroy_workqueue(pdata->fbe_wq);
-
- err_out_fbe_wq_failed:
 	if ((tegra_platform_is_unit_fpga()) &&
 		(pdata->power_irq != 0)) {
 		free_irq(pdata->power_irq, pdata);
@@ -1386,6 +1378,8 @@ static INT eqos_suspend(struct platform_device *pdev, pm_message_t state)
 
 	/* cancel iso work */
 	cancel_work_sync(&pdata->iso_work);
+	/* Cancel FBE handling work */
+	cancel_work_sync(&pdata->fbe_work);
 	/* disable clocks */
 	eqos_clock_deinit(pdata);
 	/* disable regulators */

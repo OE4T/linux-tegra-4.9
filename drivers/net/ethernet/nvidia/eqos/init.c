@@ -55,7 +55,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/clk.h>
 #include <linux/reset.h>
 #include <linux/gpio.h>
@@ -606,17 +606,12 @@ static int tegra_eqos_set_state(struct thermal_cooling_device *tcd,
 	struct eqos_prv_data *pdata = tcd->devdata;
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 
-	int hw_chg_count;
-
-	hw_chg_count = EQOS_HW_CHG_MAX_COUNT;
-	while (test_and_set_bit(HW_CHANGING, &pdata->hw_state_flgs) &&
-		hw_chg_count--)
-			usleep_range(20000, 40000);
-
-	if (pdata->suspended || hw_chg_count == 0) {
-		clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
+	if (pdata->suspended)
 		return -ENODEV;
-	}
+
+	mutex_lock(&pdata->hw_change_lock);
+	if (!pdata->hw_stopped)
+		netif_tx_stop_all_queues(pdata->dev);
 
 	pr_debug("%s cur state=%d new state=%ld, recalibrating eqos pads\n",
 		__func__, pdata->therm_state.counter, state);
@@ -634,7 +629,9 @@ static int tegra_eqos_set_state(struct thermal_cooling_device *tcd,
 	/* read-to-clear error counters */
 	hw_if->read_err_counter(pdata, false);
 
-	clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
+	if (!pdata->hw_stopped)
+		netif_tx_wake_all_queues(pdata->dev);
+	mutex_unlock(&pdata->hw_change_lock);
 
 	return 0;
 }
@@ -826,7 +823,8 @@ int eqos_probe(struct platform_device *pdev)
 
 	pdata->dev = ndev;
 
-	pdata->hw_state_flgs |= (1 << HW_STOPPED);
+	mutex_init(&pdata->hw_change_lock);
+	pdata->hw_stopped = true;
 
 	/* PMT and PHY irqs are shared on FPGA system */
 	if (tegra_platform_is_unit_fpga()) {
@@ -1367,13 +1365,10 @@ static INT eqos_suspend(struct platform_device *pdev, pm_message_t state)
 	pdata->suspended = 1;
 
 	if (netif_running(dev)) {
-		while (test_and_set_bit(HW_CHANGING, &pdata->hw_state_flgs))
-			usleep_range(1000, 2000);
 		/* Disable PHY interrupts */
 		phy_stop_interrupts(pdata->phydev);
 		eqos_stop_dev(pdata);
-		pdata->hw_state_flgs |= (1 << HW_STOPPED);
-		clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
+		pdata->hw_stopped = true;
 	}
 
 	/* cancel iso work */
@@ -1428,7 +1423,7 @@ static INT eqos_resume(struct platform_device *pdev)
 		phy_start_interrupts(pdata->phydev);
 	}
 	pdata->suspended = 0;
-	pdata->hw_state_flgs &= ~(1 << HW_STOPPED);
+	pdata->hw_stopped = false;
 
 	return 0;
 }

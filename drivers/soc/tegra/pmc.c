@@ -420,7 +420,6 @@ struct tegra_pmc_soc {
 	bool has_ps18;
 	bool has_pclk_clock;
 	bool has_interrupt_polarity_support;
-	bool has_fuse_mirroring_sticky_bit;
 	bool has_reboot_base_address;
 	bool show_reset_status;
 	bool skip_lp0_vector_setup;
@@ -1780,10 +1779,7 @@ void tegra_pmc_fuse_disable_mirroring(void)
 
 	val = tegra_pmc_readl(TEGRA_PMC_FUSE_CTRL);
 	if (val & PMC_FUSE_CTRL_ENABLE_REDIRECTION) {
-		if (pmc->soc->has_fuse_mirroring_sticky_bit)
-			val &= ~PMC_FUSE_CTRL_ENABLE_REDIRECTION;
-		else
-			val = PMC_FUSE_CTRL_DISABLE_REDIRECTION;
+		val &= ~PMC_FUSE_CTRL_ENABLE_REDIRECTION;
 		tegra_pmc_writel(val, TEGRA_PMC_FUSE_CTRL);
 	}
 }
@@ -1795,10 +1791,7 @@ void tegra_pmc_fuse_enable_mirroring(void)
 
 	val = tegra_pmc_readl(TEGRA_PMC_FUSE_CTRL);
 	if (!(val & PMC_FUSE_CTRL_ENABLE_REDIRECTION)) {
-		if (pmc->soc->has_fuse_mirroring_sticky_bit)
-			val |= PMC_FUSE_CTRL_ENABLE_REDIRECTION;
-		else
-			val = PMC_FUSE_CTRL_ENABLE_REDIRECTION;
+		val |= PMC_FUSE_CTRL_ENABLE_REDIRECTION;
 		tegra_pmc_writel(val, TEGRA_PMC_FUSE_CTRL);
 	}
 }
@@ -3379,7 +3372,6 @@ static const struct tegra_pmc_soc tegra210_pmc_soc = {
 	.has_ps18 = true,
 	.has_pclk_clock = true,
 	.has_interrupt_polarity_support = true,
-	.has_fuse_mirroring_sticky_bit = false,
 	.show_reset_status = false,
 	.has_reboot_base_address = false,
 	.skip_lp0_vector_setup = false,
@@ -3412,7 +3404,6 @@ static const struct tegra_pmc_soc tegra186_pmc_soc = {
 	.has_tsense_reset = false,
 	.has_pclk_clock = false,
 	.has_interrupt_polarity_support = false,
-	.has_fuse_mirroring_sticky_bit = true,
 	.show_reset_status = true,
 	.has_reboot_base_address = true,
 	.skip_lp0_vector_setup = true,

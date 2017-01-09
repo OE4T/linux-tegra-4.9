@@ -390,6 +390,10 @@ struct tegra_pmc_io_pad_soc {
 	unsigned int io_power;
 	const unsigned int pins[1];
 	unsigned int npins;
+	int dpd_req_reg;
+	int dpd_status_reg;
+	int dpd_timer_reg;
+	int dpd_sample_reg;
 };
 
 struct tegra_pmc_soc {
@@ -1879,24 +1883,15 @@ static inline void set_core_power_timers(void) { }
 #endif
 
 /* IO Pads configurations */
-static int tegra_pmc_io_pad_prepare(const struct tegra_pmc_io_pad_soc *pad,
-				    unsigned long *request,
-				    unsigned long *status, u32 *mask)
+static int tegra_pmc_io_pad_prepare(const struct tegra_pmc_io_pad_soc *pad)
 {
 	unsigned long rate, value;
 
 	if (pad->dpd == UINT_MAX)
 		return -ENOTSUPP;
 
-	*mask = BIT(pad->dpd % 32);
-
-	if (pad->dpd < 32) {
-		*status = IO_DPD_STATUS;
-		*request = IO_DPD_REQ;
-	} else {
-		*status = IO_DPD2_STATUS;
-		*request = IO_DPD2_REQ;
-	}
+	if (!pmc->clk)
+		return 0;
 
 	rate = clk_get_rate(pmc->clk);
 	if (!rate) {
@@ -1904,25 +1899,26 @@ static int tegra_pmc_io_pad_prepare(const struct tegra_pmc_io_pad_soc *pad,
 		return -ENODEV;
 	}
 
-	tegra_pmc_writel(DPD_SAMPLE_ENABLE, TEGRA_PMC_IO_DPD_SAMPLE);
+	tegra_pmc_writel(DPD_SAMPLE_ENABLE, pad->dpd_sample_reg);
 
 	/* must be at least 200 ns, in APB (PCLK) clock cycles */
 	value = DIV_ROUND_UP(1000000000, rate);
 	value = DIV_ROUND_UP(200, value);
-	tegra_pmc_writel(value, TEGRA_PMC_SEL_DPD_TIM);
+	tegra_pmc_writel(value, pad->dpd_timer_reg);
 
 	return 0;
 }
 
-static int tegra_pmc_io_pad_poll(unsigned long offset, u32 mask,
+static int tegra_pmc_io_pad_poll(const struct tegra_pmc_io_pad_soc *pad,
 				 u32 val, unsigned long timeout)
 {
+	u32 mask = BIT(pad->dpd);
 	u32 value;
 
 	timeout = jiffies + msecs_to_jiffies(timeout);
 
 	while (time_after(timeout, jiffies)) {
-		value = _tegra_pmc_readl(offset);
+		value = tegra_pmc_readl(pad->dpd_status_reg);
 		if ((value & mask) == val)
 			return 0;
 
@@ -1932,9 +1928,9 @@ static int tegra_pmc_io_pad_poll(unsigned long offset, u32 mask,
 	return -ETIMEDOUT;
 }
 
-static void tegra_pmc_io_pad_unprepare(void)
+static void tegra_pmc_io_pad_unprepare(const struct tegra_pmc_io_pad_soc *pad)
 {
-	tegra_pmc_writel(DPD_SAMPLE_DISABLE, TEGRA_PMC_IO_DPD_SAMPLE);
+	tegra_pmc_writel(DPD_SAMPLE_DISABLE, pad->dpd_sample_reg);
 }
 
 /**
@@ -1945,29 +1941,27 @@ static void tegra_pmc_io_pad_unprepare(void)
  */
 static int tegra_pmc_io_pad_power_enable(const struct tegra_pmc_io_pad_soc *pad)
 {
-	unsigned long request, status;
-	u32 mask;
 	int err;
 
 	mutex_lock(&pmc->powergates_lock);
 
-	err = tegra_pmc_io_pad_prepare(pad, &request, &status, &mask);
+	err = tegra_pmc_io_pad_prepare(pad);
 	if (err < 0) {
 		dev_err(pmc->dev, "Failed to prepare I/O pad %s: %d\n",
 			pad->name, err);
 		goto unlock;
 	}
 
-	_tegra_pmc_writel(IO_DPD_REQ_CODE_OFF | mask, request);
+	tegra_pmc_writel(IO_DPD_REQ_CODE_OFF | BIT(pad->dpd), pad->dpd_req_reg);
 
-	err = tegra_pmc_io_pad_poll(status, mask, 0, 250);
+	err = tegra_pmc_io_pad_poll(pad, 0, 250);
 	if (err < 0) {
 		dev_err(pmc->dev, "Failed to enable I/O pad %s: %d\n",
 			pad->name, err);
 		goto unlock;
 	}
 
-	tegra_pmc_io_pad_unprepare();
+	tegra_pmc_io_pad_unprepare(pad);
 
 unlock:
 	mutex_unlock(&pmc->powergates_lock);
@@ -1983,29 +1977,27 @@ unlock:
 static int tegra_pmc_io_pad_power_disable(
 			const struct tegra_pmc_io_pad_soc *pad)
 {
-	unsigned long request, status;
-	u32 mask;
 	int err;
 
 	mutex_lock(&pmc->powergates_lock);
 
-	err = tegra_pmc_io_pad_prepare(pad, &request, &status, &mask);
+	err = tegra_pmc_io_pad_prepare(pad);
 	if (err < 0) {
 		dev_err(pmc->dev, "Failed to prepare I/O pad %s: %d\n",
 			pad->name, err);
 		goto unlock;
 	}
 
-	_tegra_pmc_writel(IO_DPD_REQ_CODE_ON | mask, request);
+	tegra_pmc_writel(IO_DPD_REQ_CODE_ON | BIT(pad->dpd), pad->dpd_req_reg);
 
-	err = tegra_pmc_io_pad_poll(status, mask, mask, 250);
+	err = tegra_pmc_io_pad_poll(pad, BIT(pad->dpd), 250);
 	if (err < 0) {
 		dev_err(pmc->dev, "Failed to disable I/O pad %s: %d\n",
 			pad->name, err);
 		goto unlock;
 	}
 
-	tegra_pmc_io_pad_unprepare();
+	tegra_pmc_io_pad_unprepare(pad);
 
 unlock:
 	mutex_unlock(&pmc->powergates_lock);
@@ -2073,18 +2065,14 @@ static int _tegra_pmc_io_pad_get_voltage(const struct tegra_pmc_io_pad_soc *pad)
  */
 static int tegra_pmc_io_pad_is_powered(const struct tegra_pmc_io_pad_soc *pad)
 {
-	unsigned long status;
 	u32 value;
-	int bit;
 
 	if (pad->dpd == UINT_MAX)
 		return -ENOTSUPP;
 
-	status = (pad->dpd < 32) ? IO_DPD_STATUS : IO_DPD2_STATUS;
-	bit = pad->dpd % 32;
-	value = _tegra_pmc_readl(status);
+	value = tegra_pmc_readl(pad->dpd_status_reg);
 
-	return !(value & BIT(bit));
+	return !(value & BIT(pad->dpd));
 }
 
 static int tegra_pmc_io_pads_pinctrl_get_groups_count(
@@ -3188,7 +3176,8 @@ static const u8 tegra210_cpu_powergates[] = {
 	TEGRA_POWERGATE_CPU3,
 };
 
-#define TEGRA_IO_PAD_CONFIG(_pin, _npins, _name, _dpd, _vbit, _iopower)	\
+#define TEGRA210_IO_PAD_CONFIG(_pin, _npins, _name, _dpd,	\
+			       _vbit, _iopower, _reg)		\
 	{							\
 		.name =  #_name,				\
 		.pins = {(_pin)},				\
@@ -3196,6 +3185,10 @@ static const u8 tegra210_cpu_powergates[] = {
 		.dpd = _dpd,					\
 		.voltage = _vbit,				\
 		.io_power = _iopower,				\
+		.dpd_req_reg = TEGRA_PMC_IO_##_reg##_REQ,	\
+		.dpd_status_reg = TEGRA_PMC_IO_##_reg##_STATUS,	\
+		.dpd_timer_reg = TEGRA_PMC_SEL_DPD_TIM,		\
+		.dpd_sample_reg = TEGRA_PMC_IO_DPD_SAMPLE,	\
 	},
 
 /**
@@ -3209,74 +3202,74 @@ static const u8 tegra210_cpu_powergates[] = {
  * TEGRA_IO_PAD_PVONLY:  IO pad which does not support low power state but
  *			 it can operate in multi-level voltages.
  */
-#define TEGRA_IO_PAD_LPONLY(_pin, _name, _dpd)	\
-	TEGRA_IO_PAD_CONFIG(_pin, 1, _name, _dpd, UINT_MAX, UINT_MAX)
+#define TEGRA210_IO_PAD_LPONLY(_pin, _name, _dpd, _reg)	\
+	TEGRA210_IO_PAD_CONFIG(_pin, 1, _name, _dpd, UINT_MAX, UINT_MAX, _reg)
 
-#define TEGRA_IO_PAD_LP_N_PV(_pin, _name, _dpd, _vbit, _io)  \
-	TEGRA_IO_PAD_CONFIG(_pin, 1, _name, _dpd, _vbit, _io)
+#define TEGRA210_IO_PAD_LP_N_PV(_pin, _name, _dpd, _vbit, _io , _reg)  \
+	TEGRA210_IO_PAD_CONFIG(_pin, 1, _name, _dpd, _vbit, _io, _reg)
 
-#define TEGRA_IO_PAD_PVONLY(_pin, _name, _vbit, _io)	\
-	TEGRA_IO_PAD_CONFIG(_pin, 0, _name, UINT_MAX, _vbit, _io)
+#define TEGRA210_IO_PAD_PVONLY(_pin, _name, _vbit, _io, _reg)	\
+	TEGRA210_IO_PAD_CONFIG(_pin, 0, _name, UINT_MAX, _vbit, _io, _reg)
 
-#define TEGRA_IO_PAD_DESC_LP(_pin, _name, _dpd)	\
+#define TEGRA210_IO_PAD_DESC_LP(_pin, _name, _dpd, _reg)	\
 	{					\
 		.number = _pin,			\
 		.name = #_name,			\
 	},
-#define TEGRA_IO_PAD_DESC_LP_N_PV(_pin, _name, _dpd, _vbit, _io) \
-	TEGRA_IO_PAD_DESC_LP(_pin, _name, _dpd)
+#define TEGRA210_IO_PAD_DESC_LP_N_PV(_pin, _name, _dpd, _vbit, _io, _reg) \
+	TEGRA210_IO_PAD_DESC_LP(_pin, _name, _dpd, _reg)
 
-#define TEGRA_IO_PAD_DESC_PV(_pin, _name, _vbit, _io) \
-	TEGRA_IO_PAD_DESC_LP(_pin, _name, UINT_MAX)
+#define TEGRA210_IO_PAD_DESC_PV(_pin, _name, _vbit, _io, _reg) \
+	TEGRA210_IO_PAD_DESC_LP(_pin, _name, UINT_MAX, _reg)
 
 #define TEGRA210_IO_PAD_TABLE(_lponly_, _pvonly_, _lp_n_pv_)	\
-	_lp_n_pv_(0, audio, 17, 5, 5)		\
-	_lp_n_pv_(1, audio-hv, 61, 18, 18)	\
-	_lp_n_pv_(2, cam, 36, 10, 10)		\
-	_lponly_(3, csia, 0)			\
-	_lponly_(4, csib, 1)			\
-	_lponly_(5, csic, 42)			\
-	_lponly_(6, csid, 43)			\
-	_lponly_(7, csie, 44)			\
-	_lponly_(8, csif, 45)			\
-	_lp_n_pv_(9, dbg, 25, 19, 19)		\
-	_lponly_(10, debug-nonao, 26)		\
-	_lp_n_pv_(11, dmic, 50, 20, 20)		\
-	_lponly_(12, dp, 51)			\
-	_lponly_(13, dsi, 2)			\
-	_lponly_(14, dsib, 39)			\
-	_lponly_(15, dsic, 40)			\
-	_lponly_(16, dsid, 41)			\
-	_lponly_(17, emmc, 35)			\
-	_lponly_(18, emmc2, 37)			\
-	_lp_n_pv_(19, gpio, 27, 21, 21)		\
-	_lponly_(20, hdmi, 28)			\
-	_lponly_(21, hsic, 19)			\
-	_lponly_(22, lvds, 57)			\
-	_lponly_(23, mipi-bias, 3)		\
-	_lponly_(24, pex-bias, 4)		\
-	_lponly_(25, pex-clk1, 5)		\
-	_lponly_(26, pex-clk2, 6)		\
-	_pvonly_(27, pex-ctrl, 11, 11)		\
-	_lp_n_pv_(28, sdmmc1, 33, 12, 12)	\
-	_lp_n_pv_(29, sdmmc3, 34, 13, 13)	\
-	_lp_n_pv_(30, spi, 46, 22, 22)		\
-	_lp_n_pv_(31, spi-hv, 47, 23, 23)	\
-	_lp_n_pv_(32, uart, 14, 2, 2)		\
-	_lponly_(33, usb0, 9)			\
-	_lponly_(34, usb1, 10)			\
-	_lponly_(35, usb2, 11)			\
-	_lponly_(36, usb3, 18)			\
-	_lponly_(37, usb-bias, 12)
+	_lp_n_pv_(0, audio, 17, 5, 5, DPD)		\
+	_lp_n_pv_(1, audio-hv, 29, 18, 18, DPD2)	\
+	_lp_n_pv_(2, cam, 4, 10, 10, DPD2)		\
+	_lponly_(3, csia, 0, DPD)			\
+	_lponly_(4, csib, 1, DPD)			\
+	_lponly_(5, csic, 10, DPD2)			\
+	_lponly_(6, csid, 11, DPD2)			\
+	_lponly_(7, csie, 12, DPD2)			\
+	_lponly_(8, csif, 13, DPD2)			\
+	_lp_n_pv_(9, dbg, 25, 19, 19, DPD)		\
+	_lponly_(10, debug-nonao, 26, DPD)		\
+	_lp_n_pv_(11, dmic, 18, 20, 20, DPD2)		\
+	_lponly_(12, dp, 19, DPD2)			\
+	_lponly_(13, dsi, 2, DPD)			\
+	_lponly_(14, dsib, 7, DPD2)			\
+	_lponly_(15, dsic, 8, DPD2)			\
+	_lponly_(16, dsid, 9, DPD2)			\
+	_lponly_(17, emmc, 3, DPD2)			\
+	_lponly_(18, emmc2, 5, DPD2)			\
+	_lp_n_pv_(19, gpio, 27, 21, 21, DPD)		\
+	_lponly_(20, hdmi, 28, DPD)			\
+	_lponly_(21, hsic, 19, DPD)			\
+	_lponly_(22, lvds, 25, DPD2)			\
+	_lponly_(23, mipi-bias, 3, DPD)			\
+	_lponly_(24, pex-bias, 4, DPD)			\
+	_lponly_(25, pex-clk1, 5, DPD)			\
+	_lponly_(26, pex-clk2, 6, DPD)			\
+	_pvonly_(27, pex-ctrl, 0, 11, DPD2)		\
+	_lp_n_pv_(28, sdmmc1, 1, 12, 12, DPD2)		\
+	_lp_n_pv_(29, sdmmc3, 2, 13, 13, DPD2)		\
+	_lp_n_pv_(30, spi, 14, 22, 22, DPD2)		\
+	_lp_n_pv_(31, spi-hv, 15, 23, 23, DPD2)		\
+	_lp_n_pv_(32, uart, 14, 2, 2, DPD)		\
+	_lponly_(33, usb0, 9, DPD)			\
+	_lponly_(34, usb1, 10, DPD)			\
+	_lponly_(35, usb2, 11, DPD)			\
+	_lponly_(36, usb3, 18, DPD)			\
+	_lponly_(37, usb-bias, 12, DPD)
 
 static const struct tegra_pmc_io_pad_soc tegra210_io_pads[] = {
-	TEGRA210_IO_PAD_TABLE(TEGRA_IO_PAD_LPONLY, TEGRA_IO_PAD_PVONLY,
-			      TEGRA_IO_PAD_LP_N_PV)
+	TEGRA210_IO_PAD_TABLE(TEGRA210_IO_PAD_LPONLY, TEGRA210_IO_PAD_PVONLY,
+			      TEGRA210_IO_PAD_LP_N_PV)
 };
 
 static const struct pinctrl_pin_desc tegra210_io_pads_pinctrl_desc[] = {
-	TEGRA210_IO_PAD_TABLE(TEGRA_IO_PAD_DESC_LP, TEGRA_IO_PAD_DESC_PV,
-			      TEGRA_IO_PAD_DESC_LP_N_PV)
+	TEGRA210_IO_PAD_TABLE(TEGRA210_IO_PAD_DESC_LP, TEGRA210_IO_PAD_DESC_PV,
+			      TEGRA210_IO_PAD_DESC_LP_N_PV)
 };
 
 static const struct tegra_pmc_soc tegra210_pmc_soc = {

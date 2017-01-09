@@ -43,7 +43,7 @@
 /*!@file: eqos_dev.c
  * @brief: Driver functions.
  */
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/clk.h>
 #include <linux/reset.h>
 #include "yheader.h"

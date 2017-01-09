@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -23,28 +23,35 @@ enum camrtc_request {
 	/* Ping request. RTCPU returns the fw version in the data field and
 	 * 0 in the status field.
 	 */
-	CAMRTC_REQ_PING = 1,
+	CAMRTC_REQ_PING = 1,                            /*  1 (0x01) */
 	/* PM sleep request */
-	CAMRTC_REQ_PM_SLEEP,
+	CAMRTC_REQ_PM_SLEEP,                            /*  2 (0x02) */
 	/* Test request */
-	CAMRTC_REQ_MODS_TEST,
+	CAMRTC_REQ_MODS_TEST,                           /*  3 (0x03) */
 	/* Set log level */
-	CAMRTC_REQ_SET_LOGLEVEL,
-	CAMRTC_REQ_LOGLEVEL = CAMRTC_REQ_SET_LOGLEVEL,
+	CAMRTC_REQ_SET_LOGLEVEL,                        /*  4 (0x04) */
+	CAMRTC_REQ_LOGLEVEL = CAMRTC_REQ_SET_LOGLEVEL,  /*  4 (0x04) */
 	/* Get FreeRTOS state */
-	CAMRTC_REQ_RTOS_STATE,
+	CAMRTC_REQ_RTOS_STATE,                          /*  5 (0x05) */
 
 	/* Read memory */
-	CAMRTC_REQ_READ_MEMORY_32BIT,
-	CAMRTC_REQ_READ_MEMORY,
+	CAMRTC_REQ_READ_MEMORY_32BIT,                   /*  6 (0x06) */
+	CAMRTC_REQ_READ_MEMORY,                         /*  7 (0x07) */
 
 	/* Performance counter */
-	CAMRTC_REQ_SET_PERF_COUNTERS,
-	CAMRTC_REQ_GET_PERF_COUNTERS,
+	CAMRTC_REQ_SET_PERF_COUNTERS,                   /*  8 (0x08) */
+	CAMRTC_REQ_GET_PERF_COUNTERS,                   /*  9 (0x09) */
 
-	CAMRTC_REQ_GET_LOGLEVEL,
+	CAMRTC_REQ_GET_LOGLEVEL,                        /* 10 (0x0a) */
 
-	CAMRTC_REQ_RUN_TEST,
+	CAMRTC_REQ_RUN_TEST,                            /* 11 (0x0b) */
+
+	CAMRTC_REQ_GET_TASK_STAT,                       /* 12 (0x0c) */
+
+	CAMRTC_REQ_ENABLE_VI_STAT,                      /* 13 (0x0d) */
+	CAMRTC_REQ_GET_VI_STAT,                         /* 14 (0x0e) */
+
+	CAMRTC_REQ_GET_MEM_USAGE,                       /* 15 (0x0f) */
 
 	CAMRTC_REQUEST_TYPE_MAX,
 };
@@ -78,6 +85,7 @@ enum {
 	CAMRTC_DBG_MAX_DATA = 376,
 	CAMRTC_DBG_READ_MEMORY_COUNT_MAX = 256,
 	CAMRTC_DBG_MAX_PERF_COUNTERS = 31,
+	CAMRTC_DBG_TASK_STAT_MAX = 16,
 };
 
 /* This struct is used to query or set the wake timeout for the target.
@@ -185,6 +193,51 @@ struct camrtc_dbg_run_test_data {
 	uint8_t data[CAMRTC_DBG_MAX_TEST_DATA];
 } __packed;
 
+struct camrtc_dbg_task_stat {
+	uint32_t n_task;
+	uint32_t total_count;
+	struct {
+		uint32_t id[2];
+		uint32_t count;
+	} task[CAMRTC_DBG_TASK_STAT_MAX];
+} __packed;
+
+/* These structure is used to get VI message statistics.
+ * Fields:
+ *   enable: enable/disable collecting vi message statistics
+ */
+struct camrtc_dbg_enable_vi_stat {
+	uint32_t enable;
+} __packed;
+
+/* These structure is used to get VI message statistics.
+ * Fields:
+ *   avg: running average of VI message latency.
+ *   max: maximum VI message latency observed so far.
+ */
+struct camrtc_dbg_vi_stat {
+	uint32_t avg;
+	uint32_t max;
+} __packed;
+
+/* These structure is used to get memory usage.
+ * Fields:
+ *   text: code memory usage
+ *   bss: global/static memory usage.
+ *   data: global/static memory usage.
+ *   heap: heap memory usage.
+ *   stack: cpu stack memory usage.
+ *   free: remaining free memory.
+ */
+struct camrtc_dbg_mem_usage {
+	uint32_t text;
+	uint32_t bss;
+	uint32_t data;
+	uint32_t heap;
+	uint32_t stack;
+	uint32_t free;
+} __packed;
+
 /* This struct encapsulates the type of the request and the respective
  * data associated with that request.
  * Fields:
@@ -204,6 +257,7 @@ struct camrtc_dbg_request {
 		struct camrtc_dbg_read_memory rm_data;
 		struct camrtc_dbg_set_perf_counters set_perf_data;
 		struct camrtc_dbg_run_test_data run_test_data;
+		struct camrtc_dbg_enable_vi_stat enable_vi_stat;
 	} data;
 } __packed;
 
@@ -228,6 +282,9 @@ struct camrtc_dbg_response {
 		struct camrtc_dbg_read_memory_result rm_data;
 		struct camrtc_dbg_get_perf_counters_result get_perf_data;
 		struct camrtc_dbg_run_test_data run_test_data;
+		struct camrtc_dbg_task_stat task_stat_data;
+		struct camrtc_dbg_vi_stat vi_stat;
+		struct camrtc_dbg_mem_usage mem_usage;
 	} data;
 } __packed;
 

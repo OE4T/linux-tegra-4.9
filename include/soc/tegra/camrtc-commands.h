@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -24,12 +24,18 @@ enum {
 	RTCPU_CMD_PING,
 	RTCPU_CMD_PM_SUSPEND,
 	RTCPU_CMD_FW_HASH,
+	RTCPU_CMD_CH_SETUP,
+	RTCPU_CMD_PREFIX = 0x7d,
+	RTCPU_CMD_DOORBELL = 0x7e,
 	RTCPU_CMD_ERROR = 0x7f,
 };
 
 #define RTCPU_FW_DB_VERSION (0)
 #define RTCPU_FW_VERSION (1)
 #define RTCPU_FW_SM2_VERSION (2)
+#define RTCPU_FW_SM3_VERSION (3)
+
+#define RTCPU_FW_CURRENT_VERSION (RTCPU_FW_SM3_VERSION)
 
 #define RTCPU_IVC_SANS_TRACE (1)
 #define RTCPU_IVC_WITH_TRACE (2)

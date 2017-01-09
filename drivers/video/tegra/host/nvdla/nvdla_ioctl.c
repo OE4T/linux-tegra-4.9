@@ -108,7 +108,8 @@ static int nvdla_pin(struct nvdla_private *priv, void *arg)
 	}
 
 	count = buf_list->num_buffers;
-	if (count == 0 || !buf_list->buffers) {
+	if (count == 0 || count > MAX_NVDLA_PIN_BUFFERS ||
+	    !buf_list->buffers) {
 		nvdla_dbg_err(pdev, "Inval cnt arg for pin\n");
 		err = -EINVAL;
 		goto fail_to_get_val_cnt;
@@ -150,7 +151,8 @@ static int nvdla_unpin(struct nvdla_private *priv, void *arg)
 	}
 
 	count = buf_list->num_buffers;
-	if (count == 0 || !buf_list->buffers) {
+	if (count == 0 || count > MAX_NVDLA_PIN_BUFFERS ||
+	    !buf_list->buffers) {
 		nvdla_dbg_err(pdev, "Inval count argument for unpin\n");
 		err = -EINVAL;
 		goto fail_to_get_val_cnt;

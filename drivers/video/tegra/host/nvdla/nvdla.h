@@ -48,6 +48,11 @@
  */
 #define MAX_NVDLA_TASK_COUNT	32
 
+
+/**
+ * Maximum number of buffers per task
+ */
+#define MAX_NVDLA_PIN_BUFFERS	64
 /**
  * Trace Buffer Size
  */

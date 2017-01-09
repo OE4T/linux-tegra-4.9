@@ -449,6 +449,7 @@ int regmap_add_irq_chip(struct regmap *map, int irq, int irq_flags,
 			struct regmap_irq_chip_data **data)
 {
 	struct regmap_irq_chip_data *d;
+	struct irq_desc *desc;
 	int i;
 	int ret = -ENOMEM;
 	u32 reg;
@@ -539,6 +540,13 @@ int regmap_add_irq_chip(struct regmap *map, int irq, int irq_flags,
 	}
 
 	mutex_init(&d->lock);
+
+	/* Determine interrupt controller nesting depth for lockdep */
+	desc = irq_to_desc(d->irq);
+	for (i = 0; desc; ++i)
+		desc = irq_to_desc(desc->parent_irq);
+	lockdep_set_subclass(&d->lock, i);
+
 	mutex_init(&d->shutdown_lock);
 
 	for (i = 0; i < chip->num_irqs; i++)

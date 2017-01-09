@@ -394,6 +394,10 @@ struct tegra_pmc_io_pad_soc {
 	int dpd_status_reg;
 	int dpd_timer_reg;
 	int dpd_sample_reg;
+	int io_pad_pwr_det_enable_reg;
+	int io_pad_pwr_det_val_reg;
+	int pad_uv_0;
+	int pad_uv_1;
 };
 
 struct tegra_pmc_soc {
@@ -2012,26 +2016,26 @@ static int _tegra_pmc_io_pad_set_voltage(const struct tegra_pmc_io_pad_soc *pad,
 	if (pad->voltage == UINT_MAX)
 		return -ENOTSUPP;
 
-	if ((io_pad_uv != TEGRA_IO_PAD_VOLTAGE_1800000UV) &&
-	    (io_pad_uv != TEGRA_IO_PAD_VOLTAGE_3300000UV))
+	if ((io_pad_uv != pad->pad_uv_0) &&
+	    (io_pad_uv != pad->pad_uv_1))
 		return -EINVAL;
 
 	mutex_lock(&pmc->powergates_lock);
 
 	/* write-enable PMC_PWR_DET_VALUE[pad->voltage] */
-	value = tegra_pmc_readl(TEGRA_PMC_PWR_DET_ENABLE);
+	value = tegra_pmc_readl(pad->io_pad_pwr_det_enable_reg);
 	value |= BIT(pad->voltage);
-	tegra_pmc_writel(value, TEGRA_PMC_PWR_DET_ENABLE);
+	tegra_pmc_writel(value, pad->io_pad_pwr_det_enable_reg);
 
 	/* update I/O voltage */
-	value = tegra_pmc_readl(TEGRA_PMC_PWR_DET_VAL);
+	value = tegra_pmc_readl(pad->io_pad_pwr_det_val_reg);
 
-	if (io_pad_uv == TEGRA_IO_PAD_VOLTAGE_1800000UV)
+	if (io_pad_uv == pad->pad_uv_0)
 		value &= ~BIT(pad->voltage);
 	else
 		value |= BIT(pad->voltage);
 
-	tegra_pmc_writel(value, TEGRA_PMC_PWR_DET_VAL);
+	tegra_pmc_writel(value, pad->io_pad_pwr_det_val_reg);
 
 	mutex_unlock(&pmc->powergates_lock);
 
@@ -2047,12 +2051,12 @@ static int _tegra_pmc_io_pad_get_voltage(const struct tegra_pmc_io_pad_soc *pad)
 	if (pad->voltage == UINT_MAX)
 		return -ENOTSUPP;
 
-	value = tegra_pmc_readl(TEGRA_PMC_PWR_DET_VAL);
+	value = tegra_pmc_readl(pad->io_pad_pwr_det_val_reg);
 
 	if ((value & BIT(pad->voltage)) == 0)
-		return TEGRA_IO_PAD_VOLTAGE_1800000UV;
+		return pad->pad_uv_0;
 
-	return TEGRA_IO_PAD_VOLTAGE_3300000UV;
+	return pad->pad_uv_1;
 }
 
 /**
@@ -3189,6 +3193,10 @@ static const u8 tegra210_cpu_powergates[] = {
 		.dpd_status_reg = TEGRA_PMC_IO_##_reg##_STATUS,	\
 		.dpd_timer_reg = TEGRA_PMC_SEL_DPD_TIM,		\
 		.dpd_sample_reg = TEGRA_PMC_IO_DPD_SAMPLE,	\
+		.io_pad_pwr_det_enable_reg = TEGRA_PMC_PWR_DET_ENABLE, \
+		.io_pad_pwr_det_val_reg = TEGRA_PMC_PWR_DET_VAL, \
+		.pad_uv_0 = TEGRA_IO_PAD_VOLTAGE_1800000UV,	\
+		.pad_uv_1 = TEGRA_IO_PAD_VOLTAGE_3300000UV,	\
 	},
 
 /**

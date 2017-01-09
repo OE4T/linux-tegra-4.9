@@ -5057,8 +5057,11 @@ void tegra_dc_enable(struct tegra_dc *dc)
 
 	mutex_lock(&dc->lock);
 
-	if (!dc->enabled)
+	if (!dc->enabled) {
+		tegra_dc_reserve_common_channel(dc);
 		dc->enabled = _tegra_dc_enable(dc);
+		tegra_dc_release_common_channel(dc);
+	}
 
 	mutex_unlock(&dc->lock);
 	trace_display_mode(dc, &dc->mode);

@@ -1019,12 +1019,12 @@ static int nvhost_probe(struct platform_device *dev)
 
 	if ((pdata->virtual_dev || host->info.vmserver_owns_engines) &&
 		!vhost_init_done) {
-		vhost_init_done = true;
 		err = nvhost_virt_init(dev, NVHOST_MODULE_NONE);
 		if (err) {
 			dev_err(&dev->dev, "failed to init virt support\n");
 			goto fail;
 		}
+		vhost_init_done = true;
 	}
 
 	if (!pdata->virtual_dev) {

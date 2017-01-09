@@ -1917,6 +1917,76 @@ static int tegra_virt_t210_amx_set_input_stream_enable(
 	return 0;
 }
 
+static int tegra_virt_i2s_get_loopback_enable(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_I2S_GET_LOOPBACK_ENABLE;
+	msg.params.i2s_info.i2s_id = reg;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	ucontrol->value.integer.value[0] =
+			msg.params.i2s_info.i2s_loopback_enable;
+
+	return 0;
+}
+
+static int tegra_virt_i2s_set_loopback_enable(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_I2S_SET_LOOPBACK_ENABLE;
+	msg.params.i2s_info.i2s_id = reg;
+	msg.params.i2s_info.i2s_loopback_enable =
+		ucontrol->value.integer.value[0];
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+
 static const struct soc_enum tegra_virt_t210ref_source =
 	SOC_ENUM_SINGLE_EXT(NUM_MUX_INPUT, tegra_virt_t210ref_source_text);
 
@@ -2095,6 +2165,13 @@ static int32_t tegra210_adsp_hv_req_adsp_assignment(
 	0, 1, 0,	\
 	tegra_virt_t210_amx_get_input_stream_enable,	\
 	tegra_virt_t210_amx_set_input_stream_enable)
+
+
+#define I2S_LOOPBACK_ENABLE_CTRL_DECL(ename, reg) \
+	SOC_SINGLE_EXT(ename, reg,	\
+	0, 1, 0,	\
+	tegra_virt_i2s_get_loopback_enable,	\
+	tegra_virt_i2s_set_loopback_enable)
 
 static const struct snd_kcontrol_new tegra_virt_t210ref_controls[] = {
 MUX_ENUM_CTRL_DECL("ADMAIF1 Mux", 0x00),
@@ -2368,6 +2445,15 @@ AMX_ENABLE_CTRL_DECL("AMX4-1 Enable", 0x04, 0x01),
 AMX_ENABLE_CTRL_DECL("AMX4-2 Enable", 0x04, 0x02),
 AMX_ENABLE_CTRL_DECL("AMX4-3 Enable", 0x04, 0x03),
 AMX_ENABLE_CTRL_DECL("AMX4-4 Enable", 0x04, 0x04),
+#endif
+
+I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S1 Loopback", 0x01),
+I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S2 Loopback", 0x02),
+I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S3 Loopback", 0x03),
+I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S4 Loopback", 0x04),
+I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S5 Loopback", 0x05),
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+I2S_LOOPBACK_ENABLE_CTRL_DECL("I2S6 Loopback", 0x06),
 #endif
 };
 

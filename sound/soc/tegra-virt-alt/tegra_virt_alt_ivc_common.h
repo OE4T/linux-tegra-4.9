@@ -83,6 +83,8 @@ enum nvaudio_ivc_cmd_t {
 #endif
 	NVAUDIO_ADSP_REQUEST_ASSIGNMENT,
 	NVAUDIO_AMX_SET_INPUT_STREAM_ENABLE,
+	NVAUDIO_I2S_SET_LOOPBACK_ENABLE,
+	NVAUDIO_I2S_GET_LOOPBACK_ENABLE,
 	NVAUDIO_CMD_MAX,
 };
 
@@ -98,6 +100,11 @@ struct nvaudio_ivc_t210_amx_info {
 	int32_t		amx_id;
 	uint32_t	amx_stream_id;
 	uint32_t	amx_stream_enable;
+};
+
+struct nvaudio_ivc_t210_i2s_info {
+	int32_t		i2s_id;
+	uint32_t	i2s_loopback_enable;
 };
 
 struct nvaudio_ivc_t210_amixer_info {
@@ -167,6 +174,7 @@ struct nvaudio_ivc_msg {
 		struct nvaudio_ivc_t186_arad_info	arad_info;
 #endif
 		struct nvaudio_ivc_t210_amx_info	amx_info;
+		struct nvaudio_ivc_t210_i2s_info	i2s_info;
 		struct nvaudio_ivc_xbar_link		xbar_info;
 	} params;
 	bool			ack_required;

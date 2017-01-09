@@ -1120,7 +1120,8 @@ static int tegra_dvfs_suspend_one(void)
 	int ret = 0;
 
 	list_for_each_entry(rail, &dvfs_rail_list, node) {
-		if ((rail->suspended) ||
+		if ((rail == tegra_gpu_rail) || /* don't suspend vdd-gpu */
+		    (rail->suspended) ||
 		    (rail->disabled) ||
 		    (!tegra_dvfs_from_rails_suspended_or_solved(rail)))
 			continue;

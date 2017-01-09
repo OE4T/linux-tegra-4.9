@@ -47,7 +47,7 @@
 	};
 
 	ahub {
-		status = "disabled";
+		status = "okay";
 	};
 
 	spdif_dit {
@@ -55,7 +55,7 @@
 	};
 
 	adma@2930000 {
-		status = "disabled";
+		status = "okay";
 	};
 
         adsp_audio {
@@ -66,7 +66,15 @@
 	};
 #endif
 
-    i2c@3180000 {
-        compatible = "nvidia,tegra186-i2c";
-    };
+	sound {
+		adsp_disabled;
+	};
+
+	sound_ref {
+		adsp_disabled;
+	};
+
+	i2c@3180000 {
+ 		compatible = "nvidia,tegra186-i2c";
+        };
 };

@@ -1275,8 +1275,13 @@ int extcon_dev_register(struct extcon_dev *edev)
 		goto err_dev;
 	}
 #if defined(CONFIG_ANDROID)
-	if (switch_class)
+	if (switch_class) {
 		ret = class_compat_create_link(switch_class, &edev->dev, NULL);
+		if (ret) {
+			dev_warn(&edev->dev, "Create compatibility class link failed\n");
+			goto err_dev;
+		}
+	}
 #endif /* CONFIG_ANDROID */
 
 	spin_lock_init(&edev->lock);
@@ -1450,12 +1455,11 @@ out:
 
 	of_node_put(npspec.np);
 	if (!edev) {
-		if (cable_name && index >= 0) {
+		if (cable_name && index >= 0)
 			pr_err("ERROR: could not get extcon-dev %s:%s(%i)\n",
 					np->full_name,
 					cable_name ? cable_name : "", index);
-			return ERR_PTR(-EPROBE_DEFER);
-		}
+		return ERR_PTR(-EPROBE_DEFER);
 	}
 
 	if (cindex >= edev->max_supported) {

@@ -1,7 +1,7 @@
 /*
  * tegra210_admaif_alt.c - Tegra ADMAIF component driver
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -48,21 +48,24 @@ static int tegra210_admaif_hw_params(struct snd_pcm_substream *substream,
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S8:
 		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_8;
+		cif_conf->audio_bits = TEGRA210_AUDIOCIF_BITS_8;
 		break;
 	case SNDRV_PCM_FORMAT_S16_LE:
 		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_16;
+		cif_conf->audio_bits = TEGRA210_AUDIOCIF_BITS_16;
 		break;
 	case SNDRV_PCM_FORMAT_S24_LE:
 		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_24;
+		cif_conf->audio_bits = TEGRA210_AUDIOCIF_BITS_24;
 		break;
 	case SNDRV_PCM_FORMAT_S32_LE:
 		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_32;
+		cif_conf->audio_bits = TEGRA210_AUDIOCIF_BITS_32;
 		break;
 	default:
 		dev_err(dev, "Wrong format!\n");
 		return -EINVAL;
 	}
-	cif_conf->audio_bits = TEGRA210_AUDIOCIF_BITS_32;
 	cif_conf->direction = substream->stream;
 
 	value = (cif_conf->threshold <<

@@ -732,12 +732,24 @@ static int bpmp_trace_enable_show(void *data, u64 *val)
 
 static int bpmp_trace_enable_store(void *data, u64 val)
 {
-	return bpmp_modify_trace_mask(0, val);
+	int r;
+
+	r = bpmp_modify_trace_mask(0, val);
+	if (r < 0)
+		return r;
+
+	return 0;
 }
 
 static int bpmp_trace_disable_store(void *data, u64 val)
 {
-	return bpmp_modify_trace_mask(val, 0);
+	int r;
+
+	r = bpmp_modify_trace_mask(val, 0);
+	if (r < 0)
+		return r;
+
+	return 0;
 }
 
 static int bpmp_mount_show(void *data, u64 *val)

@@ -105,6 +105,10 @@
 		status = "okay";
 	};
 
+	ahb@6000c000 {
+		status = "okay";
+	};
+
 	rtc {
 		status = "okay";
 	};

@@ -400,6 +400,12 @@
 		reg = <0x0 0x60007000 0x0 0x1000>;
 	};
 
+	ahb: ahb@6000c000 {
+		compatible = "nvidia,tegra210-ahb", "nvidia,tegra30-ahb";
+		reg = <0x0 0x6000c000 0x0 0x14f>;
+		status = "disabled";
+	};
+
 	tegra_agic: agic-controller {
 		compatible = "nvidia,tegra210-agic";
 		interrupt-controller;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -130,6 +130,8 @@ extern void tegra210_sata_pll_hw_sequence_start(void);
 extern void tegra210_set_sata_pll_seq_sw(bool state);
 extern void tegra210_put_utmipll_in_iddq(void);
 extern void tegra210_put_utmipll_out_iddq(void);
+extern bool tegra210_plle_hw_sequence_is_enabled(void);
+extern void tegra210_plle_hw_sequence_start(void);
 
 #ifdef CONFIG_COMMON_CLK
 /* To be implemented for COMMON CLK framework */

@@ -127,7 +127,14 @@
 #define PLL_BASE_LOCK BIT(27)
 #define PLLCX_BASE_LOCK BIT(26)
 #define PLLE_MISC_LOCK BIT(11)
+#define PLLE_MISC_IDDQ_SW_CTRL BIT(14)
 #define PLLRE_MISC_LOCK BIT(27)
+
+#define PLLE_AUX_USE_LOCKDET BIT(3)
+#define PLLE_AUX_SS_SEQ_INCLUDE BIT(31)
+#define PLLE_AUX_ENABLE_SWCTL BIT(4)
+#define PLLE_AUX_SS_SWCTL BIT(6)
+#define PLLE_AUX_SEQ_ENABLE BIT(24)
 
 #define PLL_MISC_LOCK_ENABLE 18
 #define PLLC_MISC_LOCK_ENABLE 24
@@ -460,6 +467,41 @@ bool tegra210_xusb_pll_hw_sequence_is_enabled(void)
 	return false;
 }
 EXPORT_SYMBOL_GPL(tegra210_xusb_pll_hw_sequence_is_enabled);
+
+bool tegra210_plle_hw_sequence_is_enabled(void)
+{
+	u32 val;
+
+	val = readl_relaxed(clk_base + PLLE_AUX);
+	if (val & PLLE_AUX_SEQ_ENABLE)
+		return true;
+
+	return false;
+}
+EXPORT_SYMBOL_GPL(tegra210_plle_hw_sequence_is_enabled);
+
+void tegra210_plle_hw_sequence_start(void)
+{
+	u32 val;
+
+	if (tegra210_plle_hw_sequence_is_enabled())
+		return;
+
+	val = readl_relaxed(clk_base + PLLE_MISC0);
+	val &= ~PLLE_MISC_IDDQ_SW_CTRL;
+	writel_relaxed(val, clk_base + PLLE_MISC0);
+
+	val = readl_relaxed(clk_base + PLLE_AUX);
+	val |= (PLLE_AUX_USE_LOCKDET | PLLE_AUX_SS_SEQ_INCLUDE);
+	val &= ~(PLLE_AUX_ENABLE_SWCTL | PLLE_AUX_SS_SWCTL);
+	writel_relaxed(val, clk_base + PLLE_AUX);
+
+	udelay(1);
+
+	val |= PLLE_AUX_SEQ_ENABLE;
+	writel_relaxed(val, clk_base + PLLE_AUX);
+}
+EXPORT_SYMBOL_GPL(tegra210_plle_hw_sequence_start);
 
 void tegra210_xusb_pll_hw_control_enable(void)
 {

@@ -576,10 +576,9 @@
 				<&tegra_car TEGRA210_CLK_XUSB_HS_SRC>,
 				<&tegra_car TEGRA210_CLK_XUSB_FS_SRC>,
 				<&tegra_car TEGRA210_CLK_PLL_U_480M>,
-				<&tegra_car TEGRA210_CLK_CLK_M>,
-				<&tegra_car TEGRA210_CLK_PLL_E>;
+				<&tegra_car TEGRA210_CLK_CLK_M>;
 		clock-names = "host", "falcon_src", "ss", "ss_src", "hs_src",
-			"fs_src", "pll_u_480M", "clk_m", "pll_e";
+			"fs_src", "pll_u_480M", "clk_m";
 	};
 
 	uarta: serial@70006000 {

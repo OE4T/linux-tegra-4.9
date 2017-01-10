@@ -203,8 +203,12 @@ static int bpmp_write_threaded_ch(int *ch, int mrq, void *data, int sz)
 	int i;
 
 	ret = down_timeout(&tch_sem, usecs_to_jiffies(THREAD_CH_TIMEOUT));
-	if (ret)
+	if (ret) {
+		pr_err("%s() down_timeout return %d\n", __func__, ret);
+		pr_err("tch_free 0x%x to_complete 0x%x\n",
+				tch_free, to_complete);
 		return ret;
+	}
 
 	spin_lock_irqsave(&lock, flags);
 
@@ -307,6 +311,18 @@ int tegra_bpmp_send(int mrq, void *data, int sz)
 }
 EXPORT_SYMBOL(tegra_bpmp_send);
 
+static void bpmp_show_req(int mrq, uint8_t *ob_data, size_t ob_sz)
+{
+	int i;
+
+	printk(KERN_INFO "mrq %u data [", mrq);
+
+	for (i = 0; i < ob_sz; i++)
+		printk("0x%x ", ob_data[i]);
+
+	printk("]\n");
+}
+
 /* should be called with local irqs disabled */
 int tegra_bpmp_send_receive_atomic(int mrq, void *ob_data, int ob_sz,
 		void *ib_data, int ib_sz)
@@ -335,8 +351,12 @@ int tegra_bpmp_send_receive_atomic(int mrq, void *ob_data, int ob_sz,
 		mail_ops->ring_doorbell(ch);
 
 	r = bpmp_wait_ack(ch);
-	if (r)
+	if (r) {
+		pr_err("bpmp_wait_ack() returned %d on ch %d\n", r, ch);
+		bpmp_show_req(mrq, ob_data, ob_sz);
+		WARN_ON(1);
 		return r;
+	}
 
 	return __bpmp_read_ch(ch, ib_data, ib_sz);
 }
@@ -368,8 +388,12 @@ int tegra_bpmp_send_receive(int mrq, void *ob_data, int ob_sz,
 
 	w = bpmp_completion_obj(ch);
 	timeout = usecs_to_jiffies(THREAD_CH_TIMEOUT);
-	if (!wait_for_completion_timeout(w, timeout))
+	if (!wait_for_completion_timeout(w, timeout)) {
+		pr_err("%s() timedout on ch %d\n", __func__, ch);
+		bpmp_show_req(mrq, ob_data, ob_sz);
+		WARN_ON(1);
 		return -ETIMEDOUT;
+	}
 
 	return bpmp_read_ch(ch, ib_data, ib_sz);
 }

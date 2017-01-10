@@ -393,6 +393,8 @@ struct tegra_dc_ext_imp_head_results {
 	__u32	thresh_lwm_dvfs_cursor;
 	__u32	pipe_meter_value_cursor;
 	__u32	pool_config_entries_cursor;
+	__u8	head_active;
+	__u64	reserved[4]; /* reserved - must be 0 */
 };
 
 struct tegra_dc_ext_imp_settings {
@@ -404,6 +406,7 @@ struct tegra_dc_ext_imp_settings {
 	__u64 total_display_iso_bw_kbps;
 	__u64 proposed_emc_hz;
 	__u64 __user session_id_ptr; /* out - ptr to unsigned 64-bit val */
+	__u64 reserved[4]; /* reserved - must be 0 */
 };
 #undef TEGRA_DC_EXT_N_WINDOWS
 #undef TEGRA_DC_EXT_N_HEADS

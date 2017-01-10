@@ -40,6 +40,10 @@
 		status = "disabled";
 	};
 
+	sdhci@3460000 {
+		/delete-property/ nvidia,enable-hwcq;
+	};
+
 	pinctrl@3520000 {
 		status = "disabled";
 	};

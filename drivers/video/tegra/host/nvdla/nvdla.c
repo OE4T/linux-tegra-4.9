@@ -1,7 +1,7 @@
 /*
  * NVDLA driver for T194
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -52,8 +52,6 @@
  * default falcon idle timeout
  */
 #define FLCN_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
-
-#define ALIGNED_DMA(x) ((x >> 8) & 0xffffffff)
 
 #define CMD_TIMEOUT	500 * USEC_PER_SEC
 
@@ -153,6 +151,14 @@ int nvdla_get_cmd_memory(struct platform_device *pdev,
 	cmd_mem_info->pa = nvdla_dev->cmd_mem.pa + offset;
 	cmd_mem_info->index = index;
 
+	/* check if IOVA is correctly aligned */
+	if (cmd_mem_info->pa & 0xff) {
+		err = -EFAULT;
+		goto fail_to_aligned_dma;
+	}
+	memset(cmd_mem_info->va, 0, MAX_CMD_SIZE);
+
+fail_to_aligned_dma:
 err_get_mem:
 	mutex_unlock(&nvdla_dev->cmd_mem.lock);
 	return err;

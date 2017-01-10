@@ -28,6 +28,8 @@
 
 #include "dla_os_interface.h"
 
+#define ALIGNED_DMA(x) ((x >> 8) & 0xffffffff)
+
 /**
  * Method ID and Method data THI registers
  */
@@ -66,18 +68,12 @@
 #define MAX_NUM_NVDLA_IN_TASK_STATUS	4
 #define MAX_NUM_NVDLA_OUT_TASK_STATUS	4
 
-/**
- * keep list of DLA command size here.
- * max among them will be used to allocate memory
- *
- */
-union nvdla_cmd_mem_list {
-	struct dla_region_printf dont_use_me;
-	u32 ping_dont_use_me;
-};
-
 #define MAX_COMMANDS_PER_DEVICE		1
-#define MAX_CMD_SIZE			sizeof(union nvdla_cmd_mem_list)
+
+/*
+ * keep max cmd size multiple of 256 bytes.
+ */
+#define MAX_CMD_SIZE			256
 #define NVDLA_CMD_OFFSET(index)		(MAX_CMD_SIZE * index)
 
 /**

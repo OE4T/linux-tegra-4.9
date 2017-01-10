@@ -55,10 +55,17 @@ static int nvdla_assign_task_desc_mem(struct nvdla_task *task)
 	if (err)
 		goto fail_to_assign_pool;
 
+	/* check if IOVA is correctly aligned */
+	if (task_desc_mem.dma_addr & 0xff) {
+		err = -EFAULT;
+		goto fail_to_aligned_dma;
+	}
+
 	task->task_desc = task_desc_mem.va;
 	task->task_desc_pa = task_desc_mem.dma_addr;
 	task->pool_index = task_desc_mem.pool_index;
 
+fail_to_aligned_dma:
 fail_to_assign_pool:
 	return err;
 }
@@ -379,6 +386,9 @@ static size_t nvdla_get_task_desc_size(void)
 	size += nvdla_get_max_preaction_size();
 	size += nvdla_get_max_preaction_size();
 
+	/* falcon requires IOVA addr to be 256 aligned */
+	size = roundup(size, 256);
+
 	return size;
 }
 
@@ -666,6 +676,7 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 int nvdla_fill_task_desc(struct nvdla_task *task)
 {
 	int err;
+	size_t task_desc_size;
 	struct dla_task_descriptor *task_desc;
 	struct nvhost_queue *queue = task->queue;
 	struct platform_device *pdev = queue->pool->pdev;
@@ -679,11 +690,14 @@ int nvdla_fill_task_desc(struct nvdla_task *task)
 		goto fail_assign_task_desc;
 	}
 
+	task_desc_size = nvdla_get_task_desc_size();
+	memset(task->task_desc, 0, task_desc_size);
+
 	/* update task desc fields */
 	task_desc = task->task_desc;
 	task_desc->version = DLA_DESCRIPTOR_VERSION;
 	task_desc->engine_id = DLA_ENGINE_ID;
-	task_desc->size = nvdla_get_task_desc_size();
+	task_desc->size = task_desc_size;
 
 	/* update current task sequeue, make sure wrap around condition */
 	queue->sequence = queue->sequence + 1;
@@ -777,7 +791,7 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 	method_id = (DLA_CMD_SUBMIT_TASK & DLA_METHOD_ID_CMD_MASK) |
 			(1 << DLA_INT_ON_COMPLETE_SHIFT) |
 			(1 << DLA_INT_ON_ERROR_SHIFT);
-	method_data = ((task->task_desc_pa >> 8) & 0xffffffff);
+	method_data = ALIGNED_DMA(task->task_desc_pa);
 
 	/* register notifier with fence */
 	err = nvhost_intr_register_notifier(pdev, queue->syncpt_id,

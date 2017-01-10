@@ -2527,6 +2527,8 @@ static void tegra_nvdisp_generate_mempool_ordering(struct tegra_dc *dc,
 
 		ctrl_num = other_dc->ctrl_num;
 		head_result = &imp_settings->ext_settings.imp_results[ctrl_num];
+		if (!head_result->head_active)
+			continue;
 
 		/*
 		 * If either the cursor surface or output LUT are currently
@@ -2952,6 +2954,7 @@ static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
 void tegra_nvdisp_program_imp_results(struct tegra_dc *dc)
 {
 	struct tegra_dc_imp_settings *imp_settings = NULL;
+	struct tegra_dc_ext_imp_head_results *head_arr = NULL;
 	u32 val = 0;
 	int i;
 
@@ -2959,14 +2962,18 @@ void tegra_nvdisp_program_imp_results(struct tegra_dc *dc)
 	if (!imp_settings)
 		return;
 
+	head_arr = imp_settings->ext_settings.imp_results;
 	for (i = 0; i < TEGRA_MAX_DC; i++) {
+		struct tegra_dc_ext_imp_head_results *head_results = NULL;
 		struct tegra_dc *other_dc = tegra_dc_get_dc(i);
-		struct tegra_dc_ext_imp_head_results *head_results =
-					imp_settings->ext_settings.imp_results;
 
-		if (other_dc && other_dc->enabled)
+		if (!other_dc || !other_dc->enabled)
+			continue;
+
+		head_results = &head_arr[other_dc->ctrl_num];
+		if (head_results->head_active)
 			tegra_nvdisp_program_imp_head_results(other_dc,
-				&head_results[other_dc->ctrl_num],
+				head_results,
 				dc->ctrl_num);
 	}
 

@@ -121,8 +121,10 @@ static inline void tegra_cpu_clock_resume(void)
 }
 #endif
 
+extern bool tegra210_xusb_pll_hw_sequence_is_enabled(void);
 extern void tegra210_xusb_pll_hw_control_enable(void);
 extern void tegra210_xusb_pll_hw_sequence_start(void);
+extern bool tegra210_sata_pll_hw_sequence_is_enabled(void);
 extern void tegra210_sata_pll_hw_control_enable(void);
 extern void tegra210_sata_pll_hw_sequence_start(void);
 extern void tegra210_set_sata_pll_seq_sw(bool state);

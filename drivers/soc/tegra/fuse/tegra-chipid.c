@@ -86,11 +86,17 @@ module_param_cb(tegra_cpu, &tegra_cpu_ops, &tegra_cpu_ptr, 0444);
 
 static int get_chip_id(char *val, const struct kernel_param *kp)
 {
+	if (tegra_id.chipid == TEGRA_CHIPID_UNKNOWN)
+		tegra_set_tegraid_from_hw();
+
 	return param_get_uint(val, kp);
 }
 
 static int get_revision(char *val, const struct kernel_param *kp)
 {
+	if (tegra_id.revision == TEGRA_REVISION_UNKNOWN)
+		tegra_set_tegraid_from_hw();
+
 	return param_get_uint(val, kp);
 }
 

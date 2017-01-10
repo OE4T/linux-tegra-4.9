@@ -1365,11 +1365,15 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 		tegra_host->prods = NULL;
 	}
 
-	tegra_host->sdmmc_padctrl = devm_padctrl_get(&pdev->dev, "sdmmc");
-	if (IS_ERR(tegra_host->sdmmc_padctrl)) {
-		dev_err(mmc_dev(host->mmc), "Pad control not found %ld\n",
-			PTR_ERR(tegra_host->sdmmc_padctrl));
-		tegra_host->sdmmc_padctrl = NULL;
+	if (tegra_host->pwrdet_support) {
+		tegra_host->sdmmc_padctrl =
+			devm_padctrl_get(&pdev->dev, "sdmmc");
+		if (IS_ERR(tegra_host->sdmmc_padctrl)) {
+			dev_err(mmc_dev(host->mmc),
+				"Pad control not found %ld\n",
+				PTR_ERR(tegra_host->sdmmc_padctrl));
+			tegra_host->sdmmc_padctrl = NULL;
+		}
 	}
 
 	if (tegra_host->soc_data->nvquirks & NVQUIRK_ENABLE_DDR50)

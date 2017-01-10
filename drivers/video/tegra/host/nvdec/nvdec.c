@@ -1,7 +1,7 @@
 /*
  * Tegra NVDEC Module Support
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -67,6 +67,7 @@
 #define set_nvdec(ndev, f) ((ndev)->dev.platform_data = f)
 
 static int nvhost_nvdec_init_sw(struct platform_device *dev);
+static unsigned int tegra_nvdec_enabled_in_bootcmd = -1;
 static unsigned int tegra_nvdec_bootloader_enabled;
 
 /* caller is responsible for freeing */
@@ -738,7 +739,7 @@ static int __init tegra_nvdec_bootloader_enabled_arg(char *options)
 {
 	char *p = options;
 
-	tegra_nvdec_bootloader_enabled = memparse(p, &p);
+	tegra_nvdec_enabled_in_bootcmd = memparse(p, &p);
 
 	return 0;
 }
@@ -748,9 +749,15 @@ static int __init nvdec_init(void)
 {
 	int ret;
 
-	/* Below kernel config check is for T210 */
-	if (IS_ENABLED(CONFIG_NVDEC_BOOTLOADER))
-		tegra_nvdec_bootloader_enabled = 1;
+	if (tegra_nvdec_enabled_in_bootcmd != -1) {
+		/* If "nvdec_enabled" exists in kernel boot command,
+		tegra_nvdec_bootloader_enabled is updated with that value */
+		tegra_nvdec_bootloader_enabled = tegra_nvdec_enabled_in_bootcmd;
+	} else {
+		/* Below kernel config check is for T210 */
+		if (IS_ENABLED(CONFIG_NVDEC_BOOTLOADER))
+			tegra_nvdec_bootloader_enabled = 1;
+	}
 
 	ret = nvhost_domain_init(tegra_nvdec_domain_match);
 	if (ret)

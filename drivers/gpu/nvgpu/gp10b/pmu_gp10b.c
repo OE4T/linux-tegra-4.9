@@ -328,7 +328,7 @@ static int gp10b_init_pmu_setup_hw1(struct gk20a *g)
 		pwr_fbif_transcfg_mem_type_physical_f() |
 		pwr_fbif_transcfg_target_noncoherent_sysmem_f());
 
-	err = pmu_bootstrap(pmu);
+	err = g->ops.pmu.pmu_nsbootstrap(pmu);
 	if (err)
 		return err;
 

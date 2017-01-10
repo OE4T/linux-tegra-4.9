@@ -371,6 +371,8 @@ enum pmc_regs {
 	TEGRA_PMC_IMPL_RAMDUMP_CTL_STATUS,
 	TEGRA_PMC_SATA_PWRGT_0,
 	TEGRA_PMC_UFSHC_PWR_CNTRL_0,
+	TEGRA_PMC_E_33V_PWR,
+	TEGRA_PMC_E_18V_PWR,
 
 	/* Last entry */
 	TEGRA_PMC_MAX_REG,
@@ -398,8 +400,8 @@ struct tegra_pmc_io_pad_soc {
 	int dpd_timer_reg;
 	int dpd_sample_reg;
 	bool bdsdmem_cfc;
-	int io_pad_pwr_det_enable_reg;
-	int io_pad_pwr_det_val_reg;
+	unsigned int io_pad_pwr_det_enable_reg;
+	unsigned int io_pad_pwr_det_val_reg;
 	int pad_uv_0;
 	int pad_uv_1;
 };
@@ -1941,6 +1943,9 @@ static int tegra_pmc_io_pad_poll(const struct tegra_pmc_io_pad_soc *pad,
 
 static void tegra_pmc_io_pad_unprepare(const struct tegra_pmc_io_pad_soc *pad)
 {
+	if (!pmc->clk)
+		return;
+
 	tegra_pmc_writel(DPD_SAMPLE_DISABLE, pad->dpd_sample_reg);
 }
 
@@ -2030,9 +2035,11 @@ static int _tegra_pmc_io_pad_set_voltage(const struct tegra_pmc_io_pad_soc *pad,
 	mutex_lock(&pmc->powergates_lock);
 
 	/* write-enable PMC_PWR_DET_VALUE[pad->voltage] */
-	value = tegra_pmc_readl(pad->io_pad_pwr_det_enable_reg);
-	value |= BIT(pad->voltage);
-	tegra_pmc_writel(value, pad->io_pad_pwr_det_enable_reg);
+	if (pad->io_pad_pwr_det_enable_reg != UINT_MAX) {
+		value = tegra_pmc_readl(pad->io_pad_pwr_det_enable_reg);
+		value |= BIT(pad->voltage);
+		tegra_pmc_writel(value, pad->io_pad_pwr_det_enable_reg);
+	}
 
 	/* update I/O voltage */
 	value = tegra_pmc_readl(pad->io_pad_pwr_det_val_reg);
@@ -3390,6 +3397,9 @@ static const struct tegra_pmc_soc tegra210_pmc_soc = {
 static const unsigned long tegra186_register_map[TEGRA_PMC_MAX_REG] = {
 	[TEGRA_PMC_FUSE_CTRL]			= 0x100,
 	[TEGRA_PMC_IMPL_RAMDUMP_CTL_STATUS]	= 0x10C,
+	[TEGRA_PMC_E_18V_PWR]			= 0x3C,
+	[TEGRA_PMC_E_33V_PWR]			= 0x40,
+	[TEGRA_PMC_PWR_NO_IOPOWER]		= 0x44,
 	[TEGRA_PMC_RST_STATUS]			= 0x70,
 	[TEGRA_PMC_SATA_PWRGT_0]		= 0x68,
 	[TEGRA_PMC_UFSHC_PWR_CNTRL_0]		= 0xF4,
@@ -3398,6 +3408,109 @@ static const unsigned long tegra186_register_map[TEGRA_PMC_MAX_REG] = {
 	[TEGRA_PMC_IO_DPD2_REQ]			= 0x7C,
 	[TEGRA_PMC_IO_DPD2_STATUS]		= 0x80,
 	[TEGRA_PMC_SCRATCH0]			= 0x2000,
+};
+
+#define TEGRA186_IO_PAD_CONFIG(_pin, _npins, _name, _dpd_reg, _dpd_bit,     \
+			       _padv_reg, _padv_bit, _v0, _v1, _iopwr_bit,  \
+			       _bds)  \
+	{							\
+		.name =  #_name,				\
+		.pins = {(_pin)},				\
+		.npins = _npins,				\
+		.dpd_req_reg = TEGRA_PMC_IO_##_dpd_reg##_REQ,	\
+		.dpd_status_reg = TEGRA_PMC_IO_##_dpd_reg##_STATUS,	\
+		.dpd_timer_reg = TEGRA_PMC_SEL_DPD_TIM,		\
+		.dpd_sample_reg = TEGRA_PMC_IO_DPD_SAMPLE,	\
+		.dpd = _dpd_bit,				\
+		.io_pad_pwr_det_val_reg = TEGRA_PMC_##_padv_reg##_PWR, \
+		.io_pad_pwr_det_enable_reg = UINT_MAX,		\
+		.pad_uv_0 = TEGRA_IO_PAD_VOLTAGE_##_v0##000UV,	\
+		.pad_uv_1 = TEGRA_IO_PAD_VOLTAGE_##_v1##000UV,	\
+		.voltage = _padv_bit,				\
+		.io_power = _iopwr_bit,				\
+		.bdsdmem_cfc = _bds,				\
+	},
+
+#define TEGRA186_IO_PAD_LPONLY(_pin, _name, _dpd_reg, _dpd_bit, _iopwr_bit, \
+			       _bds)					    \
+	TEGRA186_IO_PAD_CONFIG(_pin, 1, _name, _dpd_reg, _dpd_bit,	    \
+			       E_33V, UINT_MAX, 1200, 1200, _iopwr_bit, _bds)
+
+#define TEGRA186_IO_PAD_LP_N_PV(_pin, _name, _dpd_reg, _dpd_bit, _padv_reg, \
+				_padv_bit, _v0, _v1, _iopwr_bit, _bds)	    \
+	TEGRA186_IO_PAD_CONFIG(_pin, 1, _name, _dpd_reg, _dpd_bit,	    \
+			       _padv_reg, _padv_bit, _v0, _v1, _iopwr_bit,  \
+			       _bds)
+
+#define TEGRA186_IO_PAD_PVONLY(_pin, _name, _padv_reg, _padv_bit, _v0, _v1, \
+			       _iopwr_bit, _bds)			    \
+	TEGRA186_IO_PAD_CONFIG(_pin, 1, _name, DPD, UINT_MAX, _padv_reg,    \
+			       _padv_bit, _v0, _v1, _iopwr_bit, _bds)
+
+#define TEGRA186_IO_PAD_DESC_LP(_pin, _name, _dpd_reg, _dpd_bit, _iopwr_bit, \
+				_bds)					     \
+	{								\
+		.number = _pin,						\
+		.name = #_name,						\
+	},
+
+#define TEGRA186_IO_PAD_DESC_LP_N_PV(_pin, _name, _dpd_reg, _dpd_bit,	\
+				     _padv_reg, _padv_bit, _v0, _v1,	\
+				     _iopwr_bit, _bds)			\
+	TEGRA186_IO_PAD_DESC_LP(_pin, _name, _dpd_reg, _dpd_bit, _iopwr_bit, _bds)
+
+#define TEGRA186_IO_PAD_DESC_PV(_pin, _name, _padv_reg, _padv_bit, _v0, _v1, \
+			       _iopwr_bit, _bds)			    \
+	TEGRA186_IO_PAD_DESC_LP(_pin, _name, UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX)
+
+#define TEGRA186_IO_PAD_TABLE(_lponly_, _pvonly_, _lp_n_pv_)		\
+        _lponly_(0, csia, DPD, 0, UINT_MAX, false)			\
+        _lponly_(1, csib, DPD, 1, UINT_MAX, false)			\
+        _lponly_(2, dsi, DPD, 2, UINT_MAX, false)			\
+        _lponly_(3, mipi-bias, DPD, 3, 9, false)			\
+        _lponly_(4, pex-clk-bias, DPD, 4, UINT_MAX, false)		\
+        _lponly_(5, pex-clk3, DPD, 5, UINT_MAX, false)			\
+        _lponly_(6, pex-clk2, DPD, 6, UINT_MAX, false)			\
+        _lponly_(7, pex-clk1, DPD, 7, UINT_MAX, false)			\
+        _lponly_(8, usb0, DPD, 9, UINT_MAX, false)			\
+        _lponly_(9, usb1, DPD, 10, UINT_MAX, false)			\
+        _lponly_(10, usb2, DPD, 11, UINT_MAX, false)			\
+        _lponly_(11, usb-bias, DPD, 12, UINT_MAX, false)		\
+        _lponly_(12, uart, DPD, 14, 2, false)				\
+        _lponly_(13, audio, DPD, 17, 5, false)				\
+        _lponly_(14, hsic, DPD, 19, UINT_MAX, false)			\
+        _lp_n_pv_(15, dbg, DPD, 25, E_18V, 4, 1200, 1800, 19, false)	\
+        _lponly_(16, hdmi-dp0, DPD, 28, UINT_MAX, false)		\
+        _lponly_(17, hdmi-dp1, DPD, 29, UINT_MAX, false)		\
+        _lponly_(18, pex-ctrl, DPD2, 0, 11, false)			\
+        _lp_n_pv_(19, sdmmc2-hv, DPD2, 2, E_33V, 5, 1800, 3300, 30, true) \
+        _lponly_(20, sdmmc4, DPD2, 4, 14, false)			\
+        _lponly_(21, cam, DPD2, 6, 10, false)				\
+        _lponly_(22, dsib, DPD2, 8, UINT_MAX, false)			\
+        _lponly_(23, dsic, DPD2, 9, UINT_MAX, false)			\
+        _lponly_(24, dsid, DPD2, 10, UINT_MAX, false)			\
+        _lponly_(25, csic, DPD2, 11, UINT_MAX, false)			\
+        _lponly_(26, csid, DPD2, 12, UINT_MAX, false)			\
+        _lponly_(27, csie, DPD2, 13, UINT_MAX, false)			\
+        _lponly_(28, csif, DPD2, 14, UINT_MAX, false)			\
+        _lp_n_pv_(29, spi, DPD2, 15, E_18V, 5, 1200, 1800, 22, false)	\
+        _lp_n_pv_(30, ufs, DPD2, 17, E_18V, 0, 1200, 1800, 6, false)	\
+        _lp_n_pv_(31, dmic-hv, DPD2, 20, E_33V, 2, 1800, 3300, 28, true)   \
+        _lponly_(32, edp, DPD2, 21, 4, false)				\
+        _lp_n_pv_(33, sdmmc1-hv, DPD2, 23, E_33V, 4, 1800, 3300, 15, true) \
+        _lp_n_pv_(34, sdmmc3-hv, DPD2, 24, E_33V, 6, 1800, 3300, 31, true) \
+        _lponly_(35, conn, DPD2, 28, 3, false)				\
+        _lp_n_pv_(36, audio-hv, DPD2, 29, E_33V, 1, 1800, 3300, 18, true) \
+	_pvonly_(37, ao-hv, E_33V, 0, 1800, 3300, 27, true)
+
+static const struct tegra_pmc_io_pad_soc tegra186_io_pads[] = {
+	TEGRA186_IO_PAD_TABLE(TEGRA186_IO_PAD_LPONLY, TEGRA186_IO_PAD_PVONLY,
+			      TEGRA186_IO_PAD_LP_N_PV)
+};
+
+static const struct pinctrl_pin_desc tegra186_io_pads_pinctrl_desc[] = {
+	TEGRA186_IO_PAD_TABLE(TEGRA186_IO_PAD_DESC_LP, TEGRA186_IO_PAD_DESC_PV,
+			      TEGRA186_IO_PAD_DESC_LP_N_PV)
 };
 
 static const struct tegra_pmc_soc tegra186_pmc_soc = {
@@ -3411,6 +3524,10 @@ static const struct tegra_pmc_soc tegra186_pmc_soc = {
 	.skip_power_gate_debug_fs_init = true,
 	.skip_restart_register = true,
 	.skip_arm_pm_restart = true,
+	.num_io_pads = ARRAY_SIZE(tegra186_io_pads),
+	.io_pads = tegra186_io_pads,
+	.num_descs = ARRAY_SIZE(tegra186_io_pads_pinctrl_desc),
+	.descs = tegra186_io_pads_pinctrl_desc,
 	.rmap = tegra186_register_map,
 };
 
@@ -3660,8 +3777,12 @@ static int tegra_pmc_io_power_init_one(struct device *dev,
 		return ret;
 	}
 
-	curr_io_uv = (ret == 1800000) ?  TEGRA_IO_PAD_VOLTAGE_1800000UV :
-				TEGRA_IO_PAD_VOLTAGE_3300000UV;
+	if (ret == 1200000)
+		curr_io_uv = TEGRA_IO_PAD_VOLTAGE_1200000UV;
+	else if (ret == 1800000)
+		curr_io_uv = TEGRA_IO_PAD_VOLTAGE_1800000UV;
+	else
+		curr_io_uv = TEGRA_IO_PAD_VOLTAGE_3300000UV;
 
 	ret = _tegra_pmc_io_pad_set_voltage(pad, curr_io_uv);
 	if (ret < 0) {
@@ -3723,6 +3844,7 @@ static int tegra_pmc_iopower_probe(struct platform_device *pdev)
 }
 
 static const struct of_device_id tegra_pmc_iopower_match[] = {
+	{ .compatible = "nvidia,tegra186-pmc-iopower", },
 	{ .compatible = "nvidia,tegra210-pmc-iopower", },
 	{ }
 };

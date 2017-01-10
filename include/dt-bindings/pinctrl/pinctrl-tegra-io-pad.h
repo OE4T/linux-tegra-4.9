@@ -17,6 +17,6 @@
 /* Power source voltage of IO pads. */
 #define TEGRA_IO_PAD_VOLTAGE_1800000UV		0
 #define TEGRA_IO_PAD_VOLTAGE_3300000UV		1
-
+#define TEGRA_IO_PAD_VOLTAGE_1200000UV		3
 #endif
 

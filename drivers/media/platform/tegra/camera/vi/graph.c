@@ -1,7 +1,7 @@
 /*
  * NVIDIA Media controller graph management
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -81,7 +81,6 @@ static int tegra_vi_graph_build_one(struct tegra_mc_vi *vi,
 		if (next == NULL)
 			break;
 
-		of_node_put(ep);
 		ep = next;
 
 		dev_dbg(vi->dev, "processing endpoint %s\n", ep->full_name);
@@ -162,7 +161,6 @@ static int tegra_vi_graph_build_one(struct tegra_mc_vi *vi,
 		}
 	} while (next);
 
-	of_node_put(ep);
 	return ret;
 }
 
@@ -190,7 +188,6 @@ static int tegra_vi_graph_build_links(struct tegra_mc_vi *vi)
 		if (next == NULL || !of_device_is_available(next))
 			break;
 
-		of_node_put(ep);
 		ep = next;
 
 		dev_dbg(vi->dev, "processing endpoint %s\n", ep->full_name);
@@ -256,7 +253,6 @@ static int tegra_vi_graph_build_links(struct tegra_mc_vi *vi)
 		chan = list_next_entry(chan, list);
 	} while (next != NULL);
 
-	of_node_put(ep);
 	return ret;
 }
 

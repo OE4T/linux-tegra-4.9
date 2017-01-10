@@ -774,6 +774,7 @@ struct gpu_ops {
 		u32 (*xve_readl)(struct gk20a *g, u32 reg);
 		void (*xve_writel)(struct gk20a *g, u32 reg, u32 val);
 		void (*disable_aspm)(struct gk20a *g);
+		void (*reset_gpu)(struct gk20a *g);
 	} xve;
 };
 

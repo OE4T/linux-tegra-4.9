@@ -1,7 +1,7 @@
  /*
  * eqos_ape_ioctl.h  --  EQOS and APE Clock synchronization driver IO control
  *
- * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,12 +36,20 @@ struct eqos_ape_sync_cmd {
 	u64 drift_den;
 };
 
+struct rate_to_time_period {
+	unsigned int rate;
+	unsigned int n_int;
+	unsigned int n_fract;
+	unsigned int n_modulo;
+};
+
 enum {
 	EQOS_APE_AMISC_INIT = _IO(0xF9, 0x01),
 	EQOS_APE_AMISC_DEINIT = _IO(0xF9, 0x02),
 	EQOS_APE_AMISC_FREQ_SYNC = _IO(0xF9, 0x03),
 	EQOS_APE_AMISC_PHASE_SYNC = _IO(0xF9, 0x04),
 	EQOS_APE_TEST_FREQ_ADJ = _IOW(0xF9, 0x05, struct eqos_ape_cmd),
+	EQOS_APE_AMISC_GET_RATE = _IO(0xF9, 0x06)
 };
 
 #endif

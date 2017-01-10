@@ -1,7 +1,7 @@
 /*
  * eqos_ape_ioctl.c -- EQOS APE Clock Synchronization driver IO control
  *
- * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -29,23 +29,9 @@
 
 #define ONE_MILLION		(1000000)
 #define ONE_BILLION		(1000000000)
-
-struct rate_to_time_period {
-	unsigned int rate;
-	unsigned int n_int;
-	unsigned int n_fract;
-	unsigned int n_modulo;
-};
-
-struct rate_to_time_period rate_table[] = {
-	{  24575996,   40, 23608, 34209 },
-	{  12288000,   81,    73,   192 },
-	{ 184319970,    5,  4185,  9839 },
-	{ 204000000,    4,    46,    51 },
-	{ 245759960,    4,   679,  9839 },
-	{ 245759985,    4,  2530, 36661 },
-	{ 368639941,    2,  9981, 14005 }
-};
+#define DEFAULT_N_INT		(0)
+#define DEFAULT_N_FRACT		(0)
+#define DEFAULT_N_MODULO	(0)
 
 static int eqos_ape_ioctl_major;
 static struct cdev eqos_ape_ioctl_cdev;
@@ -75,7 +61,9 @@ unsigned int cmd, unsigned long arg)
 	struct eqos_ape_sync_cmd __user *_eqos_ape_sync =
 					(struct eqos_ape_sync_cmd *)arg;
 	struct eqos_ape_sync_cmd eqos_ape_sync;
-	unsigned int n_modulo = 0, n_fract = 0, n_int = 0;
+	struct rate_to_time_period __user *_rate_info =
+					(struct rate_to_time_period *)arg;
+	struct rate_to_time_period rate_info = {0, 0, 0, 0};
 	u64 ape_sec_snap_prev = 0, ape_ns_snap_prev = 0;
 	u64 eavb_sec_snap_prev = 0, eavb_ns_snap_prev = 0;
 	struct eqos_drvdata *data = eqos_ape_drv_data;
@@ -85,8 +73,6 @@ unsigned int cmd, unsigned long arg)
 	int cur_rate;
 	int new_rate;
 	int set_rate;
-	int ape_rate;
-	int i;
 
 	switch (cmd) {
 	case EQOS_APE_AMISC_INIT:
@@ -94,36 +80,32 @@ unsigned int cmd, unsigned long arg)
 		amisc_writel(AMISC_APE_TSC_CTRL_3_0_ENABLE,
 					AMISC_APE_TSC_CTRL_3_0);
 
-		/* configuring n_fract/n_modulo based on the rate table*/
-		ape_rate = amisc_ape_get_rate();
-		for (i = 0; i < ARRAY_SIZE(rate_table) ; i++) {
-			if (ape_rate == rate_table[i].rate) {
-				n_int = rate_table[i].n_int;
-				n_fract = rate_table[i].n_fract;
-				n_modulo = rate_table[i].n_modulo;
-				break;
-			}
-		}
-		if (i == ARRAY_SIZE(rate_table)) {
-			dev_err(dev, "No Matching frequency\n");
-			return -EINVAL;
-		}
+		if (!(arg && copy_from_user(&rate_info,
+					_rate_info,
+					sizeof(rate_info)))) {
 
-		amisc_writel((AMISC_APE_TSC_CTRL_NMODULE_0_0_MASK(n_modulo) |
-			AMISC_APE_TSC_CTRL_NFRACT_0_0_MASK(n_fract)),
-			AMISC_APE_TSC_CTRL_0_0);
-		amisc_writel(AMISC_APE_TSC_CTRL_NINT_1_0_MASK(n_int),
-			AMISC_APE_TSC_CTRL_1_0);
-		amisc_writel((AMISC_APE_TSC_CTRL_3_0_ENABLE |
-			AMISC_APE_TSC_CTRL_3_0_COPY),
-			AMISC_APE_TSC_CTRL_3_0);
+			amisc_writel(
+				(AMISC_APE_TSC_CTRL_NMODULE_0_0_MASK
+							(rate_info.n_modulo) |
+				AMISC_APE_TSC_CTRL_NFRACT_0_0_MASK
+							(rate_info.n_fract)),
+				AMISC_APE_TSC_CTRL_0_0);
+			amisc_writel(AMISC_APE_TSC_CTRL_NINT_1_0_MASK
+							(rate_info.n_int),
+				AMISC_APE_TSC_CTRL_1_0);
+			amisc_writel((AMISC_APE_TSC_CTRL_3_0_ENABLE |
+				AMISC_APE_TSC_CTRL_3_0_COPY),
+				AMISC_APE_TSC_CTRL_3_0);
 
-		ape_sec_snap_prev = amisc_readl(AMISC_APE_RT_TSC_SEC_0);
-		ape_ns_snap_prev = amisc_readl(AMISC_APE_RT_TSC_NS_0);
-		dev_dbg(dev, "APE Time Sec %lld NSec %lld\n",
-			ape_sec_snap_prev, ape_ns_snap_prev);
-		dev_dbg(dev, "APE Time Sec %llx NSec %llx\n",
-			ape_sec_snap_prev, ape_ns_snap_prev);
+			ape_sec_snap_prev = amisc_readl(AMISC_APE_RT_TSC_SEC_0);
+			ape_ns_snap_prev = amisc_readl(AMISC_APE_RT_TSC_NS_0);
+			dev_dbg(dev, "APE Time Sec %lld NSec %lld\n",
+				ape_sec_snap_prev, ape_ns_snap_prev);
+			dev_dbg(dev, "APE Time Sec %llx NSec %llx\n",
+				ape_sec_snap_prev, ape_ns_snap_prev);
+		} else {
+			return -EFAULT;
+		}
 		break;
 
 	case EQOS_APE_AMISC_FREQ_SYNC:
@@ -201,13 +183,22 @@ unsigned int cmd, unsigned long arg)
 		amisc_writel((AMISC_APE_TSC_CTRL_NMODULE_0_0_MASK(0) |
 			AMISC_APE_TSC_CTRL_NFRACT_0_0_MASK(0)),
 			AMISC_APE_TSC_CTRL_0_0);
-		amisc_writel(AMISC_APE_TSC_CTRL_NINT_1_0_MASK(n_int),
+		amisc_writel(AMISC_APE_TSC_CTRL_NINT_1_0_MASK(DEFAULT_N_INT),
 			AMISC_APE_TSC_CTRL_1_0);
 		amisc_writel(AMISC_APE_TSC_CTRL_3_0_DISABLE,
 			AMISC_APE_TSC_CTRL_3_0);
 		amisc_idle_enable();
 		amisc_plla_set_rate(data->pll_a_clk_rate);
 		data->first_sync = 1;
+		break;
+
+	case EQOS_APE_AMISC_GET_RATE:
+		/* configuring n_fract/n_modulo based on the rate table*/
+		rate_info.rate = amisc_ape_get_rate();
+		if (copy_to_user((struct rate_to_time_period *)_rate_info,
+					&rate_info,
+					sizeof(rate_info)))
+			return -EFAULT;
 		break;
 	}
 

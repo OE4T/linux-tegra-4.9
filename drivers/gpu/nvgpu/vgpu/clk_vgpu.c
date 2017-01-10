@@ -128,3 +128,26 @@ int vgpu_clk_get_freqs(struct device *dev,
 
 	return 0;
 }
+
+int vgpu_clk_cap_rate(struct device *dev, unsigned long rate)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a *g = platform->g;
+	struct tegra_vgpu_cmd_msg msg = {};
+	struct tegra_vgpu_gpu_clk_rate_params *p = &msg.params.gpu_clk_rate;
+	int err = 0;
+
+	gk20a_dbg_fn("");
+
+	msg.cmd = TEGRA_VGPU_CMD_CAP_GPU_CLK_RATE;
+	msg.handle = vgpu_get_handle(g);
+	p->rate = (u32)rate;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	err = err ? err : msg.ret;
+	if (err) {
+		nvgpu_err(g, "%s failed - %d", __func__, err);
+		return err;
+	}
+
+	return 0;
+}

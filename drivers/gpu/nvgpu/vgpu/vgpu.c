@@ -516,20 +516,13 @@ static int vgpu_qos_notify(struct notifier_block *nb,
 			container_of(nb, struct gk20a_scale_profile,
 			qos_notify_block);
 	struct gk20a *g = get_gk20a(profile->dev);
-	struct tegra_vgpu_cmd_msg msg = {};
-	struct tegra_vgpu_gpu_clk_rate_params *p = &msg.params.gpu_clk_rate;
 	u32 max_freq;
 	int err;
 
 	gk20a_dbg_fn("");
 
 	max_freq = (u32)pm_qos_read_max_bound(PM_QOS_GPU_FREQ_BOUNDS);
-
-	msg.cmd = TEGRA_VGPU_CMD_SET_GPU_CLK_RATE;
-	msg.handle = vgpu_get_handle_from_dev(profile->dev);
-	p->rate = max_freq;
-	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
-	err = err ? err : msg.ret;
+	err = vgpu_clk_cap_rate(profile->dev, max_freq);
 	if (err)
 		nvgpu_err(g, "%s failed, err=%d", __func__, err);
 

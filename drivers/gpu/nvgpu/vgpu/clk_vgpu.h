@@ -20,4 +20,5 @@ void vgpu_init_clk_support(struct gk20a *g);
 long vgpu_clk_round_rate(struct device *dev, unsigned long rate);
 int vgpu_clk_get_freqs(struct device *dev,
 			unsigned long **freqs, int *num_freqs);
+int vgpu_clk_cap_rate(struct device *dev, unsigned long rate);
 #endif

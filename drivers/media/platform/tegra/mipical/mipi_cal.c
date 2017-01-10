@@ -112,6 +112,7 @@ struct tegra_mipi_soc {
 	unsigned int total_dsilanes;
 	unsigned int total_cillanes;
 	char addr_offset;
+	char ppsb_war;
 	int (*pad_enable)(struct tegra_mipi *mipi);
 	int (*pad_disable)(struct tegra_mipi *mipi);
 	int (*calibrate)(struct tegra_mipi *mipi, int lanes);
@@ -124,9 +125,9 @@ static int mipical_write(struct regmap *map,
 	int ret, rb_val;
 
 	ret = regmap_write(map, reg, val);
-
+	if (mipi->soc->ppsb_war)
 	/* Read back register to make sure that register writes completed */
-	regmap_read(map, reg, &rb_val);
+		regmap_read(map, reg, &rb_val);
 
 	return ret;
 }
@@ -137,9 +138,9 @@ static int mipical_update_bits(struct regmap *map, unsigned int reg,
 	int ret, rb_val;
 
 	ret = regmap_update_bits(map, reg, mask, val);
-
+	if (mipi->soc->ppsb_war)
 	/* Read back register to make sure that register writes completed */
-	regmap_read(map, reg, &rb_val);
+		regmap_read(map, reg, &rb_val);
 
 	return ret;
 }
@@ -807,6 +808,7 @@ static const struct tegra_mipi_soc tegra21x_mipi_soc = {
 	.total_dsilanes = 4,
 	.total_cillanes = 6,
 	.addr_offset = 0,
+	.ppsb_war = 1,
 	.pad_enable = &_t21x_tegra_mipi_bias_pad_enable,
 	.pad_disable = &_t21x_tegra_mipi_bias_pad_disable,
 	.calibrate = &_tegra_mipi_calibration,
@@ -817,6 +819,7 @@ static const struct tegra_mipi_soc tegra18x_mipi_soc = {
 	.total_dsilanes = 4,
 	.total_cillanes = 6,
 	.addr_offset = 4,
+	.ppsb_war = 0,
 	.pad_enable = &_t18x_tegra_mipi_bias_pad_enable,
 	.pad_disable = &_t18x_tegra_mipi_bias_pad_disable,
 	.calibrate = &tegra_mipical_using_prod,

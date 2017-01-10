@@ -327,7 +327,6 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 				     phys_addr_t base, size_t len, void *arg)
 {
 	struct nvmap_heap *h;
-	DEFINE_DMA_ATTRS(attrs);
 
 	h = kzalloc(sizeof(*h), GFP_KERNEL);
 	if (!h) {
@@ -389,17 +388,6 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	}
 	wmb();
 
-	if (!co->enable_static_dma_map)
-		goto finish;
-
-	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, __DMA_ATTR(attrs));
-	dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, __DMA_ATTR(attrs));
-
-#ifdef CONFIG_PLATFORM_ENABLE_IOMMU
-	dma_map_linear_attrs(parent->parent, base, len, DMA_TO_DEVICE,
-				__DMA_ATTR(attrs));
-#endif
-finish:
 	if (co->disable_dynamic_dma_map)
 		nvmap_dev->dynamic_dma_map_mask &= ~co->usage_mask;
 

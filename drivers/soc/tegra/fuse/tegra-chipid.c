@@ -71,8 +71,12 @@ static int get_cpu_type(char *val, const struct kernel_param *kp)
 {
 	enum tegra_platform platform;
 
-	platform = tegra_get_platform();
-	tegra_cpu_ptr = tegra_platform_name[platform];
+	if (tegra_cpu_is_asim()) {
+		tegra_cpu_ptr = "asim";
+	} else {
+		platform = tegra_get_platform();
+		tegra_cpu_ptr = tegra_platform_name[platform];
+	}
 	return param_get_charp(val, kp);
 }
 static struct kernel_param_ops tegra_cpu_ops = {

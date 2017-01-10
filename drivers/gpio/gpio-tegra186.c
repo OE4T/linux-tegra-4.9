@@ -539,6 +539,8 @@ static void tegra_gpio_free(struct gpio_chip *chip, unsigned offset)
 	struct tegra_gpio_info *tgi = gpiochip_get_data(chip);
 
 	pinctrl_free_gpio(chip->base + offset);
+	/* Set the GPIO to floated state, before setting to DISABLE state */
+	tegra_gpio_writel(tgi, 0x1, offset, GPIO_OUT_CTRL_REG);
 	tegra_gpio_disable(tgi, offset);
 }
 

@@ -2109,6 +2109,9 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	if (g->ops.gr.update_ctxsw_preemption_mode)
 		g->ops.gr.update_ctxsw_preemption_mode(g, ch_ctx, mem);
 
+	if (g->ops.gr.update_boosted_ctx)
+		g->ops.gr.update_boosted_ctx(g, mem, ch_ctx->gr_ctx);
+
 	virt_addr_lo = u64_lo32(ch_ctx->patch_ctx.mem.gpu_va);
 	virt_addr_hi = u64_hi32(ch_ctx->patch_ctx.mem.gpu_va);
 

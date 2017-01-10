@@ -2060,6 +2060,49 @@ clean_up:
 	return err;
 }
 
+static int gr_gp10b_set_boosted_ctx(struct channel_gk20a *ch,
+				    bool boost)
+{
+	struct gr_ctx_desc *gr_ctx = ch->ch_ctx.gr_ctx;
+	struct gk20a *g = ch->g;
+	struct mem_desc *mem = &gr_ctx->mem;
+	int err = 0;
+
+	gr_ctx->boosted_ctx = boost;
+
+	if (gk20a_mem_begin(g, mem))
+		return -ENOMEM;
+
+	err = gk20a_disable_channel_tsg(g, ch);
+	if (err)
+		goto unmap_ctx;
+
+	err = gk20a_fifo_preempt(g, ch);
+	if (err)
+		goto enable_ch;
+
+	if (g->ops.gr.update_boosted_ctx)
+		g->ops.gr.update_boosted_ctx(g, mem, gr_ctx);
+	else
+		err = -ENOSYS;
+
+enable_ch:
+	gk20a_enable_channel_tsg(g, ch);
+unmap_ctx:
+	gk20a_mem_end(g, mem);
+
+	return err;
+}
+
+static void gr_gp10b_update_boosted_ctx(struct gk20a *g, struct mem_desc *mem,
+				       struct gr_ctx_desc *gr_ctx) {
+	u32 v;
+
+	v = ctxsw_prog_main_image_pmu_options_boost_clock_frequencies_f(
+		gr_ctx->boosted_ctx);
+	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_pmu_options_o(), v);
+}
+
 static int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 					u32 graphics_preempt_mode,
 					u32 compute_preempt_mode)
@@ -2271,4 +2314,6 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.get_preemption_mode_flags = gr_gp10b_get_preemption_mode_flags;
 	gops->gr.fuse_override = gp10b_gr_fuse_override;
 	gops->gr.load_smid_config = gr_gp10b_load_smid_config;
+	gops->gr.set_boosted_ctx = gr_gp10b_set_boosted_ctx;
+	gops->gr.update_boosted_ctx = gr_gp10b_update_boosted_ctx;
 }

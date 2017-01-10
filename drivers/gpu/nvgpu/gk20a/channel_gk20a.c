@@ -3874,6 +3874,24 @@ long gk20a_channel_ioctl(struct file *filp,
 			err = -EINVAL;
 		}
 		break;
+	case NVGPU_IOCTL_CHANNEL_SET_BOOSTED_CTX:
+		if (ch->g->ops.gr.set_boosted_ctx) {
+			bool boost =
+				((struct nvgpu_boosted_ctx_args *)buf)->boost;
+
+			err = gk20a_busy(dev);
+			if (err) {
+				dev_err(dev,
+					"%s: failed to host gk20a for ioctl cmd: 0x%x",
+					__func__, cmd);
+				break;
+			}
+			err = ch->g->ops.gr.set_boosted_ctx(ch, boost);
+			gk20a_idle(dev);
+		} else {
+			err = -EINVAL;
+		}
+		break;
 	default:
 		dev_dbg(dev, "unrecognized ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;

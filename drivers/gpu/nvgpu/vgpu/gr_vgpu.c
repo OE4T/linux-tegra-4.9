@@ -1134,4 +1134,6 @@ void vgpu_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.update_hwpm_ctxsw_mode = vgpu_gr_update_hwpm_ctxsw_mode;
 	gops->gr.clear_sm_error_state = vgpu_gr_clear_sm_error_state;
 	gops->gr.dump_gr_regs = NULL;
+	gops->gr.set_boosted_ctx = NULL;
+	gops->gr.update_boosted_ctx = NULL;
 }

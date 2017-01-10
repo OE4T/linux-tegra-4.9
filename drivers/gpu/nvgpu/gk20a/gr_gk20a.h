@@ -391,6 +391,7 @@ struct gr_ctx_desc {
 
 	u32 graphics_preempt_mode;
 	u32 compute_preempt_mode;
+	bool boosted_ctx;
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct gr_ctx_desc_t18x t18x;
 #endif

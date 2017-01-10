@@ -1537,6 +1537,13 @@ struct nvgpu_preemption_mode_args {
 	__u32 compute_preempt_mode; /* in */
 };
 
+struct nvgpu_boosted_ctx_args {
+#define NVGPU_BOOSTED_CTX_MODE_NORMAL			(0U)
+#define NVGPU_BOOSTED_CTX_MODE_BOOSTED_EXECUTION	(1U)
+	__u32 boost;
+	__u32 padding;
+};
+
 #define NVGPU_IOCTL_CHANNEL_SET_NVMAP_FD	\
 	_IOW(NVGPU_IOCTL_MAGIC, 5, struct nvgpu_set_nvmap_fd_args)
 #define NVGPU_IOCTL_CHANNEL_SET_TIMEOUT	\
@@ -1585,9 +1592,11 @@ struct nvgpu_preemption_mode_args {
 	_IOW(NVGPU_IOCTL_MAGIC, 122, struct nvgpu_preemption_mode_args)
 #define NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO_EX	\
 	_IOW(NVGPU_IOCTL_MAGIC, 123, struct nvgpu_alloc_gpfifo_ex_args)
+#define NVGPU_IOCTL_CHANNEL_SET_BOOSTED_CTX	\
+	_IOW(NVGPU_IOCTL_MAGIC, 124, struct nvgpu_boosted_ctx_args)
 
 #define NVGPU_IOCTL_CHANNEL_LAST	\
-	_IOC_NR(NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO_EX)
+	_IOC_NR(NVGPU_IOCTL_CHANNEL_SET_BOOSTED_CTX)
 #define NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvgpu_alloc_gpfifo_ex_args)
 
 /*

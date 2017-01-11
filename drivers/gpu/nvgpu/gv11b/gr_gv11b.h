@@ -43,6 +43,8 @@ enum {
 #define NVC397_SET_ALPHA_CIRCULAR_BUFFER_SIZE 	0x02dc
 #define NVC397_SET_GO_IDLE_TIMEOUT 		0x022c
 
+#define NVA297_SET_SHADER_EXCEPTIONS_ENABLE_FALSE 0
+
 void gv11b_init_gr(struct gpu_ops *ops);
 int gr_gv11b_alloc_buffer(struct vm_gk20a *vm, size_t size,
                         struct mem_desc *mem);

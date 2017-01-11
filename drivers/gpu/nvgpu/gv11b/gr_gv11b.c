@@ -407,6 +407,25 @@ static void gr_gv11b_set_coalesce_buffer_size(struct gk20a *g, u32 data)
 	gk20a_dbg_fn("done");
 }
 
+
+static void gv11b_gr_set_shader_exceptions(struct gk20a *g, u32 data)
+{
+	u32 val;
+
+	gk20a_dbg_fn("");
+
+	if (data == NVA297_SET_SHADER_EXCEPTIONS_ENABLE_FALSE)
+		val = 0;
+	else
+		val = 0xffffffff;
+
+	/* setup sm warp esr report masks */
+	gk20a_writel(g, gr_gpcs_tpcs_sms_hww_warp_esr_report_mask_r(), val);
+
+	/* setup sm global esr report mask */
+	gk20a_writel(g, gr_gpcs_tpcs_sms_hww_global_esr_report_mask_r(), val);
+}
+
 static int gr_gv11b_handle_sw_method(struct gk20a *g, u32 addr,
 				     u32 class_num, u32 offset, u32 data)
 {
@@ -415,7 +434,7 @@ static int gr_gv11b_handle_sw_method(struct gk20a *g, u32 addr,
 	if (class_num == VOLTA_COMPUTE_A) {
 		switch (offset << 2) {
 		case NVC0C0_SET_SHADER_EXCEPTIONS:
-			gk20a_gr_set_shader_exceptions(g, data);
+			gv11b_gr_set_shader_exceptions(g, data);
 			break;
 		default:
 			goto fail;
@@ -425,7 +444,7 @@ static int gr_gv11b_handle_sw_method(struct gk20a *g, u32 addr,
 	if (class_num == VOLTA_A) {
 		switch (offset << 2) {
 		case NVC397_SET_SHADER_EXCEPTIONS:
-			gk20a_gr_set_shader_exceptions(g, data);
+			gv11b_gr_set_shader_exceptions(g, data);
 			break;
 		case NVC397_SET_CIRCULAR_BUFFER_SIZE:
 			g->ops.gr.set_circular_buffer_size(g, data);

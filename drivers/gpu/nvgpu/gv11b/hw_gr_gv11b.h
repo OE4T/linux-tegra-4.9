@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -553,6 +553,14 @@ static inline u32 gr_fe_hww_esr_reset_active_f(void)
 static inline u32 gr_fe_hww_esr_en_enable_f(void)
 {
 	return 0x80000000;
+}
+static inline u32 gr_gpcs_tpcs_sms_hww_warp_esr_report_mask_r(void)
+{
+	return 0x00419ea8;
+}
+static inline u32 gr_gpcs_tpcs_sms_hww_global_esr_report_mask_r(void)
+{
+	return 0x00419eac;
 }
 static inline u32 gr_fe_go_idle_timeout_r(void)
 {

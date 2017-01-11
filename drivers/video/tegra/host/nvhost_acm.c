@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Automatic Clock Management
  *
- * Copyright (c) 2010-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1136,14 +1136,8 @@ static int nvhost_module_power_on(struct generic_pm_domain *domain)
 
 	pdata = container_of(domain, struct nvhost_device_data, pd);
 
-	mutex_lock(&pdata->lock);
-	if (pdata->can_powergate) {
-		trace_nvhost_module_power_on(pdata->pdev->name,
-			pdata->powergate_id);
-		do_unpowergate_locked(pdata->powergate_id);
-	}
-
-	mutex_unlock(&pdata->lock);
+	trace_nvhost_module_power_on(pdata->pdev->name, pdata->powergate_id);
+	do_unpowergate_locked(pdata->powergate_id);
 
 	return 0;
 }
@@ -1154,13 +1148,8 @@ static int nvhost_module_power_off(struct generic_pm_domain *domain)
 
 	pdata = container_of(domain, struct nvhost_device_data, pd);
 
-	mutex_lock(&pdata->lock);
-	if (pdata->can_powergate) {
-		trace_nvhost_module_power_off(pdata->pdev->name,
-			pdata->powergate_id);
-		do_powergate_locked(pdata->powergate_id);
-	}
-	mutex_unlock(&pdata->lock);
+	trace_nvhost_module_power_off(pdata->pdev->name, pdata->powergate_id);
+	do_powergate_locked(pdata->powergate_id);
 
 	return 0;
 }

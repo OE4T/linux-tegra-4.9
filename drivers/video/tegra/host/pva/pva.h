@@ -40,6 +40,32 @@ extern const struct file_operations tegra_pva_ctrl_ops;
 #define MAX_PVA_TASK_COUNT	16
 
 /**
+ * @brief		struct to hold the segment details
+ *
+ * addr:		virtual addr of the segment from PRIV2 address base
+ * size:		segment size
+ * offset:		offset of the addr from priv2 base
+ *
+ */
+struct pva_seg_info {
+	void *addr;
+	u32 size;
+	u32 offset;
+};
+
+/**
+ * @breif		struct to hold the segment details for debug purpose
+ *
+ * pva			Pointer to pva struct
+ * seg_info		pva_seg_info struct
+ *
+ */
+struct pva_crashdump_debugfs_entry {
+	struct pva *pva;
+	struct pva_seg_info seg_info;
+};
+
+/**
  * @brief		struct to handle the PVA firmware information
  *
  * hdr			pointer to the pva_code_hdr struct
@@ -50,6 +76,7 @@ extern const struct file_operations tegra_pva_ctrl_ops;
  * priv2_buffer_phys	physical address of extra memory allocated for ucode
  * priv2_buffer_mapped	virtual address of extra memory allocated for ucode
  * priv2_buffer_size	extra buffer size allocated for ucode
+ * priv2_reg_offset	priv2 register offset from uCode
  * attrs		dma_attrs struct information
  * trace_buffer_size	buffer size for trace log
  *
@@ -65,6 +92,7 @@ struct pva_fw {
 	dma_addr_t priv2_buffer_phys;
 	void *priv2_buffer_mapped;
 	size_t priv2_buffer_size;
+	u32 priv2_reg_offset;
 	struct dma_attrs attrs;
 
 	u32 trace_buffer_size;
@@ -81,6 +109,9 @@ struct pva_fw {
  * mailbox_waitq	Mailbox waitqueue for response waiters
  * mailbox_status_regs	Response is stored into this structure temporarily
  * mailbox_status	Status of the mailbox interface
+ * debugfs_entry_r5	debugfs segment information for r5
+ * debugfs_entry_vpu0	debugfs segment information for vpu0
+ * debugfs_entry_vpu1	debugfs segment information for vpu1
  *
  */
 struct pva {
@@ -94,6 +125,10 @@ struct pva {
 	struct pva_mailbox_status_regs mailbox_status_regs;
 	enum pva_mailbox_status mailbox_status;
 	struct mutex mailbox_mutex;
+
+	struct pva_crashdump_debugfs_entry debugfs_entry_r5;
+	struct pva_crashdump_debugfs_entry debugfs_entry_vpu0;
+	struct pva_crashdump_debugfs_entry debugfs_entry_vpu1;
 };
 
 /**
@@ -134,4 +169,12 @@ int pva_prepare_poweroff(struct platform_device *pdev);
  *
  */
 int pva_register_isr(struct platform_device *dev);
+/**
+ * @brief	Initiallze pva debug utils
+ *
+ * @param pdev	Pointer to PVA device
+ * @return	none
+ *
+ */
+void pva_debugfs_init(struct platform_device *pdev);
 #endif

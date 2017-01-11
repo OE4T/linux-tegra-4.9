@@ -75,7 +75,6 @@ static u32 pva_get_evp_reg(u32 index)
 #define PVA_PRIV2_TRACE_LOG_BUFFER_SIZE 0x40000
 
 #define R5_USER_SEGREG_OFFSET 0x40000000
-#define R5_PRIV2_SEGREG_OFFSET 0x70000000
 static int pva_init_fw(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
@@ -97,10 +96,11 @@ static int pva_init_fw(struct platform_device *pdev)
 		PVA_EXTRACT64(ucode_useg_addr, 39, 32, u32));
 
 	/* Program the extra memory to be used by R5 */
-	ucode_useg_addr = fw_info->priv2_buffer_phys - R5_PRIV2_SEGREG_OFFSET;
-	host1x_writel(pdev, cfg_priv_ar2_start_r(), R5_PRIV2_SEGREG_OFFSET);
+	ucode_useg_addr =
+			fw_info->priv2_buffer_phys - fw_info->priv2_reg_offset;
+	host1x_writel(pdev, cfg_priv_ar2_start_r(), fw_info->priv2_reg_offset);
 	host1x_writel(pdev, cfg_priv_ar2_end_r(),
-			R5_PRIV2_SEGREG_OFFSET + fw_info->priv2_buffer_size);
+			fw_info->priv2_reg_offset + fw_info->priv2_buffer_size);
 	host1x_writel(pdev, cfg_priv_ar2_lsegreg_r(),
 		PVA_LOW32(ucode_useg_addr));
 	host1x_writel(pdev, cfg_priv_ar2_usegreg_r(),
@@ -197,11 +197,12 @@ static int pva_free_fw(struct platform_device *pdev, struct pva *pva)
 }
 
 static int pva_read_ucode(struct platform_device *pdev,
-		const char *fw_name, struct pva_fw *fw_info)
+		const char *fw_name, struct pva *pva)
 {
 	int err = 0, w;
 	u32 *ucode_ptr;
 	const struct firmware *ucode_fw;
+	struct pva_fw *fw_info = &pva->fw_info;
 
 	nvhost_dbg_fn("");
 
@@ -257,7 +258,6 @@ static int pva_read_ucode(struct platform_device *pdev,
 		case PVA_UCODE_SEG_R5_OVERLAY:
 		case PVA_UCODE_SEG_R5_CRASHDUMP:
 		case PVA_UCODE_SEG_VPU_CRASHDUMP:
-
 			fw_info->priv2_buffer_size += useg->size;
 			break;
 		case PVA_UCODE_SEG_TRACE_LOG:
@@ -278,9 +278,43 @@ static int pva_read_ucode(struct platform_device *pdev,
 		fw_info->priv2_buffer_size, &fw_info->priv2_buffer_phys,
 		GFP_KERNEL, &fw_info->attrs);
 
-	if (!fw_info->priv2_buffer_mapped)
+	if (!fw_info->priv2_buffer_mapped) {
 		err = -ENOMEM;
+		goto clean_up;
+	}
 
+	/* set the crashdump offsets and addresses */
+	for (w = 0; w < fw_info->hdr->nsegments; w++) {
+		struct pva_seg_info *seg_info = NULL;
+		struct pva_ucode_seg *useg = (struct pva_ucode_seg *)
+			((void *)ucode_ptr + PVA_UCODE_SEG_HDR_LENGTH
+				+ (PVA_UCODE_SEG_HDR_LENGTH * w));
+		int offset = useg->addr - fw_info->priv2_reg_offset;
+
+		switch (useg->type) {
+		case PVA_UCODE_SEG_R5_OVERLAY:
+			fw_info->priv2_reg_offset = useg->addr;
+			break;
+		case PVA_UCODE_SEG_R5_CRASHDUMP:
+			seg_info = &pva->debugfs_entry_r5.seg_info;
+			break;
+		case PVA_UCODE_SEG_VPU_CRASHDUMP:
+			if (useg->id == 0)
+				seg_info = &pva->debugfs_entry_vpu0.seg_info;
+			else
+				seg_info = &pva->debugfs_entry_vpu1.seg_info;
+			break;
+		}
+
+		if (seg_info) {
+			seg_info->offset = offset;
+			seg_info->size = useg->size;
+			seg_info->addr =
+				(void *)((u8 *)fw_info->priv2_buffer_mapped +
+								offset);
+		}
+
+	}
 clean_up:
 	release_firmware(ucode_fw);
 	return err;
@@ -292,7 +326,7 @@ static int pva_load_fw(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct pva *pva = pdata->private_data;
 
-	err = pva_read_ucode(pdev, pdata->firmware_name, &pva->fw_info);
+	err = pva_read_ucode(pdev, pdata->firmware_name, pva);
 	if (err < 0)
 		goto load_fw_err;
 
@@ -412,6 +446,9 @@ static int pva_probe(struct platform_device *pdev)
 	if (err)
 		goto err_mss_init;
 
+#ifdef CONFIG_DEBUG_FS
+	pva_debugfs_init(pdev);
+#endif
 	return 0;
 
 err_mss_init:

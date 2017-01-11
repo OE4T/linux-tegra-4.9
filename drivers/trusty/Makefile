@@ -12,3 +12,4 @@ obj-$(CONFIG_TRUSTY)		+= trusty-mem.o
 obj-$(CONFIG_TRUSTY_VIRTIO)	+= trusty-virtio.o
 obj-$(CONFIG_TRUSTY_VIRTIO_IPC)	+= trusty-ipc.o
 obj-$(CONFIG_TRUSTY)		+= trusty-ote.o
+obj-$(CONFIG_TRUSTY)		+= trusty-otf-iface.o

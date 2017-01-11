@@ -74,7 +74,9 @@ struct pt_regs;
 struct quadd_event_context {
 	struct task_struct *task;
 	struct pt_regs *regs;
+
 	int user_mode;
+	int is_sched;
 };
 
 #define QUADD_HRT_MIN_FREQ	100

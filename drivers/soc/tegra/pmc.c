@@ -665,6 +665,7 @@ static void tegra_pmc_register_update(enum pmc_regs reg,
 	tegra_pmc_writel(pmc_reg, reg);
 }
 
+#ifdef CONFIG_PM_SLEEP
 int tegra_read_wake_status(u32 *wake_status)
 {
 	if (soc_is_tegra186_n_later())
@@ -672,6 +673,7 @@ int tegra_read_wake_status(u32 *wake_status)
 
 	return 0;
 }
+#endif
 
 #ifndef CONFIG_TEGRA_POWERGATE
 /**

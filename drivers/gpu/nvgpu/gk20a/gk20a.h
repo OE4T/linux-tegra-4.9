@@ -832,6 +832,7 @@ struct gk20a {
 	void __iomem *bar1;
 	void __iomem *bar1_saved;
 
+	bool gpu_reset_done;
 	bool power_on;
 	bool suspended;
 

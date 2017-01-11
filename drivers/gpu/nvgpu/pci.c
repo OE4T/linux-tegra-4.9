@@ -400,6 +400,8 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 		platform->remove(g->dev);
 	gk20a_dbg(gpu_dbg_shutdown, "Platform remove done.\b");
 
+	enable_irq(g->irq_stall);
+
 	kfree(g);
 }
 

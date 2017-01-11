@@ -822,7 +822,8 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	 * serviced.
 	 */
 	disable_irq(g->irq_stall);
-	disable_irq(g->irq_nonstall);
+	if (g->irq_stall != g->irq_nonstall)
+		disable_irq(g->irq_nonstall);
 
 	ret |= gk20a_gr_suspend(g);
 	ret |= gk20a_mm_suspend(g);
@@ -906,6 +907,15 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	err = gk20a_detect_chip(g);
 	if (err)
 		goto done;
+
+	/*
+	 * Before probing the GPU make sure the GPU's state is cleared. This is
+	 * relevant for rebind operations.
+	 */
+	if (g->ops.xve.reset_gpu && !g->gpu_reset_done) {
+		g->ops.xve.reset_gpu(g);
+		g->gpu_reset_done = true;
+	}
 
 	if (g->ops.bios.init)
 		err = g->ops.bios.init(g);

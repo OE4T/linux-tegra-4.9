@@ -38,6 +38,9 @@
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
 #include <soc/tegra/fuse.h>
 #endif
+#ifdef CONFIG_TEGRA_BWMGR
+#include <linux/platform/tegra/emc_bwmgr.h>
+#endif
 
 #include <linux/platform/tegra/tegra_emc.h>
 
@@ -62,10 +65,18 @@
 
 extern struct device tegra_vpr_dev;
 
+#ifdef CONFIG_TEGRA_BWMGR
+struct gk20a_emc_params {
+	unsigned long bw_ratio;
+	unsigned long freq_last_set;
+	struct tegra_bwmgr_client *bwmgr_cl;
+};
+#else
 struct gk20a_emc_params {
 	unsigned long bw_ratio;
 	unsigned long freq_last_set;
 };
+#endif
 
 static void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
 static inline u32 __maybe_unused pmc_read(unsigned long reg)
@@ -317,6 +328,51 @@ static void gk20a_tegra_calibrate_emc(struct device *dev,
 	emc_params->bw_ratio = (gpu_bw / emc_bw);
 }
 
+#ifdef CONFIG_TEGRA_BWMGR
+void gm20b_bwmgr_set_rate(struct gk20a_platform *platform, bool enb)
+{
+	struct gk20a_scale_profile *profile = platform->g->scale_profile;
+	struct gk20a_emc_params *params;
+	unsigned long rate;
+
+	if (!profile || !profile->private_data)
+		return;
+
+	params = (struct gk20a_emc_params *)profile->private_data;
+	rate = (enb) ? params->freq_last_set : 0;
+	tegra_bwmgr_set_emc(params->bwmgr_cl, rate, TEGRA_BWMGR_SET_EMC_FLOOR);
+}
+
+static void gm20b_tegra_postscale(struct device *dev, unsigned long freq)
+{
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	struct gk20a_scale_profile *profile = platform->g->scale_profile;
+	struct gk20a_emc_params *emc_params;
+	unsigned long emc_rate;
+
+	if (!profile)
+		return;
+
+	emc_params = profile->private_data;
+	emc_rate = gk20a_tegra_get_emc_rate(get_gk20a(dev), emc_params);
+
+	if (emc_rate > tegra_bwmgr_get_max_emc_rate())
+		emc_rate = tegra_bwmgr_get_max_emc_rate();
+
+	emc_params->freq_last_set = emc_rate;
+	mutex_lock(&platform->railgate_lock);
+	if (platform->is_railgated && !platform->is_railgated(dev))
+		goto done;
+
+	tegra_bwmgr_set_emc(emc_params->bwmgr_cl, emc_rate,
+			TEGRA_BWMGR_SET_EMC_FLOOR);
+
+done:
+	mutex_unlock(&platform->railgate_lock);
+}
+
+#endif
+
 #ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 /*
  * gk20a_tegra_railgate()
@@ -463,7 +519,6 @@ static bool gk20a_tegra_is_railgated(struct device *dev)
 	return ret;
 }
 
-
 /*
  * gm20b_tegra_railgate()
  *
@@ -514,6 +569,10 @@ static int gm20b_tegra_railgate(struct device *dev)
 	} else
 		pr_info("No GPU regulator?\n");
 
+#ifdef CONFIG_TEGRA_BWMGR
+	gm20b_bwmgr_set_rate(platform, false);
+#endif
+
 	return 0;
 
 err_power_off:
@@ -551,6 +610,10 @@ static int gm20b_tegra_unrailgate(struct device *dev)
 	ret = tegra_dvfs_rail_power_up(platform->gpu_rail);
 	if (ret)
 		return ret;
+
+#ifdef CONFIG_TEGRA_BWMGR
+	gm20b_bwmgr_set_rate(platform, true);
+#endif
 
 	tegra_soctherm_gpu_tsens_invalidate(0);
 
@@ -750,6 +813,14 @@ static void gk20a_tegra_scale_init(struct device *dev)
 	emc_params->freq_last_set = -1;
 	gk20a_tegra_calibrate_emc(dev, emc_params);
 
+#ifdef CONFIG_TEGRA_BWMGR
+	emc_params->bwmgr_cl = tegra_bwmgr_register(TEGRA_BWMGR_CLIENT_GPU);
+	if (!emc_params->bwmgr_cl) {
+		gk20a_dbg_info("%s Missing GPU BWMGR client\n", __func__);
+		return;
+	}
+#endif
+
 	profile->private_data = emc_params;
 }
 
@@ -757,9 +828,17 @@ static void gk20a_tegra_scale_exit(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a_scale_profile *profile = platform->g->scale_profile;
+	struct gk20a_emc_params *emc_params;
 
-	if (profile)
-		kfree(profile->private_data);
+	if (!profile)
+		return;
+
+	emc_params = profile->private_data;
+#ifdef CONFIG_TEGRA_BWMGR
+	tegra_bwmgr_unregister(emc_params->bwmgr_cl);
+#endif
+
+	kfree(profile->private_data);
 }
 
 void gk20a_tegra_debug_dump(struct device *dev)
@@ -1027,9 +1106,9 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.probe = gk20a_tegra_probe,
 	.late_probe = gk20a_tegra_late_probe,
 	.remove = gk20a_tegra_remove,
-
 	/* power management callbacks */
 	.suspend = gk20a_tegra_suspend,
+
 #if defined(CONFIG_TEGRA_CLK_FRAMEWORK) || defined(CONFIG_TEGRA_DVFS)
 	.railgate = gm20b_tegra_railgate,
 	.unrailgate = gm20b_tegra_unrailgate,
@@ -1060,7 +1139,11 @@ struct gk20a_platform gm20b_tegra_platform = {
 
 	/* frequency scaling configuration */
 	.prescale = gk20a_tegra_prescale,
+#ifdef CONFIG_TEGRA_BWMGR
+	.postscale = gm20b_tegra_postscale,
+#else
 	.postscale = gk20a_tegra_postscale,
+#endif
 	.devfreq_governor = "nvhost_podgov",
 	.qos_notify = gk20a_scale_qos_notify,
 

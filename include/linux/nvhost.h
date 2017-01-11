@@ -262,10 +262,6 @@ struct nvhost_device_data {
 
 	struct notifier_block		toggle_slcg_notifier;
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	struct generic_pm_domain pd;	/* power domain representing power partition */
-#endif
-
 	/* Finalize power on. Can be used for context restore. */
 	int (*finalize_poweron)(struct platform_device *dev);
 
@@ -700,8 +696,6 @@ int nvhost_check_bondout(unsigned int id);
 /* common runtime pm and power domain APIs */
 int nvhost_module_init(struct platform_device *ndev);
 void nvhost_module_deinit(struct platform_device *dev);
-int nvhost_module_add_domain(struct generic_pm_domain *domain,
-	struct platform_device *pdev);
 extern const struct dev_pm_ops nvhost_module_pm_ops;
 
 /* public host1x sync-point management APIs */

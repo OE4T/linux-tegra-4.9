@@ -680,12 +680,6 @@ static int nvdec_probe(struct platform_device *dev)
 	/* get the module clocks to sane state */
 	nvhost_module_init(dev);
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	/* add module power domain and also add its domain
-	 * as sub-domain of host1x domain */
-	err = nvhost_module_add_domain(&pdata->pd, dev);
-#endif
-
 	err = nvhost_client_device_init(dev);
 
 	return 0;

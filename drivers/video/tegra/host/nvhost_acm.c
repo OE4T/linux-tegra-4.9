@@ -70,6 +70,18 @@ static int nvhost_module_power_off(struct generic_pm_domain *domain);
 #endif
 #endif
 
+struct nvhost_pm_domain {
+	struct generic_pm_domain domain;
+	struct list_head list;
+	int powergate_id;
+};
+
+static struct nvhost_pm_domain *genpd_to_nvhost_pd(
+	struct generic_pm_domain *genpd)
+{
+	return container_of(genpd, struct nvhost_pm_domain, domain);
+}
+
 static DEFINE_MUTEX(client_list_lock);
 
 struct nvhost_module_client {
@@ -111,6 +123,7 @@ static void do_unpowergate_locked(int id)
 	}
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 static void dump_clock_status(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
@@ -137,11 +150,14 @@ static void dump_clock_status(struct platform_device *dev)
 			rate);
 	}
 }
+#endif
 
 static void do_module_reset_locked(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	int ret;
+#endif
 
 	if (pdata->reset) {
 		pdata->reset(dev);
@@ -627,10 +643,6 @@ int nvhost_module_init(struct platform_device *dev)
 	int i = 0, err = 0;
 	struct kobj_attribute *attr = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-#if defined(CONFIG_PM_GENERIC_DOMAINS)
-	struct device_node *dn;
-	struct generic_pm_domain *gpd;
-#endif
 
 	/* initialize clocks to known state (=enabled) */
 	pdata->num_clks = 0;
@@ -736,21 +748,13 @@ int nvhost_module_init(struct platform_device *dev)
 		pdata->can_powergate && !tegra_platform_is_linsim() &&
 		!tegra_platform_is_vdk();
 
-#if defined(CONFIG_PM_GENERIC_DOMAINS)
-	gpd = dev_to_genpd(&dev->dev);
-	if (IS_ERR(gpd)) {
-		dev_err(&dev->dev, "dev_to_genpd failed.\n");
-		if (!tegra_platform_is_linsim() && !tegra_platform_is_vdk())
-			return PTR_ERR(gpd);
-		pdata->powergate_id = -1;
+	if (dev->dev.pm_domain) {
+		struct nvhost_pm_domain *pd;
+		pd = genpd_to_nvhost_pd(pd_to_genpd(dev->dev.pm_domain));
+		pdata->powergate_id = pd->powergate_id;
 	} else {
-		dn = gpd->of_node;
-
-		/* Update partition-id from DT and for failure case assign -1 id */
-		if (of_property_read_u32(dn, "partition-id", &pdata->powergate_id))
-			pdata->powergate_id = -1;
+		pdata->powergate_id = -1;
 	}
-#endif
 
 	/* needed to WAR MBIST issue */
 	if (pdata->poweron_toggle_slcg) {
@@ -929,32 +933,74 @@ const struct dev_pm_ops nvhost_module_pm_ops = {
 };
 EXPORT_SYMBOL(nvhost_module_pm_ops);
 
-static int _nvhost_init_domain(struct device_node *np,
-			       struct generic_pm_domain *gpd)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+static int pm_subdomain_attach(struct device_node *node)
+{
+	int ret;
+	struct of_phandle_args master_phandle, child_phandle;
+
+	child_phandle.np = node;
+	child_phandle.args_count = 0;
+
+	ret = of_parse_phandle_with_args(node, "power-domains",
+					 "#power-domain-cells", 0,
+					 &master_phandle);
+	if (ret < 0)
+		return ret;
+
+	pr_info("Adding domain %s to PM domain %s\n",
+		node->name, master_phandle.np->name);
+
+	return of_genpd_add_subdomain(&master_phandle, &child_phandle);
+}
+#endif
+
+static LIST_HEAD(pd_list);
+
+static int _nvhost_init_domain(struct device_node *np)
 {
 #ifdef CONFIG_PM_GENERIC_DOMAINS
+	struct nvhost_pm_domain *pd;
+	struct list_head *head;
 	bool is_off = false;
 
-	gpd->name = (char *)np->name;
-
-	if (pm_genpd_lookup_name(gpd->name))
-		return 0;
+	list_for_each(head, &pd_list) {
+		struct nvhost_pm_domain *list_pd;
+		list_pd = list_entry(head, struct nvhost_pm_domain, list);
+		/* Domain already registered somewhere else */
+		if (list_pd->domain.name == np->name)
+			return 0;
+	}
 
 	if (of_property_read_bool(np, "is_off"))
 		is_off = true;
 
-	pm_genpd_init(gpd, NULL, is_off);
+	pd = kzalloc(sizeof(*pd), GFP_KERNEL);
+	if (!pd)
+		return -ENOMEM;
 
-	gpd->power_off = nvhost_module_power_off;
-	gpd->power_on = nvhost_module_power_on;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0)
-	gpd->flags = GENPD_FLAG_PM_UPSTREAM;
+	if (of_property_read_u32(np, "partition-id", &pd->powergate_id))
+		pd->powergate_id = -1;
+
+	pd->domain.name = (char *)np->name;
+
+	pm_genpd_init(&pd->domain, NULL, is_off);
+
+	pd->domain.power_off = nvhost_module_power_off;
+	pd->domain.power_on = nvhost_module_power_on;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+	pd->domain.flags = GENPD_FLAG_PM_UPSTREAM;
 #endif
 
-	of_genpd_add_provider_simple(np, gpd);
-	gpd->of_node = of_node_get(np);
+	of_genpd_add_provider_simple(np, &pd->domain);
 
-	genpd_pm_subdomain_attach(gpd);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+	genpd_pm_subdomain_attach(&pd->domain);
+#else
+	pm_subdomain_attach(np);
+#endif
+
+	list_add(&pd->list, &pd_list);
 #endif
 	return 0;
 }
@@ -963,17 +1009,9 @@ int nvhost_domain_init(struct of_device_id *matches)
 {
 	struct device_node *np;
 	int ret = 0;
-	struct nvhost_device_data *dev_data;
-	struct generic_pm_domain *gpd;
+
 	for_each_matching_node(np, matches) {
-		const struct of_device_id *match = of_match_node(matches, np);
-		dev_data = (struct nvhost_device_data *)match->data;
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-		gpd = &dev_data->pd;
-#else
-		break;
-#endif
-		ret = _nvhost_init_domain(np, gpd);
+		ret = _nvhost_init_domain(np);
 		if (ret)
 			break;
 	}
@@ -991,33 +1029,6 @@ void nvhost_unregister_client_domain(struct generic_pm_domain *domain)
 {
 }
 EXPORT_SYMBOL(nvhost_unregister_client_domain);
-
-int nvhost_module_add_domain(struct generic_pm_domain *domain,
-	struct platform_device *pdev)
-{
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	struct nvhost_device_data *pdata;
-	struct device_node *dn = of_node_get(pdev->dev.of_node);
-	bool wakeup_capable = false;
-	struct dev_power_governor *pm_domain_gov = NULL;
-
-	pdata = platform_get_drvdata(pdev);
-	if (!pdata)
-		return -EINVAL;
-
-	if (!pdata->can_powergate)
-		pm_domain_gov = &pm_domain_always_on_gov;
-	domain->gov = pm_domain_gov;
-
-	if (of_property_read_bool(dn, "wakeup-capable"))
-		wakeup_capable = true;
-
-	device_set_wakeup_capable(&pdev->dev, wakeup_capable);
-#endif
-
-	return 0;
-}
-EXPORT_SYMBOL(nvhost_module_add_domain);
 
 int nvhost_module_enable_clk(struct device *dev)
 {
@@ -1132,24 +1143,20 @@ static int nvhost_module_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 static int nvhost_module_power_on(struct generic_pm_domain *domain)
 {
-	struct nvhost_device_data *pdata;
+	struct nvhost_pm_domain *pd = genpd_to_nvhost_pd(domain);
 
-	pdata = container_of(domain, struct nvhost_device_data, pd);
-
-	trace_nvhost_module_power_on(pdata->pdev->name, pdata->powergate_id);
-	do_unpowergate_locked(pdata->powergate_id);
+	trace_nvhost_module_power_on(pd->domain.name, pd->powergate_id);
+	do_unpowergate_locked(pd->powergate_id);
 
 	return 0;
 }
 
 static int nvhost_module_power_off(struct generic_pm_domain *domain)
 {
-	struct nvhost_device_data *pdata;
+	struct nvhost_pm_domain *pd = genpd_to_nvhost_pd(domain);
 
-	pdata = container_of(domain, struct nvhost_device_data, pd);
-
-	trace_nvhost_module_power_off(pdata->pdev->name, pdata->powergate_id);
-	do_powergate_locked(pdata->powergate_id);
+	trace_nvhost_module_power_off(pd->domain.name, pd->powergate_id);
+	do_powergate_locked(pd->powergate_id);
 
 	return 0;
 }

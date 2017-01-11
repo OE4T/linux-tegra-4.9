@@ -684,10 +684,6 @@ static int flcn_probe(struct platform_device *dev)
 
 	nvhost_module_init(dev);
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	err = nvhost_module_add_domain(&pdata->pd, dev);
-#endif
-
 	err = nvhost_client_device_init(dev);
 	if (err) {
 		nvhost_dbg_fn("failed to init client device for %s",

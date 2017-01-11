@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics ISP
  *
- * Copyright (c) 2012-2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -378,14 +378,6 @@ static int isp_probe(struct platform_device *dev)
 	INIT_WORK((struct work_struct *)tegra_isp->my_isr_work, isp_isr_work);
 
 	nvhost_module_init(dev);
-
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	/* add module power domain and also add its domain
-	 * as sub-domain of host1x domain */
-	err = nvhost_module_add_domain(&pdata->pd, dev);
-	if (err)
-		goto free_isr;
-#endif
 
 	err = nvhost_client_device_init(dev);
 	if (err)

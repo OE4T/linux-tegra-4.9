@@ -1,7 +1,7 @@
 /*
  * NVCSI driver for T186
  *
- * Copyright (c) 2014-2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -165,12 +165,6 @@ static int nvcsi_probe(struct platform_device *dev)
 	if (err)
 		goto err_module_init;
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	err = nvhost_module_add_domain(&pdata->pd, dev);
-	if (err)
-		goto err_add_domain;
-#endif
-
 	err = nvhost_client_device_init(dev);
 	if (err)
 		goto err_client_device_init;
@@ -184,9 +178,6 @@ static int nvcsi_probe(struct platform_device *dev)
 
 err_mediacontroller_init:
 err_client_device_init:
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-err_add_domain:
-#endif
 	nvhost_module_deinit(dev);
 err_module_init:
 err_get_resources:

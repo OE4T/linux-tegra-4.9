@@ -1058,9 +1058,7 @@ static int nvhost_probe(struct platform_device *dev)
 	if (err)
 		goto fail;
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	err = nvhost_module_add_domain(&pdata->pd, dev);
-#endif
+	device_set_wakeup_capable(&dev->dev, true);
 
 	mutex_init(&host->timeout_mutex);
 

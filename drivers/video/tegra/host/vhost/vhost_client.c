@@ -184,14 +184,6 @@ static int vhost_client_probe(struct platform_device *dev)
 
 	nvhost_module_init(dev);
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	pdata->pd.name = kstrdup(dev->name, GFP_KERNEL);
-	if (!pdata->pd.name)
-		return -ENOMEM;
-
-	err = nvhost_module_add_domain(&pdata->pd, dev);
-#endif
-
 	err = nvhost_virt_init(dev, pdata->moduleid);
 	if (err) {
 		dev_err(&dev->dev, "nvhost_virt_init failed for %s",

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -299,7 +299,7 @@ static int tegra_aon_mbox_send_data(struct mbox_chan *mbox_chan, void *data)
 {
 	struct tegra_aon_ivc_chan *ivc_chan;
 	struct tegra_aon_mbox_msg *msg;
-	u32 bytes;
+	int bytes;
 	int ret;
 
 	msg = (struct tegra_aon_mbox_msg *)data;

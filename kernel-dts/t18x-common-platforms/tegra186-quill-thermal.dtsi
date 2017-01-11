@@ -45,10 +45,10 @@
 
 			loc {
 				/* set to maximum for not having local  shutdown */
-				shutdown-limit = <110>;
+				shutdown-limit = <107>;
 			};
 			ext {
-				shutdown-limit = <108>;
+				shutdown-limit = <107>;
 			};
 		};
 	};
@@ -69,7 +69,7 @@
 			trips {
 				trip_critical {
 					type = "critical";
-					temperature = <108000>;
+					temperature = <107000>;
 					hysteresis = <1>;
 				};
 			};
@@ -88,7 +88,7 @@
 			trips {
 				trip_critical {
 					/* keep this below HW shutdown to log alerts */
-					temperature = <108000>;
+					temperature = <107000>;
 					type = "critical";
 					hysteresis = <0>;
 					writable;
@@ -105,7 +105,7 @@
 
 			trips {
 				trip_critical {
-					temperature = <101500>;
+					temperature = <101000>;
 					type = "critical";
 					hysteresis = <0>;
 					writable;
@@ -135,7 +135,7 @@
 
 			trips {
 				trip_critical {
-					temperature = <101500>;
+					temperature = <101000>;
 					type = "critical";
 					hysteresis = <0>;
 					writable;
@@ -175,7 +175,7 @@
 			};
 			trips {
 				trip_critical {
-					temperature = <101500>;
+					temperature = <101000>;
 					type = "critical";
 					hysteresis = <0>;
 					writable;

@@ -34,6 +34,14 @@
  */
 #define TRACE_DATA_OFFSET	(2 * sizeof(uint32_t))
 
+#define dla_set_trace_enable(pdev, trace_enable)		\
+	debug_set_trace_event_config(pdev, trace_enable,	\
+			DLA_SET_TRACE_ENABLE);			\
+
+#define dla_set_trace_event_mask(pdev, event_mask)		\
+	debug_set_trace_event_config(pdev, event_mask,	\
+			DLA_SET_TRACE_EVENT_MASK);		\
+
 static int nvdla_fw_ver_show(struct seq_file *s, void *unused)
 {
 	struct nvdla_device *nvdla_dev;
@@ -235,6 +243,54 @@ static int debug_dla_bintrace_open(struct inode *inode, struct file *file)
 	return single_open(file, debug_dla_bintracedump_show, inode->i_private);
 }
 
+static int debug_set_trace_event_config(struct platform_device *pdev,
+	u32 value, u32 sub_cmd)
+{
+	int err = 0;
+	struct nvdla_cmd_mem_info trace_events_mem_info;
+	struct dla_debug_config *trace_event;
+
+	/* make sure that device is powered on */
+	err = nvhost_module_busy(pdev);
+	if (err) {
+		nvdla_dbg_err(pdev, "failed to power on\n");
+		err = -ENODEV;
+		goto fail_to_on;
+	}
+
+	/* assign memory for command */
+	err = nvdla_get_cmd_memory(pdev, &trace_events_mem_info);
+	if (err) {
+		nvdla_dbg_err(pdev, "dma alloc for command failed");
+		goto alloc_failed;
+	}
+
+	trace_event = (struct dla_debug_config *)trace_events_mem_info.va;
+	trace_event->sub_cmd = sub_cmd;
+	trace_event->data = (u64)value;
+
+	/* pass set debug command to falcon */
+	err = nvdla_send_cmd(pdev, DLA_CMD_SET_DEBUG,
+	       ALIGNED_DMA(trace_events_mem_info.pa), true);
+
+	/* free memory allocated for trace event command */
+	nvdla_put_cmd_memory(pdev, trace_events_mem_info.index);
+
+	if (err != 0) {
+		nvdla_dbg_err(pdev, "failed to send set debug command");
+		goto send_cmd_failed;
+	}
+
+	nvhost_module_idle(pdev);
+	return err;
+
+send_cmd_failed:
+alloc_failed:
+	nvhost_module_idle(pdev);
+fail_to_on:
+	return err;
+}
+
 static ssize_t debug_dla_eventmask_set(struct file *file,
 	const char __user *buffer, size_t count, loff_t *off)
 {
@@ -277,9 +333,17 @@ static ssize_t debug_dla_eventmask_set(struct file *file,
 		goto invalid_input;
 	}
 
-	/*  Add send command to firmware from here */
+	/*  set event_mask config  */
+	ret = dla_set_trace_event_mask(pdev, nvdla_dev->events_mask);
+	if (ret) {
+		nvdla_dbg_err(pdev,
+			"%s: failed to set event mask.", __func__);
+		goto set_event_mask_failed;
+	}
+
 	return count;
 
+set_event_mask_failed:
 invalid_input:
 	return ret;
 }
@@ -321,9 +385,17 @@ static ssize_t debug_dla_enable_trace_set(struct file *file,
 		goto invalid_input;
 	}
 
-	/*  Add send command to firmware from here */
+	/*  set trace_enable config  */
+	ret = dla_set_trace_enable(pdev, nvdla_dev->trace_enable);
+	if (ret) {
+		nvdla_dbg_err(pdev,
+			"%s: failed to enable trace events.", __func__);
+		goto set_trace_enable_failed;
+	}
+
 	return count;
 
+set_trace_enable_failed:
 invalid_input:
 	return ret;
 }

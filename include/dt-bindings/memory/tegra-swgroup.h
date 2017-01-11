@@ -1,7 +1,7 @@
 /*
  * This header provides constants for binding nvidia,swgroup ID
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -197,11 +197,9 @@
 #define TEGRA_SID_APE_1		0x28	/* 40 */
 #define TEGRA_SID_APE_2		0x29	/* 41 */
 
-/* The Camera RTCPU. */
-#define TEGRA_SID_RCE		0x2a	/* 42 */
-
-/* The Camera RTCPU on Host1x address space. */
-#define TEGRA_SID_RCE_1X	0x2b	/* 43 */
+/* The Camera RTCPU running on SCE. */
+#define TEGRA_SID_SCE_CAM	0x2a	/* 42 */
+#define TEGRA_SID_SCE_CAM_1X	0x2b	/* 43 */
 
 /* The APE DMA Clients. */
 #define TEGRA_SID_APE_3		0x2c	/* 44 */

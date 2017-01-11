@@ -2044,6 +2044,22 @@ static int tegra_dp_prods_init(struct tegra_dc_dp_data *dp)
 	return 0;
 }
 
+static void _tegra_dc_dp_init(struct tegra_dc *dc)
+{
+	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
+
+	if (dp->pdata->edp2lvds_bridge_enable)
+		dp->out_ops = &tegra_edp2lvds_ops;
+	else
+		dp->out_ops = NULL;
+
+	if (dp->out_ops && dp->out_ops->init)
+		dp->out_ops->init(dp);
+
+	if (dp->out_ops && dp->out_ops->enable)
+		dp->out_ops->enable(dp);
+}
+
 static int tegra_dc_dp_init(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp;
@@ -2269,6 +2285,8 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	mutex_init(&dp->dpaux_lock);
 
 	tegra_dc_set_outdata(dc, dp);
+
+	_tegra_dc_dp_init(dc);
 
 	if (dp->pdata->hdmi2fpd_bridge_enable) {
 		hdmi2fpd_init(dc);

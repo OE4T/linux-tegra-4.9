@@ -113,6 +113,7 @@ struct tegra_dc_dp_data {
 	struct completion aux_tx;
 	struct completion hpd_plug;
 
+	struct tegra_dp_out_ops *out_ops;
 	struct tegra_dp_out *pdata;
 
 	struct mutex dpaux_lock;
@@ -159,6 +160,12 @@ struct tegra_dp_out_ops {
 	 */
 	void (*postpoweron)(struct tegra_dc_dp_data *);
 };
+
+#if defined(CONFIG_TEGRA_EDP2LVDS_PS8625)
+extern struct tegra_dp_out_ops tegra_edp2lvds_ops;
+#else
+#define tegra_edp2lvds_ops (*(struct tegra_dp_out_ops *)NULL)
+#endif
 
 enum {
 	VSC_RGB = 0,

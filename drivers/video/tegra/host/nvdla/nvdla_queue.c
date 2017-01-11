@@ -382,9 +382,33 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 		/* update action */
 		switch (task->postfences[i].type) {
 		case NVDLA_FENCE_TYPE_SYNCPT: {
+			dma_addr_t gos_syncpt_addr;
+			dma_addr_t syncpt_addr;
+
+			/* update GoS backing if available */
+			gos_syncpt_addr = nvhost_syncpt_gos_address(pdev,
+					queue->syncpt_id);
+			if (gos_syncpt_addr) {
+				u32 max;
+
+				nvdla_dbg_info(pdev, "post i:%d syncpt:[%u] gos[%pad]",
+					i, queue->syncpt_id, &gos_syncpt_addr);
+
+				/* send incremented max */
+				max = nvhost_syncpt_read_maxval(pdev,
+					queue->syncpt_id);
+				next = add_fence_action(next, POSTACTION_SEM,
+					gos_syncpt_addr, max + 1);
+			}
+
+			/* For postaction also update MSS addr */
+			syncpt_addr = nvhost_syncpt_address(pdev,
+					queue->syncpt_id);
 			next = add_fence_action(next, POSTACTION_SEM,
-				nvhost_syncpt_address(pdev, queue->syncpt_id),
-				0);
+					syncpt_addr, 1);
+
+			nvdla_dbg_info(pdev, "post i:%d syncpt:[%u] mss:[%pad]",
+					i, queue->syncpt_id, &syncpt_addr);
 			break;
 		}
 		case NVDLA_FENCE_TYPE_TS_SEMAPHORE: {
@@ -508,6 +532,8 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 			j = id = thresh = 0;
 
 			for (j = 0; j < f->num_fences; j++) {
+				dma_addr_t syncpt_addr;
+
 				pt = sync_pt_from_fence(f->cbs[j].sync_pt);
 				id = nvhost_sync_pt_id(pt);
 				thresh = nvhost_sync_pt_thresh(pt);
@@ -519,22 +545,52 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 					break;
 				}
 
+				/* check if GoS backing available */
+				syncpt_addr = nvhost_syncpt_gos_address(pdev,
+							id);
+
+				/* if not, then use MSS addr */
+				if (!syncpt_addr) {
+					nvdla_dbg_info(pdev, "pre i:%d GoS missing for syncfd [%d]",
+							i, id);
+					syncpt_addr = nvhost_syncpt_address(pdev,
+							id);
+				}
+				nvdla_dbg_info(pdev, "pre i:%d syncfd_pt:[%u] dma_addr[%pad]",
+					i, id, &syncpt_addr);
+
+
 				next = add_fence_action(next, PREACTION_SEM_GE,
-					nvhost_syncpt_address(pdev, id),
-					thresh);
+							syncpt_addr, thresh);
 			}
 			break;
 		}
 		case NVDLA_FENCE_TYPE_SYNCPT: {
+			dma_addr_t syncpt_addr;
+
 			nvdla_dbg_info(pdev, "i[%d] id[%d] val[%d]",
 					i,
 					task->prefences[i].syncpoint_index,
 					task->prefences[i].syncpoint_value);
 
+			/* check if GoS backing available */
+			syncpt_addr = nvhost_syncpt_gos_address(pdev,
+					task->prefences[i].syncpoint_index);
+
+			/* if not, then use MSS addr */
+			if (!syncpt_addr) {
+				nvdla_dbg_info(pdev, "pre i:%d GoS missing", i);
+				syncpt_addr = nvhost_syncpt_address(pdev,
+					task->prefences[i].syncpoint_index);
+			}
+			nvdla_dbg_info(pdev, "pre i:%d syncpt:[%u] dma_addr[%pad]",
+					i,
+					task->prefences[i].syncpoint_index,
+					&syncpt_addr);
+
 			next = add_fence_action(next, PREACTION_SEM_GE,
-				nvhost_syncpt_address(pdev,
-					task->prefences[i].syncpoint_index),
-				task->prefences[i].syncpoint_value);
+					syncpt_addr,
+					task->prefences[i].syncpoint_value);
 			break;
 		}
 		case NVDLA_FENCE_TYPE_SEMAPHORE: {

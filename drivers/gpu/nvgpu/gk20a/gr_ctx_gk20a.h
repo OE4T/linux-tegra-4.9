@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics Context
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,6 +17,8 @@
  */
 #ifndef __GR_CTX_GK20A_H__
 #define __GR_CTX_GK20A_H__
+
+struct gr_gk20a;
 
 /* production netlist, one and only one from below */
 /*#undef GK20A_NETLIST_IMAGE_FW_NAME*/

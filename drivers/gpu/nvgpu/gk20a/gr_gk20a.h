@@ -19,6 +19,7 @@
 #define GR_GK20A_H
 
 #include <linux/slab.h>
+#include <uapi/linux/nvgpu.h>
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "gr_t18x.h"
 #endif
@@ -29,6 +30,7 @@
 
 #include "tsg_gk20a.h"
 #include "gr_ctx_gk20a.h"
+#include "mm_gk20a.h"
 
 #define GR_IDLE_CHECK_DEFAULT		10 /* usec */
 #define GR_IDLE_CHECK_MAX		200 /* usec */
@@ -41,6 +43,8 @@
 #define GK20A_GPCCS_UCODE_IMAGE	"gpccs.bin"
 
 #define GK20A_GR_MAX_PES_PER_GPC 3
+
+struct channel_gk20a;
 
 enum /* global_ctx_buffer */ {
 	CIRCULAR		= 0,
@@ -199,6 +203,12 @@ struct gr_gk20a_isr_data {
 	u32 offset;
 	u32 sub_chan;
 	u32 class_num;
+};
+
+struct gr_ctx_buffer_desc {
+	void (*destroy)(struct gk20a *, struct gr_ctx_buffer_desc *);
+	struct mem_desc mem;
+	void *priv;
 };
 
 struct nvgpu_preemption_modes_rec {
@@ -375,6 +385,23 @@ struct gr_gk20a {
 };
 
 void gk20a_fecs_dump_falcon_stats(struct gk20a *g);
+
+struct gr_ctx_desc {
+	struct mem_desc mem;
+
+	u32 graphics_preempt_mode;
+	u32 compute_preempt_mode;
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	struct gr_ctx_desc_t18x t18x;
+#endif
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+	u64 virt_ctx;
+#endif
+};
+
+struct ctx_header_desc {
+	struct mem_desc mem;
+};
 
 struct gk20a_ctxsw_ucode_segment {
 	u32 offset;
@@ -664,6 +691,8 @@ u32 gk20a_mask_hww_warp_esr(u32 hww_warp_esr);
 
 int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long duration_ms,
 			  u32 expect_delay);
+
+struct dbg_session_gk20a;
 
 bool gr_gk20a_suspend_context(struct channel_gk20a *ch);
 bool gr_gk20a_resume_context(struct channel_gk20a *ch);

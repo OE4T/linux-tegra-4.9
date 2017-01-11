@@ -18,6 +18,8 @@
 
 #include <linux/version.h>
 
+#include "gk20a/mm_gk20a.h"
+
 struct gpu_ops;
 
 enum {

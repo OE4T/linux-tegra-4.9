@@ -1,7 +1,7 @@
 /*
  * GK20A memory management
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -112,32 +112,6 @@ struct pm_ctx_desc {
 };
 
 struct gk20a;
-struct gr_ctx_buffer_desc {
-	void (*destroy)(struct gk20a *, struct gr_ctx_buffer_desc *);
-	struct mem_desc mem;
-	void *priv;
-};
-
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-#include "gr_t18x.h"
-#endif
-
-struct gr_ctx_desc {
-	struct mem_desc mem;
-
-	u32 graphics_preempt_mode;
-	u32 compute_preempt_mode;
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	struct gr_ctx_desc_t18x t18x;
-#endif
-#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
-	u64 virt_ctx;
-#endif
-};
-
-struct ctx_header_desc {
-	struct mem_desc mem;
-};
 
 struct compbit_store_desc {
 	struct mem_desc mem;

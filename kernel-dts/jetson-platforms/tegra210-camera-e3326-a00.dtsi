@@ -62,7 +62,7 @@
 			};
 		};
 		i2c@546c0000 {
-			avdd_dsi_csi-supply = <&max77620_gpio7>;
+			avdd_dsi_csi-supply = <&max77620_ldo0>;
 
 			status = "okay";
 			#address-cells = <1>;

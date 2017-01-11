@@ -294,12 +294,12 @@
 		i2c@546c0000 {
 			status = "okay";
 			bus-pullup-supply = <&max77620_sd3>;
-			avdd_dsi_csi-supply = <&max77620_sd3>;
+			avdd_dsi_csi-supply = <&max77620_ldo0>;
 		};
 
 		vi {
 			status = "okay";
-			avdd_dsi_csi_supply = <&max77620_sd3>;
+			avdd_dsi_csi-supply = <&max77620_ldo0>;
 		};
 	};
 

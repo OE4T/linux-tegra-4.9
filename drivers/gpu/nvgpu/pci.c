@@ -19,6 +19,7 @@
 #include <linux/pm_runtime.h>
 
 #include <nvgpu/nvgpu_common.h>
+#include <nvgpu/kmem.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
@@ -357,6 +358,8 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 
 	platform->g = g;
 	g->dev = &pdev->dev;
+
+	nvgpu_kmem_init(g);
 
 	err = pci_enable_device(pdev);
 	if (err)

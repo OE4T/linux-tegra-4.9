@@ -43,6 +43,7 @@
 #include <linux/version.h>
 
 #include <nvgpu/nvgpu_common.h>
+#include <nvgpu/kmem.h>
 #include <nvgpu/allocator.h>
 #include <nvgpu/timers.h>
 
@@ -1597,6 +1598,8 @@ static int gk20a_probe(struct platform_device *dev)
 
 	set_gk20a(dev, gk20a);
 	gk20a->dev = &dev->dev;
+
+	nvgpu_kmem_init(gk20a);
 
 	gk20a->irq_stall = platform_get_irq(dev, 0);
 	gk20a->irq_nonstall = platform_get_irq(dev, 1);

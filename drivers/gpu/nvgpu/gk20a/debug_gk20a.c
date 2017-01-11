@@ -21,6 +21,7 @@
 #include <linux/io.h>
 
 #include <nvgpu/semaphore.h>
+#include <nvgpu/kmem.h>
 
 #include "gk20a.h"
 #include "debug_gk20a.h"
@@ -485,6 +486,9 @@ void gk20a_debug_init(struct device *dev, const char *debugfs_symlink)
 	gk20a_mm_debugfs_init(g->dev);
 	gk20a_fifo_debugfs_init(g->dev);
 	gk20a_sched_debugfs_init(g->dev);
+#ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
+	nvgpu_kmem_debugfs_init(g->dev);
+#endif
 #endif
 
 }

@@ -47,6 +47,17 @@ config GK20A_DEVFREQ
 
 endchoice
 
+config NVGPU_TRACK_MEM_USAGE
+        bool "Track the usage of system memory in nvgpu"
+	depends on GK20A
+	default n
+	help
+	  Say Y here to allow nvgpu to track and keep statistics on
+	  the system memory used by the driver. This does recreate
+	  some of the kmem_leak tracking but this is also applicable
+	  to other OSes which do not have Linux' kmem_leak.
+
+
 config GK20A_CYCLE_STATS
 	bool "Support GK20A GPU CYCLE STATS"
 	depends on GK20A

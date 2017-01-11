@@ -19,6 +19,8 @@
 #include <linux/pm_runtime.h>
 #include <linux/pm_qos.h>
 
+#include <nvgpu/kmem.h>
+
 #include "vgpu/vgpu.h"
 #include "vgpu/fecs_trace_vgpu.h"
 #include "gk20a/debug_gk20a.h"
@@ -561,6 +563,8 @@ int vgpu_probe(struct platform_device *pdev)
 	platform->g = gk20a;
 	platform->vgpu_priv = priv;
 	gk20a->dev = dev;
+
+	nvgpu_kmem_init(gk20a);
 
 	err = gk20a_user_init(dev, INTERFACE_NAME, &nvgpu_class);
 	if (err)

@@ -27,6 +27,7 @@ struct gk20a_ctxsw_ucode_segments;
 struct gk20a_fecs_trace;
 struct gk20a_ctxsw_trace;
 struct acr_desc;
+struct nvgpu_mem_alloc_tracker;
 
 #include <linux/sched.h>
 #include <nvgpu/lock.h>
@@ -915,6 +916,7 @@ struct gk20a {
 	struct dentry *debugfs_runlist_interleave;
 	struct dentry *debugfs_allocators;
 	struct dentry *debugfs_xve;
+	struct dentry *debugfs_kmem;
 #endif
 	struct gk20a_ctxsw_ucode_info ctxsw_ucode_info;
 
@@ -1055,6 +1057,10 @@ struct gk20a {
 	/* Check if msi is enabled */
 	bool msi_enabled;
 #endif
+#ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
+	struct nvgpu_mem_alloc_tracker *vmallocs;
+	struct nvgpu_mem_alloc_tracker *kmallocs;
+#endif
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)
@@ -1131,6 +1137,7 @@ enum gk20a_dbg_categories {
 	gpu_dbg_pmu_pstate = BIT(17), /* p state controlled by pmu */
 	gpu_dbg_xv      = BIT(18), /* XVE debugging */
 	gpu_dbg_shutdown = BIT(19), /* GPU shutdown tracing */
+	gpu_dbg_kmem    = BIT(20), /* Kmem tracking debugging */
 	gpu_dbg_mem     = BIT(31), /* memory accesses, very verbose */
 };
 

@@ -5809,8 +5809,7 @@ void eqos_stop_dev(struct eqos_prv_data *pdata)
 	/* stop DMA RX */
 	eqos_stop_all_ch_rx_dma(pdata);
 
-	if (pdata->eee_enabled)
-		del_timer_sync(&pdata->eee_ctrl_timer);
+	del_timer_sync(&pdata->eee_ctrl_timer);
 
 	/* return tx skbs */
 	desc_if->tx_skb_free_mem(pdata, pdata->num_chans);

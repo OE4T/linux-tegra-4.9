@@ -773,7 +773,7 @@
 			interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
 			iommus = <&smmu TEGRA_SWGROUP_VI>;
 			status = "disabled";
-			clocks = <&tegra_car TEGRA210_CLK_VI_V4L2_CBUS>,
+			clocks = <&tegra_car TEGRA210_CLK_VI>,
 				 <&tegra_car TEGRA210_CLK_CSI>,
 				 <&tegra_car TEGRA210_CLK_CILAB>,
 				 <&tegra_car TEGRA210_CLK_CILCD>,
@@ -783,7 +783,7 @@
 				 <&tegra_car TEGRA210_CLK_EMC>,
 				 <&tegra_car TEGRA210_CLK_PLL_D>,
 				 <&tegra_car TEGRA210_CLK_PLL_D_DSI_OUT>;
-			clock-names = "vi_v4l2", "csi", "cilab", "cilcd",
+			clock-names = "vi", "csi", "cilab", "cilcd",
 					"cile", "vii2c", "i2cslow", "emc",
 					"pll_d", "pll_d_dsi_out";
 			resets = <&tegra_car 20>;
@@ -804,10 +804,6 @@
 			interrupts = <0 71 0x04>;
 			iommus = <&smmu TEGRA_SWGROUP_ISP>;
 			status = "disabled";
-			clocks = <&tegra_car TEGRA210_CLK_ISPA_ISP_CBUS>;
-			clock-names = "ispa";
-			resets = <&tegra_car 23>;
-			reset-names = "ispa";
 		};
 
 		isp@54680000 {
@@ -817,10 +813,6 @@
 			interrupts = <0 70 0x04>;
 			iommus = <&smmu TEGRA_SWGROUP_ISP2B>;
 			status = "disabled";
-			clocks = <&tegra_car TEGRA210_CLK_ISPB_ISP_CBUS>;
-			clock-names = "ispb";
-			resets = <&tegra_car 3>;
-			reset-names = "ispb";
 		};
 
 		dc@54200000 {

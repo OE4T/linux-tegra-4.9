@@ -247,7 +247,8 @@ u32 channel_gk20a_pbdma_acquire_val(struct channel_gk20a *c)
 		return val;
 
 	timeout = gk20a_get_channel_watchdog_timeout(c);
-	do_div(timeout, 2); /* set acquire timeout to half of channel wdt */
+	timeout *= 80UL;
+	do_div(timeout, 100); /* set acquire timeout to 80% of channel wdt */
 	timeout *= 1000000UL; /* ms -> ns */
 	do_div(timeout, 1024); /* in unit of 1024ns */
 	val_len = fls(timeout >> 32) + 32;

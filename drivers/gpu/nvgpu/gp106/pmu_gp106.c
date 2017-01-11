@@ -317,6 +317,10 @@ void gp106_init_pmu_ops(struct gpu_ops *gops)
 		gops->pmu.init_wpr_region = NULL;
 	}
 	gops->pmu.pmu_setup_elpg = NULL;
+	gops->pmu.pmu_get_queue_head = pwr_pmu_queue_head_r;
+	gops->pmu.pmu_get_queue_head_size = pwr_pmu_queue_head__size_1_v;
+	gops->pmu.pmu_get_queue_tail = pwr_pmu_queue_tail_r;
+	gops->pmu.pmu_get_queue_tail_size = pwr_pmu_queue_tail__size_1_v;
 	gops->pmu.lspmuwprinitdone = 0;
 	gops->pmu.fecsbootstrapdone = false;
 	gops->pmu.write_dmatrfbase = gp10b_write_dmatrfbase;

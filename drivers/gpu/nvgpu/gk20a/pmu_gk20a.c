@@ -2625,21 +2625,25 @@ static int pmu_queue_head(struct pmu_gk20a *pmu, struct pmu_queue *queue,
 			u32 *head, bool set)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
+	u32 queue_head_size = 0;
 
-	BUG_ON(!head);
+	if (g->ops.pmu.pmu_get_queue_head_size)
+		queue_head_size = g->ops.pmu.pmu_get_queue_head_size();
+
+	BUG_ON(!head || !queue_head_size);
 
 	if (PMU_IS_COMMAND_QUEUE(queue->id)) {
 
-		if (queue->index >= pwr_pmu_queue_head__size_1_v())
+		if (queue->index >= queue_head_size)
 			return -EINVAL;
 
 		if (!set)
 			*head = pwr_pmu_queue_head_address_v(
 				gk20a_readl(g,
-					pwr_pmu_queue_head_r(queue->index)));
+				g->ops.pmu.pmu_get_queue_head(queue->index)));
 		else
 			gk20a_writel(g,
-				pwr_pmu_queue_head_r(queue->index),
+				g->ops.pmu.pmu_get_queue_head(queue->index),
 				pwr_pmu_queue_head_address_f(*head));
 	} else {
 		if (!set)
@@ -2658,21 +2662,25 @@ static int pmu_queue_tail(struct pmu_gk20a *pmu, struct pmu_queue *queue,
 			u32 *tail, bool set)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
+	u32 queue_tail_size = 0;
 
-	BUG_ON(!tail);
+	if (g->ops.pmu.pmu_get_queue_tail_size)
+		queue_tail_size = g->ops.pmu.pmu_get_queue_tail_size();
+
+	BUG_ON(!tail || !queue_tail_size);
 
 	if (PMU_IS_COMMAND_QUEUE(queue->id)) {
 
-		if (queue->index >= pwr_pmu_queue_tail__size_1_v())
+		if (queue->index >= queue_tail_size)
 			return -EINVAL;
 
 		if (!set)
 			*tail = pwr_pmu_queue_tail_address_v(
-				gk20a_readl(g,
-					pwr_pmu_queue_tail_r(queue->index)));
+			gk20a_readl(g,
+				g->ops.pmu.pmu_get_queue_tail(queue->index)));
 		else
 			gk20a_writel(g,
-				pwr_pmu_queue_tail_r(queue->index),
+				g->ops.pmu.pmu_get_queue_tail(queue->index),
 				pwr_pmu_queue_tail_address_f(*tail));
 
 	} else {
@@ -3445,6 +3453,10 @@ void gk20a_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.prepare_ucode = gk20a_prepare_ucode;
 	gops->pmu.pmu_setup_hw_and_bootstrap = gk20a_init_pmu_setup_hw1;
 	gops->pmu.pmu_nsbootstrap = pmu_bootstrap;
+	gops->pmu.pmu_get_queue_head = pwr_pmu_queue_head_r;
+	gops->pmu.pmu_get_queue_head_size = pwr_pmu_queue_head__size_1_v;
+	gops->pmu.pmu_get_queue_tail = pwr_pmu_queue_tail_r;
+	gops->pmu.pmu_get_queue_tail_size = pwr_pmu_queue_tail__size_1_v;
 	gops->pmu.pmu_setup_elpg = NULL;
 	gops->pmu.init_wpr_region = NULL;
 	gops->pmu.load_lsfalcon_ucode = NULL;

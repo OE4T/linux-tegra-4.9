@@ -618,6 +618,10 @@ struct gpu_ops {
 		int (*pmu_setup_hw_and_bootstrap)(struct gk20a *g);
 		int (*pmu_nsbootstrap)(struct pmu_gk20a *pmu);
 		int (*pmu_setup_elpg)(struct gk20a *g);
+		u32 (*pmu_get_queue_head)(u32 i);
+		u32 (*pmu_get_queue_head_size)(void);
+		u32 (*pmu_get_queue_tail_size)(void);
+		u32 (*pmu_get_queue_tail)(u32 i);
 		int (*init_wpr_region)(struct gk20a *g);
 		int (*load_lsfalcon_ucode)(struct gk20a *g, u32 falconidmask);
 		void (*write_dmatrfbase)(struct gk20a *g, u32 addr);

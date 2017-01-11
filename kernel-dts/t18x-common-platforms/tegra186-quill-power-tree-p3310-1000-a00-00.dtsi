@@ -149,6 +149,27 @@
 		iopower-dmic-hv-supply =  <&vdd_1v8_ap>;
 		iopower-sdmmc2-hv-supply = <&spmic_sd3>;
 		iopower-sdmmc3-hv-supply =  <&spmic_ldo5>;
+
+		vddio-uart-supply = <&vdd_1v8_ap>;
+		vddio-conn-supply = <&vdd_1v8_ap>;
+		vddio-edp-supply = <&vdd_1v8_ap>;
+		vddio-pex-ctrl-supply = <&vdd_1v8_ap>;
+		vddio-audio-supply = <&vdd_1v8_ap>;
+		vddio-ufs-supply = <&vdd_1v8_ap>;
+		vddio-ddr0-supply = <&spmic_sd0>;
+		vddio-ddr1-supply = <&spmic_sd0>;
+		vddio-mipi-bias-supply = <&spmic_sd1>;
+		vddio-cam-supply = <&vdd_1v8_ap>;
+		vddio-sdmmc4-supply = <&vdd_1v8_ap>;
+		vddio-sdmmc1-hv-supply = <&spmic_ldo3>;
+		vddio-audio-hv-supply = <&vdd_1v8_ap>;
+		vddio-dbg-supply = <&vdd_1v8_ap>;
+		vddio-spi-supply = <&vdd_1v8_ap>;
+		vddio-ao-supply = <&vdd_1v8_ap>;
+		vddio-ao-hv-supply = <&spmic_ldo2>;
+		vddio-dmic-hv-supply =  <&vdd_1v8_ap>;
+		vddio-sdmmc2-hv-supply = <&spmic_sd3>;
+		vddio-sdmmc3-hv-supply =  <&spmic_ldo5>;
 	};
 
 	i2c@c250000 {

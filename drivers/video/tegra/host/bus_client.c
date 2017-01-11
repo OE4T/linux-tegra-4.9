@@ -39,6 +39,8 @@
 #include <linux/nvhost.h>
 #include <linux/nvhost_ioctl.h>
 
+#include <linux/version.h>
+
 #include "debug.h"
 #include "bus_client.h"
 #include "dev.h"
@@ -1614,6 +1616,10 @@ int nvhost_client_device_init(struct platform_device *dev)
 
 	/* disable context isolation in simulation */
 	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
+		pdata->isolate_contexts = false;
+
+	/* disable context isolation in K4.9, where IOMMU is not supported */
+	if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0))
 		pdata->isolate_contexts = false;
 
 	dev_info(&dev->dev, "initialized\n");

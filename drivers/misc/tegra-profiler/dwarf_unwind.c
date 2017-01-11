@@ -121,6 +121,7 @@ struct stackframe {
 	unsigned long cfa;
 
 	int mode;
+	int is_sched;
 };
 
 struct dwarf_cpu_context {
@@ -1599,6 +1600,7 @@ dwarf_decode_fde_cie(struct ex_region_info *ri,
 
 static void *
 dwarf_find_fde(struct ex_region_info *ri,
+	       struct stackframe *sf,
 	       void *data,
 	       unsigned long length,
 	       unsigned long pc,
@@ -1656,8 +1658,9 @@ dwarf_find_fde(struct ex_region_info *ri,
 			start = fde.initial_location;
 			end = start + fde.address_range;
 
-			quadd_unwind_set_tail_info(ri->vm_start, secid,
-						   start, end);
+			if (sf && !sf->is_sched)
+				quadd_unwind_set_tail_info(ri->vm_start, secid,
+							   start, end);
 		}
 
 		pr_debug("pc: %#lx, last bst entry: %#lx - %#lx",
@@ -1697,7 +1700,7 @@ __is_fde_entry_exist(struct ex_region_info *ri, unsigned long addr, int is_eh)
 
 	hdr_len = ti->length;
 
-	fde_p = dwarf_find_fde(ri, hdr_start, hdr_len, addr, is_eh);
+	fde_p = dwarf_find_fde(ri, NULL, hdr_start, hdr_len, addr, is_eh);
 
 	return fde_p ? 1 : 0;
 }
@@ -1726,6 +1729,7 @@ is_fde_entry_exist(struct ex_region_info *ri,
 
 static long
 dwarf_decode(struct ex_region_info *ri,
+	     struct stackframe *sf,
 	     struct dw_cie *cie,
 	     struct dw_fde *fde,
 	     unsigned long pc,
@@ -1751,7 +1755,7 @@ dwarf_decode(struct ex_region_info *ri,
 	pr_debug("eh frame hdr: %p - %p\n",
 		 hdr_start, hdr_start + hdr_len);
 
-	fde_p = dwarf_find_fde(ri, hdr_start, hdr_len, pc, is_eh);
+	fde_p = dwarf_find_fde(ri, sf, hdr_start, hdr_len, pc, is_eh);
 	if (!fde_p)
 		return -QUADD_URC_IDX_NOT_FOUND;
 
@@ -1804,7 +1808,7 @@ unwind_frame(struct ex_region_info *ri,
 	struct regs_state *rs, *rs_initial;
 	int mode = sf->mode;
 
-	err = dwarf_decode(ri, &cie, &fde, pc, is_eh);
+	err = dwarf_decode(ri, sf, &cie, &fde, pc, is_eh);
 	if (err < 0)
 		return err;
 
@@ -2134,6 +2138,7 @@ quadd_get_user_cc_dwarf(struct quadd_event_context *event_ctx,
 				sizeof(u32) : sizeof(u64);
 
 	sf->mode = mode;
+	sf->is_sched = event_ctx->is_sched;
 	sf->cfa = 0;
 
 	vma = find_vma(mm, ip);

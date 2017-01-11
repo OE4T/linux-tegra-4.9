@@ -43,7 +43,7 @@
 static struct quadd_hrt_ctx hrt;
 
 static void
-read_all_sources(struct pt_regs *regs, struct task_struct *task);
+read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched);
 
 struct hrt_event_value {
 	int event_id;
@@ -67,7 +67,7 @@ static enum hrtimer_restart hrtimer_handler(struct hrtimer *hrtimer)
 	qm_debug_handler_sample(regs);
 
 	if (regs)
-		read_all_sources(regs, current);
+		read_all_sources(regs, current, 0);
 
 	hrtimer_forward_now(hrtimer, ns_to_ktime(hrt.sample_period));
 	qm_debug_timer_forward(regs, hrt.sample_period);
@@ -348,7 +348,7 @@ get_stack_offset(struct task_struct *task,
 }
 
 static void
-read_all_sources(struct pt_regs *regs, struct task_struct *task)
+read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched)
 {
 	u32 state, extra_data = 0, urcs = 0;
 	int i, vec_idx = 0, bt_size = 0;
@@ -402,6 +402,7 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 	event_ctx.regs = user_regs;
 	event_ctx.task = task;
 	event_ctx.user_mode = user_mode(regs);
+	event_ctx.is_sched = is_sched;
 
 	if (ctx->param.backtrace) {
 		cc->um = hrt.um;
@@ -621,7 +622,7 @@ void __quadd_task_sched_out(struct task_struct *prev,
 	if (is_sample_process(prev)) {
 		user_regs = task_pt_regs(prev);
 		if (user_regs)
-			read_all_sources(user_regs, prev);
+			read_all_sources(user_regs, prev, 1);
 
 		n = remove_active_thread(cpu_ctx, prev->pid);
 		atomic_sub(n, &cpu_ctx->nr_active);

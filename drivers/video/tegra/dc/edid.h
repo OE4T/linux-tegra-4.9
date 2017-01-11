@@ -131,9 +131,11 @@ enum {
 /* Flag fallback edid is in use. */
 #define EDID_ERRORS_USING_FALLBACK	0x04
 
-#define TEGRA_EDID_QUIRK_NONE      (0)
+#define TEGRA_EDID_QUIRK_NONE       (0)
 /* TV doesn't support YUV420, but declares support */
-#define TEGRA_EDID_QUIRK_NO_YUV (1 << 0)
+#define TEGRA_EDID_QUIRK_NO_YUV     (1 << 0)
+/* TV needs us to delay HDCP by a few seconds */
+#define TEGRA_EDID_QUIRK_DELAY_HDCP (1 << 1)
 
 struct tegra_edid {
 	struct tegra_edid_pvt	*data;

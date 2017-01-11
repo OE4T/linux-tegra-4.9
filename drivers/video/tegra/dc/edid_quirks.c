@@ -24,6 +24,11 @@ static const struct hdmi_blacklist {
 } edid_blacklist[] = {
 	/* Bauhn ATVS65-815 65" 4K TV */
 	{ "CTV", 48, "Tempo 4K TV", TEGRA_EDID_QUIRK_NO_YUV },
+	/* Vizio SmartCast P-Series 4K TV */
+	{ "VIZ", 4120, "P50-C1",    TEGRA_EDID_QUIRK_DELAY_HDCP },
+	{ "VIZ", 4120, "P55-C1",    TEGRA_EDID_QUIRK_DELAY_HDCP },
+	{ "VIZ", 4120, "P65-C1",    TEGRA_EDID_QUIRK_DELAY_HDCP },
+	{ "VIZ", 4120, "P75-C1",    TEGRA_EDID_QUIRK_DELAY_HDCP },
 };
 
 u32 tegra_edid_lookup_quirks(const char *manufacturer, u32 model,

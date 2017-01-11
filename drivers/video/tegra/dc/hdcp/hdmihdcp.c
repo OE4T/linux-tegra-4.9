@@ -2092,6 +2092,8 @@ static int tegra_nvhdcp_on(struct tegra_nvhdcp *nvhdcp)
 	u8 hdcp2version = 0;
 	int e;
 	int val;
+	int delay = tegra_edid_get_quirks(nvhdcp->hdmi->edid) &
+			TEGRA_EDID_QUIRK_DELAY_HDCP ? 5000 : 100;
 	nvhdcp->state = STATE_UNAUTHENTICATED;
 	if (nvhdcp_is_plugged(nvhdcp) &&
 		atomic_read(&nvhdcp->policy) !=
@@ -2133,7 +2135,7 @@ static int tegra_nvhdcp_on(struct tegra_nvhdcp *nvhdcp)
 			nvhdcp->hdcp22 = HDCP1X_PROTOCOL;
 		}
 		queue_delayed_work(nvhdcp->downstream_wq, &nvhdcp->work,
-				msecs_to_jiffies(100));
+				msecs_to_jiffies(delay));
 	}
 	return 0;
 }

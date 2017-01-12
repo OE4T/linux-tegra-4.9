@@ -1,7 +1,7 @@
 /*
  * VI driver for T186
  *
- * Copyright (c) 2015-2016 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -353,9 +353,6 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 		return err;
 
 	nvhost_module_init(pdev);
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	nvhost_module_add_domain(&pdata->pd, pdev);
-#endif
 	err = nvhost_client_device_init(pdev);
 	if (err) {
 		nvhost_module_deinit(pdev);

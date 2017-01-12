@@ -225,6 +225,9 @@ struct nvgpu_gpu_characteristics {
 	__u32 reg_ops_limit;
 	__u32 reserved1;
 
+	__s16 event_ioctl_nr_last;
+	__u16 pad[3];
+
 	/* Notes:
 	   - This struct can be safely appended with new fields. However, always
 	     keep the structure size multiple of 8 and make sure that the binary
@@ -232,8 +235,6 @@ struct nvgpu_gpu_characteristics {
 	   - If the last field is reserved/padding, it is not
 	     generally safe to repurpose the field in future revisions.
 	*/
-	__s16 event_ioctl_nr_last;
-	__u16 pad[3];
 };
 
 struct nvgpu_gpu_get_characteristics {

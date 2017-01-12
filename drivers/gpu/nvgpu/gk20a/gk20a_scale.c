@@ -1,7 +1,7 @@
 /*
  * gk20a clock scaling profile
  *
- * Copyright (c) 2013-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -181,12 +181,12 @@ static int gk20a_scale_target(struct device *dev, unsigned long *freq,
 	if (local_freq > max_freq)
 		local_freq = max_freq;
 
-	/* Check for duplicate request */
-	if (local_freq == g->last_freq)
-		return 0;
-
 	/* set the final frequency */
 	rounded_rate = platform->clk_round_rate(dev, local_freq);
+
+	/* Check for duplicate request */
+	if (rounded_rate == g->last_freq)
+		return 0;
 
 	if (platform->clk_get_rate(dev) == rounded_rate)
 		*freq = rounded_rate;

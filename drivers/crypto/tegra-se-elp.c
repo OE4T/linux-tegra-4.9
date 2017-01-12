@@ -4,7 +4,7 @@
  *
  * Support for Tegra Security Engine Elliptic crypto algorithms.
  *
- * Copyright (c) 2015-2016, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2015-2017, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2, as
@@ -97,6 +97,7 @@ static char *rng1_cmd[] = {
 
 struct tegra_se_elp_chipdata {
 	bool use_key_slot;
+	bool rng1_supported;
 };
 
 struct tegra_se_elp_dev {
@@ -2143,6 +2144,12 @@ static struct akcipher_alg pka1_rsa_algs[] = {
 
 static struct tegra_se_elp_chipdata tegra18_se_chipdata = {
 	.use_key_slot = false,
+	.rng1_supported = true,
+};
+
+static struct tegra_se_elp_chipdata tegra21_se_chipdata = {
+	.use_key_slot = false,
+	.rng1_supported = false,
 };
 
 static int tegra_se_elp_probe(struct platform_device *pdev)
@@ -2167,6 +2174,9 @@ static int tegra_se_elp_probe(struct platform_device *pdev)
 		se_dev->io_reg[i] = devm_ioremap_resource(se_dev->dev, res);
 		if (IS_ERR(se_dev->io_reg[i]))
 			return PTR_ERR(se_dev->io_reg[i]);
+
+		if (!se_dev->chipdata->rng1_supported)
+			break;
 	}
 
 	se_dev->c = devm_clk_get(se_dev->dev, "se");
@@ -2182,11 +2192,13 @@ static int tegra_se_elp_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	se_dev->rdata = devm_kzalloc(se_dev->dev,
-				     sizeof(u32) * 4, GFP_KERNEL);
-	if (!se_dev->rdata) {
-		err = -ENOMEM;
-		goto exit;
+	if (se_dev->chipdata->rng1_supported) {
+		se_dev->rdata = devm_kzalloc(se_dev->dev,
+					     sizeof(u32) * 4, GFP_KERNEL);
+		if (!se_dev->rdata) {
+			err = -ENOMEM;
+			goto exit;
+		}
 	}
 
 	elp_dev = se_dev;
@@ -2266,6 +2278,9 @@ static const struct of_device_id tegra_se_elp_of_match[] = {
 	{
 		.compatible = "nvidia,tegra186-se-elp",
 		.data = &tegra18_se_chipdata,
+	}, {
+		.compatible = "nvidia,tegra214-se-elp",
+		.data = &tegra21_se_chipdata,
 	}, {
 	},
 };

@@ -681,6 +681,11 @@ static int tegra_crypto_sha(struct file *filp, struct tegra_crypto_ctx *ctx,
 	char sha_algo[6][10] = {"sha1", "sha224", "sha256",
 				"sha384", "sha512", "cmac(aes)"};
 
+	if (sha_req->plaintext_sz > PAGE_SIZE) {
+		pr_err("alg:hash: invalid plaintext_sz for sha_req\n");
+		return -EINVAL;
+	}
+
 	tfm = crypto_alloc_ahash(sha_req->algo, 0, 0);
 	if (IS_ERR(tfm)) {
 		pr_err("alg:hash:Failed to load transform for %s:%ld\n",
@@ -716,7 +721,15 @@ static int tegra_crypto_sha(struct file *filp, struct tegra_crypto_ctx *ctx,
 
 	hash_buff = xbuf[0];
 
-	memcpy(hash_buff, sha_req->plaintext, sha_req->plaintext_sz);
+	ret = copy_from_user((void *)hash_buff,
+			     (void __user *)sha_req->plaintext,
+			     sha_req->plaintext_sz);
+	if (ret) {
+		ret = -EFAULT;
+		pr_err("%s: copy_from_user failed (%d)\n", __func__, ret);
+			goto out;
+	}
+
 	sg_init_one(&sg[0], hash_buff, sha_req->plaintext_sz);
 
 	if (sha_req->keylen) {

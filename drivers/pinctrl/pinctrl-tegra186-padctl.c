@@ -1513,7 +1513,7 @@ static void tegra186_utmi_bias_pad_power_off(struct tegra_padctl *padctl)
 	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
 }
 
-void tegra_phy_xusb_utmi_pad_power_on(struct phy *phy)
+void tegra18x_phy_xusb_utmi_pad_power_on(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 	int port;
@@ -1542,9 +1542,9 @@ void tegra_phy_xusb_utmi_pad_power_on(struct phy *phy)
 
 	padctl->utmi_ports[port].poweron = true;
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_power_on);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_utmi_pad_power_on);
 
-void tegra_phy_xusb_utmi_pad_power_down(struct phy *phy)
+void tegra18x_phy_xusb_utmi_pad_power_down(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 	int port;
@@ -1572,7 +1572,7 @@ void tegra_phy_xusb_utmi_pad_power_down(struct phy *phy)
 	tegra186_utmi_bias_pad_power_off(padctl);
 	padctl->utmi_ports[port].poweron = false;
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_power_down);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_utmi_pad_power_down);
 
 #define oc_debug(u) \
 		dev_dbg(u->dev, "%s(%d):OC_DET %#x, VBUS_OC_MAP %#x, "\
@@ -2104,14 +2104,14 @@ static ssize_t otg_vbus_store(struct device *dev,
 	}
 
 	if (on && !padctl->otg_vbus_alwayson) {
-		err = tegra_phy_xusb_utmi_vbus_power_on(
+		err = tegra18x_phy_xusb_utmi_vbus_power_on(
 				padctl->utmi_phys[port]);
 		if (!err)
 			padctl->otg_vbus_alwayson = true;
 	} else if (!on && padctl->otg_vbus_alwayson) {
 		/* pre-set this to make vbus power off really work */
 		padctl->otg_vbus_alwayson = false;
-		err = tegra_phy_xusb_utmi_vbus_power_off(
+		err = tegra18x_phy_xusb_utmi_vbus_power_off(
 				padctl->utmi_phys[port]);
 		if (!err)
 			padctl->otg_vbus_alwayson = false;
@@ -2670,7 +2670,7 @@ static void tegra_xusb_otg_vbus_work(struct work_struct *work)
 	if ((reg & ID_OVERRIDE(~0)) == ID_OVERRIDE_GROUNDED) {
 		/* entering host mode role */
 		if (!padctl->otg_vbus_on) {
-			err = tegra_phy_xusb_utmi_vbus_power_on(
+			err = tegra18x_phy_xusb_utmi_vbus_power_on(
 					padctl->utmi_phys[port]);
 			if (!err)
 				padctl->otg_vbus_on = true;
@@ -2678,7 +2678,7 @@ static void tegra_xusb_otg_vbus_work(struct work_struct *work)
 	} else if ((reg & ID_OVERRIDE(~0)) == ID_OVERRIDE_FLOATING) {
 		/* leaving host mode role */
 		if (padctl->otg_vbus_on) {
-			err = tegra_phy_xusb_utmi_vbus_power_off(
+			err = tegra18x_phy_xusb_utmi_vbus_power_off(
 					padctl->utmi_phys[port]);
 			if (!err)
 				padctl->otg_vbus_on = false;
@@ -3206,7 +3206,7 @@ static struct platform_driver tegra186_padctl_driver = {
 module_platform_driver(tegra186_padctl_driver);
 
 /* Tegra Generic PHY Extensions */
-int tegra_phy_xusb_enable_sleepwalk(struct phy *phy,
+int tegra18x_phy_xusb_enable_sleepwalk(struct phy *phy,
 				    enum usb_device_speed speed)
 {
 	struct tegra_padctl *padctl = phy_get_drvdata(phy);
@@ -3230,9 +3230,9 @@ int tegra_phy_xusb_enable_sleepwalk(struct phy *phy,
 	} else
 		return -EINVAL;
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_enable_sleepwalk);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_enable_sleepwalk);
 
-int tegra_phy_xusb_disable_sleepwalk(struct phy *phy)
+int tegra18x_phy_xusb_disable_sleepwalk(struct phy *phy)
 {
 	struct tegra_padctl *padctl = phy_get_drvdata(phy);
 	int port;
@@ -3255,7 +3255,7 @@ int tegra_phy_xusb_disable_sleepwalk(struct phy *phy)
 	} else
 		return -EINVAL;
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_disable_sleepwalk);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_disable_sleepwalk);
 
 static int tegra186_padctl_vbus_override(struct tegra_padctl *padctl,
 					 bool on)
@@ -3276,7 +3276,7 @@ static int tegra186_padctl_vbus_override(struct tegra_padctl *padctl,
 	return 0;
 }
 
-int tegra_phy_xusb_set_vbus_override(struct phy *phy)
+int tegra18x_phy_xusb_set_vbus_override(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 
@@ -3287,9 +3287,9 @@ int tegra_phy_xusb_set_vbus_override(struct phy *phy)
 
 	return tegra186_padctl_vbus_override(padctl, true);
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_set_vbus_override);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_set_vbus_override);
 
-int tegra_phy_xusb_clear_vbus_override(struct phy *phy)
+int tegra18x_phy_xusb_clear_vbus_override(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 
@@ -3300,7 +3300,7 @@ int tegra_phy_xusb_clear_vbus_override(struct phy *phy)
 
 	return tegra186_padctl_vbus_override(padctl, false);
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_clear_vbus_override);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_clear_vbus_override);
 
 static int tegra186_padctl_id_override(struct tegra_padctl *padctl,
 					 bool grounded)
@@ -3330,7 +3330,7 @@ static int tegra186_padctl_id_override(struct tegra_padctl *padctl,
 	return 0;
 }
 
-int tegra_phy_xusb_set_id_override(struct phy *phy)
+int tegra18x_phy_xusb_set_id_override(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 
@@ -3341,9 +3341,9 @@ int tegra_phy_xusb_set_id_override(struct phy *phy)
 
 	return tegra186_padctl_id_override(padctl, true);
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_set_id_override);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_set_id_override);
 
-int tegra_phy_xusb_clear_id_override(struct phy *phy)
+int tegra18x_phy_xusb_clear_id_override(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 
@@ -3354,9 +3354,9 @@ int tegra_phy_xusb_clear_id_override(struct phy *phy)
 
 	return tegra186_padctl_id_override(padctl, false);
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_clear_id_override);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_clear_id_override);
 
-bool tegra_phy_xusb_has_otg_cap(struct phy *phy)
+bool tegra18x_phy_xusb_has_otg_cap(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 
@@ -3376,7 +3376,7 @@ bool tegra_phy_xusb_has_otg_cap(struct phy *phy)
 
 	return false;
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_has_otg_cap);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_has_otg_cap);
 
 static int tegra186_usb3_phy_set_wake(struct tegra_padctl *padctl,
 				      int port, bool enable)
@@ -3499,7 +3499,7 @@ static int tegra186_hsic_phy_set_wake(struct tegra_padctl *padctl,
 	return 0;
 }
 
-int tegra_phy_xusb_enable_wake(struct phy *phy)
+int tegra18x_phy_xusb_enable_wake(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 	int port;
@@ -3527,9 +3527,9 @@ int tegra_phy_xusb_enable_wake(struct phy *phy)
 	} else
 		return -EINVAL;
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_enable_wake);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_enable_wake);
 
-int tegra_phy_xusb_disable_wake(struct phy *phy)
+int tegra18x_phy_xusb_disable_wake(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 	int port;
@@ -3557,7 +3557,7 @@ int tegra_phy_xusb_disable_wake(struct phy *phy)
 	}
 		return -EINVAL;
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_disable_wake);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_disable_wake);
 
 
 static int tegra186_usb3_phy_remote_wake_detected(struct tegra_padctl *padctl,
@@ -3599,7 +3599,7 @@ static int tegra186_hsic_phy_remote_wake_detected(struct tegra_padctl *padctl,
 		return false;
 }
 
-int tegra_phy_xusb_remote_wake_detected(struct phy *phy)
+int tegra18x_phy_xusb_remote_wake_detected(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 	int port;
@@ -3627,10 +3627,10 @@ int tegra_phy_xusb_remote_wake_detected(struct phy *phy)
 	}
 		return -EINVAL;
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_remote_wake_detected);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_remote_wake_detected);
 
 
-int tegra_phy_xusb_pretend_connected(struct phy *phy)
+int tegra18x_phy_xusb_pretend_connected(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 	int port;
@@ -3650,9 +3650,9 @@ int tegra_phy_xusb_pretend_connected(struct phy *phy)
 
 	return -EINVAL;
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_pretend_connected);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_pretend_connected);
 
-void tegra_phy_xusb_set_dcd_debounce_time(struct phy *phy, u32 val)
+void tegra18x_phy_xusb_set_dcd_debounce_time(struct phy *phy, u32 val)
 {
 	struct tegra_padctl *padctl;
 	u32 reg;
@@ -3669,9 +3669,9 @@ void tegra_phy_xusb_set_dcd_debounce_time(struct phy *phy, u32 val)
 	padctl_writel(padctl, reg,
 			XUSB_PADCTL_USB2_BATTERY_CHRG_TDCD_DBNC_TIMER_0);
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_set_dcd_debounce_time);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_set_dcd_debounce_time);
 
-void tegra_phy_xusb_utmi_pad_charger_detect_on(struct phy *phy)
+void tegra18x_phy_xusb_utmi_pad_charger_detect_on(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 	int port;
@@ -3684,7 +3684,7 @@ void tegra_phy_xusb_utmi_pad_charger_detect_on(struct phy *phy)
 	port = utmi_phy_to_port(phy);
 
 	/* power up necessary stuff */
-	tegra_phy_xusb_utmi_pad_power_on(phy);
+	tegra18x_phy_xusb_utmi_pad_power_on(phy);
 
 	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL0(port));
 	reg &= ~USB2_OTG_PD_ZI;
@@ -3712,9 +3712,9 @@ void tegra_phy_xusb_utmi_pad_charger_detect_on(struct phy *phy)
 		 ON_SRC_EN | OP_SINK_EN);
 	padctl_writel(padctl, reg, USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_charger_detect_on);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_utmi_pad_charger_detect_on);
 
-void tegra_phy_xusb_utmi_pad_charger_detect_off(struct phy *phy)
+void tegra18x_phy_xusb_utmi_pad_charger_detect_off(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 	int port;
@@ -3740,11 +3740,11 @@ void tegra_phy_xusb_utmi_pad_charger_detect_off(struct phy *phy)
 	reg &= ~(USB2_OTG_PD2 | USB2_OTG_PD2_OVRD_EN);
 	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL0(port));
 
-	tegra_phy_xusb_utmi_pad_power_down(phy);
+	tegra18x_phy_xusb_utmi_pad_power_down(phy);
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_charger_detect_off);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_utmi_pad_charger_detect_off);
 
-void tegra_phy_xusb_utmi_pad_enable_detect_filters(struct phy *phy)
+void tegra18x_phy_xusb_utmi_pad_enable_detect_filters(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 	int port;
@@ -3761,9 +3761,9 @@ void tegra_phy_xusb_utmi_pad_enable_detect_filters(struct phy *phy)
 		ZIP_FILTER_EN | ZIN_FILTER_EN);
 	padctl_writel(padctl, reg, USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_enable_detect_filters);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_utmi_pad_enable_detect_filters);
 
-void tegra_phy_xusb_utmi_pad_disable_detect_filters(struct phy *phy)
+void tegra18x_phy_xusb_utmi_pad_disable_detect_filters(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 	int port;
@@ -3780,9 +3780,9 @@ void tegra_phy_xusb_utmi_pad_disable_detect_filters(struct phy *phy)
 		 ZIP_FILTER_EN | ZIN_FILTER_EN);
 	padctl_writel(padctl, reg, USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_disable_detect_filters);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_utmi_pad_disable_detect_filters);
 
-void tegra_phy_xusb_utmi_pad_set_protection_level(struct phy *phy, int level,
+void tegra18x_phy_xusb_utmi_pad_set_protection_level(struct phy *phy, int level,
 						  enum tegra_vbus_dir dir)
 {
 	struct tegra_padctl *padctl;
@@ -3816,9 +3816,9 @@ void tegra_phy_xusb_utmi_pad_set_protection_level(struct phy *phy, int level,
 	}
 	padctl_writel(padctl, reg, USB2_BATTERY_CHRG_OTGPADX_CTL1(port));
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_set_protection_level);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_utmi_pad_set_protection_level);
 
-bool tegra_phy_xusb_utmi_pad_dcd(struct phy *phy)
+bool tegra18x_phy_xusb_utmi_pad_dcd(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 	int port;
@@ -3876,9 +3876,9 @@ bool tegra_phy_xusb_utmi_pad_dcd(struct phy *phy)
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_dcd);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_utmi_pad_dcd);
 
-u32 tegra_phy_xusb_noncompliant_div_detect(struct phy *phy)
+u32 tegra18x_phy_xusb_noncompliant_div_detect(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 	int port;
@@ -3902,9 +3902,9 @@ u32 tegra_phy_xusb_noncompliant_div_detect(struct phy *phy)
 
 	return reg;
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_noncompliant_div_detect);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_noncompliant_div_detect);
 
-bool tegra_phy_xusb_utmi_pad_primary_charger_detect(struct phy *phy)
+bool tegra18x_phy_xusb_utmi_pad_primary_charger_detect(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 	int port;
@@ -3935,9 +3935,9 @@ bool tegra_phy_xusb_utmi_pad_primary_charger_detect(struct phy *phy)
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_primary_charger_detect);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_utmi_pad_primary_charger_detect);
 
-bool tegra_phy_xusb_utmi_pad_secondary_charger_detect(struct phy *phy)
+bool tegra18x_phy_xusb_utmi_pad_secondary_charger_detect(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 	int port;
@@ -3968,14 +3968,14 @@ bool tegra_phy_xusb_utmi_pad_secondary_charger_detect(struct phy *phy)
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_secondary_charger_detect);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_utmi_pad_secondary_charger_detect);
 
 /*
  * This function will fource vbus on whatever under
  * over-current SFIO or regulator GPIO control,
  * and also without caring about regulator refcnt.
  */
-int tegra_phy_xusb_utmi_vbus_power_on(struct phy *phy)
+int tegra18x_phy_xusb_utmi_vbus_power_on(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 	int port;
@@ -4008,7 +4008,7 @@ int tegra_phy_xusb_utmi_vbus_power_on(struct phy *phy)
 	mutex_unlock(&padctl->lock);
 	return rc;
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_vbus_power_on);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_utmi_vbus_power_on);
 
 /*
  * This function will fource vbus off whatever under
@@ -4016,7 +4016,7 @@ EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_vbus_power_on);
  * and also without caring about regulator refcnt;
  * the only exception is for 'otg vbus always on' case.
  */
-int tegra_phy_xusb_utmi_vbus_power_off(struct phy *phy)
+int tegra18x_phy_xusb_utmi_vbus_power_off(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 	int port;
@@ -4056,9 +4056,9 @@ int tegra_phy_xusb_utmi_vbus_power_off(struct phy *phy)
 	mutex_unlock(&padctl->lock);
 	return rc;
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_vbus_power_off);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_utmi_vbus_power_off);
 
-int tegra_phy_xusb_overcurrent_detected(struct phy *phy)
+int tegra18x_phy_xusb_overcurrent_detected(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 	int port;
@@ -4092,9 +4092,9 @@ int tegra_phy_xusb_overcurrent_detected(struct phy *phy)
 
 	return detected;
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_overcurrent_detected);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_overcurrent_detected);
 
-void tegra_phy_xusb_handle_overcurrent(struct phy *phy)
+void tegra18x_phy_xusb_handle_overcurrent(struct phy *phy)
 {
 	struct tegra_padctl *padctl;
 	u32 reg;
@@ -4125,7 +4125,7 @@ void tegra_phy_xusb_handle_overcurrent(struct phy *phy)
 	}
 	mutex_unlock(&padctl->lock);
 }
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_handle_overcurrent);
+EXPORT_SYMBOL_GPL(tegra18x_phy_xusb_handle_overcurrent);
 
 MODULE_AUTHOR("JC Kuo <jckuo@nvidia.com>");
 MODULE_DESCRIPTION("Tegra 186 XUSB PADCTL driver");

@@ -2719,90 +2719,135 @@
 	axi2apb@2390000 {
 		compatible = "nvidia,tegra186-AXI2APB-bridge";
 		reg = <0x0 0x02390000 0x0 0x1000>;
+		clocks = <&tegra_car TEGRA186_CLK_AXI_CBB>;
+		clock-names = "axi_cbb";
+		timeout = <97000>;
 		status = "disabled";
 	};
 
 	axi2apb@23a0000 {
 		compatible = "nvidia,tegra186-AXI2APB-bridge";
 		reg = <0x0 0x023a0000 0x0 0x1000>;
+		clocks = <&tegra_car TEGRA186_CLK_AXI_CBB>;
+		clock-names = "axi_cbb";
+		timeout = <97000>;
 		status = "disabled";
 	};
 
 	axi2apb@23b0000 {
 		compatible = "nvidia,tegra186-AXI2APB-bridge";
 		reg = <0x0 0x023b0000 0x0 0x1000>;
+		clocks = <&tegra_car TEGRA186_CLK_AXI_CBB>;
+		clock-names = "axi_cbb";
+		timeout = <97000>;
 		status = "disabled";
 	};
 
 	axi2apb@23c0000 {
 		compatible = "nvidia,tegra186-AXI2APB-bridge";
 		reg = <0x0 0x023c0000 0x0 0x1000>;
+		clocks = <&tegra_car TEGRA186_CLK_AXI_CBB>;
+		clock-names = "axi_cbb";
+		timeout = <97000>;
 		status = "disabled";
 	};
 
 	axi2apb@23d0000 {
 		compatible = "nvidia,tegra186-AXI2APB-bridge";
 		reg = <0x0 0x023d0000 0x0 0x1000>;
+		clocks = <&tegra_car TEGRA186_CLK_AXI_CBB>;
+		clock-names = "axi_cbb";
+		timeout = <97000>;
 		status = "disabled";
 	};
 
 	axip2p@2100000 {
 		compatible = "nvidia,tegra186-AXIP2P-bridge";
 		reg = <0x0 0x02100000 0x0 0x1000>;
+		clocks = <&tegra_car TEGRA186_CLK_AXI_CBB>;
+		clock-names = "axi_cbb";
+		timeout = <97000>;
 		status = "disabled";
 	};
 
 	axip2p@2110000 {
 		compatible = "nvidia,tegra186-AXIP2P-bridge";
 		reg = <0x0 0x02110000 0x0 0x1000>;
+		clocks = <&tegra_car TEGRA186_CLK_AXI_CBB>;
+		clock-names = "axi_cbb";
+		timeout = <97000>;
 		status = "disabled";
 	};
 
 	axip2p@2120000 {
 		compatible = "nvidia,tegra186-AXIP2P-bridge";
 		reg = <0x0 0x02120000 0x0 0x1000>;
+		clocks = <&tegra_car TEGRA186_CLK_AXI_CBB>;
+		clock-names = "axi_cbb";
+		timeout = <97000>;
 		status = "disabled";
 	};
 
 	axip2p@2130000 {
 		compatible = "nvidia,tegra186-AXIP2P-bridge";
 		reg = <0x0 0x02130000 0x0 0x1000>;
+		clocks = <&tegra_car TEGRA186_CLK_AXI_CBB>;
+		clock-names = "axi_cbb";
+		timeout = <97000>;
 		status = "disabled";
 	};
 
 	axip2p@2140000 {
 		compatible = "nvidia,tegra186-AXIP2P-bridge";
 		reg = <0x0 0x02140000 0x0 0x1000>;
+		clocks = <&tegra_car TEGRA186_CLK_AXI_CBB>;
+		clock-names = "axi_cbb";
+		timeout = <97000>;
 		status = "disabled";
 	};
 
 	axip2p@2150000 {
 		compatible = "nvidia,tegra186-AXIP2P-bridge";
 		reg = <0x0 0x02150000 0x0 0x1000>;
+		clocks = <&tegra_car TEGRA186_CLK_AXI_CBB>;
+		clock-names = "axi_cbb";
+		timeout = <97000>;
 		status = "disabled";
 	};
 
 	axip2p@2160000 {
 		compatible = "nvidia,tegra186-AXIP2P-bridge";
 		reg = <0x0 0x02160000 0x0 0x1000>;
+		clocks = <&tegra_car TEGRA186_CLK_AXI_CBB>;
+		clock-names = "axi_cbb";
+		timeout = <97000>;
 		status = "disabled";
 	};
 
 	axip2p@2170000 {
 		compatible = "nvidia,tegra186-AXIP2P-bridge";
 		reg = <0x0 0x02170000 0x0 0x1000>;
+		clocks = <&tegra_car TEGRA186_CLK_AXI_CBB>;
+		clock-names = "axi_cbb";
+		timeout = <97000>;
 		status = "disabled";
 	};
 
 	axip2p@2180000 {
 		compatible = "nvidia,tegra186-AXIP2P-bridge";
 		reg = <0x0 0x02180000 0x0 0x1000>;
+		clocks = <&tegra_car TEGRA186_CLK_AXI_CBB>;
+		clock-names = "axi_cbb";
+		timeout = <97000>;
 		status = "disabled";
 	};
 
 	axip2p@2190000 {
 		compatible = "nvidia,tegra186-AXIP2P-bridge";
 		reg = <0x0 0x02190000 0x0 0x1000>;
+		clocks = <&tegra_car TEGRA186_CLK_AXI_CBB>;
+		clock-names = "axi_cbb";
+		timeout = <97000>;
 		status = "disabled";
 	};
 

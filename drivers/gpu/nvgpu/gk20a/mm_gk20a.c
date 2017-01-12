@@ -31,6 +31,7 @@
 #include <uapi/linux/nvgpu.h>
 #include <trace/events/gk20a.h>
 
+#include <nvgpu/kmem.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/allocator.h>
 #include <nvgpu/semaphore.h>
@@ -1486,8 +1487,8 @@ int gk20a_vm_get_buffers(struct vm_gk20a *vm,
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
-	buffer_list = nvgpu_kalloc(sizeof(*buffer_list) *
-			      vm->num_user_mapped_buffers, true);
+	buffer_list = nvgpu_big_zalloc(sizeof(*buffer_list) *
+					  vm->num_user_mapped_buffers);
 	if (!buffer_list) {
 		nvgpu_mutex_release(&vm->update_gmmu_lock);
 		return -ENOMEM;
@@ -1571,7 +1572,7 @@ void gk20a_vm_put_buffers(struct vm_gk20a *vm,
 	gk20a_vm_mapping_batch_finish_locked(vm, &batch);
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
-	nvgpu_kfree(mapped_buffers);
+	nvgpu_big_free(mapped_buffers);
 }
 
 static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,

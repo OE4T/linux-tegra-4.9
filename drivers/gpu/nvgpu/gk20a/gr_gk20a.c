@@ -31,6 +31,7 @@
 #include <linux/bsearch.h>
 #include <trace/events/gk20a.h>
 
+#include <nvgpu/kmem.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/nvgpu_common.h>
 
@@ -3423,7 +3424,7 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	gr->ctx_vars.local_golden_image = NULL;
 
 	if (gr->ctx_vars.hwpm_ctxsw_buffer_offset_map)
-		nvgpu_kfree(gr->ctx_vars.hwpm_ctxsw_buffer_offset_map);
+		nvgpu_big_free(gr->ctx_vars.hwpm_ctxsw_buffer_offset_map);
 	gr->ctx_vars.hwpm_ctxsw_buffer_offset_map = NULL;
 
 	gk20a_comptag_allocator_destroy(&gr->comp_tags);
@@ -8054,7 +8055,7 @@ static int gr_gk20a_create_hwpm_ctxsw_buffer_offset_map(struct gk20a *g)
 	hwpm_ctxsw_reg_count_max = hwpm_ctxsw_buffer_size >> 2;
 	map_size = hwpm_ctxsw_reg_count_max * sizeof(*map);
 
-	map = nvgpu_kalloc(map_size, true);
+	map = nvgpu_big_zalloc(map_size);
 	if (!map)
 		return -ENOMEM;
 
@@ -8144,7 +8145,7 @@ static int gr_gk20a_create_hwpm_ctxsw_buffer_offset_map(struct gk20a *g)
 	return 0;
 cleanup:
 	gk20a_err(dev_from_gk20a(g), "Failed to create HWPM buffer offset map");
-	nvgpu_kfree(map);
+	nvgpu_big_free(map);
 	return -EINVAL;
 }
 

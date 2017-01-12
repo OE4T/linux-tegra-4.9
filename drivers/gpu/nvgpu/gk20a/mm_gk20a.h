@@ -791,33 +791,6 @@ int gk20a_big_pages_possible(struct vm_gk20a *vm, u64 base, u64 size);
 extern const struct gk20a_mmu_level gk20a_mm_levels_64k[];
 extern const struct gk20a_mmu_level gk20a_mm_levels_128k[];
 
-static inline void *nvgpu_kalloc(size_t size, bool clear)
-{
-	void *p;
-
-	if (size > PAGE_SIZE) {
-		if (clear)
-			p = vzalloc(size);
-		else
-			p = vmalloc(size);
-	} else {
-		if (clear)
-			p = kzalloc(size, GFP_KERNEL);
-		else
-			p = kmalloc(size, GFP_KERNEL);
-	}
-
-	return p;
-}
-
-static inline void nvgpu_kfree(void *p)
-{
-	if (virt_addr_valid(p))
-		kfree(p);
-	else
-		vfree(p);
-}
-
 int gk20a_mm_get_buffer_info(struct device *dev, int dmabuf_fd,
 			     u64 *buffer_id, u64 *buffer_len);
 

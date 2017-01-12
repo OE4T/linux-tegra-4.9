@@ -24,6 +24,8 @@
 #include <linux/dma-buf.h>
 #include <uapi/linux/nvgpu.h>
 
+#include <nvgpu/kmem.h>
+
 #include "gk20a.h"
 #include "gr_gk20a.h"
 #include "dbg_gpu_gk20a.h"
@@ -817,7 +819,7 @@ static int nvgpu_dbg_gpu_ioctl_access_fb_memory(struct dbg_session_gk20a *dbg_s,
 		goto fail_dmabuf_put;
 	}
 
-	buffer = nvgpu_kalloc(access_limit_size, true);
+	buffer = nvgpu_big_zalloc(access_limit_size);
 	if (!buffer) {
 		err = -ENOMEM;
 		goto fail_dmabuf_put;
@@ -863,7 +865,7 @@ static int nvgpu_dbg_gpu_ioctl_access_fb_memory(struct dbg_session_gk20a *dbg_s,
 fail_idle:
 	gk20a_idle(g->dev);
 fail_free_buffer:
-	nvgpu_kfree(buffer);
+	nvgpu_big_free(buffer);
 fail_dmabuf_put:
 	dma_buf_put(dmabuf);
 

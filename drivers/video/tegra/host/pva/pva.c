@@ -1,7 +1,7 @@
 /*
  * PVA driver for T194
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -389,13 +389,6 @@ static int pva_probe(struct platform_device *pdev)
 	if (err < 0)
 		goto err_module_init;
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	/* Initialize Linux power domain */
-	err = nvhost_module_add_domain(&pdata->pd, pdev);
-	if (err < 0)
-		goto err_add_domain;
-#endif
-
 	/*
 	 * Add this to nvhost device list, initialize scaling,
 	 * setup memory management for the device, create dev nodes
@@ -427,9 +420,6 @@ err_isr_init:
 err_queue_init:
 	nvhost_client_device_release(pdev);
 err_client_device_init:
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-err_add_domain:
-#endif
 	nvhost_module_deinit(pdev);
 err_module_init:
 err_get_resources:

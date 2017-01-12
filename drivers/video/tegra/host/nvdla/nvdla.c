@@ -527,12 +527,6 @@ static int nvdla_probe(struct platform_device *pdev)
 	if (err)
 		goto err_module_init;
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	err = nvhost_module_add_domain(&pdata->pd, pdev);
-	if (err)
-		goto err_add_domain;
-#endif
-
 	err = nvhost_client_device_init(pdev);
 	if (err)
 		goto err_client_device_init;
@@ -567,9 +561,6 @@ err_mss_init:
 err_queue_init:
 	nvhost_client_device_release(pdev);
 err_client_device_init:
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-err_add_domain:
-#endif
 	nvhost_module_deinit(pdev);
 err_module_init:
 err_get_resources:

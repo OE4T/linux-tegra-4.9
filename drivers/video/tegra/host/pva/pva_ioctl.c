@@ -193,8 +193,6 @@ static int pva_submit(struct pva_private *priv, void *arg)
 		if ((err < 0) || !task)
 			goto err_get_task_buffer;
 
-		memset(task, 0, sizeof(struct pva_submit_task));
-
 		err = pva_copy_task(ioctl_tasks + i, task);
 		if (err < 0)
 			goto err_copy_tasks;

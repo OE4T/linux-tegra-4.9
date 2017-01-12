@@ -385,8 +385,19 @@ err_alloc_task_mem:
 
 void nvhost_queue_free_task_memory(struct nvhost_queue *queue, int index)
 {
+	int hw_offset, sw_offset;
+	u8 *task_kmem, *task_dma_va;
 	struct nvhost_queue_task_pool *task_pool =
 			(struct nvhost_queue_task_pool *)queue->task_pool;
+
+	/* clear task kernel and dma virtual memory contents*/
+	hw_offset = index * queue->task_dma_size;
+	sw_offset = index * queue->task_kmem_size;
+	task_kmem = (u8 *)task_pool->kmem_addr + sw_offset;
+	task_dma_va = (u8 *)task_pool->va + hw_offset;
+
+	memset(task_kmem, 0, queue->task_kmem_size);
+	memset(task_dma_va, 0, queue->task_dma_size);
 
 	mutex_lock(&task_pool->lock);
 	clear_bit(index, &task_pool->alloc_table);

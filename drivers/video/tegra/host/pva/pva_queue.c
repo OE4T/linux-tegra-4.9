@@ -199,12 +199,6 @@ static void pva_task_unpin_mem(struct pva_submit_task *task)
 {
 	int i;
 
-	/* Release memory that was allocated for the task */
-	nvhost_queue_free_task_memory(task->queue, task->pool_index);
-	task->dma_addr = 0;
-	task->va = 0;
-	task->pool_index = 0;
-
 #define UNPIN_MEMORY(dst_name, src_name)				\
 	do {								\
 		if ((src_name) != 0 && (dst_name).dma_addr != 0)	\
@@ -808,6 +802,9 @@ static void pva_task_update(void *priv, int nr_completed)
 	mutex_lock(&queue->list_lock);
 	list_del(&task->node);
 	mutex_unlock(&queue->list_lock);
+
+	/* Release memory that was allocated for the task */
+	nvhost_queue_free_task_memory(task->queue, task->pool_index);
 
 	/* Drop queue reference to allow reusing it */
 	nvhost_queue_put(queue);

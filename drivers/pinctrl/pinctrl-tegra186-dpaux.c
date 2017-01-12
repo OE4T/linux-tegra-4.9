@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Suresh Mangipudi <smangipudi@nvidia.com>
  *
@@ -269,13 +269,6 @@ static int tegra186_dpaux_pinctrl_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	ret = nvhost_module_add_domain(&nhd_data->pd, pdev);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "nvhost add_domain failed: %d\n", ret);
-		return ret;
-	}
-#endif
 	ret = nvhost_client_device_init(pdev);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "nvhost device_init failed: %d\n", ret);

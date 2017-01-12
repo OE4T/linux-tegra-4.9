@@ -1,7 +1,7 @@
 /*
  * GK20A Tegra Platform Interface
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -766,7 +766,9 @@ void gk20a_tegra_debug_dump(struct device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
-	nvhost_debug_dump_device(g->host1x_dev);
+
+	if (g->host1x_dev)
+		nvhost_debug_dump_device(g->host1x_dev);
 }
 
 int gk20a_tegra_busy(struct device *dev)

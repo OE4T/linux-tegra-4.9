@@ -1,7 +1,7 @@
 /*
  * GM20B PMU
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
 *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -291,6 +291,7 @@ void gm20b_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_pg_init_param = NULL;
 	gops->pmu.pmu_pg_supported_engines_list = gk20a_pmu_pg_engines_list;
 	gops->pmu.pmu_pg_engines_feature_list = gk20a_pmu_pg_feature_list;
+	gops->pmu.pmu_is_lpwr_feature_supported = NULL;
 	gops->pmu.pmu_lpwr_enable_pg = NULL;
 	gops->pmu.pmu_lpwr_disable_pg = NULL;
 	gops->pmu.pmu_pg_param_post_init = NULL;

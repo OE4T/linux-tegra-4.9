@@ -610,6 +610,8 @@ struct gpu_ops {
 		u32 (*pmu_pg_supported_engines_list)(struct gk20a *g);
 		u32 (*pmu_pg_engines_feature_list)(struct gk20a *g,
 			u32 pg_engine_id);
+		bool (*pmu_is_lpwr_feature_supported)(struct gk20a *g,
+			u32 feature_id);
 		int (*pmu_lpwr_enable_pg)(struct gk20a *g, bool pstate_lock);
 		int (*pmu_lpwr_disable_pg)(struct gk20a *g, bool pstate_lock);
 		u32 (*pmu_pg_param_post_init)(struct gk20a *g);

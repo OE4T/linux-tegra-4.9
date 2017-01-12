@@ -279,6 +279,26 @@ static void gp106_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 	pg_stat_data->avg_exit_latency_us = stats.exit_latency_avg_us;
 }
 
+static bool gp106_pmu_is_lpwr_feature_supported(struct gk20a *g, u32 feature_id)
+{
+	bool is_feature_supported = false;
+
+	switch (feature_id) {
+	case PMU_PG_LPWR_FEATURE_RPPG:
+		is_feature_supported = nvgpu_lpwr_is_rppg_supported(g,
+			nvgpu_clk_arb_get_current_pstate(g));
+		break;
+	case PMU_PG_LPWR_FEATURE_MSCG:
+		is_feature_supported = nvgpu_lpwr_is_mscg_supported(g,
+			nvgpu_clk_arb_get_current_pstate(g));
+		break;
+	default:
+		is_feature_supported = false;
+	}
+
+	return is_feature_supported;
+}
+
 void gp106_init_pmu_ops(struct gpu_ops *gops)
 {
 	gk20a_dbg_fn("");
@@ -304,6 +324,8 @@ void gp106_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_pg_init_param = gp106_pg_param_init;
 	gops->pmu.pmu_pg_supported_engines_list = gp106_pmu_pg_engines_list;
 	gops->pmu.pmu_pg_engines_feature_list = gp106_pmu_pg_feature_list;
+	gops->pmu.pmu_is_lpwr_feature_supported =
+		gp106_pmu_is_lpwr_feature_supported;
 	gops->pmu.pmu_lpwr_enable_pg = nvgpu_lpwr_enable_pg;
 	gops->pmu.pmu_lpwr_disable_pg = nvgpu_lpwr_disable_pg;
 	gops->pmu.pmu_pg_param_post_init = nvgpu_lpwr_post_init;

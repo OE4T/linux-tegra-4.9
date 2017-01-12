@@ -3302,6 +3302,7 @@ void gk20a_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_pg_init_param = NULL;
 	gops->pmu.pmu_pg_supported_engines_list = gk20a_pmu_pg_engines_list;
 	gops->pmu.pmu_pg_engines_feature_list = gk20a_pmu_pg_feature_list;
+	gops->pmu.pmu_is_lpwr_feature_supported = NULL;
 	gops->pmu.pmu_lpwr_enable_pg = NULL;
 	gops->pmu.pmu_lpwr_disable_pg = NULL;
 	gops->pmu.pmu_pg_param_post_init = NULL;

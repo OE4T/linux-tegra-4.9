@@ -647,6 +647,9 @@ struct pmu_pg_stats {
 #define PMU_PG_ELPG_ENGINE_ID_INVALID_ENGINE (0x00000005)
 #define PMU_PG_ELPG_ENGINE_MAX    PMU_PG_ELPG_ENGINE_ID_INVALID_ENGINE
 
+#define PMU_PG_LPWR_FEATURE_RPPG 0x0
+#define PMU_PG_LPWR_FEATURE_MSCG 0x1
+
 /* state transition :
     OFF => [OFF_ON_PENDING optional] => ON_PENDING => ON => OFF
     ON => OFF is always synchronized */

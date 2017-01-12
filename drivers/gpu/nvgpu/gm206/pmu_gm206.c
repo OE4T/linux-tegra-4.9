@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -161,6 +161,7 @@ void gm206_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_pg_supported_engines_list = NULL;
 	gops->pmu.pmu_pg_engines_feature_list = NULL;
 	gops->pmu.pmu_lpwr_enable_pg = NULL;
+	gops->pmu.pmu_is_lpwr_feature_supported = NULL;
 	gops->pmu.pmu_lpwr_disable_pg = NULL;
 	gops->pmu.pmu_pg_param_post_init = NULL;
 	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd = NULL;

@@ -13,32 +13,34 @@
  * more details.
  */
 
-#include <linux/tegra_gpu_t19x.h>
-#include "gk20a/gk20a.h" /* FERMI and MAXWELL classes defined here */
 #include <linux/delay.h>
 #include <linux/version.h>
+#include <linux/vmalloc.h>
+#include <linux/tegra_gpu_t19x.h>
+
 #include <soc/tegra/fuse.h>
 
 #include <nvgpu/timers.h>
 
+#include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
 #include "gk20a/semaphore_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 
 #include "gm20b/gr_gm20b.h"
+
 #include "gv11b/gr_gv11b.h"
 #include "gv11b/mm_gv11b.h"
 #include "gv11b/subctx_gv11b.h"
-#include "hw_gr_gv11b.h"
-#include "hw_fifo_gv11b.h"
-#include "hw_proj_gv11b.h"
-#include "hw_ctxsw_prog_gv11b.h"
-#include "hw_mc_gv11b.h"
-#include "hw_gr_gv11b.h"
-#include "hw_ram_gv11b.h"
-#include "hw_pbdma_gv11b.h"
-#include <linux/vmalloc.h>
-#include <linux/tegra_gpu_t19x.h>
+
+#include <nvgpu/hw/gv11b/hw_gr_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_fifo_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_proj_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_ctxsw_prog_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_gr_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_pbdma_gv11b.h>
 
 static bool gr_gv11b_is_valid_class(struct gk20a *g, u32 class_num)
 {

@@ -14,17 +14,21 @@
  */
 #include <linux/delay.h>
 #include <linux/types.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
+
 #include "gp10b/fifo_gp10b.h"
-#include "hw_pbdma_gv11b.h"
+
+#include <nvgpu/hw/gv11b/hw_pbdma_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_fifo_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_ccsr_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_usermode_gv11b.h>
+
 #include "fifo_gv11b.h"
 #include "subctx_gv11b.h"
 #include "gr_gv11b.h"
-#include "hw_fifo_gv11b.h"
-#include "hw_ram_gv11b.h"
-#include "hw_ccsr_gv11b.h"
-#include "hw_usermode_gv11b.h"
 
 #define CHANNEL_INFO_VEID0  0
 #define PBDMA_SUBDEVICE_ID  1

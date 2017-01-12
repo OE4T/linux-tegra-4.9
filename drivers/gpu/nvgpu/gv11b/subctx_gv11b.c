@@ -1,7 +1,7 @@
 /*
  * Volta GPU series Subcontext
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,9 +18,11 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/semaphore_gk20a.h"
+
 #include "gv11b/subctx_gv11b.h"
-#include "gv11b/hw_ram_gv11b.h"
-#include "gv11b/hw_ctxsw_prog_gv11b.h"
+
+#include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_ctxsw_prog_gv11b.h>
 
 static void gv11b_init_subcontext_pdb(struct channel_gk20a *c,
 				struct mem_desc *inst_block);

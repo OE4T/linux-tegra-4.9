@@ -15,12 +15,16 @@
 
 #include <linux/delay.h>	/* for udelay */
 #include <linux/clk.h>
+
 #include <soc/tegra/fuse.h>
+
 #include "gk20a/gk20a.h"
+
 #include "gp10b/pmu_gp10b.h"
 
 #include "pmu_gv11b.h"
-#include "hw_pwr_gv11b.h"
+
+#include <nvgpu/hw/gv11b/hw_pwr_gv11b.h>
 
 #define ALIGN_4KB     12
 

@@ -14,6 +14,7 @@
  */
 
 #include "gp10b/fecs_trace_gp10b.h"
+
 #include "gv11b/fecs_trace_gv11b.h"
 
 #ifdef CONFIG_GK20A_CTXSW_TRACE

@@ -1,7 +1,7 @@
 /*
  * GV11B Tegra HAL interface
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,26 +18,28 @@
 
 #include <linux/types.h>
 #include <linux/tegra_gpu_t19x.h>
-#include "gk20a/gk20a.h"
 
-#include "gv11b/hal_gv11b.h"
-#include "gv11b/gr_gv11b.h"
-#include "gv11b/mc_gv11b.h"
-#include "gv11b/ltc_gv11b.h"
-#include "gv11b/fecs_trace_gv11b.h"
-#include "gv11b/gv11b.h"
-#include "gv11b/ce_gv11b.h"
-#include "gv11b/gr_ctx_gv11b.h"
-#include "gv11b/mm_gv11b.h"
-#include "gv11b/pmu_gv11b.h"
-#include "gv11b/therm_gv11b.h"
-#include "gv11b/fb_gv11b.h"
-#include "gv11b/fifo_gv11b.h"
-#include "gv11b/hw_proj_gv11b.h"
-#include "gv11b/gv11b_gating_reglist.h"
+#include "gk20a/gk20a.h"
+#include "gk20a/dbg_gpu_gk20a.h"
 
 #include "gm20b/gr_gm20b.h"
-#include "gk20a/dbg_gpu_gk20a.h"
+
+#include "hal_gv11b.h"
+#include "gr_gv11b.h"
+#include "mc_gv11b.h"
+#include "ltc_gv11b.h"
+#include "fecs_trace_gv11b.h"
+#include "gv11b.h"
+#include "ce_gv11b.h"
+#include "gr_ctx_gv11b.h"
+#include "mm_gv11b.h"
+#include "pmu_gv11b.h"
+#include "therm_gv11b.h"
+#include "fb_gv11b.h"
+#include "fifo_gv11b.h"
+#include "gv11b_gating_reglist.h"
+
+#include <nvgpu/hw/gv11b/hw_proj_gv11b.h>
 
 static struct gpu_ops gv11b_ops;
 

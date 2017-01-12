@@ -1,7 +1,7 @@
 /*
  * GV11B master
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,9 +16,12 @@
 #include <linux/types.h>
 
 #include "gk20a/gk20a.h"
+
 #include "gp10b/mc_gp10b.h"
-#include "gv11b/mc_gv11b.h"
-#include "hw_mc_gv11b.h"
+
+#include "mc_gv11b.h"
+
+#include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
 
 static void mc_gv11b_intr_enable(struct gk20a *g)
 {

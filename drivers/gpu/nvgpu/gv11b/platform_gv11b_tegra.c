@@ -1,7 +1,7 @@
 /*
  * GV11B Tegra Platform Interface
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,17 +18,19 @@
 #include <linux/debugfs.h>
 #include <linux/tegra-powergate.h>
 #include <linux/platform_data/tegra_edp.h>
-#include <uapi/linux/nvgpu.h>
 #include <linux/dma-buf.h>
 #include <linux/nvmap.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/reset.h>
 #include <linux/hashtable.h>
+
+#include <uapi/linux/nvgpu.h>
+
 #include "gk20a/platform_gk20a.h"
 #include "gk20a/gk20a.h"
 #include "platform_tegra.h"
+
 #include "gr_gv11b.h"
-#include "hw_gr_gv11b.h"
 
 /*
  * gv11b_tegra_get_clocks()

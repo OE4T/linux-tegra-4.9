@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Init for T186 Architecture Chips
  *
- * Copyright (c) 2014-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -200,6 +200,7 @@ struct nvhost_device_data t18_isp_info = {
 	.serialize		= 1,
 	.push_work_done		= 1,
 	.vm_regs		= {{0x50, true} },
+	.mlock_timeout_factor	= 10,
 };
 #endif
 

@@ -3068,15 +3068,6 @@ static int tegra_se_probe(struct platform_device *pdev)
 		return err;
 	}
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	err = nvhost_module_add_domain(&pdata->pd, pdev);
-	if (err) {
-		dev_err(se_dev->dev,
-		"nvhost_module_add_domain failed for SE(%s)\n", pdev->name);
-		return err;
-	}
-#endif
-
 	err = nvhost_client_device_init(pdev);
 	if (err) {
 		dev_err(se_dev->dev,
@@ -3379,9 +3370,6 @@ static int __init tegra_se_module_init(void)
 static void __exit tegra_se_module_exit(void)
 {
 	platform_driver_unregister(&tegra_se_driver);
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	pm_genpd_deinit(&nvhost_se1_info.pd);
-#endif
 }
 
 module_init(tegra_se_module_init);

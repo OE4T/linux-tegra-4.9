@@ -3974,7 +3974,7 @@ static void tegra_dsi_send_dc_frames(struct tegra_dc *dc,
 	}
 }
 
-static void tegra_dsi_setup_initialized_panel(struct tegra_dc_dsi_data *dsi)
+static void __maybe_unused tegra_dsi_setup_initialized_panel(struct tegra_dc_dsi_data *dsi)
 {
 	int err = 0;
 
@@ -4029,15 +4029,6 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 	if (dsi->pad_ctrl)
 		tegra_dsi_padctrl_enable(dsi->pad_ctrl);
 #endif
-
-	/*
-	 * Do not program this panel as the bootloader as has already
-	 * initialized it. This avoids periods of blanking during boot.
-	 */
-	if (dc->initialized) {
-		tegra_dsi_setup_initialized_panel(dsi);
-		goto fail;
-	}
 
 	/* Stop DC stream before configuring DSI registers
 	 * to avoid visible glitches on panel during transition
@@ -4135,13 +4126,6 @@ static void tegra_dc_dsi_postpoweron(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 	int err = 0;
-
-	/*
-	 * Do not configure. Use bootloader configuration.
-	 * This avoids periods of blanking during boot.
-	 */
-	if (dc->initialized)
-		return;
 
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);

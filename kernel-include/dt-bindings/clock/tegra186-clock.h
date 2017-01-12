@@ -928,12 +928,16 @@
 #define TEGRA186_CLK_I2S6_SYNC_INPUT 622
 /** @brief clock recovered from SPDIFIN input */
 #define TEGRA186_CLK_SPDIFIN_SYNC_INPUT 623
+/** @brief controls MPHY_FORCE_LS_MODE upon enable/disable */
+#define TEGRA186_CLK_MPHY_FORCE_LS_MODE	634
+/** @brief fake clock which must be enabled during FUSE burn operations to ensure adequate VDD_CORE voltage. */
+#define TEGRA186_CLK_FUSE_BURN 635
 
 /**
  * @brief subject to change
  * @details maximum clock identifier value plus one.
  */
-#define TEGRA186_CLK_CLK_MAX 624
+#define TEGRA186_CLK_CLK_MAX 636
 
 /** @} */
 

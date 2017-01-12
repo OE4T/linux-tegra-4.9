@@ -23,7 +23,6 @@
 
 #define LP88XX_NUM_REGIONS		6
 #define DEFAULT_BL_NAME			"lcd-bl"
-#define MAX_BRIGHTNESS			0xffff
 #define LP88XX_MAX_INT_STATUS		3
 #define LP88XX_INT_REG_OFFSET		2
 
@@ -37,10 +36,18 @@
 #define LP88XX_REGISTER_MODE		2
 #define LP88XX_BL_EN			BIT(8)
 
-#define LP88XX_REG_BRT_BASE		0x26
+/* LP8580 */
+#define LP8580_REG_BRT_BASE			0x26
+#define LP8580_REG_GROUP1			0x2e
+#define LP8580_REG_GROUP2			0x30
+#define LP8580_MAX_BRIGHTNESS		0x1fff
 
-#define LP88XX_REG_GROUP1		0x2e
-#define LP88XX_REG_GROUP2		0x30
+/* LP88xx */
+#define LP88XX_REG_BRT_BASE			0x28
+#define LP88XX_REG_GROUP1			0x30
+#define LP88XX_REG_GROUP2			0x32
+#define LP88XX_MAX_BRIGHTNESS		0xffff
+
 #define LP88XX_GROUP_MASK		0x0f
 #define LP88XX_GROUP_OFFSET		4
 
@@ -147,12 +154,12 @@ static int lp88xx_update_region(struct lp88xx *lp, int group, int id)
 	case LP88XX_GROUP_LED1:
 	case LP88XX_GROUP_LED2:
 	case LP88XX_GROUP_LED3:
-		reg = LP88XX_REG_GROUP1;
+		reg = lp->chip_id ? LP88XX_REG_GROUP1 : LP8580_REG_GROUP1;
 		shift = group * LP88XX_GROUP_OFFSET;
 		break;
 	case LP88XX_GROUP_LED4:
 	case LP88XX_GROUP_LED5:
-		reg = LP88XX_REG_GROUP2;
+		reg = lp->chip_id ? LP88XX_REG_GROUP2 : LP8580_REG_GROUP2;
 		shift = (group - 4) * LP88XX_GROUP_OFFSET;
 		break;
 	default:
@@ -238,7 +245,8 @@ static int lp88xx_add_bl_device(struct lp88xx *lp, int id)
 	char name[64];
 	const char *pname;
 	unsigned int reg_brt[] = {
-		[LP88XX_REGION_BASE] = LP88XX_REG_BRT_BASE,
+		[LP88XX_REGION_BASE] =
+			lp->chip_id ? LP88XX_REG_BRT_BASE : LP8580_REG_BRT_BASE,
 		[LP88XX_REGION_LED1] = LP88XX_REG_BRT_LED1,
 		[LP88XX_REGION_LED2] = LP88XX_REG_BRT_LED2,
 		[LP88XX_REGION_LED3] = LP88XX_REG_BRT_LED3,
@@ -264,7 +272,8 @@ static int lp88xx_add_bl_device(struct lp88xx *lp, int id)
 	props.type = BACKLIGHT_PLATFORM;
 	props.max_brightness = lp->max_input_brt;
 	props.brightness = 0;
-	of_property_read_s32(dev->of_node, "init-brt", &props.brightness);
+	if (of_property_read_s32(dev->of_node, "init-brt", &props.brightness))
+		dev_warn(dev, "Using default init-brt \n");
 
 	bl->bldev = devm_backlight_device_register(dev, name, dev, bl,
 						   &lp88xx_bl_ops, &props);
@@ -398,10 +407,16 @@ int lp88xx_common_probe(struct device *dev, struct lp88xx *lp)
 		return ret;
 	}
 
+	if (of_device_is_compatible(np, "ti,lp8580"))
+		lp->chip_id = LP8580;
+	else
+		lp->chip_id = LP88XX;
+
 	ret = lp88xx_reg_read(lp, LP88XX_REG_CAP2, &val);
 	if (ret) {
 		dev_warn(dev, "warning: using default max brightness\n");
-		lp->max_dev_brt = MAX_BRIGHTNESS;
+		lp->max_dev_brt =
+			lp->chip_id ? LP88XX_MAX_BRIGHTNESS : LP8580_MAX_BRIGHTNESS;
 	} else {
 		val = (val & LP88XX_CAP2_MASK) >> LP88XX_CAP2_SHIFT;
 		lp->max_dev_brt = (1U << val) - 1;

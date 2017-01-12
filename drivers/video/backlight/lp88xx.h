@@ -13,6 +13,11 @@
 
 #include <linux/pwm.h>
 
+enum lp88xx_chip_id {
+	LP8580,
+	LP88XX,
+};
+
 struct lp88xx_io {
 	int (*write)(void *p, u16 reg, u16 val);
 	int (*read)(void *p, u16 reg, u16 *val);
@@ -27,6 +32,7 @@ struct lp88xx {
 	unsigned int period;
 	u16 max_dev_brt;
 	u32 max_input_brt;
+	enum lp88xx_chip_id chip_id;
 };
 
 extern int lp88xx_common_probe(struct device *dev, struct lp88xx *lp);

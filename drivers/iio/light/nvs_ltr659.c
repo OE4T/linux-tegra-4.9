@@ -296,7 +296,7 @@ static int ltr_pm(struct ltr_state *st, unsigned int en_msk)
 	int ret = 0;
 
 	if (en_msk) {
-		if (en_msk & (1 < LTR_DEV_PROX))
+		if (en_msk & (1 << LTR_DEV_PROX))
 			vreg_n = LTR_PM_LED;
 		else
 			vreg_n = LTR_PM_ON;

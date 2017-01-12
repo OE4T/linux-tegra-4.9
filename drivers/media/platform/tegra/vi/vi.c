@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2012-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -469,12 +469,6 @@ static int vi_probe(struct platform_device *dev)
 
 	nvhost_module_init(dev);
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	/* add module power domain and also add its domain
-	 * as sub-domain of host1x domain
-	 */
-	err = nvhost_module_add_domain(&pdata->pd, dev);
-#endif
 	err = nvhost_client_device_init(dev);
 	if (err)
 		goto camera_unregister;

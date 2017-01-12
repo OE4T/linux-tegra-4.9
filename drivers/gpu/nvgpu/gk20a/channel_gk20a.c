@@ -2822,7 +2822,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		/* gk20a_channel_update releases this ref. */
 		err = gk20a_busy(g->dev);
 		if (err) {
-			gk20a_err(d, "failed to host gk20a to submit gpfifo");
+			gk20a_err(d, "failed to host gk20a to submit gpfifo, process %s",
+				current->comm);
 			return err;
 		}
 

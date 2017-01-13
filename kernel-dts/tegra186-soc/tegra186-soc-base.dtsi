@@ -24,7 +24,7 @@
 #include "dt-bindings/reset/tegra186-reset.h"
 #include "dt-bindings/interrupt/tegra186-irq.h"
 #include "dt-bindings/interrupt-controller/tegra-t18x-agic.h"
-#include "dt-bindings/padctrl/tegra186-pads.h"
+#include "dt-bindings/soc/tegra-io-pads.h"
 #include "tegra186-soc/tegra186-soc-sdhci.dtsi"
 #include "tegra186-soc/tegra186-soc-sata.dtsi"
 #include "tegra186-soc/tegra186-soc-ufshc.dtsi"

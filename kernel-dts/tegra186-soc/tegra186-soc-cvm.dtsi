@@ -457,6 +457,10 @@
 		status = "okay";
 	};
 
+	ptm_bpmp@8a1c000 {
+		status = "okay";
+	};
+
 	funnel_bccplex@9010000 {
 		status = "okay";
 	};

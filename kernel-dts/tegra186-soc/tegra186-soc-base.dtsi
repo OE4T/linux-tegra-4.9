@@ -72,11 +72,11 @@
 			status = "disabled";
 		};
 
-	        adsp_reserved_mem: adsp_carveout {
-                        compatible = "nvidia,tegra18x-adsp-carveout";
-                        reg = <0x0 0xd8300000 0x0 0x01000000>;
-                        no-map;
-                };
+		adsp_reserved_mem: adsp_carveout {
+			compatible = "nvidia,tegra18x-adsp-carveout";
+			reg = <0x0 0xd8300000 0x0 0x01000000>;
+			no-map;
+		};
 
 		ramoops_reserved: ramoops_carveout {
 			compatible = "nvidia,ramoops";
@@ -122,8 +122,8 @@
 
 	mc_sid@2c00000 {
 		compatible = "nvidia,tegra186-mc-sid";
- 		reg = <0x0 0x02c00000 0x0 0x00010000>, /* MC_SID_BASE */
- 		      <0x0 0x02c10000 0x0 0x00010000>; /* MC_BASE */
+		reg = <0x0 0x02c00000 0x0 0x00010000>, /* MC_SID_BASE */
+		      <0x0 0x02c10000 0x0 0x00010000>; /* MC_BASE */
 		status = "disabled";
 	};
 
@@ -431,7 +431,7 @@
 		compatible = "nvidia,tegra-t18x-mc";
 
 		reg-ranges = <1>;
-		reg        = <0x0 0x2c10000 0x0 0x10000   /* Broadcast channel */
+		reg	   = <0x0 0x2c10000 0x0 0x10000   /* Broadcast channel */
 			      0x0 0x2c20000 0x0 0x10000   /* MC0 */
 			      0x0 0x2c30000 0x0 0x10000   /* MC1 */
 			      0x0 0x2c40000 0x0 0x10000   /* MC2 */
@@ -456,7 +456,7 @@
 		order-gpu-writes;
 
 		channels   = <4>;
-        };
+	};
 
 	tegra_usb_cd: usb_cd {
 		compatible = "nvidia,tegra186-usb-cd";
@@ -687,10 +687,10 @@
 		tegra_vi: vi@15700000 {
 			compatible = "nvidia,tegra186-vi";
 			power-domains = <&ve_pd>;
-                        reg = <0x0 0x15700000 0x0 0x00100000>;
-                        interrupts = <0 201 0x04
-                                      0 202 0x04
-                                      0 203 0x04>;
+			reg = <0x0 0x15700000 0x0 0x00100000>;
+			interrupts = <0 201 0x04
+				      0 202 0x04
+				      0 203 0x04>;
 			resets = <&tegra_car TEGRA186_RESET_VI>,
 				 <&tegra_car TEGRA186_RESET_TSCTNVI>;
 			reset-names = "vi", "tsctnvi";
@@ -705,8 +705,8 @@
 		isp@15600000 {
 			compatible = "nvidia,tegra186-isp";
 			power-domains = <&ispa_pd>;
-                        reg = <0x0 0x15600000 0x0 0x00040000>;
-                        interrupts = <0 205 0x04>;
+			reg = <0x0 0x15600000 0x0 0x00040000>;
+			interrupts = <0 205 0x04>;
 			resets = <&tegra_car TEGRA186_RESET_ISP>;
 			clocks = <&tegra_car TEGRA186_CLK_ISP>;
 			clock-names = "isp";
@@ -752,8 +752,8 @@
 
 		nvdisplay@15210000 {
 			compatible = "nvidia,tegra186-dc";
-                        reg = <0x0 0x15210000 0x0 0x10000>;
-                        interrupts = <0 154 0x04>;
+			reg = <0x0 0x15210000 0x0 0x10000>;
+			interrupts = <0 154 0x04>;
 			win-mask = <0x38>;
 			#stream-id-cells = <1>;
 			clocks = <&clk32k_in>,
@@ -786,8 +786,8 @@
 
 		nvdisplay@15220000 {
 			compatible = "nvidia,tegra186-dc";
-                        reg = <0x0 0x15220000 0x0 0x10000>;
-                        interrupts = <0 155 0x04>;
+			reg = <0x0 0x15220000 0x0 0x10000>;
+			interrupts = <0 155 0x04>;
 			win-mask = <0x0>;
 			#stream-id-cells = <1>;
 			clocks = <&clk32k_in>,
@@ -941,7 +941,7 @@
 				 <&tegra_car TEGRA186_RESET_HDA2CODEC_2X>,
 				 <&tegra_car TEGRA186_RESET_HDA2HDMICODEC>;
 			reset-names = "sor0","hda_rst", "hda2codec_2x_rst",
-                                      "hda2hdmi_rst";
+				      "hda2hdmi_rst";
 			status = "disabled";
 		};
 
@@ -969,7 +969,7 @@
 				 <&tegra_car TEGRA186_RESET_HDA2CODEC_2X>,
 				 <&tegra_car TEGRA186_RESET_HDA2HDMICODEC>;
 			reset-names = "sor1","hda_rst", "hda2codec_2x_rst",
-                                      "hda2hdmi_rst";
+				      "hda2hdmi_rst";
 			status = "disabled";
 		};
 
@@ -1167,7 +1167,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		#stream-id-cells = <1>;
-                nvidia,dma-request-selector = <&gpcdma 5>;
+		nvidia,dma-request-selector = <&gpcdma 5>;
 		dmas = <&gpcdma 5>, <&gpcdma 5>;
 		dma-names = "rx", "tx";
 		nvidia,clk-parents = "pll_p";
@@ -1340,11 +1340,11 @@
 	};
 
 	tegra_pinctrl: pinmux: pinmux@2430000 {
-                compatible = "nvidia,tegra186-pinmux";
-                reg = <0x0 0x2430000 0x0 0x15000
+		compatible = "nvidia,tegra186-pinmux";
+		reg = <0x0 0x2430000 0x0 0x15000
 			0x0 0xc300000 0x0 0x4000>;
 		#gpio-range-cells = <3>;
-                status = "disabled";
+		status = "disabled";
 
 		vbus_en0_sfio_tristate_state: vbus_en0_oc_tristate {
 			usb_vbus_en0_pl4 {
@@ -1428,7 +1428,8 @@
 	tegra_aon_gpio: gpio@c2f0000 {
 		compatible = "nvidia,tegra186-gpio-aon";
 		reg-names = "security", "gpio";
-		reg = 	<0x0 0xc2f0000 0x0 0x1000>,
+		reg =
+			<0x0 0xc2f0000 0x0 0x1000>,
 			<0x0 0xc2f1000 0x0 0x1000>;
 		interrupts =
 			<0 60 IRQ_TYPE_LEVEL_HIGH>;
@@ -1552,7 +1553,7 @@
 		      <0x0 0x02970000 0x0 0x10000>,	/* PAGE4 */
 		      <0x0 0x02996000 0x0 0x2000>,	/* ADAST */
 		      <0x0 0x029f0000 0x0 0x10>;	/* HSP SS */
-		nvidia,adast =  <0x0 0x2 0x0 0x00008008 0x0 0x40000000 0x0 0x20000000 0x0 0x40000000>;
+		nvidia,adast = <0x0 0x2 0x0 0x00008008 0x0 0x40000000 0x0 0x20000000 0x0 0x40000000>;
 		clocks = <&tegra_car TEGRA186_CLK_AHUB>,
 			<&tegra_car TEGRA186_CLK_APB2APE>,
 			<&tegra_car TEGRA186_CLK_APE>;
@@ -2067,7 +2068,7 @@
 			<&tegra_car TEGRA186_CLK_APB2APE>;
 		clock-names = "ahub", "ape", "apb2ape";
 		status = "disabled";
-        };
+	};
 
 	adsp@2993000 {
 		status = "disabled";
@@ -2169,7 +2170,7 @@
 
 	clocks {
 	     compatible = "simple-bus";
-             #address-cells = <1>;
+	     #address-cells = <1>;
 	     #size-cells = <0>;
 
 	     clk32k_in: clk32k_in@0 {
@@ -2296,6 +2297,21 @@
 		};
 	};
 
+	ptm_bpmp@8a1c000 {
+		compatible = "arm,coresight-etm3x", "arm,primecell";
+		reg = <0x0 0x08a1c000 0x0 0x1000>;
+
+		clocks = <&tegra_car TEGRA186_CLK_DBGAPB>;
+		clock-names = "apb_pclk";
+		status = "disabled";
+
+		port {
+			ptm_bpmp_out_port: endpoint {
+				remote-endpoint = <&funnel_minor_in_port0>;
+			};
+		};
+	};
+
 	funnel_bccplex@9010000 {
 		compatible = "arm,coresight-funnel", "arm,primecell";
 		reg = <0x0 0x09010000 0x0 0x1000>;
@@ -2350,7 +2366,7 @@
 			port@0 {
 				reg = <0>;
 				funnel_major_out_port0: endpoint {
-					remote-endpoint = <&replicator_in_port0>;
+					remote-endpoint = <&etf_in_port>;
 				};
 			};
 
@@ -2361,6 +2377,7 @@
 					remote-endpoint = <&funnel_bccplex_out_port0>;
 				};
 			};
+
 			port@2 {
 				reg = <1>;
 				funnel_major_in_port1: endpoint {
@@ -2369,6 +2386,14 @@
 			};
 
 			port@3 {
+				reg = <2>;
+				funnel_major_in_port2: endpoint {
+					slave-mode;
+					remote-endpoint = <&funnel_minor_out_port0>;
+				};
+			};
+
+			port@4 {
 				reg = <3>;
 				funnel_major_in_port3: endpoint {
 					slave-mode;
@@ -2393,7 +2418,7 @@
 			port@0 {
 				reg = <0>;
 				replicator_out_port0: endpoint {
-					remote-endpoint = <&etf_in_port>;
+					remote-endpoint = <&etr_in_port>;
 				};
 			};
 
@@ -2408,7 +2433,7 @@
 				reg = <0>;
 				replicator_in_port0: endpoint {
 					slave-mode;
-					remote-endpoint = <&funnel_major_out_port0>;
+					remote-endpoint = <&etf_out_port>;
 				};
 			};
 		};
@@ -2423,10 +2448,23 @@
 		clock-names = "apb_pclk";
 		status = "disabled";
 
-		port {
-			etf_in_port: endpoint@0 {
-				slave-mode;
-				remote-endpoint = <&replicator_out_port0>;
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				etf_in_port: endpoint {
+					slave-mode;
+					remote-endpoint = <&funnel_major_out_port0>;
+				};
+			};
+
+			port@1 {
+				reg = <0>;
+				etf_out_port: endpoint {
+					remote-endpoint = <&replicator_in_port0>;
+				};
 			};
 		};
 	};
@@ -2448,7 +2486,7 @@
 	};
 
 	etr@8050000 {
-		compatible = "arm,coresight-etr10", "arm,primecell";
+		compatible = "arm,coresight-tmc", "arm,primecell";
 		reg = <0x0 0x08050000 0x0 0x1000>;
 
 		clocks = <&tegra_car TEGRA186_CLK_DBGAPB>;
@@ -2458,6 +2496,7 @@
 		port {
 			etr_in_port: endpoint@0 {
 				slave-mode;
+				remote-endpoint = <&replicator_out_port0>;
 			};
 		};
 	};
@@ -2470,9 +2509,23 @@
 		clock-names = "apb_pclk";
 		status = "disabled";
 
-		port {
-			funnel_minor_in_port0: endpoint@0 {
-				slave-mode;
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				funnel_minor_out_port0: endpoint {
+					remote-endpoint = <&funnel_major_in_port2>;
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+				funnel_minor_in_port0: endpoint {
+					slave-mode;
+					remote-endpoint = <&ptm_bpmp_out_port>;
+				};
 			};
 		};
 	};

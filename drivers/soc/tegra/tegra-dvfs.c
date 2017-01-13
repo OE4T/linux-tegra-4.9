@@ -595,7 +595,7 @@ static int dvfs_get_peak_thermal_floor(struct dvfs *d, unsigned long rate)
 	if (!dfll_range && d->dvfs_rail->therm_floors)
 		return d->dvfs_rail->therm_floors[0].mv;
 	if (dfll_range)
-		return tegra_dfll_get_thermal_floor(0);
+		return tegra_dfll_get_peak_thermal_floor_mv();
 	return 0;
 }
 

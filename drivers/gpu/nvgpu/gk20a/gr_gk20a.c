@@ -1571,18 +1571,6 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	mutex_lock(&gr->ctx_mutex);
 
 	if (gr->ctx_vars.golden_image_initialized) {
-		if (gk20a_mem_begin(g, ctxheader))
-			return -ENOMEM;
-		if (ctxheader->gpu_va) {
-			err = gr_gk20a_fecs_ctx_bind_channel(g, c);
-			if (err)
-				goto clean_up;
-
-			err = gr_gk20a_wait_idle(g,
-						 gk20a_get_gr_idle_timeout(g),
-						 GR_IDLE_CHECK_DEFAULT);
-		}
-		gk20a_mem_end(g, ctxheader);
 		goto clean_up;
 	}
 	if (!platform->is_fmodel) {
@@ -1753,7 +1741,6 @@ restore_fe_go_idle:
 		data = gk20a_mem_rd32(g, gr_mem, i);
 		gk20a_mem_wr32(g, gold_mem, i, data);
 	}
-
 	gk20a_mem_wr(g, gold_mem, ctxsw_prog_main_image_zcull_o(),
 		 ctxsw_prog_main_image_zcull_mode_no_ctxsw_v());
 
@@ -1762,6 +1749,9 @@ restore_fe_go_idle:
 	g->ops.gr.commit_inst(c, ch_ctx->global_ctx_buffer_va[GOLDEN_CTX_VA]);
 
 	gr_gk20a_fecs_ctx_image_save(c, gr_fecs_method_push_adr_wfi_golden_save_v());
+
+	if (gk20a_mem_begin(g, ctxheader))
+		goto clean_up;
 
 	if (gr->ctx_vars.local_golden_image == NULL) {
 
@@ -1773,10 +1763,16 @@ restore_fe_go_idle:
 			goto clean_up;
 		}
 
-		gk20a_mem_rd_n(g, gold_mem, 0,
+		if (ctxheader->gpu_va)
+			gk20a_mem_rd_n(g, ctxheader, 0,
+				gr->ctx_vars.local_golden_image,
+				gr->ctx_vars.golden_image_size);
+		else
+			gk20a_mem_rd_n(g, gold_mem, 0,
 				gr->ctx_vars.local_golden_image,
 				gr->ctx_vars.golden_image_size);
 	}
+	gk20a_mem_end(g, ctxheader);
 
 	g->ops.gr.commit_inst(c, gr_mem->gpu_va);
 
@@ -2016,7 +2012,6 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	if (gr->ctx_vars.local_golden_image == NULL)
 		return -1;
 
-
 	/* Channel gr_ctx buffer is gpu cacheable.
 	   Flush and invalidate before cpu update. */
 	g->ops.mm.l2_flush(g, true);
@@ -2029,15 +2024,22 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 		goto clean_up_mem;
 	}
 
-	gk20a_mem_wr_n(g, mem, 0,
+	if (ctxheader->gpu_va) {
+		if (g->ops.gr.restore_context_header)
+			g->ops.gr.restore_context_header(g, ctxheader);
+	} else {
+		gk20a_mem_wr_n(g, mem, 0,
 			gr->ctx_vars.local_golden_image,
 			gr->ctx_vars.golden_image_size);
+		gk20a_mem_wr(g, mem,
+			ctxsw_prog_main_image_num_save_ops_o(), 0);
+		gk20a_mem_wr(g, mem,
+			ctxsw_prog_main_image_num_restore_ops_o(), 0);
+	}
 
 	if (g->ops.gr.enable_cde_in_fecs && c->cde)
 		g->ops.gr.enable_cde_in_fecs(g, mem);
 
-	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_num_save_ops_o(), 0);
-	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_num_restore_ops_o(), 0);
 	/* set priv access map */
 	virt_addr_lo =
 		 u64_lo32(ch_ctx->global_ctx_buffer_va[PRIV_ACCESS_MAP_VA]);
@@ -2145,9 +2147,7 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 			ctxsw_prog_main_image_pm_ptr_o(), virt_addr);
 	}
 
-	gk20a_mem_end(g, mem);
 	gk20a_mem_end(g, ctxheader);
-
 clean_up_mem:
 	gk20a_mem_end(g, mem);
 
@@ -3065,6 +3065,8 @@ static void gr_gk20a_free_channel_pm_ctx(struct channel_gk20a *c)
 
 void gk20a_free_channel_ctx(struct channel_gk20a *c)
 {
+	if(c->g->ops.fifo.free_channel_ctx_header)
+		c->g->ops.fifo.free_channel_ctx_header(c);
 	gr_gk20a_unmap_global_ctx_buffers(c);
 	gr_gk20a_free_channel_patch_ctx(c);
 	gr_gk20a_free_channel_pm_ctx(c);

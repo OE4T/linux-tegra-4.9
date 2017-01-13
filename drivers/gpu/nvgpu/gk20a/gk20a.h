@@ -332,6 +332,7 @@ struct gpu_ops {
 		int (*commit_global_timeslice)(struct gk20a *g,
 					struct channel_gk20a *c, bool patch);
 		int (*commit_inst)(struct channel_gk20a *c, u64 gpu_va);
+		void (*restore_context_header)(struct gk20a *g, struct mem_desc *ctxheader);
 	} gr;
 	const char *name;
 	struct {
@@ -420,6 +421,7 @@ struct gpu_ops {
 					u32 *runlist);
 		u32 (*userd_gp_get)(struct gk20a *g, struct channel_gk20a *ch);
 		void (*userd_gp_put)(struct gk20a *g, struct channel_gk20a *ch);
+		void (*free_channel_ctx_header)(struct channel_gk20a *ch);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/

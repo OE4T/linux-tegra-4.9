@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,13 +14,13 @@
 #ifndef __ISC_DEV_H__
 #define __ISC_DEV_H__
 
+#define ISC_DEV_IOCTL_RW	_IOW('o', 1, struct isc_dev_package)
 #define ISC_DEV_IOCTL_RDWR	_IOW('o', 3, struct isc_dev_pkg)
 
 #ifdef CONFIG_COMPAT
 #define ISC_DEV_IOCTL_RDWR32	_IOW('o', 3, struct isc_dev_pkg32)
 #endif
 
-#define MAX_ISC_DEV_PAK_SIZE	32
 #define ISC_DEV_PKG_FLAG_WR	1
 
 struct __attribute__ ((__packed__)) isc_dev_pkg {
@@ -37,6 +37,14 @@ struct __attribute__ ((__packed__)) isc_dev_pkg32 {
 	__u16 size;
 	__u32 flags;
 	__u32 buffer;
+};
+
+struct __attribute__ ((__packed__)) isc_dev_package {
+	__u16 offset;
+	__u16 offset_len;
+	__u32 size;
+	__u32 flags;
+	unsigned long buffer;
 };
 
 #ifdef __KERNEL__

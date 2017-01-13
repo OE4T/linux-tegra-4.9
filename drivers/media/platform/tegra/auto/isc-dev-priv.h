@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,7 +23,7 @@ struct isc_dev_info {
 	struct isc_dev_platform_data *pdata;
 	atomic_t in_use;
 	struct mutex mutex;
-	struct isc_dev_pkg rw_pkg;
+	struct isc_dev_package rw_pkg;
 	struct dentry *d_entry;
 	u32 reg_len;
 	u32 reg_off;

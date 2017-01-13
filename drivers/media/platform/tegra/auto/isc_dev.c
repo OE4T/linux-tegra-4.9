@@ -1,7 +1,7 @@
 /*
  * isc_dev.c - ISC generic i2c driver.
  *
- * Copyright (c) 2015-2016, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2015-2017, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -29,6 +29,9 @@
 #include <media/isc-mgr.h>
 
 #include "isc-dev-priv.h"
+
+/* i2c payload size is only 12 bit */
+#define MAX_MSG_SIZE	(0xFFF - 1)
 
 /*#define DEBUG_I2C_TRAFFIC*/
 
@@ -124,10 +127,19 @@ int isc_dev_raw_wr(
 	struct isc_dev_info *info, unsigned int offset, u8 *val, size_t size)
 {
 	int ret = -ENODEV;
+	u8 *buf_start = NULL;
+	struct i2c_msg *i2cmsg;
+	unsigned int num_msgs = 0, total_size, i;
 
 	dev_dbg(info->dev, "%s\n", __func__);
-
 	mutex_lock(&info->mutex);
+
+	if (size == 0) {
+		dev_dbg(info->dev, "%s: size is 0.\n", __func__);
+		mutex_unlock(&info->mutex);
+		return 0;
+	}
+
 	if (!info->power_is_on) {
 		dev_err(info->dev, "%s: power is off.\n", __func__);
 		mutex_unlock(&info->mutex);
@@ -148,17 +160,56 @@ int isc_dev_raw_wr(
 	}
 
 	isc_dev_dump(__func__, info, offset, val, size);
-	ret = i2c_master_send(info->i2c_client, val, size);
-	mutex_unlock(&info->mutex);
 
+	num_msgs = size / MAX_MSG_SIZE;
+	num_msgs += (size % MAX_MSG_SIZE) ? 1 : 0;
+
+	i2cmsg = kzalloc((sizeof(struct i2c_msg)*num_msgs), GFP_KERNEL);
+	if (!i2cmsg) {
+		dev_err(info->dev, "%s: failed to allocate memory\n",
+			__func__);
+		mutex_unlock(&info->mutex);
+		return -ENOMEM;
+	}
+
+	buf_start = val;
+	total_size = size;
+
+	dev_dbg(info->dev, "%s: num_msgs: %d\n", __func__, num_msgs);
+	for (i = 0; i < num_msgs; i++) {
+		i2cmsg[i].addr = info->i2c_client->addr;
+		i2cmsg[i].buf = (__u8 *)buf_start;
+
+		if (i > 0) {
+			i2cmsg[i].flags = I2C_M_NOSTART;
+		} else {
+			i2cmsg[i].flags = 0;
+		}
+
+		if (total_size > MAX_MSG_SIZE) {
+			i2cmsg[i].len = MAX_MSG_SIZE;
+			buf_start += MAX_MSG_SIZE;
+			total_size -= MAX_MSG_SIZE;
+		} else {
+			i2cmsg[i].len = total_size;
+		}
+		dev_dbg(info->dev, "%s: addr:%x buf:%p, flags:%u len:%u\n",
+			__func__, i2cmsg[i].addr, (void *)i2cmsg[i].buf,
+			i2cmsg[i].flags, i2cmsg[i].len);
+	}
+
+	ret = i2c_transfer(info->i2c_client->adapter, i2cmsg, num_msgs);
 	if (ret > 0)
 		ret = 0;
+
+	kfree(i2cmsg);
+	mutex_unlock(&info->mutex);
 	return ret;
 }
 
 static int isc_dev_raw_rw(struct isc_dev_info *info)
 {
-	struct isc_dev_pkg *pkg = &info->rw_pkg;
+	struct isc_dev_package *pkg = &info->rw_pkg;
 	void *u_ptr = (void *)pkg->buffer;
 	u8 *buf;
 	int ret = -ENODEV;
@@ -204,6 +255,7 @@ static int isc_dev_get_pkg(
 {
 	if (is_compat) {
 		struct isc_dev_pkg32 pkg32;
+
 		if (copy_from_user(&pkg32,
 			(const void __user *)arg, sizeof(pkg32))) {
 			dev_err(info->dev, "%s copy_from_user err line %d\n",
@@ -215,10 +267,43 @@ static int isc_dev_get_pkg(
 		info->rw_pkg.size = pkg32.size;
 		info->rw_pkg.flags = pkg32.flags;
 		info->rw_pkg.buffer = (unsigned long)pkg32.buffer;
-	} else if (copy_from_user(&info->rw_pkg,
+	} else {
+		struct isc_dev_pkg pkg;
+
+		if (copy_from_user(&pkg,
+			(const void __user *)arg, sizeof(pkg))) {
+			dev_err(info->dev, "%s copy_from_user err line %d\n",
+				__func__, __LINE__);
+			return -EFAULT;
+		}
+		info->rw_pkg.offset = pkg.offset;
+		info->rw_pkg.offset_len = pkg.offset_len;
+		info->rw_pkg.size = pkg.size;
+		info->rw_pkg.flags = pkg.flags;
+		info->rw_pkg.buffer = pkg.buffer;
+	}
+
+	if ((void __user *)info->rw_pkg.buffer == NULL) {
+		dev_err(info->dev, "%s package buffer NULL\n", __func__);
+		return -EINVAL;
+	}
+
+	if (!info->rw_pkg.size) {
+		dev_err(info->dev, "%s invalid package size %d\n",
+			__func__, info->rw_pkg.size);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int isc_dev_get_package(
+	struct isc_dev_info *info, unsigned long arg)
+{
+	if (copy_from_user(&info->rw_pkg,
 		(const void __user *)arg, sizeof(info->rw_pkg))) {
 		dev_err(info->dev, "%s copy_from_user err line %d\n",
-			__func__, __LINE__);
+		__func__, __LINE__);
 		return -EFAULT;
 	}
 
@@ -227,8 +312,7 @@ static int isc_dev_get_pkg(
 		return -EINVAL;
 	}
 
-	if (!info->rw_pkg.size ||
-		(info->rw_pkg.size > 4000)) {
+	if (!info->rw_pkg.size) {
 		dev_err(info->dev, "%s invalid package size %d\n",
 			__func__, info->rw_pkg.size);
 		return -EINVAL;
@@ -246,6 +330,13 @@ static long isc_dev_ioctl(struct file *file,
 	switch (cmd) {
 	case ISC_DEV_IOCTL_RDWR:
 		err = isc_dev_get_pkg(info, arg, false);
+		if (err)
+			break;
+
+		err = isc_dev_raw_rw(info);
+		break;
+	case ISC_DEV_IOCTL_RW:
+		err = isc_dev_get_package(info, arg);
 		if (err)
 			break;
 

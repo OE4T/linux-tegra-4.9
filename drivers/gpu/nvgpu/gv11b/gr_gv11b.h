@@ -1,7 +1,7 @@
 /*
  * GV11B GPU GR
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -15,6 +15,16 @@
 
 #ifndef _NVGPU_GR_GV11B_H_
 #define _NVGPU_GR_GV11B_H_
+
+#define GV11B_ZBC_TYPE_STENCIL            T19X_ZBC
+#define ZBC_STENCIL_CLEAR_FMT_INVAILD     0
+#define ZBC_STENCIL_CLEAR_FMT_U8          1
+
+struct zbc_s_table {
+	u32 stencil;
+	u32 format;
+	u32 ref_cnt;
+};
 
 struct gpu_ops;
 

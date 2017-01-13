@@ -1,7 +1,7 @@
 /*
  * GV11b GPU GR
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -223,96 +223,135 @@ static void gr_gv11b_commit_global_pagepool(struct gk20a *g,
 		gr_gpcs_gcc_pagepool_total_pages_f(size), patch);
 }
 
-static int gr_gv11b_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
-				  struct zbc_entry *color_val, u32 index)
+static int gr_gv11b_zbc_s_query_table(struct gk20a *g, struct gr_gk20a *gr,
+			struct zbc_query_params *query_params)
 {
-	u32 i;
-	u32 zbc_c;
+	u32 index = query_params->index_size;
 
-	/* update l2 table */
-	g->ops.ltc.set_zbc_color_entry(g, color_val, index);
-
-	/* update ds table */
-	gk20a_writel(g, gr_ds_zbc_color_r_r(),
-		gr_ds_zbc_color_r_val_f(color_val->color_ds[0]));
-	gk20a_writel(g, gr_ds_zbc_color_g_r(),
-		gr_ds_zbc_color_g_val_f(color_val->color_ds[1]));
-	gk20a_writel(g, gr_ds_zbc_color_b_r(),
-		gr_ds_zbc_color_b_val_f(color_val->color_ds[2]));
-	gk20a_writel(g, gr_ds_zbc_color_a_r(),
-		gr_ds_zbc_color_a_val_f(color_val->color_ds[3]));
-
-	gk20a_writel(g, gr_ds_zbc_color_fmt_r(),
-		gr_ds_zbc_color_fmt_val_f(color_val->format));
-
-	gk20a_writel(g, gr_ds_zbc_tbl_index_r(),
-		gr_ds_zbc_tbl_index_val_f(index + GK20A_STARTOF_ZBC_TABLE));
-
-	/* trigger the write */
-	gk20a_writel(g, gr_ds_zbc_tbl_ld_r(),
-		gr_ds_zbc_tbl_ld_select_c_f() |
-		gr_ds_zbc_tbl_ld_action_write_f() |
-		gr_ds_zbc_tbl_ld_trigger_active_f());
-
-	/* update local copy */
-	for (i = 0; i < GK20A_ZBC_COLOR_VALUE_SIZE; i++) {
-		gr->zbc_col_tbl[index].color_l2[i] = color_val->color_l2[i];
-		gr->zbc_col_tbl[index].color_ds[i] = color_val->color_ds[i];
+	if (index >= GK20A_ZBC_TABLE_SIZE) {
+		gk20a_err(dev_from_gk20a(g),
+			"invalid zbc stencil table index\n");
+		return -EINVAL;
 	}
-	gr->zbc_col_tbl[index].format = color_val->format;
-	gr->zbc_col_tbl[index].ref_cnt++;
-
-	gk20a_writel_check(g, gr_gpcs_swdx_dss_zbc_color_r_r(index),
-			   color_val->color_ds[0]);
-	gk20a_writel_check(g, gr_gpcs_swdx_dss_zbc_color_g_r(index),
-			   color_val->color_ds[1]);
-	gk20a_writel_check(g, gr_gpcs_swdx_dss_zbc_color_b_r(index),
-			   color_val->color_ds[2]);
-	gk20a_writel_check(g, gr_gpcs_swdx_dss_zbc_color_a_r(index),
-			   color_val->color_ds[3]);
-	zbc_c = gk20a_readl(g, gr_gpcs_swdx_dss_zbc_c_01_to_04_format_r() + (index & ~3));
-	zbc_c &= ~(0x7f << ((index % 4) * 7));
-	zbc_c |= color_val->format << ((index % 4) * 7);
-	gk20a_writel_check(g, gr_gpcs_swdx_dss_zbc_c_01_to_04_format_r() + (index & ~3), zbc_c);
+	query_params->depth = gr->zbc_s_tbl[index].stencil;
+	query_params->format = gr->zbc_s_tbl[index].format;
+	query_params->ref_cnt = gr->zbc_s_tbl[index].ref_cnt;
 
 	return 0;
 }
 
-static int gr_gv11b_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
-				struct zbc_entry *depth_val, u32 index)
+static bool gr_gv11b_add_zbc_type_s(struct gk20a *g, struct gr_gk20a *gr,
+		     struct zbc_entry *zbc_val, int *ret_val)
 {
-	u32 zbc_z;
+	struct zbc_s_table *s_tbl;
+	u32 i;
+	bool added = false;
+
+	*ret_val = -ENOMEM;
+
+	/* search existing tables */
+	for (i = 0; i < gr->max_used_s_index; i++) {
+
+		s_tbl = &gr->zbc_s_tbl[i];
+
+		if (s_tbl->ref_cnt &&
+		    s_tbl->stencil == zbc_val->depth &&
+		    s_tbl->format == zbc_val->format) {
+			added = true;
+			s_tbl->ref_cnt++;
+			*ret_val = 0;
+			break;
+		}
+	}
+	/* add new table */
+	if (!added &&
+	    gr->max_used_s_index < GK20A_ZBC_TABLE_SIZE) {
+
+		s_tbl = &gr->zbc_s_tbl[gr->max_used_s_index];
+		WARN_ON(s_tbl->ref_cnt != 0);
+
+		*ret_val = g->ops.gr.add_zbc_s(g, gr,
+				zbc_val, gr->max_used_s_index);
+
+		if (!(*ret_val))
+			gr->max_used_s_index++;
+	}
+	return added;
+}
+
+static int gr_gv11b_add_zbc_stencil(struct gk20a *g, struct gr_gk20a *gr,
+				struct zbc_entry *stencil_val, u32 index)
+{
+	u32 zbc_s;
 
 	/* update l2 table */
-	g->ops.ltc.set_zbc_depth_entry(g, depth_val, index);
-
-	/* update ds table */
-	gk20a_writel(g, gr_ds_zbc_z_r(),
-		gr_ds_zbc_z_val_f(depth_val->depth));
-
-	gk20a_writel(g, gr_ds_zbc_z_fmt_r(),
-		gr_ds_zbc_z_fmt_val_f(depth_val->format));
-
-	gk20a_writel(g, gr_ds_zbc_tbl_index_r(),
-		gr_ds_zbc_tbl_index_val_f(index + GK20A_STARTOF_ZBC_TABLE));
-
-	/* trigger the write */
-	gk20a_writel(g, gr_ds_zbc_tbl_ld_r(),
-		gr_ds_zbc_tbl_ld_select_z_f() |
-		gr_ds_zbc_tbl_ld_action_write_f() |
-		gr_ds_zbc_tbl_ld_trigger_active_f());
+	g->ops.ltc.set_zbc_s_entry(g, stencil_val, index);
 
 	/* update local copy */
-	gr->zbc_dep_tbl[index].depth = depth_val->depth;
-	gr->zbc_dep_tbl[index].format = depth_val->format;
-	gr->zbc_dep_tbl[index].ref_cnt++;
+	gr->zbc_s_tbl[index].stencil = stencil_val->depth;
+	gr->zbc_s_tbl[index].format = stencil_val->format;
+	gr->zbc_s_tbl[index].ref_cnt++;
 
-	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_z_r(index), depth_val->depth);
-	zbc_z = gk20a_readl(g, gr_gpcs_swdx_dss_zbc_z_01_to_04_format_r() + (index & ~3));
-	zbc_z &= ~(0x7f << (index % 4) * 7);
-	zbc_z |= depth_val->format << (index % 4) * 7;
-	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_z_01_to_04_format_r() + (index & ~3), zbc_z);
+	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_s_r(index), stencil_val->depth);
+	zbc_s = gk20a_readl(g, gr_gpcs_swdx_dss_zbc_s_01_to_04_format_r() +
+				 (index & ~3));
+	zbc_s &= ~(0x7f << (index % 4) * 7);
+	zbc_s |= stencil_val->format << (index % 4) * 7;
+	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_s_01_to_04_format_r() +
+				 (index & ~3), zbc_s);
 
+	return 0;
+}
+
+static int gr_gv11b_load_stencil_default_tbl(struct gk20a *g,
+		 struct gr_gk20a *gr)
+{
+	struct zbc_entry zbc_val;
+	u32 err;
+
+	/* load default stencil table */
+	zbc_val.type = GV11B_ZBC_TYPE_STENCIL;
+
+	zbc_val.depth = 0x0;
+	zbc_val.format = ZBC_STENCIL_CLEAR_FMT_U8;
+	err = gr_gk20a_add_zbc(g, gr, &zbc_val);
+
+	zbc_val.depth = 0x1;
+	zbc_val.format = ZBC_STENCIL_CLEAR_FMT_U8;
+	err |= gr_gk20a_add_zbc(g, gr, &zbc_val);
+
+	zbc_val.depth = 0xff;
+	zbc_val.format = ZBC_STENCIL_CLEAR_FMT_U8;
+	err |= gr_gk20a_add_zbc(g, gr, &zbc_val);
+
+	if (!err) {
+		gr->max_default_s_index = 3;
+	} else {
+		gk20a_err(dev_from_gk20a(g),
+			   "fail to load default zbc stencil table\n");
+		return err;
+	}
+
+	return 0;
+}
+
+static int gr_gv11b_load_stencil_tbl(struct gk20a *g, struct gr_gk20a *gr)
+{
+	int ret;
+	u32 i;
+
+	for (i = 0; i < gr->max_used_s_index; i++) {
+		struct zbc_s_table *s_tbl = &gr->zbc_s_tbl[i];
+		struct zbc_entry zbc_val;
+
+		zbc_val.type = GV11B_ZBC_TYPE_STENCIL;
+		zbc_val.depth = s_tbl->stencil;
+		zbc_val.format = s_tbl->format;
+
+		ret = g->ops.gr.add_zbc_s(g, gr, &zbc_val, i);
+		if (ret)
+			return ret;
+	}
 	return 0;
 }
 
@@ -1869,8 +1908,11 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.is_valid_class = gr_gv11b_is_valid_class;
 	gops->gr.commit_global_cb_manager = gr_gv11b_commit_global_cb_manager;
 	gops->gr.commit_global_pagepool = gr_gv11b_commit_global_pagepool;
-	gops->gr.add_zbc_color = gr_gv11b_add_zbc_color;
-	gops->gr.add_zbc_depth = gr_gv11b_add_zbc_depth;
+	gops->gr.add_zbc_s = gr_gv11b_add_zbc_stencil;
+	gops->gr.load_zbc_s_default_tbl = gr_gv11b_load_stencil_default_tbl;
+	gops->gr.load_zbc_s_tbl = gr_gv11b_load_stencil_tbl;
+	gops->gr.zbc_s_query_table = gr_gv11b_zbc_s_query_table;
+	gops->gr.add_zbc_type_s = gr_gv11b_add_zbc_type_s;
 	gops->gr.pagepool_default_size = gr_gv11b_pagepool_default_size;
 	gops->gr.calc_global_ctx_buffer_size =
 		gr_gv11b_calc_global_ctx_buffer_size;

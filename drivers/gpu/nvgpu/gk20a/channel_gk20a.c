@@ -28,13 +28,13 @@
 #include <linux/vmalloc.h>
 #include <linux/circ_buf.h>
 
-#include "debug_gk20a.h"
-#include "ctxsw_trace_gk20a.h"
+#include <nvgpu/semaphore.h>
 
 #include "gk20a.h"
+#include "debug_gk20a.h"
+#include "ctxsw_trace_gk20a.h"
 #include "dbg_gpu_gk20a.h"
 #include "fence_gk20a.h"
-#include "semaphore_gk20a.h"
 
 #include <nvgpu/timers.h>
 

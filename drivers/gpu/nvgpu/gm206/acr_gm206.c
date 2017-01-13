@@ -21,7 +21,6 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
-#include "gk20a/semaphore_gk20a.h"
 
 #include "acr.h"
 #include "acr_gm206.h"

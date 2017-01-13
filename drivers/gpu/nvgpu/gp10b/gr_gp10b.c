@@ -24,7 +24,6 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
-#include "gk20a/semaphore_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 
 #include "gm20b/gr_gm20b.h"

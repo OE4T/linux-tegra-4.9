@@ -32,6 +32,7 @@ nvgpu-y := \
 	common/mm/page_allocator.o \
 	common/mm/lockless_allocator.o \
 	common/nvgpu_common.o \
+	common/semaphore.o \
 	gk20a/gk20a.o \
 	gk20a/sched_gk20a.o \
 	gk20a/as_gk20a.o \
@@ -48,7 +49,6 @@ nvgpu-y := \
 	gk20a/mm_gk20a.o \
 	gk20a/pmu_gk20a.o \
 	gk20a/priv_ring_gk20a.o \
-	gk20a/semaphore_gk20a.o \
 	gk20a/fence_gk20a.o \
 	gk20a/therm_gk20a.o \
 	gk20a/gr_ctx_gk20a_sim.o \

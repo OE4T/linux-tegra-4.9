@@ -1,7 +1,7 @@
 /*
  * GM206 Copy Engine.
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -29,7 +29,6 @@
 #include <linux/nvhost.h>
 
 #include "gk20a/debug_gk20a.h"
-#include "gk20a/semaphore_gk20a.h"
 
 #include <nvgpu/hw/gm206/hw_ce2_gm206.h>
 #include <nvgpu/hw/gm206/hw_pbdma_gm206.h>

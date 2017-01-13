@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics Copy Engine  (gr host)
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -28,7 +28,6 @@
 
 #include "gk20a.h"
 #include "debug_gk20a.h"
-#include "semaphore_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_ce2_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>

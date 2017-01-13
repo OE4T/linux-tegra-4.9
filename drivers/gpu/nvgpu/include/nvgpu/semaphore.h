@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,9 +20,9 @@
 
 #include <nvgpu/allocator.h>
 
-#include "gk20a.h"
-#include "mm_gk20a.h"
-#include "channel_gk20a.h"
+#include "gk20a/gk20a.h"
+#include "gk20a/mm_gk20a.h"
+#include "gk20a/channel_gk20a.h"
 
 #define gpu_sema_dbg(fmt, args...)		\
 	gk20a_dbg(gpu_dbg_sema, fmt, ##args)
@@ -144,12 +144,6 @@ struct gk20a_semaphore_sea {
 	DECLARE_BITMAP(pools_alloced, SEMAPHORE_POOL_COUNT);
 
 	struct mutex sea_lock;		/* Lock alloc/free calls. */
-};
-
-enum gk20a_mem_rw_flag {
-	gk20a_mem_flag_none = 0,
-	gk20a_mem_flag_read_only = 1,
-	gk20a_mem_flag_write_only = 2,
 };
 
 /*

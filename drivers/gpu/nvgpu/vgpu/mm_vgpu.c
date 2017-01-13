@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU Memory Management
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -15,7 +15,6 @@
 
 #include <linux/dma-mapping.h>
 #include "vgpu/vgpu.h"
-#include "gk20a/semaphore_gk20a.h"
 #include "gk20a/mm_gk20a.h"
 
 static int vgpu_init_mm_setup_sw(struct gk20a *g)

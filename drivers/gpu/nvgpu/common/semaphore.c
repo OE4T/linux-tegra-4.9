@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/gk20a/semaphore_gk20a.c
+ * Nvgpu Semaphores
  *
- * GK20A Semaphores
- *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,11 +19,7 @@
 #include <linux/highmem.h>
 #include <linux/slab.h>
 
-#include <asm/pgtable.h>
-
-#include "gk20a.h"
-#include "mm_gk20a.h"
-#include "semaphore_gk20a.h"
+#include <nvgpu/semaphore.h>
 
 #define __lock_sema_sea(s)						\
 	do {								\

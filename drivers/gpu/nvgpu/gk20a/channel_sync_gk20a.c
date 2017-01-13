@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/gk20a/channel_sync_gk20a.c
- *
  * GK20A Channel Synchronization Abstraction
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,10 +18,11 @@
 #include <linux/list.h>
 #include <linux/version.h>
 
+#include <nvgpu/semaphore.h>
+
 #include "channel_sync_gk20a.h"
 #include "gk20a.h"
 #include "fence_gk20a.h"
-#include "semaphore_gk20a.h"
 #include "sync_gk20a.h"
 #include "mm_gk20a.h"
 

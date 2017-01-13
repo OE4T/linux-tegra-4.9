@@ -25,11 +25,11 @@
 #include <linux/nvhost.h>
 
 #include <nvgpu/timers.h>
+#include <nvgpu/semaphore.h>
 
 #include "gk20a.h"
 #include "debug_gk20a.h"
 #include "ctxsw_trace_gk20a.h"
-#include "semaphore_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_fifo_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>

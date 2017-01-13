@@ -26,7 +26,6 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
-#include "gk20a/semaphore_gk20a.h"
 
 #include <nvgpu/hw/gm20b/hw_pwr_gm20b.h>
 

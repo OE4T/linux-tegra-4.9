@@ -34,7 +34,6 @@
 #include "fence_gk20a.h"
 #include "gr_gk20a.h"
 #include "debug_gk20a.h"
-#include "semaphore_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>

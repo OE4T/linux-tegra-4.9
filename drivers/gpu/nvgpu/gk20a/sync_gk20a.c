@@ -1,7 +1,7 @@
 /*
  * GK20A Sync Framework Integration
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,8 +13,6 @@
  * more details.
  */
 
-#include "sync_gk20a.h"
-
 #include <linux/version.h>
 #include <linux/kernel.h>
 #include <linux/file.h>
@@ -23,9 +21,14 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+
 #include <uapi/linux/nvgpu.h>
+
+#include <nvgpu/semaphore.h>
+
 #include "../drivers/staging/android/sync.h"
-#include "semaphore_gk20a.h"
+
+#include "sync_gk20a.h"
 
 static const struct sync_timeline_ops gk20a_sync_timeline_ops;
 

@@ -41,7 +41,6 @@
 #include "regops_gk20a.h"
 #include "dbg_gpu_gk20a.h"
 #include "debug_gk20a.h"
-#include "semaphore_gk20a.h"
 #include "platform_gk20a.h"
 #include "ctxsw_trace_gk20a.h"
 

@@ -1,6 +1,4 @@
 /*
- * drivers/video/tegra/host/t20/debug_gk20a.c
- *
  * Copyright (C) 2011-2017 NVIDIA Corporation.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
@@ -20,12 +18,12 @@
 
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
-
 #include <linux/io.h>
+
+#include <nvgpu/semaphore.h>
 
 #include "gk20a.h"
 #include "debug_gk20a.h"
-#include "semaphore_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_ram_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_fifo_gk20a.h>

@@ -33,13 +33,13 @@
 
 #include <nvgpu/timers.h>
 #include <nvgpu/allocator.h>
+#include <nvgpu/semaphore.h>
 #include <nvgpu/page_allocator.h>
 
 #include "gk20a.h"
 #include "mm_gk20a.h"
 #include "fence_gk20a.h"
 #include "kind_gk20a.h"
-#include "semaphore_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_gmmu_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_fb_gk20a.h>

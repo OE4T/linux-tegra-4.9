@@ -1,7 +1,7 @@
 /*
  * GP10B MMU
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,7 +17,6 @@
 #include <linux/dma-mapping.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/semaphore_gk20a.h"
 
 #include "mm_gp10b.h"
 #include "rpfb_gp10b.h"

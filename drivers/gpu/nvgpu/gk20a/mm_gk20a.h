@@ -52,6 +52,12 @@ enum gk20a_aperture {
 	APERTURE_VIDMEM
 };
 
+enum gk20a_mem_rw_flag {
+	gk20a_mem_flag_none = 0,
+	gk20a_mem_flag_read_only = 1,
+	gk20a_mem_flag_write_only = 2,
+};
+
 static inline const char *gk20a_aperture_str(enum gk20a_aperture aperture)
 {
 	switch (aperture) {

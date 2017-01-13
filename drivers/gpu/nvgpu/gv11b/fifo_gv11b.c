@@ -1,7 +1,7 @@
 /*
  * GV11B fifo
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -230,4 +230,5 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.userd_gp_put = gv11b_userd_gp_put;
 	gops->fifo.setup_ramfc = channel_gv11b_setup_ramfc;
 	gops->fifo.unbind_channel = channel_gv11b_unbind;
+	gops->fifo.eng_runlist_base_size = fifo_eng_runlist_base__size_1_v;
 }

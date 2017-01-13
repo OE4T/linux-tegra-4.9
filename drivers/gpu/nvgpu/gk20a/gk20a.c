@@ -42,11 +42,11 @@
 #include <linux/sched.h>
 #include <linux/version.h>
 
+#include <nvgpu/nvgpu_common.h>
 #include <nvgpu/allocator.h>
 #include <nvgpu/timers.h>
 
 #include "gk20a.h"
-#include "nvgpu_common.h"
 #include "debug_gk20a.h"
 #include "ctrl_gk20a.h"
 #include "channel_sync_gk20a.h"

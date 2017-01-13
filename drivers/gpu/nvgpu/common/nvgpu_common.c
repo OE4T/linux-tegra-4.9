@@ -17,10 +17,10 @@
 #include <linux/dma-mapping.h>
 #include <linux/firmware.h>
 
-#include "nvgpu_common.h"
 #include "gk20a/gk20a_scale.h"
 #include "gk20a/gk20a.h"
-#include "nvgpu_common.h"
+
+#include <nvgpu/nvgpu_common.h>
 
 #define EMC3D_DEFAULT_RATIO 750
 

@@ -22,8 +22,7 @@
 #include <linux/platform/tegra/mc.h>
 
 #include <nvgpu/timers.h>
-
-#include "nvgpu_common.h"
+#include <nvgpu/nvgpu_common.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"

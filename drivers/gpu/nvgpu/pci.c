@@ -17,11 +17,14 @@
 #include <linux/pci.h>
 #include <linux/interrupt.h>
 #include <linux/pm_runtime.h>
-#include "pci.h"
-#include "nvgpu_common.h"
+
+#include <nvgpu/nvgpu_common.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
 #include "clk/clk.h"
+
+#include "pci.h"
 
 #define PCI_INTERFACE_NAME "card-%s%%s"
 

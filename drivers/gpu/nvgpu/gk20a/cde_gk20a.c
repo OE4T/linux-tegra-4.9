@@ -25,6 +25,7 @@
 #include <trace/events/gk20a.h>
 
 #include <nvgpu/timers.h>
+#include <nvgpu/nvgpu_common.h>
 
 #include "gk20a.h"
 #include "channel_gk20a.h"
@@ -34,7 +35,6 @@
 #include "gr_gk20a.h"
 #include "debug_gk20a.h"
 #include "semaphore_gk20a.h"
-#include "nvgpu_common.h"
 
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>

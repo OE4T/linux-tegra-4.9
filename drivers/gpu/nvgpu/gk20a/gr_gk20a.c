@@ -32,6 +32,7 @@
 #include <trace/events/gk20a.h>
 
 #include <nvgpu/timers.h>
+#include <nvgpu/nvgpu_common.h>
 
 #include "gk20a.h"
 #include "kind_gk20a.h"
@@ -43,7 +44,6 @@
 #include "semaphore_gk20a.h"
 #include "platform_gk20a.h"
 #include "ctxsw_trace_gk20a.h"
-#include "nvgpu_common.h"
 
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ctxsw_prog_gk20a.h>

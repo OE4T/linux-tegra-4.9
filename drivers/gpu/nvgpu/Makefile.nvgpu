@@ -31,7 +31,7 @@ nvgpu-y := \
 	common/mm/buddy_allocator.o \
 	common/mm/page_allocator.o \
 	common/mm/lockless_allocator.o \
-	nvgpu_common.o \
+	common/nvgpu_common.o \
 	gk20a/gk20a.o \
 	gk20a/sched_gk20a.o \
 	gk20a/as_gk20a.o \

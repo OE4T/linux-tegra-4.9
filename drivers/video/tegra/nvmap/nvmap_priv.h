@@ -26,6 +26,7 @@
 #include <linux/list.h>
 #include <linux/mm.h>
 #include <linux/mutex.h>
+#include <linux/rtmutex.h>
 #include <linux/rbtree.h>
 #include <linux/sched.h>
 #include <linux/wait.h>
@@ -225,7 +226,7 @@ struct nvmap_handle_ref {
 #define NVMAP_PP_POOL_SIZE               (128)
 
 struct nvmap_page_pool {
-	struct mutex lock;
+	struct rt_mutex lock;
 	u32 count;  /* Number of pages in the page & dirty list. */
 	u32 max;    /* Max no. of pages in all lists. */
 	u32 to_zero; /* Number of pages on the zero list */

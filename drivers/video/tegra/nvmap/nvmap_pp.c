@@ -3,7 +3,7 @@
  *
  * Manage page pools to speed up page allocation.
  *
- * Copyright (c) 2009-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -160,7 +160,7 @@ static void nvmap_pp_do_background_zero_pages(struct nvmap_page_pool *pool)
 	 */
 	static struct page *pending_zero_pages[PENDING_PAGES_SIZE];
 
-	mutex_lock(&pool->lock);
+	rt_mutex_lock(&pool->lock);
 	for (i = 0; i < PENDING_PAGES_SIZE; i++) {
 		page = get_zero_list_page(pool);
 		if (page == NULL)
@@ -173,7 +173,7 @@ static void nvmap_pp_do_background_zero_pages(struct nvmap_page_pool *pool)
 		 */
 		pool->to_zero++;
 	}
-	mutex_unlock(&pool->lock);
+	rt_mutex_unlock(&pool->lock);
 
 	ret = nvmap_pp_zero_pages(pending_zero_pages, i);
 	if (ret < 0) {
@@ -181,10 +181,10 @@ static void nvmap_pp_do_background_zero_pages(struct nvmap_page_pool *pool)
 		goto out;
 	}
 
-	mutex_lock(&pool->lock);
+	rt_mutex_lock(&pool->lock);
 	ret = __nvmap_page_pool_fill_lots_locked(pool, pending_zero_pages, i);
 	pool->to_zero -= i;
-	mutex_unlock(&pool->lock);
+	rt_mutex_unlock(&pool->lock);
 
 out:
 	for (; ret < i; ret++)
@@ -220,9 +220,9 @@ static int nvmap_background_zero_thread(void *arg)
 		 */
 		if (pool->dirty_pages >=
 		    (cache_maint_inner_threshold >> PAGE_SHIFT)) {
-			mutex_lock(&pool->lock);
+			rt_mutex_lock(&pool->lock);
 			pp_clean_cache(pool);
-			mutex_unlock(&pool->lock);
+			rt_mutex_unlock(&pool->lock);
 		}
 		wait_event_freezable(nvmap_bg_wait,
 				nvmap_bg_should_run(pool) ||
@@ -295,7 +295,7 @@ int nvmap_page_pool_alloc_lots(struct nvmap_page_pool *pool,
 	if (!enable_pp)
 		return 0;
 
-	mutex_lock(&pool->lock);
+	rt_mutex_lock(&pool->lock);
 
 	real_nr = min_t(u32, nr, pool->count);
 
@@ -315,7 +315,7 @@ int nvmap_page_pool_alloc_lots(struct nvmap_page_pool *pool,
 			BUG_ON(page_count(page) != 1);
 		}
 	}
-	mutex_unlock(&pool->lock);
+	rt_mutex_unlock(&pool->lock);
 
 	pp_alloc_add(pool, ind);
 	pp_hit_add(pool, ind);
@@ -366,7 +366,7 @@ int nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
 {
 	int ret = 0;
 
-	mutex_lock(&pool->lock);
+	rt_mutex_lock(&pool->lock);
 	if (zero_memory) {
 		int i;
 		u32 save_to_zero = pool->to_zero;
@@ -412,7 +412,7 @@ int nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
 		if (add_to_pp)
 			ret = __nvmap_page_pool_fill_lots_locked(pool, pages, nr);
 	}
-	mutex_unlock(&pool->lock);
+	rt_mutex_unlock(&pool->lock);
 
 	return ret;
 }
@@ -465,18 +465,18 @@ int nvmap_page_pool_clear(void)
 {
 	struct nvmap_page_pool *pool = &nvmap_dev->pool;
 
-	mutex_lock(&pool->lock);
+	rt_mutex_lock(&pool->lock);
 
 	(void)nvmap_page_pool_free_locked(pool, pool->count + pool->to_zero);
 
 	/* For some reason, if an error occured... */
 	if (!list_empty(&pool->page_list) || !list_empty(&pool->zero_list) ||
 	    !list_empty(&pool->dirty_list)) {
-		mutex_unlock(&pool->lock);
+		rt_mutex_unlock(&pool->lock);
 		return -ENOMEM;
 	}
 
-	mutex_unlock(&pool->lock);
+	rt_mutex_unlock(&pool->lock);
 
 	return 0;
 }
@@ -490,7 +490,7 @@ static void nvmap_page_pool_resize(struct nvmap_page_pool *pool, u32 size)
 {
 	u32 curr;
 
-	mutex_lock(&pool->lock);
+	rt_mutex_lock(&pool->lock);
 
 	curr = nvmap_page_pool_get_unused_pages();
 	if (curr > size)
@@ -499,7 +499,7 @@ static void nvmap_page_pool_resize(struct nvmap_page_pool *pool, u32 size)
 	pr_debug("page pool resized to %d from %d pages\n", size, pool->max);
 	pool->max = size;
 
-	mutex_unlock(&pool->lock);
+	rt_mutex_unlock(&pool->lock);
 }
 
 static unsigned long nvmap_page_pool_count_objects(struct shrinker *shrinker,
@@ -515,10 +515,10 @@ static unsigned long nvmap_page_pool_scan_objects(struct shrinker *shrinker,
 
 	pr_debug("sh_pages=%lu", sc->nr_to_scan);
 
-	mutex_lock(&nvmap_dev->pool.lock);
+	rt_mutex_lock(&nvmap_dev->pool.lock);
 	remaining = nvmap_page_pool_free_locked(
 			&nvmap_dev->pool, sc->nr_to_scan);
-	mutex_unlock(&nvmap_dev->pool.lock);
+	rt_mutex_unlock(&nvmap_dev->pool.lock);
 
 	return (remaining == sc->nr_to_scan) ? \
 			   SHRINK_STOP : (sc->nr_to_scan - remaining);
@@ -671,7 +671,7 @@ int nvmap_page_pool_init(struct nvmap_device *dev)
 	struct nvmap_page_pool *pool = &dev->pool;
 
 	memset(pool, 0x0, sizeof(*pool));
-	mutex_init(&pool->lock);
+	rt_mutex_init(&pool->lock);
 	INIT_LIST_HEAD(&pool->page_list);
 	INIT_LIST_HEAD(&pool->zero_list);
 	INIT_LIST_HEAD(&pool->dirty_list);

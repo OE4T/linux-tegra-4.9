@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,6 +23,7 @@
 #include <linux/regulator/consumer.h>
 
 #include <soc/tegra/cvb.h>
+#include <soc/tegra/tegra-dfll.h>
 #include <soc/tegra/tegra-dvfs.h>
 #include <soc/tegra/fuse.h>
 #include <soc/tegra/tegra_emc.h>
@@ -915,7 +916,7 @@ static int set_cpu_dvfs_data(unsigned long max_freq, struct cpu_dvfs *d,
 	unsigned long fmin_use_dfll = 0;
 	unsigned long *freqs;
 	int *dfll_millivolts;
-	struct rail_alignment *align = &tegra210_dvfs_rail_vdd_cpu.alignment;
+	struct rail_alignment *align = tegra_dfll_get_alignment();
 	int speedo = tegra_sku_info.cpu_speedo_value;
 
 	min_dfll_mv = d->min_mv;

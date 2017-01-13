@@ -198,6 +198,15 @@ config TEGRA_LVDS2FPDL_DS90UB947
 	help
 		Enable support for TI DS90UB947-Q1 LVDS-to-FPD-Link Serializer driver.
 
+config TEGRA_DS90UH948Q_DESER
+	bool "DS90UH948Q FPDLink Deserializer"
+	depends on I2C
+	help
+	  Say Y here to enable FPDLink to LVDS TI DS90UH948 adapter
+	  Disabled by default. DS90UH948Q is a deserializer chip which converts
+	  FPDLink signal to OpenLDI. This config enables deserializer driver for
+	  DS90UH948 chip.
+
 config TEGRA_EDP2LVDS_PS8625
 	bool "Enable EDP2LVDS PS8625 bridge."
 	default n

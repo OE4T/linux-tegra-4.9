@@ -967,26 +967,6 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 			win_ihub_thread_group_enable_yes_f(),
 			win_ihub_thread_group_r());
 
-	/* TODO: configure the mempool
-	nvdisp_win_write(win, win_ihub_pool_config_entries_f(817),
-			win_ihub_pool_config_r());
-	*/
-
-	/* promote the state */
-	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_common_act_update_enable_f() |
-		nvdisp_cmd_state_ctrl_win_a_update_enable_f() << win->idx,
-		nvdisp_cmd_state_ctrl_r());
-	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
-	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_common_act_req_enable_f() |
-		nvdisp_cmd_state_ctrl_a_act_req_enable_f() << win->idx,
-		nvdisp_cmd_state_ctrl_r());
-	/* wait for COMMON_ACT_REQ to complete or time out */
-	if (tegra_dc_poll_register(dc, nvdisp_cmd_state_ctrl_r(),
-			nvdisp_cmd_state_ctrl_common_act_req_enable_f(),
-			0, 1, NVDISP_TEGRA_POLL_TIMEOUT_MS))
-		dev_err(&dc->ndev->dev,
-			"dc timeout waiting for DC to stop\n");
-
 	/* set the windows scaler coeff value */
 	if (!win->is_scaler_coeff_set) {
 		tegra_nvdisp_set_scaler_coeff(win);

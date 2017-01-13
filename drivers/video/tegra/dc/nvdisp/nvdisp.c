@@ -1422,6 +1422,50 @@ static int tegra_nvdisp_cursor_init(struct tegra_dc *dc)
 	return 0;
 }
 
+static int tegra_nvdisp_assign_dc_wins(struct tegra_dc *dc)
+{
+	u32 update_mask = nvdisp_cmd_state_ctrl_common_act_update_enable_f();
+	u32 act_req_mask = nvdisp_cmd_state_ctrl_common_act_req_enable_f();
+	int num_wins = tegra_dc_get_numof_dispwindows();
+	int idx = 0, ret = 0;
+	int i = -1;
+
+	/* Assign windows to this head. */
+	for_each_set_bit(idx, &dc->pdata->win_mask, num_wins) {
+		if (tegra_nvdisp_assign_win(dc, idx)) {
+			dev_err(&dc->ndev->dev,
+				"failed to assign window %d\n", idx);
+		} else {
+			dev_info(&dc->ndev->dev,
+				"Window %d assigned to head %d\n", idx,
+				dc->ctrl_num);
+
+			update_mask |=
+			nvdisp_cmd_state_ctrl_win_a_update_enable_f() << idx;
+			act_req_mask |=
+			nvdisp_cmd_state_ctrl_a_act_req_enable_f() << idx;
+
+			if (i == -1)
+				i = idx;
+		}
+	}
+
+	/* Wait for COMMON_ACT_REQ to complete or time out. */
+	if (tegra_dc_enable_update_and_act(dc, update_mask, act_req_mask)) {
+		dev_err(&dc->ndev->dev,
+			"timeout waiting for win assignments to promote\n");
+		ret = -EINVAL;
+	}
+
+	/* Set the fb_index on changing from a zero winmask to a valid one. */
+	if ((dc->pdata->fb->win == -1) && dc->pdata->win_mask) {
+		tegra_fb_set_win_index(dc, dc->pdata->win_mask);
+		dc->pdata->fb->win = i;
+	}
+
+	return ret;
+}
+
 int tegra_nvdisp_head_disable(struct tegra_dc *dc)
 {
 	int idx;
@@ -1470,7 +1514,7 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 {
 	int i;
 	int res;
-	int idx, pclk = 0, ret = 0;
+	int pclk = 0, ret = 0;
 	struct clk *parent_clk = NULL;
 	struct clk *hubparent_clk = NULL;
 
@@ -1602,29 +1646,7 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	 */
 	dc->out->flags &= ~TEGRA_DC_OUT_INITIALIZED_MODE;
 
-	i = -1;
-	/* Assign windows to this head */
-	for_each_set_bit(idx, &dc->pdata->win_mask,
-			tegra_dc_get_numof_dispwindows()) {
-		if (tegra_nvdisp_assign_win(dc, idx))
-			dev_err(&dc->ndev->dev,
-				"failed to assign window %d\n", idx);
-		else {
-			dev_info(&dc->ndev->dev,
-				"Window %d assigned to head %d\n", idx,
-				dc->ctrl_num);
-			if (i == -1)
-				i = idx;
-		}
-	}
-
-	/* Set the fb_index on changing from a zero win_mask to
-	 * to a valid one.
-	 */
-	if ((dc->pdata->fb->win == -1) && dc->pdata->win_mask) {
-		tegra_fb_set_win_index(dc, dc->pdata->win_mask);
-		dc->pdata->fb->win = i;
-	}
+	tegra_nvdisp_assign_dc_wins(dc);
 
 	/* Enable RG underflow logging */
 	tegra_dc_writel(dc, nvdisp_rg_underflow_enable_enable_f() |
@@ -2210,6 +2232,77 @@ int tegra_nvdisp_update_cmu(struct tegra_dc *dc, struct tegra_dc_lut *cmu)
 EXPORT_SYMBOL(tegra_nvdisp_update_cmu);
 #endif
 
+static inline void tegra_nvdisp_enable_ihub_latency_events(struct tegra_dc *dc)
+{
+	tegra_dc_writel(dc,
+		tegra_dc_readl(dc,
+		nvdisp_ihub_misc_ctl_r()) |
+		nvdisp_ihub_misc_ctl_latency_event_enable_f(),
+		nvdisp_ihub_misc_ctl_r());
+}
+
+static inline void tegra_nvdisp_disable_ihub_latency_events(struct tegra_dc *dc)
+{
+	tegra_dc_writel(dc,
+		tegra_dc_readl(dc, nvdisp_ihub_misc_ctl_r()) &
+		~nvdisp_ihub_misc_ctl_latency_event_enable_f(),
+		nvdisp_ihub_misc_ctl_r());
+}
+
+static inline void tegra_nvdisp_program_common_fetch_meter(struct tegra_dc *dc,
+							u32 curs_slots,
+							u32 win_slots)
+{
+	tegra_dc_writel(dc,
+		nvdisp_ihub_common_fetch_meter_cursor_slots_f(curs_slots) |
+		nvdisp_ihub_common_fetch_meter_wgrp_slots_f(win_slots),
+		nvdisp_ihub_common_fetch_meter_r());
+}
+
+static u32 tegra_nvdisp_get_active_curs_pool(struct tegra_dc *dc)
+{
+	u32 cur_val = 0;
+
+	if (!dc || !dc->enabled)
+		return cur_val;
+
+	/*
+	 * If either the cursor surface or output LUT are currently enabled on
+	 * this head, take the active mempool value into account. Else, assume
+	 * there are no mempool entries assigned.
+	 *
+	 * The reason why output LUT matters is because it shares both the same
+	 * precomp pipe and FB request port as the corresponding cursor pipe.
+	 * As such, the cursor ihub settings would still be programmed in a case
+	 * where cursor is disabled, but output LUT is enabled.
+	 */
+	if (dc->cursor.enabled || dc->cmu_enabled)
+		cur_val = nvdisp_ihub_cursor_pool_config_entries_f(
+				tegra_dc_readl(dc,
+				nvdisp_ihub_cursor_pool_config_r()));
+
+	return cur_val;
+}
+
+static u32 tegra_nvdisp_get_active_win_pool(struct tegra_dc_win *win)
+{
+	u32 cur_val = 0;
+
+	if (!win || !win->dc)
+		return cur_val;
+
+	/*
+	 * If this window is currently enabled, take the active mempool value
+	 * into account. Else, treat this window as having no mempool entries.
+	 */
+	if (WIN_IS_ENABLED(win))
+		cur_val = win_ihub_pool_config_entries_f(
+				nvdisp_win_read(win,
+				win_ihub_pool_config_r()));
+
+	return cur_val;
+}
+
 static int tegra_nvdisp_get_v_taps_user_info(
 				struct tegra_dc_ext_imp_user_info *info)
 {
@@ -2539,21 +2632,7 @@ static void tegra_nvdisp_generate_mempool_ordering(struct tegra_dc *dc,
 		if (!head_result->head_active)
 			continue;
 
-		/*
-		 * If either the cursor surface or output LUT are currently
-		 * enabled on this head, take the active mempool value into
-		 * account. Else, assume there are no mempool entries asssigned.
-		 *
-		 * The reason why output LUT matters is because it shares both
-		 * the same precomp pipe and FB request port as the
-		 * corresponding cursor pipe. As such, the cursor ihub settings
-		 * would still be programmed in a case where cursor is disabled,
-		 * but output LUT is enabled.
-		 */
-		if (other_dc->cursor.enabled || other_dc->cmu_enabled)
-			old_val = nvdisp_ihub_cursor_pool_config_entries_f(
-					tegra_dc_readl(other_dc,
-					nvdisp_ihub_cursor_pool_config_r()));
+		old_val = tegra_nvdisp_get_active_curs_pool(other_dc);
 		new_val = head_result->pool_config_entries_cursor;
 
 		if (new_val < old_val)
@@ -2576,17 +2655,7 @@ static void tegra_nvdisp_generate_mempool_ordering(struct tegra_dc *dc,
 				continue;
 
 			head_alloc = NULL;
-			old_val = 0;
-
-			/*
-			 * If this window is currently enabled, take the active
-			 * mempool value into account. Else, treat this window
-			 * as having no mempool entries.
-			 */
-			if (WIN_IS_ENABLED(win))
-				old_val = win_ihub_pool_config_entries_f(
-						nvdisp_win_read(win,
-						win_ihub_pool_config_r()));
+			old_val = tegra_nvdisp_get_active_win_pool(win);
 			new_val = head_result->pool_config_entries_win[j];
 			if (new_val < old_val)
 				head_alloc =
@@ -2646,8 +2715,6 @@ void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 	tegra_nvdisp_program_other_mempool(dc, imp_settings, before_win_update);
 
 	if (!before_win_update) {
-		int i;
-
 		mutex_lock(&tegra_nvdisp_lock);
 
 		/*
@@ -2661,19 +2728,8 @@ void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 				(u32)ext_settings->hubclk,
 				before_win_update);
 
-		/* Re-enable ihub latency events across all heads. */
-		for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
-			struct tegra_dc *other_dc = tegra_dc_get_dc(i);
-
-			if (!other_dc || !other_dc->enabled)
-				continue;
-
-			tegra_dc_writel(other_dc,
-				tegra_dc_readl(other_dc,
-				nvdisp_ihub_misc_ctl_r()) |
-				nvdisp_ihub_misc_ctl_latency_event_enable_f(),
-				nvdisp_ihub_misc_ctl_r());
-		}
+		/* Re-enable ihub latency events. */
+		tegra_nvdisp_enable_ihub_latency_events(dc);
 
 		/*
 		 * These IMP settings are no longer pending. Remove them from
@@ -2863,67 +2919,11 @@ free_and_ret:
 }
 EXPORT_SYMBOL(tegra_dc_handle_imp_propose);
 
-static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
+static void tegra_nvdisp_program_imp_curs_results(struct tegra_dc *dc,
 			struct tegra_dc_ext_imp_head_results *imp_head_results,
 			int owner_head)
 {
-	struct tegra_dc_win *win = NULL;
-	u32 val;
-	int i;
-
-	if (!dc || !dc->enabled)
-		return;
-
-	/*
-	 * The cursor and wgrp latency registers take effect immediately.
-	 * As such, we'll disable them for now and re-enable them after the rest
-	 * of the window channel state has promoted.
-	 */
-	tegra_dc_writel(dc,
-		tegra_dc_readl(dc, nvdisp_ihub_misc_ctl_r()) &
-		~nvdisp_ihub_misc_ctl_latency_event_enable_f(),
-		nvdisp_ihub_misc_ctl_r());
-
-	for (i = 0; i < imp_head_results->num_windows; i++) {
-		win = tegra_dc_get_window(dc, imp_head_results->win_ids[i]);
-		if (!win)
-			continue;
-
-		/* program wgrp fetch meter slots */
-		val = imp_head_results->metering_slots_value_win[i];
-		nvdisp_win_write(win,
-			win_ihub_fetch_meter_slots_f(val),
-			win_ihub_fetch_meter_r());
-
-		val = imp_head_results->thresh_lwm_dvfs_win[i];
-		if (val) {
-			nvdisp_win_write(win,
-				win_ihub_latency_ctla_ctl_mode_enable_f() |
-				win_ihub_latency_ctla_submode_watermark_f(),
-				win_ihub_latency_ctla_r());
-			nvdisp_win_write(win,
-				win_ihub_latency_ctlb_watermark_f(val),
-				win_ihub_latency_ctlb_r());
-		}
-
-		/* program wgrp pipe meter value */
-		val = imp_head_results->pipe_meter_value_win[i];
-		nvdisp_win_write(win,
-			win_precomp_pipe_meter_val_f(val),
-			win_precomp_pipe_meter_r());
-
-		/*
-		 * Only program wgrp mempool for the head whose window state is
-		 * is changing. Mempool changes on other heads will be taken
-		 * care of separately.
-		 */
-		if (dc->ctrl_num == owner_head) {
-			val = imp_head_results->pool_config_entries_win[i];
-			nvdisp_win_write(win,
-				win_ihub_pool_config_entries_f(val),
-				win_ihub_pool_config_r());
-		}
-	}
+	u32 val = 0;
 
 	/* program cursor fetch meter slots */
 	val = imp_head_results->metering_slots_value_cursor;
@@ -2939,6 +2939,11 @@ static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
 			nvdisp_ihub_cursor_latency_ctla_r());
 		tegra_dc_writel(dc,
 			nvdisp_ihub_cursor_latency_ctlb_watermark_f(val),
+			nvdisp_ihub_cursor_latency_ctlb_r());
+	} else { /* disable watermark */
+		tegra_dc_writel(dc, 0x0, nvdisp_ihub_cursor_latency_ctla_r());
+		tegra_dc_writel(dc,
+			nvdisp_ihub_cursor_latency_ctlb_watermark_f(0x1fffffff),
 			nvdisp_ihub_cursor_latency_ctlb_r());
 	}
 
@@ -2960,16 +2965,92 @@ static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
 	}
 }
 
+static void tegra_nvdisp_program_imp_win_results(struct tegra_dc *dc,
+			struct tegra_dc_ext_imp_head_results *imp_head_results,
+			int owner_head)
+{
+	int i;
+
+	for (i = 0; i < imp_head_results->num_windows; i++) {
+		struct tegra_dc_win *win = NULL;
+		u32 val = 0;
+
+		win = tegra_dc_get_window(dc, imp_head_results->win_ids[i]);
+		if (!win)
+			continue;
+
+		/* program wgrp fetch meter slots */
+		val = imp_head_results->metering_slots_value_win[i];
+		nvdisp_win_write(win,
+			win_ihub_fetch_meter_slots_f(val),
+			win_ihub_fetch_meter_r());
+
+		val = imp_head_results->thresh_lwm_dvfs_win[i];
+		if (val) {
+			nvdisp_win_write(win,
+				win_ihub_latency_ctla_ctl_mode_enable_f() |
+				win_ihub_latency_ctla_submode_watermark_f(),
+				win_ihub_latency_ctla_r());
+			nvdisp_win_write(win,
+				win_ihub_latency_ctlb_watermark_f(val),
+				win_ihub_latency_ctlb_r());
+		} else { /* disable watermark */
+			nvdisp_win_write(win, 0x0, win_ihub_latency_ctla_r());
+			nvdisp_win_write(win,
+				win_ihub_latency_ctlb_watermark_f(0x1fffffff),
+				win_ihub_latency_ctlb_r());
+		}
+
+		/* program wgrp pipe meter value */
+		val = imp_head_results->pipe_meter_value_win[i];
+		nvdisp_win_write(win,
+			win_precomp_pipe_meter_val_f(val),
+			win_precomp_pipe_meter_r());
+
+		/*
+		 * Only program wgrp mempool for the head whose window state is
+		 * is changing. Mempool changes on other heads will be taken
+		 * care of separately.
+		 */
+		if (dc->ctrl_num == owner_head) {
+			val = imp_head_results->pool_config_entries_win[i];
+			nvdisp_win_write(win,
+				win_ihub_pool_config_entries_f(val),
+				win_ihub_pool_config_r());
+		}
+	}
+}
+
+static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
+			struct tegra_dc_ext_imp_head_results *imp_head_results,
+			int owner_head)
+{
+	if (!dc || !dc->enabled)
+		return;
+
+	tegra_nvdisp_program_imp_curs_results(dc, imp_head_results, owner_head);
+	tegra_nvdisp_program_imp_win_results(dc, imp_head_results, owner_head);
+}
+
 void tegra_nvdisp_program_imp_results(struct tegra_dc *dc)
 {
 	struct tegra_dc_imp_settings *imp_settings = NULL;
 	struct tegra_dc_ext_imp_head_results *head_arr = NULL;
-	u32 val = 0;
 	int i;
+
+	if (!dc || !dc->enabled)
+		return;
 
 	imp_settings = tegra_nvdisp_get_pending_imp_settings();
 	if (!imp_settings)
 		return;
+
+	/*
+	 * The cursor and wgrp latency registers take effect immediately.
+	 * As such, we'll disable latency events for now and re-enable them
+	 * after the rest of the window channel state has promoted.
+	 */
+	tegra_nvdisp_disable_ihub_latency_events(dc);
 
 	head_arr = imp_settings->ext_settings.imp_results;
 	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
@@ -2987,9 +3068,9 @@ void tegra_nvdisp_program_imp_results(struct tegra_dc *dc)
 	}
 
 	/* program common win and cursor fetch meter slots */
-	val = (imp_settings->ext_settings.window_slots_value) |
-		(imp_settings->ext_settings.cursor_slots_value << 8);
-	tegra_dc_writel(dc, val, nvdisp_ihub_common_fetch_meter_r());
+	tegra_nvdisp_program_common_fetch_meter(dc,
+				imp_settings->ext_settings.cursor_slots_value,
+				imp_settings->ext_settings.window_slots_value);
 }
 
 void reg_dump(struct tegra_dc *dc, void *data,

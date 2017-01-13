@@ -1156,29 +1156,3 @@ void tegra_dc_trigger_windows(struct tegra_dc *dc)
 	if (completed)
 		wake_up(&dc->wq);
 }
-
-/* Dynamically attach window idx to head dc */
-int tegra_dc_attach_win(struct tegra_dc *dc, unsigned idx)
-{
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	return tegra_nvdisp_assign_win(dc, idx);
-#else
-	if (dc)
-		dev_warn(&dc->ndev->dev, "%s: unsupported\n", __func__);
-	return -EINVAL;
-#endif
-}
-EXPORT_SYMBOL(tegra_dc_attach_win);
-
-/* Dynamically dettach window idx from head dc */
-int tegra_dc_dettach_win(struct tegra_dc *dc, unsigned idx)
-{
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	return tegra_nvdisp_detach_win(dc, idx);
-#else
-	if (dc)
-		dev_warn(&dc->ndev->dev, "%s: unsupported\n", __func__);
-	return -EINVAL;
-#endif
-}
-EXPORT_SYMBOL(tegra_dc_dettach_win);

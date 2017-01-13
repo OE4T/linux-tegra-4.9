@@ -152,6 +152,40 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.vidmem_is_vidmem = true,
 	.vbios_min_version = 0x86063000,
 	.hardcode_sw_threshold = true,
+	},
+	{ /* DEVICE=0x1c75 */
+	/* ptimer src frequency in hz */
+	.ptimer_src_freq	= 31250000,
+
+	.probe = nvgpu_pci_tegra_probe,
+	.remove = nvgpu_pci_tegra_remove,
+
+	/* power management configuration */
+	.railgate_delay		= 500,
+	.can_railgate		= false,
+	.can_elpg = true,
+	.enable_elpg = true,
+	.enable_elcg = false,
+	.enable_slcg = true,
+	.enable_blcg = true,
+	.enable_mscg = true,
+	.default_pri_timeout = 0x3ff,
+
+	.disable_aspm = true,
+
+	/* power management callbacks */
+	.is_railgated = nvgpu_pci_tegra_is_railgated,
+	.clk_round_rate = nvgpu_pci_clk_round_rate,
+
+	.default_big_page_size	= SZ_64K,
+
+	.ch_wdt_timeout_ms = 7000,
+
+	.has_ce = true,
+
+	.vidmem_is_vidmem = true,
+	.vbios_min_version = 0x86064700,
+	.hardcode_sw_threshold = false,
 	}
 };
 
@@ -173,6 +207,12 @@ static struct pci_device_id nvgpu_pci_table[] = {
 		.class = PCI_BASE_CLASS_DISPLAY << 16,
 		.class_mask = 0xff << 16,
 		.driver_data = 2,
+	},
+	{
+		PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, 0x1c75),
+		.class = PCI_BASE_CLASS_DISPLAY << 16,
+		.class_mask = 0xff << 16,
+		.driver_data = 3,
 	},
 	{}
 };

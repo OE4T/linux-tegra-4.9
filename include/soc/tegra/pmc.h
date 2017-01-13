@@ -296,6 +296,15 @@ void tegra_pmc_lock_thermal_shutdown(void);
 int tegra210_pmc_padctrl_init(struct device *dev, struct device_node *np);
 int tegra186_pmc_padctrl_init(struct device *dev, struct device_node *np);
 
+#if defined(CONFIG_ARCH_TEGRA)
+int tegra_io_pads_padctrl_init(struct device *dev);
+#else
+int tegra_io_pads_padctrl_init(struct device *dev)
+{
+	return 0;
+}
+#endif
+
 static inline int tegra_pmc_padctrl_init(struct device *dev,
 					 struct device_node *np)
 {

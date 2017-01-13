@@ -185,7 +185,6 @@ static u32 gv11b_userd_gp_get(struct gk20a *g, struct channel_gk20a *c)
 
 	return gk20a_mem_rd32(g, userd_mem,
 			offset + ram_userd_gp_get_w());
-
 }
 
 static void gv11b_userd_gp_put(struct gk20a *g, struct channel_gk20a *c)
@@ -199,17 +198,13 @@ static void gv11b_userd_gp_put(struct gk20a *g, struct channel_gk20a *c)
 	smp_mb();
 
 	gv11b_ring_channel_doorbell(c);
-
 }
 
 static void channel_gv11b_unbind(struct channel_gk20a *ch)
 {
 	gk20a_dbg_fn("");
 
-	gv11b_free_subctx_header(ch);
-
 	channel_gk20a_unbind(ch);
-
 }
 
 static u32 gv11b_fifo_get_num_fifos(struct gk20a *g)
@@ -231,4 +226,5 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.setup_ramfc = channel_gv11b_setup_ramfc;
 	gops->fifo.unbind_channel = channel_gv11b_unbind;
 	gops->fifo.eng_runlist_base_size = fifo_eng_runlist_base__size_1_v;
+	gops->fifo.free_channel_ctx_header = gv11b_free_subctx_header;
 }

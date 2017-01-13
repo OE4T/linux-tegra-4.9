@@ -1853,8 +1853,6 @@ static int gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 	/* point this address to engine_wfi_ptr */
 	gk20a_mem_wr32(c->g, &c->inst_block, ram_in_engine_wfi_target_w(),
 		ram_in_engine_cs_wfi_v() |
-		ram_in_engine_wfi_target_f(
-			ram_in_engine_wfi_target_sys_mem_ncoh_v()) |
 		ram_in_engine_wfi_mode_f(ram_in_engine_wfi_mode_virtual_v()) |
 		ram_in_engine_wfi_ptr_lo_f(addr_lo));
 
@@ -1919,6 +1917,29 @@ static int gr_gv11b_commit_global_timeslice(struct gk20a *g,
 	return 0;
 }
 
+static void gv11b_restore_context_header(struct gk20a *g,
+					struct mem_desc *ctxheader)
+{
+	u32 va_lo, va_hi;
+	struct gr_gk20a *gr = &g->gr;
+
+	va_hi = gk20a_mem_rd(g, ctxheader,
+			ctxsw_prog_main_image_context_buffer_ptr_hi_o());
+	va_lo = gk20a_mem_rd(g, ctxheader,
+			ctxsw_prog_main_image_context_buffer_ptr_o());
+	gk20a_mem_wr_n(g, ctxheader, 0,
+                       gr->ctx_vars.local_golden_image,
+                       gr->ctx_vars.golden_image_size);
+	gk20a_mem_wr(g, ctxheader,
+			ctxsw_prog_main_image_context_buffer_ptr_hi_o(), va_hi);
+	gk20a_mem_wr(g, ctxheader,
+			ctxsw_prog_main_image_context_buffer_ptr_o(), va_lo);
+        gk20a_mem_wr(g, ctxheader,
+			ctxsw_prog_main_image_num_restore_ops_o(), 0);
+        gk20a_mem_wr(g, ctxheader,
+			ctxsw_prog_main_image_num_save_ops_o(), 0);
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -1971,5 +1992,6 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.program_sm_id_numbering =
 			gr_gv11b_program_sm_id_numbering;
 	gops->gr.commit_inst = gr_gv11b_commit_inst;
+	gops->gr.restore_context_header = gv11b_restore_context_header;
 
 }

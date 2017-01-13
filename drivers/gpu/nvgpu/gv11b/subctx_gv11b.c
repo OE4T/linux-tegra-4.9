@@ -44,6 +44,7 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 {
 	struct ctx_header_desc *ctx = &c->ch_ctx.ctx_header;
 	struct gk20a *g = c->g;
+	struct gr_gk20a *gr = &g->gr;
 	int ret = 0;
 
 	gk20a_dbg_fn("");
@@ -51,7 +52,7 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 	if (ctx->mem.gpu_va == 0) {
 		ret = gk20a_gmmu_alloc_attr_sys(g,
 				DMA_ATTR_NO_KERNEL_MAPPING,
-				ctxsw_prog_fecs_header_v(),
+				gr->ctx_vars.golden_image_size,
 				&ctx->mem);
 		if (ret) {
 			gk20a_err(dev_from_gk20a(g),

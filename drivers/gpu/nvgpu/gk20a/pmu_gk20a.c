@@ -39,6 +39,10 @@
 #include "nvgpu_gpuid_t18x.h"
 #endif
 
+#ifdef CONFIG_TEGRA_19x_GPU
+#include "nvgpu_gpuid_t19x.h"
+#endif
+
 #define GK20A_PMU_UCODE_IMAGE	"gpmu_ucode.bin"
 
 #define PMU_MEM_SCRUBBING_TIMEOUT_MAX 1000
@@ -3708,6 +3712,11 @@ static u8 get_perfmon_id(struct pmu_gk20a *pmu)
 	case TEGRA_18x_GPUID:
 	case TEGRA_18x_GPUID2:
 	case TEGRA_18x_GPUID3:
+		unit_id = PMU_UNIT_PERFMON_T18X;
+		break;
+#endif
+#if defined(CONFIG_TEGRA_19x_GPU)
+	case TEGRA_19x_GPUID:
 		unit_id = PMU_UNIT_PERFMON_T18X;
 		break;
 #endif

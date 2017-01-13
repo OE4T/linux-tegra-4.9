@@ -188,8 +188,8 @@
 			      <&{/pcie-controller@10003000} TEGRA_SID_AFI>,
 			      <&{/ahci-sata@3507000}	TEGRA_SID_SATA2>,
 			      <&{/aon@c160000}		TEGRA_SID_AON>,
-			      <&{/rtcpu@b000000}	TEGRA_SID_RCE>,
 			      <&{/sce@b000000}		TEGRA_SID_SCE>,
+			      <&{/rtcpu@b000000}	TEGRA_SID_SCE_CAM>,
 			      <&{/bpmp}			TEGRA_SID_BPMP>,
 			      <&{/dma@2600000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/spi@3210000}		TEGRA_SID_GPCDMA_0>,
@@ -314,6 +314,16 @@
 				sid-list = <TEGRA_SID(APE) TEGRA_SID(EQOS)>;
 				sid-list-len = <2>;
 			};
+			ape_cam_domain {
+				address-space = <&camera_as>;
+				sid-list = <TEGRA_SID_APE_CAM>;
+				sid-list-len = <1>;
+			};
+			sce_cam_domain {
+				address-space = <&camera_as>;
+				sid-list = <TEGRA_SID_SCE_CAM>;
+				sid-list-len = <1>;
+			};
 			xusb_host_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_XUSB_HOST>;
@@ -363,11 +373,6 @@
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_UFSHC>;
 				sid-list-len = <1>;
-			};
-			rtcpu_domain {
-				address-space = <&camera_as>;
-				sid-list = <TEGRA_SID_RCE TEGRA_SID_APE_CAM>;
-				sid-list-len = <2>;
 			};
 		};
 

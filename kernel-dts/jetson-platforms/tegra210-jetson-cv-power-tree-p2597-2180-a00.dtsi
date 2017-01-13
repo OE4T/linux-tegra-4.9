@@ -12,7 +12,6 @@
  *
  */
 
-#include <dt-bindings/padctrl/tegra210-pads.h>
 #include "tegra210-jetson-common-power-tree-p2530-0930-e03.dtsi"
 
 / {

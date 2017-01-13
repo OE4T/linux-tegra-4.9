@@ -54,6 +54,7 @@
 			cpu-idle-states = <&C7 &CC6 &CC7 &SC2 &SC3 &SC4 &SC7>;
 			errata_hwcaps = <0x7>;
 			cpu-ipc = <1024>;
+			next-level-cache = <&L2>;
 			status = "disabled";
 		};
 
@@ -65,6 +66,7 @@
 			cpu-idle-states = <&C7 &CC6 &CC7 &SC2 &SC3 &SC4 &SC7>;
 			errata_hwcaps = <0x7>;
 			cpu-ipc = <1024>;
+			next-level-cache = <&L2>;
 			status = "disabled";
 		};
 
@@ -76,6 +78,7 @@
 			cpu-idle-states = <&C7 &CC6 &CC7 &SC2 &SC3 &SC4 &SC7>;
 			errata_hwcaps = <0x7>;
 			cpu-ipc = <1024>;
+			next-level-cache = <&L2>;
 			status = "disabled";
 		};
 
@@ -87,6 +90,7 @@
 			cpu-idle-states = <&C7 &CC6 &CC7 &SC2 &SC3 &SC4 &SC7>;
 			errata_hwcaps = <0x7>;
 			cpu-ipc = <1024>;
+			next-level-cache = <&L2>;
 			status = "disabled";
 		};
 
@@ -155,6 +159,10 @@
 				idle-state-name = "sc7-vdd-soc-off";
 				status = "disabled";
 			};
+		};
+
+		L2: l2-cache {
+			compatible = "cache";
 		};
 	};
 

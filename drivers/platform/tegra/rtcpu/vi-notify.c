@@ -122,16 +122,19 @@ static void tegra_ivc_channel_vi_notify_process(struct tegra_ivc_channel *chan)
 static int tegra_ivc_vi_notify_prepare(struct tegra_ivc_channel *chan)
 {
 	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
+	int err = 0;
 
 	if (ivn->tags == 0 && ivn->channels == 0) {
-		int err = pm_runtime_get_sync(&chan->dev);
+		err = tegra_ivc_channel_runtime_get(chan);
 		if (err)
 			return err;
 
-		return nvhost_module_busy(ivn->vi);
+		err = nvhost_module_busy(ivn->vi);
+		if (err)
+			tegra_ivc_channel_runtime_put(chan);
 	}
 
-	return 0;
+	return err;
 }
 
 static void tegra_ivc_vi_notify_complete(struct tegra_ivc_channel *chan)
@@ -140,7 +143,7 @@ static void tegra_ivc_vi_notify_complete(struct tegra_ivc_channel *chan)
 
 	if (ivn->tags == 0 && ivn->channels == 0) {
 		nvhost_module_idle(ivn->vi);
-		pm_runtime_put(&chan->dev);
+		tegra_ivc_channel_runtime_put(chan);
 	}
 }
 

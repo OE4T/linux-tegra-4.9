@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -79,6 +79,7 @@ static int tegra_camchar_open(struct inode *in, struct file *f)
 		ret = -EBUSY;
 		goto open_err;
 	}
+	tegra_ivc_channel_runtime_get(ch);
 	data->is_open = true;
 	f->private_data = ch;
 	nonseekable_open(in, f);
@@ -95,6 +96,7 @@ static int tegra_camchar_release(struct inode *in, struct file *fp)
 
 	data = tegra_ivc_channel_get_drvdata(ch);
 	mutex_lock(&tegra_camchar_lock_open);
+	tegra_ivc_channel_runtime_put(ch);
 	data->is_open = false;
 	mutex_unlock(&tegra_camchar_lock_open);
 

@@ -119,6 +119,9 @@ static inline struct device *tegra_ivc_channel_to_camrtc_dev(
 	return ch->dev.parent->parent;
 }
 
+int tegra_ivc_channel_runtime_get(struct tegra_ivc_channel *chan);
+void tegra_ivc_channel_runtime_put(struct tegra_ivc_channel *chan);
+
 struct tegra_ivc_channel_ops {
 	int (*probe)(struct tegra_ivc_channel *);
 	int (*ready)(struct tegra_ivc_channel *);

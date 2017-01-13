@@ -145,6 +145,8 @@ static int camrtc_ivc_dbg_xact(
 	if (ret)
 		return ret;
 
+	tegra_ivc_channel_runtime_get(ch);
+
 	while (tegra_ivc_can_read(&ch->ivc)) {
 		tegra_ivc_read_advance(&ch->ivc);
 		dev_warn(&ch->dev, "stray response\n");
@@ -189,6 +191,7 @@ static int camrtc_ivc_dbg_xact(
 		dev_err(&ch->dev, "unexpected response\n");
 	}
 out:
+	tegra_ivc_channel_runtime_put(ch);
 	mutex_unlock(&crd->mutex);
 	return ret;
 }
@@ -238,17 +241,20 @@ static int camrtc_show_sm_ping(struct seq_file *file, void *data)
 	struct device *camrtc = camrtc_get_device(ch);
 	u64 sent, recv;
 	u32 command;
-	int ret;
+	int err;
+
+	tegra_ivc_channel_runtime_get(ch);
 
 	sent = sched_clock();
 
 	command = RTCPU_COMMAND(PING, sent & 0xffffff);
 
-	ret = tegra_camrtc_command(camrtc, command, 0);
-	if (ret < 0)
-		return ret;
+	err = tegra_camrtc_command(camrtc, command, 0);
+	if (err < 0)
+		goto error;
 
 	recv = sched_clock();
+	err = 0;
 
 	seq_printf(file,
 		"roundtrip=%llu.%03llu us "
@@ -257,7 +263,10 @@ static int camrtc_show_sm_ping(struct seq_file *file, void *data)
 		sent / 1000000000, sent % 1000000000,
 		recv / 1000000000, recv % 1000000000);
 
-	return 0;
+error:
+	tegra_ivc_channel_runtime_put(ch);
+
+	return err;
 }
 
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_sm_ping, camrtc_show_sm_ping);

@@ -15,8 +15,7 @@
 #include <soc/tegra/pmc.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
-#include <dt-bindings/padctrl/tegra186-pads.h>
-
+#include <dt-bindings/soc/tegra-io-pads.h>
 
 #define PMC_DDR_PWR	0x38
 #define PMC_E_18V_PWR	0x3C

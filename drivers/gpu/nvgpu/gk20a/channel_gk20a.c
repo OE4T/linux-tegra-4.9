@@ -515,7 +515,7 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 		while (tmp_get != put) {
 			job = &ch->joblist.pre_alloc.jobs[tmp_get];
 			if (job->post_fence->semaphore) {
-				__gk20a_semaphore_release(
+				__nvgpu_semaphore_release(
 					job->post_fence->semaphore, true);
 				released_job_semaphore = true;
 			}
@@ -525,7 +525,7 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 		list_for_each_entry_safe(job, n,
 				&ch->joblist.dynamic.jobs, list) {
 			if (job->post_fence->semaphore) {
-				__gk20a_semaphore_release(
+				__nvgpu_semaphore_release(
 					job->post_fence->semaphore, true);
 				released_job_semaphore = true;
 			}
@@ -1006,7 +1006,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	 * as the semaphore pool might get freed after that point.
 	 */
 	if (ch->hw_sema)
-		gk20a_semaphore_free_hw_sema(ch);
+		nvgpu_semaphore_free_hw_sema(ch);
 
 	/*
 	 * When releasing the channel we unbind the VM - so release the ref.

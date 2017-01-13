@@ -47,7 +47,7 @@ static void gk20a_fence_free(struct kref *ref)
 		sync_fence_put(f->sync_fence);
 #endif
 	if (f->semaphore)
-		gk20a_semaphore_put(f->semaphore);
+		nvgpu_semaphore_put(f->semaphore);
 
 	if (f->allocator) {
 		if (nvgpu_alloc_initialized(f->allocator))
@@ -193,39 +193,39 @@ void gk20a_init_fence(struct gk20a_fence *f,
 
 /* Fences that are backed by GPU semaphores: */
 
-static int gk20a_semaphore_fence_wait(struct gk20a_fence *f, long timeout)
+static int nvgpu_semaphore_fence_wait(struct gk20a_fence *f, long timeout)
 {
 	long remain;
 
-	if (!gk20a_semaphore_is_acquired(f->semaphore))
+	if (!nvgpu_semaphore_is_acquired(f->semaphore))
 		return 0;
 
 	remain = wait_event_interruptible_timeout(
 		*f->semaphore_wq,
-		!gk20a_semaphore_is_acquired(f->semaphore),
+		!nvgpu_semaphore_is_acquired(f->semaphore),
 		timeout);
-	if (remain == 0 && gk20a_semaphore_is_acquired(f->semaphore))
+	if (remain == 0 && nvgpu_semaphore_is_acquired(f->semaphore))
 		return -ETIMEDOUT;
 	else if (remain < 0)
 		return remain;
 	return 0;
 }
 
-static bool gk20a_semaphore_fence_is_expired(struct gk20a_fence *f)
+static bool nvgpu_semaphore_fence_is_expired(struct gk20a_fence *f)
 {
-	return !gk20a_semaphore_is_acquired(f->semaphore);
+	return !nvgpu_semaphore_is_acquired(f->semaphore);
 }
 
-static const struct gk20a_fence_ops gk20a_semaphore_fence_ops = {
-	.wait = &gk20a_semaphore_fence_wait,
-	.is_expired = &gk20a_semaphore_fence_is_expired,
+static const struct gk20a_fence_ops nvgpu_semaphore_fence_ops = {
+	.wait = &nvgpu_semaphore_fence_wait,
+	.is_expired = &nvgpu_semaphore_fence_is_expired,
 };
 
 /* This function takes ownership of the semaphore */
 int gk20a_fence_from_semaphore(
 		struct gk20a_fence *fence_out,
 		struct sync_timeline *timeline,
-		struct gk20a_semaphore *semaphore,
+		struct nvgpu_semaphore *semaphore,
 		wait_queue_head_t *semaphore_wq,
 		struct sync_fence *dependency,
 		bool wfi, bool need_sync_fence)
@@ -237,13 +237,13 @@ int gk20a_fence_from_semaphore(
 	if (need_sync_fence) {
 		sync_fence = gk20a_sync_fence_create(timeline, semaphore,
 					dependency, "f-gk20a-0x%04x",
-					gk20a_semaphore_gpu_ro_va(semaphore));
+					nvgpu_semaphore_gpu_ro_va(semaphore));
 		if (!sync_fence)
 			return -1;
 	}
 #endif
 
-	gk20a_init_fence(f, &gk20a_semaphore_fence_ops, sync_fence, wfi);
+	gk20a_init_fence(f, &nvgpu_semaphore_fence_ops, sync_fence, wfi);
 	if (!f) {
 #ifdef CONFIG_SYNC
 		if (sync_fence)

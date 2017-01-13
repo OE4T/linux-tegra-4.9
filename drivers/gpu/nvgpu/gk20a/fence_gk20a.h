@@ -24,7 +24,7 @@
 struct platform_device;
 struct sync_timeline;
 struct sync_fence;
-struct gk20a_semaphore;
+struct nvgpu_semaphore;
 struct channel_gk20a;
 
 struct gk20a_fence_ops;
@@ -38,7 +38,7 @@ struct gk20a_fence {
 	const struct gk20a_fence_ops *ops;
 
 	/* Valid for fences created from semaphores: */
-	struct gk20a_semaphore *semaphore;
+	struct nvgpu_semaphore *semaphore;
 	wait_queue_head_t *semaphore_wq;
 
 	/* Valid for fences created from syncpoints: */
@@ -54,7 +54,7 @@ struct gk20a_fence {
 int gk20a_fence_from_semaphore(
 		struct gk20a_fence *fence_out,
 		struct sync_timeline *timeline,
-		struct gk20a_semaphore *semaphore,
+		struct nvgpu_semaphore *semaphore,
 		wait_queue_head_t *semaphore_wq,
 		struct sync_fence *dependency,
 		bool wfi, bool need_sync_fence);

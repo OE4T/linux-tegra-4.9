@@ -4096,8 +4096,8 @@ static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
 	 */
 	if (!gk20a_platform_has_syncpoints(gk20a_from_vm(vm)->dev)) {
 		if (vm->sema_pool) {
-			gk20a_semaphore_pool_unmap(vm->sema_pool, vm);
-			gk20a_semaphore_pool_put(vm->sema_pool);
+			nvgpu_semaphore_pool_unmap(vm->sema_pool, vm);
+			nvgpu_semaphore_pool_put(vm->sema_pool);
 		}
 	}
 
@@ -4180,7 +4180,7 @@ const struct gk20a_mmu_level gk20a_mm_levels_128k[] = {
  */
 static int gk20a_init_sema_pool(struct vm_gk20a *vm)
 {
-	struct gk20a_semaphore_sea *sema_sea;
+	struct nvgpu_semaphore_sea *sema_sea;
 	struct mm_gk20a *mm = vm->mm;
 	struct gk20a *g = mm->g;
 	int err;
@@ -4194,11 +4194,11 @@ static int gk20a_init_sema_pool(struct vm_gk20a *vm)
 	if (vm->sema_pool)
 		return 0;
 
-	sema_sea = gk20a_semaphore_sea_create(g);
+	sema_sea = nvgpu_semaphore_sea_create(g);
 	if (!sema_sea)
 		return -ENOMEM;
 
-	vm->sema_pool = gk20a_semaphore_pool_alloc(sema_sea);
+	vm->sema_pool = nvgpu_semaphore_pool_alloc(sema_sea);
 	if (!vm->sema_pool)
 		return -ENOMEM;
 
@@ -4220,9 +4220,9 @@ static int gk20a_init_sema_pool(struct vm_gk20a *vm)
 		return -ENOMEM;
 	}
 
-	err = gk20a_semaphore_pool_map(vm->sema_pool, vm);
+	err = nvgpu_semaphore_pool_map(vm->sema_pool, vm);
 	if (err) {
-		gk20a_semaphore_pool_unmap(vm->sema_pool, vm);
+		nvgpu_semaphore_pool_unmap(vm->sema_pool, vm);
 		nvgpu_free(vm->vma[gmmu_page_size_small],
 			   vm->sema_pool->gpu_va);
 		return err;

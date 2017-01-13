@@ -109,7 +109,7 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 	u32 syncpointa, syncpointb;
 	u32 *inst_mem;
 	struct channel_gk20a *c = g->fifo.channel + hw_chid;
-	struct gk20a_semaphore_int *hw_sema = NULL;
+	struct nvgpu_semaphore_int *hw_sema = NULL;
 
 	if (c->hw_sema)
 		hw_sema = c->hw_sema;
@@ -154,7 +154,7 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 				   "next_val: 0x%08x addr: 0x%010llx\n",
 				   readl(hw_sema->value),
 				   atomic_read(&hw_sema->next_value),
-				   gk20a_hw_sema_addr(hw_sema));
+				   nvgpu_hw_sema_addr(hw_sema));
 
 #ifdef CONFIG_TEGRA_GK20A
 	if ((pbdma_syncpointb_op_v(syncpointb) == pbdma_syncpointb_op_wait_v())

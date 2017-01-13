@@ -24,18 +24,18 @@
 struct sync_timeline;
 struct sync_fence;
 struct sync_pt;
-struct gk20a_semaphore;
+struct nvgpu_semaphore;
 struct fence;
 
 int gk20a_is_sema_backed_sync_fence(struct sync_fence *fence);
-struct gk20a_semaphore *gk20a_sync_fence_get_sema(struct sync_fence *f);
+struct nvgpu_semaphore *gk20a_sync_fence_get_sema(struct sync_fence *f);
 
 #ifdef CONFIG_SYNC
 struct sync_timeline *gk20a_sync_timeline_create(const char *fmt, ...);
 void gk20a_sync_timeline_destroy(struct sync_timeline *);
 void gk20a_sync_timeline_signal(struct sync_timeline *);
 struct sync_fence *gk20a_sync_fence_create(struct sync_timeline *,
-		struct gk20a_semaphore *,
+		struct nvgpu_semaphore *,
 		struct sync_fence *dependency,
 		const char *fmt, ...);
 struct sync_fence *gk20a_sync_fence_fdget(int fd);

@@ -922,7 +922,7 @@ struct gk20a {
 	/*
 	 * A group of semaphore pools. One for each channel.
 	 */
-	struct gk20a_semaphore_sea *sema_sea;
+	struct nvgpu_semaphore_sea *sema_sea;
 
 	/* List of pending SW semaphore waits. */
 	struct list_head pending_sema_waits;

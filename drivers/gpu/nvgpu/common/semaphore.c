@@ -37,12 +37,12 @@
 /*
  * Return the sema_sea pointer.
  */
-struct gk20a_semaphore_sea *gk20a_semaphore_get_sea(struct gk20a *g)
+struct nvgpu_semaphore_sea *nvgpu_semaphore_get_sea(struct gk20a *g)
 {
 	return g->sema_sea;
 }
 
-static int __gk20a_semaphore_sea_grow(struct gk20a_semaphore_sea *sea)
+static int __nvgpu_semaphore_sea_grow(struct nvgpu_semaphore_sea *sea)
 {
 	int ret = 0;
 	struct gk20a *gk20a = sea->gk20a;
@@ -68,7 +68,7 @@ out:
  * Create the semaphore sea. Only create it once - subsequent calls to this will
  * return the originally created sea pointer.
  */
-struct gk20a_semaphore_sea *gk20a_semaphore_sea_create(struct gk20a *g)
+struct nvgpu_semaphore_sea *nvgpu_semaphore_sea_create(struct gk20a *g)
 {
 	if (g->sema_sea)
 		return g->sema_sea;
@@ -83,7 +83,7 @@ struct gk20a_semaphore_sea *gk20a_semaphore_sea_create(struct gk20a *g)
 	INIT_LIST_HEAD(&g->sema_sea->pool_list);
 	mutex_init(&g->sema_sea->sea_lock);
 
-	if (__gk20a_semaphore_sea_grow(g->sema_sea))
+	if (__nvgpu_semaphore_sea_grow(g->sema_sea))
 		goto cleanup;
 
 	gpu_sema_dbg("Created semaphore sea!");
@@ -111,10 +111,10 @@ static int __semaphore_bitmap_alloc(unsigned long *bitmap, unsigned long len)
 /*
  * Allocate a pool from the sea.
  */
-struct gk20a_semaphore_pool *gk20a_semaphore_pool_alloc(
-				struct gk20a_semaphore_sea *sea)
+struct nvgpu_semaphore_pool *nvgpu_semaphore_pool_alloc(
+				struct nvgpu_semaphore_sea *sea)
 {
-	struct gk20a_semaphore_pool *p;
+	struct nvgpu_semaphore_pool *p;
 	unsigned long page_idx;
 	int ret, err = 0;
 
@@ -159,7 +159,7 @@ fail:
  * Map a pool into the passed vm's address space. This handles both the fixed
  * global RO mapping and the non-fixed private RW mapping.
  */
-int gk20a_semaphore_pool_map(struct gk20a_semaphore_pool *p,
+int nvgpu_semaphore_pool_map(struct nvgpu_semaphore_pool *p,
 			     struct vm_gk20a *vm)
 {
 	int ents, err = 0;
@@ -252,10 +252,10 @@ fail:
 /*
  * Unmap a semaphore_pool.
  */
-void gk20a_semaphore_pool_unmap(struct gk20a_semaphore_pool *p,
+void nvgpu_semaphore_pool_unmap(struct nvgpu_semaphore_pool *p,
 				struct vm_gk20a *vm)
 {
-	struct gk20a_semaphore_int *hw_sema;
+	struct nvgpu_semaphore_int *hw_sema;
 
 	kunmap(p->cpu_va);
 
@@ -291,12 +291,12 @@ void gk20a_semaphore_pool_unmap(struct gk20a_semaphore_pool *p,
  * Completely free a sempahore_pool. You should make sure this pool is not
  * mapped otherwise there's going to be a memory leak.
  */
-static void gk20a_semaphore_pool_free(struct kref *ref)
+static void nvgpu_semaphore_pool_free(struct kref *ref)
 {
-	struct gk20a_semaphore_pool *p =
-		container_of(ref, struct gk20a_semaphore_pool, ref);
-	struct gk20a_semaphore_sea *s = p->sema_sea;
-	struct gk20a_semaphore_int *hw_sema, *tmp;
+	struct nvgpu_semaphore_pool *p =
+		container_of(ref, struct nvgpu_semaphore_pool, ref);
+	struct nvgpu_semaphore_sea *s = p->sema_sea;
+	struct nvgpu_semaphore_int *hw_sema, *tmp;
 
 	WARN_ON(p->gpu_va || p->rw_sg_table || p->ro_sg_table);
 
@@ -313,21 +313,21 @@ static void gk20a_semaphore_pool_free(struct kref *ref)
 	kfree(p);
 }
 
-void gk20a_semaphore_pool_get(struct gk20a_semaphore_pool *p)
+void nvgpu_semaphore_pool_get(struct nvgpu_semaphore_pool *p)
 {
 	kref_get(&p->ref);
 }
 
-void gk20a_semaphore_pool_put(struct gk20a_semaphore_pool *p)
+void nvgpu_semaphore_pool_put(struct nvgpu_semaphore_pool *p)
 {
-	kref_put(&p->ref, gk20a_semaphore_pool_free);
+	kref_put(&p->ref, nvgpu_semaphore_pool_free);
 }
 
 /*
  * Get the address for a semaphore_pool - if global is true then return the
  * global RO address instead of the RW address owned by the semaphore's VM.
  */
-u64 __gk20a_semaphore_pool_gpu_va(struct gk20a_semaphore_pool *p, bool global)
+u64 __nvgpu_semaphore_pool_gpu_va(struct nvgpu_semaphore_pool *p, bool global)
 {
 	if (!global)
 		return p->gpu_va;
@@ -335,12 +335,12 @@ u64 __gk20a_semaphore_pool_gpu_va(struct gk20a_semaphore_pool *p, bool global)
 	return p->gpu_va_ro + (PAGE_SIZE * p->page_idx);
 }
 
-static int __gk20a_init_hw_sema(struct channel_gk20a *ch)
+static int __nvgpu_init_hw_sema(struct channel_gk20a *ch)
 {
 	int hw_sema_idx;
 	int ret = 0;
-	struct gk20a_semaphore_int *hw_sema;
-	struct gk20a_semaphore_pool *p = ch->vm->sema_pool;
+	struct nvgpu_semaphore_int *hw_sema;
+	struct nvgpu_semaphore_pool *p = ch->vm->sema_pool;
 
 	BUG_ON(!p);
 
@@ -354,7 +354,7 @@ static int __gk20a_init_hw_sema(struct channel_gk20a *ch)
 		goto fail;
 	}
 
-	hw_sema = kzalloc(sizeof(struct gk20a_semaphore_int), GFP_KERNEL);
+	hw_sema = kzalloc(sizeof(struct nvgpu_semaphore_int), GFP_KERNEL);
 	if (!hw_sema) {
 		ret = -ENOMEM;
 		goto fail_free_idx;
@@ -385,9 +385,9 @@ fail:
 /*
  * Free the channel used semaphore index
  */
-void gk20a_semaphore_free_hw_sema(struct channel_gk20a *ch)
+void nvgpu_semaphore_free_hw_sema(struct channel_gk20a *ch)
 {
-	struct gk20a_semaphore_pool *p = ch->vm->sema_pool;
+	struct nvgpu_semaphore_pool *p = ch->vm->sema_pool;
 
 	BUG_ON(!p);
 
@@ -409,13 +409,13 @@ void gk20a_semaphore_free_hw_sema(struct channel_gk20a *ch)
  * Since semaphores are ref-counted there's no explicit free for external code
  * to use. When the ref-count hits 0 the internal free will happen.
  */
-struct gk20a_semaphore *gk20a_semaphore_alloc(struct channel_gk20a *ch)
+struct nvgpu_semaphore *nvgpu_semaphore_alloc(struct channel_gk20a *ch)
 {
-	struct gk20a_semaphore *s;
+	struct nvgpu_semaphore *s;
 	int ret;
 
 	if (!ch->hw_sema) {
-		ret = __gk20a_init_hw_sema(ch);
+		ret = __nvgpu_init_hw_sema(ch);
 		if (ret)
 			return NULL;
 	}
@@ -432,29 +432,29 @@ struct gk20a_semaphore *gk20a_semaphore_alloc(struct channel_gk20a *ch)
 	 * Take a ref on the pool so that we can keep this pool alive for
 	 * as long as this semaphore is alive.
 	 */
-	gk20a_semaphore_pool_get(s->hw_sema->p);
+	nvgpu_semaphore_pool_get(s->hw_sema->p);
 
 	gpu_sema_dbg("Allocated semaphore (c=%d)", ch->hw_chid);
 
 	return s;
 }
 
-static void gk20a_semaphore_free(struct kref *ref)
+static void nvgpu_semaphore_free(struct kref *ref)
 {
-	struct gk20a_semaphore *s =
-		container_of(ref, struct gk20a_semaphore, ref);
+	struct nvgpu_semaphore *s =
+		container_of(ref, struct nvgpu_semaphore, ref);
 
-	gk20a_semaphore_pool_put(s->hw_sema->p);
+	nvgpu_semaphore_pool_put(s->hw_sema->p);
 
 	kfree(s);
 }
 
-void gk20a_semaphore_put(struct gk20a_semaphore *s)
+void nvgpu_semaphore_put(struct nvgpu_semaphore *s)
 {
-	kref_put(&s->ref, gk20a_semaphore_free);
+	kref_put(&s->ref, nvgpu_semaphore_free);
 }
 
-void gk20a_semaphore_get(struct gk20a_semaphore *s)
+void nvgpu_semaphore_get(struct nvgpu_semaphore *s)
 {
 	kref_get(&s->ref);
 }

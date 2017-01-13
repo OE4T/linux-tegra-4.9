@@ -45,7 +45,7 @@ struct gk20a_sync_timeline {
 struct gk20a_sync_pt {
 	struct kref			refcount;
 	u32				thresh;
-	struct gk20a_semaphore		*sema;
+	struct nvgpu_semaphore		*sema;
 	struct gk20a_sync_timeline	*obj;
 	struct sync_fence		*dep;
 	ktime_t				dep_timestamp;
@@ -110,7 +110,7 @@ int gk20a_is_sema_backed_sync_fence(struct sync_fence *fence)
 	return 0;
 }
 
-struct gk20a_semaphore *gk20a_sync_fence_get_sema(struct sync_fence *f)
+struct nvgpu_semaphore *gk20a_sync_fence_get_sema(struct sync_fence *f)
 {
 	struct sync_pt *spt;
 	struct gk20a_sync_pt_inst *pti;
@@ -208,13 +208,13 @@ static void gk20a_sync_pt_free_shared(struct kref *ref)
 	if (pt->dep)
 		sync_fence_put(pt->dep);
 	if (pt->sema)
-		gk20a_semaphore_put(pt->sema);
+		nvgpu_semaphore_put(pt->sema);
 	kfree(pt);
 }
 
 static struct gk20a_sync_pt *gk20a_sync_pt_create_shared(
 		struct gk20a_sync_timeline *obj,
-		struct gk20a_semaphore *sema,
+		struct nvgpu_semaphore *sema,
 		struct sync_fence *dependency)
 {
 	struct gk20a_sync_pt *shared;
@@ -244,14 +244,14 @@ static struct gk20a_sync_pt *gk20a_sync_pt_create_shared(
 
 	spin_lock_init(&shared->lock);
 
-	gk20a_semaphore_get(sema);
+	nvgpu_semaphore_get(sema);
 
 	return shared;
 }
 
 static struct sync_pt *gk20a_sync_pt_create_inst(
 		struct gk20a_sync_timeline *obj,
-		struct gk20a_semaphore *sema,
+		struct nvgpu_semaphore *sema,
 		struct sync_fence *dependency)
 {
 	struct gk20a_sync_pt_inst *pti;
@@ -309,7 +309,7 @@ static int gk20a_sync_pt_has_signaled(struct sync_pt *sync_pt)
 		goto done;
 
 	/* Acquired == not realeased yet == active == not signaled. */
-	signaled = !gk20a_semaphore_is_acquired(pt->sema);
+	signaled = !nvgpu_semaphore_is_acquired(pt->sema);
 
 	if (signaled) {
 		/* Update min if necessary. */
@@ -341,7 +341,7 @@ static int gk20a_sync_pt_has_signaled(struct sync_pt *sync_pt)
 		}
 
 		/* Release the semaphore to the pool. */
-		gk20a_semaphore_put(pt->sema);
+		nvgpu_semaphore_put(pt->sema);
 		pt->sema = NULL;
 	}
 done:
@@ -410,12 +410,12 @@ static void gk20a_sync_timeline_value_str(struct sync_timeline *timeline,
 static void gk20a_sync_pt_value_str_for_sema(struct gk20a_sync_pt *pt,
 					     char *str, int size)
 {
-	struct gk20a_semaphore *s = pt->sema;
+	struct nvgpu_semaphore *s = pt->sema;
 
 	snprintf(str, size, "S: c=%d [v=%u,r_v=%u]",
 		 s->hw_sema->ch->hw_chid,
-		 gk20a_semaphore_get_value(s),
-		 gk20a_semaphore_read(s));
+		 nvgpu_semaphore_get_value(s),
+		 nvgpu_semaphore_read(s));
 }
 
 static void gk20a_sync_pt_value_str(struct sync_pt *sync_pt, char *str,
@@ -458,7 +458,7 @@ static int gk20a_sync_fill_driver_data(struct sync_pt *sync_pt,
 }
 
 static const struct sync_timeline_ops gk20a_sync_timeline_ops = {
-	.driver_name = "gk20a_semaphore",
+	.driver_name = "nvgpu_semaphore",
 	.dup = gk20a_sync_pt_dup_inst,
 	.has_signaled = gk20a_sync_pt_has_signaled,
 	.compare = gk20a_sync_pt_compare,
@@ -508,7 +508,7 @@ struct sync_timeline *gk20a_sync_timeline_create(
 }
 
 struct sync_fence *gk20a_sync_fence_create(struct sync_timeline *obj,
-		struct gk20a_semaphore *sema,
+		struct nvgpu_semaphore *sema,
 		struct sync_fence *dependency,
 		const char *fmt, ...)
 {

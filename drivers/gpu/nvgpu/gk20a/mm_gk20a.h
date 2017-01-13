@@ -303,7 +303,7 @@ struct vm_gk20a {
 	/*
 	 * Each address space needs to have a semaphore pool.
 	 */
-	struct gk20a_semaphore_pool *sema_pool;
+	struct nvgpu_semaphore_pool *sema_pool;
 };
 
 struct gk20a;

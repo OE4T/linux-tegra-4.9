@@ -23,7 +23,6 @@
 struct gk20a_channel_sync;
 struct priv_cmd_entry;
 struct channel_gk20a;
-struct gk20a_semaphore;
 struct gk20a_fence;
 struct gk20a;
 

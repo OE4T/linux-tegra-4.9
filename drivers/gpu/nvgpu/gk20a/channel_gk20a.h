@@ -172,7 +172,7 @@ struct channel_gk20a {
 	spinlock_t ref_actions_lock;
 #endif
 
-	struct gk20a_semaphore_int *hw_sema;
+	struct nvgpu_semaphore_int *hw_sema;
 
 	int hw_chid;
 	bool wdt_enabled;

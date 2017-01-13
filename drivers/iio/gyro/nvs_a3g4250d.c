@@ -128,6 +128,8 @@
 #define AXIS_Z				(2)
 #define AXIS_N				(3)
 
+#define STM_ODR_OVERRIDE_CELLS		(3)
+
 /* regulator names in order of powering on */
 static char *stm_vregs[] = {
 	"vdd",
@@ -180,7 +182,8 @@ struct stm_state {
 	void *nvs_st;
 	struct sensor_cfg cfg;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(stm_vregs)];
-	struct delayed_work dw;
+	struct work_struct dw;
+	u32* odr_override_tbl;		/* Sampling freq override table */
 	unsigned int sts;		/* status flags */
 	unsigned int errs;		/* error count */
 	unsigned int enabled;		/* enable status */
@@ -206,10 +209,10 @@ struct stm_odr {
 };
 
 static struct stm_odr stm_odr_tbl[] = {
-	{ 1250, 0xC8, },
-	{ 2500, 0x88, },
-	{ 5000, 0x48, },
 	{ 10000, 0x08, },
+	{ 5000, 0x48, },
+	{ 2500, 0x88, },
+	{ 1250, 0xC8, },
 };
 
 
@@ -292,7 +295,7 @@ static int stm_cmd(struct stm_state *st, int enable)
 
 	if (enable) {
 		for (i = 0; i < ARRAY_SIZE(stm_odr_tbl) - 1; i++) {
-			if (st->delay_us <= stm_odr_tbl[i].us)
+			if (st->delay_us >= stm_odr_tbl[i].us)
 				break;
 		}
 		ctrl1 |= stm_odr_tbl[i].hw;
@@ -371,9 +374,8 @@ static int stm_pm_init(struct stm_state *st)
 	return ret;
 }
 
-static int stm_rd(struct stm_state *st)
+static int stm_rd(struct stm_state *st, s64 ts)
 {
-	s64 ts;
 	int ret;
 
 	ret = stm_i2c_rd(st, STM_REG_STATUS, sizeof(st->buf), st->buf);
@@ -386,7 +388,6 @@ static int stm_rd(struct stm_state *st)
 		st->ts_last += ts;
 		st->nvs->handler(st->nvs_st, &st->buf[1], st->ts_last);
 #endif
-		ts = nvs_timestamp();
 		st->nvs->handler(st->nvs_st, &st->buf[1], ts);
 	} else {
 		ret = -EAGAIN;
@@ -394,31 +395,41 @@ static int stm_rd(struct stm_state *st)
 	return ret;
 }
 
-static void stm_read(struct stm_state *st)
+static void stm_read(struct stm_state *st, s64 ts)
 {
 	st->nvs->nvs_mutex_lock(st->nvs_st);
-	if (st->enabled) {
-		stm_rd(st);
-		if (st->i2c->irq <= 0)
-			schedule_delayed_work(&st->dw,
-					      usecs_to_jiffies(st->delay_us));
-	}
+	if (st->enabled)
+		stm_rd(st, ts);
 	st->nvs->nvs_mutex_unlock(st->nvs_st);
 }
 
 static void stm_work(struct work_struct *ws)
 {
-	struct stm_state *st = container_of((struct delayed_work *)ws,
+	struct stm_state *st = container_of((struct work_struct *)ws,
 					    struct stm_state, dw);
+	s64 ts1=0, ts2=0;
+	unsigned long delay_value = 0;
+	u64 ts_diff = 0;
 
-	stm_read(st);
+	usleep_range(st->delay_us, st->delay_us);
+	while (st->enabled) {
+		ts1 = nvs_timestamp();
+		stm_read(st, ts1);
+		ts2 = nvs_timestamp();
+		ts_diff = (ts2 - ts1)/1000;
+		if (st->delay_us > (unsigned int)ts_diff) {
+			delay_value = st->delay_us - (unsigned int)ts_diff;
+			usleep_range(delay_value, delay_value);
+		}
+	}
 }
 
 static irqreturn_t stm_irq_thread(int irq, void *dev_id)
 {
 	struct stm_state *st = (struct stm_state *)dev_id;
+	s64 ts = nvs_timestamp();
 
-	stm_read(st);
+	stm_read(st, ts);
 	return IRQ_HANDLED;
 }
 
@@ -452,8 +463,6 @@ static int stm_dis(struct stm_state *st)
 {
 	if (st->i2c->irq)
 		stm_disable_irq(st);
-	else
-		cancel_delayed_work(&st->dw);
 	st->enabled = 0;
 	return 0;
 }
@@ -488,9 +497,7 @@ static int stm_enable(void *client, int snsr_id, int enable)
 				if (st->i2c->irq)
 					stm_enable_irq(st);
 				else
-					schedule_delayed_work(&st->dw,
-							      usecs_to_jiffies(
-								st->delay_us));
+					schedule_work(&st->dw);
 			}
 		}
 	} else {
@@ -646,8 +653,6 @@ static int stm_remove(struct i2c_client *client)
 		stm_shutdown(client);
 		if (st->nvs && st->nvs_st)
 			st->nvs->remove(st->nvs_st);
-		if (st->dw.wq)
-			destroy_workqueue(st->dw.wq);
 		stm_pm_exit(st);
 	}
 	dev_info(&client->dev, "%s\n", __func__);
@@ -700,6 +705,10 @@ static int stm_id_i2c(struct stm_state *st,
 
 static int stm_of_dt(struct stm_state *st, struct device_node *dn)
 {
+	u32 count;
+	int i;
+	int j;
+
 	memcpy(&st->cfg, &stm_cfg_dflt, sizeof(st->cfg));
 	if (dn) {
 		/* device specific parameters */
@@ -709,6 +718,36 @@ static int stm_of_dt(struct stm_state *st, struct device_node *dn)
 		of_property_read_u8(dn, "CTRL_REG3", &st->ru_ctrl3);
 		of_property_read_u8(dn, "CTRL_REG4", &st->ru_ctrl4);
 		of_property_read_u8(dn, "CTRL_REG5", &st->ru_ctrl5);
+		count = of_property_count_elems_of_size(dn, "stm_odr_override",
+							sizeof(u32));
+		if (count > 0) {
+			if ((count % STM_ODR_OVERRIDE_CELLS) != 0) {
+				dev_err(&st->i2c->dev,
+					"%s: Invalid sampling override table length\n",
+					__func__);
+				return -EINVAL;
+			}
+			st->odr_override_tbl = devm_kzalloc(&st->i2c->dev,
+						sizeof(u32) * count, GFP_KERNEL);
+			if (IS_ERR_OR_NULL(st->odr_override_tbl))
+				return -ENOMEM;
+			if (of_property_read_u32_array(dn, "stm_odr_override",
+						st->odr_override_tbl, count)) {
+				dev_err(&st->i2c->dev,
+					" %s Fetching odr override table failed\n",
+					__func__);
+				return -EINVAL;
+			}
+			for (i = 0; i < count; i += STM_ODR_OVERRIDE_CELLS) {
+				for (j = 0; j < ARRAY_SIZE(stm_odr_tbl); j++) {
+					if (st->odr_override_tbl[i] == stm_odr_tbl[j].us) {
+						stm_odr_tbl[j].us = st->odr_override_tbl[i+1];
+						stm_odr_tbl[j].hw = (u8)st->odr_override_tbl[i+2];
+						break;
+					}
+				}
+			}
+		}
 	} else {
 		dev_info(&st->i2c->dev, "%s dev.of_node=NULL\n", __func__);
 	}
@@ -779,7 +818,7 @@ static int stm_probe(struct i2c_client *client,
 			goto stm_probe_exit;
 		}
 	} else {
-		INIT_DELAYED_WORK(&st->dw, stm_work);
+		INIT_WORK(&st->dw, stm_work);
 	}
 
 	dev_info(&client->dev, "%s done\n", __func__);

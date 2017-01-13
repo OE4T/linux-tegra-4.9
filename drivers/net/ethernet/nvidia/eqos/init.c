@@ -1086,11 +1086,11 @@ int eqos_probe(struct platform_device *pdev)
 	spin_lock_init(&pdata->tx_lock);
 	spin_lock_init(&pdata->pmt_lock);
 
-	for (i = 0; i < num_chans; i++)
+	for (i = 0; i < num_chans; i++) {
 		spin_lock_init(&pdata->chinfo[i].chan_lock);
-
-	for (i = 0; i < num_chans; i++)
 		spin_lock_init(&pdata->chinfo[i].irq_lock);
+		spin_lock_init(&pdata->chinfo[i].chan_tx_lock);
+	}
 
 	ret = register_netdev(ndev);
 	if (ret) {

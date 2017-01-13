@@ -18,7 +18,7 @@
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include "tegra210-thermal.dtsi"
 #include <dt-bindings/gpio/tegra-gpio.h>
-#include <dt-bindings/padctrl/tegra210-pads.h>
+#include <dt-bindings/soc/tegra-io-pads.h>
 #include <dt-bindings/ata/ahci-tegra.h>
 #include <dt-bindings/clk/tegra210-clk.h>
 #include <dt-bindings/soc/nvidia,tegra210-powergate.h>
@@ -1820,7 +1820,7 @@
 		aux-device-name = "sdhci-tegra.2";
 		iommus = <&smmu TEGRA_SWGROUP_SDMMC3A>;
 		pwrdet-support;
-		pad-controllers = <&tegra_pmc TEGRA210_PAD_SDMMC3>;
+		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC3>;
 		pad-names = "sdmmc";
 		nvidia,runtime-pm-type = <0>;
 		clocks = <&tegra_car TEGRA210_CLK_SDMMC4>;
@@ -1850,7 +1850,7 @@
 		aux-device-name = "sdhci-tegra.0";
 		iommus = <&smmu TEGRA_SWGROUP_SDMMC1A>;
 		pwrdet-support;
-		pad-controllers = <&tegra_pmc TEGRA210_PAD_SDMMC1>;
+		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC1>;
 		pad-names = "sdmmc";
 		nvidia,runtime-pm-type = <1>;
 		clocks = <&tegra_car TEGRA210_CLK_SDMMC1>;
@@ -1940,20 +1940,20 @@
 
 	pmc-iopower {
 		compatible = "nvidia,tegra210-pmc-iopower";
-		pad-controllers = <&tegra_pmc TEGRA210_PAD_SYS
-					&tegra_pmc TEGRA210_PAD_UART
-					&tegra_pmc TEGRA210_PAD_AUDIO
-					&tegra_pmc TEGRA210_PAD_CAM
-					&tegra_pmc TEGRA210_PAD_PEX_CTRL
-					&tegra_pmc TEGRA210_PAD_SDMMC1
-					&tegra_pmc TEGRA210_PAD_SDMMC3
-					&tegra_pmc TEGRA210_PAD_HV
-					&tegra_pmc TEGRA210_PAD_AUDIO_HV
-					&tegra_pmc TEGRA210_PAD_DBG
-					&tegra_pmc TEGRA210_PAD_DMIC
-					&tegra_pmc TEGRA210_PAD_GPIO
-					&tegra_pmc TEGRA210_PAD_SPI
-					&tegra_pmc TEGRA210_PAD_SPI_HV>;
+		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SYS
+					&tegra_pmc TEGRA_IO_PAD_GROUP_UART
+					&tegra_pmc TEGRA_IO_PAD_GROUP_AUDIO
+					&tegra_pmc TEGRA_IO_PAD_GROUP_CAM
+					&tegra_pmc TEGRA_IO_PAD_GROUP_PEX_CTRL
+					&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC1
+					&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC3
+					&tegra_pmc TEGRA_IO_PAD_GROUP_HV
+					&tegra_pmc TEGRA_IO_PAD_GROUP_AUDIO_HV
+					&tegra_pmc TEGRA_IO_PAD_GROUP_DBG
+					&tegra_pmc TEGRA_IO_PAD_GROUP_DMIC
+					&tegra_pmc TEGRA_IO_PAD_GROUP_GPIO
+					&tegra_pmc TEGRA_IO_PAD_GROUP_SPI
+					&tegra_pmc TEGRA_IO_PAD_GROUP_SPI_HV>;
 		pad-names = "sys", "uart", "audio", "cam", "pex-ctrl",
 			"sdmmc1", "sdmmc3", "hv", "audio-hv", "debug", "dmic",
 			"gpio", "spi", "spi-hv";

@@ -1994,7 +1994,6 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	u32 v, data;
 	int ret = 0;
 	struct mem_desc *mem = &ch_ctx->gr_ctx->mem;
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	struct ctx_header_desc *ctx = &c->ch_ctx.ctx_header;
 	struct mem_desc *ctxheader = &ctx->mem;
 	u32 va_lo, va_hi, va;
@@ -2135,28 +2134,6 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 
 	gk20a_mem_end(g, mem);
 	gk20a_mem_end(g, ctxheader);
-
-	if (platform->is_fmodel) {
-
-		u32 mdata = fecs_current_ctx_data(g, &c->inst_block);
-
-		ret = gr_gk20a_submit_fecs_method_op(g,
-			  (struct fecs_method_op_gk20a) {
-				  .method.data = mdata,
-				  .method.addr =
-					  gr_fecs_method_push_adr_restore_golden_v(),
-				  .mailbox = {
-					  .id = 0, .data = 0,
-					  .clr = ~0, .ret = NULL,
-					  .ok = gr_fecs_ctxsw_mailbox_value_pass_v(),
-					  .fail = 0},
-				  .cond.ok = GR_IS_UCODE_OP_EQUAL,
-				  .cond.fail = GR_IS_UCODE_OP_SKIP}, false);
-
-		if (ret)
-			gk20a_err(dev_from_gk20a(g),
-				   "restore context image failed");
-	}
 
 clean_up_mem:
 	gk20a_mem_end(g, mem);

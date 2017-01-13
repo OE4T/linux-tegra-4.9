@@ -37,8 +37,8 @@ extern int tegra_dfll_get_thermal_index(struct tegra_dfll *td,
 extern int tegra_dfll_count_thermal_states(struct tegra_dfll *td,
 			enum tegra_dfll_thermal_type type);
 u32 tegra_dfll_get_thermal_floor_mv(void);
+u32 tegra_dfll_get_peak_thermal_floor_mv(void);
 u32 tegra_dfll_get_thermal_cap_mv(void);
-u32 tegra_dfll_get_thermal_floor(int index);
 u32 tegra_dfll_get_min_millivolts(void);
 struct rail_alignment *tegra_dfll_get_alignment(void);
 #endif

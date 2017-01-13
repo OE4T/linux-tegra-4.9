@@ -389,6 +389,9 @@ void tegra_nvdisp_init_bandwidth(struct tegra_dc *dc)
 	new_emc = max_bw_config->emc_la_floor;
 	new_hubclk = max_bw_config->hubclk;
 
+	memset(&ihub_bw_info.cur_config, 0, sizeof(ihub_bw_info.cur_config));
+	ihub_bw_info.reserved_bw = 0;
+
 	tegra_nvdisp_negotiate_reserved_bw(dc,
 				new_iso_bw,
 				new_total_bw,
@@ -531,6 +534,14 @@ void tegra_nvdisp_bandwidth_attach(struct tegra_dc *dc)
 	}
 
 	dc->ihub_bw_info = &ihub_bw_info;
+}
+
+void tegra_nvdisp_get_max_bw_cfg(struct nvdisp_bandwidth_config *max_cfg)
+{
+	if (!max_cfg)
+		return;
+
+	*max_cfg = ihub_bw_info.max_config;
 }
 
 static int tegra_nvdisp_bandwidth_register_max_config(

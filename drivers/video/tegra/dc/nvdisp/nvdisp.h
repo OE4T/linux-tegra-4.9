@@ -53,4 +53,5 @@ int tegra_nvdisp_negotiate_reserved_bw(struct tegra_dc *dc, u32 new_iso_bw,
 	u32 new_total_bw, u32 new_emc, u32 new_hubclk);
 void tegra_nvdisp_init_bandwidth(struct tegra_dc *dc);
 void tegra_nvdisp_clear_bandwidth(struct tegra_dc *dc);
+void tegra_nvdisp_get_max_bw_cfg(struct nvdisp_bandwidth_config *max_cfg);
 #endif

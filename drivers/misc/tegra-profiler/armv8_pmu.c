@@ -51,7 +51,7 @@ static DEFINE_PER_CPU(struct quadd_pmu_info, cpu_pmu_info);
 
 static DEFINE_PER_CPU(struct quadd_pmu_ctx, pmu_ctx);
 
-static unsigned
+static unsigned int
 quadd_armv8_pmuv3_arm_events_map[QUADD_EVENT_TYPE_MAX] = {
 	[QUADD_EVENT_TYPE_INSTRUCTIONS] =
 		QUADD_ARMV8_HW_EVENT_INSTR_EXECUTED,
@@ -77,7 +77,7 @@ quadd_armv8_pmuv3_arm_events_map[QUADD_EVENT_TYPE_MAX] = {
 		QUADD_ARMV8_UNSUPPORTED_EVENT,
 };
 
-static unsigned
+static unsigned int
 quadd_armv8_pmuv3_a57_events_map[QUADD_EVENT_TYPE_MAX] = {
 	[QUADD_EVENT_TYPE_INSTRUCTIONS] =
 		QUADD_ARMV8_HW_EVENT_INSTR_EXECUTED,

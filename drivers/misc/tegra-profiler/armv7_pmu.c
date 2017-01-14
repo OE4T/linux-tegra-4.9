@@ -55,7 +55,8 @@ struct quadd_cntrs_info {
 
 static DEFINE_PER_CPU(struct quadd_pmu_info, cpu_pmu_info);
 
-static unsigned quadd_armv7_a9_events_map[QUADD_EVENT_TYPE_MAX] = {
+static unsigned int
+quadd_armv7_a9_events_map[QUADD_EVENT_TYPE_MAX] = {
 	[QUADD_EVENT_TYPE_INSTRUCTIONS] =
 		QUADD_ARMV7_A9_HW_EVENT_INST_OUT_OF_RENAME_STAGE,
 	[QUADD_EVENT_TYPE_BRANCH_INSTRUCTIONS] =
@@ -80,7 +81,8 @@ static unsigned quadd_armv7_a9_events_map[QUADD_EVENT_TYPE_MAX] = {
 		QUADD_ARMV7_UNSUPPORTED_EVENT,
 };
 
-static unsigned quadd_armv7_a15_events_map[QUADD_EVENT_TYPE_MAX] = {
+static unsigned
+quadd_armv7_a15_events_map[QUADD_EVENT_TYPE_MAX] = {
 	[QUADD_EVENT_TYPE_INSTRUCTIONS] =
 				QUADD_ARMV7_HW_EVENT_INSTR_EXECUTED,
 	[QUADD_EVENT_TYPE_BRANCH_INSTRUCTIONS] =
@@ -301,10 +303,10 @@ static u32 armv7_pmu_adjust_value(u32 value, int event_id)
 {
 	struct quadd_pmu_ctx *local_pmu_ctx = this_cpu_ptr(&pmu_ctx);
 	/*
-	* Cortex A8/A9: l1 cache performance counters
-	* don't differentiate between read and write data accesses/misses,
-	* so currently we are divided by two
-	*/
+	 * Cortex A8/A9: l1 cache performance counters
+	 * don't differentiate between read and write data accesses/misses,
+	 * so currently we are divided by two
+	 */
 	if (local_pmu_ctx->l1_cache_rw &&
 	    (local_pmu_ctx->arch.type == QUADD_ARM_CPU_TYPE_CORTEX_A8 ||
 	    local_pmu_ctx->arch.type == QUADD_ARM_CPU_TYPE_CORTEX_A9) &&

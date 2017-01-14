@@ -815,7 +815,7 @@ static int mmap_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 	return 0;
 }
 
-static struct vm_operations_struct mmap_vm_ops = {
+static const struct vm_operations_struct mmap_vm_ops = {
 	.open	= mmap_open,
 	.close	= mmap_close,
 	.fault	= mmap_fault,

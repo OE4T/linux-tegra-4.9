@@ -71,7 +71,7 @@ quadd_disassemble_arm(struct quadd_disasm_data *qd)
 
 		if (((val & 0x0def0ff0) == 0x01a00000) &&
 		    !quadd_stack_found(qd)) {
-			unsigned x = (val >> 12) & 0xf, y = (val & 0xf);
+			unsigned int x = (val >> 12) & 0xf, y = (val & 0xf);
 
 			if (y == 13 && x != y) {
 				/* mov x, sp, where x != sp */
@@ -85,7 +85,8 @@ quadd_disassemble_arm(struct quadd_disasm_data *qd)
 			    ((val & 0x0fe00010) == 0x00800000) ||
 			    ((val & 0x0fe00090) == 0x00800010)) &&
 			   !quadd_stack_found(qd)) {
-			unsigned x = (val >> 12) & 0xf, y = (val >> 16) & 0xf;
+			unsigned int x = (val >> 12) & 0xf;
+			unsigned int y = (val >> 16) & 0xf;
 
 			if (y == 13 && x != y) {
 				/* add x, sp, i, where x != sp */
@@ -98,7 +99,8 @@ quadd_disassemble_arm(struct quadd_disasm_data *qd)
 		} else if ((((val & 0x0fe00000) == 0x02400000) ||
 			    ((val & 0x0fe00010) == 0x00400000)) &&
 			   !quadd_stack_found(qd)) {
-			unsigned x = (val >> 12) & 0xf, y = (val >> 16) & 0xf;
+			unsigned int x = (val >> 12) & 0xf;
+			unsigned int y = (val >> 16) & 0xf;
 
 			if (x == 13 && y == 13) {
 				/* sub sp, sp, imm */

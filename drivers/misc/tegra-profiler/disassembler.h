@@ -49,9 +49,11 @@ struct quadd_disasm_data {
 #endif
 };
 
-extern long quadd_disassemble(struct quadd_disasm_data *, unsigned long,
-			      unsigned long, int);
-extern long quadd_check_unwind_result(unsigned long,
-				      struct quadd_disasm_data *);
+extern long
+quadd_disassemble(struct quadd_disasm_data *qd, unsigned long min,
+		  unsigned long max, int thumbflag);
+extern long
+quadd_check_unwind_result(unsigned long pc,
+			  struct quadd_disasm_data *qd);
 
 #endif /* __QUADD_DISASSEMBLER_H */

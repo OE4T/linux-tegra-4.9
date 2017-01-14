@@ -79,9 +79,8 @@ static void start_hrtimer(struct quadd_cpu_context *cpu_ctx)
 {
 	u64 period = hrt.sample_period;
 
-	__hrtimer_start_range_ns(&cpu_ctx->hrtimer,
-				 ns_to_ktime(period), 0,
-				 HRTIMER_MODE_REL_PINNED, 0);
+	hrtimer_start(&cpu_ctx->hrtimer, ns_to_ktime(period),
+		      HRTIMER_MODE_REL_PINNED);
 	qm_debug_timer_start(NULL, period);
 }
 
@@ -101,17 +100,18 @@ static inline u64 get_posix_clock_monotonic_time(void)
 {
 	struct timespec ts;
 
-	do_posix_clock_monotonic_gettime(&ts);
+	ktime_get_ts(&ts);
 	return timespec_to_ns(&ts);
 }
 
 static inline u64 get_arch_time(struct timecounter *tc)
 {
+	u64 frac = 0;
 	cycle_t value;
 	const struct cyclecounter *cc = tc->cc;
 
 	value = cc->read(cc);
-	return cyclecounter_cyc2ns(cc, value);
+	return cyclecounter_cyc2ns(cc, value, 0, &frac);
 }
 
 u64 quadd_get_time(void)
@@ -573,12 +573,12 @@ void __quadd_task_sched_in(struct task_struct *prev,
 	if (likely(!atomic_read(&hrt.active)))
 		return;
 /*
-	if (__ratelimit(&ratelimit_state))
-		pr_info("sch_in, cpu: %d, prev: %u (%u) \t--> curr: %u (%u)\n",
-			smp_processor_id(), (unsigned int)prev->pid,
-			(unsigned int)prev->tgid, (unsigned int)task->pid,
-			(unsigned int)task->tgid);
-*/
+ *	if (__ratelimit(&ratelimit_state))
+ *		pr_info("sch_in, cpu: %d, prev: %u (%u) \t--> curr: %u (%u)\n",
+ *			smp_processor_id(), (unsigned int)prev->pid,
+ *			(unsigned int)prev->tgid, (unsigned int)task->pid,
+ *			(unsigned int)task->tgid);
+ */
 
 	if (is_trace_process(task))
 		put_sched_sample(task, 1);
@@ -612,12 +612,12 @@ void __quadd_task_sched_out(struct task_struct *prev,
 	if (likely(!atomic_read(&hrt.active)))
 		return;
 /*
-	if (__ratelimit(&ratelimit_state))
-		pr_info("sch_out: cpu: %d, prev: %u (%u) \t--> next: %u (%u)\n",
-			smp_processor_id(), (unsigned int)prev->pid,
-			(unsigned int)prev->tgid, (unsigned int)next->pid,
-			(unsigned int)next->tgid);
-*/
+ *	if (__ratelimit(&ratelimit_state))
+ *		pr_info("sch_out: cpu: %d, prev: %u (%u) \t--> next: %u (%u)\n",
+ *			smp_processor_id(), (unsigned int)prev->pid,
+ *			(unsigned int)prev->tgid, (unsigned int)next->pid,
+ *			(unsigned int)next->tgid);
+ */
 
 	if (is_sample_process(prev)) {
 		user_regs = task_pt_regs(prev);
@@ -779,12 +779,16 @@ void quadd_hrt_get_state(struct quadd_module_state *state)
 
 static void init_arch_timer(void)
 {
+	struct arch_timer_kvm_info *info;
+
 	u32 cntkctl = arch_timer_get_cntkctl();
 
-	if (cntkctl & ARCH_TIMER_USR_VCT_ACCESS_EN)
-		hrt.tc = arch_timer_get_timecounter();
-	else
+	if (cntkctl & ARCH_TIMER_USR_VCT_ACCESS_EN) {
+		info = arch_timer_get_kvm_info();
+		hrt.tc = &info->timecounter;
+	} else {
 		hrt.tc = NULL;
+	}
 }
 
 struct quadd_hrt_ctx *quadd_hrt_init(struct quadd_ctx *ctx)

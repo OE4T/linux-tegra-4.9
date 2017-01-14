@@ -219,7 +219,7 @@ get_user_callchain_fp(struct quadd_event_context *event_ctx,
 	if (!is_vma_addr(fp, vma, sizeof(fp)))
 		return 0;
 
-	if (probe_kernel_address(fp, reg)) {
+	if (probe_kernel_address((void *)fp, reg)) {
 		pr_warn_once("%s: failed for address: %#lx\n", __func__, fp);
 		cc->urc_fp = QUADD_URC_EACCESS;
 		return 0;
@@ -402,7 +402,7 @@ get_user_callchain_fp_compat(struct quadd_event_context *event_ctx,
 	if (!is_vma_addr(fp, vma, sizeof(fp)))
 		return 0;
 
-	if (probe_kernel_address((unsigned long)fp, reg)) {
+	if (probe_kernel_address((void *)(unsigned long)fp, reg)) {
 		pr_warn_once("%s: failed for address: %#x\n", __func__, fp);
 		cc->urc_fp = QUADD_URC_EACCESS;
 		return 0;

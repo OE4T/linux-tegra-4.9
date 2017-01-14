@@ -1,5 +1,5 @@
 /*
- * drivers/misc/tegra-profiler/exh_tables.c
+ * drivers/misc/tegra-profiler/eh_unwind.c
  *
  * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *

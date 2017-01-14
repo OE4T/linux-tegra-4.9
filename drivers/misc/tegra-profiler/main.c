@@ -52,7 +52,7 @@ static DEFINE_PER_CPU(struct quadd_comm_cap_for_cpu, per_cpu_caps);
 
 static struct source_info *get_pmu_info_for_current_cpu(void)
 {
-	return &this_cpu_ptr(ctx_pmu_info);
+	return this_cpu_ptr(&ctx_pmu_info);
 }
 
 static struct quadd_comm_cap_for_cpu *get_capabilities_for_cpu_int(int cpuid)

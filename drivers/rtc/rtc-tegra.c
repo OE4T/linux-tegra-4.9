@@ -25,7 +25,7 @@
 #include <linux/io.h>
 #include <linux/delay.h>
 #include <linux/rtc.h>
-#include <linux/rtc-tegra.h>
+#include <linux/rtc/rtc-tegra.h>
 #define CREATE_TRACE_POINTS
 #include <trace/events/tegra_rtc.h>
 #include <linux/platform_device.h>

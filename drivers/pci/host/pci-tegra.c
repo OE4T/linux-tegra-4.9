@@ -3183,8 +3183,7 @@ static char *t210_rail_names[] = {"dvdd-pex-pll", "hvdd-pex-pll-e",
 					"l6-hvddio-pex", "l6-dvddio-pex",
 					"vddio-pex-ctl"};
 
-static char *t186_rail_names[] = {"dvdd-pex", "hvdd-pex-pll",
-				"hvdd-pex", "vddio-pexctl-aud"};
+static char *t186_rail_names[] = {"vddio-pexctl-aud"};
 
 static const struct tegra_pcie_soc_data tegra186_pcie_data = {
 	.num_ports = 3,

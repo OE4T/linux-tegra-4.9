@@ -1,0 +1,1 @@
+obj-$(CONFIG_CPU_IDLE_TEGRA19X)         += cpuidle-tegra19x.o

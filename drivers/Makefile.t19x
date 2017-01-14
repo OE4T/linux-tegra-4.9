@@ -17,3 +17,4 @@ obj-y += iommu/
 obj-y += platform/
 obj-y += video/
 obj-y += pinctrl/
+obj-y += cpuidle/

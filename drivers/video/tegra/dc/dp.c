@@ -2163,7 +2163,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	clk = tegra_disp_of_clk_get_by_name(np_dp,
 			dp_num ? "dpaux1" : "dpaux");
 #else
-	clk = clk_get_sys(dp_num ? "dpaux1" : "dpaux", NULL);
+	clk = clk_get_sys(NULL, dp_num ? "dpaux1" : "dpaux");
 #endif
 	if (IS_ERR_OR_NULL(clk)) {
 		dev_err(&dc->ndev->dev, "dp: dc clock %s.edp unavailable\n",
@@ -2174,8 +2174,8 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	parent_clk = tegra_disp_of_clk_get_by_name(np_dp, "plldp");
-#elif defined(CONFIG_ARCH_TEGRA_210_SOC)
-	parent_clk = clk_get_sys("pll_dp", NULL);
+#elif defined(CONFIG_ARCH_TEGRA_21x_SOC)
+	parent_clk = clk_get_sys(NULL, "pll_dp");
 #else
 	parent_clk = tegra_get_clock_by_name("pll_dp");
 #endif
@@ -2838,7 +2838,8 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	dp->enabled = true;
 
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
-	if (tegra_dc_is_ext_dp_panel(dc))
+	if (tegra_dc_is_ext_dp_panel(dc)
+				&& sor->audio_support)
 		tegra_hda_set_data(dc, dp, SINK_DP);
 #endif
 

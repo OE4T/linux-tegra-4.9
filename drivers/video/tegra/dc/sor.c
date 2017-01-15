@@ -680,6 +680,12 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	if (np_sor && of_device_is_available(np_sor)) {
 		of_property_read_u32_array(np_sor, "nvidia,xbar-ctrl",
 			sor->xbar_ctrl, sizeof(sor->xbar_ctrl)/sizeof(u32));
+
+		if (of_property_read_bool(np_sor,
+					"nvidia,sor-audio-not-supported"))
+			sor->audio_support = false;
+		else
+			sor->audio_support = true;
 	}
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
@@ -1074,7 +1080,7 @@ static void tegra_dc_sor_io_set_dpd(struct tegra_dc_sor_data *sor, bool up)
 static void tegra_dc_sor_io_set_dpd(struct tegra_dc_sor_data *sor, bool up)
 {
 	u32 reg_val;
-	static void __iomem *pmc_base = IO_ADDRESS(TEGRA_PMC_BASE);
+	void __iomem *pmc_base = ioremap(TEGRA_PMC_BASE, SZ_4K);
 	unsigned long timeout_jf;
 
 	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())

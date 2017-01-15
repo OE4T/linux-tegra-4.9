@@ -1,6 +1,6 @@
 config PADCTRL_TEGRA186_PMC
 	bool "Tegra186 PMC PADCTRL driver"
-	depends on TEGRA186_PMC
+	depends on PLATFORM_TEGRA
 	help
 	  This option enables Tegra 186 PMC padctrl driver
 

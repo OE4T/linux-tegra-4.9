@@ -584,6 +584,7 @@ int tegra_dc_handle_imp_propose(struct tegra_dc *dc,
 {
 	return -ENOSYS;
 }
+void tegra_dc_reset_imp_state(void) {}
 int tegra_bw_create_sysfs(struct device *dev)
 {
 	return 0;

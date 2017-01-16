@@ -3130,6 +3130,9 @@ static int tegra_dc_release(struct inode *inode, struct file *filp)
 		return -EINVAL;
 	}
 
+	if (open_count == 0)
+		tegra_dc_reset_imp_state();
+
 	return 0;
 }
 

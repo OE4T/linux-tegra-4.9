@@ -2043,6 +2043,32 @@ int clk_set_rate_nocache(struct clk *clk, unsigned long rate)
 EXPORT_SYMBOL_GPL(clk_set_rate_nocache);
 
 /**
+ * clk_set_rate_refresh - re-set a clocks rate, including triggering any
+ *			  notifiers.
+ *
+ * @clk: clock source
+ *
+ * Returns success (0) or negative errno.
+ */
+int clk_set_rate_refresh(struct clk *clk)
+{
+	int ret;
+
+	if (!clk)
+		return 0;
+
+        /* prevent racing with updates to the clock topology */
+	clk_prepare_lock();
+
+	ret = clk_core_set_rate_nolock(clk->core, clk->core->req_rate);
+
+	clk_prepare_unlock();
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(clk_set_rate_refresh);
+
+/**
  * clk_get_parent - return the parent of a clk
  * @clk: the clk whose parent gets returned
  *

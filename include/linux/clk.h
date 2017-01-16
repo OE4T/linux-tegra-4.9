@@ -405,6 +405,16 @@ int clk_set_max_rate(struct clk *clk, unsigned long rate);
 int clk_set_rate_nocache(struct clk *clk, unsigned long rate);
 
 /**
+ * clk_set_rate_refresh - re-set a clocks rate, including triggering any
+ *                        notifiers.
+ *
+ * @clk: clock source
+ *
+ * Returns success (0) or negative errno.
+ */
+int clk_set_rate_refresh(struct clk *clk);
+
+/**
  * clk_set_parent - set the parent clock source for this clock
  * @clk: clock source
  * @parent: parent clock source

@@ -275,6 +275,7 @@ struct nvhost_device_data t18_msenc_info = {
 	.transcfg_val		= 0x20,
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_MSENC,
 	.isolate_contexts	= true,
+	.mlock_timeout_factor	= 3,
 };
 #endif
 

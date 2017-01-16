@@ -24,7 +24,7 @@
 #include "clk/clk_arb.h"
 
 
-#define MAX_F_POINTS 127
+#define MAX_F_POINTS 256
 #define DEFAULT_EVENT_NUMBER 32
 
 struct nvgpu_clk_dev;
@@ -685,15 +685,15 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 		goto exit_vf_table;
 	}
 
+	table->gpc2clk_num_points = MAX_F_POINTS;
+	table->mclk_num_points = MAX_F_POINTS;
+
 	if (clk_domain_get_f_points(arb->g, NVGPU_GPU_CLK_DOMAIN_GPC2CLK,
 		&table->gpc2clk_num_points, arb->gpc2clk_f_points)) {
 		gk20a_err(dev_from_gk20a(g),
 			"failed to fetch GPC2CLK frequency points");
 		goto exit_vf_table;
 	}
-
-	table->gpc2clk_num_points = MAX_F_POINTS;
-	table->mclk_num_points = MAX_F_POINTS;
 
 	if (clk_domain_get_f_points(arb->g, NVGPU_GPU_CLK_DOMAIN_MCLK,
 		&table->mclk_num_points, arb->mclk_f_points)) {

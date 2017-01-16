@@ -90,6 +90,7 @@ struct tegra_dc_ext_flip_2_32 {
 dev_t tegra_dc_ext_devno;
 struct class *tegra_dc_ext_class;
 static int head_count;
+static atomic_t dc_open_count;
 
 struct tegra_dc_ext_flip_win {
 	struct tegra_dc_ext_flip_windowattr_v2	attr;
@@ -3072,6 +3073,7 @@ static int tegra_dc_open(struct inode *inode, struct file *filp)
 {
 	struct tegra_dc_ext_user *user;
 	struct tegra_dc_ext *ext;
+	int open_count;
 
 	user = kzalloc(sizeof(*user), GFP_KERNEL);
 	if (!user)
@@ -3082,6 +3084,13 @@ static int tegra_dc_open(struct inode *inode, struct file *filp)
 
 	filp->private_data = user;
 
+	open_count = atomic_inc_return(&dc_open_count);
+	if (open_count < 1) {
+		pr_err("%s: unbalanced dc open count=%d\n", __func__,
+			open_count);
+		return -EINVAL;
+	}
+
 	return 0;
 }
 
@@ -3091,6 +3100,7 @@ static int tegra_dc_release(struct inode *inode, struct file *filp)
 	struct tegra_dc_ext *ext = user->ext;
 	unsigned int i;
 	unsigned long int windows = 0;
+	int open_count;
 
 	for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++) {
 		if (ext->win[i].user == user) {
@@ -3112,6 +3122,13 @@ static int tegra_dc_release(struct inode *inode, struct file *filp)
 		tegra_dc_ext_put_cursor(user);
 
 	kfree(user);
+
+	open_count = atomic_dec_return(&dc_open_count);
+	if (open_count < 0) {
+		pr_err("%s: unbalanced dc open count=%d\n", __func__,
+			open_count);
+		return -EINVAL;
+	}
 
 	return 0;
 }

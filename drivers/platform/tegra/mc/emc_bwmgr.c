@@ -500,6 +500,7 @@ static const char * const tegra_bwmgr_client_names[] = {
 	"se3",
 	"se4",
 	"pmqos",
+	"nvpmodel",
 	"debug",
 	"null",
 };

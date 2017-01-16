@@ -110,6 +110,8 @@ source "drivers/leds/Kconfig"
 
 source "drivers/switch/Kconfig"
 
+source "drivers/nvpmodel/Kconfig"
+
 source "drivers/accessibility/Kconfig"
 
 source "drivers/infiniband/Kconfig"

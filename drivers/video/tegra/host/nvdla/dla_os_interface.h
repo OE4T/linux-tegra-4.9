@@ -1,7 +1,7 @@
 /*
  * NVDLA OS Interface
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -226,7 +226,7 @@ struct dla_action_task_status {
  * @subframe: NA
  * @status_task: status word as configured from an action list
  */
-struct dla_task_status {
+struct dla_task_status_notifier {
 	uint64_t timestamp;
 	uint32_t status_engine;
 	uint16_t subframe;
@@ -273,6 +273,28 @@ struct dla_region_gos {
 	uint16_t grid_size;
 	uint64_t address[MAX_NUM_GRIDS];
 } __attribute__ ((packed, aligned(8)));
+
+/**
+ * Debug Setting to be configured from host
+ */
+enum dla_debug_e {
+	DLA_SET_TRACE_ENABLE = 1,
+	DLA_SET_TRACE_EVENT_MASK = 2,
+};
+
+/**
+ * DLA_SET_TRACE_EVENTS
+ *
+ * Command to configure Trace Events from host
+ * @sub_cmd: subcommand within Set Debug Command.
+ * @data: to hold the data e.g trace_enable/event_mask.
+ * @reserved: to keep this reserved for future use.
+ */
+struct dla_debug_config {
+	uint32_t sub_cmd;
+	uint64_t data;
+	uint64_t reserved;
+} __attribute__ ((packed));
 
 #define MAX_MESSAGE_SIZE	512
 

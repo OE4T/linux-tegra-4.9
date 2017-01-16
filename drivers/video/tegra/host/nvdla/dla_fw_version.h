@@ -1,7 +1,7 @@
 /*
  * NVDLA OS Interface
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,7 +20,7 @@
 #define _DLA_FW_VERSION_H_
 
 #define FIRMWARE_VERSION_MAJOR		0x00
-#define FIRMWARE_VERSION_MINOR		0x04
+#define FIRMWARE_VERSION_MINOR		0x05
 #define FIRMWARE_VERSION_SUBMINOR	0x00
 
 static inline uint32_t dla_version(void)

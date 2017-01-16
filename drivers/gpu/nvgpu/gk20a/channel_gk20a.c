@@ -1081,7 +1081,7 @@ static void gk20a_channel_dump_ref_actions(struct channel_gk20a *ch)
 
 	spin_lock(&ch->ref_actions_lock);
 
-	dev_info(d, "ch %d: refs %d. Actions, most recent last:\n",
+	dev_info(dev, "ch %d: refs %d. Actions, most recent last:\n",
 			ch->hw_chid, atomic_read(&ch->ref_count));
 
 	/* start at the oldest possible entry. put is next insertion point */
@@ -1095,7 +1095,7 @@ static void gk20a_channel_dump_ref_actions(struct channel_gk20a *ch)
 		struct channel_gk20a_ref_action *act = &ch->ref_actions[get];
 
 		if (act->trace.nr_entries) {
-			dev_info(d, "%s ref %zu steps ago (age %d ms, diff %d ms)\n",
+			dev_info(dev, "%s ref %zu steps ago (age %d ms, diff %d ms)\n",
 				act->type == channel_gk20a_ref_action_get
 					? "GET" : "PUT",
 				GK20A_CHANNEL_REFCOUNT_TRACKING - 1 - i,

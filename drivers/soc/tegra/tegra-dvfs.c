@@ -971,8 +971,7 @@ static int tegra_dvfs_clk_event(struct notifier_block *this,
 	if (!__clk_is_enabled(cnd->clk) && !__clk_is_prepared(cnd->clk))
 		return NOTIFY_DONE;
 
-	if (!d->na_therm_update)
-		mutex_lock(&dvfs_lock);
+	mutex_lock(&dvfs_lock);
 
 	switch (event) {
 	case PRE_RATE_CHANGE:
@@ -997,8 +996,7 @@ static int tegra_dvfs_clk_event(struct notifier_block *this,
 		break;
 	}
 
-	if (!d->na_therm_update)
-		mutex_unlock(&dvfs_lock);
+	mutex_unlock(&dvfs_lock);
 
 	return NOTIFY_DONE;
 }
@@ -1686,15 +1684,12 @@ static int tegra_vts_set_cur_state(struct thermal_cooling_device *cdev,
 	if (first->therm_dvfs && first->na_dvfs && first->cur_rate) {
 		/* only GPU thermal DVFS can be noise aware and this
 		 * rail has only a single clock. Therefor we can just
-		 * update the NA DVFS config by doing a set rate and
-		 * leave the normal DVFS notifier to handle the voltage
-		 * update. We are still holding dvfs_lock however, so
-		 * indicate this by setting a flag in the GPU DVFS
-		 * struct.
+		 * update the NA DVFS config by doing calling
+		 * clk_set_rate_refresh and leave the normal DVFS notifier
+		 * to handle the voltage update.
 		 */
-		first->na_therm_update = true;
-		ret = clk_set_rate_nocache(first->clk, first->cur_rate);
-		first->na_therm_update = false;
+		mutex_unlock(&dvfs_lock);
+		return clk_set_rate_refresh(first->clk);
 	} else if ((!first->therm_dvfs || !first->na_dvfs) &&
 			first->dvfs_rail) {
 		list_for_each_entry(d, &rail->dvfs, reg_node) {

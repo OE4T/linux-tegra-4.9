@@ -45,7 +45,6 @@
 #include <linux/time.h>
 #include <linux/atomic.h>
 #include <linux/sched.h>
-#include <linux/pinctrl/consumer.h>
 
 #define USEC_PER_MIN	(60L * USEC_PER_SEC)
 
@@ -851,29 +850,6 @@ irqreturn_t fan_tach_isr(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static int set_pwm_pinctrl(struct device *dev)
-{
-	struct pinctrl *pin;
-	struct pinctrl_state *active;
-	int ret;
-
-	pin = devm_pinctrl_get(dev);
-	if (IS_ERR_OR_NULL(pin))
-		return 0;
-
-	active = pinctrl_lookup_state(pin, "pin_on_pwm_mode");
-	if (IS_ERR_OR_NULL(active)) {
-		return 0;
-	}
-
-	ret = pinctrl_select_state(pin, active);
-	if (ret < 0) {
-		dev_err(dev, "setting state failed\n");
-		return -EINVAL;
-	}
-	return 0;
-}
-
 static int pwm_fan_probe(struct platform_device *pdev)
 {
 	int i;
@@ -1056,13 +1032,6 @@ static int pwm_fan_probe(struct platform_device *pdev)
 		goto cdev_register_fail;
 	}
 
-	/* change pwm pin pinmux if needed */
-	if (set_pwm_pinctrl(&pdev->dev)) {
-		dev_err(&pdev->dev, "Failed to change pin function\n");
-		err = -EINVAL;
-		goto cdev_register_fail;
-	}
-
 	fan_data->pwm_dev = devm_pwm_get(&pdev->dev, NULL);
 	if (IS_ERR(fan_data->pwm_dev) &&
 		PTR_ERR(fan_data->pwm_dev) != -EPROBE_DEFER) {
@@ -1146,7 +1115,6 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	set_pwm_duty_cycle(fan_data->fan_pwm[0], fan_data);
 	fan_data->fan_cur_pwm = fan_data->fan_pwm[0];
 
-	/* Change to SFIO from GPIO after set duty */
 	gpio_free(fan_data->pwm_gpio);
 
 	platform_set_drvdata(pdev, fan_data);

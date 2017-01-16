@@ -213,11 +213,13 @@ F:	drivers/platform/tegra/wakeups-t18x.c
 
 RTCPU
 M:	Alexander Van Brunt <avanbrunt@nvidia.com>
+M:	Jihoon Bang <jbang@nvidia.com>
 M:	Pekka Pessi <ppessi@nvidia.com>
 S:	Supported
 F:	drivers/platform/tegra/rtcpu/
 F:	drivers/platform/tegra/tegra-camera-rtcpu.c
-F:	drivers/platform/tegra/tegra_ast.c
+F:	include/soc/tegra/camrtc-*.h
+F:	include/soc/tegra/tegra-ivc-rpc*.h
 F:	include/trace/events/freertos.h
 F:	include/trace/events/tegra_rtcpu.h
 
@@ -238,4 +240,3 @@ L:	sw-mobile-system@exchange.nvidia.com
 S:	Supported
 F:	drivers/platform/tegra/tegra186-system-config.c
 F:	drivers/watchdog/*
-

@@ -45,39 +45,42 @@
 #define NVDLA_QUEUE_ABORT_RETRY_PERIOD	500	/* 500 ms */
 
 /* task management API's */
-static int nvdla_assign_task_desc_mem(struct nvdla_task *task)
+int nvdla_get_task_mem(struct nvhost_queue *queue,
+			struct nvdla_task **ptask)
 {
 	int err;
-	struct nvhost_queue_task_mem_info task_desc_mem;
+	struct nvdla_task *task = NULL;
+	struct nvhost_queue_task_mem_info task_mem_info;
 
-	/* assign mem task descriptor from task pool memory */
-	err = nvhost_queue_alloc_task_memory(task->queue, &task_desc_mem);
-	if (err)
+	/* get mem task descriptor and task mem from task_mem_pool */
+	err = nvhost_queue_alloc_task_memory(queue, &task_mem_info);
+	task = task_mem_info.kmem_addr;
+	if ((err < 0) || !task)
 		goto fail_to_assign_pool;
 
 	/* check if IOVA is correctly aligned */
-	if (task_desc_mem.dma_addr & 0xff) {
+	if (task_mem_info.dma_addr & 0xff) {
 		err = -EFAULT;
 		goto fail_to_aligned_dma;
 	}
 
-	task->task_desc = task_desc_mem.va;
-	task->task_desc_pa = task_desc_mem.dma_addr;
-	task->pool_index = task_desc_mem.pool_index;
+	task->task_desc = task_mem_info.va;
+	task->task_desc_pa = task_mem_info.dma_addr;
+	task->pool_index = task_mem_info.pool_index;
+
+	*ptask = task;
 
 fail_to_aligned_dma:
 fail_to_assign_pool:
 	return err;
 }
 
-static void nvdla_release_task_desc_mem(struct nvdla_task *task)
+void nvdla_put_task_mem(struct nvdla_task *task)
 {
-	/* release allocated task desc mem */
+	/* release allocated task desc and task mem */
 	nvhost_queue_free_task_memory(task->queue, task->pool_index);
 
-	task->task_desc = NULL;
-	task->task_desc_pa = 0;
-	task->pool_index = 0;
+	task = NULL;
 }
 
 static void task_free(struct kref *ref)
@@ -86,30 +89,30 @@ static void task_free(struct kref *ref)
 	struct platform_device *pdev = task->queue->pool->pdev;
 
 	nvdla_dbg_info(pdev, "freeing task[%p]", task);
-	nvdla_release_task_desc_mem(task);
 
 	/* free operation descriptor handle */
 	if (task->memory_handles)
 		kfree(task->memory_handles);
 
-	/* finally free task */
-	kfree(task);
+	nvdla_put_task_mem(task);
 }
 
 void nvdla_task_put(struct nvdla_task *task)
 {
-	/* release queue refcnt */
-	nvhost_queue_put(task->queue);
+	struct nvhost_queue *queue = task->queue;
 
 	kref_put(&task->ref, task_free);
+
+	/* Queue should be last to update */
+	nvhost_queue_put(queue);
 }
 
 void nvdla_task_get(struct nvdla_task *task)
 {
-	kref_get(&task->ref);
-
 	/* update queue refcnt */
 	nvhost_queue_get(task->queue);
+
+	kref_get(&task->ref);
 }
 
 static void nvdla_task_free_locked(struct nvdla_task *task)
@@ -395,7 +398,7 @@ static size_t nvdla_get_task_desc_size(void)
 static void nvdla_get_task_desc_memsize(size_t *dma_size, size_t *kmem_size)
 {
 	*dma_size = nvdla_get_task_desc_size();
-	*kmem_size = 0;
+	*kmem_size = nvdla_get_max_task_size();
 }
 
 static inline u8 *add_opcode(u8 *mem, uint8_t op)
@@ -676,28 +679,17 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 int nvdla_fill_task_desc(struct nvdla_task *task)
 {
 	int err;
-	size_t task_desc_size;
 	struct dla_task_descriptor *task_desc;
 	struct nvhost_queue *queue = task->queue;
 	struct platform_device *pdev = queue->pool->pdev;
 
 	nvdla_dbg_fn(pdev, "");
 
-	/* assign mem task descriptor*/
-	err = nvdla_assign_task_desc_mem(task);
-	if (err) {
-		nvdla_dbg_err(pdev, "fail to get mem for task desc");
-		goto fail_assign_task_desc;
-	}
-
-	task_desc_size = nvdla_get_task_desc_size();
-	memset(task->task_desc, 0, task_desc_size);
-
 	/* update task desc fields */
 	task_desc = task->task_desc;
 	task_desc->version = DLA_DESCRIPTOR_VERSION;
 	task_desc->engine_id = DLA_ENGINE_ID;
-	task_desc->size = task_desc_size;
+	task_desc->size = nvdla_get_task_desc_size();
 
 	/* update current task sequeue, make sure wrap around condition */
 	queue->sequence = queue->sequence + 1;
@@ -741,9 +733,8 @@ int nvdla_fill_task_desc(struct nvdla_task *task)
 	nvdla_dbg_info(pdev, "task[%p] initialized", task);
 
 	return 0;
+
 fail_to_map_mem:
-	nvdla_release_task_desc_mem(task);
-fail_assign_task_desc:
 	return err;
 }
 

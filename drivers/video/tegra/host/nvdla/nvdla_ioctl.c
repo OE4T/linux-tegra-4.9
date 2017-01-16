@@ -346,7 +346,7 @@ fail:
 	return err;
 }
 
-static inline int nvdla_get_max_task_size(void)
+size_t nvdla_get_max_task_size(void)
 {
 	return (sizeof(struct nvdla_task) +
 		((MAX_NUM_NVDLA_PREFENCES + MAX_NUM_NVDLA_POSTFENCES) *
@@ -359,22 +359,13 @@ static inline int nvdla_get_max_task_size(void)
 static int nvdla_fill_task(struct nvhost_queue *queue,
 				struct nvhost_buffers *buffers,
 				struct nvdla_ioctl_submit_task *local_task,
-				struct nvdla_task **ptask)
+				struct nvdla_task *task)
 {
 	void *mem;
 	int err = 0;
-	struct nvdla_task *task = NULL;
 	struct platform_device *pdev = queue->pool->pdev;
 
 	nvdla_dbg_fn(pdev, "");
-
-	 /* allocate task resource */
-	task = kzalloc(nvdla_get_max_task_size(), GFP_KERNEL);
-	if (!task) {
-		err = -ENOMEM;
-		nvdla_dbg_err(pdev, "KMD task allocation failed");
-		goto fail_to_alloc_task;
-	}
 
 	 /* initialize task parameters */
 	kref_init(&task->ref);
@@ -417,17 +408,12 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 	task->num_addresses = local_task->num_addresses;
 	task->address_list = local_task->address_list;
 
-	*ptask = task;
-
 	nvdla_dbg_info(pdev, "local task %p param filled with args", task);
 
 	return 0;
 
 fail_to_get_actions:
 fail_to_get_val_args:
-	kfree(task);
-fail_to_alloc_task:
-	*ptask = NULL;
 	return err;
 }
 
@@ -480,8 +466,14 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 
 		nvdla_dbg_info(pdev, "submit [%d]th task", i + 1);
 
+		err = nvdla_get_task_mem(queue, &task);
+		if (err) {
+			nvdla_dbg_err(pdev, "failed to get task[%d] mem", i + 1);
+			goto fail_to_get_task_mem;
+		}
+
 		/* fill local task param from user args */
-		err = nvdla_fill_task(queue, buffers, local_tasks + i, &task);
+		err = nvdla_fill_task(queue, buffers, local_tasks + i, task);
 		if (err) {
 			nvdla_dbg_err(pdev, "failed to fill task[%d]", i + 1);
 			goto fail_to_fill_task;
@@ -519,6 +511,7 @@ fail_to_submit_task:
 fail_to_fill_task_desc:
 fail_to_fill_task:
 	/*TODO: traverse list in reverse and delete jobs */
+fail_to_get_task_mem:
 fail_to_copy_task:
 	kfree(local_tasks);
 	local_tasks = NULL;

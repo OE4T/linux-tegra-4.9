@@ -281,5 +281,9 @@ int nvdla_get_cmd_memory(struct platform_device *pdev,
 				struct nvdla_cmd_mem_info *cmd_mem_info);
 int nvdla_put_cmd_memory(struct platform_device *pdev, int index);
 int nvdla_set_queue_state(struct nvhost_queue *queue, int cmd);
+int nvdla_get_task_mem(struct nvhost_queue *queue,
+				struct nvdla_task **task);
+void nvdla_put_task_mem(struct nvdla_task *task);
+size_t nvdla_get_max_task_size(void);
 
 #endif /* End of __NVHOST_NVDLA_H__ */

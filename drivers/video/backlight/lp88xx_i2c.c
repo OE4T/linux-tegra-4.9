@@ -117,7 +117,7 @@ static int lp88xx_probe(struct i2c_client *cl, const struct i2c_device_id *id)
 		return -ENOMEM;
 
 	lpi2c = devm_kzalloc(dev, sizeof(*lpi2c), GFP_KERNEL);
-	if (!lp)
+	if (!lpi2c)
 		return -ENOMEM;
 
 	lp->dev = &cl->dev;

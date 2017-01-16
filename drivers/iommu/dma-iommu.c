@@ -488,7 +488,7 @@ dma_addr_t iommu_dma_map_at(struct device *dev, dma_addr_t dma_handle,
 		return dma_handle + iova_off;
 	}
 
-	iova = __alloc_iova(domain, len, limit_addr, true);
+	iova = __alloc_iova(domain, len, limit_addr, false);
 
 	if (!iova)
 		return DMA_ERROR_CODE;

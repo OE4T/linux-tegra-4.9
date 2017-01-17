@@ -378,6 +378,24 @@ static void do_debugfs_unmount(struct work_struct *work)
 }
 static DECLARE_WORK(debugfs_unmount_work, do_debugfs_unmount);
 
+static int bpmp_mrq_is_supported(int mrq)
+{
+	struct mrq_query_abi_request rq;
+	struct mrq_query_abi_response re;
+	int r;
+
+	rq.mrq = mrq;
+
+	r = tegra_bpmp_send_receive(MRQ_QUERY_ABI, &rq, sizeof(rq),
+			&re, sizeof(re));
+
+	/* something went wrong; assume not supported */
+	if (WARN_ON(r))
+		return 0;
+
+	return re.status ? 0 : 1;
+}
+
 static int bpmp_fwdebug_init(struct dentry *root)
 {
 	dma_addr_t phys;
@@ -388,6 +406,9 @@ static int bpmp_fwdebug_init(struct dentry *root)
 
 	if (WARN_ON(!root))
 		return -EINVAL;
+
+	if (!bpmp_mrq_is_supported(MRQ_DEBUGFS))
+		return 0;
 
 	mutex_lock(&lock);
 
@@ -858,11 +879,12 @@ static void *bpmp_trace_start(struct seq_file *file, loff_t *pos)
 	int ret;
 
 	first = (*pos == 0);
-	if (first) {
+
+	if (first && bpmp_mrq_is_supported(MRQ_TRACE_ITER)) {
 		cmd = 0;
 		ret = tegra_bpmp_send_receive(MRQ_TRACE_ITER,
 				&cmd, sizeof(cmd), NULL, 0);
-		if (WARN_ON(ret && ret != -EINVAL))
+		if (WARN_ON(ret))
 			return NULL;
 	}
 
@@ -909,6 +931,9 @@ static ssize_t bpmp_trace_store(struct file *file, const char __user *user_buf,
 {
 	uint32_t cmd = 1;
 	int ret;
+
+	if (!bpmp_mrq_is_supported(MRQ_TRACE_ITER))
+		return count;
 
 	ret = tegra_bpmp_send_receive(MRQ_TRACE_ITER,
 			&cmd, sizeof(cmd), NULL, 0);

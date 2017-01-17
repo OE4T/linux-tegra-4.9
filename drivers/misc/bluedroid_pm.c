@@ -1,7 +1,7 @@
 /*
  * drivers/misc/bluedroid_pm.c
  *
- # Copyright (c) 2013-2016, NVIDIA CORPORATION. All rights reserved.
+ # Copyright (c) 2013-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,34 +12,20 @@
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include <linux/err.h>
-#include <linux/types.h>
 #include <linux/uaccess.h>
-#include <linux/fs.h>
-#include <linux/gpio.h>
-#include <linux/init.h>
-#include <linux/kernel.h>
-#include <linux/miscdevice.h>
 #include <linux/module.h>
 #include <linux/proc_fs.h>
 #include <linux/regulator/consumer.h>
 #include <linux/rfkill.h>
 #include <linux/platform_device.h>
-#include <linux/clk.h>
 #include <linux/interrupt.h>
 #include <linux/wakelock.h>
 #include <linux/slab.h>
 #include <linux/pm_qos.h>
-#include <linux/bluedroid_pm.h>
 #include <linux/delay.h>
 #include <linux/timer.h>
-#include <linux/of.h>
 #include <linux/of_gpio.h>
 
 #define PROC_DIR	"bluetooth/sleep"
@@ -64,13 +50,12 @@
 #define BT_WAKE	0x01
 
 struct bluedroid_pm_data {
-	struct platform_device *pdev;
 	int gpio_reset;
 	int gpio_shutdown;
 	int host_wake;
 	int ext_wake;
 	int is_blocked;
-	int resume_min_frequency;
+	unsigned int resume_min_frequency;
 	unsigned long flags;
 	int host_wake_irq;
 	struct regulator *vdd_3v3;
@@ -81,6 +66,7 @@ struct bluedroid_pm_data {
 	bool resumed;
 	struct work_struct work;
 	spinlock_t lock;
+	struct device *dev;
 };
 
 struct proc_dir_entry *proc_bt_dir, *bluetooth_sleep_dir;
@@ -113,7 +99,7 @@ static void bluedroid_work(struct work_struct *data)
 {
 	struct bluedroid_pm_data *bluedroid_pm =
 			container_of(data, struct bluedroid_pm_data, work);
-	struct device *dev = &bluedroid_pm->pdev->dev;
+	struct device *dev = bluedroid_pm->dev;
 	char *resumed[2] = { "BT_STATE=RESUMED", NULL };
 	char **uevent_envp = NULL;
 	unsigned long flags;
@@ -189,7 +175,6 @@ static int bluedroid_pm_rfkill_set_power(void *data, bool blocked)
 {
 	struct bluedroid_pm_data *bluedroid_pm = data;
 	int ret = 0;
-
 	mdelay(100);
 	if (blocked) {
 		if (gpio_is_valid(bluedroid_pm->gpio_shutdown))
@@ -248,9 +233,7 @@ EXPORT_SYMBOL(bluedroid_pm_set_ext_state);
 static int bluedroid_pm_probe(struct platform_device *pdev)
 {
 	static struct bluedroid_pm_data *bluedroid_pm;
-	struct bluedroid_pm_platform_data *pdata = pdev->dev.platform_data;
 	struct rfkill *rfkill;
-	struct resource *res;
 	int ret;
 	bool enable = false;  /* off */
 	struct device_node *node;
@@ -270,54 +253,20 @@ static int bluedroid_pm_probe(struct platform_device *pdev)
 		bluedroid_pm->vdd_1v8 = NULL;
 	}
 
-	if (pdev->dev.of_node) {
-		node = pdev->dev.of_node;
+	node = pdev->dev.of_node;
 
-		bluedroid_pm->gpio_reset =
-				of_get_named_gpio(node, "bluedroid_pm,reset-gpio", 0);
-		bluedroid_pm->gpio_shutdown =
-				of_get_named_gpio(node, "bluedroid_pm,shutdown-gpio", 0);
-		bluedroid_pm->host_wake =
-				of_get_named_gpio(node, "bluedroid_pm,host-wake-gpio", 0);
-		bluedroid_pm->host_wake_irq = platform_get_irq(pdev, 0);
-		bluedroid_pm->ext_wake =
-				of_get_named_gpio(node, "bluedroid_pm,ext-wake-gpio", 0);
-	} else {
-		res = platform_get_resource_byname(pdev, IORESOURCE_IO,
-							"reset_gpio");
-		if (res)
-			bluedroid_pm->gpio_reset = res->start;
-		else
-			bluedroid_pm->gpio_reset = -1;
-
-		res = platform_get_resource_byname(pdev, IORESOURCE_IO,
-							"shutdown_gpio");
-		if (res)
-			bluedroid_pm->gpio_shutdown = res->start;
-		else
-			bluedroid_pm->gpio_shutdown = -1;
-
-		res = platform_get_resource_byname(pdev, IORESOURCE_IO,
-						"gpio_host_wake");
-		if (res)
-			bluedroid_pm->host_wake = res->start;
-		else
-			bluedroid_pm->host_wake = -1;
-
-		res = platform_get_resource_byname(pdev, IORESOURCE_IRQ,
-							"host_wake");
-		if (res)
-			bluedroid_pm->host_wake_irq = res->start;
-		else
-			bluedroid_pm->host_wake_irq = -1;
-
-		res = platform_get_resource_byname(pdev, IORESOURCE_IO,
-						"gpio_ext_wake");
-		if (res)
-			bluedroid_pm->ext_wake = res->start;
-		else
-			bluedroid_pm->ext_wake = -1;
-	}
+	bluedroid_pm->gpio_reset =
+		of_get_named_gpio(node, "bluedroid_pm,reset-gpio", 0);
+	bluedroid_pm->gpio_shutdown =
+		of_get_named_gpio(node, "bluedroid_pm,shutdown-gpio", 0);
+	bluedroid_pm->host_wake =
+		of_get_named_gpio(node, "bluedroid_pm,host-wake-gpio", 0);
+	bluedroid_pm->host_wake_irq = platform_get_irq(pdev, 0);
+	bluedroid_pm->ext_wake =
+		of_get_named_gpio(node, "bluedroid_pm,ext-wake-gpio", 0);
+	/* Update resume_min_frequency, if pdata is passed from board files */
+	of_property_read_u32(node, "resume_min_frequency",
+			     &bluedroid_pm->resume_min_frequency);
 
 	if (gpio_is_valid(bluedroid_pm->gpio_reset)) {
 		ret = gpio_request(bluedroid_pm->gpio_reset, "reset_gpio");
@@ -411,15 +360,11 @@ static int bluedroid_pm_probe(struct platform_device *pdev)
 	} else
 		BDP_DBG("gpio_ext_wake not registered\n");
 
-	/* Update resume_min_frequency, if pdata is passed from board files */
-	if (pdata)
-		bluedroid_pm->resume_min_frequency =
-						pdata->resume_min_frequency;
 
 	INIT_WORK(&bluedroid_pm->work, bluedroid_work);
 	spin_lock_init(&bluedroid_pm->lock);
 
-	bluedroid_pm->pdev = pdev;
+	bluedroid_pm->dev = &pdev->dev;
 	platform_set_drvdata(pdev, bluedroid_pm);
 	BDP_DBG("driver successfully registered");
 

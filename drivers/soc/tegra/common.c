@@ -191,20 +191,6 @@ static int __init tegra_bootloader_lut_arg(char *options)
 }
 early_param("lut_mem", tegra_bootloader_lut_arg);
 
-void tegra_get_fb_resource(struct resource *fb_res)
-{
-	fb_res->start = (resource_size_t) tegra_bootloader_fb_start;
-	fb_res->end = fb_res->start +
-		(resource_size_t) tegra_bootloader_fb_size - 1;
-}
-
-void tegra_get_fb2_resource(struct resource *fb2_res)
-{
-	fb2_res->start = (resource_size_t) tegra_bootloader_fb2_start;
-	fb2_res->end = fb2_res->start +
-		(resource_size_t) tegra_bootloader_fb2_size - 1;
-}
-
 /* returns true if bl initialized the display */
 bool tegra_is_bl_display_initialized(int instance)
 {
@@ -216,6 +202,8 @@ bool tegra_is_bl_display_initialized(int instance)
 		return tegra_bootloader_fb_start && tegra_bootloader_fb_size;
 	case 1:
 		return tegra_bootloader_fb2_start && tegra_bootloader_fb2_size;
+	case 2:
+		return tegra_bootloader_fb3_start && tegra_bootloader_fb3_size;
 	default:
 		pr_err("Could not find DC instance %d\n", instance);
 		return false;
@@ -240,6 +228,12 @@ void tegra_get_fb_resource(struct resource *fb_res, int instance)
 				(resource_size_t) tegra_bootloader_fb2_start;
 			fb_res->end = fb_res->start +
 				(resource_size_t) tegra_bootloader_fb2_size - 1;
+			break;
+		case 2:
+			fb_res->start =
+				(resource_size_t) tegra_bootloader_fb3_start;
+			fb_res->end = fb_res->start +
+				(resource_size_t) tegra_bootloader_fb3_size - 1;
 			break;
 		default:
 			pr_err("Could not find DC instance %d\n", instance);

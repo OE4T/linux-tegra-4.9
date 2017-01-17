@@ -300,10 +300,10 @@ static inline int tegra_pmc_padctrl_init(struct device *dev,
 }
 #endif
 
-#if defined(CONFIG_ARCH_TEGRA)
+#if defined(CONFIG_PADCTRL_GENERIC_TEGRA_IO_PAD)
 int tegra_io_pads_padctrl_init(struct device *dev);
 #else
-int tegra_io_pads_padctrl_init(struct device *dev)
+static inline int tegra_io_pads_padctrl_init(struct device *dev)
 {
 	return 0;
 }

@@ -37,6 +37,7 @@
 #include <linux/tegra-cpu.h>
 #include <linux/version.h>
 #include <linux/pm_qos.h>
+#include <linux/tegra-cpufreq.h>
 
 #define MAX_NDIV		512 /* No of NDIV */
 #define MAX_VINDEX		80 /* No of voltage index */
@@ -137,6 +138,7 @@ static DEFINE_PER_CPU(struct mutex, pcpu_mlock);
 static DEFINE_PER_CPU(spinlock_t, pcpu_slock);
 
 static bool debug_fs_only;
+static bool tegra_cpufreq_hv_mode;
 
 struct tegra_cpu_ctr {
 	uint32_t cpu;
@@ -1376,11 +1378,19 @@ err_out:
 
 static int __init tegra_cpufreq_init(void)
 {
-	struct device_node *dn;
+	struct device_node *dn = NULL;
 	uint32_t cpu;
 	int ret = 0;
 
-	dn = of_find_compatible_node(NULL, NULL, "nvidia,tegra18x-cpufreq");
+	dn = of_find_compatible_node(NULL, NULL, "nvidia,tegra18x-cpufreq-hv");
+	if (dn) {
+		tegra_cpufreq_hv_mode = true;
+		pr_info("tegra18x-cpufreq: Using hv path\n");
+	} else {
+		tegra_cpufreq_hv_mode = false;
+		dn = of_find_compatible_node(NULL, NULL,
+						"nvidia,tegra18x-cpufreq");
+	}
 	if (dn == NULL) {
 		pr_err("tegra18x-cpufreq: dt node not found\n");
 		ret = -ENODEV;
@@ -1407,20 +1417,26 @@ static int __init tegra_cpufreq_init(void)
 		spin_lock_init(&per_cpu(pcpu_slock, cpu));
 	}
 
+	if (tegra_cpufreq_hv_mode) {
+		ret = parse_hv_dt_data(dn);
+		if (ret)
+			goto err_free_res;
+	}
+
 #ifdef CONFIG_DEBUG_FS
 	tegra_cpufreq_debug_init();
 #endif
 
 	if (of_property_read_bool(dn, "nvidia,debugfs-only")) {
 		debug_fs_only = true;
-		goto err_out;
+		goto err_free_res;
 	} else
 		debug_fs_only = false;
 
 	ret = register_with_emc_bwmgr();
 	if (ret) {
 		pr_err("tegra18x-cpufreq: unable to register with emc bw manager\n");
-		goto err_out;
+		goto err_free_res;
 	}
 
 	ret = get_lut_from_bpmp();

@@ -55,6 +55,7 @@ struct tachometer_dev {
 	unsigned int rps; /* Rotation per second */
 	unsigned int pulse_per_rev; /* Pulse Per Revolution */
 	void *drv_data;
+	bool enable_clk_gate;
 };
 
 struct tachometer_dev *devm_tachometer_register(struct device *dev,

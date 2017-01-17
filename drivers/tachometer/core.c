@@ -117,6 +117,8 @@ static struct tachometer_dev *of_tach_get(struct device *dev)
 	of_property_read_u32(np, "min-rps", &tach->min_rps);
 	of_property_read_u32(np, "max-rps", &tach->max_rps);
 	of_property_read_u32(np, "pulse-per-rev", &tach->pulse_per_rev);
+	tach->enable_clk_gate =
+		of_property_read_bool(np, "nvidia,enable-clock-gate");
 
 	return tach;
 }

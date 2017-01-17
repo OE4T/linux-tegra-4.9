@@ -79,10 +79,12 @@ static int tegra_tachometer_set_winlen(struct tachometer_dev *tach, u8 win_len)
 
 	tegra_tach = (struct tegra_tachometer_device *)tachometer_get_drvdata(tach);
 
-	ret = clk_prepare_enable(tegra_tach->clk);
-	if (ret) {
-		pr_err("%s: clock enable error: %d\n", __func__, ret);
-		return ret;
+	if (tach->enable_clk_gate) {
+		ret = clk_prepare_enable(tegra_tach->clk);
+		if (ret) {
+			pr_err("%s: clock enable error: %d\n", __func__, ret);
+			return ret;
+		}
 	}
 
 	wlen = ffs(win_len) - 1;
@@ -91,7 +93,9 @@ static int tegra_tachometer_set_winlen(struct tachometer_dev *tach, u8 win_len)
 	tach0 |= (wlen << 1);
 	tachometer_writeb(tegra_tach, tach0, TACH_FAN_TACH0_OVERFLOW);
 	tach->win_len = win_len;
-	clk_disable_unprepare(tegra_tach->clk);
+
+	if (tach->enable_clk_gate)
+		clk_disable_unprepare(tegra_tach->clk);
 
 	return 0;
 }
@@ -105,14 +109,20 @@ static unsigned long tegra_tachometer_read_rpm(struct tachometer_dev *tach)
 
 	tegra_tach = (struct tegra_tachometer_device *)tachometer_get_drvdata(tach);
 
-	ret = clk_prepare_enable(tegra_tach->clk);
-	if (ret) {
-		pr_err("%s: clock enable error: %d\n", __func__, ret);
-		return ret;
+	if (tach->enable_clk_gate) {
+		ret = clk_prepare_enable(tegra_tach->clk);
+		if (ret) {
+			pr_err("%s: clock enable error: %d\n", __func__, ret);
+			return ret;
+		}
 	}
+
 	mdelay(100);
 	tach0 = tachometer_readl(tegra_tach, TACH_FAN_TACH0);
-	clk_disable_unprepare(tegra_tach->clk);
+
+	if (tach->enable_clk_gate)
+		clk_disable_unprepare(tegra_tach->clk);
+
 	if (tach0 & TACH_FAN_TACH0_OVERFLOW_MASK) {
 		/* Fan is stalled, clear overflow state */
 		pr_info("Tachometer: Overflow is detected\n");
@@ -241,7 +251,8 @@ static int tegra_tachometer_probe(struct platform_device *pdev)
 	pr_info("Tachometer driver initialized with pulse_per_rev: %d and win_len: %d\n",
 			tach_dev->pulse_per_rev, tach_dev->win_len);
 
-	clk_disable_unprepare(tegra_tach->clk);
+	if (tach_dev->enable_clk_gate)
+		clk_disable_unprepare(tegra_tach->clk);
 
 	return 0;
 }

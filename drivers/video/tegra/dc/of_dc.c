@@ -2584,6 +2584,15 @@ struct tegra_dc_platform_data
 						pdata->default_out->dp_out->
 						edp2lvds_bridge_enable);
 			}
+			if (!of_property_read_u32(np_target_disp,
+					"nvidia,edp-lvds-i2c-bus-no", &temp)) {
+				pdata->default_out->dp_out->
+					edp2lvds_i2c_bus_no = temp;
+
+				OF_DC_LOG("edp2lvds_i2c_bus_no %d\n",
+						pdata->default_out->dp_out->
+						edp2lvds_i2c_bus_no);
+			}
 			/* enable/disable ops for DP monitors */
 			if (!pdata->default_out->enable &&
 				!pdata->default_out->disable) {

@@ -59,6 +59,40 @@ static u32 xve_xve_readl_gp106(struct gk20a *g, u32 reg)
 }
 
 /**
+ * Resets the GPU (except the XVE/XP).
+ */
+static void xve_reset_gpu_gp106(struct gk20a *g)
+{
+	u32 reset;
+
+	/*
+	 * This resets the GPU except for the XVE/XP (since then we would lose
+	 * the dGPU from the bus). t18x has a HW limitation where once that
+	 * happens the GPU is gone until the entire system is reset.
+	 *
+	 * We have to use the auto-deassert register since we won't be able to
+	 * access the GPU after the GPU goes into reset. This appears like the
+	 * GPU has dropped from the bus and causes nvgpu to reset the entire
+	 * system. Whoops!
+	 */
+	reset = xve_reset_reset_m() |
+		xve_reset_gpu_on_sw_reset_m() |
+		xve_reset_counter_en_m() |
+		xve_reset_counter_val_f(0x7ff) |
+		xve_reset_clock_on_sw_reset_m() |
+		xve_reset_clock_counter_en_m() |
+		xve_reset_clock_counter_val_f(0x7ff);
+
+	g->ops.xve.xve_writel(g, xve_reset_r(), reset | xve_reset_reset_m());
+
+	/*
+	 * Don't access GPU until _after_ it's back out of reset!
+	 */
+	msleep(100);
+	g->ops.xve.xve_writel(g, xve_reset_r(), 0);
+}
+
+/**
  * Places one of:
  *
  *   %GPU_XVE_SPEED_2P5
@@ -632,6 +666,7 @@ int gp106_init_xve_ops(struct gpu_ops *gops)
 	gops->xve.xve_readl        = xve_xve_readl_gp106;
 	gops->xve.xve_writel       = xve_xve_writel_gp106;
 	gops->xve.disable_aspm     = xve_disable_aspm_gp106;
+	gops->xve.reset_gpu        = xve_reset_gpu_gp106;
 
 	return 0;
 }

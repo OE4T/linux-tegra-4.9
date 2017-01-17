@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -145,5 +145,53 @@ static inline u32 xve_priv_xv_cya_l1_enable_m(void)
 static inline u32 xve_priv_xv_cya_l1_enable_v(u32 r)
 {
 	return (r >> 8) & 0x1;
+}
+static inline u32 xve_reset_r(void)
+{
+	return 0x00000718;
+}
+static inline u32 xve_reset_reset_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 xve_reset_gpu_on_sw_reset_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 xve_reset_counter_en_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 xve_reset_counter_val_f(u32 v)
+{
+	return (v & 0x7ff) << 4;
+}
+static inline u32 xve_reset_counter_val_m(void)
+{
+	return 0x7ff << 4;
+}
+static inline u32 xve_reset_counter_val_v(u32 r)
+{
+	return (r >> 4) & 0x7ff;
+}
+static inline u32 xve_reset_clock_on_sw_reset_m(void)
+{
+	return 0x1 << 15;
+}
+static inline u32 xve_reset_clock_counter_en_m(void)
+{
+	return 0x1 << 16;
+}
+static inline u32 xve_reset_clock_counter_val_f(u32 v)
+{
+	return (v & 0x7ff) << 17;
+}
+static inline u32 xve_reset_clock_counter_val_m(void)
+{
+	return 0x7ff << 17;
+}
+static inline u32 xve_reset_clock_counter_val_v(u32 r)
+{
+	return (r >> 17) & 0x7ff;
 }
 #endif

@@ -1,7 +1,7 @@
 /*
  * Tegra GK20A GPU Debugger/Profiler Driver
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -117,6 +117,7 @@ static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 	init_waitqueue_head(&dbg_session->dbg_events.wait_queue);
 	INIT_LIST_HEAD(&dbg_session->ch_list);
 	mutex_init(&dbg_session->ch_list_lock);
+	mutex_init(&dbg_session->ioctl_lock);
 	dbg_session->dbg_events.events_enabled = false;
 	dbg_session->dbg_events.num_pending_events = 0;
 
@@ -899,6 +900,9 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 		gk20a_idle(g->dev);
 	}
 
+	/* protect from threaded user space calls */
+	mutex_lock(&dbg_s->ioctl_lock);
+
 	switch (cmd) {
 	case NVGPU_DBG_GPU_IOCTL_BIND_CHANNEL:
 		err = dbg_bind_channel_gk20a(dbg_s,
@@ -1002,6 +1006,8 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 		err = -ENOTTY;
 		break;
 	}
+
+	mutex_unlock(&dbg_s->ioctl_lock);
 
 	gk20a_dbg(gpu_dbg_gpu_dbg, "ret=%d", err);
 

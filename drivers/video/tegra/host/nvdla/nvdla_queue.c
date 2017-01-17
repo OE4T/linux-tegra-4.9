@@ -744,6 +744,7 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 	struct nvdla_task *task = (struct nvdla_task *)in_task;
 	struct nvdla_task *last_task = NULL;
 	struct platform_device *pdev = queue->pool->pdev;
+	struct nvdla_cmd_data cmd_data;
 	uint32_t method_data;
 	uint32_t method_id;
 	int err = 0;
@@ -794,8 +795,13 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 	task->postfences[0].syncpoint_index = queue->syncpt_id;
 	task->postfences[0].syncpoint_value = task->fence;
 
+	/* prepare command */
+	cmd_data.method_id = method_id;
+	cmd_data.method_data = method_data;
+	cmd_data.wait = true;
+
 	/* submit task to engine */
-	err = nvdla_send_cmd(pdev, method_id, method_data, true);
+	err = nvdla_send_cmd(pdev, &cmd_data);
 	if (err)
 		nvdla_task_syncpt_reset(task->sp, queue->syncpt_id,
 				task->fence);
@@ -809,6 +815,7 @@ fail_to_register:
 int nvdla_set_queue_state(struct nvhost_queue *queue, int cmd)
 {
 	struct platform_device *pdev = queue->pool->pdev;
+	struct nvdla_cmd_data cmd_data;
 	int err;
 
 	nvdla_dbg_fn(pdev, "");
@@ -826,7 +833,12 @@ int nvdla_set_queue_state(struct nvhost_queue *queue, int cmd)
 		goto fail_to_poweron;
 	}
 
-	err = nvdla_send_cmd(pdev, cmd, queue->id, true);
+	/* prepare command */
+	cmd_data.method_id = cmd;
+	cmd_data.method_data = queue->id;
+	cmd_data.wait = true;
+
+	err = nvdla_send_cmd(pdev, &cmd_data);
 	if (err) {
 		nvdla_dbg_err(pdev, "failed to suspend queue %d", err);
 		goto fail_to_suspend;
@@ -842,6 +854,7 @@ static int nvdla_queue_abort(struct nvhost_queue *queue)
 {
 	int err;
 	struct nvdla_task *t;
+	struct nvdla_cmd_data cmd_data;
 	struct platform_device *pdev = queue->pool->pdev;
 	int retry = NVDLA_QUEUE_ABORT_TIMEOUT / NVDLA_QUEUE_ABORT_RETRY_PERIOD;
 
@@ -857,10 +870,14 @@ static int nvdla_queue_abort(struct nvhost_queue *queue)
 		return err;
 	}
 
+	/* prepare command */
+	cmd_data.method_id = DLA_CMD_QUEUE_FLUSH;
+	cmd_data.method_data = queue->id;
+	cmd_data.wait = true;
+
 	/* flush engine side queues */
 	do {
-		err = nvdla_send_cmd(pdev, DLA_CMD_QUEUE_FLUSH, queue->id,
-					true);
+		err = nvdla_send_cmd(pdev, &cmd_data);
 		if (err == DLA_ERR_PROCESSOR_BUSY)
 			mdelay(NVDLA_QUEUE_ABORT_RETRY_PERIOD);
 		else

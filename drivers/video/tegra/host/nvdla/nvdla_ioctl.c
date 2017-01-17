@@ -38,8 +38,6 @@
 #include "dla_os_interface.h"
 
 #define DEBUG_BUFFER_SIZE 0x100
-#define FLCN_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
-#define ALIGNED_DMA(x) ((x >> 8) & 0xffffffff)
 
 /**
  * struct nvdla_private per unique FD private data
@@ -182,6 +180,7 @@ static int nvdla_ping(struct platform_device *pdev,
 			   struct nvdla_ping_args *args)
 {
 	struct nvdla_cmd_mem_info ping_cmd_mem_info;
+	struct nvdla_cmd_data cmd_data;
 	u32 *ping_va;
 	int err = 0;
 
@@ -212,9 +211,13 @@ static int nvdla_ping(struct platform_device *pdev,
 
 	nvdla_dbg_info(pdev, "ping challenge [%d]", *ping_va);
 
+	/* prepare command data */
+	cmd_data.method_id = DLA_CMD_PING;
+	cmd_data.method_data = ALIGNED_DMA(ping_cmd_mem_info.pa);
+	cmd_data.wait = true;
+
 	/* send ping cmd */
-	err = nvdla_send_cmd(pdev, DLA_CMD_PING,
-				ALIGNED_DMA(ping_cmd_mem_info.pa), true);
+	err = nvdla_send_cmd(pdev, &cmd_data);
 	if (err) {
 		nvdla_dbg_err(pdev, "failed to send ping command");
 		goto fail_cmd;

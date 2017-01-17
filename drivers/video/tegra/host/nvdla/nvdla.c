@@ -48,12 +48,10 @@
  */
 #define DEBUG_BUFFER_SIZE 0x100
 
-/**
- * default falcon idle timeout
+/*
+ * CMD submission timeout in msec
  */
-#define FLCN_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
-
-#define CMD_TIMEOUT	500 * USEC_PER_SEC
+#define CMD_TIMEOUT_MSEC	(1000)
 
 static DEFINE_DMA_ATTRS(attrs);
 
@@ -177,12 +175,15 @@ int nvdla_put_cmd_memory(struct platform_device *pdev, int index)
 }
 
 int nvdla_send_cmd(struct platform_device *pdev,
-		   uint32_t method_id, uint32_t method_data, bool wait)
+			struct nvdla_cmd_data *cmd_data)
 {
 	unsigned long timeout;
 	int ret = 0;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvdla_device *nvdla_dev = pdata->private_data;
+	uint32_t method_id = cmd_data->method_id;
+	uint32_t method_data = cmd_data->method_data;
+	bool wait = cmd_data->wait;
 
 	mutex_lock(&nvdla_dev->cmd_lock);
 
@@ -208,7 +209,8 @@ int nvdla_send_cmd(struct platform_device *pdev,
 		return 0;
 	}
 
-	timeout = usecs_to_jiffies(CMD_TIMEOUT);
+	timeout = msecs_to_jiffies(CMD_TIMEOUT_MSEC);
+
 	if (!wait_for_completion_timeout(&nvdla_dev->cmd_completion, timeout)) {
 		nvdla_dev->waiting = 0;
 		mutex_unlock(&nvdla_dev->cmd_lock);
@@ -234,6 +236,7 @@ static int nvdla_alloc_trace_region(struct platform_device *pdev)
 	int err = 0;
 	struct flcn *m;
 	struct nvdla_cmd_mem_info trace_cmd_mem_info;
+	struct nvdla_cmd_data cmd_data;
 	struct dla_region_printf *trace_region = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 
@@ -278,8 +281,11 @@ static int nvdla_alloc_trace_region(struct platform_device *pdev)
 	trace_region->address = m->trace_dump_pa;
 	trace_region->size = TRACE_BUFFER_SIZE;
 
-	err = nvdla_send_cmd(pdev, DLA_CMD_SET_REGIONS,
-	       ALIGNED_DMA(trace_cmd_mem_info.pa), true);
+	cmd_data.method_id = DLA_CMD_SET_REGIONS;
+	cmd_data.method_data = ALIGNED_DMA(trace_cmd_mem_info.pa);
+	cmd_data.wait = true;
+
+	err = nvdla_send_cmd(pdev, &cmd_data);
 
 	/* release memory allocated for trace command */
 	nvdla_put_cmd_memory(pdev, trace_cmd_mem_info.index);
@@ -311,6 +317,7 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 	struct flcn *m;
 	struct dla_region_printf *region;
 	struct nvdla_cmd_mem_info debug_cmd_mem_info;
+	struct nvdla_cmd_data cmd_data;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 
 	if (!pdata->flcn_isr)
@@ -349,10 +356,13 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 	region->address = ALIGNED_DMA(m->debug_dump_pa);
 	region->size = DEBUG_BUFFER_SIZE;
 
-	/* pass dump region to falcon */
-	err = nvdla_send_cmd(pdev, DLA_CMD_SET_REGIONS,
-			       ALIGNED_DMA(debug_cmd_mem_info.pa), true);
+	/* prepare command data */
+	cmd_data.method_id = DLA_CMD_SET_REGIONS;
+	cmd_data.method_data = ALIGNED_DMA(debug_cmd_mem_info.pa);
+	cmd_data.wait = true;
 
+	/* pass dump region to falcon */
+	err = nvdla_send_cmd(pdev, &cmd_data);
 
 	/* release memory allocated for debug print command */
 	nvdla_put_cmd_memory(pdev, debug_cmd_mem_info.index);

@@ -107,6 +107,19 @@ struct nvdla_cmd_mem {
 };
 
 /**
+ * data structure to keep command data
+ *
+ * @method_id		method id with command and other info
+ * @method_data		method data for command
+ * @wait		If set to true then wait for command completion
+ */
+struct nvdla_cmd_data {
+	uint32_t method_id;
+	uint32_t method_data;
+	bool wait;
+};
+
+/**
  * data structure to keep per DLA engine device data
  *
  * @pdev		pointer to platform device
@@ -216,10 +229,7 @@ int nvhost_nvdla_flcn_isr(struct platform_device *pdev);
  * nvdla_send_cmd() send command to DLA
  *
  * @pdev		Pointer for platform device
- * @method_id		method id with command and other info
- * @method_data		method data for command
- * @wait		If set to true then this function waits for command
- *			complete notification from firmware
+ * @cmd_data		Pointer command data
  *
  * Return		0 on success otherwise negative
  *
@@ -227,7 +237,7 @@ int nvhost_nvdla_flcn_isr(struct platform_device *pdev);
  * command. This uses THI registers to send method id and method data
  */
 int nvdla_send_cmd(struct platform_device *pdev,
-			uint32_t method_id, uint32_t method_data, bool wait);
+			struct nvdla_cmd_data *cmd_data);
 
 /**
  * nvdla_task_put()	decrease task reference count

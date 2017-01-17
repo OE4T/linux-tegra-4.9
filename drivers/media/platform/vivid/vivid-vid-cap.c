@@ -133,7 +133,7 @@ static int vid_cap_queue_setup(struct vb2_queue *vq, const void *parg,
 	if (fmt) {
 		const struct v4l2_pix_format_mplane *mp;
 		struct v4l2_format mp_fmt;
-		const struct vivid_fmt *vfmt;
+		struct vivid_fmt *vfmt;
 
 		if (!V4L2_TYPE_IS_MULTIPLANAR(fmt->type)) {
 			fmt_sp2mp(fmt, &mp_fmt);
@@ -147,6 +147,7 @@ static int vid_cap_queue_setup(struct vb2_queue *vq, const void *parg,
 		if (mp->num_planes != buffers)
 			return -EINVAL;
 		vfmt = vivid_get_format(dev, mp->pixelformat);
+		vfmt->data_offset[0] = mp->width * dev->embedded_data_height;
 		for (p = 0; p < buffers; p++) {
 			sizes[p] = mp->plane_fmt[p].sizeimage;
 			if (sizes[p] < tpg_g_line_width(&dev->tpg, p) * h +
@@ -766,6 +767,7 @@ int vivid_s_fmt_vid_cap(struct file *file, void *priv,
 	tpg_s_crop_compose(&dev->tpg, &dev->crop_cap, &dev->compose_cap);
 	if (vivid_is_sdtv_cap(dev))
 		dev->tv_field_cap = mp->field;
+        dev->fmt_cap->data_offset[0] = mp->width * dev->embedded_data_height;
 	tpg_update_mv_step(&dev->tpg);
 	return 0;
 }

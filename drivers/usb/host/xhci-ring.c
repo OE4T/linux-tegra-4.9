@@ -1367,6 +1367,7 @@ static void handle_cmd_completion(struct xhci_hcd *xhci,
 	cmd = list_entry(xhci->cmd_list.next, struct xhci_command, cmd_list);
 
 	cancel_delayed_work(&xhci->cmd_timer);
+	pm_runtime_put(xhci->main_hcd->self.controller);
 
 	trace_xhci_cmd_completion(cmd_trb, (struct xhci_generic_trb *) event);
 
@@ -1458,6 +1459,7 @@ static void handle_cmd_completion(struct xhci_hcd *xhci,
 		xhci->current_cmd = list_entry(cmd->cmd_list.next,
 					       struct xhci_command, cmd_list);
 		xhci_mod_cmd_timer(xhci, XHCI_CMD_DEFAULT_TIMEOUT);
+		pm_runtime_get(xhci->main_hcd->self.controller);
 	} else if (xhci->current_cmd == cmd) {
 		xhci->current_cmd = NULL;
 	}
@@ -3983,6 +3985,7 @@ static int queue_command(struct xhci_hcd *xhci, struct xhci_command *cmd,
 	if (xhci->cmd_list.next == &cmd->cmd_list &&
 	    !delayed_work_pending(&xhci->cmd_timer)) {
 		xhci->current_cmd = cmd;
+		pm_runtime_get(xhci->main_hcd->self.controller);
 		xhci_mod_cmd_timer(xhci, XHCI_CMD_DEFAULT_TIMEOUT);
 	}
 

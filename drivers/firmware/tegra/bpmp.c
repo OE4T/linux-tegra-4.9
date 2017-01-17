@@ -222,7 +222,7 @@ static int bpmp_clk_init(struct platform_device *pdev)
 static int bpmp_linear_map_init(struct platform_device *pdev)
 {
 	struct device_node *node;
-	DEFINE_DMA_ATTRS(attrs);
+	unsigned long attrs;
 	uint32_t of_start;
 	uint32_t of_size;
 	int ret;
@@ -237,9 +237,8 @@ static int bpmp_linear_map_init(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
-	dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
-	ret = dma_map_linear_attrs(&pdev->dev, of_start, of_size, 0, &attrs);
+	attrs = DMA_ATTR_SKIP_IOVA_GAP | DMA_ATTR_SKIP_CPU_SYNC;
+	ret = dma_map_linear_attrs(&pdev->dev, of_start, of_size, 0, attrs);
 	if (ret == DMA_ERROR_CODE)
 		return -ENOMEM;
 

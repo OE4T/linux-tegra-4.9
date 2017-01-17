@@ -1390,6 +1390,8 @@ static void gk20a_pm_shutdown(struct platform_device *pdev)
 	/* Prevent more requests by disabling Runtime PM */
 	__pm_runtime_disable(&pdev->dev, false);
 
+	gk20a_wait_for_idle(&pdev->dev);
+
 	/* Be ready for rail-gate after this point */
 	if (gk20a_gpu_is_virtual(&pdev->dev))
 		vgpu_pm_prepare_poweroff(&pdev->dev);

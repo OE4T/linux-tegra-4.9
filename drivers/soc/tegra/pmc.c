@@ -2995,7 +2995,7 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 		return err;
 
 	/* Register as pad controller */
-	err = tegra_pmc_padctrl_init(&pdev->dev, pdev->dev.of_node);
+	err = tegra_io_pads_padctrl_init(&pdev->dev);
 	if (err)
 		pr_err("ERROR: Pad control driver init failed: %d\n", err);
 

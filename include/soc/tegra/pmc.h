@@ -296,6 +296,14 @@ void tegra_pmc_lock_thermal_shutdown(void);
 int tegra210_pmc_padctrl_init(struct device *dev, struct device_node *np);
 int tegra186_pmc_padctrl_init(struct device *dev, struct device_node *np);
 
+#ifdef CONFIG_PADCTRL_TEGRA186_PMC
+static inline int tegra_pmc_padctrl_init(struct device *dev,
+					 struct device_node *np)
+{
+	return tegra186_pmc_padctrl_init(dev, np);
+}
+#endif
+
 #if defined(CONFIG_ARCH_TEGRA)
 int tegra_io_pads_padctrl_init(struct device *dev);
 #else
@@ -304,18 +312,6 @@ int tegra_io_pads_padctrl_init(struct device *dev)
 	return 0;
 }
 #endif
-
-static inline int tegra_pmc_padctrl_init(struct device *dev,
-					 struct device_node *np)
-{
-#ifdef CONFIG_PADCTRL_TEGRA210_PMC
-	return tegra210_pmc_padctrl_init(dev, np);
-#endif
-#ifdef CONFIG_PADCTRL_TEGRA186_PMC
-	return tegra186_pmc_padctrl_init(dev, np);
-#endif
-	return 0;
-}
 
 void tegra186_pmc_register_update(int offset, unsigned long mask,
 				  unsigned long val);

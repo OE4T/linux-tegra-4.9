@@ -69,6 +69,8 @@
 		cap-sd-highspeed;
 		nvidia,en-io-trim-volt;
 		nvidia,en-periodic-calib;
+                cd-inverted;
+                wp-inverted;
 	};
 
 	sdhci@700b0200 {
@@ -111,5 +113,7 @@
 		nvidia,en-periodic-calib;
 		keep-power-in-suspend;
 		ignore-pm-notify;
+                cd-inverted;
+                wp-inverted;
 	};
 };

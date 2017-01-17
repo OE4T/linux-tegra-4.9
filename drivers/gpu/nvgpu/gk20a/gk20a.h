@@ -656,6 +656,10 @@ struct gpu_ops {
 				u16 *min_mhz, u16 *max_mhz);
 		int (*get_arbiter_clk_default)(struct gk20a *g, u32 api_domain,
 				u16 *default_mhz);
+		/* This function is inherently unsafe to call while
+		 *  arbiter is running arbiter must be blocked
+		 *  before calling this function */
+		int (*get_current_pstate)(struct gk20a *g);
 	} clk_arb;
 	struct {
 		int (*handle_pmu_perf_event)(struct gk20a *g, void *pmu_msg);

@@ -96,7 +96,12 @@ static const char *root_path;
 static const char *get_filename(const struct file *file, char *buf, int size)
 {
 	const char *filename;
-	size_t root_len = strlen(root_path);
+	size_t root_len;
+
+	if (!root_path)
+		return NULL;
+
+	root_len = strlen(root_path);
 
 	filename = dentry_path(file->f_path.dentry, buf, size);
 	if (IS_ERR_OR_NULL(filename))
@@ -317,43 +322,32 @@ static DEFINE_MUTEX(lock);
 static struct dentry *bpmp_debugfs_root;
 static char root_path_buf[256];
 
-static int bpmp_fwdebug_recreate(void *buf, size_t bufsize, struct dentry *root)
+static int bpmp_fwdebug_create(void *buf, size_t bufsize, struct dentry *root)
 {
 	struct seqbuf seqbuf;
 	int err;
-
-	mutex_lock(&lock);
-
-	debugfs_remove_recursive(bpmp_debugfs_root);
 
 	bpmp_debugfs_root = debugfs_create_dir("debug", root);
 	if (IS_ERR_OR_NULL(bpmp_debugfs_root)) {
 		pr_err("failed to create bpmp debugfs directory\n");
 		bpmp_debugfs_root = NULL;
-		mutex_unlock(&lock);
 		return -ENOMEM;
 	}
 
 	root_path = dentry_path_raw(bpmp_debugfs_root, root_path_buf,
 			sizeof(root_path_buf));
 	if (IS_ERR_OR_NULL(root_path)) {
+		/* if this happens, then to recover bpmp debugfs needs
+		 * to be unmounted from userspace */
 		pr_err("failed to figure out bpmp root path\n");
 		err = root_path ? PTR_ERR(root_path) : -ENOENT;
-		goto clean;
+		root_path = NULL;
+		return err;
 	}
 
 	seqbuf_init(&seqbuf, buf, bufsize);
 	err = bpmp_populate_dir(&seqbuf, bpmp_debugfs_root, 0);
-	if (err)
-		goto clean;
 
-	mutex_unlock(&lock);
-	return 0;
-
-clean:
-	debugfs_remove_recursive(bpmp_debugfs_root);
-	bpmp_debugfs_root = NULL;
-	mutex_unlock(&lock);
 	return err;
 }
 
@@ -377,6 +371,13 @@ static int bpmp_debugfs_dumpdir(uint32_t addr, size_t size, uint32_t *nbytes)
 	return 0;
 }
 
+static void do_debugfs_unmount(struct work_struct *work)
+{
+	debugfs_remove_recursive(bpmp_debugfs_root);
+	bpmp_debugfs_root = NULL;
+}
+static DECLARE_WORK(debugfs_unmount_work, do_debugfs_unmount);
+
 static int bpmp_fwdebug_init(struct dentry *root)
 {
 	dma_addr_t phys;
@@ -388,9 +389,17 @@ static int bpmp_fwdebug_init(struct dentry *root)
 	if (WARN_ON(!root))
 		return -EINVAL;
 
+	mutex_lock(&lock);
+
+	if (bpmp_debugfs_root) {
+		mutex_unlock(&lock);
+		return -EINVAL;
+	}
+
 	virt = tegra_bpmp_alloc_coherent(sz, &phys, GFP_KERNEL);
 	if (!virt) {
 		pr_err("%s: dma_alloc_coherent() failed\n", __func__);
+		mutex_unlock(&lock);
 		return -ENOMEM;
 	}
 
@@ -400,7 +409,9 @@ static int bpmp_fwdebug_init(struct dentry *root)
 		goto out;
 	}
 
-	ret = bpmp_fwdebug_recreate(virt, nbytes, root);
+	cancel_work_sync(&debugfs_unmount_work);
+
+	ret = bpmp_fwdebug_create(virt, nbytes, root);
 	if (ret) {
 		pr_err("create_bpmp_debugfs() failed (%d)\n", ret);
 		goto out;
@@ -411,7 +422,25 @@ static int bpmp_fwdebug_init(struct dentry *root)
 out:
 	tegra_bpmp_free_coherent(sz, virt, phys);
 
+	mutex_unlock(&lock);
+
 	return ret;
+}
+
+int bpmp_fwdebug_uninit(struct dentry *root)
+{
+	mutex_lock(&lock);
+
+	if (!bpmp_debugfs_root) {
+		mutex_unlock(&lock);
+		return -EINVAL;
+	}
+
+	schedule_work(&debugfs_unmount_work);
+
+	mutex_unlock(&lock);
+
+	return 0;
 }
 
 static struct dentry *bpmp_root;
@@ -421,6 +450,7 @@ static DEFINE_MUTEX(bpmp_lock);
 
 struct bpmp_module {
 	struct list_head entry;
+	struct work_struct unload_work;
 	char name[MODULE_NAME_LEN];
 	struct dentry *root;
 	u32 handle;
@@ -496,13 +526,32 @@ static int bpmp_module_unload(struct device *dev, u32 handle)
 			&handle, sizeof(handle), NULL, 0);
 }
 
+static void do_unload_module(struct work_struct *w)
+{
+	struct bpmp_module *m;
+	int err;
+
+	m = container_of(w, struct bpmp_module, unload_work);
+
+	if (m->handle) {
+		err = bpmp_module_unload(device, m->handle);
+		if (err) {
+			dev_err(device, "%s: failed to unload module (%d)\n",
+				m->name, err);
+			return;
+		}
+	}
+
+	debugfs_remove_recursive(m->root);
+	kfree(m);
+}
+
 static ssize_t bpmp_module_unload_store(struct file *file,
 		const char __user *user_buf, size_t count, loff_t *ppos)
 {
 	struct bpmp_module *m;
 	char buf[MODULE_NAME_LEN];
 	char *name;
-	int r;
 
 	if (count >= sizeof(buf))
 		return -EINVAL;
@@ -517,23 +566,15 @@ static ssize_t bpmp_module_unload_store(struct file *file,
 
 	m = bpmp_find_module(name);
 	if (!m) {
-		r = -ENODEV;
-		goto clean;
+		mutex_unlock(&bpmp_lock);
+		return -ENODEV;
 	}
 
-	r = bpmp_module_unload(device, m->handle);
-	if (r) {
-		dev_err(device, "%s: failed to unload module (%d)\n", name, r);
-		goto clean;
-	}
-
-	debugfs_remove_recursive(m->root);
 	list_del(&m->entry);
-	kfree(m);
-
-clean:
+	schedule_work(&m->unload_work);
 	mutex_unlock(&bpmp_lock);
-	return r ?: count;
+
+	return count;
 }
 
 static const struct file_operations bpmp_module_unload_fops = {
@@ -612,6 +653,8 @@ static ssize_t bpmp_module_load_store(struct file *file,
 	strncpy(m->name, strim(buf), sizeof(m->name) - 1);
 	m->name[sizeof(m->name) - 1] = 0;
 
+	INIT_WORK(&m->unload_work, do_unload_module);
+
 	if (bpmp_find_module(m->name)) {
 		dev_err(device, "module %s exist\n", m->name);
 		r = -EEXIST;
@@ -645,8 +688,7 @@ clean:
 	mutex_unlock(&bpmp_lock);
 
 	if (r) {
-		debugfs_remove_recursive(m->root);
-		kfree(m);
+		schedule_work(&m->unload_work);
 		return r;
 	}
 
@@ -758,12 +800,19 @@ static int bpmp_mount_show(void *data, u64 *val)
 	return 0;
 }
 
+static int bpmp_unmount_show(void *data, u64 *val)
+{
+	*val = bpmp_fwdebug_uninit(bpmp_root);
+	return 0;
+}
+
 DEFINE_SIMPLE_ATTRIBUTE(bpmp_ping_fops, bpmp_ping_show, NULL, "%lld\n");
 DEFINE_SIMPLE_ATTRIBUTE(trace_enable_fops, bpmp_trace_enable_show,
 		bpmp_trace_enable_store, "%lld\n");
 DEFINE_SIMPLE_ATTRIBUTE(trace_disable_fops, NULL,
 		bpmp_trace_disable_store, "%lld\n");
 DEFINE_SIMPLE_ATTRIBUTE(bpmp_mount_fops, bpmp_mount_show, NULL, "%lld\n");
+DEFINE_SIMPLE_ATTRIBUTE(bpmp_unmount_fops, bpmp_unmount_show, NULL, "%lld\n");
 
 static __init int bpmp_init_mount(void)
 {
@@ -981,6 +1030,7 @@ static const struct fops_entry root_attrs[] = {
 	{ "tag", &bpmp_tag_fops, S_IRUGO },
 	{ "mrq", &bpmp_mrq_fops, S_IRUGO | S_IWUSR },
 	{ "mount", &bpmp_mount_fops, S_IRUGO },
+	{ "unmount", &bpmp_unmount_fops, S_IRUGO },
 	{ NULL, NULL, 0 }
 };
 

@@ -757,6 +757,7 @@ int vivid_s_fmt_vid_cap(struct file *file, void *priv,
 	tpg_s_crop_compose(&dev->tpg, &dev->crop_cap, &dev->compose_cap);
 	if (vivid_is_sdtv_cap(dev))
 		dev->tv_field_cap = mp->field;
+	dev->fmt_cap->data_offset[0] = mp->width * dev->embedded_data_height;
 	tpg_update_mv_step(&dev->tpg);
 	return 0;
 }

@@ -288,6 +288,14 @@ static int vivid_copy_buffer(struct vivid_dev *dev, unsigned p, u8 *vcapbuf,
 
 	voutbuf = plane_vaddr(tpg, vid_out_buf, p,
 			      dev->bytesperline_out, dev->fmt_out_rect.height);
+	/* copy embedded meta data */
+	if (!p && dev->fmt_cap->data_offset[0] &&
+		dev->fmt_out->data_offset[0]) {
+		memcpy(vcapbuf, voutbuf, dev->fmt_cap->data_offset[0]);
+		vcapbuf += dev->fmt_cap->data_offset[0];
+		voutbuf += dev->fmt_out->data_offset[0];
+	}
+
 	if (p < dev->fmt_out->buffers)
 		voutbuf += vid_out_buf->vb.vb2_buf.planes[p].data_offset;
 	voutbuf += tpg_hdiv(tpg, p, dev->loop_vid_out.left) +
@@ -475,11 +483,16 @@ static void vivid_fillbuff(struct vivid_dev *dev, struct vivid_buffer *buf)
 		 * data_offset. This helps testing whether the application
 		 * correctly supports non-zero data offsets.
 		 */
+		/*
+		 * Disable below code as it resets embedded data passed from
+		 * application.
 		if (p < tpg_g_buffers(tpg) && dev->fmt_cap->data_offset[p]) {
 			memset(vbuf, dev->fmt_cap->data_offset[p] & 0xff,
 			       dev->fmt_cap->data_offset[p]);
 			vbuf += dev->fmt_cap->data_offset[p];
 		}
+		 */
+
 		tpg_calc_text_basep(tpg, basep, p, vbuf);
 		if (!is_loop || vivid_copy_buffer(dev, p, vbuf, buf))
 			tpg_fill_plane_buffer(tpg, vivid_get_std_cap(dev),

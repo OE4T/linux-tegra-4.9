@@ -107,6 +107,7 @@
 #define VIVID_CID_FRAME_LENGTH		(VIVID_CID_VIVID_BASE + 122)
 #define VIVID_CID_GROUP_HOLD		(VIVID_CID_VIVID_BASE + 123)
 #define VIVID_CID_HDR_EN		(VIVID_CID_VIVID_BASE + 124)
+#define VIVID_CID_EMBEDDED_DATA_HEIGHT	(VIVID_CID_VIVID_BASE + 125)
 
 /* General User Controls */
 
@@ -130,6 +131,9 @@ static int vivid_user_gen_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case VIVID_CID_BUTTON:
 		dev->button_pressed = 30;
+		break;
+	case VIVID_CID_EMBEDDED_DATA_HEIGHT:
+		dev->embedded_data_height = ctrl->val;
 		break;
 	}
 	return 0;
@@ -538,7 +542,7 @@ static const struct v4l2_ctrl_config vivid_ctrl_grouphold = {
 	.type = V4L2_CTRL_TYPE_BOOLEAN,
 	.min = 0,
 	.max = 1,
-        .def = 0,
+	.def = 0,
 	.step = 1,
 };
 
@@ -549,7 +553,19 @@ static const struct v4l2_ctrl_config vivid_ctrl_hdrenable = {
 	.type = V4L2_CTRL_TYPE_BOOLEAN,
 	.min = 0,
 	.max = 1,
-        .def = 0,
+	.def = 0,
+	.step = 1,
+};
+
+static const struct v4l2_ctrl_config vivid_ctrl_embeddeddata = {
+	.ops = &vivid_user_gen_ctrl_ops,
+	.id = VIVID_CID_EMBEDDED_DATA_HEIGHT,
+	.name = "Embedded Data Height",
+	.type = V4L2_CTRL_TYPE_INTEGER,
+	.flags = V4L2_CTRL_FLAG_SLIDER,
+	.min = 1,
+	.max = 16,
+	.def = 2,
 	.step = 1,
 };
 
@@ -1485,6 +1501,8 @@ int vivid_create_controls(struct vivid_dev *dev, bool show_ccs_cap,
 	v4l2_ctrl_new_custom(hdl_user_gen, &vivid_ctrl_u32_array, NULL);
 	v4l2_ctrl_new_custom(hdl_user_gen, &vivid_ctrl_u16_matrix, NULL);
 	v4l2_ctrl_new_custom(hdl_user_gen, &vivid_ctrl_u8_4d_array, NULL);
+	v4l2_ctrl_new_custom(hdl_user_gen, &vivid_ctrl_embeddeddata, NULL);
+	dev->embedded_data_height = vivid_ctrl_embeddeddata.def;
 
 	if (dev->has_vid_cap) {
 		/* Image Processing Controls */

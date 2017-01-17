@@ -40,7 +40,8 @@ static int vid_out_queue_setup(struct vb2_queue *vq,
 	const struct vivid_fmt *vfmt = dev->fmt_out;
 	unsigned planes = vfmt->buffers;
 	unsigned h = dev->fmt_out_rect.height;
-	unsigned size = dev->bytesperline_out[0] * h;
+	unsigned size =
+		dev->bytesperline_out[0] * (h + dev->embedded_data_height);
 	unsigned p;
 
 	for (p = vfmt->buffers; p < vfmt->planes; p++)
@@ -312,9 +313,9 @@ int vivid_g_fmt_vid_out(struct file *file, void *priv,
 	const struct vivid_fmt *fmt = dev->fmt_out;
 	unsigned p;
 
-	mp->width        = dev->fmt_out_rect.width;
+	mp->width	 = dev->fmt_out_rect.width;
 	mp->height       = dev->fmt_out_rect.height;
-	mp->field        = dev->field_out;
+	mp->field	 = dev->field_out;
 	mp->pixelformat  = fmt->fourcc;
 	mp->colorspace   = dev->colorspace_out;
 	mp->xfer_func    = dev->xfer_func_out;
@@ -326,6 +327,12 @@ int vivid_g_fmt_vid_out(struct file *file, void *priv,
 		mp->plane_fmt[p].sizeimage =
 			mp->plane_fmt[p].bytesperline * mp->height;
 	}
+	/* Add offset to fill embedded meta data */
+	if (!dev->fmt_out->data_offset[0] && dev->embedded_data_height) {
+		dev->fmt_out->data_offset[0] =
+			mp->width * dev->embedded_data_height;
+	}
+	mp->plane_fmt[0].sizeimage += dev->fmt_out->data_offset[0];
 	for (p = fmt->buffers; p < fmt->planes; p++) {
 		unsigned stride = dev->bytesperline_out[p];
 
@@ -531,6 +538,7 @@ int vivid_s_fmt_vid_out(struct file *file, void *priv,
 		v4l2_rect_set_size_to(compose, &r);
 	}
 
+	dev->fmt_out->data_offset[0] = mp->width * dev->embedded_data_height;
 	dev->fmt_out_rect.width = mp->width;
 	dev->fmt_out_rect.height = mp->height;
 	for (p = 0; p < mp->num_planes; p++)

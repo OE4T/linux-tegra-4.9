@@ -378,7 +378,7 @@ struct vivid_dev {
 	unsigned			ms_vid_cap;
 	bool				must_blank[VIDEO_MAX_FRAME];
 
-	const struct vivid_fmt		*fmt_cap;
+	struct vivid_fmt		*fmt_cap;
 	struct v4l2_fract		timeperframe_vid_cap;
 	enum v4l2_field			field_cap;
 	struct v4l2_rect		src_rect;
@@ -404,9 +404,10 @@ struct vivid_dev {
 	u32				vbi_cap_seq_count;
 	bool				vbi_cap_streaming;
 	bool				stream_sliced_vbi_cap;
+	u32				embedded_data_height;
 
 	/* video output */
-	const struct vivid_fmt		*fmt_out;
+	struct vivid_fmt		*fmt_out;
 	struct v4l2_fract		timeperframe_vid_out;
 	enum v4l2_field			field_out;
 	struct v4l2_rect		sink_rect;

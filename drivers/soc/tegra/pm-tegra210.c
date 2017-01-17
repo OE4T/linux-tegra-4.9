@@ -17,7 +17,11 @@
 #include <linux/kernel.h>
 #include <linux/cpu.h>
 #include <linux/cpu_pm.h>
+#include <linux/cpuidle.h>
+#include <linux/debugfs.h>
 #include <linux/init.h>
+#include <linux/interrupt.h>
+#include <linux/irq.h>
 #include <linux/notifier.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -25,10 +29,16 @@
 #include <linux/regulator/consumer.h>
 #include <linux/spinlock.h>
 #include <linux/syscore_ops.h>
+#include <linux/tick.h>
 #include <soc/tegra/bpmp_t210_abi.h>
 #include <soc/tegra/flowctrl.h>
 #include <soc/tegra/fuse.h>
 #include <soc/tegra/tegra_bpmp.h>
+
+#include <asm/cpuidle.h>
+
+#include "../../kernel/irq/internals.h"
+#include "../../kernel/time/tick-internal.h"
 
 enum tegra210_idle_index {
 	C7_IDX = 0,
@@ -294,6 +304,181 @@ out:
 	return 0;
 }
 
+#ifdef CONFIG_DEBUG_FS
+static struct dentry *cpuidle_debugfs_root;
+static unsigned int state_enable;
+static u64 idle_state;
+
+static int fast_enable_show(struct seq_file *s, void *data)
+{
+	struct cpuidle_device *dev = __this_cpu_read(cpuidle_devices);
+	struct cpuidle_driver *drv = cpuidle_get_cpu_driver(dev);
+	int i;
+
+	seq_puts(s, "Usage: write state index to disable or enable\n");
+	seq_puts(s, "  name	idx	Enabled\n");
+	seq_puts(s, "--------------------------\n");
+
+	for (i = drv->safe_state_index + 1; i < drv->state_count; i++) {
+		seq_printf(s, "  %s	%d	%d\n", drv->states[i].name,
+				i, !drv->states[i].disabled);
+	}
+
+	return 0;
+}
+
+static int fast_enable_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, fast_enable_show, inode->i_private);
+}
+
+static ssize_t fast_enable_write(struct file *fp, const char __user *ubuf,
+				 size_t count, loff_t *pos)
+{
+	struct cpuidle_device *dev = __this_cpu_read(cpuidle_devices);
+	struct cpuidle_driver *drv = cpuidle_get_cpu_driver(dev);
+
+	if (kstrtouint_from_user(ubuf, count, 0, &state_enable) < 0)
+		return -EINVAL;
+
+	if (state_enable <= drv->safe_state_index ||
+	    state_enable >= drv->state_count)
+		return -EINVAL;
+
+	if (drv->states[state_enable].disabled)
+		drv->states[state_enable].disabled = false;
+	else
+		drv->states[state_enable].disabled = true;
+
+	return count;
+}
+
+static const struct file_operations fast_cluster_enable_fops = {
+	.open   =       fast_enable_open,
+	.read   =       seq_read,
+	.llseek =       seq_lseek,
+	.write  =       fast_enable_write,
+	.release =      single_release,
+};
+
+static bool is_timer_irq(struct irq_desc *desc)
+{
+	return desc && desc->action && (desc->action->flags & IRQF_TIMER);
+}
+
+static void suspend_all_device_irqs(void)
+{
+	struct irq_desc *desc;
+	int irq;
+
+	for_each_irq_desc(irq, desc) {
+		unsigned long flags;
+
+		/* Don't disable the 'wakeup' interrupt */
+		if (is_timer_irq(desc))
+			continue;
+
+		raw_spin_lock_irqsave(&desc->lock, flags);
+		__disable_irq(desc);
+		desc->istate |= IRQS_SUSPENDED;
+		raw_spin_unlock_irqrestore(&desc->lock, flags);
+
+		synchronize_hardirq(irq);
+	}
+}
+
+static int idle_write(void *data, u64 val)
+{
+	struct cpuidle_driver *drv;
+	unsigned long timer_interval_us = (ulong)val;
+	ktime_t time, interval, sleep;
+
+	preempt_disable();
+	drv = cpuidle_get_driver();
+
+	if ((idle_state != t210_pm_data.idle_state_idx[C7_IDX]) &&
+	    (idle_state != t210_pm_data.idle_state_idx[CC6_IDX])) {
+		pr_err("%s: Request forced idle state C7/CC4: 1, CC6:2\n", __func__);
+		preempt_enable_no_resched();
+		return -EINVAL;
+	}
+	pr_info("CPU idle in state: %llu, duration: %lu us\n", idle_state, timer_interval_us);
+
+	suspend_all_device_irqs();
+	tick_nohz_idle_enter();
+	stop_critical_timings();
+	local_fiq_disable();
+	local_irq_disable();
+
+	interval = ktime_set(0, (NSEC_PER_USEC * timer_interval_us));
+
+	time = ktime_get();
+	sleep = ktime_add(time, interval);
+	tick_program_event(sleep, true);
+
+	arm_cpuidle_suspend(idle_state);
+
+	sleep = ktime_sub(ktime_get(), time);
+	time = ktime_sub(sleep, interval);
+	trace_printk("idle: %lld, exit latency: %lld\n", sleep.tv64, time.tv64);
+
+	local_irq_enable();
+	local_fiq_enable();
+	start_critical_timings();
+	tick_nohz_idle_exit();
+	resume_device_irqs();
+	preempt_enable_no_resched();
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(duration_us_fops, NULL, idle_write, "%llu\n");
+
+static int debugfs_init(void)
+{
+	struct dentry *dfs_file;
+
+	cpuidle_debugfs_root = debugfs_create_dir("cpuidle_t210", NULL);
+
+	if (!cpuidle_debugfs_root) {
+		pr_err("failed to create cpuidle_t210 node\n");
+		return -ENOMEM;
+	}
+
+	dfs_file = debugfs_create_file("fast_cluster_states_enable", 0644,
+			cpuidle_debugfs_root, NULL, &fast_cluster_enable_fops);
+	if (!dfs_file) {
+		pr_err("failed to create ast_cluster_states_enable\n");
+		goto err_out;
+	}
+
+	dfs_file = debugfs_create_u64("forced_idle_state", 0644,
+				      cpuidle_debugfs_root, &idle_state);
+
+	if (!dfs_file) {
+		pr_err("failed to create forced_idle_state\n");
+		goto err_out;
+	}
+
+
+	dfs_file = debugfs_create_file("forced_idle_duration_us", 0644,
+				cpuidle_debugfs_root, NULL, &duration_us_fops);
+
+	if (!dfs_file) {
+		pr_err("failed to create forced_idle_duration_us\n");
+		goto err_out;
+	}
+
+	return 0;
+
+err_out:
+	debugfs_remove_recursive(cpuidle_debugfs_root);
+	return -ENOMEM;
+}
+#else
+static inline int debugfs_init(void) { return 0; }
+#endif
+
 static const struct of_device_id tegra210_cpuidle_of[] = {
 	{ .compatible = "nvidia,tegra210-cpuidle" },
 	{}
@@ -319,6 +504,7 @@ static int __init tegra210_cpuidle_init(void)
 	 */
 	platform_driver_register(&tegra210_cpuidle_driver);
 
+	debugfs_init();
 out:
 	return 0;
 }

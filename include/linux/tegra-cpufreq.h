@@ -19,10 +19,12 @@
 
 enum tegra_cpufreq_msg_ids {
 	TEGRA_CPU_FREQ_THROTTLE,
+	TEGRA_CPU_FREQ_SET_RATE,
 	MAX_IVC_MSG_ID,
 };
 
 int tegra_cpufreq_tx_ivc_msg(uint32_t id, uint32_t len, void *msg_buf);
 int parse_hv_dt_data(struct device_node *dn);
+void tegra_update_cpu_speed_hv(uint32_t rate, uint8_t cpu);
 
 #endif

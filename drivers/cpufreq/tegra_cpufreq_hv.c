@@ -20,12 +20,23 @@
 #include <linux/tegra-cpufreq.h>
 #include <linux/interrupt.h>
 #include <linux/wait.h>
+#include <linux/platform/tegra/tegra18_cpu_map.h>
 
-#define TEGRA_CPUFREQ_IVC_MSG_LEN 32
+struct cpu_rate_msg {
+	uint32_t rate_khz;
+	uint8_t cl;
+};
+
+union msg_data {
+	struct cpu_rate_msg cpu_rate;
+};
+
+#define TEGRA_CPUFREQ_IVC_MSG_LEN sizeof(union msg_data)
+
 struct tegra_cpufreq_ivc_msg {
 	uint32_t msg_id;
 	uint32_t len;
-	uint8_t buffer[TEGRA_CPUFREQ_IVC_MSG_LEN];
+	union msg_data buffer;
 };
 
 struct tegra_cpufreq_ivc_data {
@@ -125,10 +136,10 @@ int tegra_cpufreq_tx_ivc_msg(uint32_t id, uint32_t len, void *msg_buf)
 	mutex_lock(&ivck->mlock);
 
 	ivc_msg = &ivck->cpufreq_ivc_msg;
-	memset(ivc_msg->buffer, 0, TEGRA_CPUFREQ_IVC_MSG_LEN);
+	memset(&ivc_msg->buffer, 0, TEGRA_CPUFREQ_IVC_MSG_LEN);
 	ivc_msg->msg_id = id;
 	ivc_msg->len = len;
-	memcpy(ivc_msg->buffer, msg_buf, len);
+	memcpy(&ivc_msg->buffer, msg_buf, len);
 
 	while (tegra_hv_ivc_channel_notified(ivck->cookie))
 		/* Waiting for the channel to be ready */;
@@ -151,3 +162,23 @@ int tegra_cpufreq_tx_ivc_msg(uint32_t id, uint32_t len, void *msg_buf)
 	return ret;
 }
 EXPORT_SYMBOL(tegra_cpufreq_tx_ivc_msg);
+
+void tegra_update_cpu_speed_hv(uint32_t rate, uint8_t cpu)
+{
+	int ret = 0;
+	struct cpu_rate_msg cpu_rate;
+
+	cpu_rate.cl = tegra18_logical_to_cluster(cpu);
+	cpu_rate.rate_khz = rate;
+
+	ret = tegra_cpufreq_tx_ivc_msg(TEGRA_CPU_FREQ_SET_RATE,
+					sizeof(cpu_rate),
+					&cpu_rate);
+
+	if (ret)
+		pr_err("\n%s: Update cpu rate %dkHz for cluster:%d failed\n",
+							__func__,
+							cpu_rate.rate_khz,
+							cpu_rate.cl);
+	return;
+}

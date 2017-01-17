@@ -366,7 +366,6 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 	tfreq_data.last_hint[cpu] = val;
 	spin_unlock(slock);
 }
-
 /**
  * tegra_setspeed - Request freq to be set for policy->cpu
  * @policy - cpufreq policy per cpu
@@ -401,12 +400,25 @@ static int tegra_setspeed(struct cpufreq_policy *policy, unsigned int index)
 
 	cl = tegra18_logical_to_cluster(policy->cpu);
 
-	if (freqs.old != tgt_freq)
+	if (freqs.old != tgt_freq) {
+		/*
+		 * In hypervisor case cpufreq server will take care of
+		 * updating frequency for each cpu in a cluster. So no
+		 * need to run through the loop.
+		 */
+		if (tegra_cpufreq_hv_mode)
+			tegra_update_cpu_speed_hv(tgt_freq, policy->cpu);
+
 		for_each_cpu(cpu, &tfreq_data.pcluster[cl].cpu_mask) {
-			tegra_update_cpu_speed(tgt_freq, cpu);
+			if (!tegra_cpufreq_hv_mode)
+				tegra_update_cpu_speed(tgt_freq, cpu);
+			/*
+			 * Update the freq data for each cpu regardless
+			 * hypervisor or native mode.
+			 */
 			tfreq_data.cpu_freq[cpu] = tgt_freq;
 		}
-
+	}
 	policy->cur = tgt_freq;
 	freqs.new = policy->cur;
 
@@ -553,8 +565,12 @@ static int freq_set(void *data, u64 val)
 	mlock = &per_cpu(pcpu_mlock, cpu);
 	mutex_lock(mlock);
 
-	if (val)
-		tegra_update_cpu_speed(freq, cpu);
+	if (val) {
+		if (tegra_cpufreq_hv_mode)
+			tegra_update_cpu_speed_hv(freq, cpu);
+		else
+			tegra_update_cpu_speed(freq, cpu);
+	}
 
 	mutex_unlock(mlock);
 	return 0;
@@ -882,7 +898,10 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 #endif
 	if (!ret && (freq != ftbl[idx].frequency)) {
 		freq = ftbl[idx].frequency;
-		tegra_update_cpu_speed(freq, policy->cpu);
+		if (tegra_cpufreq_hv_mode)
+			tegra_update_cpu_speed_hv(freq, policy->cpu);
+		else
+			tegra_update_cpu_speed(freq, policy->cpu);
 	}
 
 	policy->cur = tegra_get_speed(policy->cpu);

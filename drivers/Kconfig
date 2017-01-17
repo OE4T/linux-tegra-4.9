@@ -212,4 +212,8 @@ trysource "drivers/staging/mttcan/Kconfig.t18x"
 trysource "../t18x/drivers/tachometer/Kconfig.t18x"
 trysource "drivers/tachometer/Kconfig.t18x"
 
+trysource "../nvgpu/drivers/gpu/nvgpu/Kconfig.nvgpu"
+trysource "drivers/gpu/nvgpu/Kconfig.nvgpu"
+
+
 endmenu

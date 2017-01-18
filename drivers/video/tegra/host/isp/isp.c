@@ -27,12 +27,8 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/tegra_pm_domains.h>
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
-#include <soc/tegra/fuse.h>
-#else
-#include <linux/tegra-fuse.h>
-#endif
 #include <linux/version.h>
+#include <soc/tegra/fuse.h>
 
 #include "dev.h"
 #include "bus_client.h"

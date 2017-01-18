@@ -20,10 +20,7 @@
 #include <linux/moduleparam.h>
 #include <linux/export.h>
 #include <linux/delay.h>
-#include <linux/tegra-fuse.h>
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 #include <soc/tegra/fuse.h>
-#endif
 #include <trace/events/display.h>
 #include <linux/fb.h>
 

@@ -3485,10 +3485,6 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 	tegra_dc_sor_instance(dc, out->type);
 
 	switch (out->type) {
-	case TEGRA_DC_OUT_RGB:
-		dc->out_ops = &tegra_dc_rgb_ops;
-		break;
-
 	case TEGRA_DC_OUT_HDMI:
 #if	defined(CONFIG_TEGRA_HDMI2_0)
 		dc->out_ops = &tegra_dc_hdmi2_0_ops;

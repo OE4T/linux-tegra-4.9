@@ -13,7 +13,6 @@ endif
 obj-$(CONFIG_TEGRA_CSC) += csc.o
 obj-$(CONFIG_TEGRA_LUT) += lut.o
 obj-y += cursor.o
-obj-y += rgb.o
 obj-y += of_dc.o
 obj-$(CONFIG_TEGRA_HDMI2FPD_DS90UH949) += hdmi2fpd_ds90uh949.o
 #obj-y += dsi2lvds.o

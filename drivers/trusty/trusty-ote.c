@@ -85,8 +85,8 @@ static struct tipc_msg_buf *_handle_msg(void *data, struct tipc_msg_buf *rxbuf)
 
 	trusty_ote_debug("%s\n", __func__);
 	if (mb_avail_data(rxbuf) != chan_ctx->len[chan_ctx->cur_msg]) {
-		pr_err("%s:ERROR: expected msg len %zu: actual %zu",
-				__func__, chan_ctx->len[chan_ctx->cur_msg],
+		pr_err("%s:ERROR: expected msg(%d) len %zu: actual %zu",
+				__func__, chan_ctx->cur_msg, chan_ctx->len[chan_ctx->cur_msg],
 				mb_avail_data(rxbuf));
 		return rxbuf;
 	}
@@ -186,6 +186,33 @@ err:
 	return ret;
 }
 
+static int construct_default_stream_header(stream_header_t *stream_header) {
+
+	if (NULL == stream_header) {
+		return -EINVAL;
+	}
+
+	memset(stream_header, 0, STREAM_META_HEADER_LEN);
+
+	stream_header->magic = STREAM_HEADER_MAGIC;
+	stream_header->version = STREAM_HEADER_CUR_VERSION;
+
+	return 0;
+}
+
+static int construct_default_payload_header(payload_header_t *payload_header) {
+
+	if (NULL == payload_header) {
+		return -EINVAL;
+	}
+
+	memset(payload_header, 0, PAYLOAD_META_HEADER_LEN);
+
+	payload_header->magic = PAYLOAD_HEADER_MAGIC;
+
+	return 0;
+}
+
 /*
  * Constructs OTE message and sent it to TA over TIPC channel.
  * And then wait till response is received from TA.
@@ -193,48 +220,77 @@ err:
 static int handle_ote_msg(struct tipc_chan_ctx *chan_ctx, void *buf,
 		size_t len, uint32_t cmd, te_error_t *op_status)
 {
-	int ret;
-	te_operation_container_t op_ctr;
-	te_oper_param_t *param;
+	int ret = 0;
+	stream_header_t stream_header;
+	payload_header_t payload_header;
+	uint8_t *payload_buffer = NULL;
+
+	if (NULL == chan_ctx) {
+		return -EINVAL;
+	}
+
+	if (len > TIPC_MAX_CHUNK_SIZE) {
+		pr_err("%s: passing buffers of size > %u not supported. len(%zu)"
+			, __func__, TIPC_MAX_CHUNK_SIZE, len);
+		return -EINVAL;
+	}
+
+	ret = construct_default_stream_header(&stream_header);
+	if (ret < 0) {
+		return ret;
+	}
+
+	stream_header.command = cmd;
 
 	trusty_ote_debug("%s: buf %p len %zu\n", __func__, buf, len);
 
-	memset(&op_ctr, 0, sizeof(op_ctr));
-	op_ctr.command = cmd;
-	if (buf) {
-		op_ctr.list_count = 1;
-		param = op_ctr.params;
-		param->index = 0;
-		param->type = TE_PARAM_TYPE_MEM_RW;
-		param->u.Mem.base = (uint64_t)(uintptr_t)buf;
-		param->u.Mem.len = len;
+	if (NULL != buf) {
+		stream_header.num_entries = 1;
+		stream_header.total_length = PAYLOAD_META_HEADER_LEN + len;
+
+		ret = construct_default_payload_header(&payload_header);
+		if (ret < 0) {
+			return ret;
+		}
+
+		payload_header.type = TE_PARAM_TYPE_MEM_RW;
+		payload_header.length = len;
+
+		payload_buffer = kzalloc((len + PAYLOAD_META_HEADER_LEN), GFP_KERNEL);
+		if (NULL == payload_buffer) {
+			ret = -ENOMEM;
+			return ret;
+		}
+
+		memcpy(payload_buffer, &payload_header, PAYLOAD_META_HEADER_LEN);
+		memcpy(&payload_buffer[PAYLOAD_META_HEADER_LEN], buf, len);
 	}
 
 	chan_ctx->cur_msg = 0;
 	chan_ctx->total_msg = 1;
-	chan_ctx->data[0] = &op_ctr;
-	chan_ctx->len[0] = sizeof(op_ctr);
-	if(buf) {
-		chan_ctx->data[1] = buf;
-		chan_ctx->len[1] = len;
+	chan_ctx->data[0] = &stream_header;
+	chan_ctx->len[0] = STREAM_META_HEADER_LEN;
+	if (NULL != buf) {
+		chan_ctx->data[1] = payload_buffer;
+		chan_ctx->len[1] = len + PAYLOAD_META_HEADER_LEN;
 		chan_ctx->total_msg++;
 	}
 
-	/* queue ote header */
+	/* queue stream header */
 	trusty_ote_debug("%s: queue ote header\n", __func__);
-	ret = queue_msg(chan_ctx, &op_ctr, sizeof(op_ctr));
+	ret = queue_msg(chan_ctx, chan_ctx->data[0], chan_ctx->len[0]);
 	if (ret) {
 		pr_err("%s:error(%d) in queue header\n", __func__, ret);
-		return ret;
+		goto err_exit;
 	}
 
-	/* queue buffer if present */
-	if (buf) {
-		trusty_ote_debug("%s: queue ote buffer\n", __func__);
-		ret = queue_msg(chan_ctx, buf, len);
+	/* queue payload if present */
+	if (NULL != buf) {
+		trusty_ote_debug("%s: queue payload\n", __func__);
+		ret = queue_msg(chan_ctx, chan_ctx->data[1], chan_ctx->len[1]);
 		if (ret) {
 			pr_err("%s:error(%d) in queue header\n", __func__, ret);
-			return ret;
+			goto err_exit;
 		}
 	}
 
@@ -242,15 +298,29 @@ static int handle_ote_msg(struct tipc_chan_ctx *chan_ctx, void *buf,
 	ret = wait_for_response(chan_ctx, REPLY_TIMEOUT);
 	if (ret < 0) {
 		pr_err("%s:ERROR(%d) in receving header\n", __func__, ret);
-		return ret;
+		goto err_exit;
 	}
 
 	/* sanity check */
 	WARN_ON(chan_ctx->state != TIPC_CONNECTED);
 
-	*op_status = op_ctr.status;
+	if (NULL != buf) {
+		memcpy(&payload_header, payload_buffer, PAYLOAD_META_HEADER_LEN);
+		if (payload_header.magic != PAYLOAD_HEADER_MAGIC) {
+			ret = -EINVAL;
+			pr_err("%s: payload header magic mismatch. received != expected "
+				"(%x != %x)\n", __func__, payload_header.magic,
+				PAYLOAD_HEADER_MAGIC);
+			goto err_exit;
+		}
+		memcpy(buf, &payload_buffer[PAYLOAD_META_HEADER_LEN], len);
+	}
+
+	*op_status = stream_header.status;
 	trusty_ote_debug("%s: op status 0x%08x\n", __func__, *op_status);
 
+err_exit:
+	kfree(payload_buffer);
 	return ret;
 }
 

@@ -163,10 +163,6 @@ int tegra_pmc_clear_reboot_reason(u32 reboot_reason);
 void tegra_pmc_write_bootrom_command(u32 command_offset, unsigned long val);
 void tegra_pmc_reset_system(void);
 
-void tegra_pmc_iopower_enable(int reg, u32 bit_mask);
-void tegra_pmc_iopower_disable(int reg, u32 bit_mask);
-int tegra_pmc_iopower_get_status(int reg, u32 bit_mask);
-
 void tegra_pmc_io_dpd_clear(void);
 
 #if defined(CONFIG_ARCH_TEGRA)
@@ -312,18 +308,6 @@ int tegra_io_pads_padctrl_init(struct device *dev)
 	return 0;
 }
 #endif
-
-void tegra186_pmc_register_update(int offset, unsigned long mask,
-				  unsigned long val);
-unsigned long tegra_pmc_register_get(u32 offset);
-
-int tegra186_pmc_io_dpd_enable(int reg, int bit_pos);
-int tegra186_pmc_io_dpd_disable(int reg, int bit_pos);
-int tegra186_pmc_io_dpd_get_status(int reg, int bit_pos);
-
-void tegra_pmc_pad_voltage_update(unsigned int reg,
-		unsigned long mask, unsigned long val);
-unsigned long tegra_pmc_pad_voltage_get(unsigned int reg);
 
 void tegra_pmc_ufs_pwrcntrl_update(unsigned long mask, unsigned long val);
 unsigned long tegra_pmc_ufs_pwrcntrl_get(void);

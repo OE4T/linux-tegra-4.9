@@ -516,28 +516,6 @@ static void _tegra_pmc_writel(u32 value, unsigned long offset)
 	writel(value, pmc->base + offset);
 }
 
-#ifndef CONFIG_TEGRA186_PMC
-static void _tegra_pmc_register_update(int offset,
-		unsigned long mask, unsigned long val)
-{
-	u32 pmc_reg;
-
-	pmc_reg = _tegra_pmc_readl(offset);
-	pmc_reg = (pmc_reg & ~mask) | (val & mask);
-	_tegra_pmc_writel(pmc_reg, offset);
-}
-
-static void _tegra_pmc_register_update_lock(int offset,
-		unsigned long mask, unsigned long val)
-{
-	unsigned long flags;
-
-	spin_lock_irqsave(&pwr_lock, flags);
-	_tegra_pmc_register_update(offset, mask, val);
-	spin_unlock_irqrestore(&pwr_lock, flags);
-}
-#endif
-
 /* PMC register read/write/update with pmc register enums */
 static u32 tegra_pmc_readl(enum pmc_regs reg)
 {
@@ -1335,7 +1313,6 @@ void tegra_pmc_reset_system(void)
 }
 EXPORT_SYMBOL(tegra_pmc_reset_system);
 
-#ifndef CONFIG_TEGRA186_PMC
 int tegra_pmc_clear_reboot_reason(u32 reason)
 {
 	u32 val;
@@ -1395,31 +1372,6 @@ unsigned long tegra_pmc_sata_pwrgt_get(void)
 	return tegra_pmc_readl(TEGRA_PMC_SATA_PWRGT_0);
 }
 EXPORT_SYMBOL(tegra_pmc_sata_pwrgt_get);
-
-void tegra_pmc_iopower_enable(int reg, u32 bit_mask)
-{
-	_tegra_pmc_register_update_lock(reg, bit_mask, 0);
-}
-EXPORT_SYMBOL(tegra_pmc_iopower_enable);
-
-void  tegra_pmc_iopower_disable(int reg, u32 bit_mask)
-{
-	_tegra_pmc_register_update_lock(reg, bit_mask, bit_mask);
-}
-EXPORT_SYMBOL(tegra_pmc_iopower_disable);
-
-int tegra_pmc_iopower_get_status(int reg, u32 bit_mask)
-{
-	unsigned int no_iopower;
-
-	no_iopower = _tegra_pmc_readl(reg);
-	if (no_iopower & bit_mask)
-		return 0;
-	else
-		return 1;
-}
-EXPORT_SYMBOL(tegra_pmc_iopower_get_status);
-#endif
 
 /* cleans io dpd settings from bootloader during kernel init */
 static void _tegra_bl_io_dpd_cleanup(void)
@@ -2093,80 +2045,6 @@ static int tegra_pmc_io_pad_is_powered(const struct tegra_pmc_io_pad_soc *pad)
 
 	return !(value & BIT(pad->dpd));
 }
-
-#ifndef CONFIG_TEGRA186_PMC
-int tegra186_pmc_io_dpd_enable(int reg, int bit_pos)
-{
-	unsigned int enable_mask;
-	unsigned int dpd_status;
-	unsigned long flags;
-
-	spin_lock_irqsave(&pwr_lock, flags);
-
-	enable_mask = ((1 << bit_pos) | IO_DPD_REQ_CODE_ON);
-
-	_tegra_pmc_writel(enable_mask, (T186_PMC_IO_DPD_REQ + reg * 8));
-	udelay(7);
-
-	dpd_status = _tegra_pmc_readl(T186_PMC_IO_DPD_STATUS + reg * 8);
-	if (!(dpd_status & (1 << bit_pos))) {
-		pr_info("Error: dpd%d enable failed, status=%#x\n",
-				(reg + 1), dpd_status);
-	}
-	spin_unlock_irqrestore(&pwr_lock, flags);
-
-	return 0;
-}
-EXPORT_SYMBOL(tegra186_pmc_io_dpd_enable);
-
-int tegra186_pmc_io_dpd_disable(int reg, int bit_pos)
-{
-	unsigned int enable_mask;
-	unsigned int dpd_status;
-	unsigned long flags;
-
-	spin_lock_irqsave(&pwr_lock, flags);
-
-	enable_mask = ((1 << bit_pos) | IO_DPD_REQ_CODE_OFF);
-
-	_tegra_pmc_writel(enable_mask, T186_PMC_IO_DPD_REQ + reg * 8);
-	udelay(7);
-
-	dpd_status = _tegra_pmc_readl(T186_PMC_IO_DPD_STATUS + reg * 8);
-	if (dpd_status & (1 << bit_pos)) {
-		pr_info("Error: dpd%d disable failed, status=%#x\n",
-				(reg + 1), dpd_status);
-	}
-	spin_unlock_irqrestore(&pwr_lock, flags);
-	return 0;
-}
-EXPORT_SYMBOL(tegra186_pmc_io_dpd_disable);
-
-int tegra186_pmc_io_dpd_get_status(int reg, int bit_pos)
-{
-	unsigned int dpd_status;
-
-	dpd_status = _tegra_pmc_readl(T186_PMC_IO_DPD_STATUS + reg * 8);
-	if (dpd_status & BIT(bit_pos))
-		return 1;
-	else
-		return 0;
-}
-EXPORT_SYMBOL(tegra186_pmc_io_dpd_get_status);
-
-void tegra_pmc_pad_voltage_update(unsigned int reg,
-		unsigned long mask, unsigned long val)
-{
-	_tegra_pmc_register_update_lock(reg, mask, val);
-}
-EXPORT_SYMBOL(tegra_pmc_pad_voltage_update);
-
-unsigned long tegra_pmc_pad_voltage_get(unsigned int reg)
-{
-	return _tegra_pmc_readl(reg);
-}
-EXPORT_SYMBOL(tegra_pmc_pad_voltage_get);
-#endif
 
 static int tegra_pmc_io_pads_pinctrl_get_groups_count(
 			struct pinctrl_dev *pctldev)

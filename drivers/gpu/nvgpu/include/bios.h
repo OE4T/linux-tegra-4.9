@@ -1,7 +1,7 @@
 /*
  * vbios tables support
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -510,7 +510,7 @@ struct pwr_sensors_2x_header {
 	u8 table_entry_size;
 	u8 num_table_entries;
 	u32 ba_script_pointer;
-};
+} __packed;
 
 #define VBIOS_POWER_SENSORS_2X_ENTRY_SIZE_15                          0x00000015
 
@@ -521,7 +521,7 @@ struct pwr_sensors_2x_entry {
 	u32 sensor_param1;
 	u32 sensor_param2;
 	u32 sensor_param3;
-};
+} __packed;
 
 #define NV_VBIOS_POWER_SENSORS_2X_ENTRY_FLAGS0_CLASS_MASK                   0xF
 #define NV_VBIOS_POWER_SENSORS_2X_ENTRY_FLAGS0_CLASS_SHIFT                    0
@@ -560,7 +560,7 @@ struct pwr_topology_2x_header {
 	u8 num_table_entries;
 	u8 rel_entry_size;
 	u8 num_rel_entries;
-};
+} __packed;
 
 #define VBIOS_POWER_TOPOLOGY_2X_ENTRY_SIZE_16                          0x00000016
 
@@ -572,7 +572,7 @@ struct pwr_topology_2x_entry {
 	u32 curr_corr_offset;
 	u32 param1;
 	u32 param2;
-};
+} __packed;
 
 #define NV_VBIOS_POWER_TOPOLOGY_2X_ENTRY_FLAGS0_CLASS_MASK                  0xF
 #define NV_VBIOS_POWER_TOPOLOGY_2X_ENTRY_FLAGS0_CLASS_SHIFT                   0
@@ -609,7 +609,7 @@ struct pwr_policy_3x_header_struct {
 	u8 sm_bus_policy_idx;
 	u8 table_viol_entry_size;
 	u8 num_table_viol_entries;
-};
+} __packed;
 
 #define VBIOS_POWER_POLICY_3X_ENTRY_SIZE_2E                           0x0000002E
 
@@ -631,7 +631,7 @@ struct pwr_policy_3x_entry_struct {
 	u16 ratio_max;
 	u8 sample_mult;
 	u32 filter_param;
-};
+} __packed;
 
 #define NV_VBIOS_POWER_POLICY_3X_ENTRY_FLAGS0_CLASS_MASK                    0xF
 #define NV_VBIOS_POWER_POLICY_3X_ENTRY_FLAGS0_CLASS_SHIFT                    0

@@ -16,8 +16,8 @@
 #include <linux/tegra_gpu_t19x.h>
 #include "gk20a/gk20a.h" /* FERMI and MAXWELL classes defined here */
 #include <linux/delay.h>
-#include <linux/tegra-fuse.h>
 #include <linux/version.h>
+#include <soc/tegra/fuse.h>
 
 #include <nvgpu/timers.h>
 

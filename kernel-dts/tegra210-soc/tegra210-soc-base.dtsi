@@ -840,6 +840,7 @@
 
 		dc@54200000 {
 			compatible = "nvidia,tegra210-dc";
+			aux-device-name = "tegradc.0";
 			power-domains = <&mc_clk_pd>;
 			reg = <0x0 0x54200000 0x0 0x00040000>;
 			interrupts = <0 73 0x04>;
@@ -865,6 +866,7 @@
 
 		dc@54240000 {
 			compatible = "nvidia,tegra210-dc";
+			aux-device-name = "tegradc.1";
 			power-domains = <&mc_clk_pd>;
 			reg = <0x0 0x54240000 0x0 0x00040000>;
 			interrupts = <0 74 0x04>;

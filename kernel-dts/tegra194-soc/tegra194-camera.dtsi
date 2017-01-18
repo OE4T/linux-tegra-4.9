@@ -87,4 +87,15 @@
 		nvidia,interval-ms = <50>;
 		nvidia,log-prefix = "[RCE]";
 	};
+
+	rce-rm@bc00000 {
+		compatible = "nvidia,tegra194-rce-rm";
+		reg = <0 0xbc00000 0 0x1000>;
+
+		iommus = <&smmu TEGRA_SID_RCE_RM>;
+
+		nvidia,vi-device = <&vi>;
+
+		nvidia,scratch-size = <0x100000>; /* 1M */
+	};
 };

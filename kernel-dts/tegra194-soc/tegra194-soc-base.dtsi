@@ -163,8 +163,6 @@
 					    TEGRA_SID(NVDEC)
 					    TEGRA_SID(NVENC)
 					    TEGRA_SID(NVJPG)
-					    TEGRA_SID(VI)
-					    TEGRA_SID(ISP)
 					    TEGRA_SID(NVDLA0)
 					    TEGRA_SID(NVDLA1)
 					    TEGRA_SID(NVDISPLAY)
@@ -211,8 +209,20 @@
 				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX7>;
 			};
+			vi_domain {
+				/* Use camera_vm0_as for firmware tests */
+				address-space = <&camera_vm0_as>;
+				sid-list = <TEGRA_SID(VI)>;
+			};
+			rce_rm_domain {
+				address-space = <&camera_vm0_as>;
+				sid-list = <TEGRA_SID(RCE_RM)
+					    TEGRA_SID(ISP)
+					    TEGRA_SID(ISPFALC)
+					    TEGRA_SID(VIFALC)>;
+			};
 			rce_domain {
-				address-space = <&camera_as>;
+				address-space = <&camera_vm1_as>;
 				sid-list = <TEGRA_SID(RCE)>;
 			};
 		};
@@ -246,7 +256,14 @@
 				num-pf-page = <0>;
 				gap-page = <1>;
 			};
-			camera_as: camera {
+			camera_vm0_as: camera_vm0 {
+				iova-start = <0x0 0x80000000>;
+				iova-size = <0x0 0x20000000>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			camera_vm1_as: camera_vm1 {
 				iova-start = <0x0 0xA0000000>;
 				iova-size = <0x0 0x20000000>;
 				alignment = <0xFFFFF>;
@@ -993,9 +1010,16 @@
 			reset-names = "dpaux3";
 		}; //dpaux3
 
-		vi-thi@15f00000 {
+		vi: vi@0x15c00000 {
+			compatible = "nvidia,tegra194-vi";
+			reg = <0x0 0x15c00000 0x0 0x00250000>;
+			iommus = <&smmu TEGRA_SID_VI>;
+			iso-smmu;
+		};
+
+		vi_thi: vi-thi@15f00000 {
 			compatible = "nvidia,tegra194-vi-thi";
-                        reg = <0x0 0x15f00000 0x0 0x00100000>;
+			reg = <0x0 0x15f00000 0x0 0x00100000>;
 
 			resets = <&bpmp_resets TEGRA194_RESET_VI>,
 				 <&bpmp_resets TEGRA194_RESET_TSCTNVI>;
@@ -1005,8 +1029,13 @@
 				 <&bpmp_clks TEGRA194_CLK_NVCSILP>;
 			clock-names = "vi", "nvcsi", "nvcsilp";
 
-			iommus = <&smmu TEGRA_SID_VI>;
-			iso-smmu;
+			iommus = <&smmu TEGRA_SID_VIFALC>;
+		};
+
+		isp: isp@0x14800000 {
+			compatible = "nvidia,tegra194-isp";
+			reg = <0x0 0x14800000 0x0 0x00010000>;
+			iommus = <&smmu TEGRA_SID_ISP>;
 		};
 
 		isp-thi@14b00000 {
@@ -1018,8 +1047,7 @@
 			clocks = <&bpmp_clks TEGRA194_CLK_ISP>;
 			clock-names = "isp";
 
-			iommus = <&smmu TEGRA_SID_ISP>;
-			iso-smmu;
+			iommus = <&smmu TEGRA_SID_ISPFALC>;
 		};
 
 		nvcsi@150c0000 {

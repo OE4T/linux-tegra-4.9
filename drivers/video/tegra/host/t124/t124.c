@@ -19,11 +19,7 @@
  */
 #include <linux/slab.h>
 #include <linux/tegra-powergate.h>
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 #include <soc/tegra/fuse.h>
-#else
-#include <linux/tegra-fuse.h>
-#endif
 
 #include <linux/platform/tegra/mc.h>
 

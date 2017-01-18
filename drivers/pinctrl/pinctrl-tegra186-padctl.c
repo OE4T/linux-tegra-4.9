@@ -23,7 +23,7 @@
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
-#include <linux/tegra-fuse.h>
+#include <soc/tegra/fuse.h>
 #include <linux/tegra-soc.h>
 #include <linux/clk.h>
 #include <linux/reset.h>

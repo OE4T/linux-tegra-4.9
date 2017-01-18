@@ -1,7 +1,7 @@
 /*
  * Host1x Application Specific Virtual Memory
  *
- * Copyright (c) 2015, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,6 +26,7 @@
 #include <linux/list.h>
 #include <linux/of.h>
 #include <linux/version.h>
+#include <linux/dma-buf.h>
 
 #include <iommu_context_dev.h>
 
@@ -198,6 +199,9 @@ static int iommu_context_dev_probe(struct platform_device *pdev)
 
 	pdev->dev.dma_parms = &ctx->dma_parms;
 	dma_set_max_seg_size(&pdev->dev, UINT_MAX);
+
+	/* disable lazy unmapping for context devices */
+	dma_buf_disable_lazy_unmapping(&pdev->dev);
 
 	dev_info(&pdev->dev, "initialized (streamid=%d)",
 		 iommu_get_hwid(pdev->dev.archdata.iommu, &pdev->dev, 0));

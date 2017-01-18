@@ -48,7 +48,6 @@ enum {
 	TEGRA_VGPU_CMD_AS_FREE_SHARE = 9,
 	TEGRA_VGPU_CMD_AS_MAP = 10,
 	TEGRA_VGPU_CMD_AS_UNMAP = 11,
-	TEGRA_VGPU_CMD_AS_INVALIDATE = 12,
 	TEGRA_VGPU_CMD_CHANNEL_BIND = 13,
 	TEGRA_VGPU_CMD_CHANNEL_UNBIND = 14,
 	TEGRA_VGPU_CMD_CHANNEL_DISABLE = 15,
@@ -191,10 +190,6 @@ struct tegra_vgpu_as_map_ex_params {
 struct tegra_vgpu_mem_desc {
 	u64 addr;
 	u64 length;
-};
-
-struct tegra_vgpu_as_invalidate_params {
-	u64 handle;
 };
 
 struct tegra_vgpu_channel_config_params {
@@ -471,7 +466,6 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_as_bind_share_params as_bind_share;
 		struct tegra_vgpu_as_map_params as_map;
 		struct tegra_vgpu_as_map_ex_params as_map_ex;
-		struct tegra_vgpu_as_invalidate_params as_invalidate;
 		struct tegra_vgpu_channel_config_params channel_config;
 		struct tegra_vgpu_ramfc_params ramfc;
 		struct tegra_vgpu_ch_ctx_params ch_ctx;

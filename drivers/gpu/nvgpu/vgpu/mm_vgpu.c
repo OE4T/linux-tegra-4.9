@@ -497,18 +497,10 @@ static void vgpu_mm_l2_flush(struct gk20a *g, bool invalidate)
 
 static void vgpu_mm_tlb_invalidate(struct vm_gk20a *vm)
 {
-	struct gk20a *g = gk20a_from_vm(vm);
-	struct tegra_vgpu_cmd_msg msg;
-	struct tegra_vgpu_as_invalidate_params *p = &msg.params.as_invalidate;
-	int err;
-
 	gk20a_dbg_fn("");
 
-	msg.cmd = TEGRA_VGPU_CMD_AS_INVALIDATE;
-	msg.handle = vgpu_get_handle(g);
-	p->handle = vm->handle;
-	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
-	WARN_ON(err || msg.ret);
+	gk20a_err(dev_from_vm(vm), "%s: call to RM server not supported",
+		__func__);
 }
 
 static void vgpu_mm_mmu_set_debug_mode(struct gk20a *g, bool enable)

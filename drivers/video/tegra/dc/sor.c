@@ -27,39 +27,13 @@
 #include <linux/tegra_prod.h>
 #include <linux/uaccess.h>
 #include <linux/version.h>
-
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
-#include <soc/tegra/pmc.h>
-#else
-#include <linux/platform/tegra/io-dpd.h>
-#endif
+#include <linux/padctrl/padctrl.h>
 
 #include "dc.h"
 #include "sor.h"
 #include "sor_regs.h"
 #include "dc_priv.h"
 #include "dp.h"
-
-#include "../../../../arch/arm/mach-tegra/iomap.h"
-
-#define APBDEV_PMC_DPD_SAMPLE				(0x20)
-#define APBDEV_PMC_DPD_SAMPLE_ON_DISABLE		(0)
-#define APBDEV_PMC_DPD_SAMPLE_ON_ENABLE			(1)
-#define APBDEV_PMC_SEL_DPD_TIM				(0x1c8)
-#define APBDEV_PMC_SEL_DPD_TIM_SEL_DPD_TIM_DEFAULT	(0x7f)
-#define APBDEV_PMC_IO_DPD2_REQ				(0x1c0)
-#define APBDEV_PMC_IO_DPD2_REQ_LVDS_SHIFT		(25)
-#define APBDEV_PMC_IO_DPD2_REQ_LVDS_OFF			(0 << 25)
-#define APBDEV_PMC_IO_DPD2_REQ_LVDS_ON			(1 << 25)
-#define APBDEV_PMC_IO_DPD2_REQ_CODE_SHIFT               (30)
-#define APBDEV_PMC_IO_DPD2_REQ_CODE_DEFAULT_MASK        (0x3 << 30)
-#define APBDEV_PMC_IO_DPD2_REQ_CODE_IDLE                (0 << 30)
-#define APBDEV_PMC_IO_DPD2_REQ_CODE_DPD_OFF             (1 << 30)
-#define APBDEV_PMC_IO_DPD2_REQ_CODE_DPD_ON              (2 << 30)
-#define APBDEV_PMC_IO_DPD2_STATUS			(0x1c4)
-#define APBDEV_PMC_IO_DPD2_STATUS_LVDS_SHIFT		(25)
-#define APBDEV_PMC_IO_DPD2_STATUS_LVDS_OFF		(0 << 25)
-#define APBDEV_PMC_IO_DPD2_STATUS_LVDS_ON		(1 << 25)
 
 unsigned long
 tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
@@ -559,6 +533,11 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		sor_num ? of_find_node_by_path(SOR1_NODE) :
 		of_find_node_by_path(SOR_NODE);
 	const char *res_name = sor_num ? "sor1" : "sor0";
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	char *io_padctrl_name = sor_num ? "hdmi-dp1" : "hdmi-dp0";
+#else
+	char *io_padctrl_name = sor_num ? "hdmi" : NULL;
+#endif
 
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
@@ -657,6 +636,16 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 			sor->audio_support = false;
 		else
 			sor->audio_support = true;
+	}
+
+	if (io_padctrl_name)
+		sor->io_padctrl = devm_padctrl_get_from_node(&dc->ndev->dev,
+					np_sor, io_padctrl_name);
+
+	if (IS_ERR(sor->io_padctrl)) {
+		dev_err(&dc->ndev->dev, "sor: %s IO padctrl unavailable\n",
+			io_padctrl_name);
+		sor->io_padctrl = NULL;
 	}
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
@@ -1028,69 +1017,40 @@ static inline void tegra_dc_sor_update(struct tegra_dc_sor_data *sor)
 	tegra_sor_writel(sor, NV_SOR_STATE0, 0);
 }
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
 static void tegra_dc_sor_io_set_dpd(struct tegra_dc_sor_data *sor, bool up)
 {
-	/* BRINGUP HACK: DISABLE DPD SEQUENCE FOR NOW */
-	return;
-}
-#else
-static void tegra_dc_sor_io_set_dpd(struct tegra_dc_sor_data *sor, bool up)
-{
-	u32 reg_val;
-	void __iomem *pmc_base = ioremap(TEGRA_PMC_BASE, SZ_4K);
-	unsigned long timeout_jf;
-
 	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return;
 
-	if (up) {
-		writel(APBDEV_PMC_DPD_SAMPLE_ON_ENABLE,
-			pmc_base + APBDEV_PMC_DPD_SAMPLE);
-		writel(10, pmc_base + APBDEV_PMC_SEL_DPD_TIM);
+	if (sor->io_padctrl) {
+		int ret;
+
+		if (up)
+			ret = padctrl_power_enable(sor->io_padctrl);
+		else
+			ret = padctrl_power_disable(sor->io_padctrl);
+		if (ret < 0)
+			dev_err(&sor->dc->ndev->dev,
+				 "padctrl power %s fail %d\n",
+				 up ? "up" : "down", ret);
 	}
-
-	reg_val = readl(pmc_base + APBDEV_PMC_IO_DPD2_REQ);
-	reg_val &= ~(APBDEV_PMC_IO_DPD2_REQ_LVDS_ON ||
-		APBDEV_PMC_IO_DPD2_REQ_CODE_DEFAULT_MASK);
-
-	reg_val = up ? APBDEV_PMC_IO_DPD2_REQ_LVDS_ON |
-		APBDEV_PMC_IO_DPD2_REQ_CODE_DPD_OFF :
-		APBDEV_PMC_IO_DPD2_REQ_LVDS_OFF |
-		APBDEV_PMC_IO_DPD2_REQ_CODE_DPD_ON;
-
-	writel(reg_val, pmc_base + APBDEV_PMC_IO_DPD2_REQ);
-
-	/* Polling */
-	timeout_jf = jiffies + msecs_to_jiffies(10);
-	do {
-		usleep_range(20, 40);
-		reg_val = readl(pmc_base + APBDEV_PMC_IO_DPD2_STATUS);
-	} while (((reg_val & APBDEV_PMC_IO_DPD2_STATUS_LVDS_ON) != 0) &&
-		time_after(timeout_jf, jiffies));
-
-	if ((reg_val & APBDEV_PMC_IO_DPD2_STATUS_LVDS_ON) != 0)
-		dev_err(&sor->dc->ndev->dev,
-			"PMC_IO_DPD2 polling failed (0x%x)\n", reg_val);
-
-	if (up)
-		writel(APBDEV_PMC_DPD_SAMPLE_ON_DISABLE,
-			pmc_base + APBDEV_PMC_DPD_SAMPLE);
 }
-#endif
 
 /* hdmi uses sor sequencer for pad power up */
 void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
 {
-	struct tegra_io_dpd hdmi_dpd = {
-		.name = "hdmi",
-		.io_dpd_reg_index = 0,
-		.io_dpd_bit = 28,
-	};
 	/* seamless */
 	if (sor->dc->initialized)
 		return;
-	tegra_io_dpd_disable(&hdmi_dpd);
+
+	if (sor->io_padctrl) {
+		int ret = padctrl_power_enable(sor->io_padctrl);
+
+		if (ret < 0)
+			dev_err(&sor->dc->ndev->dev, "padctrl power up fail %d\n",
+				 ret);
+	}
+
 	usleep_range(20, 70);
 
 	tegra_sor_write_field(sor, NV_SOR_PLL2,
@@ -1134,12 +1094,6 @@ void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
 
 void tegra_sor_hdmi_pad_power_down(struct tegra_dc_sor_data *sor)
 {
-	struct tegra_io_dpd hdmi_dpd = {
-		.name = "hdmi",
-		.io_dpd_reg_index = 0,
-		.io_dpd_bit = 28,
-	};
-
 	tegra_sor_write_field(sor, NV_SOR_PLL2,
 				NV_SOR_PLL2_AUX7_PORT_POWERDOWN_MASK,
 				NV_SOR_PLL2_AUX7_PORT_POWERDOWN_ENABLE);
@@ -1158,7 +1112,13 @@ void tegra_sor_hdmi_pad_power_down(struct tegra_dc_sor_data *sor)
 				NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_MASK,
 				NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_ENABLE);
 
-	tegra_io_dpd_enable(&hdmi_dpd);
+	if (sor->io_padctrl) {
+		int ret = padctrl_power_disable(sor->io_padctrl);
+
+		if (ret < 0)
+			dev_err(&sor->dc->ndev->dev, "padctrl power down fail %d\n",
+				ret);
+	}
 }
 
 void tegra_sor_config_hdmi_clk(struct tegra_dc_sor_data *sor)

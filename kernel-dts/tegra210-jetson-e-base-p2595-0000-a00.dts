@@ -976,7 +976,8 @@
 		vdd-cpu-supply = <&cpu_ovr_reg>;
 		nvidia,pwm-to-pmic;
 		nvidia,init-uv = <1000000>;
-		nvidia,align-step-uv = <6250>;
+		nvidia,align-step-uv = <19200>; /* 19.2mv */
+		nvidia,align-offset-uv = <708000>; /* 708mv */
 		nvidia,sample-rate = <25000>;
 		nvidia,droop-ctrl = <0x00000f00>;
 		nvidia,force-mode = <1>;

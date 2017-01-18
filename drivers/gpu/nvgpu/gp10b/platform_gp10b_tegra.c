@@ -348,7 +348,7 @@ static long gp10b_round_clk_rate(struct device *dev, unsigned long rate)
 	int i;
 
 	for (i = 0; i < max_states; ++i)
-		if (freq_table[i] >= rate)
+		if (freq_table[i] > rate)
 			return freq_table[i];
 
 	return freq_table[max_states - 1];

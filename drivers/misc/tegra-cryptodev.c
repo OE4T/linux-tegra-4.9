@@ -31,7 +31,6 @@
 #include <linux/scatterlist.h>
 #include <linux/uaccess.h>
 #include <linux/tegra-soc.h>
-#include <linux/tegra-fuse.h>
 #include <crypto/rng.h>
 #include <crypto/hash.h>
 #include <linux/platform/tegra/common.h>

@@ -172,7 +172,7 @@ int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 			new_baseclock = 564480000;
 		else if ((data->soc > TEGRA_ASOC_UTILS_SOC_TEGRA30) &&
 			 (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA186))
-			new_baseclock = 282240000;
+			new_baseclock = 338688000;
 		else {
 			new_baseclock = data->clk_rates[PLLA_x11025_RATE];
 			mclk = data->clk_rates[PLLA_OUT0_x11025_RATE];

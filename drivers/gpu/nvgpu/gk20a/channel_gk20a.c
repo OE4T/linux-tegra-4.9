@@ -777,6 +777,8 @@ int gk20a_channel_set_runlist_interleave(struct channel_gk20a *ch,
 		break;
 	}
 
+	gk20a_dbg(gpu_dbg_sched, "chid=%u interleave=%u", ch->hw_chid, level);
+
 	return ret ? ret : g->ops.fifo.update_runlist(g, ch->runlist_id, ~0, true, true);
 }
 
@@ -3359,6 +3361,9 @@ int gk20a_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
 		return -EINVAL;
 
 	ch->timeslice_us = timeslice;
+
+	gk20a_dbg(gpu_dbg_sched, "chid=%u timeslice=%u us",
+			 ch->hw_chid, timeslice);
 
 	return channel_gk20a_set_schedule_params(ch);
 }

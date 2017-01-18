@@ -2098,6 +2098,14 @@ static int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 		return 0;
 
 	if (g->ops.gr.set_ctxsw_preemption_mode) {
+
+		gk20a_dbg(gpu_dbg_sched, "chid=%d tsgid=%d pid=%d "
+				"graphics_preempt=%d compute_preempt=%d",
+				ch->hw_chid,
+				ch->tsgid,
+				ch->tgid,
+				graphics_preempt_mode,
+				compute_preempt_mode);
 		err = g->ops.gr.set_ctxsw_preemption_mode(g, gr_ctx, vm, class,
 						graphics_preempt_mode, compute_preempt_mode);
 		if (err) {

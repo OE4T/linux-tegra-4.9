@@ -22,7 +22,7 @@
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #include <linux/clk/tegra.h>
-#include <linux/tegra-fuse.h>
+#include <soc/tegra/fuse.h>
 
 #include "gk20a/gk20a.h"
 

@@ -23,11 +23,9 @@
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #include <linux/clk/tegra.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
 #include <soc/tegra/fuse.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
 #include <soc/tegra/tegra-dvfs.h>
-#else
-#include <linux/tegra-fuse.h>
 #endif
 
 #include "gk20a/gk20a.h"

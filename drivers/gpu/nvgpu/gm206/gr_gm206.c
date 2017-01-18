@@ -16,8 +16,8 @@
 #include <linux/types.h>
 #include <linux/delay.h>	/* for mdelay */
 #include <linux/io.h>
-#include <linux/tegra-fuse.h>
 #include <linux/vmalloc.h>
+#include <soc/tegra/fuse.h>
 
 #include "gk20a/gk20a.h"
 

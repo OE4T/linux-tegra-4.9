@@ -15,7 +15,7 @@
 
 #include <linux/types.h>
 #include <linux/version.h>
-#include <linux/tegra-fuse.h>
+#include <soc/tegra/fuse.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"

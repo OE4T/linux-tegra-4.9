@@ -16,9 +16,9 @@
 #include <linux/types.h>
 #include <linux/delay.h>
 #include <linux/io.h>
-#include <linux/tegra-fuse.h>
 #include <linux/vmalloc.h>
 #include <linux/version.h>
+#include <soc/tegra/fuse.h>
 
 #include <dt-bindings/soc/gm20b-fuse.h>
 

@@ -14,7 +14,7 @@
  */
 
 #include <linux/delay.h>	/* for udelay */
-#include <linux/tegra-fuse.h>
+#include <soc/tegra/fuse.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"

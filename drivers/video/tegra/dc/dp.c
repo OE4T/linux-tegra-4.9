@@ -2743,7 +2743,6 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 				NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G1_62);
 	}
 #else
-	clk_set_parent(sor->sor_clk, dp->parent_clk);
 	tegra_dp_clk_enable(dp);
 	tegra_sor_config_dp_clk(dp->sor);
 	tegra_dc_setup_clk(dc, dc->clk);

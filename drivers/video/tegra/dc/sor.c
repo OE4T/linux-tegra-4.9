@@ -100,6 +100,7 @@ void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor)
 void tegra_sor_config_dp_clk(struct tegra_dc_sor_data *sor)
 {
 	int flag = tegra_dc_is_clk_enabled(sor->sor_clk);
+	int sor_num = tegra_dc_which_sor(sor->dc);
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(sor->dc);
 
 	if (sor->clk_type == TEGRA_SOR_MACRO_CLK)
@@ -129,6 +130,11 @@ void tegra_sor_config_dp_clk(struct tegra_dc_sor_data *sor)
 #ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 	if (tegra_platform_is_silicon())
 		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 1);
+#else
+	clk_set_parent(sor->sor_clk, dp->parent_clk);
+	/* For DP on sor1, set sor1 brick clk to be the parent */
+	if (sor_num)
+		clk_set_parent(sor->sor_clk, sor->brick_clk);
 #endif
 
 	if (flag)

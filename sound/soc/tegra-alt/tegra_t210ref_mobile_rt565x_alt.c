@@ -1,7 +1,7 @@
 /*
  * tegra_t210ref_mobile_rt565x_alt.c - Tegra T210 Machine driver for mobile
  *
- * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -190,17 +190,22 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 
 	codec_rate = tegra_t210ref_srate_values[machine->rate_via_kcontrol];
 	clk_rate = (machine->rate_via_kcontrol) ? codec_rate : rate;
+	/* aud_mclk, 256 times the sample rate */
+	clk_out_rate = clk_rate << 8;
 
 	switch (clk_rate) {
 	case 11025:
+		mclk = 22579200;
+		break;
 	case 22050:
 	case 44100:
 	case 88200:
-	case 176000:
-		clk_out_rate = 11289600; /* Codec rate */
-		mclk = 11289600 * 4; /* PLL_A rate */
+	case 176400:
+		mclk = 45158400;
 		break;
 	case 8000:
+		mclk = 24576000;
+		break;
 	case 16000:
 	case 32000:
 	case 48000:
@@ -208,8 +213,7 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	case 96000:
 	case 192000:
 	default:
-		clk_out_rate = 12288000;
-		mclk = 12288000 * 3;
+		mclk = 49152000;
 		break;
 	}
 

@@ -1,11 +1,11 @@
 GCOV_PROFILE := y
 
-ccflags-y += -Idrivers/gpu/nvgpu/include
-ccflags-y += -Idrivers/video/tegra/host
-ccflags-y += -Idrivers/devfreq
-ccflags-y += -I../nvgpu/include
-ccflags-y += -I../nvgpu/include/uapi
-ccflags-y += -I../nvgpu/drivers/gpu/nvgpu/include
+ccflags-y += -I$(srctree)/../nvgpu/drivers/gpu/nvgpu/include
+ccflags-y += -I$(srctree)/../nvgpu/include
+ccflags-y += -I$(srctree)/../nvgpu/include/uapi
+
+ccflags-y += -I$(srctree)/drivers/devfreq
+
 ccflags-y += -Wno-multichar
 ccflags-y += -Werror
 ccflags-y += -Wno-error=cpp
@@ -14,7 +14,6 @@ ccflags-y += -Wextra -Wno-unused-parameter -Wno-missing-field-initializers
 endif
 
 ifeq ($(CONFIG_TEGRA_19x_GPU),y)
-ccflags-y += -I$(srctree)/../nvgpu/drivers/gpu/nvgpu/include
 ccflags-y += -I$(srctree)/../nvgpu-t19x/drivers/gpu/nvgpu
 ccflags-y += -I$(srctree)/../nvgpu-t19x/drivers/gpu/nvgpu/include
 ccflags-y += -I$(srctree)/../nvgpu-t19x/include

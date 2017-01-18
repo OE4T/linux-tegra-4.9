@@ -22,6 +22,7 @@
 #include <linux/of.h>
 #include <linux/nvs.h>
 #include <linux/crc32.h>
+#include <linux/time.h>
 
 #include "nvs_dfsh.h"
 
@@ -481,6 +482,8 @@ static inline void dfsh_parse_pkt(struct tty_struct *tty, unsigned char c)
 	unsigned int ts_i;
 	int snsr_id;
 	int64_t ts;
+	struct timespec k_ts;
+	s64 k_ts_ns;
 
 	/* sanity check index */
 	if (st->pkt_byte_idx >= sizeof(st->pkt_buf))
@@ -527,9 +530,17 @@ static inline void dfsh_parse_pkt(struct tty_struct *tty, unsigned char c)
 					       sizeof(ts));
 					/* convert timestamp from usec to nsec */
 					ts = ts * 1000;
-					st->nvs->handler(st->nvs_st[snsr_id],
+					if(snsr_id == 0){
+						ktime_get_ts64(&k_ts);
+						k_ts_ns = timespec_to_ns(&k_ts);
+						st->nvs->handler(st->nvs_st[snsr_id],
+							 &k_ts_ns,
+							 ts);
+					} else {
+						st->nvs->handler(st->nvs_st[snsr_id],
 							 &st->pkt_buf[data_i],
 							 ts);
+					}
 				} else if (st->pkt.header.type == MSG_MCU) {
 					/* message from MCU */
 					dev_info(tty->dev, "received cmd:%x\n",

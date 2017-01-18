@@ -1534,7 +1534,7 @@
 	};
 
 	adma: adma@2930000 {
-		compatible = "nvidia,tegra210-adma";
+		compatible = "nvidia,tegra186-adma";
 		power-domains = <&ape_pd>;
 		wakeup-disable;
 		interrupt-parent = <&tegra_agic>;

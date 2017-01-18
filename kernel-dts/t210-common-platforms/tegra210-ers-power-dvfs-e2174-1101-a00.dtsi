@@ -13,9 +13,10 @@
  */
 
 #include <dt-bindings/gpio/tegra-gpio.h>
-#include <dt-bindings/clk/tegra210-clk.h>
 
 / {
+#ifdef KERNEL_VERSION_3_18
+#include <dt-bindings/clk/tegra210-clk.h>
 	dfll-ovr@70110000 {
 		status = "okay";
 		reg = <0x0 0x70110000 0x0 0x400>;
@@ -161,7 +162,27 @@
 			voltage-time-sel = <80>;
 		};
 	};
+#else
+	dfll-max77621@70110000 {
+		i2c_dfll: dfll-max77621-integration {
+			pmic-i2c-address = <0x36>;
+			pmic-i2c-voltage-register = <0x01>;
+			i2c-fs-rate = <400000>;
+			sel-conversion-slope = <1>;
+		};
 
+		dfll_max77621_parms: dfll-max77621-board-params {
+			sample-rate = <12500>;
+			fixed-output-forcing;
+			cf = <10>;
+			ci = <0>;
+			cg = <2>;
+			droop-cut-value = <0xf>;
+			droop-restore-ramp = <0x0>;
+			scale-out-ramp = <0x0>;
+		};
+	};
+#endif
 	cpu_edp {
 		status = "okay";
 		nvidia,edp_limit = <25000>;
@@ -172,6 +193,7 @@
 		nvidia,edp_limit = <20000>;
 	};
 
+#ifdef KERNEL_VERSION_3_18
 	dvfs_rails {
 		vdd-cpu-rail-ovr@0 {
 			status = "okay";
@@ -243,6 +265,7 @@
 			vmax-cdev = <&core_vmax_cdev>;
 		};
 	};
+#endif
 };
 
 #include <tegra210-soc/tegra210-power-dvfs.dtsi>

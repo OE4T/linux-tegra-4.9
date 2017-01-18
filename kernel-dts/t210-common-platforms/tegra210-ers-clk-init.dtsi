@@ -12,9 +12,10 @@
  *
  */
 
-#include <dt-bindings/clk/tegra210-clk.h>
 
 / {
+#ifdef KERNEL_VERSION_3_18
+#include <dt-bindings/clk/tegra210-clk.h>
 	clock {
 		t210-clk-init-table {
 				compatible = "nvidia,tegra-clk-init-table";
@@ -65,4 +66,5 @@
 				0 >;
 		};
 	};
+#endif
 };

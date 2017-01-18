@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2016-2017 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -109,4 +109,60 @@ typedef struct {
 	te_oper_param_t params[TE_OPER_MAX_PARAMS];
 } te_operation_container_t;
 
+/*
+ * Serialized buffer format
+ * +-------------------------------------------------------------------+
+ * |   Stream header  |  Payload 1 header | Payload 1| [More payload   |
+ * | (stream_header_t)| (payload_header_t)|  (data)  |  header + data] |
+ * +-------------------------------------------------------------------+
+ */
+
+#define STREAM_HEADER_MAGIC	0xfeedbeefU
+#define STREAM_HEADER_CUR_VERSION	0x1U
+
+#define PAYLOAD_HEADER_MAGIC	0xcafebabeU
+
+#define STREAM_META_HEADER_LEN	(sizeof(stream_header_t))
+#define PAYLOAD_META_HEADER_LEN	(sizeof(payload_header_t))
+
+/*
+ * Defines maximum chunk size allowed by the trusty kernel to pass in a single
+ * SMC call. This value is referenced from Android Open Source implementation
+ * of secure storage proxy daemon.
+ */
+#define TIPC_MAX_CHUNK_SIZE 4040U
+
+/*
+ * @brief payload meta data header
+ * @magic payload header magic
+ * @type payload_type_t object
+ * @index te_operation_t object linked list index
+ * @length length of the payload followed by the header
+ */
+typedef struct {
+	uint32_t magic;
+	te_oper_param_type_t type;
+	uint32_t index;
+	uint32_t length;
+} payload_header_t;
+
+/*
+ * @brief stream meta data header
+ * @magic 4 byte id
+ * @version version of the serialized buffer format
+ * @command te_operation_t object command
+ * @status te_operation_t object status code
+ * @interface_side te_operation_t object interface side
+ * @num_entries number of payload entries in the serialized buffer
+ * @total_length length of the serialized buffer
+ */
+typedef struct {
+	uint32_t magic;
+	uint32_t version;
+	uint32_t command;
+	te_error_t status;
+	uint32_t interface_side;
+	uint32_t num_entries;
+	uint32_t total_length;
+} stream_header_t;
 #endif

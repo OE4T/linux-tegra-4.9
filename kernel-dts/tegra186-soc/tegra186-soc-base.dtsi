@@ -594,10 +594,12 @@
 					TEGRA_IO_PAD_GROUP_DSI
 					TEGRA_IO_PAD_GROUP_DSIB
 					TEGRA_IO_PAD_GROUP_DSIC
-					TEGRA_IO_PAD_GROUP_DSID>;
+					TEGRA_IO_PAD_GROUP_DSID
+					TEGRA_IO_PAD_GROUP_HDMI_DP0
+					TEGRA_IO_PAD_GROUP_HDMI_DP1>;
 		pad-names = "ufs", "dbg", "spi", "audio-hv", "ao-hv",
 				"dmic-hv", "sdmmc1-hv", "sdmmc2-hv", "sdmmc3-hv",
-				"dsia", "dsib", "dsic", "dsid";
+				"dsia", "dsib", "dsic", "dsid", "hdmi-dp0", "hdmi-dp1";
 		status = "disabled";
 	};
 
@@ -947,6 +949,8 @@
 				 <&tegra_car TEGRA186_RESET_HDA2HDMICODEC>;
 			reset-names = "sor0","hda_rst", "hda2codec_2x_rst",
 				      "hda2hdmi_rst";
+			pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_HDMI_DP0>;
+			pad-names = "hdmi-dp0";
 			status = "disabled";
 		};
 
@@ -975,6 +979,8 @@
 				 <&tegra_car TEGRA186_RESET_HDA2HDMICODEC>;
 			reset-names = "sor1","hda_rst", "hda2codec_2x_rst",
 				      "hda2hdmi_rst";
+			pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_HDMI_DP1>;
+			pad-names = "hdmi-dp1";
 			status = "disabled";
 		};
 

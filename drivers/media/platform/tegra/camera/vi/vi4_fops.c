@@ -9,17 +9,18 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
+#include <linux/freezer.h>
+#include <linux/kthread.h>
 #include <linux/nvhost.h>
 #include <linux/tegra-powergate.h>
-#include <linux/kthread.h>
-#include <linux/freezer.h>
+#include <media/capture.h>
 #include <media/tegra_camera_platform.h>
-#include "nvhost_acm.h"
 #include "linux/nvhost_ioctl.h"
-#include "vi/vi4.h"
 #include "mc_common.h"
-#include "vi4_registers.h"
+#include "nvhost_acm.h"
 #include "vi4_formats.h"
+#include "vi4_registers.h"
+#include "vi/vi4.h"
 #include "vi/vi_notify.h"
 
 #define DEFAULT_FRAMERATE	30
@@ -85,8 +86,119 @@ void vi4_init_video_formats(struct tegra_channel *chan)
 		chan->video_formats[i] = &vi4_video_formats[i];
 }
 
+long vi4_default_ioctl(struct file *file, void *fh,
+			bool use_prio, unsigned int cmd, void *arg)
+{
+	struct v4l2_fh *vfh = file->private_data;
+	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
+	long err = 0;
+
+	switch (_IOC_NR(cmd)) {
+	case _IOC_NR(VIDIOC_CAPTURE_SETUP):
+		if (chan->bypass)
+			err = vi_capture_setup(chan,
+					(struct vi_capture_setup *)arg);
+		else {
+			dev_err(&chan->video.dev, "not in bypass mode\n");
+			err = -ENODEV;
+		}
+		if (err)
+			dev_err(&chan->video.dev, "capture setup failed\n");
+		break;
+	case _IOC_NR(VIDIOC_CAPTURE_RESET):
+		if (chan->bypass)
+			err = vi_capture_reset(chan, *(uint32_t *)arg);
+		else {
+			dev_err(&chan->video.dev, "not in bypass mode\n");
+			err = -ENODEV;
+		}
+		if (err)
+			dev_err(&chan->video.dev, "capture reset failed\n");
+		break;
+	case _IOC_NR(VIDIOC_CAPTURE_RELEASE):
+		if (chan->bypass)
+			err = vi_capture_release(chan, *(uint32_t *)arg);
+		else {
+			dev_err(&chan->video.dev, "not in bypass mode\n");
+			err = -ENODEV;
+		}
+		if (err)
+			dev_err(&chan->video.dev, "capture release failed\n");
+		break;
+	case _IOC_NR(VIDIOC_CAPTURE_GET_INFO):
+		if (chan->bypass)
+			err = vi_capture_get_info(chan,
+					(struct vi_capture_info *)arg);
+		else {
+			dev_err(&chan->video.dev, "not in bypass mode\n");
+			err = -ENODEV;
+		}
+		if (err)
+			dev_err(&chan->video.dev, "capture get info failed\n");
+		break;
+	case _IOC_NR(VIDIOC_CAPTURE_SET_CONFIG):
+		if (chan->bypass)
+			err = vi_capture_control_message(chan,
+					(struct vi_capture_control_msg *)arg);
+		else {
+			dev_err(&chan->video.dev, "not in bypass mode\n");
+			err = -ENODEV;
+		}
+		if (err)
+			dev_err(&chan->video.dev, "capture config failed\n");
+		break;
+	case _IOC_NR(VIDIOC_CAPTURE_REQUEST):
+		if (chan->bypass)
+			err = vi_capture_request(chan,
+					(struct vi_capture_req *)arg);
+		else {
+			dev_err(&chan->video.dev, "not in bypass mode\n");
+			err = -ENODEV;
+		}
+		if (err)
+			dev_err(&chan->video.dev,
+				"capture request submit failed\n");
+		break;
+	case _IOC_NR(VIDIOC_CAPTURE_STATUS):
+		if (chan->bypass)
+			err = vi_capture_status(chan, *(uint32_t *)arg);
+		else {
+			dev_err(&chan->video.dev, "not in bypass mode\n");
+			err = -ENODEV;
+		}
+		if (err)
+			dev_err(&chan->video.dev,
+				"capture get status failed\n");
+		break;
+	default:
+		dev_err(&chan->video.dev, "%s:Unknown ioctl\n", __func__);
+		return -ENOIOCTLCMD;
+	}
+
+	return err;
+}
+
+
+int tegra_vi4_s_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct tegra_channel *chan = container_of(ctrl->handler,
+				struct tegra_channel, ctrl_handler);
+	int err = 0;
+
+	switch (ctrl->id) {
+	case V4L2_CID_WRITE_ISPFORMAT:
+		chan->write_ispformat = ctrl->val;
+		break;
+	default:
+		dev_err(&chan->video.dev, "%s:Not valid ctrl\n", __func__);
+		return -EINVAL;
+	}
+
+	return err;
+}
+
 static const struct v4l2_ctrl_ops vi4_ctrl_ops = {
-	.s_ctrl	= tegra_channel_s_ctrl,
+	.s_ctrl	= tegra_vi4_s_ctrl,
 };
 
 static const struct v4l2_ctrl_config vi4_custom_ctrls[] = {
@@ -283,9 +395,9 @@ static void tegra_channel_notify_status_callback(
 	for (i = 0; i < chan->valid_ports; i++)
 		dev_err(chan->vi->dev, "Status: %2u channel:%02X frame:%04X\n",
 			status->status, chan->vnc_id[i], status->frame);
-	dev_err(chan->vi->dev, "         timestamp sof %llu eof %llu data 0x%08x\n",
+	dev_err(chan->vi->dev, "     timestamp sof %llu eof %llu data 0x%08x\n",
 		status->sof_ts, status->eof_ts, status->data);
-	dev_err(chan->vi->dev, "         capture_id %u stream %2u vchan %2u\n",
+	dev_err(chan->vi->dev, "     capture_id %u stream %2u vchan %2u\n",
 		status->capture_id, status->st, status->vc);
 
 	schedule_work(&chan->status_work);
@@ -572,7 +684,8 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 					index,
 					250, NULL, NULL);
 			if (unlikely(err))
-				dev_err(chan->vi->dev, "ATOMP_FE syncpt timeout!\n");
+				dev_err(chan->vi->dev,
+					"ATOMP_FE syncpt timeout!\n");
 			else {
 				err = vi_notify_get_capture_status(chan->vnc[i],
 						chan->vnc_id[i],
@@ -867,17 +980,26 @@ int vi4_power_on(struct tegra_channel *chan)
 	 * since they are unique per channel
 	 */
 	ret = nvhost_module_add_client(vi->ndev, &chan->video);
-	if (ret)
+	if (ret < 0)
 		return ret;
-	tegra_vi4_power_on(vi);
+
+	ret = tegra_vi4_power_on(vi);
+	if (ret < 0)
+		return ret;
 
 	if (atomic_add_return(1, &chan->power_on_refcnt) == 1) {
 		ret = tegra_channel_set_power(chan, 1);
-		if (ret < 0)
+		if (ret < 0) {
 			dev_err(vi->dev, "Failed to power on subdevices\n");
+			return ret;
+		}
 	}
 
-	return ret;
+	ret = vi_capture_init(chan);
+	if (ret < 0)
+		return ret;
+
+	return 0;
 }
 
 void vi4_power_off(struct tegra_channel *chan)
@@ -888,6 +1010,8 @@ void vi4_power_off(struct tegra_channel *chan)
 
 	vi = chan->vi;
 	csi = vi->csi;
+
+	vi_capture_shutdown(chan);
 
 	if (atomic_dec_and_test(&chan->power_on_refcnt)) {
 		ret = tegra_channel_set_power(chan, 0);

@@ -202,6 +202,8 @@ struct tegra_channel {
 	struct vi_notify_channel *vnc[TEGRA_CSI_BLOCKS];
 	int vnc_id[TEGRA_CSI_BLOCKS];
 	int grp_id;
+
+	struct vi_capture *capture_data;
 };
 
 #define to_tegra_channel(vdev) \
@@ -315,6 +317,8 @@ struct tegra_vi_fops {
 	int (*vi_stop_streaming)(struct vb2_queue *vq);
 	int (*vi_add_ctrls)(struct tegra_channel *chan);
 	void (*vi_init_video_formats)(struct tegra_channel *chan);
+	long (*vi_default_ioctl)(struct file *file, void *fh,
+			bool use_prio, unsigned int cmd, void *arg);
 };
 
 struct tegra_csi_fops {

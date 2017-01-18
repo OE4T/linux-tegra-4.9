@@ -867,9 +867,6 @@ int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 				chan->format.pixelformat,
 				&chan->fmtinfo->bpp, 0);
 		break;
-	case V4L2_CID_WRITE_ISPFORMAT:
-		chan->write_ispformat = ctrl->val;
-		break;
 	default:
 		dev_err(&chan->video.dev, "%s:Not valid ctrl\n", __func__);
 		return -EINVAL;
@@ -1218,6 +1215,44 @@ static int tegra_channel_log_status(struct file *file, void *priv)
 		chan->grp_id, core, log_status);
 	return 0;
 }
+
+static long tegra_channel_default_ioctl(struct file *file, void *fh,
+			bool use_prio, unsigned int cmd, void *arg)
+{
+	struct v4l2_fh *vfh = file->private_data;
+	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
+	struct tegra_mc_vi *vi = chan->vi;
+	long ret = 0;
+
+	if (vi->fops && vi->fops->vi_default_ioctl)
+		ret = vi->fops->vi_default_ioctl(file, fh, use_prio, cmd, arg);
+
+	return ret;
+}
+
+#ifdef CONFIG_COMPAT
+static long tegra_channel_compat_ioctl(struct file *filp,
+	       unsigned int cmd, unsigned long arg)
+{
+	struct video_device *vdev = video_devdata(filp);
+	int ret = -ENODEV;
+
+	if (vdev->fops->unlocked_ioctl) {
+		struct mutex *lock = v4l2_ioctl_get_lock(vdev, cmd);
+
+		if (lock && mutex_lock_interruptible(lock))
+			return -ERESTARTSYS;
+		if (video_is_registered(vdev))
+			ret = vdev->fops->unlocked_ioctl(filp, cmd, arg);
+		if (lock)
+			mutex_unlock(lock);
+	} else
+		ret = -ENOTTY;
+
+	return ret;
+}
+#endif
+
 static const struct v4l2_ioctl_ops tegra_channel_ioctl_ops = {
 	.vidioc_querycap		= tegra_channel_querycap,
 	.vidioc_enum_framesizes		= tegra_channel_enum_framesizes,
@@ -1247,6 +1282,7 @@ static const struct v4l2_ioctl_ops tegra_channel_ioctl_ops = {
 	.vidioc_g_input			= tegra_channel_g_input,
 	.vidioc_s_input			= tegra_channel_s_input,
 	.vidioc_log_status		= tegra_channel_log_status,
+	.vidioc_default			= tegra_channel_default_ioctl,
 };
 
 static int tegra_channel_close(struct file *fp);
@@ -1324,6 +1360,9 @@ static int tegra_channel_close(struct file *fp)
 static const struct v4l2_file_operations tegra_channel_fops = {
 	.owner		= THIS_MODULE,
 	.unlocked_ioctl	= video_ioctl2,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl32 = tegra_channel_compat_ioctl,
+#endif
 	.open		= tegra_channel_open,
 	.release	= tegra_channel_close,
 	.read		= vb2_fop_read,

@@ -8,7 +8,7 @@ ccflags-y += -Werror
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 ccflags-y += -I../t18x/drivers/video/tegra/host/
 ccflags-y += -I../nvhost/include
-obj-y += mc_common.o core.o channel.o graph.o vi2_fops.o vi4_fops.o
+obj-y += mc_common.o core.o channel.o graph.o vi2_fops.o vi4_fops.o capture.o
 endif
 
 ifeq ($(CONFIG_ARCH_TEGRA_210_SOC),y)

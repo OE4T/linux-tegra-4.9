@@ -25,7 +25,7 @@
 #include <linux/of_platform.h>
 #include <linux/debugfs.h>
 #include <linux/tegra-soc.h>
-#include <linux/tegra-fuse.h>
+#include <soc/tegra/fuse.h>
 #include <linux/tegra-mce.h>
 #include <linux/tegra186-pm.h>
 #include <linux/suspend.h>

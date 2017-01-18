@@ -32,7 +32,7 @@
 #include <linux/fs.h>
 #include <linux/uaccess.h>
 
-#include <linux/tegra-fuse.h>
+#include <soc/tegra/fuse.h>
 #include <linux/tegra-powergate.h>
 #include <linux/tegra_prod.h>
 #include <uapi/misc/tegra_mipi_ioctl.h>

@@ -6193,6 +6193,9 @@ static int tegra_dc_remove(struct platform_device *ndev)
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	struct device_node *np = ndev->dev.of_node;
 
+	if (!dc)
+		return 0;
+
 	tegra_dc_remove_sysfs(&dc->ndev->dev);
 	tegra_dc_remove_debugfs(dc);
 
@@ -6258,6 +6261,9 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 	int ret = 0;
 
+	if (!dc)
+		return ret;
+
 	trace_display_suspend(dc);
 	dev_info(&ndev->dev, "suspend\n");
 
@@ -6311,6 +6317,9 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 static int tegra_dc_resume(struct platform_device *ndev)
 {
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
+
+	if (!dc)
+		return 0;
 
 	trace_display_resume(dc);
 	dev_info(&ndev->dev, "resume\n");

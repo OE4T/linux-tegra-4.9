@@ -29,7 +29,7 @@
 #include <linux/nvhost.h>
 #include <linux/types.h>
 #include <linux/clk/tegra.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/reset.h>
 #include <video/tegra_dc_ext.h>
 #include <linux/platform/tegra/isomgr.h>

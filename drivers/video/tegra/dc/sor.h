@@ -19,7 +19,7 @@
 
 #define VRR_AUTHENTICATION_ENABLED (!CONFIG_TEGRA_NVDISPLAY)
 
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/clk/tegra.h>
 #include <linux/reset.h>
 #include <soc/tegra/tegra_bpmp.h>

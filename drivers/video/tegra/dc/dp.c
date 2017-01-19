@@ -21,7 +21,7 @@
 #include <linux/interrupt.h>
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/clk/tegra.h>
 #include <linux/moduleparam.h>
 #include <linux/of.h>

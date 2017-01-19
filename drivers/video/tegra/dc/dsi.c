@@ -34,7 +34,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/pm_runtime.h>
 #include <linux/clk/tegra.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/nvhost.h>
 #include <linux/of_address.h>
 #include <linux/io.h>

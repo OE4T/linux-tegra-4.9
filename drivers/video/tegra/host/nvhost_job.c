@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Job
  *
- * Copyright (c) 2010-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -303,6 +303,7 @@ static int pin_array_ids(struct platform_device *dev,
 	struct dma_buf_attachment *attach;
 	u32 prev_id = 0;
 	dma_addr_t prev_addr = 0;
+	int err = 0;
 
 	for (i = 0; i < count; i++)
 		ids[i].index = i;
@@ -316,16 +317,28 @@ static int pin_array_ids(struct platform_device *dev,
 		}
 
 		buf = dma_buf_get(ids[i].id);
-		if (IS_ERR(buf))
-			return -EINVAL;
+		if (IS_ERR(buf)) {
+			err = -EINVAL;
+			goto clean_up;
+		}
 
 		attach = dma_buf_attach(buf, &dev->dev);
-		if (IS_ERR(attach))
-			return PTR_ERR(attach);
+		if (IS_ERR(attach)) {
+			err = PTR_ERR(attach);
+			goto clean_up_attach;
+		}
 
 		sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
-		if (IS_ERR(sgt))
-			return PTR_ERR(sgt);
+		if (IS_ERR(sgt)) {
+			err = PTR_ERR(sgt);
+			goto clean_up_map;
+		}
+
+		if (!device_is_iommuable(&dev->dev) && sgt->nents > 1) {
+			dev_err(&dev->dev, "Cannot use non-contiguous buffer w/ IOMMU disabled\n");
+			err = -EINVAL;
+			goto clean_up_iommu;
+		}
 
 		if (!sg_dma_address(sgt->sgl))
 			sg_dma_address(sgt->sgl) = sg_phys(sgt->sgl);
@@ -339,6 +352,22 @@ static int pin_array_ids(struct platform_device *dev,
 		prev_addr = phys_addr[ids[i].index];
 	}
 	return pin_count;
+
+clean_up_iommu:
+	dma_buf_unmap_attachment(attach, sgt, DMA_BIDIRECTIONAL);
+clean_up_map:
+	dma_buf_detach(buf, attach);
+clean_up_attach:
+	dma_buf_put(buf);
+clean_up:
+	for (i = 0; i < pin_count; i++) {
+		dma_buf_unmap_attachment(unpin_data[i].attach,
+			unpin_data[i].sgt, DMA_BIDIRECTIONAL);
+		dma_buf_detach(unpin_data[i].buf, unpin_data[i].attach);
+		dma_buf_put(unpin_data[i].buf);
+	}
+
+	return err;
 }
 
 static int pin_job_mem(struct nvhost_job *job)

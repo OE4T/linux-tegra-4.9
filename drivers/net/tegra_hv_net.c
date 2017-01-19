@@ -707,22 +707,26 @@ static int tegra_hv_net_probe(struct platform_device *pdev)
 
 	hvn->mac_address = of_get_mac_address(dev->of_node);
 	if (hvn->mac_address == NULL) {
-		unsigned int gid;
+		if (of_property_read_bool(dev->of_node, "use-random-mac-addr"))
+			eth_hw_addr_random(ndev);
+		else {
+			unsigned int gid;
 
-		dev_warn(dev, "No valid mac-address found, using fixed local address\n");
-		ndev->dev_addr[0] = 0x0a;
-		ndev->dev_addr[1] = 0x86;
-		ndev->dev_addr[2] = 0x4c;
-		ndev->dev_addr[3] = 0xf8;
-		ndev->dev_addr[4] = (uint8_t)id;
+			dev_warn(dev, "No valid mac-address found, using fixed local address\n");
 
-		ret = hyp_read_gid(&gid);
-		if (ret != 0) {
-			dev_err(dev, "Failed to read guest id\n");
-			goto out_unreserve;
+			ndev->dev_addr[0] = 0x0a;
+			ndev->dev_addr[1] = 0x86;
+			ndev->dev_addr[2] = 0x4c;
+			ndev->dev_addr[3] = 0xf8;
+			ndev->dev_addr[4] = (uint8_t)id;
+
+			ret = hyp_read_gid(&gid);
+			if (ret != 0) {
+				dev_err(dev, "Failed to read guest id\n");
+				goto out_unreserve;
+			}
+			ndev->dev_addr[5] = (uint8_t)(gid);
 		}
-		ndev->dev_addr[5] = (uint8_t)(gid);
-
 	} else {
 		/* Set the MAC address. */
 		ether_addr_copy(ndev->dev_addr, hvn->mac_address);

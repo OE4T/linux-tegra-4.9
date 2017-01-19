@@ -39,7 +39,7 @@ struct syncpt_unit_interface {
 };
 
 struct syncpt_gos_backing {
-	struct list_head syncpt_gos_backing_list_entry; /* list entry */
+	struct rb_node syncpt_gos_backing_entry; /* backing entry */
 
 	u32 syncpt_id;	/* syncpoint id */
 
@@ -126,12 +126,20 @@ int nvhost_syncpt_get_cv_dev_address_table(struct platform_device *engine_pdev,
 struct syncpt_gos_backing *
 nvhost_syncpt_find_gos_backing(struct nvhost_master *host, u32 syncpt_id)
 {
+	struct rb_root *root = &host->syncpt_backing_head;
+	struct rb_node *node = root->rb_node;
 	struct syncpt_gos_backing *syncpt_gos_backing;
 
-	list_for_each_entry(syncpt_gos_backing,
-			    &host->syncpt_backing_list_head,
-			    syncpt_gos_backing_list_entry) {
-		if (syncpt_gos_backing->syncpt_id == syncpt_id)
+	while (node) {
+		syncpt_gos_backing =
+			container_of(node, struct syncpt_gos_backing,
+			syncpt_gos_backing_entry);
+
+		if (syncpt_gos_backing->syncpt_id > syncpt_id)
+			node = node->rb_left;
+		else if (syncpt_gos_backing->syncpt_id != syncpt_id)
+			node = node->rb_right;
+		else
 			return syncpt_gos_backing;
 	}
 
@@ -201,6 +209,39 @@ dma_addr_t nvhost_syncpt_gos_address(struct platform_device *engine_pdev,
 }
 
 /**
+ * nvhost_syncpt_insert_syncpt_backing() - insert syncpt_backing into rb_tree
+ *
+ * @root:			ROOT node of rb-tree
+ * @syncpt_gos_backing:		syncpt_backing of new node
+ *
+ * This function will add new syncpt_gos_backing node into rb_tree
+ */
+static void nvhost_syncpt_insert_syncpt_backing(struct rb_root *root,
+	struct syncpt_gos_backing *syncpt_gos_backing)
+{
+	struct rb_node **new_node = &(root->rb_node), *parent = NULL;
+
+	while (*new_node) {
+		struct syncpt_gos_backing *cmp_with =
+			container_of(*new_node, struct syncpt_gos_backing,
+			syncpt_gos_backing_entry);
+
+		parent = *new_node;
+
+		if (cmp_with->syncpt_id > syncpt_gos_backing->syncpt_id)
+			new_node = &((*new_node)->rb_left);
+		else if (cmp_with->syncpt_id != syncpt_gos_backing->syncpt_id)
+			new_node = &((*new_node)->rb_right);
+		else
+			return;
+	}
+
+	rb_link_node(&syncpt_gos_backing->syncpt_gos_backing_entry,
+		     parent, new_node);
+	rb_insert_color(&syncpt_gos_backing->syncpt_gos_backing_entry, root);
+}
+
+/**
  * nvhost_syncpt_alloc_gos_backing() - Create GoS backing for a syncpoint
  *
  * @engine_pdev:	Pointer to a host1x engine
@@ -249,10 +290,9 @@ int nvhost_syncpt_alloc_gos_backing(struct platform_device *engine_pdev,
 	syncpt_gos_backing->gos_id = cv_dev_info->idx;
 	syncpt_gos_backing->gos_offset = (u32)offset;
 	syncpt_gos_backing->offset_dev = &cv_dev_info->offset_dev;
-	INIT_LIST_HEAD(&syncpt_gos_backing->syncpt_gos_backing_list_entry);
 
-	list_add_tail(&syncpt_gos_backing->syncpt_gos_backing_list_entry,
-		      &host->syncpt_backing_list_head);
+	nvhost_syncpt_insert_syncpt_backing(&host->syncpt_backing_head,
+			      syncpt_gos_backing);
 
 	return 0;
 }
@@ -284,7 +324,8 @@ int nvhost_syncpt_release_gos_backing(struct nvhost_syncpt *sp,
 	dma_free_attrs(syncpt_gos_backing->offset_dev, sizeof(u32),
 			(void *)(uintptr_t)offset, offset, &attrs);
 
-	list_del(&syncpt_gos_backing->syncpt_gos_backing_list_entry);
+	rb_erase(&syncpt_gos_backing->syncpt_gos_backing_entry,
+		 &host->syncpt_backing_head);
 	kfree(syncpt_gos_backing);
 
 	return 0;

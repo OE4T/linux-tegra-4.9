@@ -4,6 +4,7 @@
  * This code is based on drivers/scsi/ufs/ufshcd.h
  * Copyright (C) 2011-2013 Samsung India Software Operations
  * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Authors:
  *	Santosh Yaraganavi <santosh.sy@samsung.com>
@@ -479,6 +480,11 @@ struct ufs_hba {
 	 * This quirk needs to be enabled if BKOPS feature has to be enabled
 	 */
 	#define UFSHCD_QUIRK_ENABLE_BKOPS			UFS_BIT(6)
+
+	/*
+	 * Enable this quirk to support UFS WLUNS
+	 */
+	#define UFSHCD_QUIRK_ENABLE_WLUNS			UFS_BIT(7)
 
 	unsigned int quirks;	/* Deviations from standard UFSHCI spec. */
 

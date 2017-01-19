@@ -2403,9 +2403,13 @@ sub process {
 			$in_commit_log = 0;
 		}
 
-# Check if MAINTAINERS is being updated.  If so, there's probably no need to
-# emit the "does MAINTAINERS need updating?" message on file add/move/delete
+# Check if MAINTAINERS and/or NVIDIA-REVIEWERS is being updated.  If so, there's probably no need to
+# emit the "does MAINTAINERS/NVIDIA-REVIEWERS need updating?" message on file add/move/delete
 		if ($line =~ /^\s*MAINTAINERS\s*\|/) {
+			$reported_maintainer_file = 1;
+		}
+
+		if ($line =~ /^\s*NVIDIA-REVIEWERS\s*\|/) {
 			$reported_maintainer_file = 1;
 		}
 
@@ -2594,7 +2598,7 @@ sub process {
 		      (defined($1) || defined($2))))) {
 			$reported_maintainer_file = 1;
 			WARN("FILE_PATH_CHANGES",
-			     "added, moved or deleted file(s), does MAINTAINERS need updating?\n" . $herecurr);
+			     "added, moved or deleted file(s), does MAINTAINERS and/or NVIDIA-REVIEWERS need updating?\n" . $herecurr);
 		}
 
 # Check for wrappage within a valid hunk of the file

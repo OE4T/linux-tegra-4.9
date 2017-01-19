@@ -919,6 +919,9 @@ static int set_cpu_dvfs_data(unsigned long max_freq, struct cpu_dvfs *d,
 	struct rail_alignment *align = tegra_dfll_get_alignment();
 	int speedo = tegra_sku_info.cpu_speedo_value;
 
+	if (align == ERR_PTR(-EPROBE_DEFER))
+		return -EPROBE_DEFER;
+
 	min_dfll_mv = d->min_mv;
 	if (min_dfll_mv < tegra210_dvfs_rail_vdd_cpu.min_millivolts) {
 		pr_debug("tegra210_dvfs: dfll min %dmV below rail min %dmV\n",
@@ -1190,6 +1193,8 @@ static int init_cpu_dvfs_table(int *cpu_max_freq_index)
 				   cpu_speedo_id, cpu_process_id)) {
 			ret = set_cpu_dvfs_data(max_freq,
 				d, &cpu_dvfs, cpu_max_freq_index);
+			if (ret)
+				return ret;
 			break;
 		}
 	}

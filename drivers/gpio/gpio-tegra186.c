@@ -757,7 +757,6 @@ static void tegra_gpio_irq_handler_desc(struct irq_desc *desc)
 	int port;
 	u32 i;
 	unsigned long val;
-	u32 gpio;
 	u32 addr;
 	int port_map[MAX_GPIO_PORTS];
 
@@ -778,9 +777,8 @@ static void tegra_gpio_irq_handler_desc(struct irq_desc *desc)
 		addr = tgi->soc->port[port].reg_offset;
 		val = __raw_readl(tg_cont->tgi->gpio_regs + addr +
 				GPIO_INT_STATUS_OFFSET + GPIO_STATUS_G1);
-		gpio = tgi->gc.base + (port * 8);
 		for_each_set_bit(pin, &val, 8)
-			generic_handle_irq(gpio_to_irq(gpio + pin));
+			generic_handle_irq(tegra_gpio_to_irq(&tgi->gc, port * 8 + pin));
 	}
 
 	chained_irq_exit(chip, desc);

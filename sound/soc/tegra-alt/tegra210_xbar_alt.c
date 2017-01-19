@@ -26,7 +26,7 @@
 #include <linux/tegra_pm_domains.h>
 #include <linux/regmap.h>
 #include <linux/slab.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <sound/soc.h>
 #include <linux/clk/tegra.h>
 

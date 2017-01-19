@@ -751,8 +751,11 @@ static struct clk_prog *construct_clk_prog(struct gk20a *g, void *pargs)
 		return NULL;
 	}
 
-	if (status)
+	if (status) {
+		if (board_obj_ptr)
+			board_obj_ptr->destruct(board_obj_ptr);
 		return NULL;
+	}
 
 	gk20a_dbg_info(" Done");
 

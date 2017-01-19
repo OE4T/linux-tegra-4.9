@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -69,7 +69,9 @@
 	 _OB_DDLL_LONG_DQ_RANK ## rank ## _BYTE ## byte2 ## _MASK)	\
 
 static bool emc_enable = true;
-module_param(emc_enable, bool, 0644);
+module_param(emc_enable, bool, 0444);
+static bool emc_force_max_rate;
+module_param(emc_force_max_rate, bool, 0444);
 
 enum TEGRA_EMC_SOURCE {
 	TEGRA_EMC_SRC_PLLM,
@@ -1220,6 +1222,9 @@ static long tegra210_emc_round_rate(unsigned long rate)
 	if (!tegra_emc_init_done || !tegra_emc_table_size)
 		return 0;
 
+	if (emc_force_max_rate)
+		return tegra_emc_table[tegra_emc_table_size - 1].rate * 1000;
+
 	rate /= 1000;
 	i = get_start_idx(rate);
 	for (; i < tegra_emc_table_size; i++) {
@@ -1242,6 +1247,9 @@ unsigned int tegra210_emc_get_clk_latency(unsigned long rate)
 
 	if (!emc_enable || !tegra_emc_init_done || !tegra_emc_table_size)
 		return TEGRA_EMC_DEFAULT_CLK_LATENCY_US;
+
+	if (emc_force_max_rate)
+		rate = tegra_emc_table[tegra_emc_table_size - 1].rate * 1000;
 
 	rate /= 1000;
 	for (i = 0; i < tegra_emc_table_size; i++) {
@@ -1387,6 +1395,9 @@ static int tegra210_emc_set_rate(unsigned long rate)
 
 	if (!tegra_emc_init_done || !tegra_emc_table_size)
 		return -EINVAL;
+
+	if (emc_force_max_rate)
+		rate = tegra_emc_table[tegra_emc_table_size - 1].rate * 1000;
 
 	if (rate == tegra210_emc_get_rate())
 		return 0;

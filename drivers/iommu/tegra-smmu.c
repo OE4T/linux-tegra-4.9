@@ -32,7 +32,7 @@
 #include <linux/seq_file.h>
 #include <linux/dma-mapping.h>
 #include <linux/bitops.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/tegra_smmu.h>
 #include <linux/pci.h>
 

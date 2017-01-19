@@ -1,7 +1,7 @@
 /*
  * drivers/watchdog/tegra_hv_wdt.c
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 #include <linux/init.h>
 #include <linux/of.h>
 #include <linux/tegra-ivc.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/platform_device.h>
 #include <linux/watchdog.h>
 #include <linux/kthread.h>

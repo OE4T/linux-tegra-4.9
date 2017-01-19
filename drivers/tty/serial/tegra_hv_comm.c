@@ -1,7 +1,7 @@
 /*
  * tegra_hv_comm.c: TTY over Tegra HV
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION. All rights reserved.
  *
  * Very loosely based on altera_jtaguart.c
  *
@@ -23,7 +23,7 @@
 #include <linux/serial_core.h>
 #include <linux/platform_device.h>
 #include <linux/io.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 
 #define DRV_NAME "tegra_hv_comm"
 

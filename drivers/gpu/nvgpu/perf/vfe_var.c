@@ -678,10 +678,9 @@ static u32 vfe_var_construct_single_sensed_fuse(struct gk20a *g,
 		goto exit;
 	}
 exit:
-	if (status) {
-		if (*ppboardobj != NULL)
-			(*ppboardobj)->destruct(*ppboardobj);
-	}
+	if (status)
+		(*ppboardobj)->destruct(*ppboardobj);
+
 	return status;
 }
 

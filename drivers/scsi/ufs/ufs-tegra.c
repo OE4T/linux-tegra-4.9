@@ -855,6 +855,10 @@ static int ufs_tegra_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	if (ret < 0)
 		goto out_disable_mphylane_clks;
 
+	pm_runtime_disable(dev);
+	pm_runtime_set_active(dev);
+	pm_runtime_enable(dev);
+
 	return ret;
 
 out_disable_mphylane_clks:

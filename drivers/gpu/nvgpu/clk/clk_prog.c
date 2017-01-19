@@ -718,10 +718,9 @@ static u32 clk_prog_construct_1x_master_table(struct gk20a *g,
 	memcpy(pclkprog->p_slave_entries, ptmpprog->p_slave_entries, slavesize);
 
 exit:
-	if (status) {
-		if (*ppboardobj != NULL)
-			(*ppboardobj)->destruct(*ppboardobj);
-	}
+	if (status)
+		(*ppboardobj)->destruct(*ppboardobj);
+
 	return status;
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -87,7 +87,10 @@ static int clk_frac_div_determine_rate(struct clk_hw *hw,
 
 	mul = get_mul(divider);
 
-	req->rate =  DIV_ROUND_UP(output_rate * mul, div + mul);
+	if (divider->flags & TEGRA_DIVIDER_ROUND_UP)
+		req->rate =  DIV_ROUND_UP(output_rate * mul, div + mul);
+	else
+		req->rate =  output_rate * mul / (div + mul);
 
 	return 0;
 }

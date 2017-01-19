@@ -23,7 +23,7 @@
 #include <linux/tegra-mce.h>
 #include <linux/platform/tegra/ari_mca.h>
 #include <linux/platform/tegra/tegra18_cpu_map.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 
 static struct cpumask denver_cpumask;
 

@@ -353,7 +353,7 @@ struct tegra_dc_ext_hdr {
 	__u8 eotf;
 	__u8 static_metadata_id;
 	__u8 static_metadata[24];
-};
+} __attribute__((__packed__));
 
 /*
  * The value at index i of each window-specific array corresponds to the
@@ -418,7 +418,7 @@ struct tegra_dc_ext_imp_settings {
 struct tegra_dc_ext_imp_ptr {
 	__u64 __user settings;
 	__u16 reserved[9]; /* unused - must be 0 */
-};
+} __attribute__((__packed__));
 
 /*
  * Variable session_id is a unique per-head id that designates which IMP
@@ -428,7 +428,7 @@ struct tegra_dc_ext_imp_ptr {
 struct tegra_dc_ext_imp_flip_tag {
 	__u64 session_id;
 	__u16 reserved[9]; /* unused - must be 0 */
-};
+} __attribute__((__packed__));
 
 /*
  * syncpt_id and syncpt_val are used for raw syncpts. syncpt_fd is used for the
@@ -462,7 +462,7 @@ struct tegra_dc_ext_syncpt {
 		__s32 syncpt_fd;
 	};
 	__u16 reserved[9]; /* unused - must be 0 */
-};
+} __attribute__((__packed__));
 
 /* size of the this struct is 32 bytes */
 struct tegra_dc_ext_flip_user_data {
@@ -478,7 +478,7 @@ struct tegra_dc_ext_flip_user_data {
 		struct tegra_dc_ext_imp_flip_tag imp_tag;
 		struct tegra_dc_ext_syncpt post_syncpt; /* out */
 	};
-};
+} __attribute__((__packed__));
 
 /*
  *tegra_dc_flip_4 : Incorporates a new pointer to an array of 32 bytes of data

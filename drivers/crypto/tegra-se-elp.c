@@ -28,7 +28,7 @@
 #include <linux/of_device.h>
 #include <linux/types.h>
 #include <linux/errno.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <crypto/akcipher.h>
 #include <crypto/internal/akcipher.h>
 #include <crypto/internal/rng.h>

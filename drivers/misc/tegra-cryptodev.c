@@ -450,7 +450,6 @@ static int tegra_crypt_rsa_ahash(struct file *filp, struct tegra_crypto_ctx *ctx
 		goto out;
 	}
 
-	ctx->rsa_tfm[rsa_req_ah->algo] = tfm;
 	filp->private_data = ctx;
 
 	req = ahash_request_alloc(tfm, GFP_KERNEL);

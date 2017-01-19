@@ -20,7 +20,7 @@
 #include <linux/types.h>
 #include <linux/bug.h>
 #include <linux/slab.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/version.h>
 
 #if defined(CONFIG_ARCH_TEGRA_210_SOC) || LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)

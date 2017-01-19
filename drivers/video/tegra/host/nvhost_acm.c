@@ -32,7 +32,7 @@
 #include <linux/clk/tegra.h>
 #include <linux/reset.h>
 #include <linux/tegra-powergate.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <trace/events/nvhost.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/nvhost_ioctl.h>

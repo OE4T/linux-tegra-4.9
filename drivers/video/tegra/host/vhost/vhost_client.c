@@ -19,7 +19,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/module.h>
 #if defined(CONFIG_ARCH_TEGRA_210_SOC)
 #include <soc/tegra/fuse.h>

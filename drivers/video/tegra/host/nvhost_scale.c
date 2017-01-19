@@ -24,7 +24,7 @@
 #include <linux/slab.h>
 #include <linux/clk.h>
 #include <linux/clk/tegra.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/pm_qos.h>
 #include <trace/events/nvhost.h>
 #include <linux/uaccess.h>

@@ -31,7 +31,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/vmalloc.h>
 

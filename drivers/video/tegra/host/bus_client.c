@@ -28,7 +28,7 @@
 #include <linux/export.h>
 #include <linux/firmware.h>
 #include <linux/dma-mapping.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/anon_inodes.h>
 
 #include <trace/events/nvhost.h>

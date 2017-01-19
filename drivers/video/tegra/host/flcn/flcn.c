@@ -26,7 +26,7 @@
 #include <linux/of_platform.h>
 #include <linux/dma-mapping.h>
 #include <linux/tegra-powergate.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/module.h>
 

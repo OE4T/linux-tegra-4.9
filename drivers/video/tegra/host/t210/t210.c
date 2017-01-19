@@ -19,7 +19,7 @@
 #include <linux/io.h>
 
 #include <linux/tegra-powergate.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 
 #include <linux/platform/tegra/mc.h>
 

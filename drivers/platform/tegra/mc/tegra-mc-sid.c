@@ -21,7 +21,7 @@
 #include <linux/err.h>
 #include <linux/module.h>
 #include <linux/debugfs.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/platform_device.h>
 #include <linux/io.h>
 

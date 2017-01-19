@@ -27,7 +27,7 @@
 #include <linux/delay.h>
 #include <linux/debugfs.h>
 #include <soc/tegra/fuse.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/of_device.h>
 #include <linux/of_address.h>
 #include <linux/platform_device.h>

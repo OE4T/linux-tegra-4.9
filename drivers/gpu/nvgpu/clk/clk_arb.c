@@ -477,9 +477,10 @@ static int nvgpu_clk_arb_install_fd(struct gk20a *g,
 
 	status = nvgpu_clk_notification_queue_alloc(&dev->queue,
 		DEFAULT_EVENT_NUMBER);
-	if (status < 0)
-		return status;
-
+	if (status < 0)  {
+		err = status;
+		goto fail;
+	}
 
 	fd = get_unused_fd_flags(O_RDWR);
 	if (fd < 0) {

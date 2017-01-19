@@ -124,7 +124,7 @@ struct nvhost_master {
 	/* for nvhost_masters list */
 	struct list_head list;
 
-	struct list_head syncpt_backing_list_head;
+	struct rb_root syncpt_backing_head;
 };
 
 #ifdef CONFIG_DEBUG_FS

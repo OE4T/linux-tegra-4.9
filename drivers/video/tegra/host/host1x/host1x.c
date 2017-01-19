@@ -992,7 +992,7 @@ static int nvhost_probe(struct platform_device *dev)
 	host->dev = dev;
 	INIT_LIST_HEAD(&host->static_mappings_list);
 	INIT_LIST_HEAD(&host->vm_list);
-	INIT_LIST_HEAD(&host->syncpt_backing_list_head);
+	host->syncpt_backing_head = RB_ROOT;
 	mutex_init(&host->vm_mutex);
 	mutex_init(&host->vm_alloc_mutex);
 	mutex_init(&pdata->lock);

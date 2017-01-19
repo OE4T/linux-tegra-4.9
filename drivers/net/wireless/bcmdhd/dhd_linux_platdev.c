@@ -879,7 +879,7 @@ static int dhd_wifi_platform_load_sdio(void)
 	for (i = 0; i < dhd_wifi_platdata->num_adapters; i++) {
 		bool chip_up = FALSE;
 		int retry;
-		struct semaphore dhd_chipup_sem;
+		static struct semaphore dhd_chipup_sem;
 
 		adapter = &dhd_wifi_platdata->adapters[i];
 

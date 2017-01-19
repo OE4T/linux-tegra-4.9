@@ -105,22 +105,42 @@ static bool nvhost_is_bwmgr_clk(struct nvhost_device_data *pdata, int index)
 		pdata->bwmgr_handle);
 }
 
-static void do_powergate_locked(int id)
+static int do_powergate_locked(int id)
 {
+	int ret;
+
 	nvhost_dbg_fn("%d", id);
-	if (id != -1 && tegra_powergate_is_powered(id))
-		tegra_powergate_partition(id);
+	if (id == -1 || !tegra_powergate_is_powered(id))
+		return 0;
+
+	ret = tegra_powergate_partition(id);
+	if (ret && tegra_platform_is_sim()) {
+		pr_err("%s: running on simulator, ignoring powergate failure\n",
+		       __func__);
+		ret = 0;
+	}
+
+	return ret;
 }
 
-static void do_unpowergate_locked(int id)
+static int do_unpowergate_locked(int id)
 {
-	int ret = 0;
-	if (id != -1) {
-		ret = tegra_unpowergate_partition(id);
-		if (ret)
-			pr_err("%s: unpowergate failed: id = %d\n",
-					__func__, id);
+	int ret;
+
+	if (id == -1)
+		return 0;
+
+	ret = tegra_unpowergate_partition(id);
+	if (ret) {
+		pr_err("%s: unpowergate failed: id = %d\n", __func__, id);
+		if (tegra_platform_is_sim()) {
+			pr_err("%s: running on simulator, ignoring failure\n",
+			       __func__);
+			ret = 0;
+		}
 	}
+
+	return ret;
 }
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
@@ -1146,9 +1166,7 @@ static int nvhost_module_power_on(struct generic_pm_domain *domain)
 	struct nvhost_pm_domain *pd = genpd_to_nvhost_pd(domain);
 
 	trace_nvhost_module_power_on(pd->domain.name, pd->powergate_id);
-	do_unpowergate_locked(pd->powergate_id);
-
-	return 0;
+	return do_unpowergate_locked(pd->powergate_id);
 }
 
 static int nvhost_module_power_off(struct generic_pm_domain *domain)
@@ -1156,9 +1174,7 @@ static int nvhost_module_power_off(struct generic_pm_domain *domain)
 	struct nvhost_pm_domain *pd = genpd_to_nvhost_pd(domain);
 
 	trace_nvhost_module_power_off(pd->domain.name, pd->powergate_id);
-	do_powergate_locked(pd->powergate_id);
-
-	return 0;
+	return do_powergate_locked(pd->powergate_id);
 }
 #endif
 

@@ -36,8 +36,8 @@
 #include <linux/interrupt.h>
 #include <linux/types.h>
 #include <linux/errno.h>
-#include <linux/tegra-soc.h>
 #include <soc/tegra/fuse.h>
+#include <soc/tegra/chip-id.h>
 #include <crypto/scatterwalk.h>
 #include <crypto/algapi.h>
 #include <crypto/aes.h>

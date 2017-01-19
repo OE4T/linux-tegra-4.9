@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -403,54 +403,61 @@ int ttcan_tx_buff_req_pending(struct ttcan_controller *ttcan, u8 index)
 		return 0;
 }
 
-int ttcan_tx_buffers_full(struct ttcan_controller *ttcan)
+bool ttcan_tx_buffers_full(struct ttcan_controller *ttcan)
 {
 	u32 txbrp_reg;
-	u32 mask = (1 << ttcan->mram_cfg[MRAM_TXB].num) - 1;
+	u32 txfqs_full = 1;
+	u32 mask = (1 << ttcan->tx_config.ded_buff_num) - 1;
 
-	txbrp_reg = ttcan_read32(ttcan, ADR_MTTCAN_TXBRP);
+	/* If FIFO/queue is enabled, check if full bit is set */
+	if (ttcan->tx_config.fifo_q_num)
+		txfqs_full = (ttcan_read32(ttcan, ADR_MTTCAN_TXFQS) &
+				MTT_TXFQS_TFQF_MASK) >> MTT_TXFQS_TFQF_SHIFT;
 
-	if ((txbrp_reg & mask) == mask)
-		return 1;
+	/* Check for pending Tx requests in msg buffer */
+	txbrp_reg = ttcan_read32(ttcan, ADR_MTTCAN_TXBRP) & mask;
+
+	if ((txbrp_reg == mask) && txfqs_full)
+		return true;
 	else
-		return 0;
+		return false;
 }
 
 void ttcan_tx_ded_msg_write(struct ttcan_controller *ttcan,
 			    struct ttcanfd_frame *ttcanfd,
-			    u8 index, bool tt_en)
+			    u8 index)
 {
-	u32 mask = 1 << index;
 	u32 ram_addr = ttcan->mram_cfg[MRAM_TXB].off +
 	    (index * ttcan->e_size.tx_buffer);
 	ttcan_write_tx_msg_ram(ttcan, ram_addr, ttcanfd, index);
-	if (!tt_en)
-		ttcan_write32(ttcan, ADR_MTTCAN_TXBAR, mask);
 	ttcan->tx_buf_dlc[index] = ttcanfd->d_len;
 }
 
-int ttcan_tx_msg_buffer_write(struct ttcan_controller *ttcan,
-			      struct ttcanfd_frame *ttcanfd, bool tt_en)
+void ttcan_tx_trigger_msg_transmit(struct ttcan_controller *ttcan, u8 index)
 {
-	int cur_index = 0;
-	u32 txbrp_reg = ttcan_read32(ttcan, ADR_MTTCAN_TXBRP);
-	u32 txbrp_free = ~txbrp_reg;
+	ttcan_write32(ttcan, ADR_MTTCAN_TXBAR, (1 << index));
+}
 
-	/* number of buffers to consider */
+int ttcan_tx_msg_buffer_write(struct ttcan_controller *ttcan,
+			      struct ttcanfd_frame *ttcanfd)
+{
+	int msg_no;
+	u32 txbrp_free = ~ttcan_read32(ttcan, ADR_MTTCAN_TXBRP);
+
+	/* mask out buffers that are previously reserved by SW */
+	txbrp_free &= ~ttcan->tx_object;
+
+	/* mask for buffers reserved for Tx message buffers */
 	txbrp_free &= (1 << ttcan->tx_config.ded_buff_num) - 1;
 
-	/* find first free buffer */
-	while ((cur_index = ffs(txbrp_free)) != 0) {
-		if (!(ttcan->tx_object & (1 << (cur_index - 1))))
-			break;
-		txbrp_free &= ~(1 << (cur_index - 1));
-	}
-	if (!cur_index)
+	msg_no = ffs(txbrp_free) - 1;
+	if (msg_no < 0)
 		return -ENOMEM;
 
-	ttcan_tx_ded_msg_write(ttcan, ttcanfd, (cur_index - 1), tt_en);
+	/* Write to CAN controller message RAM */
+	ttcan_tx_ded_msg_write(ttcan, ttcanfd, msg_no);
 
-	return cur_index - 1;
+	return msg_no;
 }
 
 int ttcan_set_tx_buffer_addr(struct ttcan_controller *ttcan)
@@ -512,14 +519,21 @@ int ttcan_tx_fifo_queue_msg(struct ttcan_controller *ttcan,
 	u32 put_idx;
 
 	txfqs_reg = ttcan_read32(ttcan, ADR_MTTCAN_TXFQS);
-	put_idx = (txfqs_reg & MTT_TXFQS_TFQPI_MASK) >> MTT_TXFQS_TFQPI_SHIFT;
-	if (((txfqs_reg & MTT_TXFQS_TFQF_MASK) == 0) &&
-		(!(ttcan->tx_object & (1 << put_idx)))) {
-		ttcan_tx_ded_msg_write(ttcan, ttcanfd, put_idx, 0);
-		return put_idx;
-	}
 
-	return -ENOMEM;
+	/* Test for Tx FIFO/Queue full */
+	if (txfqs_reg & MTT_TXFQS_TFQF_MASK)
+		return -ENOMEM;
+
+	/* Test if Tx index is previously reserved in SW */
+	put_idx = (txfqs_reg & MTT_TXFQS_TFQPI_MASK) >> MTT_TXFQS_TFQPI_SHIFT;
+	if (ttcan->tx_object & (1 << put_idx))
+		return -ENOMEM;
+
+	/* Write to CAN controller message RAM */
+	ttcan_tx_ded_msg_write(ttcan, ttcanfd, put_idx);
+
+	return put_idx;
+
 }
 
 /* Check tx fifo status

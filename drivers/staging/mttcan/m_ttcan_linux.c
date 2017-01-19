@@ -1,7 +1,7 @@
 /*
  * "drivers/net/can/m_ttcan/m_ttcan_linux.c"
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * References are taken from "Bosch C_CAN controller" at
  * "drivers/net/can/c_can/c_can.c"
@@ -481,15 +481,6 @@ static int mttcan_handle_bus_err(struct net_device *dev,
 	netif_receive_skb(skb);
 	stats->rx_packets++;
 	stats->rx_bytes += cf->can_dlc;
-#if 0
-	/* FIXME if buffers are cancelled, drop all echo_skb cache */
-	while (priv->ttcan->tx_object) {
-		u32 msg_no = ffs(priv->ttcan->tx_object) - 1;
-		if (priv->can.echo_skb[msg_no])
-			can_free_echo_skb(dev, msg_no);
-		priv->ttcan->tx_object &= ~(1 << msg_no);
-	}
-#endif
 	return 1;
 }
 
@@ -546,24 +537,22 @@ static void mttcan_tx_complete(struct net_device *dev)
 	u32 msg_no;
 
 	struct mttcan_priv *priv = netdev_priv(dev);
+	struct ttcan_controller *ttcan = priv->ttcan;
 	struct net_device_stats *stats = &dev->stats;
 
-	u32 completed_tx = ttcan_read_tx_complete_reg(priv->ttcan);
-	u32 txbitmap = priv->ttcan->tx_object;
+	u32 completed_tx = ttcan_read_tx_complete_reg(ttcan);
 
-	while (ffs(txbitmap)) {
-		msg_no = ffs(txbitmap) - 1;
-		txbitmap &= ~(1 << msg_no);
-		if (completed_tx & (1 << (msg_no))) {
-			/* Tx completed for this object */
-			priv->ttcan->tx_object &= ~(1 << msg_no);
-			stats->tx_bytes += priv->ttcan->tx_buf_dlc[msg_no];
-			stats->tx_packets++;
-			if (priv->can.echo_skb[msg_no])
-				can_get_echo_skb(dev, msg_no);
-			priv->tx_echo++;
-			can_led_event(dev, CAN_LED_EVENT_TX);
-		}
+	/* apply mask to consider only active CAN Tx transactions */
+	completed_tx &= ttcan->tx_object;
+
+	while (completed_tx) {
+		msg_no = ffs(completed_tx) - 1;
+		can_get_echo_skb(dev, msg_no);
+		can_led_event(dev, CAN_LED_EVENT_TX);
+		clear_bit(msg_no, &ttcan->tx_object);
+		stats->tx_packets++;
+		stats->tx_bytes += ttcan->tx_buf_dlc[msg_no];
+		completed_tx &= ~(1U << msg_no);
 	}
 
 	if (netif_queue_stopped(dev))
@@ -572,39 +561,35 @@ static void mttcan_tx_complete(struct net_device *dev)
 
 static void mttcan_tx_cancelled(struct net_device *dev)
 {
-	u32 msg_no;
-	u32 buff_bit;
-	u32 cancelled_msg;
+	u32 buff_bit, cancelled_reg, cancelled_msg, msg_no;
 	struct mttcan_priv *priv = netdev_priv(dev);
+	struct ttcan_controller *ttcan = priv->ttcan;
 	struct net_device_stats *stats = &dev->stats;
 
 
-	msg_no = ttcan_read_tx_cancelled_reg(priv->ttcan);
+	cancelled_reg = ttcan_read_tx_cancelled_reg(ttcan);
 
 	/* cancelled_msg are newly cancelled message for current interrupt */
-	cancelled_msg = (priv->tx_obj_cancelled ^ msg_no) &
-		~(priv->tx_obj_cancelled);
-	priv->tx_obj_cancelled = msg_no;
+	cancelled_msg = (ttcan->tx_obj_cancelled ^ cancelled_reg) &
+		~(ttcan->tx_obj_cancelled);
+	ttcan->tx_obj_cancelled = cancelled_reg;
 
-	msg_no = ffs(cancelled_msg);
-
-	if (msg_no && netif_queue_stopped(dev))
+	if (cancelled_msg && netif_queue_stopped(dev))
 		netif_wake_queue(dev);
 
-	while (msg_no) {
-		buff_bit = (1 << (msg_no - 1));
-		if (priv->ttcan->tx_object & buff_bit) {
-			priv->ttcan->tx_object &= ~(buff_bit);
+	while (cancelled_msg) {
+		msg_no = ffs(cancelled_msg) - 1;
+		buff_bit = 1U << msg_no;
+		if (ttcan->tx_object & buff_bit) {
+			can_free_echo_skb(dev, msg_no);
+			clear_bit(msg_no, &ttcan->tx_object);
 			cancelled_msg &= ~(buff_bit);
 			stats->tx_aborted_errors++;
-			can_free_echo_skb(dev, (msg_no - 1));
 		} else {
-			pr_debug("%s TCF %x priv->ttcan->tx_object %x\n", __func__,
-					cancelled_msg, priv->ttcan->tx_object);
+			pr_debug("%s TCF %x ttcan->tx_object %lx\n", __func__,
+					cancelled_msg, ttcan->tx_object);
 			break;
 		}
-		priv->tx_echo++;
-		msg_no = ffs(cancelled_msg);
 	}
 }
 
@@ -769,12 +754,12 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 				ttcan_ir_write(priv->ttcan, ack);
 			}
 		}
+
 		/* Handle Timer wrap around */
 		if (ir & MTT_IR_TSW_MASK) {
 			ack = MTT_IR_TSW_MASK;
 			ttcan_ir_write(priv->ttcan, ack);
 		}
-
 
 		/* Handle Transmission cancellation finished
 		* TCF interrupt is set when transmission cancelled is request
@@ -986,8 +971,6 @@ static void mttcan_start(struct net_device *dev)
 
 	mttcan_controller_config(dev);
 
-	priv->tx_next = priv->tx_echo = 0;
-
 	ttcan_clear_intr(ttcan);
 	ttcan_clear_tt_intr(ttcan);
 
@@ -1099,6 +1082,7 @@ static irqreturn_t mttcan_isr(int irq, void *dev_id)
 
 	/* schedule the NAPI */
 	napi_schedule(&priv->napi);
+
 	return IRQ_HANDLED;
 }
 
@@ -1240,10 +1224,10 @@ static netdev_tx_t mttcan_start_xmit(struct sk_buff *skb,
 		smp_mb();
 		return NETDEV_TX_BUSY;
 	}
-	/* try on buffers first */
+
+	/* Write Tx message to controller */
 	msg_no = ttcan_tx_msg_buffer_write(priv->ttcan,
-			(struct ttcanfd_frame *)frame,
-			priv->tt_param[0]);
+			(struct ttcanfd_frame *)frame);
 
 	if (msg_no < 0)
 		msg_no = ttcan_tx_fifo_queue_msg(priv->ttcan,
@@ -1258,9 +1242,14 @@ static netdev_tx_t mttcan_start_xmit(struct sk_buff *skb,
 
 	can_put_echo_skb(skb, dev, msg_no);
 
-	priv->tx_next++;
-	priv->ttcan->tx_object |= 1 << msg_no;
-	priv->tx_obj_cancelled &= ~(1 << msg_no);
+	/* Set go bit for non-TTCAN messages */
+	if (!priv->tt_param[0])
+		ttcan_tx_trigger_msg_transmit(priv->ttcan, msg_no);
+
+	/* State management for Tx complete/cancel processing */
+	if (test_and_set_bit(msg_no, &priv->ttcan->tx_object))
+		netdev_err(dev, "Writing to occupied echo_skb buffer\n");
+	clear_bit(msg_no, &priv->ttcan->tx_obj_cancelled);
 
 	return NETDEV_TX_OK;
 }

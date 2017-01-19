@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -285,6 +285,8 @@ struct ttcan_controller {
 	void __iomem *xbase;    /* extra registers are mapped */
 	void __iomem *mram_vbase;
 	size_t mram_base;
+	unsigned long tx_object;
+	unsigned long tx_obj_cancelled;
 	u8 tx_buf_dlc[32];
 	u32 id;
 	u32 proto_state;
@@ -292,7 +294,6 @@ struct ttcan_controller {
 	u32 intr_tt_enable_reg;
 	u32 ts_prescalar;
 	u32 tt_mem_elements;
-	u32 tx_object;
 	int rxq0_mem;
 	int rxq1_mem;
 	int rxb_mem;
@@ -424,7 +425,7 @@ void ttcan_set_rx_buffers_elements(struct ttcan_controller *ttcan);
 
 int ttcan_set_tx_buffer_addr(struct ttcan_controller *ttcan);
 int ttcan_tx_fifo_full(struct ttcan_controller *ttcan);
-int ttcan_tx_buffers_full(struct ttcan_controller *ttcan);
+bool ttcan_tx_buffers_full(struct ttcan_controller *ttcan);
 
 int ttcan_tx_fifo_queue_msg(struct ttcan_controller *ttcan,
 			    struct ttcanfd_frame *ttcanfd);
@@ -433,10 +434,10 @@ int ttcan_tx_fifo_get_free_element(struct ttcan_controller *ttcan);
 int ttcan_tx_buf_req_pending(struct ttcan_controller *ttcan, u8 index);
 void ttcan_tx_ded_msg_write(struct ttcan_controller *ttcan,
 			    struct ttcanfd_frame *ttcanfd,
-			    u8 index, bool tt_en);
+			    u8 index);
+void ttcan_tx_trigger_msg_transmit(struct ttcan_controller *ttcan, u8 index);
 int ttcan_tx_msg_buffer_write(struct ttcan_controller *ttcan,
-				struct ttcanfd_frame *ttcanfd,
-				bool tt_en);
+				struct ttcanfd_frame *ttcanfd);
 
 void ttcan_prog_std_id_fltrs(struct ttcan_controller *ttcan, void *std_shadow);
 void ttcan_set_std_id_filter(struct ttcan_controller *ttcan, void *std_shadow,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -95,9 +95,6 @@ struct mttcan_priv {
 	u32 xidam_reg;
 	u32 irq_flags;
 	u32 irq_ttflags;
-	u32 tx_next;
-	u32 tx_echo;
-	u32 tx_obj_cancelled;
 	u32 irqstatus;
 	u32 tt_irqstatus;
 	u32 instance;

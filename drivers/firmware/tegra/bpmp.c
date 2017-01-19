@@ -196,7 +196,6 @@ static int bpmp_clk_init(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct clk *sclk;
-	struct clk *emc_clk;
 
 	sclk = devm_clk_get(dev, "sclk");
 	if (IS_ERR(sclk)) {
@@ -204,14 +203,7 @@ static int bpmp_clk_init(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	emc_clk = devm_clk_get(dev, "emc");
-	if (IS_ERR(emc_clk)) {
-		dev_err(dev, "cannot get avp emc clk\n");
-		return -ENODEV;
-	}
-
 	clk_prepare_enable(sclk);
-	clk_prepare_enable(emc_clk);
 
 	if (tegra21_pasr_init(&pdev->dev))
 		dev_err(&pdev->dev, "PASR init failed\n");

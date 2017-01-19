@@ -50,7 +50,7 @@
 #include <linux/vmalloc.h>
 #include <linux/pm_runtime.h>
 #include <linux/tegra-powergate.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/of_device.h>
 #include <linux/of_address.h>
 #include <linux/of_gpio.h>

@@ -33,7 +33,7 @@
 #include <linux/err.h>
 #include <linux/kref.h>
 #include <linux/sched.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <asm/processor.h>
 #include <asm/current.h>
 

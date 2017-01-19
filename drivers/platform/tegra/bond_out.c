@@ -20,7 +20,7 @@
 
 #include <linux/types.h>
 #include <linux/io.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include "iomap.h"
 
 #define OFFSET_BOND_OUT_L 0x70

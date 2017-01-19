@@ -15,7 +15,7 @@
  *
  */
 
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 
 #define MINOR_QT		0
 #define MINOR_FPGA		1

@@ -23,7 +23,7 @@
 #include <linux/serial_core.h>
 #include <linux/platform_device.h>
 #include <linux/io.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 
 #define DRV_NAME "tegra_hv_comm"
 

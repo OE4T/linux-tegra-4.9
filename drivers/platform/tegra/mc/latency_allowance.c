@@ -29,7 +29,7 @@
 #include <linux/syscore_ops.h>
 #include <linux/platform/tegra/common.h>
 #include <soc/tegra/fuse.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <asm/bug.h>
 #include <asm/io.h>
 #include <asm/string.h>

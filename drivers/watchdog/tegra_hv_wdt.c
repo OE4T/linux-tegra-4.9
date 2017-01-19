@@ -22,7 +22,7 @@
 #include <linux/init.h>
 #include <linux/of.h>
 #include <linux/tegra-ivc.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/platform_device.h>
 #include <linux/watchdog.h>
 #include <linux/kthread.h>

@@ -17,7 +17,7 @@
 
 #include <linux/module.h>
 #include <linux/moduleparam.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <soc/tegra/fuse.h>
 
 #define TEGRAID_CHIPID_MASK 0xFF00

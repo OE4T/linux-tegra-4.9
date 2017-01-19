@@ -22,7 +22,7 @@
 #include <linux/tegra-hsp.h>
 #include <linux/tegra-ivc-instance.h>
 #include <linux/tegra-ivc.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <soc/tegra/bpmp_abi.h>
 #include "bpmp.h"
 

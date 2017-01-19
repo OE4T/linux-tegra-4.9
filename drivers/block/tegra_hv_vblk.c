@@ -31,7 +31,7 @@
 #include <linux/buffer_head.h> /* invalidate_bdev */
 #include <linux/bio.h>
 #include <linux/interrupt.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/tegra-ivc.h>
 #include <linux/workqueue.h>
 #include <linux/platform_device.h>

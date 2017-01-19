@@ -38,7 +38,7 @@
 #include <linux/mmc/cmdq_hci.h>
 
 #include <linux/tegra_prod.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include "sdhci-pltfm.h"
 
 /* Tegra SDHOST controller vendor register definitions */

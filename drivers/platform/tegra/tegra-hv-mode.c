@@ -12,7 +12,7 @@
  */
 
 #include <linux/of.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 
 bool is_tegra_hypervisor_mode(void)
 {

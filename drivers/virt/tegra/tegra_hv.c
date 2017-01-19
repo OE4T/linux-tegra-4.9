@@ -27,7 +27,7 @@
 #include <linux/of.h>
 #include <linux/of_irq.h>
 
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/tegra-ivc.h>
 
 #include <soc/tegra/virt/syscalls.h>

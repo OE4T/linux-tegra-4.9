@@ -26,7 +26,7 @@
 #include <linux/fs.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-instance.h>
 #include <linux/nvhvivc_mempool_ioctl.h>

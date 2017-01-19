@@ -16,7 +16,7 @@
  */
 
 #include <linux/errno.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
 #include <linux/mm.h>

@@ -21,7 +21,7 @@
 #include <linux/scatterlist.h>
 #include <linux/dma-attrs.h>
 #include <linux/iommu.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/vmalloc.h>
 #include <linux/slab.h>
 #include <linux/version.h>

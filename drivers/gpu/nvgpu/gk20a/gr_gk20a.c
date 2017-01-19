@@ -20,7 +20,7 @@
 #include <linux/delay.h>	/* for udelay */
 #include <linux/mm.h>		/* for totalram_pages */
 #include <linux/scatterlist.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/debugfs.h>
 #include <uapi/linux/nvgpu.h>
 #include <linux/vmalloc.h>

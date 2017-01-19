@@ -23,7 +23,7 @@
 #include <linux/export.h>
 #include <linux/slab.h>
 #include <linux/clk/tegra.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/platform_data/tegra_edp.h>
 #include <linux/pm_qos.h>
 

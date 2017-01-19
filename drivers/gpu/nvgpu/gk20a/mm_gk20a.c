@@ -23,7 +23,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/scatterlist.h>
 #include <linux/nvmap.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/vmalloc.h>
 #include <linux/dma-buf.h>
 #include <linux/lcm.h>

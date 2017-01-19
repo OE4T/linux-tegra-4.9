@@ -32,7 +32,7 @@ struct acr_desc;
 #include <linux/spinlock.h>
 #include <linux/nvgpu.h>
 #include <linux/irqreturn.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/version.h>
 #include <linux/atomic.h>
 

@@ -23,7 +23,7 @@ obj-y += nvmap_mm.o
 obj-$(CONFIG_NVMAP_PAGE_POOLS) += nvmap_pp.o
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
-ifneq ($(wildcard $(srctree)/../nvmap-t18x/drivers/video/tegra/nvmap/Makefile),)
+ifneq ($(wildcard $(srctree)/../nvmap-t18x/drivers/video/tegra/nvmap/Makefile.nvmap-t18x),)
 obj-y += $(call tegra-path,nvmap-t18x/,drivers/video/tegra/nvmap/)
 endif
 endif

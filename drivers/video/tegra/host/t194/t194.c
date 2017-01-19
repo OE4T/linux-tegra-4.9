@@ -19,7 +19,7 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/io.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
 
 #include <linux/platform/tegra/tegra18_kfuse.h>

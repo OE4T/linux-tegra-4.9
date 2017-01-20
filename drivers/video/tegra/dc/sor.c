@@ -249,7 +249,7 @@ static int dbg_sor_show(struct seq_file *s, void *unused)
 #define DUMP_REG(a) seq_printf(s, "%-32s  %03x  %08x\n",		\
 		#a, a, tegra_sor_readl(sor, a));
 
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
 	if (!tegra_powergate_is_powered(TEGRA_POWERGATE_SOR)) {
 		seq_puts(s, "SOR is powergated\n");
 		return 0;
@@ -629,8 +629,6 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		goto err_iounmap_reg;
 	}
 
-#ifndef	CONFIG_ARCH_TEGRA_12x_SOC
-
 #if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	safe_clk = tegra_disp_of_clk_get_by_name(np_sor, "sor_safe");
 #else
@@ -644,21 +642,13 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	}
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	if (!strcmp(res_name, "sor1")) {
-#ifndef CONFIG_ARCH_TEGRA_21x_SOC
-		brick_clk = clk_get(NULL, "sor1_brick");
-#else
 		brick_clk = tegra_disp_of_clk_get_by_name(np_sor, "sor1_brick");
-#endif
 		if (IS_ERR_OR_NULL(brick_clk)) {
 			dev_err(&dc->ndev->dev, "sor: can't get brick clock\n");
 			err = -ENOENT;
 			goto err_brick;
 		}
-#ifndef CONFIG_ARCH_TEGRA_21x_SOC
-		src_clk = clk_get(NULL, "sor1_src");
-#else
 		src_clk = tegra_disp_of_clk_get_by_name(np_sor, "sor1_src");
-#endif
 		if (IS_ERR_OR_NULL(src_clk)) {
 			dev_err(&dc->ndev->dev, "sor: can't get src clock\n");
 			err = -ENOENT;
@@ -683,8 +673,6 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		err = -ENOENT;
 		goto err_src;
 	}
-
-#endif
 #endif
 
 	for (i = 0; i < sizeof(sor->xbar_ctrl)/sizeof(u32); i++)
@@ -1599,7 +1587,7 @@ static inline void tegra_sor_reset(struct tegra_dc_sor_data *sor)
 {
 	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return;
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	if (sor->rst) {
 		reset_control_assert(sor->rst);
 		mdelay(2);
@@ -1715,28 +1703,6 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 	tegra_dc_sor_enable_sor(sor, true);
 	tegra_dc_sor_enable_sor(sor, false);
 
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_13x_SOC)
-	/* Awake request */
-	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
-		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
-		NV_SOR_SUPER_STATE1_ASY_ORMODE_NORMAL |
-		NV_SOR_SUPER_STATE1_ATTACHED_YES);
-	tegra_dc_sor_super_update(sor);
-
-	tegra_dc_sor_enable_dc(sor);
-
-	tegra_dc_sor_enable_sor(sor, true);
-
-	if (!(dc->out->flags & TEGRA_DC_OUT_NVSR_MODE)) {
-		if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
-			NV_SOR_TEST_ACT_HEAD_OPMODE_DEFAULT_MASK,
-			NV_SOR_TEST_ACT_HEAD_OPMODE_AWAKE,
-			100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
-			dev_err(&dc->ndev->dev,
-				"dc timeout waiting for OPMOD = AWAKE\n");
-		}
-	}
-#else
 	tegra_dc_sor_update(sor);
 
 	/* Sleep request */
@@ -1769,8 +1735,6 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 		NV_SOR_SUPER_STATE1_ASY_ORMODE_NORMAL |
 		NV_SOR_SUPER_STATE1_ATTACHED_YES);
 	tegra_dc_sor_super_update(sor);
-
-#endif
 
 	tegra_dc_writel(dc, reg_val, DC_CMD_STATE_ACCESS);
 	tegra_dc_put(dc);
@@ -1908,14 +1872,6 @@ void tegra_dc_sor_sleep(struct tegra_dc_sor_data *sor)
 	if (sor->sor_state == SOR_SLEEP)
 		return;
 
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_13x_SOC)
-	/* Sleep mode */
-	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
-		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
-		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
-		NV_SOR_SUPER_STATE1_ATTACHED_YES);
-	tegra_dc_sor_super_update(sor);
-#else
 	/* set OR mode to SAFE */
 	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
 		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
@@ -1936,7 +1892,6 @@ void tegra_dc_sor_sleep(struct tegra_dc_sor_data *sor)
 		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
 		NV_SOR_SUPER_STATE1_ATTACHED_YES);
 	tegra_dc_sor_super_update(sor);
-#endif
 
 	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
 		NV_SOR_TEST_ACT_HEAD_OPMODE_DEFAULT_MASK,

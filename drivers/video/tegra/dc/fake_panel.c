@@ -402,7 +402,7 @@ int tegra_dc_destroy_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 		tegra_mipi_cal_destroy(dc);
 #endif
 
-#if defined (CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined (CONFIG_TEGRA_NVDISPLAY)
 	if (dsi->pad_ctrl)
 		tegra_dsi_padctrl_shutdown(dc);
 #endif
@@ -505,7 +505,7 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 		goto err_release_regs;
 	}
 #endif
-#if defined (CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined (CONFIG_TEGRA_NVDISPLAY)
 	dsi->pad_ctrl = tegra_dsi_padctrl_init(dc);
 	if (IS_ERR(dsi->pad_ctrl)) {
 		dev_err(&dc->ndev->dev, "dsi: Padctrl sw init failed\n");
@@ -519,7 +519,7 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 	of_node_put(np_dsi);
 	return 0;
 
-#if defined (CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined (CONFIG_TEGRA_NVDISPLAY)
 err_mipical_dest:
 #ifndef COMMON_MIPICAL_SUPPORTED
 	if(dsi->mipi_cal)

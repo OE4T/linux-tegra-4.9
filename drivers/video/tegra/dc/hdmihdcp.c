@@ -115,7 +115,7 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 static u8 g_seq_num_m_retries;
 static u8 g_fallback;
 
-#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+#if (defined(CONFIG_TEGRA_NVDISPLAY))
 static void *ta_ctx;
 #endif
 
@@ -457,7 +457,7 @@ static int get_vprime(struct tegra_nvhdcp *nvhdcp, u8 *v_prime)
 	return 0;
 }
 
-#if (!defined(CONFIG_ARCH_TEGRA_18x_SOC))
+#if (!defined(CONFIG_TEGRA_NVDISPLAY))
 /* set or clear RUN_YES */
 static void hdcp_ctrl_run(struct tegra_hdmi *hdmi, bool v)
 {
@@ -1304,7 +1304,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	struct tegra_dc *dc = tegra_dc_hdmi_get_dc(hdmi);
 	int e;
 	u8 b_caps;
-#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+#if (defined(CONFIG_TEGRA_NVDISPLAY))
 	int hdcp_ta_ret; /* track returns from TA */
 	uint32_t ta_cmd = HDCP_AUTH_CMD;
 	bool enc = false;
@@ -1351,7 +1351,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 
 	nvhdcp_vdbg("read Bcaps = 0x%02x\n", b_caps);
 
-#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+#if (defined(CONFIG_TEGRA_NVDISPLAY))
 	ta_ctx = NULL;
 	e = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
 	if (e) {
@@ -1504,7 +1504,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	}
 	nvhdcp_vdbg("Bksv is 0x%016llx\n", nvhdcp->b_ksv);
 
-#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+#if (defined(CONFIG_TEGRA_NVDISPLAY))
 	*pkt = HDCP_TA_CMD_BKSV;
 	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
 	*(pkt + 2*HDCP_CMD_OFFSET) = nvhdcp->b_ksv;
@@ -1567,7 +1567,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		}
 	}
 
-#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+#if (defined(CONFIG_TEGRA_NVDISPLAY))
 	*pkt = HDCP_TA_CMD_ENC;
 	*(pkt + HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
 	*(pkt + 2*HDCP_CMD_OFFSET) = b_caps;
@@ -1625,7 +1625,7 @@ failure:
 
 lost_hdmi:
 	nvhdcp->state = STATE_UNAUTHENTICATED;
-#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+#if (defined(CONFIG_TEGRA_NVDISPLAY))
 	*pkt = HDCP_TA_CMD_CTRL;
 	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
 	*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_DISABLE;
@@ -1642,7 +1642,7 @@ lost_hdmi:
 
 err:
 	mutex_unlock(&nvhdcp->lock);
-#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+#if (defined(CONFIG_TEGRA_NVDISPLAY))
 	kfree(pkt);
 	if (ta_ctx) {
 		te_close_trusted_session(ta_ctx);
@@ -1653,7 +1653,7 @@ err:
 	return;
 disable:
 	nvhdcp->state = STATE_OFF;
-#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+#if (defined(CONFIG_TEGRA_NVDISPLAY))
 	kfree(pkt);
 	if (ta_ctx) {
 		te_close_trusted_session(ta_ctx);

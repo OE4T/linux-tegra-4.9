@@ -23,7 +23,7 @@
 #ifdef CONFIG_TEGRA_SYS_EDP
 #include <soc/tegra/sysedp.h>
 #endif
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 #include "dsi_padctrl.h"
 #endif
 
@@ -138,7 +138,7 @@ struct tegra_dc_dsi_data {
 	struct sysedp_consumer *sysedpc;
 	struct padctrl *dsi_io_padctrl[MAX_DSI_INSTANCE];
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#ifdef CONFIG_TEGRA_NVDISPLAY
 	struct tegra_dsi_padctrl *pad_ctrl;
 #endif
 };

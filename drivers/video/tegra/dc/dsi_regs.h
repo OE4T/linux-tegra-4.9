@@ -27,7 +27,7 @@ enum {
 	OP_DONE = 1,
 };
 #define DSI_INCR_SYNCPT 0x00
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 #define DSI_INCR_SYNCPT_COND(x)		(((x) & 0xff) << 10)
 #define DSI_INCR_SYNCPT_INDX(x)		(((x) & 0x3ff) << 0)
 #else

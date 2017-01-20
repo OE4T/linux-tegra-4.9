@@ -52,7 +52,7 @@
 #include "hdmi2fpd_ds90uh949.h"
 #include "max929x_hdmi2gmsl.h"
 
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
 static struct of_device_id tegra_sor_pd[] = {
 	{ .compatible = "nvidia,tegra210-sor-pd", },
 	{},
@@ -140,7 +140,7 @@ static inline void tegra_hdmi_reset(struct tegra_hdmi *hdmi)
 	if (tegra_platform_is_sim())
 		return;
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	if (hdmi->sor->rst) {
 		reset_control_assert(hdmi->sor->rst);
 		mdelay(20);
@@ -2696,7 +2696,7 @@ static const struct file_operations tegra_hdmi_hotplug_dbg_ops = {
 static void tegra_hdmi_ddc_power_toggle(struct tegra_hdmi *dc_hdmi, int value)
 {
 
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
 	int partition_id = tegra_pd_get_powergate_id(tegra_sor_pd);
 
 	if (partition_id < 0)
@@ -2708,7 +2708,7 @@ static void tegra_hdmi_ddc_power_toggle(struct tegra_hdmi *dc_hdmi, int value)
 
 	if (value == 0) {
 		_tegra_hdmi_ddc_disable(dc_hdmi);
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC) && \
+#if !defined(CONFIG_TEGRA_NVDISPLAY) && \
 	IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 		tegra_powergate_partition(partition_id);
 #else
@@ -2718,7 +2718,7 @@ static void tegra_hdmi_ddc_power_toggle(struct tegra_hdmi *dc_hdmi, int value)
 
 
 	} else if (value == 1) {
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC) && \
+#if !defined(CONFIG_TEGRA_NVDISPLAY) && \
 	IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 		tegra_unpowergate_partition(partition_id);
 #else

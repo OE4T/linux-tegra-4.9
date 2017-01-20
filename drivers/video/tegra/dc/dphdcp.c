@@ -128,7 +128,7 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 		pr_info("dphdcp: " __VA_ARGS__)
 #define HDCP_PORT_NAME  "com.nvidia.tos.hdcp"
 
-#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+#ifdef CONFIG_TEGRA_NVDISPLAY
 static void *ta_ctx;
 #endif
 
@@ -295,7 +295,7 @@ static int wait_key_ctrl(struct tegra_dc_sor_data *sor, u32 mask, u32 value)
 	return 0;
 }
 
-#if (!defined(CONFIG_ARCH_TEGRA_18x_SOC))
+#ifndef CONFIG_TEGRA_NVDISPLAY
 /* set or clear RUN_YES */
 static void hdcp_ctrl_run(struct tegra_dc_sor_data *sor, bool v)
 {
@@ -814,7 +814,7 @@ static void dphdcp_downstream_worker(struct work_struct *work)
 		container_of(to_delayed_work(work), struct tegra_dphdcp, work);
 	struct tegra_dc_dp_data *dp = dphdcp->dp;
 	struct tegra_dc *dc = dp->dc;
-#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+#ifdef CONFIG_TEGRA_NVDISPLAY
 	int hdcp_ta_ret; /* track returns from TA */
 	uint32_t ta_cmd = HDCP_AUTH_CMD;
 	bool enc = false;
@@ -865,7 +865,7 @@ static void dphdcp_downstream_worker(struct work_struct *work)
 		dphdcp_err("receiver is not hdcp capable\n");
 		goto failure;
 	}
-#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+#ifdef CONFIG_TEGRA_NVDISPLAY
 	ta_ctx = NULL;
 	e = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
 	if (e) {
@@ -1008,7 +1008,7 @@ static void dphdcp_downstream_worker(struct work_struct *work)
 		goto failure;
 	}
 	dphdcp_vdbg("read Bksv from device: 0x%016llx\n", dphdcp->b_ksv);
-#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+#ifdef CONFIG_TEGRA_NVDISPLAY
 	*pkt = HDCP_TA_CMD_BKSV;
 	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
 	*(pkt + 2*HDCP_CMD_OFFSET) = dphdcp->b_ksv;
@@ -1092,7 +1092,7 @@ static void dphdcp_downstream_worker(struct work_struct *work)
 		}
 	}
 
-#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+#ifdef CONFIG_TEGRA_NVDISPLAY
 	*pkt = HDCP_TA_CMD_ENC;
 	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
 	*(pkt + 2*HDCP_CMD_OFFSET) = b_caps;
@@ -1150,7 +1150,7 @@ failure:
 lost_dp:
 	dphdcp_info("lost dp connection\n");
 	dphdcp->state = STATE_UNAUTHENTICATED;
-#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+#ifdef CONFIG_TEGRA_NVDISPLAY
 	if (pkt) {
 		*pkt = HDCP_TA_CMD_CTRL;
 		*(pkt + HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
@@ -1169,7 +1169,7 @@ lost_dp:
 
 err:
 	mutex_unlock(&dphdcp->lock);
-#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+#ifdef CONFIG_TEGRA_NVDISPLAY
 	kfree(pkt);
 	if (ta_ctx) {
 		te_close_trusted_session(ta_ctx);
@@ -1180,7 +1180,7 @@ err:
 	return;
 disable:
 	dphdcp->state = STATE_OFF;
-#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+#ifdef CONFIG_TEGRA_NVDISPLAY
 	kfree(pkt);
 	if (ta_ctx) {
 		te_close_trusted_session(ta_ctx);

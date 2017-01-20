@@ -35,7 +35,7 @@
 #define SOR_NODE		"/host1x/sor"
 #define SOR1_NODE		"/host1x/sor1"
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 #define DPAUX_NODE		"/host1x/dpaux@155c0000"
 #define DPAUX1_NODE		"/host1x/dpaux@15040000"
 #else

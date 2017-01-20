@@ -157,44 +157,6 @@ static const u32 tegra_dp_vs_regs[][4][4] = {
 };
 #endif
 
-/* Both 12x and 13x config enabled for 13x */
-#if (defined(CONFIG_ARCH_TEGRA_12x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_13x_SOC))
-static const u32 tegra_dp_pe_regs[][4][4] = {
-	/* postcursor2 L0 */
-	{
-		/* pre-emphasis: L0, L1, L2, L3 */
-		{0x00, 0x09, 0x13, 0x25}, /* voltage swing: L0 */
-		{0x00, 0x0f, 0x1e}, /* L1 */
-		{0x00, 0x14}, /* L2 */
-		{0x00}, /* L3 */
-	},
-
-	/* postcursor2 L1 */
-	{
-		{0x00, 0x0a, 0x14, 0x28},
-		{0x00, 0x0f, 0x1e},
-		{0x00, 0x14},
-		{0x00},
-	},
-
-	/* postcursor2 L2 */
-	{
-		{0x00, 0x0a, 0x14, 0x28},
-		{0x00, 0x0f, 0x1e},
-		{0x00, 0x14},
-		{0x00},
-	},
-
-	/* postcursor2 L3 */
-	{
-		{0x00, 0x0a, 0x14, 0x28},
-		{0x00, 0x0f, 0x1e},
-		{0x00, 0x14},
-		{0x00},
-	},
-};
-#else
 static const u32 tegra_dp_pe_regs[][4][4] = {
 	/* postcursor2 L0 */
 	{
@@ -229,7 +191,6 @@ static const u32 tegra_dp_pe_regs[][4][4] = {
 		{0x00},
 	},
 };
-#endif
 
 static const u32 tegra_dp_pc_regs[][4][4] = {
 	/* postcursor2 L0 */

@@ -775,7 +775,7 @@ static int set_dsc_num_comp_pkts(void *data, u64 value)
 	case DSC_TWO_COMP_PKTS_PER_ROW:
 	case DSC_FOUR_COMP_PKTS_PER_ROW:
 		break;
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	case DSC_THREE_COMP_PKTS_PER_ROW:
 		break;
 #endif

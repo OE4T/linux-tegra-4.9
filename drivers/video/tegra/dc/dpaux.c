@@ -31,16 +31,7 @@ static const char *const dpaux_clks[TEGRA_DPAUX_INSTANCE_N] = {
 	 "dpaux",
 	 "dpaux1",
 };
-
-#if !defined(CONFIG_TEGRA_NVDISPLAY) && !defined(CONFIG_ARCH_TEGRA_210_SOC)
-static unsigned long dpaux_base_addr[TEGRA_DPAUX_INSTANCE_N] = {
-	TEGRA_DPAUX_BASE,
-	TEGRA_DPAUX1_BASE,
-};
-#endif
-
 static void __iomem *dpaux_baseaddr[TEGRA_DPAUX_INSTANCE_N];
-
 static DEFINE_MUTEX(dpaux_lock);
 
 static inline struct clk *tegra_dpaux_clk_get(struct device_node *np,
@@ -48,11 +39,7 @@ static inline struct clk *tegra_dpaux_clk_get(struct device_node *np,
 {
 	if (id >= TEGRA_DPAUX_INSTANCE_N)
 		return ERR_PTR(-EINVAL);
-#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	return tegra_disp_of_clk_get_by_name(np, dpaux_clks[id]);
-#else
-	return clk_get_sys(dpaux_clks[id], NULL);
-#endif
 }
 
 int tegra_dpaux_clk_en(struct device_node *np, enum tegra_dpaux_instance id)
@@ -69,11 +56,7 @@ static inline void _tegra_dpaux_pad_power(struct tegra_dc *dc,
 					enum tegra_dpaux_instance id, bool on)
 {
 	void __iomem *regaddr;
-#if !defined(CONFIG_TEGRA_NVDISPLAY) && !defined(CONFIG_ARCH_TEGRA_210_SOC)
-	regaddr = IO_ADDRESS(dpaux_base_addr[id] + DPAUX_HYBRID_SPARE * 4);
-#else
 	regaddr = dpaux_baseaddr[id] + DPAUX_HYBRID_SPARE * 4;
-#endif
 	writel((on ? DPAUX_HYBRID_SPARE_PAD_PWR_POWERUP :
 		DPAUX_HYBRID_SPARE_PAD_PWR_POWERDOWN),
 		regaddr);
@@ -110,11 +93,7 @@ static inline void _tegra_dpaux_config_pad_mode(struct tegra_dc *dc,
 {
 	u32 val;
 	void __iomem *regaddr;
-#if !defined(CONFIG_TEGRA_NVDISPLAY) && !defined(CONFIG_ARCH_TEGRA_210_SOC)
-	regaddr = IO_ADDRESS(dpaux_base_addr[id] + DPAUX_HYBRID_PADCTL * 4);
-#else
 	regaddr = dpaux_baseaddr[id] + DPAUX_HYBRID_PADCTL * 4;
-#endif
 
 	val = readl(regaddr);
 	val &= ~(DPAUX_HYBRID_PADCTL_I2C_SDA_INPUT_RCV_ENABLE |
@@ -206,9 +185,6 @@ void tegra_dpaux_prod_set_for_hdmi(struct tegra_dc *dc)
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 	struct device_node *np_dpaux = of_find_node_by_path(
 			sor_num ? DPAUX1_NODE : DPAUX_NODE);
-#if !defined(CONFIG_TEGRA_NVDISPLAY) && !defined(CONFIG_ARCH_TEGRA_210_SOC)
-	void __iomem *regaddr;
-#endif
 
 	if (!np_dpaux) {
 		dev_err(&dc->ndev->dev, "HDMI node not available\n");
@@ -220,14 +196,8 @@ void tegra_dpaux_prod_set_for_hdmi(struct tegra_dc *dc)
 	tegra_dc_io_start(dc);
 
 	if (!IS_ERR(hdmi->dpaux_prod_list)) {
-#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 		err = tegra_prod_set_by_name(&hdmi->hdmi_dpaux_base[sor_num],
 				"prod_c_dpaux_hdmi", hdmi->dpaux_prod_list);
-#else
-		regaddr = IO_ADDRESS(dpaux_base_addr[sor_num]);
-		err = tegra_prod_set_by_name(&regaddr,
-				"prod_c_dpaux_hdmi", hdmi->dpaux_prod_list);
-#endif
 		if (err) {
 			dev_warn(&dc->ndev->dev,
 				"dpaux: prod set failed for HDMI\n");

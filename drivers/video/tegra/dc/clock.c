@@ -82,7 +82,7 @@ void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		pclk = dc->out_ops->setup_clk(dc, clk);
 	else
 		pclk = 0;
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#ifdef CONFIG_TEGRA_NVDISPLAY
 	tegra_nvdisp_set_compclk(dc);
 #endif
 

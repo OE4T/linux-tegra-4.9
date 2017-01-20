@@ -289,8 +289,7 @@ static inline int lt_param_idx(int link_bw)
 static inline int tegra_get_sor_reset_ctrl(struct tegra_dc_sor_data *sor,
 	struct device_node *np_sor, const char *res_name)
 {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
-#ifndef CONFIG_ARCH_TEGRA_210_SOC
+#ifdef CONFIG_TEGRA_NVDISPLAY
 	/* Use only if bpmp is enabled */
 	if (!tegra_bpmp_running())
 		return 0;
@@ -303,7 +302,6 @@ static inline int tegra_get_sor_reset_ctrl(struct tegra_dc_sor_data *sor,
 		return PTR_ERR(sor->rst);
 	}
 	reset_control_deassert(sor->rst);
-#endif
 	return 0;
 }
 #endif

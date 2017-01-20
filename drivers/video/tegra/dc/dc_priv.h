@@ -30,7 +30,7 @@
 #include <video/tegra_dc_ext_kernel.h>
 #include <soc/tegra/tegra_bpmp.h>
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 #include <linux/clk-provider.h>
 #endif
 
@@ -67,7 +67,7 @@ static inline void tegra_dc_io_end(struct tegra_dc *dc)
 
 static inline int tegra_dc_is_clk_enabled(struct clk *clk)
 {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	return __clk_get_enable_count(clk);
 #else
 	return tegra_is_clk_enabled(clk);
@@ -114,7 +114,7 @@ static inline void tegra_dc_writel(struct tegra_dc *dc, unsigned long val,
 
 static inline void tegra_dc_power_on(struct tegra_dc *dc)
 {
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
 	tegra_dc_writel(dc, PW0_ENABLE | PW1_ENABLE | PW2_ENABLE | PW3_ENABLE |
 					PW4_ENABLE | PM0_ENABLE | PM1_ENABLE,
 					DC_CMD_DISPLAY_POWER_CONTROL);
@@ -391,7 +391,7 @@ static inline void tegra_dc_restore_interrupt(struct tegra_dc *dc, u32 val)
 
 static inline int tegra_dc_clk_set_rate(struct tegra_dc *dc, unsigned long rate)
 {
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
 	return 0;
 #else
 	if (!tegra_platform_is_silicon() || !tegra_bpmp_running())
@@ -409,7 +409,7 @@ static inline int tegra_dc_clk_set_rate(struct tegra_dc *dc, unsigned long rate)
 
 static inline unsigned long tegra_dc_clk_get_rate(struct tegra_dc *dc)
 {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	if (!tegra_platform_is_silicon() || !tegra_bpmp_running())
 #else
 	if (!tegra_platform_is_silicon())
@@ -421,7 +421,7 @@ static inline unsigned long tegra_dc_clk_get_rate(struct tegra_dc *dc)
 
 static inline int tegra_disp_clk_prepare_enable(struct clk *clk)
 {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	if (tegra_platform_is_silicon() && tegra_bpmp_running())
 #else
 	if (tegra_platform_is_silicon())
@@ -433,7 +433,7 @@ static inline int tegra_disp_clk_prepare_enable(struct clk *clk)
 
 static inline void tegra_disp_clk_disable_unprepare(struct clk *clk)
 {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	if (tegra_platform_is_silicon() && tegra_bpmp_running())
 #else
 	if (tegra_platform_is_silicon())
@@ -444,7 +444,7 @@ static inline void tegra_disp_clk_disable_unprepare(struct clk *clk)
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 static inline void tegra_dc_powergate_locked(struct tegra_dc *dc)
 {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	tegra_nvdisp_powergate_partition(dc->powergate_id);
 #else
 	tegra_powergate_partition(dc->powergate_id);
@@ -454,7 +454,7 @@ static inline void tegra_dc_powergate_locked(struct tegra_dc *dc)
 static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc)
 {
 	int ret;
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	ret = tegra_nvdisp_unpowergate_partition(dc->powergate_id);
 #else
 	ret = tegra_unpowergate_partition(dc->powergate_id);

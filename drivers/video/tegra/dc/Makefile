@@ -2,7 +2,7 @@ GCOV_PROFILE := y
 subdir-ccflags-y := -Werror
 EXTRA_CFLAGS += -I../nvhost/drivers/video/tegra/host
 EXTRA_CFLAGS += -Idrivers/video/tegra/host
-ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
+ifeq ($(CONFIG_TEGRA_NVDISPLAY),y)
 ccflags-y += -I$(srctree)/../t18x/drivers/video/tegra/dc
 ccflags-y += -I$(srctree)/drivers/video/tegra/dc
 endif
@@ -24,14 +24,14 @@ obj-$(CONFIG_TEGRA_EDP2LVDS_PS8625) += ps8625_edp2lvds.o
 ccflags-y +=-DCOMMON_MIPICAL_SUPPORTED\
 	-Idrivers/media/platform/tegra
 
-ifneq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
+ifneq ($(CONFIG_TEGRA_NVDISPLAY),y)
 obj-$(CONFIG_TEGRA_HDMIHDCP) += hdmihdcp.o
 obj-$(CONFIG_TEGRA_HDMIHDCP) += nvhdcp_hdcp22_methods.o
 obj-$(CONFIG_TEGRA_DPHDCP) += dphdcp.o
 ccflags-$(CONFIG_TEGRA_HDMIHDCP) += -DCONFIG_HDCP
 ccflags-$(CONFIG_TEGRA_DPHDCP) += -DCONFIG_DPHDCP
 endif
-ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
+ifeq ($(CONFIG_TEGRA_NVDISPLAY),y)
 ifeq ($(CONFIG_TRUSTY),y)
 obj-$(CONFIG_TEGRA_HDMIHDCP) += hdmihdcp.o
 obj-$(CONFIG_TEGRA_HDMIHDCP) += nvhdcp_hdcp22_methods.o

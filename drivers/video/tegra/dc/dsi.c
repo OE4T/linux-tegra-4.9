@@ -328,7 +328,7 @@ static void tegra_dsi_send_dc_frames(struct tegra_dc *dc,
  * while reading/writing. As the register is not used currently,
  * skipping this change.
  */
-#if defined CONFIG_ARCH_TEGRA_18x_SOC
+#if defined CONFIG_TEGRA_NVDISPLAY
 #define GET_BYTE_OFFSET(reg)	((reg > 8) ? ((reg + 1) * 4) : (reg * 4))
 #else
 #define GET_BYTE_OFFSET(reg)	(reg * 4)
@@ -989,7 +989,7 @@ static void tegra_dsi_get_phy_timing(struct tegra_dc_dsi_data *dsi,
 
 static inline int tegra_dsi_ignore_phy_timing_range_violation(void)
 {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	return 1;
 #else
 	return 0;
@@ -2050,7 +2050,7 @@ static void tegra_dsi_set_dc_clk(struct tegra_dc *dc,
 	 * Shift clock divider is removed in T18x. There is no display
 	 * clock control register and not shift clk div programming.
 	 */
-#if defined CONFIG_ARCH_TEGRA_18x_SOC
+#if defined CONFIG_TEGRA_NVDISPLAY
 	tegra_dc_clk_set_rate(dc, dc->mode.pclk);
 	return;
 #endif
@@ -2121,7 +2121,7 @@ static void tegra_dsi_set_dsi_clk(struct tegra_dc *dc,
 		return;
 	}
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	dsi->current_bit_clk_ps =  DIV_ROUND_CLOSEST((1000 * 1000 * 1000),
 					dsi->current_dsi_clk_khz);
 #else
@@ -2295,7 +2295,7 @@ static void tegra_dsi_pad_disable(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	return;
 #endif
 	if (dsi->info.controller_vs == DSI_VS_1) {
@@ -2327,7 +2327,7 @@ static void tegra_dsi_pad_enable(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val;
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	return;
 #endif
 	if (dsi->info.controller_vs == DSI_VS_1) {
@@ -2356,11 +2356,11 @@ static void tegra_dsi_pad_enable(struct tegra_dc_dsi_data *dsi)
 	}
 }
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
 static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val = 0;
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
 	struct clk *clk72mhz = NULL;
 	struct device_node *np_dsi = of_find_node_by_path(DSI_NODE);
 	clk72mhz = tegra_disp_of_clk_get_by_name(np_dsi, "clk72mhz");
@@ -2392,7 +2392,7 @@ static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 		dsi->info.dsi_instance == DSI_INSTANCE_1) {
 		tegra_mipi_calibration(DSIC|DSID);
 	}
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
 	tegra_disp_clk_disable_unprepare(clk72mhz);
 	clk_put(clk72mhz);
 #endif
@@ -2410,7 +2410,7 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 		tegra_dsi_mipi_calibration_21x(dsi);
 }
 
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
 static void tegra_dsi_panelB_enable(void)
 {
 	unsigned int val;
@@ -2449,7 +2449,7 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 		DSI_POWER_CONTROL);
 	/* stabilization delay */
 	udelay(300);
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
 
 	if (dsi->info.dsi_instance || dsi->info.ganged_type ||
 		dsi->info.dsi_csi_loopback)
@@ -4025,7 +4025,7 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	if (dsi->pad_ctrl)
 		tegra_dsi_padctrl_enable(dsi->pad_ctrl);
 #endif
@@ -4664,7 +4664,7 @@ static void _tegra_dc_dsi_destroy(struct tegra_dc *dc)
 static void tegra_dsi_config_phy_clk(struct tegra_dc_dsi_data *dsi,
 							u32 settings)
 {
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
 	struct clk *parent_clk = NULL;
 	struct clk *base_clk = NULL;
 	int i = 0;
@@ -4971,7 +4971,7 @@ static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
 	/* Disable dsi source clock */
 	tegra_dsi_clk_disable(dsi);
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	if (dsi->pad_ctrl)
 		tegra_dsi_padctrl_disable(dsi->pad_ctrl);
 #endif
@@ -5176,7 +5176,7 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 		dsi->avdd_dsi_csi = NULL;
 	}
 #endif
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	dsi->pad_ctrl = tegra_dsi_padctrl_init(dc);
 	if (IS_ERR(dsi->pad_ctrl)) {
 		dev_err(&dc->ndev->dev, "dsi: Padctrl init failed\n");
@@ -5190,7 +5190,7 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 					      sysedp_name);
 #endif
 	return 0;
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 err_padctrl:
 #endif
 err_reg:
@@ -5207,7 +5207,7 @@ static void tegra_dc_dsi_destroy(struct tegra_dc *dc)
 
 	avdd_dsi_csi = dsi->avdd_dsi_csi;
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	tegra_dsi_padctrl_shutdown(dc);
 #endif
 	_tegra_dc_dsi_destroy(dc);

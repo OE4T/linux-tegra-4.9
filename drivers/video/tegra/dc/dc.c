@@ -620,7 +620,7 @@ void tegra_dc_clk_disable(struct tegra_dc *dc)
 
 static void tegra_dc_sor_instance(struct tegra_dc *dc, int out_type)
 {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#ifdef CONFIG_TEGRA_NVDISPLAY
 	/* check the dc_or_node to set the instance */
 	if (!strcmp(dc->pdata->dc_or_node_name, "/host1x/sor"))
 		dc->sor_instance = 0;

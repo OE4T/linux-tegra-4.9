@@ -313,11 +313,31 @@ static int tegra186_dpaux_pinctrl_probe(struct platform_device *pdev)
 
 static int tegra186_dpaux_probe(struct platform_device *pdev)
 {
-	struct of_device_id *odev_id;
+	const struct of_device_id *odev_id;
+	struct device *dev = &pdev->dev;
+	struct nvhost_device_data *pdata;
 
-	odev_id = (struct of_device_id *)of_device_get_match_data(&pdev->dev);
+	odev_id = of_match_device(dev->driver->of_match_table, dev);
+	if (!odev_id)
+		return -ENODEV;
 
-	return nvhost_domain_init(odev_id);
+	pdata = (struct nvhost_device_data*)odev_id->data;
+	if (!pdata) {
+		/*
+		 * if data is NULL this means that tegra_dpaux_pinctl_of_match
+		 * has entry with data == NULL. Needs to be fixed.
+		 */
+		dev_err(dev, "ERROR, data == NULL please check the source");
+		return -EINVAL;
+	}
+
+	mutex_init(&pdata->lock);
+
+	/*
+	 * TODO: here I discard const qualifier, but it is better
+	 * to change nvhost_domain_init to accept const parameter
+         */
+	return nvhost_domain_init((struct of_device_id*)odev_id);
 }
 
 static struct of_device_id tegra_dpaux_pinctl_of_match[] = {

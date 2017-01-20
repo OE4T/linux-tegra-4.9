@@ -49,7 +49,7 @@
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #include <linux/dma-attrs.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/ktime.h>
 #include <linux/string.h>
 

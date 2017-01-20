@@ -92,7 +92,7 @@ inval_cmd:
 
 static int nvdla_pin(struct nvdla_private *priv, void *arg)
 {
-	u32 *handles;
+	u32 handles[MAX_NVDLA_PIN_BUFFERS];
 	int err = 0;
 	struct nvdla_pin_unpin_args *buf_list =
 			(struct nvdla_pin_unpin_args *)arg;
@@ -114,10 +114,6 @@ static int nvdla_pin(struct nvdla_private *priv, void *arg)
 	}
 	nvdla_dbg_info(pdev, "num of buffers [%d]", count);
 
-	handles = kcalloc(count, sizeof(u32), GFP_KERNEL);
-	if (!handles)
-		return -ENOMEM;
-
 	if (copy_from_user(handles, (void __user *)buf_list->buffers,
 			(count * sizeof(u32)))) {
 		err = -EFAULT;
@@ -127,7 +123,6 @@ static int nvdla_pin(struct nvdla_private *priv, void *arg)
 	err = nvhost_buffer_pin(priv->buffers, handles, count);
 
 nvdla_buffer_cpy_err:
-	kfree(handles);
 fail_to_get_val_cnt:
 fail_to_get_val_arg:
 	return err;
@@ -135,7 +130,7 @@ fail_to_get_val_arg:
 
 static int nvdla_unpin(struct nvdla_private *priv, void *arg)
 {
-	u32 *handles;
+	u32 handles[MAX_NVDLA_PIN_BUFFERS];
 	int err = 0;
 	struct nvdla_pin_unpin_args *buf_list =
 			(struct nvdla_pin_unpin_args *)arg;
@@ -157,10 +152,6 @@ static int nvdla_unpin(struct nvdla_private *priv, void *arg)
 	}
 	nvdla_dbg_info(pdev, "num of buffers [%d]", count);
 
-	handles = kcalloc(count, sizeof(u32), GFP_KERNEL);
-	if (!handles)
-		return -ENOMEM;
-
 	if (copy_from_user(handles, (void __user *)buf_list->buffers,
 		(count * sizeof(u32)))) {
 		err = -EFAULT;
@@ -170,7 +161,6 @@ static int nvdla_unpin(struct nvdla_private *priv, void *arg)
 	nvhost_buffer_unpin(priv->buffers, handles, count);
 
 nvdla_buffer_cpy_err:
-	kfree(handles);
 fail_to_get_val_cnt:
 fail_to_get_val_arg:
 	return err;
@@ -425,7 +415,7 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 	struct nvdla_submit_args *args =
 			(struct nvdla_submit_args *)arg;
 	struct nvdla_ioctl_submit_task __user *user_tasks;
-	struct nvdla_ioctl_submit_task *local_tasks;
+	struct nvdla_ioctl_submit_task local_tasks[MAX_TASKS_PER_SUBMIT];
 	struct platform_device *pdev;
 	struct nvhost_queue *queue;
 	struct nvhost_buffers *buffers;
@@ -455,10 +445,6 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 	nvdla_dbg_info(pdev, "num of tasks [%d]", num_tasks);
 
 	/* IOCTL copy descriptors*/
-	local_tasks = kcalloc(num_tasks, sizeof(*local_tasks), GFP_KERNEL);
-	if (!local_tasks)
-		return -ENOMEM;
-
 	if (copy_from_user(local_tasks, user_tasks,
 			(num_tasks * sizeof(*user_tasks)))) {
 		err = -EFAULT;
@@ -503,10 +489,6 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 			goto fail_to_send_postfences;
 		}
 	}
-
-	kfree(local_tasks);
-	local_tasks = NULL;
-
 	return 0;
 
 fail_to_send_postfences:
@@ -516,8 +498,6 @@ fail_to_fill_task:
 	/*TODO: traverse list in reverse and delete jobs */
 fail_to_get_task_mem:
 fail_to_copy_task:
-	kfree(local_tasks);
-	local_tasks = NULL;
 	return err;
 }
 

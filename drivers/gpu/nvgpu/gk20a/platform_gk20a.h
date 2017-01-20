@@ -255,6 +255,11 @@ struct gk20a_platform {
 
 	/* true if we run preos microcode on this board */
 	bool run_preos;
+
+	/* true if we need to program sw threshold for
+         * power limits
+	 */
+	bool hardcode_sw_threshold;
 };
 
 static inline struct gk20a_platform *gk20a_get_platform(

@@ -83,6 +83,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 
 	.vidmem_is_vidmem = true,
 	.vbios_min_version = 0x86063000,
+	.hardcode_sw_threshold = true,
 	},
 	{ /* DEVICE=0x1c36 */
 	/* ptimer src frequency in hz */
@@ -116,6 +117,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 
 	.vidmem_is_vidmem = true,
 	.vbios_min_version = 0x86062d00,
+	.hardcode_sw_threshold = true,
 	},
 	{ /* DEVICE=0x1c37 */
 	/* ptimer src frequency in hz */
@@ -149,6 +151,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 
 	.vidmem_is_vidmem = true,
 	.vbios_min_version = 0x86063000,
+	.hardcode_sw_threshold = true,
 	}
 };
 

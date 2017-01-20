@@ -508,6 +508,7 @@ static inline void devinit_unpack_pwr_policy_entry(
 static u32 devinit_get_pwr_policy_table(struct gk20a *g,
 			struct pmgr_pwr_policy *ppwrpolicyobjs)
 {
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	u32 status = 0;
 	u8 *ptr = NULL;
 	struct boardobj *boardobj;
@@ -518,7 +519,6 @@ static u32 devinit_get_pwr_policy_table(struct gk20a *g,
 	u16 pwr_policy_size;
 	bool integral_control = false;
 	u32 hw_threshold_policy_index = 0;
-	u32 sw_threshold_policy_index = 0;
 	union pwr_policy_data_union pwr_policy_data;
 
 	gk20a_dbg_info("");
@@ -684,7 +684,7 @@ static u32 devinit_get_pwr_policy_table(struct gk20a *g,
 		++obj_index;
 	}
 
-	if (!sw_threshold_policy_index) {
+	if (platform->hardcode_sw_threshold) {
 		status = _pwr_policy_construct_WAR_SW_Threshold_policy(g,
 					ppwrpolicyobjs,
 					&pwr_policy_data,

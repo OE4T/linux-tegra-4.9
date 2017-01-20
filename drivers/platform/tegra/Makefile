@@ -14,7 +14,6 @@ subdir-ccflags-y += -I$(srctree)/drivers/platform/tegra/include \
 ifeq ($(CONFIG_ARCH_TEGRA_21x_SOC),y)
 obj-$(CONFIG_USB_SUPPORT)		+= tegra_usb_pmc.o
 endif
-obj-$(CONFIG_OF_TEGRA_IOMMU_SMMU)       += iommu.o
 obj-$(CONFIG_TEGRA_BOOTLOADER_DEBUG)    += tegra_bootloader_debug.o
 obj-$(CONFIG_TEGRA_BOOTLOADER_DEBUG_INIT) += tegra_bootloader_debug_init.o
 

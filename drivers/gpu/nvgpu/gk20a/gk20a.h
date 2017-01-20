@@ -780,6 +780,9 @@ struct gpu_ops {
 		void (*xve_writel)(struct gk20a *g, u32 reg, u32 val);
 		void (*disable_aspm)(struct gk20a *g);
 		void (*reset_gpu)(struct gk20a *g);
+#if defined(CONFIG_PCI_MSI)
+		void (*rearm_msi)(struct gk20a *g);
+#endif
 	} xve;
 };
 
@@ -1037,6 +1040,11 @@ struct gk20a {
 
 	/* Current warning temp in sfxp24.8 */
 	s32 curr_warn_temp;
+
+#if defined(CONFIG_PCI_MSI)
+	/* Check if msi is enabled */
+	bool msi_enabled;
+#endif
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -653,6 +653,14 @@ fail:
 #endif
 }
 
+#if defined(CONFIG_PCI_MSI)
+static void xve_rearm_msi_gp106(struct gk20a *g)
+{
+	/* We just need to write a dummy val in the CYA_2 offset */
+	g->ops.xve.xve_writel(g, xve_cya_2_r(), 0);
+}
+#endif
+
 /*
  * Init the HAL functions and what not. xve_sw_init_gp106() is for initializing
  * all the other stuff like debugfs nodes, etc.
@@ -667,6 +675,8 @@ int gp106_init_xve_ops(struct gpu_ops *gops)
 	gops->xve.xve_writel       = xve_xve_writel_gp106;
 	gops->xve.disable_aspm     = xve_disable_aspm_gp106;
 	gops->xve.reset_gpu        = xve_reset_gpu_gp106;
-
+#if defined(CONFIG_PCI_MSI)
+	gops->xve.rearm_msi        = xve_rearm_msi_gp106;
+#endif
 	return 0;
 }

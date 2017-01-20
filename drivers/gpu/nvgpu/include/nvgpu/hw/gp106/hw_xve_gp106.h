@@ -194,4 +194,9 @@ static inline u32 xve_reset_clock_counter_val_v(u32 r)
 {
 	return (r >> 17) & 0x7ff;
 }
+static inline u32 xve_cya_2_r(void)
+{
+	return 0x00000704;
+}
+
 #endif

@@ -226,6 +226,12 @@ static irqreturn_t nvgpu_pci_isr(int irq, void *dev_id)
 	ret_stall = g->ops.mc.isr_stall(g);
 	ret_nonstall = g->ops.mc.isr_nonstall(g);
 
+#if defined(CONFIG_PCI_MSI)
+	/* Send MSI EOI */
+	if (g->ops.xve.rearm_msi && g->msi_enabled)
+		g->ops.xve.rearm_msi(g);
+#endif
+
 	return (ret_stall == IRQ_NONE && ret_nonstall == IRQ_NONE) ?
 		IRQ_NONE : IRQ_WAKE_THREAD;
 }
@@ -361,6 +367,16 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	g->pci_class = (pdev->class >> 8) & 0xFFFFU; // we only want base/sub
 	g->pci_revision = pdev->revision;
 
+#if defined(CONFIG_PCI_MSI)
+	err = pci_enable_msi(pdev);
+	if (err) {
+		gk20a_err(&pdev->dev,
+			"MSI could not be enabled, falling back to legacy");
+		g->msi_enabled = false;
+	} else
+		g->msi_enabled = true;
+#endif
+
 	g->irq_stall = pdev->irq;
 	g->irq_nonstall = pdev->irq;
 	if (g->irq_stall < 0)
@@ -370,6 +386,9 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 			g->irq_stall,
 			nvgpu_pci_isr,
 			nvgpu_pci_intr_thread,
+#if defined(CONFIG_PCI_MSI)
+			g->msi_enabled ? 0 :
+#endif
 			IRQF_SHARED, "nvgpu", g);
 	if (err) {
 		gk20a_err(&pdev->dev,
@@ -419,6 +438,13 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 
 	disable_irq(g->irq_stall);
 	devm_free_irq(&pdev->dev, g->irq_stall, g);
+
+#if defined(CONFIG_PCI_MSI)
+	if (g->msi_enabled) {
+		pci_disable_msi(pdev);
+		g->msi_enabled = false;
+	}
+#endif
 	gk20a_dbg(gpu_dbg_shutdown, "IRQs disabled.\n");
 
 	/*

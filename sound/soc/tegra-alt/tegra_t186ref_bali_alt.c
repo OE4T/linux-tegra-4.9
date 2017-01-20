@@ -17,7 +17,7 @@
  */
 #include <linux/module.h>
 #include <sound/soc.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 
 #include "tegra_asoc_hwdep_alt.h"
 #include "tegra_asoc_utils_alt.h"

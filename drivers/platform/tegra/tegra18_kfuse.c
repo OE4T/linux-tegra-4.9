@@ -15,7 +15,7 @@
 #include <linux/kernel.h>
 #include <linux/mutex.h>
 #include <linux/clk.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 
 #include <linux/platform/tegra/tegra18_kfuse.h>
 

@@ -22,7 +22,7 @@
 #include <linux/io.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/tick.h>
 #include <linux/vmalloc.h>
 #include <linux/syscore_ops.h>

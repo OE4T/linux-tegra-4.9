@@ -21,7 +21,7 @@
 #include <linux/ioport.h>
 #include <linux/clk/tegra.h>
 #include <linux/of.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/of_gpio.h>
 #include <linux/backlight.h>
 #include <linux/iommu.h>

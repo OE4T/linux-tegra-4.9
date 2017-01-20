@@ -20,7 +20,7 @@
 #include <linux/cpu.h>
 #include <linux/notifier.h>
 #include <linux/tegra-mce.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/t18x_ari.h>
 #include <linux/module.h>
 

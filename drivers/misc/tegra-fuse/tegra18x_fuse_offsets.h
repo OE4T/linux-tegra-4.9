@@ -19,7 +19,7 @@
 #ifndef __TEGRA18x_FUSE_OFFSETS_H
 #define __TEGRA18x_FUSE_OFFSETS_H
 
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <soc/tegra/pmc.h>
 
 

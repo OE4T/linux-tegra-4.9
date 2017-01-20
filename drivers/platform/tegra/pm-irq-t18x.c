@@ -30,7 +30,7 @@
 #include <linux/of_address.h>
 #include <linux/irqchip/tegra.h>
 #include <soc/tegra/pmc.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 
 #include <soc/tegra/fuse.h>
 

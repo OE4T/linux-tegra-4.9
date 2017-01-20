@@ -37,7 +37,7 @@
 #include <linux/syscore_ops.h>
 #include <linux/uaccess.h>
 #include <linux/watchdog.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/tegra_wdt_t18x.h>
 #include <soc/tegra/pmc.h>
 

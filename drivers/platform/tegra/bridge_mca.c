@@ -20,7 +20,7 @@
 #include <linux/platform/tegra/bridge_mca.h>
 #include <linux/io.h>
 #include <linux/ioport.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 
 #define BUS_ADDR_MASK 0x3fffffff
 #define BUS_ERROR_TYPE_MASK 0x3e0

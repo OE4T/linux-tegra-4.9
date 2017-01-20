@@ -30,7 +30,7 @@
 #include <sound/soc.h>
 #include <linux/of_device.h>
 #include <linux/debugfs.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/pinctrl/pinconf-tegra.h>
 

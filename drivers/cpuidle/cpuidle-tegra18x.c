@@ -24,7 +24,7 @@
 #include <linux/module.h>
 #include <linux/of_platform.h>
 #include <linux/debugfs.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <soc/tegra/fuse.h>
 #include <linux/tegra-mce.h>
 #include <linux/tegra186-pm.h>

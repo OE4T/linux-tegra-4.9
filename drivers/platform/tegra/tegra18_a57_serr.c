@@ -26,7 +26,7 @@
 #include <linux/tegra-mce.h>
 #include <linux/platform/tegra/ari_mca.h>
 #include <linux/platform/tegra/tegra18_a57_mca.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 #include <linux/tegra-cpu.h>
 
 static u64 read_cpumerrsr(void)

@@ -25,7 +25,7 @@
 #include <linux/leds.h>
 #include <linux/ioport.h>
 #include <linux/export.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 
 #include "dc.h"
 #include "board.h"

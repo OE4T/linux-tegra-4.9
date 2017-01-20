@@ -26,7 +26,7 @@
 #include <linux/tegra-mce.h>
 #include <linux/platform/tegra/ari_mca.h>
 #include <linux/ioport.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 
 #define ARI_BANK_PRINTF		0
 #define ARI_MCA_SAVE_PREBOOT	0

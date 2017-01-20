@@ -25,7 +25,7 @@
 #include <linux/clk/tegra.h>
 #include <linux/platform_device.h>
 #include <linux/of_device.h>
-#include <linux/tegra-soc.h>
+#include <soc/tegra/chip-id.h>
 
 #include "clk-tegra.h"
 

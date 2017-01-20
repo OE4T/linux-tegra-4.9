@@ -242,4 +242,6 @@ void gp106_init_gr(struct gpu_ops *gops)
 	gops->gr.cb_size_default = gr_gp106_cb_size_default;
 	gops->gr.init_preemption_state = NULL;
 	gops->gr.set_ctxsw_preemption_mode = gr_gp106_set_ctxsw_preemption_mode;
+	gops->gr.create_gr_sysfs = NULL;
+
 }

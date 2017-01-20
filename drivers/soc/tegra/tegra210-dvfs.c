@@ -1185,6 +1185,28 @@ static int get_core_speedo_mv(void)
 	}
 }
 
+static int get_core_sku_min_mv(void)
+{
+	int rev = tegra_sku_info.revision;
+	bool a02 = (rev == TEGRA_REVISION_A02) || (rev == TEGRA_REVISION_A02p);
+
+	switch (tegra_sku_info.sku_id) {
+	case 0x7:
+	case 0x17:
+	case 0x13:
+		if (!a02)
+			return 825;
+		return 800;
+	case 0x87:
+		return 825;
+	case 0x83:
+	case 0x8f:
+		return 800;
+	default:
+		return 950;
+	}
+}
+
 static int get_core_nominal_mv_index(int speedo_id)
 {
 	int i;
@@ -1203,6 +1225,29 @@ static int get_core_nominal_mv_index(int speedo_id)
 		pr_err("tegra210-dvfs: failed to get nominal idx at volt %d\n",
 		       mv);
 		return -ENOSYS;
+	}
+
+	return i - 1;
+}
+
+static int get_core_min_mv_index(void)
+{
+	int i;
+	int mv = get_core_sku_min_mv();
+
+	if (mv < 0)
+		return mv;
+
+	/* Round nominal level down to the nearest core scaling step */
+	for (i = 0; i < MAX_DVFS_FREQS; i++) {
+		if ((core_millivolts[i] == 0) || (mv < core_millivolts[i]))
+			break;
+	}
+
+	if (i == 0) {
+		pr_err("tegra210-dvfs: failed to get min idx at volt %d\n",
+		       mv);
+		return -EINVAL;
 	}
 
 	return i - 1;
@@ -1668,6 +1713,7 @@ int tegra210_init_dvfs(struct device_node *node)
 	int core_process_id = tegra_sku_info.soc_process_id;
 	int i, ret;
 	int core_nominal_mv_index;
+	int core_min_mv_index;
 	int cpu_max_freq_index = 0;
 	int cpu_lp_max_freq_index = 0;
 	int gpu_max_freq_index = 0;
@@ -1685,11 +1731,18 @@ int tegra210_init_dvfs(struct device_node *node)
 		tegra_dvfs_core_disabled = true;
 		core_nominal_mv_index = 0;
 	}
+
+	core_min_mv_index = get_core_min_mv_index();
+	if (core_min_mv_index < 0) {
+		tegra210_dvfs_rail_vdd_core.disabled = true;
+		tegra_dvfs_core_disabled = true;
+		core_min_mv_index = 0;
+	}
+
 	tegra210_dvfs_rail_vdd_core.nominal_millivolts =
 		core_millivolts[core_nominal_mv_index];
 	tegra210_dvfs_rail_vdd_core.min_millivolts =
-		max(tegra210_dvfs_rail_vdd_core.min_millivolts,
-		    core_millivolts[0]);
+		core_millivolts[core_min_mv_index];
 
 	for (i = 0; i <  ARRAY_SIZE(tegra210_dvfs_rails); i++) {
 		struct regulator *reg;

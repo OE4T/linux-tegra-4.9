@@ -4,7 +4,7 @@
  * Tegra Graphics Host Interrupt Management
  *
  * Copyright (C) 2010 Google, Inc.
- * Copyright (c) 2010-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,8 +22,8 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/io.h>
-#include <linux/ktime.h>
 
+#include "nvhost_ktime.h"
 #include "nvhost_intr.h"
 #include "dev.h"
 
@@ -44,7 +44,7 @@ static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
 	int i, id;
 	struct timespec isr_recv;
 
-	ktime_get_ts(&isr_recv);
+	nvhost_ktime_get_ts(&isr_recv);
 
 	for (i = 0; i < DIV_ROUND_UP(nvhost_syncpt_nb_hw_pts(&dev->syncpt), 32);
 			i++) {

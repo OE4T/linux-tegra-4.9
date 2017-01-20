@@ -19,10 +19,10 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/io.h>
-#include <linux/ktime.h>
 
 #include "bus_client_t186.h"
 #include "nvhost_intr.h"
+#include "nvhost_ktime.h"
 #include "dev.h"
 
 /* Spacing between sync registers */
@@ -62,7 +62,7 @@ static irqreturn_t syncpt_thresh_cascade_isr(int irq, void *dev_id)
 			}
 
 			sp = intr->syncpt + sp_id;
-			ktime_get_ts(&sp->isr_recv);
+			nvhost_ktime_get_ts(&sp->isr_recv);
 
 			/* handle graphics host syncpoint increments
 			 * immediately

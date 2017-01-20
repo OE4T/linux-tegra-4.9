@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Virtualization Host Interrupt Management
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,10 +19,10 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/io.h>
-#include <linux/ktime.h>
 #include <linux/delay.h>
 
 #include "nvhost_intr.h"
+#include "nvhost_ktime.h"
 #include "vhost.h"
 #include "dev.h"
 
@@ -49,7 +49,7 @@ static void syncpt_thresh_cascade_handler(struct nvhost_master *dev,
 	}
 
 	sp = intr->syncpt + sp_id;
-	ktime_get_ts(&sp->isr_recv);
+	nvhost_ktime_get_ts(&sp->isr_recv);
 	nvhost_syncpt_set_min_cached(&dev->syncpt, sp_id, info->thresh);
 
 	/* handle graphics host syncpoint increments immediately */

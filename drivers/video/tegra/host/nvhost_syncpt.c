@@ -37,6 +37,7 @@
 #include "dev.h"
 #include "chip_support.h"
 #include "nvhost_channel.h"
+#include "nvhost_ktime.h"
 #include "vhost/vhost.h"
 
 #include "host1x/host1x.h"
@@ -250,7 +251,7 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 		if (value)
 			*value = nvhost_syncpt_read_min(sp, id);
 		if (ts)
-			ktime_get_ts(ts);
+			nvhost_ktime_get_ts(ts);
 		return 0;
 	}
 
@@ -265,7 +266,7 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 		if (value)
 			*value = val;
 		if (ts)
-			ktime_get_ts(ts);
+			nvhost_ktime_get_ts(ts);
 		goto done;
 	}
 
@@ -348,7 +349,7 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 			if (ref && ts) {
 				err = nvhost_intr_release_time(ref, ts);
 				if (err)
-					ktime_get_ts(ts);
+					nvhost_ktime_get_ts(ts);
 			}
 
 			err = 0;

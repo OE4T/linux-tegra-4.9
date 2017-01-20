@@ -2447,6 +2447,12 @@
 		clocks = <&tegra_car TEGRA186_CLK_DBGAPB>;
 		clock-names = "apb_pclk";
 		status = "disabled";
+
+		port {
+			etr_in_port: endpoint@0 {
+				slave-mode;
+			};
+		};
 	};
 
 	funnel_minor@8820000 {
@@ -2456,6 +2462,12 @@
 		clocks = <&tegra_car TEGRA186_CLK_DBGAPB>;
 		clock-names = "apb_pclk";
 		status = "disabled";
+
+		port {
+			funnel_minor_in_port0: endpoint@0 {
+				slave-mode;
+			};
+		};
 	};
 
 	cpuidle {

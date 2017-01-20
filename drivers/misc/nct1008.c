@@ -3,7 +3,7 @@
  *
  * Driver for NCT1008, temperature monitoring device from ON Semiconductors
  *
- * Copyright (c) 2010-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -780,43 +780,6 @@ static int nct1008_thermal_set_limits(int sensor,
 }
 
 #ifdef CONFIG_THERMAL
-static void nct1008_update(int sensor, struct nct1008_data *data)
-{
-	struct thermal_zone_device *thz;
-	long low_temp, high_temp;
-	struct thermal_trip_info *trip_state;
-	int temp, trip_temp, hysteresis_temp;
-	int count;
-	enum thermal_trip_type trip_type;
-	low_temp = 0, high_temp = NCT1008_MAX_TEMP * 1000;
-	thz = data->sensors[sensor].thz;
-
-	if (!thz)
-		return;
-
-	thermal_zone_device_update(thz);
-
-	temp = thz->temperature;
-
-	for (count = 0; count < thz->trips; count++) {
-		trip_state = &data->plat_data.sensors[sensor].trips[count];
-		thz->ops->get_trip_temp(thz, count, &trip_temp);
-		thz->ops->get_trip_type(thz, count, &trip_type);
-		thz->ops->get_trip_hyst(thz, count, &hysteresis_temp);
-		hysteresis_temp = trip_temp - hysteresis_temp;
-		if ((trip_type == THERMAL_TRIP_PASSIVE) &&
-		    !trip_state->tripped)
-			hysteresis_temp = trip_temp;
-
-		if ((trip_temp > temp) && (trip_temp < high_temp))
-			high_temp = trip_temp;
-
-		if ((hysteresis_temp < temp) && (hysteresis_temp > low_temp))
-			low_temp = hysteresis_temp;
-	}
-
-	nct1008_thermal_set_limits(sensor, data, low_temp, high_temp);
-}
 
 static int nct1008_ext_get_temp(struct thermal_zone_device *thz, int *temp)
 {
@@ -933,7 +896,6 @@ static int nct1008_set_trip_temp(int sensor, struct thermal_zone_device *thz,
 	struct nct1008_data *data = thz->devdata;
 
 	data->plat_data.sensors[sensor].trips[trip].trip_temp = temp;
-	nct1008_update(sensor, data);
 	return 0;
 }
 
@@ -952,20 +914,20 @@ static inline int nct1008_ext_set_trip_temp(struct thermal_zone_device *thz,
 	return nct1008_set_trip_temp(EXT, thz, trip, temp);
 }
 
-static int nct1008_loc_trip_update(void *of_data, int trip)
+static int nct1008_loc_set_trips(void *of_data, int low, int high)
 {
 	struct nct1008_data *data = (struct nct1008_data *)of_data;
 
-	nct1008_update(LOC, data);
+	nct1008_thermal_set_limits(LOC, data, low, high);
 
 	return 0;
 }
 
-static int nct1008_ext_trip_update(void *of_data, int trip)
+static int nct1008_ext_set_trips(void *of_data, int low, int high)
 {
 	struct nct1008_data *data = (struct nct1008_data *)of_data;
 
-	nct1008_update(EXT, data);
+	nct1008_thermal_set_limits(EXT, data, low, high);
 
 	return 0;
 }
@@ -1157,10 +1119,6 @@ static struct thermal_zone_device_ops nct_ext_ops = {
 	.set_trip_temp = nct1008_ext_set_trip_temp,
 	.get_trend = nct1008_get_trend,
 };
-#else
-static void nct1008_update(nct1008_sensors sensor, struct nct1008_data *data)
-{
-}
 #endif /* CONFIG_THERMAL */
 
 static int nct1008_enable(struct i2c_client *client)
@@ -1214,11 +1172,11 @@ static void nct1008_work_func(struct work_struct *work)
 	if (intr_status & (LOC_LO_BIT | LOC_HI_BIT)) {
 		dev_dbg(&client->dev, "%s: LOC-sensor is not within limits\n",
 				data->chip_name);
-		nct1008_update(LOC, data);
+		thermal_zone_device_update(data->sensors[LOC].thz);
 	}
 
 	if (intr_status & (EXT_LO_BIT | EXT_HI_BIT))
-		nct1008_update(EXT, data);
+		thermal_zone_device_update(data->sensors[EXT].thz);
 
 	/* Initiate one-shot conversion */
 	err = nct1008_write_reg(data->client, ONE_SHOT, 0x1);
@@ -1299,7 +1257,6 @@ static void nct1008_setup_shutdown_warning(struct nct1008_data *data)
 		if (!strcmp(sensor_data->trips[i].cdev_type,
 						"shutdown_warning")) {
 			sensor_data->trips[i].trip_temp = warn_temp;
-			nct1008_update(EXT, data);
 			break;
 		}
 	}
@@ -1581,13 +1538,13 @@ err_parse_dt:
 static struct thermal_zone_of_device_ops loc_sops = {
 	.get_temp = nct1008_loc_get_temp_as_sensor,
 	.get_trend = nct1008_loc_get_trend_as_sensor,
-	.trip_update = nct1008_loc_trip_update,
+	.set_trips = nct1008_loc_set_trips,
 };
 
 static struct thermal_zone_of_device_ops ext_sops = {
 	.get_temp = nct1008_ext_get_temp_as_sensor,
 	.get_trend = nct1008_ext_get_trend_as_sensor,
-	.trip_update = nct1008_ext_trip_update,
+	.set_trips = nct1008_ext_set_trips,
 };
 
 /*
@@ -1759,14 +1716,8 @@ static int nct1008_probe(struct i2c_client *client,
 				data->plat_data.sensors[EXT].polling_delay);
 	}
 
-	if (!IS_ERR_OR_NULL(data->sensors[LOC].thz)) {
-		nct1008_update(LOC, data);
-	}
-
-	if (!IS_ERR_OR_NULL(data->sensors[EXT].thz)) {
-		nct1008_update(EXT, data);
+	if (!IS_ERR_OR_NULL(data->sensors[EXT].thz))
 		shutdown_warn_saved_temp = data->sensors[EXT].thz->temperature;
-	}
 #endif
 	return 0;
 
@@ -1965,8 +1916,6 @@ static int nct1008_resume(struct device *dev)
 	if (err)
 		return err;
 
-	nct1008_update(LOC, data);
-	nct1008_update(EXT, data);
 	mutex_lock(&data->mutex);
 	data->stop_workqueue = 0;
 	mutex_unlock(&data->mutex);

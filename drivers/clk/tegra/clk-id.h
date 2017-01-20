@@ -134,6 +134,7 @@ enum clk_id {
 	tegra_clk_mipi_cal,
 	tegra_clk_mpe,
 	tegra_clk_mselect,
+	tegra_clk_mselect_8,
 	tegra_clk_msenc,
 	tegra_clk_ndflash,
 	tegra_clk_ndflash_8,

@@ -1776,12 +1776,19 @@ void gk20a_driver_start_unload(struct gk20a *g)
 int gk20a_wait_for_idle(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
+	struct gk20a_platform *platform;
 	int wait_length = 150; /* 3 second overall max wait. */
+	int target_usage_count = 0;
 
 	if (!g)
 		return -ENODEV;
 
-	while (atomic_read(&g->usage_count) && wait_length-- >= 0)
+	platform = dev_get_drvdata(dev);
+	if (platform->user_railgate_disabled)
+		target_usage_count = 1;
+
+	while ((atomic_read(&g->usage_count) != target_usage_count)
+			&& (wait_length-- >= 0))
 		msleep(20);
 
 	if (wait_length < 0) {

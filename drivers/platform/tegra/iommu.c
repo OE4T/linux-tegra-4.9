@@ -23,8 +23,6 @@
 
 #include <dt-bindings/memory/tegra-swgroup.h>
 
-#include "../../../arch/arm/mach-tegra/iomap.h"
-#include "../../../arch/arm/mach-tegra/board.h"
 #include <linux/platform/tegra/common.h>
 #include <soc/tegra/common.h>
 

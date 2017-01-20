@@ -60,6 +60,8 @@ struct gk20a_platform vgpu_tegra_platform = {
 	.enable_elpg            = false,
 	.enable_aelpg           = false,
 
+	.ch_wdt_timeout_ms = 5000,
+
 	.probe = gk20a_tegra_probe,
 	.default_big_page_size	= SZ_128K,
 

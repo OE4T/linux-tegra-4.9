@@ -588,6 +588,21 @@ static int dvfs_rail_get_thermal_floor(struct dvfs_rail *rail)
 	return 0;
 }
 
+static int dvfs_dfll_get_peak_thermal_floor(void)
+{
+	struct rail_alignment *align = tegra_dfll_get_alignment();
+	int mv;
+
+	if (WARN_ON(IS_ERR(align)))
+		return 0;
+
+	mv = tegra_dfll_get_peak_thermal_floor_mv();
+	if (mv < 0)
+		return 0;
+
+	return tegra_round_voltage(mv, align, 1);
+}
+
 static int dvfs_get_peak_thermal_floor(struct dvfs *d, unsigned long rate)
 {
 	bool dfll_range = dvfs_is_dfll_range(d, rate);
@@ -595,7 +610,7 @@ static int dvfs_get_peak_thermal_floor(struct dvfs *d, unsigned long rate)
 	if (!dfll_range && d->dvfs_rail->therm_floors)
 		return d->dvfs_rail->therm_floors[0].mv;
 	if (dfll_range)
-		return tegra_dfll_get_peak_thermal_floor_mv();
+		return dvfs_dfll_get_peak_thermal_floor();
 	return 0;
 }
 

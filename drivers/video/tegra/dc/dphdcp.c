@@ -24,7 +24,7 @@
 #include <linux/wait.h>
 #include <linux/uaccess.h>
 #include <linux/tsec.h>
-#include <linux/platform/tegra/tegra_kfuse.h>
+#include <soc/tegra/kfuse.h>
 
 #include "dc.h"
 #include "dphdcp.h"

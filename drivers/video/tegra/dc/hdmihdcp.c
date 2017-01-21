@@ -29,7 +29,7 @@
 #include <linux/delay.h>
 #include <linux/tsec.h>
 
-#include <linux/platform/tegra/tegra_kfuse.h>
+#include <soc/tegra/kfuse.h>
 #if (defined(CONFIG_TRUSTY))
 #include <linux/trusty/trusty_ipc.h>
 #endif

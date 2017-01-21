@@ -18,7 +18,7 @@
 #include "nvdec_t186.h"
 
 #include <linux/iommu.h>
-#include <linux/platform/tegra/tegra18_kfuse.h>
+#include <soc/tegra/kfuse.h>
 
 static int nvdec_load_streamid_regs(struct tegra_drm_client *client)
 {

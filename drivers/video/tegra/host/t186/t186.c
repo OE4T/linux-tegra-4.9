@@ -21,7 +21,7 @@
 #include <soc/tegra/chip-id.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
 
-#include <linux/platform/tegra/tegra18_kfuse.h>
+#include <soc/tegra/kfuse.h>
 #include <linux/platform/tegra/mc.h>
 
 #include "dev.h"

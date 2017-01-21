@@ -1628,12 +1628,10 @@ int nvgpu_clk_arb_set_session_target_mhz(struct nvgpu_clk_session *session,
 
 	switch (api_domain) {
 	case NVGPU_GPU_CLK_DOMAIN_MCLK:
-	case NVGPU_GPU_CLK_DOMAIN_MCLK_ALIAS:
 		dev->mclk_target_mhz = target_mhz;
 		break;
 
 	case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
-	case NVGPU_GPU_CLK_DOMAIN_GPCCLK_ALIAS:
 		dev->gpc2clk_target_mhz = target_mhz * 2ULL;
 		break;
 
@@ -1659,12 +1657,10 @@ int nvgpu_clk_arb_get_session_target_mhz(struct nvgpu_clk_session *session,
 
 		switch (api_domain) {
 		case NVGPU_GPU_CLK_DOMAIN_MCLK:
-		case NVGPU_GPU_CLK_DOMAIN_MCLK_ALIAS:
 			*freq_mhz = target->mclk;
 			break;
 
 		case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
-		case NVGPU_GPU_CLK_DOMAIN_GPCCLK_ALIAS:
 			*freq_mhz = target->gpc2clk / 2ULL;
 			break;
 
@@ -1690,12 +1686,10 @@ int nvgpu_clk_arb_get_arbiter_actual_mhz(struct gk20a *g,
 
 		switch (api_domain) {
 		case NVGPU_GPU_CLK_DOMAIN_MCLK:
-		case NVGPU_GPU_CLK_DOMAIN_MCLK_ALIAS:
 			*freq_mhz = actual->mclk;
 			break;
 
 		case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
-		case NVGPU_GPU_CLK_DOMAIN_GPCCLK_ALIAS:
 			*freq_mhz = actual->gpc2clk / 2ULL;
 			break;
 
@@ -1712,12 +1706,10 @@ int nvgpu_clk_arb_get_arbiter_effective_mhz(struct gk20a *g,
 {
 	switch(api_domain) {
 	case NVGPU_GPU_CLK_DOMAIN_MCLK:
-	case NVGPU_GPU_CLK_DOMAIN_MCLK_ALIAS:
 		*freq_mhz = g->ops.clk.get_rate(g, CTRL_CLK_DOMAIN_MCLK);
 		return 0;
 
 	case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
-	case NVGPU_GPU_CLK_DOMAIN_GPCCLK_ALIAS:
 		*freq_mhz = g->ops.clk.get_rate(g, CTRL_CLK_DOMAIN_GPC2CLK) / 2;
 		return 0;
 
@@ -1733,13 +1725,11 @@ int nvgpu_clk_arb_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
 
 	switch(api_domain) {
 	case NVGPU_GPU_CLK_DOMAIN_MCLK:
-	case NVGPU_GPU_CLK_DOMAIN_MCLK_ALIAS:
 		ret = g->ops.clk_arb.get_arbiter_clk_range(g,
 				CTRL_CLK_DOMAIN_MCLK, min_mhz, max_mhz);
 		return ret;
 
 	case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
-	case NVGPU_GPU_CLK_DOMAIN_GPCCLK_ALIAS:
 		ret = g->ops.clk_arb.get_arbiter_clk_range(g,
 				CTRL_CLK_DOMAIN_GPC2CLK, min_mhz, max_mhz);
 		if (!ret) {
@@ -1759,10 +1749,10 @@ u32 nvgpu_clk_arb_get_arbiter_clk_domains(struct gk20a *g)
 	u32 api_domains = 0;
 
 	if (clk_domains & CTRL_CLK_DOMAIN_GPC2CLK)
-		api_domains |= NVGPU_GPU_CLK_DOMAIN_GPCCLK_ALIAS;
+		api_domains |= BIT(NVGPU_GPU_CLK_DOMAIN_GPCCLK);
 
 	if (clk_domains & CTRL_CLK_DOMAIN_MCLK)
-		api_domains |= NVGPU_GPU_CLK_DOMAIN_MCLK_ALIAS;
+		api_domains |= BIT(NVGPU_GPU_CLK_DOMAIN_MCLK);
 
 	return api_domains;
 }
@@ -1773,11 +1763,9 @@ bool nvgpu_clk_arb_is_valid_domain(struct gk20a *g, u32 api_domain)
 
 	switch(api_domain) {
 	case NVGPU_GPU_CLK_DOMAIN_MCLK:
-	case NVGPU_GPU_CLK_DOMAIN_MCLK_ALIAS:
 		return ((clk_domains & CTRL_CLK_DOMAIN_MCLK) != 0);
 
 	case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
-	case NVGPU_GPU_CLK_DOMAIN_GPCCLK_ALIAS:
 		return ((clk_domains & CTRL_CLK_DOMAIN_GPC2CLK) != 0);
 
 	default:
@@ -1793,7 +1781,6 @@ int nvgpu_clk_arb_get_arbiter_clk_f_points(struct gk20a *g,
 
 	switch (api_domain) {
 	case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
-	case NVGPU_GPU_CLK_DOMAIN_GPCCLK_ALIAS:
 		err = clk_domain_get_f_points(g, CTRL_CLK_DOMAIN_GPC2CLK,
 				max_points, fpoints);
 		if (err || !fpoints)
@@ -1802,7 +1789,6 @@ int nvgpu_clk_arb_get_arbiter_clk_f_points(struct gk20a *g,
 			fpoints[i] /= 2;
 		return 0;
 	case NVGPU_GPU_CLK_DOMAIN_MCLK:
-	case NVGPU_GPU_CLK_DOMAIN_MCLK_ALIAS:
 		return clk_domain_get_f_points(g, CTRL_CLK_DOMAIN_MCLK,
 				max_points, fpoints);
 	default:

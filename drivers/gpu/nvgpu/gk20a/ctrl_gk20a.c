@@ -987,10 +987,7 @@ static int nvgpu_gpu_clk_get_range(struct gk20a *g,
 				return -EFAULT;
 		} else {
 			bit = ffs(clk_domains) - 1;
-			if (bit <= NVGPU_GPU_CLK_DOMAIN_GPCCLK)
-				clk_range.clk_domain = bit;
-			else
-				clk_range.clk_domain = BIT(bit);
+			clk_range.clk_domain = bit;
 			clk_domains &= ~BIT(bit);
 		}
 
@@ -1139,10 +1136,7 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 				return -EFAULT;
 		} else {
 			bit = ffs(clk_domains) - 1;
-			if (bit <= NVGPU_GPU_CLK_DOMAIN_GPCCLK)
-				clk_info.clk_domain = bit;
-			else
-				clk_info.clk_domain = BIT(bit);
+			clk_info.clk_domain = bit;
 			clk_domains &= ~BIT(bit);
 			clk_info.clk_type = args->clk_type;
 		}

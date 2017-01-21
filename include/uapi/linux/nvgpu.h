@@ -541,10 +541,8 @@ struct nvgpu_gpu_alloc_vidmem_args {
 
 /* Memory clock */
 #define NVGPU_GPU_CLK_DOMAIN_MCLK                                (0)
-#define NVGPU_GPU_CLK_DOMAIN_MCLK_ALIAS                          (0x00000010)
 /* Main graphics core clock */
 #define NVGPU_GPU_CLK_DOMAIN_GPCCLK	                         (1)
-#define NVGPU_GPU_CLK_DOMAIN_GPCCLK_ALIAS                        (0x10000000)
 
 struct nvgpu_gpu_clk_range {
 

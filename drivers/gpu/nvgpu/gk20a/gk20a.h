@@ -333,6 +333,10 @@ struct gpu_ops {
 					struct channel_gk20a *c, bool patch);
 		int (*commit_inst)(struct channel_gk20a *c, u64 gpu_va);
 		void (*restore_context_header)(struct gk20a *g, struct mem_desc *ctxheader);
+		void (*write_zcull_ptr)(struct gk20a *g,
+					struct mem_desc *mem, u64 gpu_va);
+		void (*write_pm_ptr)(struct gk20a *g,
+					struct mem_desc *mem, u64 gpu_va);
 	} gr;
 	const char *name;
 	struct {

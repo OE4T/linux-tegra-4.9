@@ -742,13 +742,30 @@ static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 	return ret;
 }
 
+void gr_gk20a_write_zcull_ptr(struct gk20a *g,
+				struct mem_desc *mem, u64 gpu_va)
+{
+	u32 va = u64_lo32(gpu_va >> 8);
+
+	gk20a_mem_wr(g, mem,
+		ctxsw_prog_main_image_zcull_ptr_o(), va);
+}
+
+void gr_gk20a_write_pm_ptr(struct gk20a *g,
+				struct mem_desc *mem, u64 gpu_va)
+{
+	u32 va = u64_lo32(gpu_va >> 8);
+
+	gk20a_mem_wr(g, mem,
+		ctxsw_prog_main_image_pm_ptr_o(), va);
+}
+
 static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c)
 {
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
 	struct mem_desc *mem = &ch_ctx->gr_ctx->mem;
 	struct ctx_header_desc *ctx = &c->ch_ctx.ctx_header;
 	struct mem_desc *ctxheader = &ctx->mem;
-	u32 va_lo, va_hi, va;
 	int ret = 0;
 
 	gk20a_dbg_fn("");
@@ -768,10 +785,6 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c)
 		goto clean_up;
 	}
 
-	va_lo = u64_lo32(ch_ctx->zcull_ctx.gpu_va);
-	va_hi = u64_hi32(ch_ctx->zcull_ctx.gpu_va);
-	va = ((va_lo >> 8) & 0x00FFFFFF) | ((va_hi << 24) & 0xFF000000);
-
 	ret = gk20a_disable_channel_tsg(g, c);
 	if (ret) {
 		gk20a_err(dev_from_gk20a(g), "failed to disable channel/TSG\n");
@@ -789,11 +802,10 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c)
 		 ch_ctx->zcull_ctx.ctx_sw_mode);
 
 	if (ctxheader->gpu_va)
-		gk20a_mem_wr(g, ctxheader,
-			ctxsw_prog_main_image_zcull_ptr_o(), va);
+		g->ops.gr.write_zcull_ptr(g, ctxheader,
+					ch_ctx->zcull_ctx.gpu_va);
 	else
-		gk20a_mem_wr(g, mem,
-			ctxsw_prog_main_image_zcull_ptr_o(), va);
+		g->ops.gr.write_zcull_ptr(g, mem, ch_ctx->zcull_ctx.gpu_va);
 
 	gk20a_enable_channel_tsg(g, c);
 
@@ -1744,7 +1756,14 @@ restore_fe_go_idle:
 	gk20a_mem_wr(g, gold_mem, ctxsw_prog_main_image_zcull_o(),
 		 ctxsw_prog_main_image_zcull_mode_no_ctxsw_v());
 
-	gk20a_mem_wr(g, gold_mem, ctxsw_prog_main_image_zcull_ptr_o(), 0);
+	if (gk20a_mem_begin(g, ctxheader))
+		goto clean_up;
+
+	if (ctxheader->gpu_va)
+		g->ops.gr.write_zcull_ptr(g, ctxheader, 0);
+	else
+		g->ops.gr.write_zcull_ptr(g, gold_mem, 0);
+	gk20a_mem_end(g, ctxheader);
 
 	g->ops.gr.commit_inst(c, ch_ctx->global_ctx_buffer_va[GOLDEN_CTX_VA]);
 
@@ -1857,7 +1876,8 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
 	struct pm_ctx_desc *pm_ctx = &ch_ctx->pm_ctx;
 	struct mem_desc *gr_mem;
-	u32 data, virt_addr;
+	u32 data;
+	u64 virt_addr;
 	struct ctx_header_desc *ctx = &c->ch_ctx.ctx_header;
 	struct mem_desc *ctxheader = &ctx->mem;
 	int ret;
@@ -1953,10 +1973,7 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 	if (enable_hwpm_ctxsw) {
 		pm_ctx->pm_mode = ctxsw_prog_main_image_pm_mode_ctxsw_f();
 
-		/* pack upper 32 bits of virtual address into a 32 bit number
-		 * (256 byte boundary)
-		 */
-		virt_addr = (u32)(pm_ctx->mem.gpu_va >> 8);
+		virt_addr = pm_ctx->mem.gpu_va;
 	} else {
 		pm_ctx->pm_mode = ctxsw_prog_main_image_pm_mode_no_ctxsw_f();
 		virt_addr = 0;
@@ -1965,12 +1982,11 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 	data |= pm_ctx->pm_mode;
 
 	gk20a_mem_wr(g, gr_mem, ctxsw_prog_main_image_pm_o(), data);
+
 	if (ctxheader->gpu_va)
-		gk20a_mem_wr(g, ctxheader,
-			ctxsw_prog_main_image_pm_ptr_o(), virt_addr);
+		g->ops.gr.write_pm_ptr(g, ctxheader, virt_addr);
 	else
-		gk20a_mem_wr(g, gr_mem,
-			ctxsw_prog_main_image_pm_ptr_o(), virt_addr);
+		g->ops.gr.write_pm_ptr(g, gr_mem, virt_addr);
 
 	gk20a_mem_end(g, ctxheader);
 	gk20a_mem_end(g, gr_mem);
@@ -1999,13 +2015,12 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
 	u32 virt_addr_lo;
 	u32 virt_addr_hi;
-	u32 virt_addr = 0;
+	u64 virt_addr = 0;
 	u32 v, data;
 	int ret = 0;
 	struct mem_desc *mem = &ch_ctx->gr_ctx->mem;
 	struct ctx_header_desc *ctx = &c->ch_ctx.ctx_header;
 	struct mem_desc *ctxheader = &ctx->mem;
-	u32 va_lo, va_hi, va;
 
 	gk20a_dbg_fn("");
 
@@ -2100,19 +2115,15 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 			virt_addr_hi);
 	}
 
-	va_lo = u64_lo32(ch_ctx->zcull_ctx.gpu_va);
-	va_hi = u64_hi32(ch_ctx->zcull_ctx.gpu_va);
-	va = ((va_lo >> 8) & 0x00FFFFFF) | ((va_hi << 24) & 0xFF000000);
-
 	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_zcull_o(),
 				ch_ctx->zcull_ctx.ctx_sw_mode);
 
 	if (ctxheader->gpu_va)
-		gk20a_mem_wr(g, ctxheader,
-			ctxsw_prog_main_image_zcull_ptr_o(), va);
+		g->ops.gr.write_zcull_ptr(g, ctxheader,
+					ch_ctx->zcull_ctx.gpu_va);
 	else
-		gk20a_mem_wr(g, mem,
-			ctxsw_prog_main_image_zcull_ptr_o(), va);
+		g->ops.gr.write_zcull_ptr(g, mem,
+					ch_ctx->zcull_ctx.gpu_va);
 
 	/* Update main header region of the context buffer with the info needed
 	 * for PM context switching, including mode and possibly a pointer to
@@ -2126,10 +2137,7 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 			return -EFAULT;
 		}
 
-		/* pack upper 32 bits of virtual address into a 32 bit number
-		 * (256 byte boundary)
-		 */
-		virt_addr = (u32)(ch_ctx->pm_ctx.mem.gpu_va >> 8);
+		virt_addr = ch_ctx->pm_ctx.mem.gpu_va;
 	} else
 		virt_addr = 0;
 
@@ -2138,14 +2146,12 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	data |= ch_ctx->pm_ctx.pm_mode;
 
 	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_pm_o(), data);
-	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_pm_ptr_o(), virt_addr);
 
-	if (ctxheader->gpu_va) {
-		gk20a_mem_wr(g, ctxheader,
-			ctxsw_prog_main_image_pm_o(), data);
-		gk20a_mem_wr(g, ctxheader,
-			ctxsw_prog_main_image_pm_ptr_o(), virt_addr);
-	}
+	if (ctxheader->gpu_va)
+		g->ops.gr.write_pm_ptr(g, ctxheader, virt_addr);
+	else
+		g->ops.gr.write_pm_ptr(g, mem, virt_addr);
+
 
 	gk20a_mem_end(g, ctxheader);
 clean_up_mem:
@@ -9291,4 +9297,6 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.program_zcull_mapping = gr_gk20a_program_zcull_mapping;
 	gops->gr.commit_global_timeslice = gr_gk20a_commit_global_timeslice;
 	gops->gr.commit_inst = gr_gk20a_commit_inst;
+	gops->gr.write_zcull_ptr = gr_gk20a_write_zcull_ptr;
+	gops->gr.write_pm_ptr = gr_gk20a_write_pm_ptr;
 }

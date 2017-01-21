@@ -711,6 +711,13 @@ void gr_gk20a_init_sm_id_table(struct gk20a *g);
 
 int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va);
 
+void gr_gk20a_write_zcull_ptr(struct gk20a *g,
+				struct mem_desc *mem, u64 gpu_va);
+
+void gr_gk20a_write_pm_ptr(struct gk20a *g,
+				struct mem_desc *mem, u64 gpu_va);
+
+
 static inline const char *gr_gk20a_graphics_preempt_mode_name(u32 graphics_preempt_mode)
 {
 	switch (graphics_preempt_mode) {

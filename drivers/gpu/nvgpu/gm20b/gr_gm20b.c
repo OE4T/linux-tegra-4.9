@@ -1603,4 +1603,7 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.program_zcull_mapping = gr_gk20a_program_zcull_mapping;
 	gops->gr.commit_global_timeslice = gr_gk20a_commit_global_timeslice;
 	gops->gr.commit_inst = gr_gk20a_commit_inst;
+	gops->gr.write_zcull_ptr = gr_gk20a_write_zcull_ptr;
+	gops->gr.write_pm_ptr = gr_gk20a_write_pm_ptr;
+
 }

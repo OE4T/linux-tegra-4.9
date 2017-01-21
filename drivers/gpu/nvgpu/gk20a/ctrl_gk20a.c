@@ -869,7 +869,7 @@ static int nvgpu_gpu_clk_get_vf_points(struct gk20a *g,
 	clk_domains = nvgpu_clk_arb_get_arbiter_clk_domains(g);
 	args->num_entries = 0;
 
-	if ((args->clk_domain & clk_domains) == 0)
+	if (!nvgpu_clk_arb_is_valid_domain(g, args->clk_domain))
 		return -EINVAL;
 
 	err = nvgpu_clk_arb_get_arbiter_clk_f_points(g,
@@ -987,7 +987,10 @@ static int nvgpu_gpu_clk_get_range(struct gk20a *g,
 				return -EFAULT;
 		} else {
 			bit = ffs(clk_domains) - 1;
-			clk_range.clk_domain = BIT(bit);
+			if (bit <= NVGPU_GPU_CLK_DOMAIN_GPCCLK)
+				clk_range.clk_domain = bit;
+			else
+				clk_range.clk_domain = BIT(bit);
 			clk_domains &= ~BIT(bit);
 		}
 
@@ -1031,6 +1034,8 @@ static int nvgpu_gpu_clk_set_info(struct gk20a *g,
 	if (!session || args->flags)
 		return -EINVAL;
 
+	gk20a_dbg_info("line=%d", __LINE__);
+
 	clk_domains = nvgpu_clk_arb_get_arbiter_clk_domains(g);
 	if (!clk_domains)
 		return -EINVAL;
@@ -1038,15 +1043,17 @@ static int nvgpu_gpu_clk_set_info(struct gk20a *g,
 	entry = (struct nvgpu_gpu_clk_info __user *)
 			(uintptr_t)args->clk_info_entries;
 
+	gk20a_dbg_info("line=%d", __LINE__);
+
 	for (i = 0; i < args->num_entries; i++, entry++) {
 
+	gk20a_dbg_info("line=%d", __LINE__);
 		if (copy_from_user(&clk_info, entry, sizeof(clk_info)))
 			return -EFAULT;
 
-		if ((clk_info.clk_domain & clk_domains) != clk_info.clk_domain)
-			return -EINVAL;
+	gk20a_dbg_info("i=%d domain=0x%08x", i, clk_info.clk_domain);
 
-		if (hweight_long(clk_info.clk_domain) != 1)
+		if (!nvgpu_clk_arb_is_valid_domain(g, clk_info.clk_domain))
 			return -EINVAL;
 	}
 
@@ -1132,7 +1139,10 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 				return -EFAULT;
 		} else {
 			bit = ffs(clk_domains) - 1;
-			clk_info.clk_domain = BIT(bit);
+			if (bit <= NVGPU_GPU_CLK_DOMAIN_GPCCLK)
+				clk_info.clk_domain = bit;
+			else
+				clk_info.clk_domain = BIT(bit);
 			clk_domains &= ~BIT(bit);
 			clk_info.clk_type = args->clk_type;
 		}

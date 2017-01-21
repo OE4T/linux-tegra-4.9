@@ -34,6 +34,7 @@ int nvgpu_clk_arb_get_arbiter_clk_f_points(struct gk20a *g,
 	u32 api_domain, u32 *max_points, u16 *fpoints);
 
 u32 nvgpu_clk_arb_get_arbiter_clk_domains(struct gk20a *g);
+bool nvgpu_clk_arb_is_valid_domain(struct gk20a *g, u32 api_domain);
 
 void nvgpu_clk_arb_cleanup_arbiter(struct gk20a *g);
 

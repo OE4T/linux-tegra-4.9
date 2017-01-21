@@ -21,6 +21,7 @@
 
 #include "tegra18_kfuse_priv.h"
 #include "tegra_kfuse_priv.h"
+#include "linux/version.h"
 
 struct tegra18_kfuse {
 	unsigned int cg_refcount;
@@ -29,6 +30,7 @@ struct tegra18_kfuse {
 
 #define KFUSE_CG1_0 0x90
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 5, 0)
 int tegra_kfuse_enable_sensing(void)
 {
 	struct kfuse *kfuse;
@@ -144,3 +146,4 @@ int tegra18_kfuse_init(struct kfuse *kfuse)
 
 	return 0;
 }
+#endif

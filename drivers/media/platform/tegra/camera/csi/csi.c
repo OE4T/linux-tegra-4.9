@@ -723,6 +723,8 @@ void tpg_csi_media_controller_cleanup(struct tegra_csi_device *csi)
 		if (!item->pg_mode)
 			continue;
 		sd = &item->subdev;
+		/* decrement media device entity count */
+		sd->entity.parent->entity_id--;
 		v4l2_device_unregister_subdev(sd);
 		list_del(&item->list);
 		devm_kfree(csi->dev, item);

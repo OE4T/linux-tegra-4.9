@@ -731,8 +731,7 @@ error_capture_setup:
 	if (!chan->pg_mode)
 		tegra_channel_set_stream(chan, false);
 error_set_stream:
-	if (!chan->pg_mode)
-		media_entity_pipeline_stop(&chan->video.entity);
+	media_entity_pipeline_stop(&chan->video.entity);
 error_pipeline_start:
 	vq->start_streaming_called = 0;
 	tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_QUEUED);

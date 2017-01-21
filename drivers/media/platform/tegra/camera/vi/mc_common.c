@@ -239,6 +239,8 @@ void tpg_vi_media_controller_cleanup(struct tegra_mc_vi *mc_vi)
 		tegra_channel_cleanup(item);
 		list_del(&item->list);
 		devm_kfree(mc_vi->dev, item);
+		/* decrement media device entity count */
+		mc_vi->media_dev.entity_id--;
 	}
 	mc_vi->num_channels -= TPG_CHANNELS;
 	mc_vi->tpg_start = NULL;

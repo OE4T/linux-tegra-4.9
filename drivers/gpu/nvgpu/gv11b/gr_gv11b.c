@@ -1941,6 +1941,34 @@ static void gv11b_restore_context_header(struct gk20a *g,
         gk20a_mem_wr(g, ctxheader,
 			ctxsw_prog_main_image_num_save_ops_o(), 0);
 }
+static void gr_gv11b_write_zcull_ptr(struct gk20a *g,
+				struct mem_desc *mem, u64 gpu_va)
+{
+	u32 va_lo, va_hi;
+
+	gpu_va = gpu_va >> 8;
+	va_lo = u64_lo32(gpu_va);
+	va_hi = u64_hi32(gpu_va);
+	gk20a_mem_wr(g, mem,
+		ctxsw_prog_main_image_zcull_ptr_o(), va_lo);
+	gk20a_mem_wr(g, mem,
+		ctxsw_prog_main_image_zcull_ptr_hi_o(), va_hi);
+}
+
+
+static void gr_gv11b_write_pm_ptr(struct gk20a *g,
+				struct mem_desc *mem, u64 gpu_va)
+{
+	u32 va_lo, va_hi;
+
+	gpu_va = gpu_va >> 8;
+	va_lo = u64_lo32(gpu_va);
+	va_hi = u64_hi32(gpu_va);
+	gk20a_mem_wr(g, mem,
+		ctxsw_prog_main_image_pm_ptr_o(), va_lo);
+	gk20a_mem_wr(g, mem,
+		ctxsw_prog_main_image_pm_ptr_hi_o(), va_hi);
+}
 
 void gv11b_init_gr(struct gpu_ops *gops)
 {
@@ -1995,5 +2023,7 @@ void gv11b_init_gr(struct gpu_ops *gops)
 			gr_gv11b_program_sm_id_numbering;
 	gops->gr.commit_inst = gr_gv11b_commit_inst;
 	gops->gr.restore_context_header = gv11b_restore_context_header;
+	gops->gr.write_zcull_ptr = gr_gv11b_write_zcull_ptr;
+	gops->gr.write_pm_ptr = gr_gv11b_write_pm_ptr;
 
 }

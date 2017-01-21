@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -185,6 +185,10 @@ static inline u32 ctxsw_prog_main_image_zcull_ptr_hi_o(void)
 static inline u32 ctxsw_prog_main_image_zcull_ptr_hi_v_f(u32 v)
 {
 	return (v & 0x1ffff) << 0;
+}
+static inline u32 ctxsw_prog_main_image_pm_ptr_hi_o(void)
+{
+	return 0x00000094;
 }
 static inline u32 ctxsw_prog_main_image_full_preemption_ptr_hi_o(void)
 {

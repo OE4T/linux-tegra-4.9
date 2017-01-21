@@ -808,6 +808,8 @@ extern tegra_clk_apply_init_table_func tegra_clk_apply_init_table;
 int tegra_pll_wait_for_lock(struct tegra_clk_pll *pll);
 u16 tegra_pll_get_fixed_mdiv(struct clk_hw *hw, unsigned long input_rate);
 int tegra_pll_p_div_to_hw(struct tegra_clk_pll *pll, u8 p_div);
+unsigned long tegra_pll_adjust_vco_min_sdm(struct tegra_clk_pll_params *params,
+				unsigned long parent_rate, u32 sdm_coeff);
 
 struct tegra_pto_table {
 	int clk_id;

@@ -1329,12 +1329,7 @@ static unsigned long
 tegra210_clk_adjust_vco_min(struct tegra_clk_pll_params *params,
 			    unsigned long parent_rate)
 {
-	unsigned long vco_min = params->vco_min;
-
-	params->vco_min += DIV_ROUND_UP(parent_rate, PLL_SDM_COEFF);
-	vco_min = min(vco_min, params->vco_min);
-
-	return vco_min;
+	return tegra_pll_adjust_vco_min_sdm(params, parent_rate, PLL_SDM_COEFF);
 }
 
 static struct div_nmp pllx_nmp = {

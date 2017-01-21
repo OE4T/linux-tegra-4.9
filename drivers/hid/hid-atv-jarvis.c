@@ -1436,9 +1436,14 @@ static int atvr_snd_initialize(struct hid_device *hdev,
 	int err;
 	int i;
 	int dev = 0;
-	struct hid_input *hidinput = list_first_entry(&hdev->inputs,
+	struct hid_input *hidinput = list_first_entry_or_null(&hdev->inputs,
 			struct hid_input, list);
-	struct input_dev *shdr_input_dev = hidinput->input;
+	struct input_dev *shdr_input_dev;
+
+	if (hidinput == NULL)
+		return -ENODEV;
+
+	shdr_input_dev = hidinput->input;
 
 	while (dev < SNDRV_CARDS && cards_in_use[dev])
 		dev++;

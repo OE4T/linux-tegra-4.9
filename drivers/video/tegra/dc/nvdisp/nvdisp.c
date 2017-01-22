@@ -47,6 +47,8 @@ LIST_HEAD(nvdisp_imp_settings_queue);
 static DECLARE_WAIT_QUEUE_HEAD(nvdisp_common_channel_reservation_wq);
 static DECLARE_WAIT_QUEUE_HEAD(nvdisp_common_channel_promotion_wq);
 
+static struct tegra_dc_ext_imp_settings nvdisp_default_imp_settings;
+
 /* EMC DVFS table that will be exported to userspace IMP */
 static struct mrq_emc_dvfs_latency_response nvdisp_emc_dvfs_table;
 
@@ -606,6 +608,18 @@ static unsigned int yuv12bpc_regamma_lut[] = {
 		0x9FDF, 0x9FE7, 0x9FEF, 0x9FF7, 0x9FFF,
 };
 
+static inline void tegra_nvdisp_program_common_fetch_meter(struct tegra_dc *dc,
+							u32 curs_slots,
+							u32 win_slots);
+
+static void tegra_nvdisp_program_imp_curs_results(struct tegra_dc *dc,
+			struct tegra_dc_ext_imp_head_results *imp_head_results,
+			int owner_head);
+
+static void tegra_nvdisp_program_imp_win_results(struct tegra_dc *dc,
+			struct tegra_dc_ext_imp_head_results *imp_head_results,
+			int owner_head);
+
 int tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
 					struct tegra_dc_lut *lut)
 {
@@ -884,6 +898,36 @@ int tegra_nvdisp_test_and_set_compclk(unsigned long rate, struct tegra_dc *dc)
 	return 0;
 }
 
+static void _tegra_nvdisp_init_default_imp_settings(void)
+{
+	int i, j;
+
+	/*
+	 * For now, hardcode the reset values as the defaults. Any fields that
+	 * aren't explicitly filled in here are either deferred or already being
+	 * tracked somewhere else.
+	 */
+	nvdisp_default_imp_settings.window_slots_value = 0x1;
+	nvdisp_default_imp_settings.cursor_slots_value = 0x1;
+
+	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
+		struct tegra_dc_ext_imp_head_results *head_results = NULL;
+
+		head_results = &nvdisp_default_imp_settings.imp_results[i];
+		head_results->metering_slots_value_cursor = 0x1;
+		head_results->thresh_lwm_dvfs_cursor = 0x0;
+		head_results->pipe_meter_value_cursor = 0x0;
+		head_results->pool_config_entries_cursor = 0x10;
+
+		for (j = 0; j < tegra_dc_get_numof_dispwindows(); j++) {
+			head_results->metering_slots_value_win[j] = 0x1;
+			head_results->thresh_lwm_dvfs_win[j] = 0x0;
+			head_results->pipe_meter_value_win[j] = 0x0;
+			head_results->pool_config_entries_win[j] = 0x331;
+		}
+	}
+}
+
 static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 {
 	int ret = 0;
@@ -959,6 +1003,8 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 		}
 	}
 #endif
+
+	_tegra_nvdisp_init_default_imp_settings();
 
 	dc->valid_windows = 0;
 	goto INIT_EXIT;
@@ -1396,18 +1442,58 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 
 static int tegra_nvdisp_postcomp_init(struct tegra_dc *dc)
 {
-	/* Set the LUT address in HW register
-	 * Enabled the default sRGB_LUT, replace this
-	 * with LUT from Panel Characterization through
+	u32 update_mask = nvdisp_cmd_state_ctrl_common_act_update_enable_f();
+	u32 act_req_mask = nvdisp_cmd_state_ctrl_common_act_req_enable_f();
+	struct tegra_dc_ext_imp_head_results *head_results = NULL;
+	struct tegra_dc_lut *lut = NULL;
+	bool any_dc_enabled = false;
+	int i;
+
+	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
+		struct tegra_dc *other_dc = tegra_dc_get_dc(i);
+
+		if (other_dc && other_dc->enabled) {
+			any_dc_enabled = true;
+			break;
+		}
+	}
+
+	/*
+	 * Use any_dc_enabled to ensure that only one head programs default
+	 * values for the common fetch metering, and to ensure that this only
+	 * happens when we're transitioning from a state with no active heads.
+	 */
+	head_results = &nvdisp_default_imp_settings.imp_results[dc->ctrl_num];
+	if (!any_dc_enabled)
+		tegra_nvdisp_program_common_fetch_meter(dc,
+				nvdisp_default_imp_settings.cursor_slots_value,
+				nvdisp_default_imp_settings.window_slots_value);
+
+	/*
+	 * Program default ihub values for the cursor on this head. This should
+	 * be done before enabling the output LUT since it also uses those same
+	 * values. There shouldn't be any need to disable ihub latency events
+	 * since the cursor pipe isn't active at this point in time.
+	 */
+	tegra_nvdisp_program_imp_curs_results(dc, head_results, dc->ctrl_num);
+
+	/*
+	 * Set the LUT address in the HW register. Enable the default sRGB_LUT.
+	 * Replace this with the LUT derived from panel characterization through
 	 * DT.
 	 */
-	struct tegra_dc_lut *lut = &dc->cmu;
-
+	lut = &dc->cmu;
 	if (dc->cmu_enabled) {
 		tegra_nvdisp_set_output_lut(dc, lut);
 		tegra_nvdisp_set_color_control(dc);
-		tegra_dc_enable_general_act(dc);
+
+		act_req_mask |=
+			nvdisp_cmd_state_ctrl_general_act_req_enable_f();
 	}
+
+	if (tegra_dc_enable_update_and_act(dc, update_mask, act_req_mask))
+		dev_err(&dc->ndev->dev,
+			"timeout waiting for postcomp init state to promote\n");
 
 	return 0;
 }
@@ -1426,9 +1512,13 @@ static int tegra_nvdisp_assign_dc_wins(struct tegra_dc *dc)
 {
 	u32 update_mask = nvdisp_cmd_state_ctrl_common_act_update_enable_f();
 	u32 act_req_mask = nvdisp_cmd_state_ctrl_common_act_req_enable_f();
+	struct tegra_dc_ext_imp_head_results *head_results = NULL;
 	int num_wins = tegra_dc_get_numof_dispwindows();
 	int idx = 0, ret = 0;
 	int i = -1;
+
+	head_results = &nvdisp_default_imp_settings.imp_results[dc->ctrl_num];
+	head_results->num_windows = 0;
 
 	/* Assign windows to this head. */
 	for_each_set_bit(idx, &dc->pdata->win_mask, num_wins) {
@@ -1445,10 +1535,22 @@ static int tegra_nvdisp_assign_dc_wins(struct tegra_dc *dc)
 			act_req_mask |=
 			nvdisp_cmd_state_ctrl_a_act_req_enable_f() << idx;
 
+			head_results->win_ids[head_results->num_windows] = idx;
+			head_results->num_windows += 1;
+
 			if (i == -1)
 				i = idx;
 		}
 	}
+
+	/*
+	 *` Program default ihub values for the windows that were just assigned
+	 * to this head:
+	 * - The thread group for each window was already handled above.
+	 * - There shouldn't be any need to disable ihub latency events since
+	 *   none of the assigned windows are active at this point in time.
+	 */
+	tegra_nvdisp_program_imp_win_results(dc, head_results, dc->ctrl_num);
 
 	/* Wait for COMMON_ACT_REQ to complete or time out. */
 	if (tegra_dc_enable_update_and_act(dc, update_mask, act_req_mask)) {
@@ -2796,6 +2898,23 @@ void tegra_dc_release_common_channel(struct tegra_dc *dc)
 }
 EXPORT_SYMBOL(tegra_dc_release_common_channel);
 
+static void tegra_nvdisp_flush_imp_queue(void)
+{
+	struct tegra_dc_imp_settings *cur = NULL, *next = NULL;
+
+	mutex_lock(&tegra_nvdisp_lock);
+
+	list_for_each_entry_safe(cur,
+				next,
+				&nvdisp_imp_settings_queue,
+				imp_node) {
+		list_del(&cur->imp_node);
+		kfree(cur);
+	}
+
+	mutex_unlock(&tegra_nvdisp_lock);
+}
+
 int tegra_dc_validate_imp_queue(struct tegra_dc *dc, u64 session_id)
 {
 	struct tegra_dc_imp_settings *cur = NULL, *next = NULL;
@@ -3072,6 +3191,177 @@ void tegra_nvdisp_program_imp_results(struct tegra_dc *dc)
 				imp_settings->ext_settings.cursor_slots_value,
 				imp_settings->ext_settings.window_slots_value);
 }
+
+static void tegra_nvdisp_setup_default_imp_win_state(
+				struct tegra_dc_ext_imp_settings *ext_settings)
+{
+	int num_wins = tegra_dc_get_numof_dispwindows();
+	int i;
+
+	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
+		struct tegra_dc_ext_imp_head_results *head_res = NULL;
+		struct tegra_dc *dc = tegra_dc_get_dc(i);
+		unsigned long winmask = 0;
+		int win_idx = 0;
+
+		if (!dc || !dc->enabled)
+			continue;
+
+		head_res = &ext_settings->imp_results[dc->ctrl_num];
+		head_res->head_active = true;
+		head_res->num_windows = 0;
+		winmask = dc->pdata->win_mask;
+		for_each_set_bit(win_idx, &winmask, num_wins) {
+			struct tegra_dc_win *win = NULL;
+
+			win = tegra_dc_get_window(dc, win_idx);
+			if (!win || !win->dc)
+				continue;
+
+			head_res->win_ids[head_res->num_windows++] = win_idx;
+			nvdisp_win_write(win, dc->ctrl_num,
+							win_set_control_r());
+		}
+	}
+}
+
+static void tegra_nvdisp_cleanup_default_imp_win_state(void)
+{
+	int num_wins = tegra_dc_get_numof_dispwindows();
+	int i;
+
+	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
+		struct tegra_dc *dc = tegra_dc_get_dc(i);
+		unsigned long winmask = 0;
+		int win_idx = 0;
+
+		if (!dc || !dc->enabled)
+			continue;
+
+		winmask = dc->pdata->win_mask;
+		for_each_set_bit(win_idx, &winmask, num_wins) {
+			struct tegra_dc_win *win = NULL;
+			u32 owner = win_set_control_owner_none_f();
+
+			win = tegra_dc_get_window(dc, win_idx);
+			if (!win || !win->dc)
+				continue;
+
+			if (WIN_IS_ENABLED(win))
+				owner = dc->ctrl_num;
+
+			nvdisp_win_write(win, owner, win_set_control_r());
+		}
+	}
+}
+
+void tegra_dc_reset_imp_state(void)
+{
+	struct tegra_dc_ext_imp_settings *default_ext_settings = NULL;
+	struct tegra_dc_imp_settings *default_dc_settings = NULL;
+	struct tegra_dc *reserve_dc = NULL, *master_dc = NULL;
+	struct nvdisp_bandwidth_config max_bw_cfg = {0};
+	int num_heads = tegra_dc_get_numof_dispheads();
+	int i;
+
+	default_dc_settings = kzalloc(sizeof(*default_dc_settings), GFP_KERNEL);
+	if (!default_dc_settings) {
+		pr_err("%s: no mem for default settings\n", __func__);
+		return;
+	}
+
+	/*
+	 * Try to find any registered DC instance. It doesn't matter which one
+	 * since we just need a non-NULL instance to reserve the COMMON channel.
+	 * Although this should never happen, immediately return if there are
+	 * none found.
+	 */
+	for (i = 0; i < num_heads; i++) {
+		reserve_dc = tegra_dc_get_dc(i);
+		if (reserve_dc)
+			break;
+	}
+
+	if (!reserve_dc) {
+		kfree(default_dc_settings);
+		return;
+	}
+
+	tegra_dc_reserve_common_channel(reserve_dc);
+
+	/*
+	 * This function should only be called when all DC handles have been
+	 * closed. No userspace clients should be active at this point, and all
+	 * pending IMP requests should have already been processed or dropped.
+	 * However, we should explicitly flush the queue just to be sure.
+	 */
+	tegra_nvdisp_flush_imp_queue();
+
+	/*
+	 * No heads should be undergoing any state changes at this point, so
+	 * pick any head that's still enabled and pretend that it's triggering
+	 * an IMP state change. If there are no active heads, release the COMMON
+	 * channel and return.
+	 */
+	for (i = 0; i < num_heads; i++) {
+		master_dc = tegra_dc_get_dc(i);
+		if (master_dc && master_dc->enabled)
+			break;
+	}
+
+	if (!master_dc)
+		goto reset_imp_ret;
+
+	/* Copy the relevant settings over. */
+	default_ext_settings = &default_dc_settings->ext_settings;
+	memcpy(default_ext_settings, &nvdisp_default_imp_settings,
+						sizeof(*default_ext_settings));
+	tegra_nvdisp_get_max_bw_cfg(&max_bw_cfg);
+	default_ext_settings->total_display_iso_bw_kbps = max_bw_cfg.iso_bw;
+	default_ext_settings->required_total_bw_kbps = max_bw_cfg.total_bw;
+	default_ext_settings->proposed_emc_hz = max_bw_cfg.emc_la_floor;
+	default_ext_settings->hubclk = max_bw_cfg.hubclk;
+
+	/* Add the default settings to the IMP queue. */
+	INIT_LIST_HEAD(&default_dc_settings->imp_node);
+	list_add_tail(&default_dc_settings->imp_node,
+						&nvdisp_imp_settings_queue);
+
+	tegra_nvdisp_setup_default_imp_win_state(default_ext_settings);
+
+	/* Follow the same basic flow as an actual IMP flip. */
+	if (tegra_nvdisp_negotiate_reserved_bw(master_dc,
+					max_bw_cfg.iso_bw,
+					max_bw_cfg.total_bw,
+					max_bw_cfg.emc_la_floor,
+					max_bw_cfg.hubclk))
+		goto reset_imp_ret;
+
+	tegra_dc_adjust_imp(master_dc, true);
+	tegra_nvdisp_program_imp_results(master_dc);
+
+	if (tegra_dc_enable_update_and_act(master_dc,
+			nvdisp_cmd_state_ctrl_common_act_update_enable_f(),
+			nvdisp_cmd_state_ctrl_common_act_req_enable_f()))
+		dev_err(&master_dc->ndev->dev,
+			"timeout waiting for master dc state to promote\n");
+
+	tegra_dc_adjust_imp(master_dc, false);
+
+	tegra_nvdisp_cleanup_default_imp_win_state();
+
+	/*
+	 * The second adjust IMP call should have already freed the IMP settings
+	 * struct.
+	 */
+	tegra_dc_release_common_channel(reserve_dc);
+	return;
+
+reset_imp_ret:
+	kfree(default_dc_settings);
+	tegra_dc_release_common_channel(reserve_dc);
+}
+EXPORT_SYMBOL(tegra_dc_reset_imp_state);
 
 void reg_dump(struct tegra_dc *dc, void *data,
 		       void (* print)(void *data, const char *str))

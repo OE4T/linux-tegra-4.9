@@ -429,7 +429,7 @@ int tegra_prod_set_by_name(void __iomem **base, const char *name,
 
 	for (i = 0; i < tegra_prod->num; i++) {
 		t_prod = &tegra_prod->prod_config[i];
-		if (!strcmp(t_prod->name, name))
+		if (!strcasecmp(t_prod->name, name))
 			return tegra_prod_set(base, t_prod);
 	}
 
@@ -467,7 +467,7 @@ int tegra_prod_set_by_name_partially(void __iomem **base, const char *name,
 
 	for (i = 0; i < tegra_prod->num; i++) {
 		t_prod = &tegra_prod->prod_config[i];
-		if (!strcmp(t_prod->name, name)) {
+		if (!strcasecmp(t_prod->name, name)) {
 			found = true;
 			break;
 		}
@@ -506,7 +506,7 @@ bool tegra_prod_by_name_supported(struct tegra_prod *tegra_prod,
 		if (!t_prod)
 			break;
 
-		if (!strcmp(t_prod->name, name))
+		if (!strcasecmp(t_prod->name, name))
 			return true;
 	}
 

@@ -27,7 +27,6 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/pm.h>
 #include <linux/irqchip/tegra.h>
-#include <linux/version.h>
 #include <dt-bindings/gpio/tegra186-gpio.h>
 #include <dt-bindings/gpio/tegra194-gpio.h>
 
@@ -794,18 +793,6 @@ static void tegra_gpio_irq_handler_desc(struct irq_desc *desc)
 	chained_irq_exit(chip, desc);
 }
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
-static void tegra_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
-{
-	tegra_gpio_irq_handler_desc(desc);
-}
-#else
-static void tegra_gpio_irq_handler(struct irq_desc *desc)
-{
-	tegra_gpio_irq_handler_desc(desc);
-}
-#endif
-
 #ifdef CONFIG_DEBUG_FS
 
 #include <linux/debugfs.h>
@@ -969,7 +956,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 
 	for (bank = 0; bank < tgi->nbanks; bank++)
 		irq_set_chained_handler_and_data(tgi->tg_contrlr[bank].irq,
-						 tegra_gpio_irq_handler,
+						 tegra_gpio_irq_handler_desc,
 						 &tgi->tg_contrlr[bank]);
 
 	tegra_pm_update_gpio_wakeup_table(tgi->gc.base,

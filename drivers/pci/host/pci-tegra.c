@@ -349,8 +349,8 @@
 #define NV_PCIE2_RP_L1_PM_SUBSTATES_1_CYA			0x00000C04
 #define PCIE2_RP_L1_PM_SUBSTATES_1_CYA_PWR_OFF_DLY_MASK	(0x1FFF)
 #define PCIE2_RP_L1_PM_SUBSTATES_1_CYA_PWR_OFF_DLY		(0x26)
-#define PCIE2_RP_L1_PM_SUBSTATES_1_CYA_CLKREQ_ASSERTED_DLY_MASK	(0x1FF << 13)
-#define PCIE2_RP_L1_PM_SUBSTATES_1_CYA_CLKREQ_ASSERTED_DLY	(0x27 << 13)
+#define PCIE2_RP_L1SS_1_CYA_CLKREQ_ASSERTED_DLY_MASK	(0x1FF << 13)
+#define PCIE2_RP_L1SS_1_CYA_CLKREQ_ASSERTED_DLY		(0x27 << 13)
 
 #define NV_PCIE2_RP_L1_PM_SUBSTATES_2_CYA			0x00000C08
 #define PCIE2_RP_L1_PM_SUBSTATES_2_CYA_T_L1_2_DLY_MASK		(0x1FFF)
@@ -381,11 +381,28 @@
 #define PR_FUNC_LINE	do {} while (0)
 #endif
 
+struct pcie_dvfs {
+	u32 afi_clk;
+	u32 emc_clk;
+};
+
 struct tegra_pcie_soc_data {
 	unsigned int	num_ports;
 	char			**pcie_regulator_names;
 	int				num_pcie_regulators;
 	bool			config_pex_io_dpd;
+	bool			program_uphy;
+	bool			program_clkreq_as_bi_dir;
+	bool			enable_wrap;
+	bool			mbist_war;
+	bool			RAW_violation_war;
+	bool			perf_war;
+	bool			updateFC_timer_expire_war;
+	bool			l1ss_rp_wakeup_war;
+	bool			link_speed_war;
+	bool			dvfs_mselect;
+	bool			dvfs_afi;
+	struct pcie_dvfs	dvfs_tbl[10][2];
 };
 
 struct tegra_msi {
@@ -448,9 +465,8 @@ struct tegra_pcie {
 	struct pinctrl_state	*pex_io_dpd_en_state;
 	struct pinctrl_state	*pex_io_dpd_dis_state;
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	struct phy *u_phy;
-#endif
+
 	struct tegra_pci_platform_data *plat_data;
 	struct tegra_pcie_soc_data *soc_data;
 	struct dentry *debugfs;
@@ -921,7 +937,6 @@ static void tegra_pcie_enable_ltr_support(void)
 	}
 }
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 static void tegra_pcie_config_clkreq(struct tegra_pcie *pcie, u32 index)
 {
 	struct pinctrl		   *clkreq_pin = NULL;
@@ -958,7 +973,6 @@ static void tegra_pcie_config_clkreq(struct tegra_pcie *pcie, u32 index)
 		dev_err(pcie->dev,
 			"setting clkreq pin bi-dir state failed: %d\n", ret);
 }
-#endif
 
 struct dev_ids {
 	unsigned short	vid;
@@ -1028,17 +1042,17 @@ static void tegra_pcie_configure_aspm(void)
 
 		pci_disable_link_state_locked(pdev, i);
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-		/* check if L1SS capability is supported in current device */
-		i = pci_find_ext_capability(pdev, PCI_EXT_CAP_ID_L1SS);
-		if (!i)
-			continue;
-		/* avoid L1SS config if no support of L1PM substate feature */
-		pci_read_config_dword(pdev, i + PCI_L1SS_CAP, &val);
-		if ((val & PCI_L1SS_CAP_L1PMS) ||
-			(val & PCI_L1SS_CAP_L1PM_MASK))
-			tegra_pcie_config_clkreq(pcie, port->index);
-#endif
+		if (pcie->soc_data->program_clkreq_as_bi_dir) {
+			/* check if L1SS capability is supported */
+			i = pci_find_ext_capability(pdev, PCI_EXT_CAP_ID_L1SS);
+			if (!i)
+				continue;
+			/* avoid L1SS config if no support of L1SS feature */
+			pci_read_config_dword(pdev, i + PCI_L1SS_CAP, &val);
+			if ((val & PCI_L1SS_CAP_L1PMS) ||
+			    (val & PCI_L1SS_CAP_L1PM_MASK))
+				tegra_pcie_config_clkreq(pcie, port->index);
+		}
 	}
 	/* L1.2 specific common configuration */
 	tegra_pcie_config_l1ss_l12_thtime();
@@ -1387,21 +1401,20 @@ static int tegra_pcie_enable_pads(struct tegra_pcie *pcie, bool enable)
 	if (!tegra_platform_is_silicon())
 		return err;
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-	if (enable)
-		err = phy_power_on(pcie->u_phy);
-	else
-		err = phy_power_off(pcie->u_phy);
-	if (err)
-		dev_err(pcie->dev, "UPHY operation failed\n");
-#endif
+	if (pcie->soc_data->program_uphy) {
+		if (enable)
+			err = phy_power_on(pcie->u_phy);
+		else
+			err = phy_power_off(pcie->u_phy);
+		if (err)
+			dev_err(pcie->dev, "UPHY operation failed\n");
+	}
 
 	return err;
 }
 
 static void tegra_pcie_enable_wrap(void)
 {
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	u32 val;
 	void __iomem *msel_base;
 
@@ -1419,7 +1432,6 @@ static void tegra_pcie_enable_wrap(void)
 	val &= ~MSELECT_CONFIG_ERR_RESP_EN_SLAVE1;
 	writel(val, msel_base);
 	iounmap(msel_base);
-#endif
 }
 
 static int tegra_pcie_enable_controller(struct tegra_pcie *pcie)
@@ -1428,7 +1440,8 @@ static int tegra_pcie_enable_controller(struct tegra_pcie *pcie)
 	struct tegra_pcie_port *port, *tmp;
 
 	PR_FUNC_LINE;
-	tegra_pcie_enable_wrap();
+	if (pcie->soc_data->enable_wrap)
+		tegra_pcie_enable_wrap();
 	/* Enable PLL power down */
 	val = afi_readl(pcie, AFI_PLLE_CONTROL);
 	val &= ~AFI_PLLE_CONTROL_BYPASS_PCIE2PLLE_CONTROL;
@@ -2121,9 +2134,6 @@ retry:
 	return false;
 }
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-static bool t210_war;
-#endif
 static void tegra_pcie_apply_sw_war(struct tegra_pcie_port *port,
 				bool enum_done)
 {
@@ -2132,14 +2142,6 @@ static void tegra_pcie_apply_sw_war(struct tegra_pcie_port *port,
 	struct pci_dev *pdev = NULL;
 
 	PR_FUNC_LINE;
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-	/* T210 WAR for perf bugs required when LPDDR4 */
-	/* memory is used with both ctlrs in X4_X1 config */
-	if (pcie->plat_data->has_memtype_lpddr4 &&
-		(pcie->xbar_config == AFI_PCIE_CONFIG_XBAR_CONFIG_X4_X1) &&
-		(pcie->num_ports == pcie->soc_data->num_ports))
-		t210_war = 1;
-#endif
 	if (enum_done) {
 		/* disable msi for port driver to avoid panic */
 		for_each_pci_dev(pdev)
@@ -2180,9 +2182,12 @@ static void tegra_pcie_apply_sw_war(struct tegra_pcie_port *port,
 		data |= NV_PCIE2_RP_VEND_XP_PAD_PWRDN_SLEEP_MODE_L1_CLKREQ_L1PP;
 		rp_writel(port, data, NV_PCIE2_RP_VEND_XP_PAD_PWRDN);
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 		/* resize buffers for better perf, bug#1447522 */
-		if (t210_war) {
+		/* T210 WAR for perf bugs required when LPDDR4 */
+		/* memory is used with both ctlrs in X4_X1 config */
+		if (pcie->soc_data->perf_war &&
+		    (pcie->xbar_config == AFI_PCIE_CONFIG_XBAR_CONFIG_X4_X1) &&
+		    (pcie->num_ports == pcie->soc_data->num_ports)) {
 			struct tegra_pcie_port *temp_port;
 			list_for_each_entry(temp_port, &pcie->ports, list) {
 				data = rp_readl(temp_port,
@@ -2201,31 +2206,37 @@ static void tegra_pcie_apply_sw_war(struct tegra_pcie_port *port,
 					NV_PCIE2_RP_TX_HDR_LIMIT);
 			}
 		}
+
+		if (pcie->soc_data->l1ss_rp_wakeup_war) {
 		/* Bug#1461732 WAR, set clkreq asserted delay greater than */
 		/* power off time (2us) to avoid RP wakeup in L1.2_ENTRY */
-		data = rp_readl(port, NV_PCIE2_RP_L1_PM_SUBSTATES_1_CYA);
-		data &= ~PCIE2_RP_L1_PM_SUBSTATES_1_CYA_CLKREQ_ASSERTED_DLY_MASK;
-		data |= PCIE2_RP_L1_PM_SUBSTATES_1_CYA_CLKREQ_ASSERTED_DLY;
-		rp_writel(port, data, NV_PCIE2_RP_L1_PM_SUBSTATES_1_CYA);
-		/* take care of link speed change error in corner cases */
-		data = rp_readl(port, NV_PCIE2_RP_VEND_CTL0);
-		data &= ~PCIE2_RP_VEND_CTL0_DSK_RST_PULSE_WIDTH_MASK;
-		data |= PCIE2_RP_VEND_CTL0_DSK_RST_PULSE_WIDTH;
-		rp_writel(port, data, NV_PCIE2_RP_VEND_CTL0);
+			data = rp_readl(port,
+					NV_PCIE2_RP_L1_PM_SUBSTATES_1_CYA);
+			data &= ~PCIE2_RP_L1SS_1_CYA_CLKREQ_ASSERTED_DLY_MASK;
+			data |= PCIE2_RP_L1SS_1_CYA_CLKREQ_ASSERTED_DLY;
+			rp_writel(port, data,
+				  NV_PCIE2_RP_L1_PM_SUBSTATES_1_CYA);
+		}
 
-		/* Do timer settings only if clk25m freq equal to 19.2 MHz */
-		if (clk_get_rate(clk_get_sys(NULL, "clk_m")) != 19200000)
-			return;
-#else
-		data = rp_readl(port, RP_VEND_XP);
-		data &= ~RP_VEND_XP_UPDATE_FC_THRESHOLD;
-		data |= (0x60 << 18);
-		rp_writel(port, data, RP_VEND_XP);
+		if (pcie->soc_data->link_speed_war) {
+		/* take care of link speed change error in corner cases */
+			data = rp_readl(port, NV_PCIE2_RP_VEND_CTL0);
+			data &= ~PCIE2_RP_VEND_CTL0_DSK_RST_PULSE_WIDTH_MASK;
+			data |= PCIE2_RP_VEND_CTL0_DSK_RST_PULSE_WIDTH;
+			rp_writel(port, data, NV_PCIE2_RP_VEND_CTL0);
+		}
+
+		if (pcie->soc_data->updateFC_timer_expire_war) {
+			data = rp_readl(port, RP_VEND_XP);
+			data &= ~RP_VEND_XP_UPDATE_FC_THRESHOLD;
+			data |= (0x60 << 18);
+			rp_writel(port, data, RP_VEND_XP);
+		}
 
 		/* Do timer settings only if clk25m freq equal to 19.2 MHz */
 		if (clk_get_rate(devm_clk_get(pcie->dev, "clk_m")) != 19200000)
 			return;
-#endif
+
 		data = rp_readl(port, NV_PCIE2_RP_TIMEOUT0);
 		data &= ~PCIE2_RP_TIMEOUT0_PAD_PWRUP_MASK;
 		data |= PCIE2_RP_TIMEOUT0_PAD_PWRUP;
@@ -2265,21 +2276,21 @@ static void tegra_pcie_apply_sw_war(struct tegra_pcie_port *port,
 		data |= PCIE2_RP_L1_PM_SUBSTATES_2_CYA_MICROSECOND_COMP;
 		rp_writel(port, data, NV_PCIE2_RP_L1_PM_SUBSTATES_2_CYA);
 
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_13x_SOC)
-		/* WAR for RAW violation on T124/T132 platforms */
-		data = rp_readl(port, NV_PCIE2_RP_RX_HDR_LIMIT);
-		data &= ~PCIE2_RP_RX_HDR_LIMIT_PW_MASK;
-		data |= PCIE2_RP_RX_HDR_LIMIT_PW;
-		rp_writel(port, data, NV_PCIE2_RP_RX_HDR_LIMIT);
+		if (pcie->soc_data->RAW_violation_war) {
+			/* WAR for RAW violation on T124/T132 platforms */
+			data = rp_readl(port, NV_PCIE2_RP_RX_HDR_LIMIT);
+			data &= ~PCIE2_RP_RX_HDR_LIMIT_PW_MASK;
+			data |= PCIE2_RP_RX_HDR_LIMIT_PW;
+			rp_writel(port, data, NV_PCIE2_RP_RX_HDR_LIMIT);
 
-		data = rp_readl(port, NV_PCIE2_RP_PRIV_XP_DL);
-		data |= PCIE2_RP_PRIV_XP_DL_GEN2_UPD_FC_TSHOLD;
-		rp_writel(port, data, NV_PCIE2_RP_PRIV_XP_DL);
+			data = rp_readl(port, NV_PCIE2_RP_PRIV_XP_DL);
+			data |= PCIE2_RP_PRIV_XP_DL_GEN2_UPD_FC_TSHOLD;
+			rp_writel(port, data, NV_PCIE2_RP_PRIV_XP_DL);
 
-		data = rp_readl(port, RP_VEND_XP);
-		data |= RP_VEND_XP_UPDATE_FC_THRESHOLD;
-		rp_writel(port, data, RP_VEND_XP);
-#endif
+			data = rp_readl(port, RP_VEND_XP);
+			data |= RP_VEND_XP_UPDATE_FC_THRESHOLD;
+			rp_writel(port, data, RP_VEND_XP);
+		}
 	}
 }
 
@@ -2375,7 +2386,6 @@ static void tegra_pcie_update_pads2plle(struct tegra_pcie_port *port)
 	}
 }
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 static void mbist_war(struct tegra_pcie *pcie, bool apply)
 {
 	struct tegra_pcie_port *port, *tmp;
@@ -2395,7 +2405,6 @@ static void mbist_war(struct tegra_pcie *pcie, bool apply)
 		}
 	}
 }
-#endif
 
 static int tegra_pcie_mxm_pwr_init(struct tegra_pcie_port *port)
 {
@@ -2415,9 +2424,8 @@ static void tegra_pcie_check_ports(struct tegra_pcie *pcie)
 	PR_FUNC_LINE;
 	pcie->num_ports = 0;
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-	mbist_war(pcie, true);
-#endif
+	if (pcie->soc_data->mbist_war)
+		mbist_war(pcie, true);
 
 	list_for_each_entry_safe(port, tmp, &pcie->ports, list) {
 		dev_info(pcie->dev, "probing port %u, using %u lanes\n",
@@ -2456,9 +2464,8 @@ static void tegra_pcie_check_ports(struct tegra_pcie *pcie)
 		dev_info(pcie->dev, "link %u down, ignoring\n", port->index);
 		tegra_pcie_port_disable(port);
 	}
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+	if (pcie->soc_data->mbist_war)
 		mbist_war(pcie, false);
-#endif
 }
 
 static int tegra_pcie_conf_gpios(struct tegra_pcie *pcie)
@@ -2560,26 +2567,10 @@ static int tegra_pcie_conf_gpios(struct tegra_pcie *pcie)
 	return 0;
 }
 
-struct pcie_dvfs {
-	u32 afi_clk;
-	u32 emc_clk;
-};
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-static struct pcie_dvfs dvfs_data[1][2] = {
-		{{204000000, 102000000} , {408000000, 528000000} } };
-#else
-static struct pcie_dvfs dvfs_data[6][2] = {
-		{{0, 0} , {0, 0} },
-		{{102000000, 480000000} , {102000000, 480000000} },
-		{{102000000, 480000000} , {204000000, 480000000} },
-		{{102000000, 480000000} , {204000000, 480000000} },
-		{{204000000, 480000000} , {408000000, 480000000} },
-		{{204000000, 480000000} , {408000000, 640000000} } };
-#endif
-
 static int tegra_pcie_scale_voltage(struct tegra_pcie *pcie)
 {
 	struct tegra_pcie_port *port, *tmp;
+	struct tegra_pcie_soc_data *sd = pcie->soc_data;
 	int err = 0;
 	u32 data = 0;
 	u32 active_lanes = 0;
@@ -2595,36 +2586,44 @@ static int tegra_pcie_scale_voltage(struct tegra_pcie *pcie)
 		if (((data & RP_LINK_CONTROL_STATUS_LINK_SPEED) >> 16) == 2)
 			is_gen2 = true;
 	}
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-	active_lanes = 0;
-	dev_dbg(pcie->dev, "mselect_clk is set @ %u\n",
-		dvfs_data[active_lanes][is_gen2].afi_clk);
-	err = clk_set_rate(clk_get_sys("tegra_pcie", "mselect"),
-		dvfs_data[active_lanes][is_gen2].afi_clk);
-	if (err) {
-		dev_err(pcie->dev, "setting mselect clk to %u failed : %d\n",
-			dvfs_data[active_lanes][is_gen2].afi_clk, err);
-		return err;
+
+	if (sd->dvfs_mselect) {
+		active_lanes = 0;
+		dev_dbg(pcie->dev, "mselect_clk is set @ %u\n",
+			sd->dvfs_tbl[active_lanes][is_gen2].afi_clk);
+		err = clk_set_rate(clk_get_sys("tegra_pcie", "mselect"),
+				   sd->dvfs_tbl[active_lanes][is_gen2].afi_clk);
+		if (err) {
+			dev_err(pcie->dev,
+				"setting mselect clk to %u failed : %d\n",
+				sd->dvfs_tbl[active_lanes][is_gen2].afi_clk,
+				err);
+			return err;
+		}
 	}
-#else
-	dev_dbg(pcie->dev, "afi_clk is set @ %u\n",
-		dvfs_data[active_lanes][is_gen2].afi_clk);
-	err = clk_set_rate(devm_clk_get(pcie->dev, "afi"),
-		dvfs_data[active_lanes][is_gen2].afi_clk);
-	if (err) {
-		dev_err(pcie->dev, "setting afi clk to %u failed : %d\n",
-			dvfs_data[active_lanes][is_gen2].afi_clk, err);
-		return err;
+
+	if (sd->dvfs_afi) {
+		dev_dbg(pcie->dev, "afi_clk is set @ %u\n",
+			sd->dvfs_tbl[active_lanes][is_gen2].afi_clk);
+		err = clk_set_rate(devm_clk_get(pcie->dev, "afi"),
+				   sd->dvfs_tbl[active_lanes][is_gen2].afi_clk);
+		if (err) {
+			dev_err(pcie->dev,
+				"setting afi clk to %u failed : %d\n",
+				sd->dvfs_tbl[active_lanes][is_gen2].afi_clk,
+				err);
+			return err;
+		}
 	}
-#endif
+
 	dev_dbg(pcie->dev, "emc_clk is set @ %u\n",
-		dvfs_data[active_lanes][is_gen2].emc_clk);
+		sd->dvfs_tbl[active_lanes][is_gen2].emc_clk);
 	err = tegra_bwmgr_set_emc(pcie->emc_bwmgr,
-		dvfs_data[active_lanes][is_gen2].emc_clk,
+		sd->dvfs_tbl[active_lanes][is_gen2].emc_clk,
 		TEGRA_BWMGR_SET_EMC_FLOOR);
 	if (err < 0) {
 		dev_err(pcie->dev, "setting emc clk to %u failed : %d\n",
-			dvfs_data[active_lanes][is_gen2].emc_clk, err);
+			sd->dvfs_tbl[active_lanes][is_gen2].emc_clk, err);
 		return err;
 	}
 
@@ -3179,6 +3178,14 @@ static const struct tegra_pcie_soc_data tegra186_pcie_data = {
 	.pcie_regulator_names = t186_rail_names,
 	.num_pcie_regulators =
 			sizeof(t186_rail_names) / sizeof(t186_rail_names[0]),
+	.dvfs_afi = true,
+	.dvfs_tbl = {
+		{{0, 0}, {0, 0} },
+		{{102000000, 480000000}, {102000000, 480000000} },
+		{{102000000, 480000000}, {204000000, 480000000} },
+		{{102000000, 480000000}, {204000000, 480000000} },
+		{{204000000, 480000000}, {408000000, 480000000} },
+		{{204000000, 480000000}, {408000000, 640000000} } },
 };
 
 static const struct tegra_pcie_soc_data tegra210_pcie_data = {
@@ -3187,6 +3194,17 @@ static const struct tegra_pcie_soc_data tegra210_pcie_data = {
 	.num_pcie_regulators =
 			sizeof(t210_rail_names) / sizeof(t210_rail_names[0]),
 	.config_pex_io_dpd = true,
+	.program_uphy = true,
+	.program_clkreq_as_bi_dir = true,
+	.enable_wrap = true,
+	.mbist_war = true,
+	.perf_war = true,
+	.updateFC_timer_expire_war = true,
+	.l1ss_rp_wakeup_war = true,
+	.link_speed_war = true,
+	.dvfs_mselect = true,
+	.dvfs_tbl = {
+		{{204000000, 102000000}, {408000000, 528000000} } },
 };
 
 static const struct tegra_pcie_soc_data tegra124_pcie_data = {
@@ -3194,6 +3212,7 @@ static const struct tegra_pcie_soc_data tegra124_pcie_data = {
 	.pcie_regulator_names = t124_rail_names,
 	.num_pcie_regulators =
 			sizeof(t124_rail_names) / sizeof(t124_rail_names[0]),
+	.RAW_violation_war = true,
 };
 
 static struct of_device_id tegra_pcie_of_match[] = {
@@ -4567,13 +4586,6 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 
 	PR_FUNC_LINE;
 
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
-	if (tegra_bonded_out_dev(BOND_OUT_PCIE)) {
-		dev_err(&pdev->dev, "PCIE instance is not present\n");
-		return -ENODEV;
-	}
-#endif
-
 	pcie = devm_kzalloc(&pdev->dev, sizeof(*pcie), GFP_KERNEL);
 	if (!pcie)
 		return -ENOMEM;
@@ -4581,19 +4593,6 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, pcie);
 	pcie->dev = &pdev->dev;
 	pcie_domain.tegra_pcie = pcie;
-
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-	pcie->u_phy = devm_phy_get(pcie->dev, "pcie-phy");
-	if (IS_ERR(pcie->u_phy)) {
-		ret = PTR_ERR(pcie->u_phy);
-		goto release_drvdata;
-	}
-	ret = phy_init(pcie->u_phy);
-	if (ret) {
-		devm_phy_put(pcie->dev, pcie->u_phy);
-		goto release_drvdata;
-	}
-#endif
 
 	/* use DT way to init platform data */
 	pcie->plat_data = devm_kzalloc(pcie->dev,
@@ -4611,6 +4610,19 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 		goto release_platdata;
 	}
 	pcie->soc_data = (struct tegra_pcie_soc_data *)match->data;
+
+	if (pcie->soc_data->program_uphy) {
+		pcie->u_phy = devm_phy_get(pcie->dev, "pcie-phy");
+		if (IS_ERR(pcie->u_phy)) {
+			ret = PTR_ERR(pcie->u_phy);
+			goto release_platdata;
+		}
+		ret = phy_init(pcie->u_phy);
+		if (ret) {
+			devm_phy_put(pcie->dev, pcie->u_phy);
+			goto release_platdata;
+		}
+	}
 
 	if (pcie->soc_data->config_pex_io_dpd) {
 		pcie->pex_pin = devm_pinctrl_get(pcie->dev);
@@ -4745,10 +4757,8 @@ static int tegra_pcie_remove(struct platform_device *pdev)
 		tegra_pcie_disable_msi(pcie);
 	tegra_pcie_detach(pcie);
 	tegra_pcie_power_off(pcie);
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-	if (tegra_platform_is_silicon())
+	if (pcie->soc_data->program_uphy)
 		phy_exit(pcie->u_phy);
-#endif
 	tegra_pcie_release_resources(pcie);
 	pm_runtime_disable(pcie->dev);
 	tegra_pd_remove_device(pcie->dev);

@@ -16,7 +16,6 @@
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/gpio.h>
-#include <linux/gpio/gpio-tegra.h>
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #include <linux/platform_device.h>
@@ -481,12 +480,6 @@ static inline void tegra_gpio_update(struct tegra_gpio_info *tgi, u32 gpio,
 	rval = (rval & ~mask) | (val & mask);
 	__raw_writel(rval, GPIO_CNTRL_REG(tgi, gpio, reg_offset));
 }
-
-int tegra_gpio_get_bank_int_nr(int gpio)
-{
-	return gpio_to_irq(gpio);
-}
-EXPORT_SYMBOL(tegra_gpio_get_bank_int_nr);
 
 /* This function will return if the GPIO is accessible by CPU */
 static inline bool gpio_is_accessible(struct tegra_gpio_info *tgi, u32 offset)

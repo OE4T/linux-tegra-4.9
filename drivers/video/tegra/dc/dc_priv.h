@@ -566,11 +566,17 @@ void tegra_dc_release_dc_out(struct tegra_dc *dc);
 /* defined in dc.c, used in ext/dev.c */
 void tegra_dc_call_flip_callback(void);
 
-/* defined in dc.c, used in sor.c */
+/* defined in dc.c, used in dsi.c, nvdisp.c, nvdisp_win.c */
 unsigned long tegra_dc_poll_register(struct tegra_dc *dc,
 u32 reg, u32 mask, u32 exp_val, u32 poll_interval_us,
 u32 timeout_ms);
+
+/* defined in dc.c, used in sor.c, nvdisp.c, nvdisp_lut.c */
 void tegra_dc_enable_general_act(struct tegra_dc *dc);
+
+/* defined in dc.c, used in nvdisp.c */
+int tegra_dc_enable_update_and_act(struct tegra_dc *dc, u32 update_mask,
+							u32 act_req_mask);
 
 /* defined in dc.c, used in dsi.c */
 void tegra_dc_dsc_init(struct tegra_dc *dc);

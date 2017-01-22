@@ -2747,6 +2747,17 @@ void tegra_dc_enable_general_act(struct tegra_dc *dc)
 			"dc timeout waiting for DC to stop\n");
 }
 
+int tegra_dc_enable_update_and_act(struct tegra_dc *dc, u32 update_mask,
+							u32 act_req_mask)
+{
+	tegra_dc_writel(dc, update_mask, DC_CMD_STATE_CONTROL);
+	tegra_dc_readl(dc, DC_CMD_STATE_CONTROL); /* flush */
+	tegra_dc_writel(dc, act_req_mask, DC_CMD_STATE_CONTROL);
+	tegra_dc_readl(dc, DC_CMD_STATE_CONTROL); /* flush */
+
+	return tegra_dc_poll_register(dc, DC_CMD_STATE_CONTROL, act_req_mask,
+						0, 1, TEGRA_DC_POLL_TIMEOUT_MS);
+}
 
 static int tegra_dc_set_next(struct tegra_dc *dc)
 {

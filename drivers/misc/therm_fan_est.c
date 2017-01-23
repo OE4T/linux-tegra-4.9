@@ -82,6 +82,8 @@ static void therm_fan_est_work_func(struct work_struct *work)
 					dwork,
 					struct therm_fan_estimator,
 					therm_fan_est_work);
+	bool update_flag = false;
+
 	for (i = 0; i < est->ndevs; i++) {
 		if (est->devs[i].get_temp(est->devs[i].dev_data, &temp))
 			continue;
@@ -111,11 +113,26 @@ static void therm_fan_est_work_func(struct work_struct *work)
 			break;
 	}
 	if (est->current_trip_index != (trip_index - 1)) {
-		if (!((trip_index - 1) % 2) || (!est->current_trip_index) ||
-			((trip_index - est->current_trip_index) >= 2) ||
-			((trip_index - est->current_trip_index) <= -2)) {
-			pr_debug("%s, cur_temp:%ld, cur_trip_index:%d\n",
-			__func__, est->cur_temp, est->current_trip_index);
+		 if ((trip_index - 1) > est->current_trip_index) {
+			/* temperature is rising */
+			/* check cur_temp cross over rising trip point */
+			if ((trip_index - 1) % 2 == 0)
+				update_flag = true;
+			/* check cur_temp crose over 2 more trip point at a time */
+			if (((trip_index - 1) - est->current_trip_index) >= 2)
+				update_flag = true;
+		} else {
+			/* temperature is cooling */
+			/* check cur_temp cross over cooling trip point */
+			if ((est->current_trip_index % 2) == 1)
+				update_flag = true;
+			 /* check cur_temp crose over 2 more trip point at a time */
+			if ((est->current_trip_index - (trip_index - 1)) >= 2)
+				update_flag = true;
+		}
+		if (update_flag == true) {
+			pr_debug("%s, cur_temp: %ld, cur_trip_index: %d\n",
+				__func__, est->cur_temp, est->current_trip_index);
 			thermal_zone_device_update(est->thz);
 		}
 		est->current_trip_index = trip_index - 1;

@@ -80,6 +80,7 @@ enum tegra_se_pka1_ecc_type {
 	ECC_POINT_DOUBLE,
 	ECC_POINT_VER,
 	ECC_SHAMIR_TRICK,
+	ECC_INVALID,
 };
 
 enum tegra_se_elp_precomp_vals {
@@ -518,8 +519,22 @@ static u32 tegra_se_acquire_pka1_mutex(struct tegra_se_elp_dev *se_dev)
 
 static void tegra_se_release_pka1_mutex(struct tegra_se_elp_dev *se_dev)
 {
+	int i = 0;
+	u32 val;
+
 	se_elp_writel(se_dev, PKA1, 0x01,
 		      TEGRA_SE_PKA1_MUTEX_OFFSET);
+	/* poll SE_STATUS*/
+	do {
+		if (i > PKA1_TIMEOUT) {
+			dev_warn(se_dev->dev, "PKA1 Scrub timed out\n");
+			break;
+		}
+		udelay(1);
+		val = se_elp_readl(se_dev, PKA1,
+				   TEGRA_SE_PKA1_CTRL_STATUS_OFFSET);
+		i++;
+	} while (val & TEGRA_SE_PKA1_CTRL_SE_STATUS(SE_STATUS_BUSY));
 }
 
 static inline u32 pka1_bank_start(u32 bank)
@@ -661,7 +676,7 @@ static void tegra_se_pka1_ecc_fill_input(struct tegra_se_pka1_ecc_request *req)
 		}
 	}
 
-	if (req->type == ECC_POINT_MUL ||
+	if ((req->type == ECC_POINT_MUL && !se_dev->chipdata->use_key_slot) ||
 	    req->type == ECC_SHAMIR_TRICK) {
 		/* For shamir trick, key is parameter l
 		 * and k for ECC_POINT_MUL and l for ECC_SHAMIR_TRICK
@@ -780,6 +795,7 @@ static void tegra_se_program_pka1_rsa(struct tegra_se_pka1_rsa_context *ctx)
 {
 	u32 val;
 	struct tegra_se_elp_dev *se_dev = ctx->se_dev;
+	u32 partial_radix = 0;
 
 	tegra_se_set_pka1_op_ready(se_dev);
 
@@ -787,18 +803,23 @@ static void tegra_se_program_pka1_rsa(struct tegra_se_pka1_rsa_context *ctx)
 		      TEGRA_SE_PKA1_RSA_MOD_EXP_PRG_ENTRY_VAL,
 		      TEGRA_SE_PKA1_PRG_ENTRY_OFFSET);
 
-	val = TEGRA_SE_PKA1_CTRL_BASE_RADIX(pka1_ctrl_base(ctx->op_mode)) |
-		TEGRA_SE_PKA1_CTRL_PARTIAL_RADIX(
-				pka1_op_size[ctx->op_mode] / 32) |
-		TEGRA_SE_PKA1_CTRL_GO(TEGRA_SE_PKA1_CTRL_GO_START);
+	if (ctx->op_mode == SE_ELP_OP_MODE_RSA768 ||
+		ctx->op_mode == SE_ELP_OP_MODE_RSA1536 ||
+		ctx->op_mode == SE_ELP_OP_MODE_RSA3072)
+		partial_radix = pka1_op_size[ctx->op_mode] / 32;
 
-	se_elp_writel(se_dev, PKA1, val, TEGRA_SE_PKA1_CTRL_OFFSET);
+	val = TEGRA_SE_PKA1_CTRL_BASE_RADIX(pka1_ctrl_base(ctx->op_mode)) |
+		TEGRA_SE_PKA1_CTRL_PARTIAL_RADIX(partial_radix);
+	val |= TEGRA_SE_PKA1_CTRL_GO(TEGRA_SE_PKA1_CTRL_GO_START);
+
+	se_elp_writel(se_dev, PKA1, val, TEGRA_SE_PKA1_CTRL_PKA_CONTROL_OFFSET);
 }
 
 static void tegra_se_program_pka1_ecc(struct tegra_se_pka1_ecc_request *req)
 {
 	u32 val;
 	struct tegra_se_elp_dev *se_dev = req->se_dev;
+	u32 partial_radix = 0;
 
 	tegra_se_set_pka1_op_ready(se_dev);
 
@@ -834,12 +855,20 @@ static void tegra_se_program_pka1_ecc(struct tegra_se_pka1_ecc_request *req)
 			      TEGRA_SE_PKA1_FLAGS_OFFSET);
 	}
 
+	if (req->op_mode != SE_ELP_OP_MODE_ECC256 &&
+		req->op_mode != SE_ELP_OP_MODE_ECC512)
+		partial_radix = pka1_op_size[req->op_mode] / 32;
+
 	val =  TEGRA_SE_PKA1_CTRL_BASE_RADIX(pka1_ctrl_base(req->op_mode)) |
-			TEGRA_SE_PKA1_CTRL_PARTIAL_RADIX(
-				pka1_op_size[req->op_mode] / 32) |
+			TEGRA_SE_PKA1_CTRL_PARTIAL_RADIX(partial_radix) |
 			TEGRA_SE_PKA1_CTRL_GO(TEGRA_SE_PKA1_CTRL_GO_START);
 
-	se_elp_writel(se_dev, PKA1, val, TEGRA_SE_PKA1_CTRL_OFFSET);
+	if (req->op_mode == SE_ELP_OP_MODE_ECC521)
+		val |= TEGRA_SE_PKA1_CTRL_M521_MODE(M521_MODE_VAL);
+	else
+		val |= TEGRA_SE_PKA1_CTRL_M521_MODE(NORMAL_MODE_VAL);
+
+	se_elp_writel(se_dev, PKA1, val, TEGRA_SE_PKA1_CTRL_PKA_CONTROL_OFFSET);
 }
 
 static int tegra_se_check_pka1_op_done(struct tegra_se_elp_dev *se_dev)
@@ -926,6 +955,7 @@ enum tegra_se_pka1_keyslot_field {
 	PARAM_A,
 	PARAM_B,
 	MOD_ECC,
+	PARAM_N,
 	XP,
 	YP,
 	XQ,
@@ -935,11 +965,13 @@ enum tegra_se_pka1_keyslot_field {
 	R2_ECC,
 };
 
-static void tegra_se_pka1_set_key_param(u32 *param, u32 key_words,
-					u32 slot_num, int op)
+static void tegra_se_pka1_set_key_param(u32 *param, u32 key_words, u32 slot_num,
+					int op, u32 mode, u32 type)
 {
 	struct tegra_se_elp_dev *se_dev = elp_dev;
-	u32 i;
+	int i;
+	int len = 0;
+	int nwords_521 = pka1_op_size[SE_ELP_OP_MODE_ECC521] / 32;
 
 	for (i = 0; i < key_words; i++) {
 		se_elp_writel(se_dev, PKA1,
@@ -947,6 +979,23 @@ static void tegra_se_pka1_set_key_param(u32 *param, u32 key_words,
 			      TEGRA_SE_PKA1_KEYSLOT_ADDR_WORD(i),
 			      TEGRA_SE_PKA1_KEYSLOT_ADDR_OFFSET(slot_num));
 		se_elp_writel(se_dev, PKA1, *param++,
+			      TEGRA_SE_PKA1_KEYSLOT_DATA_OFFSET(slot_num));
+	}
+
+	if (type == ECC_INVALID)
+		return;
+
+	if (mode == SE_ELP_OP_MODE_ECC521)
+		len = nwords_521;
+	if ((op == KEY) || (op == PARAM_B && type == ECC_SHAMIR_TRICK))
+		len = num_words(mode);
+
+	for (i = key_words; i < len; i++) {
+		se_elp_writel(se_dev, PKA1,
+			      TEGRA_SE_PKA1_KEYSLOT_ADDR_FIELD(op) |
+			      TEGRA_SE_PKA1_KEYSLOT_ADDR_WORD(i),
+			      TEGRA_SE_PKA1_KEYSLOT_ADDR_OFFSET(slot_num));
+		se_elp_writel(se_dev, PKA1, 0x0,
 			      TEGRA_SE_PKA1_KEYSLOT_DATA_OFFSET(slot_num));
 	}
 }
@@ -960,10 +1009,14 @@ static void tegra_se_set_pka1_rsa_key(struct tegra_se_pka1_rsa_context *ctx)
 	u32 *R2 = ctx->r2;
 	u32 *EXP = ctx->exponent;
 
-	tegra_se_pka1_set_key_param(EXP, key_words, slot_num, EXPONENT);
-	tegra_se_pka1_set_key_param(MOD, key_words, slot_num, MOD_RSA);
-	tegra_se_pka1_set_key_param(M, key_words, slot_num, M_RSA);
-	tegra_se_pka1_set_key_param(R2, key_words, slot_num, R2_RSA);
+	tegra_se_pka1_set_key_param(EXP, key_words, slot_num, EXPONENT,
+				    ctx->op_mode, ECC_INVALID);
+	tegra_se_pka1_set_key_param(MOD, key_words, slot_num, MOD_RSA,
+				    ctx->op_mode, ECC_INVALID);
+	tegra_se_pka1_set_key_param(M, key_words, slot_num, M_RSA,
+				    ctx->op_mode, ECC_INVALID);
+	tegra_se_pka1_set_key_param(R2, key_words, slot_num, R2_RSA,
+				    ctx->op_mode, ECC_INVALID);
 }
 
 static void tegra_se_set_pka1_ecc_key(struct tegra_se_pka1_ecc_request *req)
@@ -978,15 +1031,46 @@ static void tegra_se_set_pka1_ecc_key(struct tegra_se_pka1_ecc_request *req)
 	u32 *PX = req->base_pt_x;
 	u32 *PY = req->base_pt_y;
 	u32 *K = req->key;
+	u32 *QX = req->res_pt_x;
+	u32 *QY = req->res_pt_y;
 
-	tegra_se_pka1_set_key_param(A, key_words, slot_num, PARAM_A);
-	tegra_se_pka1_set_key_param(B, key_words, slot_num, PARAM_B);
-	tegra_se_pka1_set_key_param(MOD, key_words, slot_num, MOD_ECC);
-	tegra_se_pka1_set_key_param(PX, key_words, slot_num, XP);
-	tegra_se_pka1_set_key_param(PY, key_words, slot_num, YP);
-	tegra_se_pka1_set_key_param(K, key_words, slot_num, KEY);
-	tegra_se_pka1_set_key_param(M, key_words, slot_num, M_ECC);
-	tegra_se_pka1_set_key_param(R2, key_words, slot_num, R2_ECC);
+	tegra_se_pka1_set_key_param(A, key_words, slot_num, PARAM_A,
+				    req->op_mode, req->type);
+	tegra_se_pka1_set_key_param(MOD, key_words, slot_num, MOD_ECC,
+				    req->op_mode, req->type);
+
+	if (req->type == ECC_POINT_VER ||
+	    req->type == ECC_SHAMIR_TRICK)
+		tegra_se_pka1_set_key_param(B, key_words, slot_num, PARAM_B,
+					    req->op_mode, req->type);
+
+	if (req->type != ECC_POINT_DOUBLE) {
+		tegra_se_pka1_set_key_param(PX, key_words, slot_num, XP,
+					    req->op_mode, req->type);
+		tegra_se_pka1_set_key_param(PY, key_words, slot_num, YP,
+					    req->op_mode, req->type);
+	}
+
+	if (req->type == ECC_POINT_MUL ||
+	    req->type == ECC_SHAMIR_TRICK)
+		tegra_se_pka1_set_key_param(K, key_words, slot_num, KEY,
+					    req->op_mode, req->type);
+
+	if (req->op_mode != SE_ELP_OP_MODE_ECC521) {
+		tegra_se_pka1_set_key_param(M, key_words, slot_num, M_ECC,
+					    req->op_mode, req->type);
+		tegra_se_pka1_set_key_param(R2, key_words, slot_num, R2_ECC,
+					    req->op_mode, req->type);
+	}
+
+	if (req->type == ECC_POINT_ADD ||
+	    req->type == ECC_SHAMIR_TRICK ||
+	    req->type == ECC_POINT_DOUBLE) {
+		tegra_se_pka1_set_key_param(QX, key_words, slot_num, XQ,
+					    req->op_mode, req->type);
+		tegra_se_pka1_set_key_param(QY, key_words, slot_num, YQ,
+					    req->op_mode, req->type);
+	}
 }
 
 static int tegra_se_pka1_precomp(struct tegra_se_pka1_rsa_context *ctx,
@@ -1080,36 +1164,39 @@ static int tegra_se_pka1_ecc_do(struct tegra_se_pka1_ecc_request *req)
 	u32 val, slot_num;
 	struct tegra_se_pka1_slot *pslot;
 	struct tegra_se_elp_dev *se_dev = req->se_dev;
+	u32 i = 0;
 
 	if (se_dev->chipdata->use_key_slot) {
-		if (!req->slot) {
-			pslot = tegra_se_pka1_alloc_key_slot();
-			if (!pslot) {
-				dev_err(se_dev->dev, "no free key slot\n");
-				return -ENOMEM;
-			}
-			req->slot = pslot;
+		pslot = tegra_se_pka1_alloc_key_slot();
+		if (!pslot) {
+			dev_err(se_dev->dev, "no free key slot\n");
+			return -ENOMEM;
 		}
+		req->slot = pslot;
 		slot_num = req->slot->slot_num;
 
 		tegra_se_set_pka1_ecc_key(req);
 
-		/* Set LOAD_KEY */
-		val = se_elp_readl(se_dev, PKA1,
-				   TEGRA_SE_PKA1_CTRL_CONTROL_OFFSET);
-		val |= TEGRA_SE_PKA1_CTRL_CONTROL_LOAD_KEY(ELP_ENABLE);
-		se_elp_writel(se_dev, PKA1, val,
-			      TEGRA_SE_PKA1_CTRL_CONTROL_OFFSET);
+		val = TEGRA_SE_PKA1_CTRL_CONTROL_KEYSLOT(slot_num) |
+			TEGRA_SE_PKA1_CTRL_CONTROL_LOAD_KEY(ELP_ENABLE);
 
-		/*Write KEYSLOT Number */
-		val = se_elp_readl(se_dev, PKA1,
-				   TEGRA_SE_PKA1_CTRL_CONTROL_OFFSET);
-		val |= TEGRA_SE_PKA1_CTRL_CONTROL_KEYSLOT(slot_num);
 		se_elp_writel(se_dev, PKA1, val,
 			      TEGRA_SE_PKA1_CTRL_CONTROL_OFFSET);
-	} else {
-		tegra_se_pka1_ecc_fill_input(req);
+		/* poll SE_STATUS */
+		do {
+			if (i > PKA1_TIMEOUT) {
+				dev_err(se_dev->dev,
+					"PKA1 Load Key timed out\n");
+				return -EINVAL;
+			}
+			udelay(1);
+			val = se_elp_readl(se_dev, PKA1,
+					   TEGRA_SE_PKA1_CTRL_STATUS_OFFSET);
+			i++;
+		} while (val & TEGRA_SE_PKA1_CTRL_SE_STATUS(SE_STATUS_BUSY));
 	}
+
+	tegra_se_pka1_ecc_fill_input(req);
 
 	tegra_se_program_pka1_ecc(req);
 
@@ -1258,11 +1345,12 @@ static u32 pka_ctrl_partial_radix(u32 mode)
 {
 	u32 base_words;
 	u32 operand_words;
-	u32 partial_radix;
+	u32 partial_radix = 0;
 
 	base_words = num_words(mode);
 	operand_words = pka1_op_size[mode] / 32;
-	partial_radix = operand_words % base_words;
+	if (base_words)
+		partial_radix = operand_words % base_words;
 
 	return partial_radix;
 }
@@ -2409,8 +2497,8 @@ static int tegra_se_pka1_rsa_setkey(struct crypto_akcipher *tfm,
 	struct tegra_se_pka1_rsa_context *ctx = akcipher_tfm_ctx(tfm);
 	struct tegra_se_elp_dev *se_dev = elp_dev;
 	struct tegra_se_pka1_slot *pslot;
-	u32 i, key_words = keylen / WORD_SIZE_BYTES;
-	u32 slot_num, val;
+	u32 i = 0, key_words = keylen / WORD_SIZE_BYTES;
+	u32 slot_num, val = 0;
 	u8 *pkeydata;
 	u32 *EXP;
 	int ret;
@@ -2454,19 +2542,24 @@ static int tegra_se_pka1_rsa_setkey(struct crypto_akcipher *tfm,
 		slot_num = ctx->slot->slot_num;
 
 		tegra_se_set_pka1_rsa_key(ctx);
-		/* Set LOAD_KEY */
-		val = se_elp_readl(se_dev, PKA1,
-				   TEGRA_SE_PKA1_CTRL_CONTROL_OFFSET);
-		val |= TEGRA_SE_PKA1_CTRL_CONTROL_LOAD_KEY(ELP_ENABLE);
-		se_elp_writel(se_dev, PKA1, val,
-			      TEGRA_SE_PKA1_CTRL_CONTROL_OFFSET);
 
-		/*Write KEYSLOT Number */
-		val = se_elp_readl(se_dev, PKA1,
-				   TEGRA_SE_PKA1_CTRL_CONTROL_OFFSET);
-		val |= TEGRA_SE_PKA1_CTRL_CONTROL_KEYSLOT(slot_num);
+		val = TEGRA_SE_PKA1_CTRL_CONTROL_KEYSLOT(slot_num) |
+			TEGRA_SE_PKA1_CTRL_CONTROL_LOAD_KEY(ELP_ENABLE);
+
 		se_elp_writel(se_dev, PKA1, val,
 			      TEGRA_SE_PKA1_CTRL_CONTROL_OFFSET);
+		/* poll SE_STATUS */
+		do {
+			if (i > PKA1_TIMEOUT) {
+				dev_err(se_dev->dev,
+					"PKA1 Load Key timed out\n");
+				return -EINVAL;
+			}
+			udelay(1);
+			val = se_elp_readl(se_dev, PKA1,
+					   TEGRA_SE_PKA1_CTRL_STATUS_OFFSET);
+			i++;
+		} while (val & TEGRA_SE_PKA1_CTRL_SE_STATUS(SE_STATUS_BUSY));
 	} else {
 		EXP = ctx->exponent;
 		for (i = 0; i < key_words; i++) {
@@ -2955,12 +3048,12 @@ static struct akcipher_alg ecdsa_alg = {
 };
 
 static struct tegra_se_elp_chipdata tegra18_se_chipdata = {
-	.use_key_slot = false,
+	.use_key_slot = true,
 	.rng1_supported = true,
 };
 
 static struct tegra_se_elp_chipdata tegra21_se_chipdata = {
-	.use_key_slot = false,
+	.use_key_slot = true,
 	.rng1_supported = false,
 };
 

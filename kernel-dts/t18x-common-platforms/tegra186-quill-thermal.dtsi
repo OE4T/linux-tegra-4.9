@@ -98,9 +98,10 @@
 
 		BCPU-therm {
 			status = "okay";
+			polling-delay-passive = <500>;
 
 			thermal-zone-params {
-				governor-name = "pid_thermal_gov";
+				governor-name = "step_wise";
 			};
 
 			trips {
@@ -111,7 +112,7 @@
 					writable;
 				};
 				trip_bthrot {
-					temperature = <127000>;
+					temperature = <95500>;
 					type = "passive";
 					hysteresis = <0>;
 					writable;
@@ -128,9 +129,10 @@
 
 		MCPU-therm {
 			status = "okay";
+			polling-delay-passive = <500>;
 
 			thermal-zone-params {
-				governor-name = "pid_thermal_gov";
+				governor-name = "step_wise";
 			};
 
 			trips {
@@ -141,7 +143,7 @@
 					writable;
 				};
 				trip_bthrot {
-					temperature = <127000>;
+					temperature = <95500>;
 					type = "passive";
 					hysteresis = <0>;
 					writable;
@@ -160,7 +162,7 @@
 			status = "okay";
 
 			thermal-zone-params {
-				governor-name = "pid_thermal_gov";
+				governor-name = "step_wise";
 			};
 		};
 
@@ -170,8 +172,10 @@
 
 		AO-therm {
 			status = "okay";
+			polling-delay-passive = <500>;
+
 			thermal-zone-params {
-				governor-name = "pid_thermal_gov";
+				governor-name = "step_wise";
 			};
 			trips {
 				trip_critical {
@@ -181,7 +185,7 @@
 					writable;
 				};
 				trip_bthrot {
-					temperature = <127000>;
+					temperature = <93500>;
 					type = "passive";
 					hysteresis = <0>;
 					writable;

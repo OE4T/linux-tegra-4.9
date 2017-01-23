@@ -1,7 +1,7 @@
 /*
  * Header file for Tegra Security Elliptic Engine
  *
- * Copyright (c) 2011-2017, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2015-2017, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2, as
@@ -344,11 +344,11 @@ static struct tegra_se_ecc_curve curve_p521 = {
 
 #define TEGRA_SE_PKA1_CTRL_STATUS_OFFSET		0x810C
 #define TEGRA_SE_PKA1_CTRL_SE_STATUS_SHIFT		0
-#define TEGRA_SE_PKA1_CTRL_SE_STATUS_BUSY		1
-#define TEGRA_SE_PKA1_CTRL_SE_STATUS_IDLE		0
+#define SE_STATUS_BUSY					1
+#define SE_STATUS_IDLE					0
 #define TEGRA_SE_PKA1_CTRL_PKA_STATUS_SHIFT		1
-#define TEGRA_SE_PKA1_CTRL_PKA_STATUS_BUSY		1
-#define TEGRA_SE_PKA1_CTRL_PKA_STATUS_IDLE		0
+#define PKA_STATUS_BUSY					1
+#define PKA_STATUS_IDLE					0
 #define TEGRA_SE_PKA1_CTRL_PKA_STATUS(x)	\
 				(x << TEGRA_SE_PKA1_CTRL_PKA_STATUS_SHIFT)
 #define TEGRA_SE_PKA1_CTRL_SE_STATUS(x)	\
@@ -377,6 +377,13 @@ static struct tegra_se_ecc_curve curve_p521 = {
 #define TEGRA_SE_RNG1_CTRL_OFFSET		0xF00
 
 #define TEGRA_SE_PKA1_CTRL_OFFSET		0xC000
+#define TEGRA_SE_PKA1_CTRL_PKA_CONTROL_OFFSET	0x8108
+
+#define TEGRA_SE_PKA1_CTRL_M521_MODE_SHIFT	16
+#define M521_MODE_VAL				0x9
+#define NORMAL_MODE_VAL				0x0
+#define TEGRA_SE_PKA1_CTRL_M521_MODE(x)		\
+			(x << TEGRA_SE_PKA1_CTRL_M521_MODE_SHIFT)
 
 #define TEGRA_SE_PKA1_CTRL_GO_SHIFT		31
 #define TEGRA_SE_PKA1_CTRL_GO_START		1

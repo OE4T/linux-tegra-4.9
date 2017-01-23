@@ -985,11 +985,13 @@
 				<&tegra_car TEGRA210_CLK_SOR_SAFE>,
 				<&tegra_car TEGRA210_CLK_SOR1_BRICK>,
 				<&tegra_car TEGRA210_CLK_SOR1_MUX>,
+				<&tegra_car TEGRA210_CLK_PLL_P>,
+				<&tegra_car TEGRA210_CLK_MAUD>,
 			    <&tegra_car TEGRA210_CLK_HDA>,
 			    <&tegra_car TEGRA210_CLK_HDA2CODEC_2X>,
 			    <&tegra_car TEGRA210_CLK_HDA2HDMI>;
 			clock-names = "sor1", "sor_safe", "sor1_brick", "sor1_src",
-			    "hda", "hda2codec_2x", "hda2hdmi";
+			"pll_p", "maud", "hda", "hda2codec_2x", "hda2hdmi";
 			resets = <&tegra_car TEGRA210_CLK_SOR1>,
 			       <&tegra_car TEGRA210_CLK_HDA>,
 			       <&tegra_car TEGRA210_CLK_HDA2CODEC_2X>,

@@ -92,6 +92,7 @@
 #define MII_BCM54XX_INT_HC	0x1000	/* Counter above 32768 */
 #define MII_BCM54XX_INT_MDIX	0x2000	/* MDIX status change */
 #define MII_BCM54XX_INT_PSERR	0x4000	/* Pair swap error */
+#define MII_BCM54XX_INT_EDETECT 0x8000  /* Energy change detected */
 
 #define MII_BCM54XX_SHD		0x1c	/* 0x1c shadow registers */
 #define MII_BCM54XX_SHD_WRITE	0x8000
@@ -148,6 +149,7 @@
 #define  BCM54XX_SHD_SCR3_DEF_CLK125	0x0001
 #define  BCM54XX_SHD_SCR3_DLLAPD_DIS	0x0002
 #define  BCM54XX_SHD_SCR3_TRDDAPD	0x0004
+#define BCM54XX_SHD_SCR3_EDETECT_EN	0x0020
 
 /* 01010: Auto Power-Down */
 #define BCM54XX_SHD_APD			0x0a

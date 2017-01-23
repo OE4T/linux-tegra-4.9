@@ -30,6 +30,31 @@ MODULE_DESCRIPTION("Broadcom PHY driver");
 MODULE_AUTHOR("Maciej W. Rozycki");
 MODULE_LICENSE("GPL");
 
+/* Tx FIFO latency. Set to one to allow jumbo frames to be sent */
+#define MII_BCM89XX_ECR_TXFIFOLAT	0x0001
+#define MII_BCM89XX_SHD_AUX_CONTROL	0x0
+#define MII_BCM89XX_SHD_MISC_CONTROL	0x7
+#define MII_BCM89XX_SHD_SELECT(shadow)	(((shadow)) << 0xC)
+
+/* Indirect register access functions for 89xx */
+static int bcm89xx_shadow_read(struct phy_device *phydev, u16 shadow)
+{
+	phy_write(phydev, MII_BCM54XX_AUX_CTL,
+		((MII_BCM89XX_SHD_SELECT(shadow) | 0x7) & ~BIT(15)));
+	return phy_read(phydev, MII_BCM54XX_AUX_CTL);
+}
+
+static void bcm89xx_shadow_write(struct phy_device *phydev, u8 shadow,
+					u16 val)
+{
+	/* Bits 2:0 should contain shadow. */
+	val = (val & 0xFFF8) | (shadow & 0x7);
+	/* Bit 15 should be 1 for MII_BCM89XX_SHD_MISC_CONTROL */
+	if (MII_BCM89XX_SHD_MISC_CONTROL == shadow)
+		val |= BIT(15);
+	phy_write(phydev, MII_BCM54XX_AUX_CTL, val);
+}
+
 static int bcm54xx_auxctl_write(struct phy_device *phydev, u16 regnum, u16 val)
 {
 	return phy_write(phydev, MII_BCM54XX_AUX_CTL, regnum | val);
@@ -206,6 +231,26 @@ void bcm54xx_low_power_mode(struct phy_device *phydev,
 	}
 }
 
+/* enable RGMII Out-of-Band Status */
+static void bcm89xx_enable_oob(struct phy_device *phydev)
+{
+	int reg_val = 0;
+
+	/* Read the value at MISC_CONTROL shadow register, set bit 5 to zero, */
+	/* set bit 15 to 1 and write the value to MISC_CONTROL register */
+	reg_val = bcm89xx_shadow_read(phydev, MII_BCM89XX_SHD_MISC_CONTROL);
+	reg_val &= ~BIT(5); /* Bit 5 set to zero */
+	bcm89xx_shadow_write(phydev, MII_BCM89XX_SHD_MISC_CONTROL, reg_val);
+
+	/* Following register writes need to happen once.  They are needed
+	 * to get 10mb working.
+	 */
+	phy_write(phydev, 0x18, 0x0c00);
+	phy_write(phydev, 0x17, 0x0ff0);
+	phy_write(phydev, 0x15, 0x2000);
+	phy_write(phydev, 0x18, 0x0400);
+}
+
 static int bcm54xx_config_init(struct phy_device *phydev)
 {
 	int reg, err;
@@ -224,6 +269,11 @@ static int bcm54xx_config_init(struct phy_device *phydev)
 	reg = ~(MII_BCM54XX_INT_DUPLEX |
 		MII_BCM54XX_INT_SPEED |
 		MII_BCM54XX_INT_LINK);
+
+	/* unmask energy detect interrupt */
+	if (BRCM_PHY_MODEL(phydev) == PHY_ID_BCM89610)
+		reg &= ~MII_BCM54XX_INT_EDETECT;
+
 	err = phy_write(phydev, MII_BCM54XX_IMR, reg);
 	if (err < 0)
 		return err;
@@ -237,6 +287,27 @@ static int bcm54xx_config_init(struct phy_device *phydev)
 	    (phydev->dev_flags & PHY_BRCM_DIS_TXCRXC_NOENRGY) ||
 	    (phydev->dev_flags & PHY_BRCM_AUTO_PWRDWN_ENABLE))
 		bcm54xx_adjust_rxrefclk(phydev);
+
+	/* enable energy detect interrupt status update */
+	if (BRCM_PHY_MODEL(phydev) == PHY_ID_BCM89610) {
+		reg = bcm_phy_read_shadow(phydev, BCM54XX_SHD_SCR3);
+		reg |= BCM54XX_SHD_SCR3_EDETECT_EN;
+		bcm_phy_write_shadow(phydev, BCM54XX_SHD_SCR3, reg);
+		bcm89xx_enable_oob(phydev);
+
+		/* Enable phy to tx/rx jumbo frames. Driver
+		 * will drop jumbo frames if it is not enabled.
+		 */
+		reg = phy_read(phydev, MII_BCM54XX_ECR);
+		reg |= MII_BCM89XX_ECR_TXFIFOLAT;
+		err = phy_write(phydev, MII_BCM54XX_ECR, reg);
+		if (err < 0)
+			return err;
+
+		reg = bcm89xx_shadow_read(phydev, MII_BCM89XX_SHD_AUX_CONTROL);
+		reg |= BIT(14); /* Enable rx of extended pkts */
+		bcm89xx_shadow_write(phydev, MII_BCM89XX_SHD_AUX_CONTROL, reg);
+	}
 
 	bcm54xx_phydsp_config(phydev);
 

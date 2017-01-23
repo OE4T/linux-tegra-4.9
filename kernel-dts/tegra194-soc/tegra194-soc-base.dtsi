@@ -361,7 +361,7 @@
 			clock-names = "clk32k_in", "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p0",
 				      "pllp_display", "plld2", "plld3",
-				      "pll_d", "pll_d_out1", "emc", "emc_latency";
+				      "pll_d", "emc", "emc_latency";
 			clocks = <&clk32k_in>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAYHUB>,
@@ -370,7 +370,6 @@
 				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD3>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD>,
-				 <&bpmp_clks TEGRA194_CLK_PLLD_OUT1>,
 				 <&bpmp_clks TEGRA194_CLK_EMC>,
 				 <&bpmp_clks TEGRA194_CLK_CLK_M>;
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
@@ -395,7 +394,7 @@
 			clock-names = "clk32k_in", "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p1",
 				      "pllp_display", "plld2", "plld3",
-				      "pll_d", "pll_d_out1", "disp2_emc", "emc_latency";
+				      "pll_d", "disp2_emc", "emc_latency";
 			clocks = <&clk32k_in>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAYHUB>,
@@ -404,7 +403,6 @@
 				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD3>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD>,
-				 <&bpmp_clks TEGRA194_CLK_PLLD_OUT1>,
 				 <&bpmp_clks TEGRA194_CLK_EMC>,
 				 <&bpmp_clks TEGRA194_CLK_CLK_M>;
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",

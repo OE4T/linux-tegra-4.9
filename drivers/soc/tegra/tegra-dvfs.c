@@ -302,6 +302,11 @@ static inline int dvfs_rail_apply_limits(struct dvfs_rail *rail, int millivolts)
 
 	if (rail->override_millivolts)
 		millivolts = rail->override_millivolts;
+	else {
+		/* apply offset and ignore minimum limit */
+		millivolts += rail->dbg_mv_offs;
+		return millivolts;
+	}
 
 	clamp_val(millivolts, min_mv, max_mv);
 
@@ -1780,6 +1785,7 @@ static int dvfs_tree_show(struct seq_file *s, void *data)
 		}
 		seq_printf(s, "   nominal    %-7d mV\n",
 			   rail->nominal_millivolts);
+		seq_printf(s, "   offset     %-7d mV\n", rail->dbg_mv_offs);
 
 		if (rail->dfll_mode) {
 			therm_mv = tegra_dfll_get_thermal_floor_mv();
@@ -2037,6 +2043,30 @@ static const struct file_operations gpu_dvfs_t_fops = {
 	.release        = single_release,
 };
 
+static int dvfs_offset_get(void *data, u64 *val)
+{
+	struct dvfs_rail *rail = data;
+
+	*val = rail->dbg_mv_offs;
+
+	return 0;
+}
+
+static int dvfs_offset_set(void *data, u64 val)
+{
+	struct dvfs_rail *rail = data;
+
+	mutex_lock(&dvfs_lock);
+
+	rail->dbg_mv_offs = val;
+	dvfs_rail_update(rail);
+
+	mutex_unlock(&dvfs_lock);
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(dvfs_offset_fops, dvfs_offset_get, dvfs_offset_set, "%lld\n");
+
 static int dvfs_debugfs_init(void)
 {
 	struct dentry *d_root, *d;
@@ -2062,6 +2092,16 @@ static int dvfs_debugfs_init(void)
 
 	d = debugfs_create_file("gpu_dvfs_t", S_IRUGO, d_root, NULL,
 				&gpu_dvfs_t_fops);
+	if (!d)
+		return -ENOMEM;
+
+	d = debugfs_create_file("vdd_core_offs", S_IRUGO | S_IWUSR, d_root,
+				tegra_core_rail,  &dvfs_offset_fops);
+	if (!d)
+		return -ENOMEM;
+
+	d = debugfs_create_file("vdd_gpu_offs", S_IRUGO | S_IWUSR, d_root,
+				tegra_gpu_rail,  &dvfs_offset_fops);
 	if (!d)
 		return -ENOMEM;
 

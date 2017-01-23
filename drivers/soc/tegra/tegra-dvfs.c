@@ -2060,7 +2060,7 @@ static int dvfs_debugfs_init(void)
 	if (!d)
 		return -ENOMEM;
 
-	d = debugfs_create_file("gpu_dvfs_t", S_IRUGO | S_IWUSR, d_root, NULL,
+	d = debugfs_create_file("gpu_dvfs_t", S_IRUGO, d_root, NULL,
 				&gpu_dvfs_t_fops);
 	if (!d)
 		return -ENOMEM;

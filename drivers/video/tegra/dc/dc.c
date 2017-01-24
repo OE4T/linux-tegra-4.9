@@ -1286,6 +1286,10 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 	if (dc->enabled)
 		tegra_dc_disable(dc);
 
+	/* Clear EDID error flags */
+	if (dc->edid)
+		dc->edid->errors = 0;
+
 	/* If output is already created - save it */
 	if (dc->out_data) {
 		dbg_dc_out_info[cur_dc_out][out_type].out_data = dc->out_data;

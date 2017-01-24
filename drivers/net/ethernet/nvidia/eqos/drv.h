@@ -119,4 +119,5 @@ static int eqos_vlan_rx_kill_vid(struct net_device *dev, __be16 proto, u16 vid);
 void eqos_stop_dev(struct eqos_prv_data *pdata);
 void eqos_start_dev(struct eqos_prv_data *pdata);
 int eqos_init_phy(struct net_device *ndev);
+int eqos_config_mac_loopback_mode(struct net_device *dev, unsigned int flags);
 #endif

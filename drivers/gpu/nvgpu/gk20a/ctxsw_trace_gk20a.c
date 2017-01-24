@@ -518,6 +518,9 @@ int gk20a_ctxsw_trace_init(struct gk20a *g)
 	if (unlikely(err))
 		goto fail;
 
+	g->gpu_characteristics.flags |=
+		NVGPU_GPU_FLAGS_SUPPORT_FECS_CTXSW_TRACE;
+
 	return 0;
 
 fail:

@@ -130,6 +130,8 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_SET_THERM_ALERT_LIMIT	(1ULL << 14)
 /* NVGPU_GPU_IOCTL_GET_EVENT_FD is available */
 #define NVGPU_GPU_FLAGS_SUPPORT_DEVICE_EVENTS		(1ULL << 15)
+/* FECS context switch tracing is available */
+#define NVGPU_GPU_FLAGS_SUPPORT_FECS_CTXSW_TRACE	(1ULL << 16)
 
 struct nvgpu_gpu_characteristics {
 	__u32 arch;

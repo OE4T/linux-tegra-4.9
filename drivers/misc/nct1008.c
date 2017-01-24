@@ -120,8 +120,8 @@ static int nct1008_sensor_regs[SENSORS_COUNT][REGS_COUNT] = {
 #define STANDARD_RANGE_MAX    127U
 #define EXTENDED_RANGE_MAX   (150U + EXTENDED_RANGE_OFFSET)
 
-#define NCT1008_MIN_TEMP       (-64)
-#define NCT1008_MAX_TEMP         191
+#define NCT1008_MIN_TEMP       (-64L)
+#define NCT1008_MAX_TEMP         191L
 #define NCT1008_MAX_TEMP_MILLI   191750
 
 #define MAX_STR_PRINT            50
@@ -735,15 +735,18 @@ static struct thermal_cooling_device_ops nct1008_shutdown_warning_ops = {
 
 static int nct1008_thermal_set_limits(int sensor,
 				      struct nct1008_data *data,
-				      long lo_limit_milli,
-				      long hi_limit_milli)
+				      long lo_limit_mC,
+				      long hi_limit_mC)
 {
 	int err;
 	u8 value;
 	struct i2c_client *client = data->client;
 	bool extended_range = data->plat_data.extended_range;
-	long lo_limit = MILLICELSIUS_TO_CELSIUS(lo_limit_milli);
-	long hi_limit = MILLICELSIUS_TO_CELSIUS(hi_limit_milli);
+	long lo_limit;
+	long hi_limit;
+
+	lo_limit = max(NCT1008_MIN_TEMP, MILLICELSIUS_TO_CELSIUS(lo_limit_mC));
+	hi_limit = min(NCT1008_MAX_TEMP, MILLICELSIUS_TO_CELSIUS(hi_limit_mC));
 
 	if (lo_limit >= hi_limit)
 		return -EINVAL;

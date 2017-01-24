@@ -538,7 +538,7 @@ int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
 	struct gr_gk20a *gr = &g->gr;
 	int ret;
 
-	mutex_lock(&gr->fecs_mutex);
+	nvgpu_mutex_acquire(&gr->fecs_mutex);
 
 	if (op.mailbox.id != 0)
 		gk20a_writel(g, gr_fecs_ctxsw_mailbox_r(op.mailbox.id),
@@ -561,7 +561,7 @@ int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
 				      op.cond.fail, op.mailbox.fail,
 				      sleepduringwait);
 
-	mutex_unlock(&gr->fecs_mutex);
+	nvgpu_mutex_release(&gr->fecs_mutex);
 
 	return ret;
 }
@@ -573,7 +573,7 @@ int gr_gk20a_submit_fecs_sideband_method_op(struct gk20a *g,
 	struct gr_gk20a *gr = &g->gr;
 	int ret;
 
-	mutex_lock(&gr->fecs_mutex);
+	nvgpu_mutex_acquire(&gr->fecs_mutex);
 
 	gk20a_writel(g, gr_fecs_ctxsw_mailbox_clear_r(op.mailbox.id),
 		gr_fecs_ctxsw_mailbox_clear_value_f(op.mailbox.clr));
@@ -587,7 +587,7 @@ int gr_gk20a_submit_fecs_sideband_method_op(struct gk20a *g,
 				      op.cond.fail, op.mailbox.fail,
 				      false);
 
-	mutex_unlock(&gr->fecs_mutex);
+	nvgpu_mutex_release(&gr->fecs_mutex);
 
 	return ret;
 }
@@ -1596,7 +1596,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	/* golden ctx is global to all channels. Although only the first
 	   channel initializes golden image, driver needs to prevent multiple
 	   channels from initializing golden ctx at the same time */
-	mutex_lock(&gr->ctx_mutex);
+	nvgpu_mutex_acquire(&gr->ctx_mutex);
 
 	if (gr->ctx_vars.golden_image_initialized) {
 		goto clean_up;
@@ -1825,7 +1825,7 @@ clean_up:
 	gk20a_mem_end(g, gold_mem);
 	gk20a_mem_end(g, gr_mem);
 
-	mutex_unlock(&gr->ctx_mutex);
+	nvgpu_mutex_release(&gr->ctx_mutex);
 	return err;
 }
 
@@ -3327,7 +3327,7 @@ out:
 int gk20a_comptag_allocator_init(struct gk20a_comptag_allocator *allocator,
 		unsigned long size)
 {
-	mutex_init(&allocator->lock);
+	nvgpu_mutex_init(&allocator->lock);
 	/*
 	 * 0th comptag is special and is never used. The base for this bitmap
 	 * is 1, and its size is one less than the size of comptag store.
@@ -4064,7 +4064,7 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 
 	/* no endian swap ? */
 
-	mutex_lock(&gr->zbc_lock);
+	nvgpu_mutex_acquire(&gr->zbc_lock);
 	switch (zbc_val->type) {
 	case GK20A_ZBC_TYPE_COLOR:
 		/* search existing tables */
@@ -4159,7 +4159,7 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 	}
 
 err_mutex:
-	mutex_unlock(&gr->zbc_lock);
+	nvgpu_mutex_release(&gr->zbc_lock);
 	return ret;
 }
 
@@ -4267,7 +4267,7 @@ int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr)
 	struct zbc_entry zbc_val;
 	u32 i, err;
 
-	mutex_init(&gr->zbc_lock);
+	nvgpu_mutex_init(&gr->zbc_lock);
 
 	/* load default color table */
 	zbc_val.type = GK20A_ZBC_TYPE_COLOR;
@@ -5136,7 +5136,7 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 	gr->g = g;
 
 #if defined(CONFIG_GK20A_CYCLE_STATS)
-	mutex_init(&g->gr.cs_lock);
+	nvgpu_mutex_init(&g->gr.cs_lock);
 #endif
 
 	err = gr_gk20a_init_gr_config(g, gr);
@@ -5172,8 +5172,8 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 
 	gr_gk20a_load_zbc_default_table(g, gr);
 
-	mutex_init(&gr->ctx_mutex);
-	spin_lock_init(&gr->ch_tlb_lock);
+	nvgpu_mutex_init(&gr->ctx_mutex);
+	nvgpu_spinlock_init(&gr->ch_tlb_lock);
 
 	gr->remove_support = gk20a_remove_gr_support;
 	gr->sw_ready = true;
@@ -5244,7 +5244,7 @@ int gk20a_init_gr_support(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	/* this is required before gr_gk20a_init_ctx_state */
-	mutex_init(&g->gr.fecs_mutex);
+	nvgpu_mutex_init(&g->gr.fecs_mutex);
 
 	err = gr_gk20a_init_ctxsw(g);
 	if (err)
@@ -5468,7 +5468,7 @@ int gk20a_gr_reset(struct gk20a *g)
 	int err;
 	u32 size;
 
-	mutex_lock(&g->gr.fecs_mutex);
+	nvgpu_mutex_acquire(&g->gr.fecs_mutex);
 
 	err = gk20a_enable_gr_hw(g);
 	if (err)
@@ -5482,7 +5482,7 @@ int gk20a_gr_reset(struct gk20a *g)
 	if (err)
 		return err;
 
-	mutex_unlock(&g->gr.fecs_mutex);
+	nvgpu_mutex_release(&g->gr.fecs_mutex);
 
 	/* this appears query for sw states but fecs actually init
 	   ramchain, etc so this is hw init */
@@ -5731,7 +5731,7 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 	if ((ch->cyclestate.cyclestate_buffer == NULL) || (isr_data->data_lo == 0))
 		return 0;
 
-	mutex_lock(&ch->cyclestate.cyclestate_buffer_mutex);
+	nvgpu_mutex_acquire(&ch->cyclestate.cyclestate_buffer_mutex);
 
 	virtual_address = ch->cyclestate.cyclestate_buffer;
 	buffer_size = ch->cyclestate.cyclestate_buffer_size;
@@ -5843,7 +5843,7 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 		sh_hdr->completed = true;
 		offset += sh_hdr->size;
 	}
-	mutex_unlock(&ch->cyclestate.cyclestate_buffer_mutex);
+	nvgpu_mutex_release(&ch->cyclestate.cyclestate_buffer_mutex);
 #endif
 	gk20a_dbg_fn("");
 	wake_up(&ch->notifier_wq);
@@ -5874,7 +5874,7 @@ static struct channel_gk20a *gk20a_gr_get_channel_from_ctx(
 	if (!gr_fecs_current_ctx_valid_v(curr_ctx))
 		return NULL;
 
-	spin_lock(&gr->ch_tlb_lock);
+	nvgpu_spinlock_acquire(&gr->ch_tlb_lock);
 
 	/* check cache first */
 	for (i = 0; i < GR_CHANNEL_MAP_TLB_SIZE; i++) {
@@ -5926,7 +5926,7 @@ static struct channel_gk20a *gk20a_gr_get_channel_from_ctx(
 		(GR_CHANNEL_MAP_TLB_SIZE - 1);
 
 unlock:
-	spin_unlock(&gr->ch_tlb_lock);
+	nvgpu_spinlock_release(&gr->ch_tlb_lock);
 	if (curr_tsgid)
 		*curr_tsgid = tsgid;
 	return ret;
@@ -5998,7 +5998,7 @@ static int gk20a_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
 					       GPU_LIT_TPC_IN_GPC_STRIDE);
 	u32 offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
 
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	sm_id = gr_gpc0_tpc0_sm_cfg_sm_id_v(gk20a_readl(g,
 			gr_gpc0_tpc0_sm_cfg_r() + offset));
@@ -6012,7 +6012,7 @@ static int gk20a_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
 	gr->sm_error_states[sm_id].hww_warp_esr_report_mask = gk20a_readl(g,
 			gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_r() + offset);
 
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	return 0;
 }
@@ -6029,7 +6029,7 @@ static int gk20a_gr_update_sm_error_state(struct gk20a *g,
 					       GPU_LIT_TPC_IN_GPC_STRIDE);
 	int err = 0;
 
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	gr->sm_error_states[sm_id].hww_global_esr =
 			sm_error_state->hww_global_esr;
@@ -6081,7 +6081,7 @@ enable_ctxsw:
 	err = gr_gk20a_enable_ctxsw(g);
 
 fail:
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	return err;
 }
 
@@ -6096,7 +6096,7 @@ static int gk20a_gr_clear_sm_error_state(struct gk20a *g,
 					       GPU_LIT_TPC_IN_GPC_STRIDE);
 	int err = 0;
 
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	memset(&gr->sm_error_states[sm_id], 0, sizeof(*gr->sm_error_states));
 
@@ -6122,7 +6122,7 @@ static int gk20a_gr_clear_sm_error_state(struct gk20a *g,
 	err = gr_gk20a_enable_ctxsw(g);
 
 fail:
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	return err;
 }
 
@@ -9128,7 +9128,7 @@ int gr_gk20a_suspend_contexts(struct gk20a *g,
 	struct dbg_session_channel_data *ch_data;
 	int err = 0;
 
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	err = gr_gk20a_disable_ctxsw(g);
 	if (err) {
@@ -9136,7 +9136,7 @@ int gr_gk20a_suspend_contexts(struct gk20a *g,
 		goto clean_up;
 	}
 
-	mutex_lock(&dbg_s->ch_list_lock);
+	nvgpu_mutex_acquire(&dbg_s->ch_list_lock);
 
 	list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry) {
 		ch = g->fifo.channel + ch_data->chid;
@@ -9146,7 +9146,7 @@ int gr_gk20a_suspend_contexts(struct gk20a *g,
 			local_ctx_resident_ch_fd = ch_data->channel_fd;
 	}
 
-	mutex_unlock(&dbg_s->ch_list_lock);
+	nvgpu_mutex_release(&dbg_s->ch_list_lock);
 
 	err = gr_gk20a_enable_ctxsw(g);
 	if (err)
@@ -9155,7 +9155,7 @@ int gr_gk20a_suspend_contexts(struct gk20a *g,
 	*ctx_resident_ch_fd = local_ctx_resident_ch_fd;
 
 clean_up:
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	return err;
 }
@@ -9170,7 +9170,7 @@ int gr_gk20a_resume_contexts(struct gk20a *g,
 	int err = 0;
 	struct dbg_session_channel_data *ch_data;
 
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	err = gr_gk20a_disable_ctxsw(g);
 	if (err) {
@@ -9193,7 +9193,7 @@ int gr_gk20a_resume_contexts(struct gk20a *g,
 	*ctx_resident_ch_fd = local_ctx_resident_ch_fd;
 
 clean_up:
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	return err;
 }

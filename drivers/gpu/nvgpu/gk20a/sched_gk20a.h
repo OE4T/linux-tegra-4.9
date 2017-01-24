@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,11 +21,11 @@ struct tsg_gk20a;
 struct gk20a_sched_ctrl {
 	struct gk20a *g;
 
-	struct mutex control_lock;
+	struct nvgpu_mutex control_lock;
 	bool control_locked;
 	bool sw_ready;
-	struct mutex status_lock;
-	struct mutex busy_lock;
+	struct nvgpu_mutex status_lock;
+	struct nvgpu_mutex busy_lock;
 
 	u64 status;
 

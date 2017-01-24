@@ -421,7 +421,7 @@ void gk20a_debug_init(struct device *dev, const char *debugfs_symlink)
 #endif
 
 #ifdef CONFIG_DEBUG_FS
-	spin_lock_init(&g->debugfs_lock);
+	nvgpu_spinlock_init(&g->debugfs_lock);
 
 	g->mm.ltc_enabled = true;
 	g->mm.ltc_enabled_debug = true;

@@ -346,7 +346,7 @@ int nvgpu_lpwr_enable_pg(struct gk20a *g, bool pstate_lock)
 
 	if (pstate_lock)
 		nvgpu_clk_arb_pstate_change_lock(g, true);
-	mutex_lock(&pmu->pg_mutex);
+	nvgpu_mutex_acquire(&pmu->pg_mutex);
 
 	present_pstate = nvgpu_clk_arb_get_current_pstate(g);
 
@@ -367,7 +367,7 @@ int nvgpu_lpwr_enable_pg(struct gk20a *g, bool pstate_lock)
 			status = gk20a_pmu_enable_elpg(g);
 	}
 
-	mutex_unlock(&pmu->pg_mutex);
+	nvgpu_mutex_release(&pmu->pg_mutex);
 	if (pstate_lock)
 		nvgpu_clk_arb_pstate_change_lock(g, false);
 
@@ -386,7 +386,7 @@ int nvgpu_lpwr_disable_pg(struct gk20a *g, bool pstate_lock)
 
 	if (pstate_lock)
 		nvgpu_clk_arb_pstate_change_lock(g, true);
-	mutex_lock(&pmu->pg_mutex);
+	nvgpu_mutex_acquire(&pmu->pg_mutex);
 
 	present_pstate = nvgpu_clk_arb_get_current_pstate(g);
 
@@ -411,7 +411,7 @@ int nvgpu_lpwr_disable_pg(struct gk20a *g, bool pstate_lock)
 	}
 
 exit_unlock:
-	mutex_unlock(&pmu->pg_mutex);
+	nvgpu_mutex_release(&pmu->pg_mutex);
 	if (pstate_lock)
 		nvgpu_clk_arb_pstate_change_lock(g, false);
 

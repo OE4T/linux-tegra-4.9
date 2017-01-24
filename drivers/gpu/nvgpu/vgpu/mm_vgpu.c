@@ -200,7 +200,7 @@ static void vgpu_vm_remove_support(struct vm_gk20a *vm)
 	int err;
 
 	gk20a_dbg_fn("");
-	mutex_lock(&vm->update_gmmu_lock);
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
 	/* TBD: add a flag here for the unmap code to recognize teardown
 	 * and short-circuit any otherwise expensive operations. */
@@ -231,7 +231,7 @@ static void vgpu_vm_remove_support(struct vm_gk20a *vm)
 	if (nvgpu_alloc_initialized(&vm->user))
 		nvgpu_alloc_destroy(&vm->user);
 
-	mutex_unlock(&vm->update_gmmu_lock);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
 	/* vm is not used anymore. release it. */
 	kfree(vm);
@@ -401,7 +401,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 
 	vm->mapped_buffers = RB_ROOT;
 
-	mutex_init(&vm->update_gmmu_lock);
+	nvgpu_mutex_init(&vm->update_gmmu_lock);
 	kref_init(&vm->ref);
 	INIT_LIST_HEAD(&vm->reserved_va_list);
 

@@ -101,9 +101,9 @@ __acquires(&cde_app->mutex)
 		return;
 
 	if (wait_finish) {
-		mutex_unlock(&cde_app->mutex);
+		nvgpu_mutex_release(&cde_app->mutex);
 		cancel_delayed_work_sync(&cde_ctx->ctx_deleter_work);
-		mutex_lock(&cde_app->mutex);
+		nvgpu_mutex_acquire(&cde_app->mutex);
 	} else {
 		cancel_delayed_work(&cde_ctx->ctx_deleter_work);
 	}
@@ -152,9 +152,9 @@ __releases(&cde_app->mutex)
 	if (!cde_app->initialised)
 		return;
 
-	mutex_lock(&cde_app->mutex);
+	nvgpu_mutex_acquire(&cde_app->mutex);
 	gk20a_cde_stop(g);
-	mutex_unlock(&cde_app->mutex);
+	nvgpu_mutex_release(&cde_app->mutex);
 }
 
 void gk20a_cde_suspend(struct gk20a *g)
@@ -167,7 +167,7 @@ __releases(&cde_app->mutex)
 	if (!cde_app->initialised)
 		return;
 
-	mutex_lock(&cde_app->mutex);
+	nvgpu_mutex_acquire(&cde_app->mutex);
 
 	list_for_each_entry_safe(cde_ctx, cde_ctx_save,
 			&cde_app->free_contexts, list) {
@@ -179,7 +179,7 @@ __releases(&cde_app->mutex)
 		gk20a_cde_cancel_deleter(cde_ctx, false);
 	}
 
-	mutex_unlock(&cde_app->mutex);
+	nvgpu_mutex_release(&cde_app->mutex);
 
 }
 
@@ -739,7 +739,7 @@ __releases(&cde_app->mutex)
 	gk20a_dbg(gpu_dbg_cde_ctx, "releasing use on %p", cde_ctx);
 	trace_gk20a_cde_release(cde_ctx);
 
-	mutex_lock(&cde_app->mutex);
+	nvgpu_mutex_acquire(&cde_app->mutex);
 
 	if (cde_ctx->in_use) {
 		cde_ctx->in_use = false;
@@ -749,7 +749,7 @@ __releases(&cde_app->mutex)
 		gk20a_dbg_info("double release cde context %p", cde_ctx);
 	}
 
-	mutex_unlock(&cde_app->mutex);
+	nvgpu_mutex_release(&cde_app->mutex);
 }
 
 static void gk20a_cde_ctx_deleter_fn(struct work_struct *work)
@@ -779,7 +779,7 @@ __releases(&cde_app->mutex)
 		return;
 	}
 
-	mutex_lock(&cde_app->mutex);
+	nvgpu_mutex_acquire(&cde_app->mutex);
 	if (cde_ctx->in_use || !cde_app->initialised) {
 		gk20a_dbg(gpu_dbg_cde_ctx,
 				"cde: context use raced, not deleting %p",
@@ -797,7 +797,7 @@ __releases(&cde_app->mutex)
 			cde_app->ctx_count_top);
 
 out:
-	mutex_unlock(&cde_app->mutex);
+	nvgpu_mutex_release(&cde_app->mutex);
 	gk20a_idle(dev);
 }
 
@@ -876,9 +876,9 @@ __acquires(&cde_app->mutex)
 			break;
 
 		/* exhausted, retry */
-		mutex_unlock(&cde_app->mutex);
+		nvgpu_mutex_release(&cde_app->mutex);
 		cond_resched();
-		mutex_lock(&cde_app->mutex);
+		nvgpu_mutex_acquire(&cde_app->mutex);
 	} while (!nvgpu_timeout_expired(&timeout));
 
 	return cde_ctx;
@@ -946,7 +946,7 @@ __releases(&cde_app->mutex)
 	    scatterbuffer_byte_offset < compbits_byte_offset)
 		return -EINVAL;
 
-	mutex_lock(&g->cde_app.mutex);
+	nvgpu_mutex_acquire(&g->cde_app.mutex);
 
 	cde_ctx = gk20a_cde_get_context(g);
 	if (IS_ERR(cde_ctx)) {
@@ -1118,7 +1118,7 @@ exit_unlock:
 	if (surface)
 		dma_buf_vunmap(compbits_scatter_buf, surface);
 
-	mutex_unlock(&g->cde_app.mutex);
+	nvgpu_mutex_release(&g->cde_app.mutex);
 	return err;
 }
 
@@ -1155,13 +1155,13 @@ __releases(&cde_app->mutex)
 					"cde: channel had timed out"
 					", reloading");
 			/* mark it to be deleted, replace with a new one */
-			mutex_lock(&cde_app->mutex);
+			nvgpu_mutex_acquire(&cde_app->mutex);
 			cde_ctx->is_temporary = true;
 			if (gk20a_cde_create_context(g)) {
 				gk20a_err(cde_ctx->dev,
 						"cde: can't replace context");
 			}
-			mutex_unlock(&cde_app->mutex);
+			nvgpu_mutex_release(&cde_app->mutex);
 		}
 	}
 
@@ -1274,7 +1274,7 @@ __releases(&cde_app->mutex)
 	if (err)
 		return err;
 
-	mutex_lock(&cde_app->mutex);
+	nvgpu_mutex_acquire(&cde_app->mutex);
 
 	gk20a_cde_stop(g);
 
@@ -1282,7 +1282,7 @@ __releases(&cde_app->mutex)
 	if (!err)
 		cde_app->initialised = true;
 
-	mutex_unlock(&cde_app->mutex);
+	nvgpu_mutex_release(&cde_app->mutex);
 
 	gk20a_idle(g->dev);
 	return err;
@@ -1300,8 +1300,8 @@ __releases(&cde_app->mutex)
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx, "cde: init");
 
-	mutex_init(&cde_app->mutex);
-	mutex_lock(&cde_app->mutex);
+	nvgpu_mutex_init(&cde_app->mutex);
+	nvgpu_mutex_acquire(&cde_app->mutex);
 
 	INIT_LIST_HEAD(&cde_app->free_contexts);
 	INIT_LIST_HEAD(&cde_app->used_contexts);
@@ -1313,7 +1313,7 @@ __releases(&cde_app->mutex)
 	if (!err)
 		cde_app->initialised = true;
 
-	mutex_unlock(&cde_app->mutex);
+	nvgpu_mutex_release(&cde_app->mutex);
 	gk20a_dbg(gpu_dbg_cde_ctx, "cde: init finished: %d", err);
 	return err;
 }
@@ -1561,7 +1561,7 @@ int gk20a_prepare_compressible_read(
 
 	missing_bits = (state->valid_compbits ^ request) & request;
 
-	mutex_lock(&state->lock);
+	nvgpu_mutex_acquire(&state->lock);
 
 	if (state->valid_compbits && request == NVGPU_GPU_COMPBITS_NONE) {
 
@@ -1599,7 +1599,7 @@ int gk20a_prepare_compressible_read(
 		*zbc_color = state->zbc_color;
 
 out:
-	mutex_unlock(&state->lock);
+	nvgpu_mutex_release(&state->lock);
 	dma_buf_put(dmabuf);
 	return err;
 }
@@ -1624,7 +1624,7 @@ int gk20a_mark_compressible_write(struct gk20a *g, u32 buffer_fd,
 		return err;
 	}
 
-	mutex_lock(&state->lock);
+	nvgpu_mutex_acquire(&state->lock);
 
 	/* Update the compbits state. */
 	state->valid_compbits = valid_compbits;
@@ -1634,7 +1634,7 @@ int gk20a_mark_compressible_write(struct gk20a *g, u32 buffer_fd,
 	gk20a_fence_put(state->fence);
 	state->fence = NULL;
 
-	mutex_unlock(&state->lock);
+	nvgpu_mutex_release(&state->lock);
 	dma_buf_put(dmabuf);
 	return 0;
 }

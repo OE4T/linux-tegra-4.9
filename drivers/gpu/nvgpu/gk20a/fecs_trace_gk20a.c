@@ -60,8 +60,8 @@ struct gk20a_fecs_trace {
 
 	struct mem_desc trace_buf;
 	DECLARE_HASHTABLE(pid_hash_table, GK20A_FECS_TRACE_HASH_BITS);
-	struct mutex hash_lock;
-	struct mutex poll_lock;
+	struct nvgpu_mutex hash_lock;
+	struct nvgpu_mutex poll_lock;
 	struct task_struct *poll_task;
 };
 
@@ -133,14 +133,14 @@ void gk20a_fecs_trace_hash_dump(struct gk20a *g)
 
 	gk20a_dbg(gpu_dbg_ctxsw, "dumping hash table");
 
-	mutex_lock(&trace->hash_lock);
+	nvgpu_mutex_acquire(&trace->hash_lock);
 	hash_for_each(trace->pid_hash_table, bkt, ent, node)
 	{
 		gk20a_dbg(gpu_dbg_ctxsw, " ent=%p bkt=%x context_ptr=%x pid=%d",
 			ent, bkt, ent->context_ptr, ent->pid);
 
 	}
-	mutex_unlock(&trace->hash_lock);
+	nvgpu_mutex_release(&trace->hash_lock);
 }
 
 static int gk20a_fecs_trace_hash_add(struct gk20a *g, u32 context_ptr, pid_t pid)
@@ -161,9 +161,9 @@ static int gk20a_fecs_trace_hash_add(struct gk20a *g, u32 context_ptr, pid_t pid
 
 	he->context_ptr = context_ptr;
 	he->pid = pid;
-	mutex_lock(&trace->hash_lock);
+	nvgpu_mutex_acquire(&trace->hash_lock);
 	hash_add(trace->pid_hash_table, &he->node, context_ptr);
-	mutex_unlock(&trace->hash_lock);
+	nvgpu_mutex_release(&trace->hash_lock);
 	return 0;
 }
 
@@ -176,7 +176,7 @@ static void gk20a_fecs_trace_hash_del(struct gk20a *g, u32 context_ptr)
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_ctxsw,
 		"freeing hash entry context_ptr=%x", context_ptr);
 
-	mutex_lock(&trace->hash_lock);
+	nvgpu_mutex_acquire(&trace->hash_lock);
 	hash_for_each_possible_safe(trace->pid_hash_table, ent, tmp, node,
 		context_ptr) {
 		if (ent->context_ptr == context_ptr) {
@@ -188,7 +188,7 @@ static void gk20a_fecs_trace_hash_del(struct gk20a *g, u32 context_ptr)
 			break;
 		}
 	}
-	mutex_unlock(&trace->hash_lock);
+	nvgpu_mutex_release(&trace->hash_lock);
 }
 
 static void gk20a_fecs_trace_free_hash_table(struct gk20a *g)
@@ -200,12 +200,12 @@ static void gk20a_fecs_trace_free_hash_table(struct gk20a *g)
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_ctxsw, "trace=%p", trace);
 
-	mutex_lock(&trace->hash_lock);
+	nvgpu_mutex_acquire(&trace->hash_lock);
 	hash_for_each_safe(trace->pid_hash_table, bkt, tmp, ent, node) {
 		hash_del(&ent->node);
 		kfree(ent);
 	}
-	mutex_unlock(&trace->hash_lock);
+	nvgpu_mutex_release(&trace->hash_lock);
 
 }
 
@@ -215,7 +215,7 @@ static pid_t gk20a_fecs_trace_find_pid(struct gk20a *g, u32 context_ptr)
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 	pid_t pid = 0;
 
-	mutex_lock(&trace->hash_lock);
+	nvgpu_mutex_acquire(&trace->hash_lock);
 	hash_for_each_possible(trace->pid_hash_table, ent, node, context_ptr) {
 		if (ent->context_ptr == context_ptr) {
 			gk20a_dbg(gpu_dbg_ctxsw,
@@ -225,7 +225,7 @@ static pid_t gk20a_fecs_trace_find_pid(struct gk20a *g, u32 context_ptr)
 			break;
 		}
 	}
-	mutex_unlock(&trace->hash_lock);
+	nvgpu_mutex_release(&trace->hash_lock);
 
 	return pid;
 }
@@ -336,7 +336,7 @@ static int gk20a_fecs_trace_poll(struct gk20a *g)
 	if (unlikely(err))
 		return err;
 
-	mutex_lock(&trace->poll_lock);
+	nvgpu_mutex_acquire(&trace->poll_lock);
 	write = gk20a_fecs_trace_get_write_index(g);
 	if (unlikely((write < 0) || (write >= GK20A_FECS_TRACE_NUM_RECORDS))) {
 		gk20a_err(dev_from_gk20a(g),
@@ -371,7 +371,7 @@ static int gk20a_fecs_trace_poll(struct gk20a *g)
 	gk20a_fecs_trace_set_read_index(g, read);
 
 done:
-	mutex_unlock(&trace->poll_lock);
+	nvgpu_mutex_release(&trace->poll_lock);
 	gk20a_idle(g->dev);
 	return err;
 }
@@ -580,8 +580,8 @@ static int gk20a_fecs_trace_init(struct gk20a *g)
 		goto clean;
 	}
 
-	mutex_init(&trace->poll_lock);
-	mutex_init(&trace->hash_lock);
+	nvgpu_mutex_init(&trace->poll_lock);
+	nvgpu_mutex_init(&trace->hash_lock);
 	hash_init(trace->pid_hash_table);
 
 	gk20a_fecs_trace_debugfs_init(g);

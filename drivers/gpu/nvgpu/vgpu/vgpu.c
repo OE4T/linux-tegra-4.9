@@ -250,9 +250,9 @@ static int vgpu_init_support(struct platform_device *pdev)
 	}
 	g->bar1_mem = r;
 
-	mutex_init(&g->dbg_sessions_lock);
-	mutex_init(&g->client_lock);
-	mutex_init(&g->ch_wdt_lock);
+	nvgpu_mutex_init(&g->dbg_sessions_lock);
+	nvgpu_mutex_init(&g->client_lock);
+	nvgpu_mutex_init(&g->ch_wdt_lock);
 
 	g->dbg_regops_tmp_buf = kzalloc(SZ_4K, GFP_KERNEL);
 	if (!g->dbg_regops_tmp_buf) {
@@ -576,7 +576,7 @@ int vgpu_probe(struct platform_device *pdev)
 
 	init_rwsem(&gk20a->busy_lock);
 
-	spin_lock_init(&gk20a->mc_enable_lock);
+	nvgpu_spinlock_init(&gk20a->mc_enable_lock);
 
 	/* Initialize the platform interface. */
 	err = platform->probe(dev);

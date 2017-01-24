@@ -1997,16 +1997,16 @@ static int gr_gp10b_suspend_contexts(struct gk20a *g,
 	int local_ctx_resident_ch_fd = -1;
 	bool ctx_resident;
 
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	err = gr_gk20a_disable_ctxsw(g);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g), "unable to stop gr ctxsw");
-		mutex_unlock(&g->dbg_sessions_lock);
+		nvgpu_mutex_release(&g->dbg_sessions_lock);
 		goto clean_up;
 	}
 
-	mutex_lock(&dbg_s->ch_list_lock);
+	nvgpu_mutex_acquire(&dbg_s->ch_list_lock);
 
 	list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry) {
 		ch = g->fifo.channel + ch_data->chid;
@@ -2019,15 +2019,15 @@ static int gr_gp10b_suspend_contexts(struct gk20a *g,
 			cilp_preempt_pending_ch = ch;
 	}
 
-	mutex_unlock(&dbg_s->ch_list_lock);
+	nvgpu_mutex_release(&dbg_s->ch_list_lock);
 
 	err = gr_gk20a_enable_ctxsw(g);
 	if (err) {
-		mutex_unlock(&g->dbg_sessions_lock);
+		nvgpu_mutex_release(&g->dbg_sessions_lock);
 		goto clean_up;
 	}
 
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	if (cilp_preempt_pending_ch) {
 		struct channel_ctx_gk20a *ch_ctx =

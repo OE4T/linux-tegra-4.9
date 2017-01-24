@@ -1,7 +1,7 @@
 /*
  * general p state infrastructure
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -333,7 +333,7 @@ static int pstate_sw_setup(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	init_waitqueue_head(&g->perf_pmu.pstatesobjs.pstate_notifier_wq);
-	mutex_init(&g->perf_pmu.pstatesobjs.pstate_mutex);
+	nvgpu_mutex_init(&g->perf_pmu.pstatesobjs.pstate_mutex);
 
 	err = boardobjgrpconstruct_e32(&g->perf_pmu.pstatesobjs.super);
 	if (err) {

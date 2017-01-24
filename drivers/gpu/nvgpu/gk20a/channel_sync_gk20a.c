@@ -414,9 +414,9 @@ struct wait_fence_work {
 static void gk20a_add_pending_sema_wait(struct gk20a *g,
 					struct wait_fence_work *work)
 {
-	raw_spin_lock(&g->pending_sema_waits_lock);
+	nvgpu_raw_spinlock_acquire(&g->pending_sema_waits_lock);
 	list_add(&work->entry, &g->pending_sema_waits);
-	raw_spin_unlock(&g->pending_sema_waits_lock);
+	nvgpu_raw_spinlock_release(&g->pending_sema_waits_lock);
 }
 
 /*
@@ -426,9 +426,9 @@ static void gk20a_add_pending_sema_wait(struct gk20a *g,
 static void gk20a_start_sema_wait_cancel(struct gk20a *g,
 					 struct list_head *list)
 {
-	raw_spin_lock(&g->pending_sema_waits_lock);
+	nvgpu_raw_spinlock_acquire(&g->pending_sema_waits_lock);
 	list_replace_init(&g->pending_sema_waits, list);
-	raw_spin_unlock(&g->pending_sema_waits_lock);
+	nvgpu_raw_spinlock_release(&g->pending_sema_waits_lock);
 }
 
 /*
@@ -486,10 +486,10 @@ static void gk20a_channel_semaphore_launcher(
 	 * This spinlock must protect a _very_ small critical section -
 	 * otherwise it's possible that the deterministic submit path suffers.
 	 */
-	raw_spin_lock(&g->pending_sema_waits_lock);
+	nvgpu_raw_spinlock_acquire(&g->pending_sema_waits_lock);
 	if (!list_empty(&g->pending_sema_waits))
 		list_del_init(&w->entry);
-	raw_spin_unlock(&g->pending_sema_waits_lock);
+	nvgpu_raw_spinlock_release(&g->pending_sema_waits_lock);
 
 	gk20a_dbg_info("waiting for pre fence %p '%s'",
 			fence, fence->name);

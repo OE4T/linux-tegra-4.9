@@ -1,7 +1,7 @@
 /*
  * general p state infrastructure
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -50,7 +50,7 @@ struct pstates {
 	u32  num_levels;
 	wait_queue_head_t pstate_notifier_wq;
 	u32 is_pstate_switch_on;
-	struct mutex pstate_mutex; /* protect is_pstate_switch_on */
+	struct nvgpu_mutex pstate_mutex; /* protect is_pstate_switch_on */
 };
 
 int gk20a_init_pstate_support(struct gk20a *g);

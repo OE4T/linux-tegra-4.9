@@ -1191,7 +1191,7 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	}
 #endif
 
-	mutex_init(&clk->clk_mutex);
+	nvgpu_mutex_init(&clk->clk_mutex);
 
 	clk->sw_ready = true;
 
@@ -1212,10 +1212,10 @@ static int gm20b_clk_prepare(struct clk_hw *hw)
 	struct clk_gk20a *clk = to_clk_gk20a(hw);
 	int ret = 0;
 
-	mutex_lock(&clk->clk_mutex);
+	nvgpu_mutex_acquire(&clk->clk_mutex);
 	if (!clk->gpc_pll.enabled && clk->clk_hw_on)
 		ret = set_pll_freq(clk->g, 1);
-	mutex_unlock(&clk->clk_mutex);
+	nvgpu_mutex_release(&clk->clk_mutex);
 	return ret;
 }
 
@@ -1223,10 +1223,10 @@ static void gm20b_clk_unprepare(struct clk_hw *hw)
 {
 	struct clk_gk20a *clk = to_clk_gk20a(hw);
 
-	mutex_lock(&clk->clk_mutex);
+	nvgpu_mutex_acquire(&clk->clk_mutex);
 	if (clk->gpc_pll.enabled && clk->clk_hw_on)
 		clk_disable_gpcpll(clk->g, 1);
-	mutex_unlock(&clk->clk_mutex);
+	nvgpu_mutex_release(&clk->clk_mutex);
 }
 
 static int gm20b_clk_is_prepared(struct clk_hw *hw)
@@ -1250,12 +1250,12 @@ static int gm20b_gpcclk_set_rate(struct clk_hw *hw, unsigned long rate,
 	u32 old_freq;
 	int ret = -ENODATA;
 
-	mutex_lock(&clk->clk_mutex);
+	nvgpu_mutex_acquire(&clk->clk_mutex);
 	old_freq = clk->gpc_pll.freq;
 	ret = set_pll_target(clk->g, rate_gpu_to_gpc2clk(rate), old_freq);
 	if (!ret && clk->gpc_pll.enabled && clk->clk_hw_on)
 		ret = set_pll_freq(clk->g, 1);
-	mutex_unlock(&clk->clk_mutex);
+	nvgpu_mutex_release(&clk->clk_mutex);
 
 	return ret;
 }
@@ -1272,7 +1272,7 @@ static long gm20b_round_rate(struct clk_hw *hw, unsigned long rate,
 	if (rate > maxrate)
 		rate = maxrate;
 
-	mutex_lock(&clk->clk_mutex);
+	nvgpu_mutex_acquire(&clk->clk_mutex);
 	freq = rate_gpu_to_gpc2clk(rate);
 	if (freq > gpc_pll_params.max_freq)
 		freq = gpc_pll_params.max_freq;
@@ -1281,7 +1281,7 @@ static long gm20b_round_rate(struct clk_hw *hw, unsigned long rate,
 
 	tmp_pll = clk->gpc_pll;
 	clk_config_pll(clk, &tmp_pll, &gpc_pll_params, &freq, true);
-	mutex_unlock(&clk->clk_mutex);
+	nvgpu_mutex_release(&clk->clk_mutex);
 
 	return rate_gpc2clk_to_gpu(tmp_pll.freq);
 }
@@ -1445,14 +1445,14 @@ static int gm20b_clk_export_set_rate(void *data, unsigned long *rate)
 	struct clk_gk20a *clk = &g->clk;
 
 	if (rate) {
-		mutex_lock(&clk->clk_mutex);
+		nvgpu_mutex_acquire(&clk->clk_mutex);
 		old_freq = clk->gpc_pll.freq;
 		ret = set_pll_target(g, rate_gpu_to_gpc2clk(*rate), old_freq);
 		if (!ret && clk->gpc_pll.enabled && clk->clk_hw_on)
 			ret = set_pll_freq(g, 1);
 		if (!ret)
 			*rate = rate_gpc2clk_to_gpu(clk->gpc_pll.freq);
-		mutex_unlock(&clk->clk_mutex);
+		nvgpu_mutex_release(&clk->clk_mutex);
 	}
 	return ret;
 }
@@ -1463,10 +1463,10 @@ static int gm20b_clk_export_enable(void *data)
 	struct gk20a *g = data;
 	struct clk_gk20a *clk = &g->clk;
 
-	mutex_lock(&clk->clk_mutex);
+	nvgpu_mutex_acquire(&clk->clk_mutex);
 	if (!clk->gpc_pll.enabled && clk->clk_hw_on)
 		ret = set_pll_freq(g, 1);
-	mutex_unlock(&clk->clk_mutex);
+	nvgpu_mutex_release(&clk->clk_mutex);
 	return ret;
 }
 
@@ -1475,10 +1475,10 @@ static void gm20b_clk_export_disable(void *data)
 	struct gk20a *g = data;
 	struct clk_gk20a *clk = &g->clk;
 
-	mutex_lock(&clk->clk_mutex);
+	nvgpu_mutex_acquire(&clk->clk_mutex);
 	if (clk->gpc_pll.enabled && clk->clk_hw_on)
 		clk_disable_gpcpll(g, 1);
-	mutex_unlock(&clk->clk_mutex);
+	nvgpu_mutex_release(&clk->clk_mutex);
 }
 
 static void gm20b_clk_export_init(void *data, unsigned long *rate, bool *state)
@@ -1486,12 +1486,12 @@ static void gm20b_clk_export_init(void *data, unsigned long *rate, bool *state)
 	struct gk20a *g = data;
 	struct clk_gk20a *clk = &g->clk;
 
-	mutex_lock(&clk->clk_mutex);
+	nvgpu_mutex_acquire(&clk->clk_mutex);
 	if (state)
 		*state = clk->gpc_pll.enabled;
 	if (rate)
 		*rate = rate_gpc2clk_to_gpu(clk->gpc_pll.freq);
-	mutex_unlock(&clk->clk_mutex);
+	nvgpu_mutex_release(&clk->clk_mutex);
 }
 
 static struct tegra_clk_export_ops gm20b_clk_export_ops = {
@@ -1539,11 +1539,11 @@ static int gm20b_init_clk_support(struct gk20a *g)
 		return err;
 #endif
 
-	mutex_lock(&clk->clk_mutex);
+	nvgpu_mutex_acquire(&clk->clk_mutex);
 	clk->clk_hw_on = true;
 
 	err = gm20b_init_clk_setup_hw(g);
-	mutex_unlock(&clk->clk_mutex);
+	nvgpu_mutex_release(&clk->clk_mutex);
 	if (err)
 		return err;
 
@@ -1559,10 +1559,10 @@ static int gm20b_init_clk_support(struct gk20a *g)
 		return err;
 
 	/* The prev call may not enable PLL if gbus is unbalanced - force it */
-	mutex_lock(&clk->clk_mutex);
+	nvgpu_mutex_acquire(&clk->clk_mutex);
 	if (!clk->gpc_pll.enabled)
 		err = set_pll_freq(g, 1);
-	mutex_unlock(&clk->clk_mutex);
+	nvgpu_mutex_release(&clk->clk_mutex);
 	if (err)
 		return err;
 
@@ -1582,11 +1582,11 @@ static int gm20b_suspend_clk_support(struct gk20a *g)
 	clk_disable_unprepare(g->clk.tegra_clk);
 
 	/* The prev call may not disable PLL if gbus is unbalanced - force it */
-	mutex_lock(&g->clk.clk_mutex);
+	nvgpu_mutex_acquire(&g->clk.clk_mutex);
 	if (g->clk.gpc_pll.enabled)
 		ret = clk_disable_gpcpll(g, 1);
 	g->clk.clk_hw_on = false;
-	mutex_unlock(&g->clk.clk_mutex);
+	nvgpu_mutex_release(&g->clk.clk_mutex);
 	return ret;
 }
 
@@ -1616,11 +1616,11 @@ static int pll_reg_show(struct seq_file *s, void *data)
 	struct gk20a *g = s->private;
 	u32 reg, m, n, pl, f;
 
-	mutex_lock(&g->clk.clk_mutex);
+	nvgpu_mutex_acquire(&g->clk.clk_mutex);
 	if (!g->clk.clk_hw_on) {
 		seq_printf(s, "%s powered down - no access to registers\n",
 			   dev_name(dev_from_gk20a(g)));
-		mutex_unlock(&g->clk.clk_mutex);
+		nvgpu_mutex_release(&g->clk.clk_mutex);
 		return 0;
 	}
 
@@ -1642,7 +1642,7 @@ static int pll_reg_show(struct seq_file *s, void *data)
 	f = g->clk.gpc_pll.clk_in * n / (m * pl_to_div(pl));
 	seq_printf(s, "coef = 0x%x : m = %u : n = %u : pl = %u", reg, m, n, pl);
 	seq_printf(s, " : pll_f(gpu_f) = %u(%u) kHz\n", f, f/2);
-	mutex_unlock(&g->clk.clk_mutex);
+	nvgpu_mutex_release(&g->clk.clk_mutex);
 	return 0;
 }
 
@@ -1663,11 +1663,11 @@ static int pll_reg_raw_show(struct seq_file *s, void *data)
 	struct gk20a *g = s->private;
 	u32 reg;
 
-	mutex_lock(&g->clk.clk_mutex);
+	nvgpu_mutex_acquire(&g->clk.clk_mutex);
 	if (!g->clk.clk_hw_on) {
 		seq_printf(s, "%s powered down - no access to registers\n",
 			   dev_name(dev_from_gk20a(g)));
-		mutex_unlock(&g->clk.clk_mutex);
+		nvgpu_mutex_release(&g->clk.clk_mutex);
 		return 0;
 	}
 
@@ -1685,7 +1685,7 @@ static int pll_reg_raw_show(struct seq_file *s, void *data)
 	reg = trim_sys_bypassctrl_r();
 	seq_printf(s, "[0x%02x] = 0x%08x\n", reg, gk20a_readl(g, reg));
 
-	mutex_unlock(&g->clk.clk_mutex);
+	nvgpu_mutex_release(&g->clk.clk_mutex);
 	return 0;
 }
 
@@ -1722,13 +1722,13 @@ static ssize_t pll_reg_raw_write(struct file *file,
 	    (reg != trim_sys_bypassctrl_r()))
 		return -EPERM;
 
-	mutex_lock(&g->clk.clk_mutex);
+	nvgpu_mutex_acquire(&g->clk.clk_mutex);
 	if (!g->clk.clk_hw_on) {
-		mutex_unlock(&g->clk.clk_mutex);
+		nvgpu_mutex_release(&g->clk.clk_mutex);
 		return -EBUSY;
 	}
 	gk20a_writel(g, reg, val);
-	mutex_unlock(&g->clk.clk_mutex);
+	nvgpu_mutex_release(&g->clk.clk_mutex);
 	return count;
 }
 
@@ -1755,7 +1755,7 @@ static int monitor_get(void *data, u64 *val)
 	if (err)
 		return err;
 
-	mutex_lock(&g->clk.clk_mutex);
+	nvgpu_mutex_acquire(&g->clk.clk_mutex);
 
 	/* Disable clock slowdown during measurements */
 	clk_slowdown_save = gk20a_readl(g, therm_clk_slowdown_r(0));
@@ -1787,7 +1787,7 @@ static int monitor_get(void *data, u64 *val)
 
 	/* Restore clock slowdown */
 	gk20a_writel(g, therm_clk_slowdown_r(0), clk_slowdown_save);
-	mutex_unlock(&g->clk.clk_mutex);
+	nvgpu_mutex_release(&g->clk.clk_mutex);
 
 	gk20a_idle(g->dev);
 
@@ -1811,14 +1811,14 @@ static int voltage_get(void *data, u64 *val)
 	if (err)
 		return err;
 
-	mutex_lock(&g->clk.clk_mutex);
+	nvgpu_mutex_acquire(&g->clk.clk_mutex);
 
 	det_out = gk20a_readl(g, trim_sys_gpcpll_cfg3_r());
 	det_out = trim_sys_gpcpll_cfg3_dfs_testout_v(det_out);
 	*val = div64_u64((u64)det_out * gpc_pll_params.uvdet_slope +
 		gpc_pll_params.uvdet_offs, 1000ULL);
 
-	mutex_unlock(&g->clk.clk_mutex);
+	nvgpu_mutex_release(&g->clk.clk_mutex);
 
 	gk20a_idle(g->dev);
 	return 0;

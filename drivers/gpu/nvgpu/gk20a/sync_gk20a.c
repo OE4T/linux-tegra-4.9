@@ -20,8 +20,7 @@
 #include <linux/hrtimer.h>
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/spinlock.h>
-
+#include <nvgpu/lock.h>
 #include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/semaphore.h>
@@ -55,7 +54,7 @@ struct gk20a_sync_pt {
 	 * than a mutex - there should be very little contention on this
 	 * lock.
 	 */
-	spinlock_t			lock;
+	struct nvgpu_spinlock			lock;
 };
 
 struct gk20a_sync_pt_inst {
@@ -242,7 +241,7 @@ static struct gk20a_sync_pt *gk20a_sync_pt_create_shared(
 		}
 	}
 
-	spin_lock_init(&shared->lock);
+	nvgpu_spinlock_init(&shared->lock);
 
 	nvgpu_semaphore_get(sema);
 
@@ -304,7 +303,7 @@ static int gk20a_sync_pt_has_signaled(struct sync_pt *sync_pt)
 #endif
 	bool signaled = true;
 
-	spin_lock(&pt->lock);
+	nvgpu_spinlock_acquire(&pt->lock);
 	if (!pt->sema)
 		goto done;
 
@@ -345,7 +344,7 @@ static int gk20a_sync_pt_has_signaled(struct sync_pt *sync_pt)
 		pt->sema = NULL;
 	}
 done:
-	spin_unlock(&pt->lock);
+	nvgpu_spinlock_release(&pt->lock);
 
 	return signaled;
 }

@@ -2185,8 +2185,8 @@ int clk_mclkseq_init_mclk_gddr5(struct gk20a *g)
 
 	mclk = &g->clk_pmu.clk_mclk;
 
-	mutex_init(&mclk->mclk_lock);
-	mutex_init(&mclk->data_lock);
+	nvgpu_mutex_init(&mclk->mclk_lock);
+	nvgpu_mutex_init(&mclk->data_lock);
 
 	/* FBPA gain WAR */
 	gk20a_writel(g, fb_fbpa_fbio_iref_byte_rx_ctrl_r(), 0x22222222);
@@ -2257,7 +2257,7 @@ int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, u16 val)
 
 	mclk = &g->clk_pmu.clk_mclk;
 
-	mutex_lock(&mclk->mclk_lock);
+	nvgpu_mutex_acquire(&mclk->mclk_lock);
 
 	if (!mclk->init)
 		goto exit_status;
@@ -2364,7 +2364,7 @@ int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, u16 val)
 #ifdef CONFIG_DEBUG_FS
 	g->ops.read_ptimer(g, &t1);
 
-	mutex_lock(&mclk->data_lock);
+	nvgpu_mutex_acquire(&mclk->data_lock);
 	mclk->switch_num++;
 
 	if (mclk->switch_num == 1) {
@@ -2387,11 +2387,11 @@ int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, u16 val)
 		mclk->switch_std +=
 			(curr - mclk->switch_avg) * (curr - prev_avg);
 	}
-	mutex_unlock(&mclk->data_lock);
+	nvgpu_mutex_release(&mclk->data_lock);
 #endif
 exit_status:
 
-	mutex_unlock(&mclk->mclk_lock);
+	nvgpu_mutex_release(&mclk->mclk_lock);
 	return status;
 }
 
@@ -2429,13 +2429,13 @@ static int mclk_switch_stats_show(struct seq_file *s, void *unused)
 	mclk = &g->clk_pmu.clk_mclk;
 
 	/* Make copy of structure to reduce time with lock held */
-	mutex_lock(&mclk->data_lock);
+	nvgpu_mutex_acquire(&mclk->data_lock);
 	std = mclk->switch_std;
 	avg = mclk->switch_avg;
 	max = mclk->switch_max;
 	min = mclk->switch_min;
 	num = mclk->switch_num;
-	mutex_unlock(&mclk->data_lock);
+	nvgpu_mutex_release(&mclk->data_lock);
 
 	tmp = std;
 	do_div(tmp, num);

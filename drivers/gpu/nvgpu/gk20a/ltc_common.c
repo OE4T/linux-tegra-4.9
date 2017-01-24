@@ -3,7 +3,7 @@
  *
  * GK20A Graphics
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -138,7 +138,7 @@ static void gk20a_ltc_sync_debugfs(struct gk20a *g)
 {
 	u32 reg_f = ltc_ltcs_ltss_tstg_set_mgmt_2_l2_bypass_mode_enabled_f();
 
-	spin_lock(&g->debugfs_lock);
+	nvgpu_spinlock_acquire(&g->debugfs_lock);
 	if (g->mm.ltc_enabled != g->mm.ltc_enabled_debug) {
 		u32 reg = gk20a_readl(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r());
 		if (g->mm.ltc_enabled_debug)
@@ -151,6 +151,6 @@ static void gk20a_ltc_sync_debugfs(struct gk20a *g)
 		gk20a_writel(g, ltc_ltcs_ltss_tstg_set_mgmt_2_r(), reg);
 		g->mm.ltc_enabled = g->mm.ltc_enabled_debug;
 	}
-	spin_unlock(&g->debugfs_lock);
+	nvgpu_spinlock_release(&g->debugfs_lock);
 }
 #endif

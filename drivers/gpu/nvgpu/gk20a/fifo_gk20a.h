@@ -41,7 +41,7 @@ struct fifo_runlist_info_gk20a {
 	u32  total_entries;
 	bool stopped;
 	bool support_tsg;
-	struct mutex mutex; /* protect channel preempt and runlist upate */
+	struct nvgpu_mutex mutex; /* protect channel preempt and runlist update */
 };
 
 enum {
@@ -120,18 +120,18 @@ struct fifo_gk20a {
 	struct channel_gk20a *channel;
 	/* zero-kref'd channels here */
 	struct list_head free_chs;
-	struct mutex free_chs_mutex;
-	struct mutex gr_reset_mutex;
+	struct nvgpu_mutex free_chs_mutex;
+	struct nvgpu_mutex gr_reset_mutex;
 
 	struct tsg_gk20a *tsg;
-	struct mutex tsg_inuse_mutex;
+	struct nvgpu_mutex tsg_inuse_mutex;
 
 	void (*remove_support)(struct fifo_gk20a *);
 	bool sw_ready;
 	struct {
 		/* share info between isrs and non-isr code */
 		struct {
-			struct mutex mutex;
+			struct nvgpu_mutex mutex;
 		} isr;
 		struct {
 			u32 device_fatal_0;
@@ -147,7 +147,7 @@ struct fifo_gk20a {
 
 	unsigned long deferred_fault_engines;
 	bool deferred_reset_pending;
-	struct mutex deferred_reset_mutex;
+	struct nvgpu_mutex deferred_reset_mutex;
 };
 
 static inline const char *gk20a_fifo_interleave_level_name(u32 interleave_level)

@@ -47,7 +47,7 @@ struct gk20a_ctxsw_dev {
 
 	atomic_t vma_ref;
 
-	struct mutex write_lock;
+	struct nvgpu_mutex write_lock;
 };
 
 
@@ -83,16 +83,16 @@ ssize_t gk20a_ctxsw_dev_read(struct file *filp, char __user *buf, size_t size,
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw,
 		"filp=%p buf=%p size=%zu", filp, buf, size);
 
-	mutex_lock(&dev->write_lock);
+	nvgpu_mutex_acquire(&dev->write_lock);
 	while (ring_is_empty(hdr)) {
-		mutex_unlock(&dev->write_lock);
+		nvgpu_mutex_release(&dev->write_lock);
 		if (filp->f_flags & O_NONBLOCK)
 			return -EAGAIN;
 		err = wait_event_interruptible(dev->readout_wq,
 			!ring_is_empty(hdr));
 		if (err)
 			return err;
-		mutex_lock(&dev->write_lock);
+		nvgpu_mutex_acquire(&dev->write_lock);
 	}
 
 	while (size >= sizeof(struct nvgpu_ctxsw_trace_entry)) {
@@ -101,7 +101,7 @@ ssize_t gk20a_ctxsw_dev_read(struct file *filp, char __user *buf, size_t size,
 
 		if (copy_to_user(entry, &dev->ents[hdr->read_idx],
 			sizeof(*entry))) {
-			mutex_unlock(&dev->write_lock);
+			nvgpu_mutex_release(&dev->write_lock);
 			return -EFAULT;
 		}
 
@@ -118,7 +118,7 @@ ssize_t gk20a_ctxsw_dev_read(struct file *filp, char __user *buf, size_t size,
 		hdr->read_idx);
 
 	*off = hdr->read_idx;
-	mutex_unlock(&dev->write_lock);
+	nvgpu_mutex_release(&dev->write_lock);
 
 	return copied;
 }
@@ -126,9 +126,9 @@ ssize_t gk20a_ctxsw_dev_read(struct file *filp, char __user *buf, size_t size,
 static int gk20a_ctxsw_dev_ioctl_trace_enable(struct gk20a_ctxsw_dev *dev)
 {
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "trace enabled");
-	mutex_lock(&dev->write_lock);
+	nvgpu_mutex_acquire(&dev->write_lock);
 	dev->write_enabled = true;
-	mutex_unlock(&dev->write_lock);
+	nvgpu_mutex_release(&dev->write_lock);
 	dev->g->ops.fecs_trace.enable(dev->g);
 	return 0;
 }
@@ -137,9 +137,9 @@ static int gk20a_ctxsw_dev_ioctl_trace_disable(struct gk20a_ctxsw_dev *dev)
 {
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "trace disabled");
 	dev->g->ops.fecs_trace.disable(dev->g);
-	mutex_lock(&dev->write_lock);
+	nvgpu_mutex_acquire(&dev->write_lock);
 	dev->write_enabled = false;
-	mutex_unlock(&dev->write_lock);
+	nvgpu_mutex_release(&dev->write_lock);
 	return 0;
 }
 
@@ -211,9 +211,9 @@ static int gk20a_ctxsw_dev_ioctl_ring_setup(struct gk20a_ctxsw_dev *dev,
 	if (size > GK20A_CTXSW_TRACE_MAX_VM_RING_SIZE)
 		return -EINVAL;
 
-	mutex_lock(&dev->write_lock);
+	nvgpu_mutex_acquire(&dev->write_lock);
 	ret = gk20a_ctxsw_dev_alloc_buffer(dev, size);
-	mutex_unlock(&dev->write_lock);
+	nvgpu_mutex_release(&dev->write_lock);
 
 	return ret;
 }
@@ -223,9 +223,9 @@ static int gk20a_ctxsw_dev_ioctl_set_filter(struct gk20a_ctxsw_dev *dev,
 {
 	struct gk20a *g = dev->g;
 
-	mutex_lock(&dev->write_lock);
+	nvgpu_mutex_acquire(&dev->write_lock);
 	dev->filter = args->filter;
-	mutex_unlock(&dev->write_lock);
+	nvgpu_mutex_release(&dev->write_lock);
 
 	if (g->ops.fecs_trace.set_filter)
 		g->ops.fecs_trace.set_filter(g, &dev->filter);
@@ -235,9 +235,9 @@ static int gk20a_ctxsw_dev_ioctl_set_filter(struct gk20a_ctxsw_dev *dev,
 static int gk20a_ctxsw_dev_ioctl_get_filter(struct gk20a_ctxsw_dev *dev,
 	struct nvgpu_ctxsw_trace_filter_args *args)
 {
-	mutex_lock(&dev->write_lock);
+	nvgpu_mutex_acquire(&dev->write_lock);
 	args->filter = dev->filter;
-	mutex_unlock(&dev->write_lock);
+	nvgpu_mutex_release(&dev->write_lock);
 
 	return 0;
 }
@@ -293,7 +293,7 @@ int gk20a_ctxsw_dev_open(struct inode *inode, struct file *filp)
 
 	/* Allow only one user for this device */
 	dev = &trace->devs[vmid];
-	mutex_lock(&dev->write_lock);
+	nvgpu_mutex_acquire(&dev->write_lock);
 	if (dev->hdr) {
 		err = -EBUSY;
 		goto done;
@@ -321,7 +321,7 @@ int gk20a_ctxsw_dev_open(struct inode *inode, struct file *filp)
 	}
 
 done:
-	mutex_unlock(&dev->write_lock);
+	nvgpu_mutex_release(&dev->write_lock);
 
 idle:
 	gk20a_idle(g->dev);
@@ -338,9 +338,9 @@ int gk20a_ctxsw_dev_release(struct inode *inode, struct file *filp)
 
 	g->ops.fecs_trace.disable(g);
 
-	mutex_lock(&dev->write_lock);
+	nvgpu_mutex_acquire(&dev->write_lock);
 	dev->write_enabled = false;
-	mutex_unlock(&dev->write_lock);
+	nvgpu_mutex_release(&dev->write_lock);
 
 	if (dev->hdr) {
 		dev->g->ops.fecs_trace.free_user_buffer(dev->g);
@@ -414,11 +414,11 @@ unsigned int gk20a_ctxsw_dev_poll(struct file *filp, poll_table *wait)
 
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "");
 
-	mutex_lock(&dev->write_lock);
+	nvgpu_mutex_acquire(&dev->write_lock);
 	poll_wait(filp, &dev->readout_wq, wait);
 	if (!ring_is_empty(hdr))
 		mask |= POLLIN | POLLRDNORM;
-	mutex_unlock(&dev->write_lock);
+	nvgpu_mutex_release(&dev->write_lock);
 
 	return mask;
 }
@@ -482,7 +482,7 @@ static int gk20a_ctxsw_init_devs(struct gk20a *g)
 		dev->hdr = NULL;
 		dev->write_enabled = false;
 		init_waitqueue_head(&dev->readout_wq);
-		mutex_init(&dev->write_lock);
+		nvgpu_mutex_init(&dev->write_lock);
 		atomic_set(&dev->vma_ref, 0);
 		dev++;
 	}
@@ -567,7 +567,7 @@ int gk20a_ctxsw_trace_write(struct gk20a *g,
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_ctxsw,
 		"dev=%p hdr=%p", dev, hdr);
 
-	mutex_lock(&dev->write_lock);
+	nvgpu_mutex_acquire(&dev->write_lock);
 
 	if (unlikely(!hdr)) {
 		/* device has been released */
@@ -621,7 +621,7 @@ int gk20a_ctxsw_trace_write(struct gk20a *g,
 	gk20a_dbg(gpu_dbg_ctxsw, "added: read=%d write=%d len=%d",
 		hdr->read_idx, hdr->write_idx, ring_len(hdr));
 
-	mutex_unlock(&dev->write_lock);
+	nvgpu_mutex_release(&dev->write_lock);
 	return ret;
 
 disable:
@@ -638,7 +638,7 @@ filter:
 			entry->tag, entry->timestamp, reason);
 
 done:
-	mutex_unlock(&dev->write_lock);
+	nvgpu_mutex_release(&dev->write_lock);
 	return ret;
 }
 

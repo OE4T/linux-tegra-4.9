@@ -34,13 +34,13 @@ static void nvgpu_init_vars(struct gk20a *g)
 
 	init_rwsem(&g->busy_lock);
 
-	spin_lock_init(&g->mc_enable_lock);
+	nvgpu_spinlock_init(&g->mc_enable_lock);
 
-	mutex_init(&platform->railgate_lock);
-	mutex_init(&g->dbg_sessions_lock);
-	mutex_init(&g->client_lock);
-	mutex_init(&g->ch_wdt_lock);
-	mutex_init(&g->poweroff_lock);
+	nvgpu_mutex_init(&platform->railgate_lock);
+	nvgpu_mutex_init(&g->dbg_sessions_lock);
+	nvgpu_mutex_init(&g->client_lock);
+	nvgpu_mutex_init(&g->ch_wdt_lock);
+	nvgpu_mutex_init(&g->poweroff_lock);
 
 	g->regs_saved = g->regs;
 	g->bar1_saved = g->bar1;
@@ -52,7 +52,7 @@ static void nvgpu_init_vars(struct gk20a *g)
 	dma_set_max_seg_size(g->dev, UINT_MAX);
 
 	INIT_LIST_HEAD(&g->pending_sema_waits);
-	raw_spin_lock_init(&g->pending_sema_waits_lock);
+	nvgpu_raw_spinlock_init(&g->pending_sema_waits_lock);
 }
 
 static void nvgpu_init_timeout(struct gk20a *g)

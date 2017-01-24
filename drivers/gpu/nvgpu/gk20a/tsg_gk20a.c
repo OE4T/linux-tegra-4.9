@@ -169,7 +169,7 @@ int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid)
 	init_rwsem(&tsg->ch_list_lock);
 
 	INIT_LIST_HEAD(&tsg->event_id_list);
-	mutex_init(&tsg->event_id_list_lock);
+	nvgpu_mutex_init(&tsg->event_id_list_lock);
 
 	return 0;
 }
@@ -204,7 +204,7 @@ static int gk20a_tsg_get_event_data_from_id(struct tsg_gk20a *tsg,
 	struct gk20a_event_id_data *local_event_id_data;
 	bool event_found = false;
 
-	mutex_lock(&tsg->event_id_list_lock);
+	nvgpu_mutex_acquire(&tsg->event_id_list_lock);
 	list_for_each_entry(local_event_id_data, &tsg->event_id_list,
 						 event_id_node) {
 		if (local_event_id_data->event_id == event_id) {
@@ -212,7 +212,7 @@ static int gk20a_tsg_get_event_data_from_id(struct tsg_gk20a *tsg,
 			break;
 		}
 	}
-	mutex_unlock(&tsg->event_id_list_lock);
+	nvgpu_mutex_release(&tsg->event_id_list_lock);
 
 	if (event_found) {
 		*event_id_data = local_event_id_data;
@@ -233,7 +233,7 @@ void gk20a_tsg_event_id_post_event(struct tsg_gk20a *tsg,
 	if (err)
 		return;
 
-	mutex_lock(&event_id_data->lock);
+	nvgpu_mutex_acquire(&event_id_data->lock);
 
 	gk20a_dbg_info(
 		"posting event for event_id=%d on tsg=%d\n",
@@ -242,7 +242,7 @@ void gk20a_tsg_event_id_post_event(struct tsg_gk20a *tsg,
 
 	wake_up_interruptible_all(&event_id_data->event_id_wq);
 
-	mutex_unlock(&event_id_data->lock);
+	nvgpu_mutex_release(&event_id_data->lock);
 }
 
 static int gk20a_tsg_event_id_enable(struct tsg_gk20a *tsg,
@@ -287,12 +287,12 @@ static int gk20a_tsg_event_id_enable(struct tsg_gk20a *tsg,
 	event_id_data->event_id = event_id;
 
 	init_waitqueue_head(&event_id_data->event_id_wq);
-	mutex_init(&event_id_data->lock);
+	nvgpu_mutex_init(&event_id_data->lock);
 	INIT_LIST_HEAD(&event_id_data->event_id_node);
 
-	mutex_lock(&tsg->event_id_list_lock);
+	nvgpu_mutex_acquire(&tsg->event_id_list_lock);
 	list_add_tail(&event_id_data->event_id_node, &tsg->event_id_list);
-	mutex_unlock(&tsg->event_id_list_lock);
+	nvgpu_mutex_release(&tsg->event_id_list_lock);
 
 	fd_install(local_fd, file);
 	file->private_data = event_id_data;
@@ -370,9 +370,9 @@ int gk20a_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
 
 static void release_used_tsg(struct fifo_gk20a *f, struct tsg_gk20a *tsg)
 {
-	mutex_lock(&f->tsg_inuse_mutex);
+	nvgpu_mutex_acquire(&f->tsg_inuse_mutex);
 	f->tsg[tsg->tsgid].in_use = false;
-	mutex_unlock(&f->tsg_inuse_mutex);
+	nvgpu_mutex_release(&f->tsg_inuse_mutex);
 }
 
 static struct tsg_gk20a *acquire_unused_tsg(struct fifo_gk20a *f)
@@ -380,7 +380,7 @@ static struct tsg_gk20a *acquire_unused_tsg(struct fifo_gk20a *f)
 	struct tsg_gk20a *tsg = NULL;
 	unsigned int tsgid;
 
-	mutex_lock(&f->tsg_inuse_mutex);
+	nvgpu_mutex_acquire(&f->tsg_inuse_mutex);
 	for (tsgid = 0; tsgid < f->num_channels; tsgid++) {
 		if (!f->tsg[tsgid].in_use) {
 			f->tsg[tsgid].in_use = true;
@@ -388,7 +388,7 @@ static struct tsg_gk20a *acquire_unused_tsg(struct fifo_gk20a *f)
 			break;
 		}
 	}
-	mutex_unlock(&f->tsg_inuse_mutex);
+	nvgpu_mutex_release(&f->tsg_inuse_mutex);
 
 	return tsg;
 }
@@ -482,13 +482,13 @@ void gk20a_tsg_release(struct kref *ref)
 	gk20a_sched_ctrl_tsg_removed(g, tsg);
 
 	/* unhook all events created on this TSG */
-	mutex_lock(&tsg->event_id_list_lock);
+	nvgpu_mutex_acquire(&tsg->event_id_list_lock);
 	list_for_each_entry_safe(event_id_data, event_id_data_temp,
 				&tsg->event_id_list,
 				event_id_node) {
 		list_del_init(&event_id_data->event_id_node);
 	}
-	mutex_unlock(&tsg->event_id_list_lock);
+	nvgpu_mutex_release(&tsg->event_id_list_lock);
 
 	release_used_tsg(&g->fifo, tsg);
 
@@ -517,7 +517,7 @@ static int gk20a_tsg_ioctl_set_priority(struct gk20a *g,
 	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
 	int err;
 
-	mutex_lock(&sched->control_lock);
+	nvgpu_mutex_acquire(&sched->control_lock);
 	if (sched->control_locked) {
 		err = -EPERM;
 		goto done;
@@ -533,7 +533,7 @@ static int gk20a_tsg_ioctl_set_priority(struct gk20a *g,
 
 	gk20a_idle(g->dev);
 done:
-	mutex_unlock(&sched->control_lock);
+	nvgpu_mutex_release(&sched->control_lock);
 	return err;
 }
 
@@ -545,7 +545,7 @@ static int gk20a_tsg_ioctl_set_runlist_interleave(struct gk20a *g,
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
 
-	mutex_lock(&sched->control_lock);
+	nvgpu_mutex_acquire(&sched->control_lock);
 	if (sched->control_locked) {
 		err = -EPERM;
 		goto done;
@@ -560,7 +560,7 @@ static int gk20a_tsg_ioctl_set_runlist_interleave(struct gk20a *g,
 
 	gk20a_idle(g->dev);
 done:
-	mutex_unlock(&sched->control_lock);
+	nvgpu_mutex_release(&sched->control_lock);
 	return err;
 }
 
@@ -572,7 +572,7 @@ static int gk20a_tsg_ioctl_set_timeslice(struct gk20a *g,
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
 
-	mutex_lock(&sched->control_lock);
+	nvgpu_mutex_acquire(&sched->control_lock);
 	if (sched->control_locked) {
 		err = -EPERM;
 		goto done;
@@ -585,7 +585,7 @@ static int gk20a_tsg_ioctl_set_timeslice(struct gk20a *g,
 	err = gk20a_tsg_set_timeslice(tsg, arg->timeslice_us);
 	gk20a_idle(g->dev);
 done:
-	mutex_unlock(&sched->control_lock);
+	nvgpu_mutex_release(&sched->control_lock);
 	return err;
 }
 

@@ -1,7 +1,7 @@
 /*
  * GK20A Cycle stats snapshots support (subsystem for gr_gk20a).
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,7 +19,7 @@
 #include <linux/bitops.h>
 #include <linux/dma-mapping.h>
 #include <linux/dma-buf.h>
-#include <linux/mutex.h>
+#include <nvgpu/lock.h>
 #include <linux/vmalloc.h>
 
 #include "gk20a.h"
@@ -557,7 +557,7 @@ int gr_gk20a_css_attach(struct channel_gk20a *ch,
 	gr = &g->gr;
 	*cs_client = NULL;
 
-	mutex_lock(&gr->cs_lock);
+	nvgpu_mutex_acquire(&gr->cs_lock);
 
 	ret = css_gr_create_shared_data(gr);
 	if (ret)
@@ -577,7 +577,7 @@ int gr_gk20a_css_attach(struct channel_gk20a *ch,
 	if (perfmon_start)
 		*perfmon_start = (*cs_client)->perfmon_start;
 
-	mutex_unlock(&gr->cs_lock);
+	nvgpu_mutex_release(&gr->cs_lock);
 
 	return 0;
 
@@ -591,7 +591,7 @@ failed:
 		if (list_empty(&gr->cs_data->clients))
 			css_gr_free_shared_data(gr);
 	}
-	mutex_unlock(&gr->cs_lock);
+	nvgpu_mutex_release(&gr->cs_lock);
 
 	if (perfmon_start)
 		*perfmon_start = 0;
@@ -610,7 +610,7 @@ int gr_gk20a_css_detach(struct channel_gk20a *ch,
 		return -EINVAL;
 
 	gr = &g->gr;
-	mutex_lock(&gr->cs_lock);
+	nvgpu_mutex_acquire(&gr->cs_lock);
 	if (gr->cs_data) {
 		struct gk20a_cs_snapshot *data = gr->cs_data;
 
@@ -623,7 +623,7 @@ int gr_gk20a_css_detach(struct channel_gk20a *ch,
 	} else {
 		ret = -EBADF;
 	}
-	mutex_unlock(&gr->cs_lock);
+	nvgpu_mutex_release(&gr->cs_lock);
 
 	return ret;
 }
@@ -639,9 +639,9 @@ int gr_gk20a_css_flush(struct channel_gk20a *ch,
 		return -EINVAL;
 
 	gr = &g->gr;
-	mutex_lock(&gr->cs_lock);
+	nvgpu_mutex_acquire(&gr->cs_lock);
 	ret = css_gr_flush_snapshots(ch);
-	mutex_unlock(&gr->cs_lock);
+	nvgpu_mutex_release(&gr->cs_lock);
 
 	return ret;
 }
@@ -651,10 +651,10 @@ void gr_gk20a_free_cyclestats_snapshot_data(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 
-	mutex_lock(&gr->cs_lock);
+	nvgpu_mutex_acquire(&gr->cs_lock);
 	css_gr_free_shared_data(gr);
-	mutex_unlock(&gr->cs_lock);
-	mutex_destroy(&gr->cs_lock);
+	nvgpu_mutex_release(&gr->cs_lock);
+	nvgpu_mutex_destroy(&gr->cs_lock);
 }
 
 static int css_hw_check_data_available(struct channel_gk20a *ch, u32 *pending,

@@ -1,7 +1,7 @@
 /*
  * GP106 Clocks
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -79,7 +79,7 @@ static int gp106_init_clk_support(struct gk20a *g) {
 
 	gk20a_dbg_fn("");
 
-	mutex_init(&clk->clk_mutex);
+	nvgpu_mutex_init(&clk->clk_mutex);
 
 	clk->clk_namemap = (struct namemap_cfg *)
 		kzalloc(sizeof(struct namemap_cfg) * NUM_NAMEMAPS, GFP_KERNEL);
@@ -169,7 +169,7 @@ static u32 gp106_get_rate_cntr(struct gk20a *g, struct namemap_cfg *c) {
 	if (!c || !c->cntr.reg_ctrl_addr || !c->cntr.reg_cntr_addr)
 		return 0;
 
-	mutex_lock(&clk->clk_mutex);
+	nvgpu_mutex_acquire(&clk->clk_mutex);
 
 	/* Save the register */
 	save_reg = gk20a_readl(g, c->cntr.reg_ctrl_addr);
@@ -216,7 +216,7 @@ read_err:
 	gk20a_readl(g, c->cntr.reg_ctrl_addr);
 	gk20a_writel(g, c->cntr.reg_ctrl_addr, save_reg);
 	gk20a_readl(g, c->cntr.reg_ctrl_addr);
-	mutex_unlock(&clk->clk_mutex);
+	nvgpu_mutex_release(&clk->clk_mutex);
 
 	return cntr;
 

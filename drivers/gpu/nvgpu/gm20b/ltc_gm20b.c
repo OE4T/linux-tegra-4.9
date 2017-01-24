@@ -120,7 +120,7 @@ int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 	if (gr->compbit_store.mem.size == 0)
 		return 0;
 
-	mutex_lock(&g->mm.l2_op_lock);
+	nvgpu_mutex_acquire(&g->mm.l2_op_lock);
 
 	if (op == gk20a_cbc_op_clear) {
 		gk20a_writel(g, ltc_ltcs_ltss_cbc_ctrl2_r(),
@@ -163,7 +163,7 @@ int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 	}
 out:
 	trace_gk20a_ltc_cbc_ctrl_done(dev_name(g->dev));
-	mutex_unlock(&g->mm.l2_op_lock);
+	nvgpu_mutex_release(&g->mm.l2_op_lock);
 	return err;
 }
 

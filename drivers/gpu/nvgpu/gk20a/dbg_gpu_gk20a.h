@@ -67,14 +67,14 @@ struct dbg_session_gk20a {
 
 	/* list of bound channels, if any */
 	struct list_head ch_list;
-	struct mutex ch_list_lock;
+	struct nvgpu_mutex ch_list_lock;
 
 	/* event support */
 	struct dbg_gpu_session_events dbg_events;
 
 	bool broadcast_stop_trigger;
 
-	struct mutex ioctl_lock;
+	struct nvgpu_mutex ioctl_lock;
 };
 
 struct dbg_session_data {

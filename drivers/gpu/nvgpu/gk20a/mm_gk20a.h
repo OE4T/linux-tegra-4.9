@@ -131,7 +131,7 @@ struct gk20a_buffer_state {
 	struct list_head list;
 
 	/* The valid compbits and the fence must be changed atomically. */
-	struct mutex lock;
+	struct nvgpu_mutex lock;
 
 	/* Offset of the surface within the dma-buf whose state is
 	 * described by this struct (one dma-buf can contain multiple
@@ -272,7 +272,7 @@ struct vm_gk20a {
 
 	struct kref ref;
 
-	struct mutex update_gmmu_lock;
+	struct nvgpu_mutex update_gmmu_lock;
 
 	struct gk20a_mm_entry pdb;
 
@@ -360,7 +360,7 @@ struct mm_gk20a {
 		struct vm_gk20a vm;
 	} ce;
 
-	struct mutex l2_op_lock;
+	struct nvgpu_mutex l2_op_lock;
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct mem_desc bar2_desc;
 #endif
@@ -395,7 +395,7 @@ struct mm_gk20a {
 	struct mem_desc sysmem_flush;
 
 	u32 pramin_window;
-	spinlock_t pramin_window_lock;
+	struct nvgpu_spinlock pramin_window_lock;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
 	u32 force_pramin; /* via debugfs */
 #else
@@ -413,10 +413,10 @@ struct mm_gk20a {
 
 		u32 ce_ctx_id;
 		volatile bool cleared;
-		struct mutex first_clear_mutex;
+		struct nvgpu_mutex first_clear_mutex;
 
 		struct list_head clear_list_head;
-		struct mutex clear_list_mutex;
+		struct nvgpu_mutex clear_list_mutex;
 
 		struct work_struct clear_mem_worker;
 		atomic64_t bytes_pending;

@@ -136,7 +136,7 @@ struct pmu_queue {
 	u32 mutex_id;
 	u32 mutex_lock;
 	/* used by sw, for LPQ/HPQ queue */
-	struct mutex mutex;
+	struct nvgpu_mutex mutex;
 
 	/* current write position */
 	u32 position;
@@ -334,8 +334,8 @@ struct pmu_gk20a {
 	struct pmu_mutex *mutex;
 	u32 mutex_cnt;
 
-	struct mutex pmu_copy_lock;
-	struct mutex pmu_seq_lock;
+	struct nvgpu_mutex pmu_copy_lock;
+	struct nvgpu_mutex pmu_seq_lock;
 
 	struct nvgpu_allocator dmem;
 
@@ -355,8 +355,8 @@ struct pmu_gk20a {
 
 #define PMU_ELPG_ENABLE_ALLOW_DELAY_MSEC	1 /* msec */
 	struct work_struct pg_init;
-	struct mutex pg_mutex; /* protect pg-RPPG/MSCG enable/disable */
-	struct mutex elpg_mutex; /* protect elpg enable/disable */
+	struct nvgpu_mutex pg_mutex; /* protect pg-RPPG/MSCG enable/disable */
+	struct nvgpu_mutex elpg_mutex; /* protect elpg enable/disable */
 	int elpg_refcnt; /* disable -1, enable +1, <=0 elpg disabled, > 0 elpg enabled */
 
 	union {
@@ -375,7 +375,7 @@ struct pmu_gk20a {
 	u32 load_shadow;
 	u32 load_avg;
 
-	struct mutex isr_mutex;
+	struct nvgpu_mutex isr_mutex;
 	bool isr_enabled;
 
 	bool zbc_ready;

@@ -1,7 +1,7 @@
 /*
  * gk20a allocator
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -140,7 +140,7 @@ int __nvgpu_alloc_common_init(struct nvgpu_allocator *a,
 	a->priv = priv;
 	a->debug = dbg;
 
-	mutex_init(&a->lock);
+	nvgpu_mutex_init(&a->lock);
 
 	strlcpy(a->name, name, sizeof(a->name));
 

@@ -102,7 +102,7 @@ static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f)
 
 	platform = gk20a_get_platform(f->g->dev);
 
-	mutex_lock(&f->free_chs_mutex);
+	nvgpu_mutex_acquire(&f->free_chs_mutex);
 	if (!list_empty(&f->free_chs)) {
 		ch = list_first_entry(&f->free_chs, struct channel_gk20a,
 				free_chs);
@@ -111,7 +111,7 @@ static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f)
 		WARN_ON(ch->referenceable);
 		f->used_channels++;
 	}
-	mutex_unlock(&f->free_chs_mutex);
+	nvgpu_mutex_release(&f->free_chs_mutex);
 
 	if (platform->aggressive_sync_destroy_thresh &&
 			(f->used_channels >
@@ -128,11 +128,11 @@ static void free_channel(struct fifo_gk20a *f,
 
 	trace_gk20a_release_used_channel(ch->hw_chid);
 	/* refcount is zero here and channel is in a freed/dead state */
-	mutex_lock(&f->free_chs_mutex);
+	nvgpu_mutex_acquire(&f->free_chs_mutex);
 	/* add to head to increase visibility of timing-related bugs */
 	list_add(&ch->free_chs, &f->free_chs);
 	f->used_channels--;
-	mutex_unlock(&f->free_chs_mutex);
+	nvgpu_mutex_release(&f->free_chs_mutex);
 
 	if (platform->aggressive_sync_destroy_thresh &&
 			(f->used_channels <
@@ -494,10 +494,10 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 	gk20a_channel_cancel_job_clean_up(ch, true);
 
 	/* ensure no fences are pending */
-	mutex_lock(&ch->sync_lock);
+	nvgpu_mutex_acquire(&ch->sync_lock);
 	if (ch->sync)
 		ch->sync->set_min_eq_max(ch->sync);
-	mutex_unlock(&ch->sync_lock);
+	nvgpu_mutex_release(&ch->sync_lock);
 
 	/* release all job semaphores (applies only to jobs that use
 	   semaphore synchronization) */
@@ -595,7 +595,7 @@ void gk20a_disable_channel(struct channel_gk20a *ch)
 static void gk20a_free_cycle_stats_buffer(struct channel_gk20a *ch)
 {
 	/* disable existing cyclestats buffer */
-	mutex_lock(&ch->cyclestate.cyclestate_buffer_mutex);
+	nvgpu_mutex_acquire(&ch->cyclestate.cyclestate_buffer_mutex);
 	if (ch->cyclestate.cyclestate_buffer_handler) {
 		dma_buf_vunmap(ch->cyclestate.cyclestate_buffer_handler,
 				ch->cyclestate.cyclestate_buffer);
@@ -604,7 +604,7 @@ static void gk20a_free_cycle_stats_buffer(struct channel_gk20a *ch)
 		ch->cyclestate.cyclestate_buffer = NULL;
 		ch->cyclestate.cyclestate_buffer_size = 0;
 	}
-	mutex_unlock(&ch->cyclestate.cyclestate_buffer_mutex);
+	nvgpu_mutex_release(&ch->cyclestate.cyclestate_buffer_mutex);
 }
 
 static int gk20a_channel_cycle_stats(struct channel_gk20a *ch,
@@ -654,12 +654,12 @@ static int gk20a_flush_cycle_stats_snapshot(struct channel_gk20a *ch)
 {
 	int ret;
 
-	mutex_lock(&ch->cs_client_mutex);
+	nvgpu_mutex_acquire(&ch->cs_client_mutex);
 	if (ch->cs_client)
 		ret = gr_gk20a_css_flush(ch, ch->cs_client);
 	else
 		ret = -EBADF;
-	mutex_unlock(&ch->cs_client_mutex);
+	nvgpu_mutex_release(&ch->cs_client_mutex);
 
 	return ret;
 }
@@ -671,7 +671,7 @@ static int gk20a_attach_cycle_stats_snapshot(struct channel_gk20a *ch,
 {
 	int ret;
 
-	mutex_lock(&ch->cs_client_mutex);
+	nvgpu_mutex_acquire(&ch->cs_client_mutex);
 	if (ch->cs_client) {
 		ret = -EEXIST;
 	} else {
@@ -681,7 +681,7 @@ static int gk20a_attach_cycle_stats_snapshot(struct channel_gk20a *ch,
 					perfmon_id_start,
 					&ch->cs_client);
 	}
-	mutex_unlock(&ch->cs_client_mutex);
+	nvgpu_mutex_release(&ch->cs_client_mutex);
 
 	return ret;
 }
@@ -690,14 +690,14 @@ static int gk20a_free_cycle_stats_snapshot(struct channel_gk20a *ch)
 {
 	int ret;
 
-	mutex_lock(&ch->cs_client_mutex);
+	nvgpu_mutex_acquire(&ch->cs_client_mutex);
 	if (ch->cs_client) {
 		ret = gr_gk20a_css_detach(ch, ch->cs_client);
 		ch->cs_client = NULL;
 	} else {
 		ret = 0;
 	}
-	mutex_unlock(&ch->cs_client_mutex);
+	nvgpu_mutex_release(&ch->cs_client_mutex);
 
 	return ret;
 }
@@ -824,9 +824,9 @@ static int gk20a_init_error_notifier(struct channel_gk20a *ch,
 	memset(ch->error_notifier, 0, sizeof(struct nvgpu_notification));
 
 	/* set channel notifiers pointer */
-	mutex_lock(&ch->error_notifier_mutex);
+	nvgpu_mutex_acquire(&ch->error_notifier_mutex);
 	ch->error_notifier_ref = dmabuf;
-	mutex_unlock(&ch->error_notifier_mutex);
+	nvgpu_mutex_release(&ch->error_notifier_mutex);
 
 	return 0;
 }
@@ -857,14 +857,14 @@ void gk20a_set_error_notifier_locked(struct channel_gk20a *ch, __u32 error)
 
 void gk20a_set_error_notifier(struct channel_gk20a *ch, __u32 error)
 {
-	mutex_lock(&ch->error_notifier_mutex);
+	nvgpu_mutex_acquire(&ch->error_notifier_mutex);
 	gk20a_set_error_notifier_locked(ch, error);
-	mutex_unlock(&ch->error_notifier_mutex);
+	nvgpu_mutex_release(&ch->error_notifier_mutex);
 }
 
 static void gk20a_free_error_notifiers(struct channel_gk20a *ch)
 {
-	mutex_lock(&ch->error_notifier_mutex);
+	nvgpu_mutex_acquire(&ch->error_notifier_mutex);
 	if (ch->error_notifier_ref) {
 		dma_buf_vunmap(ch->error_notifier_ref, ch->error_notifier_va);
 		dma_buf_put(ch->error_notifier_ref);
@@ -872,7 +872,7 @@ static void gk20a_free_error_notifiers(struct channel_gk20a *ch)
 		ch->error_notifier = NULL;
 		ch->error_notifier_va = NULL;
 	}
-	mutex_unlock(&ch->error_notifier_mutex);
+	nvgpu_mutex_release(&ch->error_notifier_mutex);
 }
 
 static void gk20a_wait_until_counter_is_N(
@@ -927,16 +927,16 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	nvgpu_wait_for_deferred_interrupts(g);
 
 	/* prevent new refs */
-	spin_lock(&ch->ref_obtain_lock);
+	nvgpu_spinlock_acquire(&ch->ref_obtain_lock);
 	if (!ch->referenceable) {
-		spin_unlock(&ch->ref_obtain_lock);
+		nvgpu_spinlock_release(&ch->ref_obtain_lock);
 		gk20a_err(dev_from_gk20a(ch->g),
 			  "Extra %s() called to channel %u",
 			  __func__, ch->hw_chid);
 		return;
 	}
 	ch->referenceable = false;
-	spin_unlock(&ch->ref_obtain_lock);
+	nvgpu_spinlock_release(&ch->ref_obtain_lock);
 
 	/* matches with the initial reference in gk20a_open_new_channel() */
 	atomic_dec(&ch->ref_count);
@@ -948,18 +948,18 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 			__func__, "references");
 
 	/* if engine reset was deferred, perform it now */
-	mutex_lock(&f->deferred_reset_mutex);
+	nvgpu_mutex_acquire(&f->deferred_reset_mutex);
 	if (g->fifo.deferred_reset_pending) {
 		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "engine reset was"
 			   " deferred, running now");
 		/* if lock is already taken, a reset is taking place
 		so no need to repeat */
-		if (mutex_trylock(&g->fifo.gr_reset_mutex)) {
+		if (nvgpu_mutex_tryacquire(&g->fifo.gr_reset_mutex)) {
 			gk20a_fifo_deferred_reset(g, ch);
-			mutex_unlock(&g->fifo.gr_reset_mutex);
+			nvgpu_mutex_release(&g->fifo.gr_reset_mutex);
 		}
 	}
-	mutex_unlock(&f->deferred_reset_mutex);
+	nvgpu_mutex_release(&f->deferred_reset_mutex);
 
 	if (!gk20a_channel_as_bound(ch))
 		goto unbind;
@@ -991,12 +991,12 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	channel_gk20a_free_priv_cmdbuf(ch);
 
 	/* sync must be destroyed before releasing channel vm */
-	mutex_lock(&ch->sync_lock);
+	nvgpu_mutex_acquire(&ch->sync_lock);
 	if (ch->sync) {
 		gk20a_channel_sync_destroy(ch->sync);
 		ch->sync = NULL;
 	}
-	mutex_unlock(&ch->sync_lock);
+	nvgpu_mutex_release(&ch->sync_lock);
 
 	/*
 	 * free the channel used semaphore index.
@@ -1011,10 +1011,10 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	 */
 	gk20a_vm_put(ch_vm);
 
-	spin_lock(&ch->update_fn_lock);
+	nvgpu_spinlock_acquire(&ch->update_fn_lock);
 	ch->update_fn = NULL;
 	ch->update_fn_data = NULL;
-	spin_unlock(&ch->update_fn_lock);
+	nvgpu_spinlock_release(&ch->update_fn_lock);
 	cancel_work_sync(&ch->update_fn_work);
 	cancel_delayed_work_sync(&ch->clean_up.wq);
 	cancel_delayed_work_sync(&ch->timeout.wq);
@@ -1037,21 +1037,21 @@ unbind:
 	WARN_ON(ch->sync);
 
 	/* unlink all debug sessions */
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	list_for_each_entry_safe(session_data, tmp_s,
 				&ch->dbg_s_list, dbg_s_entry) {
 		dbg_s = session_data->dbg_s;
-		mutex_lock(&dbg_s->ch_list_lock);
+		nvgpu_mutex_acquire(&dbg_s->ch_list_lock);
 		list_for_each_entry_safe(ch_data, tmp,
 					&dbg_s->ch_list, ch_entry) {
 			if (ch_data->chid == ch->hw_chid)
 				dbg_unbind_single_channel_gk20a(dbg_s, ch_data);
 		}
-		mutex_unlock(&dbg_s->ch_list_lock);
+		nvgpu_mutex_release(&dbg_s->ch_list_lock);
 	}
 
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	/* free pre-allocated resources, if applicable */
 	if (channel_gk20a_is_prealloc_enabled(ch))
@@ -1079,7 +1079,7 @@ static void gk20a_channel_dump_ref_actions(struct channel_gk20a *ch)
 	unsigned long prev_jiffies = 0;
 	struct device *dev = dev_from_gk20a(ch->g);
 
-	spin_lock(&ch->ref_actions_lock);
+	nvgpu_spinlock_acquire(&ch->ref_actions_lock);
 
 	dev_info(dev, "ch %d: refs %d. Actions, most recent last:\n",
 			ch->hw_chid, atomic_read(&ch->ref_count));
@@ -1109,7 +1109,7 @@ static void gk20a_channel_dump_ref_actions(struct channel_gk20a *ch)
 		get = (get + 1) % GK20A_CHANNEL_REFCOUNT_TRACKING;
 	}
 
-	spin_unlock(&ch->ref_actions_lock);
+	nvgpu_spinlock_release(&ch->ref_actions_lock);
 #endif
 }
 
@@ -1119,7 +1119,7 @@ static void gk20a_channel_save_ref_source(struct channel_gk20a *ch,
 #if GK20A_CHANNEL_REFCOUNT_TRACKING
 	struct channel_gk20a_ref_action *act;
 
-	spin_lock(&ch->ref_actions_lock);
+	nvgpu_spinlock_acquire(&ch->ref_actions_lock);
 
 	act = &ch->ref_actions[ch->ref_actions_put];
 	act->type = type;
@@ -1132,7 +1132,7 @@ static void gk20a_channel_save_ref_source(struct channel_gk20a *ch,
 	ch->ref_actions_put = (ch->ref_actions_put + 1) %
 		GK20A_CHANNEL_REFCOUNT_TRACKING;
 
-	spin_unlock(&ch->ref_actions_lock);
+	nvgpu_spinlock_release(&ch->ref_actions_lock);
 #endif
 }
 
@@ -1152,7 +1152,7 @@ struct channel_gk20a *_gk20a_channel_get(struct channel_gk20a *ch,
 					 const char *caller) {
 	struct channel_gk20a *ret;
 
-	spin_lock(&ch->ref_obtain_lock);
+	nvgpu_spinlock_acquire(&ch->ref_obtain_lock);
 
 	if (likely(ch->referenceable)) {
 		gk20a_channel_save_ref_source(ch, channel_gk20a_ref_action_get);
@@ -1161,7 +1161,7 @@ struct channel_gk20a *_gk20a_channel_get(struct channel_gk20a *ch,
 	} else
 		ret = NULL;
 
-	spin_unlock(&ch->ref_obtain_lock);
+	nvgpu_spinlock_release(&ch->ref_obtain_lock);
 
 	if (ret)
 		trace_gk20a_channel_get(ch->hw_chid, caller);
@@ -1250,10 +1250,10 @@ static void gk20a_channel_update_runcb_fn(struct work_struct *work)
 	void (*update_fn)(struct channel_gk20a *, void *);
 	void *update_fn_data;
 
-	spin_lock(&ch->update_fn_lock);
+	nvgpu_spinlock_acquire(&ch->update_fn_lock);
 	update_fn = ch->update_fn;
 	update_fn_data = ch->update_fn_data;
-	spin_unlock(&ch->update_fn_lock);
+	nvgpu_spinlock_release(&ch->update_fn_lock);
 
 	if (update_fn)
 		update_fn(ch, update_fn_data);
@@ -1268,10 +1268,10 @@ struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
 	struct channel_gk20a *ch = gk20a_open_new_channel(g, runlist_id, is_privileged_channel);
 
 	if (ch) {
-		spin_lock(&ch->update_fn_lock);
+		nvgpu_spinlock_acquire(&ch->update_fn_lock);
 		ch->update_fn = update_fn;
 		ch->update_fn_data = update_fn_data;
-		spin_unlock(&ch->update_fn_lock);
+		nvgpu_spinlock_release(&ch->update_fn_lock);
 	}
 
 	return ch;
@@ -1325,13 +1325,13 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	ch->tgid = current->tgid;  /* process granularity for FECS traces */
 
 	/* unhook all events created on this channel */
-	mutex_lock(&ch->event_id_list_lock);
+	nvgpu_mutex_acquire(&ch->event_id_list_lock);
 	list_for_each_entry_safe(event_id_data, event_id_data_temp,
 				&ch->event_id_list,
 				event_id_node) {
 		list_del_init(&event_id_data->event_id_node);
 	}
-	mutex_unlock(&ch->event_id_list_lock);
+	nvgpu_mutex_release(&ch->event_id_list_lock);
 
 	/* By default, channel is regular (non-TSG) channel */
 	ch->tsgid = NVGPU_INVALID_TSG_ID;
@@ -1357,7 +1357,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 
 	ch->update_fn = NULL;
 	ch->update_fn_data = NULL;
-	spin_lock_init(&ch->update_fn_lock);
+	nvgpu_spinlock_init(&ch->update_fn_lock);
 	INIT_WORK(&ch->update_fn_work, gk20a_channel_update_runcb_fn);
 
 	/* Mark the channel alive, get-able, with 1 initial use
@@ -1652,17 +1652,17 @@ static void channel_gk20a_free_job(struct channel_gk20a *c,
 void channel_gk20a_joblist_lock(struct channel_gk20a *c)
 {
 	if (channel_gk20a_is_prealloc_enabled(c))
-		mutex_lock(&c->joblist.pre_alloc.read_lock);
+		nvgpu_mutex_acquire(&c->joblist.pre_alloc.read_lock);
 	else
-		spin_lock(&c->joblist.dynamic.lock);
+		nvgpu_spinlock_acquire(&c->joblist.dynamic.lock);
 }
 
 void channel_gk20a_joblist_unlock(struct channel_gk20a *c)
 {
 	if (channel_gk20a_is_prealloc_enabled(c))
-		mutex_unlock(&c->joblist.pre_alloc.read_lock);
+		nvgpu_mutex_release(&c->joblist.pre_alloc.read_lock);
 	else
-		spin_unlock(&c->joblist.dynamic.lock);
+		nvgpu_spinlock_release(&c->joblist.dynamic.lock);
 }
 
 static struct channel_gk20a_job *channel_gk20a_joblist_peek(
@@ -1871,14 +1871,14 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	channel_gk20a_setup_userd(c);
 
 	if (!platform->aggressive_sync_destroy_thresh) {
-		mutex_lock(&c->sync_lock);
+		nvgpu_mutex_acquire(&c->sync_lock);
 		c->sync = gk20a_channel_sync_create(c);
 		if (!c->sync) {
 			err = -ENOMEM;
-			mutex_unlock(&c->sync_lock);
+			nvgpu_mutex_release(&c->sync_lock);
 			goto clean_up_unmap;
 		}
-		mutex_unlock(&c->sync_lock);
+		nvgpu_mutex_release(&c->sync_lock);
 
 		if (g->ops.fifo.resetup_ramfc) {
 			err = g->ops.fifo.resetup_ramfc(c);
@@ -2085,16 +2085,16 @@ static void gk20a_channel_timeout_start(struct channel_gk20a *ch)
 	if (!ch->wdt_enabled)
 		return;
 
-	raw_spin_lock(&ch->timeout.lock);
+	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
 
 	if (ch->timeout.initialized) {
-		raw_spin_unlock(&ch->timeout.lock);
+		nvgpu_raw_spinlock_release(&ch->timeout.lock);
 		return;
 	}
 
 	ch->timeout.gp_get = gk20a_userd_gp_get(ch->g, ch);
 	ch->timeout.initialized = true;
-	raw_spin_unlock(&ch->timeout.lock);
+	nvgpu_raw_spinlock_release(&ch->timeout.lock);
 
 	schedule_delayed_work(&ch->timeout.wq,
 	       msecs_to_jiffies(gk20a_get_channel_watchdog_timeout(ch)));
@@ -2102,18 +2102,18 @@ static void gk20a_channel_timeout_start(struct channel_gk20a *ch)
 
 static void gk20a_channel_timeout_stop(struct channel_gk20a *ch)
 {
-	raw_spin_lock(&ch->timeout.lock);
+	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
 	if (!ch->timeout.initialized) {
-		raw_spin_unlock(&ch->timeout.lock);
+		nvgpu_raw_spinlock_release(&ch->timeout.lock);
 		return;
 	}
-	raw_spin_unlock(&ch->timeout.lock);
+	nvgpu_raw_spinlock_release(&ch->timeout.lock);
 
 	cancel_delayed_work_sync(&ch->timeout.wq);
 
-	raw_spin_lock(&ch->timeout.lock);
+	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
 	ch->timeout.initialized = false;
-	raw_spin_unlock(&ch->timeout.lock);
+	nvgpu_raw_spinlock_release(&ch->timeout.lock);
 }
 
 void gk20a_channel_timeout_restart_all_channels(struct gk20a *g)
@@ -2125,13 +2125,13 @@ void gk20a_channel_timeout_restart_all_channels(struct gk20a *g)
 		struct channel_gk20a *ch = &f->channel[chid];
 
 		if (gk20a_channel_get(ch)) {
-			raw_spin_lock(&ch->timeout.lock);
+			nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
 			if (!ch->timeout.initialized) {
-				raw_spin_unlock(&ch->timeout.lock);
+				nvgpu_raw_spinlock_release(&ch->timeout.lock);
 				gk20a_channel_put(ch);
 				continue;
 			}
-			raw_spin_unlock(&ch->timeout.lock);
+			nvgpu_raw_spinlock_release(&ch->timeout.lock);
 
 			cancel_delayed_work_sync(&ch->timeout.wq);
 			if (!ch->has_timedout)
@@ -2164,13 +2164,13 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 	}
 
 	/* Need global lock since multiple channels can timeout at a time */
-	mutex_lock(&g->ch_wdt_lock);
+	nvgpu_mutex_acquire(&g->ch_wdt_lock);
 
 	/* Get timed out job and reset the timer */
-	raw_spin_lock(&ch->timeout.lock);
+	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
 	gp_get = ch->timeout.gp_get;
 	ch->timeout.initialized = false;
-	raw_spin_unlock(&ch->timeout.lock);
+	nvgpu_raw_spinlock_release(&ch->timeout.lock);
 
 	if (gk20a_userd_gp_get(ch->g, ch) != gp_get) {
 		gk20a_channel_timeout_start(ch);
@@ -2187,7 +2187,7 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 		NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT, true);
 
 fail_unlock:
-	mutex_unlock(&g->ch_wdt_lock);
+	nvgpu_mutex_release(&g->ch_wdt_lock);
 	gk20a_channel_put(ch);
 	gk20a_idle(dev_from_gk20a(g));
 }
@@ -2216,17 +2216,17 @@ int gk20a_free_priv_cmdbuf(struct channel_gk20a *c, struct priv_cmd_entry *e)
 
 static void gk20a_channel_schedule_job_clean_up(struct channel_gk20a *c)
 {
-	mutex_lock(&c->clean_up.lock);
+	nvgpu_mutex_acquire(&c->clean_up.lock);
 
 	if (c->clean_up.scheduled) {
-		mutex_unlock(&c->clean_up.lock);
+		nvgpu_mutex_release(&c->clean_up.lock);
 		return;
 	}
 
 	c->clean_up.scheduled = true;
 	schedule_delayed_work(&c->clean_up.wq, 1);
 
-	mutex_unlock(&c->clean_up.lock);
+	nvgpu_mutex_release(&c->clean_up.lock);
 }
 
 static void gk20a_channel_cancel_job_clean_up(struct channel_gk20a *c,
@@ -2235,9 +2235,9 @@ static void gk20a_channel_cancel_job_clean_up(struct channel_gk20a *c,
 	if (wait_for_completion)
 		cancel_delayed_work_sync(&c->clean_up.wq);
 
-	mutex_lock(&c->clean_up.lock);
+	nvgpu_mutex_acquire(&c->clean_up.lock);
 	c->clean_up.scheduled = false;
-	mutex_unlock(&c->clean_up.lock);
+	nvgpu_mutex_release(&c->clean_up.lock);
 }
 
 static int gk20a_channel_add_job(struct channel_gk20a *c,
@@ -2353,13 +2353,13 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 			c->sync->signal_timeline(c->sync);
 
 			if (platform->aggressive_sync_destroy_thresh) {
-				mutex_lock(&c->sync_lock);
+				nvgpu_mutex_acquire(&c->sync_lock);
 				if (atomic_dec_and_test(&c->sync->refcount) &&
 						platform->aggressive_sync_destroy) {
 					gk20a_channel_sync_destroy(c->sync);
 					c->sync = NULL;
 				}
-				mutex_unlock(&c->sync_lock);
+				nvgpu_mutex_release(&c->sync_lock);
 			}
 		}
 
@@ -2563,18 +2563,18 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 		need_sync_fence = true;
 
 	if (platform->aggressive_sync_destroy_thresh) {
-		mutex_lock(&c->sync_lock);
+		nvgpu_mutex_acquire(&c->sync_lock);
 		if (!c->sync) {
 			c->sync = gk20a_channel_sync_create(c);
 			if (!c->sync) {
 				err = -ENOMEM;
-				mutex_unlock(&c->sync_lock);
+				nvgpu_mutex_release(&c->sync_lock);
 				goto fail;
 			}
 			new_sync_created = true;
 		}
 		atomic_inc(&c->sync->refcount);
-		mutex_unlock(&c->sync_lock);
+		nvgpu_mutex_release(&c->sync_lock);
 	}
 
 	if (g->ops.fifo.resetup_ramfc && new_sync_created) {
@@ -2920,31 +2920,31 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	c->g = NULL;
 	c->hw_chid = chid;
 	atomic_set(&c->bound, false);
-	spin_lock_init(&c->ref_obtain_lock);
+	nvgpu_spinlock_init(&c->ref_obtain_lock);
 	atomic_set(&c->ref_count, 0);
 	c->referenceable = false;
 	init_waitqueue_head(&c->ref_count_dec_wq);
 #if GK20A_CHANNEL_REFCOUNT_TRACKING
-	spin_lock_init(&c->ref_actions_lock);
+	nvgpu_spinlock_init(&c->ref_actions_lock);
 #endif
-	mutex_init(&c->ioctl_lock);
-	mutex_init(&c->error_notifier_mutex);
-	spin_lock_init(&c->joblist.dynamic.lock);
-	mutex_init(&c->joblist.pre_alloc.read_lock);
-	raw_spin_lock_init(&c->timeout.lock);
-	mutex_init(&c->sync_lock);
+	nvgpu_mutex_init(&c->ioctl_lock);
+	nvgpu_mutex_init(&c->error_notifier_mutex);
+	nvgpu_spinlock_init(&c->joblist.dynamic.lock);
+	nvgpu_mutex_init(&c->joblist.pre_alloc.read_lock);
+	nvgpu_raw_spinlock_init(&c->timeout.lock);
+	nvgpu_mutex_init(&c->sync_lock);
 	INIT_DELAYED_WORK(&c->timeout.wq, gk20a_channel_timeout_handler);
 	INIT_DELAYED_WORK(&c->clean_up.wq, gk20a_channel_clean_up_runcb_fn);
-	mutex_init(&c->clean_up.lock);
+	nvgpu_mutex_init(&c->clean_up.lock);
 	INIT_LIST_HEAD(&c->joblist.dynamic.jobs);
 #if defined(CONFIG_GK20A_CYCLE_STATS)
-	mutex_init(&c->cyclestate.cyclestate_buffer_mutex);
-	mutex_init(&c->cs_client_mutex);
+	nvgpu_mutex_init(&c->cyclestate.cyclestate_buffer_mutex);
+	nvgpu_mutex_init(&c->cs_client_mutex);
 #endif
 	INIT_LIST_HEAD(&c->dbg_s_list);
 	INIT_LIST_HEAD(&c->event_id_list);
-	mutex_init(&c->event_id_list_lock);
-	mutex_init(&c->dbg_s_lock);
+	nvgpu_mutex_init(&c->event_id_list_lock);
+	nvgpu_mutex_init(&c->dbg_s_lock);
 	list_add(&c->free_chs, &g->fifo.free_chs);
 
 	return 0;
@@ -3102,7 +3102,7 @@ static unsigned int gk20a_event_id_poll(struct file *filep, poll_table *wait)
 
 	poll_wait(filep, &event_id_data->event_id_wq, wait);
 
-	mutex_lock(&event_id_data->lock);
+	nvgpu_mutex_acquire(&event_id_data->lock);
 
 	if (event_id_data->is_tsg) {
 		struct tsg_gk20a *tsg = g->fifo.tsg + event_id_data->id;
@@ -3127,7 +3127,7 @@ static unsigned int gk20a_event_id_poll(struct file *filep, poll_table *wait)
 		}
 	}
 
-	mutex_unlock(&event_id_data->lock);
+	nvgpu_mutex_release(&event_id_data->lock);
 
 	return mask;
 }
@@ -3140,15 +3140,15 @@ static int gk20a_event_id_release(struct inode *inode, struct file *filp)
 	if (event_id_data->is_tsg) {
 		struct tsg_gk20a *tsg = g->fifo.tsg + event_id_data->id;
 
-		mutex_lock(&tsg->event_id_list_lock);
+		nvgpu_mutex_acquire(&tsg->event_id_list_lock);
 		list_del_init(&event_id_data->event_id_node);
-		mutex_unlock(&tsg->event_id_list_lock);
+		nvgpu_mutex_release(&tsg->event_id_list_lock);
 	} else {
 		struct channel_gk20a *ch = g->fifo.channel + event_id_data->id;
 
-		mutex_lock(&ch->event_id_list_lock);
+		nvgpu_mutex_acquire(&ch->event_id_list_lock);
 		list_del_init(&event_id_data->event_id_node);
-		mutex_unlock(&ch->event_id_list_lock);
+		nvgpu_mutex_release(&ch->event_id_list_lock);
 	}
 
 	kfree(event_id_data);
@@ -3170,7 +3170,7 @@ static int gk20a_channel_get_event_data_from_id(struct channel_gk20a *ch,
 	struct gk20a_event_id_data *local_event_id_data;
 	bool event_found = false;
 
-	mutex_lock(&ch->event_id_list_lock);
+	nvgpu_mutex_acquire(&ch->event_id_list_lock);
 	list_for_each_entry(local_event_id_data, &ch->event_id_list,
 						 event_id_node) {
 		if (local_event_id_data->event_id == event_id) {
@@ -3178,7 +3178,7 @@ static int gk20a_channel_get_event_data_from_id(struct channel_gk20a *ch,
 			break;
 		}
 	}
-	mutex_unlock(&ch->event_id_list_lock);
+	nvgpu_mutex_release(&ch->event_id_list_lock);
 
 	if (event_found) {
 		*event_id_data = local_event_id_data;
@@ -3199,7 +3199,7 @@ void gk20a_channel_event_id_post_event(struct channel_gk20a *ch,
 	if (err)
 		return;
 
-	mutex_lock(&event_id_data->lock);
+	nvgpu_mutex_acquire(&event_id_data->lock);
 
 	gk20a_dbg_info(
 		"posting event for event_id=%d on ch=%d\n",
@@ -3208,7 +3208,7 @@ void gk20a_channel_event_id_post_event(struct channel_gk20a *ch,
 
 	wake_up_interruptible_all(&event_id_data->event_id_wq);
 
-	mutex_unlock(&event_id_data->lock);
+	nvgpu_mutex_release(&event_id_data->lock);
 }
 
 static int gk20a_channel_event_id_enable(struct channel_gk20a *ch,
@@ -3253,12 +3253,12 @@ static int gk20a_channel_event_id_enable(struct channel_gk20a *ch,
 	event_id_data->event_id = event_id;
 
 	init_waitqueue_head(&event_id_data->event_id_wq);
-	mutex_init(&event_id_data->lock);
+	nvgpu_mutex_init(&event_id_data->lock);
 	INIT_LIST_HEAD(&event_id_data->event_id_node);
 
-	mutex_lock(&ch->event_id_list_lock);
+	nvgpu_mutex_acquire(&ch->event_id_list_lock);
 	list_add_tail(&event_id_data->event_id_node, &ch->event_id_list);
-	mutex_unlock(&ch->event_id_list_lock);
+	nvgpu_mutex_release(&ch->event_id_list_lock);
 
 	fd_install(local_fd, file);
 	file->private_data = event_id_data;
@@ -3569,7 +3569,7 @@ long gk20a_channel_ioctl(struct file *filp,
 
 	/* protect our sanity for threaded userspace - most of the channel is
 	 * not thread safe */
-	mutex_lock(&ch->ioctl_lock);
+	nvgpu_mutex_acquire(&ch->ioctl_lock);
 
 	/* this ioctl call keeps a ref to the file which keeps a ref to the
 	 * channel */
@@ -3660,12 +3660,12 @@ long gk20a_channel_ioctl(struct file *filp,
 
 		/* waiting is thread-safe, not dropping this mutex could
 		 * deadlock in certain conditions */
-		mutex_unlock(&ch->ioctl_lock);
+		nvgpu_mutex_release(&ch->ioctl_lock);
 
 		err = gk20a_channel_wait(ch,
 				(struct nvgpu_wait_args *)buf);
 
-		mutex_lock(&ch->ioctl_lock);
+		nvgpu_mutex_acquire(&ch->ioctl_lock);
 
 		gk20a_idle(dev);
 		break;
@@ -3899,7 +3899,7 @@ long gk20a_channel_ioctl(struct file *filp,
 	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ))
 		err = copy_to_user((void __user *)arg, buf, _IOC_SIZE(cmd));
 
-	mutex_unlock(&ch->ioctl_lock);
+	nvgpu_mutex_release(&ch->ioctl_lock);
 
 	gk20a_channel_put(ch);
 

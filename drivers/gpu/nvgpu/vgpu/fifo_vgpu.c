@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU Fifo
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -218,7 +218,7 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 					goto clean_up_runlist;
 				}
 			}
-		mutex_init(&runlist->mutex);
+		nvgpu_mutex_init(&runlist->mutex);
 
 		/* None of buffers is pinned if this value doesn't change.
 		    Otherwise, one of them (cur_buffer) must have been pinned. */
@@ -294,7 +294,7 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 	init_runlist(g, f);
 
 	INIT_LIST_HEAD(&f->free_chs);
-	mutex_init(&f->free_chs_mutex);
+	nvgpu_mutex_init(&f->free_chs_mutex);
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		f->channel[chid].userd_iova =
@@ -306,10 +306,10 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 		gk20a_init_channel_support(g, chid);
 		gk20a_init_tsg_support(g, chid);
 	}
-	mutex_init(&f->tsg_inuse_mutex);
+	nvgpu_mutex_init(&f->tsg_inuse_mutex);
 
 	f->deferred_reset_pending = false;
-	mutex_init(&f->deferred_reset_mutex);
+	nvgpu_mutex_init(&f->deferred_reset_mutex);
 
 	f->sw_ready = true;
 
@@ -534,12 +534,12 @@ static int vgpu_fifo_update_runlist(struct gk20a *g, u32 runlist_id,
 
 	runlist = &f->runlist_info[runlist_id];
 
-	mutex_lock(&runlist->mutex);
+	nvgpu_mutex_acquire(&runlist->mutex);
 
 	ret = vgpu_fifo_update_runlist_locked(g, runlist_id, hw_chid, add,
 					wait_for_finish);
 
-	mutex_unlock(&runlist->mutex);
+	nvgpu_mutex_release(&runlist->mutex);
 	return ret;
 }
 
@@ -679,7 +679,7 @@ static int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
 static void vgpu_fifo_set_ctx_mmu_error(struct gk20a *g,
 		struct channel_gk20a *ch)
 {
-	mutex_lock(&ch->error_notifier_mutex);
+	nvgpu_mutex_acquire(&ch->error_notifier_mutex);
 	if (ch->error_notifier_ref) {
 		if (ch->error_notifier->status == 0xffff) {
 			/* If error code is already set, this mmu fault
@@ -691,7 +691,7 @@ static void vgpu_fifo_set_ctx_mmu_error(struct gk20a *g,
 				NVGPU_CHANNEL_FIFO_ERROR_MMU_ERR_FLT);
 		}
 	}
-	mutex_unlock(&ch->error_notifier_mutex);
+	nvgpu_mutex_release(&ch->error_notifier_mutex);
 
 	/* mark channel as faulted */
 	ch->has_timedout = true;

@@ -24,13 +24,13 @@
 #define __lock_sema_sea(s)						\
 	do {								\
 		gpu_sema_verbose_dbg("Acquiring sema lock...");		\
-		mutex_lock(&s->sea_lock);				\
+		nvgpu_mutex_acquire(&s->sea_lock);			\
 		gpu_sema_verbose_dbg("Sema lock aquried!");		\
 	} while (0)
 
 #define __unlock_sema_sea(s)						\
 	do {								\
-		mutex_unlock(&s->sea_lock);				\
+		nvgpu_mutex_release(&s->sea_lock);			\
 		gpu_sema_verbose_dbg("Released sema lock");		\
 	} while (0)
 
@@ -81,7 +81,7 @@ struct nvgpu_semaphore_sea *nvgpu_semaphore_sea_create(struct gk20a *g)
 	g->sema_sea->page_count = 0;
 	g->sema_sea->gk20a = g;
 	INIT_LIST_HEAD(&g->sema_sea->pool_list);
-	mutex_init(&g->sema_sea->sea_lock);
+	nvgpu_mutex_init(&g->sema_sea->sea_lock);
 
 	if (__nvgpu_semaphore_sea_grow(g->sema_sea))
 		goto cleanup;
@@ -138,7 +138,7 @@ struct nvgpu_semaphore_pool *nvgpu_semaphore_pool_alloc(
 	p->sema_sea = sea;
 	INIT_LIST_HEAD(&p->hw_semas);
 	kref_init(&p->ref);
-	mutex_init(&p->pool_lock);
+	nvgpu_mutex_init(&p->pool_lock);
 
 	sea->page_count++;
 	list_add(&p->pool_list_entry, &sea->pool_list);
@@ -344,7 +344,7 @@ static int __nvgpu_init_hw_sema(struct channel_gk20a *ch)
 
 	BUG_ON(!p);
 
-	mutex_lock(&p->pool_lock);
+	nvgpu_mutex_acquire(&p->pool_lock);
 
 	/* Find an available HW semaphore. */
 	hw_sema_idx = __semaphore_bitmap_alloc(p->semas_alloced,
@@ -371,14 +371,14 @@ static int __nvgpu_init_hw_sema(struct channel_gk20a *ch)
 
 	list_add(&hw_sema->hw_sema_list, &p->hw_semas);
 
-	mutex_unlock(&p->pool_lock);
+	nvgpu_mutex_release(&p->pool_lock);
 
 	return 0;
 
 fail_free_idx:
 	clear_bit(hw_sema_idx, p->semas_alloced);
 fail:
-	mutex_unlock(&p->pool_lock);
+	nvgpu_mutex_release(&p->pool_lock);
 	return ret;
 }
 
@@ -391,7 +391,7 @@ void nvgpu_semaphore_free_hw_sema(struct channel_gk20a *ch)
 
 	BUG_ON(!p);
 
-	mutex_lock(&p->pool_lock);
+	nvgpu_mutex_acquire(&p->pool_lock);
 
 	clear_bit(ch->hw_sema->idx, p->semas_alloced);
 
@@ -400,7 +400,7 @@ void nvgpu_semaphore_free_hw_sema(struct channel_gk20a *ch)
 	kfree(ch->hw_sema);
 	ch->hw_sema = NULL;
 
-	mutex_unlock(&p->pool_lock);
+	nvgpu_mutex_release(&p->pool_lock);
 }
 
 /*

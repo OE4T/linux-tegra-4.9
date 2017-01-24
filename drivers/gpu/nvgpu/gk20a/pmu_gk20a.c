@@ -1414,11 +1414,11 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_v *pv = &g->ops.pmu_ver;
 
-	mutex_init(&pmu->elpg_mutex);
-	mutex_init(&pmu->pg_mutex);
-	mutex_init(&pmu->isr_mutex);
-	mutex_init(&pmu->pmu_copy_lock);
-	mutex_init(&pmu->pmu_seq_lock);
+	nvgpu_mutex_init(&pmu->elpg_mutex);
+	nvgpu_mutex_init(&pmu->pg_mutex);
+	nvgpu_mutex_init(&pmu->isr_mutex);
+	nvgpu_mutex_init(&pmu->pmu_copy_lock);
+	nvgpu_mutex_init(&pmu->pmu_seq_lock);
 
 	pmu->remove_support = gk20a_remove_pmu_support;
 
@@ -2189,7 +2189,7 @@ void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
 		return;
 	}
 
-	mutex_lock(&pmu->pmu_copy_lock);
+	nvgpu_mutex_acquire(&pmu->pmu_copy_lock);
 
 	words = size >> 2;
 	bytes = size & 0x3;
@@ -2211,7 +2211,7 @@ void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
 			dst[(words << 2) + i] = ((u8 *)&data)[i];
 		}
 	}
-	mutex_unlock(&pmu->pmu_copy_lock);
+	nvgpu_mutex_release(&pmu->pmu_copy_lock);
 	return;
 }
 
@@ -2235,7 +2235,7 @@ void pmu_copy_to_dmem(struct pmu_gk20a *pmu,
 		return;
 	}
 
-	mutex_lock(&pmu->pmu_copy_lock);
+	nvgpu_mutex_acquire(&pmu->pmu_copy_lock);
 
 	words = size >> 2;
 	bytes = size & 0x3;
@@ -2265,7 +2265,7 @@ void pmu_copy_to_dmem(struct pmu_gk20a *pmu,
 			"copy failed. bytes written %d, expected %d",
 			data - dst, size);
 	}
-	mutex_unlock(&pmu->pmu_copy_lock);
+	nvgpu_mutex_release(&pmu->pmu_copy_lock);
 	return;
 }
 
@@ -2571,17 +2571,17 @@ static int pmu_seq_acquire(struct pmu_gk20a *pmu,
 	struct pmu_sequence *seq;
 	u32 index;
 
-	mutex_lock(&pmu->pmu_seq_lock);
+	nvgpu_mutex_acquire(&pmu->pmu_seq_lock);
 	index = find_first_zero_bit(pmu->pmu_seq_tbl,
 				sizeof(pmu->pmu_seq_tbl));
 	if (index >= sizeof(pmu->pmu_seq_tbl)) {
 		gk20a_err(dev_from_gk20a(g),
 			"no free sequence available");
-		mutex_unlock(&pmu->pmu_seq_lock);
+		nvgpu_mutex_release(&pmu->pmu_seq_lock);
 		return -EAGAIN;
 	}
 	set_bit(index, pmu->pmu_seq_tbl);
-	mutex_unlock(&pmu->pmu_seq_lock);
+	nvgpu_mutex_release(&pmu->pmu_seq_lock);
 
 	seq = &pmu->seq[index];
 	seq->state = PMU_SEQ_STATE_PENDING;
@@ -2616,7 +2616,7 @@ static int pmu_queue_init(struct pmu_gk20a *pmu,
 	queue->id	= id;
 	g->ops.pmu_ver.get_pmu_init_msg_pmu_queue_params(queue, id, init);
 	queue->mutex_id = id;
-	mutex_init(&queue->mutex);
+	nvgpu_mutex_init(&queue->mutex);
 
 	gk20a_dbg_pmu("queue %d: index %d, offset 0x%08x, size 0x%08x",
 		id, queue->index, queue->offset, queue->size);
@@ -2831,7 +2831,7 @@ static int pmu_queue_lock(struct pmu_gk20a *pmu,
 		return 0;
 
 	if (PMU_IS_SW_COMMAND_QUEUE(queue->id)) {
-		mutex_lock(&queue->mutex);
+		nvgpu_mutex_acquire(&queue->mutex);
 		return 0;
 	}
 
@@ -2848,7 +2848,7 @@ static int pmu_queue_unlock(struct pmu_gk20a *pmu,
 		return 0;
 
 	if (PMU_IS_SW_COMMAND_QUEUE(queue->id)) {
-		mutex_unlock(&queue->mutex);
+		nvgpu_mutex_release(&queue->mutex);
 		return 0;
 	}
 
@@ -3245,10 +3245,10 @@ static int gk20a_init_pmu_setup_hw1(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	mutex_lock(&pmu->isr_mutex);
+	nvgpu_mutex_acquire(&pmu->isr_mutex);
 	pmu_reset(pmu);
 	pmu->isr_enabled = true;
-	mutex_unlock(&pmu->isr_mutex);
+	nvgpu_mutex_release(&pmu->isr_mutex);
 
 	/* setup apertures - virtual */
 	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_UCODE),
@@ -4530,9 +4530,9 @@ void gk20a_pmu_isr(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	mutex_lock(&pmu->isr_mutex);
+	nvgpu_mutex_acquire(&pmu->isr_mutex);
 	if (!pmu->isr_enabled) {
-		mutex_unlock(&pmu->isr_mutex);
+		nvgpu_mutex_release(&pmu->isr_mutex);
 		return;
 	}
 
@@ -4546,7 +4546,7 @@ void gk20a_pmu_isr(struct gk20a *g)
 	intr = gk20a_readl(g, pwr_falcon_irqstat_r()) & mask;
 	if (!intr || pmu->pmu_state == PMU_STATE_OFF) {
 		gk20a_writel(g, pwr_falcon_irqsclr_r(), intr);
-		mutex_unlock(&pmu->isr_mutex);
+		nvgpu_mutex_release(&pmu->isr_mutex);
 		return;
 	}
 
@@ -4583,7 +4583,7 @@ void gk20a_pmu_isr(struct gk20a *g)
 				pwr_falcon_irqsset_swgen0_set_f());
 	}
 
-	mutex_unlock(&pmu->isr_mutex);
+	nvgpu_mutex_release(&pmu->isr_mutex);
 }
 
 static bool pmu_validate_cmd(struct pmu_gk20a *pmu, struct pmu_cmd *cmd,
@@ -4987,7 +4987,7 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 	if (!support_gk20a_pmu(g->dev))
 		return ret;
 
-	mutex_lock(&pmu->elpg_mutex);
+	nvgpu_mutex_acquire(&pmu->elpg_mutex);
 
 	pmu->elpg_refcnt++;
 	if (pmu->elpg_refcnt <= 0)
@@ -5026,7 +5026,7 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 	}
 
 exit_unlock:
-	mutex_unlock(&pmu->elpg_mutex);
+	nvgpu_mutex_release(&pmu->elpg_mutex);
 	gk20a_dbg_fn("done");
 	return ret;
 }
@@ -5049,7 +5049,7 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 	if (!support_gk20a_pmu(g->dev))
 		return ret;
 
-	mutex_lock(&pmu->elpg_mutex);
+	nvgpu_mutex_acquire(&pmu->elpg_mutex);
 
 	pmu->elpg_refcnt--;
 	if (pmu->elpg_refcnt > 0) {
@@ -5138,7 +5138,7 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 
 exit_reschedule:
 exit_unlock:
-	mutex_unlock(&pmu->elpg_mutex);
+	nvgpu_mutex_release(&pmu->elpg_mutex);
 	gk20a_dbg_fn("done");
 	return ret;
 }
@@ -5182,9 +5182,9 @@ int gk20a_pmu_destroy(struct gk20a *g)
 	g->pg_ungating_time_us += (u64)pg_stat_data.ungating_time;
 	g->pg_gating_cnt += pg_stat_data.gating_cnt;
 
-	mutex_lock(&pmu->isr_mutex);
+	nvgpu_mutex_acquire(&pmu->isr_mutex);
 	pmu->isr_enabled = false;
-	mutex_unlock(&pmu->isr_mutex);
+	nvgpu_mutex_release(&pmu->isr_mutex);
 
 	pmu->pmu_state = PMU_STATE_OFF;
 	pmu->pmu_ready = false;

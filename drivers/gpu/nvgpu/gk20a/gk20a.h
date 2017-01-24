@@ -29,7 +29,7 @@ struct gk20a_ctxsw_trace;
 struct acr_desc;
 
 #include <linux/sched.h>
-#include <linux/spinlock.h>
+#include <nvgpu/lock.h>
 #include <linux/nvgpu.h>
 #include <linux/irqreturn.h>
 #include <soc/tegra/chip-id.h>
@@ -871,9 +871,9 @@ struct gk20a {
 	bool timeouts_enabled;
 #endif
 
-	struct mutex ch_wdt_lock;
+	struct nvgpu_mutex ch_wdt_lock;
 
-	struct mutex poweroff_lock;
+	struct nvgpu_mutex poweroff_lock;
 
 	/* Channel priorities */
 	u32 timeslice_low_priority_us;
@@ -900,7 +900,7 @@ struct gk20a {
 	u32 emc3d_ratio;
 
 #ifdef CONFIG_DEBUG_FS
-	spinlock_t debugfs_lock;
+	struct nvgpu_spinlock debugfs_lock;
 	struct dentry *debugfs_ltc_enabled;
 	struct dentry *debugfs_timeouts_enabled;
 	struct dentry *debugfs_gr_idle_timeout_default;
@@ -924,11 +924,11 @@ struct gk20a {
 
 	/* List of pending SW semaphore waits. */
 	struct list_head pending_sema_waits;
-	raw_spinlock_t pending_sema_waits_lock;
+	struct nvgpu_raw_spinlock pending_sema_waits_lock;
 
 	/* held while manipulating # of debug/profiler sessions present */
 	/* also prevents debug sessions from attaching until released */
-	struct mutex dbg_sessions_lock;
+	struct nvgpu_mutex dbg_sessions_lock;
 	int dbg_powergating_disabled_refcount; /*refcount for pg disable */
 	int dbg_timeout_disabled_refcount; /*refcount for timeout disable */
 
@@ -942,7 +942,7 @@ struct gk20a {
 	u64 pg_ungating_time_us;
 	u32 pg_gating_cnt;
 
-	spinlock_t mc_enable_lock;
+	struct nvgpu_spinlock mc_enable_lock;
 
 	struct nvgpu_gpu_characteristics gpu_characteristics;
 
@@ -983,7 +983,7 @@ struct gk20a {
 		struct device *node;
 	} sched;
 
-	struct mutex client_lock;
+	struct nvgpu_mutex client_lock;
 	int client_refcount; /* open channels and ctrl nodes */
 
 	dev_t cdev_region;
@@ -1289,11 +1289,11 @@ static inline u32 get_field(u32 reg, u32 mask)
 /* invalidate channel lookup tlb */
 static inline void gk20a_gr_flush_channel_tlb(struct gr_gk20a *gr)
 {
-	spin_lock(&gr->ch_tlb_lock);
+	nvgpu_spinlock_acquire(&gr->ch_tlb_lock);
 	memset(gr->chid_tlb, 0,
 		sizeof(struct gr_channel_map_tlb_entry) *
 		GR_CHANNEL_MAP_TLB_SIZE);
-	spin_unlock(&gr->ch_tlb_lock);
+	nvgpu_spinlock_release(&gr->ch_tlb_lock);
 }
 
 /* classes that the device supports */

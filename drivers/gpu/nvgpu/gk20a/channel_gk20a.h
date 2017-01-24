@@ -19,14 +19,14 @@
 #define CHANNEL_GK20A_H
 
 #include <linux/log2.h>
-#include <linux/mutex.h>
 #include <linux/poll.h>
 #include <linux/semaphore.h>
 #include <linux/slab.h>
-#include <linux/spinlock.h>
 #include <linux/stacktrace.h>
 #include <linux/wait.h>
 #include <uapi/linux/nvgpu.h>
+
+#include <nvgpu/lock.h>
 
 struct gk20a;
 struct gr_gk20a;
@@ -80,18 +80,18 @@ struct channel_gk20a_joblist {
 		unsigned int put;
 		unsigned int get;
 		struct channel_gk20a_job *jobs;
-		struct mutex read_lock;
+		struct nvgpu_mutex read_lock;
 	} pre_alloc;
 
 	struct {
 		struct list_head jobs;
-		spinlock_t lock;
+		struct nvgpu_spinlock lock;
 	} dynamic;
 };
 
 struct channel_gk20a_timeout {
 	struct delayed_work wq;
-	raw_spinlock_t lock;
+	struct nvgpu_raw_spinlock lock;
 	bool initialized;
 	u32 gp_get;
 };
@@ -106,12 +106,12 @@ struct gk20a_event_id_data {
 	bool event_posted;
 
 	wait_queue_head_t event_id_wq;
-	struct mutex lock;
+	struct nvgpu_mutex lock;
 	struct list_head event_id_node;
 };
 
 struct channel_gk20a_clean_up {
-	struct mutex lock;
+	struct nvgpu_mutex lock;
 	bool scheduled;
 	struct delayed_work wq;
 };
@@ -156,7 +156,7 @@ struct channel_gk20a {
 
 	struct list_head free_chs;
 
-	spinlock_t ref_obtain_lock;
+	struct nvgpu_spinlock ref_obtain_lock;
 	bool referenceable;
 	atomic_t ref_count;
 	wait_queue_head_t ref_count_dec_wq;
@@ -169,7 +169,7 @@ struct channel_gk20a {
 	struct channel_gk20a_ref_action ref_actions[
 		GK20A_CHANNEL_REFCOUNT_TRACKING];
 	size_t ref_actions_put; /* index of next write */
-	spinlock_t ref_actions_lock;
+	struct nvgpu_spinlock ref_actions_lock;
 #endif
 
 	struct nvgpu_semaphore_int *hw_sema;
@@ -183,7 +183,7 @@ struct channel_gk20a {
 	bool cde;
 	pid_t pid;
 	pid_t tgid;
-	struct mutex ioctl_lock;
+	struct nvgpu_mutex ioctl_lock;
 
 	int tsgid;
 	struct list_head ch_entry; /* channel's entry in TSG */
@@ -221,17 +221,17 @@ struct channel_gk20a {
 	void *cyclestate_buffer;
 	u32 cyclestate_buffer_size;
 	struct dma_buf *cyclestate_buffer_handler;
-	struct mutex cyclestate_buffer_mutex;
+	struct nvgpu_mutex cyclestate_buffer_mutex;
 	} cyclestate;
 
-	struct mutex cs_client_mutex;
+	struct nvgpu_mutex cs_client_mutex;
 	struct gk20a_cs_snapshot_client *cs_client;
 #endif
-	struct mutex dbg_s_lock;
+	struct nvgpu_mutex dbg_s_lock;
 	struct list_head dbg_s_list;
 
 	struct list_head event_id_list;
-	struct mutex event_id_list_lock;
+	struct nvgpu_mutex event_id_list_lock;
 
 	bool has_timedout;
 	u32 timeout_ms_max;
@@ -241,9 +241,9 @@ struct channel_gk20a {
 	struct dma_buf *error_notifier_ref;
 	struct nvgpu_notification *error_notifier;
 	void *error_notifier_va;
-	struct mutex error_notifier_mutex;
+	struct nvgpu_mutex error_notifier_mutex;
 
-	struct mutex sync_lock;
+	struct nvgpu_mutex sync_lock;
 	struct gk20a_channel_sync *sync;
 
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
@@ -254,7 +254,7 @@ struct channel_gk20a {
 	 * via schedule_work */
 	void (*update_fn)(struct channel_gk20a *, void *);
 	void *update_fn_data;
-	spinlock_t update_fn_lock; /* make access to the two above atomic */
+	struct nvgpu_spinlock update_fn_lock; /* make access to the two above atomic */
 	struct work_struct update_fn_work;
 
 	u32 interleave_level;

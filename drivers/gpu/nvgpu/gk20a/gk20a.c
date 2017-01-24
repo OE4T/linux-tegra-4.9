@@ -33,7 +33,7 @@
 #include <linux/thermal.h>
 #include <asm/cacheflush.h>
 #include <linux/debugfs.h>
-#include <linux/spinlock.h>
+#include <nvgpu/lock.h>
 #include <linux/clk/tegra.h>
 #include <linux/kthread.h>
 #include <linux/platform/tegra/common.h>
@@ -795,13 +795,13 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 
 	gk20a_dbg_fn("");
 
-	mutex_lock(&g->poweroff_lock);
+	nvgpu_mutex_acquire(&g->poweroff_lock);
 
 	if (!g->power_on)
 		goto done;
 
 	if (gk20a_fifo_is_engine_busy(g)) {
-		mutex_unlock(&g->poweroff_lock);
+		nvgpu_mutex_release(&g->poweroff_lock);
 		return -EBUSY;
 	}
 	gk20a_scale_suspend(dev);
@@ -844,7 +844,7 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	gk20a_lockout_registers(g);
 
 done:
-	mutex_unlock(&g->poweroff_lock);
+	nvgpu_mutex_release(&g->poweroff_lock);
 
 	return ret;
 }
@@ -1373,9 +1373,9 @@ static int gk20a_pm_unrailgate(struct device *dev)
 	trace_gk20a_pm_unrailgate(dev_name(dev));
 
 	if (platform->unrailgate) {
-		mutex_lock(&platform->railgate_lock);
+		nvgpu_mutex_acquire(&platform->railgate_lock);
 		ret = platform->unrailgate(dev);
-		mutex_unlock(&platform->railgate_lock);
+		nvgpu_mutex_release(&platform->railgate_lock);
 	}
 
 #ifdef CONFIG_DEBUG_FS
@@ -1896,11 +1896,11 @@ void gk20a_disable(struct gk20a *g, u32 units)
 
 	gk20a_dbg(gpu_dbg_info, "pmc disable: %08x\n", units);
 
-	spin_lock(&g->mc_enable_lock);
+	nvgpu_spinlock_acquire(&g->mc_enable_lock);
 	pmc = gk20a_readl(g, mc_enable_r());
 	pmc &= ~units;
 	gk20a_writel(g, mc_enable_r(), pmc);
-	spin_unlock(&g->mc_enable_lock);
+	nvgpu_spinlock_release(&g->mc_enable_lock);
 }
 
 void gk20a_enable(struct gk20a *g, u32 units)
@@ -1909,12 +1909,12 @@ void gk20a_enable(struct gk20a *g, u32 units)
 
 	gk20a_dbg(gpu_dbg_info, "pmc enable: %08x\n", units);
 
-	spin_lock(&g->mc_enable_lock);
+	nvgpu_spinlock_acquire(&g->mc_enable_lock);
 	pmc = gk20a_readl(g, mc_enable_r());
 	pmc |= units;
 	gk20a_writel(g, mc_enable_r(), pmc);
 	gk20a_readl(g, mc_enable_r());
-	spin_unlock(&g->mc_enable_lock);
+	nvgpu_spinlock_release(&g->mc_enable_lock);
 
 	udelay(20);
 }
@@ -1953,7 +1953,7 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 	down_write(&g->busy_lock);
 
 	/* acquire railgate lock to prevent unrailgate in midst of do_idle() */
-	mutex_lock(&platform->railgate_lock);
+	nvgpu_mutex_acquire(&platform->railgate_lock);
 
 	/* check if it is already railgated ? */
 	if (platform->is_railgated(dev))
@@ -1963,7 +1963,7 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 	 * release railgate_lock, prevent suspend by incrementing usage counter,
 	 * re-acquire railgate_lock
 	 */
-	mutex_unlock(&platform->railgate_lock);
+	nvgpu_mutex_release(&platform->railgate_lock);
 	pm_runtime_get_sync(dev);
 
 	/*
@@ -1975,7 +1975,7 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 		target_ref_cnt = 2;
 	else
 		target_ref_cnt = 1;
-	mutex_lock(&platform->railgate_lock);
+	nvgpu_mutex_acquire(&platform->railgate_lock);
 
 	nvgpu_timeout_init(g, &timeout, GK20A_WAIT_FOR_IDLE_MS,
 			   NVGPU_TIMER_CPU_TIMER);
@@ -2052,7 +2052,7 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 fail_drop_usage_count:
 	pm_runtime_put_noidle(dev);
 fail_timeout:
-	mutex_unlock(&platform->railgate_lock);
+	nvgpu_mutex_release(&platform->railgate_lock);
 	up_write(&g->busy_lock);
 	return -EBUSY;
 }
@@ -2101,7 +2101,7 @@ int __gk20a_do_unidle(struct device *dev)
 	}
 
 	/* release the lock and open up all other busy() calls */
-	mutex_unlock(&platform->railgate_lock);
+	nvgpu_mutex_release(&platform->railgate_lock);
 	up_write(&g->busy_lock);
 
 	return 0;

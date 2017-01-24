@@ -275,8 +275,8 @@ struct gr_gk20a {
 		bool valid;
 	} ctx_vars;
 
-	struct mutex ctx_mutex; /* protect golden ctx init */
-	struct mutex fecs_mutex; /* protect fecs method */
+	struct nvgpu_mutex ctx_mutex; /* protect golden ctx init */
+	struct nvgpu_mutex fecs_mutex; /* protect fecs method */
 
 #define GR_NETLIST_DYNAMIC	-1
 #define GR_NETLIST_STATIC_A	'A'
@@ -333,7 +333,7 @@ struct gr_gk20a {
 	u32 max_comptag_mem; /* max memory size (MB) for comptag */
 	struct compbit_store_desc compbit_store;
 	struct gk20a_comptag_allocator {
-		struct mutex lock;
+		struct nvgpu_mutex lock;
 		/* this bitmap starts at ctag 1. 0th cannot be taken */
 		unsigned long *bitmap;
 		/* size of bitmap, not max ctags, so one less */
@@ -342,7 +342,7 @@ struct gr_gk20a {
 
 	struct gr_zcull_gk20a zcull;
 
-	struct mutex zbc_lock;
+	struct nvgpu_mutex zbc_lock;
 	struct zbc_color_table zbc_col_tbl[GK20A_ZBC_TABLE_SIZE];
 	struct zbc_depth_table zbc_dep_tbl[GK20A_ZBC_TABLE_SIZE];
 #ifdef CONFIG_TEGRA_19x_GPU
@@ -363,7 +363,7 @@ struct gr_gk20a {
 #define GR_CHANNEL_MAP_TLB_SIZE		2 /* must of power of 2 */
 	struct gr_channel_map_tlb_entry chid_tlb[GR_CHANNEL_MAP_TLB_SIZE];
 	u32 channel_tlb_flush_index;
-	spinlock_t ch_tlb_lock;
+	struct nvgpu_spinlock ch_tlb_lock;
 
 	void (*remove_support)(struct gr_gk20a *gr);
 	bool sw_ready;
@@ -379,7 +379,7 @@ struct gr_gk20a {
 	struct sm_info *sm_to_cluster;
 	struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_states;
 #if defined(CONFIG_GK20A_CYCLE_STATS)
-	struct mutex			cs_lock;
+	struct nvgpu_mutex			cs_lock;
 	struct gk20a_cs_snapshot	*cs_data;
 #endif
 };

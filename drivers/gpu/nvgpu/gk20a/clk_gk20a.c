@@ -1,7 +1,7 @@
 /*
  * GK20A Clocks
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -457,7 +457,7 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 		clk->gpc_pll.freq /= pl_to_div[clk->gpc_pll.PL];
 	}
 
-	mutex_init(&clk->clk_mutex);
+	nvgpu_mutex_init(&clk->clk_mutex);
 
 	clk->sw_ready = true;
 
@@ -538,14 +538,14 @@ static int gk20a_clk_export_set_rate(void *data, unsigned long *rate)
 	struct clk_gk20a *clk = &g->clk;
 
 	if (rate) {
-		mutex_lock(&clk->clk_mutex);
+		nvgpu_mutex_acquire(&clk->clk_mutex);
 		old_freq = clk->gpc_pll.freq;
 		ret = set_pll_target(g, rate_gpu_to_gpc2clk(*rate), old_freq);
 		if (!ret && clk->gpc_pll.enabled)
 			ret = set_pll_freq(g, clk->gpc_pll.freq, old_freq);
 		if (!ret)
 			*rate = rate_gpc2clk_to_gpu(clk->gpc_pll.freq);
-		mutex_unlock(&clk->clk_mutex);
+		nvgpu_mutex_release(&clk->clk_mutex);
 	}
 	return ret;
 }
@@ -556,9 +556,9 @@ static int gk20a_clk_export_enable(void *data)
 	struct gk20a *g = data;
 	struct clk_gk20a *clk = &g->clk;
 
-	mutex_lock(&clk->clk_mutex);
+	nvgpu_mutex_acquire(&clk->clk_mutex);
 	ret = set_pll_freq(g, clk->gpc_pll.freq, clk->gpc_pll.freq);
-	mutex_unlock(&clk->clk_mutex);
+	nvgpu_mutex_release(&clk->clk_mutex);
 	return ret;
 }
 
@@ -567,10 +567,10 @@ static void gk20a_clk_export_disable(void *data)
 	struct gk20a *g = data;
 	struct clk_gk20a *clk = &g->clk;
 
-	mutex_lock(&clk->clk_mutex);
+	nvgpu_mutex_acquire(&clk->clk_mutex);
 	if (g->clk.clk_hw_on)
 		clk_disable_gpcpll(g, 1);
-	mutex_unlock(&clk->clk_mutex);
+	nvgpu_mutex_release(&clk->clk_mutex);
 }
 
 static void gk20a_clk_export_init(void *data, unsigned long *rate, bool *state)
@@ -578,12 +578,12 @@ static void gk20a_clk_export_init(void *data, unsigned long *rate, bool *state)
 	struct gk20a *g = data;
 	struct clk_gk20a *clk = &g->clk;
 
-	mutex_lock(&clk->clk_mutex);
+	nvgpu_mutex_acquire(&clk->clk_mutex);
 	if (state)
 		*state = clk->gpc_pll.enabled;
 	if (rate)
 		*rate = rate_gpc2clk_to_gpu(clk->gpc_pll.freq);
-	mutex_unlock(&clk->clk_mutex);
+	nvgpu_mutex_release(&clk->clk_mutex);
 }
 
 static struct tegra_clk_export_ops gk20a_clk_export_ops = {
@@ -640,11 +640,11 @@ static int gk20a_init_clk_support(struct gk20a *g)
 	if (err)
 		return err;
 
-	mutex_lock(&clk->clk_mutex);
+	nvgpu_mutex_acquire(&clk->clk_mutex);
 	clk->clk_hw_on = true;
 
 	err = gk20a_init_clk_setup_hw(g);
-	mutex_unlock(&clk->clk_mutex);
+	nvgpu_mutex_release(&clk->clk_mutex);
 	if (err)
 		return err;
 
@@ -658,9 +658,9 @@ static int gk20a_init_clk_support(struct gk20a *g)
 		return err;
 
 	/* The prev call may not enable PLL if gbus is unbalanced - force it */
-	mutex_lock(&clk->clk_mutex);
+	nvgpu_mutex_acquire(&clk->clk_mutex);
 	err = set_pll_freq(g, clk->gpc_pll.freq, clk->gpc_pll.freq);
-	mutex_unlock(&clk->clk_mutex);
+	nvgpu_mutex_release(&clk->clk_mutex);
 	if (err)
 		return err;
 
@@ -680,10 +680,10 @@ static int gk20a_suspend_clk_support(struct gk20a *g)
 	clk_disable(g->clk.tegra_clk);
 
 	/* The prev call may not disable PLL if gbus is unbalanced - force it */
-	mutex_lock(&g->clk.clk_mutex);
+	nvgpu_mutex_acquire(&g->clk.clk_mutex);
 	ret = clk_disable_gpcpll(g, 1);
 	g->clk.clk_hw_on = false;
-	mutex_unlock(&g->clk.clk_mutex);
+	nvgpu_mutex_release(&g->clk.clk_mutex);
 	return ret;
 }
 
@@ -714,10 +714,10 @@ static int pll_reg_show(struct seq_file *s, void *data)
 	struct gk20a *g = s->private;
 	u32 reg, m, n, pl, f;
 
-	mutex_lock(&g->clk.clk_mutex);
+	nvgpu_mutex_acquire(&g->clk.clk_mutex);
 	if (!g->clk.clk_hw_on) {
 		seq_printf(s, "gk20a powered down - no access to registers\n");
-		mutex_unlock(&g->clk.clk_mutex);
+		nvgpu_mutex_release(&g->clk.clk_mutex);
 		return 0;
 	}
 
@@ -733,7 +733,7 @@ static int pll_reg_show(struct seq_file *s, void *data)
 	f = g->clk.gpc_pll.clk_in * n / (m * pl_to_div[pl]);
 	seq_printf(s, "coef = 0x%x : m = %u : n = %u : pl = %u", reg, m, n, pl);
 	seq_printf(s, " : pll_f(gpu_f) = %u(%u) kHz\n", f, f/2);
-	mutex_unlock(&g->clk.clk_mutex);
+	nvgpu_mutex_release(&g->clk.clk_mutex);
 	return 0;
 }
 

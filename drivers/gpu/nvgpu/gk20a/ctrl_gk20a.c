@@ -349,7 +349,7 @@ static int nvgpu_gpu_ioctl_inval_icache(
 	ops.offset	 = gr_pri_gpc0_gcc_dbg_r();
 
 	/* Take the global lock, since we'll be doing global regops */
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	err = gr_gk20a_exec_ctx_ops(ch, &ops, 1, 0, 1);
 
@@ -371,7 +371,7 @@ static int nvgpu_gpu_ioctl_inval_icache(
 	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_cache_control_r(), cache_ctrl);
 
 end:
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	return err;
 }
 
@@ -384,9 +384,9 @@ static int nvgpu_gpu_ioctl_set_mmu_debug_mode(
 		return -EINVAL;
 	}
 
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	g->ops.mm.set_debug_mode(g, args->state == 1);
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	gk20a_idle(g->dev);
 	return 0;
@@ -403,13 +403,13 @@ static int nvgpu_gpu_ioctl_set_debug_mode(
 	if (!ch)
 		return -EINVAL;
 
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	if (g->ops.gr.set_sm_debug_mode)
 		err = g->ops.gr.set_sm_debug_mode(g, ch,
 				args->sms, !!args->enable);
 	else
 		err = -ENOSYS;
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	return err;
 }
@@ -419,7 +419,7 @@ static int nvgpu_gpu_ioctl_trigger_suspend(struct gk20a *g)
 	int err = 0;
 	u32 dbgr_control0;
 
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	/* assert stop trigger. uniformity assumption: all SMs will have
 	 * the same state in dbg_control0. */
 	dbgr_control0 =
@@ -430,7 +430,7 @@ static int nvgpu_gpu_ioctl_trigger_suspend(struct gk20a *g)
 	gk20a_writel(g,
 		gr_gpcs_tpcs_sm_dbgr_control0_r(), dbgr_control0);
 
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	return err;
 }
 
@@ -456,7 +456,7 @@ static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 			  gr_gpc0_tpc0_sm_hww_global_esr_bpt_pause_pending_f() |
 			  gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f();
 
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	/* Lock down all SMs */
 	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
@@ -482,7 +482,7 @@ static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 	}
 
 end:
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	kfree(w_state);
 	return err;
 }
@@ -491,7 +491,7 @@ static int nvgpu_gpu_ioctl_resume_from_pause(struct gk20a *g)
 {
 	int err = 0;
 
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	/* Clear the pause mask to tell the GPU we want to resume everyone */
 	gk20a_writel(g,
@@ -505,7 +505,7 @@ static int nvgpu_gpu_ioctl_resume_from_pause(struct gk20a *g)
 	 * then a 1 to the run trigger */
 	gk20a_resume_all_sms(g);
 
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	return err;
 }
 
@@ -551,7 +551,7 @@ static int nvgpu_gpu_ioctl_has_any_exception(
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
 
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
 
@@ -565,7 +565,7 @@ static int nvgpu_gpu_ioctl_has_any_exception(
 		tpc_exception_en |= gr_gpc0_tpc0_tpccs_tpc_exception_en_sm_v(regval) << sm_id;
 	}
 
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	args->tpc_exception_en_sm_mask = tpc_exception_en;
 	return err;
 }

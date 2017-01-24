@@ -114,7 +114,7 @@ void sec2_copy_to_dmem(struct pmu_gk20a *pmu,
 		return;
 	}
 
-	mutex_lock(&pmu->pmu_copy_lock);
+	nvgpu_mutex_acquire(&pmu->pmu_copy_lock);
 
 	words = size >> 2;
 	bytes = size & 0x3;
@@ -144,7 +144,7 @@ void sec2_copy_to_dmem(struct pmu_gk20a *pmu,
 			"copy failed. bytes written %d, expected %d",
 			data - dst, size);
 	}
-	mutex_unlock(&pmu->pmu_copy_lock);
+	nvgpu_mutex_release(&pmu->pmu_copy_lock);
 	return;
 }
 
@@ -348,10 +348,10 @@ int init_sec2_setup_hw1(struct gk20a *g,
 
 	gk20a_dbg_fn("");
 
-	mutex_lock(&pmu->isr_mutex);
+	nvgpu_mutex_acquire(&pmu->isr_mutex);
 	g->ops.pmu.reset(g);
 	pmu->isr_enabled = true;
-	mutex_unlock(&pmu->isr_mutex);
+	nvgpu_mutex_release(&pmu->isr_mutex);
 
 	data = gk20a_readl(g, psec_fbif_ctl_r());
 	data |= psec_fbif_ctl_allow_phys_no_ctx_allow_f();
@@ -379,11 +379,11 @@ int init_sec2_setup_hw1(struct gk20a *g,
 			psec_fbif_transcfg_target_noncoherent_sysmem_f());
 
 	/*disable irqs for hs falcon booting as we will poll for halt*/
-	mutex_lock(&pmu->isr_mutex);
+	nvgpu_mutex_acquire(&pmu->isr_mutex);
 	pmu_enable_irq(pmu, false);
 	sec_enable_irq(pmu, false);
 	pmu->isr_enabled = false;
-	mutex_unlock(&pmu->isr_mutex);
+	nvgpu_mutex_release(&pmu->isr_mutex);
 	err = bl_bootstrap_sec2(pmu, desc, bl_sz);
 	if (err)
 		return err;

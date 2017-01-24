@@ -866,7 +866,7 @@ static int vgpu_gr_init_gr_setup_sw(struct gk20a *g)
 	gr->g = g;
 
 #if defined(CONFIG_GK20A_CYCLE_STATS)
-	mutex_init(&g->gr.cs_lock);
+	nvgpu_mutex_init(&g->gr.cs_lock);
 #endif
 
 	err = vgpu_gr_init_gr_config(g, gr);
@@ -885,7 +885,7 @@ static int vgpu_gr_init_gr_setup_sw(struct gk20a *g)
 	if (err)
 		goto clean_up;
 
-	mutex_init(&gr->ctx_mutex);
+	nvgpu_mutex_init(&gr->ctx_mutex);
 
 	gr->sm_error_states = kzalloc(
 			sizeof(struct nvgpu_dbg_gpu_sm_error_state_record) *
@@ -1078,9 +1078,9 @@ static int vgpu_gr_clear_sm_error_state(struct gk20a *g,
 {
 	struct gr_gk20a *gr = &g->gr;
 
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	memset(&gr->sm_error_states[sm_id], 0, sizeof(*gr->sm_error_states));
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	return 0;
 }
@@ -1096,7 +1096,7 @@ void vgpu_gr_handle_sm_esr_event(struct gk20a *g,
 		return;
 	}
 
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	sm_error_states = &g->gr.sm_error_states[info->sm_id];
 
@@ -1108,7 +1108,7 @@ void vgpu_gr_handle_sm_esr_event(struct gk20a *g,
 	sm_error_states->hww_warp_esr_report_mask =
 				info->hww_warp_esr_report_mask;
 
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 }
 
 void vgpu_init_gr_ops(struct gpu_ops *gops)

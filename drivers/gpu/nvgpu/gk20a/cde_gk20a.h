@@ -1,7 +1,7 @@
 /*
  * GK20A color decompression engine support
  *
- * Copyright (c) 2014-2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -262,7 +262,7 @@ struct gk20a_cde_ctx {
 
 struct gk20a_cde_app {
 	bool initialised;
-	struct mutex mutex;
+	struct nvgpu_mutex mutex;
 
 	struct list_head free_contexts;
 	struct list_head used_contexts;

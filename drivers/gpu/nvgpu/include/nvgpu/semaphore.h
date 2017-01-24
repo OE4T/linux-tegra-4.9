@@ -84,7 +84,7 @@ struct nvgpu_semaphore_pool {
 
 	struct nvgpu_semaphore_sea *sema_sea;	/* Sea that owns this pool. */
 
-	struct mutex pool_lock;
+	struct nvgpu_mutex pool_lock;
 
 	/*
 	 * This is the address spaces's personal RW table. Other channels will
@@ -143,7 +143,7 @@ struct nvgpu_semaphore_sea {
 	 */
 	DECLARE_BITMAP(pools_alloced, SEMAPHORE_POOL_COUNT);
 
-	struct mutex sea_lock;		/* Lock alloc/free calls. */
+	struct nvgpu_mutex sea_lock;		/* Lock alloc/free calls. */
 };
 
 /*

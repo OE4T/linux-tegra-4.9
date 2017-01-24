@@ -20,6 +20,8 @@
 #include <linux/dma-attrs.h>
 #include <linux/version.h>
 
+#include <nvgpu/lock.h>
+
 #define GK20A_CLKS_MAX		4
 
 struct gk20a;
@@ -184,7 +186,7 @@ struct gk20a_platform {
 
 	/* Called to turn on the device */
 	int (*unrailgate)(struct device *dev);
-	struct mutex railgate_lock;
+	struct nvgpu_mutex railgate_lock;
 
 	/* Called to check state of device */
 	bool (*is_railgated)(struct device *dev);

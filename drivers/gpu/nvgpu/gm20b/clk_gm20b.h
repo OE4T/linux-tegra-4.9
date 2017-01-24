@@ -1,7 +1,7 @@
 /*
  * GM20B Graphics
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,7 +19,7 @@
 #ifndef _NVHOST_CLK_GM20B_H_
 #define _NVHOST_CLK_GM20B_H_
 
-#include <linux/mutex.h>
+#include <nvgpu/lock.h>
 
 void gm20b_init_clk_ops(struct gpu_ops *gops);
 

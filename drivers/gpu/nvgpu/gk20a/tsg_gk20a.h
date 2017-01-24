@@ -16,6 +16,8 @@
 #ifndef __TSG_GK20A_H_
 #define __TSG_GK20A_H_
 
+#include <nvgpu/lock.h>
+
 #define NVGPU_INVALID_TSG_ID (-1)
 
 struct channel_gk20a;
@@ -58,7 +60,7 @@ struct tsg_gk20a {
 	u32 interleave_level;
 
 	struct list_head event_id_list;
-	struct mutex event_id_list_lock;
+	struct nvgpu_mutex event_id_list_lock;
 
 	u32 runlist_id;
 	pid_t tgid;

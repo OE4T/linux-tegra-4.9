@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 - 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011 - 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,7 +16,7 @@
 #ifndef CLK_GK20A_H
 #define CLK_GK20A_H
 
-#include <linux/mutex.h>
+#include <nvgpu/lock.h>
 #include <linux/clkdev.h>
 #include <linux/clk-provider.h>
 
@@ -86,7 +86,7 @@ struct clk_gk20a {
 #endif
 	struct pll gpc_pll;
 	struct pll gpc_pll_last;
-	struct mutex clk_mutex;
+	struct nvgpu_mutex clk_mutex;
 	struct namemap_cfg *clk_namemap;
 	u32 namemap_num;
 	u32 *namemap_xlat_table;

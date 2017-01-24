@@ -1247,7 +1247,7 @@ static int gm20b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
 					       GPU_LIT_TPC_IN_GPC_STRIDE);
 	u32 offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
 
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	sm_id = gr_gpc0_tpc0_sm_cfg_sm_id_v(gk20a_readl(g,
 			gr_gpc0_tpc0_sm_cfg_r() + offset));
@@ -1263,7 +1263,7 @@ static int gm20b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
 	gr->sm_error_states[sm_id].hww_warp_esr_report_mask = gk20a_readl(g,
 			gr_gpc0_tpc0_sm_hww_warp_esr_report_mask_r() + offset);
 
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	return 0;
 }
@@ -1280,7 +1280,7 @@ static int gm20b_gr_update_sm_error_state(struct gk20a *g,
 					       GPU_LIT_TPC_IN_GPC_STRIDE);
 	int err = 0;
 
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	gr->sm_error_states[sm_id].hww_global_esr =
 			sm_error_state->hww_global_esr;
@@ -1336,7 +1336,7 @@ enable_ctxsw:
 	err = gr_gk20a_enable_ctxsw(g);
 
 fail:
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	return err;
 }
 
@@ -1351,7 +1351,7 @@ static int gm20b_gr_clear_sm_error_state(struct gk20a *g,
 					       GPU_LIT_TPC_IN_GPC_STRIDE);
 	int err = 0;
 
-	mutex_lock(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	memset(&gr->sm_error_states[sm_id], 0, sizeof(*gr->sm_error_states));
 
@@ -1377,7 +1377,7 @@ static int gm20b_gr_clear_sm_error_state(struct gk20a *g,
 	err = gr_gk20a_enable_ctxsw(g);
 
 fail:
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	return err;
 }
 

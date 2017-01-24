@@ -142,7 +142,7 @@ static u32 gk20a_pramin_enter(struct gk20a *g, struct mem_desc *mem,
 
 	WARN_ON(!bufbase);
 
-	spin_lock(&g->mm.pramin_window_lock);
+	nvgpu_spinlock_acquire(&g->mm.pramin_window_lock);
 
 	if (g->mm.pramin_window != win) {
 		gk20a_writel(g, bus_bar0_window_r(), win);
@@ -158,7 +158,7 @@ static void gk20a_pramin_exit(struct gk20a *g, struct mem_desc *mem,
 {
 	gk20a_dbg(gpu_dbg_mem, "end for %p,%p", mem, chunk);
 
-	spin_unlock(&g->mm.pramin_window_lock);
+	nvgpu_spinlock_release(&g->mm.pramin_window_lock);
 }
 
 /*
@@ -483,7 +483,7 @@ static int __must_check gk20a_init_ce_vm(struct mm_gk20a *mm);
 static struct gk20a *gk20a_vidmem_buf_owner(struct dma_buf *dmabuf);
 
 struct gk20a_dmabuf_priv {
-	struct mutex lock;
+	struct nvgpu_mutex lock;
 
 	struct gk20a_comptag_allocator *comptag_allocator;
 	struct gk20a_comptags comptags;
@@ -514,7 +514,7 @@ static int gk20a_comptaglines_alloc(struct gk20a_comptag_allocator *allocator,
 	unsigned long addr;
 	int err = 0;
 
-	mutex_lock(&allocator->lock);
+	nvgpu_mutex_acquire(&allocator->lock);
 	addr = bitmap_find_next_zero_area(allocator->bitmap, allocator->size,
 			0, len, 0);
 	if (addr < allocator->size) {
@@ -524,7 +524,7 @@ static int gk20a_comptaglines_alloc(struct gk20a_comptag_allocator *allocator,
 	} else {
 		err = -ENOMEM;
 	}
-	mutex_unlock(&allocator->lock);
+	nvgpu_mutex_release(&allocator->lock);
 
 	return err;
 }
@@ -538,9 +538,9 @@ static void gk20a_comptaglines_free(struct gk20a_comptag_allocator *allocator,
 	WARN_ON(addr > allocator->size);
 	WARN_ON(addr + len > allocator->size);
 
-	mutex_lock(&allocator->lock);
+	nvgpu_mutex_acquire(&allocator->lock);
 	bitmap_clear(allocator->bitmap, addr, len);
-	mutex_unlock(&allocator->lock);
+	nvgpu_mutex_release(&allocator->lock);
 }
 
 static void gk20a_mm_delete_priv(void *_priv)
@@ -575,12 +575,12 @@ struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf)
 	if (WARN_ON(!priv))
 		return ERR_PTR(-EINVAL);
 
-	mutex_lock(&priv->lock);
+	nvgpu_mutex_acquire(&priv->lock);
 
 	if (priv->pin_count == 0) {
 		priv->attach = dma_buf_attach(dmabuf, dev);
 		if (IS_ERR(priv->attach)) {
-			mutex_unlock(&priv->lock);
+			nvgpu_mutex_release(&priv->lock);
 			return (struct sg_table *)priv->attach;
 		}
 
@@ -588,13 +588,13 @@ struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf)
 						   DMA_BIDIRECTIONAL);
 		if (IS_ERR(priv->sgt)) {
 			dma_buf_detach(dmabuf, priv->attach);
-			mutex_unlock(&priv->lock);
+			nvgpu_mutex_release(&priv->lock);
 			return priv->sgt;
 		}
 	}
 
 	priv->pin_count++;
-	mutex_unlock(&priv->lock);
+	nvgpu_mutex_release(&priv->lock);
 	return priv->sgt;
 }
 
@@ -607,7 +607,7 @@ void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
 	if (IS_ERR(priv) || !priv)
 		return;
 
-	mutex_lock(&priv->lock);
+	nvgpu_mutex_acquire(&priv->lock);
 	WARN_ON(priv->sgt != sgt);
 	priv->pin_count--;
 	WARN_ON(priv->pin_count < 0);
@@ -617,7 +617,7 @@ void gk20a_mm_unpin(struct device *dev, struct dma_buf *dmabuf,
 					 DMA_BIDIRECTIONAL);
 		dma_buf_detach(dmabuf, priv->attach);
 	}
-	mutex_unlock(&priv->lock);
+	nvgpu_mutex_release(&priv->lock);
 }
 
 void gk20a_get_comptags(struct device *dev, struct dma_buf *dmabuf,
@@ -842,7 +842,7 @@ static int gk20a_alloc_sysmem_flush(struct gk20a *g)
 static void gk20a_init_pramin(struct mm_gk20a *mm)
 {
 	mm->pramin_window = 0;
-	spin_lock_init(&mm->pramin_window_lock);
+	nvgpu_spinlock_init(&mm->pramin_window_lock);
 	mm->force_pramin = GK20A_FORCE_PRAMIN_DEFAULT;
 }
 
@@ -971,12 +971,12 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 	mm->vidmem.bootstrap_base = bootstrap_base;
 	mm->vidmem.bootstrap_size = bootstrap_size;
 
-	mutex_init(&mm->vidmem.first_clear_mutex);
+	nvgpu_mutex_init(&mm->vidmem.first_clear_mutex);
 
 	INIT_WORK(&mm->vidmem.clear_mem_worker, gk20a_vidmem_clear_mem_worker);
 	atomic64_set(&mm->vidmem.bytes_pending, 0);
 	INIT_LIST_HEAD(&mm->vidmem.clear_list_head);
-	mutex_init(&mm->vidmem.clear_list_mutex);
+	nvgpu_mutex_init(&mm->vidmem.clear_list_mutex);
 
 	gk20a_dbg_info("registered vidmem: %zu MB", size / SZ_1M);
 
@@ -998,7 +998,7 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 	}
 
 	mm->g = g;
-	mutex_init(&mm->l2_op_lock);
+	nvgpu_mutex_init(&mm->l2_op_lock);
 
 	/*TBD: make channel vm size configurable */
 	mm->channel.user_size = NV_MM_DEFAULT_USER_SIZE -
@@ -1484,12 +1484,12 @@ int gk20a_vm_get_buffers(struct vm_gk20a *vm,
 		return 0;
 	}
 
-	mutex_lock(&vm->update_gmmu_lock);
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
 	buffer_list = nvgpu_kalloc(sizeof(*buffer_list) *
 			      vm->num_user_mapped_buffers, true);
 	if (!buffer_list) {
-		mutex_unlock(&vm->update_gmmu_lock);
+		nvgpu_mutex_release(&vm->update_gmmu_lock);
 		return -ENOMEM;
 	}
 
@@ -1510,7 +1510,7 @@ int gk20a_vm_get_buffers(struct vm_gk20a *vm,
 	*num_buffers = vm->num_user_mapped_buffers;
 	*mapped_buffers = buffer_list;
 
-	mutex_unlock(&vm->update_gmmu_lock);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
 	return 0;
 }
@@ -1544,9 +1544,9 @@ void gk20a_vm_mapping_batch_finish_locked(
 void gk20a_vm_mapping_batch_finish(struct vm_gk20a *vm,
 				   struct vm_gk20a_mapping_batch *mapping_batch)
 {
-	mutex_lock(&vm->update_gmmu_lock);
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	gk20a_vm_mapping_batch_finish_locked(vm, mapping_batch);
-	mutex_unlock(&vm->update_gmmu_lock);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 }
 
 void gk20a_vm_put_buffers(struct vm_gk20a *vm,
@@ -1559,7 +1559,7 @@ void gk20a_vm_put_buffers(struct vm_gk20a *vm,
 	if (num_buffers == 0)
 		return;
 
-	mutex_lock(&vm->update_gmmu_lock);
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	gk20a_vm_mapping_batch_start(&batch);
 	vm->kref_put_batch = &batch;
 
@@ -1569,7 +1569,7 @@ void gk20a_vm_put_buffers(struct vm_gk20a *vm,
 
 	vm->kref_put_batch = NULL;
 	gk20a_vm_mapping_batch_finish_locked(vm, &batch);
-	mutex_unlock(&vm->update_gmmu_lock);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
 	nvgpu_kfree(mapped_buffers);
 }
@@ -1581,17 +1581,17 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 	int retries = 10000; /* 50 ms */
 	struct mapped_buffer_node *mapped_buffer;
 
-	mutex_lock(&vm->update_gmmu_lock);
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
 	mapped_buffer = find_mapped_buffer_locked(&vm->mapped_buffers, offset);
 	if (!mapped_buffer) {
-		mutex_unlock(&vm->update_gmmu_lock);
+		nvgpu_mutex_release(&vm->update_gmmu_lock);
 		gk20a_err(d, "invalid addr to unmap 0x%llx", offset);
 		return;
 	}
 
 	if (mapped_buffer->flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
-		mutex_unlock(&vm->update_gmmu_lock);
+		nvgpu_mutex_release(&vm->update_gmmu_lock);
 
 		while (retries >= 0 || !tegra_platform_is_silicon()) {
 			if (atomic_read(&mapped_buffer->ref.refcount) == 1)
@@ -1602,11 +1602,11 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 		if (retries < 0 && tegra_platform_is_silicon())
 			gk20a_err(d, "sync-unmap failed on 0x%llx",
 								offset);
-		mutex_lock(&vm->update_gmmu_lock);
+		nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	}
 
 	if (mapped_buffer->user_mapped == 0) {
-		mutex_unlock(&vm->update_gmmu_lock);
+		nvgpu_mutex_release(&vm->update_gmmu_lock);
 		gk20a_err(d, "addr already unmapped from user 0x%llx", offset);
 		return;
 	}
@@ -1619,7 +1619,7 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 	kref_put(&mapped_buffer->ref, gk20a_vm_unmap_locked_kref);
 	vm->kref_put_batch = NULL;
 
-	mutex_unlock(&vm->update_gmmu_lock);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 }
 
 u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
@@ -2239,7 +2239,7 @@ int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 	buf->g = g;
 
 	if (!g->mm.vidmem.cleared) {
-		mutex_lock(&g->mm.vidmem.first_clear_mutex);
+		nvgpu_mutex_acquire(&g->mm.vidmem.first_clear_mutex);
 		if (!g->mm.vidmem.cleared) {
 			err = gk20a_vidmem_clear_all(g);
 			if (err) {
@@ -2248,7 +2248,7 @@ int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 				goto err_kfree;
 			}
 		}
-		mutex_unlock(&g->mm.vidmem.first_clear_mutex);
+		nvgpu_mutex_release(&g->mm.vidmem.first_clear_mutex);
 	}
 
 	buf->mem = kzalloc(sizeof(struct mem_desc), GFP_KERNEL);
@@ -2301,10 +2301,10 @@ int gk20a_vidmem_get_space(struct gk20a *g, u64 *space)
 	if (!nvgpu_alloc_initialized(allocator))
 		return -ENOSYS;
 
-	mutex_lock(&g->mm.vidmem.clear_list_mutex);
+	nvgpu_mutex_acquire(&g->mm.vidmem.clear_list_mutex);
 	*space = nvgpu_alloc_space(allocator) +
 		atomic64_read(&g->mm.vidmem.bytes_pending);
-	mutex_unlock(&g->mm.vidmem.clear_list_mutex);
+	nvgpu_mutex_release(&g->mm.vidmem.clear_list_mutex);
 	return 0;
 #else
 	return -ENOSYS;
@@ -2425,7 +2425,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 		return -EFAULT;
 	}
 
-	mutex_lock(&vm->update_gmmu_lock);
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
 	/* check if this buffer is already mapped */
 	if (!vm->userspace_managed) {
@@ -2434,7 +2434,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 			flags, kind, sgt,
 			user_mapped, rw_flag);
 		if (map_offset) {
-			mutex_unlock(&vm->update_gmmu_lock);
+			nvgpu_mutex_release(&vm->update_gmmu_lock);
 			return map_offset;
 		}
 	}
@@ -2627,7 +2627,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 		mapped_buffer->va_node = va_node;
 	}
 
-	mutex_unlock(&vm->update_gmmu_lock);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
 	return map_offset;
 
@@ -2643,7 +2643,7 @@ clean_up:
 	if (!IS_ERR(bfr.sgt))
 		gk20a_mm_unpin(d, dmabuf, bfr.sgt);
 
-	mutex_unlock(&vm->update_gmmu_lock);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 	gk20a_dbg_info("err=%d\n", err);
 	return 0;
 }
@@ -2658,13 +2658,13 @@ int gk20a_vm_get_compbits_info(struct vm_gk20a *vm,
 	struct mapped_buffer_node *mapped_buffer;
 	struct device *d = dev_from_vm(vm);
 
-	mutex_lock(&vm->update_gmmu_lock);
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
 	mapped_buffer = find_mapped_buffer_locked(&vm->mapped_buffers, mapping_gva);
 
 	if (!mapped_buffer || !mapped_buffer->user_mapped)
 	{
-		mutex_unlock(&vm->update_gmmu_lock);
+		nvgpu_mutex_release(&vm->update_gmmu_lock);
 		gk20a_err(d, "%s: bad offset 0x%llx", __func__, mapping_gva);
 		return -EFAULT;
 	}
@@ -2685,7 +2685,7 @@ int gk20a_vm_get_compbits_info(struct vm_gk20a *vm,
 		*mapping_ctagline = mapped_buffer->ctag_offset;
 	}
 
-	mutex_unlock(&vm->update_gmmu_lock);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 	return 0;
 }
 
@@ -2716,19 +2716,19 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 		return -EFAULT;
 	}
 
-	mutex_lock(&vm->update_gmmu_lock);
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
 	mapped_buffer =
 		find_mapped_buffer_locked(&vm->mapped_buffers, mapping_gva);
 
 	if (!mapped_buffer || !mapped_buffer->user_mapped) {
-		mutex_unlock(&vm->update_gmmu_lock);
+		nvgpu_mutex_release(&vm->update_gmmu_lock);
 		gk20a_err(d, "%s: bad offset 0x%llx", __func__, mapping_gva);
 		return -EFAULT;
 	}
 
 	if (!mapped_buffer->ctags_mappable) {
-		mutex_unlock(&vm->update_gmmu_lock);
+		nvgpu_mutex_release(&vm->update_gmmu_lock);
 		gk20a_err(d, "%s: comptags not mappable, offset 0x%llx",
 			  __func__, mapping_gva);
 		return -EFAULT;
@@ -2747,7 +2747,7 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 		u64 cacheline_offset_start;
 
 		if (!mapped_buffer->ctag_map_win_size) {
-			mutex_unlock(&vm->update_gmmu_lock);
+			nvgpu_mutex_release(&vm->update_gmmu_lock);
 			gk20a_err(d,
 				  "%s: mapping 0x%llx does not have "
 				  "mappable comptags",
@@ -2774,7 +2774,7 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 				mapped_buffer->ctag_map_win_size, &va_node);
 
 			if (err) {
-				mutex_unlock(&vm->update_gmmu_lock);
+				nvgpu_mutex_release(&vm->update_gmmu_lock);
 				return err;
 			}
 
@@ -2783,7 +2783,7 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 				 * pointer if the space is freed
 				 * before before the buffer is
 				 * unmapped */
-				mutex_unlock(&vm->update_gmmu_lock);
+				nvgpu_mutex_release(&vm->update_gmmu_lock);
 				gk20a_err(d,
 					  "%s: comptags cannot be mapped into allocated space",
 					  __func__);
@@ -2810,7 +2810,7 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 				g->gr.compbit_store.mem.aperture);
 
 		if (!mapped_buffer->ctag_map_win_addr) {
-			mutex_unlock(&vm->update_gmmu_lock);
+			nvgpu_mutex_release(&vm->update_gmmu_lock);
 			gk20a_err(d,
 				  "%s: failed to map comptags for mapping 0x%llx",
 				  __func__, mapping_gva);
@@ -2818,7 +2818,7 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 		}
 	} else if (fixed_mapping && *compbits_win_gva &&
 		   mapped_buffer->ctag_map_win_addr != *compbits_win_gva) {
-		mutex_unlock(&vm->update_gmmu_lock);
+		nvgpu_mutex_release(&vm->update_gmmu_lock);
 		gk20a_err(d,
 			  "%s: re-requesting comptags map into mismatching address. buffer offset 0x"
 			  "%llx, existing comptag map at 0x%llx, requested remap 0x%llx",
@@ -2830,7 +2830,7 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 	*mapping_iova = gk20a_mm_iova_addr(g, mapped_buffer->sgt->sgl, 0);
 	*compbits_win_gva = mapped_buffer->ctag_map_win_addr;
 
-	mutex_unlock(&vm->update_gmmu_lock);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
 	return 0;
 }
@@ -2852,7 +2852,7 @@ static u64 __gk20a_gmmu_map(struct vm_gk20a *vm,
 	struct gk20a *g = gk20a_from_vm(vm);
 	u64 vaddr;
 
-	mutex_lock(&vm->update_gmmu_lock);
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	vaddr = g->ops.mm.gmmu_map(vm, addr,
 				*sgt, /* sg table */
 				0, /* sg offset */
@@ -2866,7 +2866,7 @@ static u64 __gk20a_gmmu_map(struct vm_gk20a *vm,
 				priv, /* priv */
 				NULL, /* mapping_batch handle */
 				aperture);
-	mutex_unlock(&vm->update_gmmu_lock);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 	if (!vaddr) {
 		gk20a_err(dev_from_vm(vm), "failed to allocate va space");
 		return 0;
@@ -3128,10 +3128,10 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 	 * are not done anyway */
 	WARN_ON(attr != 0 && attr != DMA_ATTR_NO_KERNEL_MAPPING);
 
-	mutex_lock(&g->mm.vidmem.clear_list_mutex);
+	nvgpu_mutex_acquire(&g->mm.vidmem.clear_list_mutex);
 	before_pending = atomic64_read(&g->mm.vidmem.bytes_pending);
 	addr = __gk20a_gmmu_alloc(vidmem_alloc, at, size);
-	mutex_unlock(&g->mm.vidmem.clear_list_mutex);
+	nvgpu_mutex_release(&g->mm.vidmem.clear_list_mutex);
 	if (!addr) {
 		/*
 		 * If memory is known to be freed soon, let the user know that
@@ -3188,12 +3188,12 @@ static void gk20a_gmmu_free_attr_vid(struct gk20a *g, enum dma_attr attr,
 	bool was_empty;
 
 	if (mem->user_mem) {
-		mutex_lock(&g->mm.vidmem.clear_list_mutex);
+		nvgpu_mutex_acquire(&g->mm.vidmem.clear_list_mutex);
 		was_empty = list_empty(&g->mm.vidmem.clear_list_head);
 		list_add_tail(&mem->clear_list_entry,
 			      &g->mm.vidmem.clear_list_head);
 		atomic64_add(mem->size, &g->mm.vidmem.bytes_pending);
-		mutex_unlock(&g->mm.vidmem.clear_list_mutex);
+		nvgpu_mutex_release(&g->mm.vidmem.clear_list_mutex);
 
 		if (was_empty) {
 			cancel_work_sync(&g->mm.vidmem.clear_mem_worker);
@@ -3258,12 +3258,12 @@ static struct mem_desc *get_pending_mem_desc(struct mm_gk20a *mm)
 {
 	struct mem_desc *mem = NULL;
 
-	mutex_lock(&mm->vidmem.clear_list_mutex);
+	nvgpu_mutex_acquire(&mm->vidmem.clear_list_mutex);
 	mem = list_first_entry_or_null(&mm->vidmem.clear_list_head,
 			struct mem_desc, clear_list_entry);
 	if (mem)
 		list_del_init(&mem->clear_list_entry);
-	mutex_unlock(&mm->vidmem.clear_list_mutex);
+	nvgpu_mutex_release(&mm->vidmem.clear_list_mutex);
 
 	return mem;
 }
@@ -3409,12 +3409,12 @@ dma_addr_t gk20a_mm_gpuva_to_iova_base(struct vm_gk20a *vm, u64 gpu_vaddr)
 	dma_addr_t addr = 0;
 	struct gk20a *g = gk20a_from_vm(vm);
 
-	mutex_lock(&vm->update_gmmu_lock);
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	buffer = find_mapped_buffer_locked(&vm->mapped_buffers, gpu_vaddr);
 	if (buffer)
 		addr = g->ops.mm.get_iova_addr(g, buffer->sgt->sgl,
 				buffer->flags);
-	mutex_unlock(&vm->update_gmmu_lock);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
 	return addr;
 }
@@ -3426,7 +3426,7 @@ void gk20a_gmmu_unmap(struct vm_gk20a *vm,
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 
-	mutex_lock(&vm->update_gmmu_lock);
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	g->ops.mm.gmmu_unmap(vm,
 			vaddr,
 			size,
@@ -3435,7 +3435,7 @@ void gk20a_gmmu_unmap(struct vm_gk20a *vm,
 			rw_flag,
 			false,
 			NULL);
-	mutex_unlock(&vm->update_gmmu_lock);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 }
 
 phys_addr_t gk20a_get_phys_from_iova(struct device *d,
@@ -4053,16 +4053,16 @@ void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset)
 	struct device *d = dev_from_vm(vm);
 	struct mapped_buffer_node *mapped_buffer;
 
-	mutex_lock(&vm->update_gmmu_lock);
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	mapped_buffer = find_mapped_buffer_locked(&vm->mapped_buffers, offset);
 	if (!mapped_buffer) {
-		mutex_unlock(&vm->update_gmmu_lock);
+		nvgpu_mutex_release(&vm->update_gmmu_lock);
 		gk20a_err(d, "invalid addr to unmap 0x%llx", offset);
 		return;
 	}
 
 	kref_put(&mapped_buffer->ref, gk20a_vm_unmap_locked_kref);
-	mutex_unlock(&vm->update_gmmu_lock);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 }
 
 static void gk20a_vm_free_entries(struct vm_gk20a *vm,
@@ -4101,7 +4101,7 @@ static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
 		}
 	}
 
-	mutex_lock(&vm->update_gmmu_lock);
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
 	/* TBD: add a flag here for the unmap code to recognize teardown
 	 * and short-circuit any otherwise expensive operations. */
@@ -4123,7 +4123,7 @@ static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
 
 	gk20a_deinit_vm(vm);
 
-	mutex_unlock(&vm->update_gmmu_lock);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 }
 
 void gk20a_vm_remove_support(struct vm_gk20a *vm)
@@ -4547,7 +4547,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 
 	vm->mapped_buffers = RB_ROOT;
 
-	mutex_init(&vm->update_gmmu_lock);
+	nvgpu_mutex_init(&vm->update_gmmu_lock);
 	kref_init(&vm->ref);
 	INIT_LIST_HEAD(&vm->reserved_va_list);
 
@@ -4696,7 +4696,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 	INIT_LIST_HEAD(&va_node->va_buffers_list);
 	INIT_LIST_HEAD(&va_node->reserved_va_list);
 
-	mutex_lock(&vm->update_gmmu_lock);
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
 	/* mark that we need to use sparse mappings here */
 	if (args->flags & NVGPU_AS_ALLOC_SPACE_FLAGS_SPARSE) {
@@ -4715,7 +4715,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 					 NULL,
 					 APERTURE_INVALID);
 		if (!map_offset) {
-			mutex_unlock(&vm->update_gmmu_lock);
+			nvgpu_mutex_release(&vm->update_gmmu_lock);
 			nvgpu_free(vma, vaddr_start);
 			kfree(va_node);
 			goto clean_up;
@@ -4725,7 +4725,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 	}
 	list_add_tail(&va_node->reserved_va_list, &vm->reserved_va_list);
 
-	mutex_unlock(&vm->update_gmmu_lock);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
 	args->o_a.offset = vaddr_start;
 	err = 0;
@@ -4754,7 +4754,7 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 	vma = vm->vma[pgsz_idx];
 	nvgpu_free(vma, args->offset);
 
-	mutex_lock(&vm->update_gmmu_lock);
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	va_node = addr_to_reservation(vm, args->offset);
 	if (va_node) {
 		struct mapped_buffer_node *buffer, *n;
@@ -4782,7 +4782,7 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 					NULL);
 		kfree(va_node);
 	}
-	mutex_unlock(&vm->update_gmmu_lock);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 	err = 0;
 
 	return err;
@@ -4819,7 +4819,7 @@ int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev)
 	if (likely(priv))
 		return 0;
 
-	mutex_lock(&priv_lock);
+	nvgpu_mutex_acquire(&priv_lock);
 	priv = dma_buf_get_drvdata(dmabuf, dev);
 	if (priv)
 		goto priv_exist_or_err;
@@ -4828,12 +4828,12 @@ int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev)
 		priv = ERR_PTR(-ENOMEM);
 		goto priv_exist_or_err;
 	}
-	mutex_init(&priv->lock);
+	nvgpu_mutex_init(&priv->lock);
 	INIT_LIST_HEAD(&priv->states);
 	priv->buffer_id = ++priv_count;
 	dma_buf_set_drvdata(dmabuf, dev, priv, gk20a_mm_delete_priv);
 priv_exist_or_err:
-	mutex_unlock(&priv_lock);
+	nvgpu_mutex_release(&priv_lock);
 	if (IS_ERR(priv))
 		return -ENOMEM;
 
@@ -4858,7 +4858,7 @@ int gk20a_dmabuf_get_state(struct dma_buf *dmabuf, struct device *dev,
 	if (WARN_ON(!priv))
 		return -ENOSYS;
 
-	mutex_lock(&priv->lock);
+	nvgpu_mutex_acquire(&priv->lock);
 
 	list_for_each_entry(s, &priv->states, list)
 		if (s->offset == offset)
@@ -4873,11 +4873,11 @@ int gk20a_dmabuf_get_state(struct dma_buf *dmabuf, struct device *dev,
 
 	s->offset = offset;
 	INIT_LIST_HEAD(&s->list);
-	mutex_init(&s->lock);
+	nvgpu_mutex_init(&s->lock);
 	list_add_tail(&s->list, &priv->states);
 
 out:
-	mutex_unlock(&priv->lock);
+	nvgpu_mutex_release(&priv->lock);
 	if (!err)
 		*state = s;
 	return err;
@@ -5152,7 +5152,7 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 
 	nvgpu_timeout_init(g, &timeout, 100, NVGPU_TIMER_RETRY_TIMER);
 
-	mutex_lock(&mm->l2_op_lock);
+	nvgpu_mutex_acquire(&mm->l2_op_lock);
 
 	/* Make sure all previous writes are committed to the L2. There's no
 	   guarantee that writes are to DRAM. This will be a sysmembar internal
@@ -5184,7 +5184,7 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 
 	trace_gk20a_mm_fb_flush_done(dev_name(g->dev));
 
-	mutex_unlock(&mm->l2_op_lock);
+	nvgpu_mutex_release(&mm->l2_op_lock);
 
 	pm_runtime_put_noidle(g->dev);
 
@@ -5231,9 +5231,9 @@ void gk20a_mm_l2_invalidate(struct gk20a *g)
 	struct mm_gk20a *mm = &g->mm;
 	gk20a_busy_noresume(g->dev);
 	if (g->power_on) {
-		mutex_lock(&mm->l2_op_lock);
+		nvgpu_mutex_acquire(&mm->l2_op_lock);
 		gk20a_mm_l2_invalidate_locked(g);
-		mutex_unlock(&mm->l2_op_lock);
+		nvgpu_mutex_release(&mm->l2_op_lock);
 	}
 	pm_runtime_put_noidle(g->dev);
 }
@@ -5252,7 +5252,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 
 	nvgpu_timeout_init(g, &timeout, 2000, NVGPU_TIMER_RETRY_TIMER);
 
-	mutex_lock(&mm->l2_op_lock);
+	nvgpu_mutex_acquire(&mm->l2_op_lock);
 
 	trace_gk20a_mm_l2_flush(dev_name(g->dev));
 
@@ -5280,7 +5280,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 	if (invalidate)
 		gk20a_mm_l2_invalidate_locked(g);
 
-	mutex_unlock(&mm->l2_op_lock);
+	nvgpu_mutex_release(&mm->l2_op_lock);
 
 hw_was_off:
 	pm_runtime_put_noidle(g->dev);
@@ -5300,7 +5300,7 @@ void gk20a_mm_cbc_clean(struct gk20a *g)
 
 	nvgpu_timeout_init(g, &timeout, 200, NVGPU_TIMER_RETRY_TIMER);
 
-	mutex_lock(&mm->l2_op_lock);
+	nvgpu_mutex_acquire(&mm->l2_op_lock);
 
 	/* Flush all dirty lines from the CBC to L2 */
 	gk20a_writel(g, flush_l2_clean_comptags_r(),
@@ -5320,7 +5320,7 @@ void gk20a_mm_cbc_clean(struct gk20a *g)
 	} while (!nvgpu_timeout_expired_msg(&timeout,
 					 "l2_clean_comptags too many retries"));
 
-	mutex_unlock(&mm->l2_op_lock);
+	nvgpu_mutex_release(&mm->l2_op_lock);
 
 hw_was_off:
 	pm_runtime_put_noidle(g->dev);
@@ -5334,19 +5334,19 @@ int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 
 	gk20a_dbg_fn("gpu_va=0x%llx", gpu_va);
 
-	mutex_lock(&vm->update_gmmu_lock);
+	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
 	mapped_buffer = find_mapped_buffer_range_locked(&vm->mapped_buffers,
 							gpu_va);
 	if (!mapped_buffer) {
-		mutex_unlock(&vm->update_gmmu_lock);
+		nvgpu_mutex_release(&vm->update_gmmu_lock);
 		return -EINVAL;
 	}
 
 	*dmabuf = mapped_buffer->dmabuf;
 	*offset = gpu_va - mapped_buffer->addr;
 
-	mutex_unlock(&vm->update_gmmu_lock);
+	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
 	return 0;
 }
@@ -5373,7 +5373,7 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 
 	addr_lo = u64_lo32(gk20a_mem_get_base_addr(g, &vm->pdb.mem, 0) >> 12);
 
-	mutex_lock(&tlb_lock);
+	nvgpu_mutex_acquire(&tlb_lock);
 
 	trace_gk20a_mm_tlb_invalidate(dev_name(g->dev));
 
@@ -5414,7 +5414,7 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 	trace_gk20a_mm_tlb_invalidate_done(dev_name(g->dev));
 
 out:
-	mutex_unlock(&tlb_lock);
+	nvgpu_mutex_release(&tlb_lock);
 }
 
 int gk20a_mm_suspend(struct gk20a *g)

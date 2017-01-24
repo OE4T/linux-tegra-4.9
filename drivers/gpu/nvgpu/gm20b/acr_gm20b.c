@@ -77,10 +77,10 @@ static get_ucode_details pmu_acr_supp_ucode_list[] = {
 static void start_gm20b_pmu(struct gk20a *g)
 {
 	/*disable irqs for hs falcon booting as we will poll for halt*/
-	mutex_lock(&g->pmu.isr_mutex);
+	nvgpu_mutex_acquire(&g->pmu.isr_mutex);
 	pmu_enable_irq(&g->pmu, true);
 	g->pmu.isr_enabled = true;
-	mutex_unlock(&g->pmu.isr_mutex);
+	nvgpu_mutex_release(&g->pmu.isr_mutex);
 	gk20a_writel(g, pwr_falcon_cpuctl_alias_r(),
 		pwr_falcon_cpuctl_startcpu_f(1));
 }
@@ -1282,10 +1282,10 @@ int gm20b_init_nspmu_setup_hw1(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	mutex_lock(&pmu->isr_mutex);
+	nvgpu_mutex_acquire(&pmu->isr_mutex);
 	pmu_reset(pmu);
 	pmu->isr_enabled = true;
-	mutex_unlock(&pmu->isr_mutex);
+	nvgpu_mutex_release(&pmu->isr_mutex);
 
 	/* setup apertures - virtual */
 	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_UCODE),
@@ -1318,10 +1318,10 @@ static int gm20b_init_pmu_setup_hw1(struct gk20a *g,
 
 	gk20a_dbg_fn("");
 
-	mutex_lock(&pmu->isr_mutex);
+	nvgpu_mutex_acquire(&pmu->isr_mutex);
 	g->ops.pmu.reset(g);
 	pmu->isr_enabled = true;
-	mutex_unlock(&pmu->isr_mutex);
+	nvgpu_mutex_release(&pmu->isr_mutex);
 
 	/* setup apertures - virtual */
 	gk20a_writel(g, pwr_fbif_transcfg_r(GK20A_PMU_DMAIDX_UCODE),
@@ -1353,10 +1353,10 @@ static int gm20b_init_pmu_setup_hw1(struct gk20a *g,
 			(u8 *)(g->ops.pmu_ver.get_pmu_cmdline_args_ptr(pmu)),
 			g->ops.pmu_ver.get_pmu_cmdline_args_size(pmu), 0);
 	/*disable irqs for hs falcon booting as we will poll for halt*/
-	mutex_lock(&pmu->isr_mutex);
+	nvgpu_mutex_acquire(&pmu->isr_mutex);
 	pmu_enable_irq(pmu, false);
 	pmu->isr_enabled = false;
-	mutex_unlock(&pmu->isr_mutex);
+	nvgpu_mutex_release(&pmu->isr_mutex);
 	/*Clearing mailbox register used to reflect capabilities*/
 	gk20a_writel(g, pwr_falcon_mailbox1_r(), 0);
 	err = bl_bootstrap(pmu, desc, bl_sz);

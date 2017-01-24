@@ -18,7 +18,7 @@
 #include <linux/anon_inodes.h>
 #include <linux/nvgpu.h>
 #include <linux/bitops.h>
-#include <linux/spinlock.h>
+#include <nvgpu/lock.h>
 #include <linux/rculist.h>
 #include <linux/llist.h>
 #include "clk/clk_arb.h"
@@ -139,10 +139,10 @@ struct nvgpu_clk_arb_target {
 };
 
 struct nvgpu_clk_arb {
-	spinlock_t sessions_lock;
-	spinlock_t users_lock;
+	struct nvgpu_spinlock sessions_lock;
+	struct nvgpu_spinlock users_lock;
 
-	struct mutex pstate_lock;
+	struct nvgpu_mutex pstate_lock;
 	struct list_head users;
 	struct list_head sessions;
 	struct llist_head requests;
@@ -308,9 +308,9 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 	g->clk_arb = arb;
 	arb->g = g;
 
-	mutex_init(&arb->pstate_lock);
-	spin_lock_init(&arb->sessions_lock);
-	spin_lock_init(&arb->users_lock);
+	nvgpu_mutex_init(&arb->pstate_lock);
+	nvgpu_spinlock_init(&arb->sessions_lock);
+	nvgpu_spinlock_init(&arb->users_lock);
 
 	err =  g->ops.clk_arb.get_arbiter_clk_default(g,
 			CTRL_CLK_DOMAIN_MCLK, &default_mhz);
@@ -546,9 +546,9 @@ int nvgpu_clk_arb_init_session(struct gk20a *g,
 
 	init_llist_head(&session->targets);
 
-	spin_lock(&arb->sessions_lock);
+	nvgpu_spinlock_acquire(&arb->sessions_lock);
 	list_add_tail_rcu(&session->link, &arb->sessions);
-	spin_unlock(&arb->sessions_lock);
+	nvgpu_spinlock_release(&arb->sessions_lock);
 
 	*_session = session;
 
@@ -573,9 +573,9 @@ static void nvgpu_clk_arb_free_session(struct kref *refcount)
 
 	gk20a_dbg_fn("");
 
-	spin_lock(&arb->sessions_lock);
+	nvgpu_spinlock_acquire(&arb->sessions_lock);
 	list_del_rcu(&session->link);
-	spin_unlock(&arb->sessions_lock);
+	nvgpu_spinlock_release(&arb->sessions_lock);
 
 	head = llist_del_all(&session->targets);
 	llist_for_each_entry_safe(dev, tmp, head, node) {
@@ -622,9 +622,9 @@ int nvgpu_clk_arb_install_event_fd(struct gk20a *g,
 
 	dev->arb_queue_head = atomic_read(&arb->notification_queue.head);
 
-	spin_lock(&arb->users_lock);
+	nvgpu_spinlock_acquire(&arb->users_lock);
 	list_add_tail_rcu(&dev->link, &arb->users);
-	spin_unlock(&arb->users_lock);
+	nvgpu_spinlock_release(&arb->users_lock);
 
 	*event_fd = fd;
 
@@ -1128,13 +1128,13 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	/* Program clocks */
 	/* A change in both mclk of gpc2clk may require a change in voltage */
 
-	mutex_lock(&arb->pstate_lock);
+	nvgpu_mutex_acquire(&arb->pstate_lock);
 	status = nvgpu_lpwr_disable_pg(g, false);
 
 	status = clk_pmu_freq_controller_load(g, false);
 	if (status < 0) {
 		arb->status = status;
-		mutex_unlock(&arb->pstate_lock);
+		nvgpu_mutex_release(&arb->pstate_lock);
 
 		/* make status visible */
 		smp_mb();
@@ -1143,7 +1143,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	status = volt_set_noiseaware_vmin(g, nuvmin, nuvmin_sram);
 	if (status < 0) {
 		arb->status = status;
-		mutex_unlock(&arb->pstate_lock);
+		nvgpu_mutex_release(&arb->pstate_lock);
 
 		/* make status visible */
 		smp_mb();
@@ -1155,7 +1155,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 		voltuv_sram);
 	if (status < 0) {
 		arb->status = status;
-		mutex_unlock(&arb->pstate_lock);
+		nvgpu_mutex_release(&arb->pstate_lock);
 
 		/* make status visible */
 		smp_mb();
@@ -1165,7 +1165,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	status = clk_pmu_freq_controller_load(g, true);
 	if (status < 0) {
 		arb->status = status;
-		mutex_unlock(&arb->pstate_lock);
+		nvgpu_mutex_release(&arb->pstate_lock);
 
 		/* make status visible */
 		smp_mb();
@@ -1175,7 +1175,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	status = nvgpu_lwpr_mclk_change(g, pstate);
 	if (status < 0) {
 		arb->status = status;
-		mutex_unlock(&arb->pstate_lock);
+		nvgpu_mutex_release(&arb->pstate_lock);
 
 		/* make status visible */
 		smp_mb();
@@ -1200,7 +1200,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	status = nvgpu_lpwr_enable_pg(g, false);
 	if (status < 0) {
 		arb->status = status;
-		mutex_unlock(&arb->pstate_lock);
+		nvgpu_mutex_release(&arb->pstate_lock);
 
 		/* make status visible */
 		smp_mb();
@@ -1212,7 +1212,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	atomic_inc(&arb->req_nr);
 
 	/* Unlock pstate change for PG */
-	mutex_unlock(&arb->pstate_lock);
+	nvgpu_mutex_release(&arb->pstate_lock);
 
 	/* VF Update complete */
 	nvgpu_clk_arb_set_global_alarm(g, EVENT(VF_UPDATE));
@@ -1589,9 +1589,9 @@ static int nvgpu_clk_arb_release_event_dev(struct inode *inode,
 
 	gk20a_dbg_fn("");
 
-	spin_lock(&arb->users_lock);
+	nvgpu_spinlock_acquire(&arb->users_lock);
 	list_del_rcu(&dev->link);
-	spin_unlock(&arb->users_lock);
+	nvgpu_spinlock_release(&arb->users_lock);
 
 	synchronize_rcu();
 	kref_put(&session->refcount, nvgpu_clk_arb_free_session);
@@ -2000,9 +2000,9 @@ void nvgpu_clk_arb_pstate_change_lock(struct gk20a *g, bool lock)
 	struct nvgpu_clk_arb *arb = g->clk_arb;
 
 	if (lock)
-		mutex_lock(&arb->pstate_lock);
+		nvgpu_mutex_acquire(&arb->pstate_lock);
 	else
-		mutex_unlock(&arb->pstate_lock);
+		nvgpu_mutex_release(&arb->pstate_lock);
 }
 
 #ifdef CONFIG_DEBUG_FS

@@ -3,7 +3,7 @@
  *
  * GK20A graphics copy engine (gr host)
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -88,7 +88,7 @@ enum {
 /* global ce app db */
 struct gk20a_ce_app {
 	bool initialised;
-	struct mutex app_mutex;
+	struct nvgpu_mutex app_mutex;
 	int app_state;
 
 	struct list_head allocated_contexts;
@@ -101,7 +101,7 @@ struct gk20a_gpu_ctx {
 	struct gk20a *g;
 	struct device *dev;
 	u32 ctx_id;
-	struct mutex gpu_ctx_mutex;
+	struct nvgpu_mutex gpu_ctx_mutex;
 	int gpu_ctx_state;
 	ce_event_callback user_event_callback;
 

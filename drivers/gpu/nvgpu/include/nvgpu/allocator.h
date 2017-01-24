@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,6 +20,7 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/platform_device.h>
+#include <nvgpu/lock.h>
 
 /* #define ALLOCATOR_DEBUG */
 
@@ -78,7 +79,7 @@ struct nvgpu_allocator_ops {
 
 struct nvgpu_allocator {
 	char name[32];
-	struct mutex lock;
+	struct nvgpu_mutex lock;
 
 	void *priv;
 	const struct nvgpu_allocator_ops *ops;
@@ -167,12 +168,12 @@ struct nvgpu_alloc_carveout {
 
 static inline void alloc_lock(struct nvgpu_allocator *a)
 {
-	mutex_lock(&a->lock);
+	nvgpu_mutex_acquire(&a->lock);
 }
 
 static inline void alloc_unlock(struct nvgpu_allocator *a)
 {
-	mutex_unlock(&a->lock);
+	nvgpu_mutex_release(&a->lock);
 }
 
 /*

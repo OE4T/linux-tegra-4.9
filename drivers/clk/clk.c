@@ -2300,10 +2300,10 @@ static void clk_summary_show_one(struct seq_file *s, struct clk_core *c,
 	if (!c)
 		return;
 
-	seq_printf(s, "%*s%-*s %11d %12d %11lu %10lu %-3d\n",
+	seq_printf(s, "%*s%-*s %11d %12d %11lu %11lu %10lu %-3d\n",
 		   level * 3 + 1, "",
-		   30 - level * 3, c->name,
-		   c->enable_count, c->prepare_count, clk_core_get_rate(c),
+		   48 - level * 3, c->name, c->enable_count,
+		   c->prepare_count, clk_core_get_rate(c), c->req_rate,
 		   clk_core_get_accuracy(c), clk_core_get_phase(c));
 
 #ifdef CONFIG_COMMON_CLK_FREQ_STATS_ACCOUNTING
@@ -2331,8 +2331,8 @@ static int clk_summary_show(struct seq_file *s, void *data)
 	struct clk_core *c;
 	struct hlist_head **lists = (struct hlist_head **)s->private;
 
-	seq_puts(s, "   clock                         enable_cnt  prepare_cnt        rate   accuracy   phase\n");
-	seq_puts(s, "----------------------------------------------------------------------------------------\n");
+	seq_puts(s, "   clock                                           enable_cnt  prepare_cnt        rate    req_rate   accuracy   phase\n");
+	seq_puts(s, "----------------------------------------------------------------------------------------------------------------------\n");
 
 	clk_prepare_lock();
 
@@ -2368,6 +2368,7 @@ static void clk_dump_one(struct seq_file *s, struct clk_core *c, int level)
 	seq_printf(s, "\"enable_count\": %d,", c->enable_count);
 	seq_printf(s, "\"prepare_count\": %d,", c->prepare_count);
 	seq_printf(s, "\"rate\": %lu,", clk_core_get_rate(c));
+	seq_printf(s, "\"req_rate\": %lu,", c->req_rate);
 	seq_printf(s, "\"accuracy\": %lu,", clk_core_get_accuracy(c));
 	seq_printf(s, "\"phase\": %d", clk_core_get_phase(c));
 }

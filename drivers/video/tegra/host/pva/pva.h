@@ -66,32 +66,35 @@ struct pva_crashdump_debugfs_entry {
 };
 
 /**
+ * @brief		struct to handle dma alloc memory info
+ *
+ * size			size allocated
+ * phys_addr		physical address
+ * va			virtual address
+ *
+ */
+struct pva_dma_alloc_info {
+	size_t size;
+	dma_addr_t pa;
+	void *va;
+};
+
+/**
  * @brief		struct to handle the PVA firmware information
  *
  * hdr			pointer to the pva_code_hdr struct
- * size			firmware file size
- * booted		variable to check whether boot completed
- * ucode_phys		physical address of dram for ucode image
- * ucode_mapped	virtual address of dram for ucode image
- * priv2_buffer_phys	physical address of extra memory allocated for ucode
- * priv2_buffer_mapped	virtual address of extra memory allocated for ucode
- * priv2_buffer_size	extra buffer size allocated for ucode
+ * priv1_buffer		pva_dma_alloc_info for priv1_buffer
+ * priv2_buffer		pva_dma_alloc_info for priv2_buffer
  * priv2_reg_offset	priv2 register offset from uCode
  * attrs		dma_attrs struct information
  * trace_buffer_size	buffer size for trace log
  *
  */
-
 struct pva_fw {
 	struct pva_ucode_hdr *hdr;
 
-	size_t size;
-
-	dma_addr_t ucode_phys;
-	void *ucode_mapped;
-	dma_addr_t priv2_buffer_phys;
-	void *priv2_buffer_mapped;
-	size_t priv2_buffer_size;
+	struct pva_dma_alloc_info priv1_buffer;
+	struct pva_dma_alloc_info priv2_buffer;
 	u32 priv2_reg_offset;
 	struct dma_attrs attrs;
 
@@ -129,6 +132,9 @@ struct pva {
 	struct pva_crashdump_debugfs_entry debugfs_entry_r5;
 	struct pva_crashdump_debugfs_entry debugfs_entry_vpu0;
 	struct pva_crashdump_debugfs_entry debugfs_entry_vpu1;
+
+	struct pva_dma_alloc_info priv1_dma;
+	struct pva_dma_alloc_info priv2_dma;
 };
 
 /**

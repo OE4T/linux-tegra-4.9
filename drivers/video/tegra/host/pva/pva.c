@@ -80,27 +80,32 @@ static int pva_init_fw(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct pva *pva = pdata->private_data;
 	struct pva_fw *fw_info = &pva->fw_info;
-	u32 *ucode_ptr = fw_info->ucode_mapped;
+	struct pva_dma_alloc_info *priv1_buffer;
+	struct pva_dma_alloc_info *priv2_buffer;
+	u32 *ucode_ptr;
 	int err = 0, w;
 	int timeout;
 	u64 ucode_useg_addr;
 
 	nvhost_dbg_fn("");
 
+	priv1_buffer = &fw_info->priv1_buffer;
+	priv2_buffer = &fw_info->priv2_buffer;
+	ucode_ptr = priv1_buffer->va;
+
 	/* Set the Ucode Header address for R5 */
 	/* Program user seg subtracting the offset */
-	ucode_useg_addr = fw_info->ucode_phys - R5_USER_SEGREG_OFFSET;
+	ucode_useg_addr = priv1_buffer->pa - R5_USER_SEGREG_OFFSET;
 	host1x_writel(pdev, cfg_r5user_lsegreg_r(),
 		PVA_LOW32(ucode_useg_addr));
 	host1x_writel(pdev, cfg_r5user_usegreg_r(),
 		PVA_EXTRACT64(ucode_useg_addr, 39, 32, u32));
 
 	/* Program the extra memory to be used by R5 */
-	ucode_useg_addr =
-			fw_info->priv2_buffer_phys - fw_info->priv2_reg_offset;
+	ucode_useg_addr = priv2_buffer->pa - fw_info->priv2_reg_offset;
 	host1x_writel(pdev, cfg_priv_ar2_start_r(), fw_info->priv2_reg_offset);
 	host1x_writel(pdev, cfg_priv_ar2_end_r(),
-			fw_info->priv2_reg_offset + fw_info->priv2_buffer_size);
+			fw_info->priv2_reg_offset + priv2_buffer->size);
 	host1x_writel(pdev, cfg_priv_ar2_lsegreg_r(),
 		PVA_LOW32(ucode_useg_addr));
 	host1x_writel(pdev, cfg_priv_ar2_usegreg_r(),
@@ -130,7 +135,7 @@ static int pva_init_fw(struct platform_device *pdev)
 
 		case PVA_UCODE_SEG_R5: {
 			/* Subracting PRIV1 start for R5PRIV1 address */
-			const u64 seg_addr = fw_info->ucode_phys - useg->addr;
+			const u64 seg_addr = priv1_buffer->pa - useg->addr;
 			/* Calculate segment start address */
 			const u64 useg_addr = seg_addr + useg->offset;
 			const u32 useg_addr_low = PVA_LOW32(useg_addr);
@@ -139,7 +144,7 @@ static int pva_init_fw(struct platform_device *pdev)
 			/* Calculate ar1 base and limit */
 			const u32 ar1_start = useg->addr;
 			const u32 ar1_end =
-				useg->addr + fw_info->size - useg->offset;
+				useg->addr + priv1_buffer->size - useg->offset;
 
 			host1x_writel(pdev, cfg_priv_ar1_start_r(), ar1_start);
 			host1x_writel(pdev, cfg_priv_ar1_end_r(), ar1_end);
@@ -182,13 +187,14 @@ static int pva_free_fw(struct platform_device *pdev, struct pva *pva)
 {
 	struct pva_fw *fw_info = &pva->fw_info;
 
-	if (fw_info->ucode_mapped)
-		dma_free_attrs(&pdev->dev, fw_info->size,
-		fw_info->ucode_mapped, fw_info->ucode_phys, &fw_info->attrs);
+	if (pva->priv1_dma.va)
+		dma_free_attrs(&pdev->dev, pva->priv1_dma.size,
+		pva->priv1_dma.va, pva->priv1_dma.pa,
+		&fw_info->attrs);
 
-	if (fw_info->priv2_buffer_mapped)
-		dma_free_attrs(&pdev->dev, fw_info->priv2_buffer_size,
-		fw_info->priv2_buffer_mapped, fw_info->priv2_buffer_phys,
+	if (pva->priv2_dma.va)
+		dma_free_attrs(&pdev->dev, pva->priv2_dma.size,
+		pva->priv2_dma.va, pva->priv2_dma.pa,
 		&fw_info->attrs);
 
 	memset(fw_info, 0, sizeof(struct pva_fw));
@@ -220,18 +226,29 @@ static int pva_read_ucode(struct platform_device *pdev,
 	/* set to default size, will add support to modify through debugfs */
 	fw_info->trace_buffer_size = PVA_PRIV2_TRACE_LOG_BUFFER_SIZE;
 
-	fw_info->size = ucode_fw->size;
+	fw_info->priv1_buffer.size = ucode_fw->size;
 
-	/* Allocate the Memory area to load the firmware */
-	fw_info->ucode_mapped = dma_alloc_attrs(&pdev->dev, fw_info->size,
-		&fw_info->ucode_phys, GFP_KERNEL, &fw_info->attrs);
+	/* Make sure the address is aligned to 4K */
+	pva->priv1_dma.size = ALIGN(fw_info->priv1_buffer.size + SZ_4K, SZ_4K);
 
-	if (!fw_info->ucode_mapped) {
+	/* Allocate memory to R5 for app code, data or to log information */
+	pva->priv1_dma.va = dma_alloc_attrs(&pdev->dev,
+				pva->priv1_dma.size,
+				&pva->priv1_dma.pa,
+				GFP_KERNEL, &fw_info->attrs);
+
+	if (!pva->priv1_dma.va) {
 		err = -ENOMEM;
 		goto clean_up;
 	}
 
-	ucode_ptr = fw_info->ucode_mapped;
+	/* Make sure the buffer allocated to R5 are 4K aligned */
+	fw_info->priv1_buffer.va =
+			(void *)ALIGN((u64)pva->priv1_dma.va, SZ_4K);
+	fw_info->priv1_buffer.pa =
+			(dma_addr_t)ALIGN((u64)pva->priv1_dma.pa, SZ_4K);
+
+	ucode_ptr = fw_info->priv1_buffer.va;
 
 	/* copy the whole thing taking into account endianness */
 	for (w = 0; w < ucode_fw->size/sizeof(u32); w++)
@@ -258,30 +275,40 @@ static int pva_read_ucode(struct platform_device *pdev,
 		case PVA_UCODE_SEG_R5_OVERLAY:
 		case PVA_UCODE_SEG_R5_CRASHDUMP:
 		case PVA_UCODE_SEG_VPU_CRASHDUMP:
-			fw_info->priv2_buffer_size += useg->size;
+			fw_info->priv2_buffer.size += useg->size;
 			break;
 		case PVA_UCODE_SEG_TRACE_LOG:
 			/* set the trace log buffer offset from priv2 start */
-			useg->offset = fw_info->priv2_buffer_size;
+			useg->offset = fw_info->priv2_buffer.size;
 
 			/* set os specified size if uCode passes zero size */
 			if (!useg->size)
 				useg->size = fw_info->trace_buffer_size;
 
-			fw_info->priv2_buffer_size += useg->size;
+			fw_info->priv2_buffer.size += useg->size;
 			break;
 		}
 	}
 
-	/* Allocate memory to R5 for app code, data or to log information */
-	fw_info->priv2_buffer_mapped = dma_alloc_attrs(&pdev->dev,
-		fw_info->priv2_buffer_size, &fw_info->priv2_buffer_phys,
-		GFP_KERNEL, &fw_info->attrs);
+	/* Make sure the address is aligned to 4K */
+	pva->priv2_dma.size = ALIGN(fw_info->priv2_buffer.size + SZ_4K, SZ_4K);
 
-	if (!fw_info->priv2_buffer_mapped) {
+	/* Allocate memory to R5 for app code, data or to log information */
+	pva->priv2_dma.va = dma_alloc_attrs(&pdev->dev,
+				pva->priv2_dma.size,
+				&pva->priv2_dma.pa,
+				GFP_KERNEL, &fw_info->attrs);
+
+	if (!pva->priv2_dma.va) {
 		err = -ENOMEM;
 		goto clean_up;
 	}
+
+	/* Make sure the buffer allocated to R5 are 4K aligned */
+	fw_info->priv2_buffer.va =
+			(void *)ALIGN((u64)pva->priv2_dma.va, SZ_4K);
+	fw_info->priv2_buffer.pa =
+			(dma_addr_t)ALIGN((u64)pva->priv2_dma.pa, SZ_4K);
 
 	/* set the crashdump offsets and addresses */
 	for (w = 0; w < fw_info->hdr->nsegments; w++) {
@@ -310,7 +337,7 @@ static int pva_read_ucode(struct platform_device *pdev,
 			seg_info->offset = offset;
 			seg_info->size = useg->size;
 			seg_info->addr =
-				(void *)((u8 *)fw_info->priv2_buffer_mapped +
+				(void *)((u8 *)fw_info->priv2_buffer.va +
 								offset);
 		}
 

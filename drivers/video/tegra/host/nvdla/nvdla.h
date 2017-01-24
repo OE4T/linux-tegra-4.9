@@ -50,11 +50,16 @@
  */
 #define MAX_NVDLA_TASK_COUNT	32
 
+/**
+ * Maximum number of buffers per pin request
+ */
+#define MAX_NVDLA_PIN_BUFFERS	32
 
 /**
  * Maximum number of buffers per task
  */
-#define MAX_NVDLA_PIN_BUFFERS	64
+#define MAX_NUM_NVDLA_BUFFERS_PER_TASK	256
+
 /**
  * Trace Buffer Size
  */
@@ -172,10 +177,12 @@ struct nvdla_task {
 	struct nvdla_fence *postfences;
 	struct nvdla_status_notify *in_task_status;
 	struct nvdla_status_notify *out_task_status;
+	struct nvdla_mem_handle *memory_handles;
 	u32 num_prefences;
 	u32 num_postfences;
 	u32 num_in_task_status;
 	u32 num_out_task_status;
+	u32 num_addresses;
 	u32 fence;
 	struct kref ref;
 	struct list_head list;
@@ -183,11 +190,11 @@ struct nvdla_task {
 	dma_addr_t task_desc_pa;
 	size_t buf_size;
 	int timeout;
-	u32 num_addresses;
-	struct nvdla_mem_handle address_list;
-	u32 *memory_handles;
-	u32 num_handles;
 	int pool_index;
+};
+
+struct dla_mem_addr {
+	uint64_t val;
 };
 
 extern const struct file_operations tegra_nvdla_ctrl_ops;

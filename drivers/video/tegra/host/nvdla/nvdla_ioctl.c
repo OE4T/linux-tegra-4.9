@@ -342,11 +342,25 @@ fail:
 size_t nvdla_get_max_task_size(void)
 {
 	return (sizeof(struct nvdla_task) +
-		((MAX_NUM_NVDLA_PREFENCES + MAX_NUM_NVDLA_POSTFENCES) *
-		sizeof(struct nvdla_fence)) +
-		((MAX_NUM_NVDLA_IN_TASK_STATUS +
-			MAX_NUM_NVDLA_OUT_TASK_STATUS) *
-			sizeof(struct nvdla_status_notify)));
+		((MAX_NUM_NVDLA_PREFENCES + MAX_NUM_NVDLA_POSTFENCES) * sizeof(struct nvdla_fence)) +
+		((MAX_NUM_NVDLA_IN_TASK_STATUS + MAX_NUM_NVDLA_OUT_TASK_STATUS) * sizeof(struct nvdla_status_notify)) +
+		(MAX_NUM_NVDLA_BUFFERS_PER_TASK * sizeof(struct nvdla_mem_handle)));
+}
+
+static int nvdla_val_task_submit_input(struct nvdla_ioctl_submit_task *in_task)
+{
+	if (in_task->num_prefences > MAX_NUM_NVDLA_PREFENCES)
+		return -EINVAL;
+	if (in_task->num_postfences > MAX_NUM_NVDLA_POSTFENCES)
+		return -EINVAL;
+	if (in_task->num_input_task_status > MAX_NUM_NVDLA_IN_TASK_STATUS)
+		return -EINVAL;
+	if (in_task->num_output_task_status > MAX_NUM_NVDLA_OUT_TASK_STATUS)
+		return -EINVAL;
+	if (in_task->num_addresses > NVDLA_MAX_BUFFERS_PER_TASK)
+		return -EINVAL;
+
+	return 0;
 }
 
 static int nvdla_fill_task(struct nvhost_queue *queue,
@@ -366,11 +380,8 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 	task->buffers = buffers;
 	task->sp = &nvhost_get_host(pdev)->syncpt;
 
-	if (local_task->num_prefences > MAX_NUM_NVDLA_PREFENCES ||
-	    local_task->num_postfences > MAX_NUM_NVDLA_POSTFENCES ||
-	    local_task->num_input_task_status > MAX_NUM_NVDLA_IN_TASK_STATUS ||
-	    local_task->num_output_task_status > MAX_NUM_NVDLA_OUT_TASK_STATUS) {
-		err = -EINVAL;
+	err = nvdla_val_task_submit_input(local_task);
+	if (err) {
 		nvdla_dbg_err(pdev, "Invalid input arguments");
 		goto fail_to_get_val_args;
 	}
@@ -379,8 +390,9 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 	task->num_postfences = local_task->num_postfences;
 	task->num_in_task_status = local_task->num_input_task_status;
 	task->num_out_task_status = local_task->num_output_task_status;
+	task->num_addresses = local_task->num_addresses;
 
-	/* assign memory for local pre and post action lists */
+	/* assign memory for local task action lists and buf handles */
 	mem = task;
 	mem += sizeof(struct nvdla_task);
 	task->prefences = mem;
@@ -390,6 +402,8 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 	task->in_task_status = mem;
 	mem += task->num_in_task_status * sizeof(struct nvdla_status_notify);
 	task->out_task_status = mem;
+	mem += task->num_out_task_status * sizeof(struct nvdla_status_notify);
+	task->memory_handles = mem;
 
 	/* update local fences into task */
 	err = nvdla_get_actions(local_task, task);
@@ -398,13 +412,21 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 		goto fail_to_get_actions;
 	}
 
-	task->num_addresses = local_task->num_addresses;
-	task->address_list = local_task->address_list;
+	/* get user addresses list */
+	if (copy_from_user(task->memory_handles,
+		(void __user *)local_task->address_list,
+		(task->num_addresses *
+			sizeof(struct nvdla_mem_handle)))) {
+		err = -EFAULT;
+		nvdla_dbg_err(pdev, "failed to copy address list");
+		goto fail_to_get_addr_list;
+	}
 
 	nvdla_dbg_info(pdev, "local task %p param filled with args", task);
 
 	return 0;
 
+fail_to_get_addr_list:
 fail_to_get_actions:
 fail_to_get_val_args:
 	return err;

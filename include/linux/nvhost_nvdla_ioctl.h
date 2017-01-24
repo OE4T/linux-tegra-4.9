@@ -119,6 +119,8 @@ struct nvdla_ioctl_submit_task {
 	__u8 num_postfences;
 	__u8 num_input_task_status;
 	__u8 num_output_task_status;
+#define NVDLA_MAX_BUFFERS_PER_TASK (256)
+	__u32 num_addresses;
 	__u16 flags;
 	__u16 reserved;
 
@@ -127,9 +129,7 @@ struct nvdla_ioctl_submit_task {
 
 	__u64 input_task_status;
 	__u64 output_task_status;
-
-	__u32 num_addresses;
-	struct nvdla_mem_handle address_list;
+	__u64 address_list;
 };
 
 /**

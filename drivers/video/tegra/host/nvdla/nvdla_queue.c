@@ -90,10 +90,6 @@ static void task_free(struct kref *ref)
 
 	nvdla_dbg_info(pdev, "freeing task[%p]", task);
 
-	/* free operation descriptor handle */
-	if (task->memory_handles)
-		kfree(task->memory_handles);
-
 	nvdla_put_task_mem(task);
 }
 
@@ -115,9 +111,55 @@ void nvdla_task_get(struct nvdla_task *task)
 	kref_get(&task->ref);
 }
 
+static int nvdla_unmap_task_memory(struct nvdla_task *task)
+{
+	int ii;
+
+	/* unpin address list */
+	for (ii = 0; ii < task->num_addresses; ii++) {
+		if (task->memory_handles[ii].handle)
+			nvhost_buffer_submit_unpin(task->buffers,
+				&task->memory_handles[ii].handle, 1);
+	}
+
+	/* unpin prefences memory */
+	for (ii = 0; ii < task->num_prefences; ii++) {
+		if (task->prefences[ii].type == NVDLA_FENCE_TYPE_SEMAPHORE &&
+			task->prefences[ii].sem_handle) {
+			nvhost_buffer_submit_unpin(task->buffers,
+				&task->prefences[ii].sem_handle, 1);
+		}
+	}
+
+	/* unpin input task status memory */
+	for (ii = 0; ii < task->num_in_task_status; ii++) {
+		if (task->in_task_status[ii].handle)
+			nvhost_buffer_submit_unpin(task->buffers,
+				&task->in_task_status[ii].handle, 1);
+	}
+
+	/* unpin postfences memory */
+	for (ii = 0; ii < task->num_postfences; ii++) {
+		if ((task->postfences[ii].type == NVDLA_FENCE_TYPE_SEMAPHORE ||
+		  task->postfences[ii].type == NVDLA_FENCE_TYPE_TS_SEMAPHORE) &&
+		  task->postfences[ii].sem_handle) {
+			nvhost_buffer_submit_unpin(task->buffers,
+				&task->postfences[ii].sem_handle, 1);
+		}
+	}
+
+	/* unpin input task status memory */
+	for (ii = 0; ii < task->num_out_task_status; ii++) {
+		if (task->out_task_status[ii].handle)
+			nvhost_buffer_submit_unpin(task->buffers,
+				&task->out_task_status[ii].handle, 1);
+	}
+
+	return 0;
+}
+
 static void nvdla_task_free_locked(struct nvdla_task *task)
 {
-	int i;
 	struct nvhost_queue *queue = task->queue;
 	struct platform_device *pdev = queue->pool->pdev;
 
@@ -128,39 +170,8 @@ static void nvdla_task_free_locked(struct nvdla_task *task)
 	/* give syncpoint reference */
 	nvhost_syncpt_put_ref(task->sp, queue->syncpt_id);
 
-	/* unpin submit ref */
-	if (task->num_handles)
-		nvhost_buffer_submit_unpin(task->buffers,
-			task->memory_handles, task->num_handles);
-
-	for (i = 0; i < task->num_prefences; i++) {
-		if (task->prefences[i].type == NVDLA_FENCE_TYPE_SEMAPHORE &&
-			task->prefences[i].sem_handle) {
-			nvhost_buffer_submit_unpin(task->buffers,
-				&task->prefences[i].sem_handle, 1);
-		}
-	}
-
-	for (i = 0; i < task->num_in_task_status; i++) {
-		if (task->in_task_status[i].handle)
-			nvhost_buffer_submit_unpin(task->buffers,
-				&task->in_task_status[i].handle, 1);
-	}
-
-	for (i = 0; i < task->num_postfences; i++) {
-		if ((task->postfences[i].type == NVDLA_FENCE_TYPE_SEMAPHORE ||
-		  task->postfences[i].type == NVDLA_FENCE_TYPE_TS_SEMAPHORE) &&
-		  task->postfences[i].sem_handle) {
-			nvhost_buffer_submit_unpin(task->buffers,
-				&task->postfences[i].sem_handle, 1);
-		}
-	}
-
-	for (i = 0; i < task->num_out_task_status; i++) {
-		if (task->out_task_status[i].handle)
-			nvhost_buffer_submit_unpin(task->buffers,
-				&task->out_task_status[i].handle, 1);
-	}
+	/* unmap all memory shared with engine */
+	nvdla_unmap_task_memory(task);
 
 	/* update takslist */
 	list_del(&task->list);
@@ -202,158 +213,6 @@ static void nvdla_queue_update(void *priv, int nr_completed)
 	mutex_unlock(&queue->list_lock);
 }
 
-static int nvdla_map_task_memory(struct nvdla_task *task)
-{
-	int i;
-	int err = 0;
-	u32 *handles;
-	size_t *dma_size;
-	void *ptr = NULL;
-	dma_addr_t *dma_addr;
-	dma_addr_t *dma_memory;
-	struct dma_buf *buf = NULL;
-	struct nvdla_mem_handle *addresses;
-	struct nvhost_buffers *buffers = task->buffers;
-	struct platform_device *pdev = task->queue->pool->pdev;
-	struct dla_task_descriptor *task_desc = task->task_desc;
-
-	nvdla_dbg_fn(pdev, "");
-
-	task->num_handles = 0;
-
-	/* keep address list always last */
-	if (task->num_addresses)
-		task->num_handles = task->num_addresses + 1;
-
-	if (task->num_handles == 0)
-		return err;
-
-	/*
-	 * Allocate memory to store information for DMA mapping of
-	 * buffers allocated from user space
-	 */
-	task->memory_handles = kcalloc(task->num_handles, sizeof(u32),
-				GFP_KERNEL);
-	if (!task->memory_handles) {
-		err = -ENOMEM;
-		nvdla_dbg_err(pdev, "fail to alloc mem handles");
-		goto fail_to_alloc_handles;
-	}
-
-	handles = task->memory_handles;
-
-	dma_addr = kcalloc(task->num_handles, sizeof(dma_addr_t),
-				GFP_KERNEL);
-	if (!dma_addr) {
-		err = -ENOMEM;
-		nvdla_dbg_err(pdev, "fail to alloc dma addr list");
-		goto fail_to_alloc_dma_addr;
-	}
-
-	dma_memory = dma_addr;
-	dma_size = kcalloc(task->num_handles, sizeof(u32),
-				GFP_KERNEL);
-	if (!dma_size) {
-		err = -ENOMEM;
-		nvdla_dbg_err(pdev, "fail to alloc dma size");
-		goto fail_to_alloc_dma_size;
-	}
-
-	/*
-	 * Fill in handles from list of addresses, need to map
-	 * address list buffer in kernel and update same buffer
-	 * with DMA addresses obtained.
-	 */
-	if (task->num_addresses) {
-		uintptr_t temp;
-
-		*handles++ = task->address_list.handle;
-
-		buf = dma_buf_get(task->address_list.handle);
-		if (IS_ERR(buf)) {
-			err = PTR_ERR(buf);
-			goto fail_to_pin_mem;
-		}
-
-		ptr = dma_buf_vmap(buf);
-		if (!ptr) {
-			err = -ENOMEM;
-			nvdla_dbg_err(pdev, "fail to vmap buf");
-			goto fail_to_pin_mem;
-		}
-
-		dma_buf_begin_cpu_access(buf, task->address_list.offset,
-				sizeof(uint64_t) * task->num_addresses,
-				DMA_TO_DEVICE);
-
-		temp = (uintptr_t)(ptr);
-		addresses =
-			(struct nvdla_mem_handle *)
-				(temp + task->address_list.offset);
-
-		for (i = 0; i < task->num_addresses; i++, addresses++)
-			*handles++ = addresses->handle;
-	}
-
-	/* Get DMA addresses for all handles */
-	err = nvhost_buffer_submit_pin(buffers, task->memory_handles,
-				task->num_handles, dma_addr, dma_size);
-	if (err) {
-		nvdla_dbg_err(pdev, "fail to submit pin buffers");
-		goto fail_to_pin_mem;
-	}
-
-	/* Update IOVA addresses in task descriptor */
-	task_desc->num_addresses = task->num_addresses;
-	if (task->num_addresses) {
-		uintptr_t temp;
-		uint64_t *dma_addr_list;
-
-		temp = (uintptr_t)(ptr);
-		dma_addr_list = (uint64_t *)
-				(temp + task->address_list.offset);
-		addresses =
-			(struct nvdla_mem_handle *)
-				(temp + task->address_list.offset);
-
-		task_desc->address_list = (*dma_addr++) +
-					task->address_list.offset;
-
-		for (i = 0; i < task->num_addresses; i++, addresses++) {
-			uint64_t offset = (uint64_t)addresses->offset;
-
-			*dma_addr_list++ = (uint64_t)(*dma_addr++) + offset;
-		}
-
-		dma_buf_vunmap(buf, ptr);
-
-		dma_buf_end_cpu_access(buf, task->address_list.offset,
-				sizeof(uint64_t) * task->num_addresses,
-				DMA_TO_DEVICE);
-
-		dma_buf_put(buf);
-	}
-
-	if (dma_memory)
-		kfree(dma_memory);
-	if (dma_size)
-		kfree(dma_size);
-
-	return 0;
-
-fail_to_pin_mem:
-	if (dma_size)
-		kfree(dma_size);
-fail_to_alloc_dma_size:
-	if (dma_memory)
-		kfree(dma_memory);
-fail_to_alloc_dma_addr:
-	if (task->memory_handles)
-		kfree(task->memory_handles);
-fail_to_alloc_handles:
-	return err;
-}
-
 static inline int nvdla_get_max_preaction_size(void)
 {
 	return (((MAX_NUM_NVDLA_PREFENCES + MAX_NUM_NVDLA_IN_TASK_STATUS) *
@@ -387,7 +246,10 @@ static size_t nvdla_get_task_desc_size(void)
 	size += sizeof(struct dla_task_descriptor);
 	size += (2 * MAX_NUM_ACTION_LIST * sizeof(struct dla_action_list));
 	size += nvdla_get_max_preaction_size();
-	size += nvdla_get_max_preaction_size();
+	size += nvdla_get_max_postaction_size();
+
+	size = roundup(size, 8);
+	size += MAX_NUM_NVDLA_BUFFERS_PER_TASK * sizeof(struct dla_mem_addr);
 
 	/* falcon requires IOVA addr to be 256 aligned */
 	size = roundup(size, 256);
@@ -399,6 +261,15 @@ static void nvdla_get_task_desc_memsize(size_t *dma_size, size_t *kmem_size)
 {
 	*dma_size = nvdla_get_task_desc_size();
 	*kmem_size = nvdla_get_max_task_size();
+}
+
+static inline u8 *add_address(u8 *mem, uint64_t addr)
+{
+	struct dla_mem_addr *address = (struct dla_mem_addr *)mem;
+
+	address->val = addr;
+
+	return mem + sizeof(struct dla_mem_addr);
 }
 
 static inline u8 *add_opcode(u8 *mem, uint8_t op)
@@ -435,6 +306,56 @@ static u8 *add_status_action(u8 *mem, uint8_t op, uint64_t addr,
 	action->status = status;
 
 	return mem + sizeof(struct dla_action_task_status);
+}
+
+static int nvdla_map_task_memory(struct nvdla_task *task)
+{
+	int jj;
+	int err = 0;
+	size_t offset;
+	struct nvhost_buffers *buffers = task->buffers;
+	struct platform_device *pdev = task->queue->pool->pdev;
+	struct dla_task_descriptor *task_desc = task->task_desc;
+	u8 *next;
+
+	nvdla_dbg_fn(pdev, "");
+
+	/* get address list offset */
+	offset = task_desc->postactions +
+	   sizeof(struct dla_action_list) + nvdla_get_max_preaction_size() +
+	   sizeof(struct dla_action_list) + nvdla_get_max_postaction_size();
+	offset = roundup(offset, 8);
+
+	/* get task desc address list to update list from kernel */
+	next = (u8 *)task_desc + offset;
+
+	/* send address lists task desc dma to engine */
+	task_desc->address_list = (uint64_t)((u8 *)task->task_desc_pa + offset);
+	task_desc->num_addresses = task->num_addresses;
+
+	/* update address list with all dma */
+	for (jj = 0; jj < task->num_addresses; jj++) {
+		dma_addr_t dma_addr;
+		size_t dma_size;
+
+		nvdla_dbg_info(pdev, "count[%d] handle[%u] offset[%u]",
+				jj,
+				task->memory_handles[jj].handle,
+				task->memory_handles[jj].offset);
+
+		err = nvhost_buffer_submit_pin(buffers,
+				&task->memory_handles[jj].handle,
+				1, &dma_addr, &dma_size);
+		if (err) {
+			nvdla_dbg_err(pdev, "fail to pin address list");
+			goto fail_to_pin_mem;
+		}
+		next = add_address(next,
+			dma_addr + task->memory_handles[jj].offset);
+	}
+
+fail_to_pin_mem:
+	return err;
 }
 
 static int nvdla_fill_postactions(struct nvdla_task *task)

@@ -271,12 +271,6 @@
 
 		fragment-p3310-c03 {
 			ids = ">=3310-1000-B00";
-			override@0 {
-				target = <&{/pcie-controller@10003000}>;
-				_overlay_ {
-					dvdd-pex-supply = <&spmic_ldo8>;
-				};
-			};
 
 			override@1 {
 				target = <&spmic_ldo8>;

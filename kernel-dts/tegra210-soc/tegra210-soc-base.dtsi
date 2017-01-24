@@ -20,7 +20,6 @@
 #include <dt-bindings/gpio/tegra-gpio.h>
 #include <dt-bindings/soc/tegra-io-pads.h>
 #include <dt-bindings/ata/ahci-tegra.h>
-#include <dt-bindings/clk/tegra210-clk.h>
 #include <dt-bindings/soc/nvidia,tegra210-powergate.h>
 #include <dt-bindings/interrupt-controller/tegra-t21x-agic.h>
 #include "tegra210-soc-power-domain.dtsi"
@@ -310,9 +309,8 @@
 		carveout-size = <0x10000>;
 		resets = <&tegra_car 1>;
 		reset-names = "cop";
-		clocks = <&tegra_car TEGRA210_CLK_ID_SBUS_AVP_USER>,
-		         <&tegra_car TEGRA210_CLK_ID_EMC_AVP_USER>;
-		clock-names = "sbus", "emc";
+		clocks = <&tegra_car TEGRA210_CLK_AVP_SCLK>;
+		clock-names = "sclk";
 		reg = <0x0 0x70016000 0x0 0x2000
 		       0x0 0x60001000 0x0 0x1000>;
 		iommus = <&smmu TEGRA_SWGROUP_AVPC>;

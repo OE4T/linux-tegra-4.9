@@ -439,6 +439,7 @@ static int pto_get(void *data, u64 *output)
 	unsigned long flags = 0;
 	u64 rate;
 	u32 val, presel_val = 0;
+	u8 cycle_count;
 
 	if (ptodef->presel_reg) {
 		spin_lock_irqsave(&pto_rmw_lock, flags);
@@ -452,7 +453,11 @@ static int pto_get(void *data, u64 *output)
 
 	mutex_lock(&pto_lock);
 
-	val = BIT(23) | BIT(13) | GENMASK(3, 0);
+	cycle_count = ptodef->cycle_count;
+	if (!cycle_count)
+		cycle_count = 16;
+
+	val = BIT(23) | BIT(13) | (cycle_count - 1);
 	val |= 	ptodef->pto_id << 14;
 	writel(val, clk_base + 0x60);
 	writel(val | BIT(10), clk_base + 0x60);
@@ -470,7 +475,7 @@ static int pto_get(void *data, u64 *output)
 
 	mutex_unlock(&pto_lock);
 
-	rate = (u64)val * 32768 / 16;
+	rate = (u64)val * 32768 / cycle_count;
 	rate = DIV_ROUND_CLOSEST(rate, 1000) * 1000;
 	*output = rate;
 
@@ -488,6 +493,28 @@ static int pto_get(void *data, u64 *output)
 
 DEFINE_SIMPLE_ATTRIBUTE(pto_fops, pto_get, NULL, "%llu\n");
 
+static int cycles_get(void *data, u64 *val)
+{
+	u8 *cycles = data;
+
+	*val = *cycles;
+
+	return 0;
+}
+
+static int cycles_set(void *data, u64 val)
+{
+	u8 *cycles = data;
+
+	if (!val)
+		val = 16;
+
+	*cycles = min(val, 16LLU);
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(cycles_fops, cycles_get, cycles_set, "%llu\n");
+
 void tegra_register_ptos(struct tegra_pto_table *ptodefs, int num_pto_defs)
 {
 	int i;
@@ -503,6 +530,15 @@ void tegra_register_ptos(struct tegra_pto_table *ptodefs, int num_pto_defs)
 				   &ptodefs[i], &pto_fops);
 		if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
 			pr_err("debugfs pro_counter failed %s\n",
+					__clk_get_name(clk));
+
+		if (!ptodefs[i].cycle_count)
+			ptodefs[i].cycle_count = 16;
+
+		d = __clk_debugfs_add_file(clk, "pto_cycles", 0600,
+				   &ptodefs[i].cycle_count, &cycles_fops);
+		if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
+			pr_err("debugfs pro_cycles failed %s\n",
 					__clk_get_name(clk));
 	}
 }

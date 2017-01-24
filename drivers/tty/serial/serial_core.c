@@ -2721,6 +2721,7 @@ int uart_add_one_port(struct uart_driver *drv, struct uart_port *uport)
 	struct uart_state *state;
 	struct tty_port *port;
 	int ret = 0;
+	int ret_rt = 0;
 	struct device *tty_dev;
 	int num_groups;
 
@@ -2789,6 +2790,15 @@ int uart_add_one_port(struct uart_driver *drv, struct uart_port *uport)
 	} else {
 		dev_err(uport->dev, "Cannot register tty device on line %d\n",
 		       uport->line);
+	}
+
+	if (uport->rt_flush) {
+		ret_rt = tty_buffer_start_rt_thread(port, uport->line);
+		if (ret_rt < 0) {
+			dev_err(uport->dev,
+				"cannot start RT thread on line %d: %d",
+				uport->line, ret_rt);
+		}
 	}
 
 	/*

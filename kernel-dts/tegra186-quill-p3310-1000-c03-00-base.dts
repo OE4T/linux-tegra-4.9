@@ -113,10 +113,6 @@
 		bluedroid_pm,reset-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(H, 5) 0>;
         };
 
-	pcie-controller@10003000 {
-		dvdd-pex-supply = <&spmic_ldo8>;
-	};
-
 	bpmp_i2c {
 		spmic@3c {
 			pinmux@0 {

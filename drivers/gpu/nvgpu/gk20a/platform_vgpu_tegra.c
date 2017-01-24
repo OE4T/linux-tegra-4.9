@@ -16,6 +16,7 @@
 #include "gk20a.h"
 #include "hal_gk20a.h"
 #include "platform_gk20a.h"
+#include "vgpu/clk_vgpu.h"
 
 #include <nvgpu/nvhost.h>
 
@@ -23,7 +24,14 @@ static int gk20a_tegra_probe(struct device *dev)
 {
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	return nvgpu_get_nvhost_dev(platform->g);
+	int ret;
+
+	ret = nvgpu_get_nvhost_dev(platform->g);
+	if (ret)
+		return ret;
+
+	vgpu_init_clk_support(platform->g);
+	return 0;
 #else
 	return 0;
 #endif
@@ -46,6 +54,12 @@ struct gk20a_platform vgpu_tegra_platform = {
 
 	.probe = gk20a_tegra_probe,
 	.default_big_page_size	= SZ_128K,
+
+	.clk_round_rate = vgpu_clk_round_rate,
+	.get_clk_freqs = vgpu_clk_get_freqs,
+
+	/* frequency scaling configuration */
+	.devfreq_governor = "userspace",
 
 	.virtual_dev = true,
 };

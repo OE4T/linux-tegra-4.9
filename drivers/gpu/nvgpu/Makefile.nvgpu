@@ -150,6 +150,7 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/dbg_vgpu.o \
 	vgpu/fecs_trace_vgpu.o \
 	vgpu/tsg_vgpu.o \
+	vgpu/clk_vgpu.o \
 	vgpu/css_vgpu.o \
 	vgpu/gk20a/vgpu_hal_gk20a.o \
 	vgpu/gk20a/vgpu_gr_gk20a.o \

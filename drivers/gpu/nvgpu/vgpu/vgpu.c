@@ -26,6 +26,7 @@
 
 #include "vgpu/vgpu.h"
 #include "vgpu/fecs_trace_vgpu.h"
+#include "vgpu/clk_vgpu.h"
 #include "gk20a/hal_gk20a.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
 #include "gk20a/tsg_gk20a.h"
@@ -538,18 +539,22 @@ static int vgpu_qos_notify(struct notifier_block *nb,
 static int vgpu_pm_qos_init(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
-	struct gk20a_scale_profile *profile;
+	struct gk20a_scale_profile *profile = g->scale_profile;
 
-	profile = nvgpu_kzalloc(g, sizeof(*profile));
-	if (!profile)
-		return -ENOMEM;
+	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ)) {
+		if (!profile)
+			return -EINVAL;
+	} else {
+		profile = nvgpu_kzalloc(g, sizeof(*profile));
+		if (!profile)
+			return -ENOMEM;
+		g->scale_profile = profile;
+	}
 
 	profile->dev = dev;
 	profile->qos_notify_block.notifier_call = vgpu_qos_notify;
-	g->scale_profile = profile;
 	pm_qos_add_max_notifier(PM_QOS_GPU_FREQ_BOUNDS,
 				&profile->qos_notify_block);
-
 	return 0;
 }
 
@@ -565,11 +570,31 @@ static void vgpu_pm_qos_remove(struct device *dev)
 
 static int vgpu_pm_init(struct device *dev)
 {
+	struct gk20a *g = get_gk20a(dev);
+	unsigned long *freqs;
+	int num_freqs;
 	int err = 0;
 
 	gk20a_dbg_fn("");
 
 	__pm_runtime_disable(dev, false);
+
+	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
+		gk20a_scale_init(dev);
+
+	if (g->devfreq) {
+		/* set min/max frequency based on frequency table */
+		err = vgpu_clk_get_freqs(dev, &freqs, &num_freqs);
+		if (err)
+			return err;
+
+		if (num_freqs < 1)
+			return -EINVAL;
+
+		g->devfreq->min_freq = freqs[0];
+		g->devfreq->max_freq = freqs[num_freqs - 1];
+	}
+
 	err = vgpu_pm_qos_init(dev);
 	if (err)
 		return err;
@@ -675,12 +700,6 @@ int vgpu_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	err = vgpu_pm_init(dev);
-	if (err) {
-		dev_err(dev, "pm init failed");
-		return err;
-	}
-
 	if (platform->late_probe) {
 		err = platform->late_probe(dev);
 		if (err) {
@@ -705,6 +724,12 @@ int vgpu_probe(struct platform_device *pdev)
 	err = vgpu_get_constants(gk20a);
 	if (err) {
 		vgpu_comm_deinit();
+		return err;
+	}
+
+	err = vgpu_pm_init(dev);
+	if (err) {
+		dev_err(dev, "pm init failed");
 		return err;
 	}
 

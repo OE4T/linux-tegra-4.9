@@ -73,6 +73,41 @@ static bool gr_gv11b_is_valid_class(struct gk20a *g, u32 class_num)
 	return valid;
 }
 
+static bool gr_gv11b_is_valid_gfx_class(struct gk20a *g, u32 class_num)
+{
+	bool valid = false;
+
+	switch (class_num) {
+	case VOLTA_A:
+	case PASCAL_A:
+	case MAXWELL_B:
+		valid = true;
+		break;
+
+	default:
+		break;
+	}
+	return valid;
+}
+
+static bool gr_gv11b_is_valid_compute_class(struct gk20a *g, u32 class_num)
+{
+	bool valid = false;
+
+	switch (class_num) {
+	case VOLTA_COMPUTE_A:
+	case PASCAL_COMPUTE_A:
+	case MAXWELL_COMPUTE_B:
+		valid = true;
+		break;
+
+	default:
+		break;
+	}
+	return valid;
+}
+
+
 static int gr_gv11b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			bool *post_event, struct channel_gk20a *fault_ch,
 			u32 *hww_global_esr)
@@ -111,122 +146,6 @@ static int gr_gv11b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		bool *post_event)
 {
 	return 0;
-}
-
-static int gr_gv11b_commit_global_cb_manager(struct gk20a *g,
-			struct channel_gk20a *c, bool patch)
-{
-	struct gr_gk20a *gr = &g->gr;
-	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
-	struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
-	u32 attrib_offset_in_chunk = 0;
-	u32 alpha_offset_in_chunk = 0;
-	u32 pd_ab_max_output;
-	u32 gpc_index, ppc_index;
-	u32 temp, temp2;
-	u32 cbm_cfg_size_beta, cbm_cfg_size_alpha, cbm_cfg_size_steadystate;
-	u32 attrib_size_in_chunk, cb_attrib_cache_size_init;
-
-	gk20a_dbg_fn("");
-
-	if (gr_ctx->graphics_preempt_mode == NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP) {
-		attrib_size_in_chunk = gr->attrib_cb_default_size +
-				  (gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v() -
-				   gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v());
-		cb_attrib_cache_size_init = gr->attrib_cb_default_size +
-				  (gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v() -
-				   gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v());
-	} else {
-		attrib_size_in_chunk = gr->attrib_cb_size;
-		cb_attrib_cache_size_init = gr->attrib_cb_default_size;
-	}
-
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_ds_tga_constraintlogic_beta_r(),
-		gr->attrib_cb_default_size, patch);
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_ds_tga_constraintlogic_alpha_r(),
-		gr->alpha_cb_default_size, patch);
-
-	pd_ab_max_output = (gr->alpha_cb_default_size *
-		gr_gpc0_ppc0_cbm_beta_cb_size_v_granularity_v()) /
-		gr_pd_ab_dist_cfg1_max_output_granularity_v();
-
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg1_r(),
-		gr_pd_ab_dist_cfg1_max_output_f(pd_ab_max_output) |
-		gr_pd_ab_dist_cfg1_max_batches_init_f(), patch);
-
-	attrib_offset_in_chunk = alpha_offset_in_chunk +
-		gr->tpc_count * gr->alpha_cb_size;
-
-	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
-		temp = proj_gpc_stride_v() * gpc_index;
-		temp2 = proj_scal_litter_num_pes_per_gpc_v() * gpc_index;
-		for (ppc_index = 0; ppc_index < gr->gpc_ppc_count[gpc_index];
-		     ppc_index++) {
-			cbm_cfg_size_beta = cb_attrib_cache_size_init *
-				gr->pes_tpc_count[ppc_index][gpc_index];
-			cbm_cfg_size_alpha = gr->alpha_cb_default_size *
-				gr->pes_tpc_count[ppc_index][gpc_index];
-			cbm_cfg_size_steadystate = gr->attrib_cb_default_size *
-				gr->pes_tpc_count[ppc_index][gpc_index];
-
-			gr_gk20a_ctx_patch_write(g, ch_ctx,
-				gr_gpc0_ppc0_cbm_beta_cb_size_r() + temp +
-				proj_ppc_in_gpc_stride_v() * ppc_index,
-				cbm_cfg_size_beta, patch);
-
-			gr_gk20a_ctx_patch_write(g, ch_ctx,
-				gr_gpc0_ppc0_cbm_beta_cb_offset_r() + temp +
-				proj_ppc_in_gpc_stride_v() * ppc_index,
-				attrib_offset_in_chunk, patch);
-
-			gr_gk20a_ctx_patch_write(g, ch_ctx,
-				gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_r() + temp +
-				proj_ppc_in_gpc_stride_v() * ppc_index,
-				cbm_cfg_size_steadystate,
-				patch);
-
-			attrib_offset_in_chunk += attrib_size_in_chunk *
-				gr->pes_tpc_count[ppc_index][gpc_index];
-
-			gr_gk20a_ctx_patch_write(g, ch_ctx,
-				gr_gpc0_ppc0_cbm_alpha_cb_size_r() + temp +
-				proj_ppc_in_gpc_stride_v() * ppc_index,
-				cbm_cfg_size_alpha, patch);
-
-			gr_gk20a_ctx_patch_write(g, ch_ctx,
-				gr_gpc0_ppc0_cbm_alpha_cb_offset_r() + temp +
-				proj_ppc_in_gpc_stride_v() * ppc_index,
-				alpha_offset_in_chunk, patch);
-
-			alpha_offset_in_chunk += gr->alpha_cb_size *
-				gr->pes_tpc_count[ppc_index][gpc_index];
-
-			gr_gk20a_ctx_patch_write(g, ch_ctx,
-				gr_gpcs_swdx_tc_beta_cb_size_r(ppc_index + temp2),
-				gr_gpcs_swdx_tc_beta_cb_size_v_f(cbm_cfg_size_steadystate),
-				patch);
-		}
-	}
-
-	return 0;
-}
-
-static void gr_gv11b_commit_global_pagepool(struct gk20a *g,
-					    struct channel_ctx_gk20a *ch_ctx,
-					    u64 addr, u32 size, bool patch)
-{
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_scc_pagepool_base_r(),
-		gr_scc_pagepool_base_addr_39_8_f(addr), patch);
-
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_scc_pagepool_r(),
-		gr_scc_pagepool_total_pages_f(size) |
-		gr_scc_pagepool_valid_true_f(), patch);
-
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_gcc_pagepool_base_r(),
-		gr_gpcs_gcc_pagepool_base_addr_39_8_f(addr), patch);
-
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_gcc_pagepool_r(),
-		gr_gpcs_gcc_pagepool_total_pages_f(size), patch);
 }
 
 static int gr_gv11b_zbc_s_query_table(struct gk20a *g, struct gr_gk20a *gr,
@@ -604,42 +523,6 @@ static void gr_gv11b_set_circular_buffer_size(struct gk20a *g, u32 data)
 	}
 }
 
-static int gr_gv11b_init_ctx_state(struct gk20a *g)
-{
-	struct fecs_method_op_gk20a op = {
-		.mailbox = { .id = 0, .data = 0,
-			     .clr = ~0, .ok = 0, .fail = 0},
-		.method.data = 0,
-		.cond.ok = GR_IS_UCODE_OP_NOT_EQUAL,
-		.cond.fail = GR_IS_UCODE_OP_SKIP,
-		};
-	int err;
-
-	gk20a_dbg_fn("");
-
-	err = gr_gk20a_init_ctx_state(g);
-	if (err)
-		return err;
-
-	if (!g->gr.t18x.ctx_vars.preempt_image_size) {
-		op.method.addr =
-			gr_fecs_method_push_adr_discover_preemption_image_size_v();
-		op.mailbox.ret = &g->gr.t18x.ctx_vars.preempt_image_size;
-		err = gr_gk20a_submit_fecs_method_op(g, op, false);
-		if (err) {
-			nvgpu_err(g, "query preempt image size failed");
-			return err;
-		}
-	}
-
-	gk20a_dbg_info("preempt image size: %u",
-		g->gr.t18x.ctx_vars.preempt_image_size);
-
-	gk20a_dbg_fn("done");
-
-	return 0;
-}
-
 int gr_gv11b_alloc_buffer(struct vm_gk20a *vm, size_t size,
 			struct nvgpu_mem *mem)
 {
@@ -671,253 +554,6 @@ fail_free:
 	return err;
 }
 
-static int gr_gv11b_alloc_gr_ctx(struct gk20a *g,
-			  struct gr_ctx_desc **gr_ctx, struct vm_gk20a *vm,
-			  u32 class,
-			  u32 flags)
-{
-	int err;
-
-	gk20a_dbg_fn("");
-
-	err = gr_gk20a_alloc_gr_ctx(g, gr_ctx, vm, class, flags);
-	if (err)
-		return err;
-
-	(*gr_ctx)->t18x.ctx_id_valid = false;
-
-	if (class == PASCAL_A && g->gr.t18x.ctx_vars.force_preemption_gfxp)
-		flags |= NVGPU_ALLOC_OBJ_FLAGS_GFXP;
-
-	if (class == PASCAL_COMPUTE_A &&
-			g->gr.t18x.ctx_vars.force_preemption_cilp)
-		flags |= NVGPU_ALLOC_OBJ_FLAGS_CILP;
-
-	if (flags & NVGPU_ALLOC_OBJ_FLAGS_GFXP) {
-		u32 spill_size =
-			gr_gpc0_swdx_rm_spill_buffer_size_256b_default_v() *
-			gr_gpc0_swdx_rm_spill_buffer_size_256b_byte_granularity_v();
-		u32 pagepool_size = g->ops.gr.pagepool_default_size(g) *
-			gr_scc_pagepool_total_pages_byte_granularity_v();
-		u32 betacb_size = g->gr.attrib_cb_default_size +
-				  (gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v() -
-				   gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v());
-		u32 attrib_cb_size = (betacb_size + g->gr.alpha_cb_size) *
-				  gr_gpc0_ppc0_cbm_beta_cb_size_v_granularity_v() *
-				  g->gr.max_tpc_count;
-		attrib_cb_size = ALIGN(attrib_cb_size, 128);
-
-		gk20a_dbg_info("gfxp context spill_size=%d", spill_size);
-		gk20a_dbg_info("gfxp context pagepool_size=%d", pagepool_size);
-		gk20a_dbg_info("gfxp context attrib_cb_size=%d",
-				attrib_cb_size);
-		err = gr_gv11b_alloc_buffer(vm,
-					g->gr.t18x.ctx_vars.preempt_image_size,
-					&(*gr_ctx)->t18x.preempt_ctxsw_buffer);
-		if (err) {
-			nvgpu_err(vm->mm->g, "cannot allocate preempt buffer");
-			goto fail_free_gk20a_ctx;
-		}
-
-		err = gr_gv11b_alloc_buffer(vm,
-					spill_size,
-					&(*gr_ctx)->t18x.spill_ctxsw_buffer);
-		if (err) {
-			nvgpu_err(vm->mm->g, "cannot allocate spill buffer");
-			goto fail_free_preempt;
-		}
-
-		err = gr_gv11b_alloc_buffer(vm,
-					attrib_cb_size,
-					&(*gr_ctx)->t18x.betacb_ctxsw_buffer);
-		if (err) {
-			nvgpu_err(vm->mm->g, "cannot allocate beta buffer");
-			goto fail_free_spill;
-		}
-
-		err = gr_gv11b_alloc_buffer(vm,
-					pagepool_size,
-					&(*gr_ctx)->t18x.pagepool_ctxsw_buffer);
-		if (err) {
-			nvgpu_err(vm->mm->g, "cannot allocate page pool");
-			goto fail_free_betacb;
-		}
-
-		(*gr_ctx)->graphics_preempt_mode = NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP;
-	}
-
-	if (class == PASCAL_COMPUTE_A) {
-		if (flags & NVGPU_ALLOC_OBJ_FLAGS_CILP)
-			(*gr_ctx)->compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CILP;
-		else
-			(*gr_ctx)->compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CTA;
-	}
-
-	gk20a_dbg_fn("done");
-
-	return err;
-
-fail_free_betacb:
-	nvgpu_dma_unmap_free(vm, &(*gr_ctx)->t18x.betacb_ctxsw_buffer);
-fail_free_spill:
-	nvgpu_dma_unmap_free(vm, &(*gr_ctx)->t18x.spill_ctxsw_buffer);
-fail_free_preempt:
-	nvgpu_dma_unmap_free(vm, &(*gr_ctx)->t18x.preempt_ctxsw_buffer);
-fail_free_gk20a_ctx:
-	gr_gk20a_free_gr_ctx(g, vm, *gr_ctx);
-	*gr_ctx = NULL;
-
-	return err;
-}
-
-static void dump_ctx_switch_stats(struct gk20a *g, struct vm_gk20a *vm,
-		  struct gr_ctx_desc *gr_ctx)
-{
-	struct nvgpu_mem *mem = &gr_ctx->mem;
-
-	if (nvgpu_mem_begin(g, mem)) {
-		WARN_ON("Cannot map context");
-		return;
-	}
-	nvgpu_err(g, "ctxsw_prog_main_image_magic_value_o : %x (expect %x)",
-		nvgpu_mem_rd(g, mem,
-				ctxsw_prog_main_image_magic_value_o()),
-		ctxsw_prog_main_image_magic_value_v_value_v());
-
-
-	nvgpu_err(g, "NUM_SAVE_OPERATIONS : %d",
-		nvgpu_mem_rd(g, mem,
-			ctxsw_prog_main_image_num_save_ops_o()));
-	nvgpu_err(g, "WFI_SAVE_OPERATIONS : %d",
-		nvgpu_mem_rd(g, mem,
-			ctxsw_prog_main_image_num_wfi_save_ops_o()));
-	nvgpu_err(g, "CTA_SAVE_OPERATIONS : %d",
-		nvgpu_mem_rd(g, mem,
-			ctxsw_prog_main_image_num_cta_save_ops_o()));
-	nvgpu_err(g, "GFXP_SAVE_OPERATIONS : %d",
-		nvgpu_mem_rd(g, mem,
-			ctxsw_prog_main_image_num_gfxp_save_ops_o()));
-	nvgpu_err(g, "CILP_SAVE_OPERATIONS : %d",
-		nvgpu_mem_rd(g, mem,
-			ctxsw_prog_main_image_num_cilp_save_ops_o()));
-	nvgpu_err(g, "image gfx preemption option (GFXP is 1) %x",
-		nvgpu_mem_rd(g, mem,
-			ctxsw_prog_main_image_graphics_preemption_options_o()));
-	nvgpu_mem_end(g, mem);
-}
-
-static void gr_gv11b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
-			  struct gr_ctx_desc *gr_ctx)
-{
-	gk20a_dbg_fn("");
-
-	if (!gr_ctx)
-		return;
-
-	if (g->gr.t18x.ctx_vars.dump_ctxsw_stats_on_channel_close)
-		dump_ctx_switch_stats(g, vm, gr_ctx);
-
-	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.pagepool_ctxsw_buffer);
-	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.betacb_ctxsw_buffer);
-	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.spill_ctxsw_buffer);
-	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.preempt_ctxsw_buffer);
-	gr_gk20a_free_gr_ctx(g, vm, gr_ctx);
-	gk20a_dbg_fn("done");
-}
-
-
-static void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
-		struct channel_ctx_gk20a *ch_ctx,
-		struct nvgpu_mem *mem)
-{
-	struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
-	u32 gfxp_preempt_option =
-		ctxsw_prog_main_image_graphics_preemption_options_control_gfxp_f();
-	u32 cilp_preempt_option =
-		ctxsw_prog_main_image_compute_preemption_options_control_cilp_f();
-	int err;
-
-	gk20a_dbg_fn("");
-
-	if (gr_ctx->graphics_preempt_mode == NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP) {
-		gk20a_dbg_info("GfxP: %x", gfxp_preempt_option);
-		nvgpu_mem_wr(g, mem, ctxsw_prog_main_image_graphics_preemption_options_o(),
-				gfxp_preempt_option);
-	}
-
-	if (gr_ctx->compute_preempt_mode == NVGPU_COMPUTE_PREEMPTION_MODE_CILP) {
-		gk20a_dbg_info("CILP: %x", cilp_preempt_option);
-		nvgpu_mem_wr(g, mem, ctxsw_prog_main_image_compute_preemption_options_o(),
-				cilp_preempt_option);
-	}
-
-	if (gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va) {
-		u32 addr;
-		u32 size;
-		u32 cbes_reserve;
-
-		nvgpu_mem_wr(g, mem, ctxsw_prog_main_image_full_preemption_ptr_o(),
-				gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va >> 8);
-
-		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
-		if (err) {
-			nvgpu_err(g, "can't map patch context");
-			goto out;
-		}
-
-		addr = (u64_lo32(gr_ctx->t18x.betacb_ctxsw_buffer.gpu_va) >>
-			gr_gpcs_setup_attrib_cb_base_addr_39_12_align_bits_v()) |
-			(u64_hi32(gr_ctx->t18x.betacb_ctxsw_buffer.gpu_va) <<
-			 (32 - gr_gpcs_setup_attrib_cb_base_addr_39_12_align_bits_v()));
-
-		gk20a_dbg_info("attrib cb addr : 0x%016x", addr);
-		g->ops.gr.commit_global_attrib_cb(g, ch_ctx, addr, true);
-
-		addr = (u64_lo32(gr_ctx->t18x.pagepool_ctxsw_buffer.gpu_va) >>
-			gr_scc_pagepool_base_addr_39_8_align_bits_v()) |
-			(u64_hi32(gr_ctx->t18x.pagepool_ctxsw_buffer.gpu_va) <<
-			 (32 - gr_scc_pagepool_base_addr_39_8_align_bits_v()));
-		size = gr_ctx->t18x.pagepool_ctxsw_buffer.size;
-
-		if (size == g->ops.gr.pagepool_default_size(g))
-			size = gr_scc_pagepool_total_pages_hwmax_v();
-
-		g->ops.gr.commit_global_pagepool(g, ch_ctx, addr, size, true);
-
-		addr = (u64_lo32(gr_ctx->t18x.spill_ctxsw_buffer.gpu_va) >>
-			gr_gpc0_swdx_rm_spill_buffer_addr_39_8_align_bits_v()) |
-			(u64_hi32(gr_ctx->t18x.spill_ctxsw_buffer.gpu_va) <<
-			 (32 - gr_gpc0_swdx_rm_spill_buffer_addr_39_8_align_bits_v()));
-		size = gr_ctx->t18x.spill_ctxsw_buffer.size /
-			gr_gpc0_swdx_rm_spill_buffer_size_256b_byte_granularity_v();
-
-		gr_gk20a_ctx_patch_write(g, ch_ctx,
-				gr_gpc0_swdx_rm_spill_buffer_addr_r(),
-				gr_gpc0_swdx_rm_spill_buffer_addr_39_8_f(addr),
-				true);
-		gr_gk20a_ctx_patch_write(g, ch_ctx,
-				gr_gpc0_swdx_rm_spill_buffer_size_r(),
-				gr_gpc0_swdx_rm_spill_buffer_size_256b_f(size),
-				true);
-
-		cbes_reserve = gr_gpcs_swdx_beta_cb_ctrl_cbes_reserve_gfxp_v();
-		gr_gk20a_ctx_patch_write(g, ch_ctx,
-				gr_gpcs_swdx_beta_cb_ctrl_r(),
-				gr_gpcs_swdx_beta_cb_ctrl_cbes_reserve_f(
-					cbes_reserve),
-				true);
-		gr_gk20a_ctx_patch_write(g, ch_ctx,
-				gr_gpcs_ppcs_cbm_beta_cb_ctrl_r(),
-				gr_gpcs_ppcs_cbm_beta_cb_ctrl_cbes_reserve_f(
-					cbes_reserve),
-				true);
-
-		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
-	}
-
-out:
-	gk20a_dbg_fn("done");
-}
 
 static int gr_gv11b_dump_gr_status_regs(struct gk20a *g,
 			   struct gk20a_debug_output *o)
@@ -1143,41 +779,6 @@ static void gr_gv11b_commit_global_attrib_cb(struct gk20a *g,
 	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_tpcs_tex_rm_cb_1_r(),
 		gr_gpcs_tpcs_tex_rm_cb_1_size_div_128b_f(attrBufferSize) |
 		gr_gpcs_tpcs_tex_rm_cb_1_valid_true_f(), patch);
-}
-
-static void gr_gv11b_commit_global_bundle_cb(struct gk20a *g,
-					    struct channel_ctx_gk20a *ch_ctx,
-					    u64 addr, u64 size, bool patch)
-{
-	u32 data;
-
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_scc_bundle_cb_base_r(),
-		gr_scc_bundle_cb_base_addr_39_8_f(addr), patch);
-
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_scc_bundle_cb_size_r(),
-		gr_scc_bundle_cb_size_div_256b_f(size) |
-		gr_scc_bundle_cb_size_valid_true_f(), patch);
-
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_swdx_bundle_cb_base_r(),
-		gr_gpcs_swdx_bundle_cb_base_addr_39_8_f(addr), patch);
-
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_gpcs_swdx_bundle_cb_size_r(),
-		gr_gpcs_swdx_bundle_cb_size_div_256b_f(size) |
-		gr_gpcs_swdx_bundle_cb_size_valid_true_f(), patch);
-
-	/* data for state_limit */
-	data = (g->gr.bundle_cb_default_size *
-		gr_scc_bundle_cb_size_div_256b_byte_granularity_v()) /
-		gr_pd_ab_dist_cfg2_state_limit_scc_bundle_granularity_v();
-
-	data = min_t(u32, data, g->gr.min_gpm_fifo_depth);
-
-	gk20a_dbg_info("bundle cb token limit : %d, state limit : %d",
-		   g->gr.bundle_cb_token_limit, data);
-
-	gr_gk20a_ctx_patch_write(g, ch_ctx, gr_pd_ab_dist_cfg2_r(),
-		gr_pd_ab_dist_cfg2_token_limit_f(g->gr.bundle_cb_token_limit) |
-		gr_pd_ab_dist_cfg2_state_limit_f(data), patch);
 }
 
 static int gr_gv11b_init_fs_state(struct gk20a *g)
@@ -2025,6 +1626,28 @@ static void gr_gv11b_load_tpc_mask(struct gk20a *g)
 
 }
 
+static void gr_gv11b_write_preemption_ptr(struct gk20a *g,
+			struct nvgpu_mem *mem, u64 gpu_va)
+{
+	u32 addr_lo, addr_hi;
+
+	addr_lo = u64_lo32(gpu_va);
+	addr_hi = u64_hi32(gpu_va);
+
+	nvgpu_mem_wr(g, mem,
+		ctxsw_prog_main_image_full_preemption_ptr_o(), addr_lo);
+	nvgpu_mem_wr(g, mem,
+		ctxsw_prog_main_image_full_preemption_ptr_hi_o(), addr_hi);
+
+	nvgpu_mem_wr(g, mem,
+		ctxsw_prog_main_image_full_preemption_ptr_veid0_o(), addr_lo);
+	nvgpu_mem_wr(g, mem,
+		ctxsw_prog_main_image_full_preemption_ptr_veid0_hi_o(),
+		addr_hi);
+
+}
+
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -2032,8 +1655,9 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.init_fs_state = gr_gv11b_init_fs_state;
 	gops->gr.detect_sm_arch = gr_gv11b_detect_sm_arch;
 	gops->gr.is_valid_class = gr_gv11b_is_valid_class;
-	gops->gr.commit_global_cb_manager = gr_gv11b_commit_global_cb_manager;
-	gops->gr.commit_global_pagepool = gr_gv11b_commit_global_pagepool;
+	gops->gr.is_valid_gfx_class = gr_gv11b_is_valid_gfx_class;
+	gops->gr.is_valid_compute_class = gr_gv11b_is_valid_compute_class;
+	gops->gr.write_preemption_ptr = gr_gv11b_write_preemption_ptr;
 	gops->gr.add_zbc_s = gr_gv11b_add_zbc_stencil;
 	gops->gr.load_zbc_s_default_tbl = gr_gv11b_load_stencil_default_tbl;
 	gops->gr.load_zbc_s_tbl = gr_gv11b_load_stencil_tbl;
@@ -2043,7 +1667,6 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.calc_global_ctx_buffer_size =
 		gr_gv11b_calc_global_ctx_buffer_size;
 	gops->gr.commit_global_attrib_cb = gr_gv11b_commit_global_attrib_cb;
-	gops->gr.commit_global_bundle_cb = gr_gv11b_commit_global_bundle_cb;
 	gops->gr.handle_sw_method = gr_gv11b_handle_sw_method;
 	gops->gr.bundle_cb_defaults = gr_gv11b_bundle_cb_defaults;
 	gops->gr.cb_size_default = gr_gv11b_cb_size_default;
@@ -2051,11 +1674,6 @@ void gv11b_init_gr(struct gpu_ops *gops)
 		gr_gv11b_set_alpha_circular_buffer_size;
 	gops->gr.set_circular_buffer_size =
 		gr_gv11b_set_circular_buffer_size;
-	gops->gr.init_ctx_state = gr_gv11b_init_ctx_state;
-	gops->gr.alloc_gr_ctx = gr_gv11b_alloc_gr_ctx;
-	gops->gr.free_gr_ctx = gr_gv11b_free_gr_ctx;
-	gops->gr.update_ctxsw_preemption_mode =
-		gr_gv11b_update_ctxsw_preemption_mode;
 	gops->gr.dump_gr_regs = gr_gv11b_dump_gr_status_regs;
 	gops->gr.wait_empty = gr_gv11b_wait_empty;
 	gops->gr.init_cyclestats = gr_gv11b_init_cyclestats;

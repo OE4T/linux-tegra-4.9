@@ -474,6 +474,23 @@ static bool gr_gm20b_is_valid_class(struct gk20a *g, u32 class_num)
 	return valid;
 }
 
+static bool gr_gm20b_is_valid_gfx_class(struct gk20a *g, u32 class_num)
+{
+	if (class_num == MAXWELL_B)
+		return true;
+	else
+		return false;
+}
+
+static bool gr_gm20b_is_valid_compute_class(struct gk20a *g, u32 class_num)
+{
+	if (class_num == MAXWELL_COMPUTE_B)
+		return true;
+	else
+		return false;
+}
+
+
 /* Following are the blocks of registers that the ucode
  stores in the extended region.*/
 /* ==  ctxsw_extended_sm_dsm_perf_counter_register_stride_v() ? */
@@ -1527,6 +1544,8 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.set_circular_buffer_size = gr_gm20b_set_circular_buffer_size;
 	gops->gr.enable_hww_exceptions = gr_gk20a_enable_hww_exceptions;
 	gops->gr.is_valid_class = gr_gm20b_is_valid_class;
+	gops->gr.is_valid_gfx_class = gr_gm20b_is_valid_gfx_class;
+	gops->gr.is_valid_compute_class = gr_gm20b_is_valid_compute_class;
 	gops->gr.get_sm_dsm_perf_regs = gr_gm20b_get_sm_dsm_perf_regs;
 	gops->gr.get_sm_dsm_perf_ctrl_regs = gr_gm20b_get_sm_dsm_perf_ctrl_regs;
 	gops->gr.init_fs_state = gr_gm20b_init_fs_state;

@@ -194,6 +194,8 @@ struct gpu_ops {
 		void (*set_circular_buffer_size)(struct gk20a *g, u32 data);
 		void (*enable_hww_exceptions)(struct gk20a *g);
 		bool (*is_valid_class)(struct gk20a *g, u32 class_num);
+		bool (*is_valid_gfx_class)(struct gk20a *g, u32 class_num);
+		bool (*is_valid_compute_class)(struct gk20a *g, u32 class_num);
 		void (*get_sm_dsm_perf_regs)(struct gk20a *g,
 						  u32 *num_sm_dsm_perf_regs,
 						  u32 **sm_dsm_perf_regs,
@@ -353,6 +355,8 @@ struct gpu_ops {
 		void (*write_zcull_ptr)(struct gk20a *g,
 					struct nvgpu_mem *mem, u64 gpu_va);
 		void (*write_pm_ptr)(struct gk20a *g,
+					struct nvgpu_mem *mem, u64 gpu_va);
+		void (*write_preemption_ptr)(struct gk20a *g,
 					struct nvgpu_mem *mem, u64 gpu_va);
 		void (*init_elcg_mode)(struct gk20a *g, u32 mode, u32 engine);
 		void (*load_tpc_mask)(struct gk20a *g);

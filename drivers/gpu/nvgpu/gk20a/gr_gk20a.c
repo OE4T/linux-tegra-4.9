@@ -3113,6 +3113,22 @@ static bool gr_gk20a_is_valid_class(struct gk20a *g, u32 class_num)
 	return valid;
 }
 
+static bool gr_gk20a_is_valid_gfx_class(struct gk20a *g, u32 class_num)
+{
+	if (class_num == KEPLER_C)
+		return true;
+	else
+		return false;
+}
+
+static bool gr_gk20a_is_valid_compute_class(struct gk20a *g, u32 class_num)
+{
+	if (class_num == KEPLER_COMPUTE_A)
+		return true;
+	else
+		return false;
+}
+
 int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 			struct nvgpu_alloc_obj_ctx_args *args)
 {
@@ -9462,6 +9478,8 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 		gk20a_gr_set_alpha_circular_buffer_size;
 	gops->gr.enable_hww_exceptions = gr_gk20a_enable_hww_exceptions;
 	gops->gr.is_valid_class = gr_gk20a_is_valid_class;
+	gops->gr.is_valid_gfx_class = gr_gk20a_is_valid_gfx_class;
+	gops->gr.is_valid_compute_class = gr_gk20a_is_valid_compute_class;
 	gops->gr.get_sm_dsm_perf_regs = gr_gk20a_get_sm_dsm_perf_regs;
 	gops->gr.get_sm_dsm_perf_ctrl_regs = gr_gk20a_get_sm_dsm_perf_ctrl_regs;
 	gops->gr.init_fs_state = gr_gk20a_init_fs_state;

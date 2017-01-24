@@ -65,6 +65,23 @@ static bool gr_gp10b_is_valid_class(struct gk20a *g, u32 class_num)
 	return valid;
 }
 
+static bool gr_gp10b_is_valid_gfx_class(struct gk20a *g, u32 class_num)
+{
+	if (class_num == PASCAL_A ||  class_num == MAXWELL_B)
+		return true;
+	else
+		return false;
+}
+
+static bool gr_gp10b_is_valid_compute_class(struct gk20a *g, u32 class_num)
+{
+	if (class_num == PASCAL_COMPUTE_A ||  class_num == MAXWELL_COMPUTE_B)
+		return true;
+	else
+		return false;
+}
+
+
 static void gr_gp10b_sm_lrf_ecc_overcount_war(int single_err,
 						u32 sed_status,
 						u32 ded_status,
@@ -869,10 +886,11 @@ static int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 {
 	int err = 0;
 
-	if (class == PASCAL_A && g->gr.t18x.ctx_vars.force_preemption_gfxp)
+	if (g->ops.gr.is_valid_gfx_class(g, class) &&
+				g->gr.t18x.ctx_vars.force_preemption_gfxp)
 		graphics_preempt_mode = NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP;
 
-	if (class == PASCAL_COMPUTE_A &&
+	if (g->ops.gr.is_valid_compute_class(g, class) &&
 			g->gr.t18x.ctx_vars.force_preemption_cilp)
 		compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CILP;
 
@@ -959,7 +977,8 @@ static int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 		break;
 	}
 
-	if (class == PASCAL_COMPUTE_A || class == PASCAL_A) {
+	if (g->ops.gr.is_valid_compute_class(g, class) ||
+			g->ops.gr.is_valid_gfx_class(g, class)) {
 		switch (compute_preempt_mode) {
 		case NVGPU_COMPUTE_PREEMPTION_MODE_WFI:
 		case NVGPU_COMPUTE_PREEMPTION_MODE_CTA:
@@ -1141,9 +1160,9 @@ static void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 		u32 size;
 		u32 cbes_reserve;
 
-		nvgpu_mem_wr(g, mem,
-				ctxsw_prog_main_image_full_preemption_ptr_o(),
-				gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va >> 8);
+		if (g->ops.gr.write_preemption_ptr)
+			g->ops.gr.write_preemption_ptr(g, mem,
+				gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va);
 
 		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
 		if (err) {
@@ -2110,6 +2129,8 @@ static int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 	struct tsg_gk20a *tsg;
 	struct vm_gk20a *vm;
 	struct nvgpu_mem *mem = &gr_ctx->mem;
+	struct ctx_header_desc *ctx = &ch->ch_ctx.ctx_header;
+	struct nvgpu_mem *ctxheader = &ctx->mem;
 	u32 class;
 	int err = 0;
 
@@ -2156,6 +2177,9 @@ static int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 	if (nvgpu_mem_begin(g, mem))
 		return -ENOMEM;
 
+	if (nvgpu_mem_begin(g, ctxheader))
+		goto unamp_ctx_header;
+
 	err = gk20a_disable_channel_tsg(g, ch);
 	if (err)
 		goto unmap_ctx;
@@ -2165,7 +2189,12 @@ static int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 		goto enable_ch;
 
 	if (g->ops.gr.update_ctxsw_preemption_mode) {
-		g->ops.gr.update_ctxsw_preemption_mode(ch->g, ch_ctx, mem);
+		if (ctxheader->gpu_va)
+			g->ops.gr.update_ctxsw_preemption_mode(ch->g,
+							ch_ctx, ctxheader);
+		else
+			g->ops.gr.update_ctxsw_preemption_mode(ch->g,
+							ch_ctx, mem);
 
 		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
 		if (err) {
@@ -2179,6 +2208,8 @@ static int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 enable_ch:
 	gk20a_enable_channel_tsg(g, ch);
 unmap_ctx:
+	nvgpu_mem_end(g, ctxheader);
+unamp_ctx_header:
 	nvgpu_mem_end(g, mem);
 
 	return err;
@@ -2262,14 +2293,28 @@ static int gr_gp10b_init_preemption_state(struct gk20a *g)
 	return 0;
 }
 
+static void gr_gp10b_write_preemption_ptr(struct gk20a *g,
+			struct nvgpu_mem *mem, u64 gpu_va)
+{
+	u32 va = u64_lo32(gpu_va >> 8);
+
+	nvgpu_mem_wr(g, mem,
+			ctxsw_prog_main_image_full_preemption_ptr_o(), va);
+
+}
+
+
 void gp10b_init_gr(struct gpu_ops *gops)
 {
 	gm20b_init_gr(gops);
 	gops->gr.init_fs_state = gr_gp10b_init_fs_state;
 	gops->gr.init_preemption_state = gr_gp10b_init_preemption_state;
 	gops->gr.is_valid_class = gr_gp10b_is_valid_class;
+	gops->gr.is_valid_gfx_class = gr_gp10b_is_valid_gfx_class;
+	gops->gr.is_valid_compute_class = gr_gp10b_is_valid_compute_class;
 	gops->gr.commit_global_cb_manager = gr_gp10b_commit_global_cb_manager;
 	gops->gr.commit_global_pagepool = gr_gp10b_commit_global_pagepool;
+	gops->gr.write_preemption_ptr = gr_gp10b_write_preemption_ptr;
 	gops->gr.add_zbc_color = gr_gp10b_add_zbc_color;
 	gops->gr.add_zbc_depth = gr_gp10b_add_zbc_depth;
 	gops->gr.pagepool_default_size = gr_gp10b_pagepool_default_size;

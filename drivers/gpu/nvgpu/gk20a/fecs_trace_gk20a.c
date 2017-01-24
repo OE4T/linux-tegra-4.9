@@ -720,15 +720,27 @@ static int gk20a_fecs_trace_enable(struct gk20a *g)
 {
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 	struct task_struct *task;
+	int write;
 
-	if (!trace->poll_task) {
-		task = kthread_run(gk20a_fecs_trace_periodic_polling, g, __func__);
-		if (unlikely(IS_ERR(task))) {
-			gk20a_warn(dev_from_gk20a(g), "failed to create FECS polling task");
-			return PTR_ERR(task);
-		}
-		trace->poll_task = task;
+	if (!trace)
+		return -EINVAL;
+
+	if  (trace->poll_task)
+		return 0;
+
+	/* drop data in hw buffer */
+	if (g->ops.fecs_trace.flush)
+		g->ops.fecs_trace.flush(g);
+	write = gk20a_fecs_trace_get_write_index(g);
+	gk20a_fecs_trace_set_read_index(g, write);
+
+	task = kthread_run(gk20a_fecs_trace_periodic_polling, g, __func__);
+	if (unlikely(IS_ERR(task))) {
+		gk20a_warn(dev_from_gk20a(g),
+				"failed to create FECS polling task");
+		return PTR_ERR(task);
 	}
+	trace->poll_task = task;
 
 	return 0;
 }

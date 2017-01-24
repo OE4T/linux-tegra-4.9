@@ -3145,8 +3145,8 @@ static int eqos_confing_l2_da_filter(struct net_device *dev,
  *
  * \retval zero on success and -ve number on failure.
  */
-static int eqos_config_mac_loopback_mode(struct net_device *dev,
-					 unsigned int flags)
+int eqos_config_mac_loopback_mode(struct net_device *dev,
+				  unsigned int flags)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);

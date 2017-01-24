@@ -30,8 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -70,6 +69,14 @@ static const struct of_device_id eqos_of_match[] = {
 	{},
 };
 MODULE_DEVICE_TABLE(of, eqos_of_match);
+
+static DEVICE_ATTR(mac_loopback, S_IRUGO | S_IWUSR,
+				eqos_mac_loopback_show,
+				eqos_mac_loopback_store);
+
+static struct device_attribute *eqos_sysfs_attrs[] = {
+				&dev_attr_mac_loopback,
+};
 
 ULONG eqos_base_addr;
 
@@ -660,6 +667,43 @@ static int eqos_therm_init(struct eqos_prv_data *pdata)
 	return 0;
 }
 
+ssize_t eqos_mac_loopback_show(struct device *dev,
+			       struct device_attribute *attr, char *buf)
+{
+	ssize_t ret = 1;
+	struct net_device *ndev = NULL;
+	struct eqos_prv_data *pdata = NULL;
+
+	ndev = (struct net_device *)dev_get_drvdata(dev);
+	pdata = netdev_priv(ndev);
+
+	ret = sprintf(buf, "%d\n", pdata->mac_loopback_mode);
+	return ret;
+}
+
+ssize_t eqos_mac_loopback_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t size)
+{
+	struct net_device *ndev = NULL;
+	struct eqos_prv_data *pdata = NULL;
+
+	ndev = (struct net_device *)dev_get_drvdata(dev);
+	pdata = netdev_priv(ndev);
+
+	if (!(pdata->hw_stopped)) {
+		if (buf[0] == '1')
+			eqos_config_mac_loopback_mode(ndev, 1);
+		else if (buf[0] == '0')
+			eqos_config_mac_loopback_mode(ndev, 0);
+		else
+			pr_err("incorrect entry\n");
+	} else {
+		pr_err("Not Allowed. Eth interface is not up\n");
+	}
+	return size;
+}
+
 /* Converts csr clock to MDC clock.
  * Values come from CR field in MAC_MDIO_Address register
  */
@@ -715,6 +759,7 @@ int eqos_probe(struct platform_device *pdev)
 	struct hw_if_struct *hw_if = NULL;
 	struct desc_if_struct *desc_if = NULL;
 	struct resource *res;
+	struct device_attribute *attr = NULL;
 	const struct of_device_id *match;
 	struct device_node *node = pdev->dev.of_node;
 	u8 mac_addr[6];
@@ -1077,6 +1122,17 @@ int eqos_probe(struct platform_device *pdev)
 	eqos_ptp_init(pdata);
 #endif	/* end of EQOS_CONFIG_PTP */
 
+	for (i = 0; i < ARRAY_SIZE(eqos_sysfs_attrs); i++) {
+		attr = eqos_sysfs_attrs[i];
+		ret = device_create_file(&pdata->pdev->dev, attr);
+
+		if (ret) {
+			dev_err(&pdata->pdev->dev,
+				"Failed to register attributes: %d\n", ret);
+			goto err_sysfs_create_failed;
+			}
+	}
+
 	spin_lock_init(&pdata->lock);
 	spin_lock_init(&pdata->tx_lock);
 	spin_lock_init(&pdata->pmt_lock);
@@ -1161,6 +1217,7 @@ int eqos_probe(struct platform_device *pdev)
 	if (1 == pdata->hw_feat.sma_sel)
 		eqos_mdio_unregister(ndev);
 
+ err_sysfs_create_failed:
  err_out_mdio_reg:
 	desc_if->free_queue_struct(pdata);
 

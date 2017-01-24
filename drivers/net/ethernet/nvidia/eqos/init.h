@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -62,5 +62,11 @@ static INT eqos_resume(struct platform_device *);
 #endif				/* end of CONFIG_PM */
 extern void eqos_stop_dev(struct eqos_prv_data *pdata);
 extern void eqos_start_dev(struct eqos_prv_data *pdata);
-
+extern int eqos_config_mac_loopback_mode(struct net_device *dev,
+					 unsigned int flags);
+ssize_t eqos_mac_loopback_show(struct device *dev,
+			       struct device_attribute *attr, char *buf);
+ssize_t eqos_mac_loopback_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t size);
 #endif

@@ -925,8 +925,6 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 		return 0;
 	}
 
-	mutex_lock(&tegra_nvdisp_lock);
-
 	if (win->dc) {	/* window is owned by another head */
 		dev_err(&dc->ndev->dev,
 			"%s: cannot assign win %d to head %d, it owned by %d\n",
@@ -976,6 +974,5 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 	win->csc = dc->default_csc;
 	win->csc_dirty = true;
 
-	mutex_unlock(&tegra_nvdisp_lock);
 	return 0;
 }

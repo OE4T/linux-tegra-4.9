@@ -1520,6 +1520,8 @@ static int tegra_nvdisp_assign_dc_wins(struct tegra_dc *dc)
 	head_results = &nvdisp_default_imp_settings.imp_results[dc->ctrl_num];
 	head_results->num_windows = 0;
 
+	mutex_lock(&tegra_nvdisp_lock);
+
 	/* Assign windows to this head. */
 	for_each_set_bit(idx, &dc->pdata->win_mask, num_wins) {
 		if (tegra_nvdisp_assign_win(dc, idx)) {
@@ -1558,6 +1560,8 @@ static int tegra_nvdisp_assign_dc_wins(struct tegra_dc *dc)
 			"timeout waiting for win assignments to promote\n");
 		ret = -EINVAL;
 	}
+
+	mutex_unlock(&tegra_nvdisp_lock);
 
 	/* Set the fb_index on changing from a zero winmask to a valid one. */
 	if ((dc->pdata->fb->win == -1) && dc->pdata->win_mask) {

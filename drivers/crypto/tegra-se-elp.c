@@ -2334,7 +2334,7 @@ static const struct of_device_id tegra_se_elp_of_match[] = {
 		.compatible = "nvidia,tegra186-se-elp",
 		.data = &tegra18_se_chipdata,
 	}, {
-		.compatible = "nvidia,tegra214-se-elp",
+		.compatible = "nvidia,tegra210b01-se-elp",
 		.data = &tegra21_se_chipdata,
 	}, {
 	},

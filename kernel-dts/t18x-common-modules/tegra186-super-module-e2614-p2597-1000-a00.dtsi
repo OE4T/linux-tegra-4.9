@@ -184,7 +184,7 @@
                 };
 
                 e2614_cm32180: cm32180@48 {
-                        compatible = "capella,cm3218x";
+                        compatible = "capella,cm32180";
                         reg = <0x48>;
                         gpio_irq = <&tegra_main_gpio TEGRA_MAIN_GPIO(I, 4) GPIO_ACTIVE_LOW>;
                         light_uncalibrated_lo = <1>;

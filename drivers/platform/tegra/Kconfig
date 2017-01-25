@@ -97,12 +97,6 @@ config TEGRA_CBUS_CAN_USE_SKIPPERS
 	  When enabled, clock skippers for cbus modules can be used to provide
 	  fine granularity clock rate control
 
-config TEGRA_CAMERA_MIPI_CAL
-	bool "Tegra camera MIPI calibration"
-	default y
-	help
-	  Enable Tegra camera MIPI calibration.
-
 config TEGRA_CENTRAL_ACTMON
 	bool "Tegra Activity Monitor"
 	depends on ARCH_TEGRA_18x_SOC || ARCH_TEGRA_21x_SOC

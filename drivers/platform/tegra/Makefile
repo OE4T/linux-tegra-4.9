@@ -20,7 +20,6 @@ obj-$(CONFIG_TEGRA_BOOTLOADER_DEBUG_INIT) += tegra_bootloader_debug_init.o
 
 obj-y					+= smc-calls.o
 
-obj-$(CONFIG_TEGRA_CAMERA_MIPI_CAL)     += mipi-cal.o
 obj-$(CONFIG_TEGRA_NVADSP)		+= nvadsp/
 obj-$(CONFIG_TEGRA_MC) += mc/
 

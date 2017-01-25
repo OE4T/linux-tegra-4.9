@@ -183,7 +183,7 @@ struct device *tegrafw_register(const char *name,
 
 	return fwdev;
 out:
-	kfree(fwdev);
+	put_device(fwdev);
 	return ERR_PTR(err);
 }
 EXPORT_SYMBOL(tegrafw_register);
@@ -196,7 +196,7 @@ EXPORT_SYMBOL(tegrafw_register);
 void tegrafw_unregister(struct device *fwdev)
 {
 	if (!IS_ERR_OR_NULL(fwdev))
-		put_device(fwdev);
+		device_unregister(fwdev);
 }
 EXPORT_SYMBOL(tegrafw_unregister);
 

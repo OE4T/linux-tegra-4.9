@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -43,7 +43,7 @@ static u32 vin_device_init_pmudata_super(struct gk20a *g,
 
 static u32 read_vin_cal_fuse_rev(struct gk20a *g)
 {
-	return fuse_vin_cal_fuse_rev_v(
+	return fuse_vin_cal_fuse_rev_data_v(
 		gk20a_readl(g, fuse_vin_cal_fuse_rev_r()));
 }
 
@@ -103,9 +103,11 @@ static u32 read_vin_cal_slope_intercept_fuse(struct gk20a *g,
 	if (data == 0xFFFFFFFF)
 		return -EINVAL;
 
-	gpc0interceptdata = fuse_vin_cal_gpc0_icpt_data_v(gpc0data) * 1000;
-	gpc0interceptdata = gpc0interceptdata >>
-		fuse_vin_cal_gpc0_icpt_frac_size_v();
+	gpc0interceptdata = (fuse_vin_cal_gpc0_icpt_int_data_v(gpc0data) <<
+			     fuse_vin_cal_gpc0_icpt_frac_data_s()) +
+			    fuse_vin_cal_gpc0_icpt_frac_data_v(gpc0data);
+	gpc0interceptdata = (gpc0interceptdata * 1000U) >>
+			    fuse_vin_cal_gpc0_icpt_frac_data_s();
 
 	switch (vin_id) {
 	case CTRL_CLK_VIN_ID_GPC0:
@@ -119,33 +121,36 @@ static u32 read_vin_cal_slope_intercept_fuse(struct gk20a *g,
 	case CTRL_CLK_VIN_ID_SYS:
 	case CTRL_CLK_VIN_ID_XBAR:
 	case CTRL_CLK_VIN_ID_LTC:
-		interceptdata =
-			(fuse_vin_cal_gpc1_icpt_data_v(data)) * 1000;
-		interceptdata = interceptdata >>
-			fuse_vin_cal_gpc1_icpt_frac_size_v();
+		interceptdata = (fuse_vin_cal_gpc1_delta_icpt_int_data_v(data) <<
+				 fuse_vin_cal_gpc1_delta_icpt_frac_data_s()) +
+				fuse_vin_cal_gpc1_delta_icpt_frac_data_v(data);
+		interceptdata = (interceptdata * 1000U) >>
+				fuse_vin_cal_gpc1_delta_icpt_frac_data_s();
 		break;
 
 	case CTRL_CLK_VIN_ID_SRAM:
-		interceptdata =
-			(fuse_vin_cal_sram_icpt_data_v(data)) * 1000;
-		interceptdata = interceptdata >>
-			fuse_vin_cal_sram_icpt_frac_size_v();
+		interceptdata = (fuse_vin_cal_sram_delta_icpt_int_data_v(data) <<
+				 fuse_vin_cal_sram_delta_icpt_frac_data_s()) +
+				fuse_vin_cal_sram_delta_icpt_frac_data_v(data);
+		interceptdata = (interceptdata * 1000U) >>
+				fuse_vin_cal_sram_delta_icpt_frac_data_s();
 		break;
 
 	default:
 		return -EINVAL;
 	}
 
-	if (data & fuse_vin_cal_gpc1_icpt_sign_f())
+	if (fuse_vin_cal_gpc1_delta_icpt_sign_data_v(data))
 		*intercept = gpc0interceptdata - interceptdata;
 	else
 		*intercept = gpc0interceptdata + interceptdata;
 
 	/* slope */
-	gpc0slopedata = (fuse_vin_cal_gpc0_slope_data_v(gpc0data)) * 1000;
-	gpc0slopedata = gpc0slopedata >>
-		fuse_vin_cal_gpc0_slope_frac_size_v();
-
+	gpc0slopedata = (fuse_vin_cal_gpc0_slope_int_data_v(gpc0data) <<
+			     fuse_vin_cal_gpc0_slope_frac_data_s()) +
+			    fuse_vin_cal_gpc0_slope_frac_data_v(gpc0data);
+	gpc0slopedata = (gpc0slopedata * 1000U) >>
+			    fuse_vin_cal_gpc0_slope_frac_data_s();
 	switch (vin_id) {
 	case CTRL_CLK_VIN_ID_GPC0:
 		break;
@@ -160,16 +165,14 @@ static u32 read_vin_cal_slope_intercept_fuse(struct gk20a *g,
 	case CTRL_CLK_VIN_ID_LTC:
 	case CTRL_CLK_VIN_ID_SRAM:
 		slopedata =
-			(fuse_vin_cal_gpc1_slope_data_v(data)) * 1000;
-		slopedata = slopedata >>
-			fuse_vin_cal_gpc1_slope_frac_size_v();
+			(fuse_vin_cal_gpc1_delta_slope_int_data_v(data)) * 1000;
 		break;
 
 	default:
 		return -EINVAL;
 	}
 
-	if (data & fuse_vin_cal_gpc1_slope_sign_f())
+	if (fuse_vin_cal_gpc1_delta_slope_sign_data_v(data))
 		*slope = gpc0slopedata - slopedata;
 	else
 		*slope = gpc0slopedata + slopedata;

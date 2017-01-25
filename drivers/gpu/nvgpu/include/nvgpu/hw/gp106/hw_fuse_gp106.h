@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -124,63 +124,103 @@ static inline u32 fuse_status_opt_fbp_r(void)
 }
 static inline u32 fuse_status_opt_fbp_idx_v(u32 r, u32 i)
 {
-	return (r >> (0 + i*0)) & 0x1;
+	return (r >> (0 + i*1)) & 0x1;
 }
 static inline u32 fuse_vin_cal_fuse_rev_r(void)
 {
 	return 0x0002164c;
 }
-static inline u32 fuse_vin_cal_fuse_rev_v(u32 r)
+static inline u32 fuse_vin_cal_fuse_rev_data_v(u32 r)
 {
-	return 0x3 & r;
+	return (r >> 0) & 0x3;
 }
 static inline u32 fuse_vin_cal_gpc0_r(void)
 {
 	return 0x00021650;
 }
-static inline u32 fuse_vin_cal_gpc0_icpt_data_v(u32 r)
+static inline u32 fuse_vin_cal_gpc0_icpt_int_data_s(void)
 {
-	return ((r & 0xFFFC000) >> 14);
+	return 12;
 }
-static inline u32 fuse_vin_cal_gpc0_icpt_frac_size_v(void)
+static inline u32 fuse_vin_cal_gpc0_icpt_int_data_v(u32 r)
+{
+	return (r >> 16) & 0xfff;
+}
+static inline u32 fuse_vin_cal_gpc0_icpt_frac_data_s(void)
 {
 	return 2;
 }
-static inline u32 fuse_vin_cal_gpc0_slope_data_v(u32 r)
+static inline u32 fuse_vin_cal_gpc0_icpt_frac_data_v(u32 r)
 {
-	return (r & 0x3FFF);
+	return (r >> 14) & 0x3;
 }
-static inline u32 fuse_vin_cal_gpc0_slope_frac_size_v(void)
+static inline u32 fuse_vin_cal_gpc0_slope_int_data_s(void)
+{
+	return 4;
+}
+static inline u32 fuse_vin_cal_gpc0_slope_int_data_v(u32 r)
+{
+	return (r >> 10) & 0xf;
+}
+static inline u32 fuse_vin_cal_gpc0_slope_frac_data_s(void)
 {
 	return 10;
+}
+static inline u32 fuse_vin_cal_gpc0_slope_frac_data_v(u32 r)
+{
+	return (r >> 0) & 0x3ff;
 }
 static inline u32 fuse_vin_cal_gpc1_delta_r(void)
 {
 	return 0x00021654;
 }
-static inline u32 fuse_vin_cal_gpc1_icpt_sign_f(void)
+static inline u32 fuse_vin_cal_gpc1_delta_icpt_int_data_s(void)
 {
-	return 0x400000;
+	return 8;
 }
-static inline u32 fuse_vin_cal_gpc1_slope_sign_f(void)
+static inline u32 fuse_vin_cal_gpc1_delta_icpt_int_data_v(u32 r)
 {
-	return 0x800;
+	return (r >> 14) & 0xff;
 }
-static inline u32 fuse_vin_cal_gpc1_icpt_data_v(u32 r)
-{
-	return ((r & 0x3FF000) >> 12);
-}
-static inline u32 fuse_vin_cal_gpc1_icpt_frac_size_v(void)
+static inline u32 fuse_vin_cal_gpc1_delta_icpt_frac_data_s(void)
 {
 	return 2;
 }
-static inline u32 fuse_vin_cal_gpc1_slope_data_v(u32 r)
+static inline u32 fuse_vin_cal_gpc1_delta_icpt_frac_data_v(u32 r)
 {
-	return (r & 0x7FF);
+	return (r >> 12) & 0x3;
 }
-static inline u32 fuse_vin_cal_gpc1_slope_frac_size_v(void)
+static inline u32 fuse_vin_cal_gpc1_delta_icpt_sign_data_s(void)
+{
+	return 1;
+}
+static inline u32 fuse_vin_cal_gpc1_delta_icpt_sign_data_v(u32 r)
+{
+	return (r >> 22) & 0x1;
+}
+static inline u32 fuse_vin_cal_gpc1_delta_slope_int_data_s(void)
+{
+	return 1;
+}
+static inline u32 fuse_vin_cal_gpc1_delta_slope_int_data_v(u32 r)
+{
+	return (r >> 10) & 0x1;
+}
+static inline u32 fuse_vin_cal_gpc1_delta_slope_frac_data_s(void)
 {
 	return 10;
+}
+static inline u32 fuse_vin_cal_gpc1_delta_slope_frac_data_v(u32 r)
+{
+	return (r >> 0) & 0x3ff;
+}
+static inline u32 fuse_vin_cal_gpc1_delta_slope_sign_data_s(void)
+{
+	return 1;
+}
+static inline u32 fuse_vin_cal_gpc1_delta_slope_sign_data_v(u32 r)
+{
+	return (r >> 11) & 0x1;
 }
 static inline u32 fuse_vin_cal_gpc2_delta_r(void)
 {
@@ -206,12 +246,20 @@ static inline u32 fuse_vin_cal_sram_delta_r(void)
 {
 	return 0x0002166c;
 }
-static inline u32 fuse_vin_cal_sram_icpt_data_v(u32 r)
+static inline u32 fuse_vin_cal_sram_delta_icpt_int_data_s(void)
 {
-	return ((r & 0x3FF000) >> 12);
+	return 9;
 }
-static inline u32 fuse_vin_cal_sram_icpt_frac_size_v(void)
+static inline u32 fuse_vin_cal_sram_delta_icpt_int_data_v(u32 r)
+{
+	return (r >> 13) & 0x1ff;
+}
+static inline u32 fuse_vin_cal_sram_delta_icpt_frac_data_s(void)
 {
 	return 1;
+}
+static inline u32 fuse_vin_cal_sram_delta_icpt_frac_data_v(u32 r)
+{
+	return (r >> 12) & 0x1;
 }
 #endif

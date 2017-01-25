@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -504,95 +504,75 @@ static inline u32 fb_mmu_local_memory_range_ecc_mode_v(u32 r)
 }
 static inline u32 fb_fbpa_fbio_delay_r(void)
 {
-	return 0x9a065c;
-}
-static inline u32 fb_fbpa_fbio_delay_src_m(void)
-{
-	return 0x7;
-}
-static inline u32 fb_fbpa_fbio_delay_src_v(u32 r)
-{
-	return (r >> 0) & 0x7;
+	return 0x009a065c;
 }
 static inline u32 fb_fbpa_fbio_delay_src_f(u32 v)
 {
-	return (v & 0x7) << 0;
+	return (v & 0xf) << 0;
+}
+static inline u32 fb_fbpa_fbio_delay_src_m(void)
+{
+	return 0xf << 0;
+}
+static inline u32 fb_fbpa_fbio_delay_src_v(u32 r)
+{
+	return (r >> 0) & 0xf;
 }
 static inline u32 fb_fbpa_fbio_delay_src_max_v(void)
 {
-	return 2;
-}
-static inline u32 fb_fbpa_fbio_delay_priv_m(void)
-{
-	return 0x7 << 4;
-}
-static inline u32 fb_fbpa_fbio_delay_priv_v(u32 r)
-{
-	return (r >> 4) & 0x7;
+	return 0x00000002;
 }
 static inline u32 fb_fbpa_fbio_delay_priv_f(u32 v)
 {
-	return (v & 0x7) << 4;
+	return (v & 0xf) << 4;
+}
+static inline u32 fb_fbpa_fbio_delay_priv_m(void)
+{
+	return 0xf << 4;
+}
+static inline u32 fb_fbpa_fbio_delay_priv_v(u32 r)
+{
+	return (r >> 4) & 0xf;
 }
 static inline u32 fb_fbpa_fbio_delay_priv_max_v(void)
 {
-	return 2;
+	return 0x00000002;
 }
 static inline u32 fb_fbpa_fbio_cmd_delay_r(void)
 {
-	return 0x9a08e0;
-}
-static inline u32 fb_fbpa_fbio_cmd_delay_cmd_src_m(void)
-{
-	return 0x7;
-}
-static inline u32 fb_fbpa_fbio_cmd_delay_cmd_src_v(u32 r)
-{
-	return (r >> 0) & 0x7;
+	return 0x009a08e0;
 }
 static inline u32 fb_fbpa_fbio_cmd_delay_cmd_src_f(u32 v)
 {
-	return (v & 0x7) << 0;
+	return (v & 0xf) << 0;
+}
+static inline u32 fb_fbpa_fbio_cmd_delay_cmd_src_m(void)
+{
+	return 0xf << 0;
+}
+static inline u32 fb_fbpa_fbio_cmd_delay_cmd_src_v(u32 r)
+{
+	return (r >> 0) & 0xf;
 }
 static inline u32 fb_fbpa_fbio_cmd_delay_cmd_src_max_v(void)
 {
-	return 1;
-}
-static inline u32 fb_fbpa_fbio_cmd_delay_cmd_priv_m(void)
-{
-	return 0x7 << 4;
-}
-static inline u32 fb_fbpa_fbio_cmd_delay_cmd_priv_v(u32 r)
-{
-	return (r >> 4) & 0x7;
+	return 0x00000001;
 }
 static inline u32 fb_fbpa_fbio_cmd_delay_cmd_priv_f(u32 v)
 {
-	return (v & 0x7) << 4;
+	return (v & 0xf) << 4;
+}
+static inline u32 fb_fbpa_fbio_cmd_delay_cmd_priv_m(void)
+{
+	return 0xf << 4;
+}
+static inline u32 fb_fbpa_fbio_cmd_delay_cmd_priv_v(u32 r)
+{
+	return (r >> 4) & 0xf;
 }
 static inline u32 fb_fbpa_fbio_cmd_delay_cmd_priv_max_v(void)
 {
-	return 1;
-}
-static inline u32 fb_niso_scrubber_status_r(void)
-{
-	return 0x00100b20;
-}
-static inline u32 fb_niso_scrubber_status_flag_s(void)
-{
-	return 1;
-}
-static inline u32 fb_niso_scrubber_status_flag_f(u32 v)
-{
-	return (v & 0x1) << 0;
-}
-static inline u32 fb_niso_scrubber_status_flag_m(void)
-{
-	return 0x1 << 0;
-}
-static inline u32 fb_niso_scrubber_status_flag_v(u32 r)
-{
-	return (r >> 0) & 0x1;
+	return 0x00000001;
 }
 static inline u32 fb_niso_scrub_status_r(void)
 {

@@ -1049,6 +1049,7 @@
 		interrupts = <0 70 0x04
 		              0 71 0x04>;
 		interrupt-names = "stall", "nonstall";
+		nvidia,host1x = <&host1x>;
 		access-vpr-phys;
 		clocks = <&bpmp_clks TEGRA194_CLK_GPCCLK>,
 			<&bpmp_clks TEGRA194_CLK_GPU_PWR>;

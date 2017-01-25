@@ -51,11 +51,12 @@ so much easier [Ed]
 Maintainers List (try to look for most precise areas first)
 
 		-----------------------------------
+
 MEMORY
-M:      Krishna Reddy <vdumpa@nvidia.com>
-M:      Sri Krishna Chowdary <schowdary@nvidia.com>
-L:      sw-mobile-memory@exchange.nvidia.com
-S:      Supported
-F:      drivers/
-F:      include/
+M:	Krishna Reddy <vdumpa@nvidia.com>
+M:	Sri Krishna Chowdary <schowdary@nvidia.com>
+L:	sw-mobile-memory@exchange.nvidia.com
+S:	Supported
+F:	drivers/
+F:	include/
 

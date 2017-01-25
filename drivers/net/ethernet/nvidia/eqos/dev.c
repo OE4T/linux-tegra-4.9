@@ -1965,8 +1965,8 @@ static INT configure_rwk_filter_registers(UINT *value, UINT count)
 
 static INT disable_tx_flow_ctrl(UINT qinx)
 {
-
-	MAC_QTFCR_TFE_WR(qinx, 0);
+	if (qinx == 0)
+		MAC_QTFCR_TFE_WR(qinx, 0);
 
 	return Y_SUCCESS;
 }
@@ -1979,8 +1979,8 @@ static INT disable_tx_flow_ctrl(UINT qinx)
 
 static INT enable_tx_flow_ctrl(UINT qinx)
 {
-
-	MAC_QTFCR_TFE_WR(qinx, 1);
+	if (qinx == 0)
+		MAC_QTFCR_TFE_WR(qinx, 1);
 
 	return Y_SUCCESS;
 }
@@ -3822,7 +3822,8 @@ static INT configure_mac(struct eqos_prv_data *pdata)
 	/* Set Tx flow control parameters */
 	for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++) {
 		/* set Pause Time */
-		MAC_QTFCR_PT_WR(qinx, 0xffff);
+		if (qinx == 0)
+			MAC_QTFCR_PT_WR(qinx, 0xffff);
 		/* Assign priority for RX flow control */
 		/* Assign priority for TX flow control */
 		switch (qinx) {

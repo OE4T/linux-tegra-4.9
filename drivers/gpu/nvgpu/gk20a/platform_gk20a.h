@@ -1,7 +1,7 @@
 /*
  * GK20A Platform (SoC) Interface
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,6 +18,7 @@
 
 #include <linux/device.h>
 #include <linux/dma-attrs.h>
+#include <linux/version.h>
 
 #define GK20A_CLKS_MAX		4
 
@@ -54,6 +55,12 @@ struct gk20a_platform {
 
 	/* Should be populated at probe. */
 	bool has_syncpoints;
+	/* Debugfs knob for forcing syncpt support off in runtime. */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
+	u32 disable_syncpoints;
+#else
+	bool disable_syncpoints;
+#endif
 
 	/* channel limit after which to start aggressive sync destroy */
 	unsigned int aggressive_sync_destroy_thresh;
@@ -265,7 +272,7 @@ extern struct gk20a_platform vgpu_tegra_platform;
 static inline bool gk20a_platform_has_syncpoints(struct device *dev)
 {
 	struct gk20a_platform *p = dev_get_drvdata(dev);
-	return p->has_syncpoints;
+	return p->has_syncpoints && !p->disable_syncpoints;
 }
 
 int gk20a_tegra_busy(struct device *dev);

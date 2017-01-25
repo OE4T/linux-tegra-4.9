@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/host/t20/debug_gk20a.c
  *
- * Copyright (C) 2011-2016 NVIDIA Corporation.  All rights reserved.
+ * Copyright (C) 2011-2017 NVIDIA Corporation.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -411,6 +411,9 @@ void gk20a_debug_init(struct device *dev, const char *debugfs_symlink)
 
 	debugfs_create_u32("ch_wdt_timeout_ms", S_IRUGO|S_IWUSR,
 		platform->debugfs, &platform->ch_wdt_timeout_ms);
+
+	debugfs_create_bool("disable_syncpoints", S_IRUGO|S_IWUSR,
+		platform->debugfs, &platform->disable_syncpoints);
 
 #if defined(GK20A_DEBUG)
 	debugfs_create_u32("dbg_mask", S_IRUGO|S_IWUSR,

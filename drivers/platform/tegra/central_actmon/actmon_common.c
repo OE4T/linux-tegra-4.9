@@ -26,7 +26,7 @@
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
 
-#include "linux/platform/tegra/actmon_common.h"
+#include <linux/platform/tegra/actmon_common.h>
 
 /* Global definitions */
 static struct actmon_drv_data *actmon;

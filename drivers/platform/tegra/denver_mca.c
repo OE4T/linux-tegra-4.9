@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -206,7 +206,7 @@ static int denver_mca_handler(void)
 	u64 bank_count;
 	struct denver_mca_bank *bank;
 	unsigned long flags;
-	int retval = 1;
+	int clear_serr = 0;
 
 	/* Ask the hardware how many banks exist */
 	asm volatile("mrs %0, s3_0_c15_c3_0" : "=r" (bank_count) : );
@@ -219,12 +219,14 @@ static int denver_mca_handler(void)
 			status = bank->stat();
 			if (status & SERRi_STATUS_VAL) {
 				print_bank(bank, status, -1);
-				retval = 0;
+				clear_serr = 1;
 			}
 		}
 	}
+	if (clear_serr)
+		tegra18_clear_serr();
 	raw_spin_unlock_irqrestore(&denver_mca_lock, flags);
-	return retval;
+	return 1;
 }
 
 /* MCA assert register dump */
@@ -234,7 +236,7 @@ static int denver_assert_mca_handler(void)
 	struct denver_mca_bank *bank;
 	unsigned long flags;
 	int cpu;
-	int retval = 1;
+	int clear_serr = 0;
 
 	/* Find the other Denver cores */
 	for_each_online_cpu(cpu) {
@@ -247,15 +249,17 @@ static int denver_assert_mca_handler(void)
 						continue;
 					if (status & SERRi_STATUS_VAL) {
 						print_bank(bank, status, cpu);
-						retval = 0;
+						clear_serr = 1;
 					}
 				}
 			}
+			if (clear_serr)
+				tegra18_clear_serr();
 			raw_spin_unlock_irqrestore(&denver_mca_lock, flags);
 		}
 	}
 
-	return retval;
+	return 1;
 }
 
 /* Handle SError for Denver cores */

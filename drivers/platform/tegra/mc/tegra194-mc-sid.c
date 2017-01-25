@@ -654,7 +654,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			RCEDMAR,
 			RCEDMAW,
 		},
-		.ord = SIM_OVERRIDE,
+		.ord = NO_OVERRIDE,
 		.name = "RCE",
 	},
 	{

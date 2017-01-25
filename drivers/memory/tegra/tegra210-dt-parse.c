@@ -1,7 +1,7 @@
 /*
  * drivers/platform/tegra/mc/tegra_emc_dt_parse.c
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -259,6 +259,18 @@ skip_periodic_training_params:
 	return tables;
 }
 
+static const struct of_device_id emc_table_match[] = {
+	{
+		.compatible = "nvidia,tegra210-emc-table",
+		.data = "nvidia,tegra210-emc-table-derated",
+	},
+	{
+		.compatible = "nvidia,tegra21-emc-table",
+		.data = "nvidia,tegra21-emc-table-derated",
+	},
+	{ },
+};
+
 int tegra_emc_dt_parse_pdata(struct platform_device *pdev,
 			       struct emc_table **tables,
 			       struct emc_table **derated_tables,
@@ -270,8 +282,8 @@ int tegra_emc_dt_parse_pdata(struct platform_device *pdev,
 	u32 tegra_bct_strapping;
 	const char *emc_mode = "nvidia,emc-mode-0";
 	struct tegra21_emc_pdata *pdata = NULL;
-	const char *comp = "nvidia,tegra210-emc-table";
-	const char *comp_derated = "nvidia,tegra210-emc-table-derated";
+	const char *comp = NULL;
+	const char *comp_derated = NULL;
 
 	if (!np) {
 		dev_err(&pdev->dev,
@@ -306,6 +318,16 @@ int tegra_emc_dt_parse_pdata(struct platform_device *pdev,
 
 	num_tables = 0;
 	for_each_child_of_node(tnp, iter) {
+		if (!comp) {
+			const struct of_device_id *m =
+				of_match_node(emc_table_match, iter);
+			if (m) {
+				comp = m->compatible;
+				comp_derated = m->data;
+				num_tables++;
+			}
+			continue;
+		}
 		if (of_device_is_compatible(iter, comp))
 			num_tables++;
 	}

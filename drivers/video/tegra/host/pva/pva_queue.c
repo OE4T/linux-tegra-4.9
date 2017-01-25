@@ -523,6 +523,9 @@ static void pva_task_write_postactions(struct pva_submit_task *task,
 				task->queue->syncpt_id);
 	u8 *hw_postactions = (void *)((u8 *)task->va + *offset);
 	int ptr = 0, i = 0;
+	struct platform_device *host1x_pdev =
+			to_platform_device(task->pva->pdev->dev.parent);
+	u32 thresh;
 
 	/* Write Output action status */
 	for (i = 0; i < task->num_output_task_status; i++) {
@@ -563,9 +566,12 @@ static void pva_task_write_postactions(struct pva_submit_task *task,
 	}
 
 	/* Make a syncpoint increment */
-	if (syncpt_gos_addr)
+	if (syncpt_gos_addr) {
+		thresh = nvhost_syncpt_read_maxval(host1x_pdev,
+				task->queue->syncpt_id) + 1;
 		ptr += pva_task_write_ptr_op(&hw_postactions[ptr],
-			TASK_ACT_PTR_WRITE_VAL, syncpt_gos_addr, 1);
+			TASK_ACT_PTR_WRITE_VAL, syncpt_gos_addr, thresh);
+	}
 	ptr += pva_task_write_ptr_op(&hw_postactions[ptr],
 		TASK_ACT_PTR_WRITE_VAL, syncpt_addr, 1);
 	ptr += pva_task_write_atomic_op(&hw_postactions[ptr],

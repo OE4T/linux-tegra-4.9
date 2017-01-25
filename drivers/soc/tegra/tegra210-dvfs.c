@@ -836,10 +836,22 @@ static struct dvfs core_dvfs_table[] = {
 	CORE_DVFS("soc_therm",		-1, -1, 1, KHZ,	 136000,  136000,  136000,  136000,  136000,  136000,  136000,  136000,  136000,  136000,  136000,  136000,  136000,  136000,  136000),
 	CORE_DVFS("tsensor",		-1, -1, 1, KHZ,	  19200,   19200,   19200,   19200,   19200,   19200,   19200,   19200,   19200,   19200,   19200,   19200,   19200,   19200,   19200),
 
+};
+
+static struct dvfs spi_dvfs_table[] = {
 	CORE_DVFS("sbc1",		-1, -1, 1, KHZ,	  12000,   35000,   50000,   50000,   65000,   65000,   65000,   65000,   65000,   65000,   65000,   65000,   65000,   65000,   65000),
 	CORE_DVFS("sbc2",		-1, -1, 1, KHZ,	  12000,   35000,   50000,   50000,   65000,   65000,   65000,   65000,   65000,   65000,   65000,   65000,   65000,   65000,   65000),
 	CORE_DVFS("sbc3",		-1, -1, 1, KHZ,	  12000,   35000,   50000,   50000,   65000,   65000,   65000,   65000,   65000,   65000,   65000,   65000,   65000,   65000,   65000),
 	CORE_DVFS("sbc4",		-1, -1, 1, KHZ,	  12000,   35000,   50000,   50000,   65000,   65000,   65000,   65000,   65000,   65000,   65000,   65000,   65000,   65000,   65000),
+};
+
+
+static struct dvfs spi_slave_dvfs_table[] = {
+	CORE_DVFS("sbc1",		-1, -1, 1, KHZ,	  45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000),
+	CORE_DVFS("sbc2",		-1, -1, 1, KHZ,	  45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000),
+	CORE_DVFS("sbc3",		-1, -1, 1, KHZ,	  45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000),
+	CORE_DVFS("sbc4",		-1, -1, 1, KHZ,	  45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000,   45000),
+
 };
 
 static struct dvfs qspi_sdr_dvfs_table[] = {
@@ -1139,6 +1151,66 @@ static void init_qspi_dvfs(int soc_speedo_id, int core_process_id,
 	if (match_dvfs_one(qspi_dvfs->clk_name, qspi_dvfs->speedo_id,
 		qspi_dvfs->process_id, soc_speedo_id, core_process_id))
 		init_dvfs_one(qspi_dvfs, core_nominal_mv_index);
+}
+
+/*
+ * SPI DVFS tables are different in master and in slave mode. Use master tables
+ * by default. Check if slave mode is specified for enabled SPI devices in DT,
+ * and overwrite master table for the respective SPI controller.
+ */
+
+static struct {
+	u64 address;
+	struct dvfs *d;
+} spi_map[] = {
+	{ 0x7000d400, &spi_dvfs_table[0] },
+	{ 0x7000d600, &spi_dvfs_table[1] },
+	{ 0x7000d800, &spi_dvfs_table[2] },
+	{ 0x7000da00, &spi_dvfs_table[3] },
+};
+
+static int of_update_spi_slave_dvfs(struct device_node *dn)
+{
+	int i;
+	u64 addr = 0;
+	const __be32 *reg;
+
+	if (!of_device_is_available(dn))
+		return 0;
+
+	reg = of_get_property(dn, "reg", NULL);
+	if (reg)
+		addr = of_translate_address(dn, reg);
+
+	for (i = 0; i < ARRAY_SIZE(spi_map); i++) {
+		if (spi_map[i].address == addr) {
+			spi_map[i].d = &spi_slave_dvfs_table[i];
+			break;
+		}
+	}
+	return 0;
+}
+
+static struct of_device_id tegra21_dvfs_spi_slave_of_match[] = {
+	{ .compatible = "nvidia,tegra210-spi-slave",
+	  .data = of_update_spi_slave_dvfs, },
+	{ },
+};
+
+static void init_spi_dvfs(int soc_speedo_id, int core_process_id,
+			  int core_nominal_mv_index)
+{
+	int i;
+
+	of_tegra_dvfs_init(tegra21_dvfs_spi_slave_of_match);
+
+	for (i = 0; i <  ARRAY_SIZE(spi_map); i++) {
+		struct dvfs *d = spi_map[i].d;
+		if (!match_dvfs_one(d->clk_name, d->speedo_id,
+			d->process_id, soc_speedo_id, core_process_id))
+			continue;
+		init_dvfs_one(d, core_nominal_mv_index);
+	}
 }
 
 static void init_sor1_dvfs(int soc_speedo_id, int core_process_id,
@@ -1811,6 +1883,7 @@ int tegra210_init_dvfs(struct device_node *node)
 
 	init_qspi_dvfs(soc_speedo_id, core_process_id, core_nominal_mv_index);
 	init_sor1_dvfs(soc_speedo_id, core_process_id, core_nominal_mv_index);
+	init_spi_dvfs(soc_speedo_id, core_process_id, core_nominal_mv_index);
 
 	/*
 	 * Initialize matching cpu dvfs entry already found when nominal

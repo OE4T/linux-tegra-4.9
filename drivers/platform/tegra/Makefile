@@ -53,9 +53,7 @@ obj-$(CONFIG_TEGRA_HMP_CLUSTER_CONTROL) += sysfs-cluster.o
 obj-$(CONFIG_TEGRA_CENTRAL_ACTMON) += central_actmon/
 obj-$(CONFIG_TEGRA_CPU_VOLT_CAP)	+= tegra_volt_cap.o
 
-ifeq ($(CONFIG_PM_SLEEP),y)
-obj-y += tegra-wakeups.o
-endif
+obj-$(CONFIG_PM_SLEEP) += tegra-wakeups.o
 
 ccflags-y += -I$(srctree)/arch/arm/mach-tegra/include \
              -I$(srctree)/arch/arm/mach-tegra

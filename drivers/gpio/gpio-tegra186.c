@@ -823,7 +823,7 @@ static const struct file_operations debug_fops = {
 	.release	= single_release,
 };
 
-static int __init tegra_gpio_debuginit(struct tegra_gpio_info *tgi)
+static int tegra_gpio_debuginit(struct tegra_gpio_info *tgi)
 {
 	(void)debugfs_create_file(tgi->soc->debug_fs_name, S_IRUGO,
 				  NULL, tgi, &debug_fops);

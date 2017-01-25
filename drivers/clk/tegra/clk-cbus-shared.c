@@ -445,6 +445,27 @@ static int _connect_shared_update(struct tegra_clk_cbus_shared *bus)
 	return err;
 }
 
+static int clk_shared_connect_master_prepare(struct clk_hw *hw)
+{
+	struct tegra_clk_cbus_shared *shared = to_clk_cbus_shared(hw);
+
+	shared->u.shared_bus_user.enabled = true;
+	if (shared->u.shared_bus_user.client)
+		return clk_prepare_enable(shared->u.shared_bus_user.client);
+
+	return 0;
+}
+
+static void clk_shared_connect_master_unprepare(struct clk_hw *hw)
+{
+	struct tegra_clk_cbus_shared *shared = to_clk_cbus_shared(hw);
+
+	if (shared->u.shared_bus_user.client)
+		clk_disable_unprepare(shared->u.shared_bus_user.client);
+
+	shared->u.shared_bus_user.enabled = false;
+}
+
 static int clk_shared_set_rate(struct clk_hw *hw, unsigned long rate,
 				unsigned long parent_rate)
 {
@@ -1052,6 +1073,11 @@ static const struct clk_ops tegra_clk_gbus_ops = {
 
 static const struct clk_ops tegra_clk_shared_master_ops = {
 	.debug_init = clk_shared_debug,
+};
+
+static const struct clk_ops tegra_clk_shared_connect_master_ops = {
+	.prepare = clk_shared_connect_master_prepare,
+	.unprepare = clk_shared_connect_master_unprepare,
 };
 
 static const struct clk_ops tegra_clk_cascade_master_ops = {

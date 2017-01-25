@@ -20,6 +20,7 @@
 #include <linux/err.h>
 #include <linux/slab.h>
 #include <linux/clk-provider.h>
+#include <soc/tegra/tegra-dvfs.h>
 
 #include "clk.h"
 
@@ -127,6 +128,16 @@ const struct clk_ops tegra_clk_super_mux_ops = {
 	.set_parent = clk_super_set_parent,
 };
 
+static int clk_super_prepare(struct clk_hw *hw)
+{
+	return tegra_dvfs_set_rate(hw->clk, clk_hw_get_rate(hw));
+}
+
+static void clk_super_unprepare(struct clk_hw *hw)
+{
+	tegra_dvfs_set_rate(hw->clk, 0);
+}
+
 static int clk_super_determine_rate(struct clk_hw *hw,
 				    struct clk_rate_request *req)
 {
@@ -166,6 +177,8 @@ const struct clk_ops tegra_clk_super_ops = {
 	.set_rate = clk_super_set_rate,
 	.determine_rate = clk_super_determine_rate,
 	.recalc_rate = clk_super_recalc_rate,
+	.prepare = clk_super_prepare,
+	.unprepare = clk_super_unprepare,
 };
 
 struct clk *tegra_clk_register_super_mux(const char *name,

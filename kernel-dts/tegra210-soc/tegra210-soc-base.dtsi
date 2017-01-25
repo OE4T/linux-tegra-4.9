@@ -199,7 +199,7 @@
 
 	bwmgr {
 		compatible = "nvidia,bwmgr";
-		clocks = <&tegra_car TEGRA210_CLK_EMC>;
+		clocks = <&tegra_car TEGRA210_CLK_BWMGR_EMC>;
 		clock-names = "emc";
 		status = "okay";
 	};

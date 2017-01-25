@@ -247,7 +247,7 @@ static int gpio_gas_gauge_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id gpio_gas_gauge_of_match[] = {
-	{ .compatible = "gpio-gas-gauge", },
+	{ .compatible = "gpio-gas-gauge", }, { }
 };
 MODULE_DEVICE_TABLE(of, gpio_gas_gauge_of_match);
 

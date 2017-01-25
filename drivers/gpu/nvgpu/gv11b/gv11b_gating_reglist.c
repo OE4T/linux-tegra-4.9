@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,7 +50,6 @@ static const struct gating_desc gv11b_slcg_chiplet[] = {
 static const struct gating_desc gv11b_slcg_fb[] = {
 	{.addr = 0x00100d14, .prod = 0x00000000, .disable = 0xfffffffe},
 	{.addr = 0x00100c9c, .prod = 0x00000000, .disable = 0x000001fe},
-	{.addr = 0x001facb4, .prod = 0x00000000, .disable = 0x000001fe},
 };
 
 /* slcg fifo */
@@ -92,16 +91,16 @@ static const struct gating_desc gv11b_slcg_gr[] = {
 	{.addr = 0x00419c74, .prod = 0x0000001e, .disable = 0x0000001e},
 	{.addr = 0x00419c84, .prod = 0x0003fffe, .disable = 0x0003fffe},
 	{.addr = 0x00419c8c, .prod = 0xffffff84, .disable = 0xfffffffe},
-	{.addr = 0x00419c94, .prod = 0x00007ffe, .disable = 0x00007ffe},
+	{.addr = 0x00419c94, .prod = 0x00000240, .disable = 0x00007ffe},
 	{.addr = 0x00419ca4, .prod = 0x00003ffe, .disable = 0x00003ffe},
 	{.addr = 0x00419cac, .prod = 0x0001fffe, .disable = 0x0001fffe},
-	{.addr = 0x00419a44, .prod = 0x00000000, .disable = 0x0000000e},
-	{.addr = 0x00419a4c, .prod = 0x00000000, .disable = 0x000001fe},
-	{.addr = 0x00419a54, .prod = 0x00000000, .disable = 0x0000003e},
-	{.addr = 0x00419a5c, .prod = 0x00000000, .disable = 0x0000000e},
-	{.addr = 0x00419a64, .prod = 0x00000000, .disable = 0x000001fe},
-	{.addr = 0x00419a7c, .prod = 0x00000000, .disable = 0x0000003e},
-	{.addr = 0x00419a84, .prod = 0x00000000, .disable = 0x0000000e},
+	{.addr = 0x00419a44, .prod = 0x00000008, .disable = 0x0000000e},
+	{.addr = 0x00419a4c, .prod = 0x000001f8, .disable = 0x000001fe},
+	{.addr = 0x00419a54, .prod = 0x0000003c, .disable = 0x0000003e},
+	{.addr = 0x00419a5c, .prod = 0x0000000c, .disable = 0x0000000e},
+	{.addr = 0x00419a64, .prod = 0x00000186, .disable = 0x000001fe},
+	{.addr = 0x00419a7c, .prod = 0x0000003c, .disable = 0x0000003e},
+	{.addr = 0x00419a84, .prod = 0x0000000c, .disable = 0x0000000e},
 	{.addr = 0x0041be2c, .prod = 0x04115fc0, .disable = 0xfffffffe},
 	{.addr = 0x0041bfec, .prod = 0xfffffff0, .disable = 0xfffffffe},
 	{.addr = 0x0041bed4, .prod = 0xfffffff8, .disable = 0xfffffffe},
@@ -186,7 +185,6 @@ static const struct gating_desc gv11b_blcg_fb[] = {
 	{.addr = 0x00100d48, .prod = 0x0000c242, .disable = 0x00000000},
 	{.addr = 0x00100d1c, .prod = 0x00000042, .disable = 0x00000000},
 	{.addr = 0x00100c98, .prod = 0x00004242, .disable = 0x00000000},
-	{.addr = 0x001facb0, .prod = 0x00004242, .disable = 0x00000000},
 };
 
 /* blcg fifo */
@@ -225,21 +223,21 @@ static const struct gating_desc gv11b_blcg_gr[] = {
 	{.addr = 0x00418898, .prod = 0x00004242, .disable = 0x00000000},
 	{.addr = 0x00419868, .prod = 0x00008242, .disable = 0x00000000},
 	{.addr = 0x00419c70, .prod = 0x0000c444, .disable = 0x00000000},
-	{.addr = 0x00419c80, .prod = 0x00000003, .disable = 0x00000000},
-	{.addr = 0x00419c88, .prod = 0x00000003, .disable = 0x00000000},
-	{.addr = 0x00419c90, .prod = 0x00000003, .disable = 0x00000000},
+	{.addr = 0x00419c80, .prod = 0x00004048, .disable = 0x00000000},
+	{.addr = 0x00419c88, .prod = 0x00004048, .disable = 0x00000000},
+	{.addr = 0x00419c90, .prod = 0x00000047, .disable = 0x00000000},
 	{.addr = 0x00419c98, .prod = 0x00000042, .disable = 0x00000000},
 	{.addr = 0x00419ca0, .prod = 0x00000043, .disable = 0x00000000},
 	{.addr = 0x00419ca8, .prod = 0x00000003, .disable = 0x00000000},
 	{.addr = 0x00419cb0, .prod = 0x00000002, .disable = 0x00000000},
-	{.addr = 0x00419a40, .prod = 0x00000202, .disable = 0x00000000},
-	{.addr = 0x00419a48, .prod = 0x00000202, .disable = 0x00000000},
-	{.addr = 0x00419a50, .prod = 0x00000202, .disable = 0x00000000},
-	{.addr = 0x00419a58, .prod = 0x00000202, .disable = 0x00000000},
-	{.addr = 0x00419a60, .prod = 0x00000202, .disable = 0x00000000},
-	{.addr = 0x00419a68, .prod = 0x00000202, .disable = 0x00000000},
-	{.addr = 0x00419a78, .prod = 0x00000202, .disable = 0x00000000},
-	{.addr = 0x00419a80, .prod = 0x00000202, .disable = 0x00000000},
+	{.addr = 0x00419a40, .prod = 0x00000545, .disable = 0x00000000},
+	{.addr = 0x00419a48, .prod = 0x00004545, .disable = 0x00000000},
+	{.addr = 0x00419a50, .prod = 0x00004545, .disable = 0x00000000},
+	{.addr = 0x00419a58, .prod = 0x00004545, .disable = 0x00000000},
+	{.addr = 0x00419a60, .prod = 0x00000505, .disable = 0x00000000},
+	{.addr = 0x00419a68, .prod = 0x00000505, .disable = 0x00000000},
+	{.addr = 0x00419a78, .prod = 0x00000505, .disable = 0x00000000},
+	{.addr = 0x00419a80, .prod = 0x00004545, .disable = 0x00000000},
 	{.addr = 0x0041be28, .prod = 0x00008242, .disable = 0x00000000},
 	{.addr = 0x0041bfe8, .prod = 0x0000c444, .disable = 0x00000000},
 	{.addr = 0x0041bed0, .prod = 0x0000c444, .disable = 0x00000000},

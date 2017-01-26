@@ -4003,23 +4003,27 @@ static int eqos_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 	switch (cmd) {
 	case SIOCGMIIPHY:
 		data->phy_id = pdata->phyaddr;
-		pr_err("PHY ID: SIOCGMIIPHY\n");
 		break;
 
 	case SIOCGMIIREG:
 		ret =
 		    eqos_mdio_read_direct(pdata, pdata->phyaddr,
-					  (data->reg_num & 0x1F), &reg_val);
-		if (ret)
+			(data->reg_num & 0x1F), &reg_val);
+		if (ret) {
+			pr_err("PHY ID: SIOCGMIIREG reg:%#x reg_val:%#x ret %d\n",
+				(data->reg_num & 0x1F), reg_val, ret);
 			ret = -EIO;
-
+		}
 		data->val_out = reg_val;
-		pr_err("PHY ID: SIOCGMIIREG reg:%#x reg_val:%#x\n",
-		       (data->reg_num & 0x1F), reg_val);
 		break;
 
 	case SIOCSMIIREG:
-		pr_err("PHY ID: SIOCSMIIPHY\n");
+		ret = eqos_mdio_write_direct(pdata, pdata->phyaddr,
+			(data->reg_num & 0x1F), data->val_in);
+		if (ret) {
+			pr_err("PHY ID: SIOCSMIIPHY ret %d\n", ret);
+			ret = -EIO;
+		}
 		break;
 
 	case EQOS_PRV_IOCTL:

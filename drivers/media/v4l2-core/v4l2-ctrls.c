@@ -3409,7 +3409,7 @@ int v4l2_ctrl_subscribe_event(struct v4l2_fh *fh,
 				const struct v4l2_event_subscription *sub)
 {
 	if (sub->type == V4L2_EVENT_CTRL)
-		return v4l2_event_subscribe(fh, sub, 0, &v4l2_ctrl_sub_ev_ops);
+		return v4l2_event_subscribe(fh, sub, 2, &v4l2_ctrl_sub_ev_ops);
 	return -EINVAL;
 }
 EXPORT_SYMBOL(v4l2_ctrl_subscribe_event);

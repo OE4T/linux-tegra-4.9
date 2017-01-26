@@ -202,10 +202,19 @@ static int tegra186_init_refcount(void)
 	return 0;
 }
 
+static bool tegra186_powergate_id_is_valid(int id)
+{
+	if ((id < 0) || (id >= TEGRA_NUM_POWERGATE))
+		return false;
+
+	return true;
+}
+
 static struct powergate_ops tegra186_pg_ops = {
 	.soc_name = "tegra186",
 
 	.num_powerdomains = TEGRA_NUM_POWERGATE,
+	.powergate_id_is_soc_valid = tegra186_powergate_id_is_valid,
 
 	.get_powergate_domain_name = tegra186_pg_get_name,
 

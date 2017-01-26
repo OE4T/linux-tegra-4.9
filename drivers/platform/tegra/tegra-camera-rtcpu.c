@@ -605,17 +605,13 @@ int tegra_camrtc_poweroff(struct device *dev)
 /*
  * RTCPU boot sequence
  */
-int tegra_camrtc_boot(struct device *dev)
+static int tegra_camrtc_boot_sync(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
 	u32 command;
 	int ret;
 
 	dev_info(dev, "booting %s with Camera RTCPU FW\n", rtcpu->name);
-
-	ret = tegra_camrtc_poweron(dev);
-	if (ret)
-		return ret;
 
 	/*
 	 * Handshake FW version before continuing with the boot
@@ -662,6 +658,16 @@ int tegra_camrtc_boot(struct device *dev)
 
 error:
 	return ret;
+}
+
+int tegra_camrtc_boot(struct device *dev)
+{
+	int err = tegra_camrtc_poweron(dev);
+
+	if (err)
+		return err;
+
+	return tegra_camrtc_boot_sync(dev);
 }
 EXPORT_SYMBOL(tegra_camrtc_boot);
 
@@ -955,7 +961,8 @@ EXPORT_SYMBOL(tegra_camrtc_halt);
 
 static const struct dev_pm_ops tegra_cam_rtcpu_pm_ops = {
 	.suspend = tegra_camrtc_halt,
-	.resume = tegra_camrtc_boot,
+	.resume_early = tegra_camrtc_poweron,
+	.resume = tegra_camrtc_boot_sync,
 	.runtime_suspend = tegra_cam_rtcpu_runtime_suspend,
 	.runtime_resume = tegra_cam_rtcpu_runtime_resume,
 };

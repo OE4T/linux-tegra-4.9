@@ -28,8 +28,9 @@
 #include <dt-bindings/soc/tegra186-powergate.h>
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
+#include <soc/tegra/tegra-powergate-driver.h>
 
-#include "powergate-priv-t18x.h"
+#define powergate_ops tegra_powergate_driver_ops
 
 struct pg_partition_info {
 	const char *name;

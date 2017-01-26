@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -119,8 +119,6 @@ static const struct gating_desc gp106_slcg_gr[] = {
 	{.addr = 0x00412a24, .prod = 0x00000000, .disable = 0x0000ffff},
 	{.addr = 0x00412c14, .prod = 0x00000000, .disable = 0x0001fffe},
 	{.addr = 0x00412e84, .prod = 0x00000000, .disable = 0x0001fffe},
-	{.addr = 0x00412dac, .prod = 0x00000000, .disable = 0x0001fffe},
-	{.addr = 0x00412e24, .prod = 0x00000000, .disable = 0x0000ffff},
 	{.addr = 0x00408814, .prod = 0x00000000, .disable = 0x0001fffe},
 	{.addr = 0x00408a84, .prod = 0x00000000, .disable = 0x0001fffe},
 	{.addr = 0x004089ac, .prod = 0x00000000, .disable = 0x0001fffe},
@@ -136,7 +134,6 @@ static const struct gating_desc gp106_slcg_ltc[] = {
 	{.addr = 0x00156050, .prod = 0x00000000, .disable = 0xfffffffe},
 	{.addr = 0x0015655c, .prod = 0x00000000, .disable = 0xfffffffe},
 	{.addr = 0x0015675c, .prod = 0x00000000, .disable = 0xfffffffe},
-	{.addr = 0x0015635c, .prod = 0x00000000, .disable = 0xfffffffe},
 	{.addr = 0x0017e050, .prod = 0x00000000, .disable = 0xfffffffe},
 	{.addr = 0x0017e35c, .prod = 0x00000000, .disable = 0xfffffffe},
 };
@@ -267,12 +264,6 @@ static const struct gating_desc gp106_blcg_gr[] = {
 	{.addr = 0x0041be28, .prod = 0x00008242, .disable = 0x00000000},
 	{.addr = 0x0041bfe8, .prod = 0x0000c444, .disable = 0x00000000},
 	{.addr = 0x0041bed0, .prod = 0x0000c444, .disable = 0x00000000},
-	{.addr = 0x00412810, .prod = 0x0000c242, .disable = 0x00000000},
-	{.addr = 0x00412a80, .prod = 0x0000c242, .disable = 0x00000000},
-	{.addr = 0x004129a8, .prod = 0x0000c242, .disable = 0x00000000},
-	{.addr = 0x00412c10, .prod = 0x0000c242, .disable = 0x00000000},
-	{.addr = 0x00412e80, .prod = 0x0000c242, .disable = 0x00000000},
-	{.addr = 0x00412da8, .prod = 0x0000c242, .disable = 0x00000000},
 	{.addr = 0x00408810, .prod = 0x0000c242, .disable = 0x00000000},
 	{.addr = 0x00408a80, .prod = 0x0000c242, .disable = 0x00000000},
 	{.addr = 0x004089a8, .prod = 0x0000c242, .disable = 0x00000000},
@@ -315,10 +306,6 @@ static const struct gating_desc gp106_blcg_xbar[] = {
 	{.addr = 0x0013cbe0, .prod = 0x00000042, .disable = 0x00000000},
 	{.addr = 0x0013cc00, .prod = 0x00000042, .disable = 0x00000000},
 	{.addr = 0x0013cc20, .prod = 0x00000042, .disable = 0x00000000},
-	{.addr = 0x0013cc40, .prod = 0x00000042, .disable = 0x00000000},
-	{.addr = 0x0013cc60, .prod = 0x00000042, .disable = 0x00000000},
-	{.addr = 0x0013cc80, .prod = 0x00000042, .disable = 0x00000000},
-	{.addr = 0x0013cca0, .prod = 0x00000042, .disable = 0x00000000},
 };
 
 /* pg gr */

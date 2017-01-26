@@ -97,10 +97,12 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 static struct tegra_dc_hw_data *hw_data;
 static struct tegra_dc_hw_data t21x_hw_data;
 static struct tegra_dc_hw_data t18x_hw_data;
+static struct tegra_dc_hw_data t19x_hw_data;
 
 static const struct of_device_id tegra_display_of_match[] = {
 	{.compatible = "nvidia,tegra210-dc", .data = &t21x_hw_data },
 	{.compatible = "nvidia,tegra186-dc", .data = &t18x_hw_data },
+	{.compatible = "nvidia,tegra194-dc", .data = &t19x_hw_data },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, tegra_display_of_match);
@@ -6684,6 +6686,7 @@ static int __init tegra_dc_module_init(void)
 
 	tegra_dc_populate_t21x_hw_data(&t21x_hw_data);
 	tegra_dc_populate_t18x_hw_data(&t18x_hw_data);
+	tegra_dc_populate_t19x_hw_data(&t19x_hw_data);
 
 	ret = tegra_dc_assign_hw_data();
 	if (ret)

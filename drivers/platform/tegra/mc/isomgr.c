@@ -295,11 +295,6 @@ static struct isoclient_info tegra18x_isoclients[] = {
 		.bwmgr_id = TEGRA_BWMGR_CLIENT_DISP2,
 	},
 	{
-		.client = TEGRA_ISO_CLIENT_VI_0,
-		.name = "vi_0",
-		.bwmgr_id = TEGRA_BWMGR_CLIENT_VI,
-	},
-	{
 		.client = TEGRA_ISO_CLIENT_ISP_A,
 		.name = "isp_a",
 		.bwmgr_id = TEGRA_BWMGR_CLIENT_ISPA,
@@ -480,8 +475,7 @@ static struct isoclient_info *get_iso_client_info(int *length)
 		cinfo = tegra18x_isoclients;
 		len = ARRAY_SIZE(tegra18x_isoclients);
 		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++) {
-			if ((i == TEGRA_ISO_CLIENT_VI_0) ||
-					(i == TEGRA_ISO_CLIENT_VI_1))
+			if (i == TEGRA_ISO_CLIENT_TEGRA_CAMERA)
 				isomgr_clients[i].limit_bw_percentage = 10;
 			else
 				isomgr_clients[i].limit_bw_percentage = 100;

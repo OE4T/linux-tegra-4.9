@@ -1,2 +1,3 @@
 obj-y += mc/
+obj-y += powergate/
 obj-$(CONFIG_TEGRA_CENTRAL_ACTMON) += cactmon_t19x.o

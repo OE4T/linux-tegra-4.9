@@ -2078,8 +2078,7 @@ static void trace_write_pushbuffer_range(struct channel_gk20a *c,
 		nvgpu_kfree(g);
 }
 
-static void gk20a_channel_timeout_start(struct channel_gk20a *ch,
-		struct channel_gk20a_job *job)
+static void gk20a_channel_timeout_start(struct channel_gk20a *ch)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
 
@@ -2096,7 +2095,7 @@ static void gk20a_channel_timeout_start(struct channel_gk20a *ch,
 		return;
 	}
 
-	ch->timeout.job = job;
+	ch->timeout.gp_get = gk20a_userd_gp_get(ch->g, ch);
 	ch->timeout.initialized = true;
 	raw_spin_unlock(&ch->timeout.lock);
 
@@ -2150,7 +2149,7 @@ void gk20a_channel_timeout_restart_all_channels(struct gk20a *g)
 
 static void gk20a_channel_timeout_handler(struct work_struct *work)
 {
-	struct channel_gk20a_job *job;
+	u32 gp_get;
 	struct gk20a *g;
 	struct channel_gk20a *ch;
 
@@ -2170,23 +2169,18 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 	/* Need global lock since multiple channels can timeout at a time */
 	mutex_lock(&g->ch_wdt_lock);
 
-	gk20a_err(dev_from_gk20a(g), "Possible job timeout on ch=%d",
-		  ch->hw_chid);
-
 	/* Get timed out job and reset the timer */
 	raw_spin_lock(&ch->timeout.lock);
-	job = ch->timeout.job;
+	gp_get = ch->timeout.gp_get;
 	ch->timeout.initialized = false;
 	raw_spin_unlock(&ch->timeout.lock);
 
-	if (gk20a_fence_is_expired(job->post_fence)) {
-		gk20a_err(dev_from_gk20a(g),
-			  "Timed out fence is expired on c=%d!",
-			  ch->hw_chid);
+	if (gk20a_userd_gp_get(ch->g, ch) != gp_get) {
+		gk20a_channel_timeout_start(ch);
 		goto fail_unlock;
 	}
 
-	gk20a_err(dev_from_gk20a(g), "Confirmed: job on channel %d timed out",
+	gk20a_err(dev_from_gk20a(g), "Job on channel %d timed out",
 		  ch->hw_chid);
 
 	gk20a_debug_dump(g->dev);
@@ -2275,7 +2269,7 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 		job->num_mapped_buffers = num_mapped_buffers;
 		job->mapped_buffers = mapped_buffers;
 
-		gk20a_channel_timeout_start(c, job);
+		gk20a_channel_timeout_start(c);
 
 		if (!pre_alloc_enabled)
 			channel_gk20a_joblist_lock(c);
@@ -2357,7 +2351,7 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 
 		completed = gk20a_fence_is_expired(job->post_fence);
 		if (!completed) {
-			gk20a_channel_timeout_start(c, job);
+			gk20a_channel_timeout_start(c);
 			break;
 		}
 

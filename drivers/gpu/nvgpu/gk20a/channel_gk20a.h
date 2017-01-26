@@ -93,7 +93,7 @@ struct channel_gk20a_timeout {
 	struct delayed_work wq;
 	raw_spinlock_t lock;
 	bool initialized;
-	struct channel_gk20a_job *job;
+	u32 gp_get;
 };
 
 struct gk20a_event_id_data {

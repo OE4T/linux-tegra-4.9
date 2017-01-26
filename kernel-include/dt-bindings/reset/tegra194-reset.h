@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -72,9 +72,9 @@
 #define TEGRA194_RESET_NVDISPLAY0_WGRP3		53
 #define TEGRA194_RESET_NVDISPLAY0_WGRP4		54
 #define TEGRA194_RESET_NVDISPLAY0_WGRP5		55
-#define TEGRA194_RESET_NVDISPLAY0_WGRP6		56
-#define TEGRA194_RESET_NVDISPLAY0_WGRP7		57
-#define TEGRA194_RESET_NVDISPLAY0_WGRP8		58
+#define TEGRA194_RESET_RSVD_56			56
+#define TEGRA194_RESET_RSVD_57			57
+#define TEGRA194_RESET_RSVD_58			58
 #define TEGRA194_RESET_NVENC			59
 #define TEGRA194_RESET_NVENC1			60
 #define TEGRA194_RESET_NVJPG			61

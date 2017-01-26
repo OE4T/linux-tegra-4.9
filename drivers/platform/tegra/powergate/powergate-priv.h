@@ -23,6 +23,7 @@
 #include <linux/spinlock.h>
 #include <linux/io.h>
 #include <linux/tegra-powergate.h>
+#include <soc/tegra/tegra-powergate-driver.h>
 
 #define MAX_CLK_EN_NUM			15
 #define MAX_HOTRESET_CLIENT_NUM		4
@@ -32,6 +33,8 @@
 #define PWRGATE_TOGGLE_START	(1 << 8)
 #define REMOVE_CLAMPING		0x34
 #define PWRGATE_STATUS		0x38
+
+#define powergate_ops tegra_powergate_driver_ops
 
 /* MC register read/write */
 extern void __iomem *tegra_mc;
@@ -80,38 +83,6 @@ struct powergate_partition_info {
 	bool disable_after_boot;
 	struct mutex pg_mutex;
 	bool skip_reset;
-};
-
-struct powergate_ops {
-	const char *soc_name;
-
-	int num_powerdomains;
-	int num_cpu_domains;
-	u8 *cpu_domains;
-
-	spinlock_t *(*get_powergate_lock)(void);
-
-	const char *(*get_powergate_domain_name)(int id);
-
-	int (*powergate_partition)(int);
-	int (*unpowergate_partition)(int id);
-
-	int (*powergate_partition_with_clk_off)(int);
-	int (*unpowergate_partition_with_clk_on)(int);
-
-	int (*powergate_mc_enable)(int id);
-	int (*powergate_mc_disable)(int id);
-
-	int (*powergate_mc_flush)(int id);
-	int (*powergate_mc_flush_done)(int id);
-
-	int (*powergate_init_refcount)(void);
-
-	bool (*powergate_check_clamping)(int id);
-
-	bool (*powergate_skip)(int id);
-
-	bool (*powergate_is_powered)(int id);
 };
 
 void get_clk_info(struct powergate_partition_info *pg_info);

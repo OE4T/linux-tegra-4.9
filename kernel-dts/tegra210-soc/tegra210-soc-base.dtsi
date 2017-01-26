@@ -1647,9 +1647,6 @@
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 98 0x04>;
 
-		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_PCIE_P(0)>;
-		phy-names = "pcie-phy";
-
 		pinctrl-names = "clkreq-0-bi-dir-enable", "clkreq-1-bi-dir-enable",
 						"pex-io-dpd-dis", "pex-io-dpd-en";
 		pinctrl-0 = <&clkreq_0_bi_dir_state>;
@@ -1683,6 +1680,9 @@
 
 			nvidia,num-lanes = <4>;
 			nvidia,afi-ctl-offset = <0x110>;
+
+			phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_PCIE_P(0)>;
+			phy-names = "pcie-phy";
 		};
 
 		pci@2,0 {
@@ -1697,6 +1697,9 @@
 
 			nvidia,num-lanes = <1>;
 			nvidia,afi-ctl-offset = <0x118>;
+
+			phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_PCIE_P(1)>;
+			phy-names = "pcie-phy";
 		};
 
 	};

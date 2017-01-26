@@ -614,8 +614,9 @@ static int bwmgr_clients_info_show(struct seq_file *s, void *data)
 			"Floor", "SharedBw", "SharedIsoBw", "Cap",
 			"IsoCap");
 	for (i = 0; i < TEGRA_BWMGR_CLIENT_COUNT; i++) {
-		seq_printf(s, "%15s%15lu%15lu%15lu%15lu%15lu\n",
+		seq_printf(s, "%14s%s%15lu%15lu%15lu%15lu%15lu\n",
 				tegra_bwmgr_client_names[i],
+				bwmgr.bwmgr_client[i].refcount ? "*" : " ",
 				bwmgr.bwmgr_client[i].floor / 1000,
 				bwmgr.bwmgr_client[i].bw / 1000,
 				bwmgr.bwmgr_client[i].iso_bw / 1000,

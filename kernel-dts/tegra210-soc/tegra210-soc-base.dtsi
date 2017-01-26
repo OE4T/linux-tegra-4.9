@@ -971,6 +971,7 @@
 			clock-names = "sor0", "sor_safe";
 			resets = <&tegra_car TEGRA210_CLK_SOR0>;
 			reset-names = "sor0";
+			nvidia,sor-audio-not-supported;
 		};
 
 		sor1 {

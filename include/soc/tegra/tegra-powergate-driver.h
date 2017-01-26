@@ -25,6 +25,8 @@ struct tegra_powergate_driver_ops {
 
 	const char *(*get_powergate_domain_name)(int id);
 
+	bool (*powergate_id_is_soc_valid)(int id);
+
 	int (*powergate_partition)(int);
 	int (*unpowergate_partition)(int id);
 

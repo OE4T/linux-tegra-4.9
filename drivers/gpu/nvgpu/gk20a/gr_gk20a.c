@@ -9304,6 +9304,7 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.update_sm_error_state = gk20a_gr_update_sm_error_state;
 	gops->gr.clear_sm_error_state = gk20a_gr_clear_sm_error_state;
 	gops->gr.suspend_contexts = gr_gk20a_suspend_contexts;
+	gops->gr.resume_contexts = gr_gk20a_resume_contexts;
 	gops->gr.get_preemption_mode_flags = gr_gk20a_get_preemption_mode_flags;
 	gops->gr.program_active_tpc_counts = gr_gk20a_program_active_tpc_counts;
 	gops->gr.program_sm_id_numbering = gr_gk20a_program_sm_id_numbering;

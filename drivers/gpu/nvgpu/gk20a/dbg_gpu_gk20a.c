@@ -777,7 +777,7 @@ nvgpu_dbg_gpu_ioctl_suspend_resume_contexts(struct dbg_session_gk20a *dbg_s,
 		break;
 
 	case NVGPU_DBG_GPU_RESUME_ALL_CONTEXTS:
-		err = gr_gk20a_resume_contexts(g, dbg_s,
+		err = g->ops.gr.resume_contexts(g, dbg_s,
 					&ctx_resident_ch_fd);
 		break;
 	}

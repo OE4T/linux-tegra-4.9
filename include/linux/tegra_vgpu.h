@@ -99,6 +99,8 @@ enum {
 	TEGRA_VGPU_CMD_CHANNEL_CYCLESTATS_SNAPSHOT = 63,
 	TEGRA_VGPU_CMD_TSG_OPEN = 64,
 	TEGRA_VGPU_CMD_GET_GPU_LOAD = 65,
+	TEGRA_VGPU_CMD_SUSPEND_CONTEXTS = 66,
+	TEGRA_VGPU_CMD_RESUME_CONTEXTS = 67,
 };
 
 struct tegra_vgpu_connect_params {
@@ -454,6 +456,12 @@ struct tegra_vgpu_gpu_load_params {
 	u32 load;
 };
 
+struct tegra_vgpu_suspend_resume_contexts {
+	u32 num_channels;
+	u16 resident_chid;
+	u16 chids[];
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -500,6 +508,8 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_constants_params constants;
 		struct tegra_vgpu_channel_cyclestats_snapshot_params cyclestats_snapshot;
 		struct tegra_vgpu_gpu_load_params gpu_load;
+		struct tegra_vgpu_suspend_resume_contexts suspend_contexts;
+		struct tegra_vgpu_suspend_resume_contexts resume_contexts;
 		char padding[192];
 	} params;
 };

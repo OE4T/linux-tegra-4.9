@@ -309,6 +309,9 @@ struct gpu_ops {
 		int (*suspend_contexts)(struct gk20a *g,
 				struct dbg_session_gk20a *dbg_s,
 				int *ctx_resident_ch_fd);
+		int (*resume_contexts)(struct gk20a *g,
+				struct dbg_session_gk20a *dbg_s,
+				int *ctx_resident_ch_fd);
 		int (*set_preemption_mode)(struct channel_gk20a *ch,
 				u32 graphics_preempt_mode,
 				u32 compute_preempt_mode);

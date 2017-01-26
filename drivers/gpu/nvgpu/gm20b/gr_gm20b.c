@@ -1589,6 +1589,7 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.update_sm_error_state = gm20b_gr_update_sm_error_state;
 	gops->gr.clear_sm_error_state = gm20b_gr_clear_sm_error_state;
 	gops->gr.suspend_contexts = gr_gk20a_suspend_contexts;
+	gops->gr.resume_contexts = gr_gk20a_resume_contexts;
 	gops->gr.get_preemption_mode_flags = gr_gm20b_get_preemption_mode_flags;
 	gops->gr.fuse_override = gm20b_gr_fuse_override;
 	gops->gr.init_sm_id_table = gr_gk20a_init_sm_id_table;

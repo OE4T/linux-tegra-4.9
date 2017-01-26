@@ -1085,6 +1085,83 @@ static int vgpu_gr_clear_sm_error_state(struct gk20a *g,
 	return 0;
 }
 
+static int vgpu_gr_suspend_resume_contexts(struct gk20a *g,
+		struct dbg_session_gk20a *dbg_s,
+		int *ctx_resident_ch_fd, u32 cmd)
+{
+	struct dbg_session_channel_data *ch_data;
+	struct tegra_vgpu_cmd_msg *msg;
+	struct tegra_vgpu_suspend_resume_contexts *p;
+	size_t size_out = offsetof(struct tegra_vgpu_cmd_msg,
+			params.suspend_contexts.chids);
+	size_t size_in;
+	size_t n;
+	int channel_fd = -1;
+	int err = 0;
+
+	mutex_lock(&g->dbg_sessions_lock);
+	mutex_lock(&dbg_s->ch_list_lock);
+
+	n = 0;
+	list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry)
+		n++;
+
+	size_in = size_out + n * sizeof(u16);
+
+	msg = kmalloc(size_in, GFP_KERNEL);
+	if (!msg)
+		return -ENOMEM;
+
+	msg->cmd = cmd;
+	msg->handle = vgpu_get_handle(g);
+	p = &msg->params.suspend_contexts;
+	p->num_channels = n;
+	n = 0;
+	list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry) {
+		p->chids[n++] = (u16)ch_data->chid;
+	}
+
+	err = vgpu_comm_sendrecv(msg, size_in, size_out);
+	if (err || msg->ret) {
+		err = -ENOMEM;
+		goto fail;
+	}
+
+	if (p->resident_chid != (u16)~0) {
+		list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry) {
+			if (ch_data->chid == p->resident_chid) {
+				channel_fd = ch_data->channel_fd;
+				break;
+			}
+		}
+	}
+
+fail:
+	mutex_unlock(&dbg_s->ch_list_lock);
+	mutex_unlock(&g->dbg_sessions_lock);
+
+	*ctx_resident_ch_fd = channel_fd;
+	kfree(msg);
+
+	return err;
+}
+
+static int vgpu_gr_suspend_contexts(struct gk20a *g,
+		struct dbg_session_gk20a *dbg_s,
+		int *ctx_resident_ch_fd)
+{
+	return vgpu_gr_suspend_resume_contexts(g, dbg_s,
+			ctx_resident_ch_fd, TEGRA_VGPU_CMD_SUSPEND_CONTEXTS);
+}
+
+static int vgpu_gr_resume_contexts(struct gk20a *g,
+		struct dbg_session_gk20a *dbg_s,
+		int *ctx_resident_ch_fd)
+{
+	return vgpu_gr_suspend_resume_contexts(g, dbg_s,
+			ctx_resident_ch_fd, TEGRA_VGPU_CMD_RESUME_CONTEXTS);
+}
+
 void vgpu_gr_handle_sm_esr_event(struct gk20a *g,
 			struct tegra_vgpu_sm_esr_info *info)
 {
@@ -1133,6 +1210,8 @@ void vgpu_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.update_smpc_ctxsw_mode = vgpu_gr_update_smpc_ctxsw_mode;
 	gops->gr.update_hwpm_ctxsw_mode = vgpu_gr_update_hwpm_ctxsw_mode;
 	gops->gr.clear_sm_error_state = vgpu_gr_clear_sm_error_state;
+	gops->gr.suspend_contexts = vgpu_gr_suspend_contexts;
+	gops->gr.resume_contexts = vgpu_gr_resume_contexts;
 	gops->gr.dump_gr_regs = NULL;
 	gops->gr.set_boosted_ctx = NULL;
 	gops->gr.update_boosted_ctx = NULL;

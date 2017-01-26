@@ -405,6 +405,7 @@ int vgpu_init_fifo_support(struct gk20a *g)
 static int vgpu_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 {
 	struct fifo_gk20a *f = &g->fifo;
+	struct channel_gk20a *ch = &f->channel[hw_chid];
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_config_params *p =
 			&msg.params.channel_config;
@@ -412,9 +413,12 @@ static int vgpu_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 
 	gk20a_dbg_fn("");
 
+	if (!atomic_read(&ch->bound))
+		return 0;
+
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_PREEMPT;
 	msg.handle = vgpu_get_handle(g);
-	p->handle = f->channel[hw_chid].virt_ctx;
+	p->handle = ch->virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 
 	if (err || msg.ret) {

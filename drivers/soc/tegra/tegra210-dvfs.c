@@ -1262,6 +1262,9 @@ static int get_core_sku_min_mv(void)
 	int rev = tegra_sku_info.revision;
 	bool a02 = (rev == TEGRA_REVISION_A02) || (rev == TEGRA_REVISION_A02p);
 
+	if (tegra_sku_info.soc_speedo_id == 1)
+		return 1100;
+
 	switch (tegra_sku_info.sku_id) {
 	case 0x7:
 	case 0x17:

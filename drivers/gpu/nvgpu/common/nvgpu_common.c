@@ -52,6 +52,8 @@ static void nvgpu_init_vars(struct gk20a *g)
 
 	INIT_LIST_HEAD(&g->pending_sema_waits);
 	nvgpu_raw_spinlock_init(&g->pending_sema_waits_lock);
+
+	INIT_LIST_HEAD(&g->profiler_objects);
 }
 
 static void nvgpu_init_timeout(struct gk20a *g)

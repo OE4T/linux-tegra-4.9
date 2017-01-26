@@ -251,6 +251,8 @@ static int vgpu_init_support(struct platform_device *pdev)
 	nvgpu_mutex_init(&g->dbg_sessions_lock);
 	nvgpu_mutex_init(&g->client_lock);
 
+	INIT_LIST_HEAD(&g->profiler_objects);
+
 	g->dbg_regops_tmp_buf = kzalloc(SZ_4K, GFP_KERNEL);
 	if (!g->dbg_regops_tmp_buf) {
 		dev_err(g->dev, "couldn't allocate regops tmp buf");

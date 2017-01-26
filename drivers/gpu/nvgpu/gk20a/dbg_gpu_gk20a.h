@@ -47,6 +47,9 @@ struct dbg_session_gk20a {
 	/* profiler session, if any */
 	bool is_profiler;
 
+	/* has a valid profiler reservation */
+	bool has_profiler_reservation;
+
 	/* power enabled or disabled */
 	bool is_pg_disabled;
 
@@ -88,6 +91,14 @@ struct dbg_session_channel_data {
 	int chid;
 	struct list_head ch_entry;
 	struct dbg_session_data *session_data;
+};
+
+struct dbg_profiler_object_data {
+	int session_id;
+	u32 prof_handle;
+	struct channel_gk20a *ch;
+	bool has_reservation;
+	struct list_head prof_obj_entry;
 };
 
 int dbg_unbind_single_channel_gk20a(struct dbg_session_gk20a *dbg_s,

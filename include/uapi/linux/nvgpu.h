@@ -1264,9 +1264,27 @@ struct nvgpu_dbg_gpu_access_fb_memory_args {
 #define NVGPU_DBG_GPU_IOCTL_ACCESS_FB_MEMORY	\
 	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 19, struct nvgpu_dbg_gpu_access_fb_memory_args)
 
+struct nvgpu_dbg_gpu_profiler_obj_mgt_args {
+	__u32 profiler_handle;
+	__u32 reserved;
+};
+
+#define NVGPU_DBG_GPU_IOCTL_PROFILER_ALLOCATE	\
+	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 20, struct nvgpu_dbg_gpu_profiler_obj_mgt_args)
+
+#define NVGPU_DBG_GPU_IOCTL_PROFILER_FREE	\
+	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 21, struct nvgpu_dbg_gpu_profiler_obj_mgt_args)
+
+struct nvgpu_dbg_gpu_profiler_reserve_args {
+	__u32 profiler_handle;
+	__u32 acquire;
+};
+
+#define NVGPU_DBG_GPU_IOCTL_PROFILER_RESERVE			\
+	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 22, struct nvgpu_dbg_gpu_profiler_reserve_args)
 
 #define NVGPU_DBG_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_DBG_GPU_IOCTL_ACCESS_FB_MEMORY)
+	_IOC_NR(NVGPU_DBG_GPU_IOCTL_PROFILER_RESERVE)
 
 #define NVGPU_DBG_GPU_IOCTL_MAX_ARG_SIZE		\
 	sizeof(struct nvgpu_dbg_gpu_access_fb_memory_args)

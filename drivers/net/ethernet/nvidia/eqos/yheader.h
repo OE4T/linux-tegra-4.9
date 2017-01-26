@@ -79,7 +79,6 @@
 #include <linux/tcp.h>
 #include <linux/ip.h>
 #include <linux/ipv6.h>
-#include <linux/inet_lro.h>
 #include <linux/semaphore.h>
 #include <linux/errno.h>
 #include <linux/interrupt.h>
@@ -233,8 +232,6 @@
 #define MIN_RX_DESC_CNT 16
 #define TX_BUF_SIZE 1536
 #define RX_BUF_SIZE 1568
-#define EQOS_MAX_LRO_DESC 16
-#define EQOS_MAX_LRO_AGGR 32
 
 #define MIN_PACKET_SIZE 60
 
@@ -1030,10 +1027,6 @@ struct eqos_rx_queue {
 	struct napi_struct napi;
 	struct eqos_prv_data *pdata;
 	uint	chan_num;
-
-	struct net_lro_mgr lro_mgr;
-	struct net_lro_desc lro_arr[EQOS_MAX_LRO_DESC];
-	int lro_flush_needed;
 };
 
 struct desc_if_struct {
@@ -1528,11 +1521,6 @@ struct eqos_prv_data {
 	 * is enabled else hold vlan id that is programmed in HW.
 	 */
 	UINT vlan_ht_or_id;
-
-	/* Used when LRO is enabled,
-	 * set to 1 if skb has TCP payload else set to 0
-	 */
-	int tcp_pkt;
 
 	u32 csr_clock_speed;
 	u32 mdc_cr;

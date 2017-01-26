@@ -446,32 +446,16 @@ static void eqos_wrapper_tx_descriptor_init(struct eqos_prv_data
 	pr_debug("<--eqos_wrapper_tx_descriptor_init\n");
 }
 
-static void eqos_wrapper_rx_descriptor_init(struct eqos_prv_data
-						   *pdata)
+static void eqos_wrapper_rx_descriptor_init(struct eqos_prv_data *pdata)
 {
 	struct eqos_rx_queue *rx_queue = NULL;
-	UINT qinx;
+	unsigned int qinx;
 
 	pr_debug("-->eqos_wrapper_rx_descriptor_init\n");
 
 	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
 		rx_queue = GET_RX_QUEUE_PTR(qinx);
 		rx_queue->pdata = pdata;
-
-		/* LRO configuration */
-		rx_queue->lro_mgr.dev = pdata->dev;
-		memset(&rx_queue->lro_mgr.stats, 0,
-			sizeof(rx_queue->lro_mgr.stats));
-		rx_queue->lro_mgr.features =
-			LRO_F_NAPI | LRO_F_EXTRACT_VLAN_ID;
-		rx_queue->lro_mgr.ip_summed = CHECKSUM_UNNECESSARY;
-		rx_queue->lro_mgr.ip_summed_aggr = CHECKSUM_UNNECESSARY;
-		rx_queue->lro_mgr.max_desc = EQOS_MAX_LRO_DESC;
-		rx_queue->lro_mgr.max_aggr = (0xffff/pdata->dev->mtu);
-		rx_queue->lro_mgr.lro_arr = rx_queue->lro_arr;
-		rx_queue->lro_mgr.get_skb_header = eqos_get_skb_hdr;
-		memset(&rx_queue->lro_arr, 0, sizeof(rx_queue->lro_arr));
-		rx_queue->lro_flush_needed = 0;
 
 		eqos_wrapper_rx_descriptor_init_single_q(pdata, qinx);
 	}
@@ -680,47 +664,6 @@ static void eqos_rx_buf_free_mem(struct eqos_prv_data *pdata,
 
 	pr_debug("<--eqos_rx_buf_free_mem\n");
 }
-
-/*!
-* \brief Assigns the network and tcp header pointers
-*
-* \details This function gets the ip and tcp header pointers of the packet
-* in the skb and assigns them to the corresponding arguments passed to the
-* function. It also sets some flags indicating that the packet to be receieved
-* is an ipv4 packet and that the protocol is tcp.
-*
-* \param[in] *skb - pointer to the sk buffer,
-* \param[in] **iph - pointer to be pointed to the ip header,
-* \param[in] **tcph - pointer to be pointed to the tcp header,
-* \param[in] *hdr_flags - flags to be set
-* \param[in] *pdata - private data structure
-*
-* \return integer
-*
-* \retval -1 if the packet does not conform to ip protocol = TCP, else 0
-*/
-
-static int eqos_get_skb_hdr(struct sk_buff *skb, void **iph,
-				   void **tcph, u64 *flags, void *ptr)
-{
-	struct eqos_prv_data *pdata = ptr;
-
-	pr_debug("-->eqos_get_skb_hdr\n");
-
-	if (!pdata->tcp_pkt)
-		return -1;
-
-	skb_reset_network_header(skb);
-	skb_set_transport_header(skb, ip_hdrlen(skb));
-	*iph = ip_hdr(skb);
-	*tcph = tcp_hdr(skb);
-	*flags = LRO_IPV4 | LRO_TCP;
-
-	pr_debug("<--eqos_get_skb_hdr\n");
-
-	return 0;
-}
-
 
 /*!
  * \brief api to handle tso

@@ -52,7 +52,6 @@
 extern ULONG eqos_base_addr;
 #include "yregacc.h"
 #include "nvregacc.h"
-#include <linux/inet_lro.h>
 #include <soc/tegra/chip-id.h>
 
 static INT eqos_status;
@@ -2215,15 +2214,10 @@ static void eqos_receive_skb(struct eqos_prv_data *pdata,
 	skb->dev = dev;
 	skb->protocol = eth_type_trans(skb, dev);
 
-	if (dev->features & NETIF_F_GRO) {
+	if (dev->features & NETIF_F_GRO)
 		napi_gro_receive(&rx_queue->napi, skb);
-	} else if ((dev->features & NETIF_F_LRO) &&
-		   (skb->ip_summed == CHECKSUM_UNNECESSARY)) {
-		lro_receive_skb(&rx_queue->lro_mgr, skb, (void *)pdata);
-		rx_queue->lro_flush_needed = 1;
-	} else {
+	else
 		netif_receive_skb(skb);
-	}
 }
 
 /* Receive Checksum Offload configuration */
@@ -2270,23 +2264,6 @@ static inline void eqos_get_rx_vlan(struct eqos_prv_data *pdata,
 			}
 		}
 	}
-}
-
-/* This api check for payload type and returns
- * 1 if payload load is TCP else returns 0;
- * */
-static int eqos_check_for_tcp_payload(struct s_rx_desc *rxdesc)
-{
-	u32 pt_type = 0;
-	int ret = 0;
-
-	if (rxdesc->rdes3 & EQOS_RDESC3_RS1V) {
-		pt_type = rxdesc->rdes1 & EQOS_RDESC1_PT;
-		if (pt_type == EQOS_RDESC1_PT_TCP)
-			ret = 1;
-	}
-
-	return ret;
 }
 
 /*!
@@ -2446,13 +2423,6 @@ static int process_rx_completions(struct eqos_prv_data *pdata,
 					}
 				}
 
-				if (!(dev->features & NETIF_F_GRO) &&
-				    (dev->features & NETIF_F_LRO)) {
-					pdata->tcp_pkt =
-					    eqos_check_for_tcp_payload
-					    (prx_desc);
-				}
-
 				dev->last_rx = jiffies;
 				/* update the statistics */
 				dev->stats.rx_packets++;
@@ -2538,15 +2508,11 @@ static int handle_txrx_completions(struct eqos_prv_data *pdata, int qinx)
 
 	/* check for tx descriptor status */
 	process_tx_completions(pdata->dev, pdata, qinx);
-	rx_queue->lro_flush_needed = 0;
 
 	received = pdata->process_rx_completions(pdata, budget, qinx);
 
 	pdata->xstats.rx_pkt_n += received;
 	pdata->xstats.q_rx_pkt_n[qinx] += received;
-
-	if (rx_queue->lro_flush_needed)
-		lro_flush_all(&rx_queue->lro_mgr);
 
 	pr_debug("<--%s():\n", __func__);
 

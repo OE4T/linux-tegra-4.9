@@ -465,8 +465,6 @@ struct tegra_pcie {
 	struct pinctrl_state	*pex_io_dpd_en_state;
 	struct pinctrl_state	*pex_io_dpd_dis_state;
 
-	struct phy *u_phy;
-
 	struct tegra_pci_platform_data *plat_data;
 	struct tegra_pcie_soc_data *soc_data;
 	struct dentry *debugfs;
@@ -501,6 +499,8 @@ struct tegra_pcie_port {
 	bool has_mxm_port;
 	int pwr_gd_gpio;
 	struct dentry *port_debugfs;
+	struct phy *phy;
+	struct device_node *np;
 };
 
 struct tegra_pcie_bus {
@@ -1394,6 +1394,85 @@ static void tegra_pcie_clocks_put(struct tegra_pcie *pcie)
 	tegra_bwmgr_unregister(pcie->emc_bwmgr);
 }
 
+static int tegra_pcie_port_get_phy(struct tegra_pcie_port *port)
+{
+	struct device *dev = port->pcie->dev;
+	struct phy *phy;
+	int err;
+
+	phy = devm_of_phy_get(dev, port->np, "pcie-phy");
+	if (IS_ERR(phy)) {
+		dev_err(dev, "failed to get PHY: %ld\n", PTR_ERR(phy));
+		return PTR_ERR(phy);
+	}
+
+	err = phy_init(phy);
+	if (err < 0) {
+		dev_err(dev, "failed to initialize PHY: %d\n", err);
+		return err;
+	}
+
+	port->phy = phy;
+
+	return 0;
+}
+
+static int tegra_pcie_phys_get(struct tegra_pcie *pcie)
+{
+	struct tegra_pcie_port *port;
+	int err;
+
+	list_for_each_entry(port, &pcie->ports, list) {
+		err = tegra_pcie_port_get_phy(port);
+		if (err < 0)
+			return err;
+	}
+
+	return 0;
+}
+
+static int tegra_pcie_phy_power_on(struct tegra_pcie *pcie)
+{
+	struct tegra_pcie_port *port;
+	int err;
+
+	list_for_each_entry(port, &pcie->ports, list) {
+		err = phy_power_on(port->phy);
+		if (err < 0)
+			return err;
+	}
+
+	return 0;
+}
+
+static int tegra_pcie_phy_power_off(struct tegra_pcie *pcie)
+{
+	struct tegra_pcie_port *port;
+	int err;
+
+	list_for_each_entry(port, &pcie->ports, list) {
+		err = phy_power_off(port->phy);
+		if (err < 0)
+			return err;
+	}
+
+	return 0;
+}
+
+static int tegra_pcie_phy_exit(struct tegra_pcie *pcie)
+{
+	struct tegra_pcie_port *port;
+	int err;
+
+	list_for_each_entry(port, &pcie->ports, list) {
+		err = phy_exit(port->phy);
+		if (err < 0)
+			return err;
+	}
+
+	return 0;
+}
+
 static int tegra_pcie_enable_pads(struct tegra_pcie *pcie, bool enable)
 {
 	int err = 0;
@@ -1405,9 +1484,9 @@ static int tegra_pcie_enable_pads(struct tegra_pcie *pcie, bool enable)
 
 	if (pcie->soc_data->program_uphy) {
 		if (enable)
-			err = phy_power_on(pcie->u_phy);
+			err = tegra_pcie_phy_power_on(pcie);
 		else
-			err = phy_power_off(pcie->u_phy);
+			err = tegra_pcie_phy_power_off(pcie);
 		if (err)
 			dev_err(pcie->dev, "UPHY operation failed\n");
 	}
@@ -3342,6 +3421,7 @@ static int tegra_pcie_parse_dt(struct tegra_pcie *pcie)
 		rp->index = index;
 		rp->lanes = value;
 		rp->pcie = pcie;
+		rp->np = port;
 		rp->base = devm_ioremap_resource(pcie->dev, &rp->regs);
 		if (!(rp->base))
 			return -EADDRNOTAVAIL;
@@ -4619,19 +4699,6 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 	}
 	pcie->soc_data = (struct tegra_pcie_soc_data *)match->data;
 
-	if (pcie->soc_data->program_uphy) {
-		pcie->u_phy = devm_phy_get(pcie->dev, "pcie-phy");
-		if (IS_ERR(pcie->u_phy)) {
-			ret = PTR_ERR(pcie->u_phy);
-			goto release_platdata;
-		}
-		ret = phy_init(pcie->u_phy);
-		if (ret) {
-			devm_phy_put(pcie->dev, pcie->u_phy);
-			goto release_platdata;
-		}
-	}
-
 	if (pcie->soc_data->config_pex_io_dpd) {
 		pcie->pex_pin = devm_pinctrl_get(pcie->dev);
 		if (IS_ERR(pcie->pex_pin)) {
@@ -4683,6 +4750,14 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 	ret = tegra_pcie_parse_dt(pcie);
 	if (ret < 0)
 		goto release_regulators;
+
+	if (pcie->soc_data->program_uphy) {
+		ret = tegra_pcie_phys_get(pcie);
+		if (ret < 0) {
+			dev_err(pcie->dev, "failed to get PHYs: %d\n", ret);
+			goto release_regulators;
+		}
+	}
 
 	pcie->prod_list = devm_tegra_prod_get(pcie->dev);
 	if (IS_ERR(pcie->prod_list)) {
@@ -4766,7 +4841,7 @@ static int tegra_pcie_remove(struct platform_device *pdev)
 	tegra_pcie_detach(pcie);
 	tegra_pcie_power_off(pcie);
 	if (pcie->soc_data->program_uphy)
-		phy_exit(pcie->u_phy);
+		tegra_pcie_phy_exit(pcie);
 	tegra_pcie_release_resources(pcie);
 	pm_runtime_disable(pcie->dev);
 	tegra_pd_remove_device(pcie->dev);

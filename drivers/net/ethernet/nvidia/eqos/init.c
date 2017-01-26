@@ -1061,10 +1061,9 @@ int eqos_probe(struct platform_device *pdev)
 		ndev->hw_features |= NETIF_F_IPV6_CSUM;
 	}
 
-	if (pdata->hw_feat.rx_coe_sel) {
-		ndev->hw_features |= NETIF_F_RXCSUM;
-		ndev->hw_features |= NETIF_F_LRO;
-	}
+	ndev->hw_features |= NETIF_F_RXCSUM;
+	ndev->hw_features |= NETIF_F_GRO;
+
 #ifdef EQOS_ENABLE_VLAN_TAG
 	ndev->vlan_features |= ndev->hw_features;
 	ndev->hw_features |= NETIF_F_HW_VLAN_CTAG_RX;

@@ -61,9 +61,6 @@ static void eqos_wrapper_rx_descriptor_init_single_q(struct
 							    eqos_prv_data
 							    *pdata, UINT qinx);
 
-static int eqos_get_skb_hdr(struct sk_buff *skb, void **iphdr,
-				   void **tcph, u64 *hdr_flags, void *priv);
-
 static void eqos_tx_free_mem(struct eqos_prv_data *);
 
 static void eqos_rx_free_mem(struct eqos_prv_data *);

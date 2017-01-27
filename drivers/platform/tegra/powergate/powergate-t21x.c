@@ -21,6 +21,10 @@
 #include <linux/tegra_soctherm.h>
 #include <soc/tegra/tegra-dvfs.h>
 #include <trace/events/power.h>
+#include <linux/clk.h>
+#include <linux/clk-provider.h>
+#include <linux/clk/tegra.h>
+#include <soc/tegra/reset.h>
 
 #include "powergate-priv.h"
 
@@ -485,8 +489,331 @@ static struct mc_client_hotreset_reg tegra210_mc_reg[] = {
 static DEFINE_SPINLOCK(tegra210_pg_lock);
 
 static struct dvfs_rail *gpu_rail;
+extern struct powergate_ops *pg_ops;
+
 
 #define HOTRESET_READ_COUNTS		5
+
+static spinlock_t *tegra_get_powergate_lock(void)
+{
+	if (pg_ops && pg_ops->get_powergate_lock)
+		return pg_ops->get_powergate_lock();
+	else
+		WARN_ON_ONCE("This SOC does not export powergate lock");
+
+	return NULL;
+}
+
+static int tegra_powergate_set(int id, bool new_state)
+{
+	bool status;
+	unsigned long flags;
+	spinlock_t *lock;
+	u32 reg;
+
+	/* 10us timeout for toggle operation if it takes affect*/
+	int toggle_timeout = 10;
+
+	/* 100 * 10 = 1000us timeout for toggle command to take affect in case
+	   of contention with h/w initiated CPU power gating */
+	int contention_timeout = 100;
+
+	if (tegra_cpu_is_asim())
+		return 0;
+
+	lock = tegra_get_powergate_lock();
+
+	spin_lock_irqsave(lock, flags);
+
+	status = !!(pmc_read(PWRGATE_STATUS) & (1 << id));
+
+	if (status == new_state) {
+		spin_unlock_irqrestore(lock, flags);
+		return 0;
+	}
+
+	if (TEGRA_IS_CPU_POWERGATE_ID(id)) {
+		/* CPU ungated in s/w only during boot/resume with outer
+		   waiting loop and no contention from other CPUs */
+		pmc_write(PWRGATE_TOGGLE_START | id, PWRGATE_TOGGLE);
+		pmc_read(PWRGATE_TOGGLE);
+		spin_unlock_irqrestore(lock, flags);
+		return 0;
+	}
+
+	/* Wait if PMC is already processing some other power gating request */
+	do {
+		udelay(1);
+		reg = pmc_read(PWRGATE_TOGGLE);
+		contention_timeout--;
+	} while ((contention_timeout > 0) && (reg & PWRGATE_TOGGLE_START));
+
+	if (contention_timeout <= 0)
+		pr_err(" Timed out waiting for PMC to submit \
+				new power gate request \n");
+	contention_timeout = 100;
+
+	/* Submit power gate request */
+	pmc_write(PWRGATE_TOGGLE_START | id, PWRGATE_TOGGLE);
+
+	/* Wait while PMC accepts the request */
+	do {
+		udelay(1);
+		reg = pmc_read(PWRGATE_TOGGLE);
+		contention_timeout--;
+	} while ((contention_timeout > 0) && (reg & PWRGATE_TOGGLE_START));
+
+	if (contention_timeout <= 0)
+		pr_err(" Timed out waiting for PMC to accept \
+				new power gate request \n");
+	contention_timeout = 100;
+
+	/* Check power gate status */
+	do {
+		do {
+			udelay(1);
+			status = !!(pmc_read(PWRGATE_STATUS) & (1 << id));
+
+			toggle_timeout--;
+		} while ((status != new_state) && (toggle_timeout > 0));
+
+		toggle_timeout = 10;
+		contention_timeout--;
+	} while ((status != new_state) && (contention_timeout > 0));
+
+	spin_unlock_irqrestore(lock, flags);
+
+	if (status != new_state) {
+		WARN(1, "Could not set powergate %d to %d", id, new_state);
+		return -EBUSY;
+	}
+
+	trace_power_domain_target(tegra_powergate_get_name(id), new_state,
+			raw_smp_processor_id());
+
+	return 0;
+}
+
+static const char *clk_get_name(struct clk *clk)
+{
+	return __clk_get_name(clk);
+}
+
+static int powergate_module(int id)
+{
+	if (!pg_ops) {
+		WARN_ON_ONCE("This SOC doesn't support powergating\n");
+		return -EINVAL;
+	}
+
+	if (!pg_ops->powergate_id_is_soc_valid(id)) {
+		pr_info("%s: invalid powergate id %d\n", __func__, id);
+		return -EINVAL;
+	}
+
+	tegra_powergate_mc_flush(id);
+
+	return tegra_powergate_set(id, false);
+}
+
+static int partition_clk_enable(struct powergate_partition_info *pg_info)
+{
+	int ret;
+	u32 idx;
+	struct clk *clk;
+	struct partition_clk_info *clk_info;
+
+	for (idx = 0; idx < MAX_CLK_EN_NUM; idx++) {
+		clk_info = &pg_info->clk_info[idx];
+		clk = clk_info->clk_ptr;
+		if (IS_ERR(clk) || !clk)
+			break;
+
+		if (clk_info->clk_type != RST_ONLY) {
+			ret = clk_prepare_enable(clk);
+			if (ret)
+				goto err_clk_en;
+		}
+	}
+
+	return 0;
+
+err_clk_en:
+	WARN(1, "Could not enable clk %s, error %d", clk_get_name(clk), ret);
+	while (idx--) {
+		clk_info = &pg_info->clk_info[idx];
+		if (clk_info->clk_type != RST_ONLY)
+			clk_disable_unprepare(clk_info->clk_ptr);
+	}
+
+	return ret;
+}
+
+static void partition_clk_disable(struct powergate_partition_info *pg_info)
+{
+	u32 idx;
+	struct clk *clk;
+	struct partition_clk_info *clk_info;
+
+	for (idx = 0; idx < MAX_CLK_EN_NUM; idx++) {
+		clk_info = &pg_info->clk_info[idx];
+		clk = clk_info->clk_ptr;
+
+		if (IS_ERR(clk) || !clk)
+			break;
+
+		if (clk_info->clk_type != RST_ONLY)
+			clk_disable_unprepare(clk);
+	}
+}
+
+static void get_clk_info(struct powergate_partition_info *pg_info)
+{
+	int idx;
+
+	for (idx = 0; idx < MAX_CLK_EN_NUM; idx++) {
+		if (!pg_info->clk_info[idx].clk_name)
+			break;
+
+		pg_info->clk_info[idx].clk_ptr =
+			clk_get_sys(NULL, pg_info->clk_info[idx].clk_name);
+
+		if (IS_ERR_OR_NULL(pg_info->clk_info[idx].clk_ptr))
+			WARN(1, "Could not find clock %s for %s partition\n",
+				pg_info->clk_info[idx].clk_name,
+				pg_info->name);
+	}
+}
+
+static void powergate_partition_assert_reset(struct powergate_partition_info *pg_info)
+{
+	tegra_rst_assertv(&pg_info->reset_id[0], pg_info->reset_id_num);
+}
+
+static void powergate_partition_deassert_reset(struct powergate_partition_info *pg_info)
+{
+	tegra_rst_deassertv(&pg_info->reset_id[0], pg_info->reset_id_num);
+}
+
+int slcg_clk_enable(struct powergate_partition_info *pg_info)
+{
+	int ret;
+	u32 idx;
+	struct clk *clk;
+	struct partition_clk_info *slcg_info;
+
+	for (idx = 0; idx < MAX_CLK_EN_NUM; idx++) {
+		slcg_info = &pg_info->slcg_info[idx];
+		clk = slcg_info->clk_ptr;
+		if (IS_ERR(clk) || !clk)
+			break;
+
+		ret = clk_prepare_enable(clk);
+		if (ret)
+			goto err_clk_en;
+	}
+
+	return 0;
+
+err_clk_en:
+	WARN(1, "Could not enable clk %s, error %d", __clk_get_name(clk), ret);
+	while (idx--) {
+		slcg_info = &pg_info->slcg_info[idx];
+		clk_disable_unprepare(slcg_info->clk_ptr);
+	}
+
+	return ret;
+}
+
+void slcg_clk_disable(struct powergate_partition_info *pg_info)
+{
+	u32 idx;
+	struct clk *clk;
+	struct partition_clk_info *slcg_info;
+
+	for (idx = 0; idx < MAX_CLK_EN_NUM; idx++) {
+		slcg_info = &pg_info->slcg_info[idx];
+		clk = slcg_info->clk_ptr;
+
+		if (IS_ERR(clk) || !clk)
+			break;
+
+		clk_disable_unprepare(clk);
+	}
+}
+
+void get_slcg_info(struct powergate_partition_info *pg_info)
+{
+	int idx;
+
+	for (idx = 0; idx < MAX_CLK_EN_NUM; idx++) {
+		if (!pg_info->slcg_info[idx].clk_name)
+			break;
+
+		pg_info->slcg_info[idx].clk_ptr =
+			clk_get_sys(NULL, pg_info->slcg_info[idx].clk_name);
+
+		if (IS_ERR_OR_NULL(pg_info->slcg_info[idx].clk_ptr))
+			pr_err("### Could not find clock %s for %s partition\n",
+				pg_info->slcg_info[idx].clk_name,
+				pg_info->name);
+	}
+}
+
+bool tegra_powergate_check_clamping(int id)
+{
+	if (!pg_ops || !pg_ops->powergate_check_clamping) {
+		WARN_ON_ONCE("This SOC can't check clamping status\n");
+		return -EINVAL;
+	}
+
+	if (!pg_ops->powergate_id_is_soc_valid(id)) {
+		pr_info("%s: invalid powergate id %d\n", __func__, id);
+		return -EINVAL;
+	}
+
+	return pg_ops->powergate_check_clamping(id);
+}
+
+int tegra_powergate_remove_clamping(int id)
+{
+	u32 mask;
+	int contention_timeout = 100;
+
+	if (!pg_ops) {
+		WARN_ON_ONCE("This SOC doesn't support powergating\n");
+		return -EINVAL;
+	}
+
+	if (!pg_ops->powergate_id_is_soc_valid(id)) {
+		pr_info("%s: invalid powergate id %d\n", __func__, id);
+		return -EINVAL;
+	}
+
+	/*
+	 * PCIE and VDE clamping masks are swapped with respect to their
+	 * partition ids
+	 */
+	if (id ==  TEGRA_POWERGATE_VDEC)
+		mask = (1 << TEGRA_POWERGATE_PCIE);
+	else if (id == TEGRA_POWERGATE_PCIE)
+		mask = (1 << TEGRA_POWERGATE_VDEC);
+	else
+		mask = (1 << id);
+
+	pmc_write(mask, REMOVE_CLAMPING);
+	/* Wait until clamp is removed */
+	do {
+		udelay(1);
+		contention_timeout--;
+	} while ((contention_timeout > 0)
+			&& (pmc_read(PWRGATE_CLAMP_STATUS) & BIT(id)));
+
+	WARN(contention_timeout <= 0, "Couldn't remove clamping");
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_powergate_remove_clamping);
 
 static int __tegra1xx_powergate(int id, struct powergate_partition_info *pg_info,
 				bool clk_enable)

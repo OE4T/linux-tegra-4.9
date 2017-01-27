@@ -85,18 +85,6 @@ struct powergate_partition_info {
 	bool skip_reset;
 };
 
-void get_clk_info(struct powergate_partition_info *pg_info);
-int tegra_powergate_remove_clamping(int id);
-int partition_clk_enable(struct powergate_partition_info *pg_info);
-void partition_clk_disable(struct powergate_partition_info *pg_info);
-int is_partition_clk_disabled(struct powergate_partition_info *pg_info);
-void powergate_partition_deassert_reset(struct powergate_partition_info *pg_info);
-void powergate_partition_assert_reset(struct powergate_partition_info *pg_info);
-int tegra_powergate_reset_module(struct powergate_partition_info *pg_info);
-int powergate_module(int id);
-int unpowergate_module(int id);
-int tegra_powergate_set(int id, bool new_state);
-
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 void get_slcg_info(struct powergate_partition_info *pg_info);
 int slcg_clk_enable(struct powergate_partition_info *pg_info);

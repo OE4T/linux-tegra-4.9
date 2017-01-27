@@ -1,0 +1,6 @@
+GCOV_PROFILE := y
+subdir-ccflags-y := -Werror
+ccflags-y += -I../display/drivers/video/tegra/dc
+ccflags-y += -I../t18x/drivers/video/tegra/dc/nvdisp
+
+obj-y += nvdisp_t19x.o

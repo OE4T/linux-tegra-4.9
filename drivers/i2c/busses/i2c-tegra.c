@@ -312,6 +312,7 @@ struct tegra_i2c_dev {
 	int msg_num;
 	struct i2c_msg *msgs;
 	bool use_single_xfer_complete;
+	bool disable_multi_pkt_mode;
 };
 
 static void dvc_writel(struct tegra_i2c_dev *i2c_dev, u32 val, unsigned long reg)
@@ -1831,6 +1832,9 @@ static int tegra_i2c_is_multi_pkt_supported(struct tegra_i2c_dev *i2c_dev,
 {
 	int i;
 
+	if (i2c_dev->disable_multi_pkt_mode)
+		return false;
+
 	for (i = 0; i < num; i++) {
 		if (msgs[i].flags & I2C_M_NOSTART)
 			return false;
@@ -1939,6 +1943,8 @@ static void tegra_i2c_parse_dt(struct tegra_i2c_dev *i2c_dev)
 			"nvidia,disable-dma-mode");
 	i2c_dev->is_clkon_always = of_property_read_bool(np,
 			"nvidia,clock-always-on");
+	i2c_dev->disable_multi_pkt_mode = of_property_read_bool(np,
+			"nvidia,disable-multi-pkt-mode");
 }
 
 static const struct i2c_algorithm tegra_i2c_algo = {

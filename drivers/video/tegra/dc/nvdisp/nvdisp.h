@@ -38,6 +38,7 @@ struct nvdisp_pd_info {
 	int ref_cnt;
 };
 
+void tegra_nvdisp_set_background_color(struct tegra_dc *dc);
 int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx);
 int tegra_nvdisp_detach_win(struct tegra_dc *dc, unsigned idx);
 int tegra_nvdisp_get_degamma_config(struct tegra_dc *dc,

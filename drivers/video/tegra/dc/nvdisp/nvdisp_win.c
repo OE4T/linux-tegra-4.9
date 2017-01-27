@@ -704,27 +704,8 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 
 		if (!WIN_IS_ENABLED(win)) {
 			u32 win_options;
-			/* Support for YUV bypass */
-			#define RGB_TO_YUV420_8BPC_BLACK_PIX 0x00801010
-			#define RGB_TO_YUV422_10BPC_BLACK_PIX 0x00001080
 
-			if (dc->yuv_bypass) {
-				if (dc->mode.vmode &
-					(FB_VMODE_Y420 | FB_VMODE_Y420_ONLY |
-					 FB_VMODE_Y24))
-					tegra_dc_writel(dc,
-					RGB_TO_YUV420_8BPC_BLACK_PIX,
-					nvdisp_background_color_r());
-				else if (dc->mode.vmode &
-					(FB_VMODE_Y422 | FB_VMODE_Y30))
-					tegra_dc_writel(dc,
-					RGB_TO_YUV422_10BPC_BLACK_PIX,
-					nvdisp_background_color_r());
-			}
-
-			#undef RGB_TO_YUV422_10BPC_BLACK_PIX
-			#undef RGB_TO_YUV420_8BPC_BLACK_PIX
-
+			tegra_nvdisp_set_background_color(dc);
 			update_mask |=
 				nvdisp_cmd_state_ctrl_win_a_update_enable_f()
 				<< win->idx;

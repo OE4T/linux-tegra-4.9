@@ -608,6 +608,35 @@ static unsigned int yuv12bpc_regamma_lut[] = {
 		0x9FDF, 0x9FE7, 0x9FEF, 0x9FF7, 0x9FFF,
 };
 
+void tegra_nvdisp_set_background_color(struct tegra_dc *dc)
+{
+	u32 reg_val = 0x0;
+
+	if (dc->yuv_bypass) {
+		int yuv_flag = dc->mode.vmode & FB_VMODE_SET_YUV_MASK;
+
+		switch (yuv_flag) {
+		case FB_VMODE_Y420 | FB_VMODE_Y24:
+			reg_val = RGB_TO_YUV420_8BPC_BLACK_PIX;
+			break;
+		case FB_VMODE_Y420 | FB_VMODE_Y30:
+			break;
+		case FB_VMODE_Y422 | FB_VMODE_Y36:
+			reg_val = RGB_TO_YUV422_10BPC_BLACK_PIX;
+			break;
+		case FB_VMODE_Y444 | FB_VMODE_Y24:
+			reg_val = RGB_TO_YUV444_8BPC_BLACK_PIX;
+			break;
+		default:
+			dev_err(&dc->ndev->dev, "%s: unverified bypass mode = 0x%x\n",
+				__func__, dc->mode.vmode);
+			break;
+		}
+	}
+	tegra_dc_writel(dc, reg_val, nvdisp_background_color_r());
+
+}
+
 static inline void tegra_nvdisp_program_common_fetch_meter(struct tegra_dc *dc,
 							u32 curs_slots,
 							u32 win_slots);
@@ -1133,16 +1162,6 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 	if (!dc->mode.pclk)
 		return 0;
 
-	/* Bypass flag is officially set during flips, but we need to initialize
-	 * it here so that the output CSC and chroma LPF blocks are correctly
-	 * programmed during modeset for YUV bypass modes. Otherwise, momentary
-	 * screen corruption can be observed during the modeset.
-	 */
-	dc->yuv_bypass = mode->vmode & FB_VMODE_YUV_MASK;
-	if ((mode->vmode & FB_VMODE_Y422) |
-		(mode->vmode & FB_VMODE_Y444))
-		dc->yuv_bypass = 0;
-
 	v_back_porch = mode->v_back_porch;
 	v_front_porch = mode->v_front_porch;
 	v_sync_width = mode->v_sync_width;
@@ -1404,7 +1423,16 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 		nvdisp_state_access_read_mux_active_f(),
 		nvdisp_state_access_r());
 
-	tegra_dc_writel(dc, 0x00000000, nvdisp_background_color_r());
+	/* YUV bypass flag is set during flips, but we need to check bypass
+	 * flag here for YUV modes so that the output CSC and chroma LPF blocks
+	 * are correctly programmed during modeset for YUV bypass modes.
+	 * Else, momentary screen corruption can be observed during modeset.
+	 */
+	if (dc->mode.pclk)
+		dc->yuv_bypass = (dc->mode.vmode & FB_VMODE_SET_YUV_MASK) &&
+					(dc->mode.vmode & FB_VMODE_BYPASS);
+
+	tegra_nvdisp_set_background_color(dc);
 
 	for_each_set_bit(i, &dc->valid_windows,
 			tegra_dc_get_numof_dispwindows()) {

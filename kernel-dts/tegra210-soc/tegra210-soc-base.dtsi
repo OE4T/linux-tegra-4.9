@@ -1739,6 +1739,7 @@
 		clock-names = "div-clk", "parent";
 		resets = <&tegra_car 12>;
 		reset-names = "i2c";
+		nvidia,disable-multi-pkt-mode;
 	};
 
 	i2c2: i2c@7000c400 {
@@ -1756,6 +1757,7 @@
 		clock-names = "div-clk", "parent";
                 resets = <&tegra_car 54>;
                 reset-names = "i2c";
+		nvidia,disable-multi-pkt-mode;
 	};
 
 	i2c3: i2c@7000c500 {
@@ -1773,6 +1775,7 @@
                 clock-names = "div-clk", "parent";
                 resets = <&tegra_car 67>;
                 reset-names = "i2c";
+		nvidia,disable-multi-pkt-mode;
 	};
 
 	i2c4: i2c@7000c700 {
@@ -1790,6 +1793,7 @@
                 clock-names = "div-clk", "parent";
                 resets = <&tegra_car 103>;
                 reset-names = "i2c";
+		nvidia,disable-multi-pkt-mode;
 	};
 
 	i2c5: i2c@7000d000 {
@@ -1810,6 +1814,7 @@
                 clock-names = "div-clk", "parent";
                 resets = <&tegra_car 47>;
                 reset-names = "i2c";
+		nvidia,disable-multi-pkt-mode;
 	};
 
 	i2c6: i2c@7000d100 {
@@ -1827,6 +1832,7 @@
                 clock-names = "div-clk", "parent";
                 resets = <&tegra_car 166>;
                 reset-names = "i2c";
+		nvidia,disable-multi-pkt-mode;
 	};
 
 	sdhci3: sdhci@700b0600 {

@@ -559,14 +559,6 @@ static void tegra_pmc_register_update(enum pmc_regs reg,
 	tegra_pmc_writel(pmc_reg, reg);
 }
 
-#ifndef CONFIG_TEGRA186_PMC
-int tegra_read_wake_status(u32 *wake_status)
-{
-	// TODO: need to check if tegra-wakeups.c is still needed by t210
-	return 0;
-}
-#endif
-
 #ifndef CONFIG_TEGRA_POWERGATE
 static inline bool tegra_powergate_state(int id)
 {

@@ -372,7 +372,7 @@ static int tegra_powergate_init_refcount(void)
 	return pg_ops->powergate_init_refcount();
 }
 
-int __init tegra_powergate_init(void)
+static int __init tegra_powergate_init(void)
 {
 	switch (tegra_get_chip_id()) {
 		case TEGRA210:

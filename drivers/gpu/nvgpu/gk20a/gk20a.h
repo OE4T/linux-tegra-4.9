@@ -1108,12 +1108,10 @@ struct gk20a_cyclestate_buffer_elem {
 
 #ifdef CONFIG_DEBUG_FS
     /* debug info, default is compiled-in but effectively disabled (0 mask) */
-    #define GK20A_DEBUG
     /*e.g: echo 1 > /d/gk20a.0/dbg_mask */
     #define GK20A_DEFAULT_DBG_MASK 0
 #else
     /* manually enable and turn it on the mask */
-    /*#define NVGPU_DEBUG*/
     #define GK20A_DEFAULT_DBG_MASK (dbg_info)
 #endif
 
@@ -1141,8 +1139,8 @@ enum gk20a_dbg_categories {
 	gpu_dbg_mem     = BIT(31), /* memory accesses, very verbose */
 };
 
-#if defined(GK20A_DEBUG)
 extern u32 gk20a_dbg_mask;
+#ifdef CONFIG_GK20A_TRACE_PRINTK
 extern u32 gk20a_dbg_ftrace;
 #define gk20a_dbg(dbg_mask, format, arg...)				\
 do {									\
@@ -1154,14 +1152,14 @@ do {									\
 					__func__, ##arg);		\
 	}								\
 } while (0)
-
-#else /* GK20A_DEBUG */
+#else
 #define gk20a_dbg(dbg_mask, format, arg...)				\
 do {									\
-	if (0)								\
-		pr_info("gk20a %s: " format "\n", __func__, ##arg);\
+	if (unlikely((dbg_mask) & gk20a_dbg_mask)) {		\
+		pr_info("gk20a %s: " format "\n",		\
+				__func__, ##arg);		\
+	}								\
 } while (0)
-
 #endif
 
 #define gk20a_err(d, fmt, arg...)					\

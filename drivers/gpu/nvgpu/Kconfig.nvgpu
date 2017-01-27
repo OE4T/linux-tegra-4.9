@@ -111,6 +111,14 @@ config GK20A_PCI
 	help
 	  Enable support for GPUs on PCIe bus.
 
+config GK20A_TRACE_PRINTK
+	bool "Support trace_printk debugging"
+	depends on CONFIG_FTRACE_PRINTK
+	default n
+	help
+	  Enable nvgpu debug facility to redirect debug spew to ftrace. This
+	  affects kernel memory use, so should not be enabled by default.
+
 config GK20A_VIDMEM
 	bool "Support separate video memory on nvgpu"
 	depends on GK20A

@@ -417,9 +417,10 @@ void gk20a_debug_init(struct device *dev, const char *debugfs_symlink)
 	debugfs_create_bool("disable_syncpoints", S_IRUGO|S_IWUSR,
 		platform->debugfs, &platform->disable_syncpoints);
 
-#if defined(GK20A_DEBUG)
 	debugfs_create_u32("dbg_mask", S_IRUGO|S_IWUSR,
 		platform->debugfs, &gk20a_dbg_mask);
+
+#ifdef CONFIG_GK20A_TRACE_PRINTK
 	debugfs_create_u32("dbg_ftrace", S_IRUGO|S_IWUSR,
 		platform->debugfs, &gk20a_dbg_ftrace);
 #endif

@@ -60,6 +60,12 @@
 
 #define OV9281_TIMING_VTS_HIGH_ADDR	0x380E
 #define OV9281_TIMING_VTS_LOW_ADDR	0x380F
+#define OV9281_TIMING_FORMAT1		0x3820
+#define OV9281_TIMING_FORMAT1_VBIN	(1 << 1)
+#define OV9281_TIMING_FORMAT1_FLIP	(1 << 2)
+#define OV9281_TIMING_FORMAT2		0x3821
+#define OV9281_TIMING_FORMAT2_HBIN	(1 << 0)
+#define OV9281_TIMING_FORMAT2_MIRROR	(1 << 2)
 #define OV9281_TIMING_RST_FSIN_HIGH_ADDR	0x3826
 #define OV9281_TIMING_RST_FSIN_LOW_ADDR	0x3827
 
@@ -89,9 +95,12 @@
 #define OV9281_MAX_EXPOSURE_COARSE	0x000FFFFF
 #define OV9281_DEFAULT_EXPOSURE_COARSE	0x00002A90
 
+#define OV9281_MAX_WIDTH		1280
+#define OV9281_MAX_HEIGHT		800
+
 #define OV9281_DEFAULT_MODE		OV9281_MODE_1280X800
-#define OV9281_DEFAULT_WIDTH		1280
-#define OV9281_DEFAULT_HEIGHT		800
+#define OV9281_DEFAULT_WIDTH		OV9281_MAX_WIDTH
+#define OV9281_DEFAULT_HEIGHT		OV9281_MAX_HEIGHT
 #define OV9281_DEFAULT_DATAFMT		MEDIA_BUS_FMT_SRGGB10_1X10
 #define OV9281_DEFAULT_CLK_FREQ		26000000
 
@@ -106,6 +115,8 @@ struct ov9281 {
 	int				cam_sid_gpio;
 	int				mcu_boot_gpio;
 	int				mcu_reset_gpio;
+	bool				mirror;
+	bool				flip;
 	struct v4l2_ctrl_handler	ctrl_handler;
 	struct i2c_client		*i2c_client;
 	struct v4l2_subdev		*subdev;
@@ -653,6 +664,32 @@ static int ov9281_s_stream(struct v4l2_subdev *sd, int enable)
 				 "%s: error coarse time override\n", __func__);
 	}
 
+	/*
+	 * Handle mirror and flip.
+	 * Vertical and horizontal binning are in the same registers, so
+	 * need to take frame resolution into account (to avoid a register
+	 * read).
+	 */
+	if (priv->mirror) {
+		if (s_data->frmfmt->size.width > (OV9281_MAX_WIDTH / 2))
+			ov9281_write_reg(s_data, OV9281_TIMING_FORMAT2,
+					 OV9281_TIMING_FORMAT2_MIRROR);
+		else
+			ov9281_write_reg(s_data, OV9281_TIMING_FORMAT2,
+					 OV9281_TIMING_FORMAT2_HBIN |
+					 OV9281_TIMING_FORMAT2_MIRROR);
+	}
+
+	if (priv->flip) {
+		if (s_data->frmfmt->size.height > (OV9281_MAX_HEIGHT / 2))
+			ov9281_write_reg(s_data, OV9281_TIMING_FORMAT1,
+					 OV9281_TIMING_FORMAT1_FLIP);
+		else
+			ov9281_write_reg(s_data, OV9281_TIMING_FORMAT1,
+					 OV9281_TIMING_FORMAT1_VBIN |
+					 OV9281_TIMING_FORMAT1_FLIP);
+	}
+
 #ifdef TPG
 	err = ov9281_write_reg(priv->s_data, OV9281_PRE_CTRL00_ADDR,
 			       OV9281_PRE_CTRL00_TEST_PATTERN_EN);
@@ -983,6 +1020,9 @@ static int ov9281_parse_dt(struct i2c_client *client, struct ov9281 *priv)
 		of_get_named_gpio(np, "mcu-reset-gpios", 0);
 
 	priv->cam_sid_gpio = of_get_named_gpio(np, "cam-sid-gpios", 0);
+
+	priv->mirror = of_property_read_bool(np, "mirror");
+	priv->flip = of_property_read_bool(np, "flip");
 
 	return 0;
 }

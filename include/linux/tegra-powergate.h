@@ -111,8 +111,6 @@
 #ifdef CONFIG_TEGRA_POWERGATE
 int tegra_cpu_powergate_id(int cpuid);
 bool tegra_powergate_is_powered(int id);
-int tegra_powergate_power_on(int id);
-int tegra_powergate_power_off(int id);
 int tegra_powergate_mc_disable(int id);
 int tegra_powergate_mc_enable(int id);
 int tegra_powergate_mc_flush(int id);

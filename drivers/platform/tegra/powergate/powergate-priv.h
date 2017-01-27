@@ -21,44 +21,13 @@
 #include <linux/clk/tegra.h>
 #include <linux/err.h>
 #include <linux/spinlock.h>
-#include <linux/io.h>
 #include <linux/tegra-powergate.h>
 #include <soc/tegra/tegra-powergate-driver.h>
 
 #define MAX_CLK_EN_NUM			15
 #define MAX_HOTRESET_CLIENT_NUM		4
 
-#define PWRGATE_CLAMP_STATUS	0x2c
-#define PWRGATE_TOGGLE		0x30
-#define PWRGATE_TOGGLE_START	(1 << 8)
-#define REMOVE_CLAMPING		0x34
-#define PWRGATE_STATUS		0x38
-
 #define powergate_ops tegra_powergate_driver_ops
-
-/* MC register read/write */
-extern void __iomem *tegra_mc;
-static inline u32 mc_read(unsigned long reg)
-{
-	return readl(tegra_mc + reg);
-}
-
-static inline void mc_write(u32 val, unsigned long reg)
-{
-	writel_relaxed(val, tegra_mc + reg);
-}
-
-/* PMC register read/write */
-extern void __iomem *tegra_pmc;
-static inline u32 pmc_read(unsigned long reg)
-{
-	return readl(tegra_pmc + reg);
-}
-
-static inline void pmc_write(u32 val, unsigned long reg)
-{
-	writel_relaxed(val, tegra_pmc + reg);
-}
 
 enum clk_type {
 	CLK_AND_RST,

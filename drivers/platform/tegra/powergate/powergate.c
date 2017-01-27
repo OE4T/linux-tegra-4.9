@@ -36,12 +36,7 @@
 #include "board.h"
 #include "powergate-priv.h"
 
-#define TEGRA_PMC_BASE	0x7000E400
-#define TEGRA_MC_BASE	0x70019000
-
 struct powergate_ops *pg_ops;
-void __iomem *tegra_mc;
-void __iomem *tegra_pmc;
 
 static inline bool tegra_powergate_check_skip_list(int id)
 {
@@ -304,8 +299,6 @@ static int tegra_powergate_init_refcount(void)
 
 int __init tegra_powergate_init(void)
 {
-	tegra_pmc = ioremap(TEGRA_PMC_BASE, 4096);
-	tegra_mc = ioremap(TEGRA_MC_BASE, 4096);
 	switch (tegra_get_chip_id()) {
 		case TEGRA210:
 			pg_ops = tegra210_powergate_init_chip_support();

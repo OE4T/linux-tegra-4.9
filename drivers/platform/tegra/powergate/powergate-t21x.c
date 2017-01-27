@@ -15,6 +15,7 @@
 #include <dt-bindings/clock/tegra210-car.h>
 #include <linux/spinlock.h>
 #include <linux/delay.h>
+#include <linux/io.h>
 #include <linux/regulator/consumer.h>
 #include <linux/tegra-powergate.h>
 #include <linux/tegra-soc.h>
@@ -486,11 +487,39 @@ static struct mc_client_hotreset_reg tegra210_mc_reg[] = {
 
 #define PMC_GPU_RG_CONTROL		0x2d4
 
+#define PWRGATE_CLAMP_STATUS		0x2c
+#define PWRGATE_TOGGLE			0x30
+#define PWRGATE_TOGGLE_START		(1 << 8)
+#define REMOVE_CLAMPING			0x34
+#define PWRGATE_STATUS			0x38
+
 static DEFINE_SPINLOCK(tegra210_pg_lock);
 
 static struct dvfs_rail *gpu_rail;
 extern struct powergate_ops *pg_ops;
+static void __iomem *tegra_mc;
+static void __iomem *tegra_pmc;
 
+static u32 mc_read(unsigned long reg)
+{
+        return readl(tegra_mc + reg);
+}
+
+static void mc_write(u32 val, unsigned long reg)
+{
+        writel_relaxed(val, tegra_mc + reg);
+}
+
+/* PMC register read/write */
+static u32 pmc_read(unsigned long reg)
+{
+        return readl(tegra_pmc + reg);
+}
+
+static void pmc_write(u32 val, unsigned long reg)
+{
+        writel_relaxed(val, tegra_pmc + reg);
+}
 
 #define HOTRESET_READ_COUNTS		5
 
@@ -1496,8 +1525,13 @@ static struct powergate_ops tegra210_pg_ops = {
 	.powergate_init_refcount = tegra210_pg_init_refcount,
 };
 
+#define TEGRA_PMC_BASE  0x7000E400
+#define TEGRA_MC_BASE   0x70019000
 struct powergate_ops *tegra210_powergate_init_chip_support(void)
 {
+	tegra_pmc = ioremap(TEGRA_PMC_BASE, 4096);
+	tegra_mc = ioremap(TEGRA_MC_BASE, 4096);
+
 	if (tegra_platform_is_linsim())
 		return NULL;
 

@@ -119,6 +119,7 @@ int tegra_powergate_mc_disable(int id);
 int tegra_powergate_mc_enable(int id);
 int tegra_powergate_mc_flush(int id);
 int tegra_powergate_mc_flush_done(int id);
+bool tegra_powergate_check_clamping(int id);
 int tegra_powergate_remove_clamping(int id);
 const char *tegra_powergate_get_name(int id);
 
@@ -153,6 +154,8 @@ int tegra_unpowergate_partition_with_clk_on(int id);
  */
 int tegra_powergate_partition(int id);
 int tegra_unpowergate_partition(int id);
+int slcg_register_notifier(int id, struct notifier_block *nb);
+int slcg_unregister_notifier(int id, struct notifier_block *nb);
 #else
 static inline bool tegra_powergate_is_powered(int id)
 {
@@ -176,16 +179,23 @@ static inline int tegra_unpowergate_partition_with_clk_on(int id)
 {
 	return -ENOSYS;
 }
-#endif
 
-bool tegra_powergate_check_clamping(int id);
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) && defined(CONFIG_TEGRA_POWERGATE)
-int slcg_register_notifier(int id, struct notifier_block *nb);
-int slcg_unregister_notifier(int id, struct notifier_block *nb);
-#else
+static inline bool tegra_powergate_check_clamping(int id)
+{
+	return false;
+}
+static inline int tegra_powergate_remove_clamping(int id)
+{
+	return -ENOTSUP;
+}
+
 static inline int slcg_register_notifier(int id, struct notifier_block *nb)
-{ return 0; }
+{
+	return 0;
+}
 static inline int slcg_unregister_notifier(int id, struct notifier_block *nb)
-{ return 0; }
+{
+	return 0;
+}
 #endif
 #endif /* _MACH_TEGRA_POWERGATE_H_ */

@@ -789,35 +789,31 @@ void get_slcg_info(struct powergate_partition_info *pg_info)
 	}
 }
 
-bool tegra_powergate_check_clamping(int id)
+static int tegra210_slcg_register_notifier(int id, struct notifier_block *nb)
 {
-	if (!pg_ops || !pg_ops->powergate_check_clamping) {
-		WARN_ON_ONCE("This SOC can't check clamping status\n");
-		return -EINVAL;
-	}
+	struct powergate_partition_info *pg_info = &tegra210_pg_partition_info[id];
 
-	if (!pg_ops->powergate_id_is_soc_valid(id)) {
-		pr_info("%s: invalid powergate id %d\n", __func__, id);
+	if (!pg_info || !nb)
 		return -EINVAL;
-	}
 
-	return pg_ops->powergate_check_clamping(id);
+	return raw_notifier_chain_register(&pg_info->slcg_notifier, nb);
 }
 
-int tegra_powergate_remove_clamping(int id)
+static int tegra210_slcg_unregister_notifier(int id, struct notifier_block *nb)
+{
+	struct powergate_partition_info *pg_info =
+			&tegra210_pg_partition_info[id];
+
+	if (!pg_info || !nb)
+		return -EINVAL;
+
+	return raw_notifier_chain_unregister(&pg_info->slcg_notifier, nb);
+}
+
+static int tegra210_powergate_remove_clamping(int id)
 {
 	u32 mask;
 	int contention_timeout = 100;
-
-	if (!pg_ops) {
-		WARN_ON_ONCE("This SOC doesn't support powergating\n");
-		return -EINVAL;
-	}
-
-	if (!pg_ops->powergate_id_is_soc_valid(id)) {
-		pr_info("%s: invalid powergate id %d\n", __func__, id);
-		return -EINVAL;
-	}
 
 	/*
 	 * PCIE and VDE clamping masks are swapped with respect to their
@@ -842,7 +838,6 @@ int tegra_powergate_remove_clamping(int id)
 
 	return 0;
 }
-EXPORT_SYMBOL(tegra_powergate_remove_clamping);
 
 static int __tegra1xx_powergate(int id, struct powergate_partition_info *pg_info,
 				bool clk_enable)
@@ -1523,6 +1518,9 @@ static struct powergate_ops tegra210_pg_ops = {
 	.powergate_is_powered = tegra210_pg_is_powered,
 
 	.powergate_init_refcount = tegra210_pg_init_refcount,
+	.powergate_remove_clamping = tegra210_powergate_remove_clamping,
+	.slcg_register_notifier = tegra210_slcg_register_notifier,
+	.slcg_unregister_notifier = tegra210_slcg_unregister_notifier,
 };
 
 #define TEGRA_PMC_BASE  0x7000E400
@@ -1537,29 +1535,6 @@ struct powergate_ops *tegra210_powergate_init_chip_support(void)
 
 	return &tegra210_pg_ops;
 }
-
-int slcg_register_notifier(int id, struct notifier_block *nb)
-{
-	struct powergate_partition_info *pg_info = &tegra210_pg_partition_info[id];
-
-	if (!pg_info || !nb)
-		return -EINVAL;
-
-	return raw_notifier_chain_register(&pg_info->slcg_notifier, nb);
-}
-EXPORT_SYMBOL(slcg_register_notifier);
-
-int slcg_unregister_notifier(int id, struct notifier_block *nb)
-{
-	struct powergate_partition_info *pg_info =
-			&tegra210_pg_partition_info[id];
-
-	if (!pg_info || !nb)
-		return -EINVAL;
-
-	return raw_notifier_chain_unregister(&pg_info->slcg_notifier, nb);
-}
-EXPORT_SYMBOL(slcg_unregister_notifier);
 
 static int __init tegra210_disable_boot_partitions(void)
 {

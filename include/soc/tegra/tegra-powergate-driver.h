@@ -44,6 +44,12 @@ struct tegra_powergate_driver_ops {
 	bool (*powergate_skip)(int id);
 
 	bool (*powergate_is_powered)(int id);
+
+	int (*powergate_remove_clamping)(int id);
+
+	int (*slcg_register_notifier)(int id, struct notifier_block *nb);
+
+	int (*slcg_unregister_notifier)(int id, struct notifier_block *nb);
 };
 
 #endif /* _SOC_TEGRA_POWERGATE_DRIVER_H_ */

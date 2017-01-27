@@ -45,6 +45,81 @@ static inline bool tegra_powergate_check_skip_list(int id)
 }
 
 /* EXTERNALY VISIBLE APIS */
+int slcg_register_notifier(int id, struct notifier_block *nb)
+{
+	if (!pg_ops) {
+		WARN_ON_ONCE("This SOC doesn't support powergating\n");
+		return -EINVAL;
+	}
+
+	if (!pg_ops->powergate_id_is_soc_valid(id)) {
+		pr_info("%s: invalid powergate id %d\n", __func__, id);
+		return -EINVAL;
+	}
+
+	if (pg_ops->slcg_register_notifier)
+		return pg_ops->slcg_register_notifier(id, nb);
+
+	return 0;
+}
+EXPORT_SYMBOL(slcg_register_notifier);
+
+int slcg_unregister_notifier(int id, struct notifier_block *nb)
+{
+	if (!pg_ops) {
+		WARN_ON_ONCE("This SOC doesn't support powergating\n");
+		return -EINVAL;
+	}
+
+	if (!pg_ops->powergate_id_is_soc_valid(id)) {
+		pr_info("%s: invalid powergate id %d\n", __func__, id);
+		return -EINVAL;
+	}
+
+	if (pg_ops->slcg_unregister_notifier)
+		return pg_ops->slcg_unregister_notifier(id, nb);
+
+	return 0;
+}
+EXPORT_SYMBOL(slcg_unregister_notifier);
+
+bool tegra_powergate_check_clamping(int id)
+{
+	if (!pg_ops) {
+		WARN_ON_ONCE("This SOC doesn't support powergating\n");
+		return false;
+	}
+
+	if (!pg_ops->powergate_id_is_soc_valid(id)) {
+		pr_info("%s: invalid powergate id %d\n", __func__, id);
+		return false;
+	}
+
+	if (pg_ops->powergate_check_clamping)
+		return pg_ops->powergate_check_clamping(id);
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_powergate_check_clamping);
+
+int tegra_powergate_remove_clamping(int id)
+{
+	if (!pg_ops) {
+		WARN_ON_ONCE("This SOC doesn't support powergating\n");
+		return -EINVAL;
+	}
+
+	if (!pg_ops->powergate_id_is_soc_valid(id)) {
+		pr_info("%s: invalid powergate id %d\n", __func__, id);
+		return -EINVAL;
+	}
+
+	if (pg_ops->powergate_remove_clamping)
+		return pg_ops->powergate_remove_clamping(id);
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_powergate_remove_clamping);
 
 bool tegra_powergate_is_powered(int id)
 {

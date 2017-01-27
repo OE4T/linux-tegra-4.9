@@ -585,21 +585,6 @@ int eqos_mdio_register(struct net_device *dev)
 	new_bus->priv = dev;
 	new_bus->phy_mask = ~(1 << pdata->phyaddr);
 	new_bus->parent = &pdata->pdev->dev;
-	new_bus->irq = devm_kzalloc(&pdata->pdev->dev,
-				    sizeof(int) * PHY_MAX_ADDR, GFP_KERNEL);
-	if (!new_bus->irq) {
-		ret = -ENOMEM;
-		pr_err("devm_kzalloc for new_bus->irq failed\n");
-		mdiobus_free(new_bus);
-		return ret;
-	}
-
-	for (i = 0; i < PHY_MAX_ADDR; ++i) {
-		if (i == pdata->phyaddr)
-			new_bus->irq[i] = pdata->phyirq;
-		else
-			new_bus->irq[i] = PHY_POLL;
-	}
 
 	ret = mdiobus_register(new_bus);
 	if (ret != 0) {
@@ -608,6 +593,19 @@ int eqos_mdio_register(struct net_device *dev)
 		return ret;
 	}
 	pdata->mii = new_bus;
+
+	for (i = 0; i < PHY_MAX_ADDR; i++) {
+		struct phy_device *phydev;
+
+		if (i != pdata->phyaddr)
+			continue;
+
+		phydev = mdiobus_get_phy(new_bus, i);
+		if (phydev) {
+			new_bus->irq[i] = pdata->phyirq;
+			phydev->irq = pdata->phyirq;
+		}
+	}
 
 	ret = eqos_init_phy(dev);
 	if (unlikely(ret)) {

@@ -38,6 +38,7 @@
 #include "fb_gv11b.h"
 #include "fifo_gv11b.h"
 #include "gv11b_gating_reglist.h"
+#include "regops_gv11b.h"
 
 #include <nvgpu/hw/gv11b/hw_proj_gv11b.h>
 
@@ -199,6 +200,7 @@ int gv11b_init_hal(struct gk20a *g)
 	gv11b_init_pmu_ops(gops);
 	gk20a_init_debug_ops(gops);
 	gk20a_init_dbg_session_ops(gops);
+	gv11b_init_regops(gops);
 	gv11b_init_therm_ops(gops);
 	gk20a_init_tsg_ops(gops);
 	gops->name = "gv11b";

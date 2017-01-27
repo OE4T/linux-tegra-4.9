@@ -53,8 +53,6 @@ static inline bool tegra_powergate_check_skip_list(int id)
 
 bool tegra_powergate_is_powered(int id)
 {
-	u32 status;
-
 	if (!pg_ops) {
 		pr_debug("This SOC doesn't support powergating\n");
 		return -EINVAL;
@@ -65,12 +63,8 @@ bool tegra_powergate_is_powered(int id)
 
 	if (pg_ops->powergate_is_powered)
 		return pg_ops->powergate_is_powered(id);
-	else
-		status = pmc_read(PWRGATE_STATUS) & (1 << id);
 
-	status = pmc_read(PWRGATE_STATUS) & (1 << id);
-
-	return !!status;
+	return true;
 }
 EXPORT_SYMBOL(tegra_powergate_is_powered);
 

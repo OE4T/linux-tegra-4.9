@@ -401,6 +401,7 @@ struct tegra_pcie_soc_data {
 	bool			l1ss_rp_wakeup_war;
 	bool			link_speed_war;
 	bool			dvfs_mselect;
+	bool			dw_unaligned_ep_cs_access;
 	bool			dvfs_afi;
 	struct pcie_dvfs	dvfs_tbl[10][2];
 };
@@ -587,7 +588,7 @@ static unsigned long tegra_pcie_conf_offset(unsigned int devfn, int where)
 {
 
 	return ((where & 0xf00) << 8) | (PCI_SLOT(devfn) << 11) |
-	       (PCI_FUNC(devfn) << 8) | (where & 0xfc);
+	       (PCI_FUNC(devfn) << 8) | (where & 0xff);
 }
 
 static struct tegra_pcie_bus *tegra_pcie_bus_alloc(struct tegra_pcie *pcie,
@@ -688,87 +689,51 @@ static void __iomem *tegra_pcie_conf_address(struct pci_bus *bus,
 static int tegra_pcie_read_conf(struct pci_bus *bus, unsigned int devfn,
 				int where, int size, u32 *value)
 {
-	void __iomem *addr;
 	struct tegra_pcie *pcie = sys_to_pcie(bus->sysdata);
 	struct tegra_pcie_port *port = NULL;
 	u32 rp = 0;
 	struct pci_dev *dn_dev;
 
-	dn_dev = bus->self;
-
-	if (!dn_dev || !pcie || (bus->number > 1))
-		goto skip_ep_check;
-
-	rp = PCI_SLOT(dn_dev->devfn);
-
-	list_for_each_entry(port, &pcie->ports, list)
-		if (rp == port->index + 1)
-			break;
-	if (!port->ep_status)
-		return PCIBIOS_DEVICE_NOT_FOUND;
-skip_ep_check:
-	addr = tegra_pcie_conf_address(bus, devfn, where);
-	if (!addr) {
-		*value = 0xffffffff;
-		return PCIBIOS_DEVICE_NOT_FOUND;
+	if (bus->number != 0 && pcie->soc_data->dw_unaligned_ep_cs_access) {
+		if (bus->number == 1) {
+			dn_dev = bus->self;
+			rp = PCI_SLOT(dn_dev->devfn);
+			list_for_each_entry(port, &pcie->ports, list)
+				if (rp == port->index + 1)
+					break;
+			if (!port->ep_status)
+				return PCIBIOS_DEVICE_NOT_FOUND;
+		}
+		return pci_generic_config_read(bus, devfn, where, size, value);
 	}
-
-	*value = readl(addr);
-
-	if (size == 1)
-		*value = (*value >> (8 * (where & 3))) & 0xff;
-	else if (size == 2)
-		*value = (*value >> (8 * (where & 3))) & 0xffff;
-
-	return PCIBIOS_SUCCESSFUL;
+	return pci_generic_config_read32(bus, devfn, where, size, value);
 }
 
 static int tegra_pcie_write_conf(struct pci_bus *bus, unsigned int devfn,
 				 int where, int size, u32 value)
 {
-	void __iomem *addr;
-	u32 mask, tmp;
 	struct tegra_pcie *pcie = sys_to_pcie(bus->sysdata);
 	struct tegra_pcie_port *port = NULL;
 	u32 rp = 0;
 	struct pci_dev *dn_dev;
 
-	dn_dev = bus->self;
-	if (!dn_dev || !pcie || (bus->number > 1))
-		goto skip_ep_check;
-	rp = PCI_SLOT(dn_dev->devfn);
-
-	list_for_each_entry(port, &pcie->ports, list)
-		if (rp == port->index + 1)
-			break;
-	if (!port->ep_status)
-		return PCIBIOS_DEVICE_NOT_FOUND;
-
-skip_ep_check:
-	addr = tegra_pcie_conf_address(bus, devfn, where);
-	if (!addr)
-		return PCIBIOS_DEVICE_NOT_FOUND;
-
-	if (size == 4) {
-		writel(value, addr);
-		return PCIBIOS_SUCCESSFUL;
+	if (bus->number != 0 && pcie->soc_data->dw_unaligned_ep_cs_access) {
+		if (bus->number == 1) {
+			dn_dev = bus->self;
+			rp = PCI_SLOT(dn_dev->devfn);
+			list_for_each_entry(port, &pcie->ports, list)
+				if (rp == port->index + 1)
+					break;
+			if (!port->ep_status)
+				return PCIBIOS_DEVICE_NOT_FOUND;
+		}
+		return pci_generic_config_write(bus, devfn, where, size, value);
 	}
-
-	if (size == 2)
-		mask = ~(0xffff << ((where & 0x3) * 8));
-	else if (size == 1)
-		mask = ~(0xff << ((where & 0x3) * 8));
-	else
-		return PCIBIOS_BAD_REGISTER_NUMBER;
-
-	tmp = readl(addr) & mask;
-	tmp |= value << ((where & 0x3) * 8);
-	writel(tmp, addr);
-
-	return PCIBIOS_SUCCESSFUL;
+	return pci_generic_config_write32(bus, devfn, where, size, value);
 }
 
 static struct pci_ops tegra_pcie_ops = {
+	.map_bus = tegra_pcie_conf_address,
 	.read	= tegra_pcie_read_conf,
 	.write	= tegra_pcie_write_conf,
 };
@@ -3263,6 +3228,7 @@ static const struct tegra_pcie_soc_data tegra186_pcie_data = {
 	.pcie_regulator_names = t186_rail_names,
 	.num_pcie_regulators =
 			sizeof(t186_rail_names) / sizeof(t186_rail_names[0]),
+	.dw_unaligned_ep_cs_access = true,
 	.dvfs_afi = true,
 	.dvfs_tbl = {
 		{{0, 0}, {0, 0} },

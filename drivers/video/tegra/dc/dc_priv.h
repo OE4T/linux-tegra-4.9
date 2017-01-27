@@ -42,6 +42,10 @@
 
 #define WIN_ALL_ACT_REQ (WIN_A_ACT_REQ | WIN_B_ACT_REQ | WIN_C_ACT_REQ)
 
+#define RGB_TO_YUV420_8BPC_BLACK_PIX 0x00801010
+#define RGB_TO_YUV422_10BPC_BLACK_PIX 0x00001080
+#define RGB_TO_YUV444_8BPC_BLACK_PIX 0x00801080
+
 #ifdef CONFIG_TEGRA_NVDISPLAY
 int tegra_nvdisp_powergate_partition(int pg_id);
 int tegra_nvdisp_unpowergate_partition(int pg_id);

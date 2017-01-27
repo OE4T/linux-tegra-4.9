@@ -1373,7 +1373,7 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 	else
 		reg_val |= NV_SOR_STATE1_ASY_VSYNCPOL_POSITIVE_TRUE;
 
-	if (out_type == TEGRA_DC_OUT_HDMI) {
+	if (out_type == TEGRA_DC_OUT_HDMI && !dc->yuv_bypass) {
 		if (yuv_flag & FB_VMODE_Y422) {	/* YCrCb 4:2:2 mode */
 			if (yuv_flag & FB_VMODE_Y24) /* YCrCb 4:2:2 8bpc */
 				reg_val |=

@@ -56,6 +56,10 @@
 #define OV10823_DEFAULT_MODE		OV10823_MODE_2168X1220_60FPS
 #define OV10823_DEFAULT_WIDTH		2168
 #define OV10823_DEFAULT_HEIGHT		1220
+
+#define OV10823_MAX_WIDTH		4336
+#define OV10823_MAX_HEIGHT		2440
+
 #define OV10823_DEFAULT_DATAFMT		MEDIA_BUS_FMT_SRGGB10_1X10
 #define OV10823_DEFAULT_CLK_FREQ	26000000
 
@@ -69,6 +73,8 @@ struct ov10823 {
 	int				cam_sid_gpio;
 	int				mcu_boot_gpio;
 	int				mcu_reset_gpio;
+	bool				mirror;
+	bool				flip;
 	struct v4l2_ctrl_handler	ctrl_handler;
 	struct i2c_client		*i2c_client;
 	struct v4l2_subdev		*subdev;
@@ -447,6 +453,27 @@ static int ov10823_s_stream(struct v4l2_subdev *sd, int enable)
 		if (err)
 			dev_dbg(&client->dev,
 				"%s: error coarse time override\n", __func__);
+	}
+
+	/*
+	 * Handle mirror and flip.
+	 * Horizontal and vertical binning needs to be enabled for mirror and
+	 * flip, respectively, so doing this operation is probably not ideal
+	 * if the full resolution of the sensor is to be used.
+	 */
+	if (priv->mirror) {
+		if (s_data->frmfmt->size.width > (OV10823_MAX_WIDTH / 2))
+			ov10823_write_reg(s_data, 0x3821, 0x04);
+		else
+			ov10823_write_reg(s_data, 0x3821, 0x06);
+	}
+
+
+	if (priv->flip) {
+		if (s_data->frmfmt->size.height > (OV10823_MAX_HEIGHT / 2))
+			ov10823_write_reg(s_data, 0x3820, 0x04);
+		else
+			ov10823_write_reg(s_data, 0x3820, 0x06);
 	}
 
 	dev_dbg(&client->dev, "%s: stream on\n", __func__);
@@ -911,6 +938,9 @@ static int ov10823_parse_dt(struct i2c_client *client, struct ov10823 *priv)
 		of_get_named_gpio(np, "mcu-reset-gpios", 0);
 
 	priv->cam_sid_gpio = of_get_named_gpio(np, "cam-sid-gpios", 0);
+
+	priv->mirror = of_property_read_bool(np, "mirror");
+	priv->flip = of_property_read_bool(np, "flip");
 
 	return 0;
 }

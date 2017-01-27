@@ -31,7 +31,6 @@
 #include <linux/platform/tegra/latency_allowance.h>
 
 #include "dc.h"
-#include "board.h"
 #include "board-panel.h"
 #include "dc_priv.h"
 #include <linux/platform_data/lp855x.h>

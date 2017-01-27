@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -29,8 +29,6 @@
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/tegra-powergate-driver.h>
-
-#define powergate_ops tegra_powergate_driver_ops
 
 struct pg_partition_info {
 	const char *name;
@@ -210,7 +208,7 @@ static bool tegra186_powergate_id_is_valid(int id)
 	return true;
 }
 
-static struct powergate_ops tegra186_pg_ops = {
+static struct tegra_powergate_driver_ops tegra186_pg_ops = {
 	.soc_name = "tegra186",
 
 	.num_powerdomains = TEGRA_NUM_POWERGATE,
@@ -228,7 +226,7 @@ static struct powergate_ops tegra186_pg_ops = {
 	.powergate_init_refcount = tegra186_init_refcount,
 };
 
-struct powergate_ops *tegra186_powergate_init_chip_support(void)
+struct tegra_powergate_driver_ops *tegra186_powergate_init_chip_support(void)
 {
 	if (tegra186_pg_query_abi()) {
 		WARN(1, "Missing BPMP support for MRQ_PG\n");

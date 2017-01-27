@@ -98,6 +98,13 @@
 #define MII_BCM54XX_SHD_VAL(x)	((x & 0x1f) << 10)
 #define MII_BCM54XX_SHD_DATA(x)	((x & 0x3ff) << 0)
 
+/* Broadcom IDDQ-LP regs */
+#define MII_BCM54XX_SHD_IDDQ           0x3000
+#define MII_BCM54XX_IDDQ_LP            0x0001
+#define MII_BCM54XX_EXT_CTL_WR_ENABLE  0X8000
+
+#define BCM_IDDQ_EN                    1
+
 /*
  * AUXILIARY CONTROL SHADOW ACCESS REGISTERS.  (PHY REG 0x18)
  */

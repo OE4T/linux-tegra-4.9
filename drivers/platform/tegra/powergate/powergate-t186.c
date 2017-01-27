@@ -32,6 +32,7 @@
 struct pg_partition_info {
 	const char *name;
 	int refcount;
+	int run_refcount;
 	struct mutex pg_mutex;
 };
 
@@ -117,7 +118,26 @@ static int tegra186_pg_unpowergate_partition(int id)
 
 static int tegra186_pg_powergate_clk_off(int id)
 {
-	return tegra186_pg_powergate_partition(id);
+	int ret = 0;
+	struct pg_partition_info *partition =
+		&t186_partition_info[id];
+
+	mutex_lock(&partition->pg_mutex);
+	if (partition->refcount) {
+		if (--partition->refcount == 0)
+			ret = pg_set_state(id, PG_STATE_OFF);
+		else if (partition->run_refcount == 1)
+			ret = pg_set_state(id, PG_STATE_ON);
+
+		if (partition->run_refcount)
+			partition->run_refcount--;
+	} else {
+		WARN(1, "partition %s refcount underflow\n",
+		     partition->name);
+	}
+	mutex_unlock(&partition->pg_mutex);
+
+	return ret;
 }
 
 static int tegra186_pg_unpowergate_clk_on(int id)
@@ -127,8 +147,9 @@ static int tegra186_pg_unpowergate_clk_on(int id)
 		&t186_partition_info[id];
 
 	mutex_lock(&partition->pg_mutex);
-	if (partition->refcount++ == 0)
+	if (partition->refcount++ == 0 || partition->run_refcount == 0)
 		ret = pg_set_state(id, PG_STATE_RUNNING);
+	partition->run_refcount++;
 	mutex_unlock(&partition->pg_mutex);
 
 	return ret;

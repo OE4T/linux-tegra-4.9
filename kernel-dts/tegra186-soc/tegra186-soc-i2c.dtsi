@@ -49,7 +49,6 @@
 		reset-names = "i2c";
 		dmas = <&gpcdma 21>, <&gpcdma 21>;
 		dma-names = "rx", "tx";
-		nvidia,disable-multi-pkt-mode;
 	};
 
 	gen2_i2c: i2c@c240000 {
@@ -70,7 +69,6 @@
 		reset-names = "i2c";
 		dmas = <&gpcdma 22>, <&gpcdma 22>;
 		dma-names = "rx", "tx";
-		nvidia,disable-multi-pkt-mode;
 	};
 
 	cam_i2c: i2c@3180000 {
@@ -91,7 +89,6 @@
 		reset-names = "i2c";
 		dmas = <&gpcdma 23>, <&gpcdma 23>;
 		dma-names = "rx", "tx";
-		nvidia,disable-multi-pkt-mode;
 	};
 
 	dp_aux_ch1_i2c: i2c@3190000 {
@@ -110,7 +107,6 @@
 		reset-names = "i2c";
 		dmas = <&gpcdma 26>, <&gpcdma 26>;
 		dma-names = "rx", "tx";
-		nvidia,disable-multi-pkt-mode;
 	};
 
 	pwr_i2c: bpmp_i2c {
@@ -137,7 +133,6 @@
 		reset-names = "i2c";
 		dmas = <&gpcdma 30>, <&gpcdma 30>;
 		dma-names = "rx", "tx";
-		nvidia,disable-multi-pkt-mode;
 	};
 
 	gen7_i2c: i2c@31c0000 {
@@ -158,7 +153,6 @@
 		reset-names = "i2c";
 		dmas = <&gpcdma 27>, <&gpcdma 27>;
 		dma-names = "rx", "tx";
-		nvidia,disable-multi-pkt-mode;
 	};
 
 	gen8_i2c: i2c@c250000 {
@@ -179,7 +173,6 @@
 		reset-names = "i2c";
 		dmas = <&gpcdma 0>, <&gpcdma 0>;
 		dma-names = "rx", "tx";
-		nvidia,disable-multi-pkt-mode;
 	};
 
 	gen9_i2c: i2c@31e0000 {
@@ -200,6 +193,5 @@
 		reset-names = "i2c";
 		dmas = <&gpcdma 31>, <&gpcdma 31>;
 		dma-names = "rx", "tx";
-		nvidia,disable-multi-pkt-mode;
 	};
 };

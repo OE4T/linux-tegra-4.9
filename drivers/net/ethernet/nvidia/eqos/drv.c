@@ -1668,6 +1668,7 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	UINT qinx = skb_get_queue_mapping(skb);
+	struct netdev_queue *txq = netdev_get_tx_queue(dev, qinx);
 
 	struct tx_ring *ptx_ring = GET_TX_WRAPPER_DESC(qinx);
 	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR(qinx);
@@ -1768,7 +1769,7 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 		goto tx_netdev_return;
 	}
 
-	dev->trans_start = jiffies;
+	txq->trans_start = jiffies;
 
 	ptx_ring->free_desc_cnt -= cnt;
 	ptx_ring->tx_pkt_queued += cnt;

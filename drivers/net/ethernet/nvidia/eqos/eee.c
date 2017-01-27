@@ -292,8 +292,8 @@ static int eqos_phy_init_eee(struct phy_device *phydev,
 			return status;
 
 		/* First check if the EEE ability is supported */
-		eee_cap = eqos_phy_read_mmd_indirect(phydev->bus,
-				CL45_PCS_EEE_ABLE, MDIO_MMD_PCS, phydev->addr);
+		eee_cap = eqos_phy_read_mmd_indirect(phydev->mdio.bus,
+				CL45_PCS_EEE_ABLE, MDIO_MMD_PCS, phydev->mdio.addr);
 		if (eee_cap < 0)
 			return eee_cap;
 /*
@@ -302,13 +302,13 @@ static int eqos_phy_init_eee(struct phy_device *phydev,
 			goto eee_exit;
 */
 		/* check whether link Partner support EEE or not */
-		eee_lp = eqos_phy_read_mmd_indirect(phydev->bus,
-			CL45_AN_EEE_LPABLE_REG, MDIO_MMD_AN, phydev->addr);
+		eee_lp = eqos_phy_read_mmd_indirect(phydev->mdio.bus,
+			CL45_AN_EEE_LPABLE_REG, MDIO_MMD_AN, phydev->mdio.addr);
 		if (eee_lp < 0)
 			return eee_lp;
 
-		eee_adv = eqos_phy_read_mmd_indirect(phydev->bus,
-				CL45_ADV_EEE_REG, MDIO_MMD_AN, phydev->addr);
+		eee_adv = eqos_phy_read_mmd_indirect(phydev->mdio.bus,
+				CL45_ADV_EEE_REG, MDIO_MMD_AN, phydev->mdio.addr);
 		if (eee_adv < 0)
 			return eee_adv;
 /*
@@ -323,16 +323,16 @@ static int eqos_phy_init_eee(struct phy_device *phydev,
 			/* Configure the PHY to stop receiving xMII
 			 * clock while it is signaling LPI.
 			 */
-			int val = eqos_phy_read_mmd_indirect(phydev->bus,
+			int val = eqos_phy_read_mmd_indirect(phydev->mdio.bus,
 					CL45_CLK_STOP_EN_REG, MDIO_MMD_PCS,
-					phydev->addr);
+					phydev->mdio.addr);
 			if (val < 0)
 				return val;
 
 			val |= CL45_CLK_STOP_EN;
-			eqos_phy_write_mmd_indirect(phydev->bus,
+			eqos_phy_write_mmd_indirect(phydev->mdio.bus,
 					CL45_CLK_STOP_EN_REG, MDIO_MMD_PCS,
-					phydev->addr, val);
+					phydev->mdio.addr, val);
 		}
 
 		ret = 0; /* EEE supported */

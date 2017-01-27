@@ -23,7 +23,6 @@
 #include <trace/events/power.h>
 
 #include "powergate-priv.h"
-#include "powergate-ops-t1xx.h"
 
 #define EMULATION_MC_FLUSH_TIMEOUT 100
 
@@ -488,6 +487,167 @@ static DEFINE_SPINLOCK(tegra210_pg_lock);
 static struct dvfs_rail *gpu_rail;
 
 #define HOTRESET_READ_COUNTS		5
+
+static int __tegra1xx_powergate(int id, struct powergate_partition_info *pg_info,
+				bool clk_enable)
+{
+	int ret;
+
+	/* If first clk_ptr is null, fill clk info for the partition */
+	if (!pg_info->clk_info[0].clk_ptr)
+		get_clk_info(pg_info);
+
+	if (clk_enable) {
+		/*
+		 * Enable clocks only if clocks are not expected to
+		 * be off when power gating is done
+		 */
+		ret = partition_clk_enable(pg_info);
+		if (ret) {
+			WARN(1, "Couldn't enable clock");
+			return ret;
+		}
+
+		udelay(10);
+	}
+
+	tegra_powergate_mc_flush(id);
+
+	udelay(10);
+
+	powergate_partition_assert_reset(pg_info);
+
+	udelay(10);
+
+	/* Powergating is done only if refcnt of all clks is 0 */
+	partition_clk_disable(pg_info);
+
+	udelay(10);
+
+	ret = tegra_powergate_set(id, false);
+	if (ret)
+		goto err_power_off;
+
+	return 0;
+
+err_power_off:
+	WARN(1, "Could not Powergate Partition %d", id);
+	return ret;
+}
+
+static int tegra1xx_powergate(int id, struct powergate_partition_info *pg_info)
+{
+	return __tegra1xx_powergate(id, pg_info, true);
+}
+
+static int __tegra1xx_unpowergate(int id, struct powergate_partition_info *pg_info,
+				bool clk_disable)
+{
+	int ret;
+
+	/* If first clk_ptr is null, fill clk info for the partition */
+	if (!pg_info->clk_info[0].clk_ptr)
+		get_clk_info(pg_info);
+
+	if (!pg_info->slcg_info[0].clk_ptr)
+		get_slcg_info(pg_info);
+
+	if (tegra_powergate_is_powered(id)) {
+		if (!clk_disable) {
+			ret = partition_clk_enable(pg_info);
+			if (ret)
+				return ret;
+			if (!pg_info->skip_reset) {
+				powergate_partition_assert_reset(pg_info);
+				udelay(10);
+				powergate_partition_deassert_reset(pg_info);
+			}
+		}
+		return 0;
+	}
+
+	ret = tegra_powergate_set(id, true);
+	if (ret)
+		goto err_power;
+
+	udelay(10);
+
+	/* Un-Powergating fails if all clks are not enabled */
+	ret = partition_clk_enable(pg_info);
+	if (ret)
+		goto err_clk_on;
+
+	powergate_partition_assert_reset(pg_info);
+
+	udelay(10);
+
+	ret = tegra_powergate_remove_clamping(id);
+	if (ret)
+		goto err_clamp;
+
+	udelay(10);
+
+	if (!pg_info->skip_reset) {
+		powergate_partition_deassert_reset(pg_info);
+
+		udelay(10);
+	}
+
+	tegra_powergate_mc_flush_done(id);
+
+	udelay(10);
+
+	slcg_clk_enable(pg_info);
+
+	raw_notifier_call_chain(&pg_info->slcg_notifier, 0, NULL);
+
+	slcg_clk_disable(pg_info);
+
+	/* Disable all clks enabled earlier. Drivers should enable clks */
+	if (clk_disable)
+		partition_clk_disable(pg_info);
+
+	return 0;
+
+err_clamp:
+	partition_clk_disable(pg_info);
+err_clk_on:
+	powergate_module(id);
+err_power:
+	WARN(1, "Could not Un-Powergate %d", id);
+	return ret;
+}
+
+static int tegra1xx_unpowergate(int id,
+				struct powergate_partition_info *pg_info)
+{
+	return __tegra1xx_unpowergate(id, pg_info, true);
+}
+
+static int tegra1xx_powergate_partition_with_clk_off(int id,
+		struct powergate_partition_info *pg_info)
+{
+	int ret = 0;
+
+	ret = __tegra1xx_powergate(id, pg_info, false);
+	if (ret)
+		WARN(1, "Could not Powergate Partition %d", id);
+
+	return ret;
+}
+
+static int tegra1xx_unpowergate_partition_with_clk_on(int id,
+	struct powergate_partition_info *pg_info)
+{
+	int ret = 0;
+
+	ret = __tegra1xx_unpowergate(id, pg_info, false);
+	if (ret)
+		WARN(1, "Could not Un-Powergate %d", id);
+
+	return ret;
+}
+
 
 static bool tegra210_pg_hotreset_check(u32 status_reg, u32 *status)
 {

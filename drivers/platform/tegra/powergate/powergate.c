@@ -36,7 +36,7 @@
 #include "board.h"
 #include "powergate-priv.h"
 
-struct powergate_ops *pg_ops;
+static struct powergate_ops *pg_ops;
 
 static inline bool tegra_powergate_check_skip_list(int id)
 {

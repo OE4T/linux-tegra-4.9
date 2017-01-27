@@ -1603,7 +1603,7 @@ extern int dhd_prot_debug_info_print(dhd_pub_t *dhd);
 void dhd_pktid_audit_fail_cb(dhd_pub_t *dhdp);
 #endif /* DHD_PKTID_AUDIT_ENABLED */
 
-#ifdef CONFIG_PLATFORM_TEGRA
+#if IS_ENABLED(CONFIG_PCI_TEGRA)
 extern void tegra_pcie_prepare_l2_exit(dhd_pub_t *dhdp);
 extern void dhdpcie_port_toggle(dhd_pub_t *pub, bool on);
 #endif

@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Init for T210 Architecture Chips
  *
- * Copyright (c) 2011-2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,6 +22,9 @@
 #include <soc/tegra/chip-id.h>
 
 #include <linux/platform/tegra/mc.h>
+#if defined(CONFIG_TEGRA_BWMGR)
+#include <linux/platform/tegra/emc_bwmgr.h>
+#endif
 
 #include "dev.h"
 #include "nvhost_job.h"
@@ -101,12 +104,20 @@ struct nvhost_device_data t21_isp_info = {
 #else
 		{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP },
 #endif
-		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
+		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+#if defined(CONFIG_TEGRA_BWMGR)
+			0, TEGRA_BWMGR_SET_EMC_SHARED_BW_ISO} },
+#else
+		} },
+#endif
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
 	.hw_init		= nvhost_isp_register_isr_v1,
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
 	.bond_out_id		= BOND_OUT_ISP,
+#if defined(CONFIG_TEGRA_BWMGR)
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_ISPA,
+#endif
 };
 
 struct nvhost_device_data t21_ispb_info = {
@@ -126,12 +137,20 @@ struct nvhost_device_data t21_ispb_info = {
 #else
 		{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISPB },
 #endif
-		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
+		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+#if defined(CONFIG_TEGRA_BWMGR)
+			0, TEGRA_BWMGR_SET_EMC_SHARED_BW_ISO} },
+#else
+		} },
+#endif
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
 	.hw_init		= nvhost_isp_register_isr_v1,
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
 	.bond_out_id		= BOND_OUT_ISP,
+#if defined(CONFIG_TEGRA_BWMGR)
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_ISPB,
+#endif
 };
 #endif
 
@@ -162,13 +181,21 @@ struct nvhost_device_data t21_vi_info = {
 		{"cile", 102000000},
 		{"vii2c", 86400000},
 		{"i2cslow", 1000000},
-		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
+		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+#if defined(CONFIG_TEGRA_BWMGR)
+			0, TEGRA_BWMGR_SET_EMC_SHARED_BW_ISO} },
+#else
+		} },
+#endif
 	.ctrl_ops		= &tegra_vi_ctrl_ops,
 	.num_channels		= 6,
 	.slcg_notifier_enable	= true,
 	.bond_out_id		= BOND_OUT_VI,
 	.prepare_poweroff = nvhost_vi_prepare_poweroff,
 	.finalize_poweron = nvhost_vi_finalize_poweron,
+#if defined(CONFIG_TEGRA_BWMGR)
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_VI,
+#endif
 };
 EXPORT_SYMBOL(t21_vi_info);
 #endif
@@ -182,7 +209,13 @@ struct nvhost_device_data t21_msenc_info = {
 	.autosuspend_delay	= 500,
 	.can_powergate		= true,
 	.clocks			= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
-				   {"emc", HOST_EMC_FLOOR} },
+				   {"emc", HOST_EMC_FLOOR,
+				NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+#if defined(CONFIG_TEGRA_BWMGR)
+				0, TEGRA_BWMGR_SET_EMC_SHARED_BW} },
+#else
+				} },
+#endif
 	.engine_cg_regs		= t21x_nvenc_gating_registers,
 	.engine_can_cg		= true,
 	.poweron_reset		= true,
@@ -200,7 +233,10 @@ struct nvhost_device_data t21_msenc_info = {
 	.firmware_name		= "nvhost_nvenc050.fw",
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.serialize		= true,
-	.bond_out_id		= BOND_OUT_NVENC
+	.bond_out_id		= BOND_OUT_NVENC,
+#if defined(CONFIG_TEGRA_BWMGR)
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_MSENC,
+#endif
 };
 #endif
 
@@ -233,6 +269,9 @@ struct nvhost_device_data t21_nvdec_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.serialize		= true,
 	.bond_out_id		= BOND_OUT_NVDEC,
+#if defined(CONFIG_TEGRA_BWMGR)
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVDEC,
+#endif
 };
 #endif
 
@@ -245,7 +284,13 @@ struct nvhost_device_data t21_nvjpg_info = {
 	.autosuspend_delay	= 500,
 	.can_powergate		= true,
 	.clocks			= { {"nvjpg", UINT_MAX, 0, TEGRA_MC_CLIENT_NVJPG},
-				    {"emc", HOST_EMC_FLOOR} },
+				    {"emc", HOST_EMC_FLOOR,
+				NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+#if defined(CONFIG_TEGRA_BWMGR)
+				0, TEGRA_BWMGR_SET_EMC_SHARED_BW} },
+#else
+				} },
+#endif
 	.engine_cg_regs		= t21x_nvjpg_gating_registers,
 	.engine_can_cg		= true,
 	.poweron_reset		= true,
@@ -264,6 +309,9 @@ struct nvhost_device_data t21_nvjpg_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.serialize		= true,
 	.firmware_name		= "nvhost_nvjpg010.fw",
+#if defined(CONFIG_TEGRA_BWMGR)
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVJPG,
+#endif
 };
 #endif
 
@@ -277,7 +325,8 @@ struct nvhost_device_data t21_tsec_info = {
 	.class			= NV_TSEC_CLASS_ID,
 	.exclusive		= false,
 	.clocks			= {{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
-				   {"emc", HOST_EMC_FLOOR} },
+				   {"emc", HOST_EMC_FLOOR,
+				NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	.can_powergate		= true,
 	.autosuspend_delay	= TSEC_AUTOSUSPEND_DELAY,
@@ -291,6 +340,9 @@ struct nvhost_device_data t21_tsec_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.serialize		= true,
 	.bond_out_id		= BOND_OUT_TSEC,
+#if defined(CONFIG_TEGRA_BWMGR)
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_TSEC,
+#endif
 };
 
 struct nvhost_device_data t21_tsecb_info = {
@@ -301,7 +353,8 @@ struct nvhost_device_data t21_tsecb_info = {
 	.class			= NV_TSECB_CLASS_ID,
 	.exclusive		= false,
 	.clocks			= {{"tsecb", UINT_MAX, 0, TEGRA_MC_CLIENT_TSECB},
-				   {"emc", HOST_EMC_FLOOR} },
+				   {"emc", HOST_EMC_FLOOR,
+				NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	.can_powergate		= true,
 	.autosuspend_delay	= TSEC_AUTOSUSPEND_DELAY,
@@ -314,6 +367,9 @@ struct nvhost_device_data t21_tsecb_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.serialize		= true,
 	.bond_out_id		= BOND_OUT_TSEC,
+#if defined(CONFIG_TEGRA_BWMGR)
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_TSECB,
+#endif
 };
 #endif
 

@@ -148,13 +148,21 @@ enum pva_task_parameter_type_e {
 	PVA_PARAM_SURFACE_LIST	= 1U,
 	PVA_PARAM_ROI_LIST	= 2U,
 	PVA_PARAM_2DPOINTS_LIST	= 3U,
-	PVA_PARAM_LAST		= 4U		/* must be last! */
+	PVA_PARAM_POINTER_LIST	= 4U,
+	PVA_PARAM_LAST		= 5U,		/* must be last! */
 };
 
+
+struct pva_task_pointer {
+	u64	address;
+	u32	size;
+	u8	flags;
+	u8	reserved[3];
+};
 struct pva_task_parameter_array {
 	u64	address;
 	u32	size;
-	u32	type;		/* type = pva_task_parameter_type_t */
+	u32	type;
 };
 
 /*

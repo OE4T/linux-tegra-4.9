@@ -90,6 +90,7 @@ struct pva_submit_task {
 	u8 num_output_surfaces;
 	u8 num_input_task_status;
 	u8 num_output_task_status;
+	u8 num_pointers;
 	u32 operation;
 	u64 timeout;
 	bool invalid;
@@ -108,6 +109,7 @@ struct pva_submit_task {
 	struct pva_task_parameter output_rois;
 	struct pva_status_handle input_task_status[PVA_MAX_INPUT_STATUS];
 	struct pva_status_handle output_task_status[PVA_MAX_OUTPUT_STATUS];
+	struct pva_memory_handle pointers[PVA_MAX_POINTERS];
 
 	/* External data that is added by the KMD */
 	struct pva_parameter_ext prefences_ext[PVA_MAX_PREFENCES];
@@ -128,6 +130,7 @@ struct pva_submit_task {
 			input_surface_rois_ext[PVA_MAX_INPUT_SURFACES];
 	struct pva_parameter_ext
 			output_surface_rois_ext[PVA_MAX_OUTPUT_SURFACES];
+	struct pva_parameter_ext pointers_ext[PVA_MAX_POINTERS];
 };
 
 struct pva_submit_tasks {

@@ -188,6 +188,7 @@ struct pva_fence {
 #define PVA_MAX_OUTPUT_STATUS	8
 #define PVA_MAX_INPUT_SURFACES	8
 #define PVA_MAX_OUTPUT_SURFACES	8
+#define PVA_MAX_POINTERS	128
 
 /**
  * struct pva_ioctl_submit_task - Describe a task for PVA
@@ -224,7 +225,9 @@ struct pva_ioctl_submit_task {
 	__u8 num_output_surfaces;
 	__u8 num_input_task_status;
 	__u8 num_output_task_status;
-	__u8 reserved[14];
+	__u16 num_pointers;
+	__u64 pointers;
+	__u8 reserved[4];
 	__u32 operation;
 	__u64 timeout;
 	__u64 prefences;

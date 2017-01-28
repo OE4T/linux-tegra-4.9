@@ -68,13 +68,16 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 	    ioctl_task->num_input_task_status > PVA_MAX_INPUT_STATUS ||
 	    ioctl_task->num_output_task_status > PVA_MAX_OUTPUT_STATUS ||
 	    ioctl_task->num_input_surfaces > PVA_MAX_INPUT_SURFACES ||
-	    ioctl_task->num_output_surfaces > PVA_MAX_OUTPUT_SURFACES) {
+	    ioctl_task->num_output_surfaces > PVA_MAX_OUTPUT_SURFACES ||
+	    ioctl_task->num_pointers > PVA_MAX_POINTERS) {
 		err = -EINVAL;
 		goto err_out;
 	}
 
-	/* These fields are clear-text in the task descriptor. Just
-	 * copy them. */
+	/*
+	 * These fields are clear-text in the task descriptor. Just
+	 * copy them.
+	 */
 	task->operation			= ioctl_task->operation;
 	task->num_prefences		= ioctl_task->num_prefences;
 	task->num_postfences		= ioctl_task->num_postfences;
@@ -82,6 +85,7 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 	task->num_output_task_status	= ioctl_task->num_output_task_status;
 	task->num_input_surfaces	= ioctl_task->num_input_surfaces;
 	task->num_output_surfaces	= ioctl_task->num_output_surfaces;
+	task->num_pointers		= ioctl_task->num_pointers;
 	task->input_scalars		= ioctl_task->input_scalars;
 	task->input_2dpoint		= ioctl_task->input_2dpoint;
 	task->input_rois		= ioctl_task->input_rois;
@@ -121,6 +125,8 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 	COPY_FIELD(task->output_task_status, ioctl_task->output_task_status,
 			task->num_output_task_status,
 			struct pva_status_handle);
+	COPY_FIELD(task->pointers, ioctl_task->pointers,
+			task->num_pointers, struct pva_memory_handle);
 #undef COPY_FIELD
 
 err_out:

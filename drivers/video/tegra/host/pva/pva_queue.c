@@ -48,6 +48,8 @@ struct pva_hw_task {
 	struct pva_task_parameter_array output_parameter_array[PVA_PARAM_LAST];
 	u8 preactions[ACTION_BUFFER_SIZE];
 	u8 postactions[ACTION_BUFFER_SIZE];
+	struct pva_task_parameter_desc pointers_desc;
+	struct pva_task_pointer pointers[PVA_MAX_POINTERS];
 	struct pva_task_parameter_desc input_surface_desc;
 	struct pva_task_surface input_surfaces[PVA_MAX_INPUT_SURFACES];
 	struct pva_task_parameter_desc output_surface_desc;
@@ -138,6 +140,11 @@ static void pva_task_dump(struct pva_submit_task *task)
 				task->output_surfaces[i].height,
 				task->output_surfaces[i].layout);
 
+	for (i = 0; i < task->num_pointers; i++)
+		nvhost_dbg_info("pointer %d: handle=%u, offset=%u",
+				i, task->pointers[i].handle,
+				task->pointers[i].offset);
+
 	for (i = 0; i < task->num_input_task_status; i++)
 		nvhost_dbg_info("input task status %d: handle=%u, offset=%u",
 				i, task->input_task_status[i].handle,
@@ -201,6 +208,12 @@ static void pva_task_unpin_mem(struct pva_submit_task *task)
 	for (i = 0; i < task->num_output_task_status; i++) {
 		if (task->output_task_status[i].handle) {
 			UNPIN_MEMORY(task->output_task_status_ext[i]);
+		}
+	}
+
+	for (i = 0; i < task->num_pointers; i++) {
+		if (task->pointers[i].handle) {
+			UNPIN_MEMORY(task->pointers_ext[i]);
 		}
 	}
 
@@ -323,6 +336,14 @@ static int pva_task_pin_mem(struct pva_submit_task *task)
 		if (task->output_task_status[i].handle) {
 			PIN_MEMORY(task->output_task_status_ext[i],
 				task->output_task_status[i].handle);
+		}
+	}
+
+	/* Pin task pointers */
+	for (i = 0; i < task->num_pointers; i++) {
+		if (task->pointers[i].handle) {
+			PIN_MEMORY(task->pointers_ext[i],
+				   task->pointers[i].handle);
 		}
 	}
 
@@ -735,6 +756,47 @@ static void pva_task_write_non_surfaces(struct pva_submit_task *task,
 #undef COPY_PARAMETER
 }
 
+static void pva_task_write_pointers(struct pva_submit_task *task,
+				    struct pva_hw_task *hw_task)
+{
+	struct pva_task_parameter_array *pointer_parameter;
+	struct pva_parameter_ext *handle_ext;
+	struct pva_memory_handle *handle;
+	unsigned int i;
+
+	if (task->num_pointers == 0)
+		return;
+
+	/* Pointers reside always in the input parameter block */
+	pointer_parameter = hw_task->input_parameter_array +
+			    hw_task->task.num_input_parameters;
+
+	/* Write parameter descriptor */
+	pointer_parameter->address = task->dma_addr +
+				     offsetof(struct pva_hw_task,
+					      pointers_desc);
+	pointer_parameter->type = PVA_PARAM_POINTER_LIST;
+	pointer_parameter->size = sizeof(struct pva_task_parameter_desc) +
+				  sizeof(struct pva_task_pointer) *
+				  task->num_pointers;
+	hw_task->task.num_input_parameters++;
+
+	/* Write the pointer descriptor base information */
+	hw_task->pointers_desc.num_parameters = task->num_pointers;
+	hw_task->pointers_desc.reserved = 0;
+
+	for (i = 0; i < task->num_pointers; i++) {
+		handle = task->pointers + i;
+		handle_ext = task->pointers_ext + i;
+
+		hw_task->pointers[i].address = handle_ext->dma_addr +
+			handle->offset;
+		hw_task->pointers[i].size = handle_ext->size;
+		if (handle_ext->heap == NVHOST_BUFFERS_HEAP_CVNAS)
+			hw_task->pointers[i].flags |= 1;
+	}
+}
+
 static int pva_task_write(struct pva_submit_task *task, bool atomic)
 {
 	struct pva_hw_task *hw_task;
@@ -755,6 +817,9 @@ static int pva_task_write(struct pva_submit_task *task, bool atomic)
 	/* Initialize parameters */
 	pva_task_write_non_surfaces(task, hw_task);
 
+	/* Write pointer parameters */
+	pva_task_write_pointers(task, hw_task);
+
 	/* Write input surfaces */
 	pva_task_write_input_surfaces(task, hw_task);
 
@@ -769,7 +834,7 @@ static int pva_task_write(struct pva_submit_task *task, bool atomic)
 	hw_task->task.gen_task.engineid = PVA_ENGINE_ID;
 	hw_task->task.gen_task.sequence = 0;
 	hw_task->task.gen_task.length = offsetof(struct pva_hw_task,
-						 input_surface_desc);
+						 pointers_desc);
 	hw_task->task.gen_task.n_preaction_lists = 1;
 	hw_task->task.gen_task.preaction_lists_p = offsetof(struct pva_hw_task,
 							    preaction_list);

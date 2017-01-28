@@ -40,6 +40,20 @@
 #include "hw_cfg_pva.h"
 #include "t194/hardware_t194.h"
 
+struct pva_hw_task {
+	struct pva_task task;
+	struct pva_action_list preaction_list;
+	struct pva_action_list postaction_list;
+	struct pva_task_parameter_array input_parameter_array[PVA_PARAM_LAST];
+	struct pva_task_parameter_array output_parameter_array[PVA_PARAM_LAST];
+	u8 preactions[ACTION_BUFFER_SIZE];
+	u8 postactions[ACTION_BUFFER_SIZE];
+	struct pva_task_parameter_desc input_surface_desc;
+	struct pva_task_surface input_surfaces[PVA_MAX_INPUT_SURFACES];
+	struct pva_task_parameter_desc output_surface_desc;
+	struct pva_task_surface output_surfaces[PVA_MAX_OUTPUT_SURFACES];
+};
+
 static void pva_task_dump(struct pva_submit_task *task)
 {
 	int i;
@@ -135,68 +149,9 @@ static void pva_task_dump(struct pva_submit_task *task)
 				task->output_task_status[i].offset);
 }
 
-static size_t pva_task_get_size(void)
-{
-	size_t size = 0;
-
-	/* Add task base structure */
-	size = sizeof(struct pva_task);
-
-	/* Allocate room for input action list */
-	size += sizeof(struct pva_action_list);
-	size = roundup(size, sizeof(u64));
-
-	/* Allocate room for output action list */
-	size += sizeof(struct pva_action_list);
-	size = roundup(size, sizeof(u64));
-
-	/* Allocate space for input parameter list */
-	size += PVA_PARAM_LAST * sizeof(struct pva_task_parameter_array);
-
-	/* Allocate space for output parameter list */
-	size += PVA_PARAM_LAST * sizeof(struct pva_task_parameter_array);
-
-	/*
-	 * Calculate space needed for input actions
-	 */
-
-	/* Pre-fences */
-	size += PVA_MAX_PREFENCES *
-		(1 + sizeof(struct pva_task_action_ptr));
-	/* Input status checks */
-	size += PVA_MAX_INPUT_STATUS *
-		(1 + sizeof(struct pva_task_action_status));
-	/* Action list termination */
-	size += 1;
-	size = roundup(size, sizeof(u64));
-
-	/*
-	 * Calculate space needed for output actions
-	 */
-
-	/* Output status writes */
-	size += PVA_MAX_OUTPUT_STATUS *
-		(1 + sizeof(struct pva_task_action_status));
-	/* Postfences requested by userspace */
-	size += PVA_MAX_POSTFENCES *
-		(1 + sizeof(struct pva_task_action_ptr));
-	/* Syncpoint increment */
-	size += sizeof(struct pva_task_action_ptr);
-	/* Action list termination */
-	size += 1;
-	size = roundup(size, sizeof(u64));
-
-	/* Add space required for the surfaces */
-	size += PVA_MAX_INPUT_SURFACES * sizeof(struct pva_task_surface);
-	size += PVA_MAX_OUTPUT_SURFACES * sizeof(struct pva_task_surface);
-
-	return size;
-}
-
-
 static void pva_task_get_memsize(size_t *dma_size, size_t *kmem_size)
 {
-	*dma_size = pva_task_get_size();
+	*dma_size = sizeof(struct pva_hw_task);
 	*kmem_size = sizeof(struct pva_submit_task);
 }
 
@@ -488,10 +443,9 @@ static inline int pva_task_write_ptr_op(u8 *base, u8 action, u64 addr, u32 val)
 }
 
 static int pva_task_write_preactions(struct pva_submit_task *task,
-		struct pva_action_list *hw_preaction_list,
-		u16 *offset)
+				     struct pva_hw_task *hw_task)
 {
-	u8 *hw_preactions = (void *)((u8 *)task->va + *offset);
+	u8 *hw_preactions = hw_task->preactions;
 	int i = 0, j = 0, ptr = 0;
 
 	/* Add waits to preactions list */
@@ -595,25 +549,20 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 		TASK_ACT_TERMINATE);
 
 	/* Store the preaction list */
-	hw_preaction_list->offset = *offset;
-	hw_preaction_list->length = ptr;
-
-	/* Mark this part of task memory as used */
-	*offset += ptr;
-	*offset = roundup(*offset, sizeof(u64));
+	hw_task->preaction_list.offset = offsetof(struct pva_hw_task, preactions);
+	hw_task->preaction_list.length = ptr;
 
 	return 0;
 }
 
 static void pva_task_write_postactions(struct pva_submit_task *task,
-		struct pva_action_list *hw_postaction_list,
-		u16 *offset)
+				       struct pva_hw_task *hw_task)
 {
 	dma_addr_t syncpt_addr = nvhost_syncpt_address(task->pva->pdev,
 				task->queue->syncpt_id);
 	dma_addr_t syncpt_gos_addr = nvhost_syncpt_gos_address(task->pva->pdev,
 				task->queue->syncpt_id);
-	u8 *hw_postactions = (void *)((u8 *)task->va + *offset);
+	u8 *hw_postactions = hw_task->postactions;
 	int ptr = 0, i = 0;
 	struct platform_device *host1x_pdev =
 			to_platform_device(task->pva->pdev->dev.parent);
@@ -670,146 +619,84 @@ static void pva_task_write_postactions(struct pva_submit_task *task,
 		TASK_ACT_TERMINATE);
 
 	/* Store the postaction list */
-	hw_postaction_list->offset = *offset;
-	hw_postaction_list->length = ptr;
-
-	/* Mark this part of task memory as used */
-	*offset += ptr;
-	*offset = roundup(*offset, sizeof(u64));
+	hw_task->postaction_list.offset = offsetof(struct pva_hw_task,
+						   postactions);
+	hw_task->postaction_list.length = ptr;
 }
 
 static void pva_task_write_output_surfaces(struct pva_submit_task *task,
-		struct pva_task_parameter_array *hw_output_parameters,
-		u32 *num_output_parameters, u16 *offset)
+					   struct pva_hw_task *hw_task)
 {
-	struct pva_task_surface *hw_output_surfaces;
-	struct pva_task_parameter_desc *hw_output_surface_desc;
+	struct pva_task_parameter_array *surface_parameter;
 
-	if (task->num_output_surfaces == 0) {
+	if (task->num_output_surfaces == 0)
 		return;
-	}
+
+	surface_parameter = hw_task->output_parameter_array +
+			    hw_task->task.num_output_parameters;
 
 	/* Write parameter descriptor */
-	hw_output_parameters[*num_output_parameters].address =
-			task->dma_addr + *offset;
-	hw_output_parameters[*num_output_parameters].type =
-			PVA_PARAM_SURFACE_LIST;
-	hw_output_parameters[*num_output_parameters].size =
-			sizeof(*hw_output_surface_desc) +
-			sizeof(*hw_output_surfaces) *
-			task->num_output_surfaces;
-	*num_output_parameters = *num_output_parameters + 1;
+	surface_parameter->address = task->dma_addr +
+				     offsetof(struct pva_hw_task,
+					      output_surface_desc);
+	surface_parameter->type = PVA_PARAM_SURFACE_LIST;
+	surface_parameter->size = sizeof(struct pva_task_parameter_desc) +
+				  sizeof(struct pva_task_surface) *
+				  task->num_output_surfaces;
+	hw_task->task.num_output_parameters++;
 
 	/* Write the surface descriptor base information */
-	hw_output_surface_desc = (void *)((u8 *)task->va + *offset);
-	hw_output_surface_desc->num_parameters = task->num_output_surfaces;
-	hw_output_surface_desc->reserved = 0;
-	*offset = *offset + sizeof(*hw_output_surface_desc);
-
-	/* Get surface base address */
-	hw_output_surfaces = (void *)((u8 *)task->va + *offset);
+	hw_task->output_surface_desc.num_parameters = task->num_output_surfaces;
+	hw_task->output_surface_desc.reserved = 0;
 
 	/* Write the output surfaces */
-	pva_task_write_surfaces(hw_output_surfaces,
+	pva_task_write_surfaces(hw_task->output_surfaces,
 			task->output_surfaces,
 			task->output_surfaces_ext,
 			task->output_surface_rois_ext,
 			task->num_output_surfaces);
-
-	/* Track the offset change */
-	*offset = *offset + sizeof(*hw_output_surfaces) *
-		PVA_MAX_OUTPUT_SURFACES;
 }
 
 static void pva_task_write_input_surfaces(struct pva_submit_task *task,
-		struct pva_task_parameter_array *hw_input_parameters,
-		u32 *num_input_parameters, u16 *offset)
+					  struct pva_hw_task *hw_task)
 {
-	struct pva_task_surface *hw_input_surfaces;
-	struct pva_task_parameter_desc *hw_input_surface_desc;
+	struct pva_task_parameter_array *surface_parameter;
 
-	if (task->num_input_surfaces == 0) {
+	if (task->num_input_surfaces == 0)
 		return;
-	}
+
+	surface_parameter = hw_task->input_parameter_array +
+			    hw_task->task.num_input_parameters;
 
 	/* Write parameter descriptor */
-	hw_input_parameters[*num_input_parameters].address =
-			task->dma_addr + *offset;
-	hw_input_parameters[*num_input_parameters].type =
-			PVA_PARAM_SURFACE_LIST;
-	hw_input_parameters[*num_input_parameters].size =
-			sizeof(*hw_input_surface_desc) +
-			sizeof(*hw_input_surfaces) *
-			task->num_input_surfaces;
-	*num_input_parameters = *num_input_parameters + 1;
+	surface_parameter->address = task->dma_addr +
+				     offsetof(struct pva_hw_task,
+					      input_surface_desc);
+	surface_parameter->type = PVA_PARAM_SURFACE_LIST;
+	surface_parameter->size = sizeof(struct pva_task_parameter_desc) +
+				  sizeof(struct pva_task_surface) *
+				  task->num_input_surfaces;
+	hw_task->task.num_input_parameters++;
 
 	/* Write the surface descriptor base information */
-	hw_input_surface_desc = (void *)((u8 *)task->va + *offset);
-	hw_input_surface_desc->num_parameters = task->num_input_surfaces;
-	hw_input_surface_desc->reserved = 0;
-	*offset = *offset + sizeof(*hw_input_surface_desc);
-
-	/* Get surface base address */
-	hw_input_surfaces = (void *)((u8 *)task->va + *offset);
+	hw_task->input_surface_desc.num_parameters = task->num_input_surfaces;
+	hw_task->input_surface_desc.reserved = 0;
 
 	/* Write the input surfaces */
-	pva_task_write_surfaces(hw_input_surfaces,
+	pva_task_write_surfaces(hw_task->input_surfaces,
 			task->input_surfaces,
 			task->input_surfaces_ext,
 			task->input_surface_rois_ext,
 			task->num_input_surfaces);
-
-	/* Track the offset change */
-	*offset = *offset + sizeof(*hw_input_surfaces) *
-			PVA_MAX_INPUT_SURFACES;
 }
 
-static int pva_task_write(struct pva_submit_task *task, bool atomic)
+static void pva_task_write_non_surfaces(struct pva_submit_task *task,
+					struct pva_hw_task *hw_task)
 {
-	struct pva_task_parameter_array *hw_input_parameters;
-	struct pva_task_parameter_array *hw_output_parameters;
-	struct pva_action_list *hw_postaction_list;
-	struct pva_action_list *hw_preaction_list;
-	struct pva_task *hw_task;
-	u32 num_input_parameters = 0;
-	u32 num_output_parameters = 0;
-	u16 offset = 0;
-	int err;
-	int i;
-
-	/* Task start from the memory base */
-	hw_task = task->va;
-	offset += sizeof(*hw_task);
-
-	/* Allocate room for postactions list */
-	hw_postaction_list = (void *)((u8 *)task->va + offset);
-	hw_task->gen_task.postaction_lists_p = offset;
-	offset = roundup(offset + sizeof(*hw_postaction_list), sizeof(u64));
-
-	/* Allocate room for preactions list */
-	hw_preaction_list = (void *)((u8 *)task->va + offset);
-	hw_task->gen_task.preaction_lists_p = offset;
-	offset = roundup(offset + sizeof(*hw_preaction_list), sizeof(u64));
-
-	/* Allocate space for the input parameters */
-	hw_input_parameters = (void *)((u8 *)task->va + offset);
-	hw_task->input_parameters = offset;
-	offset += sizeof(*hw_input_parameters) * PVA_PARAM_LAST;
-
-	/* ..and then output parameters */
-	hw_output_parameters = (void *)((u8 *)task->va + offset);
-	hw_task->output_parameters = offset;
-	offset += sizeof(*hw_output_parameters) * PVA_PARAM_LAST;
-
-	/* Write the preaction list */
-	err = pva_task_write_preactions(task, hw_preaction_list, &offset);
-	if (err < 0)
-		return err;
-
-	/* Write the postaction list */
-	pva_task_write_postactions(task, hw_postaction_list, &offset);
-
-	/* Initialize parameters */
+	struct pva_task_parameter_array *hw_input_parameters =
+			hw_task->input_parameter_array;
+	struct pva_task_parameter_array *hw_output_parameters =
+			hw_task->output_parameter_array;
 
 #define COPY_PARAMETER(target, name, name_ext, param_type, count)	\
 	do {								\
@@ -823,53 +710,84 @@ static int pva_task_write(struct pva_submit_task *task, bool atomic)
 
 	COPY_PARAMETER(hw_input_parameters, task->input_scalars,
 		       task->input_scalars_ext,
-		       PVA_PARAM_SCALAR_LIST, num_input_parameters);
+		       PVA_PARAM_SCALAR_LIST,
+		       hw_task->task.num_input_parameters);
 	COPY_PARAMETER(hw_input_parameters, task->input_rois,
 		       task->input_rois_ext,
-		       PVA_PARAM_ROI_LIST, num_input_parameters);
+		       PVA_PARAM_ROI_LIST,
+		       hw_task->task.num_input_parameters);
 	COPY_PARAMETER(hw_input_parameters, task->input_2dpoint,
 		       task->input_2dpoint_ext,
-		       PVA_PARAM_2DPOINTS_LIST, num_input_parameters);
+		       PVA_PARAM_2DPOINTS_LIST,
+		       hw_task->task.num_input_parameters);
 	COPY_PARAMETER(hw_output_parameters, task->output_scalars,
 		       task->output_scalars_ext,
-		       PVA_PARAM_SCALAR_LIST, num_output_parameters);
+		       PVA_PARAM_SCALAR_LIST,
+		       hw_task->task.num_output_parameters);
 	COPY_PARAMETER(hw_output_parameters, task->output_rois,
 		       task->output_rois_ext,
-		       PVA_PARAM_ROI_LIST, num_output_parameters);
+		       PVA_PARAM_ROI_LIST,
+		       hw_task->task.num_output_parameters);
 	COPY_PARAMETER(hw_output_parameters, task->output_2dpoint,
 		       task->output_2dpoint_ext,
-		       PVA_PARAM_2DPOINTS_LIST, num_output_parameters);
+		       PVA_PARAM_2DPOINTS_LIST,
+		       hw_task->task.num_output_parameters);
 #undef COPY_PARAMETER
+}
 
-	hw_task->gen_task.length = offset;
+static int pva_task_write(struct pva_submit_task *task, bool atomic)
+{
+	struct pva_hw_task *hw_task;
+	int err;
+	int i;
+
+	/* Task start from the memory base */
+	hw_task = task->va;
+
+	/* Write the preaction list */
+	err = pva_task_write_preactions(task, hw_task);
+	if (err < 0)
+		return err;
+
+	/* Write the postaction list */
+	pva_task_write_postactions(task, hw_task);
+
+	/* Initialize parameters */
+	pva_task_write_non_surfaces(task, hw_task);
 
 	/* Write input surfaces */
-	pva_task_write_input_surfaces(task, hw_input_parameters,
-			&num_input_parameters, &offset);
+	pva_task_write_input_surfaces(task, hw_task);
 
 	/* Write output surfaces */
-	pva_task_write_output_surfaces(task, hw_output_parameters,
-			&num_output_parameters, &offset);
+	pva_task_write_output_surfaces(task, hw_task);
 
-	hw_task->gen_task.versionid = TASK_VERSION_ID;
-	hw_task->gen_task.engineid = PVA_ENGINE_ID;
-	hw_task->gen_task.sequence = 0;
-	hw_task->gen_task.n_preaction_lists = 1;
-	hw_task->gen_task.n_postaction_lists = 1;
-	hw_task->runlist_version = PVA_TASK_VERSION_ID;
-	hw_task->queue_id = task->queue->id;
-	hw_task->num_input_parameters = num_input_parameters;
-	hw_task->num_output_parameters = num_output_parameters;
-	hw_task->flags = atomic ? PVA_TASK_FL_ATOMIC : 0;
-	hw_task->operation = task->operation;
-	hw_task->timeout = task->timeout;
+	hw_task->task.input_parameters = offsetof(struct pva_hw_task,
+						  input_parameter_array);
+	hw_task->task.output_parameters = offsetof(struct pva_hw_task,
+						  output_parameter_array);
+	hw_task->task.gen_task.versionid = TASK_VERSION_ID;
+	hw_task->task.gen_task.engineid = PVA_ENGINE_ID;
+	hw_task->task.gen_task.sequence = 0;
+	hw_task->task.gen_task.length = offsetof(struct pva_hw_task,
+						 input_surface_desc);
+	hw_task->task.gen_task.n_preaction_lists = 1;
+	hw_task->task.gen_task.preaction_lists_p = offsetof(struct pva_hw_task,
+							    preaction_list);
+	hw_task->task.gen_task.n_postaction_lists = 1;
+	hw_task->task.gen_task.postaction_lists_p = offsetof(struct pva_hw_task,
+							     postaction_list);
+	hw_task->task.runlist_version = PVA_TASK_VERSION_ID;
+	hw_task->task.queue_id = task->queue->id;
+	hw_task->task.flags = atomic ? PVA_TASK_FL_ATOMIC : 0;
+	hw_task->task.operation = task->operation;
+	hw_task->task.timeout = task->timeout;
 
 	/* This should be delivered from userspace - hard-code
 	 * until the mechanism is in place.
 	 */
-	hw_task->operation_version = 1;
+	hw_task->task.operation_version = 1;
 
-	for (i = 0; i < roundup(offset, 16) / 16; i++) {
+	for (i = 0; i < roundup(sizeof(struct pva_hw_task), 16) / 16; i++) {
 		u8 *task_va = task->va;
 		u32 base = i * 16;
 

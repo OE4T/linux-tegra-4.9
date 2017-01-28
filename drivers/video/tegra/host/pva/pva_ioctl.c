@@ -121,7 +121,6 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 	COPY_FIELD(task->output_task_status, ioctl_task->output_task_status,
 			task->num_output_task_status,
 			struct pva_status_handle);
-
 #undef COPY_FIELD
 
 err_out:

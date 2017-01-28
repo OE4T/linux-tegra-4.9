@@ -47,6 +47,11 @@ enum pva_submit_mode {
 #define MAX_PVA_TASK_COUNT	16
 
 /**
+ * Action buffer size
+ */
+#define ACTION_BUFFER_SIZE	128
+
+/**
  * @brief		struct to hold the segment details
  *
  * addr:		virtual addr of the segment from PRIV2 address base

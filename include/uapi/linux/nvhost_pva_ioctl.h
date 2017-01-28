@@ -84,6 +84,17 @@ struct pva_pin_unpin_args {
 #define PVA_MAX_PIN_BUFFERS	64
 
 /**
+ * struct pva_memory_handle - A handle to PVA pointer
+ *
+ * @handle: Handle to a dmabuf that holds the data
+ * @offset: An offset within the buffer to the data within the buffer
+ */
+struct pva_memory_handle {
+	__u32 handle;
+	__u32 offset;
+};
+
+/**
  * struct pva_ioctl_status_handle - A handle to a status structure
  *
  * @handle: Handle to a dmabuf that holds the status buffer

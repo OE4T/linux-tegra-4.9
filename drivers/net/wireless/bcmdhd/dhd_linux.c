@@ -4364,6 +4364,8 @@ static int dhd_interworking_enable(dhd_pub_t *dhd)
 }
 #endif /* WL11u */
 
+extern struct mutex net_if_lock;
+
 static int
 dhd_open(struct net_device *net)
 {
@@ -4388,6 +4390,7 @@ dhd_open(struct net_device *net)
 	dhd->pub.dongle_trap_occured = 0;
 	dhd->pub.hang_was_sent = 0;
 
+	mutex_lock(&net_if_lock);
 #if !defined(WL_CFG80211)
 	/*
 	 * Force start if ifconfig_up gets called before START command
@@ -4538,6 +4541,7 @@ exit:
 
 	DHD_PERIM_UNLOCK(&dhd->pub);
 	DHD_OS_WAKE_UNLOCK(&dhd->pub);
+	mutex_unlock(&net_if_lock);
 
 
 	return ret;

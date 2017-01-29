@@ -2326,6 +2326,9 @@ static int tegra_smmu_probe(struct platform_device *pdev)
 	smmu_debugfs_create(smmu);
 	BUG_ON(cmpxchg(&smmu_handle, NULL, smmu));
 	bus_set_iommu(&platform_bus_type, smmu_iommu_ops);
+#ifdef CONFIG_PCI
+	bus_set_iommu(&pci_bus_type, smmu_iommu_ops);
+#endif
 
 	dev_info(dev, "Loaded Tegra IOMMU driver\n");
 	return 0;

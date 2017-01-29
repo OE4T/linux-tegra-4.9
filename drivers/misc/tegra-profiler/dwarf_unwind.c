@@ -2033,6 +2033,11 @@ unwind_backtrace(struct quadd_callchain *cc,
 		cc->curr_pc = sf->pc;
 		cc->curr_lr = sf->vregs[regnum_lr(mode)];
 
+		if (cc->curr_sp <= sp) {
+			cc->urc_dwarf = QUADD_URC_SP_INCORRECT;
+			break;
+		}
+
 		nr_added = quadd_callchain_store(cc, sf->pc, unw_type);
 		if (nr_added == 0)
 			break;

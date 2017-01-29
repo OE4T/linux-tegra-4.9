@@ -961,6 +961,8 @@ static void tegra_pcie_config_clkreq(struct tegra_pcie *pcie, u32 index)
 		clkreq_bi_dir = pinctrl_lookup_state(clkreq_pin,
 						     "clkreq-1-bi-dir-enable");
 		break;
+	default:
+		return;
 	}
 
 	if (IS_ERR(clkreq_bi_dir)) {
@@ -2871,15 +2873,19 @@ static irqreturn_t tegra_pcie_msi_irq(int irq, void *data)
 		while (reg) {
 			unsigned int offset = find_first_bit(&reg, 32);
 			unsigned int index = i * 32 + offset;
-			unsigned int irq;
+			unsigned int irq_num;
+
+			/* check if there are any interrupts in this reg */
+			if (offset == 32)
+				break;
 
 			/* clear the interrupt */
 			afi_writel(pcie, 1 << offset, AFI_MSI_VEC0_0 + i * 4);
 
-			irq = irq_find_mapping(msi->domain, index);
-			if (irq) {
+			irq_num = irq_find_mapping(msi->domain, index);
+			if (irq_num) {
 				if (test_bit(index, msi->used))
-					generic_handle_irq(irq);
+					generic_handle_irq(irq_num);
 				else
 					dev_info(pcie->dev, "unhandled MSI\n");
 			} else {
@@ -3547,7 +3553,6 @@ static int dump_afi_space(struct seq_file *s, void *data)
 
 static int config_read(struct seq_file *s, void *data)
 {
-	u32 val;
 	struct pci_dev *pdev = NULL;
 
 	pdev = pci_get_bus_and_slot((bdf >> 8), (bdf & 0xFF));
@@ -3563,20 +3568,23 @@ static int config_read(struct seq_file *s, void *data)
 			PCI_EXT_CFG_SPACE_SIZE);
 	}
 	if (!(config_offset & 0x3)) {
+		u32 val;
 		/* read 32 */
 		pci_read_config_dword(pdev, config_offset, &val);
 		seq_printf(s, "%08x\n", val);
 		config_val = val;
 	} else if (!(config_offset & 0x1)) {
+		u16 val;
 		/* read 16 */
-		pci_read_config_word(pdev, config_offset, (u16 *)&val);
-		seq_printf(s, "%04x\n", (u16)(val & 0xFFFF));
-		config_val = val & 0xFFFF;
+		pci_read_config_word(pdev, config_offset, &val);
+		seq_printf(s, "%04x\n", val);
+		config_val = val;
 	} else {
+		u8 val;
 		/* read 8 */
-		pci_read_config_byte(pdev, config_offset, (u8 *)&val);
-		seq_printf(s, "%02x\n", (u8)(val & 0xFF));
-		config_val = val & 0xFF;
+		pci_read_config_byte(pdev, config_offset, &val);
+		seq_printf(s, "%02x\n", val);
+		config_val = val;
 	}
 
 end:

@@ -387,11 +387,18 @@ static int wl_android_get_rssi(struct net_device *net, char *command, int total_
 		return -1;
 	if ((ssid.SSID_len == 0) || (ssid.SSID_len > DOT11_MAX_SSID_LEN)) {
 		DHD_ERROR(("%s: wldev_get_ssid failed\n", __FUNCTION__));
+	} else if (total_len <= ssid.SSID_len) {
+		return -ENOMEM;
 	} else {
 		memcpy(command, ssid.SSID, ssid.SSID_len);
 		bytes_written = ssid.SSID_len;
 	}
-	bytes_written += snprintf(&command[bytes_written], total_len, " rssi %d", scbval.val);
+	if ((total_len - bytes_written) < (strlen(" rssi -XXX") + 1))
+		return -ENOMEM;
+	bytes_written += scnprintf(&command[bytes_written],
+		total_len - bytes_written, " rssi %d", scbval.val);
+	command[bytes_written] = '\0';
+
 	DHD_TRACE(("%s: command result is %s (%d)\n", __FUNCTION__, command, bytes_written));
 	return bytes_written;
 }
@@ -2405,10 +2412,13 @@ static int wl_android_get_link_status(struct net_device *dev, char *command,
 int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 {
 #define PRIVATE_COMMAND_MAX_LEN	8192
+#define PRIVATE_COMMAND_DEF_LEN	4096
+
 	int ret = 0;
 	char *command = NULL;
 	int bytes_written = 0;
 	android_wifi_priv_cmd priv_cmd;
+	int buf_size = 0;
 
 	net_os_wake_lock(net);
 
@@ -2437,12 +2447,17 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 			goto exit;
 		}
 	}
+
 	if ((priv_cmd.total_len > PRIVATE_COMMAND_MAX_LEN) || (priv_cmd.total_len < 0)) {
-		DHD_ERROR(("%s: too long priavte command\n", __FUNCTION__));
+		DHD_ERROR(("%s: buf length invalid:%d\n", __FUNCTION__,
+			   priv_cmd.total_len));
 		ret = -EINVAL;
 		goto exit;
 	}
-	command = kmalloc((priv_cmd.total_len + 1), GFP_KERNEL);
+
+	buf_size = max(priv_cmd.total_len, PRIVATE_COMMAND_DEF_LEN);
+	command = kmalloc((buf_size + 1), GFP_KERNEL);
+
 	if (!command)
 	{
 		DHD_ERROR(("%s: failed to allocate memory\n", __FUNCTION__));
@@ -2457,6 +2472,41 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 
 	DHD_INFO(("%s: Android private cmd \"%s\" on %s\n", __FUNCTION__, command, ifr->ifr_name));
 
+	bytes_written = wl_handle_private_cmd(net, command, priv_cmd.total_len);
+	if (bytes_written >= 0) {
+		if ((bytes_written == 0) && (priv_cmd.total_len > 0))
+			command[0] = '\0';
+		if (bytes_written >= priv_cmd.total_len) {
+			DHD_ERROR(("%s: err. b_w:%d >= tot:%d\n", __FUNCTION__,
+				   bytes_written, priv_cmd.total_len));
+			ret = BCME_BUFTOOSHORT;
+			goto exit;
+		}
+		bytes_written++;
+		priv_cmd.used_len = bytes_written;
+		if (copy_to_user(priv_cmd.buf, command, bytes_written)) {
+			DHD_ERROR(("%s: failed copy to user\n", __FUNCTION__));
+			ret = -EFAULT;
+		}
+	} else {
+		ret = bytes_written;
+	}
+
+exit:
+	net_os_wake_unlock(net);
+	kfree(command);
+	return ret;
+}
+
+int
+wl_handle_private_cmd(struct net_device *net, char *command, u32 buf_size)
+{
+	int bytes_written = 0;
+	android_wifi_priv_cmd priv_cmd;
+
+	bzero(&priv_cmd, sizeof(android_wifi_priv_cmd));
+	priv_cmd.total_len = buf_size;
+
 	if (brcm_strnicmp(command, CMD_START, strlen(CMD_START)) == 0) {
 		DHD_INFO(("%s, Received regular START command\n", __FUNCTION__));
 		bytes_written = wl_android_wifi_on(net);
@@ -2466,10 +2516,9 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	}
 
 	if (!g_wifi_on) {
-		DHD_ERROR(("%s: Ignore private cmd \"%s\" - iface %s is down\n",
-			__FUNCTION__, command, ifr->ifr_name));
-		ret = 0;
-		goto exit;
+		DHD_ERROR(("%s: Ignore private cmd \"%s\" - iface is down\n",
+			   __FUNCTION__, command));
+		return 0;
 	}
 
 	if (brcm_strnicmp(command, CMD_STOP, strlen(CMD_STOP)) == 0) {
@@ -2507,7 +2556,6 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	} else if (brcm_strnicmp(command, CMD_PKT_FILTER_PORTS, strlen(CMD_PKT_FILTER_PORTS)) == 0) {
 		bytes_written = dhd_set_packet_filter_ports(net,
 			&command[strlen(CMD_PKT_FILTER_PORTS) + 1]);
-		ret = bytes_written;
 	}
 #endif /* PKT_FILTER_SUPPORT */
 	else if (brcm_strnicmp(command, CMD_BTCOEXSCAN_START, strlen(CMD_BTCOEXSCAN_START)) == 0) {
@@ -2709,36 +2757,10 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 #endif /* WLWFDS */
 	else {
 		DHD_ERROR(("Unknown PRIVATE command %s - ignored\n", command));
-		snprintf(command, 3, "OK");
-		bytes_written = strlen("OK");
+		bytes_written = scnprintf(command, sizeof("FAIL"), "FAIL");
 	}
 
-	if (bytes_written >= 0) {
-		if ((bytes_written == 0) && (priv_cmd.total_len > 0))
-			command[0] = '\0';
-		if (bytes_written >= priv_cmd.total_len) {
-			DHD_ERROR(("%s: bytes_written = %d\n", __FUNCTION__, bytes_written));
-			bytes_written = priv_cmd.total_len;
-		} else {
-			bytes_written++;
-		}
-		priv_cmd.used_len = bytes_written;
-		if (copy_to_user(priv_cmd.buf, command, bytes_written)) {
-			DHD_ERROR(("%s: failed to copy data to user buffer\n", __FUNCTION__));
-			ret = -EFAULT;
-		}
-	}
-	else {
-		ret = bytes_written;
-	}
-
-exit:
-	net_os_wake_unlock(net);
-	if (command) {
-		kfree(command);
-	}
-
-	return ret;
+	return bytes_written;
 }
 
 int wl_android_init(void)

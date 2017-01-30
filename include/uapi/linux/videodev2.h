@@ -565,6 +565,11 @@ struct v4l2_pix_format {
 #define V4L2_PIX_FMT_SGBRG10 v4l2_fourcc('G', 'B', '1', '0') /* 10  GBGB.. RGRG.. */
 #define V4L2_PIX_FMT_SGRBG10 v4l2_fourcc('B', 'A', '1', '0') /* 10  GRGR.. BGBG.. */
 #define V4L2_PIX_FMT_SRGGB10 v4l2_fourcc('R', 'G', '1', '0') /* 10  RGRG.. GBGB.. */
+	/*10bit raw bayer packed, 4 bytes for every 3 pixels */
+#define V4L2_PIX_FMT_XBGGR10P   v4l2_fourcc('X', 'B', 'G', 'P') /* 32  BGGR Packed 10-10-10-2 */
+#define V4L2_PIX_FMT_XGBRG10P   v4l2_fourcc('X', 'G', 'B', 'P') /* 32  GBRG Packed 10-10-10-2 */
+#define V4L2_PIX_FMT_XGRBG10P   v4l2_fourcc('X', 'G', 'R', 'P') /* 32  GRBG Packed 10-10-10-2 */
+#define V4L2_PIX_FMT_XRGGB10P   v4l2_fourcc('X', 'R', 'G', 'P') /* 32  RGGB Packed 10-10-10-2 */
 	/* 10bit raw bayer packed, 5 bytes for every 4 pixels */
 #define V4L2_PIX_FMT_SBGGR10P v4l2_fourcc('p', 'B', 'A', 'A')
 #define V4L2_PIX_FMT_SGBRG10P v4l2_fourcc('p', 'G', 'A', 'A')

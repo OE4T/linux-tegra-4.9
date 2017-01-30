@@ -377,7 +377,14 @@ static int tegra_crypt_rsa(struct file *filp, struct tegra_crypto_ctx *ctx,
 		src_buff = xbuf[0];
 		dst_buff = xbuf[1];
 
-		memcpy(src_buff, rsa_req->message, rsa_req->msg_len);
+		ret = copy_from_user(src_buff, (void __user *)rsa_req->message,
+			rsa_req->msg_len);
+		if (ret) {
+			ret = -EFAULT;
+			pr_err("%s: copy_from_user failed\n", __func__);
+			goto rsa_fail;
+		}
+
 		memset(dst_buff, 0, rsa_req->msg_len);
 
 		sg_init_one(&sg[0], src_buff, rsa_req->msg_len);
@@ -478,10 +485,15 @@ static int tegra_crypt_rsa_ahash(struct file *filp, struct tegra_crypto_ctx *ctx
 
 	hash_buff = xbuf[0];
 
-	memcpy(hash_buff, rsa_req_ah->message, rsa_req_ah->msg_len);
+	ret = copy_from_user(hash_buff, (void __user *)rsa_req_ah->message,
+		rsa_req_ah->msg_len);
+	if (ret) {
+		ret = -EFAULT;
+		pr_err("%s: copy_from_user failed\n", __func__);
+		goto rsa_fail;
+	}
 
 	sg_init_one(&sg[0], hash_buff, rsa_req_ah->msg_len);
-
 	if (!(rsa_req_ah->keylen))
 		goto rsa_fail;
 

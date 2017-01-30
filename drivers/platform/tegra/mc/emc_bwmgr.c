@@ -391,9 +391,7 @@ int __init bwmgr_init(void)
 	long round_rate;
 
 	mutex_init(&bwmgr.lock);
-	bwmgr_debugfs_init();
 	bwmgr_eff_init();
-	pmqos_bwmgr_init();
 
 	dn = of_find_compatible_node(NULL, NULL, "nvidia,bwmgr");
 	if (dn == NULL) {
@@ -426,6 +424,9 @@ int __init bwmgr_init(void)
 
 	for (i = 0; i < TEGRA_BWMGR_CLIENT_COUNT; i++)
 		purge_client(bwmgr.bwmgr_client + i);
+
+	bwmgr_debugfs_init();
+	pmqos_bwmgr_init();
 
 	/* Check status property is okay or not. */
 	if (of_device_is_available(dn))

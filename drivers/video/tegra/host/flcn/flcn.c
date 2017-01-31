@@ -785,9 +785,9 @@ static struct of_device_id tegra_flcn_domain_match[] = {
 	 .data = (struct nvhost_device_data *)&t18_nvjpg_info},
 #endif
 #endif
-#ifdef CONFIG_ARCH_TEGRA_19x_SOC
+#ifdef CONFIG_TEGRA_T19X_GRHOST
 #if defined(CONFIG_TEGRA_GRHOST_NVENC)
-	{.compatible = "nvidia,tegra186-nvenc1-pd",
+	{.compatible = "nvidia,tegra194-nvenc1-pd",
 	 .data = (struct nvhost_device_data *)&t19_nvenc1_info},
 #endif
 #endif

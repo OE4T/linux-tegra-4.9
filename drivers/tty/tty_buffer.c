@@ -568,7 +568,7 @@ static int flush_to_ldisc_thread(void *data)
 
 	while (!kthread_should_stop()) {
 		flush_to_ldisc(&port->buf.work);
-		set_current_state(TASK_UNINTERRUPTIBLE);
+		set_current_state(TASK_INTERRUPTIBLE);
 		schedule();
 	}
 	return 0;
@@ -685,14 +685,13 @@ int tty_buffer_start_rt_thread(struct tty_port *port, int id)
 	int ret;
 
 	port->tty_kthread = kthread_create(flush_to_ldisc_thread,
-		tty_kthread_policy,
 		port, "tty-rt-thread-%d", id);
 	if (IS_ERR_OR_NULL(port->tty_kthread)) {
 		ret = -EINVAL;
 		goto err;
 	}
 
-	ret = sched_setscheduler(port->tty_kthread, SCHED_FIFO,
+	ret = sched_setscheduler(port->tty_kthread, tty_kthread_policy,
 		&tty_kthread_param);
 	if (ret < 0)
 		goto err;

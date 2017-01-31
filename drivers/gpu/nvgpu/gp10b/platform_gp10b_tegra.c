@@ -69,7 +69,7 @@ static void gr_gp10b_remove_sysfs(struct device *dev);
  * the clock information to gp10b platform data.
  */
 
-static int gp10b_tegra_get_clocks(struct device *dev)
+int gp10b_tegra_get_clocks(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	unsigned int i;
@@ -264,7 +264,7 @@ static int gp10b_tegra_suspend(struct device *dev)
 	return 0;
 }
 
-static int gp10b_tegra_reset_assert(struct device *dev)
+int gp10b_tegra_reset_assert(struct device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	int ret = 0;
@@ -277,7 +277,7 @@ static int gp10b_tegra_reset_assert(struct device *dev)
 	return ret;
 }
 
-static int gp10b_tegra_reset_deassert(struct device *dev)
+int gp10b_tegra_reset_deassert(struct device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	int ret = 0;

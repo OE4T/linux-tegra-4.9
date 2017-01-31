@@ -25,7 +25,6 @@ struct vm_gk20a;
 
 struct gk20a_as_share {
 	struct gk20a_as *as;
-	atomic_t ref_cnt;
 	int id;
 	struct vm_gk20a *vm;
 };

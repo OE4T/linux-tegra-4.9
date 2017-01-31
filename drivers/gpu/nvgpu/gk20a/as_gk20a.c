@@ -54,7 +54,6 @@ int gk20a_as_alloc_share(struct gk20a_as *as,
 
 	as_share->as = as;
 	as_share->id = generate_as_share_id(as_share->as);
-	as_share->ref_cnt.counter = 1;
 
 	/* this will set as_share->vm. */
 	err = gk20a_busy(g->dev);
@@ -85,9 +84,6 @@ int gk20a_as_release_share(struct gk20a_as_share *as_share)
 
 	gk20a_dbg_fn("");
 
-	if (atomic_dec_return(&as_share->ref_cnt) > 0)
-		return 0;
-
 	err = gk20a_busy(g->dev);
 	if (err)
 		return err;
@@ -114,14 +110,10 @@ static int gk20a_as_ioctl_bind_channel(
 	if (!ch || gk20a_channel_as_bound(ch))
 		return -EINVAL;
 
-	atomic_inc(&as_share->ref_cnt);
-
 	/* this will set channel_gk20a->vm */
 	err = ch->g->ops.mm.vm_bind_channel(as_share, ch);
-	if (err) {
-		atomic_dec(&as_share->ref_cnt);
+	if (err)
 		return err;
-	}
 
 	return err;
 }

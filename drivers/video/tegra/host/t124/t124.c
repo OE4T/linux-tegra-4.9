@@ -43,8 +43,6 @@
 #include "nvhost_scale.h"
 #include "vhost/vhost.h"
 
-#include "../../../../arch/arm/mach-tegra/iomap.h"
-
 #include "cg_regs.c"
 
 #define HOST_EMC_FLOOR 300000000
@@ -52,33 +50,6 @@
 #define ISP_AUTOSUSPEND_DELAY 500
 #define TSEC_AUTOSUSPEND_DELAY 500
 #define HOST1X_AUTOSUSPEND_DELAY 50
-
-#ifndef INT_HOST1X_MPCORE_SYNCPT
-#define INT_HOST1X_MPCORE_SYNCPT -1
-#endif
-#ifndef INT_HOST1X_MPCORE_GENERAL
-#define INT_HOST1X_MPCORE_GENERAL -1
-#endif
-
-#ifdef CONFIG_ARCH_TEGRA
-static struct resource tegra_host1x04_resources[] = {
-	{
-		.start = TEGRA_HOST1X_BASE,
-		.end = TEGRA_HOST1X_BASE + TEGRA_HOST1X_SIZE - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	{
-		.start = INT_HOST1X_MPCORE_SYNCPT,
-		.end = INT_HOST1X_MPCORE_SYNCPT,
-		.flags = IORESOURCE_IRQ,
-	},
-	{
-		.start = INT_HOST1X_MPCORE_GENERAL,
-		.end = INT_HOST1X_MPCORE_GENERAL,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-#endif
 
 static struct host1x_device_info host1x04_info = {
 	.nb_channels	= T124_NVHOST_NUMCHANNELS,
@@ -105,31 +76,7 @@ struct nvhost_device_data t124_host1x_info = {
 	.prepare_poweroff = nvhost_host1x_prepare_poweroff,
 };
 
-
-static struct platform_device tegra_host1x04_device = {
-	.name		= "host1x",
-	.id		= -1,
-#ifdef CONFIG_ARCH_TEGRA
-	.resource	= tegra_host1x04_resources,
-	.num_resources	= ARRAY_SIZE(tegra_host1x04_resources),
-#endif
-	.dev            = {
-		.platform_data = &t124_host1x_info,
-	},
-};
-
-
 #ifdef CONFIG_TEGRA_GRHOST_ISP
-static struct resource isp_resources[] = {
-	{
-		.name = "regs",
-		.start = TEGRA_ISP_BASE,
-		.end = TEGRA_ISP_BASE + TEGRA_ISP_SIZE - 1,
-		.flags = IORESOURCE_MEM,
-	}
-};
-
-static struct platform_device tegra_isp01b_device;
 struct nvhost_device_data t124_isp_info = {
 	.num_channels	= 1,
 	/* FIXME: control clocks from user space instead of hard-coding here */
@@ -150,24 +97,6 @@ struct nvhost_device_data t124_isp_info = {
 	.hw_init          = nvhost_isp_register_isr_v1,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
 };
-static struct platform_device tegra_isp01_device = {
-	.name          = "isp",
-	.resource      = isp_resources,
-	.num_resources = ARRAY_SIZE(isp_resources),
-	.dev           = {
-		.platform_data = &t124_isp_info,
-	},
-};
-
-static struct resource ispb_resources[] = {
-	{
-		.name = "regs",
-		.start = TEGRA_ISPB_BASE,
-		.end = TEGRA_ISPB_BASE + TEGRA_ISPB_SIZE - 1,
-		.flags = IORESOURCE_MEM,
-	}
-};
-
 
 struct nvhost_device_data t124_ispb_info = {
 	.num_channels	= 1,
@@ -189,30 +118,9 @@ struct nvhost_device_data t124_ispb_info = {
 	.hw_init          = nvhost_isp_register_isr_v1,
 	.ctrl_ops         = &tegra_isp_ctrl_ops,
 };
-
-static struct platform_device tegra_isp01b_device = {
-	.name          = "isp",
-	.id            = 1, /* .1 on the dev node */
-	.resource      = ispb_resources,
-	.num_resources = ARRAY_SIZE(ispb_resources),
-	.dev  = {
-		.platform_data = &t124_ispb_info,
-	},
-};
-
 #endif
 
 #if defined(CONFIG_VIDEO_TEGRA_VI) || defined(CONFIG_VIDEO_TEGRA_VI_MODULE)
-
-static struct resource vi_resources[] = {
-	{
-		.name = "regs",
-		.start = TEGRA_VI_BASE,
-		.end = TEGRA_VI_BASE + TEGRA_VI_SIZE - 1,
-		.flags = IORESOURCE_MEM,
-	},
-};
-
 struct nvhost_device_data t124_vi_info = {
 	.num_channels	= 2,
 	/* FIXME: resolve powergating dependency with DIS */
@@ -239,29 +147,9 @@ struct nvhost_device_data t124_vi_info = {
 	.reset            = nvhost_vi_reset_all,
 };
 EXPORT_SYMBOL(t124_vi_info);
-
-static struct platform_device tegra_vi01_device = {
-	.name		= "vi",
-	.id		= -1,
-	.resource	= vi_resources,
-	.num_resources	= ARRAY_SIZE(vi_resources),
-	.dev		= {
-		.platform_data = &t124_vi_info,
-	},
-};
-
 #endif
 
 #if defined(CONFIG_TEGRA_GRHOST_NVENC)
-static struct resource msenc_resources[] = {
-	{
-		.name = "regs",
-		.start = TEGRA_MSENC_BASE,
-		.end = TEGRA_MSENC_BASE + TEGRA_MSENC_SIZE - 1,
-		.flags = IORESOURCE_MEM,
-	},
-};
-
 struct nvhost_device_data t124_msenc_info = {
 	.num_channels	= 1,
 	.version	= NVHOST_ENCODE_FLCN_VER(3, 1),
@@ -284,28 +172,9 @@ struct nvhost_device_data t124_msenc_info = {
 	.resource_policy = RESOURCE_PER_CHANNEL_INSTANCE,
 	.serialize	= true,
 };
-
-static struct platform_device tegra_msenc03_device = {
-	.name	       = "msenc",
-	.id	       = -1,
-	.resource      = msenc_resources,
-	.num_resources = ARRAY_SIZE(msenc_resources),
-	.dev           = {
-		.platform_data = &t124_msenc_info,
-	},
-};
 #endif
 
 #if defined(CONFIG_TEGRA_GRHOST_TSEC)
-static struct resource tsec_resources[] = {
-	{
-		.name = "regs",
-		.start = TEGRA_TSEC_BASE,
-		.end = TEGRA_TSEC_BASE + TEGRA_TSEC_SIZE - 1,
-		.flags = IORESOURCE_MEM,
-	},
-};
-
 struct nvhost_device_data t124_tsec_info = {
 	.num_channels	= 1,
 	.version       = NVHOST_ENCODE_TSEC_VER(1, 0),
@@ -326,28 +195,9 @@ struct nvhost_device_data t124_tsec_info = {
 	.resource_policy  = RESOURCE_PER_CHANNEL_INSTANCE,
 	.serialize        = true,
 };
-
-static struct platform_device tegra_tsec01_device = {
-	.name		= "tsec",
-	.id		= -1,
-	.resource	= tsec_resources,
-	.num_resources	= ARRAY_SIZE(tsec_resources),
-	.dev		= {
-		.platform_data = &t124_tsec_info,
-	},
-};
 #endif
 
 #ifdef CONFIG_ARCH_TEGRA_VIC
-static struct resource vic03_resources[] = {
-	{
-	.name = "base",
-	.start = TEGRA_VIC_BASE,
-	.end = TEGRA_VIC_BASE + TEGRA_VIC_SIZE - 1,
-	.flags = IORESOURCE_MEM,
-	},
-};
-
 struct nvhost_device_data t124_vic_info = {
 	.num_channels	= 1,
 	.modulemutexes	= {NVMODMUTEX_VIC},
@@ -384,15 +234,6 @@ struct nvhost_device_data t124_vic_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.serialize		= true,
 };
-
-static struct platform_device tegra_vic03_device = {
-	.name	       = "vic03",
-	.num_resources = 1,
-	.resource      = vic03_resources,
-	.dev           = {
-		.platform_data = &t124_vic_info,
-	},
-};
 #endif
 
 /*
@@ -428,47 +269,6 @@ static struct {
 	{&t124_msenc_info, &t132_msenc_info},
 #endif
 };
-
-static struct platform_device *t124_devices[] = {
-#ifdef CONFIG_TEGRA_GRHOST_ISP
-	&tegra_isp01_device,
-	&tegra_isp01b_device,
-#endif
-#if defined(CONFIG_VIDEO_TEGRA_VI) || defined(CONFIG_VIDEO_TEGRA_VI_MODULE)
-	&tegra_vi01_device,
-#endif
-#if defined(CONFIG_TEGRA_GRHOST_NVENC)
-	&tegra_msenc03_device,
-#endif
-#if defined(CONFIG_TEGRA_GRHOST_TSEC)
-	&tegra_tsec01_device,
-#endif
-#ifdef CONFIG_ARCH_TEGRA_VIC
-	&tegra_vic03_device,
-#endif
-};
-
-
-struct platform_device *tegra12_register_host1x_devices(void)
-{
-	int i = 0;
-	struct platform_device *pdev;
-
-	nvhost_dbg_fn("");
-
-	/* register host1x device first */
-	platform_device_register(&tegra_host1x04_device);
-	tegra_host1x04_device.dev.parent = NULL;
-
-	/* register clients with host1x device as parent */
-	for (i = 0; i < ARRAY_SIZE(t124_devices); i++) {
-		pdev = t124_devices[i];
-		pdev->dev.parent = &tegra_host1x04_device.dev;
-		platform_device_register(pdev);
-	}
-
-	return &tegra_host1x04_device;
-}
 
 #include "host1x/host1x_channel.c"
 

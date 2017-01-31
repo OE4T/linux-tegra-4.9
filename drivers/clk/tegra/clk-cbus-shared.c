@@ -27,9 +27,6 @@
 
 #define KHz 1000
 
-static void add_possible_rates_file(struct clk *c);
-static void add_pass_thru_file(struct clk *c);
-
 /* there should be only 1 instance of sclk, so we can keep this global for now */
 static unsigned long sclk_pclk_unity_ratio_rate_max = 136000000;
 
@@ -517,29 +514,6 @@ static unsigned long clk_shared_recalc_rate(struct clk_hw *hw,
         return clk_hw_get_rate(clk_hw_get_parent(hw));
 }
 
-static int shared_read_op(void *data, u64 *state)
-{
-	*state = *((u32 *)data);
-
-	return 0;
-}
-
-DEFINE_SIMPLE_ATTRIBUTE(shared_flags_ops, shared_read_op, NULL, "%08llx\n");
-
-static int clk_shared_debug(struct clk_hw *hw, struct dentry *dir)
-{
-	struct dentry *d;
-	struct tegra_clk_cbus_shared *shared = to_clk_cbus_shared(hw);
-
-	d = debugfs_create_file("shared_bus_flags", S_IRUGO, dir,
-				&shared->flags, &shared_flags_ops);
-
-	if (!d)
-		return -EINVAL;
-
-	return 0;
-}
-
 static int clk_gbus_prepare(struct clk_hw *hw)
 {
 	return tegra_dvfs_set_rate(hw->clk, clk_get_rate(hw->clk));
@@ -947,10 +921,109 @@ static int _sbus_update(struct tegra_clk_cbus_shared *cbus)
 	return 0;
 }
 
+static int possible_rates_show(struct seq_file *s, void *data)
+{
+	struct clk_hw *hw = s->private;
+	struct tegra_clk_cbus_shared *bus = to_clk_cbus_shared(hw);
+	unsigned long rate = bus->min_rate;
+	unsigned long end_rate = clk_hw_round_rate(hw, bus->max_rate);
+
+	if (IS_ERR_VALUE(end_rate)) {
+		seq_printf(s, "max boundary rounding broken\n");
+		return 0;
+	}
+
+	/* shared bus clock must round up, unless top of range reached */
+	while (rate < end_rate) {
+		unsigned long rounded_rate = clk_hw_round_rate(hw, rate);
+		if (IS_ERR_VALUE(rounded_rate) ||
+		    (rounded_rate > bus->min_rate && rounded_rate <= rate)) {
+			seq_printf(s, "...rates rounding broken\n");
+			return 0;
+		}
+
+		if ((rounded_rate == bus->min_rate) && (rate > bus->min_rate)) {
+			seq_printf(s, "... %lu ", end_rate / 1000);
+			break;
+		}
+
+		rate = rounded_rate + 2000;	/* 2kHz resolution */
+		seq_printf(s, "%ld ", rounded_rate / 1000);
+	}
+	seq_printf(s, "(kHz)\n");
+	return 0;
+}
+
+static int possible_rates_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, possible_rates_show, inode->i_private);
+}
+
+static const struct file_operations possible_rates_fops = {
+	.open		= possible_rates_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int clk_shared_debug(struct clk_hw *hw, struct dentry *dir)
+{
+	struct dentry *d;
+	struct tegra_clk_cbus_shared *shared = to_clk_cbus_shared(hw);
+
+	d = debugfs_create_x32("clk_shared_bus_flags", S_IRUGO, dir,
+			&shared->flags);
+	if (!d)
+		return -EINVAL;
+
+	d = debugfs_create_file("clk_possible_rates", S_IRUGO, dir,
+			hw, &possible_rates_fops);
+	if (!d)
+		return -EINVAL;
+
+	return 0;
+}
+
+#ifdef CONFIG_TEGRA_CLK_DEBUG
+static int pass_thru_get(void *data, u64 *val)
+{
+	*val = *((u32 *)data) & TEGRA_SHARED_BUS_ROUND_PASS_THRU ? 1 : 0;
+	return 0;
+}
+
+static int pass_thru_set(void *data, u64 val)
+{
+	if (val)
+		*((u32 *)data) |= TEGRA_SHARED_BUS_ROUND_PASS_THRU;
+	else
+		*((u32 *)data) &= ~TEGRA_SHARED_BUS_ROUND_PASS_THRU;
+	return 0;
+}
+
+
+DEFINE_SIMPLE_ATTRIBUTE(pass_thru_fops, pass_thru_get, pass_thru_set, "%llu\n");
+
+static void add_pass_thru_file(struct clk *c)
+{
+	struct tegra_clk_cbus_shared *bus = to_clk_cbus_shared(__clk_get_hw(c));
+
+	struct dentry *d = __clk_debugfs_add_file(c, "clk_round_pass_thru",
+		S_IRUGO | S_IWUGO, &bus->flags, &pass_thru_fops);
+
+	if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
+		pr_err("debugfs round_pass_thru failed %s\n",
+		       __clk_get_name(c));
+}
+#else
+static void add_pass_thru_file(struct clk *c)
+{ }
+#endif
+
 static const struct clk_ops tegra_clk_system_ops = {
 	.recalc_rate = clk_system_recalc_rate,
 	.round_rate = clk_system_round_rate,
 	.set_rate = clk_system_set_rate,
+	.debug_init = clk_shared_debug,
 };
 
 static const struct clk_ops tegra_clk_cbus_ops = {
@@ -974,9 +1047,12 @@ static const struct clk_ops tegra_clk_gbus_ops = {
 	.recalc_rate = clk_cbus_recalc_rate,	/* re-used */
 	.round_rate = clk_cbus_round_rate,	/* re-used */
 	.set_rate = clk_gbus_set_rate,
+	.debug_init = clk_shared_debug,
 };
 
-static const struct clk_ops tegra_clk_shared_master_ops;
+static const struct clk_ops tegra_clk_shared_master_ops = {
+	.debug_init = clk_shared_debug,
+};
 
 static const struct clk_ops tegra_clk_cascade_master_ops = {
 	.prepare = clk_shared_prepare,
@@ -1075,7 +1151,6 @@ struct clk *tegra_clk_register_sbus_cmplx(const char *name,
 	}
 
 	register_bus_clk_notifier(c);
-	add_possible_rates_file(c);
 	return c;
 }
 
@@ -1122,7 +1197,6 @@ struct clk *tegra_clk_register_cbus(const char *name,
 	}
 
 	register_bus_clk_notifier(c);
-	add_possible_rates_file(c);
 	return c;
 }
 
@@ -1293,7 +1367,6 @@ struct clk *tegra_clk_register_gbus(const char *name,
 	}
 
 	register_bus_clk_notifier(c);
-	add_possible_rates_file(c);
 	add_pass_thru_file(c);
 	return c;
 }
@@ -1338,7 +1411,6 @@ struct clk *tegra_clk_register_shared_master(const char *name,
 	}
 
 	register_bus_clk_notifier(c);
-	add_possible_rates_file(c);
 	return c;
 }
 
@@ -1403,95 +1475,3 @@ struct clk *tegra_clk_register_cascade_master(const char *name,
 	register_bus_clk_notifier(c);
 	return c;
 }
-
-#ifdef CONFIG_TEGRA_CLK_DEBUG
-static int possible_rates_show(struct seq_file *s, void *data)
-{
-	struct clk *c = s->private;
-	struct tegra_clk_cbus_shared *bus = to_clk_cbus_shared(__clk_get_hw(c));
-	unsigned long rate = bus->min_rate;
-	unsigned long end_rate = clk_round_rate(c, bus->max_rate);
-
-	if (IS_ERR_VALUE(end_rate)) {
-		seq_printf(s, "max boundary rounding broken\n");
-		return 0;
-	}
-
-	/* shared bus clock must round up, unless top of range reached */
-	while (rate < end_rate) {
-		unsigned long rounded_rate = clk_round_rate(c, rate);
-		if (IS_ERR_VALUE(rounded_rate) ||
-		    (rounded_rate > bus->min_rate && rounded_rate <= rate)) {
-			seq_printf(s, "...rates rounding broken\n");
-			return 0;
-		}
-
-		if ((rounded_rate == bus->min_rate) && (rate > bus->min_rate)) {
-			seq_printf(s, "... %lu ", end_rate / 1000);
-			break;
-		}
-
-		rate = rounded_rate + 2000;	/* 2kHz resolution */
-		seq_printf(s, "%ld ", rounded_rate / 1000);
-	}
-	seq_printf(s, "(kHz)\n");
-	return 0;
-}
-
-static int possible_rates_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, possible_rates_show, inode->i_private);
-}
-
-static const struct file_operations possible_rates_fops = {
-	.open		= possible_rates_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-};
-
-static void add_possible_rates_file(struct clk *c)
-{
-	struct dentry *d = __clk_debugfs_add_file(
-		c, "clk_possible_rates", S_IRUGO, c, &possible_rates_fops);
-
-	if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
-		pr_err("debugfs clk_possible_rates failed %s\n",
-		       __clk_get_name(c));
-}
-
-static int pass_thru_get(void *data, u64 *val)
-{
-	*val = *((u32 *)data) & TEGRA_SHARED_BUS_ROUND_PASS_THRU ? 1 : 0;
-	return 0;
-}
-
-static int pass_thru_set(void *data, u64 val)
-{
-	if (val)
-		*((u32 *)data) |= TEGRA_SHARED_BUS_ROUND_PASS_THRU;
-	else
-		*((u32 *)data) &= ~TEGRA_SHARED_BUS_ROUND_PASS_THRU;
-	return 0;
-}
-
-
-DEFINE_SIMPLE_ATTRIBUTE(pass_thru_fops, pass_thru_get, pass_thru_set, "%llu\n");
-
-static void add_pass_thru_file(struct clk *c)
-{
-	struct tegra_clk_cbus_shared *bus = to_clk_cbus_shared(__clk_get_hw(c));
-
-	struct dentry *d = __clk_debugfs_add_file(c, "clk_round_pass_thru",
-		S_IRUGO | S_IWUGO, &bus->flags, &pass_thru_fops);
-
-	if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
-		pr_err("debugfs round_pass_thru failed %s\n",
-		       __clk_get_name(c));
-}
-#else
-static void add_possible_rates_file(struct clk *c)
-{ }
-static void add_pass_thru_file(struct clk *c)
-{ }
-#endif

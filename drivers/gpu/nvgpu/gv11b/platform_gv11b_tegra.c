@@ -27,22 +27,12 @@
 
 #include "gk20a/platform_gk20a.h"
 #include "gk20a/gk20a.h"
-#include "platform_tegra.h"
 
+#include "gp10b/platform_gp10b.h"
+
+#include "platform_tegra.h"
 #include "gr_gv11b.h"
 
-/*
- * gv11b_tegra_get_clocks()
- *
- * This function finds clocks in tegra platform and populates
- * the clock information to gv11b platform data.
- */
-
-static int gv11b_tegra_get_clocks(struct device *dev)
-{
-	/* TODO */
-	return 0;
-}
 
 static int gv11b_tegra_probe(struct device *dev)
 {
@@ -62,7 +52,7 @@ static int gv11b_tegra_probe(struct device *dev)
 	/* soc memory accessed as system memory aperture */
 	platform->g->mm.vidmem_is_vidmem = platform->vidmem_is_vidmem;
 
-	gv11b_tegra_get_clocks(dev);
+	gp10b_tegra_get_clocks(dev);
 
 	return 0;
 }

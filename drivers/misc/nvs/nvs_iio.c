@@ -541,7 +541,7 @@ static unsigned int nvs_buf_index(unsigned int size, unsigned int *bytes)
 	return index;
 }
 
-static ssize_t nvs_dbg_data(struct iio_dev *indio_dev, char *buf)
+static ssize_t nvs_dbg_data(struct iio_dev *indio_dev, char *buf, size_t size)
 {
 	struct nvs_state *st = iio_priv(indio_dev);
 	struct iio_chan_spec const *ch;
@@ -553,7 +553,7 @@ static ssize_t nvs_dbg_data(struct iio_dev *indio_dev, char *buf)
 	unsigned int i;
 	u64 data;
 
-	t = snprintf(buf, PAGE_SIZE, "%s: ", st->cfg->name);
+	t = snprintf(buf, size, "%s: ", st->cfg->name);
 	n = 0;
 	for (i = 0; i < indio_dev->num_channels - 1; i++) {
 		ch = &indio_dev->channels[i];
@@ -561,7 +561,7 @@ static ssize_t nvs_dbg_data(struct iio_dev *indio_dev, char *buf)
 			ch_n = ch->scan_type.storagebits / 8;
 			buf_i = nvs_buf_index(ch_n, &n);
 		} else {
-			t += snprintf(buf + t, PAGE_SIZE - t, "disabled ");
+			t += snprintf(buf + t, size - t, "disabled ");
 			continue;
 		}
 
@@ -570,15 +570,15 @@ static ssize_t nvs_dbg_data(struct iio_dev *indio_dev, char *buf)
 			memcpy(&data, &st->buf[buf_i], ch_n);
 			if (ch->scan_type.sign == 's') {
 				shift = 64 - ch->scan_type.realbits;
-				t += snprintf(buf + t, PAGE_SIZE - t, "%lld ",
+				t += snprintf(buf + t, size - t, "%lld ",
 					      (s64)(data << shift) >> shift);
 			} else {
-				t += snprintf(buf + t, PAGE_SIZE - t, "%llu ",
+				t += snprintf(buf + t, size - t, "%llu ",
 					      data);
 			}
 		}
 	}
-	t += snprintf(buf + t, PAGE_SIZE - t, "ts=%lld  ts_diff=%lld\n",
+	t += snprintf(buf + t, size - t, "ts=%lld  ts_diff=%lld\n",
 		      st->ts, st->ts_diff);
 	return t;
 }
@@ -699,7 +699,7 @@ static int nvs_buf_push(struct iio_dev *indio_dev, unsigned char *data, s64 ts)
 		}
 	}
 	if ((*st->fn_dev->sts & NVS_STS_SPEW_DATA) && ts) {
-		nvs_dbg_data(indio_dev, char_buf);
+		nvs_dbg_data(indio_dev, char_buf, sizeof(char_buf));
 		dev_info(st->dev, "%s", char_buf);
 	}
 	if (!ret)
@@ -1018,7 +1018,7 @@ static ssize_t nvs_info_show(struct device *dev,
 	st->dbg = NVS_INFO_DATA;
 	switch (dbg) {
 	case NVS_INFO_DATA:
-		return nvs_dbg_data(indio_dev, buf);
+		return nvs_dbg_data(indio_dev, buf, PAGE_SIZE);
 
 	case NVS_INFO_VER:
 		return snprintf(buf, PAGE_SIZE, "version=%u\n",

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify it
 * under the terms and conditions of the GNU General Public License,
@@ -13,7 +13,7 @@
 #ifndef _GPMUIFSEQ_H_
 #define _GPMUIFSEQ_H_
 
-#include "gk20a/pmu_common.h"
+#include <nvgpu/flcnif_cmn.h>
 
 #define PMU_UNIT_SEQ            (0x02)
 

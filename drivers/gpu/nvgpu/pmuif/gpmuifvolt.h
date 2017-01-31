@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify it
 * under the terms and conditions of the GNU General Public License,
@@ -14,7 +14,7 @@
 #define _GPMUIFVOLT_H_
 
 #include "pmuif/gpmuifboardobj.h"
-#include "gk20a/pmu_common.h"
+#include <nvgpu/flcnif_cmn.h>
 #include "ctrl/ctrlvolt.h"
 
 #define NV_PMU_VOLT_VALUE_0V_IN_UV	(0)

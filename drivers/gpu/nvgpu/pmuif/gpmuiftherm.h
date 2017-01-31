@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify it
 * under the terms and conditions of the GNU General Public License,
@@ -14,7 +14,7 @@
 #ifndef _GPMUIFTHERM_H_
 #define _GPMUIFTHERM_H_
 
-#include "gk20a/pmu_common.h"
+#include <nvgpu/flcnif_cmn.h>
 
 #define NV_PMU_THERM_CMD_ID_RPC                                      0x00000002
 #define NV_PMU_THERM_MSG_ID_RPC                                      0x00000002

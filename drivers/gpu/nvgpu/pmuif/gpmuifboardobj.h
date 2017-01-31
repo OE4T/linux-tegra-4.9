@@ -13,7 +13,7 @@
 #ifndef _GPMUIFBOARDOBJ_H_
 #define _GPMUIFBOARDOBJ_H_
 
-#include "gk20a/pmu_common.h"
+#include <nvgpu/flcnif_cmn.h>
 #include "ctrl/ctrlboardobj.h"
 
 /*

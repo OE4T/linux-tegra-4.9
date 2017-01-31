@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify it
 * under the terms and conditions of the GNU General Public License,
@@ -16,7 +16,7 @@
 
 #include "ctrl/ctrltherm.h"
 #include "pmuif/gpmuifboardobj.h"
-#include "gk20a/pmu_common.h"
+#include <nvgpu/flcnif_cmn.h>
 
 #define NV_PMU_THERM_BOARDOBJGRP_CLASS_ID_THERM_DEVICE      0x00
 #define NV_PMU_THERM_BOARDOBJGRP_CLASS_ID_THERM_CHANNEL     0x01

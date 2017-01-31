@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -11,8 +11,8 @@
  * more details.
  */
 
-#ifndef __PMU_COMMON_H__
-#define __PMU_COMMON_H__
+#ifndef __FLCNIFCMN_H__
+#define __FLCNIFCMN_H__
 
 #define PMU_CMD_SUBMIT_PAYLOAD_PARAMS_FB_SIZE_UNUSED 0
 
@@ -52,18 +52,8 @@ struct pmu_mem_v2 {
 };
 
 struct pmu_mem_desc_v0 {
-    /*!
-     * Start address of memory surface that is being communicated to the falcon.
-     */
 	struct falc_u64 dma_addr;
-    /*!
-     * Max allowed DMA transfer size (size of the memory surface). Accesses past
-     * this point may result in page faults and/or memory corruptions.
-     */
 	u16       dma_sizemax;
-    /*!
-     * DMA channel index to be used when accessing this surface.
-     */
 	u8        dma_idx;
 };
 
@@ -72,15 +62,8 @@ struct pmu_dmem {
 	u32 offset;
 };
 
-struct flcn_u64 {
-	u32 lo;
-	u32 hi;
-};
-
-#define nv_flcn_u64 flcn_u64
-
 struct flcn_mem_desc_v0 {
-	struct flcn_u64 address;
+	struct falc_u64 address;
 	u32 params;
 };
 
@@ -125,11 +108,24 @@ struct pmu_hdr {
 	u8 seq_id;
 };
 
+#define PMU_MSG_HDR_SIZE	sizeof(struct pmu_hdr)
+#define PMU_CMD_HDR_SIZE	sizeof(struct pmu_hdr)
+
 #define nv_pmu_hdr pmu_hdr
 typedef u8 flcn_status;
+
+#define PMU_DMEM_ALLOC_ALIGNMENT	(4)
+#define PMU_DMEM_ALIGNMENT		(4)
+
+#define PMU_CMD_FLAGS_PMU_MASK		(0xF0)
+
+#define PMU_CMD_FLAGS_STATUS		BIT(0)
+#define PMU_CMD_FLAGS_INTR		BIT(1)
+#define PMU_CMD_FLAGS_EVENT		BIT(2)
+#define PMU_CMD_FLAGS_WATERMARK		BIT(3)
 
 #define ALIGN_UP(v, gran)       (((v) + ((gran) - 1)) & ~((gran)-1))
 
 #define NV_UNSIGNED_ROUNDED_DIV(a, b)    (((a) + ((b) / 2)) / (b))
 
-#endif
+#endif /* _FLCNIFCMN_H_*/

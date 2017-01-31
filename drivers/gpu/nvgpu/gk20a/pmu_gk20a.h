@@ -23,7 +23,7 @@
 
 #include <linux/version.h>
 #include "pmu_api.h"
-#include "pmu_common.h"
+#include <nvgpu/flcnif_cmn.h>
 #include "pmuif/nvgpu_gpmu_cmdif.h"
 
 /* defined by pmu hw spec */
@@ -123,21 +123,6 @@ struct pmu_ucode_desc_v1 {
 	struct {u32 start; u32 size; } load_ovl[64];
 	u32 compressed;
 };
-
-#define PMU_DMEM_ALLOC_ALIGNMENT	(4)
-#define PMU_DMEM_ALIGNMENT		(4)
-
-#define PMU_CMD_FLAGS_PMU_MASK		(0xF0)
-
-#define PMU_CMD_FLAGS_STATUS		BIT(0)
-#define PMU_CMD_FLAGS_INTR		BIT(1)
-#define PMU_CMD_FLAGS_EVENT		BIT(2)
-#define PMU_CMD_FLAGS_WATERMARK		BIT(3)
-
-#define PMU_MSG_HDR_SIZE	sizeof(struct pmu_hdr)
-#define PMU_CMD_HDR_SIZE	sizeof(struct pmu_hdr)
-
-
 
 /***************************** ACR ERROR CODES  ******************************/
 /*!

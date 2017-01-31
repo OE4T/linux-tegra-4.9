@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify it
 * under the terms and conditions of the GNU General Public License,
@@ -20,7 +20,7 @@
 #include "ctrl/ctrlclk.h"
 #include "pmuif/gpmuifboardobj.h"
 #include "pmuif/gpmuifvolt.h"
-#include "gk20a/pmu_common.h"
+#include <nvgpu/flcnif_cmn.h>
 
 enum nv_pmu_clk_clkwhich {
 	clkwhich_mclk		= 5,

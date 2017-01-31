@@ -14,7 +14,7 @@
 #define _NVGPUGPMUCMDIF_H_
 
 #include "gk20a/pmu_api.h"
-#include "gk20a/pmu_common.h"
+#include <nvgpu/flcnif_cmn.h>
 #include "gpmuif_cmn.h"
 #include "gpmuif_pmu.h"
 #include "gpmuifboardobj.h"

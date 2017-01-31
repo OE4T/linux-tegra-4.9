@@ -13,7 +13,7 @@
 #ifndef _GPMUIFPMU_H_
 #define _GPMUIFPMU_H_
 
-#include "gk20a/pmu_common.h"
+#include <nvgpu/flcnif_cmn.h>
 #include "gpmuif_cmn.h"
 
 /* Make sure size of this structure is a multiple of 4 bytes */

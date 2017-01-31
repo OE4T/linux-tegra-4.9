@@ -12,7 +12,7 @@
 			is_off;
 			#power-domain-cells = <0>;
 			power-domains = <&mc_clk_pd>;
-			partition-id = <TEGRA_POWERGATE_APE>;
+			partition-id = <TEGRA210_POWER_DOMAIN_APE>;
 			clocks = <&tegra_car TEGRA210_CLK_APE>,
 					<&tegra_car TEGRA210_CLK_APB2APE>,
 					<&tegra_car TEGRA210_CLK_ACLK >;
@@ -45,7 +45,7 @@
 			is_off;
 			#power-domain-cells = <0>;
 			power-domains = <&host1x_pd>;
-			partition-id = <TEGRA_POWERGATE_NVDEC>;
+			partition-id = <TEGRA210_POWER_DOMAIN_NVDEC>;
 		};
 
 		ve_pd: ve-pd {
@@ -53,7 +53,7 @@
 			is_off;
 			#power-domain-cells = <0>;
 			power-domains = <&host1x_pd>;
-			partition-id = <TEGRA_POWERGATE_VENC>;
+			partition-id = <TEGRA210_POWER_DOMAIN_VENC>;
 		};
 
 		ve2_pd: ve2-pd {
@@ -61,7 +61,7 @@
 			is_off;
 			#power-domain-cells = <0>;
 			power-domains = <&host1x_pd>;
-			partition-id = <TEGRA_POWERGATE_VE2>;
+			partition-id = <TEGRA210_POWER_DOMAIN_VE2>;
 		};
 
 		vic03_pd: vic03-pd {
@@ -69,7 +69,7 @@
 			is_off;
 			#power-domain-cells = <0>;
 			power-domains = <&host1x_pd>;
-			partition-id = <TEGRA_POWERGATE_VIC>;
+			partition-id = <TEGRA210_POWER_DOMAIN_VIC>;
 		};
 
 		msenc_pd: msenc-pd {
@@ -77,7 +77,7 @@
 			is_off;
 			#power-domain-cells = <0>;
 			power-domains = <&host1x_pd>;
-			partition-id = <TEGRA_POWERGATE_MPE>;
+			partition-id = <TEGRA210_POWER_DOMAIN_MPE>;
 		};
 
 		nvjpg_pd: nvjpg-pd {
@@ -85,7 +85,7 @@
 			is_off;
 			#power-domain-cells = <0>;
 			power-domains = <&host1x_pd>;
-			partition-id = <TEGRA_POWERGATE_NVJPG>;
+			partition-id = <TEGRA210_POWER_DOMAIN_NVJPG>;
 		};
 
 		pcie_pd: pcie-pd {
@@ -93,43 +93,43 @@
 			is_off;
 			#power-domain-cells = <0>;
 			power-domains = <&mc_clk_pd>;
-			partition-id = <TEGRA_POWERGATE_PCIE>;
+			partition-id = <TEGRA210_POWER_DOMAIN_PCIE>;
 		};
 
 		sata_pd: sata-pd {
 			compatible = "nvidia,tegra210-sata-pd";
 			#power-domain-cells = <0>;
-			partition-id = <TEGRA_POWERGATE_SATA>;
+			partition-id = <TEGRA210_POWER_DOMAIN_SATA>;
 		};
 
 		disa_pd: disa-pd {
 			compatible = "nvidia,tegra210-disa-pd";
 			#power-domain-cells = <0>;
-			partition-id = <TEGRA_POWERGATE_DISA>;
+			partition-id = <TEGRA210_POWER_DOMAIN_DISA>;
 		};
 
 		disb_pd: disb-pd {
 			compatible = "nvidia,tegra210-disb-pd";
 			#power-domain-cells = <0>;
-			partition-id = <TEGRA_POWERGATE_DISB>;
+			partition-id = <TEGRA210_POWER_DOMAIN_DISB>;
 		};
 
 		xusba_pd: xusba-pd {
 			compatible = "nvidia,tegra210-xusba-pd";
 			#power-domain-cells = <0>;
-			partition-id = <TEGRA_POWERGATE_XUSBA>;
+			partition-id = <TEGRA210_POWER_DOMAIN_XUSBA>;
 		};
 
 		xusbb_pd: xusbb-pd {
 			compatible = "nvidia,tegra210-xusbb-pd";
 			#power-domain-cells = <0>;
-			partition-id = <TEGRA_POWERGATE_XUSBB>;
+			partition-id = <TEGRA210_POWER_DOMAIN_XUSBB>;
 		};
 
 		xusbc_pd: xusbc-pd {
 			compatible = "nvidia,tegra210-xusbc-pd";
 			#power-domain-cells = <0>;
-			partition-id = <TEGRA_POWERGATE_XUSBC>;
+			partition-id = <TEGRA210_POWER_DOMAIN_XUSBC>;
 		};
 	};
 };

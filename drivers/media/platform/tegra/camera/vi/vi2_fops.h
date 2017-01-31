@@ -20,6 +20,7 @@ void vi2_power_off(struct tegra_channel *chan);
 int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count);
 int vi2_channel_stop_streaming(struct vb2_queue *vq);
 int vi2_add_ctrls(struct tegra_channel *chan);
+void vi2_init_video_formats(struct tegra_channel *chan);
 
 struct tegra_vi_fops vi2_fops = {
 	.vi_power_on = vi2_power_on,
@@ -27,6 +28,7 @@ struct tegra_vi_fops vi2_fops = {
 	.vi_start_streaming = vi2_channel_start_streaming,
 	.vi_stop_streaming = vi2_channel_stop_streaming,
 	.vi_add_ctrls = vi2_add_ctrls,
+	.vi_init_video_formats = vi2_init_video_formats,
 };
 
 #endif

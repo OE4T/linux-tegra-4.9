@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra Video Input Device Driver Core Helpers
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -30,128 +30,8 @@
 #define TEGRA_DEF_HEIGHT	1080
 
 #define TEGRA_VF_DEF		MEDIA_BUS_FMT_SRGGB10_1X10
+#define TEGRA_IMAGE_FORMAT_DEF	32
 
-/*
- * These go into the TEGRA_VI_CSI_n_IMAGE_DEF registers bits 23:16
- * Output pixel memory format for the VI channel.
- */
-// TODO - The pixfmt mapping is changed in T186. We need to figure out how to handle the compatible problem with T210
-#ifdef T210
-enum tegra_image_format {
-	TEGRA_IMAGE_FORMAT_T_L8 = 16,
-
-	TEGRA_IMAGE_FORMAT_T_R16_I = 32,
-	TEGRA_IMAGE_FORMAT_T_B5G6R5,
-	TEGRA_IMAGE_FORMAT_T_R5G6B5,
-	TEGRA_IMAGE_FORMAT_T_A1B5G5R5,
-	TEGRA_IMAGE_FORMAT_T_A1R5G5B5,
-	TEGRA_IMAGE_FORMAT_T_B5G5R5A1,
-	TEGRA_IMAGE_FORMAT_T_R5G5B5A1,
-	TEGRA_IMAGE_FORMAT_T_A4B4G4R4,
-	TEGRA_IMAGE_FORMAT_T_A4R4G4B4,
-	TEGRA_IMAGE_FORMAT_T_B4G4R4A4,
-	TEGRA_IMAGE_FORMAT_T_R4G4B4A4,
-
-	TEGRA_IMAGE_FORMAT_T_A8B8G8R8 = 64,
-	TEGRA_IMAGE_FORMAT_T_A8R8G8B8,
-	TEGRA_IMAGE_FORMAT_T_B8G8R8A8,
-	TEGRA_IMAGE_FORMAT_T_R8G8B8A8,
-	TEGRA_IMAGE_FORMAT_T_A2B10G10R10,
-	TEGRA_IMAGE_FORMAT_T_A2R10G10B10,
-	TEGRA_IMAGE_FORMAT_T_B10G10R10A2,
-	TEGRA_IMAGE_FORMAT_T_R10G10B10A2,
-
-	TEGRA_IMAGE_FORMAT_T_A8Y8U8V8 = 193,
-	TEGRA_IMAGE_FORMAT_T_V8U8Y8A8,
-
-	TEGRA_IMAGE_FORMAT_T_A2Y10U10V10 = 197,
-	TEGRA_IMAGE_FORMAT_T_V10U10Y10A2,
-
-	TEGRA_IMAGE_FORMAT_T_Y8_U8__Y8_V8 = 200,
-	TEGRA_IMAGE_FORMAT_T_Y8_V8__Y8_U8,
-	TEGRA_IMAGE_FORMAT_T_U8_Y8__V8_Y8,
-	TEGRA_IMAGE_FORMAT_T_T_V8_Y8__U8_Y8,
-
-	TEGRA_IMAGE_FORMAT_T_T_Y8__U8__V8_N444 = 224,
-	TEGRA_IMAGE_FORMAT_T_Y8__U8V8_N444,
-	TEGRA_IMAGE_FORMAT_T_Y8__V8U8_N444,
-	TEGRA_IMAGE_FORMAT_T_Y8__U8__V8_N422,
-	TEGRA_IMAGE_FORMAT_T_Y8__U8V8_N422,
-	TEGRA_IMAGE_FORMAT_T_Y8__V8U8_N422,
-	TEGRA_IMAGE_FORMAT_T_Y8__U8__V8_N420,
-	TEGRA_IMAGE_FORMAT_T_Y8__U8V8_N420,
-	TEGRA_IMAGE_FORMAT_T_Y8__V8U8_N420,
-	TEGRA_IMAGE_FORMAT_T_X2Lc10Lb10La10,
-	TEGRA_IMAGE_FORMAT_T_A2R6R6R6R6R6,
-};
-#else // T186
-enum tegra_image_format {
-	TEGRA_IMAGE_FORMAT_T_L8 = 16,
-
-	TEGRA_IMAGE_FORMAT_T_R16_I = 32,
-	TEGRA_IMAGE_FORMAT_T_B5G6R5,
-	TEGRA_IMAGE_FORMAT_T_R5G6B5,
-	TEGRA_IMAGE_FORMAT_T_A1B5G5R5,
-	TEGRA_IMAGE_FORMAT_T_A1R5G5B5,
-	TEGRA_IMAGE_FORMAT_T_B5G5R5A1,
-	TEGRA_IMAGE_FORMAT_T_R5G5B5A1,
-	TEGRA_IMAGE_FORMAT_T_A4B4G4R4,
-	TEGRA_IMAGE_FORMAT_T_A4R4G4B4,
-	TEGRA_IMAGE_FORMAT_T_B4G4R4A4,
-	TEGRA_IMAGE_FORMAT_T_R4G4B4A4,
-
-	TEGRA_IMAGE_FORMAT_T_A8B8G8R8 = 64,
-	TEGRA_IMAGE_FORMAT_T_A8R8G8B8,
-	TEGRA_IMAGE_FORMAT_T_B8G8R8A8,
-	TEGRA_IMAGE_FORMAT_T_R8G8B8A8,
-	TEGRA_IMAGE_FORMAT_T_A2B10G10R10,
-	TEGRA_IMAGE_FORMAT_T_A2R10G10B10,
-	TEGRA_IMAGE_FORMAT_T_B10G10R10A2,
-	TEGRA_IMAGE_FORMAT_T_R10G10B10A2,
-
-	TEGRA_IMAGE_FORMAT_T_A8Y8U8V8 = 193,
-	TEGRA_IMAGE_FORMAT_T_V8U8Y8A8,
-
-	TEGRA_IMAGE_FORMAT_T_A2Y10U10V10 = 197,
-	TEGRA_IMAGE_FORMAT_T_V10U10Y10A2,
-
-	TEGRA_IMAGE_FORMAT_T_Y8_U8__Y8_V8 = 200,
-	TEGRA_IMAGE_FORMAT_T_Y8_V8__Y8_U8,
-
-	TEGRA_IMAGE_FORMAT_T_U8_Y8__V8_Y8 = 203,
-
-	TEGRA_IMAGE_FORMAT_T_T_V8_Y8__U8_Y8 = 223,
-	TEGRA_IMAGE_FORMAT_T_T_Y8__U8__V8_N444,
-	TEGRA_IMAGE_FORMAT_T_Y8__U8V8_N444,
-	TEGRA_IMAGE_FORMAT_T_Y8__V8U8_N444,
-	TEGRA_IMAGE_FORMAT_T_Y8__U8__V8_N422,
-	TEGRA_IMAGE_FORMAT_T_Y8__U8V8_N422,
-	TEGRA_IMAGE_FORMAT_T_Y8__V8U8_N422,
-	TEGRA_IMAGE_FORMAT_T_Y8__U8__V8_N420,
-	TEGRA_IMAGE_FORMAT_T_Y8__U8V8_N420,
-	TEGRA_IMAGE_FORMAT_T_Y8__V8U8_N420,
-
-	TEGRA_IMAGE_FORMAT_T_Y10__U10__V10_N422 = 240,
-	TEGRA_IMAGE_FORMAT_T_Y10__U10V10_N422,
-	TEGRA_IMAGE_FORMAT_T_Y10__V10U10_N422,
-	TEGRA_IMAGE_FORMAT_T_Y10__U10__V10_N420,
-	TEGRA_IMAGE_FORMAT_T_Y10__U10V10_N420,
-	TEGRA_IMAGE_FORMAT_T_Y10__V10U10_N420,
-
-	TEGRA_IMAGE_FORMAT_T_R16 = 248,
-	TEGRA_IMAGE_FORMAT_T_R32,
-	TEGRA_IMAGE_FORMAT_T_L16_F,
-	TEGRA_IMAGE_FORMAT_T_L32_F,
-
-	TEGRA_IMAGE_FORMAT_T_DPCM_RAW10 = 254,
-	TEGRA_IMAGE_FORMAT_T_DPCM_RAW12,
-};
-#endif
-
-/*
- * These go into the TEGRA_VI_CSI_n_CSI_IMAGE_DT registers bits 7:0
- * Input data type of VI channel.
- */
 enum tegra_image_dt {
 	TEGRA_IMAGE_DT_YUV420_8 = 24,
 	TEGRA_IMAGE_DT_YUV420_10,
@@ -194,11 +74,21 @@ enum tegra_vf_code {
 };
 
 /**
+ * struct tegra_frac
+ * @numerator: numerator of the fraction
+ * @denominator: denominator of the fraction
+ */
+struct tegra_frac {
+	unsigned int numerator;
+	unsigned int denominator;
+};
+
+/**
  * struct tegra_video_format - Tegra video format description
  * @vf_code: video format code
  * @width: format width in bits per component
  * @code: media bus format code
- * @bpp: bytes per pixel (when stored in memory)
+ * @bpp: bytes per pixel fraction (when stored in memory)
  * @img_fmt: image format
  * @img_dt: image data type
  * @fourcc: V4L2 pixel format FCC identifier
@@ -208,21 +98,30 @@ struct tegra_video_format {
 	enum tegra_vf_code vf_code;
 	unsigned int width;
 	unsigned int code;
-	unsigned int bpp;
-	enum tegra_image_format img_fmt;
+	struct tegra_frac bpp;
+	u32 img_fmt;
 	enum tegra_image_dt img_dt;
 	u32 fourcc;
 	__u8 description[32];
 };
 
-u32 tegra_core_get_fourcc_by_idx(unsigned int index);
+#define	TEGRA_VIDEO_FORMAT(VF_CODE, BPP, MBUS_CODE, FRAC_BPP_NUM,	\
+	FRAC_BPP_DEN, FORMAT, DATA_TYPE, FOURCC, DESCRIPTION)		\
+{									\
+	TEGRA_VF_##VF_CODE,						\
+	BPP,								\
+	MEDIA_BUS_FMT_##MBUS_CODE,					\
+	{FRAC_BPP_NUM, FRAC_BPP_DEN},					\
+	TEGRA_IMAGE_FORMAT_##FORMAT,					\
+	TEGRA_IMAGE_DT_##DATA_TYPE,					\
+	V4L2_PIX_FMT_##FOURCC,						\
+	DESCRIPTION,							\
+}
+
 u32 tegra_core_get_word_count(unsigned int frame_width,
-			      const struct tegra_video_format *fmt);
-int tegra_core_get_idx_by_code(unsigned int code, unsigned offset);
-const struct tegra_video_format *tegra_core_get_format_by_code(unsigned int
-					code, unsigned offset);
-const struct tegra_video_format *tegra_core_get_format_by_fourcc(u32 fourcc);
+		const struct tegra_video_format *fmt);
 u32 tegra_core_bytes_per_line(unsigned int width, unsigned int align,
-			      const struct tegra_video_format *fmt);
-void tegra_core_get_description_by_idx(unsigned int index, __u8 *description);
+		const struct tegra_video_format *fmt);
+const struct tegra_video_format *tegra_core_get_default_format(void);
+
 #endif

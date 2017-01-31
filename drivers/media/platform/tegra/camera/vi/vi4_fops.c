@@ -19,6 +19,7 @@
 #include "vi/vi4.h"
 #include "mc_common.h"
 #include "vi4_registers.h"
+#include "vi4_formats.h"
 #include "vi/vi_notify.h"
 
 #define DEFAULT_FRAMERATE	30
@@ -72,6 +73,15 @@ static void vi4_channel_write(struct tegra_channel *chan,
 {
 	writel(val,
 		chan->vi->iomem + VI4_CHANNEL_OFFSET * (index + 1) + addr);
+}
+
+void vi4_init_video_formats(struct tegra_channel *chan)
+{
+	int i;
+
+	chan->num_video_formats = ARRAY_SIZE(vi4_video_formats);
+	for (i = 0; i < chan->num_video_formats; i++)
+		chan->video_formats[i] = &vi4_video_formats[i];
 }
 
 static const struct v4l2_ctrl_ops vi4_ctrl_ops = {

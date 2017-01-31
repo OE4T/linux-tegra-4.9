@@ -1,7 +1,7 @@
 /*
  * Tegra Video Input device common APIs
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -30,17 +30,19 @@
 #include "camera/vi/registers.h"
 
 /* In TPG mode, VI only support 2 formats */
-static void vi_tpg_fmts_bitmap_init(struct tegra_mc_vi *vi)
+static void vi_tpg_fmts_bitmap_init(struct tegra_channel *chan)
 {
 	int index;
 
-	bitmap_zero(vi->tpg_fmts_bitmap, MAX_FORMAT_NUM);
+	bitmap_zero(chan->fmts_bitmap, MAX_FORMAT_NUM);
 
-	index = tegra_core_get_idx_by_code(MEDIA_BUS_FMT_SRGGB10_1X10, 0);
-	bitmap_set(vi->tpg_fmts_bitmap, index, 1);
+	index = tegra_core_get_idx_by_code(chan,
+			MEDIA_BUS_FMT_SRGGB10_1X10, 0);
+	bitmap_set(chan->fmts_bitmap, index, 1);
 
-	index = tegra_core_get_idx_by_code(MEDIA_BUS_FMT_RGB888_1X32_PADHI, 0);
-	bitmap_set(vi->tpg_fmts_bitmap, index, 1);
+	index = tegra_core_get_idx_by_code(chan,
+			MEDIA_BUS_FMT_RGB888_1X32_PADHI, 0);
+	bitmap_set(chan->fmts_bitmap, index, 1);
 }
 
 /* -----------------------------------------------------------------------------
@@ -182,8 +184,6 @@ int tpg_vi_media_controller_init(struct tegra_mc_vi *mc_vi, int pg_mode)
 	struct tegra_channel *item;
 
 	/* Allocate TPG channel */
-	vi_tpg_fmts_bitmap_init(mc_vi);
-
 	v4l2_ctrl_handler_init(&mc_vi->ctrl_handler, 1);
 	mc_vi->pattern = v4l2_ctrl_new_std_menu_items(&mc_vi->ctrl_handler,
 			&vi_ctrl_ops, V4L2_CID_TEST_PATTERN,
@@ -209,6 +209,7 @@ int tpg_vi_media_controller_init(struct tegra_mc_vi *mc_vi, int pg_mode)
 		err = tegra_channel_init(item);
 		if (err)
 			goto channel_init_error;
+		vi_tpg_fmts_bitmap_init(item);
 	}
 
 	err = tegra_vi_tpg_graph_init(mc_vi);

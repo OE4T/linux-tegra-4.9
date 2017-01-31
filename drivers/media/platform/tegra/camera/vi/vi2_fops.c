@@ -18,6 +18,7 @@
 #include "nvhost_acm.h"
 #include "camera/vi/mc_common.h"
 #include "camera/csi/csi2_fops.h"
+#include "vi2_formats.h"
 #include "vi/vi.h"
 
 #define DEFAULT_FRAMERATE	30
@@ -83,6 +84,15 @@ static void vi_channel_syncpt_free(struct tegra_channel *chan)
 
 	for (i = 0; i < chan->total_ports; i++)
 		nvhost_syncpt_put_ref_ext(chan->vi->ndev, chan->syncpt[i][0]);
+}
+
+void vi2_init_video_formats(struct tegra_channel *chan)
+{
+	int i;
+
+	chan->num_video_formats = ARRAY_SIZE(vi2_video_formats);
+	for (i = 0; i < chan->num_video_formats; i++)
+		chan->video_formats[i] = &vi2_video_formats[i];
 }
 
 static const struct v4l2_ctrl_ops vi2_ctrl_ops = {

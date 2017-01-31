@@ -92,8 +92,9 @@ static void update_gang_mode_params(struct tegra_channel *chan)
 						chan->format.width);
 	chan->gang_height = gang_mode_height(chan->gang_mode,
 						chan->format.height);
-	chan->gang_bytesperline = chan->gang_width *
-					chan->fmtinfo->bpp;
+	chan->gang_bytesperline = ((chan->gang_width *
+					chan->fmtinfo->bpp.numerator) /
+					chan->fmtinfo->bpp.denominator);
 	chan->gang_sizeimage = chan->gang_bytesperline *
 					chan->format.height;
 	gang_buffer_offsets(chan);
@@ -144,9 +145,11 @@ static void tegra_channel_fmt_align(struct tegra_channel *chan,
 	unsigned int min_bpl;
 	unsigned int max_bpl;
 	unsigned int temp_width;
-	unsigned int align;
+	unsigned int align, fmt_align;
 	unsigned int temp_bpl;
-	unsigned int bpp = vfmt->bpp;
+	unsigned int bpl;
+	unsigned int numerator, denominator;
+	const struct tegra_frac *bpp = &vfmt->bpp;
 
 	/* Init, if un-init */
 	if (!*width || !*height) {
@@ -154,26 +157,34 @@ static void tegra_channel_fmt_align(struct tegra_channel *chan,
 		*height = chan->format.height;
 	}
 
+	denominator = (!bpp->denominator) ? 1 : bpp->denominator;
+	numerator = (!bpp->numerator) ? 1 : bpp->numerator;
+
+	bpl = (*width * numerator) / denominator;
 	if (!*bytesperline)
-		*bytesperline = *width * bpp;
+		*bytesperline = bpl;
 
 	/* The transfer alignment requirements are expressed in bytes. Compute
 	 * the minimum and maximum values, clamp the requested width and convert
 	 * it back to pixels.
+	 * use denominator for base width alignment when >1.
+	 * use bytesperline to adjust width for applicaton related requriements.
 	 */
-	align = lcm(chan->width_align, bpp);
+	fmt_align = (denominator == 1) ? numerator : 1;
+	align = lcm(chan->width_align, fmt_align);
 	min_width = roundup(TEGRA_MIN_WIDTH, align);
 	max_width = rounddown(TEGRA_MAX_WIDTH, align);
-	temp_width = roundup(*width * bpp, align);
+	temp_width = roundup(bpl, align);
 
-	*width = clamp(temp_width, min_width, max_width) / bpp;
+	*width = (clamp(temp_width, min_width, max_width) * denominator) /
+			numerator;
 	*height = clamp(*height, TEGRA_MIN_HEIGHT, TEGRA_MAX_HEIGHT);
 
 	/* Clamp the requested bytes per line value. If the maximum bytes per
 	 * line value is zero, the module doesn't support user configurable line
 	 * sizes. Override the requested value with the minimum in that case.
 	 */
-	min_bpl = *width * bpp;
+	min_bpl = bpl;
 	max_bpl = rounddown(TEGRA_MAX_WIDTH, chan->stride_align);
 	temp_bpl = roundup(*bytesperline, chan->stride_align);
 
@@ -181,13 +192,18 @@ static void tegra_channel_fmt_align(struct tegra_channel *chan,
 }
 
 static void tegra_channel_update_format(struct tegra_channel *chan,
-		u32 width, u32 height, u32 fourcc, u32 bpp,
+		u32 width, u32 height, u32 fourcc,
+		const struct tegra_frac *bpp,
 		u32 preferred_stride)
 {
+	u32 denominator = (!bpp->denominator) ? 1 : bpp->denominator;
+	u32 numerator = (!bpp->numerator) ? 1 : bpp->numerator;
+	u32 bytesperline = (width * numerator / denominator);
+
 	chan->format.width = width;
 	chan->format.height = height;
 	chan->format.pixelformat = fourcc;
-	chan->format.bytesperline = preferred_stride ?: width * bpp;
+	chan->format.bytesperline = preferred_stride ?: bytesperline;
 
 	tegra_channel_fmt_align(chan, chan->fmtinfo,
 				&chan->format.width,
@@ -227,14 +243,15 @@ static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 			/* no more formats */
 			break;
 
-		pixel_format_index = tegra_core_get_idx_by_code(code.code, 0);
+		pixel_format_index =
+			tegra_core_get_idx_by_code(chan, code.code, 0);
 		while (pixel_format_index >= 0) {
 			bitmap_set(chan->fmts_bitmap, pixel_format_index, 1);
 			/* Set init_code to the first matched format */
 			if (!init_code)
 				init_code = code.code;
 			/* Look for other formats with the same mbus code */
-			pixel_format_index = tegra_core_get_idx_by_code(
+			pixel_format_index = tegra_core_get_idx_by_code(chan,
 				code.code, pixel_format_index + 1);
 		}
 
@@ -243,7 +260,7 @@ static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 
 	if (!init_code) {
 		pixel_format_index =
-			tegra_core_get_idx_by_code(TEGRA_VF_DEF, 0);
+			tegra_core_get_idx_by_code(chan, TEGRA_VF_DEF, 0);
 		if (pixel_format_index >= 0) {
 			bitmap_set(chan->fmts_bitmap, pixel_format_index, 1);
 			init_code = TEGRA_VF_DEF;
@@ -255,12 +272,13 @@ static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 		return;
 
 	/* Initiate the channel format to the first matched format */
-	chan->fmtinfo = tegra_core_get_format_by_code(fmt.format.code, 0);
+	chan->fmtinfo =
+		tegra_core_get_format_by_code(chan, fmt.format.code, 0);
 	v4l2_fill_pix_format(&chan->format, &fmt.format);
 	tegra_channel_update_format(chan, chan->format.width,
 				chan->format.height,
 				chan->fmtinfo->fourcc,
-				chan->fmtinfo->bpp, 0);
+				&chan->fmtinfo->bpp, 0);
 
 	if (chan->total_ports > 1)
 		update_gang_mode(chan);
@@ -659,12 +677,7 @@ tegra_channel_enum_format(struct file *file, void *fh, struct v4l2_fmtdesc *f)
 	struct v4l2_fh *vfh = file->private_data;
 	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
 	unsigned int index = 0, i;
-	unsigned long *fmts_bitmap = NULL;
-
-	if (chan->pg_mode)
-		fmts_bitmap = chan->vi->tpg_fmts_bitmap;
-	else
-		fmts_bitmap = chan->fmts_bitmap;
+	unsigned long *fmts_bitmap = chan->fmts_bitmap;
 
 	if (f->index >= bitmap_weight(fmts_bitmap, MAX_FORMAT_NUM))
 		return -EINVAL;
@@ -673,8 +686,8 @@ tegra_channel_enum_format(struct file *file, void *fh, struct v4l2_fmtdesc *f)
 		index = find_next_bit(fmts_bitmap, MAX_FORMAT_NUM, index);
 
 	index -= 1;
-	f->pixelformat = tegra_core_get_fourcc_by_idx(index);
-	tegra_core_get_description_by_idx(index, f->description);
+	f->pixelformat = tegra_core_get_fourcc_by_idx(chan, index);
+	tegra_core_get_description_by_idx(chan, index, f->description);
 
 	return 0;
 }
@@ -747,7 +760,7 @@ tegra_channel_s_dv_timings(struct file *file, void *fh,
 
 	if (!ret)
 		tegra_channel_update_format(chan, bt->width, bt->height,
-			chan->fmtinfo->fourcc, chan->fmtinfo->bpp, 0);
+			chan->fmtinfo->fourcc, &chan->fmtinfo->bpp, 0);
 
 	if (chan->total_ports > 1)
 		update_gang_mode(chan);
@@ -845,14 +858,14 @@ int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 		tegra_channel_update_format(chan, chan->format.width,
 				chan->format.height,
 				chan->format.pixelformat,
-				chan->fmtinfo->bpp, 0);
+				&chan->fmtinfo->bpp, 0);
 		break;
 	case V4L2_CID_VI_SIZE_ALIGN:
 		chan->size_align = size_align_ctrl_qmenu[ctrl->val];
 		tegra_channel_update_format(chan, chan->format.width,
 				chan->format.height,
 				chan->format.pixelformat,
-				chan->fmtinfo->bpp, 0);
+				&chan->fmtinfo->bpp, 0);
 		break;
 	case V4L2_CID_WRITE_ISPFORMAT:
 		chan->write_ispformat = ctrl->val;
@@ -1050,10 +1063,10 @@ __tegra_channel_try_format(struct tegra_channel *chan,
 	int ret = 0;
 
 	/* Use the channel format if pixformat is not supported */
-	vfmt = tegra_core_get_format_by_fourcc(pix->pixelformat);
+	vfmt = tegra_core_get_format_by_fourcc(chan, pix->pixelformat);
 	if (!vfmt) {
 		pix->pixelformat = chan->format.pixelformat;
-		vfmt = tegra_core_get_format_by_fourcc(pix->pixelformat);
+		vfmt = tegra_core_get_format_by_fourcc(chan, pix->pixelformat);
 	}
 
 	fmt.which = V4L2_SUBDEV_FORMAT_TRY;
@@ -1095,7 +1108,7 @@ __tegra_channel_set_format(struct tegra_channel *chan,
 	struct v4l2_subdev *sd = chan->subdev_on_csi;
 	int ret = 0;
 
-	vfmt = tegra_core_get_format_by_fourcc(pix->pixelformat);
+	vfmt = tegra_core_get_format_by_fourcc(chan, pix->pixelformat);
 
 	fmt.which = V4L2_SUBDEV_FORMAT_ACTIVE;
 	fmt.pad = 0;
@@ -1111,7 +1124,7 @@ __tegra_channel_set_format(struct tegra_channel *chan,
 		chan->format = *pix;
 		chan->fmtinfo = vfmt;
 		tegra_channel_update_format(chan, pix->width,
-			pix->height, vfmt->fourcc, vfmt->bpp,
+			pix->height, vfmt->fourcc, &vfmt->bpp,
 			pix->bytesperline);
 
 		*pix = chan->format;
@@ -1390,11 +1403,12 @@ int tegra_channel_init(struct tegra_channel *chan)
 	spin_lock_init(&chan->capture_state_lock);
 
 	/* Init video format */
-	chan->fmtinfo = tegra_core_get_format_by_code(TEGRA_VF_DEF, 0);
+	vi->fops->vi_init_video_formats(chan);
+	chan->fmtinfo = tegra_core_get_default_format();
 	tegra_channel_update_format(chan, TEGRA_DEF_WIDTH,
 				TEGRA_DEF_HEIGHT,
 				chan->fmtinfo->fourcc,
-				chan->fmtinfo->bpp, 0);
+				&chan->fmtinfo->bpp, 0);
 
 	chan->buffer_offset[0] = 0;
 

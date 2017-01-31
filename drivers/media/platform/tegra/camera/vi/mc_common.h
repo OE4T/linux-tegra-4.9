@@ -140,6 +140,8 @@ struct tegra_channel {
 	struct v4l2_ctrl_handler ctrl_handler;
 	struct v4l2_pix_format format;
 	const struct tegra_video_format *fmtinfo;
+	const struct tegra_video_format *video_formats[MAX_FORMAT_NUM];
+	unsigned int num_video_formats;
 	struct mutex stop_kthread_lock;
 
 	unsigned char port[TEGRA_CSI_BLOCKS];
@@ -218,7 +220,6 @@ struct tegra_channel {
  * @ctrl_handler: V4L2 control handler
  * @pattern: test pattern generator V4L2 control
  * @pg_mode: test pattern generator mode (disabled/direct/patch)
- * @tpg_fmts_bitmap: a bitmap for formats in test pattern generator mode
  *
  * @has_sensors: a flag to indicate whether is a real sensor connecting
  */
@@ -247,7 +248,6 @@ struct tegra_mc_vi {
 	struct v4l2_ctrl_handler ctrl_handler;
 	struct v4l2_ctrl *pattern;
 	enum tegra_vi_pg_mode pg_mode;
-	DECLARE_BITMAP(tpg_fmts_bitmap, MAX_FORMAT_NUM);
 
 	bool has_sensors;
 	atomic_t power_on_refcnt;
@@ -290,12 +290,25 @@ void tegra_channel_query_hdmiin_unplug(struct tegra_channel *chan,
 int tpg_vi_media_controller_init(struct tegra_mc_vi *mc_vi, int pg_mode);
 void tpg_vi_media_controller_cleanup(struct tegra_mc_vi *mc_vi);
 
+u32 tegra_core_get_fourcc_by_idx(struct tegra_channel *chan,
+		unsigned int index);
+int tegra_core_get_idx_by_code(struct tegra_channel *chan,
+		unsigned int code, unsigned offset);
+const struct tegra_video_format *tegra_core_get_format_by_code(
+		struct tegra_channel *chan,
+		unsigned int code, unsigned offset);
+const struct tegra_video_format *tegra_core_get_format_by_fourcc(
+		struct tegra_channel *chan, u32 fourcc);
+void tegra_core_get_description_by_idx(struct tegra_channel *chan,
+		unsigned int index, __u8 *description);
+
 struct tegra_vi_fops {
 	int (*vi_power_on)(struct tegra_channel *chan);
 	void (*vi_power_off)(struct tegra_channel *chan);
 	int (*vi_start_streaming)(struct vb2_queue *vq, u32 count);
 	int (*vi_stop_streaming)(struct vb2_queue *vq);
 	int (*vi_add_ctrls)(struct tegra_channel *chan);
+	void (*vi_init_video_formats)(struct tegra_channel *chan);
 };
 
 struct tegra_csi_fops {

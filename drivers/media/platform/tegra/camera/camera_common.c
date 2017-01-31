@@ -1,7 +1,7 @@
 /*
  * camera_common.c - utilities for tegra camera driver
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,6 +19,7 @@
 #include <linux/of_graph.h>
 #include <linux/string.h>
 #include <soc/tegra/pmc.h>
+#include "camera/vi/mc_common.h"
 
 #define has_s_op(master, op) \
 	(master->ops && master->ops->op)
@@ -41,9 +42,28 @@ static const struct camera_common_colorfmt camera_common_color_fmts[] = {
 		V4L2_PIX_FMT_SRGGB10,
 	},
 	{
+		MEDIA_BUS_FMT_SBGGR10_1X10,
+		V4L2_COLORSPACE_SRGB,
+		V4L2_PIX_FMT_SBGGR10,
+	},
+	{
 		MEDIA_BUS_FMT_SRGGB8_1X8,
 		V4L2_COLORSPACE_SRGB,
 		V4L2_PIX_FMT_SRGGB8,
+	},
+	/*
+	 * The below two formats are not supported by VI4,
+	 * keep them at the last to ensure they get discarded
+	 */
+	{
+		MEDIA_BUS_FMT_XRGGB10P_3X10,
+		V4L2_COLORSPACE_SRGB,
+		V4L2_PIX_FMT_XRGGB10P,
+	},
+	{
+		MEDIA_BUS_FMT_XBGGR10P_3X10,
+		V4L2_COLORSPACE_SRGB,
+		V4L2_PIX_FMT_XRGGB10P,
 	},
 };
 
@@ -55,6 +75,18 @@ static const char *camera_common_csi_io_pads[] = {
 	"csie",
 	"csif",
 };
+
+bool camera_common_verify_code(struct tegra_channel *chan, unsigned int code)
+{
+	int i;
+
+	for (i = 0; i < chan->num_video_formats; i++) {
+		if (chan->video_formats[i]->code == code)
+			return true;
+	}
+
+	return false;
+}
 
 int camera_common_g_ctrl(struct camera_common_data *s_data,
 			 struct v4l2_control *control)
@@ -337,6 +369,8 @@ int camera_common_enum_mbus_code(struct v4l2_subdev *sd,
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct camera_common_data *s_data = to_camera_common_data(client);
+	struct tegra_channel *chan = v4l2_get_subdev_hostdata(sd);
+	unsigned int mbus_code;
 
 	if (s_data->num_color_fmts < 1 || !s_data->color_fmts) {
 		s_data->color_fmts = camera_common_color_fmts;
@@ -346,7 +380,11 @@ int camera_common_enum_mbus_code(struct v4l2_subdev *sd,
 	if ((unsigned int)code->index >= s_data->num_color_fmts)
 		return -EINVAL;
 
-	code->code = s_data->color_fmts[code->index].code;
+	mbus_code = s_data->color_fmts[code->index].code;
+	if (!camera_common_verify_code(chan, mbus_code))
+		return -EINVAL;
+
+	code->code = mbus_code;
 	return 0;
 }
 EXPORT_SYMBOL(camera_common_enum_mbus_code);
@@ -364,7 +402,6 @@ int camera_common_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
 
 	if ((unsigned int)index >= s_data->num_color_fmts)
 		return -EINVAL;
-
 	*code = s_data->color_fmts[index].code;
 	return 0;
 }
@@ -373,6 +410,7 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct camera_common_data *s_data = to_camera_common_data(client);
+	struct tegra_channel *chan = v4l2_get_subdev_hostdata(sd);
 	struct v4l2_control hdr_control;
 	const struct camera_common_frmfmt *frmfmt = s_data->frmfmt;
 	int hdr_en;
@@ -426,12 +464,8 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		}
 	}
 
-	if (mf->code != MEDIA_BUS_FMT_SRGGB8_1X8 &&
-		mf->code != MEDIA_BUS_FMT_SRGGB10_1X10 &&
-		mf->code != MEDIA_BUS_FMT_SRGGB12_1X12) {
-		mf->code = MEDIA_BUS_FMT_SRGGB10_1X10;
+	if (!camera_common_verify_code(chan, mf->code))
 		err = -EINVAL;
-	}
 
 	mf->field = V4L2_FIELD_NONE;
 	mf->colorspace = V4L2_COLORSPACE_SRGB;

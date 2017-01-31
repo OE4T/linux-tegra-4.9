@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra CSI Device
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -188,6 +188,7 @@ static int tegra_csi_enum_framesizes(struct v4l2_subdev *sd,
 {
 	int i;
 	struct tegra_csi_channel *chan = to_csi_chan(sd);
+	struct tegra_channel *vi_chan = v4l2_get_subdev_hostdata(sd);
 
 	if (!chan->pg_mode)
 		return -ENOIOCTLCMD;
@@ -197,7 +198,7 @@ static int tegra_csi_enum_framesizes(struct v4l2_subdev *sd,
 
 	for (i = 0; i < ARRAY_SIZE(tegra_csi_tpg_fmts); i++) {
 		const struct tegra_video_format *format =
-		      tegra_core_get_format_by_code(
+		      tegra_core_get_format_by_code(vi_chan,
 				tegra_csi_tpg_fmts[i].code, 0);
 		if (format && format->fourcc == fse->code)
 			break;
@@ -241,6 +242,7 @@ static int tegra_csi_enum_frameintervals(struct v4l2_subdev *sd,
 	const struct tegra_video_format *format;
 	const struct tpg_frmfmt *tegra_csi_tpg_frmfmt =
 						chan->csi->tpg_frmfmt_table;
+	struct tegra_channel *vi_chan = v4l2_get_subdev_hostdata(sd);
 
 	if (!chan->pg_mode)
 		return -ENOIOCTLCMD;
@@ -248,7 +250,7 @@ static int tegra_csi_enum_frameintervals(struct v4l2_subdev *sd,
 	/* One resolution just one framerate */
 	if (fie->index > 0)
 		return -EINVAL;
-	format = tegra_core_get_format_by_fourcc(fie->code);
+	format = tegra_core_get_format_by_fourcc(vi_chan, fie->code);
 	if (!format)
 		return -EINVAL;
 	index = tegra_csi_get_fmtindex(chan, fie->width, fie->height,
@@ -367,7 +369,7 @@ static int tegra_csi_set_format(struct v4l2_subdev *subdev,
 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY)
 		return 0;
 
-	vf = tegra_core_get_format_by_code(format->code, 0);
+	vf = tegra_core_get_format_by_code(vi_chan, format->code, 0);
 	if (!vf) {
 		dev_err(chan->csi->dev, "Fail to find tegra video fmt");
 		mutex_unlock(&chan->format_lock);
@@ -543,7 +545,7 @@ static int tegra_csi_channel_init_one(struct tegra_csi_channel *chan)
 
 	mutex_init(&chan->format_lock);
 
-	vf = tegra_core_get_format_by_code(TEGRA_VF_DEF, 0);
+	vf = tegra_core_get_default_format();
 	if (vf == NULL) {
 		dev_err(csi->dev, "Fail to find tegra video fmt");
 		return -EINVAL;
@@ -564,7 +566,7 @@ static int tegra_csi_channel_init_one(struct tegra_csi_channel *chan)
 
 	/* Initialize the default format */
 	for (i = 0; i < chan->numports; i++) {
-		chan->ports[i].format.code = TEGRA_VF_DEF;
+		chan->ports[i].format.code = vf->vf_code;
 		chan->ports[i].format.field = V4L2_FIELD_NONE;
 		chan->ports[i].format.colorspace = V4L2_COLORSPACE_SRGB;
 		chan->ports[i].format.width = TEGRA_DEF_WIDTH;

@@ -1077,10 +1077,25 @@ static int vgpu_gr_clear_sm_error_state(struct gk20a *g,
 		struct channel_gk20a *ch, u32 sm_id)
 {
 	struct gr_gk20a *gr = &g->gr;
+	struct tegra_vgpu_cmd_msg msg;
+	struct tegra_vgpu_clear_sm_error_state *p =
+			&msg.params.clear_sm_error_state;
+	int err;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
+	msg.cmd = TEGRA_VGPU_CMD_CLEAR_SM_ERROR_STATE;
+	msg.handle = vgpu_get_handle(g);
+	p->handle = ch->virt_ctx;
+	p->sm_id = sm_id;
+
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	WARN_ON(err || msg.ret);
+
 	memset(&gr->sm_error_states[sm_id], 0, sizeof(*gr->sm_error_states));
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
+
+	return err ? err : msg.ret;
+
 
 	return 0;
 }
@@ -1099,8 +1114,8 @@ static int vgpu_gr_suspend_resume_contexts(struct gk20a *g,
 	int channel_fd = -1;
 	int err = 0;
 
-	mutex_lock(&g->dbg_sessions_lock);
-	mutex_lock(&dbg_s->ch_list_lock);
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
+	nvgpu_mutex_acquire(&dbg_s->ch_list_lock);
 
 	n = 0;
 	list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry)
@@ -1137,8 +1152,8 @@ static int vgpu_gr_suspend_resume_contexts(struct gk20a *g,
 	}
 
 fail:
-	mutex_unlock(&dbg_s->ch_list_lock);
-	mutex_unlock(&g->dbg_sessions_lock);
+	nvgpu_mutex_release(&dbg_s->ch_list_lock);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	*ctx_resident_ch_fd = channel_fd;
 	kfree(msg);

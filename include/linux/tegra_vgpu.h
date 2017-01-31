@@ -101,6 +101,7 @@ enum {
 	TEGRA_VGPU_CMD_GET_GPU_LOAD = 65,
 	TEGRA_VGPU_CMD_SUSPEND_CONTEXTS = 66,
 	TEGRA_VGPU_CMD_RESUME_CONTEXTS = 67,
+	TEGRA_VGPU_CMD_CLEAR_SM_ERROR_STATE = 68,
 };
 
 struct tegra_vgpu_connect_params {
@@ -462,6 +463,11 @@ struct tegra_vgpu_suspend_resume_contexts {
 	u16 chids[];
 };
 
+struct tegra_vgpu_clear_sm_error_state {
+	u64 handle;
+	u32 sm_id;
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -510,6 +516,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_gpu_load_params gpu_load;
 		struct tegra_vgpu_suspend_resume_contexts suspend_contexts;
 		struct tegra_vgpu_suspend_resume_contexts resume_contexts;
+		struct tegra_vgpu_clear_sm_error_state clear_sm_error_state;
 		char padding[192];
 	} params;
 };

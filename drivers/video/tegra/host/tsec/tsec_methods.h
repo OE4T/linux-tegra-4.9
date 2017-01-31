@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/host/tsec/tsec_methods.h
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -128,6 +128,7 @@
 #define HDCP_STREAM_MANAGE                     (0x00000734)
 #define HDCP_READ_CAPS                         (0x00000738)
 #define HDCP_ENCRYPT                           (0x0000073C)
+#define HDCP_GET_CURRENT_NONCE                 (0x00000740)
 
 struct nvhdcp_msg {
 	/* AKE_INIT */

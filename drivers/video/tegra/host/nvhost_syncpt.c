@@ -899,7 +899,7 @@ static u32 nvhost_get_syncpt(struct platform_device *pdev,
 		return 0;
 	}
 
-	if (syncpt_op().alloc)
+	if (!client_managed && syncpt_op().alloc)
 		syncpt_op().alloc(pdev, id);
 
 	mutex_unlock(&sp->syncpt_mutex);
@@ -989,7 +989,7 @@ static void nvhost_free_syncpt(struct nvhost_syncpt *sp, u32 id)
 
 	mutex_lock(&sp->syncpt_mutex);
 
-	if (syncpt_op().release)
+	if (!nvhost_syncpt_client_managed(sp, id) && syncpt_op().release)
 		syncpt_op().release(sp, id);
 
 	kfree(sp->last_used_by[id]);

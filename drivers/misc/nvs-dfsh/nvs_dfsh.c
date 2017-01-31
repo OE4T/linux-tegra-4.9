@@ -439,14 +439,14 @@ static int dfsh_enable(void *client, int snsr_id, int enable)
 			/* if individual sensor enable is supported then here
 			 * we want to send the sensor enable message to DFSH.
 			 */
-			/* ret = dfsh_en(st, snsr_id); */
-			if (ret < 0) {
-				if (!st->enabled[snsr_id])
-					dfsh_disable(st, snsr_id);
-			} else {
-				st->enabled[snsr_id] = enable;
-				st->enabled_msk |= (1 << snsr_id);
-			}
+			/* ret = dfsh_en(st, snsr_id);
+			 * if (ret < 0) {
+			 *	if (!st->enabled[snsr_id])
+			 *		dfsh_disable(st, snsr_id);
+			 * } else {
+			 */
+			st->enabled[snsr_id] = enable;
+			st->enabled_msk |= (1 << snsr_id);
 		}
 	} else {
 		ret = dfsh_disable(st, snsr_id);

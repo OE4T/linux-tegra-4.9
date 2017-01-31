@@ -398,7 +398,7 @@ static int dsm_remove(struct platform_device *pd)
 				st->nvs[i]->remove(st->nvs_st[i]);
 		}
 	}
-	dev_info(&st->pd->dev, "%s\n", __func__);
+	dev_info(&pd->dev, "%s\n", __func__);
 	return 0;
 }
 

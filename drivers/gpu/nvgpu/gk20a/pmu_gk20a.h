@@ -24,12 +24,7 @@
 #include <linux/version.h>
 #include "pmu_api.h"
 #include "pmu_common.h"
-#include "pmuif/gpmuifboardobj.h"
-#include "pmuif/gpmuifclk.h"
-#include "pmuif/gpmuifperf.h"
-#include "pmuif/gpmuifpmgr.h"
-#include "pmuif/gpmuifvolt.h"
-#include "pmuif/gpmuiftherm.h"
+#include "pmuif/nvgpu_gpmu_cmdif.h"
 
 /* defined by pmu hw spec */
 #define GK20A_PMU_VA_SIZE		(512 * 1024 * 1024)
@@ -73,53 +68,6 @@ enum {
 	GK20A_PMU_DMAIDX_PELPG		= 6,
 	GK20A_PMU_DMAIDX_END		= 7
 };
-
-struct pmu_cmdline_args_v2 {
-	u32 cpu_freq_hz;		/* Frequency of the clock driving PMU */
-	u32 falc_trace_size;		/* falctrace buffer size (bytes) */
-	u32 falc_trace_dma_base;	/* 256-byte block address */
-	u32 falc_trace_dma_idx;		/* dmaIdx for DMA operations */
-	u8 secure_mode;
-	u8 raise_priv_sec;     /*Raise priv level required for desired
-					registers*/
-	struct pmu_mem_v1 gc6_ctx;		/* dmem offset of gc6 context */
-};
-
-struct pmu_cmdline_args_v3 {
-	u32 reserved;
-	u32 cpu_freq_hz;		/* Frequency of the clock driving PMU */
-	u32 falc_trace_size;		/* falctrace buffer size (bytes) */
-	u32 falc_trace_dma_base;	/* 256-byte block address */
-	u32 falc_trace_dma_idx;		/* dmaIdx for DMA operations */
-	u8 secure_mode;
-	u8 raise_priv_sec;     /*Raise priv level required for desired
-					registers*/
-	struct pmu_mem_v1 gc6_ctx;		/* dmem offset of gc6 context */
-};
-
-struct pmu_cmdline_args_v4 {
-	u32 reserved;
-	u32 cpu_freq_hz;		/* Frequency of the clock driving PMU */
-	u32 falc_trace_size;		/* falctrace buffer size (bytes) */
-	struct falc_dma_addr dma_addr;	/* 256-byte block address */
-	u32 falc_trace_dma_idx;		/* dmaIdx for DMA operations */
-	u8 secure_mode;
-	u8 raise_priv_sec;     /*Raise priv level required for desired
-					registers*/
-	struct pmu_mem_desc_v0 gc6_ctx;		/* dmem offset of gc6 context */
-	u8 pad;
-};
-
-struct pmu_cmdline_args_v5 {
-	u32 cpu_freq_hz;		/* Frequency of the clock driving PMU */
-	struct flcn_mem_desc_v0 trace_buf;
-	u8 secure_mode;
-	u8 raise_priv_sec;
-	struct flcn_mem_desc_v0 gc6_ctx;
-	struct flcn_mem_desc_v0 init_data_dma_info;
-	u32 dummy;
-};
-
 
 #define GK20A_PMU_TRACE_BUFSIZE     0x4000   /* 4K */
 #define GK20A_PMU_DMEM_BLKSIZE2		8
@@ -176,29 +124,6 @@ struct pmu_ucode_desc_v1 {
 	u32 compressed;
 };
 
-#define PMU_UNIT_REWIND		(0x00)
-#define PMU_UNIT_PG			(0x03)
-#define PMU_UNIT_INIT		(0x07)
-#define PMU_UNIT_ACR		(0x0A)
-#define PMU_UNIT_PERFMON_T18X	(0x11)
-#define PMU_UNIT_PERFMON	(0x12)
-#define PMU_UNIT_PERF            (0x13)
-#define PMU_UNIT_RC		(0x1F)
-#define PMU_UNIT_FECS_MEM_OVERRIDE      (0x1E)
-#define PMU_UNIT_CLK             (0x0D)
-#define PMU_UNIT_THERM           (0x14)
-#define PMU_UNIT_PMGR            (0x18)
-#define PMU_UNIT_VOLT            (0x0E)
-
-#define PMU_UNIT_END		(0x23)
-
-#define PMU_UNIT_TEST_START	(0xFE)
-#define PMU_UNIT_END_SIM	(0xFF)
-#define PMU_UNIT_TEST_END	(0xFF)
-
-#define PMU_UNIT_ID_IS_VALID(id)		\
-		(((id) < PMU_UNIT_END) || ((id) >= PMU_UNIT_TEST_START))
-
 #define PMU_DMEM_ALLOC_ALIGNMENT	(4)
 #define PMU_DMEM_ALIGNMENT		(4)
 
@@ -212,124 +137,7 @@ struct pmu_ucode_desc_v1 {
 #define PMU_MSG_HDR_SIZE	sizeof(struct pmu_hdr)
 #define PMU_CMD_HDR_SIZE	sizeof(struct pmu_hdr)
 
-#define PMU_QUEUE_COUNT		5
 
-enum {
-	PMU_INIT_MSG_TYPE_PMU_INIT = 0,
-};
-
-struct pmu_init_msg_pmu_v0 {
-	u8 msg_type;
-	u8 pad;
-
-	struct {
-		u16 size;
-		u16 offset;
-		u8  index;
-		u8  pad;
-	} queue_info[PMU_QUEUE_COUNT];
-
-	u16 sw_managed_area_offset;
-	u16 sw_managed_area_size;
-};
-
-struct pmu_init_msg_pmu_v1 {
-	u8 msg_type;
-	u8 pad;
-	u16  os_debug_entry_point;
-
-	struct {
-		u16 size;
-		u16 offset;
-		u8  index;
-		u8  pad;
-	} queue_info[PMU_QUEUE_COUNT];
-
-	u16 sw_managed_area_offset;
-	u16 sw_managed_area_size;
-};
-struct pmu_init_msg_pmu_v2 {
-	u8 msg_type;
-	u8 pad;
-	u16  os_debug_entry_point;
-
-	struct {
-		u16 size;
-		u16 offset;
-		u8  index;
-		u8  pad;
-	} queue_info[PMU_QUEUE_COUNT];
-
-	u16 sw_managed_area_offset;
-	u16 sw_managed_area_size;
-	u8 dummy[18];
-};
-
-#define PMU_QUEUE_COUNT_FOR_V4 5
-#define PMU_QUEUE_COUNT_FOR_V3 3
-#define PMU_QUEUE_HPQ_IDX_FOR_V3 0
-#define PMU_QUEUE_LPQ_IDX_FOR_V3 1
-#define PMU_QUEUE_MSG_IDX_FOR_V3 2
-struct pmu_init_msg_pmu_v3 {
-	u8 msg_type;
-	u8  queue_index[PMU_QUEUE_COUNT_FOR_V3];
-	u16 queue_size[PMU_QUEUE_COUNT_FOR_V3];
-	u16 queue_offset;
-
-	u16 sw_managed_area_offset;
-	u16 sw_managed_area_size;
-
-	u16  os_debug_entry_point;
-
-	u8 dummy[18];
-};
-
-struct pmu_init_msg_pmu_v4 {
-	u8 msg_type;
-	u8  queue_index[PMU_QUEUE_COUNT_FOR_V4];
-	u16 queue_size[PMU_QUEUE_COUNT_FOR_V4];
-	u16 queue_offset;
-
-	u16 sw_managed_area_offset;
-	u16 sw_managed_area_size;
-
-	u16  os_debug_entry_point;
-
-	u8 dummy[18];
-};
-
-union pmu_init_msg_pmu {
-	struct pmu_init_msg_pmu_v0 v0;
-	struct pmu_init_msg_pmu_v1 v1;
-	struct pmu_init_msg_pmu_v2 v2;
-	struct pmu_init_msg_pmu_v3 v3;
-	struct pmu_init_msg_pmu_v4 v4;
-};
-
-struct pmu_init_msg {
-	union {
-		u8 msg_type;
-		struct pmu_init_msg_pmu_v1 pmu_init_v1;
-		struct pmu_init_msg_pmu_v0 pmu_init_v0;
-		struct pmu_init_msg_pmu_v2 pmu_init_v2;
-		struct pmu_init_msg_pmu_v3 pmu_init_v3;
-		struct pmu_init_msg_pmu_v4 pmu_init_v4;
-	};
-};
-
-enum {
-	PMU_RC_MSG_TYPE_UNHANDLED_CMD = 0,
-};
-
-struct pmu_rc_msg_unhandled_cmd {
-	u8 msg_type;
-	u8 unit_id;
-};
-
-struct pmu_rc_msg {
-	u8 msg_type;
-	struct pmu_rc_msg_unhandled_cmd unhandled_cmd;
-};
 
 /***************************** ACR ERROR CODES  ******************************/
 /*!
@@ -374,119 +182,9 @@ struct pmu_perfmon_counter_v2 {
 #define PMU_PERFMON_FLAG_CLEAR_PREV		(0x00000004)
 
 
-struct pmu_cmd {
-	struct pmu_hdr hdr;
-	union {
-		struct pmu_perfmon_cmd perfmon;
-		struct pmu_pg_cmd pg;
-		struct pmu_zbc_cmd zbc;
-		struct pmu_acr_cmd acr;
-		struct pmu_lrf_tex_ltc_dram_cmd lrf_tex_ltc_dram;
-		struct nv_pmu_boardobj_cmd boardobj;
-		struct nv_pmu_perf_cmd perf;
-		struct nv_pmu_volt_cmd volt;
-		struct nv_pmu_clk_cmd clk;
-		struct nv_pmu_pmgr_cmd pmgr;
-		struct nv_pmu_therm_cmd therm;
-	} cmd;
-};
-
-struct pmu_msg {
-	struct pmu_hdr hdr;
-	union {
-		struct pmu_init_msg init;
-		struct pmu_perfmon_msg perfmon;
-		struct pmu_pg_msg pg;
-		struct pmu_rc_msg rc;
-		struct pmu_acr_msg acr;
-		struct pmu_lrf_tex_ltc_dram_msg lrf_tex_ltc_dram;
-		struct nv_pmu_boardobj_msg boardobj;
-		struct nv_pmu_perf_msg perf;
-		struct nv_pmu_volt_msg volt;
-		struct nv_pmu_clk_msg clk;
-		struct nv_pmu_pmgr_msg pmgr;
-		struct nv_pmu_therm_msg therm;
-	} msg;
-};
-
-#define PMU_SHA1_GID_SIGNATURE		0xA7C66AD2
-#define PMU_SHA1_GID_SIGNATURE_SIZE	4
-
-#define PMU_SHA1_GID_SIZE	16
-
-struct pmu_sha1_gid {
-	bool valid;
-	u8 gid[PMU_SHA1_GID_SIZE];
-};
-
-struct pmu_sha1_gid_data {
-	u8 signature[PMU_SHA1_GID_SIGNATURE_SIZE];
-	u8 gid[PMU_SHA1_GID_SIZE];
-};
-
-#define PMU_COMMAND_QUEUE_HPQ		0	/* write by sw, read by pmu, protected by sw mutex lock */
-#define PMU_COMMAND_QUEUE_LPQ		1	/* write by sw, read by pmu, protected by sw mutex lock */
-#define PMU_COMMAND_QUEUE_BIOS		2	/* read/write by sw/hw, protected by hw pmu mutex, id = 2 */
-#define PMU_COMMAND_QUEUE_SMI		3	/* read/write by sw/hw, protected by hw pmu mutex, id = 3 */
-#define PMU_MESSAGE_QUEUE		4	/* write by pmu, read by sw, accessed by interrupt handler, no lock */
-#define PMU_QUEUE_COUNT			5
-
-enum {
-	PMU_MUTEX_ID_RSVD1 = 0	,
-	PMU_MUTEX_ID_GPUSER	,
-	PMU_MUTEX_ID_QUEUE_BIOS	,
-	PMU_MUTEX_ID_QUEUE_SMI	,
-	PMU_MUTEX_ID_GPMUTEX	,
-	PMU_MUTEX_ID_I2C	,
-	PMU_MUTEX_ID_RMLOCK	,
-	PMU_MUTEX_ID_MSGBOX	,
-	PMU_MUTEX_ID_FIFO	,
-	PMU_MUTEX_ID_PG		,
-	PMU_MUTEX_ID_GR		,
-	PMU_MUTEX_ID_CLK	,
-	PMU_MUTEX_ID_RSVD6	,
-	PMU_MUTEX_ID_RSVD7	,
-	PMU_MUTEX_ID_RSVD8	,
-	PMU_MUTEX_ID_RSVD9	,
-	PMU_MUTEX_ID_INVALID
-};
-
-#define PMU_IS_COMMAND_QUEUE(id)	\
-		((id)  < PMU_MESSAGE_QUEUE)
-
-#define PMU_IS_SW_COMMAND_QUEUE(id)	\
-		(((id) == PMU_COMMAND_QUEUE_HPQ) || \
-		 ((id) == PMU_COMMAND_QUEUE_LPQ))
-
-#define  PMU_IS_MESSAGE_QUEUE(id)	\
-		((id) == PMU_MESSAGE_QUEUE)
-
-enum
-{
-	OFLAG_READ = 0,
-	OFLAG_WRITE
-};
-
-#define QUEUE_SET		(true)
-#define QUEUE_GET		(false)
-
-#define QUEUE_ALIGNMENT		(4)
-
 #define PMU_PGENG_GR_BUFFER_IDX_INIT	(0)
 #define PMU_PGENG_GR_BUFFER_IDX_ZBC	(1)
 #define PMU_PGENG_GR_BUFFER_IDX_FECS	(2)
-
-enum
-{
-    PMU_DMAIDX_UCODE         = 0,
-    PMU_DMAIDX_VIRT          = 1,
-    PMU_DMAIDX_PHYS_VID      = 2,
-    PMU_DMAIDX_PHYS_SYS_COH  = 3,
-    PMU_DMAIDX_PHYS_SYS_NCOH = 4,
-    PMU_DMAIDX_RSVD          = 5,
-    PMU_DMAIDX_PELPG         = 6,
-    PMU_DMAIDX_END           = 7
-};
 
 struct pmu_gk20a;
 struct pmu_queue;
@@ -514,12 +212,6 @@ struct pmu_queue {
 	u32 oflag;
 	bool opened; /* opened implies locked */
 };
-
-
-#define PMU_MUTEX_ID_IS_VALID(id)	\
-		((id) < PMU_MUTEX_ID_INVALID)
-
-#define PMU_INVALID_MUTEX_OWNER_ID	(0)
 
 struct pmu_mutex {
 	u32 id;

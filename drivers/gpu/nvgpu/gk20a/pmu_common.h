@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -72,24 +72,6 @@ struct pmu_dmem {
 	u32 offset;
 };
 
-/* Make sure size of this structure is a multiple of 4 bytes */
-struct pmu_cmdline_args_v0 {
-	u32 cpu_freq_hz;		/* Frequency of the clock driving PMU */
-	u32 falc_trace_size;		/* falctrace buffer size (bytes) */
-	u32 falc_trace_dma_base;	/* 256-byte block address */
-	u32 falc_trace_dma_idx;		/* dmaIdx for DMA operations */
-	struct pmu_mem_v0 gc6_ctx;		/* dmem offset of gc6 context */
-};
-
-struct pmu_cmdline_args_v1 {
-	u32 cpu_freq_hz;		/* Frequency of the clock driving PMU */
-	u32 falc_trace_size;		/* falctrace buffer size (bytes) */
-	u32 falc_trace_dma_base;	/* 256-byte block address */
-	u32 falc_trace_dma_idx;		/* dmaIdx for DMA operations */
-	u8 secure_mode;
-	struct pmu_mem_v1 gc6_ctx;		/* dmem offset of gc6 context */
-};
-
 struct flcn_u64 {
 	u32 lo;
 	u32 hi;
@@ -147,34 +129,6 @@ struct pmu_hdr {
 typedef u8 flcn_status;
 
 #define ALIGN_UP(v, gran)       (((v) + ((gran) - 1)) & ~((gran)-1))
-
-/*!
- * Falcon PMU DMA's minimum size in bytes.
- */
-#define PMU_DMA_MIN_READ_SIZE_BYTES                                    16
-#define PMU_DMA_MIN_WRITE_SIZE_BYTES                                      4
-
-#define PMU_FB_COPY_RW_ALIGNMENT                                          \
-	(PMU_DMA_MIN_READ_SIZE_BYTES > PMU_DMA_MIN_WRITE_SIZE_BYTES ?     \
-	PMU_DMA_MIN_READ_SIZE_BYTES : PMU_DMA_MIN_WRITE_SIZE_BYTES)
-
-/*!
- * Macros to make aligned versions of RM_PMU_XXX structures. PMU needs aligned
- * data structures to issue DMA read/write operations.
- */
-#define NV_PMU_MAKE_ALIGNED_STRUCT(name, size)           \
-union name##_aligned {		                         \
-		struct name data;                        \
-		u8 pad[ALIGN_UP(sizeof(struct name),     \
-		(PMU_FB_COPY_RW_ALIGNMENT))];            \
-}
-
-#define NV_PMU_MAKE_ALIGNED_UNION(name, size)	         \
-union name##_aligned {		                         \
-		union name data;                         \
-		u8 pad[ALIGN_UP(sizeof(union name),      \
-		(PMU_FB_COPY_RW_ALIGNMENT))];            \
-}
 
 #define NV_UNSIGNED_ROUNDED_DIV(a, b)    (((a) + ((b) / 2)) / (b))
 

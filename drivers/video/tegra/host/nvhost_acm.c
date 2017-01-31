@@ -263,6 +263,7 @@ void nvhost_module_reset(struct platform_device *dev, bool reboot)
 	dev_dbg(&dev->dev, "%s: module %s out of reset\n",
 		__func__, dev_name(&dev->dev));
 }
+EXPORT_SYMBOL(nvhost_module_reset);
 
 void nvhost_module_busy_noresume(struct platform_device *dev)
 {

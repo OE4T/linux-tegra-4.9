@@ -21,6 +21,7 @@
 
 #include <uapi/linux/nvhost_pva_ioctl.h>
 #include "nvhost_queue.h"
+#include "pva-interface.h"
 
 struct dma_buf;
 
@@ -130,4 +131,12 @@ struct pva_submit_tasks {
 	u16 flags;
 	u16 num_tasks;
 };
+
+struct pva_queue_attribute {
+	struct pva *pva;
+	enum pva_queue_attr_id id;
+	uint32_t value;
+};
+
+void pva_task_remove(struct pva_submit_task *task);
 #endif

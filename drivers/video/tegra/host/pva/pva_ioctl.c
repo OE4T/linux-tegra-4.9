@@ -253,6 +253,48 @@ err_check_num_tasks:
 	return err;
 }
 
+/**
+ * pva_queue_set_attr() - Set attribute to the queue
+ *
+ * @priv: PVA Private data
+ * @arg: ioctl data
+ *
+ * This function set the attributes of the pv queue.
+ */
+static int pva_queue_set_attr(struct pva_private *priv, void *arg)
+{
+	struct pva_ioctl_queue_attr *ioctl_queue_attr =
+		(struct pva_ioctl_queue_attr *)arg;
+	struct pva_queue_attribute *attr;
+	int err = 0;
+	int id;
+
+	/* Sanity checks for the task heaader */
+	if (ioctl_queue_attr->id >= QUEUE_ATTR_MAX) {
+		err = -ENOSYS;
+		goto end;
+	}
+
+	id = ioctl_queue_attr->id;
+	attr = priv->queue->attr;
+	attr[id].pva = priv->pva;
+	attr[id].id = id;
+	attr[id].value = ioctl_queue_attr->val;
+
+	/* Turn on the hardware */
+	err = nvhost_module_busy(priv->pva->pdev);
+	if (err)
+		goto end;
+
+	err = nvhost_queue_set_attr(priv->queue, &attr[id]);
+
+	/* Drop PM runtime reference of PVA */
+	nvhost_module_idle(priv->pva->pdev);
+ end:
+	return err;
+
+}
+
 static int pva_pin(struct pva_private *priv, void *arg)
 {
 	u32 *handles;
@@ -419,6 +461,11 @@ static long pva_ioctl(struct file *file, unsigned int cmd,
 		err = pva_submit(priv, buf);
 		break;
 	}
+	case PVA_IOCTL_SET_QUEUE_ATTRIBUTES:
+	{
+		err = pva_queue_set_attr(priv, buf);
+		break;
+	}
 	default:
 		return -ENOIOCTLCMD;
 	}
@@ -429,11 +476,28 @@ static long pva_ioctl(struct file *file, unsigned int cmd,
 	return err;
 }
 
+static void pva_queue_set_default_prior_attr(struct pva_private *priv,
+		struct pva_queue_attribute *attr)
+{
+	attr->pva = priv->pva;
+	attr->id = QUEUE_ATTR_PRIORITY;
+	attr->value = PVA_QUEUE_DEFAULT_PRIORITY;
+}
+
+static void pva_queue_set_default_vpu_mask_attr(struct pva_private *priv,
+		struct pva_queue_attribute *attr)
+{
+	attr->pva = priv->pva;
+	attr->id = QUEUE_ATTR_VPU;
+	attr->value = PVA_QUEUE_DEFAULT_VPU_MASK;
+}
+
 static int pva_open(struct inode *inode, struct file *file)
 {
 	struct nvhost_device_data *pdata = container_of(inode->i_cdev,
 					struct nvhost_device_data, ctrl_cdev);
 	struct platform_device *pdev = pdata->pdev;
+	struct pva_queue_attribute *attr;
 	struct pva *pva = pdata->private_data;
 	struct pva_private *priv;
 	int err = 0;
@@ -442,6 +506,13 @@ static int pva_open(struct inode *inode, struct file *file)
 	if (priv == NULL) {
 		err = -ENOMEM;
 		goto err_alloc_priv;
+	}
+
+	attr = kzalloc(sizeof(*attr) * (QUEUE_ATTR_MAX - 1), GFP_KERNEL);
+	if (!attr) {
+		err = -ENOMEM;
+		dev_info(&pdev->dev, "unable to allocate memory for attributes\n");
+		goto err_alloc_attr;
 	}
 
 	file->private_data = priv;
@@ -464,6 +535,13 @@ static int pva_open(struct inode *inode, struct file *file)
 		goto err_alloc_queue;
 	}
 
+
+	priv->queue->attr = attr;
+
+	pva_queue_set_default_prior_attr(priv, &attr[QUEUE_ATTR_PRIORITY]);
+
+	pva_queue_set_default_vpu_mask_attr(priv, &attr[QUEUE_ATTR_VPU]);
+
 	return nonseekable_open(inode, file);
 
 err_alloc_queue:
@@ -471,6 +549,8 @@ err_alloc_queue:
 err_alloc_buffer:
 	nvhost_module_remove_client(pdev, priv);
 err_add_client:
+	kfree(attr);
+err_alloc_attr:
 	kfree(priv);
 err_alloc_priv:
 	return err;
@@ -485,6 +565,7 @@ static int pva_release(struct inode *inode, struct file *file)
 	nvhost_module_remove_client(priv->pva->pdev, priv);
 
 	nvhost_buffer_put(priv->buffers);
+	kfree(priv->queue->attr);
 	kfree(priv);
 
 	return 0;

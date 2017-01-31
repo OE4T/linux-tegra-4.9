@@ -249,6 +249,23 @@ struct pva_ioctl_submit_args {
 	__u32 version;
 };
 
+/**
+ * struct pva_ioctl_queue_attr - set queue attributes
+ *
+ * @attr_id: Attribute id which defines the attribute to be set
+ * @reserved: reserved
+ * @attr_val: The value to be set for the attribute
+ *
+ * This ioctl is used for setting attributes for a queue with id queue_id
+ * on the R5.
+ *
+ */
+struct pva_ioctl_queue_attr {
+	__u16 id;
+	__u16 reserved;
+	__u32 val;
+};
+
 #define PVA_IOCTL_CHARACTERISTICS	\
 	_IOWR(NVHOST_PVA_IOCTL_MAGIC, 1, struct pva_characteristics_req)
 #define PVA_IOCTL_PIN	\
@@ -257,9 +274,11 @@ struct pva_ioctl_submit_args {
 	_IOW(NVHOST_PVA_IOCTL_MAGIC, 3, struct pva_pin_unpin_args)
 #define PVA_IOCTL_SUBMIT	\
 	_IOW(NVHOST_PVA_IOCTL_MAGIC, 4, struct pva_ioctl_submit_args)
+#define PVA_IOCTL_SET_QUEUE_ATTRIBUTES	\
+	_IOW(NVHOST_PVA_IOCTL_MAGIC, 5, struct pva_ioctl_queue_attr)
 
 
-#define NVHOST_PVA_IOCTL_LAST _IOC_NR(PVA_IOCTL_SUBMIT)
+#define NVHOST_PVA_IOCTL_LAST _IOC_NR(PVA_IOCTL_SET_QUEUE_ATTRIBUTES)
 #define NVHOST_PVA_IOCTL_MAX_ARG_SIZE sizeof(struct pva_characteristics_req)
 
 #endif /* __LINUX_NVHOST_PVA_IOCTL_H */

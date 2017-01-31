@@ -335,6 +335,17 @@ int nvhost_queue_submit(struct nvhost_queue *queue, void *task_arg)
 	return 0;
 }
 
+int nvhost_queue_set_attr(struct nvhost_queue *queue, void *arg)
+{
+	struct nvhost_queue_pool *pool = queue->pool;
+
+	if (pool->ops && pool->ops->set_attribute)
+		return pool->ops->set_attribute(queue, arg);
+
+	return 0;
+}
+
+
 int nvhost_queue_get_task_size(struct nvhost_queue *queue)
 {
 	struct nvhost_queue_pool *pool = queue->pool;

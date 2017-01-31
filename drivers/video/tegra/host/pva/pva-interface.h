@@ -176,7 +176,11 @@ enum pva_region_ids {
 enum pva_queue_attr_id {
 	QUEUE_ATTR_PRIORITY = 1,
 	QUEUE_ATTR_VPU = 2,
+	QUEUE_ATTR_MAX = 3,
 };
+
+#define PVA_QUEUE_DEFAULT_PRIORITY	2U
+#define PVA_QUEUE_DEFAULT_VPU_MASK	3U
 
 /*
  * Threshold ID's
@@ -1105,7 +1109,7 @@ pva_cmd_set_queue_attributes(struct pva_cmd * const cmd,
 		       | PVA_SET_COMMAND(CMD_SET_QUEUE_ATTRIBUTES)
 		       | PVA_INSERT(queue_id, 15, 8)
 		       | PVA_INSERT(attr_id, 23, 16);
-	cmd->mbox[1] = attr_id;
+	cmd->mbox[1] = attribute;
 	return 2U;
 }
 

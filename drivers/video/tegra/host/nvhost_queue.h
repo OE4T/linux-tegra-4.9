@@ -53,6 +53,7 @@ struct nvhost_queue_task_mem_info {
  * task_pool		pointer to struct for task memory pool
  * task_dma_size	dma size used in hardware for a task
  * task_kmem_size	kernel memory size for a task
+ * attr			queue attribute associated with the host module
  *
  */
 struct nvhost_queue {
@@ -66,6 +67,7 @@ struct nvhost_queue {
 	struct nvhost_queue_task_pool *task_pool;
 	size_t task_dma_size;
 	size_t task_kmem_size;
+	void *attr;
 };
 
 /**
@@ -83,6 +85,7 @@ struct nvhost_queue_ops {
 	int (*abort)(struct nvhost_queue *queue);
 	int (*submit)(struct nvhost_queue *queue, void *task_arg);
 	void (*get_task_size)(size_t *dma_size, size_t *kmem_size);
+	int (*set_attribute)(struct nvhost_queue *queue, void *arg);
 };
 
 /**
@@ -235,4 +238,16 @@ int nvhost_queue_alloc_task_memory(
  *
  */
 void nvhost_queue_free_task_memory(struct nvhost_queue *queue, int index);
+
+/**
+ * @brief	Sets the attribute to the queue
+ *
+ * This function set the attribute of the queue with the arguments passed
+ *
+ * @param queue		Pointer to an allocated queue
+ * @param arg		The structure which consists of the id and value
+ * @return		0 on success or negative error code on failure.
+ *
+ */
+int nvhost_queue_set_attr(struct nvhost_queue *queue, void *arg);
 #endif

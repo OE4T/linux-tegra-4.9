@@ -379,6 +379,9 @@ int pva_finalize_poweron(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct pva *pva = pdata->private_data;
+	struct pva_queue_attribute *attr;
+	struct nvhost_queue_pool *pool;
+	unsigned long i = 0;
 	int err = 0;
 
 	/* Enable LIC_INTERRUPT line for HSP1 */
@@ -394,6 +397,23 @@ int pva_finalize_poweron(struct platform_device *pdev)
 	err = pva_init_fw(pdev);
 	if (err < 0)
 		goto err_poweron;
+
+	pool = pva->pool;
+
+	for_each_set_bit_from(i, &pool->alloc_table, pool->max_queue_cnt) {
+		uint32_t id;
+
+		for (id = 1; id < QUEUE_ATTR_MAX; id++) {
+			attr = pool->queues[i].attr;
+			err = nvhost_queue_set_attr(&pool->queues[i],
+					&attr[id]);
+			if (err) {
+				dev_err(&pdev->dev,
+					"unable to set attribute %u to queue %lu\n",
+					id, i);
+			}
+		}
+	}
 
 	return err;
 

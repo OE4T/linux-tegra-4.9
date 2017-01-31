@@ -734,9 +734,8 @@ int nvhost_module_init(struct platform_device *dev)
 				 pdata->clocks[i].name, err);
 
 		rate = clk_round_rate(c, rate);
-		clk_prepare_enable(c);
-
 		clk_set_rate(c, rate);
+		clk_prepare_enable(c);
 
 		pdata->clk[pdata->num_clks++] = c;
 		i++;

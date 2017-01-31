@@ -20,8 +20,6 @@
 #define __VHOST_H
 
 #include <linux/nvhost.h>
-#include <linux/tegra_gr_comm.h>
-#include <linux/tegra_vhost.h>
 
 #include "chip_support.h"
 
@@ -31,6 +29,9 @@ struct nvhost_virt_ctx {
 };
 
 #ifdef CONFIG_TEGRA_GRHOST_VHOST
+
+#include <linux/tegra_gr_comm.h>
+#include <linux/tegra_vhost.h>
 
 static inline void nvhost_set_virt_data(struct platform_device *dev, void *d)
 {

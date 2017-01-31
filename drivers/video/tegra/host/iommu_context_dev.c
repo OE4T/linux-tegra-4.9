@@ -81,7 +81,9 @@ void iommu_context_dev_release(struct platform_device *pdev)
 static int __iommu_context_dev_map_static(struct platform_device *pdev,
 					  struct iommu_static_mapping *mapping)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	DEFINE_DMA_ATTRS(attrs);
+#endif
 	const struct dma_map_ops *ops = get_dma_ops(&pdev->dev);
 	int num_pages = DIV_ROUND_UP(mapping->size, PAGE_SIZE);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
@@ -89,7 +91,9 @@ static int __iommu_context_dev_map_static(struct platform_device *pdev,
 #endif
 	int i, err;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
+#endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 	/* allocate the area first */
@@ -119,9 +123,13 @@ static int __iommu_context_dev_map_static(struct platform_device *pdev,
 		iova = ops->map_page_at(&pdev->dev, page, iova,
 			     (unsigned long)va & ~PAGE_MASK, PAGE_SIZE,
 			     DMA_BIDIRECTIONAL, NULL);
-#else
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 		iova = ops->map_at(&pdev->dev, iova, page_to_phys(page),
 					PAGE_SIZE, DMA_BIDIRECTIONAL, &attrs);
+#else
+		iova = ops->map_at(&pdev->dev, iova, page_to_phys(page),
+					PAGE_SIZE, DMA_BIDIRECTIONAL,
+					DMA_ATTR_SKIP_IOVA_GAP);
 #endif
 		err = dma_mapping_error(&pdev->dev, iova);
 		if (err) {

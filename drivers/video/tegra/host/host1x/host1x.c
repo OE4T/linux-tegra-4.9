@@ -974,13 +974,13 @@ static int nvhost_probe(struct platform_device *dev)
 	}
 
 	syncpt_irq = platform_get_irq(dev, 0);
-	if (IS_ERR_VALUE(syncpt_irq)) {
+	if (syncpt_irq < 0) {
 		dev_err(&dev->dev, "missing syncpt irq\n");
 		return -ENXIO;
 	}
 
 	generic_irq = platform_get_irq(dev, 1);
-	if (IS_ERR_VALUE(generic_irq)) {
+	if (generic_irq < 0) {
 		dev_err(&dev->dev, "missing generic irq\n");
 		generic_irq = 0;
 	}

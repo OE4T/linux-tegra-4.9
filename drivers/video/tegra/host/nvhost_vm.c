@@ -21,6 +21,7 @@
 #include <linux/list.h>
 #include <linux/slab.h>
 #include <linux/dma-buf.h>
+#include <linux/version.h>
 
 #include "chip_support.h"
 #include "nvhost_vm.h"
@@ -69,9 +70,11 @@ int nvhost_vm_init(struct platform_device *pdev)
 {
 	struct nvhost_master *host = nvhost_get_host(pdev);
 	struct nvhost_vm_firmware_area *firmware_area = &host->firmware_area;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	DEFINE_DMA_ATTRS(attrs);
-
 	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
+#endif
+
 	mutex_init(&firmware_area->mutex);
 
 	/* initialize bitmap */
@@ -86,10 +89,14 @@ int nvhost_vm_init(struct platform_device *pdev)
 
 	/* allocate area */
 	firmware_area->vaddr =
-		dma_alloc_attrs(&pdev->dev,
-				host->info.firmware_area_size,
-				&firmware_area->dma_addr,
-				GFP_KERNEL, &attrs);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+		dma_alloc_attrs(&pdev->dev, host->info.firmware_area_size,
+				&firmware_area->dma_addr, GFP_KERNEL, &attrs);
+#else
+		dma_alloc_attrs(&pdev->dev, host->info.firmware_area_size,
+				&firmware_area->dma_addr, GFP_KERNEL,
+				DMA_ATTR_READ_ONLY);
+#endif
 	if (!firmware_area->vaddr)
 		return -ENOMEM;
 

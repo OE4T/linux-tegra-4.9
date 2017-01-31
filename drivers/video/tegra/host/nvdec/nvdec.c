@@ -423,10 +423,13 @@ static int nvdec_read_ucode(struct platform_device *dev, const char *fw_name,
 {
 	const struct firmware *ucode_fw;
 	int err;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+	DEFINE_DMA_ATTRS(attrs);
+	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
+#endif
 
 	m->phys = 0;
 	m->mapped = NULL;
-	init_dma_attrs(&m->attrs);
 
 	ucode_fw  = nvhost_client_request_firmware(dev, fw_name);
 	if (!ucode_fw) {
@@ -437,11 +440,14 @@ static int nvdec_read_ucode(struct platform_device *dev, const char *fw_name,
 	}
 
 	m->size = ucode_fw->size;
-	dma_set_attr(DMA_ATTR_READ_ONLY, &m->attrs);
 
-	m->mapped = dma_alloc_attrs(&dev->dev,
-			m->size, &m->phys,
-			GFP_KERNEL, &m->attrs);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+	m->mapped = dma_alloc_attrs(&dev->dev, m->size, &m->phys, GFP_KERNEL,
+				    &attrs);
+#else
+	m->mapped = dma_alloc_attrs(&dev->dev, m->size, &m->phys, GFP_KERNEL,
+				    DMA_ATTR_READ_ONLY);
+#endif
 	if (!m->mapped) {
 		dev_err(&dev->dev, "dma memory allocation failed");
 		err = -ENOMEM;
@@ -463,9 +469,12 @@ static int nvdec_read_ucode(struct platform_device *dev, const char *fw_name,
 
 clean_up:
 	if (m->mapped) {
-		dma_free_attrs(&dev->dev,
-				m->size, m->mapped,
-				m->phys, &m->attrs);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+		dma_free_attrs(&dev->dev, m->size, m->mapped, m->phys, &attrs);
+#else
+		dma_free_attrs(&dev->dev, m->size, m->mapped, m->phys,
+			       DMA_ATTR_READ_ONLY);
+#endif
 		m->mapped = NULL;
 	}
 	release_firmware(ucode_fw);

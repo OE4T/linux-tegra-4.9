@@ -118,6 +118,7 @@ static void serialize(struct nvhost_job *job)
 			  nvhost_syncpt_read_max(sp, job->sp[i].id));
 }
 
+#ifdef CONFIG_TEGRA_GRHOST_SYNC
 static void add_sync_waits(struct nvhost_channel *ch, int fd)
 {
 	struct nvhost_master *host = nvhost_get_host(ch->dev);
@@ -175,6 +176,13 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 
 	sync_fence_put(fence);
 }
+#else
+static void add_sync_waits(struct nvhost_channel *ch, int fd)
+{
+	(void)ch;
+	(void)fd;
+}
+#endif
 
 static void push_waits(struct nvhost_job *job)
 {

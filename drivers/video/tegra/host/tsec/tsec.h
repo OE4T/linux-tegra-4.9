@@ -22,7 +22,6 @@
 #define __NVHOST_TSEC_H__
 
 #include <linux/types.h>
-#include <linux/dma-attrs.h>
 #include <linux/nvhost.h>
 
 int nvhost_tsec_finalize_poweron(struct platform_device *dev);

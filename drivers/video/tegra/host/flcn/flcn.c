@@ -29,6 +29,7 @@
 #include <soc/tegra/chip-id.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/module.h>
+#include <linux/version.h>
 
 #include "dev.h"
 #include "class_ids.h"
@@ -95,7 +96,7 @@ int flcn_intr_init(struct platform_device *pdev)
 		return 0;
 
 	pdata->irq = platform_get_irq(pdev, 0);
-	if (IS_ERR_VALUE(pdata->irq)) {
+	if (pdata->irq < 0) {
 		dev_err(&pdev->dev, "failed to get IRQ\n");
 		return -ENXIO;
 	}
@@ -300,7 +301,10 @@ static int flcn_read_ucode(struct platform_device *dev, const char *fw_name)
 	struct flcn *v = get_flcn(dev);
 	const struct firmware *ucode_fw;
 	int err;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	DEFINE_DMA_ATTRS(attrs);
+	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
+#endif
 
 	nvhost_dbg_fn("");
 
@@ -316,11 +320,14 @@ static int flcn_read_ucode(struct platform_device *dev, const char *fw_name)
 	}
 
 	v->size = ucode_fw->size;
-	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
 
-	v->mapped = dma_alloc_attrs(&dev->dev,
-				v->size, &v->dma_addr,
-				GFP_KERNEL, &attrs);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+	v->mapped = dma_alloc_attrs(&dev->dev, v->size, &v->dma_addr,
+				    GFP_KERNEL, &attrs);
+#else
+	v->mapped = dma_alloc_attrs(&dev->dev, v->size, &v->dma_addr,
+				    GFP_KERNEL, DMA_ATTR_READ_ONLY);
+#endif
 	if (!v->mapped) {
 		dev_err(&dev->dev, "dma memory allocation failed");
 		err = -ENOMEM;
@@ -341,9 +348,13 @@ static int flcn_read_ucode(struct platform_device *dev, const char *fw_name)
 
  clean_up:
 	if (v->mapped) {
-		dma_free_attrs(&dev->dev,
-			v->size, v->mapped,
-			v->dma_addr, &attrs);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+		dma_free_attrs(&dev->dev, v->size, v->mapped, v->dma_addr,
+			       &attrs);
+#else
+		dma_free_attrs(&dev->dev, v->size, v->mapped, v->dma_addr,
+			       DMA_ATTR_READ_ONLY);
+#endif
 		v->mapped = NULL;
 		v->dma_addr = 0;
 	}

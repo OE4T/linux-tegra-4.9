@@ -23,14 +23,14 @@
 
 #ifdef __KERNEL__
 
-#include "../drivers/staging/android/sync.h"
-
 struct nvhost_syncpt;
 struct nvhost_ctrl_sync_fence_info;
 struct nvhost_sync_timeline;
 struct nvhost_sync_pt;
 
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
+#include "../drivers/staging/android/sync.h"
+
 struct nvhost_sync_timeline *nvhost_sync_timeline_create(
 		struct nvhost_syncpt *sp,
 		int id);

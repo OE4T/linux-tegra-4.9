@@ -352,7 +352,9 @@ static void cdma_timeout_release_mlock(struct nvhost_cdma *cdma)
 	struct nvhost_job *job = NULL;
 	struct nvhost_channel *ch;
 	dma_addr_t dma_handle = 0;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	DEFINE_DMA_ATTRS(attrs);
+#endif
 	u32 *cpuvaddr = NULL;
 	bool ch_own, cpu_own;
 	unsigned int owner;
@@ -388,9 +390,14 @@ static void cdma_timeout_release_mlock(struct nvhost_cdma *cdma)
 	nvhost_channel_remove_identifier(pdata, &ch);
 
 	/* allocate a command buffer */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	cpuvaddr = dma_alloc_attrs(pdev->dev.parent, SZ_4K,
 				   &dma_handle, GFP_KERNEL,
 				   &attrs);
+#else
+	cpuvaddr = dma_alloc_attrs(pdev->dev.parent, SZ_4K,
+				   &dma_handle, GFP_KERNEL, 0);
+#endif
 	if (!cpuvaddr) {
 		nvhost_err(&pdev->dev, "mlock release failed: failed to allocate release buffer\n");
 		goto err_alloc_buffer;
@@ -466,7 +473,11 @@ err_add_gather:
 err_job_alloc:
 	nvhost_syncpt_put_ref(syncpt, syncpt_id);
 err_alloc_syncpt:
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	dma_free_attrs(pdev->dev.parent, SZ_4K, cpuvaddr, dma_handle, &attrs);
+#else
+	dma_free_attrs(pdev->dev.parent, SZ_4K, cpuvaddr, dma_handle, 0);
+#endif
 err_alloc_buffer:
 	nvhost_putchannel(ch, 1);
 }

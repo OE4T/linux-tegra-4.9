@@ -34,7 +34,9 @@
 #include "flcn/flcn.h"
 #include "isp/isp.h"
 #include "isp/isp_isr_v2.h"
+#if defined(CONFIG_TEGRA_GRHOST_NVCSI)
 #include "nvcsi/nvcsi.h"
+#endif
 #if defined(CONFIG_VIDEO_TEGRA_VI) || defined(CONFIG_VIDEO_TEGRA_VI_MODULE)
 #include "vi/vi4.h"
 #endif

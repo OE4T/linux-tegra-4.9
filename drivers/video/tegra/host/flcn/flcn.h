@@ -20,7 +20,6 @@
 #define __NVHOST_FLCN_H__
 
 #include <linux/types.h>
-#include <linux/dma-attrs.h>
 #include <linux/firmware.h>
 #include <linux/platform_device.h>
 

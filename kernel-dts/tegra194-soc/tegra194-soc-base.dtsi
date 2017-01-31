@@ -718,7 +718,10 @@
 		              0 71 0x04>;
 		interrupt-names = "stall", "nonstall";
 		access-vpr-phys;
+		clocks = <&bpmp_clks TEGRA194_CLK_GPCCLK>,
+			<&bpmp_clks TEGRA194_CLK_GPU_PWR>;
 		clock-names = "gpu", "gpu_sys";
+		resets = <&bpmp_resets TEGRA194_RESET_GPU>;
 	};
 
 };

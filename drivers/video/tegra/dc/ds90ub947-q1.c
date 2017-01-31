@@ -1,7 +1,7 @@
 /*
  * DS90UB947-Q1 1080p OpenLDS to FPD-Link III Serializer driver
  *
- * Copyright (C) 2016 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2016-2017 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,22 +25,10 @@
 #include <linux/debugfs.h>
 #include <linux/mutex.h>
 #include <linux/delay.h>
+
 #include "dsi.h"
+#include "ds90ub947-q1.h"
 
-#define DEV_NAME "ds90ub947-q1"
-#define	DS90UB947_GENERAL_STATUS	0x0C
-
-struct ds90ub947_data {
-	/* app device */
-	struct i2c_client *client;
-	struct regmap *regmap;
-	u32 *init_regs;
-	u32 n_init_regs;
-	struct dentry *debugdir;
-	struct mutex lock;
-	int en_gpio; /* GPIO */
-	int en_gpio_flags;
-};
 
 /* TODO: support multiple instances */
 struct ds90ub947_data	 *g_ds90ub947_data;
@@ -97,6 +85,60 @@ static int ds90ub947_init(struct ds90ub947_data *data)
 		pr_err("%d: lvds2fpdl GPIO is invalid\n", ret);
 	}
 	ds90ub947_lvds2fpdl_en_gpio(data, true);
+
+	/* set backchanel crc setting */
+	/*setting not needed since it is enabled by default */
+
+	/* set backchannel i2c setting */
+	ret = regmap_update_bits(data->regmap, DS90UB947_GENERAL_CONFIG,
+				BIT(DS90UB947_I2C_PASSTHROUGH_BIT),
+				data->en_bchnl_i2c_passthrough <<
+				DS90UB947_I2C_PASSTHROUGH_BIT);
+	if (ret)
+		goto fault;
+
+	ret = regmap_update_bits(data->regmap, DS90UB947_I2C_CONTROL,
+				BIT(DS90UB947_I2C_PASSALL_BIT),
+				data->en_bchnl_i2c_passthrough <<
+				DS90UB947_I2C_PASSALL_BIT);
+	if (ret)
+		goto fault;
+
+	/* set backchannel irq settings */
+	ret = regmap_update_bits(data->regmap, DS90UB947_INTR_CNTRL_REG,
+				BIT(DS90UB947_INTR_ENABLE_BIT) |
+				BIT(DS90UB947_INTR_RX_ENABLE_BIT),
+				data->en_bchnl_irq <<
+				DS90UB947_INTR_ENABLE_BIT |
+				data->en_bchnl_irq <<
+				DS90UB947_INTR_RX_ENABLE_BIT);
+	if (ret)
+		goto fault;
+
+	/* set deserializer address */
+	ret = regmap_update_bits(data->regmap, DS90UB947_DESER_ADDR,
+				0xFF << DS90UB947_DES_ID_SHIFT_WIDTH,
+				data->deser_address <<
+				DS90UB947_DES_ID_SHIFT_WIDTH);
+	if (ret)
+		goto fault;
+
+	/* set slave address */
+	ret = regmap_update_bits(data->regmap, DS90UB947_SLAVE_ADDR,
+				0xFF << DS90UB947_SLAVE_ADDR_SHIFT_WIDTH,
+				data->slave_address <<
+				DS90UB947_SLAVE_ADDR_SHIFT_WIDTH);
+	if (ret)
+		goto fault;
+
+	/* set slave alias address*/
+	ret = regmap_update_bits(data->regmap, DS90UB947_SLAVE_ALIAS,
+				0xFF << DS90UB947_SLAVE_ALIAS_SHIFT_WIDTH,
+				data->slave_alias_address <<
+				DS90UB947_SLAVE_ALIAS_SHIFT_WIDTH);
+	if (ret)
+		goto fault;
+
 	for (i = 0; i < data->n_init_regs; i += 3) {
 		reg = data->init_regs[i];
 		mask = data->init_regs[i + 1];
@@ -110,6 +152,8 @@ static int ds90ub947_init(struct ds90ub947_data *data)
 			break;
 		}
 	}
+
+fault:
 	mutex_unlock(&data->lock);
 	return ret;
 }
@@ -198,7 +242,7 @@ static int of_ds90ub947_parse_pdata(struct i2c_client *client,
 	int i = 0;
 	struct property *prop;
 	const __be32 *p;
-	u32 u;
+	u32 u, temp;
 	u32 *init_regs;
 	enum of_gpio_flags flags;
 
@@ -233,6 +277,31 @@ static int of_ds90ub947_parse_pdata(struct i2c_client *client,
 
 	data->init_regs = init_regs;
 	data->n_init_regs = count;
+
+	if (!of_property_read_u32(np, "ti,enable-bchnl-i2c", &temp))
+		data->en_bchnl_i2c_passthrough = temp;
+	else
+		data->en_bchnl_i2c_passthrough = 0;
+
+	if (!of_property_read_u32(np, "ti,enable-bchnl-irq", &temp))
+		data->en_bchnl_irq = temp;
+	else
+		data->en_bchnl_irq = 0;
+
+	if (!of_property_read_u32(np, "ti,deser-addr", &temp))
+		data->deser_address = temp;
+	else
+		data->deser_address = 0;
+
+	if (!of_property_read_u32(np, "ti,slave-addr", &temp))
+		data->slave_address = temp;
+	else
+		data->slave_address = 0;
+
+	if (!of_property_read_u32(np, "ti,slave-alias-addr", &temp))
+		data->slave_alias_address = temp;
+	else
+		data->slave_alias_address = 0;
 
 	return 0;
 }

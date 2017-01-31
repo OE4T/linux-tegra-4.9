@@ -786,7 +786,18 @@ void tegra_dsi_init_clock_param(struct tegra_dc *dc)
 			dc->mode.v_sync_width + dc->mode.v_active;
 
 	/* Calculate minimum required pixel rate. */
-	pixel_clk_hz = h_width_pixels * v_width_lines * dsi->info.refresh_rate;
+	/*
+	 * Some one shot mode panel configurations need the clock to be set
+	 * for a faster than required refresh rate to transfer framedata
+	 * before the next TE signal. For such configurations, adjust the
+	 * refresh rate.
+	 */
+	if (dsi->info.refresh_rate_adj)
+		pixel_clk_hz = h_width_pixels * v_width_lines *
+			(dsi->info.refresh_rate + dsi->info.refresh_rate_adj);
+	else
+		pixel_clk_hz = h_width_pixels * v_width_lines *
+			dsi->info.refresh_rate;
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE) {
 		if (dsi->info.rated_refresh_rate >= dsi->info.refresh_rate)
 			dev_info(&dc->ndev->dev, "DSI: measured refresh rate "

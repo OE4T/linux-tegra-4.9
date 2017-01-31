@@ -1318,6 +1318,13 @@ static struct device_node *parse_dsi_settings(struct platform_device *ndev,
 	}
 
 	if (!of_property_read_u32(np_dsi_panel,
+		"nvidia,dsi-refresh-rate-adj", &temp)) {
+		dsi->refresh_rate_adj = (u8)temp;
+		OF_DC_LOG("DSI refresh rate adjustment %d\n",
+			dsi->refresh_rate_adj);
+	}
+
+	if (!of_property_read_u32(np_dsi_panel,
 			"nvidia,dsi-n-data-lanes", &temp)) {
 		dsi->n_data_lanes = (u8)temp;
 		OF_DC_LOG("n data lanes %d\n", dsi->n_data_lanes);

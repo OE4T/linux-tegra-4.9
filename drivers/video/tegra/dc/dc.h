@@ -431,6 +431,8 @@ struct tegra_dsi_out {
 	struct tegra_dsi_board_info	boardinfo;
 	bool		use_video_host_fifo_for_cmd;
 	bool		dsi_csi_loopback;
+	bool		set_max_timeout;
+	u32		refresh_rate_adj;
 };
 
 enum {

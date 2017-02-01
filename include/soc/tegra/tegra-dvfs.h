@@ -243,6 +243,7 @@ unsigned long tegra_dvfs_get_rate(struct clk *c);
 int tegra_dvfs_get_freqs(struct clk *c, unsigned long **freqs, int *num_freqs);
 int tegra_setup_dvfs(struct clk *c, struct dvfs *d);
 int tegra_dvfs_init_rails(struct dvfs_rail *dvfs_rails[], int n);
+void tegra_dvfs_init_rails_lists(struct dvfs_rail *rails[], int n);
 void tegra_dvfs_add_relationships(struct dvfs_relationship *rels, int n);
 void tegra_dvfs_rail_enable(struct dvfs_rail *rail);
 void tegra_dvfs_rail_disable(struct dvfs_rail *rail);
@@ -290,6 +291,8 @@ static inline int tegra_setup_dvfs(struct clk *c, struct dvfs *d)
 { return -EINVAL; }
 static inline int tegra_dvfs_init_rails(struct dvfs_rail *dvfs_rails[], int n)
 { return -EINVAL; }
+static inline void tegra_dvfs_init_rails_lists(struct dvfs_rail *rails[], int n)
+{ return; }
 static inline void tegra_dvfs_add_relationships(
 		struct dvfs_relationship *rels, int n)
 { return; }

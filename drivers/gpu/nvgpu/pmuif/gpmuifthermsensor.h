@@ -14,8 +14,6 @@
 #ifndef _GPMUIFTHERMSENSOR_H_
 #define _GPMUIFTHERMSENSOR_H_
 
-#include "gk20a/gk20a.h"
-#include "gk20a/pmu_gk20a.h"
 #include "ctrl/ctrltherm.h"
 #include "pmuif/gpmuifboardobj.h"
 #include "gk20a/pmu_common.h"
@@ -74,4 +72,3 @@ union nv_pmu_therm_therm_channel_boardobj_set_union {
 NV_PMU_BOARDOBJ_GRP_SET_MAKE_E32(therm, therm_channel);
 
 #endif
-

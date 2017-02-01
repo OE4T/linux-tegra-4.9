@@ -26,6 +26,7 @@
 
 #include <nvgpu/timers.h>
 
+#include "gk20a.h"
 #include "gr_gk20a.h"
 #include "semaphore_gk20a.h"
 #include "nvgpu_common.h"

@@ -13,8 +13,6 @@
 #ifndef _GPMUIFVOLT_H_
 #define _GPMUIFVOLT_H_
 
-#include "gk20a/gk20a.h"
-#include "gk20a/pmu_gk20a.h"
 #include "pmuif/gpmuifboardobj.h"
 #include "gk20a/pmu_common.h"
 #include "ctrl/ctrlvolt.h"

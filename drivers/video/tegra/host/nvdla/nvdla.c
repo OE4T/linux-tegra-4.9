@@ -43,16 +43,6 @@
 #include "dla_fw_version.h"
 #include "dla_os_interface.h"
 
-/**
- * Maximum buffer size for debug dump
- */
-#define DEBUG_BUFFER_SIZE 0x100
-
-/*
- * CMD submission timeout in msec
- */
-#define CMD_TIMEOUT_MSEC	(1000)
-
 static DEFINE_DMA_ATTRS(attrs);
 
 int nvhost_nvdla_flcn_isr(struct platform_device *pdev)

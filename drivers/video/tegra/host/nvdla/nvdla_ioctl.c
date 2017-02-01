@@ -37,8 +37,6 @@
 #include <linux/nvhost_nvdla_ioctl.h>
 #include "dla_os_interface.h"
 
-#define DEBUG_BUFFER_SIZE 0x100
-
 /**
  * struct nvdla_private per unique FD private data
  * @pdev		pointer to platform device

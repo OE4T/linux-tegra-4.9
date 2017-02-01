@@ -63,7 +63,17 @@
 /**
  * Trace Buffer Size
  */
-#define TRACE_BUFFER_SIZE		0x100000
+#define TRACE_BUFFER_SIZE		SZ_1M
+
+/**
+ * Maximum buffer size for debug dump
+ */
+#define DEBUG_BUFFER_SIZE		SZ_256
+
+/*
+ * CMD submission timeout in msec
+ */
+#define CMD_TIMEOUT_MSEC	(1000)
 
 /**
  * Max number of fences supported
@@ -78,7 +88,7 @@
 /*
  * keep max cmd size multiple of 256 bytes.
  */
-#define MAX_CMD_SIZE			256
+#define MAX_CMD_SIZE			SZ_256
 #define NVDLA_CMD_OFFSET(index)		(MAX_CMD_SIZE * index)
 
 /**

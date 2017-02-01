@@ -252,7 +252,7 @@ static size_t nvdla_get_task_desc_size(void)
 	size += MAX_NUM_NVDLA_BUFFERS_PER_TASK * sizeof(struct dla_mem_addr);
 
 	/* falcon requires IOVA addr to be 256 aligned */
-	size = roundup(size, 256);
+	size = roundup(size, SZ_256);
 
 	return size;
 }

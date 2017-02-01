@@ -31,16 +31,21 @@
 #include <linux/sched.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
+#include <linux/of_device.h>
 
 #include <linux/platform_device.h>
 #include <linux/miscdevice.h>
 #include <linux/clk/tegra.h>
 #include <linux/of.h>
 
+#include <soc/tegra/tegra_powergate.h>
 #include "tegra_cec.h"
 
-#include <linux/tegra-powergate.h>
 #include "../../../../display/drivers/video/tegra/dc/dc_priv.h"
+
+struct tegra_cec_soc {
+	int powergate_id;
+};
 
 static ssize_t cec_logical_addr_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
@@ -432,6 +437,8 @@ static int tegra_cec_probe(struct platform_device *pdev)
 	if (!cec)
 		return -ENOMEM;
 
+	cec->soc = of_device_get_match_data(&pdev->dev);
+
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 
 	if (!res) {
@@ -474,7 +481,7 @@ static int tegra_cec_probe(struct platform_device *pdev)
 	mutex_init(&cec->tx_lock);
 
 #if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
-	ret = tegra_nvdisp_unpowergate_partition(TEGRA_POWERGATE_DISA);
+	ret = tegra_nvdisp_unpowergate_partition(cec->soc->powergate_id);
 	if (ret) {
 		dev_err(&pdev->dev, "Fail to unpowergate DISP: %d.\n", ret);
 		goto clk_error;
@@ -564,7 +571,7 @@ cec_error:
 	clk_disable(cec->clk);
 	clk_put(cec->clk);
 #if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
-	tegra_nvdisp_powergate_partition(TEGRA_POWERGATE_DISA);
+	tegra_nvdisp_powergate_partition(cec->soc->powergate_id);
 #endif
 clk_error:
 	return ret;
@@ -577,7 +584,7 @@ static int tegra_cec_remove(struct platform_device *pdev)
 	clk_disable(cec->clk);
 	clk_put(cec->clk);
 #if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
-	tegra_nvdisp_powergate_partition(TEGRA_POWERGATE_DISA);
+	tegra_nvdisp_powergate_partition(cec->soc->powergate_id);
 #endif
 
 	misc_deregister(&cec->misc_dev);
@@ -604,7 +611,7 @@ static int tegra_cec_suspend(struct platform_device *pdev, pm_message_t state)
 
 	clk_disable(cec->clk);
 #if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
-	tegra_nvdisp_powergate_partition(TEGRA_POWERGATE_DISA);
+	tegra_nvdisp_powergate_partition(cec->soc->powergate_id);
 #endif
 
 	dev_notice(&pdev->dev, "suspended\n");
@@ -618,7 +625,7 @@ static int tegra_cec_resume(struct platform_device *pdev)
 	dev_notice(&pdev->dev, "Resuming\n");
 
 #if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
-	tegra_nvdisp_unpowergate_partition(TEGRA_POWERGATE_DISA);
+	tegra_nvdisp_unpowergate_partition(cec->soc->powergate_id);
 #endif
 	clk_enable(cec->clk);
 	schedule_work(&cec->work);
@@ -627,11 +634,17 @@ static int tegra_cec_resume(struct platform_device *pdev)
 }
 #endif
 
+static struct tegra_cec_soc tegra210_soc_data = {
+	.powergate_id = TEGRA210_POWER_DOMAIN_DISA,
+};
+
+static struct tegra_cec_soc tegra186_soc_data = {
+	.powergate_id = TEGRA186_POWER_DOMAIN_DISP,
+};
+
 static struct of_device_id tegra_cec_of_match[] = {
-	{ .compatible = "nvidia,tegra114-cec", },
-	{ .compatible = "nvidia,tegra124-cec", },
-	{ .compatible = "nvidia,tegra210-cec", },
-	{ .compatible = "nvidia,tegra186-cec", },
+	{ .compatible = "nvidia,tegra210-cec", .data = &tegra210_soc_data },
+	{ .compatible = "nvidia,tegra186-cec", .data = &tegra186_soc_data },
 	{},
 };
 

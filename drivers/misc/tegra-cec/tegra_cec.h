@@ -24,6 +24,8 @@
 
 #define TEGRA_CEC_FRAME_MAX_LENGTH  16
 
+struct tegra_cec_soc;
+
 struct tegra_cec {
 	struct device		*dev;
 	struct miscdevice 	misc_dev;
@@ -41,6 +43,7 @@ struct tegra_cec {
 #endif
 	u16			logical_addr;
 	struct work_struct	work;
+	const struct tegra_cec_soc *soc;
 	unsigned int		rx_wake;
 	unsigned int		tx_wake;
 	u16			rx_buffer;

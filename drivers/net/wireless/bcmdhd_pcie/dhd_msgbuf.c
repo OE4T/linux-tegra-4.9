@@ -145,7 +145,7 @@ struct msgbuf_ring; /* ring context for common and flow rings */
 
 #if defined(PCIE_D2H_SYNC)
 #define PCIE_D2H_SYNC_WAIT_TRIES    (512UL)
-#define PCIE_D2H_SYNC_NUM_OF_STEPS	(6UL)
+#define PCIE_D2H_SYNC_NUM_OF_STEPS	(8UL)
 #define PCIE_D2H_SYNC_DELAY			(50UL)	/* in terms of usecs */
 
 /**

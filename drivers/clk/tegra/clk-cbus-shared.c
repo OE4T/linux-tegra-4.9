@@ -172,7 +172,8 @@ static int clk_cbus_set_rate(struct clk_hw *hw, unsigned long rate,
 	cbus->rate_updating = true;
 
 	parent = clk_get_parent(hw->clk);
-	if (!parent) {
+	if (IS_ERR_OR_NULL(parent)) {
+		pr_err("%s: no %s parent\n", __func__, clk_hw_get_name(hw));
 		cbus->rate_updating = false;
 		return -EINVAL;
 	}
@@ -214,8 +215,8 @@ static long clk_cbus_round_rate(struct clk_hw *hw, unsigned long rate,
 	bool pass_through = cbus->flags & TEGRA_SHARED_BUS_ROUND_PASS_THRU;
 
 	parent = clk_get_parent(hw->clk);
-	if (IS_ERR(parent)) {
-		pr_err("no parent for %s\n", __clk_get_name(hw->clk));
+	if (IS_ERR_OR_NULL(parent)) {
+		pr_info("%s: no %s parent\n", __func__, clk_hw_get_name(hw));
 		return *parent_rate;
 	}
 
@@ -241,7 +242,13 @@ static long clk_cbus_round_rate(struct clk_hw *hw, unsigned long rate,
 static unsigned long clk_cbus_recalc_rate(struct clk_hw *hw,
 				unsigned long parent_rate)
 {
-	return clk_get_rate(clk_get_parent(hw->clk));
+	struct clk *parent = clk_get_parent(hw->clk);
+
+	if (IS_ERR_OR_NULL(parent)) {
+		pr_info("%s: no %s parent\n", __func__, clk_hw_get_name(hw));
+		return parent_rate;
+	}
+	return clk_get_rate(parent);
 }
 
 static unsigned long _clk_cap_shared_bus(struct clk *c, unsigned long rate,
@@ -569,7 +576,8 @@ static int clk_gbus_set_rate(struct clk_hw *hw, unsigned long rate,
 	gbus->rate_updating = true;
 
 	parent = clk_get_parent(hw->clk);
-	if (!parent) {
+	if (IS_ERR_OR_NULL(parent)) {
+		pr_err("%s: no %s parent\n", __func__, clk_hw_get_name(hw));
 		gbus->rate_updating = false;
 		return -EINVAL;
 	}

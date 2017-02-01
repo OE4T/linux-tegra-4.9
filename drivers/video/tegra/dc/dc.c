@@ -3402,7 +3402,7 @@ static struct tegra_dc_mode *tegra_dc_get_override_mode(struct tegra_dc *dc)
 		if (refresh % 1000)
 			mode->vmode |= FB_VMODE_1000DIV1001;
 
-#ifdef CONFIG_TEGRA_DC_CMU
+#if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 		/*
 		 * Implicit contract between BL and us. If CMU is enabled,
 		 * assume limited range. This sort of works because we know

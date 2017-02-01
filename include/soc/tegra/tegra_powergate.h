@@ -18,6 +18,9 @@
 #define _LINUX_TEGRA_POWERGATE_H
 
 #include <linux/kernel.h>
+#include <linux/tegra-powergate.h>
+
+struct platform_device;
 
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 #include <dt-bindings/soc/tegra210-powergate.h>

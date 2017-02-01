@@ -194,6 +194,8 @@ dma_addr_t nvhost_syncpt_gos_address(struct platform_device *engine_pdev,
 				     u32 syncpt_id)
 {
 	u32 gos_id, gos_offset;
+	struct cv_dev_info *cv_dev_info;
+	struct sg_table *sgt;
 	int err;
 
 	err = nvhost_syncpt_get_gos(engine_pdev, syncpt_id,
@@ -201,11 +203,12 @@ dma_addr_t nvhost_syncpt_gos_address(struct platform_device *engine_pdev,
 	if (err)
 		return 0;
 
-	err = nvhost_syncpt_cv_dev_address_table_init(engine_pdev);
-	if (err)
+	cv_dev_info = nvmap_fetch_cv_dev_info(&engine_pdev->dev);
+	if (!cv_dev_info)
 		return 0;
 
-	return cv_dev_address_table[gos_id] + gos_offset;
+	sgt = cv_dev_info->sgt + gos_id;
+	return sg_dma_address(sgt->sgl) + gos_offset;
 }
 
 /**

@@ -261,6 +261,7 @@ struct pmu_sequence {
 	void* cb_params;
 };
 
+/*PG defines used by nvpgu-pmu*/
 struct pmu_pg_stats_data {
 	u32 gating_cnt;
 	u32 ingating_time;
@@ -269,78 +270,11 @@ struct pmu_pg_stats_data {
 	u32 avg_exit_latency_us;
 };
 
-struct pmu_pg_stats_v2 {
-	u32 entry_count;
-	u32 exit_count;
-	u32 abort_count;
-	u32 detection_count;
-	u32 prevention_activate_count;
-	u32 prevention_deactivate_count;
-	u32 powered_up_time_us;
-	u32 entry_latency_us;
-	u32 exit_latency_us;
-	u32 resident_time_us;
-	u32 entry_latency_avg_us;
-	u32 exit_latency_avg_us;
-	u32 entry_latency_max_us;
-	u32 exit_latency_max_us;
-	u32 total_sleep_time_us;
-	u32 total_non_sleep_time_us;
-};
-
-struct pmu_pg_stats_v1 {
-	/* Number of time PMU successfully engaged sleep state */
-	u32 entry_count;
-	/* Number of time PMU exit sleep state */
-	u32 exit_count;
-	/* Number of time PMU aborted in entry sequence */
-	u32 abort_count;
-	/*
-	* Time for which GPU was neither in Sleep state not
-	* executing sleep sequence.
-	* */
-	u32 poweredup_timeus;
-	/* Entry and exit latency of current sleep cycle */
-	u32 entry_latency_us;
-	u32 exitlatencyus;
-	/* Resident time for current sleep cycle. */
-	u32 resident_timeus;
-	/* Rolling average entry and exit latencies */
-	u32 entrylatency_avgus;
-	u32 exitlatency_avgus;
-	/* Max entry and exit latencies */
-	u32 entrylatency_maxus;
-	u32 exitlatency_maxus;
-	/* Total time spent in sleep and non-sleep state */
-	u32 total_sleep_timeus;
-	u32 total_nonsleep_timeus;
-};
-
-struct pmu_pg_stats {
-	u64 pg_entry_start_timestamp;
-	u64 pg_ingating_start_timestamp;
-	u64 pg_exit_start_timestamp;
-	u64 pg_ungating_start_timestamp;
-	u32 pg_avg_entry_time_us;
-	u32 pg_ingating_cnt;
-	u32 pg_ingating_time_us;
-	u32 pg_avg_exit_time_us;
-	u32 pg_ungating_count;
-	u32 pg_ungating_time_us;
-	u32 pg_gating_cnt;
-	u32 pg_gating_deny_cnt;
-};
-
 #define PMU_PG_IDLE_THRESHOLD_SIM		1000
 #define PMU_PG_POST_POWERUP_IDLE_THRESHOLD_SIM	4000000
 /* TBD: QT or else ? */
 #define PMU_PG_IDLE_THRESHOLD			15000
 #define PMU_PG_POST_POWERUP_IDLE_THRESHOLD	1000000
-
-#define PMU_PG_ELPG_ENGINE_ID_GRAPHICS (0x00000000)
-#define PMU_PG_ELPG_ENGINE_ID_MS       (0x00000004)
-#define PMU_PG_ELPG_ENGINE_ID_INVALID_ENGINE (0x00000005)
-#define PMU_PG_ELPG_ENGINE_MAX    PMU_PG_ELPG_ENGINE_ID_INVALID_ENGINE
 
 #define PMU_PG_LPWR_FEATURE_RPPG 0x0
 #define PMU_PG_LPWR_FEATURE_MSCG 0x1
@@ -355,8 +289,21 @@ struct pmu_pg_stats {
 #define PMU_ELPG_STAT_OFF_ON_PENDING	4   /* elpg is off, caller has requested on, but ALLOW
 					       cmd hasn't been sent due to ENABLE_ALLOW delay */
 
+#define PG_REQUEST_TYPE_GLOBAL 0x0
+#define PG_REQUEST_TYPE_PSTATE 0x1
+
 #define PMU_MSCG_DISABLED 0
 #define PMU_MSCG_ENABLED 1
+
+/* Default Sampling Period of AELPG */
+#define APCTRL_SAMPLING_PERIOD_PG_DEFAULT_US                    (1000000)
+
+/* Default values of APCTRL parameters */
+#define APCTRL_MINIMUM_IDLE_FILTER_DEFAULT_US                   (100)
+#define APCTRL_MINIMUM_TARGET_SAVING_DEFAULT_US                 (10000)
+#define APCTRL_POWER_BREAKEVEN_DEFAULT_US                       (2000)
+#define APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT                    (200)
+/*PG defines used by nvpgu-pmu*/
 
 /* Falcon Register index */
 #define PMU_FALCON_REG_R0		(0)

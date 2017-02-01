@@ -209,6 +209,7 @@ static int pva_read_ucode(struct platform_device *pdev,
 	u32 *ucode_ptr;
 	const struct firmware *ucode_fw;
 	struct pva_fw *fw_info = &pva->fw_info;
+	struct pva_trace_log *trace = &pva->pva_trace;
 
 	nvhost_dbg_fn("");
 
@@ -280,10 +281,12 @@ static int pva_read_ucode(struct platform_device *pdev,
 		case PVA_UCODE_SEG_TRACE_LOG:
 			/* set the trace log buffer offset from priv2 start */
 			useg->offset = fw_info->priv2_buffer.size;
-
 			/* set os specified size if uCode passes zero size */
 			if (!useg->size)
 				useg->size = fw_info->trace_buffer_size;
+
+			trace->size = useg->size;
+			trace->offset = useg->offset;
 
 			fw_info->priv2_buffer.size += useg->size;
 			break;
@@ -307,6 +310,10 @@ static int pva_read_ucode(struct platform_device *pdev,
 	/* Make sure the buffer allocated to R5 are 4K aligned */
 	fw_info->priv2_buffer.va =
 			(void *)ALIGN((u64)pva->priv2_dma.va, SZ_4K);
+
+	trace->addr = (void *)((u8 *)fw_info->priv2_buffer.va +
+					trace->offset);
+
 	fw_info->priv2_buffer.pa =
 			(dma_addr_t)ALIGN((u64)pva->priv2_dma.pa, SZ_4K);
 

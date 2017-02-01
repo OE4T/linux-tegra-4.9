@@ -101,6 +101,20 @@ struct pva_fw {
 	u32 trace_buffer_size;
 };
 
+/*
+ * @brief		store trace log segment's address and size
+ *
+ * addr		Pointer to the pva trace log segment
+ * size		Size of pva trace log segment
+ * offset		Offset in bytes for trace log segment
+ *
+ */
+struct pva_trace_log {
+	void *addr;
+	u32 size;
+	u32 offset;
+};
+
 /**
  * @brief		Driver private data, shared with all applications
  *
@@ -135,7 +149,21 @@ struct pva {
 
 	struct pva_dma_alloc_info priv1_dma;
 	struct pva_dma_alloc_info priv2_dma;
+
+	struct pva_trace_log pva_trace;
 };
+
+/**
+ * @brief	Copy traces to kernel trace buffer.
+ *
+ * When mailbox interrupt for copying ucode trace buffer to
+ * kernel-ucode shared trace buffer is arrived it copies the kernel-ucode
+ * shared trace buffer to kernel ftrace buffer
+ *
+ * @pva Pointer to pva structure
+ *
+ */
+void pva_trace_copy_to_ftrace(struct pva *pva);
 
 /**
  * @brief	Finalize the PVA Power-on-Sequence.

@@ -69,6 +69,9 @@ static irqreturn_t pva_isr(int irq, void *dev_id)
 		host1x_writel(pdev, hsp_sm7_r(), status7);
 	}
 
+	/* Copy trace points to ftrace buffer */
+	pva_trace_copy_to_ftrace(pva);
+
 	return IRQ_HANDLED;
 }
 

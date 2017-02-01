@@ -196,7 +196,8 @@ enum pva_threshold_id {
 	THRESHOLD_VPU_CRIT_ERRORS = 11,
 	THRESHOLD_VPU_ERRORS = 12,
 	THRESHOLD_PVA_ERRORS = 13,
-	THRESHOLD_LAST = 13,		/* must be updated as new ones added */
+	THRESHOLD_PVA_TRACE_OFFSET = 14,
+	THRESHOLD_LAST = 14,		/* must be updated as new ones added */
 };
 
 /*

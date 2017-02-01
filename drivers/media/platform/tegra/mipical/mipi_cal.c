@@ -33,7 +33,7 @@
 #include <linux/uaccess.h>
 
 #include <soc/tegra/fuse.h>
-#include <linux/tegra-powergate.h>
+#include <soc/tegra/tegra_powergate.h>
 #include <linux/tegra_prod.h>
 #include <uapi/misc/tegra_mipi_ioctl.h>
 
@@ -109,6 +109,7 @@ static const struct regmap_config t210_mipi_cal_regmap_config = {
 	.offset = nm,		\
 }
 struct tegra_mipi_soc {
+	int powergate_id;
 	unsigned int total_dsilanes;
 	unsigned int total_cillanes;
 	char addr_offset;
@@ -148,7 +149,7 @@ static int tegra_mipi_clk_enable(struct tegra_mipi *mipi)
 {
 	int err;
 
-	err = tegra_unpowergate_partition(TEGRA_POWERGATE_SOR);
+	err = tegra_unpowergate_partition(mipi->soc->powergate_id);
 	if (err) {
 		dev_err(mipi->dev, "Fail to unpowergate SOR\n");
 		return err;
@@ -170,7 +171,7 @@ static int tegra_mipi_clk_enable(struct tegra_mipi *mipi)
 err_mipi_cal_clk:
 	clk_disable_unprepare(mipi->mipi_cal_fixed);
 err_fixed_clk:
-	tegra_powergate_partition(TEGRA_POWERGATE_SOR);
+	tegra_powergate_partition(mipi->soc->powergate_id);
 
 	return err;
 }
@@ -179,7 +180,7 @@ static void tegra_mipi_clk_disable(struct tegra_mipi *mipi)
 {
 	clk_disable_unprepare(mipi->mipi_cal_clk);
 	clk_disable_unprepare(mipi->mipi_cal_fixed);
-	tegra_powergate_partition(TEGRA_POWERGATE_SOR);
+	tegra_powergate_partition(mipi->soc->powergate_id);
 }
 
 static void tegra_mipi_print(struct tegra_mipi *mipi) __maybe_unused;
@@ -497,7 +498,7 @@ static int dbgfs_show_regs(struct seq_file *s, void *data)
 	struct tegra_mipi *mipi = s->private;
 	int err;
 
-	err = tegra_unpowergate_partition(TEGRA_POWERGATE_SOR);
+	err = tegra_unpowergate_partition(mipi->soc->powergate_id);
 	if (err) {
 		dev_err(mipi->dev, "Fail to unpowergate SOR\n");
 		return err;
@@ -514,7 +515,7 @@ static int dbgfs_show_regs(struct seq_file *s, void *data)
 	err = 0;
 
 clk_err:
-	tegra_powergate_partition(TEGRA_POWERGATE_SOR);
+	tegra_powergate_partition(mipi->soc->powergate_id);
 	return err;
 }
 
@@ -813,6 +814,7 @@ static const struct tegra_mipi_soc tegra21x_mipi_soc = {
 	.pad_disable = &_t21x_tegra_mipi_bias_pad_disable,
 	.calibrate = &_tegra_mipi_calibration,
 	.parse_cfg = &tegra_mipi_parse_config,
+	.powergate_id = TEGRA210_POWER_DOMAIN_SOR,
 };
 
 static const struct tegra_mipi_soc tegra18x_mipi_soc = {
@@ -824,8 +826,8 @@ static const struct tegra_mipi_soc tegra18x_mipi_soc = {
 	.pad_disable = &_t18x_tegra_mipi_bias_pad_disable,
 	.calibrate = &tegra_mipical_using_prod,
 	.parse_cfg = &tegra_prod_get_config,
+	.powergate_id = TEGRA186_POWER_DOMAIN_DISP,
 };
-
 
 static const struct of_device_id tegra_mipi_of_match[] = {
 	{

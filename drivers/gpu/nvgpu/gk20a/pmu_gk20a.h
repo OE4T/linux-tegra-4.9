@@ -134,39 +134,6 @@ struct pmu_ucode_desc_v1 {
  */
 #define ACR_ERROR_INVALID_TRANSCFG_SETUP        (0xAC120001)
 
-/* PERFMON */
-#define PMU_DOMAIN_GROUP_PSTATE		0
-#define PMU_DOMAIN_GROUP_GPC2CLK	1
-#define PMU_DOMAIN_GROUP_NUM		2
-
-/* TBD: smart strategy */
-#define PMU_PERFMON_PCT_TO_INC		58
-#define PMU_PERFMON_PCT_TO_DEC		23
-
-struct pmu_perfmon_counter_v0 {
-	u8 index;
-	u8 flags;
-	u8 group_id;
-	u8 valid;
-	u16 upper_threshold; /* units of 0.01% */
-	u16 lower_threshold; /* units of 0.01% */
-};
-
-struct pmu_perfmon_counter_v2 {
-	u8 index;
-	u8 flags;
-	u8 group_id;
-	u8 valid;
-	u16 upper_threshold; /* units of 0.01% */
-	u16 lower_threshold; /* units of 0.01% */
-	u32 scale;
-};
-
-#define PMU_PERFMON_FLAG_ENABLE_INCREASE	(0x00000001)
-#define PMU_PERFMON_FLAG_ENABLE_DECREASE	(0x00000002)
-#define PMU_PERFMON_FLAG_CLEAR_PREV		(0x00000004)
-
-
 #define PMU_PGENG_GR_BUFFER_IDX_INIT	(0)
 #define PMU_PGENG_GR_BUFFER_IDX_ZBC	(1)
 #define PMU_PGENG_GR_BUFFER_IDX_FECS	(2)

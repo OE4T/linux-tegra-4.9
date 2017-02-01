@@ -19,6 +19,7 @@
 #include "gpmuif_pmu.h"
 #include "gpmuif_ap.h"
 #include "gpmuif_pg.h"
+#include "gpmuif_perfmon.h"
 #include "gpmuifboardobj.h"
 #include "gpmuifclk.h"
 #include "gpmuifperf.h"

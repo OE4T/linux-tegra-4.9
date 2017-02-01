@@ -40,6 +40,7 @@
 
 #include <asm/atomic.h>
 #include <video/tegrafb.h>
+#include <video/tegra_dc_ext.h>
 
 #include "dc/dc.h"
 #include "dc/dc_priv.h"
@@ -183,7 +184,7 @@ static int tegra_fb_set_par(struct fb_info *info)
 			var->blue.length = 8;
 			var->transp.offset = 24;
 			var->transp.length = 8;
-			tegra_fb->win.fmt = TEGRA_WIN_FMT_R8G8B8A8;
+			tegra_fb->win.fmt = TEGRA_DC_EXT_FMT_T_A8B8G8R8;
 			break;
 		case 16:
 			var->red.offset = 11;
@@ -192,7 +193,7 @@ static int tegra_fb_set_par(struct fb_info *info)
 			var->green.length = 6;
 			var->blue.offset = 0;
 			var->blue.length = 5;
-			tegra_fb->win.fmt = TEGRA_WIN_FMT_B5G6R5;
+			tegra_fb->win.fmt = TEGRA_DC_EXT_FMT_T_R5G6B5;
 			break;
 
 		default:
@@ -945,8 +946,8 @@ static void tegra_fb_fill_420_10bpc_blank_frame(struct tegra_dc_win *win)
 	char __iomem *mem_start = win->virt_addr;
 	u32 offset = 0;
 
-	/* phase statically rendered for TEGRA_WIN_FMT_B8G8R8A8 */
-	bytes_per_pix = tegra_dc_fmt_bpp(TEGRA_WIN_FMT_B8G8R8A8) / 8;
+	/* phase statically rendered for TEGRA_DC_EXT_FMT_T_A8R8G8B8 */
+	bytes_per_pix = tegra_dc_fmt_bpp(TEGRA_DC_EXT_FMT_T_A8R8G8B8) / 8;
 
 	/* A single line can be repeated through the whole frame height, hence
 	 * only the first line needs to be setup. */

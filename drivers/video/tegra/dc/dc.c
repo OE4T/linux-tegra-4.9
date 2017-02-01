@@ -65,6 +65,7 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #include <linux/platform/tegra/latency_allowance.h>
 #include <linux/platform/tegra/mc.h>
 #include <soc/tegra/tegra_bpmp.h>
+#include <video/tegra_dc_ext.h>
 
 #include "dc.h"
 #include "dc_reg.h"
@@ -5411,7 +5412,7 @@ void tegra_dc_blank_wins(struct tegra_dc *dc, unsigned windows)
 		 */
 		blank_win.h.full = dfixed_const(1);
 		blank_win.w.full = dfixed_const(active_width);
-		blank_win.fmt = TEGRA_WIN_FMT_B8G8R8A8;
+		blank_win.fmt = TEGRA_DC_EXT_FMT_T_A8R8G8B8;
 		blank_win.out_w = active_width;
 		blank_win.out_h = active_height;
 

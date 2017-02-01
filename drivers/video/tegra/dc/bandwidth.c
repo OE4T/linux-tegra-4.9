@@ -31,6 +31,7 @@
 #endif
 #include <linux/platform/tegra/mc.h>
 
+#include <video/tegra_dc_ext.h>
 #include "dc.h"
 #include "dc_reg.h"
 #include "dc_config.h"
@@ -152,8 +153,10 @@ static void calc_disp_params(struct tegra_dc *dc,
 	bool pitch = !WIN_IS_BLOCKLINEAR(w) && !WIN_IS_TILED(w);
 	bool planar = tegra_dc_is_yuv_planar(w->fmt);
 	bool packed_yuv422 =
-			((tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YCbCr422) ||
-			(tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YUV422));
+			((tegra_dc_fmt(w->fmt) ==
+				TEGRA_DC_EXT_FMT_T_U8_Y8__V8_Y8) ||
+			(tegra_dc_fmt(w->fmt) ==
+				TEGRA_DC_EXT_FMT_T_U8_Y8__V8_Y8_TRUE));
 	/* all of tegra's YUV formats(420 and 422) fetch 2 bytes per pixel,
 	 * but the size reported by tegra_dc_fmt_bpp for the planar version
 	 * is of the luma plane's size only. */
@@ -279,22 +282,32 @@ static void calc_disp_params(struct tegra_dc *dc,
 		lines_of_latency = 0;
 
 
-	if (((tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YCbCr422R) ||
-		(tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YUV422R) ||
-		(tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YCbCr422RA) ||
-		(tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YUV422RA)) &&
+	if (((tegra_dc_fmt(w->fmt) ==
+		TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N422R) ||
+		(tegra_dc_fmt(w->fmt) ==
+			TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N422R_TRUE) ||
+		(tegra_dc_fmt(w->fmt) ==
+			TEGRA_DC_EXT_FMT_T_V8_Y8__U8_Y8) ||
+		(tegra_dc_fmt(w->fmt) ==
+			TEGRA_DC_EXT_FMT_T_V8_Y8__U8_Y8_TRUE)) &&
 		!win_rotated) {
 		c1_fp = la_params.la_real_to_fp(5) / 2;
 	} else {
 		c1_fp = la_params.la_real_to_fp(1);
 	}
 
-	if ((((tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YCbCr420P) ||
-		(tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YUV420P) ||
-		(tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YCrCb420SP) ||
-		(tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YCbCr420SP) ||
-		(tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YVU420SP) ||
-		(tegra_dc_fmt(w->fmt) == TEGRA_WIN_FMT_YUV420SP)) &&
+	if ((((tegra_dc_fmt(w->fmt) ==
+			TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N420) ||
+		(tegra_dc_fmt(w->fmt) ==
+				TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N420_TRUE) ||
+		(tegra_dc_fmt(w->fmt) ==
+			TEGRA_DC_EXT_FMT_T_Y8___U8V8_N420) ||
+		(tegra_dc_fmt(w->fmt) ==
+			TEGRA_DC_EXT_FMT_T_Y8___V8U8_N420) ||
+		(tegra_dc_fmt(w->fmt) ==
+			TEGRA_DC_EXT_FMT_T_Y8___U8V8_N420_TRUE) ||
+		(tegra_dc_fmt(w->fmt) ==
+			TEGRA_DC_EXT_FMT_T_Y8___V8U8_N420_TRUE)) &&
 		!win_rotated) ||
 		(tegra_dc_is_yuv(w->fmt) && win_rotated)) {
 		c2 = 3;
@@ -312,46 +325,46 @@ static void calc_disp_params(struct tegra_dc *dc,
 
 	switch (tegra_dc_fmt(w->fmt)) {
 	/* YUV 420 case*/
-	case TEGRA_WIN_FMT_YCbCr420P:
-	case TEGRA_WIN_FMT_YUV420P:
-	case TEGRA_WIN_FMT_YCrCb420SP:
-	case TEGRA_WIN_FMT_YCbCr420SP:
-	case TEGRA_WIN_FMT_YVU420SP:
-	case TEGRA_WIN_FMT_YUV420SP:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N420:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N420_TRUE:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N420:
+	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N420:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N420_TRUE:
+	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N420_TRUE:
 		c1_fp = (win_rotated) ?
 			la_params.la_real_to_fp(2) :
 			la_params.la_real_to_fp(3);
 		break;
 
 	/* YUV 422 case */
-	case TEGRA_WIN_FMT_YCbCr422:
-	case TEGRA_WIN_FMT_YUV422:
-	case TEGRA_WIN_FMT_YCbCr422P:
-	case TEGRA_WIN_FMT_YUV422P:
-	case TEGRA_WIN_FMT_YCrCb422SP:
-	case TEGRA_WIN_FMT_YCbCr422SP:
-	case TEGRA_WIN_FMT_YVU422SP:
-	case TEGRA_WIN_FMT_YUV422SP:
+	case TEGRA_DC_EXT_FMT_T_U8_Y8__V8_Y8:
+	case TEGRA_DC_EXT_FMT_T_U8_Y8__V8_Y8_TRUE:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N422:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N422_TRUE:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N422:
+	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N422:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N422_TRUE:
+	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N422_TRUE:
 		c1_fp = (win_rotated) ?
 			la_params.la_real_to_fp(3) :
 			la_params.la_real_to_fp(2);
 		break;
 
 	/* YUV 422R case */
-	case TEGRA_WIN_FMT_YCbCr422R:
-	case TEGRA_WIN_FMT_YUV422R:
-	case TEGRA_WIN_FMT_YCbCr422RA:
-	case TEGRA_WIN_FMT_YUV422RA:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N422R:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N422R_TRUE:
+	case TEGRA_DC_EXT_FMT_T_V8_Y8__U8_Y8:
+	case TEGRA_DC_EXT_FMT_T_V8_Y8__U8_Y8_TRUE:
 		c1_fp = (win_rotated) ?
 			la_params.la_real_to_fp(2) :
 			la_params.la_real_to_fp(5);
 		break;
 
 	/* YUV 444 case */
-	case TEGRA_WIN_FMT_YCbCr444P:
-	case TEGRA_WIN_FMT_YUV444P:
-	case TEGRA_WIN_FMT_YVU444SP:
-	case TEGRA_WIN_FMT_YUV444SP:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N444:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N444_TRUE:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N444_TRUE:
+	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N444_TRUE:
 		c1_fp = la_params.la_real_to_fp(3);
 		break;
 
@@ -628,12 +641,12 @@ static unsigned long tegra_dc_find_max_bandwidth(struct tegra_dc_win *wins[],
 static inline int tegra_dc_is_yuv420(int fmt)
 {
 	switch (fmt) {
-	case TEGRA_WIN_FMT_YCbCr420P:
-	case TEGRA_WIN_FMT_YUV420P:
-	case TEGRA_WIN_FMT_YCrCb420SP:
-	case TEGRA_WIN_FMT_YCbCr420SP:
-	case TEGRA_WIN_FMT_YVU420SP:
-	case TEGRA_WIN_FMT_YUV420SP:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N420:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N420_TRUE:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N420:
+	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N420:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N420_TRUE:
+	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N420_TRUE:
 		return 1;
 	default:
 		return 0;

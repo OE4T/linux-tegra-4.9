@@ -35,6 +35,7 @@
 #include "../dc.h"
 #include "../dc_priv.h"
 #include "../dc_config.h"
+#include <video/tegra_dc_ext.h>
 /* XXX ew 3 */
 #include "tegra_dc_ext_priv.h"
 /* XXX ew 4 */
@@ -645,7 +646,7 @@ static int tegra_dc_ext_get_background(struct tegra_dc_ext *ext,
 	*win = *tegra_fb_get_blank_win(dc->fb);
 
 	win->flags |= TEGRA_WIN_FLAG_ENABLED;
-	win->fmt = TEGRA_WIN_FMT_B8G8R8A8;
+	win->fmt = TEGRA_DC_EXT_FMT_T_A8R8G8B8;
 	win->x.full = dfixed_const(0);
 	win->y.full = dfixed_const(0);
 	win->h.full = dfixed_const(1);

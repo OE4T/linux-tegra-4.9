@@ -30,45 +30,82 @@
 # include <unistd.h>
 #endif
 
-/* pixformat - color format */
-#define TEGRA_DC_EXT_FMT_P1		0
-#define TEGRA_DC_EXT_FMT_P2		1
-#define TEGRA_DC_EXT_FMT_P4		2
-#define TEGRA_DC_EXT_FMT_P8		3
-#define TEGRA_DC_EXT_FMT_B4G4R4A4	4
-#define TEGRA_DC_EXT_FMT_B5G5R5A	5
-#define TEGRA_DC_EXT_FMT_B5G6R5		6
-#define TEGRA_DC_EXT_FMT_AB5G5R5	7
-#define TEGRA_DC_EXT_FMT_B8G8R8A8	12
-#define TEGRA_DC_EXT_FMT_R8G8B8A8	13
-#define TEGRA_DC_EXT_FMT_B6x2G6x2R6x2A8	14
-#define TEGRA_DC_EXT_FMT_R6x2G6x2B6x2A8	15
-#define TEGRA_DC_EXT_FMT_YCbCr422	16
-#define TEGRA_DC_EXT_FMT_YUV422		17
-#define TEGRA_DC_EXT_FMT_YCbCr420P	18
-#define TEGRA_DC_EXT_FMT_YUV420P	19
-#define TEGRA_DC_EXT_FMT_YCbCr422P	20
-#define TEGRA_DC_EXT_FMT_YUV422P	21
-#define TEGRA_DC_EXT_FMT_YCbCr422R	22
-#define TEGRA_DC_EXT_FMT_YUV422R	23
-#define TEGRA_DC_EXT_FMT_YCbCr422RA	24
-#define TEGRA_DC_EXT_FMT_YUV422RA	25
-#define TEGRA_DC_EXT_FMT_YCbCr444P	41
-#define TEGRA_DC_EXT_FMT_YCrCb422RSP	46
-#define TEGRA_DC_EXT_FMT_YCbCr422RSP	47
-#define TEGRA_DC_EXT_FMT_YCrCb444SP	48
-#define TEGRA_DC_EXT_FMT_YCbCr444SP	49
-#define TEGRA_DC_EXT_FMT_YUV444P	52
-#define TEGRA_DC_EXT_FMT_YCrCb420SP	42
-#define TEGRA_DC_EXT_FMT_YCbCr420SP	43
-#define TEGRA_DC_EXT_FMT_YCrCb422SP	44
-#define TEGRA_DC_EXT_FMT_YCbCr422SP	45
-#define TEGRA_DC_EXT_FMT_YVU420SP	53
-#define TEGRA_DC_EXT_FMT_YUV420SP	54
-#define TEGRA_DC_EXT_FMT_YVU422SP	55
-#define TEGRA_DC_EXT_FMT_YUV422SP	56
-#define TEGRA_DC_EXT_FMT_YVU444SP	59
-#define TEGRA_DC_EXT_FMT_YUV444SP	60
+/* Note: These are the actual values written to the DC_WIN_COLOR_DEPTH register
+ * and may change in new tegra architectures.
+ */
+/* New naming for pixel format*/
+#define TEGRA_DC_EXT_FMT_T_P8						(3)
+#define TEGRA_DC_EXT_FMT_T_A4R4G4B4					(4)
+#define TEGRA_DC_EXT_FMT_T_A1R5G5B5					(5)
+#define TEGRA_DC_EXT_FMT_T_R5G6B5					(6)
+#define TEGRA_DC_EXT_FMT_T_R5G5B5A1					(7)
+#define TEGRA_DC_EXT_FMT_T_R4G4B4A4					(8)
+#define TEGRA_DC_EXT_FMT_T_A8R8G8B8					(12)
+#define TEGRA_DC_EXT_FMT_T_A8B8G8R8					(13)
+#define TEGRA_DC_EXT_FMT_T_U8_Y8__V8_Y8				(16)
+#define TEGRA_DC_EXT_FMT_T_U8_Y8__V8_Y8_TRUE		(17)
+#define TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N420		(18)
+#define TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N420_TRUE	(19)
+#define TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N422		(20)
+#define TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N422_TRUE	(21)
+#define TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N422R		(22)
+#define TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N422R_TRUE	(23)
+#define TEGRA_DC_EXT_FMT_T_V8_Y8__U8_Y8				(24)
+#define TEGRA_DC_EXT_FMT_T_V8_Y8__U8_Y8_TRUE		(25)
+#define TEGRA_DC_EXT_FMT_T_A4B4G4R4					(27)
+#define TEGRA_DC_EXT_FMT_T_A1B5G5R5					(28)
+#define TEGRA_DC_EXT_FMT_T_B5G5R5A1					(29)
+#define TEGRA_DC_EXT_FMT_T_X8R8G8B8					(37)
+#define TEGRA_DC_EXT_FMT_T_X8B8G8R8					(38)
+#define TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N444		(41)
+#define TEGRA_DC_EXT_FMT_T_Y8___U8V8_N420			(42)
+#define TEGRA_DC_EXT_FMT_T_Y8___V8U8_N420			(43)
+#define TEGRA_DC_EXT_FMT_T_Y8___U8V8_N422			(44)
+#define TEGRA_DC_EXT_FMT_T_Y8___V8U8_N422			(45)
+#define TEGRA_DC_EXT_FMT_T_Y8___U8V8_N422R			(46)
+#define TEGRA_DC_EXT_FMT_T_Y8___V8U8_N422R			(47)
+#define TEGRA_DC_EXT_FMT_T_Y8___U8V8_N444			(48)
+#define TEGRA_DC_EXT_FMT_T_Y8___V8U8_N444			(49)
+#define TEGRA_DC_EXT_FMT_T_Y8___U8___V8_N444_TRUE	(52)
+#define TEGRA_DC_EXT_FMT_T_Y8___U8V8_N420_TRUE		(53)
+#define TEGRA_DC_EXT_FMT_T_Y8___V8U8_N420_TRUE		(54)
+#define TEGRA_DC_EXT_FMT_T_Y8___U8V8_N422_TRUE		(55)
+#define TEGRA_DC_EXT_FMT_T_Y8___V8U8_N422_TRUE		(56)
+#define TEGRA_DC_EXT_FMT_T_Y8___U8V8_N422R_TRUE		(57)
+#define TEGRA_DC_EXT_FMT_T_Y8___V8U8_N422R_TRUE		(58)
+#define TEGRA_DC_EXT_FMT_T_Y8___U8V8_N444_TRUE		(59)
+#define TEGRA_DC_EXT_FMT_T_Y8___V8U8_N444_TRUE		(60)
+#define TEGRA_DC_EXT_FMT_T_Y8_U8__Y8_V8				(61)
+#define TEGRA_DC_EXT_FMT_T_A2R10G10B10				(70)
+#define TEGRA_DC_EXT_FMT_T_A2B10G10R10				(71)
+#define TEGRA_DC_EXT_FMT_T_X2BL10GL10RL10_XRBIAS	(72)
+#define TEGRA_DC_EXT_FMT_T_X2BL10GL10RL10_XVYCC		(73)
+#define TEGRA_DC_EXT_FMT_T_R16_G16_B16_A16_NVBIAS	(74)
+#define TEGRA_DC_EXT_FMT_T_R16_G16_B16_A16			(75)
+#define TEGRA_DC_EXT_FMT_T_Y10___U10___V10_N420		(80)
+#define TEGRA_DC_EXT_FMT_T_Y10___U10___V10_N444		(82)
+#define TEGRA_DC_EXT_FMT_T_Y10___V10U10_N420		(83)
+#define TEGRA_DC_EXT_FMT_T_Y10___U10V10_N422		(84)
+#define TEGRA_DC_EXT_FMT_T_Y10___U10V10_N422R		(86)
+#define TEGRA_DC_EXT_FMT_T_Y10___U10V10_N444		(88)
+#define TEGRA_DC_EXT_FMT_T_Y12___U12___V12_N420		(96)
+#define TEGRA_DC_EXT_FMT_T_Y12___U12___V12_N444		(98)
+#define TEGRA_DC_EXT_FMT_T_Y12___V12U12_N420		(99)
+#define TEGRA_DC_EXT_FMT_T_Y12___U12V12_N422		(100)
+#define TEGRA_DC_EXT_FMT_T_Y12___U12V12_N422R		(102)
+#define TEGRA_DC_EXT_FMT_T_Y12___U12V12_N444		(104)
+#define TEGRA_WIN_FMT_T_Y10___U10V10_N420			(127)
+#define TEGRA_WIN_FMT_T_Y12___U12V12_N420			(126)
+/* #define TEGRA_DC_EXT_FMT_T_RF16_GF16_BF16_AF16	(TBD) */
+
+/* Note: These values are not intended to be programmed directly into the
+ * DC_WIN_COLOR_DEPTH register. They only signal formats possible through
+ * additional parameters (mainly through the UV swap control).
+ *
+ * The values are chosen to prevent collisions with valid register values,
+ * while fitting into the features 4 32b words bitmap (max value: 127).
+ */
+
 /* color format type field is 8-bits */
 #define TEGRA_DC_EXT_FMT_SHIFT		0
 #define TEGRA_DC_EXT_FMT_MASK		(0xff << TEGRA_DC_EXT_FMT_SHIFT)
@@ -85,6 +122,7 @@
 #define TEGRA_DC_EXT_FMT_BYTEORDER_SHIFT	8
 #define TEGRA_DC_EXT_FMT_BYTEORDER_MASK		\
 		(0x0f << TEGRA_DC_EXT_FMT_BYTEORDER_SHIFT)
+#define TEGRA_DC_EXT_FMT_FLAG_SWAP_UV		(1u << 16)
 
 #define TEGRA_DC_EXT_BLEND_NONE		0
 #define TEGRA_DC_EXT_BLEND_PREMULT	1

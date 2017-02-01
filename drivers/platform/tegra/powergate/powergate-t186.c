@@ -56,45 +56,11 @@ static struct pg_partition_info t186_partition_info[] = {
 	[TEGRA186_POWER_DOMAIN_GPU] = { .name = "gpu" },
 };
 
-struct tegra_powergate_id_info {
-	bool valid;
-	int part_id;
-	struct pg_partition_info *part_info;
-};
-
-#define TEGRA186_POWERGATE_ID_INFO(_pg_id, _part_id, _did)		\
-[TEGRA_POWERGATE_##_pg_id] = {						\
-	.valid = true,							\
-	.part_id = _part_id,						\
-	.part_info = &t186_partition_info[TEGRA186_POWER_DOMAIN_##_did], \
-}
-
-static const struct tegra_powergate_id_info
-	t186_powergate_info[TEGRA_NUM_POWERGATE] = {
-	TEGRA186_POWERGATE_ID_INFO(APE, 0, AUD),
-	TEGRA186_POWERGATE_ID_INFO(DFD, 1, DFD),
-	TEGRA186_POWERGATE_ID_INFO(DISA, 2, DISP),
-	TEGRA186_POWERGATE_ID_INFO(DISB, 3, DISPB),
-	TEGRA186_POWERGATE_ID_INFO(DISC, 4, DISPC),
-	TEGRA186_POWERGATE_ID_INFO(ISPA, 5, ISPA),
-	TEGRA186_POWERGATE_ID_INFO(NVDEC, 6, NVDEC),
-	TEGRA186_POWERGATE_ID_INFO(NVJPG, 7, NVJPG),
-	TEGRA186_POWERGATE_ID_INFO(NVENC, 8, MPE),
-	TEGRA186_POWERGATE_ID_INFO(PCIE, 9, PCX),
-	TEGRA186_POWERGATE_ID_INFO(SATA, 10, SAX),
-	TEGRA186_POWERGATE_ID_INFO(VE, 11, VE),
-	TEGRA186_POWERGATE_ID_INFO(VIC, 12, VIC),
-	TEGRA186_POWERGATE_ID_INFO(XUSBA, 13, XUSBA),
-	TEGRA186_POWERGATE_ID_INFO(XUSBB, 14, XUSBB),
-	TEGRA186_POWERGATE_ID_INFO(XUSBC, 15, XUSBC),
-	TEGRA186_POWERGATE_ID_INFO(GPU, 43, GPU),
-};
-
 static int pg_set_state(int id, u32 state)
 {
 	struct mrq_pg_request req = {
 		.cmd = CMD_PG_SET_STATE,
-		.id = t186_powergate_info[id].part_id,
+		.id = id,
 		.set_state = {
 			.state = state,
 		}
@@ -120,7 +86,8 @@ static int tegra186_pg_query_abi(void)
 static int tegra186_pg_powergate_partition(int id)
 {
 	int ret = 0;
-	struct pg_partition_info *partition = t186_powergate_info[id].part_info;
+	struct pg_partition_info *partition =
+		&t186_partition_info[id];
 
 	mutex_lock(&partition->pg_mutex);
 	if (partition->refcount) {
@@ -138,7 +105,8 @@ static int tegra186_pg_powergate_partition(int id)
 static int tegra186_pg_unpowergate_partition(int id)
 {
 	int ret = 0;
-	struct pg_partition_info *partition = t186_powergate_info[id].part_info;
+	struct pg_partition_info *partition =
+		&t186_partition_info[id];
 
 	mutex_lock(&partition->pg_mutex);
 	if (partition->refcount++ == 0)
@@ -156,7 +124,8 @@ static int tegra186_pg_powergate_clk_off(int id)
 static int tegra186_pg_unpowergate_clk_on(int id)
 {
 	int ret = 0;
-	struct pg_partition_info *partition = t186_powergate_info[id].part_info;
+	struct pg_partition_info *partition =
+		&t186_partition_info[id];
 
 	mutex_lock(&partition->pg_mutex);
 	if (partition->refcount++ == 0)
@@ -168,10 +137,7 @@ static int tegra186_pg_unpowergate_clk_on(int id)
 
 static const char *tegra186_pg_get_name(int id)
 {
-	if (!t186_powergate_info[id].part_info)
-		return NULL;
-
-	return t186_powergate_info[id].part_info->name;
+	return t186_partition_info[id].name;
 }
 
 static bool tegra186_pg_is_powered(int id)
@@ -179,7 +145,7 @@ static bool tegra186_pg_is_powered(int id)
 	int ret;
 	struct mrq_pg_request req = {
 		.cmd = CMD_PG_GET_STATE,
-		.id = t186_powergate_info[id].part_id,
+		.id = id,
 	};
 	struct mrq_pg_response resp;
 
@@ -208,17 +174,14 @@ static int tegra186_init_refcount(void)
 {
 	int i;
 
-	for (i = 0; i < TEGRA_NUM_POWERGATE; ++i) {
-		if (!t186_powergate_info[i].valid)
-			continue;
-		mutex_init(&t186_powergate_info[i].part_info->pg_mutex);
-	}
+	for (i = 0; i < ARRAY_SIZE(t186_partition_info); ++i)
+		mutex_init(&t186_partition_info[i].pg_mutex);
 
-	tegra186_pg_force_powergate(TEGRA_POWERGATE_XUSBA);
-	tegra186_pg_force_powergate(TEGRA_POWERGATE_XUSBB);
-	tegra186_pg_force_powergate(TEGRA_POWERGATE_XUSBC);
-	tegra186_pg_force_powergate(TEGRA_POWERGATE_SATA);
-	tegra186_pg_force_powergate(TEGRA_POWERGATE_PCIE);
+	tegra186_pg_force_powergate(TEGRA186_POWER_DOMAIN_XUSBA);
+	tegra186_pg_force_powergate(TEGRA186_POWER_DOMAIN_XUSBB);
+	tegra186_pg_force_powergate(TEGRA186_POWER_DOMAIN_XUSBC);
+	tegra186_pg_force_powergate(TEGRA186_POWER_DOMAIN_SAX);
+	tegra186_pg_force_powergate(TEGRA186_POWER_DOMAIN_PCX);
 
 	/*
 	 * WAR: tegra_ape_power_on() avoid calling unpowergate on the AUD
@@ -232,7 +195,7 @@ static int tegra186_init_refcount(void)
 	 *
 	 * This WAR can be removed when GIC has proper runtime pm support.
 	 */
-	t186_partition_info[TEGRA_POWERGATE_APE].refcount = 1;
+	t186_partition_info[TEGRA186_POWER_DOMAIN_AUD].refcount = 1;
 
 	return 0;
 }
@@ -242,7 +205,7 @@ static bool tegra186_powergate_id_is_valid(int id)
 	if ((id < 0) || (id >= TEGRA_NUM_POWERGATE))
 		return false;
 
-	return t186_powergate_info[id].valid;
+	return true;
 }
 
 static struct tegra_powergate_driver_ops tegra186_pg_ops = {

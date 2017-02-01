@@ -520,6 +520,7 @@ static int gk20a_sched_debugfs_show(struct seq_file *s, void *unused)
 	struct device *dev = s->private;
 	struct gk20a *g = gk20a_get_platform(dev)->g;
 	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
+	bool sched_busy = true;
 
 	int n = sched->bitmap_size / sizeof(u64);
 	int i;
@@ -529,8 +530,13 @@ static int gk20a_sched_debugfs_show(struct seq_file *s, void *unused)
 	if (err)
 		return err;
 
+	if (mutex_trylock(&sched->busy_lock)) {
+		sched_busy = false;
+		mutex_unlock(&sched->busy_lock);
+	}
+
 	seq_printf(s, "control_locked=%d\n", sched->control_locked);
-	seq_printf(s, "busy=%d\n", mutex_is_locked(&sched->busy_lock));
+	seq_printf(s, "busy=%d\n", sched_busy);
 	seq_printf(s, "bitmap_size=%zu\n", sched->bitmap_size);
 
 	mutex_lock(&sched->status_lock);

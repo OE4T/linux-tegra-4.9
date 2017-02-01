@@ -1401,7 +1401,6 @@ static bool gk20a_fifo_handle_mmu_fault(
 		struct channel_gk20a *ch = NULL;
 		struct tsg_gk20a *tsg = NULL;
 		struct channel_gk20a *referenced_channel = NULL;
-		bool was_reset;
 		/* read and parse engine status */
 		u32 status = gk20a_readl(g, fifo_engine_status_r(engine_id));
 		u32 ctx_status = fifo_engine_status_ctx_status_v(status);
@@ -1486,13 +1485,12 @@ static bool gk20a_fifo_handle_mmu_fault(
 				   "sm debugger attached,"
 				   " deferring channel recovery to channel free");
 		} else if (engine_id != FIFO_INVAL_ENGINE_ID) {
-			was_reset = mutex_is_locked(&g->fifo.gr_reset_mutex);
-			mutex_lock(&g->fifo.gr_reset_mutex);
 			/* if lock is already taken, a reset is taking place
 			so no need to repeat */
-			if (!was_reset)
+			if (mutex_trylock(&g->fifo.gr_reset_mutex)) {
 				gk20a_fifo_reset_engine(g, engine_id);
-			mutex_unlock(&g->fifo.gr_reset_mutex);
+				mutex_unlock(&g->fifo.gr_reset_mutex);
+			}
 		}
 
 		if (ch)

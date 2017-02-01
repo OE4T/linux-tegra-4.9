@@ -906,7 +906,6 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	struct dbg_session_gk20a *dbg_s;
 	struct dbg_session_data *session_data, *tmp_s;
 	struct dbg_session_channel_data *ch_data, *tmp;
-	bool was_reset;
 
 	gk20a_dbg_fn("");
 
@@ -953,13 +952,12 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	if (g->fifo.deferred_reset_pending) {
 		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "engine reset was"
 			   " deferred, running now");
-		was_reset = mutex_is_locked(&g->fifo.gr_reset_mutex);
-		mutex_lock(&g->fifo.gr_reset_mutex);
 		/* if lock is already taken, a reset is taking place
 		so no need to repeat */
-		if (!was_reset)
+		if (mutex_trylock(&g->fifo.gr_reset_mutex)) {
 			gk20a_fifo_deferred_reset(g, ch);
-		mutex_unlock(&g->fifo.gr_reset_mutex);
+			mutex_unlock(&g->fifo.gr_reset_mutex);
+		}
 	}
 	mutex_unlock(&f->deferred_reset_mutex);
 

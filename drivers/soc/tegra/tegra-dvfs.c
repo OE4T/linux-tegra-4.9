@@ -77,17 +77,41 @@ void tegra_dvfs_add_relationships(struct dvfs_relationship *rels, int n)
 	mutex_unlock(&dvfs_lock);
 }
 
-int tegra_dvfs_init_rails(struct dvfs_rail *rails[], int n)
+static void init_rails_lists(struct dvfs_rail *rails[], int n)
 {
-	int i, mv;
+	int i;
+	static bool initialized;
 
-	mutex_lock(&dvfs_lock);
+	if (initialized)
+		return;
+
+	initialized = true;
 
 	for (i = 0; i < n; i++) {
 		INIT_LIST_HEAD(&rails[i]->dvfs);
 		INIT_LIST_HEAD(&rails[i]->relationships_from);
 		INIT_LIST_HEAD(&rails[i]->relationships_to);
 
+		list_add_tail(&rails[i]->node, &dvfs_rail_list);
+	}
+}
+
+void tegra_dvfs_init_rails_lists(struct dvfs_rail *rails[], int n)
+{
+	mutex_lock(&dvfs_lock);
+	init_rails_lists(rails, n);
+	mutex_unlock(&dvfs_lock);
+}
+
+int tegra_dvfs_init_rails(struct dvfs_rail *rails[], int n)
+{
+	int i, mv;
+
+	mutex_lock(&dvfs_lock);
+
+	init_rails_lists(rails, n);
+
+	for (i = 0; i < n; i++) {
 		mv = rails[i]->nominal_millivolts;
 		if (rails[i]->disable_millivolts > mv)
 			rails[i]->disable_millivolts = mv;
@@ -100,8 +124,6 @@ int tegra_dvfs_init_rails(struct dvfs_rail *rails[], int n)
 			rails[i]->step = rails[i]->max_millivolts;
 		if (!rails[i]->step_up)
 			rails[i]->step_up = rails[i]->step;
-
-		list_add_tail(&rails[i]->node, &dvfs_rail_list);
 
 		if (!strcmp("vdd-cpu", rails[i]->reg_id))
 			tegra_cpu_rail = rails[i];
@@ -894,13 +916,13 @@ int tegra_dvfs_get_freqs(struct clk *c, unsigned long **freqs, int *num_freqs)
 {
 	struct dvfs *d;
 
-	if (!core_dvfs_started)
-		return -EINVAL;
-
 	d = tegra_clk_to_dvfs(c);
 	if (d == NULL) {
-		pr_err("Failed to get dvfs structure\n");
-		return -ENOSYS;
+		if (core_dvfs_started) {
+			pr_err("Failed to get %s dvfs structure\n", __clk_get_name(c));
+			return -ENOSYS;
+		}
+		return -EINVAL;
 	}
 
 	*num_freqs = d->num_freqs;
@@ -916,9 +938,6 @@ unsigned long tegra_dvfs_get_maxrate(struct clk *c)
 	int err, num_freqs;
 	unsigned long *freqs;
 
-	if (!core_dvfs_started)
-		return rate;
-
 	err = tegra_dvfs_get_freqs(c, &freqs, &num_freqs);
 	if (err < 0)
 		return rate;
@@ -930,9 +949,6 @@ unsigned long tegra_dvfs_round_rate(struct clk *c, unsigned long rate)
 {
 	int i, err, num_freqs;
 	unsigned long *freqs;
-
-	if (!core_dvfs_started)
-		return rate;
 
 	err = tegra_dvfs_get_freqs(c, &freqs, &num_freqs);
 	if (err < 0)
@@ -2180,7 +2196,6 @@ static int tegra_dvfs_remove(struct platform_device *pdev)
 	return 0;
 }
 
-
 static struct platform_driver tegra_dvfs_platdrv = {
 	.driver = {
 		.name	= "tegra-dvfs",
@@ -2190,4 +2205,15 @@ static struct platform_driver tegra_dvfs_platdrv = {
 	.probe		= tegra_dvfs_probe,
 	.remove		= tegra_dvfs_remove,
 };
-module_platform_driver(tegra_dvfs_platdrv);
+
+static int __init tegra_dvfs_platdrv_init(void)
+{
+	return platform_driver_register(&tegra_dvfs_platdrv);
+}
+subsys_initcall_sync(tegra_dvfs_platdrv_init);
+
+static void __exit tegra_dvfs_platdrv_exit(void)
+{
+	platform_driver_unregister(&tegra_dvfs_platdrv);
+}
+module_exit(tegra_dvfs_platdrv_exit);

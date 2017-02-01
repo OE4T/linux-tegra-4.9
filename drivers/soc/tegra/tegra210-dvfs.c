@@ -1782,16 +1782,17 @@ static void init_gpu_dvfs_table(struct device_node *node,
 	BUG_ON((i == ARRAY_SIZE(gpu_cvb_dvfs_table)) || ret);
 }
 
-int tegra210_init_dvfs(struct device_node *node)
+static void init_core_dvfs_table(int soc_speedo_id, int core_process_id)
 {
-	int soc_speedo_id = tegra_sku_info.soc_speedo_id;
-	int core_process_id = tegra_sku_info.soc_process_id;
-	int i, ret;
 	int core_nominal_mv_index;
 	int core_min_mv_index;
-	int cpu_max_freq_index = 0;
-	int cpu_lp_max_freq_index = 0;
-	int gpu_max_freq_index = 0;
+	int i;
+	static bool initialized;
+
+	if (initialized)
+		return;
+
+	initialized = true;
 
 	/*
 	 * Find nominal voltages for core (1st) and cpu rails before rail
@@ -1819,6 +1820,46 @@ int tegra210_init_dvfs(struct device_node *node)
 	tegra210_dvfs_rail_vdd_core.min_millivolts =
 		core_millivolts[core_min_mv_index];
 
+	/*
+	 * Search core dvfs table for speedo/process matching entries and
+	 * initialize dvfs-ed clocks
+	 */
+	for (i = 0; i < ARRAY_SIZE(core_dvfs_table); i++) {
+		struct dvfs *d = &core_dvfs_table[i];
+		if (!match_dvfs_one(d->clk_name, d->speedo_id,
+			d->process_id, soc_speedo_id, core_process_id))
+			continue;
+		init_dvfs_one(d, core_nominal_mv_index);
+
+		/*
+		 * EMC dvfs is board dependent, the EMC scaling frequencies are
+		 * determined by the Tegra BCT and the board specific EMC DFS
+		 * table owned by EMC driver.
+		 */
+		if (!strcmp(d->clk_name, "emc") && tegra210_emc_is_ready())
+			adjust_emc_dvfs_table(d);
+	}
+
+	init_qspi_dvfs(soc_speedo_id, core_process_id, core_nominal_mv_index);
+	init_sor1_dvfs(soc_speedo_id, core_process_id, core_nominal_mv_index);
+	init_spi_dvfs(soc_speedo_id, core_process_id, core_nominal_mv_index);
+}
+
+int tegra210_init_dvfs(struct device_node *node)
+{
+	int soc_speedo_id = tegra_sku_info.soc_speedo_id;
+	int core_process_id = tegra_sku_info.soc_process_id;
+	int i, ret;
+	int cpu_max_freq_index = 0;
+	int cpu_lp_max_freq_index = 0;
+	int gpu_max_freq_index = 0;
+
+	tegra_dvfs_init_rails_lists(tegra210_dvfs_rails,
+				    ARRAY_SIZE(tegra210_dvfs_rails));
+	init_core_dvfs_table(soc_speedo_id, core_process_id);
+
+
+	/* Get rails alignment, defer probe if regulators are not ready */
 	for (i = 0; i <  ARRAY_SIZE(tegra210_dvfs_rails); i++) {
 		struct regulator *reg;
 		unsigned int step_uv;
@@ -1863,30 +1904,6 @@ int tegra210_init_dvfs(struct device_node *node)
 	/* Init rail structures and dependencies */
 	tegra_dvfs_init_rails(tegra210_dvfs_rails,
 			      ARRAY_SIZE(tegra210_dvfs_rails));
-
-	/*
-	 * Search core dvfs table for speedo/process matching entries and
-	 * initialize dvfs-ed clocks
-	 */
-	for (i = 0; i < ARRAY_SIZE(core_dvfs_table); i++) {
-		struct dvfs *d = &core_dvfs_table[i];
-		if (!match_dvfs_one(d->clk_name, d->speedo_id,
-			d->process_id, soc_speedo_id, core_process_id))
-			continue;
-		init_dvfs_one(d, core_nominal_mv_index);
-
-		/*
-		 * EMC dvfs is board dependent, the EMC scaling frequencies are
-		 * determined by the Tegra BCT and the board specific EMC DFS
-		 * table owned by EMC driver.
-		 */
-		if (!strcmp(d->clk_name, "emc") && tegra210_emc_is_ready())
-			adjust_emc_dvfs_table(d);
-	}
-
-	init_qspi_dvfs(soc_speedo_id, core_process_id, core_nominal_mv_index);
-	init_sor1_dvfs(soc_speedo_id, core_process_id, core_nominal_mv_index);
-	init_spi_dvfs(soc_speedo_id, core_process_id, core_nominal_mv_index);
 
 	/*
 	 * Initialize matching cpu dvfs entry already found when nominal

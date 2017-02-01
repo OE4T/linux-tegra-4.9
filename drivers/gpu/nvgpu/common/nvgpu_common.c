@@ -39,7 +39,6 @@ static void nvgpu_init_vars(struct gk20a *g)
 	nvgpu_mutex_init(&platform->railgate_lock);
 	nvgpu_mutex_init(&g->dbg_sessions_lock);
 	nvgpu_mutex_init(&g->client_lock);
-	nvgpu_mutex_init(&g->ch_wdt_lock);
 	nvgpu_mutex_init(&g->poweroff_lock);
 
 	g->regs_saved = g->regs;

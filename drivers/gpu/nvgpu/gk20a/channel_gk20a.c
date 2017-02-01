@@ -20,6 +20,7 @@
 #include <linux/list.h>
 #include <linux/delay.h>
 #include <linux/highmem.h> /* need for nvmap.h*/
+#include <linux/kthread.h>
 #include <trace/events/gk20a.h>
 #include <linux/scatterlist.h>
 #include <linux/file.h>
@@ -91,8 +92,6 @@ static u32 gk20a_get_channel_watchdog_timeout(struct channel_gk20a *ch);
 
 static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 					bool clean_all);
-static void gk20a_channel_cancel_job_clean_up(struct channel_gk20a *c,
-				bool wait_for_completion);
 
 /* allocate GPU channel */
 static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f)
@@ -491,7 +490,8 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 	bool released_job_semaphore = false;
 	bool pre_alloc_enabled = channel_gk20a_is_prealloc_enabled(ch);
 
-	gk20a_channel_cancel_job_clean_up(ch, true);
+	/* synchronize with actual job cleanup */
+	nvgpu_mutex_acquire(&ch->joblist.cleanup_lock);
 
 	/* ensure no fences are pending */
 	nvgpu_mutex_acquire(&ch->sync_lock);
@@ -533,10 +533,16 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 	}
 	channel_gk20a_joblist_unlock(ch);
 
+	nvgpu_mutex_release(&ch->joblist.cleanup_lock);
+
 	if (released_job_semaphore)
 		wake_up_interruptible_all(&ch->semaphore_wq);
 
-	gk20a_channel_update(ch, 0);
+	/*
+	 * When closing the channel, this scheduled update holds one ref which
+	 * is waited for before advancing with freeing.
+	 */
+	gk20a_channel_update(ch);
 }
 
 void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt)
@@ -1016,8 +1022,6 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	ch->update_fn_data = NULL;
 	nvgpu_spinlock_release(&ch->update_fn_lock);
 	cancel_work_sync(&ch->update_fn_work);
-	cancel_delayed_work_sync(&ch->clean_up.wq);
-	cancel_delayed_work_sync(&ch->timeout.wq);
 
 	/* make sure we don't have deferred interrupts pending that
 	 * could still touch the channel */
@@ -1345,7 +1349,6 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	ch->has_timedout = false;
 	ch->wdt_enabled = true;
 	ch->obj_class = 0;
-	ch->clean_up.scheduled = false;
 	ch->interleave_level = NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW;
 	ch->timeslice_us = g->timeslice_low_priority_us;
 
@@ -2075,6 +2078,30 @@ static void trace_write_pushbuffer_range(struct channel_gk20a *c,
 		nvgpu_kfree(g);
 }
 
+static void __gk20a_channel_timeout_start(struct channel_gk20a *ch)
+{
+	ch->timeout.gp_get = gk20a_userd_gp_get(ch->g, ch);
+	ch->timeout.running = true;
+	nvgpu_timeout_init(ch->g, &ch->timeout.timer,
+			gk20a_get_channel_watchdog_timeout(ch),
+			NVGPU_TIMER_CPU_TIMER);
+}
+
+/**
+ * Start a timeout counter (watchdog) on this channel.
+ *
+ * Trigger a watchdog to recover the channel after the per-platform timeout
+ * duration (but strictly no earlier) if the channel hasn't advanced within
+ * that time.
+ *
+ * If the timeout is already running, do nothing. This should be called when
+ * new jobs are submitted. The timeout will stop when the last tracked job
+ * finishes, making the channel idle.
+ *
+ * The channel's gpfifo read pointer will be used to determine if the job has
+ * actually stuck at that time. After the timeout duration has expired, a
+ * worker thread will consider the channel stuck and recover it if stuck.
+ */
 static void gk20a_channel_timeout_start(struct channel_gk20a *ch)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
@@ -2087,94 +2114,108 @@ static void gk20a_channel_timeout_start(struct channel_gk20a *ch)
 
 	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
 
-	if (ch->timeout.initialized) {
+	if (ch->timeout.running) {
 		nvgpu_raw_spinlock_release(&ch->timeout.lock);
 		return;
 	}
-
-	ch->timeout.gp_get = gk20a_userd_gp_get(ch->g, ch);
-	ch->timeout.initialized = true;
+	__gk20a_channel_timeout_start(ch);
 	nvgpu_raw_spinlock_release(&ch->timeout.lock);
-
-	schedule_delayed_work(&ch->timeout.wq,
-	       msecs_to_jiffies(gk20a_get_channel_watchdog_timeout(ch)));
 }
 
-static void gk20a_channel_timeout_stop(struct channel_gk20a *ch)
+/**
+ * Stop a running timeout counter (watchdog) on this channel.
+ *
+ * Make the watchdog consider the channel not running, so that it won't get
+ * recovered even if no progress is detected. Progress is not tracked if the
+ * watchdog is turned off.
+ *
+ * No guarantees are made about concurrent execution of the timeout handler.
+ * (This should be called from an update handler running in the same thread
+ * with the watchdog.)
+ */
+static bool gk20a_channel_timeout_stop(struct channel_gk20a *ch)
+{
+	bool was_running;
+
+	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
+	was_running = ch->timeout.running;
+	ch->timeout.running = false;
+	nvgpu_raw_spinlock_release(&ch->timeout.lock);
+	return was_running;
+}
+
+/**
+ * Continue a previously stopped timeout
+ *
+ * Enable the timeout again but don't reinitialize its timer.
+ *
+ * No guarantees are made about concurrent execution of the timeout handler.
+ * (This should be called from an update handler running in the same thread
+ * with the watchdog.)
+ */
+static void gk20a_channel_timeout_continue(struct channel_gk20a *ch)
 {
 	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
-	if (!ch->timeout.initialized) {
-		nvgpu_raw_spinlock_release(&ch->timeout.lock);
-		return;
-	}
-	nvgpu_raw_spinlock_release(&ch->timeout.lock);
-
-	cancel_delayed_work_sync(&ch->timeout.wq);
-
-	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
-	ch->timeout.initialized = false;
+	ch->timeout.running = true;
 	nvgpu_raw_spinlock_release(&ch->timeout.lock);
 }
 
+/**
+ * Rewind the timeout on each non-dormant channel.
+ *
+ * Reschedule the timeout of each active channel for which timeouts are running
+ * as if something was happened on each channel right now. This should be
+ * called when a global hang is detected that could cause a false positive on
+ * other innocent channels.
+ */
 void gk20a_channel_timeout_restart_all_channels(struct gk20a *g)
 {
-	u32 chid;
 	struct fifo_gk20a *f = &g->fifo;
+	u32 chid;
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *ch = &f->channel[chid];
 
-		if (gk20a_channel_get(ch)) {
-			nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
-			if (!ch->timeout.initialized) {
-				nvgpu_raw_spinlock_release(&ch->timeout.lock);
-				gk20a_channel_put(ch);
-				continue;
-			}
-			nvgpu_raw_spinlock_release(&ch->timeout.lock);
+		if (!gk20a_channel_get(ch))
+			continue;
 
-			cancel_delayed_work_sync(&ch->timeout.wq);
-			if (!ch->has_timedout)
-				schedule_delayed_work(&ch->timeout.wq,
-				       msecs_to_jiffies(
-				       gk20a_get_channel_watchdog_timeout(ch)));
+		nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
+		if (ch->timeout.running)
+			__gk20a_channel_timeout_start(ch);
+		nvgpu_raw_spinlock_release(&ch->timeout.lock);
 
-			gk20a_channel_put(ch);
-		}
+		gk20a_channel_put(ch);
 	}
 }
 
-static void gk20a_channel_timeout_handler(struct work_struct *work)
+/**
+ * Check if a timed out channel has hung and recover it if it has.
+ *
+ * Test if this channel has really got stuck at this point (should be called
+ * when the watchdog timer has expired) by checking if its gp_get has advanced
+ * or not. If no gp_get action happened since when the watchdog was started,
+ * force-reset the channel.
+ *
+ * The gpu is implicitly on at this point, because the watchdog can only run on
+ * channels that have submitted jobs pending for cleanup.
+ */
+static void gk20a_channel_timeout_handler(struct channel_gk20a *ch)
 {
+	struct gk20a *g = ch->g;
 	u32 gp_get;
-	struct gk20a *g;
-	struct channel_gk20a *ch;
 
-	ch = container_of(to_delayed_work(work), struct channel_gk20a,
-			timeout.wq);
-	ch = gk20a_channel_get(ch);
-	if (!ch)
-		return;
+	gk20a_dbg_fn("");
 
-	g = ch->g;
-
-	if (gk20a_busy(dev_from_gk20a(g))) {
-		gk20a_channel_put(ch);
-		return;
-	}
-
-	/* Need global lock since multiple channels can timeout at a time */
-	nvgpu_mutex_acquire(&g->ch_wdt_lock);
-
-	/* Get timed out job and reset the timer */
+	/* Get status and clear the timer */
 	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
 	gp_get = ch->timeout.gp_get;
-	ch->timeout.initialized = false;
+	ch->timeout.running = false;
 	nvgpu_raw_spinlock_release(&ch->timeout.lock);
 
 	if (gk20a_userd_gp_get(ch->g, ch) != gp_get) {
+		/* Channel has advanced, reschedule */
 		gk20a_channel_timeout_start(ch);
-		goto fail_unlock;
+		return;
 	}
 
 	gk20a_err(dev_from_gk20a(g), "Job on channel %d timed out",
@@ -2185,11 +2226,262 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 
 	g->ops.fifo.force_reset_ch(ch,
 		NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT, true);
+}
 
-fail_unlock:
-	nvgpu_mutex_release(&g->ch_wdt_lock);
+/**
+ * Test if the per-channel timeout is expired and handle the timeout in that case.
+ *
+ * Each channel has an expiration time based watchdog. The timer is
+ * (re)initialized in two situations: when a new job is submitted on an idle
+ * channel and when the timeout is checked but progress is detected.
+ *
+ * Watchdog timeout does not yet necessarily mean a stuck channel so this may
+ * or may not cause recovery.
+ *
+ * The timeout is stopped (disabled) after the last job in a row finishes
+ * making the channel idle.
+ */
+static void gk20a_channel_timeout_check(struct channel_gk20a *ch)
+{
+	bool timed_out;
+
+	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
+	timed_out = ch->timeout.running &&
+		nvgpu_timeout_expired(&ch->timeout.timer);
+	nvgpu_raw_spinlock_release(&ch->timeout.lock);
+
+	if (timed_out)
+		gk20a_channel_timeout_handler(ch);
+}
+
+/**
+ * Loop every living channel, check timeouts and handle stuck channels.
+ */
+static void gk20a_channel_poll_timeouts(struct gk20a *g)
+{
+	unsigned int chid;
+
+	gk20a_dbg_fn("");
+
+	for (chid = 0; chid < g->fifo.num_channels; chid++) {
+		struct channel_gk20a *ch = &g->fifo.channel[chid];
+
+		if (gk20a_channel_get(ch)) {
+			gk20a_channel_timeout_check(ch);
+			gk20a_channel_put(ch);
+		}
+	}
+}
+
+/*
+ * Process one scheduled work item for this channel. Currently, the only thing
+ * the worker does is job cleanup handling.
+ */
+static void gk20a_channel_worker_process_ch(struct channel_gk20a *ch)
+{
+	gk20a_dbg_fn("");
+
+	gk20a_channel_clean_up_jobs(ch, true);
+
+	/* ref taken when enqueued */
 	gk20a_channel_put(ch);
-	gk20a_idle(dev_from_gk20a(g));
+}
+
+/**
+ * Tell the worker that one more work needs to be done.
+ *
+ * Increase the work counter to synchronize the worker with the new work. Wake
+ * up the worker. If the worker was already running, it will handle this work
+ * before going to sleep.
+ */
+static int __gk20a_channel_worker_wakeup(struct gk20a *g)
+{
+	int put;
+
+	gk20a_dbg_fn("");
+
+	/*
+	 * Currently, the only work type is associated with a lock, which deals
+	 * with any necessary barriers. If a work type with no locking were
+	 * added, a a wmb() would be needed here. See ..worker_pending() for a
+	 * pair.
+	 */
+
+	put = atomic_inc_return(&g->channel_worker.put);
+	wake_up(&g->channel_worker.wq);
+
+	return put;
+}
+
+/**
+ * Test if there is some work pending.
+ *
+ * This is a pair for __gk20a_channel_worker_wakeup to be called from the
+ * worker. The worker has an internal work counter which is incremented once
+ * per finished work item. This is compared with the number of queued jobs,
+ * which may be channels on the items list or any other types of work.
+ */
+static bool __gk20a_channel_worker_pending(struct gk20a *g, int get)
+{
+	bool pending = atomic_read(&g->channel_worker.put) != get;
+
+	/*
+	 * This would be the place for a rmb() pairing a wmb() for a wakeup
+	 * if we had any work with no implicit barriers caused by locking.
+	 */
+
+	return pending;
+}
+
+/**
+ * Process the queued works for the worker thread serially.
+ *
+ * Flush all the work items in the queue one by one. This may block timeout
+ * handling for a short while, as these are serialized.
+ */
+static void gk20a_channel_worker_process(struct gk20a *g, int *get)
+{
+	gk20a_dbg_fn("");
+
+	while (__gk20a_channel_worker_pending(g, *get)) {
+		struct channel_gk20a *ch;
+
+		/*
+		 * If a channel is on the list, it's guaranteed to be handled
+		 * eventually just once. However, the opposite is not true. A
+		 * channel may be being processed if it's on the list or not.
+		 *
+		 * With this, processing channel works should be conservative
+		 * as follows: it's always safe to look at a channel found in
+		 * the list, and if someone enqueues the channel, it will be
+		 * handled eventually, even if it's being handled at the same
+		 * time. A channel is on the list only once; multiple calls to
+		 * enqueue are harmless.
+		 */
+		nvgpu_spinlock_acquire(&g->channel_worker.items_lock);
+		ch = list_first_entry_or_null(&g->channel_worker.items,
+				struct channel_gk20a,
+				worker_item);
+		if (ch)
+			list_del_init(&ch->worker_item);
+		nvgpu_spinlock_release(&g->channel_worker.items_lock);
+
+		if (!ch) {
+			/*
+			 * Woke up for some other reason, but there are no
+			 * other reasons than a channel added in the items list
+			 * currently, so warn and ack the message.
+			 */
+			gk20a_warn(g->dev, "Spurious worker event!");
+			++*get;
+			break;
+		}
+
+		gk20a_channel_worker_process_ch(ch);
+		++*get;
+	}
+}
+
+/*
+ * Look at channel states periodically, until canceled. Abort timed out
+ * channels serially. Process all work items found in the queue.
+ */
+static int gk20a_channel_poll_worker(void *arg)
+{
+	struct gk20a *g = (struct gk20a *)arg;
+	struct gk20a_channel_worker *worker = &g->channel_worker;
+	unsigned long start_wait;
+	/* event timeout for also polling the watchdog */
+	unsigned long timeout = msecs_to_jiffies(100);
+	int get = 0;
+
+	gk20a_dbg_fn("");
+
+	start_wait = jiffies;
+	while (!kthread_should_stop()) {
+		bool got_events;
+
+		got_events = wait_event_timeout(
+				worker->wq,
+				__gk20a_channel_worker_pending(g, get),
+				timeout) > 0;
+
+		if (got_events)
+			gk20a_channel_worker_process(g, &get);
+
+		if (jiffies - start_wait >= timeout) {
+			gk20a_channel_poll_timeouts(g);
+			start_wait = jiffies;
+		}
+	}
+	return 0;
+}
+
+/**
+ * Initialize the channel worker's metadata and start the background thread.
+ */
+int nvgpu_channel_worker_init(struct gk20a *g)
+{
+	struct task_struct *task;
+
+	atomic_set(&g->channel_worker.put, 0);
+	init_waitqueue_head(&g->channel_worker.wq);
+	INIT_LIST_HEAD(&g->channel_worker.items);
+	nvgpu_spinlock_init(&g->channel_worker.items_lock);
+	task = kthread_run(gk20a_channel_poll_worker, g,
+			"nvgpu_channel_poll_%s", dev_name(g->dev));
+	if (IS_ERR(task)) {
+		gk20a_err(g->dev, "failed to start channel poller thread");
+		return PTR_ERR(task);
+	}
+	g->channel_worker.poll_task = task;
+
+	return 0;
+}
+
+void nvgpu_channel_worker_deinit(struct gk20a *g)
+{
+	kthread_stop(g->channel_worker.poll_task);
+}
+
+/**
+ * Append a channel to the worker's list, if not there already.
+ *
+ * The worker thread processes work items (channels in its work list) and polls
+ * for other things. This adds @ch to the end of the list and wakes the worker
+ * up immediately. If the channel already existed in the list, it's not added,
+ * because in that case it has been scheduled already but has not yet been
+ * processed.
+ */
+void gk20a_channel_worker_enqueue(struct channel_gk20a *ch)
+{
+	struct gk20a *g = ch->g;
+
+	gk20a_dbg_fn("");
+
+	/*
+	 * Ref released when this item gets processed. The caller should hold
+	 * one ref already, so can't fail.
+	 */
+	if (WARN_ON(!gk20a_channel_get(ch))) {
+		gk20a_warn(g->dev, "cannot get ch ref for worker!");
+		return;
+	}
+
+	nvgpu_spinlock_acquire(&g->channel_worker.items_lock);
+	if (!list_empty(&ch->worker_item)) {
+		/*
+		 * Already queued, so will get processed eventually.
+		 * The worker is probably awake already.
+		 */
+		nvgpu_spinlock_release(&g->channel_worker.items_lock);
+		gk20a_channel_put(ch);
+		return;
+	}
+	list_add_tail(&ch->worker_item, &g->channel_worker.items);
+	nvgpu_spinlock_release(&g->channel_worker.items_lock);
+
+	__gk20a_channel_worker_wakeup(g);
 }
 
 int gk20a_free_priv_cmdbuf(struct channel_gk20a *c, struct priv_cmd_entry *e)
@@ -2214,32 +2506,6 @@ int gk20a_free_priv_cmdbuf(struct channel_gk20a *c, struct priv_cmd_entry *e)
 	return 0;
 }
 
-static void gk20a_channel_schedule_job_clean_up(struct channel_gk20a *c)
-{
-	nvgpu_mutex_acquire(&c->clean_up.lock);
-
-	if (c->clean_up.scheduled) {
-		nvgpu_mutex_release(&c->clean_up.lock);
-		return;
-	}
-
-	c->clean_up.scheduled = true;
-	schedule_delayed_work(&c->clean_up.wq, 1);
-
-	nvgpu_mutex_release(&c->clean_up.lock);
-}
-
-static void gk20a_channel_cancel_job_clean_up(struct channel_gk20a *c,
-				bool wait_for_completion)
-{
-	if (wait_for_completion)
-		cancel_delayed_work_sync(&c->clean_up.wq);
-
-	nvgpu_mutex_acquire(&c->clean_up.lock);
-	c->clean_up.scheduled = false;
-	nvgpu_mutex_release(&c->clean_up.lock);
-}
-
 static int gk20a_channel_add_job(struct channel_gk20a *c,
 				 struct channel_gk20a_job *job,
 				 bool skip_buffer_refcounting)
@@ -2256,7 +2522,10 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 			return err;
 	}
 
-	/* put() is done in gk20a_channel_update() when the job is done */
+	/*
+	 * Ref to hold the channel open during the job lifetime. This is
+	 * released by job cleanup launched via syncpt or sema interrupt.
+	 */
 	c = gk20a_channel_get(c);
 
 	if (c) {
@@ -2291,14 +2560,16 @@ err_put_buffers:
 	return err;
 }
 
-static void gk20a_channel_clean_up_runcb_fn(struct work_struct *work)
-{
-	struct channel_gk20a *c = container_of(to_delayed_work(work),
-			struct channel_gk20a, clean_up.wq);
-
-	gk20a_channel_clean_up_jobs(c, true);
-}
-
+/**
+ * Clean up job resources for further jobs to use.
+ * @clean_all: If true, process as many jobs as possible, otherwise just one.
+ *
+ * Loop all jobs from the joblist until a pending job is found, or just one if
+ * clean_all is not set. Pending jobs are detected from the job's post fence,
+ * so this is only done for jobs that have job tracking resources. Free all
+ * per-job memory for completed jobs; in case of preallocated resources, this
+ * opens up slots for new jobs to be submitted.
+ */
 static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 					bool clean_all)
 {
@@ -2307,6 +2578,7 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 	struct gk20a_platform *platform;
 	struct gk20a *g;
 	int job_finished = 0;
+	bool watchdog_on = false;
 
 	c = gk20a_channel_get(c);
 	if (!c)
@@ -2321,13 +2593,25 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 	g = c->g;
 	platform = gk20a_get_platform(g->dev);
 
-	gk20a_channel_cancel_job_clean_up(c, false);
+	/*
+	 * If !clean_all, we're in a condition where watchdog isn't supported
+	 * anyway (this would be a no-op).
+	 */
+	if (clean_all)
+		watchdog_on = gk20a_channel_timeout_stop(c);
+
+	/* Synchronize with abort cleanup that needs the jobs. */
+	nvgpu_mutex_acquire(&c->joblist.cleanup_lock);
 
 	while (1) {
 		bool completed;
 
 		channel_gk20a_joblist_lock(c);
 		if (channel_gk20a_joblist_is_empty(c)) {
+			/*
+			 * No jobs in flight, timeout will remain stopped until
+			 * new jobs are submitted.
+			 */
 			channel_gk20a_joblist_unlock(c);
 			break;
 		}
@@ -2343,7 +2627,15 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 
 		completed = gk20a_fence_is_expired(job->post_fence);
 		if (!completed) {
-			gk20a_channel_timeout_start(c);
+			/*
+			 * The watchdog eventually sees an updated gp_get if
+			 * something happened in this loop. A new job can have
+			 * been submitted between the above call to stop and
+			 * this - in that case, this is a no-op and the new
+			 * later timeout is still used.
+			 */
+			if (clean_all && watchdog_on)
+				gk20a_channel_timeout_continue(c);
 			break;
 		}
 
@@ -2394,9 +2686,13 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 		job_finished = 1;
 		gk20a_idle(g->dev);
 
-		if (!clean_all)
+		if (!clean_all) {
+			/* Timeout isn't supported here so don't touch it. */
 			break;
+		}
 	}
+
+	nvgpu_mutex_release(&c->joblist.cleanup_lock);
 
 	if (job_finished && c->update_fn)
 		schedule_work(&c->update_fn_work);
@@ -2404,22 +2700,24 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 	gk20a_channel_put(c);
 }
 
-void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
+/**
+ * Schedule a job cleanup work on this channel to free resources and to signal
+ * about completion.
+ *
+ * Call this when there has been an interrupt about finished jobs, or when job
+ * cleanup needs to be performed, e.g., when closing a channel. This is always
+ * safe to call even if there is nothing to clean up. Any visible actions on
+ * jobs just before calling this are guaranteed to be processed.
+ */
+void gk20a_channel_update(struct channel_gk20a *c)
 {
-	c = gk20a_channel_get(c);
-	if (!c)
-		return;
-
 	if (!c->g->power_on) { /* shutdown case */
-		gk20a_channel_put(c);
 		return;
 	}
 
 	trace_gk20a_channel_update(c->hw_chid);
-	gk20a_channel_timeout_stop(c);
-	gk20a_channel_schedule_job_clean_up(c);
-
-	gk20a_channel_put(c);
+	/* A queued channel is always checked for job cleanup. */
+	gk20a_channel_worker_enqueue(c);
 }
 
 static void gk20a_submit_append_priv_cmdbuf(struct channel_gk20a *c,
@@ -2809,7 +3107,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		if (c->deterministic && need_deferred_cleanup)
 			return -EINVAL;
 
-		/* gk20a_channel_update releases this ref. */
+		/* released by job cleanup via syncpt or sema interrupt */
 		err = gk20a_busy(g->dev);
 		if (err) {
 			gk20a_err(d, "failed to host gk20a to submit gpfifo, process %s",
@@ -2929,13 +3227,12 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 #endif
 	nvgpu_mutex_init(&c->ioctl_lock);
 	nvgpu_mutex_init(&c->error_notifier_mutex);
+	nvgpu_mutex_init(&c->joblist.cleanup_lock);
 	nvgpu_spinlock_init(&c->joblist.dynamic.lock);
 	nvgpu_mutex_init(&c->joblist.pre_alloc.read_lock);
 	nvgpu_raw_spinlock_init(&c->timeout.lock);
 	nvgpu_mutex_init(&c->sync_lock);
-	INIT_DELAYED_WORK(&c->timeout.wq, gk20a_channel_timeout_handler);
-	INIT_DELAYED_WORK(&c->clean_up.wq, gk20a_channel_clean_up_runcb_fn);
-	nvgpu_mutex_init(&c->clean_up.lock);
+
 	INIT_LIST_HEAD(&c->joblist.dynamic.jobs);
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	nvgpu_mutex_init(&c->cyclestate.cyclestate_buffer_mutex);
@@ -2946,6 +3243,8 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	nvgpu_mutex_init(&c->event_id_list_lock);
 	nvgpu_mutex_init(&c->dbg_s_lock);
 	list_add(&c->free_chs, &g->fifo.free_chs);
+
+	INIT_LIST_HEAD(&c->worker_item);
 
 	return 0;
 }
@@ -3384,8 +3683,6 @@ int gk20a_channel_suspend(struct gk20a *g)
 			gk20a_disable_channel_tsg(g, ch);
 			/* preempt the channel */
 			gk20a_fifo_preempt(g, ch);
-			gk20a_channel_timeout_stop(ch);
-			gk20a_channel_cancel_job_clean_up(ch, true);
 			/* wait for channel update notifiers */
 			if (ch->update_fn)
 				cancel_work_sync(&ch->update_fn_work);
@@ -3481,7 +3778,7 @@ void gk20a_channel_semaphore_wakeup(struct gk20a *g, bool post_events)
 				 * semaphore.
 				 */
 				if (!c->deterministic)
-					gk20a_channel_update(c, 0);
+					gk20a_channel_update(c);
 			}
 			gk20a_channel_put(c);
 		}

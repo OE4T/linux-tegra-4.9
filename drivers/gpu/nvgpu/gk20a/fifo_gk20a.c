@@ -502,6 +502,7 @@ static void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 
 	gk20a_dbg_fn("");
 
+	nvgpu_channel_worker_deinit(g);
 	/*
 	 * Make sure all channels are closed before deleting them.
 	 */
@@ -900,6 +901,9 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	}
 	nvgpu_mutex_init(&f->tsg_inuse_mutex);
 
+	err = nvgpu_channel_worker_init(g);
+	if (err)
+		goto clean_up;
 	f->remove_support = gk20a_remove_fifo_support;
 
 	f->deferred_reset_pending = false;

@@ -874,8 +874,6 @@ struct gk20a {
 	bool timeouts_enabled;
 #endif
 
-	struct nvgpu_mutex ch_wdt_lock;
-
 	struct nvgpu_mutex poweroff_lock;
 
 	/* Channel priorities */
@@ -1007,6 +1005,14 @@ struct gk20a {
 
 	atomic_t sw_irq_nonstall_last_handled;
 	wait_queue_head_t sw_irq_nonstall_last_handled_wq;
+
+	struct gk20a_channel_worker {
+		struct task_struct *poll_task;
+		atomic_t put;
+		wait_queue_head_t wq;
+		struct list_head items;
+		struct nvgpu_spinlock items_lock;
+	} channel_worker;
 
 	struct devfreq *devfreq;
 

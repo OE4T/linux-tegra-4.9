@@ -308,6 +308,10 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 	}
 	nvgpu_mutex_init(&f->tsg_inuse_mutex);
 
+	err = nvgpu_channel_worker_init(g);
+	if (err)
+		goto clean_up;
+
 	f->deferred_reset_pending = false;
 	nvgpu_mutex_init(&f->deferred_reset_mutex);
 

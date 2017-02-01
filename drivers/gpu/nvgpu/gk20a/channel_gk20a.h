@@ -27,6 +27,7 @@
 #include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/lock.h>
+#include <nvgpu/timers.h>
 
 struct gk20a;
 struct gr_gk20a;
@@ -87,12 +88,19 @@ struct channel_gk20a_joblist {
 		struct list_head jobs;
 		struct nvgpu_spinlock lock;
 	} dynamic;
+
+	/*
+	 * Synchronize abort cleanup (when closing a channel) and job cleanup
+	 * (asynchronously from worker) - protect from concurrent access when
+	 * job resources are being freed.
+	 */
+	struct nvgpu_mutex cleanup_lock;
 };
 
 struct channel_gk20a_timeout {
-	struct delayed_work wq;
 	struct nvgpu_raw_spinlock lock;
-	bool initialized;
+	struct nvgpu_timeout timer;
+	bool running;
 	u32 gp_get;
 };
 
@@ -108,12 +116,6 @@ struct gk20a_event_id_data {
 	wait_queue_head_t event_id_wq;
 	struct nvgpu_mutex lock;
 	struct list_head event_id_node;
-};
-
-struct channel_gk20a_clean_up {
-	struct nvgpu_mutex lock;
-	bool scheduled;
-	struct delayed_work wq;
 };
 
 /*
@@ -214,7 +216,8 @@ struct channel_gk20a {
 	u32 timeout_gpfifo_get;
 
 	struct channel_gk20a_timeout timeout;
-	struct channel_gk20a_clean_up clean_up;
+	/* for job cleanup handling in the background worker */
+	struct list_head worker_item;
 
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	struct {
@@ -250,8 +253,11 @@ struct channel_gk20a {
 	u64 virt_ctx;
 #endif
 
-	/* signal channel owner via a callback, if set, in gk20a_channel_update
-	 * via schedule_work */
+	/*
+	 * Signal channel owner via a callback, if set, in job cleanup with
+	 * schedule_work. Means that something finished on the channel (perhaps
+	 * more than one job).
+	 */
 	void (*update_fn)(struct channel_gk20a *, void *);
 	void *update_fn_data;
 	struct nvgpu_spinlock update_fn_lock; /* make access to the two above atomic */
@@ -293,6 +299,9 @@ int gk20a_disable_channel_tsg(struct gk20a *g, struct channel_gk20a *ch);
 int gk20a_channel_suspend(struct gk20a *g);
 int gk20a_channel_resume(struct gk20a *g);
 
+int nvgpu_channel_worker_init(struct gk20a *g);
+void nvgpu_channel_worker_deinit(struct gk20a *g);
+
 /* Channel file operations */
 int gk20a_channel_open(struct inode *inode, struct file *filp);
 int gk20a_channel_open_ioctl(struct gk20a *g,
@@ -302,7 +311,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			 unsigned long arg);
 int gk20a_channel_release(struct inode *inode, struct file *filp);
 struct channel_gk20a *gk20a_get_channel_from_file(int fd);
-void gk20a_channel_update(struct channel_gk20a *c, int nr_completed);
+void gk20a_channel_update(struct channel_gk20a *c);
 
 void gk20a_init_channel(struct gpu_ops *gops);
 

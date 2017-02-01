@@ -179,7 +179,7 @@ static void gk20a_channel_syncpt_update(void *priv, int nr_completed)
 {
 	struct channel_gk20a *ch = priv;
 
-	gk20a_channel_update(ch, nr_completed);
+	gk20a_channel_update(ch);
 
 	/* note: channel_get() is in __gk20a_channel_syncpt_incr() */
 	gk20a_channel_put(ch);

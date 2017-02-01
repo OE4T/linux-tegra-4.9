@@ -3312,6 +3312,14 @@ static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
 			dev_warn(adsp->dev, "No params to pass to the plugin\n");
 			return 0;
 		}
+
+		if (num_params + 2 >
+			sizeof(apm_msg.msg.fx_set_param_params.params)/
+			sizeof(apm_msg.msg.fx_set_param_params.params[0])) {
+			dev_err(adsp->dev, "parameter too large\n");
+			return -EINVAL;
+		}
+
 		apm_msg.msg.fx_set_param_params.params[0] =
 			(sizeof(nvfx_call_params_t) +
 			num_params * sizeof(int32_t));
@@ -3331,6 +3339,12 @@ static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
 	{
 		nvfx_call_params_t *call_params =
 			(nvfx_call_params_t *)ucontrol->value.bytes.data;
+
+		if (call_params->size >
+			sizeof(apm_msg.msg.fx_set_param_params.params)) {
+			dev_err(adsp->dev, "parameter too large\n");
+			return -EINVAL;
+		}
 
 		/* copy parameters */
 		memcpy(&apm_msg.msg.fx_set_param_params.params,

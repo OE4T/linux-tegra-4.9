@@ -1,7 +1,7 @@
 /*
  * Tegra CSI4 device common APIs
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Frank Chen <frankc@nvidia.com>
  *
@@ -15,6 +15,7 @@
 #include "camera/csi/csi4_registers.h"
 #include "camera/vi/core.h"
 #include "mipical/mipi_cal.h"
+#include "nvcsi/nvcsi.h"
 
 static void csi4_stream_write(struct tegra_csi_channel *chan,
 		unsigned int index, unsigned int addr, u32 val)
@@ -173,8 +174,9 @@ static void csi4_phy_config(
 		/* setup settle time */
 		csi4_phy_write(chan, phy_num,
 			NVCSI_CIL_A_CONTROL,
-			DESKEW_COMPARE | DESKEW_SETTLE | CLK_SETTLE |
-			T18X_BYPASS_LP_SEQ | THS_SETTLE);
+			DEFAULT_DESKEW_COMPARE | DEFAULT_DESKEW_SETTLE |
+			DEFAULT_CLK_SETTLE |
+			T18X_BYPASS_LP_SEQ | DEFAULT_THS_SETTLE);
 		/* release soft reset */
 		csi4_phy_write(chan, phy_num, NVCSI_CIL_A_SW_RESET, 0x0);
 
@@ -190,8 +192,9 @@ static void csi4_phy_config(
 			/* setup settle time */
 			csi4_phy_write(chan, phy_num,
 				NVCSI_CIL_B_CONTROL,
-				DESKEW_COMPARE | DESKEW_SETTLE | CLK_SETTLE |
-				T18X_BYPASS_LP_SEQ | THS_SETTLE);
+				DEFAULT_DESKEW_COMPARE | DEFAULT_DESKEW_SETTLE
+				| DEFAULT_CLK_SETTLE |
+				T18X_BYPASS_LP_SEQ | DEFAULT_THS_SETTLE);
 			/* release soft reset */
 			csi4_phy_write(chan, phy_num,
 				NVCSI_CIL_B_SW_RESET, 0x0);
@@ -208,8 +211,9 @@ static void csi4_phy_config(
 		/* setup settle time */
 		csi4_phy_write(chan, phy_num,
 			NVCSI_CIL_B_CONTROL,
-			DESKEW_COMPARE | DESKEW_SETTLE | CLK_SETTLE |
-			T18X_BYPASS_LP_SEQ | THS_SETTLE);
+			DEFAULT_DESKEW_COMPARE | DEFAULT_DESKEW_SETTLE |
+			DEFAULT_CLK_SETTLE |
+			T18X_BYPASS_LP_SEQ | DEFAULT_THS_SETTLE);
 		/* release soft reset */
 		csi4_phy_write(chan, phy_num, NVCSI_CIL_B_SW_RESET, 0x0);
 	}

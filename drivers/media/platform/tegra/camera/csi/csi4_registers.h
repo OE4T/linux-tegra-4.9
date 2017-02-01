@@ -3,7 +3,7 @@
  *
  * Tegra 18x CSI register offsets
  *
- * Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -58,10 +58,6 @@
 #define CFG_VC0_DPCM_COMPRESSION_RATIO (0xf << 0)
 
 #define ERROR_STATUS2VI_MASK		0x90
-#define CFG_ERR_STATUS2VI_MASK_VC3	(0x1 << 24)
-#define CFG_ERR_STATUS2VI_MASK_VC2	(0x1 << 16)
-#define CFG_ERR_STATUS2VI_MASK_VC1	(0x1 << 8)
-#define CFG_ERR_STATUS2VI_MASK_VC0	(0x1 << 0)
 
 /* T186 TPG */
 #define TPG_EN_0			0x0b8
@@ -186,11 +182,11 @@
 
 #define NVCSI_CIL_A_CONTROL			0x5c
 #define NVCSI_CIL_B_CONTROL			0xc0
-#define DESKEW_COMPARE				(0x4 << 20)
-#define DESKEW_SETTLE				(0x6 << 16)
-#define CLK_SETTLE					(0x21 << 8)
+#define DEFAULT_DESKEW_COMPARE				(0x4 << 20)
+#define DEFAULT_DESKEW_SETTLE				(0x6 << 16)
+#define DEFAULT_CLK_SETTLE					(0x21 << 8)
 #define T18X_BYPASS_LP_SEQ			(0x1 << 7)
-#define THS_SETTLE					(0x14 << 0)
+#define DEFAULT_THS_SETTLE					(0x14 << 0)
 
 /* MIPICAL */
 #define	NVCSI_CIL_A_BASE            0x18

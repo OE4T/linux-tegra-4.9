@@ -337,78 +337,6 @@ static int gp10b_init_pmu_setup_hw1(struct gk20a *g)
 
 }
 
-static void pmu_handle_ecc_en_dis_msg(struct gk20a *g, struct pmu_msg *msg,
-			void *param, u32 handle, u32 status)
-{
-	struct pmu_gk20a *pmu = &g->pmu;
-	struct pmu_msg_lrf_tex_ltc_dram_en_dis *ecc =
-			&msg->msg.lrf_tex_ltc_dram.en_dis;
-	gk20a_dbg_fn("");
-
-	if (status != 0) {
-		gk20a_err(dev_from_gk20a(g), "ECC en dis cmd aborted");
-		return;
-	}
-	if (msg->msg.lrf_tex_ltc_dram.msg_type !=
-			PMU_LRF_TEX_LTC_DRAM_MSG_ID_EN_DIS) {
-		gk20a_err(dev_from_gk20a(g),
-			"Invalid msg for LRF_TEX_LTC_DRAM_CMD_ID_EN_DIS cmd");
-		return;
-	} else if (ecc->pmu_status != 0) {
-		gk20a_err(dev_from_gk20a(g),
-			"LRF_TEX_LTC_DRAM_MSG_ID_EN_DIS msg status = %x",
-			ecc->pmu_status);
-		gk20a_err(dev_from_gk20a(g),
-			"LRF_TEX_LTC_DRAM_MSG_ID_EN_DIS msg en fail = %x",
-			ecc->en_fail_mask);
-		gk20a_err(dev_from_gk20a(g),
-			"LRF_TEX_LTC_DRAM_MSG_ID_EN_DIS msg dis fail = %x",
-			ecc->dis_fail_mask);
-	} else
-		pmu->override_done = 1;
-	gk20a_dbg_fn("done");
-}
-
-static int send_ecc_overide_en_dis_cmd(struct gk20a *g, u32 bitmask)
-{
-	struct pmu_gk20a *pmu = &g->pmu;
-	struct pmu_cmd cmd;
-	u32 seq;
-	int status;
-	u32 val;
-	gk20a_dbg_fn("");
-
-	tegra_fuse_readl(FUSE_OPT_ECC_EN, &val);
-	if (!val) {
-		gk20a_err(dev_from_gk20a(g), "Board not ECC capable");
-		return -1;
-	}
-	if (!(g->acr.capabilities &
-			ACR_LRF_TEX_LTC_DRAM_PRIV_MASK_ENABLE_LS_OVERRIDE)) {
-		gk20a_err(dev_from_gk20a(g), "check ACR capabilities");
-		return -1;
-	}
-	memset(&cmd, 0, sizeof(struct pmu_cmd));
-	cmd.hdr.unit_id = PMU_UNIT_FECS_MEM_OVERRIDE;
-	cmd.hdr.size = PMU_CMD_HDR_SIZE +
-			sizeof(struct pmu_cmd_lrf_tex_ltc_dram_en_dis);
-	cmd.cmd.lrf_tex_ltc_dram.en_dis.cmd_type =
-			PMU_LRF_TEX_LTC_DRAM_CMD_ID_EN_DIS;
-	cmd.cmd.lrf_tex_ltc_dram.en_dis.en_dis_mask = (u8)(bitmask & 0xff);
-
-	gp10b_dbg_pmu("cmd post PMU_ECC_CMD_ID_EN_DIS_ECC");
-	pmu->override_done = 0;
-	status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_LPQ,
-			pmu_handle_ecc_en_dis_msg, NULL, &seq, ~0);
-	if (status)
-		gk20a_err(dev_from_gk20a(g), "ECC override failed");
-	else
-		pmu_wait_message_cond(pmu, gk20a_get_gr_idle_timeout(g),
-				      &pmu->override_done, 1);
-	gk20a_dbg_fn("done");
-	return status;
-}
-
 static bool gp10b_is_lazy_bootstrap(u32 falcon_id)
 {
 	bool enable_status = false;
@@ -495,8 +423,7 @@ void gp10b_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_lpwr_enable_pg = NULL;
 	gops->pmu.pmu_lpwr_disable_pg = NULL;
 	gops->pmu.pmu_pg_param_post_init = NULL;
-	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd =
-			send_ecc_overide_en_dis_cmd;
+	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd = NULL;
 	gops->pmu.reset = gk20a_pmu_reset;
 	gops->pmu.dump_secure_fuses = pmu_dump_security_fuses_gp10b;
 }

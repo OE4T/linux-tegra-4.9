@@ -22,7 +22,6 @@
 #define __PMU_GK20A_H__
 
 #include <linux/version.h>
-#include "pmu_api.h"
 #include <nvgpu/flcnif_cmn.h>
 #include "pmuif/nvgpu_gpmu_cmdif.h"
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,7 +14,6 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "gp106/pmu_gp106.h"
-#include "gk20a/pmu_api.h"
 #include "gm206/bios_gm206.h"
 #include "pstate/pstate.h"
 #include "include/bios.h"

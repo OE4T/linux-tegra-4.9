@@ -24,8 +24,7 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/err.h>
-#include <linux/tegra-powergate.h>
-#include <dt-bindings/soc/tegra186-powergate.h>
+#include <soc/tegra/tegra_powergate.h>
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/tegra-powergate-driver.h>
@@ -202,7 +201,7 @@ static int tegra186_init_refcount(void)
 
 static bool tegra186_powergate_id_is_valid(int id)
 {
-	if ((id < 0) || (id >= TEGRA_NUM_POWERGATE))
+	if ((id < 0) || (id >= TEGRA186_POWER_DOMAIN_MAX))
 		return false;
 
 	return true;
@@ -211,7 +210,7 @@ static bool tegra186_powergate_id_is_valid(int id)
 static struct tegra_powergate_driver_ops tegra186_pg_ops = {
 	.soc_name = "tegra186",
 
-	.num_powerdomains = TEGRA_NUM_POWERGATE,
+	.num_powerdomains = TEGRA186_POWER_DOMAIN_MAX,
 	.powergate_id_is_soc_valid = tegra186_powergate_id_is_valid,
 
 	.get_powergate_domain_name = tegra186_pg_get_name,

@@ -2884,7 +2884,7 @@ static void tegra_pmc_show_reset_status(void)
 
 static int tegra_pmc_probe(struct platform_device *pdev)
 {
-	void __iomem *base;
+	void __iomem *base = pmc->base;
 	struct resource *res;
 	int err;
 
@@ -2902,9 +2902,10 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 
 	/* take over the memory region from the early initialization */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	base = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(base))
-		return PTR_ERR(base);
+	pmc->base = devm_ioremap_resource(&pdev->dev, res);
+	if (IS_ERR(pmc->base))
+		return PTR_ERR(pmc->base);
+	iounmap(base);
 
 	if (pmc->soc->has_reboot_base_address) {
 		base =  pmc->reboot_base;
@@ -2955,11 +2956,6 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 			return err;
 		}
 	}
-
-	mutex_lock(&pmc->powergates_lock);
-	iounmap(pmc->base);
-	pmc->base = base;
-	mutex_unlock(&pmc->powergates_lock);
 
 	/* Prod setting like platform specific rails */
 	prod_list = devm_tegra_prod_get(&pdev->dev);

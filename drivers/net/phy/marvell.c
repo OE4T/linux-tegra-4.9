@@ -16,7 +16,7 @@
  *
  */
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -704,7 +704,7 @@ static int m88e1512_config_init(struct phy_device *phydev)
 		msleep(1);
 		timeout--;
 	}
-
+	return m88e1512_read_status(phydev);
 err:
 	/* set the fibre reg page default */
 	ret = phy_write(phydev, MII_MARVELL_PHY_PAGE, MII_88E1512_FIBER);

@@ -249,26 +249,15 @@ static void native_synchronize(void)
 
 static int native_handshake(void __iomem *bpmp_base)
 {
-	uint32_t sem;
-	int i;
-
-	sem = __raw_readl(bpmp_base + HSP_SHRD_SEM_1_STA);
-	if (sem || !tegra_platform_is_vdk())
-		goto next;
+	if (tegra_platform_is_silicon())
+		goto dbwait;
 
 	pr_info("bpmp: waiting for signs of life\n");
 
-	for (i = 0; i < 10 && !sem; i++) {
+	while (!__raw_readl(bpmp_base + HSP_SHRD_SEM_1_STA))
 		msleep(500);
-		sem = __raw_readl(bpmp_base + HSP_SHRD_SEM_1_STA);
-	}
 
-next:
-	if (!sem) {
-		pr_info("bpmp: no signs of life\n");
-		return -ENODEV;
-	}
-
+dbwait:
 	pr_info("bpmp: waiting for handshake\n");
 	while (!tegra_hsp_db_can_ring(HSP_DB_BPMP)) {
 		if (tegra_platform_is_vdk())

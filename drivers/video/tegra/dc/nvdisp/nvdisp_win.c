@@ -16,6 +16,7 @@
 
 
 #include <linux/delay.h>
+#include <video/tegra_dc_ext.h>
 
 #include "dc.h"
 #include "nvdisp.h"
@@ -337,36 +338,36 @@ static inline u32 tegra_nvdisp_win_swap_uv(struct tegra_dc_win *win)
 	u32 swap_uv = 0;
 
 	switch (tegra_dc_fmt(win->fmt)) {
-	case TEGRA_WIN_FMT_YCbCr420SP:
+	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N420:
 		swap_uv = 1;
 		break;
 
-	case TEGRA_WIN_FMT_YCrCb420SP:
-		win->fmt = TEGRA_WIN_FMT_YCbCr420SP;
+	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N420:
+		win->fmt = TEGRA_DC_EXT_FMT_T_Y8___V8U8_N420;
 		break;
 
-	case TEGRA_WIN_FMT_YCrCb422SP:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N422:
 		swap_uv = 1;
 		break;
 
-	case TEGRA_WIN_FMT_YCbCr422SP:
-		win->fmt = TEGRA_WIN_FMT_YCrCb422SP;
+	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N422:
+		win->fmt = TEGRA_DC_EXT_FMT_T_Y8___U8V8_N422;
 		break;
 
-	case TEGRA_WIN_FMT_YCrCb422RSP:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N422R:
 		swap_uv = 1;
 		break;
 
-	case TEGRA_WIN_FMT_YCbCr422RSP:
-		win->fmt = TEGRA_WIN_FMT_YCrCb422RSP;
+	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N422R:
+		win->fmt = TEGRA_DC_EXT_FMT_T_Y8___U8V8_N422R;
 		break;
 
-	case TEGRA_WIN_FMT_YCrCb444SP:
+	case TEGRA_DC_EXT_FMT_T_Y8___U8V8_N444:
 		swap_uv = 1;
 		break;
 
-	case TEGRA_WIN_FMT_YCbCr444SP:
-		win->fmt = TEGRA_WIN_FMT_YCrCb444SP;
+	case TEGRA_DC_EXT_FMT_T_Y8___V8U8_N444:
+		win->fmt = TEGRA_DC_EXT_FMT_T_Y8___U8V8_N444;
 		break;
 	}
 
@@ -404,7 +405,7 @@ int tegra_nvdisp_get_degamma_config(struct tegra_dc *dc,
 				win_win_set_params_degamma_range_yuv8_10_f();
 	} else {
 		/* srgb for rgb, none for I8 */
-		if (win->fmt == TEGRA_WIN_FMT_P8)
+		if (win->fmt == TEGRA_DC_EXT_FMT_T_P8)
 			ret |=
 				win_win_set_params_degamma_range_none_f();
 		else

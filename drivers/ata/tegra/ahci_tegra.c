@@ -17,6 +17,8 @@
 #include "ahci_tegra.h"
 #include "linux/pinctrl/consumer.h"
 
+#include <soc/tegra/tegra_powergate.h>
+
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
@@ -67,6 +69,7 @@ static const struct tegra_ahci_soc_data tegra186_ahci_data = {
 		.t_satao_nvoob_comma_cnt_mask = (0XFF << 16),
 		.t_satao_nvoob_comma_cnt = (0X07 << 16),
 	},
+	.powergate_id = TEGRA186_POWER_DOMAIN_SAX,
 };
 
 static const struct tegra_ahci_soc_data tegra210_ahci_data = {
@@ -83,6 +86,7 @@ static const struct tegra_ahci_soc_data tegra210_ahci_data = {
 		.t_satao_nvoob_comma_cnt_mask = (0X7 << 28),
 		.t_satao_nvoob_comma_cnt = (0X7 << 28),
 	},
+	.powergate_id = TEGRA210_POWER_DOMAIN_SATA,
 };
 
 static const struct of_device_id tegra_ahci_of_match[] = {
@@ -535,7 +539,7 @@ static int tegra_ahci_elpg_enter(struct ata_host *host)
 		tegra_ahci_override_devslp(hpriv, true);
 
 	/* 5. Powergate */
-	ret = tegra_powergate_partition(TEGRA_POWERGATE_SATA);
+	ret = tegra_powergate_partition(tegra->soc_data->powergate_id);
 	tegra_ahci_disable_clks(hpriv);
 
 	return ret;
@@ -554,7 +558,7 @@ static int tegra_ahci_elpg_exit(struct ata_host *host)
 	ret = tegra_ahci_enable_clks(hpriv);
 	if (ret)
 		return ret;
-	ret = tegra_unpowergate_partition(TEGRA_POWERGATE_SATA);
+	ret = tegra_unpowergate_partition(tegra->soc_data->powergate_id);
 	if (ret)
 		return ret;
 
@@ -802,7 +806,7 @@ static int tegra_ahci_power_on(struct ahci_host_priv *hpriv)
 	if (ret)
 		goto disable_sata_clk;
 
-	ret = tegra_unpowergate_partition(TEGRA_POWERGATE_SATA);
+	ret = tegra_unpowergate_partition(tegra->soc_data->powergate_id);
 	if (ret)
 		goto disable_sata_oob_clk;
 
@@ -831,7 +835,7 @@ static void tegra_ahci_power_off(struct ahci_host_priv *hpriv)
 
 	clk_disable_unprepare(tegra->sata_clk);
 	clk_disable_unprepare(tegra->sata_oob_clk);
-	tegra_powergate_partition(TEGRA_POWERGATE_SATA);
+	tegra_powergate_partition(tegra->soc_data->powergate_id);
 
 	regulator_bulk_disable(tegra->soc_data->num_sata_regulators,
 			tegra->supplies);

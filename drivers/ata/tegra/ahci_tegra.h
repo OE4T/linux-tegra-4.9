@@ -27,7 +27,6 @@
 #include <linux/reset.h>
 #include <scsi/scsi_device.h>
 #include <scsi/scsi_cmnd.h>
-#include <linux/tegra-powergate.h>
 #include <soc/tegra/pmc.h>
 #include <soc/tegra/chip-id.h>
 #include <linux/tegra_prod.h>
@@ -231,6 +230,7 @@ struct tegra_ahci_soc_data {
 		u32 t_satao_nvoob_comma_cnt_mask;
 		u32 t_satao_nvoob_comma_cnt;
 	} reg;
+	int	powergate_id;
 };
 
 #ifdef CONFIG_DEBUG_FS

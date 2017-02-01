@@ -20,6 +20,7 @@
 #include "gpmuif_ap.h"
 #include "gpmuif_pg.h"
 #include "gpmuif_perfmon.h"
+#include "gpmuif_acr.h"
 #include "gpmuifboardobj.h"
 #include "gpmuifclk.h"
 #include "gpmuifperf.h"

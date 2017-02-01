@@ -124,16 +124,6 @@ struct pmu_ucode_desc_v1 {
 	u32 compressed;
 };
 
-/***************************** ACR ERROR CODES  ******************************/
-/*!
- * Error codes used in PMU-ACR Task
- *
- * LSF_ACR_INVALID_TRANSCFG_SETUP : Indicates that TRANSCFG Setup is not valid
- *  MAILBOX1 returns the CTXDMA ID of invalid setup
- *
- */
-#define ACR_ERROR_INVALID_TRANSCFG_SETUP        (0xAC120001)
-
 #define PMU_PGENG_GR_BUFFER_IDX_INIT	(0)
 #define PMU_PGENG_GR_BUFFER_IDX_ZBC	(1)
 #define PMU_PGENG_GR_BUFFER_IDX_FECS	(2)

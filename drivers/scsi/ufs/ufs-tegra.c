@@ -950,6 +950,8 @@ static int ufs_tegra_pwr_change_notify(struct ufs_hba *hba,
 
 		memcpy(dev_req_params, dev_max_params,
 			sizeof(struct ufs_pa_layer_attr));
+		if (hba->init_prefetch_data.ref_clk_freq)
+			ufs_tegra->enable_hs_mode = false;
 		if ((ufs_tegra->enable_hs_mode) && (dev_max_params->hs_rate)) {
 			if (ufs_tegra->max_hs_gear) {
 				if (dev_max_params->gear_rx >

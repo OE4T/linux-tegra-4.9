@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google, Inc.
- * Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -45,6 +45,8 @@
 #define SDHCI_TEGRA_VENDOR_CLOCK_CTRL			0x100
 #define SDHCI_CLOCK_CTRL_TAP_MASK			0x00ff0000
 #define SDHCI_CLOCK_CTRL_TAP_SHIFT			16
+#define SDHCI_CLOCK_CTRL_TRIM_SHIFT			24
+#define SDHCI_CLOCK_CTRL_TRIM_MASK			0x1F
 #define SDHCI_CLOCK_CTRL_SDR50_TUNING_OVERRIDE		BIT(5)
 #define SDHCI_CLOCK_CTRL_PADPIPE_CLKEN_OVERRIDE		BIT(3)
 #define SDHCI_CLOCK_CTRL_SPI_MODE_CLKEN_OVERRIDE	BIT(2)
@@ -83,16 +85,19 @@
 #define SDHCI_TUN_CTRL0_TUNING_ITER_MASK	0x7
 #define SDHCI_TUN_CTRL0_TUNING_ITER_SHIFT	13
 #define SDHCI_TUN_CTRL0_TUNING_WORD_SEL_MASK	0x7
+#define SDHCI_VNDR_TUN_CTRL0_0_TUN_ITER_MASK	0x000E000
 #define TUNING_WORD_SEL_MASK	0x7
 
 #define SDHCI_TEGRA_VNDR_TUNING_STATUS0		0x1C8
 
 #define SDHCI_TEGRA_SDMEM_COMP_PADCTRL		0x1E0
 #define SDHCI_TEGRA_PAD_E_INPUT_OR_E_PWRD_MASK	0x80000000
+#define SDHCI_TEGRA_SDMEMCOMP_PADCTRL_VREF_SEL	0x0000000F
 
 #define SDHCI_TEGRA_AUTO_CAL_CONFIG		0x1e4
 #define SDHCI_AUTO_CAL_START			BIT(31)
 #define SDHCI_AUTO_CAL_ENABLE			BIT(29)
+#define SDHCI_AUTO_CAL_PUPD_OFFSETS		0x00007F7F
 
 #define SDHCI_TEGRA_AUTO_CAL_STATUS	0x1EC
 #define SDHCI_TEGRA_AUTO_CAL_ACTIVE	0x80000000
@@ -131,6 +136,20 @@ const char *auto_calib_offset_prods[] = {
 	"autocal-pu-pd-offset-default-1v8", /* DDR52 */
 	"autocal-pu-pd-offset-hs200-1v8", /* HS200 */
 	"autocal-pu-pd-offset-hs400-1v8", /* HS400 */
+};
+
+static char prod_device_states[MMC_TIMING_COUNTER][20] = {
+	"prod_c_ds", /* MMC_TIMING_LEGACY */
+	"prod_c_hs", /* MMC_TIMING_MMC_HS */
+	"prod_c_hs", /* MMC_TIMING_SD_HS */
+	"prod_c_sdr12", /* MMC_TIMING_UHS_SDR12 */
+	"prod_c_sdr25", /* MMC_TIMING_UHS_SDR25 */
+	"prod_c_sdr50", /* MMC_TIMING_UHS_SDR50 */
+	"prod_c_sdr104", /* MMC_TIMING_UHS_SDR104 */
+	"prod_c_ddr52", /* MMC_TIMING_UHS_DDR50 */
+	"prod_c_ddr52", /* MMC_TIMING_MMC_DDR52 */
+	"prod_c_hs200", /* MMC_TIMING_MMC_HS200 */
+	"prod_c_hs400", /* MMC_TIMING_MMC_HS400 */
 };
 
 struct sdhci_tegra_soc_data {
@@ -377,22 +396,10 @@ static int tegra_sdhci_get_max_tuning_loop_counter(struct sdhci_host *host)
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 	int err = 0;
 
-	if (host->mmc->ios.timing == MMC_TIMING_UHS_SDR50)
-		err = tegra_prod_set_by_name(&host->ioaddr,
-			"tun-iterations-sdr50", tegra_host->prods);
-	else if (host->mmc->ios.timing == MMC_TIMING_UHS_SDR104)
-		err = tegra_prod_set_by_name(&host->ioaddr,
-			"tun-iterations-sdr104", tegra_host->prods);
-	else if (host->mmc->caps2 & MMC_CAP2_HS533)
-		err = tegra_prod_set_by_name(&host->ioaddr,
-			"tun-iterations-hs533", tegra_host->prods);
-	else if (host->mmc->ios.timing == MMC_TIMING_MMC_HS400)
-		err = tegra_prod_set_by_name(&host->ioaddr,
-			"tun-iterations-hs400", tegra_host->prods);
-	else if (host->mmc->ios.timing == MMC_TIMING_MMC_HS200)
-		err = tegra_prod_set_by_name(&host->ioaddr,
-			"tun-iterations-hs200", tegra_host->prods);
-
+	err = tegra_prod_set_by_name_partially(&host->ioaddr,
+			prod_device_states[host->mmc->ios.timing],
+			tegra_host->prods, 0, SDHCI_VNDR_TUN_CTRL0_0,
+			SDHCI_VNDR_TUN_CTRL0_0_TUN_ITER_MASK);
 	if (err)
 		dev_err(mmc_dev(host->mmc),
 			"%s: error %d in tuning iteration update\n",
@@ -462,7 +469,7 @@ static void tegra_sdhci_reset(struct sdhci_host *host, u8 mask)
 	if (!(mask & SDHCI_RESET_ALL))
 		return;
 
-	err = tegra_prod_set_by_name(&host->ioaddr, "prod-reset",
+	err = tegra_prod_set_by_name(&host->ioaddr, "prod",
 		tegra_host->prods);
 	if (err)
 		dev_err(mmc_dev(host->mmc),
@@ -553,6 +560,7 @@ static void tegra_sdhci_pad_autocalib(struct sdhci_host *host)
 	int card_clk_enabled, ret;
 	const char *comp_vref;
 	unsigned int timeout = 10;
+	unsigned int timing = host->mmc->ios.timing;
 
 	if (tegra_host->disable_auto_cal)
 		return;
@@ -572,26 +580,37 @@ static void tegra_sdhci_pad_autocalib(struct sdhci_host *host)
 	tegra_sdhci_configure_e_input(host, true);
 	udelay(1);
 
-	ret = tegra_prod_set_by_name(&host->ioaddr, comp_vref,
-		tegra_host->prods);
-	if (ret)
-		dev_err(mmc_dev(host->mmc), "Failed to set vref settings %d\n",
-			ret);
+	ret = tegra_prod_set_by_name_partially(&host->ioaddr,
+			prod_device_states[timing],
+			tegra_host->prods, 0, SDHCI_TEGRA_SDMEM_COMP_PADCTRL,
+			SDHCI_TEGRA_SDMEMCOMP_PADCTRL_VREF_SEL);
+	if (ret < 0)
+		dev_err(mmc_dev(host->mmc),
+			"%s: error %d in comp vref settings\n",
+			__func__, ret);
 
-	ret = tegra_prod_set_by_name(&host->ioaddr, "autocal-en",
-		tegra_host->prods);
+	/* Enable Auto Calibration*/
+	ret = tegra_prod_set_by_name_partially(&host->ioaddr,
+			prod_device_states[timing],
+			tegra_host->prods, 0, SDHCI_TEGRA_AUTO_CAL_CONFIG,
+			SDHCI_AUTO_CAL_ENABLE);
+	if (ret < 0)
+		dev_err(mmc_dev(host->mmc),
+			"%s: error %d in autocal-en settings\n",
+			__func__, ret);
 
 	val = sdhci_readl(host, SDHCI_TEGRA_AUTO_CAL_CONFIG);
 	val |= SDHCI_AUTO_CAL_START;
 	sdhci_writel(host,val, SDHCI_TEGRA_AUTO_CAL_CONFIG);
 
 	/* Program calibration offsets */
-	ret = tegra_prod_set_by_name(&host->ioaddr,
-		auto_calib_offset_prods[host->mmc->ios.timing],
-		tegra_host->prods);
+	ret = tegra_prod_set_by_name_partially(&host->ioaddr,
+			prod_device_states[timing],
+			tegra_host->prods, 0, SDHCI_TEGRA_AUTO_CAL_CONFIG,
+			SDHCI_AUTO_CAL_PUPD_OFFSETS);
 	if (ret < 0)
-		dev_err(mmc_dev(host->mmc), "Failed to set calib offsets %d\n",
-			ret);
+		dev_err(mmc_dev(host->mmc),
+			"error %d in autocal-pu-pd-offset settings\n", ret);
 
 	/* Wait 2us after auto calibration is enabled */
 	udelay(2);
@@ -829,8 +848,7 @@ static void tegra_sdhci_set_uhs_signaling(struct sdhci_host *host,
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
 	int ret;
 	u8 tap_delay_type;
-	bool tuning_mode = false, set_trim_delay = false;
-	const char *trim_delay_prod;
+	bool tuning_mode = false;
 
 	if ((timing == MMC_TIMING_UHS_DDR50) ||
 		(timing == MMC_TIMING_MMC_DDR52))
@@ -851,20 +869,16 @@ static void tegra_sdhci_set_uhs_signaling(struct sdhci_host *host,
 	}
 
 	/* Set trim delay */
-	if (tegra_host->ddr_signaling) {
-		trim_delay_prod = "trim-delay-ddr";
-		set_trim_delay = true;
-	} else if (timing == MMC_TIMING_MMC_HS200) {
-		trim_delay_prod = "trim-delay-hs200";
-		set_trim_delay = true;
-	}
-
-	if (set_trim_delay) {
-		ret = tegra_prod_set_by_name(&host->ioaddr, trim_delay_prod,
-				tegra_host->prods);
+	if (tegra_host->ddr_signaling || (timing == MMC_TIMING_MMC_HS200)) {
+		ret = tegra_prod_set_by_name_partially(&host->ioaddr,
+				prod_device_states[timing], tegra_host->prods,
+				0, SDHCI_TEGRA_VENDOR_CLOCK_CTRL,
+				SDHCI_CLOCK_CTRL_TRIM_MASK <<
+				SDHCI_CLOCK_CTRL_TRIM_SHIFT);
 		if (ret < 0)
-			dev_dbg(mmc_dev(host->mmc),
-				"Failed to set trim value %d\n", ret);
+			dev_err(mmc_dev(host->mmc),
+				"Failed to set trim value for timing %d, %d\n",
+				timing, ret);
 	}
 
 	/* Set Tap delay */
@@ -914,7 +928,6 @@ static void tegra_sdhci_set_tap(struct sdhci_host *host, unsigned int tap,
 	u32 reg;
 	u16 clk;
 	bool card_clk_enabled = false;
-	const char *tap_type;
 	int err;
 
 	if ((tap < 0)  || (tap > MAX_TAP_VALUE)) {
@@ -939,13 +952,16 @@ static void tegra_sdhci_set_tap(struct sdhci_host *host, unsigned int tap,
 	}
 
 	if (type & (SET_DDR_TAP | SET_DEFAULT_TAP)) {
-		tap_type = (type == SET_DDR_TAP) ? "tap-delay-ddr" :
-			"tap-delay-default";
-		err = tegra_prod_set_by_name(&host->ioaddr, tap_type,
-			tegra_host->prods);
+		err = tegra_prod_set_by_name_partially(&host->ioaddr,
+				prod_device_states[host->mmc->ios.timing],
+				tegra_host->prods, 0,
+				SDHCI_TEGRA_VENDOR_CLOCK_CTRL,
+				SDHCI_CLOCK_CTRL_TAP_MASK <<
+				SDHCI_CLOCK_CTRL_TAP_SHIFT);
 		if (err < 0)
 			dev_err(mmc_dev(host->mmc),
-				"Failed to set tap prod value %d\n", err);
+				"%s: error %d in tap settings, timing: %d\n",
+				__func__, err, host->mmc->ios.timing);
 	} else {
 		reg = sdhci_readl(host, SDHCI_TEGRA_VENDOR_CLOCK_CTRL);
 		reg &= ~SDHCI_CLOCK_CTRL_TAP_MASK;

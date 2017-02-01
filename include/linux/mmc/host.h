@@ -1,7 +1,7 @@
 /*
  *  linux/include/linux/mmc/host.h
  *
- *  Copyright (c) 2013-2016, NVIDIA CORPORATION. All Rights Reserved.
+ *  Copyright (c) 2013-2017, NVIDIA CORPORATION. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -69,6 +69,7 @@ struct mmc_ios {
 #define MMC_TIMING_MMC_DDR52	8
 #define MMC_TIMING_MMC_HS200	9
 #define MMC_TIMING_MMC_HS400	10
+#define MMC_TIMING_COUNTER	11
 
 	unsigned char	signal_voltage;		/* signalling voltage (1.8V or 3.3V) */
 

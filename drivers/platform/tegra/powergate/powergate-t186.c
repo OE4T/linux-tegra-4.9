@@ -168,6 +168,9 @@ static int tegra186_pg_unpowergate_clk_on(int id)
 
 static const char *tegra186_pg_get_name(int id)
 {
+	if (!t186_powergate_info[id].part_info)
+		return NULL;
+
 	return t186_powergate_info[id].part_info->name;
 }
 

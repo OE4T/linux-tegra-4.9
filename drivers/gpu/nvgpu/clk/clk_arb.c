@@ -1708,11 +1708,13 @@ int nvgpu_clk_arb_get_arbiter_effective_mhz(struct gk20a *g,
 {
 	switch(api_domain) {
 	case NVGPU_GPU_CLK_DOMAIN_MCLK:
-		*freq_mhz = g->ops.clk.get_rate(g, CTRL_CLK_DOMAIN_MCLK);
+		*freq_mhz = g->ops.clk.measure_freq(g, CTRL_CLK_DOMAIN_MCLK) /
+			1000000ULL;
 		return 0;
 
 	case NVGPU_GPU_CLK_DOMAIN_GPCCLK:
-		*freq_mhz = g->ops.clk.get_rate(g, CTRL_CLK_DOMAIN_GPC2CLK) / 2;
+		*freq_mhz = g->ops.clk.measure_freq(g, CTRL_CLK_DOMAIN_GPC2CLK) /
+			2000000ULL;
 		return 0;
 
 	default:

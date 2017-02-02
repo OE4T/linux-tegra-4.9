@@ -43,13 +43,12 @@ static int clk_gp106_debugfs_init(struct gk20a *g);
 
 
 static u32 gp106_get_rate_cntr(struct gk20a *g, struct namemap_cfg *);
-static u16 gp106_clk_get_rate(struct gk20a *g, u32 api_domain);
 static u32 gp106_crystal_clk_hz(struct gk20a *g)
 {
 	return (XTAL4X_KHZ * 1000);
 }
 
-static u16 gp106_clk_get_rate(struct gk20a *g, u32 api_domain)
+static unsigned long gp106_clk_measure_freq(struct gk20a *g, u32 api_domain)
 {
 	struct clk_gk20a *clk = &g->clk;
 	u32 freq_khz;
@@ -69,8 +68,8 @@ static u16 gp106_clk_get_rate(struct gk20a *g, u32 api_domain)
 	freq_khz = c->is_counter ? c->scale * gp106_get_rate_cntr(g, c) :
 		0; /* TODO: PLL read */
 
-	/* Convert to MHZ */
-	return (u16) (freq_khz/1000);
+	/* Convert to HZ */
+	return freq_khz * 1000UL;
 }
 
 static int gp106_init_clk_support(struct gk20a *g) {
@@ -270,5 +269,5 @@ err_out:
 void gp106_init_clk_ops(struct gpu_ops *gops) {
 	gops->clk.init_clk_support = gp106_init_clk_support;
 	gops->clk.get_crystal_clk_hz = gp106_crystal_clk_hz;
-	gops->clk.get_rate = gp106_clk_get_rate;
+	gops->clk.measure_freq = gp106_clk_measure_freq;
 }

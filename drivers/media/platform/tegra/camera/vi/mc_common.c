@@ -157,7 +157,7 @@ static int vi_parse_dt(struct tegra_mc_vi *vi, struct platform_device *dev)
 
 	err = of_property_read_u32(node, "num-channels", &num_channels);
 	if (err) {
-		dev_err(&dev->dev,
+		dev_dbg(&dev->dev,
 			"Failed to find num of channels, set to 0\n");
 		num_channels = 0;
 	}
@@ -269,6 +269,13 @@ int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 	err = vi_parse_dt(mc_vi, pdev);
 	if (err)
 		goto mc_init_fail;
+
+	/*
+	 * if there is no vi channels listed in DT,
+	 * no need to init the channel and graph
+	 */
+	if (mc_vi->num_channels == 0)
+		return 0;
 
 	err = tegra_vi_v4l2_init(mc_vi);
 	if (err < 0)

@@ -657,7 +657,7 @@ static int csi_parse_dt(struct tegra_csi_device *csi,
 		return -EINVAL;
 	err = of_property_read_u32(node, "num-channels", &num_channels);
 	if (err) {
-		dev_err(csi->dev, " Faile to find num of channels, set to 0\n");
+		dev_dbg(csi->dev, " Failed to find num of channels, set to 0\n");
 		num_channels = 0;
 	}
 
@@ -748,6 +748,14 @@ int tegra_csi_media_controller_init(struct tegra_csi_device *csi,
 	ret = csi_parse_dt(csi, pdev);
 	if (ret < 0)
 		return ret;
+
+	/*
+	 * if there is no csi channels listed in DT,
+	 * no need to init the channel and graph
+	 */
+	if (csi->num_channels == 0)
+		return 0;
+
 	ret = tegra_csi_channels_init(csi);
 	ret = tegra_csi_init(csi, pdev);
 	if (ret < 0)

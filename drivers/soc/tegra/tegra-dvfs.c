@@ -1094,6 +1094,52 @@ static void cleanup_dvfs_table(struct dvfs *d)
 	d->num_freqs = i;
 }
 
+#ifdef CONFIG_TEGRA_CLK_DEBUG
+static int dvfs_freq_offset_get(void *data, u64 *val)
+{
+	struct dvfs *d = data;
+
+	*val = d->dbg_hz_offs;
+
+	return 0;
+}
+
+static int dvfs_freq_offset_set(void *data, u64 val)
+{
+	struct dvfs *d = data;
+	int i, ret = 0;
+	long offs = (long)val - d->dbg_hz_offs;
+	unsigned long unit_rate = 1 * d->freqs_mult;
+
+	if (!offs || !d->num_freqs)
+		return 0;
+
+	mutex_lock(&dvfs_lock);
+
+	for (i = 0; i <  d->num_freqs; i++) {
+		unsigned long rate = d->freqs[i];
+
+		if (rate <= unit_rate)
+			continue;
+
+		if ((offs < 0) && (rate <= unit_rate + (-offs))) {
+			ret = -EINVAL;
+			goto out;
+		}
+
+		d->freqs[i] = rate + offs;
+	}
+	d->dbg_hz_offs = (long)val;
+
+out:
+	mutex_unlock(&dvfs_lock);
+
+	return ret;
+}
+DEFINE_SIMPLE_ATTRIBUTE(dvfs_freq_offset_fops, dvfs_freq_offset_get,
+			dvfs_freq_offset_set, "%lld\n");
+#endif
+
 int tegra_setup_dvfs(struct clk *c, struct dvfs *d)
 {
 	cleanup_dvfs_table(d);
@@ -1104,6 +1150,10 @@ int tegra_setup_dvfs(struct clk *c, struct dvfs *d)
 	list_add_tail(&d->reg_node, &d->dvfs_rail->dvfs);
 	mutex_unlock(&dvfs_lock);
 
+#ifdef CONFIG_TEGRA_CLK_DEBUG
+	__clk_debugfs_add_file(c, "dvfs_freq_offs", S_IRUGO | S_IWUSR, d,
+				&dvfs_freq_offset_fops);
+#endif
 	return 0;
 }
 

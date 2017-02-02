@@ -82,7 +82,7 @@ endif
 
 config TEGRA_KFUSE
 	bool "Tegra kfuse support"
-	default y
+	default n
 	depends on ARCH_TEGRA
 	help
 	  Enable Tegra kfuse support. The kfuse block stores downstream and

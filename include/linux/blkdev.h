@@ -351,7 +351,6 @@ struct request_queue {
 	struct delayed_work	delay_work;
 
 	struct backing_dev_info	*backing_dev_info;
-	struct backing_dev_info	_backing_dev_info;
 
 	/*
 	 * The queue owner gets to use this for whatever they like.

@@ -13,7 +13,6 @@
 
 #include <linux/delay.h>	/* for mdelay */
 #include <linux/firmware.h>
-#include <linux/clk.h>
 #include <linux/module.h>
 #include <linux/debugfs.h>
 #include <linux/dma-mapping.h>
@@ -1317,7 +1316,6 @@ static int gm20b_init_pmu_setup_hw1(struct gk20a *g,
 
 	struct pmu_gk20a *pmu = &g->pmu;
 	int err;
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	gk20a_dbg_fn("");
 
@@ -1345,7 +1343,7 @@ static int gm20b_init_pmu_setup_hw1(struct gk20a *g,
 
 	/*Copying pmu cmdline args*/
 	g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq(pmu,
-				clk_get_rate(platform->clk[1]));
+				g->ops.clk.get_rate(g, CTRL_CLK_DOMAIN_PWRCLK));
 	g->ops.pmu_ver.set_pmu_cmdline_args_secure_mode(pmu, 1);
 	g->ops.pmu_ver.set_pmu_cmdline_args_trace_size(
 		pmu, GK20A_PMU_TRACE_BUFSIZE);

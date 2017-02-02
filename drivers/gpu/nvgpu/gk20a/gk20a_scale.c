@@ -19,10 +19,8 @@
 #include <linux/devfreq.h>
 #include <linux/debugfs.h>
 #include <linux/types.h>
-#include <linux/clk.h>
 #include <linux/export.h>
 #include <linux/slab.h>
-#include <linux/clk/tegra.h>
 #include <soc/tegra/chip-id.h>
 #include <linux/platform_data/tegra_edp.h>
 #include <linux/pm_qos.h>
@@ -188,11 +186,11 @@ static int gk20a_scale_target(struct device *dev, unsigned long *freq,
 	if (rounded_rate == g->last_freq)
 		return 0;
 
-	if (platform->clk_get_rate(dev) == rounded_rate)
+	if (g->ops.clk.get_rate(g, CTRL_CLK_DOMAIN_GPCCLK) == rounded_rate)
 		*freq = rounded_rate;
 	else {
-		platform->clk_set_rate(dev, rounded_rate);
-		*freq = platform->clk_get_rate(dev);
+		g->ops.clk.set_rate(g, CTRL_CLK_DOMAIN_GPCCLK, rounded_rate);
+		*freq = g->ops.clk.get_rate(g, CTRL_CLK_DOMAIN_GPCCLK);
 	}
 
 	g->last_freq = *freq;
@@ -321,7 +319,7 @@ static int gk20a_scale_get_dev_status(struct device *dev,
 
 	/* Make sure there are correct values for the current frequency */
 	profile->dev_stat.current_frequency =
-				platform->clk_get_rate(profile->dev);
+				g->ops.clk.get_rate(g, CTRL_CLK_DOMAIN_GPCCLK);
 
 	/* Update load estimate */
 	update_load_estimate_gpmu(dev);
@@ -344,8 +342,8 @@ static int gk20a_scale_get_dev_status(struct device *dev,
 
 static int get_cur_freq(struct device *dev, unsigned long *freq)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	*freq = platform->clk_get_rate(dev);
+	struct gk20a *g = get_gk20a(dev);
+	*freq = g->ops.clk.get_rate(g, CTRL_CLK_DOMAIN_GPCCLK);
 	return 0;
 }
 

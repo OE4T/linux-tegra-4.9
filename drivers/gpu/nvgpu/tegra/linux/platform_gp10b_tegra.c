@@ -29,6 +29,8 @@
 
 #include <soc/tegra/tegra_bpmp.h>
 
+#include "clk.h"
+
 #include "gk20a/platform_gk20a.h"
 #include "gk20a/gk20a.h"
 #include "gk20a/gk20a_scale.h"
@@ -173,6 +175,7 @@ static int gp10b_tegra_probe(struct device *dev)
 	platform->g->mm.vidmem_is_vidmem = platform->vidmem_is_vidmem;
 
 	gp10b_tegra_get_clocks(dev);
+	nvgpu_linux_init_clk_support(platform->g);
 
 	return 0;
 }
@@ -329,14 +332,6 @@ static void gp10b_tegra_postscale(struct device *pdev,
 	gk20a_dbg_fn("done");
 }
 
-static unsigned long gp10b_get_clk_rate(struct device *dev)
-{
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
-
-	return clk_get_rate(platform->clk[0]);
-
-}
-
 static long gp10b_round_clk_rate(struct device *dev, unsigned long rate)
 {
 	struct gk20a *g = get_gk20a(dev);
@@ -350,13 +345,6 @@ static long gp10b_round_clk_rate(struct device *dev, unsigned long rate)
 			return freq_table[i];
 
 	return freq_table[max_states - 1];
-}
-
-static int gp10b_set_clk_rate(struct device *dev, unsigned long rate)
-{
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
-
-	return clk_set_rate(platform->clk[0], rate);
 }
 
 static int gp10b_clk_get_freqs(struct device *dev,
@@ -440,9 +428,7 @@ struct gk20a_platform gp10b_tegra_platform = {
 
 	.has_ce = true,
 
-	.clk_get_rate = gp10b_get_clk_rate,
 	.clk_round_rate = gp10b_round_clk_rate,
-	.clk_set_rate = gp10b_set_clk_rate,
 	.get_clk_freqs = gp10b_clk_get_freqs,
 
 	/* frequency scaling configuration */

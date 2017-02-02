@@ -13,7 +13,6 @@
 
 #include <linux/delay.h>	/* for mdelay */
 #include <linux/firmware.h>
-#include <linux/clk.h>
 #include <linux/module.h>
 #include <linux/debugfs.h>
 #include <linux/dma-mapping.h>

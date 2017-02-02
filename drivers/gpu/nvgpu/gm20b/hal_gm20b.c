@@ -185,7 +185,7 @@ int gm20b_init_hal(struct gk20a *g)
 	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	u32 val;
 
-	*gops = gm20b_ops;
+	gops->clock_gating = gm20b_ops.clock_gating;
 	gops->securegpccs = false;
 	gops->pmupstate = false;
 #ifdef CONFIG_TEGRA_ACR

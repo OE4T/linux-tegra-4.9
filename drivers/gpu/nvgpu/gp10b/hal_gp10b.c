@@ -193,7 +193,7 @@ int gp10b_init_hal(struct gk20a *g)
 	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	u32 val;
 
-	*gops = gp10b_ops;
+	gops->clock_gating = gp10b_ops.clock_gating;
 	gops->pmupstate = false;
 #ifdef CONFIG_TEGRA_ACR
 	if (platform->is_fmodel) {

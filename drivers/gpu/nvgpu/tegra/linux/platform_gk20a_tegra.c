@@ -49,6 +49,8 @@
 #include "gk20a/gk20a_scale.h"
 #include "gm20b/clk_gm20b.h"
 
+#include "clk.h"
+
 #define TEGRA_GK20A_BW_PER_FREQ 32
 #define TEGRA_GM20B_BW_PER_FREQ 64
 #define TEGRA_DDR3_BW_PER_FREQ 16
@@ -938,6 +940,7 @@ static int gk20a_tegra_probe(struct device *dev)
 	platform->g->mm.vidmem_is_vidmem = platform->vidmem_is_vidmem;
 
 	gk20a_tegra_get_clocks(dev);
+	nvgpu_linux_init_clk_support(platform->g);
 
 	if (platform->clk_register) {
 		ret = platform->clk_register(platform->g);
@@ -975,29 +978,12 @@ static int gk20a_tegra_suspend(struct device *dev)
 }
 
 #if defined(CONFIG_TEGRA_CLK_FRAMEWORK) || defined(CONFIG_COMMON_CLK)
-static unsigned long gk20a_get_clk_rate(struct device *dev)
-{
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
-	struct gk20a *g = platform->g;
-
-	return gk20a_clk_get_rate(g);
-
-}
-
 static long gk20a_round_clk_rate(struct device *dev, unsigned long rate)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
 
 	return gk20a_clk_round_rate(g, rate);
-}
-
-static int gk20a_set_clk_rate(struct device *dev, unsigned long rate)
-{
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
-	struct gk20a *g = platform->g;
-
-	return gk20a_clk_set_rate(g, rate);
 }
 
 static int gk20a_clk_get_freqs(struct device *dev,
@@ -1056,9 +1042,7 @@ struct gk20a_platform gk20a_tegra_platform = {
 	.reset_deassert = gk20a_tegra_reset_deassert,
 
 #ifdef CONFIG_TEGRA_CLK_FRAMEWORK
-	.clk_get_rate = gk20a_get_clk_rate,
 	.clk_round_rate = gk20a_round_clk_rate,
-	.clk_set_rate = gk20a_set_clk_rate,
 	.get_clk_freqs = gk20a_clk_get_freqs,
 #endif
 
@@ -1124,9 +1108,7 @@ struct gk20a_platform gm20b_tegra_platform = {
 #endif
 
 #if defined(CONFIG_TEGRA_CLK_FRAMEWORK) || defined(CONFIG_COMMON_CLK)
-	.clk_get_rate = gk20a_get_clk_rate,
 	.clk_round_rate = gk20a_round_clk_rate,
-	.clk_set_rate = gk20a_set_clk_rate,
 	.get_clk_freqs = gk20a_clk_get_freqs,
 #endif
 

@@ -18,7 +18,6 @@
 
 #include <linux/delay.h>	/* for mdelay */
 #include <linux/firmware.h>
-#include <linux/clk.h>
 #include <linux/module.h>
 #include <linux/debugfs.h>
 #include <linux/dma-mapping.h>
@@ -2474,7 +2473,6 @@ int pmu_reset(struct pmu_gk20a *pmu)
 int pmu_bootstrap(struct pmu_gk20a *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	struct mm_gk20a *mm = &g->mm;
 	struct pmu_ucode_desc *desc = pmu->desc;
 	u64 addr_code, addr_data, addr_load;
@@ -2499,7 +2497,7 @@ int pmu_bootstrap(struct pmu_gk20a *pmu)
 		pmu, GK20A_PMU_DMAIDX_VIRT);
 
 	g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq(pmu,
-		clk_get_rate(platform->clk[1]));
+		g->ops.clk.get_rate(g, CTRL_CLK_DOMAIN_PWRCLK));
 
 	addr_args = (pwr_falcon_hwcfg_dmem_size_v(
 		gk20a_readl(g, pwr_falcon_hwcfg_r()))

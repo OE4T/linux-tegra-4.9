@@ -196,10 +196,7 @@ struct gk20a_platform {
 				unsigned long **freqs, int *num_freqs);
 
 	/* clk related supported functions */
-	unsigned long (*clk_get_rate)(struct device *dev);
 	long (*clk_round_rate)(struct device *dev,
-				unsigned long rate);
-	int (*clk_set_rate)(struct device *dev,
 				unsigned long rate);
 
 	/* Called to register GPCPLL with common clk framework */

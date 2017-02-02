@@ -218,7 +218,7 @@ int gp106_init_hal(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	*gops = gp106_ops;
+	gops->clock_gating = gp106_ops.clock_gating;
 
 	gops->privsecurity = 1;
 	gops->securegpccs = 1;

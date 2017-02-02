@@ -16,12 +16,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/clk.h>
 #include <linux/delay.h>	/* for mdelay */
 #include <linux/module.h>
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
-#include <linux/clk/tegra.h>
 #include <soc/tegra/fuse.h>
 
 #include "gk20a/gk20a.h"

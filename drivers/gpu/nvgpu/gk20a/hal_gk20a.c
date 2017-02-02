@@ -143,7 +143,7 @@ int gk20a_init_hal(struct gk20a *g)
 	struct gpu_ops *gops = &g->ops;
 	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
 
-	*gops = gk20a_ops;
+	gops->clock_gating = gk20a_ops.clock_gating;
 	gops->privsecurity = 0;
 	gops->securegpccs = 0;
 	gops->pmupstate = false;

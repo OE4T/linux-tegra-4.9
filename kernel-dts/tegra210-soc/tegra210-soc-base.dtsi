@@ -916,7 +916,7 @@
 			compatible = "nvidia,tegra210-nvenc";
 			power-domains = <&msenc_pd>;
 			reg = <0x0 0x544c0000 0x0 0x00040000>;
-			clocks = <&tegra_car TEGRA210_CLK_NVENC>;
+			clocks = <&tegra_car TEGRA210_CLK_NVENC_CBUS>;
 			clock-names = "msenc";
 			resets = <&tegra_car TEGRA210_CLK_NVENC>;
 			iommus = <&smmu TEGRA_SWGROUP_MPE>;
@@ -936,6 +936,8 @@
 			compatible = "nvidia,tegra210-tsec";
 			power-domains = <&tsec_pd>;
 			reg = <0x0 0x54100000 0x0 0x00040000>;
+			clocks = <&tegra_car TEGRA210_CLK_TSECB_CBUS>;
+			clock-names = "tsecb";
 			resets = <&tegra_car TEGRA210_CLK_TSECB>;
 			iommus = <&smmu TEGRA_SWGROUP_TSECB>;
 			status = "disabled";
@@ -945,6 +947,8 @@
 			compatible = "nvidia,tegra210-nvdec";
 			power-domains = <&nvdec_pd>;
 			reg = <0x0 0x54480000 0x0 0x00040000>;
+			clocks = <&tegra_car TEGRA210_CLK_NVDEC_CBUS>;
+			clock-names = "nvdec";
 			resets = <&tegra_car TEGRA210_CLK_NVDEC>;
 			iommus = <&smmu TEGRA_SWGROUP_NVDEC>;
 			status = "disabled";
@@ -954,6 +958,8 @@
 			compatible = "nvidia,tegra210-nvjpg";
 			power-domains = <&nvjpg_pd>;
 			reg = <0x0 0x54380000 0x0 0x00040000>;
+			clocks = <&tegra_car TEGRA210_CLK_NVJPG_CBUS>;
+			clock-names = "nvjpg";
 			resets = <&tegra_car TEGRA210_CLK_NVJPG>;
 			iommus = <&smmu TEGRA_SWGROUP_NVJPG>;
 			status = "disabled";

@@ -1326,11 +1326,11 @@ static void tegra_dc_dp_debugfs_remove(struct tegra_dc_dp_data *dp)
 	debugfs_remove_recursive(dp->debugdir);
 	dp->debugdir = NULL;
 }
-
 #else
-static inline void tegra_dc_dp_debugfs_create(struct tegra_dc_dp_data *dp)
+static void tegra_dc_dp_debugfs_create(struct tegra_dc_dp_data *dp)
 { }
-static inline void tegra_dc_dp_debugfs_remove(struct tegra_dc_dp_data *dp)
+
+static void tegra_dc_dp_debugfs_remove(struct tegra_dc_dp_data *dp)
 { }
 #endif
 

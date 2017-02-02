@@ -990,6 +990,11 @@ static int vivid_create_instance(struct platform_device *pdev, int inst)
 	memcpy(dev->edid, vivid_hdmi_edid, sizeof(vivid_hdmi_edid));
 	ktime_get_ts(&dev->radio_rds_init_ts);
 
+	/* initialize locks */
+	spin_lock_init(&dev->slock);
+	mutex_init(&dev->mutex);
+	mutex_init(&dev->mutex_framerate);
+
 	/* create all controls */
 	ret = vivid_create_controls(dev, ccs_cap == -1, ccs_out == -1, no_error_inj,
 			in_type_counter[TV] || in_type_counter[SVID] ||
@@ -1019,10 +1024,6 @@ static int vivid_create_instance(struct platform_device *pdev, int inst)
 	dev->fb_cap.fmt.pixelformat = dev->fmt_cap->fourcc;
 	dev->fb_cap.fmt.bytesperline = dev->src_rect.width * tpg_g_twopixelsize(&dev->tpg, 0) / 2;
 	dev->fb_cap.fmt.sizeimage = dev->src_rect.height * dev->fb_cap.fmt.bytesperline;
-
-	/* initialize locks */
-	spin_lock_init(&dev->slock);
-	mutex_init(&dev->mutex);
 
 	/* init dma queues */
 	INIT_LIST_HEAD(&dev->vid_cap_active);

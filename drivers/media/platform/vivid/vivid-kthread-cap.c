@@ -791,6 +791,7 @@ static int vivid_thread_vid_cap(void *data)
 			break;
 
 		mutex_lock(&dev->mutex);
+		mutex_lock(&dev->mutex_framerate);
 		cur_jiffies = jiffies;
 		if (dev->cap_seq_resync) {
 			dev->jiffies_vid_cap = cur_jiffies;
@@ -838,6 +839,7 @@ static int vivid_thread_vid_cap(void *data)
 		/* And the number of jiffies since we started */
 		jiffies_since_start = jiffies - dev->jiffies_vid_cap;
 
+		mutex_unlock(&dev->mutex_framerate);
 		mutex_unlock(&dev->mutex);
 
 		/*

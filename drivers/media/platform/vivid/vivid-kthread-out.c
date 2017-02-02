@@ -148,6 +148,7 @@ static int vivid_thread_vid_out(void *data)
 			break;
 
 		mutex_lock(&dev->mutex);
+		mutex_lock(&dev->mutex_framerate);
 		cur_jiffies = jiffies;
 		if (dev->out_seq_resync) {
 			dev->jiffies_vid_out = cur_jiffies;
@@ -184,6 +185,7 @@ static int vivid_thread_vid_out(void *data)
 		dev->vbi_out_seq_count = dev->out_seq_count - dev->vbi_out_seq_start;
 
 		vivid_thread_vid_out_tick(dev);
+		mutex_unlock(&dev->mutex_framerate);
 		mutex_unlock(&dev->mutex);
 
 		/*

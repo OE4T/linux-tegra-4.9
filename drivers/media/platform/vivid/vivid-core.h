@@ -170,6 +170,7 @@ struct vivid_dev {
 	struct v4l2_ctrl_handler	ctrl_hdl_sdr_cap;
 	spinlock_t			slock;
 	struct mutex			mutex;
+	struct mutex			mutex_framerate;
 
 	/* capabilities */
 	u32				vid_cap_caps;
@@ -230,6 +231,7 @@ struct vivid_dev {
 	struct v4l2_ctrl		*colorspace;
 	struct v4l2_ctrl		*rgb_range_cap;
 	struct v4l2_ctrl		*real_rgb_range_cap;
+	struct v4l2_ctrl		*framelength;
 	struct {
 		/* std_signal_mode/standard cluster */
 		struct v4l2_ctrl	*ctrl_std_signal_mode;

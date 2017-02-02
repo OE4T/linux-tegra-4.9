@@ -484,6 +484,9 @@ static int vivid_vid_cap_s_ctrl(struct v4l2_ctrl *ctrl)
 		if (dev->edid_blocks > dev->edid_max_blocks)
 			dev->edid_blocks = dev->edid_max_blocks;
 		break;
+	case VIVID_CID_FRAME_LENGTH:
+		vivid_update_timeperframe(dev, ctrl->val);
+		break;
 	}
 	return 0;
 }
@@ -1544,7 +1547,8 @@ int vivid_create_controls(struct vivid_dev *dev, bool show_ccs_cap,
 		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_ycbcr_enc, NULL);
 		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_quantization, NULL);
 		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_alpha_mode, NULL);
-		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_framelength, NULL);
+		dev->framelength = v4l2_ctrl_new_custom(hdl_vid_cap,
+			&vivid_ctrl_framelength, NULL);
 		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_coarsetime, NULL);
 		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_coarsetime_short, NULL);
 		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_grouphold, NULL);

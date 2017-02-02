@@ -388,6 +388,29 @@ static enum tpg_pixel_aspect vivid_get_pixel_aspect(const struct vivid_dev *dev)
 	return TPG_PIXEL_ASPECT_SQUARE;
 }
 
+void vivid_update_timeperframe(struct vivid_dev *dev, u32 frame_length)
+{
+	struct v4l2_bt_timings *bt = &dev->dv_timings_cap.bt;
+	unsigned size;
+
+	mutex_lock(&dev->mutex_framerate);
+
+	dev->cap_seq_resync = true;
+	size = V4L2_DV_BT_FRAME_WIDTH(bt) * frame_length;
+	dev->timeperframe_vid_cap = (struct v4l2_fract) {
+		size / 100, (u32)bt->pixelclock / 100
+	};
+
+	if (dev->loop_video) {
+		dev->out_seq_resync = true;
+		dev->timeperframe_vid_out = (struct v4l2_fract) {
+			size / 100, (u32)bt->pixelclock / 100
+		};
+	}
+
+	mutex_unlock(&dev->mutex_framerate);
+}
+
 /*
  * Called whenever the format has to be reset which can occur when
  * changing inputs, standard, timings, etc.
@@ -759,6 +782,9 @@ int vivid_s_fmt_vid_cap(struct file *file, void *priv,
 		dev->tv_field_cap = mp->field;
 	dev->fmt_cap->data_offset[0] = mp->width * dev->embedded_data_height;
 	tpg_update_mv_step(&dev->tpg);
+	// update framelength control to control framerate
+	v4l2_ctrl_s_ctrl(dev->framelength,
+		V4L2_DV_BT_FRAME_HEIGHT(&dev->dv_timings_cap.bt));
 	return 0;
 }
 
@@ -1669,6 +1695,9 @@ int vivid_vid_cap_s_dv_timings(struct file *file, void *_fh,
 
 	dev->dv_timings_cap = *timings;
 	vivid_update_format_cap(dev, false);
+	// update framelength control to control framerate
+	v4l2_ctrl_s_ctrl(dev->framelength,
+		V4L2_DV_BT_FRAME_HEIGHT(&dev->dv_timings_cap.bt));
 	return 0;
 }
 

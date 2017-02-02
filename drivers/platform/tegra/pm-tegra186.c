@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,7 +24,7 @@
 static struct dentry *debugfs_dir;
 static u32 shutdown_state;
 
-#define SMC_PM_FUNC	0x82FFFE00
+#define SMC_PM_FUNC	0xC2FFFE00
 #define SMC_SET_SHUTDOWN_MODE 0x1
 #define SYSTEM_SHUTDOWN_STATE_FULL_POWER_OFF 0
 #define SYSTEM_SHUTDOWN_STATE_SC8 8

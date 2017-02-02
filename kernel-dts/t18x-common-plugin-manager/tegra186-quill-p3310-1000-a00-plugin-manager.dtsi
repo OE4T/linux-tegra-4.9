@@ -227,6 +227,27 @@
 			};
 		};
 
+		fragment-e3320-dp {
+			ids = ">=3320-1000-000", ">=3320-1100-000";
+			override@0 {
+				target = <&{/host1x}>;
+				_overlay_ {
+					nvdisplay@15220000 {
+						status = "okay";
+					};
+					sor {
+						status = "okay";
+						dp-display {
+							status = "okay";
+						};
+					};
+					dpaux@155c0000 {
+						status = "okay";
+					};
+				};
+			};
+		};
+
 		fragment-p3310-c00-comm {
 			ids = ">=3310-1000-800";
 			override@0 {

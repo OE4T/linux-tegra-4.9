@@ -43,10 +43,10 @@
 
 #include <linux/platform/tegra/tegra_emc.h>
 
-#include "gk20a.h"
-#include "hal_gk20a.h"
-#include "platform_gk20a.h"
-#include "gk20a_scale.h"
+#include "gk20a/gk20a.h"
+#include "gk20a/hal_gk20a.h"
+#include "gk20a/platform_gk20a.h"
+#include "gk20a/gk20a_scale.h"
 #include "gm20b/clk_gm20b.h"
 
 #define TEGRA_GK20A_BW_PER_FREQ 32

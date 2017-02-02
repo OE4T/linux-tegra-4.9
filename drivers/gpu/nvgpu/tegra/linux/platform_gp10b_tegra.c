@@ -34,9 +34,7 @@
 #include "gk20a/gk20a_scale.h"
 
 #include "platform_tegra.h"
-#include "gr_gp10b.h"
-#include "ltc_gp10b.h"
-#include "gp10b_sysfs.h"
+#include "gp10b/gp10b_sysfs.h"
 
 #include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_ltc_gp10b.h>

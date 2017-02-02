@@ -947,18 +947,25 @@ unsigned long tegra_dvfs_get_maxrate(struct clk *c)
 
 unsigned long tegra_dvfs_round_rate(struct clk *c, unsigned long rate)
 {
-	int i, err, num_freqs;
-	unsigned long *freqs;
+	int i, num_freqs;
+	unsigned long *freqs, ret;
 
-	err = tegra_dvfs_get_freqs(c, &freqs, &num_freqs);
-	if (err < 0)
-		return rate;
+	mutex_lock(&dvfs_lock);
+	ret = tegra_dvfs_get_freqs(c, &freqs, &num_freqs);
+	if (ret < 0)
+		goto out;
 
-	for (i = 0; i < num_freqs; i++)
-		if (freqs[i] >= rate)
-			return freqs[i];
+	for (i = 0; i < num_freqs; i++) {
+		if (freqs[i] >= rate) {
+			ret = freqs[i];
+			goto out;
+		}
+	}
+	ret = freqs[i-1];
 
-	return freqs[i - 1];
+out:
+	mutex_unlock(&dvfs_lock);
+	return ret;
 }
 
 int tegra_dvfs_use_alt_freqs_on_clk(struct clk *c, bool use_alt_freq)

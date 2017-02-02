@@ -361,6 +361,8 @@ struct mm_gk20a {
 	} ce;
 
 	struct nvgpu_mutex l2_op_lock;
+	struct nvgpu_mutex tlb_lock;
+	struct nvgpu_mutex priv_lock;
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct mem_desc bar2_desc;
 #endif

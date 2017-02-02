@@ -4811,15 +4811,15 @@ int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
 
 int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev)
 {
+	struct gk20a *g = gk20a_get_platform(dev)->g;
 	struct gk20a_dmabuf_priv *priv;
-	static DEFINE_MUTEX(priv_lock);
 	static u64 priv_count = 0;
 
 	priv = dma_buf_get_drvdata(dmabuf, dev);
 	if (likely(priv))
 		return 0;
 
-	nvgpu_mutex_acquire(&priv_lock);
+	nvgpu_mutex_acquire(&g->mm.priv_lock);
 	priv = dma_buf_get_drvdata(dmabuf, dev);
 	if (priv)
 		goto priv_exist_or_err;
@@ -4833,7 +4833,7 @@ int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev)
 	priv->buffer_id = ++priv_count;
 	dma_buf_set_drvdata(dmabuf, dev, priv, gk20a_mm_delete_priv);
 priv_exist_or_err:
-	nvgpu_mutex_release(&priv_lock);
+	nvgpu_mutex_release(&g->mm.priv_lock);
 	if (IS_ERR(priv))
 		return -ENOMEM;
 
@@ -5358,8 +5358,6 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 	u32 addr_lo;
 	u32 data;
 
-	static DEFINE_MUTEX(tlb_lock);
-
 	gk20a_dbg_fn("");
 
 	/* pagetables are considered sw states which are preserved after
@@ -5373,7 +5371,7 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 
 	addr_lo = u64_lo32(gk20a_mem_get_base_addr(g, &vm->pdb.mem, 0) >> 12);
 
-	nvgpu_mutex_acquire(&tlb_lock);
+	nvgpu_mutex_acquire(&g->mm.tlb_lock);
 
 	trace_gk20a_mm_tlb_invalidate(dev_name(g->dev));
 
@@ -5414,7 +5412,7 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 	trace_gk20a_mm_tlb_invalidate_done(dev_name(g->dev));
 
 out:
-	nvgpu_mutex_release(&tlb_lock);
+	nvgpu_mutex_release(&g->mm.tlb_lock);
 }
 
 int gk20a_mm_suspend(struct gk20a *g)

@@ -26,7 +26,7 @@
 
 #include <asm/smp_plat.h>
 
-#define SMC_SIP_INVOKE_MCE	0x82FFFF00
+#define SMC_SIP_INVOKE_MCE	0xC2FFFF00
 
 #define NR_SMC_REGS		6
 

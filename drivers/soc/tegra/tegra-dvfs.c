@@ -995,7 +995,7 @@ static int tegra_dvfs_clk_event(struct notifier_block *this,
 {
 	struct clk_notifier_data *cnd = ptr;
 	struct dvfs *d;
-	int new_mv;
+	int new_mv, err = 0;
 
 	d = tegra_clk_to_dvfs(cnd->clk);
 	if (d == NULL)
@@ -1012,7 +1012,7 @@ static int tegra_dvfs_clk_event(struct notifier_block *this,
 	switch (event) {
 	case PRE_RATE_CHANGE:
 		if (cnd->old_rate < cnd->new_rate)
-			__tegra_dvfs_set_rate(d, cnd->new_rate);
+			err = __tegra_dvfs_set_rate(d, cnd->new_rate);
 		else if (cnd->old_rate == cnd->new_rate) {
 			new_mv = predict_mv_at_hz_cur_tfloor(d, cnd->new_rate);
 			if (new_mv > d->cur_millivolts)
@@ -1021,7 +1021,7 @@ static int tegra_dvfs_clk_event(struct notifier_block *this,
 		break;
 	case POST_RATE_CHANGE:
 		if (cnd->old_rate > cnd->new_rate)
-			__tegra_dvfs_set_rate(d, cnd->new_rate);
+			err = __tegra_dvfs_set_rate(d, cnd->new_rate);
 		else if (cnd->old_rate == cnd->new_rate) {
 			new_mv = predict_mv_at_hz_cur_tfloor(d, cnd->new_rate);
 			if (new_mv < d->cur_millivolts)
@@ -1033,6 +1033,9 @@ static int tegra_dvfs_clk_event(struct notifier_block *this,
 	}
 
 	mutex_unlock(&dvfs_lock);
+
+	if (err < 0)
+		return NOTIFY_BAD;
 
 	return NOTIFY_DONE;
 }

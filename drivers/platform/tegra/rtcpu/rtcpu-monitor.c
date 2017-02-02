@@ -29,56 +29,15 @@
 
 struct tegra_camrtc_mon {
 	struct device *rce_dev;
-	struct vi_notify_msg_ex *msg;
-	u32 msg_size;
 	int wdt_irq;
 	struct work_struct wdt_work;
 };
 
 int tegra_camrtc_mon_restore_rtcpu(struct tegra_camrtc_mon *cam_rtcpu_mon)
 {
-	int err;
-	struct vi_capture_status ev;
-	struct vi_notify_msg_ex *msg;
-
-	if (!cam_rtcpu_mon || !cam_rtcpu_mon->msg) {
-		pr_err("Invalid cam_rtcpu_mon params\n");
-		return -EINVAL;
-	}
-
-	msg = cam_rtcpu_mon->msg;
-
-	memset(msg, 0, cam_rtcpu_mon->msg_size);
-
-	/* Complete event info */
-	ev.status = VI_CAPTURE_STATUS_NOTIFIER_BACKEND_DOWN;
-
-	/*
-	 * RTCPU_DOWN is a special per-channel error message,
-	 * which does not have any of the below information
-	 * available and not required also. So set all of them to 0.
-	 */
-	ev.st = ev.vc = ev.frame = ev.sof_ts =
-		ev.eof_ts = ev.data = ev.capture_id = 0;
-
-	/* Fill in notify msg structure. */
-	msg->type = VI_NOTIFY_MSG_STATUS;
-
-	msg->dest = 0xFFF; /* Broadcast the error to all 12 Vi Channels */
-
-	msg->size = sizeof(struct vi_capture_status);
-	memcpy(msg->data, &ev, msg->size);
-
 	/* Stop the rtcpu */
+	/* Halt will broadcast the rtcpu-down message to all ivc channels */
 	tegra_camrtc_halt(cam_rtcpu_mon->rce_dev);
-
-	/* Broadcast rtcpu-down message to all vi channels */
-	err = tegra_ivc_vi_notify_report(msg);
-	if (err) {
-		dev_err(cam_rtcpu_mon->rce_dev,
-			"tegra_ivc_vi_notify_report failed %d\n", err);
-		return err;
-	}
 
 	/* (Re)start the rtcpu */
 	tegra_camrtc_boot(cam_rtcpu_mon->rce_dev);
@@ -139,20 +98,11 @@ struct tegra_camrtc_mon *tegra_camrtc_mon_create(struct device *dev)
 {
 	struct tegra_camrtc_mon *cam_rtcpu_mon;
 
-	cam_rtcpu_mon = kzalloc(sizeof(*cam_rtcpu_mon), GFP_KERNEL);
+	cam_rtcpu_mon = devm_kzalloc(dev, sizeof(*cam_rtcpu_mon), GFP_KERNEL);
 	if (unlikely(cam_rtcpu_mon == NULL))
 		return ERR_PTR(-ENOMEM);
 
 	cam_rtcpu_mon->rce_dev = dev;
-
-	cam_rtcpu_mon->msg_size = sizeof(*cam_rtcpu_mon->msg) +
-					sizeof(struct vi_capture_status);
-
-	cam_rtcpu_mon->msg = kzalloc(cam_rtcpu_mon->msg_size, GFP_KERNEL);
-	if (unlikely(cam_rtcpu_mon->msg == NULL)) {
-		dev_err(dev, "failed to allocate vi_notify_msg_ex struct\n");
-		return ERR_PTR(-ENOMEM);
-	}
 
 	/* Initialize wdt_work */
 	INIT_WORK(&cam_rtcpu_mon->wdt_work, tegra_camrtc_mon_wdt_worker);
@@ -170,9 +120,7 @@ int tegra_cam_rtcpu_mon_destroy(struct tegra_camrtc_mon *cam_rtcpu_mon)
 	if (IS_ERR_OR_NULL(cam_rtcpu_mon))
 		return -EINVAL;
 
-	if (cam_rtcpu_mon->msg)
-		kfree(cam_rtcpu_mon->msg);
-	kfree(cam_rtcpu_mon);
+	devm_kfree(cam_rtcpu_mon->rce_dev, cam_rtcpu_mon);
 
 	return 0;
 }

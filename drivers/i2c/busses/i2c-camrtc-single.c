@@ -831,23 +831,23 @@ fail_remove_chan:
 
 static void tegra_ivc_i2c_add_single_worker(struct work_struct *work)
 {
-	int ret = 0;
 	struct tegra_i2c_ivc_dev *ivc_dev = container_of(work,
 					struct tegra_i2c_ivc_dev, work);
 	struct tegra_ivc_channel *chan = ivc_dev->chan;
 
-	ret = tegra_ivc_i2c_add_single(ivc_dev->chan);
-	if (ret != 0)
-		dev_err(&chan->dev, "I2C device not ready\n");
+	if (chan->is_ready) {
+		int err = tegra_ivc_i2c_add_single(ivc_dev->chan);
+		if (err != 0)
+			dev_err(&chan->dev, "I2C device not ready\n");
+	}
 }
 
-static int tegra_ivc_i2c_single_ready(
-	struct tegra_ivc_channel *chan)
+static void tegra_ivc_i2c_single_ready(
+	struct tegra_ivc_channel *chan, bool online)
 {
 	struct tegra_i2c_ivc_dev *ivc_dev =
 		tegra_ivc_channel_get_drvdata(chan);
 	schedule_work(&ivc_dev->work);
-	return 0;
 }
 
 static int tegra_ivc_i2c_single_pm_prepare(struct device *dev)

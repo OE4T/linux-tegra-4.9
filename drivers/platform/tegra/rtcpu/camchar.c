@@ -332,7 +332,6 @@ static int tegra_camchar_probe(struct tegra_ivc_channel *ch)
 	if (!data)
 		return -ENOMEM;
 
-	ch->is_ready = false;
 	data->ch = ch;
 	cdev_init(&data->cdev, &tegra_camchar_fops);
 	data->cdev.owner = THIS_MODULE;
@@ -364,12 +363,6 @@ static int tegra_camchar_probe(struct tegra_ivc_channel *ch)
 	return ret;
 }
 
-static int tegra_camchar_ready(struct tegra_ivc_channel *ch)
-{
-	ch->is_ready = true;
-	return 0;
-}
-
 static void tegra_camchar_remove(struct tegra_ivc_channel *ch)
 {
 	struct tegra_camchar_data *data = tegra_ivc_channel_get_drvdata(ch);
@@ -382,7 +375,6 @@ static void tegra_camchar_remove(struct tegra_ivc_channel *ch)
 
 static const struct tegra_ivc_channel_ops tegra_ivc_channel_chardev_ops = {
 	.probe	= tegra_camchar_probe,
-	.ready	= tegra_camchar_ready,
 	.remove	= tegra_camchar_remove,
 	.notify	= tegra_camchar_notify,
 };

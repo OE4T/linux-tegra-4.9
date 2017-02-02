@@ -15,6 +15,7 @@
 #define _LINUX_TEGRA_IVC_BUS_H
 
 #include <linux/tegra-ivc-instance.h>
+#include <linux/types.h>
 
 extern struct bus_type tegra_ivc_bus_type;
 struct tegra_ivc_bus;
@@ -130,7 +131,7 @@ void tegra_ivc_channel_runtime_put(struct tegra_ivc_channel *chan);
 
 struct tegra_ivc_channel_ops {
 	int (*probe)(struct tegra_ivc_channel *);
-	int (*ready)(struct tegra_ivc_channel *);
+	void (*ready)(struct tegra_ivc_channel *, bool online);
 	void (*remove)(struct tegra_ivc_channel *);
 	void (*notify)(struct tegra_ivc_channel *);
 };

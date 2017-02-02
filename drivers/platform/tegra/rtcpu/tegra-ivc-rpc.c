@@ -609,14 +609,12 @@ int tegra_ivc_rpc_channel_remove(struct tegra_ivc_channel *chan)
 }
 EXPORT_SYMBOL(tegra_ivc_rpc_channel_remove);
 
-int tegra_ivc_rpc_channel_ready(struct tegra_ivc_channel *chan)
+void tegra_ivc_rpc_channel_ready(struct tegra_ivc_channel *chan,
+				bool ready)
 {
 	struct tegra_ivc_rpc_data *rpc = chan->rpc_priv;
-	int ret = 0;
 
 	if (rpc->ops && rpc->ops->ready)
-		ret = rpc->ops->ready(chan);
-
-	return ret;
+		rpc->ops->ready(chan, ready);
 }
 EXPORT_SYMBOL(tegra_ivc_rpc_channel_ready);

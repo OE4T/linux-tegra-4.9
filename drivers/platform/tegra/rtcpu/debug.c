@@ -148,7 +148,9 @@ static int camrtc_ivc_dbg_xact(
 	if (ret)
 		return ret;
 
-	tegra_ivc_channel_runtime_get(ch);
+	ret = tegra_ivc_channel_runtime_get(ch);
+	if (ret < 0)
+		goto unlock;
 
 	while (tegra_ivc_can_read(&ch->ivc)) {
 		tegra_ivc_read_advance(&ch->ivc);
@@ -195,6 +197,7 @@ static int camrtc_ivc_dbg_xact(
 	}
 out:
 	tegra_ivc_channel_runtime_put(ch);
+unlock:
 	mutex_unlock(&crd->mutex);
 	return ret;
 }
@@ -246,7 +249,9 @@ static int camrtc_show_sm_ping(struct seq_file *file, void *data)
 	u32 command;
 	int err;
 
-	tegra_ivc_channel_runtime_get(ch);
+	err = tegra_ivc_channel_runtime_get(ch);
+	if (err < 0)
+		return err;
 
 	sent = sched_clock();
 
@@ -837,7 +842,6 @@ static int camrtc_debug_probe(struct tegra_ivc_channel *ch)
 	if (unlikely(crd == NULL))
 		return -ENOMEM;
 
-	ch->is_ready = false;
 	crd->parameters.mods_loops = 20;
 
 	if (of_property_read_u32(dev->of_node,
@@ -861,12 +865,6 @@ static int camrtc_debug_probe(struct tegra_ivc_channel *ch)
 	return 0;
 }
 
-static int camrtc_debug_ready(struct tegra_ivc_channel *ch)
-{
-	ch->is_ready = true;
-	return 0;
-}
-
 static void camrtc_debug_remove(struct tegra_ivc_channel *ch)
 {
 	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
@@ -876,7 +874,6 @@ static void camrtc_debug_remove(struct tegra_ivc_channel *ch)
 
 static const struct tegra_ivc_channel_ops tegra_ivc_channel_debug_ops = {
 	.probe	= camrtc_debug_probe,
-	.ready	= camrtc_debug_ready,
 	.remove	= camrtc_debug_remove,
 	.notify	= camrtc_debug_notify,
 };

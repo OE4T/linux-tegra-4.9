@@ -74,7 +74,7 @@ struct tegra_ivc_rpc_ops {
 		struct tegra_ivc_channel *chan,
 		struct dentry *debugfs_root);
 	/* after RTCPU gets ready */
-	int (*ready)(struct tegra_ivc_channel *chan);
+	void (*ready)(struct tegra_ivc_channel *chan, bool ready);
 	/* notify */
 	int (*non_rpc_msg)(
 		struct tegra_ivc_channel *chan,
@@ -104,7 +104,7 @@ bool tegra_ivc_rpc_channel_is_suspended(
  * channel_name: Name of channel that uses RPC/IVC
  */
 
-int tegra_ivc_rpc_channel_ready(struct tegra_ivc_channel *chan);
+void tegra_ivc_rpc_channel_ready(struct tegra_ivc_channel *chan, bool ready);
 void tegra_ivc_rpc_channel_notify(struct tegra_ivc_channel *chan);
 int tegra_ivc_rpc_channel_pm_prepare(struct device *dev);
 void tegra_ivc_rpc_channel_pm_complete(struct device *dev);

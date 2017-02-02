@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -33,15 +33,5 @@ enum {
 	VI_CAPTURE_STATUS_SYNC_FAILURE,
 	VI_CAPTURE_STATUS_NOTIFIER_BACKEND_DOWN,
 };
-
-/* Extended VI notify message */
-struct vi_notify_msg_ex {
-	u32 type;	/* message type (LSB=0) */
-	u32 dest;	/* destination channels (bitmask) */
-	u32 size;	/* data size */
-	u8 data[];	/* payload data */
-};
-
-int tegra_ivc_vi_notify_report(const struct vi_notify_msg_ex *msg);
 
 #endif /* INCLUDE_VI_NOTIFY_H */

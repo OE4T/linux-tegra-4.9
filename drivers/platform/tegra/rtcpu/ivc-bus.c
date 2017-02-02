@@ -428,27 +428,20 @@ static int tegra_ivc_bus_remove(struct device *dev)
 static int tegra_ivc_bus_ready_child(struct device *dev, void *data)
 {
 	struct tegra_ivc_driver *drv = to_tegra_ivc_driver(dev->driver);
-	bool online = (data != NULL) ? *(bool *)data : true;
-
-	int ret;
-
-	if (drv == NULL) {
-		dev_warn(dev, "ivc channel driver missing\n");
-		return 0;
-	}
-
-	/* TODO: propagate offline status to bus devices */
-	if (!online)
-		return 0;
+	bool is_ready = (data != NULL) ? *(bool *)data : true;
 
 	if (dev->type == &tegra_ivc_channel_type) {
 		struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
-		const struct tegra_ivc_channel_ops *ops = drv->ops.channel;
+		const struct tegra_ivc_channel_ops *ops;
 
-		if (ops->ready != NULL) {
-			ret = ops->ready(chan);
-			if (ret)
-				return ret;
+		chan->is_ready = is_ready;
+
+		if (drv != NULL) {
+			ops = drv->ops.channel;
+			if (ops->ready != NULL)
+				ops->ready(chan, is_ready);
+		} else {
+			dev_warn(dev, "ivc channel driver missing\n");
 		}
 	}
 

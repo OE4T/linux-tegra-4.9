@@ -61,6 +61,15 @@ struct vi_notify_req {
 	};
 };
 
+/* Extended VI notify message */
+struct vi_notify_msg_ex {
+	u32 type;	/* message type (LSB=0) */
+	u32 dest;	/* destination channels (bitmask) */
+	u32 size;	/* data size */
+	u8 data[];	/* payload data */
+};
+
+
 enum {
 	TEGRA_IVC_VI_CLASSIFY,
 	TEGRA_IVC_VI_SET_SYNCPTS,
@@ -86,6 +95,9 @@ struct tegra_ivc_vi_notify {
 	u64 ts_res_ns;
 	s64 ts_adjustment;
 };
+
+static int tegra_ivc_vi_notify_status(struct tegra_ivc_channel *chan,
+				const struct vi_notify_msg_ex *msg);
 
 static inline s64 get_ts_adjustment(u64 tsc_res)
 {
@@ -134,7 +146,7 @@ static void tegra_ivc_vi_notify_process(struct tegra_ivc_channel *chan,
 		complete(&ivn->ack);
 		break;
 	case VI_NOTIFY_MSG_STATUS:
-		tegra_ivc_vi_notify_report(msg);
+		tegra_ivc_vi_notify_status(chan, msg);
 		break;
 	default:
 		dev_warn(&chan->dev, "Unknown message type: %u\n", msg->type);
@@ -475,12 +487,10 @@ static struct platform_device *tegra_vi_get(struct device *dev)
 	return vi_pdev;
 }
 
-static struct tegra_ivc_vi_notify *_ivn;
-
-int tegra_ivc_vi_notify_report(const struct vi_notify_msg_ex *msg)
+static int tegra_ivc_vi_notify_status(struct tegra_ivc_channel *chan,
+				const struct vi_notify_msg_ex *msg)
 {
-	struct tegra_ivc_vi_notify *ivn = _ivn;
-	struct vi_notify_dev *vnd;
+	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
 	u32 mask;
 	u8 ch;
 
@@ -494,7 +504,6 @@ int tegra_ivc_vi_notify_report(const struct vi_notify_msg_ex *msg)
 		return 0;
 	}
 
-	vnd = ivn->vi_notify;
 
 	if (msg->size != sizeof(struct vi_capture_status)) {
 		pr_warn("vi-notify: Invalid status message.\n");
@@ -506,13 +515,39 @@ int tegra_ivc_vi_notify_report(const struct vi_notify_msg_ex *msg)
 	for (ch = 0; mask; mask >>= 1, ch++) {
 		if (!(mask & 1u))
 			continue;
-		vi_notify_dev_report(vnd, ch,
+		vi_notify_dev_report(ivn->vi_notify, ch,
 				(struct vi_capture_status *)msg->data);
 	}
 
 	return 0;
 }
-EXPORT_SYMBOL(tegra_ivc_vi_notify_report);
+
+static void tegra_ivc_channel_vi_notify_ready(struct tegra_ivc_channel *chan,
+	bool online)
+{
+	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
+	const struct vi_capture_status ev = {
+		/*
+		 * NOTIFIER_BACKEND_DOWN is a special all-channel error message
+		 */
+		.status = VI_CAPTURE_STATUS_NOTIFIER_BACKEND_DOWN,
+	};
+	u8 ch;
+	u32 channels_mask = ivn->channels_mask;
+
+	if (ivn->vi_notify == NULL || channels_mask == 0)
+		return;
+
+	if (!online) {
+		dev_info(&chan->dev, "notify backend down");
+
+		/* Broadcast the error to all active channels */
+		for (ch = 0; channels_mask != 0; channels_mask >>= 1, ch++)
+			if ((channels_mask & 1U) != 0)
+				vi_notify_dev_report(ivn->vi_notify, ch, &ev);
+	}
+}
+
 
 static int tegra_ivc_channel_vi_notify_probe(struct tegra_ivc_channel *chan)
 {
@@ -523,8 +558,6 @@ static int tegra_ivc_channel_vi_notify_probe(struct tegra_ivc_channel *chan)
 	ivn = devm_kzalloc(&chan->dev, sizeof(*ivn), GFP_KERNEL);
 	if (unlikely(ivn == NULL))
 		return -ENOMEM;
-
-	_ivn = ivn;
 
 	chan->is_ready = false;
 	ivn->vi = tegra_vi_get(&chan->dev);
@@ -560,19 +593,10 @@ static int tegra_ivc_channel_vi_notify_probe(struct tegra_ivc_channel *chan)
 	return err;
 }
 
-static int tegra_ivc_channel_vi_notify_ready(struct tegra_ivc_channel *chan)
-{
-	chan->is_ready = true;
-	return 0;
-}
-
 static void tegra_ivc_channel_vi_notify_remove(struct tegra_ivc_channel *chan)
 {
 	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
 	struct device *dev = tegra_ivc_channel_to_camrtc_dev(chan);
-
-	WARN_ON(ivn != _ivn);
-	_ivn = NULL;
 
 	if (likely(ivn->status_mem != NULL))
 		dma_free_coherent(dev,
@@ -590,7 +614,7 @@ static struct of_device_id tegra_ivc_channel_vi_notify_of_match[] = {
 
 static const struct tegra_ivc_channel_ops tegra_ivc_channel_vi_notify_ops = {
 	.probe	= tegra_ivc_channel_vi_notify_probe,
-	.ready	= tegra_ivc_channel_vi_notify_ready,
+	.ready = tegra_ivc_channel_vi_notify_ready,
 	.remove	= tegra_ivc_channel_vi_notify_remove,
 	.notify	= tegra_ivc_channel_vi_notify_process,
 };

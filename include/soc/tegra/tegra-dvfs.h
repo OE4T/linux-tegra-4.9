@@ -170,6 +170,7 @@ struct dvfs {
 
 	/* Maximum rate safe at minimum voltage across all thermal ranges */
 	unsigned long fmax_at_vmin_safe_t;
+	long dbg_hz_offs;
 };
 
 struct cvb_dvfs_table {

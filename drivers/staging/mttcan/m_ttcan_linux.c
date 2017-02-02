@@ -1270,6 +1270,7 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 	struct hwtstamp_config config;
 	unsigned long flags;
 	u64 tref;
+	bool rx_config_chg = false;
 
 	if (copy_from_user(&config, ifr->ifr_data,
 			   sizeof(struct hwtstamp_config)))
@@ -1289,8 +1290,9 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 		/* time stamp no incoming packet at all */
 	case HWTSTAMP_FILTER_NONE:
 		config.rx_filter = HWTSTAMP_FILTER_NONE;
-		priv->hwts_rx_en = 0;
-		tegra_unregister_hwtime_notifier(&priv->ttcan_nb);
+		if (priv->hwts_rx_en == true)
+			rx_config_chg = true;
+		priv->hwts_rx_en = false;
 		break;
 		/* time stamp any incoming packet */
 	case HWTSTAMP_FILTER_ALL:
@@ -1300,8 +1302,9 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 			return -ERANGE;
 		}
 		config.rx_filter = HWTSTAMP_FILTER_ALL;
-		priv->hwts_rx_en = 1;
-		tegra_register_hwtime_notifier(&priv->ttcan_nb);
+		if (priv->hwts_rx_en == false)
+			rx_config_chg = true;
+		priv->hwts_rx_en = true;
 		break;
 	default:
 		return -ERANGE;
@@ -1309,21 +1312,26 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 
 	priv->hwtstamp_config = config;
 	/* Setup hardware time stamping cyclecounter */
-	if (priv->hwts_rx_en) {
-		priv->cc.read = ttcan_read_ts_cntr;
-		priv->cc.mask = CLOCKSOURCE_MASK(16);
-		priv->cc.mult = ((u64)NSEC_PER_SEC *
-				priv->ttcan->ts_prescalar) /
+	if (rx_config_chg) {
+		if (priv->hwts_rx_en) {
+			tegra_register_hwtime_notifier(&priv->ttcan_nb);
+			priv->cc.read = ttcan_read_ts_cntr;
+			priv->cc.mask = CLOCKSOURCE_MASK(16);
+			priv->cc.mult = ((u64)NSEC_PER_SEC *
+					priv->ttcan->ts_prescalar) /
 				priv->ttcan->bt_config.nominal.bitrate;
-		priv->cc.shift = 0;
+			priv->cc.shift = 0;
 
-		spin_lock_irqsave(&priv->tc_lock, flags);
-		tref = get_ptp_hwtime();
-		timecounter_init(&priv->tc, &priv->cc, tref);
-		spin_unlock_irqrestore(&priv->tc_lock, flags);
-		mod_timer(&priv->timer,
-			jiffies + (msecs_to_jiffies(MTTCAN_HWTS_ROLLOVER)));
+			spin_lock_irqsave(&priv->tc_lock, flags);
+			tref = get_ptp_hwtime();
+			timecounter_init(&priv->tc, &priv->cc, tref);
+			spin_unlock_irqrestore(&priv->tc_lock, flags);
+			mod_timer(&priv->timer, jiffies +
+				(msecs_to_jiffies(MTTCAN_HWTS_ROLLOVER)));
+		} else
+			tegra_unregister_hwtime_notifier(&priv->ttcan_nb);
 	}
+
 	return (copy_to_user(ifr->ifr_data, &config,
 			sizeof(struct hwtstamp_config))) ? -EFAULT : 0;
 }

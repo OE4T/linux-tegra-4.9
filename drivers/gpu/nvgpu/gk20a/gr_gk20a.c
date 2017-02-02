@@ -2941,7 +2941,7 @@ int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 	gr_ctx->mem.gpu_va = gk20a_gmmu_map(vm,
 					&gr_ctx->mem.sgt,
 					gr_ctx->mem.size,
-					NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+					NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_FALSE,
 					gk20a_mem_flag_none, true,
 					gr_ctx->mem.aperture);
 	if (!gr_ctx->mem.gpu_va)

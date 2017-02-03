@@ -2707,7 +2707,7 @@ static int tegra_pmc_debug_scratch_reg_init(struct tegra_pmc *pmc)
 }
 
 #else
-static int tegra_pmc_debug_scratch_reg_init(struct device_node *np)
+static int tegra_pmc_debug_scratch_reg_init(struct tegra_pmc *pmc)
 {
 	return 0;
 }
@@ -2734,40 +2734,84 @@ static void tegra_pmc_halt_in_fiq_init(struct tegra_pmc *pmc)
 				  PMC_IMPL_HALT_IN_FIQ_MASK);
 }
 
+static char *pmc_reset_source[] = {
+	"Power on reset",
+	"AOWDT",
+	"Denver watchdog time out",
+	"BPMPWDT",
+	"SCEWDT",
+	"SPEWDT",
+	"APEWDT",
+	"A57 watchdog time out",
+	"SENSOR",
+	"AOTAG",
+	"VFSENSOR",
+	"Software reset",
+	"SC7",
+	"HSM",
+	"CSITE",
+};
+
+static char *pmc_reset_level[] = {
+	"L0",
+	"L1",
+	"L2",
+	"WARM",
+};
+
 static void tegra_pmc_show_reset_status(void)
 {
 	u32 val, rst_src, rst_lvl;
-	char *reset_source[] = {
-		"Power on reset",
-		"AOWDT",
-		"Denvor watchdog time out",
-		"BPMPWDT",
-		"SCEWDT",
-		"SPEWDT",
-		"APEWDT",
-		"A57 watchdog time out",
-		"SENSOR",
-		"AOTAG",
-		"VFSENSOR",
-		"Software reset",
-		"SC7",
-		"HSM",
-		"CSITE",
-	};
-	char *reset_level[] = {
-		"L0",
-		"L1",
-		"L2",
-		"WARM",
-	};
 
 	val = tegra_pmc_readl(TEGRA_PMC_RST_STATUS);
 	rst_src = (val & PMC_RST_SOURCE_MASK) >> PMC_RST_SOURCE_SHIFT;
 	rst_lvl = (val & PMC_RST_LEVEL_MASK) >> PMC_RST_LEVEL_SHIFT;
-	pr_info("### PMC reset source: %s\n", reset_source[rst_src]);
-	pr_info("### PMC reset level: %s\n", reset_level[rst_lvl]);
+	pr_info("### PMC reset source: %s\n", pmc_reset_source[rst_src]);
+	pr_info("### PMC reset level: %s\n", pmc_reset_level[rst_lvl]);
 	pr_info("### PMC reset status reg: 0x%x\n", val);
 }
+
+#if defined(CONFIG_DEBUG_FS)
+static int pmc_reset_show(struct seq_file *s, void *data)
+{
+	u32 val, rst_src, rst_lvl;
+
+	val = tegra_pmc_readl(TEGRA_PMC_RST_STATUS);
+	rst_src = (val & PMC_RST_SOURCE_MASK) >> PMC_RST_SOURCE_SHIFT;
+	rst_lvl = (val & PMC_RST_LEVEL_MASK) >> PMC_RST_LEVEL_SHIFT;
+	seq_printf(s, "### PMC reset source: %s\n", pmc_reset_source[rst_src]);
+	seq_printf(s, "### PMC reset level: %s\n", pmc_reset_level[rst_lvl]);
+	seq_printf(s, "### PMC reset status reg: 0x%x\n", val);
+
+	return 0;
+}
+
+static int pmc_reset_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, pmc_reset_show, inode->i_private);
+}
+
+static const struct file_operations pmc_reset_fops = {
+	.open = pmc_reset_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+static void tegra_pmc_reset_debugfs_init(struct device *dev)
+{
+	struct dentry *d;
+
+	d = debugfs_create_file("pmc-reset", S_IRUGO, NULL, NULL,
+				&pmc_reset_fops);
+	if (!d)
+		dev_err(dev, "Error in creating the debugfs for pmc-reset\n");
+}
+#else
+static void tegra_pmc_reset_debugfs_init(struct device *dev)
+{
+}
+#endif
 
 static int tegra_pmc_probe(struct platform_device *pdev)
 {
@@ -2825,8 +2869,10 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 
 	tegra_pmc_debug_scratch_reg_init(pmc);
 
-	if (pmc->soc->show_reset_status)
+	if (pmc->soc->show_reset_status) {
 		tegra_pmc_show_reset_status();
+		tegra_pmc_reset_debugfs_init(&pdev->dev);
+	}
 
 	if (IS_ENABLED(CONFIG_DEBUG_FS)) {
 		err = tegra_powergate_debugfs_init();

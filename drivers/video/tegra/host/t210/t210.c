@@ -385,7 +385,12 @@ struct nvhost_device_data t21_vic_info = {
 				   {"vic_floor", 0,
 				   NVHOST_MODULE_ID_CBUS_FLOOR},
 				   {"emc_shared", 0,
-				   NVHOST_MODULE_ID_EMC_SHARED}, {} },
+				   NVHOST_MODULE_ID_EMC_SHARED,
+#if defined(CONFIG_TEGRA_BWMGR)
+				   0, TEGRA_BWMGR_SET_EMC_SHARED_BW}, {} },
+#else
+				   }, {} },
+#endif
 	.version		= NVHOST_ENCODE_FLCN_VER(4, 0),
 	.can_powergate		= true,
 	.autosuspend_delay	= 500,
@@ -410,6 +415,9 @@ struct nvhost_device_data t21_vic_info = {
 	.aggregate_constraints	= nvhost_vic_aggregate_constraints,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.num_ppc		= 8,
+#if defined(CONFIG_TEGRA_BWMGR)
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_VIC,
+#endif
 };
 #endif
 

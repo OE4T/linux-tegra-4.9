@@ -1429,7 +1429,7 @@ static int tegra_se_prepare_cmdbuf(struct tegra_se_dev *se_dev,
 				ret = tegra_se_send_key_data(se_dev, req->info,
 					TEGRA_SE_AES_IV_SIZE,
 					aes_ctx->slot->slot_num,
-					SE_KEY_TABLE_TYPE_ORGIV,
+					SE_KEY_TABLE_TYPE_UPDTDIV,
 					se_dev->opcode_addr, cpuvaddr,
 					iova, true);
 			}
@@ -1442,7 +1442,7 @@ static int tegra_se_prepare_cmdbuf(struct tegra_se_dev *se_dev,
 					req_ctx->encrypt, aes_ctx->keylen);
 		req_ctx->crypto_config = tegra_se_get_crypto_config(se_dev,
 				req_ctx->op_mode, req_ctx->encrypt,
-				aes_ctx->slot->slot_num, true);
+				aes_ctx->slot->slot_num, false);
 
 		tegra_se_send_data(se_dev, req_ctx, req, req->nbytes,
 			se_dev->opcode_addr, cpuvaddr);

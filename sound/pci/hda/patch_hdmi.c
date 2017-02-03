@@ -2136,6 +2136,13 @@ static int generic_hdmi_build_controls(struct hda_codec *codec)
 	for (pin_idx = 0; pin_idx < spec->num_pins; pin_idx++) {
 		struct hdmi_spec_per_pin *per_pin = get_pin(spec, pin_idx);
 
+		/* add control for custom ELD */
+		err = hdmi_create_custom_eld_ctl(codec,
+						 per_pin->pin_nid,
+						 HDA_PCM_TYPE_HDMI);
+		if (err < 0)
+			return err;
+
 		hdmi_present_sense(per_pin, 0);
 	}
 

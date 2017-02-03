@@ -188,6 +188,10 @@ struct hda_codec {
 	unsigned int addr;	/* codec addr*/
 	u32 probe_id; /* overridden id for probing */
 
+	/* fields for custom ELD */
+	unsigned int *custom_eld_data;
+	unsigned int custom_eld_size;
+
 	/* detected preset */
 	const struct hda_device_id *preset;
 	const char *modelname;	/* model name for preset */

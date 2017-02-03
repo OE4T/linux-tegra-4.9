@@ -132,6 +132,85 @@ static int cea_sampling_frequencies[8] = {
 	SNDRV_PCM_RATE_192000,	/* 7: 192000Hz */
 };
 
+#define ELD_BYTE_MASK 0x80000000
+
+static int snd_hda_use_custom_eld_info(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_info *uinfo)
+{
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_BYTES;
+	/* +1 to indicate the size of ELD passed */
+	uinfo->count = ELD_MAX_SIZE+1;
+
+	return 0;
+}
+
+static int snd_hda_use_custom_eld_put(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	int i = 0;
+
+	struct hda_codec *codec = snd_kcontrol_chip(kcontrol);
+
+	if (ucontrol->value.bytes.data[0] == 0) {
+		if  (codec->custom_eld_data)
+			kfree(codec->custom_eld_data);
+		codec->custom_eld_data = NULL;
+		codec->custom_eld_size = 0;
+		return 0;
+	}
+
+	if (codec->custom_eld_size != ucontrol->value.bytes.data[0]) {
+		codec->custom_eld_size = ucontrol->value.bytes.data[0]+1;
+		/* free up old memory if any */
+		if (codec->custom_eld_data) {
+			kfree(codec->custom_eld_data);
+			codec->custom_eld_data = NULL;
+		}
+		/* allocate new memory for size difference */
+		codec->custom_eld_data = kzalloc(codec->custom_eld_size
+					* sizeof(unsigned int), GFP_KERNEL);
+		if (!codec->custom_eld_data) {
+			codec_err(codec,
+				"Memory allocation for custom ELD failed!\n");
+			codec->custom_eld_size = 0;
+			return 0;
+		}
+	}
+
+	for (i = 0; i < codec->custom_eld_size; i++)
+		codec->custom_eld_data[i] = (ELD_BYTE_MASK
+				| (0xFF & ucontrol->value.bytes.data[i+1]));
+
+	return 0;
+}
+
+static struct snd_kcontrol_new custom_eld_ctl = {
+	.access = SNDRV_CTL_ELEM_ACCESS_WRITE,
+	.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+	.name = "HDA Custom ELD",
+	.info = snd_hda_use_custom_eld_info,
+	.put = snd_hda_use_custom_eld_put,
+};
+
+int hdmi_create_custom_eld_ctl(struct hda_codec *codec,
+			hda_nid_t associated_nid, int device)
+{
+	struct snd_kcontrol *kctl;
+	int err;
+
+	kctl = snd_ctl_new1(&custom_eld_ctl, codec);
+	if (!kctl)
+		return -ENOMEM;
+
+	kctl->id.device = device;
+
+	err = snd_hda_ctl_add(codec, associated_nid, kctl);
+	if (err < 0)
+		return err;
+
+	return 0;
+}
+
 static unsigned int hdmi_get_eld_data(struct hda_codec *codec, hda_nid_t nid,
 					int byte_index)
 {
@@ -139,6 +218,12 @@ static unsigned int hdmi_get_eld_data(struct hda_codec *codec, hda_nid_t nid,
 
 	val = snd_hda_codec_read(codec, nid, 0,
 					AC_VERB_GET_HDMI_ELDD, byte_index);
+
+	if (codec->custom_eld_data) {
+		codec_dbg(codec, "HDMI: Warning! Using custom ELD values!!\n");
+		val = codec->custom_eld_data[byte_index];
+	}
+
 #ifdef BE_PARANOID
 	codec_info(codec, "HDMI: ELD data byte %d: 0x%x\n", byte_index, val);
 #endif
@@ -418,8 +503,14 @@ out_fail:
 
 int snd_hdmi_get_eld_size(struct hda_codec *codec, hda_nid_t nid)
 {
-	return snd_hda_codec_read(codec, nid, 0, AC_VERB_GET_HDMI_DIP_SIZE,
-						 AC_DIPSIZE_ELD_BUF);
+	int size = snd_hda_codec_read(codec, nid, 0, AC_VERB_GET_HDMI_DIP_SIZE,
+							AC_DIPSIZE_ELD_BUF);
+
+	/* Hardcode ELD SIZE based on the presence of custom eld array */
+	if (codec->custom_eld_data)
+		size = codec->custom_eld_size;
+
+	return size;
 }
 
 int snd_hdmi_get_eld(struct hda_codec *codec, hda_nid_t nid,

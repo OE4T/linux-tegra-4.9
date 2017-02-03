@@ -760,6 +760,8 @@ struct hdmi_eld {
 	struct parsed_hdmi_eld info;
 };
 
+int hdmi_create_custom_eld_ctl(struct hda_codec *codec,
+				hda_nid_t associated_nid, int device);
 int snd_hdmi_get_eld_size(struct hda_codec *codec, hda_nid_t nid);
 int snd_hdmi_get_eld(struct hda_codec *codec, hda_nid_t nid,
 		     unsigned char *buf, int *eld_size);

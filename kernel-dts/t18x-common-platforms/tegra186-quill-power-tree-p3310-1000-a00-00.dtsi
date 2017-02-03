@@ -272,7 +272,7 @@
 					maxim,active-fps-power-down-slot = <7>;
 					regulator-enable-ramp-delay = <160>;
 					regulator-disable-ramp-delay = <16000>;
-					regulator-ramp-delay = <100000>;
+					regulator-ramp-delay = <5000>;
 					regulator-ramp-delay-scale = <500>;
 				};
 
@@ -291,7 +291,7 @@
 					maxim,active-fps-power-down-slot = <7>;
 					regulator-enable-ramp-delay = <309>;
 					regulator-disable-ramp-delay = <16000>;
-					regulator-ramp-delay = <100000>;
+					regulator-ramp-delay = <5000>;
 					regulator-ramp-delay-scale = <950>;
 				};
 

@@ -136,6 +136,8 @@ enum {
 #define TEGRA_EDID_QUIRK_NO_YUV     (1 << 0)
 /* TV needs us to delay HDCP by a few seconds */
 #define TEGRA_EDID_QUIRK_DELAY_HDCP (1 << 1)
+/* TVs that blank screen if we try to do HDCP at all */
+#define TEGRA_EDID_QUIRK_NO_HDCP    (1 << 2)
 
 struct tegra_edid {
 	struct tegra_edid_pvt	*data;

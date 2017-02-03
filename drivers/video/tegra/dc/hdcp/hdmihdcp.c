@@ -2097,7 +2097,9 @@ static int tegra_nvhdcp_on(struct tegra_nvhdcp *nvhdcp)
 	nvhdcp->state = STATE_UNAUTHENTICATED;
 	if (nvhdcp_is_plugged(nvhdcp) &&
 		atomic_read(&nvhdcp->policy) !=
-		TEGRA_DC_HDCP_POLICY_ALWAYS_OFF) {
+		TEGRA_DC_HDCP_POLICY_ALWAYS_OFF &&
+		!(tegra_edid_get_quirks(nvhdcp->hdmi->edid) &
+		  TEGRA_EDID_QUIRK_NO_HDCP)) {
 		nvhdcp->fail_count = 0;
 		e = nvhdcp_i2c_read8(nvhdcp, HDCP_HDCP2_VERSION, &hdcp2version);
 		if (e)

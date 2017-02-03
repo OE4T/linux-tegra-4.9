@@ -58,7 +58,6 @@ enum nvaudio_ivc_cmd_t {
 	NVAUDIO_SFC_GET_IN_FREQ,
 	NVAUDIO_SFC_SET_OUT_FREQ,
 	NVAUDIO_SFC_GET_OUT_FREQ,
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	NVAUDIO_ASRC_SET_INT_RATIO,
 	NVAUDIO_ASRC_GET_INT_RATIO,
 	NVAUDIO_ASRC_SET_FRAC_RATIO,
@@ -80,7 +79,6 @@ enum nvaudio_ivc_cmd_t {
 	NVAUDIO_ARAD_SET_LANE_ENABLE,
 	NVAUDIO_ARAD_GET_LANE_ENABLE,
 	NVAUDIO_ARAD_GET_LANE_RATIO,
-#endif
 	NVAUDIO_ADSP_REQUEST_ASSIGNMENT,
 	NVAUDIO_AMX_SET_INPUT_STREAM_ENABLE,
 	NVAUDIO_I2S_SET_LOOPBACK_ENABLE,
@@ -123,7 +121,6 @@ struct nvaudio_ivc_t210_sfc_info {
 	uint32_t	out_freq;
 };
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 struct nvaudio_ivc_t186_asrc_info {
 	int32_t		id;
 	uint32_t	stream_num;
@@ -147,7 +144,6 @@ struct nvaudio_ivc_t186_arad_info {
 	int32_t		den_prescalar;
 	uint32_t	lane_enable;
 };
-#endif
 
 struct nvaudio_ivc_xbar_link {
 	uint32_t	rx_reg;
@@ -169,10 +165,8 @@ struct nvaudio_ivc_msg {
 		struct nvaudio_ivc_t124_dam_info	dam_info;
 		struct nvaudio_ivc_t210_amixer_info	amixer_info;
 		struct nvaudio_ivc_t210_sfc_info	sfc_info;
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 		struct nvaudio_ivc_t186_asrc_info	asrc_info;
 		struct nvaudio_ivc_t186_arad_info	arad_info;
-#endif
 		struct nvaudio_ivc_t210_amx_info	amx_info;
 		struct nvaudio_ivc_t210_i2s_info	i2s_info;
 		struct nvaudio_ivc_xbar_link		xbar_info;

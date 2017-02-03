@@ -1,7 +1,7 @@
 /*
  * tegra210_admaif_alt.h - Tegra210 ADMAIF registers
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,14 +26,10 @@
 #define TEGRA210_ADMAIF_XBAR_TX_FIFO_WRITE		0x32c
 #define TEGRA210_ADMAIF_CHANNEL_REG_STRIDE		0x40
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-#define DRV_NAME_T186					"virt-alt-pcm"
-
 #define TEGRA186_ADMAIF_BASE				0x0290f000
 #define TEGRA186_ADMAIF_XBAR_RX_FIFO_READ		0x2c
 #define TEGRA186_ADMAIF_XBAR_TX_FIFO_WRITE		0x52c
 #define TEGRA186_ADMAIF_CHANNEL_REG_STRIDE		0x40
-#endif
 
 #define TEGRA210_AUDIOCIF_BITS_8			1
 #define TEGRA210_AUDIOCIF_BITS_12			2
@@ -67,8 +63,19 @@ enum {
 	ADMAIF_ID_8,
 	ADMAIF_ID_9,
 	ADMAIF_ID_10,
+	TEGRA210_ADMAIF_CHANNEL_COUNT = ADMAIF_ID_10,
 	ADMAIF_ID_11,
-	MAX_ADMAIF_IDS
+	ADMAIF_ID_12,
+	ADMAIF_ID_13,
+	ADMAIF_ID_14,
+	ADMAIF_ID_15,
+	ADMAIF_ID_16,
+	ADMAIF_ID_17,
+	ADMAIF_ID_18,
+	ADMAIF_ID_19,
+	MAX_ADMAIF_T186_IDS,
+	TEGRA186_ADMAIF_CHANNEL_COUNT = MAX_ADMAIF_T186_IDS,
+	MAX_ADMAIF_IDS = MAX_ADMAIF_T186_IDS,
 };
 
 /* Audio cif definition */
@@ -99,6 +106,11 @@ struct tegra210_admaif {
 	struct tegra210_virt_admaif_client_data client_data;
 };
 
-int tegra210_virt_admaif_register_component(struct platform_device *pdev);
+struct tegra_virt_admaif_soc_data {
+	unsigned int num_ch;
+};
+
+int tegra210_virt_admaif_register_component(struct platform_device *pdev,
+				struct tegra_virt_admaif_soc_data *soc_data);
 
 #endif

@@ -993,7 +993,7 @@ static void mttcan_start(struct net_device *dev)
 	} else if (psr & MTT_PSR_EP_MASK) {
 		/* Error Passive */
 		priv->can.state = CAN_STATE_ERROR_PASSIVE;
-	} else if (psr * MTT_PSR_EW_MASK) {
+	} else if (psr & MTT_PSR_EW_MASK) {
 		/* Error Warning */
 		priv->can.state = CAN_STATE_ERROR_WARNING;
 	} else {

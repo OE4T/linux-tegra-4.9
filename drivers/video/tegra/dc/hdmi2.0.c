@@ -336,15 +336,17 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 
 	/* some non-compliant edids list 420vdb modes in vdb */
 	if ((mode->vmode & FB_VMODE_Y420) &&
-		!(tegra_edid_is_hfvsdb_present(hdmi->edid) &&
-		tegra_edid_is_scdc_present(hdmi->edid)) &&
+		!(mode->flag & FB_MODE_IS_FROM_VAR) &&
+		!(tegra_edid_is_hfvsdb_present(hdmi->edid)) &&
+		tegra_edid_is_scdc_present(hdmi->edid) &&
 		tegra_edid_is_420db_present(hdmi->edid)) {
 		mode->vmode &= ~FB_VMODE_Y420;
 		mode->vmode |= FB_VMODE_Y420_ONLY;
 	}
 
-	if (mode->vmode & FB_VMODE_YUV_MASK &&
-		tegra_edid_get_quirks(hdmi->edid) & TEGRA_EDID_QUIRK_NO_YUV)
+	if ((mode->vmode & FB_VMODE_YUV_MASK) &&
+		!(mode->flag & FB_MODE_IS_FROM_VAR) &&
+		(tegra_edid_get_quirks(hdmi->edid) & TEGRA_EDID_QUIRK_NO_YUV))
 		return false;
 
 	/*
@@ -354,7 +356,8 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 	 * is to disable the 594 MHz mode if no HF-VSDB is present or if no SCDC
 	 * support is indicated
 	 */
-	if (tegra_hdmi_mode_min_tmds_rate(mode) / 1000 >= 340 &&
+	if (((tegra_hdmi_mode_min_tmds_rate(mode) / 1000 >= 340) &&
+		!(mode->flag & FB_MODE_IS_FROM_VAR)) &&
 		(!tegra_edid_is_hfvsdb_present(hdmi->edid) ||
 		!tegra_edid_is_scdc_present(hdmi->edid)))
 		return false;

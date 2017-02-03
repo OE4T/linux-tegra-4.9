@@ -15,12 +15,13 @@
 			partition-id = <TEGRA210_POWER_DOMAIN_APE>;
 			clocks = <&tegra_car TEGRA210_CLK_APE>,
 					<&tegra_car TEGRA210_CLK_APB2APE>,
-					<&tegra_car TEGRA210_CLK_ACLK >;
+					<&tegra_car TEGRA210_CLK_ADSP >;
 			clock-names = "ape", "apb2ape", "adsp";
 		};
 
 		adsp_pd: adsp-pd {
 			compatible = "nvidia,tegra210-adsp-pd";
+			is_off;
 			#power-domain-cells = <0>;
 			power-domains = <&ape_pd>;
 		};

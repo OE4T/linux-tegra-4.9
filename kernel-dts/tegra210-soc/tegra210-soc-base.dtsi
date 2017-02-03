@@ -15,6 +15,7 @@
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/tegra210-car.h>
+#include <dt-bindings/reset/tegra210-car.h>
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include "tegra210-thermal.dtsi"
 #include <dt-bindings/gpio/tegra-gpio.h>
@@ -1615,6 +1616,15 @@
 				ROUTE_TO_ADSP>, /* ADSP MBOX RECV */
 			     <GIC_SPI INT_AMISC_MBOX_FULL2 IRQ_TYPE_LEVEL_HIGH
 				ROUTE_TO_ADSP>; /* ADSP FIQ HANDLER */
+		clocks = <&tegra_car TEGRA210_CLK_ADSP_APE>,
+			<&tegra_car TEGRA210_CLK_APB2APE>,
+			<&tegra_car TEGRA210_CLK_ADSP_NEON>,
+			<&tegra_car TEGRA210_CLK_ADSP>,
+			<&tegra_car TEGRA210_CLK_EMC>;
+		clock-names = "adsp.ape", "adsp.apb2ape", "adspneon",
+				"adsp", "adsp.emc";
+		resets = <&tegra_car TEGRA210_RST_ADSP>;
+		reset-names = "adspall";
 	     nvidia,adsp_unit_fpga_reset = <0x0 0x00000040>;
 	     status = "disabled";
 	};

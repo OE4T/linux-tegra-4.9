@@ -1699,6 +1699,7 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 
 	pr_info(" dc clk %ld\n", clk_get_rate(dc->clk));
 
+	tegra_nvdisp_set_compclk(dc);
 	tegra_dc_get(dc);
 
 	/* Deassert the dc reset */
@@ -1749,7 +1750,6 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	if (dc->out_ops && dc->out_ops->postpoweron)
 		dc->out_ops->postpoweron(dc);
 
-	tegra_nvdisp_set_compclk(dc);
 
 	tegra_log_resume_time();
 	/*

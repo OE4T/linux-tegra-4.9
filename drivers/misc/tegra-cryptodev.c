@@ -927,10 +927,9 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 			ret = crypto_rng_reset(ctx->rng, ctx->seed,
 				crypto_rng_seedsize(ctx->rng));
 		}
-		if (ret) {
+		if (ret)
 			pr_err("crypto_rng_reset failed: %d\n", ret);
-			crypto_free_rng(tfm);
-		}
+		crypto_free_rng(tfm);
 		break;
 
 #ifdef CONFIG_COMPAT

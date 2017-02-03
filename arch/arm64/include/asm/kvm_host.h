@@ -72,9 +72,6 @@ struct kvm_arch {
 	/* Interrupt controller */
 	struct vgic_dist	vgic;
 
-	/* Timer */
-	struct arch_timer_kvm	timer;
-
 	/* Mandated version of PSCI */
 	u32 psci_version;
 };

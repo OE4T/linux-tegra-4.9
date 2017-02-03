@@ -990,6 +990,7 @@ struct gk20a {
 
 	struct gpu_ops ops;
 
+	int irqs_enabled;
 	int irq_stall; /* can be same as irq_nonstall in case of PCI */
 	int irq_nonstall;
 	u32 max_ltc_count;

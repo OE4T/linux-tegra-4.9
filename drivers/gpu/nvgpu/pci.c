@@ -439,7 +439,9 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 	gk20a_dbg(gpu_dbg_shutdown, "Removing nvgpu driver!\n");
 	gk20a_driver_start_unload(g);
 
-	disable_irq(g->irq_stall);
+	if (g->irqs_enabled)
+		disable_irq(g->irq_stall);
+
 	devm_free_irq(&pdev->dev, g->irq_stall, g);
 
 #if defined(CONFIG_PCI_MSI)

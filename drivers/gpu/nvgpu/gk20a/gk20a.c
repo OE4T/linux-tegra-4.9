@@ -1098,6 +1098,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	enable_irq(g->irq_stall);
 	if (g->irq_stall != g->irq_nonstall)
 		enable_irq(g->irq_nonstall);
+	g->irqs_enabled = 1;
 
 	if (g->ops.xve.available_speeds) {
 		u32 speed;

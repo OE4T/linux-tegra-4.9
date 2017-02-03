@@ -40,7 +40,7 @@ void kvm_timer_vcpu_put(struct kvm_vcpu *vcpu)
 	vcpu_vtimer(vcpu)->active_cleared_last = false;
 }
 
-static cycle_t kvm_phys_timer_read(void)
+cycle_t kvm_phys_timer_read(void)
 {
 	return timecounter->cc->read(timecounter->cc);
 }

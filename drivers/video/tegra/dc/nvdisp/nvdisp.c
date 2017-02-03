@@ -3331,16 +3331,17 @@ void tegra_dc_reset_imp_state(void)
 	list_add_tail(&default_dc_settings->imp_node,
 						&nvdisp_imp_settings_queue);
 
-	tegra_nvdisp_setup_default_imp_win_state(default_ext_settings);
-
 	/* Follow the same basic flow as an actual IMP flip. */
 	if (tegra_nvdisp_negotiate_reserved_bw(master_dc,
 					max_bw_cfg.iso_bw,
 					max_bw_cfg.total_bw,
 					max_bw_cfg.emc_la_floor,
-					max_bw_cfg.hubclk))
+					max_bw_cfg.hubclk)) {
+		list_del(&default_dc_settings->imp_node);
 		goto reset_imp_ret;
+	}
 
+	tegra_nvdisp_setup_default_imp_win_state(default_ext_settings);
 	tegra_dc_adjust_imp(master_dc, true);
 	tegra_nvdisp_program_imp_results(master_dc);
 
@@ -3351,7 +3352,6 @@ void tegra_dc_reset_imp_state(void)
 			"timeout waiting for master dc state to promote\n");
 
 	tegra_dc_adjust_imp(master_dc, false);
-
 	tegra_nvdisp_cleanup_default_imp_win_state();
 
 	/*

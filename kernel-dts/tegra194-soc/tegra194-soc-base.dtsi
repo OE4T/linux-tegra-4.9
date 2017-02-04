@@ -74,14 +74,14 @@
 
 	bpmp_clks: clock@0 {
 		compatible = "nvidia,tegra-fake-clks";
-		reg = <0x0>;
+		reg = <0x0 0x0 0x0 0x0>;
 		#clock-cells = <1>;
 		status = "okay";
 	};
 
 	bpmp_resets: bpmp_reset@0 {
 		compatible = "nvidia,bpmp-resets";
-		reg = <0x0>;
+		reg = <0x0 0x0 0x0 0x0>;
 		#reset-cells = <1>;
 	};
 

@@ -1,4 +1,3 @@
-
 subdir-ccflags-y += -Werror
 
 obj-$(CONFIG_POWER_AVS)		+= avs/

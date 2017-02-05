@@ -3,6 +3,7 @@
 #
 
 ccflags-$(CONFIG_SPI_DEBUG) := -DDEBUG
+subdir-ccflags-y += -Werror
 
 # small core, mostly translating board-specific
 # config declarations into driver model code

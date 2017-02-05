@@ -75,7 +75,7 @@ static void therm_fan_est_work_func(struct work_struct *work)
 	int i, j, group, index, trip_index;
 	int sum[MAX_SUBDEVICE_GROUP] = {0, };
 	int sum_max = 0;
-	long temp = 0;
+	int temp = 0;
 	struct delayed_work *dwork = container_of(work,
 					struct delayed_work, work);
 	struct therm_fan_estimator *est = container_of(
@@ -384,7 +384,7 @@ static int fan_est_match(struct thermal_zone_device *thz, void *data)
 	return (strcmp((char *)data, thz->type) == 0);
 }
 
-static int fan_est_get_temp_func(const char *data, long *temp)
+static int fan_est_get_temp_func(const char *data, int *temp)
 {
 	struct thermal_zone_device *thz;
 
@@ -400,7 +400,7 @@ static int fan_est_get_temp_func(const char *data, long *temp)
 static int therm_fan_est_probe(struct platform_device *pdev)
 {
 	int i, j;
-	long temp;
+	int temp;
 	int err = 0;
 	int of_err = 0;
 	struct therm_fan_estimator *est_data;
@@ -574,7 +574,7 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 		}
 		for (j = 0; j < HIST_LEN; j++)
 			dev->hist[j] = temp;
-		pr_debug("THERMAL EST init dev[%d] temp hist to %ld\n",
+		pr_debug("THERMAL EST init dev[%d] temp hist to %d\n",
 			i, temp);
 	}
 

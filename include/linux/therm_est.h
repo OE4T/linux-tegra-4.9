@@ -98,7 +98,7 @@ struct therm_est_data {
 
 struct therm_fan_est_subdevice {
 	const char *dev_data;
-	int (*get_temp)(const char *, long *);
+	int (*get_temp)(const char *, int *);
 	int group;
 	/*
 	 * as we read coeffs array from the device tree,

@@ -79,10 +79,10 @@
 	};
 
 	gpio@2200000 {
-		camera-control-output-low {
+		camera-control-output-high {
 			gpio-hog;
 			gpios = <CAM1_RST_L 0>;
-			output-low;
+			output-high;
 			label = "cam1-rst";
 		};
 	};

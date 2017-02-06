@@ -126,8 +126,6 @@ int tegra_powergate_remove_clamping(unsigned int id);
 int tegra_powergate_sequence_power_up(unsigned int id, struct clk *clk,
 				      struct reset_control *rst);
 
-int tegra_io_rail_power_on(unsigned int id);
-int tegra_io_rail_power_off(unsigned int id);
 #else
 static inline int tegra_powergate_is_powered(unsigned int id)
 {
@@ -156,16 +154,6 @@ static inline int tegra_powergate_sequence_power_up(unsigned int id,
 	return -ENOSYS;
 }
 
-static inline int tegra_io_rail_power_on(unsigned int id)
-{
-	return -ENOSYS;
-}
-
-static inline int tegra_io_rail_power_off(unsigned int id)
-{
-	return -ENOSYS;
-}
-
 #endif /* CONFIG_ARCH_TEGRA || CONFIG_PLATFORM_TEGRA */
 #endif /* CONFIG_TEGRA_POWERGATE */
 
@@ -179,17 +167,15 @@ void tegra_pmc_iopower_enable(int reg, u32 bit_mask);
 void tegra_pmc_iopower_disable(int reg, u32 bit_mask);
 int tegra_pmc_iopower_get_status(int reg, u32 bit_mask);
 
-void tegra_pmc_pwr_detect_update(unsigned long mask, unsigned long val);
-unsigned long tegra_pmc_pwr_detect_get(unsigned long mask);
-
 void tegra_pmc_io_dpd_clear(void);
-int tegra_pmc_io_dpd_enable(int reg, int bit_pos);
-int tegra_pmc_io_dpd_disable(int reg, int bit_pos);
-int tegra_pmc_io_dpd_get_status(int reg, int bit_pos);
 
 #if defined(CONFIG_ARCH_TEGRA)
 int tegra_pmc_io_pad_low_power_enable(const char *pad_name);
 int tegra_pmc_io_pad_low_power_disable(const char *pad_name);
+int tegra_io_rail_power_on(int id);
+int tegra_io_rail_power_off(int id);
+int tegra_pmc_io_pad_set_voltage(const char *pad_name, unsigned int pad_uv);
+int tegra_pmc_io_pad_get_voltage(const char *pad_name);
 #else
 static inline int tegra_pmc_io_pad_low_power_enable(const char *pad_name)
 {
@@ -199,6 +185,27 @@ static inline int tegra_pmc_io_pad_low_power_enable(const char *pad_name)
 static inline int tegra_pmc_io_pad_low_power_disable(const char *pad_name)
 {
 	return 0;
+}
+
+static inline int tegra_io_rail_power_on(int id)
+{
+	return -ENOSYS;
+}
+
+static inline int tegra_io_rail_power_off(int id)
+{
+	return -ENOSYS;
+}
+
+static inline int tegra_pmc_io_pad_set_voltage(const char *pad_name,
+					       unsigned int pad_uv)
+{
+	return -ENOSYS;
+}
+
+static inline int tegra_pmc_io_pad_get_voltage(const char *pad_name)
+{
+	return -ENOSYS;
 }
 #endif
 
@@ -289,17 +296,22 @@ void tegra_pmc_lock_thermal_shutdown(void);
 int tegra210_pmc_padctrl_init(struct device *dev, struct device_node *np);
 int tegra186_pmc_padctrl_init(struct device *dev, struct device_node *np);
 
+#ifdef CONFIG_PADCTRL_TEGRA186_PMC
 static inline int tegra_pmc_padctrl_init(struct device *dev,
 					 struct device_node *np)
 {
-#ifdef CONFIG_PADCTRL_TEGRA210_PMC
-	return tegra210_pmc_padctrl_init(dev, np);
-#endif
-#ifdef CONFIG_PADCTRL_TEGRA186_PMC
 	return tegra186_pmc_padctrl_init(dev, np);
+}
 #endif
+
+#if defined(CONFIG_ARCH_TEGRA)
+int tegra_io_pads_padctrl_init(struct device *dev);
+#else
+int tegra_io_pads_padctrl_init(struct device *dev)
+{
 	return 0;
 }
+#endif
 
 void tegra186_pmc_register_update(int offset, unsigned long mask,
 				  unsigned long val);
@@ -323,25 +335,8 @@ unsigned long tegra_pmc_nvcsi_cdef_brick_getstatus(void);
 void tegra186_pmc_disable_nvcsi_brick_dpd(void);
 void tegra186_pmc_enable_nvcsi_brick_dpd(void);
 
-#ifdef CONFIG_TEGRA186_PMC
-extern void tegra_pmc_sata_pwrgt_update(unsigned long mask,
+bool tegra_pmc_is_halt_in_fiq(void);
+void tegra_pmc_sata_pwrgt_update(unsigned long mask,
 		unsigned long val);
-extern unsigned long tegra_pmc_sata_pwrgt_get(void);
-extern bool tegra_pmc_is_halt_in_fiq(void);
-#else
-static inline void tegra_pmc_sata_pwrgt_update(unsigned long mask,
-		unsigned long val)
-{
-}
-
-static inline unsigned long tegra_pmc_sata_pwrgt_get(void)
-{
-	return -EINVAL;
-}
-
-static inline bool tegra_pmc_is_halt_in_fiq(void)
-{
-	return false;
-}
-#endif
+unsigned long tegra_pmc_sata_pwrgt_get(void);
 #endif /* __SOC_TEGRA_PMC_H__ */

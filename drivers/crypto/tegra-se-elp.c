@@ -38,7 +38,14 @@
 #include <linux/fips.h>
 #include <crypto/ecdh.h>
 
+#include <crypto/internal/akcipher.h>
+#include <crypto/akcipher.h>
+#include <crypto/ecdsa.h>
+
 #include "tegra-se-elp.h"
+
+#include "../../crypto/ecc.h"
+#include "../../crypto/ecc_curve_defs.h"
 
 #define DRIVER_NAME	"tegra-se-elp"
 
@@ -55,6 +62,8 @@
 #define ECC_MAX_WORDS	20
 #define WORD_SIZE_BYTES	4
 #define MAX_PKA1_SIZE	TEGRA_SE_PKA1_RSA4096_INPUT_SIZE
+
+#define ECDSA_USE_SHAMIRS_TRICK		1
 
 enum tegra_se_pka_mod_type {
 	MOD_MULT,
@@ -2608,6 +2617,343 @@ static struct akcipher_alg pka1_rsa_algs[] = {
 	},
 };
 
+struct tegra_se_ecdsa_ctx {
+	struct tegra_se_elp_dev *se_dev;
+	unsigned int curve_id;
+	unsigned int ndigits;
+	u64 private_key[ECC_MAX_DIGITS];
+	u64 public_key[2 * ECC_MAX_DIGITS];
+};
+
+static unsigned int tegra_se_ecdsa_supported_curve(unsigned int curve_id)
+{
+	switch (curve_id) {
+	case ECC_CURVE_NIST_P192: return 3;
+	case ECC_CURVE_NIST_P256: return 4;
+	default: return 0;
+	}
+}
+
+static struct tegra_se_ecdsa_ctx *
+tegra_se_ecdsa_get_ctx(struct crypto_akcipher *tfm)
+{
+	return akcipher_tfm_ctx(tfm);
+}
+
+int tegra_se_ecdsa_sign(struct akcipher_request *req)
+{
+	struct crypto_akcipher *tfm = crypto_akcipher_reqtfm(req);
+	struct tegra_se_ecdsa_ctx *ctx = tegra_se_ecdsa_get_ctx(tfm);
+	struct tegra_se_ecc_point *x1y1 = NULL;
+	const struct tegra_se_ecc_curve *curve =
+		tegra_se_ecc_get_curve(ctx->curve_id);
+	int nbytes = curve->nbytes;
+	int nwords = nbytes / WORD_SIZE_BYTES;
+	unsigned int ndigits = nwords / 2;
+	u64 z[ndigits], d[ndigits];
+	u64 k[ndigits], k_inv[ndigits];
+	u64 r[ndigits], s[ndigits];
+	u64 dr[ndigits], zdr[ndigits];
+	u8 *r_ptr, *s_ptr;
+	int ret = -ENOMEM;
+	int mod_op_mode;
+
+	if (req->dst_len < 2 * nbytes) {
+		req->dst_len = 2 * nbytes;
+		return -EINVAL;
+	}
+
+	if (!curve)
+		return -EINVAL;
+
+	mod_op_mode = tegra_se_mod_op_mode(nbytes);
+	if (mod_op_mode < 0)
+		return mod_op_mode;
+
+	ecdsa_parse_msg_hash(req, z, ndigits);
+
+	/* d */
+	vli_set(d, (const u64 *)ctx->private_key, ndigits);
+
+	/* k */
+	ret = ecdsa_get_rnd_bytes((u8 *)k, nbytes);
+	if (ret)
+		return ret;
+
+#if defined(CONFIG_CRYPTO_MANAGER2)
+	if (req->info)
+		vli_copy_from_buf(k, ndigits, req->info, nbytes);
+#endif
+
+	x1y1 = tegra_se_ecc_alloc_point(elp_dev, nwords);
+	if (!x1y1)
+		return -ENOMEM;
+
+	/* (x1, y1) = k x G */
+	ret = tegra_se_ecc_point_mult(x1y1, &curve->g, k, curve, nbytes);
+	if (ret)
+		goto exit;
+
+	/* r = x1 mod n */
+	ret = tegra_se_mod_reduce(mod_op_mode, r, x1y1->x, curve->n, nbytes);
+	if (ret)
+		goto exit;
+
+	/* k^-1 */
+	ret = tegra_se_mod_inv(mod_op_mode, k_inv, k, curve->n, nbytes);
+	if (ret)
+		goto exit;
+
+	/* d . r mod n */
+	ret = tegra_se_mod_mult(mod_op_mode, dr, d, r, curve->n, nbytes);
+	if (ret)
+		goto exit;
+
+	/* z + dr mod n */
+	ret = tegra_se_mod_add(mod_op_mode, zdr, z, dr, curve->n, nbytes);
+	if (ret)
+		goto exit;
+
+	/* k^-1 . ( z + dr) mod n */
+	ret = tegra_se_mod_mult(mod_op_mode, s, k_inv, zdr, curve->n, nbytes);
+	if (ret)
+		goto exit;
+
+	/* write signature (r,s) in dst */
+	r_ptr = sg_virt(req->dst);
+	s_ptr = (u8 *)sg_virt(req->dst) + nbytes;
+
+	vli_copy_to_buf(r_ptr, nbytes, r, ndigits);
+	vli_copy_to_buf(s_ptr, nbytes, s, ndigits);
+
+	req->dst_len = 2 * nbytes;
+ exit:
+	tegra_se_ecc_free_point(elp_dev, x1y1);
+	return ret;
+}
+
+
+int tegra_se_ecdsa_verify(struct akcipher_request *req)
+{
+	struct crypto_akcipher *tfm = crypto_akcipher_reqtfm(req);
+	struct tegra_se_ecdsa_ctx *ctx = tegra_se_ecdsa_get_ctx(tfm);
+	struct tegra_se_ecc_point *x1y1 = NULL, *x2y2 = NULL, *Q = NULL;
+	const struct tegra_se_ecc_curve *curve =
+		tegra_se_ecc_get_curve(ctx->curve_id);
+	int nbytes = curve->nbytes;
+	int nwords = nbytes / WORD_SIZE_BYTES;
+	unsigned int ndigits = nwords / 2;
+	u64 *ctx_qx, *ctx_qy;
+	u64 r[ndigits], s[ndigits], v[ndigits];
+	u64 z[ndigits], w[ndigits];
+	u64 u1[ndigits], u2[ndigits];
+	int mod_op_mode;
+	int ret = -ENOMEM;
+
+	if (!curve)
+		return -EINVAL;
+
+	mod_op_mode = tegra_se_mod_op_mode(nbytes);
+	if (mod_op_mode < 0)
+		return mod_op_mode;
+
+	x1y1 = tegra_se_ecc_alloc_point(elp_dev, nwords);
+	x2y2 = tegra_se_ecc_alloc_point(elp_dev, nwords);
+	Q = tegra_se_ecc_alloc_point(elp_dev, nwords);
+	if (!x1y1 || !x2y2 || !Q) {
+		ret = -ENOMEM;
+		goto exit;
+	}
+
+	ecdsa_parse_msg_hash(req, z, ndigits);
+
+	/* Signature r,s */
+	vli_copy_from_buf(r, ndigits, sg_virt(&req->src[1]), nbytes);
+	vli_copy_from_buf(s, ndigits, sg_virt(&req->src[2]), nbytes);
+
+	/* w = s^-1 mod n */
+	ret = tegra_se_mod_inv(mod_op_mode, w, s, curve->n, nbytes);
+	if (ret)
+		goto exit;
+
+	/* u1 = zw mod n */
+	ret = tegra_se_mod_mult(mod_op_mode, u1, z, w, curve->n, nbytes);
+	if (ret)
+		goto exit;
+
+	/* u2 = rw mod n */
+	ret = tegra_se_mod_mult(mod_op_mode, u2, r, w, curve->n, nbytes);
+	if (ret)
+		goto exit;
+
+#if defined(ECDSA_USE_SHAMIRS_TRICK)
+	/* Q=(Qx,Qy) */
+	ctx_qx = ctx->public_key;
+	ctx_qy = ctx_qx + ECC_MAX_DIGITS;
+	vli_set(Q->x, ctx_qx, ndigits);
+	vli_set(Q->y, ctx_qy, ndigits);
+
+	/* u1.G + u2.Q => P + Q in Q */
+	ret = tegra_se_ecc_shamir_trick(u1, &curve->g, u2, Q, curve, nbytes);
+	if (ret)
+		goto exit;
+
+	/* v = x mod n */
+	ret = tegra_se_mod_reduce(mod_op_mode, v, Q->x, curve->n, nbytes);
+	if (ret)
+		goto exit;
+#else
+	/* u1 . G */
+	ret = tegra_se_ecc_point_mult(x1y1, &curve->g, u1, curve, nbytes);
+	if (ret)
+		goto exit;
+
+	/* Q=(Qx,Qy) */
+	ctx_qx = ctx->public_key;
+	ctx_qy = ctx_qx + ECC_MAX_DIGITS;
+	vli_set(Q->x, ctx_qx, ndigits);
+	vli_set(Q->y, ctx_qy, ndigits);
+
+	/* u2 x Q */
+	ret = tegra_se_ecc_point_mult(x2y2, Q, u2, curve, nbytes);
+	if (ret)
+		goto exit;
+
+	/* x1y1 + x2y2 => P + Q; P + Q in x2 y2 */
+	ret = tegra_se_ecc_point_add(x1y1, x2y2, curve, nbytes);
+	if (ret)
+		goto exit;
+
+	/* v = x mod n */
+	ret = tegra_se_mod_reduce(mod_op_mode, v, x2y2->x, curve->n, nbytes);
+	if (ret)
+		goto exit;
+#endif
+	/* validate signature */
+	ret = vli_cmp(v, r, ndigits) == 0 ? 0 : -EBADMSG;
+ exit:
+	tegra_se_ecc_free_point(elp_dev, x1y1);
+	tegra_se_ecc_free_point(elp_dev, x2y2);
+	tegra_se_ecc_free_point(elp_dev, Q);
+	return ret;
+}
+
+int tegra_se_ecdsa_dummy_enc(struct akcipher_request *req)
+{
+	return -EINVAL;
+}
+
+int tegra_se_ecdsa_dummy_dec(struct akcipher_request *req)
+{
+	return -EINVAL;
+}
+
+int tegra_se_ecdsa_set_pub_key(struct crypto_akcipher *tfm, const void *key,
+		      unsigned int keylen)
+{
+	struct tegra_se_ecdsa_ctx *ctx = tegra_se_ecdsa_get_ctx(tfm);
+	struct ecdsa params;
+	unsigned int ndigits;
+	unsigned int nbytes;
+	u8 *params_qx, *params_qy;
+	u64 *ctx_qx, *ctx_qy;
+	int err = 0;
+
+	if (crypto_ecdsa_parse_pub_key(key, keylen, &params))
+		return -EINVAL;
+
+	ndigits = tegra_se_ecdsa_supported_curve(params.curve_id);
+	if (!ndigits)
+		return -EINVAL;
+
+	err = ecc_is_pub_key_valid(params.curve_id, ndigits,
+				   params.key, params.key_size);
+	if (err)
+		return err;
+
+	ctx->curve_id = params.curve_id;
+	ctx->ndigits = ndigits;
+	nbytes = ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
+
+	params_qx = params.key;
+	params_qy = params_qx + ECC_MAX_DIGIT_BYTES;
+
+	ctx_qx = ctx->public_key;
+	ctx_qy = ctx_qx + ECC_MAX_DIGITS;
+
+	vli_copy_from_buf(ctx_qx, ndigits, params_qx, nbytes);
+	vli_copy_from_buf(ctx_qy, ndigits, params_qy, nbytes);
+
+	memset(&params, 0, sizeof(params));
+	return 0;
+}
+
+int tegra_se_ecdsa_set_priv_key(struct crypto_akcipher *tfm, const void *key,
+		       unsigned int keylen)
+{
+	struct tegra_se_ecdsa_ctx *ctx = tegra_se_ecdsa_get_ctx(tfm);
+	struct ecdsa params;
+	unsigned int ndigits;
+	unsigned int nbytes;
+
+	if (crypto_ecdsa_parse_priv_key(key, keylen, &params))
+		return -EINVAL;
+
+	ndigits = tegra_se_ecdsa_supported_curve(params.curve_id);
+	if (!ndigits)
+		return -EINVAL;
+
+	ctx->curve_id = params.curve_id;
+	ctx->ndigits = ndigits;
+	nbytes = ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
+
+	if (ecc_is_key_valid(ctx->curve_id, ctx->ndigits,
+			     (const u8 *)params.key, params.key_size) < 0)
+		return -EINVAL;
+
+	vli_copy_from_buf(ctx->private_key, ndigits, params.key, nbytes);
+
+	memset(&params, 0, sizeof(params));
+	return 0;
+}
+
+int tegra_se_ecdsa_max_size(struct crypto_akcipher *tfm)
+{
+	struct tegra_se_ecdsa_ctx *ctx = tegra_se_ecdsa_get_ctx(tfm);
+	int nbytes = ctx->ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
+
+	/* For r,s */
+	return 2 * nbytes;
+}
+
+int tegra_se_ecdsa_init_tfm(struct crypto_akcipher *tfm)
+{
+	return 0;
+}
+
+void tegra_se_ecdsa_exit_tfm(struct crypto_akcipher *tfm)
+{
+}
+
+static struct akcipher_alg ecdsa_alg = {
+	.sign		= tegra_se_ecdsa_sign,
+	.verify		= tegra_se_ecdsa_verify,
+	.encrypt	= tegra_se_ecdsa_dummy_enc,
+	.decrypt	= tegra_se_ecdsa_dummy_dec,
+	.set_priv_key	= tegra_se_ecdsa_set_priv_key,
+	.set_pub_key	= tegra_se_ecdsa_set_pub_key,
+	.max_size	= tegra_se_ecdsa_max_size,
+	.init		= tegra_se_ecdsa_init_tfm,
+	.exit		= tegra_se_ecdsa_exit_tfm,
+	.base = {
+		.cra_name	= "ecdsa",
+		.cra_driver_name = "ecdsa-tegra",
+		.cra_priority	= 300,
+		.cra_module	= THIS_MODULE,
+		.cra_ctxsize	= sizeof(struct tegra_se_ecdsa_ctx),
+	},
+};
+
 static struct tegra_se_elp_chipdata tegra18_se_chipdata = {
 	.use_key_slot = false,
 	.rng1_supported = true,
@@ -2720,10 +3066,19 @@ static int tegra_se_elp_probe(struct platform_device *pdev)
 		goto prop_fail;
 	}
 
+	err = crypto_register_akcipher(&ecdsa_alg);
+	if (err) {
+		dev_err(se_dev->dev,
+			"crypto_register_alg ecdsa failed\n");
+		goto ecdsa_fail;
+	}
+
 	clk_disable_unprepare(se_dev->c);
 	dev_info(se_dev->dev, "%s: complete", __func__);
 	return 0;
 
+ecdsa_fail:
+	crypto_unregister_akcipher(&pka1_rsa_algs[0]);
 prop_fail:
 	crypto_unregister_kpp(&ecdh_algs[0]);
 clk_dis:

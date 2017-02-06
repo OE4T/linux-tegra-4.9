@@ -1929,6 +1929,24 @@
 					status = "okay";
 				};
 			};
+			/* GPIO */
+			override@15 {
+				target = <&{/gpio@2200000}>;
+				_overlay_ {
+					camera-control-input {
+						status = "disabled";
+					};
+					camera-control-output-low {
+						status = "disabled";
+					};
+					camera-control-output-high {
+						gpio-hog;
+						gpios = <CAM0_RST_L 0>;
+						label = "cam0-rst";
+						output-high;
+					};
+				};
+			};
 
 		};
 	};

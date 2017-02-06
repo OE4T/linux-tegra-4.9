@@ -21,7 +21,6 @@
 #include "boardobj.h"
 #include "boardobjgrpmask.h"
 #include "boardobj/boardobjgrp.h"
-#include "boardobjgrp_e255.h"
 
 /*
  * boardobjgrp_e255 is @ref BOARDOBJGRP child class allowing storage of up

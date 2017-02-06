@@ -414,7 +414,7 @@ struct tegra_hdmi {
 	atomic_t suspended;
 	struct delayed_work hdr_worker;
 	struct tegra_hdmi_out_ops *out_ops;
-	void	*out_data;	/* HDMI to GMSL bridge, etc. */
+	void *out_data;	/* HDMI to GMSL bridge, HDMI to DSI bridge, etc. */
 };
 
 struct tegra_hdmi_out_ops {
@@ -472,7 +472,6 @@ u32 tegra_hdmi_get_cea_modedb_size(struct tegra_hdmi *hdmi);
 int tegra_hdmi_get_hotplug_state(struct tegra_hdmi *hdmi);
 void tegra_hdmi_set_hotplug_state(struct tegra_hdmi *hdmi, int new_hpd_state);
 
-#ifdef CONFIG_TEGRA_HDMI2GMSL_MAX929x
 static inline void *tegra_hdmi_get_outdata(struct tegra_hdmi *hdmi)
 {
 	return hdmi->out_data;
@@ -483,4 +482,4 @@ static inline void tegra_hdmi_set_outdata(struct tegra_hdmi *hdmi,
 {
 	hdmi->out_data = data;
 }
-#endif	/* CONFIG_TEGRA_HDMI2GMSL_MAX929x */
+

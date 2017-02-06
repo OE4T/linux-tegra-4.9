@@ -50,6 +50,7 @@
 
 #include "hdmi2fpd_ds90uh949.h"
 #include "max929x_hdmi2gmsl.h"
+#include "hdmi2dsi_tc358870.h"
 
 static struct tmds_prod_pair tmds_config_modes[] = {
 	{ /* 54 MHz */
@@ -1374,6 +1375,12 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	}
 #endif	/* CONFIG_TEGRA_HDMI2GMSL_MAX929x */
 
+	if (hdmi->pdata->hdmi2dsi_bridge_enable) {
+		hdmi->out_ops = &tegra_hdmi2dsi_ops;
+		if (hdmi->out_ops && hdmi->out_ops->init)
+			hdmi->out_ops->init(hdmi);
+	}
+
 	/* NOTE: Below code is applicable to L4T or embedded systems and is
 	 * protected accordingly. This section early enables DC with first mode
 	 * from the monitor specs.
@@ -2364,8 +2371,10 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 
 	if (hdmi->enabled)
 		return;
+
 	if (NULL != hdmi->out_ops && NULL != hdmi->out_ops->enable)
 		hdmi->out_ops->enable(hdmi);
+
 	tegra_hdmi_controller_enable(hdmi);
 
 	hdmi->enabled = true;
@@ -2726,6 +2735,9 @@ static void tegra_dc_hdmi_suspend(struct tegra_dc *dc)
 	if (hdmi->pdata->hdmi2fpd_bridge_enable)
 		hdmi2fpd_suspend(dc);
 
+	if (hdmi->out_ops && hdmi->out_ops->suspend)
+		hdmi->out_ops->suspend(hdmi);
+
 	if (dc->out->flags & TEGRA_DC_OUT_HOTPLUG_WAKE_LP0) {
 		int wake_irq = gpio_to_irq(dc->out->hotplug_gpio);
 		int ret;
@@ -2752,6 +2764,9 @@ static void tegra_dc_hdmi_resume(struct tegra_dc *dc)
 
 	if (hdmi->pdata->hdmi2fpd_bridge_enable)
 		hdmi2fpd_resume(dc);
+
+	if (hdmi->out_ops && hdmi->out_ops->resume)
+		hdmi->out_ops->resume(hdmi);
 
 	if (tegra_platform_is_sim() &&
 		(dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL))

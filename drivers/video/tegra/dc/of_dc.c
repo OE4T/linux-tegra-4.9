@@ -2607,6 +2607,14 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 			OF_DC_LOG("hdmi2gmsl_bridge_enabled %d\n",
 				def_out->hdmi_out->hdmi2gmsl_bridge_enable);
 		}
+		if (!of_property_read_u32(np_target_disp,
+				"nvidia,hdmi-dsi-bridge", &temp)) {
+			pdata->default_out->hdmi_out->
+				hdmi2dsi_bridge_enable = (bool)temp;
+			OF_DC_LOG("hdmi2dsi_bridge_enabled %d\n",
+				pdata->default_out->hdmi_out->
+					hdmi2dsi_bridge_enable);
+		}
 		/* fixed panel ops is dominant. If fixed panel ops
 		 * is not defined, we set default hdmi panel ops */
 		if (!def_out->enable && !def_out->disable) {

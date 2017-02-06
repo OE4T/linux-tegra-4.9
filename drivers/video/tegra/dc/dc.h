@@ -1213,6 +1213,7 @@ bool tegra_dc_is_ext_dp_panel(const struct tegra_dc *dc);
 struct tegra_hdmi_out {
 	bool hdmi2fpd_bridge_enable;
 	bool hdmi2gmsl_bridge_enable;
+	bool hdmi2dsi_bridge_enable;
 };
 
 enum {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -44,7 +44,13 @@
 /* 4 instructions to skip upon undef exception */
 #define CREGS_NR_JUMP_OFFSET 16
 
-#ifdef CONFIG_DEBUG_FS
+enum creg_command {
+	CREG_INDEX = 1,
+	CREG_READ,
+	CREG_WRITE,
+	TRACER_CONTROL
+};
+
 struct denver_creg {
 	unsigned long offset;
 	const char *name;
@@ -99,32 +105,6 @@ static struct denver_creg denver_cregs[] = {
 	{0x0000004e, "mm.dmtrr_mask6"},
 	{0x0000004f, "mm.dmtrr_mask7"}
 };
-
-#define NR_CREGS (sizeof(denver_cregs) / sizeof(struct denver_creg))
-
-enum creg_command {
-	CREG_INDEX = 1,
-	CREG_READ,
-	CREG_WRITE,
-	TRACER_CONTROL
-};
-
-enum tc_input {
-	TC_CLEAR = 0,
-	TC_START,
-	TC_STOP
-};
-
-static const char * const pmic_names[] = {
-	[UNDEFINED] = "none",
-	[AMS_372x] = "AMS 3722/3720",
-	[TI_TPS_65913_22] = "TI TPS65913 2.2",
-	[OPEN_VR] = "Open VR",
-	[TI_TPS_65913_23] = "TI TPS65913 2.3",
-};
-
-static DEFINE_SPINLOCK(nvg_lock);
-#endif
 
 int smp_call_function_denver(smp_call_func_t func, void *info, int wait)
 {
@@ -190,7 +170,29 @@ void denver_set_bg_allowed(int cpu, bool enable)
 				 (void *) enable, 1);
 }
 
+struct creg_param {
+	u64 offset;
+	u64 val;
+};
+
 #ifdef CONFIG_DEBUG_FS
+#define NR_CREGS (sizeof(denver_cregs) / sizeof(struct denver_creg))
+
+enum tc_input {
+	TC_CLEAR = 0,
+	TC_START,
+	TC_STOP
+};
+
+static const char * const pmic_names[] = {
+	[UNDEFINED] = "none",
+	[AMS_372x] = "AMS 3722/3720",
+	[TI_TPS_65913_22] = "TI TPS65913 2.2",
+	[OPEN_VR] = "Open VR",
+	[TI_TPS_65913_23] = "TI TPS65913 2.3",
+};
+
+static DEFINE_SPINLOCK(nvg_lock);
 
 static struct dentry *denver_debugfs_root;
 
@@ -238,27 +240,10 @@ static int __init create_denver_bgallowed(void)
 
 static struct dentry *denver_creg_root;
 
-struct creg_param {
-	u64 offset;
-	u64 val;
-};
-
 struct tc_param {
 	enum tc_input in;
 	u64 val;
 };
-
-static void _denver_creg_get(struct creg_param *param)
-{
-	asm volatile (
-	"	sys 0, c11, c0, 1, %1\n"
-	"	sys 0, c11, c0, 0, %2\n"
-	"	sys 0, c11, c0, 0, %3\n"
-	"	sysl %0, 0, c11, c0, 0\n"
-	: "=r" (param->val)
-	: "r" (param->offset), "r" (CREG_INDEX), "r" (CREG_READ)
-	);
-}
 
 static void _denver_tracer_control(struct tc_param *param)
 {
@@ -299,6 +284,19 @@ static void _denver_creg_set(struct creg_param *param)
 	  "r" (param->val), "r" (CREG_WRITE)
 	);
 }
+#endif
+
+static void _denver_creg_get(struct creg_param *param)
+{
+	asm volatile (
+	"	sys 0, c11, c0, 1, %1\n"
+	"	sys 0, c11, c0, 0, %2\n"
+	"	sys 0, c11, c0, 0, %3\n"
+	"	sysl %0, 0, c11, c0, 0\n"
+	: "=r" (param->val)
+	: "r" (param->offset), "r" (CREG_INDEX), "r" (CREG_READ)
+	);
+}
 
 static int denver_creg_get(void *data, u64 *val)
 {
@@ -313,6 +311,7 @@ static int denver_creg_get(void *data, u64 *val)
 	return ret;
 }
 
+#ifdef CONFIG_DEBUG_FS
 static int denver_creg_set(void *data, u64 val)
 {
 	struct creg_param param;
@@ -675,6 +674,7 @@ done:
 	return err;
 }
 arch_initcall(denver_pmic_init);
+#endif
 
 static bool backdoor_enabled;
 
@@ -776,18 +776,23 @@ static const struct file_operations mts_version_fops = {
 
 static int __init denver_knobs_init(void)
 {
+#ifdef CONFIG_DEBUG_FS
 	int error;
+#endif
 
 	if (tegra_cpu_is_asim())
 		return 0;
 
+#ifdef CONFIG_DEBUG_FS
 	denver_debugfs_root = debugfs_create_dir("tegra_denver", NULL);
+#endif
 
 	check_backdoor();
 
 	/* BGALLOWED/NVMSTATS don't go through the SYS backdoor
 	 *  interface such that we can always enable them.
 	 */
+#ifdef CONFIG_DEBUG_FS
 	error = create_denver_bgallowed();
 	if (error)
 		return error;
@@ -804,6 +809,7 @@ static int __init denver_knobs_init(void)
 		if (error)
 			return error;
 	}
+#endif
 
 	/* Cancel the notifier as mts_version should be set now. */
 	unregister_cpu_notifier(&mts_version_cpu_nb);
@@ -817,4 +823,3 @@ static int __init denver_knobs_init(void)
 }
 device_initcall(denver_knobs_init);
 
-#endif

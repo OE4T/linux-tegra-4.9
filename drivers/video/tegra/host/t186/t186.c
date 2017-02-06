@@ -310,6 +310,7 @@ struct nvhost_device_data t18_nvdec_info = {
 	.transcfg_val		= 0x20,
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVDEC,
 	.isolate_contexts	= true,
+	.mlock_timeout_factor	= 3,
 };
 #endif
 
@@ -377,6 +378,7 @@ struct nvhost_device_data t18_tsec_info = {
 	.transcfg_addr		= 0x1644,
 	.transcfg_val		= 0x20,
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_TSEC,
+	.mlock_timeout_factor	= 3,
 };
 
 struct nvhost_device_data t18_tsecb_info = {
@@ -407,6 +409,7 @@ struct nvhost_device_data t18_tsecb_info = {
 	.transcfg_addr		= 0x1644,
 	.transcfg_val		= 0x20,
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_TSECB,
+	.mlock_timeout_factor	= 3,
 };
 #endif
 
@@ -449,6 +452,7 @@ struct nvhost_device_data t18_vic_info = {
 	.freqs			= {100000000, 200000000, 300000000,
 					400000000, 500000000, 600000000},
 	.isolate_contexts	= true,
+	.mlock_timeout_factor	= 3,
 };
 #endif
 

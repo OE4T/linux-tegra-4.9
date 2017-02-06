@@ -340,7 +340,7 @@ static struct dentry *debugfs_node;
 static int __init denver_serr_init(void)
 {
 	int cpu;
-	if (tegra_get_chipid() != TEGRA_CHIPID_TEGRA18)
+	if (tegra_get_chip_id() != TEGRA186)
 		return 0;
 
 	/* Register the SError hook so that this driver is called on SError */

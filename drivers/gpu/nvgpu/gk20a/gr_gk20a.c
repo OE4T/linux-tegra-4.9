@@ -6582,6 +6582,7 @@ int gk20a_gr_isr(struct gk20a *g)
 
 int gk20a_gr_nonstall_isr(struct gk20a *g)
 {
+	int ops = 0;
 	u32 gr_intr = gk20a_readl(g, gr_intr_nonstall_r());
 
 	gk20a_dbg(gpu_dbg_intr, "pgraph nonstall intr %08x", gr_intr);
@@ -6590,11 +6591,10 @@ int gk20a_gr_nonstall_isr(struct gk20a *g)
 		/* Clear the interrupt */
 		gk20a_writel(g, gr_intr_nonstall_r(),
 			gr_intr_nonstall_trap_pending_f());
-		/* Wakeup all the waiting channels */
-		gk20a_channel_semaphore_wakeup(g, true);
+		ops |= (gk20a_nonstall_ops_wakeup_semaphore |
+			gk20a_nonstall_ops_post_events);
 	}
-
-	return 0;
+	return ops;
 }
 
 int gr_gk20a_fecs_get_reglist_img_size(struct gk20a *g, u32 *size)

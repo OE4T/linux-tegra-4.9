@@ -155,7 +155,7 @@ struct gpu_ops {
 	} ltc;
 	struct {
 		void (*isr_stall)(struct gk20a *g, u32 inst_id, u32 pri_base);
-		void (*isr_nonstall)(struct gk20a *g, u32 inst_id, u32 pri_base);
+		int (*isr_nonstall)(struct gk20a *g, u32 inst_id, u32 pri_base);
 	} ce2;
 	struct {
 		int (*init_fs_state)(struct gk20a *g);
@@ -735,7 +735,8 @@ struct gpu_ops {
 		irqreturn_t (*isr_stall)(struct gk20a *g);
 		irqreturn_t (*isr_nonstall)(struct gk20a *g);
 		irqreturn_t (*isr_thread_stall)(struct gk20a *g);
-		irqreturn_t (*isr_thread_nonstall)(struct gk20a *g);
+		void (*isr_thread_nonstall)(struct gk20a *g, u32 intr);
+		void (*isr_nonstall_cb)(struct work_struct *work);
 		u32 intr_mask_restore[4];
 	} mc;
 	struct {
@@ -847,6 +848,10 @@ struct gk20a {
 
 	atomic_t usage_count;
 	int driver_is_dying;
+
+	atomic_t nonstall_ops;
+	struct work_struct nonstall_fn_work;
+	struct workqueue_struct *nonstall_work_queue;
 
 	struct resource *reg_mem;
 	void __iomem *regs;
@@ -1149,6 +1154,12 @@ enum gk20a_dbg_categories {
 	gpu_dbg_shutdown = BIT(19), /* GPU shutdown tracing */
 	gpu_dbg_kmem    = BIT(20), /* Kmem tracking debugging */
 	gpu_dbg_mem     = BIT(31), /* memory accesses, very verbose */
+};
+
+/* operations that will need to be executed on non stall workqueue */
+enum gk20a_nonstall_ops {
+	gk20a_nonstall_ops_wakeup_semaphore = BIT(0), /* wake up semaphore */
+	gk20a_nonstall_ops_post_events = BIT(1),
 };
 
 extern u32 gk20a_dbg_mask;

@@ -21,6 +21,24 @@
 
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 
+void mc_gk20a_nonstall_cb(struct work_struct *work)
+{
+	struct gk20a *g = container_of(work, struct gk20a, nonstall_fn_work);
+	u32 ops;
+	bool semaphore_wakeup, post_events;
+
+	do {
+		ops = atomic_xchg(&g->nonstall_ops, 0);
+
+		semaphore_wakeup = ops & gk20a_nonstall_ops_wakeup_semaphore;
+		post_events = ops & gk20a_nonstall_ops_post_events;
+
+		if (semaphore_wakeup)
+			gk20a_channel_semaphore_wakeup(g, post_events);
+
+	} while (atomic_read(&g->nonstall_ops) != 0);
+}
+
 irqreturn_t mc_gk20a_isr_stall(struct gk20a *g)
 {
 	u32 mc_intr_0;
@@ -51,6 +69,7 @@ irqreturn_t mc_gk20a_isr_stall(struct gk20a *g)
 irqreturn_t mc_gk20a_isr_nonstall(struct gk20a *g)
 {
 	u32 mc_intr_1;
+	u32 hw_irq_count;
 
 	if (!g->power_on)
 		return IRQ_NONE;
@@ -66,9 +85,23 @@ irqreturn_t mc_gk20a_isr_nonstall(struct gk20a *g)
 	/* flush previous write */
 	gk20a_readl(g, mc_intr_en_1_r());
 
-	atomic_inc(&g->hw_irq_nonstall_count);
+	if (g->ops.mc.isr_thread_nonstall)
+		g->ops.mc.isr_thread_nonstall(g, mc_intr_1);
 
-	return IRQ_WAKE_THREAD;
+	hw_irq_count = atomic_inc_return(&g->hw_irq_nonstall_count);
+
+	/* sync handled irq counter before re-enabling interrupts */
+	atomic_set(&g->sw_irq_nonstall_last_handled, hw_irq_count);
+
+	gk20a_writel(g, mc_intr_en_1_r(),
+		mc_intr_en_1_inta_hardware_f());
+
+	/* flush previous write */
+	gk20a_readl(g, mc_intr_en_1_r());
+
+	wake_up_all(&g->sw_irq_nonstall_last_handled_wq);
+
+	return IRQ_HANDLED;
 }
 
 irqreturn_t mc_gk20a_intr_thread_stall(struct gk20a *g)
@@ -137,59 +170,47 @@ irqreturn_t mc_gk20a_intr_thread_stall(struct gk20a *g)
 	return IRQ_HANDLED;
 }
 
-irqreturn_t mc_gk20a_intr_thread_nonstall(struct gk20a *g)
+void mc_gk20a_intr_thread_nonstall(struct gk20a *g, u32 mc_intr_1)
 {
-	u32 mc_intr_1;
-	int hw_irq_count;
 	u32 engine_id_idx;
 	u32 active_engine_id = 0;
 	u32 engine_enum = ENGINE_INVAL_GK20A;
-
-	gk20a_dbg(gpu_dbg_intr, "interrupt thread launched");
-
-	mc_intr_1 = gk20a_readl(g, mc_intr_1_r());
-	hw_irq_count = atomic_read(&g->hw_irq_nonstall_count);
-
-	gk20a_dbg(gpu_dbg_intr, "non-stall intr %08x\n", mc_intr_1);
+	int ops_old, ops_new, ops = 0;
 
 	if (mc_intr_1 & mc_intr_0_pfifo_pending_f())
-		gk20a_fifo_nonstall_isr(g);
-	if (mc_intr_1 & mc_intr_0_priv_ring_pending_f())
-		gk20a_priv_ring_isr(g);
+		ops |= gk20a_fifo_nonstall_isr(g);
 
-	for (engine_id_idx = 0; engine_id_idx < g->fifo.num_engines; engine_id_idx++) {
+	for (engine_id_idx = 0; engine_id_idx < g->fifo.num_engines;
+							engine_id_idx++) {
 		active_engine_id = g->fifo.active_engines_list[engine_id_idx];
 
-		if (mc_intr_1 & g->fifo.engine_info[active_engine_id].intr_mask) {
+		if (mc_intr_1 &
+			g->fifo.engine_info[active_engine_id].intr_mask) {
 			engine_enum = g->fifo.engine_info[active_engine_id].engine_enum;
 			/* GR Engine */
-			if (engine_enum == ENGINE_GR_GK20A) {
-				gk20a_gr_nonstall_isr(g);
-			}
+			if (engine_enum == ENGINE_GR_GK20A)
+				ops |= gk20a_gr_nonstall_isr(g);
 
 			/* CE Engine */
 			if (((engine_enum == ENGINE_GRCE_GK20A) ||
 				(engine_enum == ENGINE_ASYNC_CE_GK20A)) &&
-				g->ops.ce2.isr_nonstall) {
-					g->ops.ce2.isr_nonstall(g,
-					g->fifo.engine_info[active_engine_id].inst_id,
-					g->fifo.engine_info[active_engine_id].pri_base);
-			}
+				g->ops.ce2.isr_nonstall)
+					ops |= g->ops.ce2.isr_nonstall(g,
+					g->fifo.engine_info[active_engine_id].
+								inst_id,
+					g->fifo.engine_info[active_engine_id].
+								pri_base);
 		}
 	}
+	if (ops) {
+		do {
+			ops_old = atomic_read(&g->nonstall_ops);
+			ops_new  = ops_old | ops;
+		} while (ops_old != atomic_cmpxchg(&g->nonstall_ops,
+						ops_old, ops_new));
 
-	/* sync handled irq counter before re-enabling interrupts */
-	atomic_set(&g->sw_irq_nonstall_last_handled, hw_irq_count);
-
-	gk20a_writel(g, mc_intr_en_1_r(),
-		mc_intr_en_1_inta_hardware_f());
-
-	/* flush previous write */
-	gk20a_readl(g, mc_intr_en_1_r());
-
-	wake_up_all(&g->sw_irq_nonstall_last_handled_wq);
-
-	return IRQ_HANDLED;
+		queue_work(g->nonstall_work_queue, &g->nonstall_fn_work);
+	}
 }
 
 void mc_gk20a_intr_enable(struct gk20a *g)
@@ -237,4 +258,5 @@ void gk20a_init_mc(struct gpu_ops *gops)
 	gops->mc.isr_nonstall = mc_gk20a_isr_nonstall;
 	gops->mc.isr_thread_stall = mc_gk20a_intr_thread_stall;
 	gops->mc.isr_thread_nonstall = mc_gk20a_intr_thread_nonstall;
+	gops->mc.isr_nonstall_cb = mc_gk20a_nonstall_cb;
 }

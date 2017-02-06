@@ -1,7 +1,7 @@
 /*
  * GK20A memory interface
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,4 +27,5 @@ void gm20b_init_mc(struct gpu_ops *gops)
 	gops->mc.isr_nonstall = mc_gk20a_isr_nonstall;
 	gops->mc.isr_thread_stall = mc_gk20a_intr_thread_stall;
 	gops->mc.isr_thread_nonstall = mc_gk20a_intr_thread_nonstall;
+	gops->mc.isr_nonstall_cb = mc_gk20a_nonstall_cb;
 }

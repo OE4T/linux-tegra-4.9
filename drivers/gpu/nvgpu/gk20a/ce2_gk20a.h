@@ -26,7 +26,7 @@
 
 void gk20a_init_ce2(struct gpu_ops *gops);
 void gk20a_ce2_isr(struct gk20a *g, u32 inst_id, u32 pri_base);
-void gk20a_ce2_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base);
+int gk20a_ce2_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base);
 
 /* CE command utility macros */
 #define NVGPU_CE_LOWER_ADDRESS_OFFSET_MASK 0xffffffff

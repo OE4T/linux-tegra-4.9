@@ -236,8 +236,7 @@ static irqreturn_t nvgpu_pci_isr(int irq, void *dev_id)
 		g->ops.xve.rearm_msi(g);
 #endif
 
-	return (ret_stall == IRQ_NONE && ret_nonstall == IRQ_NONE) ?
-		IRQ_NONE : IRQ_WAKE_THREAD;
+	return (ret_stall == IRQ_NONE) ? ret_nonstall : IRQ_WAKE_THREAD;
 }
 
 static irqreturn_t nvgpu_pci_intr_thread(int irq, void *dev_id)
@@ -245,7 +244,6 @@ static irqreturn_t nvgpu_pci_intr_thread(int irq, void *dev_id)
 	struct gk20a *g = dev_id;
 
 	g->ops.mc.isr_thread_stall(g);
-	g->ops.mc.isr_thread_nonstall(g);
 
 	return IRQ_HANDLED;
 }

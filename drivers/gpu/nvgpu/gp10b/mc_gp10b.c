@@ -16,6 +16,7 @@
 #include <linux/types.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/mc_gk20a.h"
 
 #include "mc_gp10b.h"
 
@@ -80,12 +81,15 @@ irqreturn_t mc_gp10b_isr_stall(struct gk20a *g)
 
 	gk20a_writel(g, mc_intr_en_clear_r(0), 0xffffffff);
 
+	atomic_inc(&g->hw_irq_stall_count);
+
 	return IRQ_WAKE_THREAD;
 }
 
 irqreturn_t mc_gp10b_isr_nonstall(struct gk20a *g)
 {
 	u32 mc_intr_1;
+	u32 hw_irq_count;
 
 	if (!g->power_on)
 		return IRQ_NONE;
@@ -97,12 +101,27 @@ irqreturn_t mc_gp10b_isr_nonstall(struct gk20a *g)
 
 	gk20a_writel(g, mc_intr_en_clear_r(1), 0xffffffff);
 
-	return IRQ_WAKE_THREAD;
+	if (g->ops.mc.isr_thread_nonstall)
+		g->ops.mc.isr_thread_nonstall(g, mc_intr_1);
+
+	hw_irq_count = atomic_inc_return(&g->hw_irq_nonstall_count);
+
+	gk20a_writel(g, mc_intr_en_set_r(NVGPU_MC_INTR_NONSTALLING),
+			g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_NONSTALLING]);
+
+	/* sync handled irq counter before re-enabling interrupts */
+	atomic_set(&g->sw_irq_nonstall_last_handled, hw_irq_count);
+
+	wake_up_all(&g->sw_irq_nonstall_last_handled_wq);
+
+	return IRQ_HANDLED;
 }
 
 irqreturn_t mc_gp10b_intr_thread_stall(struct gk20a *g)
 {
 	u32 mc_intr_0;
+	int hw_irq_count;
+
 	u32 engine_id_idx;
 	u32 active_engine_id = 0;
 	u32 engine_enum = ENGINE_INVAL_GK20A;
@@ -110,6 +129,7 @@ irqreturn_t mc_gp10b_intr_thread_stall(struct gk20a *g)
 	gk20a_dbg(gpu_dbg_intr, "interrupt thread launched");
 
 	mc_intr_0 = gk20a_readl(g, mc_intr_r(0));
+	hw_irq_count = atomic_read(&g->hw_irq_stall_count);
 
 	gk20a_dbg(gpu_dbg_intr, "stall intr %08x\n", mc_intr_0);
 
@@ -146,51 +166,13 @@ irqreturn_t mc_gp10b_intr_thread_stall(struct gk20a *g)
 	if (mc_intr_0 & mc_intr_ltc_pending_f())
 		g->ops.ltc.isr(g);
 
+	/* sync handled irq counter before re-enabling interrupts */
+	atomic_set(&g->sw_irq_stall_last_handled, hw_irq_count);
+
 	gk20a_writel(g, mc_intr_en_set_r(NVGPU_MC_INTR_STALLING),
 			g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_STALLING]);
 
-	return IRQ_HANDLED;
-}
-
-irqreturn_t mc_gp10b_intr_thread_nonstall(struct gk20a *g)
-{
-	u32 mc_intr_1;
-	u32 engine_id_idx;
-	u32 active_engine_id = 0;
-	u32 engine_enum = ENGINE_INVAL_GK20A;
-
-	gk20a_dbg(gpu_dbg_intr, "interrupt thread launched");
-
-	mc_intr_1 = gk20a_readl(g, mc_intr_r(1));
-
-	gk20a_dbg(gpu_dbg_intr, "non-stall intr %08x\n", mc_intr_1);
-
-	if (mc_intr_1 & mc_intr_pfifo_pending_f())
-		gk20a_fifo_nonstall_isr(g);
-
-	for (engine_id_idx = 0; engine_id_idx < g->fifo.num_engines; engine_id_idx++) {
-		active_engine_id = g->fifo.active_engines_list[engine_id_idx];
-
-		if (mc_intr_1 & g->fifo.engine_info[active_engine_id].intr_mask) {
-			engine_enum = g->fifo.engine_info[active_engine_id].engine_enum;
-			/* GR Engine */
-			if (engine_enum == ENGINE_GR_GK20A) {
-				gk20a_gr_nonstall_isr(g);
-			}
-
-			/* CE Engine */
-			if (((engine_enum == ENGINE_GRCE_GK20A) ||
-				(engine_enum == ENGINE_ASYNC_CE_GK20A)) &&
-				g->ops.ce2.isr_nonstall) {
-					g->ops.ce2.isr_nonstall(g,
-					g->fifo.engine_info[active_engine_id].inst_id,
-					g->fifo.engine_info[active_engine_id].pri_base);
-			}
-		}
-	}
-
-	gk20a_writel(g, mc_intr_en_set_r(NVGPU_MC_INTR_NONSTALLING),
-			g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_NONSTALLING]);
+	wake_up_all(&g->sw_irq_stall_last_handled_wq);
 
 	return IRQ_HANDLED;
 }
@@ -202,5 +184,7 @@ void gp10b_init_mc(struct gpu_ops *gops)
 	gops->mc.isr_stall = mc_gp10b_isr_stall;
 	gops->mc.isr_nonstall = mc_gp10b_isr_nonstall;
 	gops->mc.isr_thread_stall = mc_gp10b_intr_thread_stall;
-	gops->mc.isr_thread_nonstall = mc_gp10b_intr_thread_nonstall;
+	gops->mc.isr_thread_nonstall = mc_gk20a_intr_thread_nonstall;
+	gops->mc.isr_nonstall_cb = mc_gk20a_nonstall_cb;
+
 }

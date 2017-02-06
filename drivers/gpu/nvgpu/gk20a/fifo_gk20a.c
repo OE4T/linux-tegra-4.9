@@ -2377,7 +2377,7 @@ void gk20a_fifo_isr(struct gk20a *g)
 	return;
 }
 
-void gk20a_fifo_nonstall_isr(struct gk20a *g)
+int gk20a_fifo_nonstall_isr(struct gk20a *g)
 {
 	u32 fifo_intr = gk20a_readl(g, fifo_intr_0_r());
 	u32 clear_intr = 0;
@@ -2389,9 +2389,7 @@ void gk20a_fifo_nonstall_isr(struct gk20a *g)
 
 	gk20a_writel(g, fifo_intr_0_r(), clear_intr);
 
-	gk20a_channel_semaphore_wakeup(g, false);
-
-	return;
+	return gk20a_nonstall_ops_wakeup_semaphore;
 }
 
 void gk20a_fifo_issue_preempt(struct gk20a *g, u32 id, bool is_tsg)

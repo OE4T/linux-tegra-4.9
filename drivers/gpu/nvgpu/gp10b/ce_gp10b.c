@@ -1,7 +1,7 @@
 /*
  * Pascal GPU series Copy Engine.
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,15 +21,6 @@
 #include "ce_gp10b.h"
 
 #include <nvgpu/hw/gp10b/hw_ce_gp10b.h>
-
-static void ce_nonblockpipe_isr(struct gk20a *g, u32 fifo_intr)
-{
-	gk20a_dbg(gpu_dbg_intr, "ce non-blocking pipe interrupt\n");
-
-	/* wake theads waiting in this channel */
-	gk20a_channel_semaphore_wakeup(g, true);
-	return;
-}
 
 static u32 ce_blockpipe_isr(struct gk20a *g, u32 fifo_intr)
 {
@@ -63,8 +54,9 @@ static void gp10b_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 	return;
 }
 
-static void gp10b_ce_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
+static int gp10b_ce_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 {
+	int ops = 0;
 	u32 ce_intr = gk20a_readl(g, ce_intr_status_r(inst_id));
 
 	gk20a_dbg(gpu_dbg_intr, "ce nonstall isr %08x %08x\n", ce_intr, inst_id);
@@ -72,10 +64,11 @@ static void gp10b_ce_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 	if (ce_intr & ce_intr_status_nonblockpipe_pending_f()) {
 		gk20a_writel(g, ce_intr_status_r(inst_id),
 			ce_intr_status_nonblockpipe_pending_f());
-		ce_nonblockpipe_isr(g, ce_intr);
+		ops |= (gk20a_nonstall_ops_wakeup_semaphore |
+			gk20a_nonstall_ops_post_events);
 	}
 
-	return;
+	return ops;
 }
 void gp10b_init_ce(struct gpu_ops *gops)
 {

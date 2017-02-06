@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,5 +22,6 @@ void mc_gk20a_intr_unit_config(struct gk20a *g, bool enable,
 irqreturn_t mc_gk20a_isr_stall(struct gk20a *g);
 irqreturn_t mc_gk20a_isr_nonstall(struct gk20a *g);
 irqreturn_t mc_gk20a_intr_thread_stall(struct gk20a *g);
-irqreturn_t mc_gk20a_intr_thread_nonstall(struct gk20a *g);
+void mc_gk20a_intr_thread_nonstall(struct gk20a *g, u32 intr);
+void mc_gk20a_nonstall_cb(struct work_struct *work);
 #endif

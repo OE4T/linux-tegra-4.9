@@ -76,8 +76,9 @@ void gk20a_ce2_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 	return;
 }
 
-void gk20a_ce2_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
+int gk20a_ce2_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 {
+	int ops = 0;
 	u32 ce2_intr = gk20a_readl(g, ce2_intr_status_r());
 
 	gk20a_dbg(gpu_dbg_intr, "ce2 nonstall isr %08x\n", ce2_intr);
@@ -85,12 +86,10 @@ void gk20a_ce2_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 	if (ce2_intr & ce2_intr_status_nonblockpipe_pending_f()) {
 		gk20a_writel(g, ce2_intr_status_r(),
 			ce2_nonblockpipe_isr(g, ce2_intr));
-
-		/* wake threads waiting in this channel */
-		gk20a_channel_semaphore_wakeup(g, true);
+		ops |= (gk20a_nonstall_ops_wakeup_semaphore |
+			gk20a_nonstall_ops_post_events);
 	}
-
-	return;
+	return ops;
 }
 void gk20a_init_ce2(struct gpu_ops *gops)
 {

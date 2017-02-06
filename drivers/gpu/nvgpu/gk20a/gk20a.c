@@ -697,12 +697,6 @@ static irqreturn_t gk20a_intr_thread_stall(int irq, void *dev_id)
 	return g->ops.mc.isr_thread_stall(g);
 }
 
-static irqreturn_t gk20a_intr_thread_nonstall(int irq, void *dev_id)
-{
-	struct gk20a *g = dev_id;
-	return g->ops.mc.isr_thread_nonstall(g);
-}
-
 void gk20a_remove_support(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
@@ -716,6 +710,12 @@ void gk20a_remove_support(struct device *dev)
 	nvgpu_wait_for_deferred_interrupts(g);
 
 	gk20a_channel_cancel_pending_sema_waits(g);
+
+	if (g->nonstall_work_queue) {
+		cancel_work_sync(&g->nonstall_fn_work);
+		destroy_workqueue(g->nonstall_work_queue);
+		g->nonstall_work_queue = NULL;
+	}
 
 	if (g->pmu.remove_support)
 		g->pmu.remove_support(&g->pmu);
@@ -931,6 +931,13 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 
 	if (g->ops.clk.disable_slowboot)
 		g->ops.clk.disable_slowboot(g);
+
+	/* Enable interrupt workqueue */
+	if (!g->nonstall_work_queue) {
+		g->nonstall_work_queue = alloc_workqueue("%s",
+						WQ_HIGHPRI, 1, "mc_nonstall");
+		INIT_WORK(&g->nonstall_fn_work, g->ops.mc.isr_nonstall_cb);
+	}
 
 	gk20a_enable_priv_ring(g);
 
@@ -1617,10 +1624,9 @@ static int gk20a_probe(struct platform_device *dev)
 				gk20a->irq_stall);
 		return err;
 	}
-	err = devm_request_threaded_irq(&dev->dev,
+	err = devm_request_irq(&dev->dev,
 			gk20a->irq_nonstall,
 			gk20a_intr_isr_nonstall,
-			gk20a_intr_thread_nonstall,
 			0, "gk20a_nonstall", gk20a);
 	if (err) {
 		dev_err(&dev->dev,

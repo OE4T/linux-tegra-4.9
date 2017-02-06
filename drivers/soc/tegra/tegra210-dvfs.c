@@ -1546,8 +1546,7 @@ static int gpu_dvfs_rail_set_vmax_cdev_cur_state(
 			cap_rate = gpu_cap_rates[cur_state - 1];
 		else
 			cap_rate =
-				tegra_dvfs_predict_hz_at_mv_max_tfloor(vgpu_cap_clk,
-									gpu_dvfs.clk);
+				tegra_dvfs_predict_hz_at_mv_max_tfloor(gpu_dvfs.clk, level);
 	}
 
 	if (!IS_ERR_VALUE(cap_rate))

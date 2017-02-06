@@ -1605,5 +1605,6 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.commit_inst = gr_gk20a_commit_inst;
 	gops->gr.write_zcull_ptr = gr_gk20a_write_zcull_ptr;
 	gops->gr.write_pm_ptr = gr_gk20a_write_pm_ptr;
+	gops->gr.init_elcg_mode = gr_gk20a_init_elcg_mode;
 
 }

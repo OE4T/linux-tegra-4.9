@@ -4455,7 +4455,8 @@ void gr_gk20a_init_cg_mode(struct gk20a *g, u32 cgmode, u32 mode_config)
 				gr_gk20a_init_blcg_mode(g, mode_config, active_engine_id);
 				break;
 		} else if (cgmode == ELCG_MODE)
-			gr_gk20a_init_elcg_mode(g, mode_config, active_engine_id);
+			g->ops.gr.init_elcg_mode(g, mode_config,
+						active_engine_id);
 		else
 			gk20a_err(dev_from_gk20a(g), "invalid cg mode %d %d", cgmode, mode_config);
 	}
@@ -9316,4 +9317,5 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.commit_inst = gr_gk20a_commit_inst;
 	gops->gr.write_zcull_ptr = gr_gk20a_write_zcull_ptr;
 	gops->gr.write_pm_ptr = gr_gk20a_write_pm_ptr;
+	gops->gr.init_elcg_mode = gr_gk20a_init_elcg_mode;
 }

@@ -590,7 +590,7 @@ static void tegra_se_config_crypto(struct tegra_se_dev *se_dev,
 		val = SE_CRYPTO_INPUT_SEL(INPUT_RANDOM) |
 			SE_CRYPTO_XOR_POS(XOR_BYPASS) |
 			SE_CRYPTO_CORE_SEL(CORE_ENCRYPT);
-		if ((tegra_get_chipid() == TEGRA_CHIPID_TEGRA11))
+		if (tegra_get_chip_id() == TEGRA114)
 			val = val | SE_CRYPTO_KEY_INDEX(slot_num);
 		freq = se_dev->chipdata->rng_freq;
 		break;
@@ -712,7 +712,7 @@ static int tegra_se_start_operation(struct tegra_se_dev *se_dev, u32 nbytes,
 	int ret = 0, err = 0;
 	u32 val = 0;
 
-	if ((tegra_get_chipid() == TEGRA_CHIPID_TEGRA11) &&
+	if ((tegra_get_chip_id() == TEGRA114) &&
 				nblocks > SE_MAX_LAST_BLOCK_SIZE)
 		return -EINVAL;
 
@@ -2440,7 +2440,7 @@ static bool is_algo_supported(struct tegra_se_dev *se_dev, const char *algo)
 
 	if (!strcmp(algo, "rsa-pka0") || !strcmp(algo, "rsa")) {
 		if (se_dev->chipdata->rsa_supported) {
-			if ((tegra_get_chipid() == TEGRA_CHIPID_TEGRA21) &&
+			if ((tegra_get_chip_id() == TEGRA210) &&
 			(tegra_chip_get_revision() == TEGRA_REVISION_A01))
 				return false;
 			else
@@ -2738,7 +2738,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 	pm_runtime_get_sync(se_dev->dev);
 
 	if (se_dev->chipdata->drbg_supported
-		&& (tegra_get_chipid() != TEGRA_CHIPID_TEGRA11)) {
+		&& (tegra_get_chip_id() != TEGRA114)) {
 		se_writel(se_dev,
 			SE_RNG_SRC_CONFIG_RO_ENT_SRC(DRBG_RO_ENT_SRC_ENABLE)
 		|SE_RNG_SRC_CONFIG_RO_ENT_SRC_LOCK(DRBG_RO_ENT_SRC_LOCK_ENABLE),
@@ -3231,7 +3231,7 @@ static int tegra_se_save_SRK(struct tegra_se_dev *se_dev)
 		return ret;
 	}
 
-	if ((tegra_get_chipid() == TEGRA_CHIPID_TEGRA11) &&
+	if ((tegra_get_chip_id() == TEGRA114) &&
 				se_dev->chipdata->drbg_supported) {
 		/* clear any pending interrupts */
 		val = se_readl(se_dev, SE_INT_STATUS_REG_OFFSET);
@@ -3441,8 +3441,8 @@ static int __maybe_unused tegra_se_resume(struct device *dev)
 	mutex_lock(&se_hw_lock);
 	pm_runtime_get_sync(se_dev->dev);
 
-	if ((tegra_get_chipid() != TEGRA_CHIPID_TEGRA3)
-		&& (tegra_get_chipid() != TEGRA_CHIPID_TEGRA11)) {
+	if ((tegra_get_chip_id() != TEGRA30)
+		&& (tegra_get_chip_id() != TEGRA114)) {
 		se_writel(se_dev,
 			SE_RNG_SRC_CONFIG_RO_ENT_SRC(DRBG_RO_ENT_SRC_ENABLE)
 		|SE_RNG_SRC_CONFIG_RO_ENT_SRC_LOCK(DRBG_RO_ENT_SRC_LOCK_ENABLE),

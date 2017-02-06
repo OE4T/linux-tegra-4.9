@@ -2147,6 +2147,58 @@ static int tegra_se_ecc_point_mult(struct tegra_se_ecc_point *result,
 	return ret;
 }
 
+static int tegra_se_ecc_point_add(struct tegra_se_ecc_point *p1,
+				  struct tegra_se_ecc_point *p2,
+				  const struct tegra_se_ecc_curve *curve,
+				  int nbytes)
+{
+	struct tegra_se_pka1_ecc_request ecc_req;
+	int ret;
+
+	ecc_req.se_dev = elp_dev;
+	ecc_req.op_mode = curve->mode;
+	ecc_req.size = nbytes;
+	ecc_req.type = ECC_POINT_ADD;
+	ecc_req.curve_param_a = curve->a;
+	ecc_req.modulus = curve->p;
+	ecc_req.base_pt_x = p1->x;
+	ecc_req.base_pt_y = p1->y;
+	ecc_req.res_pt_x = p2->x;
+	ecc_req.res_pt_y = p2->y;
+
+	ret = tegra_se_pka1_ecc_op(&ecc_req);
+
+	return ret;
+}
+
+static int tegra_se_ecc_shamir_trick(u32 *s1,
+				     struct tegra_se_ecc_point *p1,
+				     u32 *s2,
+				     struct tegra_se_ecc_point *p2,
+				     const struct tegra_se_ecc_curve *curve,
+				     int nbytes)
+{
+	struct tegra_se_pka1_ecc_request ecc_req;
+	int ret;
+
+	ecc_req.se_dev = elp_dev;
+	ecc_req.op_mode = curve->mode;
+	ecc_req.size = nbytes;
+	ecc_req.type = ECC_SHAMIR_TRICK;
+	ecc_req.curve_param_a = curve->a;
+	ecc_req.modulus = curve->p;
+	ecc_req.curve_param_b = s1;
+	ecc_req.key = s2;
+	ecc_req.base_pt_x = p1->x;
+	ecc_req.base_pt_y = p1->y;
+	ecc_req.res_pt_x = p2->x;
+	ecc_req.res_pt_y = p2->y;
+
+	ret = tegra_se_pka1_ecc_op(&ecc_req);
+
+	return ret;
+}
+
 static int tegra_se_ecdh_compute_shared_secret(struct tegra_se_elp_dev *se_dev,
 					       unsigned int cid,
 					       const u32 *private_key,

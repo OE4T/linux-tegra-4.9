@@ -18,8 +18,7 @@
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
 
-#include "pmuif/gpmuifboardobj.h"
-#include "pmuif/gpmuifclk.h"
+#include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 
 #include "ctrl/ctrlvolt.h"
 

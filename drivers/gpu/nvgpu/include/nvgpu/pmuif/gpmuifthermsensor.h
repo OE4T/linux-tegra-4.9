@@ -15,7 +15,7 @@
 #define _GPMUIFTHERMSENSOR_H_
 
 #include "ctrl/ctrltherm.h"
-#include "pmuif/gpmuifboardobj.h"
+#include "gpmuifboardobj.h"
 #include <nvgpu/flcnif_cmn.h>
 
 #define NV_PMU_THERM_BOARDOBJGRP_CLASS_ID_THERM_DEVICE      0x00

@@ -1,7 +1,7 @@
 /*
  * general power device structures & definitions
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,7 +16,7 @@
 #define _PWRDEV_H_
 
 #include "boardobj/boardobj.h"
-#include "pmuif/gpmuifpmgr.h"
+#include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 #include "ctrl/ctrlpmgr.h"
 
 #define  PWRDEV_I2CDEV_DEVICE_INDEX_NONE  (0xFF)

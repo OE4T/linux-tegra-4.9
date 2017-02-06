@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,8 +17,6 @@
 #include <linux/uaccess.h>
 #include "boardobj.h"
 #include "ctrl/ctrlboardobj.h"
-#include "pmuif/gpmuifboardobj.h"
-
 
 u32 boardobj_construct_super(struct gk20a *g, struct boardobj **ppboardobj,
 				u16 size, void *args)

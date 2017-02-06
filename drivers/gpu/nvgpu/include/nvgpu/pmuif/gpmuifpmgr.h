@@ -15,7 +15,7 @@
 #define _GPMUIFPMGR_H_
 
 #include "ctrl/ctrlpmgr.h"
-#include "pmuif/gpmuifboardobj.h"
+#include "gpmuifboardobj.h"
 #include <nvgpu/flcnif_cmn.h>
 
 struct nv_pmu_pmgr_i2c_device_desc {

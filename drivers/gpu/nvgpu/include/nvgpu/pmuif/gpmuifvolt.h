@@ -13,7 +13,7 @@
 #ifndef _GPMUIFVOLT_H_
 #define _GPMUIFVOLT_H_
 
-#include "pmuif/gpmuifboardobj.h"
+#include "gpmuifboardobj.h"
 #include <nvgpu/flcnif_cmn.h>
 #include "ctrl/ctrlvolt.h"
 

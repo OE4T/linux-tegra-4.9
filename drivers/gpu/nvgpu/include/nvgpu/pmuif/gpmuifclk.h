@@ -18,8 +18,8 @@
 #include "ctrl/ctrlvolt.h"
 #include "ctrl/ctrlperf.h"
 #include "ctrl/ctrlclk.h"
-#include "pmuif/gpmuifboardobj.h"
-#include "pmuif/gpmuifvolt.h"
+#include "gpmuifboardobj.h"
+#include "gpmuifvolt.h"
 #include <nvgpu/flcnif_cmn.h>
 
 enum nv_pmu_clk_clkwhich {

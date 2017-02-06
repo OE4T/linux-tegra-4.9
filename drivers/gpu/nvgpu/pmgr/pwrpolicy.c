@@ -16,8 +16,6 @@
 #include "include/bios.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
-#include "pmuif/gpmuifboardobj.h"
-#include "pmuif/gpmuifpmgr.h"
 #include "gm206/bios_gm206.h"
 #include "gk20a/pmu_gk20a.h"
 

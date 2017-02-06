@@ -1,7 +1,7 @@
 /*
  * general perf structures & definitions
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,8 +17,7 @@
 
 #include "boardobj/boardobjgrp.h"
 #include "perf/vfe_var.h"
-#include "pmuif/gpmuifperf.h"
-#include "pmuif/gpmuifperfvfe.h"
+#include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 
 u32 vfe_equ_sw_setup(struct gk20a *g);
 u32 vfe_equ_pmu_setup(struct gk20a *g);

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify it
 * under the terms and conditions of the GNU General Public License,
@@ -16,7 +16,7 @@
 
 #include "ctrl/ctrlclk.h"
 #include "ctrl/ctrlboardobj.h"
-#include "pmuif/gpmuifclk.h"
+#include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 #include "boardobj/boardobjgrp_e32.h"
 #include "boardobj/boardobjgrpmask.h"
 

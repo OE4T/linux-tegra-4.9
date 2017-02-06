@@ -23,7 +23,7 @@
 
 #include <linux/version.h>
 #include <nvgpu/flcnif_cmn.h>
-#include "pmuif/nvgpu_gpmu_cmdif.h"
+#include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 
 /* defined by pmu hw spec */
 #define GK20A_PMU_VA_SIZE		(512 * 1024 * 1024)

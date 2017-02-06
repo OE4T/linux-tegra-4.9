@@ -23,9 +23,12 @@
 #include "gpmuifboardobj.h"
 #include "gpmuifclk.h"
 #include "gpmuifperf.h"
+#include "gpmuifperfvfe.h"
 #include "gpmuifpmgr.h"
 #include "gpmuifvolt.h"
 #include "gpmuiftherm.h"
+#include "gpmuifthermsensor.h"
+#include "gpmuifseq.h"
 
 struct pmu_cmd {
 	struct pmu_hdr hdr;

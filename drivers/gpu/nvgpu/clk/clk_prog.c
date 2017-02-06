@@ -18,8 +18,6 @@
 #include "include/bios.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
-#include "pmuif/gpmuifboardobj.h"
-#include "pmuif/gpmuifclk.h"
 #include "gm206/bios_gm206.h"
 #include "ctrl/ctrlclk.h"
 #include "ctrl/ctrlvolt.h"

@@ -17,7 +17,7 @@
 #include "gm206/bios_gm206.h"
 #include "pstate/pstate.h"
 #include "include/bios.h"
-#include "pmuif/gpmuif_pg_rppg.h"
+#include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 
 static void pmu_handle_rppg_init_msg(struct gk20a *g, struct pmu_msg *msg,
 	void *param, u32 handle, u32 status)

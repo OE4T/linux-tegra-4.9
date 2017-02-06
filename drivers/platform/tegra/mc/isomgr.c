@@ -396,31 +396,31 @@ static struct isoclient_info *get_iso_client_info(int *length)
 	struct isoclient_info *cinfo;
 	int i, len;
 
-	cid = tegra_get_chipid();
+	cid = tegra_get_chip_id();
 	switch (cid) {
-	case TEGRA_CHIPID_TEGRA11:
+	case TEGRA114:
 		cinfo = tegra11x_isoclients;
 		len = ARRAY_SIZE(tegra11x_isoclients);
 		iso_bw_percentage = 50;
 		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++)
 			isomgr_clients[i].limit_bw_percentage = 100;
 		break;
-	case TEGRA_CHIPID_TEGRA14:
+	case TEGRA148:
 		cinfo = tegra14x_isoclients;
 		len = ARRAY_SIZE(tegra14x_isoclients);
 		iso_bw_percentage = 50;
 		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++)
 			isomgr_clients[i].limit_bw_percentage = 100;
 		break;
-	case TEGRA_CHIPID_TEGRA12:
-	case TEGRA_CHIPID_TEGRA13:
+	case TEGRA124:
+	case TEGRA132:
 		cinfo = tegra12x_isoclients;
 		len = ARRAY_SIZE(tegra12x_isoclients);
 		iso_bw_percentage = 50;
 		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++)
 			isomgr_clients[i].limit_bw_percentage = 100;
 		break;
-	case TEGRA_CHIPID_TEGRA21:
+	case TEGRA210:
 		cinfo = tegra21x_isoclients;
 		iso_bw_percentage = 45; /* Hack: Should be determined based on
 					 * DRAM type
@@ -429,7 +429,7 @@ static struct isoclient_info *get_iso_client_info(int *length)
 		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++)
 			isomgr_clients[i].limit_bw_percentage = 100;
 		break;
-	case TEGRA_CHIPID_TEGRA18:
+	case TEGRA186:
 		cinfo = tegra18x_isoclients;
 		len = ARRAY_SIZE(tegra18x_isoclients);
 		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++) {

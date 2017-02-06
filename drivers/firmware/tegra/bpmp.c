@@ -117,6 +117,23 @@ static struct syscore_ops bpmp_syscore_ops = {
 	.resume = tegra_bpmp_resume,
 };
 
+int __bpmp_do_ping(void)
+{
+	int ret;
+	int challenge = 1;
+	int reply;
+
+	ret = tegra_bpmp_send_receive_atomic(MRQ_PING,
+			&challenge, sizeof(challenge), &reply, sizeof(reply));
+	if (ret)
+		return ret;
+
+	if (reply != challenge * 2)
+		return -EINVAL;
+
+	return 0;
+}
+
 static int bpmp_do_ping(void)
 {
 	unsigned long flags;

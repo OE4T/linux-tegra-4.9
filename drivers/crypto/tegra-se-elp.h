@@ -1,7 +1,7 @@
 /*
  * Header file for Tegra Security Elliptic Engine
  *
- * Copyright (c) 2011-2016, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2011-2017, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2, as
@@ -34,6 +34,7 @@ enum tegra_se_elp_op_mode {
 	SE_ELP_OP_MODE_RSA2048,
 	SE_ELP_OP_MODE_RSA3072,
 	SE_ELP_OP_MODE_RSA4096,
+
 	SE_ELP_OP_MODE_ECC160,
 	SE_ELP_OP_MODE_ECC192,
 	SE_ELP_OP_MODE_ECC224,
@@ -41,6 +42,13 @@ enum tegra_se_elp_op_mode {
 	SE_ELP_OP_MODE_ECC384,
 	SE_ELP_OP_MODE_ECC512,
 	SE_ELP_OP_MODE_ECC521,
+
+	SE_ELP_OP_MODE_MOD160,
+	SE_ELP_OP_MODE_MOD192,
+	SE_ELP_OP_MODE_MOD224,
+	SE_ELP_OP_MODE_MOD256,
+	SE_ELP_OP_MODE_MOD384,
+	SE_ELP_OP_MODE_MOD512,
 };
 
 struct tegra_se_ecc_point {
@@ -508,6 +516,14 @@ static struct tegra_se_ecc_curve curve_p521 = {
 #define TEGRA_SE_PKA1_ECC_YQ_ID		3
 #define TEGRA_SE_PKA1_ECC_K_BANK	BANK_D
 #define TEGRA_SE_PKA1_ECC_K_ID		7
+
+#define TEGRA_SE_PKA1_ENTRY_MODMULT	0xa
+#define TEGRA_SE_PKA1_ENTRY_MODADD	0xb
+#define TEGRA_SE_PKA1_ENTRY_MODSUB	0xc
+#define TEGRA_SE_PKA1_ENTRY_MODDIV	0xd
+#define TEGRA_SE_PKA1_ENTRY_MODINV	0xe
+#define TEGRA_SE_PKA1_ENTRY_REDUCE	0xf
+
 
 #define TEGRA_SE_PKA1_KEYSLOT_ADDR_OFFSET(i)		(0x00008800+((i)*4))
 #define TEGRA_SE_PKA1_KEYSLOT_DATA_OFFSET(i)		(0x00008810+((i)*4))

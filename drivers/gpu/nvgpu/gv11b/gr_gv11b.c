@@ -41,6 +41,7 @@
 #include <nvgpu/hw/gv11b/hw_gr_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_pbdma_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_therm_gv11b.h>
 
 static bool gr_gv11b_is_valid_class(struct gk20a *g, u32 class_num)
 {
@@ -1970,6 +1971,39 @@ static void gr_gv11b_write_pm_ptr(struct gk20a *g,
 		ctxsw_prog_main_image_pm_ptr_hi_o(), va_hi);
 }
 
+void gr_gv11b_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
+{
+	u32 gate_ctrl;
+
+	gate_ctrl = gk20a_readl(g, therm_gate_ctrl_r(engine));
+
+	switch (mode) {
+	case ELCG_RUN:
+		gate_ctrl = set_field(gate_ctrl,
+				therm_gate_ctrl_eng_clk_m(),
+				therm_gate_ctrl_eng_clk_run_f());
+		gate_ctrl = set_field(gate_ctrl,
+				therm_gate_ctrl_idle_holdoff_m(),
+				therm_gate_ctrl_idle_holdoff_on_f());
+		break;
+	case ELCG_STOP:
+		gate_ctrl = set_field(gate_ctrl,
+				therm_gate_ctrl_eng_clk_m(),
+				therm_gate_ctrl_eng_clk_stop_f());
+		break;
+	case ELCG_AUTO:
+		gate_ctrl = set_field(gate_ctrl,
+				therm_gate_ctrl_eng_clk_m(),
+				therm_gate_ctrl_eng_clk_auto_f());
+		break;
+	default:
+		gk20a_err(dev_from_gk20a(g),
+			"invalid elcg mode %d", mode);
+	}
+
+	gk20a_writel(g, therm_gate_ctrl_r(engine), gate_ctrl);
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -2025,5 +2059,6 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.restore_context_header = gv11b_restore_context_header;
 	gops->gr.write_zcull_ptr = gr_gv11b_write_zcull_ptr;
 	gops->gr.write_pm_ptr = gr_gv11b_write_pm_ptr;
+	gops->gr.init_elcg_mode = gr_gv11b_init_elcg_mode;
 
 }

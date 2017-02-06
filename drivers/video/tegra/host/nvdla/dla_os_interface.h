@@ -145,6 +145,15 @@
  * @postactions: Offset to postactions list
  * @queue_id: ID fo queue to insert this task
  * @address_list: IOVA address list for addresses used in surface descriptors
+ *    Index references used in address list are as:
+ *    address_list[0]:  address of a dla_network_desc
+ *    address_list[net.operation_desc_index]   : start address of a list of dla_operation_container
+ *    address_list[net.surface_desc_index]     : start address of a list of dla_surface_container
+ *    address_list[net.dependency_graph_index] : start address of a list of dla_common_op_desc
+ *    address_list[net.lut_data_index]         : start address of a list of dla_lut_param
+ *    address_list[net.roi_array_index]        : start address of a list of dla_roi_desc, but the
+ *                                               first entry has to be dla_roi_array_desc
+ *    address_list[net.surface_index]          : start address of a list of dla_surface_container
  * @num_addresses: Number of addresses in address list
  * @status: Update task status here after completion
  */

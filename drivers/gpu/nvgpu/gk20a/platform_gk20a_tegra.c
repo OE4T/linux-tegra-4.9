@@ -237,8 +237,8 @@ static void gk20a_tegra_postscale(struct device *dev,
 	emc_target = gk20a_tegra_get_emc_rate(g, emc_params);
 
 	switch (chip_id) {
-	case TEGRA_CHIPID_TEGRA12:
-	case TEGRA_CHIPID_TEGRA13:
+	case TEGRA124:
+	case TEGRA132:
 		/* T124 and T132 don't apply any rounding. The resulting
 		 * emc frequency gets implicitly rounded up after issuing
 		 * the clock_set_request.
@@ -248,7 +248,7 @@ static void gk20a_tegra_postscale(struct device *dev,
 			tegra_emc_round_rate_updown(emc_target, true);
 		break;
 
-	case TEGRA_CHIPID_TEGRA21:
+	case TEGRA210:
 		emc_freq_lower = (unsigned long)
 			tegra_emc_round_rate_updown(emc_target, false);
 		emc_freq_upper = (unsigned long)
@@ -261,7 +261,6 @@ static void gk20a_tegra_postscale(struct device *dev,
 			emc_freq_rounded = emc_freq_upper;
 		break;
 
-	case TEGRA_CHIPID_UNKNOWN:
 	default:
 		/* a proper rounding function needs to be implemented
 		 * for emc in t18x */
@@ -300,19 +299,18 @@ static void gk20a_tegra_prescale(struct device *dev)
 static void gk20a_tegra_calibrate_emc(struct device *dev,
 			       struct gk20a_emc_params *emc_params)
 {
-	enum tegra_chipid cid = tegra_get_chipid();
+	enum tegra_chipid cid = tegra_get_chip_id();
 	long gpu_bw, emc_bw;
 
 	/* store gpu bw based on soc */
 	switch (cid) {
-	case TEGRA_CHIPID_TEGRA21:
+	case TEGRA210:
 		gpu_bw = TEGRA_GM20B_BW_PER_FREQ;
 		break;
-	case TEGRA_CHIPID_TEGRA12:
-	case TEGRA_CHIPID_TEGRA13:
+	case TEGRA124:
+	case TEGRA132:
 		gpu_bw = TEGRA_GK20A_BW_PER_FREQ;
 		break;
-	case TEGRA_CHIPID_UNKNOWN:
 	default:
 		gpu_bw = 0;
 		break;
@@ -926,7 +924,7 @@ static int gk20a_tegra_probe(struct device *dev)
 	/* WAR for bug 1547668: Disable railgating and scaling irrespective of
 	 * platform data if the rework has not been made. */
 
-	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA21) {
+	if (tegra_get_chip_id() == TEGRA210) {
 		np = of_find_node_by_path("/gpu-dvfs-rework");
 		if (!(np && of_device_is_available(np))) {
 			platform->devfreq_governor = "";
@@ -934,7 +932,7 @@ static int gk20a_tegra_probe(struct device *dev)
 		}
 	}
 
-	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA13)
+	if (tegra_get_chip_id() == TEGRA132)
 		platform->soc_name = "tegra13x";
 
 	platform->g->mm.vidmem_is_vidmem = platform->vidmem_is_vidmem;

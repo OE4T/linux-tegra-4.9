@@ -1525,26 +1525,43 @@ static u32 gk20a_init_sw_bundle(struct gk20a *g)
 			     sw_bundle_init->l[i].addr);
 
 		if (gr_pipe_bundle_address_value_v(sw_bundle_init->l[i].addr) ==
-		    GR_GO_IDLE_BUNDLE)
-			err |= gr_gk20a_wait_idle(g,
+		    GR_GO_IDLE_BUNDLE) {
+			err = gr_gk20a_wait_idle(g,
 						  gk20a_get_gr_idle_timeout(g),
 						  GR_IDLE_CHECK_DEFAULT);
+			if (err)
+				goto error;
+		}
 
 		err = gr_gk20a_wait_fe_idle(g, gk20a_get_gr_idle_timeout(g),
 					    GR_IDLE_CHECK_DEFAULT);
 		if (err)
-			break;
+			goto error;
 	}
-	if (g->ops.gr.init_sw_veid_bundle)
-		g->ops.gr.init_sw_veid_bundle(g);
+
+	if (!err && g->ops.gr.init_sw_veid_bundle) {
+		err = g->ops.gr.init_sw_veid_bundle(g);
+		if (err)
+			goto error;
+	}
+
 	/* disable pipe mode override */
 	gk20a_writel(g, gr_pipe_bundle_config_r(),
 		     gr_pipe_bundle_config_override_pipe_mode_disabled_f());
 
 	err = gr_gk20a_wait_idle(g, gk20a_get_gr_idle_timeout(g),
 				 GR_IDLE_CHECK_DEFAULT);
-	if (err)
-		return err;
+
+	/* restore fe_go_idle */
+	gk20a_writel(g, gr_fe_go_idle_timeout_r(),
+		     gr_fe_go_idle_timeout_count_prod_f());
+
+	return err;
+
+error:
+	/* in case of error skip waiting for GR idle - just restore state */
+	gk20a_writel(g, gr_pipe_bundle_config_r(),
+		     gr_pipe_bundle_config_override_pipe_mode_disabled_f());
 
 	/* restore fe_go_idle */
 	gk20a_writel(g, gr_fe_go_idle_timeout_r(),

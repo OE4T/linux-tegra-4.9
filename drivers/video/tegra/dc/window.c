@@ -715,11 +715,7 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 			tegra_dc_writel(dc, win->cde.ctb_entry,
 				DC_WINBUF_CDE_CTB_ENTRY_0);
 			rev = tegra_chip_get_revision();
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 			if (tegra_get_chip_id() == TEGRA210
-#else
-			if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA21
-#endif
 				&& ((rev == TEGRA_REVISION_A01) ||
 					(rev == TEGRA_REVISION_A01q)))
 				tegra_dc_writel(dc, 0, DC_WINBUF_CDE_CG_SW_OVR);

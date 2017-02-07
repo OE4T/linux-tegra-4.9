@@ -228,6 +228,7 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.userd_gp_get = gv11b_userd_gp_get;
 	gops->fifo.userd_gp_put = gv11b_userd_gp_put;
 	gops->fifo.setup_ramfc = channel_gv11b_setup_ramfc;
+	gops->fifo.resetup_ramfc = NULL;
 	gops->fifo.unbind_channel = channel_gv11b_unbind;
 	gops->fifo.eng_runlist_base_size = fifo_eng_runlist_base__size_1_v;
 	gops->fifo.free_channel_ctx_header = gv11b_free_subctx_header;

@@ -546,10 +546,6 @@ static inline u32 ram_fc_subdevice_w(void)
 {
 	return 37;
 }
-static inline u32 ram_fc_allowed_syncpoints_w(void)
-{
-	return 58;
-}
 static inline u32 ram_fc_target_w(void)
 {
 	return 43;

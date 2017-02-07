@@ -914,9 +914,9 @@ out:
 		CUSTOMIZED_ACIPHER_SPEED_TEST_BLOCK_SIZE)
 #define CUSTOMIZED_ACIPHER_SPEED_TEST_KEY_SIZE 16
 #define CUSTOMIZED_ACIPHER_SPEED_TEST_MAX_OUTSTANDING_BLOCKS 1024
-#define CUSTOMIZED_ACIPHER_SPEED_TEST_NO_RUNS 3
-#define CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_ENCRYPT_SPEED 280
-#define CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_DECRYPT_SPEED 300
+#define CUSTOMIZED_ACIPHER_SPEED_TEST_NO_RUNS 5
+#define CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_ENCRYPT_SPEED 240
+#define CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_DECRYPT_SPEED 260
 
 static atomic_t atomic_counter;
 
@@ -1126,11 +1126,13 @@ static int customized_test_acipher_speed(const char *algo, unsigned int bsize,
 	pr_info("Test Encrypt speed: %d(MB/s) Decrypt speed: %d(MB/s)\n",
 		max_enc_speed, max_dec_speed);
 
-	if (max_enc_speed > target_enc_speed &&
-		       max_dec_speed > target_dec_speed)
+	if (max_enc_speed >= target_enc_speed &&
+		       max_dec_speed >= target_dec_speed)
 		return 0;
-	else
+	else {
+		pr_err("AES Encrypt/Decrypt target performance is not met\n");
 		return 1;
+	}
 }
 
 static void test_skcipher_speed(const char *algo, int enc, unsigned int secs,

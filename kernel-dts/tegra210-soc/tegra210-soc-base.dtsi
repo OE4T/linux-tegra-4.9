@@ -2258,4 +2258,9 @@
 		reg = <0x0 0x70000800 0x0 0x64>,   /* Chip revision */
 		      <0x0 0x70000008 0x0 0x04>;   /* Strapping options */
 	};
+
+	nvdumper {
+		compatible = "nvidia,tegra210-nvdumper";
+		status = "disabled";
+	};
 };

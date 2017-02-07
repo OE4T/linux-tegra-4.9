@@ -2174,6 +2174,7 @@ static int clk_core_set_parent(struct clk_core *core, struct clk_core *parent)
 	int ret = 0;
 	int p_index = 0;
 	unsigned long p_rate = 0;
+	unsigned long old_p_rate = 0;
 
 	if (!core)
 		return 0;
@@ -2215,13 +2216,23 @@ static int clk_core_set_parent(struct clk_core *core, struct clk_core *parent)
 	if (ret & NOTIFY_STOP_MASK)
 		goto out;
 
-	/* do the re-parent */
-	ret = __clk_set_parent(core, parent, p_index);
+
+	/* propagate PRE_PARENT_CHANGE notifications */
+	if (core->parent)
+		old_p_rate = core->parent->rate;
+
+	ret = __clk_notify(core, PRE_PARENT_CHANGE, old_p_rate, p_rate);
+
+	/* do the re-parent if no objections */
+	if (!(ret & NOTIFY_STOP_MASK))
+		ret = __clk_set_parent(core, parent, p_index);
 
 	/* propagate rate an accuracy recalculation accordingly */
 	if (ret) {
+		__clk_notify(core, ABORT_PARENT_CHANGE, old_p_rate, p_rate);
 		__clk_recalc_rates(core, ABORT_RATE_CHANGE);
 	} else {
+		__clk_notify(core, POST_PARENT_CHANGE, old_p_rate, p_rate);
 		__clk_recalc_rates(core, POST_RATE_CHANGE);
 		__clk_recalc_accuracies(core);
 	}

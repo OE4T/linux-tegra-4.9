@@ -1784,9 +1784,9 @@ static int tegra_se_sha_finup(struct ahash_request *req)
 
 static int tegra_se_sha_final(struct ahash_request *req)
 {
-	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
-	struct tegra_se_sha_context *sha_ctx = crypto_ahash_ctx(tfm);
-	struct tegra_se_req_context *req_ctx = ahash_request_ctx(req);
+	struct crypto_ahash *tfm;
+	struct tegra_se_sha_context *sha_ctx;
+	struct tegra_se_req_context *req_ctx;
 	struct tegra_se_dev *se_dev;
 	struct scatterlist *src_sg;
 	u32 total, num_sgs;
@@ -1835,6 +1835,14 @@ static int tegra_se_sha_final(struct ahash_request *req)
 
 	if (!req)
 		return -EINVAL;
+
+	tfm = crypto_ahash_reqtfm(req);
+	if (!tfm)
+		return -EINVAL;
+	sha_ctx = crypto_ahash_ctx(tfm);
+	if (!sha_ctx)
+		return -EINVAL;
+	req_ctx = ahash_request_ctx(req);
 
 	switch (crypto_ahash_digestsize(tfm)) {
 	case SHA1_DIGEST_SIZE:

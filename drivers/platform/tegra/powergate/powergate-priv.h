@@ -1,0 +1,88 @@
+/*
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
+
+#ifndef __POWERGATE_PRIV_H__
+#define __POWERGATE_PRIV_H__
+
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/clk.h>
+#include <linux/clk/tegra.h>
+#include <linux/err.h>
+#include <linux/spinlock.h>
+#include <linux/tegra-powergate.h>
+#include <soc/tegra/tegra-powergate-driver.h>
+
+#define MAX_CLK_EN_NUM			15
+#define MAX_HOTRESET_CLIENT_NUM		4
+
+#define powergate_ops tegra_powergate_driver_ops
+
+enum clk_type {
+	CLK_AND_RST,
+	RST_ONLY,
+	CLK_ONLY,
+};
+
+struct partition_clk_info {
+	const char *clk_name;
+	enum clk_type clk_type;
+	struct clk *clk_ptr;
+};
+
+struct powergate_partition_info {
+	const char *name;
+	struct partition_clk_info clk_info[MAX_CLK_EN_NUM];
+	struct partition_clk_info slcg_info[MAX_CLK_EN_NUM];
+	unsigned long reset_id[MAX_CLK_EN_NUM];
+	int reset_id_num;
+	struct raw_notifier_head slcg_notifier;
+	int refcount;
+	bool disable_after_boot;
+	struct mutex pg_mutex;
+	bool skip_reset;
+};
+
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+void get_slcg_info(struct powergate_partition_info *pg_info);
+int slcg_clk_enable(struct powergate_partition_info *pg_info);
+void slcg_clk_disable(struct powergate_partition_info *pg_info);
+#else
+static inline void get_slcg_info(struct powergate_partition_info *pg_info)
+{ return; }
+static inline int slcg_clk_enable(struct powergate_partition_info *pg_info)
+{ return 0; }
+static inline void slcg_clk_disable(struct powergate_partition_info *pg_info)
+{ return; }
+#endif
+
+/* INIT APIs: New SoC needs to add its support here */
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+struct powergate_ops *tegra210_powergate_init_chip_support(void);
+#else
+static inline struct powergate_ops *tegra210_powergate_init_chip_support(void)
+{
+	return NULL;
+}
+#endif
+
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+struct powergate_ops *tegra186_powergate_init_chip_support(void);
+#else
+static inline struct powergate_ops *tegra186_powergate_init_chip_support(void)
+{
+	return NULL;
+}
+#endif
+#endif /* __POWERGATE_PRIV_H__ */

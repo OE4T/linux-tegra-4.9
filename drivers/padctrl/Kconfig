@@ -1,0 +1,11 @@
+menuconfig PADCTRL
+	bool "Pad controller support"
+	help
+	  Say Y here to enable pad controller support
+
+	  This framework provides a generic interface to PAD
+	  devices.
+
+if PADCTRL
+source "../t18x/drivers/padctrl/Kconfig.t18x"
+endif

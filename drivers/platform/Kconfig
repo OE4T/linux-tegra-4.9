@@ -1,0 +1,21 @@
+if X86
+source "drivers/platform/x86/Kconfig"
+endif
+if MIPS
+source "drivers/platform/mips/Kconfig"
+endif
+
+source "drivers/platform/goldfish/Kconfig"
+
+source "drivers/platform/chrome/Kconfig"
+
+config PLATFORM_TEGRA
+	bool "NVIDIA Tegra platform"
+	default y if ARCH_TEGRA
+	help
+	  Enable support for misc Tegra drivers.
+
+if PLATFORM_TEGRA
+source "drivers/platform/tegra/Kconfig"
+source "drivers/platform/tegra/nvadsp/Kconfig"
+endif

@@ -597,7 +597,7 @@ err_add_children:
 	for_each_possible_cpu(cpu) {
 		struct trusty_work *tw = per_cpu_ptr(s->nop_works, cpu);
 
-		flush_workitem(&tw->work);
+		cancel_workitem(&tw->work);
 	}
 	free_percpu(s->nop_works);
 err_alloc_works:
@@ -627,7 +627,7 @@ static int trusty_remove(struct platform_device *pdev)
 	for_each_possible_cpu(cpu) {
 		struct trusty_work *tw = per_cpu_ptr(s->nop_works, cpu);
 
-		flush_workitem(&tw->work);
+		cancel_workitem(&tw->work);
 	}
 	free_percpu(s->nop_works);
 	destroy_workqueue(s->nop_wq);

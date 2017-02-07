@@ -1805,4 +1805,15 @@
 			};
 		};
 	};
+
+	arm64_ras: arm64_ras {
+		compatible = "arm,armv8.2-ras";
+		interrupts = <0 400 0x04>;
+		status = "disabled";
+	};
+
+	carmel_ras {
+		compatible = "nvidia,carmel-ras";
+		status = "disabled";
+	};
 };

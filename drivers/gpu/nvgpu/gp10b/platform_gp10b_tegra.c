@@ -16,7 +16,7 @@
 #include <linux/of_platform.h>
 #include <linux/nvhost.h>
 #include <linux/debugfs.h>
-#include <linux/tegra-powergate.h>
+#include <soc/tegra/tegra_powergate.h>
 #include <linux/platform_data/tegra_edp.h>
 #include <linux/dma-buf.h>
 #include <linux/nvmap.h>
@@ -207,7 +207,7 @@ static bool gp10b_tegra_is_railgated(struct device *dev)
 	bool ret = false;
 
 	if (tegra_bpmp_running())
-		ret = !tegra_powergate_is_powered(TEGRA_POWERGATE_GPU);
+		ret = !tegra_powergate_is_powered(TEGRA186_POWER_DOMAIN_GPU);
 
 	return ret;
 }
@@ -224,13 +224,13 @@ static int gp10b_tegra_railgate(struct device *dev)
 			0, TEGRA_BWMGR_SET_EMC_FLOOR);
 
 	if (tegra_bpmp_running() &&
-	    tegra_powergate_is_powered(TEGRA_POWERGATE_GPU)) {
+	    tegra_powergate_is_powered(TEGRA186_POWER_DOMAIN_GPU)) {
 		int i;
 		for (i = 0; i < platform->num_clks; i++) {
 			if (platform->clk[i])
 				clk_disable_unprepare(platform->clk[i]);
 		}
-		tegra_powergate_partition(TEGRA_POWERGATE_GPU);
+		tegra_powergate_partition(TEGRA186_POWER_DOMAIN_GPU);
 	}
 	return 0;
 }
@@ -243,7 +243,7 @@ static int gp10b_tegra_unrailgate(struct device *dev)
 
 	if (tegra_bpmp_running()) {
 		int i;
-		ret = tegra_unpowergate_partition(TEGRA_POWERGATE_GPU);
+		ret = tegra_unpowergate_partition(TEGRA186_POWER_DOMAIN_GPU);
 		for (i = 0; i < platform->num_clks; i++) {
 			if (platform->clk[i])
 				clk_prepare_enable(platform->clk[i]);

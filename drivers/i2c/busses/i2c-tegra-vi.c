@@ -43,7 +43,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/dmapool.h>
 #include <linux/pm_runtime.h>
-#include <linux/tegra-powergate.h>
+#include <soc/tegra/tegra_powergate.h>
 #include <asm/unaligned.h>
 
 #define TEGRA_I2C_TIMEOUT (msecs_to_jiffies(1000))
@@ -1890,7 +1890,7 @@ static const struct tegra_i2c_hw_feature tegra210_vii2c_hw = {
 	.has_slcg_support = false,
 	.has_regulator = true,
 	.has_powergate = true,
-	.powergate_id = TEGRA_POWERGATE_VENC,
+	.powergate_id = TEGRA210_POWER_DOMAIN_VENC,
 	.is_vi = true,
 };
 

@@ -241,6 +241,7 @@ struct tegra_dc {
 	struct tegra_dc_mode		cached_mode;
 	bool				use_cached_mode;
 	s64				frametime_ns;
+	struct tegra_dc_mode_metadata	mode_metadata;
 
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	struct tegra_dc_win		windows[DC_N_WINDOWS];

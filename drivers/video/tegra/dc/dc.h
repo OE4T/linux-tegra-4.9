@@ -474,6 +474,12 @@ struct tegra_dc_mode {
 	u32	vmode;
 };
 
+struct tegra_dc_mode_metadata {
+	u64 line_in_nsec; /* Line duration in nsec */
+	int vtotal_lines; /* # of lines to vsync */
+	int vblank_lines; /* # of lines till vblank intr; vtotal-fp */
+};
+
 #define TEGRA_DC_MODE_FLAG_NEG_V_SYNC	(1 << 0)
 #define TEGRA_DC_MODE_FLAG_NEG_H_SYNC	(1 << 1)
 #define TEGRA_DC_MODE_FLAG_NEG_DE		(1 << 2)
@@ -1007,6 +1013,7 @@ int tegra_dc_ext_process_modechange(int output);
 int tegra_dc_ext_process_bandwidth_renegotiate(int output,
 					struct tegra_dc_bw_data *bw);
 bool tegra_dc_ext_is_userspace_active(void);
+int tegra_dc_ext_get_scanline(struct tegra_dc_ext *dc_ext);
 /* finish dc/ext */
 
 /* needed for tegra_fb.h merge */

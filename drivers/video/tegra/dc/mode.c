@@ -705,13 +705,34 @@ int tegra_dc_to_fb_videomode(struct fb_videomode *fbmode,
 
 int tegra_dc_update_mode(struct tegra_dc *dc)
 {
+	int ret = 0;
+
 	if (dc->mode_dirty)
 #ifdef CONFIG_TEGRA_NVDISPLAY
-		return tegra_nvdisp_program_mode(dc, &dc->mode);
+		ret = tegra_nvdisp_program_mode(dc, &dc->mode);
 #else
-		return tegra_dc_program_mode(dc, &dc->mode);
+		ret = tegra_dc_program_mode(dc, &dc->mode);
 #endif
-	return 0;
+
+	/* Update tracing constants */
+	if (!dc->mode_dirty) {
+		int line_width = dc->mode.h_sync_width +
+					dc->mode.h_back_porch +
+					dc->mode.h_active +
+					dc->mode.h_front_porch;
+		dc->mode_metadata.line_in_nsec = ((u64)line_width *
+					(u64)NSEC_PER_SEC) /
+					(u64)dc->mode.pclk;
+		dc->mode_metadata.vtotal_lines = dc->mode.v_sync_width +
+					dc->mode.v_back_porch +
+					dc->mode.v_active +
+					dc->mode.v_front_porch;
+		dc->mode_metadata.vblank_lines =
+					dc->mode_metadata.vtotal_lines -
+					dc->mode.v_front_porch;
+	}
+
+	return ret;
 }
 
 int tegra_dc_set_fb_mode(struct tegra_dc *dc,

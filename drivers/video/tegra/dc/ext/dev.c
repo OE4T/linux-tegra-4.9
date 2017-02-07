@@ -839,6 +839,11 @@ int tegra_dc_ext_vpulse3(struct tegra_dc_ext *ext,
 	return 0;
 }
 
+int tegra_dc_ext_get_scanline(struct tegra_dc_ext *ext)
+{
+	return ext->scanline_trigger;
+}
+
 static void tegra_dc_ext_unpin_handles(struct tegra_dc_dmabuf *unpin_handles[],
 				       int nr_unpin)
 {

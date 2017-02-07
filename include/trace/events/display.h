@@ -376,6 +376,26 @@ TRACE_EVENT(display_vblank,
 		__entry->ctrl_num, __entry->vblank_count)
 );
 
+TRACE_EVENT(display_scanline,
+	TP_PROTO(u32 ctrl_num, u16 line_num, u16 frame_num, s64 timestamp),
+	TP_ARGS(ctrl_num, line_num, frame_num, timestamp),
+	TP_STRUCT__entry(
+		__field(u32, ctrl_num)
+		__field(u16, line_num)
+		__field(u16, frame_num)
+		__field(u64, timestamp)
+	),
+	TP_fast_assign(
+		__entry->ctrl_num = ctrl_num;
+		__entry->line_num = line_num;
+		__entry->frame_num = frame_num;
+		__entry->timestamp = timestamp;
+	),
+	TP_printk("ctrl_num=%u line_num=%u frame_num=%u timestamp=%lld",
+		__entry->ctrl_num, __entry->line_num,
+		__entry->frame_num, __entry->timestamp)
+);
+
 #endif /* _TRACE_DISPLAY_H */
 
 /* This part must be outside protection */

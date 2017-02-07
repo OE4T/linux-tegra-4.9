@@ -52,6 +52,7 @@
 #if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_TRUSTY)
 #include <linux/ote_protocol.h>
 #endif
+#include <linux/version.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/display.h>
@@ -4409,6 +4410,90 @@ bool tegra_dc_does_vsync_separate(struct tegra_dc *dc, s64 new_ts, s64 old_ts)
 				dc->frametime_ns)));
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0))
+static inline u64 tegra_dc_get_tsc_time(void)
+{
+	struct timecounter *tc;
+	cycle_t value;
+	u64 frac = 0;
+
+	tc = arch_timer_get_timecounter();
+	if (tc) {
+		const struct cyclecounter *cc = tc->cc;
+
+		value = cc->read(cc);
+		return cyclecounter_cyc2ns(cc, value, 0, &frac);
+	}
+	return 0;
+}
+#else
+static inline u64 tegra_dc_get_tsc_time(void)
+{
+	/* TBD: Add support for kernel 4.9 */
+	/* arch_timer_get_timecounter() doesn't exist in 4.9 */
+	return 0;
+}
+#endif
+
+static inline void tegra_dc_scanline_trace(struct tegra_dc *dc)
+{
+	int current_scanline, vp3_scanline;
+	int current_frame, diff_frames;
+	int vblank_diff_lines, vp3_diff_lines;
+	u64 vblank_delta_time, vp3_delta_time;
+	u64 curr_timestamp, vblank_timestamp, vp3_timestamp;
+
+	/* TBD: Currently, if this function is delayed by greater than
+	 * one frame duration, then prints for those frames would be skipped.
+	 */
+
+	/* Get current TSC time & raster position */
+	curr_timestamp = tegra_dc_get_tsc_time();
+	current_scanline = tegra_dc_get_v_count(dc);
+	current_frame = tegra_dc_readl(dc, DC_COM_RG_DPCA) >> 16;
+
+	/* TBD: Extend for more than one programmable scanline. */
+	/* Is there a programmed scanline ? */
+	vp3_scanline = tegra_dc_ext_get_scanline(dc->ext);
+
+	/* Compare current scanline to actual event occurrence */
+	if (current_scanline >= dc->mode_metadata.vblank_lines  &&
+	    current_scanline <= dc->mode_metadata.vtotal_lines) {
+		/* If control still in old frame; where vblank occurred */
+		vblank_diff_lines = current_scanline -
+				dc->mode_metadata.vblank_lines;
+		if (vp3_scanline >= 0)
+			vp3_diff_lines = current_scanline - vp3_scanline;
+		diff_frames = 0;
+	} else {
+		/* If in next frame */
+		vblank_diff_lines = current_scanline + dc->mode.v_front_porch;
+		if (vp3_scanline >= 0)
+			vp3_diff_lines = (dc->mode_metadata.vtotal_lines
+					- vp3_scanline) + current_scanline;
+		diff_frames = -1;
+	}
+
+	/* Calculate time delta & accurate timestamps */
+	vblank_delta_time = (u64)vblank_diff_lines *
+				dc->mode_metadata.line_in_nsec;
+	vblank_timestamp = curr_timestamp - vblank_delta_time;
+	if (vp3_scanline >= 0) {
+		vp3_delta_time = (u64)vp3_diff_lines *
+				dc->mode_metadata.line_in_nsec;
+		vp3_timestamp = curr_timestamp - vp3_delta_time;
+	}
+
+	/* Write to ftrace buffer */
+	if (vp3_scanline >= 0) {
+		trace_display_scanline(dc->ctrl_num, vp3_scanline,
+				current_frame+diff_frames, vp3_timestamp);
+	}
+	/* Write -1 for line number to indicate its vblank line # */
+	trace_display_scanline(dc->ctrl_num, -1,
+				current_frame+diff_frames, vblank_timestamp);
+}
+
 static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 {
 	ktime_t timestamp = ktime_get();
@@ -4468,6 +4553,13 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 
 	if (dc->nvsr)
 		tegra_dc_nvsr_irq(dc->nvsr, status);
+
+	/* Trace scanlines before mode change takes effect below */
+	if (status & V_BLANK_INT) {
+		/* Do any extra work only if tracepoint enabled */
+		if (trace_display_scanline_enabled())
+			tegra_dc_scanline_trace(dc);
+	}
 
 	/* update video mode if it has changed since the last frame */
 	if (status & (FRAME_END_INT | V_BLANK_INT))

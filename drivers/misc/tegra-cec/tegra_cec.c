@@ -304,12 +304,38 @@ out:
 	return IRQ_HANDLED;
 }
 
+static long tegra_cec_ioctl(struct file *file, unsigned int cmd,
+		 unsigned long arg)
+{
+	struct tegra_cec *cec = file->private_data;
+
+	if (_IOC_TYPE(cmd) != TEGRA_CEC_IOC_MAGIC)
+		return  -EINVAL;
+
+	switch (cmd) {
+	case TEGRA_CEC_IOCTL_ERROR_RECOVERY:
+		mutex_lock(&cec->recovery_lock);
+		tegra_cec_error_recovery(cec);
+		mutex_unlock(&cec->recovery_lock);
+		break;
+	default:
+		dev_err(cec->dev, "unsupported ioctl\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static const struct file_operations tegra_cec_fops = {
 	.owner = THIS_MODULE,
 	.open = tegra_cec_open,
 	.release = tegra_cec_release,
 	.read = tegra_cec_read,
 	.write = tegra_cec_write,
+	.unlocked_ioctl = tegra_cec_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl =  tegra_cec_ioctl,
+#endif
 };
 
 static int tegra_cec_send_one_touch_play(struct tegra_cec *cec)
@@ -534,6 +560,7 @@ static int tegra_cec_probe(struct platform_device *pdev)
 
 	atomic_set(&cec->init_done, 0);
 	mutex_init(&cec->tx_lock);
+	mutex_init(&cec->recovery_lock);
 
 #if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
 	ret = tegra_nvdisp_unpowergate_partition(cec->soc->powergate_id);

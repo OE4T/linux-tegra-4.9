@@ -18,6 +18,8 @@
 #include <linux/init.h>
 #include <linux/io.h>
 #include <linux/module.h>
+#include <linux/of_device.h>
+#include <linux/platform_device.h>
 #include <linux/reboot.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
@@ -27,8 +29,8 @@
 
 unsigned long nvdumper_reserved;
 
-static void __init nvdumper_sysfs_init(void);
-static void __exit nvdumper_sysfs_exit(void);
+static void nvdumper_sysfs_init(void);
+static void nvdumper_sysfs_exit(void);
 
 #define NVDUMPER_CLEAN      0xf000caf3U
 #define NVDUMPER_DIRTY      0x2badfaceU
@@ -40,7 +42,11 @@ static void __exit nvdumper_sysfs_exit(void);
 static void __iomem *nvdumper_ptr;
 static uint32_t nvdumper_last_reboot;
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+struct nvdumper_soc {
+	bool enable_hw_ram_dump_cntrl;
+};
+
+static const struct nvdumper_soc *nvdumper_soc;
 
 #define NV_ADDRESS_MAP_PMC_IMPL_BASE              0x0c360000
 #define NV_ADDRESS_MAP_PMC_IMPL_SIZE              0x400 /* map 1k */
@@ -70,7 +76,6 @@ static void enable_hw_ram_dump_ctrl(int enable)
 
 	iounmap(ram_dump_ctrl);
 }
-#endif
 
 static uint32_t get_dirty_state(void)
 {
@@ -82,7 +87,9 @@ static void set_dirty_state(uint32_t state)
 	pr_info("nvdumper: set_dirty_state 0x%x\n", state);
 	iowrite32(state, nvdumper_ptr);
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	if (!nvdumper_soc->enable_hw_ram_dump_cntrl)
+		return;
+
 	if (state == NVDUMPER_DIRTY_DUMP || state == NVDUMPER_WDT_DUMP) {
 		pr_info("nvdumper: preparing wdt\n");
 		enable_hw_ram_dump_ctrl(1);
@@ -90,7 +97,6 @@ static void set_dirty_state(uint32_t state)
 		pr_info("nvdumper: cleaning up wdt\n");
 		enable_hw_ram_dump_ctrl(0);
 	}
-#endif
 }
 
 static int nvdumper_reboot_cb(struct notifier_block *nb,
@@ -118,9 +124,32 @@ static int __init tegra_nvdumper_arg(char *options)
 }
 early_param("nvdumper_reserved", tegra_nvdumper_arg);
 
-static int __init nvdumper_init(void)
+static const struct nvdumper_soc tegra210_nvdumper_soc = {
+	.enable_hw_ram_dump_cntrl = false,
+};
+
+static struct of_device_id of_nvdumper_match[] = {
+	{
+		.compatible = "nvidia,tegra210-nvdumper",
+		.data = &tegra210_nvdumper_soc
+	},
+	{ }
+};
+
+static int nvdumper_probe(struct platform_device *pdev)
 {
+	const struct of_device_id *match;
 	int ret;
+
+	if (pdev->dev.of_node) {
+		match = of_match_device(of_nvdumper_match,
+					&pdev->dev);
+		if (match)
+			nvdumper_soc = match->data;
+	} else {
+		dev_err(&pdev->dev, "No nvdumper OF node\n");
+		return -ENODEV;
+	}
 
 	if (!nvdumper_reserved)
 		return -ENOTSUPP;
@@ -169,7 +198,7 @@ err_out1:
 	return ret;
 }
 
-static void __exit nvdumper_exit(void)
+static int nvdumper_remove(struct platform_device *pdev)
 {
 	nvdumper_sysfs_exit();
 	nvdumper_regdump_exit();
@@ -177,6 +206,8 @@ static void __exit nvdumper_exit(void)
 	unregister_reboot_notifier(&nvdumper_reboot_notifier);
 	set_dirty_state(NVDUMPER_CLEAN);
 	iounmap(nvdumper_ptr);
+
+	return 0;
 }
 
 static char *nvdumper_set_str = "dirty_dump";
@@ -227,7 +258,7 @@ static const struct kobj_attribute nvdumper_attr[] = {
 	__ATTR(nvdumper_prev, 0444, nvdumper_prev_show, NULL),
 };
 
-static void __init nvdumper_sysfs_init(void)
+static void nvdumper_sysfs_init(void)
 {
 	int i, ret = 0;
 
@@ -262,7 +293,7 @@ static void __init nvdumper_sysfs_init(void)
 	}
 }
 
-static void __exit nvdumper_sysfs_exit(void)
+static void nvdumper_sysfs_exit(void)
 {
 	int i;
 
@@ -273,7 +304,26 @@ static void __exit nvdumper_sysfs_exit(void)
 		sysfs_remove_file(nvdumper_kobj, &nvdumper_attr[i].attr);
 }
 
-arch_initcall(nvdumper_init);
+static struct platform_driver nvdumper_driver = {
+	.probe		= nvdumper_probe,
+	.remove		= nvdumper_remove,
+	.driver		= {
+		.name	= "tegra-nvdumper",
+		.owner	= THIS_MODULE,
+		.of_match_table = of_nvdumper_match,
+	},
+};
+
+static int __init nvdumper_init(void)
+{
+	return platform_driver_register(&nvdumper_driver);
+}
+module_init(nvdumper_init);
+
+static void __exit nvdumper_exit(void)
+{
+	platform_driver_unregister(&nvdumper_driver);
+}
 module_exit(nvdumper_exit);
 
 MODULE_LICENSE("GPL");

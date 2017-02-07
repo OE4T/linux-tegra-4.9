@@ -34,7 +34,6 @@
 #include <asm/cacheflush.h>
 #include <linux/debugfs.h>
 #include <linux/spinlock.h>
-#include <linux/tegra-powergate.h>
 #include <linux/clk/tegra.h>
 #include <linux/kthread.h>
 #include <linux/platform/tegra/common.h>

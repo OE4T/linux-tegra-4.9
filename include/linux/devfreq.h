@@ -4,6 +4,7 @@
  *
  * Copyright (C) 2011 Samsung Electronics
  *	MyungJoo Ham <myungjoo.ham@samsung.com>
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -42,6 +43,8 @@ struct devfreq;
  *			own protocol with private_data. However, because
  *			this is governor-specific, a governor using this
  *			will be only compatible with devices aware of it.
+ * @busy:		The current status of the device; True if the
+ *			device is busy, false if it is not.
  */
 struct devfreq_dev_status {
 	/* both since the last measure */
@@ -49,6 +52,7 @@ struct devfreq_dev_status {
 	unsigned long busy_time;
 	unsigned long current_frequency;
 	void *private_data;
+	bool busy;
 };
 
 /*
@@ -78,6 +82,16 @@ struct devfreq_dev_status {
  *			devfreq.last_status.
  * @get_cur_freq:	The device should provide the current frequency
  *			at which it is operating.
+ * @set_high_wmark:	This is an optional callback to set high
+ *			watermark for watermark event. The value is
+ *			be scaled between 0 and 1000 where 1000 equals to
+ *			100% load. Setting this value to 1000 disables
+ *			the event
+ * @set_low_wmark:	This is an optional callback to set low
+ *			watermark for watermark event. The value is
+ *			be scaled between 0 and 1000 where 1000 equals to
+ *			100% load. Setting this value to 0 disables the
+ *			event.
  * @exit:		An optional callback that is called when devfreq
  *			is removing the devfreq object due to error or
  *			from devfreq_remove_device() call. If the user
@@ -94,6 +108,8 @@ struct devfreq_dev_profile {
 	int (*get_dev_status)(struct device *dev,
 			      struct devfreq_dev_status *stat);
 	int (*get_cur_freq)(struct device *dev, unsigned long *freq);
+	int (*set_high_wmark)(struct device *dev, unsigned int val);
+	int (*set_low_wmark)(struct device *dev, unsigned int val);
 	void (*exit)(struct device *dev);
 
 	unsigned long *freq_table;
@@ -187,6 +203,8 @@ struct devfreq {
 	unsigned long last_stat_updated;
 
 	struct srcu_notifier_head transition_notifier_list;
+
+	bool suspended;
 };
 
 struct devfreq_freqs {
@@ -210,6 +228,8 @@ extern void devm_devfreq_remove_device(struct device *dev,
 /* Supposed to be called by PM callbacks */
 extern int devfreq_suspend_device(struct devfreq *devfreq);
 extern int devfreq_resume_device(struct devfreq *devfreq);
+extern int devfreq_watermark_event(struct devfreq *devfreq,
+				  int type);
 
 /* Helper functions for devfreq user device driver with OPP. */
 extern struct dev_pm_opp *devfreq_recommended_opp(struct device *dev,
@@ -409,6 +429,12 @@ static inline struct devfreq *devfreq_get_devfreq_by_phandle(struct device *dev,
 static inline int devfreq_update_stats(struct devfreq *df)
 {
 	return -EINVAL;
+}
+
+static inline int devfreq_watermark_event(struct devfreq *devfreq,
+					int type)
+{
+	return 0;
 }
 #endif /* CONFIG_PM_DEVFREQ */
 

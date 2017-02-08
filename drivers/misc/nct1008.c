@@ -1155,7 +1155,7 @@ static void nct1008_work_func(struct work_struct *work)
 						work);
 	struct i2c_client *client = data->client;
 	int err;
-	int intr_status;
+	int st;
 
 	mutex_lock(&data->mutex);
 	if (data->stop_workqueue) {
@@ -1168,17 +1168,12 @@ static void nct1008_work_func(struct work_struct *work)
 	if (err == -ENODEV)
 		return;
 
-	intr_status = nct1008_read_reg(data->client, STATUS_RD);
-	dev_dbg(&client->dev, "%s: interruption (0x%08x)\n",
-			data->chip_name, intr_status);
-
-	if (intr_status & (LOC_LO_BIT | LOC_HI_BIT)) {
-		dev_dbg(&client->dev, "%s: LOC-sensor is not within limits\n",
-				data->chip_name);
+	st = nct1008_read_reg(data->client, STATUS_RD);
+	dev_dbg(&client->dev, "%s: interrupt (0x%08x)\n", data->chip_name, st);
+	if ((st & (LOC_LO_BIT | LOC_HI_BIT)) && data->sensors[LOC].thz)
 		thermal_zone_device_update(data->sensors[LOC].thz);
-	}
 
-	if (intr_status & (EXT_LO_BIT | EXT_HI_BIT))
+	if ((st & (EXT_LO_BIT | EXT_HI_BIT)) && data->sensors[EXT].thz)
 		thermal_zone_device_update(data->sensors[EXT].thz);
 
 	/* Initiate one-shot conversion */

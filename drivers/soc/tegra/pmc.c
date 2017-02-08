@@ -3404,6 +3404,7 @@ static const struct tegra_pmc_soc tegra186_pmc_soc = {
 	.num_descs = ARRAY_SIZE(tegra186_io_pads_pinctrl_desc),
 	.descs = tegra186_io_pads_pinctrl_desc,
 	.rmap = tegra186_register_map,
+	.has_ps18 = true,
 };
 
 static const struct of_device_id tegra_pmc_match[] = {

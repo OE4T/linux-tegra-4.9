@@ -44,8 +44,13 @@
 			nvidia,up_wmark_window = /bits/ 8 <3>;
 			nvidia,down_wmark_window = /bits/ 8 <2>;
 			nvidia,avg_window_log2 = /bits/ 8 <6>;
-			/* emc_freq / actmon_freq = 1600MHz / 19.2 MHz */
-			nvidia,count_weight = <0x53>;
+			/* Activity counter is increamented every 256 memory
+			 * transactions. Considering 64 bytes Bus and each
+			 * emc clock(DRAM clock) reads 16 Bytes, It will need
+			 * 64/16 = 4 emc clocks to read 64 Bytes wider memory
+			 * bus. Hence count_weight, W = 4 * 256 = 0x400.
+			 */
+			nvidia,count_weight = <0x400>;
 			nvidia,type = <1>;
 			status = "disabled";
 		};

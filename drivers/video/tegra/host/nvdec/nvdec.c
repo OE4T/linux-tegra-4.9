@@ -571,7 +571,11 @@ static struct of_device_id tegra_nvdec_of_match[] = {
 #endif
 #ifdef CONFIG_TEGRA_T19X_GRHOST
 	{ .compatible = "nvidia,tegra194-nvdec",
-		.data = (struct nvhost_device_data *)&t19_nvdec_info },
+		.data = (struct nvhost_device_data *)&t19_nvdec_info,
+		.name = "nvdec" },
+	{ .compatible = "nvidia,tegra194-nvdec",
+		.data = (struct nvhost_device_data *)&t19_nvdec1_info,
+		.name = "nvdec1" },
 #endif
 	{ },
 };
@@ -734,6 +738,10 @@ static struct of_device_id tegra_nvdec_domain_match[] = {
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	{ .compatible = "nvidia,tegra186-nvdec-pd",
 	.data = (struct nvhost_device_data *)&t18_nvdec_info},
+#endif
+#ifdef CONFIG_TEGRA_T19X_GRHOST
+	{.compatible = "nvidia,tegra194-nvdec1-pd",
+	 .data = (struct nvhost_device_data *)&t19_nvdec1_info},
 #endif
 	{},
 };

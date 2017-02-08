@@ -22,6 +22,7 @@
 #include <linux/kernel.h>
 #include <linux/clk/tegra.h>
 #include <linux/delay.h>
+#include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/of.h>
@@ -47,7 +48,7 @@
 
 #define TEGRA_SE_MUTEX_WDT_UNITS	0x600000
 #define RNG1_TIMEOUT			2000	/*micro seconds*/
-#define PKA1_TIMEOUT			40000	/*micro seconds*/
+#define PKA1_TIMEOUT			1000000	/*micro seconds*/
 #define RAND_128			16	/*bytes*/
 #define RAND_256			32	/*bytes*/
 #define ADV_STATE_FREQ			3
@@ -103,7 +104,9 @@ struct tegra_se_elp_chipdata {
 struct tegra_se_elp_dev {
 	struct device *dev;
 	void __iomem *io_reg[2];
+	int irq;	/* irq allocated */
 	struct clk *c;
+	struct completion complete;
 	struct tegra_se_pka1_slot *slot_list;
 	const struct tegra_se_elp_chipdata *chipdata;
 	u32 *rdata;
@@ -669,26 +672,85 @@ static u32 pka1_ctrl_base(u32 mode)
 	return base_radix;
 }
 
+static int tegra_se_pka1_done_verify(struct tegra_se_elp_dev *se_dev)
+{
+	u32 val, abnormal_val;
+
+	/* Write Status Register to acknowledge interrupt */
+	val = se_elp_readl(se_dev, PKA1, TEGRA_SE_PKA1_STATUS_OFFSET);
+	se_elp_writel(se_dev, PKA1, val, TEGRA_SE_PKA1_STATUS_OFFSET);
+
+	val = se_elp_readl(se_dev, PKA1, TEGRA_SE_PKA1_RETURN_CODE_OFFSET);
+
+	abnormal_val = TEGRA_SE_PKA1_RETURN_CODE_STOP_REASON(
+			TEGRA_SE_PKA1_RETURN_CODE_STOP_REASON_ABNORMAL);
+	if (abnormal_val & val) {
+		dev_err(se_dev->dev, "PKA1 Operation ended Abnormally\n");
+		return -EFAULT;
+	}
+
+	val = se_elp_readl(se_dev, PKA1, TEGRA_SE_PKA1_CTRL_SE_INT_STAT_OFFSET);
+	if (val & TEGRA_SE_PKA1_CTRL_SE_INT_STAT_ERR(ELP_TRUE)) {
+		dev_err(se_dev->dev, "tegra_se_pka1_irq err: %x\n", val);
+		return -EFAULT;
+	}
+
+	return 0;
+}
+
+static irqreturn_t tegra_se_pka1_irq(int irq, void *dev)
+{
+	struct tegra_se_elp_dev *se_dev = dev;
+
+	if (!tegra_se_pka1_done_verify(se_dev))
+		complete(&se_dev->complete);
+
+	return IRQ_HANDLED;
+}
+
+static void tegra_se_set_pka1_op_ready(struct tegra_se_elp_dev *se_dev)
+{
+	u32 val;
+
+	se_elp_writel(se_dev, PKA1, 0, TEGRA_SE_PKA1_FLAGS_OFFSET);
+	se_elp_writel(se_dev, PKA1, 0, TEGRA_SE_PKA1_FSTACK_PTR_OFFSET);
+
+	/* Clear PKA1 Error Capture bits */
+	se_elp_writel(se_dev, PKA1, 0, TEGRA_SE_PKA1_CTRL_ERROR_CAPTURE_OFFSET);
+
+	/* Clear any pending interrupts */
+	val = se_elp_readl(se_dev, PKA1, TEGRA_SE_PKA1_STATUS_OFFSET);
+	se_elp_writel(se_dev, PKA1, val, TEGRA_SE_PKA1_STATUS_OFFSET);
+
+	/* Unmask PKA1 interrupt bit */
+	se_elp_writel(se_dev, PKA1,
+		TEGRA_SE_PKA1_CTRL_SE_INT_PKA1_MASK(ELP_ENABLE),
+		TEGRA_SE_PKA1_CTRL_SE_INT_MASK_OFFSET);
+
+	/* Enable PKA1 interrupt */
+	se_elp_writel(se_dev, PKA1,
+		      TEGRA_SE_PKA1_INT_ENABLE_IE_IRQ_EN(ELP_ENABLE),
+		      TEGRA_SE_PKA1_INT_ENABLE_OFFSET);
+
+	reinit_completion(&se_dev->complete);
+}
+
 static void tegra_se_program_pka1_rsa(struct tegra_se_pka1_rsa_context *ctx)
 {
 	u32 val;
 	struct tegra_se_elp_dev *se_dev = ctx->se_dev;
 
-	se_elp_writel(se_dev, PKA1, 0, TEGRA_SE_PKA1_FLAGS_OFFSET);
-	se_elp_writel(se_dev, PKA1, 0, TEGRA_SE_PKA1_FSTACK_PTR_OFFSET);
+	tegra_se_set_pka1_op_ready(se_dev);
 
 	se_elp_writel(se_dev, PKA1,
 		      TEGRA_SE_PKA1_RSA_MOD_EXP_PRG_ENTRY_VAL,
 		      TEGRA_SE_PKA1_PRG_ENTRY_OFFSET);
-	se_elp_writel(se_dev, PKA1,
-		      TEGRA_SE_PKA1_INT_ENABLE_IE_IRQ_EN(ELP_ENABLE),
-		      TEGRA_SE_PKA1_INT_ENABLE_OFFSET);
 
 	val = TEGRA_SE_PKA1_CTRL_BASE_RADIX(pka1_ctrl_base(ctx->op_mode)) |
 		TEGRA_SE_PKA1_CTRL_PARTIAL_RADIX(
-				pka1_op_size[ctx->op_mode] / 32);
+				pka1_op_size[ctx->op_mode] / 32) |
+		TEGRA_SE_PKA1_CTRL_GO(TEGRA_SE_PKA1_CTRL_GO_START);
 
-	val |= TEGRA_SE_PKA1_CTRL_GO(TEGRA_SE_PKA1_CTRL_GO_START);
 	se_elp_writel(se_dev, PKA1, val, TEGRA_SE_PKA1_CTRL_OFFSET);
 }
 
@@ -697,8 +759,7 @@ static void tegra_se_program_pka1_ecc(struct tegra_se_pka1_ecc_request *req)
 	u32 val;
 	struct tegra_se_elp_dev *se_dev = req->se_dev;
 
-	se_elp_writel(se_dev, PKA1, 0, TEGRA_SE_PKA1_FLAGS_OFFSET);
-	se_elp_writel(se_dev, PKA1, 0, TEGRA_SE_PKA1_FSTACK_PTR_OFFSET);
+	tegra_se_set_pka1_op_ready(se_dev);
 
 	if (req->type == ECC_POINT_MUL) {
 		se_elp_writel(se_dev, PKA1,
@@ -726,10 +787,6 @@ static void tegra_se_program_pka1_ecc(struct tegra_se_pka1_ecc_request *req)
 			      TEGRA_SE_PKA1_PRG_ENTRY_OFFSET);
 	}
 
-	se_elp_writel(se_dev, PKA1,
-		      TEGRA_SE_PKA1_INT_ENABLE_IE_IRQ_EN(ELP_ENABLE),
-		      TEGRA_SE_PKA1_INT_ENABLE_OFFSET);
-
 	if (req->op_mode == SE_ELP_OP_MODE_ECC521) {
 		se_elp_writel(se_dev, PKA1,
 			      TEGRA_SE_PKA1_FLAGS_FLAG_F1(ELP_ENABLE),
@@ -746,33 +803,14 @@ static void tegra_se_program_pka1_ecc(struct tegra_se_pka1_ecc_request *req)
 
 static int tegra_se_check_pka1_op_done(struct tegra_se_elp_dev *se_dev)
 {
-	u32 val, i = 0;
-	u32 abnormal_val;
+	int ret;
 
-	/* poll pka done status*/
-	do {
-		if (i > PKA1_TIMEOUT) {
-			dev_err(se_dev->dev, "PKA1 Done status timed out\n");
-			return -EINVAL;
-		}
-		udelay(1);
-		val = se_elp_readl(se_dev, PKA1,
-				   TEGRA_SE_PKA1_STATUS_OFFSET);
-		i++;
-	} while (!(val & TEGRA_SE_PKA1_STATUS_IRQ_STAT(ELP_ENABLE)));
-
-	val = se_elp_readl(se_dev, PKA1, TEGRA_SE_PKA1_RETURN_CODE_OFFSET);
-
-	abnormal_val = TEGRA_SE_PKA1_RETURN_CODE_STOP_REASON(
-			TEGRA_SE_PKA1_RETURN_CODE_STOP_REASON_ABNORMAL);
-
-	if (abnormal_val & val) {
-		dev_err(se_dev->dev, "PKA1 Operation ended Abnormally\n");
-		return -EINVAL;
+	ret = wait_for_completion_timeout(&se_dev->complete, msecs_to_jiffies(
+					  PKA1_TIMEOUT / 1000));
+	if (ret == 0) {
+		dev_err(se_dev->dev, "Interrupt timed out\n");
+		return -ETIMEDOUT;
 	}
-	/* Write Status Register to acknowledge interrupt */
-	val = se_elp_readl(se_dev, PKA1, TEGRA_SE_PKA1_STATUS_OFFSET);
-	se_elp_writel(se_dev, PKA1, val, TEGRA_SE_PKA1_STATUS_OFFSET);
 
 	return 0;
 }
@@ -936,8 +974,7 @@ static int tegra_se_pka1_precomp(struct tegra_se_pka1_rsa_context *ctx,
 	if (op_mode == SE_ELP_OP_MODE_ECC521)
 		return 0;
 
-	se_elp_writel(se_dev, PKA1, 0, TEGRA_SE_PKA1_FLAGS_OFFSET);
-	se_elp_writel(se_dev, PKA1, 0, TEGRA_SE_PKA1_FSTACK_PTR_OFFSET);
+	tegra_se_set_pka1_op_ready(se_dev);
 
 	if (op == PRECOMP_RINV) {
 		for (i = 0; i < nwords; i++) {
@@ -956,9 +993,6 @@ static int tegra_se_pka1_precomp(struct tegra_se_pka1_rsa_context *ctx,
 			      TEGRA_SE_PKA1_PRG_ENTRY_OFFSET);
 	}
 
-	se_elp_writel(se_dev, PKA1,
-		      TEGRA_SE_PKA1_INT_ENABLE_IE_IRQ_EN(ELP_ENABLE),
-		      TEGRA_SE_PKA1_INT_ENABLE_OFFSET);
 	se_elp_writel(se_dev, PKA1,
 		      TEGRA_SE_PKA1_CTRL_BASE_RADIX(pka1_ctrl_base(op_mode)) |
 		      TEGRA_SE_PKA1_CTRL_PARTIAL_RADIX(nwords) |
@@ -2179,6 +2213,20 @@ static int tegra_se_elp_probe(struct platform_device *pdev)
 			break;
 	}
 
+	se_dev->irq = platform_get_irq(pdev, 0);
+	if (se_dev->irq <= 0) {
+		dev_err(&pdev->dev, "no irq resource\n");
+		return -ENODEV;
+	}
+
+	err = devm_request_irq(se_dev->dev, se_dev->irq, tegra_se_pka1_irq, 0,
+			dev_name(se_dev->dev), se_dev);
+	if (err) {
+		dev_err(se_dev->dev, "request_irq failed - irq[%d] err[%d]\n",
+			se_dev->irq, err);
+		return err;
+	}
+
 	se_dev->c = devm_clk_get(se_dev->dev, "se");
 	if (IS_ERR(se_dev->c)) {
 		dev_err(se_dev->dev, "se clk_get_sys failed: %ld\n",
@@ -2197,7 +2245,7 @@ static int tegra_se_elp_probe(struct platform_device *pdev)
 					     sizeof(u32) * 4, GFP_KERNEL);
 		if (!se_dev->rdata) {
 			err = -ENOMEM;
-			goto exit;
+			goto clk_dis;
 		}
 	}
 
@@ -2206,21 +2254,23 @@ static int tegra_se_elp_probe(struct platform_device *pdev)
 	err = tegra_se_pka1_init_key_slot(se_dev);
 	if (err) {
 		dev_err(se_dev->dev, "tegra_se_pka_init_key_slot failed\n");
-		goto exit;
+		goto clk_dis;
 	}
+
+	init_completion(&se_dev->complete);
 
 	err = tegra_se_check_trng_op(se_dev);
 	if (err)
 		err = tegra_se_set_trng_op(se_dev);
 	if (err) {
 		dev_err(se_dev->dev, "set_trng_op Failed\n");
-		goto exit;
+		goto clk_dis;
 	}
 
 	err = crypto_register_kpp(&ecdh_algs[0]);
 	if (err) {
 		dev_err(se_dev->dev, "kpp registeration failed for ECDH\n");
-		goto exit;
+		goto clk_dis;
 	}
 
 	node = of_node_get(se_dev->dev->of_node);
@@ -2232,16 +2282,20 @@ static int tegra_se_elp_probe(struct platform_device *pdev)
 	}
 
 	err = crypto_register_akcipher(&pka1_rsa_algs[0]);
-	if (err)
+	if (err) {
 		dev_err(se_dev->dev, "crypto_register_akcipher "
 			"alg failed index[0]\n");
-prop_fail:
-	if (err)
-		crypto_unregister_kpp(&ecdh_algs[0]);
-exit:
+		goto prop_fail;
+	}
+
 	clk_disable_unprepare(se_dev->c);
-	if (!err)
-		dev_info(se_dev->dev, "%s: complete", __func__);
+	dev_info(se_dev->dev, "%s: complete", __func__);
+	return 0;
+
+prop_fail:
+	crypto_unregister_kpp(&ecdh_algs[0]);
+clk_dis:
+	clk_disable_unprepare(se_dev->c);
 
 	return err;
 }

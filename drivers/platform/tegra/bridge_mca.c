@@ -350,6 +350,8 @@ static int bridge_serr_hook(struct pt_regs *regs, int reason,
 #ifdef CONFIG_DEBUG_FS
 static DEFINE_MUTEX(bridge_mca_mutex);
 static struct dentry *bridge_root;
+static struct dentry *bridge_timeout_dir;
+static struct dentry *bridge_timeout_node;
 
 static int bridge_mca_show(struct seq_file *file, void *data)
 {
@@ -385,6 +387,119 @@ static const struct file_operations bridge_mca_fops = {
 	.release = single_release
 };
 
+static int bridge_timeout_show(struct seq_file *s, void *unused)
+{
+	struct device *dev = s->private;
+	struct resource *res_base;
+	struct bridge_mca_bank *bank;
+	unsigned long flags;
+	struct platform_device *pdev;
+
+	if (WARN_ON(!dev))
+		return -EINVAL;
+
+	pdev = to_platform_device(dev);
+
+	res_base = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res_base) {
+		dev_err(&pdev->dev, "Could not find base address");
+		return -ENOENT;
+	}
+
+	raw_spin_lock_irqsave(&bridge_lock, flags);
+	list_for_each_entry(bank, &bridge_list, node) {
+		if (bank->bank == res_base->start) {
+			seq_printf(s, "timeout = %u\n", bank->timeout);
+			break;
+		}
+	}
+	raw_spin_unlock_irqrestore(&bridge_lock, flags);
+	return 0;
+}
+
+static ssize_t bridge_timeout_set(struct file *file,
+	const char __user *addr, size_t len, loff_t *pos)
+{
+	struct seq_file *m = file->private_data;
+	struct device *dev = m ? m->private : NULL;
+	struct resource *res_base;
+	struct bridge_mca_bank *bank;
+	unsigned long flags;
+	struct platform_device *pdev;
+	u32 timeout;
+	int ret;
+
+	if (WARN_ON(!dev))
+		return -EINVAL;
+
+	pdev = to_platform_device(dev);
+
+	ret = kstrtouint_from_user(addr, len, 10, &timeout);
+	if (ret < 0)
+		return ret;
+
+	if (timeout > 100000) {
+		dev_err(&pdev->dev, "bad value of timeout = %u\n",
+				 timeout);
+		return -EINVAL;
+	}
+
+	res_base = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res_base) {
+		dev_err(&pdev->dev, "Could not find base address");
+		return -ENOENT;
+	}
+
+	raw_spin_lock_irqsave(&bridge_lock, flags);
+	list_for_each_entry(bank, &bridge_list, node) {
+		if (bank->bank == res_base->start)
+			break;
+	}
+	raw_spin_unlock_irqrestore(&bridge_lock, flags);
+
+	bank->setup_timeout(bank->vaddr, timeout, &pdev->dev);
+	bank->timeout = timeout;
+
+	return len;
+}
+
+static int bridge_timeout_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, bridge_timeout_show, inode->i_private);
+}
+
+static const struct file_operations timeout_fops = {
+	.open = bridge_timeout_open,
+	.read = seq_read,
+	.write = bridge_timeout_set,
+	.llseek = seq_lseek,
+	.release = single_release
+};
+
+static int bridge_timeout_dbgfs_init(struct bridge_mca_bank *bank,
+		struct device *dev)
+{
+	char devname[50];
+
+	snprintf(devname, sizeof(devname), "%s@0x%llx", bank->name, bank->bank);
+
+	bridge_timeout_dir = debugfs_create_dir(devname, NULL);
+	if  (!bridge_timeout_dir) {
+		dev_err(dev, "Failed to create bridge timeout debugfs dir");
+		return -ENODEV;
+	}
+
+	bridge_timeout_node = debugfs_create_file("timeout", S_IRUGO,
+				bridge_timeout_dir, dev, &timeout_fops);
+	if (!bridge_timeout_node) {
+		dev_err(dev, "Failed to create brige_timeout_node");
+		return -ENODEV;
+	}
+
+	return 0;
+
+}
+
 static int bridge_mca_dbgfs_init(void)
 {
 	struct dentry *d;
@@ -416,6 +531,7 @@ clean:
 }
 #else
 static int bridge_mca_dbgfs_init(void) { return 0; }
+static int bridge_bridge_dbgfs_init(void) { return 0; }
 #endif
 
 #define AXIAPB_TIMEOUT_TIMER	0x2c8
@@ -482,7 +598,8 @@ static struct tegra_bridge_data axi2apb_data = {
 	.error_fifo_count = axi2apb_error_fifo_count,
 	.setup_timeout = axi2apb_setup_timeout,
 	.errors = t18x_axi_errors,
-	.max_error = ARRAY_SIZE(t18x_axi_errors)
+	.max_error = ARRAY_SIZE(t18x_axi_errors),
+	.timeout = 97000			/* Default value of timer */
 };
 
 
@@ -558,7 +675,8 @@ static struct tegra_bridge_data axip2p_data = {
 	.error_fifo_count = axip2p_error_fifo_count,
 	.setup_timeout = axip2p_setup_timeout,
 	.errors = t18x_axi_errors,
-	.max_error = ARRAY_SIZE(t18x_axi_errors)
+	.max_error = ARRAY_SIZE(t18x_axi_errors),
+	.timeout = 97000			/* Default value of timer */
 };
 
 static struct of_device_id tegra18_bridge_match[] = {
@@ -621,6 +739,10 @@ static int tegra18_bridge_probe(struct platform_device *pdev)
 	bank->max_error = bdata->max_error;
 	bank->setup_timeout = bdata->setup_timeout;
 	bank->seen_error = 0;
+	bank->timeout = bdata->timeout;
+	rc = bridge_timeout_dbgfs_init(bank, &pdev->dev);
+	if (rc)
+		return rc;
 
 	hook = devm_kzalloc(&pdev->dev, sizeof(*hook), GFP_KERNEL);
 	hook->fn = bridge_serr_hook;
@@ -639,8 +761,10 @@ static int tegra18_bridge_probe(struct platform_device *pdev)
 	print_bank_info(NULL, bank);
 
 	if (of_property_read_u32(pdev->dev.of_node, "timeout", &timeout) == 0) {
-		if (timeout > 0 && timeout < 100000)
+		if (timeout > 0 && timeout < 100000) {
 			bank->setup_timeout(bank->vaddr, timeout, &pdev->dev);
+			bank->timeout = timeout;
+		}
 		else
 			dev_err(&pdev->dev, "error setting up timeout = %u\n",
 				 timeout);

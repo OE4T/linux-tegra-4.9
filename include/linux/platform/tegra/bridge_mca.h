@@ -63,6 +63,7 @@ struct bridge_mca_bank {
 	struct bridge_mca_error *errors;
 	int seen_error;
 	int max_error;
+	u32 timeout;
 };
 
 struct tegra_bridge_data {
@@ -73,4 +74,5 @@ struct tegra_bridge_data {
 			struct device *dev);
 	struct bridge_mca_error *errors;
 	int max_error;
+	u32 timeout;
 };

@@ -912,6 +912,13 @@ struct dentry *__clk_debugfs_add_file(struct clk *clk, char *name,
 		umode_t mode, void *data, const struct file_operations *fops);
 struct dentry *clk_debugfs_add_file(struct clk_hw *hw, char *name, umode_t mode,
 				void *data, const struct file_operations *fops);
+#else
+static inline struct dentry *__clk_debugfs_add_file(struct clk *clk, char *name,
+		umode_t mode, void *data, const struct file_operations *fops)
+{ return NULL; }
+static inline struct dentry *clk_debugfs_add_file(struct clk_hw *hw, char *name,
+		umode_t mode, void *data, const struct file_operations *fops)
+{ return NULL; }
 #endif
 
 #endif /* CONFIG_COMMON_CLK */

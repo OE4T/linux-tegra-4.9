@@ -20,7 +20,6 @@
 
 #include "gk20a/gk20a.h"
 #include "gm20b/fifo_gm20b.h"
-#include "fifo_gm206.h"
 #include "bios_gm206.h"
 
 #include <nvgpu/nvgpu_common.h>

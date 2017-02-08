@@ -84,11 +84,6 @@ nvgpu-y := \
 	gm20b/cde_gm20b.o \
 	gm20b/therm_gm20b.o \
 	gm206/bios_gm206.o \
-	gm206/fifo_gm206.o \
-	gm206/hal_gm206.o \
-	gm206/gr_gm206.o \
-	gm206/mm_gm206.o \
-	gm206/ce_gm206.o \
 	boardobj/boardobj.o \
 	boardobj/boardobjgrp.o \
 	boardobj/boardobjgrpmask.o \

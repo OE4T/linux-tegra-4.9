@@ -16,7 +16,6 @@
 #include "gk20a.h"
 #include "hal_gk20a.h"
 #include "gm20b/hal_gm20b.h"
-#include "gm206/hal_gm206.h"
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "nvgpu_gpuid_t18x.h"
@@ -37,12 +36,6 @@ int gpu_init_hal(struct gk20a *g)
 	case GK20A_GPUID_GM20B:
 		gk20a_dbg_info("gm20b detected");
 		if (gm20b_init_hal(g))
-			return -ENODEV;
-		break;
-	case GK20A_GPUID_GM204:
-	case GK20A_GPUID_GM206:
-		gk20a_dbg_info("gm20x detected");
-		if (gm206_init_hal(g))
 			return -ENODEV;
 		break;
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)

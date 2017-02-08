@@ -1357,12 +1357,6 @@ int gk20a_wait_for_idle(struct device *dev);
 #define GK20A_GPUID_GM20B \
 	GK20A_GPUID(NVGPU_GPU_ARCH_GM200, NVGPU_GPU_IMPL_GM20B)
 
-#define GK20A_GPUID_GM204 \
-	GK20A_GPUID(NVGPU_GPU_ARCH_GM200, NVGPU_GPU_IMPL_GM204)
-
-#define GK20A_GPUID_GM206 \
-	GK20A_GPUID(NVGPU_GPU_ARCH_GM200, NVGPU_GPU_IMPL_GM206)
-
 int gk20a_init_gpu_characteristics(struct gk20a *g);
 
 void gk20a_pbus_isr(struct gk20a *g);

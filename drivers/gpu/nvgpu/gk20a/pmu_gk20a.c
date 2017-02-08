@@ -3719,10 +3719,6 @@ static u8 get_perfmon_id(struct pmu_gk20a *pmu)
 		unit_id = PMU_UNIT_PERFMON_T18X;
 		break;
 #endif
-	case GK20A_GPUID_GM206:
-	case GK20A_GPUID_GM204:
-		unit_id = PMU_UNIT_PERFMON_T18X;
-		break;
 	default:
 		gk20a_err(g->dev, "no support for %x", ver);
 		BUG();

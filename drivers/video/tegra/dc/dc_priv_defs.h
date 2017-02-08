@@ -380,6 +380,14 @@ struct tegra_dc {
 	u8	*vedid_data;
 	atomic_t	enable_count;
 	bool	hdr_cache_dirty;
+	/* hotplug_supported refers to the capability of the protocol
+	 * to support hotplug and should not be used to ascertain the
+	 * HW support for hotplug on the device
+	 * e.g. DP/HDMI: hotplug supported | EDP/DSI: hotplug not supported
+	 * for fake output types:
+	 * FAKE_DSI: hotplug not supported
+	 * FAKE_DP: hotplug supported if ext_dp_panel DT flag is set
+	 * */
 	bool    hotplug_supported;
 
 	/* user call-back for shared ISR */

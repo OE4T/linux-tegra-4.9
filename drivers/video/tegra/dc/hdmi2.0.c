@@ -221,6 +221,9 @@ static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi)
 	}
 	tegra_dc_set_edid(dc, hdmi->edid);
 
+	if (tegra_platform_is_sim())
+		return 0;
+
 	i2c_adap = i2c_get_adapter(dc->out->ddc_bus);
 	if (!i2c_adap) {
 		dev_err(&dc->ndev->dev,
@@ -681,6 +684,10 @@ static int hdmi_recheck_edid(struct tegra_hdmi *hdmi, int *match)
 {
 	int ret;
 	u8 tmp[HDMI_EDID_MAX_LENGTH] = {0};
+
+	if (tegra_platform_is_sim())
+		return 0;
+
 	ret = read_edid_into_buffer(hdmi, tmp, sizeof(tmp));
 	dev_info(&hdmi->dc->ndev->dev, "%s: read_edid_into_buffer() returned %d\n",
 		__func__, ret);
@@ -799,6 +806,9 @@ static int tegra_dc_hdmi_hpd_init(struct tegra_dc *dc)
 	int hotplug_irq;
 	int err;
 
+	if (tegra_platform_is_sim())
+		goto skip_gpio_irq_settings;
+
 	if (!gpio_is_valid(hotplug_gpio)) {
 		dev_err(&dc->ndev->dev, "hdmi: invalid hotplug gpio\n");
 		return -EINVAL;
@@ -829,6 +839,7 @@ static int tegra_dc_hdmi_hpd_init(struct tegra_dc *dc)
 	}
 	hdmi->irq = hotplug_irq;
 
+skip_gpio_irq_settings:
 	INIT_DELAYED_WORK(&hdmi->hpd_worker, tegra_hdmi_hpd_worker);
 
 	mutex_init(&hdmi->hpd_lock);
@@ -1950,8 +1961,14 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 
 	tegra_dc_sor_set_internal_panel(sor, false);
 	tegra_hdmi_config(hdmi);
-	tegra_hdmi_avi_infoframe(hdmi);
-	tegra_hdmi_vendor_infoframe(hdmi);
+	/* For simulator we still have use cases where
+	 * we can have hotplug without a valid edid. This
+	 * check ensures we don't reference a null edid
+	 * */
+	if (hdmi->edid) {
+		tegra_hdmi_avi_infoframe(hdmi);
+		tegra_hdmi_vendor_infoframe(hdmi);
+	}
 
 	tegra_sor_pad_cal_power(sor, true);
 	tegra_hdmi_config_tmds(hdmi);
@@ -2338,11 +2355,12 @@ static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 	unsigned long delay = msecs_to_jiffies(HDMI_HPD_DEBOUNCE_DELAY_MS);
 
-	if (tegra_platform_is_sim())
-		return true;
-
 	if (dc->out->hotplug_state != TEGRA_HPD_STATE_NORMAL)
 		delay = 0;
+
+	if (tegra_platform_is_sim() &&
+		(dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL))
+		return true;
 
 	cancel_delayed_work(&hdmi->hpd_worker);
 	schedule_delayed_work(&hdmi->hpd_worker, delay);

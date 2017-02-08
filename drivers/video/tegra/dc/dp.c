@@ -114,7 +114,6 @@ static inline void tegra_dp_disable_irq(u32 irq)
 ({ \
 	!tegra_platform_is_fpga() && \
 	!tegra_platform_is_linsim() && \
-	!tegra_platform_is_vdk() && \
 	tegra_dc_is_ext_dp_panel(dp->dc); \
 })
 
@@ -3005,7 +3004,8 @@ static bool tegra_dc_dp_detect(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 
-	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
+	if (tegra_platform_is_sim() &&
+		(dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL))
 		return true;
 
 	tegra_dp_pending_hpd(dp);

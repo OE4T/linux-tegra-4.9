@@ -2955,7 +2955,8 @@ struct tegra_dc_platform_data
 		pdata->fb->win = -1;
 #endif
 
-	if (pdata->default_out->type == TEGRA_DC_OUT_DP) {
+	if ((pdata->default_out->type == TEGRA_DC_OUT_DP) ||
+		(pdata->default_out->type == TEGRA_DC_OUT_FAKE_DP)) {
 		if (!of_property_read_u32(np_target_disp,
 			"nvidia,is_ext_dp_panel", &temp)) {
 			pdata->default_out->is_ext_dp_panel = (int)temp;

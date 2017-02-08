@@ -1590,6 +1590,10 @@ static ssize_t dbg_hotplug_write(struct file *file, const char __user *addr,
 	mutex_lock(&dc->lock);
 	rmb();
 	hotplug_state = dc->out->hotplug_state;
+
+	if (tegra_platform_is_sim())
+		goto skip_gpio;
+
 	if (hotplug_state == TEGRA_HPD_STATE_NORMAL &&
 	    new_state != TEGRA_HPD_STATE_NORMAL     &&
 	    dc->hotplug_supported) {
@@ -1606,10 +1610,15 @@ static ssize_t dbg_hotplug_write(struct file *file, const char __user *addr,
 		enable_irq(gpio_irq);
 	}
 
+skip_gpio:
 	dc->out->hotplug_state = new_state;
 	wmb();
 
-	/* retrigger the hotplug */
+	/* retrigger the hotplug
+	 * exception: dont trigger for simulator with hotplug
+	 * state TEGRA_HPD_STATE_NORMAL since hpd_state
+	 * callback for sim always returns true
+	 * */
 	if (dc->out_ops->detect)
 		dc->connected = dc->out_ops->detect(dc);
 	mutex_unlock(&dc->lock);
@@ -6039,10 +6048,12 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			udelay(10);
 			tegra_disp_clk_disable_unprepare(dc->clk);
 		}
+	}
 
-		if (dc->out_ops && dc->out_ops->hotplug_init)
-			dc->out_ops->hotplug_init(dc);
+	if (dc->out_ops && dc->out_ops->hotplug_init)
+		dc->out_ops->hotplug_init(dc);
 
+	if (dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) {
 		_tegra_dc_set_default_videomode(dc);
 		dc->enabled = _tegra_dc_enable(dc);
 

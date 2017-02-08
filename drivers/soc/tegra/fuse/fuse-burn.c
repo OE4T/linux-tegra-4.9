@@ -28,6 +28,7 @@
 #include <linux/kernel.h>
 #include <linux/delay.h>
 #include <linux/wakelock.h>
+#include <linux/thermal.h>
 
 #include <soc/tegra/pmc.h>
 
@@ -60,6 +61,8 @@
 #define TEGRA_FUSE_ODM_PRODUCTION_MODE		0xa0
 #define H2_START_MACRO_BIT_INDEX		2167
 #define H2_END_MACRO_BIT_INDEX			3326
+#define FUSE_BURN_TEMPERATURE_MIN		25000
+#define FUSE_BURN_TEMPERATURE_MAX		101000
 
 struct fuse_burn_data {
 	char *name;
@@ -84,6 +87,7 @@ struct tegra_fuse_burn_dev {
 	struct wake_lock wake_lock;
 	struct clk *pgm_clk;
 	u32 pgm_width;
+	struct thermal_zone_device *tz;
 };
 
 static void fuse_state_wait_for_idle(void)
@@ -192,9 +196,33 @@ static int tegra_fuse_form_burn_data(struct fuse_burn_data *data,
 	return offset;
 }
 
+static int tegra_fuse_is_temp_under_range(struct tegra_fuse_burn_dev *fuse_dev)
+{
+	int temp, ret;
+
+	/* Check if temperature is under permissible range */
+	ret = thermal_zone_get_temp(fuse_dev->tz, &temp);
+	if (!ret) {
+		if (temp < FUSE_BURN_TEMPERATURE_MIN ||
+			temp > FUSE_BURN_TEMPERATURE_MAX) {
+			dev_err(fuse_dev->dev, "temp-%d is not under range\n",
+					temp);
+			return -EPERM;
+		}
+	}
+	return 0;
+}
+
 static int tegra_fuse_pre_burn_process(struct tegra_fuse_burn_dev *fuse_dev)
 {
 	u32 off_0_val, off_1_val, reg;
+	int ret;
+
+	if (fuse_dev->tz) {
+		ret = tegra_fuse_is_temp_under_range(fuse_dev);
+		if (ret)
+			return ret;
+	}
 
 	/* Check if fuse burn is disabled */
 	reg = tegra_fuse_control_read(TEGRA_FUSE_DISABLE_REG_PROG, &reg);
@@ -505,6 +533,8 @@ static const struct of_device_id tegra_fuse_burn_match[] = {
 static int tegra_fuse_burn_probe(struct platform_device *pdev)
 {
 	struct tegra_fuse_burn_dev *fuse_dev;
+	struct device_node *np = pdev->dev.of_node;
+	struct device_node *tz_np;
 	int i, ret;
 
 	fuse_dev = devm_kzalloc(&pdev->dev, sizeof(*fuse_dev), GFP_KERNEL);
@@ -542,6 +572,14 @@ static int tegra_fuse_burn_probe(struct platform_device *pdev)
 
 	wake_lock_init(&fuse_dev->wake_lock, WAKE_LOCK_SUSPEND,
 		       "fuse_wake_lock");
+
+	tz_np = of_parse_phandle(np, "nvidia,tz", 0);
+	if (tz_np) {
+		fuse_dev->tz = thermal_zone_get_zone_by_node(tz_np);
+		if (IS_ERR(fuse_dev->tz))
+			dev_dbg(&pdev->dev, "temp zone node not available\n");
+	}
+
 	dev_info(&pdev->dev, "Fuse burn driver initialized\n");
 	return 0;
 }

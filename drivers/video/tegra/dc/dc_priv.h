@@ -400,6 +400,8 @@ int tegra_nvdisp_set_degamma_user_config(struct tegra_dc_win *win,
 				    long degamma_flag);
 int tegra_nvdisp_get_degamma_user_config(struct tegra_dc_win *win);
 int tegra_nvdisp_get_imp_caps(struct tegra_dc_ext_imp_caps *imp_caps);
+int tegra_nvdisp_verify_win_properties(struct tegra_dc *dc,
+				struct tegra_dc_ext_flip_windowattr_v2 *win);
 
 static inline int tegra_dc_io_start(struct tegra_dc *dc)
 {

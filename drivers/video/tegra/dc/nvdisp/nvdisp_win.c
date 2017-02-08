@@ -307,6 +307,83 @@ static int tegra_nvdisp_scaling(struct tegra_dc_win *win)
 	return 0;
 }
 
+int tegra_nvdisp_verify_win_properties(struct tegra_dc *dc,
+			struct tegra_dc_ext_flip_windowattr_v2 *win)
+{
+	fixed20_12 win_in_width, win_in_height;
+	fixed20_12 win_out_width, win_out_height;
+	fixed20_12 h_ds_ratio, v_ds_ratio;
+	u64 h_v_combined_ratio = 0;
+
+	/*
+	 * Following are the downscaling constraints in nvdisplay:
+	 * Maximum downscaling in any direction is 4x.
+	 * Up-scaling is not limited, but only verified up to 16x.
+	 * For performance reasons, vertical down-scaling should not
+	 * exceed 2x.
+	 * For performance reasons, total down-scaling (H x V) should
+	 * not exceed 4x.
+	 */
+
+	if (!win->out_w || !win->out_h)
+		return 0;
+
+	/* win->w/h are of fixed20_12 type */
+	win_in_width.full = win->w;
+	win_in_height.full = win->h;
+	win_out_width.full = dfixed_const(win->out_w);
+	win_out_height.full = dfixed_const(win->out_h);
+
+	if (win->flags & TEGRA_DC_EXT_FLIP_FLAG_SCAN_COLUMN) {
+		/* Rotated 90 degrees or 270 degrees */
+		v_ds_ratio.full =
+			dfixed_div(win_in_width, win_out_height);
+		h_ds_ratio.full =
+			dfixed_div(win_in_height, win_out_width);
+	} else {
+		/* Either no rotation or 180 degrees rotation */
+		v_ds_ratio.full =
+			dfixed_div(win_in_height, win_out_height);
+		h_ds_ratio.full =
+			dfixed_div(win_in_width, win_out_width);
+	}
+
+	/*
+	 * Most dfixed functions return u32 values with msb 20 bits
+	 * having the actual value. Hence, need to shift them right
+	 * by 12. Except for dfixed_mul() which returns u64 type.
+	 */
+	if ((dfixed_ceil(v_ds_ratio) >> 12) > 2) {
+		dev_err(&dc->ndev->dev,
+			"Vertical downscale ratio %ux greater than 2x\n",
+			(dfixed_ceil(v_ds_ratio) >> 12));
+		return -EINVAL;
+	}
+
+	if ((dfixed_ceil(h_ds_ratio) >> 12) > 4) {
+		dev_err(&dc->ndev->dev,
+			"Horizontal downscale ratio %ux greater than 4x\n",
+			(dfixed_ceil(h_ds_ratio) >> 12));
+		return -EINVAL;
+	}
+
+	/*
+	 * Checking combined ratio. If either h or v is upscaled, then
+	 * the downscale ratio will be < 1. Multiplication in such cases
+	 * will not yield desired results. But, that should not affect
+	 * us as we have already checked h and v downscale ratios above
+	 */
+	h_v_combined_ratio = dfixed_mul(h_ds_ratio, v_ds_ratio);
+	if ((h_v_combined_ratio >> 12) > 4) {
+		dev_err(&dc->ndev->dev,
+			"Total (H x V) downscale ratio %llux greater than 4x\n",
+			(h_v_combined_ratio >> 12));
+			return -EINVAL;
+	}
+
+	return 0;
+}
+
 static int tegra_nvdisp_enable_cde(struct tegra_dc_win *win)
 {
 	if (win->cde.cde_addr) {

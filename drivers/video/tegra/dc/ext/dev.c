@@ -1453,6 +1453,13 @@ static int sanitize_flip_args(struct tegra_dc_ext_user *user,
 				win->out_h + win->out_y, dc->mode.v_active, i);
 			return -EINVAL;
 		}
+
+		if (tegra_dc_is_nvdisplay()) {
+			if (tegra_nvdisp_verify_win_properties(dc, win)) {
+				/* Error in window properties */
+				return -EINVAL;
+			}
+		}
 	}
 
 	if (!used_windows)

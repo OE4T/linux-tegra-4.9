@@ -5412,7 +5412,9 @@ int gk20a_mm_suspend(struct gk20a *g)
 {
 	gk20a_dbg_fn("");
 
+#if defined(CONFIG_GK20A_VIDMEM)
 	cancel_work_sync(&g->mm.vidmem.clear_mem_worker);
+#endif
 
 	g->ops.mm.cbc_clean(g);
 	g->ops.mm.l2_flush(g, false);

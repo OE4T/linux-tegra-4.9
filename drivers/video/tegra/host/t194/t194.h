@@ -33,6 +33,7 @@ extern struct nvhost_device_data t19_vic_info;
 #endif
 #if defined(CONFIG_TEGRA_GRHOST_NVDEC)
 extern struct nvhost_device_data t19_nvdec_info;
+extern struct nvhost_device_data t19_nvdec1_info;
 #endif
 #if defined(CONFIG_TEGRA_GRHOST_NVJPG)
 extern struct nvhost_device_data t19_nvjpg_info;

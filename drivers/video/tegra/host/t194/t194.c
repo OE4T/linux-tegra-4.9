@@ -298,6 +298,31 @@ struct nvhost_device_data t19_nvdec_info = {
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVDEC,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 };
+
+struct nvhost_device_data t19_nvdec1_info = {
+	.version		= NVHOST_ENCODE_NVDEC_VER(4, 0),
+	.devfs_name		= "nvdec1",
+	.modulemutexes		= {NV_HOST1X_MLOCK_ID_NVDEC1},
+	.class			= NV_NVDEC1_CLASS_ID,
+	.autosuspend_delay      = 500,
+	.clocks			= {
+		{"nvdec", UINT_MAX},
+		{"kfuse", 0, 0},
+		{"emc", HOST_NVDEC_EMC_FLOOR,
+		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
+	},
+	.poweron_reset		= true,
+	.finalize_poweron	= nvhost_nvdec_t194_finalize_poweron,
+	.prepare_poweroff	= nvhost_nvdec_t194_prepare_poweroff,
+	.moduleid		= NVHOST_MODULE_NVDEC1,
+	.ctrl_ops		= &tegra_nvdec_ctrl_ops,
+	.num_channels		= 1,
+	.serialize		= true,
+	.push_work_done		= true,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.vm_regs		= {{0x30, true}, {0x34, false} },
+};
 #endif
 
 #if defined(CONFIG_TEGRA_GRHOST_NVJPG)

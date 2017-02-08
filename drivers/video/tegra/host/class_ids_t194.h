@@ -27,6 +27,8 @@ enum {
 
 	NV_DLA0_CLASS_ID	= 0xF3,
 	NV_DLA1_CLASS_ID	= 0xF4,
+
+	NV_NVDEC1_CLASS_ID	= 0xF5,
 };
 
 #endif /*__NVHOST_CLASS_IDS_T194_H */

@@ -25,6 +25,7 @@
 
 enum nvhost_module_id_t194 {
 	NVHOST_MODULE_NVENC1 = 12,
+	NVHOST_MODULE_NVDEC1 = 13,
 };
 
 #endif

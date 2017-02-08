@@ -32,6 +32,9 @@
 #define MHZ		1000000
 #define VDD_SAFE_STEP	100
 
+/* Margin % applied to PLL CVB tables */
+#define CVB_PLL_MARGIN	30
+
 static bool tegra_dvfs_cpu_disabled;
 static bool tegra_dvfs_core_disabled;
 static int cpu_millivolts[MAX_DVFS_FREQS];
@@ -1005,6 +1008,7 @@ static int set_cpu_dvfs_data(unsigned long max_freq, struct cpu_dvfs *d,
 		/* Clip maximum frequency at maximum voltage for pll source */
 		mv = tegra_get_cvb_voltage(speedo, d->speedo_scale,
 					   &d->cvb_pll_table[i].coefficients);
+		mv = (100 + CVB_PLL_MARGIN) * mv / 100;
 		mv = tegra_round_cvb_voltage(mv, d->voltage_scale, align);
 		mv = max(mv, min_mv);
 		if ((mv > d->max_mv) && !i) {

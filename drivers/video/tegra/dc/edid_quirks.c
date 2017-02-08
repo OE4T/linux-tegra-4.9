@@ -31,6 +31,8 @@ static const struct hdmi_blacklist {
 	{ "VIZ", 4120, "P75-C1",    TEGRA_EDID_QUIRK_DELAY_HDCP },
 	/* BlackMagic 12G SDI */
 	{ "BMD", 0,    "BMD HDMI",  TEGRA_EDID_QUIRK_NO_HDCP    },
+	/* Denon 2313 doesn't support YUV422, but declares support for it */
+	{ "DON", 48, "DENON-AVR",   TEGRA_EDID_QUIRK_NO_YUV_422 },
 };
 
 u32 tegra_edid_lookup_quirks(const char *manufacturer, u32 model,

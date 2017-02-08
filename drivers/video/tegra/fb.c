@@ -958,7 +958,9 @@ void tegra_fb_update_fix(struct tegra_fb_info *fb_info,
 	BUILD_BUG_ON((TEGRA_DC_Y420_30 << 1) != FB_CAP_Y420_DC_30);
 	BUILD_BUG_ON((TEGRA_DC_RGB_48 << 1) != FB_CAP_RGB_DC_48);
 	fix->capabilities = (tegra_edid_get_cd_flag(dc_edid) << 1);
-	if (tegra_edid_support_yuv422(dc_edid))
+	if (tegra_edid_support_yuv422(dc_edid) &&
+		(!(tegra_edid_get_quirks(dc_edid) &
+		TEGRA_EDID_QUIRK_NO_YUV_422)))
 		fix->capabilities |= FB_CAP_Y422;
 	if (tegra_edid_support_yuv444(dc_edid))
 		fix->capabilities |= FB_CAP_Y444;

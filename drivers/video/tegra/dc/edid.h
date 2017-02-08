@@ -138,6 +138,8 @@ enum {
 #define TEGRA_EDID_QUIRK_DELAY_HDCP (1 << 1)
 /* TVs that blank screen if we try to do HDCP at all */
 #define TEGRA_EDID_QUIRK_NO_HDCP    (1 << 2)
+/* Denon 2313 doesn't support YUV422, but declares support for it */
+#define TEGRA_EDID_QUIRK_NO_YUV_422	(1 << 3)
 
 struct tegra_edid {
 	struct tegra_edid_pvt	*data;

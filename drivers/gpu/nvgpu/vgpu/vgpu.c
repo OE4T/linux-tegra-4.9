@@ -31,10 +31,6 @@
 
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-#include "nvgpu_gpuid_t18x.h"
-#endif
-
 static inline int vgpu_comm_init(struct platform_device *pdev)
 {
 	size_t queue_sizes[] = { TEGRA_VGPU_QUEUE_SIZES };
@@ -374,11 +370,10 @@ static int vgpu_init_hal(struct gk20a *g)
 		gk20a_dbg_info("gm20b detected");
 		err = vgpu_gm20b_init_hal(g);
 		break;
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	case TEGRA_18x_GPUID:
-		err = TEGRA_18x_GPUID_VGPU_HAL(g);
+	case NVGPU_GPUID_GP10B:
+		gk20a_dbg_info("gp10b detected");
+		err = vgpu_gp10b_init_hal(g);
 		break;
-#endif
 	default:
 		gk20a_err(g->dev, "no support for %x", ver);
 		err = -ENODEV;

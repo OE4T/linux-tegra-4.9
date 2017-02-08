@@ -24,11 +24,6 @@
 #ifndef _UAPI__LINUX_NVGPU_T18X_IOCTL_H_
 #define _UAPI__LINUX_NVGPU_T18X_IOCTL_H_
 
-#define NVGPU_GPU_ARCH_GP100 0x00000130
-#define NVGPU_GPU_IMPL_GP104 0x00000004
-#define NVGPU_GPU_IMPL_GP106 0x00000006
-#define NVGPU_GPU_IMPL_GP10B 0x0000000B
-
 /*
  * this flag is used in struct nvgpu_as_map_buffer_ex_args
  * to specify IO coherence
@@ -70,5 +65,3 @@
 #define NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_COMPLETE	4
 
 #endif /* _UAPI__LINUX_NVGPU_T18X_IOCTL_H_ */
-
-

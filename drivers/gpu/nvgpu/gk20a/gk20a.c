@@ -65,10 +65,6 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/gk20a.h>
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-#include "nvgpu_gpuid_t18x.h"
-#endif
-
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "nvgpu_gpuid_t19x.h"
 #endif
@@ -1133,8 +1129,8 @@ static struct of_device_id tegra_gk20a_of_match[] = {
 	{ .compatible = "nvidia,tegra210-gm20b",
 		.data = &gm20b_tegra_platform },
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	{ .compatible = TEGRA_18x_GPU_COMPAT_TEGRA,
-		.data = &t18x_gpu_tegra_platform },
+	{ .compatible = "nvidia,tegra186-gp10b",
+		.data = &gp10b_tegra_platform },
 #endif
 #ifdef CONFIG_TEGRA_19x_GPU
 	{ .compatible = TEGRA_19x_GPU_COMPAT_TEGRA,
@@ -1160,7 +1156,7 @@ static struct of_device_id tegra_gk20a_of_match[] = {
 	{ .compatible = "nvidia,generic-gm20b",
 		.data = &gk20a_generic_platform },
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	{ .compatible = TEGRA_18x_GPU_COMPAT_GENERIC,
+	{ .compatible = "nvidia,generic-gp10b",
 		.data = &gk20a_generic_platform },
 #endif
 	{ },

@@ -15,7 +15,6 @@
 
 #include "gk20a/gk20a.h"
 #include "gr_ctx_gp106.h"
-#include "nvgpu_gpuid_t18x.h"
 
 static int gr_gp106_get_netlist_name(struct gk20a *g, int index, char *name)
 {

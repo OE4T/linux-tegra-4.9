@@ -401,7 +401,7 @@ static int gp10b_clk_get_freqs(struct device *dev,
 	return 0;
 }
 
-struct gk20a_platform t18x_gpu_tegra_platform = {
+struct gk20a_platform gp10b_tegra_platform = {
 	.has_syncpoints = true,
 
 	/* power management configuration */

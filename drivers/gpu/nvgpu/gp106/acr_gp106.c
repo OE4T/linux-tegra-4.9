@@ -31,7 +31,6 @@
 #include "gp106/pmu_gp106.h"
 
 #include "sec2_gp106.h"
-#include "nvgpu_gpuid_t18x.h"
 
 #include <nvgpu/hw/gp106/hw_psec_gp106.h>
 #include <nvgpu/hw/gp106/hw_pwr_gp106.h>

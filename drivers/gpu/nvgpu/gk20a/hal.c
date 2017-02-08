@@ -16,10 +16,8 @@
 #include "gk20a.h"
 #include "hal_gk20a.h"
 #include "gm20b/hal_gm20b.h"
-
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-#include "nvgpu_gpuid_t18x.h"
-#endif
+#include "gp10b/hal_gp10b.h"
+#include "gp106/hal_gp106.h"
 
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "nvgpu_gpuid_t19x.h"
@@ -39,13 +37,13 @@ int gpu_init_hal(struct gk20a *g)
 			return -ENODEV;
 		break;
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	case TEGRA_18x_GPUID:
-		if (TEGRA_18x_GPUID_HAL(g))
+	case NVGPU_GPUID_GP10B:
+		if (gp10b_init_hal(g))
 			return -ENODEV;
 		break;
-	case TEGRA_18x_GPUID2:
-	case TEGRA_18x_GPUID3:
-		if (TEGRA_18x_GPUID2_HAL(g))
+	case NVGPU_GPUID_GP104:
+	case NVGPU_GPUID_GP106:
+		if (gp106_init_hal(g))
 			return -ENODEV;
 		break;
 #endif

@@ -34,10 +34,6 @@
 #include <nvgpu/hw/gk20a/hw_pwr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_top_gk20a.h>
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-#include "nvgpu_gpuid_t18x.h"
-#endif
-
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "nvgpu_gpuid_t19x.h"
 #endif
@@ -3707,13 +3703,11 @@ static u8 get_perfmon_id(struct pmu_gk20a *pmu)
 	case GK20A_GPUID_GM20B:
 		unit_id = PMU_UNIT_PERFMON;
 		break;
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	case TEGRA_18x_GPUID:
-	case TEGRA_18x_GPUID2:
-	case TEGRA_18x_GPUID3:
+	case NVGPU_GPUID_GP10B:
+	case NVGPU_GPUID_GP104:
+	case NVGPU_GPUID_GP106:
 		unit_id = PMU_UNIT_PERFMON_T18X;
 		break;
-#endif
 #if defined(CONFIG_TEGRA_19x_GPU)
 	case TEGRA_19x_GPUID:
 		unit_id = PMU_UNIT_PERFMON_T18X;

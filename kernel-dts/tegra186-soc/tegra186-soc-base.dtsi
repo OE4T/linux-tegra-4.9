@@ -1301,7 +1301,7 @@
 			<GIC_SPI INT_AMISC_MBOX_EMPTY7
 				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
 			<GIC_SPI INT_AHSP_SHRD0
-				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_ADSP>,
 			<GIC_SPI INT_AHSP_SHRD1
 				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
 			<GIC_SPI INT_AHSP_SHRD2
@@ -1314,7 +1314,7 @@
 				"full4", "full5", "full6", "full7",
 				"empty0", "empty1", "empty2", "empty3",
 				"empty4", "empty5", "empty6", "empty7",
-				"shared0", "shared1", "shared2", "shared3",
+				"adsp-shared0", "shared1", "shared2", "shared3",
 				"shared4";
 		status = "disabled";
 	};

@@ -171,10 +171,10 @@
 		status = "disabled";
 
 		power-domains = <&ape_pd>;
-
 		reg =	<0 0x02993000 0 0x1000>, /* APE EVP */
+			<0 0x02990000 0 0x0800>, /* AMISC */
 			<0 0x02994000 0 0x2000>; /* ACAST */
-		reg-names = "ape-evp", "ast-cpu";
+		reg-names = "ape-evp", "ape-amisc", "ast-cpu";
 
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_APE_CAM>;
@@ -183,25 +183,41 @@
 			<&tegra_car TEGRA186_CLK_APE>,
 			<&tegra_car TEGRA186_CLK_APB2APE>,
 			<&tegra_car TEGRA186_CLK_ADSPNEON>,
-			<&tegra_car TEGRA186_CLK_ADSP>,
-			<&tegra_car TEGRA186_CLK_ACLK>,
-			<&tegra_car TEGRA186_CLK_AHUB>,
-			<&tegra_car TEGRA186_CLK_EMC>;
+			<&tegra_car TEGRA186_CLK_ADSP>;
 		clock-names =
 			"ape",
 			"apb2ape",
 			"adspneon",
-			"adsp",
-			"aclk",
-			"ahub",
-			"adsp.emc";
+			"adsp";
 		resets =
 			<&tegra_car TEGRA186_RESET_ADSP_ALL>;
 		reset-names =
 			"adsp-all";
 
-		interrupts = <0 17 0x4>;
-		interrupt-names = "wdt-remote";
+		interrupt-parent = <&tegra_agic>;
+		interrupts =
+			AGIC_ROUTE_SPI(INT_WFI, TO_HOST_INTF0),
+			AGIC_ROUTE_SPI(INT_WFE, TO_HOST_INTF0),
+			/* This is ATKE WDT remote interrupt */
+			AGIC_ROUTE_SPI(INT_ATKE_WDT_ERR, TO_HOST_INTF0),
+			/* Nameless interrupts below are routed to ADSP */
+			AGIC_ROUTE_SPI(INT_ADMA_EOT31, TO_ADSP),
+			AGIC_ROUTE_SPI(INT_AHSP_SHRD0, TO_ADSP),
+			AGIC_ROUTE_SPI(INT_LIC_TO_APE0, TO_ADSP),
+			AGIC_ROUTE_SPI(INT_LIC_TO_APE1, TO_ADSP),
+			AGIC_ROUTE_SPI(INT_VI_NOTIFY_LOW, TO_ADSP),
+			AGIC_ROUTE_SPI(INT_VI_NOTIFY_HIGH, TO_ADSP),
+			AGIC_ROUTE_SPI(INT_I2C_IRQ1, TO_ADSP),
+			AGIC_ROUTE_SPI(INT_I2C_IRQ3, TO_ADSP),
+			AGIC_ROUTE_SPI(INT_I2C_IRQ8, TO_ADSP),
+			AGIC_ROUTE_SPI(INT_SHSP2APE_DB, TO_ADSP),
+			AGIC_ROUTE_SPI(INT_ATKE_TMR0, TO_ADSP),
+			AGIC_ROUTE_SPI(INT_ATKE_TMR1, TO_ADSP),
+			AGIC_ROUTE_SPI(INT_ATKE_TMR2, TO_ADSP),
+			AGIC_ROUTE_SPI(INT_ATKE_WDT_IRQ, TO_ADSP),
+			AGIC_ROUTE_SPI(INT_ATKE_WDT_FIQ, TO_ADSP);
+
+		interrupt-names = "adsp-wfi", "adsp-wfe", "wdt-remote";
 
 		nvidia,trace = <&tegra_rtcpu_trace 4 0x40200000 0x80000>;
 		nvidia,ivc-channels = <&tegra_ape_ivc 2 0x40000000 0x10000>;

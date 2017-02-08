@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,6 +24,9 @@
 
 /* The DT adds an offset of 32 to IRQs defined as SPI */
 #define AGIC_IRQ(x)			(x - 32)
+
+/* LEVEL_HIGH SPI */
+#define AGIC_ROUTE_SPI(x,c) <GIC_SPI x IRQ_TYPE_LEVEL_HIGH ROUTE_##c>
 
 /* INT_ADMA Channel End of Transfer Interrupt */
 #define INT_ADMA_EOT0			AGIC_IRQ(32)

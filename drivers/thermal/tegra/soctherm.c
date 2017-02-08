@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014 - 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Mikko Perttunen <mperttunen@nvidia.com>
@@ -354,6 +354,7 @@ static void enable_tsensor(struct tegra_soctherm *tegra, unsigned int i)
 	writel(tegra->calib[i], base + SENSOR_CONFIG2);
 }
 
+#ifdef CONFIG_DEBUG_FS
 /**
  * translate_temp_reverse() - Translates the given temperature from two's
  * complement to the signed magnitude form used in SOC_THERM registers
@@ -383,6 +384,7 @@ static u32 translate_temp_reverse(u32 temp)
 
 	return reg;
 }
+#endif
 
 /*
  * Translate from soctherm readback format to millicelsius.
@@ -1494,8 +1496,8 @@ static void soctherm_debug_temp_add(struct tegra_thermctl_zone *z)
 }
 
 #else
-static inline void soctherm_debug_temp_add(struct platform_device *pdev) {}
-static void soctherm_tempoverride_init(struct tegra_thermctl_zone *z) {}
+static inline void soctherm_debug_init(struct platform_device *pdev) {}
+static inline void soctherm_debug_temp_add(struct tegra_thermctl_zone *z) {}
 #endif
 
 static int soctherm_clk_enable(struct platform_device *pdev, bool enable)

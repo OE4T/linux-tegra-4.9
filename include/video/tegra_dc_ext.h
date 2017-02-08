@@ -110,6 +110,12 @@
 #define TEGRA_DC_EXT_FLIP_FLAG_CS_REC601	(1 << 13)
 #define TEGRA_DC_EXT_FLIP_FLAG_CS_REC709	(2 << 13)
 #define TEGRA_DC_EXT_FLIP_FLAG_CS_REC2020	(4 << 13)
+#define TEGRA_DC_EXT_FLIP_FLAG_DEGAMMA_MASK	(15 << 16)
+#define TEGRA_DC_EXT_FLIP_FLAG_DEGAMMA_DEFAULT	(0 << 16) /* driver selects */
+#define TEGRA_DC_EXT_FLIP_FLAG_DEGAMMA_NONE	(1 << 16)
+#define TEGRA_DC_EXT_FLIP_FLAG_DEGAMMA_SRGB	(2 << 16)
+#define TEGRA_DC_EXT_FLIP_FLAG_DEGAMMA_YUV_8_10	(4 << 16)
+#define TEGRA_DC_EXT_FLIP_FLAG_DEGAMMA_YUV_12	(8 << 16)
 /*Passthrough condition for running 4K HDMI*/
 #define TEGRA_DC_EXT_FLIP_HEAD_FLAG_YUVBYPASS	(1 << 0)
 #define TEGRA_DC_EXT_FLIP_HEAD_FLAG_VRR_MODE	(1 << 1)
@@ -342,6 +348,7 @@ enum tegra_dc_ext_flip_data_type {
 	TEGRA_DC_EXT_FLIP_USER_DATA_IMP_DATA, /* only valid during PROPOSE */
 	TEGRA_DC_EXT_FLIP_USER_DATA_IMP_TAG, /* only valid during FLIP */
 	TEGRA_DC_EXT_FLIP_USER_DATA_POST_SYNCPT,
+	TEGRA_DC_EXT_FLIP_USER_DATA_CSC_V2,
 };
 
 /*
@@ -464,6 +471,12 @@ struct tegra_dc_ext_syncpt {
 	__u16 reserved[9]; /* unused - must be 0 */
 } __attribute__((__packed__));
 
+struct tegra_dc_ext_udata_csc_v2 {
+	__u64 __user array; /* pointer to an array of "tegra_dc_ext_csc_v2" */
+	__u8 nr_elements;
+	__u8 reserved[17];
+} __attribute__((__packed__));
+
 /* size of the this struct is 32 bytes */
 struct tegra_dc_ext_flip_user_data {
 	__u8 data_type;
@@ -477,6 +490,7 @@ struct tegra_dc_ext_flip_user_data {
 		struct tegra_dc_ext_imp_ptr imp_ptr;
 		struct tegra_dc_ext_imp_flip_tag imp_tag;
 		struct tegra_dc_ext_syncpt post_syncpt; /* out */
+		struct tegra_dc_ext_udata_csc_v2 csc_v2;
 	};
 } __attribute__((__packed__));
 

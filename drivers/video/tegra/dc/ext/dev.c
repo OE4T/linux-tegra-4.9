@@ -107,6 +107,8 @@ struct tegra_dc_ext_flip_win {
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
 	struct sync_fence			*pre_syncpt_fence;
 #endif
+	bool					user_csc_v2;
+	struct tegra_dc_ext_csc_v2		csc_v2;
 };
 
 struct tegra_dc_ext_flip_data {
@@ -440,6 +442,15 @@ static void tegra_dc_ext_set_windowattr_basic(struct tegra_dc_win *win,
 		win->flags |= TEGRA_WIN_FLAG_CS_REC2020;
 	else
 		win->flags |= TEGRA_WIN_FLAG_CS_DEFAULT;
+
+	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_DEGAMMA_NONE)
+		win->flags |= TEGRA_WIN_FLAG_DEGAMMA_NONE;
+	else if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_DEGAMMA_SRGB)
+		win->flags |= TEGRA_WIN_FLAG_DEGAMMA_SRGB;
+	else if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_DEGAMMA_YUV_8_10)
+		win->flags |= TEGRA_WIN_FLAG_DEGAMMA_YUV_8_10;
+	else if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_DEGAMMA_YUV_12)
+		win->flags |= TEGRA_WIN_FLAG_DEGAMMA_YUV_12;
 
 	win->fmt = flip_win->pixformat;
 	win->x.full = flip_win->x;
@@ -971,6 +982,23 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			win->csc.b2b = data->win[i].attr.csc2.b2b;
 			win->csc.const2b = data->win[i].attr.csc2.const2b;
 			win->csc_dirty = true;
+		} else if (data->win[i].user_csc_v2 &&
+			   !ext->dc->yuv_bypass &&
+			   !win->force_user_csc) {
+			win->csc.csc_enable = data->win[i].csc_v2.csc_enable;
+			win->csc.r2r = data->win[i].csc_v2.r2r;
+			win->csc.g2r = data->win[i].csc_v2.g2r;
+			win->csc.b2r = data->win[i].csc_v2.b2r;
+			win->csc.const2r = data->win[i].csc_v2.const2r;
+			win->csc.r2g = data->win[i].csc_v2.r2g;
+			win->csc.g2g = data->win[i].csc_v2.g2g;
+			win->csc.b2g = data->win[i].csc_v2.b2g;
+			win->csc.const2g = data->win[i].csc_v2.const2g;
+			win->csc.r2b = data->win[i].csc_v2.r2b;
+			win->csc.g2b = data->win[i].csc_v2.g2b;
+			win->csc.b2b = data->win[i].csc_v2.b2b;
+			win->csc.const2b = data->win[i].csc_v2.const2b;
+			win->csc_dirty = true;
 		}
 #endif
 
@@ -1350,17 +1378,97 @@ static void tegra_dc_ext_unpin_window(struct tegra_dc_ext_win *win)
 	tegra_dc_ext_unpin_handles(unpin_handles, nr_unpin);
 }
 
-static void tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
+static int tegra_dc_ext_read_csc_v2_user_data(
+	struct tegra_dc_ext_flip_data *flip_kdata,
+	struct tegra_dc_ext_flip_user_data *flip_udata)
+{
+	int ret = 0;
+	int i, j;
+	struct tegra_dc_ext_csc_v2 *entry;
+	struct tegra_dc_ext_udata_csc_v2 *ucsc_v2;
+
+	if (!flip_kdata || !flip_udata)
+		return -EINVAL;
+
+	ucsc_v2 = &flip_udata->csc_v2;
+
+	if (ucsc_v2->nr_elements <= 0) {
+		dev_err(&flip_kdata->ext->dc->ndev->dev,
+			"Invalid TEGRA_DC_EXT_FLIP_USER_DATA_CSC_V2 config\n");
+		return -EINVAL;
+	}
+
+	entry = kcalloc((size_t)ucsc_v2->nr_elements, (size_t)sizeof(*entry),
+			GFP_KERNEL);
+	if (!entry)
+		return -ENOMEM;
+
+	if (copy_from_user(entry, (void __user *) (uintptr_t)ucsc_v2->array,
+			   sizeof(*entry) * ucsc_v2->nr_elements)) {
+		ret = -EFAULT;
+		goto end;
+	}
+
+	for (i = 0; i < ucsc_v2->nr_elements; i++) {
+		for (j = 0; j < flip_kdata->act_window_num; j++) {
+			if (entry[i].win_index ==
+				flip_kdata->win[j].attr.index) {
+				break;
+			}
+		}
+
+		if (j >= flip_kdata->act_window_num) {
+			dev_err(&flip_kdata->ext->dc->ndev->dev,
+				"win%d for csc_v2 not in flip wins\n",
+					entry[i].win_index);
+			ret = -EINVAL;
+			goto end;
+		}
+
+		if (flip_kdata->win[j].attr.flags &
+					TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC_V2) {
+			dev_err(&flip_kdata->ext->dc->ndev->dev,
+				"only one csc_v2/win%d allowed\n",
+					entry[i].win_index);
+			ret = -EINVAL;
+			goto end;
+		}
+
+		/* copy into local tegra_dc_ext_flip_win */
+		flip_kdata->win[j].csc_v2 = entry[i];
+		flip_kdata->win[j].user_csc_v2 = true;
+	}
+
+end:
+	kfree(entry);
+	return ret;
+}
+
+static int tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 			struct tegra_dc_ext_flip_user_data *flip_user_data,
 			int nr_user_data)
 {
-	int i = 0;
+	int i = 0, ret = 0;
+	bool hdr_present = false;
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	bool imp_tag_present = false;
+#endif
+	bool csc_v2_present = false;
 
 	for (i = 0; i < nr_user_data; i++) {
-		struct tegra_dc_hdr *hdr;
-		struct tegra_dc_ext_hdr *info;
 		switch (flip_user_data[i].data_type) {
 		case TEGRA_DC_EXT_FLIP_USER_DATA_HDR_DATA:
+		{
+			struct tegra_dc_hdr *hdr;
+			struct tegra_dc_ext_hdr *info;
+
+			if (hdr_present) {
+				dev_err(&data->ext->dc->ndev->dev,
+					"only one hdr_data/flip is allowed\n");
+				return -EINVAL;
+			}
+			hdr_present = true;
+
 			hdr = &data->hdr_data;
 			info = &flip_user_data[i].hdr_info;
 			if (flip_user_data[i].flags &
@@ -1377,8 +1485,16 @@ static void tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 					sizeof(hdr->static_metadata));
 			}
 			break;
+		}
 #ifdef CONFIG_TEGRA_NVDISPLAY
 		case TEGRA_DC_EXT_FLIP_USER_DATA_IMP_TAG:
+			if (imp_tag_present) {
+				dev_err(&data->ext->dc->ndev->dev,
+					"only one imp_tag/flip is allowed\n");
+				return -EINVAL;
+			}
+			imp_tag_present = true;
+
 			data->imp_session_id =
 					flip_user_data[i].imp_tag.session_id;
 			data->imp_dirty = true;
@@ -1387,12 +1503,28 @@ static void tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 		case TEGRA_DC_EXT_FLIP_USER_DATA_POST_SYNCPT:
 			/* Already handled in the core FLIP ioctl. */
 			break;
+
+		case TEGRA_DC_EXT_FLIP_USER_DATA_CSC_V2:
+			if (csc_v2_present) {
+				dev_err(&data->ext->dc->ndev->dev,
+					"only one csc_v2/flip is allowed\n");
+				return -EINVAL;
+			}
+			csc_v2_present = true;
+
+			ret = tegra_dc_ext_read_csc_v2_user_data(data,
+							&flip_user_data[i]);
+			if (ret)
+				return ret;
+
+			break;
 		default:
 			dev_err(&data->ext->dc->ndev->dev,
 				"Invalid FLIP_USER_DATA_TYPE\n");
+			return -EINVAL;
 		}
 	}
-	return;
+	return ret;
 }
 
 static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
@@ -1438,7 +1570,9 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	if (ret)
 		goto fail_pin;
 
-	tegra_dc_ext_read_user_data(data, flip_user_data, nr_user_data);
+	ret = tegra_dc_ext_read_user_data(data, flip_user_data, nr_user_data);
+	if (ret)
+		goto fail_pin;
 
 	/*
 	 * If this flip needs to update the current IMP settings, reserve

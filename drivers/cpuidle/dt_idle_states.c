@@ -174,6 +174,11 @@ int dt_init_idle_driver(struct cpuidle_driver *drv,
 		if (!state_node)
 			break;
 
+		if (!of_device_is_compatible(state_node, matches->compatible)) {
+			err = -EINVAL;
+			break;
+		}
+
 		if (!of_device_is_available(state_node))
 			continue;
 

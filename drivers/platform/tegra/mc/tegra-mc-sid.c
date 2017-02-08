@@ -1,7 +1,7 @@
 /*
  * MC StreamID configuration
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -197,7 +197,7 @@ static void tegra_mc_sid_remove_debugfs(void)
 	debugfs_remove_recursive(mc_sid->debugfs_root);
 }
 #else
-static inline void tegra_mc_sid_debugfs(void)
+static inline void tegra_mc_sid_create_debugfs(void)
 {
 }
 static void tegra_mc_sid_remove_debugfs(void)

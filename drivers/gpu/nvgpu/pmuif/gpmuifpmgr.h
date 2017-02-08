@@ -14,7 +14,6 @@
 #ifndef _GPMUIFPMGR_H_
 #define _GPMUIFPMGR_H_
 
-#include "gk20a/pmu_common.h"
 #include "ctrl/ctrlpmgr.h"
 #include "pmuif/gpmuifboardobj.h"
 #include <nvgpu/flcnif_cmn.h>

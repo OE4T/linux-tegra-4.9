@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -257,6 +257,14 @@ static inline u32 ctxsw_prog_main_image_misc_options_verif_features_m(void)
 static inline u32 ctxsw_prog_main_image_misc_options_verif_features_disabled_f(void)
 {
 	return 0x0;
+}
+static inline u32 ctxsw_prog_main_image_pmu_options_o(void)
+{
+	return 0x00000070;
+}
+static inline u32 ctxsw_prog_main_image_pmu_options_boost_clock_frequencies_f(u32 v)
+{
+	return (v & 0x1) << 0;
 }
 static inline u32 ctxsw_prog_main_image_graphics_preemption_options_o(void)
 {

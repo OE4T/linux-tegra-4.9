@@ -75,7 +75,7 @@
 			};
 		};
 
-		Tdiode_tegra {
+		tdiode: Tdiode_tegra {
 			status = "okay";
 			polling-delay = <0>;
 			polling-delay-passive = <1000>;

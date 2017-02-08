@@ -1149,6 +1149,7 @@
 		compatible = "nvidia,tegra186-se-elp";
 		reg = <0x0 0x03ad0000 0x0 0x10000>,
 		      <0x0 0x03ae0000 0x0 0x10000>;
+		interrupts = <0 283 0x04>;
 		clocks = <&tegra_car TEGRA186_CLK_SE>;
 		clock-names = "se";
 		pka1-rsa-priority = <300>;

@@ -176,81 +176,6 @@ static int parse_dc_out_type(struct device_node *np,
 	return -EINVAL;
 }
 
-static int parse_tmds(struct device_node *np,
-	u8 *addr)
-{
-	u32 temp;
-	int i = 0;
-	u32 major = 0;
-	u32 minor = 0;
-	struct property *prop;
-	const __be32 *p;
-	u32 u;
-	struct tmds_config *tmds_cfg_addr;
-	tmds_cfg_addr = (struct tmds_config *)addr;
-
-	of_property_for_each_u32(np, "version", prop, p, u)
-		i++;
-
-	if (i == 2) { /* major version, minor version */
-		i = 0;
-		of_property_for_each_u32(np,
-			"version", prop, p, u) {
-			i++;
-			if (i == 1)
-				major = u;
-			else
-				minor = u;
-		}
-		tmds_cfg_addr->version = MKDEV(major, minor);
-		OF_DC_LOG("tmds version 0x%x\n",
-			tmds_cfg_addr->version);
-	} else if (i == 0) {
-		OF_DC_LOG("there's no tmds conf version.\n");
-	} else {
-		OF_DC_LOG("need to have major, minor version\n");
-		goto parse_tmds_fail;
-	}
-
-	if (!of_property_read_u32(np, "pclk", &temp)) {
-		tmds_cfg_addr->pclk = (int)temp;
-		OF_DC_LOG("tmds pclk %d\n", temp);
-	}
-	if (!of_property_read_u32(np, "pll0", &temp)) {
-		tmds_cfg_addr->pll0 = (u32)temp;
-		OF_DC_LOG("tmds pll0 0x%x\n", temp);
-	}
-	if (!of_property_read_u32(np, "pll1", &temp)) {
-		tmds_cfg_addr->pll1 = (u32)temp;
-		OF_DC_LOG("tmds pll1 0x%x\n", temp);
-	}
-	if (!of_property_read_u32(np, "pe-current", &temp)) {
-		tmds_cfg_addr->pe_current = (u32)temp;
-		OF_DC_LOG("tmds pe-current 0x%x\n", temp);
-	}
-	if (!of_property_read_u32(np, "drive-current", &temp)) {
-		tmds_cfg_addr->drive_current = (u32)temp;
-		OF_DC_LOG("tmds drive-current 0x%x\n", temp);
-	}
-	if (!of_property_read_u32(np, "peak-current", &temp)) {
-		tmds_cfg_addr->peak_current = (u32)temp;
-		OF_DC_LOG("tmds peak-current 0x%x\n", temp);
-	}
-	if (!of_property_read_u32(np, "pad-ctls0-mask", &temp)) {
-		tmds_cfg_addr->pad_ctls0_mask = (u32)temp;
-		OF_DC_LOG("tmds pad_ctls0_mask 0x%x\n", temp);
-	}
-	if (!of_property_read_u32(np, "pad-ctls0-setting", &temp)) {
-		tmds_cfg_addr->pad_ctls0_setting = (u32)temp;
-		OF_DC_LOG("tmds pad_ctls0_setting 0x%x\n", temp);
-	}
-
-	return 0;
-parse_tmds_fail:
-	pr_err("parse tmds fail!\n");
-	return -EINVAL;
-}
-
 static bool is_dc_default_out_flag(u32 flag)
 {
 	if ((flag == TEGRA_DC_OUT_HOTPLUG_HIGH) |
@@ -565,56 +490,6 @@ static int parse_vrr_settings(struct platform_device *ndev,
 	 */
 	vrr->capability = 1;
 	return 0;
-}
-
-static int parse_tmds_config(struct platform_device *ndev,
-	struct device_node *np, struct tegra_dc_out *default_out)
-{
-	int err = 0;
-	u8 *addr;
-	struct device_node *tmds_np = NULL;
-	struct device_node *entry = NULL;
-
-	tmds_np = of_get_child_by_name(np, "tmds-config");
-
-	if (!tmds_np) {
-		pr_info("%s: No tmds-config node\n",
-			__func__);
-	} else {
-		int tmds_set_count =
-			of_get_child_count(tmds_np);
-		if (!tmds_set_count) {
-			pr_info("tmds node exists but no cfg!\n");
-			goto success_tmds_config;
-		}
-
-		default_out->hdmi_out->n_tmds_config =
-			tmds_set_count;
-
-		default_out->hdmi_out->tmds_config = devm_kzalloc(&ndev->dev,
-			tmds_set_count * sizeof(struct tmds_config),
-			GFP_KERNEL);
-		if (!default_out->hdmi_out->tmds_config) {
-			dev_err(&ndev->dev, "not enough memory\n");
-			err = -ENOMEM;
-			goto fail_tmds_config;
-		}
-		addr = (u8 *)default_out->hdmi_out->tmds_config;
-		for_each_child_of_node(tmds_np, entry) {
-			err = parse_tmds(entry, addr);
-			if (err)
-				goto fail_tmds_config;
-			addr += sizeof(struct tmds_config);
-		}
-	}
-success_tmds_config:
-	of_node_put(tmds_np);
-	return 0;
-
-fail_tmds_config:
-	pr_err("%s: a parse error\n", __func__);
-	of_node_put(tmds_np);
-	return err;
 }
 
 static int parse_sd_settings(struct device_node *np,
@@ -2625,10 +2500,6 @@ struct tegra_dc_platform_data
 			dev_err(&ndev->dev, "not enough memory\n");
 			goto fail_parse;
 		}
-		err = parse_tmds_config(ndev, np_target_disp,
-				pdata->default_out);
-		if (err)
-			goto fail_parse;
 		if (!of_property_read_u32(np_target_disp,
 					"nvidia,hdmi-fpd-bridge", &temp)) {
 			pdata->default_out->hdmi_out->

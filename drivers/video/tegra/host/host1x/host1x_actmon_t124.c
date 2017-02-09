@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Actmon support for T124 and T210
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -170,11 +170,7 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 		return 0;
 
 	if (actmon->init == ACTMON_OFF) {
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 		if (tegra_get_chip_id() == TEGRA210) {
-#else
-		if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA21) {
-#endif
 			actmon->usecs_per_sample = 80;
 			actmon->k = 4;
 		} else {

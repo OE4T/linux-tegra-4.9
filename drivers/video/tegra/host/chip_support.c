@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Chip support module
  *
- * Copyright (c) 2012-2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -61,28 +61,14 @@ int nvhost_init_chip_support(struct nvhost_master *host)
 }
 
 bool nvhost_is_124() {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0)
-	return false;
-#else
-	return tegra_get_chipid() == TEGRA_CHIPID_TEGRA12 ||
-	       tegra_get_chipid() == TEGRA_CHIPID_TEGRA13;
-#endif
+	return tegra_get_chip_id() == TEGRA124 ||
+	       tegra_get_chip_id() == TEGRA132;
 }
 
 bool nvhost_is_210() {
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) || LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 	return tegra_get_chip_id() == TEGRA210;
-#else
-	return tegra_get_chipid() == TEGRA_CHIPID_TEGRA21;
-#endif
 }
 
 bool nvhost_is_186() {
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) || LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 	return tegra_get_chip_id() == TEGRA186;
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0)
-	return tegra_get_chipid() == TEGRA_CHIPID_TEGRA18;
-#else
-	return false;
-#endif
 }

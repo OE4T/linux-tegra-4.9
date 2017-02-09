@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Init for T124 Architecture Chips
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -307,11 +307,7 @@ int nvhost_init_t124_support(struct nvhost_master *host,
 	struct nvhost_device_data *data = platform_get_drvdata(host->dev);
 
 	/* Select the soc name */
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 	if (tegra_get_chip_id() == TEGRA124)
-#else
-	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA12)
-#endif
 		op->soc_name = "tegra12x";
 	else
 		op->soc_name = "tegra13x";

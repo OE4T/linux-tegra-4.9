@@ -386,12 +386,34 @@ static const struct file_operations parent_fops = {
 };
 #endif
 
+void tegra_clk_debugfs_add(struct clk *clk)
+{
+#ifdef CONFIG_TEGRA_CLK_DEBUG
+	const char *name;
+	struct dentry *d;
+
+	name = __clk_get_name(clk);
+	d = __clk_debugfs_add_file(clk, "clk_update_rate", 0200, clk,
+				   &rate_fops);
+	if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
+		pr_err("debugfs clk_update_rate failed %s\n", name);
+
+	d = __clk_debugfs_add_file(clk, "clk_state", 0644, clk,
+				   &state_fops);
+	if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
+		pr_err("debugfs clk_state failed %s\n", name);
+
+	d = __clk_debugfs_add_file(clk, "clk_parent", 0644, clk,
+				   &parent_fops);
+	if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
+		pr_err("debugfs clk_parent failed %s\n", name);
+#endif
+}
+
 void __init tegra_add_of_provider(struct device_node *np)
 {
 	int i;
-	struct dentry *d;
 	struct clk *clk;
-	char *name;
 
 	for (i = 0; i < clk_num; i++) {
 		clk = clks[i];
@@ -404,24 +426,7 @@ void __init tegra_add_of_provider(struct device_node *np)
 			clks[i] = ERR_PTR(-EINVAL);
 			continue;
 		}
-#ifdef CONFIG_TEGRA_CLK_DEBUG
-		name = __clk_get_name(clk);
-		d = __clk_debugfs_add_file(clk, "clk_update_rate", 0200, clk,
-				   &rate_fops);
-		if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
-			pr_err("debugfs clk_update_rate failed %s\n", name);
-
-		d = __clk_debugfs_add_file(clk, "clk_state", 0644, clk,
-				   &state_fops);
-		if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
-			pr_err("debugfs clk_state failed %s\n", name);
-
-		d = __clk_debugfs_add_file(clk, "clk_parent", 0644, clk,
-				   &parent_fops);
-		if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
-			pr_err("debugfs clk_parent failed %s\n", name);
-
-#endif
+		tegra_clk_debugfs_add(clk);
 	}
 
 	clk_data.clks = clks;
@@ -515,31 +520,36 @@ static int cycles_set(void *data, u64 val)
 }
 DEFINE_SIMPLE_ATTRIBUTE(cycles_fops, cycles_get, cycles_set, "%llu\n");
 
+void tegra_register_pto(struct clk *clk, struct tegra_pto_table *ptodef)
+{
+	struct dentry *d;
+
+	d = __clk_debugfs_add_file(clk, "pto_rate", 0400,
+				   ptodef, &pto_fops);
+	if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
+		pr_err("debugfs pto_rate failed %s\n",
+		       __clk_get_name(clk));
+
+	if (!ptodef->cycle_count)
+		ptodef->cycle_count = 16;
+
+	d = __clk_debugfs_add_file(clk, "pto_cycles", 0600,
+				   &ptodef->cycle_count, &cycles_fops);
+	if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
+		pr_err("debugfs pto_cycles failed %s\n",
+		       __clk_get_name(clk));
+}
+
 void tegra_register_ptos(struct tegra_pto_table *ptodefs, int num_pto_defs)
 {
 	int i;
 	struct clk *clk;
-	struct dentry *d;
 
 	for (i = 0; i < num_pto_defs; i++) {
 		clk = clks[ptodefs[i].clk_id];
 		if (IS_ERR(clk))
 			continue;
-
-		d = __clk_debugfs_add_file(clk, "pto_rate", 0400,
-				   &ptodefs[i], &pto_fops);
-		if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
-			pr_err("debugfs pro_counter failed %s\n",
-					__clk_get_name(clk));
-
-		if (!ptodefs[i].cycle_count)
-			ptodefs[i].cycle_count = 16;
-
-		d = __clk_debugfs_add_file(clk, "pto_cycles", 0600,
-				   &ptodefs[i].cycle_count, &cycles_fops);
-		if ((IS_ERR(d) && PTR_ERR(d) != -EAGAIN) || !d)
-			pr_err("debugfs pro_cycles failed %s\n",
-					__clk_get_name(clk));
+		tegra_register_pto(clk, &ptodefs[i]);
 	}
 }
 

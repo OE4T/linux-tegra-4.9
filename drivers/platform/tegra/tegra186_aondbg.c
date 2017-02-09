@@ -672,10 +672,11 @@ static int tegra_aondbg_probe(struct platform_device *pdev)
 	aondbg->cl.rx_callback = tegra_aondbg_recv_msg;
 	aondbg->mbox = mbox_request_channel(&aondbg->cl, 0);
 	if (IS_ERR(aondbg->mbox)) {
-		dev_warn(&pdev->dev,
-			 "can't get mailbox channel (%d)\n",
-			 (int)PTR_ERR(aondbg->mbox));
-		return PTR_ERR(aondbg->mbox);
+		ret = PTR_ERR(aondbg->mbox);
+		if (ret != -EPROBE_DEFER)
+			dev_warn(&pdev->dev,
+				 "can't get mailbox channel (%d)\n", ret);
+		return ret;
 	}
 	dev_dbg(dev, "aondbg->mbox = %p\n", aondbg->mbox);
 

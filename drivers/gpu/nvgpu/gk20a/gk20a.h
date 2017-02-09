@@ -783,6 +783,8 @@ struct gpu_ops {
 #if defined(CONFIG_PCI_MSI)
 		void (*rearm_msi)(struct gk20a *g);
 #endif
+		void (*enable_shadow_rom)(struct gk20a *g);
+		void (*disable_shadow_rom)(struct gk20a *g);
 	} xve;
 };
 

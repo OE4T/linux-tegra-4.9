@@ -24,7 +24,6 @@
 
 #include <nvgpu/hw/gm206/hw_pwr_gm206.h>
 #include <nvgpu/hw/gm206/hw_mc_gm206.h>
-#include <nvgpu/hw/gm206/hw_xve_gm206.h>
 #include <nvgpu/hw/gm206/hw_top_gm206.h>
 
 #define BIT_HEADER_ID 0xb8ff
@@ -868,8 +867,7 @@ static int gm206_bios_init(struct gk20a *g)
 		g->bios.data = vmalloc(BIOS_SIZE);
 		if (!g->bios.data)
 			return -ENOMEM;
-		gk20a_writel(g, NV_PCFG + xve_rom_ctrl_r(),
-				xve_rom_ctrl_rom_shadow_disabled_f());
+		g->ops.xve.disable_shadow_rom(g);
 		for (i = 0; i < g->bios.size/4; i++) {
 			u32 val = be32_to_cpu(gk20a_readl(g, 0x300000 + i*4));
 
@@ -878,8 +876,7 @@ static int gm206_bios_init(struct gk20a *g)
 			g->bios.data[(i*4)+2] = (val >> 8) & 0xff;
 			g->bios.data[(i*4)+3] = val & 0xff;
 		}
-		gk20a_writel(g, NV_PCFG + xve_rom_ctrl_r(),
-				xve_rom_ctrl_rom_shadow_enabled_f());
+		g->ops.xve.enable_shadow_rom(g);
 	}
 
 	err = gm206_bios_parse_rom(g);

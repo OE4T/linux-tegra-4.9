@@ -25,6 +25,8 @@
 #include <nvgpu/hw/gp106/hw_xp_gp106.h>
 #include <nvgpu/hw/gp106/hw_xve_gp106.h>
 
+#define NV_PCFG 0x88000
+
 /**
  * Init a timer and place the timeout data in @timeout.
  */
@@ -661,6 +663,18 @@ static void xve_rearm_msi_gp106(struct gk20a *g)
 }
 #endif
 
+static void xve_enable_shadow_rom_gp106(struct gk20a *g)
+{
+	g->ops.xve.xve_writel(g, NV_PCFG + xve_rom_ctrl_r(),
+			xve_rom_ctrl_rom_shadow_enabled_f());
+}
+
+static void xve_disable_shadow_rom_gp106(struct gk20a *g)
+{
+	g->ops.xve.xve_writel(g, NV_PCFG + xve_rom_ctrl_r(),
+			xve_rom_ctrl_rom_shadow_disabled_f());
+}
+
 /*
  * Init the HAL functions and what not. xve_sw_init_gp106() is for initializing
  * all the other stuff like debugfs nodes, etc.
@@ -678,5 +692,8 @@ int gp106_init_xve_ops(struct gpu_ops *gops)
 #if defined(CONFIG_PCI_MSI)
 	gops->xve.rearm_msi        = xve_rearm_msi_gp106;
 #endif
+	gops->xve.enable_shadow_rom = xve_enable_shadow_rom_gp106;
+	gops->xve.disable_shadow_rom = xve_disable_shadow_rom_gp106;
+
 	return 0;
 }

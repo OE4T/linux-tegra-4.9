@@ -239,6 +239,14 @@ config TEGRA_HDMI2GMSL_MAX929x
 	  This bridge chip converts SOR->HDMI output to GMSL.
 	  Driver supports MAX9291 and MAX9293 chips, ignoring HDCP on the latter.
 
+config TEGRA_HDMI2DSI_TC358870
+	bool "Enable HDMI-to-DSI TC358870 bridge."
+	depends on TEGRA_HDMI2_0 && I2C
+	default n
+	help
+	  Say Y here to enable the Toshiba TC358870 bridge.
+	  The bridge chip converts HDMI output to DSI.
+
 config TEGRA_HDA_DC
 	bool "Enable HDA DC driver"
 	depends on TEGRA_HDMI2_0 || (TEGRA_DP && (ARCH_TEGRA_210_SOC || ARCH_TEGRA_18x_SOC))

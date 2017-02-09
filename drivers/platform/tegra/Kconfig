@@ -123,7 +123,7 @@ config TEGRA_FIQ_DEBUGGER
 config TEGRA_NVDUMPER
 	bool "Enable nvdumper"
 	depends on ARCH_TEGRA
-	default y
+	default n
 	help
 	  This is debug feature to dump whole memory when system crashes.
 

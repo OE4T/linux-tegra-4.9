@@ -29,15 +29,14 @@
         #size-cells = <2>;
 
 	pmc@c360000 {
-		io-pad-defaults {
-			sdmmc1-hv {
-				nvidia,enable-dynamic-pad-voltage;
-			};
-			sdmmc2-hv {
-				nvidia,enable-dynamic-pad-voltage;
-			};
-			sdmmc3-hv {
-				nvidia,enable-dynamic-pad-voltage;
+		nvidia,restrict-voltage-switch;
+		pinctrl-names = "default";
+		pinctrl-0 = <&iopad_default>;
+
+		iopad_default: iopad-defaults {
+			sdmmc-io-pads {
+				pins = "sdmmc1-hv", "sdmmc2-hv", "sdmmc3-hv";
+				nvidia,enable-voltage-switching;
 			};
 		};
 	};

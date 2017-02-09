@@ -1065,6 +1065,10 @@ static void ufs_tegra_unipro_pre_linkup(struct ufs_hba *hba)
 {
 	/* Unipro LCC disable */
 	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_Local_TX_LCC_Enable), 0x0);
+	/* Before link start configuration request from Host controller,
+	 * burst closure delay needs to be configured to 0
+	 */
+	ufshcd_dme_set(hba, UIC_ARG_MIB(VS_TXBURSTCLOSUREDELAY), 0x0);
 }
 
 static int ufs_tegra_link_startup_notify(struct ufs_hba *hba,

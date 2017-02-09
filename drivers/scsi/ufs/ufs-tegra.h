@@ -81,6 +81,9 @@
 #define VS_DEBUGSAVECONFIGTIME_ST_SCT	0x3
 #define SET_ST_SCT(x)			((x) & 0x3)
 
+#define VS_TXBURSTCLOSUREDELAY		0xD084
+
+
 #define MPHY_ADDR_RANGE		0x1fc
 #define UFS_AUX_ADDR_RANGE	0x18
 

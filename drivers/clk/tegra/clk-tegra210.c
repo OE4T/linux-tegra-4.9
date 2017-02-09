@@ -287,6 +287,8 @@ static struct cpu_clk_suspend_context {
 } tegra210_cpu_clk_sctx;
 #endif
 
+static bool emc_is_native;
+
 static void __iomem *clk_base;
 static void __iomem *pmc_base;
 
@@ -2963,6 +2965,8 @@ static __init void tegra210_emc_clk_init(void __iomem *clk_base)
 	struct clk *clk;
 	const struct emc_clk_ops *emc_ops;
 
+	if (!emc_is_native)
+		goto skip_emc;
 	emc_ops = tegra210_emc_get_ops();
 	clk = tegra_clk_register_emc_t210("emc", mux_pllmcp_clkm,
 		ARRAY_SIZE(mux_pllmcp_clkm), &tegra_emc_periph, clk_base,
@@ -2970,6 +2974,7 @@ static __init void tegra210_emc_clk_init(void __iomem *clk_base)
 		emc_ops);
 	clks[TEGRA210_CLK_EMC] = clk;
 
+skip_emc:
 	clk = tegra_clk_register_mc("mc", "emc", clk_base + CLK_SOURCE_EMC,
 		&emc_lock);
 	clks[TEGRA210_CLK_MC] = clk;
@@ -3106,6 +3111,9 @@ static void __init tegra210_pll_init(void __iomem *clk_base,
 	clk_register_clkdev(clk, "pll_c3", NULL);
 	clks[TEGRA210_CLK_PLL_C3] = clk;
 
+	if (!emc_is_native)
+		goto skip_pllms;
+
 	/* PLLM */
 	clk = tegra_clk_register_pllm("pll_m", "osc", clk_base, pmc,
 			     CLK_SET_RATE_GATE, &pll_m_params, NULL);
@@ -3130,6 +3138,7 @@ static void __init tegra210_pll_init(void __iomem *clk_base,
 	clk_register_clkdev(clk, "pll_mb_ud", NULL);
 	clks[TEGRA210_CLK_PLL_MB_UD] = clk;
 
+skip_pllms:
 	/* PLLU_VCO */
 	if (!tegra210_init_pllu()) {
 		clk = clk_register_fixed_rate(NULL, "pll_u_vco", "pll_ref", 0,
@@ -4078,6 +4087,10 @@ static void __init tegra210_clock_init(struct device_node *np)
 		WARN_ON(1);
 		return;
 	}
+
+	emc_is_native = (of_find_compatible_node(NULL, NULL,
+						 "nvidia,tegra-bpmp-emc-clk")
+			 == NULL);
 
 	has_ccplex_therm_control = 1;
 	clks = tegra_clk_init(clk_base, TEGRA210_CLK_CLK_MAX,

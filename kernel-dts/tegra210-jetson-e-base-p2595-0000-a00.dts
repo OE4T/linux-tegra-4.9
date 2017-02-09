@@ -372,11 +372,28 @@
 		status = "okay";
 	};
 
-	sound {
+	sound_card: sound {
 		compatible = "nvidia,tegra-audio-t210ref-mobile-rt5639";
 		nvidia,model = "tegra-snd-t210ref-mobile-rt5639";
 		nvidia,ldo-gpios = <&gpio TEGRA_GPIO(BB, 3) GPIO_ACTIVE_HIGH>;
 		nvidia,hp-det-gpios = <&gpio TEGRA_GPIO(E, 6) GPIO_ACTIVE_HIGH>;
+
+		clocks = <&tegra_car TEGRA210_CLK_PLL_P_OUT1>,
+			<&tegra_car TEGRA210_CLK_PLL_A>,
+			<&tegra_car TEGRA210_CLK_PLL_A_OUT0>,
+			<&tegra_car TEGRA210_CLK_D_AUDIO>,
+			<&tegra_car TEGRA210_CLK_CLK_M>,
+			<&tegra_car TEGRA210_CLK_EXTERN1>;
+		clock-names = "pll_p_out1", "pll_a", "pll_a_out0", "ahub",
+			"clk_m", "extern1";
+
+
+		assigned-clocks = <&tegra_car TEGRA210_CLK_PLL_A>,
+			<&tegra_car TEGRA210_CLK_PLL_A_OUT0>,
+			<&tegra_car TEGRA210_CLK_D_AUDIO>,
+			<&tegra_car TEGRA210_CLK_EXTERN1>;
+		assigned-clock-rates = <368640000>, <36864000>,
+			<36864000>, <12288000>;
 
 		nvidia,num-codec-link = <3>;
 
@@ -401,11 +418,11 @@
 		nvidia,xbar = <&tegra_axbar>;
 
 		nvidia,dai-link-1 {
-			link-name = "rt5639-playback";
+			link-name = "rt5640-playback";
 			cpu-dai = <&tegra_i2s1>;
-			codec-dai = <&rt5639>;
+			codec-dai = <&rt5640>;
 			cpu-dai-name = "I2S1";
-			codec-dai-name = "rt5639-aif1";
+			codec-dai-name = "rt5640-aif1";
 			format = "i2s";
 			bitclock-slave;
 			frame-slave;
@@ -657,8 +674,9 @@
 		ak8963c@0c {
 			magnetic_field_matrix = [00 ff 00 01 00 00 00 00 01];
 		};
-		rt5639: rt5639.0-001c@1c {
-			compatible = "realtek,rt5639";
+		rt5640: rt5640.0-001c@1c {
+			compatible = "realtek,rt5640";
+			realtek,ldo1-en-gpios = <&gpio TEGRA_GPIO(BB, 3) GPIO_ACTIVE_HIGH>;
 			reg = <0x1c>;
 		};
 	};

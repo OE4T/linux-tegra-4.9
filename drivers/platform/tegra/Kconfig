@@ -97,7 +97,7 @@ config TEGRA_CBUS_CAN_USE_SKIPPERS
 
 config TEGRA_CENTRAL_ACTMON
 	bool "Tegra Activity Monitor"
-	depends on ARCH_TEGRA_18x_SOC || ARCH_TEGRA_21x_SOC
+	depends on ARCH_TEGRA
 	default n
 	help
 	  Actmon is a hardware block that can be used to track the activity of

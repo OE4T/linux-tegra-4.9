@@ -95,33 +95,58 @@ static size_t  scrncapt_copy_dcbuf(void *pDst,
 			struct tegra_dc_dmabuf *pSrcBuf, size_t len)
 {
 	size_t  copied;
-	void *vaddr_src;
-	void *vaddr_min = (void *)PAGE_OFFSET;
-	void *vaddr_max = __va(memblock_end_of_DRAM() - 1);
-	int  i;
-	int  ofs;
-	int  l;
 
 	if (!len || !pDst || !pSrcBuf || !pSrcBuf->buf || !pSrcBuf->sgt
 		|| !pSrcBuf->sgt->nents || !pSrcBuf->sgt->sgl)
 		return 0;
 
-	ofs = 0;
-	for (i = 0; i < pSrcBuf->sgt->nents; i++) {
-		l = pSrcBuf->sgt->sgl[i].length;
-		l = (len < (ofs + l)) ? len - ofs : l;
-		vaddr_src = sg_virt(&pSrcBuf->sgt->sgl[i]);
-		if (vaddr_src >= vaddr_min && vaddr_src <= vaddr_max) {
-			memcpy((char *)pDst + ofs, vaddr_src, l);
-		} else {
-			vaddr_src = ioremap_cache(
-				sg_phys(&pSrcBuf->sgt->sgl[i]), l);
-			memcpy((char *)pDst + ofs, vaddr_src, l);
-			iounmap(vaddr_src);
+	/* to emulate the segmented memory copy
+	 *	copied = sg_copy_to_buffer(pSrcBuf->sgt->sgl,
+	 *			pSrcBuf->sgt->nents, pDst, len);
+	 * sg_copy_to_buffer() is not compatible with EBP DisplayServer
+	 * virtualization due to no nvmap carveout highmem support.
+	 */
+	{
+		void *vaddr_src;
+		void *vaddr_min = (void *)PAGE_OFFSET;
+		void *vaddr_max = __va(memblock_end_of_DRAM() - 1);
+		struct scatterlist *sg;
+		unsigned int  i;
+		size_t  ofs, l;
+		unsigned long  flags;
+
+		pr_debug("@@ %s: copy to %p from %p(PA=%llx) nents=%d len=%lu\n",
+			__func__, pDst, sg_virt(&pSrcBuf->sgt->sgl[0]),
+			sg_phys(&pSrcBuf->sgt->sgl[0]),
+			pSrcBuf->sgt->nents, len);
+		ofs = 0;
+		local_irq_save(flags);
+		for_each_sg(pSrcBuf->sgt->sgl, sg, pSrcBuf->sgt->nents, i) {
+			if (len <= ofs)
+				break;
+			l = sg->length;
+			l = (len < (ofs + l)) ? len - ofs : l;
+			vaddr_src = sg_virt(sg);
+			if (vaddr_src >= vaddr_min && vaddr_src <= vaddr_max) {
+				memcpy((char *)pDst + ofs, vaddr_src, l);
+			} else {
+				vaddr_src = ioremap_cache(sg_phys(sg), l);
+				memcpy((char *)pDst + ofs, vaddr_src, l);
+				iounmap(vaddr_src);
+			}
+			ofs += l;
+			if (sg->offset) {
+				pr_debug("@@!! %s.%d: sgl[].offset:%d\n",
+					__func__, __LINE__, sg->offset);
+			}
 		}
-		ofs += l;
+		local_irq_restore(flags);
+		if (ofs != len) {
+			pr_debug("@@!! %s.%d: copied only %lu out of %lu\n",
+				__func__, __LINE__, ofs, len);
+		}
+		copied = ofs;
 	}
-	copied = ofs;
 
 	return copied;
 }

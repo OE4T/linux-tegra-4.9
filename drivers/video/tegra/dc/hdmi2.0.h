@@ -345,12 +345,14 @@ enum {
 };
 
 struct tegra_hdmi {
-	/* Note:
-	 * structure aux_base and sor should always be
-	 * at the top and should align with tegra_dc_dp_data struct.
-	 * Please do not move this sequence
+	/*
+	 * The following "dpaux" and "sor" fields need to stay at the top of
+	 * this struct. The placement of these fields needs to align with the
+	 * tegra_dc_dp_data struct definition in order to support dynamic SOR
+	 * re-assignment with fakeDP. This is something that needs to be fixed,
+	 * though.
 	 */
-	void __iomem *aux_base;
+	struct tegra_dc_dpaux_data *dpaux;
 	struct tegra_dc_sor_data *sor;
 
 	struct tegra_dc *dc;
@@ -385,7 +387,6 @@ struct tegra_hdmi {
 #endif
 	char *hpd_switch_name;
 	char *audio_switch_name;
-	void __iomem *hdmi_dpaux_base[2];
 
 	struct hdmi_vendor_infoframe vsi;
 
@@ -399,7 +400,6 @@ struct tegra_hdmi {
 	int ddc_i2c_original_rate;
 	int irq;
 	struct tegra_prod *prod_list;
-	struct tegra_prod *dpaux_prod_list;
 	int ddc_refcount;
 	struct mutex ddc_refcount_lock;
 	bool device_shutdown;

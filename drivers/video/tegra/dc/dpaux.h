@@ -18,27 +18,35 @@
 #ifndef __DRIVER_VIDEO_TEGRA_DC_DPAUX_H__
 #define __DRIVER_VIDEO_TEGRA_DC_DPAUX_H__
 
+struct tegra_dc_dpaux_data {
+	struct tegra_dc *dc;
+
+	void __iomem *base;
+
+	struct clk *clk;
+
+	struct reset_control *rst;
+
+	struct tegra_prod *prod_list;
+};
+
 enum tegra_dpaux_pad_mode {
 	TEGRA_DPAUX_PAD_MODE_AUX = 0,
 	TEGRA_DPAUX_PAD_MODE_I2C = 1,
 };
 
-enum tegra_dpaux_instance {
-	TEGRA_DPAUX_INSTANCE_0 = 0,
-	TEGRA_DPAUX_INSTANCE_1 = 1,
-	TEGRA_DPAUX_INSTANCE_N,
-};
-
-void tegra_set_dpaux_addr(void __iomem *dpaux_base,
-				enum tegra_dpaux_instance id);
-int tegra_dpaux_clk_en(struct device_node *np, enum tegra_dpaux_instance id);
-void tegra_dpaux_clk_dis(struct device_node *np, enum tegra_dpaux_instance id);
-void tegra_dpaux_pad_power(struct tegra_dc *dc,
-			enum tegra_dpaux_instance id,
-			bool on);
-void tegra_dpaux_config_pad_mode(struct tegra_dc *dc,
-				enum tegra_dpaux_instance id,
+int tegra_dpaux_readl(struct tegra_dc_dpaux_data *dpaux, u32 reg);
+void tegra_dpaux_writel(struct tegra_dc_dpaux_data *dpaux, u32 reg, u32 val);
+void tegra_dpaux_write_field(struct tegra_dc_dpaux_data *dpaux, u32 reg,
+				u32 mask, u32 val);
+int tegra_dpaux_clk_en(struct tegra_dc_dpaux_data *dpaux);
+void tegra_dpaux_clk_dis(struct tegra_dc_dpaux_data *dpaux);
+void tegra_dpaux_int_toggle(struct tegra_dc_dpaux_data *dpaux, u32 intr,
+				bool enable);
+void tegra_dpaux_pad_power(struct tegra_dc_dpaux_data *dpaux, bool on);
+void tegra_dpaux_config_pad_mode(struct tegra_dc_dpaux_data *dpaux,
 				enum tegra_dpaux_pad_mode mode);
-void tegra_dpaux_prod_set_for_dp(struct tegra_dc *dc);
-void tegra_dpaux_prod_set_for_hdmi(struct tegra_dc *dc);
+void tegra_dpaux_prod_set(struct tegra_dc_dpaux_data *dpaux);
+struct tegra_dc_dpaux_data *tegra_dpaux_init_data(struct tegra_dc *dc);
+void tegra_dpaux_destroy_data(struct tegra_dc_dpaux_data *dpaux);
 #endif

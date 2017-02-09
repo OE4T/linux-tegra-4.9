@@ -69,20 +69,21 @@ extern struct tegra_dp_test_settings default_dp_test_settings;
 #define DP_DPCD_SINK_CAP_SIZE (0xc)
 
 struct tegra_dc_dp_data {
-	/* Note:
-	 * structure aux_base and sor should always be
-	 * at the top and should align with tegra_hdmi struct.
-	 * Please do not move this sequence
+	/*
+	 * The following "dpaux" and "sor" fields need to stay at the top of
+	 * this struct. The placement of these fields needs to align with the
+	 * tegra_hdmi struct definition in order to support dynamic SOR
+	 * re-assignment with fakeDP. This is something that needs to be fixed,
+	 * though.
 	 */
-	void __iomem *aux_base;
+	struct tegra_dc_dpaux_data *dpaux;
 	struct tegra_dc_sor_data *sor;
 	void *out_data;
 
 	struct tegra_dc *dc;
 	u32 irq;
-	struct clk *dpaux_clk;
+
 	struct clk *parent_clk; /* pll_dp clock */
-	struct reset_control *dpaux_rst;
 
 	u8 revision;
 
@@ -116,7 +117,6 @@ struct tegra_dc_dp_data {
 
 	struct tegra_prod *prod_list;
 
-	struct tegra_prod *dpaux_prod_list;
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *debugdir;
 #endif

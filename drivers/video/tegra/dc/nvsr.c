@@ -21,6 +21,7 @@
 #include "nvsr.h"
 #include "nvsr_regs.h"
 #include "dpaux_regs.h"
+#include "dpaux.h"
 
 #define HIMAX_HX8880_A 1
 
@@ -1365,7 +1366,7 @@ static int tegra_dc_nvsr_init(struct tegra_dc *dc)
 			NVSR_RETV(ret, "Out ops init failed.\n");
 		}
 		nvsr->out_data.dp = tegra_dc_get_outdata(dc);
-		nvsr->aux_clk = nvsr->out_data.dp->dpaux_clk;
+		nvsr->aux_clk = nvsr->out_data.dp->dpaux->clk;
 		nvsr->reg_ops.read = tegra_nvsr_read_dpaux;
 		nvsr->reg_ops.write = tegra_nvsr_write_dpaux;
 		break;

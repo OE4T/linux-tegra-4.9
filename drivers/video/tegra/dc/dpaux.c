@@ -27,185 +27,329 @@
 #include "hdmi2.0.h"
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
-static const char *const dpaux_clks[TEGRA_DPAUX_INSTANCE_N] = {
-	 "dpaux",
-	 "dpaux1",
-};
-static void __iomem *dpaux_baseaddr[TEGRA_DPAUX_INSTANCE_N];
 static DEFINE_MUTEX(dpaux_lock);
 
-static inline struct clk *tegra_dpaux_clk_get(struct device_node *np,
-					enum tegra_dpaux_instance id)
+static inline void tegra_dpaux_get_name(char *buf, size_t buf_len, int sor_num)
 {
-	if (id >= TEGRA_DPAUX_INSTANCE_N)
-		return ERR_PTR(-EINVAL);
-	return tegra_disp_of_clk_get_by_name(np, dpaux_clks[id]);
+	if (sor_num > 0)
+		snprintf(buf, buf_len, "dpaux%d", sor_num);
+	else
+		snprintf(buf, buf_len, "dpaux");
 }
 
-int tegra_dpaux_clk_en(struct device_node *np, enum tegra_dpaux_instance id)
+int tegra_dpaux_readl(struct tegra_dc_dpaux_data *dpaux, u32 reg)
 {
-	return tegra_disp_clk_prepare_enable(tegra_dpaux_clk_get(np, id));
+	return readl(dpaux->base + reg * 4);
 }
 
-void tegra_dpaux_clk_dis(struct device_node *np, enum tegra_dpaux_instance id)
+void tegra_dpaux_writel(struct tegra_dc_dpaux_data *dpaux, u32 reg, u32 val)
 {
-	tegra_disp_clk_disable_unprepare(tegra_dpaux_clk_get(np, id));
+	writel(val, dpaux->base + reg * 4);
 }
 
-static inline void _tegra_dpaux_pad_power(struct tegra_dc *dc,
-					enum tegra_dpaux_instance id, bool on)
+void tegra_dpaux_write_field(struct tegra_dc_dpaux_data *dpaux, u32 reg,
+				u32 mask, u32 val)
 {
-	void __iomem *regaddr;
-	regaddr = dpaux_baseaddr[id] + DPAUX_HYBRID_SPARE * 4;
-	writel((on ? DPAUX_HYBRID_SPARE_PAD_PWR_POWERUP :
-		DPAUX_HYBRID_SPARE_PAD_PWR_POWERDOWN),
-		regaddr);
+	u32 reg_val = tegra_dpaux_readl(dpaux, reg);
+
+	reg_val = (reg_val & ~mask) | (val & mask);
+	tegra_dpaux_writel(dpaux, reg, reg_val);
 }
 
-__maybe_unused
-void tegra_dpaux_pad_power(struct tegra_dc *dc,
-				enum tegra_dpaux_instance id, bool on)
+int tegra_dpaux_clk_en(struct tegra_dc_dpaux_data *dpaux)
 {
-	struct device_node *np_dp = id ? of_find_node_by_path(DPAUX1_NODE)
-		: of_find_node_by_path(DPAUX_NODE);
+	return tegra_disp_clk_prepare_enable(dpaux->clk);
+}
 
-	if (!np_dp) {
-		dev_err(&dc->ndev->dev, "dp node not available\n");
+void tegra_dpaux_clk_dis(struct tegra_dc_dpaux_data *dpaux)
+{
+	tegra_disp_clk_disable_unprepare(dpaux->clk);
+}
+
+void tegra_dpaux_int_toggle(struct tegra_dc_dpaux_data *dpaux, u32 intr,
+				bool enable)
+{
+	u32 reg_val = tegra_dpaux_readl(dpaux, DPAUX_INTR_EN_AUX);
+
+	if (enable)
+		reg_val |= intr;
+	else
+		reg_val &= ~intr;
+
+	tegra_dpaux_writel(dpaux, DPAUX_INTR_EN_AUX, reg_val);
+}
+
+static inline void _tegra_dpaux_pad_power(struct tegra_dc_dpaux_data *dpaux,
+					bool on)
+{
+	tegra_dpaux_writel(dpaux,
+			DPAUX_HYBRID_SPARE,
+			(on ? DPAUX_HYBRID_SPARE_PAD_PWR_POWERUP :
+			DPAUX_HYBRID_SPARE_PAD_PWR_POWERDOWN));
+}
+
+void tegra_dpaux_pad_power(struct tegra_dc_dpaux_data *dpaux, bool on)
+{
+	struct tegra_dc *dc;
+
+	if (!dpaux || !dpaux->dc) {
+		pr_err("%s: dpaux and dc must both be non-NULL", __func__);
 		return;
 	}
 
-	tegra_dpaux_clk_en(np_dp, id);
+	dc = dpaux->dc;
+	tegra_dpaux_clk_en(dpaux);
 
 	tegra_dc_io_start(dc);
 
 	mutex_lock(&dpaux_lock);
-	_tegra_dpaux_pad_power(dc, id, on);
+	_tegra_dpaux_pad_power(dpaux, on);
 	mutex_unlock(&dpaux_lock);
 
 	tegra_dc_io_end(dc);
-	tegra_dpaux_clk_dis(np_dp, id);
-	of_node_put(np_dp);
+	tegra_dpaux_clk_dis(dpaux);
 }
 
-static inline void _tegra_dpaux_config_pad_mode(struct tegra_dc *dc,
-					enum tegra_dpaux_instance id,
+static inline void _tegra_dpaux_config_pad_mode(
+					struct tegra_dc_dpaux_data *dpaux,
 					enum tegra_dpaux_pad_mode mode)
 {
-	u32 val;
-	void __iomem *regaddr;
-	regaddr = dpaux_baseaddr[id] + DPAUX_HYBRID_PADCTL * 4;
+	u32 val = 0;
 
-	val = readl(regaddr);
+	val = tegra_dpaux_readl(dpaux, DPAUX_HYBRID_PADCTL);
+
 	val &= ~(DPAUX_HYBRID_PADCTL_I2C_SDA_INPUT_RCV_ENABLE |
 		DPAUX_HYBRID_PADCTL_I2C_SCL_INPUT_RCV_ENABLE |
 		DPAUX_HYBRID_PADCTL_MODE_I2C);
 	val |= mode ? (DPAUX_HYBRID_PADCTL_I2C_SDA_INPUT_RCV_ENABLE |
 		DPAUX_HYBRID_PADCTL_I2C_SCL_INPUT_RCV_ENABLE |
 		mode) : 0;
-	writel(val, regaddr);
+
+	tegra_dpaux_writel(dpaux, DPAUX_HYBRID_PADCTL, val);
 }
 
-__maybe_unused
-void tegra_dpaux_config_pad_mode(struct tegra_dc *dc,
-					enum tegra_dpaux_instance id,
-					enum tegra_dpaux_pad_mode mode)
+void tegra_dpaux_config_pad_mode(struct tegra_dc_dpaux_data *dpaux,
+			enum tegra_dpaux_pad_mode mode)
 {
-	struct device_node *np_dp = id ? of_find_node_by_path(DPAUX1_NODE)
-		: of_find_node_by_path(DPAUX_NODE);
+	struct tegra_dc *dc;
 
-	if (!np_dp) {
-		dev_err(&dc->ndev->dev, "dp node not available\n");
+	if (!dpaux || !dpaux->dc) {
+		pr_err("%s: dpaux and dc must both be non-NULL", __func__);
 		return;
 	}
 
+	dc = dpaux->dc;
 	tegra_dc_unpowergate_locked(dc);
-	tegra_dpaux_clk_en(np_dp, id);
+	tegra_dpaux_clk_en(dpaux);
 	tegra_dc_io_start(dc);
-
 	mutex_lock(&dpaux_lock);
+
 	/*
-	 * Make sure to configure the pad mode before we power it on.
-	 * If not done in this order, there is a chance that the pad
-	 * runs in the default mode for a while causing intermittent
-	 * glitches on the physical lines
+	 * Make sure to configure the pad mode before we power it on. If not
+	 * done in this order, there is a chance that the pad will run in the
+	 * default mode for a while before switching to the requested mode. This
+	 * could cause intermittent glitches on the physical lines.
 	 */
-	_tegra_dpaux_config_pad_mode(dc, id, mode);
-	_tegra_dpaux_pad_power(dc, id, true);
+	_tegra_dpaux_config_pad_mode(dpaux, mode);
+	_tegra_dpaux_pad_power(dpaux, true);
+
 	mutex_unlock(&dpaux_lock);
-
 	tegra_dc_io_end(dc);
-	tegra_dpaux_clk_dis(np_dp, id);
+	tegra_dpaux_clk_dis(dpaux);
 	tegra_dc_powergate_locked(dc);
-
-	of_node_put(np_dp);
 }
 
-__maybe_unused
-void tegra_set_dpaux_addr(void __iomem *dpaux_base,
-			enum tegra_dpaux_instance id)
+void tegra_dpaux_prod_set(struct tegra_dc_dpaux_data *dpaux)
 {
-	dpaux_baseaddr[id] = dpaux_base;
-}
+	struct tegra_dc *dc;
 
-void tegra_dpaux_prod_set_for_dp(struct tegra_dc *dc)
-{
-	int err = 0;
-	int sor_num = tegra_dc_which_sor(dc);
-	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
-	struct device_node *np_dp = of_find_node_by_path(
-			sor_num ? DPAUX1_NODE : DPAUX_NODE);
+	if (!dpaux || !dpaux->dc) {
+		pr_err("%s: dpaux and dc must both be non-NULL", __func__);
+		return;
+	}
 
-	if (!np_dp) {
-		dev_err(&dc->ndev->dev, "dp node not available\n");
+	/* Only HDMI, DP, and fakeDP use DPAUX. */
+	dc = dpaux->dc;
+	if (dc->out->type != TEGRA_DC_OUT_HDMI &&
+		dc->out->type != TEGRA_DC_OUT_DP &&
+		dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
+		pr_err("%s: dc output type must be HDMI, DP, or fakeDP\n",
+			__func__);
 		return;
 	}
 
 	tegra_dc_unpowergate_locked(dc);
-	tegra_dpaux_clk_en(np_dp, sor_num);
+	tegra_dpaux_clk_en(dpaux);
 	tegra_dc_io_start(dc);
 
-	if (!IS_ERR(dp->dpaux_prod_list)) {
-		err = tegra_prod_set_by_name(&dp->aux_base, "prod_c_dpaux_dp",
-							dp->dpaux_prod_list);
-		if (err) {
-			dev_warn(&dc->ndev->dev,
-				"dpaux: prod set failed for DP\n");
-			}
+	if (!IS_ERR_OR_NULL(dpaux->prod_list)) {
+		char *prod_string = NULL;
+
+		prod_string = dc->out->type == TEGRA_DC_OUT_HDMI ?
+				"prod_c_dpaux_hdmi" : "prod_c_dpaux_dp";
+
+		if (tegra_prod_set_by_name(&dpaux->base, prod_string,
+							dpaux->prod_list)) {
+			dev_warn(&dc->ndev->dev, "%s: dpaux prod set failed\n",
+				__func__);
 		}
+	}
 
 	tegra_dc_io_end(dc);
-	tegra_dpaux_clk_dis(np_dp, sor_num);
+	tegra_dpaux_clk_dis(dpaux);
 	tegra_dc_powergate_locked(dc);
 }
 
-void tegra_dpaux_prod_set_for_hdmi(struct tegra_dc *dc)
+struct tegra_dc_dpaux_data *tegra_dpaux_init_data(struct tegra_dc *dc)
 {
+	struct tegra_dc_dpaux_data *dpaux = NULL;
+	struct device_node *np_dpaux = NULL;
+	void __iomem *base = NULL;
+	struct clk *clk = NULL;
+	struct reset_control *rst = NULL;
+	struct tegra_prod *prod_list = NULL;
+	int sor_num = -1;
 	int err = 0;
-	int sor_num = tegra_dc_which_sor(dc);
-	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
-	struct device_node *np_dpaux = of_find_node_by_path(
-			sor_num ? DPAUX1_NODE : DPAUX_NODE);
+	char dpaux_name[CHAR_BUF_SIZE_MAX] = {0};
+	bool need_rst = true;
 
-	if (!np_dpaux) {
-		dev_err(&dc->ndev->dev, "HDMI node not available\n");
+	if (!dc) {
+		pr_err("%s: dc must be non-NULL\n", __func__);
+		return NULL;
+	}
+
+	/* Allocate memory for the dpaux struct. */
+	dpaux = devm_kzalloc(&dc->ndev->dev, sizeof(*dpaux), GFP_KERNEL);
+	if (!dpaux)
+		return ERR_PTR(-ENOMEM);
+
+	sor_num = tegra_dc_which_sor(dc);
+	tegra_dpaux_get_name(dpaux_name, CHAR_BUF_SIZE_MAX, sor_num);
+
+	/* Find the DPAUX node in DT based on the SOR instance. */
+	np_dpaux = sor_num ? of_find_node_by_path(DPAUX1_NODE) :
+				of_find_node_by_path(DPAUX_NODE);
+	if (!np_dpaux || ((!of_device_is_available(np_dpaux)) &&
+				(dc->out->type != TEGRA_DC_OUT_FAKE_DP))) {
+		dev_err(&dc->ndev->dev, "%s: no dpaux node found\n", __func__);
+		err = -ENODEV;
+
+		goto err_put_dpaux_node;
+	}
+
+	/* ioremap the memory region for the DPAUX registers. */
+	base = of_iomap(np_dpaux, 0);
+	if (!base) {
+		dev_err(&dc->ndev->dev, "%s: dpaux regs can't be mapped\n",
+			__func__);
+		err = -ENOENT;
+
+		goto err_put_dpaux_node;
+	}
+
+	/* Query the DPAUX clock. */
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	clk = tegra_disp_of_clk_get_by_name(np_dpaux, dpaux_name);
+#else
+	clk = clk_get_sys(NULL, dpaux_name);
+#endif
+	if (IS_ERR_OR_NULL(clk)) {
+		dev_err(&dc->ndev->dev, "%s: %s clk unavailable\n", __func__,
+			dpaux_name);
+		err = -ENOENT;
+
+		goto err_unmap_region;
+	}
+
+#ifndef CONFIG_TEGRA_NVDISPLAY
+	/*
+	 * All accesses to the DPAUX reset signal in the DP driver are wrapped
+	 * in CONFIG_TEGRA_NVDISPLAY sections. Until that's cleaned up, set the
+	 * "need_rst" flag to false to skip querying the reset for DP on
+	 * pre-NVDISPLAY platforms.
+	 */
+	if (dc->out->type == TEGRA_DC_OUT_DP ||
+		dc->out->type == TEGRA_DC_OUT_FAKE_DP) {
+		need_rst = false;
+	}
+#endif
+
+	/* Extract the reset entry from the DT node. */
+	if (tegra_bpmp_running() && need_rst) {
+		rst = of_reset_control_get(np_dpaux, dpaux_name);
+		if (IS_ERR_OR_NULL(rst)) {
+			dev_err(&dc->ndev->dev,
+				"%s: Unable to get %s reset control\n",
+				__func__, dpaux_name);
+			err = -ENOENT;
+
+			goto err_put_clk;
+		}
+
+		reset_control_deassert(rst);
+	}
+
+	/* Get the PROD value lists that are defined for the DPAUX node. */
+	prod_list = devm_tegra_prod_get_from_node(&dc->ndev->dev, np_dpaux);
+	if (IS_ERR_OR_NULL(prod_list)) {
+		dev_err(&dc->ndev->dev,
+			"%s: prod list init failed for dpaux with error %ld\n",
+			__func__, PTR_ERR(prod_list));
+		err = -EINVAL;
+
+		goto err_put_rst;
+	}
+
+	dpaux->dc = dc;
+	dpaux->base = base;
+	dpaux->clk = clk;
+	dpaux->rst = rst;
+	dpaux->prod_list = prod_list;
+
+	return dpaux;
+
+err_put_rst:
+	if (rst)
+		reset_control_put(rst);
+err_put_clk:
+#ifndef CONFIG_TEGRA_NVDISPLAY
+	clk_put(clk);
+#endif
+err_unmap_region:
+	iounmap(base);
+err_put_dpaux_node:
+	of_node_put(np_dpaux);
+	devm_kfree(&dc->ndev->dev, dpaux);
+
+	return ERR_PTR(err);
+}
+
+void tegra_dpaux_destroy_data(struct tegra_dc_dpaux_data *dpaux)
+{
+	struct device_node *np_dpaux;
+	struct tegra_dc *dc;
+	int sor_num = -1;
+
+	if (!dpaux || !dpaux->dc) {
+		pr_err("%s: dc and dpaux must be non-NULL\n", __func__);
 		return;
 	}
 
-	tegra_dc_unpowergate_locked(dc);
-	tegra_dpaux_clk_en(np_dpaux, sor_num);
-	tegra_dc_io_start(dc);
+	dc = dpaux->dc;
+	sor_num = tegra_dc_which_sor(dc);
+	np_dpaux = sor_num ? of_find_node_by_path(DPAUX1_NODE) :
+			of_find_node_by_path(DPAUX_NODE);
 
-	if (!IS_ERR(hdmi->dpaux_prod_list)) {
-		err = tegra_prod_set_by_name(&hdmi->hdmi_dpaux_base[sor_num],
-				"prod_c_dpaux_hdmi", hdmi->dpaux_prod_list);
-		if (err) {
-			dev_warn(&dc->ndev->dev,
-				"dpaux: prod set failed for HDMI\n");
-		}
-	}
+	dpaux->prod_list = NULL;
+	if (dpaux->rst)
+		reset_control_put(dpaux->rst);
 
-	tegra_dc_io_end(dc);
-	tegra_dpaux_clk_dis(np_dpaux, sor_num);
-	tegra_dc_powergate_locked(dc);
+#ifndef CONFIG_TEGRA_NVDISPLAY
+	clk_put(dpaux->clk);
+#endif
+
+	iounmap(dpaux->base);
+
+	devm_kfree(&dc->ndev->dev, dpaux);
+	of_node_put(np_dpaux);
 }
-

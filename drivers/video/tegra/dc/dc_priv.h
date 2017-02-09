@@ -34,6 +34,8 @@
 #include <linux/clk-provider.h>
 #endif
 
+#define CHAR_BUF_SIZE_MAX	50
+
 #define WIN_IS_TILED(win)	((win)->flags & TEGRA_WIN_FLAG_TILED)
 #define WIN_IS_ENABLED(win)	((win)->flags & TEGRA_WIN_FLAG_ENABLED)
 #define WIN_IS_FB(win)		((win)->flags & TEGRA_WIN_FLAG_FB)

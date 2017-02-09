@@ -51,7 +51,6 @@
 	__ret;							\
 })
 
-#ifdef CONFIG_ARCH_TEGRA_210_SOC
 static int tegra_mc_clk_power_off(struct generic_pm_domain *genpd)
 {
 	int32_t val = cpu_to_le32(true);
@@ -75,22 +74,19 @@ static int tegra_mc_clk_power_on(struct generic_pm_domain *genpd)
 	return tegra_bpmp_send_receive(MRQ_SCX_ENABLE,
 			&val, sizeof(val), NULL, 0);
 }
-#endif
 
 typedef int (*of_tegra_pd_init_cb_t)(struct generic_pm_domain *);
 
-static int __init tegra_init_mc_clk(struct generic_pm_domain *pd)
+static int __init tegra210_init_mc_clk(struct generic_pm_domain *pd)
 {
-#ifdef CONFIG_ARCH_TEGRA_210_SOC
 	pd->power_off = tegra_mc_clk_power_off;
 	pd->power_on = tegra_mc_clk_power_on;
-#endif
 	return 0;
 }
 
 /* Do not add to this list */
 static const struct of_device_id tegra_pd_match[] __initconst = {
-	{.compatible = "nvidia,tegra210-mc-clk-pd", .data = tegra_init_mc_clk},
+	{.compatible = "nvidia,tegra210-mc-clk-pd", .data = tegra210_init_mc_clk},
 	{.compatible = "nvidia,tegra186-adsp-pd", .data = NULL},
 	{},
 };

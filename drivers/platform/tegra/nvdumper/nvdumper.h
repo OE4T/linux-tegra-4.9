@@ -1,7 +1,5 @@
 /*
- * arch/arm64/mach-tegra/include/mach/nvdumper.h
- *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -14,8 +12,8 @@
  *
  */
 
-#ifndef __MACH_TEGRA_NVDUMPER_H
-#define __MACH_TEGRA_NVDUMPER_H
+#ifndef __PLATFORM_TEGRA_NVDUMPER_H
+#define __PLATFORM_TEGRA_NVDUMPER_H
 
 extern struct notifier_block nvdumper_panic_notifier;
 extern struct notifier_block nvdumper_die_notifier;

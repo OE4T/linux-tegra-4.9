@@ -164,9 +164,7 @@ static int tegra_ivc_vi_notify_send(struct tegra_ivc_channel *chan,
 					const struct vi_notify_req *req)
 {
 	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
-	int ret;
-
-	ret = tegra_ivc_vi_notify_prepare(chan);
+	int ret = 0;
 
 	while (ret == 0) {
 		DEFINE_WAIT(wait);
@@ -228,9 +226,14 @@ static int tegra_ivc_vi_notify_classify(struct device *dev, u32 mask)
 	if (ivn->tags == mask)
 		return 0; /* nothing to do */
 
+	err = tegra_ivc_vi_notify_prepare(chan);
+	if (unlikely(err))
+		return err;
+
 	err = tegra_ivc_vi_notify_send(chan, &req);
 	if (likely(err == 0))
 		ivn->tags = mask;
+
 	tegra_ivc_vi_notify_complete(chan);
 
 	return err;
@@ -245,13 +248,17 @@ static int tegra_ivc_vi_notify_set_syncpts(struct device *dev, u8 ch,
 		.type = TEGRA_IVC_VI_SET_SYNCPTS,
 		.channel = ch,
 	};
-	int err;
+
+	int err = tegra_ivc_vi_notify_prepare(chan);
+	if (unlikely(err))
+		return err;
 
 	memcpy(msg.syncpt_ids, ids, sizeof(msg.syncpt_ids));
 
 	err = tegra_ivc_vi_notify_send(chan, &msg);
 	if (likely(err == 0))
 		ivn->channels_mask |= 1u << ch;
+
 	tegra_ivc_vi_notify_complete(chan);
 
 	return err;
@@ -275,13 +282,17 @@ static int tegra_ivc_vi_notify_enable_reports(struct device *dev, u8 ch,
 		.status_base_addr = status_dmaptr,
 		.status_entries = ivn->status_entries,
 	};
-	int err;
+
+	int err = tegra_ivc_vi_notify_prepare(chan);
+	if (unlikely(err))
+		return err;
 
 	memcpy(msg.syncpt_ids, ids, sizeof(msg.syncpt_ids));
 
 	err = tegra_ivc_vi_notify_send(chan, &msg);
 	if (likely(err == 0))
 		ivn->channels_mask |= 1u << ch;
+
 	tegra_ivc_vi_notify_complete(chan);
 
 	return err;
@@ -297,9 +308,19 @@ static void tegra_ivc_vi_notify_reset_channel(struct device *dev, u8 ch)
 	};
 	int err;
 
+	if (unlikely((ivn->channels_mask & (1u << ch)) == 0))
+		return;
+
+	err = tegra_ivc_vi_notify_prepare(chan);
+	if (unlikely(err)) {
+		dev_err(dev, "poweron failed\n");
+		return;
+	}
+
 	err = tegra_ivc_vi_notify_send(chan, &msg);
 	if (likely(err == 0))
 		ivn->channels_mask &= ~(1u << ch);
+
 	tegra_ivc_vi_notify_complete(chan);
 }
 

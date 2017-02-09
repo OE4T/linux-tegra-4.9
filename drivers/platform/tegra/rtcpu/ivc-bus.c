@@ -71,20 +71,16 @@ EXPORT_SYMBOL(tegra_ivc_channel_type);
 int tegra_ivc_channel_runtime_get(struct tegra_ivc_channel *ch)
 {
 	BUG_ON(ch == NULL);
-	BUG_ON(ch->dev.parent == NULL);
-	BUG_ON(ch->dev.parent->parent == NULL);
 
-	return pm_runtime_get_sync(ch->dev.parent->parent);
+	return pm_runtime_get_sync(&ch->dev);
 }
 EXPORT_SYMBOL(tegra_ivc_channel_runtime_get);
 
 void tegra_ivc_channel_runtime_put(struct tegra_ivc_channel *ch)
 {
 	BUG_ON(ch == NULL);
-	BUG_ON(ch->dev.parent == NULL);
-	BUG_ON(ch->dev.parent->parent == NULL);
 
-	pm_runtime_put(ch->dev.parent->parent);
+	pm_runtime_put(&ch->dev);
 }
 EXPORT_SYMBOL(tegra_ivc_channel_runtime_put);
 

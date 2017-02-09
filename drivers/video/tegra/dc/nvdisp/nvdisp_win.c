@@ -377,8 +377,19 @@ int tegra_nvdisp_get_degamma_config(struct tegra_dc *dc,
 {
 	int ret = 0;
 
-	if (!dc->cmu_enabled)
+	if (!dc->cmu_enabled || win->flags & TEGRA_WIN_FLAG_DEGAMMA_NONE)
 		return win_win_set_params_degamma_range_none_f();
+
+	if (win->flags & TEGRA_WIN_FLAG_DEGAMMA_MASK) {
+		if (win->flags & TEGRA_WIN_FLAG_DEGAMMA_SRGB)
+			ret |= win_win_set_params_degamma_range_srgb_f();
+		else if (win->flags & TEGRA_WIN_FLAG_DEGAMMA_YUV_8_10)
+			ret |= win_win_set_params_degamma_range_yuv8_10_f();
+		else if (win->flags & TEGRA_WIN_FLAG_DEGAMMA_YUV_12)
+			ret |= win_win_set_params_degamma_range_yuv12_f();
+
+		return ret;
+	}
 
 	if (tegra_dc_is_yuv(win->fmt)) {
 		/* yuv8_10 for rec601/709/2020-10 and

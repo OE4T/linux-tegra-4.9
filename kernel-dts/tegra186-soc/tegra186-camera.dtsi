@@ -71,7 +71,7 @@
 		interrupts = <0 16 0x4>;
 		interrupt-names = "wdt-remote";
 
-		nvidia,trace = <&tegra_rtcpu_trace 4 0x70100000 0x100000>;
+		nvidia,trace = <&tegra_rtcpu_sce_trace 4 0x70100000 0x100000>;
 		nvidia,ivc-channels = <&tegra_sce_ivc 2 0x90000000 0x10000>;
 
 		hsp {
@@ -79,6 +79,12 @@
 			nvidia,hsp-shared-mailbox = <&sce_hsp 1 &sce_hsp 6>;
 			nvidia,hsp-shared-mailbox-names = "ivc-pair", "cmd-pair";
 		};
+	};
+
+	tegra_rtcpu_sce_trace: tegra-rtcpu-sce-trace {
+		nvidia,enable-printk;
+		nvidia,interval-ms = <50>;
+		nvidia,log-prefix = "[SCE]";
 	};
 
 	tegra_sce_ivc: sce-ivc-channels {
@@ -195,7 +201,7 @@
 
 		interrupt-names = "adsp-wfi", "adsp-wfe", "wdt-remote";
 
-		nvidia,trace = <&tegra_rtcpu_trace 4 0x40200000 0x80000>;
+		nvidia,trace = <&tegra_rtcpu_ape_trace 4 0x40200000 0x80000>;
 		nvidia,ivc-channels = <&tegra_ape_ivc 2 0x40000000 0x10000>;
 
 		hsp {
@@ -203,6 +209,12 @@
 			nvidia,hsp-shared-mailbox = <&ape_hsp 1 &ape_hsp 6>;
 			nvidia,hsp-shared-mailbox-names = "ivc-pair", "cmd-pair";
 		};
+	};
+
+	tegra_rtcpu_ape_trace: tegra-rtcpu-ape-trace {
+		nvidia,enable-printk;
+		nvidia,interval-ms = <50>;
+		nvidia,log-prefix = "[APE]";
 	};
 
 	tegra_ape_ivc: ape-ivc-channels {
@@ -257,9 +269,5 @@
 			nvidia,frame-count = <1>;
 			nvidia,frame-size = <384>;
 		};
-	};
-
-	tegra_rtcpu_trace:tegra-rtcpu-trace {
-		nvidia,interval-ms = <50>;
 	};
 };

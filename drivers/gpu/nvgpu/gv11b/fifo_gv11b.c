@@ -15,8 +15,9 @@
 #include <linux/delay.h>
 #include <linux/types.h>
 
+#include "nvgpu/semaphore.h"
+
 #include "gk20a/gk20a.h"
-#include "gk20a/fifo_gk20a.h"
 
 #include "gp10b/fifo_gp10b.h"
 
@@ -223,6 +224,93 @@ static bool gv11b_is_fault_engine_subid_gpc(struct gk20a *g, u32 engine_subid)
 	return (engine_subid == gmmu_fault_client_type_gpc_v());
 }
 
+static void gv11b_dump_channel_status_ramfc(struct gk20a *g,
+				     struct gk20a_debug_output *o,
+				     u32 hw_chid,
+				     struct ch_state *ch_state)
+{
+	u32 channel = gk20a_readl(g, ccsr_channel_r(hw_chid));
+	u32 status = ccsr_channel_status_v(channel);
+	u32 *inst_mem;
+	struct channel_gk20a *c = g->fifo.channel + hw_chid;
+	struct nvgpu_semaphore_int *hw_sema = NULL;
+
+	if (c->hw_sema)
+		hw_sema = c->hw_sema;
+
+	if (!ch_state)
+		return;
+
+	inst_mem = &ch_state->inst_block[0];
+
+	gk20a_debug_output(o, "%d-%s, pid %d, refs: %d: ", hw_chid,
+			dev_name(g->dev),
+			ch_state->pid,
+			ch_state->refs);
+	gk20a_debug_output(o, "channel status: %s in use %s %s\n",
+			ccsr_channel_enable_v(channel) ? "" : "not",
+			gk20a_decode_ccsr_chan_status(status),
+			ccsr_channel_busy_v(channel) ? "busy" : "not busy");
+	gk20a_debug_output(o, "RAMFC : TOP: %016llx PUT: %016llx GET: %016llx "
+			"FETCH: %016llx\nHEADER: %08x COUNT: %08x\n"
+			"SEMAPHORE: addr hi: %08x addr lo: %08x\n"
+			"payload %08x execute %08x\n",
+		(u64)inst_mem[ram_fc_pb_top_level_get_w()] +
+		((u64)inst_mem[ram_fc_pb_top_level_get_hi_w()] << 32ULL),
+		(u64)inst_mem[ram_fc_pb_put_w()] +
+		((u64)inst_mem[ram_fc_pb_put_hi_w()] << 32ULL),
+		(u64)inst_mem[ram_fc_pb_get_w()] +
+		((u64)inst_mem[ram_fc_pb_get_hi_w()] << 32ULL),
+		(u64)inst_mem[ram_fc_pb_fetch_w()] +
+		((u64)inst_mem[ram_fc_pb_fetch_hi_w()] << 32ULL),
+		inst_mem[ram_fc_pb_header_w()],
+		inst_mem[ram_fc_pb_count_w()],
+		inst_mem[ram_fc_sem_addr_hi_w()],
+		inst_mem[ram_fc_sem_addr_lo_w()],
+		inst_mem[ram_fc_sem_payload_lo_w()],
+		inst_mem[ram_fc_sem_execute_w()]);
+	if (hw_sema)
+		gk20a_debug_output(o, "SEMA STATE: value: 0x%08x "
+				   "next_val: 0x%08x addr: 0x%010llx\n",
+				   readl(hw_sema->value),
+				   atomic_read(&hw_sema->next_value),
+				   nvgpu_hw_sema_addr(hw_sema));
+	gk20a_debug_output(o, "\n");
+}
+
+static void gv11b_dump_eng_status(struct gk20a *g,
+				 struct gk20a_debug_output *o)
+{
+	u32 i, host_num_engines;
+
+	host_num_engines = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_ENGINES);
+
+	for (i = 0; i < host_num_engines; i++) {
+		u32 status = gk20a_readl(g, fifo_engine_status_r(i));
+		u32 ctx_status = fifo_engine_status_ctx_status_v(status);
+
+		gk20a_debug_output(o, "%s eng %d: ", dev_name(g->dev), i);
+		gk20a_debug_output(o,
+			"id: %d (%s), next_id: %d (%s), ctx status: %s ",
+			fifo_engine_status_id_v(status),
+			fifo_engine_status_id_type_v(status) ?
+				"tsg" : "channel",
+			fifo_engine_status_next_id_v(status),
+			fifo_engine_status_next_id_type_v(status) ?
+				"tsg" : "channel",
+			gk20a_decode_pbdma_chan_eng_ctx_status(ctx_status));
+
+		if (fifo_engine_status_eng_reload_v(status))
+			gk20a_debug_output(o, "ctx_reload ");
+		if (fifo_engine_status_faulted_v(status))
+			gk20a_debug_output(o, "faulted ");
+		if (fifo_engine_status_engine_v(status))
+			gk20a_debug_output(o, "busy ");
+		gk20a_debug_output(o, "\n");
+	}
+	gk20a_debug_output(o, "\n");
+}
+
 void gv11b_init_fifo(struct gpu_ops *gops)
 {
 	gp10b_init_fifo(gops);
@@ -242,4 +330,7 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.device_info_fault_id = top_device_info_data_fault_id_enum_v;
 	gops->fifo.is_fault_engine_subid_gpc = gv11b_is_fault_engine_subid_gpc;
 	gops->fifo.trigger_mmu_fault = NULL;
+	gops->fifo.dump_pbdma_status = gk20a_dump_pbdma_status;
+	gops->fifo.dump_eng_status = gv11b_dump_eng_status;
+	gops->fifo.dump_channel_status_ramfc = gv11b_dump_channel_status_ramfc;
 }

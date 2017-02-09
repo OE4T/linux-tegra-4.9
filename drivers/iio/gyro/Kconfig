@@ -121,4 +121,14 @@ config ITG3200
 	  Say yes here to add support for the InvenSense ITG3200 digital
 	  3-axis gyroscope sensor.
 
+config NVS_A3G4250D
+	tristate "STMicroelectronics gyroscope A3G4250D"
+	depends on I2C
+	select IIO_BUFFER
+	select IIO_TRIGGERED_BUFFER
+	select NVS_IIO
+	help
+	  Say yes here to build support for STMicroelectronics A3G4250D
+	  gyroscope using NVS (NVidia Sensor framework).
+
 endmenu

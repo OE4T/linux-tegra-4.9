@@ -54,6 +54,7 @@ obj-$(CONFIG_VEXPRESS_SYSCFG)	+= vexpress-syscfg.o
 obj-$(CONFIG_CXL_BASE)		+= cxl/
 obj-$(CONFIG_PANEL)             += panel.o
 obj-$(CONFIG_TEGRA_PROFILER)	+= tegra-profiler/
+obj-$(CONFIG_NVS)		+= nvs/
 
 obj-$(CONFIG_UID_CPUTIME)	+= uid_cputime.o
 obj-$(CONFIG_MEMORY_STATE_TIME)	+= memory_state_time.o
@@ -64,6 +65,7 @@ lkdtm-$(CONFIG_LKDTM)		+= lkdtm_heap.o
 lkdtm-$(CONFIG_LKDTM)		+= lkdtm_perms.o
 lkdtm-$(CONFIG_LKDTM)		+= lkdtm_rodata_objcopy.o
 lkdtm-$(CONFIG_LKDTM)		+= lkdtm_usercopy.o
+obj-$(CONFIG_NVS_DFSH)		+= nvs-dfsh/
 
 OBJCOPYFLAGS :=
 OBJCOPYFLAGS_lkdtm_rodata_objcopy.o := \

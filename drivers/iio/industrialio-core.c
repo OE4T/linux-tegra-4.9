@@ -1,6 +1,7 @@
 /* The industrial I/O core
  *
  * Copyright (c) 2008 Jonathan Cameron
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -51,7 +52,7 @@ static const char * const iio_direction[] = {
 	[1] = "out",
 };
 
-static const char * const iio_chan_type_name_spec[] = {
+const char * const iio_chan_type_name_spec[] = {
 	[IIO_VOLTAGE] = "voltage",
 	[IIO_CURRENT] = "current",
 	[IIO_POWER] = "power",
@@ -81,12 +82,36 @@ static const char * const iio_chan_type_name_spec[] = {
 	[IIO_PH] = "ph",
 	[IIO_UVINDEX] = "uvindex",
 	[IIO_ELECTRICALCONDUCTIVITY] = "electricalconductivity",
+	[IIO_ORIENTATION] = "orientation",
+	[IIO_GRAVITY] = "gravity",
+	[IIO_LINEAR_ACCEL] = "linearaccel",
+	[IIO_HUMIDITY] = "humidity",
+	[IIO_GAME_ROT] = "gamerot",
+	[IIO_MOTION] = "motion",
+	[IIO_STEP] = "step",
+	[IIO_STEP_COUNT] = "stepcount",
+	[IIO_GEOMAGN_ROT] = "geomagnrot",
+	[IIO_HEART_RATE] = "heartrate",
+	[IIO_GESTURE_WAKE] = "gesturewake",
+	[IIO_GESTURE_GLANCE] = "gestureglance",
+	[IIO_GESTURE_PICKUP] = "gesturepickup",
+	[IIO_GESTURE_WRIST_TILT] = "gesturewristtilt",
+	[IIO_DEVICE_ORIENTATION] = "dev_orientation",
+	[IIO_POSE_6DOF] = "pose6dof",
+	[IIO_STATIONARY_DETECT] = "stationary_detect",
+	[IIO_MOTION_DETECT] = "motion_detect",
+	[IIO_HEART_BEAT] = "heartbeat",
+	[IIO_DYNAMIC_SENSOR_META] = "dsm",
+	[IIO_ADDITIONAL_INFO] = "info",
+	[IIO_GENERIC] = "generic_sensor",
 };
+EXPORT_SYMBOL(iio_chan_type_name_spec);
 
 static const char * const iio_modifier_names[] = {
 	[IIO_MOD_X] = "x",
 	[IIO_MOD_Y] = "y",
 	[IIO_MOD_Z] = "z",
+	[IIO_MOD_W] = "w",
 	[IIO_MOD_X_AND_Y] = "x&y",
 	[IIO_MOD_X_AND_Z] = "x&z",
 	[IIO_MOD_Y_AND_Z] = "y&z",
@@ -95,6 +120,7 @@ static const char * const iio_modifier_names[] = {
 	[IIO_MOD_X_OR_Z] = "x|z",
 	[IIO_MOD_Y_OR_Z] = "y|z",
 	[IIO_MOD_X_OR_Y_OR_Z] = "x|y|z",
+	[IIO_MOD_COS] = "cos",
 	[IIO_MOD_ROOT_SUM_SQUARED_X_Y] = "sqrt(x^2+y^2)",
 	[IIO_MOD_SUM_SQUARED_X_Y_Z] = "x^2+y^2+z^2",
 	[IIO_MOD_LIGHT_BOTH] = "both",
@@ -120,6 +146,14 @@ static const char * const iio_modifier_names[] = {
 	[IIO_MOD_Q] = "q",
 	[IIO_MOD_CO2] = "co2",
 	[IIO_MOD_VOC] = "voc",
+	[IIO_MOD_X_UNCALIB] = "x_uncalib",
+	[IIO_MOD_Y_UNCALIB] = "y_uncalib",
+	[IIO_MOD_Z_UNCALIB] = "z_uncalib",
+	[IIO_MOD_X_BIAS] = "x_bias",
+	[IIO_MOD_Y_BIAS] = "y_bias",
+	[IIO_MOD_Z_BIAS] = "z_bias",
+	[IIO_MOD_STATUS] = "status",
+	[IIO_MOD_BPM] = "bpm"
 };
 
 /* relies on pairs of these shared then separate */
@@ -132,7 +166,8 @@ static const char * const iio_chan_info_postfix[] = {
 	[IIO_CHAN_INFO_CALIBBIAS] = "calibbias",
 	[IIO_CHAN_INFO_PEAK] = "peak_raw",
 	[IIO_CHAN_INFO_PEAK_SCALE] = "peak_scale",
-	[IIO_CHAN_INFO_QUADRATURE_CORRECTION_RAW] = "quadrature_correction_raw",
+	[IIO_CHAN_INFO_QUADRATURE_CORRECTION_RAW] =
+	"quadrature_correction_raw",
 	[IIO_CHAN_INFO_AVERAGE_RAW] = "mean_raw",
 	[IIO_CHAN_INFO_LOW_PASS_FILTER_3DB_FREQUENCY]
 	= "filter_low_pass_3db_frequency",
@@ -151,6 +186,12 @@ static const char * const iio_chan_info_postfix[] = {
 	[IIO_CHAN_INFO_DEBOUNCE_TIME] = "debounce_time",
 	[IIO_CHAN_INFO_CALIBEMISSIVITY] = "calibemissivity",
 	[IIO_CHAN_INFO_OVERSAMPLING_RATIO] = "oversampling_ratio",
+	[IIO_CHAN_INFO_THRESHOLD_LOW] = "threshold_low",
+	[IIO_CHAN_INFO_THRESHOLD_HIGH] = "threshold_high",
+	[IIO_CHAN_INFO_BATCH_FLAGS] = "batch_flags",
+	[IIO_CHAN_INFO_BATCH_PERIOD] = "batch_period",
+	[IIO_CHAN_INFO_BATCH_TIMEOUT] = "batch_timeout",
+	[IIO_CHAN_INFO_BATCH_FLUSH] = "flush",
 };
 
 /**
@@ -1249,10 +1290,10 @@ struct device_type iio_device_type = {
 };
 
 /**
- * iio_device_alloc() - allocate an iio_dev from a driver
+ * nvs_device_alloc() - allocate an iio_dev from a driver
  * @sizeof_priv:	Space to allocate for private structure.
  **/
-struct iio_dev *iio_device_alloc(int sizeof_priv)
+struct iio_dev *nvs_device_alloc(int sizeof_priv, bool multi_link)
 {
 	struct iio_dev *dev;
 	size_t alloc_size;
@@ -1268,15 +1309,6 @@ struct iio_dev *iio_device_alloc(int sizeof_priv)
 	dev = kzalloc(alloc_size, GFP_KERNEL);
 
 	if (dev) {
-		dev->dev.groups = dev->groups;
-		dev->dev.type = &iio_device_type;
-		dev->dev.bus = &iio_bus_type;
-		device_initialize(&dev->dev);
-		dev_set_drvdata(&dev->dev, (void *)dev);
-		mutex_init(&dev->mlock);
-		mutex_init(&dev->info_exist_lock);
-		INIT_LIST_HEAD(&dev->channel_attr_list);
-
 		dev->id = ida_simple_get(&iio_ida, 0, 0, GFP_KERNEL);
 		if (dev->id < 0) {
 			/* cannot use a dev_err as the name isn't available */
@@ -1284,11 +1316,39 @@ struct iio_dev *iio_device_alloc(int sizeof_priv)
 			kfree(dev);
 			return NULL;
 		}
+
+		memcpy(&dev->dev_type, &iio_device_type,
+		       sizeof(dev->dev_type));
+		if (multi_link) {
+			snprintf(dev->link_name, sizeof(dev->link_name),
+				 "iio_device_%d", dev->id);
+			dev->dev_type.name = dev->link_name;
+			dev->dev.type = &dev->dev_type;
+		} else {
+			dev->dev.type = &iio_device_type;
+		}
+		dev->dev.groups = dev->groups;
+		dev->dev.bus = &iio_bus_type;
+		device_initialize(&dev->dev);
+		dev_set_drvdata(&dev->dev, (void *)dev);
+		mutex_init(&dev->mlock);
+		mutex_init(&dev->info_exist_lock);
+		INIT_LIST_HEAD(&dev->channel_attr_list);
 		dev_set_name(&dev->dev, "iio:device%d", dev->id);
 		INIT_LIST_HEAD(&dev->buffer_list);
 	}
 
 	return dev;
+}
+EXPORT_SYMBOL(nvs_device_alloc);
+
+/**
+ * iio_device_alloc() - allocate an iio_dev from a driver
+ * @sizeof_priv:	Space to allocate for private structure.
+ **/
+struct iio_dev *iio_device_alloc(int sizeof_priv)
+{
+	return nvs_device_alloc(sizeof_priv, false);
 }
 EXPORT_SYMBOL(iio_device_alloc);
 
@@ -1532,7 +1592,19 @@ int iio_device_register(struct iio_dev *indio_dev)
 	if (ret < 0)
 		goto error_cdev_del;
 
+	ret = sysfs_create_link(&indio_dev->dev.parent->kobj,
+				&indio_dev->dev.kobj,
+				indio_dev->dev_type.name);
+	if (ret) {
+		dev_err(indio_dev->dev.parent,
+			"Failed to create link for iio_device %d\n", ret);
+		goto error_del_device;
+	}
+
 	return 0;
+
+error_del_device:
+	device_del(&indio_dev->dev);
 error_cdev_del:
 	cdev_del(&indio_dev->chrdev);
 error_unreg_eventset:
@@ -1554,7 +1626,8 @@ EXPORT_SYMBOL(iio_device_register);
 void iio_device_unregister(struct iio_dev *indio_dev)
 {
 	mutex_lock(&indio_dev->info_exist_lock);
-
+	sysfs_delete_link(&indio_dev->dev.parent->kobj, &indio_dev->dev.kobj,
+			  indio_dev->dev_type.name);
 	device_del(&indio_dev->dev);
 
 	if (indio_dev->chrdev.dev)
@@ -1676,3 +1749,4 @@ module_exit(iio_exit);
 MODULE_AUTHOR("Jonathan Cameron <jic23@kernel.org>");
 MODULE_DESCRIPTION("Industrial I/O core");
 MODULE_LICENSE("GPL");
+

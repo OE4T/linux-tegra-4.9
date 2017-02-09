@@ -11,15 +11,15 @@
  * more details.
  */
 
+#include <nvgpu/bios.h>
+
 #include "gk20a/gk20a.h"
 #include "clk.h"
 #include "clk_fll.h"
 #include "clk_domain.h"
 #include "clk_freq_controller.h"
-#include "include/bios.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
-#include "gm206/bios_gm206.h"
 #include "ctrl/ctrlclk.h"
 #include "ctrl/ctrlvolt.h"
 #include "gk20a/pmu_gk20a.h"
@@ -185,16 +185,11 @@ static u32 clk_get_freq_controller_table(struct gk20a *g,
 		};
 	} freq_controller_data;
 
-	if (g->ops.bios.get_perf_table_ptrs) {
-		pfreq_controller_table_ptr =
-			(u8 *)g->ops.bios.get_perf_table_ptrs(g,
-				g->bios.clock_token,
-				FREQUENCY_CONTROLLER_TABLE);
-		if (pfreq_controller_table_ptr == NULL) {
-			status = -EINVAL;
-			goto done;
-		}
-	} else {
+	pfreq_controller_table_ptr =
+		(u8 *)nvgpu_bios_get_perf_table_ptrs(g,
+			g->bios.clock_token,
+			FREQUENCY_CONTROLLER_TABLE);
+	if (pfreq_controller_table_ptr == NULL) {
 		status = -EINVAL;
 		goto done;
 	}

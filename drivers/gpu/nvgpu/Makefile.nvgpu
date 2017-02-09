@@ -33,6 +33,7 @@ nvgpu-y := \
 	common/mm/lockless_allocator.o \
 	common/nvgpu_common.o \
 	common/semaphore.o \
+	common/vbios/bios.o \
 	gk20a/gk20a.o \
 	gk20a/sched_gk20a.o \
 	gk20a/as_gk20a.o \
@@ -160,7 +161,6 @@ nvgpu-y += \
 	gp106/fifo_gp106.o \
 	gp106/ltc_gp106.o \
 	gp106/fb_gp106.o \
-	gp106/bios_gp106.o \
 	gp106/regops_gp106.o \
 	clk/clk_mclk.o \
 	pstate/pstate.o \

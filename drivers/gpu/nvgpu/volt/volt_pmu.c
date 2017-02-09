@@ -12,7 +12,6 @@
  */
 
 #include "gk20a/gk20a.h"
-#include "include/bios.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
 #include "gm206/bios_gm206.h"
@@ -20,7 +19,6 @@
 #include "ctrl/ctrlperf.h"
 #include "gk20a/pmu_gk20a.h"
 
-#include "include/bios.h"
 #include "volt.h"
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 

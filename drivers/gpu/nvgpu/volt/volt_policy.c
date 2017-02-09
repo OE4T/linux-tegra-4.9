@@ -11,16 +11,15 @@
  * more details.
  */
 
+#include <nvgpu/bios.h>
+
 #include "gk20a/gk20a.h"
-#include "include/bios.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
 #include "gm206/bios_gm206.h"
 #include "ctrl/ctrlvolt.h"
 #include "gk20a/pmu_gk20a.h"
 
-#include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
-#include "include/bios.h"
 #include "volt.h"
 
 static u32 volt_policy_pmu_data_init_super(struct gk20a *g,
@@ -170,15 +169,10 @@ static u32 volt_get_volt_policy_table(struct gk20a *g,
 		struct voltage_policy_split_rail	split_rail;
 	} policy_type_data;
 
-	if (g->ops.bios.get_perf_table_ptrs) {
-		voltage_policy_table_ptr =
-			(u8 *)g->ops.bios.get_perf_table_ptrs(g,
-				g->bios.perf_token, VOLTAGE_POLICY_TABLE);
-		if (voltage_policy_table_ptr == NULL) {
-			status = -EINVAL;
-			goto done;
-		}
-	} else {
+	voltage_policy_table_ptr =
+		(u8 *)nvgpu_bios_get_perf_table_ptrs(g,
+			g->bios.perf_token, VOLTAGE_POLICY_TABLE);
+	if (voltage_policy_table_ptr == NULL) {
 		status = -EINVAL;
 		goto done;
 	}

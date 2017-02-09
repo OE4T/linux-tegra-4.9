@@ -11,13 +11,13 @@
  * more details.
  */
 
+#include <nvgpu/bios.h>
+
 #include "gk20a/gk20a.h"
 #include "perf.h"
 #include "vfe_var.h"
-#include "include/bios.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
-#include "gm206/bios_gm206.h"
 #include "ctrl/ctrlclk.h"
 #include "ctrl/ctrlvolt.h"
 #include "gk20a/pmu_gk20a.h"
@@ -179,17 +179,14 @@ u32 dev_init_get_vfield_info(struct gk20a *g,
 	u8 *psegmentcount = NULL;
 	u32 status = 0;
 
-	if (!g->ops.bios.get_perf_table_ptrs)
-		return -EINVAL;
-
-	vfieldregtableptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+	vfieldregtableptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 			g->bios.virt_token, VP_FIELD_REGISTER);
 	if (vfieldregtableptr == NULL) {
 		status = -EINVAL;
 		goto done;
 	}
 
-	vfieldtableptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+	vfieldtableptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 			g->bios.virt_token, VP_FIELD_TABLE);
 	if (vfieldtableptr == NULL) {
 		status = -EINVAL;
@@ -864,12 +861,7 @@ static u32 devinit_get_vfe_var_table(struct gk20a *g,
 
 	gk20a_dbg_info("");
 
-	if (!g->ops.bios.get_perf_table_ptrs) {
-		status = -EINVAL;
-		goto done;
-	}
-
-	vfevars_tbl_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+	vfevars_tbl_ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 			g->bios.perf_token,
 			CONTINUOUS_VIRTUAL_BINNING_TABLE);
 	if (vfevars_tbl_ptr == NULL) {

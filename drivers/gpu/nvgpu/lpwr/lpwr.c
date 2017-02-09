@@ -11,12 +11,13 @@
  * more details.
  */
 
+#include <nvgpu/bios.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "gp106/pmu_gp106.h"
 #include "gm206/bios_gm206.h"
 #include "pstate/pstate.h"
-#include "include/bios.h"
 #include "perf/perf.h"
 #include "lpwr.h"
 
@@ -30,13 +31,10 @@ static int get_lpwr_idx_table(struct gk20a *g)
 	struct nvgpu_bios_lpwr_idx_table_1x_header header = { 0 };
 	struct nvgpu_bios_lpwr_idx_table_1x_entry entry = { 0 };
 
-	if (g->ops.bios.get_perf_table_ptrs) {
-		lpwr_idx_table_ptr = (u32 *)g->ops.bios.get_perf_table_ptrs(g,
-			g->bios.perf_token, LOWPOWER_TABLE);
-		if (lpwr_idx_table_ptr == NULL)
-			return -EINVAL;
-	} else
-		 return -EINVAL;
+	lpwr_idx_table_ptr = (u32 *)nvgpu_bios_get_perf_table_ptrs(g,
+		g->bios.perf_token, LOWPOWER_TABLE);
+	if (lpwr_idx_table_ptr == NULL)
+		return -EINVAL;
 
 	memcpy(&header, lpwr_idx_table_ptr,
 		sizeof(struct nvgpu_bios_lpwr_idx_table_1x_header));
@@ -75,13 +73,10 @@ static int get_lpwr_gr_table(struct gk20a *g)
 	struct nvgpu_bios_lpwr_gr_table_1x_header header = { 0 };
 	struct nvgpu_bios_lpwr_gr_table_1x_entry entry = { 0 };
 
-	if (g->ops.bios.get_perf_table_ptrs) {
-		lpwr_gr_table_ptr = (u32 *)g->ops.bios.get_perf_table_ptrs(g,
-			g->bios.perf_token, LOWPOWER_GR_TABLE);
-		if (lpwr_gr_table_ptr == NULL)
-			return -EINVAL;
-	} else
-		 return -EINVAL;
+	lpwr_gr_table_ptr = (u32 *)nvgpu_bios_get_perf_table_ptrs(g,
+		g->bios.perf_token, LOWPOWER_GR_TABLE);
+	if (lpwr_gr_table_ptr == NULL)
+		return -EINVAL;
 
 	memcpy(&header, lpwr_gr_table_ptr,
 		sizeof(struct nvgpu_bios_lpwr_gr_table_1x_header));
@@ -122,13 +117,10 @@ static int get_lpwr_ms_table(struct gk20a *g)
 	struct nvgpu_bios_lpwr_ms_table_1x_header header = { 0 };
 	struct nvgpu_bios_lpwr_ms_table_1x_entry entry = { 0 };
 
-	if (g->ops.bios.get_perf_table_ptrs) {
-		lpwr_ms_table_ptr = (u32 *)g->ops.bios.get_perf_table_ptrs(g,
-			g->bios.perf_token, LOWPOWER_MS_TABLE);
-		if (lpwr_ms_table_ptr == NULL)
-			return -EINVAL;
-	} else
-		 return -EINVAL;
+	lpwr_ms_table_ptr = (u32 *)nvgpu_bios_get_perf_table_ptrs(g,
+		g->bios.perf_token, LOWPOWER_MS_TABLE);
+	if (lpwr_ms_table_ptr == NULL)
+		return -EINVAL;
 
 	memcpy(&header, lpwr_ms_table_ptr,
 		sizeof(struct nvgpu_bios_lpwr_ms_table_1x_header));

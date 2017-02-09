@@ -13,12 +13,10 @@
 
 #include <linux/delay.h>
 
+#include <nvgpu/bios.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
-#include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
-#include "gm206/bios_gm206.h"
-
-#include "include/bios.h"
 
 #include <nvgpu/hw/gk20a/hw_pwr_gk20a.h>
 #include <nvgpu/hw/gp106/hw_fb_gp106.h>
@@ -2022,12 +2020,7 @@ static int mclk_get_memclk_table(struct gk20a *g)
 
 	gk20a_dbg_info("");
 
-	if (!(g->ops.bios.get_perf_table_ptrs &&
-		g->ops.bios.execute_script)) {
-		goto done;
-	}
-
-	mem_table_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+	mem_table_ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 					g->bios.perf_token,
 					MEMORY_CLOCK_TABLE);
 	if (mem_table_ptr == NULL) {
@@ -2067,7 +2060,7 @@ static int mclk_get_memclk_table(struct gk20a *g)
 		script_index = BIOS_GET_FIELD(memclock_base_entry.flags1,
 			VBIOS_MEMORY_CLOCK_BASE_ENTRY_11_FLAGS1_SCRIPT_INDEX);
 
-		script_ptr = gm206_bios_read_u32(g,
+		script_ptr = nvgpu_bios_read_u32(g,
 			memclock_table_header.script_list_ptr +
 				script_index * sizeof(u32));
 
@@ -2107,7 +2100,7 @@ static int mclk_get_memclk_table(struct gk20a *g)
 					fb_fbpa_fbio_delay_priv_m(),
 					fb_fbpa_fbio_delay_priv_f(shadow_idx)));
 
-			status = g->ops.bios.execute_script(g, script_ptr);
+			status = nvgpu_bios_execute_script(g, script_ptr);
 			if (status < 0) {
 				gk20a_writel(g, fb_fbpa_fbio_delay_r(),
 					old_fbio_delay);
@@ -2121,7 +2114,7 @@ static int mclk_get_memclk_table(struct gk20a *g)
 		cmd_script_index = BIOS_GET_FIELD(memclock_base_entry.flags2,
 			VBIOS_MEMORY_CLOCK_BASE_ENTRY_12_FLAGS2_CMD_SCRIPT_INDEX);
 
-		cmd_script_ptr = gm206_bios_read_u32(g,
+		cmd_script_ptr = nvgpu_bios_read_u32(g,
 			memclock_table_header.cmd_script_list_ptr +
 				cmd_script_index * sizeof(u32));
 
@@ -2159,7 +2152,7 @@ static int mclk_get_memclk_table(struct gk20a *g)
 					fb_fbpa_fbio_cmd_delay_cmd_priv_f(
 						cmd_idx)));
 
-			status = g->ops.bios.execute_script(g, cmd_script_ptr);
+			status = nvgpu_bios_execute_script(g, cmd_script_ptr);
 			if (status < 0) {
 				gk20a_writel(g, fb_fbpa_fbio_cmd_delay_r(),
 					old_fbio_cmd_delay);

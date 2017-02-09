@@ -11,11 +11,12 @@
  * more details.
  */
 
+#include <nvgpu/bios.h>
+
 #include "gk20a/gk20a.h"
 #include "clk.h"
 #include "clk_prog.h"
 #include "clk_vf_point.h"
-#include "include/bios.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
 #include "gm206/bios_gm206.h"
@@ -180,12 +181,7 @@ static u32 devinit_get_clk_prog_table(struct gk20a *g,
 
 	gk20a_dbg_info("");
 
-	if (!g->ops.bios.get_perf_table_ptrs) {
-		status = -EINVAL;
-		goto done;
-	}
-
-	clkprogs_tbl_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+	clkprogs_tbl_ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 			g->bios.clock_token, CLOCK_PROGRAMMING_TABLE);
 	if (clkprogs_tbl_ptr == NULL) {
 		status = -EINVAL;

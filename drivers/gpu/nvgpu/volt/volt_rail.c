@@ -11,16 +11,15 @@
  * more details.
  */
 
+#include <nvgpu/bios.h>
+
 #include "gk20a/gk20a.h"
-#include "include/bios.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
 #include "gm206/bios_gm206.h"
 #include "ctrl/ctrlvolt.h"
 #include "gk20a/pmu_gk20a.h"
 
-#include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
-#include "include/bios.h"
 #include "volt.h"
 
 u8 volt_rail_volt_domain_convert_to_idx(struct gk20a *g, u8 volt_domain)
@@ -241,14 +240,9 @@ static u32 volt_get_volt_rail_table(struct gk20a *g,
 		struct voltage_rail volt_rail;
 	} rail_type_data;
 
-	if (g->ops.bios.get_perf_table_ptrs) {
-		volt_rail_table_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
-				g->bios.perf_token, VOLTAGE_RAIL_TABLE);
-		if (volt_rail_table_ptr == NULL) {
-			status = -EINVAL;
-			goto done;
-		}
-	} else {
+	volt_rail_table_ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
+			g->bios.perf_token, VOLTAGE_RAIL_TABLE);
+	if (volt_rail_table_ptr == NULL) {
 		status = -EINVAL;
 		goto done;
 	}

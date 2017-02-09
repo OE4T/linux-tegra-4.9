@@ -11,9 +11,10 @@
  * more details.
  */
 
+#include <nvgpu/bios.h>
+
 #include "gk20a/gk20a.h"
 #include "pwrpolicy.h"
-#include "include/bios.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
 #include "gm206/bios_gm206.h"
@@ -521,10 +522,7 @@ static u32 devinit_get_pwr_policy_table(struct gk20a *g,
 
 	gk20a_dbg_info("");
 
-	if (!g->ops.bios.get_perf_table_ptrs)
-		return -EINVAL;
-
-	ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+	ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 			g->bios.perf_token, POWER_CAPPING_TABLE);
 	if (ptr == NULL) {
 		status = -EINVAL;

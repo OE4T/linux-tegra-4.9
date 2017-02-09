@@ -14,16 +14,16 @@
 #include <linux/sort.h>
 
 #include "gk20a/gk20a.h"
-#include "include/bios.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
 #include "gm206/bios_gm206.h"
 #include "ctrl/ctrlvolt.h"
 #include "gk20a/pmu_gk20a.h"
 
-#include "include/bios.h"
 #include "volt.h"
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
+
+#include <nvgpu/bios.h>
 
 #define VOLT_DEV_PWM_VOLTAGE_STEPS_INVALID	0
 #define VOLT_DEV_PWM_VOLTAGE_STEPS_DEFAULT	1
@@ -363,14 +363,9 @@ static u32 volt_get_volt_devices_table(struct gk20a *g,
 	u8 entry_idx;
 	u8 *entry_offset;
 
-	if (g->ops.bios.get_perf_table_ptrs) {
-		volt_device_table_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
-				g->bios.perf_token, VOLTAGE_DEVICE_TABLE);
-		if (volt_device_table_ptr == NULL) {
-			status = -EINVAL;
-			goto done;
-		}
-	} else {
+	volt_device_table_ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
+			g->bios.perf_token, VOLTAGE_DEVICE_TABLE);
+	if (volt_device_table_ptr == NULL) {
 		status = -EINVAL;
 		goto done;
 	}

@@ -13,11 +13,12 @@
  * more details.
  */
 
+#include <nvgpu/bios.h>
+
 #include "gk20a/gk20a.h"
 #include "clk/clk.h"
 #include "perf/perf.h"
 #include "pmgr/pmgr.h"
-#include "include/bios.h"
 #include "pstate/pstate.h"
 #include "therm/thrm.h"
 
@@ -342,11 +343,9 @@ static int pstate_sw_setup(struct gk20a *g)
 		goto done;
 	}
 
-	if (g->ops.bios.get_perf_table_ptrs) {
-		hdr = (struct vbios_pstate_header_5x *)
-				g->ops.bios.get_perf_table_ptrs(g,
-				g->bios.perf_token, PERFORMANCE_TABLE);
-	}
+	hdr = (struct vbios_pstate_header_5x *)
+			nvgpu_bios_get_perf_table_ptrs(g,
+			g->bios.perf_token, PERFORMANCE_TABLE);
 
 	if (!hdr) {
 		gk20a_err(dev_from_gk20a(g),

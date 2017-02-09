@@ -54,7 +54,6 @@ struct acr_desc;
 #include "cde_gk20a.h"
 #include "debug_gk20a.h"
 #include "sched_gk20a.h"
-#include "gm206/bios_gm206.h"
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "clk/clk.h"
 #include "clk/clk_arb.h"
@@ -62,7 +61,6 @@ struct acr_desc;
 #include "pmgr/pmgr.h"
 #include "therm/thrm.h"
 #endif
-#include "gm206/bios_gm206.h"
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0)
 #define WRITE_ONCE(x, val) \
@@ -751,12 +749,8 @@ struct gpu_ops {
 	int (*chip_init_gpu_characteristics)(struct gk20a *g);
 	int (*read_ptimer)(struct gk20a *g, u64 *value);
 
-	struct {
-		int (*init)(struct gk20a *g);
-		void *(*get_perf_table_ptrs)(struct gk20a *g,
-				struct bit_token *ptoken, u8 table_id);
-		int (*execute_script)(struct gk20a *g, u32 offset);
-	} bios;
+	int (*bios_init)(struct gk20a *g);
+
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	struct {
 		int (*enable_snapshot)(struct channel_gk20a *ch,

@@ -918,8 +918,8 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		g->gpu_reset_done = true;
 	}
 
-	if (g->ops.bios.init)
-		err = g->ops.bios.init(g);
+	if (g->ops.bios_init)
+		err = g->ops.bios_init(g);
 	if (err)
 		goto done;
 

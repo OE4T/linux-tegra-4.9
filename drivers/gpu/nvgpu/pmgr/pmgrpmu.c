@@ -13,7 +13,6 @@
 
 #include "gk20a/gk20a.h"
 #include "pwrdev.h"
-#include "include/bios.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>

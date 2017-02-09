@@ -11,14 +11,14 @@
  * more details.
  */
 
+#include <nvgpu/bios.h>
+
 #include "gk20a/gk20a.h"
 #include "clk.h"
 #include "clk_fll.h"
 #include "clk_domain.h"
-#include "include/bios.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
-#include "gm206/bios_gm206.h"
 #include "ctrl/ctrlclk.h"
 #include "ctrl/ctrlvolt.h"
 #include "gk20a/pmu_gk20a.h"
@@ -261,10 +261,7 @@ static u32 devinit_get_clocks_table(struct gk20a *g,
 
 	gk20a_dbg_info("");
 
-	if (!g->ops.bios.get_perf_table_ptrs)
-		return -EINVAL;
-
-	clocks_table_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+	clocks_table_ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 			g->bios.clock_token, CLOCKS_TABLE);
 	if (clocks_table_ptr == NULL) {
 		status = -EINVAL;

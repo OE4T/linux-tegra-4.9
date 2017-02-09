@@ -198,7 +198,7 @@ int gm206_init_hal(struct gk20a *g)
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	gk20a_init_css_ops(gops);
 #endif
-	gm206_init_bios(gops);
+	gm206_init_bios_ops(gops);
 	switch(ver){
 	case GK20A_GPUID_GM206:
 		gops->name = "gm206";

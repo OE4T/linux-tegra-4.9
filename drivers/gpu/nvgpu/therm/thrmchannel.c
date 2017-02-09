@@ -11,9 +11,10 @@
  * more details.
  */
 
+#include <nvgpu/bios.h>
+
 #include "gk20a/gk20a.h"
 #include "thrmchannel.h"
-#include "include/bios.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
@@ -130,10 +131,7 @@ static u32 devinit_get_therm_channel_table(struct gk20a *g,
 
 	gk20a_dbg_info("");
 
-	if (!g->ops.bios.get_perf_table_ptrs)
-		return -EINVAL;
-
-	therm_channel_table_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+	therm_channel_table_ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 			g->bios.perf_token, THERMAL_CHANNEL_TABLE);
 	if (therm_channel_table_ptr == NULL) {
 		status = -EINVAL;

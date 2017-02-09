@@ -11,9 +11,9 @@
  * more details.
  */
 
-#include "gk20a/gk20a.h"
+#include <nvgpu/bios.h>
 
-#include "include/bios.h"
+#include "gk20a/gk20a.h"
 
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
@@ -27,7 +27,6 @@
 
 #include "clk.h"
 #include "clk_vin.h"
-
 
 #include <nvgpu/hw/gp106/hw_fuse_gp106.h>
 
@@ -349,10 +348,7 @@ static u32 devinit_get_vin_device_table(struct gk20a *g,
 
 	gk20a_dbg_info("");
 
-	if (!g->ops.bios.get_perf_table_ptrs)
-		return -EINVAL;
-
-	vin_table_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+	vin_table_ptr = (u8 *)nvgpu_bios_get_perf_table_ptrs(g,
 			g->bios.clock_token, VIN_TABLE);
 	if (vin_table_ptr == NULL) {
 		status = -1;

@@ -1459,7 +1459,7 @@ void __init dma_contiguous_remap(void)
 
 		for (addr = start; addr < end; addr += PAGE_SIZE)
 			create_mapping_noalloc(addr, __phys_to_virt(addr),
-				       PAGE_SIZE, PAGE_KERNEL_EXEC);
+				       PAGE_SIZE, PAGE_KERNEL);
 	}
 }
 

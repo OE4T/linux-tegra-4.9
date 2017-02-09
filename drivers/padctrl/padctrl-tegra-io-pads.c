@@ -135,21 +135,13 @@ static int tegra_io_pad_set_voltage(struct padctrl_dev *pad_dev,
 		return -EINVAL;
 	}
 
-	if (!pad->dynamic_pad_voltage) {
-		ret = tegra_pmc_io_pad_get_voltage(pad->name);
-		if (ret < 0)
-			return ret;
+	ret = tegra_pmc_io_pad_get_voltage(pad->name);
+	if (ret < 0)
+		return ret;
 
-		curr_volt = ret;
-		if (voltage == curr_volt)
-			return 0;
-
-		dev_err(padctrl->dev,
-			"Dynamic pad voltage is not supported for IO pad %s\n",
-			pad->name);
-
-		return -EINVAL;
-	}
+	curr_volt = ret;
+	if (voltage == curr_volt)
+		return 0;
 
 	ret = tegra_pmc_io_pad_set_voltage(pad->name, voltage);
 	if (!ret)

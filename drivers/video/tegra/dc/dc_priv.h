@@ -664,6 +664,12 @@ int tegra_dc_set_hdr(struct tegra_dc *dc, struct tegra_dc_hdr *hdr,
 struct tegra_dc_platform_data
 	*of_dc_parse_platform_data(struct platform_device *ndev);
 
+struct tegra_panel_ops *tegra_dc_get_panel_ops(struct device_node *panel_np);
+int tegra_panel_get_panel_id(const char *comp_str, struct device_node *dnode,
+				int *panel_id);
+int tegra_panel_regulator_get_dt(struct device *dev,
+				struct tegra_panel_reg *panel_reg);
+
 /* defined in dc.c, used in dc.c and dev.c */
 void tegra_dc_set_act_vfp(struct tegra_dc *dc, int vfp);
 

@@ -425,6 +425,12 @@ struct tegra_dsi_out {
 	u32		refresh_rate_adj;
 };
 
+struct tegra_panel_reg {
+	struct regulator *avdd_lcd;
+	struct regulator *avee_lcd;
+	struct regulator *vddi_lcd;
+};
+
 enum {
 	TEGRA_DC_STEREO_MODE_2D,
 	TEGRA_DC_STEREO_MODE_3D

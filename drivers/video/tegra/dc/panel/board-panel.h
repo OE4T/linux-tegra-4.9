@@ -57,6 +57,13 @@ static struct tegra_panel_of __maybe_unused panel_of = {
 	 * initialized to TEGRA_GPIO_INVALID */
 	.panel_gpio = {-1, -1, -1, -1, -1, -1, -1},
 };
+
+/* To handle multipe panels */
+struct tegra_panel_instance {
+	struct tegra_panel_of panel_of;
+	struct tegra_panel_reg panel_reg;
+};
+
 struct tegra_panel_ops {
 	int (*enable)(struct device *);
 	int (*postpoweron)(struct device *);
@@ -90,6 +97,7 @@ extern struct tegra_panel_ops edp_s_uhdtv_15_6_ops;
 extern struct tegra_panel_ops dsi_o_720p_6_0_ops;
 extern struct tegra_panel_ops dsi_n_wqxga_6_0_ops;
 extern struct tegra_panel_ops dsi_s_4kuhd_5_46_ops;
+extern struct tegra_panel_ops dsi_b_1440_1600_3_5_ops;
 #ifdef CONFIG_TEGRA_NVDISPLAY
 extern struct tegra_panel_ops panel_sim_ops;
 #endif
@@ -112,7 +120,6 @@ extern struct tegra_panel dsi_a_1200_800_8_0;
 
 int tegra_panel_gpio_get_dt(const char *comp_str,
 				struct tegra_panel_of *panel);
-
 int tegra_panel_check_regulator_dt_support(const char *comp_str,
 				struct tegra_panel_of *panel);
 

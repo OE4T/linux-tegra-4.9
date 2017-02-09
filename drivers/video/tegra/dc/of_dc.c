@@ -181,6 +181,8 @@ struct tegra_panel_ops *tegra_dc_get_panel_ops(struct device_node *panel_np)
 		p_ops = &edp_s_uhdtv_15_6_ops;
 	else if (of_device_is_compatible(panel_np, "s,4kuhd-5-46"))
 		p_ops = &dsi_s_4kuhd_5_46_ops;
+	else if (of_device_is_compatible(panel_np, "b,1440-1600-3-5"))
+		p_ops = &dsi_b_1440_1600_3_5_ops;
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	else if (of_device_is_compatible(panel_np, "nvidia,sim-panel"))
 		p_ops = &panel_sim_ops;
@@ -190,6 +192,69 @@ struct tegra_panel_ops *tegra_dc_get_panel_ops(struct device_node *panel_np)
 			of_node_full_name(panel_np));
 
 	return p_ops;
+}
+
+int tegra_panel_get_panel_id(const char *comp_str, struct device_node *dnode,
+				int *panel_id)
+{
+	int err = 0;
+	struct device_node *node =
+		of_find_compatible_node(dnode, NULL, comp_str);
+
+	if (!node) {
+		pr_err("%s panel dt support not available\n", comp_str);
+		err = -ENOENT;
+		goto fail;
+	}
+
+	err = of_property_read_u32(node, "nvidia,panel-id", panel_id);
+
+fail:
+	of_node_put(node);
+	return err;
+}
+
+int tegra_panel_regulator_get_dt(struct device *dev,
+		struct tegra_panel_reg *panel_reg)
+{
+	int err = 0;
+
+	panel_reg->vddi_lcd = regulator_get(dev, "dvdd_lcd");
+	if (IS_ERR_OR_NULL(panel_reg->vddi_lcd)) {
+		pr_err("vddi_lcd_1v88 regulator get failed\n");
+		err = PTR_ERR(panel_reg->vddi_lcd);
+		panel_reg->vddi_lcd = NULL;
+		goto fail;
+	}
+
+	panel_reg->avdd_lcd = regulator_get(dev, "outp");
+	if (IS_ERR_OR_NULL(panel_reg->avdd_lcd)) {
+		pr_err("avdd_lcd_var regulator get failed\n");
+		err = PTR_ERR(panel_reg->avdd_lcd);
+		panel_reg->avdd_lcd = NULL;
+		goto avdd_lcd_var_fail;
+	}
+
+	panel_reg->avee_lcd = regulator_get(dev, "outn");
+	if (IS_ERR_OR_NULL(panel_reg->avee_lcd)) {
+		pr_err("avee_lcd_var regulator get failed\n");
+		err = PTR_ERR(panel_reg->avee_lcd);
+		panel_reg->avee_lcd = NULL;
+		goto avee_lcd_var_fail;
+	}
+
+avee_lcd_var_fail:
+	if (panel_reg->avdd_lcd) {
+		regulator_put(panel_reg->avdd_lcd);
+		panel_reg->avdd_lcd = NULL;
+	}
+avdd_lcd_var_fail:
+	if (panel_reg->vddi_lcd) {
+		regulator_put(panel_reg->vddi_lcd);
+		panel_reg->vddi_lcd = NULL;
+	}
+fail:
+	return err;
 }
 
 static void tegra_panel_unregister_ops(struct tegra_dc_out *dc_out)

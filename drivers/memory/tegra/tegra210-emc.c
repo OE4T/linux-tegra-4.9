@@ -21,6 +21,8 @@
 #include <linux/of_platform.h>
 #include <linux/thermal.h>
 
+#include <soc/tegra/bpmp_t210_abi.h>
+#include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/tegra_emc.h>
 #include <soc/tegra/fuse.h>
 
@@ -1271,9 +1273,28 @@ void tegra210_emc_timing_invalidate(void)
 }
 EXPORT_SYMBOL(tegra210_emc_timing_invalidate);
 
+static enum {
+	BPMP_EMC_UNKNOWN,
+	BPMP_EMC_VALID,
+	BPMP_EMC_INVALID,
+} bpmp_emc_table_state = BPMP_EMC_UNKNOWN;
+static struct mrq_emc_dvfs_table_response bpmp_emc_table;
+
+static void tegra210_bpmp_emc_table_get(void)
+{
+	if (!tegra_bpmp_send_receive(MRQ_EMC_DVFS_TABLE, NULL, 0,
+				     &bpmp_emc_table,
+				     sizeof(bpmp_emc_table)))
+		bpmp_emc_table_state = BPMP_EMC_VALID;
+	else
+		bpmp_emc_table_state = BPMP_EMC_INVALID;
+}
+
 bool tegra210_emc_is_ready(void)
 {
-	return tegra_emc_init_done;
+	if (bpmp_emc_table_state == BPMP_EMC_UNKNOWN)
+		tegra210_bpmp_emc_table_get();
+	return tegra_emc_init_done || bpmp_emc_table_state == BPMP_EMC_VALID;
 }
 EXPORT_SYMBOL(tegra210_emc_is_ready);
 
@@ -1281,6 +1302,18 @@ unsigned long tegra210_predict_emc_rate(int millivolts)
 {
 	int i;
 	unsigned long ret = 0;
+
+	if (bpmp_emc_table_state == BPMP_EMC_UNKNOWN)
+		tegra210_bpmp_emc_table_get();
+
+	if (bpmp_emc_table_state == BPMP_EMC_VALID) {
+		for (i = 0; i < bpmp_emc_table.num_pairs; ++i) {
+			if (bpmp_emc_table.pairs[i].mv > millivolts)
+				break;
+			ret = bpmp_emc_table.pairs[i].freq * 1000;
+		}
+		return ret;
+	}
 
 	if (!emc_enable)
 		return -ENODEV;

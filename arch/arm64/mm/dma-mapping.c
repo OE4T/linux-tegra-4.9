@@ -323,6 +323,7 @@ no_kernel_mapping:
 		goto no_mem;
 	for (i = 0; i < (size >> PAGE_SHIFT); i++)
 		pages[i] = page;
+	return pages;
 
 no_map:
 	__dma_free_coherent(dev, size, ptr, *dma_handle, attrs);
@@ -339,7 +340,9 @@ static void __dma_free(struct device *dev, size_t size,
 
 	size = PAGE_ALIGN(size);
 
-	if (!is_device_dma_coherent(dev)) {
+	if (DMA_ATTR_NO_KERNEL_MAPPING & attrs) {
+		kvfree((struct page **)vaddr); /* vaddr is same as pages[] */
+	} else if (!is_device_dma_coherent(dev)) {
 		if (__free_from_pool(vaddr, size))
 			return;
 		vunmap(vaddr);

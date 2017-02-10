@@ -657,7 +657,7 @@ int tegra_hdmi_vrr_init(struct tegra_hdmi *hdmi)
 	};
 
 	if (!hdmi || !hdmi->dc || !hdmi->dc->out || !hdmi->dc->out->vrr) {
-		err = -EINVAL;
+		err = -ENODEV;
 		goto fail;
 	}
 
@@ -799,7 +799,7 @@ int tegra_hdmivrr_setup(struct tegra_hdmi *hdmi)
 	struct tegra_vrr *vrr;
 
 	if (!hdmi || !hdmi->dc || !hdmi->dc->out || !hdmi->dc->out->vrr)
-		return -EINVAL;
+		return -ENODEV;
 
 	dc = hdmi->dc;
 	vrr = dc->out->vrr;

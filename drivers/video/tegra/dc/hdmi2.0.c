@@ -538,8 +538,8 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 		goto fail;
 
 	err = tegra_hdmivrr_setup(hdmi);
-	if (err < 0)
-		dev_info(&hdmi->dc->ndev->dev, "vrr_setup failed\n");
+	if (err && err != -ENODEV)
+		dev_err(&hdmi->dc->ndev->dev, "vrr_setup failed\n");
 
 	tegra_dc_powergate_locked(hdmi->dc);
 
@@ -1112,7 +1112,9 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	tegra_hdmi_scdc_init(hdmi);
 
-	tegra_hdmi_vrr_init(hdmi);
+	err = tegra_hdmi_vrr_init(hdmi);
+	if (err && err != -ENODEV)
+		dev_err(&dc->ndev->dev, "vrr_init failed\n");
 
 	tegra_hdmi_debugfs_init(hdmi);
 

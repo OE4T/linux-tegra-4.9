@@ -406,6 +406,10 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 	if (!nvhost_is_bwmgr_clk(pdata, index) && !pdata->clk[index])
 		return -EINVAL;
 
+	/* don't update rate if scaling is disabled for this clock */
+	if (pdata->clocks[index].disable_scaling)
+		return 0;
+
 	/* aggregate client constraints */
 	list_for_each_entry(m, &pdata->client_list, node) {
 		unsigned long constraint = m->constraint[index];

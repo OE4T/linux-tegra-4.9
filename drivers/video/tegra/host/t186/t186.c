@@ -221,8 +221,8 @@ struct nvhost_device_data t18_vi_info = {
 	.moduleid		= NVHOST_MODULE_VI,
 	.clocks = {
 		{"vi", 408000000},
-		{"nvcsi", 204000000},
-		{"nvcsilp", 204000000},
+		{"nvcsi", 204000000, 0, 0, 0, true},
+		{"nvcsilp", 204000000, 0, 0, 0, true},
 	},
 	.num_channels		= 15,
 	.ctrl_ops               = &nvhost_vi4_ctrl_ops,

@@ -792,7 +792,7 @@ static int tegra_mipi_parse_config(struct platform_device *pdev,
 		parse_prod(np, mipi);
 
 	if (of_device_is_compatible(np, "nvidia, tegra186-mipical")) {
-		if (tegra_chip_get_revision() == TEGRA_REVISION_A01) {
+		if (tegra_chip_get_revision() == TEGRA186_REVISION_A01) {
 			dev_dbg(mipi->dev, "T186-A01\n");
 			next = of_get_child_by_name(np, "a01");
 			parse_prod(next, mipi);

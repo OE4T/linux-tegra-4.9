@@ -351,7 +351,7 @@ static int tegra_pm_irq_suspend(void)
 	/* Clear PMC Wake Status registers while going to suspend */
 	wke_clear_wake_status();
 	revision = tegra_chip_get_revision();
-	if (revision < TEGRA_REVISION_A02p)
+	if (revision < TEGRA186_REVISION_A02p)
 		wake_enb[2] &= ~(7 << 12);
 
 	wke_write_wake_levels(wake_level);

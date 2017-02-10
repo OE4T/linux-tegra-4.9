@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -77,6 +77,23 @@ enum tegra_revision {
 	TEGRA_REVISION_A03p,
 	TEGRA_REVISION_A04,
 	TEGRA_REVISION_A04p,
+	TEGRA210_REVISION_A01,
+	TEGRA210_REVISION_A01q,
+	TEGRA210_REVISION_A02,
+	TEGRA210_REVISION_A02p,
+	TEGRA210_REVISION_A03,
+	TEGRA210_REVISION_A03p,
+	TEGRA210_REVISION_A04,
+	TEGRA210_REVISION_A04p,
+	TEGRA210_REVISION_B01,
+	TEGRA186_REVISION_A01,
+	TEGRA186_REVISION_A01q,
+	TEGRA186_REVISION_A02,
+	TEGRA186_REVISION_A02p,
+	TEGRA186_REVISION_A03,
+	TEGRA186_REVISION_A03p,
+	TEGRA186_REVISION_A04,
+	TEGRA186_REVISION_A04p,
 	TEGRA_REVISION_QT,
 	TEGRA_REVISION_SIM,
 	TEGRA_REVISION_MAX,
@@ -100,6 +117,7 @@ struct tegra_sku_info {
 	int gpu_speedo_value;
 	int gpu_iddq_value;
 	enum tegra_revision revision;
+	enum tegra_revision id_and_rev;
 };
 
 u32 tegra_read_straps(void);

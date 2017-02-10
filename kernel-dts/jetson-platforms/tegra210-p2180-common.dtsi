@@ -20,7 +20,6 @@
 
 #include <t210-common-platforms/tegra210-thermal-nct72-p2530.dtsi>
 #include <tegra210-soc/tegra210-thermal-Tboard-Tdiode.dtsi>
-#include <t210-common-platforms/tegra210-ers-clk-init.dtsi>
 
 / {
 	#address-cells = <2>;

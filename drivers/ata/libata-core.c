@@ -3322,8 +3322,10 @@ int ata_down_xfermask_limit(struct ata_device *dev, unsigned int sel)
 
 	switch (sel) {
 	case ATA_DNXFER_PIO:
-		highbit = fls(pio_mask) - 1;
-		pio_mask &= ~(1 << highbit);
+		if (pio_mask) {
+			highbit = fls(pio_mask) - 1;
+			pio_mask &= ~(1 << highbit);
+		}
 		break;
 
 	case ATA_DNXFER_DMA:

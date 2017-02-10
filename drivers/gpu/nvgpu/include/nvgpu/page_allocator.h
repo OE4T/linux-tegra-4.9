@@ -22,6 +22,7 @@
 
 #include <nvgpu/allocator.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/list.h>
 
 struct nvgpu_allocator;
 
@@ -78,10 +79,17 @@ struct page_alloc_slab_page {
 };
 
 struct page_alloc_chunk {
-	struct list_head list_entry;
+	struct nvgpu_list_node list_entry;
 
 	u64 base;
 	u64 length;
+};
+
+static inline struct page_alloc_chunk *
+page_alloc_chunk_from_list_entry(struct nvgpu_list_node *node)
+{
+	return (struct page_alloc_chunk *)
+	((uintptr_t)node - offsetof(struct page_alloc_chunk, list_entry));
 };
 
 /*
@@ -90,7 +98,7 @@ struct page_alloc_chunk {
  * scatter gather table.
  */
 struct nvgpu_page_alloc {
-	struct list_head alloc_chunks;
+	struct nvgpu_list_node alloc_chunks;
 
 	int nr_chunks;
 	u64 length;

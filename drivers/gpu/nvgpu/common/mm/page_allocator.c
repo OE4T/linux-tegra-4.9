@@ -135,11 +135,11 @@ static void __nvgpu_free_pages(struct nvgpu_page_allocator *a,
 {
 	struct page_alloc_chunk *chunk;
 
-	while (!list_empty(&alloc->alloc_chunks)) {
-		chunk = list_first_entry(&alloc->alloc_chunks,
-					 struct page_alloc_chunk,
+	while (!nvgpu_list_empty(&alloc->alloc_chunks)) {
+		chunk = nvgpu_list_first_entry(&alloc->alloc_chunks,
+					 page_alloc_chunk,
 					 list_entry);
-		list_del(&chunk->list_entry);
+		nvgpu_list_del(&chunk->list_entry);
 
 		if (free_buddy_alloc)
 			nvgpu_free(&a->source_allocator, chunk->base);
@@ -322,8 +322,8 @@ static int __do_slab_alloc(struct nvgpu_page_allocator *a,
 	alloc->length = slab_page->slab_size;
 	alloc->base = slab_page->page_addr + (offs * slab_page->slab_size);
 
-	chunk = list_first_entry(&alloc->alloc_chunks,
-				 struct page_alloc_chunk, list_entry);
+	chunk = nvgpu_list_first_entry(&alloc->alloc_chunks,
+				page_alloc_chunk, list_entry);
 	chunk->base = alloc->base;
 	chunk->length = alloc->length;
 
@@ -359,8 +359,8 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_slab(
 		goto fail;
 	}
 
-	INIT_LIST_HEAD(&alloc->alloc_chunks);
-	list_add(&chunk->list_entry, &alloc->alloc_chunks);
+	nvgpu_init_list_node(&alloc->alloc_chunks);
+	nvgpu_list_add(&chunk->list_entry, &alloc->alloc_chunks);
 
 	err = __do_slab_alloc(a, slab, alloc);
 	if (err)
@@ -448,7 +448,7 @@ static struct nvgpu_page_alloc *__do_nvgpu_alloc_pages(
 
 	memset(alloc, 0, sizeof(*alloc));
 
-	INIT_LIST_HEAD(&alloc->alloc_chunks);
+	nvgpu_init_list_node(&alloc->alloc_chunks);
 	alloc->length = pages << a->page_shift;
 
 	while (pages) {
@@ -504,23 +504,23 @@ static struct nvgpu_page_alloc *__do_nvgpu_alloc_pages(
 
 		c->base = chunk_addr;
 		c->length = chunk_len;
-		list_add(&c->list_entry, &alloc->alloc_chunks);
+		nvgpu_list_add(&c->list_entry, &alloc->alloc_chunks);
 
 		i++;
 	}
 
 	alloc->nr_chunks = i;
-	c = list_first_entry(&alloc->alloc_chunks,
-			     struct page_alloc_chunk, list_entry);
+	c = nvgpu_list_first_entry(&alloc->alloc_chunks,
+				page_alloc_chunk, list_entry);
 	alloc->base = c->base;
 
 	return alloc;
 
 fail_cleanup:
-	while (!list_empty(&alloc->alloc_chunks)) {
-		c = list_first_entry(&alloc->alloc_chunks,
-				     struct page_alloc_chunk, list_entry);
-		list_del(&c->list_entry);
+	while (!nvgpu_list_empty(&alloc->alloc_chunks)) {
+		c = nvgpu_list_first_entry(&alloc->alloc_chunks,
+				     page_alloc_chunk, list_entry);
+		nvgpu_list_del(&c->list_entry);
 		nvgpu_free(&a->source_allocator, c->base);
 		nvgpu_kmem_cache_free(a->chunk_cache, c);
 	}
@@ -548,7 +548,8 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_pages(
 
 	palloc_dbg(a, "Alloc 0x%llx (%llu) id=0x%010llx\n",
 		   pages << a->page_shift, pages, alloc->base);
-	list_for_each_entry(c, &alloc->alloc_chunks, list_entry) {
+	nvgpu_list_for_each_entry(c, &alloc->alloc_chunks,
+				  page_alloc_chunk, list_entry) {
 		palloc_dbg(a, "  Chunk %2d: 0x%010llx + 0x%llx\n",
 			   i++, c->base, c->length);
 	}
@@ -664,11 +665,11 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_pages_fixed(
 
 	alloc->nr_chunks = 1;
 	alloc->length = length;
-	INIT_LIST_HEAD(&alloc->alloc_chunks);
+	nvgpu_init_list_node(&alloc->alloc_chunks);
 
 	c->base = alloc->base;
 	c->length = length;
-	list_add(&c->list_entry, &alloc->alloc_chunks);
+	nvgpu_list_add(&c->list_entry, &alloc->alloc_chunks);
 
 	return alloc;
 
@@ -708,7 +709,8 @@ static u64 nvgpu_page_alloc_fixed(struct nvgpu_allocator *__a,
 
 	palloc_dbg(a, "Alloc [fixed] @ 0x%010llx + 0x%llx (%llu)\n",
 		   alloc->base, aligned_len, pages);
-	list_for_each_entry(c, &alloc->alloc_chunks, list_entry) {
+	nvgpu_list_for_each_entry(c, &alloc->alloc_chunks,
+				  page_alloc_chunk, list_entry) {
 		palloc_dbg(a, "  Chunk %2d: 0x%010llx + 0x%llx\n",
 			   i++, c->base, c->length);
 	}

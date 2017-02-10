@@ -88,7 +88,8 @@ void nvgpu_pramin_access_batched(struct gk20a *g, struct mem_desc *mem,
 	u32 byteoff, start_reg, until_end, n;
 
 	alloc = get_vidmem_page_alloc(mem->sgt->sgl);
-	list_for_each_entry(chunk, &alloc->alloc_chunks, list_entry) {
+	nvgpu_list_for_each_entry(chunk, &alloc->alloc_chunks,
+			page_alloc_chunk, list_entry) {
 		if (offset >= chunk->length)
 			offset -= chunk->length;
 		else
@@ -113,7 +114,8 @@ void nvgpu_pramin_access_batched(struct gk20a *g, struct mem_desc *mem,
 		size -= n;
 
 		if (n == (chunk->length - offset)) {
-			chunk = list_next_entry(chunk, list_entry);
+			chunk = nvgpu_list_next_entry(chunk, page_alloc_chunk,
+					list_entry);
 			offset = 0;
 		} else {
 			offset += n / sizeof(u32);

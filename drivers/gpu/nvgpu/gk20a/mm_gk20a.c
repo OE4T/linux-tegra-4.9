@@ -33,6 +33,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/pramin.h>
+#include <nvgpu/list.h>
 #include <nvgpu/allocator.h>
 #include <nvgpu/semaphore.h>
 #include <nvgpu/page_allocator.h>
@@ -2174,7 +2175,8 @@ static u64 gk20a_mm_get_align(struct gk20a *g, struct scatterlist *sgl,
 		struct nvgpu_page_alloc *alloc = get_vidmem_page_alloc(sgl);
 		struct page_alloc_chunk *chunk = NULL;
 
-		list_for_each_entry(chunk, &alloc->alloc_chunks, list_entry) {
+		nvgpu_list_for_each_entry(chunk, &alloc->alloc_chunks,
+					page_alloc_chunk, list_entry) {
 			chunk_align = 1ULL << __ffs(chunk->base | chunk->length);
 
 			if (align)
@@ -2875,7 +2877,8 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct mem_desc *mem)
 
 	alloc = get_vidmem_page_alloc(mem->sgt->sgl);
 
-	list_for_each_entry(chunk, &alloc->alloc_chunks, list_entry) {
+	nvgpu_list_for_each_entry(chunk, &alloc->alloc_chunks,
+				  page_alloc_chunk, list_entry) {
 		if (gk20a_last_fence)
 			gk20a_fence_put(gk20a_last_fence);
 
@@ -3732,8 +3735,8 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 		if (sgt) {
 			alloc = get_vidmem_page_alloc(sgt->sgl);
 
-			list_for_each_entry(chunk, &alloc->alloc_chunks,
-							list_entry) {
+			nvgpu_list_for_each_entry(chunk, &alloc->alloc_chunks,
+						 page_alloc_chunk, list_entry) {
 				if (space_to_skip &&
 				    space_to_skip > chunk->length) {
 					space_to_skip -= chunk->length;

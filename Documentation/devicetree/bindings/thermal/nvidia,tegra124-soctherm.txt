@@ -31,6 +31,17 @@ Required properties :
 - #thermal-sensor-cells : Should be 1. See ./thermal.txt for a description
     of this property. See <dt-bindings/thermal/tegra124-soctherm.h> for a
     list of valid values when referring to thermal sensors.
+- hw-pllx-offsets : All the tsensors can be invalidated under certain conditions
+  and be configured to report temperature as an offset from the PLLX tsensor.
+  When present this property enables this offsetting. It is an array of triplets
+  where each triplet represents a tsensor id followed by a min and a max offset.
+  - All tsensors except the PLLX sensor may have an offset defined and offsets
+    for PLLX tsensor are ignored. The list of valid tsensor ids are present in
+    <dt-bindings/thermal/tegra124-soctherm.h>.
+  - The min and max offsets are used to bound the temperature reported by the
+    soctherm hardware after offsetting has been applied.
+  Offsets are disabled if one or more elements of a triplet are missing or
+  incorrect.
 - throttle-cfgs: A sub-node which is a container of configuration for each
     hardware throttle events. These events can be set as cooling devices.
   * throttle events: Sub-nodes must be named as "light" or "heavy".

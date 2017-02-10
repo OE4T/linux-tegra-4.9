@@ -30,6 +30,7 @@
 #include <linux/platform_device.h>
 #include <linux/reset.h>
 #include <linux/thermal.h>
+#include <linux/tegra_soctherm.h>
 
 #include <dt-bindings/thermal/tegra124-soctherm.h>
 
@@ -309,7 +310,15 @@ struct soctherm_oc_irq_chip_data {
 	int			irq_enable;
 };
 
+struct tsensor_hw_pllx_offset {
+	bool cpu_rail_low_voltage;
+	bool gpu_rail_low_voltage;
+	void __iomem *sensor_valid_reg;
+};
+
 static struct soctherm_oc_irq_chip_data soc_irq_cdata;
+static struct tsensor_hw_pllx_offset hw_pllx;
+static DEFINE_SPINLOCK(soctherm_lock);
 
 /**
  * ccroc_writel() - writes a value to a CCROC register
@@ -1312,6 +1321,12 @@ static int regs_show(struct seq_file *s, void *data)
 	r = readl(ts->regs + SENSOR_HOTSPOT_OFF);
 	seq_printf(s, "HOTSPOT: 0x%x\n", r);
 
+	r = readl(ts->regs + SENSOR_HW_PLLX_OFFSET_MAX);
+	seq_printf(s, "HW_PLLX_OFFSET_MAX: 0x%x\n", r);
+
+	r = readl(ts->regs + SENSOR_HW_PLLX_OFFSET_MIN);
+	seq_printf(s, "HW_PLLX_OFFSET_MIN: 0x%x\n", r);
+
 	seq_puts(s, "\n");
 	seq_puts(s, "-----SOC_THERM-----\n");
 
@@ -1601,6 +1616,60 @@ static struct thermal_cooling_device_ops throt_cooling_ops = {
 	.get_cur_state = throt_get_cdev_cur_state,
 	.set_cur_state = throt_set_cdev_state,
 };
+
+static int soctherm_hw_pllx_offsets_parse(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+	struct tegra_soctherm *ts = dev_get_drvdata(dev);
+	struct tsensor_group_offsets *toffs = ts->soc->toffs;
+	int i = 0, j = 0, r, n;
+	const u32 ele_per_prop = 3;
+	/* offset from PLLX, no need to configure PLLX */
+	const u32 max_num_props = (ts->soc->num_ttgs - 1) * ele_per_prop;
+	u32 off[max_num_props];
+
+	if (!toffs)
+		return 0;
+
+	hw_pllx.sensor_valid_reg = ts->regs + SENSOR_VALID;
+	n = of_property_count_u32_elems(dev->of_node, "hw-pllx-offsets");
+	if (n <= 0) {
+		dev_err(dev, "invalid dt prop: hw-pllx-offsets:%d\n", n);
+		return n;
+	}
+
+	if (n > max_num_props || n % ele_per_prop != 0) {
+		dev_err(dev, "invalid num of hw_pllx_offsets: %d\n", n);
+		return -EINVAL;
+	}
+
+	r = of_property_read_u32_array(dev->of_node, "hw-pllx-offsets", off, n);
+	if (r) {
+		dev_info(dev, "hw_pllx_offset not enabled:%d, num:%d\n", r, n);
+		return r;
+	}
+
+	for (j = 0; j < max_num_props; j = j + ele_per_prop) {
+		if (off[j] >= TEGRA124_SOCTHERM_SENSOR_NUM ||
+			off[j] == TEGRA124_SOCTHERM_SENSOR_PLLX)
+			continue;
+
+		for (i = 0; i < ts->soc->num_ttgs; i++)
+			if (toffs[i].ttg->id == off[j])
+				break;
+
+		if (i == ts->soc->num_ttgs)
+			continue;
+
+		toffs[i].hw_offsetting_en = 1;
+		toffs[i].min = off[j+1] / 500;
+		toffs[i].max = off[j+2] / 500;
+		dev_info(dev, "pllx_offset tz:%d max:%d, min:%d\n",
+			toffs[i].ttg->id, toffs[i].max, toffs[i].min);
+	}
+
+	return 0;
+}
 
 /**
  * soctherm_init_hw_throt_cdev() - Parse the HW throttle configurations
@@ -1937,6 +2006,77 @@ static int soctherm_interrupts_init(struct platform_device *pdev,
 	return 0;
 }
 
+
+static void soctherm_sensor_invalidate(void)
+{
+	tegra_soctherm_cpu_tsens_invalidate(hw_pllx.cpu_rail_low_voltage);
+	tegra_soctherm_gpu_tsens_invalidate(hw_pllx.gpu_rail_low_voltage);
+}
+
+void tegra_soctherm_cpu_tsens_invalidate(bool low_voltage_range)
+{
+	u32 r;
+	unsigned long flags;
+
+	if (!hw_pllx.sensor_valid_reg)
+		return;
+
+	spin_lock_irqsave(&soctherm_lock, flags);
+	hw_pllx.cpu_rail_low_voltage = low_voltage_range;
+	r = readl(hw_pllx.sensor_valid_reg);
+	r = (hw_pllx.cpu_rail_low_voltage) ?
+		(r | SENSOR_CPU_VALID_MASK) :
+		(r & ~SENSOR_CPU_VALID_MASK);
+	writel(r, hw_pllx.sensor_valid_reg);
+	spin_unlock_irqrestore(&soctherm_lock, flags);
+}
+
+void tegra_soctherm_gpu_tsens_invalidate(bool low_voltage_range)
+{
+	u32 r;
+	unsigned long flags;
+
+	if (!hw_pllx.sensor_valid_reg)
+		return;
+
+	spin_lock_irqsave(&soctherm_lock, flags);
+	hw_pllx.gpu_rail_low_voltage = low_voltage_range;
+	r = readl(hw_pllx.sensor_valid_reg);
+	r = (hw_pllx.gpu_rail_low_voltage) ?
+		(r | SENSOR_GPU_VALID_MASK) :
+		(r & ~SENSOR_GPU_VALID_MASK);
+	writel(r, hw_pllx.sensor_valid_reg);
+	spin_unlock_irqrestore(&soctherm_lock, flags);
+}
+
+static void soctherm_hw_pllx_offsets_init(struct tegra_soctherm *tegra)
+{
+	const struct tegra_tsensor_group *ttg;
+	struct tsensor_group_offsets *toff;
+	u32 i, max = 0, min = 0, en = 0;
+
+	if (!tegra->soc->toffs)
+		return;
+
+	for (i = 0; i < tegra->soc->num_ttgs; ++i) {
+		toff = &tegra->soc->toffs[i];
+		ttg = toff->ttg;
+		if (!toff->hw_offsetting_en)
+			continue;
+
+		max = REG_SET_MASK(max, ttg->hw_pllx_offset_mask, toff->max);
+		min = REG_SET_MASK(min, ttg->hw_pllx_offset_mask, toff->min);
+		en = REG_SET_MASK(en, ttg->hw_pllx_offset_en_mask, 1);
+	}
+
+	if (en) {
+		writel(max, tegra->regs + SENSOR_HW_PLLX_OFFSET_MAX);
+		writel(min, tegra->regs + SENSOR_HW_PLLX_OFFSET_MIN);
+		writel(en, tegra->regs + SENSOR_HW_PLLX_OFFSET_EN);
+		soctherm_sensor_invalidate();
+	}
+}
+
 static void soctherm_init(struct platform_device *pdev)
 {
 	struct tegra_soctherm *tegra = platform_get_drvdata(pdev);
@@ -1948,21 +2088,24 @@ static void soctherm_init(struct platform_device *pdev)
 	for (i = 0; i < tegra->soc->num_tsensors; ++i)
 		enable_tsensor(tegra, i);
 
-	/* program pdiv and hotspot offsets per THERM */
 	pdiv = readl(tegra->regs + SENSOR_PDIV);
 	hotspot = readl(tegra->regs + SENSOR_HOTSPOT_OFF);
 	for (i = 0; i < tegra->soc->num_ttgs; ++i) {
 		pdiv = REG_SET_MASK(pdiv, ttgs[i]->pdiv_mask,
 				    tegra->soc->tsensors[0].config->pdiv);
+
 		/* hotspot offset from PLLX, doesn't need to configure PLLX */
 		if (ttgs[i]->id == TEGRA124_SOCTHERM_SENSOR_PLLX)
 			continue;
-		hotspot =  REG_SET_MASK(hotspot,
-					ttgs[i]->pllx_hotspot_mask,
+
+		hotspot =  REG_SET_MASK(hotspot, ttgs[i]->pllx_hotspot_mask,
 					ttgs[i]->pllx_hotspot_diff);
 	}
 	writel(pdiv, tegra->regs + SENSOR_PDIV);
 	writel(hotspot, tegra->regs + SENSOR_HOTSPOT_OFF);
+
+	/* use hw offsets if available */
+	soctherm_hw_pllx_offsets_init(tegra);
 
 	/* Configure hw throttle */
 	tegra_soctherm_throttle(&pdev->dev);
@@ -2089,8 +2232,8 @@ static int tegra_soctherm_probe(struct platform_device *pdev)
 
 	soctherm_init_hw_throt_cdev(pdev);
 
+	soctherm_hw_pllx_offsets_parse(pdev);
 	soctherm_init(pdev);
-
 	soctherm_debug_init(pdev);
 
 	for (i = 0; i < soc->num_ttgs; ++i) {

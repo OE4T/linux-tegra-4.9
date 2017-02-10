@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -58,6 +58,8 @@ static const struct tegra_tsensor_group tegra210_tsensor_group_cpu = {
 	.pdiv_mask = SENSOR_PDIV_CPU_MASK,
 	.pllx_hotspot_diff = 10,
 	.pllx_hotspot_mask = SENSOR_HOTSPOT_CPU_MASK,
+	.hw_pllx_offset_mask = SENSOR_HW_PLLX_OFFSET_CPU_MASK,
+	.hw_pllx_offset_en_mask = SENSOR_HW_PLLX_OFFSET_CPU_EN_MASK,
 	.thermtrip_any_en_mask = TEGRA210_THERMTRIP_ANY_EN_MASK,
 	.thermtrip_enable_mask = TEGRA210_THERMTRIP_CPU_EN_MASK,
 	.thermtrip_threshold_mask = TEGRA210_THERMTRIP_CPU_THRESH_MASK,
@@ -75,6 +77,8 @@ static const struct tegra_tsensor_group tegra210_tsensor_group_gpu = {
 	.pdiv_mask = SENSOR_PDIV_GPU_MASK,
 	.pllx_hotspot_diff = 5,
 	.pllx_hotspot_mask = SENSOR_HOTSPOT_GPU_MASK,
+	.hw_pllx_offset_mask = SENSOR_HW_PLLX_OFFSET_GPU_MASK,
+	.hw_pllx_offset_en_mask = SENSOR_HW_PLLX_OFFSET_GPU_EN_MASK,
 	.thermtrip_any_en_mask = TEGRA210_THERMTRIP_ANY_EN_MASK,
 	.thermtrip_enable_mask = TEGRA210_THERMTRIP_GPU_EN_MASK,
 	.thermtrip_threshold_mask = TEGRA210_THERMTRIP_GPUMEM_THRESH_MASK,
@@ -107,6 +111,8 @@ static const struct tegra_tsensor_group tegra210_tsensor_group_mem = {
 	.pdiv_mask = SENSOR_PDIV_MEM_MASK,
 	.pllx_hotspot_diff = 0,
 	.pllx_hotspot_mask = SENSOR_HOTSPOT_MEM_MASK,
+	.hw_pllx_offset_mask = SENSOR_HW_PLLX_OFFSET_MEM_MASK,
+	.hw_pllx_offset_en_mask = SENSOR_HW_PLLX_OFFSET_MEM_EN_MASK,
 	.thermtrip_any_en_mask = TEGRA210_THERMTRIP_ANY_EN_MASK,
 	.thermtrip_enable_mask = TEGRA210_THERMTRIP_MEM_EN_MASK,
 	.thermtrip_threshold_mask = TEGRA210_THERMTRIP_GPUMEM_THRESH_MASK,
@@ -121,6 +127,13 @@ static const struct tegra_tsensor_group *tegra210_tsensor_groups[] = {
 	&tegra210_tsensor_group_gpu,
 	&tegra210_tsensor_group_pll,
 	&tegra210_tsensor_group_mem,
+};
+
+struct tsensor_group_offsets tegra210_tsensor_group_offsets[] = {
+	{.ttg = &tegra210_tsensor_group_cpu,},
+	{.ttg = &tegra210_tsensor_group_gpu,},
+	{.ttg = &tegra210_tsensor_group_mem,},
+	{.ttg = &tegra210_tsensor_group_pll,},
 };
 
 static const struct tegra_tsensor tegra210_tsensors[] = {
@@ -226,6 +239,7 @@ const struct tegra_soctherm_soc tegra210_soctherm = {
 	.tsensors = tegra210_tsensors,
 	.num_tsensors = ARRAY_SIZE(tegra210_tsensors),
 	.ttgs = tegra210_tsensor_groups,
+	.toffs = tegra210_tsensor_group_offsets,
 	.num_ttgs = ARRAY_SIZE(tegra210_tsensor_groups),
 	.tfuse = &tegra210_soctherm_fuse,
 	.thresh_grain = TEGRA210_THRESH_GRAIN,

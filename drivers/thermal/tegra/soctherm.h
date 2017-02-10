@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -42,12 +42,28 @@
 #define SENSOR_HOTSPOT_GPU_MASK			(0xff << 8)
 #define SENSOR_HOTSPOT_MEM_MASK			(0xff << 0)
 
+#define SENSOR_HW_PLLX_OFFSET_EN		0x1e4
+#define SENSOR_HW_PLLX_OFFSET_MEM_EN_MASK	BIT(2)
+#define SENSOR_HW_PLLX_OFFSET_CPU_EN_MASK	BIT(1)
+#define SENSOR_HW_PLLX_OFFSET_GPU_EN_MASK	BIT(0)
+
+#define SENSOR_HW_PLLX_OFFSET_MIN		0x1e8
+#define SENSOR_HW_PLLX_OFFSET_MAX		0x1ec
+#define SENSOR_HW_PLLX_OFFSET_MEM_MASK		(0xff << 16)
+#define SENSOR_HW_PLLX_OFFSET_GPU_MASK		(0xff << 8)
+#define SENSOR_HW_PLLX_OFFSET_CPU_MASK		(0xff << 0)
+
 #define SENSOR_TEMP1				0x1c8
 #define SENSOR_TEMP1_CPU_TEMP_MASK		(0xffff << 16)
 #define SENSOR_TEMP1_GPU_TEMP_MASK		0xffff
 #define SENSOR_TEMP2				0x1cc
 #define SENSOR_TEMP2_MEM_TEMP_MASK		(0xffff << 16)
 #define SENSOR_TEMP2_PLLX_TEMP_MASK		0xffff
+
+#define SENSOR_VALID			0x1e0
+#define SENSOR_GPU_VALID_MASK		BIT(9)
+#define SENSOR_CPU_VALID_MASK		0xf
+#define SENSOR_MEM_VALID_MASK		(0x3 << 10)
 
 /**
  * struct tegra_tsensor_group - SOC_THERM sensor group data
@@ -68,7 +84,10 @@ struct tegra_tsensor_group {
 	u16 sensor_temp_offset;
 	u32 sensor_temp_mask;
 	u32 pdiv_mask;
-	u32 pllx_hotspot_diff, pllx_hotspot_mask;
+	u32 pllx_hotspot_diff;
+	u32 pllx_hotspot_mask;
+	u32 hw_pllx_offset_mask;
+	u32 hw_pllx_offset_en_mask;
 	u32 thermtrip_enable_mask;
 	u32 thermtrip_any_en_mask;
 	u32 thermtrip_threshold_mask;
@@ -91,10 +110,18 @@ struct tegra_tsensor {
 	const struct tegra_tsensor_group *group;
 };
 
+struct tsensor_group_offsets {
+	u32 max;
+	u32 min;
+	u32 hw_offsetting_en;
+	const struct tegra_tsensor_group *ttg;
+};
+
 struct tegra_soctherm_soc {
 	const struct tegra_tsensor *tsensors;
 	const unsigned int num_tsensors;
 	const struct tegra_tsensor_group **ttgs;
+	struct tsensor_group_offsets *toffs;
 	const unsigned int num_ttgs;
 	const struct tegra_tsensor_fuse *tfuse;
 	const int thresh_grain;

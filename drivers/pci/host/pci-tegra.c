@@ -2831,6 +2831,7 @@ static int tegra_pcie_init(struct tegra_pcie *pcie)
 
 	if (!pcie->num_ports) {
 		dev_info(pcie->dev, "PCIE: no end points detected\n");
+		err = -ENODEV;
 		goto fail_power_off;
 	}
 	if (IS_ENABLED(CONFIG_PCI_MSI)) {
@@ -4424,7 +4425,8 @@ static const struct file_operations tegra_pcie_ports_ops = {
 
 static void tegra_pcie_debugfs_exit(struct tegra_pcie *pcie)
 {
-	debugfs_remove_recursive(pcie->debugfs);
+	if (pcie->debugfs)
+		debugfs_remove_recursive(pcie->debugfs);
 }
 
 static int tegra_pcie_debugfs_init(struct tegra_pcie *pcie)
@@ -4560,9 +4562,11 @@ static int tegra_pcie_probe_complete(struct tegra_pcie *pcie)
 static void pcie_delayed_detect(struct work_struct *work)
 {
 	struct tegra_pcie *pcie;
+	struct platform_device *pdev;
 	int ret = 0;
 
 	pcie = container_of(work, struct tegra_pcie, detect_delay.work);
+	pdev = to_platform_device(pcie->dev);
 #ifdef CONFIG_THERMAL
 	if (pcie->is_cooling_dev) {
 		dev_info(pcie->dev,
@@ -4585,6 +4589,7 @@ release_regulators:
 	devm_kfree(pcie->dev, pcie->pcie_regulators);
 	devm_kfree(pcie->dev, pcie->plat_data);
 	devm_kfree(pcie->dev, pcie);
+	platform_set_drvdata(pdev, NULL);
 	return;
 }
 
@@ -4733,6 +4738,8 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 			__func__,
 			pcie->soc_data->pcie_regulator_names[i]);
 			pcie->pcie_regulators[i] = NULL;
+			ret = IS_ERR(pcie->pcie_regulators[i]);
+			goto release_regulators;
 		}
 	}
 
@@ -4791,11 +4798,14 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 	return ret;
 
 release_regulators:
+	if (pcie->soc_data->program_uphy)
+		tegra_pcie_phy_exit(pcie);
 	devm_kfree(&pdev->dev, pcie->pcie_regulators);
 release_platdata:
 	devm_kfree(&pdev->dev, pcie->plat_data);
 release_drvdata:
 	devm_kfree(&pdev->dev, pcie);
+	platform_set_drvdata(pdev, NULL);
 	return ret;
 }
 
@@ -4805,6 +4815,9 @@ static int tegra_pcie_remove(struct platform_device *pdev)
 	struct tegra_pcie_bus *bus;
 
 	PR_FUNC_LINE;
+
+	if (!pcie)
+		return 0;
 
 	if (cancel_delayed_work_sync(&pcie->detect_delay))
 		return 0;

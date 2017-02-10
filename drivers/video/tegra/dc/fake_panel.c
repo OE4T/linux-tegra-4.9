@@ -20,7 +20,7 @@
 #include "fake_panel.h"
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 #define INT_GIC_BASE                    0
 #define INT_PRI_BASE                    (INT_GIC_BASE + 32)
 #define INT_SEC_BASE                    (INT_PRI_BASE + 32)

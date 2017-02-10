@@ -46,7 +46,7 @@
 #include "dp_lt.h"
 #include "dp_auto.h"
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
 #include "hda_dc.h"
 #endif
 
@@ -2190,7 +2190,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	parent_clk = tegra_disp_of_clk_get_by_name(np_dp, "plldp");
-#elif defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#elif defined(CONFIG_ARCH_TEGRA_210_SOC)
 	parent_clk = clk_get_sys(NULL, "pll_dp");
 #else
 	parent_clk = tegra_get_clock_by_name("pll_dp");
@@ -2855,7 +2855,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	/* Host is ready. Start link training. */
 	dp->enabled = true;
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
 	if (tegra_dc_is_ext_dp_panel(dc)
 				&& sor->audio_support)
 		tegra_hda_set_data(dc, dp, SINK_DP);
@@ -2995,7 +2995,7 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 
 	tegra_dc_io_end(dc);
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
 	if (tegra_dc_is_ext_dp_panel(dc))
 		tegra_hda_reset_data(dc);
 #endif

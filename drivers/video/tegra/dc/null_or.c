@@ -26,7 +26,7 @@
 
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+#if defined(CONFIG_ARCH_TEGRA_210_SOC) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
 #define INT_GIC_BASE                    0
 #define INT_PRI_BASE                    (INT_GIC_BASE + 32)
 #define INT_SEC_BASE                    (INT_PRI_BASE + 32)

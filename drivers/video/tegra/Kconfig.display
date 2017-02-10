@@ -29,7 +29,7 @@ config TEGRA_NVDISPLAY
 
 config TEGRA_DC_CDE
 	bool "Tegra Color Decompression Engine"
-	depends on TEGRA_DC && (ARCH_TEGRA_21x_SOC || TEGRA_NVDISPLAY)
+	depends on TEGRA_DC && (ARCH_TEGRA_210_SOC || TEGRA_NVDISPLAY)
 	default y
 	help
 	  Say Y here to enable Tegra color decompression engine
@@ -87,7 +87,7 @@ config TEGRA_DC_INTERLACE
 
 config TEGRA_DC_64BIT_SUPPORT
 	bool "64-bit addressing in DC"
-	depends on TEGRA_DC && ARCH_TEGRA_21x_SOC
+	depends on TEGRA_DC && ARCH_TEGRA_210_SOC
 	default y
 	help
 	  T12x/T21x LPAE support in dc driver.
@@ -241,7 +241,7 @@ config TEGRA_HDMI2GMSL_MAX929x
 
 config TEGRA_HDA_DC
 	bool "Enable HDA DC driver"
-	depends on TEGRA_HDMI2_0 || (TEGRA_DP && (ARCH_TEGRA_21x_SOC || ARCH_TEGRA_18x_SOC))
+	depends on TEGRA_HDMI2_0 || (TEGRA_DP && (ARCH_TEGRA_210_SOC || ARCH_TEGRA_18x_SOC))
 	default y
 	help
 	  Say Y here to enable separate HDA driver in DC space.

@@ -970,7 +970,7 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 
 	tegra_dc_set_dynamic_emc(dc);
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 	/* prevent FIFO from taking in stale data after a reset */
 	tegra_dc_writel(dc, MEMFETCH_RESET, DC_WINBUF_MEMFETCH_CONTROL);
 #endif

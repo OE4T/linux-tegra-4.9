@@ -2361,7 +2361,7 @@ static void tegra_dsi_pad_enable(struct tegra_dc_dsi_data *dsi)
 	}
 }
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
 static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val = 0;
@@ -2470,7 +2470,7 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 			tegra_dsi_writel(dsi, 0, init_reg_vs1_ext[i]);
 	}
 
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+#ifdef CONFIG_ARCH_TEGRA_210_SOC
 	if (tegra_platform_is_fpga()) {
 		if (dsi->info.video_data_type ==
 				TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE) {

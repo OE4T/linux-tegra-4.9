@@ -828,7 +828,7 @@ void reg_dump(struct tegra_dc *dc, void *data,
 	DUMP_REG(DC_DISP_CURSOR_BACKGROUND);
 	DUMP_REG(DC_DISP_CURSOR_START_ADDR);
 	DUMP_REG(DC_DISP_CURSOR_START_ADDR_NS);
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 	DUMP_REG(DC_DISP_CURSOR_START_ADDR_HI);
 	DUMP_REG(DC_DISP_CURSOR_START_ADDR_HI_NS);
 #endif
@@ -931,7 +931,7 @@ void reg_dump(struct tegra_dc *dc, void *data,
 		DUMP_REG(DC_WIN_CSC_KUB);
 		DUMP_REG(DC_WIN_CSC_KVB);
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 		DUMP_REG(DC_WINBUF_CDE_CONTROL);
 		DUMP_REG(DC_WINBUF_CDE_COMPTAG_BASE_0);
 		DUMP_REG(DC_WINBUF_CDE_COMPTAG_BASEHI_0);
@@ -1213,7 +1213,7 @@ static int is_valid_fake_support(struct tegra_dc *dc, long dc_outtype)
 
 static int set_avdd(struct tegra_dc *dc, long cur_out, long new_out)
 {
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+#ifdef CONFIG_ARCH_TEGRA_210_SOC
 	/* T210 macro_clk is failing SOR access
 	 * if avdd_lcd is not enabled
 	 */
@@ -3507,7 +3507,7 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 #if	defined(CONFIG_TEGRA_HDMI2_0)
 		dc->out_ops = &tegra_dc_hdmi2_0_ops;
 #endif
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+#ifdef CONFIG_ARCH_TEGRA_210_SOC
 		if (tegra_bonded_out_dev(BOND_OUT_SOR1)) {
 			dev_info(&dc->ndev->dev,
 				"SOR1 instance is bonded out\n");
@@ -3522,7 +3522,7 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 	case TEGRA_DC_OUT_FAKE_DSIB:
 	case TEGRA_DC_OUT_FAKE_DSI_GANGED:
 		dc->out_ops = &tegra_dc_dsi_ops;
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+#ifdef CONFIG_ARCH_TEGRA_210_SOC
 		if (tegra_bonded_out_dev(BOND_OUT_DSI) ||
 			tegra_bonded_out_dev(BOND_OUT_DSIB)) {
 			dev_info(&dc->ndev->dev,
@@ -4578,7 +4578,7 @@ void tegra_dc_dsc_init(struct tegra_dc *dc)
 	u32 delay_in_slice, output_delay, wrap_output_delay;
 	u8 i, j;
 	u8 bpp;
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 	u32 check_flatness;
 #endif
 
@@ -4602,7 +4602,7 @@ void tegra_dc_dsc_init(struct tegra_dc *dc)
 		DSC_VALID_SLICE_WIDTH(slice_width);
 	tegra_dc_writel(dc, val, DSC_COM_DSC_SLICE_INFO);
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 	/*
 	 * Use RC overflow solution 2. Program overflow threshold values and
 	 * enable flatness checking.
@@ -4982,7 +4982,7 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 	/* initialize cursor to defaults, as driver depends on HW state */
 	tegra_dc_writel(dc, 0, DC_DISP_CURSOR_START_ADDR);
 	tegra_dc_writel(dc, 0, DC_DISP_CURSOR_START_ADDR_NS);
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 	tegra_dc_writel(dc, 0, DC_DISP_CURSOR_START_ADDR_HI);
 	tegra_dc_writel(dc, 0, DC_DISP_CURSOR_START_ADDR_HI_NS);
 #endif
@@ -5491,7 +5491,7 @@ int tegra_dc_ddc_enable(struct tegra_dc *dc, bool enabled)
 int tegra_dc_slgc_disp0(struct notifier_block *nb,
 	unsigned long unused0, void *unused1)
 {
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+#ifdef CONFIG_ARCH_TEGRA_210_SOC
 	struct tegra_dc *dc = container_of(nb, struct tegra_dc, slgc_notifier);
 	u32 val;
 
@@ -5642,7 +5642,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	int partition_id_disa, partition_id_disb;
 #endif
 
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+#ifdef CONFIG_ARCH_TEGRA_210_SOC
 	if (tegra_platform_is_linsim()) {
 		dev_info(&ndev->dev, "DC instances are not present on linsim\n");
 		return -ENODEV;

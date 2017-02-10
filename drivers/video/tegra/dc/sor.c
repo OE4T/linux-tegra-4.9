@@ -330,7 +330,7 @@ static int dbg_sor_show(struct seq_file *s, void *unused)
 	DUMP_REG(NV_SOR_DP_SPARE(1));
 	DUMP_REG(NV_SOR_DP_TPG);
 	DUMP_REG(NV_SOR_HDMI_GENERIC_CTRL);
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
 	DUMP_REG(NV_SOR_HDMI_CTRL);
 #endif
 	DUMP_REG(NV_SOR_HDMI2_CTRL);
@@ -618,7 +618,7 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		goto err_release_resource_reg;
 	}
 
-#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	clk = tegra_disp_of_clk_get_by_name(np_sor, res_name);
 #else
 	clk = clk_get(NULL, res_name);
@@ -629,7 +629,7 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		goto err_iounmap_reg;
 	}
 
-#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	safe_clk = tegra_disp_of_clk_get_by_name(np_sor, "sor_safe");
 #else
 	safe_clk = clk_get(NULL, "sor_safe");
@@ -1593,7 +1593,7 @@ static inline void tegra_sor_reset(struct tegra_dc_sor_data *sor)
 {
 	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return;
-#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	if (sor->rst) {
 		reset_control_assert(sor->rst);
 		mdelay(2);

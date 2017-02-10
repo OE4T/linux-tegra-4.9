@@ -1,7 +1,7 @@
 /*
- * arch/arm/mach-tegra/nvdumper_config.c
+ * drivers/platform/tegra/nvdumper/nvdumper_config.c
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -249,7 +249,7 @@ const struct config_option nvdumper_config[] = {
 {
 	"f_dentry",
 	"file",
-	(uint64_t)offsetof(struct file, f_dentry)
+	(uint64_t)offsetof(struct file, f_path.dentry)
 },
 {
 	"d_name",

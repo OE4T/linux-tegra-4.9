@@ -1,7 +1,7 @@
 /*
- * arch/arm64/mach-tegra/nvdumper_regdump.c
+ * drivers/platform/tegra/nvdumper/nvdumper_regdump.c
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and

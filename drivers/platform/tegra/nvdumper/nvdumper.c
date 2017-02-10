@@ -1,4 +1,6 @@
 /*
+ * drivers/platform/tegra/nvdumper/nvdumper.c
+ *
  * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
@@ -29,6 +31,7 @@
 #define NVDUMPER_DIRTY      0x2badfaceU
 #define NVDUMPER_DIRTY_DUMP 0xdeadbeefU
 #define NVDUMPER_WDT_DUMP   0x2badbeefU
+#define NVDUMPER_SET_STR_LEN 16
 #define RW_MODE (S_IWUSR | S_IRUGO)
 #define NV_ADDRESS_MAP_PMC_IMPL_BASE              0x0c360000
 #define NV_ADDRESS_MAP_PMC_IMPL_SIZE              0x400 /* map 1k */
@@ -45,7 +48,7 @@ static void __iomem *nvdumper_ptr;
 static u32 nvdumper_last_reboot;
 static unsigned long nvdumper_reserved;
 static const struct nvdumper_soc *nvdumper_soc;
-static char *nvdumper_set_str = "dirty_dump";
+static char nvdumper_set_str[NVDUMPER_SET_STR_LEN];
 static struct kobject *nvdumper_kobj;
 
 static int __init tegra_nvdumper_arg(char *options)
@@ -134,7 +137,7 @@ static ssize_t nvdumper_set_store(struct kobject *kobj,
 	if (n < 1)
 		return 0;
 
-	snprintf(nvdumper_set_str, strlen("dirty_dump"), "%s", buf);
+	snprintf(nvdumper_set_str, NVDUMPER_SET_STR_LEN, "%s", buf);
 	nvdumper_set_str[n - 1] = '\0';
 
 	if (!strcmp(nvdumper_set_str, "clean"))
@@ -146,7 +149,7 @@ static ssize_t nvdumper_set_store(struct kobject *kobj,
 	else if (!strcmp(nvdumper_set_str, "wdt_dump"))
 		set_dirty_state(NVDUMPER_WDT_DUMP);
 	else
-		strcpy(nvdumper_set_str, "unknown");
+		snprintf(nvdumper_set_str, NVDUMPER_SET_STR_LEN, "unknown");
 
 	pr_info("nvdumper_set was updated to %s\n", nvdumper_set_str);
 
@@ -186,16 +189,16 @@ static void nvdumper_sysfs_init(void)
 
 	switch (nvdumper_last_reboot) {
 	case NVDUMPER_CLEAN:
-		nvdumper_set_str = "clean\n";
+		snprintf(nvdumper_set_str, NVDUMPER_SET_STR_LEN, "clean");
 		break;
 	case NVDUMPER_DIRTY:
-		nvdumper_set_str = "dirty\n";
+		snprintf(nvdumper_set_str, NVDUMPER_SET_STR_LEN, "dirty");
 		break;
 	case NVDUMPER_DIRTY_DUMP:
-		nvdumper_set_str = "dirty_dump\n";
+		snprintf(nvdumper_set_str, NVDUMPER_SET_STR_LEN, "dirty_dump");
 		break;
 	default:
-		nvdumper_set_str = "dirty\n";
+		snprintf(nvdumper_set_str, NVDUMPER_SET_STR_LEN, "dirty");
 		break;
 	}
 }
@@ -284,6 +287,10 @@ static const struct nvdumper_soc tegra210_nvdumper_soc = {
 static const struct of_device_id of_nvdumper_match[] = {
 	{
 		.compatible = "nvidia,tegra210-nvdumper",
+		.data = &tegra210_nvdumper_soc
+	},
+	{
+		.compatible = "nvidia,tegra186-nvdumper",
 		.data = &tegra210_nvdumper_soc
 	},
 	{ }

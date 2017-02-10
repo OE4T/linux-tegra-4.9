@@ -126,6 +126,7 @@ struct tegra_sku_info {
 	enum tegra_revision revision;
 	enum tegra_revision id_and_rev;
 	enum tegra_ucm ucm;
+	int speedo_rev;
 };
 
 u32 tegra_read_straps(void);

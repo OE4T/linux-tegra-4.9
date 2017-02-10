@@ -34,6 +34,7 @@ struct tegra_sku_info tegra_sku_info = {
 	.cpu_iddq_value = -ENOTSUPP,
 	.gpu_iddq_value = -ENOTSUPP,
 	.soc_iddq_value = -ENOTSUPP,
+	.speedo_rev = -ENOTSUPP,
 };
 EXPORT_SYMBOL(tegra_sku_info);
 

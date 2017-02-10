@@ -95,10 +95,10 @@ static struct dvfs_rail tegra210_dvfs_rail_vdd_gpu = {
 	.step = VDD_SAFE_STEP,
 	.step_up = 1300,
 	.alignment = {
-		.step_uv = 6250, /* 6.25mV */
+		.step_uv = 10000, /* 10mV */
 	},
 	.stats = {
-		.bin_uv = 6250, /* 6.25mV */
+		.bin_uv = 10000, /* 10mV */
 	},
 	.in_band_pm = true,
 	.therm_floors = gpu_therm_floors,
@@ -1867,6 +1867,7 @@ int tegra210_init_dvfs(struct device_node *node)
 	for (i = 0; i <  ARRAY_SIZE(tegra210_dvfs_rails); i++) {
 		struct regulator *reg;
 		unsigned int step_uv;
+		int min_uV, max_uV, ret;
 
 		reg = regulator_get(NULL, tegra210_dvfs_rails[i]->reg_id);
 		if (IS_ERR(reg)) {
@@ -1875,12 +1876,22 @@ int tegra210_init_dvfs(struct device_node *node)
 			return -EPROBE_DEFER;
 		}
 
-		step_uv = regulator_get_linear_step(reg);
-		regulator_put(reg);
+		ret = regulator_get_constraint_voltages(reg, &min_uV, &max_uV);
+		if (!ret)
+			tegra210_dvfs_rails[i]->alignment.offset_uv = min_uV;
+
+		step_uv = regulator_get_linear_step(reg); /* 1st try get step */
+		if (!step_uv && !ret) {    /* if no step, try to calculate it */
+			int n_voltages = regulator_count_voltages(reg);
+
+			if (n_voltages > 1)
+				step_uv = (max_uV - min_uV) / (n_voltages - 1);
+		}
 		if (step_uv) {
 			tegra210_dvfs_rails[i]->alignment.step_uv = step_uv;
 			tegra210_dvfs_rails[i]->stats.bin_uv = step_uv;
 		}
+		regulator_put(reg);
 	}
 
 	/*

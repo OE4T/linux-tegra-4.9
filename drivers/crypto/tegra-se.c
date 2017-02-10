@@ -2440,8 +2440,7 @@ static bool is_algo_supported(struct tegra_se_dev *se_dev, const char *algo)
 
 	if (!strcmp(algo, "rsa-pka0") || !strcmp(algo, "rsa")) {
 		if (se_dev->chipdata->rsa_supported) {
-			if ((tegra_get_chip_id() == TEGRA210) &&
-			(tegra_chip_get_revision() == TEGRA_REVISION_A01))
+			if (tegra_chip_get_revision() == TEGRA210_REVISION_A01)
 				return false;
 			else
 				return true;

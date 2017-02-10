@@ -2772,4 +2772,9 @@
 	tegra-mce {
 		compatible = "nvidia,tegra186-mce";
 	};
+
+	nvdumper {
+		compatible = "nvidia,tegra186-nvdumper";
+		status = "disabled";
+	};
 };

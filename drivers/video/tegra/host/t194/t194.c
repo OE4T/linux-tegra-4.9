@@ -296,6 +296,7 @@ struct nvhost_device_data t19_nvdec_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVDEC,
+	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 };
 #endif
 

@@ -32,7 +32,7 @@
 
 #define ZBC_MASK(i)			(~(~(0) << ((i)+1)) & 0xfffe)
 
-#define APP_VERSION_NC_3	21548462
+#define APP_VERSION_NC_3	21688026
 #define APP_VERSION_NC_2	20429989
 #define APP_VERSION_NC_1	20313802
 #define APP_VERSION_NC_0	20360931

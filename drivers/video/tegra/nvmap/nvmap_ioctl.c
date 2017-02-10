@@ -3,7 +3,7 @@
  *
  * User-space interface to nvmap
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -569,7 +569,7 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
 
-	if (!op.nr)
+	if (!op.nr || op.nr > UINT_MAX / sizeof(u32))
 		return -EINVAL;
 
 	if (!access_ok(VERIFY_READ, op.handles, op.nr * sizeof(u32)))

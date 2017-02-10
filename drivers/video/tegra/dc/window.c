@@ -23,6 +23,7 @@
 #include <soc/tegra/fuse.h>
 #include <trace/events/display.h>
 #include <linux/fb.h>
+#include <linux/version.h>
 
 #include "dc.h"
 #include "dc_reg.h"
@@ -715,9 +716,14 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 			tegra_dc_writel(dc, win->cde.ctb_entry,
 				DC_WINBUF_CDE_CTB_ENTRY_0);
 			rev = tegra_chip_get_revision();
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0))
 			if (tegra_get_chip_id() == TEGRA210
 				&& ((rev == TEGRA_REVISION_A01) ||
 					(rev == TEGRA_REVISION_A01q)))
+#else
+			if (rev == TEGRA210_REVISION_A01 ||
+					rev == TEGRA210_REVISION_A01q)
+#endif
 				tegra_dc_writel(dc, 0, DC_WINBUF_CDE_CG_SW_OVR);
 		} else {
 			tegra_dc_writel(dc, 0, DC_WINBUF_CDE_CONTROL);

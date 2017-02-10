@@ -43,8 +43,9 @@
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C1
-			&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "div-clk", "parent";
+			&tegra_car TEGRA186_CLK_PLLP_OUT0
+			&tegra_car TEGRA186_CLK_I2C_SLOW>;
+		clock-names = "div-clk", "parent", "slow-clk";
 		resets = <&tegra_car TEGRA186_RESET_I2C1>;
 		reset-names = "i2c";
 		dmas = <&gpcdma 21>, <&gpcdma 21>;
@@ -63,8 +64,9 @@
 		status = "okay";
 		clock-frequency = <100000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C2
-			&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "div-clk", "parent";
+			&tegra_car TEGRA186_CLK_PLLP_OUT0
+			&tegra_car TEGRA186_CLK_AON_I2C_SLOW>;
+		clock-names = "div-clk", "parent", "slow-clk";
 		resets = <&tegra_car TEGRA186_RESET_I2C2>;
 		reset-names = "i2c";
 		dmas = <&gpcdma 22>, <&gpcdma 22>;
@@ -83,8 +85,9 @@
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C3
-			&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "div-clk", "parent";
+			&tegra_car TEGRA186_CLK_PLLP_OUT0
+			&tegra_car TEGRA186_CLK_I2C_SLOW>;
+		clock-names = "div-clk", "parent", "slow-clk";
 		resets = <&tegra_car TEGRA186_RESET_I2C3>;
 		reset-names = "i2c";
 		dmas = <&gpcdma 23>, <&gpcdma 23>;
@@ -101,8 +104,9 @@
 		status = "disabled";
 		clock-frequency = <100000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C4
-			&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "div-clk", "parent";
+			&tegra_car TEGRA186_CLK_PLLP_OUT0
+			&tegra_car TEGRA186_CLK_AON_I2C_SLOW>;
+		clock-names = "div-clk", "parent", "slow-clk";
 		resets = <&tegra_car TEGRA186_RESET_I2C4>;
 		reset-names = "i2c";
 		dmas = <&gpcdma 26>, <&gpcdma 26>;
@@ -127,8 +131,9 @@
 		status = "disabled";
 		clock-frequency = <100000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C6
-			&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "div-clk", "parent";
+			&tegra_car TEGRA186_CLK_PLLP_OUT0
+			&tegra_car TEGRA186_CLK_I2C_SLOW>;
+		clock-names = "div-clk", "parent", "slow-clk";
 		resets = <&tegra_car TEGRA186_RESET_I2C6>;
 		reset-names = "i2c";
 		dmas = <&gpcdma 30>, <&gpcdma 30>;
@@ -147,8 +152,9 @@
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C7
-			&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "div-clk", "parent";
+			&tegra_car TEGRA186_CLK_PLLP_OUT0
+			&tegra_car TEGRA186_CLK_I2C_SLOW>;
+		clock-names = "div-clk", "parent", "slow-clk";
 		resets = <&tegra_car TEGRA186_RESET_I2C7>;
 		reset-names = "i2c";
 		dmas = <&gpcdma 27>, <&gpcdma 27>;
@@ -167,8 +173,9 @@
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C8
-			&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "div-clk", "parent";
+			&tegra_car TEGRA186_CLK_PLLP_OUT0
+			&tegra_car TEGRA186_CLK_AON_I2C_SLOW>;
+		clock-names = "div-clk", "parent", "slow-clk";
 		resets = <&tegra_car TEGRA186_RESET_I2C8>;
 		reset-names = "i2c";
 		dmas = <&gpcdma 0>, <&gpcdma 0>;
@@ -187,8 +194,9 @@
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C9
-			&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "div-clk", "parent";
+			&tegra_car TEGRA186_CLK_PLLP_OUT0
+			&tegra_car TEGRA186_CLK_I2C_SLOW>;
+		clock-names = "div-clk", "parent", "slow-clk";
 		resets = <&tegra_car TEGRA186_RESET_I2C9>;
 		reset-names = "i2c";
 		dmas = <&gpcdma 31>, <&gpcdma 31>;

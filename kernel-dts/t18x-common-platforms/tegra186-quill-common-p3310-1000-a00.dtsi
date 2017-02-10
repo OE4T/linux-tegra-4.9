@@ -1,7 +1,7 @@
 /*
  * tegra186-quill-common-p3310-1000-a00.dtsi: Quill common dtsi.
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -103,6 +103,10 @@
 	};
 
 	sdhci@3440000 {
+		status = "okay";
+	};
+
+	nvdumper {
 		status = "okay";
 	};
 };

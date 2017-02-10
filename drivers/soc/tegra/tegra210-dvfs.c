@@ -933,6 +933,7 @@ static void init_dvfs_one(struct dvfs *d, int max_freq_index)
 	}
 
 	d->max_millivolts = d->dvfs_rail->nominal_millivolts;
+	d->num_freqs = max_freq_index + 1;
 
 	ret = tegra_setup_dvfs(c, d);
 	if (ret)

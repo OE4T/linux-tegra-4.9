@@ -1091,7 +1091,9 @@ static void cleanup_dvfs_table(struct dvfs *d)
 			d->freqs[i] = d->freqs[i - 1];
 	}
 
-	d->num_freqs = i;
+	/* Update num_freqs if not set at all, or set above cleaned max */
+	if (!d->num_freqs || (d->num_freqs > i))
+		d->num_freqs = i;
 }
 
 #ifdef CONFIG_TEGRA_CLK_DEBUG
@@ -1172,6 +1174,13 @@ int tegra_dvfs_add_alt_freqs(struct clk *c, struct dvfs *alt_d)
 
 	cleanup_dvfs_table(alt_d);
 
+	if (alt_d->num_freqs < d->num_freqs) {
+		pr_err("tegra_dvfs: %s: %d alt freqs below %d main freqs\n",
+		       d->clk_name, alt_d->num_freqs, d->num_freqs);
+		err = -EINVAL;
+		goto out;
+	}
+
 	d->alt_freqs = alt_d->freqs;
 
 	__clk_debugfs_add_file(c, "use_alt_freq", S_IRUGO | S_IWUSR, c,
@@ -1180,7 +1189,7 @@ int tegra_dvfs_add_alt_freqs(struct clk *c, struct dvfs *alt_d)
 out:
 	mutex_unlock(&dvfs_lock);
 
-	return 0;
+	return err;
 }
 
 static bool tegra_dvfs_all_rails_suspended(void)

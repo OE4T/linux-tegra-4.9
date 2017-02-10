@@ -1241,7 +1241,7 @@ static void init_sor1_dvfs(int soc_speedo_id, int core_process_id,
 
 static int get_core_speedo_mv(void)
 {
-	int speedo_rev = tegra_sku_info.revision;
+	int speedo_rev = tegra_sku_info.speedo_rev;
 
 	switch (tegra_sku_info.soc_process_id) {
 	case 0:

@@ -62,6 +62,7 @@
 #include <linux/delay.h>
 #include <linux/workqueue.h>
 #include <linux/tegra_prod.h>
+#include <linux/of_net.h>
 
 #define LP_SUPPORTED 0
 static const struct of_device_id eqos_of_match[] = {
@@ -1019,7 +1020,7 @@ int eqos_probe(struct platform_device *pdev)
 		}
 	}
 
-	pdata->interface = eqos_get_phy_interface(pdata);
+	pdata->interface = of_get_phy_mode(node);
 	/* Bypass PHYLIB for TBI, RTBI and SGMII interface */
 	if (1 == pdata->hw_feat.sma_sel && !pdata->use_fixed_phy) {
 		ret = eqos_mdio_register(ndev);

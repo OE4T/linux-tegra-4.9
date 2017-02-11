@@ -17,7 +17,6 @@
  */
 
 #include "gk20a/gk20a.h"
-#include "gk20a/semaphore_gk20a.h"
 
 #include "gv11b/subctx_gv11b.h"
 

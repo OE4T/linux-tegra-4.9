@@ -1873,9 +1873,9 @@ static int dvfs_tree_show(struct seq_file *s, void *data)
 				dvfs_solve_relationship(&show_rel),
 				dvfs_solve_relationship(rel));
 		}
-		seq_printf(s, "   nominal    %-7d mV\n",
+		seq_printf(s, "   %-26s %-4d mV\n", "nominal",
 			   rail->nominal_millivolts);
-		seq_printf(s, "   offset     %-7d mV\n", rail->dbg_mv_offs);
+		seq_printf(s, "   %-26s %-4d mV\n", "offset", rail->dbg_mv_offs);
 
 		if (rail->dfll_mode) {
 			therm_mv = tegra_dfll_get_thermal_floor_mv();
@@ -1883,7 +1883,7 @@ static int dvfs_tree_show(struct seq_file *s, void *data)
 			   (rail->therm_floor_idx < rail->therm_floors_size)) {
 			therm_mv = rail->therm_floors[rail->therm_floor_idx].mv;
 		}
-		seq_printf(s, "   therm_floor    %-7d mV\n", therm_mv);
+		seq_printf(s, "   %-26s %-4d mV\n", "therm_floor", therm_mv);
 
 		therm_mv = 0;
 		if (rail->dfll_mode) {
@@ -1892,7 +1892,7 @@ static int dvfs_tree_show(struct seq_file *s, void *data)
 			   (rail->therm_cap_idx > 0)) {
 			therm_mv = rail->therm_caps[rail->therm_cap_idx - 1].mv;
 		}
-		seq_printf(s, "   therm_cap    %-7d mV\n", therm_mv);
+		seq_printf(s, "   %-26s %-4d mV\n", "therm_cap", therm_mv);
 
 		list_sort(NULL, &rail->dvfs, dvfs_tree_sort_cmp);
 

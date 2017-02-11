@@ -308,21 +308,6 @@
 					hysteresis = <1000>; /* millicelsius */
 					type = "active";
 				};
-				dfll_floor_trip1: dfll-floor-trip1 {
-					temperature = <TEGRA210_DFLL_THERMAL_FLOOR_1>; /* millicelsius */
-					hysteresis = <1000>; /* millicelsius */
-					type = "active";
-				};
-				dfll_floor_trip2: dfll-floor-trip2 {
-					temperature = <TEGRA210_DFLL_THERMAL_FLOOR_2>; /* millicelsius */
-					hysteresis = <1000>; /* millicelsius */
-					type = "active";
-				};
-				dfll_floor_trip3: dfll-floor-trip3 {
-					temperature = <TEGRA210_DFLL_THERMAL_FLOOR_3>; /* millicelsius */
-					hysteresis = <1000>; /* millicelsius */
-					type = "active";
-				};
 				dfll_cap_trip0: dfll-cap-trip0 {
 					temperature = <TEGRA210_DFLL_THERMAL_CAP_0>; /* millicelsius */
 					hysteresis = <1000>; /* millicelsius */
@@ -339,18 +324,6 @@
 				dfll_map0 {
 					trip = <&dfll_floor_trip0>;
 					cooling-device = <&dfll_floor 1 1>;
-				};
-				dfll_map1 {
-					trip = <&dfll_floor_trip1>;
-					cooling-device = <&dfll_floor 2 2>;
-				};
-				dfll_map2 {
-					trip = <&dfll_floor_trip2>;
-					cooling-device = <&dfll_floor 3 3>;
-				};
-				dfll_map3 {
-					trip = <&dfll_floor_trip3>;
-					cooling-device = <&dfll_floor 4 4>;
 				};
 				dfll_map5 {
 					trip = <&dfll_cap_trip0>;

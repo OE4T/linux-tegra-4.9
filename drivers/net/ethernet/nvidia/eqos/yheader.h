@@ -525,16 +525,6 @@
 /* Enabling perfect filter for L2. If disabled has filter will be used */
 #define ENABLE_PERFECT_L2_FILTER
 
-/* For handling differnet PHY interfaces */
-#define EQOS_GMII_MII	0x0
-#define EQOS_RGMII	0x1
-#define EQOS_SGMII	0x2
-#define EQOS_TBI		0x3
-#define EQOS_RMII	0x4
-#define EQOS_RTBI	0x5
-#define EQOS_SMII	0x6
-#define EQOS_REV_MII	0x7
-
 /* for EEE */
 #define EQOS_DEFAULT_LPI_LS_TIMER 0x3E8 /* 1000 in decimal */
 #define EQOS_DEFAULT_LPI_TWT_TIMER 0x0
@@ -1595,7 +1585,6 @@ void eqos_mmc_read(struct eqos_mmc_counters *mmc);
 
 int eqos_ptp_init(struct eqos_prv_data *pdata);
 void eqos_ptp_remove(struct eqos_prv_data *pdata);
-phy_interface_t eqos_get_phy_interface(struct eqos_prv_data *pdata);
 bool eqos_eee_init(struct eqos_prv_data *pdata);
 void eqos_handle_eee_interrupt(struct eqos_prv_data *pdata);
 void eqos_disable_eee_mode(struct eqos_prv_data *pdata);

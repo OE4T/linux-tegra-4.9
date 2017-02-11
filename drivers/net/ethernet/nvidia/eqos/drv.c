@@ -5742,40 +5742,6 @@ void eqos_mmc_read(struct eqos_mmc_counters *mmc)
 	pr_debug("<--eqos_mmc_read\n");
 }
 
-phy_interface_t eqos_get_phy_interface(struct eqos_prv_data *pdata)
-{
-	phy_interface_t ret = PHY_INTERFACE_MODE_MII;
-
-	pr_debug("-->eqos_get_phy_interface\n");
-
-	if (pdata->hw_feat.act_phy_sel == EQOS_GMII_MII) {
-		if (pdata->hw_feat.gmii_sel)
-			ret = PHY_INTERFACE_MODE_GMII;
-		else if (pdata->hw_feat.mii_sel)
-			ret = PHY_INTERFACE_MODE_MII;
-	} else if (pdata->hw_feat.act_phy_sel == EQOS_RGMII) {
-		ret = PHY_INTERFACE_MODE_RGMII;
-	} else if (pdata->hw_feat.act_phy_sel == EQOS_SGMII) {
-		ret = PHY_INTERFACE_MODE_SGMII;
-	} else if (pdata->hw_feat.act_phy_sel == EQOS_TBI) {
-		ret = PHY_INTERFACE_MODE_TBI;
-	} else if (pdata->hw_feat.act_phy_sel == EQOS_RMII) {
-		ret = PHY_INTERFACE_MODE_RMII;
-	} else if (pdata->hw_feat.act_phy_sel == EQOS_RTBI) {
-		ret = PHY_INTERFACE_MODE_RTBI;
-	} else if (pdata->hw_feat.act_phy_sel == EQOS_SMII) {
-		ret = PHY_INTERFACE_MODE_SMII;
-	} else if (pdata->hw_feat.act_phy_sel == EQOS_REV_MII) {
-	} else {
-		pr_err("Missing interface support between" "PHY and MAC\n\n");
-		ret = PHY_INTERFACE_MODE_NA;
-	}
-
-	pr_debug("<--eqos_get_phy_interface\n");
-
-	return ret;
-}
-
 static const struct net_device_ops eqos_netdev_ops = {
 	.ndo_open = eqos_open,
 	.ndo_stop = eqos_close,

@@ -17,4 +17,14 @@
 / {
 	compatible = "nvidia,tegra210b01", "nvidia,tegra210";
 
+	se_elp: se_elp@70420000 {
+		compatible = "nvidia,tegra210b01-se-elp";
+		reg = <0x0 0x70420000 0x0 0x10000>;
+		interrupts = <0 191 0x04>;
+		clocks = <&tegra_car TEGRA210_CLK_SE_CBUS>;
+		clock-names = "se";
+		pka1-rsa-priority = <300>;
+		status = "disabled";
+	};
+
 };

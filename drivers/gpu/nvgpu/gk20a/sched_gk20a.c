@@ -377,21 +377,28 @@ int gk20a_sched_dev_open(struct inode *inode, struct file *filp)
 {
 	struct gk20a *g = container_of(inode->i_cdev,
 				struct gk20a, sched.cdev);
-	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
-	int err;
+	struct gk20a_sched_ctrl *sched;
+	int err = 0;
+
+	g = gk20a_get(g);
+	if (!g)
+		return -ENODEV;
+	sched = &g->sched_ctrl;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "g=%p", g);
 
 	if (!sched->sw_ready) {
 		err = gk20a_busy(g->dev);
 		if (err)
-			return err;
+			goto free_ref;
 
 		gk20a_idle(g->dev);
 	}
 
-	if (!nvgpu_mutex_tryacquire(&sched->busy_lock))
-		return -EBUSY;
+	if (!nvgpu_mutex_tryacquire(&sched->busy_lock)) {
+		err = -EBUSY;
+		goto free_ref;
+	}
 
 	memcpy(sched->recent_tsg_bitmap, sched->active_tsg_bitmap,
 			sched->bitmap_size);
@@ -400,7 +407,10 @@ int gk20a_sched_dev_open(struct inode *inode, struct file *filp)
 	filp->private_data = sched;
 	gk20a_dbg(gpu_dbg_sched, "filp=%p sched=%p", filp, sched);
 
-	return 0;
+free_ref:
+	if (err)
+		gk20a_put(g);
+	return err;
 }
 
 long gk20a_sched_dev_ioctl(struct file *filp, unsigned int cmd,
@@ -511,6 +521,7 @@ int gk20a_sched_dev_release(struct inode *inode, struct file *filp)
 	nvgpu_mutex_release(&sched->control_lock);
 
 	nvgpu_mutex_release(&sched->busy_lock);
+	gk20a_put(g);
 	return 0;
 }
 

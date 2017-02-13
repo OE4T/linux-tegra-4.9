@@ -481,7 +481,8 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 
 	enable_irq(g->irq_stall);
 
-	kfree(g);
+	gk20a_get_platform(&pdev->dev)->g = NULL;
+	gk20a_put(g);
 }
 
 static struct pci_driver nvgpu_pci_driver = {

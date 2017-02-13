@@ -172,6 +172,8 @@ int nvgpu_probe(struct gk20a *g,
 
 	g->remove_support = gk20a_remove_support;
 
+	kref_init(&g->refcount);
+
 	return 0;
 }
 

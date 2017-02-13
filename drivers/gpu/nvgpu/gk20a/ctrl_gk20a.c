@@ -55,10 +55,15 @@ int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 
 	g = container_of(inode->i_cdev,
 			 struct gk20a, ctrl.cdev);
+	g = gk20a_get(g);
+	if (!g)
+		return -ENODEV;
 
 	priv = kzalloc(sizeof(struct gk20a_ctrl_priv), GFP_KERNEL);
-	if (!priv)
-		return -ENOMEM;
+	if (!priv) {
+		err = -ENOMEM;
+		goto free_ref;
+	}
 	filp->private_data = priv;
 	priv->dev = g->dev;
 	/*
@@ -71,16 +76,16 @@ int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 	if (!g->gr.sw_ready) {
 		err = gk20a_busy(g->dev);
 		if (err)
-			return err;
+			goto free_ref;
 		gk20a_idle(g->dev);
 	}
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	err = nvgpu_clk_arb_init_session(g, &priv->clk_session);
-	if (err)
-		return err;
 #endif
-
+free_ref:
+	if (err)
+		gk20a_put(g);
 	return err;
 }
 int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)
@@ -95,6 +100,7 @@ int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)
 		nvgpu_clk_arb_release_session(g, priv->clk_session);
 #endif
 
+	gk20a_put(g);
 	kfree(priv);
 
 	return 0;

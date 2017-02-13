@@ -259,15 +259,23 @@ static int gk20a_tsg_event_id_enable(struct tsg_gk20a *tsg,
 	struct file *file;
 	char *name;
 	struct gk20a_event_id_data *event_id_data;
+	struct gk20a *g;
+
+	g = gk20a_get(tsg->g);
+	if (!g)
+		return -ENODEV;
 
 	err = gk20a_tsg_get_event_data_from_id(tsg,
 				event_id, &event_id_data);
-	if (err == 0) /* We already have event enabled */
-		return -EINVAL;
+	if (err == 0) {
+		/* We already have event enabled */
+		err = -EINVAL;
+		goto free_ref;
+	}
 
 	err = get_unused_fd_flags(O_RDWR);
 	if (err < 0)
-		return err;
+		goto free_ref;
 	local_fd = err;
 
 	name = kasprintf(GFP_KERNEL, "nvgpu-event%d-fd%d",
@@ -286,7 +294,7 @@ static int gk20a_tsg_event_id_enable(struct tsg_gk20a *tsg,
 		err = -ENOMEM;
 		goto clean_up_file;
 	}
-	event_id_data->g = tsg->g;
+	event_id_data->g = g;
 	event_id_data->id = tsg->tsgid;
 	event_id_data->is_tsg = true;
 	event_id_data->event_id = event_id;
@@ -315,6 +323,8 @@ clean_up_file:
 	fput(file);
 clean_up:
 	put_unused_fd(local_fd);
+free_ref:
+	gk20a_put(g);
 	return err;
 }
 
@@ -410,18 +420,25 @@ int gk20a_tsg_open(struct gk20a *g, struct file *filp)
 	struct device *dev;
 	int err;
 
+	g = gk20a_get(g);
+	if (!g)
+		return -ENODEV;
+
 	dev  = dev_from_gk20a(g);
 
 	gk20a_dbg(gpu_dbg_fn, "tsg: %s", dev_name(dev));
 
 	priv = kmalloc(sizeof(*priv), GFP_KERNEL);
-	if (!priv)
-		return -ENOMEM;
+	if (!priv) {
+		err = -ENOMEM;
+		goto free_ref;
+	}
 
 	tsg = acquire_unused_tsg(&g->fifo);
 	if (!tsg) {
 		kfree(priv);
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto free_ref;
 	}
 
 	tsg->g = g;
@@ -458,6 +475,8 @@ int gk20a_tsg_open(struct gk20a *g, struct file *filp)
 
 clean_up:
 	kref_put(&tsg->refcount, gk20a_tsg_release);
+free_ref:
+	gk20a_put(g);
 	return err;
 }
 
@@ -505,16 +524,13 @@ void gk20a_tsg_release(struct kref *ref)
 	tsg->runlist_id = ~0;
 
 	gk20a_dbg(gpu_dbg_fn, "tsg released %d\n", tsg->tsgid);
+	gk20a_put(g);
 }
 
 int gk20a_tsg_dev_release(struct inode *inode, struct file *filp)
 {
 	struct tsg_private *priv = filp->private_data;
 	struct tsg_gk20a *tsg = priv->tsg;
-	struct gk20a *g = priv->g;
-
-	if (g->driver_is_dying)
-		return -ENODEV;
 
 	kref_put(&tsg->refcount, gk20a_tsg_release);
 	kfree(priv);

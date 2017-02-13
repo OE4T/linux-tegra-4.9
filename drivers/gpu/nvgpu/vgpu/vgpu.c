@@ -638,6 +638,8 @@ int vgpu_probe(struct platform_device *pdev)
 	vgpu_create_sysfs(dev);
 	gk20a_init_gr(gk20a);
 
+	kref_init(&gk20a->refcount);
+
 	return 0;
 }
 
@@ -656,6 +658,7 @@ int vgpu_remove(struct platform_device *pdev)
 	gk20a_user_deinit(dev, &nvgpu_class);
 	vgpu_remove_sysfs(dev);
 	gk20a_get_platform(dev)->g = NULL;
-	kfree(g);
+	gk20a_put(g);
+
 	return 0;
 }

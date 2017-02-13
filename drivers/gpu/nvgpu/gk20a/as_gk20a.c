@@ -1,7 +1,7 @@
 /*
  * GK20A Address Spaces
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -46,6 +46,9 @@ int gk20a_as_alloc_share(struct gk20a_as *as,
 	int err = 0;
 
 	gk20a_dbg_fn("");
+	g = gk20a_get(g);
+	if (!g)
+		return -ENODEV;
 
 	*out = NULL;
 	as_share = kzalloc(sizeof(*as_share), GFP_KERNEL);
@@ -85,15 +88,19 @@ int gk20a_as_release_share(struct gk20a_as_share *as_share)
 	gk20a_dbg_fn("");
 
 	err = gk20a_busy(g->dev);
+
 	if (err)
-		return err;
+		goto release_fail;
 
 	err = gk20a_vm_release_share(as_share);
 
 	gk20a_idle(g->dev);
 
+release_fail:
 	release_as_share_id(as_share->as, as_share->id);
+	gk20a_put(g);
 	kfree(as_share);
+
 	return err;
 }
 

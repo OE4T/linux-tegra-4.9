@@ -857,6 +857,7 @@ struct gk20a {
 	atomic_t nonstall_ops;
 	struct work_struct nonstall_fn_work;
 	struct workqueue_struct *nonstall_work_queue;
+	struct kref refcount;
 
 	struct resource *reg_mem;
 	void __iomem *regs;
@@ -1467,6 +1468,9 @@ static inline void gk20a_channel_trace_sched_param(
 }
 
 void nvgpu_wait_for_deferred_interrupts(struct gk20a *g);
+
+struct gk20a * __must_check gk20a_get(struct gk20a *g);
+void gk20a_put(struct gk20a *g);
 
 #ifdef CONFIG_DEBUG_FS
 int gk20a_railgating_debugfs_init(struct device *dev);

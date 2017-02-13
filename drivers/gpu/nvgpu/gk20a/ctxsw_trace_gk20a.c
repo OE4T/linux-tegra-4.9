@@ -276,14 +276,20 @@ int gk20a_ctxsw_dev_open(struct inode *inode, struct file *filp)
 	const int vmid = 0;
 
 	g = container_of(inode->i_cdev, struct gk20a, ctxsw.cdev);
+	g = gk20a_get(g);
+	if (!g)
+		return -ENODEV;
+
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "g=%p", g);
 
-	if (!capable(CAP_SYS_ADMIN))
-		return -EPERM;
+	if (!capable(CAP_SYS_ADMIN)) {
+		err = -EPERM;
+		goto free_ref;
+	}
 
 	err = gk20a_busy(g->dev);
 	if (err)
-		return err;
+		goto free_ref;
 
 	trace = g->ctxsw_trace;
 	if (!trace) {
@@ -325,7 +331,9 @@ done:
 
 idle:
 	gk20a_idle(g->dev);
-
+free_ref:
+	if (err)
+		gk20a_put(g);
 	return err;
 }
 
@@ -346,7 +354,7 @@ int gk20a_ctxsw_dev_release(struct inode *inode, struct file *filp)
 		dev->g->ops.fecs_trace.free_user_buffer(dev->g);
 		dev->hdr = NULL;
 	}
-
+	gk20a_put(g);
 	return 0;
 }
 

@@ -1712,7 +1712,7 @@ static int __exit gk20a_remove(struct platform_device *pdev)
 		platform->remove(dev);
 
 	set_gk20a(pdev, NULL);
-	kfree(g);
+	gk20a_put(g);
 
 	gk20a_dbg_fn("removed");
 
@@ -2272,6 +2272,68 @@ int gk20a_read_ptimer(struct gk20a *g, u64 *value)
 	/* too many iterations, bail out */
 	gk20a_err(dev_from_gk20a(g), "failed to read ptimer");
 	return -EBUSY;
+}
+
+/*
+ * Free the gk20a struct.
+ */
+static void gk20a_free_cb(struct kref *refcount)
+{
+	struct gk20a *g = container_of(refcount,
+		struct gk20a, refcount);
+
+	gk20a_dbg(gpu_dbg_shutdown, "Freeing GK20A struct!");
+	kfree(g);
+}
+
+/**
+ * gk20a_get() - Increment ref count on driver
+ *
+ * @g The driver to increment
+ * This will fail if the driver is in the process of being released. In that
+ * case it will return NULL. Otherwise a pointer to the driver passed in will
+ * be returned.
+ */
+struct gk20a * __must_check gk20a_get(struct gk20a *g)
+{
+	int success;
+
+	/*
+	 * Handle the possibility we are still freeing the gk20a struct while
+	 * gk20a_get() is called. Unlikely but plausible race condition. Ideally
+	 * the code will never be in such a situation that this race is
+	 * possible.
+	 */
+	success = kref_get_unless_zero(&g->refcount);
+
+	gk20a_dbg(gpu_dbg_shutdown, "GET: refs currently %d %s",
+		atomic_read(&g->refcount.refcount), success ? "" : "(FAILED)");
+
+	return success ? g : NULL;
+}
+
+/**
+ * gk20a_put() - Decrement ref count on driver
+ *
+ * @g - The driver to decrement
+ *
+ * Decrement the driver ref-count. If neccesary also free the underlying driver
+ * memory
+ */
+void gk20a_put(struct gk20a *g)
+{
+	/*
+	 * Note - this is racy, two instances of this could run before the
+	 * actual kref_put(0 runs, you could see something like:
+	 *
+	 *  ... PUT: refs currently 2
+	 *  ... PUT: refs currently 2
+	 *  ... Freeing GK20A struct!
+	 */
+	gk20a_dbg(gpu_dbg_shutdown, "PUT: refs currently %d",
+		atomic_read(&g->refcount.refcount));
+
+	kref_put(&g->refcount, gk20a_free_cb);
 }
 
 MODULE_LICENSE("GPL v2");

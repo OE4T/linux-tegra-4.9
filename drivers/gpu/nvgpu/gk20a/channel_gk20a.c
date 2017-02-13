@@ -1234,7 +1234,7 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 	err = gk20a_busy(g->dev);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g), "failed to release a channel!");
-		return err;
+		goto channel_release;
 	}
 
 	trace_gk20a_channel_release(dev_name(g->dev));
@@ -1242,6 +1242,8 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 	gk20a_channel_close(ch);
 	gk20a_idle(g->dev);
 
+channel_release:
+	gk20a_put(g);
 	kfree(filp->private_data);
 	filp->private_data = NULL;
 	return 0;
@@ -1382,11 +1384,17 @@ static int __gk20a_channel_open(struct gk20a *g, struct file *filp, s32 runlist_
 
 	gk20a_dbg_fn("");
 
+	g = gk20a_get(g);
+	if (!g)
+		return -ENODEV;
+
 	trace_gk20a_channel_open(dev_name(g->dev));
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-	if (!priv)
-		return -ENOMEM;
+	if (!priv) {
+		err = -ENOMEM;
+		goto free_ref;
+	}
 
 	err = gk20a_busy(g->dev);
 	if (err) {
@@ -1414,6 +1422,8 @@ static int __gk20a_channel_open(struct gk20a *g, struct file *filp, s32 runlist_
 
 fail_busy:
 	kfree(priv);
+free_ref:
+	gk20a_put(g);
 	return err;
 }
 
@@ -3509,6 +3519,7 @@ static int gk20a_event_id_release(struct inode *inode, struct file *filp)
 	}
 
 	nvgpu_mutex_destroy(&event_id_data->lock);
+	gk20a_put(g);
 	kfree(event_id_data);
 	filp->private_data = NULL;
 
@@ -3573,20 +3584,28 @@ static int gk20a_channel_event_id_enable(struct channel_gk20a *ch,
 					 int event_id,
 					 int *fd)
 {
+	struct gk20a *g;
 	int err = 0;
 	int local_fd;
 	struct file *file;
 	char *name;
 	struct gk20a_event_id_data *event_id_data;
 
+	g = gk20a_get(ch->g);
+	if (!g)
+		return -ENODEV;
+
 	err = gk20a_channel_get_event_data_from_id(ch,
 				event_id, &event_id_data);
-	if (err == 0) /* We already have event enabled */
-		return -EINVAL;
+	if (err == 0) {
+		/* We already have event enabled */
+		err = -EINVAL;
+		goto free_ref;
+	}
 
 	err = get_unused_fd_flags(O_RDWR);
 	if (err < 0)
-		return err;
+		goto free_ref;
 	local_fd = err;
 
 	name = kasprintf(GFP_KERNEL, "nvgpu-event%d-fd%d",
@@ -3605,7 +3624,7 @@ static int gk20a_channel_event_id_enable(struct channel_gk20a *ch,
 		err = -ENOMEM;
 		goto clean_up_file;
 	}
-	event_id_data->g = ch->g;
+	event_id_data->g = g;
 	event_id_data->id = ch->hw_chid;
 	event_id_data->is_tsg = false;
 	event_id_data->event_id = event_id;
@@ -3633,6 +3652,8 @@ clean_up_file:
 	fput(file);
 clean_up:
 	put_unused_fd(local_fd);
+free_ref:
+	gk20a_put(g);
 	return err;
 }
 

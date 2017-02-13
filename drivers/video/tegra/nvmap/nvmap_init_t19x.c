@@ -172,7 +172,7 @@ static struct reserved_mem_ops gosmem_rmem_ops = {
 	.device_release = nvmap_gosmem_device_release,
 };
 
-int __init nvmap_gosmem_setup(struct reserved_mem *rmem)
+static int __init nvmap_gosmem_setup(struct reserved_mem *rmem)
 {
 	int ret;
 

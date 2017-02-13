@@ -3246,7 +3246,7 @@ static int gk20a_init_pmu_setup_hw1(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	nvgpu_mutex_acquire(&pmu->isr_mutex);
-	pmu_reset(pmu);
+	g->ops.pmu.reset(g);
 	pmu->isr_enabled = true;
 	nvgpu_mutex_release(&pmu->isr_mutex);
 

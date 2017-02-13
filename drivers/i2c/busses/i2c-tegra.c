@@ -48,6 +48,7 @@
 
 #define I2C_CNFG				0x000
 #define I2C_CNFG_DEBOUNCE_CNT_SHIFT		12
+#define I2C_CNFG_DEBOUNCE_MASK			0x7000
 #define I2C_CNFG_PACKET_MODE_EN			BIT(10)
 #define I2C_CNFG_NEW_MASTER_FSM			BIT(11)
 #define I2C_CNFG_MULTI_MASTER_MODE		BIT(17)
@@ -153,6 +154,11 @@
 #define I2C_TLOW_MASK                           0x3F
 #define I2C_THIGH_SHIFT                         8
 #define I2C_THIGH_MASK                          (0x3F << I2C_THIGH_SHIFT)
+
+#define I2C_HS_INTERFACE_TIMING			0x9c
+#define I2C_HS_TLOW_MASK			0x3F
+#define I2C_HS_THIGH_SHIFT                         8
+#define I2C_HS_THIGH_MASK			(0x3F << I2C_THIGH_SHIFT)
 
 #define I2C_DEBUG_CONTROL                       0x0A4
 #define I2C_MASTER_RESET_CONTROL		0x0A8
@@ -279,6 +285,8 @@ struct tegra_i2c_dev {
 	bool is_shutdown;
 	u32 low_clock_count;
 	u32 high_clock_count;
+	u32 hs_low_clock_count;
+	u32 hs_high_clock_count;
 	struct tegra_prod *prod_list;
 	int clk_divisor_hs_mode;
 	u16 hs_master_code;
@@ -837,7 +845,8 @@ static int tegra_i2c_set_clk_rate(struct tegra_i2c_dev *i2c_dev)
 
 	switch (i2c_dev->bus_clk_rate) {
 	case I2C_HS_MODE:
-		clk_multiplier = i2c_dev->hw->clk_multiplier_hs_mode;
+		clk_multiplier = (i2c_dev->hs_low_clock_count +
+				i2c_dev->hs_high_clock_count + 2);
 		clk_multiplier *= (i2c_dev->clk_divisor_hs_mode + 1);
 		break;
 	case I2C_FAST_MODE_PLUS:
@@ -894,6 +903,11 @@ static void tegra_i2c_get_clk_parameters(struct tegra_i2c_dev *i2c_dev)
 	val = i2c_readl(i2c_dev, I2C_INTERFACE_TIMING_0);
 	i2c_dev->low_clock_count = val & I2C_TLOW_MASK;
 	i2c_dev->high_clock_count = (val & I2C_THIGH_MASK) >> I2C_THIGH_SHIFT;
+
+	val = i2c_readl(i2c_dev, I2C_HS_INTERFACE_TIMING);
+	i2c_dev->hs_low_clock_count = val & I2C_HS_TLOW_MASK;
+	i2c_dev->hs_high_clock_count = ((val & I2C_HS_THIGH_MASK)
+		>> I2C_HS_THIGH_SHIFT);
 
 	val = i2c_readl(i2c_dev, I2C_CLK_DIVISOR);
 	i2c_dev->clk_divisor_hs_mode = val & I2C_CLK_DIVISOR_HS_MODE_MASK;
@@ -1804,6 +1818,45 @@ static int tegra_i2c_is_multi_pkt_supported(struct tegra_i2c_dev *i2c_dev,
 	return true;
 }
 
+static int tegra_i2c_change_clock_rate(struct tegra_i2c_dev *i2c_dev)
+{
+	u32 val, clk_divisor;
+	int ret;
+
+	val = i2c_readl(i2c_dev, I2C_CNFG);
+	val &= ~I2C_CNFG_DEBOUNCE_MASK;
+	if (i2c_dev->bus_clk_rate != I2C_HS_MODE)
+		val |= (0x2 << I2C_CNFG_DEBOUNCE_CNT_SHIFT);
+	i2c_writel(i2c_dev, val, I2C_CNFG);
+
+	if (i2c_dev->hw->has_config_load_reg) {
+		ret = tegra_i2c_wait_for_config_load(i2c_dev);
+		if (ret)
+			return ret;
+	}
+
+	if (i2c_dev->bus_clk_rate == I2C_HS_MODE) {
+		i2c_dev->clk_divisor_hs_mode = i2c_dev->hw->clk_divisor_hs_mode;
+	} else {
+		val = i2c_readl(i2c_dev, I2C_CLK_DIVISOR);
+		i2c_dev->clk_divisor_hs_mode = val &
+			I2C_CLK_DIVISOR_HS_MODE_MASK;
+	}
+
+	clk_divisor = i2c_dev->clk_divisor_hs_mode;
+	clk_divisor |= i2c_dev->clk_divisor_non_hs_mode <<
+					I2C_CLK_DIVISOR_STD_FAST_MODE_SHIFT;
+	i2c_writel(i2c_dev, clk_divisor, I2C_CLK_DIVISOR);
+
+	if (i2c_dev->prod_list)
+		tegra_i2c_config_prod_settings(i2c_dev);
+
+	tegra_i2c_get_clk_parameters(i2c_dev);
+	ret = tegra_i2c_set_clk_rate(i2c_dev);
+
+	return ret;
+}
+
 static int tegra_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 	int num)
 {
@@ -1830,7 +1883,7 @@ static int tegra_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 
 	if (adap->bus_clk_rate != i2c_dev->bus_clk_rate) {
 		i2c_dev->bus_clk_rate = adap->bus_clk_rate;
-		ret = tegra_i2c_set_clk_rate(i2c_dev);
+		ret = tegra_i2c_change_clock_rate(i2c_dev);
 		if (ret < 0)
 			return ret;
 	}

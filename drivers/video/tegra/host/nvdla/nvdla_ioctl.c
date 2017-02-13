@@ -378,12 +378,6 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 	task->buffers = buffers;
 	task->sp = &nvhost_get_host(pdev)->syncpt;
 
-	err = nvdla_val_task_submit_input(local_task);
-	if (err) {
-		nvdla_dbg_err(pdev, "Invalid input arguments");
-		goto fail_to_get_val_args;
-	}
-
 	task->num_prefences = local_task->num_prefences;
 	task->num_postfences = local_task->num_postfences;
 	task->num_in_task_status = local_task->num_input_task_status;
@@ -426,7 +420,6 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 
 fail_to_get_addr_list:
 fail_to_get_actions:
-fail_to_get_val_args:
 	return err;
 }
 
@@ -463,6 +456,14 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 		return -EINVAL;
 
 	nvdla_dbg_info(pdev, "num of tasks [%d]", num_tasks);
+
+	for (i = 0; i < num_tasks; i++) {
+		err = nvdla_val_task_submit_input(user_tasks + i);
+		if (err) {
+			nvdla_dbg_err(pdev, "Invalid input arguments");
+			goto fail_to_val_args;
+		}
+	}
 
 	/* IOCTL copy descriptors*/
 	if (copy_from_user(local_tasks, user_tasks,
@@ -518,6 +519,7 @@ fail_to_fill_task:
 	/*TODO: traverse list in reverse and delete jobs */
 fail_to_get_task_mem:
 fail_to_copy_task:
+fail_to_val_args:
 	return err;
 }
 

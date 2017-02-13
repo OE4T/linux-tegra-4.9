@@ -373,15 +373,15 @@ void tegra_channel_ring_buffer(struct tegra_channel *chan,
 	else
 		update_state_to_buffer(chan, state);
 
-	/* update time stamp of the buffer */
-	vb->timestamp.tv_sec = ts->tv_sec;
-	vb->timestamp.tv_usec = ts->tv_nsec / NSEC_PER_USEC;
-
 	/* Capture state is not GOOD, release all buffers and re-init state */
 	if (chan->capture_state != CAPTURE_GOOD) {
 		free_ring_buffers(chan, chan->num_buffers);
 		tegra_channel_init_ring_buffer(chan);
 		return;
+	} else {
+		/* update time stamp of the buffer */
+		vb->timestamp.tv_sec = ts->tv_sec;
+		vb->timestamp.tv_usec = ts->tv_nsec / NSEC_PER_USEC;
 	}
 
 	/* release buffer N at N+2 frame start event */

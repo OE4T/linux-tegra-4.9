@@ -463,6 +463,8 @@ static int tegra_csi_get_port_info(struct tegra_csi_channel *chan,
 		if (!chan_dt->name || of_node_cmp(chan_dt->name, "channel"))
 			continue;
 		ret = of_property_read_u32(chan_dt, "reg", &value);
+		if (ret < 0)
+			return -EINVAL;
 		if (value == index)
 			break;
 	}

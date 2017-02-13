@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra CSI Device Header
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -36,8 +36,7 @@ enum tegra_csi_port_num {
 	PORT_F = 5,
 };
 
-#define csi_port_is_valid(port) \
-	(port < PORT_A ? 0 : (port > PORT_F ? 0 : 1))
+#define csi_port_is_valid(port) (port > PORT_F ? 0 : 1)
 
 enum camera_gang_mode {
 	CAMERA_NO_GANG_MODE = 0,

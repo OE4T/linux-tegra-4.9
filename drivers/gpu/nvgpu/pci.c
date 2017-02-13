@@ -460,6 +460,10 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 	gk20a_wait_for_idle(&pdev->dev);
 	gk20a_dbg(gpu_dbg_shutdown, "Driver idle.\n");
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	nvgpu_clk_arb_cleanup_arbiter(g);
+#endif
+
 	gk20a_user_deinit(g->dev, &nvgpu_pci_class);
 	gk20a_dbg(gpu_dbg_shutdown, "User de-init done.\b");
 

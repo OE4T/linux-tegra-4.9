@@ -403,7 +403,8 @@ void nvgpu_clk_arb_schedule_alarm(struct gk20a *g, u32 alarm)
 	struct nvgpu_clk_arb *arb = g->clk_arb;
 
 	nvgpu_clk_arb_set_global_alarm(g, alarm);
-	queue_work(arb->update_work_queue, &arb->update_fn_work);
+	if (arb->update_work_queue)
+		queue_work(arb->update_work_queue, &arb->update_fn_work);
 }
 
 static void nvgpu_clk_arb_clear_global_alarm(struct gk20a *g, u32 alarm)
@@ -455,8 +456,30 @@ static void nvgpu_clk_arb_set_global_alarm(struct gk20a *g, u32 alarm)
 
 void nvgpu_clk_arb_cleanup_arbiter(struct gk20a *g)
 {
+	struct nvgpu_clk_arb *arb = g->clk_arb;
+	int index;
+
+	if (arb) {
+		cancel_work_sync(&arb->vf_table_fn_work);
+		destroy_workqueue(arb->vf_table_work_queue);
+		arb->vf_table_work_queue = NULL;
+
+		cancel_work_sync(&arb->update_fn_work);
+		destroy_workqueue(arb->update_work_queue);
+		arb->update_work_queue = NULL;
+
+		kfree(arb->gpc2clk_f_points);
+		kfree(arb->mclk_f_points);
+
+		for (index = 0; index < 2; index++) {
+			kfree(arb->vf_table_pool[index].gpc2clk_points);
+			kfree(arb->vf_table_pool[index].mclk_points);
+		}
+	}
+
 	nvgpu_mutex_destroy(&g->clk_arb->pstate_lock);
 	kfree(g->clk_arb);
+	g->clk_arb = NULL;
 }
 
 static int nvgpu_clk_arb_install_fd(struct gk20a *g,
@@ -575,9 +598,11 @@ static void nvgpu_clk_arb_free_session(struct kref *refcount)
 
 	gk20a_dbg_fn("");
 
-	nvgpu_spinlock_acquire(&arb->sessions_lock);
-	list_del_rcu(&session->link);
-	nvgpu_spinlock_release(&arb->sessions_lock);
+	if (arb) {
+		nvgpu_spinlock_acquire(&arb->sessions_lock);
+		list_del_rcu(&session->link);
+		nvgpu_spinlock_release(&arb->sessions_lock);
+	}
 
 	head = llist_del_all(&session->targets);
 	llist_for_each_entry_safe(dev, tmp, head, node) {
@@ -596,8 +621,8 @@ void nvgpu_clk_arb_release_session(struct gk20a *g,
 
 	session->zombie = true;
 	kref_put(&session->refcount, nvgpu_clk_arb_free_session);
-
-	queue_work(arb->update_work_queue, &arb->update_fn_work);
+	if (arb && arb->update_work_queue)
+		queue_work(arb->update_work_queue, &arb->update_fn_work);
 }
 
 int nvgpu_clk_arb_install_event_fd(struct gk20a *g,
@@ -964,8 +989,8 @@ exit_vf_table:
 	if (status < 0)
 		nvgpu_clk_arb_set_global_alarm(g,
 			EVENT(ALARM_VF_TABLE_UPDATE_FAILED));
-
-	queue_work(arb->update_work_queue, &arb->update_fn_work);
+	if (arb->update_work_queue)
+		queue_work(arb->update_work_queue, &arb->update_fn_work);
 
 	return status;
 }
@@ -973,8 +998,8 @@ exit_vf_table:
 void nvgpu_clk_arb_schedule_vf_table_update(struct gk20a *g)
 {
 	struct nvgpu_clk_arb *arb = g->clk_arb;
-
-	queue_work(arb->vf_table_work_queue, &arb->vf_table_fn_work);
+	if (arb->vf_table_work_queue)
+		queue_work(arb->vf_table_work_queue, &arb->vf_table_fn_work);
 }
 
 static void nvgpu_clk_arb_run_vf_table_cb(struct work_struct *work)
@@ -991,8 +1016,9 @@ static void nvgpu_clk_arb_run_vf_table_cb(struct work_struct *work)
 			"failed to cache VF table");
 		nvgpu_clk_arb_set_global_alarm(g,
 			EVENT(ALARM_VF_TABLE_UPDATE_FAILED));
-
-		queue_work(arb->update_work_queue, &arb->update_fn_work);
+		if (arb->update_work_queue)
+			queue_work(arb->update_work_queue,
+				&arb->update_fn_work);
 
 		return;
 	}
@@ -1490,8 +1516,8 @@ int nvgpu_clk_arb_commit_request_fd(struct gk20a *g,
 	}
 	kref_get(&dev->refcount);
 	llist_add(&dev->node, &session->targets);
-
-	queue_work(arb->update_work_queue, &arb->update_fn_work);
+	if (arb->update_work_queue)
+		queue_work(arb->update_work_queue, &arb->update_fn_work);
 
 fdput_fd:
 	fdput(fd);
@@ -1568,15 +1594,12 @@ static int nvgpu_clk_arb_release_completion_dev(struct inode *inode,
 {
 	struct nvgpu_clk_dev *dev = filp->private_data;
 	struct nvgpu_clk_session *session = dev->session;
-	struct nvgpu_clk_arb *arb;
 
-	arb = session->g->clk_arb;
 
 	gk20a_dbg_fn("");
 
 	kref_put(&session->refcount, nvgpu_clk_arb_free_session);
 	kref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
-
 	return 0;
 }
 
@@ -1591,15 +1614,17 @@ static int nvgpu_clk_arb_release_event_dev(struct inode *inode,
 
 	gk20a_dbg_fn("");
 
-	nvgpu_spinlock_acquire(&arb->users_lock);
-	list_del_rcu(&dev->link);
-	nvgpu_spinlock_release(&arb->users_lock);
+	if (arb) {
+		nvgpu_spinlock_acquire(&arb->users_lock);
+		list_del_rcu(&dev->link);
+		nvgpu_spinlock_release(&arb->users_lock);
+	}
 
 	synchronize_rcu();
 	kref_put(&session->refcount, nvgpu_clk_arb_free_session);
 
 	nvgpu_clk_notification_queue_free(&dev->queue);
-	kfree(dev);
+	kref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
 
 	return 0;
 }

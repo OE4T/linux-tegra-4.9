@@ -39,6 +39,7 @@
 
 struct gk20a_ctrl_priv {
 	struct device *dev;
+	struct gk20a *g;
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct nvgpu_clk_session *clk_session;
 #endif
@@ -58,35 +59,42 @@ int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 	priv = kzalloc(sizeof(struct gk20a_ctrl_priv), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
-
 	filp->private_data = priv;
 	priv->dev = g->dev;
+	/*
+	 * We dont close the arbiter fd's after driver teardown to support
+	 * GPU_LOST events, so we store g here, instead of dereferencing the
+	 * dev structure on teardown
+	 */
+	priv->g = g;
 
 	if (!g->gr.sw_ready) {
 		err = gk20a_busy(g->dev);
 		if (err)
 			return err;
-
 		gk20a_idle(g->dev);
 	}
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	err = nvgpu_clk_arb_init_session(g, &priv->clk_session);
+	if (err)
+		return err;
 #endif
+
 	return err;
 }
-
 int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)
 {
 	struct gk20a_ctrl_priv *priv = filp->private_data;
+	struct gk20a *g = priv->g;
 
 	gk20a_dbg_fn("");
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	if (priv->clk_session)
-		nvgpu_clk_arb_release_session(gk20a_from_dev(priv->dev),
-				priv->clk_session);
+		nvgpu_clk_arb_release_session(g, priv->clk_session);
 #endif
+
 	kfree(priv);
 
 	return 0;

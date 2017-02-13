@@ -2601,8 +2601,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			}
 		}
 
-		if (nr_user_data > 0)
-			kfree(flip_user_data);
+		kfree(flip_user_data);
 
 		if (dev_cpy_to_usr((void *)args.win, usr_win_size,
 					win, win_num) ||

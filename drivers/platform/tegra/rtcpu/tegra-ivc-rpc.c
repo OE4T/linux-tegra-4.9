@@ -411,8 +411,10 @@ int tegra_ivc_rpc_call(
 		/* Wait until IVC channel gets writable */
 		ret = wait_event_interruptible(rpc->ivc_wq,
 			tegra_ivc_can_write(&chan->ivc));
-		if (ret < 0)
-			return TEGRA_IVC_RPC_ERR_WRITE_FAILED;
+		if (ret < 0) {
+			ret = TEGRA_IVC_RPC_ERR_WRITE_FAILED;
+			goto exit;
+		}
 
 		/* Attempts to get a pointer to frame buffer */
 		mutex_lock(&chan->ivc_wr_lock);
@@ -474,6 +476,7 @@ int tegra_ivc_rpc_call(
 	} else
 		ret = tx_desc->ret_code;
 
+exit:
 	kmem_cache_free(tx_desc_cache, tx_desc);
 
 	return ret;

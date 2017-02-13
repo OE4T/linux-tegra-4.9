@@ -10,6 +10,7 @@
 #include <linux/scatterlist.h>
 #include <linux/kmemcheck.h>
 #include <linux/bug.h>
+#include <linux/dma-attrs.h>
 
 /**
  * List of possible attributes associated with a DMA mapping. The semantics

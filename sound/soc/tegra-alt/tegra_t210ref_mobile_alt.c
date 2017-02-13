@@ -1,7 +1,7 @@
 /*
  * tegra_t210ref_mobile.c - Tegra T210 Machine driver for mobile
  *
- * Copyright (c) 2013-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,18 +18,20 @@
 
 #include <linux/module.h>
 #include <linux/platform_device.h>
+#include <linux/of_platform.h>
+#include <linux/input.h>
 #include <linux/slab.h>
 #include <linux/gpio.h>
 #include <linux/of_gpio.h>
 #include <linux/i2c.h>
 #include <linux/regulator/consumer.h>
 #include <linux/delay.h>
-#include <linux/sysedp.h>
 #include <soc/tegra/pmc.h>
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif
 #include <linux/pm_runtime.h>
+#include <linux/version.h>
 #include <linux/platform_data/tegra_asoc_pdata.h>
 
 #include <sound/core.h>
@@ -37,7 +39,7 @@
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
-#include "../codecs/rt5639.h"
+#include "../codecs/rt5640.h"
 
 #include "tegra_asoc_utils_alt.h"
 #include "tegra_asoc_machine_alt.h"
@@ -67,7 +69,9 @@ struct tegra_t210ref {
 	struct regulator *spk_reg;
 	struct regulator *dmic_reg;
 	struct snd_soc_card *pcard;
+	int is_codec_dummy;
 	int rate_via_kcontrol;
+	int fmt_via_kcontrol;
 };
 
 static const int tegra_t210ref_srate_values[] = {
@@ -82,7 +86,7 @@ static const int tegra_t210ref_srate_values[] = {
 	32000,
 	88200,
 	96000,
-	176000,
+	176400,
 	192000,
 };
 
@@ -100,19 +104,36 @@ static struct switch_dev tegra_t210ref_headset_switch = {
 	.name = "h2w",
 };
 
+static int tegra_t210ref_startup(struct snd_pcm_substream *substream)
+{
+	return 0;
+}
+static void tegra_t210ref_shutdown(struct snd_pcm_substream *substream)
+{
+
+}
+
 static int tegra_t210ref_jack_notifier(struct notifier_block *self,
 			      unsigned long action, void *dev)
 {
 	struct snd_soc_jack *jack = dev;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
 	struct snd_soc_codec *codec = jack->codec;
 	struct snd_soc_card *card = codec->component.card;
+#else
+	struct snd_soc_card *card = jack->card;
+	struct snd_soc_codec *codec;
+#endif
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct tegra_asoc_platform_data *pdata = machine->pdata;
-	enum headset_state state = BIT_NO_HEADSET;
 	unsigned char status_jack = 0;
+	enum headset_state state = BIT_NO_HEADSET;
 	int idx = 0;
 
-	idx = tegra_machine_get_codec_dai_link_idx("rt5639-playback");
+	if (machine->is_codec_dummy)
+		return NOTIFY_OK;
+
+	idx = tegra_machine_get_codec_dai_link_idx("rt5640-playback");
 	/* check if idx has valid number */
 	if (idx == -EINVAL)
 		return idx;
@@ -126,35 +147,32 @@ static int tegra_t210ref_jack_notifier(struct notifier_block *self,
 				gpio_direction_output(
 				pdata->gpio_ext_mic_en, 0);
 
-			status_jack = rt5639_headset_detect(codec, 1);
+			status_jack = rt5640_headset_detect(codec, jack, 1);
 
-			machine->jack_status &= ~SND_JACK_HEADPHONE;
-			machine->jack_status &= ~SND_JACK_MICROPHONE;
-			machine->jack_status &= ~SND_JACK_HEADSET;
+			jack->status &= ~SND_JACK_HEADPHONE;
+			jack->status &= ~SND_JACK_MICROPHONE;
+			jack->status &= ~SND_JACK_HEADSET;
 
-			if (status_jack == RT5639_HEADPHO_DET)
-				machine->jack_status |=
-				SND_JACK_HEADPHONE;
-			else if (status_jack == RT5639_HEADSET_DET) {
-					machine->jack_status |=
-							SND_JACK_HEADPHONE;
-					machine->jack_status |=
-							SND_JACK_MICROPHONE;
+			if (status_jack == RT5640_HEADPHO_DET) {
+				jack->status |= SND_JACK_HEADPHONE;
+			} else if (status_jack == RT5640_HEADSET_DET) {
+				jack->status |= SND_JACK_HEADPHONE;
+				jack->status |= SND_JACK_MICROPHONE;
 			}
-		} else {
-			/* Disable ext mic; enable signal is active-low */
+		}
+	} else {
+			/* Disable ext mic; enable signal is active-low*/
 			if (gpio_is_valid(pdata->gpio_ext_mic_en))
 				gpio_direction_output(
 				pdata->gpio_ext_mic_en, 1);
 
-			rt5639_headset_detect(codec, 0);
+			rt5640_headset_detect(codec, jack, 0);
 
-			machine->jack_status &= ~SND_JACK_HEADPHONE;
-			machine->jack_status &= ~SND_JACK_MICROPHONE;
-		}
+			jack->status &= ~SND_JACK_HEADPHONE;
+			jack->status &= ~SND_JACK_MICROPHONE;
 	}
 
-	switch (machine->jack_status) {
+	switch (jack->status) {
 	case SND_JACK_HEADPHONE:
 		state = BIT_HEADSET_NO_MIC;
 		break;
@@ -167,8 +185,8 @@ static int tegra_t210ref_jack_notifier(struct notifier_block *self,
 		state = BIT_NO_HEADSET;
 	}
 
+	dev_dbg(card->dev, "switch state to %x\n", state);
 	switch_set_state(&tegra_t210ref_headset_switch, state);
-
 	return NOTIFY_OK;
 }
 
@@ -197,17 +215,22 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 
 	codec_rate = tegra_t210ref_srate_values[machine->rate_via_kcontrol];
 	clk_rate = (machine->rate_via_kcontrol) ? codec_rate : rate;
+	/* aud_mclk, 256 times the sample rate */
+	clk_out_rate = clk_rate << 8;
 
 	switch (clk_rate) {
 	case 11025:
+		mclk = 22579200;
+		break;
 	case 22050:
 	case 44100:
 	case 88200:
-	case 176000:
-		clk_out_rate = 11289600; /* Codec rate */
-		mclk = 11289600 * 4; /* PLL_A rate */
+	case 176400:
+		mclk = 45158400;
 		break;
 	case 8000:
+		mclk = 24576000;
+		break;
 	case 16000:
 	case 32000:
 	case 48000:
@@ -215,8 +238,7 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	case 96000:
 	case 192000:
 	default:
-		clk_out_rate = 12288000;
-		mclk = 12288000 * 3;
+		mclk = 49152000;
 		break;
 	}
 
@@ -238,23 +260,44 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 		return err;
 	}
 
-	idx = tegra_machine_get_codec_dai_link_idx("rt5639-playback");
+	/* update dai link hw_params for non pcm links */
+	for (idx = 0; idx < TEGRA210_XBAR_DAI_LINKS; idx++) {
+		if (card->rtd[idx].dai_link->params) {
+			dai_params =
+			  (struct snd_soc_pcm_stream *)
+			  card->rtd[idx].dai_link->params;
+			dai_params->rate_min = rate;
+			dai_params->channels_min = channels;
+			dai_params->formats = 1ULL <<
+				((machine->fmt_via_kcontrol == 2) ?
+				SNDRV_PCM_FORMAT_S32_LE :
+				SNDRV_PCM_FORMAT_S16_LE);
+		}
+	}
+
+	idx = tegra_machine_get_codec_dai_link_idx("rt5640-playback");
 	/* check if idx has valid number */
 	if (idx != -EINVAL) {
 		dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
-		err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
-		RT5639_SCLK_S_MCLK, clk_out_rate, SND_SOC_CLOCK_IN);
-		if (err < 0) {
-			dev_err(card->dev, "codec_dai clock not set\n");
-			return err;
+
+		if (!machine->is_codec_dummy) {
+			err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
+			RT5640_SCLK_S_MCLK, clk_out_rate, SND_SOC_CLOCK_IN);
+			if (err < 0) {
+				dev_err(card->dev, "codec_dai clock not set\n");
+				return err;
+			}
 		}
 
-		/* update link_param to update hw_param for DAPM */
+		dai_params->formats = 1ULL <<
+			((machine->fmt_via_kcontrol == 2) ?
+			SNDRV_PCM_FORMAT_S32_LE :
+			SNDRV_PCM_FORMAT_S16_LE);
+
 		dai_params->rate_min = (machine->rate_via_kcontrol) ?
 			codec_rate : rate;
 		dai_params->channels_min = channels;
-		dai_params->formats = formats;
 
 		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
 		tegra_machine_get_bclk_ratio(&card->rtd[idx]));
@@ -331,15 +374,7 @@ static int tegra_t210ref_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static int tegra_t210ref_startup(struct snd_pcm_substream *substream)
-{
-	return 0;
-}
-static void tegra_t210ref_shutdown(struct snd_pcm_substream *substream)
-{
-	return;
-}
-
+#if defined(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
 static int tegra_t210ref_compr_set_params(struct snd_compr_stream *cstream)
 {
 	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
@@ -370,12 +405,10 @@ static int tegra_t210ref_compr_set_params(struct snd_compr_stream *cstream)
 
 	return 0;
 }
+#endif
 
 static int tegra_t210ref_init(struct snd_soc_pcm_runtime *rtd)
 {
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	struct snd_soc_codec *codec = codec_dai->codec;
-	struct snd_soc_dapm_context *dapm = &codec->dapm;
 	struct snd_soc_card *card = rtd->card;
 	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct tegra_asoc_platform_data *pdata = machine->pdata;
@@ -383,6 +416,10 @@ static int tegra_t210ref_init(struct snd_soc_pcm_runtime *rtd)
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	unsigned int srate;
 	int err;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+#endif
 
 	srate = dai_params->rate_min;
 
@@ -393,27 +430,41 @@ static int tegra_t210ref_init(struct snd_soc_pcm_runtime *rtd)
 		return err;
 	}
 
-	if (gpio_is_valid(pdata->gpio_hp_det)) {
-		tegra_t210ref_hp_jack_gpio.gpio = pdata->gpio_hp_det;
-		tegra_t210ref_hp_jack_gpio.invert =
-			!pdata->gpio_hp_det_active_high;
-		snd_soc_jack_new(codec, "Headphone Jack", SND_JACK_HEADPHONE,
-				&tegra_t210ref_hp_jack);
-#ifndef CONFIG_SWITCH
-		snd_soc_jack_add_pins(&tegra_t210ref_hp_jack,
-					ARRAY_SIZE(tegra_t210ref_hp_jack_pins),
-					tegra_t210ref_hp_jack_pins);
+	tegra_t210ref_hp_jack_gpio.gpio = pdata->gpio_hp_det;
+	tegra_t210ref_hp_jack_gpio.invert =
+		!pdata->gpio_hp_det_active_high;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
+	snd_soc_jack_new(codec, "Headphone Jack", SND_JACK_HEADPHONE,
+		&tegra_t210ref_hp_jack);
 #else
-		snd_soc_jack_notifier_register(&tegra_t210ref_hp_jack,
-					&tegra_t210ref_jack_detect_nb);
+	err = snd_soc_card_jack_new(card, "Headphone Jack", SND_JACK_HEADPHONE,
+				    &tegra_t210ref_hp_jack, NULL, 0);
+	if (err) {
+		dev_err(card->dev, "Headset Jack creation failed %d\n", err);
+		return err;
+	}
 #endif
+
+#ifndef CONFIG_SWITCH
+	snd_soc_jack_add_pins(&tegra_t210ref_hp_jack,
+				ARRAY_SIZE(tegra_t210ref_hp_jack_pins),
+				tegra_t210ref_hp_jack_pins);
+#else
+	snd_soc_jack_notifier_register(&tegra_t210ref_hp_jack,
+				&tegra_t210ref_jack_detect_nb);
+#endif
+	if (gpio_is_valid(pdata->gpio_hp_det)) {
+		dev_dbg(card->dev, "associate the gpio to jack\n");
 		snd_soc_jack_add_gpios(&tegra_t210ref_hp_jack,
-					1,
-					&tegra_t210ref_hp_jack_gpio);
-		machine->gpio_requested |= GPIO_HP_DET;
+					1, &tegra_t210ref_hp_jack_gpio);
 	}
 
-	snd_soc_dapm_sync(dapm);
+	snd_jack_set_key(tegra_t210ref_hp_jack.jack,
+		SND_JACK_BTN_1, KEY_MEDIA);
+	/* FIXME: map other button events too */
+
+	snd_soc_dapm_sync(&card->dapm);
 
 	return 0;
 }
@@ -432,11 +483,11 @@ static int tegra_t210ref_sfc_init(struct snd_soc_pcm_runtime *rtd)
 	err = snd_soc_dai_set_sysclk(codec_dai, 0, in_srate,
 					SND_SOC_CLOCK_IN);
 
-	return 0;
+	return err;
 }
 
 
-static int tegra_rt5639_event_int_spk(struct snd_soc_dapm_widget *w,
+static int tegra_rt5640_event_int_spk(struct snd_soc_dapm_widget *w,
 					struct snd_kcontrol *k, int event)
 {
 	struct snd_soc_dapm_context *dapm = w->dapm;
@@ -461,7 +512,7 @@ static int tegra_rt5639_event_int_spk(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
-static int tegra_rt5639_event_hp(struct snd_soc_dapm_widget *w,
+static int tegra_rt5640_event_hp(struct snd_soc_dapm_widget *w,
 					struct snd_kcontrol *k, int event)
 {
 	struct snd_soc_dapm_context *dapm = w->dapm;
@@ -474,11 +525,10 @@ static int tegra_rt5639_event_hp(struct snd_soc_dapm_widget *w,
 
 	gpio_set_value_cansleep(pdata->gpio_hp_mute,
 				!SND_SOC_DAPM_EVENT_ON(event));
-
 	return 0;
 }
 
-static int tegra_rt5639_event_int_mic(struct snd_soc_dapm_widget *w,
+static int tegra_rt5640_event_int_mic(struct snd_soc_dapm_widget *w,
 					struct snd_kcontrol *k, int event)
 {
 	struct snd_soc_dapm_context *dapm = w->dapm;
@@ -503,7 +553,7 @@ static int tegra_rt5639_event_int_mic(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
-static int tegra_rt5639_event_ext_mic(struct snd_soc_dapm_widget *w,
+static int tegra_rt5640_event_ext_mic(struct snd_soc_dapm_widget *w,
 					struct snd_kcontrol *k, int event)
 {
 	struct snd_soc_dapm_context *dapm = w->dapm;
@@ -526,18 +576,22 @@ static struct snd_soc_ops tegra_t210ref_ops = {
 	.shutdown = tegra_t210ref_shutdown,
 };
 
+#if defined(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
 static struct snd_soc_compr_ops tegra_t210ref_compr_ops = {
 	.set_params = tegra_t210ref_compr_set_params,
 };
+#endif
 
 static const struct snd_soc_dapm_widget tegra_t210ref_dapm_widgets[] = {
-	SND_SOC_DAPM_HP("x Headphone Jack", tegra_rt5639_event_hp),
-	SND_SOC_DAPM_SPK("x Int Spk", tegra_rt5639_event_int_spk),
+	SND_SOC_DAPM_HP("x Headphone Jack", tegra_rt5640_event_hp),
+	SND_SOC_DAPM_SPK("x Int Spk", tegra_rt5640_event_int_spk),
+	SND_SOC_DAPM_HP("x Headphone", NULL),
 	SND_SOC_DAPM_HP("y Headphone", NULL),
 	SND_SOC_DAPM_HP("z Headphone", NULL),
 	SND_SOC_DAPM_HP("s Headphone", NULL),
-	SND_SOC_DAPM_MIC("x Int Mic", tegra_rt5639_event_int_mic),
-	SND_SOC_DAPM_MIC("x Mic Jack", tegra_rt5639_event_ext_mic),
+	SND_SOC_DAPM_MIC("x Int Mic", tegra_rt5640_event_int_mic),
+	SND_SOC_DAPM_MIC("x Mic Jack", tegra_rt5640_event_ext_mic),
+	SND_SOC_DAPM_MIC("x Mic", NULL),
 	SND_SOC_DAPM_MIC("y Mic", NULL),
 	SND_SOC_DAPM_MIC("z Mic", NULL),
 	SND_SOC_DAPM_MIC("s Mic", NULL),
@@ -640,9 +694,42 @@ static int tegra_t210ref_codec_put_rate(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static const char * const tegra_t210ref_format_text[] = {
+	"None",
+	"16",
+	"32",
+};
+
+static int tegra_t210ref_codec_get_format(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
+
+	ucontrol->value.integer.value[0] = machine->fmt_via_kcontrol;
+
+	return 0;
+}
+
+static int tegra_t210ref_codec_put_format(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
+
+	/* set the format control flag */
+	machine->fmt_via_kcontrol = ucontrol->value.integer.value[0];
+
+	return 0;
+}
+
 static const struct soc_enum tegra_t210ref_codec_rate =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra_t210ref_srate_text),
 		tegra_t210ref_srate_text);
+
+static const struct soc_enum tegra_t210ref_codec_format =
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra_t210ref_format_text),
+		tegra_t210ref_format_text);
 
 static const struct snd_kcontrol_new tegra_t210ref_controls[] = {
 	SOC_DAPM_PIN_SWITCH("x Int Spk"),
@@ -651,6 +738,8 @@ static const struct snd_kcontrol_new tegra_t210ref_controls[] = {
 	SOC_DAPM_PIN_SWITCH("x Int Mic"),
 	SOC_ENUM_EXT("codec-x rate", tegra_t210ref_codec_rate,
 		tegra_t210ref_codec_get_rate, tegra_t210ref_codec_put_rate),
+	SOC_ENUM_EXT("codec-x format", tegra_t210ref_codec_format,
+		tegra_t210ref_codec_get_format, tegra_t210ref_codec_put_format),
 };
 
 static int tegra_t210ref_remove(struct snd_soc_card *card)
@@ -672,44 +761,15 @@ static struct snd_soc_card snd_soc_tegra_t210ref = {
 	.fully_routed = true,
 };
 
-static int tegra_t210ref_driver_probe(struct platform_device *pdev)
+static void dai_link_setup(struct platform_device *pdev)
 {
-	struct device_node *np = pdev->dev.of_node;
-	struct snd_soc_card *card = &snd_soc_tegra_t210ref;
-	struct tegra_t210ref *machine;
-	struct snd_soc_dai_link *tegra_machine_dai_links = NULL;
-	struct snd_soc_dai_link *tegra_t210ref_codec_links = NULL;
+	struct snd_soc_card *card = platform_get_drvdata(pdev);
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_codec_conf *tegra_machine_codec_conf = NULL;
 	struct snd_soc_codec_conf *tegra_t210ref_codec_conf = NULL;
-	struct tegra_asoc_platform_data *pdata = NULL;
-	struct snd_soc_codec *codec = NULL;
-	int ret = 0, i, idx;
-
-	if (!np) {
-		dev_err(&pdev->dev, "No device tree node for t210ref driver");
-		return -ENODEV;
-	}
-
-	machine = devm_kzalloc(&pdev->dev, sizeof(struct tegra_t210ref),
-			       GFP_KERNEL);
-	if (!machine) {
-		dev_err(&pdev->dev, "Can't allocate tegra_t210ref struct\n");
-		ret = -ENOMEM;
-		goto err;
-	}
-
-	card->dev = &pdev->dev;
-	platform_set_drvdata(pdev, card);
-	snd_soc_card_set_drvdata(card, machine);
-
-	ret = snd_soc_of_parse_card_name(card, "nvidia,model");
-	if (ret)
-		goto err;
-
-	ret = snd_soc_of_parse_audio_routing(card,
-				"nvidia,audio-routing");
-	if (ret)
-		goto err;
+	struct snd_soc_dai_link *tegra_machine_dai_links = NULL;
+	struct snd_soc_dai_link *tegra_t210ref_codec_links = NULL;
+	int i;
 
 	/* set new codec links and conf */
 	tegra_t210ref_codec_links = tegra_machine_new_codec_links(pdev,
@@ -718,12 +778,21 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	if (!tegra_t210ref_codec_links)
 		goto err_alloc_dai_link;
 
+	/* set codec init */
+	for (i = 0; i < machine->num_codec_links; i++) {
+		if (tegra_t210ref_codec_links[i].name) {
+			if (strstr(tegra_t210ref_codec_links[i].name,
+				"rt5640-playback"))
+				tegra_t210ref_codec_links[i].init =
+					tegra_t210ref_init;
+		}
+	}
+
 	tegra_t210ref_codec_conf = tegra_machine_new_codec_conf(pdev,
 		tegra_t210ref_codec_conf,
 		&machine->num_codec_links);
 	if (!tegra_t210ref_codec_conf)
 		goto err_alloc_dai_link;
-
 
 	/* get the xbar dai link/codec conf structure */
 	tegra_machine_dai_links = tegra_machine_get_dai_link();
@@ -733,18 +802,16 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 	if (!tegra_machine_codec_conf)
 		goto err_alloc_dai_link;
 
-	tegra_t210ref_codec_links[1].init = tegra_t210ref_init;
-
 	/* set ADMAIF dai_ops */
 	for (i = TEGRA210_DAI_LINK_ADMAIF1;
 		i <= TEGRA210_DAI_LINK_ADMAIF10; i++)
 		tegra_machine_set_dai_ops(i, &tegra_t210ref_ops);
 
-
 	/* set sfc dai_init */
 	tegra_machine_set_dai_init(TEGRA210_DAI_LINK_SFC1_RX,
 		&tegra_t210ref_sfc_init);
 
+#if defined(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
 	/* set ADSP PCM */
 	for (i = TEGRA210_DAI_LINK_ADSP_PCM1;
 		i <= TEGRA210_DAI_LINK_ADSP_PCM2; i++) {
@@ -758,6 +825,7 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		tegra_machine_set_dai_compr_ops(i,
 			&tegra_t210ref_compr_ops);
 	}
+#endif
 
 	/* append t210ref specific dai_links */
 	card->num_links =
@@ -772,6 +840,52 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 			machine->num_codec_links);
 	tegra_machine_codec_conf = tegra_machine_get_codec_conf();
 	card->codec_conf = tegra_machine_codec_conf;
+
+	return;
+
+err_alloc_dai_link:
+	tegra_machine_remove_dai_link();
+	tegra_machine_remove_codec_conf();
+}
+
+static int tegra_t210ref_driver_probe(struct platform_device *pdev)
+{
+	struct device_node *np = pdev->dev.of_node;
+	struct snd_soc_card *card = &snd_soc_tegra_t210ref;
+	struct tegra_t210ref *machine;
+	struct tegra_asoc_platform_data *pdata = NULL;
+	struct snd_soc_codec *codec = NULL;
+	int ret = 0, idx;
+	const char *codec_dai_name;
+
+	if (!np) {
+		dev_err(&pdev->dev, "No device tree node for t210ref driver");
+		return -ENODEV;
+	}
+
+	machine = devm_kzalloc(&pdev->dev, sizeof(struct tegra_t210ref),
+			       GFP_KERNEL);
+	if (!machine) {
+		ret = -ENOMEM;
+		goto err;
+	}
+
+	card->dev = &pdev->dev;
+	platform_set_drvdata(pdev, card);
+	snd_soc_card_set_drvdata(card, machine);
+	machine->is_codec_dummy = 0;
+
+	ret = snd_soc_of_parse_card_name(card, "nvidia,model");
+	if (ret)
+		goto err;
+
+	ret = snd_soc_of_parse_audio_routing(card,
+				"nvidia,audio-routing");
+	if (ret)
+		goto err;
+
+
+	dai_link_setup(pdev);
 
 #ifdef CONFIG_SWITCH
 	/* Addd h2w swith class support */
@@ -789,32 +903,17 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	pdata->gpio_ldo1_en = of_get_named_gpio(np,
-					"nvidia,ldo-gpios", 0);
-	if (pdata->gpio_ldo1_en < 0)
-		dev_warn(&pdev->dev, "Failed to get LDO_EN GPIO\n");
-
 	pdata->gpio_hp_det = of_get_named_gpio(np,
 					"nvidia,hp-det-gpios", 0);
-	if (pdata->gpio_hp_det < 0)
-		dev_warn(&pdev->dev, "Failed to get HP Det GPIO\n");
+	if (pdata->gpio_hp_det < 0) {
+		/* interrupt handled by codec */
+		dev_info(&pdev->dev, "Failed to get HP Det GPIO, should be handled by codec\n");
+	}
 
 	pdata->gpio_codec1 = pdata->gpio_codec2 = pdata->gpio_codec3 =
 	pdata->gpio_spkr_en = pdata->gpio_hp_mute =
 	pdata->gpio_int_mic_en = pdata->gpio_ext_mic_en = -1;
 
-
-	if (gpio_is_valid(pdata->gpio_ldo1_en)) {
-		ret = gpio_request(pdata->gpio_ldo1_en, "audio_ldo1");
-		if (ret)
-			dev_err(&pdev->dev, "Fail gpio_request AUDIO_LDO1\n");
-		else {
-			ret = gpio_direction_output(pdata->gpio_ldo1_en, 1);
-			if (ret)
-				dev_err(&pdev->dev, "Fail gpio_direction AUDIO_LDO1\n");
-		}
-		msleep(200);
-	}
 
 	/*
 	*codec_reg - its a GPIO (in the form of a fixed regulator) that enables
@@ -880,13 +979,26 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 		goto err_alloc_dai_link;
 	}
 
-	idx = tegra_machine_get_codec_dai_link_idx("rt5639-playback");
+	idx = tegra_machine_get_codec_dai_link_idx("rt5640-playback");
 	/* check if idx has valid number */
 	if (idx == -EINVAL)
-		return idx;
+		dev_warn(&pdev->dev, "codec link not defined - codec not part of sound card");
+	else {
+		codec = card->rtd[idx].codec;
+		codec_dai_name = card->rtd[idx].dai_link->codec_dai_name;
 
-	codec = card->rtd[idx].codec;
-	rt5639_irq_jd_reg_init(codec);
+		dev_info(&pdev->dev,
+			"codec-dai \"%s\" registered\n", codec_dai_name);
+		if (!strcmp("dit-hifi", codec_dai_name)) {
+			dev_info(&pdev->dev, "This is a dummy codec\n");
+			machine->is_codec_dummy = 1;
+		}
+	}
+
+	if (!machine->is_codec_dummy) {
+		/* setup for jack detection only in non-dummy case */
+		rt5640_irq_jd_reg_init(codec);
+	}
 
 	return 0;
 
@@ -929,7 +1041,7 @@ static struct platform_driver tegra_t210ref_driver = {
 module_platform_driver(tegra_t210ref_driver);
 
 MODULE_AUTHOR("Dara Ramesh <dramesh@nvidia.com>");
-MODULE_DESCRIPTION("Tegra+t210ref machine ASoC driver");
+MODULE_DESCRIPTION("Tegra t210ref machine ASoC driver for ");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:" DRV_NAME);
 MODULE_DEVICE_TABLE(of, tegra_t210ref_of_match);

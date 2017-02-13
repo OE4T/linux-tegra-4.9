@@ -2120,4 +2120,8 @@ int rt5640_dmic_enable(struct snd_soc_codec *codec,
 int rt5640_sel_asrc_clk_src(struct snd_soc_codec *codec,
 		unsigned int filter_mask, unsigned int clk_src);
 
+int rt5640_irq_jd_reg_init(struct snd_soc_codec *codec);
+
+int rt5640_headset_detect(struct snd_soc_codec *codec,
+	struct snd_soc_jack *jack, int jack_insert);
 #endif

@@ -386,19 +386,12 @@ static ssize_t camrtc_dbgfs_write_test_case(struct file *file,
 	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
 	char *test_case = crd->parameters.test_case;
 	size_t size = sizeof(crd->parameters.test_case);
-	char *tbuf = test_case;
 	ssize_t ret;
 
-	if (*f_pos > size)
-		return count;
-
-	tbuf += *f_pos;
-	size -= *f_pos;
-
-	ret = simple_write_to_buffer(tbuf, size, f_pos, buf, count);
+	ret = simple_write_to_buffer(test_case, size, f_pos, buf, count);
 
 	if (ret > 0)
-		crd->parameters.test_case_size = tbuf + ret - test_case;
+		crd->parameters.test_case_size = *f_pos;
 
 	return ret;
 }

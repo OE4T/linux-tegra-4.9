@@ -121,7 +121,7 @@ static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
 	return 0;
 }
 
-static int gp106_pmu_reset(struct gk20a *g)
+int gp106_pmu_reset(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	int err = 0;

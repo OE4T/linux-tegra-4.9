@@ -16,6 +16,7 @@
 #include <linux/mutex.h>
 #include <linux/spinlock.h>
 #include <linux/err.h>
+#include <linux/fs.h>
 #include <linux/list.h>
 #include <linux/slab.h>
 #include <linux/of.h>

@@ -433,13 +433,15 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 						"tuned_nv_path", NULL);
 
 		if (gpio_is_valid(adapter->wlan_pwr)) {
-			ret = gpio_request(adapter->wlan_pwr, "wlan_pwr");
+			ret = devm_gpio_request(&pdev->dev, adapter->wlan_pwr,
+						"wlan_pwr");
 			if (ret)
 				DHD_ERROR(("Failed to request wlan_pwr gpio %d\n", adapter->wlan_pwr));
 		}
 
 		if (gpio_is_valid(adapter->wlan_rst)) {
-			ret = gpio_request(adapter->wlan_rst, "wlan_rst");
+			ret = devm_gpio_request(&pdev->dev, adapter->wlan_rst,
+						"wlan_rst");
 			if (ret)
 				DHD_ERROR(("Failed to request wlan_rst gpio %d\n", adapter->wlan_rst));
 		}
@@ -855,6 +857,34 @@ extern struct semaphore dhd_registration_sem;
 #endif 
 
 #ifdef BCMSDIO
+void dhd_mmc_power_restore_sdhci_host(struct device_node *dn)
+{
+	struct platform_device *pdev = NULL;
+	struct sdhci_host *host =  NULL;
+
+	if (!dn) {
+		DHD_ERROR(("%s: sdhci_host is NULL\n", __FUNCTION__));
+		return;
+	}
+
+	pdev = of_find_device_by_node(dn);
+	if (IS_ERR_OR_NULL(pdev)) {
+		DHD_ERROR(("%s: pdev=%ld\n", __FUNCTION__, PTR_ERR(pdev)));
+		return;
+	}
+
+	host = platform_get_drvdata(pdev);
+	if (IS_ERR_OR_NULL(host)) {
+		DHD_ERROR(("%s: mmc_host=%ld\n", __FUNCTION__, PTR_ERR(host)));
+		return;
+	}
+
+	if (dhd_mmc_power_restore_host(host->mmc)) {
+		DHD_ERROR(("%s: mmc_restore fail\n", __FUNCTION__));
+		return;
+	}
+}
+
 static int dhd_wifi_platform_load_sdio(void)
 {
 	int i;
@@ -895,14 +925,10 @@ static int dhd_wifi_platform_load_sdio(void)
 		DHD_INFO((" - bus type %d, bus num %d, slot num %d\n\n",
 			adapter->bus_type, adapter->bus_num, adapter->slot_num));
 
+		dhd_mmc_power_restore_sdhci_host(adapter->sdhci_host);
+
 		do {
 			sema_init(&dhd_chipup_sem, 0);
-			err = dhd_bus_reg_sdio_notify(&dhd_chipup_sem);
-			if (err) {
-				DHD_ERROR(("%s dhd_bus_reg_sdio_notify fail(%d)\n\n",
-					__FUNCTION__, err));
-				return err;
-			}
 			err = wifi_platform_set_power(adapter, TRUE, WIFI_TURNON_DELAY);
 			if (err) {
 				/* WL_REG_ON state unknown, Power off forcely */
@@ -911,6 +937,13 @@ static int dhd_wifi_platform_load_sdio(void)
 			} else {
 				wifi_platform_bus_enumerate(adapter, TRUE);
 				err = 0;
+			}
+
+			err = dhd_bus_reg_sdio_notify(&dhd_chipup_sem);
+			if (err) {
+				DHD_ERROR(("%s dhd_bus_reg_sdio_notify fail(%d)\n\n",
+					__FUNCTION__, err));
+				return err;
 			}
 
 			if (down_timeout(&dhd_chipup_sem, msecs_to_jiffies(POWERUP_WAIT_MS)) == 0) {

@@ -27,6 +27,7 @@
 #ifndef _linux_osl_h_
 #define _linux_osl_h_
 
+#include <linux/mmc/host.h>
 #include <typedefs.h>
 #define DECLSPEC_ALIGN(x)	__attribute__ ((aligned(x)))
 
@@ -1012,4 +1013,8 @@ extern void osl_sec_dma_unmap_all(osl_t *osh, void *ptr_cma_info);
 extern void osl_sec_cma_baseaddr_memsize(osl_t *osh, dma_addr_t *cma_baseaddr, uint32 *cma_memsize);
 
 #endif /* BCM_SECURE_DMA */
+
+extern int dhd_mmc_power_save_host(struct mmc_host *host);
+extern int dhd_mmc_power_restore_host(struct mmc_host *host);
+
 #endif	/* _linux_osl_h_ */

@@ -63,6 +63,7 @@
 #endif /* BCM_SECURE_DMA */
 
 #include <linux/fs.h>
+#include <linux/mmc/host.h>
 
 
 #if defined(BCMPCIE)
@@ -2418,3 +2419,29 @@ osl_sec_cma_baseaddr_memsize(osl_t *osh, dma_addr_t *cma_baseaddr, uint32 *cma_m
 }
 
 #endif /* BCM_SECURE_DMA */
+
+int dhd_mmc_power_save_host(struct mmc_host *host)
+{
+	if (!host) {
+		printf("%s: host is NULL\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (host->ios.power_mode == MMC_POWER_OFF)
+		return 0;
+
+	return mmc_power_save_host(host);
+}
+
+int dhd_mmc_power_restore_host(struct mmc_host *host)
+{
+	if (!host) {
+		printf("%s: host is NULL\n", __FUNCTION__);
+		return -EINVAL;
+	}
+
+	if (host->ios.power_mode == MMC_POWER_ON)
+		return 0;
+
+	return mmc_power_restore_host(host);
+}

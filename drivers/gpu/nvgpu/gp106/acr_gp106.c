@@ -19,17 +19,19 @@
 #include <linux/dma-mapping.h>
 #include <linux/io.h>
 
+#include <nvgpu/nvgpu_common.h>
+#include <nvgpu/acr/nvgpu_acr.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 
+#include "gm20b/mm_gm20b.h"
 #include "gm20b/acr_gm20b.h"
 #include "gp106/acr_gp106.h"
 #include "gp106/pmu_gp106.h"
 
 #include "sec2_gp106.h"
 #include "nvgpu_gpuid_t18x.h"
-
-#include <nvgpu/nvgpu_common.h>
 
 #include <nvgpu/hw/gp106/hw_psec_gp106.h>
 #include <nvgpu/hw/gp106/hw_pwr_gp106.h>

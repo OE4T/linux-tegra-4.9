@@ -11,15 +11,60 @@
  * more details.
  */
 
-#ifndef __ACR_H_
-#define __ACR_H_
+#ifndef __NVGPU_ACR_H__
+#define __NVGPU_ACR_H__
 
-#include "gm20b/mm_gm20b.h"
-#include "gm20b/acr_gm20b.h"
-#include "gp106/acr_gp106.h"
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-#include "acr_t18x.h"
-#endif
+#include "gk20a/mm_gk20a.h"
+
+#include "acr_lsfm.h"
+#include "acr_flcnbl.h"
+#include "acr_objlsfm.h"
+#include "acr_objflcn.h"
+
+#define MAX_SUPPORTED_LSFM 3 /*PMU, FECS, GPCCS*/
+
+#define ACR_COMPLETION_TIMEOUT_MS 10000 /*in msec */
+
+#define PMU_SECURE_MODE (0x1)
+#define PMU_LSFM_MANAGED (0x2)
+
+struct bin_hdr {
+	/* 0x10de */
+	u32 bin_magic;
+	/* versioning of bin format */
+	u32 bin_ver;
+	/* Entire image size including this header */
+	u32 bin_size;
+	/*
+	 * Header offset of executable binary metadata,
+	 * start @ offset- 0x100 *
+	 */
+	u32 header_offset;
+	/*
+	 * Start of executable binary data, start @
+	 * offset- 0x200
+	 */
+	u32 data_offset;
+	/* Size of executable binary */
+	u32 data_size;
+};
+
+struct acr_fw_header {
+	u32 sig_dbg_offset;
+	u32 sig_dbg_size;
+	u32 sig_prod_offset;
+	u32 sig_prod_size;
+	u32 patch_loc;
+	u32 patch_sig;
+	u32 hdr_offset; /* This header points to acr_ucode_header_t210_load */
+	u32 hdr_size; /* Size of above header */
+};
+
+struct wpr_carveout_info {
+	u64 wpr_base;
+	u64 nonwpr_base;
+	u64 size;
+};
 
 struct acr_desc {
 	struct mem_desc ucode_blob;
@@ -32,9 +77,7 @@ struct acr_desc {
 	const struct firmware *acr_fw;
 	union{
 		struct flcn_acr_desc *acr_dmem_desc;
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
 		struct flcn_acr_desc_v1 *acr_dmem_desc_v1;
-#endif
 	};
 	struct mem_desc acr_ucode;
 	const struct firmware *hsbl_fw;
@@ -48,4 +91,4 @@ struct acr_desc {
 	u32 capabilities;
 };
 
-#endif /*__ACR_H_*/
+#endif /*__NVGPU_ACR_H__*/

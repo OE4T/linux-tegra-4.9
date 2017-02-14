@@ -27,7 +27,6 @@
 
 #include "gr_gm20b.h"
 #include "pmu_gm20b.h"
-#include "acr_gm20b.h"
 
 #include <nvgpu/hw/gm20b/hw_gr_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_fifo_gm20b.h>

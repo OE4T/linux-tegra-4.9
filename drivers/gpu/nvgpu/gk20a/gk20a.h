@@ -38,6 +38,8 @@ struct acr_desc;
 
 #include "../../../arch/arm/mach-tegra/iomap.h"
 
+#include <nvgpu/acr/nvgpu_acr.h>
+
 #include "as_gk20a.h"
 #include "clk_gk20a.h"
 #include "ce2_gk20a.h"
@@ -50,7 +52,6 @@ struct acr_desc;
 #include "therm_gk20a.h"
 #include "platform_gk20a.h"
 #include "gm20b/acr_gm20b.h"
-#include "acr.h"
 #include "cde_gk20a.h"
 #include "debug_gk20a.h"
 #include "sched_gk20a.h"

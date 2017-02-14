@@ -185,6 +185,8 @@ struct tegra_channel {
 	unsigned int gang_height;
 	unsigned int gang_bytesperline;
 	unsigned int gang_sizeimage;
+	unsigned int embedded_data_width;
+	unsigned int embedded_data_height;
 
 	DECLARE_BITMAP(fmts_bitmap, MAX_FORMAT_NUM);
 	atomic_t power_on_refcnt;
@@ -267,6 +269,10 @@ struct tegra_mc_vi {
 	bool bypass;
 
 	struct tegra_vi_fops *fops;
+
+	dma_addr_t emb_buf;
+	void *emb_buf_addr;
+	unsigned int emb_buf_size;
 };
 
 int tegra_vi_get_port_info(struct tegra_channel *chan,

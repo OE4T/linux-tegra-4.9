@@ -22,6 +22,7 @@
 #include "vi4_registers.h"
 #include "vi/vi4.h"
 #include "vi/vi_notify.h"
+#include <media/sensor_common.h>
 
 #define DEFAULT_FRAMERATE	30
 #define BPP_MEM		2
@@ -323,9 +324,14 @@ static void tegra_channel_surface_setup(
 	int vnc_id = chan->vnc_id[index];
 	unsigned int offset = chan->buffer_offset[index];
 
-	vi4_channel_write(chan, vnc_id, ATOMP_EMB_SURFACE_OFFSET0, 0x0);
+	if (chan->embedded_data_height > 0)
+		vi4_channel_write(chan, vnc_id, ATOMP_EMB_SURFACE_OFFSET0,
+						  chan->vi->emb_buf);
+	else
+		vi4_channel_write(chan, vnc_id, ATOMP_EMB_SURFACE_OFFSET0, 0);
 	vi4_channel_write(chan, vnc_id, ATOMP_EMB_SURFACE_OFFSET0_H, 0x0);
-	vi4_channel_write(chan, vnc_id, ATOMP_EMB_SURFACE_STRIDE0, 0x0);
+	vi4_channel_write(chan, vnc_id, ATOMP_EMB_SURFACE_STRIDE0,
+					  chan->embedded_data_width * BPP_MEM);
 	vi4_channel_write(chan, vnc_id,
 		ATOMP_SURFACE_OFFSET0, buf->addr + offset);
 	vi4_channel_write(chan, vnc_id,
@@ -571,8 +577,15 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan,
 	vi4_channel_write(chan, vnc_id, ATOMP_DPCM_CHUNK, 0x0);
 	vi4_channel_write(chan, vnc_id, ISPBUFA, 0x0);
 	vi4_channel_write(chan, vnc_id, LINE_TIMER, 0x1000000);
-	vi4_channel_write(chan, vnc_id, EMBED_X, 0x0);
-	vi4_channel_write(chan, vnc_id, EMBED_Y, 0x0);
+	if (chan->embedded_data_height > 0) {
+		vi4_channel_write(chan, vnc_id, EMBED_X,
+			chan->embedded_data_width * BPP_MEM);
+		vi4_channel_write(chan, vnc_id, EMBED_Y,
+			chan->embedded_data_height | EXPECT);
+	} else {
+		vi4_channel_write(chan, vnc_id, EMBED_X, 0);
+		vi4_channel_write(chan, vnc_id, EMBED_Y, 0);
+	}
 	/*
 	 * Set ATOMP_RESERVE to 0 so rctpu won't increment syncpt
 	 * for captureInfo. This is copied from nvvi driver.
@@ -837,6 +850,13 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	int ret = 0, i;
 	unsigned long flags;
 	struct v4l2_ctrl *override_ctrl;
+	struct v4l2_subdev *sd;
+	struct i2c_client *client;
+	struct device_node *node;
+	struct sensor_properties sensor_props;
+	struct sensor_mode_properties *sensor_mode;
+	struct camera_common_data *s_data;
+	unsigned int emb_buf_size = 0;
 
 	vi4_init(chan);
 	ret = media_entity_pipeline_start(&chan->video.entity, pipe);
@@ -853,6 +873,59 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	spin_lock_irqsave(&chan->capture_state_lock, flags);
 	chan->capture_state = CAPTURE_IDLE;
 	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
+
+	sd = chan->subdev_on_csi;
+	client = v4l2_get_subdevdata(sd);
+	node = client->dev.of_node;
+	s_data = to_camera_common_data(client);
+
+	/* get sensor properties from DT */
+	if (node != NULL) {
+		ret = sensor_common_init_sensor_properties(sd->dev, node, &sensor_props);
+		if (ret < 0)
+			goto error_capture_setup;
+
+		if (s_data != NULL)
+			sensor_mode = &sensor_props.sensor_modes[s_data->mode];
+		else
+			sensor_mode = &sensor_props.sensor_modes[0];
+
+		chan->embedded_data_width =
+			sensor_mode->image_properties.width;
+		chan->embedded_data_height =
+			sensor_mode->image_properties.embedded_metadata_height;
+		/* rounding up to page size */
+		emb_buf_size =
+			round_up(
+				chan->embedded_data_width * chan->embedded_data_height * BPP_MEM,
+				PAGE_SIZE);
+	}
+
+	/* Allocate buffer for Embedded Data if need to*/
+	if (emb_buf_size > chan->vi->emb_buf_size) {
+		/*
+		 * if old buffer is smaller than what we need,
+		 * release the old buffer and re-allocate a bigger
+		 * one below
+		 */
+		if (chan->vi->emb_buf_size > 0) {
+			dma_free_coherent(chan->vi->dev,
+				chan->vi->emb_buf_size,
+				chan->vi->emb_buf_addr, chan->vi->emb_buf);
+			chan->vi->emb_buf_size = 0;
+		}
+
+		chan->vi->emb_buf_addr =
+			dma_alloc_coherent(chan->vi->dev,
+				emb_buf_size,
+				&chan->vi->emb_buf, GFP_KERNEL);
+		if (!chan->vi->emb_buf_addr) {
+			dev_err(&chan->video.dev,
+					"Can't allocate memory for embedded data\n");
+			goto error_capture_setup;
+		}
+		chan->vi->emb_buf_size = emb_buf_size;
+	}
 
 	for (i = 0; i < chan->valid_ports; i++) {
 		ret = tegra_channel_capture_setup(chan, i);

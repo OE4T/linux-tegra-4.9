@@ -1528,6 +1528,14 @@ ctrl_init_error:
 
 int tegra_channel_cleanup(struct tegra_channel *chan)
 {
+	/* release embedded data buffer */
+	if (chan->vi->emb_buf_size > 0) {
+		dma_free_coherent(chan->vi->dev,
+			chan->vi->emb_buf_size,
+			chan->vi->emb_buf_addr, chan->vi->emb_buf);
+		chan->vi->emb_buf_size = 0;
+	}
+
 	v4l2_ctrl_handler_free(&chan->ctrl_handler);
 	vb2_queue_release(&chan->queue);
 #if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)

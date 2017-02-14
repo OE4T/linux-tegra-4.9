@@ -300,6 +300,18 @@
 		#cooling-cells = <2>; /* min followed by max */
 	};
 
+	gpu_scaling_cdev: gpu-scaling-cdev {
+		cooling-min-state = <0>;
+		cooling-max-state = <5>;
+		#cooling-cells = <2>;
+		compatible = "nvidia,tegra210-rail-scaling-cdev";
+		cdev-type = "gpu_scaling";
+		nvidia,constraint;
+		nvidia,trips = <&gpu_scaling_trip0 950 &gpu_scaling_trip1 0
+				&gpu_scaling_trip2 0 &gpu_scaling_trip3 0
+				&gpu_scaling_trip4 0 &gpu_scaling_trip5 0>;
+	};
+
 	thermal-zones {
 		CPU-therm {
 			trips {
@@ -332,6 +344,64 @@
 				dfll_map6 {
 					trip = <&dfll_cap_trip1>;
 					cooling-device = <&dfll_cap 2 2>;
+				};
+			};
+		};
+
+		Tdiode_tegra {
+			trips {
+				gpu_scaling_trip0: gpu-scaling-trip0 {
+					temperature = <(-25000)>; /* millicelsius */
+					hysteresis = <0>; /* millicelsius */
+					type = "active";
+				};
+				gpu_scaling_trip1: gpu-scaling-trip1 {
+					temperature = <15000>; /* millicelsius */
+					hysteresis = <1000>; /* millicelsius */
+					type = "active";
+				};
+				gpu_scaling_trip2: gpu-scaling-trip2 {
+					temperature = <30000>; /* millicelsius */
+					hysteresis = <1000>; /* millicelsius */
+					type = "active";
+				};
+				gpu_scaling_trip3: gpu-scaling-trip3 {
+					temperature = <50000>; /* millicelsius */
+					hysteresis = <1000>; /* millicelsius */
+					type = "active";
+				};
+				gpu_scaling_trip4: gpu-scaling-trip4 {
+					temperature = <70000>; /* millicelsius */
+					hysteresis = <1000>; /* millicelsius */
+					type = "active";
+				};
+				gpu_scaling_trip5: gpu-scaling-trip5 {
+					temperature = <105000>; /* millicelsius */
+					hysteresis = <1000>; /* millicelsius */
+					type = "active";
+				};
+			};
+
+			cooling-maps {
+				gpu-scaling-map1 {
+					trip = <&gpu_scaling_trip1>;
+					cooling-device = <&gpu_scaling_cdev 1 1>;
+				};
+				gpu-scaling-map2 {
+					trip = <&gpu_scaling_trip2>;
+					cooling-device = <&gpu_scaling_cdev 2 2>;
+				};
+				gpu_scaling_map3 {
+					trip = <&gpu_scaling_trip3>;
+					cooling-device = <&gpu_scaling_cdev 3 3>;
+				};
+				gpu-scaling-map4 {
+					trip = <&gpu_scaling_trip4>;
+					cooling-device = <&gpu_scaling_cdev 4 4>;
+				};
+				gpu-scaling-map5 {
+					trip = <&gpu_scaling_trip5>;
+					cooling-device = <&gpu_scaling_cdev 5 5>;
 				};
 			};
 		};

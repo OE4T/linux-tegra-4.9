@@ -27,5 +27,6 @@
 		active_pwm_max = <256>;
 		tach_gpio =  <&gpio TEGRA_GPIO(G, 0) GPIO_ACTIVE_LOW>; /* TEGRA_GPIO_PG0 */
 		pwm_gpio = <&gpio TEGRA_GPIO(E, 7) GPIO_ACTIVE_LOW>; /* TEGRA_GPIO_PE7 */
+		tach_period = <1000>;
 	};
 };

@@ -22,8 +22,8 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 
-#include "gm206/acr_gm206.h"
 #include "gm20b/acr_gm20b.h"
+#include "gp106/acr_gp106.h"
 #include "gp106/pmu_gp106.h"
 
 #include "sec2_gp106.h"

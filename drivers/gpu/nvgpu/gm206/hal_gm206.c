@@ -37,7 +37,6 @@
 #include "gm20b/clk_gm20b.h"
 #include "gm20b/debug_gm20b.h"
 #include "gm206/mm_gm206.h"
-#include "gm206/acr_gm206.h"
 
 #include <nvgpu/hw/gm206/hw_proj_gm206.h>
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,7 +16,7 @@
 
 #include "gm20b/mm_gm20b.h"
 #include "gm20b/acr_gm20b.h"
-#include "gm206/acr_gm206.h"
+#include "gp106/acr_gp106.h"
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "acr_t18x.h"
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -15,12 +15,49 @@
 #define __ACR_GP106_H_
 
 #include "gm20b/acr_gm20b.h"
-#include "gm206/acr_gm206.h"
 
 #define GP106_FECS_UCODE_SIG "gp106/fecs_sig.bin"
 #define GP106_GPCCS_UCODE_SIG "gp106/gpccs_sig.bin"
 #define GP104_FECS_UCODE_SIG "gp104/fecs_sig.bin"
 #define GP104_GPCCS_UCODE_SIG "gp104/gpccs_sig.bin"
+
+struct loader_config_v1 {
+	u32 reserved;
+	u32 dma_idx;
+	struct falc_u64 code_dma_base;
+	u32 code_size_total;
+	u32 code_size_to_load;
+	u32 code_entry_point;
+	struct falc_u64 data_dma_base;
+	u32 data_size;
+	struct falc_u64 overlay_dma_base;
+	u32 argc;
+	u32 argv;
+};
+
+struct flcn_bl_dmem_desc_v1 {
+	u32    reserved[4];        /*Should be the first element..*/
+	u32    signature[4];        /*Should be the first element..*/
+	u32    ctx_dma;
+	struct falc_u64 code_dma_base;
+	u32    non_sec_code_off;
+	u32    non_sec_code_size;
+	u32    sec_code_off;
+	u32    sec_code_size;
+	u32    code_entry_point;
+	struct falc_u64 data_dma_base;
+	u32    data_size;
+	u32 argc;
+	u32 argv;
+};
+
+/*!
+ * Union of all supported structures used by bootloaders.
+ */
+union flcn_bl_generic_desc_v1 {
+	struct flcn_bl_dmem_desc_v1 bl_dmem_desc_v1;
+	struct loader_config_v1 loader_cfg_v1;
+};
 
 struct lsf_ucode_desc_v1 {
 	u8  prd_keys[2][16];

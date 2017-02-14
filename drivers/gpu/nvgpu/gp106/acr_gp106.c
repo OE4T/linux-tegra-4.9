@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,7 +24,7 @@
 
 #include "gm206/acr_gm206.h"
 #include "gm20b/acr_gm20b.h"
-#include "gm206/pmu_gm206.h"
+#include "gp106/pmu_gp106.h"
 
 #include "sec2_gp106.h"
 #include "nvgpu_gpuid_t18x.h"
@@ -122,8 +122,6 @@ void gp106_init_secure_pmu(struct gpu_ops *gops)
 {
 	gops->pmu.prepare_ucode = gp106_prepare_ucode_blob;
 	gops->pmu.pmu_setup_hw_and_bootstrap = gp106_bootstrap_hs_flcn;
-	gops->pmu.is_lazy_bootstrap = gm206_is_lazy_bootstrap;
-	gops->pmu.is_priv_load = gm206_is_priv_load;
 	gops->pmu.get_wpr = gp106_wpr_info;
 	gops->pmu.alloc_blob_space = gp106_alloc_blob_space;
 	gops->pmu.pmu_populate_loader_cfg = gp106_pmu_populate_loader_cfg;

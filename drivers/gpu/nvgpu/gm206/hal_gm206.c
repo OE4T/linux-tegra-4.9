@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -37,7 +37,6 @@
 #include "gm20b/clk_gm20b.h"
 #include "gm20b/debug_gm20b.h"
 #include "gm206/mm_gm206.h"
-#include "gm206/pmu_gm206.h"
 #include "gm206/acr_gm206.h"
 
 #include <nvgpu/hw/gm206/hw_proj_gm206.h>
@@ -190,7 +189,6 @@ int gm206_init_hal(struct gk20a *g)
 	gm206_init_ce(gops);
 	gm20b_init_gr_ctx(gops);
 	gm206_init_mm(gops);
-	gm206_init_pmu_ops(gops);
 	gm20b_init_clk_ops(gops);
 	gm20b_init_regops(gops);
 	gm20b_init_debug_ops(gops);

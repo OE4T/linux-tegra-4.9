@@ -29,6 +29,7 @@
 #include "tegra194-trusty.dtsi"
 #include "tegra194-soc-uart.dtsi"
 #include "tegra194-soc-ufshc.dtsi"
+#include "tegra194-soc-pwm.dtsi"
 
 / {
 	compatible = "nvidia,tegra186";
@@ -717,6 +718,20 @@
 		interrupt-controller;
 		#interrupt-cells = <2>;
 		gpio-ranges = <&tegra_pinctrl TEGRA194_AON_GPIO_BASE(AA) TEGRA_PIN_BASE(AA) TEGRA194_AON_GPIO_RANGE(AA, FF) >;
+	};
+
+	tegra_tachometer: tachometer@39c0000 {
+		compatible = "nvidia,tegra194-tachometer";
+		reg = <0x0 0x039c0000 0x0 0x10>;
+		#stream-id-cells = <1>;
+		clocks = <&bpmp_clks TEGRA194_CLK_TACH>;
+		clock-names = "tach";
+		resets = <&bpmp_clks TEGRA194_RESET_TACH>;
+		reset-names = "tach";
+		pulse-per-rev = <2>;
+		sampling-window = <2>;
+		disable-clk-gate;
+		status = "disabled";
 	};
 
 	tegra_pmc: pmc@c360000 {

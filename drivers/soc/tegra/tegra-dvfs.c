@@ -249,8 +249,7 @@ static int dvfs_rail_set_voltage(struct dvfs_rail *rail, int millivolts)
 		steps = DIV_ROUND_UP(abs(millivolts - rail->millivolts), step);
 
 	for (i = 0; i < steps; i++) {
-		if (!jmp_to_zero &&
-		    (abs(millivolts - rail->millivolts) > step))
+		if ((i + 1) < steps)
 			rail->new_millivolts = rail->millivolts + offset;
 		else
 			rail->new_millivolts = millivolts;
@@ -1634,29 +1633,59 @@ struct dvfs_rail *tegra_dvfs_get_rail_by_name(char *name)
 
 bool tegra_dvfs_is_rail_up(struct dvfs_rail *rail)
 {
+	bool ret = false;
+
 	if (!rail)
 		return false;
 
 	if (!rail->in_band_pm)
 		return true;
 
-	return regulator_is_enabled(rail->reg);
+	mutex_lock(&dvfs_lock);
+	if (rail->reg)
+		ret = regulator_is_enabled(rail->reg) > 0;
+	mutex_unlock(&dvfs_lock);
+	return ret;
 }
 
 int tegra_dvfs_rail_power_up(struct dvfs_rail *rail)
 {
+	int ret = -ENOENT;
+
 	if (!rail || !rail->in_band_pm)
 		return -EINVAL;
 
-	return regulator_enable(rail->reg);
+	mutex_lock(&dvfs_lock);
+	if (rail->reg) {
+		ret = regulator_enable(rail->reg);
+		if (!ret && !timekeeping_suspended) {
+			rail->stats.off = false;
+			dvfs_rail_stats_update(rail, rail->millivolts,
+					       ktime_get());
+		}
+	}
+	mutex_unlock(&dvfs_lock);
+	return ret;
 }
 
 int tegra_dvfs_rail_power_down(struct dvfs_rail *rail)
 {
+	int ret = -ENOENT;
+
 	if (!rail || !rail->in_band_pm)
 		return -EINVAL;
 
-	return regulator_disable(rail->reg);
+	mutex_lock(&dvfs_lock);
+	if (rail->reg) {
+		ret = regulator_disable(rail->reg);
+		if (!ret && !timekeeping_suspended) {
+			dvfs_rail_stats_update(rail, 0, ktime_get());
+			rail->stats.off = true;
+
+		}
+	}
+	mutex_unlock(&dvfs_lock);
+	return ret;
 }
 
 unsigned long tegra_dvfs_get_fmax_at_vmin_safe_t(struct clk *c)
@@ -1913,8 +1942,8 @@ static int dvfs_tree_show(struct seq_file *s, void *data)
 	list_for_each_entry(rail, &dvfs_rail_list, node) {
 		int therm_mv = 0;
 
-		seq_printf(s, "%s %d mV%s:\n", rail->reg_id,
-			   rail->stats.off ? 0 : rail->millivolts,
+		seq_printf(s, "%s %d mV%s%s:\n", rail->reg_id, rail->millivolts,
+			   rail->stats.off ? " OFF" : " ON",
 			   rail->dfll_mode ? " dfll mode" :
 				rail->disabled ? " disabled" : "");
 		list_for_each_entry(rel, &rail->relationships_from, from_node) {

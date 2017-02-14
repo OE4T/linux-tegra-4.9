@@ -650,9 +650,29 @@ static void tegra_adma_start(struct tegra_adma_chan *tdc)
 static unsigned int tegra_adma_get_residue(struct tegra_adma_chan *tdc)
 {
 	struct tegra_adma_desc *desc = tdc->desc;
+	struct tegra_adma_chan_regs *ch_regs = &desc->ch_regs;
 	unsigned int max = ADMA_CH_XFER_STATUS_COUNT_MASK + 1;
-	unsigned int pos = tdma_ch_read(tdc, ADMA_CH_XFER_STATUS);
-	unsigned int periods_remaining;
+	unsigned int pos, pos_l;
+	unsigned int tc_remain, tc_remain_l;
+	unsigned int  tc_transferred;
+	uint64_t tot_xfer;
+
+	pos = tdma_ch_read(tdc, ADMA_CH_XFER_STATUS) &
+				ADMA_CH_XFER_STATUS_COUNT_MASK;
+
+	/* read TC_STATUS register to get current transfer status. */
+	tc_remain = tdma_ch_read(tdc, ADMA_CH_TC_STATUS);
+
+	pos_l = tdma_ch_read(tdc, ADMA_CH_XFER_STATUS) &
+				ADMA_CH_XFER_STATUS_COUNT_MASK;
+
+	tc_remain_l = tdma_ch_read(tdc, ADMA_CH_TC_STATUS);
+
+	/* Transfer count status got reset between ADMA_CH_XFER_STATUS reads */
+	if (pos != pos_l) {
+		tc_remain = tc_remain_l;
+		pos = pos_l;
+	}
 
 	/*
 	 * Handle wrap around of buffer count register
@@ -662,10 +682,14 @@ static unsigned int tegra_adma_get_residue(struct tegra_adma_chan *tdc)
 	else
 		tdc->tx_buf_count += pos - tdc->tx_buf_pos;
 
-	periods_remaining = tdc->tx_buf_count % desc->num_periods;
 	tdc->tx_buf_pos = pos;
+	/* get transferred data count */
+	tc_transferred = ch_regs->tc - tc_remain;
 
-	return desc->buf_len - (periods_remaining * desc->period_len);
+	tot_xfer = (tdc->tx_buf_count * ch_regs->tc) + tc_transferred;
+	tot_xfer %= desc->buf_len;
+
+	return desc->buf_len - tot_xfer;
 }
 
 static irqreturn_t tegra_adma_isr(int irq, void *dev_id)

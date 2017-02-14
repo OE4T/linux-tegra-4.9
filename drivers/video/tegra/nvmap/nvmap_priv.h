@@ -727,14 +727,10 @@ static inline int nvmap_get_user_pages(ulong vaddr,
 #endif
 }
 
-#ifndef DEFINE_DMA_ATTRS
-#define DEFINE_DMA_ATTRS(attrs) unsigned long attrs = 0
-#define dma_set_attr(attr, attrs) (attrs |= attr)
-#define __DMA_ATTR(attrs) attrs
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 #define device_node_from_iter(iter) \
 	iter.node
 #else
-#define __DMA_ATTR(attrs) &attrs
 #define device_node_from_iter(iter) \
 	iter.out_args.np
 #endif

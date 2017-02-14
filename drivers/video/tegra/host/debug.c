@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (C) 2011-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2011-2017, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -60,7 +60,7 @@ static void show_syncpts(struct nvhost_master *m, struct output *o)
 		u32 max = nvhost_syncpt_read_max(&m->syncpt, i);
 		u32 min = nvhost_syncpt_update_min(&m->syncpt, i);
 		u32 refs = nvhost_syncpt_read_ref(&m->syncpt, i);
-		if (!min && !max)
+		if ((!min && !max) || (refs == 0 && min == max))
 			continue;
 		nvhost_debug_output(o,
 				"id %d (%s) min %d max %d refs %d (previous client : %s)\n",

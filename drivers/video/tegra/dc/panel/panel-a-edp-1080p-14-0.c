@@ -22,6 +22,7 @@
 #include "../dc.h"
 #include "board.h"
 #include "board-panel.h"
+#include <linux/gpio.h>
 
 static bool reg_requested;
 
@@ -30,6 +31,70 @@ static struct regulator *vdd_lcd_bl_en;
 static struct regulator *avdd_lcd;
 static struct regulator *vdd_ds_1v8;
 static struct regulator *avdd_3v3_dp;
+static u16 en_panel_rst;
+
+static int auo_edp_regulator_get(struct device *dev)
+{
+	int err = 0;
+
+	if (reg_requested)
+		return 0;
+
+	vdd_ds_1v8 = regulator_get(dev, "vdd_ds_1v8");
+	if (IS_ERR(vdd_ds_1v8)) {
+		pr_err("vdd_ds_1v8 regulator get failed\n");
+		err = PTR_ERR(vdd_ds_1v8);
+		vdd_ds_1v8 = NULL;
+		goto fail;
+	}
+
+	/*
+	 * Backlight
+	 */
+	vdd_lcd_bl_en = regulator_get(dev, "vdd_lcd_bl_en");
+	if (IS_ERR(vdd_lcd_bl_en)) {
+		pr_err("vdd_lcd_bl_en regulator get failed\n");
+		err = PTR_ERR(vdd_lcd_bl_en);
+		vdd_lcd_bl_en = NULL;
+		goto fail;
+	}
+
+	/*
+	 * LCD
+	 */
+	avdd_lcd = regulator_get(dev, "avdd_lcd");
+	if (IS_ERR(avdd_lcd)) {
+		pr_err("avdd_lcd regulator get failed\n");
+		err = PTR_ERR(avdd_lcd);
+		avdd_lcd = NULL;
+		goto fail;
+	}
+
+	/*
+	 * LCD_RST
+	 *
+	 * If the panel reset gpio is explicitly specified in DT,
+	 * prefer using it over the avdd_3v3_dp regulator.
+	 */
+	err = tegra_panel_gpio_get_dt("a-edp,1080p-14-0", &panel_of);
+	if (err < 0 || !gpio_is_valid(panel_of.panel_gpio[TEGRA_GPIO_RESET])) {
+		avdd_3v3_dp = regulator_get(dev, "avdd_3v3_dp");
+		if (IS_ERR(avdd_3v3_dp)) {
+			pr_err("avdd_3v3_dp regulator get failed\n");
+			err = PTR_ERR(avdd_3v3_dp);
+			avdd_3v3_dp = NULL;
+			goto fail;
+		}
+	} else {
+		en_panel_rst = panel_of.panel_gpio[TEGRA_GPIO_RESET];
+	}
+
+	reg_requested = true;
+	return 0;
+fail:
+	return err;
+}
+
 
 static int laguna_edp_regulator_get(struct device *dev)
 {
@@ -125,7 +190,9 @@ static int edp_a_1080p_14_0_enable(struct device *dev)
 {
 	int err = 0;
 
-	if (of_machine_is_compatible("nvidia,ardbeg"))
+	if (of_machine_is_compatible("nvidia,quill"))
+		err = auo_edp_regulator_get(dev);
+	else if (of_machine_is_compatible("nvidia,ardbeg"))
 		err = ardbeg_edp_regulator_get(dev);
 	else
 		err = laguna_edp_regulator_get(dev);
@@ -134,11 +201,13 @@ static int edp_a_1080p_14_0_enable(struct device *dev)
 		goto fail;
 	}
 
-	err = tegra_panel_gpio_get_dt("a-edp,1080p-14-0",
-		&panel_of);
-	if (err < 0) {
-		pr_err("edp gpio request failed\n");
-		goto fail;
+	/* LCD_RST */
+	if (gpio_is_valid(en_panel_rst)) {
+		gpio_direction_output(en_panel_rst, 1);
+		usleep_range(1000, 5000);
+		gpio_set_value(en_panel_rst, 0);
+		usleep_range(1000, 5000);
+		gpio_set_value(en_panel_rst, 1);
 	}
 
 	if (vdd_lcd_bl) {
@@ -208,6 +277,11 @@ static int edp_a_1080p_14_0_disable(struct device *dev)
 
 	if (vdd_lcd_bl)
 		regulator_disable(vdd_lcd_bl);
+
+	if (gpio_is_valid(en_panel_rst)) {
+		gpio_set_value(en_panel_rst, 0);
+		usleep_range(1000, 5000);
+	}
 
 	if (avdd_3v3_dp)
 		regulator_disable(avdd_3v3_dp);

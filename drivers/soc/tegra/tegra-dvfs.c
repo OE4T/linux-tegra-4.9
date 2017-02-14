@@ -2234,11 +2234,12 @@ static int tegra_dvfs_probe(struct platform_device *pdev)
 		if (rail->vts_of_node) {
 			char *name;
 
-			name = kasprintf(GFP_KERNEL, "%s vts", rail->reg_id);
-			rail->vts_cdev =
-				thermal_of_cooling_device_register(
-					rail->vts_of_node, name, rail,
-					&tegra_vts_cooling_ops);
+			name = kasprintf(GFP_KERNEL, "%s-vts", rail->reg_id);
+			rail->vts_cdev = thermal_of_cooling_device_register(
+				rail->vts_of_node, name, rail,
+				&tegra_vts_cooling_ops);
+			pr_info("tegra_dvfs: %s: %sregistered\n", name,
+				IS_ERR_OR_NULL(rail->vts_cdev) ? "not " : "");
 		}
 	}
 

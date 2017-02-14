@@ -69,7 +69,6 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #include "dc_config.h"
 #include "dc_priv.h"
 #include "dc_shared_isr.h"
-#include "dev.h"
 #include "nvhost_sync.h"
 #include "nvsd.h"
 #include "nvsd2.h"

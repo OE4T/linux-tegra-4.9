@@ -33,8 +33,6 @@
 #include "../dc.h"
 #include "../dc_priv.h"
 #include "../dc_config.h"
-/* XXX ew 2 */
-#include "dev.h"
 /* XXX ew 3 */
 #include "tegra_dc_ext_priv.h"
 /* XXX ew 4 */

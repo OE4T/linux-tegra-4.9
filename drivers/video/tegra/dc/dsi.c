@@ -44,7 +44,6 @@
 #include "dc.h"
 #include "dc_reg.h"
 #include "dc_priv.h"
-#include "dev.h"
 #include "dsi_regs.h"
 #include "dsi.h"
 

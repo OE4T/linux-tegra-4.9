@@ -23,7 +23,6 @@
 #include <linux/delay.h>
 #include "dc_reg.h"
 #include "dc_priv.h"
-#include "dev.h"
 #include "dp.h"
 #include "dp_lt.h"
 #include "sor_regs.h"

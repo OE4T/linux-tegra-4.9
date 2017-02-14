@@ -57,7 +57,6 @@
 #include "dc_reg.h"
 #include "dc_config.h"
 #include "dc_priv.h"
-#include "dev.h"
 #include "nvsd.h"
 #include "dsi.h"
 #include "edid.h"

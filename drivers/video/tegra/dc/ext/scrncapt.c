@@ -32,7 +32,6 @@
 #include "../dc.h"
 #include "../dc_priv.h"
 #include "../dc_config.h"
-#include "dev.h"
 #include "tegra_dc_ext_priv.h"
 
 

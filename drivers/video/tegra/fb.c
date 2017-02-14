@@ -42,7 +42,6 @@
 #include <video/tegrafb.h>
 
 #include "dc/dc.h"
-#include "dev.h"
 #include "dc/dc_priv.h"
 #include "dc/edid.h"
 #include "dc/dc_config.h"

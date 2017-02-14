@@ -122,10 +122,10 @@ struct dvfs_rail {
 
 	struct thermal_cooling_device *vts_cdev;
 	struct device_node *vts_of_node;
+	struct dvfs_therm_limits vts_floors_table[MAX_THERMAL_LIMITS];
 	int vts_trips_table[MAX_THERMAL_LIMITS];
 	int vts_number_of_trips;
 	unsigned long therm_scale_idx;
-	int therm_floors_table[MAX_THERMAL_LIMITS];
 
 	struct thermal_cooling_device *vmax_cdev;
 	struct device_node *vmax_of_node;

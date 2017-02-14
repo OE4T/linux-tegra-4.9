@@ -547,7 +547,15 @@ static int clk_gbus_prepare(struct clk_hw *hw)
 
 static void clk_gbus_unprepare(struct clk_hw *hw)
 {
-	tegra_dvfs_set_rate(hw->clk, 0);
+	/*
+	 * gbus is unprepared when GPU is powered Off. However, current DVFS
+	 * rate should be maintained (not set to 0), so that the GPU voltage
+	 * is properly updated if temperature changes while GPU is Off, This
+	 * would assure that voltage for the next GPU power On at the new
+	 * temperature is safe.
+	 *
+	 *  tegra_dvfs_set_rate(hw->clk, 0);
+	 */
 }
 
 static int clk_gbus_set_rate(struct clk_hw *hw, unsigned long rate,
@@ -1266,7 +1274,7 @@ struct clk *tegra_clk_register_gbus(const char *name,
 
 	init.name = name;
 	init.ops = &tegra_clk_gbus_ops;
-	init.flags = CLK_GET_RATE_NOCACHE;
+	init.flags = CLK_GET_RATE_NOCACHE | CLK_SET_RATE_NOCACHE;
 	init.parent_names = &parent;
 	init.num_parents = 1;
 

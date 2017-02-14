@@ -1097,12 +1097,12 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	tegra_fb->fb_size = fb_size;
 	tegra_fb->valid = true;
 
-	dma_set_attr(DMA_ATTR_WRITE_COMBINE, &attrs);
+	dma_set_attr(DMA_ATTR_WRITE_COMBINE, __DMA_ATTR(attrs));
 	tegra_fb->blank_base = dma_alloc_attrs(&ndev->dev,
 					       BLANK_LINE_SIZE,
 					       &tegra_fb->blank_start,
 					       GFP_KERNEL,
-					       &attrs);
+					       __DMA_ATTR(attrs));
 	if (!tegra_fb->blank_base) {
 		dev_err(&ndev->dev, "failed to allocate blank buffer\n");
 		ret = -EBUSY;
@@ -1219,7 +1219,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 
 err_iounmap_fb:
 	dma_free_attrs(&ndev->dev, BLANK_LINE_SIZE, tegra_fb->blank_base,
-		       tegra_fb->blank_start, &attrs);
+		       tegra_fb->blank_start, __DMA_ATTR(attrs));
 	if (fb_base)
 		iounmap(fb_base);
 err_free_fbmem:
@@ -1236,10 +1236,10 @@ void tegra_fb_unregister(struct tegra_fb_info *fb_info)
 	struct device *dev = &fb_info->ndev->dev;
 	DEFINE_DMA_ATTRS(attrs);
 
-	dma_set_attr(DMA_ATTR_WRITE_COMBINE, &attrs);
+	dma_set_attr(DMA_ATTR_WRITE_COMBINE, __DMA_ATTR(attrs));
 
 	dma_free_attrs(dev, BLANK_LINE_SIZE, fb_info->blank_base,
-		       fb_info->blank_start, &attrs);
+		       fb_info->blank_start, __DMA_ATTR(attrs));
 
 	tegra_fb_release_fbmem(fb_info);
 	unregister_framebuffer(info);

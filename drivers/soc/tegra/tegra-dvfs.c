@@ -1011,28 +1011,29 @@ static int tegra_dvfs_clk_event(struct notifier_block *this,
 	if (d->dvfs_rail == tegra_core_rail && !core_dvfs_started)
 		return NOTIFY_DONE;
 
-	if (!__clk_is_enabled(cnd->clk) && !__clk_is_prepared(cnd->clk))
+	if (!__clk_is_enabled(cnd->clk) && !__clk_is_prepared(cnd->clk) &&
+	    (d->dvfs_rail != tegra_gpu_rail))
 		return NOTIFY_DONE;
 
 	mutex_lock(&dvfs_lock);
 
 	switch (event) {
 	case PRE_RATE_CHANGE:
-		if (cnd->old_rate < cnd->new_rate)
-			err = __tegra_dvfs_set_rate(d, cnd->new_rate);
-		else if (cnd->old_rate == cnd->new_rate) {
+		if (d->therm_dvfs) {
 			new_mv = predict_mv_at_hz_cur_tfloor(d, cnd->new_rate);
 			if (new_mv > d->cur_millivolts)
-				dvfs_rail_update(d->dvfs_rail);
+				err = __tegra_dvfs_set_rate(d, cnd->new_rate);
+		} else if (cnd->old_rate < cnd->new_rate) {
+			err = __tegra_dvfs_set_rate(d, cnd->new_rate);
 		}
 		break;
 	case POST_RATE_CHANGE:
-		if (cnd->old_rate > cnd->new_rate)
-			err = __tegra_dvfs_set_rate(d, cnd->new_rate);
-		else if (cnd->old_rate == cnd->new_rate) {
+		if (d->therm_dvfs) {
 			new_mv = predict_mv_at_hz_cur_tfloor(d, cnd->new_rate);
 			if (new_mv < d->cur_millivolts)
-				dvfs_rail_update(d->dvfs_rail);
+				err = __tegra_dvfs_set_rate(d, cnd->new_rate);
+		} else if (cnd->old_rate > cnd->new_rate) {
+			err = __tegra_dvfs_set_rate(d, cnd->new_rate);
 		}
 		break;
 	case ABORT_RATE_CHANGE:

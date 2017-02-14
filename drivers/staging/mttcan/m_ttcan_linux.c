@@ -457,7 +457,8 @@ static int mttcan_handle_bus_err(struct net_device *dev,
 		cf->data[2] |= CAN_ERR_PROT_FORM;
 		break;
 	case LEC_ACK_ERROR:
-		netdev_err(dev, "Acknowledgement Error Detected\n");
+		if (printk_ratelimit())
+			netdev_err(dev, "Acknowledgement Error Detected\n");
 		cf->data[3] |= (CAN_ERR_PROT_LOC_ACK |
 				CAN_ERR_PROT_LOC_ACK_DEL);
 		break;
@@ -657,8 +658,11 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 							>> MTT_PSR_DLEC_SHIFT;
 					work_done +=
 					    mttcan_handle_bus_err(dev, lec);
-					netdev_err(dev,	"IR = 0x%x PSR 0x%x\n",
-						ir, psr);
+
+					if (printk_ratelimit())
+						netdev_err(dev,
+							"IR %#x PSR %#x\n",
+							ir, psr);
 				}
 			}
 			if (ir & MTT_IR_WDI_MASK)
@@ -741,15 +745,19 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 			}
 
 			if (ir & MTT_IR_RF0L_MASK) {
-				netdev_warn(dev, "%s: some msgs lost on in Q0\n",
-					__func__);
+				if (printk_ratelimit())
+					netdev_warn(dev,
+						"%s: some msgs lost in Q0\n",
+						__func__);
 				ack = MTT_IR_RF0L_MASK;
 				ttcan_ir_write(priv->ttcan, ack);
 			}
 
 			if (ir & MTT_IR_RF1L_MASK) {
-				netdev_warn(dev, "%s: some msgs lost on in Q1\n",
-					__func__);
+				if (printk_ratelimit())
+					netdev_warn(dev,
+						"%s: some msgs lost in Q1\n",
+						__func__);
 				ack = MTT_IR_RF1L_MASK;
 				ttcan_ir_write(priv->ttcan, ack);
 			}
@@ -803,7 +811,8 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 
 			if ((ir & MTT_IR_TEFL_MASK) &&
 				priv->ttcan->tx_config.evt_q_num)
-				netdev_warn(dev, "Tx event lost\n");
+				if (printk_ratelimit())
+					netdev_warn(dev, "Tx event lost\n");
 
 			ack = MTTCAN_TX_EV_FIFO_INTR;
 			ttcan_ir_write(priv->ttcan, ack);
@@ -1234,7 +1243,8 @@ static netdev_tx_t mttcan_start_xmit(struct sk_buff *skb,
 				(struct ttcanfd_frame *)frame);
 
 	if (msg_no < 0) {
-		netdev_warn(dev, "No Tx space left\n");
+		if (printk_ratelimit())
+			netdev_warn(dev, "No Tx space left\n");
 		kfree_skb(skb);
 		dev->stats.tx_dropped++;
 		return NETDEV_TX_OK;
@@ -1247,7 +1257,8 @@ static netdev_tx_t mttcan_start_xmit(struct sk_buff *skb,
 		ttcan_tx_trigger_msg_transmit(priv->ttcan, msg_no);
 
 	/* State management for Tx complete/cancel processing */
-	if (test_and_set_bit(msg_no, &priv->ttcan->tx_object))
+	if (test_and_set_bit(msg_no, &priv->ttcan->tx_object) &&
+		printk_ratelimit())
 		netdev_err(dev, "Writing to occupied echo_skb buffer\n");
 	clear_bit(msg_no, &priv->ttcan->tx_obj_cancelled);
 

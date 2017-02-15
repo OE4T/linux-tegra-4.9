@@ -713,9 +713,14 @@ struct sg_table *dma_buf_map_attachment(struct dma_buf_attachment *attach,
 
 	might_sleep();
 
-	if (WARN_ON(!attach || !attach->dmabuf ||
-		    !atomic_inc_not_zero(&attach->ref)))
+	if (WARN_ON(!attach || !attach->dmabuf))
 		return ERR_PTR(-EINVAL);
+
+	mutex_lock(&attach->dmabuf->lock);
+	if (!atomic_inc_not_zero(&attach->ref)) {
+		mutex_unlock(&attach->dmabuf->lock);
+		return ERR_PTR(-EINVAL);
+	}
 
 	sg_table = attach->sg_table;
 	if (dmabuf_can_defer_unmap(attach->dmabuf, attach->dev) && sg_table) {
@@ -735,6 +740,7 @@ finish:
 		atomic_inc(&attach->maps);
 	else
 		atomic_dec(&attach->ref);
+	mutex_unlock(&attach->dmabuf->lock);
 	return sg_table;
 }
 EXPORT_SYMBOL_GPL(dma_buf_map_attachment);
@@ -757,6 +763,7 @@ void dma_buf_unmap_attachment(struct dma_buf_attachment *attach,
 	if (WARN_ON(!attach || !attach->dmabuf || !sg_table))
 		return;
 
+	mutex_lock(&attach->dmabuf->lock);
 	if (dmabuf_can_defer_unmap(attach->dmabuf, attach->dev)) {
 		if (!(attach->dmabuf->flags & DMABUF_SKIP_CACHE_SYNC))
 			dma_sync_sg_for_cpu(attach->dev, sg_table->sgl,
@@ -769,6 +776,7 @@ void dma_buf_unmap_attachment(struct dma_buf_attachment *attach,
 finish:
 	atomic_dec(&attach->maps);
 	atomic_dec(&attach->ref);
+	mutex_unlock(&attach->dmabuf->lock);
 }
 EXPORT_SYMBOL_GPL(dma_buf_unmap_attachment);
 

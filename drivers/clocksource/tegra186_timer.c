@@ -120,11 +120,11 @@ static irqreturn_t tegra186_timer_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static void tegra186_timer_setup(struct tegra186_tmr *tmr)
+static int tegra186_timer_setup(unsigned int cpu)
 {
-#ifdef CONFIG_SMP
-	int cpu = smp_processor_id();
-#endif
+
+	struct tegra186_tmr *tmr = &tke->tegra186_tmr[cpu];
+
 
 	clockevents_config_and_register(&tmr->evt, tmr->freq,
 					1, /* min */
@@ -137,23 +137,27 @@ static void tegra186_timer_setup(struct tegra186_tmr *tmr)
 	}
 #endif
 	enable_irq(tmr->evt.irq);
+	return 0;
 }
 
-static void tegra186_timer_stop(struct tegra186_tmr *tmr)
+static int tegra186_timer_stop(unsigned int cpu)
 {
+	struct tegra186_tmr *tmr = &tke->tegra186_tmr[cpu];
 	_shutdown(tmr);
 	disable_irq_nosync(tmr->evt.irq);
+	return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 7, 0)
 static int tegra186_timer_cpu_notify(struct notifier_block *self,
 				     unsigned long action, void *hcpu)
 {
 	switch (action & ~CPU_TASKS_FROZEN) {
 	case CPU_STARTING:
-		tegra186_timer_setup(&tke->tegra186_tmr[smp_processor_id()]);
+		tegra186_timer_setup(smp_processor_id());
 		break;
 	case CPU_DYING:
-		tegra186_timer_stop(&tke->tegra186_tmr[smp_processor_id()]);
+		tegra186_timer_stop(smp_processor_id());
 		break;
 	}
 
@@ -163,6 +167,7 @@ static int tegra186_timer_cpu_notify(struct notifier_block *self,
 static struct notifier_block tegra186_timer_cpu_nb = {
 	.notifier_call = tegra186_timer_cpu_notify,
 };
+#endif
 
 static void tegra186_timer_resume(void)
 {
@@ -262,19 +267,35 @@ static void __init tegra186_timer_init(struct device_node *np)
 		tmr_index++;
 	}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 7, 0)
 	/* boot cpu is online */
-	tmr = &tke->tegra186_tmr[0];
-	tegra186_timer_setup(tmr);
+	tegra186_timer_setup(0);
 
 	if (register_cpu_notifier(&tegra186_timer_cpu_nb)) {
 		pr_err("%s: cannot setup CPU notifier\n", __func__);
 		BUG();
 	}
+#else
+	cpuhp_setup_state(CPUHP_AP_TEGRA_TIMER_STARTING,
+			  "AP_TEGRA_TIMER_STARTING", tegra186_timer_setup,
+			  tegra186_timer_stop);
+#endif
 
 	register_syscore_ops(&tegra186_timer_syscore_ops);
 
 	of_node_put(np);
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 7, 0)
+#define tegra186_timer_init_func tegra186_timer_init
+#else
+static int __init tegra186_timer_init_ret(struct device_node *np)
+{
+	tegra186_timer_init(np);
+	return 0;
+}
+#define tegra186_timer_init_func tegra186_timer_init_ret
+#endif
+
 CLOCKSOURCE_OF_DECLARE(tegra186_timer, "nvidia,tegra186-timer",
-		       tegra186_timer_init);
+		       tegra186_timer_init_func);

@@ -422,6 +422,7 @@ struct arm_smmu_device {
 
 	void __iomem			*base[MAX_SMMUS];
 	u32				num_smmus;
+	s8				iso_smmu_id;
 
 	unsigned long			size;
 	unsigned long			pgshift;
@@ -469,6 +470,7 @@ struct arm_smmu_cfg {
 	u8				irptndx;
 	u32				cbar;
 	pgd_t				*pgd;
+	bool				iso_client;
 };
 #define INVALID_IRPTNDX			0xff
 
@@ -509,6 +511,46 @@ static inline void writel_relaxed_single(u32 val,
 			volatile void __iomem *virt_addr)
 {
 	writel_relaxed(val, virt_addr);
+}
+
+static inline void writel_relaxed_iso(u32 val,
+			volatile void __iomem *virt_addr, bool iso_smmu)
+{
+	int smmu_id, offset;
+
+	offset = virt_addr - smmu_handle->base[0];
+	if (iso_smmu) {
+		if (smmu_handle->iso_smmu_id < 0)
+			return;
+		writel_relaxed(val,
+			smmu_handle->base[smmu_handle->iso_smmu_id] + offset);
+	} else {
+		for (smmu_id = 0; smmu_id < smmu_handle->num_smmus; smmu_id++) {
+			if (smmu_id != smmu_handle->iso_smmu_id)
+				writel_relaxed(val,
+					smmu_handle->base[smmu_id] + offset);
+		}
+	}
+}
+
+static inline void writeq_relaxed_iso(u64 val,
+			volatile void __iomem *virt_addr, bool iso_smmu)
+{
+	int smmu_id, offset;
+
+	offset = virt_addr - smmu_handle->base[0];
+	if (iso_smmu) {
+		if (smmu_handle->iso_smmu_id < 0)
+			return;
+		writel_relaxed(val,
+			smmu_handle->base[smmu_handle->iso_smmu_id] + offset);
+	} else {
+		for (smmu_id = 0; smmu_id < smmu_handle->num_smmus; smmu_id++) {
+			if (smmu_id != smmu_handle->iso_smmu_id)
+				writel_relaxed(val,
+					smmu_handle->base[smmu_id] + offset);
+		}
+	}
 }
 
 #define WRITEL_FN(fn, call, type) \
@@ -786,29 +828,47 @@ static void __arm_smmu_free_bitmap(unsigned long *map, int idx)
 }
 
 /* Wait for any pending TLB invalidations to complete */
-static void arm_smmu_tlb_sync(struct arm_smmu_device *smmu)
+static void arm_smmu_tlb_sync_wait_for_complete(struct arm_smmu_device *smmu,
+		void __iomem *gr0_base)
 {
-	int count = 0, smmu_id = 0;
+	int count = 0;
+
+	while (readl_relaxed(gr0_base + ARM_SMMU_GR0_sTLBGSTATUS)
+			& sTLBGSTATUS_GSACTIVE) {
+		cpu_relax();
+		if (++count == TLB_LOOP_TIMEOUT) {
+			dev_err_ratelimited(smmu->dev,
+			"TLB sync timed out -- SMMU may be deadlocked\n");
+			return;
+		}
+		udelay(1);
+	}
+}
+
+static void arm_smmu_tlb_sync(struct arm_smmu_device *smmu, bool iso_client)
+{
+	int smmu_id = 0;
 	void __iomem *gr0_base = ARM_SMMU_GR0(smmu);
 	u32 gr0_offset = gr0_base - smmu->base[0];
 
 	if (tegra_platform_is_sim() || arm_smmu_gr0_tlbiallnsnh)
-		writel_relaxed(0, gr0_base + ARM_SMMU_GR0_TLBIALLNSNH);
+		writel_relaxed_iso(0, gr0_base + ARM_SMMU_GR0_TLBIALLNSNH,
+					iso_client);
 
-	writel_relaxed(0, gr0_base + ARM_SMMU_GR0_sTLBGSYNC);
+	writel_relaxed_iso(0, gr0_base + ARM_SMMU_GR0_sTLBGSYNC, iso_client);
+
+	if (iso_client) {
+		if (smmu_handle->iso_smmu_id < 0)
+			return;
+		gr0_base = smmu->base[smmu->iso_smmu_id] + gr0_offset;
+		arm_smmu_tlb_sync_wait_for_complete(smmu, gr0_base);
+		return;
+	}
 
 	while (smmu_id < smmu->num_smmus) {
-		gr0_base = smmu->base[smmu_id] + gr0_offset;
-
-		while (readl_relaxed(gr0_base + ARM_SMMU_GR0_sTLBGSTATUS)
-		       & sTLBGSTATUS_GSACTIVE) {
-			cpu_relax();
-			if (++count == TLB_LOOP_TIMEOUT) {
-				dev_err_ratelimited(smmu->dev,
-				"TLB sync timed out -- SMMU may be deadlocked\n");
-				return;
-			}
-			udelay(1);
+		if (smmu_id != smmu->iso_smmu_id) {
+			gr0_base = smmu->base[smmu_id] + gr0_offset;
+			arm_smmu_tlb_sync_wait_for_complete(smmu, gr0_base);
 		}
 		smmu_id++;
 	}
@@ -830,15 +890,17 @@ static void arm_smmu_tlb_inv_context(struct arm_smmu_domain *smmu_domain)
 
 	if (stage1) {
 		base = ARM_SMMU_CB_BASE(smmu) + ARM_SMMU_CB(smmu, cfg->cbndx);
-		writel_relaxed(ARM_SMMU_CB_ASID(cfg),
-			       base + ARM_SMMU_CB_S1_TLBIASID);
+		writel_relaxed_iso(ARM_SMMU_CB_ASID(cfg),
+			       base + ARM_SMMU_CB_S1_TLBIASID,
+			       cfg->iso_client);
 	} else {
 		base = ARM_SMMU_GR0(smmu);
-		writel_relaxed(ARM_SMMU_CB_VMID(cfg),
-			       base + ARM_SMMU_GR0_TLBIVMID);
+		writel_relaxed_iso(ARM_SMMU_CB_VMID(cfg),
+			       base + ARM_SMMU_GR0_TLBIVMID,
+			       cfg->iso_client);
 	}
 
-	arm_smmu_tlb_sync(smmu);
+	arm_smmu_tlb_sync(smmu, cfg->iso_client);
 
 	if (time_before)
 		trace_arm_smmu_tlb_inv_context(time_before, cfg->cbndx);
@@ -857,14 +919,15 @@ static void __arm_smmu_tlb_inv_range(struct arm_smmu_domain *smmu_domain,
 		reg += ARM_SMMU_CB_S1_TLBIVA;
 		iova >>= 12;
 		iova |= (u64)ARM_SMMU_CB_ASID(cfg) << 48;
-		writeq_relaxed(iova, reg);
+		writeq_relaxed_iso(iova, reg, cfg->iso_client);
 	} else if (smmu->version == ARM_SMMU_V2) {
 		reg = ARM_SMMU_CB_BASE(smmu) + ARM_SMMU_CB(smmu, cfg->cbndx);
 		reg += ARM_SMMU_CB_S2_TLBIIPAS2;
-		writeq_relaxed(iova >> 12, reg);
+		writeq_relaxed_iso(iova >> 12, reg, cfg->iso_client);
 	} else {
 		reg = ARM_SMMU_GR0(smmu) + ARM_SMMU_GR0_TLBIVMID;
-		writel_relaxed(ARM_SMMU_CB_VMID(cfg), reg);
+		writel_relaxed_iso(ARM_SMMU_CB_VMID(cfg), reg,
+					cfg->iso_client);
 	}
 }
 
@@ -887,7 +950,7 @@ static void arm_smmu_tlb_inv_range(struct arm_smmu_domain *smmu_domain,
 		__arm_smmu_tlb_inv_range(smmu_domain, iova);
 		iova += PAGE_SIZE;
 	}
-	arm_smmu_tlb_sync(smmu);
+	arm_smmu_tlb_sync(smmu, cfg->iso_client);
 
 	if (time_before)
 		trace_arm_smmu_tlb_inv_range(time_before, cfg->cbndx,
@@ -1844,8 +1907,10 @@ static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 {
 	int ret, i;
 	struct arm_smmu_domain *smmu_domain = to_smmu_domain(domain);
+	struct arm_smmu_cfg *arm_smmu_cfg = &smmu_domain->cfg;
 	struct arm_smmu_device *smmu, *dom_smmu;
 	struct arm_smmu_master_cfg *cfg;
+	struct device_node *dev_node;
 
 	smmu = find_smmu_for_device(dev);
 	if (!smmu) {
@@ -1896,6 +1961,11 @@ static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	/* Enable stream Id override, which enables SMMU translation for dev */
 	for (i = 0; i < cfg->num_streamids; i++)
 		platform_override_streamid(cfg->streamids[i]);
+
+	dev_node = dev_get_dev_node(dev);
+	if (of_property_read_bool(dev_node, "iso-smmu"))
+		arm_smmu_cfg->iso_client = true;
+
 	return ret;
 }
 
@@ -2487,7 +2557,9 @@ static void arm_smmu_device_reset(struct arm_smmu_device *smmu)
 	reg &= ~(sCR0_BSU_MASK << sCR0_BSU_SHIFT);
 
 	/* Push the button */
-	arm_smmu_tlb_sync(smmu);
+	arm_smmu_tlb_sync(smmu, false);
+	arm_smmu_tlb_sync(smmu, true);
+
 	writel(reg, ARM_SMMU_GR0_NS(smmu) + ARM_SMMU_GR0_sCR0);
 }
 
@@ -3104,6 +3176,10 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 		dev_err(dev, "missing #global-interrupts property\n");
 		return -ENODEV;
 	}
+
+	if (of_property_read_u8(dev->of_node, "iso-smmu-id",
+				 &smmu->iso_smmu_id))
+		smmu->iso_smmu_id = -1;
 
 	num_irqs = 0;
 	while ((res = platform_get_resource(pdev, IORESOURCE_IRQ, num_irqs))) {

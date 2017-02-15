@@ -39,6 +39,8 @@
 
 #include "registers.h"
 #include "mipi_cal.h"
+#include "vmipi/vmipi.h"
+
 #define DRV_NAME "tegra_mipi_cal"
 #define MIPI_CAL_TIMEOUT_MSEC 500
 
@@ -118,6 +120,7 @@ struct tegra_mipi_soc {
 	int (*pad_disable)(struct tegra_mipi *mipi);
 	int (*calibrate)(struct tegra_mipi *mipi, int lanes);
 	int (*parse_cfg)(struct platform_device *pdev, struct tegra_mipi *mipi);
+	u8 virtual_dev;
 };
 
 static int mipical_write(struct regmap *map,
@@ -833,6 +836,13 @@ static const struct tegra_mipi_soc tegra18x_mipi_soc = {
 	.powergate_id = TEGRA186_POWER_DOMAIN_DISP,
 };
 
+static const struct tegra_mipi_soc tegra_vmipi_soc = {
+	.pad_enable = &tegra_vmipi_bias_pad_enable,
+	.pad_disable = &tegra_vmipi_bias_pad_disable,
+	.calibrate = &tegra_vmipi_calibration,
+	.virtual_dev = 1,
+};
+
 static const struct of_device_id tegra_mipi_of_match[] = {
 	{
 		.compatible = "nvidia,tegra210-mipical",
@@ -844,7 +854,10 @@ static const struct of_device_id tegra_mipi_of_match[] = {
 		.compatible = "nvidia, tegra186-mipical-shared-multi-os",
 		.data = &tegra18x_mipi_soc,
 	}, {
-	},
+		.compatible = "nvidia,tegra-mipical-hv",
+		.data = &tegra_vmipi_soc,
+	}, {
+	}
 };
 MODULE_DEVICE_TABLE(of, tegra_mipi_of_match);
 
@@ -910,6 +923,40 @@ static const struct file_operations tegra_mipi_miscdev_fops = {
 #endif
 };
 
+static int tegra_mipi_misc_register(struct tegra_mipi *mipi)
+{
+	int err;
+
+	if (!mipi)
+		return -EINVAL;
+
+	mipi->misc_dev.minor = MISC_DYNAMIC_MINOR;
+	mipi->misc_dev.name = DRV_NAME;
+	mipi->misc_dev.fops = &tegra_mipi_miscdev_fops;
+	err = misc_register(&mipi->misc_dev);
+	if (err)
+		dev_err(mipi->dev, "Fail to register misc dev\n");
+
+	return err;
+}
+
+int tegra_vmipi_probe(struct platform_device *pdev)
+{
+	int err;
+
+	err = tegra_vmipi_init(pdev);
+	if (err) {
+		dev_err(&pdev->dev, "Mipi cal virtual dev probe failed\n");
+		return err;
+	}
+
+	err = tegra_mipi_misc_register(mipi);
+	if (err)
+		tegra_vmipi_deinit();
+
+	return err;
+}
+
 static int tegra_mipi_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *match;
@@ -933,6 +980,10 @@ static int tegra_mipi_probe(struct platform_device *pdev)
 	mipi->dev = &pdev->dev;
 	mipi->soc = cdata;
 	platform_set_drvdata(pdev, mipi);
+
+	if (mipi->soc->virtual_dev)
+		return tegra_vmipi_probe(pdev);
+
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
 		dev_err(&pdev->dev, "No memory resource\n");
@@ -1004,14 +1055,9 @@ static int tegra_mipi_probe(struct platform_device *pdev)
 	mutex_init(&mipi->lock);
 	atomic_set(&mipi->refcount, 0);
 
-	mipi->misc_dev.minor = MISC_DYNAMIC_MINOR;
-	mipi->misc_dev.name = DRV_NAME;
-	mipi->misc_dev.fops = &tegra_mipi_miscdev_fops;
-	err = misc_register(&mipi->misc_dev);
-	if (err) {
-		dev_err(mipi->dev, "Fail to register misc dev\n");
+	err = tegra_mipi_misc_register(mipi);
+	if (err)
 		return err;
-	}
 
 #ifdef CONFIG_DEBUG_FS
 	err = dbgfs_mipi_init(mipi);

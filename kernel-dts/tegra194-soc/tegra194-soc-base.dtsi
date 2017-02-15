@@ -359,6 +359,7 @@
 		};
 
 		nvdisplay@15200000 {
+			status = "disabled";
 			compatible = "nvidia,tegra194-dc";
 			reg = <0x0 0x15200000 0x0 0x10000>;
 			interrupts = <0 153 4>;
@@ -392,6 +393,7 @@
 		}; //nvdisplay@15200000
 
 		nvdisplay@15210000 {
+			status = "disabled";
 			compatible = "nvidia,tegra194-dc";
 			reg = <0x0 0x15210000 0x0 0x10000>;
 			interrupts = <0 154 4>;
@@ -425,6 +427,7 @@
 		}; //nvdisplay@15210000
 
 		sor {
+			status = "disabled";
 			compatible = "nvidia,tegra194-sor";
 			reg = <0x0 0x15B00000 0x0 0x40000>;
 
@@ -453,6 +456,7 @@
 		}; //sor
 
 		sor1 {
+			status = "disabled";
 			compatible = "nvidia,tegra194-sor1";
 			reg = <0x0 0x15580000 0x0 0x40000>;
 
@@ -481,6 +485,7 @@
 		}; //sor1
 
 		dpaux@155c0000 {
+			status = "disabled";
 			compatible = "nvidia,tegra194-dpaux";
 			reg = <0x0 0x155c0000 0x0 0x00010000>;
 			interrupts = <0 159 4>;
@@ -494,6 +499,7 @@
 		}; //dpaux@155c0000
 
 		dpaux@15040000 {
+			status = "disabled";
 			compatible = "nvidia,tegra194-dpaux1";
 			reg = <0x0 0x15040000 0x0 0x00010000>;
 			interrupts = <0 160 4>;

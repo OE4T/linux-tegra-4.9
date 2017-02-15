@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1369,5 +1369,9 @@ static inline u32 nvdisp_csc2_control_output_color_sel_y2020_f(void)
 static inline u32 nvdisp_blend_cursor_ctrl_r(void)
 {
 	return 0x000004f1;
+}
+static inline u32 nvdisp_rg_loadv_r(void)
+{
+	return 0x00000363;
 }
 #endif

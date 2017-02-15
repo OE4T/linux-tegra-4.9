@@ -21,6 +21,7 @@
 #include "nvdisp.h"
 #include "nvdisp_priv.h"
 #include "hw_nvdisp_nvdisp.h"
+#include "dc_common.h"
 
 #include "dc_config.h"
 
@@ -653,7 +654,7 @@ int tegra_nvdisp_get_linestride(struct tegra_dc *dc, int win)
 
 int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	struct tegra_dc_win *windows[], int n,
-	u16 *dirty_rect, bool wait_for_vblank)
+	u16 *dirty_rect, bool wait_for_vblank, bool lock_flip)
 {
 	int i;
 	u32 update_mask = nvdisp_cmd_state_ctrl_general_update_enable_f();
@@ -661,7 +662,6 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	u32 act_control = 0;
 
 	mutex_lock(&tegra_nvdisp_lock);
-
 	/* If any of the window updates requires vsync to program the window
 	   update safely, vsync all windows in this flip.  Safety overrides both
 	   the requested wait_for_vblank, and also the no_vsync global.
@@ -840,8 +840,14 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	tegra_dc_writel(dc, update_mask, nvdisp_cmd_state_ctrl_r());
 	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
 	if (act_req_mask) {
-		tegra_dc_writel(dc, act_req_mask, nvdisp_cmd_state_ctrl_r());
-		tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
+		if (lock_flip)  {
+			dc->act_req_mask = act_req_mask;
+		} else {
+			tegra_dc_writel(dc, act_req_mask,
+					nvdisp_cmd_state_ctrl_r());
+			tegra_dc_readl(dc,
+				nvdisp_cmd_state_ctrl_r()); /* flush */
+		}
 	}
 
 	if (!wait_for_vblank) {

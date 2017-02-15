@@ -99,3 +99,4 @@ DUMP_REG(nvdisp_interlace_fld2_active_r());
 DUMP_REG(nvdisp_cursor_startaddr_hi_r());
 DUMP_REG(nvdisp_csc2_control_r());
 DUMP_REG(nvdisp_blend_cursor_ctrl_r());
+DUMP_REG(nvdisp_rg_loadv_r());

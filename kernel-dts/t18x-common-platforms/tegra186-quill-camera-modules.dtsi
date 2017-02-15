@@ -18,6 +18,7 @@
 #include "t18x-common-platforms/tegra186-quill-camera-e3322-a00.dtsi"
 #include "t18x-common-platforms/tegra186-quill-camera-li-mipi-adpt-a00.dtsi"
 #include "t18x-common-platforms/tegra186-quill-camera-imx274-a00.dtsi"
+#include "t18x-common-platforms/tegra186-quill-camera-vivid.dtsi"
 
 #define CAM0_RST_L	TEGRA_MAIN_GPIO(R, 5)
 #define CAM0_PWDN	TEGRA_MAIN_GPIO(R, 0)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,15 +27,11 @@
 
 /* tegra_prod: Tegra Prod list for the given submodule
  * @n_prod_cells: Number of prod setting cells.
- * @mask_ones:  Mask value type. if it is true than value applied for those
- *		bits whose mask bits are 1s. If it false then value applies
- *		to those bits whose mask bits are 0.
  */
 struct tegra_prod {
 	struct tegra_prod_config *prod_config;
 	int num; /* number of tegra_prod*/
 	int n_prod_cells;
-	bool mask_ones;
 };
 
 struct prod_tuple {
@@ -216,9 +212,6 @@ static int tegra_prod_parse_dt(struct device *dev,
 	}
 	tegra_prod->n_prod_cells = n_tupple;
 
-	tegra_prod->mask_ones = of_property_read_bool(np_prod,
-							   "mask-one-style");
-
 	n_child = 0;
 	for_each_available_child_of_node(np_prod, child) {
 		t_prod = &tegra_prod->prod_config[n_child];
@@ -271,14 +264,12 @@ static int tegra_prod_parse_dt(struct device *dev,
  * tegra_prod_set_tuple - Only set a tuple.
  * @base:		base address of the register.
  * @prod_tuple:		the tuple to set.
- * @mask_one:		Mask style.
  * @new_mask:		Mask override value, 0 means use from tupple.
  *
  * Returns 0 on success.
  */
 static int tegra_prod_set_tuple(void __iomem **base,
 				struct prod_tuple *prod_tuple,
-				bool mask_ones,
 				u32 new_mask)
 {
 	u32 reg;
@@ -288,10 +279,7 @@ static int tegra_prod_set_tuple(void __iomem **base,
 		return -EINVAL;
 
 	reg = readl(base[prod_tuple->index] + prod_tuple->addr);
-	if (mask_ones)
-		reg = ((reg & ~mask) | (prod_tuple->val & mask));
-	else
-		reg = ((reg & mask) | (prod_tuple->val & ~mask));
+	reg = ((reg & ~mask) | (prod_tuple->val & mask));
 
 	writel(reg, base[prod_tuple->index] + prod_tuple->addr);
 
@@ -307,8 +295,7 @@ static int tegra_prod_set_tuple(void __iomem **base,
  * Returns 0 on success.
  */
 static int tegra_prod_set(void __iomem **base,
-			  struct tegra_prod_config *tegra_prod,
-			  bool mask_ones)
+			  struct tegra_prod_config *tegra_prod)
 {
 	int i;
 	int ret;
@@ -317,8 +304,7 @@ static int tegra_prod_set(void __iomem **base,
 		return -EINVAL;
 
 	for (i = 0; i < tegra_prod->count; i++) {
-		ret = tegra_prod_set_tuple(base, &tegra_prod->prod_tuple[i],
-					   mask_ones, 0);
+		ret = tegra_prod_set_tuple(base, &tegra_prod->prod_tuple[i], 0);
 		if (ret)
 			return ret;
 	}
@@ -343,8 +329,7 @@ int tegra_prod_set_list(void __iomem **base,
 		return -EINVAL;
 
 	for (i = 0; i < tegra_prod->num; i++) {
-		ret = tegra_prod_set(base, &tegra_prod->prod_config[i],
-				     tegra_prod->mask_ones);
+		ret = tegra_prod_set(base, &tegra_prod->prod_config[i]);
 		if (ret)
 			return ret;
 	}
@@ -373,8 +358,7 @@ int tegra_prod_set_boot_init(void __iomem **base,
 	for (i = 0; i < tegra_prod->num; i++) {
 		if (!tegra_prod->prod_config[i].boot_init)
 			continue;
-		ret = tegra_prod_set(base, &tegra_prod->prod_config[i],
-				     tegra_prod->mask_ones);
+		ret = tegra_prod_set(base, &tegra_prod->prod_config[i]);
 		if (ret)
 			return ret;
 	}
@@ -406,8 +390,7 @@ int tegra_prod_set_by_name(void __iomem **base, const char *name,
 	for (i = 0; i < tegra_prod->num; i++) {
 		t_prod = &tegra_prod->prod_config[i];
 		if (!strcasecmp(t_prod->name, name))
-			return tegra_prod_set(base, t_prod,
-					      tegra_prod->mask_ones);
+			return tegra_prod_set(base, t_prod);
 	}
 
 	return -ENODEV;
@@ -460,8 +443,7 @@ int tegra_prod_set_by_name_partially(void __iomem **base, const char *name,
 		    ((ptuple->mask & mask) != mask))
 			continue;
 
-		ret = tegra_prod_set_tuple(base, ptuple,
-					   tegra_prod->mask_ones, mask);
+		ret = tegra_prod_set_tuple(base, ptuple, mask);
 		if (ret < 0)
 			return ret;
 	}

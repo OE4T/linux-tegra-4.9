@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2002-3 Patrick Mochel
  * Copyright (c) 2002-3 Open Source Development Labs
+ * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This file is released under the GPLv2
  *
@@ -1163,8 +1164,10 @@ u64 dma_get_required_mask(struct device *dev)
 
 	if (!high_totalram) {
 		/* convert to mask just covering totalram */
-		low_totalram = (1 << (fls(low_totalram) - 1));
-		low_totalram += low_totalram - 1;
+		if (low_totalram) {
+			low_totalram = (1 << (fls(low_totalram) - 1));
+			low_totalram += low_totalram - 1;
+		}
 		mask = low_totalram;
 	} else {
 		high_totalram = (1 << (fls(high_totalram) - 1));

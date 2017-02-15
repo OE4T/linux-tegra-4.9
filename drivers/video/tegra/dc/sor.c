@@ -63,7 +63,6 @@ tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor)
 {
 	int flag = tegra_dc_is_clk_enabled(sor->sor_clk);
-
 	if (sor->clk_type == TEGRA_SOR_SAFE_CLK)
 		return;
 
@@ -658,6 +657,7 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	sor->src_switch_clk = src_clk;
 	sor->link_cfg = cfg;
 	sor->portnum = 0;
+
 	sor->sor_state = SOR_DETACHED;
 
 	tegra_dc_sor_debug_create(sor, res_name);
@@ -1164,6 +1164,7 @@ void tegra_sor_config_hdmi_clk(struct tegra_dc_sor_data *sor)
 static void tegra_sor_pad_power_up(struct tegra_dc_sor_data *sor,
 					bool is_lvds)
 {
+
 	if (sor->power_is_up)
 		return;
 
@@ -1465,6 +1466,7 @@ static int tegra_sor_config_dp_prods(struct tegra_dc_dp_data *dp)
 
 static void tegra_sor_dp_cal(struct tegra_dc_sor_data *sor)
 {
+
 	tegra_sor_pad_cal_power(sor, true);
 
 	tegra_sor_config_dp_prods(tegra_dc_get_outdata(sor->dc));
@@ -1544,14 +1546,22 @@ void tegra_sor_config_xbar(struct tegra_dc_sor_data *sor)
 
 void tegra_dc_sor_enable_dp(struct tegra_dc_sor_data *sor)
 {
-	tegra_sor_reset(sor);
 
-	tegra_sor_config_safe_clk(sor);
+	if (!sor->dc->initialized) {
+		tegra_sor_reset(sor);
+		tegra_sor_config_safe_clk(sor);
+	}
+	/* This need to be invoked for seamless */
 	tegra_sor_clk_enable(sor);
 
-	tegra_sor_dp_cal(sor);
+	if (!sor->dc->initialized) {
+		tegra_sor_dp_cal(sor);
+		tegra_sor_pad_power_up(sor, false);
+	} else {
+		/* Update sor power state for seamless */
+		sor->power_is_up = true;
+	}
 
-	tegra_sor_pad_power_up(sor, false);
 }
 
 static void tegra_dc_sor_enable_sor(struct tegra_dc_sor_data *sor, bool enable)
@@ -2147,9 +2157,12 @@ void tegra_sor_setup_clk(struct tegra_dc_sor_data *sor, struct clk *clk,
 		dc_parent_clk = clk_get_parent(clk);
 		BUG_ON(!dc_parent_clk);
 
-		if (dc->mode.pclk != clk_get_rate(dc_parent_clk)) {
-			clk_set_rate(dc_parent_clk, dc->mode.pclk);
-			clk_set_rate(clk, dc->mode.pclk);
+		/* Change for seamless */
+		if (!dc->initialized) {
+			if (dc->mode.pclk != clk_get_rate(dc_parent_clk)) {
+				clk_set_rate(dc_parent_clk, dc->mode.pclk);
+				clk_set_rate(clk, dc->mode.pclk);
+			}
 		}
 
 #ifdef CONFIG_TEGRA_NVDISPLAY

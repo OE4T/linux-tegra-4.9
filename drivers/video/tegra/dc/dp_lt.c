@@ -1048,11 +1048,20 @@ void tegra_dp_lt_init(struct tegra_dp_lt_data *lt_data,
 	BUG_ON(!dp || !lt_data || !dp->dc);
 
 	lt_data->dp = dp;
-	lt_data->state = STATE_RESET;
-	lt_data->pending_evt = 0;
-	lt_data->shutdown = 0;
 
-	lt_data_sw_reset(lt_data);
+	/* Change for seamless */
+	if (tegra_dc_hpd(dp->dc) &&
+		dp->dc->initialized) {
+		lt_data->state = STATE_DONE_PASS;
+		/* Set config valid to false */
+		/* So that fresh LT starts   */
+		lt_data->lt_config_valid = false;
+	} else {
+		lt_data->state = STATE_RESET;
+		lt_data->pending_evt = 0;
+		lt_data->shutdown = 0;
+		lt_data_sw_reset(lt_data);
+	}
 
 	mutex_init(&lt_data->lock);
 	INIT_DELAYED_WORK(&lt_data->dwork, lt_worker);

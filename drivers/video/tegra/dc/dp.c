@@ -2137,6 +2137,8 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		dp->sor = ((struct tegra_dc_dp_data *)dc->out_data)->sor;
 	} else {
 		dp->sor = tegra_dc_sor_init(dc, &dp->link_cfg);
+		if (dc->initialized)
+			dp->sor->clk_type = TEGRA_SOR_MACRO_CLK;
 	}
 	dp->irq = irq;
 	dp->pdata = dc->pdata->default_out->dp_out;
@@ -2440,6 +2442,9 @@ static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp)
 {
 	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return;
+	/* Seamless prevent reset */
+	if (dp->dc->initialized)
+		return;
 
 	if (!dp || !dp->dpaux)
 		return;
@@ -2646,12 +2651,17 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 
 	tegra_dc_io_start(dc);
 
-	ret = tegra_dp_panel_power_state(dp, NV_DPCD_SET_POWER_VAL_D0_NORMAL);
-	if (ret < 0) {
-		dev_err(&dp->dc->ndev->dev,
-		"dp: failed to exit panel power save mode (0x%x)\n", ret);
-		tegra_dc_io_end(dp->dc);
-		return;
+	/* Change for seamless */
+	if (!dc->initialized) {
+		ret = tegra_dp_panel_power_state(dp,
+					NV_DPCD_SET_POWER_VAL_D0_NORMAL);
+		if (ret < 0) {
+			dev_err(&dp->dc->ndev->dev,
+			"dp: failed to exit panel power save mode (0x%x)\n",
+			ret);
+			tegra_dc_io_end(dp->dc);
+			return;
+		}
 	}
 
 	/* For eDP, driver gets to decide the best mode. */
@@ -2693,38 +2703,43 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	tegra_dc_dp_dpcd_write(dp, NV_DPCD_MAIN_LINK_CHANNEL_CODING_SET,
 			NV_DPCD_MAIN_LINK_CHANNEL_CODING_SET_ANSI_8B10B);
 
-	tegra_sor_write_field(sor, NV_SOR_DP_CONFIG(sor->portnum),
+	if (!dc->initialized) {
+		tegra_sor_write_field(sor, NV_SOR_DP_CONFIG(sor->portnum),
 				NV_SOR_DP_CONFIG_IDLE_BEFORE_ATTACH_ENABLE,
 				NV_SOR_DP_CONFIG_IDLE_BEFORE_ATTACH_ENABLE);
 
-	tegra_dp_set_link_bandwidth(dp, cfg->link_bw);
+		tegra_dp_set_link_bandwidth(dp, cfg->link_bw);
 
-	/*
-	 * enhanced framing enable field shares DPCD offset
-	 * with lane count set field. Make sure lane count is set
-	 * before enhanced framing enable. CTS waits on first
-	 * write to this offset to check for lane count set.
-	 */
-	tegra_dp_set_lane_count(dp, cfg->lane_count);
-	tegra_dp_set_enhanced_framing(dp, cfg->enhanced_framing);
+		/*
+		* enhanced framing enable field shares DPCD offset
+		* with lane count set field. Make sure lane count is set
+		* before enhanced framing enable. CTS waits on first
+		* write to this offset to check for lane count set.
+		*/
+		tegra_dp_set_lane_count(dp, cfg->lane_count);
 
-	tegra_dp_link_cal(dp);
-	tegra_dp_tu_config(dp, cfg);
+		tegra_dp_set_enhanced_framing(dp, cfg->enhanced_framing);
 
-	tegra_dp_tpg(dp, TRAINING_PATTERN_DISABLE, cfg->lane_count);
+		tegra_dp_link_cal(dp);
+		tegra_dp_tu_config(dp, cfg);
+
+		tegra_dp_tpg(dp, TRAINING_PATTERN_DISABLE, cfg->lane_count);
+	}
 
 	tegra_sor_port_enable(sor, true);
 	tegra_sor_config_xbar(dp->sor);
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	/* switch to macro feedback clock */
-	clk_set_parent(sor->src_switch_clk, sor->brick_clk);
+	if (!dp->dc->initialized) {
+		/* switch to macro feedback clock */
+		clk_set_parent(sor->src_switch_clk, sor->brick_clk);
 
-	tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
-		NV_SOR_CLK_CNTRL_DP_CLK_SEL_MASK,
-		NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_DPCLK);
-	tegra_dc_sor_set_link_bandwidth(sor, dp->link_cfg.link_bw ? :
-			NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G1_62);
+		tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
+			NV_SOR_CLK_CNTRL_DP_CLK_SEL_MASK,
+			NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_DPCLK);
+		tegra_dc_sor_set_link_bandwidth(sor, dp->link_cfg.link_bw ? :
+				NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G1_62);
+	}
 #else
 	clk_set_parent(sor->sor_clk, dp->parent_clk);
 	tegra_dp_clk_enable(dp);
@@ -2743,12 +2758,17 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 
 	if (likely(dc->out->type != TEGRA_DC_OUT_FAKE_DP) &&
 		!no_lt_at_unblank) {
-		tegra_dp_lt_set_pending_evt(&dp->lt_data);
-		ret = tegra_dp_lt_wait_for_completion(&dp->lt_data,
-					STATE_DONE_PASS, LT_TIMEOUT_MS);
-		if (!ret)
-			dev_err(&dp->dc->ndev->dev,
-				"dp: link training failed\n");
+		if (!dc->initialized) {
+			tegra_dp_lt_set_pending_evt(&dp->lt_data);
+			ret = tegra_dp_lt_wait_for_completion(&dp->lt_data,
+						STATE_DONE_PASS, LT_TIMEOUT_MS);
+			if (!ret)
+				dev_err(&dp->dc->ndev->dev,
+					"dp: link training failed\n");
+		} else {
+			/* Perform SOR attach here */
+			tegra_dc_sor_attach(dp->sor);
+		}
 	} else {
 		/*
 		 * Fake panel. Just enable host.
@@ -2922,21 +2942,29 @@ static long tegra_dc_dp_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	/* set pll_d2 to pclk rate */
 	tegra_sor_setup_clk(dp->sor, clk, false);
 
-	/* fixed pll_dp@270MHz */
-	clk_set_rate(dp->parent_clk, 270000000);
+	/* Change for seamless */
+	if (!dc->initialized) {
+		/* fixed pll_dp@270MHz */
+		clk_set_rate(dp->parent_clk, 270000000);
+	}
 
 	/* BRINGUP HACK: NEED TO CLEAN UP CLK PROGRAMMING SEQUENCE */
 #ifdef CONFIG_TEGRA_NVDISPLAY
+
 	/* enable pll_dp */
 	tegra_dp_clk_enable(dp);
 
 	/* enable SOR safe clock */
 	tegra_sor_safe_clk_enable(sor);
-	/* switch sor_pad_clk to use SOR safe clock for now */
-	clk_set_parent(sor->src_switch_clk, sor->safe_clk);
 
-	/* set parent of SOR brick clock to pll_dp */
-	clk_set_parent(sor->brick_clk, dp->parent_clk);
+	/* Change for seamless */
+	if (!dc->initialized) {
+		/* switch sor_pad_clk to use SOR safe clock for now */
+		clk_set_parent(sor->src_switch_clk, sor->safe_clk);
+
+		/* set parent of SOR brick clock to pll_dp */
+		clk_set_parent(sor->brick_clk, dp->parent_clk);
+	}
 
 	/* enable sor_pad_clk */
 	tegra_disp_clk_prepare_enable(sor->src_switch_clk);

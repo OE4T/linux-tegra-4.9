@@ -3361,8 +3361,9 @@ static struct tegra_dc_mode *tegra_dc_get_override_mode(struct tegra_dc *dc)
 {
 	unsigned long refresh;
 
-	if (dc->out->type == TEGRA_DC_OUT_HDMI &&
-			tegra_is_bl_display_initialized(dc->ndev->id)) {
+	if (((dc->out->type == TEGRA_DC_OUT_HDMI) ||
+		(dc->out->type == TEGRA_DC_OUT_DP)) &&
+		   tegra_is_bl_display_initialized(dc->ndev->id)) {
 
 		/* For seamless HDMI, read mode parameters from bootloader
 		 * set DC configuration
@@ -3441,7 +3442,8 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 
 	dc->out = out;
 
-	if (dc->out->type == TEGRA_DC_OUT_HDMI &&
+	if (((dc->out->type == TEGRA_DC_OUT_HDMI) ||
+		(dc->out->type == TEGRA_DC_OUT_DP)) &&
 			tegra_is_bl_display_initialized(dc->ndev->id)) {
 		/*
 		 * Bootloader enables clk and host1x in seamless

@@ -891,7 +891,8 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	/* Print firmware version */
 	ret = tegra_camrtc_get_fw_hash(dev, rtcpu->fw_hash);
 	if (ret == 0)
-		devm_tegrafw_register(dev, "camrtc",
+		devm_tegrafw_register(dev,
+			name != pdata->name ? name :  "camrtc",
 			TFW_NORMAL, tegra_camrtc_print_version, NULL);
 
 	/* set idle to slow down clock while idle mode */

@@ -19,6 +19,7 @@
 #include <linux/bitops.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/io.h>
 #include <linux/iommu.h>
 #include <linux/jiffies.h>
 #include <linux/kernel.h>
@@ -528,8 +529,11 @@ static int tegra_camrtc_poweron(struct device *dev)
 		val = readl(rtcpu->pm_base + TEGRA_PM_R5_CTRL_0);
 
 		/* Skip configuring core if it is already unhalted */
-		if ((val & TEGRA_PM_FWLOADDONE) != 0)
+		if ((val & TEGRA_PM_FWLOADDONE) != 0) {
+			writel(val & ~TEGRA_PM_FWLOADDONE,
+				rtcpu->pm_base + TEGRA_PM_R5_CTRL_0);
 			return 0;
+		}
 	}
 
 	if (rtcpu->cfg_base) {
@@ -541,6 +545,8 @@ static int tegra_camrtc_poweron(struct device *dev)
 		writel(TEGRA_FN_MODEIN,
 			rtcpu->cfg_base + TEGRA_APS_FRSC_SC_MODEIN_0);
 
+		mmiowb();
+
 		/* Reset R5 */
 		if (rtcpu->sce_resets.sce_nsysporeset != NULL)
 			reset_control_reset(rtcpu->sce_resets.sce_nsysporeset);
@@ -548,6 +554,15 @@ static int tegra_camrtc_poweron(struct device *dev)
 
 	if (rtcpu->pm_base) {
 		writel(val | TEGRA_PM_FWLOADDONE,
+			rtcpu->pm_base + TEGRA_PM_R5_CTRL_0);
+
+		mmiowb();
+
+		/*
+		 * Make sure we always find FWLOADDONE set to 0 after crash.
+		 * Clearing FWLOADDONE does not affect R5 once it has been set.
+		 */
+		writel(val & ~TEGRA_PM_FWLOADDONE,
 			rtcpu->pm_base + TEGRA_PM_R5_CTRL_0);
 	}
 

@@ -52,6 +52,8 @@ static int vgpu_fecs_trace_init(struct gk20a *g)
 		dev_info(dev_from_gk20a(g), "does not support fecs trace\n");
 		goto fail;
 	}
+	g->gpu_characteristics.flags |=
+		NVGPU_GPU_FLAGS_SUPPORT_FECS_CTXSW_TRACE;
 
 	hv_np = args.np;
 	mempool = args.args[0];

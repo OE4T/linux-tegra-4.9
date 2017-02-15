@@ -584,6 +584,9 @@ static int gk20a_fecs_trace_init(struct gk20a *g)
 	nvgpu_mutex_init(&trace->hash_lock);
 	hash_init(trace->pid_hash_table);
 
+	g->gpu_characteristics.flags |=
+		NVGPU_GPU_FLAGS_SUPPORT_FECS_CTXSW_TRACE;
+
 	gk20a_fecs_trace_debugfs_init(g);
 	return 0;
 

@@ -70,9 +70,6 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 #define HDCP_REAUTH_MASK		(1 << 3)
 #define HDCP_LINK_INTEG_FAIL		(1 << 4)
 
-#define TEGRA_NVHDCP_PORT_DP		2
-#define TEGRA_NVHDCP_PORT_HDMI		3
-
 #define HDCP_TA_CMD_CTRL		0
 #define HDCP_TA_CMD_AKSV		1
 #define HDCP_TA_CMD_ENC			2
@@ -108,6 +105,17 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 #define HDCP_KEY_LOAD			0x100
 #define KFUSE_MASK			0x10
 
+#define HDCP_CMD_GEN_CMAC		0xB
+#define HDCP_CMAC_OFFSET		6
+#define HDCP_TSEC_ADDR_OFFSET		22
+
+#define HDCP11_SRM_PATH			"etc/hdcpsrm/hdcp1x.srm"
+#define RCVR_ID_LIST_SIZE		635
+#define TSEC_SRM_REVOCATION_CHECK	(1)
+
+#define CP_IRQ_OFFSET			(1 << 2)
+#define CP_IRQ_RESET			0x4
+
 /* logging */
 #ifdef VERBOSE_DEBUG
 #define dphdcp_vdbg(...)	\
@@ -132,6 +140,8 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 #ifdef CONFIG_TEGRA_NVDISPLAY
 static void *ta_ctx;
 #endif
+static bool repeater_flag;
+static bool vprime_check_done;
 
 static int tegra_dphdcp_read(struct tegra_dc_dp_data *dp, u32 cmd,
 	u8 *data_ptr, u32 size, u32 *aux_status)
@@ -254,6 +264,24 @@ static int tegra_dphdcp_write64(struct tegra_dc_dp_data *dp, u32 reg,
 	return tegra_dphdcp_write(dp, reg, buf, sizeof(buf));
 }
 
+/* write 1 byte of data */
+static int tegra_dphdcp_write8(struct tegra_dc_dp_data *dp, u32 reg,
+	u8 data)
+{
+	char buf[SIZE_ONE_BYTE];
+	u8 cur_data;
+
+	if (!dp) {
+		dphdcp_err("Null params sent\n");
+		return -EINVAL;
+	}
+
+	cur_data = data;
+
+	memcpy(buf, (char *)&cur_data, sizeof(buf));
+	return tegra_dphdcp_write(dp, reg, buf, sizeof(buf));
+}
+
 /* write 5 bytes of data */
 static int tegra_dphdcp_write40(struct tegra_dc_dp_data *dp, u32 reg,
 	u64 *data)
@@ -296,7 +324,6 @@ static int wait_key_ctrl(struct tegra_dc_sor_data *sor, u32 mask, u32 value)
 	return 0;
 }
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
 /* set or clear RUN_YES */
 static void hdcp_ctrl_run(struct tegra_dc_sor_data *sor, bool v)
 {
@@ -304,7 +331,7 @@ static void hdcp_ctrl_run(struct tegra_dc_sor_data *sor, bool v)
 
 	if (!sor) {
 		dphdcp_err("Null params sent\n");
-		return -EINVAL;
+		return;
 	}
 
 	if (v) {
@@ -348,24 +375,6 @@ static int wait_hdcp_ctrl(struct tegra_dc_sor_data *sor, u32 mask, u32 *v)
 	return 0;
 }
 
-/* write 1 byte of data */
-static int tegra_dphdcp_write8(struct tegra_dc_dp_data *dp, u32 reg,
-	u8 data)
-{
-	char buf[SIZE_ONE_BYTE];
-	u8 cur_data;
-
-	if (!dp) {
-		dphdcp_err("Null params sent\n");
-		return -EINVAL;
-	}
-
-	cur_data = data;
-
-	memcpy(buf, (char *)&cur_data, sizeof(buf));
-	return tegra_dphdcp_write(dp, reg, buf, sizeof(buf));
-}
-
 /*
  * check if the KSV values returned are valid,
  * i.e a combination of 20 ones and 20 zeroes
@@ -379,7 +388,6 @@ static int verify_ksv(u64 k)
 
 	return  (i != 20) ? -EINVAL : 0;
 }
-#endif
 
 /* 64-bit link encryption session random number */
 static inline u64 get_an(struct tegra_dc_sor_data *sor)
@@ -448,6 +456,20 @@ static int get_bstatus(struct tegra_dc_dp_data *dp, u8 *bstatus)
 	return tegra_dphdcp_read(dp, NV_DPCD_HDCP_BSTATUS_OFFSET,
 						bstatus, 1, &status);
 }
+
+static int get_irq_status(struct tegra_dc_dp_data *dp, u8 *irq_status)
+{
+	u32 status;
+
+	if (!dp || !irq_status) {
+		dphdcp_err("Null params sent!\n");
+		return -EINVAL;
+	}
+
+	return tegra_dphdcp_read(dp, NV_DPCD_DEVICE_SERVICE_IRQ_VECTOR,
+				irq_status, 1, &status);
+}
+
 static inline bool dphdcp_is_plugged(struct tegra_dphdcp *dphdcp)
 {
 	rmb();
@@ -673,51 +695,183 @@ aux_read:
 	return 0;
 }
 
-static int tsec_hdcp_dp_verify_vprime(struct tegra_dphdcp *dphdcp)
+static int tsec_hdcp_context_creation(struct hdcp_context_t *hdcp_context)
 {
-	struct hdcp_context_t hdcp_context;
-	struct hdcp_verify_vprime_param verify_vprime_param;
 	int e = 0;
-
-	e = tsec_hdcp_create_context(&hdcp_context);
-	if (e)
+	e = tsec_hdcp_create_context(hdcp_context);
+	if (e) {
 		dphdcp_err("Error creating hdcp context\n");
-	e = tsec_hdcp_init(&hdcp_context);
+		goto exit;
+	}
+
+	e = tsec_hdcp_init(hdcp_context);
 	if (e)
 		dphdcp_err("error in tsec init\n");
+exit:
+	return e;
+}
+
+/* validate srm signature */
+static int get_srm_signature(struct hdcp_context_t *hdcp_context,
+			char *nonce, uint64_t *pkt, void *ta_ctx)
+{
+	int err = 0;
+
+	if (!hdcp_context || !nonce || !pkt || !ta_ctx) {
+		dphdcp_err("Null params sent!\n");
+		return err;
+	}
+	/* generate nonce in the ucode */
+	err = tsec_hdcp_generate_nonce(hdcp_context, nonce);
+	if (err) {
+		dphdcp_err("Error generating nonce!\n");
+		return err;
+	}
+	/* pass the nonce to hdcp TA and get the signature back */
+	memcpy(pkt, nonce, HDCP_NONCE_SIZE);
+	err = te_launch_trusted_oper(pkt, PKT_SIZE, HDCP_CMD_GEN_CMAC, ta_ctx);
+	if (err)
+		dphdcp_err("te launch operation failed with error %d\n", err);
+	return err;
+}
+
+/* SRM revocation check for receiver */
+static int srm_revocation_check(struct tegra_dphdcp *dphdcp)
+{
+	struct hdcp_context_t *hdcp_context =
+		kmalloc(sizeof(struct hdcp_context_t), GFP_KERNEL);
+	int e = 0;
+	uint64_t *pkt = NULL;
+	unsigned char nonce[HDCP_NONCE_SIZE];
+
+	pkt = kzalloc(PKT_SIZE, GFP_KERNEL);
+
+	if (!pkt || !hdcp_context)
+		goto exit;
+
+	e = tsec_hdcp_context_creation(hdcp_context);
+	if (e) {
+		dphdcp_err("hdcp context create/init failed\n");
+		goto exit;
+	}
+
+	if (tegra_dc_is_t18x()) {
+		e = get_srm_signature(hdcp_context, nonce, pkt, ta_ctx);
+		if (e) {
+			dphdcp_err("Error getting srm signature!\n");
+			goto exit;
+		}
+	}
+	e = tsec_hdcp_revocation_check(hdcp_context,
+			(unsigned char *)(pkt + HDCP_CMAC_OFFSET),
+			*((unsigned int *)(pkt + HDCP_TSEC_ADDR_OFFSET)),
+			TEGRA_NVHDCP_PORT_DP, HDCP_1x);
+
+	if (e)
+		dphdcp_err("hdcp revocation check failed with err: %x\n", e);
+exit:
+	tsec_hdcp_free_context(hdcp_context);
+	kfree(hdcp_context);
+	kfree(pkt);
+	return e;
+}
+
+/* vprime verification for repeater */
+int tsec_hdcp_dp_verify_vprime(struct tegra_dphdcp *dphdcp)
+{
+	int i;
+	u8 *p;
+	u8 buf[RCVR_ID_LIST_SIZE];
+	unsigned char nonce[HDCP_NONCE_SIZE];
+	struct hdcp_verify_vprime_param verify_vprime_param;
+	int e = 0;
+	uint64_t *pkt = NULL;
+	unsigned int *tsec_addr;
+	struct hdcp_context_t *hdcp_context =
+		kmalloc(sizeof(struct hdcp_context_t), GFP_KERNEL);
+
+	e = tsec_hdcp_context_creation(hdcp_context);
+	if (e) {
+		dphdcp_err("hdcp context create/init failed\n");
+		goto exit;
+	}
+	pkt = kzalloc(PKT_SIZE, GFP_KERNEL);
+
+	if (!pkt || !hdcp_context)
+		goto exit;
+	if (tegra_dc_is_t18x()) {
+		ta_ctx = NULL;
+		/* Open a trusted sesion with HDCP TA */
+		e = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
+		if (e) {
+			dphdcp_err("Invalid session id\n");
+			goto exit;
+		}
+		e = get_srm_signature(hdcp_context, nonce, pkt, ta_ctx);
+		if (e) {
+			dphdcp_err("Error getting srm signature!\n");
+			goto exit;
+		}
+	}
+
 	memset(&verify_vprime_param, 0x0,
 		sizeof(struct hdcp_verify_vprime_param));
-	memset(hdcp_context.cpuvaddr_mthd_buf_aligned, 0,
+	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
-	/* revocation check */
-	verify_vprime_param.srm_size =
-		tsec_dp_hdcp_revocation_check(&hdcp_context);
-	/* get receiver id list into the buffer */
-	memcpy(hdcp_context.cpuvaddr_rcvr_id_list, dphdcp->bksv_list,
+	verify_vprime_param.srm_size = tsec_hdcp_srm_read(hdcp_context,
+							HDCP_1x);
+
+	if (!verify_vprime_param.srm_size) {
+		dphdcp_err("Error reading SRM file!\n");
+		goto exit;
+	}
+	/* convert 64 bit values to 40 bit */
+	p = buf;
+	for (i = 0; i < dphdcp->num_bksv_list; i++) {
+		p[0] = (u8)(dphdcp->bksv_list[i] & 0xff);
+		p[1] = (u8)((dphdcp->bksv_list[i]>>8) & 0xff);
+		p[2] = (u8)((dphdcp->bksv_list[i]>>16) & 0xff);
+		p[3] = (u8)((dphdcp->bksv_list[i]>>24) & 0xff);
+		p[4] = (u8)((dphdcp->bksv_list[i]>>32) & 0xff);
+		p += 5;
+	}
+
+	memcpy(hdcp_context->cpuvaddr_rcvr_id_list, buf,
 			(dphdcp->num_bksv_list)*SIZE_FIVE_BYTES);
-	memcpy(verify_vprime_param.vprime, dphdcp->v_prime,
+	memcpy((void *)verify_vprime_param.vprime, dphdcp->v_prime,
 			HDCP_SIZE_VPRIME_1X_8);
 	verify_vprime_param.trans_id.session_id = 0;
 	verify_vprime_param.is_ver_hdcp2x = 0; /* hdcp 1.x */
+	verify_vprime_param.port = TEGRA_NVHDCP_PORT_DP; /* hdcp 1.x */
 	verify_vprime_param.bstatus = dphdcp->binfo;
 	verify_vprime_param.depth = 0; /* depth not used */
 	verify_vprime_param.device_count = dphdcp->num_bksv_list;
 	verify_vprime_param.has_hdcp2_repeater = 0;
+	tsec_addr = (unsigned int *)(pkt + HDCP_TSEC_ADDR_OFFSET);
+	verify_vprime_param.tsec_gsc_address = *tsec_addr;
+	memcpy(verify_vprime_param.srm_cmac,
+		(unsigned char *)(pkt + HDCP_CMAC_OFFSET),
+		HDCP_CMAC_SIZE);
 	verify_vprime_param.has_hdcp1_device = 0;
-	memcpy(hdcp_context.cpuvaddr_mthd_buf_aligned,
+	memcpy(hdcp_context->cpuvaddr_mthd_buf_aligned,
 		&verify_vprime_param,
 		sizeof(struct hdcp_verify_vprime_param));
-	tsec_send_method(&hdcp_context,
+	tsec_send_method(hdcp_context,
 	HDCP_VERIFY_VPRIME,
 	HDCP_MTHD_FLAGS_SB|HDCP_MTHD_FLAGS_RECV_ID_LIST|HDCP_MTHD_FLAGS_SRM);
 	memcpy(&verify_vprime_param,
-		hdcp_context.cpuvaddr_mthd_buf_aligned,
+		hdcp_context->cpuvaddr_mthd_buf_aligned,
 		sizeof(struct hdcp_verify_vprime_param));
 	if (verify_vprime_param.ret_code) {
-		dphdcp_err("tsec_hdcp_verify_vprime: failed with error:%d\n",
+		dphdcp_err("tsec_hdcp_verify_vprime: failed with error:%x\n",
 		verify_vprime_param.ret_code);
 	}
 	e = verify_vprime_param.ret_code;
+
+exit:
+	tsec_hdcp_free_context(hdcp_context);
+	kfree(pkt);
+	kfree(hdcp_context);
 	return e;
 }
 
@@ -729,6 +883,7 @@ static int get_repeater_info(struct tegra_dphdcp *dphdcp)
 	int vcheck_tries = VPRIME_RETRIES;
 	u8 bstatus;
 	u64 binfo;
+	u8 irq;
 	struct tegra_dc_dp_data *dp = dphdcp->dp;
 
 	dphdcp_vdbg("repeater found:fetching repeater info\n");
@@ -755,6 +910,15 @@ static int get_repeater_info(struct tegra_dphdcp *dphdcp)
 		dphdcp_err("repeater Bstatus read timeout\n");
 		return -ETIMEDOUT;
 	}
+	/* READY is set so the CP_IRQ interrupt should go high */
+	e = get_irq_status(dp, &irq);
+	if (e) {
+		dphdcp_err("irq register read failure!\n");
+		return e;
+	}
+	if (irq & CP_IRQ_OFFSET)
+		dphdcp_vdbg("CP_IRQ interrupt set high\n");
+
 	/* verify V' thrice to check for link failures */
 	do {
 		memset(dphdcp->bksv_list, 0, sizeof(dphdcp->bksv_list));
@@ -767,6 +931,23 @@ static int get_repeater_info(struct tegra_dphdcp *dphdcp)
 			return e;
 		}
 		msleep(100);
+
+		/* clear the irq register, this will be needed to find out
+		 * if a spurious interrupt is generated. The DEVICE_SERVICE_IRQ
+		 * register is clearable read only and can be cleared by writing
+		 * 1 to the respective bit
+		 */
+		e = tegra_dphdcp_write8(dp, NV_DPCD_DEVICE_SERVICE_IRQ_VECTOR,
+								CP_IRQ_RESET);
+		/* wait for the CP_IRQ bit to be cleared */
+		msleep(100);
+
+		e = get_irq_status(dp, &irq);
+		if (e) {
+			dphdcp_err("irq register read failure!\n");
+			return e;
+		}
+		dphdcp_vdbg("read irq after clearing: %x\n", irq);
 
 		if (binfo & BINFO_MAX_DEVS_EXCEEDED) {
 			dphdcp_err("repeater:max devices (0x%016llx)\n", binfo);
@@ -795,26 +976,53 @@ static int get_repeater_info(struct tegra_dphdcp *dphdcp)
 		e = get_vprime(dp, dphdcp->v_prime);
 		if (e)
 			dphdcp_err("repeater Vprime read failure!\n");
-
 		err = tsec_hdcp_dp_verify_vprime(dphdcp);
 		if (err)
 			dphdcp_err("vprime verification failed\n");
+
+		/* read CP_IRQ interrupt to check for spurious interrupts.
+		 * This needs to be done only when we are authenticating
+		 * on the DP engine. On the HDMI engine, we will not take
+		 * any action for a spurious interrupt
+		 */
+		if (!repeater_flag) {
+			e = get_irq_status(dp, &irq);
+			if (e) {
+				dphdcp_err("irq register read failure!\n");
+				return e;
+			}
+			get_bstatus(dp, &bstatus);
+			/* For a spurious CP_IRQ interrupt, the CP_IRQ bit
+			 * will be high and the bstatus register bits will be
+			 * de-asserted. Check for both these conditions
+			 * to ensure if the interrupt generated is a
+			 * spurious one
+			 */
+			if ((irq & CP_IRQ_OFFSET) && (bstatus == 0)) {
+				dphdcp_vdbg("Spurious interrupt set\n");
+				return -EINVAL;
+			}
+		}
 	} while (--vcheck_tries && err);
 	if (err)
 		return -EINVAL;
+	vprime_check_done = true;
 	return 0;
 }
 
 static void dphdcp_downstream_worker(struct work_struct *work)
 {
-	int e;
-	u8 b_caps;
-	u8 bstatus;
+	int e = 0;
+	u8 b_caps = 0;
+	u8 bstatus = 0;
+	u32 tmp = 0;
+	u32 res = 0;
 
 	struct tegra_dphdcp *dphdcp =
 		container_of(to_delayed_work(work), struct tegra_dphdcp, work);
 	struct tegra_dc_dp_data *dp = dphdcp->dp;
 	struct tegra_dc *dc = dp->dc;
+	struct tegra_dc_sor_data *sor = dp->sor;
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	int hdcp_ta_ret; /* track returns from TA */
 	uint32_t ta_cmd = HDCP_AUTH_CMD;
@@ -828,10 +1036,6 @@ static void dphdcp_downstream_worker(struct work_struct *work)
 		e = -ENOMEM;
 		goto failure;
 	}
-#else
-	struct tegra_dc_sor_data *sor = dp->sor;
-	u32 tmp;
-	u32 res;
 #endif
 	dphdcp_vdbg("%s():started thread %s\n", __func__, dphdcp->name);
 	tegra_dc_io_start(dc);
@@ -870,112 +1074,119 @@ static void dphdcp_downstream_worker(struct work_struct *work)
 		dphdcp_err("receiver is not hdcp capable\n");
 		goto failure;
 	}
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	ta_ctx = NULL;
-	e = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
-	if (e) {
-		dphdcp_info("Invalid session id");
-		goto failure;
-	}
-	/* if session successfully opened, launch operations */
-	/* repeater flag in Bskv must be configured before loading fuses */
-	*pkt = HDCP_TA_CMD_REP;
-	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
-	*(pkt + 2*HDCP_CMD_OFFSET) = 0;
-	*(pkt + 3*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
-	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
-	if (e) {
-		dphdcp_err("te launch operation failed with error %d\n", e);
-		goto failure;
-	} else {
-		dphdcp_vdbg("Loading kfuse\n");
-		e = load_kfuse(dp);
+repeater_auth:
+	if (tegra_dc_is_t18x()) {
+		ta_ctx = NULL;
+		e = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
 		if (e) {
-			dphdcp_err("kfuse could not be loaded\n");
+			dphdcp_err("Invalid session id");
 			goto failure;
 		}
-	}
+		/* if session successfully opened, launch operations */
+		/* repeater flag in Bskv must be configured before
+		 * loading fuses
+		 */
+		*pkt = HDCP_TA_CMD_REP;
+		*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
+		*(pkt + 2*HDCP_CMD_OFFSET) = 0;
+		*(pkt + 3*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
+		*(pkt + 4*HDCP_CMD_OFFSET) = repeater_flag;
+		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
+		if (e) {
+			dphdcp_err("te launch oper failed with error %d\n", e);
+			goto failure;
+		} else {
+			dphdcp_vdbg("Loading kfuse\n");
+			e = load_kfuse(dp);
+			if (e) {
+				dphdcp_err("kfuse could not be loaded\n");
+				goto failure;
+			}
+		}
 
-	usleep_range(20000, 25000);
-	*pkt = HDCP_TA_CMD_CTRL;
-	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
-	*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_ENABLE;
-	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
-	if (e) {
-		dphdcp_err("te launch operation failed with error %d\n", e);
-		goto failure;
+		usleep_range(20000, 25000);
+		*pkt = HDCP_TA_CMD_CTRL;
+		*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
+		*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_ENABLE;
+		*(pkt + 3*HDCP_CMD_OFFSET) = repeater_flag;
+		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
+		if (e) {
+			dphdcp_err("te launch oper failed with error %d\n", e);
+			goto failure;
+		} else {
+			dphdcp_vdbg("wait AN_VALID ...\n");
+			hdcp_ta_ret = *pkt;
+			dphdcp_vdbg("An returned %x\n", e);
+			if (hdcp_ta_ret) {
+				dphdcp_err("An key generation timeout\n");
+				goto failure;
+			}
+			/* check SROM return */
+			hdcp_ta_ret = *(pkt + HDCP_CMD_BYTE_OFFSET);
+			if (hdcp_ta_ret) {
+				dphdcp_err("SROM error\n");
+				goto failure;
+			}
+		}
+
+		msleep(25);
+		*pkt = HDCP_TA_CMD_AKSV;
+		*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
+		*(pkt + 2*HDCP_CMD_OFFSET) = repeater_flag;
+		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
+		if (e) {
+			dphdcp_err("te launch oper failed with error %d\n", e);
+			goto failure;
+		} else {
+			hdcp_ta_ret = (u64)*pkt;
+			dphdcp->a_ksv = (u64)*(pkt + 1*HDCP_CMD_BYTE_OFFSET);
+			dphdcp->a_n = (u64)*(pkt + 2*HDCP_CMD_BYTE_OFFSET);
+			dphdcp_vdbg("Aksv is 0x%016llx\n", dphdcp->a_ksv);
+			dphdcp_vdbg("An is 0x%016llx\n", dphdcp->a_n);
+			/* check if verification of Aksv failed */
+			if (hdcp_ta_ret) {
+				dphdcp_err("Aksv verify failure\n");
+				goto disable;
+			}
+		}
 	} else {
-		dphdcp_vdbg("wait AN_VALID ...\n");
-		hdcp_ta_ret = *pkt;
-		dphdcp_vdbg("An returned %x\n", e);
-		if (hdcp_ta_ret) {
+		set_bksv(sor, 0, (b_caps & BCAPS_REPEATER));
+		e = load_kfuse(dp);
+		if (e) {
+			dphdcp_err("error loading kfuse\n");
+			goto failure;
+		}
+
+		usleep_range(20000, 25000);
+		hdcp_ctrl_run(sor, 1);
+
+		dphdcp_vdbg("waiting for An_valid\n");
+
+		/* wait for hardware to generate HDCP values */
+		e = wait_hdcp_ctrl(sor, AN_VALID | SROM_ERR, &res);
+		if (e) {
 			dphdcp_err("An key generation timeout\n");
 			goto failure;
 		}
-		/* check SROM return */
-		hdcp_ta_ret = *(pkt + HDCP_CMD_BYTE_OFFSET);
-		if (hdcp_ta_ret) {
+		if (res & SROM_ERR) {
 			dphdcp_err("SROM error\n");
 			goto failure;
 		}
-	}
 
-	msleep(25);
-	*pkt = HDCP_TA_CMD_AKSV;
-	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
-	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
-	if (e) {
-		dphdcp_err("te launch operation failed with error %d\n", e);
-		goto failure;
-	} else {
-		hdcp_ta_ret = (u64)*pkt;
-		dphdcp->a_ksv = (u64)*(pkt + 1*HDCP_CMD_BYTE_OFFSET);
-		dphdcp->a_n = (u64)*(pkt + 2*HDCP_CMD_BYTE_OFFSET);
-		dphdcp_vdbg("Aksv is 0x%016llx\n", dphdcp->a_ksv);
-		dphdcp_vdbg("An is 0x%016llx\n", dphdcp->a_n);
-		/* check if verification of Aksv failed */
-		if (hdcp_ta_ret) {
-			dphdcp_err("Aksv verify failure\n");
+		msleep(25);
+
+		dphdcp->a_ksv = get_aksv(sor);
+		dphdcp->a_n = get_an(sor);
+
+		dphdcp_vdbg("aksv is 0x%016llx\n", dphdcp->a_ksv);
+		dphdcp_vdbg("an is 0x%016llx\n", dphdcp->a_n);
+
+		if (verify_ksv(dphdcp->a_ksv)) {
+			dphdcp_err("Aksv verify failure! (0x%016llx)\n",
+					dphdcp->a_ksv);
 			goto disable;
 		}
 	}
-#else
-	set_bksv(sor, 0, (b_caps & BCAPS_REPEATER));
-	e = load_kfuse(dp);
-	if (e) {
-		dphdcp_err("error loading kfuse\n");
-		goto failure;
-	}
-
-	usleep_range(20000, 25000);
-	hdcp_ctrl_run(sor, 1);
-
-	dphdcp_vdbg("waiting for An_valid\n");
-
-	/* wait for hardware to generate HDCP values */
-	e = wait_hdcp_ctrl(sor, AN_VALID | SROM_ERR, &res);
-	if (e) {
-		dphdcp_err("An key generation timeout\n");
-		goto failure;
-	}
-	if (res & SROM_ERR) {
-		dphdcp_err("SROM error\n");
-		goto failure;
-	}
-
-	msleep(25);
-
-	dphdcp->a_ksv = get_aksv(sor);
-	dphdcp->a_n = get_an(sor);
-
-	dphdcp_vdbg("aksv is 0x%016llx\n", dphdcp->a_ksv);
-	dphdcp_vdbg("an is 0x%016llx\n", dphdcp->a_n);
-
-	if (verify_ksv(dphdcp->a_ksv)) {
-		dphdcp_err("Aksv verify failure! (0x%016llx)\n", dphdcp->a_ksv);
-		goto disable;
-	}
-#endif
 	mutex_unlock(&dphdcp->lock);
 
 	/* write An to receiver */
@@ -1018,6 +1229,7 @@ static void dphdcp_downstream_worker(struct work_struct *work)
 	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
 	*(pkt + 2*HDCP_CMD_OFFSET) = dphdcp->b_ksv;
 	*(pkt + 3*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
+	*(pkt + 4*HDCP_CMD_OFFSET) = repeater_flag;
 	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
 	if (e) {
 		dphdcp_err("te launch operation failed with error: %d\n", e);
@@ -1048,14 +1260,6 @@ static void dphdcp_downstream_worker(struct work_struct *work)
 		goto failure;
 	}
 
-	/*if repeater, set the reauth enable irq bit in Ainfo reg */
-	if (b_caps & BCAPS_REPEATER) {
-		mutex_unlock(&dphdcp->lock);
-		e = tegra_dphdcp_write8(dp, NV_DPCD_HDCP_AINFO_OFFSET,
-						0x01);
-		mutex_lock(&dphdcp->lock);
-	}
-
 	set_bksv(sor, dphdcp->b_ksv, (b_caps & BCAPS_REPEATER));
 	dphdcp_vdbg("Loaded Bksv into controller\n");
 
@@ -1077,42 +1281,87 @@ static void dphdcp_downstream_worker(struct work_struct *work)
 	 * link integrity
 	 * TODO: add support for both single and multi stream mode
 	 */
-	e = validate_rx(dphdcp);
-	if (e) {
-		dphdcp_err("could not validate receiver\n");
-		mutex_lock(&dphdcp->lock);
-		goto failure;
-	}
+	if (!repeater_flag) {
+		e = validate_rx(dphdcp);
+		if (e) {
+			dphdcp_err("could not validate receiver\n");
+			mutex_lock(&dphdcp->lock);
+			goto failure;
+		}
 
+	if (tegra_dc_is_t18x()) {
+		*pkt = HDCP_TA_CMD_ENC;
+		*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
+		*(pkt + 2*HDCP_CMD_OFFSET) = b_caps;
+		e = te_launch_trusted_oper(pkt, PKT_SIZE/4, ta_cmd, ta_ctx);
+		if (e) {
+			dphdcp_err("launch oper failed with error: %d\n", e);
+			goto failure;
+		}
+		enc = true;
+	} else {
+		tmp = tegra_sor_readl(sor, NV_SOR_DP_HDCP_CTRL);
+		tmp |= CRYPT_ENABLED;
+		tegra_sor_writel(sor, NV_SOR_DP_HDCP_CTRL, tmp);
+	}
+		dphdcp_vdbg("CRYPT enabled\n");
+	}
+		msleep(100);
+		e = get_bstatus(dp, &bstatus);
+		if (!e && (bstatus & BSTATUS_LINK_INTEG_FAIL)) {
+			dphdcp_err("link integrity failure\n");
+			mutex_lock(&dphdcp->lock);
+			goto failure;
+		}
+	/* revocation check for receiver. For repeater, is it
+	 * handled in verify V'
+	 */
+	if (!(b_caps & BCAPS_REPEATER)) {
+		e = srm_revocation_check(dphdcp);
+		if (e) {
+			dphdcp_err("SRM revocation check failed\n");
+			goto failure;
+		}
+	}
 	/*
 	 * part 2 of authentication protocol, if receiver is
 	 * a repeater
 	 */
-	if (b_caps & BCAPS_REPEATER) {
+	if ((b_caps & BCAPS_REPEATER) && !vprime_check_done) {
 		e = get_repeater_info(dphdcp);
 		if (e) {
 			dphdcp_err("get repeater info failed\n");
+			/* some latency before we transition to the
+			 * HDMI engine
+			 */
+			msleep(100);
+			repeater_flag = true;
 			mutex_lock(&dphdcp->lock);
 			goto failure;
 		}
+		/* continue last part of authentication as
+		 * a DP receiver, ie. second stage of
+		 * authentication will not be performed
+		 */
+		repeater_flag = false;
+		mutex_lock(&dphdcp->lock);
+	if (tegra_dc_is_t18x()) {
+		*pkt = HDCP_TA_CMD_CTRL;
+		*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
+		*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_DISABLE;
+		*(pkt + 3*HDCP_CMD_OFFSET) = repeater_flag;
+		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
+		if (e) {
+			dphdcp_err("te_launch_oper failed with err: %d\n", e);
+			goto failure;
+		}
+	} else {
+		tmp = tegra_sor_readl(sor, NV_SOR_DP_HDCP_CTRL);
+		tmp |= CRYPT_ENABLED;
+		tegra_sor_writel(sor, NV_SOR_DP_HDCP_CTRL, tmp);
 	}
-
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	*pkt = HDCP_TA_CMD_ENC;
-	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
-	*(pkt + 2*HDCP_CMD_OFFSET) = b_caps;
-	e = te_launch_trusted_oper(pkt, PKT_SIZE/4, ta_cmd, ta_ctx);
-	if (e) {
-		dphdcp_err("te launch operation failed with error: %d\n", e);
-		goto failure;
+	goto repeater_auth;
 	}
-	enc = true;
-#else
-	tmp = tegra_sor_readl(sor, NV_SOR_DP_HDCP_CTRL);
-	tmp |= CRYPT_ENABLED;
-	tegra_sor_writel(sor, NV_SOR_DP_HDCP_CTRL, tmp);
-#endif
-	dphdcp_vdbg("CRYPT enabled\n");
 
 	mutex_lock(&dphdcp->lock);
 	dphdcp->state = STATE_LINK_VERIFY;
@@ -1130,6 +1379,7 @@ static void dphdcp_downstream_worker(struct work_struct *work)
 		e = get_bstatus(dp, &bstatus);
 		if (!e && (bstatus & BSTATUS_LINK_INTEG_FAIL)) {
 			dphdcp_err("link integrity failure\n");
+			mutex_lock(&dphdcp->lock);
 			goto failure;
 		}
 		tegra_dc_io_end(dc);
@@ -1148,34 +1398,41 @@ failure:
 		dphdcp_err("dphdcp failure- renegotiating in 1 second\n");
 		if (!dphdcp_is_plugged(dphdcp))
 			goto lost_dp;
+
 		queue_delayed_work(dphdcp->downstream_wq, &dphdcp->work,
 						msecs_to_jiffies(1000));
 	}
 
 	/* Failed because of lack of memory */
-	if (e == -ENOMEM)
+	if (e == -ENOMEM) {
+		kfree(pkt);
 		return;
-
-
+	}
 lost_dp:
 	dphdcp_info("lost dp connection\n");
 	dphdcp->state = STATE_UNAUTHENTICATED;
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	if (pkt) {
-		*pkt = HDCP_TA_CMD_CTRL;
-		*(pkt + HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
-		*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_DISABLE;
-	}
-	if (enc) {
-		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
-		if (e) {
-			dphdcp_err("te_launch_oper failed with error:%d\n", e);
+	if (tegra_dc_is_t18x()) {
+		if (pkt) {
+			*pkt = HDCP_TA_CMD_CTRL;
+			*(pkt + HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_DP;
+			*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_DISABLE;
+			*(pkt + 3*HDCP_CMD_OFFSET) = repeater_flag;
+		}
+		/* a launch operation makes sense only if a valid context exists
+		* already
+		*/
+		if (ta_ctx) {
+			e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd,
+							ta_ctx);
+			if (e) {
+				dphdcp_err("te_launch_oper failed with error:"
+						"%d\n", e);
 			goto failure;
 		}
-	}
-#else
+		}
+	} else {
 	hdcp_ctrl_run(sor, 0);
-#endif
+	}
 
 err:
 	mutex_unlock(&dphdcp->lock);
@@ -1867,8 +2124,10 @@ static int tegra_dphdcp_renegotiate(struct tegra_dphdcp *dphdcp)
 
 void tegra_dphdcp_set_plug(struct tegra_dphdcp *dphdcp, bool hpd)
 {
+	/* ensure all previous values are reset on hotplug */
+	vprime_check_done = false;
+	repeater_flag = false;
 	dphdcp_debug("DP hotplug detected (hpd = %d)\n", hpd);
-
 	if (hpd) {
 		dphdcp_set_plugged(dphdcp, true);
 		tegra_dphdcp_on(dphdcp);

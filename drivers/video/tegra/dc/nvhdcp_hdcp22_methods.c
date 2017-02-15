@@ -397,13 +397,52 @@ exit:
 	return err;
 }
 
+int tsec_hdcp_srm_read(struct hdcp_context_t *hdcp_context,
+			uint32_t hdcp_version)
+{
+	struct file *fp = NULL;
+	unsigned int size = 0;
+	mm_segment_t seg;
+
+	if (!hdcp_context) {
+		hdcp_err("tsec_hdcp_srm_read: null params sent!");
+		return -EINVAL;
+	}
+
+	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
+		HDCP_MTHD_RPLY_BUF_SIZE);
+
+	if (hdcp_version == HDCP_22)
+		fp = filp_open(HDCP22_SRM_PATH, O_RDONLY, 0);
+	else if (hdcp_version == HDCP_1x)
+		fp = filp_open(HDCP11_SRM_PATH, O_RDONLY, 0);
+	else {
+		hdcp_err("Invalid HDCP version sent!\n");
+		return -EINVAL;
+	}
+
+	if (IS_ERR(fp) || !fp) {
+		hdcp_err("Opening SRM file failed!\n");
+		return -ENOENT;
+	}
+	seg = get_fs();
+	set_fs(get_ds());
+	/* copy SRM to buffer */
+	vfs_read(fp, (u8 *)hdcp_context->cpuvaddr_srm,
+		HDCP_SRM_SIZE, &fp->f_pos);
+	set_fs(seg);
+	size = fp->f_pos;
+	filp_close(fp, NULL);
+	return size;
+}
+
 int tsec_hdcp_revocation_check(struct hdcp_context_t *hdcp_context,
-			unsigned char *cmac, unsigned int tsec_address)
+			unsigned char *cmac, unsigned int tsec_address,
+			unsigned int port, unsigned int hdcp_version)
 {
 	int err = 0;
-	struct file *fp = NULL;
-	mm_segment_t seg;
 	struct hdcp_revocation_check_param revocation_check_param;
+
 	if (!hdcp_context || !cmac || !tsec_address) {
 		hdcp_err("tsec_hdcp_revocation_check: null params sent!");
 		return -EINVAL;
@@ -412,21 +451,13 @@ int tsec_hdcp_revocation_check(struct hdcp_context_t *hdcp_context,
 			sizeof(struct hdcp_revocation_check_param));
 	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
 		HDCP_MTHD_RPLY_BUF_SIZE);
+	revocation_check_param.srm_size = tsec_hdcp_srm_read(hdcp_context,
+							hdcp_version);
 	revocation_check_param.trans_id.session_id = hdcp_context->session_id;
-	revocation_check_param.is_ver_hdcp2x = 1;
+	revocation_check_param.is_ver_hdcp2x = hdcp_version;
 	revocation_check_param.tsec_gsc_address = tsec_address;
-	fp = filp_open(HDCP22_SRM_PATH, O_RDONLY, 0);
-	if (IS_ERR(fp) || !fp) {
-		hdcp_err("Opening SRM file failed!\n");
-		return -ENOENT;
-	}
-	seg = get_fs();
-	set_fs(get_ds());
-	vfs_read(fp, (u8 *)hdcp_context->cpuvaddr_srm,
-			HDCP_SRM_SIZE, &fp->f_pos);
-	set_fs(seg);
-	revocation_check_param.srm_size = fp->f_pos;
-	filp_close(fp, NULL);
+	revocation_check_param.port = port;
+
 	/* send the cmac generated from secure service */
 	memcpy(revocation_check_param.srm_cmac, cmac, HDCP_CMAC_SIZE);
 	memcpy(hdcp_context->cpuvaddr_mthd_buf_aligned,
@@ -448,30 +479,9 @@ exit:
 	return err;
 }
 
-int tsec_dp_hdcp_revocation_check(struct hdcp_context_t *hdcp_context)
-{
-	struct file *fp = NULL;
-	unsigned int size = 0;
-	mm_segment_t seg;
-
-	fp = filp_open(HDCP11_SRM_PATH, O_RDONLY, 0);
-	if (IS_ERR(fp) || !fp) {
-		hdcp_err("Opening SRM file failed!\n");
-		return -ENOENT;
-	}
-	seg = get_fs();
-	set_fs(get_ds());
-	/* copy SRM to buffer */
-	vfs_read(fp, (u8 *)hdcp_context->cpuvaddr_srm,
-		HDCP_SRM_SIZE, &fp->f_pos);
-	set_fs(seg);
-	size = fp->f_pos;
-	filp_close(fp, NULL);
-	return size;
-}
-
 int tsec_hdcp_verify_vprime(struct hdcp_context_t *hdcp_context,
-			unsigned char *cmac, unsigned int tsec_addr)
+			unsigned char *cmac, unsigned int tsec_addr,
+			unsigned int port)
 {
 	int err = 0;
 	u16 rxinfo;
@@ -508,6 +518,7 @@ int tsec_hdcp_verify_vprime(struct hdcp_context_t *hdcp_context,
 	verify_vprime_param.has_hdcp1_device = (rxinfo & 0x0001);
 	verify_vprime_param.bstatus = 0;
 	verify_vprime_param.is_ver_hdcp2x = 1;
+	verify_vprime_param.port = port;
 
 	if (!g_seq_num_init) {
 		if (memcmp(hdcp_context->msg.seq_num,

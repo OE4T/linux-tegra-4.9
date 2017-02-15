@@ -349,6 +349,7 @@ struct hdcp_revocation_check_param {
 	unsigned int tsec_gsc_address;              /* <<in */
 	unsigned char nonce[16];                    /* <<in */
 	unsigned char srm_cmac[16];                 /* <<in */
+	unsigned int port;                          /* <<in */
 };
 #define HDCP_REVOCATION_CHECK_ERROR_NONE                 HDCP_ERROR_NONE
 #define HDCP_REVOCATION_CHECK_ERROR_INVALID_SESSION\
@@ -610,6 +611,7 @@ struct hdcp_verify_vprime_param {
 	unsigned int    tsec_gsc_address;                           /* <<in */
 	unsigned char   srm_cmac[16];                               /* >>out */
 	unsigned char   nonce[16];                                  /* <<in */
+	unsigned int    port;                                       /* <<in */
 };
 #define HDCP_VERIFY_VPRIME_ERROR_NONE                    HDCP_ERROR_NONE
 #define HDCP_VERIFY_VPRIME_ERROR_INVALID_SESSION\

@@ -118,9 +118,7 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 static u8 g_seq_num_m_retries;
 static u8 g_fallback;
 
-#if (defined(CONFIG_TEGRA_NVDISPLAY))
 static void *ta_ctx;
-#endif
 
 static struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_hdmi *hdmi)
 {
@@ -1159,7 +1157,8 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 	}
 	err =  tsec_hdcp_revocation_check(hdcp_context,
 		(unsigned char *)(pkt + HDCP_CMAC_OFFSET),
-		*((unsigned int *)(pkt + HDCP_TSEC_ADDR_OFFSET)));
+		*((unsigned int *)(pkt + HDCP_TSEC_ADDR_OFFSET)),
+		TEGRA_NVHDCP_PORT_HDMI, HDCP_22);
 	if (err)
 		goto exit;
 	err = nvhdcp_poll_ready(nvhdcp, 1000);
@@ -1258,7 +1257,8 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 		}
 		err =  tsec_hdcp_verify_vprime(hdcp_context,
 		(char *)(pkt + HDCP_CMAC_OFFSET),
-		*((unsigned int *)(pkt + HDCP_TSEC_ADDR_OFFSET)));
+		*((unsigned int *)(pkt + HDCP_TSEC_ADDR_OFFSET)),
+		TEGRA_NVHDCP_PORT_HDMI);
 
 		if (err)
 			goto exit;
@@ -1432,6 +1432,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
 	*(pkt + 2*HDCP_CMD_OFFSET) = 0;
 	*(pkt + 3*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
+	*(pkt + 4*HDCP_CMD_OFFSET) = false;
 	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
 	if (e) {
 		nvhdcp_err("te launch operation failed with error %d\n", e);
@@ -1448,6 +1449,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	*pkt = HDCP_TA_CMD_CTRL;
 	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
 	*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_ENABLE;
+	*(pkt + 3*HDCP_CMD_OFFSET) = false;
 	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
 	if (e) {
 		nvhdcp_err("te launch operation failed with error %d\n", e);
@@ -1576,6 +1578,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
 	*(pkt + 2*HDCP_CMD_OFFSET) = nvhdcp->b_ksv;
 	*(pkt + 3*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
+	*(pkt + 4*HDCP_CMD_OFFSET) = false;
 	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
 	if (e) {
 		nvhdcp_err("te launch operation failed with error: %d\n", e);
@@ -1705,6 +1708,7 @@ lost_hdmi:
 	*pkt = HDCP_TA_CMD_CTRL;
 	*(pkt + 1*HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
 	*(pkt + 2*HDCP_CMD_OFFSET) = HDCP_TA_CTRL_DISABLE;
+	*(pkt + 3*HDCP_CMD_OFFSET) = false;
 	if (enc) {
 		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
 		if (e) {
@@ -1797,7 +1801,8 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 		}
 		err =  tsec_hdcp_verify_vprime(hdcp_context,
 			(char *)(pkt + HDCP_CMAC_OFFSET),
-			*((unsigned int *)(pkt + HDCP_TSEC_ADDR_OFFSET)));
+			*((unsigned int *)(pkt + HDCP_TSEC_ADDR_OFFSET)),
+			TEGRA_NVHDCP_PORT_HDMI);
 		if (err)
 			goto exit;
 		hdcp_context->msg.rptr_send_ack_msg_id = ID_SEND_RPTR_ACK;

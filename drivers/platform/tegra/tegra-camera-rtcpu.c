@@ -510,16 +510,16 @@ static int tegra_camrtc_poweron(struct device *dev)
 	u32 val = 0;
 	int ret;
 
-	ret = tegra_cam_rtcpu_apply_resets(dev, reset_control_deassert);
+	ret = tegra_cam_rtcpu_apply_clks(dev, clk_prepare_enable);
 	if (ret) {
-		dev_err(dev, "failed to deassert %s resets: %d\n",
+		dev_err(dev, "failed to turn on %s clocks: %d\n",
 			rtcpu->name, ret);
 		return ret;
 	}
 
-	ret = tegra_cam_rtcpu_apply_clks(dev, clk_prepare_enable);
+	ret = tegra_cam_rtcpu_apply_resets(dev, reset_control_deassert);
 	if (ret) {
-		dev_err(dev, "failed to turn on %s clocks: %d\n",
+		dev_err(dev, "failed to deassert %s resets: %d\n",
 			rtcpu->name, ret);
 		return ret;
 	}

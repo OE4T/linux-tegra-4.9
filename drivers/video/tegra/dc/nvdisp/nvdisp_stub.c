@@ -345,6 +345,14 @@ struct device_node *tegra_primary_panel_get_dt_node(
 				tegra_panel_register_ops(dc_out,
 				&edp_s_uhdtv_15_6_ops);
 		}
+		/* AUO 1080p EDP */
+		if (!of_device_is_available(np_panel)) {
+			np_panel = of_get_child_by_name(np_primary,
+				"panel-a-edp-1080p-14-0");
+			if (of_device_is_available(np_panel) && dc_out)
+				tegra_panel_register_ops(dc_out,
+				&edp_a_1080p_14_0_ops);
+		}
 		/* MODS - DSI to fakeDP - Bug 1734772*/
 		if (!of_device_is_available(np_panel)) {
 			np_panel = of_get_child_by_name(np_primary,
@@ -397,6 +405,14 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 			if (of_device_is_available(np_panel) && dc_out)
 				tegra_panel_register_ops(dc_out,
 					&edp_s_uhdtv_15_6_ops);
+		}
+		/* AUO 1080p EDP */
+		if (!of_device_is_available(np_panel)) {
+			np_panel = of_get_child_by_name(np_secondary,
+				"panel-a-edp-1080p-14-0");
+			if (of_device_is_available(np_panel) && dc_out)
+				tegra_panel_register_ops(dc_out,
+				&edp_a_1080p_14_0_ops);
 		}
 		/* DSI */
 		/* SHARP 19x12 panel */
@@ -468,6 +484,14 @@ struct device_node *tegra_tertiary_panel_get_dt_node(
 			if (of_device_is_available(np_panel) && dc_out)
 				tegra_panel_register_ops(dc_out,
 					&edp_s_uhdtv_15_6_ops);
+		}
+		/* AUO 1080p EDP */
+		if (!of_device_is_available(np_panel)) {
+			np_panel = of_get_child_by_name(np_tertiary,
+				"panel-a-edp-1080p-14-0");
+			if (of_device_is_available(np_panel) && dc_out)
+				tegra_panel_register_ops(dc_out,
+				&edp_a_1080p_14_0_ops);
 		}
 		/* HDMI */
 		if (!of_device_is_available(np_panel))

@@ -84,6 +84,7 @@ struct vivid_fmt {
 	bool	is_yuv;
 	bool	can_do_overlay;
 	u8	vdownsampling[TPG_MAX_PLANES];
+	u8	packedpixels;
 	u32	alpha_mask;
 	u8	planes;
 	u8	buffers;

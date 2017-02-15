@@ -120,7 +120,8 @@ static void blend_line(struct vivid_dev *dev, unsigned y_offset, unsigned x_offs
 	}
 }
 
-static void scale_line(const u8 *src, u8 *dst, unsigned srcw, unsigned dstw, unsigned twopixsize)
+static void scale_line(const u8 *src, u8 *dst, unsigned srcw, unsigned dstw,
+		unsigned twopixsize, unsigned packedpixels)
 {
 	/* Coarse scaling with Bresenham */
 	unsigned int_part;
@@ -132,9 +133,16 @@ static void scale_line(const u8 *src, u8 *dst, unsigned srcw, unsigned dstw, uns
 	/*
 	 * We always combine two pixels to prevent color bleed in the packed
 	 * yuv case.
+	 * only for packed 10bit case three pixels are packed to construct
+	 * 32 bit values. convert srcw and dstw to match the packing.
 	 */
-	srcw /= 2;
-	dstw /= 2;
+	if (packedpixels == 3) {
+		srcw /= 3;
+		dstw /= 3;
+	} else {
+		srcw /= 2;
+		dstw /= 2;
+	}
 	int_part = srcw / dstw;
 	fract_part = srcw % dstw;
 	for (x = 0; x < dstw; x++, dst += twopixsize) {
@@ -368,7 +376,7 @@ static int vivid_copy_buffer(struct vivid_dev *dev, unsigned p, u8 *vcapbuf,
 			scale_line(voutbuf + vid_out_y * stride_out, dev->scaled_line,
 				tpg_hdiv(tpg, p, dev->loop_vid_out.width),
 				tpg_hdiv(tpg, p, dev->loop_vid_cap.width),
-				tpg_g_twopixelsize(tpg, p));
+				tpg_g_twopixelsize(tpg, p), tpg_g_packedpixels(tpg, p));
 		} else {
 			/*
 			 * Offset in bytes within loop_vid_copy to the start of the
@@ -381,7 +389,7 @@ static int vivid_copy_buffer(struct vivid_dev *dev, unsigned p, u8 *vcapbuf,
 
 			scale_line(voutbuf + vid_out_y * stride_out, dev->blended_line,
 				dev->loop_vid_out.width, dev->loop_vid_copy.width,
-				tpg_g_twopixelsize(tpg, p));
+				tpg_g_twopixelsize(tpg, p), tpg_g_packedpixels(tpg, p));
 			if (blend)
 				blend_line(dev, vid_overlay_y + dev->loop_vid_overlay.top,
 					   dev->loop_vid_overlay.left,
@@ -392,7 +400,7 @@ static int vivid_copy_buffer(struct vivid_dev *dev, unsigned p, u8 *vcapbuf,
 				       osd, (dev->loop_vid_overlay.width * twopixsize) / 2);
 			scale_line(dev->blended_line, dev->scaled_line,
 					dev->loop_vid_copy.width, dev->loop_vid_cap.width,
-					tpg_g_twopixelsize(tpg, p));
+					tpg_g_twopixelsize(tpg, p), tpg_g_packedpixels(tpg, p));
 		}
 		dev->cur_scaled_line = vid_out_y;
 		memcpy(vcapbuf + vid_cap_left, dev->scaled_line,

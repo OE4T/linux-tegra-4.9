@@ -565,9 +565,10 @@ int vivid_g_fmt_vid_cap(struct file *file, void *priv,
 	mp->quantization = vivid_quantization_cap(dev);
 	mp->num_planes = dev->fmt_cap->buffers;
 	for (p = 0; p < mp->num_planes; p++) {
-		mp->plane_fmt[p].bytesperline = tpg_g_bytesperline(&dev->tpg, p);
+		mp->plane_fmt[p].bytesperline =
+			tpg_g_bytesperline(&dev->tpg, p);
 		mp->plane_fmt[p].sizeimage =
-			tpg_g_line_width(&dev->tpg, p) * mp->height +
+			mp->plane_fmt[p].bytesperline * mp->height +
 			dev->fmt_cap->data_offset[p];
 	}
 	return 0;
@@ -584,6 +585,7 @@ int vivid_try_fmt_vid_cap(struct file *file, void *priv,
 	unsigned factor = 1;
 	unsigned w, h;
 	unsigned p;
+	unsigned packedpixels;
 
 	fmt = vivid_get_format(dev, mp->pixelformat);
 	if (!fmt) {
@@ -592,6 +594,9 @@ int vivid_try_fmt_vid_cap(struct file *file, void *priv,
 		mp->pixelformat = V4L2_PIX_FMT_YUYV;
 		fmt = vivid_get_format(dev, mp->pixelformat);
 	}
+	packedpixels = fmt->packedpixels;
+	if (!packedpixels)
+		packedpixels = 1;
 
 	mp->field = vivid_field_cap(dev, mp->field);
 	if (vivid_is_webcam(dev)) {
@@ -636,7 +641,8 @@ int vivid_try_fmt_vid_cap(struct file *file, void *priv,
 	mp->num_planes = fmt->buffers;
 	for (p = 0; p < mp->num_planes; p++) {
 		/* Calculate the minimum supported bytesperline value */
-		bytesperline = (mp->width * fmt->bit_depth[p]) >> 3;
+		bytesperline = ((mp->width * fmt->bit_depth[p]) >> 3) /
+				packedpixels;
 		/* Calculate the maximum supported bytesperline value */
 		max_bpl = (MAX_ZOOM * MAX_WIDTH * fmt->bit_depth[p]) >> 3;
 

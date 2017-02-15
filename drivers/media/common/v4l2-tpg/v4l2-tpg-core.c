@@ -191,11 +191,21 @@ bool tpg_s_fourcc(struct tpg_data *tpg, u32 fourcc)
 	tpg->interleaved = false;
 	tpg->vdownsampling[0] = 1;
 	tpg->hdownsampling[0] = 1;
+	tpg->packedpixels[0] = 1;
+	tpg->packedpixels[1] = 1;
+	tpg->packedpixels[2] = 1;
 	tpg->hmask[0] = ~0;
 	tpg->hmask[1] = ~0;
 	tpg->hmask[2] = ~0;
 
 	switch (fourcc) {
+	case V4L2_PIX_FMT_XBGGR10P:
+	case V4L2_PIX_FMT_XGBRG10P:
+	case V4L2_PIX_FMT_XGRBG10P:
+	case V4L2_PIX_FMT_XRGGB10P:
+		tpg->packedpixels[0] = 3;
+		tpg->is_yuv = false;
+		break;
 	case V4L2_PIX_FMT_SBGGR8:
 	case V4L2_PIX_FMT_SGBRG8:
 	case V4L2_PIX_FMT_SGRBG8:
@@ -389,6 +399,13 @@ bool tpg_s_fourcc(struct tpg_data *tpg, u32 fourcc)
 		tpg->twopixelsize[0] = 4;
 		tpg->twopixelsize[1] = 4;
 		break;
+	case V4L2_PIX_FMT_XBGGR10P:
+	case V4L2_PIX_FMT_XGBRG10P:
+	case V4L2_PIX_FMT_XGRBG10P:
+	case V4L2_PIX_FMT_XRGGB10P:
+		tpg->twopixelsize[0] = 2 * 4;
+		tpg->twopixelsize[1] = 2 * 4;
+		break;
 	case V4L2_PIX_FMT_YUV444M:
 	case V4L2_PIX_FMT_YVU444M:
 	case V4L2_PIX_FMT_YUV422M:
@@ -448,7 +465,7 @@ void tpg_reset_source(struct tpg_data *tpg, unsigned width, unsigned height,
 	tpg->compose.height = tpg->buf_height;
 	for (p = 0; p < tpg->planes; p++)
 		tpg->bytesperline[p] = (width * tpg->twopixelsize[p]) /
-				       (2 * tpg->hdownsampling[p]);
+			(2 * tpg->hdownsampling[p] * tpg->packedpixels[p]);
 	tpg->recalc_square_border = true;
 }
 EXPORT_SYMBOL_GPL(tpg_reset_source);

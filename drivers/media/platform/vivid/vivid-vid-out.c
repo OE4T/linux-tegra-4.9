@@ -211,6 +211,7 @@ void vivid_update_format_out(struct vivid_dev *dev)
 	struct v4l2_bt_timings *bt = &dev->dv_timings_out.bt;
 	unsigned size, p;
 	u64 pixelclock;
+	unsigned packedpixels = dev->fmt_out->packedpixels;
 
 	switch (dev->output_type[dev->output]) {
 	case SVID:
@@ -264,9 +265,12 @@ void vivid_update_format_out(struct vivid_dev *dev)
 	if (V4L2_FIELD_HAS_T_OR_B(dev->field_out))
 		dev->crop_out.height /= 2;
 	dev->fmt_out_rect = dev->crop_out;
+	if (!packedpixels)
+		packedpixels = 1;
 	for (p = 0; p < dev->fmt_out->planes; p++)
 		dev->bytesperline_out[p] =
-			(dev->sink_rect.width * dev->fmt_out->bit_depth[p]) / 8;
+			(dev->sink_rect.width * dev->fmt_out->bit_depth[p]) /
+				(8 * packedpixels);
 }
 
 /* Map the field to something that is valid for the current output */
@@ -330,7 +334,6 @@ int vivid_g_fmt_vid_out(struct file *file, void *priv,
 	/* Add offset to fill embedded meta data */
 	dev->fmt_out->data_offset[0] =
 		dev->bytesperline_out[0] * dev->embedded_data_height;
-
 	mp->plane_fmt[0].sizeimage += dev->fmt_out->data_offset[0];
 	for (p = fmt->buffers; p < fmt->planes; p++) {
 		unsigned stride = dev->bytesperline_out[p];
@@ -353,6 +356,7 @@ int vivid_try_fmt_vid_out(struct file *file, void *priv,
 	unsigned factor = 1;
 	unsigned w, h;
 	unsigned p;
+	unsigned packedpixels;
 
 	fmt = vivid_get_format(dev, mp->pixelformat);
 	if (!fmt) {
@@ -361,6 +365,9 @@ int vivid_try_fmt_vid_out(struct file *file, void *priv,
 		mp->pixelformat = V4L2_PIX_FMT_YUYV;
 		fmt = vivid_get_format(dev, mp->pixelformat);
 	}
+	packedpixels = fmt->packedpixels;
+	if (!packedpixels)
+		packedpixels = 1;
 
 	mp->field = vivid_field_out(dev, mp->field);
 	if (vivid_is_svid_out(dev)) {
@@ -396,7 +403,7 @@ int vivid_try_fmt_vid_out(struct file *file, void *priv,
 	/* This driver supports custom bytesperline values */
 
 	/* Calculate the minimum supported bytesperline value */
-	bytesperline = (mp->width * fmt->bit_depth[0]) >> 3;
+	bytesperline = ((mp->width * fmt->bit_depth[0]) >> 3) / packedpixels;
 	/* Calculate the maximum supported bytesperline value */
 	max_bpl = (MAX_ZOOM * MAX_WIDTH * fmt->bit_depth[0]) >> 3;
 	mp->num_planes = fmt->buffers;

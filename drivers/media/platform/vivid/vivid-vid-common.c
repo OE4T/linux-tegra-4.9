@@ -477,6 +477,38 @@ struct vivid_fmt vivid_formats[] = {
 		.buffers = 1,
 	},
 	{
+		.fourcc = V4L2_PIX_FMT_XBGGR10P, /* Packed Bayer BG/GR */
+		.vdownsampling = { 1 },
+		.packedpixels = 3,
+		.bit_depth = { 32 },
+		.planes = 1,
+		.buffers = 1,
+	},
+	{
+		.fourcc = V4L2_PIX_FMT_XGBRG10P, /* Packed Bayer GB/RG */
+		.vdownsampling = { 1 },
+		.packedpixels = 3,
+		.bit_depth = { 32 },
+		.planes = 1,
+		.buffers = 1,
+	},
+	{
+		.fourcc = V4L2_PIX_FMT_XGRBG10P, /* Packed Bayer GR/BG */
+		.vdownsampling = { 1 },
+		.packedpixels = 3,
+		.bit_depth = { 32 },
+		.planes = 1,
+		.buffers = 1,
+	},
+	{
+		.fourcc = V4L2_PIX_FMT_XRGGB10P, /* Packed Bayer RG/GB */
+		.vdownsampling = { 1 },
+		.packedpixels = 3,
+		.bit_depth = { 32 },
+		.planes = 1,
+		.buffers = 1,
+	},
+	{
 		.fourcc   = V4L2_PIX_FMT_NV16M,
 		.vdownsampling = { 1, 1 },
 		.bit_depth = { 8, 8 },

@@ -148,6 +148,7 @@ struct tpg_data {
 	bool				interleaved;
 	u8				vdownsampling[TPG_MAX_PLANES];
 	u8				hdownsampling[TPG_MAX_PLANES];
+	u8				packedpixels[TPG_MAX_PLANES];
 	/*
 	 * horizontal positions must be ANDed with this value to enforce
 	 * correct boundaries for packed YUYV values.
@@ -380,11 +381,21 @@ static inline unsigned tpg_g_twopixelsize(const struct tpg_data *tpg, unsigned p
 	return tpg->twopixelsize[plane];
 }
 
+static inline unsigned tpg_g_packedpixels(const struct tpg_data *tpg, unsigned plane)
+{
+	return tpg->packedpixels[plane];
+}
+
 static inline unsigned tpg_hdiv(const struct tpg_data *tpg,
 				  unsigned plane, unsigned x)
 {
-	return ((x / tpg->hdownsampling[plane]) & tpg->hmask[plane]) *
-		tpg->twopixelsize[plane] / 2;
+	if (tpg->packedpixels[plane] > 1)
+		return ((((x / tpg->hdownsampling[plane]) & tpg->hmask[plane]) *
+			tpg->twopixelsize[plane]) /
+			(2 * tpg->packedpixels[plane]));
+	else
+		return ((x / tpg->hdownsampling[plane]) & tpg->hmask[plane]) *
+			(tpg->twopixelsize[plane] / 2);
 }
 
 static inline unsigned tpg_hscale(const struct tpg_data *tpg, unsigned x)

@@ -27,4 +27,9 @@
 		status = "disabled";
 	};
 
+	efuse@7000f800 {
+		efuse-burn {
+			compatible = "nvidia,tegra210b01-efuse-burn";
+		};
+	};
 };

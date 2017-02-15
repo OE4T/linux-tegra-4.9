@@ -258,7 +258,7 @@ int tegra_dc_ext_restore(struct tegra_dc_ext *ext)
 		}
 
 	if (nr_win) {
-		tegra_dc_update_windows(&wins[0], nr_win, NULL, true);
+		tegra_dc_update_windows(&wins[0], nr_win, NULL, true, false);
 		tegra_dc_sync_windows(&wins[0], nr_win);
 		tegra_dc_program_bandwidth(ext->dc, true);
 	}
@@ -913,6 +913,7 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 	int i, nr_unpin = 0, nr_win = 0;
 	bool skip_flip = false;
 	bool wait_for_vblank = false;
+	bool lock_flip = false;
 	bool show_background =
 		tegra_dc_ext_should_show_background(data, win_num);
 
@@ -1081,7 +1082,6 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 
 		if (flip_win->attr.swap_interval && !no_vsync)
 			wait_for_vblank = true;
-
 		ext_win->enabled = !!(win->flags & TEGRA_WIN_FLAG_ENABLED);
 
 		/* Hijack first disabled, scaling capable window to host
@@ -1121,9 +1121,14 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 			tegra_dc_adjust_imp(dc, true);
 		}
 
+		if (dc->frm_lck_info.frame_lock_enable &&
+			((dc->out->type == TEGRA_DC_OUT_HDMI) ||
+			(dc->out->type == TEGRA_DC_OUT_DP) ||
+			(dc->out->type == TEGRA_DC_OUT_FAKE_DP)))
+				lock_flip = true;
 		tegra_dc_update_windows(wins, nr_win,
 			data->dirty_rect_valid ? data->dirty_rect : NULL,
-			wait_for_vblank);
+			wait_for_vblank, lock_flip);
 		/* TODO: implement swapinterval here */
 		tegra_dc_sync_windows(wins, nr_win);
 
@@ -1181,7 +1186,6 @@ static int lock_windows_for_flip(struct tegra_dc_ext_user *user,
 	BUG_ON(win_num > tegra_dc_get_numof_dispwindows());
 	for (i = 0; i < win_num; i++) {
 		int index = win_attr[i].index;
-
 		if (index < 0 || !test_bit(index, &ext->dc->valid_windows))
 			continue;
 
@@ -1198,8 +1202,9 @@ static int lock_windows_for_flip(struct tegra_dc_ext_user *user,
 
 		mutex_lock_nested(&win->lock, i);
 
-		if (win->user != user)
+		if (win->user != user) {
 			goto fail_unlock;
+		}
 	}
 
 	return 0;
@@ -1612,7 +1617,6 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	/* If display has been disconnected return with error. */
 	if (!ext->dc->connected)
 		return -1;
-
 	ret = sanitize_flip_args(user, win, win_num, &dirty_rect);
 	if (ret)
 		return ret;

@@ -432,5 +432,7 @@ struct tegra_dc {
 	void  *isr_usr_pdt;
 
 	u32 dbg_fe_count;
+	struct frame_lock_info frm_lck_info;
+	unsigned long act_req_mask;
 };
 #endif

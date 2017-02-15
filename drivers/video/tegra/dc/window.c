@@ -29,6 +29,7 @@
 #include "dc_reg.h"
 #include "dc_config.h"
 #include "dc_priv.h"
+#include "dc_common.h"
 
 int no_vsync;
 
@@ -576,7 +577,7 @@ static void tegra_dc_vrr_cancel_vfp(struct tegra_dc *dc)
  */
 static int _tegra_dc_program_windows(struct tegra_dc *dc,
 	struct tegra_dc_win *windows[], int n, u16 *dirty_rect,
-	bool wait_for_vblank)
+	bool wait_for_vblank, bool lock_flip)
 {
 	unsigned long update_mask = GENERAL_ACT_REQ;
 	unsigned long act_control = 0;
@@ -1006,7 +1007,10 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		update_mask |= NC_HOST_TRIG;
 
-	tegra_dc_writel(dc, update_mask, DC_CMD_STATE_CONTROL);
+	if (lock_flip)
+		dc->act_req_mask = update_mask;
+	else
+		tegra_dc_writel(dc, update_mask, DC_CMD_STATE_CONTROL);
 
 	if (!wait_for_vblank) {
 		/* Don't use a interrupt handler for the update, but leave
@@ -1032,7 +1036,7 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
  * Requires a matching sync_windows to avoid leaking ref-count on clocks.
  */
 int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
-	u16 *dirty_rect, bool wait_for_vblank)
+	u16 *dirty_rect, bool wait_for_vblank, bool lock_flip)
 {
 	struct tegra_dc *dc;
 	int i;
@@ -1068,6 +1072,26 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 		goto done;
 	}
 
+	/* If there is a request to tegra_dc_update_windows without flip lock,
+	 * then wait for the current flips (with flip lock) to finish.
+	 * Requesting process are queued until the ongoing request is
+	 * completed.
+	 */
+	if (!lock_flip) {
+		DEFINE_WAIT(wait);
+		if (dc->frm_lck_info.job_pending) {
+			prepare_to_wait_exclusive(
+				&dc->frm_lck_info.win_upd_reqs,
+				&wait, TASK_INTERRUPTIBLE);
+			if (dc->frm_lck_info.job_pending) {
+				mutex_unlock(&dc->lock);
+				schedule();
+				mutex_lock(&dc->lock);
+			}
+			finish_wait(&dc->frm_lck_info.win_upd_reqs, &wait);
+		}
+	}
+
 	tegra_dc_io_start(dc);
 	if (dc->out_ops && dc->out_ops->hold)
 		dc->out_ops->hold(dc);
@@ -1080,11 +1104,26 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 	e = tegra_nvdisp_update_windows(dc, windows, n, dirty_rect,
-		wait_for_vblank);
+		wait_for_vblank, (lock_flip & wait_for_vblank));
 #else
 	e = _tegra_dc_program_windows(dc, windows, n, dirty_rect,
-		wait_for_vblank);
+		wait_for_vblank, (lock_flip & wait_for_vblank));
 #endif
+	if (lock_flip && wait_for_vblank) {
+		int ret;
+		dc->frm_lck_info.job_pending = true;
+		mutex_unlock(&dc->lock);
+		ret = tegra_dc_common_sync_flips(dc, dc->act_req_mask,
+							DC_CMD_STATE_CONTROL);
+		mutex_lock(&dc->lock);
+		if (ret)
+			dev_err(&dc->ndev->dev,
+				"failed to submit job for tegradc.%d with error : %d\n",
+				dc->ctrl_num, ret);
+		dc->act_req_mask = 0UL;
+		dc->frm_lck_info.job_pending = false;
+		wake_up(&dc->frm_lck_info.win_upd_reqs);
+	}
 	/*
 	 * tegra_dc_put() called at frame end, for one shot.
 	 * out_ops->release called in tegra_dc_sync_windows.

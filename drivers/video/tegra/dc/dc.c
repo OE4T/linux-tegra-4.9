@@ -76,6 +76,7 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #include "nvsd2.h"
 #include "dpaux.h"
 #include "nvsr.h"
+#include "dc_common.h"
 
 #include "edid.h"
 
@@ -4349,7 +4350,16 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status,
 		if (!completion_done(&dc->crc_complete))
 			complete(&dc->crc_complete);
 
-		tegra_dc_trigger_windows(dc);
+		if (dc->frm_lck_info.frame_lock_enable &&
+			((dc->out->type == TEGRA_DC_OUT_HDMI) ||
+			(dc->out->type == TEGRA_DC_OUT_DP) ||
+			(dc->out->type == TEGRA_DC_OUT_FAKE_DP))) {
+			mutex_unlock(&dc->lock);
+			tegra_dc_common_handle_flip_lock_error(dc);
+			mutex_lock(&dc->lock);
+		} else {
+			tegra_dc_trigger_windows(dc);
+		}
 
 		/* Check COMMON_ACT_REQ. */
 		if (tegra_dc_handle_common_channel_promotion(dc))
@@ -5383,7 +5393,7 @@ void tegra_dc_blank_wins(struct tegra_dc *dc, unsigned windows)
 
 	/* Skip update for linsim */
 	if (!tegra_platform_is_linsim() && !tegra_platform_is_vdk()) {
-		tegra_dc_update_windows(dcwins, nr_win, NULL, true);
+		tegra_dc_update_windows(dcwins, nr_win, NULL, true, false);
 		tegra_dc_sync_windows(dcwins, nr_win);
 	}
 
@@ -6077,6 +6087,11 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 	tegra_dc_create_debugfs(dc);
 
+
+	dc->frm_lck_info.frame_lock_enable = dc->pdata->frame_lock_enable;
+	dc->frm_lck_info.job_pending = false;
+	init_waitqueue_head(&(dc->frm_lck_info.win_upd_reqs));
+
 	dev_info(&ndev->dev, "probed\n");
 
 	if (dc->pdata->fb) {
@@ -6612,7 +6627,6 @@ int  tegra_dc_register_isr_usr_cb(int dcid,
 }
 EXPORT_SYMBOL(tegra_dc_register_isr_usr_cb);
 
-
 /*
  * to unregister the Tegra display ISR user call-back routine
  * o inputs:
@@ -6648,7 +6662,40 @@ EXPORT_SYMBOL(tegra_dc_unregister_isr_usr_cb);
 
 #endif /* TEGRA_DC_USR_SHARED_IRQ */
 
-int tegra_dc_get_numof_dispheads(void)
+/**
+ * tegra_dc_enable_disable_frame_lock - enables/disables frame_lock in dc.
+ * @dc: Pointer to tegra_dc struct.
+ * @enable: Boolean value for enabling or disabling.
+ *
+ * The only call(entry point) to this function should be from dc_common.
+ * dc_common makes sure that dc!=NULL before calling this API.
+ *
+ * Return: void
+ */
+void tegra_dc_enable_disable_frame_lock(struct tegra_dc *dc, bool enable)
+{
+	mutex_lock(&dc->lock);
+	dc->frm_lck_info.frame_lock_enable = enable;
+	mutex_unlock(&dc->lock);
+}
+EXPORT_SYMBOL(tegra_dc_enable_disable_frame_lock);
+
+/**
+ * tegra_dc_request_trigger_wins - enables/disables frame_lock in dc.
+ * @dc: Pointer to tegra_dc struct.
+ * @enable: Boolean value for status.
+ *
+ * Return: void
+ */
+void tegra_dc_request_trigger_wins(struct tegra_dc *dc)
+{
+	mutex_lock(&dc->lock);
+	tegra_dc_trigger_windows(dc);
+	mutex_unlock(&dc->lock);
+}
+EXPORT_SYMBOL(tegra_dc_request_trigger_wins);
+
+int  tegra_dc_get_numof_dispheads(void)
 {
 	if (!hw_data || !hw_data->valid)
 		return -ENODEV;

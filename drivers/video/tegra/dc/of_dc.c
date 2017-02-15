@@ -65,6 +65,7 @@
 #include "dp_lt.h"
 #include "panel/board-panel.h"
 #include "panel/tegra-board-id.h"
+#include "dc_common.h"
 
 /* #define OF_DC_DEBUG */
 
@@ -2150,7 +2151,6 @@ parse_dp_settings_fail:
 static int dc_dp_out_enable(struct device *dev)
 {
 	int ret = 0;
-
 	if (!of_dp_pwr) {
 		of_dp_pwr = devm_regulator_get(dev, "vdd-dp-pwr");
 		if (IS_ERR(of_dp_pwr)) {
@@ -2470,6 +2470,11 @@ struct tegra_dc_platform_data *of_dc_parse_platform_data(
 		dev_err(&ndev->dev, "not enough memory\n");
 		err = -ENOMEM;
 		goto fail_parse;
+	}
+
+	if (!of_property_read_u32(np, "nvidia,frame_lock_enable", &temp)) {
+		pdata->frame_lock_enable = (bool)temp;
+		OF_DC_LOG("nvidia,frame_lock_enable%d\n", pdata->frame_lock_enable);
 	}
 
 	pdata->conn_np = of_parse_phandle(np, "nvidia,dc-connector", 0);
@@ -2928,6 +2933,42 @@ fail_parse:
 #endif
 	return ERR_PTR(err);
 }
+
+#ifdef CONFIG_OF
+struct tegra_dc_common_platform_data
+		*of_dc_common_parse_platform_data(struct platform_device *pdev)
+{
+	struct tegra_dc_common_platform_data *pdata;
+	struct device_node *np = pdev->dev.of_node;
+
+	u32 temp;
+	pdata = devm_kzalloc(&pdev->dev,
+		sizeof(struct tegra_dc_common_platform_data), GFP_KERNEL);
+	if (!pdata) {
+		dev_err(&pdev->dev, "not enough memory\n");
+		return NULL;
+	}
+
+	if (!of_property_read_u32(np, "nvidia,valid_heads", &temp)) {
+		pdata->valid_heads = (int)temp;
+		OF_DC_LOG("valid_heads %d\n", pdata->valid_heads);
+	} else {
+		goto fail_parse;
+	}
+
+	return pdata;
+
+fail_parse:
+	kfree(pdata);
+	return NULL;
+}
+#else
+struct tegra_dc_common_platform_data
+		*of_dc_common_parse_platform_data(struct platform_device *pdev)
+{
+	return NULL;
+}
+#endif
 
 static int __init check_fb_console_map_default(void)
 {

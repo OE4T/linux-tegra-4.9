@@ -35,6 +35,7 @@
 #include "sor_regs.h"
 #include "dc_priv.h"
 #include "dp.h"
+#include "dc_common.h"
 
 static struct of_device_id tegra_sor_pd[] = {
 	{ .compatible = "nvidia,tegra210-sor-pd", },
@@ -1402,16 +1403,32 @@ static void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor)
 #endif
 
 	/* Enable DC */
-	if (dc->out->flags & TEGRA_DC_OUT_NVSR_MODE)
+	if (dc->out->flags & TEGRA_DC_OUT_NVSR_MODE) {
 		tegra_dc_writel(dc, DISP_CTRL_MODE_NC_DISPLAY,
 			DC_CMD_DISPLAY_COMMAND);
+	}
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	else if (dc->out->vrr)
+	else if (dc->out->vrr) {
 		tegra_nvdisp_set_vrr_mode(dc);
+	}
 #endif
-	else
+	else if (dc->frm_lck_info.frame_lock_enable &&
+		((dc->out->type == TEGRA_DC_OUT_HDMI) ||
+		(dc->out->type == TEGRA_DC_OUT_DP) ||
+		(dc->out->type == TEGRA_DC_OUT_FAKE_DP))) {
+		int ret;
+		mutex_unlock(&dc->lock);
+		ret = tegra_dc_common_sync_frames(dc, DC_CMD_DISPLAY_COMMAND,
+				DC_CMD_STATE_ACCESS, DISP_CTRL_MODE_C_DISPLAY);
+		mutex_lock(&dc->lock);
+		if (ret)
+			dev_err(&dc->ndev->dev,
+				"failed to submit job for tegradc.%d with error : %d\n",
+				dc->ctrl_num, ret);
+	} else {
 		tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY,
 			DC_CMD_DISPLAY_COMMAND);
+	}
 
 	tegra_dc_writel(dc, reg_val, DC_CMD_STATE_ACCESS);
 

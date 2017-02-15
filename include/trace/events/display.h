@@ -27,6 +27,7 @@
 #define _TRACE_DISPLAY_H
 
 #include "../../../drivers/video/tegra/dc/dc_priv_defs.h"
+#include "../../../drivers/video/tegra/dc/dc_common.h"
 #include <linux/tracepoint.h>
 
 DECLARE_EVENT_CLASS(display_basic_template,
@@ -416,6 +417,93 @@ TRACE_EVENT(display_scanline,
 	TP_printk("ctrl_num=%u line_num=%u frame_num=%u timestamp=%lld",
 		__entry->ctrl_num, __entry->line_num,
 		__entry->frame_num, __entry->timestamp)
+);
+
+DECLARE_EVENT_CLASS(display_dc_common_events_notifier,
+	TP_PROTO(struct tegra_dc_common *dc_cmmn, struct bit_mapped_data *data,
+		int head_no),
+	TP_ARGS(dc_cmmn, data, head_no),
+	TP_STRUCT__entry(
+		__field(ulong, flags)
+		__field(ulong, valid_heads)
+		__field(ulong, fr_lck_req_rcvd)
+		__field(ulong, fl_lck_req_rcvd)
+		__field(ulong, fl_lck_req_completed)
+		__field(ulong, gen_act_read_result)
+		__field(bool, heads_locked)
+		__field(int, head_no)
+	),
+	TP_fast_assign(
+		__entry->flags = dc_cmmn->flags;
+		__entry->valid_heads = dc_cmmn->valid_heads;
+		__entry->fr_lck_req_rcvd = data->fr_lck_req_rcvd;
+		__entry->fl_lck_req_rcvd = data->fl_lck_req_rcvd;
+		__entry->fl_lck_req_completed = data->fl_lck_req_completed;
+		__entry->gen_act_read_result = data->gen_act_read_result;
+		__entry->heads_locked = dc_cmmn->heads_locked;
+		__entry->head_no = head_no;
+	),
+	TP_printk("flags = %lu, valid_heads = %lu, fr_lck_req_rcvd = %lu, "
+		"fl_lck_req_rcvd = %lu, fl_lck_req_completed = %lu, "
+		"gen_act_read_result = %lu, heads_locked = %d, head = %d",
+		__entry->flags, __entry->valid_heads, __entry->fr_lck_req_rcvd,
+		__entry->fl_lck_req_rcvd, __entry->fl_lck_req_completed,
+		__entry->gen_act_read_result, __entry->heads_locked,
+		__entry->head_no)
+);
+
+DEFINE_EVENT(display_dc_common_events_notifier, received_fl_lock_request,
+	TP_PROTO(struct tegra_dc_common *dc_cmmn, struct bit_mapped_data *data,
+		int head_no),
+	TP_ARGS(dc_cmmn, data, head_no)
+);
+
+DEFINE_EVENT(display_dc_common_events_notifier, received_fr_lock_request,
+	TP_PROTO(struct tegra_dc_common *dc_cmmn, struct bit_mapped_data *data,
+		int head_no),
+	TP_ARGS(dc_cmmn, data, head_no)
+);
+
+DEFINE_EVENT(display_dc_common_events_notifier, received_err_check_request,
+	TP_PROTO(struct tegra_dc_common *dc_cmmn, struct bit_mapped_data *data,
+		int head_no),
+	TP_ARGS(dc_cmmn, data, head_no)
+);
+
+DEFINE_EVENT(display_dc_common_events_notifier, completed_fr_lock_request,
+	TP_PROTO(struct tegra_dc_common *dc_cmmn, struct bit_mapped_data *data,
+		int head_no),
+	TP_ARGS(dc_cmmn, data, head_no)
+);
+
+DEFINE_EVENT(display_dc_common_events_notifier, completed_fl_lock_request,
+	TP_PROTO(struct tegra_dc_common *dc_cmmn, struct bit_mapped_data *data,
+		int head_no),
+	TP_ARGS(dc_cmmn, data, head_no)
+);
+
+DEFINE_EVENT(display_dc_common_events_notifier, completed_err_check_request,
+	TP_PROTO(struct tegra_dc_common *dc_cmmn, struct bit_mapped_data *data,
+		int head_no),
+	TP_ARGS(dc_cmmn, data, head_no)
+);
+
+DEFINE_EVENT(display_dc_common_events_notifier, host1x_job_allocated,
+	TP_PROTO(struct tegra_dc_common *dc_cmmn, struct bit_mapped_data *data,
+		int head_no),
+	TP_ARGS(dc_cmmn, data, head_no)
+);
+
+DEFINE_EVENT(display_dc_common_events_notifier, host1x_job_submitted,
+	TP_PROTO(struct tegra_dc_common *dc_cmmn, struct bit_mapped_data *data,
+		int head_no),
+	TP_ARGS(dc_cmmn, data, head_no)
+);
+
+DEFINE_EVENT(display_dc_common_events_notifier, host1x_job_executed,
+	TP_PROTO(struct tegra_dc_common *dc_cmmn, struct bit_mapped_data *data,
+		int head_no),
+	TP_ARGS(dc_cmmn, data, head_no)
 );
 
 #endif /* _TRACE_DISPLAY_H */

@@ -852,6 +852,14 @@ struct tegra_dc_hdr {
 	u8		static_metadata[24];
 };
 
+struct frame_lock_info {
+	bool frame_lock_enable;
+	bool job_pending;
+	bool check_for_error;
+	wait_queue_head_t win_upd_reqs;
+
+};
+
 #define TEGRA_WIN_PPFLAG_CP_ENABLE	(1 << 0) /* enable RGB color lut */
 #define TEGRA_WIN_PPFLAG_CP_FBOVERRIDE	(1 << 1) /* override fbdev color lut */
 
@@ -960,6 +968,7 @@ struct tegra_dc_platform_data {
 	struct device_node	*conn_np; /* DSI, SOR0, SOR1, etc. */
 	struct device_node	*panel_np; /* dp-display, hdmi-display etc. */
 	struct device_node	*def_out_np; /* disp-default-out */
+	bool			frame_lock_enable;
 };
 
 struct tegra_dc_bw_data {
@@ -1112,7 +1121,7 @@ static int tegra_fb_set_win_index(struct tegra_dc *dc, unsigned long win_mask)
  * dirty_rect is u16[4]: xoff, yoff, width, height
  */
 int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
-	u16 *dirty_rect, bool wait_for_vblank);
+	u16 *dirty_rect, bool wait_for_vblank, bool lock_flip);
 int tegra_dc_sync_windows(struct tegra_dc_win *windows[], int n);
 void tegra_dc_disable_window(struct tegra_dc *dc, unsigned win);
 int tegra_dc_attach_win(struct tegra_dc *dc, unsigned idx);

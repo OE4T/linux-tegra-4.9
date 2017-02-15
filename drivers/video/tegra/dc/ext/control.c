@@ -28,6 +28,7 @@
 #endif
 
 #include "tegra_dc_ext_priv.h"
+#include "../dc_common.h"
 
 #ifdef CONFIG_COMPAT
 struct tegra_dc_ext_control_output_edid32 {
@@ -310,6 +311,35 @@ static long tegra_dc_ext_control_ioctl(struct file *filp, unsigned int cmd,
 #else
 		return -EINVAL;
 #endif
+	case TEGRA_DC_EXT_CONTROL_GET_FRAME_LOCK_PARAMS:
+	{
+		struct tegra_dc_ext_control_frm_lck_params args;
+		int ret;
+
+		ret = tegra_dc_common_get_frm_lock_params(&args);
+		if (ret)
+			return ret;
+
+		if (copy_to_user(user_arg, &args, sizeof(args)))
+			return -EFAULT;
+
+		return 0;
+	}
+	case TEGRA_DC_EXT_CONTROL_SET_FRAME_LOCK_PARAMS:
+	{
+		struct tegra_dc_ext_control_frm_lck_params args;
+		int ret;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		ret = tegra_dc_common_set_frm_lock_params(&args);
+		if (ret)
+			return ret;
+
+		return 0;
+	}
+
 	default:
 		return -EINVAL;
 	}

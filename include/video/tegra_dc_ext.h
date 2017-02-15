@@ -1233,6 +1233,23 @@ struct tegra_dc_ext_control_scrncapt_resume {
 	__u32  reserved[7];
 };
 
+/**
+ * struct tegra_dc_ext_control_frm_lck_params - Used by userspace to get and
+ * update frame_lock status in kernel.
+ */
+struct tegra_dc_ext_control_frm_lck_params {
+	/**
+	 * @frame_lock_status: Tells the current frame_lock status in kernel.
+	 * Since it's boolean in kernel and the data type here is u8. Values
+	 * here should inly be 0 and 1.
+	 */
+	__u8 frame_lock_status;
+	/**
+	 * @valid_heads: It's bit-mapped array storing the head_ids of the
+	 * participating dc heads in frame-lock.
+	 */
+	__u64 valid_heads;
+};
 
 #define TEGRA_DC_EXT_CONTROL_GET_NUM_OUTPUTS \
 	_IOR('C', 0x00, __u32)
@@ -1248,5 +1265,11 @@ struct tegra_dc_ext_control_scrncapt_resume {
 	_IOWR('C', 0x05, struct tegra_dc_ext_control_scrncapt_pause)
 #define TEGRA_DC_EXT_CONTROL_SCRNCAPT_RESUME \
 	_IOW('C', 0x06, struct tegra_dc_ext_control_scrncapt_resume)
+#define TEGRA_DC_EXT_CONTROL_GET_FRAME_LOCK_PARAMS\
+	_IOW('C', 0x07, struct tegra_dc_ext_control_scrncapt_resume)
+#define TEGRA_DC_EXT_CONTROL_SET_FRAME_LOCK_PARAMS\
+	_IOW('C', 0x08, struct tegra_dc_ext_control_scrncapt_resume)
+
+
 
 #endif /* __TEGRA_DC_EXT_H */

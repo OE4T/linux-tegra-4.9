@@ -712,11 +712,20 @@ void tegra_dc_reset_imp_state(void);
 int tegra_bw_create_sysfs(struct device *dev);
 void tegra_bw_remove_sysfs(struct device *dev);
 
+/** Frame-Flip Lock API
+ * Defined in dc.c. Used in dc_common.c
+ */
+void tegra_dc_enable_disable_frame_lock(struct tegra_dc *dc, bool enable);
+void tegra_dc_upd_frame_flip_lock_job_stauts(struct tegra_dc *dc, bool status);
+void tegra_dc_request_trigger_wins(struct tegra_dc *dc);
+
 #ifdef CONFIG_TEGRA_NVDISPLAY
 int tegra_nvdisp_init(struct tegra_dc *dc);
 int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	struct tegra_dc_win *windows[], int n,
-	u16 *dirty_rect, bool wait_for_vblank);
+	u16 *dirty_rect, bool wait_for_vblank, bool lock_flip);
+int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx);
+int tegra_nvdisp_detach_win(struct tegra_dc *dc, unsigned idx);
 int tegra_nvdisp_head_enable(struct tegra_dc *dc);
 int tegra_nvdisp_head_disable(struct tegra_dc *dc);
 int tegra_nvdisp_get_linestride(struct tegra_dc *dc, int win);

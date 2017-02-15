@@ -23,6 +23,7 @@
 #include <linux/tegra-aon.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-instance.h>
+#include <linux/tegra-hsp.h>
 
 #include <asm/cache.h>
 
@@ -41,9 +42,13 @@ static inline int ivc_min_frame_size(void)
 
 #define IPCBUF_SIZE 2097152
 
+#define SMBOX_IVC_CHAN_SHIFT	16
+#define SMBOX_IVC_NOTIFY_MASK	0xFFFF
+
 enum smbox_msgs {
 	SMBOX_IVC_READY_MSG = 0xAAAA5555,
 	SMBOX_IVC_DBG_ENABLE = 0xAAAA6666,
+	SMBOX_IVC_NOTIFY = 0x0000AABB,
 };
 
 enum ivc_tasks_dbg_enable {
@@ -58,32 +63,33 @@ enum ivc_tasks_dbg_enable {
 
 struct tegra_aon {
 	struct mbox_controller mbox;
-	int hsp_master;
-	int hsp_db;
+	struct tegra_hsp_sm_pair *hsp_sm_pair;
 	struct work_struct ch_rx_work;
-	void __iomem *smbox_base;
 	void __iomem *shrdsem_base;
 	void *ipcbuf;
 	dma_addr_t ipcbuf_dma;
 	size_t ipcbuf_size;
+	u64 ivc_chans_notified_id;
 };
 
 struct tegra_aon_ivc_chan {
 	struct ivc ivc;
 	char *name;
+	int chan_id;
 	struct tegra_aon *aon;
 	bool last_tx_done;
 };
 
+static DEFINE_SPINLOCK(ivc_lock);
+
 static void tegra_aon_notify_remote(struct ivc *ivc)
 {
 	struct tegra_aon_ivc_chan *ivc_chan;
-	int ret;
 
 	ivc_chan = container_of(ivc, struct tegra_aon_ivc_chan, ivc);
-	ret = tegra_hsp_db_ring(ivc_chan->aon->hsp_db);
-	if (ret)
-		pr_err("tegra_hsp_db_ring failed: %d\n", ret);
+	tegra_hsp_sm_pair_write(ivc_chan->aon->hsp_sm_pair,
+				(ivc_chan->chan_id << SMBOX_IVC_CHAN_SHIFT) |
+				SMBOX_IVC_NOTIFY);
 }
 
 static void tegra_aon_rx_worker(struct work_struct *work)
@@ -91,11 +97,17 @@ static void tegra_aon_rx_worker(struct work_struct *work)
 	struct mbox_chan *mbox_chan;
 	struct ivc *ivc;
 	struct tegra_aon_mbox_msg msg;
-	int i;
+	int ivc_chans, i;
+	unsigned long flags;
 	struct tegra_aon *aon = container_of(work,
 					struct tegra_aon, ch_rx_work);
 
-	for (i = 0; i < aon->mbox.num_chans; i++) {
+	spin_lock_irqsave(&ivc_lock, flags);
+	ivc_chans = aon->ivc_chans_notified_id;
+	aon->ivc_chans_notified_id = 0;
+	spin_unlock_irqrestore(&ivc_lock, flags);
+	while (ivc_chans) {
+		i = __builtin_ctz(ivc_chans);
 		mbox_chan = &aon->mbox.chans[i];
 		ivc = (struct ivc *)mbox_chan->con_priv;
 		while (tegra_ivc_can_read(ivc)) {
@@ -104,21 +116,36 @@ static void tegra_aon_rx_worker(struct work_struct *work)
 			mbox_chan_received_data(mbox_chan, &msg);
 			tegra_ivc_read_advance(ivc);
 		}
+		ivc_chans &= ~BIT(i);
 	}
 }
 
-static void hsp_irq_handler(void *data)
+static u32 tegra_aon_hsp_sm_full_notify(void *data, u32 value)
 {
 	struct tegra_aon *aon = data;
+	int chan_id;
+	unsigned long flags;
 
-	schedule_work(&aon->ch_rx_work);
+	if ((value & SMBOX_IVC_NOTIFY_MASK) == SMBOX_IVC_NOTIFY) {
+		chan_id = value >> SMBOX_IVC_CHAN_SHIFT;
+		if (chan_id < 0 || chan_id >= aon->mbox.num_chans)
+			return 1;
+		spin_lock_irqsave(&ivc_lock, flags);
+		aon->ivc_chans_notified_id |=
+					BIT((value >> SMBOX_IVC_CHAN_SHIFT));
+		spin_unlock_irqrestore(&ivc_lock, flags);
+		schedule_work(&aon->ch_rx_work);
+	}
+
+	return 0;
 }
 
 #define NV(p) "nvidia," p
 
 static int tegra_aon_parse_channel(struct device *dev,
 				struct mbox_chan *mbox_chan,
-				struct device_node *ch_node)
+				struct device_node *ch_node,
+				int chan_id)
 {
 	struct tegra_aon *aon;
 	struct tegra_aon_ivc_chan *ivc_chan;
@@ -187,6 +214,8 @@ static int tegra_aon_parse_channel(struct device *dev,
 	ivc_chan->name = devm_kstrdup(dev, ch_node->name, GFP_KERNEL);
 	if (!ivc_chan->name)
 		return -ENOMEM;
+
+	ivc_chan->chan_id = chan_id;
 
 	/* Allocate the IVC links */
 	ret = tegra_ivc_init_with_dma_handle(&ivc_chan->ivc,
@@ -282,8 +311,9 @@ static int tegra_aon_parse_channels(struct device *dev)
 
 		for_each_child_of_node(reg_node, ch_node) {
 			ret = tegra_aon_parse_channel(dev,
-						&aon->mbox.chans[i++],
-						ch_node);
+						&aon->mbox.chans[i],
+						ch_node, i);
+			i++;
 			if (ret) {
 				dev_err(dev, "failed to parse a channel\n");
 				return ret;
@@ -378,7 +408,7 @@ static ssize_t store_ivc_dbg(struct device *dev, struct device_attribute *attr,
 
 	shrdsem_msg = channel | enable;
 	writel(shrdsem_msg, aon->shrdsem_base + SHRD_SEM_SET);
-	writel(SMBOX_IVC_DBG_ENABLE, aon->smbox_base + SMBOX1_OFFSET);
+	tegra_hsp_sm_pair_write(aon->hsp_sm_pair, SMBOX_IVC_DBG_ENABLE);
 
 	return count;
 }
@@ -391,7 +421,6 @@ static int tegra_aon_probe(struct platform_device *pdev)
 	struct tegra_aon *aon;
 	struct device *dev = &pdev->dev;
 	struct device_node *dn = dev->of_node;
-	u32 hsp_data[TEGRA_AON_HSP_DATA_ARRAY_SIZE];
 	int num_chans;
 	int ret = 0;
 
@@ -410,30 +439,11 @@ static int tegra_aon_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	aon->smbox_base = of_iomap(dn, 0);
-	if (!aon->smbox_base) {
-		dev_err(dev, "failed to map smbox IO space.\n");
-		return -EINVAL;
-	}
-
-	aon->shrdsem_base = of_iomap(dn, 1);
+	aon->shrdsem_base = of_iomap(dn, 0);
 	if (!aon->shrdsem_base) {
 		dev_err(dev, "failed to map shrdsem IO space.\n");
-		iounmap(aon->smbox_base);
 		return -EINVAL;
 	}
-
-	ret = of_property_read_u32_array(dn, NV("hsp-notifications"), hsp_data,
-					ARRAY_SIZE(hsp_data));
-	if (ret) {
-		dev_err(dev, "missing <%s> property\n",
-				NV("hsp-notifications"));
-		goto exit;
-	}
-
-	/* hsp_data[0] is HSP phandle */
-	aon->hsp_master = hsp_data[1];
-	aon->hsp_db = hsp_data[2];
 
 	num_chans = tegra_aon_count_ivc_channels(dn);
 	if (num_chans <= 0) {
@@ -466,42 +476,44 @@ static int tegra_aon_probe(struct platform_device *pdev)
 	/* Init IVC channels ch_rx_work */
 	INIT_WORK(&aon->ch_rx_work, tegra_aon_rx_worker);
 
-	/* Listen to the remote's notification */
-	ret = tegra_hsp_db_add_handler(aon->hsp_master, hsp_irq_handler, aon);
-	if (ret) {
-		dev_err(dev, "failed to add hsp db handler: %d\n", ret);
-		goto exit;
-	}
-	/* Allow remote to ring CCPLEX's doorbell */
-	ret = tegra_hsp_db_enable_master(aon->hsp_master);
-	if (ret) {
-		dev_err(dev, "failed to enable hsp db master: %d\n", ret);
-		tegra_hsp_db_del_handler(aon->hsp_master);
+	/* Fetch the shared mailbox pair associated with IVC tx and rx */
+	aon->hsp_sm_pair = of_tegra_hsp_sm_pair_by_name(dn, "ivc-pair",
+						tegra_aon_hsp_sm_full_notify,
+						NULL, aon);
+	if (IS_ERR(aon->hsp_sm_pair)) {
+		ret = PTR_ERR(aon->hsp_sm_pair);
+		if (ret != -EPROBE_DEFER)
+			dev_err(dev, "failed to fetch mailbox pair : %d\n",
+				ret);
 		goto exit;
 	}
 
 	ret = mbox_controller_register(&aon->mbox);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to register mailbox: %d\n", ret);
-		tegra_hsp_db_del_handler(aon->hsp_master);
+		tegra_hsp_sm_pair_free(aon->hsp_sm_pair);
 		goto exit;
 	}
-	writel((u32)aon->ipcbuf_dma, aon->shrdsem_base + SHRD_SEM_SET);
-	writel((u32)aon->ipcbuf_size, aon->shrdsem_base + SHRD_SEM_OFFSET
-					+ SHRD_SEM_SET);
-	writel(SMBOX_IVC_READY_MSG, aon->smbox_base + SMBOX1_OFFSET);
+
 	ret = device_create_file(dev, &dev_attr_ivc_dbg);
 	if (ret) {
 		dev_err(dev, "failed to create device file: %d\n", ret);
+		tegra_hsp_sm_pair_free(aon->hsp_sm_pair);
+		mbox_controller_unregister(&aon->mbox);
 		goto exit;
 	}
+
+	writel((u32)aon->ipcbuf_dma, aon->shrdsem_base + SHRD_SEM_SET);
+	writel((u32)aon->ipcbuf_size, aon->shrdsem_base + SHRD_SEM_OFFSET
+					+ SHRD_SEM_SET);
+	tegra_hsp_sm_pair_write(aon->hsp_sm_pair, SMBOX_IVC_READY_MSG);
+	aon->ivc_chans_notified_id = 0;
 
 	dev_dbg(&pdev->dev, "tegra aon driver probe OK\n");
 	return ret;
 
 exit:
 	iounmap(aon->shrdsem_base);
-	iounmap(aon->smbox_base);
 	return ret;
 }
 
@@ -510,23 +522,11 @@ static int tegra_aon_remove(struct platform_device *pdev)
 	struct tegra_aon *aon = platform_get_drvdata(pdev);
 
 	iounmap(aon->shrdsem_base);
-	iounmap(aon->smbox_base);
 	mbox_controller_unregister(&aon->mbox);
-	tegra_hsp_db_del_handler(aon->hsp_master);
+	tegra_hsp_sm_pair_free(aon->hsp_sm_pair);
 
 	return 0;
 }
-
-static int tegra_aon_resume(struct device *dev)
-{
-	struct tegra_aon *aon = platform_get_drvdata(to_platform_device(dev));
-
-	return tegra_hsp_db_enable_master(aon->hsp_master);
-}
-
-static const struct dev_pm_ops tegra_aon_pm_ops = {
-	.resume = tegra_aon_resume,
-};
 
 static const struct of_device_id tegra_aon_of_match[] = {
 	{ .compatible = NV("tegra186-aon"), },
@@ -541,7 +541,6 @@ static struct platform_driver tegra_aon_driver = {
 		.owner	= THIS_MODULE,
 		.name	= "tegra_aon",
 		.of_match_table = of_match_ptr(tegra_aon_of_match),
-		.pm = &tegra_aon_pm_ops,
 	},
 };
 module_platform_driver(tegra_aon_driver);

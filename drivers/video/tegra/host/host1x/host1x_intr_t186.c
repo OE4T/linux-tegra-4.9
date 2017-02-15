@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -112,12 +112,6 @@ static void intr_init_host_sync(struct nvhost_intr *intr)
 
 static void intr_set_host_clocks_per_usec(struct nvhost_intr *intr, u32 cpm)
 {
-	struct nvhost_master *dev = intr_to_dev(intr);
-	/* write microsecond clock register */
-	host1x_hypervisor_writel(dev->dev, host1x_sync_usec_clk_r(), cpm);
-	/* set the ip_busy_timeout */
-	host1x_hypervisor_writel(dev->dev,
-			host1x_sync_ip_busy_timeout_r(), cpm * 500000);
 }
 
 static void intr_set_syncpt_threshold(struct nvhost_intr *intr,

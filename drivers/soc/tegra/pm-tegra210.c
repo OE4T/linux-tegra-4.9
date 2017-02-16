@@ -315,6 +315,11 @@ static int fast_enable_show(struct seq_file *s, void *data)
 	struct cpuidle_driver *drv = cpuidle_get_cpu_driver(dev);
 	int i;
 
+	if (!drv) {
+		seq_puts(s, "Failed to get cpuidle driver\n");
+		return 0;
+	}
+
 	seq_puts(s, "Usage: write state index to disable or enable\n");
 	seq_puts(s, "  name	idx	Enabled\n");
 	seq_puts(s, "--------------------------\n");
@@ -337,6 +342,11 @@ static ssize_t fast_enable_write(struct file *fp, const char __user *ubuf,
 {
 	struct cpuidle_device *dev = __this_cpu_read(cpuidle_devices);
 	struct cpuidle_driver *drv = cpuidle_get_cpu_driver(dev);
+
+	if (!drv) {
+		pr_err("%s: Failed to get cpuidle driver\n", __func__);
+		return -ENOTSUPP;
+	}
 
 	if (kstrtouint_from_user(ubuf, count, 0, &state_enable) < 0)
 		return -EINVAL;

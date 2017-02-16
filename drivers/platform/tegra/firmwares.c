@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -251,11 +251,11 @@ struct device *devm_tegrafw_register(struct device *dev, const char *name,
 	if (!IS_ERR(fwdev)) {
 		*ptr = fwdev;
 		devres_add(dev, ptr);
+		/* set device parent */
+		device_move(fwdev, dev, DPM_ORDER_NONE);
 	} else {
 		devres_free(ptr);
 	}
-	/* set device parent */
-	device_move(fwdev, dev, DPM_ORDER_NONE);
 	return fwdev;
 }
 EXPORT_SYMBOL(devm_tegrafw_register);

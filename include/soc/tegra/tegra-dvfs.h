@@ -361,16 +361,16 @@ static inline bool tegra_dvfs_is_rail_ready(struct dvfs_rail *rail)
 #endif
 
 #ifdef CONFIG_TEGRA_124_DVFS
-int tegra124_init_dvfs(struct device_node *node);
+int tegra124_init_dvfs(struct device *node);
 #else
-static inline int tegra124_init_dvfs(struct device_node *node)
+static inline int tegra124_init_dvfs(struct device *node)
 { return -EINVAL; }
 #endif
 
 #ifdef CONFIG_TEGRA_210_DVFS
-int tegra210_init_dvfs(struct device_node *node);
+int tegra210_init_dvfs(struct device *node);
 #else
-static inline int tegra210_init_dvfs(struct device_node *node)
+static inline int tegra210_init_dvfs(struct device *node)
 { return -EINVAL; }
 #endif
 

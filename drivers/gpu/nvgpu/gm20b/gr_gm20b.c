@@ -1259,9 +1259,9 @@ static int gm20b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
 	gr->sm_error_states[sm_id].hww_warp_esr_pc = gk20a_readl(g,
 			gr_gpc0_tpc0_sm_hww_warp_esr_pc_r() + offset);
 	gr->sm_error_states[sm_id].hww_global_esr_report_mask = gk20a_readl(g,
-		       gr_gpcs_tpcs_sm_hww_global_esr_report_mask_r() + offset);
+		       gr_gpc0_tpc0_sm_hww_global_esr_report_mask_r() + offset);
 	gr->sm_error_states[sm_id].hww_warp_esr_report_mask = gk20a_readl(g,
-			gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_r() + offset);
+			gr_gpc0_tpc0_sm_hww_warp_esr_report_mask_r() + offset);
 
 	mutex_unlock(&g->dbg_sessions_lock);
 

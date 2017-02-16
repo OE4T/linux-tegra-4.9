@@ -3062,6 +3062,10 @@ static inline u32 gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_divergent_report_f(vo
 {
 	return 0x100000;
 }
+static inline u32 gr_gpc0_tpc0_sm_hww_warp_esr_report_mask_r(void)
+{
+	return 0x00504644;
+}
 static inline u32 gr_gpcs_tpcs_sm_hww_global_esr_report_mask_r(void)
 {
 	return 0x00419e4c;
@@ -3093,6 +3097,10 @@ static inline u32 gr_gpcs_tpcs_sm_hww_global_esr_report_mask_bpt_pause_report_f(
 static inline u32 gr_gpcs_tpcs_sm_hww_global_esr_report_mask_single_step_complete_report_f(void)
 {
 	return 0x40;
+}
+static inline u32 gr_gpc0_tpc0_sm_hww_global_esr_report_mask_r(void)
+{
+	return 0x0050464c;
 }
 static inline u32 gr_gpcs_tpcs_tpccs_tpc_exception_en_r(void)
 {

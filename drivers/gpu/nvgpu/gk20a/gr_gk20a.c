@@ -8740,7 +8740,7 @@ void gk20a_resume_single_sm(struct gk20a *g,
 			gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_m(),
 			gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_disable_f());
 	gk20a_writel(g,
-		gr_gpcs_tpcs_sm_dbgr_control0_r() + offset, dbgr_control0);
+		gr_gpc0_tpc0_sm_dbgr_control0_r() + offset, dbgr_control0);
 
 	/* Run trigger */
 	dbgr_control0 |= gr_gpcs_tpcs_sm_dbgr_control0_run_trigger_task_f();

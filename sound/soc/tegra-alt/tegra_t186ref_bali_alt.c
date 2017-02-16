@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <linux/module.h>
+#include <linux/version.h>
 #include <sound/soc.h>
 #include <soc/tegra/chip-id.h>
 
@@ -371,11 +372,14 @@ static int tegra_t186ref_bali_audio_dsp_tdm1_hw_params(
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
 	unsigned int srate;
-	unsigned int idx =
-		tegra_machine_get_codec_dai_link_idx_t18x
-				("bali-audio-dsp-tdm1-1");
-	struct snd_soc_pcm_stream *dai_params =
-		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+	struct snd_soc_pcm_stream *dai_params;
+
+	rtd = snd_soc_get_pcm_runtime(card, "bali-audio-dsp-tdm1-1");
+	if (!rtd)
+		return -EINVAL;
+
+	dai_params =
+		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	/* update dai params rate for audio dsp TDM link */
 	dai_params->rate_min = params_rate(params);
 
@@ -391,11 +395,13 @@ static int tegra_t186ref_bali_audio_dsp_tdm2_hw_params(
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
 	unsigned int srate;
-	unsigned int idx =
-		tegra_machine_get_codec_dai_link_idx_t18x
-				("bali-audio-dsp-tdm1-2");
-	struct snd_soc_pcm_stream *dai_params =
-		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+	struct snd_soc_pcm_stream *dai_params;
+
+	rtd = snd_soc_get_pcm_runtime(card, "bali-audio-dsp-tdm1-2");
+	if (!rtd)
+		return -EINVAL;
+
+	dai_params = (struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	/* update dai params rate for audio dsp TDM link */
 	dai_params->rate_min = params_rate(params);
 
@@ -412,15 +418,17 @@ static int tegra_t186ref_bali_spdif_hw_params(
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
 	struct snd_soc_dai *cpu_dai = NULL;
-	unsigned int idx =
-		tegra_machine_get_codec_dai_link_idx_t18x
-				("bt-playback");
-	struct snd_soc_pcm_stream *dai_params =
-		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+	struct snd_soc_pcm_stream *dai_params;
 
-	cpu_dai = card->rtd[idx].cpu_dai;
+	rtd = snd_soc_get_pcm_runtime(card, "bt-playback");
+	if (!rtd)
+		return -EINVAL;
+
+	cpu_dai = rtd->cpu_dai;
 
 	/* dummy hw_params; clocks set in the init function */
+	dai_params =
+		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	dai_params->rate_min = params_rate(params);
 
 	/* bt operates at 2048KHz bclk*/
@@ -458,12 +466,19 @@ static const struct snd_soc_dapm_widget tegra_bali_dapm_widgets[] = {
 
 static int tegra_t186ref_bali_suspend_pre(struct snd_soc_card *card)
 {
-	unsigned int idx;
+	struct snd_soc_pcm_runtime *rtd;
 
 	/* DAPM dai link stream work for non pcm links */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 5, 0)
+	unsigned int idx;
 	for (idx = 0; idx < card->num_rtd; idx++) {
-		if (card->rtd[idx].dai_link->params)
-			INIT_DELAYED_WORK(&card->rtd[idx].delayed_work, NULL);
+		rtd = &card->rtd[idx];
+#else
+	list_for_each_entry(rtd, &card->rtd_list, list) {
+#endif
+
+		if (rtd->dai_link->params)
+			INIT_DELAYED_WORK(&rtd->delayed_work, NULL);
 	}
 
 	return 0;
@@ -519,16 +534,20 @@ static int tegra_t186ref_put_rate(struct snd_kcontrol *kcontrol,
 	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
 	struct snd_soc_dai *cpu_dai = NULL;
 	struct tegra_t186ref_bali *machine = snd_soc_card_get_drvdata(card);
-	unsigned int idx =
-		tegra_machine_get_codec_dai_link_idx_t18x("bt-playback");
-	struct snd_soc_pcm_stream *dai_params =
-		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+	struct snd_soc_pcm_stream *dai_params;
+	struct snd_soc_pcm_runtime *rtd;
 
-	cpu_dai = card->rtd[idx].cpu_dai;
+	rtd = snd_soc_get_pcm_runtime(card, "bt-playback");
+	if (!rtd)
+		return -EINVAL;
+
+	cpu_dai = rtd->cpu_dai;
 	/* set the rate control flag */
 	machine->rate_via_kcontrol = ucontrol->value.integer.value[0];
 
 	/* update the dai params rate */
+	dai_params =
+		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	dai_params->rate_min =
 		tegra_t186ref_srate_values[machine->rate_via_kcontrol];
 
@@ -763,10 +782,12 @@ static int tegra_t186ref_bali_driver_probe(struct platform_device *pdev)
 			TEGRA186_DAI_LINK_ADMAIF11 + (2 * i),
 			(struct snd_soc_pcm_stream *)
 			&tegra_t186ref_bali_sse_admaif_params[i]);
+#if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
 		tegra_machine_set_dai_params(
 			TEGRA186_DAI_LINK_ADSP_ADMAIF11 + (2 * i),
 			(struct snd_soc_pcm_stream *)
 			&tegra_t186ref_bali_sse_admaif_params[i]);
+#endif
 	}
 
 	/* The packet from ARAD to ASRC for the ratio update is 24 bit */

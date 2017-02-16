@@ -139,13 +139,24 @@ static int tegra186_hw_params(struct snd_pcm_substream *substream,
 		machine->audio_clock.set_mclk, clk_out_rate, rate);
 
 	/* Update dai link hw_params for non pcm links */
-	for (i = 0; i < TEGRA186_DAI_LINK_ADMAIF20; i++) {
-		if (!card->rtd[i].dai_link->params)
+	i = 0;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 5, 0)
+	for ( ; i < TEGRA186_DAI_LINK_ADMAIF20; ) {
+		rtd = &card->rtd[i];
+#else
+	list_for_each_entry(rtd, &card->rtd_list, list) {
+		if (i >= TEGRA186_DAI_LINK_ADMAIF20)
+			break;
+#endif
+		if (!rtd->dai_link->params) {
+			i++;
 			continue;
-		dai_link = card->rtd[i].dai_link;
+		}
+		dai_link = rtd->dai_link;
 		dai_params = (struct snd_soc_pcm_stream *) dai_link->params;
 		dai_params->rate_min = rate;
 		dai_params->channels_min = channels;
+		i++;
 	}
 
 	for (i = 0; i < ARRAY_SIZE(dai_link_names); i++) {
@@ -196,7 +207,8 @@ static int tegra186_startup(struct snd_pcm_substream *substream)
 	if (!machine->unmute_count) {
 		for (i = 0; i < CS53L30_MAX_INDEX; i++) {
 			rtd = snd_soc_get_pcm_runtime(card, dai_link_names[i]);
-			snd_soc_dai_digital_mute(rtd->codec_dai, 0, 0);
+			if (rtd)
+				snd_soc_dai_digital_mute(rtd->codec_dai, 0, 0);
 		}
 	}
 
@@ -217,7 +229,8 @@ static void tegra186_shutdown(struct snd_pcm_substream *substream)
 	if (!machine->unmute_count) {
 		for (i = 0; i < CS53L30_MAX_INDEX; i++) {
 			rtd = snd_soc_get_pcm_runtime(card, dai_link_names[i]);
-			snd_soc_dai_digital_mute(rtd->codec_dai, 1, 0);
+			if (rtd)
+				snd_soc_dai_digital_mute(rtd->codec_dai, 1, 0);
 		}
 	}
 }
@@ -266,12 +279,19 @@ static const struct snd_soc_dapm_widget tegra186_dapm_widgets[] = {
 
 static int tegra186_suspend_pre(struct snd_soc_card *card)
 {
-	unsigned int i;
+	struct snd_soc_pcm_runtime *rtd;
 
 	/* DAPM dai link stream work for non pcm links */
-	for (i = 0; i < card->num_rtd; i++) {
-		if (card->rtd[i].dai_link->params)
-			INIT_DELAYED_WORK(&card->rtd[i].delayed_work, NULL);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 5, 0)
+	unsigned int idx;
+
+	for (idx = 0; idx < card->num_rtd; idx++) {
+		rtd = &card->rtd[idx];
+#else
+	list_for_each_entry(rtd, &card->rtd_list, list) {
+#endif
+		if (rtd->dai_link->params)
+			INIT_DELAYED_WORK(&rtd->delayed_work, NULL);
 	}
 
 	return 0;
@@ -342,10 +362,12 @@ static void dai_link_setup(struct platform_device *pdev)
 		tegra_machine_set_dai_ops(i, &tegra186_ops);
 
 	/* Set ADSP PCM/COMPR */
+#if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
 	for (i = TEGRA186_DAI_LINK_ADSP_PCM1;
 		i <= TEGRA186_DAI_LINK_ADSP_PCM2; i++) {
 		tegra_machine_set_dai_ops(i, &tegra186_ops);
 	}
+#endif
 
 	/* Append t186 specific dai_links */
 	card->num_links =

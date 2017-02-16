@@ -151,7 +151,7 @@
 #define TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK			0xFFFFFFFF
 
 #define TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MAX			0x7FFFFFFF
-enum task_event {
+enum asrc_task_event {
 	STREAM_DISABLE,
 	STREAM_ENABLE,
 };
@@ -182,7 +182,7 @@ struct tegra186_asrc {
 	int active_dai_count;
 };
 int tegra186_asrc_set_source(int id, int source);
-int tegra186_asrc_event(int id, enum task_event event, int status);
+int tegra186_asrc_event(int id, enum asrc_task_event event, int status);
 int tegra186_asrc_update_ratio(int id, int inte, int frac);
 void tegra186_asrc_handle_arad_unlock(int stream_id, int action);
 #endif

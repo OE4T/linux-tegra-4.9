@@ -217,18 +217,16 @@ static int tegra_t186ref_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
-
-	int idx = tegra_machine_get_codec_dai_link_idx_t18x("spdif-dit-0");
 	struct snd_soc_pcm_stream *dai_params;
 	int mclk, clk_out_rate;
 	int err;
 
-	/* check if idx has valid number */
-	if (idx == -EINVAL)
-		return idx;
+	rtd = snd_soc_get_pcm_runtime(card, "spdif-dit-0");
+	if (!rtd)
+		return -EINVAL;
 
 	dai_params =
-		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	switch (dai_params->rate_min) {
 	case 11025:
 	case 22050:
@@ -251,8 +249,8 @@ static int tegra_t186ref_hw_params(struct snd_pcm_substream *substream,
 		break;
 	}
 
-	err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
-		tegra_machine_get_bclk_ratio_t18x(&card->rtd[idx]));
+	err = snd_soc_dai_set_bclk_ratio(rtd->cpu_dai,
+		tegra_machine_get_bclk_ratio_t18x(rtd));
 	if (err < 0) {
 		dev_err(card->dev, "Failed to set cpu dai bclk ratio\n");
 		return err;
@@ -507,10 +505,14 @@ static int tegra_t186ref_codec_put_rate(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
 	struct tegra_t186ref *machine = snd_soc_card_get_drvdata(card);
-	unsigned int idx =
-		tegra_machine_get_codec_dai_link_idx_t18x("spdif-dit-0");
-	struct snd_soc_pcm_stream *dai_params =
-		(struct snd_soc_pcm_stream *)card->dai_link[idx].params;
+	struct snd_soc_pcm_runtime *rtd;
+	struct snd_soc_pcm_stream *dai_params;
+
+	rtd = snd_soc_get_pcm_runtime(card, "spdif-dit-0");
+	if (!rtd)
+		return -EINVAL;
+
+	dai_params = (struct snd_soc_pcm_stream *)rtd->dai_link->params;
 
 	/* set the rate control flag */
 	machine->codec_rate_via_kcontrol = ucontrol->value.integer.value[0];

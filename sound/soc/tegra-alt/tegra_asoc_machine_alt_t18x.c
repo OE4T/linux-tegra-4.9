@@ -1441,6 +1441,7 @@ static struct snd_soc_dai_link
 		.params = &default_link_params,
 		.ignore_suspend = 1,
 	},
+#if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
 	[TEGRA186_DAI_LINK_ADSP_ADMAIF1] = {
 		.name = "ADSP ADMAIF1",
 		.stream_name = "ADSP ADMAIF1",
@@ -1685,6 +1686,7 @@ static struct snd_soc_dai_link
 		.ignore_pmdown_time = 1,
 		.ignore_suspend = 1,
 	},
+#endif
 };
 
 static struct snd_soc_codec_conf
@@ -1836,10 +1838,17 @@ static int tegra_machine_get_num_links_t18x(void)
 	return num_links;
 }
 
+#if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
 void tegra_machine_remove_adsp_links_t18x(void)
 {
 	num_links = TEGRA186_DAI_LINK_ADSP_ADMAIF1;
 }
+#else
+void tegra_machine_remove_adsp_links_t18x(void)
+{
+}
+#endif
+
 EXPORT_SYMBOL_GPL(tegra_machine_remove_adsp_links_t18x);
 
 struct snd_soc_dai_link *tegra_machine_get_dai_link_t18x(void)

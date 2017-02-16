@@ -28,6 +28,7 @@
 #include <linux/slab.h>
 #include <sound/soc.h>
 #include <linux/clk/tegra.h>
+#include <linux/version.h>
 
 #include "tegra210_xbar_alt.h"
 #include "tegra186_xbar_alt.h"
@@ -863,9 +864,16 @@ static const struct snd_soc_dapm_route tegra186_xbar_routes[] = {
 
 static struct snd_soc_codec_driver tegra186_xbar_codec = {
 	.probe = tegra210_xbar_codec_probe,
+	.idle_bias_off = 1,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 8, 0)
 	.dapm_widgets = tegra186_xbar_widgets,
 	.dapm_routes = tegra186_xbar_routes,
-	.idle_bias_off = 1,
+#else
+	.component_driver = {
+		.dapm_widgets = tegra186_xbar_widgets,
+		.dapm_routes = tegra186_xbar_routes,
+	},
+#endif
 };
 
 static struct of_dev_auxdata tegra186_xbar_auxdata[] = {
@@ -916,12 +924,22 @@ static struct of_dev_auxdata tegra186_xbar_auxdata[] = {
 int tegra186_xbar_registration(struct platform_device *pdev)
 {
 	int ret;
+	int num_dapm_widgets, num_dapm_routes;
 
-	tegra186_xbar_codec.num_dapm_widgets = (NUM_MUX_WIDGETS * 3) +
-				(NUM_DAIS - NUM_MUX_WIDGETS) * 2;
-	tegra186_xbar_codec.num_dapm_routes =
-		(NUM_DAIS - NUM_MUX_WIDGETS) * 2 +
-		(NUM_MUX_WIDGETS * NUM_MUX_INPUT);
+	num_dapm_widgets = (NUM_MUX_WIDGETS * 3) +
+			(NUM_DAIS - NUM_MUX_WIDGETS) * 2;
+	num_dapm_routes = (NUM_DAIS - NUM_MUX_WIDGETS) * 2 +
+			(NUM_MUX_WIDGETS * NUM_MUX_INPUT);
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 8, 0)
+	tegra186_xbar_codec.num_dapm_widgets = num_dapm_widgets;
+	tegra186_xbar_codec.num_dapm_routes = num_dapm_routes;
+#else
+	tegra186_xbar_codec.component_driver.num_dapm_widgets =
+			num_dapm_widgets;
+	tegra186_xbar_codec.component_driver.num_dapm_routes =
+			num_dapm_routes;
+#endif
 
 	ret = snd_soc_register_codec(&pdev->dev, &tegra186_xbar_codec,
 				tegra186_xbar_dais, NUM_DAIS);

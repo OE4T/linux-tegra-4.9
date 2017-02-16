@@ -115,7 +115,7 @@
 
 #define SE_OP_DONE_SHIFT	4
 #define OP_DONE	1
-#define SE_OP_DONE(x, y)	((x) && (y << SE_OP_DONE_SHIFT))
+#define SE_OP_DONE(x, y)	((x) & (y << SE_OP_DONE_SHIFT))
 
 #define SE_CRYPTO_REG_OFFSET		0x304
 #define SE_CRYPTO_HASH_SHIFT		0

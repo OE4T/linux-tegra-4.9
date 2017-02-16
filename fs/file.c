@@ -890,6 +890,7 @@ SYSCALL_DEFINE3(dup3, unsigned int, oldfd, unsigned int, newfd, int, flags)
 {
 	int err = -EBADF;
 	struct file *file;
+	struct file *new_file;
 	struct files_struct *files = current->files;
 
 	if ((flags & ~O_CLOEXEC) != 0)
@@ -898,10 +899,16 @@ SYSCALL_DEFINE3(dup3, unsigned int, oldfd, unsigned int, newfd, int, flags)
 	if (unlikely(oldfd == newfd))
 		return -EINVAL;
 
-	if (newfd >= rlimit(RLIMIT_NOFILE))
-		return -EBADF;
-
 	spin_lock(&files->file_lock);
+	/* If newfd is beyond the file resource limt and already pointing to
+	 *  a valid file *, It means kernel has allowed the process to use fd's
+	 *  beyond the file resoruce limit. In this case, bypass the file
+	 *  resource limit check and allow recycling the newfd.
+	 */
+	new_file = fcheck(newfd);
+	if (!new_file  && newfd >= rlimit(RLIMIT_NOFILE))
+		goto out_unlock;
+
 	err = expand_files(files, newfd);
 	file = fcheck(oldfd);
 	if (unlikely(!file))

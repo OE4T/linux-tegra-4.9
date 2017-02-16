@@ -34,6 +34,7 @@
 #include <soc/tegra/chip-id.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/vmalloc.h>
+#include <linux/version.h>
 
 #include "dev.h"
 #include <trace/events/nvhost.h>
@@ -1152,13 +1153,16 @@ static int __exit nvhost_remove(struct platform_device *dev)
 
 static int nvhost_suspend_prepare(struct device *dev)
 {
-	pm_runtime_enable(dev);
+	if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0))
+		pm_runtime_enable(dev);
+
 	return 0;
 }
 
 static void nvhost_suspend_complete(struct device *dev)
 {
-	__pm_runtime_disable(dev, false);
+	if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0))
+		__pm_runtime_disable(dev, false);
 }
 
 static int nvhost_suspend(struct device *dev)

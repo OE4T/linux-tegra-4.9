@@ -997,8 +997,7 @@ static void nvhost_free_syncpt(struct nvhost_syncpt *sp, u32 id)
 					sp->syncpt_names[id]);
 
 	/* set to default state */
-	if (nvhost_syncpt_client_managed(sp, id))
-		nvhost_syncpt_set_min_eq_max(sp, id);
+	nvhost_syncpt_set_min_eq_max(sp, id);
 	sp->assigned[id] = false;
 	sp->client_managed[id] = false;
 	kfree(sp->syncpt_names[id]);

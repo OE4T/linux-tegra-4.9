@@ -91,6 +91,9 @@ struct tegra_rtcpu_trace {
 	/* debugfs */
 	struct dentry *debugfs_root;
 
+	/* printk logging */
+	const char *log_prefix;
+	bool enable_printk;
 	u32 printk_used;
 	char printk[EXCEPTION_STR_LENGTH];
 };
@@ -127,7 +130,7 @@ static int rtcpu_trace_setup_memory(struct tegra_rtcpu_trace *tracer)
 	tracer->trace_memory = trace_memory;
 	tracer->trace_memory_size = mem_size;
 	tracer->dma_handle = dma_addr;
-	of_node_put(reg_spec.np);
+	tracer->of_node = reg_spec.np;
 
 	return 0;
 
@@ -671,7 +674,7 @@ static void trace_rtcpu_log(struct tegra_rtcpu_trace *tracer,
 {
 	size_t len, used;
 
-	if (event->header.id != camrtc_trace_type_string)
+	if (unlikely(event->header.id != camrtc_trace_type_string))
 		return;
 
 	len = event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE;
@@ -682,9 +685,10 @@ static void trace_rtcpu_log(struct tegra_rtcpu_trace *tracer,
 
 	used = tracer->printk_used;
 
-	if (used + len > sizeof(tracer->printk)) {
+	if (unlikely(used + len > sizeof(tracer->printk))) {
 		/* Too long concatenated message, print it out now */
-		pr_info("RTCPU: %.*s\n", (int)used, tracer->printk);
+		pr_info("%s %.*s\n", tracer->log_prefix,
+			(int)used, tracer->printk);
 		used = 0;
 	}
 
@@ -692,11 +696,11 @@ static void trace_rtcpu_log(struct tegra_rtcpu_trace *tracer,
 
 	used += len;
 
-	if (used > 0) {
+	if (likely(used > 0)) {
 		char end = tracer->printk[used - 1];
 
 		/*
-		 * Some messsages from rtcpu consists of multiple
+		 * Some log entries from rtcpu consists of multiple
 		 * messages.  If the string does not end with \r or
 		 * \n, do not print it now but rather wait for the
 		 * next piece.
@@ -708,7 +712,8 @@ static void trace_rtcpu_log(struct tegra_rtcpu_trace *tracer,
 					break;
 			}
 
-			pr_info("RTCPU: %.*s\n", (int)used, tracer->printk);
+			pr_info("%s %.*s\n", tracer->log_prefix,
+				(int)used, tracer->printk);
 			used = 0;
 		}
 	}
@@ -738,7 +743,8 @@ static void rtcpu_trace_event(struct tegra_rtcpu_trace *tracer,
 		    event->header.id,
 			  event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
 			  (char *) event->data.data8);
-		trace_rtcpu_log(tracer, event);
+		if (likely(tracer->enable_printk))
+			trace_rtcpu_log(tracer, event);
 		break;
 	case CAMRTC_EVENT_TYPE_BULK:
 		trace_rtcpu_bulk(event->header.tstamp,
@@ -992,9 +998,15 @@ struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev)
 	rtcpu_trace_debugfs_init(tracer);
 
 	/* Worker */
-	ret = of_property_read_u32(tracer->of_node, NV(interval-ms), &param);
-	if (ret)
-		param = WORK_INTERVAL_DEFAULT;
+	param = WORK_INTERVAL_DEFAULT;
+	of_property_read_u32(tracer->of_node, NV(interval-ms), &param);
+
+	tracer->enable_printk = of_property_read_bool(tracer->of_node,
+						NV(enable-printk));
+
+	tracer->log_prefix = "RTCPU:";
+	of_property_read_string(tracer->of_node, NV(log-prefix),
+				&tracer->log_prefix);
 
 	INIT_DELAYED_WORK(&tracer->work, rtcpu_trace_worker);
 	tracer->work_interval_jiffies = msecs_to_jiffies(param);
@@ -1017,6 +1029,10 @@ EXPORT_SYMBOL(tegra_rtcpu_trace_boot_sync);
 
 void tegra_rtcpu_trace_destroy(struct tegra_rtcpu_trace *tracer)
 {
+	if (IS_ERR_OR_NULL(tracer))
+		return;
+
+	of_node_put(tracer->of_node);
 	cancel_delayed_work_sync(&tracer->work);
 	flush_delayed_work(&tracer->work);
 	rtcpu_trace_debugfs_deinit(tracer);

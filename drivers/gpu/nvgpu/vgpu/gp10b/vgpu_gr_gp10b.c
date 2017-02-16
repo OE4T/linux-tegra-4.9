@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -264,9 +264,17 @@ static int vgpu_gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 	if (!class)
 		return -EINVAL;
 
-	/* preemption already set ? */
-	if (gr_ctx->graphics_preempt_mode || gr_ctx->compute_preempt_mode)
-		return -EINVAL;
+	/* skip setting anything if both modes are already set */
+	if (graphics_preempt_mode &&
+	   (graphics_preempt_mode == gr_ctx->graphics_preempt_mode))
+		graphics_preempt_mode = 0;
+
+	if (compute_preempt_mode &&
+	   (compute_preempt_mode == gr_ctx->compute_preempt_mode))
+		compute_preempt_mode = 0;
+
+	if (graphics_preempt_mode == 0 && compute_preempt_mode == 0)
+		return 0;
 
 	if (gk20a_is_channel_marked_as_tsg(ch)) {
 		tsg = &g->fifo.tsg[ch->tsgid];

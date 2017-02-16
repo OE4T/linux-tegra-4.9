@@ -38,17 +38,9 @@ static const struct gating_desc gp106_slcg_ce2[] = {
 static const struct gating_desc gp106_slcg_chiplet[] = {
 	{.addr = 0x0010c07c, .prod = 0x00000000, .disable = 0x00000007},
 	{.addr = 0x0010c0fc, .prod = 0x00000000, .disable = 0x00000007},
-	{.addr = 0x0010c17c, .prod = 0x00000000, .disable = 0x00000007},
-	{.addr = 0x0010c1fc, .prod = 0x00000000, .disable = 0x00000007},
-	{.addr = 0x0010c27c, .prod = 0x00000000, .disable = 0x00000007},
-	{.addr = 0x0010c2fc, .prod = 0x00000000, .disable = 0x00000007},
 	{.addr = 0x0010e07c, .prod = 0x00000000, .disable = 0x00000007},
 	{.addr = 0x0010d07c, .prod = 0x00000000, .disable = 0x00000007},
 	{.addr = 0x0010d0fc, .prod = 0x00000000, .disable = 0x00000007},
-	{.addr = 0x0010d17c, .prod = 0x00000000, .disable = 0x00000007},
-	{.addr = 0x0010d1fc, .prod = 0x00000000, .disable = 0x00000007},
-	{.addr = 0x0010d27c, .prod = 0x00000000, .disable = 0x00000007},
-	{.addr = 0x0010d2fc, .prod = 0x00000000, .disable = 0x00000007},
 	{.addr = 0x0010e17c, .prod = 0x00000000, .disable = 0x00000007},
 };
 
@@ -113,12 +105,6 @@ static const struct gating_desc gp106_slcg_gr[] = {
 	{.addr = 0x0041be2c, .prod = 0x04115fc0, .disable = 0xfffffffe},
 	{.addr = 0x0041bfec, .prod = 0xfffffff0, .disable = 0xfffffffe},
 	{.addr = 0x0041bed4, .prod = 0xfffffff8, .disable = 0xfffffffe},
-	{.addr = 0x00412814, .prod = 0x00000000, .disable = 0x0001fffe},
-	{.addr = 0x00412a84, .prod = 0x00000000, .disable = 0x0001fffe},
-	{.addr = 0x004129ac, .prod = 0x00000000, .disable = 0x0001fffe},
-	{.addr = 0x00412a24, .prod = 0x00000000, .disable = 0x0000ffff},
-	{.addr = 0x00412c14, .prod = 0x00000000, .disable = 0x0001fffe},
-	{.addr = 0x00412e84, .prod = 0x00000000, .disable = 0x0001fffe},
 	{.addr = 0x00408814, .prod = 0x00000000, .disable = 0x0001fffe},
 	{.addr = 0x00408a84, .prod = 0x00000000, .disable = 0x0001fffe},
 	{.addr = 0x004089ac, .prod = 0x00000000, .disable = 0x0001fffe},
@@ -127,13 +113,6 @@ static const struct gating_desc gp106_slcg_gr[] = {
 
 /* slcg ltc */
 static const struct gating_desc gp106_slcg_ltc[] = {
-	{.addr = 0x00154050, .prod = 0x00000000, .disable = 0xfffffffe},
-	{.addr = 0x0015455c, .prod = 0x00000000, .disable = 0xfffffffe},
-	{.addr = 0x0015475c, .prod = 0x00000000, .disable = 0xfffffffe},
-	{.addr = 0x0015435c, .prod = 0x00000000, .disable = 0xfffffffe},
-	{.addr = 0x00156050, .prod = 0x00000000, .disable = 0xfffffffe},
-	{.addr = 0x0015655c, .prod = 0x00000000, .disable = 0xfffffffe},
-	{.addr = 0x0015675c, .prod = 0x00000000, .disable = 0xfffffffe},
 	{.addr = 0x0017e050, .prod = 0x00000000, .disable = 0xfffffffe},
 	{.addr = 0x0017e35c, .prod = 0x00000000, .disable = 0xfffffffe},
 };
@@ -143,16 +122,8 @@ static const struct gating_desc gp106_slcg_perf[] = {
 	{.addr = 0x001be018, .prod = 0x000001ff, .disable = 0x00000000},
 	{.addr = 0x001bc018, .prod = 0x000001ff, .disable = 0x00000000},
 	{.addr = 0x001bc218, .prod = 0x000001ff, .disable = 0x00000000},
-	{.addr = 0x001bc418, .prod = 0x000001ff, .disable = 0x00000000},
-	{.addr = 0x001bc618, .prod = 0x000001ff, .disable = 0x00000000},
-	{.addr = 0x001bc818, .prod = 0x000001ff, .disable = 0x00000000},
-	{.addr = 0x001bca18, .prod = 0x000001ff, .disable = 0x00000000},
 	{.addr = 0x001b8018, .prod = 0x000001ff, .disable = 0x00000000},
 	{.addr = 0x001b8218, .prod = 0x000001ff, .disable = 0x00000000},
-	{.addr = 0x001b8418, .prod = 0x000001ff, .disable = 0x00000000},
-	{.addr = 0x001b8618, .prod = 0x000001ff, .disable = 0x00000000},
-	{.addr = 0x001b8818, .prod = 0x000001ff, .disable = 0x00000000},
-	{.addr = 0x001b8a18, .prod = 0x000001ff, .disable = 0x00000000},
 	{.addr = 0x001b4124, .prod = 0x00000001, .disable = 0x00000000},
 };
 
@@ -181,10 +152,6 @@ static const struct gating_desc gp106_slcg_xbar[] = {
 	{.addr = 0x0013cbe4, .prod = 0x00000000, .disable = 0x1ffffffe},
 	{.addr = 0x0013cc04, .prod = 0x00000000, .disable = 0x1ffffffe},
 	{.addr = 0x0013cc24, .prod = 0x00000000, .disable = 0x1ffffffe},
-	{.addr = 0x0013cc44, .prod = 0x00000000, .disable = 0x1ffffffe},
-	{.addr = 0x0013cc64, .prod = 0x00000000, .disable = 0x1ffffffe},
-	{.addr = 0x0013cc84, .prod = 0x00000000, .disable = 0x1ffffffe},
-	{.addr = 0x0013cca4, .prod = 0x00000000, .disable = 0x1ffffffe},
 };
 
 /* blcg bus */
@@ -203,7 +170,6 @@ static const struct gating_desc gp106_blcg_fb[] = {
 	{.addr = 0x00100d30, .prod = 0x0000c242, .disable = 0x00000000},
 	{.addr = 0x00100d3c, .prod = 0x00000242, .disable = 0x00000000},
 	{.addr = 0x00100d48, .prod = 0x0000c242, .disable = 0x00000000},
-	{.addr = 0x00100d1c, .prod = 0x00000042, .disable = 0x00000000},
 	{.addr = 0x00100c98, .prod = 0x00004242, .disable = 0x00000000},
 };
 
@@ -271,22 +237,6 @@ static const struct gating_desc gp106_blcg_gr[] = {
 
 /* blcg ltc */
 static const struct gating_desc gp106_blcg_ltc[] = {
-	{.addr = 0x00154030, .prod = 0x00000044, .disable = 0x00000000},
-	{.addr = 0x00154040, .prod = 0x00000044, .disable = 0x00000000},
-	{.addr = 0x001545e0, .prod = 0x00000044, .disable = 0x00000000},
-	{.addr = 0x001545c8, .prod = 0x00000044, .disable = 0x00000000},
-	{.addr = 0x001547e0, .prod = 0x00000044, .disable = 0x00000000},
-	{.addr = 0x001547c8, .prod = 0x00000044, .disable = 0x00000000},
-	{.addr = 0x001543e0, .prod = 0x00000044, .disable = 0x00000000},
-	{.addr = 0x001543c8, .prod = 0x00000044, .disable = 0x00000000},
-	{.addr = 0x00156030, .prod = 0x00000044, .disable = 0x00000000},
-	{.addr = 0x00156040, .prod = 0x00000044, .disable = 0x00000000},
-	{.addr = 0x001565e0, .prod = 0x00000044, .disable = 0x00000000},
-	{.addr = 0x001565c8, .prod = 0x00000044, .disable = 0x00000000},
-	{.addr = 0x001567e0, .prod = 0x00000044, .disable = 0x00000000},
-	{.addr = 0x001567c8, .prod = 0x00000044, .disable = 0x00000000},
-	{.addr = 0x001563e0, .prod = 0x00000044, .disable = 0x00000000},
-	{.addr = 0x001563c8, .prod = 0x00000044, .disable = 0x00000000},
 	{.addr = 0x0017e030, .prod = 0x00000044, .disable = 0x00000000},
 	{.addr = 0x0017e040, .prod = 0x00000044, .disable = 0x00000000},
 	{.addr = 0x0017e3e0, .prod = 0x00000044, .disable = 0x00000000},

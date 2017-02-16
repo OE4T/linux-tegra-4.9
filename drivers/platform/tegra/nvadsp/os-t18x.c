@@ -36,7 +36,7 @@ int nvadsp_os_init(struct platform_device *pdev)
 	int ret;
 
 	if (of_device_is_compatible(node, "nvidia,tegra18x-adsp-hv")) {
-		writel(1, drv_data->base_regs[HWMB_REG_IDX] + HWMBOX5_REG);
+		hwmbox_writel(1, drv_data->chip_data->hwmb.hwmbox5_reg);
 		return 0;
 	}
 

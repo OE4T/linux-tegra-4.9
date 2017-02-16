@@ -1,7 +1,7 @@
 /*
  * tegra186-quill-kenrel-4.9.dtsi: Quill dts overlay for kernel 4.9 bringup
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,6 +52,15 @@
 		vpr-carveout {
 			alloc-ranges = <0x0 0x0 0x2 0x00000000>;
 			status = "okay";
+		};
+
+		shared-dma-carveout {
+			compatible = "shared-dma-pool";
+			reusable;
+			alloc-ranges = <0x0 0x0 0x1 0x0>;
+			status = "okay";
+			size = <0x0 0x10000000>; /* 256MB */
+			linux,cma-default;
 		};
 	};
 

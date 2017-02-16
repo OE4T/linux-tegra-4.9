@@ -441,6 +441,8 @@ u32 gk20a_ce_create_context_with_cb(struct device *dev,
 	ce_ctx->submitted_seq_number = 0;
 	ce_ctx->completed_seq_number = 0;
 
+	ce_ctx->vm = &g->mm.ce.vm;
+
 	/* always kernel client needs privileged channel */
 	ce_ctx->ch = gk20a_open_new_channel_with_cb(g, gk20a_ce_finished_ctx_cb,
 					ce_ctx,

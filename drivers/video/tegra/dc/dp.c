@@ -1103,7 +1103,7 @@ static ssize_t bits_per_pixel_set(struct file *file, const char __user *buf,
 	tegra_dp_int_dis(dp, DPAUX_INTR_EN_AUX_PLUG_EVENT |
 			DPAUX_INTR_EN_AUX_UNPLUG_EVENT |
 			DPAUX_INTR_EN_AUX_PLUG_EVENT);
-	dp->dc->out->hotplug_state = -1;
+	dp->dc->out->hotplug_state = TEGRA_HPD_STATE_FORCE_DEASSERT;
 	tegra_dp_pending_hpd(dp);
 
 	/* wait till HPD state machine has reached disable state */
@@ -1114,7 +1114,7 @@ static ssize_t bits_per_pixel_set(struct file *file, const char __user *buf,
 	tegra_dp_int_en(dp, DPAUX_INTR_EN_AUX_PLUG_EVENT |
 			DPAUX_INTR_EN_AUX_UNPLUG_EVENT |
 			DPAUX_INTR_EN_AUX_PLUG_EVENT);
-	dp->dc->out->hotplug_state = 0;
+	dp->dc->out->hotplug_state = TEGRA_HPD_STATE_NORMAL;
 	tegra_dp_pending_hpd(dp);
 
 #ifdef CONFIG_SWITCH

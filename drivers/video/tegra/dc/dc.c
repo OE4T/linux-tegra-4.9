@@ -1587,17 +1587,17 @@ static ssize_t dbg_hotplug_write(struct file *file, const char __user *addr,
 	mutex_lock(&dc->lock);
 	rmb();
 	hotplug_state = dc->out->hotplug_state;
-	if (hotplug_state == 0 && new_state != 0
-			&& dc->hotplug_supported) {
-		/* was 0, now -1 or 1.
-		 * we are overriding the hpd GPIO, so ignore the interrupt. */
+	if (hotplug_state == TEGRA_HPD_STATE_NORMAL &&
+	    new_state != TEGRA_HPD_STATE_NORMAL     &&
+	    dc->hotplug_supported) {
+		/* we are overriding the hpd GPIO, so ignore the interrupt. */
 		int gpio_irq = gpio_to_irq(dc->out->hotplug_gpio);
 
 		disable_irq(gpio_irq);
-	} else if (hotplug_state != 0 && new_state == 0
-			&& dc->hotplug_supported) {
-		/* was -1 or 1, and now 0
-		 * restore the interrupt for hpd GPIO. */
+	} else if (hotplug_state != TEGRA_HPD_STATE_NORMAL &&
+		   new_state == TEGRA_HPD_STATE_NORMAL     &&
+		   dc->hotplug_supported) {
+		/* restore the interrupt for hpd GPIO. */
 		int gpio_irq = gpio_to_irq(dc->out->hotplug_gpio);
 
 		enable_irq(gpio_irq);

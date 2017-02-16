@@ -108,14 +108,19 @@
 	/* HACK: Populate earlier than other device */
 	smmu: iommu@12000000{
 		compatible = "t19x,arm,mmu-500";
-		reg = <0x0 0x11000000 0x0 0x01000000>, /* SMMU1 16MB */
+		reg = <0x0 0x10000000 0x0 0x01000000>, /* SMMU2 16MB */
+		      <0x0 0x11000000 0x0 0x01000000>, /* SMMU1 16MB */
 		      <0x0 0x12000000 0x0 0x01000000>; /* SMMU0 16MB */
 
-		#global-interrupts = <4>;
+		#global-interrupts = <6>;
 		interrupts = <0 170 4>,
 			     <0 171 4>,
 			     <0 232 4>,
-			     <0 233 4>;
+			     <0 233 4>,
+			     <0 240 4>,
+			     <0 241 4>;
+
+		iso-smmu-id = <0>;
 
 		status = "disabled";
 
@@ -418,6 +423,7 @@
 			interrupts = <0 153 4>;
 
 			#stream-id-cells = <0x1>;
+			iso-smmu;
 
 			nvidia,dc-ctrlnum = <0>;
 
@@ -463,6 +469,7 @@
 			interrupts = <0 154 4>;
 
 			#stream-id-cells = <0x1>;
+			iso-smmu;
 
 			nvidia,dc-ctrlnum = <1>;
 
@@ -508,6 +515,7 @@
 			interrupts = <0 155 4>;
 
 			#stream-id-cells = <0x1>;
+			iso-smmu;
 
 			nvidia,dc-ctrlnum = <2>;
 
@@ -553,6 +561,7 @@
 			interrupts = <0 242 4>;
 
 			#stream-id-cells = <0x1>;
+			iso-smmu;
 
 			nvidia,dc-ctrlnum = <3>;
 
@@ -832,6 +841,7 @@
 			clock-names = "vi", "nvcsi", "nvcsilp";
 
 			#stream-id-cells = <1>;
+			iso-smmu;
 		};
 
 		pva0: pva0 {

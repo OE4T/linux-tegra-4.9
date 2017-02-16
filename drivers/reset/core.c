@@ -229,10 +229,15 @@ static struct reset_control *__reset_control_get(
 
 	lockdep_assert_held(&reset_list_mutex);
 
+	shared = shared ? 1 : 0;
+
 	list_for_each_entry(rstc, &rcdev->reset_control_head, list) {
 		if (rstc->id == index) {
-			if (WARN_ON(!rstc->shared || !shared))
+			if (WARN_ON(shared != rstc->shared))
 				return ERR_PTR(-EBUSY);
+
+			if (!shared)
+				break;
 
 			rstc->refcnt++;
 			return rstc;

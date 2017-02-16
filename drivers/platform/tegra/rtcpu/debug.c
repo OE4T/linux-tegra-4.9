@@ -711,8 +711,11 @@ static int camrtc_debug_populate(struct tegra_ivc_channel *ch)
 	struct dentry *dir;
 	struct camrtc_dbgfs_ast_node *ast_nodes;
 	unsigned dma, region;
+	char const *name = "camrtc";
 
-	crd->root = dir = debugfs_create_dir("camrtc", NULL);
+	of_property_read_string(ch->dev.of_node, NV(debugfs), &name);
+
+	crd->root = dir = debugfs_create_dir(name, NULL);
 	if (dir == NULL)
 		return -ENOMEM;
 

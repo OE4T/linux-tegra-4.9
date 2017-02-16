@@ -1844,7 +1844,7 @@ static void init_core_dvfs_table(int soc_speedo_id, int core_process_id)
 	init_spi_dvfs(soc_speedo_id, core_process_id, core_nominal_mv_index);
 }
 
-int tegra210_init_dvfs(struct device_node *node)
+int tegra210_init_dvfs(struct device *dev)
 {
 	int soc_speedo_id = tegra_sku_info.soc_speedo_id;
 	int core_process_id = tegra_sku_info.soc_process_id;
@@ -1852,6 +1852,7 @@ int tegra210_init_dvfs(struct device_node *node)
 	int cpu_max_freq_index = 0;
 	int cpu_lp_max_freq_index = 0;
 	int gpu_max_freq_index = 0;
+	struct device_node *node = dev->of_node;
 
 	tegra_dvfs_init_rails_lists(tegra210_dvfs_rails,
 				    ARRAY_SIZE(tegra210_dvfs_rails));
@@ -1864,7 +1865,7 @@ int tegra210_init_dvfs(struct device_node *node)
 		unsigned int step_uv;
 		int min_uV, max_uV, ret;
 
-		reg = regulator_get(NULL, tegra210_dvfs_rails[i]->reg_id);
+		reg = regulator_get(dev, tegra210_dvfs_rails[i]->reg_id);
 		if (IS_ERR(reg)) {
 			pr_info("tegra_dvfs: Unable to get %s rail for step info, defering probe\n",
 					tegra210_dvfs_rails[i]->reg_id);

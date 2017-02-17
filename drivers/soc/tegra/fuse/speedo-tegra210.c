@@ -74,17 +74,21 @@ static void __init rev_t210sku_to_speedo_ids(struct tegra_sku_info *sku_info,
 {
 	int sku = sku_info->sku_id;
 	int rev = sku_info->revision;
-	bool a02 = (rev == TEGRA_REVISION_A02) || (rev == TEGRA_REVISION_A02p);
+	bool a02 = (rev != TEGRA_REVISION_A01) && (rev != TEGRA_REVISION_A01q) &&
+		(rev != TEGRA_REVISION_UNKNOWN);
 	bool vcm31_sku = false;
+	bool always_on = false;
 
 	/* Assign to default */
 	sku_info->cpu_speedo_id = 0;
 	sku_info->soc_speedo_id = 0;
 	sku_info->gpu_speedo_id = 0;
+	sku_info->ucm = TEGRA_UCM1;
 	*threshold = THRESHOLD_INDEX_0;
 #ifdef CONFIG_OF
-	vcm31_sku = of_property_read_bool(of_chosen,
-						"nvidia,t210-vcm31-sku");
+	vcm31_sku = of_property_read_bool(of_chosen, "nvidia,t210-vcm31-sku");
+	always_on = of_property_read_bool(of_chosen,
+					  "nvidia,tegra-always-on-personality");
 #endif
 
 	switch (sku) {
@@ -99,16 +103,20 @@ static void __init rev_t210sku_to_speedo_ids(struct tegra_sku_info *sku_info,
 		/* fall through for a01 */
 	case 0x07:
 	case 0x17:
-		if (a02) {
-			sku_info->cpu_speedo_id = 7;
-			sku_info->gpu_speedo_id = 2;
-			break;
-		}
-		if (vcm31_sku) {
+		if (vcm31_sku && sku == 0x17) {
 			sku_info->cpu_speedo_id = 4;
 			sku_info->soc_speedo_id = 1;
 			sku_info->gpu_speedo_id = 4;
 			*threshold = THRESHOLD_INDEX_1;
+			break;
+		}
+		if (a02) {
+			sku_info->cpu_speedo_id = 7;
+			sku_info->gpu_speedo_id = 2;
+			if (always_on) {
+				sku_info->cpu_speedo_id = 8;
+				sku_info->ucm = TEGRA_UCM2;
+			}
 			break;
 		}
 		/* fall through for a01 */
@@ -141,13 +149,16 @@ static void __init rev_t210sku_to_speedo_ids(struct tegra_sku_info *sku_info,
 		}
 		/* fall through for a01 */
 	case 0x8F:
-		if (a02) {
+		if (a02 && always_on) {
 			sku_info->cpu_speedo_id = 9;
 			sku_info->gpu_speedo_id = 2;
+			sku_info->ucm = TEGRA_UCM2;
 			break;
 		}
 	default:
-		pr_err("Tegra210: unknown SKU %#04x\n", sku);
+		pr_err("Tegra210: invalid combination of SKU/revision/mode:\n");
+		pr_err("Tegra210: SKU %#04x, rev %d, vcm31 %d, always_on %d\n",
+		       sku, rev, vcm31_sku, always_on);
 		/* Using the default for the error case */
 		break;
 	}

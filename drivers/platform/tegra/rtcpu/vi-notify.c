@@ -28,6 +28,10 @@
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-bus.h>
 #include <linux/workqueue.h>
+#include <linux/time.h>
+#include <linux/time64.h>
+#include <asm/arch_timer.h>
+#include <linux/timekeeping.h>
 
 #include "drivers/video/tegra/host/vi/vi_notify.h"
 #include "drivers/video/tegra/host/nvhost_acm.h"
@@ -35,6 +39,8 @@
 #include "vi-notify.h"
 
 #define BUG_200219206
+
+#define ADJUST_TS_FREQUENCY (100)
 
 struct vi_notify_req {
 	union {
@@ -75,7 +81,41 @@ struct tegra_ivc_vi_notify {
 	void __iomem *status_mem;
 	dma_addr_t status_dmaptr;
 	u16 status_entries;
+	u32 adjust_ts_counter;
+	u64 ts_res_ns;
+	s64 ts_adjustment;
 };
+
+static inline s64 get_ts_adjustment(u64 tsc_res)
+{
+	s64 tsc = 0;
+	struct timespec64 ts;
+	s64 delta1 = 0, delta2 = 0;
+	s64 mono_time = 0;
+	u8 tries = 0;
+	#define _MAX_ADJUSTMENT_TRIES (5)
+	#define _DELTA_DIFF_THRESHOLD (5000)
+
+	do {
+		tsc = (s64)(arch_counter_get_cntvct() * tsc_res);
+
+		ktime_get_ts64(&ts);
+		mono_time = timespec_to_ns(&ts);
+
+		delta1 = mono_time - tsc;
+		tsc = (s64)(arch_counter_get_cntvct() * tsc_res);
+		delta2 = mono_time - tsc;
+
+		tries++;
+	} while ((tries < _MAX_ADJUSTMENT_TRIES) &&
+		    (abs(delta2 - delta1) > _DELTA_DIFF_THRESHOLD));
+
+	WARN_ON(tries == _MAX_ADJUSTMENT_TRIES);
+	#undef _MAX_ADJUSTMENT_TRIES
+	#undef _DELTA_DIFF_THRESHOLD
+
+	return delta1;
+}
 
 static u64 tegra_ivc_vi_notify_get_status_mem_channel_offset(size_t size,
 					unsigned ch)
@@ -308,6 +348,12 @@ static int tegra_ivc_vi_notify_enable_reports(struct device *dev, u8 ch,
 
 	tegra_ivc_vi_notify_complete(chan);
 
+	ivn->adjust_ts_counter = 0;
+	ivn->ts_adjustment = 0;
+	#define _PICO_SECS (1000000000000ULL)
+	ivn->ts_res_ns = (_PICO_SECS/(u64)arch_timer_get_cntfrq())/1000;
+	#undef _PICO_SECS
+
 	return err;
 }
 
@@ -375,6 +421,23 @@ static int tegra_ivc_vi_notify_get_capture_status(struct device *dev,
 	if (ivn->status_entries) {
 		tail = index & (VI_NOTIFY_STATUS_ENTRIES - 1);
 		*status = *(status_mem + tail);
+
+		if (ivn->adjust_ts_counter % ADJUST_TS_FREQUENCY == 0)
+			ivn->ts_adjustment = get_ts_adjustment(ivn->ts_res_ns);
+
+		if (status->sof_ts != 0) {
+			s64 ts = (s64)status->sof_ts;
+			ts += ivn->ts_adjustment;
+			status->sof_ts = (u64)ts;
+		}
+
+		if (status->eof_ts != 0) {
+			s64 ts = (s64)status->eof_ts;
+			ts += ivn->ts_adjustment;
+			status->eof_ts = (u64)ts;
+		}
+
+		ivn->adjust_ts_counter++;
 	} else {
 		err = -ENOTSUPP;
 	}

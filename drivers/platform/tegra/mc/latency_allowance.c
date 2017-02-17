@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/latency_allowance.c
  *
- * Copyright (C) 2011-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2011-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -72,7 +72,7 @@ static void init_chip_specific(void)
 		tegra_la_get_t18x_specific(&cs);
 		break;
 #endif
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 	case TEGRA210:
 		tegra_la_get_t21x_specific(&cs);
 		break;

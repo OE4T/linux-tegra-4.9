@@ -93,7 +93,7 @@ static int tegra210_i2s_set_clock_rate(struct device *dev, int clock_rate)
 				dev_err(dev, "Can't set I2S sync clock rate\n");
 				return ret;
 			}
-#if !defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_210_SOC)
 			ret = clk_set_parent(i2s->clk_audio_sync,
 					i2s->clk_i2s_sync);
 			if (ret) {
@@ -1032,7 +1032,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 			goto err_i2s_sync_clk_put;
 		}
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 		i2s->clk_i2s_source = clk_get_sys(NULL, "pll_a_out0");
 #else
 		i2s->clk_i2s_source = devm_clk_get(&pdev->dev, "pll_a_out0");
@@ -1187,7 +1187,7 @@ err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 err_pll_a_out0_clk_put:
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 		clk_put(i2s->clk_i2s_source);
 #else
 		devm_clk_put(&pdev->dev, i2s->clk_i2s_source);

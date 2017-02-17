@@ -3809,7 +3809,7 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (IS_ENABLED(CONFIG_ARCH_TEGRA_21x_SOC)) {
+		if (IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC)) {
 			adsp->ahub_clk = clk_get_sys("tegra210-adsp", "ahub");
 			if (IS_ERR(adsp->ahub_clk)) {
 				dev_err(&pdev->dev, "Error: Missing AHUB clock\n");

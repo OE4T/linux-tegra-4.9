@@ -520,6 +520,12 @@ static const struct thermal_tv tegra210_thermal_cap_table[] = {
 	{TEGRA210_DFLL_THERMAL_CAP_1 / 1000, 1132},
 };
 
+static const struct thermal_tv tegra210_thermal_cap_ucm2_table[] = {
+	{TEGRA210_DFLL_THERMAL_CAP_NOCAP / 1000, INT_MAX},
+	{TEGRA210_DFLL_THERMAL_CAP_0 / 1000, 1162},
+	{TEGRA210_DFLL_THERMAL_CAP_1 / 1000, 1090},
+};
+
 static const struct thermal_table tegra210_cpu_thermal_table = {
 	.thermal_floor_table = tegra210_thermal_floor_table,
 	.thermal_floor_table_size = ARRAY_SIZE(tegra210_thermal_floor_table),
@@ -529,6 +535,8 @@ static const struct thermal_table tegra210_cpu_thermal_table = {
 	.temp_scale = 10,
 	.thermal_cap_table = tegra210_thermal_cap_table,
 	.thermal_cap_table_size = ARRAY_SIZE(tegra210_thermal_cap_table),
+	.thermal_cap_ucm2_table = tegra210_thermal_cap_ucm2_table,
+	.thermal_cap_ucm2_table_size = ARRAY_SIZE(tegra210_thermal_cap_ucm2_table),
 };
 
 static const struct dfll_fcpu_data tegra124_dfll_fcpu_data = {
@@ -607,10 +615,12 @@ static int tegra124_dfll_fcpu_probe(struct platform_device *pdev)
 	const struct thermal_table *thermal;
 	unsigned long max_freq;
 	u32 f;
+	bool ucm2;
 
 	of_id = of_match_device(tegra124_dfll_fcpu_of_match, &pdev->dev);
 	fcpu_data = of_id->data;
 
+	ucm2 = tegra_sku_info.ucm == TEGRA_UCM2;
 	process_id = tegra_sku_info.cpu_process_id;
 	speedo_id = tegra_sku_info.cpu_speedo_id;
 	speedo_value = tegra_sku_info.cpu_speedo_value;
@@ -680,11 +690,14 @@ static int tegra124_dfll_fcpu_probe(struct platform_device *pdev)
 		soc->thermal_floor_table_size = thermal->thermal_floor_table_size;
 	}
 
-	if (!thermal || !thermal->thermal_cap_table) {
-		pr_warn("couldn't get thermal cap table\n");
-	} else {
+	if (thermal && thermal->thermal_cap_table && !ucm2) {
 		soc->thermal_cap_table = thermal->thermal_cap_table;
 		soc->thermal_cap_table_size = thermal->thermal_cap_table_size;
+	} else if (thermal && thermal->thermal_cap_ucm2_table && ucm2) {
+		soc->thermal_cap_table = thermal->thermal_cap_ucm2_table;
+		soc->thermal_cap_table_size = thermal->thermal_cap_ucm2_table_size;
+	} else {
+		pr_warn("couldn't get thermal cap table\n");
 	}
 
 	err = tegra_dfll_register(pdev, soc);

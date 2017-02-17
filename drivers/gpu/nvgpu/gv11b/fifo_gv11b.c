@@ -1375,6 +1375,33 @@ static bool gv11b_fifo_handle_ctxsw_timeout(struct gk20a *g, u32 fifo_intr)
 	return ret;
 }
 
+static unsigned int gv11b_fifo_handle_pbdma_intr_0(struct gk20a *g,
+			u32 pbdma_id, u32 pbdma_intr_0,
+			u32 *handled, u32 *error_notifier)
+{
+	unsigned int rc_type = RC_TYPE_NO_RC;
+
+	rc_type = gk20a_fifo_handle_pbdma_intr_0(g, pbdma_id,
+			 pbdma_intr_0, handled, error_notifier);
+
+	if (pbdma_intr_0 & pbdma_intr_0_clear_faulted_error_pending_f()) {
+		gk20a_dbg(gpu_dbg_intr, "clear faulted error on pbdma id %d",
+				 pbdma_id);
+		gk20a_fifo_reset_pbdma_method(g, pbdma_id, 0);
+		*handled |= pbdma_intr_0_clear_faulted_error_pending_f();
+		rc_type = RC_TYPE_PBDMA_FAULT;
+	}
+
+	if (pbdma_intr_0 & pbdma_intr_0_eng_reset_pending_f()) {
+		gk20a_dbg(gpu_dbg_intr, "eng reset intr on pbdma id %d",
+				 pbdma_id);
+		*handled |= pbdma_intr_0_eng_reset_pending_f();
+		rc_type = RC_TYPE_PBDMA_FAULT;
+	}
+
+	return rc_type;
+}
+
 void gv11b_init_fifo(struct gpu_ops *gops)
 {
 	gp10b_init_fifo(gops);
@@ -1407,4 +1434,6 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.teardown_ch_tsg = gv11b_fifo_teardown_ch_tsg;
 	gops->fifo.handle_sched_error = gv11b_fifo_handle_sched_error;
 	gops->fifo.handle_ctxsw_timeout = gv11b_fifo_handle_ctxsw_timeout;
+	gops->fifo.handle_pbdma_intr_0 =
+			 gv11b_fifo_handle_pbdma_intr_0;
 }

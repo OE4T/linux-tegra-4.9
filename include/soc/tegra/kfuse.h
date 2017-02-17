@@ -24,7 +24,7 @@ int tegra_kfuse_enable_sensing(void);
 #else
 static inline int tegra_kfuse_read(void *dest, size_t len)
 {
-	return -ENOTSUPP;
+	return -EOPNOTSUPP;
 }
 
 static inline void tegra_kfuse_disable_sensing(void)
@@ -33,7 +33,7 @@ static inline void tegra_kfuse_disable_sensing(void)
 
 static inline int tegra_kfuse_enable_sensing(void)
 {
-	return -ENOTSUPP;
+	return -EOPNOTSUPP;
 }
 #endif
 

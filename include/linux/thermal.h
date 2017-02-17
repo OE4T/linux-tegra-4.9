@@ -480,6 +480,10 @@ struct thermal_instance *get_thermal_instance(struct thermal_zone_device *,
 void thermal_cdev_update(struct thermal_cooling_device *);
 void thermal_notify_framework(struct thermal_zone_device *, int);
 #else
+static inline struct thermal_zone_device *
+thermal_zone_get_zone_by_node(struct device_node *node)
+{ return ERR_PTR(-EOPNOTSUPP); }
+
 static inline bool cdev_is_power_actor(struct thermal_cooling_device *cdev)
 { return false; }
 static inline int power_actor_get_max_power(struct thermal_cooling_device *cdev,

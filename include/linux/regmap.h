@@ -1099,7 +1099,7 @@ static inline void regcache_mark_dirty(struct regmap *map)
 	WARN_ONCE(1, "regmap API is disabled");
 }
 
-static int regcache_volatile_set(struct regmap *map, unsigned int reg,
+static inline int regcache_volatile_set(struct regmap *map, unsigned int reg,
 				 bool is_volatile)
 {
 	WARN_ONCE(1, "regmap API is disabled");

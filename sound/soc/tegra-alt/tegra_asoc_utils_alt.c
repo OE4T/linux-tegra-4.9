@@ -41,7 +41,7 @@
 static bool is_switch_registered;
 #endif
 
-#if !defined(CONFIG_ARCH_TEGRA_21x_SOC) && !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 static atomic_t dap_ref_count[5];
 static const char *tegra_dap_group_names[4][4] = {
 	{"dap1_fs_pn0", "dap1_din_pn1", "dap1_dout_pn2", "dap1_sclk_pn3"},
@@ -142,7 +142,7 @@ EXPORT_SYMBOL_GPL(tegra_alt_asoc_utils_get_clk);
 
 void tegra_alt_asoc_utils_clk_put(struct device *dev, struct clk *clk)
 {
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 	clk_put(clk);
 #else
 	devm_clk_put(dev, clk);

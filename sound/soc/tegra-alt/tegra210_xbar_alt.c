@@ -32,7 +32,7 @@
 
 #include "tegra210_xbar_alt.h"
 /* TODO: remove DRV_NAME_T18X after registering properly */
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 #define DRV_NAME "tegra210-axbar"
 #else
 #include <sound/tegra_audio.h>
@@ -131,7 +131,7 @@ int tegra210_xbar_codec_probe(struct snd_soc_codec *codec)
 }
 EXPORT_SYMBOL_GPL(tegra210_xbar_codec_probe);
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 #define DAI(sname)						\
 	{							\
 		.name = #sname,					\
@@ -752,7 +752,7 @@ static const struct snd_soc_dapm_route tegra210_xbar_routes[] = {
 	IN_OUT_ROUTES("ADX2-4")
 };
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 static struct snd_soc_codec_driver tegra210_xbar_codec = {
 	.probe = tegra210_xbar_codec_probe,
 	.dapm_widgets = tegra210_xbar_widgets,
@@ -777,7 +777,7 @@ static const struct of_device_id tegra210_xbar_of_match[] = {
 	{},
 };
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 static struct of_dev_auxdata tegra210_xbar_auxdata[] = {
 	OF_DEV_AUXDATA("nvidia,tegra210-admaif", ADMAIF_BASE_ADDR, "tegra210-admaif", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-i2s", I2S1_BASE_ADDR, "tegra210-i2s.0", NULL),
@@ -830,7 +830,7 @@ int tegra210_xbar_set_clock(unsigned long rate)
 }
 EXPORT_SYMBOL_GPL(tegra210_xbar_set_clock);
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 static int tegra210_xbar_registration(struct platform_device *pdev)
 {
 	int ret;
@@ -959,7 +959,7 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 			goto err_pm_disable;
 	}
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 	ret = tegra210_xbar_registration(pdev);
 #else
 	ret = tegra186_xbar_registration(pdev);

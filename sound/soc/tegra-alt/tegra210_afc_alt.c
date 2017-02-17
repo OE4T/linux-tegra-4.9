@@ -119,7 +119,7 @@ unsigned int tegra210_afc_get_sfc_id(unsigned int afc_id)
 }
 EXPORT_SYMBOL_GPL(tegra210_afc_get_sfc_id);
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
 /* returns the destination I2S id connected along the AFC path */
 static unsigned int tegra210_afc_get_i2s_id(unsigned int afc_id)
 {

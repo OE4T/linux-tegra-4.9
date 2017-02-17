@@ -42,6 +42,8 @@
 
 #define RC_TYPE_NORMAL			0
 #define RC_TYPE_MMU_FAULT		1
+#define RC_TYPE_PBDMA_FAULT		2
+#define RC_TYPE_NO_RC			0xff
 
 /*
  * Number of entries in the kickoff latency buffer, used to calculate
@@ -391,4 +393,8 @@ bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 			bool *verbose, u32 *ms);
 bool gk20a_fifo_handle_sched_error(struct gk20a *g);
 
+void gk20a_fifo_reset_pbdma_method(struct gk20a *g, int pbdma_id,
+			 int pbdma_method_index);
+unsigned int gk20a_fifo_handle_pbdma_intr_0(struct gk20a *g, u32 pbdma_id,
+			u32 pbdma_intr_0, u32 *handled, u32 *error_notifier);
 #endif /*__GR_GK20A_H__*/

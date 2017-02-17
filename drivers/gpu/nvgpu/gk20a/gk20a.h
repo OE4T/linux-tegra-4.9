@@ -474,6 +474,9 @@ struct gpu_ops {
 			 struct mmu_fault_info *mmfault);
 		bool (*handle_sched_error)(struct gk20a *g);
 		bool (*handle_ctxsw_timeout)(struct gk20a *g, u32 fifo_intr);
+		unsigned int (*handle_pbdma_intr_0)(struct gk20a *g,
+					u32 pbdma_id, u32 pbdma_intr_0,
+					u32 *handled, u32 *error_notifier);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/

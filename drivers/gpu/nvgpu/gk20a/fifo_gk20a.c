@@ -2258,7 +2258,7 @@ static inline void gk20a_fifo_reset_pbdma_header(struct gk20a *g, int pbdma_id)
 			pbdma_pb_header_type_non_inc_f());
 }
 
-static inline void gk20a_fifo_reset_pbdma_method(struct gk20a *g, int pbdma_id,
+void gk20a_fifo_reset_pbdma_method(struct gk20a *g, int pbdma_id,
 						int pbdma_method_index)
 {
 	u32 pbdma_method_stride;
@@ -2299,6 +2299,79 @@ static bool gk20a_fifo_is_sw_method_subch(struct gk20a *g, int pbdma_id,
 	return false;
 }
 
+unsigned int gk20a_fifo_handle_pbdma_intr_0(struct gk20a *g, u32 pbdma_id,
+			u32 pbdma_intr_0, u32 *handled, u32 *error_notifier)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	unsigned int rc_type = RC_TYPE_NO_RC;
+	int i;
+
+	if ((f->intr.pbdma.device_fatal_0 |
+	     f->intr.pbdma.channel_fatal_0 |
+	     f->intr.pbdma.restartable_0) & pbdma_intr_0) {
+		nvgpu_err(g,
+			"pbdma_intr_0(%d):0x%08x PBH: %08x "
+			"SHADOW: %08x M0: %08x %08x %08x %08x ",
+			pbdma_id, pbdma_intr_0,
+			gk20a_readl(g, pbdma_pb_header_r(pbdma_id)),
+			gk20a_readl(g, pbdma_hdr_shadow_r(pbdma_id)),
+			gk20a_readl(g, pbdma_method0_r(pbdma_id)),
+			gk20a_readl(g, pbdma_method1_r(pbdma_id)),
+			gk20a_readl(g, pbdma_method2_r(pbdma_id)),
+			gk20a_readl(g, pbdma_method3_r(pbdma_id))
+			);
+		rc_type = RC_TYPE_PBDMA_FAULT;
+		*handled |= ((f->intr.pbdma.device_fatal_0 |
+			     f->intr.pbdma.channel_fatal_0 |
+			     f->intr.pbdma.restartable_0) &
+			    pbdma_intr_0);
+	}
+
+	if (pbdma_intr_0 & pbdma_intr_0_acquire_pending_f()) {
+		u32 val = gk20a_readl(g, pbdma_acquire_r(pbdma_id));
+
+		val &= ~pbdma_acquire_timeout_en_enable_f();
+		gk20a_writel(g, pbdma_acquire_r(pbdma_id), val);
+		if (g->timeouts_enabled) {
+			rc_type = RC_TYPE_PBDMA_FAULT;
+			nvgpu_err(g,
+				"semaphore acquire timeout!");
+		}
+		*handled |= pbdma_intr_0_acquire_pending_f();
+	}
+
+	if (pbdma_intr_0 & pbdma_intr_0_pbentry_pending_f()) {
+		gk20a_fifo_reset_pbdma_header(g, pbdma_id);
+		gk20a_fifo_reset_pbdma_method(g, pbdma_id, 0);
+		rc_type = RC_TYPE_PBDMA_FAULT;
+	}
+
+	if (pbdma_intr_0 & pbdma_intr_0_method_pending_f()) {
+		gk20a_fifo_reset_pbdma_method(g, pbdma_id, 0);
+		rc_type = RC_TYPE_PBDMA_FAULT;
+	}
+
+	if (pbdma_intr_0 & pbdma_intr_0_pbcrc_pending_f()) {
+		*error_notifier =
+			NVGPU_CHANNEL_PBDMA_PUSHBUFFER_CRC_MISMATCH;
+		rc_type = RC_TYPE_PBDMA_FAULT;
+	}
+
+	if (pbdma_intr_0 & pbdma_intr_0_device_pending_f()) {
+		gk20a_fifo_reset_pbdma_header(g, pbdma_id);
+
+		for (i = 0; i < 4; i++) {
+			if (gk20a_fifo_is_sw_method_subch(g,
+					pbdma_id, i))
+				gk20a_fifo_reset_pbdma_method(g,
+						pbdma_id, i);
+		}
+		rc_type = RC_TYPE_PBDMA_FAULT;
+	}
+
+	return rc_type;
+}
+
 static u32 gk20a_fifo_handle_pbdma_intr(struct gk20a *g,
 					struct fifo_gk20a *f,
 					u32 pbdma_id)
@@ -2309,75 +2382,15 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct gk20a *g,
 
 	u32 handled = 0;
 	u32 error_notifier = NVGPU_CHANNEL_PBDMA_ERROR;
-	bool reset = false;
-	int i;
+	unsigned int rc_type = RC_TYPE_NO_RC;
 
 	gk20a_dbg_fn("");
 
 	gk20a_dbg(gpu_dbg_intr, "pbdma id intr pending %d %08x %08x", pbdma_id,
 			pbdma_intr_0, pbdma_intr_1);
 	if (pbdma_intr_0) {
-		if ((f->intr.pbdma.device_fatal_0 |
-		     f->intr.pbdma.channel_fatal_0 |
-		     f->intr.pbdma.restartable_0) & pbdma_intr_0) {
-			nvgpu_err(g,
-				"pbdma_intr_0(%d):0x%08x PBH: %08x SHADOW: %08x M0: %08x %08x %08x %08x",
-				pbdma_id, pbdma_intr_0,
-				gk20a_readl(g, pbdma_pb_header_r(pbdma_id)),
-				gk20a_readl(g, pbdma_hdr_shadow_r(pbdma_id)),
-				gk20a_readl(g, pbdma_method0_r(pbdma_id)),
-				gk20a_readl(g, pbdma_method1_r(pbdma_id)),
-				gk20a_readl(g, pbdma_method2_r(pbdma_id)),
-				gk20a_readl(g, pbdma_method3_r(pbdma_id))
-				);
-			reset = true;
-			handled |= ((f->intr.pbdma.device_fatal_0 |
-				     f->intr.pbdma.channel_fatal_0 |
-				     f->intr.pbdma.restartable_0) &
-				    pbdma_intr_0);
-		}
-
-		if (pbdma_intr_0 & pbdma_intr_0_acquire_pending_f()) {
-			u32 val = gk20a_readl(g, pbdma_acquire_r(pbdma_id));
-			val &= ~pbdma_acquire_timeout_en_enable_f();
-			gk20a_writel(g, pbdma_acquire_r(pbdma_id), val);
-			if (g->timeouts_enabled) {
-				reset = true;
-				nvgpu_err(g,
-					"semaphore acquire timeout!");
-			}
-			handled |= pbdma_intr_0_acquire_pending_f();
-		}
-
-		if (pbdma_intr_0 & pbdma_intr_0_pbentry_pending_f()) {
-			gk20a_fifo_reset_pbdma_header(g, pbdma_id);
-			gk20a_fifo_reset_pbdma_method(g, pbdma_id, 0);
-			reset = true;
-		}
-
-		if (pbdma_intr_0 & pbdma_intr_0_method_pending_f()) {
-			gk20a_fifo_reset_pbdma_method(g, pbdma_id, 0);
-			reset = true;
-		}
-
-		if (pbdma_intr_0 & pbdma_intr_0_pbcrc_pending_f()) {
-			error_notifier =
-				NVGPU_CHANNEL_PBDMA_PUSHBUFFER_CRC_MISMATCH;
-			reset = true;
-		}
-
-		if (pbdma_intr_0 & pbdma_intr_0_device_pending_f()) {
-			gk20a_fifo_reset_pbdma_header(g, pbdma_id);
-
-			for (i = 0; i < 4; i++) {
-				if (gk20a_fifo_is_sw_method_subch(g,
-						pbdma_id, i))
-					gk20a_fifo_reset_pbdma_method(g,
-							pbdma_id, i);
-			}
-			reset = true;
-		}
-
+		rc_type = g->ops.fifo.handle_pbdma_intr_0(g, pbdma_id,
+				 pbdma_intr_0, &handled, &error_notifier);
 		gk20a_writel(g, pbdma_intr_0_r(pbdma_id), pbdma_intr_0);
 	}
 
@@ -2386,11 +2399,11 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct gk20a *g,
 	if (pbdma_intr_1) {
 		nvgpu_err(g, "channel hce error: pbdma_intr_1(%d): 0x%08x",
 			pbdma_id, pbdma_intr_1);
-		reset = true;
+		rc_type = RC_TYPE_PBDMA_FAULT;
 		gk20a_writel(g, pbdma_intr_1_r(pbdma_id), pbdma_intr_1);
 	}
 
-	if (reset) {
+	if (rc_type == RC_TYPE_PBDMA_FAULT) {
 		/* Remove the channel from runlist */
 		u32 id = fifo_pbdma_status_id_v(status);
 		if (fifo_pbdma_status_id_type_v(status)
@@ -4277,4 +4290,5 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.pbdma_acquire_val = gk20a_fifo_pbdma_acquire_val;
 	gops->fifo.teardown_ch_tsg = gk20a_fifo_teardown_ch_tsg;
 	gops->fifo.handle_sched_error = gk20a_fifo_handle_sched_error;
+	gops->fifo.handle_pbdma_intr_0 = gk20a_fifo_handle_pbdma_intr_0;
 }

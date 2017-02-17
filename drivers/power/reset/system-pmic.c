@@ -1,7 +1,7 @@
 /*
  * system-pmic.c -- Core power off/reset functionality from system PMIC.
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Laxman Dewangan <ldewangan@nvidia.com>
  *
@@ -42,10 +42,33 @@ struct system_pmic_dev {
 
 static struct system_pmic_dev *system_pmic_dev;
 
-void (*soc_specific_power_off)(void);
-EXPORT_SYMBOL(soc_specific_power_off);
+static power_handler_t soc_specific_power_off;
 
-void (*system_pmic_post_power_off_handler)(void);
+void set_soc_specific_power_off(power_handler_t func)
+{
+	soc_specific_power_off = func;
+}
+EXPORT_SYMBOL(set_soc_specific_power_off);
+
+power_handler_t get_soc_specific_power_off(void)
+{
+	return soc_specific_power_off;
+}
+EXPORT_SYMBOL(get_soc_specific_power_off);
+
+static power_handler_t system_pmic_post_power_off_handler;
+
+void set_system_pmic_post_power_off_handler(power_handler_t func)
+{
+	system_pmic_post_power_off_handler = func;
+}
+EXPORT_SYMBOL(set_system_pmic_post_power_off_handler);
+
+power_handler_t get_system_pmic_post_power_off_handler(void)
+{
+	return system_pmic_post_power_off_handler;
+}
+EXPORT_SYMBOL(get_system_pmic_post_power_off_handler);
 
 static void system_pmic_prepare_power_off(void)
 {

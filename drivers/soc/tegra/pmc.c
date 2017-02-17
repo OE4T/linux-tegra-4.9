@@ -2211,7 +2211,7 @@ static int tegra_pmc_init_boorom_cmds(struct device *dev)
 	}
 
 	if (br_off_commands)
-		soc_specific_power_off = tegra_pmc_soc_power_off;
+		set_soc_specific_power_off(tegra_pmc_soc_power_off);
 
 	ret = tegra_pmc_configure_bootrom_scratch(dev, br_rst_commands);
 	if (ret < 0) {

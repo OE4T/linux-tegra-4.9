@@ -171,7 +171,7 @@ static void max77620_pm_power_off(void *drv_data)
 
 	_max77620_prepare_system_power_off(max77620_poweroff);
 
-	if (soc_specific_power_off)
+	if (get_soc_specific_power_off())
 		return;
 
 	if (max77620_chip->chip_id == MAX20024) {

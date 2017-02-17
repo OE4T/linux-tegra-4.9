@@ -22,6 +22,7 @@
 #include <linux/pm.h>
 #include <linux/printk.h>
 #include <linux/psci.h>
+#include <linux/power/reset/system-pmic.h>
 #include <linux/reboot.h>
 #include <linux/slab.h>
 #include <linux/suspend.h>
@@ -522,7 +523,7 @@ static void __init psci_0_2_set_functions(void)
 
 	arm_pm_restart = psci_sys_reset;
 
-	pm_power_off = psci_sys_poweroff;
+	set_system_pmic_post_power_off_handler(psci_sys_poweroff);
 }
 
 /*

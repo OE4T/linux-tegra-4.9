@@ -20,10 +20,10 @@ struct device;
 
 int tegra_camrtc_iovm_setup(struct device *dev, dma_addr_t iova);
 ssize_t tegra_camrtc_print_version(struct device *dev, char *buf, size_t size);
-int tegra_camrtc_boot(struct device *dev);
-int tegra_camrtc_halt(struct device *dev);
+int tegra_camrtc_reboot(struct device *dev);
 int tegra_camrtc_restore(struct device *dev);
 bool tegra_camrtc_is_rtcpu_alive(struct device *dev);
+
 #define TEGRA_CAMRTC_VERSION_LEN 128
 
 int tegra_camrtc_command(struct device *dev, u32 command, long timeout);

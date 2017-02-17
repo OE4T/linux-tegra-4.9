@@ -79,7 +79,11 @@ EXPORT_SYMBOL(tegra_ivc_channel_runtime_get);
 void tegra_ivc_channel_runtime_put(struct tegra_ivc_channel *ch)
 {
 	BUG_ON(ch == NULL);
+	BUG_ON(ch->dev.parent == NULL);
+	BUG_ON(ch->dev.parent->parent == NULL);
 
+	pm_runtime_mark_last_busy(ch->dev.parent->parent);
+	pm_runtime_mark_last_busy(ch->dev.parent);
 	pm_runtime_put(&ch->dev);
 }
 EXPORT_SYMBOL(tegra_ivc_channel_runtime_put);
@@ -348,6 +352,9 @@ int tegra_ivc_bus_boot_sync(struct tegra_ivc_bus *bus)
 {
 	int i;
 
+	if (IS_ERR_OR_NULL(bus))
+		return 0;
+
 	for (i = 0; i < bus->num_regions; i++) {
 		int ret = tegra_camrtc_iovm_setup(bus->dev.parent,
 						bus->regions[i].iova);
@@ -595,6 +602,9 @@ EXPORT_SYMBOL(tegra_ivc_bus_create);
  */
 void tegra_ivc_bus_ready(struct tegra_ivc_bus *bus, bool online)
 {
+	if (IS_ERR_OR_NULL(bus))
+		return;
+
 	device_for_each_child(&bus->dev, &online, tegra_ivc_bus_ready_child);
 }
 EXPORT_SYMBOL(tegra_ivc_bus_ready);

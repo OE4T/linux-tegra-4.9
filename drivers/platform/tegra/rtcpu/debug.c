@@ -94,9 +94,11 @@ static int camrtc_show_reboot(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
 	struct device *rce_dev = camrtc_get_device(ch);
+	int ret;
 
-	tegra_camrtc_halt(rce_dev);
-	tegra_camrtc_boot(rce_dev);
+	ret = tegra_camrtc_reboot(rce_dev);
+	if (ret)
+		return ret;
 
 	seq_puts(file, "0\n");
 
@@ -116,8 +118,11 @@ static int camrtc_show_forced_reset_restore(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
 	struct device *rce_dev = camrtc_get_device(ch);
+	int ret;
 
-	tegra_camrtc_restore(rce_dev);
+	ret = tegra_camrtc_restore(rce_dev);
+	if (ret)
+		return ret;
 
 	seq_puts(file, "0\n");
 

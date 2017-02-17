@@ -35,14 +35,9 @@ struct tegra_camrtc_mon {
 
 int tegra_camrtc_mon_restore_rtcpu(struct tegra_camrtc_mon *cam_rtcpu_mon)
 {
-	/* Stop the rtcpu */
-	/* Halt will broadcast the rtcpu-down message to all ivc channels */
-	tegra_camrtc_halt(cam_rtcpu_mon->rce_dev);
-
-	/* (Re)start the rtcpu */
-	tegra_camrtc_boot(cam_rtcpu_mon->rce_dev);
-
-	return 0;
+	/* (Re)boot the rtcpu */
+	/* rtcpu-down and rtcpu-up events are broadcast to all ivc channels */
+	return tegra_camrtc_reboot(cam_rtcpu_mon->rce_dev);
 }
 EXPORT_SYMBOL(tegra_camrtc_mon_restore_rtcpu);
 
@@ -52,7 +47,7 @@ static void tegra_camrtc_mon_wdt_worker(struct work_struct *work)
 					struct tegra_camrtc_mon, wdt_work);
 
 	dev_info(cam_rtcpu_mon->rce_dev,
-		"Alert: Camera RTCPU gone bad! restore it immediately!!\n");
+		"Alert: Camera RTCPU gone bad! restoring it immediately!!\n");
 
 	tegra_camrtc_mon_restore_rtcpu(cam_rtcpu_mon);
 

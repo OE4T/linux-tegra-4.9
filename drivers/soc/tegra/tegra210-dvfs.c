@@ -1545,15 +1545,19 @@ static int gpu_dvfs_rail_set_vmax_cdev_cur_state(
 		if (rail->vts_cdev && gpu_dvfs.therm_dvfs)
 			cap_rate = gpu_cap_rates[cur_state - 1];
 		else
-			cap_rate =
-				tegra_dvfs_predict_hz_at_mv_max_tfloor(gpu_dvfs.clk, level);
+			cap_rate = tegra_dvfs_predict_hz_at_mv_max_tfloor(
+				gpu_dvfs.clk, level);
 	}
 
-	if (!IS_ERR_VALUE(cap_rate))
-		err = clk_set_max_rate(vgpu_cap_clk, cap_rate);
-	else
-		pr_err("tegra21_dvfs: Failed to find GPU cap rate for %dmV\n",
-				level);
+	if (!IS_ERR_VALUE(cap_rate)) {
+		err = clk_set_rate(vgpu_cap_clk, cap_rate);
+		if (err)
+			pr_err("tegra_dvfs: Failed to set GPU cap rate %lu\n",
+			       cap_rate);
+	} else {
+		pr_err("tegra_dvfs: Failed to find GPU cap rate for %dmV\n",
+		       level);
+	}
 
 	rail->therm_cap_idx = cur_state;
 
@@ -1578,7 +1582,7 @@ static int init_gpu_rail_thermal_caps(struct device_node *node,
 	if (thermal_ranges <= 1 )
 		return 0;
 
-	cdev_node = of_find_compatible_node(node, NULL,
+	cdev_node = of_find_compatible_node(NULL, NULL,
 				"nvidia,tegra210-rail-vmax-cdev");
 	rail->vmax_of_node = cdev_node;
 
@@ -1590,15 +1594,14 @@ static int init_gpu_rail_thermal_caps(struct device_node *node,
 		return 0;
 
 	num_trips = of_parse_dvfs_rail_cdev_trips(cdev_node,
-			vdd_gpu_vmax_trips_table, vdd_gpu_therm_caps_table, &rail->alignment,
-			false);
+		vdd_gpu_vmax_trips_table, vdd_gpu_therm_caps_table,
+		&rail->alignment, false);
 	if (num_trips <= 0)
 		return 0;
 
 	rail->therm_caps = vdd_gpu_therm_caps_table;
-	rail->vmax_trips = vdd_gpu_vmax_trips_table;
-	rail->vmax_trips_num = num_trips;
 	rail->therm_caps_size = num_trips;
+	rail->therm_cap_idx = num_trips;
 
 	for (k = 0; k < num_trips; k++) {
 		int cap_tempr = vdd_gpu_therm_caps_table[k].temperature;
@@ -1620,8 +1623,12 @@ static int init_gpu_rail_thermal_caps(struct device_node *node,
 		gpu_cap_rates[k] = cap_freq * dvfs->freqs_mult;
 	}
 
-	thermal_of_cooling_device_register(rail->vmax_of_node, "vdd-gpu vmax",
-			rail, &gpu_dvfs_rail_vmax_cooling_ops);
+
+	clk_set_rate(vgpu_cap_clk, gpu_cap_rates[num_trips - 1]);
+	rail->vmax_cdev = thermal_of_cooling_device_register(rail->vmax_of_node,
+		"GPU-cap", rail, &gpu_dvfs_rail_vmax_cooling_ops);
+	pr_info("tegra_dvfs: GPU-cap: %sregistered\n",
+		IS_ERR_OR_NULL(rail->vmax_cdev) ? "not " : "");
 
 	return num_trips;
 }

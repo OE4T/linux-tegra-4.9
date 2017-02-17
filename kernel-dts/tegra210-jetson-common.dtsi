@@ -312,6 +312,18 @@
 				&gpu_scaling_trip4 0 &gpu_scaling_trip5 0>;
 	};
 
+	gpu_vmax_cdev: gpu-vmax-cdev {
+		cooling-min-state = <0>;
+		cooling-max-state = <1>;
+		#cooling-cells = <2>;
+		compatible = "nvidia,tegra210-rail-vmax-cdev";
+		cdev-type = "GPU-cap";
+		nvidia,constraint;
+		nvidia,trips = <&gpu_vmax_trip1 1132>;
+		clocks = <&tegra_car TEGRA210_CLK_CAP_VGPU_GBUS>;
+		clock-names = "cap-clk";
+	};
+
 	thermal-zones {
 		CPU-therm {
 			trips {
@@ -372,6 +384,12 @@
 					type = "active";
 				};
 
+				gpu_vmax_trip1: gpu-vmax-trip1 {
+					temperature = <83000>; /* millicelsius */
+					hysteresis = <1000>; /* millicelsius */
+					type = "active";
+				};
+
 				core_dvfs_floor_trip0: core_dvfs_floor_trip0 {
 					temperature = <15000>;
 					hysteresis = <1000>;
@@ -411,6 +429,11 @@
 				gpu-scaling-map5 {
 					trip = <&gpu_scaling_trip5>;
 					cooling-device = <&gpu_scaling_cdev 5 5>;
+				};
+
+				gpu-vmax-map1 {
+					trip = <&gpu_vmax_trip1>;
+					cooling-device = <&gpu_vmax_cdev 1 1>;
 				};
 
 				core_dvfs_floor_map0 {

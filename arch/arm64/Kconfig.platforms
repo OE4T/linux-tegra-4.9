@@ -172,6 +172,7 @@ config ARCH_TEGRA
 	select GENERIC_CLOCKEVENTS
 	select GPIOLIB
 	select PINCTRL
+	select GENERIC_PINCONF
 	select PM
 	select PM_GENERIC_DOMAINS
 	select RESET_CONTROLLER

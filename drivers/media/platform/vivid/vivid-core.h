@@ -25,6 +25,7 @@
 #include <media/v4l2-device.h>
 #include <media/v4l2-dev.h>
 #include <media/v4l2-ctrls.h>
+#include <media/sensor_common.h>
 #include "vivid-tpg.h"
 #include "vivid-rds-gen.h"
 #include "vivid-vbi-gen.h"
@@ -219,6 +220,11 @@ struct vivid_dev {
 	struct v4l2_ctrl		*rgb_range_cap;
 	struct v4l2_ctrl		*real_rgb_range_cap;
 	struct v4l2_ctrl		*framelength;
+	struct v4l2_ctrl		*ctrl_signalprops;
+	struct v4l2_ctrl		*ctrl_imageprops;
+	struct v4l2_ctrl		*ctrl_controlprops;
+	struct v4l2_ctrl		*ctrl_dvtimings;
+	struct v4l2_ctrl		*ctrl_sensormodes;
 	struct {
 		/* std_signal_mode/standard cluster */
 		struct v4l2_ctrl	*ctrl_std_signal_mode;
@@ -393,6 +399,9 @@ struct vivid_dev {
 	bool				vbi_cap_streaming;
 	bool				stream_sliced_vbi_cap;
 	u32				embedded_data_height;
+
+	/* added for NV sensor emulation */
+	struct sensor_properties	sensor_props;
 
 	/* video output */
 	struct vivid_fmt		*fmt_out;

@@ -598,7 +598,7 @@ static int _tegra_mipi_calibration(struct tegra_mipi *mipi, int lanes)
 }
 static int tegra_mipical_using_prod(struct tegra_mipi *mipi, int lanes)
 {
-	int err;
+	int err = 0;
 
 	mutex_lock(&mipi->lock);
 
@@ -608,14 +608,17 @@ static int tegra_mipical_using_prod(struct tegra_mipi *mipi, int lanes)
 	/* Apply MIPI_CAL PROD_Set */
 	if (lanes & (CSIA|CSIB|CSIC|CSID|CSIE|CSIF)) {
 		if (!IS_ERR(mipi->prod_gr_csi))
-			tegra_prod_set_by_name(&mipi->io, "prod",
+			err = tegra_prod_set_by_name(&mipi->io, "prod",
 					mipi->prod_gr_csi);
 	} else {
 		if (!IS_ERR(mipi->prod_gr_dsi))
-			tegra_prod_set_by_name(&mipi->io,
+			err = tegra_prod_set_by_name(&mipi->io,
 					"prod", mipi->prod_gr_dsi);
 	}
-
+	if (err) {
+		dev_err(mipi->dev, "tegra_prod set failed\n");
+		goto err_unlock;
+	}
 	/*Select lanes */
 	select_lanes(mipi, lanes);
 	/* Start calibration */
@@ -627,6 +630,7 @@ static int tegra_mipical_using_prod(struct tegra_mipi *mipi, int lanes)
 	if (err)
 		timeout_ct++;
 #endif
+err_unlock:
 	mutex_unlock(&mipi->lock);
 	return err;
 

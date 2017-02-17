@@ -74,6 +74,7 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 #define HDCP_MIN_RETRIES		0
 #define HDCP_DEBUG                      0
 #define SEQ_NUM_M_MAX_RETRIES		1
+#define AKE_INIT_RESPONSE_DELAY		100
 
 #define HDCP_FALLBACK_1X                0xdeadbeef
 #define HDCP_NON_22_RX                  0x0300
@@ -1080,7 +1081,7 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 	if (err)
 		goto exit;
 
-	err = nvhdcp_poll_ready(nvhdcp, 1000);
+	err = nvhdcp_poll_ready(nvhdcp, AKE_INIT_RESPONSE_DELAY);
 	if (err)
 		goto exit;
 	err = nvhdcp_ake_cert_receive(nvhdcp,

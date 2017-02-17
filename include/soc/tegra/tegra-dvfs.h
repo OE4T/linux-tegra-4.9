@@ -113,9 +113,6 @@ struct dvfs_rail {
 	struct dvfs_therm_limits *therm_floors;
 	int therm_floors_size;
 	int therm_floor_idx;
-	struct dvfs_therm_limits *therm_caps;
-	int therm_caps_size;
-	int therm_cap_idx;
 
 	bool is_ready;
 	bool in_band_pm;
@@ -129,8 +126,9 @@ struct dvfs_rail {
 
 	struct thermal_cooling_device *vmax_cdev;
 	struct device_node *vmax_of_node;
-	int *vmax_trips;
-	int vmax_trips_num;
+	struct dvfs_therm_limits *therm_caps;
+	int therm_caps_size;
+	int therm_cap_idx;
 };
 
 enum dfll_range {

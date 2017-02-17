@@ -328,10 +328,9 @@ int vivid_g_fmt_vid_out(struct file *file, void *priv,
 			mp->plane_fmt[p].bytesperline * mp->height;
 	}
 	/* Add offset to fill embedded meta data */
-	if (!dev->fmt_out->data_offset[0] && dev->embedded_data_height) {
-		dev->fmt_out->data_offset[0] =
-			mp->width * dev->embedded_data_height;
-	}
+	dev->fmt_out->data_offset[0] =
+		dev->bytesperline_out[0] * dev->embedded_data_height;
+
 	mp->plane_fmt[0].sizeimage += dev->fmt_out->data_offset[0];
 	for (p = fmt->buffers; p < fmt->planes; p++) {
 		unsigned stride = dev->bytesperline_out[p];
@@ -538,11 +537,12 @@ int vivid_s_fmt_vid_out(struct file *file, void *priv,
 		v4l2_rect_set_size_to(compose, &r);
 	}
 
-	dev->fmt_out->data_offset[0] = mp->width * dev->embedded_data_height;
 	dev->fmt_out_rect.width = mp->width;
 	dev->fmt_out_rect.height = mp->height;
 	for (p = 0; p < mp->num_planes; p++)
 		dev->bytesperline_out[p] = mp->plane_fmt[p].bytesperline;
+	dev->fmt_out->data_offset[0] =
+		dev->bytesperline_out[0] * dev->embedded_data_height;
 	for (p = dev->fmt_out->buffers; p < dev->fmt_out->planes; p++)
 		dev->bytesperline_out[p] =
 			(dev->bytesperline_out[0] * dev->fmt_out->bit_depth[p]) /

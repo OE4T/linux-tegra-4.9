@@ -772,6 +772,8 @@ int vivid_s_fmt_vid_cap(struct file *file, void *priv,
 	tpg_s_fourcc(&dev->tpg, dev->fmt_cap->fourcc);
 	for (p = 0; p < tpg_g_buffers(&dev->tpg); p++)
 		tpg_s_bytesperline(&dev->tpg, p, mp->plane_fmt[p].bytesperline);
+	dev->fmt_cap->data_offset[0] =
+		mp->plane_fmt[0].bytesperline * dev->embedded_data_height;
 	dev->field_cap = mp->field;
 	if (dev->field_cap == V4L2_FIELD_ALTERNATE)
 		tpg_s_field(&dev->tpg, V4L2_FIELD_TOP, true);
@@ -780,7 +782,6 @@ int vivid_s_fmt_vid_cap(struct file *file, void *priv,
 	tpg_s_crop_compose(&dev->tpg, &dev->crop_cap, &dev->compose_cap);
 	if (vivid_is_sdtv_cap(dev))
 		dev->tv_field_cap = mp->field;
-	dev->fmt_cap->data_offset[0] = mp->width * dev->embedded_data_height;
 	tpg_update_mv_step(&dev->tpg);
 	// update framelength control to control framerate
 	v4l2_ctrl_s_ctrl(dev->framelength,

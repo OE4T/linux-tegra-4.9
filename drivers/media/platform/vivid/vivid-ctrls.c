@@ -108,6 +108,16 @@
 #define VIVID_CID_GROUP_HOLD		(VIVID_CID_VIVID_BASE + 123)
 #define VIVID_CID_HDR_EN		(VIVID_CID_VIVID_BASE + 124)
 #define VIVID_CID_EMBEDDED_DATA_HEIGHT	(VIVID_CID_VIVID_BASE + 125)
+#define VIVID_CID_SENSOR_SIGNAL_PROPERTIES (VIVID_CID_VIVID_BASE + 126)
+#define VIVID_CID_SENSOR_IMAGE_PROPERTIES (VIVID_CID_VIVID_BASE + 127)
+#define VIVID_CID_SENSOR_CONTROL_PROPERTIES (VIVID_CID_VIVID_BASE + 128)
+#define VIVID_CID_SENSOR_DV_TIMINGS (VIVID_CID_VIVID_BASE + 129)
+/**
+ * This is temporary with the current v4l2 infrastructure
+ * currently discussing with upstream maintainers our proposals and
+ * better approaches to resolve this
+ */
+#define VIVID_CID_SENSOR_MODES		(VIVID_CID_VIVID_BASE + 130)
 
 /* General User Controls */
 
@@ -131,9 +141,6 @@ static int vivid_user_gen_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case VIVID_CID_BUTTON:
 		dev->button_pressed = 30;
-		break;
-	case VIVID_CID_EMBEDDED_DATA_HEIGHT:
-		dev->embedded_data_height = ctrl->val;
 		break;
 	}
 	return 0;
@@ -487,7 +494,46 @@ static int vivid_vid_cap_s_ctrl(struct v4l2_ctrl *ctrl)
 	case VIVID_CID_FRAME_LENGTH:
 		vivid_update_timeperframe(dev, ctrl->val);
 		break;
+	case VIVID_CID_EMBEDDED_DATA_HEIGHT:
+		dev->embedded_data_height = ctrl->val;
+		break;
 	}
+	return 0;
+}
+
+int vivid_update_sensorprops(struct vivid_dev *dev)
+{
+	struct v4l2_ctrl *ctrl_signalprops = dev->ctrl_signalprops;
+	struct v4l2_ctrl *ctrl_imageprops = dev->ctrl_imageprops;
+	struct v4l2_ctrl *ctrl_controlprops = dev->ctrl_controlprops;
+	struct v4l2_ctrl *ctrl_dvtimings = dev->ctrl_dvtimings;
+	struct sensor_mode_properties *modes = dev->sensor_props.sensor_modes;
+	u32 i;
+
+	for (i = 0; i < dev->sensor_props.num_modes; i++) {
+		void *ptr = NULL;
+		u32 size = sizeof(struct sensor_signal_properties);
+
+		ptr = ctrl_signalprops->p_new.p + (i * size);
+		memcpy(ptr, &modes[i].signal_properties, size);
+
+		size = sizeof(struct sensor_image_properties);
+		ptr = ctrl_imageprops->p_new.p + (i * size);
+		memcpy(ptr, &modes[i].image_properties, size);
+
+		size = sizeof(struct sensor_control_properties);
+		ptr = ctrl_controlprops->p_new.p + (i * size);
+		memcpy(ptr, &modes[i].control_properties, size);
+
+		size = sizeof(struct sensor_dv_timings);
+		ptr = ctrl_dvtimings->p_new.p + (i * size);
+		memcpy(ptr, &modes[i].dv_timings, size);
+	}
+	ctrl_signalprops->p_cur.p = ctrl_signalprops->p_new.p;
+	ctrl_imageprops->p_cur.p = ctrl_imageprops->p_new.p;
+	ctrl_controlprops->p_cur.p = ctrl_controlprops->p_new.p;
+	ctrl_dvtimings->p_cur.p = ctrl_dvtimings->p_new.p;
+
 	return 0;
 }
 
@@ -561,15 +607,79 @@ static const struct v4l2_ctrl_config vivid_ctrl_hdrenable = {
 };
 
 static const struct v4l2_ctrl_config vivid_ctrl_embeddeddata = {
-	.ops = &vivid_user_gen_ctrl_ops,
+	.ops = &vivid_vid_cap_ctrl_ops,
 	.id = VIVID_CID_EMBEDDED_DATA_HEIGHT,
 	.name = "Embedded Data Height",
 	.type = V4L2_CTRL_TYPE_INTEGER,
 	.flags = V4L2_CTRL_FLAG_SLIDER,
-	.min = 1,
+	.min = 0,
 	.max = 16,
-	.def = 2,
+	.def = 1,
 	.step = 1,
+};
+
+static const struct v4l2_ctrl_config vivid_ctrl_sensor_modes = {
+	.ops = &vivid_vid_cap_ctrl_ops,
+	.id = VIVID_CID_SENSOR_MODES,
+	.name = "Sensor Modes",
+	.type = V4L2_CTRL_TYPE_INTEGER,
+	.flags = V4L2_CTRL_FLAG_READ_ONLY,
+	.min = 0,
+	.max = MAX_NUM_SENSOR_MODES,
+	.def = MAX_NUM_SENSOR_MODES,
+	.step = 1,
+};
+
+static const struct v4l2_ctrl_config vivid_ctrl_signalprops = {
+	.ops = &vivid_vid_cap_ctrl_ops,
+	.id = VIVID_CID_SENSOR_SIGNAL_PROPERTIES,
+	.name = "Sensor Signal Properties",
+	.type = V4L2_CTRL_TYPE_U32,
+	.flags = V4L2_CTRL_FLAG_HAS_PAYLOAD,
+	.min = 0,
+	.max = 0xFFFFFFFF,
+	.step = 1,
+	.def = 0,
+	.dims = { MAX_NUM_SENSOR_MODES, SENSOR_SIGNAL_PROPERTIES_CID_SIZE },
+};
+
+static const struct v4l2_ctrl_config vivid_ctrl_imageprops = {
+	.ops = &vivid_vid_cap_ctrl_ops,
+	.id = VIVID_CID_SENSOR_IMAGE_PROPERTIES,
+	.name = "Sensor Image Properties",
+	.type = V4L2_CTRL_TYPE_U32,
+	.flags = V4L2_CTRL_FLAG_HAS_PAYLOAD,
+	.min = 0,
+	.max = 0xFFFFFFFF,
+	.step = 1,
+	.def = 0,
+	.dims = { MAX_NUM_SENSOR_MODES, SENSOR_IMAGE_PROPERTIES_CID_SIZE },
+};
+
+static const struct v4l2_ctrl_config vivid_ctrl_controlprops = {
+	.ops = &vivid_vid_cap_ctrl_ops,
+	.id = VIVID_CID_SENSOR_CONTROL_PROPERTIES,
+	.name = "Sensor Control Properties",
+	.type = V4L2_CTRL_TYPE_U32,
+	.flags = V4L2_CTRL_FLAG_HAS_PAYLOAD,
+	.min = 0,
+	.max = 0xFFFFFFFF,
+	.step = 1,
+	.def = 0,
+	.dims = { MAX_NUM_SENSOR_MODES, SENSOR_CONTROL_PROPERTIES_CID_SIZE },
+};
+
+static const struct v4l2_ctrl_config vivid_ctrl_dvtimings = {
+	.ops = &vivid_vid_cap_ctrl_ops,
+	.id = VIVID_CID_SENSOR_DV_TIMINGS,
+	.name = "Sensor DV Timings",
+	.type = V4L2_CTRL_TYPE_U32,
+	.flags = V4L2_CTRL_FLAG_HAS_PAYLOAD,
+	.min = 0,
+	.max = 0xFFFFFFFF,
+	.step = 1,
+	.def = 0,
+	.dims = { MAX_NUM_SENSOR_MODES, SENSOR_DV_TIMINGS_CID_SIZE },
 };
 
 static const char * const vivid_ctrl_hor_movement_strings[] = {
@@ -1489,7 +1599,7 @@ int vivid_create_controls(struct vivid_dev *dev, bool show_ccs_cap,
 		dev->autogain = v4l2_ctrl_new_std(hdl_user_vid, &vivid_user_vid_ctrl_ops,
 			V4L2_CID_AUTOGAIN, 0, 1, 1, 1);
 		dev->gain = v4l2_ctrl_new_std(hdl_user_vid, &vivid_user_vid_ctrl_ops,
-			V4L2_CID_GAIN, 0, 255, 1, 100);
+			V4L2_CID_GAIN, 1, 256, 1, 100);
 		dev->alpha = v4l2_ctrl_new_std(hdl_user_vid, &vivid_user_vid_ctrl_ops,
 			V4L2_CID_ALPHA_COMPONENT, 0, 255, 1, 0);
 	}
@@ -1504,8 +1614,6 @@ int vivid_create_controls(struct vivid_dev *dev, bool show_ccs_cap,
 	v4l2_ctrl_new_custom(hdl_user_gen, &vivid_ctrl_u32_array, NULL);
 	v4l2_ctrl_new_custom(hdl_user_gen, &vivid_ctrl_u16_matrix, NULL);
 	v4l2_ctrl_new_custom(hdl_user_gen, &vivid_ctrl_u8_4d_array, NULL);
-	v4l2_ctrl_new_custom(hdl_user_gen, &vivid_ctrl_embeddeddata, NULL);
-	dev->embedded_data_height = vivid_ctrl_embeddeddata.def;
 
 	if (dev->has_vid_cap) {
 		/* Image Processing Controls */
@@ -1550,9 +1658,23 @@ int vivid_create_controls(struct vivid_dev *dev, bool show_ccs_cap,
 		dev->framelength = v4l2_ctrl_new_custom(hdl_vid_cap,
 			&vivid_ctrl_framelength, NULL);
 		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_coarsetime, NULL);
-		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_coarsetime_short, NULL);
+		v4l2_ctrl_new_custom(hdl_vid_cap,
+			&vivid_ctrl_coarsetime_short, NULL);
 		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_grouphold, NULL);
 		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_hdrenable, NULL);
+		v4l2_ctrl_new_custom(hdl_vid_cap,
+			&vivid_ctrl_embeddeddata, NULL);
+		dev->embedded_data_height = vivid_ctrl_embeddeddata.def;
+		dev->ctrl_signalprops = v4l2_ctrl_new_custom(hdl_vid_cap,
+			&vivid_ctrl_signalprops, NULL);
+		dev->ctrl_imageprops = v4l2_ctrl_new_custom(hdl_vid_cap,
+			&vivid_ctrl_imageprops, NULL);
+		dev->ctrl_controlprops = v4l2_ctrl_new_custom(hdl_vid_cap,
+			&vivid_ctrl_controlprops, NULL);
+		dev->ctrl_dvtimings = v4l2_ctrl_new_custom(hdl_vid_cap,
+			&vivid_ctrl_dvtimings, NULL);
+		dev->ctrl_sensormodes = v4l2_ctrl_new_custom(hdl_vid_cap,
+			&vivid_ctrl_sensor_modes, NULL);
 	}
 
 	if (dev->has_vid_out && show_ccs_out) {

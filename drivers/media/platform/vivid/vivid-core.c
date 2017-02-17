@@ -637,6 +637,35 @@ static void vivid_dev_release(struct v4l2_device *v4l2_dev)
 	kfree(dev);
 }
 
+static int vivid_parse_dt(struct video_device *vfd, struct vivid_dev *dev)
+{
+	struct device_node *vivid_node = NULL;
+	struct device_node *node = NULL;
+	char temp_str[OF_MAX_STR_LEN];
+
+	vivid_node = of_find_node_by_name(NULL, "vivid-driver");
+	if (!vivid_node) {
+		dev_err(&vfd->dev, "%s:cannot find vivid node\n", __func__);
+		return -ENODATA;
+	}
+
+	snprintf(temp_str, sizeof(temp_str), "%s%d", "instance", dev->inst);
+	node = of_find_node_by_name(vivid_node, temp_str);
+	if (!node) {
+		dev_err(&vfd->dev, "%s:cannot find instance node\n", __func__);
+		return -ENODATA;
+	}
+
+	sensor_common_init_sensor_properties(&vfd->dev,
+		node, &dev->sensor_props);
+
+	v4l2_ctrl_s_ctrl(dev->ctrl_sensormodes, dev->sensor_props.num_modes);
+
+	vivid_update_sensorprops(dev);
+
+	return 0;
+}
+
 static int vivid_create_instance(struct platform_device *pdev, int inst)
 {
 	static const struct v4l2_dv_timings def_dv_timings =
@@ -1195,6 +1224,10 @@ static int vivid_create_instance(struct platform_device *pdev, int inst)
 			goto unreg_dev;
 		v4l2_info(&dev->v4l2_dev, "V4L2 capture device registered as %s\n",
 					  video_device_node_name(vfd));
+
+		ret = vivid_parse_dt(vfd, dev);
+		if (ret < 0)
+			goto unreg_dev;
 	}
 
 	if (dev->has_vid_out) {

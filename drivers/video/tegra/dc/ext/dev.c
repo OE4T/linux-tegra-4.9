@@ -1206,6 +1206,8 @@ static int sanitize_flip_args(struct tegra_dc_ext_user *user,
 
 	for (i = 0; i < win_num; i++) {
 		int index = win[i].index;
+		fixed20_12 input_w, input_h;
+		u32 w, h;
 
 		if (index < 0)
 			continue;
@@ -1218,6 +1220,23 @@ static int sanitize_flip_args(struct tegra_dc_ext_user *user,
 			return -EINVAL;
 
 		used_windows |= BIT(index);
+
+		/*
+		 * Check that the window dimensions are non-zero. The input
+		 * width and height are specified as 20.12 fixed-point numbers.
+		 */
+		input_w.full = win->w;
+		input_h.full = win->h;
+		w = dfixed_trunc(input_w);
+		h = dfixed_trunc(input_h);
+		if (win->buff_id != 0 &&
+			(w == 0 || h == 0 ||
+			win->out_w == 0 || win->out_h == 0)) {
+			dev_err(&dc->ndev->dev,
+			"%s: WIN %d invalid size:w=%u,h=%u,out_w=%u,out_h=%u\n",
+				__func__, index, w, h, win->out_w, win->out_h);
+			return -EINVAL;
+		}
 	}
 
 	if (!used_windows)

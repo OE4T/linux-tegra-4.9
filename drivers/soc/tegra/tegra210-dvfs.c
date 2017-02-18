@@ -627,8 +627,8 @@ static struct cvb_dvfs gpu_cvb_dvfs_table[] = {
 static int gpu_vmin[MAX_THERMAL_RANGES];
 static int gpu_peak_millivolts[MAX_DVFS_FREQS];
 static int gpu_millivolts[MAX_THERMAL_RANGES][MAX_DVFS_FREQS];
-static int vdd_gpu_vmax_trips_table[MAX_THERMAL_LIMITS];
 static struct dvfs_therm_limits vdd_gpu_therm_caps_table[MAX_THERMAL_LIMITS];
+static struct dvfs_therm_limits vdd_gpu_therm_caps_ucm2_table[MAX_THERMAL_LIMITS];
 static unsigned long gpu_cap_rates[MAX_THERMAL_LIMITS];
 static struct clk *vgpu_cap_clk;
 
@@ -1452,13 +1452,15 @@ static int find_gpu_vmin_at_fmax(
 static int of_parse_dvfs_rail_cdev_trips(struct device_node *node,
 		int *therm_trips_table,
 		struct dvfs_therm_limits *therm_limits_table,
+		struct dvfs_therm_limits *therm_limits_ucm2_table,
 		struct rail_alignment *align, bool up)
 {
 	struct of_phandle_iter iter;
 	int cells_num, i = 0, t;
 
 	/* 1 cell per trip-point, if constraint is specified */
-	cells_num = !!of_property_read_bool(node, "nvidia,constraint");
+	cells_num = of_property_read_bool(node, "nvidia,constraint-ucm2") ? 2 :
+		of_property_read_bool(node, "nvidia,constraint") ? 1 : 0;
 
 	of_property_for_each_phandle_with_args(iter, node, "nvidia,trips",
 					       NULL, cells_num) {
@@ -1474,12 +1476,20 @@ static int of_parse_dvfs_rail_cdev_trips(struct device_node *node,
 			return -ENODATA;
 		}
 
-		therm_trips_table[i] = t / 1000; /* convert mC to C */
+		if (therm_trips_table)
+			therm_trips_table[i] = t / 1000; /* convert mC to C */
+
 		if (cells_num && therm_limits_table) {
 			int mv = iter.out_args.args[0];
 			mv = tegra_round_voltage(mv, align, up);
 			therm_limits_table[i].temperature = t / 1000;
 			therm_limits_table[i].mv = mv;
+			if (cells_num == 2 && therm_limits_ucm2_table) {
+				mv = iter.out_args.args[1];
+				mv = tegra_round_voltage(mv, align, up);
+				therm_limits_ucm2_table[i].temperature = t/1000;
+				therm_limits_ucm2_table[i].mv = mv;
+			}
 		}
 		i++;
 	}
@@ -1504,7 +1514,7 @@ static int init_gpu_rail_thermal_scaling(struct device_node *node,
 
 	thermal_ranges = of_parse_dvfs_rail_cdev_trips(cdev_node,
 		&rail->vts_trips_table[0], &rail->vts_floors_table[0],
-		&rail->alignment, true);
+		NULL, &rail->alignment, true);
 
 	if (thermal_ranges <= 0)
 		return 1;
@@ -1583,6 +1593,7 @@ static int init_gpu_rail_thermal_caps(struct device_node *node,
 {
 	struct device_node *cdev_node;
 	int num_trips, i, j, k;
+	bool ucm2 = tegra_sku_info.ucm == TEGRA_UCM2;
 
 	if (thermal_ranges <= 1 )
 		return 0;
@@ -1599,18 +1610,24 @@ static int init_gpu_rail_thermal_caps(struct device_node *node,
 		return 0;
 
 	num_trips = of_parse_dvfs_rail_cdev_trips(cdev_node,
-		vdd_gpu_vmax_trips_table, vdd_gpu_therm_caps_table,
+		NULL, vdd_gpu_therm_caps_table, vdd_gpu_therm_caps_ucm2_table,
 		&rail->alignment, false);
 	if (num_trips <= 0)
 		return 0;
 
-	rail->therm_caps = vdd_gpu_therm_caps_table;
+	rail->therm_caps =
+		ucm2 ? vdd_gpu_therm_caps_ucm2_table : vdd_gpu_therm_caps_table;
+	if (!rail->therm_caps[0].mv) {
+		pr_err("tegra_dvfs: invalid gpu cap table\n");
+		rail->therm_caps = NULL;
+		return 0;
+	}
 	rail->therm_caps_size = num_trips;
 	rail->therm_cap_idx = num_trips;
 
 	for (k = 0; k < num_trips; k++) {
-		int cap_tempr = vdd_gpu_therm_caps_table[k].temperature;
-		int cap_level = vdd_gpu_therm_caps_table[k].mv;
+		int cap_tempr = rail->therm_caps[k].temperature;
+		int cap_level = rail->therm_caps[k].mv;
 		unsigned long cap_freq = GPU_MAX_RATE;
 
 		for (j = 0; j < thermal_ranges; j++) {

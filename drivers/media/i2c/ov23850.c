@@ -1,7 +1,7 @@
 /*
  * ov23850.c - ov23850 sensor driver
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -252,7 +252,7 @@ static inline void ov23850_get_gain_reg(ov23850_reg *regs,
 				u16 gain)
 {
 	regs->addr = OV23850_GAIN_ADDR_MSB;
-	regs->val = (gain >> 16) & 0x07;
+	regs->val = (gain >> 8) & 0x07;
 	(regs + 1)->addr = OV23850_GAIN_ADDR_LSB;
 	(regs + 1)->val = (gain) & 0xff;
 }

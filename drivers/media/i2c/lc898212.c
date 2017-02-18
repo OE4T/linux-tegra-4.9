@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -327,14 +327,13 @@ static unsigned int convert_signed16b_to_unsigned10b(s16 data)
 static int lc898212_init(struct lc898212 *priv)
 {
 	int err;
-	u16 data;
+	int data;
 
 	err = lc898212_write_table(priv, lc898212_init_setting);
 
-	err |= regmap_read(priv->regmap16, LC898212_ADOFFSET,
-					(unsigned int *) &data);
+	err |= regmap_read(priv->regmap16, LC898212_ADOFFSET, &data);
 	priv->s_data->def_position =
-			convert_signed16b_to_unsigned10b((s16)data);
+			convert_signed16b_to_unsigned10b((s16)(data & 0xffff));
 	err |= regmap_write(priv->regmap16, LC898212_RZ, data);
 
 	/* Servo On */

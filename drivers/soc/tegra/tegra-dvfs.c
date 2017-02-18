@@ -322,15 +322,15 @@ static inline int dvfs_rail_apply_limits(struct dvfs_rail *rail, int millivolts)
 			max_mv = rail->therm_caps[i - 1].mv;
 	}
 
-	if (rail->override_millivolts)
+	if (rail->override_millivolts) {
 		millivolts = rail->override_millivolts;
-	else {
-		/* apply offset and ignore minimum limit */
+	} else if (rail->dbg_mv_offs) {
+		/* apply offset and ignore limits */
 		millivolts += rail->dbg_mv_offs;
 		return millivolts;
 	}
 
-	clamp_val(millivolts, min_mv, max_mv);
+	millivolts = clamp_val(millivolts, min_mv, max_mv);
 
 	return millivolts;
 }

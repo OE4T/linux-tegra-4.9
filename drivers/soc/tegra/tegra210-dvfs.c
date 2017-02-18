@@ -53,6 +53,12 @@ tegra210_core_therm_caps[MAX_THERMAL_LIMITS] = {
 	{0, 0},
 };
 
+static struct dvfs_therm_limits
+tegra210_core_therm_caps_ucm2[MAX_THERMAL_LIMITS] = {
+	{86, 1090},
+	{0, 0},
+};
+
 static struct dvfs_rail tegra210_dvfs_rail_vdd_cpu = {
 	.reg_id = "vdd-cpu",
 	.max_millivolts = 1300,
@@ -82,7 +88,6 @@ static struct dvfs_rail tegra210_dvfs_rail_vdd_core = {
 		.bin_uv = 12500, /* 12.5mV */
 	},
 	.therm_floors = tegra210_core_therm_floors,
-	.therm_caps = tegra210_core_therm_caps,
 	.is_ready = false,
 };
 
@@ -1855,6 +1860,7 @@ int tegra210_init_dvfs(struct device *dev)
 {
 	int soc_speedo_id = tegra_sku_info.soc_speedo_id;
 	int core_process_id = tegra_sku_info.soc_process_id;
+	bool ucm2 = tegra_sku_info.ucm == TEGRA_UCM2;
 	int i, ret;
 	int cpu_max_freq_index = 0;
 	int cpu_lp_max_freq_index = 0;
@@ -1916,7 +1922,9 @@ int tegra210_init_dvfs(struct device *dev)
 	 */
 	init_gpu_dvfs_table(node, &gpu_max_freq_index);
 
-	/* Init core thermal floors */
+	/* Init core thermal floors abd caps */
+	tegra210_dvfs_rail_vdd_core.therm_caps =
+		ucm2 ? tegra210_core_therm_caps_ucm2 : tegra210_core_therm_caps;
 	tegra_dvfs_init_therm_limits(&tegra210_dvfs_rail_vdd_core);
 
 	/* Init rail structures and dependencies */

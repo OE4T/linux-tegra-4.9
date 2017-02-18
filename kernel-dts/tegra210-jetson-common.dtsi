@@ -318,8 +318,8 @@
 		#cooling-cells = <2>;
 		compatible = "nvidia,tegra210-rail-vmax-cdev";
 		cdev-type = "GPU-cap";
-		nvidia,constraint;
-		nvidia,trips = <&gpu_vmax_trip1 1132>;
+		nvidia,constraint-ucm2;
+		nvidia,trips = <&gpu_vmax_trip1 1132 1090>;
 		clocks = <&tegra_car TEGRA210_CLK_CAP_VGPU_GBUS>;
 		clock-names = "cap-clk";
 	};

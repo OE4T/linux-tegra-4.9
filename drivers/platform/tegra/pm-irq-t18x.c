@@ -153,7 +153,7 @@ static void wke_write_wake_levels(u32 *lvl)
 	print_vals("level", lvl);
 }
 
-int tegra_read_wake_status(u32 *status)
+int tegra18x_read_wake_status(u32 *status)
 {
 	int i;
 	u32 reg = WAKE_AOWAKE_STATUS_R_31_0_0;

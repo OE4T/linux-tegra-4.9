@@ -48,6 +48,15 @@ extern int *tegra_gpio_wake_table;
 extern int *tegra_irq_wake_table;
 extern int tegra_wake_table_len;
 
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+int tegra18x_read_wake_status(u32 *wake_status);
+#else
+static inline int tegra18x_read_wake_status(u32 *wake_status)
+{
+	return -EINVAL;
+}
+#endif
+
 #if defined(CONFIG_PM_SLEEP)
 int tegra_wakeup_table_init(void);
 int tegra_read_wake_status(u32 *wake_status);

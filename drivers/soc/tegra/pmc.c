@@ -49,6 +49,7 @@
 #include <linux/notifier.h>
 #include <linux/regulator/consumer.h>
 #include <linux/uaccess.h>
+#include <linux/irqchip/tegra.h>
 
 #include <soc/tegra/common.h>
 #include <soc/tegra/fuse.h>
@@ -557,6 +558,14 @@ static void tegra_pmc_register_update(enum pmc_regs reg,
 	pmc_reg = tegra_pmc_readl(reg);
 	pmc_reg = (pmc_reg & ~mask) | (val & mask);
 	tegra_pmc_writel(pmc_reg, reg);
+}
+
+int tegra_read_wake_status(u32 *wake_status)
+{
+	if (soc_is_tegra186_n_later())
+		return tegra18x_read_wake_status(wake_status);
+
+	return 0;
 }
 
 #ifndef CONFIG_TEGRA_POWERGATE

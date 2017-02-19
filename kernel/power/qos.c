@@ -52,6 +52,7 @@
 #include <linux/uaccess.h>
 #include <linux/export.h>
 #include <trace/events/power.h>
+#include <soc/tegra/common.h>
 
 /*
  * locking rule: all changes to constraints or notifiers lists
@@ -1867,21 +1868,24 @@ static int __init pm_qos_power_init(void)
 		d = NULL;
 
 	for (i = PM_QOS_CPU_DMA_LATENCY; i < PM_QOS_NUM_CLASSES; i++) {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 		switch (i) {
 		case PM_QOS_CPU_FREQ_MIN:
 		case PM_QOS_CPU_FREQ_MAX:
-			continue;
-		}
-#else
-		switch (i) {
+			if (soc_is_tegra186_n_later())
+				continue;
+
+			break;
+
 		case PM_QOS_CLUSTER0_FREQ_MIN:
 		case PM_QOS_CLUSTER0_FREQ_MAX:
 		case PM_QOS_CLUSTER1_FREQ_MIN:
 		case PM_QOS_CLUSTER1_FREQ_MAX:
-			continue;
+			if (soc_is_tegra210_n_before())
+				continue;
+
+			break;
 		}
-#endif
+
 		ret = register_pm_qos_misc(pm_qos_array[i], d);
 		if (ret < 0) {
 			printk(KERN_ERR "pm_qos_param: %s setup failed\n",
@@ -1891,16 +1895,21 @@ static int __init pm_qos_power_init(void)
 	}
 
 	for (i = 1; i < PM_QOS_NUM_BOUNDED_CLASSES; i++) {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-		if (i == PM_QOS_CPU_FREQ_BOUNDS)
-			continue;
-#else
 		switch (i) {
+		case PM_QOS_CPU_FREQ_BOUNDS:
+			if (soc_is_tegra186_n_later())
+				continue;
+
+			break;
+
 		case PM_QOS_CLUSTER0_FREQ_BOUNDS:
 		case PM_QOS_CLUSTER1_FREQ_BOUNDS:
-			continue;
+			if (soc_is_tegra210_n_before())
+				continue;
+
+			break;
 		}
-#endif
+
 		ret = register_pm_qos_bounded_obj(pm_qos_bounded_obj_array[i]);
 		if (ret < 0) {
 			pr_err("pm_qos_bounded_reg: %s setup failed\n",

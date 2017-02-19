@@ -56,7 +56,7 @@ struct sensor_cfg snsr_list[] = {
 		.name			= "accelerometer",
 		.kbuf_sz		= 1024,
 		.timestamp_sz		= 8,
-		.snsr_data_n		= 6,
+		.snsr_data_n		= 18,
 		.ch_n			= 3,
 		.ch_sz			= -2,
 		.part			= "IMU-20628",
@@ -88,7 +88,7 @@ struct sensor_cfg snsr_list[] = {
 		.name			= "gyroscope",
 		.kbuf_sz		= 1024,
 		.timestamp_sz		= 8,
-		.snsr_data_n		= 6,
+		.snsr_data_n		= 18,
 		.ch_n			= 3,
 		.ch_sz			= -2,
 		.part			= "IMU-20628",
@@ -120,7 +120,7 @@ struct sensor_cfg snsr_list[] = {
 		.name			= "magnetic_field",
 		.kbuf_sz		= 1024,
 		.timestamp_sz		= 8,
-		.snsr_data_n		= 12,
+		.snsr_data_n		= 24,
 		.ch_n			= 3,
 		.ch_sz			= -4,
 		.part			= "AK8963C",
@@ -180,6 +180,13 @@ struct dfsh_state {
 };
 
 static struct dfsh_state *st;
+
+/*Modify the struct if accel/gyro payload is modified*/
+struct __attribute__ ((__packed__)) sensor_sync_pkt_t {
+	uint16_t sensor_data[3];
+	uint32_t status;
+	uint64_t timestamp;
+};
 
 /* We are using crc32 to validate packets */
 #define CRC_SIZE		4
@@ -489,7 +496,9 @@ static inline void dfsh_parse_pkt(struct tty_struct *tty, unsigned char c)
 	int64_t ts;
 	struct timespec k_ts;
 	s64 k_ts_ns;
-
+	static s64 prev_ktime;
+	static s64 prev_mcutime;
+	struct sensor_sync_pkt_t sensor_sync_pkt;
 	/* sanity check index */
 	if (st->pkt_byte_idx >= sizeof(st->pkt_buf))
 		/* Reset if byte index longer than longest packet */
@@ -533,18 +542,38 @@ static inline void dfsh_parse_pkt(struct tty_struct *tty, unsigned char c)
 					/* sensor timestamp */
 					memcpy(&ts, &st->pkt_buf[ts_i],
 					       sizeof(ts));
-					/* convert timestamp from usec to nsec */
+					/*convert timestamp from usec to nsec*/
 					ts = ts * 1000;
-					if(snsr_id == 0){
-						ktime_get_ts64(&k_ts);
-						k_ts_ns = timespec_to_ns(&k_ts);
-						st->nvs->handler(st->nvs_st[snsr_id],
-							 &k_ts_ns,
-							 ts);
+					ktime_get_ts64(&k_ts);
+					k_ts_ns = timespec_to_ns(&k_ts);
+					if (prev_mcutime == ts)
+						k_ts_ns = prev_ktime;
+					if (st->pkt.header.type == MSG_CAMERA) {
+						st->nvs->handler
+							(st->nvs_st[snsr_id],
+							&ts,
+							k_ts_ns);
+					} else if (st->pkt.header.type ==
+						MSG_ACCEL || st->pkt.header.type
+						== MSG_GYRO) {
+						sensor_sync_pkt.timestamp = ts;
+						memcpy(&sensor_sync_pkt.
+								sensor_data,
+							&st->pkt_buf[data_i],
+							sizeof(sensor_sync_pkt.
+								sensor_data));
+						prev_ktime = k_ts_ns;
+						prev_mcutime = ts;
+						st->nvs->handler
+							(st->nvs_st[snsr_id],
+							&sensor_sync_pkt.
+								sensor_data,
+							k_ts_ns);
 					} else {
-						st->nvs->handler(st->nvs_st[snsr_id],
-							 &st->pkt_buf[data_i],
-							 ts);
+						st->nvs->handler
+							(st->nvs_st[snsr_id],
+							&st->pkt_buf[data_i],
+							k_ts_ns);
 					}
 				} else if (st->pkt.header.type == MSG_MCU) {
 					/* message from MCU */

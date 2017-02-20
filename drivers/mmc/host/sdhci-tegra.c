@@ -124,6 +124,8 @@
 #define SET_DDR_TAP	0x1
 #define SET_DEFAULT_TAP	0x2
 
+#define SDHOST_LOW_VOLT_MIN	1800000
+
 const char *auto_calib_offset_prods[] = {
 	"autocal-pu-pd-offset-default-3v3", /* DS */
 	"autocal-pu-pd-offset-hs-3v3", /* MMC HS */
@@ -186,7 +188,6 @@ struct sdhci_tegra {
 	int timing;
 	bool set_1v8_calib_offsets;
 	int current_voltage;
-	struct padctrl *sdmmc_padctrl;
 	unsigned int cd_irq;
 	bool config_pad_ctrl;
 	bool pwrdet_support;
@@ -194,6 +195,9 @@ struct sdhci_tegra {
 	bool cd_wakeup_capable;
 	int cd_gpio;
 	bool enable_hwcq;
+	struct pinctrl *pinctrl_sdmmc;
+	struct pinctrl_state *e_33v_enable;
+	struct pinctrl_state *e_33v_disable;
 };
 
 /* Module params */
@@ -1021,13 +1025,33 @@ static void tegra_sdhci_set_padctrl(struct sdhci_host *host, int voltage)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
 	struct sdhci_tegra *tegra_host = sdhci_pltfm_priv(pltfm_host);
-	int ret;
+	int ret = 0;
 
-	if (tegra_host->pwrdet_support && tegra_host->sdmmc_padctrl) {
-		ret = padctrl_set_voltage(tegra_host->sdmmc_padctrl, voltage);
-		if (ret)
-			dev_err(mmc_dev(host->mmc),
-				"Failed to set sdmmc padctrl %d\n", ret);
+	if (!tegra_host->pwrdet_support || IS_ERR_OR_NULL(tegra_host->pinctrl_sdmmc)
+			|| IS_ERR_OR_NULL(tegra_host->e_33v_enable)
+			|| IS_ERR_OR_NULL(tegra_host->e_33v_disable)) {
+		dev_dbg(mmc_dev(host->mmc),
+			"IO pad Volt setting skip: pwrdet-%d, pinctrl_sdmmc-%d"
+			" e_33v_enable-%d, e_33v_disable-%d\n",
+			tegra_host->pwrdet_support,
+			IS_ERR_OR_NULL(tegra_host->pinctrl_sdmmc),
+			IS_ERR_OR_NULL(tegra_host->e_33v_enable),
+			IS_ERR_OR_NULL(tegra_host->e_33v_disable));
+		return;
+	}
+
+	if (voltage == SDHOST_LOW_VOLT_MIN) {
+		ret = pinctrl_select_state(tegra_host->pinctrl_sdmmc,
+				tegra_host->e_33v_disable);
+		if (ret < 0)
+			dev_warn(mmc_dev(host->mmc),
+				"setting E_33V dis failed, ret: %d\n", ret);
+	} else {
+		ret = pinctrl_select_state(tegra_host->pinctrl_sdmmc,
+				tegra_host->e_33v_enable);
+		if (ret < 0)
+			dev_warn(mmc_dev(host->mmc),
+				"setting E_33V en failed, ret: %d\n", ret);
 	}
 }
 
@@ -1138,6 +1162,44 @@ static int sdhci_tegra_get_parent_pll_from_dt(struct sdhci_host *host,
 	clk_src_data->parent_clk_src_cnt = j;
 
 	return 0;
+}
+
+static void tegra_sdhci_init_pinctrl_info(struct device *dev,
+		struct sdhci_tegra *tegra_host)
+{
+	struct device_node *np = dev->of_node;
+
+	if (!np)
+		return;
+
+	tegra_host->prods = devm_tegra_prod_get(dev);
+	if (IS_ERR_OR_NULL(tegra_host->prods)) {
+		dev_err(dev, "Prod-setting not available\n");
+		tegra_host->prods = NULL;
+	}
+
+	if (tegra_host->pwrdet_support) {
+		tegra_host->pinctrl_sdmmc = devm_pinctrl_get(dev);
+		if (IS_ERR_OR_NULL(tegra_host->pinctrl_sdmmc)) {
+			dev_err(dev, "Missing pinctrl info, err: %ld\n",
+					PTR_ERR(tegra_host->pinctrl_sdmmc));
+			tegra_host->pinctrl_sdmmc = NULL;
+			return;
+		}
+
+		tegra_host->e_33v_enable =
+			pinctrl_lookup_state(tegra_host->pinctrl_sdmmc,
+					"sdmmc_e_33v_enable");
+		if (IS_ERR_OR_NULL(tegra_host->e_33v_enable))
+			dev_dbg(dev, "Missing E_33V enable state, err:%ld\n",
+					PTR_ERR(tegra_host->e_33v_enable));
+		tegra_host->e_33v_disable =
+			pinctrl_lookup_state(tegra_host->pinctrl_sdmmc,
+					"sdmmc_e_33v_disable");
+		if (IS_ERR_OR_NULL(tegra_host->e_33v_disable))
+			dev_dbg(dev, "Missing E_33V disable state, err:%ld\n",
+				PTR_ERR(tegra_host->e_33v_disable));
+	}
 }
 
 static const struct sdhci_ops tegra_sdhci_ops = {
@@ -1423,22 +1485,7 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 		dev_err(mmc_dev(host->mmc),
 			"Failed to find parent clocks\n");
 
-	tegra_host->prods = devm_tegra_prod_get(&pdev->dev);
-	if (IS_ERR_OR_NULL(tegra_host->prods)) {
-		dev_err(mmc_dev(host->mmc), "Prod-setting not available\n");
-		tegra_host->prods = NULL;
-	}
-
-	if (tegra_host->pwrdet_support) {
-		tegra_host->sdmmc_padctrl =
-			devm_padctrl_get(&pdev->dev, "sdmmc");
-		if (IS_ERR(tegra_host->sdmmc_padctrl)) {
-			dev_err(mmc_dev(host->mmc),
-				"Pad control not found %ld\n",
-				PTR_ERR(tegra_host->sdmmc_padctrl));
-			tegra_host->sdmmc_padctrl = NULL;
-		}
-	}
+	tegra_sdhci_init_pinctrl_info(&pdev->dev, tegra_host);
 
 	if (tegra_host->soc_data->nvquirks & NVQUIRK_ENABLE_DDR50)
 		host->mmc->caps |= MMC_CAP_1_8V_DDR;

@@ -546,6 +546,8 @@ static void lt_reset_state(struct tegra_dp_lt_data *lt_data)
 		pr_info("dp lt: link training force disable\n");
 		lt_data->force_disable = false;
 		lt_data->force_trigger = false;
+		if (!lt_data->no_aux_handshake)
+			lt_data->lt_config_valid = false;
 		tgt_state = STATE_DONE_FAIL;
 		timeout = -1;
 		goto done;

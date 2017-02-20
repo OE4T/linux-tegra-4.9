@@ -22,7 +22,6 @@
 #include <tegra210-soc/tegra210-audio.dtsi>
 #include "jetson-platforms/tegra210-jetson-cv-power-tree-p2597-2180-a00.dtsi"
 #include "jetson-platforms/tegra210-jetson-cv-pinmux-p2597-2180-a00.dtsi"
-#include "jetson-platforms/tegra210-jetson-cv-sdmmc-drv-p2597-2180-a00.dtsi"
 #include "jetson-platforms/tegra210-jetson-cv-prods.dtsi"
 #include "jetson-platforms/tegra210-comms-p2530-0930.dtsi"
 #include "jetson-platforms/tegra210-jetson-cv-camera-modules.dtsi"
@@ -111,13 +110,6 @@
 		uhs-mask = <0xc>;
 		power-off-rail;
 		nvidia,update-pinctrl-settings;
-		pinctrl-names = "sdmmc_schmitt_enable", "sdmmc_schmitt_disable", "sdmmc_clk_schmitt_enable", "sdmmc_clk_schmitt_disable", "sdmmc_drv_code", "sdmmc_default_drv_code";
-		pinctrl-0 = <&sdmmc1_schmitt_enable_state>;
-		pinctrl-1 = <&sdmmc1_schmitt_disable_state>;
-		pinctrl-2 = <&sdmmc1_clk_schmitt_enable_state>;
-		pinctrl-3 = <&sdmmc1_clk_schmitt_disable_state>;
-		pinctrl-4 = <&sdmmc1_drv_code_1_8V>;
-		pinctrl-5 = <&sdmmc1_default_drv_code_3_3V>;
 		nvidia,sd-device;
 		wp-gpios = <&gpio TEGRA_GPIO(Z, 4) 0>;
 		status = "okay";

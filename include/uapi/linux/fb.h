@@ -310,8 +310,9 @@ struct fb_bitfield {
 #define FB_VMODE_VRR	0x08000000
 
 #define FB_VMODE_LIMITED_RANGE	0x10000000
+#define FB_VMODE_BYPASS		0x20000000 /* select bypass mode */
 
-#define FB_VMODE_MASK		0x18e3ffff
+#define FB_VMODE_MASK		0x38e3ffff
 
 #define FB_VMODE_YWRAP		0x40000  /* ywrap instead of panning */
 #define FB_VMODE_SMOOTH_XPAN	0x80000  /* smooth xpan possible (internally used) */

@@ -150,6 +150,11 @@ retry:
 						ARRAY_SIZE(port->write_urbs));
 	spin_unlock_irqrestore(&port->lock, flags);
 
+	if ((i < 0) || (i >= ARRAY_SIZE(port->write_urbs))) {
+		dev_err_console(port, "%s - no bits are set\n", __func__);
+		return -EINVAL;
+	}
+
 	urb = port->write_urbs[i];
 	count = port->serial->type->prepare_write_buffer(port,
 						urb->transfer_buffer,

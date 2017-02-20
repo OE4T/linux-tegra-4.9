@@ -21,10 +21,8 @@
 
 #include <asm/cpuidle.h>
 
-#ifdef CONFIG_ARCH_TEGRA_210_SOC
 #include <soc/tegra/fuse.h>
 #include <soc/tegra/pm.h>
-#endif
 
 #include "dt_idle_states.h"
 
@@ -50,7 +48,6 @@ static int arm_enter_idle_state(struct cpuidle_device *dev,
 
 	ret = cpu_pm_enter();
 	if (!ret) {
-#ifdef CONFIG_ARCH_TEGRA_210_SOC
 		if (tegra_get_chip_id() == TEGRA210) {
 			void *idle_idx = (void *)(long)idx;
 			int not_tolerance;
@@ -65,7 +62,6 @@ static int arm_enter_idle_state(struct cpuidle_device *dev,
 				 */
 				idx = 1;
 		}
-#endif
 
 		/*
 		 * Pass idle state index to cpu_suspend which in turn will
@@ -74,13 +70,11 @@ static int arm_enter_idle_state(struct cpuidle_device *dev,
 		 */
 		ret = arm_cpuidle_suspend(idx);
 
-#ifdef CONFIG_ARCH_TEGRA_210_SOC
 		if (tegra_get_chip_id() == TEGRA210) {
 			void *idle_idx = (void *)(long)idx;
 
 			tegra210_cpu_pm_exit(idle_idx);
 		}
-#endif
 
 		cpu_pm_exit();
 	}

@@ -167,6 +167,7 @@ struct tegra_uart_port {
 	bool					rt_flush;
 	int					error_tolerance_low_range;
 	int					error_tolerance_high_range;
+	bool					disable_pio_mode;
 };
 
 static void tegra_uart_start_next_tx(struct tegra_uart_port *tup);
@@ -813,7 +814,7 @@ static int tegra_uart_rx_buffer_push(struct tegra_uart_port *tup,
 
 	/* If we are here, DMA is stopped */
 	ret = tegra_uart_copy_rx_to_tty(tup, port, count);
-	if (ret)
+	if (ret || !tup->disable_pio_mode)
 		goto skip_pio;
 
 	ret = tegra_uart_handle_rx_pio(tup, port);
@@ -1629,6 +1630,7 @@ static int tegra_uart_parse_dt(struct platform_device *pdev,
 			"early-print-console-channel");
 
 	tup->rt_flush = of_property_read_bool(np, "rt-flush");
+	tup->disable_pio_mode = of_property_read_bool(np, "nvidia,disable-pio-mode");
 
 	ret = of_property_read_u32(np, "nvidia,tolerance-low-range",
 				   &tup->error_tolerance_low_range);

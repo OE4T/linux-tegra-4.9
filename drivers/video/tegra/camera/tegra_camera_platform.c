@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/camera/tegra_camera_platform.c
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -111,6 +111,10 @@ static int tegra_camera_isomgr_register(struct tegra_camera_info *info,
 	 *
 	 * The final ISO BW is based on the max of the two.
 	 */
+	if (!bits_per_pixel) {
+		dev_err(info->dev, "bits_per_pixel is invalid\n");
+		return -EINVAL;
+	}
 	vi_iso_bw = ((num_csi_lanes * max_lane_speed) / bits_per_pixel)
 				* vi_bpp * (100 + vi_margin_pct) / 100;
 	isp_iso_bw = max_pixel_rate * isp_bpp * (100 + isp_margin_pct) / 100;

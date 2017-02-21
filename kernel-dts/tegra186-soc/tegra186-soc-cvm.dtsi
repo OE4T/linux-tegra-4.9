@@ -69,6 +69,10 @@
 		};
 	};
 
+	tegra-hsp@c150000 {
+		status = "okay";
+	};
+
 	aon@c160000 {
 		status = "okay";
 	};

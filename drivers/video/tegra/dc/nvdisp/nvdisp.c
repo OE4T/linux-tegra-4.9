@@ -649,6 +649,17 @@ static void tegra_nvdisp_program_imp_win_results(struct tegra_dc *dc,
 			struct tegra_dc_ext_imp_head_results *imp_head_results,
 			int owner_head);
 
+static inline bool tegra_nvdisp_is_dc_active(struct tegra_dc *dc)
+{
+	u32 ctrl_mode = 0;
+
+	if (!dc || !dc->enabled)
+		return false;
+
+	ctrl_mode = tegra_dc_readl(dc, nvdisp_display_command_r());
+	return (ctrl_mode != nvdisp_display_command_control_mode_stop_f());
+}
+
 int tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
 					struct tegra_dc_lut *lut)
 {
@@ -2650,6 +2661,9 @@ static inline bool tegra_nvdisp_common_channel_is_clean(struct tegra_dc *dc)
 
 static void tegra_nvdisp_enable_common_channel_intr(struct tegra_dc *dc)
 {
+	if (!tegra_nvdisp_is_dc_active(dc))
+		return;
+
 	/*
 	 * WIN_X_ACT_REQs are checked at VBLANK in NC_DISPLAY mode, and at
 	 * FRAME_END in C_DISPLAY mode. Be consistent and check COMMON_ACT_REQ
@@ -2670,11 +2684,14 @@ static void tegra_nvdisp_enable_common_channel_intr(struct tegra_dc *dc)
 	dc->common_channel_intr_enabled = true;
 }
 
+void tegra_nvdisp_set_common_channel_pending(struct tegra_dc *dc)
+{
+	if (tegra_nvdisp_is_dc_active(dc))
+		dc->common_channel_pending = true;
+}
+
 static void tegra_nvdisp_activate_common_channel(struct tegra_dc *dc)
 {
-	if (!dc || !dc->enabled)
-		return;
-
 	tegra_nvdisp_enable_common_channel_intr(dc);
 
 	tegra_dc_writel(dc,
@@ -2687,7 +2704,7 @@ static void tegra_nvdisp_activate_common_channel(struct tegra_dc *dc)
 	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
 
 	mutex_lock(&tegra_nvdisp_lock);
-	dc->common_channel_pending = true;
+	tegra_nvdisp_set_common_channel_pending(dc);
 	mutex_unlock(&tegra_nvdisp_lock);
 }
 
@@ -2872,6 +2889,16 @@ void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 {
 	struct tegra_dc_imp_settings *imp_settings = NULL;
 	struct tegra_dc_ext_imp_settings *ext_settings = NULL;
+
+	if (!dc) {
+		pr_err("%s: DC is NULL\n", __func__);
+		return;
+	}
+
+	if (!dc->enabled) {
+		pr_err("%s: DC %d is NOT enabled\n", __func__, dc->ctrl_num);
+		return;
+	}
 
 	mutex_lock(&tegra_nvdisp_lock);
 

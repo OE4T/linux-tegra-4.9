@@ -811,7 +811,7 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 		 * We can safely set the pending flag here since we're holding
 		 * the global nvdisp lock.
 		 */
-		dc->common_channel_pending = true;
+		tegra_nvdisp_set_common_channel_pending(dc);
 		dc->imp_dirty = false;
 	}
 

@@ -105,11 +105,5 @@
 	sdhci@3440000 {
 		status = "okay";
 	};
-
-	efuse@3820000 {
-		efuse-burn {
-			nvidia,tz = <&tdiode>;
-		};
-	};
 };
 

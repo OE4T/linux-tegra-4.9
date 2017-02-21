@@ -70,8 +70,6 @@ asflags-y += -I$(srctree)/arch/arm/mach-tegra/include \
 
 
 
-obj-$(CONFIG_TEGRA_KFUSE) += tegra_kfuse.o
-
 obj-$(CONFIG_TEGRA_MC_DOMAINS) += pm_domains.o
 obj-y += bond_out.o
 

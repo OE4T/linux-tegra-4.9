@@ -28,7 +28,6 @@
 #include <linux/of_device.h>
 #include <soc/tegra/chip-id.h>
 #include <soc/tegra/kfuse.h>
-#include <linux/platform/tegra/clock.h>
 
 /* SOC specific Tegra kfuse information */
 struct tegra_kfuse_soc {
@@ -242,10 +241,7 @@ static int tegra_kfuse_probe(struct platform_device *pdev)
 	kfuse->soc = of_device_get_match_data(&pdev->dev);
 	kfuse->dev = &pdev->dev;
 
-	if (IS_ENABLED(CONFIG_COMMON_CLK))
-		kfuse->clk = devm_clk_get(&pdev->dev, "kfuse");
-	else
-		kfuse->clk = tegra_get_clock_by_name("kfuse");
+	kfuse->clk = devm_clk_get(&pdev->dev, "kfuse");
 
 	if (IS_ERR(kfuse->clk)) {
 		err = PTR_ERR(kfuse->clk);

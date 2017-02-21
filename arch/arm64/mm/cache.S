@@ -42,11 +42,11 @@
 	and	x1, x1, #7			// mask of the bits for current cache only
 	cmp	x1, #2				// see what cache we have at this level
 	b.lt	4f				// skip if no cache, or just i-cache
-	save_and_disable_irqs x9		// make CSSELR and CCSIDR access atomic
+	save_and_disable_irq x9			// make CSSELR and CCSIDR access atomic
 	msr	csselr_el1, x10			// select current cache level in csselr
 	isb					// isb to sych the new cssr&csidr
 	mrs	x1, ccsidr_el1			// read the new ccsidr
-	restore_irqs x9
+	restore_irq x9
 	and	x2, x1, #7			// extract the length of the cache lines
 	add	x2, x2, #4			// add 4 (line length offset)
 	mov	x4, #0x3ff

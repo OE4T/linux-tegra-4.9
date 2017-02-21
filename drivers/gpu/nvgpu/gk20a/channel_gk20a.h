@@ -33,6 +33,7 @@ struct gk20a;
 struct gr_gk20a;
 struct dbg_session_gk20a;
 struct gk20a_fence;
+struct fifo_profile_gk20a;
 
 #include "channel_sync_gk20a.h"
 
@@ -344,7 +345,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				u32 flags,
 				struct nvgpu_fence *fence,
 				struct gk20a_fence **fence_out,
-				bool force_need_sync_fence);
+				bool force_need_sync_fence,
+				struct fifo_profile_gk20a *profile);
 
 int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 			       struct nvgpu_alloc_gpfifo_ex_args *args);

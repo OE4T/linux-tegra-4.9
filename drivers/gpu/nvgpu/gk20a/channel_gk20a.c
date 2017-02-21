@@ -2987,7 +2987,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				u32 flags,
 				struct nvgpu_fence *fence,
 				struct gk20a_fence **fence_out,
-				bool force_need_sync_fence)
+				bool force_need_sync_fence,
+				struct fifo_profile_gk20a *profile)
 {
 	struct gk20a *g = c->g;
 	struct device *d = dev_from_gk20a(g);
@@ -3035,6 +3036,9 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			    " submission.");
 		return -EINVAL;
 	}
+
+	if (profile)
+		profile->timestamp[PROFILE_ENTRY] = sched_clock();
 
 #ifdef CONFIG_DEBUG_FS
 	/* update debug settings */
@@ -3162,6 +3166,9 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			goto clean_up_job;
 	}
 
+	if (profile)
+		profile->timestamp[PROFILE_JOB_TRACKING] = sched_clock();
+
 	if (wait_cmd)
 		gk20a_submit_append_priv_cmdbuf(c, wait_cmd);
 
@@ -3184,6 +3191,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	if (need_job_tracking)
 		/* TODO! Check for errors... */
 		gk20a_channel_add_job(c, job, skip_buffer_refcounting);
+	if (profile)
+		profile->timestamp[PROFILE_APPEND] = sched_clock();
 
 	g->ops.fifo.userd_gp_put(g, c);
 
@@ -3197,6 +3206,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	gk20a_dbg_info("post-submit put %d, get %d, size %d",
 		c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);
 
+	if (profile)
+		profile->timestamp[PROFILE_END] = sched_clock();
 	gk20a_dbg_fn("done");
 	return err;
 
@@ -3789,15 +3800,22 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 	struct nvgpu_submit_gpfifo_args *args)
 {
 	struct gk20a_fence *fence_out;
+	struct fifo_profile_gk20a *profile = NULL;
+
 	int ret = 0;
 	gk20a_dbg_fn("");
 
+#ifdef CONFIG_DEBUG_FS
+	profile = gk20a_fifo_profile_acquire(ch->g);
+
+	if (profile)
+		profile->timestamp[PROFILE_IOCTL_ENTRY] = sched_clock();
+#endif
 	if (ch->has_timedout)
 		return -ETIMEDOUT;
-
 	ret = gk20a_submit_channel_gpfifo(ch, NULL, args, args->num_entries,
 					  args->flags, &args->fence,
-					  &fence_out, false);
+					  &fence_out, false, profile);
 
 	if (ret)
 		goto clean_up;
@@ -3816,7 +3834,12 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 		}
 	}
 	gk20a_fence_put(fence_out);
-
+#ifdef CONFIG_DEBUG_FS
+	if (profile) {
+		profile->timestamp[PROFILE_IOCTL_EXIT] = sched_clock();
+		gk20a_fifo_profile_release(ch->g, profile);
+	}
+#endif
 clean_up:
 	return ret;
 }

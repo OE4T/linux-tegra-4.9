@@ -30,6 +30,15 @@
 #define FIFO_INVAL_CHANNEL_ID	((u32)~0)
 #define FIFO_INVAL_TSG_ID	((u32)~0)
 
+/*
+ * Number of entries in the kickoff latency buffer, used to calculate
+ * the profiling and histogram. This number is calculated to be statistically
+ * significative on a histogram on a 5% step
+ */
+#ifdef CONFIG_DEBUG_FS
+#define FIFO_PROFILING_ENTRIES	16384
+#endif
+
 /* generally corresponds to the "pbdma" engine */
 
 struct fifo_runlist_info_gk20a {
@@ -99,6 +108,20 @@ struct fifo_engine_info_gk20a {
 
 };
 
+enum {
+	PROFILE_IOCTL_ENTRY = 0,
+	PROFILE_ENTRY,
+	PROFILE_JOB_TRACKING,
+	PROFILE_APPEND,
+	PROFILE_END,
+	PROFILE_IOCTL_EXIT,
+	PROFILE_MAX
+};
+
+struct fifo_profile_gk20a {
+	u64 timestamp[PROFILE_MAX];
+};
+
 struct fifo_gk20a {
 	struct gk20a *g;
 	unsigned int num_channels;
@@ -115,7 +138,16 @@ struct fifo_gk20a {
 
 	struct fifo_runlist_info_gk20a *runlist_info;
 	u32 max_runlists;
-
+#ifdef CONFIG_DEBUG_FS
+	struct {
+		struct fifo_profile_gk20a *data;
+		atomic_t get;
+		bool enabled;
+		u64 *sorted;
+		struct kref ref;
+		struct nvgpu_mutex lock;
+	} profile;
+#endif
 	struct mem_desc userd;
 	u32 userd_entry_size;
 
@@ -275,5 +307,10 @@ void gk20a_get_ch_runlist_entry(struct channel_gk20a *ch, u32 *runlist);
 u32 gk20a_userd_gp_get(struct gk20a *g, struct channel_gk20a *c);
 void gk20a_userd_gp_put(struct gk20a *g, struct channel_gk20a *c);
 bool gk20a_is_fault_engine_subid_gpc(struct gk20a *g, u32 engine_subid);
+#ifdef CONFIG_DEBUG_FS
+struct fifo_profile_gk20a *gk20a_fifo_profile_acquire(struct gk20a *g);
+void gk20a_fifo_profile_release(struct gk20a *g,
+	struct fifo_profile_gk20a *profile);
+#endif
 
 #endif /*__GR_GK20A_H__*/

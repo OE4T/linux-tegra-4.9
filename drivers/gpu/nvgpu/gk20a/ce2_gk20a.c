@@ -653,7 +653,7 @@ int gk20a_ce_execute_ops(struct device *dev,
 
 		ret = gk20a_submit_channel_gpfifo(ce_ctx->ch, &gpfifo, NULL,
 					1, submit_flags, &fence,
-					&ce_cmd_buf_fence_out, false);
+					&ce_cmd_buf_fence_out, false, NULL);
 
 		if (!ret) {
 			memcpy((void *)(cmd_buf_cpu_va + fence_index),

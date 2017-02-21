@@ -126,7 +126,8 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 		pr_err("dphdcp: Error: " __VA_ARGS__)
 #define dphdcp_info(...)	\
 		pr_info("dphdcp: " __VA_ARGS__)
-#define HDCP_PORT_NAME  "com.nvidia.tos.hdcp"
+
+#define HDCP_PORT_NAME	"com.nvidia.tos.13f616f9-8572-4a6f-a1f104aa9b05f9ff"
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 static void *ta_ctx;

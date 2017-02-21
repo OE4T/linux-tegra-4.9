@@ -111,7 +111,7 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 		pr_err("nvhdcp: Error: " __VA_ARGS__)
 #define nvhdcp_info(...)	\
 		pr_info("nvhdcp: " __VA_ARGS__)
-#define HDCP_PORT_NAME	"com.nvidia.tos.hdcp"
+#define HDCP_PORT_NAME	"com.nvidia.tos.13f616f9-8572-4a6f-a1f104aa9b05f9ff"
 
 static u8 g_seq_num_m_retries;
 static u8 g_fallback;

@@ -959,8 +959,6 @@ static u32 tegra_se_get_crypto_config(struct tegra_se_dev *se_dev,
 		val = SE_CRYPTO_INPUT_SEL(INPUT_RANDOM) |
 			SE_CRYPTO_XOR_POS(XOR_BYPASS) |
 			SE_CRYPTO_CORE_SEL(CORE_ENCRYPT);
-		if (tegra_get_chip_id() == TEGRA114)
-			val = val | SE_CRYPTO_KEY_INDEX(slot_num);
 		break;
 	case SE_AES_OP_MODE_ECB:
 		if (encrypt) {
@@ -1048,7 +1046,7 @@ static int tegra_se_send_sha_data(struct tegra_se_dev *se_dev,
 	u64 msg_len;
 
 	cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent, SZ_4K,
-				 &cmdbuf_iova, GFP_KERNEL, &attrs);
+				 &cmdbuf_iova, GFP_KERNEL, __DMA_ATTR(attrs));
 	if (!cmdbuf_cpuvaddr)
 		return -ENOMEM;
 	while (total) {
@@ -1111,7 +1109,7 @@ static int tegra_se_send_sha_data(struct tegra_se_dev *se_dev,
 			cmdbuf_cpuvaddr, cmdbuf_iova,
 			0, cmdbuf_num_words, false);
 	dma_free_attrs(se_dev->dev->parent, SZ_4K,
-			cmdbuf_cpuvaddr, cmdbuf_iova, &attrs);
+			cmdbuf_cpuvaddr, cmdbuf_iova, __DMA_ATTR(attrs));
 
 	return err;
 }
@@ -2381,7 +2379,7 @@ static int tegra_se_send_rsa_data(struct tegra_se_dev *se_dev,
 	u32 val = 0;
 
 	cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent, SZ_4K,
-				 &cmdbuf_iova, GFP_KERNEL, &attrs);
+				 &cmdbuf_iova, GFP_KERNEL, __DMA_ATTR(attrs));
 	if (!cmdbuf_cpuvaddr)
 		return -ENOMEM;
 
@@ -2419,7 +2417,7 @@ static int tegra_se_send_rsa_data(struct tegra_se_dev *se_dev,
 			0, cmdbuf_num_words, false);
 
 	dma_free_attrs(se_dev->dev->parent,
-		SZ_4K, cmdbuf_cpuvaddr, cmdbuf_iova, &attrs);
+		SZ_4K, cmdbuf_cpuvaddr, cmdbuf_iova, __DMA_ATTR(attrs));
 	return err;
 }
 
@@ -2467,7 +2465,7 @@ static int tegra_se_rsa_setkey(struct crypto_akcipher *tfm, const void *key,
 	ctx->exp_len = exponent_key_length;
 
 	cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent, SZ_64K,
-				&cmdbuf_iova, GFP_KERNEL, &attrs);
+				&cmdbuf_iova, GFP_KERNEL, __DMA_ATTR(attrs));
 	if (!cmdbuf_cpuvaddr)
 		return -ENOMEM;
 
@@ -2527,7 +2525,7 @@ static int tegra_se_rsa_setkey(struct crypto_akcipher *tfm, const void *key,
 			0, cmdbuf_num_words, false);
 
 	dma_free_attrs(se_dev->dev->parent,
-		SZ_64K, cmdbuf_cpuvaddr, cmdbuf_iova, &attrs);
+		SZ_64K, cmdbuf_cpuvaddr, cmdbuf_iova, __DMA_ATTR(attrs));
 	return err;
 }
 
@@ -3252,7 +3250,8 @@ static int tegra_se_probe(struct platform_device *pdev)
 		se_dev->aes_cmdbuf_cpuvaddr =
 			dma_alloc_attrs(se_dev->dev->parent,
 			SZ_8K * SE_MAX_SUBMIT_CHAIN_SZ,
-			&se_dev->aes_cmdbuf_iova, GFP_KERNEL, &attrs);
+			&se_dev->aes_cmdbuf_iova, GFP_KERNEL,
+			__DMA_ATTR(attrs));
 		if (!se_dev->aes_cmdbuf_cpuvaddr)
 			goto cmd_buf_alloc_fail;
 
@@ -3293,7 +3292,7 @@ static int tegra_se_remove(struct platform_device *pdev)
 		dma_free_attrs(se_dev->dev->parent,
 			SZ_8K * SE_MAX_SUBMIT_CHAIN_SZ,
 			se_dev->aes_cmdbuf_cpuvaddr, se_dev->aes_cmdbuf_iova,
-			&attrs);
+			__DMA_ATTR(attrs));
 
 	if (is_algo_supported(node, "drbg")) {
 		/* Unregister RNG(DRBG), the first element in aes_algs/rng_algs

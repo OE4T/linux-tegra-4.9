@@ -42,6 +42,21 @@
 #define LP8580_REG_GROUP2			0x30
 #define LP8580_MAX_BRIGHTNESS		0x1fff
 
+/* EEPROM */
+#define LP88XX_EEPROM_CONTROL_1		0x270
+#define LP88XX_EEPROM_CONTROL_2		0x272
+#define LP88XX_EEPROM_CONTROL_3		0x274
+#define LP88XX_EEPROM_CONTROL_4		0x276
+#define LP88XX_EEPROM_UNLOCK		0x278
+#define LP88XX_EEPROM_UNLOCK_SEQ1	0x1234
+#define LP88XX_EEPROM_UNLOCK_SEQ2	0x5678
+#define LP88XX_EEPROM_UNLOCK_SEQ3	0x9abc
+#define LP88XX_EEPROM_LOCK_SEQ		0x0000
+#define LP88XX_READ_EEPROM_DATA		BIT(3)
+#define LP88XX_START_EEPROM_PROG	BIT(2)
+#define LP88XX_EEPROM0_ADDR			0x0000
+#define LP88XX_EEPROM1_ADDR			0x0001
+
 /* LP88xx */
 #define LP88XX_REG_BRT_BASE			0x28
 #define LP88XX_REG_GROUP1			0x30
@@ -117,6 +132,148 @@ static int lp88xx_reg_write(struct lp88xx *lp, u16 reg, u16 val)
 	ret = io->write(lp->priv, reg, val);
 	if (ret)
 		dev_err(lp->dev, "IO write error: %d\n", ret);
+
+	return ret;
+}
+
+static int lp88xx_read_eeprom(struct lp88xx *lp, u16 reg, u16 *val)
+{
+	int ret = 0;
+
+	/* EEPROM Map addr to read */
+	ret = lp88xx_reg_write(lp, LP88XX_EEPROM_CONTROL_2, reg);
+	if (ret < 0)
+		return ret;
+	/* Start EEPROM read */
+	ret = lp88xx_reg_write(lp, LP88XX_EEPROM_CONTROL_1,
+				LP88XX_READ_EEPROM_DATA);
+	if (ret < 0)
+		return ret;
+	/* Read returned value */
+	ret = lp88xx_reg_read(lp, LP88XX_EEPROM_CONTROL_3, val);
+	if (ret < 0)
+		return ret;
+	/*Sleep for 150 micro seconds after each read */
+	udelay(150);
+	return ret;
+}
+
+static int lp88xx_write_eeprom(struct lp88xx *lp, u16 reg, u16 val)
+{
+	int ret = 0;
+
+	if (lp->eeprom_lock) {
+		dev_err(lp->dev, "EEPROM is locked! Cannot write\n");
+		return -EACCES;
+	}
+
+	/* EEPROM Map addr to write */
+	ret = lp88xx_reg_write(lp, LP88XX_EEPROM_CONTROL_2, reg);
+	if (ret < 0)
+		return ret;
+	/* Value to write */
+	ret = lp88xx_reg_write(lp, LP88XX_EEPROM_CONTROL_4, val);
+	if (ret < 0)
+		return ret;
+	/* Start EEPROM program */
+	ret = lp88xx_reg_write(lp, LP88XX_EEPROM_CONTROL_1,
+				LP88XX_START_EEPROM_PROG);
+	if (ret < 0)
+		return ret;
+	/* Sleep for 20 milli seconds after each write */
+	msleep(20);
+	return ret;
+}
+
+static int lp88xx_unlock_eeprom(struct lp88xx *lp)
+{
+	int ret = 0;
+
+	if (!lp->eeprom_lock)
+		return ret;
+	ret = lp88xx_reg_write(lp, LP88XX_EEPROM_UNLOCK,
+			LP88XX_EEPROM_UNLOCK_SEQ1);
+	if (ret < 0)
+		return ret;
+	ret = lp88xx_reg_write(lp, LP88XX_EEPROM_UNLOCK,
+			LP88XX_EEPROM_UNLOCK_SEQ2);
+	if (ret < 0)
+		return ret;
+	ret = lp88xx_reg_write(lp, LP88XX_EEPROM_UNLOCK,
+			LP88XX_EEPROM_UNLOCK_SEQ3);
+	if (ret < 0)
+		return ret;
+
+	lp->eeprom_lock = false;
+	return ret;
+}
+
+static int lp88xx_lock_eeprom(struct lp88xx *lp)
+{
+	int ret = 0;
+
+	if (lp->eeprom_lock)
+		return ret;
+	ret = lp88xx_reg_write(lp, LP88XX_EEPROM_UNLOCK,
+			LP88XX_EEPROM_LOCK_SEQ);
+	if (ret < 0)
+		return ret;
+
+	lp->eeprom_lock = true;
+	return ret;
+}
+
+static int lp88xx_verify_default_eeproms(struct lp88xx *lp)
+{
+	int ret = 0;
+	int index = 0;
+	u16 addr, val, default_val = 0;
+
+	for (index = 0; index < lp->eeprom_count; index++) {
+
+		addr = lp->default_eeprom[index].addr;
+		default_val = lp->default_eeprom[index].val;
+
+		ret = lp88xx_read_eeprom(lp, addr, &val);
+		if (ret) {
+			dev_err(lp->dev, "Failed to read EEPROM%d data: %d\n",
+				index, ret);
+			return ret;
+		}
+
+		/* If EEPROM value doesn't match the expected value read
+		 * from DT, update the EEPROM with the value read from DT .
+		 */
+		if (val != default_val) {
+			dev_info(lp->dev,
+			"EEPROM%d isn't right: 0x%04x, updating default: 0x%04x\n",
+			addr, val, default_val);
+
+			/* Unlock EEPROM before writing data to EEPROM */
+			ret = lp88xx_unlock_eeprom(lp);
+			if (ret) {
+				dev_err(lp->dev, "Failed to unlock EEPROM: %d\n",
+					ret);
+				return ret;
+			}
+
+			ret = lp88xx_write_eeprom(lp, addr, default_val);
+			if (ret) {
+				dev_err(lp->dev,
+					"Failed to write EEPROM%d data: %d\n",
+					index, ret);
+				goto lock_eeprom;
+			}
+		}
+	}
+
+lock_eeprom:
+	/* Lock the EEPROM after write */
+	ret = lp88xx_lock_eeprom(lp);
+	if (ret) {
+		dev_err(lp->dev, "Failed to lock  EEPROM: %d\n", ret);
+		return ret;
+	}
 
 	return ret;
 }
@@ -363,13 +520,16 @@ static irqreturn_t lp88xx_irq_handler(int irq, void *ptr)
 int lp88xx_common_probe(struct device *dev, struct lp88xx *lp)
 {
 	struct device_node *np = dev->of_node;
-	const __be32 *list;
+	struct property *prop;
+	const __be32 *list, *p;
+	u32 u = 0;
 	u32 *region;
 	u32 slope_ms;
 	u8 index = 0;
 	u16 val = 0;
 	int en_gpio, irq_gpio;
 	int i, ret, size;
+	int eeprom_count = 0;
 
 	/* HW enable pin control */
 	en_gpio = of_get_named_gpio(np, "enable-gpios", 0);
@@ -412,6 +572,8 @@ int lp88xx_common_probe(struct device *dev, struct lp88xx *lp)
 	else
 		lp->chip_id = LP88XX;
 
+	lp->eeprom_lock = true;
+
 	ret = lp88xx_reg_read(lp, LP88XX_REG_CAP2, &val);
 	if (ret) {
 		dev_warn(dev, "warning: using default max brightness\n");
@@ -425,6 +587,23 @@ int lp88xx_common_probe(struct device *dev, struct lp88xx *lp)
 	if (of_property_read_u32(dev->of_node, "max-input-brt",
 		&lp->max_input_brt))
 		lp->max_input_brt = lp->max_dev_brt;
+
+	of_property_for_each_u32(dev->of_node, "default-eeprom", prop, p, u)
+		eeprom_count++;
+
+	if (eeprom_count) {
+		lp->eeprom_count = eeprom_count;
+		eeprom_count = 0;
+		of_property_for_each_u32(dev->of_node, "default-eeprom", prop,
+				p, u) {
+			lp->default_eeprom[eeprom_count].addr = (u16)
+						((u & 0xFFFF0000) >> 16);
+			lp->default_eeprom[eeprom_count].val = (u16)u;
+			eeprom_count++;
+		}
+	} else {
+		dev_err(dev, "Failed to get default eeprom data\n");
+	}
 
 	for (i = 0; i < size; i++) {
 		if (!lp88xx_is_valid_region(region[i])) {
@@ -446,6 +625,13 @@ int lp88xx_common_probe(struct device *dev, struct lp88xx *lp)
 			dev_err(dev, "Failed to add backlight: %d\n", ret);
 			return ret;
 		}
+	}
+
+	/* Verify default EEPROM data */
+	ret = lp88xx_verify_default_eeproms(lp);
+	if (ret) {
+		dev_err(dev, "Failed to verify eeprom data: %d\n", ret);
+		return ret;
 	}
 
 	/* Backlight mode configuration */

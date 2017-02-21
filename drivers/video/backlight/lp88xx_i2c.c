@@ -15,8 +15,10 @@
 
 #include "lp88xx.h"
 
-#define LP88XX_SLAVE_OFFSET		1
-#define LP88XX_NUM_SLAVES		2
+#define LP88XX_SLAVE1_OFFSET		1
+#define LP88XX_SLAVE2_OFFSET		2
+#define LP88XX_SLAVE3_OFFSET		3
+#define LP88XX_NUM_SLAVES		4
 
 struct lp88xx_i2c {
 	struct i2c_client *client[LP88XX_NUM_SLAVES];
@@ -30,6 +32,10 @@ static struct i2c_client *lp88xx_get_client(struct lp88xx_i2c *lpi2c,
 		return lpi2c->client[0];
 	case 0x100 ... 0x1ff:
 		return lpi2c->client[1];
+	case 0x200 ... 0x2ff:
+		return lpi2c->client[2];
+	case 0x300 ... 0x3ff:
+		return lpi2c->client[3];
 	default:
 		return NULL;
 	}
@@ -71,16 +77,28 @@ static int lp88xx_add_slave(struct i2c_client *cl)
 	struct i2c_board_info info[] = {
 		{
 			I2C_BOARD_INFO("lp88xx-bl",
-				cl->addr + LP88XX_SLAVE_OFFSET),
+				cl->addr + LP88XX_SLAVE1_OFFSET),
+		},
+		{
+			I2C_BOARD_INFO("lp88xx-bl",
+				cl->addr + LP88XX_SLAVE2_OFFSET),
+		},
+		{
+			I2C_BOARD_INFO("lp88xx-bl",
+				cl->addr + LP88XX_SLAVE3_OFFSET),
 		},
 	};
+	int index = 0;
 
-	client = i2c_new_device(cl->adapter, &info[0]);
-	if (!client)
-		return -ENODEV;
+	for (index = 0; index < (LP88XX_NUM_SLAVES - 1); index++) {
 
-	lpi2c->client[1] = client;
+		client = i2c_new_device(cl->adapter, &info[index]);
+		if (!client)
+			return -ENODEV;
 
+		lpi2c->client[index + LP88XX_SLAVE1_OFFSET] = client;
+
+	}
 	return 0;
 }
 

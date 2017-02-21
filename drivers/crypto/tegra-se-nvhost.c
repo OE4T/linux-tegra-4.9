@@ -136,12 +136,12 @@ struct tegra_se_dev {
 	struct tegra_se_cmdbuf *cmdbuf_addr_list;
 	int cmdbuf_list_entry;
 	struct tegra_se_chipdata *chipdata; /* chip specific data */
-	u32 *src_ll_buf;        /* pointer to source linked list buffer */
+	u32 *src_ll_buf;	/* pointer to source linked list buffer */
 	dma_addr_t src_ll_buf_adr; /* Source linked list buffer dma address */
-	u32 src_ll_size;        /* Size of source linked list buffer */
-	u32 *dst_ll_buf;        /* pointer to destination linked list buffer */
+	u32 src_ll_size;	/* Size of source linked list buffer */
+	u32 *dst_ll_buf;	/* pointer to destination linked list buffer */
 	dma_addr_t dst_ll_buf_adr; /* Destination linked list dma address */
-	u32 dst_ll_size;        /* Size of destination linked list buffer */
+	u32 dst_ll_size;	/* Size of destination linked list buffer */
 	struct tegra_se_ll *src_ll;
 	struct tegra_se_ll *dst_ll;
 	u32 *dh_buf1, *dh_buf2;
@@ -225,6 +225,12 @@ struct tegra_se_rng_context {
 struct tegra_se_sha_context {
 	struct tegra_se_dev	*se_dev;	/* Security Engine device */
 	u32 op_mode;	/* SHA operation mode */
+	bool is_first; /* Represents first block */
+	u8 *sha_buf[2];	/* Buffer to store residual data */
+	dma_addr_t sha_buf_addr[2];	/* DMA address to residual data */
+	u32 total_count; /* Total bytes in all the requests */
+	u32 residual_bytes; /* Residual byte count */
+	u32 blk_size; /* SHA block size */
 };
 
 struct tegra_se_sha_zero_length_vector {
@@ -240,7 +246,6 @@ struct tegra_se_aes_cmac_context {
 	u8 K1[TEGRA_SE_KEY_128_SIZE];	/* Key1 */
 	u8 K2[TEGRA_SE_KEY_128_SIZE];	/* Key2 */
 	dma_addr_t dma_addr;	/* DMA address of local buffer */
-	u32 buflen;	/* local buffer length */
 	u8	*buffer;	/* local buffer pointer */
 };
 
@@ -627,27 +632,32 @@ static u32 tegra_se_get_config(struct tegra_se_dev *se_dev,
 		break;
 
 	case SE_AES_OP_MODE_SHA1:
-		val = SE_CONFIG_ENC_ALG(ALG_SHA) |
+		val = SE_CONFIG_DEC_ALG(ALG_NOP) |
+			SE_CONFIG_ENC_ALG(ALG_SHA) |
 			SE_CONFIG_ENC_MODE(MODE_SHA1) |
 				SE_CONFIG_DST(DST_HASHREG);
 		break;
 	case SE_AES_OP_MODE_SHA224:
-		val = SE_CONFIG_ENC_ALG(ALG_SHA) |
+		val = SE_CONFIG_DEC_ALG(ALG_NOP) |
+			SE_CONFIG_ENC_ALG(ALG_SHA) |
 			SE_CONFIG_ENC_MODE(MODE_SHA224) |
 				SE_CONFIG_DST(DST_HASHREG);
 		break;
 	case SE_AES_OP_MODE_SHA256:
-		val = SE_CONFIG_ENC_ALG(ALG_SHA) |
+		val = SE_CONFIG_DEC_ALG(ALG_NOP) |
+			SE_CONFIG_ENC_ALG(ALG_SHA) |
 			SE_CONFIG_ENC_MODE(MODE_SHA256) |
 				SE_CONFIG_DST(DST_HASHREG);
 		break;
 	case SE_AES_OP_MODE_SHA384:
-		val = SE_CONFIG_ENC_ALG(ALG_SHA) |
+		val = SE_CONFIG_DEC_ALG(ALG_NOP) |
+			SE_CONFIG_ENC_ALG(ALG_SHA) |
 			SE_CONFIG_ENC_MODE(MODE_SHA384) |
 				SE_CONFIG_DST(DST_HASHREG);
 		break;
 	case SE_AES_OP_MODE_SHA512:
-		val = SE_CONFIG_ENC_ALG(ALG_SHA) |
+		val = SE_CONFIG_DEC_ALG(ALG_NOP) |
+			SE_CONFIG_ENC_ALG(ALG_SHA) |
 			SE_CONFIG_ENC_MODE(MODE_SHA512) |
 				SE_CONFIG_DST(DST_HASHREG);
 		break;
@@ -1116,9 +1126,10 @@ static u32 tegra_se_get_crypto_config(struct tegra_se_dev *se_dev,
 }
 
 static int tegra_se_send_sha_data(struct tegra_se_dev *se_dev,
-			struct tegra_se_req_context *req_ctx, u32 count)
+		struct tegra_se_req_context *req_ctx,
+		struct tegra_se_sha_context *sha_ctx,
+		u32 count, bool last)
 {
-	int k;
 	int err = 0;
 	u32 cmdbuf_num_words = 0, i = 0;
 	u32 *cmdbuf_cpuvaddr = NULL;
@@ -1143,18 +1154,35 @@ static int tegra_se_send_sha_data(struct tegra_se_dev *se_dev,
 				__nvhost_opcode_incr(se_dev->opcode_addr +
 					SE_SHA_MSG_LENGTH_OFFSET, 8);
 			msg_len = (count * 8);
-			for (k = 0; k < 2; k++) {
+			cmdbuf_cpuvaddr[i++] =
+					(sha_ctx->total_count * 8);
+			cmdbuf_cpuvaddr[i++] = (u32)(msg_len >> 32);
+			cmdbuf_cpuvaddr[i++] = 0;
+			cmdbuf_cpuvaddr[i++] = 0;
+
+			/* If it is not last request, length of message left
+			 * should be more than input buffer length.
+			 */
+			if (!last)
 				cmdbuf_cpuvaddr[i++] =
-					(u32)(msg_len & 0xFFFFFFFFULL);
-				cmdbuf_cpuvaddr[i++] = (u32)(msg_len >> 32);
-				cmdbuf_cpuvaddr[i++] = 0;
-				cmdbuf_cpuvaddr[i++] = 0;
-			}
+					(u32)(msg_len + 8) & 0xFFFFFFFFULL;
+			else
+				cmdbuf_cpuvaddr[i++] =
+					(u32)((msg_len) &  0xFFFFFFFFULL);
+			cmdbuf_cpuvaddr[i++] = (u32)(msg_len >> 32);
+			cmdbuf_cpuvaddr[i++] = 0;
+			cmdbuf_cpuvaddr[i++] = 0;
+
 			cmdbuf_cpuvaddr[i++] =
 				__nvhost_opcode_incr(se_dev->opcode_addr, 4);
 			cmdbuf_cpuvaddr[i++] = req_ctx->config;
-			cmdbuf_cpuvaddr[i++] =
-				SE4_HW_INIT_HASH(HW_INIT_HASH_ENABLE);
+
+			if (sha_ctx->is_first)
+				cmdbuf_cpuvaddr[i++] =
+					SE4_HW_INIT_HASH(HW_INIT_HASH_ENABLE);
+			else
+				cmdbuf_cpuvaddr[i++] =
+					SE4_HW_INIT_HASH(HW_INIT_HASH_DISABLE);
 		} else {
 			cmdbuf_cpuvaddr[i++] =
 				__nvhost_opcode_incr(se_dev->opcode_addr +
@@ -1195,7 +1223,6 @@ static int tegra_se_send_sha_data(struct tegra_se_dev *se_dev,
 			0, cmdbuf_num_words, false);
 	dma_free_attrs(se_dev->dev->parent, SZ_4K,
 			cmdbuf_cpuvaddr, cmdbuf_iova, __DMA_ATTR(attrs));
-
 	return err;
 }
 
@@ -1925,31 +1952,166 @@ static void tegra_se_rng_drbg_exit(struct crypto_tfm *tfm)
 	rng_ctx->se_dev = NULL;
 }
 
-static int tegra_se_sha_init(struct ahash_request *req)
+static void tegra_se_sha_copy_residual_data(struct ahash_request *req,
+		 struct tegra_se_sha_context *sha_ctx, u32 bytes_to_copy)
 {
-	return 0;
-}
-
-static int tegra_se_sha_update(struct ahash_request *req)
-{
-	return 0;
-}
-
-static int tegra_se_sha_finup(struct ahash_request *req)
-{
-	return 0;
-}
-
-static int tegra_se_sha_final(struct ahash_request *req)
-{
-	struct crypto_ahash *tfm;
-	struct tegra_se_sha_context *sha_ctx;
-	struct tegra_se_req_context *req_ctx;
-	struct tegra_se_dev *se_dev;
+	struct sg_mapping_iter miter;
+	unsigned int sg_flags, total = 0;
+	u32 num_sgs, last_block_bytes = bytes_to_copy;
+	unsigned long flags;
 	struct scatterlist *src_sg;
-	u32 total, num_sgs;
+	u8 *temp_buffer = NULL;
+
+	src_sg = req->src;
+	num_sgs = tegra_se_count_sgs(req->src, req->nbytes);
+	sg_flags = SG_MITER_ATOMIC | SG_MITER_FROM_SG;
+	sg_miter_start(&miter, req->src, num_sgs, sg_flags);
+	local_irq_save(flags);
+
+	temp_buffer = sha_ctx->sha_buf[0];
+	while (sg_miter_next(&miter) && total < req->nbytes) {
+		unsigned int len;
+
+		len = min(miter.length, (size_t)(req->nbytes - total));
+		if ((req->nbytes - (total + len)) <= last_block_bytes) {
+			bytes_to_copy =
+				last_block_bytes -
+				(req->nbytes - (total + len));
+			memcpy(temp_buffer, miter.addr + (len - bytes_to_copy),
+				bytes_to_copy);
+			last_block_bytes -= bytes_to_copy;
+			temp_buffer += bytes_to_copy;
+		}
+		total += len;
+	}
+	sg_miter_stop(&miter);
+	local_irq_restore(flags);
+}
+
+static int tegra_se_sha_process_buf(struct ahash_request *req, bool is_last,
+			bool process_cur_req)
+{
+	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
+	struct tegra_se_sha_context *sha_ctx = crypto_ahash_ctx(tfm);
+	struct tegra_se_req_context *req_ctx = ahash_request_ctx(req);
+	struct tegra_se_dev *se_dev = se_devices[SE_SHA];
+	struct scatterlist *src_sg = req->src;
+	struct tegra_se_ll *src_ll;
+	u32 current_total = 0, num_sgs, bytes_process_in_req = 0, num_blks;
 	int err = 0;
+
+	if (is_last) {
+		/* Prepare buf for residual and current data */
+		/* Fill number of sgs */
+		num_sgs = tegra_se_count_sgs(req->src, req->nbytes);
+		if (sha_ctx->residual_bytes)
+			num_sgs++;
+		*se_dev->src_ll_buf = num_sgs - 1;
+
+		/* Fill sgs entries */
+		se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
+		src_ll = se_dev->src_ll;
+		if (sha_ctx->residual_bytes) {
+			src_ll->addr = sha_ctx->sha_buf_addr[0];
+			src_ll->data_len = sha_ctx->residual_bytes;
+			src_ll++;
+		}
+
+		if (process_cur_req) {
+			bytes_process_in_req = req->nbytes;
+			tegra_map_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE,
+						src_ll, bytes_process_in_req);
+			current_total = req->nbytes + sha_ctx->residual_bytes;
+			sha_ctx->total_count += current_total;
+		} else {
+			current_total = sha_ctx->residual_bytes;
+			sha_ctx->total_count += current_total;
+			if (!current_total)
+				return 0;
+		}
+	} else {
+		current_total = req->nbytes + sha_ctx->residual_bytes;
+		num_blks = current_total / sha_ctx->blk_size;
+
+		/* If total bytes is less than or equal to one blk,
+		 * copy to residual and return.
+		 */
+		if (num_blks <= 1) {
+			num_sgs = tegra_se_count_sgs(req->src, req->nbytes);
+			sg_copy_to_buffer(req->src, num_sgs,
+				sha_ctx->sha_buf[0] + sha_ctx->residual_bytes,
+				req->nbytes);
+			sha_ctx->residual_bytes += req->nbytes;
+			return 0;
+		}
+
+		/* Number of bytes to be processed from given request buffers */
+		bytes_process_in_req = (num_blks * sha_ctx->blk_size)
+					- sha_ctx->residual_bytes;
+		sha_ctx->total_count += bytes_process_in_req;
+
+		/* Fill number of sgs */
+		num_sgs = tegra_se_count_sgs(req->src, bytes_process_in_req);
+		if (sha_ctx->residual_bytes)
+			num_sgs++;
+		*se_dev->src_ll_buf = num_sgs - 1;
+
+		/* Fill sgs entries */
+		/* If residual bytes are present copy it to second buffer */
+		if (sha_ctx->residual_bytes)
+			memcpy(sha_ctx->sha_buf[1], sha_ctx->sha_buf[0],
+					sha_ctx->residual_bytes);
+		sha_ctx->total_count += sha_ctx->residual_bytes;
+
+		se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
+		src_ll = se_dev->src_ll;
+		if (sha_ctx->residual_bytes) {
+			src_ll->addr = sha_ctx->sha_buf_addr[1];
+			src_ll->data_len = sha_ctx->residual_bytes;
+			src_ll++;
+		}
+
+		/* Map required bytes to process in given request */
+		tegra_map_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE,
+						src_ll, bytes_process_in_req);
+
+		/* Copy residual data */
+		sha_ctx->residual_bytes = current_total -
+						(num_blks * sha_ctx->blk_size);
+		tegra_se_sha_copy_residual_data(req, sha_ctx,
+						sha_ctx->residual_bytes);
+
+		/* Total bytes to be processed */
+		current_total = (num_blks * sha_ctx->blk_size);
+	}
+
+	req_ctx->config = tegra_se_get_config(se_dev,
+					sha_ctx->op_mode, false, 0);
+	err = tegra_se_send_sha_data(se_dev, req_ctx, sha_ctx,
+					current_total, is_last);
+	if (err) {
+		if (is_last && process_cur_req)
+			tegra_unmap_sg(se_dev->dev, src_sg, DMA_TO_DEVICE,
+							bytes_process_in_req);
+		return err;
+	}
+	sha_ctx->is_first = false;
+
+	if (process_cur_req)
+		tegra_unmap_sg(se_dev->dev, src_sg, DMA_TO_DEVICE,
+						bytes_process_in_req);
+
+	return 0;
+}
+
+static int tegra_se_sha_op(struct ahash_request *req, bool is_last,
+		bool process_cur_req)
+{
+	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
+	struct tegra_se_sha_context *sha_ctx = crypto_ahash_ctx(tfm);
+	struct tegra_se_dev *se_dev = se_devices[SE_SHA];
 	u32 mode;
+	int ret;
 
 	struct tegra_se_sha_zero_length_vector zero_vec[] = {
 		{
@@ -1990,17 +2152,6 @@ static int tegra_se_sha_final(struct ahash_request *req)
 		}
 	};
 
-	if (!req)
-		return -EINVAL;
-
-	tfm = crypto_ahash_reqtfm(req);
-	if (!tfm)
-		return -EINVAL;
-	sha_ctx = crypto_ahash_ctx(tfm);
-	if (!sha_ctx)
-		return -EINVAL;
-	req_ctx = ahash_request_ctx(req);
-
 	switch (crypto_ahash_digestsize(tfm)) {
 	case SHA1_DIGEST_SIZE:
 		sha_ctx->op_mode = SE_AES_OP_MODE_SHA1;
@@ -2021,7 +2172,10 @@ static int tegra_se_sha_final(struct ahash_request *req)
 		return -EINVAL;
 	}
 
-	if (!req->nbytes) {
+	/* If request length, total length are zero and this is last
+	 * request return zero hash result.
+	 */
+	if (!req->nbytes && !sha_ctx->total_count && is_last) {
 		/*
 		 *  SW WAR for zero length SHA operation since
 		 *  SE HW can't accept zero length SHA operation.
@@ -2031,57 +2185,157 @@ static int tegra_se_sha_final(struct ahash_request *req)
 		return 0;
 	}
 
-	se_dev = se_devices[SE_SHA];
+	/* If request length, total length are zero and this is not last
+	 * request return without any processing.
+	 */
+	if (!req->nbytes && !sha_ctx->total_count && !is_last)
+		return 0;
 
-	num_sgs = tegra_se_count_sgs(req->src, req->nbytes);
-	if ((num_sgs > SE_MAX_SRC_SG_COUNT)) {
-		dev_err(se_dev->dev, "num of SG buffers are more\n");
+	/* If request length is zero, total processed length is not zero
+	 * is considered as error.
+	 */
+	if (!req->nbytes && sha_ctx->total_count)
+		return -EINVAL;
+
+	mutex_lock(&se_dev->mtx);
+	ret = tegra_se_sha_process_buf(req, is_last, process_cur_req);
+	if (ret)
+		return ret;
+
+	if (is_last) {
+		tegra_se_read_hash_result(se_dev, req->result,
+			crypto_ahash_digestsize(tfm), true);
+
+		if ((sha_ctx->op_mode == SE_AES_OP_MODE_SHA384) ||
+				(sha_ctx->op_mode == SE_AES_OP_MODE_SHA512)) {
+			u32 *result = (u32 *)req->result;
+			u32 temp, i;
+
+			for (i = 0; i < crypto_ahash_digestsize(tfm) / 4;
+						i += 2) {
+				temp = result[i];
+				result[i] = result[i + 1];
+				result[i + 1] = temp;
+			}
+		}
+	}
+	mutex_unlock(&se_dev->mtx);
+
+	return 0;
+}
+
+static int tegra_se_sha_init(struct ahash_request *req)
+{
+	struct tegra_se_req_context *req_ctx;
+	struct crypto_ahash *tfm = NULL;
+	struct tegra_se_sha_context *sha_ctx;
+	struct tegra_se_dev *se_dev = se_devices[SE_SHA];
+
+	if (!req)
+		return -EINVAL;
+
+	mutex_lock(&se_dev->mtx);
+	tfm = crypto_ahash_reqtfm(req);
+	sha_ctx = crypto_ahash_ctx(tfm);
+	req_ctx = ahash_request_ctx(req);
+
+	sha_ctx->total_count = 0;
+	sha_ctx->is_first = true;
+	sha_ctx->blk_size = crypto_tfm_alg_blocksize(crypto_ahash_tfm(tfm));
+	sha_ctx->residual_bytes = 0;
+	sha_ctx->sha_buf[0] = dma_alloc_coherent(se_dev->dev,
+				(TEGRA_SE_SHA_MAX_BLOCK_SIZE * 2),
+				&sha_ctx->sha_buf_addr[0], GFP_KERNEL);
+	if (!sha_ctx->sha_buf[0]) {
+		mutex_unlock(&se_dev->mtx);
 		return -EINVAL;
 	}
 
-	*se_dev->src_ll_buf = num_sgs - 1;
-	se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
-
-	src_sg = req->src;
-
-	total = req->nbytes;
-	if (total)
-		tegra_map_sg(se_dev->dev,
-			src_sg, 1, DMA_TO_DEVICE, se_dev->src_ll, total);
-
-	req_ctx->config = tegra_se_get_config(se_dev,
-					sha_ctx->op_mode, false, 0);
-	err = tegra_se_send_sha_data(se_dev, req_ctx, req->nbytes);
-	if (err)
-		goto sha_fail;
-
-	tegra_se_read_hash_result(se_dev, req->result,
-				crypto_ahash_digestsize(tfm), true);
-
-	if ((sha_ctx->op_mode == SE_AES_OP_MODE_SHA384) ||
-		(sha_ctx->op_mode == SE_AES_OP_MODE_SHA512)) {
-		u32 *result = (u32 *)req->result;
-		u32 temp, i;
-
-		for (i = 0; i < crypto_ahash_digestsize(tfm)/4;
-			i += 2) {
-			temp = result[i];
-			result[i] = result[i+1];
-			result[i+1] = temp;
-		}
+	sha_ctx->sha_buf[1] = dma_alloc_coherent(se_dev->dev,
+				(TEGRA_SE_SHA_MAX_BLOCK_SIZE * 2),
+				&sha_ctx->sha_buf_addr[1], GFP_KERNEL);
+	if (!sha_ctx->sha_buf[1]) {
+		dma_free_coherent(se_dev->dev,
+			(TEGRA_SE_SHA_MAX_BLOCK_SIZE * 2),
+			sha_ctx->sha_buf[0], sha_ctx->sha_buf_addr[0]);
+		mutex_unlock(&se_dev->mtx);
+		return -EINVAL;
 	}
-sha_fail:
-	src_sg = req->src;
-	total = req->nbytes;
-	if (total)
-		tegra_unmap_sg(se_dev->dev, src_sg, DMA_TO_DEVICE, total);
+	mutex_unlock(&se_dev->mtx);
 
-	return err;
+	return 0;
+}
+
+static int tegra_se_sha_update(struct ahash_request *req)
+{
+	struct tegra_se_dev *se_dev = se_devices[SE_SHA];
+	int ret = 0;
+
+	if (!req)
+		return -EINVAL;
+
+	ret = tegra_se_sha_op(req, false, false);
+	if (ret)
+		dev_err(se_dev->dev, "tegra_se_sha_update failed - %d\n", ret);
+
+	return ret;
+}
+
+static int tegra_se_sha_finup(struct ahash_request *req)
+{
+	struct tegra_se_dev *se_dev = se_devices[SE_SHA];
+	int ret = 0;
+
+	if (!req)
+		return -EINVAL;
+
+	ret = tegra_se_sha_op(req, true, true);
+	if (ret)
+		dev_err(se_dev->dev, "tegra_se_sha_finup failed - %d\n", ret);
+
+	return ret;
+}
+
+static int tegra_se_sha_final(struct ahash_request *req)
+{
+	struct tegra_se_dev *se_dev = se_devices[SE_SHA];
+	int ret = 0;
+
+	if (!req)
+		return -EINVAL;
+
+	/* Do not process data in given request */
+	ret = tegra_se_sha_op(req, true, false);
+	if (ret)
+		dev_err(se_dev->dev, "tegra_se_sha_final failed - %d\n", ret);
+
+	return ret;
 }
 
 static int tegra_se_sha_digest(struct ahash_request *req)
 {
-	return tegra_se_sha_init(req) ?: tegra_se_sha_final(req);
+	struct tegra_se_dev *se_dev = se_devices[SE_SHA];
+	int ret = 0;
+
+	ret = tegra_se_sha_init(req);
+	if (ret)
+		return ret;
+
+	ret = tegra_se_sha_op(req, true, true);
+	if (ret)
+		dev_err(se_dev->dev, "tegra_se_sha_digest failed - %d\n", ret);
+
+	return ret;
+}
+
+static int tegra_se_sha_export(struct ahash_request *req, void *out)
+{
+	return 0;
+}
+
+static int tegra_se_sha_import(struct ahash_request *req, const void *in)
+{
+	return 0;
 }
 
 static int tegra_se_sha_cra_init(struct crypto_tfm *tfm)
@@ -2093,12 +2347,22 @@ static int tegra_se_sha_cra_init(struct crypto_tfm *tfm)
 
 static void tegra_se_sha_cra_exit(struct crypto_tfm *tfm)
 {
-	/* do nothing */
+	struct tegra_se_sha_context *sha_ctx = crypto_tfm_ctx(tfm);
+	struct tegra_se_dev *se_dev = se_devices[SE_SHA];
+	int i;
+
+	mutex_lock(&se_dev->mtx);
+	for (i = 0; i < 2; i++) {
+		if (sha_ctx->sha_buf[i])
+			dma_free_coherent(se_dev->dev,
+				(TEGRA_SE_SHA_MAX_BLOCK_SIZE * 2),
+				sha_ctx->sha_buf[i], sha_ctx->sha_buf_addr[i]);
+	}
+	mutex_unlock(&se_dev->mtx);
 }
 
 static int tegra_se_aes_cmac_init(struct ahash_request *req)
 {
-
 	return 0;
 }
 
@@ -3297,6 +3561,8 @@ static struct ahash_alg hash_algs[] = {
 		.final = tegra_se_sha_final,
 		.finup = tegra_se_sha_finup,
 		.digest = tegra_se_sha_digest,
+		.export = tegra_se_sha_export,
+		.import = tegra_se_sha_import,
 		.halg.digestsize = SHA1_DIGEST_SIZE,
 		.halg.statesize = SHA1_STATE_SIZE,
 		.halg.base = {
@@ -3317,6 +3583,8 @@ static struct ahash_alg hash_algs[] = {
 		.final = tegra_se_sha_final,
 		.finup = tegra_se_sha_finup,
 		.digest = tegra_se_sha_digest,
+		.export = tegra_se_sha_export,
+		.import = tegra_se_sha_import,
 		.halg.digestsize = SHA224_DIGEST_SIZE,
 		.halg.statesize = SHA224_STATE_SIZE,
 		.halg.base = {
@@ -3337,6 +3605,8 @@ static struct ahash_alg hash_algs[] = {
 		.final = tegra_se_sha_final,
 		.finup = tegra_se_sha_finup,
 		.digest = tegra_se_sha_digest,
+		.export = tegra_se_sha_export,
+		.import = tegra_se_sha_import,
 		.halg.digestsize = SHA256_DIGEST_SIZE,
 		.halg.statesize = SHA256_STATE_SIZE,
 		.halg.base = {
@@ -3357,6 +3627,8 @@ static struct ahash_alg hash_algs[] = {
 		.final = tegra_se_sha_final,
 		.finup = tegra_se_sha_finup,
 		.digest = tegra_se_sha_digest,
+		.export = tegra_se_sha_export,
+		.import = tegra_se_sha_import,
 		.halg.digestsize = SHA384_DIGEST_SIZE,
 		.halg.statesize = SHA384_STATE_SIZE,
 		.halg.base = {
@@ -3377,6 +3649,8 @@ static struct ahash_alg hash_algs[] = {
 		.final = tegra_se_sha_final,
 		.finup = tegra_se_sha_finup,
 		.digest = tegra_se_sha_digest,
+		.export = tegra_se_sha_export,
+		.import = tegra_se_sha_import,
 		.halg.digestsize = SHA512_DIGEST_SIZE,
 		.halg.statesize = SHA512_STATE_SIZE,
 		.halg.base = {

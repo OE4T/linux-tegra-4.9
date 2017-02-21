@@ -774,6 +774,7 @@ int camera_common_parse_sensor_mode(struct i2c_client *client,
 	for (i = 0; num_modes < MAX_NUM_SENSOR_MODES; i++) {
 		snprintf(temp_str, sizeof(temp_str), "%s%d",
 			OF_SENSORMODE_PREFIX, i);
+		of_node_get(np);
 		node = of_find_node_by_name(np, temp_str);
 		if (node == NULL)
 			break;
@@ -794,6 +795,7 @@ int camera_common_parse_sensor_mode(struct i2c_client *client,
 	for (i = 0; i < num_modes; i++) {
 		snprintf(temp_str, sizeof(temp_str), "%s%d",
 			OF_SENSORMODE_PREFIX, i);
+		of_node_get(np);
 		node = of_find_node_by_name(np, temp_str);
 		if (node == NULL) {
 			dev_err(&client->dev, "Failed to find mode\n");

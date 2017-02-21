@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -61,8 +61,6 @@
 #define TEGRA_FUSE_ODM_PRODUCTION_MODE		0xa0
 #define H2_START_MACRO_BIT_INDEX		2167
 #define H2_END_MACRO_BIT_INDEX			3326
-#define FUSE_BURN_TEMPERATURE_MIN		25000
-#define FUSE_BURN_TEMPERATURE_MAX		101000
 
 struct fuse_burn_data {
 	char *name;
@@ -88,6 +86,8 @@ struct tegra_fuse_burn_dev {
 	struct clk *pgm_clk;
 	u32 pgm_width;
 	struct thermal_zone_device *tz;
+	u32 min_temp;
+	u32 max_temp;
 };
 
 static void fuse_state_wait_for_idle(void)
@@ -203,8 +203,8 @@ static int tegra_fuse_is_temp_under_range(struct tegra_fuse_burn_dev *fuse_dev)
 	/* Check if temperature is under permissible range */
 	ret = thermal_zone_get_temp(fuse_dev->tz, &temp);
 	if (!ret) {
-		if (temp < FUSE_BURN_TEMPERATURE_MIN ||
-			temp > FUSE_BURN_TEMPERATURE_MAX) {
+		if (temp < fuse_dev->min_temp ||
+			temp > fuse_dev->max_temp) {
 			dev_err(fuse_dev->dev, "temp-%d is not under range\n",
 					temp);
 			return -EPERM;
@@ -530,6 +530,22 @@ static const struct of_device_id tegra_fuse_burn_match[] = {
 	}, {},
 };
 
+static void tegra_fuse_parse_dt(struct tegra_fuse_burn_dev *fuse_dev,
+		struct device_node *np)
+{
+	int n_entries;
+
+	n_entries = of_property_count_u32_elems(np, "nvidia,temp-range");
+	if (n_entries == 2) {
+		of_property_read_u32_index(np, "nvidia,temp-range",
+				0, &fuse_dev->min_temp);
+		of_property_read_u32_index(np, "nvidia,temp-range",
+				1, &fuse_dev->max_temp);
+	} else {
+		dev_dbg(fuse_dev->dev, "invalid fuse-temp range entries\n");
+	}
+}
+
 static int tegra_fuse_burn_probe(struct platform_device *pdev)
 {
 	struct tegra_fuse_burn_dev *fuse_dev;
@@ -578,6 +594,8 @@ static int tegra_fuse_burn_probe(struct platform_device *pdev)
 		fuse_dev->tz = thermal_zone_get_zone_by_node(tz_np);
 		if (IS_ERR(fuse_dev->tz))
 			dev_dbg(&pdev->dev, "temp zone node not available\n");
+		else
+			tegra_fuse_parse_dt(fuse_dev, np);
 	}
 
 	dev_info(&pdev->dev, "Fuse burn driver initialized\n");

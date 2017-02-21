@@ -1,0 +1,8 @@
+config TEGRA_19X_RAS
+	tristate "Tegra19 RAS Handler"
+	depends on ARCH_TEGRA_19x_SOC && RAS && ARM64_RAS
+	default y
+	select SERROR_HANDLER
+	help
+	  This driver adds RAS handlers for Carmel Correctable Errors,
+	  Uncorrectable Errors per core, per core cluster and per CCPLEX

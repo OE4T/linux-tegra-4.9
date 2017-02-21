@@ -47,7 +47,7 @@
 			status = "disabled";
 		};
 
-		AO-therm {
+		aotag: AO-therm {
 			polling-delay = <0>;
 			polling-delay-passive = <1000>;
 			thermal-sensors = <&{/bpmp/bpmpthermal} THERMAL_ZONE_AO>;

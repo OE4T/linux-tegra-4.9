@@ -1,7 +1,7 @@
 /*
  * ov5693_v4l2.c - ov5693 sensor driver
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -45,6 +45,8 @@
 #define OV5693_MIN_EXPOSURE_COARSE	(0x0002)
 #define OV5693_MAX_EXPOSURE_COARSE	\
 	(OV5693_MAX_FRAME_LENGTH-OV5693_MAX_COARSE_DIFF)
+#define OV5693_DEFAULT_LINE_LENGTH	(0xA80)
+#define OV5693_DEFAULT_PIXEL_CLOCK	(160)
 
 #define OV5693_DEFAULT_GAIN		OV5693_MIN_GAIN
 #define OV5693_DEFAULT_FRAME_LENGTH	(0x07C0)
@@ -71,6 +73,7 @@ struct ov5693 {
 	int				reg_offset;
 
 	s32				group_hold_prev;
+	u32				frame_length;
 	bool				group_hold_en;
 	struct regmap			*regmap;
 	struct camera_common_data	*s_data;
@@ -488,14 +491,30 @@ static int ov5693_s_stream(struct v4l2_subdev *sd, int enable)
 	struct ov5693 *priv = (struct ov5693 *)s_data->priv;
 	struct v4l2_control control;
 	int err;
+	u32 frame_time;
 
 	dev_dbg(&client->dev, "%s++\n", __func__);
 
 	if (!enable) {
 		ov5693_update_ctrl_range(priv, OV5693_MAX_FRAME_LENGTH);
 
-		return ov5693_write_table(priv,
+		err = ov5693_write_table(priv,
 			mode_table[OV5693_MODE_STOP_STREAM]);
+		if (err)
+			return err;
+
+		/*
+		 * Wait for one frame to make sure sensor is set to
+		 * software standby in V-blank
+		 *
+		 * frame_time = frame length rows * Tline
+		 * Tline = line length / pixel clock (in MHz)
+		 */
+		frame_time = priv->frame_length *
+			OV5693_DEFAULT_LINE_LENGTH / OV5693_DEFAULT_PIXEL_CLOCK;
+
+		usleep_range(frame_time, frame_time + 1000);
+		return 0;
 	}
 
 	err = ov5693_write_table(priv, mode_table[s_data->mode]);
@@ -778,6 +797,8 @@ static int ov5693_set_frame_length(struct ov5693 *priv, s32 val)
 		if (err)
 			goto fail;
 	}
+
+	priv->frame_length = frame_length;
 
 	ov5693_update_ctrl_range(priv, val);
 	return 0;

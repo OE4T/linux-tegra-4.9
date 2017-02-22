@@ -958,7 +958,7 @@ exit:
 static int
 wl_cfgvendor_rtt_set_config(struct wiphy *wiphy, struct wireless_dev *wdev,
 	const void *data, int len) {
-	int err = 0, rem, rem1, rem2, type;
+	int err = 0, rem, rem1, rem2, type, target_cnt = 0;
 	rtt_config_params_t rtt_param;
 	rtt_target_info_t* rtt_target = NULL;
 	const struct nlattr *iter, *iter1, *iter2;
@@ -974,18 +974,24 @@ wl_cfgvendor_rtt_set_config(struct wiphy *wiphy, struct wireless_dev *wdev,
 		WL_ERR(("failed to register rtt_noti_callback\n"));
 		goto exit;
 	}
+	if (len <= 0) {
+		err = BCME_ERROR;
+		goto exit;
+	}
 	memset(&rtt_param, 0, sizeof(rtt_param));
 	nla_for_each_attr(iter, data, len, rem) {
 		type = nla_type(iter);
 		switch (type) {
 		case RTT_ATTRIBUTE_TARGET_CNT:
-			rtt_param.rtt_target_cnt = nla_get_u8(iter);
-			if (rtt_param.rtt_target_cnt > RTT_MAX_TARGET_CNT) {
-				WL_ERR(("exceed max target count : %d\n",
-					rtt_param.rtt_target_cnt));
+			target_cnt = nla_get_u8(iter);
+			if ((target_cnt < 0) ||
+			    (target_cnt > RTT_MAX_TARGET_CNT)) {
+				WL_ERR(("target_cnt is not valid: %d",
+					target_cnt));
 				err = BCME_RANGE;
 				goto exit;
 			}
+			rtt_param.rtt_target_cnt = nla_get_u8(iter);
 			break;
 		case RTT_ATTRIBUTE_TARGET_INFO:
 			rtt_target = rtt_param.target_info;
@@ -1063,7 +1069,7 @@ wl_cfgvendor_rtt_set_config(struct wiphy *wiphy, struct wireless_dev *wdev,
 			break;
 		}
 	}
-	WL_DBG(("leave :target_cnt : %d\n", rtt_param.rtt_target_cnt));
+	WL_DBG(("leave :target_cnt : %d\n", target_cnt));
 	if (dhd_dev_rtt_set_cfg(bcmcfg_to_prmry_ndev(cfg), &rtt_param) < 0) {
 		WL_ERR(("Could not set RTT configuration\n"));
 		err = -EINVAL;
@@ -1077,47 +1083,64 @@ wl_cfgvendor_rtt_cancel_config(struct wiphy *wiphy, struct wireless_dev *wdev,
 	const void *data, int len)
 {
 	int err = 0, rem, type, target_cnt = 0;
-	int target_cnt_chk = 0;
+	int target_idx = 0;
 	const struct nlattr *iter;
-	struct ether_addr *mac_list = NULL, *mac_addr = NULL;
+	struct ether_addr *mac_list = NULL;
 	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
 
+	if (len <= 0) {
+		err = -EINVAL;
+		goto exit;
+	}
 	nla_for_each_attr(iter, data, len, rem) {
 		type = nla_type(iter);
 		switch (type) {
 		case RTT_ATTRIBUTE_TARGET_CNT:
 			if (mac_list != NULL) {
 				WL_ERR(("mac_list is not NULL\n"));
+				err = -EINVAL;
 				goto exit;
 			}
 			target_cnt = nla_get_u8(iter);
-			mac_list = (struct ether_addr *)kzalloc(target_cnt * ETHER_ADDR_LEN,
-				GFP_KERNEL);
-			if (mac_list == NULL) {
-				WL_ERR(("failed to allocate mem for mac list\n"));
-				goto exit;
-			}
-			mac_addr = &mac_list[0];
-			break;
-		case RTT_ATTRIBUTE_TARGET_MAC:
-			if (mac_addr) {
-				memcpy(mac_addr++, nla_data(iter), ETHER_ADDR_LEN);
-				target_cnt_chk++;
-				if (target_cnt_chk > target_cnt) {
-					WL_ERR(("over target count\n"));
+			if ((target_cnt > 0) &&
+			    (target_cnt < RTT_MAX_TARGET_CNT)) {
+				mac_list = (struct ether_addr *)kzalloc(target_cnt * ETHER_ADDR_LEN,
+					GFP_KERNEL);
+				if (mac_list == NULL) {
+					WL_ERR(("failed to allocate mem for mac list\n"));
+					err = -EINVAL;
 					goto exit;
 				}
-				break;
 			} else {
-				WL_ERR(("mac_list is NULL\n"));
+ 				/* cancel the current whole RTT process */
+ 				goto exit;
+			}
+			break;
+		case RTT_ATTRIBUTE_TARGET_MAC:
+			if (!mac_list) {
+				err = -EINVAL;
 				goto exit;
 			}
+
+			if (target_idx >= target_cnt) {
+				err = -EINVAL;
+				goto exit;
+			}
+
+			if (nla_len(iter) != ETHER_ADDR_LEN) {
+				err = -EINVAL;
+				goto exit;
+			}
+
+			memcpy(&mac_list[target_idx], nla_data(iter),
+			       ETHER_ADDR_LEN);
+			target_idx++;
+			break;
+
+		default:
+			err = -EINVAL;
+			goto exit;
 		}
-	}
-	if (dhd_dev_rtt_cancel_cfg(bcmcfg_to_prmry_ndev(cfg), mac_list, target_cnt) < 0) {
-		WL_ERR(("Could not cancel RTT configuration\n"));
-		err = -EINVAL;
-		goto exit;
 	}
 
 exit:

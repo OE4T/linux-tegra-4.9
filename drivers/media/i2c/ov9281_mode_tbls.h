@@ -131,8 +131,8 @@ static const ov9281_reg ov9281_mode_1280x800_26MhzMCLK[] = {
 	{ 0x380b, 0x20 },
 	{ 0x380c, 0x02 },
 	{ 0x380d, 0xd8 },
-	{ 0x380e, 0x03 },
-	{ 0x380f, 0x8e },
+	{ 0x380e, 0x07 },
+	{ 0x380f, 0x1c },
 	{ 0x3810, 0x00 },
 	{ 0x3811, 0x08 },
 	{ 0x3812, 0x00 },
@@ -251,8 +251,8 @@ static const ov9281_reg ov9281_mode_1280x720_26MhzMCLK[] = {
 	{ 0x380b, 0xd0 },
 	{ 0x380c, 0x02 },
 	{ 0x380d, 0xd8 },
-	{ 0x380e, 0x03 },
-	{ 0x380f, 0x8e },
+	{ 0x380e, 0x07 },
+	{ 0x380f, 0x1c },
 	{ 0x3810, 0x00 },
 	{ 0x3811, 0x08 },
 	{ 0x3812, 0x00 },
@@ -409,16 +409,16 @@ static const ov9281_reg *ov9281_fsync_table[] = {
 	[OV9281_FSYNC_SLAVE] = ov9281_fsync_slave,
 };
 
-static const int ov9281_120fps[] = {
-	120,
+static const int ov9281_60fps[] = {
+	60,
 };
 
 static const struct camera_common_frmfmt ov9281_frmfmt[] = {
-	{ { 1280, 800 }, ov9281_120fps, ARRAY_SIZE(ov9281_120fps), 0,
+	{ { 1280, 800 }, ov9281_60fps, ARRAY_SIZE(ov9281_60fps), 0,
 	  OV9281_MODE_1280X800 },
-	{ { 1280, 720 }, ov9281_120fps, ARRAY_SIZE(ov9281_120fps), 0,
+	{ { 1280, 720 }, ov9281_60fps, ARRAY_SIZE(ov9281_60fps), 0,
 	  OV9281_MODE_1280X720 },
-	{ { 640, 400 }, ov9281_120fps, ARRAY_SIZE(ov9281_120fps), 0,
+	{ { 640, 400 }, ov9281_60fps, ARRAY_SIZE(ov9281_60fps), 0,
 	  OV9281_MODE_640X400 },
 };
 

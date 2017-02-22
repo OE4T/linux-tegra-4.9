@@ -1,7 +1,7 @@
 /*
  * tegra_vcm30t124.c - Tegra VCM30 T124 Machine driver
  *
- * Copyright (c) 2013-2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,7 +36,6 @@
 
 #include "tegra_asoc_utils_alt.h"
 #include "tegra_asoc_machine_alt.h"
-#include "tegra_asoc_hwdep_alt.h"
 
 #define DRV_NAME "tegra-snd-vcm30t124"
 
@@ -1412,16 +1411,8 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 		goto err_fini_utils;
 	}
 
-	ret = tegra_asoc_hwdep_create(card);
-	if (ret) {
-		dev_err(&pdev->dev, "can't create tegra_machine_hwdep (%d)\n",
-			ret);
-		goto err_unregister_card;
-	}
-
 	return 0;
-err_unregister_card:
-	snd_soc_unregister_card(card);
+
 err_fini_utils:
 	tegra_alt_asoc_utils_fini(&machine->audio_clock);
 err_gpio_free:

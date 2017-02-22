@@ -130,6 +130,8 @@ enum {
 	NVMAP_PAGES_PROT_AND_CLEAN,
 };
 
+#define NVMAP_ELEM_SIZE_U64 (1 << 31)
+
 struct nvmap_create_handle {
 	union {
 		struct {

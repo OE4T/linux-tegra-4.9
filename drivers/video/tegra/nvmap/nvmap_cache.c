@@ -527,8 +527,8 @@ out:
  *
  * NOTE: this omits outer cache operations which is fine for ARM64
  */
-int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
-			      u32 *sizes, int op, int nr)
+int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u64 *offsets,
+			      u64 *sizes, int op, int nr)
 {
 	int i;
 	u64 total = 0;
@@ -585,8 +585,8 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
 					nvmap_stats_read(NS_CFLUSH_DONE));
 	} else {
 		for (i = 0; i < nr; i++) {
-			u32 size = sizes[i] ? sizes[i] : handles[i]->size;
-			u32 offset = sizes[i] ? offsets[i] : 0;
+			u64 size = sizes[i] ? sizes[i] : handles[i]->size;
+			u64 offset = sizes[i] ? offsets[i] : 0;
 			int err = __nvmap_do_cache_maint(handles[i]->owner,
 							 handles[i], offset,
 							 offset + size,

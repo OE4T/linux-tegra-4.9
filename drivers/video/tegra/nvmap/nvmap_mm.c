@@ -31,7 +31,7 @@ enum NVMAP_PROT_OP {
 	NVMAP_HANDLE_PROT_RESTORE = 2,
 };
 
-void nvmap_zap_handle(struct nvmap_handle *handle, u32 offset, u32 size)
+void nvmap_zap_handle(struct nvmap_handle *handle, u64 offset, u64 size)
 {
 	struct list_head *vmas;
 	struct nvmap_vma_list *vma_list;
@@ -75,8 +75,8 @@ void nvmap_zap_handle(struct nvmap_handle *handle, u32 offset, u32 size)
 	mutex_unlock(&handle->lock);
 }
 
-static int nvmap_prot_handle(struct nvmap_handle *handle, u32 offset,
-		u32 size, int op)
+static int nvmap_prot_handle(struct nvmap_handle *handle, u64 offset,
+		u64 size, int op)
 {
 	struct list_head *vmas;
 	struct nvmap_vma_list *vma_list;
@@ -153,8 +153,8 @@ finish:
 	return err;
 }
 
-static int nvmap_prot_handles(struct nvmap_handle **handles, u32 *offsets,
-		       u32 *sizes, u32 nr, int op)
+static int nvmap_prot_handles(struct nvmap_handle **handles, u64 *offsets,
+		       u64 *sizes, u32 nr, int op)
 {
 	int i, err = 0;
 
@@ -170,14 +170,14 @@ finish:
 	return err;
 }
 
-int nvmap_reserve_pages(struct nvmap_handle **handles, u32 *offsets, u32 *sizes,
+int nvmap_reserve_pages(struct nvmap_handle **handles, u64 *offsets, u64 *sizes,
 			u32 nr, u32 op)
 {
 	int i, err;
 
 	for (i = 0; i < nr; i++) {
-		u32 size = sizes[i] ? sizes[i] : handles[i]->size;
-		u32 offset = sizes[i] ? offsets[i] : 0;
+		u64 size = sizes[i] ? sizes[i] : handles[i]->size;
+		u64 offset = sizes[i] ? offsets[i] : 0;
 
 		if ((offset != 0) || (size != handles[i]->size))
 			return -EINVAL;

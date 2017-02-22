@@ -561,11 +561,13 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 {
 	struct nvmap_cache_op_list op;
 	u32 *handle_ptr;
-	u32 *offset_ptr;
-	u32 *size_ptr;
+	u64 *offset_ptr;
+	u64 *size_ptr;
 	struct nvmap_handle **refs;
 	int err = 0;
 	u32 i, n_unmarshal_handles = 0, count = 0;
+	size_t bytes;
+	size_t elem_size;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
@@ -573,26 +575,41 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 	if (!op.nr || op.nr > UINT_MAX / sizeof(u32))
 		return -EINVAL;
 
+	bytes = op.nr * sizeof(*refs);
 	if (!access_ok(VERIFY_READ, op.handles, op.nr * sizeof(u32)))
 		return -EFAULT;
 
-	if (!access_ok(VERIFY_READ, op.offsets, op.nr * sizeof(u32)))
+	elem_size  = (op.op & NVMAP_ELEM_SIZE_U64) ?
+			sizeof(u64) : sizeof(u32);
+	if (!access_ok(VERIFY_READ, op.offsets, op.nr * elem_size))
 		return -EFAULT;
 
-	if (!access_ok(VERIFY_READ, op.sizes, op.nr * sizeof(u32)))
+	if (!access_ok(VERIFY_READ, op.sizes, op.nr * elem_size))
 		return -EFAULT;
 
 	if (!op.offsets || !op.sizes)
 		return -EINVAL;
 
-	refs = kcalloc(op.nr, sizeof(*refs), GFP_KERNEL);
+	if (!(op.op & NVMAP_ELEM_SIZE_U64))
+		bytes += 2 * op.nr * sizeof(u64); /* to prepare u64 array */
 
+	refs = nvmap_altalloc(bytes);
 	if (!refs)
 		return -ENOMEM;
 
 	handle_ptr = (u32 *)(uintptr_t)op.handles;
-	offset_ptr = (u32 *)(uintptr_t)op.offsets;
-	size_ptr = (u32 *)(uintptr_t)op.sizes;
+	if (op.op & NVMAP_ELEM_SIZE_U64) {
+		offset_ptr = (u64 *)(uintptr_t)op.offsets;
+		size_ptr = (u64 *)(uintptr_t)op.sizes;
+		op.op &= ~NVMAP_ELEM_SIZE_U64;
+	} else {
+		offset_ptr = (u64 *)(refs + op.nr);
+		size_ptr = offset_ptr + op.nr;
+		for (i = 0; i < op.nr; i++) {
+			offset_ptr[i] = *(((u32 *)op.offsets) + i);
+			size_ptr[i] = *(((u32 *)op.sizes) + i);
+		}
+	}
 
 	for (i = 0; i < op.nr; i++) {
 		u32 handle;
@@ -654,7 +671,7 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 free_mem:
 	for (i = 0; i < n_unmarshal_handles; i++)
 		nvmap_handle_put(refs[i]);
-	kfree(refs);
+	nvmap_altfree(refs, bytes);
 	return err;
 }
 

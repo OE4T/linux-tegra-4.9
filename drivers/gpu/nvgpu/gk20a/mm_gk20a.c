@@ -2061,17 +2061,24 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct mapped_buffer_node *mapped_buffer = NULL;
 
-	mapped_buffer =
-		find_mapped_buffer_reverse_locked(&vm->mapped_buffers,
+	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
+		mapped_buffer = find_mapped_buffer_locked(&vm->mapped_buffers,
+							  offset_align);
+		if (!mapped_buffer)
+			return 0;
+
+		if (mapped_buffer->dmabuf != dmabuf ||
+		    mapped_buffer->kind != (u32)kind)
+			return 0;
+	} else {
+		mapped_buffer =
+			find_mapped_buffer_reverse_locked(&vm->mapped_buffers,
 						  dmabuf, kind);
-	if (!mapped_buffer)
-		return 0;
+		if (!mapped_buffer)
+			return 0;
+	}
 
 	if (mapped_buffer->flags != flags)
-		return 0;
-
-	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET &&
-	    mapped_buffer->addr != offset_align)
 		return 0;
 
 	BUG_ON(mapped_buffer->vm != vm);

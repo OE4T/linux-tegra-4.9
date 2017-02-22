@@ -9693,9 +9693,8 @@ static s32 wl_update_bss_info(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 #endif
 	cur_channel = ieee80211_get_channel(wiphy, freq);
 
-	bss = cfg80211_get_bss(wiphy, cur_channel, curbssid,
-		ssid->SSID, ssid->SSID_len, WLAN_CAPABILITY_ESS,
-		WLAN_CAPABILITY_ESS);
+	bss = CFG80211_GET_BSS(wiphy, cur_channel, curbssid,
+		ssid->SSID, ssid->SSID_len);
 
 	if (!bss) {
 		WL_DBG(("Could not find the AP\n"));
@@ -9829,6 +9828,49 @@ wl_bss_roaming_done(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 	return err;
 }
 
+static bool
+wl_cfg80211_verify_bss(struct bcm_cfg80211 *cfg, struct net_device *ndev)
+{
+	struct cfg80211_bss *bss;
+	struct wiphy *wiphy;
+	struct wlc_ssid *ssid;
+	uint8 *curbssid;
+	int count = 0;
+	bool ret = false;
+
+	wiphy = bcmcfg_to_wiphy(cfg);
+	ssid = (struct wlc_ssid *)wl_read_prof(cfg, ndev, WL_PROF_SSID);
+	if (!ssid) {
+		WL_ERR(("No SSID found in the saved profile \n"));
+		return false;
+	}
+	curbssid = wl_read_prof(cfg, ndev, WL_PROF_BSSID);
+
+	do {
+		bss = CFG80211_GET_BSS(wiphy, NULL, curbssid,
+			ssid->SSID, ssid->SSID_len);
+		if (bss || (count > 5)) {
+			break;
+		}
+
+		count++;
+		msleep(100);
+	} while (bss == NULL);
+
+	WL_DBG(("cfg80211 bss_ptr:%p loop_cnt:%d\n", bss, count));
+	if (bss) {
+		/* Update the reference count after use */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 9, 0))
+		cfg80211_put_bss(wiphy, bss);
+#else
+		cfg80211_put_bss(bss);
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 9, 0) */
+		ret = true;
+	}
+
+	return ret;
+}
+
 static s32
 wl_bss_connect_done(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 	const wl_event_msg_t *e, void *data, bool completed)
@@ -9865,8 +9907,7 @@ wl_bss_connect_done(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 		wl_notify_escan_complete(cfg, ndev, true, true);
 	}
 #endif /* ESCAN_RESULT_PATCH */
-	if (wl_get_drv_status(cfg, CONNECTING, ndev) &&
-		(e->event_type == WLC_E_SET_SSID)) {
+	if (wl_get_drv_status(cfg, CONNECTING, ndev)) {
 		wl_cfg80211_scan_abort(cfg);
 		wl_clr_drv_status(cfg, CONNECTING, ndev);
 		if (completed) {
@@ -9898,11 +9939,20 @@ wl_bss_connect_done(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 				dhd_set_cpucore(dhd, TRUE);
 			}
 #endif /* CUSTOM_SET_CPUCORE */
-
+			memset(&cfg->last_roamed_addr, 0, ETHER_ADDR_LEN);
 		}
 		/* Update the cfg layer with the lates active channels available */
 		wl_update_wiphybands(NULL, true);
 
+		if (completed && (wl_cfg80211_verify_bss(cfg, ndev) != true)) {
+			/* If bss entry is not available in the cfg80211 bss cache
+			 * the wireless stack will complain and won't populate
+			 * wdev->current_bss ptr
+			 */
+			WL_ERR(("BSS entry not found. Indicate assoc event failure\n"));
+			completed = false;
+			sec->auth_assoc_res_status = WLAN_STATUS_UNSPECIFIED_FAILURE;
+		}
 		cfg80211_connect_result(ndev,
 			curbssid,
 			conn_info->req_ie,
@@ -9915,7 +9965,7 @@ wl_bss_connect_done(struct bcm_cfg80211 *cfg, struct net_device *ndev,
 			WLAN_STATUS_UNSPECIFIED_FAILURE,
 			GFP_KERNEL);
 		if (completed)
-			WL_INFORM(("Report connect result - connection succeeded\n"));
+			WL_ERR(("Report connect result - connection succeeded\n"));
 		else
 			WL_ERR(("Report connect result - connection failed\n"));
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA

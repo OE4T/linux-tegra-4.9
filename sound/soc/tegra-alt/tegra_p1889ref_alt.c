@@ -1,7 +1,7 @@
 /*
  * tegra_p1889ref.c - Tegra P1889 Machine driver
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -33,7 +33,6 @@
 
 #include "tegra_asoc_utils_alt.h"
 #include "tegra_asoc_machine_alt.h"
-#include "tegra_asoc_hwdep_alt.h"
 
 #define DRV_NAME "tegra-snd-p1889ref"
 
@@ -651,13 +650,6 @@ static int tegra_p1889ref_driver_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n",
 			ret);
 		goto err_fini_utils;
-	}
-
-	ret = tegra_asoc_hwdep_create(card);
-	if (ret) {
-		dev_err(&pdev->dev, "can't create tegra_machine_hwdep (%d)\n",
-			ret);
-		goto err_unregister_card;
 	}
 
 	return 0;

@@ -58,8 +58,6 @@ struct imx274 {
 	struct camera_common_power_rail	power;
 	int				num_ctrls;
 	struct v4l2_ctrl_handler	ctrl_handler;
-	struct camera_common_eeprom_data eeprom[IMX274_EEPROM_NUM_BLOCKS];
-	u8				eeprom_buf[IMX274_EEPROM_SIZE];
 	struct i2c_client		*i2c_client;
 	struct v4l2_subdev		*subdev;
 	struct media_pad		pad;
@@ -153,36 +151,6 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 		.menu_skip_mask = 0,
 		.def = 0,
 		.qmenu_int = switch_ctrl_qmenu,
-	},
-	{
-		.ops = &imx274_ctrl_ops,
-		.id = V4L2_CID_EEPROM_DATA,
-		.name = "EEPROM Data",
-		.type = V4L2_CTRL_TYPE_STRING,
-		.flags = V4L2_CTRL_FLAG_VOLATILE,
-		.min = 0,
-		.max = IMX274_EEPROM_STR_SIZE,
-		.step = 2,
-	},
-	{
-		.ops = &imx274_ctrl_ops,
-		.id = V4L2_CID_OTP_DATA,
-		.name = "OTP Data",
-		.type = V4L2_CTRL_TYPE_STRING,
-		.flags = V4L2_CTRL_FLAG_READ_ONLY,
-		.min = 0,
-		.max = IMX274_OTP_STR_SIZE,
-		.step = 2,
-	},
-	{
-		.ops = &imx274_ctrl_ops,
-		.id = V4L2_CID_FUSE_ID,
-		.name = "Fuse ID",
-		.type = V4L2_CTRL_TYPE_STRING,
-		.flags = V4L2_CTRL_FLAG_READ_ONLY,
-		.min = 0,
-		.max = IMX274_FUSE_ID_STR_SIZE,
-		.step = 2,
 	},
 };
 
@@ -473,9 +441,12 @@ static int imx274_s_stream(struct v4l2_subdev *sd, int enable)
 				"%s: error coarse time override\n", __func__);
 	}
 
-	if (test_mode)
+	if (test_mode) {
 		err = imx274_write_table(priv,
 			mode_table[IMX274_MODE_TEST_PATTERN]);
+		if (err)
+			goto exit;
+		}
 
 	err = imx274_write_table(priv, mode_table[IMX274_MODE_START_STREAM]);
 	if (err)
@@ -731,139 +702,6 @@ fail:
 	return err;
 }
 
-static int imx274_eeprom_device_release(struct imx274 *priv)
-{
-	int i;
-
-	for (i = 0; i < IMX274_EEPROM_NUM_BLOCKS; i++) {
-		if (priv->eeprom[i].i2c_client != NULL) {
-			i2c_unregister_device(priv->eeprom[i].i2c_client);
-			priv->eeprom[i].i2c_client = NULL;
-		}
-	}
-
-	return 0;
-}
-
-static int imx274_eeprom_device_init(struct imx274 *priv)
-{
-	char *dev_name = "eeprom_imx274";
-	static struct regmap_config eeprom_regmap_config = {
-		.reg_bits = 8,
-		.val_bits = 8,
-	};
-	int i;
-	int err;
-
-	return 0;
-
-	for (i = 0; i < IMX274_EEPROM_NUM_BLOCKS; i++) {
-		priv->eeprom[i].adap = i2c_get_adapter(
-				priv->i2c_client->adapter->nr);
-		memset(&priv->eeprom[i].brd, 0, sizeof(priv->eeprom[i].brd));
-		strncpy(priv->eeprom[i].brd.type, dev_name,
-				sizeof(priv->eeprom[i].brd.type));
-		priv->eeprom[i].brd.addr = IMX274_EEPROM_ADDRESS + i;
-		priv->eeprom[i].i2c_client = i2c_new_device(
-				priv->eeprom[i].adap, &priv->eeprom[i].brd);
-
-		priv->eeprom[i].regmap = devm_regmap_init_i2c(
-			priv->eeprom[i].i2c_client, &eeprom_regmap_config);
-		if (IS_ERR(priv->eeprom[i].regmap)) {
-			err = PTR_ERR(priv->eeprom[i].regmap);
-			imx274_eeprom_device_release(priv);
-			return err;
-		}
-	}
-
-	return 0;
-}
-
-static int imx274_read_eeprom(struct imx274 *priv,
-				struct v4l2_ctrl *ctrl)
-{
-	int err, i;
-
-	for (i = 0; i < IMX274_EEPROM_NUM_BLOCKS; i++) {
-		err = regmap_bulk_read(priv->eeprom[i].regmap, 0,
-			&priv->eeprom_buf[i * IMX274_EEPROM_BLOCK_SIZE],
-			IMX274_EEPROM_BLOCK_SIZE);
-		if (err)
-			return err;
-	}
-
-	for (i = 0; i < IMX274_EEPROM_SIZE; i++)
-		sprintf(&ctrl->p_new.p_char[i*2], "%02x",
-			priv->eeprom_buf[i]);
-	return 0;
-}
-
-static int imx274_write_eeprom(struct imx274 *priv,
-				char *string)
-{
-	int err;
-	int i;
-	u8 curr[3];
-	unsigned long data;
-
-	for (i = 0; i < IMX274_EEPROM_SIZE; i++) {
-		curr[0] = string[i*2];
-		curr[1] = string[i*2+1];
-		curr[2] = '\0';
-
-		err = kstrtol(curr, 16, &data);
-		if (err) {
-			dev_err(&priv->i2c_client->dev,
-				"invalid eeprom string\n");
-			return -EINVAL;
-		}
-
-		priv->eeprom_buf[i] = (u8)data;
-		err = regmap_write(priv->eeprom[i >> 8].regmap,
-				   i & 0xFF, (u8)data);
-		if (err)
-			return err;
-		msleep(20);
-	}
-	return 0;
-}
-
-static int imx274_read_otp_page(struct imx274 *priv,
-				u8 *buf, int page, u16 addr, int size)
-{
-	u8 status;
-	int err;
-
-	err = imx274_write_reg(priv->s_data, IMX274_OTP_PAGE_NUM_ADDR, page);
-	if (err)
-		return err;
-	err = imx274_write_reg(priv->s_data, IMX274_OTP_CTRL_ADDR, 0x01);
-	if (err)
-		return err;
-	err = imx274_read_reg(priv->s_data, IMX274_OTP_STATUS_ADDR, &status);
-	if (err)
-		return err;
-	if (status == IMX274_OTP_STATUS_IN_PROGRESS) {
-		dev_err(&priv->i2c_client->dev,
-			"another OTP read in progress\n");
-		return err;
-	}
-
-	err = regmap_bulk_read(priv->regmap, addr, buf, size);
-	if (err)
-		return err;
-
-	err = imx274_read_reg(priv->s_data, IMX274_OTP_STATUS_ADDR, &status);
-	if (err)
-		return err;
-	if (status == IMX274_OTP_STATUS_READ_FAIL) {
-		dev_err(&priv->i2c_client->dev, "fuse id read error\n");
-		return err;
-	}
-
-	return 0;
-}
-
 static int imx274_verify_streaming(struct imx274 *priv)
 {
 	int err = 0;
@@ -883,99 +721,6 @@ error:
 	return err;
 }
 
-static int imx274_otp_setup(struct imx274 *priv)
-{
-	int err;
-	int i;
-	struct v4l2_ctrl *ctrl;
-	u8 otp_buf[IMX274_OTP_SIZE];
-	/* fixed me later */
-	return 0;
-
-	err = camera_common_s_power(priv->subdev, true);
-	if (err)
-		return err;
-
-	for (i = 0; i < IMX274_OTP_NUM_PAGES; i++) {
-		err = imx274_read_otp_page(priv,
-				   &otp_buf[i * IMX274_OTP_PAGE_SIZE],
-				   i,
-				   IMX274_OTP_PAGE_START_ADDR,
-				   IMX274_OTP_PAGE_SIZE);
-		if (err)
-			break;
-	}
-
-	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, V4L2_CID_OTP_DATA);
-	if (!ctrl) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
-		return -EINVAL;
-	}
-
-	if (err) {
-		dev_err(&priv->i2c_client->dev, "%s error read otp bank\n",
-			__func__);
-		ctrl->flags = V4L2_CTRL_FLAG_DISABLED;
-		return 0;
-	}
-
-	for (i = 0; i < IMX274_OTP_SIZE; i++)
-		sprintf(&ctrl->p_new.p_char[i*2], "%02x",
-			otp_buf[i]);
-	ctrl->p_cur.p_char = ctrl->p_new.p_char;
-
-	err = camera_common_s_power(priv->subdev, false);
-	if (err)
-		return err;
-
-	return 0;
-}
-
-static int imx274_fuse_id_setup(struct imx274 *priv)
-{
-	int err;
-	int i;
-	struct v4l2_ctrl *ctrl;
-	u8 fuse_id[IMX274_FUSE_ID_SIZE];
-	/* fixed me later */
-	return 0;
-
-	err = camera_common_s_power(priv->subdev, true);
-	if (err)
-		return err;
-
-	err = imx274_read_otp_page(priv,
-			   &fuse_id[0],
-			   IMX274_FUSE_ID_OTP_PAGE,
-			   IMX274_FUSE_ID_OTP_ROW_ADDR,
-			   IMX274_FUSE_ID_SIZE);
-
-	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, V4L2_CID_FUSE_ID);
-	if (!ctrl) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
-		return -EINVAL;
-	}
-
-	if (err) {
-		dev_err(&priv->i2c_client->dev, "%s error read fuse id\n",
-			__func__);
-		ctrl->flags = V4L2_CTRL_FLAG_DISABLED;
-		return 0;
-	}
-
-	for (i = 0; i < IMX274_FUSE_ID_SIZE; i++)
-		sprintf(&ctrl->p_new.p_char[i*2], "%02x",
-			fuse_id[i]);
-	ctrl->p_cur.p_char = ctrl->p_new.p_char;
-
-	err = camera_common_s_power(priv->subdev, false);
-	if (err)
-		return err;
-
-	return 0;
-}
 
 static int imx274_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 {
@@ -987,10 +732,7 @@ static int imx274_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 		return 0;
 
 	switch (ctrl->id) {
-	case V4L2_CID_EEPROM_DATA:
-		err = imx274_read_eeprom(priv, ctrl);
-		if (err)
-			return err;
+
 		break;
 	default:
 			pr_err("%s: unknown ctrl id.\n", __func__);
@@ -1029,13 +771,6 @@ static int imx274_s_ctrl(struct v4l2_ctrl *ctrl)
 			priv->group_hold_en = false;
 			err = imx274_set_group_hold(priv);
 		}
-		break;
-	case V4L2_CID_EEPROM_DATA:
-		if (!ctrl->p_new.p_char[0])
-			break;
-		err = imx274_write_eeprom(priv, ctrl->p_new.p_char);
-		if (err)
-			return err;
 		break;
 	case V4L2_CID_HDR_EN:
 		break;
@@ -1090,20 +825,6 @@ static int imx274_ctrls_init(struct imx274 *priv)
 	if (err) {
 		dev_err(&client->dev,
 			"Error %d setting default controls\n", err);
-		goto error;
-	}
-
-	err = imx274_otp_setup(priv);
-	if (err) {
-		dev_err(&client->dev,
-			"Error %d reading otp data\n", err);
-		goto error;
-	}
-
-	err = imx274_fuse_id_setup(priv);
-	if (err) {
-		dev_err(&client->dev,
-			"Error %d reading fuse id data\n", err);
 		goto error;
 	}
 
@@ -1276,12 +997,6 @@ static int imx274_probe(struct i2c_client *client,
 	err = imx274_verify_streaming(priv);
 	if (err)
 		return err;
-
-	/* eeprom interface */
-	err = imx274_eeprom_device_init(priv);
-	if (err)
-		dev_err(&client->dev,
-			"Failed to allocate eeprom register map: %d\n", err);
 
 	priv->subdev->internal_ops = &imx274_subdev_internal_ops;
 	priv->subdev->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE |

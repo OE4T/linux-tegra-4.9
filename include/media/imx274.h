@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -31,36 +31,6 @@
 #define IMX274_IOCTL_SET_GROUP_HOLD		_IOW('o', 7, struct imx274_ae)
 #define IMX274_IOCTL_SET_HDR_COARSE_TIME	_IOW('o', 8, struct imx274_hdr)
 #define IMX274_IOCTL_SET_POWER			_IOW('o', 20, __u32)
-
-/* The following register address need to be updated */
-#define IMX274_EEPROM_ADDRESS		0x50
-#define IMX274_EEPROM_SIZE		1024
-#define IMX274_EEPROM_STR_SIZE		(IMX274_EEPROM_SIZE * 2)
-#define IMX274_EEPROM_BLOCK_SIZE	(1 << 8)
-#define IMX274_EEPROM_NUM_BLOCKS \
-	 (IMX274_EEPROM_SIZE / IMX274_EEPROM_BLOCK_SIZE)
-
-/* The following register address need to be updated */
-#define IMX274_OTP_CTRL_ADDR		0x0A00
-#define IMX274_OTP_STATUS_ADDR		0x0A01
-#define IMX274_OTP_PAGE_NUM_ADDR	0x0A02
-#define IMX274_OTP_PAGE_START_ADDR	0x0A04
-#define IMX274_OTP_PAGE_END_ADDR	0x0A43
-#define IMX274_OTP_NUM_PAGES		(16)
-#define IMX274_OTP_PAGE_SIZE \
-	 (IMX274_OTP_PAGE_END_ADDR - IMX274_OTP_PAGE_START_ADDR + 1)
-#define IMX274_OTP_SIZE \
-	 (IMX274_OTP_PAGE_SIZE * IMX274_OTP_NUM_PAGES)
-#define IMX274_OTP_STR_SIZE (IMX274_OTP_SIZE * 2)
-#define IMX274_OTP_STATUS_IN_PROGRESS		0
-#define IMX274_OTP_STATUS_READ_COMPLETE	1
-#define IMX274_OTP_STATUS_READ_FAIL		5
-
-/* The following register address need to be updated */
-#define IMX274_FUSE_ID_OTP_ROW_ADDR	0x0A36
-#define IMX274_FUSE_ID_OTP_PAGE	19 /*0x13*/
-#define IMX274_FUSE_ID_SIZE		11
-#define IMX274_FUSE_ID_STR_SIZE	(IMX274_FUSE_ID_SIZE * 2)
 
 #define IMX274_SVR_ADDR					0x300E
 
@@ -107,11 +77,6 @@ struct imx274_ae {
 	__u8  coarse_time_enable;
 	__s32 gain;
 	__u8  gain_enable;
-};
-
-struct imx274_sensordata {
-	__u32 fuse_id_size;
-	__u8  fuse_id[IMX274_FUSE_ID_SIZE];
 };
 
 #ifdef __KERNEL__

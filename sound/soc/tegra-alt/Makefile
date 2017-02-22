@@ -10,7 +10,6 @@ subdir-ccflags-y += -I$(srctree)/sound/soc/tegra-virt-alt/
 snd-soc-tegra-alt-pcm-objs := tegra_pcm_alt.o
 CFLAGS_tegra_pcm_alt.o += -Wno-shift-count-overflow
 snd-soc-tegra-alt-utils-objs := tegra_asoc_utils_alt.o
-snd-soc-tegra-alt-hwdep-objs := tegra_asoc_hwdep_alt.o
 snd-soc-tegra-alt-machine-objs := tegra_asoc_machine_alt.o
 snd-soc-tegra-alt-isomgr-objs := tegra_isomgr_bw_alt.o
 snd-soc-tegra30-alt-apbif-objs := tegra30_apbif_alt.o

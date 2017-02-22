@@ -36,6 +36,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/tegra-powergate.h>
 #include <linux/tegra_pm_domains.h>
+#include <soc/tegra/common.h>
 
 #include <sound/core.h>
 #include <sound/initval.h>
@@ -231,12 +232,11 @@ static int hda_tegra_enable_clocks(struct hda_tegra *hda)
 	int rc;
 
 	if (hda->is_power_on == false) {
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
-		tegra_unpowergate_partition(hda->partition_id);
-#else
-		tegra_unpowergate_partition_with_clk_on(
-				hda->partition_id);
-#endif
+		if (!soc_is_tegra186_n_later())
+			tegra_unpowergate_partition(hda->partition_id);
+		else
+			tegra_unpowergate_partition_with_clk_on(
+					hda->partition_id);
 		hda->is_power_on = true;
 	}
 
@@ -269,12 +269,11 @@ static void hda_tegra_disable_clocks(struct hda_tegra *hda)
 	clk_disable_unprepare(hda->hda_clk);
 
 	if (hda->is_power_on) {
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
-		tegra_powergate_partition(hda->partition_id);
-#else
-		tegra_powergate_partition_with_clk_off(
+		if (!soc_is_tegra186_n_later())
+			tegra_powergate_partition(hda->partition_id);
+		else
+			tegra_powergate_partition_with_clk_off(
 					hda->partition_id);
-#endif
 		hda->is_power_on = false;
 	}
 }

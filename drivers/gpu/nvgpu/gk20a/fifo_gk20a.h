@@ -39,6 +39,9 @@ struct fifo_runlist_info_gk20a {
 	struct mem_desc mem[MAX_RUNLIST_BUFFERS];
 	u32  cur_buffer;
 	u32  total_entries;
+	u32  pbdma_bitmask;      /* pbdmas supported for this runlist*/
+	u32  eng_bitmask;        /* engines using this runlist */
+	u32  reset_eng_bitmask;  /* engines to be reset during recovery */
 	bool stopped;
 	bool support_tsg;
 	struct nvgpu_mutex mutex; /* protect channel preempt and runlist update */

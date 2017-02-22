@@ -326,6 +326,7 @@ int gk20a_fifo_init_engine_info(struct fifo_gk20a *f)
 	u32 pri_base = 0;
 	u32 fault_id = 0;
 	u32 gr_runlist_id = ~0;
+	bool found_pbdma_for_runlist = false;
 
 	gk20a_dbg_fn("");
 
@@ -352,14 +353,20 @@ int gk20a_fifo_init_engine_info(struct fifo_gk20a *f)
 
 				runlist_bit = BIT(runlist_id);
 
-				for (pbdma_id = 0; pbdma_id < f->num_pbdma; pbdma_id++) {
-					gk20a_dbg_info("gr info: pbdma_map[%d]=%d",
-						pbdma_id, f->pbdma_map[pbdma_id]);
-					if (f->pbdma_map[pbdma_id] & runlist_bit)
-						break;
+				found_pbdma_for_runlist = false;
+				for (pbdma_id = 0; pbdma_id < f->num_pbdma;
+								pbdma_id++) {
+					if (f->pbdma_map[pbdma_id] &
+								runlist_bit) {
+						gk20a_dbg_info(
+						"gr info: pbdma_map[%d]=%d",
+							pbdma_id,
+							f->pbdma_map[pbdma_id]);
+						found_pbdma_for_runlist = true;
+					}
 				}
 
-				if (pbdma_id == f->num_pbdma) {
+				if (!found_pbdma_for_runlist) {
 					gk20a_err(d, "busted pbdma map");
 					return -EINVAL;
 				}
@@ -611,6 +618,8 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 	unsigned int runlist_id;
 	u32 i;
 	size_t runlist_size;
+	u32 active_engine_id, pbdma_id, engine_id;
+	struct fifo_engine_info_gk20a *engine_info;
 
 	gk20a_dbg_fn("");
 
@@ -655,7 +664,25 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 		/* None of buffers is pinned if this value doesn't change.
 		    Otherwise, one of them (cur_buffer) must have been pinned. */
 		runlist->cur_buffer = MAX_RUNLIST_BUFFERS;
+
+		for (pbdma_id = 0; pbdma_id < f->num_pbdma; pbdma_id++) {
+			if (f->pbdma_map[pbdma_id] & BIT(runlist_id))
+				runlist->pbdma_bitmask |= BIT(pbdma_id);
+		}
+		gk20a_dbg_info("runlist %d : pbdma bitmask %x",
+				 runlist_id, runlist->pbdma_bitmask);
+
+		for (engine_id = 0; engine_id < f->num_engines; ++engine_id) {
+			active_engine_id = f->active_engines_list[engine_id];
+			engine_info = &f->engine_info[active_engine_id];
+
+			if (engine_info && engine_info->runlist_id == runlist_id)
+				runlist->eng_bitmask |= BIT(engine_id);
+		}
+		gk20a_dbg_info("runlist %d : eng bitmask %x",
+				 runlist_id, runlist->eng_bitmask);
 	}
+
 
 	gk20a_dbg_fn("done");
 	return 0;

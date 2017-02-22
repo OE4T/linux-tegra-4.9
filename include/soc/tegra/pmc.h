@@ -310,12 +310,11 @@ static inline int tegra_io_pads_padctrl_init(struct device *dev)
 void tegra_pmc_ufs_pwrcntrl_update(unsigned long mask, unsigned long val);
 unsigned long tegra_pmc_ufs_pwrcntrl_get(void);
 
-void tegra_pmc_nvcsi_ab_brick_update(unsigned long mask, unsigned long val);
-unsigned long tegra_pmc_nvcsi_ab_brick_getstatus(void);
-void tegra_pmc_nvcsi_cdef_brick_update(unsigned long mask, unsigned long val);
-unsigned long tegra_pmc_nvcsi_cdef_brick_getstatus(void);
-void tegra186_pmc_disable_nvcsi_brick_dpd(void);
-void tegra186_pmc_enable_nvcsi_brick_dpd(void);
+int tegra_pmc_nvcsi_brick_getstatus(const char *pad_name);
+int tegra_pmc_nvcsi_ab_brick_dpd_enable(void);
+int tegra_pmc_nvcsi_cdef_brick_dpd_enable(void);
+int tegra_pmc_nvcsi_ab_brick_dpd_disable(void);
+int tegra_pmc_nvcsi_cdef_brick_dpd_disable(void);
 
 bool tegra_pmc_is_halt_in_fiq(void);
 void tegra_pmc_sata_pwrgt_update(unsigned long mask,

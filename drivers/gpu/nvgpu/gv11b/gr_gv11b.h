@@ -35,9 +35,6 @@ enum {
 	VOLTA_DMA_COPY_A        = 0xC3B5,
 };
 
-/* use magic number 99 for subctx litter value */
-#define GPU_LIT_NUM_SUBCTX 99
-
 #define NVC397_SET_SHADER_EXCEPTIONS		0x1528
 #define NVC397_SET_CIRCULAR_BUFFER_SIZE 	0x1280
 #define NVC397_SET_ALPHA_CIRCULAR_BUFFER_SIZE 	0x02dc

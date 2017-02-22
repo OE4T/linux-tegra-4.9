@@ -462,6 +462,18 @@ static inline u32 gr_pri_fe_go_idle_info_r(void)
 {
 	return 0x00404194;
 }
+static inline u32 gr_pri_fe_chip_def_info_r(void)
+{
+	return 0x00404030;
+}
+static inline u32 gr_pri_fe_chip_def_info_max_veid_count_v(u32 r)
+{
+	return (r >> 0) & 0xfff;
+}
+static inline u32 gr_pri_fe_chip_def_info_max_veid_count_init_v(void)
+{
+	return 0x00000040;
+}
 static inline u32 gr_pri_gpc0_tpc0_tex_m_tex_subunits_status_r(void)
 {
 	return 0x00504238;

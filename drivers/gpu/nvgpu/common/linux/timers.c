@@ -15,6 +15,7 @@
  */
 
 #include <linux/jiffies.h>
+#include <linux/delay.h>
 
 #include <nvgpu/timers.h>
 
@@ -174,4 +175,55 @@ int nvgpu_timeout_peek_expired(struct nvgpu_timeout *timeout)
 		return timeout->retries.attempted >= timeout->retries.max;
 	else
 		return time_after(jiffies, (unsigned long)timeout->time);
+}
+
+/**
+ * nvgpu_udelay - Delay for some number of microseconds.
+ *
+ * @usecs - Microseconds to wait for.
+ *
+ * Wait for at least @usecs microseconds. This is not guaranteed to be perfectly
+ * accurate. This is normally backed by a busy-loop so this means waits should
+ * be kept short, below 100us. If longer delays are necessary then
+ * nvgpu_msleep() should be preferred.
+ *
+ * Alternatively, on some platforms, nvgpu_usleep_range() is usable. This
+ * function will attempt to not use a busy-loop.
+ */
+void nvgpu_udelay(unsigned int usecs)
+{
+	udelay(usecs);
+}
+
+/**
+ * nvgpu_usleep_range - Sleep for a range of microseconds.
+ *
+ * @min_us - Minimum wait time.
+ * @max_us - Maximum wait time.
+ *
+ * Wait for some number of microseconds between @min_us and @max_us. This,
+ * unlike nvgpu_udelay(), will attempt to sleep for the passed number of
+ * microseconds instead of busy looping. Not all platforms support this,
+ * and in that case this reduces to nvgpu_udelay(min_us).
+ *
+ * Linux note: this is not safe to use in atomic context. If you are in
+ * atomic context you must use nvgpu_udelay().
+ */
+void nvgpu_usleep_range(unsigned int min_us, unsigned int max_us)
+{
+	usleep_range(min_us, max_us);
+}
+
+/**
+ * nvgpu_msleep - Sleep for some milliseconds.
+ *
+ * @msecs - Sleep for at least this many milliseconds.
+ *
+ * Sleep for at least @msecs of milliseconds. For small @msecs (less than 20 ms
+ * or so) the sleep will be significantly longer due to scheduling overhead and
+ * mechanics.
+ */
+void nvgpu_msleep(unsigned int msecs)
+{
+	msleep(msecs);
 }

@@ -89,4 +89,12 @@ int nvgpu_timeout_peek_expired(struct nvgpu_timeout *timeout);
 int __nvgpu_timeout_expired_msg(struct nvgpu_timeout *timeout,
 			      void *caller, const char *fmt, ...);
 
+
+/*
+ * Waits and delays.
+ */
+void nvgpu_msleep(unsigned int msecs);
+void nvgpu_usleep_range(unsigned int min_us, unsigned int max_us);
+void nvgpu_udelay(unsigned int usecs);
+
 #endif

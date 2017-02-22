@@ -1,7 +1,7 @@
 /*
  * tegra_t186ref_bali_alt.c - Tegra t186ref bali Machine driver
  *
- * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,7 +19,6 @@
 #include <sound/soc.h>
 #include <soc/tegra/chip-id.h>
 
-#include "tegra_asoc_hwdep_alt.h"
 #include "tegra_asoc_utils_alt.h"
 #include "tegra_asoc_machine_alt.h"
 #include "tegra_asoc_machine_alt_t18x.h"
@@ -833,17 +832,8 @@ static int tegra_t186ref_bali_driver_probe(struct platform_device *pdev)
 		goto err_fini_utils;
 	}
 
-	ret = tegra_asoc_hwdep_create(card);
-	if (ret) {
-		dev_err(&pdev->dev, "can't create tegra_machine_hwdep (%d)\n",
-			ret);
-		goto err_unregister_card;
-	}
-
 	return 0;
 
-err_unregister_card:
-	snd_soc_unregister_card(card);
 err_fini_utils:
 	tegra_alt_asoc_utils_fini(&machine->audio_clock);
 err_alloc_dai_link:

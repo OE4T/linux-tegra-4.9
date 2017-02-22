@@ -168,12 +168,6 @@ config SND_SOC_TEGRA210_ADSP_ALT
 	help
 	  Say Y or M if you want to add support for Tegra210 ADSP module.
 
-config SND_SOC_TEGRA_ASOC_HWDEP_ALT
-	tristate "Tegra ASoC hwdep driver"
-	depends on SND_SOC_TEGRA_ALT
-	select SND_HWDEP
-	help
-	  Say Y or M if you want to add support for Tegra ASoC HWDEP module.
 
 config SND_SOC_TEGRA_ASOC_MACHINE_ALT
 	tristate "Tegra ASoC machine driver"
@@ -197,7 +191,6 @@ config SND_SOC_TEGRA_VCM30T124_ALT
 	select SND_SOC_WM8731
 	select SND_SOC_SPDIF
 	select SND_SOC_AK4618
-	select SND_SOC_TEGRA_ASOC_HWDEP_ALT
 	select SND_SOC_TEGRA_ASOC_MACHINE_ALT
 	help
 	  Say Y or M here if you want to add support for SoC audio on the

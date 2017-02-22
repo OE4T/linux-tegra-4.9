@@ -2441,66 +2441,82 @@ void gk20a_fifo_issue_preempt(struct gk20a *g, u32 id, bool is_tsg)
 			fifo_preempt_type_channel_f());
 }
 
-static int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
+int gk20a_fifo_is_preempt_pending(struct gk20a *g, u32 id,
+		unsigned int id_type, unsigned int timeout_rc_type)
 {
 	struct nvgpu_timeout timeout;
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
-	u32 ret = 0;
+	int ret = -EBUSY;
 
-	gk20a_dbg_fn("%d", id);
-
-	/* issue preempt */
-	gk20a_fifo_issue_preempt(g, id, is_tsg);
-
-	gk20a_dbg_fn("%d", id);
-	/* wait for preempt */
-	ret = -EBUSY;
 	nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
 			   NVGPU_TIMER_CPU_TIMER);
 	do {
 		if (!(gk20a_readl(g, fifo_preempt_r()) &
-			fifo_preempt_pending_true_f())) {
+				fifo_preempt_pending_true_f())) {
 			ret = 0;
 			break;
 		}
 
 		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-	} while (!nvgpu_timeout_expired(&timeout));
+	} while (!nvgpu_timeout_expired_msg(&timeout, "preempt timeout"));
 
-	gk20a_dbg_fn("%d", id);
-	if (ret) {
-		if (is_tsg) {
-			struct tsg_gk20a *tsg = &g->fifo.tsg[id];
-			struct channel_gk20a *ch = NULL;
+	return ret;
+}
 
-			gk20a_err(dev_from_gk20a(g),
-				"preempt TSG %d timeout\n", id);
+void __locked_fifo_preempt_timeout_rc(struct gk20a *g, u32 id,
+					 unsigned int id_type)
+{
+	if (id_type == ID_TYPE_TSG) {
+		struct tsg_gk20a *tsg = &g->fifo.tsg[id];
+		struct channel_gk20a *ch = NULL;
 
-			down_read(&tsg->ch_list_lock);
-			list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
-				if (!gk20a_channel_get(ch))
-					continue;
-				gk20a_set_error_notifier(ch,
+		gk20a_err(dev_from_gk20a(g),
+			"preempt TSG %d timeout\n", id);
+
+		down_read(&tsg->ch_list_lock);
+		list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+			if (!gk20a_channel_get(ch))
+				continue;
+			gk20a_set_error_notifier(ch,
+				NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
+			gk20a_channel_put(ch);
+		}
+		up_read(&tsg->ch_list_lock);
+		gk20a_fifo_recover_tsg(g, id, true);
+	} else {
+		struct channel_gk20a *ch = &g->fifo.channel[id];
+
+		gk20a_err(dev_from_gk20a(g),
+			"preempt channel %d timeout\n", id);
+
+		if (gk20a_channel_get(ch)) {
+			gk20a_set_error_notifier(ch,
 					NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
-				gk20a_channel_put(ch);
-			}
-			up_read(&tsg->ch_list_lock);
-			gk20a_fifo_recover_tsg(g, id, true);
-		} else {
-			struct channel_gk20a *ch = &g->fifo.channel[id];
-
-			gk20a_err(dev_from_gk20a(g),
-				"preempt channel %d timeout\n", id);
-
-			if (gk20a_channel_get(ch)) {
-				gk20a_set_error_notifier(ch,
-						NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
-				gk20a_fifo_recover_ch(g, id, true);
-				gk20a_channel_put(ch);
-			}
+			gk20a_fifo_recover_ch(g, id, true);
+			gk20a_channel_put(ch);
 		}
 	}
+}
+
+int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
+{
+	int ret;
+	unsigned int id_type;
+
+	gk20a_dbg_fn("%d", id);
+
+	/* issue preempt */
+	gk20a_fifo_issue_preempt(g, id, is_tsg);
+
+	id_type = is_tsg ? ID_TYPE_TSG : ID_TYPE_CHANNEL;
+
+	/* wait for preempt */
+	ret = g->ops.fifo.is_preempt_pending(g, id, id_type,
+					 PREEMPT_TIMEOUT_RC);
+
+	if (ret)
+		__locked_fifo_preempt_timeout_rc(g, id, id_type);
 
 	return ret;
 }
@@ -3802,4 +3818,5 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.dump_eng_status = gk20a_dump_eng_status;
 	gops->fifo.dump_channel_status_ramfc = gk20a_dump_channel_status_ramfc;
 	gops->fifo.intr_0_error_mask = gk20a_fifo_intr_0_error_mask;
+	gops->fifo.is_preempt_pending = gk20a_fifo_is_preempt_pending;
 }

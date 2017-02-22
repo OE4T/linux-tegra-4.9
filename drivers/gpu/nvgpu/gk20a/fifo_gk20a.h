@@ -25,11 +25,18 @@
 #include "tsg_gk20a.h"
 #include "debug_gk20a.h"
 
-#define MAX_RUNLIST_BUFFERS	2
+#define MAX_RUNLIST_BUFFERS		2
 
-#define FIFO_INVAL_ENGINE_ID	((u32)~0)
-#define FIFO_INVAL_CHANNEL_ID	((u32)~0)
-#define FIFO_INVAL_TSG_ID	((u32)~0)
+#define FIFO_INVAL_ENGINE_ID		((u32)~0)
+#define FIFO_INVAL_CHANNEL_ID		((u32)~0)
+#define FIFO_INVAL_TSG_ID		((u32)~0)
+
+#define ID_TYPE_CHANNEL			0
+#define ID_TYPE_TSG			1
+#define ID_TYPE_UNKNOWN			((u32)~0)
+
+#define PREEMPT_TIMEOUT_RC		1
+#define PREEMPT_TIMEOUT_NORC		0
 
 /*
  * Number of entries in the kickoff latency buffer, used to calculate
@@ -335,5 +342,11 @@ const char *gk20a_decode_pbdma_chan_eng_ctx_status(u32 index);
 struct channel_gk20a *gk20a_refch_from_inst_ptr(struct gk20a *g, u64 inst_ptr);
 
 u32 gk20a_fifo_intr_0_error_mask(struct gk20a *g);
+
+int gk20a_fifo_is_preempt_pending(struct gk20a *g, u32 id, unsigned int id_type,
+					 unsigned int timeout_rc_type);
+int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg);
+void __locked_fifo_preempt_timeout_rc(struct gk20a *g, u32 id,
+					 unsigned int id_type);
 
 #endif /*__GR_GK20A_H__*/

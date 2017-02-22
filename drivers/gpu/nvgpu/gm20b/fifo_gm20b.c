@@ -175,4 +175,5 @@ void gm20b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.dump_eng_status = gk20a_dump_eng_status;
 	gops->fifo.dump_channel_status_ramfc = gk20a_dump_channel_status_ramfc;
 	gops->fifo.intr_0_error_mask = gk20a_fifo_intr_0_error_mask;
+	gops->fifo.is_preempt_pending = gk20a_fifo_is_preempt_pending;
 }

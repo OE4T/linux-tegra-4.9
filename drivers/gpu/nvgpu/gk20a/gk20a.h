@@ -450,6 +450,10 @@ struct gpu_ops {
 				struct gk20a_debug_output *o, u32 hw_chid,
 				struct ch_state *ch_state);
 		u32 (*intr_0_error_mask)(struct gk20a *g);
+		int (*is_preempt_pending)(struct gk20a *g, u32 id,
+			unsigned int id_type, unsigned int timeout_rc_type);
+		int (*preempt_ch_tsg)(struct gk20a *g, u32 id,
+			unsigned int id_type, unsigned int timeout_rc_type);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/

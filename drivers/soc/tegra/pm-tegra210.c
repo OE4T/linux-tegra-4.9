@@ -13,7 +13,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
+#ifdef CONFIG_PM_SLEEP
 #include <linux/kernel.h>
 #include <linux/cpu.h>
 #include <linux/cpu_pm.h>
@@ -562,3 +562,4 @@ out:
 	return 0;
 }
 device_initcall(tegra210_pm_init);
+#endif

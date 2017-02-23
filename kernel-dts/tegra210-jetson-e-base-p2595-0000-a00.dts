@@ -1,7 +1,7 @@
 /*
  * arch/arm64/boot/dts/tegra210-jetson-e-base-p2595-0000-a00.dts
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,6 +65,7 @@
 
 	pmc@7000e400 {
 		nvidia,invert-interrupt;
+
 		io-pad-defaults {
 			audio-hv {
 				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
@@ -73,13 +74,18 @@
 			spi-hv {
 				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
 			};
+		};
 
-			sdmmc3 {
-				nvidia,deep-power-down-enable;
-				nvidia,enable-dynamic-pad-voltage;
+		iopad-defaults {
+			sdmmc-io-pads {
+				pins = "sdmmc1";
+				nvidia,enable-voltage-switching;
 			};
-			sdmmc1 {
-				nvidia,enable-dynamic-pad-voltage;
+
+			sdmmc3-io-pads {
+				pins = "sdmmc3";
+				nvidia,enable-voltage-switching;
+				low-power-enable;
 			};
 		};
 	};

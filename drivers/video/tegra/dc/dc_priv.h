@@ -102,7 +102,7 @@ static inline unsigned long tegra_dc_readl(struct tegra_dc *dc,
 		return 0;
 
 	ret = readl(dc->base + reg * 4);
-	trace_display_readl(dc, ret, (char *)dc->base_res->start + reg * 4);
+	trace_display_readl(dc, ret, (char *)dc->base + reg * 4);
 	return ret;
 }
 
@@ -112,7 +112,7 @@ static inline void tegra_dc_writel(struct tegra_dc *dc, unsigned long val,
 	if (tegra_dc_is_accessible(dc))
 		return;
 
-	trace_display_writel(dc, val, (char *)dc->base_res->start + reg * 4);
+	trace_display_writel(dc, val, (char *)dc->base + reg * 4);
 	writel(val, dc->base + reg * 4);
 }
 

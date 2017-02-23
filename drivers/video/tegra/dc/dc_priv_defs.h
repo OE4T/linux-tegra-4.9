@@ -193,8 +193,6 @@ struct tegra_dc_hw_data {
 struct tegra_dc {
 	struct platform_device		*ndev;
 	struct tegra_dc_platform_data	*pdata;
-
-	struct resource			*base_res;
 	void __iomem			*base;
 	int				irq;
 

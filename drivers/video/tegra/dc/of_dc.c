@@ -2466,13 +2466,11 @@ struct tegra_dc_platform_data
 		goto fail_parse;
 	}
 
-	/* Check the OR node connected to each Display
-	 * Controller. To enable this feature nvidia,dc_or_node
-	 * has to set a valid OR name in the DT file.
-	 */
 	err = of_property_read_string(np, "nvidia,dc-or-node", &dc_or_node);
-	if (err)
+	if (err) {
 		pr_err("No dc-or-node is defined in DT\n");
+		goto fail_parse;
+	}
 
 	if (dc_or_node && ((!strcmp(dc_or_node, "/host1x/sor")) ||
 		(!strcmp(dc_or_node, "/host1x/sor1")) ||
@@ -2480,23 +2478,8 @@ struct tegra_dc_platform_data
 		strcpy(pdata->dc_or_node_name, dc_or_node);
 		OF_DC_LOG("dc or node %s\n", pdata->dc_or_node_name);
 	} else {
-		/* TODO: Faile the parsing here.
-		 * Since this a new change to DT, till it is reflected in all
-		 * needed DT files. Hard Coding the following assumption
-		 */
-		switch (ndev->id) {
-		case 0:
-			strcpy(pdata->dc_or_node_name, "/host1x/dsi");
-			break;
-		case 1:
-			strcpy(pdata->dc_or_node_name, "/host1x/sor1");
-			break;
-		case 2:
-			strcpy(pdata->dc_or_node_name, "/host1x/sor");
-			break;
-		default:
-			strcpy(pdata->dc_or_node_name, "");
-		};
+		pr_err("unknown dc_or_node: %s in DT\n", dc_or_node);
+		goto fail_parse;
 	}
 
 	pr_info("DC OR NODE connected to %s\n", pdata->dc_or_node_name);

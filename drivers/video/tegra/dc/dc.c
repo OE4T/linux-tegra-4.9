@@ -5629,9 +5629,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #endif
 	struct clk *emc_la_clk;
 	struct device_node *np = ndev->dev.of_node;
-	struct resource *res;
-	struct resource dt_res;
-	struct resource *base_res;
 	struct resource *fb_mem = NULL;
 	char clk_name[16];
 	int ret = 0;
@@ -5641,6 +5638,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS) && !IS_ENABLED(CONFIG_TEGRA_NVDISPLAY)
 	int partition_id_disa, partition_id_disb;
 #endif
+	struct resource of_fb_res;
 
 #ifdef CONFIG_ARCH_TEGRA_210_SOC
 	if (tegra_platform_is_linsim()) {
@@ -5648,11 +5646,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		return -ENODEV;
 	}
 #endif
-
-	if (!np && !ndev->dev.platform_data) {
-		dev_err(&ndev->dev, "no platform data\n");
-		return -ENOENT;
-	}
 
 	/* Specify parameters for the maximum physical segment size. */
 	ndev->dev.dma_parms = &tegra_dc_dma_parameters;
@@ -5663,89 +5656,40 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		return -ENOMEM;
 	}
 
-	if (np) {
-		irq = of_irq_to_resource(np, 0, NULL);
-		if (!irq)
-			goto err_free;
+	irq = of_irq_to_resource(np, 0, NULL);
+	if (!irq)
+		goto err_free;
 
-		ret = of_address_to_resource(np, 0, &dt_res);
-		if (ret)
-			goto err_free;
-
-		ndev->id = tegra_dc_set(dc, -1);
-		if (ndev->id < 0) {
-			dev_err(&ndev->dev, "can't add dc\n");
-			goto err_free;
-		}
-
-		dev_info(&ndev->dev, "Display dc.%08x registered with id=%d\n",
-				(unsigned int)dt_res.start, ndev->id);
-		res = &dt_res;
-
-		dt_pdata = of_dc_parse_platform_data(ndev);
-		if (IS_ERR_OR_NULL(dt_pdata)) {
-			if (dt_pdata)
-				ret = PTR_ERR(dt_pdata);
-			goto err_free;
-		}
-
-#ifdef CONFIG_TEGRA_NVDISPLAY
-		dc->ctrl_num = dt_pdata->ctrl_num;
-#else
-		if (dt_res.start == TEGRA_DISPLAY_BASE)
-			dc->ctrl_num = 0;
-		else if (dt_res.start == TEGRA_DISPLAY2_BASE)
-			dc->ctrl_num = 1;
-		else
-			goto err_free;
-#endif
-
-	} else {
-
-		dc->ctrl_num = ndev->id;
-
-		irq = platform_get_irq_byname(ndev, "irq");
-		if (irq <= 0) {
-			dev_err(&ndev->dev, "no irq\n");
-			ret = -ENOENT;
-			goto err_free;
-		}
-
-		res = platform_get_resource_byname(ndev,
-			IORESOURCE_MEM, "regs");
-		if (!res) {
-			dev_err(&ndev->dev, "no mem resource\n");
-			ret = -ENOENT;
-			goto err_free;
-		}
-
-		if (tegra_dc_set(dc, ndev->id) < 0) {
-			dev_err(&ndev->dev, "can't add dc\n");
-			goto err_free;
-		}
-
-	}
-
-	base_res = request_mem_region(res->start, resource_size(res),
-		ndev->name);
-	if (!base_res) {
-		dev_err(&ndev->dev, "request_mem_region failed\n");
-		ret = -EBUSY;
+	ndev->id = tegra_dc_set(dc, -1);
+	if (ndev->id < 0) {
+		dev_err(&ndev->dev, "can't add dc\n");
 		goto err_free;
 	}
 
-	base = ioremap(res->start, resource_size(res));
+	dt_pdata = of_dc_parse_platform_data(ndev);
+	if (IS_ERR_OR_NULL(dt_pdata)) {
+		if (dt_pdata)
+			ret = PTR_ERR(dt_pdata);
+		goto err_free;
+	}
+
+	dc->ctrl_num = dt_pdata->ctrl_num;
+
+	base = of_iomap(np, 0);
 	if (!base) {
 		dev_err(&ndev->dev, "registers can't be mapped\n");
 		ret = -EBUSY;
 		goto err_release_resource_reg;
 	}
 
+	dev_info(&ndev->dev, "Display dc.%p registered with id=%d\n",
+			base, ndev->id);
+
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++)
 		dc->windows[i].syncpt.id = NVSYNCPT_INVALID;
 
-	if (TEGRA_DISPLAY_BASE == res->start) {
+	if (dc->ctrl_num == 0) {
 		dc->vblank_syncpt = NVSYNCPT_VBLANK0;
 		dc->windows[0].syncpt.id =
 			nvhost_get_syncpt_client_managed(ndev, "disp0_a");
@@ -5770,7 +5714,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		slcg_register_notifier(dc->powergate_id,
 			&dc->slgc_notifier);
 #endif
-	} else if (TEGRA_DISPLAY2_BASE == res->start) {
+	} else if (dc->ctrl_num == 1) {
 		dc->vblank_syncpt = NVSYNCPT_VBLANK1;
 		dc->windows[0].syncpt.id =
 			nvhost_get_syncpt_client_managed(ndev, "disp1_a");
@@ -5790,33 +5734,21 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_1;
 #endif
 	} else {
-		dev_err(&ndev->dev,
-			"Unknown base address %llx: unable to assign syncpt\n",
-			(u64)res->start);
+		dev_err(&ndev->dev, "unknown dc number:%d\n", dc->ctrl_num);
 	}
 #endif	/* !CONFIG_TEGRA_NVDISPLAY */
 
-	if (np) {
-		struct resource of_fb_res;
 
-		tegra_get_fb_resource(&of_fb_res, dc->ctrl_num);
-		fb_mem = kzalloc(sizeof(struct resource), GFP_KERNEL);
-		if (fb_mem == NULL) {
-			ret = -ENOMEM;
-			goto err_iounmap_reg;
-		}
-		fb_mem->name = "fbmem";
-		fb_mem->flags = IORESOURCE_MEM;
-		fb_mem->start = (resource_size_t)of_fb_res.start;
-		fb_mem->end = (resource_size_t)of_fb_res.end;
-	} else {
-		fb_mem = platform_get_resource_byname(ndev,
-			IORESOURCE_MEM, "fbmem");
-		if (fb_mem == NULL) {
-			ret = -ENOMEM;
-			goto err_iounmap_reg;
-		}
+	tegra_get_fb_resource(&of_fb_res, dc->ctrl_num);
+	fb_mem = kzalloc(sizeof(struct resource), GFP_KERNEL);
+	if (fb_mem == NULL) {
+		ret = -ENOMEM;
+		goto err_iounmap_reg;
 	}
+	fb_mem->name = "fbmem";
+	fb_mem->flags = IORESOURCE_MEM;
+	fb_mem->start = (resource_size_t)of_fb_res.start;
+	fb_mem->end = (resource_size_t)of_fb_res.end;
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	snprintf(clk_name, sizeof(clk_name), "nvdisplay_p%u", dc->ctrl_num);
@@ -5837,16 +5769,11 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	 * according to refresh rate later. */
 	dc->one_shot_delay_ms = 40;
 
-	dc->base_res = base_res;
 	dc->base = base;
 	dc->irq = irq;
 	dc->ndev = ndev;
 	dc->fb_mem = fb_mem;
-
-	if (!np)
-		dc->pdata = ndev->dev.platform_data;
-	else
-		dc->pdata = dt_pdata;
+	dc->pdata = dt_pdata;
 
 	dc->bw_kbps = 0;
 
@@ -6180,14 +6107,8 @@ err_put_clk:
 	tegra_disp_clk_put(&ndev->dev, clk);
 err_iounmap_reg:
 	iounmap(base);
-	if (fb_mem) {
-		if (!np)
-			release_resource(fb_mem);
-		else
-			kfree(fb_mem);
-	}
+	kfree(fb_mem);
 err_release_resource_reg:
-	release_resource(base_res);
 err_free:
 	kfree(dc);
 	tegra_dc_set(NULL, ndev->id);
@@ -6198,7 +6119,6 @@ err_free:
 static int tegra_dc_remove(struct platform_device *ndev)
 {
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
-	struct device_node *np = ndev->dev.of_node;
 
 	if (!dc)
 		return 0;
@@ -6208,12 +6128,7 @@ static int tegra_dc_remove(struct platform_device *ndev)
 
 	if (dc->fb) {
 		tegra_fb_unregister(dc->fb);
-		if (dc->fb_mem) {
-			if (!np)
-				release_resource(dc->fb_mem);
-			else
-				kfree(dc->fb_mem);
-		}
+		kfree(dc->fb_mem);
 	}
 
 	if (dc->ext) {
@@ -6254,8 +6169,6 @@ static int tegra_dc_remove(struct platform_device *ndev)
 
 	tegra_disp_clk_put(&ndev->dev, dc->clk);
 	iounmap(dc->base);
-	if (dc->fb_mem)
-		release_resource(dc->base_res);
 	kfree(dc);
 	tegra_dc_set(NULL, ndev->id);
 

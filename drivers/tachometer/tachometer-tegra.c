@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -120,16 +120,18 @@ static unsigned long tegra_tachometer_read_rpm(struct tachometer_dev *tach)
 	mdelay(100);
 	tach0 = tachometer_readl(tegra_tach, TACH_FAN_TACH0);
 
-	if (tach->enable_clk_gate)
-		clk_disable_unprepare(tegra_tach->clk);
-
 	if (tach0 & TACH_FAN_TACH0_OVERFLOW_MASK) {
 		/* Fan is stalled, clear overflow state */
 		pr_info("Tachometer: Overflow is detected\n");
 		tachometer_writeb(tegra_tach, (u8)(tach0 >> 24),
 				TACH_FAN_TACH0_OVERFLOW);
+		if (tach->enable_clk_gate)
+			clk_disable_unprepare(tegra_tach->clk);
 		return 0;
 	}
+
+	if (tach->enable_clk_gate)
+		clk_disable_unprepare(tegra_tach->clk);
 
 	period = (tach0 & TACH_FAN_TACH0_PERIOD_MASK);
 	if ((period == TACH_FAN_TACH0_PERIOD_MIN) ||

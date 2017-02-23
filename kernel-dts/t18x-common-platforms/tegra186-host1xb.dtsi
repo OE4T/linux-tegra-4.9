@@ -1,7 +1,7 @@
 /*
  * tegra186-host1xb.dtsi: Configure host1xb
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -104,6 +104,16 @@
 			      <&{/i2c@31e0000}		TEGRA_SID_GPCDMA_0>;
 		};
 
+	host1x {
+		nvcsi@150c0000 {
+			status = "disabled";
+		};
+
+		vi@15700000 {
+			status = "disabled";
+		};
+	};
+
 	host1xb: host1xb {
 		compatible = "nvidia,tegra186-host1x", "simple-bus";
 		reg = <0x0 0x13e10000 0x0 0x00010000>;
@@ -114,7 +124,7 @@
 		clocks = <&tegra_car TEGRA186_CLK_HOST1X>,
 			 <&tegra_car TEGRA186_CLK_ACTMON>;
 		clock-names = "host1x", "actmon";
-		status = "disabled";
+		status = "okay";
 
                 #address-cells = <2>;
                 #size-cells = <2>;
@@ -151,7 +161,7 @@
 			num-ports = <6>;
 		};
 
-		vi@15700000 {
+		tegra_vi_h1xb: vi@15700000 {
 			compatible = "nvidia,tegra186-vi";
 			power-domains = <&bpmp TEGRA186_POWER_DOMAIN_VE>;
                         reg = <0x0 0x15700000 0x0 0x00100000>;
@@ -167,6 +177,12 @@
 			clock-names = "vi", "nvcsi", "nvcsilp";
 			#stream-id-cells = <1>;
 			status = "okay";
+		};
+	};
+
+	tegra_camera_ivc: camera-ivc-channels {
+		vinotify@12c0 {
+			device = <&tegra_vi_h1xb>;
 		};
 	};
 };

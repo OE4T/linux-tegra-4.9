@@ -36,6 +36,7 @@
 #include <linux/platform/tegra/common.h>
 #include <soc/tegra/fuse.h>
 #include <crypto/akcipher.h>
+#include <crypto/internal/skcipher.h>
 
 #include "tegra-cryptodev.h"
 
@@ -46,7 +47,7 @@
 
 struct tegra_crypto_ctx {
 	/*ecb, cbc, ofb, ctr */
-	struct crypto_ablkcipher *aes_tfm[4];
+	struct crypto_skcipher *aes_tfm[4];
 	/* rsa512, rsa1024, rsa1536, rsa2048 */
 	struct crypto_akcipher *rsa_tfm[4];
 	/* rsa512, rsa768, rsa1024, rsa1536, rsa2048, rsa3072, rsa4096 */
@@ -106,7 +107,7 @@ static int tegra_crypto_dev_open(struct inode *inode, struct file *filp)
 	 * for (LP0) CTX_SAVE test that is performed using CBC
 	 */
 	ctx->aes_tfm[TEGRA_CRYPTO_CBC] =
-		crypto_alloc_ablkcipher("cbc-aes-tegra",
+		crypto_alloc_skcipher("cbc-aes-tegra",
 		CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC, 0);
 	if (IS_ERR(ctx->aes_tfm[TEGRA_CRYPTO_CBC])) {
 		pr_err("Failed to load transform for cbc-aes-tegra: %ld\n",
@@ -124,7 +125,7 @@ static int tegra_crypto_dev_release(struct inode *inode, struct file *filp)
 	struct tegra_crypto_ctx *ctx = filp->private_data;
 
 	if (ctx->aes_tfm[TEGRA_CRYPTO_CBC])
-		crypto_free_ablkcipher(ctx->aes_tfm[TEGRA_CRYPTO_CBC]);
+		crypto_free_skcipher(ctx->aes_tfm[TEGRA_CRYPTO_CBC]);
 	kfree(ctx);
 	filp->private_data = NULL;
 	return 0;
@@ -143,7 +144,7 @@ static void tegra_crypt_complete(struct crypto_async_request *req, int err)
 static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 				struct tegra_crypt_req *crypt_req)
 {
-	struct crypto_ablkcipher *tfm;
+	struct crypto_skcipher *tfm;
 	struct ablkcipher_request *req = NULL;
 	struct scatterlist in_sg;
 	struct scatterlist out_sg;
@@ -158,7 +159,7 @@ static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 		if (crypt_req->op >= TEGRA_CRYPTO_MAX)
 			return -EINVAL;
 
-		tfm = crypto_alloc_ablkcipher(aes_algo[crypt_req->op],
+		tfm = crypto_alloc_skcipher(aes_algo[crypt_req->op],
 			CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC, 0);
 		if (IS_ERR(tfm)) {
 			pr_err("Failed to load transform for %s: %ld\n",
@@ -191,13 +192,13 @@ static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 		goto process_req_out;
 	}
 
-	crypto_ablkcipher_clear_flags(tfm, ~0);
+	crypto_skcipher_clear_flags(tfm, ~0);
 
 	if (!ctx->use_ssk)
 		key = crypt_req->key;
 
 	if (!crypt_req->skip_key) {
-		ret = crypto_ablkcipher_setkey(tfm, key, crypt_req->keylen);
+		ret = crypto_skcipher_setkey(tfm, key, crypt_req->keylen);
 		if (ret < 0) {
 			pr_err("setkey failed");
 			goto process_req_out;
@@ -279,7 +280,7 @@ process_req_out:
 	ablkcipher_request_free(req);
 free_tfm:
 	if (crypt_req->op != TEGRA_CRYPTO_CBC)
-		crypto_free_ablkcipher(tfm);
+		crypto_free_skcipher(tfm);
 out:
 	return ret;
 }

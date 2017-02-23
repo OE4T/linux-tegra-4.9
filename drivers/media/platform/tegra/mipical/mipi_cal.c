@@ -40,7 +40,7 @@
 #include "registers.h"
 #include "mipi_cal.h"
 #define DRV_NAME "tegra_mipi_cal"
-#define MIPI_CAL_TIMEOUT_MSEC 1
+#define MIPI_CAL_TIMEOUT_MSEC 500
 
 struct tegra_mipi_bias {
 	/* BIAS_PAD_CFG0 */

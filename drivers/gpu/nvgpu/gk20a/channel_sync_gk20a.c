@@ -817,12 +817,10 @@ static int __gk20a_channel_semaphore_incr(
 			dependency, wfi_cmd,
 			need_sync_fence);
 	if (err)
-		goto clean_up_priv_cmd;
+		goto clean_up_sema;
 
 	return 0;
 
-clean_up_priv_cmd:
-	gk20a_free_priv_cmdbuf(c, incr_cmd);
 clean_up_sema:
 	nvgpu_semaphore_put(semaphore);
 	return err;

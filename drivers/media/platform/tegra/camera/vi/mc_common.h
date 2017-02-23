@@ -28,6 +28,7 @@
 #include <media/v4l2-device.h>
 #include <media/v4l2-dev.h>
 #include <media/videobuf2-core.h>
+#include <linux/workqueue.h>
 
 #include "core.h"
 #include "../csi/csi.h"
@@ -162,6 +163,8 @@ struct tegra_channel {
 	void *alloc_ctx;
 	struct list_head capture;
 	spinlock_t start_lock;
+	struct work_struct status_work;
+	struct work_struct error_work;
 
 	void __iomem *csibase[TEGRA_CSI_BLOCKS];
 	unsigned int stride_align;

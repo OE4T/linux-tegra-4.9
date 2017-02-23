@@ -47,6 +47,7 @@ static void tegra_channel_notify_status_callback(
 				struct vi_notify_channel *,
 				const struct vi_capture_status *,
 				void *);
+static void tegra_channel_error_worker(struct work_struct *status_work);
 static void tegra_channel_notify_error_callback(void *);
 
 u32 csimux_config_stream[] = {
@@ -241,6 +242,14 @@ static void tegra_channel_handle_error(struct tegra_channel *chan)
 		v4l2_subdev_notify_event(sd_on_csi, &source_ev_fmt);
 }
 
+static void tegra_channel_status_worker(struct work_struct *status_work)
+{
+	struct tegra_channel *chan;
+
+	chan = container_of(status_work, struct tegra_channel, status_work);
+
+	tegra_channel_handle_error(chan);
+}
 
 static void tegra_channel_notify_status_callback(
 				struct vi_notify_channel *vnc,
@@ -267,7 +276,7 @@ static void tegra_channel_notify_status_callback(
 	dev_err(chan->vi->dev, "         capture_id %u stream %2u vchan %2u\n",
 		status->capture_id, status->st, status->vc);
 
-	tegra_channel_handle_error(chan);
+	schedule_work(&chan->status_work);
 }
 
 static int tegra_channel_notify_enable(
@@ -724,6 +733,10 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	ret = tegra_channel_update_clknbw(chan, 1);
 	if (ret)
 		goto error_capture_setup;
+
+	INIT_WORK(&chan->error_work, tegra_channel_error_worker);
+	INIT_WORK(&chan->status_work, tegra_channel_status_worker);
+
 	/* Start kthread to capture data to buffer */
 	chan->kthread_capture_start = kthread_run(
 					tegra_channel_kthread_capture_start,
@@ -759,6 +772,9 @@ int vi4_channel_stop_streaming(struct vb2_queue *vq)
 		if (chan->vnc_id[i] == -1)
 			return 0;
 	}
+
+	cancel_work_sync(&chan->status_work);
+	cancel_work_sync(&chan->error_work);
 
 	if (!chan->bypass) {
 		tegra_channel_stop_kthreads(chan);
@@ -856,6 +872,16 @@ void vi4_power_off(struct tegra_channel *chan)
 	nvhost_module_remove_client(vi->ndev, &chan->video);
 }
 
+static void tegra_channel_error_worker(struct work_struct *error_work)
+{
+	struct tegra_channel *chan;
+
+	chan = container_of(error_work, struct tegra_channel, error_work);
+
+	vi4_power_off(chan);
+	tegra_channel_handle_error(chan);
+}
+
 static void tegra_channel_notify_error_callback(void *client_data)
 {
 	struct tegra_channel *chan = (struct tegra_channel *)client_data;
@@ -869,7 +895,5 @@ static void tegra_channel_notify_error_callback(void *client_data)
 	}
 	spin_unlock(&chan->capture_state_lock);
 
-	vi4_power_off(chan);
-	tegra_channel_handle_error(chan);
+	schedule_work(&chan->error_work);
 }
-

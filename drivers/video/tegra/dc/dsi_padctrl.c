@@ -57,13 +57,13 @@ static int dsi_padctrl_pull_down_regs[DSI_MAX_INSTANCES] = {
 static inline void tegra_dsi_padctrl_write(struct tegra_dsi_padctrl *dsi_padctrl,
 	int val, int reg)
 {
-	writel(val, dsi_padctrl->base_addr + (reg * 4));
+	writel(val, dsi_padctrl->base + (reg * 4));
 }
 
 static inline unsigned long tegra_dsi_padctrl_read(struct tegra_dsi_padctrl *dsi_padctrl,
 	int reg)
 {
-	return readl(dsi_padctrl->base_addr + (reg * 4));
+	return readl(dsi_padctrl->base + (reg * 4));
 }
 
 static void tegra_dsi_padctrl_reset(struct tegra_dsi_padctrl *dsi_padctrl)
@@ -129,7 +129,7 @@ void tegra_dsi_padctrl_enable(struct tegra_dsi_padctrl *dsi_padctrl)
 	tegra_dsi_padctrl_write(dsi_padctrl, val, DSI_PADCTRL_GLOBAL_CNTRLS);
 
 	if (dsi_padctrl->prod_list) {
-		err = tegra_prod_set_by_name(&dsi_padctrl->base_addr,
+		err = tegra_prod_set_by_name(&dsi_padctrl->base,
 			"dsi-padctrl-prod", dsi_padctrl->prod_list);
 		if (err)
 			pr_err("dsi padctl:prod settings failed%d\n", err);
@@ -217,55 +217,43 @@ struct tegra_dsi_padctrl *tegra_dsi_padctrl_init(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi;
 	struct tegra_dsi_padctrl *dsi_padctrl;
-	struct resource *res;
-	struct resource padctrl_res;
-	struct device_node *np_dsi = of_find_node_by_path(DSI_NODE);
+	struct device_node *np_dsi;
 	int err;
 
 	/* Padctrl module doesn't exist on fpga */
-	if (tegra_platform_is_linsim() || tegra_platform_is_fpga()) {
+	if (tegra_platform_is_linsim() || tegra_platform_is_fpga())
 		return NULL;
-	}
 
 	dsi = tegra_dc_get_outdata(dc);
-	dsi_padctrl = devm_kzalloc(&dc->ndev->dev, sizeof(struct tegra_dsi_padctrl),
-		GFP_KERNEL);
-        if (!dsi_padctrl) {
-                dev_err(&dc->ndev->dev, "dsi padctl: memory allocation failed\n");
-                err = -ENOMEM;
+	if (!dsi) {
+		dev_err(&dc->ndev->dev, "%s:dsi outdata not found\n", __func__);
+		err = -EINVAL;
 		goto fail;
-        }
+	}
+
+	np_dsi = of_find_node_by_path(DSI_NODE);
+	if (!np_dsi || !of_device_is_available(np_dsi)) {
+		dev_err(&dc->ndev->dev, "dsi padctl not available\n");
+		err = -ENODEV;
+		goto fail;
+	}
+
+	dsi_padctrl = kzalloc(sizeof(*dsi_padctrl), GFP_KERNEL);
+	if (!dsi_padctrl) {
+		err = -ENOMEM;
+		goto put_dsi;
+	}
 
 	/*
 	 * DSI pad control module is listed in dt immediately after DSI
 	 * instances. Use DSI_PADCTRL_INSTANCE to get the resource for
 	 * dsi pad control module.
 	 */
-	if (np_dsi && of_device_is_available(np_dsi)) {
-		err = of_address_to_resource(np_dsi, DSI_PADCTRL_INSTANCE,
-			&padctrl_res);
-		if (err) {
-			dev_err(&dc->ndev->dev, "dsi padctl: no mem res\n");
-			goto fail;
-		}
-	}
-
-	res = &padctrl_res;
-	dsi_padctrl->base_res = request_mem_region(res->start,
-		resource_size(res), dc->ndev->name);
-	if (!dsi_padctrl->base_res) {
-		dev_err(&dc->ndev->dev,
-			"dsi patctl: request_mem_region failed\n");
-		err = -EBUSY;
-		goto fail;
-	}
-
-	dsi_padctrl->base_addr = ioremap(res->start, resource_size(res));
-	if (!dsi_padctrl->base_addr) {
-		dev_err(&dc->ndev->dev,
-			"dsi patctl: Failed to map registers\n");
+	dsi_padctrl->base = of_iomap(np_dsi, DSI_PADCTRL_INSTANCE);
+	if (!dsi_padctrl->base) {
+		dev_err(&dc->ndev->dev, "dsi patctl: Failed to map registers\n");
 		err = -EINVAL;
-		goto fail;
+		goto free_mem;
 	}
 
 	if (tegra_bpmp_running()) {
@@ -273,7 +261,7 @@ struct tegra_dsi_padctrl *tegra_dsi_padctrl_init(struct tegra_dc *dc)
 		if (IS_ERR_OR_NULL(dsi_padctrl->reset)) {
 			dev_err(&dc->ndev->dev, "dsi padctl: Failed to get reset\n");
 			err = PTR_ERR(dsi_padctrl->reset);
-			goto fail;
+			goto iounmap;
 		}
 
 		/* Reset dsi padctrl module */
@@ -290,8 +278,15 @@ struct tegra_dsi_padctrl *tegra_dsi_padctrl_init(struct tegra_dc *dc)
 
 	/* Set up active data and clock lanes mask */
 	tegra_dsi_padctrl_setup_pwr_down_mask(dsi, dsi_padctrl);
+	of_node_put(np_dsi);
 
 	return dsi_padctrl;
+iounmap:
+	iounmap(dsi_padctrl->base);
+free_mem:
+	kfree(dsi_padctrl);
+put_dsi:
+	of_node_put(np_dsi);
 fail:
 	dev_err(&dc->ndev->dev, "dsi pactrl init failed %d\n", err);
 	return ERR_PTR(err);
@@ -300,18 +295,15 @@ fail:
 void tegra_dsi_padctrl_shutdown(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
-	struct tegra_dsi_padctrl *dsi_padctrl;
-
-	dsi_padctrl = dsi->pad_ctrl;
+	struct tegra_dsi_padctrl *dsi_padctrl = dsi->pad_ctrl;
 
 	/* Power down all DSI pads */
 	tegra_dsi_padctrl_disable(dsi_padctrl);
 
-	if (dsi_padctrl->prod_list) {
+	if (dsi_padctrl->prod_list)
 		dsi_padctrl->prod_list = NULL;
-	}
 
-	iounmap(dsi_padctrl->base_addr);
-	release_mem_region(dsi_padctrl->base_res->start,
-		resource_size(dsi_padctrl->base_res));
+	iounmap(dsi_padctrl->base);
+	kfree(dsi_padctrl);
+	dsi->pad_ctrl = NULL;
 }

@@ -335,24 +335,12 @@ int tegra_dc_init_fakedsi_panel(struct tegra_dc *dc, long dc_outtype)
 
 int tegra_dc_destroy_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 {
-	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 	int i = 0;
-	struct resource *res;
-	struct resource dsi_res;
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	char *ganged_reg_name[4] = {"ganged_dsia_regs", "ganged_dsib_regs",
-					NULL, NULL};
-#else
-	char *ganged_reg_name[2] = {"ganged_dsia_regs", "ganged_dsib_regs"};
-#endif
-	struct device_node *np = dc->ndev->dev.of_node;
-	struct device_node *np_dsi =
-		of_find_node_by_path(DSI_NODE);
+	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 
 	if (!dsi) {
-		dev_err(&dc->ndev->dev, " dsi: allocation deleted\n");
-		of_node_put(np_dsi);
-		return -ENOMEM;
+		dev_err(&dc->ndev->dev, " dsi out_data not found\n");
+		return -EINVAL;
 	}
 
 	dsi->max_instances = dc->out->dsi->ganged_type ? MAX_DSI_INSTANCE : 1;
@@ -360,37 +348,14 @@ int tegra_dc_destroy_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
 	for (i = 0; i < dsi->max_instances; i++) {
-		if (np) {
-			if (np_dsi && of_device_is_available(np_dsi)) {
-				if (!dc->out->dsi->ganged_type)
-					of_address_to_resource(np_dsi,
-						dc->out->dsi->dsi_instance,
-						&dsi_res);
-				else /* ganged type */
-					of_address_to_resource(np_dsi,
-						i, &dsi_res);
-				res = &dsi_res;
-			} else {
-				return -EINVAL;
-			}
-		} else {
-			res = platform_get_resource_byname(dc->ndev,
-				IORESOURCE_MEM,
-				dc->out->dsi->ganged_type ?
-				ganged_reg_name[i] :
-				ganged_reg_name[dsi->info.dsi_instance]);
-		}
-		if (!res) {
-			dev_err(&dc->ndev->dev, "dsi: no mem resource\n");
-			return -ENOENT;
-		}
-
-		if (dsi->base[i])
+		if (dsi->base[i]) {
 			iounmap(dsi->base[i]);
-		if (dsi->base_res[i])
-			release_mem_region(res->start, resource_size(res));
-		dsi->base[i] = NULL;
-		dsi->base_res[i] = NULL;
+			dsi->base[i] = NULL;
+		}
+		if (dsi->base_res[i]) {
+			release_resource(dsi->base_res[i]);
+			dsi->base_res[i] = NULL;
+		}
 	}
 
 	if (dsi->avdd_dsi_csi) {
@@ -413,19 +378,10 @@ int tegra_dc_destroy_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 	return 0;
 }
 
-
 int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 {
 	struct resource *res;
-	struct resource dsi_res;
-
 	int err = 0, i;
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	char *ganged_reg_name[4] = {"ganged_dsia_regs", "ganged_dsib_regs",
-					NULL, NULL};
-#else
-	char *ganged_reg_name[4] = {"ganged_dsia_regs", "ganged_dsib_regs"};
-#endif
 
 	struct device_node *np = dc->ndev->dev.of_node;
 	struct device_node *np_dsi =
@@ -446,6 +402,7 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 
 	for (i = 0; i < dsi->max_instances; i++) {
 		if (np) {
+			struct resource dsi_res;
 			if (np_dsi && of_device_is_available(np_dsi)) {
 				if (!dc->out->dsi->ganged_type)
 					of_address_to_resource(np_dsi,
@@ -459,12 +416,6 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 				err = -EINVAL;
 				goto err_release_regs;
 			}
-		} else {
-			res = platform_get_resource_byname(dc->ndev,
-				IORESOURCE_MEM,
-				dc->out->dsi->ganged_type ?
-				ganged_reg_name[i] :
-				ganged_reg_name[dsi->info.dsi_instance]);
 		}
 		if (!res) {
 			dev_err(&dc->ndev->dev, "dsi: no mem resource\n");
@@ -472,15 +423,7 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 			goto err_release_regs;
 		}
 
-		dsi->base_res[i] = request_mem_region(res->start,
-				resource_size(res), dc->ndev->name);
-		if (!dsi->base_res[i]) {
-			dev_err(&dc->ndev->dev,
-				"dsi: request_mem_region failed\n");
-			err = -EBUSY;
-			goto err_release_regs;
-		}
-
+		dsi->base_res[i] = res;
 		dsi->base[i] = ioremap(res->start, resource_size(res));
 		if (!dsi->base[i]) {
 			dev_err(&dc->ndev->dev,
@@ -488,7 +431,6 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 			err = -EBUSY;
 			goto err_release_regs;
 		}
-
 	}
 
 	dsi->avdd_dsi_csi =  regulator_get(&dc->ndev->dev, "avdd_dsi_csi");

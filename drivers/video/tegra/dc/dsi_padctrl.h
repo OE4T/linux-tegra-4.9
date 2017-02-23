@@ -20,12 +20,11 @@
 #define DSI_MAX_INSTANCES	4
 
 struct tegra_dsi_padctrl {
+	void __iomem *base;
 	struct reset_control *reset;
-	struct resource *base_res;
 	u8 pwr_dwn_mask[DSI_MAX_INSTANCES];
 	struct tegra_prod *prod_list;
 	bool dsi_pads_enabled;
-	void __iomem *base_addr;
 };
 
 /* Defined in dsi_padctrl.c and used in dsi.c */

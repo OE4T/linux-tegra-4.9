@@ -636,7 +636,7 @@ int gr_gm20b_init_fs_state(struct gk20a *g)
 
 	gr_gk20a_init_fs_state(g);
 
-	gr_gm20b_load_tpc_mask(g);
+	g->ops.gr.load_tpc_mask(g);
 
 	gk20a_writel(g, gr_bes_zrop_settings_r(),
 		     gr_bes_zrop_settings_num_active_ltcs_f(g->ltc_count));
@@ -1605,5 +1605,6 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.write_zcull_ptr = gr_gk20a_write_zcull_ptr;
 	gops->gr.write_pm_ptr = gr_gk20a_write_pm_ptr;
 	gops->gr.init_elcg_mode = gr_gk20a_init_elcg_mode;
+	gops->gr.load_tpc_mask = gr_gm20b_load_tpc_mask;
 
 }

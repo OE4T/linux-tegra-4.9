@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,17 +46,14 @@
 	};
 
 	pmc@7000e400 {
-		io-pad-defaults {
-			pex-bias {
-				nvidia,deep-power-down-enable;
-			};
+		nvidia,restrict-voltage-switch;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_iopad_default>;
 
-			pex-clk1 {
-				nvidia,deep-power-down-enable;
-			};
-
-			pex-clk2 {
-				nvidia,deep-power-down-enable;
+                pinctrl_iopad_default: iopad-defaults {
+                        pex-io-pads {
+				pins = "pex-bias", "pex-clk1", "pex-clk2";
+				low-power-enable;
 			};
 		};
 

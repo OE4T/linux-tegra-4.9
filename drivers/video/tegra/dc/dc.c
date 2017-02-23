@@ -568,7 +568,10 @@ static int dsc_rc_ranges_8bpp_8bpc[16][3] = {
 
 #ifndef CONFIG_TEGRA_NVDISPLAY
 /* stub out IMP calls */
-void tegra_dc_reserve_common_channel(struct tegra_dc *dc) {}
+int tegra_dc_reserve_common_channel(struct tegra_dc *dc)
+{
+	return 0;
+}
 void tegra_dc_release_common_channel(struct tegra_dc *dc) {}
 void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update) {}
 int tegra_dc_validate_imp_queue(struct tegra_dc *dc, u64 session_id)
@@ -5093,7 +5096,15 @@ void tegra_dc_enable(struct tegra_dc *dc)
 	mutex_lock(&dc->lock);
 
 	if (!dc->enabled) {
-		tegra_dc_reserve_common_channel(dc);
+		if (tegra_dc_reserve_common_channel(dc)) {
+			dev_err(&dc->ndev->dev,
+				"%s: DC %d enable failed due to timeout\n",
+				__func__, dc->ctrl_num);
+			mutex_unlock(&dc->lock);
+
+			return;
+		}
+
 		dc->enabled = _tegra_dc_enable(dc);
 		tegra_dc_release_common_channel(dc);
 	}
@@ -5352,7 +5363,13 @@ static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq)
 				dc->out_ops->shutdown_interface(dc);
 	}
 
-	tegra_dc_reserve_common_channel(dc);
+	if (tegra_dc_reserve_common_channel(dc)) {
+		dev_err(&dc->ndev->dev,
+			"%s: DC %d disable failed due to timeout\n",
+			__func__, dc->ctrl_num);
+
+		return;
+	}
 
 	blank_windows = !tegra_dc_ext_disable(dc->ext);
 
@@ -6187,7 +6204,14 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 	trace_display_suspend(dc);
 	dev_info(&ndev->dev, "suspend\n");
 
-	tegra_dc_reserve_common_channel(dc);
+	ret = tegra_dc_reserve_common_channel(dc);
+	if (ret) {
+		dev_err(&dc->ndev->dev,
+			"%s: DC %d suspend failed due to timeout\n",
+			__func__, dc->ctrl_num);
+
+		return ret;
+	}
 
 	tegra_dc_ext_disable(dc->ext);
 

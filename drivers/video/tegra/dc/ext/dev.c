@@ -1601,7 +1601,14 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	 * block.
 	 */
 	if (data->imp_dirty) {
-		tegra_dc_reserve_common_channel(ext->dc);
+		ret = tegra_dc_reserve_common_channel(ext->dc);
+		if (ret) {
+			dev_err(&ext->dc->ndev->dev,
+			"%s: DC %d flip failed to reserve the COMMON channel\n",
+				__func__, ext->dc->ctrl_num);
+			goto fail_pin;
+		}
+
 		ret = tegra_dc_validate_imp_queue(ext->dc,
 							data->imp_session_id);
 		if (ret) {

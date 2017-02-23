@@ -1198,7 +1198,9 @@ static bool tegra_dvfs_all_rails_suspended(void)
 	struct dvfs_rail *rail;
 
 	list_for_each_entry(rail, &dvfs_rail_list, node)
-		if (!rail->suspended && !rail->disabled)
+		if ((!rail->suspended) &&
+		    (!rail->disabled) &&
+		    (rail != tegra_gpu_rail))
 			return false;
 
 	return true;

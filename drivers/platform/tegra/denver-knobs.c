@@ -26,13 +26,13 @@
 #include <linux/of_platform.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/tegra-soc.h>
 
 #include <asm/traps.h>
 #include <asm/cputype.h>
 #include <asm/cpu.h>
 #include <asm/smp_plat.h>
 
-#include <mach/hardware.h>
 
 #include "denver-knobs.h"
 

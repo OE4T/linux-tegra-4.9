@@ -2005,6 +2005,11 @@ void gr_gv11b_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 	gk20a_writel(g, therm_gate_ctrl_r(engine), gate_ctrl);
 }
 
+static void gr_gv11b_load_tpc_mask(struct gk20a *g)
+{
+	/* TODO */
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -2061,5 +2066,6 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.write_zcull_ptr = gr_gv11b_write_zcull_ptr;
 	gops->gr.write_pm_ptr = gr_gv11b_write_pm_ptr;
 	gops->gr.init_elcg_mode = gr_gv11b_init_elcg_mode;
+	gops->gr.load_tpc_mask = gr_gv11b_load_tpc_mask;
 
 }

@@ -506,7 +506,7 @@ static void tegra210_pllcx_set_defaults(const char *name,
 	pllcx->params->defaults_set = true;
 
 	if (readl_relaxed(clk_base + pllcx->params->base_reg) &
-			PLL_ENABLE) {
+			PLL_ENABLE && !pllcx->params->defaults_set) {
 		/* PLL is ON: only check if defaults already set */
 		pllcx_check_defaults(pllcx->params);
 		pr_warn("%s already enabled. Postponing set full defaults\n",
@@ -612,7 +612,6 @@ static void tegra210_plld_set_defaults(struct tegra_clk_pll *plld)
 
 	if (readl_relaxed(clk_base + plld->params->base_reg) &
 			PLL_ENABLE) {
-		pr_warn("PLL_D already enabled. Postponing set full defaults\n");
 
 		/*
 		 * PLL is ON: check if defaults already set, then set those
@@ -628,6 +627,9 @@ static void tegra210_plld_set_defaults(struct tegra_clk_pll *plld)
 			PLLD_MISC0_LOCK_OVERRIDE | PLLD_MISC0_EN_SDM;
 		_pll_misc_chk_default(clk_base, plld->params, 0, val,
 				~mask & PLLD_MISC0_WRITE_MASK);
+
+		if (!plld->params->defaults_set)
+			pr_warn("PLL_D already enabled. Postponing set full defaults\n");
 
 		/* Enable lock detect */
 		mask = PLLD_MISC0_LOCK_ENABLE | PLLD_MISC0_LOCK_OVERRIDE;
@@ -900,7 +902,6 @@ static void tegra210_pllx_set_defaults(struct tegra_clk_pll *pllx)
 	val |= step_b << PLLX_MISC2_DYNRAMP_STEPB_SHIFT;
 
 	if (readl_relaxed(clk_base + pllx->params->base_reg) & PLL_ENABLE) {
-		pr_warn("PLL_X already enabled. Postponing set full defaults\n");
 
 		/*
 		 * PLL is ON: check if defaults already set, then set those
@@ -908,6 +909,8 @@ static void tegra210_pllx_set_defaults(struct tegra_clk_pll *pllx)
 		 */
 		pllx_check_defaults(pllx);
 
+		if (!pllx->params->defaults_set)
+			pr_warn("PLL_X already enabled. Postponing set full defaults\n");
 		/* Configure dyn ramp, disable lock override */
 		writel_relaxed(val, clk_base + pllx->params->ext_misc_reg[2]);
 
@@ -952,7 +955,6 @@ static void tegra210_pllmb_set_defaults(struct tegra_clk_pll *pllmb)
 	pllmb->params->defaults_set = true;
 
 	if (val & PLL_ENABLE) {
-		pr_warn("PLL_MB already enabled. Postponing set full defaults\n");
 
 		/*
 		 * PLL is ON: check if defaults already set, then set those
@@ -963,6 +965,8 @@ static void tegra210_pllmb_set_defaults(struct tegra_clk_pll *pllmb)
 		_pll_misc_chk_default(clk_base, pllmb->params, 0, val,
 				~mask & PLLMB_MISC1_WRITE_MASK);
 
+		if (!pllmb->params->defaults_set)
+			pr_warn("PLL_MB already enabled. Postponing set full defaults\n");
 		/* Enable lock detect */
 		val = readl_relaxed(clk_base + pllmb->params->ext_misc_reg[0]);
 		val &= ~mask;
@@ -1012,13 +1016,14 @@ static void tegra210_pllp_set_defaults(struct tegra_clk_pll *pllp)
 	pllp->params->defaults_set = true;
 
 	if (val & PLL_ENABLE) {
-		pr_warn("PLL_P already enabled. Postponing set full defaults\n");
 
 		/*
 		 * PLL is ON: check if defaults already set, then set those
 		 * that can be updated in flight.
 		 */
 		pllp_check_defaults(pllp, true);
+		if (!pllp->params->defaults_set)
+			pr_warn("PLL_P already enabled. Postponing set full defaults\n");
 
 		/* Enable lock detect */
 		val = readl_relaxed(clk_base + pllp->params->ext_misc_reg[0]);
@@ -1073,13 +1078,14 @@ static void tegra210_pllu_set_defaults(struct tegra_clk_pll *pllu)
 	pllu->params->defaults_set = true;
 
 	if (val & PLL_ENABLE) {
-		pr_warn("PLL_U already enabled. Postponing set full defaults\n");
 
 		/*
 		 * PLL is ON: check if defaults already set, then set those
 		 * that can be updated in flight.
 		 */
 		pllu_check_defaults(pllu, false);
+		if (!pllu->params->defaults_set)
+			pr_warn("PLL_U already enabled. Postponing set full defaults\n");
 
 		/* Enable lock detect */
 		val = readl_relaxed(clk_base + pllu->params->ext_misc_reg[0]);

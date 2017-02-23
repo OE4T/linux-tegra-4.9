@@ -1945,14 +1945,8 @@ static inline u32 tegra_hdmi_get_bpp(struct tegra_hdmi *hdmi)
 {
 	int yuv_flag = hdmi->dc->mode.vmode & FB_VMODE_YUV_MASK;
 
-	/* According to HDMI 1.4b spec:
-	 *
-	 * YCbCr 4:2:2 is also 36-bit mode but does not require the
-	 * further use of the Deep Color modes described in ...
-	 *
-	 * Setting this to zero prevents sending phase info */
 	if (yuv_flag == (FB_VMODE_Y422 | FB_VMODE_Y36))
-		return 0;
+		return 24;
 	else if (yuv_flag & FB_VMODE_Y24)
 		return 24;
 	else if (yuv_flag & FB_VMODE_Y30)

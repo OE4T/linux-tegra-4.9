@@ -589,7 +589,7 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 
 	/* Mark capture state to IDLE as capture is finished */
 	chan->capture_state = CAPTURE_IDLE;
-	getnstimeofday(&ts);
+
 	tegra_channel_ring_buffer(chan, &buf->buf, &ts, state);
 }
 

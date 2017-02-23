@@ -25,17 +25,14 @@
 
 #include <linux/tegra_prod.h>
 
-#define DSI_PADCTRL_INSTANCE	4
-#define DSI_MAX_INSTANCES	4
-
-static int dsi_padctrl_pwr_down_regs[DSI_MAX_INSTANCES] = {
+static int dsi_padctrl_pwr_down_regs[MAX_DSI_INSTANCE] = {
 	DSI_PADCTRL_A_LANES_PWR_DOWN,
 	DSI_PADCTRL_B_LANES_PWR_DOWN,
 	DSI_PADCTRL_C_LANES_PWR_DOWN,
 	DSI_PADCTRL_D_LANES_PWR_DOWN,
 };
 
-static int dsi_padctrl_pull_down_regs[DSI_MAX_INSTANCES] = {
+static int dsi_padctrl_pull_down_regs[MAX_DSI_INSTANCE] = {
 	DSI_PADCTRL_A_PULL_DOWN,
 	DSI_PADCTRL_B_PULL_DOWN,
 	DSI_PADCTRL_C_PULL_DOWN,
@@ -207,7 +204,7 @@ static void tegra_dsi_padctrl_setup_pwr_down_mask(struct tegra_dc_dsi_data *dsi,
 	 * BIT(0) indicates whether clock lane is active or not.
 	 * BIT(1) and BIT(2) indicate whether IO LANE0 and LANE1 are active.
 	 */
-	for (i = 0; i < DSI_MAX_INSTANCES; i++)
+	for (i = 0; i < MAX_DSI_INSTANCE; i++)
 		dsi_padctrl->pwr_dwn_mask[i] =
 			(((dsi_act_data_lane_mask >> (2 * i)) & 0x3) << 1) |
 			((dsi_act_clk_lane_mask >> i) & 0x1);
@@ -246,10 +243,10 @@ struct tegra_dsi_padctrl *tegra_dsi_padctrl_init(struct tegra_dc *dc)
 
 	/*
 	 * DSI pad control module is listed in dt immediately after DSI
-	 * instances. Use DSI_PADCTRL_INSTANCE to get the resource for
+	 * instances. Use DSI_PADCTRL_INDEX to get the resource for
 	 * dsi pad control module.
 	 */
-	dsi_padctrl->base = of_iomap(np_dsi, DSI_PADCTRL_INSTANCE);
+	dsi_padctrl->base = of_iomap(np_dsi, DSI_PADCTRL_INDEX);
 	if (!dsi_padctrl->base) {
 		dev_err(&dc->ndev->dev, "dsi patctl: Failed to map registers\n");
 		err = -EINVAL;

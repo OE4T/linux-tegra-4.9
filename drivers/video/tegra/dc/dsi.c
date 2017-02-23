@@ -347,8 +347,7 @@ unsigned long tegra_dsi_controller_readl(struct tegra_dc_dsi_data *dsi,
 	}
 	ret = readl(dsi->base[index] + GET_BYTE_OFFSET(reg));
 	trace_display_readl(dsi->dc, ret,
-			(char *)dsi->base_res[index]->start
-			+ GET_BYTE_OFFSET(reg));
+			(char *)dsi->base[index] + GET_BYTE_OFFSET(reg));
 	return ret;
 }
 EXPORT_SYMBOL(tegra_dsi_controller_readl);
@@ -362,8 +361,8 @@ void tegra_dsi_controller_writel(struct tegra_dc_dsi_data *dsi,
 		"DSI is clock gated!"))
 			return;
 	}
-	trace_display_writel(dsi->dc, val, (char *)dsi->base_res[index]->start
-			+ GET_BYTE_OFFSET(reg));
+	trace_display_writel(dsi->dc, val,
+			(char *)dsi->base[index] + GET_BYTE_OFFSET(reg));
 	writel(val, dsi->base[index] + GET_BYTE_OFFSET(reg));
 }
 EXPORT_SYMBOL(tegra_dsi_controller_writel);
@@ -374,8 +373,7 @@ unsigned long tegra_dsi_readl(struct tegra_dc_dsi_data *dsi, u32 reg)
 	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
 	ret = readl(dsi->base[DSI_INSTANCE_0] + GET_BYTE_OFFSET(reg));
 	trace_display_readl(dsi->dc, ret,
-			(char *)dsi->base_res[DSI_INSTANCE_0]->start
-			+ GET_BYTE_OFFSET(reg));
+		(char *)dsi->base[DSI_INSTANCE_0] + GET_BYTE_OFFSET(reg));
 	return ret;
 }
 EXPORT_SYMBOL(tegra_dsi_readl);
@@ -386,8 +384,7 @@ void tegra_dsi_writel(struct tegra_dc_dsi_data *dsi, u32 val, u32 reg)
 	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
 	for (i = 0; i < dsi->max_instances; i++) {
 		trace_display_writel(dsi->dc, val,
-				(char *)dsi->base_res[i]->start
-				+ GET_BYTE_OFFSET(reg));
+			(char *)dsi->base[i] + GET_BYTE_OFFSET(reg));
 		writel(val, dsi->base[i] + GET_BYTE_OFFSET(reg));
 	}
 }
@@ -401,7 +398,7 @@ unsigned long tegra_dsi_pad_control_readl(struct tegra_dc_dsi_data *dsi,
 	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
 	ret = readl((int *)dsi->pad_control_base + reg * 4);
 	trace_display_readl(dsi->dc, ret,
-			(char *)dsi->pad_control_base_res->start + reg * 4);
+			(char *)dsi->pad_control_base + reg * 4);
 	return ret;
 }
 
@@ -410,7 +407,7 @@ void tegra_dsi_pad_control_writel(struct tegra_dc_dsi_data *dsi, u32 val,
 {
 	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
 	trace_display_writel(dsi->dc, val,
-			(char *)dsi->pad_control_base_res->start + reg * 4);
+			(char *)dsi->pad_control_base + reg * 4);
 	writel(val, (int *)dsi->pad_control_base + reg * 4);
 }
 
@@ -4340,9 +4337,6 @@ err_free_init_cmd:
 static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi;
-	struct resource *res;
-	struct resource *base_res;
-	struct resource dsi_res;
 	void __iomem *base;
 	struct clk *dc_clk = NULL;
 	struct clk *dsi_clk;
@@ -4355,86 +4349,48 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	int err = 0, i;
 	int dsi_instance;
 
-	char *split_link_reg_name[4] = {"split_dsia_regs", "split_disb_regs",
-					"split_dsic_regs", "split_dsid_regs"};
 	char *dsi_io_padctrl_name[4] = {"dsia", "dsib", "dsic", "dsid"};
-	char *ganged_reg_name[4] = {"ganged_dsia_regs", "ganged_dsib_regs",
-					NULL, NULL};
 	char *dsi_clk_name[4] = {"dsi", "dsib", "dsic", "dsid"};
 	char *dsi_lp_clk_name[4] = {"dsia_lp", "dsib_lp", "dsic_lp", "dsid_lp"};
 	char *dsi_reset_name[4] = {"dsia", "dsib", "dsic", "dsid"};
-	struct device_node *np = dc->ndev->dev.of_node;
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	char *dsi_fixed_clk_name = "pllp_display";
 #else
 	char *dsi_fixed_clk_name = "pll_p_out3";
 #endif
-
 	struct device_node *np_dsi =
 		of_find_node_by_path(DSI_NODE);
+
+	if (!np_dsi || !of_device_is_available(np_dsi)) {
+		dev_err(&dc->ndev->dev, "dsi not available\n");
+		return -ENODEV;
+	}
+
 	dsi = kzalloc(sizeof(*dsi), GFP_KERNEL);
 	if (!dsi) {
-		dev_err(&dc->ndev->dev, "dsi: memory allocation failed\n");
 		of_node_put(np_dsi);
 		return -ENOMEM;
 	}
 
-	dsi->max_instances = (dc->out->dsi->ganged_type ||
-		dc->out->dsi->dsi_csi_loopback ||
-		dc->out->dsi->split_link_type) ? MAX_DSI_INSTANCE : 1;
+	dsi->max_instances = is_simple_dsi(dc->out->dsi) ? 1 : MAX_DSI_INSTANCE;
 	dsi_instance = (int)dc->out->dsi->dsi_instance;
+
 	for (i = 0; i < dsi->max_instances; i++) {
-		if (np) {
-			if (np_dsi && of_device_is_available(np_dsi)) {
-				if (!dc->out->dsi->ganged_type &&
-					!dc->out->dsi->split_link_type &&
-					!dc->out->dsi->dsi_csi_loopback)
-					of_address_to_resource(np_dsi,
-						dsi_instance, &dsi_res);
-				else /* ganged type OR split link*/
-					of_address_to_resource(np_dsi,
-						i, &dsi_res);
-				res = &dsi_res;
-			} else {
-				err = -EINVAL;
-				goto err_free_dsi;
-			}
-		} else {
-			res = platform_get_resource_byname(dc->ndev,
-					IORESOURCE_MEM,
-					(dc->out->dsi->split_link_type ||
-					dc->out->dsi->dsi_csi_loopback) ?
-					split_link_reg_name[i] :
-					dc->out->dsi->ganged_type ?
-					ganged_reg_name[i] : "dsi_regs");
-		}
-		if (!res) {
-			dev_err(&dc->ndev->dev, "dsi: no mem resource\n");
+		if (is_simple_dsi(dc->out->dsi))
+			base = of_iomap(np_dsi, dsi_instance);
+		else /* ganged type OR split link*/
+			base = of_iomap(np_dsi, i);
+
+		if (!base) {
+			dev_err(&dc->ndev->dev, "dsi: ioremap failed\n");
 			err = -ENOENT;
 			goto err_free_dsi;
-		}
-
-		base_res = request_mem_region(res->start, resource_size(res),
-					dc->ndev->name);
-		if (!base_res) {
-			dev_err(&dc->ndev->dev,
-				"dsi: request_mem_region failed\n");
-			err = -EBUSY;
-			goto err_free_dsi;
-		}
-
-		base = ioremap(res->start, resource_size(res));
-		if (!base) {
-			dev_err(&dc->ndev->dev,
-				"dsi: registers can't be mapped\n");
-			err = -EBUSY;
-			goto err_release_regs;
 		}
 
 		dsi_pdata = dc->pdata->default_out->dsi;
 		if (!dsi_pdata) {
 			dev_err(&dc->ndev->dev, "dsi: dsi data not available\n");
-			goto err_release_regs;
+			goto err_free_dsi;
 		}
 
 		dsi_clk = dsi_pdata->dsi_instance ?
@@ -4474,7 +4430,6 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		}
 
 		dsi->base[i] = base;
-		dsi->base_res[i] = base_res;
 		dsi->dsi_clk[i] = dsi_clk;
 		dsi->dsi_lp_clk[i] = dsi_lp_clk;
 		dsi->dsi_reset[i] = dsi_reset;
@@ -4483,45 +4438,12 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 
 	/* Initialise pad registers needed for split link */
 	if (dc->out->dsi->split_link_type) {
-		if (np) {
-			if (np_dsi && of_device_is_available(np_dsi)) {
-				of_address_to_resource(np_dsi,
-					4, &dsi_res); /*PADCTL REG index is 4*/
-				res = &dsi_res;
-			} else {
-				err = -EINVAL;
-				goto err_free_dsi;
-			}
-		} else {
-			res = platform_get_resource_byname(dc->ndev,
-					IORESOURCE_MEM, "dsi_pad_reg");
-		}
-		if (!res) {
-			dev_err(&dc->ndev->dev,
-					"dsi: pad control no mem resource\n");
+		dsi->pad_control_base = of_iomap(np_dsi, DSI_PADCTRL_INDEX);
+		if (!dsi->pad_control_base) {
+			dev_err(&dc->ndev->dev, "dsi padctrl ioremap failed\n");
 			err = -ENOENT;
-			goto err_free_dsi;
+			goto err_dsi_clk_put;
 		}
-
-		base_res = request_mem_region(res->start, resource_size(res),
-					dc->ndev->name);
-		if (!base_res) {
-			dev_err(&dc->ndev->dev,
-				"dsi: request_mem_region failed\n");
-			err = -EBUSY;
-			goto err_free_dsi;
-		}
-
-		base = ioremap(res->start, resource_size(res));
-		if (!base) {
-			dev_err(&dc->ndev->dev,
-				"dsi: registers can't be mapped\n");
-			err = -EBUSY;
-			goto err_release_regs;
-		}
-
-		dsi->pad_control_base = base;
-		dsi->pad_control_base_res = base_res;
 	}
 
 	dsi_fixed_clk = tegra_disp_clk_get(&dc->ndev->dev, dsi_fixed_clk_name);
@@ -4610,11 +4532,9 @@ err_dsi_clk_put:
 			clk_put(dsi->dsi_lp_clk[i]);
 		if (dsi->dsi_clk[i])
 			clk_put(dsi->dsi_clk[i]);
+		if (dsi->dsi_reset[i])
+			reset_control_put(dsi->dsi_reset[i]);
 	}
-err_release_regs:
-	for (i = 0; i < dsi->max_instances; i++)
-		if (dsi->base_res[i])
-			release_resource(dsi->base_res[i]);
 err_free_dsi:
 	kfree(dsi);
 
@@ -4654,7 +4574,6 @@ static void _tegra_dc_dsi_destroy(struct tegra_dc *dc)
 
 	for (i = 0; i < dsi->max_instances; i++) {
 		iounmap(dsi->base[i]);
-		release_resource(dsi->base_res[i]);
 	}
 	clk_put(dsi->dc_clk);
 	for (i = 0; i < dsi->max_instances; i++)

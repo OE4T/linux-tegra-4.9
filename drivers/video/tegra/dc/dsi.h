@@ -27,6 +27,14 @@
 #include "dsi_padctrl.h"
 #endif
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+#define MAX_DSI_INSTANCE	4
+#else
+#define MAX_DSI_INSTANCE	2
+#endif
+
+#define DSI_PADCTRL_INDEX	4
+
 /* Defines the DSI phy timing parameters */
 struct dsi_phy_timing_inclk {
 	unsigned	t_hsdexit;
@@ -65,18 +73,10 @@ struct dsi_status {
 	unsigned dc_stream:1;
 };
 
-#if !defined(CONFIG_TEGRA_NVDISPLAY)
-#define MAX_DSI_INSTANCE	2
-#else
-#define MAX_DSI_INSTANCE	4
-#endif
-
 struct tegra_dc_dsi_data {
 	struct tegra_dc *dc;
 	void __iomem *base[MAX_DSI_INSTANCE];
-	struct resource *base_res[MAX_DSI_INSTANCE];
 	void __iomem *pad_control_base;
-	struct resource *pad_control_base_res;
 
 	struct clk *dc_clk;
 	struct clk *dsi_clk[MAX_DSI_INSTANCE];
@@ -558,4 +558,10 @@ static inline void tegra_dsi_set_outdata(struct tegra_dc_dsi_data *dsi,
 	dsi->out_data = data;
 }
 
+static inline bool is_simple_dsi(struct tegra_dsi_out *dsi_out)
+{
+	return !(dsi_out->ganged_type ||
+		 dsi_out->dsi_csi_loopback ||
+		 dsi_out->split_link_type);
+}
 #endif

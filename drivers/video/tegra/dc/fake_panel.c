@@ -352,10 +352,6 @@ int tegra_dc_destroy_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 			iounmap(dsi->base[i]);
 			dsi->base[i] = NULL;
 		}
-		if (dsi->base_res[i]) {
-			release_resource(dsi->base_res[i]);
-			dsi->base_res[i] = NULL;
-		}
 	}
 
 	if (dsi->avdd_dsi_csi) {
@@ -380,10 +376,9 @@ int tegra_dc_destroy_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 
 int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 {
-	struct resource *res;
 	int err = 0, i;
-
-	struct device_node *np = dc->ndev->dev.of_node;
+	int dsi_instance;
+	void __iomem *base;
 	struct device_node *np_dsi =
 		of_find_node_by_path(DSI_NODE);
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
@@ -398,39 +393,22 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 	/* to avoid misconfigurations when switching between fake DSI types */
 	tegra_dc_reset_fakedsi_panel(dc, dc_outtype);
 
-	dsi->max_instances = dc->out->dsi->ganged_type ? MAX_DSI_INSTANCE : 1;
+	dsi->max_instances = is_simple_dsi(dc->out->dsi) ? 1 : MAX_DSI_INSTANCE;
+	dsi_instance = (int)dc->out->dsi->dsi_instance;
 
 	for (i = 0; i < dsi->max_instances; i++) {
-		if (np) {
-			struct resource dsi_res;
-			if (np_dsi && of_device_is_available(np_dsi)) {
-				if (!dc->out->dsi->ganged_type)
-					of_address_to_resource(np_dsi,
-						dc->out->dsi->dsi_instance,
-						&dsi_res);
-				else /* ganged type */
-					of_address_to_resource(np_dsi,
-						i, &dsi_res);
-				res = &dsi_res;
-			} else {
-				err = -EINVAL;
-				goto err_release_regs;
-			}
-		}
-		if (!res) {
-			dev_err(&dc->ndev->dev, "dsi: no mem resource\n");
+		if (is_simple_dsi(dc->out->dsi))
+			base = of_iomap(np_dsi, dsi_instance);
+		else /* ganged type OR split link*/
+			base = of_iomap(np_dsi, i);
+
+		if (!base) {
+			dev_err(&dc->ndev->dev, "dsi: ioremap failed\n");
 			err = -ENOENT;
-			goto err_release_regs;
+			goto err_iounmap;
 		}
 
-		dsi->base_res[i] = res;
-		dsi->base[i] = ioremap(res->start, resource_size(res));
-		if (!dsi->base[i]) {
-			dev_err(&dc->ndev->dev,
-				"dsi: registers can't be mapped\n");
-			err = -EBUSY;
-			goto err_release_regs;
-		}
+		dsi->base[i] = base;
 	}
 
 	dsi->avdd_dsi_csi =  regulator_get(&dc->ndev->dev, "avdd_dsi_csi");
@@ -472,11 +450,14 @@ err_release_regs:
 	if (dsi->avdd_dsi_csi)
 		regulator_put(dsi->avdd_dsi_csi);
 
-	for (i = 0; i < dsi->max_instances; i++) {
-		if (dsi->base_res[i])
-			release_resource(dsi->base_res[i]);
+err_iounmap:
+	for (; i >= 0; i--) {
+		if (dsi->base[i]) {
+			iounmap(dsi->base[i]);
+			dsi->base[i] = NULL;
+		}
 	}
+
 	of_node_put(np_dsi);
 	return err;
 }
-

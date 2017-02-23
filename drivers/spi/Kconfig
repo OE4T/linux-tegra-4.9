@@ -625,12 +625,13 @@ config SPI_MXS
 
 config SPI_TEGRA114
 	tristate "NVIDIA Tegra114 SPI Controller"
-	depends on (ARCH_TEGRA && TEGRA20_APB_DMA) || COMPILE_TEST
+	depends on (ARCH_TEGRA || ARCH_TEGRA_18x_SOC) || COMPILE_TEST
+	depends on (TEGRA20_APB_DMA || TEGRA186_GPC_DMA)
 	depends on RESET_CONTROLLER && HAS_DMA
 	help
-	  SPI driver for NVIDIA Tegra114 SPI Controller interface. This controller
-	  is different than the older SoCs SPI controller and also register interface
-	  get changed with this controller.
+	  SPI driver for NVIDIA Tegra114 and newer SPI Controller interface.
+	  This controller is different than the older SoCs SPI controller and
+	  also register interface get changed with this controller.
 
 config SPI_TEGRA20_SFLASH
 	tristate "Nvidia Tegra20 Serial flash Controller"

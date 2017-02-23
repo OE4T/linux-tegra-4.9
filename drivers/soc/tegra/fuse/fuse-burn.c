@@ -29,6 +29,7 @@
 #include <linux/delay.h>
 #include <linux/wakelock.h>
 #include <linux/thermal.h>
+#include <linux/slab.h>
 
 #include <soc/tegra/pmc.h>
 
@@ -330,27 +331,68 @@ static int tegra_fuse_burn_fuse(struct tegra_fuse_burn_dev *fuse_dev,
 	return 0;
 }
 
+static void tegra_fuse_get_fuse(struct fuse_burn_data *data, u32 *macro_buf)
+{
+	int start_bit = data->start_bit;
+	int nbits = data->size_bits;
+	int offset = data->start_offset;
+	bool is_redundant = data->is_redundant;
+	int bit_position = 0;
+	int i, loops;
+	u32 actual_val, redun_val;
+
+	do {
+		actual_val = fuse_cmd_read(offset);
+		if (is_redundant)
+			redun_val = fuse_cmd_read(offset + 1);
+		loops = min(nbits, 32 - start_bit);
+		for (i = 0; i < loops; i++) {
+			if (actual_val & (BIT(start_bit + i)))
+				*macro_buf |= BIT(bit_position);
+			if (is_redundant) {
+				if (redun_val & (BIT(start_bit + i)))
+					*macro_buf |= BIT(bit_position);
+			}
+			bit_position++;
+			if (bit_position == 32) {
+				macro_buf++;
+				bit_position = 0;
+			}
+		}
+		nbits -= loops;
+		if (is_redundant)
+			offset += 2;
+		else
+			offset += 1;
+		start_bit = 0;
+	} while (nbits > 0);
+}
+
 static ssize_t tegra_fuse_show(struct device *dev,
 	struct device_attribute *attr,
 	char *buf)
 {
 	struct fuse_burn_data *data;
 	char str[9];
-	u32 reg[9] = {0};
+	u32 *macro_buf;
 	int num_words;
-	int i, off;
 
 	data = container_of(attr, struct fuse_burn_data, attr);
 	num_words = DIV_ROUND_UP(data->size_bits, 32);
+	macro_buf = kcalloc(num_words, sizeof(*macro_buf), GFP_KERNEL);
+	if (!macro_buf) {
+		dev_err(dev, "buffer allocation failed\n");
+		return -ENOMEM;
+	}
 
-	for (i = 0, off = 0; i < num_words; i++, off += 4)
-		tegra_fuse_readl(data->reg_offset + off, &reg[i]);
+	tegra_fuse_get_fuse(data, macro_buf);
 	strcpy(buf, "0x");
 	while (num_words--) {
-		sprintf(str, "%08x", reg[num_words]);
+		sprintf(str, "%08x", macro_buf[num_words]);
 		strcat(buf, str);
 	}
 	strcat(buf, "\n");
+	kfree(macro_buf);
 
 	return strlen(buf);
 }

@@ -44,8 +44,8 @@ DEFINE_MUTEX(tegra_nvdisp_lock);
 
 LIST_HEAD(nvdisp_imp_settings_queue);
 
-static DECLARE_WAIT_QUEUE_HEAD(nvdisp_common_channel_reservation_wq);
-static DECLARE_WAIT_QUEUE_HEAD(nvdisp_common_channel_promotion_wq);
+static struct nvdisp_request_wq nvdisp_common_channel_reservation_wq;
+static struct nvdisp_request_wq nvdisp_common_channel_promotion_wq;
 
 static struct tegra_dc_ext_imp_settings nvdisp_default_imp_settings;
 
@@ -927,9 +927,54 @@ int tegra_nvdisp_test_and_set_compclk(unsigned long rate, struct tegra_dc *dc)
 	return 0;
 }
 
+static void _tegra_nvdisp_init_imp_wqs(void)
+{
+	int num_heads = tegra_dc_get_numof_dispheads();
+	int timeout;
+
+	/*
+	 * Initialize the promotion workqueue:
+	 * - Use 1 HZ to represent the worst-case time for a pending ACT_REQ
+	 *   to promote.
+	 * - The "nr_pending" field will be ignored for this workqueue, but go
+	 *   ahead and initialize it to 0.
+	 */
+	init_waitqueue_head(&nvdisp_common_channel_promotion_wq.wq);
+	atomic_set(&nvdisp_common_channel_promotion_wq.nr_pending, 0);
+	nvdisp_common_channel_promotion_wq.timeout_per_entry = HZ;
+
+	/* Initialize the reservation workqueue. */
+	init_waitqueue_head(&nvdisp_common_channel_reservation_wq.wq);
+	atomic_set(&nvdisp_common_channel_reservation_wq.nr_pending, 0);
+
+	/*
+	 * We can quickly calculate the worst-case time for an IMP flip by doing
+	 * the following:
+	 * 1) Use 1 HZ as the base value. This roughly corresponds to an 1 fps
+	 *    refresh rate.
+	 * 2) For a single IMP flip on head X, we may need to promote BOTH
+	 *    decreasing and increasing mempool requests for all the other
+	 *    heads. This is why there's a factor of 2. Keep using the
+	 *    worst-case promotion time of 1 HZ.
+	 */
+	timeout = HZ;
+	timeout += max(num_heads - 1, 0) * 2 * HZ;
+
+	/*
+	 * The COMMON channel barrier can be held during head enable/disable as
+	 * well. Each of these operations should complete within a few
+	 * microseconds, but we still need to consider them to approximate our
+	 * upper bound.
+	 */
+	timeout = max(timeout, NVDISP_HEAD_ENABLE_DISABLE_TIMEOUT_HZ);
+	nvdisp_common_channel_reservation_wq.timeout_per_entry = timeout;
+}
+
 static void _tegra_nvdisp_init_default_imp_settings(void)
 {
 	int i, j;
+
+	_tegra_nvdisp_init_imp_wqs();
 
 	/*
 	 * For now, hardcode the reset values as the defaults. Any fields that
@@ -2598,6 +2643,11 @@ static struct tegra_dc_imp_settings *tegra_nvdisp_get_pending_imp_settings(void)
 					imp_node);
 }
 
+static inline bool tegra_nvdisp_common_channel_is_clean(struct tegra_dc *dc)
+{
+	return !dc->common_channel_pending;
+}
+
 static void tegra_nvdisp_enable_common_channel_intr(struct tegra_dc *dc)
 {
 	/*
@@ -2643,11 +2693,11 @@ static void tegra_nvdisp_activate_common_channel(struct tegra_dc *dc)
 
 static void tegra_nvdisp_wait_for_common_channel_to_promote(struct tegra_dc *dc)
 {
-	DEFINE_WAIT(wait);
+	int timeout = 0;
 
 	mutex_lock(&tegra_nvdisp_lock);
 
-	if (!dc->common_channel_pending) {
+	if (tegra_nvdisp_common_channel_is_clean(dc)) {
 		mutex_unlock(&tegra_nvdisp_lock);
 		return;
 	}
@@ -2656,16 +2706,19 @@ static void tegra_nvdisp_wait_for_common_channel_to_promote(struct tegra_dc *dc)
 	 * Use an exclusive wait since only one HEAD can program COMMON channel
 	 * state at any given time.
 	 */
-	prepare_to_wait_exclusive(&nvdisp_common_channel_promotion_wq,
-				&wait,
-				TASK_INTERRUPTIBLE);
-	if (dc->common_channel_pending) {
+	timeout = nvdisp_common_channel_promotion_wq.timeout_per_entry;
+	___wait_event(nvdisp_common_channel_promotion_wq.wq,
+		___wait_cond_timeout(tegra_nvdisp_common_channel_is_clean(dc)),
+		TASK_UNINTERRUPTIBLE, WQ_FLAG_EXCLUSIVE, timeout,
 		mutex_unlock(&tegra_nvdisp_lock);
-		schedule();
-		mutex_lock(&tegra_nvdisp_lock);
-	}
+		__ret = schedule_timeout(__ret);
+		mutex_lock(&tegra_nvdisp_lock));
 
-	finish_wait(&nvdisp_common_channel_promotion_wq, &wait);
+	if (!tegra_nvdisp_common_channel_is_clean(dc))
+		dev_err(&dc->ndev->dev,
+			"%s: DC %d timed out waiting for COMMON promotion\n",
+			__func__, dc->ctrl_num);
+
 	mutex_unlock(&tegra_nvdisp_lock);
 }
 
@@ -2674,7 +2727,7 @@ static void tegra_nvdisp_notify_common_channel_promoted(struct tegra_dc *dc)
 	/* Wake up one exclusive waiter. There should only be one. */
 	dc->common_channel_pending = false;
 	dc->common_channel_intr_enabled = false;
-	wake_up_nr(&nvdisp_common_channel_promotion_wq, 1);
+	wake_up_nr(&nvdisp_common_channel_promotion_wq.wq, 1);
 }
 
 static void tegra_nvdisp_program_dc_mempool(struct tegra_dc *dc,
@@ -2896,43 +2949,82 @@ static bool tegra_nvdisp_common_channel_is_free(void)
 	return true;
 }
 
-void tegra_dc_reserve_common_channel(struct tegra_dc *dc)
+int tegra_dc_reserve_common_channel(struct tegra_dc *dc)
 {
-	DEFINE_WAIT(wait);
+	int cur_nr_pending = 0;
+	int timeout = 0;
+	int ret = 0;
 
 	mutex_lock(&tegra_nvdisp_lock);
 
-	if (tegra_nvdisp_common_channel_is_free())
-		goto reserve_and_unlock;
+	cur_nr_pending =
+		atomic_read(&nvdisp_common_channel_reservation_wq.nr_pending);
+	atomic_inc(&nvdisp_common_channel_reservation_wq.nr_pending);
 
-	/*
-	 * Use an exclusive wait since only one HEAD can reserve the COMMON
-	 * channel at any given time. Exclusive waiters are also queued in
-	 * a FIFO order, which guarantees that the pending waiters are always
-	 * in-sync with the global list of pending IMP requests.
-	 */
-	prepare_to_wait_exclusive(&nvdisp_common_channel_reservation_wq,
-				&wait,
-				TASK_INTERRUPTIBLE);
-	if (!tegra_nvdisp_common_channel_is_free()) {
+	if (tegra_nvdisp_common_channel_is_free()) {
+		dc->common_channel_reserved = true;
 		mutex_unlock(&tegra_nvdisp_lock);
-		schedule();
-		mutex_lock(&tegra_nvdisp_lock);
+
+		return ret;
 	}
 
-	finish_wait(&nvdisp_common_channel_reservation_wq, &wait);
+	/*
+	 * Scale the per-entry timeout value by the number of outstanding
+	 * requests that need to be serviced before this one.
+	 */
+	timeout = nvdisp_common_channel_reservation_wq.timeout_per_entry;
+	timeout *= max(cur_nr_pending, 1);
 
-reserve_and_unlock:
+	/*
+	 * Use an exclusive wait to queue and wake up processes in a FIFO order.
+	 * This ensures that the list of pending waiters is always aligned with
+	 * the global queue of IMP settings.
+	 */
+	ret = ___wait_event(nvdisp_common_channel_reservation_wq.wq,
+		___wait_cond_timeout(tegra_nvdisp_common_channel_is_free()),
+		TASK_UNINTERRUPTIBLE, WQ_FLAG_EXCLUSIVE, timeout,
+		mutex_unlock(&tegra_nvdisp_lock);
+		__ret = schedule_timeout(__ret);
+		mutex_lock(&tegra_nvdisp_lock));
+
+	/*
+	 * If we timed out, manually restore "nr_pending" and return an error.
+	 */
+	if (!tegra_nvdisp_common_channel_is_free()) {
+		atomic_dec(&nvdisp_common_channel_reservation_wq.nr_pending);
+		mutex_unlock(&tegra_nvdisp_lock);
+
+		dev_err(&dc->ndev->dev,
+			"%s: DC %d timed out waiting for the COMMON channel\n",
+			__func__, dc->ctrl_num);
+		ret = -EINVAL;
+
+		return ret;
+	}
+
+	ret = 0;
 	dc->common_channel_reserved = true;
 	mutex_unlock(&tegra_nvdisp_lock);
+
+	return ret;
 }
 EXPORT_SYMBOL(tegra_dc_reserve_common_channel);
 
 void tegra_dc_release_common_channel(struct tegra_dc *dc)
 {
-	/* Selectively wake up the next exclusive waiter. */
+	mutex_lock(&tegra_nvdisp_lock);
+
+	if (!dc->common_channel_reserved) {
+		mutex_unlock(&tegra_nvdisp_lock);
+		return;
+	}
+
+	/* Wake up the next exclusive waiter. */
 	dc->common_channel_reserved = false;
-	wake_up_nr(&nvdisp_common_channel_reservation_wq, 1);
+	atomic_dec(&nvdisp_common_channel_reservation_wq.nr_pending);
+	wake_up_nr(&nvdisp_common_channel_reservation_wq.wq, 1);
+
+	mutex_unlock(&tegra_nvdisp_lock);
 }
 EXPORT_SYMBOL(tegra_dc_release_common_channel);
 

@@ -24,6 +24,14 @@ extern struct list_head nvdisp_imp_settings_queue;
 
 #define NVDISP_TEGRA_POLL_TIMEOUT_MS	50
 
+#define NVDISP_HEAD_ENABLE_DISABLE_TIMEOUT_HZ	(2 * HZ)
+
+struct nvdisp_request_wq {
+	wait_queue_head_t	wq;
+	atomic_t		nr_pending;
+	int			timeout_per_entry;
+};
+
 /* common struct for power domain */
 #define NVDISP_PD_COUNT 3
 #define NVDISP_PD_INDEX 0

@@ -1,7 +1,7 @@
 /*
  * tegra-core-action.c - connect Tegra CORE DVFS driver to thermal framework
  *
- * Copyright (C) 2012-2014 NVIDIA Corporation.  All rights reserved.
+ * Copyright (C) 2012-2017 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -24,6 +24,8 @@
 #include <linux/platform_device.h>
 #include <linux/err.h>
 #include <linux/clk-provider.h>
+#include <linux/clk.h>
+#include <linux/slab.h>
 
 #include <soc/tegra/tegra-dvfs.h>
 
@@ -38,6 +40,8 @@
 struct tegra_core_cdev_data {
 	struct thermal_cooling_device *cdev_floor;
 	struct thermal_cooling_device *cdev_cap;
+	struct clk **cap_clks;
+	int cap_clks_num;
 };
 
 static struct tegra_core_cdev_data tegra_core_cdev_data;
@@ -75,8 +79,8 @@ tegra_core_cdev_get_cur_state(struct thermal_cooling_device *cdev,
 }
 
 static int
-tegra_core_cdev_set_state(struct thermal_cooling_device *cdev,
-			  unsigned long cur_state)
+tegra_core_floor_cdev_set_state(struct thermal_cooling_device *cdev,
+				unsigned long cur_state)
 {
 	enum tegra_dvfs_core_thermal_type type;
 
@@ -84,10 +88,41 @@ tegra_core_cdev_set_state(struct thermal_cooling_device *cdev,
 	return tegra_dvfs_core_update_thermal_index(type, cur_state);
 }
 
-static struct thermal_cooling_device_ops tegra_core_cooling_ops = {
+static int
+tegra_core_cap_cdev_set_state(struct thermal_cooling_device *cdev,
+			  unsigned long cur_state)
+{
+	int i, ret;
+	enum tegra_dvfs_core_thermal_type type = TEGRA_DVFS_CORE_THERMAL_CAP;
+	bool t_up =  cur_state > tegra_dvfs_core_get_thermal_index(type);
+
+	if (t_up) {
+		for (i = 0; i < tegra_core_cdev_data.cap_clks_num; i++)
+			tegra_dvfs_core_set_thermal_cap(
+				tegra_core_cdev_data.cap_clks[i], cur_state);
+	}
+
+	ret = tegra_dvfs_core_update_thermal_index(type, cur_state);
+
+	if (!t_up) {
+		for (i = 0; i < tegra_core_cdev_data.cap_clks_num; i++)
+			tegra_dvfs_core_set_thermal_cap(
+				tegra_core_cdev_data.cap_clks[i], cur_state);
+	}
+
+	return ret;
+}
+
+static struct thermal_cooling_device_ops tegra_core_floor_cooling_ops = {
 	.get_max_state = tegra_core_cdev_get_max_state,
 	.get_cur_state = tegra_core_cdev_get_cur_state,
-	.set_cur_state = tegra_core_cdev_set_state,
+	.set_cur_state = tegra_core_floor_cdev_set_state,
+};
+
+static struct thermal_cooling_device_ops tegra_core_cap_cooling_ops = {
+	.get_max_state = tegra_core_cdev_get_max_state,
+	.get_cur_state = tegra_core_cdev_get_cur_state,
+	.set_cur_state = tegra_core_cap_cdev_set_state,
 };
 
 static int tegra_core_register_therm(struct platform_device *pdev,
@@ -101,7 +136,7 @@ static int tegra_core_register_therm(struct platform_device *pdev,
 		tcd = thermal_of_cooling_device_register(dev->of_node,
 					CORE_CDEV_TYPE_FLOOR,
 					(void *)TEGRA_DVFS_CORE_THERMAL_FLOOR,
-					&tegra_core_cooling_ops);
+					&tegra_core_floor_cooling_ops);
 		if (IS_ERR_OR_NULL(tcd)) {
 			dev_err(dev,
 				"Tegra CORE DVFS thermal reaction: failed to register floor\n");
@@ -115,7 +150,7 @@ static int tegra_core_register_therm(struct platform_device *pdev,
 		tcd = thermal_of_cooling_device_register(dev->of_node,
 					CORE_CDEV_TYPE_CAP,
 					(void *)TEGRA_DVFS_CORE_THERMAL_CAP,
-					&tegra_core_cooling_ops);
+					&tegra_core_cap_cooling_ops);
 		if (IS_ERR_OR_NULL(tcd)) {
 			dev_err(dev,
 				"Tegra CORE DVFS thermal reaction: failed to register cap\n");
@@ -131,6 +166,66 @@ static int tegra_core_register_therm(struct platform_device *pdev,
 
 error:
 	return ret;
+}
+
+static void tegra_core_cdev_cap_set_max_state(void)
+{
+	int i;
+	int max_state = tegra_dvfs_core_count_thermal_states(
+		TEGRA_DVFS_CORE_THERMAL_CAP);
+
+	if (max_state > 0) {
+		for (i = 0; i < tegra_core_cdev_data.cap_clks_num; i++)
+			tegra_dvfs_core_set_thermal_cap(
+				tegra_core_cdev_data.cap_clks[i], max_state);
+	}
+}
+
+static void tegra_core_cdev_put_cap_clks(void)
+{
+	int i;
+
+	for (i = 0; i < tegra_core_cdev_data.cap_clks_num; i++) {
+		if (!tegra_core_cdev_data.cap_clks[i])
+			break;
+		clk_put(tegra_core_cdev_data.cap_clks[i]);
+	}
+	kfree(tegra_core_cdev_data.cap_clks);
+}
+
+static int tegra_core_cdev_of_get_cap_clks(struct device *dev)
+{
+	const char *name;
+	struct property *prop;
+	int i = 0;
+	struct device_node *np = dev->of_node;
+	int num = of_property_count_strings(np, "clock-names");
+
+	if (num <= 0) {
+		dev_err(dev, "No cap clocks specified\n");
+		return -EINVAL;
+	}
+
+	tegra_core_cdev_data.cap_clks =
+		kzalloc(num * sizeof(struct clk *), GFP_KERNEL);
+	if (!tegra_core_cdev_data.cap_clks) {
+		dev_err(dev, "Failed to allocate cap clocks array\n");
+		return -ENOMEM;
+	}
+	tegra_core_cdev_data.cap_clks_num = num;
+
+	of_property_for_each_string(np, "clock-names", prop, name) {
+		struct clk *c = clk_get(dev, name);
+
+		if (IS_ERR_OR_NULL(c)) {
+			dev_err(dev, "Failed to get cap clk %s\n", name);
+			tegra_core_cdev_put_cap_clks();
+			return -ENOENT;
+		}
+		tegra_core_cdev_data.cap_clks[i++] = c;
+	}
+
+	return 0;
 }
 
 static int tegra_core_cdev_probe(struct platform_device *pdev)
@@ -153,13 +248,20 @@ static int tegra_core_cdev_probe(struct platform_device *pdev)
 		goto error;
 	}
 
-	if (!strcmp(cdev_type, CORE_CDEV_TYPE_FLOOR))
+	if (!strcmp(cdev_type, CORE_CDEV_TYPE_FLOOR)) {
 		ret = tegra_core_register_therm(pdev,
 						TEGRA_DVFS_CORE_THERMAL_FLOOR);
-	else if (!strcmp(cdev_type, CORE_CDEV_TYPE_CAP))
-		ret = tegra_core_register_therm(pdev,
-						TEGRA_DVFS_CORE_THERMAL_CAP);
-	else {
+	} else if (!strcmp(cdev_type, CORE_CDEV_TYPE_CAP)) {
+		ret = tegra_core_cdev_of_get_cap_clks(dev);
+		if (!ret) {
+			ret = tegra_core_register_therm(
+				pdev, TEGRA_DVFS_CORE_THERMAL_CAP);
+			if (ret) {
+				tegra_core_cdev_cap_set_max_state();
+				tegra_core_cdev_put_cap_clks();
+			}
+		}
+	} else {
 		ret = -ENOENT;
 		dev_err(dev, "Tegra CORE DVFS thermal reaction: incorrect cdev type\n");
 	}
@@ -176,6 +278,8 @@ static int tegra_core_cdev_remove(struct platform_device *pdev)
 	if (tegra_core_cdev_data.cdev_cap)
 		thermal_cooling_device_unregister(
 				tegra_core_cdev_data.cdev_cap);
+	if (tegra_core_cdev_data.cap_clks)
+		tegra_core_cdev_put_cap_clks();
 
 	return 0;
 }

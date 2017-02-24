@@ -50,7 +50,9 @@
 #include "t210/t210.h"
 #include "iomap.h"
 
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
 #include <linux/ote_protocol.h>
+#endif
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "t186/t186.h"

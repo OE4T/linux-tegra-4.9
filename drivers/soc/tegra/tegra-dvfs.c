@@ -303,7 +303,8 @@ out:
 	return ret;
 }
 
-static inline int dvfs_rail_apply_limits(struct dvfs_rail *rail, int millivolts)
+static int dvfs_rail_apply_limits(struct dvfs_rail *rail, int millivolts,
+				  bool warn_on_cap)
 {
 	int min_mv = rail->min_millivolts;
 	int max_mv = rail->max_millivolts;
@@ -315,11 +316,13 @@ static inline int dvfs_rail_apply_limits(struct dvfs_rail *rail, int millivolts)
 			min_mv = rail->therm_floors[i].mv;
 	}
 
-	if (rail->therm_caps) {
+	if (rail->therm_caps && warn_on_cap) {
 		int i = rail->therm_cap_idx;
 
-		if (i > 0)
-			max_mv = rail->therm_caps[i - 1].mv;
+		if ((i > 0) && (millivolts > rail->therm_caps[i - 1].mv))
+			WARN(1, "tegra_dvfs: %s set to %dmV above cap %dmV\n",
+			     rail->reg_id, millivolts,
+			     rail->therm_caps[i - 1].mv);
 	}
 
 	if (rail->override_millivolts) {
@@ -375,7 +378,7 @@ static int dvfs_rail_update(struct dvfs_rail *rail)
 
 	/* Apply offset and min/max limits if any clock is requesting voltage */
 	if (millivolts)
-		millivolts = dvfs_rail_apply_limits(rail, millivolts);
+		millivolts = dvfs_rail_apply_limits(rail, millivolts, true);
 	/* Keep current voltage if regulator is to be disabled via explicitly */
 	else if (rail->in_band_pm)
 		return 0;
@@ -1239,7 +1242,7 @@ static int tegra_dvfs_suspend_one(void)
 			continue;
 
 		mv = tegra_dvfs_rail_get_suspend_level(rail);
-		mv = dvfs_rail_apply_limits(rail, mv);
+		mv = dvfs_rail_apply_limits(rail, mv, false);
 		/* apply suspend limit only if it is above current mv */
 		if (mv >= rail->millivolts)
 			ret = dvfs_rail_set_voltage(rail, mv);
@@ -1366,7 +1369,7 @@ static void __tegra_dvfs_rail_disable(struct dvfs_rail *rail)
 	}
 
 	mv = tegra_dvfs_rail_get_disable_level(rail);
-	mv = dvfs_rail_apply_limits(rail, mv);
+	mv = dvfs_rail_apply_limits(rail, mv, false);
 
 	if (mv >= rail->millivolts)
 		ret = dvfs_rail_set_voltage(rail, mv);
@@ -1580,6 +1583,40 @@ int tegra_dvfs_core_update_thermal_index(enum tegra_dvfs_core_thermal_type type,
 }
 EXPORT_SYMBOL(tegra_dvfs_core_update_thermal_index);
 
+int tegra_dvfs_core_set_thermal_cap(struct clk *cap_clk,
+				    unsigned long thermal_index)
+{
+	int mv;
+	unsigned long rate = UINT_MAX;
+	struct dvfs_rail *rail = tegra_core_rail;
+
+	if (IS_ERR_OR_NULL(tegra_core_rail) || !tegra_core_rail->is_ready) {
+		pr_err("tegra_dvfs: not ready to set thermal cap on %s\n",
+		       cap_clk ? __clk_get_name(cap_clk) : "Unknown");
+		return -EINVAL;
+	}
+
+	if (rail->therm_caps && thermal_index) {
+		mv = rail->therm_caps[thermal_index - 1].mv;
+		rate = tegra_dvfs_predict_hz_at_mv_max_tfloor(cap_clk, mv);
+		if (IS_ERR_VALUE(rate)) {
+			pr_err("tegra_dvfs: failed to get %s rate @ %dmV\n",
+			       __clk_get_name(cap_clk), mv);
+			return -EINVAL;
+		}
+	}
+	pr_debug("tegra_dvfs: Set %lu on %s\n", rate, __clk_get_name(cap_clk));
+
+	if (clk_set_rate(cap_clk, rate)) {
+		pr_err("tegra_dvfs: failed to set cap rate %lu on %s\n",
+		       rate, __clk_get_name(cap_clk));
+		return -EINVAL;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_dvfs_core_set_thermal_cap);
+
 struct dvfs_rail *tegra_dvfs_get_rail_by_name(char *name)
 {
 	struct dvfs_rail *rail;
@@ -1681,7 +1718,7 @@ static int get_thermal_limits_size(struct dvfs_rail *rail,
 	return i + 1;
 }
 
-void tegra_dvfs_init_therm_limits(struct dvfs_rail *rail)
+void tegra_dvfs_core_init_therm_limits(struct dvfs_rail *rail)
 {
 	int size;
 
@@ -1702,7 +1739,12 @@ void tegra_dvfs_init_therm_limits(struct dvfs_rail *rail)
 		pr_warn("%s: invalid Vmax thermal caps\n", rail->reg_id);
 	} else {
 		rail->therm_caps_size = size;
-		rail->therm_cap_idx = size;
+		/*
+		 * Core voltage and module rates are not throttled on boot until
+		 * CORE_CDEV_TYPE_CAP is registered. In fact, core boot voltage
+		 * is allowed above high temperature cap during boot.
+		 */
+		rail->therm_cap_idx = 0;
 	}
 }
 

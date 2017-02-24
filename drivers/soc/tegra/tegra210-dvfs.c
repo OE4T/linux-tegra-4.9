@@ -1948,7 +1948,7 @@ int tegra210_init_dvfs(struct device *dev)
 	/* Init core thermal floors abd caps */
 	tegra210_dvfs_rail_vdd_core.therm_caps =
 		ucm2 ? tegra210_core_therm_caps_ucm2 : tegra210_core_therm_caps;
-	tegra_dvfs_init_therm_limits(&tegra210_dvfs_rail_vdd_core);
+	tegra_dvfs_core_init_therm_limits(&tegra210_dvfs_rail_vdd_core);
 
 	/* Init rail structures and dependencies */
 	tegra_dvfs_init_rails(tegra210_dvfs_rails,

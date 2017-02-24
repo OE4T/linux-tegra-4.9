@@ -918,7 +918,6 @@ static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 
 static int tegra_hdmi_dpaux_init(struct tegra_hdmi *hdmi)
 {
-	struct resource of_dpaux_res;
 	int err = 0;
 	struct reset_control *dpaux_rst;
 
@@ -927,45 +926,22 @@ static int tegra_hdmi_dpaux_init(struct tegra_hdmi *hdmi)
 		sor_num ? of_find_node_by_path(DPAUX1_NODE)
 		: of_find_node_by_path(DPAUX_NODE);
 
-	if (np_dpaux && (of_device_is_available(np_dpaux))) {
-		of_address_to_resource(np_dpaux, 0, &of_dpaux_res);
-		hdmi->hdmi_dpaux_res[sor_num] = &of_dpaux_res;
-	} else {
+	if (!np_dpaux || !of_device_is_available(np_dpaux)) {
 		dev_err(&hdmi->dc->ndev->dev, "hdmi: no dpaux node found\n");
 		err = -EFAULT;
 		return err;
 	}
 
-	if (!hdmi->hdmi_dpaux_res[sor_num]) {
-		dev_err(&hdmi->dc->ndev->dev, "hdmi: no mem resources for dpaux\n");
-		err = -EFAULT;
-		goto err_free_dpaux;
-	}
-
-	hdmi->hdmi_dpaux_base_res[sor_num] = devm_request_mem_region(
-				&hdmi->dc->ndev->dev,
-				hdmi->hdmi_dpaux_res[sor_num]->start,
-				resource_size(hdmi->hdmi_dpaux_res[sor_num]),
-				hdmi->dc->ndev->name);
-	if (!hdmi->hdmi_dpaux_base_res[sor_num]) {
-		dev_err(&hdmi->dc->ndev->dev, "hdmi: request_mem_region failed\n");
-		err = -EFAULT;
-		goto err_free_dpaux;
-	}
-
-	hdmi->hdmi_dpaux_base[sor_num] = devm_ioremap(&hdmi->dc->ndev->dev,
-			hdmi->hdmi_dpaux_res[sor_num]->start,
-			resource_size(hdmi->hdmi_dpaux_res[sor_num]));
+	hdmi->hdmi_dpaux_base[sor_num] = of_iomap(np_dpaux, 0);
 	if (!hdmi->hdmi_dpaux_base[sor_num]) {
 		dev_err(&hdmi->dc->ndev->dev, "hdmi: registers can't be mapped\n");
 		err = -EFAULT;
-		goto err_release_resource_reg;
+		goto err_free_dpaux;
 	}
 
 	/* check for dpaux clock reset control */
 	if (tegra_bpmp_running()) {
-		dpaux_rst =
-			of_reset_control_get(np_dpaux,
+		dpaux_rst = of_reset_control_get(np_dpaux,
 				(sor_num) ? "dpaux1" : "dpaux");
 		if (IS_ERR_OR_NULL(dpaux_rst)) {
 			dev_err(&hdmi->dc->ndev->dev,
@@ -983,13 +959,7 @@ static int tegra_hdmi_dpaux_init(struct tegra_hdmi *hdmi)
 	return 0;
 
 dpaux_fail:
-	devm_iounmap(&hdmi->dc->ndev->dev, hdmi->hdmi_dpaux_base[sor_num]);
-
-err_release_resource_reg:
-	devm_release_mem_region(&hdmi->dc->ndev->dev,
-		hdmi->hdmi_dpaux_res[sor_num]->start,
-		resource_size(hdmi->hdmi_dpaux_res[sor_num]));
-
+	iounmap(hdmi->hdmi_dpaux_base[sor_num]);
 err_free_dpaux:
 	of_node_put(np_dpaux);
 
@@ -1006,7 +976,6 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi;
 	int err;
-	struct device_node *np = dc->ndev->dev.of_node;
 	int sor_num = tegra_dc_which_sor(dc);
 	struct device_node *np_hdmi = NULL;
 	struct device_node *np_panel = NULL;
@@ -1042,9 +1011,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		goto fail_audio_switch;
 	}
 
-	hdmi->res          = hdmi->hdmi_dpaux_res[sor_num];
-	hdmi->aux_base_res = hdmi->hdmi_dpaux_base_res[sor_num];
-	hdmi->aux_base     = hdmi->hdmi_dpaux_base[sor_num];
+	hdmi->aux_base = hdmi->hdmi_dpaux_base[sor_num];
 
 	hdmi->sor = tegra_dc_sor_init(dc, NULL);
 	if (IS_ERR_OR_NULL(hdmi->sor)) {
@@ -1052,20 +1019,18 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		goto fail_tegra_hdmi_dpaux_init;
 	}
 
-	if (np) {
-		if (np_hdmi && of_device_is_available(np_hdmi)) {
-			np_panel = tegra_get_panel_node_out_type_check(dc,
-				TEGRA_DC_OUT_HDMI);
-			if (np_panel && of_device_is_available(np_panel)) {
-				if (of_property_read_bool(np_panel,
-							"nvidia,edid"))
-					hdmi->edid_src = EDID_SRC_DT;
-				of_node_put(np_panel);
-			}
-		} else {
-			err = -EINVAL;
-			goto fail_tegra_hdmi_dpaux_init;
+	if (np_hdmi && of_device_is_available(np_hdmi)) {
+		np_panel = tegra_get_panel_node_out_type_check(dc,
+			TEGRA_DC_OUT_HDMI);
+		if (np_panel && of_device_is_available(np_panel)) {
+			if (of_property_read_bool(np_panel,
+						"nvidia,edid"))
+				hdmi->edid_src = EDID_SRC_DT;
+			of_node_put(np_panel);
 		}
+	} else {
+		err = -EINVAL;
+		goto fail_tegra_hdmi_dpaux_init;
 	}
 
 	hdmi->pdata = dc->pdata->default_out->hdmi_out;
@@ -1181,10 +1146,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	return 0;
 
 fail_tegra_hdmi_dpaux_init:
-	devm_iounmap(&dc->ndev->dev, hdmi->hdmi_dpaux_base[sor_num]);
-	devm_release_mem_region(&dc->ndev->dev,
-		hdmi->hdmi_dpaux_res[sor_num]->start,
-		resource_size(hdmi->hdmi_dpaux_res[sor_num]));
+	iounmap(hdmi->hdmi_dpaux_base[sor_num]);
 fail_audio_switch:
 	devm_kfree(&dc->ndev->dev, hdmi->audio_switch_name);
 fail_hpd_switch:

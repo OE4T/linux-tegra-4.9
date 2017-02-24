@@ -2063,20 +2063,22 @@ static void _tegra_dc_dp_init(struct tegra_dc *dc)
 static int tegra_dc_dp_init(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp;
-	struct resource *res;
-	struct resource *base_res;
-	struct resource of_dp_res;
 	void __iomem *base;
 	struct clk *clk;
 	struct clk *parent_clk;
 	int err;
 	u32 irq;
-	struct device_node *np = dc->ndev->dev.of_node;
 	int dp_num = tegra_dc_which_sor(dc);
 	struct device_node *np_dp =
 		dp_num ? of_find_node_by_path(DPAUX1_NODE)
 		: of_find_node_by_path(DPAUX_NODE);
 	struct device_node *np_panel = NULL;
+
+	if (!np_dp ||  ((!of_device_is_available(np_dp)) &&
+			(dc->out->type != TEGRA_DC_OUT_FAKE_DP))) {
+		dev_err(&dc->ndev->dev, "dp%d not available\n", dp_num);
+		return -ENODEV;
+	}
 
 	dp = devm_kzalloc(&dc->ndev->dev, sizeof(*dp), GFP_KERNEL);
 	if (!dp) {
@@ -2107,73 +2109,32 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	}
 
 	dp->edid_src = EDID_SRC_PANEL;
-	if (np) {
-		if (np_dp && (of_device_is_available(np_dp) ||
-			(dc->out->type == TEGRA_DC_OUT_FAKE_DP))) {
-			irq = of_irq_to_resource(np_dp, 0, NULL);
-			if (!irq) {
-				err = -ENOENT;
-				goto err_audio_switch;
-			}
-			of_address_to_resource(np_dp, 0, &of_dp_res);
-			res = &of_dp_res;
-			np_panel = tegra_get_panel_node_out_type_check(dc,
-				TEGRA_DC_OUT_DP);
-			if (np_panel && of_device_is_available(np_panel)) {
-				if (of_property_read_bool(np_panel,
-					"nvidia,edid"))
-					dp->edid_src = EDID_SRC_DT;
-			}
-		} else {
-			err = -EINVAL;
-			goto err_audio_switch;
-		}
-	} else {
-		irq = platform_get_irq_byname(dc->ndev, "irq_dp");
-		if (irq <= 0) {
-			dev_err(&dc->ndev->dev, "dp: no irq\n");
-			err = -ENOENT;
-			goto err_audio_switch;
-		}
-		res = platform_get_resource_byname(dc->ndev,
-			IORESOURCE_MEM, "dpaux");
-	}
-	if (!res) {
-		dev_err(&dc->ndev->dev, "dp: no mem resources for dpaux\n");
-		err = -EFAULT;
+
+	irq = of_irq_to_resource(np_dp, 0, NULL);
+	if (!irq) {
+		err = -ENOENT;
 		goto err_audio_switch;
 	}
 
-	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP && dc->out_data &&
-		((struct tegra_dc_dp_data *)dc->out_data)->aux_base_res) {
-		base_res = ((struct tegra_dc_dp_data *)dc->out_data)->
-								aux_base_res;
-	} else {
-		base_res = devm_request_mem_region(&dc->ndev->dev,
-			res->start, resource_size(res),
-			dc->ndev->name);
-		if (!base_res) {
-			dev_err(&dc->ndev->dev,
-				"dp: request_mem_region failed\n");
-			err = -EFAULT;
-			goto err_free_dp;
-		}
+	np_panel = tegra_get_panel_node_out_type_check(dc,
+		TEGRA_DC_OUT_DP);
+	if (np_panel && of_device_is_available(np_panel)) {
+		if (of_property_read_bool(np_panel,
+			"nvidia,edid"))
+			dp->edid_src = EDID_SRC_DT;
 	}
 
 	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP && dc->out_data &&
 		 ((struct tegra_dc_dp_data *)dc->out_data)->aux_base) {
 		base = ((struct tegra_dc_dp_data *)dc->out_data)->aux_base;
 	} else {
-		base = devm_ioremap(&dc->ndev->dev,
-			res->start, resource_size(res));
+		base = of_iomap(np_dp, 0);
 		if (!base) {
-			dev_err(&dc->ndev->dev,
-				"dp: registers can't be mapped\n");
+			dev_err(&dc->ndev->dev, "dp: registers can't be mapped\n");
 			err = -EFAULT;
-			goto err_release_resource_reg;
+			goto err_audio_switch;
 		}
 	}
-
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	clk = tegra_disp_of_clk_get_by_name(np_dp,
@@ -2231,8 +2192,6 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 
 	dp->dc = dc;
 	dp->aux_base = base;
-	dp->res = res;
-	dp->aux_base_res = base_res;
 	dp->dpaux_clk = clk;
 	dp->parent_clk = parent_clk;
 	dp->mode = &dc->mode;
@@ -2340,14 +2299,7 @@ err_get_clk:
 	clk_put(clk);
 #endif
 err_iounmap_reg:
-	devm_iounmap(&dc->ndev->dev, base);
-err_release_resource_reg:
-	devm_release_mem_region(&dc->ndev->dev,
-		res->start,
-		resource_size(res));
-
-	if (!np_dp || !of_device_is_available(np_dp))
-		release_resource(res);
+	iounmap(base);
 err_audio_switch:
 	devm_kfree(&dc->ndev->dev, dp->audio_switch_name);
 err_hpd_switch:
@@ -2928,12 +2880,7 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 	clk_put(dp->parent_clk);
 #endif
 
-	devm_iounmap(&dc->ndev->dev, dp->aux_base);
-	devm_release_mem_region(&dc->ndev->dev,
-		dp->res->start,
-		resource_size(dp->res));
-	if (!np_dp || !of_device_is_available(np_dp))
-		release_resource(dp->res);
+	iounmap(dp->aux_base);
 
 	dp->prod_list = NULL;
 	dp->dpaux_prod_list = NULL;

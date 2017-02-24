@@ -346,13 +346,11 @@ enum {
 
 struct tegra_hdmi {
 	/* Note:
-	* structures res/aux_base_res/aux_base and sor should always be
-	* at the top and should align with tegra_dc_dp_data struct.
-	* Please do not move this sequence
-	*/
-	struct resource                 *res;
-	struct resource                 *aux_base_res;
-	void __iomem                    *aux_base;
+	 * structure aux_base and sor should always be
+	 * at the top and should align with tegra_dc_dp_data struct.
+	 * Please do not move this sequence
+	 */
+	void __iomem *aux_base;
 	struct tegra_dc_sor_data *sor;
 
 	struct tegra_dc *dc;
@@ -387,8 +385,6 @@ struct tegra_hdmi {
 #endif
 	char *hpd_switch_name;
 	char *audio_switch_name;
-	struct resource *hdmi_dpaux_res[2];
-	struct resource *hdmi_dpaux_base_res[2];
 	void __iomem *hdmi_dpaux_base[2];
 
 	struct hdmi_vendor_infoframe vsi;

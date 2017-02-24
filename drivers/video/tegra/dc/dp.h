@@ -70,20 +70,16 @@ extern struct tegra_dp_test_settings default_dp_test_settings;
 
 struct tegra_dc_dp_data {
 	/* Note:
-	 * structures res/aux_base_res/aux_base and sor should always be
+	 * structure aux_base and sor should always be
 	 * at the top and should align with tegra_hdmi struct.
 	 * Please do not move this sequence
 	 */
-	struct resource *res;
-	struct resource *aux_base_res;
 	void __iomem *aux_base;
-	void *out_data;
 	struct tegra_dc_sor_data *sor;
+	void *out_data;
 
 	struct tegra_dc *dc;
-
 	u32 irq;
-
 	struct clk *dpaux_clk;
 	struct clk *parent_clk; /* pll_dp clock */
 	struct reset_control *dpaux_rst;

@@ -1,7 +1,7 @@
 /*
  * pwm_fan.c fan driver that is controlled by pwm
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Anshul Jain <anshulj@nvidia.com>
  *
@@ -742,6 +742,10 @@ static ssize_t set_tach_enabled_sysfs(struct device *dev,
 		if (tach_enabled) {
 			dev_err(dev, "tach irq is already enabled\n");
 			return -EINVAL;
+		}
+		if (!fan_data->tach_workqueue) {
+			dev_err(dev, "tach not initialized\n");
+			return -EAGAIN;
 		}
 		fan_data->irq_count = 0;
 		enable_irq(fan_data->tach_irq);

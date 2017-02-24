@@ -549,16 +549,11 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 				const struct tegra_dc_dp_link_config *cfg)
 {
 	struct tegra_dc_sor_data *sor;
-	struct resource *res;
-	struct resource *base_res;
-	struct resource of_sor_res;
-	void __iomem *base;
 	struct clk *clk;
 	int err, i;
 	struct clk *safe_clk = NULL;
 	struct clk *brick_clk = NULL;
 	struct clk *src_clk = NULL;
-	struct device_node *np = dc->ndev->dev.of_node;
 	int sor_num = tegra_dc_which_sor(dc);
 	struct device_node *np_sor =
 		sor_num ? of_find_node_by_path(SOR1_NODE) :
@@ -573,6 +568,13 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	}
 #endif
 
+	if (!np_sor || ((!of_device_is_available(np_sor)) &&
+			(dc->out->type != TEGRA_DC_OUT_FAKE_DP))) {
+		dev_err(&dc->ndev->dev, "sor not available\n");
+		err = -ENODEV;
+		goto err_allocate;
+	}
+
 	sor = devm_kzalloc(&dc->ndev->dev, sizeof(*sor), GFP_KERNEL);
 	if (!sor) {
 		err = -ENOMEM;
@@ -580,42 +582,11 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	}
 	sor->instance = sor_num;
 
-	if (np) {
-		if (np_sor && (of_device_is_available(np_sor) ||
-			(dc->out->type == TEGRA_DC_OUT_FAKE_DP))) {
-			of_address_to_resource(np_sor, 0,
-				&of_sor_res);
-			res = &of_sor_res;
-		} else {
-			err = -EINVAL;
-			goto err_free_sor;
-		}
-	} else {
-		res = platform_get_resource_byname(dc->ndev,
-			IORESOURCE_MEM, res_name);
-		if (!res) {
-			dev_err(&dc->ndev->dev,
-				"sor: no mem resource\n");
-			err = -ENOENT;
-			goto err_free_sor;
-		}
-	}
-
-	base_res = devm_request_mem_region(&dc->ndev->dev,
-		res->start, resource_size(res),
-		dc->ndev->name);
-	if (!base_res) {
-		dev_err(&dc->ndev->dev, "sor: request_mem_region failed\n");
-		err = -EBUSY;
-		goto err_free_sor;
-	}
-
-	base = devm_ioremap(&dc->ndev->dev,
-			res->start, resource_size(res));
-	if (!base) {
+	sor->base = of_iomap(np_sor, 0);
+	if (!sor->base) {
 		dev_err(&dc->ndev->dev, "sor: registers can't be mapped\n");
 		err = -ENOENT;
-		goto err_release_resource_reg;
+		goto err_free_sor;
 	}
 
 #if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_210_SOC)
@@ -692,9 +663,6 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	res_name = sor_num ? "sor1" : "sor0";
 #endif
 	sor->dc = dc;
-	sor->base = base;
-	sor->res = res;
-	sor->base_res = base_res;
 	sor->sor_clk = clk;
 	sor->safe_clk = safe_clk;
 	sor->brick_clk = brick_clk;
@@ -726,12 +694,7 @@ err_safe: __maybe_unused
 	clk_put(clk);
 #endif
 err_iounmap_reg:
-	devm_iounmap(&dc->ndev->dev, base);
-err_release_resource_reg:
-	devm_release_mem_region(&dc->ndev->dev,
-		res->start, resource_size(res));
-	if (!np_sor || !of_device_is_available(np_sor))
-		release_resource(res);
+	iounmap(sor->base);
 err_free_sor:
 	devm_kfree(&dc->ndev->dev, sor);
 err_allocate:
@@ -790,12 +753,7 @@ void tegra_dc_sor_destroy(struct tegra_dc_sor_data *sor)
 	if (sor->src_switch_clk)
 		clk_put(sor->src_switch_clk);
 #endif
-	devm_iounmap(dev, sor->base);
-	devm_release_mem_region(dev,
-		sor->res->start, resource_size(sor->res));
-
-	if (!np_sor || !of_device_is_available(np_sor))
-		release_resource(sor->res);
+	iounmap(sor->base);
 	devm_kfree(dev, sor);
 	of_node_put(np_sor);
 }

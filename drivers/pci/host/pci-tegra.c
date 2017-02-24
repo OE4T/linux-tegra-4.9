@@ -190,6 +190,7 @@
 #define AFI_MSG_PM_PME_MASK					0x00100010
 #define AFI_MSG_INTX_MASK					0x1f001f00
 #define AFI_MSG_PM_PME0						(1 << 4)
+#define AFI_MSG_PM_PME1						(1 << 20)
 #define AFI_MSG_RP_INT_MASK					0x10001000
 
 #define RP_VEND_XP						0x00000F00
@@ -1204,9 +1205,12 @@ static void handle_sb_intr(struct tegra_pcie *pcie)
 	else if (mesg & AFI_MSG_PM_PME_MASK) {
 		struct tegra_pcie_port *port, *tmp;
 		/* handle PME messages */
-		list_for_each_entry_safe(port, tmp, &pcie->ports, list)
-			if (port->index == (mesg & AFI_MSG_PM_PME0))
+		list_for_each_entry_safe(port, tmp, &pcie->ports, list) {
+			if ((port->index == 0) && (mesg & AFI_MSG_PM_PME0))
 				break;
+			if ((port->index == 1) && (mesg & AFI_MSG_PM_PME1))
+				break;
+		}
 		mesg = rp_readl(port, NV_PCIE2_RP_RSR);
 		mesg |= NV_PCIE2_RP_RSR_PMESTAT;
 		rp_writel(port, mesg, NV_PCIE2_RP_RSR);

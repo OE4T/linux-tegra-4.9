@@ -461,10 +461,9 @@
 
 	efuse@7000f800 {
 		status = "okay";
-	};
-
-	efuse-burn {
-		status = "okay";
+		efuse-burn {
+			status = "okay";
+		};
 	};
 
 	udc@7d000000 {

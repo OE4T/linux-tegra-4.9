@@ -2078,8 +2078,8 @@ static int tegra_soctherm_probe(struct platform_device *pdev)
 	}
 
 	tegra->thermctl_tzs = devm_kzalloc(&pdev->dev,
-					   sizeof(*z) * soc->num_ttgs,
-					   GFP_KERNEL);
+					sizeof(z) * soc->num_ttgs, GFP_KERNEL);
+
 	if (!tegra->thermctl_tzs)
 		return -ENOMEM;
 

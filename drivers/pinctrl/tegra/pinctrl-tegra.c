@@ -914,7 +914,7 @@ static int tegra_pinctrl_suspend(void)
 {
 	int i, j;
 	u32 *pg_data = pmx->pg_data;
-	u32 *regs;
+	void __iomem *regs;
 
 	switch (tegra_get_chip_id()) {
 	case TEGRA114:
@@ -928,8 +928,8 @@ static int tegra_pinctrl_suspend(void)
 
 	for (i = 0; i < pmx->nbanks; i++) {
 		regs = pmx->regs[i];
-		for (j = 0; j < pmx->reg_bank_size[i] / 4; j++)
-			*pg_data++ = readl(regs++);
+		for (j = 0; j < pmx->reg_bank_size[i] / 4; j++, regs += 4)
+			*pg_data++ = readl(regs);
 	}
 
 	return pinctrl_force_sleep(pmx->pctl);
@@ -940,7 +940,7 @@ static void tegra_pinctrl_resume(void)
 	int i, j;
 	u8 chip_id;
 	u32 *pg_data = pmx->pg_data;
-	u32 *regs;
+	void __iomem *regs;
 	u32 val;
 
 	chip_id = tegra_get_chip_id();
@@ -957,8 +957,8 @@ static void tegra_pinctrl_resume(void)
 
 	for (i = 0; i < pmx->nbanks; i++) {
 		regs = pmx->regs[i];
-		for (j = 0; j < pmx->reg_bank_size[i] / 4; j++)
-			writel(*pg_data++, regs++);
+		for (j = 0; j < pmx->reg_bank_size[i] / 4; j++, regs += 4)
+			writel(*pg_data++, regs);
 	}
 
 	if (chip_id == TEGRA210) {

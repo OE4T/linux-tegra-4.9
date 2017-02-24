@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -41,12 +41,6 @@ enum nvaudio_ivc_cmd_t {
 	NVAUDIO_STOP_PLAYBACK,
 	NVAUDIO_START_CAPTURE,
 	NVAUDIO_STOP_CAPTURE,
-	NVAUDIO_T124_DAM_SET_IN_SRATE,
-	NVAUDIO_T124_DAM_GET_IN_SRATE,
-	NVAUDIO_T124_DAM_SET_OUT_SRATE,
-	NVAUDIO_T124_DAM_GET_OUT_SRATE,
-	NVAUDIO_T124_DAM_CHANNEL_SET_GAIN,
-	NVAUDIO_T124_DAM_CHANNEL_GET_GAIN,
 	NVAUDIO_XBAR_SET_ROUTE,
 	NVAUDIO_XBAR_GET_ROUTE,
 	NVAUDIO_AMIXER_SET_RX_GAIN,
@@ -79,19 +73,10 @@ enum nvaudio_ivc_cmd_t {
 	NVAUDIO_ARAD_SET_LANE_ENABLE,
 	NVAUDIO_ARAD_GET_LANE_ENABLE,
 	NVAUDIO_ARAD_GET_LANE_RATIO,
-	NVAUDIO_ADSP_REQUEST_ASSIGNMENT,
 	NVAUDIO_AMX_SET_INPUT_STREAM_ENABLE,
 	NVAUDIO_I2S_SET_LOOPBACK_ENABLE,
 	NVAUDIO_I2S_GET_LOOPBACK_ENABLE,
 	NVAUDIO_CMD_MAX,
-};
-
-struct nvaudio_ivc_t124_dam_info {
-	int32_t		id;
-	uint32_t	in_srate;
-	uint32_t	out_srate;
-	uint32_t	channel_reg;
-	uint32_t	gain;
 };
 
 struct nvaudio_ivc_t210_amx_info {
@@ -162,7 +147,6 @@ struct nvaudio_ivc_msg {
 	enum nvaudio_ivc_cmd_t	cmd;
 	union {
 		struct nvaudio_ivc_dmaif_info		dmaif_info;
-		struct nvaudio_ivc_t124_dam_info	dam_info;
 		struct nvaudio_ivc_t210_amixer_info	amixer_info;
 		struct nvaudio_ivc_t210_sfc_info	sfc_info;
 		struct nvaudio_ivc_t186_asrc_info	asrc_info;

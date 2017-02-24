@@ -1,7 +1,7 @@
 /*
  * tegra_virt_ref_alt.c - Tegra reference virtual machine driver
  *
- * Copyright (c) 2015-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -120,11 +120,6 @@ static int tegra_virt_machine_driver_probe(struct platform_device *pdev)
 
 	if (adsp_enabled) {
 		dev_info(&pdev->dev, "virt-alt-pcm: adsp config is set\n");
-		if (tegra210_adsp_hv_req_adsp_assignment(card) < 0) {
-			dev_err(&pdev->dev, "virt-alt-pcm: Failed to get adsp\n");
-			adsp_enabled = false;
-		}
-		dev_info(&pdev->dev, "virt-alt-pcm: adsp access obtained\n");
 	} else {
 		dev_info(&pdev->dev, "virt-alt-pcm: adsp config is not set\n");
 		card->num_links = soc_data->num_ch;

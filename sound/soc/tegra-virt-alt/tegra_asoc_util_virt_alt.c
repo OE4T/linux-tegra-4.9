@@ -1,7 +1,7 @@
 /*
  * tegra_asoc_util_virt_alt.c - Tegra xbar dai link for machine drivers
  *
- * Copyright (c) 2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -857,45 +857,6 @@ int tegra186_virt_asrc_set_output_threshold(
 	return 0;
 }
 EXPORT_SYMBOL(tegra186_virt_asrc_set_output_threshold);
-
-int tegra210_adsp_hv_req_adsp_assignment(
-					struct snd_soc_card *card)
-{
-	int err = 0;
-	struct nvaudio_ivc_ctxt *hivc_client =
-		nvaudio_ivc_alloc_ctxt(card->dev);
-	struct nvaudio_ivc_msg msg;
-
-	/* Requesting ack to know if adsp has been assigned or not */
-	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
-	msg.cmd = NVAUDIO_ADSP_REQUEST_ASSIGNMENT;
-	msg.ack_required = true;
-	msg.err = 0;
-
-	err = nvaudio_ivc_send_retry(hivc_client,
-				&msg,
-				sizeof(struct nvaudio_ivc_msg));
-	if (err < 0) {
-		pr_err("error on ivc_send\n");
-		return err;
-	}
-
-	err = nvaudio_ivc_receive(hivc_client,
-				&msg,
-				sizeof(struct nvaudio_ivc_msg));
-	if (err < 0) {
-		pr_err("error on ivc_receive\n");
-		return err;
-	}
-
-	if (msg.err < 0) {
-		dev_err(card->dev, "Error: Adsp assignment failed\n");
-		err = msg.err;
-	}
-
-	return err;
-}
-EXPORT_SYMBOL(tegra210_adsp_hv_req_adsp_assignment);
 
 int tegra_virt_t210_amx_get_input_stream_enable(
 	struct snd_kcontrol *kcontrol,

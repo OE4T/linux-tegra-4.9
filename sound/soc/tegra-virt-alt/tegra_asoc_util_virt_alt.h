@@ -1,7 +1,7 @@
 /*
  * tegra_asoc_util_virt_alt.h - Tegra xbar dai link for machine drivers
  *
- * Copyright (c) 2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -228,7 +228,6 @@ int tegra186_virt_asrc_get_output_threshold(
 int tegra186_virt_asrc_set_output_threshold(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 
-int tegra210_adsp_hv_req_adsp_assignment(struct snd_soc_card *card);
 int tegra_virt_t210_amx_get_input_stream_enable(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 int tegra_virt_t210_amx_set_input_stream_enable(struct snd_kcontrol *kcontrol,

@@ -1606,7 +1606,8 @@ static void tegra_i2c_prepare_buffer(struct tegra_i2c_dev *i2c_dev,
 		memcpy(buff_u32, msg->buf, msg->len);
 }
 
-enum msg_end_type tegra_i2c_calc_end_bit(struct i2c_msg msgs[], int num, int i)
+static enum msg_end_type tegra_i2c_calc_end_bit(struct i2c_msg msgs[],
+	int num, int i)
 {
 	if (i >= (num - 1))
 		return MSG_END_STOP;

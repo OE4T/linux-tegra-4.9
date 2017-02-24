@@ -60,15 +60,18 @@ int nvhost_init_chip_support(struct nvhost_master *host)
 	return err;
 }
 
-bool nvhost_is_124() {
+bool nvhost_is_124(void)
+{
 	return tegra_get_chip_id() == TEGRA124 ||
 	       tegra_get_chip_id() == TEGRA132;
 }
 
-bool nvhost_is_210() {
+bool nvhost_is_210(void)
+{
 	return tegra_get_chip_id() == TEGRA210;
 }
 
-bool nvhost_is_186() {
+bool nvhost_is_186(void)
+{
 	return tegra_get_chip_id() == TEGRA186;
 }

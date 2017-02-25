@@ -812,7 +812,13 @@ long tegra_dvfs_predict_hz_at_mv_max_tfloor(struct clk *c, int mv)
 	const int *millivolts;
 	unsigned long rate = -EINVAL;
 
-	d = tegra_clk_to_dvfs(c);
+	/* Recursively search for ancestor with DVFS */
+	do {
+		d = tegra_clk_to_dvfs(c);
+		if (!d)
+			c = clk_get_parent(c);
+	} while (!d && !IS_ERR_OR_NULL(c));
+
 	if (d == NULL)
 		return -EINVAL;
 

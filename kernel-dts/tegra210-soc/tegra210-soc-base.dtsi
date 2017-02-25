@@ -2123,6 +2123,9 @@
 		sensor-params-tsamp-ate  = <480>;
 		sensor-params-pdiv-ate   = <8>;
 
+		hw-pllx-offsets = <TEGRA124_SOCTHERM_SENSOR_CPU 1000 7000
+				TEGRA124_SOCTHERM_SENSOR_GPU 2000 4000>;
+
 		throttle-cfgs {
 			throttle_heavy: heavy {
 				nvidia,priority = <100>;
@@ -2154,26 +2157,6 @@
 			mem1 = <1173700  (-6263600)>;
 			gpu  = <1074300  2734900>;
 			pllx = <1039700  6829100>;
-		};
-		/* thermctl - groups of sensors */
-		therm_cpu {
-			device_type = "thermctl";
-			thermal-sensor-id = <0>;
-			hotspot-offset = <10000>;
-		};
-		therm_gpu {
-			device_type = "thermctl";
-			thermal-sensor-id = <1>;
-			hotspot-offset = <5000>;
-		};
-		therm_mem {
-			status = "disabled";
-			device_type = "thermctl";
-			thermal-sensor-id = <2>;
-		};
-		therm_pll {
-			device_type = "thermctl";
-			thermal-sensor-id = <3>;
 		};
 
 		/* throttlectl - hardware 'throttle' devices */

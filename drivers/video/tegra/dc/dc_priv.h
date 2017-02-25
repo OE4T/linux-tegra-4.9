@@ -661,6 +661,11 @@ int tegra_dc_update_cmu_aligned(struct tegra_dc *dc, struct tegra_dc_cmu *cmu);
 int tegra_dc_set_hdr(struct tegra_dc *dc, struct tegra_dc_hdr *hdr,
 					bool cache_dirty);
 
+struct tegra_dsi_cmd *dsi_parse_cmd_dt(struct device *dev,
+		const struct device_node *node,
+		struct property *prop,
+		u32 n_cmd);
+
 struct tegra_dc_platform_data
 	*of_dc_parse_platform_data(struct platform_device *ndev);
 

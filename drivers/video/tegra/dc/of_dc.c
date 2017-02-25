@@ -1319,10 +1319,10 @@ static int parse_cmu_data(struct device_node *np, struct tegra_dc_cmu *cmu)
 }
 #endif
 
-static struct tegra_dsi_cmd *tegra_dsi_parse_cmd_dt(struct platform_device *ndev,
-					const struct device_node *node,
-					struct property *prop,
-					u32 n_cmd)
+struct tegra_dsi_cmd *dsi_parse_cmd_dt(struct device *dev,
+				const struct device_node *node,
+				struct property *prop,
+				u32 n_cmd)
 {
 	struct tegra_dsi_cmd *dsi_cmd = NULL, *temp;
 	u32 *prop_val_ptr;
@@ -1335,9 +1335,10 @@ static struct tegra_dsi_cmd *tegra_dsi_parse_cmd_dt(struct platform_device *ndev
 
 	if (!prop)
 		return NULL;
+
 	prop_val_ptr = prop->value;
 
-	dsi_cmd = devm_kzalloc(&ndev->dev, sizeof(*dsi_cmd) * n_cmd,
+	dsi_cmd = devm_kzalloc(dev, sizeof(*dsi_cmd) * n_cmd,
 				GFP_KERNEL);
 	if (!dsi_cmd) {
 		pr_err("dsi: cmd memory allocation failed\n");
@@ -1365,7 +1366,7 @@ static struct tegra_dsi_cmd *tegra_dsi_parse_cmd_dt(struct platform_device *ndev
 			if (long_pkt) {
 				temp->sp_len_dly.data_len =
 					(arg2 << NUMOF_BIT_PER_BYTE) | arg1;
-				temp->pdata = devm_kzalloc(&ndev->dev,
+				temp->pdata = devm_kzalloc(dev,
 					temp->sp_len_dly.data_len, GFP_KERNEL);
 				for (i = 0; i < temp->sp_len_dly.data_len; i++)
 					(temp->pdata)[i] =
@@ -1381,6 +1382,9 @@ static struct tegra_dsi_cmd *tegra_dsi_parse_cmd_dt(struct platform_device *ndev
 		} else if (temp->cmd_type == TEGRA_DSI_DELAY_MS) {
 			temp->sp_len_dly.delay_ms =
 				be32_to_cpu(*prop_val_ptr++);
+		} else if (temp->cmd_type == TEGRA_DSI_DELAY_US) {
+			temp->sp_len_dly.delay_us =
+				be32_to_cpu(*prop_val_ptr++);
 		} else if (temp->cmd_type == TEGRA_DSI_SEND_FRAME) {
 			temp->sp_len_dly.frame_cnt =
 				be32_to_cpu(*prop_val_ptr++);
@@ -1391,6 +1395,19 @@ static struct tegra_dsi_cmd *tegra_dsi_parse_cmd_dt(struct platform_device *ndev
 				be32_to_cpu(*prop_val_ptr++);
 		}
 	}
+
+	return dsi_cmd;
+}
+
+static struct tegra_dsi_cmd *tegra_dsi_parse_cmd_dt(
+					struct platform_device *ndev,
+					const struct device_node *node,
+					struct property *prop,
+					u32 n_cmd)
+{
+	struct tegra_dsi_cmd *dsi_cmd = NULL;
+
+	dsi_cmd = dsi_parse_cmd_dt(&ndev->dev, node, prop, n_cmd);
 
 	return dsi_cmd;
 }
@@ -1762,6 +1779,24 @@ static int parse_dsi_settings(struct platform_device *ndev,
 		dev_err(&ndev->dev,
 			"dsi: copy init cmd from dt failed\n");
 		ret = -EINVAL;
+		goto parse_dsi_settings_fail;
+	};
+
+	if (!of_property_read_u32(np_dsi_panel,
+		"nvidia,dsi-n-postvideo-cmd", &temp)) {
+		dsi->n_postvideo_cmd = (u16)temp;
+		OF_DC_LOG("dsi n_postvideo_cmd %d\n",
+			dsi->n_postvideo_cmd);
+	}
+	dsi->dsi_postvideo_cmd =
+		tegra_dsi_parse_cmd_dt(ndev, np_dsi_panel,
+			of_find_property(np_dsi_panel,
+			"nvidia,dsi-postvideo-cmd", NULL),
+			dsi->n_postvideo_cmd);
+	if (dsi->n_postvideo_cmd &&
+		IS_ERR_OR_NULL(dsi->dsi_postvideo_cmd)) {
+		dev_err(&ndev->dev,
+			"dsi: copy postvideo cmd from dt failed\n");
 		goto parse_dsi_settings_fail;
 	};
 

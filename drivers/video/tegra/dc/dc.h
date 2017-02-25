@@ -112,6 +112,7 @@ enum {
 	TEGRA_DSI_GPIO_SET,
 	TEGRA_DSI_SEND_FRAME,
 	TEGRA_DSI_PACKET_VIDEO_VBLANK_CMD,
+	TEGRA_DSI_DELAY_US,
 };
 enum {
 	TEGRA_DSI_LINK0,
@@ -124,6 +125,7 @@ struct tegra_dsi_cmd {
 	union {
 		u16 data_len;
 		u16 delay_ms;
+		u16 delay_us;
 		unsigned gpio;
 		u16 frame_cnt;
 		struct {
@@ -367,6 +369,9 @@ struct tegra_dsi_out {
 
 	struct tegra_dsi_cmd	*dsi_late_resume_cmd;
 	u16		n_late_resume_cmd;
+
+	struct tegra_dsi_cmd	*dsi_postvideo_cmd;
+	u16		n_postvideo_cmd;
 
 	struct tegra_dsi_cmd	*dsi_suspend_cmd;	/* required */
 	u16		n_suspend_cmd;			/* required */

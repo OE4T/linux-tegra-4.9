@@ -72,5 +72,12 @@
 		compatible = "nvidia,tegra-core-cdev-action";
 		cdev-type = "CORE-cap";
 		#cooling-cells = <2>; /* min followed by max */
+		clocks = <&tegra_car TEGRA210_CLK_CAP_VCORE_C2BUS>,
+			 <&tegra_car TEGRA210_CLK_CAP_VCORE_C3BUS>,
+			 <&tegra_car TEGRA210_CLK_CAP_VCORE_SCLK>,
+			 <&tegra_car TEGRA210_CLK_CAP_VCORE_HOST1X>,
+			 <&tegra_car TEGRA210_CLK_CAP_VCORE_ABUS>;
+		clock-names = "c2bus_cap", "c3bus_cap", "sclk_cap",
+				"host1x_cap", "adsp_cap";
 	};
 };

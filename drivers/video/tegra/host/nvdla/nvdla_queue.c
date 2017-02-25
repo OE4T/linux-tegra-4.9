@@ -51,6 +51,9 @@ int nvdla_get_task_mem(struct nvhost_queue *queue,
 	int err;
 	struct nvdla_task *task = NULL;
 	struct nvhost_queue_task_mem_info task_mem_info;
+	struct platform_device *pdev = queue->pool->pdev;
+
+	nvdla_dbg_fn(pdev, "");
 
 	/* get mem task descriptor and task mem from task_mem_pool */
 	err = nvhost_queue_alloc_task_memory(queue, &task_mem_info);
@@ -96,6 +99,9 @@ static void task_free(struct kref *ref)
 void nvdla_task_put(struct nvdla_task *task)
 {
 	struct nvhost_queue *queue = task->queue;
+	struct platform_device *pdev = queue->pool->pdev;
+
+	nvdla_dbg_fn(pdev, "task:[%p]", task);
 
 	kref_put(&task->ref, task_free);
 
@@ -105,6 +111,11 @@ void nvdla_task_put(struct nvdla_task *task)
 
 void nvdla_task_get(struct nvdla_task *task)
 {
+	struct nvhost_queue *queue = task->queue;
+	struct platform_device *pdev = queue->pool->pdev;
+
+	nvdla_dbg_fn(pdev, "task:[%p]", task);
+
 	/* update queue refcnt */
 	nvhost_queue_get(task->queue);
 
@@ -114,6 +125,10 @@ void nvdla_task_get(struct nvdla_task *task)
 static int nvdla_unmap_task_memory(struct nvdla_task *task)
 {
 	int ii;
+	struct nvhost_queue *queue = task->queue;
+	struct platform_device *pdev = queue->pool->pdev;
+
+	nvdla_dbg_fn(pdev, "task:[%p]", task);
 
 	/* unpin address list */
 	for (ii = 0; ii < task->num_addresses; ii++) {
@@ -121,6 +136,7 @@ static int nvdla_unmap_task_memory(struct nvdla_task *task)
 			nvhost_buffer_submit_unpin(task->buffers,
 				&task->memory_handles[ii].handle, 1);
 	}
+	nvdla_dbg_fn(pdev, "all mem handles unmaped");
 
 	/* unpin prefences memory */
 	for (ii = 0; ii < task->num_prefences; ii++) {
@@ -130,6 +146,7 @@ static int nvdla_unmap_task_memory(struct nvdla_task *task)
 				&task->prefences[ii].sem_handle, 1);
 		}
 	}
+	nvdla_dbg_fn(pdev, "all prefences unmaped");
 
 	/* unpin input task status memory */
 	for (ii = 0; ii < task->num_in_task_status; ii++) {
@@ -137,6 +154,7 @@ static int nvdla_unmap_task_memory(struct nvdla_task *task)
 			nvhost_buffer_submit_unpin(task->buffers,
 				&task->in_task_status[ii].handle, 1);
 	}
+	nvdla_dbg_fn(pdev, "all in task status unmaped");
 
 	/* unpin postfences memory */
 	for (ii = 0; ii < task->num_postfences; ii++) {
@@ -147,6 +165,7 @@ static int nvdla_unmap_task_memory(struct nvdla_task *task)
 				&task->postfences[ii].sem_handle, 1);
 		}
 	}
+	nvdla_dbg_fn(pdev, "all postfences unmaped");
 
 	/* unpin input task status memory */
 	for (ii = 0; ii < task->num_out_task_status; ii++) {
@@ -154,6 +173,7 @@ static int nvdla_unmap_task_memory(struct nvdla_task *task)
 			nvhost_buffer_submit_unpin(task->buffers,
 				&task->out_task_status[ii].handle, 1);
 	}
+	nvdla_dbg_fn(pdev, "all out task status unmaped");
 
 	return 0;
 }
@@ -197,6 +217,8 @@ static void nvdla_queue_update(void *priv, int nr_completed)
 
 	mutex_lock(&queue->list_lock);
 
+	nvdla_dbg_fn(pdev, "");
+
 	/* check which task(s) finished */
 	list_for_each_entry_safe(task, safe, &queue->tasklist, list) {
 
@@ -204,8 +226,11 @@ static void nvdla_queue_update(void *priv, int nr_completed)
 					queue->syncpt_id, task->fence);
 
 		/* clean task and remove from list */
-		if (task_complete)
+		if (task_complete) {
+			nvdla_dbg_fn(pdev, "task with syncpt[%d] val[%d] done",
+				queue->syncpt_id, task->fence);
 			nvdla_task_free_locked(task);
+		}
 	}
 	/* put pm refcount */
 	nvhost_module_idle_mult(pdev, nr_completed);
@@ -325,6 +350,7 @@ static int nvdla_map_task_memory(struct nvdla_task *task)
 	   sizeof(struct dla_action_list) + nvdla_get_max_preaction_size() +
 	   sizeof(struct dla_action_list) + nvdla_get_max_postaction_size();
 	offset = roundup(offset, 8);
+	nvdla_dbg_fn(pdev, "addresslist offset is[%zu]", offset);
 
 	/* get task desc address list to update list from kernel */
 	next = (u8 *)task_desc + offset;
@@ -684,6 +710,10 @@ int nvdla_fill_task_desc(struct nvdla_task *task)
 	task_desc->queue_id = queue->id;
 
 	nvdla_dbg_info(pdev, "Queue id[%d]", task_desc->queue_id);
+	nvdla_dbg_info(pdev, "version[%d]", task_desc->version);
+	nvdla_dbg_info(pdev, "engine_id[%d]", task_desc->engine_id);
+	nvdla_dbg_info(pdev, "task desc size[%u]", task_desc->size);
+	nvdla_dbg_info(pdev, "task desc sequence[%u]", task_desc->sequence);
 
 	/* get pre/post action list HEAD mem offset
 	 * - preactions list HEAD stored after dla_task_descriptor
@@ -742,6 +772,9 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 		last_task = list_last_entry(&queue->tasklist,
 						struct nvdla_task, list);
 		last_task->task_desc->next = (uint64_t)task->task_desc_pa;
+
+		nvdla_dbg_info(pdev, "last task[%p] last_task_desc_pa[%llu]",
+				last_task, task->task_desc_pa);
 	}
 	list_add_tail(&task->list, &queue->tasklist);
 
@@ -779,9 +812,11 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 
 	/* submit task to engine */
 	err = nvdla_send_cmd(pdev, &cmd_data);
-	if (err)
+	if (err) {
 		nvdla_task_syncpt_reset(task->sp, queue->syncpt_id,
 				task->fence);
+		nvdla_dbg_err(pdev, "task[%p] submit failed", task);
+	}
 
 fail_to_register:
 	mutex_unlock(&queue->list_lock);

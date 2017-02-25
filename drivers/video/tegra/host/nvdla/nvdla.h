@@ -306,7 +306,7 @@ int nvdla_fill_task_desc(struct nvdla_task *task);
  * This function send post fences back to UMD after task submit
  */
 int nvdla_send_postfences(struct nvdla_task *task,
-			struct nvdla_ioctl_submit_task usr_task);
+			struct nvdla_ioctl_submit_task *usr_task);
 
 int nvdla_get_cmd_memory(struct platform_device *pdev,
 				struct nvdla_cmd_mem_info *cmd_mem_info);

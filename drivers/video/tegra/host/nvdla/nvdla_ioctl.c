@@ -59,6 +59,8 @@ static int nvdla_set_queue(struct nvdla_private *priv, void *args)
 	int status = queue_arg->status;
 	int err = 0;
 
+	nvdla_dbg_fn(pdev, "");
+
 	if (!queue) {
 		nvdla_dbg_err(pdev, "invalid queue\n");
 		err = -EINVAL;
@@ -81,6 +83,7 @@ static int nvdla_set_queue(struct nvdla_private *priv, void *args)
 		err = -EINVAL;
 		goto inval_cmd;
 	}
+	nvdla_dbg_fn(pdev, "done");
 
 inval_queue:
 inval_input:
@@ -96,6 +99,8 @@ static int nvdla_pin(struct nvdla_private *priv, void *arg)
 			(struct nvdla_pin_unpin_args *)arg;
 	u32 count;
 	struct platform_device *pdev = priv->pdev;
+
+	nvdla_dbg_fn(pdev, "");
 
 	if (!buf_list) {
 		nvdla_dbg_err(pdev, "Invalid argument ptr in pin\n");
@@ -119,6 +124,9 @@ static int nvdla_pin(struct nvdla_private *priv, void *arg)
 	}
 
 	err = nvhost_buffer_pin(priv->buffers, handles, count);
+	if (err)
+		nvdla_dbg_err(pdev, "failed to pin handles\n");
+
 
 nvdla_buffer_cpy_err:
 fail_to_get_val_cnt:
@@ -134,6 +142,8 @@ static int nvdla_unpin(struct nvdla_private *priv, void *arg)
 			(struct nvdla_pin_unpin_args *)arg;
 	u32 count;
 	struct platform_device *pdev = priv->pdev;
+
+	nvdla_dbg_fn(pdev, "");
 
 	if (!buf_list) {
 		nvdla_dbg_err(pdev, "Invalid argument for pointer\n");
@@ -284,14 +294,14 @@ fail:
 }
 
 int nvdla_send_postfences(struct nvdla_task *task,
-			struct nvdla_ioctl_submit_task user_task)
+			struct nvdla_ioctl_submit_task *user_task)
 {
 	int err = 0, i;
 	struct platform_device *dla_pdev = task->queue->pool->pdev;
 	struct platform_device *host_pdev =
 				to_platform_device(dla_pdev->dev.parent);
 	struct nvdla_fence __user *postfences =
-		(struct nvdla_fence __user *)(uintptr_t)user_task.postfences;
+		(struct nvdla_fence __user *)(uintptr_t)user_task->postfences;
 	char fence_name[32];
 
 	nvdla_dbg_fn(dla_pdev, "sending post fences");
@@ -324,6 +334,7 @@ int nvdla_send_postfences(struct nvdla_task *task,
 		}
 	}
 
+	nvdla_dbg_fn(dla_pdev, "copy postfences to user");
 	/* send post fences */
 	if (copy_to_user(postfences, task->postfences,
 		(task->num_postfences * sizeof(struct nvdla_fence)))) {
@@ -347,16 +358,39 @@ size_t nvdla_get_max_task_size(void)
 
 static int nvdla_val_task_submit_input(struct nvdla_ioctl_submit_task *in_task)
 {
-	if (in_task->num_prefences > MAX_NUM_NVDLA_PREFENCES)
+	if (in_task->num_prefences > MAX_NUM_NVDLA_PREFENCES) {
+		pr_err("num_prefences[%u] crossing expected[%d]\n",
+			in_task->num_prefences, MAX_NUM_NVDLA_PREFENCES);
 		return -EINVAL;
-	if (in_task->num_postfences > MAX_NUM_NVDLA_POSTFENCES)
+	}
+	if (in_task->num_postfences < 1) {
+		pr_err("num postfences[%u] should be min one",
+			in_task->num_postfences);
 		return -EINVAL;
-	if (in_task->num_input_task_status > MAX_NUM_NVDLA_IN_TASK_STATUS)
+	}
+	if (in_task->num_postfences > MAX_NUM_NVDLA_POSTFENCES) {
+		pr_err("num_postfences[%u] crossing expected[%d]\n",
+			in_task->num_postfences, MAX_NUM_NVDLA_POSTFENCES);
 		return -EINVAL;
-	if (in_task->num_output_task_status > MAX_NUM_NVDLA_OUT_TASK_STATUS)
+	}
+	if (in_task->num_input_task_status > MAX_NUM_NVDLA_IN_TASK_STATUS) {
+		pr_err("in task status[%u] crossing expected[%d]\n",
+			in_task->num_input_task_status,
+			MAX_NUM_NVDLA_IN_TASK_STATUS);
 		return -EINVAL;
-	if (in_task->num_addresses > NVDLA_MAX_BUFFERS_PER_TASK)
+	}
+	if (in_task->num_output_task_status > MAX_NUM_NVDLA_OUT_TASK_STATUS) {
+		pr_err("out task status[%u] crossing expected[%d]\n",
+			in_task->num_output_task_status,
+			MAX_NUM_NVDLA_OUT_TASK_STATUS);
 		return -EINVAL;
+	}
+	if (in_task->num_addresses > NVDLA_MAX_BUFFERS_PER_TASK) {
+		pr_err("num addresses[%u] crossing expected[%d]\n",
+			in_task->num_addresses,
+			NVDLA_MAX_BUFFERS_PER_TASK);
+		return -EINVAL;
+	}
 
 	return 0;
 }
@@ -377,6 +411,12 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 	task->queue = queue;
 	task->buffers = buffers;
 	task->sp = &nvhost_get_host(pdev)->syncpt;
+
+	err = nvdla_val_task_submit_input(local_task);
+	if (err) {
+		nvdla_dbg_err(pdev, "Invalid input arguments");
+		goto fail_to_get_val_args;
+	}
 
 	task->num_prefences = local_task->num_prefences;
 	task->num_postfences = local_task->num_postfences;
@@ -420,7 +460,71 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 
 fail_to_get_addr_list:
 fail_to_get_actions:
+fail_to_get_val_args:
 	return err;
+}
+
+void nvdla_dump_task(struct nvdla_task *task)
+{
+	int i;
+	struct nvhost_queue *queue = task->queue;
+	struct platform_device *pdev = queue->pool->pdev;
+
+	nvdla_dbg_info(pdev, "dumping input task [%p] parameters:", task);
+	nvdla_dbg_info(pdev, "num_prefences[%u] num_postfences[%u]",
+			task->num_postfences, task->num_postfences);
+	nvdla_dbg_info(pdev, "num_in_status[%u] num_out_task_status[%u]",
+			task->num_in_task_status, task->num_out_task_status);
+	nvdla_dbg_info(pdev, "num_addresses[%u]", task->num_addresses);
+
+	for (i = 0; i < task->num_prefences; i++) {
+		nvdla_dbg_info(pdev, "prefence[%d]: type[%u] syncpt_index[%u]"
+				" syncpt_val[%u] sync_fd[%u] sem_handle[%u]"
+				" sem_offset[%u] sem_val[%u]",
+				i, task->prefences[i].type,
+				task->prefences[i].syncpoint_index,
+				task->prefences[i].syncpoint_value,
+				task->prefences[i].sync_fd,
+				task->prefences[i].sem_handle,
+				task->prefences[i].sem_offset,
+				task->prefences[i].sem_val);
+	}
+
+	for (i = 0; i < task->num_postfences; i++) {
+		nvdla_dbg_info(pdev, "postfence[%d]: type[%u] syncpt_index[%u]"
+				" syncpt_val[%u] sync_fd[%u] sem_handle[%u]"
+				" sem_offset[%u] sem_val[%u]",
+				i, task->postfences[i].type,
+				task->postfences[i].syncpoint_index,
+				task->postfences[i].syncpoint_value,
+				task->postfences[i].sync_fd,
+				task->postfences[i].sem_handle,
+				task->postfences[i].sem_offset,
+				task->postfences[i].sem_val);
+	}
+
+	for (i = 0; i < task->num_in_task_status; i++) {
+		nvdla_dbg_info(pdev, "Input task status[%d]:"
+				"handle[%u] offset[%u] status[%u]",
+				i, task->in_task_status[i].handle,
+				task->in_task_status[i].offset,
+				task->in_task_status[i].status);
+	}
+
+	for (i = 0; i < task->num_out_task_status; i++) {
+		nvdla_dbg_info(pdev, "Output task status[%d]:"
+				"handle[%u] offset[%u] status[%u]",
+				i, task->out_task_status[i].handle,
+				task->out_task_status[i].offset,
+				task->out_task_status[i].status);
+	}
+
+	for (i = 0; i < task->num_addresses; i++) {
+		nvdla_dbg_info(pdev, "Memory Handles[%d]:"
+				"handle[%u] offset[%u]",
+				i, task->memory_handles[i].handle,
+				task->memory_handles[i].offset);
+	}
 }
 
 static int nvdla_submit(struct nvdla_private *priv, void *arg)
@@ -441,10 +545,11 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 
 	pdev = priv->pdev;
 	queue = priv->queue;
-	if (!queue)
+	buffers = priv->buffers;
+	if (!(queue && pdev && buffers))
 		return -EINVAL;
 
-	buffers = priv->buffers;
+	nvdla_dbg_fn(pdev, "inside task submit");
 
 	user_tasks = (struct nvdla_ioctl_submit_task __user *)
 			(uintptr_t)args->tasks;
@@ -457,20 +562,13 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 
 	nvdla_dbg_info(pdev, "num of tasks [%d]", num_tasks);
 
-	for (i = 0; i < num_tasks; i++) {
-		err = nvdla_val_task_submit_input(user_tasks + i);
-		if (err) {
-			nvdla_dbg_err(pdev, "Invalid input arguments");
-			goto fail_to_val_args;
-		}
-	}
-
 	/* IOCTL copy descriptors*/
-	if (copy_from_user(local_tasks, user_tasks,
+	if (copy_from_user(local_tasks, (void __user *)user_tasks,
 			(num_tasks * sizeof(*user_tasks)))) {
 		err = -EFAULT;
 		goto fail_to_copy_task;
 	}
+	nvdla_dbg_info(pdev, "copy of user tasks done");
 
 	for (i = 0; i < num_tasks; i++) {
 
@@ -481,6 +579,7 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 			nvdla_dbg_err(pdev, "failed to get task[%d] mem", i + 1);
 			goto fail_to_get_task_mem;
 		}
+		nvdla_dbg_info(pdev, "task[%d] mem allocate done", i + 1);
 
 		/* fill local task param from user args */
 		err = nvdla_fill_task(queue, buffers, local_tasks + i, task);
@@ -488,6 +587,11 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 			nvdla_dbg_err(pdev, "failed to fill task[%d]", i + 1);
 			goto fail_to_fill_task;
 		}
+		nvdla_dbg_info(pdev, "local task[%d] filled", i + 1);
+
+		/* dump task input parameters */
+		nvdla_dump_task(task);
+		nvdla_dbg_info(pdev, "dump task[%d] done", i + 1);
 
 		/* update task desc fields */
 		err = nvdla_fill_task_desc(task);
@@ -495,6 +599,7 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 			nvdla_dbg_err(pdev, "fail to fill task desc%d", i + 1);
 			goto fail_to_fill_task_desc;
 		}
+		nvdla_dbg_info(pdev, "task[%d] desc filled", i + 1);
 
 		/* send job to engine through queue framework */
 		err = nvhost_queue_submit(queue, task);
@@ -502,14 +607,18 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 			nvdla_dbg_err(pdev, "fail to submit task: %d", i + 1);
 			goto fail_to_submit_task;
 		}
+		nvdla_dbg_info(pdev, "task[%d] submitted", i + 1);
 
 		/* send fences to user */
-		err = nvdla_send_postfences(task, user_tasks[i]);
+		err = nvdla_send_postfences(task, local_tasks + i);
 		if (err) {
 			nvdla_dbg_err(pdev, "fail to send postfence%d", i + 1);
 			goto fail_to_send_postfences;
 		}
+		nvdla_dbg_info(pdev, "postfences of task[%d] sent", i + 1);
 	}
+	nvdla_dbg_fn(pdev, "Task submitted, done!");
+
 	return 0;
 
 fail_to_send_postfences:
@@ -519,7 +628,6 @@ fail_to_fill_task:
 	/*TODO: traverse list in reverse and delete jobs */
 fail_to_get_task_mem:
 fail_to_copy_task:
-fail_to_val_args:
 	return err;
 }
 
@@ -567,6 +675,7 @@ static long nvdla_ioctl(struct file *file, unsigned int cmd,
 		err = nvdla_set_queue(priv, (void *)buf);
 		break;
 	default:
+		nvdla_dbg_err(pdev, "invalid IOCTL CMD");
 		err = -ENOIOCTLCMD;
 		break;
 	}

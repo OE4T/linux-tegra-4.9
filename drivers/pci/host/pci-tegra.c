@@ -401,7 +401,6 @@ struct tegra_pcie_soc_data {
 	bool			l1ss_rp_wakeup_war;
 	bool			link_speed_war;
 	bool			dvfs_mselect;
-	bool			dw_unaligned_ep_cs_access;
 	bool			dvfs_afi;
 	struct pcie_dvfs	dvfs_tbl[10][2];
 };
@@ -694,7 +693,7 @@ static int tegra_pcie_read_conf(struct pci_bus *bus, unsigned int devfn,
 	u32 rp = 0;
 	struct pci_dev *dn_dev;
 
-	if (bus->number != 0 && pcie->soc_data->dw_unaligned_ep_cs_access) {
+	if (bus->number) {
 		if (bus->number == 1) {
 			dn_dev = bus->self;
 			rp = PCI_SLOT(dn_dev->devfn);
@@ -717,7 +716,7 @@ static int tegra_pcie_write_conf(struct pci_bus *bus, unsigned int devfn,
 	u32 rp = 0;
 	struct pci_dev *dn_dev;
 
-	if (bus->number != 0 && pcie->soc_data->dw_unaligned_ep_cs_access) {
+	if (bus->number) {
 		if (bus->number == 1) {
 			dn_dev = bus->self;
 			rp = PCI_SLOT(dn_dev->devfn);
@@ -3228,7 +3227,6 @@ static const struct tegra_pcie_soc_data tegra186_pcie_data = {
 	.pcie_regulator_names = t186_rail_names,
 	.num_pcie_regulators =
 			sizeof(t186_rail_names) / sizeof(t186_rail_names[0]),
-	.dw_unaligned_ep_cs_access = true,
 	.dvfs_afi = true,
 	.dvfs_tbl = {
 		{{0, 0}, {0, 0} },

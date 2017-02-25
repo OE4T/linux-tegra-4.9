@@ -250,11 +250,11 @@ static int isc_dev_raw_rw(struct isc_dev_info *info)
 	return ret;
 }
 
-static int isc_dev_get_pkg(
+static int isc_dev_get_package(
 	struct isc_dev_info *info, unsigned long arg, bool is_compat)
 {
 	if (is_compat) {
-		struct isc_dev_pkg32 pkg32;
+		struct isc_dev_package32 pkg32;
 
 		if (copy_from_user(&pkg32,
 			(const void __user *)arg, sizeof(pkg32))) {
@@ -268,7 +268,7 @@ static int isc_dev_get_pkg(
 		info->rw_pkg.flags = pkg32.flags;
 		info->rw_pkg.buffer = (unsigned long)pkg32.buffer;
 	} else {
-		struct isc_dev_pkg pkg;
+		struct isc_dev_package pkg;
 
 		if (copy_from_user(&pkg,
 			(const void __user *)arg, sizeof(pkg))) {
@@ -297,30 +297,6 @@ static int isc_dev_get_pkg(
 	return 0;
 }
 
-static int isc_dev_get_package(
-	struct isc_dev_info *info, unsigned long arg)
-{
-	if (copy_from_user(&info->rw_pkg,
-		(const void __user *)arg, sizeof(info->rw_pkg))) {
-		dev_err(info->dev, "%s copy_from_user err line %d\n",
-		__func__, __LINE__);
-		return -EFAULT;
-	}
-
-	if ((void __user *)info->rw_pkg.buffer == NULL) {
-		dev_err(info->dev, "%s package buffer NULL\n", __func__);
-		return -EINVAL;
-	}
-
-	if (!info->rw_pkg.size) {
-		dev_err(info->dev, "%s invalid package size %d\n",
-			__func__, info->rw_pkg.size);
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
 static long isc_dev_ioctl(struct file *file,
 			unsigned int cmd, unsigned long arg)
 {
@@ -328,15 +304,8 @@ static long isc_dev_ioctl(struct file *file,
 	int err = 0;
 
 	switch (cmd) {
-	case ISC_DEV_IOCTL_RDWR:
-		err = isc_dev_get_pkg(info, arg, false);
-		if (err)
-			break;
-
-		err = isc_dev_raw_rw(info);
-		break;
 	case ISC_DEV_IOCTL_RW:
-		err = isc_dev_get_package(info, arg);
+		err = isc_dev_get_package(info, arg, false);
 		if (err)
 			break;
 
@@ -358,8 +327,8 @@ static long isc_dev_ioctl32(struct file *file,
 	int err = 0;
 
 	switch (cmd) {
-	case ISC_DEV_IOCTL_RDWR32:
-		err = isc_dev_get_pkg(info, arg, true);
+	case ISC_DEV_IOCTL_RW32:
+		err = isc_dev_get_package(info, arg, true);
 		if (err)
 			break;
 

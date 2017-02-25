@@ -183,10 +183,22 @@ static bool vi_notify_wait(struct tegra_channel *chan,
 	for (i = 0; i < chan->valid_ports; i++) {
 		err = nvhost_syncpt_wait_timeout_ext(chan->vi->ndev,
 				chan->syncpt[i][SOF_SYNCPT_IDX], thresh[i],
-				250, NULL, ts);
-		if (err)
+				250, NULL, NULL);
+		if (unlikely(err))
 			dev_err(chan->vi->dev,
 				"PXL_SOF syncpt timeout! err = %d\n", err);
+		else {
+			struct vi_capture_status status;
+
+			err = vi_notify_get_capture_status(chan->vnc[i],
+					chan->vnc_id[i],
+					thresh[i], &status);
+			if (unlikely(err))
+				dev_err(chan->vi->dev,
+					"no capture status! err = %d\n", err);
+			else
+				*ts = ns_to_timespec((s64)status.sof_ts);
+		}
 	}
 	return true;
 }
@@ -548,6 +560,8 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 				chan->syncpt[i][FE_SYNCPT_IDX], &thresh[i]);
 		/* Get current ATOMP_FE syncpt min value */
 		if (!err) {
+			struct vi_capture_status status;
+			u32 index = thresh[i] + 1;
 			/* Wait for ATOMP_FE syncpt
 			 *
 			 * This is to make sure we don't exit the capture thread
@@ -555,10 +569,21 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 			 */
 			err = nvhost_syncpt_wait_timeout_ext(chan->vi->ndev,
 					chan->syncpt[i][FE_SYNCPT_IDX],
-					thresh[i] + 1,
-					250, NULL, &ts);
-			if (err < 0)
+					index,
+					250, NULL, NULL);
+			if (unlikely(err))
 				dev_err(chan->vi->dev, "ATOMP_FE syncpt timeout!\n");
+			else {
+				err = vi_notify_get_capture_status(chan->vnc[i],
+						chan->vnc_id[i],
+						index, &status);
+				if (unlikely(err))
+					dev_err(chan->vi->dev,
+						"no capture status! err = %d\n",
+						err);
+				else
+					ts = ns_to_timespec((s64)status.eof_ts);
+			}
 		}
 	}
 

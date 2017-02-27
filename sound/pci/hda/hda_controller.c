@@ -957,13 +957,19 @@ static int azx_single_get_response(struct hdac_bus *bus, unsigned int addr,
 static int azx_send_cmd(struct hdac_bus *bus, unsigned int val)
 {
 	struct azx *chip = bus_to_azx(bus);
+	unsigned int ret = 0;
 
 	if (chip->disabled)
 		return 0;
+
+	pm_runtime_get_sync(chip->card->dev);
 	if (chip->single_cmd)
-		return azx_single_send_cmd(bus, val);
+		ret = azx_single_send_cmd(bus, val);
 	else
-		return snd_hdac_bus_send_cmd(bus, val);
+		ret = snd_hdac_bus_send_cmd(bus, val);
+	pm_runtime_put(chip->card->dev);
+
+	return ret;
 }
 
 /* get a response */
@@ -972,12 +978,18 @@ static int azx_get_response(struct hdac_bus *bus, unsigned int addr,
 {
 	struct azx *chip = bus_to_azx(bus);
 
+	unsigned int ret = 0;
 	if (chip->disabled)
 		return 0;
+
+	pm_runtime_get_sync(chip->card->dev);
 	if (chip->single_cmd)
-		return azx_single_get_response(bus, addr, res);
+		ret = azx_single_get_response(bus, addr, res);
 	else
-		return azx_rirb_get_response(bus, addr, res);
+		ret = azx_rirb_get_response(bus, addr, res);
+	pm_runtime_put(chip->card->dev);
+
+	return ret;
 }
 
 static int azx_link_power(struct hdac_bus *bus, bool enable)

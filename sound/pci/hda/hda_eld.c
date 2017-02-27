@@ -599,6 +599,9 @@ void snd_hdmi_eld_update_pcm_info(struct parsed_hdmi_eld *e,
 					maxbps = 24;
 			}
 		}
+		/* Allow 192khz in card if sink is EAC3 decode capable */
+		if (a->format == AUDIO_CODING_TYPE_EAC3)
+			rates |= SNDRV_PCM_RATE_192000;
 	}
 
 	/* restrict the parameters by the values the codec provides */

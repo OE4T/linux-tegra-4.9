@@ -144,8 +144,9 @@ static void tegra_crypt_complete(struct crypto_async_request *req, int err)
 static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 				struct tegra_crypt_req *crypt_req)
 {
+
 	struct crypto_skcipher *tfm;
-	struct ablkcipher_request *req = NULL;
+	struct skcipher_request *req = NULL;
 	struct scatterlist in_sg;
 	struct scatterlist out_sg;
 	unsigned long *xbuf[NBUFS];
@@ -174,7 +175,7 @@ static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 		tfm = ctx->aes_tfm[TEGRA_CRYPTO_CBC];
 	}
 
-	req = ablkcipher_request_alloc(tfm, GFP_KERNEL);
+	req = skcipher_request_alloc(tfm, GFP_KERNEL);
 	if (!req) {
 		pr_err("%s: Failed to allocate request\n", __func__);
 		ret = -ENOMEM;
@@ -213,7 +214,7 @@ static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 
 	init_completion(&tcrypt_complete.restart);
 
-	ablkcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+	skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
 		tegra_crypt_complete, &tcrypt_complete);
 
 	total = crypt_req->plaintext_sz;
@@ -230,10 +231,10 @@ static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 		sg_init_one(&out_sg, xbuf[1], size);
 
 		if (!crypt_req->skip_iv)
-			ablkcipher_request_set_crypt(req, &in_sg,
+			skcipher_request_set_crypt(req, &in_sg,
 				&out_sg, size, crypt_req->iv);
 		else
-			ablkcipher_request_set_crypt(req, &in_sg,
+			skcipher_request_set_crypt(req, &in_sg,
 				&out_sg, size, NULL);
 
 		reinit_completion(&tcrypt_complete.restart);
@@ -241,8 +242,8 @@ static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 		tcrypt_complete.req_err = 0;
 
 		ret = crypt_req->encrypt ?
-			crypto_ablkcipher_encrypt(req) :
-			crypto_ablkcipher_decrypt(req);
+			crypto_skcipher_encrypt(req) :
+			crypto_skcipher_decrypt(req);
 		if ((ret == -EINPROGRESS) || (ret == -EBUSY)) {
 			/* crypto driver is asynchronous */
 			ret = wait_for_completion_interruptible(&tcrypt_complete.restart);
@@ -277,7 +278,7 @@ static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 process_req_buf_out:
 	free_bufs(xbuf);
 process_req_out:
-	ablkcipher_request_free(req);
+	skcipher_request_free(req);
 free_tfm:
 	if (crypt_req->op != TEGRA_CRYPTO_CBC)
 		crypto_free_skcipher(tfm);

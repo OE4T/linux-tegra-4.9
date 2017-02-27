@@ -3,7 +3,7 @@
  *
  * Copyright 2011 Realtek Semiconductor Corp.
  * Author: Johnny Hsu <johnnyhsu@realtek.com>
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -2184,9 +2184,14 @@ static int rt5640_probe(struct snd_soc_codec *codec)
 		break;
 	case RT5640_ID_5639:
 		/* Enable JD2 Function for Extra JD Status */
+		snd_soc_update_bits(codec, RT5640_DUMMY1, 0x3b01, 0x3b01);
 		snd_soc_write(codec, RT5640_DUMMY2, 0x4140);
-		snd_soc_write(codec, RT5640_JD_CTRL, 0x6000);
-		snd_soc_write(codec, 0xbb, 0x6000);
+		if (rt5640->sel_jd_source >= 0)
+			snd_soc_update_bits(codec, RT5640_JD_CTRL,
+				RT5640_JD_MASK,
+				rt5640->sel_jd_source << RT5640_JD_SFT);
+		else
+			snd_soc_write(codec, RT5640_JD_CTRL, 0x6000);
 
 		snd_soc_dapm_new_controls(dapm,
 			rt5639_specific_dapm_widgets,
@@ -2294,7 +2299,7 @@ int rt5640_headset_detect(struct snd_soc_codec *codec,
 			snd_soc_write(codec, RT5640_PWR_ANLG1, 0xa814);
 			snd_soc_write(codec, RT5640_MICBIAS, 0x3810);
 			snd_soc_write(codec, RT5640_DUMMY1, 0x3b01);
-		    snd_soc_update_bits(codec, RT5640_GLB_CLK,
+			snd_soc_update_bits(codec, RT5640_GLB_CLK,
 				RT5640_SCLK_SRC_MASK,
 				0x3 << RT5640_SCLK_SRC_SFT);
 		}
@@ -2536,6 +2541,10 @@ static int rt5640_parse_dt(struct rt5640_priv *rt5640, struct device_node *np)
 
 	rt5640->pdata.ldo1_en = of_get_named_gpio(np,
 					"realtek,ldo1-en-gpios", 0);
+
+	if (of_property_read_s32(np, "sel_jd_source", &rt5640->sel_jd_source))
+		rt5640->sel_jd_source = -1;
+
 	/*
 	 * LDO1_EN is optional (it may be statically tied on the board).
 	 * -ENOENT means that the property doesn't exist, i.e. there is no

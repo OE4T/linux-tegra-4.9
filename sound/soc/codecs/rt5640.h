@@ -3,6 +3,7 @@
  *
  * Copyright 2011 Realtek Microelectronics
  * Author: Johnny Hsu <johnnyhsu@realtek.com>
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -2110,6 +2111,8 @@ struct rt5640_priv {
 	int pll_src;
 	int pll_in;
 	int pll_out;
+
+	int sel_jd_source;
 
 	bool hp_mute;
 	bool asrc_en;

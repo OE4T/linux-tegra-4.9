@@ -159,8 +159,7 @@ static int tegra_t210ref_jack_notifier(struct notifier_block *self,
 				jack->status |= SND_JACK_HEADPHONE;
 				jack->status |= SND_JACK_MICROPHONE;
 			}
-		}
-	} else {
+		} else {
 			/* Disable ext mic; enable signal is active-low*/
 			if (gpio_is_valid(pdata->gpio_ext_mic_en))
 				gpio_direction_output(
@@ -170,6 +169,7 @@ static int tegra_t210ref_jack_notifier(struct notifier_block *self,
 
 			jack->status &= ~SND_JACK_HEADPHONE;
 			jack->status &= ~SND_JACK_MICROPHONE;
+		}
 	}
 
 	switch (jack->status) {

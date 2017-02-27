@@ -1937,7 +1937,7 @@ static int dvfs_table_show(struct seq_file *s, void *data)
 	list_for_each_entry(rail, &dvfs_rail_list, node) {
 		list_for_each_entry(d, &rail->dvfs, reg_node) {
 			bool mv_done = false;
-			v_pll = d->millivolts;
+			v_pll =  dvfs_get_millivolts_pll(d);
 			v_dfll = d->dfll_millivolts;
 
 			if (v_pll && (last_v_pll != v_pll)) {

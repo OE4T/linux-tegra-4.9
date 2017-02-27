@@ -27,6 +27,7 @@
 #include <linux/slab.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-bus.h>
+#include <linux/workqueue.h>
 
 #include "drivers/video/tegra/host/vi/vi_notify.h"
 #include "drivers/video/tegra/host/nvhost_acm.h"
@@ -62,12 +63,14 @@ enum {
 };
 
 struct tegra_ivc_vi_notify {
+	struct tegra_ivc_channel *chan;
 	struct vi_notify_dev *vi_notify;
 	struct platform_device *vi;
 	u32 tags;
 	u16 channels_mask;
 	wait_queue_head_t write_q;
 	struct completion ack;
+	struct work_struct notify_work;
 	size_t status_mem_size;
 	void __iomem *status_mem;
 	dma_addr_t status_dmaptr;
@@ -116,11 +119,12 @@ static void tegra_ivc_vi_notify_recv(struct tegra_ivc_channel *chan,
 		tegra_ivc_vi_notify_process(chan, data, len);
 }
 
-static void tegra_ivc_channel_vi_notify_process(struct tegra_ivc_channel *chan)
+static void tegra_ivc_channel_vi_notify_worker(struct work_struct *work)
 {
-	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
+	struct tegra_ivc_channel *chan;
 
-	wake_up(&ivn->write_q);
+	chan = container_of(work,
+			struct tegra_ivc_vi_notify, notify_work)->chan;
 
 	while (tegra_ivc_can_read(&chan->ivc)) {
 		const void *data = tegra_ivc_read_get_next_frame(&chan->ivc);
@@ -129,6 +133,15 @@ static void tegra_ivc_channel_vi_notify_process(struct tegra_ivc_channel *chan)
 		tegra_ivc_vi_notify_recv(chan, data, length);
 		tegra_ivc_read_advance(&chan->ivc);
 	}
+}
+
+/* Called from interrupt handler */
+static void tegra_ivc_channel_vi_notify_process(struct tegra_ivc_channel *chan)
+{
+	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
+
+	wake_up(&ivn->write_q);
+	schedule_work(&ivn->notify_work);
 }
 
 /* VI Notify */
@@ -471,8 +484,10 @@ static int tegra_ivc_channel_vi_notify_probe(struct tegra_ivc_channel *chan)
 	else
 		ivn->status_entries = VI_NOTIFY_STATUS_ENTRIES;
 
+	ivn->chan = chan;
 	init_waitqueue_head(&ivn->write_q);
 	init_completion(&ivn->ack);
+	INIT_WORK(&ivn->notify_work, tegra_ivc_channel_vi_notify_worker);
 
 	tegra_ivc_channel_set_drvdata(chan, ivn);
 

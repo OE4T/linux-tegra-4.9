@@ -270,6 +270,9 @@ struct hda_codec {
 	void (*proc_widget_hook)(struct snd_info_buffer *buffer,
 				 struct hda_codec *codec, hda_nid_t nid);
 
+	unsigned int recv_dec_cap;
+	unsigned int max_pcm_channels;
+
 	/* jack detection */
 	struct snd_array jacktbl;
 	unsigned long jackpoll_interval; /* In jiffies. Zero means no poll, rely on unsol events */

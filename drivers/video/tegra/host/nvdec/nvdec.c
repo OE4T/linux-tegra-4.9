@@ -50,7 +50,7 @@
 #include "t210/t210.h"
 #include "iomap.h"
 
-#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_TRUSTY)
 #include <linux/ote_protocol.h>
 #endif
 
@@ -351,9 +351,8 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 
 	dev_dbg(&dev->dev, "nvdec_boot: success\n");
 
-#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
-	if (te_is_secos_dev_enabled())
-		te_restore_keyslots();
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_TRUSTY)
+	te_restore_keyslots();
 #endif
 
 	return 0;

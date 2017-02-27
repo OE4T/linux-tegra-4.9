@@ -30,6 +30,7 @@
 #include <linux/wakelock.h>
 #include <linux/thermal.h>
 #include <linux/slab.h>
+#include <linux/sysfs.h>
 
 #include <soc/tegra/pmc.h>
 
@@ -534,6 +535,7 @@ static struct tegra_fuse_hw_feature tegra210_fuse_chip_data = {
 		FUSE_BURN_DATA(public_key, 0xc, 6, 256, 0x64, true),
 		FUSE_BURN_DATA(pkc_disable, 0x52, 7, 1, 0x168, true),
 		FUSE_BURN_DATA(debug_authentication, 0x5a, 19, 5, 0x1e4, true),
+		FUSE_BURN_DATA(aid, 0x67, 2, 32, 0x1f8, false),
 		{},
 	},
 };
@@ -650,6 +652,8 @@ static int tegra_fuse_burn_probe(struct platform_device *pdev)
 			return ret;
 		}
 	}
+	WARN(sysfs_create_link(&platform_bus.kobj, &pdev->dev.kobj,
+			"tegra-fuse"), "Unable to create symlink\n");
 
 	wake_lock_init(&fuse_dev->wake_lock, WAKE_LOCK_SUSPEND,
 		       "fuse_wake_lock");

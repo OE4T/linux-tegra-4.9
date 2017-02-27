@@ -29,11 +29,13 @@
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/bpmp_abi.h>
 #include <linux/delay.h>
+#include <linux/pstore.h>
 #include <linux/ptrace.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/platform/tegra/tegra18_cpu_map.h>
 #include <linux/tegra-mce.h>
 #include <linux/tegra-cpu.h>
+#include <linux/version.h>
 #include <linux/pm_qos.h>
 
 #define MAX_NDIV		512 /* No of NDIV */
@@ -884,8 +886,13 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 	cpufreq_table_validate_and_show(policy, ftbl);
 
 	/* clip boot frequency to table entry */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	ret = cpufreq_frequency_table_target(policy, ftbl, freq,
 		CPUFREQ_RELATION_L, &idx);
+#else
+	idx = cpufreq_frequency_table_target(policy, freq,
+					     CPUFREQ_RELATION_L);
+#endif
 	if (!ret && (freq != ftbl[idx].frequency)) {
 		freq = ftbl[idx].frequency;
 		tegra_update_cpu_speed(freq, policy->cpu);

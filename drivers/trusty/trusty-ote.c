@@ -428,8 +428,8 @@ EXPORT_SYMBOL(te_close_trusted_session);
 
 /*
  * te_launch_trusted_oper - Communicate with TA to perform any operation
- * @buf: Buffer to sent to secure world.
- * @buf_len: length of the buffer.
+ * @buf: Buffer to be sent to secure world (NULL if a buffer is not required)
+ * @buf_len: length of the buffer. (0 if a buffer is not required)
  * @ta_cmd: command to sent to secure world.
  * @ctx: ctx returned by open session.
  * Returns 0 on Success else error code.
@@ -443,7 +443,7 @@ int te_launch_trusted_oper(void *buf, size_t buf_len, uint32_t ta_cmd,
 
 	trusty_ote_debug("%s: cmd %u\n", __func__, ta_cmd);
 
-	if (!ctx || !buf || !buf_len)
+	if (!ctx)
 		return -EINVAL;
 
 	chan_ctx = (struct tipc_chan_ctx *)ctx;

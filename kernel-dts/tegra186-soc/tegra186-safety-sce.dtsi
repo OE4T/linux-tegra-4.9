@@ -30,6 +30,14 @@
 			nvidia,frame-count = <16>;
 			nvidia,frame-size = <64>;
 		};
+
+                hb@0 {
+                        compatible = "nvidia,tegra186-safety-hb";
+                        reg = <0x0500>, <0x8500>;
+                        reg-names = "rx", "tx";
+                        nvidia,frame-count = <1>;
+                        nvidia,frame-size = <64>;
+                };
 	};
 
 	tegra_safety: sce@b000000 {

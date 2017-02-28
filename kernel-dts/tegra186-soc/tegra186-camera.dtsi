@@ -116,22 +116,6 @@
 			nvidia,frame-count = <1>;
 			nvidia,frame-size = <64>;
 		};
-		ivccontrol@52c0 {
-			compatible = "nvidia,tegra186-camera-ivc-protocol-capture-control";
-			nvidia,service = "capture-control";
-			nvidia,version = <0>;
-			nvidia,group = <1>;
-			nvidia,frame-count = <16>;
-			nvidia,frame-size = <320>;
-		};
-		ivccapture@72c0 {
-			compatible = "nvidia,tegra186-camera-ivc-protocol-capture";
-			nvidia,service = "capture";
-			nvidia,version = <0>;
-			nvidia,group = <1>;
-			nvidia,frame-count = <16>;
-			nvidia,frame-size = <64>;
-		};
 		dbg@7c00 {
 			compatible = "nvidia,tegra186-camera-ivc-protocol-dbg";
 			reg = <0x7C00>, <0xFC00>;
@@ -224,22 +208,6 @@
 			nvidia,frame-count = <63>;
 			nvidia,frame-size = <128>;
 			device = <&tegra_vi>;
-		};
-		ivccontrol@52c0 {
-			compatible = "nvidia,tegra186-camera-ivc-protocol-capture-control";
-			nvidia,service = "capture-control";
-			nvidia,version = <0>;
-			nvidia,group = <1>;
-			nvidia,frame-count = <16>;
-			nvidia,frame-size = <320>;
-		};
-		ivccapture@72c0 {
-			compatible = "nvidia,tegra186-camera-ivc-protocol-capture";
-			nvidia,service = "capture";
-			nvidia,version = <0>;
-			nvidia,group = <1>;
-			nvidia,frame-count = <16>;
-			nvidia,frame-size = <64>;
 		};
 		dbg@7c00 {
 			compatible = "nvidia,tegra186-camera-ivc-protocol-dbg";

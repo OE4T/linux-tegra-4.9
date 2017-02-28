@@ -138,17 +138,22 @@ struct i2c_client *get_i2c_client(struct tegra_dc *dc)
 	struct list_head *pos;
 	struct i2c_client_list *tmp;
 	struct device_node *np;
-	u32 sor_instance;
+	u32 sor_num;
 
 	mutex_lock(&i2c_list_mutex);
 	list_for_each(pos, &ds90uh949_i2c_list) {
 		tmp = list_entry(pos, struct i2c_client_list, i2c_list);
 		np = tmp->ds90uh949_i2c_client->dev.of_node;
-		if (!of_property_read_u32(np, "sor-instance", &sor_instance)) {
-			if (sor_instance == dc->sor_instance) {
-				mutex_unlock(&i2c_list_mutex);
-				return tmp->ds90uh949_i2c_client;
-			}
+
+		if (of_property_read_u32(np, "sor-instance", &sor_num))
+			continue;
+
+		if (dc && dc->out_ops &&
+		    dc->out_ops->get_connector_instance &&
+		    sor_num == dc->out_ops->get_connector_instance(dc)) {
+
+			mutex_unlock(&i2c_list_mutex);
+			return tmp->ds90uh949_i2c_client;
 		}
 	}
 	mutex_unlock(&i2c_list_mutex);

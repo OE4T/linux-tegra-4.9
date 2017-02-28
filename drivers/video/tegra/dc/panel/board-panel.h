@@ -90,13 +90,9 @@ extern struct tegra_panel_ops edp_s_uhdtv_15_6_ops;
 extern struct tegra_panel_ops dsi_o_720p_6_0_ops;
 extern struct tegra_panel_ops dsi_n_wqxga_6_0_ops;
 extern struct tegra_panel_ops dsi_s_4kuhd_5_46_ops;
-
-extern struct tegra_panel_ops *fixed_primary_panel_ops;
-extern struct tegra_panel_ops *fixed_secondary_panel_ops;
-extern const char *fixed_primary_panel_compatible;
-extern const char *fixed_secondary_panel_compatible;
-
-extern struct pwm_bl_data_dt_ops *fixed_pwm_bl_ops;
+#ifdef CONFIG_TEGRA_NVDISPLAY
+extern struct tegra_panel_ops panel_sim_ops;
+#endif
 
 extern struct tegra_panel dsi_p_wuxga_10_1;
 extern struct tegra_panel dsi_a_1080p_11_6;
@@ -114,27 +110,11 @@ extern struct tegra_panel dsi_j_720p_5;
 extern struct tegra_panel dsi_a_1200_1920_8_0;
 extern struct tegra_panel dsi_a_1200_800_8_0;
 
-void tegra_dsi_resources_init(u8 dsi_instance,
-			struct resource *resources, int n_resources);
-
-void tegra_dsi_update_init_cmd_gpio_rst(struct tegra_dc_out *dsi_disp1_out);
-
 int tegra_panel_gpio_get_dt(const char *comp_str,
 				struct tegra_panel_of *panel);
 
 int tegra_panel_check_regulator_dt_support(const char *comp_str,
 				struct tegra_panel_of *panel);
-
-int tegra_panel_reset(struct tegra_panel_of *panel, unsigned int delay_ms);
-
-void tegra_fb_copy_or_clear(void);
-
-int tegra_disp_defer_vcore_override(void);
-
-void tegra_set_fixed_panel_ops(bool is_primary,
-			struct tegra_panel_ops *p_ops, char *panel_node);
-
-void tegra_set_fixed_pwm_bl_ops(struct pwm_bl_data_dt_ops *p_ops);
 
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 static inline void tegra_pwm_bl_ops_register(struct device *dev)

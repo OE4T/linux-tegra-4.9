@@ -80,6 +80,7 @@ struct tegra_dc_dp_data {
 	struct tegra_dc_sor_data *sor;
 	void *out_data;
 
+	void *hda_handle;
 	struct tegra_dc *dc;
 	u32 irq;
 

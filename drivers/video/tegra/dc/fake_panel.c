@@ -379,13 +379,11 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 	int err = 0, i;
 	int dsi_instance;
 	void __iomem *base;
-	struct device_node *np_dsi =
-		of_find_node_by_path(DSI_NODE);
+	struct device_node *np_dsi = tegra_dc_get_conn_np(dc);
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 
 	if (!dsi) {
 		dev_err(&dc->ndev->dev, " dsi: allocation deleted\n");
-		of_node_put(np_dsi);
 		return -ENOMEM;
 	}
 
@@ -436,7 +434,6 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 #endif
 	/* Need to always reinitialize clocks to ensure proper functionality */
 	tegra_dsi_init_clock_param(dc);
-	of_node_put(np_dsi);
 	return 0;
 
 #if defined (CONFIG_TEGRA_NVDISPLAY)
@@ -458,6 +455,5 @@ err_iounmap:
 		}
 	}
 
-	of_node_put(np_dsi);
 	return err;
 }

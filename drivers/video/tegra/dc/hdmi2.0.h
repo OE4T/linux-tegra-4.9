@@ -355,6 +355,7 @@ struct tegra_hdmi {
 	struct tegra_dc_dpaux_data *dpaux;
 	struct tegra_dc_sor_data *sor;
 
+	void *hda_handle;
 	struct tegra_dc *dc;
 	struct tegra_hdmi_out *pdata;
 	struct hdmi_avi_infoframe avi;

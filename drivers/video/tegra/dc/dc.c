@@ -140,7 +140,6 @@ static struct tegra_dc_mode override_disp_mode[TEGRA_DC_OUT_NULL + 1];
 
 static void _tegra_dc_controller_disable(struct tegra_dc *dc);
 static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq);
-static void tegra_dc_sor_instance(struct tegra_dc *dc, int out_type);
 static int _tegra_dc_config_frame_end_intr(struct tegra_dc *dc, bool enable);
 
 static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out);
@@ -623,21 +622,6 @@ void tegra_dc_clk_disable(struct tegra_dc *dc)
 #ifdef CONFIG_TEGRA_CORE_DVFS
 	tegra_dvfs_set_rate(dc->clk, 0);
 #endif
-}
-
-static void tegra_dc_sor_instance(struct tegra_dc *dc, int out_type)
-{
-	/* check the dc_or_node to set the instance */
-	if (!strcmp(dc->pdata->dc_or_node_name, "/host1x/sor"))
-		dc->sor_instance = 0;
-	else if (!strcmp(dc->pdata->dc_or_node_name, "/host1x/sor1"))
-		dc->sor_instance = 1;
-	else if (out_type == TEGRA_DC_OUT_FAKE_DP)
-		/* Assign default instance to fake DP if
-		SOR instance is not available */
-		dc->sor_instance = 0;
-	else
-		dc->sor_instance = -1;
 }
 
 void tegra_dc_get(struct tegra_dc *dc)
@@ -1164,7 +1148,7 @@ struct tegra_dc_out_info {
 static struct tegra_dc_out_info dbg_dc_out_info[TEGRA_DC_OUT_MAX];
 
 /* array for saving the out_type for each head */
-static int  boot_out_type[] = {-1, -1, -1};
+static int *boot_out_type;
 
 static int is_invalid_dc_out(struct tegra_dc *dc, long dc_outtype)
 {
@@ -1174,11 +1158,9 @@ static int is_invalid_dc_out(struct tegra_dc *dc, long dc_outtype)
 		(dc_outtype != TEGRA_DC_OUT_FAKE_DSIB) &&
 		(dc_outtype != TEGRA_DC_OUT_FAKE_DSI_GANGED) &&
 		(dc_outtype != TEGRA_DC_OUT_NULL)) {
-		dev_err(&dc->ndev->dev,
-			"Request 0x%lx is unsupported target out_type\n",
+		dev_err(&dc->ndev->dev, "Request 0x%lx is unsupported target out_type\n",
 			 dc_outtype);
-		dev_err(&dc->ndev->dev,
-			"boot_out_type[%d] is 0x%x\n",
+		dev_err(&dc->ndev->dev, "boot_out_type[%d] is 0x%x\n",
 			 dc->ndev->id, boot_out_type[dc->ndev->id]);
 		return -EINVAL;
 	}
@@ -1260,13 +1242,10 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 		return -EINVAL;
 
 	/* check out type is out of range then skip */
-	if (out_type < TEGRA_DC_OUT_RGB ||
-		out_type >= TEGRA_DC_OUT_MAX) {
+	if (out_type < TEGRA_DC_OUT_RGB || out_type >= TEGRA_DC_OUT_MAX) {
 		dev_err(&dc->ndev->dev, "Unknown out_type 0x%lx\n", out_type);
 		return -EINVAL;
 	}
-
-	WARN_ON(ARRAY_SIZE(boot_out_type) < tegra_dc_get_numof_dispheads());
 
 	if (boot_out_type[dc->ndev->id] == -1)
 		boot_out_type[dc->ndev->id] = dc->pdata->default_out->type;
@@ -2807,30 +2786,6 @@ static int tegra_dc_set_next(struct tegra_dc *dc)
 	return ret;
 }
 
-static int tegra_dc_set_idx(struct tegra_dc *dc, int index)
-{
-	int ret = 0;
-
-	mutex_lock(&tegra_dc_lock);
-
-	if (index >= tegra_dc_get_numof_dispheads()) {
-		ret = -EINVAL;
-		goto out;
-	}
-
-	if (dc != NULL && tegra_dcs[index] != NULL) {
-		ret = -EBUSY;
-		goto out;
-	}
-
-	tegra_dcs[index] = dc;
-
-out:
-	mutex_unlock(&tegra_dc_lock);
-
-	return ret;
-}
-
 /*
  * If index == -1, set dc at next available index. This is to be called only
  * when registering dc in DT case. For non DT case & when removing the device
@@ -2840,8 +2795,6 @@ static int tegra_dc_set(struct tegra_dc *dc, int index)
 {
 	if ((index == -1) && (dc != NULL)) /* DT register case */
 		return tegra_dc_set_next(dc);
-	else if (index > -1)	/* non DT, register/unregister case */
-		return tegra_dc_set_idx(dc, index);
 	else
 		return -EINVAL;
 }
@@ -3523,7 +3476,6 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		} else
 			tegra_dc_set_mode(dc, &dc->out->modes[0]);
 	}
-	tegra_dc_sor_instance(dc, out->type);
 
 	switch (out->type) {
 	case TEGRA_DC_OUT_HDMI:
@@ -3588,8 +3540,8 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 			dc->out = NULL;
 			dc->out_ops = NULL;
 			dev_err(&dc->ndev->dev,
-				"Error: out->type:%d out_ops->init() failed\n",
-				out->type);
+				"Error: out->type:%d out_ops->init() failed. err=%d\n",
+				out->type, err);
 			return err;
 		}
 	}
@@ -5964,17 +5916,17 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		if (!test_bit(i, &dc->valid_windows))
 			win->flags |= TEGRA_WIN_FLAG_INVALID;
 		else {
-		win->idx = i;
-		tmp_win->idx = i;
-		tmp_win->dc = dc;
+			win->idx = i;
+			tmp_win->idx = i;
+			tmp_win->dc = dc;
 #if defined(CONFIG_TEGRA_CSC)
-		tegra_dc_init_csc_defaults(&win->csc);
+			tegra_dc_init_csc_defaults(&win->csc);
 #endif
 
 #if defined(CONFIG_TEGRA_CSC_V2)
-		win->force_user_csc = false;
+			win->force_user_csc = false;
 #endif
-		tegra_dc_init_lut_defaults(&win->lut);
+			tegra_dc_init_lut_defaults(&win->lut);
 		}
 	}
 
@@ -6696,7 +6648,7 @@ EXPORT_SYMBOL(tegra_dc_unregister_isr_usr_cb);
 
 #endif /* TEGRA_DC_USR_SHARED_IRQ */
 
-int  tegra_dc_get_numof_dispheads(void)
+int tegra_dc_get_numof_dispheads(void)
 {
 	if (!hw_data || !hw_data->valid)
 		return -ENODEV;
@@ -6795,6 +6747,9 @@ static struct platform_driver tegra_dc_driver = {
 static int __init tegra_dc_module_init(void)
 {
 	int ret;
+#if defined(CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT) && defined(CONFIG_DEBUG_FS)
+	int i;
+#endif
 
 	tegra_dc_populate_t21x_hw_data(&t21x_hw_data);
 	tegra_dc_populate_t18x_hw_data(&t18x_hw_data);
@@ -6804,20 +6759,39 @@ static int __init tegra_dc_module_init(void)
 	if (ret)
 		return ret;
 
-	tegra_dcs = kzalloc(
-		(hw_data->nheads) * sizeof(struct tegra_dc *), GFP_KERNEL);
+	tegra_dcs = kzalloc(tegra_dc_get_numof_dispheads() *
+				sizeof(struct tegra_dc *), GFP_KERNEL);
 	if (!tegra_dcs)
 		return -ENOMEM;
 
+#if defined(CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT) && defined(CONFIG_DEBUG_FS)
+	boot_out_type = kzalloc(tegra_dc_get_numof_dispheads() *
+				sizeof(int), GFP_KERNEL);
+	if (!boot_out_type) {
+		kfree(tegra_dcs);
+		return -ENOMEM;
+	}
+	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++)
+		boot_out_type[i] = -1;
+#endif
+
 	ret = tegra_dc_ext_module_init();
-	if (ret)
+	if (ret) {
+#if defined(CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT) && defined(CONFIG_DEBUG_FS)
+		kfree(boot_out_type);
+#endif
+		kfree(tegra_dcs);
 		return ret;
+	}
 
 	return platform_driver_register(&tegra_dc_driver);
 }
 
 static void __exit tegra_dc_module_exit(void)
 {
+#if defined(CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT) && defined(CONFIG_DEBUG_FS)
+	kfree(boot_out_type);
+#endif
 	kfree(tegra_dcs);
 	platform_driver_unregister(&tegra_dc_driver);
 	tegra_dc_ext_module_exit();

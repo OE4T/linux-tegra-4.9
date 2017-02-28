@@ -134,6 +134,8 @@ struct tegra_dc_out_ops {
 	void (*shutdown_interface)(struct tegra_dc *dc);
 	u32 (*get_crc)(struct tegra_dc *dc);
 	void (*toggle_crc)(struct tegra_dc *dc, u32 val);
+	/* returns sor ctrl_num, it can be extended to DSI if needed */
+	int (*get_connector_instance)(struct tegra_dc *dc);
 };
 
 struct tegra_dc_shift_clk_div {
@@ -225,7 +227,6 @@ struct tegra_dc {
 	struct tegra_dc_shift_clk_div	shift_clk_div;
 
 	u32				powergate_id;
-	int				sor_instance;
 
 	bool				connected;
 	bool				enabled;

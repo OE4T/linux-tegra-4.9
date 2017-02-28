@@ -23,13 +23,8 @@ enum {
 	SINK_DP = 1,
 };
 
-enum {
-	SOR0 = 0,
-	SOR1,
-	MAX_SOR_COUNT,
-};
-
 struct tegra_dc_hda_data {
+	bool valid; /* set to true only after tegra_hda_set_data */
 	struct tegra_dc_sor_data *sor;
 	struct tegra_dc *dc;
 	struct tegra_edid_hdmi_eld *eld;
@@ -46,7 +41,7 @@ struct tegra_dc_hda_data {
 	void *client_data;
 };
 
-void tegra_hda_set_data(struct tegra_dc *dc, void *data, int sink);
-void tegra_hda_reset_data(struct tegra_dc *dc);
+void *tegra_hda_set_data(struct tegra_dc *dc, void *data, int sink);
+void tegra_hda_reset_data(void *hda_handle);
 
 #endif

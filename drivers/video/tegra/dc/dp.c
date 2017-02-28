@@ -26,7 +26,6 @@
 #include <linux/moduleparam.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
-#include <linux/of_irq.h>
 #include <linux/ctype.h>
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
@@ -1987,32 +1986,6 @@ static int tegra_dc_dp_hotplug_init(struct tegra_dc *dc)
 	return 0;
 }
 
-static int tegra_dp_prods_init(struct tegra_dc_dp_data *dp)
-{
-	struct device_node *np_prod =
-		of_find_node_by_path(tegra_dc_which_sor(dp->dc) ? "/host1x/sor1"
-					: "/host1x/sor");
-
-	if (!np_prod) {
-		dev_warn(&dp->dc->ndev->dev,
-			"dp: find prod node failed\n");
-		return -EINVAL;
-	}
-
-	dp->prod_list = devm_tegra_prod_get_from_node(&dp->dc->ndev->dev,
-						      np_prod);
-	if (IS_ERR(dp->prod_list)) {
-		dev_warn(&dp->dc->ndev->dev,
-			"dp: prod list init failed with error %ld\n",
-			PTR_ERR(dp->prod_list));
-		of_node_put(np_prod);
-		return -EINVAL;
-	}
-
-	of_node_put(np_prod);
-	return 0;
-}
-
 static void _tegra_dc_dp_init(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
@@ -2031,33 +2004,30 @@ static void _tegra_dc_dp_init(struct tegra_dc *dc)
 
 static int tegra_dc_dp_init(struct tegra_dc *dc)
 {
-	struct tegra_dc_dp_data *dp;
-	struct clk *parent_clk;
-	int err;
 	u32 irq;
-	int dp_num = tegra_dc_which_sor(dc);
-	struct device_node *np_panel = NULL;
-	struct device_node *np_dp;
+	int err;
+	struct clk *parent_clk;
+	struct device_node *sor_np, *panel_np;
+	struct tegra_dc_dp_data *dp;
 
-	if (dp_num) {
-		/* Note: this is WAR until driver clean-up patches are merged */
-		np_dp = tegra_platform_is_vdk() ?
-			of_find_node_by_path("/host1x/dpaux@155D0000") :
-			of_find_node_by_path(DPAUX1_NODE);
-	} else {
-		np_dp = of_find_node_by_path(DPAUX_NODE);
+	sor_np = tegra_dc_get_conn_np(dc);
+	if (!sor_np) {
+		dev_err(&dc->ndev->dev, "%s: error getting connector np\n",
+			__func__);
+		return -ENODEV;
 	}
 
-	if (!np_dp ||  ((!of_device_is_available(np_dp)) &&
-			(dc->out->type != TEGRA_DC_OUT_FAKE_DP))) {
-		dev_err(&dc->ndev->dev, "dp%d not available\n", dp_num);
+	panel_np = tegra_dc_get_panel_np(dc);
+	if (!panel_np) {
+		dev_err(&dc->ndev->dev, "%s: error getting panel np\n",
+			__func__);
 		return -ENODEV;
 	}
 
 	dp = devm_kzalloc(&dc->ndev->dev, sizeof(*dp), GFP_KERNEL);
 	if (!dp) {
-		of_node_put(np_dp);
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto err_dp_alloc;
 	}
 
 	dp->hpd_switch_name = devm_kzalloc(&dc->ndev->dev,
@@ -2084,19 +2054,8 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 
 	dp->edid_src = EDID_SRC_PANEL;
 
-	irq = of_irq_to_resource(np_dp, 0, NULL);
-	if (!irq) {
-		err = -ENOENT;
-		goto err_audio_switch;
-	}
-
-	np_panel = tegra_get_panel_node_out_type_check(dc,
-		TEGRA_DC_OUT_DP);
-	if (np_panel && of_device_is_available(np_panel)) {
-		if (of_property_read_bool(np_panel,
-			"nvidia,edid"))
-			dp->edid_src = EDID_SRC_DT;
-	}
+	if (of_property_read_bool(panel_np, "nvidia,edid"))
+		dp->edid_src = EDID_SRC_DT;
 
 	/*
 	 * If the new output type is fakeDP and an DPAUX instance from a
@@ -2111,7 +2070,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	}
 
 	if (!dp->dpaux)
-		dp->dpaux = tegra_dpaux_init_data(dc);
+		dp->dpaux = tegra_dpaux_init_data(dc, sor_np);
 
 	if (IS_ERR_OR_NULL(dp->dpaux)) {
 		err = PTR_ERR(dp->dpaux);
@@ -2120,12 +2079,17 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		goto err_audio_switch;
 	}
 
+	irq = tegra_dpaux_get_irq(dp->dpaux);
+	if (!irq) {
+		dev_err(&dc->ndev->dev, "%s: error getting irq\n", __func__);
+		err = -ENOENT;
+		goto err_audio_switch;
+	}
+
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	parent_clk = tegra_disp_of_clk_get_by_name(np_dp, "plldp");
+	parent_clk = tegra_dpaux_get_clk(dp->dpaux, "plldp");
 #elif defined(CONFIG_ARCH_TEGRA_210_SOC)
-	parent_clk = clk_get_sys(NULL, "pll_dp");
-#else
-	parent_clk = tegra_get_clock_by_name("pll_dp");
+	parent_clk = tegra_dpaux_get_clk(dp->dpaux, "pll_dp");
 #endif
 
 	if (IS_ERR_OR_NULL(parent_clk)) {
@@ -2184,6 +2148,8 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	if (IS_ERR_OR_NULL(dp->sor)) {
 		err = PTR_ERR(dp->sor);
 		dp->sor = NULL;
+		dev_err(&dc->ndev->dev, "%s: error getting sor,%d\n",
+				__func__, err);
 		goto err_audio_switch;
 	}
 
@@ -2200,7 +2166,15 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	}
 #endif
 
-	tegra_dp_prods_init(dp);
+	if (!tegra_platform_is_sim()) {
+		dp->prod_list = devm_tegra_prod_get_from_node(
+				&dc->ndev->dev, sor_np);
+		if (IS_ERR(dp->prod_list)) {
+			dev_warn(&dc->ndev->dev, "%s: error getting prod-list\n",
+					__func__);
+			dp->prod_list = NULL;
+		}
+	}
 
 	init_completion(&dp->aux_tx);
 	init_completion(&dp->hpd_plug);
@@ -2235,8 +2209,8 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		err = switch_dev_register(&dp->hpd_data.hpd_switch);
 		if (err)
 			dev_err(&dc->ndev->dev,
-				"dp: failed to register hpd switch %d, err=%d\n",
-				dp_num, err);
+				"%s: failed to register hpd switch, err=%d\n",
+				__func__, err);
 	}
 
 	if (tegra_dc_is_ext_dp_panel(dc) &&
@@ -2244,17 +2218,18 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		err = switch_dev_register(&dp->audio_switch);
 		if (err)
 			dev_err(&dc->ndev->dev,
-				"dp: failed to register audio switch %d, err=%d\n",
-				dp_num, err);
+				"%s: failed to register audio switch, err=%d\n",
+				__func__, err);
 	}
 #endif
 
 	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE))
-		tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, false);
+		if (tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, false))
+			dev_err(&dc->ndev->dev, "%s: mode-set for fb_console failed\n",
+					__func__);
 
 	tegra_dc_dp_debugfs_create(dp);
 	dp_instance++;
-	of_node_put(np_dp);
 
 	return 0;
 
@@ -2264,8 +2239,7 @@ err_hpd_switch:
 	devm_kfree(&dc->ndev->dev, dp->hpd_switch_name);
 err_free_dp:
 	devm_kfree(&dc->ndev->dev, dp);
-	of_node_put(np_dp);
-
+err_dp_alloc:
 	return err;
 }
 
@@ -2779,9 +2753,8 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	dp->enabled = true;
 
 #if defined(CONFIG_ARCH_TEGRA_210_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
-	if (tegra_dc_is_ext_dp_panel(dc)
-				&& sor->audio_support)
-		tegra_hda_set_data(dc, dp, SINK_DP);
+	if (tegra_dc_is_ext_dp_panel(dc) && sor->audio_support)
+		dp->hda_handle = tegra_hda_set_data(dc, dp, SINK_DP);
 #endif
 
 	if (likely(dc->out->type != TEGRA_DC_OUT_FAKE_DP) &&
@@ -2915,7 +2888,7 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 
 #if defined(CONFIG_ARCH_TEGRA_210_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
 	if (tegra_dc_is_ext_dp_panel(dc))
-		tegra_hda_reset_data(dc);
+		tegra_hda_reset_data(dp->hda_handle);
 #endif
 
 #ifdef CONFIG_SWITCH
@@ -3290,6 +3263,13 @@ static struct tegra_hpd_ops hpd_ops = {
 	.edid_read_prepare = tegra_dp_hpd_op_edid_read_prepare,
 };
 
+static int tegra_dc_dp_get_sor_ctrl_num(struct tegra_dc *dc)
+{
+	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
+
+	return (!dp) ? -ENODEV : tegra_sor_get_ctrl_num(dp->sor);
+}
+
 struct tegra_dc_out_ops tegra_dc_dp_ops = {
 	.init	   = tegra_dc_dp_init,
 	.destroy   = tegra_dc_dp_destroy,
@@ -3306,4 +3286,5 @@ struct tegra_dc_out_ops tegra_dc_dp_ops = {
 	.shutdown_interface = tegra_dc_dp_sor_sleep,
 	.get_crc = tegra_dc_dp_sor_crc_check,
 	.toggle_crc = tegra_dc_dp_sor_crc_toggle,
+	.get_connector_instance = tegra_dc_dp_get_sor_ctrl_num,
 };

@@ -2359,13 +2359,12 @@ static void tegra_dsi_pad_enable(struct tegra_dc_dsi_data *dsi)
 	}
 }
 
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
-static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
+static void tegra_dsi_mipi_calibration(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val = 0;
 #if !defined(CONFIG_TEGRA_NVDISPLAY)
 	struct clk *clk72mhz = NULL;
-	struct device_node *np_dsi = of_find_node_by_path(DSI_NODE);
+	struct device_node *np_dsi = tegra_dc_get_conn_np(dsi->dc);
 	clk72mhz = tegra_disp_of_clk_get_by_name(np_dsi, "clk72mhz");
 	if (IS_ERR_OR_NULL(clk72mhz)) {
 		dev_err(&dsi->dc->ndev->dev, "dsi: can't get clk72mhz clock\n");
@@ -2400,7 +2399,6 @@ static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 	clk_put(clk72mhz);
 #endif
 }
-#endif
 
 static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 {
@@ -2410,7 +2408,7 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 		tegra_dsi_pad_disable(dsi);
 
 	if (dsi->info.controller_vs == DSI_VS_1)
-		tegra_dsi_mipi_calibration_21x(dsi);
+		tegra_dsi_mipi_calibration(dsi);
 }
 
 #if !defined(CONFIG_TEGRA_NVDISPLAY) && !defined(CONFIG_ARCH_TEGRA_210_SOC)
@@ -4359,8 +4357,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 #else
 	char *dsi_fixed_clk_name = "pll_p_out3";
 #endif
-	struct device_node *np_dsi =
-		of_find_node_by_path(DSI_NODE);
+	struct device_node *np_dsi = tegra_dc_get_conn_np(dc);
 
 	if (!np_dsi || !of_device_is_available(np_dsi)) {
 		dev_err(&dc->ndev->dev, "dsi not available\n");
@@ -4368,10 +4365,8 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	}
 
 	dsi = kzalloc(sizeof(*dsi), GFP_KERNEL);
-	if (!dsi) {
-		of_node_put(np_dsi);
+	if (!dsi)
 		return -ENOMEM;
-	}
 
 	dsi->max_instances = is_simple_dsi(dc->out->dsi) ? 1 : MAX_DSI_INSTANCE;
 	dsi_instance = (int)dc->out->dsi->dsi_instance;
@@ -4520,7 +4515,6 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		goto err_dc_clk_put;
 	}
 
-	of_node_put(np_dsi);
 	return 0;
 
 err_dc_clk_put:
@@ -4539,7 +4533,6 @@ err_dsi_clk_put:
 err_free_dsi:
 	kfree(dsi);
 
-	of_node_put(np_dsi);
 	return err;
 }
 

@@ -67,8 +67,7 @@ get_output_properties(struct tegra_dc_ext_control_output_properties *properties)
 {
 	struct tegra_dc *dc;
 
-	/* TODO: this should be more dynamic */
-	if (properties->handle > 2)
+	if (properties->handle >= tegra_dc_get_numof_dispheads())
 		return -EINVAL;
 
 	dc = tegra_dc_get_dc(properties->handle);
@@ -118,8 +117,7 @@ static int get_output_edid(struct tegra_dc_ext_control_output_edid *edid)
 	struct tegra_dc_edid *dc_edid = NULL;
 	int ret = 0;
 
-	/* TODO: this should be more dynamic */
-	if (edid->handle > 2)
+	if (edid->handle >= tegra_dc_get_numof_dispheads())
 		return -EINVAL;
 
 	dc = tegra_dc_get_dc(edid->handle);

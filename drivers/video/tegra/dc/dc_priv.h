@@ -139,6 +139,21 @@ static inline void _tegra_dc_write_table(struct tegra_dc *dc, const u32 *table,
 #define tegra_dc_write_table(dc, table)		\
 	_tegra_dc_write_table(dc, table, ARRAY_SIZE(table) / 2)
 
+static inline struct device_node *tegra_dc_get_conn_np(struct tegra_dc *dc)
+{
+	return dc->pdata->conn_np;
+}
+
+static inline struct device_node *tegra_dc_get_panel_np(struct tegra_dc *dc)
+{
+	return dc->pdata->panel_np;
+}
+
+static inline struct device_node *tegra_dc_get_out_np(struct tegra_dc *dc)
+{
+	return dc->pdata->def_out_np;
+}
+
 static inline void tegra_dc_set_outdata(struct tegra_dc *dc, void *data)
 {
 	dc->out_data = data;
@@ -166,11 +181,6 @@ static inline int tegra_dc_fmt_byteorder(int fmt)
 {
 	return (fmt & TEGRA_DC_EXT_FMT_BYTEORDER_MASK) >>
 		TEGRA_DC_EXT_FMT_BYTEORDER_SHIFT;
-}
-
-static inline int tegra_dc_which_sor(struct tegra_dc *dc)
-{
-	return dc->sor_instance;
 }
 
 static inline int tegra_dc_fmt_bpp(int fmt)
@@ -650,9 +660,6 @@ int tegra_dc_update_cmu_aligned(struct tegra_dc *dc, struct tegra_dc_cmu *cmu);
 int tegra_dc_set_hdr(struct tegra_dc *dc, struct tegra_dc_hdr *hdr,
 					bool cache_dirty);
 
-struct device_node *tegra_get_panel_node_out_type_check
-	(struct tegra_dc *dc, u32 out_type);
-
 struct tegra_dc_platform_data
 	*of_dc_parse_platform_data(struct platform_device *ndev);
 
@@ -758,7 +765,6 @@ int tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc);
 int tegra_nvdisp_set_ocsc(struct tegra_dc *dc, struct tegra_dc_mode *mode);
 #endif
 
-int tegra_dc_get_numof_dispsors(void);
 void __attribute__((weak)) tegra_dc_populate_t21x_hw_data(
 	struct tegra_dc_hw_data *);
 void __attribute__((weak)) tegra_dc_populate_t18x_hw_data(
@@ -769,6 +775,12 @@ void __attribute__((weak)) tegra_dc_populate_t19x_hw_data(
 bool __attribute__((weak)) tegra_dc_is_t21x(void);
 bool __attribute__((weak)) tegra_dc_is_t18x(void);
 bool __attribute__((weak)) tegra_dc_is_t19x(void);
+
+int tegra_dc_get_numof_dispsors(void);
+void __attribute__((weak)) tegra_dc_enable_sor_t18x(struct tegra_dc *dc,
+			int sor_num, bool enable);
+void __attribute__((weak)) tegra_dc_enable_sor_t19x(struct tegra_dc *dc,
+			int sor_num, bool enable);
 
 int tegra_fb_release_fbmem(struct tegra_fb_info *);
 #endif

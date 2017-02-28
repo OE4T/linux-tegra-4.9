@@ -19,6 +19,7 @@
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/tegra_prod.h>
+#include <linux/of_irq.h>
 
 #include "dpaux_regs.h"
 #include "dc_priv.h"
@@ -29,10 +30,10 @@
 
 static DEFINE_MUTEX(dpaux_lock);
 
-static inline void tegra_dpaux_get_name(char *buf, size_t buf_len, int sor_num)
+static inline void tegra_dpaux_get_name(char *buf, size_t buf_len, int ctrl_num)
 {
-	if (sor_num > 0)
-		snprintf(buf, buf_len, "dpaux%d", sor_num);
+	if (ctrl_num > 0)
+		snprintf(buf, buf_len, "dpaux%d", ctrl_num);
 	else
 		snprintf(buf, buf_len, "dpaux");
 }
@@ -200,62 +201,69 @@ void tegra_dpaux_prod_set(struct tegra_dc_dpaux_data *dpaux)
 	tegra_dc_powergate_locked(dc);
 }
 
-struct tegra_dc_dpaux_data *tegra_dpaux_init_data(struct tegra_dc *dc)
+struct tegra_dc_dpaux_data *tegra_dpaux_init_data(struct tegra_dc *dc,
+		struct device_node *sor_np)
 {
-	struct tegra_dc_dpaux_data *dpaux = NULL;
-	struct device_node *np_dpaux = NULL;
-	void __iomem *base = NULL;
-	struct clk *clk = NULL;
-	struct reset_control *rst = NULL;
-	struct tegra_prod *prod_list = NULL;
-	int sor_num = -1;
+	u32 temp;
 	int err = 0;
 	char dpaux_name[CHAR_BUF_SIZE_MAX] = {0};
+	void __iomem *base = NULL;
+	struct clk *clk = NULL;
+	struct device_node *dpaux_np = NULL;
+	struct reset_control *rst = NULL;
+	struct tegra_prod *prod_list = NULL;
+	struct tegra_dc_dpaux_data *dpaux = NULL;
 
-	if (!dc) {
-		pr_err("%s: dc must be non-NULL\n", __func__);
+	if (!dc || !sor_np) {
+		pr_err("%s: err: %s cannot be NULL\n", __func__,
+				!dc ? "dc" : "sor_np");
 		return NULL;
+	}
+
+	dpaux_np = of_parse_phandle(sor_np, "nvidia,dpaux", 0);
+	if (IS_ERR_OR_NULL(dpaux_np)) {
+		dev_err(&dc->ndev->dev, "%s: could not find %s property for %s\n",
+			__func__, "nvidia,dpaux", of_node_full_name(sor_np));
+		return NULL;
+	}
+
+	if (!of_device_is_available(dpaux_np)) {
+		dev_err(&dc->ndev->dev, "%s: %s present but disabled\n",
+				__func__, of_node_full_name(dpaux_np));
+		err = -ENODEV;
+		goto exit;
 	}
 
 	/* Allocate memory for the dpaux struct. */
 	dpaux = devm_kzalloc(&dc->ndev->dev, sizeof(*dpaux), GFP_KERNEL);
-	if (!dpaux)
-		return ERR_PTR(-ENOMEM);
+	if (!dpaux) {
+		err = -ENOMEM;
+		goto exit;
+	}
 
-	sor_num = tegra_dc_which_sor(dc);
-	tegra_dpaux_get_name(dpaux_name, CHAR_BUF_SIZE_MAX, sor_num);
-
-	/* Find the DPAUX node in DT based on the SOR instance. */
-	if (sor_num) {
-		/* Note: this is WAR until driver clean-up patches are merged */
-		np_dpaux = tegra_platform_is_vdk() ?
-			of_find_node_by_path("/host1x/dpaux@155D0000") :
-			of_find_node_by_path(DPAUX1_NODE);
+	if (!of_property_read_u32(dpaux_np, "nvidia,dpaux-ctrlnum", &temp)) {
+		dpaux->ctrl_num = (unsigned long)temp;
 	} else {
-		np_dpaux = of_find_node_by_path(DPAUX_NODE);
+		dev_err(&dc->ndev->dev, "mandatory property %s for %s not found\n",
+				"nvidia,dpaux-ctrlnum",
+				of_node_full_name(dpaux_np));
+		goto release_mem;
 	}
 
-	if (!np_dpaux || ((!of_device_is_available(np_dpaux)) &&
-				(dc->out->type != TEGRA_DC_OUT_FAKE_DP))) {
-		dev_err(&dc->ndev->dev, "%s: no dpaux node found\n", __func__);
-		err = -ENODEV;
-
-		goto err_put_dpaux_node;
-	}
+	tegra_dpaux_get_name(dpaux_name, CHAR_BUF_SIZE_MAX, dpaux->ctrl_num);
 
 	/* ioremap the memory region for the DPAUX registers. */
-	base = of_iomap(np_dpaux, 0);
+	base = of_iomap(dpaux_np, 0);
 	if (!base) {
-		dev_err(&dc->ndev->dev, "%s: dpaux regs can't be mapped\n",
-			__func__);
+		dev_err(&dc->ndev->dev, "%s: %s regs can't be mapped\n",
+				__func__, of_node_full_name(dpaux_np));
 		err = -ENOENT;
-
-		goto err_put_dpaux_node;
+		goto release_mem;
 	}
 
 	/* Query the DPAUX clock. */
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	clk = tegra_disp_of_clk_get_by_name(np_dpaux, dpaux_name);
+	clk = tegra_disp_of_clk_get_by_name(dpaux_np, dpaux_name);
 #else
 	clk = clk_get_sys(NULL, dpaux_name);
 #endif
@@ -269,28 +277,27 @@ struct tegra_dc_dpaux_data *tegra_dpaux_init_data(struct tegra_dc *dc)
 
 	/* Extract the reset entry from the DT node. */
 	if (tegra_bpmp_running()) {
-		rst = of_reset_control_get(np_dpaux, dpaux_name);
+		rst = of_reset_control_get(dpaux_np, dpaux_name);
 		if (IS_ERR_OR_NULL(rst)) {
 			dev_err(&dc->ndev->dev,
 				"%s: Unable to get %s reset control\n",
 				__func__, dpaux_name);
 			err = -ENOENT;
-
 			goto err_put_clk;
 		}
-
 		reset_control_deassert(rst);
 	}
 
-	/* Get the PROD value lists that are defined for the DPAUX node. */
-	prod_list = devm_tegra_prod_get_from_node(&dc->ndev->dev, np_dpaux);
-	if (IS_ERR_OR_NULL(prod_list)) {
-		dev_err(&dc->ndev->dev,
-			"%s: prod list init failed for dpaux with error %ld\n",
-			__func__, PTR_ERR(prod_list));
-		err = -EINVAL;
-
-		goto err_put_rst;
+	if (!tegra_platform_is_sim()) {
+		prod_list = devm_tegra_prod_get_from_node(
+				&dc->ndev->dev, dpaux_np);
+		if (IS_ERR_OR_NULL(prod_list)) {
+			dev_err(&dc->ndev->dev,
+				"%s: prod list init failed for dpaux with error %ld\n",
+				__func__, PTR_ERR(prod_list));
+			err = -EINVAL;
+			goto err_put_rst;
+		}
 	}
 
 	dpaux->dc = dc;
@@ -298,6 +305,7 @@ struct tegra_dc_dpaux_data *tegra_dpaux_init_data(struct tegra_dc *dc)
 	dpaux->clk = clk;
 	dpaux->rst = rst;
 	dpaux->prod_list = prod_list;
+	dpaux->np = dpaux_np;
 
 	return dpaux;
 
@@ -310,36 +318,51 @@ err_put_clk:
 #endif
 err_unmap_region:
 	iounmap(base);
-err_put_dpaux_node:
-	of_node_put(np_dpaux);
+release_mem:
 	devm_kfree(&dc->ndev->dev, dpaux);
-
+exit:
+	of_node_put(dpaux_np);
 	return ERR_PTR(err);
+}
+
+int tegra_dpaux_get_irq(struct tegra_dc_dpaux_data *dpaux)
+{
+	int irq;
+
+	if (!dpaux)
+		return 0; /* return 0 for an error */
+
+	irq = of_irq_to_resource(dpaux->np, 0, NULL);
+	if (!irq)
+		pr_err("%s: error getting irq\n", __func__);
+
+	return irq;
+}
+
+struct clk *tegra_dpaux_get_clk(struct tegra_dc_dpaux_data *dpaux,
+		const char *clk_name)
+{
+	if (!dpaux || !clk_name)
+		return NULL;
+
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	return tegra_disp_of_clk_get_by_name(dpaux->np, clk_name);
+#elif defined(CONFIG_ARCH_TEGRA_210_SOC)
+	return clk_get_sys(NULL, clk_name);
+#endif
 }
 
 void tegra_dpaux_destroy_data(struct tegra_dc_dpaux_data *dpaux)
 {
-	struct device_node *np_dpaux;
 	struct tegra_dc *dc;
-	int sor_num = -1;
 
 	if (!dpaux || !dpaux->dc) {
-		pr_err("%s: dc and dpaux must be non-NULL\n", __func__);
+		pr_err("%s: %s must be non-NULL\n", __func__,
+				!dpaux ? "dpaux" : "dc");
 		return;
 	}
 
 	dc = dpaux->dc;
-	sor_num = tegra_dc_which_sor(dc);
-	if (sor_num) {
-		/* Note: this is WAR until driver clean-up patches are merged */
-		np_dpaux = tegra_platform_is_vdk() ?
-			of_find_node_by_path("/host1x/dpaux@155D0000") :
-			of_find_node_by_path(DPAUX1_NODE);
-	} else {
-		np_dpaux = of_find_node_by_path(DPAUX_NODE);
-	}
-
-	dpaux->prod_list = NULL;
 	if (dpaux->rst)
 		reset_control_put(dpaux->rst);
 
@@ -350,5 +373,4 @@ void tegra_dpaux_destroy_data(struct tegra_dc_dpaux_data *dpaux)
 	iounmap(dpaux->base);
 
 	devm_kfree(&dc->ndev->dev, dpaux);
-	of_node_put(np_dpaux);
 }

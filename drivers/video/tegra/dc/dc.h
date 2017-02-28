@@ -32,18 +32,6 @@
 #include <video/tegra_dc_ext_kernel.h>
 #include "dc_extras.h"
 
-#define DSI_NODE		"/host1x/dsi"
-#define SOR_NODE		"/host1x/sor"
-#define SOR1_NODE		"/host1x/sor1"
-
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-#define DPAUX_NODE		"/host1x/dpaux@155c0000"
-#define DPAUX1_NODE		"/host1x/dpaux@15040000"
-#else
-#define DPAUX_NODE		"/host1x/dpaux"
-#define DPAUX1_NODE		"/host1x/dpaux1"
-#endif
-
 #define DEFAULT_FPGA_FREQ_KHZ	160000
 
 #define TEGRA_DC_EXT_FLIP_MAX_WINDOW 6
@@ -968,8 +956,10 @@ struct tegra_dc_platform_data {
 	int			default_clr_space;
 #endif
 	unsigned long		ctrl_num;
-	char dc_or_node_name[20];
 	unsigned long		win_mask;
+	struct device_node	*conn_np; /* DSI, SOR0, SOR1, etc. */
+	struct device_node	*panel_np; /* dp-display, hdmi-display etc. */
+	struct device_node	*def_out_np; /* disp-default-out */
 };
 
 struct tegra_dc_bw_data {
@@ -985,7 +975,6 @@ int tegra_dc_get_stride(struct tegra_dc *dc, unsigned win);
 struct tegra_dc_win *tegra_dc_get_window(struct tegra_dc *dc, unsigned win);
 bool tegra_dc_get_connected(struct tegra_dc *);
 bool tegra_dc_hpd(struct tegra_dc *dc);
-
 
 bool tegra_dc_has_vsync(struct tegra_dc *dc);
 int tegra_dc_vsync_enable(struct tegra_dc *dc);
@@ -1189,30 +1178,9 @@ struct tegra_dc_edid {
 struct tegra_dc_edid *tegra_dc_get_edid(struct tegra_dc *dc);
 void tegra_dc_put_edid(struct tegra_dc_edid *edid);
 
-#if 0
-int tegra_dc_set_flip_callback(void (*callback)(void));
-int tegra_dc_unset_flip_callback(void);
-int tegra_dc_get_panel_sync_rate(void);
-#endif
-
 int tegra_dc_get_head(const struct tegra_dc *dc);
 int tegra_dc_get_out(const struct tegra_dc *dc);
 int tegra_dc_get_source_physical_address(u8 *phy_address);
-
-struct device_node *tegra_primary_panel_get_dt_node(
-				struct tegra_dc_platform_data *pdata);
-struct device_node *tegra_secondary_panel_get_dt_node(
-				struct tegra_dc_platform_data *pdata);
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-struct device_node *tegra_tertiary_panel_get_dt_node(
-				struct tegra_dc_platform_data *pdata);
-#else
-static inline struct device_node *tegra_tertiary_panel_get_dt_node(
-				struct tegra_dc_platform_data *pdata)
-{
-	return NULL;
-}
-#endif
 
 bool tegra_is_bl_display_initialized(int instance);
 
@@ -1220,6 +1188,12 @@ static inline void find_dc_node(struct device_node **dc1_node,
 	struct device_node **dc2_node)
 {
 	pr_err("%s: function is unimplemented\n", __func__);
+}
+
+static inline struct tegra_dc *tegra_get_dc_from_dev(struct device *dev)
+{
+	return platform_get_drvdata(container_of(dev,
+				struct platform_device, dev));
 }
 
 void tegra_get_fb_resource(struct resource *fb_res, int instance);

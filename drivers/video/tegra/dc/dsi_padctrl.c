@@ -230,8 +230,8 @@ struct tegra_dsi_padctrl *tegra_dsi_padctrl_init(struct tegra_dc *dc)
 		goto fail;
 	}
 
-	np_dsi = of_find_node_by_path(DSI_NODE);
-	if (!np_dsi || !of_device_is_available(np_dsi)) {
+	np_dsi = tegra_dc_get_conn_np(dc);
+	if (!np_dsi) {
 		dev_err(&dc->ndev->dev, "dsi padctl not available\n");
 		err = -ENODEV;
 		goto fail;
@@ -240,7 +240,7 @@ struct tegra_dsi_padctrl *tegra_dsi_padctrl_init(struct tegra_dc *dc)
 	dsi_padctrl = kzalloc(sizeof(*dsi_padctrl), GFP_KERNEL);
 	if (!dsi_padctrl) {
 		err = -ENOMEM;
-		goto put_dsi;
+		goto fail;
 	}
 
 	/*
@@ -277,15 +277,12 @@ struct tegra_dsi_padctrl *tegra_dsi_padctrl_init(struct tegra_dc *dc)
 
 	/* Set up active data and clock lanes mask */
 	tegra_dsi_padctrl_setup_pwr_down_mask(dsi, dsi_padctrl);
-	of_node_put(np_dsi);
 
 	return dsi_padctrl;
 iounmap:
 	iounmap(dsi_padctrl->base);
 free_mem:
 	kfree(dsi_padctrl);
-put_dsi:
-	of_node_put(np_dsi);
 fail:
 	dev_err(&dc->ndev->dev, "dsi pactrl init failed %d\n", err);
 	return ERR_PTR(err);

@@ -93,10 +93,11 @@ enum {
 };
 
 struct tegra_dc_sor_data {
-	struct tegra_dc	*dc;
+	int ctrl_num; /* SOR0, SOR1 etc. */
+	struct tegra_dc *dc;
+	struct device_node *np; /* dc->pdata->conn_np */
 
 	void __iomem	*base;
-	int instance; /* SOR0 or SOR1 */
 	struct clk	*sor_clk;
 	struct clk *safe_clk;
 	struct clk *brick_clk;
@@ -190,6 +191,10 @@ unsigned long tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 					u32 reg, u32 mask, u32 exp_val,
 					u32 poll_interval_us,
 					u32 timeout_ms);
+static inline int tegra_sor_get_ctrl_num(struct tegra_dc_sor_data *sor)
+{
+	return (!sor || !sor->base) ? -ENODEV : sor->ctrl_num;
+}
 
 static inline u32 tegra_sor_readl(struct tegra_dc_sor_data *sor, u32 reg)
 {

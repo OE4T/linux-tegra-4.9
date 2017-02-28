@@ -978,9 +978,7 @@ int tegra_dc_edid_blob(struct tegra_dc *dc, struct i2c_msg *msgs, int num)
 	u32 len = 0;
 	struct device_node *np_panel = NULL;
 
-	np_panel = tegra_get_panel_node_out_type_check(dc,
-		dc->pdata->default_out->type);
-
+	np_panel = tegra_dc_get_panel_np(dc);
 	if (!np_panel || !of_device_is_available(np_panel))
 		return -ENOENT;
 
@@ -1001,7 +999,6 @@ int tegra_dc_edid_blob(struct tegra_dc *dc, struct i2c_msg *msgs, int num)
 			}
 		}
 	}
-	of_node_put(np_panel);
 	return i;
 }
 

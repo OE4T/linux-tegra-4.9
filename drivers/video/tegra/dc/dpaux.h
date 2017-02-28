@@ -20,14 +20,12 @@
 
 struct tegra_dc_dpaux_data {
 	struct tegra_dc *dc;
-
 	void __iomem *base;
-
 	struct clk *clk;
-
 	struct reset_control *rst;
-
 	struct tegra_prod *prod_list;
+	struct device_node *np; /* dpaux@******** */
+	int ctrl_num; /* this should match with sor->ctrl_num */
 };
 
 enum tegra_dpaux_pad_mode {
@@ -47,6 +45,10 @@ void tegra_dpaux_pad_power(struct tegra_dc_dpaux_data *dpaux, bool on);
 void tegra_dpaux_config_pad_mode(struct tegra_dc_dpaux_data *dpaux,
 				enum tegra_dpaux_pad_mode mode);
 void tegra_dpaux_prod_set(struct tegra_dc_dpaux_data *dpaux);
-struct tegra_dc_dpaux_data *tegra_dpaux_init_data(struct tegra_dc *dc);
+struct tegra_dc_dpaux_data *tegra_dpaux_init_data(struct tegra_dc *dc,
+				struct device_node *sor_np);
 void tegra_dpaux_destroy_data(struct tegra_dc_dpaux_data *dpaux);
+int tegra_dpaux_get_irq(struct tegra_dc_dpaux_data *dpaux);
+struct clk *tegra_dpaux_get_clk(struct tegra_dc_dpaux_data *dpaux,
+				const char *clk_name);
 #endif

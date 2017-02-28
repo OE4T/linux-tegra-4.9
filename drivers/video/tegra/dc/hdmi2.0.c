@@ -846,36 +846,6 @@ fail:
 	return err;
 }
 
-static int tegra_hdmi_tmds_init(struct tegra_hdmi *hdmi)
-{
-	int sor_num = tegra_dc_which_sor(hdmi->dc);
-	int retval = 0;
-	struct device_node *np_prod = of_find_node_by_path(
-			sor_num ? SOR1_NODE : SOR_NODE);
-
-	/* NULL check for both np_prod and np_prod_dpaux */
-	if (!np_prod) {
-		dev_warn(&hdmi->dc->ndev->dev,
-			"hdmi: find tmds prod node failed\n");
-		retval = -EINVAL;
-		goto fail;
-	}
-
-	hdmi->prod_list = devm_tegra_prod_get_from_node(&hdmi->dc->ndev->dev,
-							np_prod);
-	if (IS_ERR(hdmi->prod_list)) {
-		dev_warn(&hdmi->dc->ndev->dev,
-			"hdmi: prod list init failed with error %ld\n",
-			PTR_ERR(hdmi->prod_list));
-		retval = -EINVAL;
-		goto fail;
-	}
-
-fail:
-	of_node_put(np_prod);
-	return retval;
-}
-
 static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 {
 	size_t tmds_len;
@@ -909,19 +879,28 @@ static int tegra_hdmi_hdr_init(struct tegra_hdmi *hdmi)
 
 static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 {
-	struct tegra_hdmi *hdmi;
 	int err;
-	int sor_num = tegra_dc_which_sor(dc);
-	struct device_node *np_hdmi = NULL;
-	struct device_node *np_panel = NULL;
+	struct device_node *sor_np, *panel_np;
+	struct tegra_hdmi *hdmi;
 
-	np_hdmi = of_find_node_by_path(
-			sor_num ? SOR1_NODE : SOR_NODE);
+	sor_np = tegra_dc_get_conn_np(dc);
+	if (!sor_np) {
+		dev_err(&dc->ndev->dev, "%s: error getting connector np\n",
+			__func__);
+		return -ENODEV;
+	}
+
+	panel_np = tegra_dc_get_panel_np(dc);
+	if (!panel_np) {
+		dev_err(&dc->ndev->dev, "%s: error getting panel np\n",
+			__func__);
+		return -ENODEV;
+	}
 
 	hdmi = devm_kzalloc(&dc->ndev->dev, sizeof(*hdmi), GFP_KERNEL);
 	if (!hdmi) {
 		err = -ENOMEM;
-		goto fail_np_hdmi;
+		goto fail_sor_np;
 	}
 
 	hdmi->hpd_switch_name = devm_kzalloc(&dc->ndev->dev,
@@ -941,7 +920,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi->dc = dc;
 	hdmi->edid_src = EDID_SRC_PANEL;
 
-	hdmi->dpaux = tegra_dpaux_init_data(dc);
+	hdmi->dpaux = tegra_dpaux_init_data(dc, sor_np);
 	if (IS_ERR_OR_NULL(hdmi->dpaux)) {
 		err = PTR_ERR(hdmi->dpaux);
 		goto fail_audio_switch;
@@ -953,19 +932,8 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		goto fail_audio_switch;
 	}
 
-	if (np_hdmi && of_device_is_available(np_hdmi)) {
-		np_panel = tegra_get_panel_node_out_type_check(dc,
-			TEGRA_DC_OUT_HDMI);
-		if (np_panel && of_device_is_available(np_panel)) {
-			if (of_property_read_bool(np_panel,
-						"nvidia,edid"))
-				hdmi->edid_src = EDID_SRC_DT;
-			of_node_put(np_panel);
-		}
-	} else {
-		err = -EINVAL;
-		goto fail_audio_switch;
-	}
+	if (of_property_read_bool(panel_np, "nvidia,edid"))
+		hdmi->edid_src = EDID_SRC_DT;
 
 	hdmi->pdata = dc->pdata->default_out->hdmi_out;
 	hdmi->ddc_refcount = 0; /* assumes this is disabled when starting */
@@ -1021,7 +989,15 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	tegra_hdmi_debugfs_init(hdmi);
 
-	tegra_hdmi_tmds_init(hdmi);
+	if (!tegra_platform_is_sim()) {
+		hdmi->prod_list = devm_tegra_prod_get_from_node(&dc->ndev->dev,
+							sor_np);
+		if (IS_ERR(hdmi->prod_list)) {
+			dev_warn(&dc->ndev->dev,
+				"%s: error getting prod-list\n", __func__);
+			hdmi->prod_list = NULL;
+		}
+	}
 
 	tegra_dc_set_outdata(dc, hdmi);
 
@@ -1069,18 +1045,17 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	err = switch_dev_register(&hdmi->hpd_switch);
 	if (err)
 		dev_err(&dc->ndev->dev,
-			"hdmi: failed to register hpd switch %d, err=%d\n",
-			sor_num, err);
+			"%s: failed to register hpd switch, err=%d\n",
+			__func__, err);
 
 	err = switch_dev_register(&hdmi->audio_switch);
 	if (err)
 		dev_err(&dc->ndev->dev,
-			"hdmi: failed to register audio switch %d, err=%d\n",
-			sor_num, err);
+			"%s: failed to register audio switch, err=%d\n",
+			__func__, err);
 #endif
 
 	hdmi_instance++;
-	of_node_put(np_hdmi);
 	return 0;
 
 fail_audio_switch:
@@ -1089,8 +1064,7 @@ fail_hpd_switch:
 	devm_kfree(&dc->ndev->dev, hdmi->hpd_switch_name);
 fail_hdmi:
 	devm_kfree(&dc->ndev->dev, hdmi);
-fail_np_hdmi:
-	of_node_put(np_hdmi);
+fail_sor_np:
 	return err;
 }
 
@@ -2020,7 +1994,7 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 
 	hdmi->enabled = true;
 
-	tegra_hda_set_data(dc, hdmi, SINK_HDMI);
+	hdmi->hda_handle = tegra_hda_set_data(dc, hdmi, SINK_HDMI);
 #ifdef CONFIG_SWITCH
 	if (!hdmi->dvi)
 		switch_set_state(&hdmi->audio_switch, 1);
@@ -2345,7 +2319,7 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 #endif
 
 	tegra_hdmi_controller_disable(hdmi);
-	tegra_hda_reset_data(dc);
+	tegra_hda_reset_data(hdmi->hda_handle);
 
 	return;
 }
@@ -2834,6 +2808,13 @@ static void tegra_dc_hdmi_sor_crc_toggle(struct tegra_dc *dc,
 	tegra_dc_sor_toggle_crc(hdmi->sor, val);
 }
 
+static int tegra_dc_hdmi_get_sor_ctrl_num(struct tegra_dc *dc)
+{
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+
+	return (!hdmi) ? -ENODEV : tegra_sor_get_ctrl_num(hdmi->sor);
+}
+
 struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.init = tegra_dc_hdmi_init,
 	.hotplug_init = tegra_dc_hdmi_hpd_init,
@@ -2857,4 +2838,5 @@ struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.shutdown_interface = tegra_dc_hdmi_sor_sleep,
 	.get_crc = tegra_dc_hdmi_sor_crc_check,
 	.toggle_crc = tegra_dc_hdmi_sor_crc_toggle,
+	.get_connector_instance = tegra_dc_hdmi_get_sor_ctrl_num,
 };

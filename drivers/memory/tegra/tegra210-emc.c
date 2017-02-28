@@ -511,6 +511,17 @@ void tegra210_update_emc_alt_timing(struct emc_table *current_timing)
 				EMC_COPY_TABLE_PARAM_PERIODIC_FIELDS);
 }
 
+static void emc_copy_table_params(struct emc_table *src,
+				  struct emc_table *dst,
+				  int table_size,
+				  int flags)
+{
+	int i;
+
+	for (i = 0; i < table_size; i++)
+		__emc_copy_table_params(&src[i], &dst[i], flags);
+}
+
 u32 tegra210_actual_osc_clocks(u32 in)
 {
 	if (in < 0x40)
@@ -2087,6 +2098,18 @@ static int tegra210_init_emc_data(struct platform_device *pdev)
 		return -EINVAL;
 	}
 	tegra_emc_table = tegra_emc_table_normal;
+
+	/*
+	 * Copy trained trimmers from the normal table to the derated
+	 * table for LP4. Bootloader trains only the normal table.
+	 * Trimmers are the same for derated and normal tables.
+	 */
+	if (tegra_emc_table_derated && tegra_dram_type == DRAM_TYPE_LPDDR4)
+		emc_copy_table_params(tegra_emc_table_normal,
+				      tegra_emc_table_derated,
+				      tegra_emc_table_size,
+				      EMC_COPY_TABLE_PARAM_PERIODIC_FIELDS |
+				      EMC_COPY_TABLE_PARAM_TRIM_REGS);
 
 	seq = supported_seqs;
 	while (seq->table_rev) {

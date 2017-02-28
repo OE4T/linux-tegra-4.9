@@ -3303,7 +3303,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 				"fail to load golden ctx image");
 			goto out;
 		}
-		if (g->ops.fecs_trace.bind_channel) {
+		if (g->ops.fecs_trace.bind_channel && !c->vpr) {
 			err = g->ops.fecs_trace.bind_channel(g, c);
 			if (err) {
 				gk20a_warn(dev_from_gk20a(g),

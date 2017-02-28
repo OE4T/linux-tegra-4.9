@@ -969,7 +969,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 
 	gk20a_free_error_notifiers(ch);
 
-	if (g->ops.fecs_trace.unbind_channel)
+	if (g->ops.fecs_trace.unbind_channel && !ch->vpr)
 		g->ops.fecs_trace.unbind_channel(g, ch);
 
 	/* release channel ctx */

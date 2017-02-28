@@ -13,10 +13,22 @@
  */
 / {
 	memory-controller@7001b000 {
-		compatible = "nvidia,tegra21-emc";
-		reg = <0x0 0x7001b000 0x0 0x1000>;
-		#address-cells = <1>;
-		#size-cells = <0>;
+		compatible = "nvidia,tegra21-emc", "nvidia,tegra210-emc";
+		reg = <0x0 0x7001b000 0x0 0x1000>,
+		      <0x0 0x7001e000 0x0 0x1000>,
+		      <0x0 0x7001f000 0x0 0x1000>;
+		clocks = <&tegra_car TEGRA210_CLK_EMC>,
+			 <&tegra_car TEGRA210_CLK_PLL_M>,
+			 <&tegra_car TEGRA210_CLK_PLL_C>,
+			 <&tegra_car TEGRA210_CLK_PLL_P>,
+			 <&tegra_car TEGRA210_CLK_CLK_M>,
+			 <&tegra_car TEGRA210_CLK_PLL_MB>,
+			 <&tegra_car TEGRA210_CLK_PLL_MB_UD>,
+			 <&tegra_car TEGRA210_CLK_PLL_P_UD>,
+			 <&tegra_car TEGRA210_CLK_OVERRIDE_EMC>;
+		clock-names = "emc", "pll_m", "pll_c", "pll_p", "clk_m",
+			"pll_mb", "pll_mb_ud", "pll_p_ud", "emc_override";
+		#thermal-sensor-cells = <0>;
 		emc-table@40800 {
 			compatible = "nvidia,tegra21-emc-table";
 			nvidia,revision = <0x07>;

@@ -57,7 +57,6 @@ struct sync_pt;
 #define NVHOST_MODULE_MAX_WAITBASES		3
 #define NVHOST_MODULE_MAX_MODMUTEXES		5
 #define NVHOST_MODULE_MAX_IORESOURCE_MEM	3
-#define NVHOST_MODULE_NO_POWERGATE_ID		.powergate_id = -1
 #define NVHOST_MODULE_MAX_IORESOURCE_MEM 3
 #define NVHOST_NAME_SIZE			24
 #define NVSYNCPT_INVALID			(-1)
@@ -191,7 +190,6 @@ struct nvhost_device_data {
 
 	char		*firmware_name;	/* Name of firmware */
 
-	int		powergate_id;
 	bool		engine_can_cg;	/* True if CG is enabled */
 	bool		can_powergate;	/* True if module can be power gated */
 	int		autosuspend_delay;/* Delay before power gated */

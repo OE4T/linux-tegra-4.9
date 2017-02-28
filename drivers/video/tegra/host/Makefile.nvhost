@@ -20,7 +20,8 @@ nvhost-objs = \
 	chip_support.o \
 	nvhost_scale.o \
 	nvhost_vm.o \
-	scale_emc.o
+	scale_emc.o \
+	nvhost_pd.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost.o
 obj-$(CONFIG_TEGRA_GRHOST) += host1x/

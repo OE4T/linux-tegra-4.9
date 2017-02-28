@@ -67,7 +67,6 @@ static struct host1x_device_info host1x04_info = {
 
 struct nvhost_device_data t124_host1x_info = {
 	.clocks		= {{"host1x", 81600000}, {"actmon", UINT_MAX} },
-	NVHOST_MODULE_NO_POWERGATE_ID,
 	.can_powergate   = true,
 	.autosuspend_delay = HOST1X_AUTOSUSPEND_DELAY,
 	.private_data	= &host1x04_info,
@@ -183,7 +182,6 @@ struct nvhost_device_data t124_tsec_info = {
 	.exclusive     = false,
 	.clocks	       = {{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
 			 {"emc", HOST_EMC_FLOOR} },
-	NVHOST_MODULE_NO_POWERGATE_ID,
 	.can_powergate   = true,
 	.poweron_reset   = true,
 	.autosuspend_delay = TSEC_AUTOSUSPEND_DELAY,

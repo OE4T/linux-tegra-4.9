@@ -131,7 +131,6 @@ struct nvhost_device_data t18_host1x_info = {
 		{"host1x", 102000000},
 		{"actmon", UINT_MAX}
 	},
-	NVHOST_MODULE_NO_POWERGATE_ID,
 	.can_powergate          = false,
 	.autosuspend_delay      = 50,
 	.private_data		= &host1x04_info,
@@ -145,7 +144,6 @@ struct nvhost_device_data t18_host1x_hv_info = {
 		{"host1x", 102000000},
 		{"actmon", UINT_MAX}
 	},
-	NVHOST_MODULE_NO_POWERGATE_ID,
 	.can_powergate          = false,
 	.autosuspend_delay      = 2000,
 	.private_data		= &host1x04_info,
@@ -173,7 +171,6 @@ struct nvhost_device_data t18_host1xb_info = {
 		{"host1x", UINT_MAX},
 		{"actmon", UINT_MAX}
 	},
-	NVHOST_MODULE_NO_POWERGATE_ID,
 	.private_data		= &host1xb04_info,
 };
 
@@ -361,7 +358,6 @@ struct nvhost_device_data t18_tsec_info = {
 	},
 	.engine_cg_regs		= t18x_tsec_gating_registers,
 	.engine_can_cg		= true,
-	NVHOST_MODULE_NO_POWERGATE_ID,
 	.can_powergate          = true,
 	.autosuspend_delay      = 500,
 	.keepalive		= true,
@@ -393,7 +389,6 @@ struct nvhost_device_data t18_tsecb_info = {
 	},
 	.engine_cg_regs		= t18x_tsec_gating_registers,
 	.engine_can_cg		= true,
-	NVHOST_MODULE_NO_POWERGATE_ID,
 	.can_powergate          = true,
 	.autosuspend_delay      = 500,
 	.keepalive		= true,

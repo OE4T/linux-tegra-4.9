@@ -2599,7 +2599,7 @@ static int tegra_se_rsa_op(struct akcipher_request *req)
 	} else {
 		tegra_unmap_sg(se_dev->dev, req->src,
 				DMA_TO_DEVICE, req->src_len);
-		tegra_unmap_sg(se_dev->dev, req->src,
+		tegra_unmap_sg(se_dev->dev, req->dst,
 				DMA_FROM_DEVICE, req->dst_len);
 	}
 	return err;

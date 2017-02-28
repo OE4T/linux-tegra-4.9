@@ -138,22 +138,6 @@ static DEFINE_PER_CPU(spinlock_t, pcpu_slock);
 
 static bool debug_fs_only;
 
-static uint32_t notrace get_coreclk_count(uint8_t cpu)
-{
-	int cur_cluster = tegra18_logical_to_cluster(cpu);
-	void __iomem *reg_base;
-	uint32_t phy_cpu, ret;
-
-	phy_cpu = logical_to_phys_map(cpu);
-
-	reg_base = coreclk_base(tfreq_data.pcluster[cur_cluster].edvd_pub,
-				phy_cpu);
-	pstore_rtrace_set_bypass(1);
-	ret = tcpufreq_readl(reg_base, phy_cpu);
-	pstore_rtrace_set_bypass(0);
-	return ret;
-}
-
 struct tegra_cpu_ctr {
 	uint32_t cpu;
 	uint32_t coreclk_cnt, last_coreclk_cnt;

@@ -15,6 +15,81 @@
  */
 
 #include "dc_priv.h"
+#include "nvdisp.h"
+#include "hw_nvdisp_nvdisp.h"
+
+int tegra_nvdisp_set_control_t19x(struct tegra_dc *dc)
+{
+	u32 reg, protocol;
+
+	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
+
+		/* sor1 in the function name is irrelevant */
+		protocol = nvdisp_sor1_control_protocol_tmdsa_f();
+	} else if ((dc->out->type == TEGRA_DC_OUT_DP) ||
+		   (dc->out->type == TEGRA_DC_OUT_NVSR_DP) ||
+		   (dc->out->type == TEGRA_DC_OUT_FAKE_DP)) {
+
+		/* sor in the function name is irrelevant */
+		protocol = nvdisp_sor_control_protocol_dpa_f();
+	} else {
+		dev_err(&dc->ndev->dev, "%s: unsupported out_type=%d\n",
+				__func__, dc->out->type);
+		return -EINVAL;
+	}
+
+	switch (dc->out_ops->get_connector_instance(dc)) {
+	case 0:
+		reg = nvdisp_sor_control_r();
+		break;
+	case 1:
+		reg = nvdisp_sor1_control_r();
+		break;
+	case 2:
+		reg = 0x00000405; /* todo: add t19x hw_reg headerfile */
+		break;
+	case 3:
+		reg = 0x00000406; /* todo: add t19x hw_reg headerfile */
+		break;
+	default:
+		pr_err("%s: invalid sor_num:%d\n", __func__,
+				dc->out_ops->get_connector_instance(dc));
+		return -ENODEV;
+	}
+
+	tegra_dc_writel(dc, protocol, reg);
+	tegra_dc_enable_general_act(dc);
+
+	return 0;
+}
+
+void tegra_dc_enable_sor_t19x(struct tegra_dc *dc, int sor_num, bool enable)
+{
+	u32 enb;
+	u32 reg_val = tegra_dc_readl(dc, nvdisp_win_options_r());
+
+	/* todo: add t19x hw_reg headerfile */
+	switch (sor_num) {
+	case 0:
+		enb = nvdisp_win_options_sor_set_sor_enable_f();
+		break;
+	case 1:
+		enb = nvdisp_win_options_sor1_set_sor1_enable_f();
+		break;
+	case 2:
+		enb = BIT(28); /* todo: add t19x hw_reg headerfile */
+		break;
+	case 3:
+		enb = BIT(29); /* todo: add t19x hw_reg headerfile */
+		break;
+	default:
+		pr_err("%s: invalid sor_num:%d\n", __func__, sor_num);
+		return;
+	}
+
+	reg_val = enable ? reg_val | enb : reg_val & ~enb;
+	tegra_dc_writel(dc, reg_val, nvdisp_win_options_r());
+}
 
 void tegra_dc_populate_t19x_hw_data(struct tegra_dc_hw_data *hw_data)
 {

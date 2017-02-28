@@ -952,7 +952,7 @@ unsigned long tegra_dvfs_round_rate(struct clk *c, unsigned long rate)
 
 	mutex_lock(&dvfs_lock);
 	ret = tegra_dvfs_get_freqs(c, &freqs, &num_freqs);
-	if (ret < 0)
+	if (IS_ERR_VALUE(ret))
 		goto out;
 
 	for (i = 0; i < num_freqs; i++) {

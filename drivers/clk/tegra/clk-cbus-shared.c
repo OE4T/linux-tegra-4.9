@@ -214,6 +214,7 @@ static long clk_cbus_round_rate(struct clk_hw *hw, unsigned long rate,
 	long new_rate;
 	unsigned long dvfs_rate;
 	struct tegra_clk_cbus_shared *cbus = to_clk_cbus_shared(hw);
+	bool pass_through = cbus->flags & TEGRA_SHARED_BUS_ROUND_PASS_THRU;
 
 	parent = clk_get_parent(hw->clk);
 	if (IS_ERR(parent)) {
@@ -221,16 +222,21 @@ static long clk_cbus_round_rate(struct clk_hw *hw, unsigned long rate,
 		return *parent_rate;
 	}
 
-	if (~cbus->flags & TEGRA_SHARED_BUS_ROUND_PASS_THRU)
+	if (!pass_through) {
 		dvfs_rate = tegra_dvfs_round_rate(hw->clk, rate);
-	else
+		if (IS_ERR_VALUE(dvfs_rate))
+			pass_through = true;
+	}
+
+	if (pass_through)
 		dvfs_rate = rate;
 
 	new_rate = clk_round_rate(parent, dvfs_rate);
 	if (new_rate < 0)
 		return *parent_rate;
 
-	WARN_ON(new_rate > dvfs_rate);
+	if (!pass_through)
+		WARN_ON(new_rate > dvfs_rate);
 
 	return new_rate;
 }

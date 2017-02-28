@@ -28,6 +28,8 @@
 
 #include "tegra210-emc-reg.h"
 
+void tegra210_emc_mr4_set_freq_thresh(unsigned long thresh);
+
 static struct device_node *tegra_emc_ramcode_devnode(
 	struct device_node *np)
 {
@@ -284,6 +286,7 @@ int tegra_emc_dt_parse_pdata(struct platform_device *pdev,
 	struct tegra21_emc_pdata *pdata = NULL;
 	const char *comp = NULL;
 	const char *comp_derated = NULL;
+	const void *prop;
 
 	if (!np) {
 		dev_err(&pdev->dev,
@@ -293,17 +296,16 @@ int tegra_emc_dt_parse_pdata(struct platform_device *pdev,
 
 	tegra_bct_strapping = tegra_read_ram_code();
 
-#if 0
 	prop = of_get_property(pdev->dev.of_node,
 			       "nvidia,poll_thresh_freq", NULL);
 	if (prop) {
 		unsigned long freq_thresh = (unsigned long)be32_to_cpup(prop);
 
-		tegra_emc_mr4_set_freq_thresh(freq_thresh);
+		tegra210_emc_mr4_set_freq_thresh(freq_thresh);
 		pr_info("tegra: emc: Using MR4 freq threshold: %lu\n",
 			freq_thresh);
 	}
-#endif
+
 	if (of_find_property(np, "nvidia,use-ram-code", NULL)) {
 		tnp = tegra_emc_ramcode_devnode(np);
 

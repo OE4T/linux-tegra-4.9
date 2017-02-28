@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -43,6 +43,7 @@
 #include <linux/mutex.h>
 #include <linux/delay.h>
 #include <asm/uaccess.h>
+#include <asm-generic/bug.h>
 
 #define DRV_NAME "tegra_hv_vblk"
 
@@ -67,28 +68,30 @@ enum cmd_mode {
 	UNKNOWN_CMD = 0xffffffff,
 };
 
+#define SECTOR_SIZE 512
+
 #pragma pack(push)
 #pragma pack(1)
 struct ivc_blk_request {
 	enum cmd_mode cmd;      /* 0:read 1:write */
-	sector_t sector_offset; /* Sector cursor */
-	uint32_t sector_number; /* Total sector number to transfer */
+	sector_t blk_offset; /* Blk cursor */
+	uint32_t num_blks; /* Total Block number to transfer */
 	uint32_t serial_number;
 	uint32_t total_frame;
 };
 
 struct ivc_blk_result {
 	uint32_t status;        /* 0 for success, < 0 for error */
-	uint32_t sector_number; /* number of sectors  to complete */
+	uint32_t num_blks; /* number of blocks to complete */
 	uint32_t serial_number;
 	uint32_t total_frame;
 };
 
 struct virtual_storage_configinfo {
 	enum cmd_mode cmd;                /* 2:configinfo */
-	uint64_t nsectors;                /* Total number of Sectors */
-	uint32_t hardsect_size;           /* Sector Size */
-	uint32_t max_sectors_per_io;      /* Limit number of sectors per I/O*/
+	uint64_t num_blks;                /* Total number of blocks */
+	uint32_t hardblk_size;           /* Block Size */
+	uint32_t max_blks_per_io;       /* Limit number of Blocks per I/O*/
 	uint32_t virtual_storage_ver;     /* Version of virtual storage */
 	uint32_t shared_buffer_offset;    /* Storage offset of shared buffer*/
 };
@@ -108,7 +111,6 @@ struct combo_info_t {
 };
 #pragma pack(pop)
 
-static struct tegra_hv_ivm_cookie *ivmk;
 static void *shared_buffer;
 
 enum IOCTL_STATUS {
@@ -148,8 +150,8 @@ struct vblk_dev {
 	struct tegra_hv_ivc_cookie *ivck;
 	struct tegra_hv_ivm_cookie *ivmk;
 	uint32_t devnum;
-	sector_t cur_sector;
-	uint32_t cur_nsect;
+	sector_t cur_blk;
+	uint32_t cur_nblk;
 	void *cur_buffer;
 	enum cmd_mode cur_transfer_cmd;
 	uint8_t serial_number;
@@ -216,8 +218,8 @@ static int vblk_send_config_cmd(struct vblk_dev *vblkdev)
 	}
 
 	ivc_blk_req->cmd = R_CONFIG;
-	ivc_blk_req->sector_offset = 0;
-	ivc_blk_req->sector_number = 0;
+	ivc_blk_req->blk_offset = 0;
+	ivc_blk_req->num_blks = 0;
 
 	dev_info(vblkdev->device, "send config cmd to ivc #%d\n",
 		vblkdev->ivc_id);
@@ -333,7 +335,7 @@ static int vblk_get_configinfo(struct vblk_dev *vblkdev)
 	if (vblkdev->config.cmd != R_CONFIG)
 		return -EIO;
 
-	if (vblkdev->config.nsectors == 0) {
+	if (vblkdev->config.num_blks == 0) {
 		dev_err(vblkdev->device, "controller init failed\n");
 		return -EINVAL;
 	}
@@ -346,8 +348,8 @@ static void io_error_handler(struct vblk_dev *vblkdev)
 	spin_lock(vblkdev->queue->queue_lock);
 	__blk_end_request_all(vblkdev->req, -EIO);
 	spin_unlock(vblkdev->queue->queue_lock);
-	vblkdev->cur_sector = 0;
-	vblkdev->cur_nsect = 0;
+	vblkdev->cur_blk = 0;
+	vblkdev->cur_nblk = 0;
 	vblkdev->cur_buffer = NULL;
 	vblkdev->cur_transfer_cmd = UNKNOWN_CMD;
 	vblkdev->req = NULL;
@@ -367,8 +369,8 @@ static void vblk_fetch_request(struct vblk_dev *vblkdev)
 				return;
 		}
 	}
-	vblkdev->cur_sector = 0;
-	vblkdev->cur_nsect = 0;
+	vblkdev->cur_blk = 0;
+	vblkdev->cur_nblk = 0;
 	vblkdev->cur_buffer = NULL;
 	vblkdev->cur_transfer_cmd = UNKNOWN_CMD;
 }
@@ -392,8 +394,8 @@ static int next_transfer(struct vblk_dev *vblkdev)
 	if (vblkdev->cur_transfer_cmd == W_TRANSFER)
 		ivc_blk_req->cmd = W_TRANSFER_SHARED_BUF;
 
-	ivc_blk_req->sector_offset = vblkdev->cur_sector;
-	ivc_blk_req->sector_number = vblkdev->cur_nsect;
+	ivc_blk_req->blk_offset = vblkdev->cur_blk;
+	ivc_blk_req->num_blks = vblkdev->cur_nblk;
 	ivc_blk_req->serial_number = vblkdev->serial_number;
 	ivc_blk_req->total_frame = vblkdev->total_frame;
 
@@ -403,25 +405,25 @@ static int next_transfer(struct vblk_dev *vblkdev)
 			vblkdev->cur_buffer = page_address(bvec.bv_page) +
 						bvec.bv_offset;
 
-			if ((total_size + size) > (vblkdev->cur_nsect *
-				vblkdev->config.hardsect_size))
-				size = (vblkdev->cur_nsect *
-					vblkdev->config.hardsect_size) -
+			if ((total_size + size) > (vblkdev->cur_nblk *
+				vblkdev->config.hardblk_size))
+				size = (vblkdev->cur_nblk *
+					vblkdev->config.hardblk_size) -
 					total_size;
 
 			memcpy(vblkdev->shared_buffer + total_size,
 				vblkdev->cur_buffer, size);
 			total_size += size;
-			if (total_size == (vblkdev->cur_nsect *
-				vblkdev->config.hardsect_size))
+			if (total_size == (vblkdev->cur_nblk *
+				vblkdev->config.hardblk_size))
 				goto exit;
 		}
 exit:
-		vblkdev->cur_sector = 0;
+		vblkdev->cur_blk = 0;
 		vblkdev->cur_buffer = NULL;
 	}
 
-	vblkdev->cur_sector = 0;
+	vblkdev->cur_blk = 0;
 
 	if (tegra_hv_ivc_write_advance(vblkdev->ivck)) {
 		dev_err(vblkdev->device, "ivc write failed\n");
@@ -512,18 +514,18 @@ static int get_data_from_io_server(struct vblk_dev *vblkdev)
 					page_address(bvec.bv_page) +
 					bvec.bv_offset;
 
-				if ((total_size + size) > (vblkdev->cur_nsect *
-					vblkdev->config.hardsect_size))
-					size = (vblkdev->cur_nsect *
-						vblkdev->config.hardsect_size) -
+				if ((total_size + size) > (vblkdev->cur_nblk *
+					vblkdev->config.hardblk_size))
+					size = (vblkdev->cur_nblk *
+						vblkdev->config.hardblk_size) -
 						total_size;
 				memcpy(vblkdev->cur_buffer,
 					vblkdev->shared_buffer + total_size,
 					size);
 
 				total_size += size;
-				if (total_size == (vblkdev->cur_nsect *
-					vblkdev->config.hardsect_size))
+				if (total_size == (vblkdev->cur_nblk *
+					vblkdev->config.hardblk_size))
 					goto exit;
 			}
 		}
@@ -548,12 +550,11 @@ static int fetch_next_req(struct vblk_dev *vblkdev)
 	vblkdev->total_frame = 1;
 	vblkdev->iter.bio = NULL;
 
-	if (blk_rq_sectors(vblkdev->req) >
-		vblkdev->config.max_sectors_per_io) {
+	if (blk_rq_bytes(vblkdev->req) > vblkdev->size) {
 		dev_err(vblkdev->device,
 			"Request size over I/O limit. 0x%x > 0x%x\n",
-			blk_rq_sectors(vblkdev->req),
-			vblkdev->config.max_sectors_per_io);
+			blk_rq_bytes(vblkdev->req),
+			vblkdev->config.max_blks_per_io);
 		io_error_handler(vblkdev);
 		return -EINVAL;
 	}
@@ -564,13 +565,34 @@ static int fetch_next_req(struct vblk_dev *vblkdev)
 static void do_next_bio(struct vblk_dev *vblkdev)
 {
 	vblkdev->serial_number += 1;
-	vblkdev->cur_sector = blk_rq_pos(vblkdev->req);
-	vblkdev->cur_nsect = blk_rq_sectors(vblkdev->req);
 
-	if ((vblkdev->cur_sector + vblkdev->cur_nsect) >
-		vblkdev->config.nsectors) {
+	if (((blk_rq_pos(vblkdev->req) * SECTOR_SIZE) %
+			vblkdev->config.hardblk_size) != 0) {
+		dev_err(vblkdev->device, "Unaligned block offset (%lld %d)\n",
+			(long long int)blk_rq_pos(vblkdev->req),
+				vblkdev->config.hardblk_size);
+		io_error_handler(vblkdev);
+		return;
+	}
+
+	if (((blk_rq_sectors(vblkdev->req) * SECTOR_SIZE) %
+			vblkdev->config.hardblk_size) != 0) {
+		dev_err(vblkdev->device, "Unaligned io length (%lld %d)\n",
+			(long long int)blk_rq_sectors(vblkdev->req),
+				vblkdev->config.hardblk_size);
+		io_error_handler(vblkdev);
+		return;
+	}
+
+	vblkdev->cur_blk = ((blk_rq_pos(vblkdev->req) * SECTOR_SIZE) /
+					vblkdev->config.hardblk_size);
+	vblkdev->cur_nblk = ((blk_rq_sectors(vblkdev->req) * SECTOR_SIZE) /
+					vblkdev->config.hardblk_size);
+
+	if ((vblkdev->cur_blk + vblkdev->cur_nblk) >
+		vblkdev->config.num_blks) {
 		dev_err(vblkdev->device, "Beyond-end write (%lld %d)\n",
-			(long long int)vblkdev->cur_sector, vblkdev->cur_nsect);
+			(long long int)vblkdev->cur_blk, vblkdev->cur_nblk);
 		io_error_handler(vblkdev);
 		return;
 	}
@@ -612,8 +634,8 @@ static void vblk_request_work(struct work_struct *ws)
 		if (vblkdev->ready_to_receive == false) {
 			spin_lock(vblkdev->queue->queue_lock);
 			if (!__blk_end_request(vblkdev->req, 0,
-				vblkdev->cur_nsect *
-				vblkdev->config.hardsect_size)) {
+				vblkdev->cur_nblk *
+				vblkdev->config.hardblk_size)) {
 				spin_unlock(vblkdev->queue->queue_lock);
 
 				if (fetch_next_req(vblkdev))
@@ -813,7 +835,7 @@ const struct block_device_operations vblk_ops = {
 static void setup_device(struct vblk_dev *vblkdev)
 {
 	vblkdev->size =
-		vblkdev->config.nsectors * vblkdev->config.hardsect_size;
+		vblkdev->config.num_blks * vblkdev->config.hardblk_size;
 
 	spin_lock_init(&vblkdev->lock);
 	spin_lock_init(&vblkdev->queue_lock);
@@ -837,9 +859,12 @@ static void setup_device(struct vblk_dev *vblkdev)
 	}
 
 	blk_queue_logical_block_size(vblkdev->queue,
-		vblkdev->config.hardsect_size);
+		vblkdev->config.hardblk_size);
+	blk_queue_physical_block_size(vblkdev->queue,
+		vblkdev->config.hardblk_size);
 	blk_queue_max_hw_sectors(vblkdev->queue,
-		vblkdev->config.max_sectors_per_io);
+		(vblkdev->config.hardblk_size *
+			vblkdev->config.max_blks_per_io) / SECTOR_SIZE);
 	queue_flag_set_unlocked(QUEUE_FLAG_NONROT, vblkdev->queue);
 
 	/* And the gendisk structure. */
@@ -854,7 +879,7 @@ static void setup_device(struct vblk_dev *vblkdev)
 	vblkdev->gd->queue = vblkdev->queue;
 	vblkdev->gd->private_data = vblkdev;
 	snprintf(vblkdev->gd->disk_name, 32, "vblkdev%d", vblkdev->devnum);
-	set_capacity(vblkdev->gd, vblkdev->config.nsectors);
+	set_capacity(vblkdev->gd, (vblkdev->size / SECTOR_SIZE));
 	add_disk(vblkdev->gd);
 }
 
@@ -896,7 +921,7 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 	struct vblk_dev *vblkdev;
 	struct device *dev = &pdev->dev;
 	int ret;
-	static uint32_t ivm_id;
+	struct tegra_hv_ivm_cookie *ivmk;
 
 	if (!is_tegra_hypervisor_mode()) {
 		dev_err(dev, "Hypervisor is not present\n");
@@ -951,26 +976,21 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 		goto free_drvdata;
 	}
 
-	if (!ivmk) {
-		ivmk = tegra_hv_mempool_reserve(NULL, vblkdev->ivm_id);
-		if (IS_ERR_OR_NULL(ivmk)) {
-			dev_err(dev, "Failed to reserve IVM channel %d\n",
+	ivmk = tegra_hv_mempool_reserve(NULL, vblkdev->ivm_id);
+	if (IS_ERR_OR_NULL(ivmk)) {
+		dev_err(dev, "Failed to reserve IVM channel %d\n",
+			vblkdev->ivm_id);
+		ivmk = NULL;
+		ret = -ENODEV;
+		goto free_drvdata;
+	}
+
+	shared_buffer = ioremap_cache(ivmk->ipa, ivmk->size);
+	if (IS_ERR_OR_NULL(shared_buffer)) {
+		dev_err(dev, "Failed to map mempool area %d\n",
 				vblkdev->ivm_id);
-			ivmk = NULL;
-			ret = -ENODEV;
-			goto free_drvdata;
-		}
-		shared_buffer = ioremap_cache(ivmk->ipa, ivmk->size);
-		ivm_id = vblkdev->ivm_id;
-	} else {
-		if (vblkdev->ivm_id != ivm_id) {
-			dev_err(dev, "mempool id do not match\n");
-			goto free_drvdata;
-		}
-		if (vblkdev->ivck->peer_vmid != ivmk->peer_vmid) {
-			dev_err(dev, "IVC and IVM has different peer\n");
-			goto free_drvdata;
-		}
+		ret = -ENOMEM;
+		goto free_mempool;
 	}
 
 	vblkdev->ivmk = ivmk;
@@ -978,7 +998,7 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 	vblkdev->cmd_frame = kzalloc(vblkdev->ivck->frame_size, GFP_KERNEL);
 	if (vblkdev->cmd_frame == NULL) {
 		ret = -ENOMEM;
-		goto free_drvdata;
+		goto unmap_mempool;
 	}
 
 	vblkdev->cur_transfer_cmd = UNKNOWN_CMD;
@@ -1021,6 +1041,12 @@ free_wq:
 
 free_cmd_frame:
 	kfree(vblkdev->cmd_frame);
+
+unmap_mempool:
+	iounmap(shared_buffer);
+
+free_mempool:
+	kfree(ivmk);
 
 free_drvdata:
 	platform_set_drvdata(pdev, NULL);

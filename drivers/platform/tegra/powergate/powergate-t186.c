@@ -250,7 +250,7 @@ struct tegra_powergate_driver_ops *tegra186_powergate_init_chip_support(void)
 {
 	if (tegra186_pg_query_abi()) {
 		WARN(1, "Missing BPMP support for MRQ_PG\n");
-		return 0;
+		return NULL;
 	}
 
 	return &tegra186_pg_ops;

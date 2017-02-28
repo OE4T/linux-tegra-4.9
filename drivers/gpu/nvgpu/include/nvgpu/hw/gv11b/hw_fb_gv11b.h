@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -826,6 +826,10 @@ static inline u32 fb_mmu_fault_buffer_get_ptr_f(u32 v)
 {
 	return (v & 0xfffff) << 0;
 }
+static inline u32 fb_mmu_fault_buffer_get_ptr_m(void)
+{
+	return 0xfffff << 0;
+}
 static inline u32 fb_mmu_fault_buffer_get_ptr_v(u32 r)
 {
 	return (r >> 0) & 0xfffff;
@@ -1330,6 +1334,10 @@ static inline u32 fb_mmu_fault_status_replayable_set_f(void)
 {
 	return 0x100;
 }
+static inline u32 fb_mmu_fault_status_replayable_reset_f(void)
+{
+	return 0x0;
+}
 static inline u32 fb_mmu_fault_status_non_replayable_f(u32 v)
 {
 	return (v & 0x1) << 9;
@@ -1345,6 +1353,10 @@ static inline u32 fb_mmu_fault_status_non_replayable_set_v(void)
 static inline u32 fb_mmu_fault_status_non_replayable_set_f(void)
 {
 	return 0x200;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_reset_f(void)
+{
+	return 0x0;
 }
 static inline u32 fb_mmu_fault_status_replayable_error_f(u32 v)
 {
@@ -1362,6 +1374,10 @@ static inline u32 fb_mmu_fault_status_replayable_error_set_f(void)
 {
 	return 0x400;
 }
+static inline u32 fb_mmu_fault_status_replayable_error_reset_f(void)
+{
+	return 0x0;
+}
 static inline u32 fb_mmu_fault_status_non_replayable_error_f(u32 v)
 {
 	return (v & 0x1) << 11;
@@ -1377,6 +1393,10 @@ static inline u32 fb_mmu_fault_status_non_replayable_error_set_v(void)
 static inline u32 fb_mmu_fault_status_non_replayable_error_set_f(void)
 {
 	return 0x800;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_error_reset_f(void)
+{
+	return 0x0;
 }
 static inline u32 fb_mmu_fault_status_replayable_overflow_f(u32 v)
 {
@@ -1394,6 +1414,10 @@ static inline u32 fb_mmu_fault_status_replayable_overflow_set_f(void)
 {
 	return 0x1000;
 }
+static inline u32 fb_mmu_fault_status_replayable_overflow_reset_f(void)
+{
+	return 0x0;
+}
 static inline u32 fb_mmu_fault_status_non_replayable_overflow_f(u32 v)
 {
 	return (v & 0x1) << 13;
@@ -1409,6 +1433,10 @@ static inline u32 fb_mmu_fault_status_non_replayable_overflow_set_v(void)
 static inline u32 fb_mmu_fault_status_non_replayable_overflow_set_f(void)
 {
 	return 0x2000;
+}
+static inline u32 fb_mmu_fault_status_non_replayable_overflow_reset_f(void)
+{
+	return 0x0;
 }
 static inline u32 fb_mmu_fault_status_replayable_getptr_corrupted_f(u32 v)
 {

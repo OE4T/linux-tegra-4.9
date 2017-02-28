@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -47,39 +47,27 @@
  *         comparison with unshifted values appropriate for use in field <y>
  *         of register <x>.
  */
-#ifndef _hw_pri_ringstation_sys_gv11b_h_
-#define _hw_pri_ringstation_sys_gv11b_h_
+#ifndef _hw_pri_ringstation_gpc_gv11b_h_
+#define _hw_pri_ringstation_gpc_gv11b_h_
 
-static inline u32 pri_ringstation_sys_master_config_r(u32 i)
+static inline u32 pri_ringstation_gpc_master_config_r(u32 i)
 {
-	return 0x00122300 + i*4;
+	return 0x00128300 + i*4;
 }
-static inline u32 pri_ringstation_sys_decode_config_r(void)
+static inline u32 pri_ringstation_gpc_gpc0_priv_error_adr_r(void)
 {
-	return 0x00122204;
+	return 0x00128120;
 }
-static inline u32 pri_ringstation_sys_decode_config_ring_m(void)
+static inline u32 pri_ringstation_gpc_gpc0_priv_error_wrdat_r(void)
 {
-	return 0x7 << 0;
+	return 0x00128124;
 }
-static inline u32 pri_ringstation_sys_decode_config_ring_drop_on_ring_not_started_f(void)
+static inline u32 pri_ringstation_gpc_gpc0_priv_error_info_r(void)
 {
-	return 0x1;
+	return 0x00128128;
 }
-static inline u32 pri_ringstation_sys_priv_error_adr_r(void)
+static inline u32 pri_ringstation_gpc_gpc0_priv_error_code_r(void)
 {
-	return 0x00122120;
-}
-static inline u32 pri_ringstation_sys_priv_error_wrdat_r(void)
-{
-	return 0x00122124;
-}
-static inline u32 pri_ringstation_sys_priv_error_info_r(void)
-{
-	return 0x00122128;
-}
-static inline u32 pri_ringstation_sys_priv_error_code_r(void)
-{
-	return 0x0012212c;
+	return 0x0012812c;
 }
 #endif

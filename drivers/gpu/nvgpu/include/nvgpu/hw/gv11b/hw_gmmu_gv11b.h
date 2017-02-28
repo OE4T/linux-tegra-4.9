@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1273,6 +1273,26 @@ static inline u32 gmmu_pte_kind_s8_v(void)
 static inline u32 gmmu_pte_kind_s8_2s_v(void)
 {
 	return 0x0000002b;
+}
+static inline u32 gmmu_fault_client_type_gpc_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 gmmu_fault_client_type_hub_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 gmmu_fault_type_unbound_inst_block_v(void)
+{
+	return 0x00000004;
+}
+static inline u32 gmmu_fault_mmu_eng_id_bar2_v(void)
+{
+	return 0x00000005;
+}
+static inline u32 gmmu_fault_mmu_eng_id_physical_v(void)
+{
+	return 0x0000001f;
 }
 static inline u32 gmmu_fault_buf_size_v(void)
 {

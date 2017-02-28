@@ -454,6 +454,10 @@ static inline u32 pbdma_intr_0_pbcrc_pending_f(void)
 {
 	return 0x80000;
 }
+static inline u32 pbdma_intr_0_clear_faulted_error_pending_f(void)
+{
+	return 0x100000;
+}
 static inline u32 pbdma_intr_0_method_pending_f(void)
 {
 	return 0x200000;
@@ -465,6 +469,10 @@ static inline u32 pbdma_intr_0_methodcrc_pending_f(void)
 static inline u32 pbdma_intr_0_device_pending_f(void)
 {
 	return 0x800000;
+}
+static inline u32 pbdma_intr_0_eng_reset_pending_f(void)
+{
+	return 0x1000000;
 }
 static inline u32 pbdma_intr_0_semaphore_pending_f(void)
 {
@@ -513,6 +521,10 @@ static inline u32 pbdma_intr_stall_r(u32 i)
 static inline u32 pbdma_intr_stall_lbreq_enabled_f(void)
 {
 	return 0x100;
+}
+static inline u32 pbdma_intr_stall_1_r(u32 i)
+{
+	return 0x00040140 + i*8192;
 }
 static inline u32 pbdma_udma_nop_r(void)
 {

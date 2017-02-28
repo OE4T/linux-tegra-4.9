@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -266,14 +266,6 @@ static inline u32 fifo_intr_chsw_error_r(void)
 {
 	return 0x0000256c;
 }
-static inline u32 fifo_gpc_v(void)
-{
-	return 0x00000000;
-}
-static inline u32 fifo_hub_v(void)
-{
-	return 0x00000001;
-}
 static inline u32 fifo_intr_pbdma_id_r(void)
 {
 	return 0x000025a0;
@@ -305,10 +297,6 @@ static inline u32 fifo_fb_timeout_period_m(void)
 static inline u32 fifo_fb_timeout_period_max_f(void)
 {
 	return 0x3fffffff;
-}
-static inline u32 fifo_error_sched_disable_r(void)
-{
-	return 0x0000262c;
 }
 static inline u32 fifo_sched_disable_r(void)
 {
@@ -405,6 +393,10 @@ static inline u32 fifo_engine_status_next_id_type_v(u32 r)
 static inline u32 fifo_engine_status_next_id_type_chid_v(void)
 {
 	return 0x00000000;
+}
+static inline u32 fifo_engine_status_eng_reload_v(u32 r)
+{
+	return (r >> 29) & 0x1;
 }
 static inline u32 fifo_engine_status_faulted_v(u32 r)
 {

@@ -187,36 +187,31 @@ static struct tegra_se_ecc_curve curve_p384 = {
 };
 
 /* NIST P-521 */
-static u32 nist_p521_x[] = { 0x00000000ull, 0x00000000ull, 0x00000000ull,
-				0xBD660000ull, 0x7E31C2E5ull, 0x429BF97Eull,
+static u32 nist_p521_x[] = { 0xBD660000ull, 0x7E31C2E5ull, 0x429BF97Eull,
 				0xB3C1856Aull, 0xA8DE3348ull, 0xC127A2FFull,
 				0x5928FE1Dull, 0x5E77EFE7ull, 0x3DBAA14Bull,
 				0xAF606B4Dull, 0xB521F828ull, 0x8139053Full,
 				0xB4429C64ull, 0xCB662395ull, 0xE9CD9E3Eull,
 				0x06B70404ull, 0x00C6858Eull };
-static u32 nist_p521_y[] = { 0x00000000ull, 0x00000000ull, 0x00000000ull,
-				0x66500000ull, 0x94769FD1ull, 0xC24088BEull,
+static u32 nist_p521_y[] = { 0x66500000ull, 0x94769FD1ull, 0xC24088BEull,
 				0x7086A272ull, 0x0761353Cull, 0xB9013FADull,
 				0x2640C550ull, 0x72995EF4ull, 0x662C97EEull,
 				0xBD17273Eull, 0x446817AFull, 0x4449579Bull,
 				0x1BD998F5ull, 0x5FB42C7Dull, 0xC0045C8Aull,
 				0x6A789A3Bull, 0x01183929ull };
-static u32 nist_p521_p[] = { 0x00000000ull, 0x00000000ull, 0x00000000ull,
-				0xFFFF0000ull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+static u32 nist_p521_p[] = { 0xFFFF0000ull, 0xFFFFFFFFull, 0xFFFFFFFFull,
 				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
 				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
 				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
 				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
 				0xFFFFFFFFull, 0x01FFFFFFull };
-static u32 nist_p521_n[] = { 0x00000000ull, 0x00000000ull, 0x00000000ull,
-				0x64090000ull, 0xB71E9138ull, 0x47AEBB6Full,
+static u32 nist_p521_n[] = { 0x64090000ull, 0xB71E9138ull, 0x47AEBB6Full,
 				0xC9B8899Cull, 0xA5D03BB5ull, 0x0148F709ull,
 				0x966B7FCCull, 0x8783BF2Full, 0xFFFA5186ull,
 				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
 				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
 				0xFFFFFFFFull, 0x01FFFFFFull };
-static u32 nist_p521_a[] = { 0x00000000ull, 0x00000000ull, 0x00000000ull,
-				0xFFFC0000ull, 0xFFFFFFFFull, 0xFFFFFFFFull,
+static u32 nist_p521_a[] = { 0xFFFC0000ull, 0xFFFFFFFFull, 0xFFFFFFFFull,
 				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
 				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
 				0xFFFFFFFFull, 0xFFFFFFFFull, 0xFFFFFFFFull,
@@ -232,7 +227,7 @@ static struct tegra_se_ecc_curve curve_p521 = {
 	.p = nist_p521_p,
 	.n = nist_p521_n,
 	.a = nist_p521_a,
-	.nbytes = 80,
+	.nbytes = 68,
 	.mode = SE_ELP_OP_MODE_ECC521,
 };
 

@@ -216,19 +216,20 @@ static void set_pmu_cmdline_args_secure_mode_v5(struct pmu_gk20a *pmu, u32 val)
 static void set_pmu_cmdline_args_falctracesize_v5(
 			struct pmu_gk20a *pmu, u32 size)
 {
-	pmu->args_v5.trace_buf.params |= (size & 0x0FFF);
+	/* set by surface describe */
 }
 
 static void set_pmu_cmdline_args_falctracedmabase_v5(struct pmu_gk20a *pmu)
 {
-	pmu->args_v5.trace_buf.address.lo = ((u32)pmu->trace_buf.gpu_va)/0x100;
-	pmu->args_v5.trace_buf.address.hi = 0;
+	struct gk20a *g = gk20a_from_pmu(pmu);
+
+	gk20a_pmu_surface_describe(g, &pmu->trace_buf, &pmu->args_v5.trace_buf);
 }
 
 static void set_pmu_cmdline_args_falctracedmaidx_v5(
 			struct pmu_gk20a *pmu, u32 idx)
 {
-	pmu->args_v5.trace_buf.params |= (idx << 24);
+	/* set by surface describe */
 }
 
 static u32 pmu_cmdline_size_v3(struct pmu_gk20a *pmu)
@@ -294,17 +295,31 @@ static bool find_hex_in_string(char *strings, struct gk20a *g, u32 *hex_pos)
 static void printtrace(struct pmu_gk20a *pmu)
 {
 	u32 i = 0, j = 0, k, l, m, count;
-	char *trace = pmu->trace_buf.cpu_va;
 	char part_str[40], buf[0x40];
-	u32 *trace1 = pmu->trace_buf.cpu_va;
 	struct gk20a *g = gk20a_from_pmu(pmu);
+	void *tracebuffer;
+	char *trace;
+	u32 *trace1;
+
+	/* allocate system memory to copy pmu trace buffer */
+	tracebuffer = kzalloc(GK20A_PMU_TRACE_BUFSIZE, GFP_KERNEL);
+	if (tracebuffer == NULL)
+		return;
+
+	/* read pmu traces into system memory buffer */
+	gk20a_mem_rd_n(g, &pmu->trace_buf,
+		       0, tracebuffer, GK20A_PMU_TRACE_BUFSIZE);
+
+	trace = (char *)tracebuffer;
+	trace1 = (u32 *)tracebuffer;
+
 	gk20a_err(dev_from_gk20a(g), "Dump pmutrace");
 	for (i = 0; i < GK20A_PMU_TRACE_BUFSIZE; i += 0x40) {
 		for (j = 0; j < 0x40; j++)
 			if (trace1[(i / 4) + j])
 				break;
 		if (j == 0x40)
-			return;
+			break;
 		count = scnprintf(buf, 0x40, "Index %x: ", trace1[(i / 4)]);
 		l = 0;
 		m = 0;
@@ -318,9 +333,10 @@ static void printtrace(struct pmu_gk20a *pmu)
 			l++;
 			m += k + 2;
 		}
-		count += scnprintf((buf + count), 0x40, "%s", (trace+i+20+m));
+		scnprintf((buf + count), 0x40, "%s", (trace+i+20+m));
 		gk20a_err(dev_from_gk20a(g), "%s", buf);
 	}
+	kfree(tracebuffer);
 }
 
 static void set_pmu_cmdline_args_falctracedmabase_v1(struct pmu_gk20a *pmu)
@@ -3177,13 +3193,6 @@ static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 		goto err_free_seq;
 	}
 
-	err = gk20a_gmmu_alloc_map_sys(vm, GK20A_PMU_TRACE_BUFSIZE,
-			&pmu->trace_buf);
-	if (err) {
-		gk20a_err(d, "failed to allocate trace memory\n");
-		goto err_free_seq_buf;
-	}
-
 	ptr = (u8 *)pmu->seq_buf.cpu_va;
 
 	/* TBD: remove this if ZBC save/restore is handled by PMU
@@ -3193,6 +3202,13 @@ static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	ptr[4] = 0; ptr[5] = 0; ptr[6] = 0; ptr[7] = 0;
 
 	pmu->seq_buf.size = GK20A_PMU_SEQ_BUF_SIZE;
+
+	err = gk20a_gmmu_alloc_map(vm, GK20A_PMU_TRACE_BUFSIZE,
+			&pmu->trace_buf);
+	if (err) {
+		gk20a_err(d, "failed to allocate pmu trace buffer\n");
+		goto err_free_seq_buf;
+	}
 
 	pmu->sw_ready = true;
 
@@ -5668,15 +5684,29 @@ static int falc_trace_show(struct seq_file *s, void *data)
 	struct gk20a *g = s->private;
 	struct pmu_gk20a *pmu = &g->pmu;
 	u32 i = 0, j = 0, k, l, m;
-	char *trace = pmu->trace_buf.cpu_va;
 	char part_str[40];
-	u32 *trace1 = pmu->trace_buf.cpu_va;
+	void *tracebuffer;
+	char *trace;
+	u32 *trace1;
+
+	/* allocate system memory to copy pmu trace buffer */
+	tracebuffer = kzalloc(GK20A_PMU_TRACE_BUFSIZE, GFP_KERNEL);
+	if (tracebuffer == NULL)
+		return -ENOMEM;
+
+	/* read pmu traces into system memory buffer */
+	gk20a_mem_rd_n(g, &pmu->trace_buf,
+		       0, tracebuffer, GK20A_PMU_TRACE_BUFSIZE);
+
+	trace = (char *)tracebuffer;
+	trace1 = (u32 *)tracebuffer;
+
 	for (i = 0; i < GK20A_PMU_TRACE_BUFSIZE; i += 0x40) {
 		for (j = 0; j < 0x40; j++)
 			if (trace1[(i / 4) + j])
 				break;
 		if (j == 0x40)
-			return 0;
+			break;
 		seq_printf(s, "Index %x: ", trace1[(i / 4)]);
 		l = 0;
 		m = 0;
@@ -5692,6 +5722,8 @@ static int falc_trace_show(struct seq_file *s, void *data)
 		}
 		seq_printf(s, "%s", (trace+i+20+m));
 	}
+
+	kfree(tracebuffer);
 	return 0;
 }
 

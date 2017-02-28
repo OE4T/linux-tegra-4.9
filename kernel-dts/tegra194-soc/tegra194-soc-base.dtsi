@@ -701,7 +701,10 @@
 		#gpio-cells = <2>;
 		interrupt-controller;
 		#interrupt-cells = <2>;
-		gpio-ranges = <&tegra_pinctrl TEGRA194_MAIN_GPIO_BASE(A) TEGRA_PIN_BASE(A) TEGRA194_MAIN_GPIO_RANGE(A, Z) >;
+		gpio-ranges =
+			<&tegra_pinctrl TEGRA194_MAIN_GPIO_BASE(A) TEGRA_PIN_BASE(A) TEGRA194_MAIN_GPIO_RANGE(A, A) >,
+			<&tegra_pinctrl TEGRA194_MAIN_GPIO_BASE(C) TEGRA_PIN_BASE(C) TEGRA194_MAIN_GPIO_RANGE(C, Z) >,
+			<&tegra_pinctrl TEGRA194_MAIN_GPIO_BASE(FF) TEGRA_PIN_BASE(FF) TEGRA194_MAIN_GPIO_RANGE(FF, GG) >;
 		status = "disabled";
 	};
 
@@ -717,7 +720,9 @@
 		#gpio-cells = <2>;
 		interrupt-controller;
 		#interrupt-cells = <2>;
-		gpio-ranges = <&tegra_pinctrl TEGRA194_AON_GPIO_BASE(AA) TEGRA_PIN_BASE(AA) TEGRA194_AON_GPIO_RANGE(AA, FF) >;
+		gpio-ranges =
+			<&tegra_pinctrl TEGRA194_AON_GPIO_BASE(B) TEGRA_PIN_BASE(B) TEGRA194_AON_GPIO_RANGE(B, B) >,
+			<&tegra_pinctrl TEGRA194_AON_GPIO_BASE(AA) TEGRA_PIN_BASE(AA) TEGRA194_AON_GPIO_RANGE(AA, EE) >;
 	};
 
 	tegra_tachometer: tachometer@39c0000 {

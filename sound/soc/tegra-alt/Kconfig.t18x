@@ -44,12 +44,6 @@ config SND_SOC_TEGRA186_XBAR_ALT
 	help
 	  Say Y or M if you want to add support for Tegra186 XBAR module.
 
-config SND_SOC_TEGRA186_AFC_ALT
-	tristate "Tegra186 AFC driver"
-	depends on SND_SOC_TEGRA_ALT && SND_SOC_TEGRA_ALT_186
-	help
-	  Say Y or M if you want to add support for Tegra186 AFC module.
-
 config SND_SOC_TEGRA_T186REF_ALT
 	tristate "SoC Audio support for T186Ref"
 	depends on SND_SOC_TEGRA_ALT
@@ -64,7 +58,7 @@ config SND_SOC_TEGRA_T186REF_ALT
 	select SND_SOC_TEGRA210_ADX_ALT
 	select SND_SOC_TEGRA210_MIXER_ALT
 	select SND_SOC_TEGRA210_SFC_ALT
-	select SND_SOC_TEGRA186_AFC_ALT
+	select SND_SOC_TEGRA210_AFC_ALT
 	select SND_SOC_TEGRA210_MVC_ALT
 	select SND_SOC_TEGRA210_OPE_ALT
 	select SND_SOC_TEGRA210_SPDIF_ALT
@@ -94,7 +88,7 @@ config SND_SOC_TEGRA_T186REF_MOBILE_ALT
         select SND_SOC_TEGRA210_ADX_ALT
         select SND_SOC_TEGRA210_MIXER_ALT
         select SND_SOC_TEGRA210_SFC_ALT
-        select SND_SOC_TEGRA186_AFC_ALT
+	select SND_SOC_TEGRA210_AFC_ALT
         select SND_SOC_TEGRA210_MVC_ALT
         select SND_SOC_TEGRA210_OPE_ALT
         select SND_SOC_TEGRA210_SPDIF_ALT

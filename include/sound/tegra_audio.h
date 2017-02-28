@@ -1,7 +1,7 @@
 /*
  * tegra_audio.h
  *
- * Copyright (c) 2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,6 +26,5 @@
 #include "ahub_unit_fpga_clock.h"
 #include "sound/soc/tegra-alt/ahub_unit_fpga_clock_t18x.h"
 #include "sound/soc/tegra-alt/tegra186_admaif_alt.h"
-#include "sound/soc/tegra-alt/tegra186_afc_alt.h"
 #include "sound/soc/tegra-alt/tegra186_xbar_alt.h"
 #endif

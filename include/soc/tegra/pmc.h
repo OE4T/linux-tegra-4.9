@@ -208,6 +208,10 @@ static inline int tegra_pmc_io_pad_get_voltage(const char *pad_name)
 }
 #endif
 
+int tegra_pmc_pwm_blink_enable(void);
+int tegra_pmc_pwm_blink_disable(void);
+int tegra_pmc_pwm_blink_config(int duty_ns, int period_ns);
+
 /* T210 USB2 SLEEPWALK APIs */
 struct tegra_utmi_pad_config {
 	u32 tctrl;

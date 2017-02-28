@@ -401,6 +401,8 @@ enum pmc_regs {
 	TEGRA_PMC_WAKE_STATUS,
 	TEGRA_PMC_WAKE_DELAY,
 	TEGRA_PMC_SW_WAKE_STATUS,
+	TEGRA_PMC_DPD_PADS_ORIDE,
+	TEGRA_PMC_BLINK_TIMER,
 	TEGRA_PMC_WAKE2_MASK,
 	TEGRA_PMC_WAKE2_LEVEL,
 	TEGRA_PMC_WAKE2_STATUS,
@@ -2800,6 +2802,54 @@ void tegra186_pmc_disable_nvcsi_brick_dpd(void)
 }
 EXPORT_SYMBOL(tegra186_pmc_disable_nvcsi_brick_dpd);
 
+#define TEGRA210_PMC_DPD_PADS_ORIDE_BLINK		BIT(20)
+#define TEGRA210_PMC_CTRL_BLINK_EN			BIT(7)
+int tegra_pmc_pwm_blink_enable(void)
+{
+	tegra_pmc_register_update(TEGRA_PMC_DPD_PADS_ORIDE,
+				  TEGRA210_PMC_DPD_PADS_ORIDE_BLINK,
+				  TEGRA210_PMC_DPD_PADS_ORIDE_BLINK);
+
+	tegra_pmc_register_update(TEGRA_PMC_CNTRL, TEGRA210_PMC_CTRL_BLINK_EN,
+				  TEGRA210_PMC_CTRL_BLINK_EN);
+	return 0;
+}
+EXPORT_SYMBOL(tegra_pmc_pwm_blink_enable);
+
+int tegra_pmc_pwm_blink_disable(void)
+{
+	tegra_pmc_register_update(TEGRA_PMC_CNTRL, TEGRA210_PMC_CTRL_BLINK_EN,
+				  0);
+
+	tegra_pmc_register_update(TEGRA_PMC_DPD_PADS_ORIDE,
+				  TEGRA210_PMC_DPD_PADS_ORIDE_BLINK, 0);
+	return 0;
+}
+EXPORT_SYMBOL(tegra_pmc_pwm_blink_disable);
+
+int tegra_pmc_pwm_blink_config(int duty_ns, int period_ns)
+{
+	int data_on;
+	int data_off;
+	u32 val;
+
+	/* 16 x 32768 Hz = 1000000000/(32768*16) = 488281ns */
+	data_on = (duty_ns - 30517) / 488281;
+	data_off = (period_ns - duty_ns - 30517) / 488281;
+
+	if (data_off > 0xFFFF)
+		data_off = 0xFFFF;
+
+	if (data_on > 0x7FFF)
+		data_on = 0x7FFF;
+
+	val = (data_off << 16) | BIT(15) | data_on;
+	tegra_pmc_writel(val, TEGRA_PMC_BLINK_TIMER);
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_pmc_pwm_blink_config);
+
 static int tegra_pmc_parse_dt(struct tegra_pmc *pmc, struct device_node *np)
 {
 	u32 value, values[2];
@@ -3511,6 +3561,8 @@ static const unsigned long tegra210_register_map[TEGRA_PMC_MAX_REG] = {
 	[TEGRA_PMC_WAKE_LEVEL]		=  0x10,
 	[TEGRA_PMC_WAKE_STATUS]		=  0x14,
 	[TEGRA_PMC_SW_WAKE_STATUS]	=  0x18,
+	[TEGRA_PMC_DPD_PADS_ORIDE]	=  0x1c,
+	[TEGRA_PMC_BLINK_TIMER]		=  0x40,
 	[TEGRA_PMC_WAKE_DELAY]		=  0xe0,
 	[TEGRA_PMC_WAKE2_MASK]		=  0x160,
 	[TEGRA_PMC_WAKE2_LEVEL]		=  0x164,

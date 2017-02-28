@@ -1451,33 +1451,49 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 	return err;
 }
 
-static int tegra_nvdisp_set_control(struct tegra_dc *dc)
+static int tegra_nvdisp_set_control_t18x(struct tegra_dc *dc)
 {
-	u32 protocol = nvdisp_sor_control_protocol_custom_f();
-	u32 reg      = nvdisp_sor_control_r();
-	int sor_num = tegra_dc_which_sor(dc);
+	u32 reg, protocol;
+	bool use_sor = false;
 
-	/* Set the protocol type in DT and use from there
-	 * Current setting are default ones.
-	 */
+	if ((dc->out->type == TEGRA_DC_OUT_DSI) ||
+	    (dc->out->type == TEGRA_DC_OUT_FAKE_DSIA) ||
+	    (dc->out->type == TEGRA_DC_OUT_FAKE_DSIB) ||
+	    (dc->out->type == TEGRA_DC_OUT_FAKE_DSI_GANGED)) {
 
-	if (dc->out->type == TEGRA_DC_OUT_HDMI)	{
-		protocol = nvdisp_sor1_control_protocol_tmdsa_f();
-		if (sor_num)
-			reg = nvdisp_sor1_control_r();
-		else
-			reg = nvdisp_sor_control_r();
-	} else if ((dc->out->type == TEGRA_DC_OUT_DP) ||
-		(dc->out->type == TEGRA_DC_OUT_NVSR_DP) ||
-		(dc->out->type == TEGRA_DC_OUT_FAKE_DP)) {
-		protocol = nvdisp_sor_control_protocol_dpa_f();
-		reg = nvdisp_sor_control_r();
-	} else if ((dc->out->type == TEGRA_DC_OUT_DSI) ||
-		(dc->out->type == TEGRA_DC_OUT_FAKE_DSIA) ||
-		(dc->out->type == TEGRA_DC_OUT_FAKE_DSIB) ||
-		(dc->out->type == TEGRA_DC_OUT_FAKE_DSI_GANGED)) {
 		protocol = nvdisp_dsi_control_protocol_dsia_f();
 		reg = nvdisp_dsi_control_r();
+	} else if (dc->out->type == TEGRA_DC_OUT_HDMI) {
+
+		/* sor1 in the function name is irrelevant */
+		protocol = nvdisp_sor1_control_protocol_tmdsa_f();
+		use_sor = true;
+	} else if ((dc->out->type == TEGRA_DC_OUT_DP) ||
+		   (dc->out->type == TEGRA_DC_OUT_NVSR_DP) ||
+		   (dc->out->type == TEGRA_DC_OUT_FAKE_DP)) {
+
+		/* sor in the function name is irrelevant */
+		protocol = nvdisp_sor_control_protocol_dpa_f();
+		use_sor = true;
+	} else {
+		dev_err(&dc->ndev->dev, "%s: unsupported out_type=%d\n",
+				__func__, dc->out->type);
+		return -EINVAL;
+	}
+
+	if (use_sor) {
+		switch (dc->out_ops->get_connector_instance(dc)) {
+		case 0:
+			reg = nvdisp_sor_control_r();
+			break;
+		case 1:
+			reg = nvdisp_sor1_control_r();
+			break;
+		default:
+			pr_err("%s: invalid sor_num:%d\n", __func__,
+				dc->out_ops->get_connector_instance(dc));
+			return -ENODEV;
+		}
 	}
 
 	tegra_dc_writel(dc, protocol, reg);
@@ -1487,6 +1503,7 @@ static int tegra_nvdisp_set_control(struct tegra_dc *dc)
 
 static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 {
+	int ret = 0;
 	u32 int_enable;
 	u32 int_mask;
 	u32 i, val;
@@ -1557,8 +1574,16 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 	/* set mode */
 	tegra_nvdisp_program_mode(dc, &dc->mode);
 
-	/*set display control */
-	tegra_nvdisp_set_control(dc);
+	if (tegra_dc_is_t18x())
+		ret = tegra_nvdisp_set_control_t18x(dc);
+	else if (tegra_dc_is_t19x())
+		ret = tegra_nvdisp_set_control_t19x(dc);
+
+	if (ret) {
+		dev_err(&dc->ndev->dev, "%s: error:%d in set_control\n",
+				__func__, ret);
+		goto exit;
+	}
 
 	tegra_nvdisp_set_color_control(dc);
 
@@ -1568,7 +1593,8 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 
 	tegra_dc_enable_general_act(dc);
 
-	return 0;
+exit:
+	return ret;
 }
 
 static int tegra_nvdisp_postcomp_init(struct tegra_dc *dc)
@@ -3640,6 +3666,27 @@ void reg_dump(struct tegra_dc *dc, void *data,
 
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
+}
+
+void tegra_dc_enable_sor_t18x(struct tegra_dc *dc, int sor_num, bool enable)
+{
+	u32 enb;
+	u32 reg_val = tegra_dc_readl(dc, nvdisp_win_options_r());
+
+	switch (sor_num) {
+	case 0:
+		enb = nvdisp_win_options_sor_set_sor_enable_f();
+		break;
+	case 1:
+		enb = nvdisp_win_options_sor1_set_sor1_enable_f();
+		break;
+	default:
+		pr_err("%s: invalid sor_num:%d\n", __func__, sor_num);
+		return;
+	}
+
+	reg_val = enable ? reg_val | enb : reg_val & ~enb;
+	tegra_dc_writel(dc, reg_val, nvdisp_win_options_r());
 }
 
 void tegra_dc_populate_t18x_hw_data(struct tegra_dc_hw_data *hw_data)

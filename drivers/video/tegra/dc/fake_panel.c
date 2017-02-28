@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <generated/mach-types.h>
+#include <iomap.h>
 #include "fake_panel.h"
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))

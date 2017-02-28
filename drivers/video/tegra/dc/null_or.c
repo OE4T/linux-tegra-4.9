@@ -15,6 +15,7 @@
  *
  */
 
+#include <iomap.h>
 #include <linux/kernel.h>
 #include <linux/version.h>
 #include <linux/of_irq.h> /*for INT_DISPLAY_GENERAL, INT_DPAUX*/
@@ -23,8 +24,6 @@
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "null_or.h"
-
-#include "../../../../arch/arm/mach-tegra/iomap.h"
 
 #if defined(CONFIG_ARCH_TEGRA_210_SOC) && (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
 #define INT_GIC_BASE                    0

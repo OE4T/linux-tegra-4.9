@@ -14,6 +14,9 @@
  *
  */
 
+#include <asm/uaccess.h>
+/* HACK! This needs to come from DT */
+#include <iomap.h>
 #include <linux/kernel.h>
 #include <linux/clk.h>
 #include <linux/moduleparam.h>
@@ -25,9 +28,6 @@
 #include "dc_priv.h"
 #include "dsi_regs.h"
 #include "dsi.h"
-#include <asm/uaccess.h>
-/* HACK! This needs to come from DT */
-#include "../../../../arch/arm/mach-tegra/iomap.h"
 
 #ifdef CONFIG_DEBUG_FS
 

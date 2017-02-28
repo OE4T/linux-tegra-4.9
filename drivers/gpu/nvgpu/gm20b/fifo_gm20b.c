@@ -171,4 +171,7 @@ void gm20b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.get_tsg_runlist_entry = gk20a_get_tsg_runlist_entry;
 	gops->fifo.get_ch_runlist_entry = gk20a_get_ch_runlist_entry;
 	gops->fifo.is_fault_engine_subid_gpc = gk20a_is_fault_engine_subid_gpc;
+	gops->fifo.dump_pbdma_status = gk20a_dump_pbdma_status;
+	gops->fifo.dump_eng_status = gk20a_dump_eng_status;
+	gops->fifo.dump_channel_status_ramfc = gk20a_dump_channel_status_ramfc;
 }

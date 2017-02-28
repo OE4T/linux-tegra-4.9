@@ -33,49 +33,6 @@
 
 unsigned int gk20a_debug_trace_cmdbuf;
 
-struct ch_state {
-	int pid;
-	int refs;
-	u32 inst_block[0];
-};
-
-static const char * const ccsr_chan_status_str[] = {
-	"idle",
-	"pending",
-	"pending_ctx_reload",
-	"pending_acquire",
-	"pending_acq_ctx_reload",
-	"on_pbdma",
-	"on_pbdma_and_eng",
-	"on_eng",
-	"on_eng_pending_acquire",
-	"on_eng_pending",
-	"on_pbdma_ctx_reload",
-	"on_pbdma_and_eng_ctx_reload",
-	"on_eng_ctx_reload",
-	"on_eng_pending_ctx_reload",
-	"on_eng_pending_acq_ctx_reload",
-};
-
-static const char * const chan_status_str[] = {
-	"invalid",
-	"valid",
-	"chsw_load",
-	"chsw_save",
-	"chsw_switch",
-};
-
-static const char * const ctx_status_str[] = {
-	"invalid",
-	"valid",
-	NULL,
-	NULL,
-	NULL,
-	"ctxsw_load",
-	"ctxsw_save",
-	"ctxsw_switch",
-};
-
 static inline void gk20a_debug_write_printk(void *ctx, const char *str,
 					    size_t len)
 {
@@ -100,136 +57,12 @@ void gk20a_debug_output(struct gk20a_debug_output *o,
 	o->fn(o->ctx, o->buf, len);
 }
 
-static void gk20a_debug_show_channel(struct gk20a *g,
-				     struct gk20a_debug_output *o,
-				     u32 hw_chid,
-				     struct ch_state *ch_state)
-{
-	u32 channel = gk20a_readl(g, ccsr_channel_r(hw_chid));
-	u32 status = ccsr_channel_status_v(channel);
-	u32 syncpointa, syncpointb;
-	u32 *inst_mem;
-	struct channel_gk20a *c = g->fifo.channel + hw_chid;
-	struct nvgpu_semaphore_int *hw_sema = NULL;
-
-	if (c->hw_sema)
-		hw_sema = c->hw_sema;
-
-	if (!ch_state)
-		return;
-
-	inst_mem = &ch_state->inst_block[0];
-
-	syncpointa = inst_mem[ram_fc_syncpointa_w()];
-	syncpointb = inst_mem[ram_fc_syncpointb_w()];
-
-	gk20a_debug_output(o, "%d-%s, pid %d, refs: %d: ", hw_chid,
-			dev_name(g->dev),
-			ch_state->pid,
-			ch_state->refs);
-	gk20a_debug_output(o, "%s in use %s %s\n",
-			ccsr_channel_enable_v(channel) ? "" : "not",
-			ccsr_chan_status_str[status],
-			ccsr_channel_busy_v(channel) ? "busy" : "not busy");
-	gk20a_debug_output(o, "TOP: %016llx PUT: %016llx GET: %016llx "
-			"FETCH: %016llx\nHEADER: %08x COUNT: %08x\n"
-			"SYNCPOINT %08x %08x SEMAPHORE %08x %08x %08x %08x\n",
-		(u64)inst_mem[ram_fc_pb_top_level_get_w()] +
-		((u64)inst_mem[ram_fc_pb_top_level_get_hi_w()] << 32ULL),
-		(u64)inst_mem[ram_fc_pb_put_w()] +
-		((u64)inst_mem[ram_fc_pb_put_hi_w()] << 32ULL),
-		(u64)inst_mem[ram_fc_pb_get_w()] +
-		((u64)inst_mem[ram_fc_pb_get_hi_w()] << 32ULL),
-		(u64)inst_mem[ram_fc_pb_fetch_w()] +
-		((u64)inst_mem[ram_fc_pb_fetch_hi_w()] << 32ULL),
-		inst_mem[ram_fc_pb_header_w()],
-		inst_mem[ram_fc_pb_count_w()],
-		syncpointa,
-		syncpointb,
-		inst_mem[ram_fc_semaphorea_w()],
-		inst_mem[ram_fc_semaphoreb_w()],
-		inst_mem[ram_fc_semaphorec_w()],
-		inst_mem[ram_fc_semaphored_w()]);
-	if (hw_sema)
-		gk20a_debug_output(o, "SEMA STATE: value: 0x%08x "
-				   "next_val: 0x%08x addr: 0x%010llx\n",
-				   readl(hw_sema->value),
-				   atomic_read(&hw_sema->next_value),
-				   nvgpu_hw_sema_addr(hw_sema));
-
-#ifdef CONFIG_TEGRA_GK20A
-	if ((pbdma_syncpointb_op_v(syncpointb) == pbdma_syncpointb_op_wait_v())
-		&& (pbdma_syncpointb_wait_switch_v(syncpointb) ==
-			pbdma_syncpointb_wait_switch_en_v()))
-		gk20a_debug_output(o, "%s on syncpt %u (%s) val %u\n",
-			(status == 3 || status == 8) ? "Waiting" : "Waited",
-			pbdma_syncpointb_syncpt_index_v(syncpointb),
-			nvhost_syncpt_get_name(g->host1x_dev,
-				pbdma_syncpointb_syncpt_index_v(syncpointb)),
-			pbdma_syncpointa_payload_v(syncpointa));
-#endif
-
-	gk20a_debug_output(o, "\n");
-}
-
-void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o)
+static void gk20a_debug_dump_all_channel_status_ramfc(struct gk20a *g,
+		 struct gk20a_debug_output *o)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	u32 chid;
-	unsigned int i;
-	u32 host_num_pbdma = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_PBDMA);
-	u32 host_num_engines = nvgpu_get_litter_value(g,
-					 GPU_LIT_HOST_NUM_ENGINES);
-
 	struct ch_state **ch_state;
-
-	for (i = 0; i < host_num_pbdma; i++) {
-		u32 status = gk20a_readl(g, fifo_pbdma_status_r(i));
-		u32 chan_status = fifo_pbdma_status_chan_status_v(status);
-
-		gk20a_debug_output(o, "%s pbdma %d: ", dev_name(g->dev), i);
-		gk20a_debug_output(o,
-				"id: %d (%s), next_id: %d (%s) status: %s\n",
-				fifo_pbdma_status_id_v(status),
-				fifo_pbdma_status_id_type_v(status) ?
-					"tsg" : "channel",
-				fifo_pbdma_status_next_id_v(status),
-				fifo_pbdma_status_next_id_type_v(status) ?
-					"tsg" : "channel",
-				chan_status_str[chan_status]);
-		gk20a_debug_output(o, "PUT: %016llx GET: %016llx "
-				"FETCH: %08x HEADER: %08x\n",
-			(u64)gk20a_readl(g, pbdma_put_r(i)) +
-			((u64)gk20a_readl(g, pbdma_put_hi_r(i)) << 32ULL),
-			(u64)gk20a_readl(g, pbdma_get_r(i)) +
-			((u64)gk20a_readl(g, pbdma_get_hi_r(i)) << 32ULL),
-			gk20a_readl(g, pbdma_gp_fetch_r(i)),
-			gk20a_readl(g, pbdma_pb_header_r(i)));
-	}
-	gk20a_debug_output(o, "\n");
-
-	for (i = 0; i < host_num_engines; i++) {
-		u32 status = gk20a_readl(g, fifo_engine_status_r(i));
-		u32 ctx_status = fifo_engine_status_ctx_status_v(status);
-
-		gk20a_debug_output(o, "%s eng %d: ", dev_name(g->dev), i);
-		gk20a_debug_output(o,
-				"id: %d (%s), next_id: %d (%s), ctx: %s ",
-				fifo_engine_status_id_v(status),
-				fifo_engine_status_id_type_v(status) ?
-					"tsg" : "channel",
-				fifo_engine_status_next_id_v(status),
-				fifo_engine_status_next_id_type_v(status) ?
-					"tsg" : "channel",
-				ctx_status_str[ctx_status]);
-
-		if (fifo_engine_status_faulted_v(status))
-			gk20a_debug_output(o, "faulted ");
-		if (fifo_engine_status_engine_v(status))
-			gk20a_debug_output(o, "busy ");
-		gk20a_debug_output(o, "\n");
-	}
-	gk20a_debug_output(o, "\n");
 
 	ch_state = kzalloc(sizeof(*ch_state)
 				 * f->num_channels, GFP_KERNEL);
@@ -265,11 +98,20 @@ void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o)
 	}
 	for (chid = 0; chid < f->num_channels; chid++) {
 		if (ch_state[chid]) {
-			gk20a_debug_show_channel(g, o, chid, ch_state[chid]);
+			g->ops.fifo.dump_channel_status_ramfc(g, o, chid,
+						 ch_state[chid]);
 			kfree(ch_state[chid]);
 		}
 	}
 	kfree(ch_state);
+}
+
+void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o)
+{
+	g->ops.fifo.dump_pbdma_status(g, o);
+	g->ops.fifo.dump_eng_status(g, o);
+
+	gk20a_debug_dump_all_channel_status_ramfc(g, o);
 }
 
 static int gk20a_gr_dump_regs(struct device *dev,

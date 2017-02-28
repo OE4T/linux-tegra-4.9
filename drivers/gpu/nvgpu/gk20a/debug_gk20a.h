@@ -1,7 +1,7 @@
 /*
  * GK20A Debug functionality
  *
- * Copyright (C) 2011-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (C) 2011-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -38,6 +38,4 @@ int gk20a_gr_debug_dump(struct device *pdev);
 void gk20a_debug_init(struct device *dev, const char *debugfs_symlink);
 void gk20a_init_debug_ops(struct gpu_ops *gops);
 void gk20a_debug_dump_device(void *dev);
-
-
 #endif

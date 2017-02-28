@@ -23,6 +23,7 @@
 
 #include "channel_gk20a.h"
 #include "tsg_gk20a.h"
+#include "debug_gk20a.h"
 
 #define MAX_RUNLIST_BUFFERS	2
 
@@ -202,6 +203,12 @@ static inline const char *gk20a_fifo_interleave_level_name(u32 interleave_level)
 	}
 }
 
+struct ch_state {
+	int pid;
+	int refs;
+	u32 inst_block[0];
+};
+
 int gk20a_init_fifo_support(struct gk20a *g);
 
 int gk20a_init_fifo_setup_hw(struct gk20a *g);
@@ -312,5 +319,16 @@ struct fifo_profile_gk20a *gk20a_fifo_profile_acquire(struct gk20a *g);
 void gk20a_fifo_profile_release(struct gk20a *g,
 	struct fifo_profile_gk20a *profile);
 #endif
+
+void gk20a_dump_channel_status_ramfc(struct gk20a *g,
+				     struct gk20a_debug_output *o,
+				     u32 hw_chid,
+				     struct ch_state *ch_state);
+void gk20a_dump_pbdma_status(struct gk20a *g,
+				 struct gk20a_debug_output *o);
+void gk20a_dump_eng_status(struct gk20a *g,
+				 struct gk20a_debug_output *o);
+const char *gk20a_decode_ccsr_chan_status(u32 index);
+const char *gk20a_decode_pbdma_chan_eng_ctx_status(u32 index);
 
 #endif /*__GR_GK20A_H__*/

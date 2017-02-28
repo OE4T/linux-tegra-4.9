@@ -3554,6 +3554,191 @@ void gk20a_fifo_debugfs_init(struct device *dev)
 }
 #endif /* CONFIG_DEBUG_FS */
 
+static const char * const ccsr_chan_status_str[] = {
+	"idle",
+	"pending",
+	"pending_ctx_reload",
+	"pending_acquire",
+	"pending_acq_ctx_reload",
+	"on_pbdma",
+	"on_pbdma_and_eng",
+	"on_eng",
+	"on_eng_pending_acquire",
+	"on_eng_pending",
+	"on_pbdma_ctx_reload",
+	"on_pbdma_and_eng_ctx_reload",
+	"on_eng_ctx_reload",
+	"on_eng_pending_ctx_reload",
+	"on_eng_pending_acq_ctx_reload",
+};
+
+const char * const pbdma_chan_eng_ctx_status_str[] = {
+	"invalid",
+	"valid",
+	"NA",
+	"NA",
+	"NA",
+	"load",
+	"save",
+	"switch",
+};
+
+static const char * const not_found_str[] = {
+	"NOT FOUND"
+};
+
+const char *gk20a_decode_ccsr_chan_status(u32 index)
+{
+	if (index >= ARRAY_SIZE(ccsr_chan_status_str))
+		return not_found_str[0];
+	else
+		return ccsr_chan_status_str[index];
+}
+
+const char *gk20a_decode_pbdma_chan_eng_ctx_status(u32 index)
+{
+	if (index >= ARRAY_SIZE(pbdma_chan_eng_ctx_status_str))
+		return not_found_str[0];
+	else
+		return pbdma_chan_eng_ctx_status_str[index];
+}
+
+void gk20a_dump_channel_status_ramfc(struct gk20a *g,
+				     struct gk20a_debug_output *o,
+				     u32 hw_chid,
+				     struct ch_state *ch_state)
+{
+	u32 channel = gk20a_readl(g, ccsr_channel_r(hw_chid));
+	u32 status = ccsr_channel_status_v(channel);
+	u32 syncpointa, syncpointb;
+	u32 *inst_mem;
+	struct channel_gk20a *c = g->fifo.channel + hw_chid;
+	struct nvgpu_semaphore_int *hw_sema = NULL;
+
+	if (c->hw_sema)
+		hw_sema = c->hw_sema;
+
+	if (!ch_state)
+		return;
+
+	inst_mem = &ch_state->inst_block[0];
+
+	syncpointa = inst_mem[ram_fc_syncpointa_w()];
+	syncpointb = inst_mem[ram_fc_syncpointb_w()];
+
+	gk20a_debug_output(o, "%d-%s, pid %d, refs: %d: ", hw_chid,
+			dev_name(g->dev),
+			ch_state->pid,
+			ch_state->refs);
+	gk20a_debug_output(o, "channel status: %s in use %s %s\n",
+			ccsr_channel_enable_v(channel) ? "" : "not",
+			gk20a_decode_ccsr_chan_status(status),
+			ccsr_channel_busy_v(channel) ? "busy" : "not busy");
+	gk20a_debug_output(o, "RAMFC : TOP: %016llx PUT: %016llx GET: %016llx "
+			"FETCH: %016llx\nHEADER: %08x COUNT: %08x\n"
+			"SYNCPOINT %08x %08x SEMAPHORE %08x %08x %08x %08x\n",
+		(u64)inst_mem[ram_fc_pb_top_level_get_w()] +
+		((u64)inst_mem[ram_fc_pb_top_level_get_hi_w()] << 32ULL),
+		(u64)inst_mem[ram_fc_pb_put_w()] +
+		((u64)inst_mem[ram_fc_pb_put_hi_w()] << 32ULL),
+		(u64)inst_mem[ram_fc_pb_get_w()] +
+		((u64)inst_mem[ram_fc_pb_get_hi_w()] << 32ULL),
+		(u64)inst_mem[ram_fc_pb_fetch_w()] +
+		((u64)inst_mem[ram_fc_pb_fetch_hi_w()] << 32ULL),
+		inst_mem[ram_fc_pb_header_w()],
+		inst_mem[ram_fc_pb_count_w()],
+		syncpointa,
+		syncpointb,
+		inst_mem[ram_fc_semaphorea_w()],
+		inst_mem[ram_fc_semaphoreb_w()],
+		inst_mem[ram_fc_semaphorec_w()],
+		inst_mem[ram_fc_semaphored_w()]);
+	if (hw_sema)
+		gk20a_debug_output(o, "SEMA STATE: value: 0x%08x "
+				   "next_val: 0x%08x addr: 0x%010llx\n",
+				   readl(hw_sema->value),
+				   atomic_read(&hw_sema->next_value),
+				   nvgpu_hw_sema_addr(hw_sema));
+
+#ifdef CONFIG_TEGRA_GK20A
+	if ((pbdma_syncpointb_op_v(syncpointb) == pbdma_syncpointb_op_wait_v())
+		&& (pbdma_syncpointb_wait_switch_v(syncpointb) ==
+			pbdma_syncpointb_wait_switch_en_v()))
+		gk20a_debug_output(o, "%s on syncpt %u (%s) val %u\n",
+			(status == 3 || status == 8) ? "Waiting" : "Waited",
+			pbdma_syncpointb_syncpt_index_v(syncpointb),
+			nvhost_syncpt_get_name(g->host1x_dev,
+				pbdma_syncpointb_syncpt_index_v(syncpointb)),
+			pbdma_syncpointa_payload_v(syncpointa));
+#endif
+
+	gk20a_debug_output(o, "\n");
+}
+
+void gk20a_dump_pbdma_status(struct gk20a *g,
+				 struct gk20a_debug_output *o)
+{
+	u32 i, host_num_pbdma;
+
+	host_num_pbdma = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_PBDMA);
+
+	for (i = 0; i < host_num_pbdma; i++) {
+		u32 status = gk20a_readl(g, fifo_pbdma_status_r(i));
+		u32 chan_status = fifo_pbdma_status_chan_status_v(status);
+
+		gk20a_debug_output(o, "%s pbdma %d: ", dev_name(g->dev), i);
+		gk20a_debug_output(o,
+				"id: %d (%s), next_id: %d (%s) chan status: %s\n",
+				fifo_pbdma_status_id_v(status),
+				fifo_pbdma_status_id_type_v(status) ?
+					"tsg" : "channel",
+				fifo_pbdma_status_next_id_v(status),
+				fifo_pbdma_status_next_id_type_v(status) ?
+					"tsg" : "channel",
+			gk20a_decode_pbdma_chan_eng_ctx_status(chan_status));
+		gk20a_debug_output(o, "PUT: %016llx GET: %016llx "
+				"FETCH: %08x HEADER: %08x\n",
+			(u64)gk20a_readl(g, pbdma_put_r(i)) +
+			((u64)gk20a_readl(g, pbdma_put_hi_r(i)) << 32ULL),
+			(u64)gk20a_readl(g, pbdma_get_r(i)) +
+			((u64)gk20a_readl(g, pbdma_get_hi_r(i)) << 32ULL),
+			gk20a_readl(g, pbdma_gp_fetch_r(i)),
+			gk20a_readl(g, pbdma_pb_header_r(i)));
+	}
+	gk20a_debug_output(o, "\n");
+}
+
+void gk20a_dump_eng_status(struct gk20a *g,
+				 struct gk20a_debug_output *o)
+{
+	u32 i, host_num_engines;
+
+	host_num_engines = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_ENGINES);
+
+	for (i = 0; i < host_num_engines; i++) {
+		u32 status = gk20a_readl(g, fifo_engine_status_r(i));
+		u32 ctx_status = fifo_engine_status_ctx_status_v(status);
+
+		gk20a_debug_output(o, "%s eng %d: ", dev_name(g->dev), i);
+		gk20a_debug_output(o,
+			"id: %d (%s), next_id: %d (%s), ctx status: %s ",
+			fifo_engine_status_id_v(status),
+			fifo_engine_status_id_type_v(status) ?
+				"tsg" : "channel",
+			fifo_engine_status_next_id_v(status),
+			fifo_engine_status_next_id_type_v(status) ?
+				"tsg" : "channel",
+			gk20a_decode_pbdma_chan_eng_ctx_status(ctx_status));
+
+		if (fifo_engine_status_faulted_v(status))
+			gk20a_debug_output(o, "faulted ");
+		if (fifo_engine_status_engine_v(status))
+			gk20a_debug_output(o, "busy ");
+		gk20a_debug_output(o, "\n");
+	}
+	gk20a_debug_output(o, "\n");
+}
+
 void gk20a_init_fifo(struct gpu_ops *gops)
 {
 	gk20a_init_channel(gops);
@@ -3578,4 +3763,7 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.get_tsg_runlist_entry = gk20a_get_tsg_runlist_entry;
 	gops->fifo.get_ch_runlist_entry = gk20a_get_ch_runlist_entry;
 	gops->fifo.is_fault_engine_subid_gpc = gk20a_is_fault_engine_subid_gpc;
+	gops->fifo.dump_pbdma_status = gk20a_dump_pbdma_status;
+	gops->fifo.dump_eng_status = gk20a_dump_eng_status;
+	gops->fifo.dump_channel_status_ramfc = gk20a_dump_channel_status_ramfc;
 }

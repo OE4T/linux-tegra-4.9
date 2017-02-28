@@ -438,6 +438,13 @@ struct gpu_ops {
 		void (*free_channel_ctx_header)(struct channel_gk20a *ch);
 		bool (*is_fault_engine_subid_gpc)(struct gk20a *g,
 					 u32 engine_subid);
+		void (*dump_pbdma_status)(struct gk20a *g,
+				struct gk20a_debug_output *o);
+		void (*dump_eng_status)(struct gk20a *g,
+				struct gk20a_debug_output *o);
+		void (*dump_channel_status_ramfc)(struct gk20a *g,
+				struct gk20a_debug_output *o, u32 hw_chid,
+				struct ch_state *ch_state);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/

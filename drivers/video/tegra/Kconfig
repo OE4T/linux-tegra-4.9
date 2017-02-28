@@ -4,6 +4,7 @@ trysource "drivers/video/tegra/nvmap/Kconfig.nvmap"
 
 trysource "../nvhost/drivers/video/tegra/Kconfig.nvhost"
 trysource "drivers/video/tegra/Kconfig.nvhost"
+
 if PLATFORM_TEGRA
 
 config TEGRA_GR_VIRTUALIZATION
@@ -15,3 +16,16 @@ config TEGRA_GR_VIRTUALIZATION
 	  drivers.
 
 endif
+
+trysource "../display/drivers/video/tegra/Kconfig.display"
+trysource "drivers/video/tegra/Kconfig.display"
+
+config TEGRA_DC
+	tristate "Tegra Display Contoller"
+	depends on (TEGRA_GRHOST || TEGRA_HOST1X) && I2C
+	select BACKLIGHT_CLASS_DEVICE
+	select FB_MODE_HELPERS
+	help
+	 Tegra display controller support.
+	 Enable this to access the Tegra display controller using either framebuffer
+	 console interface and a proprietary dc-ext interface or with ADF.

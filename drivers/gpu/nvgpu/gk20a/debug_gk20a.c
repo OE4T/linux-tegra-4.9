@@ -176,10 +176,13 @@ void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o)
 	struct fifo_gk20a *f = &g->fifo;
 	u32 chid;
 	unsigned int i;
+	u32 host_num_pbdma = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_PBDMA);
+	u32 host_num_engines = nvgpu_get_litter_value(g,
+					 GPU_LIT_HOST_NUM_ENGINES);
 
 	struct ch_state **ch_state;
 
-	for (i = 0; i < fifo_pbdma_status__size_1_v(); i++) {
+	for (i = 0; i < host_num_pbdma; i++) {
 		u32 status = gk20a_readl(g, fifo_pbdma_status_r(i));
 		u32 chan_status = fifo_pbdma_status_chan_status_v(status);
 
@@ -204,7 +207,7 @@ void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o)
 	}
 	gk20a_debug_output(o, "\n");
 
-	for (i = 0; i < fifo_engine_status__size_1_v(); i++) {
+	for (i = 0; i < host_num_engines; i++) {
 		u32 status = gk20a_readl(g, fifo_engine_status_r(i));
 		u32 ctx_status = fifo_engine_status_ctx_status_v(status);
 

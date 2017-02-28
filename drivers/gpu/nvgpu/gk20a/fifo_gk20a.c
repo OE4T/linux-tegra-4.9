@@ -3115,9 +3115,11 @@ bool gk20a_fifo_mmu_fault_pending(struct gk20a *g)
 
 bool gk20a_fifo_is_engine_busy(struct gk20a *g)
 {
-	unsigned int i;
+	u32 i, host_num_engines;
 
-	for (i = 0; i < fifo_engine_status__size_1_v(); i++) {
+	host_num_engines = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_ENGINES);
+
+	for (i = 0; i < host_num_engines; i++) {
 		u32 status = gk20a_readl(g, fifo_engine_status_r(i));
 		if (fifo_engine_status_engine_v(status) ==
 			fifo_engine_status_engine_busy_v())
@@ -3131,14 +3133,17 @@ int gk20a_fifo_wait_engine_idle(struct gk20a *g)
 	struct nvgpu_timeout timeout;
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
 	int ret = -ETIMEDOUT;
-	u32 i;
+	u32 i, host_num_engines;
 
 	gk20a_dbg_fn("");
+
+	host_num_engines =
+		 nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_ENGINES);
 
 	nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
 			   NVGPU_TIMER_CPU_TIMER);
 
-	for (i = 0; i < fifo_engine_status__size_1_v(); i++) {
+	for (i = 0; i < host_num_engines; i++) {
 		do {
 			u32 status = gk20a_readl(g, fifo_engine_status_r(i));
 			if (!fifo_engine_status_engine_v(status)) {

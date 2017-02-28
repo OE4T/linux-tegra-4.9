@@ -125,6 +125,8 @@ extern void tegra210_xusb_pll_hw_control_enable(void);
 extern void tegra210_xusb_pll_hw_sequence_start(void);
 extern void tegra210_sata_pll_hw_control_enable(void);
 extern void tegra210_sata_pll_hw_sequence_start(void);
+extern void tegra210_put_utmipll_in_iddq(void);
+extern void tegra210_put_utmipll_out_iddq(void);
 
 struct clk;
 static inline void tegra_periph_reset_deassert(struct clk *c) { }

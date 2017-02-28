@@ -182,7 +182,7 @@ static const struct pinctrl_ops tegra_dpaux_pinctrl_ops = {
 	.get_groups_count = tegra_dpaux_pinctrl_get_groups_count,
 	.get_group_name = tegra_dpaux_pinctrl_get_group_name,
 	.dt_node_to_map = pinconf_generic_dt_node_to_map_pin,
-	.dt_free_map = pinctrl_utils_dt_free_map,
+	.dt_free_map = pinctrl_utils_free_map,
 };
 
 static int tegra186_dpaux_get_functions_count(struct pinctrl_dev *pctldev)

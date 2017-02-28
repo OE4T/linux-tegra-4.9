@@ -129,7 +129,9 @@ int nvdisp_register_backlight_notifier(struct tegra_dc *dc)
 
 static int disp_fb_linear_set(void)
 {
+#if defined(CONFIG_OF_TEGRA_IOMMU_SMMU)
 	tegra_fb_linear_set(NULL);
+#endif
 	return 0;
 }
 arch_initcall(disp_fb_linear_set);

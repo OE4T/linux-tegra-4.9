@@ -1,7 +1,7 @@
 /*
  * tegra210_afc_alt.h - Definitions for Tegra210 AFC driver
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -75,26 +75,21 @@
 #define TEGRA210_AFC_EN_SHIFT				0
 #define TEGRA210_AFC_EN						(1 << TEGRA210_AFC_EN_SHIFT)
 
-#define TEGRA210_AFC_DEST_I2S_ID_SHIFT			24
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#define TEGRA_AFC_MODULE_SELECT_SHIFT			27
+#endif
+
+#define TEGRA210_AFC_DEST_MODULE_ID_SHIFT		24
 #define TEGRA210_AFC_FIFO_HIGH_THRESHOLD_SHIFT		16
 #define TEGRA210_AFC_FIFO_START_THRESHOLD_SHIFT		8
 
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
-#define XBAR_AFC_REG_OFFSET_DIVIDED_BY_4 0x34
-
-#define MAX_NUM_I2S 5
-#define MAX_NUM_AMX 2
-#define MASK_AMX_TX 0x300
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#define MAX_I2S_COUNT 6
+#else
+#define MAX_I2S_COUNT 5
+#endif
 
 #define AFC_CLK_PPM_DIFF 50
-
-#define CONFIG_AFC_DEST_PARAM(module_sel, module_id)\
-	(module_id << TEGRA210_AFC_DEST_I2S_ID_SHIFT)
-
-#define SET_AFC_DEST_PARAM(value)\
-	regmap_write(afc->regmap,\
-		TEGRA210_AFC_DEST_I2S_PARAMS, value)
-#endif
 
 struct tegra210_afc_soc_data {
 	void (*set_audio_cif)(struct regmap *map,
@@ -102,12 +97,25 @@ struct tegra210_afc_soc_data {
 			struct tegra210_xbar_cif_conf *conf);
 };
 
-struct tegra210_afc {
-	unsigned int destination_i2s;
-	struct regmap *regmap;
-	const struct tegra210_afc_soc_data *soc_data;
+enum tegra210_afc_threshold_type {
+	TH_DEFAULT,	/* default thresholds */
+	TH_NON_SFC,	/* no SFC is in the path */
+	TH_SFC,		/* when SFC is in the path */
+	TH_SFC_AMX,	/* when both SFC and AMX in the path */
+	TH_TYPE_COUNT,
 };
 
-unsigned int tegra210_afc_get_sfc_id(unsigned int afc_id);
+struct tegra210_afc {
+	struct regmap *regmap;
+	const struct tegra210_afc_soc_data *soc_data;
+
+	/* mandatory control to be set */
+	unsigned int dest_module_num;
+
+	unsigned int ppm_diff;
+	unsigned int src_burst;
+	unsigned int start_threshold;
+	unsigned int threshold_type;
+};
 
 #endif

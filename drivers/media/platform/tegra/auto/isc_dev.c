@@ -417,8 +417,8 @@ static int isc_dev_probe(struct i2c_client *client,
 	info->dev = &client->dev;
 
 	if (info->pdata)
-		strncpy(info->devname, info->pdata->drv_name,
-			sizeof(info->devname));
+		snprintf(info->devname, sizeof(info->devname),
+			"%s", info->pdata->drv_name);
 	else
 		snprintf(info->devname, sizeof(info->devname),
 			"isc-dev.%u.%02x", client->adapter->nr, client->addr);

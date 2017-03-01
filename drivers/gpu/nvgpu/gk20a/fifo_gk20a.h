@@ -313,6 +313,7 @@ void gk20a_get_ch_runlist_entry(struct channel_gk20a *ch, u32 *runlist);
 
 u32 gk20a_userd_gp_get(struct gk20a *g, struct channel_gk20a *c);
 void gk20a_userd_gp_put(struct gk20a *g, struct channel_gk20a *c);
+
 bool gk20a_is_fault_engine_subid_gpc(struct gk20a *g, u32 engine_subid);
 #ifdef CONFIG_DEBUG_FS
 struct fifo_profile_gk20a *gk20a_fifo_profile_acquire(struct gk20a *g);
@@ -332,5 +333,7 @@ const char *gk20a_decode_ccsr_chan_status(u32 index);
 const char *gk20a_decode_pbdma_chan_eng_ctx_status(u32 index);
 
 struct channel_gk20a *gk20a_refch_from_inst_ptr(struct gk20a *g, u64 inst_ptr);
+
+u32 gk20a_fifo_intr_0_error_mask(struct gk20a *g);
 
 #endif /*__GR_GK20A_H__*/

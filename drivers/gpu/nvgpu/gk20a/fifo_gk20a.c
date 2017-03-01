@@ -725,6 +725,33 @@ clean_up_runlist:
 
 #define GRFIFO_TIMEOUT_CHECK_PERIOD_US 100000
 
+u32 gk20a_fifo_intr_0_error_mask(struct gk20a *g)
+{
+	u32 intr_0_error_mask =
+		fifo_intr_0_bind_error_pending_f() |
+		fifo_intr_0_sched_error_pending_f() |
+		fifo_intr_0_chsw_error_pending_f() |
+		fifo_intr_0_fb_flush_timeout_pending_f() |
+		fifo_intr_0_dropped_mmu_fault_pending_f() |
+		fifo_intr_0_mmu_fault_pending_f() |
+		fifo_intr_0_lb_error_pending_f() |
+		fifo_intr_0_pio_error_pending_f();
+
+	return intr_0_error_mask;
+}
+
+static u32 gk20a_fifo_intr_0_en_mask(struct gk20a *g)
+{
+	u32 intr_0_en_mask;
+
+	intr_0_en_mask = g->ops.fifo.intr_0_error_mask(g);
+
+	intr_0_en_mask |= fifo_intr_0_runlist_event_pending_f() |
+				 fifo_intr_0_pbdma_intr_pending_f();
+
+	return intr_0_en_mask;
+}
+
 int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 {
 	u32 intr_stall;
@@ -756,7 +783,7 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 
 	/* enable pfifo interrupt */
 	gk20a_writel(g, fifo_intr_0_r(), 0xFFFFFFFF);
-	gk20a_writel(g, fifo_intr_en_0_r(), 0x7FFFFFFF);
+	gk20a_writel(g, fifo_intr_en_0_r(), gk20a_fifo_intr_0_en_mask(g));
 	gk20a_writel(g, fifo_intr_en_1_r(), 0x80000000);
 
 	/* enable pbdma interrupt */
@@ -2128,8 +2155,9 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 	}
 
 	if (fifo_intr & fifo_intr_0_mmu_fault_pending_f()) {
-		print_channel_reset_log =
-			gk20a_fifo_handle_mmu_fault(g, 0, ~(u32)0, false);
+		print_channel_reset_log |=
+			gk20a_fifo_handle_mmu_fault(g, 0,
+					 ~(u32)0, false);
 		handled |= fifo_intr_0_mmu_fault_pending_f();
 	}
 
@@ -2355,18 +2383,11 @@ static u32 fifo_pbdma_isr(struct gk20a *g, u32 fifo_intr)
 
 void gk20a_fifo_isr(struct gk20a *g)
 {
-	u32 error_intr_mask =
-		fifo_intr_0_bind_error_pending_f() |
-		fifo_intr_0_sched_error_pending_f() |
-		fifo_intr_0_chsw_error_pending_f() |
-		fifo_intr_0_fb_flush_timeout_pending_f() |
-		fifo_intr_0_dropped_mmu_fault_pending_f() |
-		fifo_intr_0_mmu_fault_pending_f() |
-		fifo_intr_0_lb_error_pending_f() |
-		fifo_intr_0_pio_error_pending_f();
-
-	u32 fifo_intr = gk20a_readl(g, fifo_intr_0_r());
+	u32 error_intr_mask;
 	u32 clear_intr = 0;
+	u32 fifo_intr = gk20a_readl(g, fifo_intr_0_r());
+
+	error_intr_mask = g->ops.fifo.intr_0_error_mask(g);
 
 	if (g->fifo.sw_ready) {
 		/* note we're not actually in an "isr", but rather
@@ -3780,4 +3801,5 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.dump_pbdma_status = gk20a_dump_pbdma_status;
 	gops->fifo.dump_eng_status = gk20a_dump_eng_status;
 	gops->fifo.dump_channel_status_ramfc = gk20a_dump_channel_status_ramfc;
+	gops->fifo.intr_0_error_mask = gk20a_fifo_intr_0_error_mask;
 }

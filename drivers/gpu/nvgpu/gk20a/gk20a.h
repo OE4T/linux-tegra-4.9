@@ -450,6 +450,7 @@ struct gpu_ops {
 		void (*dump_channel_status_ramfc)(struct gk20a *g,
 				struct gk20a_debug_output *o, u32 hw_chid,
 				struct ch_state *ch_state);
+		u32 (*intr_0_error_mask)(struct gk20a *g);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/

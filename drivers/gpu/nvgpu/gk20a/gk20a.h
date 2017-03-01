@@ -417,6 +417,7 @@ struct gpu_ops {
 		void (*device_info_data_parse)(struct gk20a *g,
 					u32 table_entry, u32 *inst_id,
 					u32 *pri_base, u32 *fault_id);
+		u32 (*device_info_fault_id)(u32 table_entry);
 		int (*tsg_bind_channel)(struct tsg_gk20a *tsg,
 				struct channel_gk20a *ch);
 		int (*tsg_unbind_channel)(struct channel_gk20a *ch);

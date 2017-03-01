@@ -1,7 +1,7 @@
 /*
  * GP10B fifo
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -217,11 +217,13 @@ static void gp10b_device_info_data_parse(struct gk20a *g, u32 table_entry,
 			*pri_base =
 			    (top_device_info_data_pri_base_v(table_entry)
 			    << top_device_info_data_pri_base_align_v());
+			gk20a_dbg_info("device info: pri_base: %d", *pri_base);
 		}
 		if (fault_id && (top_device_info_data_fault_id_v(table_entry) ==
 		    top_device_info_data_fault_id_valid_v())) {
 			*fault_id =
-			     top_device_info_data_fault_id_enum_v(table_entry);
+				 g->ops.fifo.device_info_fault_id(table_entry);
+			gk20a_dbg_info("device info: fault_id: %d", *fault_id);
 		}
 	} else
 		gk20a_err(g->dev, "unknown device_info_data %d",
@@ -237,4 +239,5 @@ void gp10b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.engine_enum_from_type = gp10b_fifo_engine_enum_from_type;
 	gops->fifo.device_info_data_parse = gp10b_device_info_data_parse;
 	gops->fifo.eng_runlist_base_size = fifo_eng_runlist_base__size_1_v;
+	gops->fifo.device_info_fault_id = top_device_info_data_fault_id_enum_v;
 }

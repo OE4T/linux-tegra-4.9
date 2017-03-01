@@ -165,7 +165,6 @@ struct nvhost_device_data t19_host1x_info = {
 		{"host1x", UINT_MAX},
 		{"actmon", UINT_MAX}
 	},
-	NVHOST_MODULE_NO_POWERGATE_ID,
 	.autosuspend_delay      = 50,
 	.private_data		= &host1x04_info,
 	.finalize_poweron	= nvhost_host1x_finalize_poweron,
@@ -192,7 +191,6 @@ struct nvhost_device_data t19_host1xb_info = {
 		{"host1x", UINT_MAX},
 		{"actmon", UINT_MAX}
 	},
-	NVHOST_MODULE_NO_POWERGATE_ID,
 	.private_data		= &host1xb04_info,
 };
 
@@ -365,7 +363,6 @@ struct nvhost_device_data t19_tsec_info = {
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
 	},
-	NVHOST_MODULE_NO_POWERGATE_ID,
 	.autosuspend_delay      = 500,
 	.keepalive		= true,
 	.moduleid		= NVHOST_MODULE_TSEC,
@@ -391,7 +388,6 @@ struct nvhost_device_data t19_tsecb_info = {
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
 	},
-	NVHOST_MODULE_NO_POWERGATE_ID,
 	.autosuspend_delay      = 500,
 	.keepalive		= true,
 	.poweron_reset		= true,

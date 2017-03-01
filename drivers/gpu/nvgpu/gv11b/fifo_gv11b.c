@@ -25,6 +25,7 @@
 #include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_ccsr_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_usermode_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_top_gv11b.h>
 
 #include "fifo_gv11b.h"
 #include "subctx_gv11b.h"
@@ -232,4 +233,5 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.unbind_channel = channel_gv11b_unbind;
 	gops->fifo.eng_runlist_base_size = fifo_eng_runlist_base__size_1_v;
 	gops->fifo.free_channel_ctx_header = gv11b_free_subctx_header;
+	gops->fifo.device_info_fault_id = top_device_info_data_fault_id_enum_v;
 }

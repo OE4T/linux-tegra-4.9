@@ -632,7 +632,6 @@
 		interrupts = <0 265 0x04
 				0 263 0x04>;
 
-		power-domains = <&host1x_pd>;
 		wakeup_capable;
 		resets = <&tegra_car TEGRA186_RESET_HOST1X>;
 		clocks = <&tegra_car TEGRA186_CLK_HOST1X>,
@@ -714,7 +713,7 @@
 
 		nvcsi@150c0000 {
 			compatible = "nvidia,tegra186-nvcsi";
-			power-domains = <&ve_pd>;
+			power-domains = <&bpmp TEGRA186_POWER_DOMAIN_VE>;
 			reg = <0x0 0x150c0000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_NVCSI>;
 			clocks = <&tegra_car TEGRA186_CLK_NVCSI>,
@@ -732,7 +731,7 @@
 
 		tegra_vi: vi@15700000 {
 			compatible = "nvidia,tegra186-vi";
-			power-domains = <&ve_pd>;
+			power-domains = <&bpmp TEGRA186_POWER_DOMAIN_VE>;
 			reg = <0x0 0x15700000 0x0 0x00100000>;
 			interrupts = <0 201 0x04
 				      0 202 0x04
@@ -750,7 +749,7 @@
 
 		isp@15600000 {
 			compatible = "nvidia,tegra186-isp";
-			power-domains = <&ispa_pd>;
+			power-domains = <&bpmp TEGRA186_POWER_DOMAIN_ISPA>;
 			reg = <0x0 0x15600000 0x0 0x00040000>;
 			interrupts = <0 205 0x04>;
 			resets = <&tegra_car TEGRA186_RESET_ISP>;
@@ -912,7 +911,7 @@
 
 		vic@15340000 {
 			compatible = "nvidia,tegra186-vic";
-			power-domains = <&vic03_pd>;
+			power-domains = <&bpmp TEGRA186_POWER_DOMAIN_VIC>;
 			reg = <0x0 0x15340000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_VIC>;
 			clocks = <&tegra_car TEGRA186_CLK_VIC>;
@@ -924,7 +923,7 @@
 
 		nvenc@154c0000 {
 			compatible = "nvidia,tegra186-nvenc";
-			power-domains = <&msenc_pd>;
+			power-domains = <&bpmp TEGRA186_POWER_DOMAIN_MPE>;
 			reg = <0x0 0x154c0000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_NVENC>;
 			clocks = <&tegra_car TEGRA186_CLK_NVENC>;
@@ -936,7 +935,7 @@
 
 		nvdec@15480000 {
 			compatible = "nvidia,tegra186-nvdec";
-			power-domains = <&nvdec_pd>;
+			power-domains = <&bpmp TEGRA186_POWER_DOMAIN_NVDEC>;
 			reg = <0x0 0x15480000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_NVDEC>;
 			clocks = <&tegra_car TEGRA186_CLK_NVDEC>,
@@ -949,7 +948,7 @@
 
 		nvjpg@15380000 {
 			compatible = "nvidia,tegra186-nvjpg";
-			power-domains = <&nvjpg_pd>;
+			power-domains = <&bpmp TEGRA186_POWER_DOMAIN_NVJPG>;
 			reg = <0x0 0x15380000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_NVJPG>;
 			clocks = <&tegra_car TEGRA186_CLK_NVJPG>;
@@ -962,7 +961,6 @@
 
 		tsec@15500000 {
 			compatible = "nvidia,tegra186-tsec";
-			power-domains = <&tsec_pd>;
 			reg = <0x0 0x15500000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_TSEC>;
 			clocks = <&tegra_car TEGRA186_CLK_TSEC>;
@@ -974,7 +972,6 @@
 
 		tsecb@15100000 {
 			compatible = "nvidia,tegra186-tsec";
-			power-domains = <&tsec_pd>;
 			reg = <0x0 0x15100000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_TSECB>;
 			clocks = <&tegra_car TEGRA186_CLK_TSECB>;
@@ -1091,7 +1088,6 @@
 
 		se@15810000 {
 			compatible = "nvidia,tegra186-se1-nvhost";
-			power-domains = <&se_pd>;
 			reg = <0x0 0x15810000 0x0 0x10000>;
 			supported-algos = "drbg";
 			opcode_addr = <0x204>;
@@ -1105,7 +1101,6 @@
 
 		se@15820000 {
 			compatible = "nvidia,tegra186-se2-nvhost";
-			power-domains = <&se_pd>;
 			reg = <0x0 0x15820000 0x0 0x10000>;
 			supported-algos = "aes", "cmac";
 			opcode_addr = <0x404>;
@@ -1119,7 +1114,6 @@
 
 		se@15830000 {
 			compatible = "nvidia,tegra186-se3-nvhost";
-			power-domains = <&se_pd>;
 			reg = <0x0 0x15830000 0x0 0x10000>;
 			supported-algos = "rsa";
 			opcode_addr = <0x604>;
@@ -1133,7 +1127,6 @@
 
 		se@15840000 {
 			compatible = "nvidia,tegra186-se4-nvhost";
-			power-domains = <&se_pd>;
 			reg = <0x0 0x15840000 0x0 0x10000>;
 			supported-algos = "sha";
 			opcode_addr = <0x104>;
@@ -1387,7 +1380,7 @@
 		status = "disabled";
 	};
 
-	bpmp {
+	bpmp: bpmp {
 		compatible = "nvidia,tegra186-bpmp";
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_BPMP>;
@@ -1395,6 +1388,8 @@
 		      <0x0 0x3004e000 0x0 0x00001000>,
 		      <0x0 0x3004f000 0x0 0x00001000>;
 		status = "disabled";
+
+		#power-domain-cells = <1>;
 
 		bpmpthermal: bpmpthermal {
 			compatible = "nvidia,tegra186-bpmp-thermal";

@@ -26,6 +26,7 @@
 #include <nvgpu/hw/gv11b/hw_ccsr_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_usermode_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_top_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_gmmu_gv11b.h>
 
 #include "fifo_gv11b.h"
 #include "subctx_gv11b.h"
@@ -217,6 +218,11 @@ static u32 gv11b_fifo_get_num_fifos(struct gk20a *g)
 	return ccsr_channel__size_1_v();
 }
 
+static bool gv11b_is_fault_engine_subid_gpc(struct gk20a *g, u32 engine_subid)
+{
+	return (engine_subid == gmmu_fault_client_type_gpc_v());
+}
+
 void gv11b_init_fifo(struct gpu_ops *gops)
 {
 	gp10b_init_fifo(gops);
@@ -234,4 +240,5 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.eng_runlist_base_size = fifo_eng_runlist_base__size_1_v;
 	gops->fifo.free_channel_ctx_header = gv11b_free_subctx_header;
 	gops->fifo.device_info_fault_id = top_device_info_data_fault_id_enum_v;
+	gops->fifo.is_fault_engine_subid_gpc = gv11b_is_fault_engine_subid_gpc;
 }

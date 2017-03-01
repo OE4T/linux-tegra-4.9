@@ -241,4 +241,5 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.free_channel_ctx_header = gv11b_free_subctx_header;
 	gops->fifo.device_info_fault_id = top_device_info_data_fault_id_enum_v;
 	gops->fifo.is_fault_engine_subid_gpc = gv11b_is_fault_engine_subid_gpc;
+	gops->fifo.trigger_mmu_fault = NULL;
 }

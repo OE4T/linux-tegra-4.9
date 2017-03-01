@@ -829,7 +829,7 @@ static void pva_task_update(void *priv, int nr_completed)
 	nvhost_queue_put(queue);
 }
 
-void pva_queue_dump(struct nvhost_queue *queue, struct seq_file *s)
+static void pva_queue_dump(struct nvhost_queue *queue, struct seq_file *s)
 {
 	struct pva_submit_task *task;
 	int i = 0;

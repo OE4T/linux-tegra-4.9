@@ -628,36 +628,33 @@ static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 		v4l2_subdev_call(chan->subdev_on_csi, video,
 				g_frame_interval, &fie);
 	if (on) {
-		/**
-		 * TODO: use real sensor pixelrate
-		 * See PowerService code
-		 */
-		request_pixelrate = (long long)(chan->format.width
+		/* for PG, using default frequence */
+		if (chan->pg_mode) {
+			csi_freq = DEFAULT_CSI_FREQ;
+			request_pixelrate = csi_freq * NUM_PPC;
+		} else {
+			/**
+			 * TODO: use real sensor pixelrate
+			 * See PowerService code
+			 */
+			request_pixelrate = (long long)(chan->format.width
 				* chan->format.height
 				* fie.interval.denominator / 100)
 				* VI_CSI_CLK_SCALE;
-		/* for PG, get csi frequency from nvhost */
-		if (chan->pg_mode) {
-			ret = nvhost_module_get_rate(
-					chan->vi->csi->pdev, &csi_freq, 0);
-			csi_freq = ret ? DEFAULT_CSI_FREQ : csi_freq;
-		} else
-			/* Use default csi4 frequency for t186 for now
-			 * We can't get the frequency from nvhost because
-			 * vi4 does not has access to csi4
-			 */
-			csi_freq = DEFAULT_CSI_FREQ;
+			csi_freq = ((long long)chan->format.width
+				* chan->format.height
+				* fie.interval.denominator) / NUM_PPC;
+		}
 
 		/* VI clk should be slightly faster than CSI clk*/
 		ret = nvhost_module_set_rate(chan->vi->ndev, &chan->video,
-				max(request_pixelrate,
-				csi_freq * VI_CSI_CLK_SCALE * NUM_PPC / 100),
-				0, NVHOST_PIXELRATE);
+				request_pixelrate, 0, NVHOST_PIXELRATE);
 		if (ret) {
 			dev_err(chan->vi->dev, "Fail to update vi clk\n");
 			return ret;
 		}
 	} else {
+		csi_freq = DEFAULT_CSI_FREQ;
 		ret = nvhost_module_set_rate(chan->vi->ndev, &chan->video, 0, 0,
 				NVHOST_PIXELRATE);
 		if (ret) {
@@ -665,9 +662,12 @@ static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 			return ret;
 		}
 	}
-
-	chan->requested_kbyteps = (on > 0 ? 1 : -1) *
-		((long long)(chan->format.width * chan->format.height
+	if (chan->pg_mode)
+		chan->requested_kbyteps = (on > 0 ? 1 : -1) *
+			((long long)csi_freq * BPP_MEM * 110 / 100) / 1000;
+	else
+		chan->requested_kbyteps = (on > 0 ? 1 : -1) *
+		(((long long) chan->format.width * chan->format.height
 		* fie.interval.denominator * BPP_MEM) * 115 / 100) / 1000;
 
 	mutex_lock(&chan->vi->bw_update_lock);
@@ -720,14 +720,16 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	/* disable override for vi mode */
 	override_ctrl = v4l2_ctrl_find(
 		&chan->ctrl_handler, V4L2_CID_OVERRIDE_ENABLE);
-	if (override_ctrl) {
-		ret = v4l2_ctrl_s_ctrl(override_ctrl, false);
-		if (ret < 0)
+	if (!chan->pg_mode) {
+		if (override_ctrl) {
+			ret = v4l2_ctrl_s_ctrl(override_ctrl, false);
+			if (ret < 0)
+				dev_err(&chan->video.dev,
+					"failed to disable override control\n");
+		} else
 			dev_err(&chan->video.dev,
-				"failed to disable override control\n");
-	} else
-		dev_err(&chan->video.dev,
-			"No override control\n");
+				"No override control\n");
+	}
 
 	/* Update clock and bandwidth based on the format */
 	ret = tegra_channel_update_clknbw(chan, 1);

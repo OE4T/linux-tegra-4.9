@@ -226,31 +226,31 @@ static void csi4_stream_check_status(
 	int status = 0;
 
 	dev_dbg(csi->dev, "%s\n", __func__);
-
-	status = csi4_stream_read(chan, port_num, ERROR_STATUS2VI_VC0);
-	if (status)
-		dev_err(csi->dev,
+	if (!chan->pg_mode) {
+		status = csi4_stream_read(chan, port_num, ERROR_STATUS2VI_VC0);
+		if (status)
+			dev_err(csi->dev,
 				"%s (%d) ERROR_STATUS2VI_VC0 = 0x%08x\n",
 				__func__, port_num, status);
 
-	status = csi4_stream_read(chan, port_num, ERROR_STATUS2VI_VC1);
-	if (status)
-		dev_err(csi->dev,
+		status = csi4_stream_read(chan, port_num, ERROR_STATUS2VI_VC1);
+		if (status)
+			dev_err(csi->dev,
 				"%s (%d) ERROR_STATUS2VI_VC1 = 0x%08x\n",
 				__func__, port_num, status);
 
-	status = csi4_stream_read(chan, port_num, ERROR_STATUS2VI_VC2);
-	if (status)
-		dev_err(csi->dev,
+		status = csi4_stream_read(chan, port_num, ERROR_STATUS2VI_VC2);
+		if (status)
+			dev_err(csi->dev,
 				"%s (%d) ERROR_STATUS2VI_VC2 = 0x%08x\n",
 				__func__, port_num, status);
 
-	status = csi4_stream_read(chan, port_num, ERROR_STATUS2VI_VC3);
-	if (status)
-		dev_err(csi->dev,
+		status = csi4_stream_read(chan, port_num, ERROR_STATUS2VI_VC3);
+		if (status)
+			dev_err(csi->dev,
 				"%s (%d) ERROR_STATUS2VI_VC2 = 0x%08x\n",
 				__func__, port_num, status);
-
+	}
 	status = csi4_stream_read(chan, port_num, INTR_STATUS);
 	if (status)
 		dev_err(csi->dev,

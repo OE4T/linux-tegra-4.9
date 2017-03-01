@@ -1,7 +1,7 @@
 /*
  * tegra210_afc_alt.c - Tegra210 AFC driver
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -60,6 +60,15 @@ static const struct reg_default tegra210_afc_reg_defaults[] = {
 	{ TEGRA210_AFC_LCOEF_2_4_2, 0x00004c07},
 };
 
+static void tegra210_afc_init(struct tegra210_afc *afc)
+{
+	afc->ppm_diff = AFC_CLK_PPM_DIFF;
+	afc->threshold_type = TH_DEFAULT;
+	afc->src_burst = 0;
+	afc->start_threshold = 0;
+	afc->dest_module_num = 0;
+}
+
 static int tegra210_afc_runtime_suspend(struct device *dev)
 {
 	struct tegra210_afc *afc = dev_get_drvdata(dev);
@@ -96,80 +105,195 @@ static int tegra210_afc_suspend(struct device *dev)
 }
 #endif
 
-static void tegra210_afc_set_ppm_diff(struct tegra210_afc *afc,
-			unsigned int ppm_diff)
+static int tegra210_afc_controls_get(struct snd_kcontrol *kctl,
+	struct snd_ctl_elem_value *uctl)
 {
-	regmap_update_bits(afc->regmap,
-		TEGRA210_AFC_CLK_PPM_DIFF, 0xFFFF, ppm_diff);
-}
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kctl);
+	struct tegra210_afc *afc = snd_soc_codec_get_drvdata(codec);
 
-/* returns the id if SFC is connected along the AFC src path */
-unsigned int tegra210_afc_get_sfc_id(unsigned int afc_id)
-{
-	unsigned int reg, val = 0;
+	if (strstr(kctl->id.name, "ppm diff"))
+		uctl->value.integer.value[0] = afc->ppm_diff;
+	else if (strstr(kctl->id.name, "src burst"))
+		uctl->value.integer.value[0] = afc->src_burst;
+	else if (strstr(kctl->id.name, "start threshold"))
+		uctl->value.integer.value[0] = afc->start_threshold;
+	else if (strstr(kctl->id.name, "threshold type"))
+		uctl->value.integer.value[0] = afc->threshold_type;
+	else if (strstr(kctl->id.name, "dest module name"))
+		uctl->value.integer.value[0] = afc->dest_module_num;
 
-	reg = TEGRA210_XBAR_PART0_RX +
-		TEGRA210_XBAR_RX_STRIDE *
-		(afc_id + XBAR_AFC_REG_OFFSET_DIVIDED_BY_4);
-
-	tegra210_xbar_read_reg(reg, &val);
-	val = val >> 24;
-
-	return val;
-}
-EXPORT_SYMBOL_GPL(tegra210_afc_get_sfc_id);
-
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
-/* returns the destination I2S id connected along the AFC path */
-static unsigned int tegra210_afc_get_i2s_id(unsigned int afc_id)
-{
-	unsigned int i2s_reg, i2s_val, amx_reg, amx_val, i, j;
-
-	for (i = 1; i < MAX_NUM_I2S; i++) {
-		i2s_val = 0;
-		i2s_reg = TEGRA210_XBAR_PART1_RX +
-			TEGRA210_XBAR_RX_STRIDE * (i + 0xF);
-		tegra210_xbar_read_reg(i2s_reg, &i2s_val);
-		if ((i2s_val >> 24) & (1 << afc_id)) {
-			return i;
-		} else if (i2s_val & MASK_AMX_TX) {
-			for (j = 1; j < 9; j++) { /* AMX1/2 */
-				amx_val = 0;
-				amx_reg = TEGRA210_XBAR_PART1_RX +
-					TEGRA210_XBAR_RX_STRIDE * (j + 0x4F);
-				tegra210_xbar_read_reg(amx_reg, &amx_val);
-				if ((amx_val >> 24) & (1 << afc_id))
-					return i;
-			}
-		}
-	}
 	return 0;
 }
+
+static int tegra210_afc_controls_put(struct snd_kcontrol *kctl,
+	struct snd_ctl_elem_value *uctl)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kctl);
+	struct tegra210_afc *afc = snd_soc_codec_get_drvdata(codec);
+	int value = uctl->value.integer.value[0];
+
+	if (strstr(kctl->id.name, "ppm diff")) {
+		if (value >= 0 && value <= 100)
+			afc->ppm_diff = value;
+		else
+			return -EINVAL;
+	} else if (strstr(kctl->id.name, "src burst")) {
+		if (value >= 0 && value <= 24)
+			afc->src_burst = value;
+		else
+			return -EINVAL;
+	} else if (strstr(kctl->id.name, "start threshold")) {
+		if (value >= 0 && value <= 63)
+			afc->start_threshold = value;
+		else
+			return -EINVAL;
+	} else if (strstr(kctl->id.name, "dest module name"))
+		afc->dest_module_num = value;
+	else if (strstr(kctl->id.name, "threshold type"))
+		afc->threshold_type = value;
+
+	return 0;
+}
+
+static const char *const tegra210_afc_threshold_type_text[] = {
+	"None", "NO-SFC", "SFC", "SFC-AMX",
+};
+
+static const char *const tegra210_afc_dst_mod_type_text[] = {
+	"None", "I2S1", "I2S2", "I2S3", "I2S4", "I2S5",
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	"I2S6", "DSPK1", "DSPK2",
+#endif
+};
+
+static const struct soc_enum tegra210_afc_threshold_config_enum =
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra210_afc_threshold_type_text),
+		tegra210_afc_threshold_type_text);
+
+static const struct soc_enum tegra210_afc_dst_mod_type_enum =
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra210_afc_dst_mod_type_text),
+		tegra210_afc_dst_mod_type_text);
+
+#define NV_SOC_SINGLE_RANGE_EXT(xname, xmin, xmax, xget, xput) \
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname), \
+	.info = snd_soc_info_xr_sx, .get = xget, .put = xput, \
+	.private_value = (unsigned long)&(struct soc_mixer_control) \
+		{.invert = 0, .min = xmin, .max = xmax, \
+		.platform_max = xmax}}
+
+static const struct snd_kcontrol_new tegra210_afc_controls[] = {
+	NV_SOC_SINGLE_RANGE_EXT("ppm diff", 0, 100, tegra210_afc_controls_get,
+		tegra210_afc_controls_put),
+	NV_SOC_SINGLE_RANGE_EXT("src burst", 0, 24, tegra210_afc_controls_get,
+		tegra210_afc_controls_put),
+	NV_SOC_SINGLE_RANGE_EXT("start threshold", 0, 63,
+		tegra210_afc_controls_get, tegra210_afc_controls_put),
+	SOC_ENUM_EXT("threshold type", tegra210_afc_threshold_config_enum,
+		tegra210_afc_controls_get, tegra210_afc_controls_put),
+	SOC_ENUM_EXT("dest module name", tegra210_afc_dst_mod_type_enum,
+		tegra210_afc_controls_get, tegra210_afc_controls_put),
+};
 
 static int tegra210_afc_set_thresholds(struct tegra210_afc *afc,
 				unsigned int afc_id)
 {
-	unsigned int i2s_id, value;
+	unsigned int val_afc, val_dst_mod, dest_module, dest_module_id;
 
-	if (tegra210_afc_get_sfc_id(afc_id)) {
-		/* TODO program thresholds using SRC_BURST */
-	} else {
-		value = 4 << TEGRA210_AFC_FIFO_HIGH_THRESHOLD_SHIFT;
-		value |= 3 << TEGRA210_AFC_FIFO_START_THRESHOLD_SHIFT;
-		value |= 2;
-	}
-	regmap_write(afc->regmap, TEGRA210_AFC_TXCIF_FIFO_PARAMS, value);
-
-	i2s_id = tegra210_afc_get_i2s_id(afc_id);
-	if (!i2s_id)
+	if (afc->dest_module_num == 0) {
+		pr_err("destination module for afc not selected\n");
 		return -EINVAL;
+	}
 
-	value |= CONFIG_AFC_DEST_PARAM(0, i2s_id);
-	SET_AFC_DEST_PARAM(value);
+	if (afc->dest_module_num > MAX_I2S_COUNT) {
+		dest_module = 1;
+		dest_module_id = afc->dest_module_num - MAX_I2S_COUNT;
+	} else {
+		dest_module = 0;
+		dest_module_id = afc->dest_module_num;
+	}
+
+	switch (afc->threshold_type) {
+	case TH_NON_SFC:
+		if (afc->start_threshold == 0) {
+			pr_err("case %s: threshold not defined\n",
+				tegra210_afc_threshold_type_text[TH_NON_SFC]);
+			goto err_exit;
+		}
+		val_afc = (afc->start_threshold + 1) <<
+			TEGRA210_AFC_FIFO_HIGH_THRESHOLD_SHIFT;
+		val_afc |= afc->start_threshold <<
+			TEGRA210_AFC_FIFO_START_THRESHOLD_SHIFT;
+		val_afc |= afc->start_threshold - 1;
+
+		val_dst_mod = val_afc;
+		break;
+
+	/* use src_burst when SFC is in the path*/
+	case TH_SFC:
+		if (afc->src_burst == 0) {
+			pr_err("case %s: src_burst not defined\n",
+				tegra210_afc_threshold_type_text[TH_SFC]);
+			goto err_exit;
+		}
+		val_afc = (afc->src_burst + 1) <<
+			TEGRA210_AFC_FIFO_HIGH_THRESHOLD_SHIFT;
+		val_afc |= (afc->src_burst + 1) <<
+			TEGRA210_AFC_FIFO_START_THRESHOLD_SHIFT;
+		val_afc |= afc->src_burst + 1;
+
+		val_dst_mod = ((afc->src_burst << 1) + 1) <<
+			TEGRA210_AFC_FIFO_HIGH_THRESHOLD_SHIFT;
+		val_dst_mod |= (afc->src_burst + 2) <<
+			TEGRA210_AFC_FIFO_START_THRESHOLD_SHIFT;
+		val_dst_mod |= afc->src_burst;
+		break;
+
+	case TH_SFC_AMX:
+		if (afc->src_burst == 0) {
+			pr_err("case %s: src_burst not defined\n",
+				tegra210_afc_threshold_type_text[TH_SFC_AMX]);
+			goto err_exit;
+		}
+		val_afc = ((afc->src_burst << 1) + 4) <<
+			TEGRA210_AFC_FIFO_HIGH_THRESHOLD_SHIFT;
+		val_afc |= (afc->src_burst + 4) <<
+			TEGRA210_AFC_FIFO_START_THRESHOLD_SHIFT;
+		val_afc |= 4;
+
+		val_dst_mod = ((afc->src_burst << 1) + 1) <<
+			TEGRA210_AFC_FIFO_HIGH_THRESHOLD_SHIFT;
+		val_dst_mod |= (afc->src_burst + 2) <<
+			TEGRA210_AFC_FIFO_START_THRESHOLD_SHIFT;
+		val_dst_mod |= afc->src_burst;
+		break;
+
+	/* default threshold settings */
+	case TH_DEFAULT:
+		val_afc = 4 << TEGRA210_AFC_FIFO_HIGH_THRESHOLD_SHIFT;
+		val_afc |= 3 << TEGRA210_AFC_FIFO_START_THRESHOLD_SHIFT;
+		val_afc |= 2;
+
+		val_dst_mod = val_afc;
+		break;
+
+	default:
+		pr_err("unsupported threshold type\n");
+		goto err_exit;
+	}
+	regmap_write(afc->regmap, TEGRA210_AFC_TXCIF_FIFO_PARAMS, val_afc);
+
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	val_dst_mod |= dest_module  << 	TEGRA_AFC_MODULE_SELECT_SHIFT;
+#endif
+
+	val_dst_mod |= dest_module_id << TEGRA210_AFC_DEST_MODULE_ID_SHIFT;
+	regmap_write(afc->regmap, TEGRA210_AFC_DEST_I2S_PARAMS, val_dst_mod);
 
 	return 0;
+
+err_exit:
+	return -EINVAL;
 }
-#endif
 
 static int tegra210_afc_set_audio_cif(struct tegra210_afc *afc,
 				struct snd_pcm_hw_params *params,
@@ -227,9 +351,11 @@ static int tegra210_afc_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
-	tegra210_afc_set_ppm_diff(afc, AFC_CLK_PPM_DIFF);
+	/* update expected ppm difference */
+	regmap_update_bits(afc->regmap,
+		TEGRA210_AFC_CLK_PPM_DIFF, 0xFFFF, afc->ppm_diff);
 
-	/* program the thresholds, destn i2s id, PPM values */
+	/* program thresholds, dest module depending on the mode*/
 	if (tegra210_afc_set_thresholds(afc, dev->id) == -EINVAL)
 		dev_err(dev, "Can't set AFC threshold: %d\n", ret);
 
@@ -242,6 +368,7 @@ static int tegra210_afc_codec_probe(struct snd_soc_codec *codec)
 	struct tegra210_afc *afc = snd_soc_codec_get_drvdata(codec);
 
 	codec->control_data = afc->regmap;
+	tegra210_afc_init(afc);
 
 	return 0;
 }
@@ -293,6 +420,8 @@ static struct snd_soc_codec_driver tegra210_afc_codec = {
 	.num_dapm_widgets = ARRAY_SIZE(tegra210_afc_widgets),
 	.dapm_routes = tegra210_afc_routes,
 	.num_dapm_routes = ARRAY_SIZE(tegra210_afc_routes),
+	.controls = tegra210_afc_controls,
+	.num_controls = ARRAY_SIZE(tegra210_afc_controls),
 	.idle_bias_off = 1,
 };
 
@@ -393,9 +522,6 @@ static int tegra210_afc_platform_probe(struct platform_device *pdev)
 	}
 
 	afc->soc_data = soc_data;
-
-	/* initialize default destination I2S */
-	afc->destination_i2s = 1;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {

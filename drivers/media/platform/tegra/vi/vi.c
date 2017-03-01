@@ -458,13 +458,9 @@ static int vi_probe(struct platform_device *dev)
 	}
 #endif
 
-	if (pdata->slcg_notifier_enable &&
-			(pdata->powergate_id != -1)) {
+	if (pdata->slcg_notifier_enable) {
 		pdata->toggle_slcg_notifier.notifier_call =
-		&nvhost_vi_slcg_handler;
-
-		slcg_register_notifier(pdata->powergate_id,
-			&pdata->toggle_slcg_notifier);
+			&nvhost_vi_slcg_handler;
 	}
 
 	nvhost_module_init(dev);
@@ -537,11 +533,6 @@ static int __exit vi_remove(struct platform_device *dev)
 	tegra_vi_media_controller_cleanup(&tegra_vi->mc_vi);
 
 	nvhost_client_device_release(dev);
-
-	if (pdata->slcg_notifier_enable &&
-	    (pdata->powergate_id != -1))
-		slcg_unregister_notifier(pdata->powergate_id,
-					 &pdata->toggle_slcg_notifier);
 
 	vi_intr_free(tegra_vi);
 

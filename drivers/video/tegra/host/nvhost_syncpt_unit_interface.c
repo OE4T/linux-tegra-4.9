@@ -123,7 +123,7 @@ int nvhost_syncpt_get_cv_dev_address_table(struct platform_device *engine_pdev,
  * in global list.
  * Return NULL if no backing is found
  */
-struct syncpt_gos_backing *
+static struct syncpt_gos_backing *
 nvhost_syncpt_find_gos_backing(struct nvhost_master *host, u32 syncpt_id)
 {
 	struct rb_root *root = &host->syncpt_backing_head;

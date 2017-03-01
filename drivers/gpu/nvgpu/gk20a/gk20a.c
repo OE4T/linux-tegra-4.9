@@ -817,7 +817,8 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 		goto done;
 
 	/* disable elpg before gr or fifo suspend */
-	ret |= gk20a_pmu_destroy(g);
+	if (g->ops.pmu.is_pmu_supported(g))
+		ret |= gk20a_pmu_destroy(g);
 	/*
 	 * After this point, gk20a interrupts should not get
 	 * serviced.

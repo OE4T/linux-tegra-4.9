@@ -115,5 +115,8 @@
 		ignore-pm-notify;
                 cd-inverted;
                 wp-inverted;
+		clocks = <&tegra_car TEGRA210_CLK_SDMMC1>,
+		       <&tegra_car TEGRA210_CLK_PLL_P>;
+		clock-names = "sdmmc", "pll_p";
 	};
 };

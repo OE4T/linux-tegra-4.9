@@ -368,6 +368,7 @@ struct gpu_ops {
 		bool (*is_debug_mode_enabled)(struct gk20a *g);
 		void (*set_debug_mode)(struct gk20a *g, bool enable);
 		void (*tlb_invalidate)(struct gk20a *g, struct mem_desc *pdb);
+		void (*hub_isr)(struct gk20a *g);
 	} fb;
 	struct {
 		void (*slcg_bus_load_gating_prod)(struct gk20a *g, bool prod);
@@ -758,6 +759,7 @@ struct gpu_ops {
 		irqreturn_t (*isr_thread_stall)(struct gk20a *g);
 		void (*isr_thread_nonstall)(struct gk20a *g, u32 intr);
 		void (*isr_nonstall_cb)(struct work_struct *work);
+		bool (*is_intr_hub_pending)(struct gk20a *g, u32 mc_intr);
 		u32 intr_mask_restore[4];
 		void (*enable)(struct gk20a *g, u32 units);
 		void (*disable)(struct gk20a *g, u32 units);

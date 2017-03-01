@@ -131,7 +131,7 @@ irqreturn_t mc_gp10b_intr_thread_stall(struct gk20a *g)
 	mc_intr_0 = gk20a_readl(g, mc_intr_r(0));
 	hw_irq_count = atomic_read(&g->hw_irq_stall_count);
 
-	gk20a_dbg(gpu_dbg_intr, "stall intr %08x\n", mc_intr_0);
+	gk20a_dbg(gpu_dbg_intr, "stall intr 0x%08x\n", mc_intr_0);
 
 	for (engine_id_idx = 0; engine_id_idx < g->fifo.num_engines; engine_id_idx++) {
 		active_engine_id = g->fifo.active_engines_list[engine_id_idx];
@@ -153,6 +153,9 @@ irqreturn_t mc_gp10b_intr_thread_stall(struct gk20a *g)
 			}
 		}
 	}
+	if (g->ops.mc.is_intr_hub_pending &&
+		 g->ops.mc.is_intr_hub_pending(g, mc_intr_0))
+		g->ops.fb.hub_isr(g);
 	if (mc_intr_0 & mc_intr_pfifo_pending_f())
 		gk20a_fifo_isr(g);
 	if (mc_intr_0 & mc_intr_pmu_pending_f())
@@ -166,6 +169,8 @@ irqreturn_t mc_gp10b_intr_thread_stall(struct gk20a *g)
 
 	/* sync handled irq counter before re-enabling interrupts */
 	atomic_set(&g->sw_irq_stall_last_handled, hw_irq_count);
+
+	gk20a_dbg(gpu_dbg_intr, "stall intr done 0x%08x\n", mc_intr_0);
 
 	gk20a_writel(g, mc_intr_en_set_r(NVGPU_MC_INTR_STALLING),
 			g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_STALLING]);

@@ -31,10 +31,12 @@ static void mc_gv11b_intr_enable(struct gk20a *g)
 				0xffffffff);
 	g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_STALLING] =
 				mc_intr_pfifo_pending_f() |
+				mc_intr_hub_pending_f() |
 				mc_intr_priv_ring_pending_f() |
 				mc_intr_pbus_pending_f() |
 				mc_intr_ltc_pending_f() |
 				eng_intr_mask;
+
 	gk20a_writel(g, mc_intr_en_set_r(NVGPU_MC_INTR_STALLING),
 			g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_STALLING]);
 
@@ -47,8 +49,14 @@ static void mc_gv11b_intr_enable(struct gk20a *g)
 			g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_NONSTALLING]);
 }
 
+static bool gv11b_mc_is_intr_hub_pending(struct gk20a *g, u32 mc_intr_0)
+{
+	return ((mc_intr_0 & mc_intr_hub_pending_f()) ? true : false);
+}
+
 void gv11b_init_mc(struct gpu_ops *gops)
 {
 	gp10b_init_mc(gops);
 	gops->mc.intr_enable = mc_gv11b_intr_enable;
+	gops->mc.is_intr_hub_pending = gv11b_mc_is_intr_hub_pending;
 }

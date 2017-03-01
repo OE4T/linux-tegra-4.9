@@ -23,6 +23,7 @@
 #include "gv11b/fb_gv11b.h"
 
 #include <nvgpu/hw/gv11b/hw_gmmu_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_fb_gv11b.h>
 
 static void gv11b_init_uncompressed_kind_map(void)
 {
@@ -73,10 +74,26 @@ static void gv11b_init_kind_attr(void)
 	}
 }
 
+static void gv11b_fb_hub_isr(struct gk20a *g)
+{
+	u32 niso_intr = gk20a_readl(g, fb_niso_intr_r());
+
+	gk20a_dbg_info("enter hub isr, niso_intr = 0x%x", niso_intr);
+
+	if (niso_intr &
+		 (fb_niso_intr_hub_access_counter_notify_pending_f() |
+		  fb_niso_intr_hub_access_counter_error_pending_f())) {
+
+		gk20a_dbg_info("hub access counter notify/error");
+	} else {
+		gk20a_dbg_info("mmu fault : TODO");
+	}
+}
+
 void gv11b_init_fb(struct gpu_ops *gops)
 {
 	gp10b_init_fb(gops);
-
+	gops->fb.hub_isr = gv11b_fb_hub_isr;
 	gv11b_init_uncompressed_kind_map();
 	gv11b_init_kind_attr();
 

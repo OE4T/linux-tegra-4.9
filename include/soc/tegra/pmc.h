@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2010 Google, Inc
- * Copyright (c) 2014 NVIDIA Corporation
+ * Copyright (c) 2014-2016, NVIDIA Corporation. All rights reserved.
  *
  * Author:
  *	Colin Cross <ccross@google.com>
@@ -34,15 +34,16 @@ void tegra_pmc_enter_suspend_mode(enum tegra_suspend_mode mode);
 #endif /* CONFIG_PM_SLEEP */
 
 #ifdef CONFIG_SMP
-bool tegra_pmc_cpu_is_powered(unsigned int cpuid);
-int tegra_pmc_cpu_power_on(unsigned int cpuid);
-int tegra_pmc_cpu_remove_clamping(unsigned int cpuid);
+bool tegra_pmc_cpu_is_powered(int cpuid);
+int tegra_pmc_cpu_power_on(int cpuid);
+int tegra_pmc_cpu_remove_clamping(int cpuid);
 #endif /* CONFIG_SMP */
 
 /*
  * powergate and I/O rail APIs
  */
 
+#ifndef CONFIG_TEGRA_POWERGATE
 #define TEGRA_POWERGATE_CPU	0
 #define TEGRA_POWERGATE_3D	1
 #define TEGRA_POWERGATE_VENC	2
@@ -73,7 +74,7 @@ int tegra_pmc_cpu_remove_clamping(unsigned int cpuid);
 #define TEGRA_POWERGATE_AUD	27
 #define TEGRA_POWERGATE_DFD	28
 #define TEGRA_POWERGATE_VE2	29
-#define TEGRA_POWERGATE_MAX	TEGRA_POWERGATE_VE2
+#endif
 
 #define TEGRA_POWERGATE_3D0	TEGRA_POWERGATE_3D
 
@@ -116,45 +117,44 @@ int tegra_pmc_cpu_remove_clamping(unsigned int cpuid);
 #define FORCED_RECOVERY_MODE    BIT(1)
 
 #ifndef CONFIG_TEGRA_POWERGATE
-#if defined CONFIG_ARCH_TEGRA || CONFIG_PLATFORM_TEGRA
-int tegra_powergate_is_powered(unsigned int id);
-int tegra_powergate_power_on(unsigned int id);
-int tegra_powergate_power_off(unsigned int id);
-int tegra_powergate_remove_clamping(unsigned int id);
+#if defined CONFIG_ARCH_TEGRA
+int tegra_powergate_is_powered(int id);
+int tegra_powergate_power_on(int id);
+int tegra_powergate_power_off(int id);
+int tegra_powergate_remove_clamping(int id);
 
 /* Must be called with clk disabled, and returns with clk enabled */
-int tegra_powergate_sequence_power_up(unsigned int id, struct clk *clk,
+int tegra_powergate_sequence_power_up(int id, struct clk *clk,
 				      struct reset_control *rst);
 
 #else
-static inline int tegra_powergate_is_powered(unsigned int id)
+static inline int tegra_powergate_is_powered(int id)
 {
 	return -ENOSYS;
 }
 
-static inline int tegra_powergate_power_on(unsigned int id)
+static inline int tegra_powergate_power_on(int id)
 {
 	return -ENOSYS;
 }
 
-static inline int tegra_powergate_power_off(unsigned int id)
+static inline int tegra_powergate_power_off(int id)
 {
 	return -ENOSYS;
 }
 
-static inline int tegra_powergate_remove_clamping(unsigned int id)
+static inline int tegra_powergate_remove_clamping(int id)
 {
 	return -ENOSYS;
 }
 
-static inline int tegra_powergate_sequence_power_up(unsigned int id,
-						    struct clk *clk,
+static inline int tegra_powergate_sequence_power_up(int id, struct clk *clk,
 						    struct reset_control *rst)
 {
 	return -ENOSYS;
 }
 
-#endif /* CONFIG_ARCH_TEGRA || CONFIG_PLATFORM_TEGRA */
+#endif /* CONFIG_ARCH_TEGRA */
 #endif /* CONFIG_TEGRA_POWERGATE */
 
 int tegra_pmc_set_reboot_reason(u32 reboot_reason);
@@ -163,9 +163,8 @@ int tegra_pmc_clear_reboot_reason(u32 reboot_reason);
 void tegra_pmc_write_bootrom_command(u32 command_offset, unsigned long val);
 void tegra_pmc_reset_system(void);
 
+#if defined(CONFIG_ARCH_TEGRA) && !defined(CONFIG_TEGRA186_PMC)
 void tegra_pmc_io_dpd_clear(void);
-
-#if defined(CONFIG_ARCH_TEGRA)
 int tegra_pmc_io_pad_low_power_enable(const char *pad_name);
 int tegra_pmc_io_pad_low_power_disable(const char *pad_name);
 int tegra_io_rail_power_on(int id);
@@ -173,6 +172,10 @@ int tegra_io_rail_power_off(int id);
 int tegra_pmc_io_pad_set_voltage(const char *pad_name, unsigned int pad_uv);
 int tegra_pmc_io_pad_get_voltage(const char *pad_name);
 #else
+static inline void tegra_pmc_io_dpd_clear(void)
+{
+}
+
 static inline int tegra_pmc_io_pad_low_power_enable(const char *pad_name)
 {
 	return 0;
@@ -288,17 +291,6 @@ struct tegra_thermtrip_pmic_data {
 void tegra_pmc_config_thermal_trip(struct tegra_thermtrip_pmic_data *data);
 void tegra_pmc_enable_thermal_trip(void);
 void tegra_pmc_lock_thermal_shutdown(void);
-
-int tegra210_pmc_padctrl_init(struct device *dev, struct device_node *np);
-int tegra186_pmc_padctrl_init(struct device *dev, struct device_node *np);
-
-#ifdef CONFIG_PADCTRL_TEGRA186_PMC
-static inline int tegra_pmc_padctrl_init(struct device *dev,
-					 struct device_node *np)
-{
-	return tegra186_pmc_padctrl_init(dev, np);
-}
-#endif
 
 #if defined(CONFIG_PADCTRL_GENERIC_TEGRA_IO_PAD)
 int tegra_io_pads_padctrl_init(struct device *dev);

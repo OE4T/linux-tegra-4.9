@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -173,6 +173,26 @@ static inline u32 ltc_ltcs_ltss_cbc_base_address_v(u32 r)
 static inline u32 ltc_ltcs_ltss_cbc_num_active_ltcs_r(void)
 {
 	return 0x0017e27c;
+}
+static inline u32 ltc_ltcs_ltss_cbc_num_active_ltcs__v(u32 r)
+{
+	return (r >> 0) & 0x1f;
+}
+static inline u32 ltc_ltcs_ltss_cbc_num_active_ltcs_nvlink_peer_through_l2_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 ltc_ltcs_ltss_cbc_num_active_ltcs_nvlink_peer_through_l2_v(u32 r)
+{
+	return (r >> 24) & 0x1;
+}
+static inline u32 ltc_ltcs_ltss_cbc_num_active_ltcs_serialize_f(u32 v)
+{
+	return (v & 0x1) << 25;
+}
+static inline u32 ltc_ltcs_ltss_cbc_num_active_ltcs_serialize_v(u32 r)
+{
+	return (r >> 25) & 0x1;
 }
 static inline u32 ltc_ltcs_misc_ltc_num_active_ltcs_r(void)
 {

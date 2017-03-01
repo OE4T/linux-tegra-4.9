@@ -311,6 +311,18 @@ static void gv11b_dump_eng_status(struct gk20a *g,
 	gk20a_debug_output(o, "\n");
 }
 
+static u32 gv11b_fifo_intr_0_error_mask(struct gk20a *g)
+{
+	u32 intr_0_error_mask =
+		fifo_intr_0_bind_error_pending_f() |
+		fifo_intr_0_sched_error_pending_f() |
+		fifo_intr_0_chsw_error_pending_f() |
+		fifo_intr_0_fb_flush_timeout_pending_f() |
+		fifo_intr_0_lb_error_pending_f();
+
+	return intr_0_error_mask;
+}
+
 void gv11b_init_fifo(struct gpu_ops *gops)
 {
 	gp10b_init_fifo(gops);
@@ -333,4 +345,5 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.dump_pbdma_status = gk20a_dump_pbdma_status;
 	gops->fifo.dump_eng_status = gv11b_dump_eng_status;
 	gops->fifo.dump_channel_status_ramfc = gv11b_dump_channel_status_ramfc;
+	gops->fifo.intr_0_error_mask = gv11b_fifo_intr_0_error_mask;
 }

@@ -189,6 +189,10 @@ static void tegra_bpmp_pg_add_domains(struct tegra_bpmp_pg *pg)
 		if (err)
 			continue;
 
+		/* Don't add a domain more than once */
+		if (pg->genpd_data.domains[id])
+			continue;
+
 		err = tegra_bpmp_pg_add_domain(pg, id);
 		if (err)
 			dev_warn(pg->dev, "failed to add domain: %d\n", id);

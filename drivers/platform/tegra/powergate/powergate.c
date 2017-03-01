@@ -2,7 +2,7 @@
  * arch/arm/mach-tegra/powergate.c
  *
  * Copyright (c) 2010 Google, Inc
- * Copyright (c) 2011 - 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011 - 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Colin Cross <ccross@google.com>
@@ -28,15 +28,19 @@
 #include <linux/io.h>
 #include <linux/seq_file.h>
 #include <linux/spinlock.h>
-#include <linux/tegra-powergate.h>
 #include <soc/tegra/fuse.h>
+#include <soc/tegra/tegra_powergate.h>
+#include <soc/tegra/tegra-powergate-driver.h>
 #include <trace/events/power.h>
 #include <asm/atomic.h>
 
-#include "board.h"
-#include "powergate-priv.h"
+int TEGRA_POWERGATE_DISA;
+EXPORT_SYMBOL(TEGRA_POWERGATE_DISA);
 
-static struct powergate_ops *pg_ops;
+int TEGRA_POWERGATE_SOR;
+EXPORT_SYMBOL(TEGRA_POWERGATE_SOR);
+
+static struct tegra_powergate_driver_ops *pg_ops;
 
 static inline bool tegra_powergate_check_skip_list(int id)
 {
@@ -121,15 +125,17 @@ int tegra_powergate_remove_clamping(int id)
 }
 EXPORT_SYMBOL(tegra_powergate_remove_clamping);
 
-bool tegra_powergate_is_powered(int id)
+int tegra_powergate_is_powered(int id)
 {
 	if (!pg_ops) {
 		pr_debug("This SOC doesn't support powergating\n");
 		return -EINVAL;
 	}
 
-	if (id < 0 || id >= pg_ops->num_powerdomains)
+	if (!pg_ops->powergate_id_is_soc_valid(id)) {
+		pr_info("%s: invalid powergate id %d\n", __func__, id);
 		return -EINVAL;
+	}
 
 	if (pg_ops->powergate_is_powered)
 		return pg_ops->powergate_is_powered(id);
@@ -166,8 +172,8 @@ int tegra_powergate_partition(int id)
 		return -EINVAL;
 	}
 
-	if (id < 0 || id >= pg_ops->num_powerdomains) {
-		pr_info("%s: invalid powergate id\n", __func__);
+	if (!pg_ops->powergate_id_is_soc_valid(id)) {
+		pr_info("%s: invalid powergate id %d\n", __func__, id);
 		return -EINVAL;
 	}
 
@@ -191,8 +197,8 @@ int tegra_unpowergate_partition(int id)
 		return -EINVAL;
 	}
 
-	if (id < 0 || id >= pg_ops->num_powerdomains) {
-		pr_info("%s: invalid powergate id\n", __func__);
+	if (!pg_ops->powergate_id_is_soc_valid(id)) {
+		pr_info("%s: invalid powergate id %d\n", __func__, id);
 		return -EINVAL;
 	}
 
@@ -216,8 +222,8 @@ int tegra_powergate_partition_with_clk_off(int id)
 		return -EINVAL;
 	}
 
-	if (id < 0 || id >= pg_ops->num_powerdomains) {
-		pr_info("%s: invalid powergate id\n", __func__);
+	if (!pg_ops->powergate_id_is_soc_valid(id)) {
+		pr_info("%s: invalid powergate id %d\n", __func__, id);
 		return -EINVAL;
 	}
 
@@ -241,8 +247,8 @@ int tegra_unpowergate_partition_with_clk_on(int id)
 		return -EINVAL;
 	}
 
-	if (id < 0 || id >= pg_ops->num_powerdomains) {
-		pr_info("%s: invalid powergate id\n", __func__);
+	if (!pg_ops->powergate_id_is_soc_valid(id)) {
+		pr_info("%s: invalid powergate id %d\n", __func__, id);
 		return -EINVAL;
 	}
 
@@ -266,8 +272,8 @@ int tegra_powergate_mc_enable(int id)
 		return -EINVAL;
 	}
 
-	if (id < 0 || id >= pg_ops->num_powerdomains) {
-		pr_info("%s: invalid powergate id\n", __func__);
+	if (!pg_ops->powergate_id_is_soc_valid(id)) {
+		pr_info("%s: invalid powergate id %d\n", __func__, id);
 		return -EINVAL;
 	}
 
@@ -287,8 +293,8 @@ int tegra_powergate_mc_disable(int id)
 		return -EINVAL;
 	}
 
-	if (id < 0 || id >= pg_ops->num_powerdomains) {
-		pr_info("%s: invalid powergate id\n", __func__);
+	if (!pg_ops->powergate_id_is_soc_valid(id)) {
+		pr_info("%s: invalid powergate id %d\n", __func__, id);
 		return -EINVAL;
 	}
 
@@ -308,8 +314,8 @@ int tegra_powergate_mc_flush(int id)
 		return -EINVAL;
 	}
 
-	if (id < 0 || id >= pg_ops->num_powerdomains) {
-		pr_info("%s: invalid powergate id\n", __func__);
+	if (!pg_ops->powergate_id_is_soc_valid(id)) {
+		pr_info("%s: invalid powergate id %d\n", __func__, id);
 		return -EINVAL;
 	}
 
@@ -329,8 +335,8 @@ int tegra_powergate_mc_flush_done(int id)
 		return -EINVAL;
 	}
 
-	if (id < 0 || id >= pg_ops->num_powerdomains) {
-		pr_info("%s: invalid powergate id\n", __func__);
+	if (!pg_ops->powergate_id_is_soc_valid(id)) {
+		pr_info("%s: invalid powergate id %d\n", __func__, id);
 		return -EINVAL;
 	}
 
@@ -350,9 +356,9 @@ const char *tegra_powergate_get_name(int id)
 		return NULL;
 	}
 
-	if (id < 0 || id >= pg_ops->num_powerdomains) {
-		pr_info("invalid powergate id\n");
-		return "invalid";
+	if (!pg_ops->powergate_id_is_soc_valid(id)) {
+		pr_info("%s: invalid powergate id %d\n", __func__, id);
+		return NULL;
 	}
 
 	if (pg_ops->get_powergate_domain_name)
@@ -360,9 +366,18 @@ const char *tegra_powergate_get_name(int id)
 	else
 		WARN_ON_ONCE("This SOC does not support CPU powergate");
 
-	return "invalid";
+	return NULL;
 }
 EXPORT_SYMBOL(tegra_powergate_get_name);
+
+int tegra_powergate_cpuid_to_powergate_id(int cpu)
+{
+	if (pg_ops->powergate_cpuid_to_powergate_id)
+		return pg_ops->powergate_cpuid_to_powergate_id(cpu);
+
+	return -1;
+}
+EXPORT_SYMBOL(tegra_powergate_cpuid_to_powergate_id);
 
 static int tegra_powergate_init_refcount(void)
 {
@@ -372,24 +387,35 @@ static int tegra_powergate_init_refcount(void)
 	return pg_ops->powergate_init_refcount();
 }
 
+struct tegra_powergate_driver_ops
+__weak *tegra194_powergate_init_chip_support(void)
+{
+	return NULL;
+}
+
 static int __init tegra_powergate_init(void)
 {
 	switch (tegra_get_chip_id()) {
-		case TEGRA210:
-			pg_ops = tegra210_powergate_init_chip_support();
-			break;
+	case TEGRA210:
+		pg_ops = tegra210_powergate_init_chip_support();
+		TEGRA_POWERGATE_DISA = TEGRA210_POWER_DOMAIN_DISA;
+		TEGRA_POWERGATE_SOR = TEGRA210_POWER_DOMAIN_SOR;
+		break;
 
-		default:
-/*
- * TODO: Add correct chipid and remove this later
- */
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-			pg_ops = tegra186_powergate_init_chip_support();
-#else
-			pg_ops = NULL;
-			pr_info("%s: Unknown Tegra variant. Disabling powergate\n", __func__);
-#endif
-			break;
+	case TEGRA186:
+		pg_ops = tegra186_powergate_init_chip_support();
+		TEGRA_POWERGATE_DISA = TEGRA186_POWER_DOMAIN_DISP;
+		TEGRA_POWERGATE_SOR = TEGRA186_POWER_DOMAIN_DISP;
+		break;
+
+	case TEGRA194:
+		pg_ops = tegra194_powergate_init_chip_support();
+		break;
+
+	default:
+		pg_ops = NULL;
+		pr_info("%s: Unknown Tegra variant. Disabling powergate\n", __func__);
+		break;
 	}
 
 	tegra_powergate_init_refcount();
@@ -508,19 +534,23 @@ int __init tegra_powergate_debugfs_init(void)
 	pg_debugfs_root = d;
 
 	for (i = 0; i < pg_ops->num_powerdomains; i++) {
+		if (!pg_ops->powergate_id_is_soc_valid(i))
+			continue;
+
 		name = tegra_powergate_get_name(i);
 		if (name) {
 			ret = powergate_debugfs_register_one(i, name);
-			if (ret)
-				goto err_out;
+
+			/* Continue even if error is there */
+			if (ret) {
+				pr_info("powerdomain debugfs not created for %s(%d): %d\n",
+					name, i, ret);
+				continue;
+			}
 		}
 	}
 
 	return 0;
-
-err_out:
-	debugfs_remove_recursive(pg_debugfs_root);
-	return -ENOMEM;
 }
 late_initcall(tegra_powergate_debugfs_init);
 

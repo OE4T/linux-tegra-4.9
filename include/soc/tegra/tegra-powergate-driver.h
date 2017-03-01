@@ -26,6 +26,7 @@ struct tegra_powergate_driver_ops {
 	const char *(*get_powergate_domain_name)(int id);
 
 	bool (*powergate_id_is_soc_valid)(int id);
+	int (*powergate_cpuid_to_powergate_id)(int cpu);
 
 	int (*powergate_partition)(int);
 	int (*unpowergate_partition)(int id);
@@ -53,5 +54,28 @@ struct tegra_powergate_driver_ops {
 
 	int (*slcg_unregister_notifier)(int id, struct notifier_block *nb);
 };
+
+/* INIT APIs: New SoC needs to add its support here */
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+struct tegra_powergate_driver_ops *tegra210_powergate_init_chip_support(void);
+#else
+static inline
+struct tegra_powergate_driver_ops *tegra210_powergate_init_chip_support(void)
+{
+	return NULL;
+}
+#endif
+
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+struct tegra_powergate_driver_ops *tegra186_powergate_init_chip_support(void);
+#else
+static inline
+struct tegra_powergate_driver_ops *tegra186_powergate_init_chip_support(void)
+{
+	return NULL;
+}
+#endif
+
+struct tegra_powergate_driver_ops *tegra194_powergate_init_chip_support(void);
 
 #endif /* _SOC_TEGRA_POWERGATE_DRIVER_H_ */

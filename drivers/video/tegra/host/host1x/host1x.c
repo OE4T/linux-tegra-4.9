@@ -1153,7 +1153,7 @@ static int __exit nvhost_remove(struct platform_device *dev)
 
 static int nvhost_suspend_prepare(struct device *dev)
 {
-	if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0))
+	if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0) && dev->pm_domain)
 		pm_runtime_enable(dev);
 
 	return 0;
@@ -1161,7 +1161,7 @@ static int nvhost_suspend_prepare(struct device *dev)
 
 static void nvhost_suspend_complete(struct device *dev)
 {
-	if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0))
+	if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0) && dev->pm_domain)
 		__pm_runtime_disable(dev, false);
 }
 

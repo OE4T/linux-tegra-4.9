@@ -964,7 +964,7 @@ static int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 		break;
 	}
 
-	if (class == PASCAL_COMPUTE_A) {
+	if (class == PASCAL_COMPUTE_A || class == PASCAL_A) {
 		switch (compute_preempt_mode) {
 		case NVGPU_COMPUTE_PREEMPTION_MODE_WFI:
 		case NVGPU_COMPUTE_PREEMPTION_MODE_CTA:
@@ -1079,6 +1079,10 @@ static void dump_ctx_switch_stats(struct gk20a *g, struct vm_gk20a *vm,
 		"image gfx preemption option (GFXP is 1) %x\n",
 		gk20a_mem_rd(g, mem,
 			ctxsw_prog_main_image_graphics_preemption_options_o()));
+	gk20a_err(dev_from_gk20a(g),
+		"image compute preemption option (CTA is 1) %x\n",
+		gk20a_mem_rd(g, mem,
+			ctxsw_prog_main_image_compute_preemption_options_o()));
 	gk20a_mem_end(g, mem);
 }
 

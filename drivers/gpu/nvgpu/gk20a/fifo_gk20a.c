@@ -1209,14 +1209,19 @@ static void gk20a_fifo_handle_dropped_mmu_fault(struct gk20a *g)
 	gk20a_err(dev, "dropped mmu fault (0x%08x)", fault_id);
 }
 
+bool gk20a_is_fault_engine_subid_gpc(struct gk20a *g, u32 engine_subid)
+{
+	return (engine_subid == fifo_intr_mmu_fault_info_engine_subid_gpc_v());
+}
+
 static bool gk20a_fifo_should_defer_engine_reset(struct gk20a *g, u32 engine_id,
-		struct fifo_mmu_fault_info_gk20a *f, bool fake_fault)
+		u32 engine_subid, bool fake_fault)
 {
 	u32 engine_enum = ENGINE_INVAL_GK20A;
 	struct fifo_gk20a *fifo = NULL;
 	struct fifo_engine_info_gk20a *engine_info;
 
-	if (!g || !f)
+	if (!g)
 		return false;
 
 	fifo = &g->fifo;
@@ -1240,11 +1245,10 @@ static bool gk20a_fifo_should_defer_engine_reset(struct gk20a *g, u32 engine_id,
 	if (fake_fault)
 		return false;
 
-	if (engine_enum != ENGINE_GR_GK20A ||
-	    f->engine_subid_v != fifo_intr_mmu_fault_info_engine_subid_gpc_v())
+	if (engine_enum != ENGINE_GR_GK20A)
 		return false;
 
-	return true;
+	return g->ops.fifo.is_fault_engine_subid_gpc(g, engine_subid);
 }
 
 /* caller must hold a channel reference */
@@ -1507,7 +1511,7 @@ static bool gk20a_fifo_handle_mmu_fault(
 
 		/* check if engine reset should be deferred */
 		if ((ch || tsg) && gk20a_fifo_should_defer_engine_reset(g,
-				engine_id, &f, fake_fault)) {
+				engine_id, f.engine_subid_v, fake_fault)) {
 			g->fifo.deferred_fault_engines |= BIT(engine_id);
 
 			/* handled during channel free */
@@ -3355,4 +3359,5 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.runlist_entry_size = ram_rl_entry_size_v;
 	gops->fifo.get_tsg_runlist_entry = gk20a_get_tsg_runlist_entry;
 	gops->fifo.get_ch_runlist_entry = gk20a_get_ch_runlist_entry;
+	gops->fifo.is_fault_engine_subid_gpc = gk20a_is_fault_engine_subid_gpc;
 }

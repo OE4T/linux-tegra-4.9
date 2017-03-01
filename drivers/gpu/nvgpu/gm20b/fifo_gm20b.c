@@ -170,4 +170,5 @@ void gm20b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.runlist_entry_size = ram_rl_entry_size_v;
 	gops->fifo.get_tsg_runlist_entry = gk20a_get_tsg_runlist_entry;
 	gops->fifo.get_ch_runlist_entry = gk20a_get_ch_runlist_entry;
+	gops->fifo.is_fault_engine_subid_gpc = gk20a_is_fault_engine_subid_gpc;
 }

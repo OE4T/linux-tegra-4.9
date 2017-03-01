@@ -274,6 +274,6 @@ void gk20a_get_ch_runlist_entry(struct channel_gk20a *ch, u32 *runlist);
 
 u32 gk20a_userd_gp_get(struct gk20a *g, struct channel_gk20a *c);
 void gk20a_userd_gp_put(struct gk20a *g, struct channel_gk20a *c);
-
+bool gk20a_is_fault_engine_subid_gpc(struct gk20a *g, u32 engine_subid);
 
 #endif /*__GR_GK20A_H__*/

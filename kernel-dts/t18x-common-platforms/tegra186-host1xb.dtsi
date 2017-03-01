@@ -120,7 +120,6 @@
                 #size-cells = <2>;
 
 		#stream-id-cells = <9>;
-		power-domains = <&host1x_pd>;
 
 		ranges;
 
@@ -137,7 +136,7 @@
 
 		nvcsi@150c0000 {
 			compatible = "nvidia,tegra186-nvcsi";
-			power-domains = <&ve_pd>;
+			power-domains = <&bpmp TEGRA186_POWER_DOMAIN_VE>;
 			reg = <0x0 0x150c0000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_NVCSI>;
 			clocks = <&tegra_car TEGRA186_CLK_NVCSI>,
@@ -154,7 +153,7 @@
 
 		vi@15700000 {
 			compatible = "nvidia,tegra186-vi";
-			power-domains = <&ve_pd>;
+			power-domains = <&bpmp TEGRA186_POWER_DOMAIN_VE>;
                         reg = <0x0 0x15700000 0x0 0x00100000>;
                         interrupts = <0 201 0x04
                                       0 202 0x04

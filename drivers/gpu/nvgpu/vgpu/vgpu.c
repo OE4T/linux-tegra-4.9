@@ -317,6 +317,7 @@ static int vgpu_init_gpu_characteristics(struct gk20a *g)
 
 	/* features vgpu does not support */
 	g->gpu_characteristics.flags &= ~NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS;
+	g->gpu_characteristics.flags &= ~NVGPU_GPU_FLAGS_SUPPORT_MAP_COMPBITS;
 
 	return 0;
 }

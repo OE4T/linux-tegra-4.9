@@ -135,6 +135,8 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_DEVICE_EVENTS		(1ULL << 15)
 /* FECS context switch tracing is available */
 #define NVGPU_GPU_FLAGS_SUPPORT_FECS_CTXSW_TRACE	(1ULL << 16)
+/* NVGPU_AS_IOCTL_MAP_BUFFER_COMPBITS is available */
+#define NVGPU_GPU_FLAGS_SUPPORT_MAP_COMPBITS		(1ULL << 17)
 
 struct nvgpu_gpu_characteristics {
 	__u32 arch;

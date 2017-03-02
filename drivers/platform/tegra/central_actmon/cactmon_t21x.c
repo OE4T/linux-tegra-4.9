@@ -261,8 +261,7 @@ static void cactmon_bwmgr_unregister_t21x(
 	}
 }
 
-
-int actmon_dev_platform_init_t21x(struct actmon_dev *adev,
+static int actmon_dev_platform_init_t21x(struct actmon_dev *adev,
 		struct platform_device *pdev)
 {
 	struct tegra_bwmgr_client *bwclnt = (struct tegra_bwmgr_client *)

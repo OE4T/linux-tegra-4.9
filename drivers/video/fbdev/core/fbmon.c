@@ -2,7 +2,7 @@
  * linux/drivers/video/fbmon.c
  *
  * Copyright (C) 2002 James Simmons <jsimmons@users.sf.net>
- * Copyright (C) 2014-2015 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2017 NVIDIA CORPORATION. All rights reserved.
  *
  * Credits:
  *
@@ -1140,11 +1140,8 @@ void fb_edid_add_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 			if (edid[pos] == 3 && edid[pos + 1] == 0xc &&
 			    edid[pos + 2] == 0) {
 				specs->misc |= FB_MISC_HDMI;
-				/* HDMI_Video_Format @HDMI 1.4 ch8.2.3*/
-				if (edid[pos + 2] >> 5 != 0) {
-					fb_hvd_parse(edid, &hvd, pos + 3);
-					hdmi_num = hvd.hdmi_vic_len;
-				}
+				fb_hvd_parse(edid, &hvd, pos + 3);
+				hdmi_num = hvd.hdmi_vic_len;
 			}
 
 			/* OUI for hdmi forum: C4-5D-D8 */

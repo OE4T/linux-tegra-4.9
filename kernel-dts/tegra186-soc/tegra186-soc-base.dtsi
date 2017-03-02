@@ -2163,7 +2163,7 @@
 		nvidia,expiry-count = <5>;
 		nvidia,enable-on-init;
 		nvidia,extend-watchdog-suspend;
-		nvidia,heartbeat-init = <120>;
+		timeout-sec = <120>;
 		nvidia,disable-debug-reset;
 		status = "disabled";
 	};

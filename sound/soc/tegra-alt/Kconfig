@@ -165,6 +165,7 @@ config SND_SOC_TEGRA210_OPE_ALT
 config SND_SOC_TEGRA210_ADSP_ALT
 	tristate "Tegra210 ADSP driver"
 	depends on SND_SOC_TEGRA_ALT && SND_SOC_TEGRA_ALT_210 && TEGRA_NVADSP
+	select SND_SOC_COMPRESS
 	help
 	  Say Y or M if you want to add support for Tegra210 ADSP module.
 

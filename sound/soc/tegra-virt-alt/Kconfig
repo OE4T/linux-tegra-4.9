@@ -1,4 +1,4 @@
-config SND_SOC_TEGRA_VIRT_ALT
+config SND_SOC_TEGRA_VIRT_IVC_COMM
         tristate "IVC client for Tegra virt audio"
         depends on TEGRA_HV_MANAGER
         help
@@ -9,8 +9,9 @@ config SND_SOC_TEGRA_VIRT_ALT
 
 config SND_SOC_TEGRA_VIRT_T210REF_PCM
 	tristate "Tegra210 virt PCM driver"
-	select SND_SOC_TEGRA_VIRT_ALT
-	select SND_SOC_TEGRA_ALT
+	depends on TEGRA_HV_MANAGER
+	depends on SND_SOC_TEGRA_ALT
+	select SND_SOC_TEGRA_VIRT_IVC_COMM
 	select SND_SOC_TEGRA210_ADSP_ALT
 	help
 	  Say Y or M if you want to add support for Tegra210 para-virtualized PCM audio.

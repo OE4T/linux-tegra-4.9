@@ -121,7 +121,7 @@
 	watchdog@60005100 {
 		dt-override-status-odm-data = <0x00010000 0x00010000>;
 		nvidia,enable-on-init;
-		nvidia,heartbeat-init = <120>;
+		timeout-sec = <120>;
 	};
 
 	tegra-supply-tests {

@@ -141,15 +141,15 @@ static irqreturn_t tegra_hsp_full_isr(int irq, void *data)
 	if (!(value & TEGRA_HSP_SM_FULL))
 		return IRQ_NONE;
 
+	/* Empty the mailbox and clear the interrupt */
+	writel(0, reg);
+
 	if (pair->notify_full != NULL) {
 		void *data = dev_get_drvdata(&pair->dev);
 
-		value = pair->notify_full(data, value & ~TEGRA_HSP_SM_FULL);
-	} else
-		value = 0;
+		pair->notify_full(data, value & ~TEGRA_HSP_SM_FULL);
+	}
 
-	/* Write new value to empty the mailbox and clear the interrupt */
-	writel(value & ~TEGRA_HSP_SM_FULL, reg);
 	return IRQ_HANDLED;
 }
 

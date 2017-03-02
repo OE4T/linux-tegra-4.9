@@ -13,3 +13,4 @@ obj-y += tegra-rtcpu-trace.o
 obj-y += camchar.o
 obj-y += rtcpu-monitor.o
 obj-y += tegra-ivc-rpc.o tegra-ivc-rpc-test.o
+obj-y += capture-ivc.o

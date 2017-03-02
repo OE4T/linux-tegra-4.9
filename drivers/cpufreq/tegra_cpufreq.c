@@ -492,6 +492,7 @@ static void enable_cc3(struct device_node *dn)
 		ret = smp_call_function_any(&tfreq_data.pcluster[cl].cpu_mask,
 				__tegra_mce_cc3_ctrl,
 				cc3, 1);
+		WARN_ON_ONCE(ret);
 idx_inc:
 		idx += INDEX_STEP;
 	}

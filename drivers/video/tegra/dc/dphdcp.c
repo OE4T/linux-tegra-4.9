@@ -1946,9 +1946,28 @@ static const struct file_operations dphdcp_fops = {
 struct tegra_dphdcp *tegra_dphdcp_create(struct tegra_dc_dp_data *dp,
 			int id, int bus)
 {
-	static struct tegra_dphdcp *dphdcp; /* prevent multiple calls */
+	struct tegra_dphdcp *dphdcp;
+	static struct tegra_dphdcp **dphdcp_head;
 	int e;
+	int num_heads;
 
+	num_heads = tegra_dc_get_numof_dispheads();
+
+	if (id >= num_heads) {
+		dphdcp_err("head id greater than what's available!");
+		return ERR_PTR(-EMFILE);
+	}
+
+	/* ensure memory allocated once */
+	if (!dphdcp_head) {
+		dphdcp_head =
+		kzalloc(sizeof(void *) * num_heads, GFP_KERNEL);
+		if (!dphdcp_head)
+			return ERR_PTR(-ENOMEM);
+	}
+
+	dphdcp = dphdcp_head[id];
+	/* do not allow multiple node creation */
 	if (dphdcp)
 		return ERR_PTR(-EMFILE);
 
@@ -1982,6 +2001,7 @@ struct tegra_dphdcp *tegra_dphdcp_create(struct tegra_dc_dp_data *dp,
 		goto free_workqueue;
 	}
 
+	dphdcp_head[id] = dphdcp;
 	dphdcp_vdbg("%s(): created misc device %s\n", __func__, dphdcp->name);
 
 	return dphdcp;

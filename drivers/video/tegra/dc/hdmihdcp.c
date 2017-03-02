@@ -2091,10 +2091,28 @@ static const struct file_operations nvhdcp_fops = {
 struct tegra_nvhdcp *tegra_nvhdcp_create(struct tegra_hdmi *hdmi,
 			int id, int bus)
 {
-	static struct tegra_nvhdcp *nvhdcp; /* prevent multiple calls */
+	struct tegra_nvhdcp *nvhdcp;
+	static struct tegra_nvhdcp **nvhdcp_head;
 	struct i2c_adapter *adapter;
 	int e;
+	int num_heads;
 
+	num_heads = tegra_dc_get_numof_dispheads();
+
+	if (id >= num_heads) {
+		nvhdcp_err("head id greater than what's available!");
+		return ERR_PTR(-EMFILE);
+	}
+
+	if (!nvhdcp_head) {
+		nvhdcp_head =
+		kzalloc(sizeof(void *) * num_heads, GFP_KERNEL);
+		if (!nvhdcp_head)
+			return ERR_PTR(-ENOMEM);
+	}
+
+	nvhdcp = nvhdcp_head[id];
+	/* do not allow duplicate node creation */
 	if (nvhdcp)
 		return ERR_PTR(-EMFILE);
 
@@ -2146,6 +2164,7 @@ struct tegra_nvhdcp *tegra_nvhdcp_create(struct tegra_hdmi *hdmi,
 	if (e)
 		goto free_workqueue;
 
+	nvhdcp_head[id] = nvhdcp;
 	nvhdcp_vdbg("%s(): created misc device %s\n", __func__, nvhdcp->name);
 
 	return nvhdcp;

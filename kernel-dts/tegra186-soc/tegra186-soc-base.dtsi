@@ -2785,4 +2785,9 @@
 		compatible = "nvidia,tegra186-nvdumper";
 		status = "disabled";
 	};
+
+	tegra-pmc-blink-pwm {
+		compatible = "nvidia,tegra210-pmc-blink-pwm";
+		status = "disabled";
+	};
 };

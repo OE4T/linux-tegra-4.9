@@ -37,7 +37,6 @@
 
 #define DPAUX_NVHOST_DEVICE_DATA(aux_name)	\
 	{					\
-	NVHOST_MODULE_NO_POWERGATE_ID,		\
 	.clocks = {{#aux_name, UINT_MAX},	\
 			{} },			\
 	.devfs_name	= "pinctrl-dpaux",	\

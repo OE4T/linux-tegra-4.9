@@ -3280,7 +3280,7 @@ static int tegra_se_remove(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct tegra_se_dev *se_dev = pdata->private_data;
-	struct device_node *node = of_node_get(se_dev->dev->of_node);
+	struct device_node *node;
 	int i;
 
 	if (!se_dev)
@@ -3294,6 +3294,7 @@ static int tegra_se_remove(struct platform_device *pdev)
 			se_dev->aes_cmdbuf_cpuvaddr, se_dev->aes_cmdbuf_iova,
 			__DMA_ATTR(attrs));
 
+	node = of_node_get(se_dev->dev->of_node);
 	if (is_algo_supported(node, "drbg")) {
 		/* Unregister RNG(DRBG), the first element in aes_algs/rng_algs
 		 * with SE1/AES0

@@ -1,7 +1,7 @@
 /*
  * isc manager.
  *
- * Copyright (c) 2015-2016, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2015-2017, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -265,7 +265,7 @@ static int isc_mgr_get_pwr_info(struct isc_mgr_priv *isc_mgr,
 		goto pwr_info_end;
 	}
 
-	if (pinfo.pwr_gpio >= pd->num_pwr_gpios) {
+	if (pinfo.pwr_gpio >= pd->num_pwr_gpios || pinfo.pwr_gpio < 0) {
 		dev_err(isc_mgr->pdev,
 			"%s: invalid power gpio provided\n", __func__);
 		pinfo.pwr_status = -1;
@@ -511,8 +511,6 @@ static int isc_mgr_open(struct inode *inode, struct file *file)
 	struct isc_mgr_priv *isc_mgr = container_of(inode->i_cdev,
 					struct isc_mgr_priv, cdev);
 
-	if (!isc_mgr)
-		return -ENODEV;
 	/* only one application can open one isc_mgr device */
 	if (atomic_xchg(&isc_mgr->in_use, 1))
 		return -EBUSY;

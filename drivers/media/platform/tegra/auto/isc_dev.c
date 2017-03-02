@@ -346,9 +346,10 @@ static int isc_dev_open(struct inode *inode, struct file *file)
 {
 	struct isc_dev_info *info;
 
-	info = container_of(inode->i_cdev, struct isc_dev_info, cdev);
-	if (!info)
+	if (inode == NULL)
 		return -ENODEV;
+
+	info = container_of(inode->i_cdev, struct isc_dev_info, cdev);
 
 	if (atomic_xchg(&info->in_use, 1))
 		return -EBUSY;
@@ -400,13 +401,16 @@ static int isc_dev_probe(struct i2c_client *client,
 	if (client->dev.platform_data) {
 		info->pdata = client->dev.platform_data;
 		dev_dbg(&client->dev, "pdata: %p\n", info->pdata);
-	} else
+	} else {
 		dev_notice(&client->dev, "%s NO platform data\n", __func__);
+		return -ENODEV;
+	}
 
-	if (info->pdata && info->pdata->reg_bits)
+	if (info->pdata->reg_bits)
 		info->reg_len = info->pdata->reg_bits / 8;
 	else
 		info->reg_len = 2;
+
 	if (info->reg_len > 2) {
 		dev_err(&client->dev,
 			"device offset length invalid: %d\n", info->reg_len);
@@ -423,9 +427,13 @@ static int isc_dev_probe(struct i2c_client *client,
 		snprintf(info->devname, sizeof(info->devname),
 			"isc-dev.%u.%02x", client->adapter->nr, client->addr);
 
+	if (info->pdata->pdev == NULL)
+		return -ENODEV;
+
 	cdev_init(&info->cdev, &isc_dev_fileops);
 	info->cdev.owner = THIS_MODULE;
 	pdev = info->pdata->pdev;
+
 	err = cdev_add(&info->cdev, MKDEV(MAJOR(pdev->devt), client->addr), 1);
 	if (err < 0) {
 		dev_err(&client->dev,

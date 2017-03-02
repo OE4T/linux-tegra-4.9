@@ -458,7 +458,7 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	ret = of_property_read_u32(np, "nvidia,heartbeat-init", &pval);
+	ret = of_property_read_u32(np, "timeout-sec", &pval);
 	if (!ret)
 		tegra_wdt_t18x->heartbeat = pval;
 	else

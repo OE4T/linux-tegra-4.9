@@ -558,7 +558,6 @@ static int get_dst_timing(unsigned char *block, struct fb_videomode *mode,
 static void get_detailed_timing(unsigned char *block,
 				struct fb_videomode *mode)
 {
-	int i;
 	int cea_vic;
 	int v_size = V_SIZE;
 	int h_size = H_SIZE;
@@ -589,6 +588,10 @@ static void get_detailed_timing(unsigned char *block,
 		mode->vsync_len *= 2;
 		mode->vmode |= FB_VMODE_INTERLACED;
 	}
+
+	cea_vic = fb_mode_find_cea(mode);
+	mode->vmode |= cea_vic ? FB_VMODE_IS_CEA : 0;
+
 	mode->flag = FB_MODE_IS_DETAILED;
 	mode->vmode |= FB_VMODE_IS_DETAILED;
 
@@ -597,16 +600,6 @@ static void get_detailed_timing(unsigned char *block,
 		mode->flag |= FB_FLAG_RATIO_16_9;
 	if (h_size * 18 > v_size * 23 && h_size * 18 < v_size * 25)
 		mode->flag |= FB_FLAG_RATIO_4_3;
-
-	/* Find if it is a CEA mode */
-	cea_vic = 0;
-	for (i = CEA_MODEDB_SIZE - 1; i > 0; i--) {
-		if (fb_mode_is_equal(cea_modes + i, mode)) {
-			mode->vmode |= FB_VMODE_IS_CEA;
-			cea_vic = i;
-			break;
-		}
-	}
 
 	DPRINTK("      %d MHz ",  PIXEL_CLOCK/1000000);
 	DPRINTK("%d %d %d %d ", H_ACTIVE, H_ACTIVE + H_SYNC_OFFSET,
@@ -1233,6 +1226,11 @@ void fb_edid_add_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 		}
 
 		memcpy(&m[i], &hdmi_ext_modes[vic], sizeof(m[i]));
+		m[i].vmode |= fb_mode_find_cea(&m[i]) ?
+			FB_VMODE_IS_CEA : 0;
+		m[i].vmode |= FB_VMODE_IS_HDMI_EXT;
+		pr_debug("Adding HDMI VIC #%d: %ux%u@%u\n", vic,
+				m[i].xres, m[i].yres, m[i].refresh);
 		i++;
 	}
 

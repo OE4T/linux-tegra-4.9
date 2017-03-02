@@ -4030,6 +4030,9 @@ static const struct tegra_pmc_soc tegra210_pmc_soc = {
 
 /* Tegra 186 register map */
 static const unsigned long tegra186_register_map[TEGRA_PMC_MAX_REG] = {
+	[TEGRA_PMC_CNTRL]			= 0x0,
+	[TEGRA_PMC_DPD_PADS_ORIDE]		= 0x08,
+	[TEGRA_PMC_BLINK_TIMER]			= 0x30,
 	[TEGRA_PMC_FUSE_CTRL]			= 0x100,
 	[TEGRA_PMC_IMPL_RAMDUMP_CTL_STATUS]	= 0x10C,
 	[TEGRA_PMC_E_18V_PWR]			= 0x3C,

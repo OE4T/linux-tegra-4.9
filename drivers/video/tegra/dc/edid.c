@@ -42,8 +42,6 @@ struct tegra_edid_pvt {
 	bool				support_yuv444;
 	bool				rgb_quant_selectable;
 	bool				yuv_quant_selectable;
-	int			        hdmi_vic_len;
-	u8			        hdmi_vic[7];
 	u16			color_depth_flag;
 	u16			max_tmds_char_rate_hf_mhz;
 	u16			max_tmds_char_rate_hllc_mhz;
@@ -432,13 +430,6 @@ static int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 					/* 3D_present? */
 					if (j <= len && (ptr[j] & 0x80))
 						edid->support_stereo = 1;
-					/* HDMI_VIC_LEN */
-					if (++j <= len && (ptr[j] & 0xe0)) {
-						int k = 0;
-						edid->hdmi_vic_len = ptr[j] >> 5;
-						for (k = 0; k < edid->hdmi_vic_len; k++)
-						    edid->hdmi_vic[k] = ptr[j+k+1];
-					}
 				}
 			}
 			if ((len > 5) &&
@@ -808,34 +799,6 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 						specs->modedb[j].vmode |=
 						FB_VMODE_STEREO_FRAME_PACK;
 				}
-			}
-
-			if (new_data->hdmi_vic_len > 0) {
-				int k;
-				int l = specs->modedb_len;
-				struct fb_videomode *m;
-				m = kzalloc((specs->modedb_len +
-				    new_data->hdmi_vic_len) *
-				    sizeof(struct fb_videomode), GFP_KERNEL);
-				if (!m)
-					break;
-				memcpy(m, specs->modedb, specs->modedb_len *
-					sizeof(struct fb_videomode));
-				for (k = 0; k < new_data->hdmi_vic_len; k++) {
-				    unsigned vic = new_data->hdmi_vic[k];
-				    if (vic >= HDMI_EXT_MODEDB_SIZE) {
-				        pr_warning("Unsupported HDMI VIC %d, ignoring\n", vic);
-				        continue;
-				    }
-				    memcpy(&m[l], &hdmi_ext_modes[vic],
-						sizeof(m[l]));
-				    m[l].vmode |= FB_VMODE_IS_HDMI_EXT;
-				    l++;
-				}
-				kfree(specs->modedb);
-				specs->modedb = m;
-				specs->modedb_len = specs->modedb_len +
-							new_data->hdmi_vic_len;
 			}
 		}
 	}

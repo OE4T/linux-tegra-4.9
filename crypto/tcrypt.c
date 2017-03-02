@@ -32,6 +32,7 @@
 #include <linux/init.h>
 #include <linux/gfp.h>
 #include <linux/module.h>
+#include <linux/delay.h>
 #include <linux/scatterlist.h>
 #include <linux/string.h>
 #include <linux/moduleparam.h>
@@ -55,6 +56,8 @@
 #define VERIFY		3
 
 #define MAX_DIGEST_SIZE		64
+#define MAX_PAGE_ORDER		10
+#define MAX_PAGE_ALLOC		BIT(MAX_PAGE_ORDER)
 
 /*
  * return a string with the driver name
@@ -83,6 +86,8 @@ static char *check[] = {
 	"lzo", "cts", "zlib", "sha3-224", "sha3-256", "sha3-384", "sha3-512",
 	NULL
 };
+
+static atomic_t tcrypt_aes_buf[MAX_PAGE_ALLOC];
 
 struct tcrypt_result {
 	struct completion completion;
@@ -927,11 +932,15 @@ out:
 #define CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_ENCRYPT_SPEED 240
 #define CUSTOMIZED_ACIPHER_SPEED_TEST_TARGET_DECRYPT_SPEED 260
 
+#define MAX_AESBUF_TIMEOUT_FACTOR	20
+#define WAIT_UDELAY			500
+
 static atomic_t atomic_counter;
 
 struct customized_tcrypt_result {
 	u8 iv[CUSTOMIZED_ACIPHER_SPEED_TEST_KEY_SIZE];
 	u8 *block;
+	int index;
 	struct completion completion;
 	struct completion restart;
 	struct skcipher_request *req;
@@ -952,7 +961,7 @@ static void customized_tcrypt_complete(struct crypto_async_request *req,
 	res->err = err;
 	atomic_add(1, &atomic_counter);
 	skcipher_request_free(res->req);
-	kfree(res->block);
+	atomic_set(&tcrypt_aes_buf[res->index], 1);
 }
 
 static unsigned int customized_blocks[] = {
@@ -984,8 +993,25 @@ static unsigned int acipher_speed(const char *algo, int enc,
 	unsigned long bytes_tested = blocks_to_test * blocksize;
 	unsigned long bytes_per_ms = 0;
 	u32 val = 0;
+	u32 npages_per_block = ((blocksize / PAGE_SIZE) + 1);
+	unsigned long pages;
+	u32 nalloc = MAX_PAGE_ALLOC / npages_per_block;
+	int index = 0;
+	unsigned long aes_buf_addr[nalloc];
 
-	atomic_set(&atomic_counter, 0);
+	pages = __get_free_pages(GFP_KERNEL, MAX_PAGE_ORDER);
+	if (!pages) {
+		pr_err("aes pages allocation failed for %s\n", algo);
+		return -ENOMEM;
+	}
+
+	for (k = 0; k < nalloc; k++) {
+		aes_buf_addr[k] = pages + (k * (npages_per_block) * PAGE_SIZE);
+		atomic_set(&tcrypt_aes_buf[k], 1);
+	}
+
+	for (k = nalloc; k < MAX_PAGE_ALLOC; k++)
+		atomic_set(&tcrypt_aes_buf[k], 0);
 
 	if (enc == ENCRYPT) {
 		e = "encryption";
@@ -1007,8 +1033,6 @@ static unsigned int acipher_speed(const char *algo, int enc,
 	pr_info("testing  (%d bit key, %d byte blocks)\n",
 			keysize * 8, blocksize);
 
-	memset(tvmem[0], 0xff, PAGE_SIZE);
-
 	crypto_skcipher_clear_flags(tfm, ~0);
 
 	ret = crypto_skcipher_setkey(tfm, key, keysize);
@@ -1018,17 +1042,34 @@ static unsigned int acipher_speed(const char *algo, int enc,
 		goto out;
 	}
 
+	atomic_set(&atomic_counter, 0);
 	getnstimeofday(&before);
 
 	for (k = 0; k < blocks_to_test; k++) {
 		struct skcipher_request *req;
-		u8 *alloc_addr;
+		int i = index + 1, j;
 		struct customized_tcrypt_result *tresult;
 		struct scatterlist *sg;
 		u8 *block, *iv;
+		u8 *alloc_addr = NULL;
 
-		alloc_addr = kmalloc(((blocksize / PAGE_SIZE) + 1) * PAGE_SIZE,
-				GFP_KERNEL);
+		for (j = 0; j < (MAX_AESBUF_TIMEOUT_FACTOR * nalloc); j++, i++) {
+				i = i % nalloc;
+				if (atomic_read(&tcrypt_aes_buf[i])) {
+					alloc_addr = (u8 *)aes_buf_addr[i];
+					index = i;
+					atomic_set(&tcrypt_aes_buf[i], 0);
+					break;
+				}
+				if (j % nalloc == 0)
+					udelay(WAIT_UDELAY);
+		}
+
+		if (!alloc_addr) {
+			pr_err("alloc_addr for aes buffer not available\n");
+			return -ENOMEM;
+		}
+
 		tresult = (struct customized_tcrypt_result *)
 						(alloc_addr + blocksize);
 		if (!tresult) {
@@ -1036,6 +1077,7 @@ static unsigned int acipher_speed(const char *algo, int enc,
 			goto out;
 		}
 		tresult->block = alloc_addr;
+		tresult->index = index;
 
 		init_completion(&tresult->completion);
 		init_completion(&tresult->restart);
@@ -1091,6 +1133,9 @@ static unsigned int acipher_speed(const char *algo, int enc,
 		val = atomic_read(&atomic_counter);
 
 	getnstimeofday(&after);
+
+	free_pages(pages, MAX_PAGE_ORDER);
+
 	before_a = before.tv_nsec;
 	after_a = ((after.tv_sec - before.tv_sec) * 1000000000) + after.tv_nsec;
 	diff_in_ms = (after_a - before_a) / 1000000;

@@ -314,6 +314,10 @@ static int vgpu_init_gpu_characteristics(struct gk20a *g)
 
 	g->gpu_characteristics.max_freq = priv->constants.max_freq;
 	g->gpu_characteristics.map_buffer_batch_limit = 0;
+
+	/* features vgpu does not support */
+	g->gpu_characteristics.flags &= ~NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS;
+
 	return 0;
 }
 

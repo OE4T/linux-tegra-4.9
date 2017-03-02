@@ -23,6 +23,7 @@
 #include <linux/iommu.h>
 #include <linux/io.h>
 #include <linux/nvmap_t19x.h>
+#include <linux/dma-attrs.h>
 
 #include "bus_client_t194.h"
 #include "nvhost_syncpt_unit_interface.h"
@@ -282,7 +283,7 @@ int nvhost_syncpt_alloc_gos_backing(struct platform_device *engine_pdev,
 		return -ENOMEM;
 
 	dma_alloc_attrs(&cv_dev_info->offset_dev, sizeof(u32), &offset,
-			DMA_MEMORY_NOMAP, &attrs);
+			DMA_MEMORY_NOMAP, __DMA_ATTR(attrs));
 	err = dma_mapping_error(&cv_dev_info->offset_dev, offset);
 	if (err) {
 		kfree(syncpt_gos_backing);
@@ -325,7 +326,7 @@ int nvhost_syncpt_release_gos_backing(struct nvhost_syncpt *sp,
 
 	offset = (dma_addr_t)syncpt_gos_backing->gos_offset;
 	dma_free_attrs(syncpt_gos_backing->offset_dev, sizeof(u32),
-			(void *)(uintptr_t)offset, offset, &attrs);
+			(void *)(uintptr_t)offset, offset, __DMA_ATTR(attrs));
 
 	rb_erase(&syncpt_gos_backing->syncpt_gos_backing_entry,
 		 &host->syncpt_backing_head);
@@ -453,14 +454,14 @@ int nvhost_syncpt_unit_interface_init(struct platform_device *engine_pdev)
 		struct scatterlist sg;
 
 		/* The area doesn't really exist so we cannot do CPU sync */
-		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, __DMA_ATTR(attrs));
 
 		/* Initialize the scatterlist to cover the whole range */
 		sg_init_table(&sg, 1);
 		sg_set_page(&sg, phys_to_page(res->start), range_size, 0);
 
 		err = dma_map_sg_attrs(&engine_pdev->dev, &sg, 1,
-				       DMA_BIDIRECTIONAL, &attrs);
+				       DMA_BIDIRECTIONAL, __DMA_ATTR(attrs));
 
 		/* dma_map_sg_attrs returns 0 on errors */
 		if (err == 0) {

@@ -780,7 +780,7 @@
 
 		ranges;
 
-		clocks = <&tegra_car TEGRA210_CLK_HOST1X>,
+		clocks = <&tegra_car TEGRA210_CLK_NV_HOST1X>,
 			<&tegra_car TEGRA210_CLK_ACTMON>;
 		clock-names = "host1x", "actmon";
 		resets = <&tegra_car TEGRA210_CLK_HOST1X>;

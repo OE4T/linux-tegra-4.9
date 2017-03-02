@@ -54,7 +54,7 @@
 
 #include "tegra_asoc_utils_alt.h"
 #include "tegra210_adsp_alt.h"
-#ifdef CONFIG_TEGRA_HV_MANAGER
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 #include "tegra210_virt_alt_admaif.h"
 #include "tegra_virt_alt_ivc.h"
 #endif
@@ -149,7 +149,7 @@ struct tegra210_adsp {
 		uint32_t fe_reg;
 		uint32_t be_reg;
 	} pcm_path[ADSP_FE_COUNT+1][2];
-#ifdef CONFIG_TEGRA_HV_MANAGER
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 	struct nvaudio_ivc_ctxt *hivc_client;
 	uint32_t fe_to_admaif_map[ADSP_FE_END - ADSP_FE_START + 1][2];
 #endif
@@ -730,7 +730,7 @@ static int tegra210_adsp_send_data_request_msg(struct tegra210_adsp_app *app,
 static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 				struct tegra210_adsp_app *app)
 {
-#ifdef CONFIG_TEGRA_HV_MANAGER
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 	struct device *dev = adsp->dev;
 	struct device_node *node = dev->of_node;
 #endif
@@ -803,7 +803,7 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 		}
 		__set_bit(app->adma_chan, adsp->adma_usage);
 
-#ifdef CONFIG_TEGRA_HV_MANAGER
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 		if (of_device_is_compatible(node,
 				"nvidia,tegra210-adsp-audio-hv"))
 			app->adma_chan += TEGRA210_ADSP_ADMA_CHANNEL_START_HV;
@@ -1634,7 +1634,7 @@ static int tegra210_adsp_pcm_hw_free(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-#ifdef CONFIG_TEGRA_HV_MANAGER
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 static uint32_t tegra_adsp_get_admaif_id(
 					struct tegra210_adsp *adsp,
 					uint32_t apm_out_in,
@@ -1797,7 +1797,7 @@ static int tegra210_adsp_pcm_trigger(struct snd_pcm_substream *substream,
 				     int cmd)
 {
 	struct tegra210_adsp_pcm_rtd *prtd = substream->runtime->private_data;
-#ifdef CONFIG_TEGRA_HV_MANAGER
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 	struct tegra210_adsp *adsp = prtd->fe_apm->adsp;
 	struct device *dev = adsp->dev;
 	struct device_node *node = dev->of_node;
@@ -1806,7 +1806,7 @@ static int tegra210_adsp_pcm_trigger(struct snd_pcm_substream *substream,
 
 	dev_vdbg(prtd->dev, "%s : state %d", __func__, cmd);
 
-#ifdef CONFIG_TEGRA_HV_MANAGER
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 	if (of_device_is_compatible(node, "nvidia,tegra210-adsp-audio-hv")) {
 		ret = tegra210_adsp_hv_pcm_trigger(adsp,
 					prtd->fe_apm->reg,
@@ -1968,7 +1968,7 @@ static void tegra210_adsp_pcm_free(struct snd_pcm *pcm)
 	}
 }
 
-#ifdef CONFIG_TEGRA_HV_MANAGER
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 static void tegra_adsp_set_admaif_id(
 				struct tegra210_adsp *adsp,
 				uint32_t admaif_id,
@@ -2128,7 +2128,7 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_soc_dai *dai)
 {
 	struct tegra210_adsp *adsp = snd_soc_dai_get_drvdata(dai);
-#ifdef CONFIG_TEGRA_HV_MANAGER
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 	struct device *dev = adsp->dev;
 	struct device_node *node = dev->of_node;
 #endif
@@ -2144,7 +2144,7 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 
 	if (!adsp->adsp_started)
 		return -EINVAL;
-#ifdef CONFIG_TEGRA_HV_MANAGER
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 	if (of_device_is_compatible(node, "nvidia,tegra210-adsp-audio-hv")) {
 
 		/*Start of sending IVC command for admaif cif settings*/

@@ -3,7 +3,7 @@
  *
  * User-space interface to nvmap
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,6 +63,7 @@
 #define NVMAP_CARVEOUT_KILLER_RETRY_TIME 100 /* msecs */
 
 struct nvmap_device *nvmap_dev;
+EXPORT_SYMBOL(nvmap_dev);
 struct nvmap_stats nvmap_stats;
 
 static struct device_dma_parameters nvmap_dma_parameters = {

@@ -525,7 +525,7 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	if (twdt_t18x->extended_suspend)
 		register_syscore_ops(&tegra_wdt_t18x_syscore_ops);
 
-	ret = watchdog_register_device(&twdt_t18x->wdt);
+	ret = devm_watchdog_register_device(&pdev->dev, &twdt_t18x->wdt);
 	if (ret) {
 		dev_err(&pdev->dev, "Failed to register watchdog device\n");
 		goto cleanup;
@@ -570,8 +570,6 @@ static int tegra_wdt_t18x_remove(struct platform_device *pdev)
 		unregister_syscore_ops(&tegra_wdt_t18x_syscore_ops);
 
 	debugfs_remove_recursive(twdt_t18x->root);
-
-	watchdog_unregister_device(&twdt_t18x->wdt);
 
 	return 0;
 }

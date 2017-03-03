@@ -381,6 +381,8 @@
 
 			#stream-id-cells = <0x1>;
 
+			nvidia,dc-ctrlnum = <0>;
+
 			clock-names = "clk32k_in", "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p0",
 				      "pllp_display", "plld2", "plld3",
@@ -414,6 +416,8 @@
 			interrupts = <0 154 4>;
 
 			#stream-id-cells = <0x1>;
+
+			nvidia,dc-ctrlnum = <1>;
 
 			clock-names = "clk32k_in", "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p1",

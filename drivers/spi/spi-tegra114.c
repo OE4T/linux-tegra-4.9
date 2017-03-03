@@ -173,7 +173,7 @@
 #define DATA_DIR_TX				(1 << 0)
 #define DATA_DIR_RX				(1 << 1)
 
-#define SPI_DMA_TIMEOUT				(msecs_to_jiffies(1000))
+#define SPI_DMA_TIMEOUT				(msecs_to_jiffies(10000))
 #define DEFAULT_SPI_DMA_BUF_LEN			(16*1024)
 #define TX_FIFO_EMPTY_COUNT_MAX			SPI_TX_FIFO_EMPTY_COUNT(0x40)
 #define RX_FIFO_FULL_COUNT_ZERO			SPI_RX_FIFO_FULL_COUNT(0)

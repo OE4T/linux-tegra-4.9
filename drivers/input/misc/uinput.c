@@ -790,7 +790,7 @@ static int uinput_str_to_user(void __user *dest, const char *str,
 static long uinput_ioctl_handler(struct file *file, unsigned int cmd,
 				 unsigned long arg, void __user *p)
 {
-	int			retval;
+	long			retval;
 	struct uinput_device	*udev = file->private_data;
 	struct uinput_ff_upload ff_up;
 	struct uinput_ff_erase  ff_erase;

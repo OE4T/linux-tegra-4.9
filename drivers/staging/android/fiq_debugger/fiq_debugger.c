@@ -4,6 +4,7 @@
  * Serial Debugger Interface accessed through an FIQ interrupt.
  *
  * Copyright (C) 2008 Google, Inc.
+ * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -52,6 +53,8 @@
 #define MAX_UNHANDLED_FIQ_COUNT 1000000
 
 #define MAX_FIQ_DEBUGGER_PORTS 4
+
+#define MIN(a, b)	((a) < (b) ? (a) : (b))
 
 struct fiq_debugger_state {
 #ifdef CONFIG_FIQ_GLUE
@@ -402,7 +405,7 @@ static void fiq_debugger_work(struct work_struct *work)
 		cmd += 6;
 		while (*cmd == ' ')
 			cmd++;
-		if (cmd != '\0')
+		if (*cmd != '\0')
 			kernel_restart(cmd);
 		else
 			kernel_restart(NULL);
@@ -535,7 +538,8 @@ static bool fiq_debugger_fiq_exec(struct fiq_debugger_state *state,
 				"command processor busy. trying to abort.\n");
 			state->debug_abort = -1;
 		} else {
-			strcpy(state->debug_cmd, cmd);
+			strlcpy(state->debug_cmd, cmd,
+				MIN(strlen(cmd), DEBUG_MAX));
 			state->debug_busy = 1;
 		}
 

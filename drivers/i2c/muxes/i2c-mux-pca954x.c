@@ -127,7 +127,7 @@ static const struct of_device_id pca954x_of_match[] = {
 	{ .compatible = "nxp,pca9543", .data = &chips[pca_9543] },
 	{ .compatible = "nxp,pca9544", .data = &chips[pca_9544] },
 	{ .compatible = "nxp,pca9545", .data = &chips[pca_9545] },
-	{ .compatible = "nxp,pca9546", .data = &chips[pca_9546] },
+	{ .compatible = "nxp,pca9546", .data = &chips[pca_9545] },
 	{ .compatible = "nxp,pca9547", .data = &chips[pca_9547] },
 	{ .compatible = "nxp,pca9548", .data = &chips[pca_9548] },
 	{}

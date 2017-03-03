@@ -53,8 +53,7 @@ static void gv11b_ltc_init_fs_state(struct gk20a *g)
 	gk20a_dbg_info("%u ltcs out of %u", g->ltc_count, g->max_ltc_count);
 
 	reg = gk20a_readl(g, ltc_ltcs_ltss_cbc_num_active_ltcs_r());
-	reg |= ltc_ltcs_ltss_cbc_num_active_ltcs_nvlink_peer_through_l2_f(true)
-		| ltc_ltcs_ltss_cbc_num_active_ltcs_serialize_f(true);
+	reg |= ltc_ltcs_ltss_cbc_num_active_ltcs_serialize_f(true);
 	gk20a_writel(g, ltc_ltcs_ltss_cbc_num_active_ltcs_r(), reg);
 
 	gk20a_writel(g, ltc_ltcs_ltss_dstg_cfg0_r(),
@@ -75,10 +74,24 @@ static void gv11b_ltc_init_fs_state(struct gk20a *g)
 				ltc_intr);
 }
 
+u32 gv11b_ltc_cbc_fix_config(struct gk20a *g, int base)
+{
+	u32 val = gk20a_readl(g, ltc_ltcs_ltss_cbc_num_active_ltcs_r());
+
+	if (ltc_ltcs_ltss_cbc_num_active_ltcs__v(val) == 2)
+		return base * 2;
+	else if (ltc_ltcs_ltss_cbc_num_active_ltcs__v(val) != 1) {
+		gk20a_err(dev_from_gk20a(g),
+			"Invalid number of active ltcs: %08x\n", val);
+	}
+	return base;
+}
+
 
 void gv11b_init_ltc(struct gpu_ops *gops)
 {
 	gp10b_init_ltc(gops);
 	gops->ltc.set_zbc_s_entry = gv11b_ltc_set_zbc_stencil_entry;
 	gops->ltc.init_fs_state = gv11b_ltc_init_fs_state;
+	gops->ltc.cbc_fix_config = gv11b_ltc_cbc_fix_config;
 }

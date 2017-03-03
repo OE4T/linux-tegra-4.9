@@ -758,10 +758,10 @@ static int usb_serial_probe(struct usb_interface *interface,
 
 	/* if this device type has a probe function, call it */
 	if (type->probe) {
-		const struct usb_device_id *id;
+		const struct usb_device_id *id1;
 
-		id = get_iface_id(type, interface);
-		retval = type->probe(serial, id);
+		id1 = get_iface_id(type, interface);
+		retval = type->probe(serial, id1);
 
 		if (retval) {
 			dev_dbg(ddev, "sub driver rejected device\n");

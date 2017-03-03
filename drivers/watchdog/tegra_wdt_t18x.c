@@ -17,18 +17,16 @@
  * more details.
  */
 
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/fs.h>
 #include <linux/debugfs.h>
+#include <linux/fs.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
-#include <linux/spinlock.h>
 #include <linux/syscore_ops.h>
 #include <linux/uaccess.h>
 #include <linux/watchdog.h>
@@ -36,16 +34,22 @@
 #include <soc/tegra/pmc.h>
 
 /* minimum and maximum watchdog trigger periods, in seconds */
-#define MIN_WDT_PERIOD	5
-#define MAX_WDT_PERIOD	256
+#define MIN_WDT_PERIOD		5
+#define MAX_WDT_PERIOD		256
+
+/* Bit numbers for status flags */
+#define WDT_ENABLED		0
+#define WDT_ENABLED_ON_INIT	1
+#define WDT_ENABLED_USERSPACE	2
 
 struct tegra_wdt_t18x {
-	struct platform_device *pdev;
+	struct device		*dev;
 	struct watchdog_device	wdt;
 	unsigned long		users;
 	void __iomem		*wdt_source;
 	void __iomem		*wdt_timer;
 	void __iomem		*wdt_tke;
+	struct dentry		*root;
 	u32			config;
 	int			irq;
 	int			hwirq;
@@ -53,15 +57,10 @@ struct tegra_wdt_t18x {
 	bool			enable_on_init;
 	int			expiry_count;
 	int			active_count;
-	int			heartbeat;
 	int			shutdown_timeout;
 	int			index;
 	bool			extended_suspend;
-	bool			preset_config;
-/* Bit numbers for status flags */
-#define WDT_ENABLED		0
-#define WDT_ENABLED_ON_INIT	1
-#define WDT_ENABLED_USERSPACE	2
+	bool			config_locked;
 };
 
 /*
@@ -83,7 +82,7 @@ MODULE_PARM_DESC(default_disable, "Default state of watchdog");
  * on skip configuration if supported. To be safe, we set the default expiry
  * count to 1. It should be updated later with value specified in device tree.
  */
-#define EXPIRY_COUNT	1
+#define EXPIRY_COUNT		1
 
 /*
  * To detect lockup condition, the heartbeat should be expiry_count*lockup.
@@ -91,7 +90,7 @@ MODULE_PARM_DESC(default_disable, "Default state of watchdog");
  * Must be greater than expiry_count*MIN_WDT_PERIOD and lower than
  * expiry_count*MAX_WDT_PERIOD.
  */
-#define HEARTBEAT	120
+#define HEARTBEAT		120
 
 static struct syscore_ops tegra_wdt_t18x_syscore_ops;
 
@@ -145,7 +144,7 @@ static int __tegra_wdt_t18x_ping(struct tegra_wdt_t18x *twdt_t18x)
 
 	writel(WDT_CMD_START_COUNTER, twdt_t18x->wdt_source + WDT_CMD);
 
-	pr_debug("Watchdog%d: wdt cleared\n", twdt_t18x->wdt.id);
+	dev_dbg(twdt_t18x->dev, "Watchdog%d: wdt cleared\n", twdt_t18x->wdt.id);
 
 	return 0;
 }
@@ -166,9 +165,7 @@ static void tegra_wdt_t18x_ref(struct watchdog_device *wdt)
 	if (twdt_t18x->irq <= 0)
 		return;
 
-	/*
-	 * Remove the interrupt handler if userspace is taking over WDT.
-	 */
+	/* Remove the interrupt handler if userspace is taking over WDT. */
 	if (!test_and_set_bit(WDT_ENABLED_USERSPACE, &twdt_t18x->status) &&
 	    test_bit(WDT_ENABLED_ON_INIT, &twdt_t18x->status))
 		disable_irq(twdt_t18x->irq);
@@ -217,7 +214,7 @@ static int __tegra_wdt_t18x_enable(struct tegra_wdt_t18x *twdt_t18x)
 	val |= (TOP_TKE_TMR_EN | TOP_TKE_TMR_PERIODIC);
 	writel(val, twdt_t18x->wdt_timer + TOP_TKE_TMR_PTV);
 
-	if (!twdt_t18x->preset_config)
+	if (!twdt_t18x->config_locked)
 		writel(twdt_t18x->config, twdt_t18x->wdt_source + WDT_CFG);
 	writel(WDT_CMD_START_COUNTER, twdt_t18x->wdt_source + WDT_CMD);
 	set_bit(WDT_ENABLED, &twdt_t18x->status);
@@ -263,12 +260,14 @@ static int tegra_wdt_t18x_ping(struct watchdog_device *wdt)
 static int tegra_wdt_t18x_set_timeout(struct watchdog_device *wdt,
 				      unsigned int timeout)
 {
+	struct tegra_wdt_t18x *twdt_t18x = to_tegra_wdt_t18x(wdt);
+
 	tegra_wdt_t18x_disable(wdt);
 	wdt->timeout = timeout;
 	tegra_wdt_t18x_enable(wdt);
 
-	pr_info("Watchdog(%d): wdt timeout set to %u seconds\n", wdt->id,
-		timeout);
+	dev_info(twdt_t18x->dev, "Watchdog(%d): wdt timeout set to %u sec\n",
+		 wdt->id, timeout);
 	return 0;
 }
 
@@ -287,23 +286,22 @@ static const struct watchdog_ops tegra_wdt_t18x_ops = {
 };
 
 #ifdef CONFIG_DEBUG_FS
-
 static int dump_registers_show(void *data, u64 *val)
 {
 	struct tegra_wdt_t18x *twdt_t18x = data;
 
-	pr_info("timer config register \t%x\n",
-		readl(twdt_t18x->wdt_timer + TOP_TKE_TMR_PTV));
-	pr_info("timer status register \t%x\n",
-		readl(twdt_t18x->wdt_timer + TOP_TKE_TMR_PCR));
-	pr_info("watchdog config register \t%x\n",
-		readl(twdt_t18x->wdt_source + WDT_CFG));
-	pr_info("watchdog status register \t%x\n",
-		readl(twdt_t18x->wdt_source + WDT_STATUS));
-	pr_info("watchdog command register \t%x\n",
-		readl(twdt_t18x->wdt_source + WDT_CMD));
-	pr_info("watchdog skip register \t%x\n",
-		readl(twdt_t18x->wdt_source + WDT_SKIP));
+	dev_info(twdt_t18x->dev, "Timer config register \t%x\n",
+		 readl(twdt_t18x->wdt_timer + TOP_TKE_TMR_PTV));
+	dev_info(twdt_t18x->dev, "Timer status register \t%x\n",
+		 readl(twdt_t18x->wdt_timer + TOP_TKE_TMR_PCR));
+	dev_info(twdt_t18x->dev, "Watchdog config register \t%x\n",
+		 readl(twdt_t18x->wdt_source + WDT_CFG));
+	dev_info(twdt_t18x->dev, "Watchdog status register \t%x\n",
+		 readl(twdt_t18x->wdt_source + WDT_STATUS));
+	dev_info(twdt_t18x->dev, "Watchdog command register \t%x\n",
+		 readl(twdt_t18x->wdt_source + WDT_CMD));
+	dev_info(twdt_t18x->dev, "Watchdog skip register \t%x\n",
+		 readl(twdt_t18x->wdt_source + WDT_SKIP));
 
 	*val = 0;
 
@@ -339,7 +337,7 @@ static void tegra_wdt_t18x_debugfs_init(struct tegra_wdt_t18x *twdt_t18x)
 {
 	struct dentry *root;
 	struct dentry *retval;
-	struct platform_device *pdev = twdt_t18x->pdev;
+	struct platform_device *pdev = to_platform_device(twdt_t18x->dev);
 
 	root = debugfs_create_dir(pdev->name, NULL);
 	if (IS_ERR_OR_NULL(root))
@@ -362,9 +360,11 @@ static void tegra_wdt_t18x_debugfs_init(struct tegra_wdt_t18x *twdt_t18x)
 	if (IS_ERR_OR_NULL(retval))
 		goto clean;
 
+	twdt_t18x->root = root;
+
 	return;
 clean:
-	pr_warn("tegra_wdt_t18x: Failed to create debugfs!\n");
+	dev_warn(twdt_t18x->dev, "Failed to create debugfs!\n");
 	debugfs_remove_recursive(root);
 }
 
@@ -372,40 +372,7 @@ clean:
 static void tegra_wdt_t18x_debugfs_init(struct tegra_wdt_t18x *twdt_t18x)
 {
 }
-
 #endif /* CONFIG_DEBUG_FS */
-
-static int tegra_wdt_t18x_setup_pet(struct tegra_wdt_t18x *twdt_t18x, int index)
-{
-	struct platform_device *pdev = twdt_t18x->pdev;
-	int ret = 0;
-
-	if (!twdt_t18x->enable_on_init)
-		return 0;
-
-	if (twdt_t18x->irq <= 0) {
-		dev_err(&pdev->dev, "failed to get WDT IRQ\n");
-		return -ENXIO;
-	}
-
-	ret = devm_request_threaded_irq(&pdev->dev, twdt_t18x->irq,
-					NULL, tegra_wdt_t18x_isr,
-					IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
-					dev_name(&pdev->dev), twdt_t18x);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "failed to register irq %d err %d\n",
-			twdt_t18x->irq, ret);
-		return ret;
-	}
-
-	tegra_wdt_t18x_enable(&twdt_t18x->wdt);
-	set_bit(WDOG_ACTIVE, &twdt_t18x->wdt.status);
-	set_bit(WDT_ENABLED_ON_INIT, &twdt_t18x->status);
-	pr_info("Tegra WDT setup timeout = %u seconds.\n",
-		twdt_t18x->wdt.timeout);
-
-	return 0;
-}
 
 static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 {
@@ -414,56 +381,42 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct of_phandle_args oirq;
 	u32 pval = 0;
-	u32 cfg;
-	int ret = 0, index;
-
-	if (!np) {
-		dev_err(&pdev->dev, "Support registration from DT only");
-		return -EPERM;
-	}
+	int ret;
 
 	twdt_t18x = devm_kzalloc(&pdev->dev, sizeof(*twdt_t18x), GFP_KERNEL);
 	if (!twdt_t18x)
 		return -ENOMEM;
 
-	ret = of_property_read_u32(np, "timeout-sec", &pval);
-	if (!ret)
-		twdt_t18x->heartbeat = pval;
-	else
-		twdt_t18x->heartbeat = HEARTBEAT;
-
 	ret = of_property_read_u32(np, "nvidia,expiry-count", &pval);
-	if (!ret)
-		twdt_t18x->expiry_count = pval;
-	else
-		twdt_t18x->expiry_count = EXPIRY_COUNT;
+	twdt_t18x->expiry_count = (ret) ? EXPIRY_COUNT : pval;
 
 	ret = of_property_read_u32(np, "nvidia,shutdown-timeout", &pval);
-	if (!ret)
-		twdt_t18x->shutdown_timeout = pval;
-	else
-		twdt_t18x->shutdown_timeout = SHUTDOWN_TIMEOUT;
+	twdt_t18x->shutdown_timeout = (ret) ? SHUTDOWN_TIMEOUT : pval;
 
-	twdt_t18x->pdev = pdev;
+	twdt_t18x->dev = &pdev->dev;
 	twdt_t18x->wdt.info = &tegra_wdt_t18x_info;
 	twdt_t18x->wdt.ops = &tegra_wdt_t18x_ops;
+	twdt_t18x->wdt.min_timeout = MIN_WDT_PERIOD * twdt_t18x->expiry_count;
+	twdt_t18x->wdt.max_timeout = MAX_WDT_PERIOD * twdt_t18x->expiry_count;
+	ret = watchdog_init_timeout(&twdt_t18x->wdt, 0, &pdev->dev);
+	if (ret < 0)
+		twdt_t18x->wdt.timeout = HEARTBEAT;
 
-	twdt_t18x->wdt.min_timeout = MIN_WDT_PERIOD *
-					twdt_t18x->expiry_count;
-	twdt_t18x->wdt.max_timeout = MAX_WDT_PERIOD *
-					twdt_t18x->expiry_count;
-	watchdog_init_timeout(&twdt_t18x->wdt, twdt_t18x->heartbeat,
-			      &pdev->dev);
 	watchdog_set_nowayout(&twdt_t18x->wdt, nowayout);
 
-	twdt_t18x->irq = irq_of_parse_and_map(np, 0);
+	twdt_t18x->irq = platform_get_irq(pdev, 0);
+	if (twdt_t18x->irq < 0) {
+		dev_err(&pdev->dev, "Interrupt is not available\n");
+		return -EINVAL;
+	}
+
 	/*
 	 * Find the IRQ number from the perspective of the interrupt
 	 * controller. This is different than Linux's IRQ number
 	 */
 	ret = of_irq_parse_one(np, 0, &oirq);
-	if (ret) {
-		dev_err(&pdev->dev, "Could not parse IRQ\n");
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Failed to parse IRQ: %d\n", ret);
 		return -EINVAL;
 	}
 
@@ -477,50 +430,44 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 				"nvidia,extend-watchdog-suspend");
 
 	t18x_wdt = twdt_t18x;
+	platform_set_drvdata(pdev, twdt_t18x);
 
 	res_src = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	res_wdt = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	res_tke = platform_get_resource(pdev, IORESOURCE_MEM, 2);
-
 	if (!res_src || !res_wdt || !res_tke) {
-		dev_err(&pdev->dev, "incorrect resources\n");
+		dev_err(&pdev->dev, "Insufficient resources\n");
 		return -ENOENT;
 	}
 
 	twdt_t18x->wdt_source = devm_ioremap_resource(&pdev->dev, res_src);
-
-	cfg = readl(twdt_t18x->wdt_source + WDT_CFG);
-	twdt_t18x->preset_config = (cfg & WDT_CFG_INT_EN) != 0;
-	twdt_t18x->config = cfg;
-
 	if (IS_ERR(twdt_t18x->wdt_source)) {
-		dev_err(&pdev->dev,
-			"Cannot request memregion/iomap res_src\n");
+		dev_err(&pdev->dev, "Cannot request memregion/iomap res_src\n");
 		return PTR_ERR(twdt_t18x->wdt_source);
 	}
 
 	twdt_t18x->wdt_timer = devm_ioremap_resource(&pdev->dev, res_wdt);
 	if (IS_ERR(twdt_t18x->wdt_timer)) {
-		dev_err(&pdev->dev,
-			"Cannot request memregion/iomap res_wdt\n");
+		dev_err(&pdev->dev, "Cannot request memregion/iomap res_wdt\n");
 		return PTR_ERR(twdt_t18x->wdt_timer);
 	}
 
-	twdt_t18x->wdt_tke = devm_ioremap(&pdev->dev,
-			res_tke->start, resource_size(res_tke));
+	twdt_t18x->wdt_tke = devm_ioremap_resource(&pdev->dev, res_tke);
 	if (IS_ERR(twdt_t18x->wdt_tke)) {
-		dev_err(&pdev->dev,
-			"Cannot request memregion/iomap res_tke\n");
+		dev_err(&pdev->dev, "Cannot request memregion/iomap res_tke\n");
 		return PTR_ERR(twdt_t18x->wdt_tke);
 	}
+
+	twdt_t18x->config = readl(twdt_t18x->wdt_source + WDT_CFG);
+	twdt_t18x->config_locked = !!(twdt_t18x->config & WDT_CFG_INT_EN);
 
 	/* Watchdog index in list of wdts under top_tke */
 	twdt_t18x->index = ((res_src->start >> 16) & 0xF) - 0xc;
 
-	if (!twdt_t18x->preset_config) {
+	if (!twdt_t18x->config_locked) {
 		/* Configure timer source and period */
-		cfg = (((res_wdt->start >> 16) & (0xf)) - 2) | WDT_CFG_PERIOD;
-		twdt_t18x->config = cfg;
+		twdt_t18x->config = ((res_wdt->start >> 16) & (0xf)) - 2;
+		twdt_t18x->config |= WDT_CFG_PERIOD;
 
 		/* Enable local interrupt for WDT petting */
 		twdt_t18x->config |= WDT_CFG_INT_EN;
@@ -553,52 +500,78 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	}
 
 	tegra_wdt_t18x_disable(&twdt_t18x->wdt);
-	writel(TOP_TKE_TMR_PCR_INTR, twdt_t18x->wdt_timer +
-					TOP_TKE_TMR_PCR);
+	writel(TOP_TKE_TMR_PCR_INTR, twdt_t18x->wdt_timer + TOP_TKE_TMR_PCR);
 
-	/*
-	 * Setup routing for WDT petting and enable when any one core
-	 * is online. Disabled in low power state
-	 */
-	tegra_wdt_t18x_setup_pet(twdt_t18x, index);
-
-	ret = watchdog_register_device(&twdt_t18x->wdt);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to register watchdog device\n");
-		__tegra_wdt_t18x_disable(twdt_t18x);
+	ret = devm_request_threaded_irq(&pdev->dev, twdt_t18x->irq,
+					NULL, tegra_wdt_t18x_isr,
+					IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
+					dev_name(&pdev->dev), twdt_t18x);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Failed to register irq %d err %d\n",
+			twdt_t18x->irq, ret);
 		return ret;
 	}
 
-	platform_set_drvdata(pdev, twdt_t18x);
+	if (twdt_t18x->enable_on_init) {
+		tegra_wdt_t18x_enable(&twdt_t18x->wdt);
+		set_bit(WDOG_ACTIVE, &twdt_t18x->wdt.status);
+		set_bit(WDT_ENABLED_ON_INIT, &twdt_t18x->status);
+		dev_info(twdt_t18x->dev, "Tegra WDT init timeout = %u sec\n",
+			 twdt_t18x->wdt.timeout);
+	}
 
 	tegra_wdt_t18x_debugfs_init(twdt_t18x);
 
 	if (twdt_t18x->extended_suspend)
 		register_syscore_ops(&tegra_wdt_t18x_syscore_ops);
 
-	dev_info(&pdev->dev, "%s done\n", __func__);
+	ret = watchdog_register_device(&twdt_t18x->wdt);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to register watchdog device\n");
+		goto cleanup;
+	}
+
+	dev_info(&pdev->dev, "Registered successfully\n");
 
 	return 0;
+
+cleanup:
+	__tegra_wdt_t18x_disable(twdt_t18x);
+
+	if (twdt_t18x->extended_suspend)
+		unregister_syscore_ops(&tegra_wdt_t18x_syscore_ops);
+
+	debugfs_remove_recursive(twdt_t18x->root);
+
+	return ret;
 }
 
 static void tegra_wdt_t18x_shutdown(struct platform_device *pdev)
 {
 	struct tegra_wdt_t18x *twdt_t18x = platform_get_drvdata(pdev);
 
-	if (twdt_t18x->wdt.timeout < twdt_t18x->shutdown_timeout)
-		twdt_t18x->wdt.timeout =
-			twdt_t18x->shutdown_timeout;
-	__tegra_wdt_t18x_ping(twdt_t18x);
+	if (twdt_t18x->shutdown_timeout) {
+		twdt_t18x->wdt.timeout = twdt_t18x->shutdown_timeout;
+		__tegra_wdt_t18x_ping(twdt_t18x);
+		return;
+	}
+
+	__tegra_wdt_t18x_disable(twdt_t18x);
 }
 
 static int tegra_wdt_t18x_remove(struct platform_device *pdev)
 {
 	struct tegra_wdt_t18x *twdt_t18x = platform_get_drvdata(pdev);
 
+	t18x_wdt = NULL;
 	__tegra_wdt_t18x_disable(twdt_t18x);
 
+	if (twdt_t18x->extended_suspend)
+		unregister_syscore_ops(&tegra_wdt_t18x_syscore_ops);
+
+	debugfs_remove_recursive(twdt_t18x->root);
+
 	watchdog_unregister_device(&twdt_t18x->wdt);
-	platform_set_drvdata(pdev, NULL);
 
 	return 0;
 }
@@ -608,10 +581,10 @@ static int tegra_wdt_t18x_suspend(struct device *dev)
 {
 	struct tegra_wdt_t18x *twdt_t18x = dev_get_drvdata(dev);
 
-	if (!twdt_t18x->extended_suspend)
-		__tegra_wdt_t18x_disable(twdt_t18x);
-	else
+	if (twdt_t18x->extended_suspend)
 		__tegra_wdt_t18x_ping(twdt_t18x);
+	else
+		__tegra_wdt_t18x_disable(twdt_t18x);
 
 	return 0;
 }
@@ -621,12 +594,12 @@ static int tegra_wdt_t18x_resume(struct device *dev)
 	struct tegra_wdt_t18x *twdt_t18x = dev_get_drvdata(dev);
 
 	if (watchdog_active(&twdt_t18x->wdt)) {
-		if (!twdt_t18x->extended_suspend)
+		if (twdt_t18x->extended_suspend)
 			__tegra_wdt_t18x_ping(twdt_t18x);
 		else
 			__tegra_wdt_t18x_enable(twdt_t18x);
 	} else {
-		if (!twdt_t18x->extended_suspend)
+		if (twdt_t18x->extended_suspend)
 			__tegra_wdt_t18x_disable(twdt_t18x);
 	}
 
@@ -646,7 +619,6 @@ static void tegra_wdt_t18x_syscore_resume(void)
 	if (t18x_wdt && t18x_wdt->extended_suspend)
 		__tegra_wdt_t18x_enable(t18x_wdt);
 }
-
 #else
 static int tegra_wdt_t18x_syscore_suspend(void)
 {
@@ -699,4 +671,3 @@ module_exit(tegra_wdt_t18x_exit);
 MODULE_AUTHOR("NVIDIA Corporation");
 MODULE_DESCRIPTION("Tegra Watchdog Driver");
 MODULE_LICENSE("GPL v2");
-MODULE_ALIAS("platform:tegra_wdt_t18x");

@@ -211,8 +211,8 @@
 					maxim,active-fps-power-down-slot = <2>;
 					regulator-enable-ramp-delay = <278>;
 					regulator-disable-ramp-delay = <153000>;
-					regulator-ramp-delay = <27500>;
-					regulator-ramp-delay-scale = <700>;
+					maxim,ramp-rate-setting = <27500>;
+					regulator-ramp-delay = <3930>;
 				};
 
 				sd1 {
@@ -221,8 +221,8 @@
 					maxim,active-fps-power-down-slot = <1>;
 					regulator-enable-ramp-delay = <211>;
 					regulator-disable-ramp-delay = <40000>;
-					regulator-ramp-delay = <27500>;
-					regulator-ramp-delay-scale = <500>;
+					maxim,ramp-rate-setting = <27500>;
+					regulator-ramp-delay = <5500>;
 				};
 
 				sd2 {
@@ -231,8 +231,8 @@
 					maxim,active-fps-power-down-slot = <7>;
 					regulator-enable-ramp-delay = <4000>;
 					regulator-disable-ramp-delay = <21000>;
-					regulator-ramp-delay = <27500>;
-					regulator-ramp-delay-scale = <6150>;
+					maxim,ramp-rate-setting = <27500>;
+					regulator-ramp-delay = <450>;
 				};
 
 				sd3 {
@@ -241,18 +241,20 @@
 					maxim,active-fps-power-down-slot = <1>;
 					regulator-enable-ramp-delay = <574>;
 					regulator-disable-ramp-delay = <40000>;
-					regulator-ramp-delay = <27500>;
-					regulator-ramp-delay-scale = <500>;
+					maxim,ramp-rate-setting = <27500>;
+					regulator-ramp-delay = <5500>;
 				};
 
 				ldo0 {
 					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
 					maxim,active-fps-power-up-slot = <3>;
 					maxim,active-fps-power-down-slot = <3>;
+					maxim,ramp-rate-setting = <100000>;
 					regulator-ramp-delay = <100000>;
 				};
 
 				ldo1 {
+					maxim,ramp-rate-setting = <100000>;
 					regulator-ramp-delay = <100000>;
 				};
 
@@ -262,8 +264,8 @@
 					maxim,active-fps-power-down-slot = <1>;
 					regulator-enable-ramp-delay = <152>;
 					regulator-disable-ramp-delay = <14000>;
-					regulator-ramp-delay = <100000>;
-					regulator-ramp-delay-scale = <500>;
+					maxim,ramp-rate-setting = <100000>;
+					regulator-ramp-delay = <20000>;
 				};
 
 				ldo3 {
@@ -272,8 +274,8 @@
 					maxim,active-fps-power-down-slot = <7>;
 					regulator-enable-ramp-delay = <160>;
 					regulator-disable-ramp-delay = <16000>;
-					regulator-ramp-delay = <5000>;
-					regulator-ramp-delay-scale = <500>;
+					maxim,ramp-rate-setting = <5000>;
+					regulator-ramp-delay = <1000>;
 				};
 
 				ldo4 {
@@ -282,8 +284,8 @@
 					maxim,active-fps-power-down-slot = <7>;
 					regulator-enable-ramp-delay = <26>;
 					regulator-disable-ramp-delay = <1650>;
-					regulator-ramp-delay = <100000>;
-					regulator-ramp-delay-scale = <300>;
+					maxim,ramp-rate-setting = <100000>;
+					regulator-ramp-delay = <33000>;
 				};
 
 				ldo5 {
@@ -291,11 +293,12 @@
 					maxim,active-fps-power-down-slot = <7>;
 					regulator-enable-ramp-delay = <309>;
 					regulator-disable-ramp-delay = <16000>;
-					regulator-ramp-delay = <5000>;
-					regulator-ramp-delay-scale = <950>;
+					maxim,ramp-rate-setting = <5000>;
+					regulator-ramp-delay = <526>;
 				};
 
 				ldo6 {
+					maxim,ramp-rate-setting = <100000>;
 					regulator-ramp-delay = <100000>;
 				};
 
@@ -305,8 +308,8 @@
 					maxim,active-fps-power-down-slot = <1>;
 					regulator-enable-ramp-delay = <95>;
 					regulator-disable-ramp-delay = <15000>;
-					regulator-ramp-delay = <100000>;
-					regulator-ramp-delay-scale = <950>;
+					maxim,ramp-rate-setting = <100000>;
+					regulator-ramp-delay = <10000>;
 				};
 
 			};

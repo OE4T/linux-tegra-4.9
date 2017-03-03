@@ -727,6 +727,7 @@
 			interrupts = <0 153 0x04>;
 			win-mask = <0x7>;
 			#stream-id-cells = <1>;
+			nvidia,dc-ctrlnum = <0>;
 			clocks = <&clk32k_in>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
@@ -763,6 +764,7 @@
 			interrupts = <0 154 0x04>;
 			win-mask = <0x38>;
 			#stream-id-cells = <1>;
+			nvidia,dc-ctrlnum = <1>;
 			clocks = <&clk32k_in>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
@@ -797,6 +799,7 @@
 			interrupts = <0 155 0x04>;
 			win-mask = <0x0>;
 			#stream-id-cells = <1>;
+			nvidia,dc-ctrlnum = <2>;
 			clocks = <&clk32k_in>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_DISP>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,

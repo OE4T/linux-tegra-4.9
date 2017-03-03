@@ -5450,4 +5450,5 @@ void gk20a_init_mm(struct gpu_ops *gops)
 	gops->mm.bar1_bind = gk20a_mm_bar1_bind;
 	gops->mm.init_inst_block = gk20a_init_inst_block;
 	gops->mm.is_bar1_supported = gk20a_mm_is_bar1_supported;
+	gops->mm.mmu_fault_pending = gk20a_fifo_mmu_fault_pending;
 }

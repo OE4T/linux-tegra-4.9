@@ -633,6 +633,7 @@ struct gpu_ops {
 		size_t (*get_vidmem_size)(struct gk20a *g);
 		void (*init_inst_block)(struct mem_desc *inst_block,
 				struct vm_gk20a *vm, u32 big_page_size);
+		bool (*mmu_fault_pending)(struct gk20a *g);
 	} mm;
 	struct {
 		int (*init_therm_setup_hw)(struct gk20a *g);

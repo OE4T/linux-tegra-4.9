@@ -8625,7 +8625,7 @@ int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 		/* if an mmu fault is pending and mmu debug mode is not
 		 * enabled, the sm will never lock down. */
 		if (!mmu_debug_mode_enabled &&
-		     gk20a_fifo_mmu_fault_pending(g)) {
+		     (g->ops.mm.mmu_fault_pending(g))) {
 			gk20a_err(dev_from_gk20a(g),
 				"GPC%d TPC%d: mmu fault pending,"
 				" sm will never lock down!", gpc, tpc);

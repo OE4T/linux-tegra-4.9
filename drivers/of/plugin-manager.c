@@ -1328,6 +1328,7 @@ static int ops_copy_property_value(struct device_node *np,
 		if (!nval)
 			return -ENOMEM;
 
+		tprop->value = nval;
 		memcpy(tprop->value, sprop->value, sprop->length);
 		tprop->length = sprop->length;
 		kfree(oval);

@@ -38,7 +38,6 @@
 #include <linux/uaccess.h>
 #include <linux/watchdog.h>
 #include <soc/tegra/chip-id.h>
-#include <linux/tegra_wdt_t18x.h>
 #include <soc/tegra/pmc.h>
 
 /* minimum and maximum watchdog trigger periods, in seconds */
@@ -312,13 +311,6 @@ static inline int tegra_wdt_t18x_update_config_bit(struct tegra_wdt_t18x
 	}
 	return 0;
 }
-
-void tegra_wdt_t18x_disable_all(void)
-{
-	if (t18x_wdt)
-		__tegra_wdt_t18x_disable(t18x_wdt);
-}
-EXPORT_SYMBOL(tegra_wdt_t18x_disable_all);
 
 #ifdef CONFIG_DEBUG_FS
 

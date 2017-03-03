@@ -7,4 +7,4 @@ ccflags-y += -Idrivers/video/tegra/camera
 ccflags-y += -Idrivers/media/platform/tegra
 ccflags-y += -Werror
 
-obj-y += camera_common.o camera_gpio.o
+obj-y += camera_common.o camera_gpio.o sensor_common.o

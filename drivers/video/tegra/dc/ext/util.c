@@ -54,6 +54,13 @@ int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 fd,
 	if (IS_ERR_OR_NULL(dc_dmabuf->sgt))
 		goto sgt_fail;
 
+	if (!device_is_iommuable(ext->dev->parent) &&
+			sg_nents(dc_dmabuf->sgt->sgl) > 1) {
+		dev_err(ext->dev->parent,
+			"Cannot use non-contiguous buffer w/ IOMMU disabled\n");
+		goto iommu_fail;
+	}
+
 	dma_addr = sg_dma_address(dc_dmabuf->sgt->sgl);
 	if (dma_addr)
 		*phys_addr = dma_addr;
@@ -63,6 +70,9 @@ int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 fd,
 	*dc_buf = dc_dmabuf;
 
 	return 0;
+iommu_fail:
+	dma_buf_unmap_attachment(dc_dmabuf->attach, dc_dmabuf->sgt,
+		DMA_TO_DEVICE);
 sgt_fail:
 	dma_buf_detach(dc_dmabuf->buf, dc_dmabuf->attach);
 attach_fail:

@@ -229,6 +229,17 @@ clean:
 	return NULL;
 }
 
+static void free_simple_device_node(struct device_node *np)
+{
+	if (!np)
+		return;
+
+	kfree(np->full_name);
+	kfree(np->name);
+	kfree(np->data);
+	kfree(np);
+}
+
 struct device_node *duplicate_single_node(struct device_node *np,
 					  const char *base_dir,
 					  const char *path,
@@ -1808,6 +1819,8 @@ static void connection_manager(void)
 
 	/* Process upstream, device and downstream nodes */
 	process_plugin_module_connections(plcroot);
+
+	free_simple_device_node(plcroot);
 }
 
 static int __init plugin_manager_init(void)

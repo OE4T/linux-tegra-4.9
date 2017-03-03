@@ -45,6 +45,8 @@
 		mmc-hs400-1_8v;
 		nvidia,enable-strobe-mode;
 		pll_source = "pll_p", "pll_c4_out0";
+		resets = <&tegra_car TEGRA210_CLK_SDMMC4>;
+		reset-names = "sdmmc";
 		clocks = <&tegra_car TEGRA210_CLK_SDMMC4>,
 		       <&tegra_car TEGRA210_CLK_PLL_P>,
 		       <&tegra_car TEGRA210_CLK_PLL_C4_OUT0>;
@@ -62,6 +64,11 @@
 		compad-vref-3v3 = <0x7>;
 		compad-vref-1v8 = <0x7>;
 		pll_source = "pll_p";
+		resets = <&tegra_car TEGRA210_CLK_SDMMC3>;
+		reset-names = "sdmmc";
+		clocks = <&tegra_car TEGRA210_CLK_SDMMC3>,
+		       <&tegra_car TEGRA210_CLK_PLL_P>;
+		clock-names = "sdmmc", "pll_p";
 		keep-power-in-suspend;
 		ignore-pm-notify;
 		non-removable;
@@ -86,6 +93,11 @@
 		compad-vref-1v8 = <0x7>;
 		default-drive-type = <1>;
 		pll_source = "pll_p";
+		resets = <&tegra_car TEGRA210_CLK_SDMMC2>;
+		reset-names = "sdmmc";
+		clocks = <&tegra_car TEGRA210_CLK_SDMMC2>,
+		       <&tegra_car TEGRA210_CLK_PLL_P>;
+		clock-names = "sdmmc", "pll_p";
 		non-removable;
 		cap-mmc-highspeed;
 		cap-sd-highspeed;
@@ -115,6 +127,8 @@
 		ignore-pm-notify;
                 cd-inverted;
                 wp-inverted;
+		resets = <&tegra_car TEGRA210_CLK_SDMMC1>;
+		reset-names = "sdmmc";
 		clocks = <&tegra_car TEGRA210_CLK_SDMMC1>,
 		       <&tegra_car TEGRA210_CLK_PLL_P>;
 		clock-names = "sdmmc", "pll_p";

@@ -42,6 +42,15 @@ static void gv11b_init_inst_block(struct mem_desc *inst_block,
 		g->ops.mm.set_big_page_size(g, inst_block, big_page_size);
 }
 
+static bool gv11b_mm_mmu_fault_pending(struct gk20a *g)
+{
+	if (gk20a_readl(g, fb_niso_intr_r()) &
+		(fb_niso_intr_mmu_nonreplayable_fault_notify_pending_f() |
+		fb_niso_intr_mmu_nonreplayable_fault_overflow_pending_f()))
+		return true;
+
+	return false;
+}
 
 void gv11b_init_mm(struct gpu_ops *gops)
 {
@@ -50,4 +59,5 @@ void gv11b_init_mm(struct gpu_ops *gops)
 	gops->mm.is_bar1_supported = gv11b_mm_is_bar1_supported;
 	gops->mm.init_inst_block = gv11b_init_inst_block;
 	gops->mm.init_mm_setup_hw = gk20a_init_mm_setup_hw;
+	gops->mm.mmu_fault_pending = gv11b_mm_mmu_fault_pending;
 }

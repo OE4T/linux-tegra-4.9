@@ -2007,7 +2007,32 @@ void gr_gv11b_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 
 static void gr_gv11b_load_tpc_mask(struct gk20a *g)
 {
-	/* TODO */
+	u32 pes_tpc_mask = 0, fuse_tpc_mask;
+	u32 gpc, pes, val;
+	u32 num_tpc_per_gpc = nvgpu_get_litter_value(g,
+				GPU_LIT_NUM_TPC_PER_GPC);
+
+	/* gv11b has 1 GPC and 4 TPC/GPC, so mask will not overflow u32 */
+	for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
+		for (pes = 0; pes < g->gr.pe_count_per_gpc; pes++) {
+			pes_tpc_mask |= g->gr.pes_tpc_mask[pes][gpc] <<
+				num_tpc_per_gpc * gpc;
+		}
+	}
+
+	gk20a_dbg_info("pes_tpc_mask %u\n", pes_tpc_mask);
+	fuse_tpc_mask = g->ops.gr.get_gpc_tpc_mask(g, gpc);
+	if (g->tpc_fs_mask_user &&
+			g->tpc_fs_mask_user != fuse_tpc_mask &&
+			fuse_tpc_mask == (0x1U << g->gr.max_tpc_count) - 1U) {
+		val = g->tpc_fs_mask_user;
+		val &= (0x1U << g->gr.max_tpc_count) - 1U;
+		val = (0x1U << hweight32(val)) - 1U;
+		gk20a_writel(g, gr_fe_tpc_fs_r(0), val);
+	} else {
+		gk20a_writel(g, gr_fe_tpc_fs_r(0), pes_tpc_mask);
+	}
+
 }
 
 void gv11b_init_gr(struct gpu_ops *gops)

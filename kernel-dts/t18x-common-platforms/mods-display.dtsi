@@ -24,7 +24,6 @@
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,fb-win = <0>;
 			win-mask = <0x3>;
-			nvidia,dc-ctrlnum = <0>;
 			nvidia,dc-or-node = "/host1x/dsi";
 		};
 
@@ -35,7 +34,6 @@
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,fb-win = <2>;
 			win-mask = <0xc>;
-			nvidia,dc-ctrlnum = <1>;
 			nvidia,dc-or-node = "/host1x/sor1";
 		};
 
@@ -46,7 +44,6 @@
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,fb-win = <4>;
 			win-mask = <0x30>;
-			nvidia,dc-ctrlnum = <2>;
 			nvidia,dc-or-node = "/host1x/sor";
 		};
 

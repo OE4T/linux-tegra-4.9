@@ -251,7 +251,6 @@
                         nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
 			nvidia,fb-win = <0>;
 			win-mask = <0x7>;
-			nvidia,dc-ctrlnum = <0>;
 			nvidia,dc-or-node = "/host1x/dsi";
 			nvidia,cmu-enable = <1>;
                 };
@@ -264,7 +263,6 @@
 			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
 			nvidia,fb-win = <3>;
 			win-mask = <0x38>;
-			nvidia,dc-ctrlnum = <1>;
 			nvidia,dc-or-node = "/host1x/sor1";
 			nvidia,cmu-enable = <1>;
 		};
@@ -277,7 +275,6 @@
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
 			win-mask = <0x0>;
-			nvidia,dc-ctrlnum = <2>;
 			nvidia,dc-or-node = "/host1x/sor";
 			nvidia,cmu-enable = <1>;
 		};

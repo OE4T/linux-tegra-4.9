@@ -22,6 +22,8 @@
 #include <linux/of_fdt.h>
 #include "of_private.h"
 
+#define MAXIMUM_FNAME_LENGTH	300
+
 enum plugin_manager_match_type {
 	PLUGIN_MANAGER_MATCH_EXACT,
 	PLUGIN_MANAGER_MATCH_PARTIAL,
@@ -236,7 +238,7 @@ struct device_node *duplicate_single_node(struct device_node *np,
 	struct property *pp, *new_pp;
 	int ret;
 	const char *add_name;
-	char fname[300];
+	char fname[MAXIMUM_FNAME_LENGTH + 1] = {};
 
 	dup = kzalloc(sizeof(*dup), GFP_KERNEL);
 	if (!dup)
@@ -250,12 +252,12 @@ struct device_node *duplicate_single_node(struct device_node *np,
 	}
 
 	if (path) {
-		strncpy(fname, path, 300);
+		strncpy(fname, path, MAXIMUM_FNAME_LENGTH);
 	} else {
 		const char *lname = strrchr(np->full_name, '/');
 		int llen = strlen(np->full_name) - strlen(lname);
 
-		strncpy(fname, np->full_name, 300);
+		strncpy(fname, np->full_name, MAXIMUM_FNAME_LENGTH);
 		fname[llen] = '\0';
 	}
 
@@ -1018,7 +1020,7 @@ static void plugin_module_resolve_uid(struct device_node *cnp)
 	if (!cinfo->uid_str)
 		return;
 
-	fname = kzalloc(300, GFP_KERNEL);
+	fname = kzalloc(MAXIMUM_FNAME_LENGTH + 1, GFP_KERNEL);
 	if (!fname)
 		return;
 
@@ -1028,7 +1030,8 @@ static void plugin_module_resolve_uid(struct device_node *cnp)
 
 		for_each_child_of_node(sub_funcs, child) {
 			ovalue = child->full_name;
-			snprintf(fname, 300, "%s", child->full_name);
+			snprintf(fname, MAXIMUM_FNAME_LENGTH, "%s",
+				 child->full_name);
 			lname = strrchr(fname, '/');
 			len = strlen(fname) - strlen(lname);
 			fname[len] = '\0';

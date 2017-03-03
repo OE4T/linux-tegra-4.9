@@ -2596,25 +2596,76 @@ int gk20a_fifo_preempt(struct gk20a *g, struct channel_gk20a *ch)
 	return err;
 }
 
-int gk20a_fifo_enable_engine_activity(struct gk20a *g,
-				struct fifo_engine_info_gk20a *eng_info)
+static void gk20a_fifo_sched_disable_rw(struct gk20a *g, u32 runlists_mask,
+					 u32 runlist_state)
+{
+	u32 reg_val;
+
+	reg_val = gk20a_readl(g, fifo_sched_disable_r());
+
+	if (runlist_state == RUNLIST_DISABLED)
+		reg_val |= runlists_mask;
+	else
+		reg_val &= (~runlists_mask);
+
+	gk20a_writel(g, fifo_sched_disable_r(), reg_val);
+
+}
+
+void gk20a_fifo_set_runlist_state(struct gk20a *g, u32 runlists_mask,
+		u32 runlist_state,
+		int is_runlist_info_mutex_locked)
 {
 	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
 	u32 mutex_ret;
-	u32 enable;
+	u32 runlist_id;
 
 	gk20a_dbg_fn("");
 
+	if (!is_runlist_info_mutex_locked) {
+		gk20a_dbg_info("acquire runlist_info mutex");
+		for (runlist_id = 0; runlist_id < g->fifo.max_runlists;
+							 runlist_id++) {
+			if (runlists_mask &
+				 fifo_sched_disable_runlist_m(runlist_id))
+				nvgpu_mutex_acquire(&g->fifo.
+					runlist_info[runlist_id].mutex);
+		}
+	}
+
 	mutex_ret = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
-	enable = gk20a_readl(g, fifo_sched_disable_r());
-	enable &= ~(fifo_sched_disable_true_v() << eng_info->runlist_id);
-	gk20a_writel(g, fifo_sched_disable_r(), enable);
+	gk20a_fifo_sched_disable_rw(g, runlists_mask, runlist_state);
 
 	if (!mutex_ret)
 		pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
+	if (!is_runlist_info_mutex_locked) {
+		gk20a_dbg_info("release runlist_info mutex");
+		for (runlist_id = 0; runlist_id < g->fifo.max_runlists;
+						 runlist_id++) {
+			if (runlists_mask &
+				 fifo_sched_disable_runlist_m(runlist_id))
+
+				nvgpu_mutex_release(&g->fifo.
+					runlist_info[runlist_id].mutex);
+		}
+	}
+
 	gk20a_dbg_fn("done");
+}
+
+int gk20a_fifo_enable_engine_activity(struct gk20a *g,
+				struct fifo_engine_info_gk20a *eng_info)
+{
+	gk20a_dbg_fn("");
+
+	gk20a_fifo_set_runlist_state(g, fifo_sched_disable_runlist_m(
+				eng_info->runlist_id), RUNLIST_ENABLED,
+				 !RUNLIST_INFO_MUTEX_LOCKED);
+
+	gk20a_dbg_fn("done");
+
 	return 0;
 }
 
@@ -2643,7 +2694,7 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 {
 	u32 gr_stat, pbdma_stat, chan_stat, eng_stat, ctx_stat;
 	u32 pbdma_chid = FIFO_INVAL_CHANNEL_ID;
-	u32 engine_chid = FIFO_INVAL_CHANNEL_ID, disable;
+	u32 engine_chid = FIFO_INVAL_CHANNEL_ID;
 	u32 token = PMU_INVALID_MUTEX_OWNER_ID;
 	u32 mutex_ret;
 	u32 err = 0;
@@ -2658,12 +2709,9 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 
 	mutex_ret = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
-	disable = gk20a_readl(g, fifo_sched_disable_r());
-	disable = set_field(disable,
-			fifo_sched_disable_runlist_m(eng_info->runlist_id),
-			fifo_sched_disable_runlist_f(fifo_sched_disable_true_v(),
-				eng_info->runlist_id));
-	gk20a_writel(g, fifo_sched_disable_r(), disable);
+	gk20a_fifo_set_runlist_state(g, fifo_sched_disable_runlist_m(
+					eng_info->runlist_id), RUNLIST_DISABLED,
+					!RUNLIST_INFO_MUTEX_LOCKED);
 
 	/* chid from pbdma status */
 	pbdma_stat = gk20a_readl(g, fifo_pbdma_status_r(eng_info->pbdma_id));
@@ -2710,40 +2758,6 @@ clean_up:
 		gk20a_dbg_fn("done");
 	}
 	return err;
-}
-
-int gk20a_fifo_disable_all_engine_activity(struct gk20a *g,
-				bool wait_for_idle)
-{
-	unsigned int i;
-	int err = 0, ret = 0;
-	u32 active_engine_id;
-
-	for (i = 0; i < g->fifo.num_engines; i++) {
-		active_engine_id = g->fifo.active_engines_list[i];
-		err = gk20a_fifo_disable_engine_activity(g,
-				&g->fifo.engine_info[active_engine_id],
-				wait_for_idle);
-		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-				"failed to disable engine %d activity\n", active_engine_id);
-			ret = err;
-			break;
-		}
-	}
-
-	if (err) {
-		while (i-- != 0) {
-			active_engine_id = g->fifo.active_engines_list[i];
-			err = gk20a_fifo_enable_engine_activity(g,
-						&g->fifo.engine_info[active_engine_id]);
-			if (err)
-				gk20a_err(dev_from_gk20a(g),
-				 "failed to re-enable engine %d activity\n", active_engine_id);
-		}
-	}
-
-	return ret;
 }
 
 static void gk20a_fifo_runlist_reset_engines(struct gk20a *g, u32 runlist_id)

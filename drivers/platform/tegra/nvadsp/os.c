@@ -5,7 +5,7 @@
  * Copyright (C) 2011 Texas Instruments, Inc.
  * Copyright (C) 2011 Google, Inc.
  *
- * Copyright (C) 2014-2018, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2019, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1631,7 +1631,7 @@ int nvadsp_os_start(void)
 	priv.num_start++;
 #if defined(CONFIG_TEGRA_ADSP_FILEIO)
 	if (!drv_data->adspff_init) {
-		ret = adspff_init();
+		ret = adspff_init(priv.pdev);
 		if (!ret)
 			drv_data->adspff_init = true;
 	}

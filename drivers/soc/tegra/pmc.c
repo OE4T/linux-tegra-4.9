@@ -2833,6 +2833,10 @@ int tegra_pmc_pwm_blink_config(int duty_ns, int period_ns)
 	int data_off;
 	u32 val;
 
+	tegra_pmc_register_update(TEGRA_PMC_CNTRL,
+				  TEGRA210_PMC_CTRL_BLINK_EN, 0);
+	udelay(64);
+
 	/* 16 x 32768 Hz = 1000000000/(32768*16) = 488281ns */
 	data_on = (duty_ns - 30517) / 488281;
 	data_off = (period_ns - duty_ns - 30517) / 488281;
@@ -2845,6 +2849,9 @@ int tegra_pmc_pwm_blink_config(int duty_ns, int period_ns)
 
 	val = (data_off << 16) | BIT(15) | data_on;
 	tegra_pmc_writel(val, TEGRA_PMC_BLINK_TIMER);
+	udelay(64);
+	tegra_pmc_register_update(TEGRA_PMC_CNTRL,
+				  TEGRA210_PMC_CTRL_BLINK_EN, 1);
 
 	return 0;
 }

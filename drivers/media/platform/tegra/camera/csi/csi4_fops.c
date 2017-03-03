@@ -20,6 +20,8 @@
 
 #define DEFAULT_TPG_FREQ	102000000
 
+#define DEFAULT_MIPICAL_TIMEOUTMS 500
+
 static void csi4_stream_write(struct tegra_csi_channel *chan,
 		unsigned int index, unsigned int addr, u32 val)
 {
@@ -476,7 +478,8 @@ void csi4_override_format(struct tegra_csi_channel *chan,
 	csi4_stream_write(chan, csi_port, PG_IMAGE_SIZE, val);
 }
 
-int csi4_mipi_cal(struct tegra_csi_channel *chan)
+int csi4_mipi_cal(struct tegra_csi_channel *chan,
+		  struct tegra_mipi_context **ctx)
 {
 	unsigned int lanes, num_ports, port, addr;
 	unsigned int cila, cilb;
@@ -525,5 +528,5 @@ int csi4_mipi_cal(struct tegra_csi_channel *chan)
 		dev_err(csi->dev, "Selected no CSI lane, cannot do calibration");
 		return -EINVAL;
 	}
-	return tegra_mipi_calibration(lanes);
+	return tegra_mipical_nonblock(ctx, lanes, DEFAULT_MIPICAL_TIMEOUTMS);
 }

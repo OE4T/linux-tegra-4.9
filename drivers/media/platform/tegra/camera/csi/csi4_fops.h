@@ -25,7 +25,8 @@ void csi4_stop_streaming(struct tegra_csi_channel *chan,
 		enum tegra_csi_port_num port_num);
 void csi4_override_format(struct tegra_csi_channel *chan,
 		enum tegra_csi_port_num port_num);
-int csi4_mipi_cal(struct tegra_csi_channel *chan);
+int csi4_mipi_cal(struct tegra_csi_channel *chan,
+		  struct tegra_mipi_context **ctx);
 int csi4_hw_init(struct tegra_csi_device *csi);
 
 struct tegra_csi_fops csi4_fops = {

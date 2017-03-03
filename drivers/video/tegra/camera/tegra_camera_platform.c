@@ -57,6 +57,8 @@ struct tegra_camera_info {
 	struct mutex update_bw_lock;
 	u32 vi_mode_isobw;
 	u64 bypass_mode_isobw;
+	/* set max bw by default */
+	bool en_max_bw;
 };
 
 static const struct of_device_id tegra_camera_of_ids[] = {
@@ -511,6 +513,18 @@ static int tegra_camera_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	info->en_max_bw = of_property_read_bool(pdev->dev.of_node,
+		"default-max-bw");
+	if (info->en_max_bw == true) {
+		ret = tegra_camera_isomgr_request(info, info->max_bw, 4);
+		if (ret) {
+			dev_err(info->dev,
+			"%s: failed to request max bw\n", __func__);
+			tegra_camera_isomgr_unregister(info);
+			return -EFAULT;
+		}
+	}
+
 	tegra_camera_dev_mfi_init();
 	tegra_vi_register_mfi_cb(tegra_camera_dev_mfi_cb, NULL);
 
@@ -521,13 +535,17 @@ static int tegra_camera_probe(struct platform_device *pdev)
 		dev_err(info->dev, "Fail to create debugfs");
 #endif
 	return 0;
-
 }
+
 static int tegra_camera_remove(struct platform_device *pdev)
 {
 	struct tegra_camera_info *info = platform_get_drvdata(pdev);
 
 	dev_info(&pdev->dev, "%s:camera_platform_driver remove\n", __func__);
+
+	/* deallocate isomgr bw */
+	if (info->en_max_bw)
+		tegra_camera_isomgr_request(info, 0, 4);
 
 	tegra_vi_unregister_mfi_cb();
 	tegra_camera_isomgr_unregister(info);

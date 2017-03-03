@@ -878,12 +878,11 @@ static void audio_dec(struct hid_device *hdev, const uint8_t *raw_input,
 						int type, size_t num_bytes)
 {
 	bool dropped_packet = false;
-	struct snd_pcm_substream *substream;
 	struct shdr_device *shdr_dev = hid_get_drvdata(hdev);
 	struct snd_card *shdr_card;
 	struct snd_atvr *atvr_snd;
 	unsigned long flags;
-	int ret;
+	uint writable;
 
 	if (shdr_dev == NULL)
 		return;
@@ -905,7 +904,7 @@ static void audio_dec(struct hid_device *hdev, const uint8_t *raw_input,
 		}
 
 		/* Write data to a FIFO for decoding by the timer task. */
-		uint writable = atomic_fifo_available_to_write(
+		writable = atomic_fifo_available_to_write(
 			&atvr_snd->fifo_controller);
 		if (writable > 0) {
 			uint fifo_index = atomic_fifo_get_write_index(
@@ -1144,7 +1143,6 @@ static void snd_atvr_timer_callback(unsigned long data)
 		pr_err("callback took %d ms\n", diff);
 #endif
 
-lock_err:
 	spin_lock_irqsave(&atvr_snd->timer_lock, flags);
 	if (need_silence)
 		silence_counter += 1;
@@ -1407,18 +1405,21 @@ static int snd_atvr_pcm_copy(struct snd_pcm_substream *substream,
 		int16_t __user *destination = dst;
 		size_t num_frames = atvr_snd->frames_per_buffer - pos;
 		size_t num_bytes = num_frames * sizeof(int16_t);
-		copy_to_user(destination, source, num_bytes);
+		if (copy_to_user(destination, source, num_bytes))
+			return -EFAULT;
 
 		source = &atvr_snd->pcm_buffer[0];
 		destination += num_frames;
 		num_frames = count - num_frames;
 		num_bytes = num_frames * sizeof(int16_t);
-		copy_to_user(destination, source, num_bytes);
+		if (copy_to_user(destination, source, num_bytes))
+			return -EFAULT;
 	} else {
 		const int16_t *source = &atvr_snd->pcm_buffer[pos];
 		int16_t __user *destination = dst;
 		size_t num_bytes = count * sizeof(int16_t);
-		copy_to_user(destination, source, num_bytes);
+		if (copy_to_user(destination, source, num_bytes))
+			return -EFAULT;
 	}
 
 	return 0;
@@ -1929,7 +1930,7 @@ static void atvr_remove(struct hid_device *hdev)
 	struct snd_atvr *atvr_snd;
 
 	if (shdr_card == NULL)
-		return -EIO;
+		return;
 
 	cancel_work_sync(&shdr_dev->snsr_probe_work);
 

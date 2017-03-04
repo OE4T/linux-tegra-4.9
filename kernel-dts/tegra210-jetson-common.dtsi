@@ -188,14 +188,9 @@
                       <0x0 0x70000008 0x0 0x04>;   /* Strapping options */
         };
 
-	pwm_dfll: pwm@70110000 {
-		compatible = "nvidia,tegra210-dfll-pwm";
-		reg = <0x0 0x70110000 0x0 0x400>;
-		clocks = <&tegra_car TEGRA210_CLK_DFLL_REF>;
-		clock-names = "ref";
-		#pwm-cells = <2>;
+	pwm@70110000 {
 		pwm-regulator = <&cpu_ovr_reg>;
-		status = "disable";
+		status = "disabled";
 	};
 
 	pwm_regulators {
@@ -207,7 +202,7 @@
 			status = "okay";
 			reg = <0>;
 			compatible = "pwm-regulator";
-			pwms = <&pwm_dfll 0 2500>;
+			pwms = <&tegra_pwm_dfll 0 2500>;
 			regulator-name = "vdd-cpu";
 			regulator-min-microvolt = <708000>;
 			regulator-max-microvolt = <1322400>;

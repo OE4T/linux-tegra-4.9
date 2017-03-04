@@ -2063,6 +2063,16 @@
 		status = "disabled";
 	};
 
+	tegra_pwm_dfll: pwm@70110000 {
+		compatible = "nvidia,tegra210-dfll-pwm";
+		reg = <0x0 0x70110000 0x0 0x400>;
+		clocks = <&tegra_car TEGRA210_CLK_DFLL_REF>;
+		clock-names = "ref";
+		pinctrl-names = "dvfs_pwm_enable", "dvfs_pwm_disable";
+		#pwm-cells = <2>;
+		status = "disabled";
+	};
+
 	soctherm: soctherm@0x700E2000 {
 		compatible = "nvidia,tegra-soctherm", "nvidia,tegra210-soctherm";
 		reg =	<0x0 0x700E2000 0x0 0x600>, /* 0: SOC_THERM reg_base */

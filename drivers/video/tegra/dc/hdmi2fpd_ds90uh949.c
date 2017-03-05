@@ -1,7 +1,7 @@
 /*
  * FPDLink Serializer driver
  *
- * Copyright (C) 2014-2016 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2017 NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -32,7 +32,6 @@
 #include "hdmi2fpd_ds90uh949.h"
 
 static struct tegra_dc_hdmi2fpd_data *hdmi2fpd;
-static struct i2c_client *ds90uh949_i2c_client;
 
 struct i2c_client_list {
 	struct list_head i2c_list;
@@ -40,7 +39,8 @@ struct i2c_client_list {
 	struct i2c_client *ds90uh949_i2c_client;
 };
 
-struct i2c_client_list ds90uh949_i2c;
+static LIST_HEAD(ds90uh949_i2c_list);
+DEFINE_MUTEX(i2c_list_mutex);
 
 int hdmi2fpd_enable(struct tegra_dc *dc)
 {
@@ -140,19 +140,25 @@ struct i2c_client *get_i2c_client(struct tegra_dc *dc)
 	struct device_node *np;
 	u32 out_type;
 
-	list_for_each(pos, &ds90uh949_i2c.i2c_list) {
+	mutex_lock(&i2c_list_mutex);
+	list_for_each(pos, &ds90uh949_i2c_list) {
 		tmp = list_entry(pos, struct i2c_client_list, i2c_list);
 		np = tmp->ds90uh949_i2c_client->dev.of_node;
-		if (!of_property_read_u32(np, "out-type", &out_type))
-			if (out_type == dc->out->type)
+		if (!of_property_read_u32(np, "out-type", &out_type)) {
+			if (out_type == dc->out->type) {
+				mutex_unlock(&i2c_list_mutex);
 				return tmp->ds90uh949_i2c_client;
+			}
+		}
 	}
+	mutex_unlock(&i2c_list_mutex);
 	return NULL;
 }
 
 int hdmi2fpd_init(struct tegra_dc *dc)
 {
 	int err = 0;
+	struct i2c_client *ds90uh949_i2c_client = NULL;
 
 	hdmi2fpd = devm_kzalloc(&dc->ndev->dev,
 				sizeof(*hdmi2fpd), GFP_KERNEL);
@@ -160,6 +166,10 @@ int hdmi2fpd_init(struct tegra_dc *dc)
 		return -ENOMEM;
 
 	ds90uh949_i2c_client = get_i2c_client(dc);
+	if (ds90uh949_i2c_client == NULL) {
+		pr_err("i2c_client not found");
+		return -ENODEV;
+	}
 
 	err = of_hdmi2fpd_parse_platform_data(dc, ds90uh949_i2c_client);
 	if (err)
@@ -214,19 +224,27 @@ static int ds90uh949_probe(struct i2c_client *client,
 		dev_err(&client->dev, "SMBUS Byte Data not Supported\n");
 		return -EIO;
 	}
-	ds90uh949_i2c_client = client;
 
 	INIT_LIST_HEAD(&new->i2c_list);
 
 	new->ds90uh949_i2c_client = client;
-	list_add(&new->i2c_list, &ds90uh949_i2c.i2c_list);
+	mutex_lock(&i2c_list_mutex);
+	list_add(&new->i2c_list, &ds90uh949_i2c_list);
+	mutex_unlock(&i2c_list_mutex);
 	return 0;
 }
 
 static int ds90uh949_remove(struct i2c_client *client)
 {
-	ds90uh949_i2c_client = NULL;
-
+	struct i2c_client_list *pos, *next;
+	mutex_lock(&i2c_list_mutex);
+	list_for_each_entry_safe(pos, next, &ds90uh949_i2c_list, i2c_list) {
+		if (pos->ds90uh949_i2c_client == client) {
+			list_del(&pos->i2c_list);
+			break;
+		}
+	}
+	mutex_unlock(&i2c_list_mutex);
 	return 0;
 }
 
@@ -256,8 +274,6 @@ static struct i2c_driver ds90uh949_driver = {
 static int __init ds90uh949_i2c_client_init(void)
 {
 	int err = 0;
-
-	INIT_LIST_HEAD(&ds90uh949_i2c.i2c_list);
 
 	err = i2c_add_driver(&ds90uh949_driver);
 	if (err)

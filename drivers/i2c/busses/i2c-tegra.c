@@ -231,6 +231,7 @@ struct tegra_i2c_hw_feature {
 	bool has_bus_clr_support;
 	bool has_reg_write_buffering;
 	bool has_slcg_support;
+	bool has_hs_mode_support;
 };
 
 /**
@@ -1964,6 +1965,17 @@ static void tegra_i2c_parse_dt(struct tegra_i2c_dev *i2c_dev)
 			"nvidia,disable-multi-pkt-mode");
 }
 
+static bool tegra_i2c_clk_rate_supported(void *data, unsigned long bus_clk_rate)
+{
+	struct i2c_adapter *adap = (struct i2c_adapter *)data;
+	struct tegra_i2c_dev *i2c_dev = i2c_get_adapdata(adap);
+
+	if (bus_clk_rate == I2C_HS_MODE && !i2c_dev->hw->has_hs_mode_support)
+		return false;
+
+	return true;
+}
+
 static const struct i2c_algorithm tegra_i2c_algo = {
 	.master_xfer	= tegra_i2c_xfer,
 	.functionality	= tegra_i2c_func,
@@ -1990,6 +2002,7 @@ static const struct tegra_i2c_hw_feature tegra20_i2c_hw = {
 	.has_bus_clr_support = false,
 	.has_reg_write_buffering = true,
 	.has_slcg_support = false,
+	.has_hs_mode_support = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra30_i2c_hw = {
@@ -2007,6 +2020,7 @@ static const struct tegra_i2c_hw_feature tegra30_i2c_hw = {
 	.has_bus_clr_support = false,
 	.has_reg_write_buffering = true,
 	.has_slcg_support = false,
+	.has_hs_mode_support = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra114_i2c_hw = {
@@ -2024,6 +2038,7 @@ static const struct tegra_i2c_hw_feature tegra114_i2c_hw = {
 	.has_bus_clr_support = true,
 	.has_reg_write_buffering = true,
 	.has_slcg_support = false,
+	.has_hs_mode_support = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra124_i2c_hw = {
@@ -2041,6 +2056,7 @@ static const struct tegra_i2c_hw_feature tegra124_i2c_hw = {
 	.has_bus_clr_support = true,
 	.has_reg_write_buffering = true,
 	.has_slcg_support = false,
+	.has_hs_mode_support = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra210_i2c_hw = {
@@ -2058,6 +2074,7 @@ static const struct tegra_i2c_hw_feature tegra210_i2c_hw = {
 	.has_bus_clr_support = true,
 	.has_reg_write_buffering = true,
 	.has_slcg_support = false,
+	.has_hs_mode_support = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra186_i2c_hw = {
@@ -2075,6 +2092,7 @@ static const struct tegra_i2c_hw_feature tegra186_i2c_hw = {
 	.has_bus_clr_support = true,
 	.has_reg_write_buffering = false,
 	.has_slcg_support = true,
+	.has_hs_mode_support = false,
 };
 
 /* Match table for of_platform binding */
@@ -2156,6 +2174,11 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	i2c_dev->hw = of_device_get_match_data(&pdev->dev);
 	i2c_dev->is_dvc = of_device_is_compatible(pdev->dev.of_node,
 						  "nvidia,tegra20-i2c-dvc");
+	if ((i2c_dev->bus_clk_rate == I2C_HS_MODE) &&
+			!i2c_dev->hw->has_hs_mode_support) {
+		dev_info(i2c_dev->dev, "HS mode not supported\n");
+		i2c_dev->bus_clk_rate = 100000; /* default clock rate */
+	}
 	init_completion(&i2c_dev->msg_complete);
 	raw_spin_lock_init(&i2c_dev->xfer_lock);
 	init_completion(&i2c_dev->tx_dma_complete);
@@ -2264,6 +2287,8 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	i2c_dev->adapter.dev.parent = &pdev->dev;
 	i2c_dev->adapter.nr = pdev->id;
 	i2c_dev->adapter.dev.of_node = pdev->dev.of_node;
+	i2c_dev->adapter.is_bus_clk_rate_supported =
+		tegra_i2c_clk_rate_supported;
 
 	ret = i2c_add_numbered_adapter(&i2c_dev->adapter);
 	if (ret)

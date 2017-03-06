@@ -147,6 +147,8 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate);
 void gk20a_mm_cbc_clean(struct gk20a *g);
 void gk20a_mm_l2_invalidate(struct gk20a *g);
 
+#define FAULT_TYPE_NUM		2	/* replay and nonreplay faults */
+
 struct mmu_fault_info {
 	u64	inst_ptr;
 	u32	inst_aperture;
@@ -224,8 +226,15 @@ struct mm_gk20a {
 	struct nvgpu_mutex l2_op_lock;
 	struct nvgpu_mutex tlb_lock;
 	struct nvgpu_mutex priv_lock;
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+
 	struct nvgpu_mem bar2_desc;
+
+#ifdef CONFIG_TEGRA_19x_GPU
+	struct nvgpu_mem hw_fault_buf[FAULT_TYPE_NUM];
+	unsigned int hw_fault_buf_status[FAULT_TYPE_NUM];
+	struct mmu_fault_info *fault_info[FAULT_TYPE_NUM];
+	struct nvgpu_mutex hub_isr_mutex;
+	u32    hub_intr_types;
 #endif
 	/*
 	 * Separate function to cleanup the CE since it requires a channel to

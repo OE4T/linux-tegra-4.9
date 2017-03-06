@@ -729,6 +729,7 @@ struct gpu_ops {
 		int (*secure_alloc)(struct gk20a *g,
 				    struct gr_ctx_buffer_desc *desc,
 				    size_t size);
+		void (*fault_info_mem_destroy)(struct gk20a *g);
 	} mm;
 	struct {
 		u32 (*enter)(struct gk20a *g, struct nvgpu_mem *mem,

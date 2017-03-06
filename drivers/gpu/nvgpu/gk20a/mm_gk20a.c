@@ -464,6 +464,9 @@ static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 {
 	struct gk20a *g = gk20a_from_mm(mm);
 
+	if (g->ops.mm.fault_info_mem_destroy)
+		g->ops.mm.fault_info_mem_destroy(g);
+
 	if (g->ops.mm.remove_bar2_vm)
 		g->ops.mm.remove_bar2_vm(g);
 

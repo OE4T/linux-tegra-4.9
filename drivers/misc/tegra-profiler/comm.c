@@ -24,7 +24,7 @@
 #include <linux/bitops.h>
 #include <linux/err.h>
 #include <linux/mm.h>
-
+#include <linux/circ_buf.h>
 #include <linux/uaccess.h>
 
 #include <linux/tegra_profiler.h>
@@ -68,136 +68,102 @@ struct comm_cpu_context {
 static struct quadd_comm_ctx comm_ctx;
 static DEFINE_PER_CPU(struct comm_cpu_context, cpu_ctx);
 
-static int __maybe_unused
-rb_is_full(struct quadd_ring_buffer *rb)
-{
-	struct quadd_ring_buffer_hdr *rb_hdr = rb->rb_hdr;
-
-	return (rb_hdr->pos_write + 1) % rb_hdr->size == rb_hdr->pos_read;
-}
-
-static int __maybe_unused
-rb_is_empty(struct quadd_ring_buffer *rb)
-{
-	struct quadd_ring_buffer_hdr *rb_hdr = rb->rb_hdr;
-
-	return rb_hdr->pos_read == rb_hdr->pos_write;
-}
-
-static size_t
-rb_get_filled_space(struct quadd_ring_buffer_hdr *rb_hdr)
-{
-	return (rb_hdr->pos_write >= rb_hdr->pos_read) ?
-		rb_hdr->pos_write - rb_hdr->pos_read :
-		rb_hdr->pos_write + rb_hdr->size - rb_hdr->pos_read;
-}
-
-static size_t
-rb_get_free_space(struct quadd_ring_buffer_hdr *rb_hdr)
-{
-	return rb_hdr->size - rb_get_filled_space(rb_hdr) - 1;
-}
-
-static ssize_t
+static void
 rb_write(struct quadd_ring_buffer_hdr *rb_hdr,
-	 char *mmap_buf, void *data, size_t length)
+	 char *buf, const void *data, size_t length)
 {
-	size_t new_pos_write, chunk1;
+	size_t len, head = rb_hdr->pos_write;
+	const char *s = data;
 
-	new_pos_write = (rb_hdr->pos_write + length) % rb_hdr->size;
+	len = min_t(size_t, rb_hdr->size - head, length);
 
-	if (new_pos_write < rb_hdr->pos_write) {
-		chunk1 = rb_hdr->size - rb_hdr->pos_write;
+	memcpy(buf + head, s, len);
+	head = (head + len) & (rb_hdr->size - 1);
 
-		memcpy(mmap_buf + rb_hdr->pos_write, data, chunk1);
+	if (length > len) {
+		s += len;
+		len = length - len;
 
-		if (new_pos_write > 0)
-			memcpy(mmap_buf, data + chunk1, new_pos_write);
-	} else {
-		memcpy(mmap_buf + rb_hdr->pos_write, data, length);
+		memcpy(buf + head, s, len);
+		head += len;
 	}
 
-	rb_hdr->pos_write = new_pos_write;
-	return length;
+	rb_hdr->pos_write = head;
 }
 
 static ssize_t
 write_sample(struct quadd_ring_buffer *rb,
 	     struct quadd_record_data *sample,
-	     struct quadd_iovec *vec, int vec_count)
+	     const struct quadd_iovec *vec, int vec_count)
 {
 	int i;
-	ssize_t err;
-	size_t length_sample = 0, fill_count;
-	struct quadd_ring_buffer_hdr *rb_hdr = rb->rb_hdr, new_hdr;
+	size_t len = 0, c;
+	struct quadd_ring_buffer_hdr hdr, *rb_hdr = rb->rb_hdr;
 
 	if (!rb_hdr)
 		return -EIO;
 
 	if (vec) {
 		for (i = 0; i < vec_count; i++)
-			length_sample += vec[i].len;
+			len += vec[i].len;
 	}
 
-	sample->extra_size = length_sample;
-	length_sample += sizeof(*sample);
+	sample->extra_size = len;
+	len += sizeof(*sample);
 
-	new_hdr.size = rb_hdr->size;
-	new_hdr.pos_write = rb_hdr->pos_write;
-	new_hdr.pos_read = rb_hdr->pos_read;
+	hdr.size = rb_hdr->size;
+	hdr.pos_write = rb_hdr->pos_write;
+	hdr.pos_read = READ_ONCE(rb_hdr->pos_read);
 
-	pr_debug("[cpu: %d] type/len: %u/%#zx, read/write pos: %#x/%#x, free: %#zx\n",
-		smp_processor_id(),
-		sample->record_type,
-		length_sample,
-		new_hdr.pos_read, new_hdr.pos_write,
-		rb_get_free_space(&new_hdr));
-
-	if (length_sample > rb_get_free_space(&new_hdr)) {
+	c = CIRC_SPACE(hdr.pos_write, hdr.pos_read, hdr.size);
+	if (len > c) {
 		pr_err_once("[cpu: %d] warning: buffer has been overflowed\n",
 			    smp_processor_id());
 		return -ENOSPC;
 	}
 
-	err = rb_write(&new_hdr, rb->buf, sample, sizeof(*sample));
-	if (err < 0)
-		return err;
+	rb_write(&hdr, rb->buf, sample, sizeof(*sample));
 
 	if (vec) {
-		for (i = 0; i < vec_count; i++) {
-			err = rb_write(&new_hdr, rb->buf,
-				       vec[i].base, vec[i].len);
-			if (err < 0)
-				return err;
-		}
+		for (i = 0; i < vec_count; i++)
+			rb_write(&hdr, rb->buf, vec[i].base, vec[i].len);
 	}
 
-	fill_count = rb_get_filled_space(&new_hdr);
-	if (fill_count > rb->max_fill_count) {
-		rb->max_fill_count = fill_count;
-		rb_hdr->max_fill_count = fill_count;
+	c = CIRC_CNT(hdr.pos_write, hdr.pos_read, hdr.size);
+	if (c > rb->max_fill_count) {
+		rb->max_fill_count = c;
+		rb_hdr->max_fill_count = c;
 	}
 
-	smp_store_release(&rb_hdr->pos_write, new_hdr.pos_write);
+	smp_store_release(&rb_hdr->pos_write, hdr.pos_write);
 
-	return length_sample;
+	return len;
 }
 
 static size_t get_data_size(void)
 {
 	int cpu_id;
-	size_t size = 0;
+	unsigned long flags;
+	size_t size = 0, tail;
 	struct comm_cpu_context *cc;
 	struct quadd_ring_buffer *rb;
+	struct quadd_ring_buffer_hdr *rb_hdr;
 
 	for_each_possible_cpu(cpu_id) {
 		cc = &per_cpu(cpu_ctx, cpu_id);
 
 		rb = &cc->rb;
-		if (!rb->rb_hdr)
+
+		rb_hdr = rb->rb_hdr;
+		if (!rb_hdr)
 			continue;
 
-		size +=  rb_get_filled_space(rb->rb_hdr);
+		raw_spin_lock_irqsave(&rb->lock, flags);
+
+		tail = READ_ONCE(rb_hdr->pos_read);
+		size += CIRC_CNT(rb_hdr->pos_write, tail, rb_hdr->size);
+
+		raw_spin_unlock_irqrestore(&rb->lock, flags);
 	}
 
 	return size;
@@ -319,19 +285,23 @@ init_mmap_hdr(struct quadd_mmap_rb_info *mmap_rb,
 
 	rb = &cc->rb;
 
+	vma = mmap->mmap_vma;
+	size = vma->vm_end - vma->vm_start;
+
+	if (size <= PAGE_SIZE || !is_power_of_2(size - PAGE_SIZE))
+		return -EINVAL;
+
+	size -= PAGE_SIZE;
+
 	raw_spin_lock_irqsave(&rb->lock, flags);
 
 	mmap->rb = rb;
 
 	rb->mmap = mmap;
+	rb->buf = (char *)mmap->data + PAGE_SIZE;
 
 	rb->max_fill_count = 0;
 	rb->nr_skipped_samples = 0;
-
-	vma = mmap->mmap_vma;
-
-	size = vma->vm_end - vma->vm_start;
-	size -= sizeof(*mmap_hdr) + sizeof(*rb_hdr);
 
 	mmap_hdr = mmap->data;
 
@@ -349,8 +319,6 @@ init_mmap_hdr(struct quadd_mmap_rb_info *mmap_rb,
 
 	rb_hdr->max_fill_count = 0;
 	rb_hdr->skipped_samples = 0;
-
-	rb->buf = (char *)(rb_hdr + 1);
 
 	rb_hdr->state = QUADD_RB_STATE_ACTIVE;
 

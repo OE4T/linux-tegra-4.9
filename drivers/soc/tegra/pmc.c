@@ -368,6 +368,7 @@
 #define PMC_RST_LEVEL_SHIFT			0x0
 #define PMC_RST_SOURCE_MASK			0x3C
 #define PMC_RST_SOURCE_SHIFT			0x2
+#define T210_PMC_RST_LEVEL_MASK			0x7
 
 #define TEGRA210_PMC_DPD_PADS_ORIDE_BLINK	BIT(20)
 #define TEGRA210_PMC_CTRL_BLINK_EN		BIT(7)
@@ -508,7 +509,7 @@ struct tegra_pmc_soc {
 	bool has_pclk_clock;
 	bool has_interrupt_polarity_support;
 	bool has_reboot_base_address;
-	bool show_reset_status;
+	bool show_legacy_reset_status;
 	bool skip_lp0_vector_setup;
 	bool skip_legacy_pmc_init;
 	bool skip_power_gate_debug_fs_init;
@@ -2701,7 +2702,7 @@ static int tegra_pmc_io_pads_pinctrl_init(struct tegra_pmc *pmc)
 	}
 
 	pmc->voltage_switch_restriction_enabled = false;
-	pmc->pinctrl_desc.name = "pinctr-pmc-io-pads";
+	pmc->pinctrl_desc.name = "pinctrl-pmc-io-pads";
 	pmc->pinctrl_desc.pctlops = &tegra_pmc_io_pads_pinctrl_ops;
 	pmc->pinctrl_desc.confops = &tegra_pmc_io_pads_pinconf_ops;
 	pmc->pinctrl_desc.pins = pmc->soc->descs;
@@ -3450,7 +3451,16 @@ static void tegra_pmc_halt_in_fiq_init(struct tegra_pmc *pmc)
 				  PMC_IMPL_HALT_IN_FIQ_MASK);
 }
 
-static char *pmc_reset_source[] = {
+static char *t210_pmc_rst_src[] = {
+	"Power on reset",
+	"Watchdog",
+	"Sensor",
+	"Software reset",
+	"LP0",
+	"AOTAG",
+};
+
+static char *t186_pmc_rst_src[] = {
 	"Power on reset",
 	"AOWDT",
 	"Denvor watchdog time out",
@@ -3480,10 +3490,19 @@ static void tegra_pmc_show_reset_status(void)
 	u32 val, rst_src, rst_lvl;
 
 	val = tegra_pmc_readl(TEGRA_PMC_RST_STATUS);
-	rst_src = (val & PMC_RST_SOURCE_MASK) >> PMC_RST_SOURCE_SHIFT;
-	rst_lvl = (val & PMC_RST_LEVEL_MASK) >> PMC_RST_LEVEL_SHIFT;
-	pr_info("### PMC reset source: %s\n", pmc_reset_source[rst_src]);
-	pr_info("### PMC reset level: %s\n", pmc_reset_level[rst_lvl]);
+
+	if (pmc->soc->show_legacy_reset_status) {
+		rst_src = val & T210_PMC_RST_LEVEL_MASK;
+		pr_info("### PMC reset source: %s\n",
+			t210_pmc_rst_src[rst_src]);
+	} else {
+		rst_src = (val & PMC_RST_SOURCE_MASK) >> PMC_RST_SOURCE_SHIFT;
+		rst_lvl = (val & PMC_RST_LEVEL_MASK) >> PMC_RST_LEVEL_SHIFT;
+		pr_info("### PMC reset source: %s\n",
+			t186_pmc_rst_src[rst_src]);
+		pr_info("### PMC reset level: %s\n",
+			pmc_reset_level[rst_lvl]);
+	}
 	pr_info("### PMC reset status reg: 0x%x\n", val);
 }
 
@@ -3493,13 +3512,19 @@ static int pmc_reset_show(struct seq_file *s, void *data)
 	u32 val, rst_src, rst_lvl;
 
 	val = tegra_pmc_readl(TEGRA_PMC_RST_STATUS);
-	rst_src = (val & PMC_RST_SOURCE_MASK) >> PMC_RST_SOURCE_SHIFT;
-	rst_lvl = (val & PMC_RST_LEVEL_MASK) >> PMC_RST_LEVEL_SHIFT;
-	seq_printf(s, "### PMC reset source: %s\n", pmc_reset_source[rst_src]);
-	seq_printf(s, "### PMC reset level: %s\n", pmc_reset_level[rst_lvl]);
-	seq_printf(s, "### PMC reset status reg: 0x%x\n", val);
 
-	tegra_pmc_show_reset_status();
+	if (pmc->soc->show_legacy_reset_status) {
+		rst_src = val & T210_PMC_RST_LEVEL_MASK;
+		seq_printf(s, "### PMC reset source: %s\n",
+				t210_pmc_rst_src[rst_src]);
+	} else {
+		rst_src = (val & PMC_RST_SOURCE_MASK) >> PMC_RST_SOURCE_SHIFT;
+		rst_lvl = (val & PMC_RST_LEVEL_MASK) >> PMC_RST_LEVEL_SHIFT;
+		seq_printf(s, "### PMC reset source: %s\n",
+				t186_pmc_rst_src[rst_src]);
+		seq_printf(s, "### PMC reset level: %s\n",
+				pmc_reset_level[rst_lvl]);
+	}
 
 	return 0;
 }
@@ -3582,10 +3607,8 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 
 	tegra_pmc_debug_scratch_reg_init(pmc);
 
-	if (pmc->soc->show_reset_status) {
-		tegra_pmc_show_reset_status();
-		tegra_pmc_reset_debugfs_init(&pdev->dev);
-	}
+	tegra_pmc_show_reset_status();
+	tegra_pmc_reset_debugfs_init(&pdev->dev);
 
 	if (IS_ENABLED(CONFIG_DEBUG_FS)) {
 		err = tegra_powergate_debugfs_init();
@@ -3821,6 +3844,7 @@ static const unsigned long tegra210_register_map[TEGRA_PMC_MAX_REG] = {
 	[TEGRA_PMC_CPUPWRGOOD_TIMER]	=  0xc8,
 	[TEGRA_PMC_CPUPWROFF_TIMER]	=  0xcc,
 	[TEGRA_PMC_SENSOR_CTRL]		=  0x1b0,
+	[TEGRA_PMC_RST_STATUS]		=  0x1b4,
 	[TEGRA_PMC_GPU_RG_CNTRL]	=  0x2d4,
 	[TEGRA_PMC_FUSE_CTRL]		=  0x450,
 	[TEGRA_PMC_BR_COMMAND_BASE]	=  0x908,
@@ -3988,7 +4012,7 @@ static const struct tegra_pmc_soc tegra210_pmc_soc = {
 	.has_bootrom_command = true,
 	.has_pclk_clock = true,
 	.has_interrupt_polarity_support = true,
-	.show_reset_status = false,
+	.show_legacy_reset_status = true,
 	.has_reboot_base_address = false,
 	.skip_lp0_vector_setup = false,
 	.skip_legacy_pmc_init = false,
@@ -4127,7 +4151,7 @@ static const struct tegra_pmc_soc tegra186_pmc_soc = {
 	.has_tsense_reset = false,
 	.has_pclk_clock = false,
 	.has_interrupt_polarity_support = false,
-	.show_reset_status = true,
+	.show_legacy_reset_status = false,
 	.has_reboot_base_address = true,
 	.skip_lp0_vector_setup = true,
 	.skip_legacy_pmc_init = true,
@@ -4164,7 +4188,7 @@ static const struct tegra_pmc_soc tegra194_pmc_soc = {
 	.has_tsense_reset = false,
 	.has_pclk_clock = false,
 	.has_interrupt_polarity_support = false,
-	.show_reset_status = true,
+	.show_legacy_reset_status = true,
 	.has_reboot_base_address = true,
 	.skip_lp0_vector_setup = true,
 	.skip_legacy_pmc_init = true,

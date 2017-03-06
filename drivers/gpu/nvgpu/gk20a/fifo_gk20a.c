@@ -1051,10 +1051,10 @@ int gk20a_init_fifo_support(struct gk20a *g)
 }
 
 /* return with a reference to the channel, caller must put it back */
-static struct channel_gk20a *
-channel_from_inst_ptr(struct fifo_gk20a *f, u64 inst_ptr)
+struct channel_gk20a *
+gk20a_refch_from_inst_ptr(struct gk20a *g, u64 inst_ptr)
 {
-	struct gk20a *g = f->g;
+	struct fifo_gk20a *f = &g->fifo;
 	unsigned int ci;
 	if (unlikely(!f->channel))
 		return NULL;
@@ -1531,7 +1531,7 @@ static bool gk20a_fifo_handle_mmu_fault(
 			}
 		} else {
 			/* read channel based on instruction pointer */
-			ch = channel_from_inst_ptr(&g->fifo, f.inst_ptr);
+			ch = gk20a_refch_from_inst_ptr(g, f.inst_ptr);
 			referenced_channel = ch;
 		}
 

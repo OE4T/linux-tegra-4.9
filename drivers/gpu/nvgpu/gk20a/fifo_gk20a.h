@@ -331,4 +331,6 @@ void gk20a_dump_eng_status(struct gk20a *g,
 const char *gk20a_decode_ccsr_chan_status(u32 index);
 const char *gk20a_decode_pbdma_chan_eng_ctx_status(u32 index);
 
+struct channel_gk20a *gk20a_refch_from_inst_ptr(struct gk20a *g, u64 inst_ptr);
+
 #endif /*__GR_GK20A_H__*/

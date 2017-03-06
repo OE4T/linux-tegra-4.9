@@ -1,7 +1,7 @@
 /*
  * include/linux/tegra_profiler.h
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,7 +20,7 @@
 #include <linux/ioctl.h>
 
 #define QUADD_SAMPLES_VERSION	37
-#define QUADD_IO_VERSION	20
+#define QUADD_IO_VERSION	21
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
 #define QUADD_IO_VERSION_RB_MAX_FILL_COUNT	6
@@ -36,8 +36,9 @@
 #define QUADD_IO_VERSION_STACK_OFFSET		16
 #define QUADD_IO_VERSION_SECTIONS_INFO		17
 #define QUADD_IO_VERSION_UNW_METHODS_OPT	18
-#define QUADD_IO_VERSION_PER_CPU_SETUP          19
-#define QUADD_IO_VERSION_TRACE_ALL_TASKS        20
+#define QUADD_IO_VERSION_PER_CPU_SETUP		19
+#define QUADD_IO_VERSION_TRACE_ALL_TASKS	20
+#define QUADD_IO_VERSION_CB_POWER_OF_2		21
 
 #define QUADD_SAMPLE_VERSION_THUMB_MODE_FLAG	17
 #define QUADD_SAMPLE_VERSION_GROUP_SAMPLES	18

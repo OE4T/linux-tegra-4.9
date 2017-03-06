@@ -1615,10 +1615,20 @@ static ssize_t set_bus_clk_rate(struct device *dev,
 	struct i2c_adapter *adap = to_i2c_adapter(dev);
 	char *p = (char *)buf;
 	int bus_clk_rate;
+	bool ret;
 
 	bus_clk_rate = memparse(p, &p);
+	if (adap->is_bus_clk_rate_supported) {
+		ret = adap->is_bus_clk_rate_supported(adap, bus_clk_rate);
+		if (!ret) {
+			dev_info(dev, "clock rate %d not supported\n",
+					bus_clk_rate);
+			goto exit;
+		}
+	}
 	dev_info(dev, "Setting clock rate %d on next transfer\n", bus_clk_rate);
 	adap->bus_clk_rate = bus_clk_rate;
+exit:
 	return count;
 }
 static DEVICE_ATTR(bus_clk_rate, S_IRUGO | S_IWUSR, show_bus_clk_rate,

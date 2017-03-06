@@ -906,7 +906,7 @@ static int tegra_bw_create_common_sysfs(struct kobject *parent_kobj)
 	return ret;
 }
 
-void tegra_bw_remove_common_sysfs(void)
+static void tegra_bw_remove_common_sysfs(void)
 {
 	if (common_bw_kobj) {
 		sysfs_remove_group(common_bw_kobj, &common_bw_attr_group);

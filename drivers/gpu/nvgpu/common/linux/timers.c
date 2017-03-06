@@ -88,7 +88,7 @@ static int __nvgpu_timeout_expired_msg_cpu(struct nvgpu_timeout *timeout,
 			vsnprintf(buf, sizeof(buf), fmt, args);
 
 			dev_err(dev_from_gk20a(g),
-				"Timeout detected @ 0x%pF %s\n", caller, buf);
+				"Timeout detected @ %pF %s\n", caller, buf);
 		}
 
 		return -ETIMEDOUT;

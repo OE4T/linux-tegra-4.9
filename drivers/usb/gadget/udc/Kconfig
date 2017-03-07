@@ -429,4 +429,11 @@ config USB_DUMMY_HCD
 # NOTE:  Please keep dummy_hcd LAST so that "real hardware" appears
 # first and will be selected by default.
 
+config USB_TEGRA_CD
+	bool "TEGRA USB charger detection"
+	depends on ARCH_TEGRA
+	default n
+	help
+	  Say y to enable tegra charger detection driver.
+
 endmenu

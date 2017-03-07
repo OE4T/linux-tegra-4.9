@@ -1,7 +1,7 @@
 /*
  * QSPI driver for NVIDIA's Tegra186 QUAD SPI Controller.
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -974,7 +974,10 @@ static void tegra_qspi_set_gr_registers(struct spi_device *spi)
 		 * for QSPI with the values mentioned in prod list.
 		 */
 		tegra_prod_set_by_name(&tqspi->base, "prod", tqspi->prod_list);
-		sprintf(prod_name, "prod_c_cs%d", spi->chip_select);
+		if (tqspi->is_ddr_mode)
+			sprintf(prod_name, "prod_c_DDR%d", (tqspi->cur_speed/1000000));
+		else
+			sprintf(prod_name, "prod_c_SDR%d", (tqspi->cur_speed/1000000));
 		if (tegra_prod_set_by_name(&tqspi->base,
 					prod_name, tqspi->prod_list))
 			dev_info(tqspi->dev, "failed to apply prod for qspi\n");

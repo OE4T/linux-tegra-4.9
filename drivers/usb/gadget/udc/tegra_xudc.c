@@ -39,6 +39,7 @@
 #include <linux/tegra_pm_domains.h>
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
+#include <linux/usb/tegra_usb_charger.h>
 #include <linux/workqueue.h>
 
 /* XUSB_DEV registers */
@@ -516,6 +517,15 @@ struct tegra_xudc {
 	bool powergated;
 
 	struct completion disconnect_complete;
+
+	/* charger detection */
+	struct tegra_usb_cd *ucd;
+	unsigned int connect_type;
+#define NON_STD_CHARGER_DET_TIME_MS 2000
+#define USB_ANDROID_SUSPEND_CURRENT_MA 2
+	struct work_struct set_charging_current_work;
+	struct delayed_work non_std_charger_work;
+	u32 current_ma;
 };
 
 #define XUDC_TRB_MAX_BUFFER_SIZE 65536
@@ -606,6 +616,7 @@ static inline void dump_trb(struct tegra_xudc *xudc, const char *type,
 static void tegra_xudc_device_mode_on(struct tegra_xudc *xudc)
 {
 	unsigned long flags;
+	unsigned int type;
 
 	spin_lock_irqsave(&xudc->lock, flags);
 	if (xudc->device_mode) {
@@ -613,6 +624,18 @@ static void tegra_xudc_device_mode_on(struct tegra_xudc *xudc)
 		return;
 	}
 	spin_unlock_irqrestore(&xudc->lock, flags);
+
+	/* charger detection should be done when b_idle->b_peripheral only */
+	if (xudc->ucd && !xudc->gadget.is_a_peripheral) {
+		type = tegra_ucd_detect_cable_and_set_current(xudc->ucd);
+
+		spin_lock_irqsave(&xudc->lock, flags);
+		xudc->connect_type = type;
+		if (xudc->connect_type == EXTCON_USB && xudc->pullup)
+			schedule_delayed_work(&xudc->non_std_charger_work,
+				msecs_to_jiffies(NON_STD_CHARGER_DET_TIME_MS));
+		spin_unlock_irqrestore(&xudc->lock, flags);
+	}
 
 	pm_runtime_get_sync(xudc->dev);
 
@@ -638,6 +661,12 @@ static void tegra_xudc_device_mode_off(struct tegra_xudc *xudc)
 	}
 
 	dev_info(xudc->dev, "device mode off\n");
+
+	if (xudc->ucd) {
+		xudc->connect_type = EXTCON_NONE;
+		cancel_delayed_work(&xudc->non_std_charger_work);
+		xudc->current_ma = 0;
+	}
 
 	connected = !!(xudc_readl(xudc, PORTSC) & PORTSC_CCS);
 	reinit_completion(&xudc->disconnect_complete);
@@ -671,6 +700,9 @@ static void tegra_xudc_device_mode_off(struct tegra_xudc *xudc)
 
 	/* Make sure interrupt handler has completed before powergating. */
 	synchronize_irq(xudc->irq);
+
+	if (xudc->ucd)
+		tegra_ucd_set_charger_type(xudc->ucd, EXTCON_NONE);
 
 	pm_runtime_put(xudc->dev);
 }
@@ -1800,6 +1832,10 @@ static int tegra_xudc_gadget_pullup(struct usb_gadget *gadget, int is_on)
 		xudc_writel(xudc, val, CTRL);
 	}
 	xudc->pullup = is_on;
+	if (xudc->ucd && xudc->device_mode &&
+	    xudc->connect_type == EXTCON_USB && is_on)
+		schedule_delayed_work(&xudc->non_std_charger_work,
+			msecs_to_jiffies(NON_STD_CHARGER_DET_TIME_MS));
 	spin_unlock_irqrestore(&xudc->lock, flags);
 	pm_runtime_put(xudc->dev);
 
@@ -1876,12 +1912,37 @@ static int tegra_xudc_gadget_stop(struct usb_gadget *gadget)
 	return 0;
 }
 
+static void tegra_xudc_set_charging_current_work(struct work_struct *work)
+{
+	struct tegra_xudc *xudc = container_of(work, struct tegra_xudc,
+				  set_charging_current_work);
+
+	dev_dbg(xudc->dev, "%s\n", __func__);
+	tegra_ucd_set_sdp_cdp_current(xudc->ucd, xudc->current_ma);
+}
+
+static int tegra_xudc_gadget_vbus_draw(struct usb_gadget *gadget,
+						unsigned int m_a)
+{
+	struct tegra_xudc *xudc = to_xudc(gadget);
+
+	dev_dbg(xudc->dev, "%s: %u mA\n", __func__, m_a);
+
+	if (xudc->ucd && xudc->current_ma != m_a) {
+		xudc->current_ma = m_a;
+		schedule_work(&xudc->set_charging_current_work);
+	}
+
+	return 0;
+}
+
 static struct usb_gadget_ops tegra_xudc_gadget_ops = {
 	.get_frame = tegra_xudc_gadget_get_frame,
 	.wakeup = tegra_xudc_gadget_wakeup,
 	.pullup = tegra_xudc_gadget_pullup,
 	.udc_start = tegra_xudc_gadget_start,
 	.udc_stop = tegra_xudc_gadget_stop,
+	.vbus_draw = tegra_xudc_gadget_vbus_draw,
 };
 
 static void no_op_complete(struct usb_ep *ep, struct usb_request *req)
@@ -2295,6 +2356,8 @@ static void tegra_xudc_handle_ep0_event(struct tegra_xudc *xudc,
 	struct usb_ctrlrequest *ctrl = (struct usb_ctrlrequest *)event;
 	u16 seq_num = trb_read_seq_num(event);
 
+	if (xudc->ucd)
+		cancel_delayed_work(&xudc->non_std_charger_work);
 	if (xudc->setup_state != WAIT_FOR_SETUP) {
 		/*
 		 * The controller is in the process of handling another
@@ -3162,6 +3225,22 @@ static void tegra_xudc_phy_power_off(struct tegra_xudc *xudc)
 	phy_exit(xudc->utmi_phy);
 }
 
+static void tegra_xudc_non_std_charger_work(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct tegra_xudc *xudc = container_of(dwork, struct tegra_xudc,
+					       non_std_charger_work);
+	unsigned long flags;
+
+	if (xudc->ucd) {
+		spin_lock_irqsave(&xudc->lock, flags);
+		xudc->connect_type = EXTCON_CHG_USB_SLOW;
+		spin_unlock_irqrestore(&xudc->lock, flags);
+		tegra_ucd_set_charger_type(xudc->ucd,
+					   EXTCON_CHG_USB_SLOW);
+	}
+}
+
 static const char * const tegra210_xudc_supply_names[] = {
 	"hvdd_usb",
 	"avddio_usb",
@@ -3222,6 +3301,8 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 	unsigned int i;
 	int err;
 	int partition_id_xusba, partition_id_xusbb;
+	struct device_node *np;
+	struct platform_device *cd_pdev;
 
 	xudc = devm_kzalloc(&pdev->dev, sizeof(*xudc), GFP_ATOMIC);
 	if (!xudc)
@@ -3398,6 +3479,27 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 		goto free_eps;
 	}
 
+	/* get charger detector */
+	np = of_parse_phandle(pdev->dev.of_node, "charger-detector", 0);
+	if (np) {
+		cd_pdev = of_find_device_by_node(np);
+		of_node_put(np);
+		xudc->ucd = tegra_usb_get_ucd(cd_pdev);
+
+		if (IS_ERR(xudc->ucd)) {
+			dev_info(xudc->dev, "USB charger detection disabled\n");
+			xudc->ucd = NULL;
+		} else {
+			xudc->current_ma = USB_ANDROID_SUSPEND_CURRENT_MA;
+			xudc->connect_type = EXTCON_NONE;
+			INIT_WORK(&xudc->set_charging_current_work,
+				  tegra_xudc_set_charging_current_work);
+			INIT_DELAYED_WORK(&xudc->non_std_charger_work,
+					  tegra_xudc_non_std_charger_work);
+			xudc->connect_type = EXTCON_NONE;
+		}
+	}
+
 	init_completion(&xudc->disconnect_complete);
 
 	INIT_WORK(&xudc->data_role_work, tegra_xudc_data_role_work);
@@ -3438,6 +3540,12 @@ static int tegra_xudc_remove(struct platform_device *pdev)
 	int partition_id_xusba, partition_id_xusbb;
 
 	pm_runtime_get_sync(xudc->dev);
+
+	if (xudc->ucd) {
+		cancel_work_sync(&xudc->set_charging_current_work);
+		cancel_delayed_work_sync(&xudc->non_std_charger_work);
+		tegra_usb_release_ucd(xudc->ucd);
+	}
 
 	extcon_unregister_notifier(xudc->data_role_extcon, EXTCON_USB,
 				   &xudc->data_role_nb);

@@ -1670,14 +1670,9 @@ static int tegra_se_rng_drbg_init(struct crypto_tfm *tfm)
 	return 0;
 }
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4,3,0)
 static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 		const u8 *src, unsigned int slen,
 		u8 *rdata, unsigned int dlen)
-#else
-static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
-		u8 *rdata, u32 dlen)
-#endif
 {
 	struct tegra_se_rng_context *rng_ctx = crypto_rng_ctx(tfm);
 	struct tegra_se_dev *se_dev = rng_ctx->se_dev;
@@ -1739,12 +1734,8 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 	return dlen;
 }
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4,3,0)
 static int tegra_se_rng_drbg_reset(struct crypto_rng *tfm, const u8 *seed,
 			unsigned int slen)
-#else
-static int tegra_se_rng_drbg_reset(struct crypto_rng *tfm, u8 *seed, u32 slen)
-#endif
 {
 	return 0;
 }
@@ -2613,7 +2604,6 @@ static void tegra_se_rsa_exit(struct crypto_akcipher *tfm)
 	ctx->slot = NULL;
 }
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4,3,0)
 static struct rng_alg rng_algs[] = { {
 		.generate	= tegra_se_rng_drbg_get_random,
 		.seed		= tegra_se_rng_drbg_reset,
@@ -2629,29 +2619,8 @@ static struct rng_alg rng_algs[] = { {
 			.cra_exit = tegra_se_rng_drbg_exit,
 		}
 }};
-#endif
 
 static struct crypto_alg aes_algs[] = {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
-	{
-		.cra_name = "rng_drbg",
-		.cra_driver_name = "rng_drbg-aes-tegra",
-		.cra_priority = 100,
-		.cra_flags = CRYPTO_ALG_TYPE_RNG,
-		.cra_ctxsize = sizeof(struct tegra_se_rng_context),
-		.cra_type = &crypto_rng_type,
-		.cra_module = THIS_MODULE,
-		.cra_init = tegra_se_rng_drbg_init,
-		.cra_exit = tegra_se_rng_drbg_exit,
-		.cra_u = {
-			.rng = {
-				.rng_make_random = tegra_se_rng_drbg_get_random,
-				.rng_reset = tegra_se_rng_drbg_reset,
-				.seedsize = TEGRA_SE_RNG_SEED_SIZE,
-			}
-		}
-	},
-#endif
 	{
 		.cra_name = "cbc(aes)",
 		.cra_driver_name = "cbc-aes-tegra",
@@ -3138,22 +3107,12 @@ static int tegra_se_probe(struct platform_device *pdev)
 		/* Register RNG(DRBG), the first element in aes_algs/rng_algs
 		 * with SE1/AES0
 		 */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
-		INIT_LIST_HEAD(&aes_algs[0].cra_list);
-		err = crypto_register_alg(&aes_algs[0]);
-		if (err) {
-			dev_err(se_dev->dev,
-				"crypto_register_alg failed for rng\n");
-			goto reg_fail;
-		}
-#else
 		INIT_LIST_HEAD(&rng_algs[0].base.cra_list);
 		err = crypto_register_rng(&rng_algs[0]);
 		if (err) {
 			dev_err(se_dev->dev, "crypto_register_rng failed\n");
 			goto reg_fail;
 		}
-#endif
 	}
 
 	if (is_algo_supported(node, "aes")) {
@@ -3161,11 +3120,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 		 * ecb,cbc,ofb,ctr and first element in hash_algs that is
 		 * cmac, with SE2/AES1
 		 */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
-		for (i = 1; i < ARRAY_SIZE(aes_algs); i++) {
-#else
 		for (i = 0; i < ARRAY_SIZE(aes_algs); i++) {
-#endif
 			INIT_LIST_HEAD(&aes_algs[i].cra_list);
 			err = crypto_register_alg(&aes_algs[i]);
 			if (err) {
@@ -3299,11 +3254,7 @@ static int tegra_se_remove(struct platform_device *pdev)
 		/* Unregister RNG(DRBG), the first element in aes_algs/rng_algs
 		 * with SE1/AES0
 		 */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
-		crypto_unregister_alg(&aes_algs[0]);
-#else
 		crypto_unregister_rng(&rng_algs[0]);
-#endif
 	}
 
 	if (is_algo_supported(node, "aes")) {
@@ -3311,9 +3262,7 @@ static int tegra_se_remove(struct platform_device *pdev)
 		 * ecb,cbc,ofb,ctr and first element in hash_algs that is
 		 * cmac, with SE2/AES1
 		 */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0)
 		crypto_unregister_alg(&aes_algs[0]);
-#endif
 		for (i = 1; i < ARRAY_SIZE(aes_algs); i++)
 			crypto_unregister_alg(&aes_algs[i]);
 	}

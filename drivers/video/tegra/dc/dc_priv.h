@@ -49,10 +49,10 @@
 #define RGB_TO_YUV444_8BPC_BLACK_PIX 0x00801080
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
-int tegra_nvdisp_powergate_partition(int pg_id);
-int tegra_nvdisp_unpowergate_partition(int pg_id);
+int tegra_nvdisp_powergate_dc(struct tegra_dc *dc);
+int tegra_nvdisp_unpowergate_dc(struct tegra_dc *dc);
 int tegra_nvdisp_set_compclk(struct tegra_dc *dc);
-int tegra_nvdisp_is_powered(int pg_id);
+int tegra_nvdisp_is_powered(struct tegra_dc *dc);
 #endif
 
 static inline int tegra_dc_io_start(struct tegra_dc *dc)
@@ -453,7 +453,7 @@ static inline void tegra_disp_clk_disable_unprepare(struct clk *clk)
 static inline void tegra_dc_powergate_locked(struct tegra_dc *dc)
 {
 #if defined(CONFIG_TEGRA_NVDISPLAY)
-	tegra_nvdisp_powergate_partition(dc->powergate_id);
+	tegra_nvdisp_powergate_dc(dc);
 #else
 	tegra_powergate_partition(dc->powergate_id);
 #endif
@@ -463,7 +463,7 @@ static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc)
 {
 	int ret;
 #if defined(CONFIG_TEGRA_NVDISPLAY)
-	ret = tegra_nvdisp_unpowergate_partition(dc->powergate_id);
+	ret = tegra_nvdisp_unpowergate_dc(dc);
 #else
 	ret = tegra_unpowergate_partition(dc->powergate_id);
 #endif
@@ -477,7 +477,8 @@ static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return true;
-	return tegra_nvdisp_is_powered(dc->powergate_id);
+
+	return tegra_nvdisp_is_powered(dc);
 #else
 	return tegra_powergate_is_powered(dc->powergate_id);
 #endif
@@ -781,6 +782,8 @@ void __attribute__((weak)) tegra_dc_enable_sor_t18x(struct tegra_dc *dc,
 			int sor_num, bool enable);
 void __attribute__((weak)) tegra_dc_enable_sor_t19x(struct tegra_dc *dc,
 			int sor_num, bool enable);
+
+struct tegra_dc_pd_table *tegra_dc_get_disp_pd_table(void);
 
 int tegra_fb_release_fbmem(struct tegra_fb_info *);
 #endif

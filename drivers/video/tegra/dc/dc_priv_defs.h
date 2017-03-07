@@ -193,11 +193,37 @@ enum tegra_dc_hw {
 	TEGRA_DC_HW_MAX
 };
 
+struct tegra_dc_pd_clk_info {
+	const char	*name;
+	struct clk	*clk;
+};
+
+struct tegra_dc_pd_info {
+	struct of_device_id			of_id[2];
+	int					pg_id;
+
+	const u32				head_owner;
+	const u32				head_mask;
+	const u32				win_mask;
+
+	struct tegra_dc_pd_clk_info		*domain_clks;
+	const int				nclks;
+
+	int					ref_cnt;
+};
+
+struct tegra_dc_pd_table {
+	struct tegra_dc_pd_info *pd_entries;
+	int npd;
+	struct mutex pd_lock;
+};
+
 struct tegra_dc_hw_data {
 	bool valid;
 	int nheads;
 	int nwins;
 	int nsors;
+	struct tegra_dc_pd_table *pd_table;
 	enum tegra_dc_hw version;
 };
 

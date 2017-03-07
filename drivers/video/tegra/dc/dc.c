@@ -6674,6 +6674,14 @@ int tegra_dc_get_numof_dispsors(void)
 	return hw_data->nsors;
 }
 
+struct tegra_dc_pd_table *tegra_dc_get_disp_pd_table(void)
+{
+	if (!hw_data || !hw_data->valid)
+		return ERR_PTR(-ENODEV);
+
+	return hw_data->pd_table;
+}
+
 static int tegra_dc_assign_hw_data(void)
 {
 	const struct of_device_id *match = NULL;
@@ -6723,6 +6731,10 @@ void tegra_dc_populate_t21x_hw_data(struct tegra_dc_hw_data *hw_data)
 	hw_data->nheads = 2;
 	hw_data->nwins = 5;
 	hw_data->nsors = 2;
+
+	/* unused */
+	hw_data->pd_table = NULL;
+
 	hw_data->valid = true;
 	hw_data->version = TEGRA_DC_HW_T210;
 }

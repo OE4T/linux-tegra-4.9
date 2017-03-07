@@ -402,6 +402,27 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 
 	start = next = (u8 *)task_desc + postactionlist_of;
 
+	/* fill output task status */
+	for (j = 0; j < task->num_out_task_status; j++) {
+		dma_addr_t dma_addr;
+		size_t dma_size;
+
+		nvdla_dbg_info(pdev, "i[%d] h[%u] o[%u] status[%d]",
+					j,
+					task->out_task_status[j].handle,
+					task->out_task_status[j].offset,
+					task->out_task_status[j].status);
+
+			if (nvhost_buffer_submit_pin(buffers,
+					&task->out_task_status[j].handle,
+					1, &dma_addr, &dma_size))
+				break;
+
+			next = add_status_action(next, POSTACTION_TASK_STATUS,
+				dma_addr + task->out_task_status[j].offset,
+				task->out_task_status[j].status);
+	}
+
 	/* fill all postactions */
 	for (i = 0; i < task->num_postfences; i++) {
 
@@ -486,27 +507,6 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 				task->postfences[i].type);
 			return -EINVAL;
 		}
-	}
-
-	/* fill output task status */
-	for (j = 0; j < task->num_out_task_status; j++) {
-		dma_addr_t dma_addr;
-		size_t dma_size;
-
-		nvdla_dbg_info(pdev, "i[%d] h[%u] o[%u] status[%d]",
-					j,
-					task->out_task_status[j].handle,
-					task->out_task_status[j].offset,
-					task->out_task_status[j].status);
-
-			if (nvhost_buffer_submit_pin(buffers,
-					&task->out_task_status[j].handle,
-					1, &dma_addr, &dma_size))
-				break;
-
-			next = add_status_action(next, POSTACTION_TASK_STATUS,
-				dma_addr + task->out_task_status[j].offset,
-				task->out_task_status[j].status);
 	}
 
 	/* update end of action list */

@@ -343,8 +343,12 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 
 	region = (struct dla_region_printf *)debug_cmd_mem_info.va;
 	region->region = DLA_REGION_PRINTF;
-	region->address = ALIGNED_DMA(m->debug_dump_pa);
 	region->size = DEBUG_BUFFER_SIZE;
+#if CURRENT_FW_VERSION > FW_VERSION(0, 6, 0)
+	region->address = m->debug_dump_pa;
+#else
+	region->address = ALIGNED_DMA(m->debug_dump_pa);
+#endif
 
 	/* prepare command data */
 	cmd_data.method_id = DLA_CMD_SET_REGIONS;

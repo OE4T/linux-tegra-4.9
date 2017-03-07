@@ -27,6 +27,17 @@
 #include "nvhost_buffer.h"
 
 #include "dla_os_interface.h"
+#include "dla_fw_version.h"
+
+/**
+ * get current firmware version in number
+ * TODO: move to dla_fw_version.h
+ *
+ */
+#define FW_VERSION(a, b, c) 	(((a) << 16) + ((b) << 8) + (c))
+#define CURRENT_FW_VERSION	FW_VERSION(FIRMWARE_VERSION_MAJOR, \
+					   FIRMWARE_VERSION_MINOR, \
+					   FIRMWARE_VERSION_SUBMINOR)
 
 #define ALIGNED_DMA(x) ((x >> 8) & 0xffffffff)
 

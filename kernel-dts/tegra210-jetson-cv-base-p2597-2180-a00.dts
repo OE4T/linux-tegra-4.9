@@ -1054,10 +1054,9 @@
 			pllx-offset-min = <2000>;
 		};
 	};
-	dfll: clock@70110000 {
-		status = "okay";
 
-		reg = <0x0 0x70110000 0x0 0x400>;
+	clock@70110000 {
+		status = "okay";
 		vdd-cpu-supply = <&cpu_ovr_reg>;
 		nvidia,pwm-to-pmic;
 		nvidia,init-uv = <1000000>;

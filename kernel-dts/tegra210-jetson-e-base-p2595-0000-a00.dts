@@ -973,9 +973,8 @@
 		};
 	};
 
-	dfll: clock@70110000 {
+	clock@70110000 {
 		status = "okay";
-		reg = <0x0 0x70110000 0x0 0x400>;
 		vdd-cpu-supply = <&cpu_ovr_reg>;
 		nvidia,pwm-to-pmic;
 		nvidia,init-uv = <1000000>;

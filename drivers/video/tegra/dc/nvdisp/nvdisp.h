@@ -1,5 +1,5 @@
 /*
- * drivers/video/tegra/dc/nvdisplay/nvdis.h
+ * drivers/video/tegra/dc/nvdisplay/nvdisp.h
  *
  * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
  *
@@ -30,20 +30,6 @@ struct nvdisp_request_wq {
 	wait_queue_head_t	wq;
 	atomic_t		nr_pending;
 	int			timeout_per_entry;
-};
-
-/* common struct for power domain */
-#define NVDISP_PD_COUNT 3
-#define NVDISP_PD_INDEX 0
-#define NVDISPB_PD_INDEX 1
-#define NVDISPC_PD_INDEX 2
-struct nvdisp_pd_info {
-	bool head_inuse;
-	/*Update valid_windows whenever the winmask changes dynamically*/
-	unsigned long valid_windows;
-	unsigned long windows_inuse;
-	int powergate_id;
-	int ref_cnt;
 };
 
 void tegra_nvdisp_set_background_color(struct tegra_dc *dc);

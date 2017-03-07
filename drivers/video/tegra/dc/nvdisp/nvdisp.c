@@ -62,32 +62,97 @@ static struct mrq_emc_dvfs_latency_response nvdisp_emc_dvfs_table;
  */
 struct clk *hubclk;
 static struct clk *compclk;
-static struct clk *dscclk;
-static struct clk *nvdisp_p0;
-static struct clk *nvdisp_p1;
-static struct clk *nvdisp_p2;
-
 
 static struct reset_control *nvdisp_common_rst[DC_N_WINDOWS+1];
 
 static int tegra_nvdisp_set_color_control(struct tegra_dc *dc);
 
-static struct of_device_id nvdisp_disa_pd[] = {
-	{ .compatible = "nvidia,tegra186-disa-pd", },
-	{},
+static struct tegra_dc_pd_clk_info t18x_disp_pd0_clk_info[] = {
+	{
+		.name = "nvdisplayhub",
+		.clk = NULL,
+	},
+	{
+		.name = "nvdisplay_disp",
+		.clk = NULL,
+	},
+	{
+		.name = "nvdisplay_p0",
+		.clk = NULL,
+	},
+	{
+		.name = "nvdisp_dsc",
+		.clk = NULL,
+	},
 };
 
-static struct of_device_id nvdisp_disb_pd[] = {
-	{ .compatible = "nvidia,tegra186-disb-pd", },
-	{},
+static struct tegra_dc_pd_clk_info t18x_disp_pd1_clk_info[] = {
+	{
+		.name = "nvdisplay_p1",
+		.clk = NULL,
+	},
 };
 
-static struct of_device_id nvdisp_disc_pd[] = {
-	{ .compatible = "nvidia,tegra186-disc-pd", },
-	{},
+static struct tegra_dc_pd_clk_info t18x_disp_pd2_clk_info[] = {
+	{
+		.name = "nvdisplay_p2",
+		.clk = NULL,
+	},
 };
 
-static struct nvdisp_pd_info nvdisp_pg[NVDISP_PD_COUNT];
+/*
+ * NOTE: Keep the following power domains ordered according to their head owner.
+ */
+static struct tegra_dc_pd_info t18x_disp_pd_info[] = {
+	/* Head0 power domain */
+	{
+		.of_id = {
+			{ .compatible = "nvidia,tegra186-disa-pd", },
+			{},
+		},
+		.pg_id = -1,
+		.head_owner = 0,
+		.head_mask = 0x1,	/* Head(s):	0 */
+		.win_mask = 0x1,	/* Window(s):	0 */
+		.domain_clks = t18x_disp_pd0_clk_info,
+		.nclks = ARRAY_SIZE(t18x_disp_pd0_clk_info),
+		.ref_cnt = 0,
+	},
+	/* Head1 power domain */
+	{
+		.of_id = {
+			{ .compatible = "nvidia,tegra186-disb-pd", },
+			{},
+		},
+		.pg_id = -1,
+		.head_owner = 1,
+		.head_mask = 0x2,	/* Head(s):	1 */
+		.win_mask = 0x6,	/* Window(s):	1,2 */
+		.domain_clks = t18x_disp_pd1_clk_info,
+		.nclks = ARRAY_SIZE(t18x_disp_pd1_clk_info),
+		.ref_cnt = 0,
+	},
+	/* Head2 power domain */
+	{
+		.of_id = {
+			{ .compatible = "nvidia,tegra186-disc-pd", },
+			{},
+		},
+		.pg_id = -1,
+		.head_owner = 2,
+		.head_mask = 0x4,	/* Head(s):	2 */
+		.win_mask = 0x38,	/* Window(s):	3,4,5 */
+		.domain_clks = t18x_disp_pd2_clk_info,
+		.nclks = ARRAY_SIZE(t18x_disp_pd2_clk_info),
+		.ref_cnt = 0,
+	},
+};
+
+static struct tegra_dc_pd_table t18x_disp_pd_table = {
+	.pd_entries = t18x_disp_pd_info,
+	.npd = ARRAY_SIZE(t18x_disp_pd_info),
+};
+
 static bool compclk_already_on = false, hubclk_already_on = false;
 static int cur_clk_client_index;
 
@@ -1018,6 +1083,69 @@ static void _tegra_nvdisp_init_default_imp_settings(void)
 	}
 }
 
+static int _tegra_nvdisp_init_pd_table(struct tegra_dc *dc)
+{
+	struct tegra_dc_pd_table *pd_table = tegra_dc_get_disp_pd_table();
+	struct tegra_dc_pd_info *pds = pd_table->pd_entries;
+	int npower_domains = pd_table->npd;
+	int i;
+
+	mutex_init(&pd_table->pd_lock);
+
+	for (i = 0; i < npower_domains; i++) {
+		struct tegra_dc_pd_info *pd = &pds[i];
+		struct tegra_dc_pd_clk_info *domain_clks = pd->domain_clks;
+		int nclks = pd->nclks;
+		int j;
+
+		/* Fill in the powergate id for this power domain. */
+		pd->pg_id = tegra_pd_get_powergate_id(pd->of_id);
+
+		/* Query all the required clocks for this power domain. */
+		for (j = 0; j < nclks; j++) {
+			struct tegra_dc_pd_clk_info *domain_clk;
+
+			domain_clk = &domain_clks[j];
+			domain_clk->clk =
+			tegra_disp_clk_get(&dc->ndev->dev, domain_clk->name);
+
+			if (IS_ERR_OR_NULL(domain_clk->clk)) {
+				dev_err(&dc->ndev->dev, "can't get %s clock\n",
+					domain_clk->name);
+				return -ENOENT;
+			}
+		}
+	}
+
+	return 0;
+}
+
+static void _tegra_nvdisp_destroy_pd_table(struct tegra_dc *dc)
+{
+	struct tegra_dc_pd_table *pd_table = tegra_dc_get_disp_pd_table();
+	struct tegra_dc_pd_info *pds = pd_table->pd_entries;
+	int npower_domains = pd_table->npd;
+	int i;
+
+	for (i = 0; i < npower_domains; i++) {
+		struct tegra_dc_pd_info *pd = &pds[i];
+		struct tegra_dc_pd_clk_info *domain_clks = pd->domain_clks;
+		int nclks = pd->nclks;
+		int j;
+
+		/* Release all the required clocks for this power domain. */
+		for (j = 0; j < nclks; j++) {
+			struct tegra_dc_pd_clk_info *domain_clk;
+
+			domain_clk = &domain_clks[j];
+			if (IS_ERR_OR_NULL(domain_clk->clk))
+				continue;
+
+			tegra_disp_clk_put(&dc->ndev->dev, domain_clk->clk);
+		}
+	}
+}
+
 static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 {
 	int ret = 0;
@@ -1047,36 +1175,6 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 		goto INIT_CLK_ERR;
 	}
 
-	if (!tegra_platform_is_vdk()) {
-		dscclk = tegra_disp_clk_get(&dc->ndev->dev, "nvdisp_dsc");
-		if (IS_ERR_OR_NULL(dscclk)) {
-			dev_err(&dc->ndev->dev, "can't get display dsc clock\n");
-			ret = -ENOENT;
-			goto INIT_CLK_ERR;
-		}
-	}
-
-	nvdisp_p0 = tegra_disp_clk_get(&dc->ndev->dev, "nvdisplay_p0");
-	if (IS_ERR_OR_NULL(nvdisp_p0)) {
-		dev_err(&dc->ndev->dev, "can't get display nvdisp_p0 clock\n");
-		ret = -ENOENT;
-		goto INIT_CLK_ERR;
-	}
-
-	nvdisp_p1 = tegra_disp_clk_get(&dc->ndev->dev, "nvdisplay_p1");
-	if (IS_ERR_OR_NULL(nvdisp_p1)) {
-		dev_err(&dc->ndev->dev, "can't get display nvdisp_p1 clock\n");
-		ret = -ENOENT;
-		goto INIT_CLK_ERR;
-	}
-
-	nvdisp_p2 = tegra_disp_clk_get(&dc->ndev->dev, "nvdisplay_p2");
-	if (IS_ERR_OR_NULL(nvdisp_p2)) {
-		dev_err(&dc->ndev->dev, "can't get display nvdisp_p2 clock\n");
-		ret = -ENOENT;
-		goto INIT_CLK_ERR;
-	}
-
 	/* Initialize the session id counter to 0 */
 	dc->imp_session_id_cntr = 0;
 
@@ -1095,13 +1193,9 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 			goto INIT_LUT_ERR;
 	}
 
-	/* Assign powergate id for each partition*/
-	nvdisp_pg[NVDISP_PD_INDEX].powergate_id =
-			tegra_pd_get_powergate_id(nvdisp_disa_pd);
-	nvdisp_pg[NVDISPB_PD_INDEX].powergate_id =
-			tegra_pd_get_powergate_id(nvdisp_disb_pd);
-	nvdisp_pg[NVDISPC_PD_INDEX].powergate_id =
-			tegra_pd_get_powergate_id(nvdisp_disc_pd);
+	ret = _tegra_nvdisp_init_pd_table(dc);
+	if (ret)
+		goto INIT_PD_ERR;
 
 	/* Fill in the EMC DVFS table */
 	tegra_bpmp_send_receive(MRQ_EMC_DVFS_LATENCY, NULL, 0,
@@ -1134,6 +1228,8 @@ BW_REG_ERR:
 	if (!tegra_platform_is_vdk())
 		tegra_nvdisp_bandwidth_unregister();
 #endif
+INIT_PD_ERR:
+	_tegra_nvdisp_destroy_pd_table(dc);
 INIT_LUT_ERR:
 	for (i = 0; i < tegra_dc_get_numof_dispwindows(); ++i) {
 		struct tegra_dc_lut *lut;
@@ -1151,18 +1247,6 @@ INIT_CLK_ERR:
 
 	if (!IS_ERR_OR_NULL(compclk))
 		tegra_disp_clk_put(&dc->ndev->dev, compclk);
-
-	if (!IS_ERR_OR_NULL(dscclk))
-		tegra_disp_clk_put(&dc->ndev->dev, dscclk);
-
-	if (!IS_ERR_OR_NULL(nvdisp_p0))
-		tegra_disp_clk_put(&dc->ndev->dev, nvdisp_p0);
-
-	if (!IS_ERR_OR_NULL(nvdisp_p1))
-		tegra_disp_clk_put(&dc->ndev->dev, nvdisp_p1);
-
-	if (!IS_ERR_OR_NULL(nvdisp_p2))
-		tegra_disp_clk_put(&dc->ndev->dev, nvdisp_p2);
 INIT_EXIT:
 /*	mutex_unlock(&tegra_nvdisp_lock); */
 	return ret;
@@ -1408,13 +1492,6 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 
 	/* Set the valid windows as per mask */
 	dc->valid_windows = dc->pdata->win_mask;
-
-	/* Assign powergate id for each partition*/
-	dc->powergate_id = nvdisp_pg[dc->ctrl_num].powergate_id;
-
-	/* Save for powermgmt purpose */
-	/* valid_windows should be updated on dynamically changing windows */
-	nvdisp_pg[dc->ctrl_num].valid_windows = dc->valid_windows;
 
 	/* Allocate a syncpoint for vblank on each head */
 	snprintf(syncpt_name, sizeof(syncpt_name), "vblank%u", dc->ctrl_num);
@@ -1787,10 +1864,6 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
 		return false;
 
-	/* Save for powermgmt purpose */
-	nvdisp_pg[dc->ctrl_num].valid_windows = dc->pdata->win_mask;
-
-	/* TODO: confirm power domains for parker */
 	tegra_dc_unpowergate_locked(dc);
 
 	/* Set HUB CLOCK PARENT as PLLP/ ENABLE */
@@ -2172,208 +2245,178 @@ void tegra_nvdisp_underflow_handler(struct tegra_dc *dc)
 	}
 }
 
-int tegra_nvdisp_is_powered(int pg_id)
+int tegra_nvdisp_is_powered(struct tegra_dc *dc)
 {
-	int i, ret;
-	int pd_index = -1;
-
-	for (i = 0; i < NVDISP_PD_COUNT; i++) {
-		if (nvdisp_pg[i].powergate_id == pg_id) {
-			pd_index = i;
-			break;
-		}
-	}
-
-	if (pd_index < 0) {
-		pr_info("Not a disp powerdomain\n");
-		return 0;
-	}
-
-	mutex_lock(&tegra_nvdisp_lock);
-	ret = nvdisp_pg[pd_index].ref_cnt;
-	mutex_unlock(&tegra_nvdisp_lock);
-
-	return ret;
-}
-
-int tegra_nvdisp_powergate_partition(int pg_id)
-{
-	int i , ret = 0;
-	int pd_index = -1;
-	bool disable_disp[NVDISP_PD_COUNT] = {
-			false, false, false };
-
-	/* DISP - common for all IHUB, ORs, head0, win 0
-	 * Request from DISPB or DISPC - disable DISP last
-	 * Check DISPB and DISPC valid_windows
-	 * in addition to the request for HEAD 1 and 2 powergate
-	 */
-
-	for (i = 0; i < NVDISP_PD_COUNT; i++) {
-		if (nvdisp_pg[i].powergate_id == pg_id) {
-			pd_index = i;
-			break;
-		}
-	}
-
-	if (pd_index < 0) {
-		pr_info(" Not a disp powerdomain: %d.\n", pd_index);
-		return -EINVAL;
-	}
-
-	if (!nvdisp_pg[pd_index].ref_cnt) {
-		pr_info("Already powergated DISP id %d\n",
-				 nvdisp_pg[i].powergate_id);
-		return 0;
-	}
-
-	mutex_lock(&tegra_nvdisp_lock);
-	/* Check any valid_windows resides in another PD
-	 * the check whether those head are in use before
-	 * powering off those PDs
-	 */
-	for_each_set_bit(i, &nvdisp_pg[pd_index].valid_windows, DC_N_WINDOWS) {
-		if (i == 0 && nvdisp_pg[NVDISP_PD_INDEX].windows_inuse) {
-			nvdisp_pg[NVDISP_PD_INDEX].windows_inuse -= 1;
-			disable_disp[NVDISP_PD_INDEX] = true;
-		} else if (((i == 1) || (i == 2)) &&
-			nvdisp_pg[NVDISPB_PD_INDEX].windows_inuse) {
-			nvdisp_pg[NVDISPB_PD_INDEX].windows_inuse -= 1;
-			disable_disp[NVDISPB_PD_INDEX] = true;
-		} else if (nvdisp_pg[NVDISPC_PD_INDEX].windows_inuse) {
-			nvdisp_pg[NVDISPC_PD_INDEX].windows_inuse -= 1;
-			disable_disp[NVDISPC_PD_INDEX] = true;
-		}
-	}
-
-	/* Check head is in use */
-	if (nvdisp_pg[pd_index].head_inuse)
-		disable_disp[pd_index] = true;
-
-	nvdisp_pg[pd_index].head_inuse = false;
-
-	disable_disp[pd_index] = true;
-	/* Request from DISPB or DISPC - disable DISP also */
-	if ((pd_index == 1) || (pd_index == 2))
-		disable_disp[NVDISP_PD_INDEX] = true;
-
-	for (i = NVDISP_PD_COUNT - 1; i >= 0; i--) {
-		if (disable_disp[i] && (--nvdisp_pg[i].ref_cnt == 0)) {
-
-			if (nvdisp_pg[i].windows_inuse &&
-				nvdisp_pg[i].head_inuse)
-				pr_err("Error in Windows/Head ref_count\n");
-
-			pr_info("PD DISP%d index%d DOWN\n",
-					 i, nvdisp_pg[i].powergate_id);
-			ret = tegra_powergate_partition_with_clk_off(
-						nvdisp_pg[i].powergate_id);
-			if (ret)
-				pr_err("Fail to powergate DISP%d\n", i);
-
-			switch (i) {
-			case NVDISP_PD_INDEX:
-				tegra_disp_clk_disable_unprepare(hubclk);
-				tegra_disp_clk_disable_unprepare(compclk);
-				tegra_disp_clk_disable_unprepare(dscclk);
-				tegra_disp_clk_disable_unprepare(nvdisp_p0);
-				break;
-			case NVDISPB_PD_INDEX:
-				tegra_disp_clk_disable_unprepare(nvdisp_p1);
-				break;
-			case NVDISPC_PD_INDEX:
-				tegra_disp_clk_disable_unprepare(nvdisp_p2);
-				break;
-			}
-		}
-	}
-	mutex_unlock(&tegra_nvdisp_lock);
-
-	return ret;
-}
-
-int tegra_nvdisp_unpowergate_partition(int pg_id)
-{
+	struct tegra_dc_pd_table *pd_table = tegra_dc_get_disp_pd_table();
+	struct tegra_dc_pd_info *pds = pd_table->pd_entries;
+	u32 cur_head_mask = (1 << dc->ctrl_num);
+	int npower_domains = pd_table->npd;
 	int i, ret = 0;
-	int pd_index = -1;
-	bool enable_disp[NVDISP_PD_COUNT] = {
-			false , false, false};
 
-	/* DISP - common for all IHUB, ORs, head0, win 0
-	 * Request from DISPB or DISPC - enable DISP first
-	 * Enable DISPB and DISPC based on valid_windows
-	 * checking
-	 */
+	mutex_lock(&pd_table->pd_lock);
 
-	for (i = 0; i < NVDISP_PD_COUNT; i++) {
-		if (nvdisp_pg[i].powergate_id == pg_id) {
-			pd_index = i;
+	for (i = 0; i < npower_domains; i++) {
+		struct tegra_dc_pd_info *pd = &pds[i];
+
+		if (cur_head_mask & pd->head_mask) {
+			ret = pd->ref_cnt;
 			break;
 		}
 	}
 
-	if (pd_index < 0) {
-		pr_info(" Not a disp powerdomain: %d.\n", pd_index);
-		return -EINVAL;
-	}
-	mutex_lock(&tegra_nvdisp_lock);
+	mutex_unlock(&pd_table->pd_lock);
 
-	nvdisp_pg[pd_index].head_inuse = true;
-	enable_disp[pd_index] = true;
-	/* Request from DISPB or DISPC - enable DISP first */
-	if ((pd_index == 1) || (pd_index == 2))
-		enable_disp[NVDISP_PD_INDEX] = true;
-
-	/* Check the for valid_windows per head
-	 * win0 is in DISP, win1&2 in DISPB and
-	 * win3,win4 &win5 in DISPC domains
-	 */
-
-	for_each_set_bit(i, &nvdisp_pg[pd_index].valid_windows, DC_N_WINDOWS) {
-		if (i == 0) {
-			enable_disp[NVDISP_PD_INDEX] = true;
-			nvdisp_pg[NVDISP_PD_INDEX].windows_inuse += 1;
-		} else if ((i == 1) || (i == 2)) {
-			enable_disp[NVDISPB_PD_INDEX] = true;
-			nvdisp_pg[NVDISPB_PD_INDEX].windows_inuse += 1;
-		} else { /* win 3/4/5 */
-			enable_disp[NVDISPC_PD_INDEX] = true;
-			nvdisp_pg[NVDISPC_PD_INDEX].windows_inuse += 1;
-		}
-	}
-
-	for (i = 0; i < NVDISP_PD_COUNT; i++) {
-		if (enable_disp[i] && (nvdisp_pg[i].ref_cnt++ == 0)) {
-			pr_info("PD DISP%d index%d UP\n",
-					i, nvdisp_pg[i].powergate_id);
-			ret = tegra_unpowergate_partition_with_clk_on(
-						nvdisp_pg[i].powergate_id);
-			if (ret) {
-				pr_err("Fail to Unpowergate DISP%d\n", i);
-				mutex_unlock(&tegra_nvdisp_lock);
-				return ret;
-			}
-			switch (i) {
-			case NVDISP_PD_INDEX:
-				tegra_disp_clk_prepare_enable(hubclk);
-				tegra_disp_clk_prepare_enable(compclk);
-				tegra_disp_clk_prepare_enable(dscclk);
-				tegra_disp_clk_prepare_enable(nvdisp_p0);
-				break;
-			case NVDISPB_PD_INDEX:
-				tegra_disp_clk_prepare_enable(nvdisp_p1);
-				break;
-			case NVDISPC_PD_INDEX:
-				tegra_disp_clk_prepare_enable(nvdisp_p2);
-				break;
-			}
-
-		}
-	}
-
-	mutex_unlock(&tegra_nvdisp_lock);
 	return ret;
 }
+
+static inline int tegra_nvdisp_handle_pd_enable(struct tegra_dc_pd_info *pd,
+						int ref_cnt_update)
+{
+	int ret = 0;
+
+	if (pd->ref_cnt == 0) {
+		struct tegra_dc_pd_clk_info *domain_clks = pd->domain_clks;
+		int nclks = pd->nclks;
+		int i;
+
+		ret = tegra_unpowergate_partition_with_clk_on(pd->pg_id);
+		if (ret) {
+			pr_err("%s: Failed to unpowergate Head%u pd\n",
+				__func__, pd->head_owner);
+			return -EINVAL;
+		}
+
+		for (i = 0; i < nclks; i++)
+			tegra_disp_clk_prepare_enable(domain_clks[i].clk);
+
+		pr_info("%s: Unpowergated Head%u pd\n", __func__,
+			pd->head_owner);
+	}
+
+	pd->ref_cnt += ref_cnt_update;
+	return ret;
+}
+
+static inline int tegra_nvdisp_handle_pd_disable(struct tegra_dc_pd_info *pd,
+						int ref_cnt_update)
+{
+	int remaining_ref_cnt = pd->ref_cnt - ref_cnt_update;
+	int ret = 0;
+
+	if (remaining_ref_cnt < 0) {
+		pr_err("%s: Unbalanced ref count for Head%u pd=%d\n",
+			__func__, pd->head_owner, pd->ref_cnt);
+		return -EINVAL;
+	} else if (remaining_ref_cnt == 0) {
+		struct tegra_dc_pd_clk_info *domain_clks = pd->domain_clks;
+		int nclks = pd->nclks;
+		int i;
+
+		ret = tegra_powergate_partition_with_clk_off(pd->pg_id);
+		if (ret) {
+			pr_err("%s: Failed to powergate Head%u pd\n",
+				__func__, pd->head_owner);
+			return -EINVAL;
+		}
+
+		for (i = 0; i < nclks; i++)
+			tegra_disp_clk_disable_unprepare(domain_clks[i].clk);
+
+		pr_info("%s: Powergated Head%u pd\n", __func__, pd->head_owner);
+	}
+
+	pd->ref_cnt = remaining_ref_cnt;
+	return ret;
+}
+
+static int tegra_nvdisp_update_pd_ref_cnts(struct tegra_dc *dc, bool enable)
+{
+	struct tegra_dc_pd_table *pd_table = tegra_dc_get_disp_pd_table();
+	struct tegra_dc_pd_info *pds = pd_table->pd_entries;
+	struct tegra_dc_pd_info *pd;
+	u32 cur_head_mask = (1 << dc->ctrl_num);
+	u32 pd_owner;
+	int npower_domains = pd_table->npd;
+	int ret = 0, i;
+	int pd_ref_cnt_updates[npower_domains];
+
+	memset(pd_ref_cnt_updates, 0,
+			sizeof(pd_ref_cnt_updates[0]) * npower_domains);
+
+	for (i = 0; i < npower_domains; i++) {
+		pd = &pds[i];
+		pd_owner = pd->head_owner;
+
+		/*
+		 * Check whether the given head and/or ANY of its assigned
+		 * windows reside in this power domain. Take/release an extra
+		 * refcount to the DISP (Head0) power domain if necessary.
+		 * There's an implicit dependency here since DISP houses common
+		 * logic, such as PFE, IHUB, ORs, etc.
+		 */
+		if ((cur_head_mask & pd->head_mask) ||
+			(dc->valid_windows & pd->win_mask)) {
+			pd_ref_cnt_updates[pd_owner]++;
+
+			if (pd_owner != 0)
+				pd_ref_cnt_updates[0]++;
+		}
+	}
+
+	mutex_lock(&pd_table->pd_lock);
+
+	for (i = 0; i < npower_domains; i++) {
+		int ref_cnt_update;
+		int pd_idx = i;
+
+		/*
+		 * If this is a powerGATE request, start iterating backwards
+		 * and save DISP for last.
+		 */
+		if (!enable)
+			pd_idx = npower_domains - i - 1;
+
+		pd = &pds[pd_idx];
+		pd_owner = pd->head_owner;
+		ref_cnt_update = pd_ref_cnt_updates[pd_owner];
+		if (ref_cnt_update == 0)
+			continue;
+
+		if (enable)
+			ret = tegra_nvdisp_handle_pd_enable(pd, ref_cnt_update);
+		else
+			ret = tegra_nvdisp_handle_pd_disable(pd,
+								ref_cnt_update);
+
+		if (ret)
+			break;
+	}
+
+	mutex_unlock(&pd_table->pd_lock);
+
+	return ret;
+}
+
+int tegra_nvdisp_unpowergate_dc(struct tegra_dc *dc)
+{
+	if (!dc) {
+		pr_err("%s: DC is NULL\n", __func__);
+		return -ENODEV;
+	}
+
+	return tegra_nvdisp_update_pd_ref_cnts(dc, true);
+}
+
+int tegra_nvdisp_powergate_dc(struct tegra_dc *dc)
+{
+	if (!dc) {
+		pr_err("%s: DC is NULL\n", __func__);
+		return -ENODEV;
+	}
+
+	return tegra_nvdisp_update_pd_ref_cnts(dc, false);
+}
+
 static int tegra_nvdisp_set_color_control(struct tegra_dc *dc)
 {
 	u32 color_control;
@@ -3697,6 +3740,7 @@ void tegra_dc_populate_t18x_hw_data(struct tegra_dc_hw_data *hw_data)
 	hw_data->nheads = 3;
 	hw_data->nwins = 6;
 	hw_data->nsors = 2;
+	hw_data->pd_table = &t18x_disp_pd_table;
 	hw_data->valid = true;
 	hw_data->version = TEGRA_DC_HW_T18x;
 }

@@ -8588,9 +8588,15 @@ int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
 	u32 offset =
 		gpc_stride * gpc + tpc_in_gpc_stride * tpc;
+	u32 dbgr_status0 = 0, dbgr_control0 = 0;
+	u64 warps_valid = 0, warps_paused = 0, warps_trapped = 0;
+	struct nvgpu_timeout timeout;
 
 	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
 		"GPC%d TPC%d: locking down SM", gpc, tpc);
+
+	nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
+			   NVGPU_TIMER_CPU_TIMER);
 
 	/* wait for the sm to lock down */
 	do {
@@ -8598,7 +8604,7 @@ int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 				gr_gpc0_tpc0_sm_hww_global_esr_r() + offset);
 		u32 warp_esr = gk20a_readl(g,
 				gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset);
-		u32 dbgr_status0 = gk20a_readl(g,
+		dbgr_status0 = gk20a_readl(g,
 				gr_gpc0_tpc0_sm_dbgr_status0_r() + offset);
 
 		warp_esr = g->ops.gr.mask_hww_warp_esr(warp_esr);
@@ -8630,13 +8636,32 @@ int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 
 		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-	} while (!locked_down);
+	} while (!nvgpu_timeout_expired(&timeout)
+			|| !tegra_platform_is_silicon());
+
+	dbgr_control0 = gk20a_readl(g,
+				gr_gpc0_tpc0_sm_dbgr_control0_r() + offset);
+
+	/* 64 bit read */
+	warps_valid = (u64)gk20a_readl(g, gr_gpc0_tpc0_sm_warp_valid_mask_1_r() + offset) << 32;
+	warps_valid |= gk20a_readl(g, gr_gpc0_tpc0_sm_warp_valid_mask_r() + offset);
+
+	/* 64 bit read */
+	warps_paused = (u64)gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_1_r() + offset) << 32;
+	warps_paused |= gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_r() + offset);
+
+	/* 64 bit read */
+	warps_trapped = (u64)gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_1_r() + offset) << 32;
+	warps_trapped |= gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_r() + offset);
 
 	gk20a_err(dev_from_gk20a(g),
-		  "GPC%d TPC%d: timed out while trying to lock down SM",
-		  gpc, tpc);
+		"GPC%d TPC%d: timed out while trying to lock down SM", gpc, tpc);
+	gk20a_err(dev_from_gk20a(g),
+		"STATUS0(0x%x)=0x%x CONTROL0=0x%x VALID_MASK=0x%llx PAUSE_MASK=0x%llx TRAP_MASK=0x%llx\n",
+		gr_gpc0_tpc0_sm_dbgr_status0_r() + offset, dbgr_status0, dbgr_control0,
+		warps_valid, warps_paused, warps_trapped);
 
-	return -EAGAIN;
+	return -ETIMEDOUT;
 }
 
 void gk20a_suspend_single_sm(struct gk20a *g,
@@ -8699,7 +8724,7 @@ void gk20a_suspend_all_sms(struct gk20a *g,
 		gr_gpcs_tpcs_sm_dbgr_control0_r(), dbgr_control0);
 
 	for (gpc = 0; gpc < gr->gpc_count; gpc++) {
-		for (tpc = 0; tpc < gr->tpc_count; tpc++) {
+		for (tpc = 0; tpc < gr_gk20a_get_tpc_count(gr, gpc); tpc++) {
 			err =
 			 gk20a_gr_wait_for_sm_lock_down(g, gpc, tpc,
 					global_esr_mask, check_errors);

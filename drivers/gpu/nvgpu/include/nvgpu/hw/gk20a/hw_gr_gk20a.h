@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -3178,13 +3178,25 @@ static inline u32 gr_gpc0_tpc0_sm_warp_valid_mask_r(void)
 {
 	return 0x00504614;
 }
+static inline u32 gr_gpc0_tpc0_sm_warp_valid_mask_1_r(void)
+{
+	return 0x00504618;
+}
 static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_r(void)
 {
 	return 0x00504624;
 }
+static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_1_r(void)
+{
+	return 0x00504628;
+}
 static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_r(void)
 {
 	return 0x00504634;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_1_r(void)
+{
+	return 0x00504638;
 }
 static inline u32 gr_gpcs_tpcs_sm_dbgr_bpt_pause_mask_r(void)
 {

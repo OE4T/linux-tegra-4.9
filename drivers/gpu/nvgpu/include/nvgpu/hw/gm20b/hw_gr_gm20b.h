@@ -3250,6 +3250,10 @@ static inline u32 gr_gpc0_tpc0_sm_warp_valid_mask_r(void)
 {
 	return 0x00504614;
 }
+static inline u32 gr_gpc0_tpc0_sm_warp_valid_mask_1_r(void)
+{
+	return 0x00504618;
+}
 static inline u32 gr_gpc0_tpc0_sm_warp_valid_mask_2_r(void)
 {
 	return 0x0050461c;
@@ -3258,6 +3262,10 @@ static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_r(void)
 {
 	return 0x00504624;
 }
+static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_1_r(void)
+{
+	return 0x00504628;
+}
 static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_2_r(void)
 {
 	return 0x00504750;
@@ -3265,6 +3273,10 @@ static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_pause_mask_2_r(void)
 static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_r(void)
 {
 	return 0x00504634;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_1_r(void)
+{
+	return 0x00504638;
 }
 static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_2_r(void)
 {

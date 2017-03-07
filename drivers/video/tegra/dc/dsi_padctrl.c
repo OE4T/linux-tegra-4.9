@@ -136,15 +136,17 @@ void tegra_dsi_padctrl_enable(struct tegra_dsi_padctrl *dsi_padctrl)
 	for (i = 0; i < ARRAY_SIZE(dsi_padctrl_pwr_down_regs); i++) {
 		val = tegra_dsi_padctrl_read(dsi_padctrl,
 			dsi_padctrl_pwr_down_regs[i]);
-		val &= ~dsi_padctrl->pwr_dwn_mask[i];
+		val &= ~DSI_PADCTRL_PWR_DOWN_MASK;
+		val |= ((~dsi_padctrl->pwr_dwn_mask[i]) &
+			DSI_PADCTRL_PWR_DOWN_MASK);
 		tegra_dsi_padctrl_write(dsi_padctrl, val,
 			dsi_padctrl_pwr_down_regs[i]);
 
 		val = tegra_dsi_padctrl_read(dsi_padctrl,
 			dsi_padctrl_pull_down_regs[i]);
-		val &= ~(DSI_PADCTRL_E_PULL_DWN_PD_CLK_EN |
-				DSI_PADCTRL_E_PULL_DWN_PD_IO_0_EN |
-				DSI_PADCTRL_E_PULL_DWN_PD_IO_1_EN);
+		val &= ~DSI_PADCTRL_E_PULL_DWN_MASK;
+		val |= ((~dsi_padctrl->pwr_dwn_mask[i]) &
+			DSI_PADCTRL_E_PULL_DWN_MASK);
 		tegra_dsi_padctrl_write(dsi_padctrl, val,
 			dsi_padctrl_pull_down_regs[i]);
 	}

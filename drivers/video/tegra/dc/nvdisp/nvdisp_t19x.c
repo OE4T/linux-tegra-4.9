@@ -18,6 +18,92 @@
 #include "nvdisp.h"
 #include "hw_nvdisp_nvdisp.h"
 
+static struct tegra_dc_pd_clk_info t19x_disp_pd0_clk_info[] = {
+	{
+		.name = "nvdisplayhub",
+		.clk = NULL,
+	},
+	{
+		.name = "nvdisplay_disp",
+		.clk = NULL,
+	},
+	{
+		.name = "nvdisplay_p0",
+		.clk = NULL,
+	},
+};
+
+static struct tegra_dc_pd_clk_info t19x_disp_pd1_clk_info[] = {
+	{
+		.name = "nvdisplay_p1",
+		.clk = NULL,
+	},
+};
+
+static struct tegra_dc_pd_clk_info t19x_disp_pd2_clk_info[] = {
+	{
+		.name = "nvdisplay_p2",
+		.clk = NULL,
+	},
+	{
+		.name = "nvdisplay_p3",
+		.clk = NULL,
+	},
+};
+
+/*
+ * NOTE: Keep the following power domains ordered according to their head owner.
+ */
+static struct tegra_dc_pd_info t19x_disp_pd_info[] = {
+	/* Head0 power domain */
+	{
+		.of_id = {
+			{ .compatible = "nvidia,tegra194-disa-pd", },
+			{},
+		},
+		.pg_id = -1,
+		.head_owner = 0,
+		.head_mask = 0x1,	/* Head(s):	0 */
+		.win_mask = 0x1,	/* Window(s):	0 */
+		.domain_clks = t19x_disp_pd0_clk_info,
+		.nclks = ARRAY_SIZE(t19x_disp_pd0_clk_info),
+		.ref_cnt = 0,
+	},
+	/* Head1 power domain */
+	{
+		.of_id = {
+			{ .compatible = "nvidia,tegra194-disb-pd", },
+			{},
+		},
+		.pg_id = -1,
+		.head_owner = 1,
+		.head_mask = 0x2,	/* Head(s):	1 */
+		.win_mask = 0x6,	/* Window(s):	1,2 */
+		.domain_clks = t19x_disp_pd1_clk_info,
+		.nclks = ARRAY_SIZE(t19x_disp_pd1_clk_info),
+		.ref_cnt = 0,
+	},
+	/* Head2 power domain */
+	{
+		.of_id = {
+			{ .compatible = "nvidia,tegra194-disc-pd", },
+			{},
+		},
+		.pg_id = -1,
+		.head_owner = 2,
+		.head_mask = 0xc,	/* Head(s):	2,3 */
+		.win_mask = 0x38,	/* Window(s):	3,4,5 */
+		.domain_clks = t19x_disp_pd2_clk_info,
+		.nclks = ARRAY_SIZE(t19x_disp_pd2_clk_info),
+		.ref_cnt = 0,
+	},
+};
+
+static struct tegra_dc_pd_table t19x_disp_pd_table = {
+	.pd_entries = t19x_disp_pd_info,
+	.npd = ARRAY_SIZE(t19x_disp_pd_info),
+};
+
 int tegra_nvdisp_set_control_t19x(struct tegra_dc *dc)
 {
 	u32 reg, protocol;
@@ -99,6 +185,7 @@ void tegra_dc_populate_t19x_hw_data(struct tegra_dc_hw_data *hw_data)
 	hw_data->nheads = 4;
 	hw_data->nwins = 6;
 	hw_data->nsors = 4;
+	hw_data->pd_table = &t19x_disp_pd_table;
 	hw_data->valid = true;
 	hw_data->version = TEGRA_DC_HW_T19x;
 }

@@ -488,4 +488,32 @@
 	tpiu@8060000 {
 		status = "okay";
 	};
+
+	pwm@3280000 {
+		clock-names = "pwm";
+	};
+
+	pwm@3290000 {
+		clock-names = "pwm";
+	};
+
+	pwm@32a0000 {
+		clock-names = "pwm";
+	};
+
+	pwm@32c0000 {
+		clock-names = "pwm";
+	};
+
+	pwm@32d0000 {
+		clock-names = "pwm";
+	};
+
+	pwm@32e0000 {
+		clock-names = "pwm";
+	};
+
+	pwm@32f0000 {
+		clock-names = "pwm";
+	};
 };

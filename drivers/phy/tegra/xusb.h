@@ -19,6 +19,7 @@
 #include <linux/mutex.h>
 #include <linux/workqueue.h>
 #include <linux/usb/ch9.h>
+#include <linux/phy/tegra/xusb.h>
 
 /* legacy entry points for backwards-compatibility */
 int tegra_xusb_padctl_legacy_probe(struct platform_device *pdev);
@@ -391,6 +392,27 @@ struct tegra_xusb_padctl_ops {
 			     bool enable, enum usb_device_speed speed);
 	int (*phy_wake)(struct tegra_xusb_padctl *padctl, struct phy *phy,
 			bool enable);
+	int (*set_debounce_time)(struct tegra_xusb_padctl *padctl,
+				struct phy *phy, u32 val);
+	int (*utmi_pad_charger_detect_on)(struct tegra_xusb_padctl *padctl,
+				struct phy *phy);
+	int (*utmi_pad_charger_detect_off)(struct tegra_xusb_padctl *padctl,
+				struct phy *phy);
+	int (*detect_filters)(struct tegra_xusb_padctl *padctl,
+				struct phy *phy,
+				bool on);
+	int (*utmi_pad_set_protection_level)(struct tegra_xusb_padctl *padctl,
+				struct phy *phy,
+				int level,
+				enum tegra_vbus_dir dir);
+	int (*utmi_pad_dcd)(struct tegra_xusb_padctl *padctl,
+				struct phy *phy);
+	int (*noncompliant_div_detect)(struct tegra_xusb_padctl *padctl,
+				struct phy *phy);
+	int (*utmi_pad_primary_charger_detect)(struct tegra_xusb_padctl *padctl,
+				struct phy *phy);
+	int (*utmi_pad_secondary_charger_detect)(struct tegra_xusb_padctl
+				*padctl, struct phy *phy);
 };
 
 struct tegra_xusb_padctl_soc {

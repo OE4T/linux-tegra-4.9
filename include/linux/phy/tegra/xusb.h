@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,6 +17,18 @@
 struct tegra_xusb_padctl;
 struct device;
 enum usb_device_speed;
+
+/*
+ * Tegra OTG port VBUS direction:
+ * default (based on port capability) or
+ * as source or sink
+ */
+enum tegra_vbus_dir {
+	TEGRA_VBUS_DEFAULT,
+	TEGRA_VBUS_SOURCE,
+	TEGRA_VBUS_SINK
+};
+struct phy;
 
 struct tegra_xusb_padctl *tegra_xusb_padctl_get(struct device *dev);
 void tegra_xusb_padctl_put(struct tegra_xusb_padctl *padctl);
@@ -41,4 +53,26 @@ int tegra_xusb_padctl_disable_phy_wake(struct tegra_xusb_padctl *padctl,
 				       struct phy *phy);
 void tegra_phy_xusb_utmi_pad_power_on(struct phy *phy);
 void tegra_phy_xusb_utmi_pad_power_down(struct phy *phy);
+int tegra_xusb_padctl_set_dcd_debounce_time(struct tegra_xusb_padctl *padctl,
+					struct phy *phy, u32 val);
+int tegra_xusb_padctl_utmi_pad_charger_detect_on(struct tegra_xusb_padctl
+					*padctl, struct phy *phy);
+int tegra_xusb_padctl_utmi_pad_charger_detect_off(struct tegra_xusb_padctl
+					*padctl, struct phy *phy);
+int tegra_xusb_padctl_utmi_pad_enable_detect_filters(struct tegra_xusb_padctl
+					*padctl, struct phy *phy);
+int tegra_xusb_padctl_utmi_pad_disable_detect_filters(struct tegra_xusb_padctl
+					*padctl, struct phy *phy);
+int tegra_xusb_padctl_utmi_pad_set_protection_level(
+				struct tegra_xusb_padctl *padctl,
+				struct phy *phy, int level,
+				enum tegra_vbus_dir dir);
+int tegra_xusb_padctl_utmi_pad_dcd(struct tegra_xusb_padctl
+					*padctl, struct phy *phy);
+int tegra_xusb_padctl_noncompliant_div_detect(struct tegra_xusb_padctl
+					*padctl, struct phy *phy);
+int tegra_xusb_padctl_utmi_pad_primary_charger_detect(struct tegra_xusb_padctl
+					*padctl, struct phy *phy);
+int tegra_xusb_padctl_utmi_pad_secondary_charger_detect(struct tegra_xusb_padctl
+					*padctl, struct phy *phy);
 #endif /* PHY_TEGRA_XUSB_H */

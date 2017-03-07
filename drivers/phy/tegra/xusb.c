@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1098,6 +1098,110 @@ int tegra_xusb_padctl_disable_phy_wake(struct tegra_xusb_padctl *padctl,
 	return -ENOSYS;
 }
 EXPORT_SYMBOL_GPL(tegra_xusb_padctl_disable_phy_wake);
+
+int tegra_xusb_padctl_set_dcd_debounce_time(struct tegra_xusb_padctl *padctl,
+					struct phy *phy, u32 val)
+{
+	if (padctl->soc->ops->set_debounce_time)
+		return padctl->soc->ops->set_debounce_time(padctl, phy, val);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_set_dcd_debounce_time);
+
+int tegra_xusb_padctl_utmi_pad_charger_detect_on(struct tegra_xusb_padctl
+					*padctl, struct phy *phy)
+{
+	if (padctl->soc->ops->utmi_pad_charger_detect_on)
+		return padctl->soc->ops->utmi_pad_charger_detect_on(padctl,
+									phy);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_utmi_pad_charger_detect_on);
+
+int tegra_xusb_padctl_utmi_pad_charger_detect_off(struct tegra_xusb_padctl
+					*padctl, struct phy *phy)
+{
+	if (padctl->soc->ops->utmi_pad_charger_detect_off)
+		return padctl->soc->ops->utmi_pad_charger_detect_off(padctl,
+									phy);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_utmi_pad_charger_detect_off);
+
+int tegra_xusb_padctl_utmi_pad_enable_detect_filters(struct tegra_xusb_padctl
+					*padctl, struct phy *phy)
+{
+	if (padctl->soc->ops->detect_filters)
+		return padctl->soc->ops->detect_filters(padctl, phy, true);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_utmi_pad_enable_detect_filters);
+
+int tegra_xusb_padctl_utmi_pad_disable_detect_filters(struct tegra_xusb_padctl
+					*padctl, struct phy *phy)
+{
+	if (padctl->soc->ops->detect_filters)
+		return padctl->soc->ops->detect_filters(padctl, phy, false);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_utmi_pad_disable_detect_filters);
+
+int tegra_xusb_padctl_utmi_pad_set_protection_level(struct tegra_xusb_padctl
+		*padctl, struct phy *phy, int level, enum tegra_vbus_dir dir)
+{
+	if (padctl->soc->ops->utmi_pad_set_protection_level)
+		return padctl->soc->ops->utmi_pad_set_protection_level
+						(padctl, phy, level, dir);
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_utmi_pad_set_protection_level);
+
+int tegra_xusb_padctl_utmi_pad_dcd(struct tegra_xusb_padctl
+					*padctl, struct phy *phy)
+{
+	if (padctl->soc->ops->utmi_pad_dcd)
+		return padctl->soc->ops->utmi_pad_dcd(padctl, phy);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_utmi_pad_dcd);
+
+int tegra_xusb_padctl_noncompliant_div_detect(struct tegra_xusb_padctl
+					*padctl, struct phy *phy)
+{
+	if (padctl->soc->ops->noncompliant_div_detect)
+		return padctl->soc->ops->noncompliant_div_detect(padctl, phy);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_noncompliant_div_detect);
+
+int tegra_xusb_padctl_utmi_pad_primary_charger_detect(struct tegra_xusb_padctl
+					*padctl, struct phy *phy)
+{
+	if (padctl->soc->ops->utmi_pad_primary_charger_detect)
+		return padctl->soc->ops->utmi_pad_primary_charger_detect(padctl,
+									phy);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_utmi_pad_primary_charger_detect);
+
+int tegra_xusb_padctl_utmi_pad_secondary_charger_detect(struct tegra_xusb_padctl
+					*padctl, struct phy *phy)
+{
+	if (padctl->soc->ops->utmi_pad_secondary_charger_detect)
+		return padctl->soc->ops->utmi_pad_secondary_charger_detect(
+								padctl, phy);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_utmi_pad_secondary_charger_detect);
 
 MODULE_AUTHOR("Thierry Reding <treding@nvidia.com>");
 MODULE_DESCRIPTION("Tegra XUSB Pad Controller driver");

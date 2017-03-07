@@ -1720,6 +1720,77 @@ static int gv11b_init_fifo_setup_hw(struct gk20a *g)
 	return 0;
 }
 
+static u32 gv11b_mmu_fault_id_to_gr_veid(struct gk20a *g, u32 gr_eng_fault_id,
+				 u32 mmu_fault_id)
+{
+	u32 num_subctx;
+	u32 veid = FIFO_INVAL_VEID;
+
+	num_subctx = gv11b_get_max_subctx_count(g);
+
+	if (mmu_fault_id >= gr_eng_fault_id &&
+			mmu_fault_id < (gr_eng_fault_id + num_subctx))
+		veid = mmu_fault_id - gr_eng_fault_id;
+
+	return veid;
+}
+
+static u32 gv11b_mmu_fault_id_to_eng_id_and_veid(struct gk20a *g,
+			 u32 mmu_fault_id, u32 *veid)
+{
+	u32 engine_id;
+	u32 active_engine_id;
+	struct fifo_engine_info_gk20a *engine_info;
+	struct fifo_gk20a *f = &g->fifo;
+
+
+	for (engine_id = 0; engine_id < f->num_engines; engine_id++) {
+		active_engine_id = f->active_engines_list[engine_id];
+		engine_info = &g->fifo.engine_info[active_engine_id];
+
+		if (active_engine_id == ENGINE_GR_GK20A) {
+			/* get faulted subctx id */
+			*veid = gv11b_mmu_fault_id_to_gr_veid(g,
+					engine_info->fault_id, mmu_fault_id);
+			if (*veid != FIFO_INVAL_VEID)
+				break;
+		} else {
+			if (engine_info->fault_id == mmu_fault_id)
+				break;
+		}
+
+		active_engine_id = FIFO_INVAL_ENGINE_ID;
+	}
+	return active_engine_id;
+}
+
+static u32 gv11b_mmu_fault_id_to_pbdma_id(struct gk20a *g, u32 mmu_fault_id)
+{
+	u32 num_pbdma, reg_val, fault_id_pbdma0;
+
+	reg_val = gk20a_readl(g, fifo_cfg0_r());
+	num_pbdma = fifo_cfg0_num_pbdma_v(reg_val);
+	fault_id_pbdma0 = fifo_cfg0_pbdma_fault_id_v(reg_val);
+
+	if (mmu_fault_id >= fault_id_pbdma0 &&
+		mmu_fault_id <= fault_id_pbdma0 + num_pbdma - 1)
+		return mmu_fault_id - fault_id_pbdma0;
+
+	return FIFO_INVAL_PBDMA_ID;
+}
+
+void gv11b_mmu_fault_id_to_eng_pbdma_id_and_veid(struct gk20a *g,
+	u32 mmu_fault_id, u32 *active_engine_id, u32 *veid, u32 *pbdma_id)
+{
+	*active_engine_id = gv11b_mmu_fault_id_to_eng_id_and_veid(g,
+				 mmu_fault_id, veid);
+
+	if (*active_engine_id == FIFO_INVAL_ENGINE_ID)
+		*pbdma_id = gv11b_mmu_fault_id_to_pbdma_id(g, mmu_fault_id);
+	else
+		*pbdma_id = FIFO_INVAL_PBDMA_ID;
+}
+
 void gv11b_init_fifo(struct gpu_ops *gops)
 {
 	gp10b_init_fifo(gops);

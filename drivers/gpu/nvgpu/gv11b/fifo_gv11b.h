@@ -17,6 +17,7 @@
 #define FIFO_GV11B_H
 
 #define FIFO_INVAL_PBDMA_ID	((u32)~0)
+#define FIFO_INVAL_VEID		((u32)~0)
 
 /* engine context-switch request occurred while the engine was in reset */
 #define SCHED_ERROR_CODE_ENGINE_RESET      0x00000005
@@ -43,4 +44,6 @@ void gv11b_init_fifo(struct gpu_ops *gops);
 void gv11b_fifo_reset_pbdma_and_eng_faulted(struct gk20a *g,
 			struct channel_gk20a *refch,
 			u32 faulted_pbdma, u32 faulted_engine);
+void gv11b_mmu_fault_id_to_eng_pbdma_id_and_veid(struct gk20a *g,
+	u32 mmu_fault_id, u32 *active_engine_id, u32 *veid, u32 *pbdma_id);
 #endif

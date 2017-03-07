@@ -22,5 +22,6 @@
 struct gpu_ops;
 
 void gv11b_init_ce(struct gpu_ops *gops);
+void gv11b_ce_mthd_buffer_fault_in_bar2_fault(struct gk20a *g);
 
 #endif /*__CE2_GV11B_H__*/

@@ -59,6 +59,8 @@ static bool gv11b_mm_mmu_fault_pending(struct gk20a *g)
 
 static void gv11b_mm_fault_info_mem_destroy(struct gk20a *g)
 {
+	nvgpu_log_fn(g, " ");
+
 	nvgpu_mutex_acquire(&g->mm.hub_isr_mutex);
 
 	gv11b_fb_disable_hub_intr(g, STALL_REG_INDEX, HUB_INTR_TYPE_OTHER |
@@ -136,6 +138,8 @@ static void gv11b_mm_mmu_hw_fault_buf_deinit(struct gk20a *g)
 {
 	struct vm_gk20a *vm = g->mm.bar2.vm;
 
+	nvgpu_log_fn(g, " ");
+
 	gv11b_fb_disable_hub_intr(g, STALL_REG_INDEX, HUB_INTR_TYPE_NONREPLAY |
 					 HUB_INTR_TYPE_REPLAY);
 
@@ -173,6 +177,8 @@ static void gv11b_mm_remove_bar2_vm(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 
+	nvgpu_log_fn(g, " ");
+
 	gv11b_mm_mmu_hw_fault_buf_deinit(g);
 
 	gk20a_free_inst_block(g, &mm->bar2.inst_block);
@@ -195,6 +201,8 @@ static int gv11b_mm_mmu_fault_setup_sw(struct gk20a *g)
 {
 	int err;
 
+	nvgpu_log_fn(g, " ");
+
 	nvgpu_mutex_init(&g->mm.hub_isr_mutex);
 
 	g->mm.hw_fault_buf_status[NONREPLAY_REG_INDEX] =
@@ -216,7 +224,7 @@ static int gv11b_init_mm_setup_hw(struct gk20a *g)
 {
 	int err = 0;
 
-	nvgpu_log_fn(g, "start");
+	nvgpu_log_fn(g, " ");
 
 	g->ops.fb.set_mmu_page_size(g);
 	g->ops.fb.init_hw(g);

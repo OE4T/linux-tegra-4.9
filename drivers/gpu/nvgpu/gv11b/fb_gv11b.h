@@ -15,7 +15,6 @@
 
 #ifndef _NVGPU_GV11B_FB
 #define _NVGPU_GV11B_FB
-struct gpu_ops;
 
 #define	STALL_REG_INDEX			0
 #define	NONSTALL_REG_INDEX		1
@@ -26,8 +25,8 @@ struct gpu_ops;
 #define	FAULT_BUF_DISABLED		0
 #define	FAULT_BUF_ENABLED		1
 
+#define	FAULT_BUF_INVALID		0
 #define	FAULT_BUF_VALID			1
-#define	CHECK_NEXT_FAULT_BUF		1
 
 #define	HUB_INTR_TYPE_OTHER		1	/* bit 0 */
 #define	HUB_INTR_TYPE_NONREPLAY		2	/* bit 1 */
@@ -43,12 +42,14 @@ struct gpu_ops;
 #define	FAULT_TYPE_OTHER_AND_NONREPLAY		0
 #define	FAULT_TYPE_REPLAY			1
 
+struct gpu_ops;
+
 void gv11b_init_fb(struct gpu_ops *gops);
 u32 gv11b_fb_is_fault_buf_enabled(struct gk20a *g,
 				 unsigned int index);
 void gv11b_fb_fault_buf_set_state_hw(struct gk20a *g,
 		 unsigned int index, unsigned int state);
-void gv11b_fb_nonreplay_fault_buf_configure_hw(struct gk20a *g);
+void gv11b_fb_fault_buf_configure_hw(struct gk20a *g, unsigned int index);
 void gv11b_fb_enable_hub_intr(struct gk20a *g,
 	 unsigned int index, unsigned int intr_type);
 void gv11b_fb_disable_hub_intr(struct gk20a *g,

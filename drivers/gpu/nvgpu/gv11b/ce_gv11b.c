@@ -26,6 +26,7 @@
 #include "ce_gv11b.h"
 
 #include <nvgpu/hw/gv11b/hw_ce_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_top_gv11b.h>
 
 static u32 gv11b_ce_get_num_pce(struct gk20a *g)
 {
@@ -72,6 +73,25 @@ static void gv11b_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 	gk20a_writel(g, ce_intr_status_r(inst_id), clear_intr);
 
 	gp10b_ce_isr(g, inst_id, pri_base);
+}
+
+void gv11b_ce_mthd_buffer_fault_in_bar2_fault(struct gk20a *g)
+{
+	u32 reg_val, num_lce, lce, clear_intr;
+
+	reg_val = gk20a_readl(g, top_num_ces_r());
+	num_lce = top_num_ces_value_v(reg_val);
+	nvgpu_log_info(g, "num LCE: %d", num_lce);
+
+	for (lce = 0; lce < num_lce; lce++) {
+		reg_val = gk20a_readl(g, ce_intr_status_r(lce));
+		if (reg_val & ce_intr_status_mthd_buffer_fault_pending_f()) {
+			nvgpu_log(g, gpu_dbg_intr,
+			"ce: lce %d: mthd buffer fault", lce);
+			clear_intr = ce_intr_status_mthd_buffer_fault_reset_f();
+			gk20a_writel(g, ce_intr_status_r(lce), clear_intr);
+		}
+	}
 }
 
 void gv11b_init_ce(struct gpu_ops *gops)

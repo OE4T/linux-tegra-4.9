@@ -243,8 +243,6 @@
 							BIT(11))
 
 #define APBDEV_PMC_UTMIP_UHSIC_SLEEPWALK_CFG(x)	UTMIP(x, 0x200, 0x288)
-#define   UTMIP_WAKE_WALK_EN(x)			UTMIP(x, BIT(8 * (x) + 6), \
-							BIT(14))
 #define   UTMIP_LINEVAL_WALK_EN(x)		UTMIP(x, BIT(8 * (x) + 7), \
 							BIT(15))
 
@@ -1154,7 +1152,7 @@ int tegra_pmc_utmi_phy_enable_sleepwalk(int port, enum usb_device_speed speed,
 
 	/* enable the trigger of the sleepwalk logic */
 	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEPWALK_CFG(port));
-	reg |= (UTMIP_WAKE_WALK_EN(port) | UTMIP_LINEVAL_WALK_EN(port));
+	reg |= UTMIP_LINEVAL_WALK_EN(port);
 	_tegra_pmc_writel(reg, APBDEV_PMC_UTMIP_UHSIC_SLEEPWALK_CFG(port));
 
 	/* reset the walk pointer and clear the alarm of the sleepwalk logic,
@@ -1243,7 +1241,7 @@ int tegra_pmc_utmi_phy_disable_sleepwalk(int port)
 {
 	u32 reg;
 
-	pr_info("PMC %s : port %dn", __func__, port);
+	pr_info("PMC %s : port %d\n", __func__, port);
 
 	/* disable the wake detection */
 	reg = _tegra_pmc_readl(APBDEV_PMC_UTMIP_UHSIC_SLEEP_CFG(port));

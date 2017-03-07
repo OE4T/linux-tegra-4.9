@@ -32,11 +32,12 @@
 #define SYNCPT_APERTURE_SIZE	0x400000
 
 #define MAX_CV_DEVS	6
-static dma_addr_t cv_dev_address_table[MAX_CV_DEVS];
-static int cv_dev_count;
 
 struct syncpt_unit_interface {
 	dma_addr_t start;
+
+	int cv_dev_count;
+	dma_addr_t cv_dev_address_table[MAX_CV_DEVS];
 };
 
 struct syncpt_gos_backing {
@@ -49,41 +50,6 @@ struct syncpt_gos_backing {
 
 	struct device *offset_dev; /* Device pointer to allocate offset */
 };
-
-/**
- * nvhost_syncpt_cv_dev_address_table_init() - Initialize CV devices address table
- *
- * @engine_pdev:	Pointer to a host1x engine
- *
- * Returns:		0 on success, a negative error code otherwise.
- *
- * This function will initialize table of all CV devices' addresses.
- * Table stores base IOVA address of each GoS
- */
-static int
-nvhost_syncpt_cv_dev_address_table_init(struct platform_device *engine_pdev)
-{
-	struct cv_dev_info *cv_dev_info;
-	struct sg_table *sgt;
-	int i;
-
-	if (cv_dev_count)
-		return 0;
-
-	cv_dev_info = nvmap_fetch_cv_dev_info(&engine_pdev->dev);
-	if (!cv_dev_info)
-		return -EFAULT;
-
-	cv_dev_count = cv_dev_info->count;
-	WARN_ON(cv_dev_count > MAX_CV_DEVS);
-
-	for (i = 0; i < cv_dev_count; ++i) {
-		sgt = cv_dev_info->sgt + i;
-		cv_dev_address_table[i] = sg_dma_address(sgt->sgl);
-	}
-
-	return 0;
-}
 
 /**
  * nvhost_syncpt_get_cv_dev_address_table() - Get details of CV devices address table
@@ -103,11 +69,33 @@ int nvhost_syncpt_get_cv_dev_address_table(struct platform_device *engine_pdev,
 				   int *count,
 				   dma_addr_t **table)
 {
-	if (nvhost_syncpt_cv_dev_address_table_init(engine_pdev))
+	struct nvhost_device_data *pdata = platform_get_drvdata(engine_pdev);
+	struct syncpt_unit_interface *syncpt_unit_interface =
+			pdata->syncpt_unit_interface;
+	struct cv_dev_info *cv_dev_info;
+	struct sg_table *sgt;
+	int i;
+
+	/* table is already prepared ? */
+	if (syncpt_unit_interface->cv_dev_count)
+		goto finish;
+
+	/* fetch and store the address table */
+	cv_dev_info = nvmap_fetch_cv_dev_info(&engine_pdev->dev);
+	if (!cv_dev_info)
 		return -EFAULT;
 
-	*table = cv_dev_address_table;
-	*count = cv_dev_count;
+	for (i = 0; i < cv_dev_info->count; ++i) {
+		sgt = cv_dev_info->sgt + i;
+		syncpt_unit_interface->cv_dev_address_table[i] =
+			sg_dma_address(sgt->sgl);
+	}
+
+	syncpt_unit_interface->cv_dev_count = cv_dev_info->count;
+
+finish:
+	*table = syncpt_unit_interface->cv_dev_address_table;
+	*count = syncpt_unit_interface->cv_dev_count;
 
 	return 0;
 }

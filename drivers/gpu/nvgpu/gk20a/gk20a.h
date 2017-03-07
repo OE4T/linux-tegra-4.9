@@ -1366,6 +1366,11 @@ static inline u32 u64_lo32(u64 n)
 	return (u32)(n & ~(u32)0);
 }
 
+static inline u64 hi32_lo32_to_u64(u32 hi, u32 lo)
+{
+	return  (((u64)hi) << 32) | (u64)lo;
+}
+
 static inline u32 set_field(u32 val, u32 mask, u32 field)
 {
 	return ((val & ~mask) | field);

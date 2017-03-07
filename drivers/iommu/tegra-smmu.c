@@ -2313,10 +2313,11 @@ static int tegra_smmu_probe(struct platform_device *pdev)
 	spin_lock_init(&smmu->lock);
 	spin_lock_init(&smmu->ptc_lock);
 
+#ifdef CONFIG_TEGRA_IOMMU_SMMU_HV
 	if (is_tegra_hypervisor_mode() &&
 	    !strcmp(match->compatible, "nvidia,tegra124-smmu-hv"))
 		__tegra_smmu_probe = tegra_smmu_probe_hv;
-
+#endif
 	err = __tegra_smmu_probe(pdev, smmu);
 	if (err)
 		goto fail_cleanup;

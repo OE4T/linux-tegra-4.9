@@ -222,6 +222,8 @@ int tegra_pmc_hsic_phy_disable_sleepwalk(int port);
 
 void tegra_pmc_fuse_control_ps18_latch_set(void);
 void tegra_pmc_fuse_control_ps18_latch_clear(void);
+void tegra_pmc_fuse_disable_mirroring(void);
+void tegra_pmc_fuse_enable_mirroring(void);
 
 /* Legacy APIs for IO DPD enable/disable */
 /* Tegra io dpd entry - for each supported driver */

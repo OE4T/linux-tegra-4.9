@@ -225,7 +225,7 @@ static void native_ring_doorbell(int ch)
 	tegra_hsp_db_ring(HSP_DB_BPMP);
 }
 
-static void native_synchronize(void)
+static void native_synchronize(int relax)
 {
 	struct ivc *ivc;
 	int i;
@@ -239,7 +239,7 @@ static void native_synchronize(void)
 
 		while (tegra_ivc_channel_notified(ivc)) {
 			native_ring_doorbell(i);
-			if (tegra_platform_is_vdk())
+			if (tegra_platform_is_vdk() && relax)
 				msleep(100);
 		}
 	}
@@ -286,7 +286,7 @@ static void native_resume(void)
 			tegra_ivc_channel_reset(ivc);
 	}
 
-	native_synchronize();
+	native_synchronize(0);
 }
 
 static void native_notify(struct ivc *ivc)
@@ -343,7 +343,7 @@ static int native_channel_init(unsigned int nr_channels,
 			return r;
 	}
 
-	native_synchronize();
+	native_synchronize(1);
 
 	return 0;
 }

@@ -333,6 +333,21 @@ static u8 *add_status_action(u8 *mem, uint8_t op, uint64_t addr,
 	return mem + sizeof(struct dla_action_task_status);
 }
 
+static u8 *add_gos_action(u8 *mem, uint8_t op, uint8_t index, uint16_t offset,
+				uint32_t value)
+{
+	struct dla_action_gos *action;
+
+	mem = add_opcode(mem, op);
+
+	action = (struct dla_action_gos *)mem;
+	action->index = index;
+	action->offset = offset;
+	action->value = value;
+
+	return mem + sizeof(struct dla_action_gos);
+}
+
 static int nvdla_map_task_memory(struct nvdla_task *task)
 {
 	int jj;
@@ -429,23 +444,22 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 		/* update action */
 		switch (task->postfences[i].type) {
 		case NVDLA_FENCE_TYPE_SYNCPT: {
-			dma_addr_t gos_syncpt_addr;
 			dma_addr_t syncpt_addr;
+			u32 gos_id, gos_offset;
 
-			/* update GoS backing if available */
-			gos_syncpt_addr = nvhost_syncpt_gos_address(pdev,
-					queue->syncpt_id);
-			if (gos_syncpt_addr) {
+			/* update GoS backing if available  */
+			if (!nvhost_syncpt_get_gos(pdev, queue->syncpt_id,
+					&gos_id, &gos_offset)) {
 				u32 max;
-
-				nvdla_dbg_info(pdev, "post i:%d syncpt:[%u] gos[%pad]",
-					i, queue->syncpt_id, &gos_syncpt_addr);
 
 				/* send incremented max */
 				max = nvhost_syncpt_read_maxval(pdev,
 					queue->syncpt_id);
-				next = add_fence_action(next, POSTACTION_SEM,
-					gos_syncpt_addr, max + 1);
+				nvdla_dbg_info(pdev, "post i:%d syncpt:[%u] gos_id[%u] gos_offset[%u] val[%u]",
+					i, queue->syncpt_id, gos_id,
+					gos_offset, max + 1);
+				next = add_gos_action(next, POSTACTION_GOS,
+					gos_id, gos_offset, max + 1);
 			}
 
 			/* For postaction also update MSS addr */
@@ -558,7 +572,7 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 			j = id = thresh = 0;
 
 			for (j = 0; j < f->num_fences; j++) {
-				dma_addr_t syncpt_addr;
+				u32 gos_id, gos_offset;
 
 				pt = sync_pt_from_fence(f->cbs[j].sync_pt);
 				id = nvhost_sync_pt_id(pt);
@@ -572,51 +586,63 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 				}
 
 				/* check if GoS backing available */
-				syncpt_addr = nvhost_syncpt_gos_address(pdev,
-							id);
+				if (!nvhost_syncpt_get_gos(pdev, id, &gos_id,
+						&gos_offset)) {
+					nvdla_dbg_info(pdev, "pre i:%d syncfd_pt:[%u] gos_id[%u] gos_offset[%u] val[%u]",
+						i, id, gos_id,
+						gos_offset, thresh);
+					next = add_gos_action(next,
+						PREACTION_GOS_GE,
+						gos_id, gos_offset, thresh);
+				} else {
+					dma_addr_t syncpt_addr;
 
-				/* if not, then use MSS addr */
-				if (!syncpt_addr) {
 					nvdla_dbg_info(pdev, "pre i:%d GoS missing for syncfd [%d]",
 							i, id);
 					syncpt_addr = nvhost_syncpt_address(pdev,
 							id);
-				}
-				nvdla_dbg_info(pdev, "pre i:%d syncfd_pt:[%u] dma_addr[%pad]",
-					i, id, &syncpt_addr);
-
-
-				next = add_fence_action(next, PREACTION_SEM_GE,
+					nvdla_dbg_info(pdev, "pre i:%d syncfd_pt:[%u] mss_dma_addr[%pad]",
+						i, id, &syncpt_addr);
+					next = add_fence_action(next, PREACTION_SEM_GE,
 							syncpt_addr, thresh);
+				}
 			}
 			break;
 		}
 		case NVDLA_FENCE_TYPE_SYNCPT: {
-			dma_addr_t syncpt_addr;
+			u32 gos_id, gos_offset;
 
 			nvdla_dbg_info(pdev, "i[%d] id[%d] val[%d]",
 					i,
 					task->prefences[i].syncpoint_index,
 					task->prefences[i].syncpoint_value);
 
-			/* check if GoS backing available */
-			syncpt_addr = nvhost_syncpt_gos_address(pdev,
-					task->prefences[i].syncpoint_index);
+			if (!nvhost_syncpt_get_gos(pdev,
+				task->prefences[i].syncpoint_index, &gos_id,
+						&gos_offset)) {
+				nvdla_dbg_info(pdev, "pre i:%d syncpt:[%u] gos_id[%u] gos_offset[%u] val[%u]",
+					i, task->prefences[i].syncpoint_index,
+					gos_id, gos_offset,
+					task->prefences[i].syncpoint_value);
+				next = add_gos_action(next, PREACTION_GOS_GE,
+					gos_id, gos_offset,
+					task->prefences[i].syncpoint_value);
+			} else {
+				dma_addr_t syncpt_addr;
 
-			/* if not, then use MSS addr */
-			if (!syncpt_addr) {
 				nvdla_dbg_info(pdev, "pre i:%d GoS missing", i);
+
 				syncpt_addr = nvhost_syncpt_address(pdev,
 					task->prefences[i].syncpoint_index);
-			}
-			nvdla_dbg_info(pdev, "pre i:%d syncpt:[%u] dma_addr[%pad]",
+				nvdla_dbg_info(pdev, "pre i:%d syncpt:[%u] dma_addr[%pad]",
 					i,
 					task->prefences[i].syncpoint_index,
 					&syncpt_addr);
 
-			next = add_fence_action(next, PREACTION_SEM_GE,
+				next = add_fence_action(next, PREACTION_SEM_GE,
 					syncpt_addr,
 					task->prefences[i].syncpoint_value);
+			}
 			break;
 		}
 		case NVDLA_FENCE_TYPE_SEMAPHORE: {

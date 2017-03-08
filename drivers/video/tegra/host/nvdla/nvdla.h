@@ -41,6 +41,12 @@
 
 #define ALIGNED_DMA(x) ((x >> 8) & 0xffffffff)
 
+/*
+ * Max grid size
+ * TODO: This should come from nvhost, remove this when API available
+ */
+#define MAX_GRID_SIZE			SZ_256
+
 /**
  * Method ID and Method data THI registers
  */

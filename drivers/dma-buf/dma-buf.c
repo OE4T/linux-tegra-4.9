@@ -644,9 +644,14 @@ struct dma_buf_attachment *dma_buf_attach(struct dma_buf *dmabuf,
 	 * number of attach/detach in many intermediate states
 	 * till the buffer is freed. This extra ref count will
 	 * prevent multiple mappings for a given device in such
-	 * scenarios.
+	 * scenarios. For devices which do not use defer unmap
+	 * it needs to be 1 as we want to free those as soon as
+	 * possible.
 	 */
-	atomic_set(&attach->ref, 2);
+	if (dmabuf_can_defer_unmap(dmabuf, dev))
+		atomic_set(&attach->ref, 2);
+	else
+		atomic_set(&attach->ref, 1);
 	atomic_set(&attach->maps, 0);
 
 	if (dmabuf->ops->attach) {

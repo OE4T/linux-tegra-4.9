@@ -41,7 +41,6 @@
 #include <soc/tegra/tegra_powergate.h>
 #include "tegra_cec.h"
 
-#include "../../../../display/drivers/video/tegra/dc/dc_priv.h"
 #include "../../../../display/drivers/video/tegra/dc/dc.h"
 
 #define LOGICAL_ADDRESS_RESERVED2 0xD
@@ -563,7 +562,7 @@ static int tegra_cec_probe(struct platform_device *pdev)
 	mutex_init(&cec->recovery_lock);
 
 #if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
-	ret = tegra_nvdisp_unpowergate_partition(cec->soc->powergate_id);
+	ret = tegra_unpowergate_partition(cec->soc->powergate_id);
 	if (ret) {
 		dev_err(&pdev->dev, "Fail to unpowergate DISP: %d.\n", ret);
 		goto clk_error;
@@ -653,7 +652,7 @@ cec_error:
 	clk_disable(cec->clk);
 	clk_put(cec->clk);
 #if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
-	tegra_nvdisp_powergate_partition(cec->soc->powergate_id);
+	tegra_powergate_partition(cec->soc->powergate_id);
 #endif
 clk_error:
 	return ret;
@@ -666,7 +665,7 @@ static int tegra_cec_remove(struct platform_device *pdev)
 	clk_disable(cec->clk);
 	clk_put(cec->clk);
 #if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
-	tegra_nvdisp_powergate_partition(cec->soc->powergate_id);
+	tegra_powergate_partition(cec->soc->powergate_id);
 #endif
 
 	misc_deregister(&cec->misc_dev);
@@ -693,7 +692,7 @@ static int tegra_cec_suspend(struct platform_device *pdev, pm_message_t state)
 
 	clk_disable(cec->clk);
 #if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
-	tegra_nvdisp_powergate_partition(cec->soc->powergate_id);
+	tegra_powergate_partition(cec->soc->powergate_id);
 #endif
 
 	dev_notice(&pdev->dev, "suspended\n");
@@ -707,7 +706,7 @@ static int tegra_cec_resume(struct platform_device *pdev)
 	dev_notice(&pdev->dev, "Resuming\n");
 
 #if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
-	tegra_nvdisp_unpowergate_partition(cec->soc->powergate_id);
+	tegra_unpowergate_partition(cec->soc->powergate_id);
 #endif
 	clk_enable(cec->clk);
 	schedule_work(&cec->work);

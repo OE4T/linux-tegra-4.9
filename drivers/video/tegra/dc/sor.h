@@ -120,6 +120,7 @@ struct tegra_dc_sor_data {
 	u32  xbar_ctrl[5];
 	bool audio_support;
 	struct padctrl *io_padctrl;
+	int powergate_id;
 };
 
 #define TEGRA_SOR_TIMEOUT_MS		1000

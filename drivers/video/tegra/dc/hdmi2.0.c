@@ -31,7 +31,6 @@
 #include <linux/switch.h>
 #endif
 #include <linux/of_address.h>
-#include <linux/tegra_pm_domains.h>
 #include <soc/tegra/tegra_powergate.h>
 
 #include "dc.h"
@@ -51,13 +50,6 @@
 
 #include "hdmi2fpd_ds90uh949.h"
 #include "max929x_hdmi2gmsl.h"
-
-#if !defined(CONFIG_TEGRA_NVDISPLAY)
-static struct of_device_id tegra_sor_pd[] = {
-	{ .compatible = "nvidia,tegra210-sor-pd", },
-	{},
-};
-#endif
 
 struct tmds_prod_pair {
 	int clk;
@@ -523,7 +515,7 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 {
 	int err;
 
-	tegra_dc_unpowergate_locked(hdmi->dc);
+	tegra_unpowergate_partition(hdmi->sor->powergate_id);
 
 	err = tegra_hdmi_edid_read(hdmi);
 	if (err < 0)
@@ -537,7 +529,7 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 	if (err && err != -ENODEV)
 		dev_err(&hdmi->dc->ndev->dev, "vrr_setup failed\n");
 
-	tegra_dc_powergate_locked(hdmi->dc);
+	tegra_powergate_partition(hdmi->sor->powergate_id);
 
 	tegra_hdmi_edid_config(hdmi);
 
@@ -549,7 +541,7 @@ static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
 	tegra_hdmi_hotplug_notify(hdmi, true);
 	return 0;
 fail:
-	tegra_dc_powergate_locked(hdmi->dc);
+	tegra_powergate_partition(hdmi->sor->powergate_id);
 	return err;
 }
 
@@ -2607,35 +2599,22 @@ static const struct file_operations tegra_hdmi_hotplug_dbg_ops = {
 static void tegra_hdmi_ddc_power_toggle(struct tegra_hdmi *dc_hdmi, int value)
 {
 
-#if !defined(CONFIG_TEGRA_NVDISPLAY)
-	int partition_id = tegra_pd_get_powergate_id(tegra_sor_pd);
+	int partition_id = -1;
+
+	if (!dc_hdmi || !dc_hdmi->sor)
+		return;
+
+	partition_id = dc_hdmi->sor->powergate_id;
 
 	if (partition_id < 0)
-		return;
-#endif
-
-	if (dc_hdmi == NULL)
 		return;
 
 	if (value == 0) {
 		_tegra_hdmi_ddc_disable(dc_hdmi);
-#if !defined(CONFIG_TEGRA_NVDISPLAY) && \
-	IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 		tegra_powergate_partition(partition_id);
-#else
-		/* No specific powerdomain for SORs */
-		tegra_dc_powergate_locked(dc_hdmi->dc);
-#endif
-
 
 	} else if (value == 1) {
-#if !defined(CONFIG_TEGRA_NVDISPLAY) && \
-	IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 		tegra_unpowergate_partition(partition_id);
-#else
-		/* No specific powerdomain for SORs */
-		tegra_dc_unpowergate_locked(dc_hdmi->dc);
-#endif
 		_tegra_hdmi_ddc_enable(dc_hdmi);
 	}
 

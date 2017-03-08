@@ -28,12 +28,18 @@
 #include <linux/uaccess.h>
 #include <linux/version.h>
 #include <linux/padctrl/padctrl.h>
+#include <linux/tegra_pm_domains.h>
 
 #include "dc.h"
 #include "sor.h"
 #include "sor_regs.h"
 #include "dc_priv.h"
 #include "dp.h"
+
+static struct of_device_id tegra_sor_pd[] = {
+	{ .compatible = "nvidia,tegra210-sor-pd", },
+	{ .compatible = "nvidia,tegra186-disa-pd", },
+};
 
 unsigned long
 tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
@@ -223,7 +229,7 @@ static int dbg_sor_show(struct seq_file *s, void *unused)
 		#a, a, tegra_sor_readl(sor, a));
 
 #if !defined(CONFIG_TEGRA_NVDISPLAY)
-	if (!tegra_powergate_is_powered(TEGRA_POWERGATE_SOR)) {
+	if (!tegra_powergate_is_powered(sor->powergate_id)) {
 		seq_puts(s, "SOR is powergated\n");
 		return 0;
 	}
@@ -657,7 +663,7 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	sor->src_switch_clk = src_clk;
 	sor->link_cfg = cfg;
 	sor->portnum = 0;
-
+	sor->powergate_id = tegra_pd_get_powergate_id(tegra_sor_pd);
 	sor->sor_state = SOR_DETACHED;
 
 	tegra_dc_sor_debug_create(sor, res_name);

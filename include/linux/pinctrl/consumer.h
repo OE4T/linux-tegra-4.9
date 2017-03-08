@@ -192,4 +192,14 @@ static inline struct pinctrl * __must_check devm_pinctrl_get_select_default(
 	return devm_pinctrl_get_select(dev, PINCTRL_STATE_DEFAULT);
 }
 
+static inline int pinctrl_gpio_save_config(unsigned gpio)
+{
+	return 0;
+}
+
+static inline int pinctrl_gpio_restore_config(unsigned gpio)
+{
+	return 0;
+}
+
 #endif /* __LINUX_PINCTRL_CONSUMER_H */

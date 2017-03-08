@@ -345,6 +345,70 @@ static int of_gpiochip_scan_gpios(struct gpio_chip *chip)
 }
 
 /**
+ * of_gpiochip_suspend - Suspend GPIOs
+ * @chip:	gpio chip to act on
+ *
+ */
+int of_gpiochip_suspend(struct gpio_chip *chip)
+{
+	struct gpio_desc *desc = NULL;
+	struct device_node *np;
+	const char *name;
+	enum gpio_lookup_flags lflags;
+	enum gpiod_flags dflags;
+	int ret;
+	int i, ncells, ngpios;
+
+	ncells = of_gpio_get_gpio_cells_size(chip->of_node);
+	if (ncells < 0)
+		return 0;
+
+	for_each_available_child_of_node(chip->of_node, np) {
+		if (!of_property_read_bool(np, "gpio-suspend"))
+			continue;
+
+		ngpios = of_property_count_u32_elems(np, "gpios");
+		if (ngpios < 0)
+			continue;
+
+		if (ngpios % ncells) {
+			dev_warn(chip->parent, "Invalid GPIO entries at %s\n",
+				 np->name);
+			continue;
+		}
+
+		ngpios /= ncells;
+		for (i = 0; i < ngpios; i++) {
+			desc = of_parse_own_gpio(np, chip, &name, i,
+						 &lflags, &dflags);
+			if (IS_ERR(desc))
+				continue;
+
+			if (chip->suspend_configure) {
+				ret = chip->suspend_configure(chip,
+						gpio_chip_hwgpio(desc),
+						dflags);
+			} else {
+				if (dflags & GPIOD_FLAGS_BIT_DIR_OUT)
+					ret = chip->direction_output(chip,
+						gpio_chip_hwgpio(desc),
+						dflags & GPIOD_FLAGS_BIT_DIR_VAL);
+				else
+					ret = chip->direction_input(chip,
+							gpio_chip_hwgpio(desc));
+			}
+
+			if (ret < 0)
+				dev_warn(chip->parent, "Failed to configure gpio %d of node %s: %d\n",
+					 i, np->name, ret);
+		}
+	}
+
+	return 0;
+}
+
+
+/**
  * of_gpio_simple_xlate - translate gpio_spec to the GPIO number and flags
  * @gc:		pointer to the gpio_chip structure
  * @np:		device node of the GPIO chip

@@ -270,6 +270,10 @@ static int pwm_backlight_parse_dt(struct device *dev,
 			"bl-measured", prop, p, u)
 			data->bl_measured[n_bl_measured++] = u;
 	}
+
+	/* label, if specified in DT, will be used as device name */
+	of_property_read_string(node, "label", &data->name);
+
 	of_node_put(compat_node);
 	return 0;
 
@@ -479,8 +483,9 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "backlight gpio request failed\n");
 	}
 
-	bl = backlight_device_register(dev_name(&pdev->dev), &pdev->dev, pb,
-				       &pwm_backlight_ops, &props);
+	bl = backlight_device_register(data->name ? data->name :
+					dev_name(&pdev->dev), &pdev->dev,
+					pb, &pwm_backlight_ops, &props);
 	if (IS_ERR(bl)) {
 		dev_err(&pdev->dev, "failed to register backlight\n");
 		ret = PTR_ERR(bl);

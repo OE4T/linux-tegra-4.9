@@ -1,7 +1,7 @@
 /*
  * Generic PWM backlight driver data - see drivers/video/backlight/pwm_bl.c
  *
- * Copyright (c) 2013-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -51,6 +51,7 @@ struct pwm_bl_data_dt_ops {
 
 struct platform_pwm_backlight_data {
 	int pwm_id;
+	const char *name;
 	unsigned int max_brightness;
 	unsigned int dft_brightness;
 	unsigned int lth_brightness;

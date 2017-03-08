@@ -1,7 +1,7 @@
 /*
  * Driver for Tegra Security Engine
  *
- * Copyright (c) 2015-2016, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2015-2017, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -208,10 +208,15 @@
 #define SE_MAX_SUBMIT_CHAIN_SZ		10
 #define SE_WORD_SIZE_BYTES		4
 
+#define SE_MAX_MEM_ALLOC		4194304
+#define SE_MAX_GATHER_BUF_SZ		16384
+#define SE_MAX_AESBUF_ALLOC	(SE_MAX_MEM_ALLOC / SE_MAX_GATHER_BUF_SZ)
+#define SE_MAX_AESBUF_TIMEOUT		(20 * SE_MAX_AESBUF_ALLOC)
+
 /* FIXME: The below 2 macros should fine tuned
  * based on discussions with CPU team */
 
-#define SE_MAX_CMDBUF_TIMEOUT		(20 * SE_MAX_SUBMIT_CHAIN_SZ)
+#define SE_MAX_CMDBUF_TIMEOUT		(200 * SE_MAX_SUBMIT_CHAIN_SZ)
 #define SE_WAIT_UDELAY			500 /* micro seconds */
 
 #define SE_INT_ENABLE_REG_OFFSET	0x88
@@ -255,6 +260,8 @@
 
 #define SE_HASH_RESULT_REG_OFFSET	0x13c
 #define SE_CMAC_RESULT_REG_OFFSET	0x4c4
+
+#define SE_STATIC_MEM_ALLOC_BUFSZ	512
 
 #define TEGRA_SE_KEY_256_SIZE		32
 #define TEGRA_SE_KEY_192_SIZE		24

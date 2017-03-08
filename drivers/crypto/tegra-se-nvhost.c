@@ -146,12 +146,18 @@ struct tegra_se_dev {
 	struct work_struct se_work;
 	struct workqueue_struct *se_work_q;
 	struct scatterlist aes_sg;
+	bool dynamic_mem;
+	void *total_aes_buf;
 	void *aes_buf;
+	void *aes_bufs[SE_MAX_AESBUF_ALLOC];
+	atomic_t aes_buf_stat[SE_MAX_AESBUF_ALLOC];
 	dma_addr_t aes_addr;
 	dma_addr_t aes_cur_addr;
 	int syncpt_id_num;
 	int cmdbuf_cnt;
+	int toal_aesbuf_cnt;
 	int gather_buf_sz;
+	int aesbuf_entry;
 	u32 *aes_cmdbuf_cpuvaddr;
 	dma_addr_t aes_cmdbuf_iova;
 	struct pm_qos_request boost_cpufreq_req;
@@ -178,9 +184,11 @@ struct tegra_se_priv_data {
 	int gather_buf_sz;
 	struct scatterlist sg;
 	void *buf;
+	bool dynmem;
 	dma_addr_t buf_addr;
 	dma_addr_t iova;
 	int cmdbuf_node;
+	int aesbuf_entry;
 };
 
 /* Security Engine AES context */
@@ -684,7 +692,8 @@ static void tegra_se_complete_callback(void *priv, int nr_completed)
 		req = priv_data->reqs[i];
 		if (!req) {
 			dev_err(se_dev->dev, "Invalid request for callback\n");
-			kfree(priv_data->buf);
+			if (priv_data->dynmem)
+				kfree( priv_data->buf);
 			kfree(priv_data);
 			return;
 		}
@@ -702,7 +711,10 @@ static void tegra_se_complete_callback(void *priv, int nr_completed)
 
 	dma_unmap_sg(se_dev->dev, &priv_data->sg, 1, DMA_BIDIRECTIONAL);
 
-	kfree(priv_data->buf);
+	if (unlikely(priv_data->dynmem))
+		kfree(priv_data->buf);
+	else
+		atomic_set(&se_dev->aes_buf_stat[priv_data->aesbuf_entry], 1);
 	kfree(priv_data);
 }
 
@@ -793,7 +805,15 @@ static int tegra_se_channel_submit_gather(struct tegra_se_dev *se_dev,
 		for (i = 0; i < se_dev->req_cnt; i++)
 			priv->reqs[i] = se_dev->reqs[i];
 		priv->sg = se_dev->aes_sg;
-		priv->buf = se_dev->aes_buf;
+
+		if (unlikely(se_dev->dynamic_mem)) {
+			priv->buf = se_dev->aes_buf;
+			priv->dynmem = se_dev->dynamic_mem;
+		} else {
+			priv->buf = se_dev->aes_bufs[se_dev->aesbuf_entry];
+			priv->aesbuf_entry = se_dev->aesbuf_entry;
+		}
+
 		priv->buf_addr = se_dev->aes_addr;
 		priv->req_cnt = se_dev->req_cnt;
 		priv->gather_buf_sz = se_dev->gather_buf_sz;
@@ -1261,14 +1281,36 @@ static int tegra_se_setup_ablk_req(struct tegra_se_dev *se_dev)
 {
 	struct ablkcipher_request *req;
 	void *buf;
-	int i = 0;
+	int i;
 	u32 num_sgs;
 	int chained;
+	int index;
 
-	se_dev->aes_buf = kmalloc(se_dev->gather_buf_sz, GFP_KERNEL);
-	if (!se_dev->aes_buf)
-		return -ENOMEM;
-	buf = se_dev->aes_buf;
+	if (unlikely(se_dev->dynamic_mem)) {
+		se_dev->aes_buf = kmalloc(se_dev->gather_buf_sz, GFP_KERNEL);
+		if (!se_dev->aes_buf)
+			return -ENOMEM;
+		buf = se_dev->aes_buf;
+	} else {
+		index = se_dev->aesbuf_entry + 1;
+		for (i = 0; i < SE_MAX_AESBUF_TIMEOUT; i++, index++) {
+			index = index % SE_MAX_AESBUF_ALLOC;
+			if (atomic_read(&se_dev->aes_buf_stat[index])) {
+				se_dev->aesbuf_entry = index;
+				atomic_set(&se_dev->aes_buf_stat[index], 0);
+				break;
+			}
+			if (i % SE_MAX_AESBUF_ALLOC == 0)
+				udelay(SE_WAIT_UDELAY);
+		}
+
+		if (i == SE_MAX_AESBUF_TIMEOUT) {
+			pr_err("aes_buffer not available\n");
+			return -ENOMEM;
+		} else {
+			buf = se_dev->aes_bufs[index];
+		}
+	}
 
 	for (i = 0; i < se_dev->req_cnt; i++) {
 		req = se_dev->reqs[i];
@@ -1282,7 +1324,13 @@ static int tegra_se_setup_ablk_req(struct tegra_se_dev *se_dev)
 		buf += req->nbytes;
 	}
 
-	sg_init_one(&se_dev->aes_sg, se_dev->aes_buf, se_dev->gather_buf_sz);
+	if (unlikely(se_dev->dynamic_mem))
+		sg_init_one(&se_dev->aes_sg, se_dev->aes_buf,
+			    se_dev->gather_buf_sz);
+	else
+		sg_init_one(&se_dev->aes_sg, se_dev->aes_bufs[index],
+			    se_dev->gather_buf_sz);
+
 	dma_map_sg(se_dev->dev, &se_dev->aes_sg, 1, DMA_BIDIRECTIONAL);
 
 	se_dev->aes_addr = sg_dma_address(&se_dev->aes_sg);
@@ -1361,6 +1409,14 @@ static void tegra_se_process_new_req(struct tegra_se_dev *se_dev)
 
 	tegra_se_boost_cpu_freq(se_dev);
 
+	for (i = 0; i < se_dev->req_cnt; i++) {
+		req = se_dev->reqs[i];
+		if (req->nbytes != SE_STATIC_MEM_ALLOC_BUFSZ) {
+			se_dev->dynamic_mem = true;
+			break;
+		}
+	}
+
 	err = tegra_se_setup_ablk_req(se_dev);
 	if (err)
 		goto mem_out;
@@ -1385,13 +1441,15 @@ static void tegra_se_process_new_req(struct tegra_se_dev *se_dev)
 		iova, 0, se_dev->cmdbuf_cnt, true);
 	if (err)
 		goto cmdbuf_out;
+
 	return;
 
 cmdbuf_out:
 	atomic_set(&se_dev->cmdbuf_addr_list[index].free, 1);
 index_out:
 	dma_unmap_sg(se_dev->dev, &se_dev->aes_sg, 1, DMA_BIDIRECTIONAL);
-	kfree(se_dev->aes_buf);
+	if (se_dev->aes_buf)
+		kfree(se_dev->aes_buf);
 mem_out:
 	for (i = 0; i < se_dev->req_cnt; i++) {
 		req = se_dev->reqs[i];
@@ -1546,6 +1604,17 @@ static int tegra_se_aes_ofb_decrypt(struct ablkcipher_request *req)
 	req_ctx->encrypt = false;
 	req_ctx->op_mode = SE_AES_OP_MODE_OFB;
 	return tegra_se_aes_queue_req(req_ctx->se_dev, req);
+}
+
+static void tegra_se_init_aesbuf(struct tegra_se_dev *se_dev)
+{
+	int i;
+	void *buf = se_dev->total_aes_buf;
+
+	for (i = 0; i < SE_MAX_AESBUF_ALLOC; i++) {
+		se_dev->aes_bufs[i] = buf + (i * SE_MAX_GATHER_BUF_SZ);
+		atomic_set(&se_dev->aes_buf_stat[i], 1);
+	}
 }
 
 static int tegra_se_aes_setkey(struct crypto_ablkcipher *tfm,
@@ -3200,6 +3269,14 @@ static int tegra_se_probe(struct platform_device *pdev)
 	se_dev->dst_ll = devm_kzalloc(&pdev->dev, sizeof(struct tegra_se_ll),
 						GFP_KERNEL);
 
+	se_dev->total_aes_buf = kzalloc(SE_MAX_MEM_ALLOC, GFP_KERNEL);
+	if (!se_dev->total_aes_buf) {
+		dev_err(se_dev->dev, "aesbuf allocation failed\n");
+		err = -ENOMEM;
+		goto aes_buf_alloc_fail;
+	}
+	tegra_se_init_aesbuf(se_dev);
+
 	if (is_algo_supported(node, "drbg") || is_algo_supported(node, "aes") ||
 		is_algo_supported(node, "cmac")) {
 		se_dev->aes_cmdbuf_cpuvaddr =
@@ -3219,6 +3296,8 @@ static int tegra_se_probe(struct platform_device *pdev)
 	return 0;
 
 cmd_buf_alloc_fail:
+	kfree(se_dev->total_aes_buf);
+aes_buf_alloc_fail:
 	nvhost_syncpt_put_ref_ext(se_dev->pdev, se_dev->syncpt_id);
 reg_fail:
 	tegra_se_free_ll_buf(se_dev);
@@ -3282,6 +3361,8 @@ static int tegra_se_remove(struct platform_device *pdev)
 	}
 
 	tegra_se_free_ll_buf(se_dev);
+
+	kfree(se_dev->total_aes_buf);
 
 	cancel_work_sync(&se_dev->se_work);
 	if (se_dev->se_work_q)

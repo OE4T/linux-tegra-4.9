@@ -156,6 +156,7 @@ int gk20a_tsg_unbind_channel(struct channel_gk20a *ch)
 int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid)
 {
 	struct tsg_gk20a *tsg = NULL;
+	int err;
 
 	if (tsgid >= g->fifo.num_channels)
 		return -EINVAL;
@@ -169,7 +170,11 @@ int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid)
 	init_rwsem(&tsg->ch_list_lock);
 
 	INIT_LIST_HEAD(&tsg->event_id_list);
-	nvgpu_mutex_init(&tsg->event_id_list_lock);
+	err = nvgpu_mutex_init(&tsg->event_id_list_lock);
+	if (err) {
+		tsg->in_use = true; /* make this TSG unusable */
+		return err;
+	}
 
 	return 0;
 }
@@ -287,7 +292,10 @@ static int gk20a_tsg_event_id_enable(struct tsg_gk20a *tsg,
 	event_id_data->event_id = event_id;
 
 	init_waitqueue_head(&event_id_data->event_id_wq);
-	nvgpu_mutex_init(&event_id_data->lock);
+	err = nvgpu_mutex_init(&event_id_data->lock);
+	if (err)
+		goto clean_up_free;
+
 	INIT_LIST_HEAD(&event_id_data->event_id_node);
 
 	nvgpu_mutex_acquire(&tsg->event_id_list_lock);
@@ -301,6 +309,8 @@ static int gk20a_tsg_event_id_enable(struct tsg_gk20a *tsg,
 
 	return 0;
 
+clean_up_free:
+	kfree(event_id_data);
 clean_up_file:
 	fput(file);
 clean_up:

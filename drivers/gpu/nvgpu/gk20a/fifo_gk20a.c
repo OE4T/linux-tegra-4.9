@@ -513,6 +513,7 @@ static void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 	 */
 	for (; i < f->num_channels; i++) {
 		struct channel_gk20a *c = f->channel + i;
+		struct tsg_gk20a *tsg = f->tsg + i;
 
 		/*
 		 * Could race but worst that happens is we get an error message
@@ -520,6 +521,21 @@ static void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 		 */
 		if (c->referenceable)
 			__gk20a_channel_kill(c);
+
+		nvgpu_mutex_destroy(&tsg->event_id_list_lock);
+
+		nvgpu_mutex_destroy(&c->ioctl_lock);
+		nvgpu_mutex_destroy(&c->error_notifier_mutex);
+		nvgpu_mutex_destroy(&c->joblist.cleanup_lock);
+		nvgpu_mutex_destroy(&c->joblist.pre_alloc.read_lock);
+		nvgpu_mutex_destroy(&c->sync_lock);
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+		nvgpu_mutex_destroy(&c->cyclestate.cyclestate_buffer_mutex);
+		nvgpu_mutex_destroy(&c->cs_client_mutex);
+#endif
+		nvgpu_mutex_destroy(&c->event_id_list_lock);
+		nvgpu_mutex_destroy(&c->dbg_s_lock);
+
 	}
 
 	vfree(f->channel);

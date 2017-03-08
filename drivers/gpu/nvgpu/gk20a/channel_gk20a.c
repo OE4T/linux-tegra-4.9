@@ -3225,6 +3225,8 @@ clean_up:
 int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 {
 	struct channel_gk20a *c = g->fifo.channel+chid;
+	int err;
+
 	c->g = NULL;
 	c->hw_chid = chid;
 	atomic_set(&c->bound, false);
@@ -3232,31 +3234,72 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	atomic_set(&c->ref_count, 0);
 	c->referenceable = false;
 	init_waitqueue_head(&c->ref_count_dec_wq);
+
 #if GK20A_CHANNEL_REFCOUNT_TRACKING
 	nvgpu_spinlock_init(&c->ref_actions_lock);
 #endif
-	nvgpu_mutex_init(&c->ioctl_lock);
-	nvgpu_mutex_init(&c->error_notifier_mutex);
-	nvgpu_mutex_init(&c->joblist.cleanup_lock);
 	nvgpu_spinlock_init(&c->joblist.dynamic.lock);
-	nvgpu_mutex_init(&c->joblist.pre_alloc.read_lock);
 	nvgpu_raw_spinlock_init(&c->timeout.lock);
-	nvgpu_mutex_init(&c->sync_lock);
 
 	INIT_LIST_HEAD(&c->joblist.dynamic.jobs);
-#if defined(CONFIG_GK20A_CYCLE_STATS)
-	nvgpu_mutex_init(&c->cyclestate.cyclestate_buffer_mutex);
-	nvgpu_mutex_init(&c->cs_client_mutex);
-#endif
 	INIT_LIST_HEAD(&c->dbg_s_list);
 	INIT_LIST_HEAD(&c->event_id_list);
-	nvgpu_mutex_init(&c->event_id_list_lock);
-	nvgpu_mutex_init(&c->dbg_s_lock);
-	list_add(&c->free_chs, &g->fifo.free_chs);
-
 	INIT_LIST_HEAD(&c->worker_item);
 
+	err = nvgpu_mutex_init(&c->ioctl_lock);
+	if (err)
+		return err;
+	err = nvgpu_mutex_init(&c->error_notifier_mutex);
+	if (err)
+		goto fail_1;
+	err = nvgpu_mutex_init(&c->joblist.cleanup_lock);
+	if (err)
+		goto fail_2;
+	err = nvgpu_mutex_init(&c->joblist.pre_alloc.read_lock);
+	if (err)
+		goto fail_3;
+	err = nvgpu_mutex_init(&c->sync_lock);
+	if (err)
+		goto fail_4;
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	err = nvgpu_mutex_init(&c->cyclestate.cyclestate_buffer_mutex);
+	if (err)
+		goto fail_5;
+	err = nvgpu_mutex_init(&c->cs_client_mutex);
+	if (err)
+		goto fail_6;
+#endif
+	err = nvgpu_mutex_init(&c->event_id_list_lock);
+	if (err)
+		goto fail_7;
+	err = nvgpu_mutex_init(&c->dbg_s_lock);
+	if (err)
+		goto fail_8;
+
+	list_add(&c->free_chs, &g->fifo.free_chs);
+
 	return 0;
+
+fail_8:
+	nvgpu_mutex_destroy(&c->event_id_list_lock);
+fail_7:
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	nvgpu_mutex_destroy(&c->cs_client_mutex);
+fail_6:
+	nvgpu_mutex_destroy(&c->cyclestate.cyclestate_buffer_mutex);
+fail_5:
+#endif
+	nvgpu_mutex_destroy(&c->sync_lock);
+fail_4:
+	nvgpu_mutex_destroy(&c->joblist.pre_alloc.read_lock);
+fail_3:
+	nvgpu_mutex_destroy(&c->joblist.cleanup_lock);
+fail_2:
+	nvgpu_mutex_destroy(&c->error_notifier_mutex);
+fail_1:
+	nvgpu_mutex_destroy(&c->ioctl_lock);
+
+	return err;
 }
 
 static int gk20a_channel_wait_semaphore(struct channel_gk20a *ch,
@@ -3460,6 +3503,7 @@ static int gk20a_event_id_release(struct inode *inode, struct file *filp)
 		nvgpu_mutex_release(&ch->event_id_list_lock);
 	}
 
+	nvgpu_mutex_destroy(&event_id_data->lock);
 	kfree(event_id_data);
 	filp->private_data = NULL;
 
@@ -3562,7 +3606,9 @@ static int gk20a_channel_event_id_enable(struct channel_gk20a *ch,
 	event_id_data->event_id = event_id;
 
 	init_waitqueue_head(&event_id_data->event_id_wq);
-	nvgpu_mutex_init(&event_id_data->lock);
+	err = nvgpu_mutex_init(&event_id_data->lock);
+	if (err)
+		goto clean_up_free;
 	INIT_LIST_HEAD(&event_id_data->event_id_node);
 
 	nvgpu_mutex_acquire(&ch->event_id_list_lock);
@@ -3576,6 +3622,8 @@ static int gk20a_channel_event_id_enable(struct channel_gk20a *ch,
 
 	return 0;
 
+clean_up_free:
+	kfree(event_id_data);
 clean_up_file:
 	fput(file);
 clean_up:

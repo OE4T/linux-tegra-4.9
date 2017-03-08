@@ -1,7 +1,7 @@
 /*
  * tegra_t186ref_mobile_rt565x.c - Tegra t186ref Machine driver
  *
- * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -284,7 +284,7 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 
 	clk_out_rate = machine->audio_clock.clk_out_rate;
 
-	pr_info("pll_a_out0 = %d Hz, aud_mclk = %d Hz, codec rate = %d Hz\n",
+	pr_debug("pll_a_out0 = %d Hz, aud_mclk = %d Hz, codec rate = %d Hz\n",
 		machine->audio_clock.set_mclk, clk_out_rate, clk_rate);
 
 	tegra_t186ref_set_params(card, machine, rate, channels, formats);

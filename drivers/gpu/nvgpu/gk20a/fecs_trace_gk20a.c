@@ -573,15 +573,20 @@ static int gk20a_fecs_trace_init(struct gk20a *g)
 	}
 	g->fecs_trace = trace;
 
+	err = nvgpu_mutex_init(&trace->poll_lock);
+	if (err)
+		goto clean;
+	err = nvgpu_mutex_init(&trace->hash_lock);
+	if (err)
+		goto clean_poll_lock;
+
 	BUG_ON(!is_power_of_2(GK20A_FECS_TRACE_NUM_RECORDS));
 	err = gk20a_fecs_trace_alloc_ring(g);
 	if (err) {
 		gk20a_warn(dev_from_gk20a(g), "failed to allocate FECS ring");
-		goto clean;
+		goto clean_hash_lock;
 	}
 
-	nvgpu_mutex_init(&trace->poll_lock);
-	nvgpu_mutex_init(&trace->hash_lock);
 	hash_init(trace->pid_hash_table);
 
 	g->gpu_characteristics.flags |=
@@ -590,6 +595,10 @@ static int gk20a_fecs_trace_init(struct gk20a *g)
 	gk20a_fecs_trace_debugfs_init(g);
 	return 0;
 
+clean_hash_lock:
+	nvgpu_mutex_destroy(&trace->hash_lock);
+clean_poll_lock:
+	nvgpu_mutex_destroy(&trace->poll_lock);
 clean:
 	kfree(trace);
 	g->fecs_trace = NULL;
@@ -699,6 +708,9 @@ static int gk20a_fecs_trace_deinit(struct gk20a *g)
 	kthread_stop(trace->poll_task);
 	gk20a_fecs_trace_free_ring(g);
 	gk20a_fecs_trace_free_hash_table(g);
+
+	nvgpu_mutex_destroy(&g->fecs_trace->hash_lock);
+	nvgpu_mutex_destroy(&g->fecs_trace->poll_lock);
 
 	kfree(g->fecs_trace);
 	g->fecs_trace = NULL;

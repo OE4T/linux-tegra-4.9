@@ -62,6 +62,11 @@ static struct mrq_emc_dvfs_latency_response nvdisp_emc_dvfs_table;
  */
 struct clk *hubclk;
 static struct clk *compclk;
+static struct clk *dscclk;
+static struct clk *nvdisp_p0;
+static struct clk *nvdisp_p1;
+static struct clk *nvdisp_p2;
+
 
 static struct reset_control *nvdisp_common_rst[DC_N_WINDOWS+1];
 
@@ -1042,6 +1047,36 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 		goto INIT_CLK_ERR;
 	}
 
+	if (!tegra_platform_is_vdk()) {
+		dscclk = tegra_disp_clk_get(&dc->ndev->dev, "nvdisp_dsc");
+		if (IS_ERR_OR_NULL(dscclk)) {
+			dev_err(&dc->ndev->dev, "can't get display dsc clock\n");
+			ret = -ENOENT;
+			goto INIT_CLK_ERR;
+		}
+	}
+
+	nvdisp_p0 = tegra_disp_clk_get(&dc->ndev->dev, "nvdisplay_p0");
+	if (IS_ERR_OR_NULL(nvdisp_p0)) {
+		dev_err(&dc->ndev->dev, "can't get display nvdisp_p0 clock\n");
+		ret = -ENOENT;
+		goto INIT_CLK_ERR;
+	}
+
+	nvdisp_p1 = tegra_disp_clk_get(&dc->ndev->dev, "nvdisplay_p1");
+	if (IS_ERR_OR_NULL(nvdisp_p1)) {
+		dev_err(&dc->ndev->dev, "can't get display nvdisp_p1 clock\n");
+		ret = -ENOENT;
+		goto INIT_CLK_ERR;
+	}
+
+	nvdisp_p2 = tegra_disp_clk_get(&dc->ndev->dev, "nvdisplay_p2");
+	if (IS_ERR_OR_NULL(nvdisp_p2)) {
+		dev_err(&dc->ndev->dev, "can't get display nvdisp_p2 clock\n");
+		ret = -ENOENT;
+		goto INIT_CLK_ERR;
+	}
+
 	/* Initialize the session id counter to 0 */
 	dc->imp_session_id_cntr = 0;
 
@@ -1111,11 +1146,23 @@ INIT_LUT_ERR:
 				(void *)lut->rgb, lut->phy_addr);
 	}
 INIT_CLK_ERR:
-	if (hubclk)
+	if (!IS_ERR_OR_NULL(hubclk))
 		tegra_disp_clk_put(&dc->ndev->dev, hubclk);
 
-	if (compclk)
+	if (!IS_ERR_OR_NULL(compclk))
 		tegra_disp_clk_put(&dc->ndev->dev, compclk);
+
+	if (!IS_ERR_OR_NULL(dscclk))
+		tegra_disp_clk_put(&dc->ndev->dev, dscclk);
+
+	if (!IS_ERR_OR_NULL(nvdisp_p0))
+		tegra_disp_clk_put(&dc->ndev->dev, nvdisp_p0);
+
+	if (!IS_ERR_OR_NULL(nvdisp_p1))
+		tegra_disp_clk_put(&dc->ndev->dev, nvdisp_p1);
+
+	if (!IS_ERR_OR_NULL(nvdisp_p2))
+		tegra_disp_clk_put(&dc->ndev->dev, nvdisp_p2);
 INIT_EXIT:
 /*	mutex_unlock(&tegra_nvdisp_lock); */
 	return ret;
@@ -2193,13 +2240,25 @@ int tegra_nvdisp_powergate_partition(int pg_id)
 
 			pr_info("PD DISP%d index%d DOWN\n",
 					 i, nvdisp_pg[i].powergate_id);
-			/* User when using pg with clk_on */
-			ret = tegra_powergate_partition_with_clk_off(
+			ret = tegra_powergate_partition(
 						nvdisp_pg[i].powergate_id);
-			/*ret = tegra_powergate_partition(
-						nvdisp_pg[i].powergate_id);*/
 			if (ret)
 				pr_err("Fail to powergate DISP%d\n", i);
+
+			switch (i) {
+			case NVDISP_PD_INDEX:
+				tegra_disp_clk_disable_unprepare(hubclk);
+				tegra_disp_clk_disable_unprepare(compclk);
+				tegra_disp_clk_disable_unprepare(dscclk);
+				tegra_disp_clk_disable_unprepare(nvdisp_p0);
+				break;
+			case NVDISPB_PD_INDEX:
+				tegra_disp_clk_disable_unprepare(nvdisp_p1);
+				break;
+			case NVDISPC_PD_INDEX:
+				tegra_disp_clk_disable_unprepare(nvdisp_p2);
+				break;
+			}
 		}
 	}
 	mutex_unlock(&tegra_nvdisp_lock);
@@ -2261,16 +2320,28 @@ int tegra_nvdisp_unpowergate_partition(int pg_id)
 		if (enable_disp[i] && (nvdisp_pg[i].ref_cnt++ == 0)) {
 			pr_info("PD DISP%d index%d UP\n",
 					i, nvdisp_pg[i].powergate_id);
-			/* use clk_off with clk_on  */
-			ret = tegra_unpowergate_partition_with_clk_on(
+			ret = tegra_unpowergate_partition(
 						nvdisp_pg[i].powergate_id);
-			/*ret = tegra_unpowergate_partition(
-						nvdisp_pg[i].powergate_id);*/
 			if (ret) {
 				pr_err("Fail to Unpowergate DISP%d\n", i);
 				mutex_unlock(&tegra_nvdisp_lock);
 				return ret;
 			}
+			switch (i) {
+			case NVDISP_PD_INDEX:
+				tegra_disp_clk_prepare_enable(hubclk);
+				tegra_disp_clk_prepare_enable(compclk);
+				tegra_disp_clk_prepare_enable(dscclk);
+				tegra_disp_clk_prepare_enable(nvdisp_p0);
+				break;
+			case NVDISPB_PD_INDEX:
+				tegra_disp_clk_prepare_enable(nvdisp_p1);
+				break;
+			case NVDISPC_PD_INDEX:
+				tegra_disp_clk_prepare_enable(nvdisp_p2);
+				break;
+			}
+
 		}
 	}
 

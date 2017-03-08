@@ -3718,10 +3718,10 @@ static int tegra_xudc_powergate(struct tegra_xudc *xudc)
 	dev_info(xudc->dev, "entering ELPG\n");
 	spin_lock_irqsave(&xudc->lock, flags);
 	xudc->powergated = true;
-	spin_unlock_irqrestore(&xudc->lock, flags);
-
 	xudc->saved_regs.ctrl = xudc_readl(xudc, CTRL);
 	xudc->saved_regs.portpm = xudc_readl(xudc, PORTPM);
+	xudc_writel(xudc, 0, CTRL);
+	spin_unlock_irqrestore(&xudc->lock, flags);
 
 	phy_power_off(xudc->usb3_phy);
 	phy_power_off(xudc->utmi_phy);

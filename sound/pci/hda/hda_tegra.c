@@ -232,11 +232,7 @@ static int hda_tegra_enable_clocks(struct hda_tegra *hda)
 	int rc;
 
 	if (hda->is_power_on == false) {
-		if (!soc_is_tegra186_n_later())
-			tegra_unpowergate_partition(hda->partition_id);
-		else
-			tegra_unpowergate_partition_with_clk_on(
-					hda->partition_id);
+		tegra_unpowergate_partition(hda->partition_id);
 		hda->is_power_on = true;
 	}
 
@@ -269,11 +265,7 @@ static void hda_tegra_disable_clocks(struct hda_tegra *hda)
 	clk_disable_unprepare(hda->hda_clk);
 
 	if (hda->is_power_on) {
-		if (!soc_is_tegra186_n_later())
-			tegra_powergate_partition(hda->partition_id);
-		else
-			tegra_powergate_partition_with_clk_off(
-					hda->partition_id);
+		tegra_powergate_partition(hda->partition_id);
 		hda->is_power_on = false;
 	}
 }

@@ -617,14 +617,20 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case NVMAP_IOC_WRITE_32:
 	case NVMAP_IOC_READ_32:
 		err = nvmap_ioctl_rw_handle(filp, cmd == NVMAP_IOC_READ_32,
-			uarg, true);
+			uarg, sizeof(struct nvmap_rw_handle_32));
 		break;
 #endif
 
 	case NVMAP_IOC_WRITE:
 	case NVMAP_IOC_READ:
 		err = nvmap_ioctl_rw_handle(filp, cmd == NVMAP_IOC_READ, uarg,
-			false);
+			sizeof(struct nvmap_rw_handle));
+		break;
+
+	case NVMAP_IOC_WRITE_64:
+	case NVMAP_IOC_READ_64:
+		err = nvmap_ioctl_rw_handle(filp, cmd == NVMAP_IOC_READ_64,
+			uarg, sizeof(struct nvmap_rw_handle_64));
 		break;
 
 #ifdef CONFIG_COMPAT

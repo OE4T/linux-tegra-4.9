@@ -219,6 +219,16 @@ struct nvmap_rw_handle {
 	__u32 count;		/* number of atoms to copy */
 };
 
+struct nvmap_rw_handle_64 {
+	unsigned long addr;	/* user pointer*/
+	__u32 handle;		/* nvmap handle */
+	__u64 offset;		/* offset into hmem */
+	__u64 elem_size;	/* individual atom size */
+	__u64 hmem_stride;	/* delta in bytes between atoms in hmem */
+	__u64 user_stride;	/* delta in bytes between atoms in user */
+	__u64 count;		/* number of atoms to copy */
+};
+
 #ifdef CONFIG_COMPAT
 struct nvmap_rw_handle_32 {
 	__u32 addr;		/* user pointer */
@@ -338,6 +348,10 @@ struct nvmap_available_heaps {
 #define NVMAP_IOC_WRITE_32   _IOW(NVMAP_IOC_MAGIC, 6, struct nvmap_rw_handle_32)
 #define NVMAP_IOC_READ_32    _IOW(NVMAP_IOC_MAGIC, 7, struct nvmap_rw_handle_32)
 #endif
+#define NVMAP_IOC_WRITE_64 \
+	_IOW(NVMAP_IOC_MAGIC, 6, struct nvmap_rw_handle_64)
+#define NVMAP_IOC_READ_64 \
+	_IOW(NVMAP_IOC_MAGIC, 7, struct nvmap_rw_handle_64)
 
 #define NVMAP_IOC_PARAM _IOWR(NVMAP_IOC_MAGIC, 8, struct nvmap_handle_param)
 #ifdef CONFIG_COMPAT

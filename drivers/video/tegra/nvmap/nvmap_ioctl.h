@@ -52,7 +52,7 @@ int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg, bool is32);
 int nvmap_ioctl_cache_maint(struct file *filp, void __user *arg, bool is32);
 
 int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
-	bool is32);
+	size_t op_size);
 
 int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 	bool is_rsrv_op);

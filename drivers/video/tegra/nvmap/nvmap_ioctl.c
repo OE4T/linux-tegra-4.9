@@ -264,9 +264,11 @@ int nvmap_ioctl_create_from_va(struct file *filp, void __user *arg)
 }
 
 int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
-			  bool is32)
+			  size_t op_size)
 {
 	struct nvmap_client *client = filp->private_data;
+	struct nvmap_rw_handle_64 __user *uarg64 = arg;
+	struct nvmap_rw_handle_64 op64;
 	struct nvmap_rw_handle __user *uarg = arg;
 	struct nvmap_rw_handle op;
 #ifdef CONFIG_COMPAT
@@ -276,51 +278,78 @@ int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 	struct nvmap_handle *h;
 	ssize_t copied;
 	int err = 0;
+	unsigned long addr, offset, elem_size, hmem_stride, user_stride;
+	unsigned long count;
+	int handle;
 
 #ifdef CONFIG_COMPAT
-	if (is32) {
+	if (op_size == sizeof(op32)) {
 		if (copy_from_user(&op32, arg, sizeof(op32)))
 			return -EFAULT;
-		op.addr = op32.addr;
-		op.handle = op32.handle;
-		op.offset = op32.offset;
-		op.elem_size = op32.elem_size;
-		op.hmem_stride = op32.hmem_stride;
-		op.user_stride = op32.user_stride;
-		op.count = op32.count;
+		addr = op32.addr;
+		handle = op32.handle;
+		offset = op32.offset;
+		elem_size = op32.elem_size;
+		hmem_stride = op32.hmem_stride;
+		user_stride = op32.user_stride;
+		count = op32.count;
 	} else
 #endif
-		if (copy_from_user(&op, arg, sizeof(op)))
-			return -EFAULT;
+	{
+		if (op_size == sizeof(op)) {
+			if (copy_from_user(&op, arg, sizeof(op)))
+				return -EFAULT;
+			addr = op.addr;
+			handle = op.handle;
+			offset = op.offset;
+			elem_size = op.elem_size;
+			hmem_stride = op.hmem_stride;
+			user_stride = op.user_stride;
+			count = op.count;
+		} else {
+			if (copy_from_user(&op64, arg, sizeof(op64)))
+				return -EFAULT;
+			addr = op64.addr;
+			handle = op64.handle;
+			offset = op64.offset;
+			elem_size = op64.elem_size;
+			hmem_stride = op64.hmem_stride;
+			user_stride = op64.user_stride;
+			count = op64.count;
+		}
+	}
 
-	if (!op.addr || !op.count || !op.elem_size)
+	if (!addr || !count || !elem_size)
 		return -EINVAL;
 
-	h = nvmap_handle_get_from_fd(op.handle);
+	h = nvmap_handle_get_from_fd(handle);
 	if (!h)
 		return -EINVAL;
 
 	nvmap_kmaps_inc(h);
-	trace_nvmap_ioctl_rw_handle(client, h, is_read, op.offset,
-				    op.addr, op.hmem_stride,
-				    op.user_stride, op.elem_size, op.count);
-	copied = rw_handle(client, h, is_read, op.offset,
-			   (unsigned long)op.addr, op.hmem_stride,
-			   op.user_stride, op.elem_size, op.count);
+	trace_nvmap_ioctl_rw_handle(client, h, is_read, offset,
+				    addr, hmem_stride,
+				    user_stride, elem_size, count);
+	copied = rw_handle(client, h, is_read, offset,
+			   addr, hmem_stride,
+			   user_stride, elem_size, count);
 	nvmap_kmaps_dec(h);
 
 	if (copied < 0) {
 		err = copied;
 		copied = 0;
-	} else if (copied < (op.count * op.elem_size))
+	} else if (copied < (count * elem_size))
 		err = -EINTR;
 
 #ifdef CONFIG_COMPAT
-	if (is32)
+	if (op_size == sizeof(op32))
 		__put_user(copied, &uarg32->count);
 	else
 #endif
-		__put_user(copied, &uarg->count);
+		if (op_size == sizeof(op))
+			__put_user(copied, &uarg->count);
+		else
+			__put_user(copied, &uarg64->count);
 
 	nvmap_handle_put(h);
 

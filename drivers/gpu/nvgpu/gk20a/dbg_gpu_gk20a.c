@@ -118,12 +118,22 @@ static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 
 	init_waitqueue_head(&dbg_session->dbg_events.wait_queue);
 	INIT_LIST_HEAD(&dbg_session->ch_list);
-	nvgpu_mutex_init(&dbg_session->ch_list_lock);
-	nvgpu_mutex_init(&dbg_session->ioctl_lock);
+	err = nvgpu_mutex_init(&dbg_session->ch_list_lock);
+	if (err)
+		goto err_free_session;
+	err = nvgpu_mutex_init(&dbg_session->ioctl_lock);
+	if (err)
+		goto err_destroy_lock;
 	dbg_session->dbg_events.events_enabled = false;
 	dbg_session->dbg_events.num_pending_events = 0;
 
 	return 0;
+
+err_destroy_lock:
+	nvgpu_mutex_destroy(&dbg_session->ch_list_lock);
+err_free_session:
+	kfree(dbg_session);
+	return err;
 }
 
 /* used in scenarios where the debugger session can take just the inter-session
@@ -479,6 +489,9 @@ int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp)
 				NVGPU_DBG_GPU_POWERGATE_MODE_ENABLE);
 	nvgpu_dbg_timeout_enable(dbg_s, NVGPU_DBG_GPU_IOCTL_TIMEOUT_ENABLE);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
+
+	nvgpu_mutex_destroy(&dbg_s->ch_list_lock);
+	nvgpu_mutex_destroy(&dbg_s->ioctl_lock);
 
 	kfree(dbg_s);
 	return 0;

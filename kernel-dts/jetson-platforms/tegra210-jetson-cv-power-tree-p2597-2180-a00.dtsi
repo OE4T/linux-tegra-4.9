@@ -328,10 +328,6 @@
 		vdd-fan-supply = <&vdd_fan>;
 	};
 
-	otg@7d000000 {
-		usb_vbus-supply = <&usb_vbus1>;
-	};
-
 	pinctrl@7009f000 {
 		vbus-0-supply = <&usb_vbus1>;
 		vbus-1-supply = <&en_vdd_eth_5v0>;

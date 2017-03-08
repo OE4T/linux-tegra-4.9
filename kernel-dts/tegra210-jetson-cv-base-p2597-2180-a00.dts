@@ -473,18 +473,6 @@
 		};
 	};
 
-	udc@7d000000 {
-		nvidia,port-otg;
-		nvidia,charging-supported;
-		#extcon-cells = <1>;
-		status = "disabled";
-	};
-
-	otg@7d000000 {
-		#extcon-cells = <1>;
-		status = "disabled";
-	};
-
 	mailbox@70098000 {
 		status = "okay";
 	};

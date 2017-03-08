@@ -422,63 +422,6 @@
 		};
 	};
 
-	udc@7d000000 {
-		prod-settings {
-				#prod-cells = <3>;
-				mask-one-style;
-				prod {
-					prod = <0x0000080c 0x0100000c 0x0100000c// UTMIP_BIAS_CFG0
-										//				24:24=HS_DISCON_LEVEL_MSB	0x01
-										//				3:2=HS_DISCON_LEVEL_LSB		0x03
-						0x00000850 0x00000001 0x00000002// UTMIP_BIAS_CFG2_0
-										//				2:0=HSSQUELCH_LEVEL_NEW		0x02
-						0x00000810 0x0f000000 0x00000000// UTMIP_HSRX_CFG0
-										// 				27:24=UTMIP_PCOUNT_UPDN_DIV	0x00
-					>;
-				};
-				prod_a02 {
-					prod = <0x00000850 0x00000001 0x00000000
-					>;
-				};
-
-				prod_c_bias {
-					prod = <0x00000284 0x0000003f 0x0000003a
-					>;
-				};
-				prod_c_bias_a02 {
-					prod = <0x00000284 0x0000003f 0x00000038
-					>;
-				};
-		};
-	};
-
-	ehci@7d000000 {
-		prod-settings {
-				#prod-cells = <3>;
-				mask-one-style;
-				prod {
-					prod = <0x0000080c 0x0100000c 0x0100000c// UTMIP_BIAS_CFG0
-										//				24:24=HS_DISCON_LEVEL_MSB	0x01
-										//				3:2=HS_DISCON_LEVEL_LSB		0x03
-						0x00000850 0x00000001 0x00000002// UTMIP_BIAS_CFG2_0
-										//				2:0=HSSQUELCH_LEVEL_NEW		0x02
-					>;
-				};
-				prod_a02 {
-					prod = <0x00000850 0x00000001 0x00000000
-					>;
-				};
-				prod_c_bias {
-					prod = <0x00000284 0x0000003f 0x0000003a
-					>;
-				};
-				prod_c_bias_a02 {
-					prod = <0x00000284 0x0000003f 0x00000038
-					>;
-				};
-		};
-	};
-
 	spi@7000d400 {
 		prod-settings {
 			#prod-cells = <3>;

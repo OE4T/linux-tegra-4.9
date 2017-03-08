@@ -1943,61 +1943,6 @@
 		status = "okay";
 	};
 
-	udc: udc@7d000000 {
-		compatible = "nvidia,tegra210-udc";
-		reg = <0x0 0x7d000000 0x0 0x4000>;
-		clocks = <&tegra_car TEGRA210_CLK_USBD>,
-			 <&tegra_car TEGRA210_CLK_PLL_U>;
-		clock-names = "usbd", "pllu";
-		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_SNPS_P(0)>;
-		phy-names = "snps-0";
-		interrupts = <0 20 0x04>;
-		status = "disabled";
-	};
-
-	otg: otg@7d000000 {
-		compatible = "nvidia,tegra132-otg";
-		power-domains = <&mc_clk_pd>;
-		reg = <0x0 0x7d000000 0x0 0x4000>;
-		interrupts = <0 20 0x04>;
-		clocks = <&tegra_car TEGRA210_CLK_USBD>;
-		clock-names = "usbd";
-		nvidia,hc-device = <&ehci1>;
-		status = "disabled";
-	};
-
-	ehci1: ehci@7d000000 {
-		compatible = "nvidia,tegra132-ehci";
-		power-domains = <&mc_clk_pd>;
-		reg = <0x0 0x7d000000 0x0 0x4000>;
-		interrupts = <0 20 0x04>;
-		iommus = <&smmu TEGRA_SWGROUP_PPCS>,
-			 <&smmu TEGRA_SWGROUP_PPCS1>,
-			 <&smmu TEGRA_SWGROUP_PPCS2>;
-		clocks = <&tegra_car TEGRA210_CLK_USB2>,
-			 <&tegra_car TEGRA210_CLK_PLL_U>;
-		clock-names = "usbd", "pllu";
-		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_SNPS_P(0)>;
-		phy-names = "snps-0";
-		nvidia,port-otg;
-		nvidia,has-hostpc;
-		nvidia,unaligned-dma-buf-supported;
-		nvidia,power-off-on-suspend;
-		nvidia,is-intf-utmi;
-		nvidia,remote-wakeup-supported;
-		nvidia,hssync-start-delay = <0>;
-		nvidia,idle-wait-delay = <17>;
-		nvidia,elastic-limit = <16>;
-		nvidia,term-range-adj = <6>;
-		nvidia,xcvr-setup = <8>;
-		nvidia,xcvr-lsfslew = <2>;
-		nvidia,xcvr-lsrslew = <2>;
-		nvidia,xcvr-use-fuses;
-		nvidia,vbus-oc-map = <5>;
-		nvidia,xcvr-setup-offset = <0>;
-		status = "disabled";
-	};
-
 	pmc-iopower {
 		compatible = "nvidia,tegra210-pmc-iopower";
 		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SYS
@@ -2237,21 +2182,6 @@
 		interrupts = <0 3 0x04>;
 		clocks = <&tegra_car TEGRA210_CLK_CEC>;
 		clock-names = "cec";
-		status = "disabled";
-	};
-
-	ehci2: ehci@7d004000 {
-		compatible = "nvidia,tegra132-ehci";
-		power-domains = <&mc_clk_pd>;
-		reg = <0x0 0x7d004000 0x0 0x4000>;
-		interrupts = <0 21 0x04>;
-		iommus = <&smmu TEGRA_SWGROUP_PPCS>,
-			 <&smmu TEGRA_SWGROUP_PPCS1>,
-			 <&smmu TEGRA_SWGROUP_PPCS2>;
-		nvidia,has-hostpc;
-		nvidia,power-off-on-suspend;
-		nvidia,remote-wakeup-supported;
-		nvidia,skip_resume;
 		status = "disabled";
 	};
 

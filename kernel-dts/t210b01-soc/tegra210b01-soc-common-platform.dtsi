@@ -34,9 +34,6 @@
 		serial1 = &uartb;
 		serial2 = &uartc;
 		serial3 = &uartd;
-		udc0 = &udc;
-		ehci0 = &ehci1;
-		ehci1 = &ehci2;
 		rtc0 = "/rtc";
 		rtc1 = "/i2c@7000d000/max77620@3c";
 	};
@@ -467,14 +464,6 @@
 		status = "okay";
 	};
 
-	udc@7d000000 {
-		status = "disabled";
-	};
-
-	otg@7d000000 {
-		status = "disabled";
-	};
-
 	pmc-iopower {
 		status = "okay";
 	};
@@ -501,10 +490,6 @@
 
 	tegra_cec {
 		status = "okay";
-	};
-
-	ehci@7d004000 {
-		status = "disabled";
 	};
 
 	watchdog@60005100 {

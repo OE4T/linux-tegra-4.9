@@ -16,6 +16,7 @@
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/gpio.h>
+#include <linux/gpio/consumer.h>
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #include <linux/platform_device.h>
@@ -426,6 +427,13 @@ struct tegra_gpio_controller {
 	struct tegra_gpio_info *tgi;
 };
 
+struct tegra_gpio_saved_register {
+	bool restore_needed;
+	u32 val;
+	u32 conf;
+	u32 out;
+};
+
 struct tegra_gpio_info {
 	struct device *dev;
 	int nbanks;
@@ -436,6 +444,7 @@ struct tegra_gpio_info {
 	struct tegra_gpio_controller tg_contrlr[MAX_GPIO_CONTROLLERS];
 	struct gpio_chip gc;
 	struct irq_chip ic;
+	struct tegra_gpio_saved_register *gpio_rval;
 };
 
 static struct lock_class_key gpio_lock_class;
@@ -601,6 +610,29 @@ static int tegra_gpio_direction_output(struct gpio_chip *chip, unsigned offset,
 		dev_err(chip->parent, "Failed to set output direction: %d\n",
 			ret);
 	return ret;
+}
+
+static int tegra_gpio_suspend_configure(struct gpio_chip *chip, unsigned offset,
+					enum gpiod_flags dflags)
+{
+	struct tegra_gpio_info *tgi = gpiochip_get_data(chip);
+	struct tegra_gpio_saved_register *regs;
+
+	if (!gpio_is_accessible(tgi, offset))
+		return -EBUSY;
+
+	regs = &tgi->gpio_rval[offset];
+	regs->conf = tegra_gpio_readl(tgi, offset, GPIO_ENB_CONFIG_REG),
+	regs->out = tegra_gpio_readl(tgi, offset, GPIO_OUT_CTRL_REG),
+	regs->val = tegra_gpio_readl(tgi, offset, GPIO_OUT_VAL_REG),
+	pinctrl_gpio_save_config(tgi->gc.base + offset);
+	regs->restore_needed = true;
+
+	if (dflags & GPIOD_FLAGS_BIT_DIR_OUT)
+		return tegra_gpio_direction_output(chip, offset,
+					dflags & GPIOD_FLAGS_BIT_DIR_VAL);
+
+	return tegra_gpio_direction_input(chip, offset);
 }
 
 static int tegra_gpio_set_debounce(struct gpio_chip *chip, unsigned offset,
@@ -859,9 +891,15 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	tgi = devm_kzalloc(&pdev->dev, sizeof(*tgi), GFP_KERNEL);
 	if (!tgi)
 		return -ENOMEM;
+
 	tgi->dev = &pdev->dev;
 	tgi->nbanks = bank;
 	tgi->soc = of_device_get_match_data(&pdev->dev);
+
+	tgi->gpio_rval = devm_kzalloc(&pdev->dev, tgi->soc->nports * 8 *
+				      sizeof(*tgi->gpio_rval), GFP_KERNEL);
+	if (!tgi->gpio_rval)
+		return -ENOMEM;
 
 	tgi->gc.label			= tgi->soc->name;
 	tgi->gc.request			= tegra_gpio_request;
@@ -871,6 +909,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	tgi->gc.direction_output	= tegra_gpio_direction_output;
 	tgi->gc.set			= tegra_gpio_set;
 	tgi->gc.get_direction		= tegra_gpio_get_direction;
+	tgi->gc.suspend_configure	= tegra_gpio_suspend_configure;
 	tgi->gc.is_enabled		= tegra_gpio_is_enabled;
 	tgi->gc.to_irq			= tegra_gpio_to_irq;
 	tgi->gc.set_debounce		= tegra_gpio_set_debounce;
@@ -961,6 +1000,45 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM_SLEEP
+static int tegra_gpio_resume_early(struct device *dev)
+{
+	struct tegra_gpio_info *tgi = dev_get_drvdata(dev);
+	struct tegra_gpio_saved_register *regs;
+	int i;
+
+	for (i = 0; i < tgi->gc.ngpio; i++) {
+		regs = &tgi->gpio_rval[i];
+		if (!regs->restore_needed)
+			continue;
+
+		regs->restore_needed = false;
+
+		tegra_gpio_writel(tgi, regs->val, i, GPIO_OUT_VAL_REG);
+		tegra_gpio_writel(tgi, regs->out, i, GPIO_OUT_CTRL_REG);
+		tegra_gpio_writel(tgi, regs->conf, i, GPIO_ENB_CONFIG_REG);
+		pinctrl_gpio_restore_config(tgi->gc.base + i);
+	}
+
+	return 0;
+}
+
+static int tegra_gpio_suspend_late(struct device *dev)
+{
+	struct tegra_gpio_info *tgi = dev_get_drvdata(dev);
+
+	return of_gpiochip_suspend(&tgi->gc);
+}
+
+static const struct dev_pm_ops tegra_gpio_pm = {
+        .suspend_late = tegra_gpio_suspend_late,
+        .resume_early = tegra_gpio_resume_early,
+};
+#define TEGRA_GPIO_PM		&tegra_gpio_pm
+#else
+#define TEGRA_GPIO_PM		NULL
+#endif
+
 static const struct tegra_gpio_soc_info t186_gpio_soc = {
 	.name = "tegra-gpio",
 	.debug_fs_name = "tegra_gpio",
@@ -1005,6 +1083,7 @@ static struct platform_driver tegra_gpio_driver = {
 	.driver		= {
 		.name	= "gpio-tegra186",
 		.of_match_table = tegra_gpio_of_match,
+		.pm = TEGRA_GPIO_PM,
 	},
 	.probe		= tegra_gpio_probe,
 };

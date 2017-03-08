@@ -167,6 +167,7 @@
 	backlight {
 		compatible = "pwm-backlight";
 		status = "okay";
+		label = "pwm-backlight";
 		power-supply = <&max77620_sd3>;
 		panel-s-wqxga-10-1-bl {
 			pwms = <&tegra_pwm 0 1000000>;

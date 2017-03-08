@@ -2658,6 +2658,14 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 			gk20a_vm_put_buffers(vm, job->mapped_buffers,
 				job->num_mapped_buffers);
 
+		/* Remove job from channel's job list before we close the
+		 * fences, to prevent other callers (gk20a_channel_abort) from
+		 * trying to dereference post_fence when it no longer exists.
+		 */
+		channel_gk20a_joblist_lock(c);
+		channel_gk20a_joblist_delete(c, job);
+		channel_gk20a_joblist_unlock(c);
+
 		/* Close the fences (this will unref the semaphores and release
 		 * them to the pool). */
 		gk20a_fence_put(job->pre_fence);
@@ -2673,13 +2681,10 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 		gk20a_channel_put(c);
 
 		/*
-		 * ensure all pending writes complete before deleting the node.
+		 * ensure all pending writes complete before freeing up the job.
 		 * see corresponding rmb in channel_gk20a_alloc_job().
 		 */
 		wmb();
-		channel_gk20a_joblist_lock(c);
-		channel_gk20a_joblist_delete(c, job);
-		channel_gk20a_joblist_unlock(c);
 
 		channel_gk20a_free_job(c, job);
 		job_finished = 1;

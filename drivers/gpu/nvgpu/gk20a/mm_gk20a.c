@@ -832,6 +832,7 @@ static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 	gk20a_free_inst_block(gk20a_from_mm(mm), &mm->hwpm.inst_block);
 	gk20a_vm_remove_support_nofree(&mm->cde.vm);
 
+	gk20a_semaphore_sea_destroy(g);
 	gk20a_vidmem_destroy(g);
 }
 

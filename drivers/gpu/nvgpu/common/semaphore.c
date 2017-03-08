@@ -64,6 +64,16 @@ out:
 	return ret;
 }
 
+void gk20a_semaphore_sea_destroy(struct gk20a *g)
+{
+	if (!g->sema_sea)
+		return;
+
+	nvgpu_mutex_destroy(&g->sema_sea->sea_lock);
+	kfree(g->sema_sea);
+	g->sema_sea = NULL;
+}
+
 /*
  * Create the semaphore sea. Only create it once - subsequent calls to this will
  * return the originally created sea pointer.
@@ -81,15 +91,18 @@ struct nvgpu_semaphore_sea *nvgpu_semaphore_sea_create(struct gk20a *g)
 	g->sema_sea->page_count = 0;
 	g->sema_sea->gk20a = g;
 	INIT_LIST_HEAD(&g->sema_sea->pool_list);
-	nvgpu_mutex_init(&g->sema_sea->sea_lock);
+	if (nvgpu_mutex_init(&g->sema_sea->sea_lock))
+		goto cleanup_free;
 
 	if (__nvgpu_semaphore_sea_grow(g->sema_sea))
-		goto cleanup;
+		goto cleanup_destroy;
 
 	gpu_sema_dbg("Created semaphore sea!");
 	return g->sema_sea;
 
-cleanup:
+cleanup_destroy:
+	nvgpu_mutex_destroy(&g->sema_sea->sea_lock);
+cleanup_free:
 	kfree(g->sema_sea);
 	g->sema_sea = NULL;
 	gpu_sema_dbg("Failed to creat semaphore sea!");
@@ -124,10 +137,14 @@ struct nvgpu_semaphore_pool *nvgpu_semaphore_pool_alloc(
 
 	__lock_sema_sea(sea);
 
+	err = nvgpu_mutex_init(&p->pool_lock);
+	if (err)
+		goto fail;
+
 	ret = __semaphore_bitmap_alloc(sea->pools_alloced, SEMAPHORE_POOL_COUNT);
 	if (ret < 0) {
 		err = ret;
-		goto fail;
+		goto fail_alloc;
 	}
 
 	page_idx = (unsigned long)ret;
@@ -138,7 +155,6 @@ struct nvgpu_semaphore_pool *nvgpu_semaphore_pool_alloc(
 	p->sema_sea = sea;
 	INIT_LIST_HEAD(&p->hw_semas);
 	kref_init(&p->ref);
-	nvgpu_mutex_init(&p->pool_lock);
 
 	sea->page_count++;
 	list_add(&p->pool_list_entry, &sea->pool_list);
@@ -148,6 +164,8 @@ struct nvgpu_semaphore_pool *nvgpu_semaphore_pool_alloc(
 
 	return p;
 
+fail_alloc:
+	nvgpu_mutex_destroy(&p->pool_lock);
 fail:
 	__unlock_sema_sea(sea);
 	kfree(p);
@@ -308,6 +326,8 @@ static void nvgpu_semaphore_pool_free(struct kref *ref)
 
 	list_for_each_entry_safe(hw_sema, tmp, &p->hw_semas, hw_sema_list)
 		kfree(hw_sema);
+
+	nvgpu_mutex_destroy(&p->pool_lock);
 
 	gpu_sema_dbg("Freed semaphore pool! (idx=%d)", p->page_idx);
 	kfree(p);

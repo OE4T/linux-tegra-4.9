@@ -688,6 +688,62 @@ int pinctrl_gpio_direction_output(unsigned gpio)
 }
 EXPORT_SYMBOL_GPL(pinctrl_gpio_direction_output);
 
+/**
+ * pinctrl_gpio_save_config() - Save GPIO configuration of pins.
+ * @gpio: the GPIO pin number from the GPIO subsystem number space
+ *
+ */
+int pinctrl_gpio_save_config(unsigned gpio)
+{
+	struct pinctrl_dev *pctldev;
+	struct pinctrl_gpio_range *range;
+	int ret;
+	int pin;
+
+	ret = pinctrl_get_device_gpio_range(gpio, &pctldev, &range);
+	if (ret)
+		return ret;
+
+	mutex_lock(&pctldev->mutex);
+
+	/* Convert to the pin controllers number space */
+	pin = gpio_to_pin(range, gpio);
+	ret = pinmux_gpio_save_config(pctldev, range, pin);
+
+	mutex_unlock(&pctldev->mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(pinctrl_gpio_save_config);
+
+/**
+ * pinctrl_gpio_restore_config() - Restore GPIO configuration of pins.
+ * @gpio: the GPIO pin number from the GPIO subsystem number space
+ *
+ */
+int pinctrl_gpio_restore_config(unsigned gpio)
+{
+	struct pinctrl_dev *pctldev;
+	struct pinctrl_gpio_range *range;
+	int ret;
+	int pin;
+
+	ret = pinctrl_get_device_gpio_range(gpio, &pctldev, &range);
+	if (ret)
+		return ret;
+
+	mutex_lock(&pctldev->mutex);
+
+	/* Convert to the pin controllers number space */
+	pin = gpio_to_pin(range, gpio);
+	ret = pinmux_gpio_restore_config(pctldev, range, pin);
+
+	mutex_unlock(&pctldev->mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(pinctrl_gpio_restore_config);
+
 static struct pinctrl_state *find_state(struct pinctrl *p,
 					const char *name)
 {

@@ -116,6 +116,7 @@ void nvgpu_alloc_release_carveout(struct nvgpu_allocator *a,
 void nvgpu_alloc_destroy(struct nvgpu_allocator *a)
 {
 	a->ops->fini(a);
+	nvgpu_mutex_destroy(&a->lock);
 	memset(a, 0, sizeof(*a));
 }
 
@@ -126,6 +127,8 @@ int __nvgpu_alloc_common_init(struct nvgpu_allocator *a,
 			      const char *name, void *priv, bool dbg,
 			      const struct nvgpu_allocator_ops *ops)
 {
+	int err;
+
 	if (!ops)
 		return -EINVAL;
 
@@ -136,11 +139,13 @@ int __nvgpu_alloc_common_init(struct nvgpu_allocator *a,
 	if (!ops->alloc || !ops->free || !ops->fini)
 		return -EINVAL;
 
+	err = nvgpu_mutex_init(&a->lock);
+	if (err)
+		return err;
+
 	a->ops = ops;
 	a->priv = priv;
 	a->debug = dbg;
-
-	nvgpu_mutex_init(&a->lock);
 
 	strlcpy(a->name, name, sizeof(a->name));
 

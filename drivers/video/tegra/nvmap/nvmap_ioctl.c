@@ -198,10 +198,13 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 	if (!client)
 		return -ENODEV;
 
-	if (cmd == NVMAP_IOC_CREATE) {
-		ref = nvmap_create_handle(client, PAGE_ALIGN(op.size));
+	if (cmd == NVMAP_IOC_CREATE)
+		op.size64 = PAGE_ALIGN(op.size);
+
+	if ((cmd == NVMAP_IOC_CREATE) || (cmd == NVMAP_IOC_CREATE_64)) {
+		ref = nvmap_create_handle(client, PAGE_ALIGN(op.size64));
 		if (!IS_ERR(ref))
-			ref->handle->orig_size = op.size;
+			ref->handle->orig_size = op.size64;
 	} else if (cmd == NVMAP_IOC_FROM_FD) {
 		ref = nvmap_create_handle_from_fd(client, op.fd);
 
@@ -226,7 +229,10 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 		return PTR_ERR(ref);
 	}
 
-	op.handle = fd;
+	if (cmd == NVMAP_IOC_CREATE_64)
+		op.handle64 = fd;
+	else
+		op.handle = fd;
 	return nvmap_install_fd(client, handle, fd,
 				arg, &op, sizeof(op), 1, dmabuf);
 }

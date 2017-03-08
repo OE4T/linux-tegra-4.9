@@ -573,6 +573,7 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	switch (cmd) {
 	case NVMAP_IOC_CREATE:
+	case NVMAP_IOC_CREATE_64:
 	case NVMAP_IOC_FROM_FD:
 		err = nvmap_ioctl_create(filp, cmd, uarg);
 		break;

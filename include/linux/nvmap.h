@@ -131,6 +131,7 @@ struct nvmap_create_handle {
 	union {
 		struct {
 			union {
+				/* size will be overwritten */
 				__u32 size;	/* CreateHandle */
 				__s32 fd;	/* DmaBufFd or FromFd */
 			};
@@ -144,6 +145,13 @@ struct nvmap_create_handle {
 			union {
 				__u64 ivm_id;	 /* CreateHandle from ivm*/
 				__s32 ivm_handle;/* Get ivm_id from handle */
+			};
+		};
+		struct {
+			union {
+				/* size64 will be overwritten */
+				__u64 size64; /* CreateHandle */
+				__u32 handle64; /* returns nvmap handle */
 			};
 		};
 	};
@@ -324,6 +332,8 @@ struct nvmap_available_heaps {
  * handle; on return, the argument is the name of the new handle
  */
 #define NVMAP_IOC_CREATE  _IOWR(NVMAP_IOC_MAGIC, 0, struct nvmap_create_handle)
+#define NVMAP_IOC_CREATE_64 \
+	_IOWR(NVMAP_IOC_MAGIC, 1, struct nvmap_create_handle)
 #define NVMAP_IOC_FROM_ID _IOWR(NVMAP_IOC_MAGIC, 2, struct nvmap_create_handle)
 
 /* Actually allocates memory for the specified handle */

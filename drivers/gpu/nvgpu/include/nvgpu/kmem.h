@@ -26,6 +26,16 @@
 
 struct gk20a;
 
+/*
+ * When there's other implementations make sure they are included instead of
+ * Linux when not compiling on Linux!
+ *
+ * Also note this is above any usage of size_t. At the moment we don't have a
+ * cross OS way of defining the necessary types used by these APIs. Eventually
+ * we will need a <nvgpu/types.h> include to handle this.
+ */
+#include <nvgpu/kmem_linux.h>
+
 /**
  * DOC: Kmem cache support
  *
@@ -213,12 +223,6 @@ void nvgpu_kmem_fini(struct gk20a *g, int flags);
 #define NVGPU_KMEM_FINI_DUMP_ALLOCS		(1 << 1)
 #define NVGPU_KMEM_FINI_WARN			(1 << 2)
 #define NVGPU_KMEM_FINI_BUG			(1 << 3)
-
-/*
- * When there's other implementations make sure they are included instead of
- * Linux when not compiling on Linux!
- */
-#include <nvgpu/kmem_linux.h>
 
 static inline void *__nvgpu_big_alloc(struct gk20a *g, size_t size, bool clear)
 {

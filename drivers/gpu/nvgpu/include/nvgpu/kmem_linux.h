@@ -52,7 +52,7 @@ static inline void nvgpu_kmem_debugfs_init(struct device *dev)
  * nvgpu. This should not be included directly - instead include <nvgpu/kmem.h>.
  */
 
-static inline void *__nvgpu_kmalloc(struct gk20a *g, unsigned long size,
+static inline void *__nvgpu_kmalloc(struct gk20a *g, size_t size,
 				    unsigned long ip)
 {
 #ifdef CONFIG_NVGPU_TRACK_MEM_USAGE

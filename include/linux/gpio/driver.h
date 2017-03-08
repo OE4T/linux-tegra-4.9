@@ -15,6 +15,7 @@ struct device_node;
 struct seq_file;
 struct gpio_device;
 struct module;
+enum gpiod_flags;
 
 #ifdef CONFIG_GPIOLIB
 
@@ -156,6 +157,10 @@ struct gpio_chip {
 	int			(*set_single_ended)(struct gpio_chip *chip,
 						unsigned offset,
 						enum single_ended_mode mode);
+
+	int			(*suspend_configure)(struct gpio_chip *chip,
+						     unsigned offset,
+						     enum gpiod_flags dflags);
 
 	int			(*is_enabled)(struct gpio_chip *chip,
 						unsigned offset);

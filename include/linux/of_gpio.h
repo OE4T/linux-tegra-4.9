@@ -156,4 +156,9 @@ static inline int of_get_gpio(struct device_node *np, int index)
 	return of_get_gpio_flags(np, index, NULL);
 }
 
+static inline int of_gpiochip_suspend(struct gpio_chip *gc)
+{
+	return 0;
+}
+
 #endif /* __LINUX_OF_GPIO_H */

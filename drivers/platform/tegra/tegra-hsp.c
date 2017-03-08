@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -43,7 +43,7 @@ struct hsp_top {
 	void __iomem *base;
 };
 
-static DEFINE_MUTEX(hsp_top_lock);
+static DEFINE_SPINLOCK(hsp_top_lock);
 
 struct db_handler_info {
 	db_handler_t	handler;
@@ -135,19 +135,20 @@ static irqreturn_t dbell_irq(int irq, void *data)
 
 static int tegra_hsp_db_set_master(enum tegra_hsp_master master, bool enabled)
 {
+	unsigned long flags;
 	u32 reg;
 
 	if (!hsp_ready() || !is_master_valid(master))
 		return -EINVAL;
 
-	mutex_lock(&hsp_top_lock);
+	spin_lock_irqsave(&hsp_top_lock, flags);
 	reg = hsp_readl(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_ENABLE);
 	if (enabled)
 		reg |= BIT(master);
 	else
 		reg &= ~BIT(master);
 	hsp_writel(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_ENABLE, reg);
-	mutex_unlock(&hsp_top_lock);
+	spin_unlock_irqrestore(&hsp_top_lock, flags);
 	return 0;
 }
 
@@ -301,17 +302,18 @@ static int hsp_dbg_can_ring_show(void *data, u64 *val)
  */
 static int hsp_dbg_can_ring_store(void *data, u64 val)
 {
+	unsigned long flags;
 	int reg;
 	enum tegra_hsp_doorbell dbell = (int)val;
 
 	if (!hsp_ready() || dbell >= HSP_NR_DBS)
 		return -EINVAL;
 
-	mutex_lock(&hsp_top_lock);
+	spin_lock_irqsave(&hsp_top_lock, flags);
 	reg = hsp_readl(db_bases[dbell], HSP_DB_REG_ENABLE);
 	reg |= BIT(HSP_MASTER_CCPLEX);
 	hsp_writel(db_bases[dbell], HSP_DB_REG_ENABLE, reg);
-	mutex_unlock(&hsp_top_lock);
+	spin_unlock_irqrestore(&hsp_top_lock, flags);
 	return 0;
 }
 

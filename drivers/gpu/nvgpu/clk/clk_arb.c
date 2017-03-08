@@ -267,10 +267,14 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 		return 0;
 
 	arb = kzalloc(sizeof(struct nvgpu_clk_arb), GFP_KERNEL);
-	if (!arb) {
-		err = -ENOMEM;
-		goto init_fail;
-	}
+	if (!arb)
+		return -ENOMEM;
+
+	err = nvgpu_mutex_init(&arb->pstate_lock);
+	if (err)
+		goto mutex_fail;
+	nvgpu_spinlock_init(&arb->sessions_lock);
+	nvgpu_spinlock_init(&arb->users_lock);
 
 	arb->mclk_f_points = kcalloc(MAX_F_POINTS, sizeof(u16), GFP_KERNEL);
 	if (!arb->mclk_f_points) {
@@ -307,10 +311,6 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 
 	g->clk_arb = arb;
 	arb->g = g;
-
-	nvgpu_mutex_init(&arb->pstate_lock);
-	nvgpu_spinlock_init(&arb->sessions_lock);
-	nvgpu_spinlock_init(&arb->users_lock);
 
 	err =  g->ops.clk_arb.get_arbiter_clk_default(g,
 			CTRL_CLK_DOMAIN_MCLK, &default_mhz);
@@ -382,16 +382,17 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 
 init_fail:
 
-	if (arb) {
-		kfree(arb->gpc2clk_f_points);
-		kfree(arb->mclk_f_points);
+	kfree(arb->gpc2clk_f_points);
+	kfree(arb->mclk_f_points);
 
-		for (index = 0; index < 2; index++) {
-			kfree(arb->vf_table_pool[index].gpc2clk_points);
-			kfree(arb->vf_table_pool[index].mclk_points);
-		}
+	for (index = 0; index < 2; index++) {
+		kfree(arb->vf_table_pool[index].gpc2clk_points);
+		kfree(arb->vf_table_pool[index].mclk_points);
 	}
 
+	nvgpu_mutex_destroy(&arb->pstate_lock);
+
+mutex_fail:
 	kfree(arb);
 
 	return err;
@@ -454,6 +455,7 @@ static void nvgpu_clk_arb_set_global_alarm(struct gk20a *g, u32 alarm)
 
 void nvgpu_clk_arb_cleanup_arbiter(struct gk20a *g)
 {
+	nvgpu_mutex_destroy(&g->clk_arb->pstate_lock);
 	kfree(g->clk_arb);
 }
 

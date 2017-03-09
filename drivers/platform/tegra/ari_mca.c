@@ -1208,6 +1208,8 @@ static int __init ari_serr_init(void)
 {
 	int rc;
 
+	if (tegra_get_chip_id() != TEGRA186)
+		return 0;
 	/*
 	 * ARI is not supported on the simulator
 	 */

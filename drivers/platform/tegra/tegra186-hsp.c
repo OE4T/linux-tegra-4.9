@@ -137,6 +137,7 @@ static irqreturn_t tegra_hsp_full_isr(int irq, void *data)
 	struct device *dev = pair->dev.parent;
 	void __iomem *reg = tegra_hsp_sm_reg(dev, hi->index);
 	u32 value = readl(reg);
+	void *drv_data;
 
 	if (!(value & TEGRA_HSP_SM_FULL))
 		return IRQ_NONE;
@@ -145,9 +146,8 @@ static irqreturn_t tegra_hsp_full_isr(int irq, void *data)
 	writel(0, reg);
 
 	if (pair->notify_full != NULL) {
-		void *data = dev_get_drvdata(&pair->dev);
-
-		pair->notify_full(data, value & ~TEGRA_HSP_SM_FULL);
+		drv_data = dev_get_drvdata(&pair->dev);
+		pair->notify_full(drv_data, value & ~TEGRA_HSP_SM_FULL);
 	}
 
 	return IRQ_HANDLED;

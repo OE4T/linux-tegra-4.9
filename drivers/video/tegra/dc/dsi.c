@@ -2411,7 +2411,7 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 		tegra_dsi_mipi_calibration_21x(dsi);
 }
 
-#if !defined(CONFIG_TEGRA_NVDISPLAY)
+#if !defined(CONFIG_TEGRA_NVDISPLAY) && !defined(CONFIG_ARCH_TEGRA_210_SOC)
 static void tegra_dsi_panelB_enable(void)
 {
 	unsigned int val;
@@ -2450,7 +2450,7 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 		DSI_POWER_CONTROL);
 	/* stabilization delay */
 	udelay(300);
-#if !defined(CONFIG_TEGRA_NVDISPLAY)
+#if !defined(CONFIG_TEGRA_NVDISPLAY) && !defined(CONFIG_ARCH_TEGRA_210_SOC)
 
 	if (dsi->info.dsi_instance || dsi->info.ganged_type ||
 		dsi->info.dsi_csi_loopback)

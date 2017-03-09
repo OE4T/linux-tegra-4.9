@@ -22,6 +22,8 @@
 #include <linux/uaccess.h>
 #include <soc/tegra/fuse.h>
 
+#include <nvgpu/kmem.h>
+
 #include "gk20a/gk20a.h"
 
 #include "clk_gp106.h"
@@ -79,16 +81,15 @@ static int gp106_init_clk_support(struct gk20a *g) {
 	nvgpu_mutex_init(&clk->clk_mutex);
 
 	clk->clk_namemap = (struct namemap_cfg *)
-		kzalloc(sizeof(struct namemap_cfg) * NUM_NAMEMAPS, GFP_KERNEL);
+		nvgpu_kzalloc(g, sizeof(struct namemap_cfg) * NUM_NAMEMAPS);
 
 	if (!clk->clk_namemap)
 		return -ENOMEM;
 
-	clk->namemap_xlat_table = kcalloc(NUM_NAMEMAPS, sizeof(u32),
-		GFP_KERNEL);
+	clk->namemap_xlat_table = nvgpu_kcalloc(g, NUM_NAMEMAPS, sizeof(u32));
 
 	if (!clk->namemap_xlat_table) {
-		kfree(clk->clk_namemap);
+		nvgpu_kfree(g, clk->clk_namemap);
 		return -ENOMEM;
 	}
 

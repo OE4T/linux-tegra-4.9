@@ -23,6 +23,7 @@
 #include <nvgpu/lock.h>
 #include <uapi/linux/nvgpu.h>
 
+#include <nvgpu/kmem.h>
 #include <nvgpu/semaphore.h>
 
 #include "../drivers/staging/android/sync.h"
@@ -42,6 +43,7 @@ struct gk20a_sync_timeline {
  * refcounted gk20a_sync_pt for each duped pt.
  */
 struct gk20a_sync_pt {
+	struct gk20a			*g;
 	struct kref			refcount;
 	u32				thresh;
 	struct nvgpu_semaphore		*sema;
@@ -203,26 +205,29 @@ static void gk20a_sync_pt_free_shared(struct kref *ref)
 {
 	struct gk20a_sync_pt *pt =
 		container_of(ref, struct gk20a_sync_pt, refcount);
+	struct gk20a *g = pt->g;
 
 	if (pt->dep)
 		sync_fence_put(pt->dep);
 	if (pt->sema)
 		nvgpu_semaphore_put(pt->sema);
-	kfree(pt);
+	nvgpu_kfree(g, pt);
 }
 
 static struct gk20a_sync_pt *gk20a_sync_pt_create_shared(
+		struct gk20a *g,
 		struct gk20a_sync_timeline *obj,
 		struct nvgpu_semaphore *sema,
 		struct sync_fence *dependency)
 {
 	struct gk20a_sync_pt *shared;
 
-	shared = kzalloc(sizeof(*shared), GFP_KERNEL);
+	shared = nvgpu_kzalloc(g, sizeof(*shared));
 	if (!shared)
 		return NULL;
 
 	kref_init(&shared->refcount);
+	shared->g = g;
 	shared->obj = obj;
 	shared->sema = sema;
 	shared->thresh = ++obj->max; /* sync framework has a lock */
@@ -249,6 +254,7 @@ static struct gk20a_sync_pt *gk20a_sync_pt_create_shared(
 }
 
 static struct sync_pt *gk20a_sync_pt_create_inst(
+		struct gk20a *g,
 		struct gk20a_sync_timeline *obj,
 		struct nvgpu_semaphore *sema,
 		struct sync_fence *dependency)
@@ -260,7 +266,7 @@ static struct sync_pt *gk20a_sync_pt_create_inst(
 	if (!pti)
 		return NULL;
 
-	pti->shared = gk20a_sync_pt_create_shared(obj, sema, dependency);
+	pti->shared = gk20a_sync_pt_create_shared(g, obj, sema, dependency);
 	if (!pti->shared) {
 		sync_pt_free(&pti->pt);
 		return NULL;
@@ -506,7 +512,9 @@ struct sync_timeline *gk20a_sync_timeline_create(
 	return &obj->obj;
 }
 
-struct sync_fence *gk20a_sync_fence_create(struct sync_timeline *obj,
+struct sync_fence *gk20a_sync_fence_create(
+		struct gk20a *g,
+		struct sync_timeline *obj,
 		struct nvgpu_semaphore *sema,
 		struct sync_fence *dependency,
 		const char *fmt, ...)
@@ -517,7 +525,7 @@ struct sync_fence *gk20a_sync_fence_create(struct sync_timeline *obj,
 	struct sync_fence *fence;
 	struct gk20a_sync_timeline *timeline = to_gk20a_timeline(obj);
 
-	pt = gk20a_sync_pt_create_inst(timeline, sema, dependency);
+	pt = gk20a_sync_pt_create_inst(g, timeline, sema, dependency);
 	if (pt == NULL)
 		return NULL;
 

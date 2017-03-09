@@ -47,6 +47,8 @@
 
 #include <linux/platform/tegra/tegra_emc.h>
 
+#include <nvgpu/kmem.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/hal_gk20a.h"
 #include "gk20a/platform_gk20a.h"
@@ -162,7 +164,7 @@ int gk20a_tegra_secure_alloc(struct device *dev,
 	if (dma_mapping_error(&tegra_vpr_dev, iova))
 		return -ENOMEM;
 
-	sgt = kzalloc(sizeof(*sgt), GFP_KERNEL);
+	sgt = nvgpu_kzalloc(platform->g, sizeof(*sgt));
 	if (!sgt) {
 		gk20a_err(dev, "failed to allocate memory\n");
 		goto fail;
@@ -186,7 +188,7 @@ int gk20a_tegra_secure_alloc(struct device *dev,
 	return err;
 
 fail_sgt:
-	kfree(sgt);
+	nvgpu_kfree(platform->g, sgt);
 fail:
 	dma_free_attrs(&tegra_vpr_dev, desc->mem.size,
 			(void *)(uintptr_t)iova, iova, __DMA_ATTR(attrs));
@@ -809,7 +811,7 @@ static void gk20a_tegra_scale_init(struct device *dev)
 	if (!profile)
 		return;
 
-	emc_params = kzalloc(sizeof(*emc_params), GFP_KERNEL);
+	emc_params = nvgpu_kzalloc(platform->g, sizeof(*emc_params));
 	if (!emc_params)
 		return;
 
@@ -841,7 +843,7 @@ static void gk20a_tegra_scale_exit(struct device *dev)
 	tegra_bwmgr_unregister(emc_params->bwmgr_cl);
 #endif
 
-	kfree(profile->private_data);
+	nvgpu_kfree(platform->g, profile->private_data);
 }
 
 void gk20a_tegra_debug_dump(struct device *dev)

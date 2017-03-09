@@ -26,6 +26,8 @@
 
 #include <governor.h>
 
+#include <nvgpu/kmem.h>
+
 #include "gk20a.h"
 #include "pmu_gk20a.h"
 #include "clk_gk20a.h"
@@ -364,7 +366,7 @@ void gk20a_scale_init(struct device *dev)
 	if (!platform->devfreq_governor && !platform->qos_notify)
 		return;
 
-	profile = kzalloc(sizeof(*profile), GFP_KERNEL);
+	profile = nvgpu_kzalloc(g, sizeof(*profile));
 
 	profile->dev = dev;
 	profile->dev_stat.busy = false;
@@ -415,7 +417,7 @@ void gk20a_scale_init(struct device *dev)
 	return;
 
 err_get_freqs:
-	kfree(profile);
+	nvgpu_kfree(g, profile);
 }
 
 void gk20a_scale_exit(struct device *dev)
@@ -436,7 +438,7 @@ void gk20a_scale_exit(struct device *dev)
 		g->devfreq = NULL;
 	}
 
-	kfree(g->scale_profile);
+	nvgpu_kfree(g, g->scale_profile);
 	g->scale_profile = NULL;
 }
 

@@ -23,6 +23,9 @@
 #include <linux/debugfs.h>
 #include <linux/log2.h>
 #include <uapi/linux/nvgpu.h>
+
+#include <nvgpu/kmem.h>
+
 #include "ctxsw_trace_gk20a.h"
 #include "fecs_trace_gk20a.h"
 #include "gk20a.h"
@@ -151,7 +154,7 @@ static int gk20a_fecs_trace_hash_add(struct gk20a *g, u32 context_ptr, pid_t pid
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_ctxsw,
 		"adding hash entry context_ptr=%x -> pid=%d", context_ptr, pid);
 
-	he = kzalloc(sizeof(*he), GFP_KERNEL);
+	he = nvgpu_kzalloc(g, sizeof(*he));
 	if (unlikely(!he)) {
 		gk20a_warn(dev_from_gk20a(g),
 			"can't alloc new hash entry for context_ptr=%x pid=%d",
@@ -184,7 +187,7 @@ static void gk20a_fecs_trace_hash_del(struct gk20a *g, u32 context_ptr)
 			gk20a_dbg(gpu_dbg_ctxsw,
 				"freed hash entry=%p context_ptr=%x", ent,
 				ent->context_ptr);
-			kfree(ent);
+			nvgpu_kfree(g, ent);
 			break;
 		}
 	}
@@ -203,7 +206,7 @@ static void gk20a_fecs_trace_free_hash_table(struct gk20a *g)
 	nvgpu_mutex_acquire(&trace->hash_lock);
 	hash_for_each_safe(trace->pid_hash_table, bkt, tmp, ent, node) {
 		hash_del(&ent->node);
-		kfree(ent);
+		nvgpu_kfree(g, ent);
 	}
 	nvgpu_mutex_release(&trace->hash_lock);
 
@@ -566,7 +569,7 @@ static int gk20a_fecs_trace_init(struct gk20a *g)
 	struct gk20a_fecs_trace *trace;
 	int err;
 
-	trace = kzalloc(sizeof(struct gk20a_fecs_trace), GFP_KERNEL);
+	trace = nvgpu_kzalloc(g, sizeof(struct gk20a_fecs_trace));
 	if (!trace) {
 		gk20a_warn(dev_from_gk20a(g), "failed to allocate fecs_trace");
 		return -ENOMEM;
@@ -600,7 +603,7 @@ clean_hash_lock:
 clean_poll_lock:
 	nvgpu_mutex_destroy(&trace->poll_lock);
 clean:
-	kfree(trace);
+	nvgpu_kfree(g, trace);
 	g->fecs_trace = NULL;
 	return err;
 }
@@ -712,7 +715,7 @@ static int gk20a_fecs_trace_deinit(struct gk20a *g)
 	nvgpu_mutex_destroy(&g->fecs_trace->hash_lock);
 	nvgpu_mutex_destroy(&g->fecs_trace->poll_lock);
 
-	kfree(g->fecs_trace);
+	nvgpu_kfree(g, g->fecs_trace);
 	g->fecs_trace = NULL;
 	return 0;
 }

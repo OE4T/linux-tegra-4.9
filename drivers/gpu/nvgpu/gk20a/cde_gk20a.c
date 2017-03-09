@@ -26,6 +26,7 @@
 
 #include <nvgpu/timers.h>
 #include <nvgpu/nvgpu_common.h>
+#include <nvgpu/kmem.h>
 
 #include "gk20a.h"
 #include "channel_gk20a.h"
@@ -55,7 +56,7 @@ static void gk20a_deinit_cde_img(struct gk20a_cde_ctx *cde_ctx)
 		gk20a_gmmu_unmap_free(cde_ctx->vm, mem);
 	}
 
-	kfree(cde_ctx->init_convert_cmd);
+	nvgpu_kfree(cde_ctx->g, cde_ctx->init_convert_cmd);
 
 	cde_ctx->convert_cmd = NULL;
 	cde_ctx->init_convert_cmd = NULL;
@@ -86,7 +87,7 @@ __must_hold(&cde_app->mutex)
 	/* housekeeping on app */
 	list_del(&cde_ctx->list);
 	cde_ctx->g->cde_app.ctx_count--;
-	kfree(cde_ctx);
+	nvgpu_kfree(g, cde_ctx);
 }
 
 static void gk20a_cde_cancel_deleter(struct gk20a_cde_ctx *cde_ctx,
@@ -535,8 +536,8 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 	}
 
 	/* allocate gpfifo entries to be pushed */
-	*gpfifo = kzalloc(sizeof(struct nvgpu_gpfifo) * num_elems,
-			  GFP_KERNEL);
+	*gpfifo = nvgpu_kzalloc(cde_ctx->g,
+				sizeof(struct nvgpu_gpfifo) * num_elems);
 	if (!*gpfifo) {
 		gk20a_warn(cde_ctx->dev, "cde: could not allocate memory for gpfifo entries");
 		return -ENOMEM;
@@ -588,7 +589,7 @@ static int gk20a_cde_pack_cmdbufs(struct gk20a_cde_ctx *cde_ctx)
 	struct nvgpu_gpfifo *combined_cmd;
 
 	/* allocate buffer that has space for both */
-	combined_cmd = kzalloc(total_bytes, GFP_KERNEL);
+	combined_cmd = nvgpu_kzalloc(cde_ctx->g, total_bytes);
 	if (!combined_cmd) {
 		gk20a_warn(cde_ctx->dev,
 				"cde: could not allocate memory for gpfifo entries");
@@ -600,8 +601,8 @@ static int gk20a_cde_pack_cmdbufs(struct gk20a_cde_ctx *cde_ctx)
 	memcpy(combined_cmd + cde_ctx->init_cmd_num_entries,
 			cde_ctx->convert_cmd, conv_bytes);
 
-	kfree(cde_ctx->init_convert_cmd);
-	kfree(cde_ctx->convert_cmd);
+	nvgpu_kfree(cde_ctx->g, cde_ctx->init_convert_cmd);
+	nvgpu_kfree(cde_ctx->g, cde_ctx->convert_cmd);
 
 	cde_ctx->init_convert_cmd = combined_cmd;
 	cde_ctx->convert_cmd = combined_cmd
@@ -893,7 +894,7 @@ static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct gk20a *g)
 	struct gk20a_cde_ctx *cde_ctx;
 	int ret;
 
-	cde_ctx = kzalloc(sizeof(*cde_ctx), GFP_KERNEL);
+	cde_ctx = nvgpu_kzalloc(g, sizeof(*cde_ctx));
 	if (!cde_ctx)
 		return ERR_PTR(-ENOMEM);
 
@@ -902,7 +903,7 @@ static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct gk20a *g)
 
 	ret = gk20a_cde_load(cde_ctx);
 	if (ret) {
-		kfree(cde_ctx);
+		nvgpu_kfree(g, cde_ctx);
 		return ERR_PTR(ret);
 	}
 

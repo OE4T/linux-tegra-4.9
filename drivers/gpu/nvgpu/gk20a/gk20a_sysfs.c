@@ -29,6 +29,8 @@
 #include <soc/tegra/tegra-dvfs.h>
 #endif
 
+#include <nvgpu/kmem.h>
+
 #include "gk20a.h"
 #include "gr_gk20a.h"
 #include "fifo_gk20a.h"
@@ -794,7 +796,7 @@ static ssize_t tpc_fs_mask_store(struct device *dev,
 
 		g->ops.gr.set_gpc_tpc_mask(g, 0);
 
-		vfree(g->gr.ctx_vars.local_golden_image);
+		nvgpu_vfree(g, g->gr.ctx_vars.local_golden_image);
 		g->gr.ctx_vars.local_golden_image = NULL;
 		g->gr.ctx_vars.golden_image_initialized = false;
 		g->gr.ctx_vars.golden_image_size = 0;

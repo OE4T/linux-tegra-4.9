@@ -23,6 +23,8 @@
 #include <uapi/linux/nvgpu.h>
 #include <linux/delay.h>
 
+#include <nvgpu/kmem.h>
+
 #include "gk20a.h"
 #include "fence_gk20a.h"
 
@@ -52,7 +54,7 @@ int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 	if (!g)
 		return -ENODEV;
 
-	priv = kzalloc(sizeof(struct gk20a_ctrl_priv), GFP_KERNEL);
+	priv = nvgpu_kzalloc(g, sizeof(struct gk20a_ctrl_priv));
 	if (!priv) {
 		err = -ENOMEM;
 		goto free_ref;
@@ -94,7 +96,7 @@ int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)
 #endif
 
 	gk20a_put(g);
-	kfree(priv);
+	nvgpu_kfree(g, priv);
 
 	return 0;
 }
@@ -195,18 +197,16 @@ static int gk20a_ctrl_alloc_as(
 	int err;
 	int fd;
 	struct file *file;
-	char *name;
+	char name[64];
 
 	err = get_unused_fd_flags(O_RDWR);
 	if (err < 0)
 		return err;
 	fd = err;
 
-	name = kasprintf(GFP_KERNEL, "nvhost-%s-fd%d",
-			g->name, fd);
+	snprintf(name, sizeof(name), "nvhost-%s-fd%d", g->name, fd);
 
 	file = anon_inode_getfile(name, g->as.cdev.ops, NULL, O_RDWR);
-	kfree(name);
 	if (IS_ERR(file)) {
 		err = PTR_ERR(file);
 		goto clean_up;
@@ -236,18 +236,16 @@ static int gk20a_ctrl_open_tsg(struct gk20a *g,
 	int err;
 	int fd;
 	struct file *file;
-	char *name;
+	char name[64];
 
 	err = get_unused_fd_flags(O_RDWR);
 	if (err < 0)
 		return err;
 	fd = err;
 
-	name = kasprintf(GFP_KERNEL, "nvgpu-%s-tsg%d",
-			 g->name, fd);
+	snprintf(name, sizeof(name), "nvgpu-%s-tsg%d", g->name, fd);
 
 	file = anon_inode_getfile(name, g->tsg.cdev.ops, NULL, O_RDWR);
-	kfree(name);
 	if (IS_ERR(file)) {
 		err = PTR_ERR(file);
 		goto clean_up;
@@ -407,7 +405,7 @@ static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 
 	sm_count = g->gr.gpc_count * g->gr.tpc_count;
 	size = sm_count * sizeof(struct warpstate);
-	w_state = kzalloc(size, GFP_KERNEL);
+	w_state = nvgpu_kzalloc(g, size);
 	if (!w_state)
 		return -ENOMEM;
 
@@ -421,7 +419,7 @@ static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 	}
 
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
-	kfree(w_state);
+	nvgpu_kfree(g, w_state);
 	return err;
 }
 
@@ -473,7 +471,7 @@ static int gk20a_ctrl_vsm_mapping(struct gk20a *g,
 	struct nvgpu_gpu_vsms_mapping_entry *vsms_buf;
 	u32 i;
 
-	vsms_buf = kzalloc(write_size, GFP_KERNEL);
+	vsms_buf = nvgpu_kzalloc(g, write_size);
 	if (vsms_buf == NULL)
 		return -ENOMEM;
 
@@ -485,7 +483,7 @@ static int gk20a_ctrl_vsm_mapping(struct gk20a *g,
 	err = copy_to_user((void __user *)(uintptr_t)
 			   args->vsms_map_buf_addr,
 			   vsms_buf, write_size);
-	kfree(vsms_buf);
+	nvgpu_kfree(g, vsms_buf);
 
 	return err;
 }
@@ -760,7 +758,7 @@ static int nvgpu_gpu_clk_get_vf_points(struct gk20a *g,
 	if (err)
 		return err;
 
-	fpoints = kcalloc(max_points, sizeof(u16), GFP_KERNEL);
+	fpoints = nvgpu_kcalloc(g, max_points, sizeof(u16));
 	if (!fpoints)
 		return -ENOMEM;
 
@@ -797,7 +795,7 @@ static int nvgpu_gpu_clk_get_vf_points(struct gk20a *g,
 	args->num_entries = num_points;
 
 fail:
-	kfree(fpoints);
+	nvgpu_kfree(g, fpoints);
 	return err;
 }
 
@@ -1245,13 +1243,13 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 
 		memset(get_info_args, 0, sizeof(struct nvgpu_gpu_zcull_get_info_args));
 
-		zcull_info = kzalloc(sizeof(struct gr_zcull_info), GFP_KERNEL);
+		zcull_info = nvgpu_kzalloc(g, sizeof(struct gr_zcull_info));
 		if (zcull_info == NULL)
 			return -ENOMEM;
 
 		err = g->ops.gr.get_zcull_info(g, &g->gr, zcull_info);
 		if (err) {
-			kfree(zcull_info);
+			nvgpu_kfree(g, zcull_info);
 			break;
 		}
 
@@ -1266,12 +1264,12 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		get_info_args->subregion_height_align_pixels = zcull_info->subregion_height_align_pixels;
 		get_info_args->subregion_count = zcull_info->subregion_count;
 
-		kfree(zcull_info);
+		nvgpu_kfree(g, zcull_info);
 		break;
 	case NVGPU_GPU_IOCTL_ZBC_SET_TABLE:
 		set_table_args = (struct nvgpu_gpu_zbc_set_table_args *)buf;
 
-		zbc_val = kzalloc(sizeof(struct zbc_entry), GFP_KERNEL);
+		zbc_val = nvgpu_kzalloc(g, sizeof(struct zbc_entry));
 		if (zbc_val == NULL)
 			return -ENOMEM;
 
@@ -1303,12 +1301,12 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		}
 
 		if (zbc_val)
-			kfree(zbc_val);
+			nvgpu_kfree(g, zbc_val);
 		break;
 	case NVGPU_GPU_IOCTL_ZBC_QUERY_TABLE:
 		query_table_args = (struct nvgpu_gpu_zbc_query_table_args *)buf;
 
-		zbc_tbl = kzalloc(sizeof(struct zbc_query_params), GFP_KERNEL);
+		zbc_tbl = nvgpu_kzalloc(g, sizeof(struct zbc_query_params));
 		if (zbc_tbl == NULL)
 			return -ENOMEM;
 
@@ -1342,7 +1340,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		}
 
 		if (zbc_tbl)
-			kfree(zbc_tbl);
+			nvgpu_kfree(g, zbc_tbl);
 		break;
 
 	case NVGPU_GPU_IOCTL_GET_CHARACTERISTICS:

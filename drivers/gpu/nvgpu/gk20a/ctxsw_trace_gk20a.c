@@ -24,6 +24,9 @@
 #include <linux/log2.h>
 #include <trace/events/gk20a.h>
 #include <uapi/linux/nvgpu.h>
+
+#include <nvgpu/kmem.h>
+
 #include "ctxsw_trace_gk20a.h"
 #include "gk20a.h"
 #include "gr_gk20a.h"
@@ -196,7 +199,7 @@ static int gk20a_ctxsw_dev_ring_free(struct gk20a *g)
 {
 	struct gk20a_ctxsw_dev *dev = &g->ctxsw_trace->devs[0];
 
-	vfree(dev->hdr);
+	nvgpu_vfree(g, dev->hdr);
 	return 0;
 }
 
@@ -516,7 +519,7 @@ int gk20a_ctxsw_trace_init(struct gk20a *g)
 	if (likely(trace))
 		return 0;
 
-	trace = kzalloc(sizeof(*trace), GFP_KERNEL);
+	trace = nvgpu_kzalloc(g, sizeof(*trace));
 	if (unlikely(!trace))
 		return -ENOMEM;
 	g->ctxsw_trace = trace;
@@ -533,7 +536,7 @@ int gk20a_ctxsw_trace_init(struct gk20a *g)
 
 fail:
 	memset(&g->ops.fecs_trace, 0, sizeof(g->ops.fecs_trace));
-	kfree(trace);
+	nvgpu_kfree(g, trace);
 	g->ctxsw_trace = NULL;
 	return err;
 #else
@@ -559,7 +562,7 @@ void gk20a_ctxsw_trace_cleanup(struct gk20a *g)
 		dev++;
 	}
 
-	kfree(g->ctxsw_trace);
+	nvgpu_kfree(g, g->ctxsw_trace);
 	g->ctxsw_trace = NULL;
 
 	g->ops.fecs_trace.deinit(g);

@@ -18,6 +18,7 @@
 #include <linux/version.h>
 
 #include <nvgpu/semaphore.h>
+#include <nvgpu/kmem.h>
 
 #include "gk20a.h"
 #include "channel_gk20a.h"
@@ -42,6 +43,8 @@ static void gk20a_fence_free(struct kref *ref)
 {
 	struct gk20a_fence *f =
 		container_of(ref, struct gk20a_fence, ref);
+	struct gk20a *g = f->g;
+
 #ifdef CONFIG_SYNC
 	if (f->sync_fence)
 		sync_fence_put(f->sync_fence);
@@ -53,7 +56,7 @@ static void gk20a_fence_free(struct kref *ref)
 		if (nvgpu_alloc_initialized(f->allocator))
 			nvgpu_free(f->allocator, (size_t)f);
 	} else
-		kfree(f);
+		nvgpu_kfree(g, f);
 }
 
 void gk20a_fence_put(struct gk20a_fence *f)
@@ -124,7 +127,7 @@ int gk20a_alloc_fence_pool(struct channel_gk20a *c, unsigned int count)
 	size = sizeof(struct gk20a_fence);
 	if (count <= UINT_MAX / size) {
 		size = count * size;
-		fence_pool = vzalloc(size);
+		fence_pool = nvgpu_vzalloc(c->g, size);
 	}
 
 	if (!fence_pool)
@@ -139,7 +142,7 @@ int gk20a_alloc_fence_pool(struct channel_gk20a *c, unsigned int count)
 	return 0;
 
 fail:
-	vfree(fence_pool);
+	nvgpu_vfree(c->g, fence_pool);
 	return err;
 }
 
@@ -150,7 +153,7 @@ void gk20a_free_fence_pool(struct channel_gk20a *c)
 				nvgpu_alloc_base(&c->fence_allocator);
 
 		nvgpu_alloc_destroy(&c->fence_allocator);
-		vfree(base);
+		nvgpu_vfree(c->g, base);
 	}
 }
 
@@ -171,10 +174,12 @@ struct gk20a_fence *gk20a_alloc_fence(struct channel_gk20a *c)
 			}
 		}
 	} else
-		fence = kzalloc(sizeof(struct gk20a_fence), GFP_KERNEL);
+		fence = nvgpu_kzalloc(c->g, sizeof(struct gk20a_fence));
 
-	if (fence)
+	if (fence) {
 		kref_init(&fence->ref);
+		fence->g = c->g;
+	}
 
 	return fence;
 }
@@ -223,6 +228,7 @@ static const struct gk20a_fence_ops nvgpu_semaphore_fence_ops = {
 
 /* This function takes ownership of the semaphore */
 int gk20a_fence_from_semaphore(
+		struct gk20a *g,
 		struct gk20a_fence *fence_out,
 		struct sync_timeline *timeline,
 		struct nvgpu_semaphore *semaphore,
@@ -235,7 +241,7 @@ int gk20a_fence_from_semaphore(
 
 #ifdef CONFIG_SYNC
 	if (need_sync_fence) {
-		sync_fence = gk20a_sync_fence_create(timeline, semaphore,
+		sync_fence = gk20a_sync_fence_create(g, timeline, semaphore,
 					dependency, "f-gk20a-0x%04x",
 					nvgpu_semaphore_gpu_ro_va(semaphore));
 		if (!sync_fence)

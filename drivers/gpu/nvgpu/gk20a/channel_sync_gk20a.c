@@ -667,7 +667,7 @@ static int gk20a_channel_semaphore_wait_fd(
 	ret = __semaphore_wait_fd_fast_path(c, sync_fence, wait_cmd, &fp_sema);
 	if (ret == 0) {
 		if (fp_sema) {
-			err = gk20a_fence_from_semaphore(fence,
+			err = gk20a_fence_from_semaphore(c->g, fence,
 					sema->timeline,
 					fp_sema,
 					&c->semaphore_wq,
@@ -734,7 +734,7 @@ static int gk20a_channel_semaphore_wait_fd(
 	 *  that we properly clean up in the event the sync_fence has
 	 *  already signaled
 	 */
-	err = gk20a_fence_from_semaphore(fence, sema->timeline, w->sema,
+	err = gk20a_fence_from_semaphore(c->g, fence, sema->timeline, w->sema,
 			&c->semaphore_wq, NULL, false, false);
 	if (err)
 		goto clean_up_sema;
@@ -810,7 +810,7 @@ static int __gk20a_channel_semaphore_incr(
 	/* Release the completion semaphore. */
 	add_sema_cmd(c->g, c, semaphore, incr_cmd, 14, false, wfi_cmd);
 
-	err = gk20a_fence_from_semaphore(fence,
+	err = gk20a_fence_from_semaphore(c->g, fence,
 			sp->timeline, semaphore,
 			&c->semaphore_wq,
 			dependency, wfi_cmd,

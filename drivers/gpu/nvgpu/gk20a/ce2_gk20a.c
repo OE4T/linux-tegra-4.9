@@ -26,6 +26,8 @@
 #include <linux/nvhost.h>
 #include <linux/debugfs.h>
 
+#include <nvgpu/kmem.h>
+
 #include "gk20a.h"
 #include "debug_gk20a.h"
 
@@ -207,7 +209,7 @@ static void gk20a_ce_delete_gpu_context(struct gk20a_gpu_ctx *ce_ctx)
 	nvgpu_mutex_release(&ce_ctx->gpu_ctx_mutex);
 	nvgpu_mutex_destroy(&ce_ctx->gpu_ctx_mutex);
 
-	kfree(ce_ctx);
+	nvgpu_kfree(ce_ctx->g, ce_ctx);
 }
 
 static inline unsigned int gk20a_ce_get_method_size(int request_operation)
@@ -428,7 +430,7 @@ u32 gk20a_ce_create_context_with_cb(struct device *dev,
 	if (!ce_app->initialised || ce_app->app_state != NVGPU_CE_ACTIVE)
 		return ctx_id;
 
-	ce_ctx = kzalloc(sizeof(*ce_ctx), GFP_KERNEL);
+	ce_ctx = nvgpu_kzalloc(g, sizeof(*ce_ctx));
 	if (!ce_ctx)
 		return ctx_id;
 

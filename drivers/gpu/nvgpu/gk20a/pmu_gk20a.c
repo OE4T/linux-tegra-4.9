@@ -25,6 +25,7 @@
 
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/timers.h>
+#include <nvgpu/kmem.h>
 
 #include "gk20a.h"
 #include "gr_gk20a.h"
@@ -301,7 +302,7 @@ static void printtrace(struct pmu_gk20a *pmu)
 	u32 *trace1;
 
 	/* allocate system memory to copy pmu trace buffer */
-	tracebuffer = kzalloc(GK20A_PMU_TRACE_BUFSIZE, GFP_KERNEL);
+	tracebuffer = nvgpu_kzalloc(g, GK20A_PMU_TRACE_BUFSIZE);
 	if (tracebuffer == NULL)
 		return;
 
@@ -335,7 +336,7 @@ static void printtrace(struct pmu_gk20a *pmu)
 		scnprintf((buf + count), 0x40, "%s", (trace+i+20+m));
 		gk20a_err(dev_from_gk20a(g), "%s", buf);
 	}
-	kfree(tracebuffer);
+	nvgpu_kfree(g, tracebuffer);
 }
 
 static void set_pmu_cmdline_args_falctracedmabase_v1(struct pmu_gk20a *pmu)
@@ -3163,8 +3164,8 @@ static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 		pmu->perfmon_sampling_enabled = true;
 
 	pmu->mutex_cnt = pwr_pmu_mutex__size_1_v();
-	pmu->mutex = kzalloc(pmu->mutex_cnt *
-		sizeof(struct pmu_mutex), GFP_KERNEL);
+	pmu->mutex = nvgpu_kzalloc(g, pmu->mutex_cnt *
+		sizeof(struct pmu_mutex));
 	if (!pmu->mutex) {
 		err = -ENOMEM;
 		goto err;
@@ -3175,8 +3176,8 @@ static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 		pmu->mutex[i].index = i;
 	}
 
-	pmu->seq = kzalloc(PMU_MAX_NUM_SEQUENCES *
-		sizeof(struct pmu_sequence), GFP_KERNEL);
+	pmu->seq = nvgpu_kzalloc(g, PMU_MAX_NUM_SEQUENCES *
+		sizeof(struct pmu_sequence));
 	if (!pmu->seq) {
 		err = -ENOMEM;
 		goto err_free_mutex;
@@ -3218,9 +3219,9 @@ skip_init:
  err_free_seq_buf:
 	gk20a_gmmu_unmap_free(vm, &pmu->seq_buf);
  err_free_seq:
-	kfree(pmu->seq);
+	nvgpu_kfree(g, pmu->seq);
  err_free_mutex:
-	kfree(pmu->mutex);
+	nvgpu_kfree(g, pmu->mutex);
  err:
 	gk20a_dbg_fn("fail");
 	return err;
@@ -4060,7 +4061,7 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 
 		gk20a_pmu_surface_free(g, seq->out_mem);
 		if (seq->out_mem != seq->in_mem)
-			kfree(seq->out_mem);
+			nvgpu_kfree(g, seq->out_mem);
 		else
 			seq->out_mem = NULL;
 	}
@@ -4072,7 +4073,7 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 				pv->get_pmu_seq_in_a_ptr(seq)));
 
 		gk20a_pmu_surface_free(g, seq->in_mem);
-		kfree(seq->in_mem);
+		nvgpu_kfree(g, seq->in_mem);
 		seq->in_mem = NULL;
 	}
 
@@ -4822,8 +4823,7 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 			goto clean_up;
 
 		if (payload->in.fb_size != 0x0) {
-			seq->in_mem = kzalloc(sizeof(struct mem_desc),
-				GFP_KERNEL);
+			seq->in_mem = nvgpu_kzalloc(g, sizeof(struct mem_desc));
 			if (!seq->in_mem) {
 				err = -ENOMEM;
 				goto clean_up;
@@ -4866,8 +4866,8 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 				goto clean_up;
 
 			if (payload->out.fb_size != 0x0) {
-				seq->out_mem = kzalloc(sizeof(struct mem_desc),
-					GFP_KERNEL);
+				seq->out_mem = nvgpu_kzalloc(g,
+					sizeof(struct mem_desc));
 				if (!seq->out_mem) {
 					err = -ENOMEM;
 					goto clean_up;
@@ -5690,7 +5690,7 @@ static int falc_trace_show(struct seq_file *s, void *data)
 	u32 *trace1;
 
 	/* allocate system memory to copy pmu trace buffer */
-	tracebuffer = kzalloc(GK20A_PMU_TRACE_BUFSIZE, GFP_KERNEL);
+	tracebuffer = nvgpu_kzalloc(g, GK20A_PMU_TRACE_BUFSIZE);
 	if (tracebuffer == NULL)
 		return -ENOMEM;
 
@@ -5723,7 +5723,7 @@ static int falc_trace_show(struct seq_file *s, void *data)
 		seq_printf(s, "%s", (trace+i+20+m));
 	}
 
-	kfree(tracebuffer);
+	nvgpu_kfree(g, tracebuffer);
 	return 0;
 }
 

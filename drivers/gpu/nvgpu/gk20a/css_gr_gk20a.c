@@ -19,8 +19,10 @@
 #include <linux/bitops.h>
 #include <linux/dma-mapping.h>
 #include <linux/dma-buf.h>
-#include <nvgpu/lock.h>
 #include <linux/vmalloc.h>
+
+#include <nvgpu/kmem.h>
+#include <nvgpu/lock.h>
 
 #include "gk20a.h"
 #include "css_gr_gk20a.h"
@@ -112,7 +114,7 @@ static int css_gr_create_shared_data(struct gr_gk20a *gr)
 	if (gr->cs_data)
 		return 0;
 
-	data = kzalloc(sizeof(*data), GFP_KERNEL);
+	data = nvgpu_kzalloc(gr->g, sizeof(*data));
 	if (!data)
 		return -ENOMEM;
 
@@ -234,7 +236,7 @@ static void css_gr_free_shared_data(struct gr_gk20a *gr)
 		g->ops.css.disable_snapshot(gr);
 
 		/* release the objects */
-		kfree(gr->cs_data);
+		nvgpu_kfree(gr->g, gr->cs_data);
 		gr->cs_data = NULL;
 	}
 }
@@ -458,7 +460,7 @@ static int css_gr_free_client_data(struct gk20a *g,
 		dma_buf_put(client->dma_handler);
 	}
 
-	kfree(client);
+	nvgpu_kfree(g, client);
 
 	return ret;
 }
@@ -471,7 +473,7 @@ static int css_gr_create_client_data(struct gk20a *g,
 	struct gk20a_cs_snapshot_client *cur;
 	int ret = 0;
 
-	cur = kzalloc(sizeof(*cur), GFP_KERNEL);
+	cur = nvgpu_kzalloc(g, sizeof(*cur));
 	if (!cur) {
 		ret = -ENOMEM;
 		goto failed;

@@ -30,6 +30,8 @@ struct channel_gk20a;
 struct gk20a_fence_ops;
 
 struct gk20a_fence {
+	struct gk20a *g;
+
 	/* Valid for all fence types: */
 	bool valid;
 	struct kref ref;
@@ -52,6 +54,7 @@ struct gk20a_fence {
 
 /* Fences can be created from semaphores or syncpoint (id, value) pairs */
 int gk20a_fence_from_semaphore(
+		struct gk20a *g,
 		struct gk20a_fence *fence_out,
 		struct sync_timeline *timeline,
 		struct nvgpu_semaphore *semaphore,

@@ -69,14 +69,14 @@ static int generate_unique_id(void)
 	return atomic_add_return(1, &unique_id);
 }
 
-static int alloc_session(struct dbg_session_gk20a **_dbg_s)
+static int alloc_session(struct gk20a *g, struct dbg_session_gk20a **_dbg_s)
 {
 	struct dbg_session_gk20a *dbg_s;
 	*_dbg_s = NULL;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
 
-	dbg_s = kzalloc(sizeof(*dbg_s), GFP_KERNEL);
+	dbg_s = nvgpu_kzalloc(g, sizeof(*dbg_s));
 	if (!dbg_s)
 		return -ENOMEM;
 
@@ -125,7 +125,7 @@ static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "dbg session: %s", g->name);
 
-	err  = alloc_session(&dbg_session);
+	err  = alloc_session(g, &dbg_session);
 	if (err)
 		goto free_ref;
 
@@ -443,10 +443,10 @@ int dbg_unbind_single_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 
 	session_data = ch_data->session_data;
 	list_del_init(&session_data->dbg_s_entry);
-	kfree(session_data);
+	nvgpu_kfree(dbg_s->g, session_data);
 
 	fput(ch_data->ch_f);
-	kfree(ch_data);
+	nvgpu_kfree(dbg_s->g, ch_data);
 
 	return 0;
 }
@@ -545,7 +545,7 @@ int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp)
 	nvgpu_mutex_destroy(&dbg_s->ch_list_lock);
 	nvgpu_mutex_destroy(&dbg_s->ioctl_lock);
 
-	kfree(dbg_s);
+	nvgpu_kfree(g, dbg_s);
 	gk20a_put(g);
 
 	return 0;
@@ -582,7 +582,7 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	nvgpu_mutex_acquire(&ch->dbg_s_lock);
 
-	ch_data = kzalloc(sizeof(*ch_data), GFP_KERNEL);
+	ch_data = nvgpu_kzalloc(g, sizeof(*ch_data));
 	if (!ch_data) {
 		fput(f);
 		return -ENOMEM;
@@ -592,9 +592,9 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	ch_data->chid = ch->hw_chid;
 	INIT_LIST_HEAD(&ch_data->ch_entry);
 
-	session_data = kzalloc(sizeof(*session_data), GFP_KERNEL);
+	session_data = nvgpu_kzalloc(g, sizeof(*session_data));
 	if (!session_data) {
-		kfree(ch_data);
+		nvgpu_kfree(g, ch_data);
 		fput(f);
 		return -ENOMEM;
 	}
@@ -796,7 +796,7 @@ static int nvgpu_dbg_gpu_ioctl_write_single_sm_error_state(
 	if (sm_id >= gr->no_of_sm)
 		return -EINVAL;
 
-	sm_error_state = kzalloc(sizeof(*sm_error_state), GFP_KERNEL);
+	sm_error_state = nvgpu_kzalloc(g, sizeof(*sm_error_state));
 	if (!sm_error_state)
 		return -ENOMEM;
 
@@ -829,7 +829,7 @@ static int nvgpu_dbg_gpu_ioctl_write_single_sm_error_state(
 	gk20a_idle(g);
 
 err_free:
-	kfree(sm_error_state);
+	nvgpu_kfree(g, sm_error_state);
 
 	return err;
 }

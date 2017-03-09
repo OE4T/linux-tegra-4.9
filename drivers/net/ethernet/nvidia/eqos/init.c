@@ -1282,10 +1282,8 @@ int eqos_remove(struct platform_device *pdev)
 }
 
 static struct platform_driver eqos_driver = {
-
 	.probe = eqos_probe,
 	.remove = eqos_remove,
-	.shutdown = eqos_shutdown,
 #if 0
 	.suspend_late = eqos_suspend_late,
 	.resume_early = eqos_resume_early,
@@ -1301,15 +1299,6 @@ static struct platform_driver eqos_driver = {
 			 .of_match_table = eqos_of_match,
 	},
 };
-
-static void eqos_shutdown(struct platform_device *pdev)
-{
-	pr_err("-->eqos_shutdown\n");
-	pr_err("Handle the shutdown\n");
-	pr_err(">--eqos_shutdown\n");
-
-	return;
-}
 
 #if 0
 static INT eqos_suspend_late(struct platform_device *pdev, pm_message_t state)

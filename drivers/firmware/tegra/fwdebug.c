@@ -123,9 +123,6 @@ static int bpmp_debugfs_read(uint32_t name, uint32_t sz_name,
 	struct mrq_debugfs_response re;
 	int r;
 
-	if (sz_name < 0 || sz_data < 0)
-		return -EINVAL;
-
 	rq.cmd = cpu_to_le32(CMD_DEBUGFS_READ);
 	rq.fop.fnameaddr = cpu_to_le32(name);
 	rq.fop.fnamelen = cpu_to_le32(sz_name);
@@ -199,9 +196,6 @@ static int bpmp_debugfs_write(uint32_t name, size_t sz_name,
 		uint32_t data, size_t sz_data)
 {
 	struct mrq_debugfs_request rq;
-
-	if (sz_name < 0 || sz_data < 0)
-		return -EINVAL;
 
 	rq.cmd = cpu_to_le32(CMD_DEBUGFS_WRITE);
 	rq.fop.fnameaddr = cpu_to_le32(name);

@@ -337,7 +337,7 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	struct gk20a_platform *platform = NULL;
 	struct gk20a *g;
 	int err;
-	char *nodefmt;
+	char nodefmt[64];
 
 	/* make sure driver_data is a sane index */
 	if (pent->driver_data >= sizeof(nvgpu_pci_device) /
@@ -410,16 +410,12 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 		return -EINVAL;
 	}
 
-	nodefmt = kasprintf(GFP_KERNEL, PCI_INTERFACE_NAME, dev_name(&pdev->dev));
-	if (!nodefmt)
-		return -ENOMEM;
+	snprintf(nodefmt, sizeof(nodefmt),
+		 PCI_INTERFACE_NAME, dev_name(&pdev->dev));
 
 	err = nvgpu_probe(g, "gpu_pci", nodefmt, &nvgpu_pci_class);
 	if (err)
 		return err;
-
-	kfree(nodefmt);
-	nodefmt = NULL;
 
 	err = nvgpu_pci_pm_init(&pdev->dev);
 	if (err) {

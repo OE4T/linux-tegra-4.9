@@ -311,15 +311,6 @@ power_off_done:
 	return 0;
 }
 
-static int imx185_power_put(struct imx185 *priv)
-{
-	struct camera_common_power_rail *pw = &priv->power;
-
-	if (unlikely(!pw))
-		return -EFAULT;
-	return 0;
-}
-
 static int imx185_power_get(struct imx185 *priv)
 {
 	struct camera_common_power_rail *pw = &priv->power;
@@ -342,10 +333,6 @@ static int imx185_power_get(struct imx185 *priv)
 		dev_err(&priv->i2c_client->dev, "devm_clk_get failed for pllp_grtba");
 	else
 		clk_set_parent(pw->mclk, parent);
-
-	err = clk_set_rate(pw->mclk, IMX185_DEFAULT_CLK_FREQ);
-	if (!err)
-		err = clk_prepare_enable(pw->mclk);
 
 	pw->reset_gpio = pdata->reset_gpio;
 
@@ -430,9 +417,12 @@ static int imx185_s_stream(struct v4l2_subdev *sd, int enable)
 		}
 	}
 
-	if (test_mode)
+	if (test_mode) {
 		err = imx185_write_table(priv,
 			mode_table[IMX185_MODE_TEST_PATTERN]);
+		if (err)
+			goto exit;
+	}
 
 	err = imx185_write_table(priv, mode_table[IMX185_MODE_START_STREAM]);
 	if (err)
@@ -1106,9 +1096,7 @@ imx185_remove(struct i2c_client *client)
 #endif
 
 	v4l2_ctrl_handler_free(&priv->ctrl_handler);
-	imx185_power_put(priv);
 	camera_common_remove_debugfs(s_data);
-
 	return 0;
 }
 

@@ -474,10 +474,10 @@ fail:
 static int ov9281_set_coarse_time(struct ov9281 *priv, s32 val)
 {
 	ov9281_reg regs[4];
-	u16 coarse_time;
+	u32 coarse_time;
 	int err;
 
-	coarse_time = (u16)val;
+	coarse_time = (u32)val;
 
 	dev_dbg(&priv->i2c_client->dev,
 		 "%s: coarse_time: %d\n", __func__, coarse_time);

@@ -76,11 +76,9 @@ static const struct regmap_config sensor_regmap_config = {
 	.cache_type = REGCACHE_RBTREE,
 };
 
-static int imx274_g_volatile_ctrl(struct v4l2_ctrl *ctrl);
 static int imx274_s_ctrl(struct v4l2_ctrl *ctrl);
 
 static const struct v4l2_ctrl_ops imx274_ctrl_ops = {
-	.g_volatile_ctrl = imx274_g_volatile_ctrl,
 	.s_ctrl		= imx274_s_ctrl,
 };
 
@@ -717,27 +715,6 @@ static int imx274_verify_streaming(struct imx274 *priv)
 error:
 	imx274_s_stream(priv->subdev, false);
 	camera_common_s_power(priv->subdev, false);
-
-	return err;
-}
-
-
-static int imx274_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
-{
-	struct imx274 *priv =
-		container_of(ctrl->handler, struct imx274, ctrl_handler);
-	int err = 0;
-	return 0;
-	if (priv->power.state == SWITCH_OFF)
-		return 0;
-
-	switch (ctrl->id) {
-
-		break;
-	default:
-			pr_err("%s: unknown ctrl id.\n", __func__);
-			return -EINVAL;
-	}
 
 	return err;
 }

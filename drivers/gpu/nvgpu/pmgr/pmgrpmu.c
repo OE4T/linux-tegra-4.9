@@ -11,13 +11,17 @@
  * more details.
  */
 
-#include "gk20a/gk20a.h"
-#include "pwrdev.h"
-#include "boardobj/boardobjgrp.h"
-#include "boardobj/boardobjgrp_e32.h"
+#include <nvgpu/kmem.h>
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
+
+#include "gk20a/gk20a.h"
 #include "gm206/bios_gm206.h"
 #include "gk20a/pmu_gk20a.h"
+
+#include "boardobj/boardobjgrp.h"
+#include "boardobj/boardobjgrp_e32.h"
+
+#include "pwrdev.h"
 #include "pmgrpmu.h"
 
 struct pmgr_pmucmdhandler_params {
@@ -281,7 +285,7 @@ u32 pmgr_send_pwr_policy_to_pmu(struct gk20a *g)
 	u8 indx;
 	u32 max_dmem_size;
 
-	ppwrpack = kzalloc(sizeof(struct nv_pmu_pmgr_pwr_policy_pack), GFP_KERNEL);
+	ppwrpack = nvgpu_kzalloc(g, sizeof(struct nv_pmu_pmgr_pwr_policy_pack));
 	if (!ppwrpack) {
 		gk20a_err(dev_from_gk20a(g),
 			"pwr policy alloc failed %x",
@@ -357,7 +361,7 @@ u32 pmgr_send_pwr_policy_to_pmu(struct gk20a *g)
 
 exit:
 	if (ppwrpack) {
-		kfree(ppwrpack);
+		nvgpu_kfree(g, ppwrpack);
 	}
 
 	return status;

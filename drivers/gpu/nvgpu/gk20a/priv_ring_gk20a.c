@@ -76,6 +76,8 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
+	if (platform->is_fmodel)
+		return;
 
 	status0 = gk20a_readl(g, pri_ringmaster_intr_status0_r());
 	status1 = gk20a_readl(g, pri_ringmaster_intr_status1_r());
@@ -88,6 +90,7 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	    pri_ringmaster_intr_status0_overflow_fault_v(status0) != 0) {
 		gk20a_reset_priv_ring(g);
 	}
+
 	if (pri_ringmaster_intr_status0_gbl_write_error_sys_v(status0) != 0) {
 		gk20a_dbg(gpu_dbg_intr, "SYS write error. ADR %08x WRDAT %08x INFO %08x, CODE %08x",
 			gk20a_readl(g, pri_ringstation_sys_priv_error_adr_r()),
@@ -105,9 +108,6 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_code_r() + gpc * gpc_stride));
 		}
 	}
-
-	if (platform->is_fmodel)
-		return;
 
 	cmd = gk20a_readl(g, pri_ringmaster_command_r());
 	cmd = set_field(cmd, pri_ringmaster_command_cmd_m(),

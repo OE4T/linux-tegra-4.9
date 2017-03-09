@@ -1,7 +1,7 @@
 /*
  * GP20B master
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -133,12 +133,6 @@ irqreturn_t mc_gp10b_intr_thread_stall(struct gk20a *g)
 
 	gk20a_dbg(gpu_dbg_intr, "stall intr %08x\n", mc_intr_0);
 
-	/* handle critical interrupts first */
-	if (mc_intr_0 & mc_intr_pbus_pending_f())
-		gk20a_pbus_isr(g);
-	if (mc_intr_0 & mc_intr_priv_ring_pending_f())
-		gk20a_priv_ring_isr(g);
-
 	for (engine_id_idx = 0; engine_id_idx < g->fifo.num_engines; engine_id_idx++) {
 		active_engine_id = g->fifo.active_engines_list[engine_id_idx];
 
@@ -163,8 +157,12 @@ irqreturn_t mc_gp10b_intr_thread_stall(struct gk20a *g)
 		gk20a_fifo_isr(g);
 	if (mc_intr_0 & mc_intr_pmu_pending_f())
 		gk20a_pmu_isr(g);
+	if (mc_intr_0 & mc_intr_priv_ring_pending_f())
+		gk20a_priv_ring_isr(g);
 	if (mc_intr_0 & mc_intr_ltc_pending_f())
 		g->ops.ltc.isr(g);
+	if (mc_intr_0 & mc_intr_pbus_pending_f())
+		gk20a_pbus_isr(g);
 
 	/* sync handled irq counter before re-enabling interrupts */
 	atomic_set(&g->sw_irq_stall_last_handled, hw_irq_count);

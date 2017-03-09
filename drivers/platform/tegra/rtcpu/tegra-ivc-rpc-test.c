@@ -358,3 +358,4 @@ void tegra_ivc_rpc_create_test_debugfs(
 		debugfs_root, chan,
 		&tegra_ivc_rpc_debugfs_perftest);
 }
+EXPORT_SYMBOL(tegra_ivc_rpc_create_test_debugfs);

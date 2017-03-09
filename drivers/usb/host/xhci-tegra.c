@@ -31,6 +31,7 @@
 #include <linux/kthread.h>
 #include <linux/circ_buf.h>
 #include <linux/extcon.h>
+#include <linux/pm_qos.h>
 
 #include <linux/tegra_pm_domains.h>
 #include <linux/tegra-powergate.h>
@@ -183,6 +184,26 @@
 	USB_DEVICE(vid, pid), \
 	.driver_info = QUIRK_FOR_LS_DEVICE,
 
+/* Device ID */
+#define XHCI_DEVICE_ID_T124	0x0fa3
+#define XHCI_DEVICE_ID_T210	0x0fad
+#define XHCI_DEVICE_ID_T186	0x10e2
+#define XHCI_DEVICE_ID_T194	0x10fe
+
+#define XHCI_IS_T210(t) (t->soc ? \
+        (t->soc->device_id == XHCI_DEVICE_ID_T210) : false)
+#define XHCI_IS_T186(t) (t->soc ? \
+        (t->soc->device_id == XHCI_DEVICE_ID_T186) : false)
+#define XHCI_IS_T194(t) (t->soc ? \
+        (t->soc->device_id == XHCI_DEVICE_ID_T194) : false)
+
+/* Number of PMQOS clusters */
+#define PM_QOS_CLUSTERS		2
+
+/* default parameters for boosting CPU freq */
+#define XHCI_BOOST_TIMEOUT		2000 /* 2 seconds */
+#define XHCI_BOOST_TRIGGER_SIZE		16384 /* 16KB */
+
 static struct usb_device_id disable_usb_persist_quirk_list[] = {
 	/* Sandisk Extreme USB 3.0 pen drive, SuperSpeed */
 	{ USB_DEVICE_SS(0x0781, 0x5580) },
@@ -291,6 +312,7 @@ static const char * const tegra_xhci_phy_names[] = {
 };
 
 struct tegra_xusb_soc {
+	u16 device_id;
 	const char *firmware;
 	const char * const *supply_names;
 	unsigned int num_supplies;
@@ -441,6 +463,15 @@ struct tegra_xusb {
 	bool cdp_internal;
 
 	struct work_struct oc_work;
+
+	struct mutex boost_cpufreq_lock;
+	struct pm_qos_request core_req;
+	struct pm_qos_request boost_cpufreq_req[PM_QOS_CLUSTERS];
+	struct work_struct boost_cpufreq_work;
+	unsigned int boost_cpu_freq;
+	unsigned int boost_cpu_trigger;
+	unsigned long cpufreq_last_boosted;
+	bool cpu_boost_enabled;
 };
 
 static int tegra_xhci_hcd_reinit(struct usb_hcd *hcd);
@@ -459,6 +490,68 @@ static const struct of_device_id tegra_xusbc_pd[] = {
 	{},
 };
 #endif
+
+static void tegra_xusb_boost_cpu_freq_fn(struct work_struct *work)
+{
+	struct tegra_xusb *tegra = container_of(work, struct tegra_xusb,
+							boost_cpufreq_work);
+	unsigned long delay = XHCI_BOOST_TIMEOUT;
+	s32 cpufreq = tegra->boost_cpu_freq * 1000;
+
+	mutex_lock(&tegra->boost_cpufreq_lock);
+
+	dev_dbg(tegra->dev, "boost cpu freq %d kHz, with timeout %lu ms\n",
+							cpufreq, delay);
+
+	if (XHCI_IS_T210(tegra)) {
+		pm_qos_update_request_timeout(&tegra->core_req,
+			PM_QOS_MAX_ONLINE_CPUS_DEFAULT_VALUE, delay * 1000);
+		pm_qos_update_request_timeout(&tegra->boost_cpufreq_req[0],
+						cpufreq, delay * 1000);
+	} else {
+		pm_qos_update_request_timeout(&tegra->boost_cpufreq_req[0],
+						cpufreq, delay * 1000);
+		pm_qos_update_request_timeout(&tegra->boost_cpufreq_req[1],
+						cpufreq, delay * 1000);
+	}
+
+	tegra->cpufreq_last_boosted = jiffies;
+	mutex_unlock(&tegra->boost_cpufreq_lock);
+}
+
+static void tegra_xusb_boost_cpu_init(struct tegra_xusb *tegra)
+{
+	INIT_WORK(&tegra->boost_cpufreq_work, tegra_xusb_boost_cpu_freq_fn);
+
+	if (XHCI_IS_T210(tegra)) {
+		pm_qos_add_request(&tegra->core_req, PM_QOS_MIN_ONLINE_CPUS,
+							PM_QOS_DEFAULT_VALUE);
+		pm_qos_add_request(&tegra->boost_cpufreq_req[0],
+				PM_QOS_CPU_FREQ_MIN, PM_QOS_DEFAULT_VALUE);
+	} else {
+		pm_qos_add_request(&tegra->boost_cpufreq_req[0],
+				PM_QOS_CLUSTER0_FREQ_MIN, PM_QOS_DEFAULT_VALUE);
+		pm_qos_add_request(&tegra->boost_cpufreq_req[1],
+				PM_QOS_CLUSTER1_FREQ_MIN, PM_QOS_DEFAULT_VALUE);
+	}
+
+	mutex_init(&tegra->boost_cpufreq_lock);
+}
+
+static void tegra_xusb_boost_cpu_deinit(struct tegra_xusb *tegra)
+{
+	cancel_work_sync(&tegra->boost_cpufreq_work);
+
+	if (XHCI_IS_T210(tegra)) {
+		pm_qos_remove_request(&tegra->core_req);
+		pm_qos_remove_request(&tegra->boost_cpufreq_req[0]);
+	} else {
+		pm_qos_remove_request(&tegra->boost_cpufreq_req[0]);
+		pm_qos_remove_request(&tegra->boost_cpufreq_req[1]);
+	}
+
+	mutex_destroy(&tegra->boost_cpufreq_lock);
+}
 
 static inline u32 fpci_readl(struct tegra_xusb *tegra, unsigned int offset)
 {
@@ -1433,6 +1526,10 @@ static void tegra_xusb_parse_dt(struct platform_device *pdev,
 		dev_info(tegra->dev, "Enable CDP with internal USB2 phy\n");
 		tegra->cdp_enabled = true;
 	}
+	of_property_read_u32(node, "nvidia,boost_cpu_freq",
+					&tegra->boost_cpu_freq);
+	of_property_read_u32(node, "nvidia,boost_cpu_trigger",
+					&tegra->boost_cpu_trigger);
 }
 
 static int tegra_xusb_clk_enable(struct tegra_xusb *tegra)
@@ -2331,6 +2428,18 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 
 	tegra_xusb_parse_dt(pdev, tegra);
 
+	if (tegra->boost_cpu_freq > 0) {
+		dev_dbg(&pdev->dev, "PMQOS CPU freq boost enabled\n");
+		tegra->cpu_boost_enabled = true;
+	}
+
+	/* If cpu boost is enabled, XHCI_BOOST_TRIGGER_SIZE is the
+	 * minimum buffer length beyond which we boost the frequency.
+	 */
+	if (tegra->cpu_boost_enabled &&
+			tegra->boost_cpu_trigger < XHCI_BOOST_TRIGGER_SIZE)
+		tegra->boost_cpu_trigger = XHCI_BOOST_TRIGGER_SIZE;
+
 	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	tegra->regs = devm_ioremap_resource(&pdev->dev, regs);
 	if (IS_ERR(tegra->regs))
@@ -2564,6 +2673,10 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 	if (tegra->soc->handle_oc)
 		INIT_WORK(&tegra->oc_work, tegra_xhci_oc_work);
 
+	/* Init pm qos for cpu boost */
+	if (tegra->cpu_boost_enabled)
+		tegra_xusb_boost_cpu_init(tegra);
+
 	/* TODO: look up dtb */
 	device_init_wakeup(tegra->dev, true);
 
@@ -2601,6 +2714,9 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 
 	if (tegra->soc->handle_oc)
 		cancel_work_sync(&tegra->oc_work);
+
+	if (tegra->cpu_boost_enabled)
+		tegra_xusb_boost_cpu_deinit(tegra);
 
 	if (!tegra->soc->is_xhci_vf)
 		cancel_delayed_work_sync(&tegra->firmware_retry_work);
@@ -3325,6 +3441,7 @@ static const char * const tegra124_supply_names[] = {
 };
 
 static const struct tegra_xusb_soc tegra124_soc = {
+	.device_id = XHCI_DEVICE_ID_T124,
 	.firmware = "nvidia/tegra124/xusb.bin",
 	.supply_names = tegra124_supply_names,
 	.num_supplies = ARRAY_SIZE(tegra124_supply_names),
@@ -3364,6 +3481,7 @@ static const char * const tegra210_supply_names[] = {
 };
 
 static const struct tegra_xusb_soc tegra210_soc = {
+	.device_id = XHCI_DEVICE_ID_T210,
 	.firmware = "nvidia/tegra210/xusb.bin",
 	.supply_names = tegra210_supply_names,
 	.num_supplies = ARRAY_SIZE(tegra210_supply_names),
@@ -3396,6 +3514,7 @@ static const char * const tegra186_supply_names[] = {
 };
 
 static const struct tegra_xusb_soc tegra186_soc = {
+	.device_id = XHCI_DEVICE_ID_T186,
 	.firmware = "tegra18x_xusb_firmware",
 	.lpm_support = true,
 	.supply_names = tegra186_supply_names,
@@ -3427,6 +3546,7 @@ static const char * const tegra194_supply_names[] = {
 };
 
 static const struct tegra_xusb_soc tegra194_soc = {
+	.device_id = XHCI_DEVICE_ID_T194,
 	.firmware = "tegra19x_xusb_firmware",
 	.supply_names = tegra194_supply_names,
 	.num_supplies = ARRAY_SIZE(tegra194_supply_names),
@@ -3454,6 +3574,7 @@ static const struct tegra_xusb_soc tegra194_soc = {
 MODULE_FIRMWARE("tegra19x_xusb_firmware");
 
 static const struct tegra_xusb_soc tegra194_vf1_soc = {
+	.device_id = XHCI_DEVICE_ID_T194,
 	.is_xhci_vf = true,
 	.vf_id = 1,
 	.supply_names = tegra194_supply_names,
@@ -3483,6 +3604,7 @@ static const struct tegra_xusb_soc tegra194_vf1_soc = {
 MODULE_FIRMWARE("tegra19x_xusb_firmware");
 
 static const struct tegra_xusb_soc tegra194_vf2_soc = {
+	.device_id = XHCI_DEVICE_ID_T194,
 	.is_xhci_vf = true,
 	.vf_id = 2,
 	.supply_names = tegra194_supply_names,
@@ -3630,6 +3752,39 @@ static void tegra_xhci_free_dev(struct usb_hcd *hcd, struct usb_device *udev)
 			tegra->padctl, tegra->typed_phys[USB2_PHY][port], -1,
 			TEGRA_VBUS_SOURCE);
 	}
+}
+
+static int tegra_xhci_urb_enqueue(struct usb_hcd *hcd, struct urb *urb,
+						gfp_t mem_flags)
+{
+	int xfertype;
+	struct tegra_xusb *tegra = hcd_to_tegra_xusb(hcd);
+
+	xfertype = usb_endpoint_type(&urb->ep->desc);
+	switch (xfertype) {
+	case USB_ENDPOINT_XFER_ISOC:
+	case USB_ENDPOINT_XFER_BULK:
+		if (!tegra->cpu_boost_enabled)
+			break;
+		if (urb->transfer_buffer_length > tegra->boost_cpu_trigger) {
+			/* break, if last boost was done within 1 sec back,
+			 * because previous boost lasts for XHCI_BOOST_TIMEOUT
+			 * i.e 2 sec and no need to schedule work for every
+			 * transaction.
+			 */
+			if (time_is_after_jiffies(tegra->cpufreq_last_boosted +
+				(msecs_to_jiffies(XHCI_BOOST_TIMEOUT/2))))
+				break;
+			schedule_work(&tegra->boost_cpufreq_work);
+		}
+		break;
+	case USB_ENDPOINT_XFER_INT:
+	case USB_ENDPOINT_XFER_CONTROL:
+	default:
+		/* Do nothing special here */
+		break;
+	}
+	return xhci_urb_enqueue(hcd, urb, mem_flags);
 }
 
 static int tegra_xhci_hub_control(struct usb_hcd *hcd, u16 type_req,
@@ -3798,6 +3953,7 @@ static int __init tegra_xusb_init(void)
 	tegra_xhci_hc_driver.hub_status_data = tegra_xhci_hub_status_data;
 	tegra_xhci_hc_driver.enable_usb3_lpm_timeout =
 		tegra_xhci_enable_usb3_lpm_timeout;
+	tegra_xhci_hc_driver.urb_enqueue = tegra_xhci_urb_enqueue;
 
 	return platform_driver_register(&tegra_xusb_driver);
 }

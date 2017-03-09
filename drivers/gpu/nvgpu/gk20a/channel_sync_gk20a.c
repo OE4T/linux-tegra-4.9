@@ -19,6 +19,7 @@
 #include <linux/version.h>
 
 #include <nvgpu/semaphore.h>
+#include <nvgpu/kmem.h>
 
 #include "channel_sync_gk20a.h"
 #include "gk20a.h"
@@ -339,7 +340,7 @@ static void gk20a_channel_syncpt_destroy(struct gk20a_channel_sync *s)
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	nvhost_syncpt_set_min_eq_max_ext(sp->host1x_pdev, sp->id);
 	nvhost_syncpt_put_ref_ext(sp->host1x_pdev, sp->id);
-	kfree(sp);
+	nvgpu_kfree(sp->c->g, sp);
 }
 
 static struct gk20a_channel_sync *
@@ -348,7 +349,7 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 	struct gk20a_channel_syncpt *sp;
 	char syncpt_name[32];
 
-	sp = kzalloc(sizeof(*sp), GFP_KERNEL);
+	sp = nvgpu_kzalloc(c->g, sizeof(*sp));
 	if (!sp)
 		return NULL;
 
@@ -361,7 +362,7 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 	sp->id = nvhost_get_syncpt_host_managed(sp->host1x_pdev,
 						c->hw_chid, syncpt_name);
 	if (!sp->id) {
-		kfree(sp);
+		nvgpu_kfree(c->g, sp);
 		gk20a_err(c->g->dev, "failed to get free syncpt");
 		return NULL;
 	}
@@ -464,12 +465,13 @@ void gk20a_channel_cancel_pending_sema_waits(struct gk20a *g)
 		list_del_init(&work->entry);
 
 		/*
-		 * Only kfree() work if the cancel is successful. Otherwise it's
-		 * in use by the gk20a_channel_semaphore_launcher() code.
+		 * Only nvgpu_kfree() work if the cancel is successful.
+		 * Otherwise it's in use by the
+		 * gk20a_channel_semaphore_launcher() code.
 		 */
 		ret = sync_fence_cancel_async(work->fence, &work->waiter);
 		if (ret == 0)
-			kfree(work);
+			nvgpu_kfree(g, work);
 	}
 }
 
@@ -503,7 +505,7 @@ static void gk20a_channel_semaphore_launcher(
 	sync_fence_put(fence);
 	nvgpu_semaphore_release(w->sema);
 	nvgpu_semaphore_put(w->sema);
-	kfree(w);
+	nvgpu_kfree(g, w);
 }
 #endif
 
@@ -706,7 +708,7 @@ static int gk20a_channel_semaphore_wait_fd(
 		goto clean_up_sync_fence;
 	}
 
-	w = kzalloc(sizeof(*w), GFP_KERNEL);
+	w = nvgpu_kzalloc(c->g, sizeof(*w));
 	if (!w) {
 		err = -ENOMEM;
 		goto clean_up_priv_cmd;
@@ -766,7 +768,7 @@ clean_up_sema:
 	nvgpu_semaphore_put(w->sema);
 	nvgpu_semaphore_put(w->sema);
 clean_up_worker:
-	kfree(w);
+	nvgpu_kfree(c->g, w);
 clean_up_priv_cmd:
 	gk20a_free_priv_cmdbuf(c, entry);
 clean_up_sync_fence:
@@ -917,7 +919,7 @@ static void gk20a_channel_semaphore_destroy(struct gk20a_channel_sync *s)
 	/* The sema pool is cleaned up by the VM destroy. */
 	sema->pool = NULL;
 
-	kfree(sema);
+	nvgpu_kfree(sema->c->g, sema);
 }
 
 static struct gk20a_channel_sync *
@@ -930,7 +932,7 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c)
 	if (WARN_ON(!c->vm))
 		return NULL;
 
-	sema = kzalloc(sizeof(*sema), GFP_KERNEL);
+	sema = nvgpu_kzalloc(c->g, sizeof(*sema));
 	if (!sema)
 		return NULL;
 	sema->c = c;

@@ -22,6 +22,8 @@
 #include <uapi/linux/nvgpu.h>
 #include <linux/anon_inodes.h>
 
+#include <nvgpu/kmem.h>
+
 #include "gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
@@ -257,7 +259,7 @@ static int gk20a_tsg_event_id_enable(struct tsg_gk20a *tsg,
 	int err = 0;
 	int local_fd;
 	struct file *file;
-	char *name;
+	char name[64];
 	struct gk20a_event_id_data *event_id_data;
 	struct gk20a *g;
 
@@ -278,18 +280,17 @@ static int gk20a_tsg_event_id_enable(struct tsg_gk20a *tsg,
 		goto free_ref;
 	local_fd = err;
 
-	name = kasprintf(GFP_KERNEL, "nvgpu-event%d-fd%d",
-			event_id, local_fd);
+	snprintf(name, sizeof(name), "nvgpu-event%d-fd%d",
+		 event_id, local_fd);
 
 	file = anon_inode_getfile(name, &gk20a_event_id_ops,
 				  NULL, O_RDWR);
-	kfree(name);
 	if (IS_ERR(file)) {
 		err = PTR_ERR(file);
 		goto clean_up;
 	}
 
-	event_id_data = kzalloc(sizeof(*event_id_data), GFP_KERNEL);
+	event_id_data = nvgpu_kzalloc(tsg->g, sizeof(*event_id_data));
 	if (!event_id_data) {
 		err = -ENOMEM;
 		goto clean_up_file;
@@ -428,7 +429,7 @@ int gk20a_tsg_open(struct gk20a *g, struct file *filp)
 
 	gk20a_dbg(gpu_dbg_fn, "tsg: %s", dev_name(dev));
 
-	priv = kmalloc(sizeof(*priv), GFP_KERNEL);
+	priv = nvgpu_kmalloc(g, sizeof(*priv));
 	if (!priv) {
 		err = -ENOMEM;
 		goto free_ref;
@@ -436,7 +437,7 @@ int gk20a_tsg_open(struct gk20a *g, struct file *filp)
 
 	tsg = acquire_unused_tsg(&g->fifo);
 	if (!tsg) {
-		kfree(priv);
+		nvgpu_kfree(g, priv);
 		err = -ENOMEM;
 		goto free_ref;
 	}
@@ -533,7 +534,7 @@ int gk20a_tsg_dev_release(struct inode *inode, struct file *filp)
 	struct tsg_gk20a *tsg = priv->tsg;
 
 	kref_put(&tsg->refcount, gk20a_tsg_release);
-	kfree(priv);
+	nvgpu_kfree(tsg->g, priv);
 	return 0;
 }
 

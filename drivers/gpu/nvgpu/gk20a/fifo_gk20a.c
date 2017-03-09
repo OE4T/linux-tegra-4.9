@@ -18,7 +18,6 @@
  */
 
 #include <linux/delay.h>
-#include <linux/slab.h>
 #include <linux/scatterlist.h>
 #include <trace/events/gk20a.h>
 #include <linux/dma-mapping.h>
@@ -27,6 +26,7 @@
 
 #include <nvgpu/timers.h>
 #include <nvgpu/semaphore.h>
+#include <nvgpu/kmem.h>
 
 #include "gk20a.h"
 #include "debug_gk20a.h"
@@ -483,10 +483,10 @@ void gk20a_fifo_delete_runlist(struct fifo_gk20a *f)
 			gk20a_gmmu_free(g, &runlist->mem[i]);
 		}
 
-		kfree(runlist->active_channels);
+		nvgpu_kfree(g, runlist->active_channels);
 		runlist->active_channels = NULL;
 
-		kfree(runlist->active_tsgs);
+		nvgpu_kfree(g, runlist->active_tsgs);
 		runlist->active_tsgs = NULL;
 
 		nvgpu_mutex_destroy(&runlist->mutex);
@@ -495,7 +495,7 @@ void gk20a_fifo_delete_runlist(struct fifo_gk20a *f)
 	memset(f->runlist_info, 0, (sizeof(struct fifo_runlist_info_gk20a) *
 		f->max_runlists));
 
-	kfree(f->runlist_info);
+	nvgpu_kfree(g, f->runlist_info);
 	f->runlist_info = NULL;
 	f->max_runlists = 0;
 }
@@ -538,8 +538,8 @@ static void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 
 	}
 
-	vfree(f->channel);
-	vfree(f->tsg);
+	nvgpu_vfree(g, f->channel);
+	nvgpu_vfree(g, f->tsg);
 	if (g->ops.mm.is_bar1_supported(g))
 		gk20a_gmmu_unmap_free(&g->mm.bar1.vm, &f->userd);
 	else
@@ -547,11 +547,11 @@ static void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 
 	gk20a_fifo_delete_runlist(f);
 
-	kfree(f->pbdma_map);
+	nvgpu_kfree(g, f->pbdma_map);
 	f->pbdma_map = NULL;
-	kfree(f->engine_info);
+	nvgpu_kfree(g, f->engine_info);
 	f->engine_info = NULL;
-	kfree(f->active_engines_list);
+	nvgpu_kfree(g, f->active_engines_list);
 	f->active_engines_list = NULL;
 #ifdef CONFIG_DEBUG_FS
 	nvgpu_mutex_acquire(&f->profile.lock);
@@ -654,8 +654,9 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 	gk20a_dbg_fn("");
 
 	f->max_runlists = g->ops.fifo.eng_runlist_base_size();
-	f->runlist_info = kzalloc(sizeof(struct fifo_runlist_info_gk20a) *
-				  f->max_runlists, GFP_KERNEL);
+	f->runlist_info = nvgpu_kzalloc(g,
+					sizeof(struct fifo_runlist_info_gk20a) *
+					f->max_runlists);
 	if (!f->runlist_info)
 		goto clean_up_runlist;
 
@@ -666,14 +667,14 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 		runlist = &f->runlist_info[runlist_id];
 
 		runlist->active_channels =
-			kzalloc(DIV_ROUND_UP(f->num_channels, BITS_PER_BYTE),
-				GFP_KERNEL);
+			nvgpu_kzalloc(g, DIV_ROUND_UP(f->num_channels,
+						      BITS_PER_BYTE));
 		if (!runlist->active_channels)
 			goto clean_up_runlist;
 
 		runlist->active_tsgs =
-			kzalloc(DIV_ROUND_UP(f->num_channels, BITS_PER_BYTE),
-				GFP_KERNEL);
+			nvgpu_kzalloc(g, DIV_ROUND_UP(f->num_channels,
+						      BITS_PER_BYTE));
 		if (!runlist->active_tsgs)
 			goto clean_up_runlist;
 
@@ -905,16 +906,14 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 
 	f->userd_entry_size = 1 << ram_userd_base_shift_v();
 
-	f->channel = vzalloc(f->num_channels * sizeof(*f->channel));
-	f->tsg = vzalloc(f->num_channels * sizeof(*f->tsg));
-	f->pbdma_map = kzalloc(f->num_pbdma * sizeof(*f->pbdma_map),
-				GFP_KERNEL);
-	f->engine_info = kzalloc(f->max_engines * sizeof(*f->engine_info),
-				GFP_KERNEL);
-	f->active_engines_list = kzalloc(f->max_engines * sizeof(u32),
-				GFP_KERNEL);
+	f->channel = nvgpu_vzalloc(g, f->num_channels * sizeof(*f->channel));
+	f->tsg = nvgpu_vzalloc(g, f->num_channels * sizeof(*f->tsg));
+	f->pbdma_map = nvgpu_kzalloc(g, f->num_pbdma * sizeof(*f->pbdma_map));
+	f->engine_info = nvgpu_kzalloc(g, f->max_engines *
+				sizeof(*f->engine_info));
+	f->active_engines_list = nvgpu_kzalloc(g, f->max_engines * sizeof(u32));
 
-	if (!(f->channel && f->pbdma_map && f->engine_info &&
+	if (!(f->channel && f->tsg && f->pbdma_map && f->engine_info &&
 		f->active_engines_list)) {
 		err = -ENOMEM;
 		goto clean_up;
@@ -977,15 +976,15 @@ clean_up:
 	else
 		gk20a_gmmu_free(g, &f->userd);
 
-	vfree(f->channel);
+	nvgpu_vfree(g, f->channel);
 	f->channel = NULL;
-	vfree(f->tsg);
+	nvgpu_vfree(g, f->tsg);
 	f->tsg = NULL;
-	kfree(f->pbdma_map);
+	nvgpu_kfree(g, f->pbdma_map);
 	f->pbdma_map = NULL;
-	kfree(f->engine_info);
+	nvgpu_kfree(g, f->engine_info);
 	f->engine_info = NULL;
-	kfree(f->active_engines_list);
+	nvgpu_kfree(g, f->active_engines_list);
 	f->active_engines_list = NULL;
 
 	return err;

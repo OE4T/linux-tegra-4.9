@@ -12,7 +12,6 @@
  */
 
 #include <asm/barrier.h>
-#include <linux/slab.h>
 #include <linux/kthread.h>
 #include <linux/circ_buf.h>
 #include <linux/delay.h>
@@ -23,6 +22,8 @@
 #include <linux/debugfs.h>
 #include <linux/log2.h>
 #include <uapi/linux/nvgpu.h>
+
+#include <nvgpu/kmem.h>
 
 #include "ctxsw_trace_gk20a.h"
 #include "gk20a.h"
@@ -154,7 +155,7 @@ static int gk20a_sched_dev_ioctl_get_tsgs_by_pid(struct gk20a_sched_ctrl *sched,
 		return -ENOSPC;
 	}
 
-	bitmap = kzalloc(sched->bitmap_size, GFP_KERNEL);
+	bitmap = nvgpu_kzalloc(sched->g, sched->bitmap_size);
 	if (!bitmap)
 		return -ENOMEM;
 
@@ -172,7 +173,7 @@ static int gk20a_sched_dev_ioctl_get_tsgs_by_pid(struct gk20a_sched_ctrl *sched,
 		bitmap, sched->bitmap_size))
 		err = -EFAULT;
 
-	kfree(bitmap);
+	nvgpu_kfree(sched->g, bitmap);
 
 	return err;
 }
@@ -650,15 +651,15 @@ int gk20a_sched_ctrl_init(struct gk20a *g)
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "g=%p sched=%p size=%zu",
 			g, sched, sched->bitmap_size);
 
-	sched->active_tsg_bitmap = kzalloc(sched->bitmap_size, GFP_KERNEL);
+	sched->active_tsg_bitmap = nvgpu_kzalloc(g, sched->bitmap_size);
 	if (!sched->active_tsg_bitmap)
 		return -ENOMEM;
 
-	sched->recent_tsg_bitmap = kzalloc(sched->bitmap_size, GFP_KERNEL);
+	sched->recent_tsg_bitmap = nvgpu_kzalloc(g, sched->bitmap_size);
 	if (!sched->recent_tsg_bitmap)
 		goto free_active;
 
-	sched->ref_tsg_bitmap = kzalloc(sched->bitmap_size, GFP_KERNEL);
+	sched->ref_tsg_bitmap = nvgpu_kzalloc(g, sched->bitmap_size);
 	if (!sched->ref_tsg_bitmap)
 		goto free_recent;
 
@@ -672,10 +673,10 @@ int gk20a_sched_ctrl_init(struct gk20a *g)
 	return 0;
 
 free_recent:
-	kfree(sched->recent_tsg_bitmap);
+	nvgpu_kfree(g, sched->recent_tsg_bitmap);
 
 free_active:
-	kfree(sched->active_tsg_bitmap);
+	nvgpu_kfree(g, sched->active_tsg_bitmap);
 
 	return -ENOMEM;
 }
@@ -684,9 +685,9 @@ void gk20a_sched_ctrl_cleanup(struct gk20a *g)
 {
 	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
 
-	kfree(sched->active_tsg_bitmap);
-	kfree(sched->recent_tsg_bitmap);
-	kfree(sched->ref_tsg_bitmap);
+	nvgpu_kfree(g, sched->active_tsg_bitmap);
+	nvgpu_kfree(g, sched->recent_tsg_bitmap);
+	nvgpu_kfree(g, sched->ref_tsg_bitmap);
 	sched->active_tsg_bitmap = NULL;
 	sched->recent_tsg_bitmap = NULL;
 	sched->ref_tsg_bitmap = NULL;

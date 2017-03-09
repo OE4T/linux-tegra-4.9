@@ -26,7 +26,6 @@
 #include <linux/file.h>
 #include <linux/anon_inodes.h>
 #include <linux/dma-buf.h>
-#include <linux/vmalloc.h>
 #include <linux/circ_buf.h>
 
 #include <nvgpu/semaphore.h>
@@ -1244,7 +1243,7 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 
 channel_release:
 	gk20a_put(g);
-	kfree(filp->private_data);
+	nvgpu_kfree(g, filp->private_data);
 	filp->private_data = NULL;
 	return 0;
 }
@@ -1390,7 +1389,7 @@ static int __gk20a_channel_open(struct gk20a *g, struct file *filp, s32 runlist_
 
 	trace_gk20a_channel_open(dev_name(g->dev));
 
-	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+	priv = nvgpu_kzalloc(g, sizeof(*priv));
 	if (!priv) {
 		err = -ENOMEM;
 		goto free_ref;
@@ -1421,7 +1420,7 @@ static int __gk20a_channel_open(struct gk20a *g, struct file *filp, s32 runlist_
 	return 0;
 
 fail_busy:
-	kfree(priv);
+	nvgpu_kfree(g, priv);
 free_ref:
 	gk20a_put(g);
 	return err;
@@ -1446,7 +1445,7 @@ int gk20a_channel_open_ioctl(struct gk20a *g,
 	int err;
 	int fd;
 	struct file *file;
-	char *name;
+	char name[64];
 	s32 runlist_id = args->in.runlist_id;
 
 	err = get_unused_fd_flags(O_RDWR);
@@ -1454,15 +1453,10 @@ int gk20a_channel_open_ioctl(struct gk20a *g,
 		return err;
 	fd = err;
 
-	name = kasprintf(GFP_KERNEL, "nvhost-%s-fd%d",
-			dev_name(g->dev), fd);
-	if (!name) {
-		err = -ENOMEM;
-		goto clean_up;
-	}
+	snprintf(name, sizeof(name), "nvhost-%s-fd%d",
+		 dev_name(g->dev), fd);
 
 	file = anon_inode_getfile(name, g->channel.cdev.ops, NULL, O_RDWR);
-	kfree(name);
 	if (IS_ERR(file)) {
 		err = PTR_ERR(file);
 		goto clean_up;
@@ -1609,7 +1603,7 @@ static void free_priv_cmdbuf(struct channel_gk20a *c,
 	if (channel_gk20a_is_prealloc_enabled(c))
 		memset(e, 0, sizeof(struct priv_cmd_entry));
 	else
-		kfree(e);
+		nvgpu_kfree(c->g, e);
 }
 
 static int channel_gk20a_alloc_job(struct channel_gk20a *c,
@@ -1635,8 +1629,8 @@ static int channel_gk20a_alloc_job(struct channel_gk20a *c,
 			err = -EAGAIN;
 		}
 	} else {
-		*job_out = kzalloc(sizeof(struct channel_gk20a_job),
-				GFP_KERNEL);
+		*job_out = nvgpu_kzalloc(c->g,
+					 sizeof(struct channel_gk20a_job));
 		if (!*job_out)
 			err = -ENOMEM;
 	}
@@ -1659,7 +1653,7 @@ static void channel_gk20a_free_job(struct channel_gk20a *c,
 		job->wait_cmd = wait_cmd;
 		job->incr_cmd = incr_cmd;
 	} else
-		kfree(job);
+		nvgpu_kfree(c->g, job);
 }
 
 void channel_gk20a_joblist_lock(struct channel_gk20a *c)
@@ -1757,7 +1751,8 @@ static int channel_gk20a_prealloc_resources(struct channel_gk20a *c,
 	 */
 	size = sizeof(struct channel_gk20a_job);
 	if (num_jobs <= ULONG_MAX / size)
-		c->joblist.pre_alloc.jobs = vzalloc(num_jobs * size);
+		c->joblist.pre_alloc.jobs = nvgpu_vzalloc(c->g,
+							  num_jobs * size);
 	if (!c->joblist.pre_alloc.jobs) {
 		err = -ENOMEM;
 		goto clean_up;
@@ -1770,7 +1765,7 @@ static int channel_gk20a_prealloc_resources(struct channel_gk20a *c,
 	 */
 	size = sizeof(struct priv_cmd_entry);
 	if (num_jobs <= ULONG_MAX / (size << 1))
-		entries = vzalloc((num_jobs << 1) * size);
+		entries = nvgpu_vzalloc(c->g, (num_jobs << 1) * size);
 	if (!entries) {
 		err = -ENOMEM;
 		goto clean_up_joblist;
@@ -1799,9 +1794,9 @@ static int channel_gk20a_prealloc_resources(struct channel_gk20a *c,
 	return 0;
 
 clean_up_priv_cmd:
-	vfree(entries);
+	nvgpu_vfree(c->g, entries);
 clean_up_joblist:
-	vfree(c->joblist.pre_alloc.jobs);
+	nvgpu_vfree(c->g, c->joblist.pre_alloc.jobs);
 clean_up:
 	memset(&c->joblist.pre_alloc, 0, sizeof(c->joblist.pre_alloc));
 	return err;
@@ -1809,8 +1804,8 @@ clean_up:
 
 static void channel_gk20a_free_prealloc_resources(struct channel_gk20a *c)
 {
-	vfree(c->joblist.pre_alloc.jobs[0].wait_cmd);
-	vfree(c->joblist.pre_alloc.jobs);
+	nvgpu_vfree(c->g, c->joblist.pre_alloc.jobs[0].wait_cmd);
+	nvgpu_vfree(c->g, c->joblist.pre_alloc.jobs);
 	gk20a_free_fence_pool(c);
 
 	/*
@@ -2910,8 +2905,8 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 		}
 
 		if (!pre_alloc_enabled)
-			job->wait_cmd = kzalloc(sizeof(struct priv_cmd_entry),
-						GFP_KERNEL);
+			job->wait_cmd = nvgpu_kzalloc(g,
+				sizeof(struct priv_cmd_entry));
 
 		if (!job->wait_cmd) {
 			err = -ENOMEM;
@@ -2951,8 +2946,7 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 		goto clean_up_wait_cmd;
 	}
 	if (!pre_alloc_enabled)
-		job->incr_cmd = kzalloc(sizeof(struct priv_cmd_entry),
-					GFP_KERNEL);
+		job->incr_cmd = nvgpu_kzalloc(g, sizeof(struct priv_cmd_entry));
 
 	if (!job->incr_cmd) {
 		err = -ENOMEM;
@@ -3520,7 +3514,7 @@ static int gk20a_event_id_release(struct inode *inode, struct file *filp)
 
 	nvgpu_mutex_destroy(&event_id_data->lock);
 	gk20a_put(g);
-	kfree(event_id_data);
+	nvgpu_kfree(g, event_id_data);
 	filp->private_data = NULL;
 
 	return 0;
@@ -3588,7 +3582,7 @@ static int gk20a_channel_event_id_enable(struct channel_gk20a *ch,
 	int err = 0;
 	int local_fd;
 	struct file *file;
-	char *name;
+	char name[64];
 	struct gk20a_event_id_data *event_id_data;
 
 	g = gk20a_get(ch->g);
@@ -3608,18 +3602,16 @@ static int gk20a_channel_event_id_enable(struct channel_gk20a *ch,
 		goto free_ref;
 	local_fd = err;
 
-	name = kasprintf(GFP_KERNEL, "nvgpu-event%d-fd%d",
-			event_id, local_fd);
-
+	snprintf(name, sizeof(name), "nvgpu-event%d-fd%d",
+		 event_id, local_fd);
 	file = anon_inode_getfile(name, &gk20a_event_id_ops,
 				  NULL, O_RDWR);
-	kfree(name);
 	if (IS_ERR(file)) {
 		err = PTR_ERR(file);
 		goto clean_up;
 	}
 
-	event_id_data = kzalloc(sizeof(*event_id_data), GFP_KERNEL);
+	event_id_data = nvgpu_kzalloc(ch->g, sizeof(*event_id_data));
 	if (!event_id_data) {
 		err = -ENOMEM;
 		goto clean_up_file;

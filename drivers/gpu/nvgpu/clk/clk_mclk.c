@@ -14,6 +14,7 @@
 #include <linux/delay.h>
 
 #include <nvgpu/bios.h>
+#include <nvgpu/kmem.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
@@ -2216,8 +2217,7 @@ int clk_mclkseq_init_mclk_gddr5(struct gk20a *g)
 	mclk->p0_min = p0_info->min_mhz;
 
 
-	mclk->vreg_buf = kcalloc(VREG_COUNT,
-		sizeof(u32), GFP_KERNEL);
+	mclk->vreg_buf = nvgpu_kcalloc(g, VREG_COUNT, sizeof(u32));
 	if (!mclk->vreg_buf) {
 		gk20a_err(dev_from_gk20a(g),
 				"unable to allocate memory for VREG");

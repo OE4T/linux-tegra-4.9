@@ -11,18 +11,20 @@
  * more details.
  */
 
-#include "gk20a/gk20a.h"
 
 #include <linux/cdev.h>
 #include <linux/file.h>
 #include <linux/anon_inodes.h>
 #include <linux/nvgpu.h>
 #include <linux/bitops.h>
-#include <nvgpu/lock.h>
 #include <linux/rculist.h>
 #include <linux/llist.h>
-#include "clk/clk_arb.h"
 
+#include <nvgpu/lock.h>
+#include <nvgpu/kmem.h>
+
+#include "gk20a/gk20a.h"
+#include "clk/clk_arb.h"
 
 #define MAX_F_POINTS 256
 #define DEFAULT_EVENT_NUMBER 32
@@ -66,11 +68,11 @@ static void nvgpu_clk_arb_clear_global_alarm(struct gk20a *g, u32 alarm);
 static void nvgpu_clk_arb_queue_notification(struct gk20a *g,
 				struct nvgpu_clk_notification_queue *queue,
 				u32 alarm_mask);
-static int nvgpu_clk_notification_queue_alloc(
+static int nvgpu_clk_notification_queue_alloc(struct gk20a *g,
 				struct nvgpu_clk_notification_queue *queue,
 				size_t events_number);
 
-static void nvgpu_clk_notification_queue_free(
+static void nvgpu_clk_notification_queue_free(struct gk20a *g,
 				struct nvgpu_clk_notification_queue *queue);
 
 #define VF_POINT_INVALID_PSTATE ~0U
@@ -230,11 +232,11 @@ static const struct file_operations event_dev_ops = {
 	.unlocked_ioctl = nvgpu_clk_arb_ioctl_event_dev,
 };
 
-static int nvgpu_clk_notification_queue_alloc(
+static int nvgpu_clk_notification_queue_alloc(struct gk20a *g,
 				struct nvgpu_clk_notification_queue *queue,
 				size_t events_number) {
-	queue->notifications = kcalloc(events_number,
-		sizeof(struct nvgpu_clk_notification), GFP_KERNEL);
+	queue->notifications = nvgpu_kcalloc(g, events_number,
+		sizeof(struct nvgpu_clk_notification));
 	if (!queue->notifications)
 		return -ENOMEM;
 	queue->size = events_number;
@@ -245,9 +247,9 @@ static int nvgpu_clk_notification_queue_alloc(
 	return 0;
 }
 
-static void nvgpu_clk_notification_queue_free(
+static void nvgpu_clk_notification_queue_free(struct gk20a *g,
 		struct nvgpu_clk_notification_queue *queue) {
-	kfree(queue->notifications);
+	nvgpu_kfree(g, queue->notifications);
 	queue->size = 0;
 	atomic_set(&queue->head, 0);
 	atomic_set(&queue->tail, 0);
@@ -266,7 +268,7 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 	if (!g->ops.clk_arb.get_arbiter_clk_domains)
 		return 0;
 
-	arb = kzalloc(sizeof(struct nvgpu_clk_arb), GFP_KERNEL);
+	arb = nvgpu_kzalloc(g, sizeof(struct nvgpu_clk_arb));
 	if (!arb)
 		return -ENOMEM;
 
@@ -276,13 +278,13 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 	nvgpu_spinlock_init(&arb->sessions_lock);
 	nvgpu_spinlock_init(&arb->users_lock);
 
-	arb->mclk_f_points = kcalloc(MAX_F_POINTS, sizeof(u16), GFP_KERNEL);
+	arb->mclk_f_points = nvgpu_kcalloc(g, MAX_F_POINTS, sizeof(u16));
 	if (!arb->mclk_f_points) {
 		err = -ENOMEM;
 		goto init_fail;
 	}
 
-	arb->gpc2clk_f_points = kcalloc(MAX_F_POINTS, sizeof(u16), GFP_KERNEL);
+	arb->gpc2clk_f_points = nvgpu_kcalloc(g, MAX_F_POINTS, sizeof(u16));
 	if (!arb->gpc2clk_f_points) {
 		err = -ENOMEM;
 		goto init_fail;
@@ -293,16 +295,16 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 		table->gpc2clk_num_points = MAX_F_POINTS;
 		table->mclk_num_points = MAX_F_POINTS;
 
-		table->gpc2clk_points = kcalloc(MAX_F_POINTS,
-			sizeof(struct nvgpu_clk_vf_point), GFP_KERNEL);
+		table->gpc2clk_points = nvgpu_kcalloc(g, MAX_F_POINTS,
+			sizeof(struct nvgpu_clk_vf_point));
 		if (!table->gpc2clk_points) {
 			err = -ENOMEM;
 			goto init_fail;
 		}
 
 
-		table->mclk_points = kcalloc(MAX_F_POINTS,
-			sizeof(struct nvgpu_clk_vf_point), GFP_KERNEL);
+		table->mclk_points = nvgpu_kcalloc(g, MAX_F_POINTS,
+			sizeof(struct nvgpu_clk_vf_point));
 		if (!table->mclk_points) {
 			err = -ENOMEM;
 			goto init_fail;
@@ -335,7 +337,7 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 	atomic_set(&arb->req_nr, 0);
 
 	atomic64_set(&arb->alarm_mask, 0);
-	err = nvgpu_clk_notification_queue_alloc(&arb->notification_queue,
+	err = nvgpu_clk_notification_queue_alloc(g, &arb->notification_queue,
 		DEFAULT_EVENT_NUMBER);
 	if (err < 0)
 		goto init_fail;
@@ -381,19 +383,18 @@ int nvgpu_clk_arb_init_arbiter(struct gk20a *g)
 	return arb->status;
 
 init_fail:
-
-	kfree(arb->gpc2clk_f_points);
-	kfree(arb->mclk_f_points);
+	nvgpu_kfree(g, arb->gpc2clk_f_points);
+	nvgpu_kfree(g, arb->mclk_f_points);
 
 	for (index = 0; index < 2; index++) {
-		kfree(arb->vf_table_pool[index].gpc2clk_points);
-		kfree(arb->vf_table_pool[index].mclk_points);
+		nvgpu_kfree(g, arb->vf_table_pool[index].gpc2clk_points);
+		nvgpu_kfree(g, arb->vf_table_pool[index].mclk_points);
 	}
 
 	nvgpu_mutex_destroy(&arb->pstate_lock);
 
 mutex_fail:
-	kfree(arb);
+	nvgpu_kfree(g, arb);
 
 	return err;
 }
@@ -478,7 +479,7 @@ void nvgpu_clk_arb_cleanup_arbiter(struct gk20a *g)
 	}
 
 	nvgpu_mutex_destroy(&g->clk_arb->pstate_lock);
-	kfree(g->clk_arb);
+	nvgpu_kfree(g, g->clk_arb);
 	g->clk_arb = NULL;
 }
 
@@ -488,19 +489,19 @@ static int nvgpu_clk_arb_install_fd(struct gk20a *g,
 		struct nvgpu_clk_dev **_dev)
 {
 	struct file *file;
-	char *name;
 	int fd;
 	int err;
-	struct nvgpu_clk_dev *dev;
 	int status;
+	char name[64];
+	struct nvgpu_clk_dev *dev;
 
 	gk20a_dbg_fn("");
 
-	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
+	dev = nvgpu_kzalloc(g, sizeof(*dev));
 	if (!dev)
 		return -ENOMEM;
 
-	status = nvgpu_clk_notification_queue_alloc(&dev->queue,
+	status = nvgpu_clk_notification_queue_alloc(g, &dev->queue,
 		DEFAULT_EVENT_NUMBER);
 	if (status < 0)  {
 		err = status;
@@ -513,9 +514,8 @@ static int nvgpu_clk_arb_install_fd(struct gk20a *g,
 		goto fail;
 	}
 
-	name = kasprintf(GFP_KERNEL, "%s-clk-fd%d", dev_name(g->dev), fd);
+	snprintf(name, sizeof(name), "%s-clk-fd%d", dev_name(g->dev), fd);
 	file = anon_inode_getfile(name, fops, dev, O_RDWR);
-	kfree(name);
 	if (IS_ERR(file)) {
 		err = PTR_ERR(file);
 		goto fail_fd;
@@ -539,7 +539,7 @@ static int nvgpu_clk_arb_install_fd(struct gk20a *g,
 fail_fd:
 	put_unused_fd(fd);
 fail:
-	kfree(dev);
+	nvgpu_kfree(g, dev);
 
 	return err;
 }
@@ -555,7 +555,7 @@ int nvgpu_clk_arb_init_session(struct gk20a *g,
 	if (!g->ops.clk_arb.get_arbiter_clk_domains)
 		return 0;
 
-	session = kzalloc(sizeof(struct nvgpu_clk_session), GFP_KERNEL);
+	session = nvgpu_kzalloc(g, sizeof(struct nvgpu_clk_session));
 	if (!session)
 		return -ENOMEM;
 	session->g = g;
@@ -584,8 +584,9 @@ static void nvgpu_clk_arb_free_fd(struct kref *refcount)
 {
 	struct nvgpu_clk_dev *dev = container_of(refcount,
 			struct nvgpu_clk_dev, refcount);
+	struct nvgpu_clk_session *session = dev->session;
 
-	kfree(dev);
+	nvgpu_kfree(session->g, dev);
 }
 
 static void nvgpu_clk_arb_free_session(struct kref *refcount)
@@ -593,6 +594,7 @@ static void nvgpu_clk_arb_free_session(struct kref *refcount)
 	struct nvgpu_clk_session *session = container_of(refcount,
 			struct nvgpu_clk_session, refcount);
 	struct nvgpu_clk_arb *arb = session->g->clk_arb;
+	struct gk20a *g = session->g;
 	struct nvgpu_clk_dev *dev, *tmp;
 	struct llist_node *head;
 
@@ -609,7 +611,7 @@ static void nvgpu_clk_arb_free_session(struct kref *refcount)
 		kref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
 	}
 	synchronize_rcu();
-	kfree(session);
+	nvgpu_kfree(g, session);
 }
 
 void nvgpu_clk_arb_release_session(struct gk20a *g,
@@ -1618,12 +1620,11 @@ static int nvgpu_clk_arb_release_event_dev(struct inode *inode,
 		nvgpu_spinlock_acquire(&arb->users_lock);
 		list_del_rcu(&dev->link);
 		nvgpu_spinlock_release(&arb->users_lock);
+		nvgpu_clk_notification_queue_free(arb->g, &dev->queue);
 	}
 
 	synchronize_rcu();
 	kref_put(&session->refcount, nvgpu_clk_arb_free_session);
-
-	nvgpu_clk_notification_queue_free(&dev->queue);
 	kref_put(&dev->refcount, nvgpu_clk_arb_free_fd);
 
 	return 0;

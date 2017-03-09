@@ -13,6 +13,8 @@
 
 #include <nvgpu/bios.h>
 
+#include <nvgpu/kmem.h>
+
 #include "gk20a/gk20a.h"
 #include "clk.h"
 #include "clk_prog.h"
@@ -613,7 +615,7 @@ static u32 clk_prog_construct_1x_master(struct gk20a *g,
 			getslaveclk_prog_1x_master;
 
 	pclkprog->p_vf_entries = (struct ctrl_clk_clk_prog_1x_master_vf_entry *)
-		kzalloc(vfsize, GFP_KERNEL);
+		nvgpu_kzalloc(g, vfsize);
 
 	memcpy(pclkprog->p_vf_entries, ptmpprog->p_vf_entries, vfsize);
 
@@ -658,7 +660,7 @@ static u32 clk_prog_construct_1x_master_ratio(struct gk20a *g,
 
 	pclkprog->p_slave_entries =
 		(struct ctrl_clk_clk_prog_1x_master_ratio_slave_entry *)
-		kzalloc(slavesize, GFP_KERNEL);
+		nvgpu_kzalloc(g, slavesize);
 	if (!pclkprog->p_slave_entries)
 		return -ENOMEM;
 
@@ -699,7 +701,7 @@ static u32 clk_prog_construct_1x_master_table(struct gk20a *g,
 
 	pclkprog->p_slave_entries =
 		(struct ctrl_clk_clk_prog_1x_master_table_slave_entry *)
-		kzalloc(slavesize, GFP_KERNEL);
+		nvgpu_kzalloc(g, slavesize);
 
 	if (!pclkprog->p_slave_entries) {
 		status = -ENOMEM;

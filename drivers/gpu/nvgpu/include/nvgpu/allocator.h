@@ -20,6 +20,7 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/platform_device.h>
+
 #include <nvgpu/lock.h>
 
 /* #define ALLOCATOR_DEBUG */
@@ -78,6 +79,8 @@ struct nvgpu_allocator_ops {
 };
 
 struct nvgpu_allocator {
+	struct gk20a *g;
+
 	char name[32];
 	struct nvgpu_mutex lock;
 
@@ -238,13 +241,18 @@ void nvgpu_alloc_destroy(struct nvgpu_allocator *allocator);
 void nvgpu_alloc_print_stats(struct nvgpu_allocator *a,
 			     struct seq_file *s, int lock);
 
+static inline struct gk20a *nvgpu_alloc_to_gpu(struct nvgpu_allocator *a)
+{
+	return a->g;
+}
+
 /*
  * Common functionality for the internals of the allocators.
  */
 void nvgpu_init_alloc_debug(struct gk20a *g, struct nvgpu_allocator *a);
 void nvgpu_fini_alloc_debug(struct nvgpu_allocator *a);
 
-int  __nvgpu_alloc_common_init(struct nvgpu_allocator *a,
+int  __nvgpu_alloc_common_init(struct nvgpu_allocator *a, struct gk20a *g,
 			       const char *name, void *priv, bool dbg,
 			       const struct nvgpu_allocator_ops *ops);
 

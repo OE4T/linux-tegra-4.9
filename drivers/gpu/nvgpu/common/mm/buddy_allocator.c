@@ -18,6 +18,7 @@
 #include <linux/slab.h>
 
 #include <nvgpu/allocator.h>
+#include <nvgpu/kmem.h>
 
 #include "gk20a/mm_gk20a.h"
 #include "gk20a/platform_gk20a.h"
@@ -304,7 +305,7 @@ static void nvgpu_buddy_allocator_destroy(struct nvgpu_allocator *__a)
 	}
 
 	nvgpu_kmem_cache_destroy(a->buddy_cache);
-	kfree(a);
+	nvgpu_kfree(nvgpu_alloc_to_gpu(__a), a);
 
 	alloc_unlock(__a);
 }
@@ -809,7 +810,7 @@ static void __balloc_do_free_fixed(struct nvgpu_buddy_allocator *a,
 		balloc_coalesce(a, bud);
 	}
 
-	kfree(falloc);
+	nvgpu_kfree(nvgpu_alloc_to_gpu(a->owner), falloc);
 }
 
 /*
@@ -893,7 +894,7 @@ static u64 __nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *__a,
 			goto fail;
 	}
 
-	falloc = kmalloc(sizeof(*falloc), GFP_KERNEL);
+	falloc = nvgpu_kmalloc(nvgpu_alloc_to_gpu(__a), sizeof(*falloc));
 	if (!falloc)
 		goto fail;
 
@@ -932,7 +933,7 @@ static u64 __nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *__a,
 fail_unlock:
 	alloc_unlock(__a);
 fail:
-	kfree(falloc);
+	nvgpu_kfree(nvgpu_alloc_to_gpu(__a), falloc);
 	nvgpu_alloc_trace_func_done();
 	return 0;
 }
@@ -1261,11 +1262,11 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	if (flags & GPU_ALLOC_GVA_SPACE && !vm)
 		return -EINVAL;
 
-	a = kzalloc(sizeof(struct nvgpu_buddy_allocator), GFP_KERNEL);
+	a = nvgpu_kzalloc(g, sizeof(struct nvgpu_buddy_allocator));
 	if (!a)
 		return -ENOMEM;
 
-	err = __nvgpu_alloc_common_init(__a, name, a, false, &buddy_ops);
+	err = __nvgpu_alloc_common_init(__a, g, name, a, false, &buddy_ops);
 	if (err)
 		goto fail;
 
@@ -1339,7 +1340,7 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 fail:
 	if (a->buddy_cache)
 		nvgpu_kmem_cache_destroy(a->buddy_cache);
-	kfree(a);
+	nvgpu_kfree(g, a);
 	return err;
 }
 

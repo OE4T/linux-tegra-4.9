@@ -20,8 +20,7 @@
 #include <linux/list.h>
 #include <linux/rbtree.h>
 
-#include <nvgpu/kmem.h>
-
+struct nvgpu_kmem_cache;
 struct nvgpu_allocator;
 struct vm_gk20a;
 

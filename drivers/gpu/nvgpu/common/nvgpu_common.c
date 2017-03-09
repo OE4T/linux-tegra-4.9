@@ -17,10 +17,11 @@
 #include <linux/dma-mapping.h>
 #include <linux/firmware.h>
 
+#include <nvgpu/kmem.h>
+#include <nvgpu/nvgpu_common.h>
+
 #include "gk20a/gk20a_scale.h"
 #include "gk20a/gk20a.h"
-
-#include <nvgpu/nvgpu_common.h>
 
 #define EMC3D_DEFAULT_RATIO 750
 
@@ -164,7 +165,7 @@ int nvgpu_probe(struct gk20a *g,
 	gk20a_create_sysfs(g->dev);
 	gk20a_debug_init(g->dev, debugfs_symlink);
 
-	g->dbg_regops_tmp_buf = kzalloc(SZ_4K, GFP_KERNEL);
+	g->dbg_regops_tmp_buf = nvgpu_kzalloc(g, SZ_4K);
 	if (!g->dbg_regops_tmp_buf) {
 		dev_err(g->dev, "couldn't allocate regops tmp buf");
 		return -ENOMEM;
@@ -190,7 +191,8 @@ static const struct firmware *do_request_firmware(struct device *dev,
 		path_len = strlen(prefix) + strlen(fw_name);
 		path_len += 2; /* for the path separator and zero terminator*/
 
-		fw_path = kzalloc(sizeof(*fw_path) * path_len, GFP_KERNEL);
+		fw_path = nvgpu_kzalloc(get_gk20a(dev),
+					sizeof(*fw_path) * path_len);
 		if (!fw_path)
 			return NULL;
 
@@ -207,7 +209,7 @@ static const struct firmware *do_request_firmware(struct device *dev,
 		err = request_firmware(&fw, fw_name, dev);
 #endif
 
-	kfree(fw_path);
+	nvgpu_kfree(get_gk20a(dev), fw_path);
 	if (err)
 		return NULL;
 	return fw;

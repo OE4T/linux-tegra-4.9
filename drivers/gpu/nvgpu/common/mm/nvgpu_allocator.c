@@ -123,7 +123,7 @@ void nvgpu_alloc_destroy(struct nvgpu_allocator *a)
 /*
  * Handle the common init stuff for a nvgpu_allocator.
  */
-int __nvgpu_alloc_common_init(struct nvgpu_allocator *a,
+int __nvgpu_alloc_common_init(struct nvgpu_allocator *a, struct gk20a *g,
 			      const char *name, void *priv, bool dbg,
 			      const struct nvgpu_allocator_ops *ops)
 {
@@ -143,6 +143,7 @@ int __nvgpu_alloc_common_init(struct nvgpu_allocator *a,
 	if (err)
 		return err;
 
+	a->g = g;
 	a->ops = ops;
 	a->priv = priv;
 	a->debug = dbg;

@@ -20,6 +20,7 @@
 #include <linux/atomic.h>
 
 #include <nvgpu/allocator.h>
+#include <nvgpu/kmem.h>
 
 #include "lockless_allocator_priv.h"
 
@@ -106,7 +107,7 @@ static void nvgpu_lockless_alloc_destroy(struct nvgpu_allocator *a)
 	nvgpu_fini_alloc_debug(a);
 
 	vfree(pa->next);
-	kfree(pa);
+	nvgpu_kfree(nvgpu_alloc_to_gpu(a), pa);
 }
 
 static void nvgpu_lockless_print_stats(struct nvgpu_allocator *a,
@@ -154,7 +155,7 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 		return -EINVAL;
 
 	/*
-	 * Ensure we have space for atleast one node & there's no overflow.
+	 * Ensure we have space for at least one node & there's no overflow.
 	 * In order to control memory footprint, we require count < INT_MAX
 	 */
 	count = length;
@@ -162,11 +163,11 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	if (!base || !count || count > INT_MAX)
 		return -EINVAL;
 
-	a = kzalloc(sizeof(struct nvgpu_lockless_allocator), GFP_KERNEL);
+	a = nvgpu_kzalloc(g, sizeof(struct nvgpu_lockless_allocator));
 	if (!a)
 		return -ENOMEM;
 
-	err = __nvgpu_alloc_common_init(__a, name, a, false, &pool_ops);
+	err = __nvgpu_alloc_common_init(__a, g, name, a, false, &pool_ops);
 	if (err)
 		goto fail;
 
@@ -202,6 +203,6 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	return 0;
 
 fail:
-	kfree(a);
+	nvgpu_kfree(g, a);
 	return err;
 }

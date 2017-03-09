@@ -20,6 +20,10 @@
 #include <linux/slab.h>
 
 #include <nvgpu/semaphore.h>
+#include <nvgpu/kmem.h>
+
+#include "gk20a/gk20a.h"
+#include "gk20a/mm_gk20a.h"
 
 #define __lock_sema_sea(s)						\
 	do {								\
@@ -83,7 +87,7 @@ struct nvgpu_semaphore_sea *nvgpu_semaphore_sea_create(struct gk20a *g)
 	if (g->sema_sea)
 		return g->sema_sea;
 
-	g->sema_sea = kzalloc(sizeof(*g->sema_sea), GFP_KERNEL);
+	g->sema_sea = nvgpu_kzalloc(g, sizeof(*g->sema_sea));
 	if (!g->sema_sea)
 		return NULL;
 
@@ -103,7 +107,7 @@ struct nvgpu_semaphore_sea *nvgpu_semaphore_sea_create(struct gk20a *g)
 cleanup_destroy:
 	nvgpu_mutex_destroy(&g->sema_sea->sea_lock);
 cleanup_free:
-	kfree(g->sema_sea);
+	nvgpu_kfree(g, g->sema_sea);
 	g->sema_sea = NULL;
 	gpu_sema_dbg("Failed to creat semaphore sea!");
 	return NULL;
@@ -131,7 +135,7 @@ struct nvgpu_semaphore_pool *nvgpu_semaphore_pool_alloc(
 	unsigned long page_idx;
 	int ret, err = 0;
 
-	p = kzalloc(sizeof(*p), GFP_KERNEL);
+	p = nvgpu_kzalloc(sea->gk20a, sizeof(*p));
 	if (!p)
 		return ERR_PTR(-ENOMEM);
 
@@ -168,7 +172,7 @@ fail_alloc:
 	nvgpu_mutex_destroy(&p->pool_lock);
 fail:
 	__unlock_sema_sea(sea);
-	kfree(p);
+	nvgpu_kfree(sea->gk20a, p);
 	gpu_sema_dbg("Failed to allocate semaphore pool!");
 	return ERR_PTR(err);
 }
@@ -191,7 +195,8 @@ int nvgpu_semaphore_pool_map(struct nvgpu_semaphore_pool *p,
 	gpu_sema_dbg("  %d: CPU VA = 0x%p!", p->page_idx, p->cpu_va);
 
 	/* First do the RW mapping. */
-	p->rw_sg_table = kzalloc(sizeof(*p->rw_sg_table), GFP_KERNEL);
+	p->rw_sg_table = nvgpu_kzalloc(p->sema_sea->gk20a,
+				       sizeof(*p->rw_sg_table));
 	if (!p->rw_sg_table)
 		return -ENOMEM;
 
@@ -261,7 +266,7 @@ fail_unmap_sgt:
 fail_free_sgt:
 	sg_free_table(p->rw_sg_table);
 fail:
-	kfree(p->rw_sg_table);
+	nvgpu_kfree(p->sema_sea->gk20a, p->rw_sg_table);
 	p->rw_sg_table = NULL;
 	gpu_sema_dbg("  %d: Failed to map semaphore pool!", p->page_idx);
 	return err;
@@ -292,7 +297,7 @@ void nvgpu_semaphore_pool_unmap(struct nvgpu_semaphore_pool *p,
 		     DMA_BIDIRECTIONAL);
 
 	sg_free_table(p->rw_sg_table);
-	kfree(p->rw_sg_table);
+	nvgpu_kfree(p->sema_sea->gk20a, p->rw_sg_table);
 	p->rw_sg_table = NULL;
 
 	list_for_each_entry(hw_sema, &p->hw_semas, hw_sema_list)
@@ -325,12 +330,12 @@ static void nvgpu_semaphore_pool_free(struct kref *ref)
 	__unlock_sema_sea(s);
 
 	list_for_each_entry_safe(hw_sema, tmp, &p->hw_semas, hw_sema_list)
-		kfree(hw_sema);
+		nvgpu_kfree(p->sema_sea->gk20a, hw_sema);
 
 	nvgpu_mutex_destroy(&p->pool_lock);
 
 	gpu_sema_dbg("Freed semaphore pool! (idx=%d)", p->page_idx);
-	kfree(p);
+	nvgpu_kfree(p->sema_sea->gk20a, p);
 }
 
 void nvgpu_semaphore_pool_get(struct nvgpu_semaphore_pool *p)
@@ -374,7 +379,7 @@ static int __nvgpu_init_hw_sema(struct channel_gk20a *ch)
 		goto fail;
 	}
 
-	hw_sema = kzalloc(sizeof(struct nvgpu_semaphore_int), GFP_KERNEL);
+	hw_sema = nvgpu_kzalloc(ch->g, sizeof(struct nvgpu_semaphore_int));
 	if (!hw_sema) {
 		ret = -ENOMEM;
 		goto fail_free_idx;
@@ -417,7 +422,7 @@ void nvgpu_semaphore_free_hw_sema(struct channel_gk20a *ch)
 
 	/* Make sure that when the ch is re-opened it will get a new HW sema. */
 	list_del(&ch->hw_sema->hw_sema_list);
-	kfree(ch->hw_sema);
+	nvgpu_kfree(ch->g, ch->hw_sema);
 	ch->hw_sema = NULL;
 
 	nvgpu_mutex_release(&p->pool_lock);
@@ -440,7 +445,7 @@ struct nvgpu_semaphore *nvgpu_semaphore_alloc(struct channel_gk20a *ch)
 			return NULL;
 	}
 
-	s = kzalloc(sizeof(*s), GFP_KERNEL);
+	s = nvgpu_kzalloc(ch->g, sizeof(*s));
 	if (!s)
 		return NULL;
 
@@ -466,7 +471,7 @@ static void nvgpu_semaphore_free(struct kref *ref)
 
 	nvgpu_semaphore_pool_put(s->hw_sema->p);
 
-	kfree(s);
+	nvgpu_kfree(s->hw_sema->ch->g, s);
 }
 
 void nvgpu_semaphore_put(struct nvgpu_semaphore *s)

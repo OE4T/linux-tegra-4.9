@@ -21,6 +21,7 @@
 
 #include <nvgpu/allocator.h>
 #include <nvgpu/page_allocator.h>
+#include <nvgpu/kmem.h>
 
 #include "buddy_allocator_priv.h"
 
@@ -760,7 +761,7 @@ static void nvgpu_page_allocator_destroy(struct nvgpu_allocator *__a)
 	struct nvgpu_page_allocator *a = page_allocator(__a);
 
 	alloc_lock(__a);
-	kfree(a);
+	nvgpu_kfree(nvgpu_alloc_to_gpu(__a), a);
 	__a->priv = NULL;
 	alloc_unlock(__a);
 }
@@ -848,9 +849,9 @@ static int nvgpu_page_alloc_init_slabs(struct nvgpu_page_allocator *a)
 	size_t nr_slabs = ilog2(a->page_size >> 12);
 	unsigned int i;
 
-	a->slabs = kcalloc(nr_slabs,
-			   sizeof(struct page_alloc_slab),
-			   GFP_KERNEL);
+	a->slabs = nvgpu_kcalloc(nvgpu_alloc_to_gpu(a->owner),
+				 nr_slabs,
+				 sizeof(struct page_alloc_slab));
 	if (!a->slabs)
 		return -ENOMEM;
 	a->nr_slabs = nr_slabs;
@@ -881,11 +882,11 @@ int nvgpu_page_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	if (blk_size < SZ_4K)
 		return -EINVAL;
 
-	a = kzalloc(sizeof(struct nvgpu_page_allocator), GFP_KERNEL);
+	a = nvgpu_kzalloc(g, sizeof(struct nvgpu_page_allocator));
 	if (!a)
 		return -ENOMEM;
 
-	err = __nvgpu_alloc_common_init(__a, name, a, false, &page_ops);
+	err = __nvgpu_alloc_common_init(__a, g, name, a, false, &page_ops);
 	if (err)
 		goto fail;
 
@@ -938,6 +939,6 @@ fail:
 		nvgpu_kmem_cache_destroy(a->chunk_cache);
 	if (a->slab_page_cache)
 		nvgpu_kmem_cache_destroy(a->slab_page_cache);
-	kfree(a);
+	nvgpu_kfree(g, a);
 	return err;
 }

@@ -19,6 +19,7 @@
 #include <linux/bitops.h>
 
 #include <nvgpu/allocator.h>
+#include <nvgpu/kmem.h>
 
 #include "bitmap_allocator_priv.h"
 
@@ -248,12 +249,11 @@ static u64 nvgpu_bitmap_alloc(struct nvgpu_allocator *__a, u64 len)
 
 	/*
 	 * Only do meta-data storage if we are allowed to allocate storage for
-	 * that meta-data. The issue with using kmalloc() and friends is that
+	 * that meta-data. The issue with using malloc and friends is that
 	 * in latency and success critical paths an alloc_page() call can either
-	 * sleep for potentially a long time or, assuming GFP_ATOMIC, fail.
-	 * Since we might not want either of these possibilities assume that the
-	 * caller will keep what data it needs around to successfully free this
-	 * allocation.
+	 * sleep for potentially a long time or fail. Since we might not want
+	 * either of these possibilities assume that the caller will keep what
+	 * data it needs around to successfully free this allocation.
 	 */
 	if (!(a->flags & GPU_ALLOC_NO_ALLOC_PAGE) &&
 	    __nvgpu_bitmap_store_alloc(a, addr, blks * a->blk_size))
@@ -332,8 +332,8 @@ static void nvgpu_bitmap_alloc_destroy(struct nvgpu_allocator *__a)
 	}
 
 	nvgpu_kmem_cache_destroy(a->meta_data_cache);
-	kfree(a->bitmap);
-	kfree(a);
+	nvgpu_kfree(nvgpu_alloc_to_gpu(__a), a->bitmap);
+	nvgpu_kfree(nvgpu_alloc_to_gpu(__a), a);
 }
 
 static void nvgpu_bitmap_print_stats(struct nvgpu_allocator *__a,
@@ -397,11 +397,11 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 		length -= blk_size;
 	}
 
-	a = kzalloc(sizeof(struct nvgpu_bitmap_allocator), GFP_KERNEL);
+	a = nvgpu_kzalloc(g, sizeof(struct nvgpu_bitmap_allocator));
 	if (!a)
 		return -ENOMEM;
 
-	err = __nvgpu_alloc_common_init(__a, name, a, false, &bitmap_ops);
+	err = __nvgpu_alloc_common_init(__a, g, name, a, false, &bitmap_ops);
 	if (err)
 		goto fail;
 
@@ -422,8 +422,8 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	a->bit_offs = a->base >> a->blk_shift;
 	a->flags = flags;
 
-	a->bitmap = kcalloc(BITS_TO_LONGS(a->num_bits), sizeof(*a->bitmap),
-			    GFP_KERNEL);
+	a->bitmap = nvgpu_kcalloc(g, BITS_TO_LONGS(a->num_bits),
+				  sizeof(*a->bitmap));
 	if (!a->bitmap) {
 		err = -ENOMEM;
 		goto fail;
@@ -445,6 +445,6 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 fail:
 	if (a->meta_data_cache)
 		nvgpu_kmem_cache_destroy(a->meta_data_cache);
-	kfree(a);
+	nvgpu_kfree(g, a);
 	return err;
 }

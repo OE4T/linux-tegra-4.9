@@ -17,12 +17,12 @@
 #include <linux/pci.h>
 
 #include <nvgpu/bios.h>
+#include <nvgpu/kmem.h>
+#include <nvgpu/nvgpu_common.h>
 
 #include "gk20a/gk20a.h"
 #include "gm20b/fifo_gm20b.h"
 #include "bios_gm206.h"
-
-#include <nvgpu/nvgpu_common.h>
 
 #include <nvgpu/hw/gm206/hw_pwr_gm206.h>
 #include <nvgpu/hw/gm206/hw_mc_gm206.h>
@@ -260,7 +260,7 @@ int gm206_bios_init(struct gk20a *g)
 	} else {
 		gk20a_dbg_info("reading bios from EEPROM");
 		g->bios.size = BIOS_SIZE;
-		g->bios.data = vmalloc(BIOS_SIZE);
+		g->bios.data = nvgpu_vmalloc(g, BIOS_SIZE);
 		if (!g->bios.data)
 			return -ENOMEM;
 		g->ops.xve.disable_shadow_rom(g);

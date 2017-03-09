@@ -49,8 +49,6 @@ int eqos_probe(struct platform_device *);
 
 int eqos_remove(struct platform_device *);
 
-static void eqos_shutdown(struct platform_device *);
-
 #if 0
 static INT eqos_suspend_late(struct platform_device *, pm_message_t);
 

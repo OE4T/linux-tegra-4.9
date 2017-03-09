@@ -394,6 +394,7 @@ config TEGRA_CRYPTO_DEV
 
 config CRYPTO_DEV_TEGRA_ELLIPTIC_SE
 	tristate "Tegra SE for Elliptic crypto algorithms"
+	select CRYPTO_ECDH
 	select CRYPTO_ECDSA
 	help
 	  This option allows you to have support of Security Engine

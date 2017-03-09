@@ -71,8 +71,8 @@ static void gk20a_debug_dump_all_channel_status_ramfc(struct gk20a *g,
 		struct channel_gk20a *ch = &f->channel[chid];
 		if (gk20a_channel_get(ch)) {
 			ch_state[chid] =
-				kmalloc(sizeof(struct ch_state) +
-					ram_in_alloc_size_v(), GFP_KERNEL);
+				nvgpu_kmalloc(g, sizeof(struct ch_state) +
+					ram_in_alloc_size_v());
 			/* ref taken stays to below loop with
 			 * successful allocs */
 			if (!ch_state[chid])
@@ -96,10 +96,10 @@ static void gk20a_debug_dump_all_channel_status_ramfc(struct gk20a *g,
 		if (ch_state[chid]) {
 			g->ops.fifo.dump_channel_status_ramfc(g, o, chid,
 						 ch_state[chid]);
-			kfree(ch_state[chid]);
+			nvgpu_kfree(g, ch_state[chid]);
 		}
 	}
-	kfree(ch_state);
+	nvgpu_kfree(g, ch_state);
 }
 
 void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o)

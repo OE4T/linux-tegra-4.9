@@ -18,6 +18,8 @@
 #ifndef __GR_CTX_GK20A_H__
 #define __GR_CTX_GK20A_H__
 
+#include <nvgpu/kmem.h>
+
 struct gr_gk20a;
 
 /* production netlist, one and only one from below */
@@ -145,23 +147,24 @@ struct ctxsw_buf_offset_map_entry {
 };
 
 static inline
-struct av_gk20a *alloc_av_list_gk20a(struct av_list_gk20a *avl)
+struct av_gk20a *alloc_av_list_gk20a(struct gk20a *g, struct av_list_gk20a *avl)
 {
-	avl->l = kzalloc(avl->count * sizeof(*avl->l), GFP_KERNEL);
+	avl->l = nvgpu_kzalloc(g, avl->count * sizeof(*avl->l));
 	return avl->l;
 }
 
 static inline
-struct aiv_gk20a *alloc_aiv_list_gk20a(struct aiv_list_gk20a *aivl)
+struct aiv_gk20a *alloc_aiv_list_gk20a(struct gk20a *g,
+				       struct aiv_list_gk20a *aivl)
 {
-	aivl->l = kzalloc(aivl->count * sizeof(*aivl->l), GFP_KERNEL);
+	aivl->l = nvgpu_kzalloc(g, aivl->count * sizeof(*aivl->l));
 	return aivl->l;
 }
 
 static inline
-u32 *alloc_u32_list_gk20a(struct u32_list_gk20a *u32l)
+u32 *alloc_u32_list_gk20a(struct gk20a *g, struct u32_list_gk20a *u32l)
 {
-	u32l->l = kzalloc(u32l->count * sizeof(*u32l->l), GFP_KERNEL);
+	u32l->l = nvgpu_kzalloc(g, u32l->count * sizeof(*u32l->l));
 	return u32l->l;
 }
 

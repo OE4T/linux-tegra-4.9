@@ -340,7 +340,7 @@ void gk20a_remove_support(struct gk20a *g)
 	tegra_unregister_idle_unidle();
 #endif
 	if (g->dbg_regops_tmp_buf)
-		kfree(g->dbg_regops_tmp_buf);
+		nvgpu_kfree(g, g->dbg_regops_tmp_buf);
 
 	if (g->pmu.remove_support)
 		g->pmu.remove_support(&g->pmu);

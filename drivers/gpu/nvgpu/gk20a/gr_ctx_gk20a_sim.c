@@ -71,23 +71,23 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 	gk20a_sim_esc_readl(g, "GRCTX_REG_LIST_PM_TPC_COUNT", 0,
 			    &g->gr.ctx_vars.ctxsw_regs.pm_tpc.count);
 
-	err |= !alloc_u32_list_gk20a(&g->gr.ctx_vars.ucode.fecs.inst);
-	err |= !alloc_u32_list_gk20a(&g->gr.ctx_vars.ucode.fecs.data);
-	err |= !alloc_u32_list_gk20a(&g->gr.ctx_vars.ucode.gpccs.inst);
-	err |= !alloc_u32_list_gk20a(&g->gr.ctx_vars.ucode.gpccs.data);
-	err |= !alloc_av_list_gk20a(&g->gr.ctx_vars.sw_bundle_init);
-	err |= !alloc_av_list_gk20a(&g->gr.ctx_vars.sw_method_init);
-	err |= !alloc_aiv_list_gk20a(&g->gr.ctx_vars.sw_ctx_load);
-	err |= !alloc_av_list_gk20a(&g->gr.ctx_vars.sw_non_ctx_load);
-	err |= !alloc_av_list_gk20a(&g->gr.ctx_vars.sw_veid_bundle_init);
-	err |= !alloc_aiv_list_gk20a(&g->gr.ctx_vars.ctxsw_regs.sys);
-	err |= !alloc_aiv_list_gk20a(&g->gr.ctx_vars.ctxsw_regs.gpc);
-	err |= !alloc_aiv_list_gk20a(&g->gr.ctx_vars.ctxsw_regs.tpc);
-	err |= !alloc_aiv_list_gk20a(&g->gr.ctx_vars.ctxsw_regs.zcull_gpc);
-	err |= !alloc_aiv_list_gk20a(&g->gr.ctx_vars.ctxsw_regs.ppc);
-	err |= !alloc_aiv_list_gk20a(&g->gr.ctx_vars.ctxsw_regs.pm_sys);
-	err |= !alloc_aiv_list_gk20a(&g->gr.ctx_vars.ctxsw_regs.pm_gpc);
-	err |= !alloc_aiv_list_gk20a(&g->gr.ctx_vars.ctxsw_regs.pm_tpc);
+	err |= !alloc_u32_list_gk20a(g, &g->gr.ctx_vars.ucode.fecs.inst);
+	err |= !alloc_u32_list_gk20a(g, &g->gr.ctx_vars.ucode.fecs.data);
+	err |= !alloc_u32_list_gk20a(g, &g->gr.ctx_vars.ucode.gpccs.inst);
+	err |= !alloc_u32_list_gk20a(g, &g->gr.ctx_vars.ucode.gpccs.data);
+	err |= !alloc_av_list_gk20a(g, &g->gr.ctx_vars.sw_bundle_init);
+	err |= !alloc_av_list_gk20a(g, &g->gr.ctx_vars.sw_method_init);
+	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.sw_ctx_load);
+	err |= !alloc_av_list_gk20a(g, &g->gr.ctx_vars.sw_non_ctx_load);
+	err |= !alloc_av_list_gk20a(g, &g->gr.ctx_vars.sw_veid_bundle_init);
+	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.sys);
+	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.gpc);
+	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.tpc);
+	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.zcull_gpc);
+	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.ppc);
+	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.pm_sys);
+	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.pm_gpc);
+	err |= !alloc_aiv_list_gk20a(g, &g->gr.ctx_vars.ctxsw_regs.pm_tpc);
 
 	if (err)
 		goto fail;
@@ -244,4 +244,3 @@ fail:
 	return err;
 
 }
-

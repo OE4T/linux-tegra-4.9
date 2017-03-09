@@ -22,17 +22,18 @@
 #include <linux/firmware.h>
 
 #include <nvgpu/nvgpu_common.h>
+#include <nvgpu/kmem.h>
 
 #include "gk20a.h"
 #include "gr_ctx_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
 
-static int gr_gk20a_alloc_load_netlist_u32(u32 *src, u32 len,
+static int gr_gk20a_alloc_load_netlist_u32(struct gk20a *g, u32 *src, u32 len,
 			struct u32_list_gk20a *u32_list)
 {
 	u32_list->count = (len + sizeof(u32) - 1) / sizeof(u32);
-	if (!alloc_u32_list_gk20a(u32_list))
+	if (!alloc_u32_list_gk20a(g, u32_list))
 		return -ENOMEM;
 
 	memcpy(u32_list->l, src, len);
@@ -40,11 +41,11 @@ static int gr_gk20a_alloc_load_netlist_u32(u32 *src, u32 len,
 	return 0;
 }
 
-static int gr_gk20a_alloc_load_netlist_av(u32 *src, u32 len,
+static int gr_gk20a_alloc_load_netlist_av(struct gk20a *g, u32 *src, u32 len,
 			struct av_list_gk20a *av_list)
 {
 	av_list->count = len / sizeof(struct av_gk20a);
-	if (!alloc_av_list_gk20a(av_list))
+	if (!alloc_av_list_gk20a(g, av_list))
 		return -ENOMEM;
 
 	memcpy(av_list->l, src, len);
@@ -52,11 +53,11 @@ static int gr_gk20a_alloc_load_netlist_av(u32 *src, u32 len,
 	return 0;
 }
 
-static int gr_gk20a_alloc_load_netlist_aiv(u32 *src, u32 len,
+static int gr_gk20a_alloc_load_netlist_aiv(struct gk20a *g, u32 *src, u32 len,
 			struct aiv_list_gk20a *aiv_list)
 {
 	aiv_list->count = len / sizeof(struct aiv_gk20a);
-	if (!alloc_aiv_list_gk20a(aiv_list))
+	if (!alloc_aiv_list_gk20a(g, aiv_list))
 		return -ENOMEM;
 
 	memcpy(aiv_list->l, src, len);
@@ -153,56 +154,56 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 			switch (netlist->regions[i].region_id) {
 			case NETLIST_REGIONID_FECS_UCODE_DATA:
 				gk20a_dbg_info("NETLIST_REGIONID_FECS_UCODE_DATA");
-				err = gr_gk20a_alloc_load_netlist_u32(
+				err = gr_gk20a_alloc_load_netlist_u32(g,
 					src, size, &g->gr.ctx_vars.ucode.fecs.data);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_FECS_UCODE_INST:
 				gk20a_dbg_info("NETLIST_REGIONID_FECS_UCODE_INST");
-				err = gr_gk20a_alloc_load_netlist_u32(
+				err = gr_gk20a_alloc_load_netlist_u32(g,
 					src, size, &g->gr.ctx_vars.ucode.fecs.inst);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_GPCCS_UCODE_DATA:
 				gk20a_dbg_info("NETLIST_REGIONID_GPCCS_UCODE_DATA");
-				err = gr_gk20a_alloc_load_netlist_u32(
+				err = gr_gk20a_alloc_load_netlist_u32(g,
 					src, size, &g->gr.ctx_vars.ucode.gpccs.data);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_GPCCS_UCODE_INST:
 				gk20a_dbg_info("NETLIST_REGIONID_GPCCS_UCODE_INST");
-				err = gr_gk20a_alloc_load_netlist_u32(
+				err = gr_gk20a_alloc_load_netlist_u32(g,
 					src, size, &g->gr.ctx_vars.ucode.gpccs.inst);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_SW_BUNDLE_INIT:
 				gk20a_dbg_info("NETLIST_REGIONID_SW_BUNDLE_INIT");
-				err = gr_gk20a_alloc_load_netlist_av(
+				err = gr_gk20a_alloc_load_netlist_av(g,
 					src, size, &g->gr.ctx_vars.sw_bundle_init);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_SW_METHOD_INIT:
 				gk20a_dbg_info("NETLIST_REGIONID_SW_METHOD_INIT");
-				err = gr_gk20a_alloc_load_netlist_av(
+				err = gr_gk20a_alloc_load_netlist_av(g,
 					src, size, &g->gr.ctx_vars.sw_method_init);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_SW_CTX_LOAD:
 				gk20a_dbg_info("NETLIST_REGIONID_SW_CTX_LOAD");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.sw_ctx_load);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_SW_NON_CTX_LOAD:
 				gk20a_dbg_info("NETLIST_REGIONID_SW_NON_CTX_LOAD");
-				err = gr_gk20a_alloc_load_netlist_av(
+				err = gr_gk20a_alloc_load_netlist_av(g,
 					src, size, &g->gr.ctx_vars.sw_non_ctx_load);
 				if (err)
 					goto clean_up;
@@ -210,7 +211,7 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 			case NETLIST_REGIONID_SWVEIDBUNDLEINIT:
 				gk20a_dbg_info(
 					"NETLIST_REGIONID_SW_VEID_BUNDLE_INIT");
-				err = gr_gk20a_alloc_load_netlist_av(
+				err = gr_gk20a_alloc_load_netlist_av(g,
 					src, size,
 					&g->gr.ctx_vars.sw_veid_bundle_init);
 				if (err)
@@ -218,56 +219,56 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 				break;
 			case NETLIST_REGIONID_CTXREG_SYS:
 				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_SYS");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.sys);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_CTXREG_GPC:
 				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_GPC");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.gpc);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_CTXREG_TPC:
 				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_TPC");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.tpc);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_CTXREG_ZCULL_GPC:
 				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_ZCULL_GPC");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.zcull_gpc);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_CTXREG_PPC:
 				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_PPC");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.ppc);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_CTXREG_PM_SYS:
 				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_PM_SYS");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.pm_sys);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_CTXREG_PM_GPC:
 				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_PM_GPC");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.pm_gpc);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_CTXREG_PM_TPC:
 				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_PM_TPC");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.pm_tpc);
 				if (err)
 					goto clean_up;
@@ -294,84 +295,84 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 				break;
 			case NETLIST_REGIONID_CTXREG_PMPPC:
 				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_PMPPC");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.pm_ppc);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_NVPERF_CTXREG_SYS:
 				gk20a_dbg_info("NETLIST_REGIONID_NVPERF_CTXREG_SYS");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.perf_sys);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_NVPERF_FBP_CTXREGS:
 				gk20a_dbg_info("NETLIST_REGIONID_NVPERF_FBP_CTXREGS");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.fbp);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_NVPERF_CTXREG_GPC:
 				gk20a_dbg_info("NETLIST_REGIONID_NVPERF_CTXREG_GPC");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.perf_gpc);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_NVPERF_FBP_ROUTER:
 				gk20a_dbg_info("NETLIST_REGIONID_NVPERF_FBP_ROUTER");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.fbp_router);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_NVPERF_GPC_ROUTER:
 				gk20a_dbg_info("NETLIST_REGIONID_NVPERF_GPC_ROUTER");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.gpc_router);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_CTXREG_PMLTC:
 				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_PMLTC");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.pm_ltc);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_CTXREG_PMFBPA:
 				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_PMFBPA");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.pm_fbpa);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_NVPERF_SYS_ROUTER:
 				gk20a_dbg_info("NETLIST_REGIONID_NVPERF_SYS_ROUTER");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.perf_sys_router);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_NVPERF_PMA:
 				gk20a_dbg_info("NETLIST_REGIONID_NVPERF_PMA");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.perf_pma);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_CTXREG_PMROP:
 				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_PMROP");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.pm_rop);
 				if (err)
 					goto clean_up;
 				break;
 			case NETLIST_REGIONID_CTXREG_PMUCGPC:
 				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_PMUCGPC");
-				err = gr_gk20a_alloc_load_netlist_aiv(
+				err = gr_gk20a_alloc_load_netlist_aiv(g,
 					src, size, &g->gr.ctx_vars.ctxsw_regs.pm_ucgpc);
 				if (err)
 					goto clean_up;
@@ -397,35 +398,35 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 
 clean_up:
 		g->gr.ctx_vars.valid = false;
-		kfree(g->gr.ctx_vars.ucode.fecs.inst.l);
-		kfree(g->gr.ctx_vars.ucode.fecs.data.l);
-		kfree(g->gr.ctx_vars.ucode.gpccs.inst.l);
-		kfree(g->gr.ctx_vars.ucode.gpccs.data.l);
-		kfree(g->gr.ctx_vars.sw_bundle_init.l);
-		kfree(g->gr.ctx_vars.sw_method_init.l);
-		kfree(g->gr.ctx_vars.sw_ctx_load.l);
-		kfree(g->gr.ctx_vars.sw_non_ctx_load.l);
-		kfree(g->gr.ctx_vars.sw_veid_bundle_init.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.sys.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.gpc.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.tpc.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.zcull_gpc.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.ppc.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.pm_sys.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.pm_gpc.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.pm_tpc.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.pm_ppc.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.perf_sys.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.fbp.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.perf_gpc.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.fbp_router.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.gpc_router.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.pm_ltc.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.pm_fbpa.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.perf_sys_router.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.perf_pma.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.pm_rop.l);
-		kfree(g->gr.ctx_vars.ctxsw_regs.pm_ucgpc.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ucode.fecs.inst.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ucode.fecs.data.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ucode.gpccs.inst.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ucode.gpccs.data.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.sw_bundle_init.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.sw_method_init.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.sw_ctx_load.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.sw_non_ctx_load.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.sw_veid_bundle_init.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.sys.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.gpc.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.tpc.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.zcull_gpc.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.ppc.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_sys.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_gpc.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_tpc.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_ppc.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.perf_sys.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.fbp.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.perf_gpc.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.fbp_router.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.gpc_router.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_ltc.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_fbpa.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.perf_sys_router.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.perf_pma.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_rop.l);
+		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_ucgpc.l);
 		release_firmware(netlist_fw);
 		err = -ENOENT;
 	}

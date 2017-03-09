@@ -22,7 +22,6 @@
 #include <linux/scatterlist.h>
 #include <linux/debugfs.h>
 #include <uapi/linux/nvgpu.h>
-#include <linux/vmalloc.h>
 #include <linux/dma-mapping.h>
 #include <linux/firmware.h>
 #include <linux/nvhost.h>
@@ -1250,8 +1249,8 @@ static int gr_gk20a_setup_alpha_beta_tables(struct gk20a *g,
 
 	gk20a_dbg_fn("");
 
-	map_alpha = kzalloc(3 * gr_pd_alpha_ratio_table__size_1_v() *
-				sizeof(u32), GFP_KERNEL);
+	map_alpha = nvgpu_kzalloc(g, 3 * gr_pd_alpha_ratio_table__size_1_v() *
+				  sizeof(u32));
 	if (!map_alpha)
 		return -ENOMEM;
 	map_beta = map_alpha + gr_pd_alpha_ratio_table__size_1_v();
@@ -1321,7 +1320,7 @@ static int gr_gk20a_setup_alpha_beta_tables(struct gk20a *g,
 		}
 	}
 
-	kfree(map_alpha);
+	nvgpu_kfree(g, map_alpha);
 	return 0;
 }
 
@@ -1744,14 +1743,14 @@ restore_fe_go_idle:
 	if (err)
 		goto clean_up;
 
-	kfree(gr->sm_error_states);
+	nvgpu_kfree(g, gr->sm_error_states);
 
 	/* we need to allocate this after g->ops.gr.init_fs_state() since
 	 * we initialize gr->no_of_sm in this function
 	 */
-	gr->sm_error_states = kzalloc(
+	gr->sm_error_states = nvgpu_kzalloc(g,
 			sizeof(struct nvgpu_dbg_gpu_sm_error_state_record)
-			* gr->no_of_sm, GFP_KERNEL);
+			* gr->no_of_sm);
 	if (!gr->sm_error_states) {
 		err = -ENOMEM;
 		goto restore_fe_go_idle;
@@ -1794,7 +1793,7 @@ restore_fe_go_idle:
 	if (gr->ctx_vars.local_golden_image == NULL) {
 
 		gr->ctx_vars.local_golden_image =
-			vzalloc(gr->ctx_vars.golden_image_size);
+			nvgpu_vzalloc(g, gr->ctx_vars.golden_image_size);
 
 		if (gr->ctx_vars.local_golden_image == NULL) {
 			err = -ENOMEM;
@@ -2949,7 +2948,7 @@ int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 	gr->ctx_vars.buffer_size = gr->ctx_vars.golden_image_size;
 	gr->ctx_vars.buffer_total_size = gr->ctx_vars.golden_image_size;
 
-	gr_ctx = kzalloc(sizeof(*gr_ctx), GFP_KERNEL);
+	gr_ctx = nvgpu_kzalloc(g, sizeof(*gr_ctx));
 	if (!gr_ctx)
 		return -ENOMEM;
 
@@ -2975,7 +2974,7 @@ int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
  err_free_mem:
 	gk20a_gmmu_free(g, &gr_ctx->mem);
  err_free_ctx:
-	kfree(gr_ctx);
+	nvgpu_kfree(g, gr_ctx);
 	gr_ctx = NULL;
 
 	return err;
@@ -3023,7 +3022,7 @@ void gr_gk20a_free_gr_ctx(struct gk20a *g,
 	gk20a_gmmu_unmap(vm, gr_ctx->mem.gpu_va,
 		gr_ctx->mem.size, gk20a_mem_flag_none);
 	gk20a_gmmu_free(g, &gr_ctx->mem);
-	kfree(gr_ctx);
+	nvgpu_kfree(g, gr_ctx);
 }
 
 void gr_gk20a_free_tsg_gr_ctx(struct tsg_gk20a *tsg)
@@ -3370,18 +3369,18 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 
 	memset(&gr->compbit_store, 0, sizeof(struct compbit_store_desc));
 
-	kfree(gr->sm_error_states);
-	kfree(gr->gpc_tpc_count);
-	kfree(gr->gpc_zcb_count);
-	kfree(gr->gpc_ppc_count);
-	kfree(gr->pes_tpc_count[0]);
-	kfree(gr->pes_tpc_count[1]);
-	kfree(gr->pes_tpc_mask[0]);
-	kfree(gr->pes_tpc_mask[1]);
-	kfree(gr->sm_to_cluster);
-	kfree(gr->gpc_skip_mask);
-	kfree(gr->map_tiles);
-	kfree(gr->fbp_rop_l2_en_mask);
+	nvgpu_kfree(g, gr->sm_error_states);
+	nvgpu_kfree(g, gr->gpc_tpc_count);
+	nvgpu_kfree(g, gr->gpc_zcb_count);
+	nvgpu_kfree(g, gr->gpc_ppc_count);
+	nvgpu_kfree(g, gr->pes_tpc_count[0]);
+	nvgpu_kfree(g, gr->pes_tpc_count[1]);
+	nvgpu_kfree(g, gr->pes_tpc_mask[0]);
+	nvgpu_kfree(g, gr->pes_tpc_mask[1]);
+	nvgpu_kfree(g, gr->sm_to_cluster);
+	nvgpu_kfree(g, gr->gpc_skip_mask);
+	nvgpu_kfree(g, gr->map_tiles);
+	nvgpu_kfree(g, gr->fbp_rop_l2_en_mask);
 	gr->gpc_tpc_count = NULL;
 	gr->gpc_zcb_count = NULL;
 	gr->gpc_ppc_count = NULL;
@@ -3394,31 +3393,31 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	gr->fbp_rop_l2_en_mask = NULL;
 
 	gr->ctx_vars.valid = false;
-	kfree(gr->ctx_vars.ucode.fecs.inst.l);
-	kfree(gr->ctx_vars.ucode.fecs.data.l);
-	kfree(gr->ctx_vars.ucode.gpccs.inst.l);
-	kfree(gr->ctx_vars.ucode.gpccs.data.l);
-	kfree(gr->ctx_vars.sw_bundle_init.l);
-	kfree(gr->ctx_vars.sw_veid_bundle_init.l);
-	kfree(gr->ctx_vars.sw_method_init.l);
-	kfree(gr->ctx_vars.sw_ctx_load.l);
-	kfree(gr->ctx_vars.sw_non_ctx_load.l);
-	kfree(gr->ctx_vars.ctxsw_regs.sys.l);
-	kfree(gr->ctx_vars.ctxsw_regs.gpc.l);
-	kfree(gr->ctx_vars.ctxsw_regs.tpc.l);
-	kfree(gr->ctx_vars.ctxsw_regs.zcull_gpc.l);
-	kfree(gr->ctx_vars.ctxsw_regs.ppc.l);
-	kfree(gr->ctx_vars.ctxsw_regs.pm_sys.l);
-	kfree(gr->ctx_vars.ctxsw_regs.pm_gpc.l);
-	kfree(gr->ctx_vars.ctxsw_regs.pm_tpc.l);
-	kfree(gr->ctx_vars.ctxsw_regs.pm_ppc.l);
-	kfree(gr->ctx_vars.ctxsw_regs.perf_sys.l);
-	kfree(gr->ctx_vars.ctxsw_regs.fbp.l);
-	kfree(gr->ctx_vars.ctxsw_regs.perf_gpc.l);
-	kfree(gr->ctx_vars.ctxsw_regs.fbp_router.l);
-	kfree(gr->ctx_vars.ctxsw_regs.gpc_router.l);
-	kfree(gr->ctx_vars.ctxsw_regs.pm_ltc.l);
-	kfree(gr->ctx_vars.ctxsw_regs.pm_fbpa.l);
+	nvgpu_kfree(g, gr->ctx_vars.ucode.fecs.inst.l);
+	nvgpu_kfree(g, gr->ctx_vars.ucode.fecs.data.l);
+	nvgpu_kfree(g, gr->ctx_vars.ucode.gpccs.inst.l);
+	nvgpu_kfree(g, gr->ctx_vars.ucode.gpccs.data.l);
+	nvgpu_kfree(g, gr->ctx_vars.sw_bundle_init.l);
+	nvgpu_kfree(g, gr->ctx_vars.sw_veid_bundle_init.l);
+	nvgpu_kfree(g, gr->ctx_vars.sw_method_init.l);
+	nvgpu_kfree(g, gr->ctx_vars.sw_ctx_load.l);
+	nvgpu_kfree(g, gr->ctx_vars.sw_non_ctx_load.l);
+	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.sys.l);
+	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.gpc.l);
+	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.tpc.l);
+	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.zcull_gpc.l);
+	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.ppc.l);
+	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.pm_sys.l);
+	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.pm_gpc.l);
+	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.pm_tpc.l);
+	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.pm_ppc.l);
+	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.perf_sys.l);
+	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.fbp.l);
+	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.perf_gpc.l);
+	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.fbp_router.l);
+	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.gpc_router.l);
+	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.pm_ltc.l);
+	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.pm_fbpa.l);
 
 	vfree(gr->ctx_vars.local_golden_image);
 	gr->ctx_vars.local_golden_image = NULL;
@@ -3464,7 +3463,7 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	gr->fbp_en_mask = g->ops.gr.get_fbp_en_mask(g);
 
 	gr->fbp_rop_l2_en_mask =
-		kzalloc(gr->max_fbps_count * sizeof(u32), GFP_KERNEL);
+		nvgpu_kzalloc(g, gr->max_fbps_count * sizeof(u32));
 	if (!gr->fbp_rop_l2_en_mask)
 		goto clean_up;
 
@@ -3491,14 +3490,14 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 		goto clean_up;
 	}
 
-	gr->gpc_tpc_count = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
-	gr->gpc_tpc_mask = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
-	gr->gpc_zcb_count = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
-	gr->gpc_ppc_count = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
+	gr->gpc_tpc_count = nvgpu_kzalloc(g, gr->gpc_count * sizeof(u32));
+	gr->gpc_tpc_mask = nvgpu_kzalloc(g, gr->gpc_count * sizeof(u32));
+	gr->gpc_zcb_count = nvgpu_kzalloc(g, gr->gpc_count * sizeof(u32));
+	gr->gpc_ppc_count = nvgpu_kzalloc(g, gr->gpc_count * sizeof(u32));
 
 	gr->gpc_skip_mask =
-		kzalloc(gr_pd_dist_skip_table__size_1_v() * 4 * sizeof(u32),
-			GFP_KERNEL);
+		nvgpu_kzalloc(g, gr_pd_dist_skip_table__size_1_v() *
+			      4 * sizeof(u32));
 
 	if (!gr->gpc_tpc_count || !gr->gpc_tpc_mask || !gr->gpc_zcb_count ||
 	    !gr->gpc_ppc_count || !gr->gpc_skip_mask)
@@ -3526,11 +3525,11 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 		for (pes_index = 0; pes_index < gr->pe_count_per_gpc; pes_index++) {
 			if (!gr->pes_tpc_count[pes_index]) {
 				gr->pes_tpc_count[pes_index] =
-					kzalloc(gr->gpc_count * sizeof(u32),
-						GFP_KERNEL);
+					nvgpu_kzalloc(g, gr->gpc_count *
+						      sizeof(u32));
 				gr->pes_tpc_mask[pes_index] =
-					kzalloc(gr->gpc_count * sizeof(u32),
-						GFP_KERNEL);
+					nvgpu_kzalloc(g, gr->gpc_count *
+						      sizeof(u32));
 				if (!gr->pes_tpc_count[pes_index] ||
 				    !gr->pes_tpc_mask[pes_index])
 					goto clean_up;
@@ -3585,8 +3584,8 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 		gr->gpc_skip_mask[gpc_index] = gpc_new_skip_mask;
 	}
 
-	gr->sm_to_cluster = kzalloc(gr->gpc_count * gr->tpc_count *
-							sizeof(struct sm_info), GFP_KERNEL);
+	gr->sm_to_cluster = nvgpu_kzalloc(g, gr->gpc_count * gr->tpc_count *
+					  sizeof(struct sm_info));
 	gr->no_of_sm = 0;
 
 	gk20a_dbg_info("fbps: %d", gr->num_fbps);
@@ -3696,14 +3695,13 @@ static int gr_gk20a_init_map_tiles(struct gk20a *g, struct gr_gk20a *gr)
 	int num_tpc_per_gpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_TPC_PER_GPC);
 	int map_tile_count = num_gpcs * num_tpc_per_gpc;
 
-	init_frac = kzalloc(num_gpcs * sizeof(s32), GFP_KERNEL);
-	init_err = kzalloc(num_gpcs * sizeof(s32), GFP_KERNEL);
-	run_err = kzalloc(num_gpcs * sizeof(s32), GFP_KERNEL);
+	init_frac = nvgpu_kzalloc(g, num_gpcs * sizeof(s32));
+	init_err = nvgpu_kzalloc(g, num_gpcs * sizeof(s32));
+	run_err = nvgpu_kzalloc(g, num_gpcs * sizeof(s32));
 	sorted_num_tpcs =
-		kzalloc(num_gpcs * num_tpc_per_gpc * sizeof(s32),
-			GFP_KERNEL);
+		nvgpu_kzalloc(g, num_gpcs * num_tpc_per_gpc * sizeof(s32));
 	sorted_to_unsorted_gpc_map =
-		kzalloc(num_gpcs * sizeof(s32), GFP_KERNEL);
+		nvgpu_kzalloc(g, num_gpcs * sizeof(s32));
 
 	if (!(init_frac && init_err && run_err && sorted_num_tpcs &&
 	      sorted_to_unsorted_gpc_map)) {
@@ -3764,15 +3762,14 @@ static int gr_gk20a_init_map_tiles(struct gk20a *g, struct gr_gk20a *gr)
 		}
 
 		if (delete_map) {
-			kfree(gr->map_tiles);
+			nvgpu_kfree(g, gr->map_tiles);
 			gr->map_tiles = NULL;
 			gr->map_tile_count = 0;
 		}
 	}
 
 	if (gr->map_tiles == NULL) {
-		gr->map_tiles = kzalloc(map_tile_count * sizeof(u8),
-					GFP_KERNEL);
+		gr->map_tiles = nvgpu_kzalloc(g, num_gpcs * sizeof(u8));
 		if (gr->map_tiles == NULL) {
 			ret = -ENOMEM;
 			goto clean_up;
@@ -3838,11 +3835,11 @@ static int gr_gk20a_init_map_tiles(struct gk20a *g, struct gr_gk20a *gr)
 	}
 
 clean_up:
-	kfree(init_frac);
-	kfree(init_err);
-	kfree(run_err);
-	kfree(sorted_num_tpcs);
-	kfree(sorted_to_unsorted_gpc_map);
+	nvgpu_kfree(g, init_frac);
+	nvgpu_kfree(g, init_err);
+	nvgpu_kfree(g, run_err);
+	nvgpu_kfree(g, sorted_num_tpcs);
+	nvgpu_kfree(g, sorted_to_unsorted_gpc_map);
 
 	if (ret)
 		gk20a_err(dev_from_gk20a(g), "fail");
@@ -4588,20 +4585,20 @@ static int gr_gk20a_zcull_init_hw(struct gk20a *g, struct gr_gk20a *gr)
 		/* Total 8 fields per map reg i.e. tile_0 to tile_7*/
 		zcull_alloc_num += (zcull_alloc_num % 8);
 	}
-	zcull_map_tiles = kzalloc(zcull_alloc_num *
-				 sizeof(u32), GFP_KERNEL);
+	zcull_map_tiles = nvgpu_kzalloc(g, zcull_alloc_num * sizeof(u32));
+
 	if (!zcull_map_tiles) {
 		gk20a_err(dev_from_gk20a(g),
 			"failed to allocate zcull map titles");
 		return -ENOMEM;
 	}
-	zcull_bank_counters = kzalloc(zcull_alloc_num *
-				 sizeof(u32), GFP_KERNEL);
+
+	zcull_bank_counters = nvgpu_kzalloc(g, zcull_alloc_num * sizeof(u32));
 
 	if (!zcull_bank_counters) {
 		gk20a_err(dev_from_gk20a(g),
 			"failed to allocate zcull bank counters");
-		kfree(zcull_map_tiles);
+		nvgpu_kfree(g, zcull_map_tiles);
 		return -ENOMEM;
 	}
 
@@ -4616,8 +4613,8 @@ static int gr_gk20a_zcull_init_hw(struct gk20a *g, struct gr_gk20a *gr)
 		g->ops.gr.program_zcull_mapping(g, zcull_alloc_num,
 					 zcull_map_tiles);
 
-	kfree(zcull_map_tiles);
-	kfree(zcull_bank_counters);
+	nvgpu_kfree(g, zcull_map_tiles);
+	nvgpu_kfree(g, zcull_bank_counters);
 
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
 		gpc_tpc_count = gr->gpc_tpc_count[gpc_index];
@@ -4891,14 +4888,14 @@ restore_fe_go_idle:
 	if (err)
 		goto out;
 
-	kfree(gr->sm_error_states);
+	nvgpu_kfree(g, gr->sm_error_states);
 
 	/* we need to allocate this after g->ops.gr.init_fs_state() since
 	 * we initialize gr->no_of_sm in this function
 	 */
-	gr->sm_error_states = kzalloc(
-			sizeof(struct nvgpu_dbg_gpu_sm_error_state_record)
-			* gr->no_of_sm, GFP_KERNEL);
+	gr->sm_error_states = nvgpu_kzalloc(g,
+			sizeof(struct nvgpu_dbg_gpu_sm_error_state_record) *
+			gr->no_of_sm);
 	if (!gr->sm_error_states) {
 		err = -ENOMEM;
 		goto restore_fe_go_idle;
@@ -6945,7 +6942,7 @@ int gr_gk20a_get_ctx_buffer_offsets(struct gk20a *g,
 	if (!g->gr.ctx_vars.golden_image_initialized)
 		return -ENODEV;
 
-	priv_registers = kzalloc(sizeof(u32) * potential_offsets, GFP_KERNEL);
+	priv_registers = nvgpu_kzalloc(g, sizeof(u32) * potential_offsets);
 	if (!priv_registers) {
 		gk20a_dbg_fn("failed alloc for potential_offsets=%d", potential_offsets);
 		err = PTR_ERR(priv_registers);
@@ -6991,7 +6988,7 @@ int gr_gk20a_get_ctx_buffer_offsets(struct gk20a *g,
 	*num_offsets = num_registers;
 cleanup:
 	if (!IS_ERR_OR_NULL(priv_registers))
-		kfree(priv_registers);
+		nvgpu_kfree(g, priv_registers);
 
 	return err;
 }
@@ -7019,7 +7016,7 @@ int gr_gk20a_get_pm_ctx_buffer_offsets(struct gk20a *g,
 	if (!g->gr.ctx_vars.golden_image_initialized)
 		return -ENODEV;
 
-	priv_registers = kzalloc(sizeof(u32) * potential_offsets, GFP_KERNEL);
+	priv_registers = nvgpu_kzalloc(g, sizeof(u32) * potential_offsets);
 	if (ZERO_OR_NULL_PTR(priv_registers)) {
 		gk20a_dbg_fn("failed alloc for potential_offsets=%d", potential_offsets);
 		return -ENOMEM;
@@ -7060,7 +7057,7 @@ int gr_gk20a_get_pm_ctx_buffer_offsets(struct gk20a *g,
 
 	*num_offsets = num_registers;
 cleanup:
-	kfree(priv_registers);
+	nvgpu_kfree(g, priv_registers);
 
 	return err;
 }
@@ -8352,7 +8349,7 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 	}
 
 	/* they're the same size, so just use one alloc for both */
-	offsets = kzalloc(2 * sizeof(u32) * max_offsets, GFP_KERNEL);
+	offsets = nvgpu_kzalloc(g, 2 * sizeof(u32) * max_offsets);
 	if (!offsets) {
 		err = -ENOMEM;
 		goto cleanup;
@@ -8502,7 +8499,7 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 
  cleanup:
 	if (offsets)
-		kfree(offsets);
+		nvgpu_kfree(g, offsets);
 
 	if (ch_ctx->patch_ctx.mem.cpu_va)
 		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
@@ -9025,7 +9022,7 @@ int gr_gk20a_set_sm_debug_mode(struct gk20a *g,
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
 
-	ops = kcalloc(g->gr.no_of_sm, sizeof(*ops), GFP_KERNEL);
+	ops = nvgpu_kcalloc(g, g->gr.no_of_sm, sizeof(*ops));
 	if (!ops)
 		return -ENOMEM;
 	for (sm_id = 0; sm_id < g->gr.no_of_sm; sm_id++) {
@@ -9068,7 +9065,7 @@ int gr_gk20a_set_sm_debug_mode(struct gk20a *g,
 	err = gr_gk20a_exec_ctx_ops(ch, ops, i, i, 0);
 	if (err)
 		gk20a_err(dev_from_gk20a(g), "Failed to access register\n");
-	kfree(ops);
+	nvgpu_kfree(g, ops);
 	return err;
 }
 

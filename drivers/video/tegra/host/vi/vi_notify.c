@@ -463,10 +463,30 @@ static long vi_notify_ioctl(struct file *file, unsigned int cmd,
 static struct vi_notify_dev *vnd_;
 static DEFINE_MUTEX(vnd_lock);
 
+static int vi_notifier_busy(struct vi_notify_dev *vnd)
+{
+	if (vnd->driver->runtime_get) {
+		int err = vnd->driver->runtime_get(vnd->device);
+		if (err < 0) {
+			dev_err(vnd->device, "runtime_get() failed: %d\n", err);
+			return err;
+		}
+	}
+
+	return 0;
+}
+
+static inline void vi_notifier_idle(struct vi_notify_dev *vnd)
+{
+	if (vnd->driver->runtime_put)
+		vnd->driver->runtime_put(vnd->device);
+}
+
 struct vi_notify_channel *vi_notify_channel_open(unsigned channel)
 {
 	struct vi_notify_dev *vnd;
 	struct vi_notify_channel *chan;
+	int err;
 
 	if (mutex_lock_interruptible(&vnd_lock))
 		return ERR_PTR(-ERESTARTSYS);
@@ -480,19 +500,22 @@ struct vi_notify_channel *vi_notify_channel_open(unsigned channel)
 	}
 	mutex_unlock(&vnd_lock);
 
+	err = vi_notifier_busy(vnd);
+	if (err < 0)
+		goto module_put;
+
 	if (vnd->driver->has_notifier_backend) {
 		if (!vnd->driver->has_notifier_backend(vnd->device)) {
 			/* TODO: poll/wait and recheck before returning error */
-			dev_err(vnd->device,
-				"vi_notifier_backend is not up and running\n");
-			return ERR_PTR(-ENODEV);
+			err = -ENODEV;
+			goto runtime_put;
 		}
 	}
 
 	chan = kzalloc(sizeof(*chan), GFP_KERNEL);
 	if (unlikely(chan == NULL)) {
-		module_put(vnd->driver->owner);
-		return ERR_PTR(-ENOMEM);
+		err = -ENOMEM;
+		goto runtime_put;
 	}
 
 	chan->vnd = vnd;
@@ -509,8 +532,8 @@ struct vi_notify_channel *vi_notify_channel_open(unsigned channel)
 	if (rcu_access_pointer(vnd->channels[channel]) != NULL) {
 		mutex_unlock(&vnd->lock);
 		kfree(chan);
-		module_put(vnd->driver->owner);
-		return ERR_PTR(-EBUSY);
+		err = -EBUSY;
+		goto runtime_put;
 	}
 
 	rcu_assign_pointer(vnd->channels[channel], chan);
@@ -518,6 +541,12 @@ struct vi_notify_channel *vi_notify_channel_open(unsigned channel)
 	mutex_unlock(&vnd->lock);
 
 	return chan;
+
+runtime_put:
+	vi_notifier_idle(vnd);
+module_put:
+	module_put(vnd->driver->owner);
+	return ERR_PTR(err);
 }
 EXPORT_SYMBOL(vi_notify_channel_open);
 
@@ -535,6 +564,7 @@ int vi_notify_channel_close(unsigned channel, struct vi_notify_channel *chan)
 	vi_notify_dev_classify(vnd);
 	mutex_unlock(&vnd->lock);
 	kfree_rcu(chan, rcu);
+	vi_notifier_idle(vnd);
 	module_put(vnd->driver->owner);
 
 	return 0;
@@ -603,10 +633,6 @@ int vi_notify_register(struct vi_notify_driver *drv, struct device *dev,
 	err = vnd->driver->probe(vnd->device, vnd);
 	if (err)
 		return err;
-
-	err = vi_notify_dev_classify(vnd);
-	if (err)
-		goto error;
 
 	err = tegra_vi_init_mfi(&vnd->mfi_ctx, num_channels);
 	if (err)

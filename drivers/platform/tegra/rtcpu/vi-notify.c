@@ -194,34 +194,6 @@ static void tegra_ivc_channel_vi_notify_process(struct tegra_ivc_channel *chan)
 }
 
 /* VI Notify */
-static int tegra_ivc_vi_notify_prepare(struct tegra_ivc_channel *chan)
-{
-	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
-	int err = 0;
-
-	if (ivn->tags == 0 && ivn->channels_mask == 0) {
-		err = tegra_ivc_channel_runtime_get(chan);
-		if (err)
-			return err;
-
-		err = nvhost_module_busy(ivn->vi);
-		if (err)
-			tegra_ivc_channel_runtime_put(chan);
-	}
-
-	return err;
-}
-
-static void tegra_ivc_vi_notify_complete(struct tegra_ivc_channel *chan)
-{
-	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
-
-	if (ivn->tags == 0 && ivn->channels_mask == 0) {
-		nvhost_module_idle(ivn->vi);
-		tegra_ivc_channel_runtime_put(chan);
-	}
-}
-
 static int tegra_ivc_vi_notify_send(struct tegra_ivc_channel *chan,
 					const struct vi_notify_req *req)
 {
@@ -291,15 +263,9 @@ static int tegra_ivc_vi_notify_classify(struct device *dev, u32 mask)
 	if (ivn->tags == mask)
 		return 0; /* nothing to do */
 
-	err = tegra_ivc_vi_notify_prepare(chan);
-	if (unlikely(err))
-		return err;
-
 	err = tegra_ivc_vi_notify_send(chan, &req);
 	if (likely(err == 0))
 		ivn->tags = mask;
-
-	tegra_ivc_vi_notify_complete(chan);
 
 	return err;
 }
@@ -313,18 +279,13 @@ static int tegra_ivc_vi_notify_set_syncpts(struct device *dev, u8 ch,
 		.type = TEGRA_IVC_VI_SET_SYNCPTS,
 		.channel = ch,
 	};
-
-	int err = tegra_ivc_vi_notify_prepare(chan);
-	if (unlikely(err))
-		return err;
+	int err;
 
 	memcpy(msg.syncpt_ids, ids, sizeof(msg.syncpt_ids));
 
 	err = tegra_ivc_vi_notify_send(chan, &msg);
 	if (likely(err == 0))
 		ivn->channels_mask |= 1u << ch;
-
-	tegra_ivc_vi_notify_complete(chan);
 
 	return err;
 }
@@ -346,18 +307,13 @@ static int tegra_ivc_vi_notify_enable_reports(struct device *dev, u8 ch,
 		.status_base_addr = status_dmaptr,
 		.status_entries = ivn->status_entries,
 	};
-
-	int err = tegra_ivc_vi_notify_prepare(chan);
-	if (unlikely(err))
-		return err;
+	int err;
 
 	memcpy(msg.syncpt_ids, ids, sizeof(msg.syncpt_ids));
 
 	err = tegra_ivc_vi_notify_send(chan, &msg);
 	if (likely(err == 0))
 		ivn->channels_mask |= 1u << ch;
-
-	tegra_ivc_vi_notify_complete(chan);
 
 	ivn->adjust_ts_counter = 0;
 	ivn->ts_adjustment = 0;
@@ -381,17 +337,9 @@ static void tegra_ivc_vi_notify_reset_channel(struct device *dev, u8 ch)
 	if (unlikely((ivn->channels_mask & (1u << ch)) == 0))
 		return;
 
-	err = tegra_ivc_vi_notify_prepare(chan);
-	if (unlikely(err)) {
-		dev_err(dev, "poweron failed\n");
-		return;
-	}
-
 	err = tegra_ivc_vi_notify_send(chan, &msg);
 	if (likely(err == 0))
 		ivn->channels_mask &= ~(1u << ch);
-
-	tegra_ivc_vi_notify_complete(chan);
 }
 
 /* Get a camera-rtcpu device */
@@ -410,8 +358,12 @@ static bool tegra_ivc_vi_notify_has_notifier_backend(struct device *dev)
 {
 	struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
 	struct device *rce_dev = camrtc_get_device(chan);
+	bool alive = tegra_camrtc_is_rtcpu_alive(rce_dev);
 
-	return tegra_camrtc_is_rtcpu_alive(rce_dev);
+	if (!alive)
+		dev_err(dev, "vi_notifier_backend is down\n");
+
+	return alive;
 }
 
 static int tegra_ivc_vi_notify_get_capture_status(struct device *dev,
@@ -451,6 +403,32 @@ static int tegra_ivc_vi_notify_get_capture_status(struct device *dev,
 	return err;
 }
 
+static int tegra_ivc_vi_notify_runtime_get(struct device *dev)
+{
+	struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
+	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
+	int err = nvhost_module_busy(ivn->vi);
+
+	if (err < 0)
+		return err;
+
+	err = tegra_ivc_channel_runtime_get(chan);
+	if (err < 0)
+		nvhost_module_idle(ivn->vi);
+
+	return err;
+}
+
+static void tegra_ivc_vi_notify_runtime_put(struct device *dev)
+{
+	struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
+	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
+
+	tegra_ivc_channel_runtime_put(chan);
+
+	nvhost_module_idle(ivn->vi);
+}
+
 static struct vi_notify_driver tegra_ivc_vi_notify_driver = {
 	.owner		= THIS_MODULE,
 	.probe		= tegra_ivc_vi_notify_probe,
@@ -460,6 +438,8 @@ static struct vi_notify_driver tegra_ivc_vi_notify_driver = {
 	.reset_channel	= tegra_ivc_vi_notify_reset_channel,
 	.has_notifier_backend = tegra_ivc_vi_notify_has_notifier_backend,
 	.get_capture_status = tegra_ivc_vi_notify_get_capture_status,
+	.runtime_get    = tegra_ivc_vi_notify_runtime_get,
+	.runtime_put    = tegra_ivc_vi_notify_runtime_put,
 };
 
 /* Platform device */

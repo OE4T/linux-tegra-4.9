@@ -59,6 +59,8 @@ struct vi_notify_driver {
 	struct module *owner;
 	int (*probe)(struct device *, struct vi_notify_dev *);
 	void (*remove)(struct device *);
+	int (*runtime_get)(struct device *);
+	void (*runtime_put)(struct device *);
 	int (*classify)(struct device *, u32);
 	int (*set_syncpts)(struct device *, u8, const u32[3]);
 	int (*enable_reports)(struct device *dev, u8 ch,

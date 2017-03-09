@@ -429,6 +429,8 @@ static int __init tegra18_a57_serr_init(void)
 	struct cpuinfo_arm64 *cpuinfo;
 	char *core_type	= "Denver";
 
+	if (tegra_get_chip_id() != TEGRA186)
+		return 0;
 	/*
 	 * No point in registering an ECC error handler on the
 	 * simulator.

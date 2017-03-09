@@ -21,6 +21,9 @@
 #include <dt-bindings/soc/gm20b-fuse.h>
 #include <dt-bindings/soc/gp10b-fuse.h>
 
+#include <nvgpu/timers.h>
+#include <nvgpu/kmem.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
@@ -28,8 +31,6 @@
 #include "gm20b/gr_gm20b.h"
 #include "gp10b/gr_gp10b.h"
 #include "gp10b_sysfs.h"
-
-#include <nvgpu/timers.h>
 
 #include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fifo_gp10b.h>
@@ -1479,7 +1480,7 @@ static int gr_gp10b_load_smid_config(struct gk20a *g)
 	u32 tpc_index, gpc_index;
 	u32 max_gpcs = nvgpu_get_litter_value(g, GPU_LIT_NUM_GPCS);
 
-	tpc_sm_id = kcalloc(gr_cwd_sm_id__size_1_v(), sizeof(u32), GFP_KERNEL);
+	tpc_sm_id = nvgpu_kcalloc(g, gr_cwd_sm_id__size_1_v(), sizeof(u32));
 	if (!tpc_sm_id)
 		return -ENOMEM;
 
@@ -1512,7 +1513,7 @@ static int gr_gp10b_load_smid_config(struct gk20a *g)
 	for (i = 0; i < gr_cwd_sm_id__size_1_v(); i++)
 		gk20a_writel(g, gr_cwd_sm_id_r(i), tpc_sm_id[i]);
 
-	kfree(tpc_sm_id);
+	nvgpu_kfree(g, tpc_sm_id);
 
 	return 0;
 }
@@ -2224,7 +2225,7 @@ static int gp10b_gr_fuse_override(struct gk20a *g)
 	if (count <= 0)
 		return count;
 
-	fuses = kmalloc(sizeof(u32) * count * 2, GFP_KERNEL);
+	fuses = nvgpu_kmalloc(g, sizeof(u32) * count * 2);
 	if (!fuses)
 		return -ENOMEM;
 	of_property_read_u32_array(np, "fuse-overrides", fuses, count * 2);
@@ -2247,7 +2248,7 @@ static int gp10b_gr_fuse_override(struct gk20a *g)
 		}
 	}
 
-	kfree(fuses);
+	nvgpu_kfree(g, fuses);
 
 	return 0;
 }

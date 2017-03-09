@@ -16,18 +16,19 @@
 #include <linux/of_platform.h>
 #include <linux/nvhost.h>
 #include <linux/debugfs.h>
-#include <soc/tegra/tegra_powergate.h>
 #include <linux/platform_data/tegra_edp.h>
 #include <linux/dma-buf.h>
 #include <linux/nvmap.h>
 #include <linux/reset.h>
 #include <linux/hashtable.h>
-
 #include <linux/platform/tegra/emc_bwmgr.h>
 
 #include <uapi/linux/nvgpu.h>
 
 #include <soc/tegra/tegra_bpmp.h>
+#include <soc/tegra/tegra_powergate.h>
+
+#include <nvgpu/kmem.h>
 
 #include "clk.h"
 
@@ -540,11 +541,13 @@ static int ecc_stat_create(struct device *dev,
 		num_hw_units = g->gr.tpc_count;
 
 	/* Allocate arrays */
-	dev_attr_array = kzalloc(sizeof(struct device_attribute) * num_hw_units, GFP_KERNEL);
-	ecc_stat->counters = kzalloc(sizeof(u32) * num_hw_units, GFP_KERNEL);
-	ecc_stat->names = kzalloc(sizeof(char *) * num_hw_units, GFP_KERNEL);
+	dev_attr_array = nvgpu_kzalloc(g, sizeof(struct device_attribute) *
+				       num_hw_units);
+	ecc_stat->counters = nvgpu_kzalloc(g, sizeof(u32) * num_hw_units);
+	ecc_stat->names = nvgpu_kzalloc(g, sizeof(char *) * num_hw_units);
 	for (hw_unit = 0; hw_unit < num_hw_units; hw_unit++) {
-		ecc_stat->names[hw_unit] = kzalloc(sizeof(char) * ECC_STAT_NAME_MAX_SIZE, GFP_KERNEL);
+		ecc_stat->names[hw_unit] = nvgpu_kzalloc(g, sizeof(char) *
+						ECC_STAT_NAME_MAX_SIZE);
 	}
 
 	for (hw_unit = 0; hw_unit < num_hw_units; hw_unit++) {
@@ -604,12 +607,12 @@ static void ecc_stat_remove(struct device *dev,
 	hash_del(&ecc_stat->hash_node);
 
 	/* Free arrays */
-	kfree(ecc_stat->counters);
+	nvgpu_kfree(g, ecc_stat->counters);
 	for (hw_unit = 0; hw_unit < num_hw_units; hw_unit++) {
-		kfree(ecc_stat->names[hw_unit]);
+		nvgpu_kfree(g, ecc_stat->names[hw_unit]);
 	}
-	kfree(ecc_stat->names);
-	kfree(dev_attr_array);
+	nvgpu_kfree(g, ecc_stat->names);
+	nvgpu_kfree(g, dev_attr_array);
 }
 
 void gr_gp10b_create_sysfs(struct device *dev)

@@ -11,10 +11,13 @@
  * more details.
  */
 
-#include "gk20a/gk20a.h"
 #include <linux/firmware.h>
 #include <linux/module.h>
 #include <linux/uaccess.h>
+
+#include <nvgpu/kmem.h>
+
+#include "gk20a/gk20a.h"
 #include "boardobj.h"
 #include "ctrl/ctrlboardobj.h"
 
@@ -30,12 +33,13 @@ u32 boardobj_construct_super(struct gk20a *g, struct boardobj **ppboardobj,
 		return -EINVAL;
 
 	if (*ppboardobj == NULL) {
-		*ppboardobj = kzalloc(size, GFP_KERNEL);
+		*ppboardobj = nvgpu_kzalloc(g, size);
 		if (*ppboardobj == NULL)
 			return -ENOMEM;
 	}
 
 	pboardobj = *ppboardobj;
+	pboardobj->g = g;
 	pboardobj->type = devtmp->type;
 	pboardobj->idx = CTRL_BOARDOBJ_IDX_INVALID;
 	pboardobj->type_mask   = BIT(pboardobj->type) | devtmp->type_mask;
@@ -52,7 +56,7 @@ u32 boardobj_destruct_super(struct boardobj *pboardobj)
 	gk20a_dbg_info("");
 	if (pboardobj == NULL)
 		return -EINVAL;
-	kfree(pboardobj);
+	nvgpu_kfree(pboardobj->g, pboardobj);
 	return 0;
 }
 

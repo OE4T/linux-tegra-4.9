@@ -60,6 +60,8 @@ typedef u32 boardobj_destruct(struct boardobj *pboardobj);
 */
 
 struct boardobj {
+	struct gk20a *g;
+
 	u8 type; /*type of the device*/
 	u8 idx;  /*index of boardobj within in its group*/
 	u32 type_mask; /*mask of types this boardobjimplements*/

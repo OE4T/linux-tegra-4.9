@@ -78,6 +78,7 @@ u8 tegra_get_chip_id(void)
 
 	return (tegra_read_chipid() >> 8) & 0xff;
 }
+EXPORT_SYMBOL(tegra_get_chip_id);
 
 u32 tegra_read_emu_revid(void)
 {
@@ -99,6 +100,7 @@ enum tegra_revision tegra_chip_get_revision(void)
 
 	return tegra_sku_info.id_and_rev;
 }
+EXPORT_SYMBOL(tegra_chip_get_revision);
 
 u32 tegra_read_straps(void)
 {

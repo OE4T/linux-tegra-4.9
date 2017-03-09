@@ -25,6 +25,7 @@
 
 #include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_ctxsw_prog_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_gr_gv11b.h>
 
 static void gv11b_init_subcontext_pdb(struct channel_gk20a *c,
 				struct nvgpu_mem *inst_block);
@@ -146,4 +147,11 @@ int gv11b_update_subctx_header(struct channel_gk20a *c, u64 gpu_va)
 		ctxsw_prog_main_image_context_buffer_ptr_o(), addr_lo);
 	nvgpu_mem_end(g, gr_mem);
 	return ret;
+}
+
+int gv11b_get_max_subctx_count(struct gk20a *g)
+{
+	u32 data = gk20a_readl(g, gr_pri_fe_chip_def_info_r());
+
+	return gr_pri_fe_chip_def_info_max_veid_count_v(data);
 }

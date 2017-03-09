@@ -1649,10 +1649,9 @@ static void gv11b_write_bundle_veid_state(struct gk20a *g, u32 index)
 	struct av_list_gk20a *sw_veid_bundle_init =
 			&g->gr.ctx_vars.sw_veid_bundle_init;
 	u32 j;
-	u32 data = gk20a_readl(g, gr_pri_fe_chip_def_info_r());
 	u32  num_subctx, err = 0;
 
-	num_subctx = gr_pri_fe_chip_def_info_max_veid_count_v(data);
+	num_subctx = gv11b_get_max_subctx_count(g);
 
 	for (j = 0; j < num_subctx; j++) {
 

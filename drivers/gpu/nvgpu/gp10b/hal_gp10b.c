@@ -17,7 +17,6 @@
 #include <linux/printk.h>
 #include <linux/version.h>
 #include <linux/types.h>
-#include <soc/tegra/fuse.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
@@ -46,11 +45,7 @@
 #include "gp10b.h"
 
 #include <nvgpu/hw/gp10b/hw_proj_gp10b.h>
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
-#define FUSE_OPT_PRIV_SEC_EN_0 0x264
-#endif
-#define PRIV_SECURITY_ENABLED 0x01
+#include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
 
 static struct gpu_ops gp10b_ops = {
 	.clock_gating = {
@@ -205,8 +200,8 @@ int gp10b_init_hal(struct gk20a *g)
 		gops->privsecurity = 0;
 		gops->securegpccs = 0;
 	} else {
-		tegra_fuse_readl(FUSE_OPT_PRIV_SEC_EN_0, &val);
-		if (val & PRIV_SECURITY_ENABLED) {
+		val = gk20a_readl(g, fuse_opt_priv_sec_en_r());
+		if (val) {
 			gops->privsecurity = 1;
 			gops->securegpccs =1;
 		} else {
@@ -221,8 +216,8 @@ int gp10b_init_hal(struct gk20a *g)
 		gops->privsecurity = 0;
 		gops->securegpccs = 0;
 	} else {
-		tegra_fuse_readl(FUSE_OPT_PRIV_SEC_EN_0, &val);
-		if (val & PRIV_SECURITY_ENABLED) {
+		val = gk20a_readl(g, fuse_opt_priv_sec_en_r());
+		if (val) {
 			gk20a_dbg_info("priv security is not supported but enabled");
 			gops->privsecurity = 1;
 			gops->securegpccs =1;

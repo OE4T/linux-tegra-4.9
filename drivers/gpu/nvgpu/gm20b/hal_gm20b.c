@@ -14,8 +14,6 @@
  */
 
 #include <linux/types.h>
-#include <linux/version.h>
-#include <soc/tegra/fuse.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
@@ -39,10 +37,7 @@
 #include "therm_gm20b.h"
 
 #include <nvgpu/hw/gm20b/hw_proj_gm20b.h>
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
-#define FUSE_OPT_PRIV_SEC_DIS_0 0x264
-#endif
+#include <nvgpu/hw/gm20b/hw_fuse_gm20b.h>
 
 #define PRIV_SECURITY_DISABLE 0x01
 
@@ -197,8 +192,8 @@ int gm20b_init_hal(struct gk20a *g)
 	if (platform->is_fmodel) {
 		gops->privsecurity = 1;
 	} else {
-		tegra_fuse_readl(FUSE_OPT_PRIV_SEC_DIS_0, &val);
-		if (val & PRIV_SECURITY_DISABLE) {
+		val = gk20a_readl(g, fuse_opt_priv_sec_en_r());
+		if (!val) {
 			gk20a_dbg_info("priv security is disabled in HW");
 			gops->privsecurity = 0;
 		} else {
@@ -210,8 +205,8 @@ int gm20b_init_hal(struct gk20a *g)
 		gk20a_dbg_info("running ASIM with PRIV security disabled");
 		gops->privsecurity = 0;
 	} else {
-		tegra_fuse_readl(FUSE_OPT_PRIV_SEC_DIS_0, &val);
-		if (val & PRIV_SECURITY_DISABLE) {
+		val = gk20a_readl(g, fuse_opt_priv_sec_en_r());
+		if (!val) {
 			gops->privsecurity = 0;
 		} else {
 			gk20a_dbg_info("priv security is not supported but enabled");

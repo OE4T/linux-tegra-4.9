@@ -16,6 +16,8 @@
 #include <linux/tegra_vgpu.h>
 #include <linux/version.h>
 
+#include <nvgpu/kmem.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
 #include "vgpu.h"
@@ -42,7 +44,7 @@ static int vgpu_fecs_trace_init(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	vcst = kzalloc(sizeof(*vcst), GFP_KERNEL);
+	vcst = nvgpu_kzalloc(g, sizeof(*vcst));
 	if (!vcst)
 		return -ENOMEM;
 
@@ -91,7 +93,7 @@ fail:
 	iounmap(vcst->buf);
 	if (vcst->cookie)
 		tegra_hv_mempool_unreserve(vcst->cookie);
-	kfree(vcst);
+	nvgpu_kfree(g, vcst);
 	return err;
 }
 
@@ -101,7 +103,7 @@ static int vgpu_fecs_trace_deinit(struct gk20a *g)
 
 	iounmap(vcst->buf);
 	tegra_hv_mempool_unreserve(vcst->cookie);
-	kfree(vcst);
+	nvgpu_kfree(g, vcst);
 	return 0;
 }
 

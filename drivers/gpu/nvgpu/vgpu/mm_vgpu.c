@@ -14,6 +14,9 @@
  */
 
 #include <linux/dma-mapping.h>
+
+#include <nvgpu/kmem.h>
+
 #include "vgpu/vgpu.h"
 #include "gk20a/mm_gk20a.h"
 
@@ -220,7 +223,7 @@ static void vgpu_vm_remove_support(struct vm_gk20a *vm)
 	list_for_each_entry_safe(va_node, va_node_tmp, &vm->reserved_va_list,
 		reserved_va_list) {
 		list_del(&va_node->reserved_va_list);
-		kfree(va_node);
+		nvgpu_kfree(g, va_node);
 	}
 
 	msg.cmd = TEGRA_VGPU_CMD_AS_FREE_SHARE;
@@ -237,7 +240,7 @@ static void vgpu_vm_remove_support(struct vm_gk20a *vm)
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
 	/* vm is not used anymore. release it. */
-	kfree(vm);
+	nvgpu_kfree(g, vm);
 }
 
 u64 vgpu_bar1_map(struct gk20a *g, struct sg_table **sgt, u64 size)
@@ -297,7 +300,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 
 	big_page_size = gmmu_page_sizes[gmmu_page_size_big];
 
-	vm = kzalloc(sizeof(*vm), GFP_KERNEL);
+	vm = nvgpu_kzalloc(g, sizeof(*vm));
 	if (!vm)
 		return -ENOMEM;
 
@@ -421,7 +424,7 @@ clean_up_share:
 	p->handle = vm->handle;
 	WARN_ON(vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg)) || msg.ret);
 clean_up:
-	kfree(vm);
+	nvgpu_kfree(g, vm);
 	as_share->vm = NULL;
 	return err;
 }

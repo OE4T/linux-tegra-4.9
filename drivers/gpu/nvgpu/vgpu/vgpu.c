@@ -198,7 +198,7 @@ static void vgpu_remove_support(struct gk20a *g)
 	int err;
 
 	if (g->dbg_regops_tmp_buf)
-		kfree(g->dbg_regops_tmp_buf);
+		nvgpu_kfree(g, g->dbg_regops_tmp_buf);
 
 	if (g->pmu.remove_support)
 		g->pmu.remove_support(&g->pmu);
@@ -252,7 +252,7 @@ static int vgpu_init_support(struct platform_device *pdev)
 
 	INIT_LIST_HEAD(&g->profiler_objects);
 
-	g->dbg_regops_tmp_buf = kzalloc(SZ_4K, GFP_KERNEL);
+	g->dbg_regops_tmp_buf = nvgpu_kzalloc(g, SZ_4K);
 	if (!g->dbg_regops_tmp_buf) {
 		dev_err(g->dev, "couldn't allocate regops tmp buf");
 		return -ENOMEM;
@@ -474,7 +474,7 @@ static int vgpu_pm_qos_init(struct device *dev)
 	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_scale_profile *profile;
 
-	profile = kzalloc(sizeof(*profile), GFP_KERNEL);
+	profile = nvgpu_kzalloc(g, sizeof(*profile));
 	if (!profile)
 		return -ENOMEM;
 
@@ -493,7 +493,7 @@ static void vgpu_pm_qos_remove(struct device *dev)
 
 	pm_qos_remove_max_notifier(PM_QOS_GPU_FREQ_BOUNDS,
 				&g->scale_profile->qos_notify_block);
-	kfree(g->scale_profile);
+	nvgpu_kfree(g, g->scale_profile);
 	g->scale_profile = NULL;
 }
 
@@ -556,23 +556,26 @@ int vgpu_probe(struct platform_device *pdev)
 
 	gk20a_dbg_fn("");
 
-	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
-	if (!priv)
-		return -ENOMEM;
-
 	gk20a = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
 	if (!gk20a) {
 		dev_err(dev, "couldn't allocate gk20a support");
 		return -ENOMEM;
 	}
 
-	platform->g = gk20a;
-	platform->vgpu_priv = priv;
 	gk20a->dev = dev;
 
 	gk20a->is_fmodel = platform->is_fmodel;
 
 	nvgpu_kmem_init(gk20a);
+
+	priv = nvgpu_kzalloc(gk20a, sizeof(*priv));
+	if (!priv) {
+		kfree(gk20a);
+		return -ENOMEM;
+	}
+
+	platform->g = gk20a;
+	platform->vgpu_priv = priv;
 
 	err = gk20a_user_init(dev, INTERFACE_NAME, &nvgpu_class);
 	if (err)

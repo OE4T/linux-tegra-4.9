@@ -13,6 +13,8 @@
  * more details.
  */
 
+#include <nvgpu/kmem.h>
+
 #include "vgpu/vgpu.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 
@@ -269,7 +271,7 @@ int vgpu_gr_alloc_gr_ctx(struct gk20a *g,
 	gr->ctx_vars.buffer_size = gr->ctx_vars.golden_image_size;
 	gr->ctx_vars.buffer_total_size = gr->ctx_vars.golden_image_size;
 
-	gr_ctx = kzalloc(sizeof(*gr_ctx), GFP_KERNEL);
+	gr_ctx = nvgpu_kzalloc(g, sizeof(*gr_ctx));
 	if (!gr_ctx)
 		return -ENOMEM;
 
@@ -279,7 +281,7 @@ int vgpu_gr_alloc_gr_ctx(struct gk20a *g,
 						gmmu_page_size_kernel);
 
 	if (!gr_ctx->mem.gpu_va) {
-		kfree(gr_ctx);
+		nvgpu_kfree(g, gr_ctx);
 		return -ENOMEM;
 	}
 
@@ -295,7 +297,7 @@ int vgpu_gr_alloc_gr_ctx(struct gk20a *g,
 		gk20a_err(dev_from_gk20a(g), "fail to alloc gr_ctx");
 		gk20a_vm_free_va(vm, gr_ctx->mem.gpu_va,
 				 gr_ctx->mem.size, gmmu_page_size_kernel);
-		kfree(gr_ctx);
+		nvgpu_kfree(g, gr_ctx);
 	} else {
 		gr_ctx->virt_ctx = p->gr_ctx_handle;
 		*__gr_ctx = gr_ctx;
@@ -322,7 +324,7 @@ void vgpu_gr_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 
 		gk20a_vm_free_va(vm, gr_ctx->mem.gpu_va, gr_ctx->mem.size,
 				gmmu_page_size_kernel);
-		kfree(gr_ctx);
+		nvgpu_kfree(g, gr_ctx);
 	}
 }
 
@@ -617,16 +619,17 @@ static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 
 	gr->max_tpc_count = gr->max_gpc_count * gr->max_tpc_per_gpc_count;
 
-	gr->gpc_tpc_count = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
+	gr->gpc_tpc_count = nvgpu_kzalloc(g, gr->gpc_count * sizeof(u32));
 	if (!gr->gpc_tpc_count)
 		goto cleanup;
 
-	gr->gpc_tpc_mask = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
+	gr->gpc_tpc_mask = nvgpu_kzalloc(g, gr->gpc_count * sizeof(u32));
 	if (!gr->gpc_tpc_mask)
 		goto cleanup;
 
-	gr->sm_to_cluster = kzalloc(gr->gpc_count * gr->max_tpc_per_gpc_count *
-				sizeof(struct sm_info), GFP_KERNEL);
+	gr->sm_to_cluster = nvgpu_kzalloc(g, gr->gpc_count *
+					  gr->max_tpc_per_gpc_count *
+					  sizeof(struct sm_info));
 	if (!gr->sm_to_cluster)
 		goto cleanup;
 
@@ -650,10 +653,10 @@ static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 cleanup:
 	gk20a_err(dev_from_gk20a(g), "%s: out of memory", __func__);
 
-	kfree(gr->gpc_tpc_count);
+	nvgpu_kfree(g, gr->gpc_tpc_count);
 	gr->gpc_tpc_count = NULL;
 
-	kfree(gr->gpc_tpc_mask);
+	nvgpu_kfree(g, gr->gpc_tpc_mask);
 	gr->gpc_tpc_mask = NULL;
 
 	return -ENOMEM;
@@ -838,16 +841,16 @@ static void vgpu_remove_gr_support(struct gr_gk20a *gr)
 
 	gk20a_comptag_allocator_destroy(&gr->comp_tags);
 
-	kfree(gr->sm_error_states);
+	nvgpu_kfree(gr->g, gr->sm_error_states);
 	gr->sm_error_states = NULL;
 
-	kfree(gr->gpc_tpc_mask);
+	nvgpu_kfree(gr->g, gr->gpc_tpc_mask);
 	gr->gpc_tpc_mask = NULL;
 
-	kfree(gr->sm_to_cluster);
+	nvgpu_kfree(gr->g, gr->sm_to_cluster);
 	gr->sm_to_cluster = NULL;
 
-	kfree(gr->gpc_tpc_count);
+	nvgpu_kfree(gr->g, gr->gpc_tpc_count);
 	gr->gpc_tpc_count = NULL;
 }
 
@@ -887,9 +890,9 @@ static int vgpu_gr_init_gr_setup_sw(struct gk20a *g)
 
 	nvgpu_mutex_init(&gr->ctx_mutex);
 
-	gr->sm_error_states = kzalloc(
+	gr->sm_error_states = nvgpu_kzalloc(g,
 			sizeof(struct nvgpu_dbg_gpu_sm_error_state_record) *
-			gr->no_of_sm, GFP_KERNEL);
+			gr->no_of_sm);
 	if (!gr->sm_error_states) {
 		err = -ENOMEM;
 		goto clean_up;

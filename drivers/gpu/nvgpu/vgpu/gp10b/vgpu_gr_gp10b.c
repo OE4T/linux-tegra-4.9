@@ -11,6 +11,8 @@
  * more details.
  */
 
+#include <nvgpu/kmem.h>
+
 #include "vgpu/vgpu.h"
 #include "vgpu/gm20b/vgpu_gr_gm20b.h"
 
@@ -44,7 +46,7 @@ static void vgpu_gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.spill_ctxsw_buffer);
 	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.preempt_ctxsw_buffer);
 
-	kfree(gr_ctx);
+	nvgpu_kfree(g, gr_ctx);
 }
 
 static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,

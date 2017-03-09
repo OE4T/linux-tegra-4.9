@@ -16,6 +16,8 @@
 #include <linux/dma-mapping.h>
 #include <trace/events/gk20a.h>
 
+#include <nvgpu/kmem.h>
+
 #include "vgpu/vgpu.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
 
@@ -192,8 +194,9 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 	gk20a_dbg_fn("");
 
 	f->max_runlists = g->ops.fifo.eng_runlist_base_size();
-	f->runlist_info = kzalloc(sizeof(struct fifo_runlist_info_gk20a) *
-				  f->max_runlists, GFP_KERNEL);
+	f->runlist_info = nvgpu_kzalloc(g,
+				sizeof(struct fifo_runlist_info_gk20a) *
+				f->max_runlists);
 	if (!f->runlist_info)
 		goto clean_up_runlist;
 
@@ -204,8 +207,8 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 		runlist = &f->runlist_info[runlist_id];
 
 		runlist->active_channels =
-			kzalloc(DIV_ROUND_UP(f->num_channels, BITS_PER_BYTE),
-				GFP_KERNEL);
+			nvgpu_kzalloc(g, DIV_ROUND_UP(f->num_channels,
+						      BITS_PER_BYTE));
 		if (!runlist->active_channels)
 			goto clean_up_runlist;
 
@@ -276,12 +279,11 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 
 	gk20a_dbg(gpu_dbg_map_v, "userd bar1 va = 0x%llx", f->userd.gpu_va);
 
-	f->channel = vzalloc(f->num_channels * sizeof(*f->channel));
-	f->tsg = vzalloc(f->num_channels * sizeof(*f->tsg));
-	f->engine_info = kzalloc(f->max_engines * sizeof(*f->engine_info),
-				GFP_KERNEL);
-	f->active_engines_list = kzalloc(f->max_engines * sizeof(u32),
-				GFP_KERNEL);
+	f->channel = nvgpu_vzalloc(g, f->num_channels * sizeof(*f->channel));
+	f->tsg = nvgpu_vzalloc(g, f->num_channels * sizeof(*f->tsg));
+	f->engine_info = nvgpu_kzalloc(g, f->max_engines *
+				       sizeof(*f->engine_info));
+	f->active_engines_list = nvgpu_kzalloc(g, f->max_engines * sizeof(u32));
 
 	if (!(f->channel && f->tsg && f->engine_info && f->active_engines_list)) {
 		err = -ENOMEM;
@@ -327,13 +329,13 @@ clean_up:
 
 	memset(&f->userd, 0, sizeof(f->userd));
 
-	vfree(f->channel);
+	nvgpu_vfree(g, f->channel);
 	f->channel = NULL;
-	vfree(f->tsg);
+	nvgpu_vfree(g, f->tsg);
 	f->tsg = NULL;
-	kfree(f->engine_info);
+	nvgpu_kfree(g, f->engine_info);
 	f->engine_info = NULL;
-	kfree(f->active_engines_list);
+	nvgpu_kfree(g, f->active_engines_list);
 	f->active_engines_list = NULL;
 
 	return err;
@@ -453,8 +455,8 @@ static int vgpu_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 	return err;
 }
 
-static int vgpu_submit_runlist(u64 handle, u8 runlist_id, u16 *runlist,
-			u32 num_entries)
+static int vgpu_submit_runlist(struct gk20a *g, u64 handle, u8 runlist_id,
+			       u16 *runlist, u32 num_entries)
 {
 	struct tegra_vgpu_cmd_msg *msg;
 	struct tegra_vgpu_runlist_params *p;
@@ -462,7 +464,7 @@ static int vgpu_submit_runlist(u64 handle, u8 runlist_id, u16 *runlist,
 	char *ptr;
 	int err;
 
-	msg = kmalloc(size, GFP_KERNEL);
+	msg = nvgpu_kmalloc(g, size);
 	if (!msg)
 		return -1;
 
@@ -477,7 +479,7 @@ static int vgpu_submit_runlist(u64 handle, u8 runlist_id, u16 *runlist,
 	err = vgpu_comm_sendrecv(msg, size, sizeof(*msg));
 
 	err = (err || msg->ret) ? -1 : 0;
-	kfree(msg);
+	nvgpu_kfree(g, msg);
 	return err;
 }
 
@@ -523,7 +525,7 @@ static int vgpu_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	} else	/* suspend to remove all channels */
 		count = 0;
 
-	return vgpu_submit_runlist(vgpu_get_handle(g), runlist_id,
+	return vgpu_submit_runlist(g, vgpu_get_handle(g), runlist_id,
 				runlist->mem[0].cpu_va, count);
 }
 

@@ -22,6 +22,8 @@
 
 #include <uapi/linux/nvgpu.h>
 
+#include <nvgpu/kmem.h>
+
 #include "gk20a.h"
 
 /* dumb allocator... */
@@ -51,7 +53,7 @@ int gk20a_as_alloc_share(struct gk20a_as *as,
 		return -ENODEV;
 
 	*out = NULL;
-	as_share = kzalloc(sizeof(*as_share), GFP_KERNEL);
+	as_share = nvgpu_kzalloc(g, sizeof(*as_share));
 	if (!as_share)
 		return -ENOMEM;
 
@@ -72,7 +74,7 @@ int gk20a_as_alloc_share(struct gk20a_as *as,
 	return 0;
 
 failed:
-	kfree(as_share);
+	nvgpu_kfree(g, as_share);
 	return err;
 }
 
@@ -98,8 +100,8 @@ int gk20a_as_release_share(struct gk20a_as_share *as_share)
 
 release_fail:
 	release_as_share_id(as_share->as, as_share->id);
+	nvgpu_kfree(g, as_share);
 	gk20a_put(g);
-	kfree(as_share);
 
 	return err;
 }

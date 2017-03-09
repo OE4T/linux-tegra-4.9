@@ -138,7 +138,7 @@ static void gk20a_tegra_secure_destroy(struct gk20a *g,
 		dma_free_attrs(&tegra_vpr_dev, desc->mem.size,
 			(void *)(uintptr_t)pa,
 			pa, __DMA_ATTR(attrs));
-		gk20a_free_sgtable(&desc->mem.sgt);
+		gk20a_free_sgtable(g, &desc->mem.sgt);
 		desc->mem.sgt = NULL;
 	}
 }

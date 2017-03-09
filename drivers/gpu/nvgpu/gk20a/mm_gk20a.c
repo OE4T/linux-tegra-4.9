@@ -22,7 +22,6 @@
 #include <linux/nvhost.h>
 #include <linux/scatterlist.h>
 #include <linux/nvmap.h>
-#include <linux/vmalloc.h>
 #include <linux/dma-buf.h>
 #include <linux/dma-mapping.h>
 #include <linux/dma-attrs.h>
@@ -486,6 +485,8 @@ static struct gk20a *gk20a_vidmem_buf_owner(struct dma_buf *dmabuf);
 struct gk20a_dmabuf_priv {
 	struct nvgpu_mutex lock;
 
+	struct gk20a *g;
+
 	struct gk20a_comptag_allocator *comptag_allocator;
 	struct gk20a_comptags comptags;
 
@@ -548,8 +549,12 @@ static void gk20a_mm_delete_priv(void *_priv)
 {
 	struct gk20a_buffer_state *s, *s_tmp;
 	struct gk20a_dmabuf_priv *priv = _priv;
+	struct gk20a *g;
+
 	if (!priv)
 		return;
+
+	g = priv->g;
 
 	if (priv->comptags.lines) {
 		BUG_ON(!priv->comptag_allocator);
@@ -562,10 +567,10 @@ static void gk20a_mm_delete_priv(void *_priv)
 	list_for_each_entry_safe(s, s_tmp, &priv->states, list) {
 		gk20a_fence_put(s->fence);
 		list_del(&s->list);
-		kfree(s);
+		nvgpu_kfree(g, s);
 	}
 
-	kfree(priv);
+	nvgpu_kfree(g, priv);
 }
 
 struct sg_table *gk20a_mm_pin(struct device *dev, struct dma_buf *dmabuf)
@@ -1142,6 +1147,7 @@ static int alloc_gmmu_phys_pages(struct vm_gk20a *vm, u32 order,
 	u32 len = num_pages * PAGE_SIZE;
 	int err;
 	struct page *pages;
+	struct gk20a *g = vm->mm->g;
 
 	gk20a_dbg_fn("");
 
@@ -1152,7 +1158,7 @@ static int alloc_gmmu_phys_pages(struct vm_gk20a *vm, u32 order,
 		gk20a_dbg(gpu_dbg_pte, "alloc_pages failed");
 		goto err_out;
 	}
-	entry->mem.sgt = kzalloc(sizeof(*entry->mem.sgt), GFP_KERNEL);
+	entry->mem.sgt = nvgpu_kzalloc(g, sizeof(*entry->mem.sgt));
 	if (!entry->mem.sgt) {
 		gk20a_dbg(gpu_dbg_pte, "cannot allocate sg table");
 		goto err_alloced;
@@ -1172,7 +1178,7 @@ static int alloc_gmmu_phys_pages(struct vm_gk20a *vm, u32 order,
 	return 0;
 
 err_sg_table:
-	kfree(entry->mem.sgt);
+	nvgpu_kfree(vm->mm->g, entry->mem.sgt);
 err_alloced:
 	__free_pages(pages, order);
 err_out:
@@ -1190,7 +1196,7 @@ static void free_gmmu_phys_pages(struct vm_gk20a *vm,
 	entry->mem.cpu_va = NULL;
 
 	sg_free_table(entry->mem.sgt);
-	kfree(entry->mem.sgt);
+	nvgpu_kfree(vm->mm->g, entry->mem.sgt);
 	entry->mem.sgt = NULL;
 	entry->mem.size = 0;
 	entry->mem.aperture = APERTURE_INVALID;
@@ -2113,7 +2119,7 @@ static void gk20a_vidbuf_release(struct dma_buf *dmabuf)
 		buf->dmabuf_priv_delete(buf->dmabuf_priv);
 
 	gk20a_gmmu_free(buf->g, buf->mem);
-	kfree(buf);
+	nvgpu_kfree(buf->g, buf);
 }
 
 static void *gk20a_vidbuf_kmap(struct dma_buf *dmabuf, unsigned long page_num)
@@ -2204,7 +2210,7 @@ int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 
 	gk20a_dbg_fn("");
 
-	buf = kzalloc(sizeof(*buf), GFP_KERNEL);
+	buf = nvgpu_kzalloc(g, sizeof(*buf));
 	if (!buf)
 		return -ENOMEM;
 
@@ -2223,7 +2229,7 @@ int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 		nvgpu_mutex_release(&g->mm.vidmem.first_clear_mutex);
 	}
 
-	buf->mem = kzalloc(sizeof(struct mem_desc), GFP_KERNEL);
+	buf->mem = nvgpu_kzalloc(g, sizeof(struct mem_desc));
 	if (!buf->mem)
 		goto err_kfree;
 
@@ -2254,9 +2260,9 @@ int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 err_bfree:
 	gk20a_gmmu_free(g, buf->mem);
 err_memfree:
-	kfree(buf->mem);
+	nvgpu_kfree(g, buf->mem);
 err_kfree:
-	kfree(buf);
+	nvgpu_kfree(g, buf);
 	return err;
 #else
 	return -ENOSYS;
@@ -2556,7 +2562,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	/* keep track of the buffer for unmapping */
 	/* TBD: check for multiple mapping of same buffer */
-	mapped_buffer = kzalloc(sizeof(*mapped_buffer), GFP_KERNEL);
+	mapped_buffer = nvgpu_kzalloc(g, sizeof(*mapped_buffer));
 	if (!mapped_buffer) {
 		gk20a_warn(d, "oom allocating tracking buffer");
 		goto clean_up;
@@ -2609,7 +2615,7 @@ clean_up:
 		if (user_mapped)
 			vm->num_user_mapped_buffers--;
 	}
-	kfree(mapped_buffer);
+	nvgpu_kfree(g, mapped_buffer);
 	if (va_allocated)
 		gk20a_vm_free_va(vm, map_offset, bfr.size, bfr.pgsz_idx);
 	if (!IS_ERR(bfr.sgt))
@@ -3007,7 +3013,7 @@ static void gk20a_gmmu_free_sys(struct gk20a *g, struct mem_desc *mem)
 	}
 
 	if (mem->sgt)
-		gk20a_free_sgtable(&mem->sgt);
+		gk20a_free_sgtable(g, &mem->sgt);
 
 	mem->size = 0;
 	mem->aperture = APERTURE_INVALID;
@@ -3144,7 +3150,7 @@ int gk20a_gmmu_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 	else
 		mem->fixed = false;
 
-	mem->sgt = kzalloc(sizeof(struct sg_table), GFP_KERNEL);
+	mem->sgt = nvgpu_kzalloc(g, sizeof(struct sg_table));
 	if (!mem->sgt) {
 		err = -ENOMEM;
 		goto fail_physfree;
@@ -3168,7 +3174,7 @@ int gk20a_gmmu_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 	return 0;
 
 fail_kfree:
-	kfree(mem->sgt);
+	nvgpu_kfree(g, mem->sgt);
 fail_physfree:
 	nvgpu_free(&g->mm.vidmem.allocator, addr);
 	return err;
@@ -3201,7 +3207,7 @@ static void gk20a_gmmu_free_vid(struct gk20a *g, struct mem_desc *mem)
 		gk20a_memset(g, mem, 0, 0, mem->size);
 		nvgpu_free(mem->allocator,
 			   (u64)get_vidmem_page_alloc(mem->sgt->sgl));
-		gk20a_free_sgtable(&mem->sgt);
+		gk20a_free_sgtable(g, &mem->sgt);
 
 		mem->size = 0;
 		mem->aperture = APERTURE_INVALID;
@@ -3271,14 +3277,14 @@ static void gk20a_vidmem_clear_mem_worker(struct work_struct *work)
 		gk20a_gmmu_clear_vidmem_mem(g, mem);
 		nvgpu_free(mem->allocator,
 			   (u64)get_vidmem_page_alloc(mem->sgt->sgl));
-		gk20a_free_sgtable(&mem->sgt);
+		gk20a_free_sgtable(g, &mem->sgt);
 
 		WARN_ON(atomic64_sub_return(mem->size,
 					&g->mm.vidmem.bytes_pending) < 0);
 		mem->size = 0;
 		mem->aperture = APERTURE_INVALID;
 
-		kfree(mem);
+		nvgpu_kfree(g, mem);
 	}
 }
 #endif
@@ -3445,8 +3451,10 @@ int gk20a_get_sgtable(struct device *d, struct sg_table **sgt,
 			void *cpuva, u64 iova,
 			size_t size)
 {
+	struct gk20a *g = get_gk20a(d);
+
 	int err = 0;
-	*sgt = kzalloc(sizeof(struct sg_table), GFP_KERNEL);
+	*sgt = nvgpu_kzalloc(g, sizeof(struct sg_table));
 	if (!(*sgt)) {
 		dev_err(d, "failed to allocate memory\n");
 		err = -ENOMEM;
@@ -3464,7 +3472,7 @@ int gk20a_get_sgtable(struct device *d, struct sg_table **sgt,
 	return 0;
  fail:
 	if (*sgt) {
-		kfree(*sgt);
+		nvgpu_kfree(g, *sgt);
 		*sgt = NULL;
 	}
 	return err;
@@ -3475,7 +3483,9 @@ int gk20a_get_sgtable_from_pages(struct device *d, struct sg_table **sgt,
 			size_t size)
 {
 	int err = 0;
-	*sgt = kzalloc(sizeof(struct sg_table), GFP_KERNEL);
+	struct gk20a *g = get_gk20a(d);
+
+	*sgt = nvgpu_kzalloc(g, sizeof(struct sg_table));
 	if (!(*sgt)) {
 		dev_err(d, "failed to allocate memory\n");
 		err = -ENOMEM;
@@ -3492,16 +3502,16 @@ int gk20a_get_sgtable_from_pages(struct device *d, struct sg_table **sgt,
 	return 0;
  fail:
 	if (*sgt) {
-		kfree(*sgt);
+		nvgpu_kfree(get_gk20a(d), *sgt);
 		*sgt = NULL;
 	}
 	return err;
 }
 
-void gk20a_free_sgtable(struct sg_table **sgt)
+void gk20a_free_sgtable(struct gk20a *g, struct sg_table **sgt)
 {
 	sg_free_table(*sgt);
-	kfree(*sgt);
+	nvgpu_kfree(g, *sgt);
 	*sgt = NULL;
 }
 
@@ -3773,7 +3783,8 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 					 (l->hi_bit[pgsz_idx]
 					  - l->lo_bit[pgsz_idx] + 1);
 				pte->entries =
-					vzalloc(sizeof(struct gk20a_mm_entry) *
+					nvgpu_vzalloc(g,
+						sizeof(struct gk20a_mm_entry) *
 						num_entries);
 				if (!pte->entries)
 					return -ENOMEM;
@@ -4030,7 +4041,7 @@ void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer,
 	if (mapped_buffer->own_mem_ref)
 		dma_buf_put(mapped_buffer->dmabuf);
 
-	kfree(mapped_buffer);
+	nvgpu_kfree(g, mapped_buffer);
 
 	return;
 }
@@ -4064,7 +4075,7 @@ static void gk20a_vm_free_entries(struct vm_gk20a *vm,
 
 	if (parent->mem.size)
 		free_gmmu_pages(vm, parent);
-	vfree(parent->entries);
+	nvgpu_vfree(vm->mm->g, parent->entries);
 	parent->entries = NULL;
 }
 
@@ -4106,7 +4117,7 @@ static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
 	list_for_each_entry_safe(va_node, va_node_tmp, &vm->reserved_va_list,
 		reserved_va_list) {
 		list_del(&va_node->reserved_va_list);
-		kfree(va_node);
+		nvgpu_kfree(vm->mm->g, va_node);
 	}
 
 	gk20a_deinit_vm(vm);
@@ -4118,7 +4129,7 @@ void gk20a_vm_remove_support(struct vm_gk20a *vm)
 {
 	gk20a_vm_remove_support_nofree(vm);
 	/* vm is not used anymore. release it. */
-	kfree(vm);
+	nvgpu_kfree(vm->mm->g, vm);
 }
 
 static void gk20a_vm_remove_support_kref(struct kref *ref)
@@ -4309,8 +4320,9 @@ static int init_vm_page_tables(struct vm_gk20a *vm)
 	pde_range_from_vaddr_range(vm,
 				   0, vm->va_limit-1,
 				   &pde_lo, &pde_hi);
-	vm->pdb.entries = vzalloc(sizeof(struct gk20a_mm_entry) *
-				  (pde_hi + 1));
+	vm->pdb.entries = nvgpu_vzalloc(vm->mm->g,
+					sizeof(struct gk20a_mm_entry) *
+					(pde_hi + 1));
 	vm->pdb.num_entries = pde_hi + 1;
 
 	if (!vm->pdb.entries)
@@ -4561,7 +4573,7 @@ clean_up_allocators:
 		nvgpu_alloc_destroy(&vm->user_lp);
 clean_up_page_tables:
 	/* Cleans up init_vm_page_tables() */
-	vfree(vm->pdb.entries);
+	nvgpu_vfree(g, vm->pdb.entries);
 	free_gmmu_pages(vm, &vm->pdb);
 	return err;
 }
@@ -4592,7 +4604,7 @@ int gk20a_vm_alloc_share(struct gk20a_as_share *as_share, u32 big_page_size,
 			return -EINVAL;
 	}
 
-	vm = kzalloc(sizeof(*vm), GFP_KERNEL);
+	vm = nvgpu_kzalloc(g, sizeof(*vm));
 	if (!vm)
 		return -ENOMEM;
 
@@ -4656,7 +4668,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 		goto clean_up;
 	}
 
-	va_node = kzalloc(sizeof(*va_node), GFP_KERNEL);
+	va_node = nvgpu_kzalloc(g, sizeof(*va_node));
 	if (!va_node) {
 		err = -ENOMEM;
 		goto clean_up;
@@ -4674,7 +4686,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 					  (u64)args->page_size);
 
 	if (!vaddr_start) {
-		kfree(va_node);
+		nvgpu_kfree(g, va_node);
 		goto clean_up;
 	}
 
@@ -4705,7 +4717,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 		if (!map_offset) {
 			nvgpu_mutex_release(&vm->update_gmmu_lock);
 			nvgpu_free(vma, vaddr_start);
-			kfree(va_node);
+			nvgpu_kfree(g, va_node);
 			goto clean_up;
 		}
 
@@ -4768,7 +4780,7 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 					gk20a_mem_flag_none,
 					true,
 					NULL);
-		kfree(va_node);
+		nvgpu_kfree(g, va_node);
 	}
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 	err = 0;
@@ -4811,15 +4823,19 @@ int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev)
 	priv = dma_buf_get_drvdata(dmabuf, dev);
 	if (priv)
 		goto priv_exist_or_err;
-	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+
+	priv = nvgpu_kzalloc(g, sizeof(*priv));
 	if (!priv) {
 		priv = ERR_PTR(-ENOMEM);
 		goto priv_exist_or_err;
 	}
+
 	nvgpu_mutex_init(&priv->lock);
 	INIT_LIST_HEAD(&priv->states);
 	priv->buffer_id = ++priv_count;
+	priv->g = g;
 	dma_buf_set_drvdata(dmabuf, dev, priv, gk20a_mm_delete_priv);
+
 priv_exist_or_err:
 	nvgpu_mutex_release(&g->mm.priv_lock);
 	if (IS_ERR(priv))
@@ -4834,6 +4850,7 @@ int gk20a_dmabuf_get_state(struct dma_buf *dmabuf, struct device *dev,
 	int err = 0;
 	struct gk20a_dmabuf_priv *priv;
 	struct gk20a_buffer_state *s;
+	struct gk20a *g = get_gk20a(dev);
 
 	if (WARN_ON(offset >= (u64)dmabuf->size))
 		return -EINVAL;
@@ -4853,7 +4870,7 @@ int gk20a_dmabuf_get_state(struct dma_buf *dmabuf, struct device *dev,
 			goto out;
 
 	/* State not found, create state. */
-	s = kzalloc(sizeof(*s), GFP_KERNEL);
+	s = nvgpu_kzalloc(g, sizeof(*s));
 	if (!s) {
 		err = -ENOMEM;
 		goto out;

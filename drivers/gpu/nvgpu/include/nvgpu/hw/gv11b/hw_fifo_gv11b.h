@@ -230,6 +230,10 @@ static inline u32 fifo_intr_0_channel_intr_pending_f(void)
 {
 	return 0x80000000;
 }
+static inline u32 fifo_intr_0_ctxsw_timeout_pending_f(void)
+{
+	return 0x2;
+}
 static inline u32 fifo_intr_en_0_r(void)
 {
 	return 0x00002140;
@@ -241,6 +245,10 @@ static inline u32 fifo_intr_en_0_sched_error_f(u32 v)
 static inline u32 fifo_intr_en_0_sched_error_m(void)
 {
 	return 0x1 << 8;
+}
+static inline u32 fifo_intr_en_0_ctxsw_timeout_pending_f(void)
+{
+	return 0x2;
 }
 static inline u32 fifo_intr_en_1_r(void)
 {
@@ -265,6 +273,82 @@ static inline u32 fifo_intr_sched_error_code_ctxsw_timeout_v(void)
 static inline u32 fifo_intr_chsw_error_r(void)
 {
 	return 0x0000256c;
+}
+static inline u32 fifo_intr_ctxsw_timeout_r(void)
+{
+	return 0x00002a30;
+}
+static inline u32 fifo_intr_ctxsw_timeout_engine_f(u32 v, u32 i)
+{
+	return (v & 0x1) << (0 + i*1);
+}
+static inline u32 fifo_intr_ctxsw_timeout_engine_v(u32 r, u32 i)
+{
+	return (r >> (0 + i*1)) & 0x1;
+}
+static inline u32 fifo_intr_ctxsw_timeout_engine__size_1_v(void)
+{
+	return 0x00000020;
+}
+static inline u32 fifo_intr_ctxsw_timeout_engine_pending_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_intr_ctxsw_timeout_engine_pending_f(u32 i)
+{
+	return 0x1 << (0 + i*1);
+}
+static inline u32 fifo_intr_ctxsw_timeout_info_r(u32 i)
+{
+	return 0x00003200 + i*4;
+}
+static inline u32 fifo_intr_ctxsw_timeout_info__size_1_v(void)
+{
+	return 0x00000004;
+}
+static inline u32 fifo_intr_ctxsw_timeout_info_ctxsw_state_v(u32 r)
+{
+	return (r >> 0) & 0x3;
+}
+static inline u32 fifo_intr_ctxsw_timeout_info_ctxsw_state_load_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_intr_ctxsw_timeout_info_ctxsw_state_save_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 fifo_intr_ctxsw_timeout_info_ctxsw_state_switch_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 fifo_intr_ctxsw_timeout_info_prev_tsgid_v(u32 r)
+{
+	return (r >> 4) & 0xfff;
+}
+static inline u32 fifo_intr_ctxsw_timeout_info_next_tsgid_v(u32 r)
+{
+	return (r >> 16) & 0xfff;
+}
+static inline u32 fifo_intr_ctxsw_timeout_info_status_v(u32 r)
+{
+	return (r >> 28) & 0x3;
+}
+static inline u32 fifo_intr_ctxsw_timeout_info_status_awaiting_ack_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fifo_intr_ctxsw_timeout_info_status_eng_was_reset_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fifo_intr_ctxsw_timeout_info_status_ack_received_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 fifo_intr_ctxsw_timeout_info_status_dropped_timeout_v(void)
+{
+	return 0x00000003;
 }
 static inline u32 fifo_intr_pbdma_id_r(void)
 {
@@ -449,6 +533,26 @@ static inline u32 fifo_engine_status_ctxsw_in_progress_v(void)
 static inline u32 fifo_engine_status_ctxsw_in_progress_f(void)
 {
 	return 0x8000;
+}
+static inline u32 fifo_eng_ctxsw_timeout_r(void)
+{
+	return 0x00002a0c;
+}
+static inline u32 fifo_eng_ctxsw_timeout_period_f(u32 v)
+{
+	return (v & 0x7fffffff) << 0;
+}
+static inline u32 fifo_eng_ctxsw_timeout_period_v(u32 r)
+{
+	return (r >> 0) & 0x7fffffff;
+}
+static inline u32 fifo_eng_ctxsw_timeout_detection_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 fifo_eng_ctxsw_timeout_detection_enabled_f(void)
+{
+	return 0x80000000;
 }
 static inline u32 fifo_pbdma_status_r(u32 i)
 {

@@ -18,6 +18,20 @@
 
 #define FIFO_INVAL_PBDMA_ID	((u32)~0)
 
+/* engine context-switch request occurred while the engine was in reset */
+#define SCHED_ERROR_CODE_ENGINE_RESET      0x00000005
+
+/*
+* ERROR_CODE_BAD_TSG indicates that Host encountered a badly formed TSG header
+* or a badly formed channel type runlist entry in the runlist. This is typically
+* caused by encountering a new TSG entry in the middle of a TSG definition.
+* A channel type entry having wrong runqueue selector can also cause this.
+* Additionally this error code can indicate when a channel is encountered on
+* the runlist which is outside of a TSG.
+*/
+#define SCHED_ERROR_CODE_BAD_TSG           0x00000020
+
+
 struct gpu_ops;
 void gv11b_init_fifo(struct gpu_ops *gops);
 #endif

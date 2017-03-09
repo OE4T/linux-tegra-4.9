@@ -15,13 +15,15 @@
 #include <linux/delay.h>
 #include <linux/types.h>
 
-#include "nvgpu/semaphore.h"
+#include <nvgpu/semaphore.h>
 #include <nvgpu/timers.h>
+#include <nvgpu/log.h>
 
 
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
+#include "gk20a/channel_gk20a.h"
 
 #include "gp10b/fifo_gp10b.h"
 
@@ -862,7 +864,7 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 	gk20a_dbg_info("hw id     =%d", id);
 	gk20a_dbg_info("id_type   =%d", id_type);
 	gk20a_dbg_info("rc_type   =%d", rc_type);
-	gk20a_dbg_info("mmu_fault =%p", mmfault);
+	gk20a_dbg_info("mmu_fault =0x%p", mmfault);
 
 	runlists_mask =  gv11b_fifo_get_runlists_mask(g, act_eng_bitmask, id,
 					 id_type, rc_type, mmfault);
@@ -1060,7 +1062,8 @@ static u32 gv11b_fifo_intr_0_en_mask(struct gk20a *g)
 	intr_0_en_mask = g->ops.fifo.intr_0_error_mask(g);
 
 	intr_0_en_mask |= fifo_intr_0_runlist_event_pending_f() |
-				 fifo_intr_0_pbdma_intr_pending_f();
+				 fifo_intr_0_pbdma_intr_pending_f() |
+				 fifo_intr_0_ctxsw_timeout_pending_f();
 
 	return intr_0_en_mask;
 }
@@ -1072,6 +1075,7 @@ int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
 	u32 timeout;
 	unsigned int i;
 	u32 host_num_pbdma = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_PBDMA);
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	gk20a_dbg_fn("");
 
@@ -1123,6 +1127,16 @@ int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
 		gk20a_writel(g, pbdma_intr_en_1_r(i), intr_stall);
 	}
 
+	/* clear ctxsw timeout interrupts */
+	gk20a_writel(g, fifo_intr_ctxsw_timeout_r(), ~0);
+
+	/* enable ctxsw timeout */
+	timeout = GRFIFO_TIMEOUT_CHECK_PERIOD_US;
+	timeout = scale_ptimer(timeout,
+		ptimer_scalingfactor10x(platform->ptimer_src_freq));
+	timeout |= fifo_eng_ctxsw_timeout_detection_enabled_f();
+	gk20a_writel(g, fifo_eng_ctxsw_timeout_r(), timeout);
+
 	/* clear runlist interrupts */
 	gk20a_writel(g, fifo_intr_runlist_r(), ~0);
 
@@ -1137,6 +1151,221 @@ int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
 	gk20a_dbg_fn("done");
 
 	return 0;
+}
+
+static const char *const gv11b_sched_error_str[] = {
+	"xxx-0",
+	"xxx-1",
+	"xxx-2",
+	"xxx-3",
+	"xxx-4",
+	"engine_reset",
+	"rl_ack_timeout",
+	"rl_ack_extra",
+	"rl_rdat_timeout",
+	"rl_rdat_extra",
+	"xxx-a",
+	"xxx-b",
+	"rl_req_timeout",
+	"new_runlist",
+	"code_config_while_busy",
+	"xxx-f",
+	"xxx-0x10",
+	"xxx-0x11",
+	"xxx-0x12",
+	"xxx-0x13",
+	"xxx-0x14",
+	"xxx-0x15",
+	"xxx-0x16",
+	"xxx-0x17",
+	"xxx-0x18",
+	"xxx-0x19",
+	"xxx-0x1a",
+	"xxx-0x1b",
+	"xxx-0x1c",
+	"xxx-0x1d",
+	"xxx-0x1e",
+	"xxx-0x1f",
+	"bad_tsg",
+};
+
+static bool gv11b_fifo_handle_sched_error(struct gk20a *g)
+{
+	u32 sched_error;
+
+	sched_error = gk20a_readl(g, fifo_intr_sched_error_r());
+
+	if (sched_error < ARRAY_SIZE(gv11b_sched_error_str))
+		nvgpu_err(g, "fifo sched error :%s",
+			gv11b_sched_error_str[sched_error]);
+	else
+		nvgpu_err(g, "fifo sched error code not supported");
+
+	if (sched_error == SCHED_ERROR_CODE_BAD_TSG ) {
+		/* id is unknown, preempt all runlists and do recovery */
+		gk20a_fifo_recover(g, 0, 0, false, false, false);
+	}
+
+	return false;
+}
+
+static u32 gv11b_fifo_ctxsw_timeout_info(struct gk20a *g, u32 active_eng_id)
+{
+	u32 tsgid = FIFO_INVAL_TSG_ID;
+	u32 timeout_info;
+	u32 ctx_status, info_status;
+
+	timeout_info = gk20a_readl(g,
+			 fifo_intr_ctxsw_timeout_info_r(active_eng_id));
+
+	/*
+	 * ctxsw_state and tsgid are snapped at the point of the timeout and
+	 * will not change while the corresponding INTR_CTXSW_TIMEOUT_ENGINE bit
+	 * is PENDING.
+	 */
+	ctx_status = fifo_intr_ctxsw_timeout_info_ctxsw_state_v(timeout_info);
+	if (ctx_status ==
+		fifo_intr_ctxsw_timeout_info_ctxsw_state_load_v()) {
+
+		tsgid = fifo_intr_ctxsw_timeout_info_next_tsgid_v(timeout_info);
+
+	} else if (ctx_status ==
+		       fifo_intr_ctxsw_timeout_info_ctxsw_state_switch_v() ||
+			ctx_status ==
+			fifo_intr_ctxsw_timeout_info_ctxsw_state_save_v()) {
+
+		tsgid = fifo_intr_ctxsw_timeout_info_prev_tsgid_v(timeout_info);
+	}
+	gk20a_dbg_info("ctxsw timeout info: tsgid = %d", tsgid);
+
+	/*
+	 * STATUS indicates whether the context request ack was eventually
+	 * received and whether a subsequent request timed out.  This field is
+	 * updated live while the corresponding INTR_CTXSW_TIMEOUT_ENGINE bit
+	 * is PENDING. STATUS starts in AWAITING_ACK, and progresses to
+	 * ACK_RECEIVED and finally ends with DROPPED_TIMEOUT.
+	 *
+	 * AWAITING_ACK - context request ack still not returned from engine.
+	 * ENG_WAS_RESET - The engine was reset via a PRI write to NV_PMC_ENABLE
+	 * or NV_PMC_ELPG_ENABLE prior to receiving the ack.  Host will not
+	 * expect ctx ack to return, but if it is already in flight, STATUS will
+	 * transition shortly to ACK_RECEIVED unless the interrupt is cleared
+	 * first.  Once the engine is reset, additional context switches can
+	 * occur; if one times out, STATUS will transition to DROPPED_TIMEOUT
+	 * if the interrupt isn't cleared first.
+	 * ACK_RECEIVED - The ack for the timed-out context request was
+	 * received between the point of the timeout and this register being
+	 * read.  Note this STATUS can be reported during the load stage of the
+	 * same context switch that timed out if the timeout occurred during the
+	 * save half of a context switch.  Additional context requests may have
+	 * completed or may be outstanding, but no further context timeout has
+	 * occurred.  This simplifies checking for spurious context switch
+	 * timeouts.
+	 * DROPPED_TIMEOUT - The originally timed-out context request acked,
+	 * but a subsequent context request then timed out.
+	 * Information about the subsequent timeout is not stored; in fact, that
+	 * context request may also have already been acked by the time SW
+	 * SW reads this register.  If not, there is a chance SW can get the
+	 * dropped information by clearing the corresponding
+	 * INTR_CTXSW_TIMEOUT_ENGINE bit and waiting for the timeout to occur
+	 * again. Note, however, that if the engine does time out again,
+	 * it may not be from the  original request that caused the
+	 * DROPPED_TIMEOUT state, as that request may
+	 * be acked in the interim.
+	 */
+	info_status = fifo_intr_ctxsw_timeout_info_status_v(timeout_info);
+	if (info_status ==
+		 fifo_intr_ctxsw_timeout_info_status_awaiting_ack_v()) {
+
+		gk20a_dbg_info("ctxsw timeout info : awaiting ack");
+
+	} else if (info_status ==
+		 fifo_intr_ctxsw_timeout_info_status_eng_was_reset_v()) {
+
+		gk20a_dbg_info("ctxsw timeout info : eng was reset");
+
+	} else if (info_status ==
+		 fifo_intr_ctxsw_timeout_info_status_ack_received_v()) {
+
+		gk20a_dbg_info("ctxsw timeout info : ack received");
+		/* no need to recover */
+		tsgid = FIFO_INVAL_TSG_ID;
+
+	} else if (info_status ==
+		fifo_intr_ctxsw_timeout_info_status_dropped_timeout_v()) {
+
+		gk20a_dbg_info("ctxsw timeout info : dropped timeout");
+		/* no need to recover */
+		tsgid = FIFO_INVAL_TSG_ID;
+
+	} else {
+		gk20a_dbg_info("ctxsw timeout info status = %u", info_status);
+	}
+
+	return tsgid;
+}
+
+static bool gv11b_fifo_handle_ctxsw_timeout(struct gk20a *g, u32 fifo_intr)
+{
+	bool ret = false;
+	u32 tsgid = FIFO_INVAL_TSG_ID;
+	u32 engine_id, active_eng_id;
+	u32 timeout_val, ctxsw_timeout_engines;
+
+
+	if (!(fifo_intr & fifo_intr_0_ctxsw_timeout_pending_f()))
+		return ret;
+
+	/* get ctxsw timedout engines */
+	ctxsw_timeout_engines = gk20a_readl(g, fifo_intr_ctxsw_timeout_r());
+	if (ctxsw_timeout_engines == 0) {
+		nvgpu_err(g, "no eng ctxsw timeout pending");
+		return ret;
+	}
+
+	timeout_val = gk20a_readl(g, fifo_eng_ctxsw_timeout_r());
+	timeout_val = fifo_eng_ctxsw_timeout_period_v(timeout_val);
+
+	gk20a_dbg_info("eng ctxsw timeout period = 0x%x", timeout_val);
+
+	for (engine_id = 0; engine_id < g->fifo.num_engines; engine_id++) {
+		active_eng_id = g->fifo.active_engines_list[engine_id];
+
+		if (ctxsw_timeout_engines &
+			fifo_intr_ctxsw_timeout_engine_pending_f(
+				active_eng_id)) {
+
+			struct fifo_gk20a *f = &g->fifo;
+			u32 ms = 0;
+			bool verbose = false;
+
+			tsgid = gv11b_fifo_ctxsw_timeout_info(g, active_eng_id);
+
+			if (tsgid == FIFO_INVAL_TSG_ID)
+				continue;
+
+			if (gk20a_fifo_check_tsg_ctxsw_timeout(
+				&f->tsg[tsgid], &verbose, &ms)) {
+				ret = true;
+				nvgpu_err(g,
+				 "ctxsw timeout error:"
+				"active engine id =%u, %s=%d, ms=%u",
+				active_eng_id, "tsg", tsgid, ms);
+
+				/* Cancel all channels' timeout */
+				gk20a_channel_timeout_restart_all_channels(g);
+				gk20a_fifo_recover(g, BIT(active_eng_id), tsgid,
+						true, true, verbose);
+			} else {
+				gk20a_dbg_info(
+					"fifo is waiting for ctx switch: "
+					"for %d ms, %s=%d", ms, "tsg", tsgid);
+			}
+		}
+	}
+	/* clear interrupt */
+	gk20a_writel(g, fifo_intr_ctxsw_timeout_r(), ctxsw_timeout_engines);
+	return ret;
 }
 
 void gv11b_init_fifo(struct gpu_ops *gops)
@@ -1169,4 +1398,6 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.init_pbdma_intr_descs = gv11b_fifo_init_pbdma_intr_descs;
 	gops->fifo.reset_enable_hw = gv11b_init_fifo_reset_enable_hw;
 	gops->fifo.teardown_ch_tsg = gv11b_fifo_teardown_ch_tsg;
+	gops->fifo.handle_sched_error = gv11b_fifo_handle_sched_error;
+	gops->fifo.handle_ctxsw_timeout = gv11b_fifo_handle_ctxsw_timeout;
 }

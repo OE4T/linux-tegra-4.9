@@ -13,17 +13,19 @@
 
 #include <linux/sort.h>
 
+#include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
+#include <nvgpu/bios.h>
+#include <nvgpu/kmem.h>
+
 #include "gk20a/gk20a.h"
+#include "gk20a/pmu_gk20a.h"
+#include "gm206/bios_gm206.h"
+
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
-#include "gm206/bios_gm206.h"
 #include "ctrl/ctrlvolt.h"
-#include "gk20a/pmu_gk20a.h"
 
 #include "volt.h"
-#include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
-
-#include <nvgpu/bios.h>
 
 #define VOLT_DEV_PWM_VOLTAGE_STEPS_INVALID	0
 #define VOLT_DEV_PWM_VOLTAGE_STEPS_DEFAULT	1
@@ -135,7 +137,7 @@ struct voltage_device_entry *volt_dev_construct_dev_entry_pwm(struct gk20a *g,
 	struct voltage_device_pwm_entry *ptmp_entry =
 			(struct voltage_device_pwm_entry *)pargs;
 
-	pentry = kzalloc(sizeof(struct voltage_device_pwm_entry), GFP_KERNEL);
+	pentry = nvgpu_kzalloc(g, sizeof(struct voltage_device_pwm_entry));
 	if (pentry == NULL)
 		return NULL;
 
@@ -200,7 +202,7 @@ static u32 volt_get_voltage_device_table_1x_psv(struct gk20a *g,
 	u8 volt_domain = 0;
 	struct voltage_device_pwm_entry pwm_entry = { { 0 } };
 
-	ptmp_dev = kzalloc(sizeof(struct voltage_device_pwm), GFP_KERNEL);
+	ptmp_dev = nvgpu_kzalloc(g, sizeof(struct voltage_device_pwm));
 	if (ptmp_dev == NULL)
 		return -ENOMEM;
 
@@ -349,7 +351,7 @@ done:
 	if (pvolt_dev != NULL)
 		pvolt_dev->num_entries = entry_cnt;
 
-	kfree(ptmp_dev);
+	nvgpu_kfree(g, ptmp_dev);
 	return status;
 }
 
@@ -579,4 +581,3 @@ done:
 	gk20a_dbg_info(" done status %x", status);
 	return status;
 }
-

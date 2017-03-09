@@ -234,6 +234,8 @@ static struct gpio_desc *of_parse_own_gpio(struct device_node *np,
 		*dflags |= GPIOD_OUT_LOW;
 	else if (of_property_read_bool(np, "output-high"))
 		*dflags |= GPIOD_OUT_HIGH;
+	else if (of_property_read_bool(np, "function"))
+		*dflags = 0;
 	else {
 		pr_warn("GPIO line %d (%s): no hogging state specified, bailing out\n",
 			desc_to_gpio(desc), np->name);
@@ -334,6 +336,16 @@ static int of_gpiochip_scan_gpios(struct gpio_chip *chip)
 						 &lflags, &dflags);
 			if (IS_ERR(desc))
 				continue;
+
+			/* dflags is 0 for making pin in non-gpio mode */
+			if (!dflags) {
+				ret = chip->request(chip,
+						    gpio_chip_hwgpio(desc));
+				if (!ret)
+					chip->free(chip,
+						   gpio_chip_hwgpio(desc));
+				continue;
+			}
 
 			ret = gpiod_hog(desc, name, lflags, dflags);
 			if (ret < 0)

@@ -2051,7 +2051,7 @@ static bool gk20a_fifo_check_ch_ctxsw_timeout(struct channel_gk20a *ch,
 	return recover;
 }
 
-static bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
+bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 		bool *verbose, u32 *ms)
 {
 	struct channel_gk20a *ch;
@@ -2121,7 +2121,7 @@ static bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 	return recover;
 }
 
-static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
+bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 {
 	u32 sched_error;
 	u32 engine_id;
@@ -2205,7 +2205,7 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 	}
 
 	if (fifo_intr & fifo_intr_0_sched_error_pending_f()) {
-		print_channel_reset_log = gk20a_fifo_handle_sched_error(g);
+		print_channel_reset_log = g->ops.fifo.handle_sched_error(g);
 		handled |= fifo_intr_0_sched_error_pending_f();
 	}
 
@@ -2462,6 +2462,9 @@ void gk20a_fifo_isr(struct gk20a *g)
 		}
 		if (fifo_intr & fifo_intr_0_pbdma_intr_pending_f())
 			clear_intr |= fifo_pbdma_isr(g, fifo_intr);
+
+		if (g->ops.fifo.handle_ctxsw_timeout)
+			g->ops.fifo.handle_ctxsw_timeout(g, fifo_intr);
 
 		if (unlikely(fifo_intr & error_intr_mask))
 			clear_intr = fifo_error_isr(g, fifo_intr);
@@ -4273,4 +4276,5 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.userd_gp_put = gk20a_fifo_userd_gp_put;
 	gops->fifo.pbdma_acquire_val = gk20a_fifo_pbdma_acquire_val;
 	gops->fifo.teardown_ch_tsg = gk20a_fifo_teardown_ch_tsg;
+	gops->fifo.handle_sched_error = gk20a_fifo_handle_sched_error;
 }

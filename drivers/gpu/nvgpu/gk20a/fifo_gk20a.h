@@ -386,4 +386,9 @@ bool gk20a_fifo_should_defer_engine_reset(struct gk20a *g, u32 engine_id,
 void gk20a_fifo_teardown_ch_tsg(struct gk20a *g, u32 __engine_ids,
 			u32 hw_id, unsigned int id_type, unsigned int rc_type,
 			 struct mmu_fault_info *mmfault);
+
+bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
+			bool *verbose, u32 *ms);
+bool gk20a_fifo_handle_sched_error(struct gk20a *g);
+
 #endif /*__GR_GK20A_H__*/

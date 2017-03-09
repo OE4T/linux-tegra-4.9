@@ -228,4 +228,5 @@ void gm20b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.init_pbdma_intr_descs = gm20b_fifo_init_pbdma_intr_descs;
 	gops->fifo.reset_enable_hw = gk20a_init_fifo_reset_enable_hw;
 	gops->fifo.teardown_ch_tsg = gk20a_fifo_teardown_ch_tsg;
+	gops->fifo.handle_sched_error = gk20a_fifo_handle_sched_error;
 }

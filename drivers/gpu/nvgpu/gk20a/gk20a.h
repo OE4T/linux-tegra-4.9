@@ -472,6 +472,8 @@ struct gpu_ops {
 		void (*teardown_ch_tsg)(struct gk20a *g, u32 act_eng_bitmask,
 			u32 id, unsigned int id_type, unsigned int rc_type,
 			 struct mmu_fault_info *mmfault);
+		bool (*handle_sched_error)(struct gk20a *g);
+		bool (*handle_ctxsw_timeout)(struct gk20a *g, u32 fifo_intr);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/

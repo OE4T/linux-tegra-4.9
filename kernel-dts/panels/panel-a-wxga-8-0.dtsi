@@ -1,7 +1,7 @@
 /*
  * arch/arm/boot/dts/panel-a-wxga-8-0.dtsi
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 / {
 	host1x {
 		dsi {
-			panel-a-wxga-8-0 {
+			panel_a_wxga_8_0: panel-a-wxga-8-0 {
 				status = "disabled";
 				compatible = "a,wxga-8-0";
 				nvidia,dsi-instance = <DSI_INSTANCE_0>;
@@ -199,7 +199,7 @@
 		};
 	};
 	backlight {
-		panel-a-wxga-8-0-bl {
+		panel_a_wxga_8_0_bl: panel-a-wxga-8-0-bl {
 			status = "disabled";
 			compatible = "a,wxga-8-0-bl";
 			pwms = <&tegra_pwm 1 1000000>;

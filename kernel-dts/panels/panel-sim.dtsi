@@ -1,7 +1,7 @@
 /*
  * arch/arm/boot/dts/panel-sim.dtsi
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 / {
 	host1x {
 		sor {
-			panel-nvidia-sim {
+			panel_nvidia_sim_sor0: panel-nvidia-sim {
 				compatible = "nvidia,sim-panel";
 				nvidia,tx-pu-disable = <1>;
 				disp-default-out {
@@ -57,7 +57,7 @@
 				};
 			};
 
-			dp-ufpga-panel {
+			dp_ufpga_panel: dp-ufpga-panel {
 				compatible = "nvidia,dp-ufpga-panel";
 				nvidia,tx-pu-disable = <1>;
 				disp-default-out {
@@ -116,7 +116,7 @@
 		};
 
 		sor1 {
-			panel-nvidia-sim {
+			panel_nvidia_sim_sor1: panel-nvidia-sim {
 				compatible = "nvidia,sim-panel";
 				nvidia,tx-pu-disable = <1>;
 				disp-default-out {
@@ -187,7 +187,7 @@
 			};
 		};
 		dsi {
-			panel-s-wuxga-8-0 {
+			panel_s_wuxga_8_0: panel-s-wuxga-8-0 {
 				status = "okay";
 				compatible = "s,wuxga-8-0";
 				nvidia,dsi-instance = <DSI_INSTANCE_0>;
@@ -642,7 +642,7 @@
 		};
 	};
 	backlight {
-		panel-a-edp-1080p-14-0-bl {
+		panel_a_edp_1080p_14_0_bl: panel-a-edp-1080p-14-0-bl {
 			status = "okay";
 			compatible = "a-edp,1080p-14-0-bl";
 			max-brightness = <255>;

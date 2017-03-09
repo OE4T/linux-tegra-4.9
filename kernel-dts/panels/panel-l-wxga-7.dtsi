@@ -1,7 +1,7 @@
 /*
  * arch/arm/boot/dts/panel-l-wxga-7.dtsi
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 / {
 	host1x {
 		dsi {
-			panel-l-wxga-7 {
+			panel_l_wxga_7: panel-l-wxga-7 {
 				status = "disabled";
 				compatible = "lg,wxga-7";
 				nvidia,dsi-instance = <DSI_INSTANCE_0>;
@@ -120,7 +120,7 @@
 		};
 	};
 	backlight {
-		panel-l-wxga-7-bl {
+		panel_l_wxga_7_bl: panel-l-wxga-7-bl {
 			status = "disabled";
 			compatible = "lg,wxga-7-bl";
 			pwms = <&tegra_pwm 1 1000000>;

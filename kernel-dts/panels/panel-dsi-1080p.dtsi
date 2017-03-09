@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
 / {
 	host1x {
 		dsi {
-			panel-dsi-1080p-p2382 {
+			panel_dsi_1080p_p2382: panel-dsi-1080p-p2382 {
 				status = "okay";
 				compatible = "dsi,1080p";
 				nvidia,dsi-instance = <DSI_INSTANCE_0>;
@@ -231,7 +231,7 @@
 	};
 	backlight {
 		pwms = <&tegra_pwm 1 29334>;
-		panel-dsi-1080p-p2382-bl {
+		panel_dsi_1080p_p2382_bl: panel-dsi-1080p-p2382-bl {
 			status = "okay";
 			compatible = "dsi,1080p-bl";
 			max-brightness = <255>;

@@ -1,7 +1,7 @@
 /*
  * arch/arm/boot/dts/panel-n-wqxga-6-0.dtsi
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@
 / {
 	host1x {
 		dsi {
-			panel-n-wqxga-6-0 {
+			panel_n_wqxga_6_0: panel-n-wqxga-6-0 {
 				compatible = "n,wqxga-6-0";
 				nvidia,dsi-instance = <DSI_INSTANCE_0>;
 				nvidia,dsi-n-data-lanes = <4>;

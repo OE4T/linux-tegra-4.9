@@ -1,7 +1,7 @@
 /*
  * arch/arm/boot/dts/panel-p-wuxga-10-1.dtsi
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 / {
 	host1x {
 		dsi {
-			panel-p-wuxga-10-1 {
+			panel_p_wuxga_10_1: panel-p-wuxga-10-1 {
 				status = "disabled";
 				compatible = "p,wuxga-10-1";
 				nvidia,dsi-instance = <DSI_INSTANCE_0>;
@@ -231,7 +231,7 @@
 		};
 	};
 	backlight {
-		panel-p-wuxga-10-1-bl {
+		panel_p_wuxga_10_1_bl: panel-p-wuxga-10-1-bl {
 			status = "disabled";
 			compatible = "p,wuxga-10-1-bl";
 			pwms = <&tegra_pwm 1 1000000>;

@@ -1,7 +1,7 @@
 /*
  * arch/arm/boot/dts/panel-s-wuxga-8-0-mods.dtsi
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 / {
 	host1x {
 		dsi {
-			panel-s-wuxga-8-0-mods {
+			panel_s_wuxga_8_0_mods: panel-s-wuxga-8-0-mods {
 				status = "disabled";
 				compatible = "s,wuxga-8-0-mods";
 				nvidia,dsi-instance = <DSI_INSTANCE_0>;

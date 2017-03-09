@@ -1,7 +1,7 @@
 /*
  * arch/arm/boot/dts/panel-a-edp-1080p-14-0.dtsi
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 / {
 	host1x {
 		sor {
-			panel-a-edp-1080p-14-0 {
+			panel_a_edp_1080p_14_0: panel-a-edp-1080p-14-0 {
 				status = "disabled";
 				compatible = "a-edp,1080p-14-0";
 				nvidia,tx-pu-disable = <1>;
@@ -101,7 +101,7 @@
 		};
 	};
 	backlight {
-		panel-a-edp-1080p-14-0-bl {
+		panel_a_edp_1080p_14_0_bl: panel-a-edp-1080p-14-0-bl {
 			status = "disabled";
 			compatible = "a-edp,1080p-14-0-bl";
 			pwms = <&tegra_pwm 1 1000000>;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 / {
 	host1x {
 		dsi {
-			panel-s-wqxga-10-1 {
+			panel_s_wqxga_10_1: panel-s-wqxga-10-1 {
 				status = "okay";
 				compatible = "dsi,25x16";
 				nvidia,dsi-instance = <DSI_INSTANCE_0>;
@@ -258,7 +258,7 @@
 	};
 	backlight {
 		pwms = <&tegra_pwm 1 1000000>;
-		panel-s-wqxga-10-1-bl {
+		panel_s_wqxga_10_1_bl: panel-s-wqxga-10-1-bl {
 			status = "okay";
 			compatible = "dsi,25x16-bl";
 			max-brightness = <255>;

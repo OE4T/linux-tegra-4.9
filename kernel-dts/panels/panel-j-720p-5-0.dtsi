@@ -1,7 +1,7 @@
 /*
  * arch/arm/boot/dts/panel-j-720p-5-0.dtsi
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 / {
 	host1x {
 		dsi {
-			panel-j-720p-5-0 {
+			panel_j_720p_5_0: panel-j-720p-5-0 {
 				status = "disabled";
 				compatible = "j,720p-5-0";
 				nvidia,dsi-instance = <DSI_INSTANCE_0>;
@@ -234,7 +234,7 @@
 		};
 	};
 	backlight {
-		panel-j-720p-5-0-bl {
+		panel_j_720p_5_0_bl: panel-j-720p-5-0-bl {
 			status = "disabled";
 			compatible = "j,720p-5-0-bl";
 			pwms = <&tegra_pwm 1 29334>;

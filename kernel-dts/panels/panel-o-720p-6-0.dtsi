@@ -1,7 +1,7 @@
 /*
  * arch/arm/boot/dts/panel-o-720p-6-0.dtsi
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 / {
 	host1x {
 		dsi {
-			panel-o-720p-6-0 {
+			panel_o_720p_6_0: panel-o-720p-6-0 {
 				status = "disabled";
 				compatible = "o,720-1280-6-0";
 				nvidia,dsi-instance = <DSI_INSTANCE_0>;
@@ -136,7 +136,7 @@
 		};
 	};
 	backlight {
-		panel-o-720p-6-0-bl {
+		panel_o_720p_6_0_bl: panel-o-720p-6-0-bl {
 			status = "disabled";
 			compatible = "o,720-1280-6-0-bl";
 			pwms = <&tegra_pwm 1 50000>;

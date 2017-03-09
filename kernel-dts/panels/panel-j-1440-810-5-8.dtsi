@@ -1,7 +1,7 @@
 /*
  * arch/arm/boot/dts/panel-j-1440-810-5-8.dtsi
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 / {
 	host1x {
 		dsi {
-			panel-j-1440-810-5-8 {
+			panel_j_1440_810_5_8: panel-j-1440-810-5-8 {
 				status = "disabled";
 				compatible = "j,1440-810-5-8";
 				nvidia,dsi-instance = <DSI_INSTANCE_0>;
@@ -233,7 +233,7 @@
 		};
 	};
 	backlight {
-		panel-j-1440-810-5-8-bl {
+		panel_j_1440_810_5_8_bl: panel-j-1440-810-5-8-bl {
 			status = "disabled";
 			compatible = "j,1440-810-5-8-bl";
 			pwms = <&tegra_pwm 1 29334>;

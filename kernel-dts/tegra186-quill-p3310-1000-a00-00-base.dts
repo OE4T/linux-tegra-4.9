@@ -149,6 +149,10 @@
 		};
 	};
 
+	i2c@c240000 {
+		clock-frequency = <400000>;
+	};
+
 	cpus {
 		status = "disabled";
 	};

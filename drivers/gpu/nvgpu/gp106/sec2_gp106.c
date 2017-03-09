@@ -12,7 +12,6 @@
  */
 
 #include <linux/delay.h>	/* for udelay */
-#include <linux/clk.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
@@ -289,7 +288,6 @@ void init_pmu_setup_hw1(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct pmu_gk20a *pmu = &g->pmu;
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	/* PMU TRANSCFG */
 	/* setup apertures - virtual */
@@ -322,8 +320,7 @@ void init_pmu_setup_hw1(struct gk20a *g)
 					pwr_pmu_new_instblk_target_fb_f()));
 
 	/*Copying pmu cmdline args*/
-	g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq(pmu,
-				clk_get_rate(platform->clk[1]));
+	g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq(pmu, 0);
 	g->ops.pmu_ver.set_pmu_cmdline_args_secure_mode(pmu, 1);
 	g->ops.pmu_ver.set_pmu_cmdline_args_trace_size(
 		pmu, GK20A_PMU_TRACE_BUFSIZE);

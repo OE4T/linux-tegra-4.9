@@ -19,6 +19,7 @@
 #include <linux/tegra-camera-rtcpu.h>
 
 #include <linux/completion.h>
+#include <linux/io.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
@@ -78,7 +79,7 @@ struct tegra_ivc_vi_notify {
 	struct completion ack;
 	struct work_struct notify_work;
 	size_t status_mem_size;
-	void __iomem *status_mem;
+	struct vi_capture_status __iomem *status_mem;
 	dma_addr_t status_dmaptr;
 	u16 status_entries;
 	u32 adjust_ts_counter;
@@ -115,12 +116,6 @@ static inline s64 get_ts_adjustment(u64 tsc_res)
 	#undef _DELTA_DIFF_THRESHOLD
 
 	return delta1;
-}
-
-static u64 tegra_ivc_vi_notify_get_status_mem_channel_offset(size_t size,
-					unsigned ch)
-{
-	return (size / VI_NOTIFY_MAX_VI_CHANS) * ch;
 }
 
 static void tegra_ivc_vi_notify_process(struct tegra_ivc_channel *chan,
@@ -324,9 +319,8 @@ static int tegra_ivc_vi_notify_enable_reports(struct device *dev, u8 ch,
 	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
 
 	u64 status_dmaptr = ivn->status_dmaptr +
-		tegra_ivc_vi_notify_get_status_mem_channel_offset(
-						ivn->status_mem_size,
-						ch);
+		ch * ivn->status_entries * sizeof(*ivn->status_mem);
+
 	struct vi_notify_req msg = {
 		.type = TEGRA_IVC_VI_ENABLE_REPORTS_2,
 		.channel = ch,
@@ -410,17 +404,13 @@ static int tegra_ivc_vi_notify_get_capture_status(struct device *dev,
 {
 	struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
 	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
-	struct vi_capture_status *status_mem =
-		(struct vi_capture_status *)(((u8 *)ivn->status_mem) +
-		tegra_ivc_vi_notify_get_status_mem_channel_offset(
-						ivn->status_mem_size,
-						ch));
-	u64 tail = 0;
+	struct vi_capture_status __iomem *status_mem =
+		&ivn->status_mem[ch * ivn->status_entries];
 	int err = 0;
 
-	if (ivn->status_entries) {
-		tail = index & (VI_NOTIFY_STATUS_ENTRIES - 1);
-		*status = *(status_mem + tail);
+	if (ivn->status_entries != 0) {
+		index &= ivn->status_entries - 1;
+		memcpy_fromio(status, &status_mem[index], sizeof(*status));
 
 		if (ivn->adjust_ts_counter % ADJUST_TS_FREQUENCY == 0)
 			ivn->ts_adjustment = get_ts_adjustment(ivn->ts_res_ns);
@@ -535,9 +525,12 @@ static int tegra_ivc_channel_vi_notify_probe(struct tegra_ivc_channel *chan)
 	if (IS_ERR(ivn->vi))
 		return PTR_ERR(ivn->vi);
 
-	ivn->status_mem_size = VI_NOTIFY_STATUS_ENTRIES *
-				sizeof(struct vi_capture_status) *
-				VI_NOTIFY_MAX_VI_CHANS;
+	/* This must be power of 2 */
+	BUG_ON(VI_NOTIFY_STATUS_ENTRIES & (VI_NOTIFY_STATUS_ENTRIES - 1));
+
+	ivn->status_mem_size = sizeof(*ivn->status_mem)
+		* VI_NOTIFY_STATUS_ENTRIES * VI_NOTIFY_MAX_VI_CHANS;
+
 	ivn->status_mem = dma_alloc_coherent(dev,
 		ivn->status_mem_size,
 		&ivn->status_dmaptr, GFP_KERNEL | __GFP_ZERO);

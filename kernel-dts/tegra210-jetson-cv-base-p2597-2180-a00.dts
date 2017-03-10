@@ -262,6 +262,7 @@
 		dsi {
 			nvidia,dsi-controller-vs = <DSI_VS_1>;
 			status = "okay";
+			nvidia,active-panel = <&panel_a_wuxga_8_0>;
 			panel-a-wuxga-8-0 {
 				status = "okay";
 				nvidia,dsi-dpd-pads = <DSIC_DPD_EN DSID_DPD_EN>;
@@ -276,9 +277,7 @@
 		sor {
 			status = "okay";
 			nvidia,hpd-gpio = <&gpio TEGRA_GPIO(CC, 6) 0>; /* PCC6 */
-			prod-settings {
-				status = "okay";
-			};
+			nvidia,active-panel = <&panel_s_edp_uhdtv_15_6>;
 			panel-s-edp-uhdtv-15-6 {
 				status = "okay";
 				nvidia,panel-bl-pwm-gpio = <&gpio TEGRA_GPIO(V, 0) 0>; /* PV0 */
@@ -286,6 +285,9 @@
 				smartdimmer {
 					status = "okay";
 				};
+			};
+			prod-settings {
+				status = "okay";
 			};
 		};
 

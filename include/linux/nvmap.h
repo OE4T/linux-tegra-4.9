@@ -304,6 +304,10 @@ struct nvmap_set_tag_label {
 	__u64 addr;		/* in: pointer to label or NULL to remove */
 };
 
+struct nvmap_available_heaps {
+	__u64 heaps;		/* heaps bitmask */
+};
+
 #define NVMAP_IOC_MAGIC 'N'
 
 /* Creates a new memory handle. On input, the argument is the size of the new
@@ -388,6 +392,9 @@ struct nvmap_set_tag_label {
 
 /* Define a label for allocation tag */
 #define NVMAP_IOC_SET_TAG_LABEL	_IOW(NVMAP_IOC_MAGIC, 24, struct nvmap_set_tag_label)
+
+#define NVMAP_IOC_GET_AVAILABLE_HEAPS \
+	_IOR(NVMAP_IOC_MAGIC, 25, struct nvmap_available_heaps)
 
 /* START of T124 IOCTLS */
 /* Actually allocates memory for the specified handle, with kind */

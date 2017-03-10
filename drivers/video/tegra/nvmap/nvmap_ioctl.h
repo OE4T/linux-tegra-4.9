@@ -66,4 +66,6 @@ int nvmap_ioctl_gup_test(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_set_tag_label(struct file *filp, void __user *arg);
 
+int nvmap_ioctl_get_available_heaps(struct file *filp, void __user *arg);
+
 #endif	/*  __VIDEO_TEGRA_NVMAP_IOCTL_H */

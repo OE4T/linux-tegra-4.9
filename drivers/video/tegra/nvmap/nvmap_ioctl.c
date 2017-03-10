@@ -742,3 +742,21 @@ int nvmap_ioctl_set_tag_label(struct file *filp, void __user *arg)
 
 	return err;
 }
+
+int nvmap_ioctl_get_available_heaps(struct file *filp, void __user *arg)
+{
+	struct nvmap_available_heaps op;
+	int i;
+
+	memset(&op, 0, sizeof(op));
+
+	for (i = 0; i < nvmap_dev->nr_carveouts; i++)
+		op.heaps |= nvmap_dev->heaps[i].heap_bit;
+
+	if (copy_to_user(arg, &op, sizeof(op))) {
+		pr_err("copy_to_user failed\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}

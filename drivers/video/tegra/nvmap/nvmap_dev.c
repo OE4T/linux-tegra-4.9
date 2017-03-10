@@ -693,6 +693,10 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		err = nvmap_ioctl_set_tag_label(filp, uarg);
 		break;
 
+	case NVMAP_IOC_GET_AVAILABLE_HEAPS:
+		err = nvmap_ioctl_get_available_heaps(filp, uarg);
+		break;
+
 	default:
 		pr_warn("Unknown NVMAP_IOC = 0x%x\n", cmd);
 	}

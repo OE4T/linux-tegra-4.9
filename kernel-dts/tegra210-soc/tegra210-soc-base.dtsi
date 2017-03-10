@@ -844,7 +844,7 @@
 			status = "disabled";
 		};
 
-		dc@54200000 {
+		head0: dc@54200000 {
 			compatible = "nvidia,tegra210-dc";
 			aux-device-name = "tegradc.0";
 			power-domains = <&mc_clk_pd>;
@@ -870,7 +870,7 @@
 			};
 		};
 
-		dc@54240000 {
+		head1: dc@54240000 {
 			compatible = "nvidia,tegra210-dc";
 			aux-device-name = "tegradc.1";
 			power-domains = <&mc_clk_pd>;
@@ -894,7 +894,7 @@
 			};
 		};
 
-		dsi {
+		dsi: dsi {
 			compatible = "nvidia,tegra210-dsi";
 			reg = <0x0 0x54300000 0x0 0x00040000
 			       0x0 0x54400000 0x0 0x00040000>;
@@ -984,11 +984,13 @@
 			status = "disabled";
 		};
 
-		sor {
+		sor0: sor {
 			compatible = "nvidia,tegra210-sor";
 			reg = <0x0 0x54540000 0x0 0x00040000>;
 			reg-names = "sor";
 			status = "disabled";
+			nvidia,sor-ctrlnum = <0>;
+			nvidia,dpaux = <&dpaux0>;
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
 			clocks = <&tegra_car TEGRA210_CLK_SOR0>,
 				<&tegra_car TEGRA210_CLK_SOR_SAFE>;
@@ -998,12 +1000,14 @@
 			nvidia,sor-audio-not-supported;
 		};
 
-		sor1 {
+		sor1: sor1 {
 			compatible = "nvidia,tegra210-sor1";
 			reg = <0x0 0x54580000 0x0 0x00040000>;
 			reg-names = "sor";
 			interrupts = <0 76 0x4>; /* INT_SOR_1 */
 			status = "disabled";
+			nvidia,sor-ctrlnum = <1>;
+			nvidia,dpaux = <&dpaux1>;
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
 			clocks = <&tegra_car TEGRA210_CLK_SOR1>,
 				<&tegra_car TEGRA210_CLK_SOR_SAFE>,
@@ -1031,10 +1035,11 @@
 		    };
 		};
 
-		dpaux {
+		dpaux0: dpaux {
 			compatible = "nvidia,tegra210-dpaux";
 			reg = <0x0 0x545c0000 0x0 0x00040000>;
 			interrupts = <0 159 0x4>; /* INT_DPAUX */
+			nvidia,dpaux-ctrlnum = <0>;
 			status = "disabled";
 			clocks = <&tegra_car TEGRA210_CLK_DPAUX>,
 				<&tegra_car TEGRA210_CLK_PLL_DP>;
@@ -1043,10 +1048,11 @@
 			reset-names = "dpaux";
 		};
 
-		dpaux1 {
+		dpaux1: dpaux1 {
 			compatible = "nvidia,tegra210-dpaux1";
 			reg = <0x0 0x54040000 0x0 0x00040000>;
 			interrupts = <0 11 0x4>; /* INT_DPAUX_1 */
+			nvidia,dpaux-ctrlnum = <1>;
 			status = "disabled";
 			clocks = <&tegra_car TEGRA210_CLK_DPAUX1>,
 				<&tegra_car TEGRA210_CLK_PLL_DP>;

@@ -723,7 +723,7 @@
 			status = "disabled";
 		};
 
-		nvdisplay@15200000 {
+		head0: nvdisplay@15200000 {
 			compatible = "nvidia,tegra186-dc";
 			reg = <0x0 0x15200000 0x0 0x10000>;
 			interrupts = <0 153 0x04>;
@@ -762,7 +762,7 @@
 			status = "disabled";
 		};
 
-		nvdisplay@15210000 {
+		head1: nvdisplay@15210000 {
 			compatible = "nvidia,tegra186-dc";
 			reg = <0x0 0x15210000 0x0 0x10000>;
 			interrupts = <0 154 0x04>;
@@ -801,7 +801,7 @@
 			status = "disabled";
 		};
 
-		nvdisplay@15220000 {
+		head2: nvdisplay@15220000 {
 			compatible = "nvidia,tegra186-dc";
 			reg = <0x0 0x15220000 0x0 0x10000>;
 			interrupts = <0 155 0x04>;
@@ -838,7 +838,7 @@
 			status = "disabled";
 		};
 
-		dsi {	/* dsi@15300000 */
+		dsi: dsi {	/* dsi@15300000 */
 			compatible = "nvidia,tegra186-dsi";
 			reg = <0x0 0x15300000 0x0 0x00040000>, /* DSIA */
 			      <0x0 0x15400000 0x0 0x00040000>, /* DSIB */
@@ -940,9 +940,11 @@
 			status = "disabled";
 		};
 
-		sor {
+		sor0: sor {
 			compatible = "nvidia,tegra186-sor";
 			reg = <0x0 0x15540000 0x0 0x00040000>;
+			nvidia,sor-ctrlnum = <0>;
+			nvidia,dpaux = <&dpaux0>;
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
 			clocks = <&clk32k_in>,
 				 <&tegra_car TEGRA186_CLK_SOR0>,
@@ -967,12 +969,20 @@
 			pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_HDMI_DP0>;
 			pad-names = "hdmi-dp0";
 			status = "disabled";
+			sor0_hdmi_display: hdmi-display {
+				status = "disabled";
+			};
+			sor0_dp_display: dp-display {
+				status = "disabled";
+			};
 		};
 
-		sor1 {
+		sor1: sor1 {
 			compatible = "nvidia,tegra186-sor1";
 			reg = <0x0 0x15580000 0x0 0x00040000>;
 			interrupts = <0 158 0x4>; /* INT_SOR_1 */
+			nvidia,sor-ctrlnum = <1>;
+			nvidia,dpaux = <&dpaux1>;
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
 			clocks = <&clk32k_in>,
 				 <&tegra_car TEGRA186_CLK_SOR1>,
@@ -997,12 +1007,19 @@
 			pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_HDMI_DP1>;
 			pad-names = "hdmi-dp1";
 			status = "disabled";
+			sor1_hdmi_display: hdmi-display {
+				status = "disabled";
+			};
+			sor1_dp_display: dp-display {
+				status = "disabled";
+			};
 		};
 
-		dpaux@155c0000 {
+		dpaux0: dpaux@155c0000 {
 			compatible = "nvidia,tegra186-dpaux";
 			reg = <0x0 0x155c0000 0x0 0x00040000>;
 			interrupts = <0 159 0x4>; /* INT_DPAUX */
+			nvidia,dpaux-ctrlnum = <0>;
 			clocks = <&clk32k_in>,
 				 <&tegra_car TEGRA186_CLK_DPAUX>,
 				 <&tegra_car TEGRA186_CLK_PLLDP>;
@@ -1013,10 +1030,11 @@
 			status = "disabled";
 		};
 
-		dpaux@15040000 {
+		dpaux1: dpaux@15040000 {
 			compatible = "nvidia,tegra186-dpaux1";
 			reg = <0x0 0x15040000 0x0 0x00040000>;
 			interrupts = <0 160 0x4>; /* INT_DPAUX_1 */
+			nvidia,dpaux-ctrlnum = <1>;
 			clocks = <&clk32k_in>,
 				 <&tegra_car TEGRA186_CLK_DPAUX1>,
 				 <&tegra_car TEGRA186_CLK_PLLDP>;

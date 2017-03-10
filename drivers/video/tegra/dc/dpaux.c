@@ -211,7 +211,6 @@ struct tegra_dc_dpaux_data *tegra_dpaux_init_data(struct tegra_dc *dc)
 	int sor_num = -1;
 	int err = 0;
 	char dpaux_name[CHAR_BUF_SIZE_MAX] = {0};
-	bool need_rst = true;
 
 	if (!dc) {
 		pr_err("%s: dc must be non-NULL\n", __func__);
@@ -261,21 +260,8 @@ struct tegra_dc_dpaux_data *tegra_dpaux_init_data(struct tegra_dc *dc)
 		goto err_unmap_region;
 	}
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	/*
-	 * All accesses to the DPAUX reset signal in the DP driver are wrapped
-	 * in CONFIG_TEGRA_NVDISPLAY sections. Until that's cleaned up, set the
-	 * "need_rst" flag to false to skip querying the reset for DP on
-	 * pre-NVDISPLAY platforms.
-	 */
-	if (dc->out->type == TEGRA_DC_OUT_DP ||
-		dc->out->type == TEGRA_DC_OUT_FAKE_DP) {
-		need_rst = false;
-	}
-#endif
-
 	/* Extract the reset entry from the DT node. */
-	if (tegra_bpmp_running() && need_rst) {
+	if (tegra_bpmp_running()) {
 		rst = of_reset_control_get(np_dpaux, dpaux_name);
 		if (IS_ERR_OR_NULL(rst)) {
 			dev_err(&dc->ndev->dev,

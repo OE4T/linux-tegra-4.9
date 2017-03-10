@@ -170,15 +170,7 @@ static inline int tegra_dc_fmt_byteorder(int fmt)
 
 static inline int tegra_dc_which_sor(struct tegra_dc *dc)
 {
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	/* Till support is added to Previous chip */
-	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
-		return 1;
-	}
-	return dc->ndev->id;
-#else
 	return dc->sor_instance;
-#endif
 }
 
 static inline int tegra_dc_fmt_bpp(int fmt)

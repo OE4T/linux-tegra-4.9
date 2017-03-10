@@ -624,7 +624,6 @@ void tegra_dc_clk_disable(struct tegra_dc *dc)
 
 static void tegra_dc_sor_instance(struct tegra_dc *dc, int out_type)
 {
-#ifdef CONFIG_TEGRA_NVDISPLAY
 	/* check the dc_or_node to set the instance */
 	if (!strcmp(dc->pdata->dc_or_node_name, "/host1x/sor"))
 		dc->sor_instance = 0;
@@ -636,13 +635,6 @@ static void tegra_dc_sor_instance(struct tegra_dc *dc, int out_type)
 		dc->sor_instance = 0;
 	else
 		dc->sor_instance = -1;
-#else
-	dc->sor_instance = dc->ndev->id;
-
-	if (out_type == TEGRA_DC_OUT_HDMI)
-		dc->sor_instance = 1;
-
-#endif
 }
 
 void tegra_dc_get(struct tegra_dc *dc)
@@ -6060,10 +6052,22 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			(dc->out->type == TEGRA_DC_OUT_DP ||
 				dc->out->type == TEGRA_DC_OUT_NVSR_DP)) {
 			tegra_disp_clk_prepare_enable(dc->clk);
-			tegra_periph_reset_assert(dc->clk);
-			udelay(10);
-			tegra_periph_reset_deassert(dc->clk);
-			udelay(10);
+#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+			dc->rst = of_reset_control_get(np, "dc_rst");
+			if (IS_ERR_OR_NULL(dc->rst)) {
+				dev_err(&dc->ndev->dev,
+					"Unable to get dc_rst%u reset control\n",
+					dc->ctrl_num);
+				return PTR_ERR(dc->rst);
+			}
+
+			if (dc->rst) {
+				reset_control_assert(dc->rst);
+				udelay(10);
+				reset_control_deassert(dc->rst);
+				udelay(10);
+			}
+#endif
 			tegra_disp_clk_disable_unprepare(dc->clk);
 		}
 	}

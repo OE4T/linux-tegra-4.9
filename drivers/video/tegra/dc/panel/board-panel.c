@@ -767,6 +767,10 @@ static struct device_node
 		else
 			is_edp_a_1080p_14_0 = true;
 		break;
+	case BOARD_E2606:
+	case BOARD_E2603:
+		is_edp_a_1080p_14_0 = true;
+		break;
 	default:
 		/* If display panel is not searched by display board id,
 		 * check if there's fixed primary panel.

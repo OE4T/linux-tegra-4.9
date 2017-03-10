@@ -2448,7 +2448,6 @@ static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp)
 	if (!dp || !dp->dpaux)
 		return;
 
-#if defined(CONFIG_TEGRA_NVDISPLAY)
 	/* Use only if bpmp is enabled */
 	/* bpmp is supported in silicon and simulation */
 	if (!tegra_bpmp_running())
@@ -2460,13 +2459,6 @@ static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp)
 		reset_control_deassert(dp->dpaux->rst);
 		mdelay(1);
 	}
-#else
-
-	tegra_periph_reset_assert(dp->dpaux->clk);
-	mdelay(2);
-	tegra_periph_reset_deassert(dp->dpaux->clk);
-	mdelay(1);
-#endif
 }
 
 static inline void tegra_dp_default_int(struct tegra_dc_dp_data *dp,
@@ -2932,8 +2924,7 @@ static long tegra_dc_dp_setup_clk(struct tegra_dc *dc, struct clk *clk)
 			return -EINVAL;
 		}
 #else
-		dc_parent_clk = clk_get_sys(NULL,
-				dc->out->parent_clk ? : "pll_d_out0");
+		dc_parent_clk = clk_get_sys(NULL, dc->out->parent_clk);
 #endif
 		clk_set_parent(dc->clk, dc_parent_clk);
 	}

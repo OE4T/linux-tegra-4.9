@@ -190,7 +190,8 @@ struct tegra_se_pka1_rsa_context {
 	u32 *m;
 	u32 *r2;
 	u32 op_mode;
-	u32 keylen;
+	u16 modlen;
+	u16 explen;
 };
 
 /* Security Engine key slot */
@@ -1002,20 +1003,21 @@ static void tegra_se_pka1_set_key_param(u32 *param, u32 key_words, u32 slot_num,
 
 static void tegra_se_set_pka1_rsa_key(struct tegra_se_pka1_rsa_context *ctx)
 {
-	u32 key_words = ctx->keylen / WORD_SIZE_BYTES;
+	u16 mod_words = ctx->modlen / WORD_SIZE_BYTES;
+	u16 exp_words = ctx->explen / WORD_SIZE_BYTES;
 	u32 slot_num = ctx->slot->slot_num;
 	u32 *MOD = ctx->modulus;
 	u32 *M = ctx->m;
 	u32 *R2 = ctx->r2;
 	u32 *EXP = ctx->exponent;
 
-	tegra_se_pka1_set_key_param(EXP, key_words, slot_num, EXPONENT,
+	tegra_se_pka1_set_key_param(EXP, exp_words, slot_num, EXPONENT,
 				    ctx->op_mode, ECC_INVALID);
-	tegra_se_pka1_set_key_param(MOD, key_words, slot_num, MOD_RSA,
+	tegra_se_pka1_set_key_param(MOD, mod_words, slot_num, MOD_RSA,
 				    ctx->op_mode, ECC_INVALID);
-	tegra_se_pka1_set_key_param(M, key_words, slot_num, M_RSA,
+	tegra_se_pka1_set_key_param(M, mod_words, slot_num, M_RSA,
 				    ctx->op_mode, ECC_INVALID);
-	tegra_se_pka1_set_key_param(R2, key_words, slot_num, R2_RSA,
+	tegra_se_pka1_set_key_param(R2, mod_words, slot_num, R2_RSA,
 				    ctx->op_mode, ECC_INVALID);
 }
 
@@ -1078,7 +1080,8 @@ static int tegra_se_pka1_precomp(struct tegra_se_pka1_rsa_context *ctx,
 				 struct tegra_se_pka1_mod_request *mod_req,
 				 u32 op)
 {
-	int ret, i, nwords, op_mode;
+	int ret, i, op_mode;
+	u16 nwords;
 	u32 *MOD, *M, *R2;
 	struct tegra_se_elp_dev *se_dev;
 
@@ -1086,7 +1089,7 @@ static int tegra_se_pka1_precomp(struct tegra_se_pka1_rsa_context *ctx,
 		MOD = ctx->modulus;
 		M = ctx->m;
 		R2 = ctx->r2;
-		nwords = ctx->keylen / WORD_SIZE_BYTES;
+		nwords = ctx->modlen / WORD_SIZE_BYTES;
 		op_mode = ctx->op_mode;
 		se_dev = ctx->se_dev;
 	} else if (ecc_req) {
@@ -2036,7 +2039,7 @@ static int tegra_se_pka1_rsa_op(struct akcipher_request *req)
 		goto exit;
 	}
 
-	if (req->src_len != ctx->keylen) {
+	if (req->src_len != ctx->modlen) {
 		ret = -EINVAL;
 		goto exit;
 	}
@@ -2471,19 +2474,19 @@ static int tegra_se_ecdh_max_size(struct crypto_kpp *tfm)
 
 static int tegra_se_pka1_get_opmode(struct tegra_se_pka1_rsa_context *ctx)
 {
-	if (ctx->keylen == TEGRA_SE_PKA1_RSA512_INPUT_SIZE)
+	if (ctx->modlen == TEGRA_SE_PKA1_RSA512_INPUT_SIZE)
 		ctx->op_mode = SE_ELP_OP_MODE_RSA512;
-	else if (ctx->keylen == TEGRA_SE_PKA1_RSA768_INPUT_SIZE)
+	else if (ctx->modlen == TEGRA_SE_PKA1_RSA768_INPUT_SIZE)
 		ctx->op_mode = SE_ELP_OP_MODE_RSA768;
-	else if (ctx->keylen == TEGRA_SE_PKA1_RSA1024_INPUT_SIZE)
+	else if (ctx->modlen == TEGRA_SE_PKA1_RSA1024_INPUT_SIZE)
 		ctx->op_mode = SE_ELP_OP_MODE_RSA1024;
-	else if (ctx->keylen == TEGRA_SE_PKA1_RSA1536_INPUT_SIZE)
+	else if (ctx->modlen == TEGRA_SE_PKA1_RSA1536_INPUT_SIZE)
 		ctx->op_mode = SE_ELP_OP_MODE_RSA1536;
-	else if (ctx->keylen == TEGRA_SE_PKA1_RSA2048_INPUT_SIZE)
+	else if (ctx->modlen == TEGRA_SE_PKA1_RSA2048_INPUT_SIZE)
 		ctx->op_mode = SE_ELP_OP_MODE_RSA2048;
-	else if (ctx->keylen == TEGRA_SE_PKA1_RSA3072_INPUT_SIZE)
+	else if (ctx->modlen == TEGRA_SE_PKA1_RSA3072_INPUT_SIZE)
 		ctx->op_mode = SE_ELP_OP_MODE_RSA3072;
-	else if (ctx->keylen == TEGRA_SE_PKA1_RSA4096_INPUT_SIZE)
+	else if (ctx->modlen == TEGRA_SE_PKA1_RSA4096_INPUT_SIZE)
 		ctx->op_mode = SE_ELP_OP_MODE_RSA4096;
 	else
 		return -EINVAL;
@@ -2497,11 +2500,12 @@ static int tegra_se_pka1_rsa_setkey(struct crypto_akcipher *tfm,
 	struct tegra_se_pka1_rsa_context *ctx = akcipher_tfm_ctx(tfm);
 	struct tegra_se_elp_dev *se_dev = elp_dev;
 	struct tegra_se_pka1_slot *pslot;
-	u32 i = 0, key_words = keylen / WORD_SIZE_BYTES;
+	u32 i = 0;
 	u32 slot_num, val = 0;
 	u8 *pkeydata;
 	u32 *EXP;
 	int ret;
+	u16 modlen, explen, exp_words;
 
 	if (!ctx || !key)
 		return -EINVAL;
@@ -2516,10 +2520,17 @@ static int tegra_se_pka1_rsa_setkey(struct crypto_akcipher *tfm,
 		goto clk_dis;
 	}
 
-	ctx->keylen = keylen;
+	modlen = (keylen >> 16);
+	explen = (keylen & (0xFFFF));
 
-	memcpy((u8 *)ctx->exponent, pkeydata, keylen);
-	memcpy((u8 *)ctx->modulus, &pkeydata[keylen], keylen);
+	if ((modlen < 64) || (modlen > 512))
+		return -EINVAL;
+
+	ctx->modlen = modlen;
+	ctx->explen = explen;
+
+	memcpy((u8 *)ctx->exponent, pkeydata, explen);
+	memcpy((u8 *)ctx->modulus, &pkeydata[explen], modlen);
 
 	ret = tegra_se_pka1_get_opmode(ctx);
 	if (ret)
@@ -2562,7 +2573,8 @@ static int tegra_se_pka1_rsa_setkey(struct crypto_akcipher *tfm,
 		} while (val & TEGRA_SE_PKA1_CTRL_SE_STATUS(SE_STATUS_BUSY));
 	} else {
 		EXP = ctx->exponent;
-		for (i = 0; i < key_words; i++) {
+		exp_words = explen / WORD_SIZE_BYTES;
+		for (i = 0; i < exp_words; i++) {
 			se_elp_writel(se_dev, PKA1, *EXP++, reg_bank_offset(
 				      TEGRA_SE_PKA1_RSA_EXP_BANK,
 				      TEGRA_SE_PKA1_RSA_EXP_ID,
@@ -2571,8 +2583,8 @@ static int tegra_se_pka1_rsa_setkey(struct crypto_akcipher *tfm,
 	}
 
 	/*memset exponent and modulus to 0 before returning */
-	memset((u8 *)ctx->exponent, 0x0, keylen);
-	memset((u8 *)ctx->modulus, 0x0, keylen);
+	memset((u8 *)ctx->exponent, 0x0, explen);
+	memset((u8 *)ctx->modulus, 0x0, modlen);
 
 	return ret;
 rel_mutex:
@@ -2590,11 +2602,11 @@ static int tegra_se_pka1_rsa_max_size(struct crypto_akcipher *tfm)
 	if (!ctx)
 		return -EINVAL;
 
-	if (ctx->keylen < TEGRA_SE_PKA1_RSA512_INPUT_SIZE ||
-	    ctx->keylen > TEGRA_SE_PKA1_RSA4096_INPUT_SIZE)
+	if (ctx->modlen < TEGRA_SE_PKA1_RSA512_INPUT_SIZE ||
+	    ctx->modlen > TEGRA_SE_PKA1_RSA4096_INPUT_SIZE)
 		return -EINVAL;
 
-	return ctx->keylen;
+	return ctx->modlen;
 }
 
 static int tegra_se_pka1_rsa_init(struct crypto_akcipher *tfm)

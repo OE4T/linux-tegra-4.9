@@ -3446,21 +3446,6 @@ void gk20a_gmmu_unmap(struct vm_gk20a *vm,
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 }
 
-phys_addr_t gk20a_get_phys_from_iova(struct device *d,
-				u64 dma_addr)
-{
-	phys_addr_t phys;
-	u64 iova;
-
-	struct dma_iommu_mapping *mapping = to_dma_iommu_mapping(d);
-	if (!mapping)
-		return dma_addr;
-
-	iova = dma_addr & PAGE_MASK;
-	phys = iommu_iova_to_phys(mapping->domain, iova);
-	return phys;
-}
-
 /* get sg_table from already allocated buffer */
 int gk20a_get_sgtable(struct device *d, struct sg_table **sgt,
 			void *cpuva, u64 iova,

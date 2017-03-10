@@ -16,7 +16,7 @@
 / {
 
 	chosen {
-		bootargs ="console=ttyS0,115200 androidboot.selinux=permissive androidboot.presilicon=true";
+		bootargs ="console=ttyS0,115200 androidboot.selinux=permissive androidboot.presilicon=true firmware_class.path=/etc/firmware";
 	};
 
 	firmware {

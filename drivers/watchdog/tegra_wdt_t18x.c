@@ -464,7 +464,17 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	/* Watchdog index in list of wdts under top_tke */
 	twdt_t18x->index = ((res_src->start >> 16) & 0xF) - 0xc;
 
-	if (!twdt_t18x->config_locked) {
+	if (twdt_t18x->config_locked) {
+		int tmr_id = ((res_wdt->start >> 16) & (0xF)) - 2;
+		int tmr_prog = twdt_t18x->config & 0xF;
+
+		if (tmr_id != tmr_prog) {
+			dev_err(&pdev->dev,
+				"The configured timer %d is not same as DT timer ID %d",
+				tmr_id, tmr_prog);
+			return -EINVAL;
+		}
+	} else {
 		/* Configure timer source and period */
 		twdt_t18x->config = ((res_wdt->start >> 16) & (0xf)) - 2;
 		twdt_t18x->config |= WDT_CFG_PERIOD;

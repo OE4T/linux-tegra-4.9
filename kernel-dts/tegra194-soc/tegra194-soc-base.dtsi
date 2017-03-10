@@ -385,12 +385,15 @@
 
 			clock-names = "clk32k_in", "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p0",
+				      "nvdisplay_p1", "nvdisplay_p2",
 				      "pllp_display", "plld2", "plld3",
 				      "pll_d", "emc", "emc_latency";
 			clocks = <&clk32k_in>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAYHUB>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P0>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P1>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD3>,
@@ -420,13 +423,16 @@
 			nvidia,dc-ctrlnum = <1>;
 
 			clock-names = "clk32k_in", "nvdisplay_disp",
-				      "nvdisplayhub", "nvdisplay_p1",
+				      "nvdisplayhub", "nvdisplay_p0",
+				      "nvdisplay_p1", "nvdisplay_p2",
 				      "pllp_display", "plld2", "plld3",
 				      "pll_d", "disp2_emc", "emc_latency";
 			clocks = <&clk32k_in>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAYHUB>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P0>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P1>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD3>,

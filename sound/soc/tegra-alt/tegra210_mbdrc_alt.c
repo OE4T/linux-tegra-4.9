@@ -1,7 +1,7 @@
 /*
  * tegra210_mbdrc_alt.c - Tegra210 MBDRC driver
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -344,6 +344,17 @@ static int tegra210_mbdrc_biquad_coeffs_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int tegra210_mbdrc_param_info(struct snd_kcontrol *kcontrol,
+		       struct snd_ctl_elem_info *uinfo)
+{
+	struct soc_bytes *params = (void *)kcontrol->private_value;
+
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_BYTES;
+	uinfo->count = params->num_regs;
+
+	return 0;
+}
+
 static const char * const tegra210_mbdrc_mode_text[] = {
 	"bypass", "fullband", "dualband", "multiband"
 };
@@ -380,13 +391,14 @@ static const struct soc_enum tegra210_mbdrc_frame_size_enum =
 		TEGRA210_MBDRC_CONFIG_FRAME_SIZE_SHIFT, 7,
 		tegra210_mbdrc_frame_size_text);
 
-#define TEGRA_MBDRC_BYTES_EXT(xname, xbase, xregs, xshift, xmask) \
+#define TEGRA_MBDRC_BYTES_EXT(xname, xbase, xregs, xshift, xmask, xinfo) \
 	TEGRA_SOC_BYTES_EXT(xname, xbase, xregs, xshift, xmask, \
-	    tegra210_mbdrc_band_params_get, tegra210_mbdrc_band_params_put)
+	    tegra210_mbdrc_band_params_get, tegra210_mbdrc_band_params_put, \
+		tegra210_mbdrc_param_info)
 
-#define TEGRA_MBDRC_BAND_BYTES_EXT(xname, xbase, xshift, xmask) \
+#define TEGRA_MBDRC_BAND_BYTES_EXT(xname, xbase, xshift, xmask, xinfo) \
 	TEGRA_MBDRC_BYTES_EXT(xname, xbase, TEGRA210_MBDRC_FILTER_COUNT, \
-		xshift, xmask)
+		xshift, xmask, xinfo)
 
 static const struct snd_kcontrol_new tegra210_mbdrc_controls[] = {
 	SOC_ENUM_EXT("mbdrc peak-rms mode", tegra210_mbdrc_peak_rms_enum,
@@ -419,79 +431,101 @@ static const struct snd_kcontrol_new tegra210_mbdrc_controls[] = {
 		TEGRA210_MBDRC_FILTER_COUNT,
 		TEGRA210_MBDRC_IIR_CONFIG_NUM_STAGES_SHIFT,
 		TEGRA210_MBDRC_IIR_CONFIG_NUM_STAGES_MASK,
-		tegra210_mbdrc_band_params_get, tegra210_mbdrc_band_params_put),
+		tegra210_mbdrc_band_params_get,
+		tegra210_mbdrc_band_params_put,
+		tegra210_mbdrc_param_info),
 	TEGRA_SOC_BYTES_EXT("mbdrc in attack tc", TEGRA210_MBDRC_IN_ATTACK,
 		TEGRA210_MBDRC_FILTER_COUNT,
 		TEGRA210_MBDRC_IN_ATTACK_TC_SHIFT,
 		TEGRA210_MBDRC_IN_ATTACK_TC_MASK,
-		tegra210_mbdrc_band_params_get, tegra210_mbdrc_band_params_put),
+		tegra210_mbdrc_band_params_get,
+		tegra210_mbdrc_band_params_put,
+		tegra210_mbdrc_param_info),
 	TEGRA_SOC_BYTES_EXT("mbdrc in release tc", TEGRA210_MBDRC_IN_RELEASE,
 		TEGRA210_MBDRC_FILTER_COUNT,
 		TEGRA210_MBDRC_IN_RELEASE_TC_SHIFT,
 		TEGRA210_MBDRC_IN_RELEASE_TC_MASK,
-		tegra210_mbdrc_band_params_get, tegra210_mbdrc_band_params_put),
+		tegra210_mbdrc_band_params_get,
+		tegra210_mbdrc_band_params_put,
+		tegra210_mbdrc_param_info),
 	TEGRA_SOC_BYTES_EXT("mbdrc fast attack tc", TEGRA210_MBDRC_FAST_ATTACK,
 		TEGRA210_MBDRC_FILTER_COUNT,
 		TEGRA210_MBDRC_FAST_ATTACK_TC_SHIFT,
 		TEGRA210_MBDRC_FAST_ATTACK_TC_MASK,
-		tegra210_mbdrc_band_params_get, tegra210_mbdrc_band_params_put),
+		tegra210_mbdrc_band_params_get,
+		tegra210_mbdrc_band_params_put,
+		tegra210_mbdrc_param_info),
 
 	TEGRA_SOC_BYTES_EXT("mbdrc in threshold", TEGRA210_MBDRC_IN_THRESHOLD,
 		TEGRA210_MBDRC_FILTER_COUNT * 4, 0, 0xffffffff,
-		tegra210_mbdrc_threshold_get, tegra210_mbdrc_threshold_put),
+		tegra210_mbdrc_threshold_get, tegra210_mbdrc_threshold_put, tegra210_mbdrc_param_info),
 	TEGRA_SOC_BYTES_EXT("mbdrc out threshold", TEGRA210_MBDRC_OUT_THRESHOLD,
 		TEGRA210_MBDRC_FILTER_COUNT * 4, 0, 0xffffffff,
-		tegra210_mbdrc_threshold_get, tegra210_mbdrc_threshold_put),
+		tegra210_mbdrc_threshold_get, tegra210_mbdrc_threshold_put, tegra210_mbdrc_param_info),
 
 	TEGRA_SOC_BYTES_EXT("mbdrc ratio", TEGRA210_MBDRC_RATIO_1ST,
 		TEGRA210_MBDRC_FILTER_COUNT * 5,
 		TEGRA210_MBDRC_RATIO_1ST_SHIFT, TEGRA210_MBDRC_RATIO_1ST_MASK,
-		tegra210_mbdrc_band_params_get, tegra210_mbdrc_band_params_put),
-
+		tegra210_mbdrc_band_params_get,
+		tegra210_mbdrc_band_params_put,
+		tegra210_mbdrc_param_info),
 	TEGRA_SOC_BYTES_EXT("mbdrc makeup gain", TEGRA210_MBDRC_MAKEUP_GAIN,
 		TEGRA210_MBDRC_FILTER_COUNT,
 		TEGRA210_MBDRC_MAKEUP_GAIN_SHIFT,
 		TEGRA210_MBDRC_MAKEUP_GAIN_MASK,
-		tegra210_mbdrc_band_params_get, tegra210_mbdrc_band_params_put),
+		tegra210_mbdrc_band_params_get,
+		tegra210_mbdrc_band_params_put,
+		tegra210_mbdrc_param_info),
 	TEGRA_SOC_BYTES_EXT("mbdrc init gain", TEGRA210_MBDRC_INIT_GAIN,
 		TEGRA210_MBDRC_FILTER_COUNT,
 		TEGRA210_MBDRC_INIT_GAIN_SHIFT,
 		TEGRA210_MBDRC_INIT_GAIN_MASK,
-		tegra210_mbdrc_band_params_get, tegra210_mbdrc_band_params_put),
+		tegra210_mbdrc_band_params_get,
+		tegra210_mbdrc_band_params_put,
+		tegra210_mbdrc_param_info),
 	TEGRA_SOC_BYTES_EXT("mbdrc attack gain", TEGRA210_MBDRC_GAIN_ATTACK,
 		TEGRA210_MBDRC_FILTER_COUNT,
 		TEGRA210_MBDRC_GAIN_ATTACK_SHIFT,
 		TEGRA210_MBDRC_GAIN_ATTACK_MASK,
-		tegra210_mbdrc_band_params_get, tegra210_mbdrc_band_params_put),
+		tegra210_mbdrc_band_params_get,
+		tegra210_mbdrc_band_params_put,
+		tegra210_mbdrc_param_info),
 	TEGRA_SOC_BYTES_EXT("mbdrc release gain", TEGRA210_MBDRC_GAIN_RELEASE,
 		TEGRA210_MBDRC_FILTER_COUNT,
 		TEGRA210_MBDRC_GAIN_RELEASE_SHIFT,
 		TEGRA210_MBDRC_GAIN_RELEASE_MASK,
-		tegra210_mbdrc_band_params_get, tegra210_mbdrc_band_params_put),
+		tegra210_mbdrc_band_params_get,
+		tegra210_mbdrc_band_params_put,
+		tegra210_mbdrc_param_info),
 	TEGRA_SOC_BYTES_EXT("mbdrc fast release gain",
 		TEGRA210_MBDRC_FAST_RELEASE,
 		TEGRA210_MBDRC_FILTER_COUNT,
 		TEGRA210_MBDRC_FAST_RELEASE_SHIFT,
 		TEGRA210_MBDRC_FAST_RELEASE_MASK,
-		tegra210_mbdrc_band_params_get, tegra210_mbdrc_band_params_put),
+		tegra210_mbdrc_band_params_get,
+		tegra210_mbdrc_band_params_put,
+		tegra210_mbdrc_param_info),
 
 	TEGRA_SOC_BYTES_EXT("mbdrc low band biquad coeffs",
 		TEGRA210_MBDRC_AHUBRAMCTL_CONFIG_RAM_CTRL,
 		TEGRA210_MBDRC_MAX_BIQUAD_STAGES * 5, 0, 0xffffffff,
 		tegra210_mbdrc_biquad_coeffs_get,
-		tegra210_mbdrc_biquad_coeffs_put),
+		tegra210_mbdrc_biquad_coeffs_put,
+		tegra210_mbdrc_param_info),
 	TEGRA_SOC_BYTES_EXT("mbdrc mid band biquad coeffs",
 		TEGRA210_MBDRC_AHUBRAMCTL_CONFIG_RAM_CTRL +
 		TEGRA210_MBDRC_FILTER_PARAM_STRIDE,
 		TEGRA210_MBDRC_MAX_BIQUAD_STAGES * 5, 0, 0xffffffff,
 		tegra210_mbdrc_biquad_coeffs_get,
-		tegra210_mbdrc_biquad_coeffs_put),
+		tegra210_mbdrc_biquad_coeffs_put,
+		tegra210_mbdrc_param_info),
 	TEGRA_SOC_BYTES_EXT("mbdrc high band biquad coeffs",
 		TEGRA210_MBDRC_AHUBRAMCTL_CONFIG_RAM_CTRL +
 		(TEGRA210_MBDRC_FILTER_PARAM_STRIDE * 2),
 		TEGRA210_MBDRC_MAX_BIQUAD_STAGES * 5, 0, 0xffffffff,
 		tegra210_mbdrc_biquad_coeffs_get,
-		tegra210_mbdrc_biquad_coeffs_put),
+		tegra210_mbdrc_biquad_coeffs_put,
+		tegra210_mbdrc_param_info),
 };
 
 static bool tegra210_mbdrc_wr_reg(struct device *dev, unsigned int reg)

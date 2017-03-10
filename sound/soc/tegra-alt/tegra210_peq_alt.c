@@ -1,7 +1,7 @@
 /*
  * tegra210_peq_alt.c - Tegra210 PEQ driver
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -68,6 +68,8 @@ static const u32 biquad_init_shifts[TEGRA210_PEQ_SHIFT_PARAM_SIZE_PER_CH] = {
 	28, /* post-shift */
 };
 
+static s32 biquad_coeff_buffer[TEGRA210_PEQ_GAIN_PARAM_SIZE_PER_CH];
+
 static int tegra210_peq_get(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -111,9 +113,19 @@ static int tegra210_peq_ahub_ram_get(struct snd_kcontrol *kcontrol,
 {
 	struct tegra_soc_bytes *params = (void *)kcontrol->private_value;
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
-	u32 *data = (u32 *)ucontrol->value.bytes.data;
+	struct tegra210_ope *ope = snd_soc_codec_get_drvdata(codec);
+	u32 i, reg_ctrl = params->soc.base;
+	u32 reg_data = reg_ctrl + codec->component.val_bytes;
+	s32 *data = (s32 *)biquad_coeff_buffer;
 
-	memset(data, 0, params->soc.num_regs * codec->component.val_bytes);
+	pm_runtime_get_sync(codec->dev);
+	tegra210_xbar_read_ahubram(ope->peq_regmap, reg_ctrl, reg_data,
+				    params->shift, data, params->soc.num_regs);
+	pm_runtime_put_sync(codec->dev);
+
+	for (i = 0; i < params->soc.num_regs; i++)
+		ucontrol->value.integer.value[i] = (long)data[i];
+
 	return 0;
 }
 
@@ -123,12 +135,31 @@ static int tegra210_peq_ahub_ram_put(struct snd_kcontrol *kcontrol,
 	struct tegra_soc_bytes *params = (void *)kcontrol->private_value;
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_ope *ope = snd_soc_codec_get_drvdata(codec);
-	u32 reg_ctrl = params->soc.base;
+	u32 i, reg_ctrl = params->soc.base;
 	u32 reg_data = reg_ctrl + codec->component.val_bytes;
-	u32 *data = (u32 *)ucontrol->value.bytes.data;
+	s32 *data = (s32 *)biquad_coeff_buffer;
 
+	for (i = 0; i < params->soc.num_regs; i++)
+		data[i] = (s32)ucontrol->value.integer.value[i];
+
+	pm_runtime_get_sync(codec->dev);
 	tegra210_xbar_write_ahubram(ope->peq_regmap, reg_ctrl, reg_data,
 				    params->shift, data, params->soc.num_regs);
+	pm_runtime_put_sync(codec->dev);
+
+	return 0;
+}
+
+static int tegra210_peq_param_info(struct snd_kcontrol *kcontrol,
+		       struct snd_ctl_elem_info *uinfo)
+{
+	struct soc_bytes *params = (void *)kcontrol->private_value;
+
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+	uinfo->value.integer.min = -0x7fffffff;
+	uinfo->value.integer.max = 0x7fffffff;
+	uinfo->count = params->num_regs;
+
 	return 0;
 }
 
@@ -137,14 +168,16 @@ static int tegra210_peq_ahub_ram_put(struct snd_kcontrol *kcontrol,
 		TEGRA210_PEQ_AHUBRAMCTL_CONFIG_RAM_CTRL, \
 		TEGRA210_PEQ_GAIN_PARAM_SIZE_PER_CH, \
 		(TEGRA210_PEQ_GAIN_PARAM_SIZE_PER_CH * chan), 0xffffffff, \
-		tegra210_peq_ahub_ram_get, tegra210_peq_ahub_ram_put)
+		tegra210_peq_ahub_ram_get, tegra210_peq_ahub_ram_put, \
+		tegra210_peq_param_info)
 
 #define TEGRA210_PEQ_SHIFT_PARAMS_CTRL(chan) \
 	TEGRA_SOC_BYTES_EXT("peq channel" #chan " biquad shift params", \
 		TEGRA210_PEQ_AHUBRAMCTL_CONFIG_RAM_SHIFT_CTRL, \
 		TEGRA210_PEQ_SHIFT_PARAM_SIZE_PER_CH, \
 		(TEGRA210_PEQ_SHIFT_PARAM_SIZE_PER_CH * chan), 0x1f, \
-		tegra210_peq_ahub_ram_get, tegra210_peq_ahub_ram_put)
+		tegra210_peq_ahub_ram_get, tegra210_peq_ahub_ram_put, \
+		tegra210_peq_param_info)
 
 static const struct snd_kcontrol_new tegra210_peq_controls[] = {
 	SOC_SINGLE_EXT("peq active", TEGRA210_PEQ_CONFIG,
@@ -157,9 +190,21 @@ static const struct snd_kcontrol_new tegra210_peq_controls[] = {
 
 	TEGRA210_PEQ_GAIN_PARAMS_CTRL(0),
 	TEGRA210_PEQ_GAIN_PARAMS_CTRL(1),
+	TEGRA210_PEQ_GAIN_PARAMS_CTRL(2),
+	TEGRA210_PEQ_GAIN_PARAMS_CTRL(3),
+	TEGRA210_PEQ_GAIN_PARAMS_CTRL(4),
+	TEGRA210_PEQ_GAIN_PARAMS_CTRL(5),
+	TEGRA210_PEQ_GAIN_PARAMS_CTRL(6),
+	TEGRA210_PEQ_GAIN_PARAMS_CTRL(7),
 
 	TEGRA210_PEQ_SHIFT_PARAMS_CTRL(0),
 	TEGRA210_PEQ_SHIFT_PARAMS_CTRL(1),
+	TEGRA210_PEQ_SHIFT_PARAMS_CTRL(2),
+	TEGRA210_PEQ_SHIFT_PARAMS_CTRL(3),
+	TEGRA210_PEQ_SHIFT_PARAMS_CTRL(4),
+	TEGRA210_PEQ_SHIFT_PARAMS_CTRL(5),
+	TEGRA210_PEQ_SHIFT_PARAMS_CTRL(6),
+	TEGRA210_PEQ_SHIFT_PARAMS_CTRL(7),
 };
 
 static bool tegra210_peq_wr_reg(struct device *dev, unsigned int reg)

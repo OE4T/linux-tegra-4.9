@@ -172,7 +172,7 @@
 
 		AO-therm {
 			status = "okay";
-			polling-delay-passive = <500>;
+			polling-delay-passive = <250>;
 
 			thermal-zone-params {
 				governor-name = "step_wise";
@@ -185,7 +185,7 @@
 					writable;
 				};
 				trip_bthrot {
-					temperature = <93500>;
+					temperature = <95500>;
 					type = "passive";
 					hysteresis = <0>;
 					writable;

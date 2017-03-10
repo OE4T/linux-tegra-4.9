@@ -148,6 +148,9 @@ struct tegra210_adsp {
 	struct tegra210_adsp_path {
 		uint32_t fe_reg;
 		uint32_t be_reg;
+		uint32_t channels;
+		uint32_t format;
+		uint32_t rate;
 	} pcm_path[ADSP_FE_COUNT+1][2];
 #ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 	struct nvaudio_ivc_ctxt *hivc_client;
@@ -2006,18 +2009,31 @@ static void tegra_adsp_set_admaif_id(
 		}
 	}
 }
+static int tegra_adsp_get_connected_fe(struct tegra210_adsp *adsp,
+				uint32_t be_reg,
+				int stream)
+{
+	unsigned int val;
 
+	for (val = 1; val < (ADSP_FE_COUNT); val++) {
+		if (adsp->pcm_path[val][stream].be_reg == be_reg)
+			break;
+		}
+	return val;
+}
 static int tegra_adsp_admaif_ivc_set_cif(struct tegra210_adsp *adsp,
 				struct snd_pcm_hw_params *params,
 				uint32_t admaif_id,
+				uint32_t be_reg,
+				nvfx_adma_init_params_t *adma_params,
 				int stream)
 {
-	int ret;
+	int ret = 0;
 	uint32_t ivc_msg_admaif_id;
 	struct tegra210_virt_audio_cif cif_setting;
 	struct tegra210_virt_audio_cif *cif_conf = NULL;
 	struct nvaudio_ivc_msg  msg;
-	unsigned int value;
+	unsigned int value, channels, format, rate;
 
 	adsp->hivc_client =
 			nvaudio_ivc_alloc_ctxt(adsp->dev);
@@ -2027,30 +2043,63 @@ static int tegra_adsp_admaif_ivc_set_cif(struct tegra210_adsp *adsp,
 		ret = -ENODEV;
 		return ret;
 	}
+
+	channels = params_channels(params);
+	format = params_format(params);
+
+	/* overwrite channel, rate, format if we already have FE info */
+	if (stream == SNDRV_PCM_STREAM_CAPTURE) {
+		ret = tegra_adsp_get_connected_fe(adsp, be_reg,
+					SNDRV_PCM_STREAM_PLAYBACK);
+		if (ret != ADSP_FE_COUNT) {
+			format = adsp->pcm_path
+				[ret][SNDRV_PCM_STREAM_PLAYBACK].format;
+			channels = adsp->pcm_path
+				[ret][SNDRV_PCM_STREAM_PLAYBACK].channels;
+			rate = adsp->pcm_path
+				[ret][SNDRV_PCM_STREAM_PLAYBACK].rate;
+		}
+	} else {
+		ret = tegra_adsp_get_connected_fe(adsp, be_reg,
+					SNDRV_PCM_STREAM_CAPTURE);
+		if (ret != ADSP_FE_COUNT) {
+			format = adsp->pcm_path
+				[ret][SNDRV_PCM_STREAM_CAPTURE].format;
+			channels = adsp->pcm_path
+				[ret][SNDRV_PCM_STREAM_CAPTURE].channels;
+			rate = adsp->pcm_path
+				[ret][SNDRV_PCM_STREAM_CAPTURE].rate;
+		}
+	}
+
 	cif_conf = &cif_setting;
 
 	ivc_msg_admaif_id = admaif_id - 1;
 
 	memset(cif_conf, 0, sizeof(struct tegra210_virt_audio_cif));
-	cif_conf->audio_channels = params_channels(params);
-	cif_conf->client_channels = params_channels(params);
+	cif_conf->audio_channels = channels;
+	cif_conf->client_channels = channels;
 
-	switch (params_format(params)) {
+	switch (format) {
 	case SNDRV_PCM_FORMAT_S8:
 		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_8;
 		cif_conf->audio_bits = TEGRA210_AUDIOCIF_BITS_8;
+		adma_params->burst_size = channels/4;
 		break;
 	case SNDRV_PCM_FORMAT_S16_LE:
 		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_16;
 		cif_conf->audio_bits = TEGRA210_AUDIOCIF_BITS_16;
+		adma_params->burst_size = (channels * 2)/4;
 		break;
 	case SNDRV_PCM_FORMAT_S24_LE:
 		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_24;
 		cif_conf->audio_bits = TEGRA210_AUDIOCIF_BITS_24;
+		adma_params->burst_size = (channels * 3)/4;
 		break;
 	case SNDRV_PCM_FORMAT_S32_LE:
 		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_32;
 		cif_conf->audio_bits = TEGRA210_AUDIOCIF_BITS_32;
+		adma_params->burst_size = channels;
 		break;
 	default:
 		dev_err(adsp->dev, "Wrong format!\n");
@@ -2102,6 +2151,7 @@ static int tegra210_adsp_admaif_hv_hw_params(
 				struct snd_pcm_hw_params *params,
 				uint32_t admaif_id,
 				uint32_t be_reg,
+				nvfx_adma_init_params_t *adma_params,
 				int stream)
 {
 	int ret = 0;
@@ -2109,6 +2159,8 @@ static int tegra210_adsp_admaif_hv_hw_params(
 	ret = tegra_adsp_admaif_ivc_set_cif(adsp,
 				params,
 				admaif_id,
+				be_reg,
+				adma_params,
 				stream);
 	if (ret < 0) {
 		pr_err("error on ivc_send\n");
@@ -2121,6 +2173,32 @@ static int tegra210_adsp_admaif_hv_hw_params(
 	return ret;
 }
 #endif
+static int tegra210_adsp_fe_hw_params(struct snd_pcm_substream *substream,
+				struct snd_pcm_hw_params *params,
+				struct snd_soc_dai *dai)
+{
+
+	struct tegra210_adsp *adsp = snd_soc_dai_get_drvdata(dai);
+	uint32_t fe_reg = dai->id;
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_PLAYBACK].rate
+					= params_rate(params);
+		adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_PLAYBACK].channels
+					= params_channels(params);
+		adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_PLAYBACK].format
+					= params_format(params);
+	} else {
+		adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_CAPTURE].rate
+					= params_rate(params);
+		adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_CAPTURE].channels
+					= params_channels(params);
+		adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_CAPTURE].format
+					= params_format(params);
+	}
+
+	return 0;
+}
 
 /* ADSP-ADMAIF codec driver HW-params. Used for configuring ADMA */
 static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
@@ -2141,9 +2219,10 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 
 	dev_vdbg(adsp->dev, "%s : stream %d admaif %d\n",
 		__func__, substream->stream, admaif_id);
-
 	if (!adsp->adsp_started)
 		return -EINVAL;
+
+	memset(&adma_params, 0, sizeof(adma_params));
 #ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 	if (of_device_is_compatible(node, "nvidia,tegra210-adsp-audio-hv")) {
 
@@ -2152,6 +2231,7 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 				params,
 				admaif_id,
 				be_reg,
+				&adma_params,
 				substream->stream);
 		if (ret < 0) {
 			pr_err("error on ivc_send\n");
@@ -2161,7 +2241,6 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 
 	}
 #endif
-
 
 	adma_params.mode = ADMA_MODE_CONTINUOUS;
 	adma_params.ahub_channel = admaif_id;
@@ -2548,6 +2627,9 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 
 	return ret;
 }
+static struct snd_soc_dai_ops tegra210_adsp_fe_dai_ops = {
+	.hw_params      = tegra210_adsp_fe_hw_params,
+};
 
 static struct snd_soc_dai_ops tegra210_adsp_admaif_dai_ops = {
 	.hw_params	= tegra210_adsp_admaif_hw_params,
@@ -2563,7 +2645,7 @@ static struct snd_soc_dai_driver tegra210_adsp_dai[] = {
 		.playback = {
 			.stream_name = "ADSP PCM1 Receive",
 			.channels_min = 1,
-			.channels_max = 2,
+			.channels_max = 8,
 			.rates = SNDRV_PCM_RATE_8000_48000,
 			.formats = SNDRV_PCM_FMTBIT_S8 |
 				   SNDRV_PCM_FMTBIT_S16_LE |
@@ -2573,7 +2655,7 @@ static struct snd_soc_dai_driver tegra210_adsp_dai[] = {
 		.capture = {
 			.stream_name = "ADSP PCM1 Transmit",
 			.channels_min = 1,
-			.channels_max = 2,
+			.channels_max = 8,
 			.rates = SNDRV_PCM_RATE_8000_48000,
 			.formats = SNDRV_PCM_FMTBIT_S8 |
 				   SNDRV_PCM_FMTBIT_S16_LE |
@@ -2586,7 +2668,7 @@ static struct snd_soc_dai_driver tegra210_adsp_dai[] = {
 		.playback = {
 			.stream_name = "ADSP PCM2 Receive",
 			.channels_min = 1,
-			.channels_max = 2,
+			.channels_max = 8,
 			.rates = SNDRV_PCM_RATE_8000_48000,
 			.formats = SNDRV_PCM_FMTBIT_S8 |
 				   SNDRV_PCM_FMTBIT_S16_LE |
@@ -2596,7 +2678,7 @@ static struct snd_soc_dai_driver tegra210_adsp_dai[] = {
 		.capture = {
 			.stream_name = "ADSP PCM2 Transmit",
 			.channels_min = 1,
-			.channels_max = 2,
+			.channels_max = 8,
 			.rates = SNDRV_PCM_RATE_8000_48000,
 			.formats = SNDRV_PCM_FMTBIT_S8 |
 				   SNDRV_PCM_FMTBIT_S16_LE |
@@ -2652,7 +2734,7 @@ static struct snd_soc_dai_driver tegra210_adsp_dai[] = {
 		.playback = {					\
 			.stream_name = "ADSP-FE" #idx " Receive",\
 			.channels_min = 1,			\
-			.channels_max = 2,			\
+			.channels_max = 8,			\
 			.rates = SNDRV_PCM_RATE_8000_48000,	\
 			.formats = SNDRV_PCM_FMTBIT_S8 |	\
 				SNDRV_PCM_FMTBIT_S16_LE |	\
@@ -2662,13 +2744,14 @@ static struct snd_soc_dai_driver tegra210_adsp_dai[] = {
 		.capture = {					\
 			.stream_name = "ADSP-FE" #idx " Transmit",\
 			.channels_min = 1,			\
-			.channels_max = 2,			\
+			.channels_max = 8,			\
 			.rates = SNDRV_PCM_RATE_8000_48000,	\
 			.formats = SNDRV_PCM_FMTBIT_S8 |	\
 				SNDRV_PCM_FMTBIT_S16_LE |	\
 				SNDRV_PCM_FMTBIT_S24_LE |	\
 				SNDRV_PCM_FMTBIT_S32_LE,	\
 		},						\
+		.ops = &tegra210_adsp_fe_dai_ops,		\
 	}
 
 #define ADSP_ADMAIF_CODEC_DAI(idx)				\
@@ -2678,14 +2761,14 @@ static struct snd_soc_dai_driver tegra210_adsp_dai[] = {
 		.playback = {					\
 		.stream_name = "ADSP-ADMAIF" #idx " Receive",	\
 			.channels_min = 1,			\
-			.channels_max = 2,			\
+			.channels_max = 8,			\
 			.rates = SNDRV_PCM_RATE_8000_48000,	\
 			.formats = SNDRV_PCM_FMTBIT_S16_LE,	\
 		},						\
 		.capture = {					\
 			.stream_name = "ADSP-ADMAIF" #idx " Transmit",\
 			.channels_min = 1,			\
-			.channels_max = 2,			\
+			.channels_max = 8,			\
 			.rates = SNDRV_PCM_RATE_8000_48000,	\
 			.formats = SNDRV_PCM_FMTBIT_S16_LE,	\
 		},						\

@@ -375,7 +375,7 @@
 			#stream-id-cells = <1>;
 		};
 
-		nvdisplay@15200000 {
+		head0: nvdisplay@15200000 {
 			status = "disabled";
 			compatible = "nvidia,tegra194-dc";
 			reg = <0x0 0x15200000 0x0 0x10000>;
@@ -414,7 +414,7 @@
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_HEAD0>;
 		}; //nvdisplay@15200000
 
-		nvdisplay@15210000 {
+		head1: nvdisplay@15210000 {
 			status = "disabled";
 			compatible = "nvidia,tegra194-dc";
 			reg = <0x0 0x15210000 0x0 0x10000>;
@@ -453,11 +453,13 @@
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_HEAD1>;
 		}; //nvdisplay@15210000
 
-		sor {
+		sor0: sor {
 			status = "disabled";
 			compatible = "nvidia,tegra194-sor";
 			reg = <0x0 0x15B00000 0x0 0x40000>;
 
+			nvidia,sor-ctrlnum = <0>;
+			nvidia,dpaux = <&dpaux0>;
 			nvidia,xbar-ctrl = <0x2 0x1 0x0 0x3 0x4>;
 
 			clocks = <&clk32k_in>,
@@ -480,13 +482,21 @@
 				 <&bpmp_resets TEGRA194_RESET_HDA2HDMICODEC>;
 			reset-names = "sor0","hda_rst", "hda2codec_2x_rst",
 				"hda2hdmi_rst";
+			sor0_hdmi_display: hdmi-display {
+				status = "disabled";
+			};
+			sor0_dp_display: dp-display {
+				status = "disabled";
+			};
 		}; //sor
 
-		sor1 {
+		sor1: sor1 {
 			status = "disabled";
 			compatible = "nvidia,tegra194-sor1";
 			reg = <0x0 0x15580000 0x0 0x40000>;
 
+			nvidia,sor-ctrlnum = <1>;
+			nvidia,dpaux = <&dpaux1>;
 			nvidia,xbar-ctrl = <0x2 0x1 0x0 0x3 0x4>;
 
 			clocks = <&clk32k_in>,
@@ -509,13 +519,20 @@
 				 <&bpmp_resets TEGRA194_RESET_HDA2HDMICODEC>;
 			reset-names = "sor1","hda_rst", "hda2codec_2x_rst",
 				"hda2hdmi_rst";
+			sor1_hdmi_display: hdmi-display {
+				status = "disabled";
+			};
+			sor1_dp_display: dp-display {
+				status = "disabled";
+			};
 		}; //sor1
 
-		dpaux@155c0000 {
+		dpaux0: dpaux@155c0000 {
 			status = "disabled";
 			compatible = "nvidia,tegra194-dpaux";
 			reg = <0x0 0x155c0000 0x0 0x00010000>;
 			interrupts = <0 159 4>;
+			nvidia,dpaux-ctrlnum = <0>;
 
 			clocks = <&clk32k_in>,
 				 <&bpmp_clks TEGRA194_CLK_DPAUX>,
@@ -525,11 +542,12 @@
 			reset-names = "dpaux";
 		}; //dpaux@155c0000
 
-		dpaux@15040000 {
+		dpaux1: dpaux@15040000 {
 			status = "disabled";
 			compatible = "nvidia,tegra194-dpaux1";
 			reg = <0x0 0x15040000 0x0 0x00010000>;
 			interrupts = <0 160 4>;
+			nvidia,dpaux-ctrlnum = <1>;
 
 			clocks = <&clk32k_in>,
 				 <&bpmp_clks TEGRA194_CLK_DPAUX1>,

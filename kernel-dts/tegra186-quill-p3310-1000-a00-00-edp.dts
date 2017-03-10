@@ -1,7 +1,7 @@
 /*
  * tegra186-quill-p3310-1000-a00-00-edp.dtsi:
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,6 +47,7 @@
 		nvdisplay@15200000 {
 			vdd_lcd_bl_en-supply = <&vdd_lcd_bl_en>; /* GPIO_DIS3 / LCD_BL_EN for eDP */
 			nvidia,dc-or-node = "/host1x/sor";
+			nvidia,dc-connector = <&sor0>;
 		};
 
 		sor {

@@ -2403,6 +2403,10 @@ static void tegra_dc_hdmi_resume(struct tegra_dc *dc)
 	if (hdmi->pdata->hdmi2fpd_bridge_enable)
 		hdmi2fpd_resume(dc);
 
+	if (tegra_platform_is_sim() &&
+		(dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL))
+		return;
+
 	cancel_delayed_work(&hdmi->hpd_worker);
 
 	/* If resume happens with a non-VRR monitor, the HPD

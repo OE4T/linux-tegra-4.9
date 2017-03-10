@@ -3054,6 +3054,11 @@ static void tegra_dc_dp_resume(struct tegra_dc *dc)
 	/* Get ready to receive any hpd event */
 	tegra_dpaux_init(dp);
 
+	if (tegra_platform_is_sim() &&
+		(dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL)) {
+		dp->suspended = false;
+		return;
+	}
 	tegra_dp_pending_hpd(dp);
 
 	dp->suspended = false;

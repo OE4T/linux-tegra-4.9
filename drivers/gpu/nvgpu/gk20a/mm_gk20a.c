@@ -20,7 +20,6 @@
 #include <linux/highmem.h>
 #include <linux/log2.h>
 #include <linux/nvhost.h>
-#include <linux/pm_runtime.h>
 #include <linux/scatterlist.h>
 #include <linux/nvmap.h>
 #include <soc/tegra/chip-id.h>
@@ -5155,7 +5154,7 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 
 	gk20a_busy_noresume(g->dev);
 	if (!g->power_on) {
-		pm_runtime_put_noidle(g->dev);
+		gk20a_idle_nosuspend(g->dev);
 		return 0;
 	}
 
@@ -5195,7 +5194,7 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 
 	nvgpu_mutex_release(&mm->l2_op_lock);
 
-	pm_runtime_put_noidle(g->dev);
+	gk20a_idle_nosuspend(g->dev);
 
 	return ret;
 }
@@ -5244,7 +5243,7 @@ void gk20a_mm_l2_invalidate(struct gk20a *g)
 		gk20a_mm_l2_invalidate_locked(g);
 		nvgpu_mutex_release(&mm->l2_op_lock);
 	}
-	pm_runtime_put_noidle(g->dev);
+	gk20a_idle_nosuspend(g->dev);
 }
 
 void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
@@ -5292,7 +5291,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 	nvgpu_mutex_release(&mm->l2_op_lock);
 
 hw_was_off:
-	pm_runtime_put_noidle(g->dev);
+	gk20a_idle_nosuspend(g->dev);
 }
 
 void gk20a_mm_cbc_clean(struct gk20a *g)
@@ -5332,7 +5331,7 @@ void gk20a_mm_cbc_clean(struct gk20a *g)
 	nvgpu_mutex_release(&mm->l2_op_lock);
 
 hw_was_off:
-	pm_runtime_put_noidle(g->dev);
+	gk20a_idle_nosuspend(g->dev);
 }
 
 int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,

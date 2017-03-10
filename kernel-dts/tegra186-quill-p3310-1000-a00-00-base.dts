@@ -180,6 +180,7 @@
 
 		sor1 {
 			status = "okay";
+			nvidia,active-panel = <&sor1_hdmi_display>;
 			hdmi-display {
 				status = "okay";
 			};

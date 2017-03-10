@@ -1,7 +1,7 @@
 /*
  * tegra210_peq_alt.h - Definitions for Tegra210 PEQ driver
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -43,10 +43,7 @@
 /* PEQ register definition ends here */
 #define TEGRA210_PEQ_MAX_BIQUAD_STAGES 12
 
-/* Though PEQ hardware supports upto 8-channel  This driver supports only
-   stereo data at this moment. Support for 8 channel data will be added
-   when need arises */
-#define TEGRA210_PEQ_MAX_CHANNELS 2
+#define TEGRA210_PEQ_MAX_CHANNELS 8
 
 #define TEGRA210_PEQ_GAIN_PARAM_SIZE_PER_CH \
 	(2 + TEGRA210_PEQ_MAX_BIQUAD_STAGES * 5)

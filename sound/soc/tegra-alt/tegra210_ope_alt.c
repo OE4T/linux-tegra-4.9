@@ -1,7 +1,7 @@
 /*
  * tegra210_ope_alt.c - Tegra210 OPE driver
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -161,6 +161,13 @@ static int tegra210_ope_codec_probe(struct snd_soc_codec *codec)
 	return 0;
 }
 
+static struct regmap *tegra210_ope_init_regmap(struct device *dev)
+{
+	struct tegra210_ope *ope = dev_get_drvdata(dev);
+
+	return ope->regmap;
+}
+
 static struct snd_soc_dai_ops tegra210_ope_dai_ops = {
 	.hw_params	= tegra210_ope_hw_params,
 };
@@ -222,6 +229,7 @@ static struct snd_soc_codec_driver tegra210_ope_codec = {
 	.controls = tegra210_ope_controls,
 	.num_controls = ARRAY_SIZE(tegra210_ope_controls),
 	.idle_bias_off = 1,
+	.get_regmap = tegra210_ope_init_regmap,
 };
 
 static bool tegra210_ope_wr_reg(struct device *dev, unsigned int reg)

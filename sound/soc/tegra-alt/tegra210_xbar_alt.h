@@ -1,7 +1,7 @@
 /*
  * tegra210_xbar_alt.h - TEGRA210 XBAR registers
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -233,9 +233,9 @@ struct tegra_soc_bytes {
 
 /* Utility structures for using mixer control of type snd_soc_bytes */
 #define TEGRA_SOC_BYTES_EXT(xname, xbase, xregs, xshift, xmask, \
-	xhandler_get, xhandler_put) \
+	xhandler_get, xhandler_put, xinfo) \
 	{.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = xname, \
-	 .info = snd_soc_bytes_info, .get = xhandler_get, .put = xhandler_put, \
+	 .info = xinfo, .get = xhandler_get, .put = xhandler_put, \
 	 .private_value = ((unsigned long)&(struct tegra_soc_bytes) \
 		{.soc.base = xbase, .soc.num_regs = xregs, .soc.mask = xmask, \
 		 .shift = xshift })}

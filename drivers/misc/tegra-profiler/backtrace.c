@@ -523,7 +523,7 @@ static unsigned int
 get_user_callchain_mixed(struct quadd_event_context *event_ctx,
 			 struct quadd_callchain *cc)
 {
-	int nr_prev, nr_added;
+	int nr_prev, nr_added, is_stack_ok;
 	unsigned long pc, prev_sp, align_mask;
 	struct quadd_unw_methods *um = &cc->um;
 
@@ -546,19 +546,13 @@ get_user_callchain_mixed(struct quadd_event_context *event_ctx,
 		if (um->ut)
 			quadd_get_user_cc_arm32_ehabi(event_ctx, cc);
 
-		if (nr_prev != cc->nr) {
-			if (cc->curr_sp <= prev_sp ||
-			    cc->curr_sp & align_mask)
-				break;
-
-			continue;
-		}
-
-		if (um->fp)
+		if (um->fp && nr_prev == cc->nr)
 			__get_user_callchain_fp(event_ctx, cc);
-	} while (nr_prev != cc->nr &&
-		 cc->curr_sp > prev_sp &&
-		 !(cc->curr_sp & align_mask));
+
+		is_stack_ok = cc->nr <= 1 ?
+			cc->curr_sp >= prev_sp : cc->curr_sp > prev_sp;
+		is_stack_ok = (cc->curr_sp & align_mask) ? 0 : is_stack_ok;
+	} while (nr_prev != cc->nr && is_stack_ok);
 
 	return cc->nr;
 }

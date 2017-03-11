@@ -1952,7 +1952,7 @@ unwind_backtrace(struct quadd_callchain *cc,
 
 	while (1) {
 		long sp, err;
-		int nr_added;
+		int nr_added, is_stack_ok;
 		int __is_eh, __is_debug;
 		struct vm_area_struct *vma_pc;
 		unsigned long addr, where = sf->pc;
@@ -2033,7 +2033,10 @@ unwind_backtrace(struct quadd_callchain *cc,
 		cc->curr_pc = sf->pc;
 		cc->curr_lr = sf->vregs[regnum_lr(mode)];
 
-		if (cc->curr_sp <= sp) {
+		is_stack_ok = cc->nr > 0 ?
+			cc->curr_sp > sp : cc->curr_sp >= sp;
+
+		if (!is_stack_ok) {
 			cc->urc_dwarf = QUADD_URC_SP_INCORRECT;
 			break;
 		}

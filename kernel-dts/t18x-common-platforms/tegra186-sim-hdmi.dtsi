@@ -1,7 +1,7 @@
 /*
  * arch/arm64/boot/dts/tegra186-sim-hdmi.dtsi
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@
 			status = "okay";
 			/*nvidia,ddc-i2c-bus = <&hdmi_ddc>;*/
 			/*nvidia,hpd-gpio = <&tegra_main_gpio 0xFFFFFFFF 1>;*/ /* hotplug less */
+			nvidia,active-panel = <&sor1_hdmi_display>;
 			hdmi-display {
 				status = "okay";
 				compatible = "hdmi,display";
@@ -58,6 +59,7 @@
 
 		sor {
 			status = "okay";
+			nvidia,active-panel = <&sor0_hdmi_display>;
 			hdmi-display {
 				status = "okay";
 				compatible = "hdmi,display";

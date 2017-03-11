@@ -1,7 +1,7 @@
 /*
  * arch/arm64/boot/dts/tegra186-platforms/tegra186-dp.dtsi
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@
 / {
 	host1x {
 		sor {
+			nvidia,active-panel = <&sor0_dp_display>;
 			dp-display {
 				status = "okay";
 				compatible = "dp, display";
@@ -239,6 +240,7 @@
 			};//dp-display
 		};//sor
 		sor1 {
+			nvidia,active-panel = <&sor1_dp_display>;
 			dp-display {
 				status = "okay";
 				compatible = "dp, display";

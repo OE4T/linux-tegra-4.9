@@ -52,6 +52,10 @@
 
 		dsi {
 			status = "okay";
+			nvidia,active-panel = <&panel_s_wuxga_8_0_mods>;
+			panel-s-wuxga-8-0-mods {
+				status = "okay";
+			};
 			panel-s-wuxga-8-0 {
 				status = "disabled";
 				disp-default-out {
@@ -59,13 +63,11 @@
 					nvidia,out-yres = <2160>;
 				};
 			};
-			panel-s-wuxga-8-0-mods {
-				status = "okay";
-			};
 		};
 
 		sor {
 			status = "okay";
+			nvidia,active-panel = <&sor0_dp_display>;
 			dp-display {
 				status = "okay";
 				disp-default-out {
@@ -84,6 +86,7 @@
 
 		sor1 {
 			status = "okay";
+			nvidia,active-panel = <&sor1_hdmi_display>;
 			hdmi-display {
 				status = "okay";
 				disp-default-out {

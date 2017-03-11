@@ -1,9 +1,3 @@
-config TEGRA186_PMC
-        bool "Tegra Power Management Controller"
-	depends on ARCH_TEGRA_18x_SOC
-        help
-          Enable Tegra186 PMC.
-
 config TEGRA_AON
 	bool "Tegra AON driver"
 	depends on ARCH_TEGRA_18x_SOC

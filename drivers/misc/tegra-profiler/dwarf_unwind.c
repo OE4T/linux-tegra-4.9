@@ -563,7 +563,7 @@ dwarf_read_sleb128(struct ex_region_info *ri,
 	num_bits = 8 * sizeof(result);
 
 	if ((shift < num_bits) && (byte & 0x40))
-		result |= (-1 << shift);
+		result |= (-1L << shift);
 
 	*ret = result;
 

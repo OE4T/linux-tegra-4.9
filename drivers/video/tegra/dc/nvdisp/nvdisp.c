@@ -3649,5 +3649,7 @@ void tegra_dc_populate_t18x_hw_data(struct tegra_dc_hw_data *hw_data)
 
 	hw_data->nheads = 3;
 	hw_data->nwins = 6;
+	hw_data->nsors = 2;
 	hw_data->valid = true;
+	hw_data->version = TEGRA_DC_HW_T18x;
 }

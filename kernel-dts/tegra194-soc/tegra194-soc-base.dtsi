@@ -134,6 +134,8 @@
 			      <&{/host1x/nvdla1@158c0000}	TEGRA_SID_NVDLA1>,
 			      <&{/host1x/nvdisplay@15200000}	TEGRA_SID_NVDISPLAY>,
 			      <&{/host1x/nvdisplay@15210000}	TEGRA_SID_NVDISPLAY>,
+			      <&{/host1x/nvdisplay@15220000}	TEGRA_SID_NVDISPLAY>,
+			      <&{/host1x/nvdisplay@15230000}	TEGRA_SID_NVDISPLAY>,
 			      <&{/host1x/nvenc1@15a80000}	TEGRA_SID_NVENC1>,
 			      <&{/host1x/pva0}			TEGRA_SID_PVA0>,
 			      <&{/host1x/pva1}			TEGRA_SID_PVA1>,
@@ -388,13 +390,19 @@
 			clock-names = "clk32k_in", "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p0",
 				      "nvdisplay_p1", "nvdisplay_p2",
-				      "pllp_display", "plld2", "plld3",
+				      "nvdisplay_p3", "pllp_display",
+				      "plld2", "plld3",
 				      "pll_d", "emc", "emc_latency";
 			clocks = <&clk32k_in>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAYHUB>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P0>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P1>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
+				/*
+				 * todo: TEGRA194_CLK_NVDISPLAY_P3 not defined
+				 *       yet so use TEGRA194_CLK_NVDISPLAY_P2
+				 */
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
@@ -427,13 +435,19 @@
 			clock-names = "clk32k_in", "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p0",
 				      "nvdisplay_p1", "nvdisplay_p2",
-				      "pllp_display", "plld2", "plld3",
+				      "nvdisplay_p3", "pllp_display",
+				      "plld2", "plld3",
 				      "pll_d", "disp2_emc", "emc_latency";
 			clocks = <&clk32k_in>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAYHUB>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P0>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P1>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
+				/*
+				 * todo: TEGRA194_CLK_NVDISPLAY_P3 not defined
+				 *       yet so use TEGRA194_CLK_NVDISPLAY_P2
+				 */
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
@@ -452,6 +466,96 @@
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP5>,
 				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_HEAD1>;
 		}; //nvdisplay@15210000
+
+		head2: nvdisplay@15220000 {
+			status = "disabled";
+			compatible = "nvidia,tegra194-dc";
+			reg = <0x0 0x15220000 0x0 0x10000>;
+			interrupts = <0 155 4>;
+
+			#stream-id-cells = <0x1>;
+
+			nvidia,dc-ctrlnum = <2>;
+
+			clock-names = "clk32k_in", "nvdisplay_disp",
+				      "nvdisplayhub", "nvdisplay_p0",
+				      "nvdisplay_p1", "nvdisplay_p2",
+				      "nvdisplay_p3", "pllp_display",
+				      "plld2", "plld3",
+				      "pll_d", "disp3_emc", "emc_latency";
+			clocks = <&clk32k_in>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAYHUB>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P0>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P1>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
+				/*
+				 * todo: TEGRA194_CLK_NVDISPLAY_P3 not defined
+				 *       yet so use TEGRA194_CLK_NVDISPLAY_P2
+				 */
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
+				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
+				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				 <&bpmp_clks TEGRA194_CLK_PLLD3>,
+				 <&bpmp_clks TEGRA194_CLK_PLLD>,
+				 <&bpmp_clks TEGRA194_CLK_EMC>,
+				 <&bpmp_clks TEGRA194_CLK_CLK_M>;
+			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
+				      "wgrp3", "wgrp4", "wgrp5", "head2";
+			resets = <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_MISC>,
+				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP0>,
+				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP1>,
+				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP2>,
+				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP3>,
+				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP4>,
+				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP5>,
+				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_HEAD2>;
+		}; //nvdisplay@15220000
+
+		head3: nvdisplay@15230000 {
+			status = "disabled";
+			compatible = "nvidia,tegra194-dc";
+			reg = <0x0 0x15230000 0x0 0x10000>;
+			interrupts = <0 242 4>;
+
+			#stream-id-cells = <0x1>;
+
+			nvidia,dc-ctrlnum = <3>;
+
+			clock-names = "clk32k_in", "nvdisplay_disp",
+				      "nvdisplayhub", "nvdisplay_p0",
+				      "nvdisplay_p1", "nvdisplay_p2",
+				      "nvdisplay_p3", "pllp_display",
+				      "plld2", "plld3",
+				      "pll_d", "disp4_emc", "emc_latency";
+			clocks = <&clk32k_in>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAYHUB>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P0>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P1>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
+				/*
+				 * todo: TEGRA194_CLK_NVDISPLAY_P3 not defined
+				 *       yet so use TEGRA194_CLK_NVDISPLAY_P2
+				 */
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
+				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
+				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				 <&bpmp_clks TEGRA194_CLK_PLLD3>,
+				 <&bpmp_clks TEGRA194_CLK_PLLD>,
+				 <&bpmp_clks TEGRA194_CLK_EMC>,
+				 <&bpmp_clks TEGRA194_CLK_CLK_M>;
+			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
+				      "wgrp3", "wgrp4", "wgrp5", "head3";
+			resets = <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_MISC>,
+				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP0>,
+				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP1>,
+				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP2>,
+				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP3>,
+				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP4>,
+				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_WGRP5>,
+				 <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_HEAD3>;
+		}; //nvdisplay@15230000
 
 		sor0: sor {
 			status = "disabled";
@@ -482,6 +586,7 @@
 				 <&bpmp_resets TEGRA194_RESET_HDA2HDMICODEC>;
 			reset-names = "sor0","hda_rst", "hda2codec_2x_rst",
 				"hda2hdmi_rst";
+
 			sor0_hdmi_display: hdmi-display {
 				status = "disabled";
 			};
@@ -493,7 +598,7 @@
 		sor1: sor1 {
 			status = "disabled";
 			compatible = "nvidia,tegra194-sor1";
-			reg = <0x0 0x15580000 0x0 0x40000>;
+			reg = <0x0 0x15540000 0x0 0x40000>;
 
 			nvidia,sor-ctrlnum = <1>;
 			nvidia,dpaux = <&dpaux1>;
@@ -519,6 +624,7 @@
 				 <&bpmp_resets TEGRA194_RESET_HDA2HDMICODEC>;
 			reset-names = "sor1","hda_rst", "hda2codec_2x_rst",
 				"hda2hdmi_rst";
+
 			sor1_hdmi_display: hdmi-display {
 				status = "disabled";
 			};
@@ -526,6 +632,90 @@
 				status = "disabled";
 			};
 		}; //sor1
+
+		sor2: sor2 {
+			status = "disabled";
+			compatible = "nvidia,tegra194-sor1";
+			reg = <0x0 0x15580000 0x0 0x40000>;
+
+			nvidia,sor-ctrlnum = <2>;
+			nvidia,dpaux = <&dpaux2>;
+			nvidia,xbar-ctrl = <0x2 0x1 0x0 0x3 0x4>;
+
+			clocks = <&clk32k_in>,
+				/*
+				 * todo: TEGRA194_CLK_SOR2* not defined yet
+				 *       so use TEGRA194_CLK_SOR1*
+				 */
+				 <&bpmp_clks TEGRA194_CLK_SOR1>,
+				 <&bpmp_clks TEGRA194_CLK_SOR_SAFE>,
+				 <&bpmp_clks TEGRA194_CLK_SOR1_PAD_CLKOUT>,
+				 <&bpmp_clks TEGRA194_CLK_SOR1_OUT>,
+				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
+				 <&bpmp_clks TEGRA194_CLK_MAUD>,
+				 <&bpmp_clks TEGRA194_CLK_HDA>,
+				 <&bpmp_clks TEGRA194_CLK_HDA2CODEC_2X>,
+				 <&bpmp_clks TEGRA194_CLK_HDA2HDMICODEC>;
+			clock-names = "clk32k_in", "sor2", "sor_safe",
+				      "sor2_pad_clkout", "sor2_out",
+				      "pllp_out0", "maud", "hda",
+				      "hda2codec_2x", "hda2hdmi";
+			resets = <&bpmp_resets TEGRA194_RESET_SOR2>,
+				 <&bpmp_resets TEGRA194_RESET_HDA>,
+				 <&bpmp_resets TEGRA194_RESET_HDA2CODEC_2X>,
+				 <&bpmp_resets TEGRA194_RESET_HDA2HDMICODEC>;
+			reset-names = "sor2","hda_rst", "hda2codec_2x_rst",
+				"hda2hdmi_rst";
+
+			sor2_hdmi_display: hdmi-display {
+				status = "disabled";
+			};
+			sor2_dp_display: dp-display {
+				status = "disabled";
+			};
+		}; //sor2
+
+		sor3: sor3 {
+			status = "disabled";
+			compatible = "nvidia,tegra194-sor1";
+			reg = <0x0 0x155C0000 0x0 0x40000>;
+
+			nvidia,sor-ctrlnum = <3>;
+			nvidia,dpaux = <&dpaux3>;
+			nvidia,xbar-ctrl = <0x2 0x1 0x0 0x3 0x4>;
+
+			clocks = <&clk32k_in>,
+				/*
+				 * todo: TEGRA194_CLK_SOR3* not defined yet
+				 *       so use TEGRA194_CLK_SOR1*
+				 */
+				 <&bpmp_clks TEGRA194_CLK_SOR1>,
+				 <&bpmp_clks TEGRA194_CLK_SOR_SAFE>,
+				 <&bpmp_clks TEGRA194_CLK_SOR1_PAD_CLKOUT>,
+				 <&bpmp_clks TEGRA194_CLK_SOR1_OUT>,
+				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
+				 <&bpmp_clks TEGRA194_CLK_MAUD>,
+				 <&bpmp_clks TEGRA194_CLK_HDA>,
+				 <&bpmp_clks TEGRA194_CLK_HDA2CODEC_2X>,
+				 <&bpmp_clks TEGRA194_CLK_HDA2HDMICODEC>;
+			clock-names = "clk32k_in", "sor3", "sor_safe",
+				      "sor3_pad_clkout", "sor3_out",
+				      "pllp_out0", "maud", "hda",
+				      "hda2codec_2x", "hda2hdmi";
+			resets = <&bpmp_resets TEGRA194_RESET_SOR3>,
+				 <&bpmp_resets TEGRA194_RESET_HDA>,
+				 <&bpmp_resets TEGRA194_RESET_HDA2CODEC_2X>,
+				 <&bpmp_resets TEGRA194_RESET_HDA2HDMICODEC>;
+			reset-names = "sor3","hda_rst", "hda2codec_2x_rst",
+				"hda2hdmi_rst";
+
+			sor3_hdmi_display: hdmi-display {
+				status = "disabled";
+			};
+			sor3_dp_display: dp-display {
+				status = "disabled";
+			};
+		}; //sor3
 
 		dpaux0: dpaux@155c0000 {
 			status = "disabled";
@@ -540,12 +730,12 @@
 			clock-names = "clk32k_in", "dpaux", "plldp";
 			resets = <&bpmp_resets TEGRA194_RESET_DPAUX>;
 			reset-names = "dpaux";
-		}; //dpaux@155c0000
+		}; //dpaux0
 
-		dpaux1: dpaux@15040000 {
+		dpaux1: dpaux@155D0000 {
 			status = "disabled";
-			compatible = "nvidia,tegra194-dpaux1";
-			reg = <0x0 0x15040000 0x0 0x00010000>;
+			compatible = "nvidia,tegra194-dpaux";
+			reg = <0x0 0x155D0000 0x0 0x00010000>;
 			interrupts = <0 160 4>;
 			nvidia,dpaux-ctrlnum = <1>;
 
@@ -555,7 +745,45 @@
 			clock-names = "clk32k_in", "dpaux1", "plldp";
 			resets = <&bpmp_resets TEGRA194_RESET_DPAUX1>;
 			reset-names = "dpaux1";
-		}; //dpaux@15040000
+		}; //dpaux1
+
+		dpaux2: dpaux@155E0000 {
+			status = "disabled";
+			compatible = "nvidia,tegra194-dpaux";
+			reg = <0x0 0x155E0000 0x0 0x00010000>;
+			interrupts = <0 245 4>;
+			nvidia,dpaux-ctrlnum = <2>;
+
+			clocks = <&clk32k_in>,
+				/*
+				 * todo: TEGRA194_CLK_DPAUX2* not defined yet
+				 *       so use TEGRA194_CLK_DPAUX1*
+				 */
+				 <&bpmp_clks TEGRA194_CLK_DPAUX1>,
+				 <&bpmp_clks TEGRA194_CLK_PLLDP>;
+			clock-names = "clk32k_in", "dpaux2", "plldp";
+			resets = <&bpmp_resets TEGRA194_RESET_DPAUX2>;
+			reset-names = "dpaux2";
+		}; //dpaux2
+
+		dpaux3: dpaux@155F0000 {
+			status = "disabled";
+			compatible = "nvidia,tegra194-dpaux";
+			reg = <0x0 0x155F0000 0x0 0x00010000>;
+			interrupts = <0 246 4>;
+			nvidia,dpaux-ctrlnum = <3>;
+
+			clocks = <&clk32k_in>,
+				/*
+				 * todo: TEGRA194_CLK_DPAUX3* not defined yet
+				 *       so use TEGRA194_CLK_DPAUX1*
+				 */
+				 <&bpmp_clks TEGRA194_CLK_DPAUX1>,
+				 <&bpmp_clks TEGRA194_CLK_PLLDP>;
+			clock-names = "clk32k_in", "dpaux3", "plldp";
+			resets = <&bpmp_resets TEGRA194_RESET_DPAUX3>;
+			reset-names = "dpaux3";
+		}; //dpaux3
 
 		vi-thi@15f00000 {
 			compatible = "nvidia,tegra194-vi-thi";

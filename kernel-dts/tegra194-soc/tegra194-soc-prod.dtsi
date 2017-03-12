@@ -306,7 +306,7 @@
 				};
 			};
 		};
-		dpaux@15040000 {
+		dpaux@155D0000 {
 			prod-settings {
 				#prod-cells = <3>;
 				mask-one-style;

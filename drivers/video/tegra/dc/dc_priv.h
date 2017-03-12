@@ -758,13 +758,17 @@ int tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc);
 int tegra_nvdisp_set_ocsc(struct tegra_dc *dc, struct tegra_dc_mode *mode);
 #endif
 
-int tegra_dc_get_max_heads(void);
+int tegra_dc_get_numof_dispsors(void);
 void __attribute__((weak)) tegra_dc_populate_t21x_hw_data(
 	struct tegra_dc_hw_data *);
 void __attribute__((weak)) tegra_dc_populate_t18x_hw_data(
 	struct tegra_dc_hw_data *);
 void __attribute__((weak)) tegra_dc_populate_t19x_hw_data(
 	struct tegra_dc_hw_data *);
+
+bool __attribute__((weak)) tegra_dc_is_t21x(void);
+bool __attribute__((weak)) tegra_dc_is_t18x(void);
+bool __attribute__((weak)) tegra_dc_is_t19x(void);
 
 int tegra_fb_release_fbmem(struct tegra_fb_info *);
 #endif

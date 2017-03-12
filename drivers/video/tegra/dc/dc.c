@@ -6705,7 +6705,7 @@ int  tegra_dc_get_numof_dispheads(void)
 }
 EXPORT_SYMBOL(tegra_dc_get_numof_dispheads);
 
-int  tegra_dc_get_numof_dispwindows(void)
+int tegra_dc_get_numof_dispwindows(void)
 {
 	if (!hw_data || !hw_data->valid)
 		return DC_N_WINDOWS;
@@ -6713,6 +6713,14 @@ int  tegra_dc_get_numof_dispwindows(void)
 	return hw_data->nwins;
 }
 EXPORT_SYMBOL(tegra_dc_get_numof_dispwindows);
+
+int tegra_dc_get_numof_dispsors(void)
+{
+	if (!hw_data || !hw_data->valid)
+		return -ENODEV;
+
+	return hw_data->nsors;
+}
 
 static int tegra_dc_assign_hw_data(void)
 {
@@ -6740,6 +6748,21 @@ static int tegra_dc_assign_hw_data(void)
 	return 0;
 }
 
+inline bool tegra_dc_is_t21x(void)
+{
+	return hw_data && (hw_data->version == TEGRA_DC_HW_T210);
+}
+
+inline bool tegra_dc_is_t18x(void)
+{
+	return hw_data && (hw_data->version == TEGRA_DC_HW_T18x);
+}
+
+inline bool tegra_dc_is_t19x(void)
+{
+	return hw_data && (hw_data->version == TEGRA_DC_HW_T19x);
+}
+
 void tegra_dc_populate_t21x_hw_data(struct tegra_dc_hw_data *hw_data)
 {
 	if (!hw_data)
@@ -6747,7 +6770,9 @@ void tegra_dc_populate_t21x_hw_data(struct tegra_dc_hw_data *hw_data)
 
 	hw_data->nheads = 2;
 	hw_data->nwins = 5;
+	hw_data->nsors = 2;
 	hw_data->valid = true;
+	hw_data->version = TEGRA_DC_HW_T210;
 }
 
 static struct platform_driver tegra_dc_driver = {

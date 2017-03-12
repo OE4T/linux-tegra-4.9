@@ -184,10 +184,19 @@ struct tegra_dc_imp_settings {
 	u32					owner;
 };
 
+enum tegra_dc_hw {
+	TEGRA_DC_HW_T210,
+	TEGRA_DC_HW_T18x,
+	TEGRA_DC_HW_T19x,
+	TEGRA_DC_HW_MAX
+};
+
 struct tegra_dc_hw_data {
 	bool valid;
 	int nheads;
 	int nwins;
+	int nsors;
+	enum tegra_dc_hw version;
 };
 
 struct tegra_dc {

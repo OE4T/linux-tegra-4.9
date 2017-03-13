@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -55,6 +55,7 @@
 					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
 					maxim,active-fps-power-up-slot = <1>;
 					maxim,active-fps-power-down-slot = <6>;
+					maxim,ramp-rate-setting = <27500>;
 					regulator-ramp-delay = <27500>;
 				};
 
@@ -62,6 +63,7 @@
 					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
 					maxim,active-fps-power-up-slot = <5>;
 					maxim,active-fps-power-down-slot = <2>;
+					maxim,ramp-rate-setting = <27500>;
 					regulator-ramp-delay = <27500>;
 				};
 
@@ -69,6 +71,7 @@
 					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
 					maxim,active-fps-power-up-slot = <2>;
 					maxim,active-fps-power-down-slot = <5>;
+					maxim,ramp-rate-setting = <27500>;
 					regulator-ramp-delay = <27500>;
 				};
 
@@ -76,6 +79,7 @@
 					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
 					maxim,active-fps-power-up-slot = <3>;
 					maxim,active-fps-power-down-slot = <4>;
+					maxim,ramp-rate-setting = <27500>;
 					regulator-ramp-delay = <27500>;
 				};
 
@@ -83,6 +87,7 @@
 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
 					maxim,active-fps-power-up-slot = <0>;
 					maxim,active-fps-power-down-slot = <7>;
+					maxim,ramp-rate-setting = <27500>;
 					regulator-ramp-delay = <27500>;
 				};
 
@@ -92,8 +97,8 @@
 					maxim,active-fps-power-down-slot = <7>;
 					regulator-enable-ramp-delay = <84>;
 					regulator-disable-ramp-delay = <14700>;
-					regulator-ramp-delay = <100000>;
-					regulator-ramp-delay-scale = <750>;
+					maxim,ramp-rate-setting = <100000>;
+					regulator-ramp-delay = <13500>;
 				};
 
 				ldo1 {
@@ -102,8 +107,8 @@
 					maxim,active-fps-power-down-slot = <3>;
 					regulator-enable-ramp-delay = <34>;
 					regulator-disable-ramp-delay = <660>;
-					regulator-ramp-delay = <100000>;
-					regulator-ramp-delay-scale = <350>;
+					maxim,ramp-rate-setting = <100000>;
+					regulator-ramp-delay = <28500>;
 				};
 
 				ldo2 {
@@ -113,8 +118,8 @@
 					maxim,active-fps-power-down-slot = <7>;
 					regulator-enable-ramp-delay = <300>;
 					regulator-disable-ramp-delay = <64000>;
-					regulator-ramp-delay = <100000>;
-					regulator-ramp-delay-scale = <950>;
+					maxim,ramp-rate-setting = <100000>;
+					regulator-ramp-delay = <10500>;
 				};
 
 				ldo3 {
@@ -130,14 +135,15 @@
 					maxim,active-fps-power-down-slot = <6>;
 					regulator-enable-ramp-delay = <23>;
 					regulator-disable-ramp-delay = <1100>;
-					regulator-ramp-delay = <100000>;
-					regulator-ramp-delay-scale = <250>;
+					maxim,ramp-rate-setting = <100000>;
+					regulator-ramp-delay = <40000>;
 				};
 
 				ldo5 {
 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
 					maxim,active-fps-power-up-slot = <0>;
 					maxim,active-fps-power-down-slot = <7>;
+					maxim,ramp-rate-setting = <100000>;
 					regulator-ramp-delay = <100000>;
 				};
 
@@ -145,6 +151,7 @@
 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
 					maxim,active-fps-power-up-slot = <0>;
 					maxim,active-fps-power-down-slot = <7>;
+					maxim,ramp-rate-setting = <100000>;
 					regulator-ramp-delay = <100000>;
 				};
 
@@ -154,8 +161,8 @@
 					maxim,active-fps-power-down-slot = <4>;
 					regulator-enable-ramp-delay = <124>;
 					regulator-disable-ramp-delay = <24000>;
-					regulator-ramp-delay = <100000>;
-					regulator-ramp-delay-scale = <1200>;
+					maxim,ramp-rate-setting = <100000>;
+					regulator-ramp-delay = <8500>;
 				};
 
 				ldo8 {
@@ -164,8 +171,8 @@
 					maxim,active-fps-power-down-slot = <1>;
 					regulator-enable-ramp-delay = <93>;
 					regulator-disable-ramp-delay = <10000>;
-					regulator-ramp-delay = <100000>;
-					regulator-ramp-delay-scale = <900>;
+					maxim,ramp-rate-setting = <100000>;
+					regulator-ramp-delay-scale = <11100>;
 				};
 			};
 		};

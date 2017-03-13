@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,92 +34,92 @@
 				sd0 {
 					regulator-enable-ramp-delay = <146>;
 					regulator-disable-ramp-delay = <4080>;
-					regulator-ramp-delay = <27500>;
-					regulator-ramp-delay-scale = <300>;
+					maxim,ramp-rate-setting = <27500>;
+					regulator-ramp-delay = <9100>;
 				};
 
 				sd1 {
 					regulator-enable-ramp-delay = <130>;
 					regulator-disable-ramp-delay = <145800>;
-					regulator-ramp-delay = <27500>;
-					regulator-ramp-delay-scale = <300>;
+					maxim,ramp-rate-setting = <27500>;
+					regulator-ramp-delay = <9100>;
 				};
 
 				sd2 {
 					regulator-enable-ramp-delay = <176>;
 					regulator-disable-ramp-delay = <32000>;
-					regulator-ramp-delay = <27500>;
-					regulator-ramp-delay-scale = <350>;
+					maxim,ramp-rate-setting = <27500>;
+					regulator-ramp-delay = <7900>;
 				};
 
 				sd3 {
 					regulator-enable-ramp-delay = <242>;
 					regulator-disable-ramp-delay = <118000>;
-					regulator-ramp-delay = <27500>;
-					regulator-ramp-delay-scale = <360>;
+					maxim,ramp-rate-setting = <27500>;
+					regulator-ramp-delay = <7700>;
 				};
 
 				ldo0 {
 					regulator-enable-ramp-delay = <26>;
 					regulator-disable-ramp-delay = <626>;
-					regulator-ramp-delay = <100000>;
-					regulator-ramp-delay-scale = <200>;
+					maxim,ramp-rate-setting = <100000>;
+					regulator-ramp-delay = <50000>;
 				};
 
 				ldo1 {
 					regulator-enable-ramp-delay = <22>;
 					regulator-disable-ramp-delay = <630>;
-					regulator-ramp-delay = <100000>;
-					regulator-ramp-delay-scale = <200>;
+					maxim,ramp-rate-setting = <100000>;
+					regulator-ramp-delay = <50000>;
 				};
 
 				ldo2 {
 					regulator-enable-ramp-delay = <62>;
 					regulator-disable-ramp-delay = <650>;
-					regulator-ramp-delay = <100000>;
-					regulator-ramp-delay-scale = <200>;
+					maxim,ramp-rate-setting = <100000>;
+					regulator-ramp-delay = <50000>;
 				};
 
 				ldo3 {
 					regulator-enable-ramp-delay = <50>;
 					regulator-disable-ramp-delay = <1110>;
-					regulator-ramp-delay = <100000>;
-					regulator-ramp-delay-scale = <200>;
+					maxim,ramp-rate-setting = <100000>;
+					regulator-ramp-delay = <50000>;
 				};
 
 				ldo4 {
 					regulator-enable-ramp-delay = <22>;
 					regulator-disable-ramp-delay = <610>;
-					regulator-ramp-delay = <100000>;
-					regulator-ramp-delay-scale = <200>;
+					maxim,ramp-rate-setting = <100000>;
+					regulator-ramp-delay = <50000>;
 				};
 
 				ldo5 {
 					regulator-enable-ramp-delay = <62>;
 					regulator-disable-ramp-delay = <640>;
-					regulator-ramp-delay = <100000>;
-					regulator-ramp-delay-scale = <200>;
+					maxim,ramp-rate-setting = <100000>;
+					regulator-ramp-delay = <50000>;
 				};
 
 				ldo6 {
 					regulator-enable-ramp-delay = <36>;
 					regulator-disable-ramp-delay = <674>;
-					regulator-ramp-delay = <100000>;
-					regulator-ramp-delay-scale = <200>;
+					maxim,ramp-rate-setting = <100000>;
+					regulator-ramp-delay = <50000>;
 				};
 
 				ldo7 {
 					regulator-enable-ramp-delay = <24>;
 					regulator-disable-ramp-delay = <2768>;
-					regulator-ramp-delay = <100000>;
-					regulator-ramp-delay-scale = <200>;
+					maxim,ramp-rate-setting = <100000>;
+					regulator-ramp-delay = <50000>;
 				};
 
 				ldo8 {
 					regulator-enable-ramp-delay = <22>;
 					regulator-disable-ramp-delay = <1160>;
-					regulator-ramp-delay = <100000>;
-					regulator-ramp-delay-scale = <200>;
+					maxim,ramp-rate-setting = <100000>;
+					regulator-ramp-delay = <50000>;
 				};
 			};
 		};

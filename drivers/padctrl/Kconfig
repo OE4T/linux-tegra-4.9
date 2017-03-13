@@ -15,6 +15,4 @@ config PADCTRL_GENERIC_TEGRA_IO_PAD
 
 	  Tegra IO Pad padctrl driver which controls the IO pad
 	  configuration for 1.2V, 1.8V and 3.3V.
-
-source "../t18x/drivers/padctrl/Kconfig.t18x"
 endif

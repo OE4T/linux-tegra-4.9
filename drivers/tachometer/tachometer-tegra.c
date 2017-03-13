@@ -13,7 +13,6 @@
  */
 
 #include <linux/module.h>
-#include <linux/delay.h>
 #include <linux/of.h>
 #include <linux/clk.h>
 #include <linux/platform_device.h>
@@ -117,7 +116,6 @@ static unsigned long tegra_tachometer_read_rpm(struct tachometer_dev *tach)
 		}
 	}
 
-	mdelay(100);
 	tach0 = tachometer_readl(tegra_tach, TACH_FAN_TACH0);
 
 	if (tach0 & TACH_FAN_TACH0_OVERFLOW_MASK) {

@@ -83,7 +83,7 @@
 #include <linux/nvs.h>
 #include <linux/version.h>
 
-#define NVS_IIO_DRIVER_VERSION		(220)
+#define NVS_IIO_DRIVER_VERSION		(221)
 
 enum NVS_ATTR {
 	NVS_ATTR_ENABLE,
@@ -488,7 +488,7 @@ static ssize_t nvs_dbg_cfg(struct iio_dev *indio_dev, char *buf)
 		      st->cfg->delay_us_max);
 	t += snprintf(buf + t, PAGE_SIZE - t, "uuid: ");
 	for (i = 0; i < 16; i++)
-		t += snprintf(buf + t, PAGE_SIZE - t, "%02x ",
+		t += snprintf(buf + t, PAGE_SIZE - t, "%02X ",
 			      st->cfg->uuid[i]);
 	t += snprintf(buf + t, PAGE_SIZE - t, "\nmatrix: ");
 	for (i = 0; i < 9; i++)
@@ -536,24 +536,24 @@ static unsigned int nvs_buf_index(unsigned int size, unsigned int *bytes)
 	if (!(*bytes % size))
 		index = *bytes;
 	else
-		index = *bytes - *bytes % size + size;
+		index = (*bytes - (*bytes % size)) + size;
 	*bytes = index + size;
 	return index;
 }
 
-static ssize_t nvs_dbg_data(struct iio_dev *indio_dev, char *buf, size_t size)
+static ssize_t nvs_dbg_data(struct iio_dev *indio_dev, char *buf, size_t buf_n)
 {
 	struct nvs_state *st = iio_priv(indio_dev);
 	struct iio_chan_spec const *ch;
 	ssize_t t;
-	unsigned int shift;
 	unsigned int buf_i;
 	unsigned int ch_n;
 	unsigned int n;
 	unsigned int i;
+	unsigned int j;
 	u64 data;
 
-	t = snprintf(buf, size, "%s: ", st->cfg->name);
+	t = snprintf(buf, buf_n, "%s: ", st->cfg->name);
 	n = 0;
 	for (i = 0; i < indio_dev->num_channels - 1; i++) {
 		ch = &indio_dev->channels[i];
@@ -561,24 +561,34 @@ static ssize_t nvs_dbg_data(struct iio_dev *indio_dev, char *buf, size_t size)
 			ch_n = ch->scan_type.storagebits / 8;
 			buf_i = nvs_buf_index(ch_n, &n);
 		} else {
-			t += snprintf(buf + t, size - t, "disabled ");
+			t += snprintf(buf + t, buf_n - t, "disabled ");
 			continue;
 		}
+
+		if (!ch_n)
+			continue;
 
 		if (ch_n <= sizeof(data)) {
 			data = 0LL;
 			memcpy(&data, &st->buf[buf_i], ch_n);
 			if (ch->scan_type.sign == 's') {
-				shift = 64 - ch->scan_type.realbits;
-				t += snprintf(buf + t, size - t, "%lld ",
-					      (s64)(data << shift) >> shift);
+				j = 64 - ch->scan_type.realbits;
+				t += snprintf(buf + t, buf_n - t, "%lld (0x",
+					      (s64)(data << j) >> j);
 			} else {
-				t += snprintf(buf + t, size - t, "%llu ",
+				t += snprintf(buf + t, buf_n - t, "%llu (0x",
 					      data);
 			}
+		} else {
+			t += snprintf(buf + t, buf_n - t, "? (0x");
 		}
+		for (j = ch_n - 1; j > 0; j--)
+			t += snprintf(buf + t, buf_n - t, "%02X",
+				      st->buf[buf_i + j]);
+		t += snprintf(buf + t, buf_n - t, "%02X)  ", st->buf[buf_i]);
 	}
-	t += snprintf(buf + t, size - t, "ts=%lld  ts_diff=%lld\n",
+
+	t += snprintf(buf + t, buf_n - t, "ts=%lld  ts_diff=%lld\n",
 		      st->ts, st->ts_diff);
 	return t;
 }
@@ -691,7 +701,7 @@ static int nvs_buf_push(struct iio_dev *indio_dev, unsigned char *data, s64 ts)
 			}
 			if (*st->fn_dev->sts & NVS_STS_SPEW_BUF) {
 				for (i = 0; i < bytes; i++)
-					dev_info(st->dev, "%s buf[%u]=%X\n",
+					dev_info(st->dev, "%s buf[%u]=%02X\n",
 						 st->cfg->name, i, st->buf[i]);
 				dev_info(st->dev, "%s ts=%lld  diff=%lld\n",
 					 st->cfg->name, ts, st->ts_diff);

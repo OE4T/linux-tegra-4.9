@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(342)
+#define NVI_DRIVER_VERSION		(343)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"
@@ -2733,6 +2733,8 @@ int nvi_push(struct nvi_state *st, unsigned int dev, u8 *buf, s64 ts)
 	/* add status if needed (no endian conversion) */
 	if (buf_le_i < st->snsr[dev].cfg.snsr_data_n) {
 		n = st->snsr[dev].cfg.snsr_data_n - buf_le_i;
+		if (n > sizeof(u_val))
+			n = sizeof(u_val);
 		u_val = st->snsr[dev].sts;
 		for (i = 0; i < n; i++) {
 			buf_le[buf_le_i + i] = (u8)(u_val & 0xFF);
@@ -3976,7 +3978,7 @@ static struct sensor_cfg nvi_cfg_dflt[] = {
 		.name			= "accelerometer",
 		.snsr_id		= DEV_ACC,
 		.kbuf_sz		= KBUF_SZ,
-		.snsr_data_n		= 14,
+		.snsr_data_n		= 20, /* 64-bit status for integer */
 		.ch_n			= AXIS_N,
 		.ch_sz			= -4,
 		.vendor			= NVI_VENDOR,
@@ -3988,7 +3990,7 @@ static struct sensor_cfg nvi_cfg_dflt[] = {
 		.name			= "gyroscope",
 		.snsr_id		= DEV_GYR,
 		.kbuf_sz		= KBUF_SZ,
-		.snsr_data_n		= 14,
+		.snsr_data_n		= 20, /* 64-bit status for integer */
 		.ch_n			= AXIS_N,
 		.ch_sz			= -4,
 		.vendor			= NVI_VENDOR,

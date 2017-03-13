@@ -1,7 +1,7 @@
 /*
  * tegra210_i2s.c - Tegra210 I2S driver
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -441,6 +441,8 @@ static int tegra210_i2s_get_format(struct snd_kcontrol *kcontrol,
 	else if (strstr(kcontrol->id.name, "TX mono to stereo"))
 		ucontrol->value.integer.value[0] =
 					i2s->mono_to_stereo[I2S_TX_PATH];
+	else if (strstr(kcontrol->id.name, "Rx fifo threshold"))
+		ucontrol->value.integer.value[0] = i2s->rx_fifo_th;
 
 	return 0;
 }
@@ -450,28 +452,31 @@ static int tegra210_i2s_put_format(struct snd_kcontrol *kcontrol,
 {
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_i2s *i2s = snd_soc_codec_get_drvdata(codec);
+	int value = ucontrol->value.integer.value[0];
 
 	/* set the format control flag */
 	if (strstr(kcontrol->id.name, "input"))
-		i2s->format_in = ucontrol->value.integer.value[0];
+		i2s->format_in = value;
 	else if (strstr(kcontrol->id.name, "codec"))
-		i2s->codec_bit_format = ucontrol->value.integer.value[0];
+		i2s->codec_bit_format = value;
 	else if (strstr(kcontrol->id.name, "Sample Rate"))
-		i2s->sample_rate_via_control = ucontrol->value.integer.value[0];
+		i2s->sample_rate_via_control = value;
 	else if (strstr(kcontrol->id.name, "Channels"))
-		i2s->channels_via_control = ucontrol->value.integer.value[0];
+		i2s->channels_via_control = value;
 	else if (strstr(kcontrol->id.name, "RX stereo to mono"))
-		i2s->stereo_to_mono[I2S_RX_PATH] =
-					ucontrol->value.integer.value[0];
+		i2s->stereo_to_mono[I2S_RX_PATH] = value;
 	else if (strstr(kcontrol->id.name, "RX mono to stereo"))
-		i2s->mono_to_stereo[I2S_RX_PATH] =
-					ucontrol->value.integer.value[0];
+		i2s->mono_to_stereo[I2S_RX_PATH] = value;
 	else if (strstr(kcontrol->id.name, "TX stereo to mono"))
-		i2s->stereo_to_mono[I2S_TX_PATH] =
-					ucontrol->value.integer.value[0];
+		i2s->stereo_to_mono[I2S_TX_PATH] = value;
 	else if (strstr(kcontrol->id.name, "TX mono to stereo"))
-		i2s->mono_to_stereo[I2S_TX_PATH] =
-					ucontrol->value.integer.value[0];
+		i2s->mono_to_stereo[I2S_TX_PATH] = value;
+	else if (strstr(kcontrol->id.name, "Rx fifo threshold")) {
+		if (value >= 0 && value < TEGRA210_I2S_RX_FIFO_DEPTH)
+			i2s->rx_fifo_th = value;
+		else
+			return -EINVAL;
+	}
 
 	return 0;
 }
@@ -506,7 +511,7 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 	struct device *dev = dai->dev;
 	struct tegra210_i2s *i2s = snd_soc_dai_get_drvdata(dai);
 	unsigned int mask, val, reg, frame_format;
-	int ret, sample_size, channels, srate, i2sclock, bitcnt;
+	int ret, sample_size, channels, srate, i2sclock, bitcnt, max_th;
 	struct tegra210_xbar_cif_conf cif_conf;
 
 	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
@@ -571,12 +576,9 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 	if (frame_format == TEGRA210_I2S_CTRL_FRAME_FORMAT_FSYNC_MODE) {
 		i2s->soc_data->set_slot_ctrl(i2s->regmap, channels,
 			i2s->tx_mask, i2s->rx_mask);
-		/* FIXUP : I2S fifo threshold set to 3 when AFC is connected */
-		cif_conf.threshold = 3;
 		cif_conf.audio_channels = channels;
 		cif_conf.client_channels = channels;
 	} else {
-		cif_conf.threshold = 3;
 		cif_conf.audio_channels = channels;
 		cif_conf.client_channels = (channels == 1) ? 2 : channels;
 	}
@@ -625,6 +627,14 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 			cif_conf.stereo_conv =
 					i2s->stereo_to_mono[I2S_RX_PATH] - 1;
 		}
+
+		/* RX FIFO threshold interms of frames */
+		max_th = (TEGRA210_I2S_RX_FIFO_DEPTH / channels) - 1;
+		if (i2s->rx_fifo_th > max_th) { /* error handling */
+			cif_conf.threshold = max_th;
+			i2s->rx_fifo_th = max_th;
+		} else
+			cif_conf.threshold = i2s->rx_fifo_th;
 	} else {
 		if (i2s->mono_to_stereo[I2S_TX_PATH] > 0) {
 			cif_conf.audio_channels = 2;
@@ -657,6 +667,8 @@ static int tegra210_i2s_codec_probe(struct snd_soc_codec *codec)
 	struct tegra210_i2s *i2s = snd_soc_codec_get_drvdata(codec);
 
 	codec->control_data = i2s->regmap;
+	/* default threshold settings */
+	i2s->rx_fifo_th = 3;
 
 	return 0;
 }
@@ -794,6 +806,13 @@ static const struct soc_enum tegra210_i2s_stereo_conv_enum =
 		ARRAY_SIZE(tegra210_i2s_stereo_conv_text),
 		tegra210_i2s_stereo_conv_text);
 
+#define NV_SOC_SINGLE_RANGE_EXT(xname, xmin, xmax, xget, xput) \
+{       .iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname), \
+        .info = snd_soc_info_xr_sx, .get = xget, .put = xput, \
+        .private_value = (unsigned long)&(struct soc_mixer_control) \
+                {.invert = 0, .min = xmin, .max = xmax, \
+                .platform_max = xmax}}
+
 static const struct snd_kcontrol_new tegra210_i2s_controls[] = {
 	SOC_SINGLE_EXT("Loopback", SND_SOC_NOPM, 0, 1, 0,
 		tegra210_i2s_loopback_get, tegra210_i2s_loopback_put),
@@ -813,6 +832,9 @@ static const struct snd_kcontrol_new tegra210_i2s_controls[] = {
 		tegra210_i2s_get_format, tegra210_i2s_put_format),
 	SOC_ENUM_EXT("TX mono to stereo conv", tegra210_i2s_mono_conv_enum,
 		tegra210_i2s_get_format, tegra210_i2s_put_format),
+	NV_SOC_SINGLE_RANGE_EXT("Rx fifo threshold", 0,
+		TEGRA210_I2S_RX_FIFO_DEPTH - 1, tegra210_i2s_get_format,
+		tegra210_i2s_put_format),
 };
 
 static const struct snd_soc_dapm_widget tegra210_i2s_widgets[] = {

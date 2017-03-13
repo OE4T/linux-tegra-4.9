@@ -1,7 +1,7 @@
 /*
  * tegra210_i2s_alt.h - Definitions for Tegra210 I2S driver
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -189,6 +189,8 @@
 #define TEGRA210_I2S_SLOT_CTRL_TOTAL_SLOTS_SHIFT	0
 #define TEGRA210_I2S_SLOT_CTRL_TOTAL_SLOTS_MASK		0xf
 
+#define TEGRA210_I2S_RX_FIFO_DEPTH			64
+
 struct tegra210_i2s_soc_data {
 	void (*set_audio_cif)(struct regmap *map,
 			unsigned int reg,
@@ -230,6 +232,7 @@ struct tegra210_i2s {
 	unsigned int rx_mask;
 	unsigned int loopback;
 	bool enable_cya;
+	unsigned int rx_fifo_th; /* should be programmed interms of frames */
 };
 
 #endif

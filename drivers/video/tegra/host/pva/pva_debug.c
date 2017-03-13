@@ -23,7 +23,7 @@
 #include "dev.h"
 #include "pva.h"
 
-void pva_read_crashdump(struct seq_file *s, struct pva_seg_info *seg_info)
+static void pva_read_crashdump(struct seq_file *s, struct pva_seg_info *seg_info)
 {
 	int i = 0;
 	u32 *seg_addr = (u32 *) seg_info->addr;

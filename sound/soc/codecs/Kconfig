@@ -266,8 +266,15 @@ config SND_SOC_AD193X_SPI
 	select SND_SOC_AD193X
 
 config SND_SOC_AD193X_I2C
-	tristate
+	tristate "AD193X_I2C codec driver"
 	select SND_SOC_AD193X
+	default n
+	---help---
+	AD193X_I2C codec driver
+
+	Say Y here to compile the AD193X codec driver into the kernel or say M
+	to compile it as a module.
+
 
 config SND_SOC_AD1980
 	select REGMAP_AC97

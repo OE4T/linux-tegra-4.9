@@ -95,6 +95,7 @@
 			<&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>,
 			<&tegra_xusb_padctl TEGRA_PADCTL_PHY_USB3_P(1)>;
 		phy-names = "utmi-0", "utmi-1", "usb3-1";
+		nvidia,boost_cpu_freq = <800>;
 	};
 #endif
 

@@ -861,7 +861,7 @@
 				<&tegra_car TEGRA210_CLK_PLL_D>;
 			clock-names = "disp1", "timer", "disp1_emc", "disp1_la_emc", "pll_p_out3", "pll_d_out0", "pll_d";
 			resets = <&tegra_car TEGRA210_CLK_DISP1>;
-			reset-names = "dc_rst1";
+			reset-names = "dc_rst";
 			status = "disabled";
 			nvidia,dc-ctrlnum = <0>;
 
@@ -887,7 +887,7 @@
 				<&tegra_car TEGRA210_CLK_PLL_D2>;
 			clock-names = "disp2", "timer", "disp2_emc", "disp2_la_emc", "pll_d2_out0", "pll_d2";
 			resets = <&tegra_car TEGRA210_CLK_DISP2>;
-			reset-names = "dc_rst2";
+			reset-names = "dc_rst";
 
 			rgb {
 				status = "disabled";

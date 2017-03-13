@@ -29,7 +29,6 @@
 
 #include "la_priv.h"
 
-
 #define T18X_LA_EMEM_CHANNEL_ENABLE_MASK		0xf
 #define T18X_LA_ECC_ENABLE_MASK				0x1
 #define T18X_LA_2_STAGE_ECC_ISO_DDA_FACTOR_FP		1400U

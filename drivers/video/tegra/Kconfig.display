@@ -344,3 +344,4 @@ config TEGRA_DC_FAKE_PANEL_SUPPORT
 trysource "../t18x/drivers/video/tegra/Kconfig"
 trysource "../t18x/drivers/video/tegra/Kconfig.t18x"
 trysource "drivers/video/tegra/Kconfig.t18x"
+trysource "../display/drivers/misc/tegra-cec/Kconfig"

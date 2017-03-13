@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -142,14 +142,15 @@ struct akm_state {
 	void *nvs_st;
 	struct sensor_cfg cfg;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(akm_vregs)];
-	struct delayed_work dw;
+	struct workqueue_struct *wq;
+	struct work_struct ws;
 	struct akm_hal *hal;		/* Hardware Abstraction Layer */
 	u8 asa[AXIS_N];			/* axis sensitivity adjustment */
 	u64 asa_q30[AXIS_N];		/* Q30 axis sensitivity adjustment */
 	unsigned int sts;		/* status flags */
 	unsigned int errs;		/* error count */
 	unsigned int enabled;		/* enable status */
-	unsigned int poll_delay_us;	/* requested sampling delay (us) */
+	unsigned int period_us;		/* requested sampling period (us) */
 	unsigned int rr_i;		/* resolution/range index */
 	u16 i2c_addr;			/* I2C address */
 	u8 dev_id;			/* device ID */
@@ -393,7 +394,7 @@ static int akm_pm_init(struct akm_state *st)
 	int ret;
 
 	st->enabled = 0;
-	st->poll_delay_us = (AKM_POLL_DELAY_MS_DFLT * 1000);
+	st->period_us = (AKM_POLL_DELAY_MS_DFLT * 1000);
 	st->initd = false;
 	st->mpu_en = false;
 	st->port_en[WR] = false;
@@ -474,7 +475,7 @@ static int akm_mode(struct akm_state *st)
 		while (st->hal->cmode_tbl[i].t_us) {
 			mode = st->hal->cmode_tbl[i].mode;
 			t_us = st->hal->cmode_tbl[i].t_us;
-			if (st->poll_delay_us >= st->hal->cmode_tbl[i].t_us)
+			if (st->period_us >= st->hal->cmode_tbl[i].t_us)
 				break;
 
 			i++;
@@ -482,7 +483,7 @@ static int akm_mode(struct akm_state *st)
 				t_us -= st->hal->cmode_tbl[i].t_us;
 				t_us >>= 1;
 				t_us += st->hal->cmode_tbl[i].t_us;
-				if (st->poll_delay_us > t_us)
+				if (st->period_us > t_us)
 					break;
 			}
 		}
@@ -555,9 +556,8 @@ static int akm_read_sts(struct akm_state *st, u8 *data)
 	return ret;
 }
 
-static int akm_read(struct akm_state *st)
+static int akm_read(struct akm_state *st, s64 ts)
 {
-	s64 ts;
 	u8 data[10];
 	unsigned int i;
 	int ret;
@@ -566,7 +566,6 @@ static int akm_read(struct akm_state *st)
 	if (ret)
 		return ret;
 
-	ts = nvs_timestamp();
 	ret = akm_read_sts(st, data);
 	if (ret > 0) {
 		i = st->hal->reg_st1 - st->hal->reg_start_rd + 1;
@@ -595,6 +594,12 @@ static void akm_mpu_handler(u8 *data, unsigned int len, s64 ts, void *p_val)
 	}
 
 	if (st->enabled) {
+		if (!data) {
+			/* Invensense error - push previous data*/
+			st->nvs->handler(st->nvs_st, &st->magn, ts);
+			return;
+		}
+
 		if (len == st->dmp_rd_len_sts) {
 			/* this is the status data from the DMP */
 			if (st->dmp_rd_be_sts)
@@ -624,23 +629,45 @@ static void akm_mpu_handler(u8 *data, unsigned int len, s64 ts, void *p_val)
 
 static void akm_work(struct work_struct *ws)
 {
-	struct akm_state *st = container_of((struct delayed_work *)ws,
-					    struct akm_state, dw);
+	struct akm_state *st = container_of((struct work_struct *)ws,
+					    struct akm_state, ws);
+	s64 ts1;
+	s64 ts2;
+	unsigned int ts_diff;
+	unsigned long delay_us;
 	int ret;
 
-	st->nvs->nvs_mutex_lock(st->nvs_st);
-	if (st->enabled) {
-		ret = akm_read(st);
-		if (ret > 0) {
-			akm_i2c_wr(st, st->hal->reg_mode, st->data_out);
-		} else if (ret < 0) {
-			akm_reset_dev(st);
-			akm_mode(st);
+	while (1) {
+		st->nvs->nvs_mutex_lock(st->nvs_st);
+		if (st->enabled) {
+			ts1 = nvs_timestamp();
+			ret = akm_read(st, ts1);
+			if (ret > 0) {
+				akm_i2c_wr(st, st->hal->reg_mode,
+					   st->data_out);
+			} else if (ret < 0) {
+				akm_reset_dev(st);
+				akm_mode(st);
+			}
+			ts2 = nvs_timestamp();
+			ts_diff = (ts2 - ts1) / 1000; /* ns => us */
+			if (st->period_us > ts_diff)
+				delay_us = st->period_us - ts_diff;
+			else
+				delay_us = 0;
+			st->nvs->nvs_mutex_unlock(st->nvs_st);
+		} else {
+			st->nvs->nvs_mutex_unlock(st->nvs_st);
+			break;
 		}
-		schedule_delayed_work(&st->dw,
-				      usecs_to_jiffies(st->poll_delay_us));
+
+		if (delay_us) {
+			if (st->period_us <= st->cfg.thresh_lo)
+				usleep_range(delay_us, delay_us);
+			else
+				usleep_range(delay_us, st->period_us);
+		}
 	}
-	st->nvs->nvs_mutex_unlock(st->nvs_st);
 }
 
 static irqreturn_t akm_irq_thread(int irq, void *dev_id)
@@ -648,7 +675,7 @@ static irqreturn_t akm_irq_thread(int irq, void *dev_id)
 	struct akm_state *st = (struct akm_state *)dev_id;
 	int ret;
 
-	ret = akm_read(st);
+	ret = akm_read(st, nvs_timestamp());
 	if (ret < 0) {
 		akm_reset_dev(st);
 		akm_mode(st);
@@ -770,8 +797,6 @@ static int akm_dis(struct akm_state *st)
 	} else {
 		if (st->cmode)
 			akm_disable_irq(st);
-		else
-			cancel_delayed_work(&st->dw);
 	}
 	if (!ret)
 		st->enabled = 0;
@@ -817,12 +842,12 @@ static int akm_enable(void *client, int snsr_id, int enable)
 			} else {
 				st->enabled = 1;
 				if (!st->mpu_en) {
-					if (st->cmode)
+					if (st->cmode) {
 						akm_enable_irq(st);
-					else
-						schedule_delayed_work(&st->dw,
-							      usecs_to_jiffies(
-							   st->poll_delay_us));
+					} else {
+						cancel_work_sync(&st->ws);
+						queue_work(st->wq, &st->ws);
+					}
 				}
 			}
 		}
@@ -845,7 +870,7 @@ static int akm_batch(void *client, int snsr_id, int flags,
 		ret = nvi_mpu_batch(st->port_id[RD], period, timeout);
 	if (!ret)
 #endif /* AKM_NVI_MPU_SUPPORT */
-		st->poll_delay_us = period;
+		st->period_us = period;
 	if (st->enabled && st->cmode && !ret)
 		ret = akm_mode(st);
 	return ret;
@@ -1086,9 +1111,11 @@ static int akm_remove(struct i2c_client *client)
 			if (st->nvs_st)
 				st->nvs->remove(st->nvs_st);
 		}
-		if (st->dw.wq)
-			destroy_workqueue(st->dw.wq);
 		akm_pm_exit(st);
+		if (st->wq) {
+			destroy_workqueue(st->wq);
+			st->wq = NULL;
+		}
 	}
 	dev_info(&client->dev, "%s\n", __func__);
 	return 0;
@@ -1310,7 +1337,7 @@ static int akm_id_hal(struct akm_state *st, u8 dev_id)
 	st->rr_i = st->hal->rr_i_max;
 	st->cfg.name = "magnetic_field";
 	st->cfg.kbuf_sz = AKM_KBUF_SIZE;
-	st->cfg.snsr_data_n = 8; /* two bytes for status */
+	st->cfg.snsr_data_n = 14; /* status is 64-bit for integer */
 	st->cfg.ch_n = AXIS_N;
 	st->cfg.ch_sz = -2;
 	st->cfg.part = st->hal->part;
@@ -1324,6 +1351,7 @@ static int akm_id_hal(struct akm_state *st, u8 dev_id)
 	st->cfg.milliamp.fval = st->hal->milliamp.fval;
 	st->cfg.delay_us_min = st->hal->delay_us_min;
 	st->cfg.delay_us_max = AKM_DELAY_US_MAX;
+	st->cfg.thresh_lo = AKM_DELAY_US_MAX;
 	st->cfg.scale.ival = st->hal->rr[st->rr_i].resolution.ival;
 	st->cfg.scale.fval = st->hal->rr[st->rr_i].resolution.fval;
 	nvs_of_dt(st->i2c->dev.of_node, &st->cfg, NULL);
@@ -1467,7 +1495,7 @@ static int akm_id_dev(struct akm_state *st, const char *name)
 		nmp.ctrl = 10; /* MPU FIFO can't handle odd size */
 		nmp.data_out = 0;
 		nmp.delay_ms = 0;
-		nmp.period_us = st->poll_delay_us;
+		nmp.period_us = st->period_us;
 		if (st->cmode)
 			nmp.shutdown_bypass = true;
 		nmp.handler = &akm_mpu_handler;
@@ -1667,8 +1695,15 @@ static int akm_probe(struct i2c_client *client,
 
 	if (st->matrix_en)
 		memcpy(st->cfg.matrix, matrix, sizeof(st->cfg.matrix));
-	if (!st->mpu_en)
-		INIT_DELAYED_WORK(&st->dw, akm_work);
+	if (!st->mpu_en) {
+		st->wq = create_workqueue(AKM_NAME);
+		if (!st->wq) {
+			ret = -ENOMEM;
+			goto akm_probe_err;
+		}
+
+		INIT_WORK(&st->ws, akm_work);
+	}
 	if (st->i2c->irq) {
 		if (st->cmode && !st->mpu_en) {
 			ret = request_threaded_irq(st->i2c->irq, NULL,

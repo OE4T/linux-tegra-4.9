@@ -1,5 +1,4 @@
 #include <dt-bindings/gpio/tegra-gpio.h>
-#include <dt-bindings/soc/tegra-pmc.h>
 #include <dt-bindings/spi/rm31080a_platform.h>
 / {
 	spi@7000da00 {
@@ -26,8 +25,6 @@
 			name-of-clock-con = "extern2";
 			avdd-supply = <&max77620_ldo5>;
 			dvdd-supply = <&max77620_ldo6>;
-			nvidia,pmc-wakeup = <&tegra_pmc
-				PMC_WAKE_TYPE_EVENT 62 PMC_TRIGGER_TYPE_RISING>;
 		};
 		spi-touch25x16@0 {
 			compatible = "raydium,rm_ts_spidev";
@@ -43,8 +40,6 @@
 			name-of-clock-con = "extern2";
 			avdd-supply = <&max77620_ldo5>;
 			dvdd-supply = <&max77620_ldo6>;
-			nvidia,pmc-wakeup = <&tegra_pmc
-				PMC_WAKE_TYPE_EVENT 62 PMC_TRIGGER_TYPE_RISING>;
 		};
 		spi-touch14x8@0 {
 			compatible = "raydium,rm_ts_spidev";
@@ -60,8 +55,6 @@
 			name-of-clock-con = "extern2";
 			avdd-supply = <&max77620_ldo5>;
 			dvdd-supply = <&max77620_ldo6>;
-			nvidia,pmc-wakeup = <&tegra_pmc
-				PMC_WAKE_TYPE_EVENT 62 PMC_TRIGGER_TYPE_RISING>;
 		};
 	};
 };

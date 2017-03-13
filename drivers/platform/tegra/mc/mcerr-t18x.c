@@ -352,8 +352,8 @@ static void log_fault(int src_chan, const struct mc_error *fault)
 	secure = !!(status & MC_ERR_STATUS_SECURE);
 	write = !!(status & MC_ERR_STATUS_WRITE);
 	client_id = status & 0xff;
-	client = &mc_clients[client_id <= mc_client_last
-			     ? client_id : mc_client_last];
+	client = &mc_clients[client_id <= mc_client_last ?
+			     client_id : mc_client_last];
 
 	/*
 	 * LPAE: make sure we get the extra 2 physical address bits available

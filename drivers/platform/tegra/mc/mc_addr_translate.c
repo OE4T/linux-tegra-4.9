@@ -14,6 +14,7 @@
 #include <linux/platform/tegra/mc-regs-t18x.h>
 #include <linux/platform/tegra/mc.h>
 #include <linux/platform/tegra/mcerr_ecc_t18x.h>
+#include <linux/platform/tegra/mc-regs-t18x.h>
 
 #define MASK(Y, Z)      ((0xFFFFFFFF >> (31-Y)) & (0xFFFFFFFF << Z))
 #define CALC(X, Y, Z)	((X & MASK(Y, Z)) >> Z)

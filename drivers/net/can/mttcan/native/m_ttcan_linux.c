@@ -19,7 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "hw/m_ttcan.h"
+#include "m_ttcan.h"
 #include <linux/platform_device.h>
 
 static __init int mttcan_hw_init(struct mttcan_priv *priv)

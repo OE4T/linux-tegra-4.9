@@ -15,13 +15,9 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-obj-$(CONFIG_MTTCAN) := mttcan.o
-
-mttcan-y = m_ttcan_linux.o m_ttcan_sys.o hw/m_ttcan.o
-mttcan-y += hw/m_ttcan_intr.o hw/m_ttcan_list.o  hw/m_ttcan_ram.o
-mttcan-y += hw/m_ttcan_tt.o
-
 obj-$(CONFIG_MTTCAN_IVC) := mttcan_ivc.o
 
-mttcan_ivc-y = m_ttcan_linux_ivc.o hw/m_ttcan.o
-mttcan_ivc-y += hw/m_ttcan_list.o hw/m_ttcan_ram.o
+mttcan_ivc-y = m_ttcan_linux_ivc.o ../hal/m_ttcan.o
+mttcan_ivc-y += ../hal/m_ttcan_list.o ../hal/m_ttcan_ram.o
+
+ccflags-y += -I$(src)/../include

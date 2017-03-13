@@ -1,3 +1,2 @@
-trysource "../t18x/drivers/staging/mttcan/Kconfig"
-trysource "../t18x/drivers/staging/mttcan/Kconfig.t18x"
-trysource "drivers/staging/mttcan/Kconfig.t18x"
+trysource "../t18x/drivers/net/can/mttcan/native/Kconfig.t18x"
+trysource "../t18x/drivers/net/can/mttcan/ivc/Kconfig.t18x"

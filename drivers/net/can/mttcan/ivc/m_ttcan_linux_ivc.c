@@ -19,7 +19,7 @@
  */
 
 #include <linux/platform_device.h>
-#include "hw/m_ttcan.h"
+#include "m_ttcan.h"
 
 #define KHZ		1000
 #define MHZ		(1000 * KHZ)

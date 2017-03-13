@@ -1,16 +1,6 @@
-config MTTCAN
-	tristate "Bosch M_TTCAN Devices"
-	depends on ARCH_TEGRA_18x_SOC && CAN
-	select STAGING
-	help
-	  Support for the Bosch M_TTCAN driver. The Bosch MTTCAN CAN
-	  controller is having two independent CAN interfaces. These
-	  intefaces supports CAN-FD and TT-CAN. This driver will require
-	  SocketCAN support enabled in kernel.
-
 config MTTCAN_IVC
 	tristate "Bosch M_TTCAN IVC Devices"
-	depends on ARCH_TEGRA_18x_SOC && CAN && !MTTCAN
+	depends on ARCH_TEGRA_18x_SOC && CAN
 	select STAGING
 	help
 	  Support for the Bosch M_TTCAN driver over IVC. The driver

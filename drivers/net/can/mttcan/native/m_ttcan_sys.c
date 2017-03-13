@@ -1,4 +1,5 @@
-/* Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+/*
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "hw/m_ttcan.h"
+#include "m_ttcan.h"
 
 static ssize_t show_std_fltr(struct device *dev,
 	struct device_attribute *devattr, char *buf)

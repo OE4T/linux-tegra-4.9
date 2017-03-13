@@ -1,7 +1,7 @@
 /*
  * tegra186_dspk_alt.c - Tegra186 DSPK driver
  *
- * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -59,6 +59,35 @@ static const struct reg_default tegra186_dspk_reg_defaults[] = {
 	{ TEGRA186_DSPK_SDM_COEF_G_1,      0x00000074},
 	{ TEGRA186_DSPK_SDM_COEF_G_2,      0x0000007d},
 };
+
+static int tegra186_dspk_get_control(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra186_dspk *dspk = snd_soc_codec_get_drvdata(codec);
+
+	if (strstr(kcontrol->id.name, "Rx fifo threshold"))
+		ucontrol->value.integer.value[0] = dspk->rx_fifo_th;
+
+	return 0;
+}
+
+static int tegra186_dspk_put_control(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra186_dspk *dspk = snd_soc_codec_get_drvdata(codec);
+	int val = ucontrol->value.integer.value[0];
+
+	if (strstr(kcontrol->id.name, "Rx fifo threshold")) {
+		if (val >= 0 && val < TEGRA186_DSPK_RX_FIFO_DEPTH)
+			dspk->rx_fifo_th = val;
+		else
+			return -EINVAL;
+	}
+
+	return 0;
+}
 
 static int tegra186_dspk_runtime_suspend(struct device *dev)
 {
@@ -126,7 +155,7 @@ static int tegra186_dspk_set_audio_cif(struct tegra186_dspk *dspk,
 		struct snd_pcm_hw_params *params,
 		unsigned int reg, struct snd_soc_dai *dai)
 {
-	int channels;
+	int channels, max_th;
 	struct tegra210_xbar_cif_conf cif_conf;
 	struct device *dev = dai->dev;
 
@@ -135,6 +164,15 @@ static int tegra186_dspk_set_audio_cif(struct tegra186_dspk *dspk,
 	cif_conf.audio_channels = channels;
 	cif_conf.client_channels = channels;
 	cif_conf.client_bits = TEGRA210_AUDIOCIF_BITS_24;
+
+	/* RX FIFO threshold interms of frames */
+	max_th = (TEGRA186_DSPK_RX_FIFO_DEPTH / channels) - 1;
+	max_th = (max_th < 0) ? 0 : max_th;
+	if (dspk->rx_fifo_th > max_th) { /* error handling */
+		cif_conf.threshold = max_th;
+		dspk->rx_fifo_th = max_th;
+	} else
+		cif_conf.threshold = dspk->rx_fifo_th;
 
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
@@ -211,6 +249,7 @@ static int tegra186_dspk_codec_probe(struct snd_soc_codec *codec)
 	struct tegra186_dspk *dspk = snd_soc_codec_get_drvdata(codec);
 
 	codec->control_data = dspk->regmap;
+	dspk->rx_fifo_th = 0;
 
 	return 0;
 }
@@ -286,12 +325,28 @@ static const struct snd_soc_dapm_route tegra186_dspk_routes[] = {
 	{ "DSPK Left Transmit", NULL, "DSPK TX" },
 };
 
+
+#define NV_SOC_SINGLE_RANGE_EXT(xname, xmin, xmax, xget, xput) \
+{       .iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname), \
+        .info = snd_soc_info_xr_sx, .get = xget, .put = xput, \
+        .private_value = (unsigned long)&(struct soc_mixer_control) \
+                {.invert = 0, .min = xmin, .max = xmax, \
+                .platform_max = xmax}}
+
+static const struct snd_kcontrol_new tegrat186_dspk_controls[] = {
+	NV_SOC_SINGLE_RANGE_EXT("Rx fifo threshold", 0,
+		TEGRA186_DSPK_RX_FIFO_DEPTH - 1, tegra186_dspk_get_control,
+		tegra186_dspk_put_control),
+};
+
 static struct snd_soc_codec_driver tegra186_dspk_codec = {
 	.probe = tegra186_dspk_codec_probe,
 	.dapm_widgets = tegra186_dspk_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(tegra186_dspk_widgets),
 	.dapm_routes = tegra186_dspk_routes,
 	.num_dapm_routes = ARRAY_SIZE(tegra186_dspk_routes),
+	.controls = tegrat186_dspk_controls,
+	.num_controls = ARRAY_SIZE(tegrat186_dspk_controls),
 	.idle_bias_off = 1,
 };
 

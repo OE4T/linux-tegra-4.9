@@ -1,7 +1,7 @@
 /*
  * tegra186_dspk_alt.h - Definitions for Tegra186 DSPK driver
  *
- * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -169,6 +169,7 @@
 #define TEGRA186_DSPK_DEBUG_STAGE4_CH1_SHIFT            0
 #define TEGRA186_DSPK_DEBUG_STAGE4_CH1_MASK             (0xffff << TEGRA186_DSPK_DEBUG_STAGE4_CH1_SHIFT)
 
+#define TEGRA186_DSPK_RX_FIFO_DEPTH			4
 
 struct tegra186_dspk_soc_data {
         void (*set_audio_cif) (struct regmap *map,
@@ -185,6 +186,7 @@ struct tegra186_dspk {
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pin_active_state;
 	struct pinctrl_state *pin_idle_state;
+	unsigned int rx_fifo_th; /* threshold in terms of frames */
 };
 
 #endif

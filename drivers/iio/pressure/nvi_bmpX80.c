@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -214,14 +214,15 @@ struct bmp_state {
 	void *nvs_st[BMP_DEV_N];
 	struct sensor_cfg cfg[BMP_DEV_N];
 	struct regulator_bulk_data vreg[ARRAY_SIZE(bmp_vregs)];
-	struct delayed_work dw;
+	struct workqueue_struct *wq;
+	struct work_struct ws;
 	struct bmp_hal *hal;		/* Hardware Abstaction Layer */
 	union bmp_rom rom;		/* calibration data */
 	unsigned int sts;		/* status flags */
 	unsigned int errs;		/* error count */
 	unsigned int enabled;		/* enable status */
 	unsigned int period_us_min;	/* minimum period from MPU */
-	unsigned int poll_delay_us;	/* global sampling delay */
+	unsigned int period_us;		/* global sampling period */
 	unsigned int delay_us[BMP_DEV_N]; /* sampling delay */
 	unsigned int timeout_us[BMP_DEV_N]; /* batch timeout */
 	unsigned int scale_i;		/* oversampling index */
@@ -253,7 +254,7 @@ struct bmp_hal {
 	bool rom_big_endian;
 	u8 mode_mask;
 	struct bmp_cmode *cmode_tbl;
-	int (*bmp_read)(struct bmp_state *st);
+	int (*bmp_read)(struct bmp_state *st, s64 ts);
 #if BMP_NVI_MPU_SUPPORT
 	unsigned int mpu_id;
 	u8 port_rd_reg;
@@ -487,7 +488,7 @@ static int bmp_pm_init(struct bmp_state *st)
 
 	st->delay_us[BMP_DEV_PRS] = (BMP_POLL_DELAY_MS_DFLT * 1000);
 	st->delay_us[BMP_DEV_TMP] = (BMP_POLL_DELAY_MS_DFLT * 1000);
-	st->poll_delay_us = (BMP_POLL_DELAY_MS_DFLT * 1000);
+	st->period_us = (BMP_POLL_DELAY_MS_DFLT * 1000);
 	st->port_id[WR] = -1;
 	st->port_id[RD] = -1;
 	nvs_vregs_init(&st->i2c->dev,
@@ -657,7 +658,7 @@ static int bmp_mode(struct bmp_state *st, unsigned int period_us,
 		ret |= bmp_mode_wr(st, mode);
 	}
 	if (!ret) {
-		if (period_us != st->poll_delay_us) {
+		if (period_us != st->period_us) {
 			if (st->sts & NVS_STS_SPEW_MSG)
 				dev_info(&st->i2c->dev, "%s: period_us=%u\n",
 					 __func__, period_us);
@@ -674,7 +675,7 @@ static int bmp_mode(struct bmp_state *st, unsigned int period_us,
 			}
 			if (!ret)
 #endif /* BMP_NVI_MPU_SUPPORT */
-				st->poll_delay_us = period_us;
+				st->period_us = period_us;
 		}
 		if (!ret)
 			st->scale_i = scale_i;
@@ -740,9 +741,8 @@ static int bmp_read_sts_180(struct bmp_state *st, u8 *data, s64 ts)
 	return ret;
 }
 
-static int bmp_read_180(struct bmp_state *st)
+static int bmp_read_180(struct bmp_state *st, s64 ts)
 {
-	s64 ts;
 	u8 data[5];
 	int ret;
 
@@ -750,7 +750,6 @@ static int bmp_read_180(struct bmp_state *st)
 	if (ret)
 		return ret;
 
-	ts = nvs_timestamp();
 	ret = bmp_read_sts_180(st, data, ts);
 	if (ret > 0) {
 		if (st->enabled & (1 << BMP_DEV_PRS))
@@ -884,9 +883,8 @@ static int bmp_read_sts_280(struct bmp_state *st, u8 *data)
 	return 1;
 }
 
-static int bmp_read_280(struct bmp_state *st)
+static int bmp_read_280(struct bmp_state *st, s64 ts)
 {
-	s64 ts;
 	u8 data[10];
 	int ret;
 
@@ -894,7 +892,6 @@ static int bmp_read_280(struct bmp_state *st)
 	if (ret)
 		return ret;
 
-	ts = nvs_timestamp();
 	ret = bmp_read_sts_280(st, data);
 	if (ret > 0) {
 		ret = bmp_push_280(st, &data[4], ts);
@@ -911,7 +908,7 @@ static void bmp_mpu_handler_280(u8 *data, unsigned int len, s64 ts, void *p_val)
 	unsigned int i;
 	int ret;
 
-	if (ts < 0)
+	if (ts < 0 || !data)
 		/* error - just drop */
 		return;
 
@@ -979,19 +976,41 @@ static void bmp_mpu_handler_180(u8 *data, unsigned int len, s64 ts, void *p_val)
 
 static void bmp_work(struct work_struct *ws)
 {
-	struct bmp_state *st = container_of((struct delayed_work *)ws,
-					    struct bmp_state, dw);
+	struct bmp_state *st = container_of((struct work_struct *)ws,
+					    struct bmp_state, ws);
+	s64 ts1;
+	s64 ts2;
+	unsigned int ts_diff;
 	unsigned int i;
+	unsigned long delay_us;
 
-	for (i = 0; i < BMP_DEV_N; i++)
-		st->nvs->nvs_mutex_lock(st->nvs_st[i]);
-	if (st->enabled) {
-		st->hal->bmp_read(st);
-		schedule_delayed_work(&st->dw,
-				      usecs_to_jiffies(st->poll_delay_us));
+	while (1) {
+		for (i = 0; i < BMP_DEV_N; i++)
+			st->nvs->nvs_mutex_lock(st->nvs_st[i]);
+		if (st->enabled) {
+			ts1 = nvs_timestamp();
+			st->hal->bmp_read(st, ts1);
+			ts2 = nvs_timestamp();
+			ts_diff = (ts2 - ts1) / 1000; /* ns => us */
+			if (st->period_us > ts_diff)
+				delay_us = st->period_us - ts_diff;
+			else
+				delay_us = 0;
+			for (i = 0; i < BMP_DEV_N; i++)
+				st->nvs->nvs_mutex_unlock(st->nvs_st[i]);
+		} else {
+			for (i = 0; i < BMP_DEV_N; i++)
+				st->nvs->nvs_mutex_unlock(st->nvs_st[i]);
+			break;
+		}
+
+		if (delay_us) {
+			if (st->period_us <= st->cfg[BMP_DEV_PRS].thresh_lo)
+				usleep_range(delay_us, delay_us);
+			else
+				usleep_range(delay_us, st->period_us);
+		}
 	}
-	for (i = 0; i < BMP_DEV_N; i++)
-		st->nvs->nvs_mutex_unlock(st->nvs_st[i]);
 }
 
 static unsigned int bmp_poll_delay(struct bmp_state *st, unsigned int en_msk)
@@ -1053,13 +1072,10 @@ static int bmp_dis(struct bmp_state *st)
 
 	if (st->mpu_en)
 		ret = bmp_ports_enable(st, false);
-	else
-		cancel_delayed_work(&st->dw);
 	if (!ret)
 		st->enabled = 0;
 	return ret;
 #else /* BMP_NVI_MPU_SUPPORT */
-	cancel_delayed_work(&st->dw);
 	st->enabled = 0;
 	return 0;
 #endif /* BMP_NVI_MPU_SUPPORT */
@@ -1116,10 +1132,10 @@ static int bmp_enable(void *client, int snsr_id, int enable)
 				bmp_disable(st, snsr_id);
 			} else {
 				st->enabled = enable;
-				if (!st->mpu_en)
-					schedule_delayed_work(&st->dw,
-							      usecs_to_jiffies(
-							   st->poll_delay_us));
+				if (!st->mpu_en) {
+					cancel_work_sync(&st->ws);
+					queue_work(st->wq, &st->ws);
+				}
 			}
 		}
 	} else {
@@ -1183,7 +1199,7 @@ static int bmp_resolution(void *client, int snsr_id, int resolution)
 	if (resolution > st->hal->dev[BMP_DEV_PRS].scale_n)
 		resolution = st->hal->dev[BMP_DEV_PRS].scale_n;
 	if (st->enabled) {
-		ret = bmp_mode(st, st->poll_delay_us, resolution, st->enabled);
+		ret = bmp_mode(st, st->period_us, resolution, st->enabled);
 		if (ret)
 			return ret;
 	} else {
@@ -1359,9 +1375,11 @@ static int bmp_remove(struct i2c_client *client)
 				}
 			}
 		}
-		if (st->dw.wq)
-			destroy_workqueue(st->dw.wq);
 		bmp_pm_exit(st);
+		if (st->wq) {
+			destroy_workqueue(st->wq);
+			st->wq = NULL;
+		}
 	}
 	dev_info(&client->dev, "%s\n", __func__);
 	return 0;
@@ -1878,7 +1896,7 @@ static int bmp_id_dev(struct bmp_state *st, const char *name)
 		nmp.addr = st->i2c_addr | 0x80; /* read port */
 		nmp.data_out = 0;
 		nmp.delay_ms = 0;
-		nmp.period_us = st->poll_delay_us;
+		nmp.period_us = st->period_us;
 		if (st->cmode)
 			nmp.shutdown_bypass = true;
 		nmp.ext_driver = (void *)st;
@@ -2048,8 +2066,15 @@ static int bmp_probe(struct i2c_client *client,
 		goto bmp_probe_exit;
 	}
 
-	if (!st->mpu_en)
-		INIT_DELAYED_WORK(&st->dw, bmp_work);
+	if (!st->mpu_en) {
+		st->wq = create_workqueue(BMP_NAME);
+		if (!st->wq) {
+			ret = -ENOMEM;
+			goto bmp_probe_err;
+		}
+
+		INIT_WORK(&st->ws, bmp_work);
+	}
 	dev_info(&client->dev, "%s done\n", __func__);
 	return 0;
 

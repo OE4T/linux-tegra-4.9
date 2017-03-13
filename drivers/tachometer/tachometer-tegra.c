@@ -125,9 +125,6 @@ static unsigned long tegra_tachometer_read_rpm(struct tachometer_dev *tach)
 		pr_info("Tachometer: Overflow is detected\n");
 		tachometer_writeb(tegra_tach, (u8)(tach0 >> 24),
 				TACH_FAN_TACH0_OVERFLOW);
-		if (tach->enable_clk_gate)
-			clk_disable_unprepare(tegra_tach->clk);
-		return 0;
 	}
 
 	if (tach->enable_clk_gate)

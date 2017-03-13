@@ -39,6 +39,7 @@
 #include <linux/platform/tegra/mc.h>
 #include <linux/platform/tegra/mcerr.h>
 #include <linux/platform/tegra/tegra_emc_err.h>
+#include <linux/platform/tegra/mc-regs-t18x.h>
 
 static const struct of_device_id __mcerr_of_table_sentinel
 	__used __section(__mcerr_of_table_end);

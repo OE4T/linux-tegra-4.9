@@ -81,7 +81,71 @@ static struct mrq_emc_dvfs_latency_response bwmgr_emc_dvfs;
 #define DRAM_LPDDR3 2 /* On T186 this value is LPDDR3 */
 #define DRAM_DDR2 3
 
-void bwmgr_eff_init(void)
+static int get_iso_bw_table_idx(unsigned long iso_bw)
+{
+	int i = ARRAY_SIZE(bwmgr_t186_iso_bw_table) - 1;
+
+	/* Input is in Hz, iso_bw table's unit is MHz */
+	iso_bw /= 1000000;
+
+	while (i > 0 && bwmgr_t186_iso_bw_table[i] > iso_bw)
+		i--;
+
+	return i;
+}
+
+static unsigned long freq_to_bw(unsigned long freq)
+{
+	if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH_ECC ||
+			bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH ||
+			bwmgr_dram_type == DRAM_TYPE_LPDDR3_2CH ||
+			bwmgr_dram_type == DRAM_TYPE_DDR3_2CH)
+		return freq * 32;
+
+	return freq * 16;
+}
+
+static unsigned long bw_to_freq(unsigned long bw)
+{
+	if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH_ECC ||
+			bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH ||
+			bwmgr_dram_type == DRAM_TYPE_LPDDR3_2CH ||
+			bwmgr_dram_type == DRAM_TYPE_DDR3_2CH)
+		return (bw + 32 - 1) / 32;
+
+	return (bw + 16 - 1) / 16;
+}
+
+static u32 dvfs_latency(u32 ufreq)
+{
+	u32 lt = 4000; /* default value of 4000 nsec */
+	int i;
+
+	if (bwmgr_emc_dvfs.num_pairs <= 0)
+		return lt / 1000; /* convert nsec to usec, Bug 1697424 */
+
+	for (i = 0; i < bwmgr_emc_dvfs.num_pairs; i++) {
+		if (ufreq <= bwmgr_emc_dvfs.pairs[i].freq) {
+			lt = bwmgr_emc_dvfs.pairs[i].latency;
+			break;
+		}
+	}
+
+	if (i >= bwmgr_emc_dvfs.num_pairs)
+		lt =
+		bwmgr_emc_dvfs.pairs[bwmgr_emc_dvfs.num_pairs - 1].latency;
+
+	return lt / 1000; /* convert nsec to usec, Bug 1697424 */
+}
+
+static struct bwmgr_ops bwmgr_ops_t18x = {
+	.get_iso_bw_table_idx = get_iso_bw_table_idx,
+	.freq_to_bw = freq_to_bw,
+	.bw_to_freq = bw_to_freq,
+	.dvfs_latency = dvfs_latency,
+};
+
+struct bwmgr_ops *bwmgr_eff_init_t18x(void)
 {
 	int i, ch_num;
 	u32 dram, ch, ecc;
@@ -172,65 +236,6 @@ void bwmgr_eff_init(void)
 
 	tegra_bpmp_send_receive(MRQ_EMC_DVFS_LATENCY, NULL, 0,
 			&bwmgr_emc_dvfs, sizeof(bwmgr_emc_dvfs));
+
+	return &bwmgr_ops_t18x;
 }
-
-int get_iso_bw_table_idx(unsigned long iso_bw)
-{
-	int i = ARRAY_SIZE(bwmgr_t186_iso_bw_table) - 1;
-
-	/* Input is in Hz, iso_bw table's unit is MHz */
-	iso_bw /= 1000000;
-
-	while (i > 0 && bwmgr_t186_iso_bw_table[i] > iso_bw)
-		i--;
-
-	return i;
-}
-EXPORT_SYMBOL(get_iso_bw_table_idx);
-
-unsigned long bwmgr_freq_to_bw(unsigned long freq)
-{
-	if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH_ECC ||
-			bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH ||
-			bwmgr_dram_type == DRAM_TYPE_LPDDR3_2CH ||
-			bwmgr_dram_type == DRAM_TYPE_DDR3_2CH)
-		return freq * 32;
-
-	return freq * 16;
-}
-EXPORT_SYMBOL_GPL(bwmgr_freq_to_bw);
-
-unsigned long bwmgr_bw_to_freq(unsigned long bw)
-{
-	if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH_ECC ||
-			bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH ||
-			bwmgr_dram_type == DRAM_TYPE_LPDDR3_2CH ||
-			bwmgr_dram_type == DRAM_TYPE_DDR3_2CH)
-		return (bw + 32 - 1) / 32;
-
-	return (bw + 16 - 1) / 16;
-}
-EXPORT_SYMBOL_GPL(bwmgr_bw_to_freq);
-
-u32 bwmgr_dvfs_latency(u32 ufreq)
-{
-	u32 lt = 4000; /* default value of 4000 nsec */
-	int i;
-
-	if (bwmgr_emc_dvfs.num_pairs <= 0)
-		return lt / 1000; /* convert nsec to usec, Bug 1697424 */
-
-	for (i = 0; i < bwmgr_emc_dvfs.num_pairs; i++) {
-		if (ufreq <= bwmgr_emc_dvfs.pairs[i].freq) {
-			lt = bwmgr_emc_dvfs.pairs[i].latency;
-			break;
-		}
-	}
-
-	if (i >= bwmgr_emc_dvfs.num_pairs)
-		lt =
-		bwmgr_emc_dvfs.pairs[bwmgr_emc_dvfs.num_pairs - 1].latency;
-
-	return lt / 1000; /* convert nsec to usec, Bug 1697424 */
-}
-EXPORT_SYMBOL_GPL(bwmgr_dvfs_latency);

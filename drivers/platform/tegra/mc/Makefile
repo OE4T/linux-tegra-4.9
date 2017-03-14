@@ -20,9 +20,7 @@ obj-y                                   += tegra21x_la.o
 
 obj-${CONFIG_TEGRA_ISOMGR}              += isomgr.o
 obj-$(CONFIG_TEGRA_BWMGR)               += emc_bwmgr.o pmqos_bwmgr_client.o
-ifeq ($(CONFIG_ARCH_TEGRA_210_SOC),y)
-obj-$(CONFIG_TEGRA_BWMGR)               += emc_bwmgr-t21x.o
-endif
+obj-$(CONFIG_TEGRA_BWMGR)               += emc_bwmgr-t21x.o emc_bwmgr-t18x.o
 
 ifeq ($(CONFIG_TEGRA_MC),y)
 
@@ -36,7 +34,6 @@ obj-$(CONFIG_ARCH_TEGRA_18x_SOC) 	+= mcerr_ecc_t18x.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) 	+= mc_addr_translate.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) 	+= mcerr-t18x.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) 	+= tegra18_emc.o
-obj-$(CONFIG_ARCH_TEGRA_18x_SOC) 	+= bwmgr_mc_t186.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) 	+= tegra18x_la.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) 	+= tegra186-mc-sid.o
 endif

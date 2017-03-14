@@ -1249,7 +1249,6 @@ static const struct v4l2_ioctl_ops tegra_channel_ioctl_ops = {
 	.vidioc_log_status		= tegra_channel_log_status,
 };
 
-static int tegra_channel_close(struct file *fp);
 static int tegra_channel_open(struct file *fp)
 {
 	int ret;
@@ -1263,14 +1262,12 @@ static int tegra_channel_open(struct file *fp)
 
 	mutex_lock(&chan->video_lock);
 	ret = v4l2_fh_open(fp);
-	if (ret || !v4l2_fh_is_singular_file(fp)) {
-		mutex_unlock(&chan->video_lock);
-		return ret;
-	}
+	if (ret || !v4l2_fh_is_singular_file(fp))
+		goto unlock;
 
 	if (chan->subdev[0] == NULL) {
 		ret = -ENODEV;
-		goto fail;
+		goto unlock;
 	}
 
 	vi = chan->vi;
@@ -1279,19 +1276,24 @@ static int tegra_channel_open(struct file *fp)
 #endif
 	csi = vi->csi;
 
+#ifdef T210
+	/* TPG mode and a real sensor is open, return busy */
+	if (vi->pg_mode && tegra_vi->sensor_opened)
+		return -EBUSY;
+
+	/* None TPG mode and a TPG channel is opened, return busy */
+	if (!vi->pg_mode && tegra_vi->tpg_opened)
+		return -EBUSY;
+#endif
 	/* The first open then turn on power */
 	if (vi->fops)
 		ret = vi->fops->vi_power_on(chan);
 	if (ret < 0)
-		goto fail;
+		goto unlock;
 
 	chan->fh = (struct v4l2_fh *)fp->private_data;
 
-	mutex_unlock(&chan->video_lock);
-	return 0;
-
-fail:
-	tegra_channel_close(fp);
+unlock:
 	mutex_unlock(&chan->video_lock);
 	return ret;
 }
@@ -1392,6 +1394,7 @@ int tegra_channel_init(struct tegra_channel *chan)
 	chan->width_align = TEGRA_WIDTH_ALIGNMENT;
 	chan->stride_align = TEGRA_STRIDE_ALIGNMENT;
 	chan->num_subdevs = 0;
+	mutex_init(&chan->video_lock);
 	INIT_LIST_HEAD(&chan->capture);
 	init_waitqueue_head(&chan->start_wait);
 	spin_lock_init(&chan->start_lock);
@@ -1422,7 +1425,7 @@ int tegra_channel_init(struct tegra_channel *chan)
 	ret = v4l2_ctrl_handler_init(&chan->ctrl_handler, MAX_CID_CONTROLS);
 	if (chan->ctrl_handler.error) {
 		dev_err(&chan->video.dev, "failed to init control handler\n");
-		goto ctrl_init_error;
+		goto video_register_error;
 	}
 
 	/* init video node... */
@@ -1473,8 +1476,7 @@ int tegra_channel_init(struct tegra_channel *chan)
 
 	ret = video_register_device(&chan->video, VFL_TYPE_GRABBER, -1);
 	if (ret < 0) {
-		dev_err(&chan->video.dev, "failed to register %s\n",
-			chan->video.name);
+		dev_err(&chan->video.dev, "failed to register video device\n");
 		goto video_register_error;
 	}
 
@@ -1487,16 +1489,14 @@ vb2_queue_error:
 	vb2_dma_contig_cleanup_ctx(chan->alloc_ctx);
 vb2_init_error:
 #endif
-	v4l2_ctrl_handler_free(&chan->ctrl_handler);
-ctrl_init_error:
 	media_entity_cleanup(&chan->video.entity);
 	return ret;
 }
 
 int tegra_channel_cleanup(struct tegra_channel *chan)
 {
-	if (chan->video.cdev != NULL)
-		video_unregister_device(&chan->video);
+	video_unregister_device(&chan->video);
+
 	v4l2_ctrl_handler_free(&chan->ctrl_handler);
 	vb2_queue_release(&chan->queue);
 #if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
@@ -1506,30 +1506,6 @@ int tegra_channel_cleanup(struct tegra_channel *chan)
 	media_entity_cleanup(&chan->video.entity);
 
 	return 0;
-}
-
-void tegra_vi_channels_lock_init(struct tegra_mc_vi *vi)
-{
-	struct tegra_channel *it;
-
-	list_for_each_entry(it, &vi->vi_chans, list)
-		mutex_init(&it->video_lock);
-}
-
-void tegra_vi_channels_lock(struct tegra_mc_vi *vi)
-{
-	struct tegra_channel *it;
-
-	list_for_each_entry(it, &vi->vi_chans, list)
-		mutex_lock(&it->video_lock);
-}
-
-void tegra_vi_channels_unlock(struct tegra_mc_vi *vi)
-{
-	struct tegra_channel *it;
-
-	list_for_each_entry(it, &vi->vi_chans, list)
-		mutex_unlock(&it->video_lock);
 }
 
 int tegra_vi_channels_init(struct tegra_mc_vi *vi)
@@ -1542,7 +1518,7 @@ int tegra_vi_channels_init(struct tegra_mc_vi *vi)
 		ret = tegra_channel_init(it);
 		if (ret < 0) {
 			dev_err(vi->dev, "channel init failed\n");
-			continue;
+			return ret;
 		}
 	}
 	return 0;

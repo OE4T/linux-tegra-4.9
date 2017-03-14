@@ -334,25 +334,13 @@ static irqreturn_t gk20a_intr_thread_stall(int irq, void *dev_id)
 	return g->ops.mc.isr_thread_stall(g);
 }
 
-void gk20a_remove_support(struct device *dev)
+void gk20a_remove_support(struct gk20a *g)
 {
-	struct gk20a *g = get_gk20a(dev);
-
 #ifdef CONFIG_TEGRA_COMMON
 	tegra_unregister_idle_unidle();
 #endif
 	if (g->dbg_regops_tmp_buf)
 		kfree(g->dbg_regops_tmp_buf);
-
-	nvgpu_wait_for_deferred_interrupts(g);
-
-	gk20a_channel_cancel_pending_sema_waits(g);
-
-	if (g->nonstall_work_queue) {
-		cancel_work_sync(&g->nonstall_fn_work);
-		destroy_workqueue(g->nonstall_work_queue);
-		g->nonstall_work_queue = NULL;
-	}
 
 	if (g->pmu.remove_support)
 		g->pmu.remove_support(&g->pmu);
@@ -1251,6 +1239,11 @@ static int gk20a_probe(struct platform_device *dev)
 	if (gk20a->irq_stall != gk20a->irq_nonstall)
 		disable_irq(gk20a->irq_nonstall);
 
+	/*
+	 * is_fmodel needs to be in gk20a struct for deferred teardown
+	 */
+	gk20a->is_fmodel = platform->is_fmodel;
+
 	err = gk20a_init_support(dev);
 	if (err)
 		return err;
@@ -1296,11 +1289,6 @@ static int __exit gk20a_remove(struct platform_device *pdev)
 
 	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
 		gk20a_scale_exit(dev);
-
-	if (g->remove_support)
-		g->remove_support(dev);
-
-	gk20a_ce_destroy(g);
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	nvgpu_clk_arb_cleanup_arbiter(g);
@@ -1390,7 +1378,21 @@ void gk20a_busy_noresume(struct device *dev)
 void gk20a_driver_start_unload(struct gk20a *g)
 {
 	gk20a_dbg(gpu_dbg_shutdown, "Driver is now going down!\n");
+
+	down_write(&g->busy_lock);
 	g->driver_is_dying = 1;
+	up_write(&g->busy_lock);
+
+	gk20a_wait_for_idle(g->dev);
+
+	nvgpu_wait_for_deferred_interrupts(g);
+	gk20a_channel_cancel_pending_sema_waits(g);
+
+	if (g->nonstall_work_queue) {
+		cancel_work_sync(&g->nonstall_fn_work);
+		destroy_workqueue(g->nonstall_work_queue);
+		g->nonstall_work_queue = NULL;
+	}
 }
 
 int gk20a_wait_for_idle(struct device *dev)
@@ -1859,6 +1861,12 @@ static void gk20a_free_cb(struct kref *refcount)
 		struct gk20a, refcount);
 
 	gk20a_dbg(gpu_dbg_shutdown, "Freeing GK20A struct!");
+
+	gk20a_ce_destroy(g);
+
+	if (g->remove_support)
+		g->remove_support(g);
+
 	kfree(g);
 }
 

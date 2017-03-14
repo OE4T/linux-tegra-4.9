@@ -1344,8 +1344,7 @@ static int nvgpu_gpu_set_therm_alert_limit(struct gk20a *g,
 long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct gk20a_ctrl_priv *priv = filp->private_data;
-	struct device *dev = priv->dev;
-	struct gk20a *g = get_gk20a(dev);
+	struct gk20a *g = priv->g;
 	struct nvgpu_gpu_zcull_get_ctx_size_args *get_ctx_size_args;
 	struct nvgpu_gpu_zcull_get_info_args *get_info_args;
 	struct nvgpu_gpu_zbc_set_table_args *set_table_args;

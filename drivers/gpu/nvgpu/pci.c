@@ -393,6 +393,11 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	}
 	disable_irq(g->irq_stall);
 
+	/*
+	 * is_fmodel needs to be in gk20a struct for deferred teardown
+	 */
+	g->is_fmodel = platform->is_fmodel;
+
 	err = nvgpu_pci_init_support(pdev);
 	if (err)
 		return err;
@@ -426,7 +431,6 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 	struct gk20a *g = get_gk20a(&pdev->dev);
 
 	gk20a_dbg(gpu_dbg_shutdown, "Removing nvgpu driver!\n");
-	gk20a_driver_start_unload(g);
 
 	if (g->irqs_enabled)
 		disable_irq(g->irq_stall);
@@ -445,7 +449,7 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 	 * Wait for the driver to finish up all the IOCTLs it's working on
 	 * before cleaning up the driver's data structures.
 	 */
-	gk20a_wait_for_idle(&pdev->dev);
+	gk20a_driver_start_unload(g);
 	gk20a_dbg(gpu_dbg_shutdown, "Driver idle.\n");
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
@@ -454,9 +458,6 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 
 	gk20a_user_deinit(g->dev, &nvgpu_pci_class);
 	gk20a_dbg(gpu_dbg_shutdown, "User de-init done.\b");
-
-	if (g->remove_support)
-		g->remove_support(g->dev);
 
 	debugfs_remove_recursive(platform->debugfs);
 	debugfs_remove_recursive(platform->debugfs_alias);

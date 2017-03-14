@@ -877,6 +877,9 @@ struct gk20a {
 	atomic_t nonstall_ops;
 	struct work_struct nonstall_fn_work;
 	struct workqueue_struct *nonstall_work_queue;
+
+	bool is_fmodel;
+
 	struct kref refcount;
 
 	struct resource *reg_mem;
@@ -987,7 +990,7 @@ struct gk20a {
 	bool global_profiler_reservation_held;
 	int profiler_reservation_count;
 
-	void (*remove_support)(struct device *);
+	void (*remove_support)(struct gk20a *);
 
 	u64 pg_ingating_time_us;
 	u64 pg_ungating_time_us;
@@ -1455,7 +1458,7 @@ extern struct class nvgpu_class;
 
 int gk20a_pm_init(struct device *dev);
 int gk20a_pm_finalize_poweron(struct device *dev);
-void gk20a_remove_support(struct device *dev);
+void gk20a_remove_support(struct gk20a *g);
 
 static inline struct tsg_gk20a *tsg_gk20a_from_ch(struct channel_gk20a *ch)
 {

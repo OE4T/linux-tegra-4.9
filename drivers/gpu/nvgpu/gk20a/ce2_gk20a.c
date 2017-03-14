@@ -690,6 +690,12 @@ void gk20a_ce_delete_context(struct device *dev,
 		u32 ce_ctx_id)
 {
 	struct gk20a *g = gk20a_from_dev(dev);
+	gk20a_ce_delete_context_priv(g, ce_ctx_id);
+}
+
+void gk20a_ce_delete_context_priv(struct gk20a *g,
+		u32 ce_ctx_id)
+{
 	struct gk20a_ce_app *ce_app = &g->ce_app;
 	struct gk20a_gpu_ctx *ce_ctx, *ce_ctx_save;
 

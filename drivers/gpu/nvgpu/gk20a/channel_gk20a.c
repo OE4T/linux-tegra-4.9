@@ -122,7 +122,8 @@ static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f)
 static void free_channel(struct fifo_gk20a *f,
 		struct channel_gk20a *ch)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(f->g->dev);
+	struct gk20a_platform *platform;
+	struct gk20a *g = f->g;
 
 	trace_gk20a_release_used_channel(ch->hw_chid);
 	/* refcount is zero here and channel is in a freed/dead state */
@@ -132,10 +133,18 @@ static void free_channel(struct fifo_gk20a *f,
 	f->used_channels--;
 	nvgpu_mutex_release(&f->free_chs_mutex);
 
-	if (platform->aggressive_sync_destroy_thresh &&
+	/*
+	 * On teardown it is not possible to dereference platform, but ignoring
+	 * this is fine then because no new channels would be created.
+	 */
+	if (!g->driver_is_dying) {
+		platform = gk20a_get_platform(g->dev);
+
+		if (platform->aggressive_sync_destroy_thresh &&
 			(f->used_channels <
 			 platform->aggressive_sync_destroy_thresh))
-		platform->aggressive_sync_destroy = false;
+			platform->aggressive_sync_destroy = false;
+	}
 }
 
 int channel_gk20a_commit_va(struct channel_gk20a *c)
@@ -3016,7 +3025,12 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	bool need_deferred_cleanup = false;
 	struct nvgpu_gpfifo __user *user_gpfifo = args ?
 		(struct nvgpu_gpfifo __user *)(uintptr_t)args->gpfifo : NULL;
-	struct gk20a_platform *platform = gk20a_get_platform(d);
+	struct gk20a_platform *platform;
+
+	if (g->driver_is_dying)
+		return -ENODEV;
+
+	platform = gk20a_get_platform(d);
 
 	if (c->has_timedout)
 		return -ETIMEDOUT;

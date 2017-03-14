@@ -144,8 +144,11 @@ int gk20a_ce_execute_ops(struct device *dev,
 		struct gk20a_fence *gk20a_fence_in,
 		u32 submit_flags,
 		struct gk20a_fence **gk20a_fence_out);
+void gk20a_ce_delete_context_priv(struct gk20a *g,
+		u32 ce_ctx_id);
 void gk20a_ce_delete_context(struct device *dev,
 		u32 ce_ctx_id);
+
 
 #ifdef CONFIG_DEBUG_FS
 /* CE app debugfs api */

@@ -665,7 +665,7 @@ static int nvgpu_dbg_gpu_ioctl_timeout(struct dbg_session_gk20a *dbg_s,
 			 struct nvgpu_dbg_gpu_timeout_args *args)
 {
 	int err;
-	struct gk20a *g = get_gk20a(dbg_s->dev);
+	struct gk20a *g = dbg_s->g;
 
 	gk20a_dbg_fn("powergate mode = %d", args->enable);
 
@@ -680,7 +680,7 @@ static void nvgpu_dbg_gpu_ioctl_get_timeout(struct dbg_session_gk20a *dbg_s,
 			 struct nvgpu_dbg_gpu_timeout_args *args)
 {
 	int status;
-	struct gk20a *g = get_gk20a(dbg_s->dev);
+	struct gk20a *g = dbg_s->g;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	status = g->timeouts_enabled;
@@ -711,7 +711,7 @@ static int nvgpu_dbg_gpu_ioctl_read_single_sm_error_state(
 		struct dbg_session_gk20a *dbg_s,
 		struct nvgpu_dbg_gpu_read_single_sm_error_state_args *args)
 {
-	struct gk20a *g = get_gk20a(dbg_s->dev);
+	struct gk20a *g = dbg_s->g;
 	struct gr_gk20a *gr = &g->gr;
 	struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_state;
 	u32 sm_id;
@@ -750,7 +750,7 @@ static int nvgpu_dbg_gpu_ioctl_clear_single_sm_error_state(
 		struct dbg_session_gk20a *dbg_s,
 		struct nvgpu_dbg_gpu_clear_single_sm_error_state_args *args)
 {
-	struct gk20a *g = get_gk20a(dbg_s->dev);
+	struct gk20a *g = dbg_s->g;
 	struct gr_gk20a *gr = &g->gr;
 	u32 sm_id;
 	struct channel_gk20a *ch;
@@ -781,7 +781,7 @@ static int nvgpu_dbg_gpu_ioctl_write_single_sm_error_state(
 		struct dbg_session_gk20a *dbg_s,
 		struct nvgpu_dbg_gpu_write_single_sm_error_state_args *args)
 {
-	struct gk20a *g = get_gk20a(dbg_s->dev);
+	struct gk20a *g = dbg_s->g;
 	struct gr_gk20a *gr = &g->gr;
 	u32 sm_id;
 	struct channel_gk20a *ch;
@@ -952,7 +952,7 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 			     unsigned long arg)
 {
 	struct dbg_session_gk20a *dbg_s = filp->private_data;
-	struct gk20a *g = get_gk20a(dbg_s->dev);
+	struct gk20a *g = dbg_s->g;
 	u8 buf[NVGPU_DBG_GPU_IOCTL_MAX_ARG_SIZE];
 	int err = 0;
 
@@ -1141,7 +1141,7 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 	bool is_pg_disabled = false;
 
 	struct device *dev = dbg_s->dev;
-	struct gk20a *g = get_gk20a(dbg_s->dev);
+	struct gk20a *g = dbg_s->g;
 	struct channel_gk20a *ch;
 
 	gk20a_dbg_fn("%d ops, max fragment %d", args->num_ops, g->dbg_regops_tmp_buf_ops);
@@ -1257,7 +1257,7 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
 {
 	int err = 0;
-	struct gk20a *g = get_gk20a(dbg_s->dev);
+	struct gk20a *g = dbg_s->g;
 
 	 /* This function must be called with g->dbg_sessions_lock held */
 
@@ -1360,7 +1360,7 @@ static int nvgpu_ioctl_powergate_gk20a(struct dbg_session_gk20a *dbg_s,
 				struct nvgpu_dbg_gpu_powergate_args *args)
 {
 	int err;
-	struct gk20a *g = get_gk20a(dbg_s->dev);
+	struct gk20a *g = dbg_s->g;
 	gk20a_dbg_fn("%s  powergate mode = %d",
 		      dev_name(dbg_s->dev), args->mode);
 
@@ -1374,7 +1374,7 @@ static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 			       struct nvgpu_dbg_gpu_smpc_ctxsw_mode_args *args)
 {
 	int err;
-	struct gk20a *g = get_gk20a(dbg_s->dev);
+	struct gk20a *g = dbg_s->g;
 	struct channel_gk20a *ch_gk20a;
 
 	gk20a_dbg_fn("%s smpc ctxsw mode = %d",
@@ -1416,7 +1416,7 @@ static int nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 			       struct nvgpu_dbg_gpu_hwpm_ctxsw_mode_args *args)
 {
 	int err;
-	struct gk20a *g = get_gk20a(dbg_s->dev);
+	struct gk20a *g = dbg_s->g;
 	struct channel_gk20a *ch_gk20a;
 
 	gk20a_dbg_fn("%s pm ctxsw mode = %d",
@@ -1468,7 +1468,7 @@ static int nvgpu_dbg_gpu_ioctl_suspend_resume_sm(
 		struct dbg_session_gk20a *dbg_s,
 		struct nvgpu_dbg_gpu_suspend_resume_all_sms_args *args)
 {
-	struct gk20a *g = get_gk20a(dbg_s->dev);
+	struct gk20a *g = dbg_s->g;
 	struct channel_gk20a *ch;
 	int err = 0, action = args->mode;
 

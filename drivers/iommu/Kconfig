@@ -240,6 +240,13 @@ config TEGRA_IOMMU_GART
 	  space through the GART (Graphics Address Relocation Table)
 	  hardware included on Tegra SoCs.
 
+config OF_TEGRA_IOMMU_SMMU
+	bool
+	depends on PLATFORM_TEGRA
+	help
+	  Enables device tree parsing for tegra-smmu and arm-smmu that is
+	  getting used in Tegra platforms.
+
 config TEGRA_IOMMU_SMMU
 	bool "NVIDIA Tegra SMMU Support"
 	depends on ARCH_TEGRA
@@ -299,7 +306,8 @@ config ARM_SMMU
 	depends on (ARM64 || ARM) && MMU
 	select IOMMU_API
 	select IOMMU_IO_PGTABLE_LPAE
-	select ARM_DMA_USE_IOMMU if ARM
+	select ARM_DMA_USE_IOMMU if (ARM || ARM64)
+	select OF_TEGRA_IOMMU_SMMU if (ARM || ARM64)
 	help
 	  Support for implementations of the ARM System MMU architecture
 	  versions 1 and 2.

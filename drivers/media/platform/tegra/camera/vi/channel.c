@@ -1316,10 +1316,11 @@ static int tegra_channel_open(struct file *fp)
 	csi = vi->csi;
 
 	/* The first open then turn on power */
-	if (vi->fops)
+	if (vi->fops) {
 		ret = vi->fops->vi_power_on(chan);
-	if (ret < 0)
-		goto fail;
+		if (ret < 0)
+			goto fail;
+	}
 
 	chan->fh = (struct v4l2_fh *)fp->private_data;
 
@@ -1327,8 +1328,8 @@ static int tegra_channel_open(struct file *fp)
 	return 0;
 
 fail:
-	tegra_channel_close(fp);
 	mutex_unlock(&chan->video_lock);
+	tegra_channel_close(fp);
 	return ret;
 }
 

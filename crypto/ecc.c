@@ -546,7 +546,7 @@ void vli_print(char *vli_name, const u64 *vli, unsigned int ndigits)
 
 	c = (unsigned char *)vli;
 
-	for (i = nbytes - 1, j = 0; i >= 0 && j < buf_size; i--, j += 2)
+	for (i = nbytes - 1, j = 0; i >= 0 && j+1 < buf_size; i--, j += 2)
 		snprintf(&buf[j], 3, "%02x", *(c + i));
 
 	buf[j] = '\0';

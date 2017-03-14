@@ -1249,6 +1249,7 @@ static const struct v4l2_ioctl_ops tegra_channel_ioctl_ops = {
 	.vidioc_log_status		= tegra_channel_log_status,
 };
 
+static int tegra_channel_close(struct file *fp);
 static int tegra_channel_open(struct file *fp)
 {
 	int ret;
@@ -1262,12 +1263,14 @@ static int tegra_channel_open(struct file *fp)
 
 	mutex_lock(&chan->video_lock);
 	ret = v4l2_fh_open(fp);
-	if (ret || !v4l2_fh_is_singular_file(fp))
-		goto unlock;
+	if (ret || !v4l2_fh_is_singular_file(fp)) {
+		mutex_unlock(&chan->video_lock);
+		return ret;
+	}
 
 	if (chan->subdev[0] == NULL) {
 		ret = -ENODEV;
-		goto unlock;
+		goto fail;
 	}
 
 	vi = chan->vi;
@@ -1276,24 +1279,19 @@ static int tegra_channel_open(struct file *fp)
 #endif
 	csi = vi->csi;
 
-#ifdef T210
-	/* TPG mode and a real sensor is open, return busy */
-	if (vi->pg_mode && tegra_vi->sensor_opened)
-		return -EBUSY;
-
-	/* None TPG mode and a TPG channel is opened, return busy */
-	if (!vi->pg_mode && tegra_vi->tpg_opened)
-		return -EBUSY;
-#endif
 	/* The first open then turn on power */
 	if (vi->fops)
 		ret = vi->fops->vi_power_on(chan);
 	if (ret < 0)
-		goto unlock;
+		goto fail;
 
 	chan->fh = (struct v4l2_fh *)fp->private_data;
 
-unlock:
+	mutex_unlock(&chan->video_lock);
+	return 0;
+
+fail:
+	tegra_channel_close(fp);
 	mutex_unlock(&chan->video_lock);
 	return ret;
 }
@@ -1425,7 +1423,7 @@ int tegra_channel_init(struct tegra_channel *chan)
 	ret = v4l2_ctrl_handler_init(&chan->ctrl_handler, MAX_CID_CONTROLS);
 	if (chan->ctrl_handler.error) {
 		dev_err(&chan->video.dev, "failed to init control handler\n");
-		goto video_register_error;
+		goto ctrl_init_error;
 	}
 
 	/* init video node... */
@@ -1474,29 +1472,22 @@ int tegra_channel_init(struct tegra_channel *chan)
 		goto vb2_queue_error;
 	}
 
-	ret = video_register_device(&chan->video, VFL_TYPE_GRABBER, -1);
-	if (ret < 0) {
-		dev_err(&chan->video.dev, "failed to register video device\n");
-		goto video_register_error;
-	}
-
+	chan->init_done = true;
 	return 0;
 
-video_register_error:
-	vb2_queue_release(&chan->queue);
 vb2_queue_error:
 #if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	vb2_dma_contig_cleanup_ctx(chan->alloc_ctx);
 vb2_init_error:
 #endif
+	v4l2_ctrl_handler_free(&chan->ctrl_handler);
+ctrl_init_error:
 	media_entity_cleanup(&chan->video.entity);
 	return ret;
 }
 
 int tegra_channel_cleanup(struct tegra_channel *chan)
 {
-	video_unregister_device(&chan->video);
-
 	v4l2_ctrl_handler_free(&chan->ctrl_handler);
 	vb2_queue_release(&chan->queue);
 #if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
@@ -1508,19 +1499,63 @@ int tegra_channel_cleanup(struct tegra_channel *chan)
 	return 0;
 }
 
+int tegra_vi_channels_register(struct tegra_mc_vi *vi)
+{
+	int ret = 0;
+	struct tegra_channel *it;
+	int count = 0;
+
+	list_for_each_entry(it, &vi->vi_chans, list) {
+		if (!it->init_done)
+			continue;
+		ret = video_register_device(&it->video, VFL_TYPE_GRABBER, -1);
+		if (ret < 0) {
+			dev_err(&it->video.dev, "failed to register %s\n",
+				it->video.name);
+			continue;
+		}
+		count++;
+	}
+
+	if (count == 0) {
+		dev_err(vi->dev, "all channel register failed\n");
+		return ret;
+	}
+
+	return 0;
+}
+
+void tegra_vi_channels_unregister(struct tegra_mc_vi *vi)
+{
+	struct tegra_channel *it;
+
+	list_for_each_entry(it, &vi->vi_chans, list) {
+		if (it->video.cdev != NULL)
+		      video_unregister_device(&it->video);
+	}
+}
+
 int tegra_vi_channels_init(struct tegra_mc_vi *vi)
 {
-	int ret;
+	int ret = 0;
 	struct tegra_channel *it;
+	int count = 0;
 
 	list_for_each_entry(it, &vi->vi_chans, list) {
 		it->vi = vi;
 		ret = tegra_channel_init(it);
 		if (ret < 0) {
 			dev_err(vi->dev, "channel init failed\n");
-			return ret;
+			continue;
 		}
+		count++;
 	}
+
+	if (count == 0) {
+		dev_err(vi->dev, "all channel init failed\n");
+		return ret;
+	}
+
 	return 0;
 }
 EXPORT_SYMBOL(tegra_vi_channels_init);
@@ -1531,6 +1566,8 @@ int tegra_vi_channels_cleanup(struct tegra_mc_vi *vi)
 	struct tegra_channel *it;
 
 	list_for_each_entry(it, &vi->vi_chans, list) {
+		if (!it->init_done)
+			continue;
 		err = tegra_channel_cleanup(it);
 		if (err < 0) {
 			ret = err;

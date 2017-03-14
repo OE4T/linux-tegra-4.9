@@ -188,6 +188,12 @@ static int tegra_vi_graph_build_links(struct tegra_mc_vi *vi)
 		if (next == NULL || !of_device_is_available(next))
 			break;
 
+		/* Device not registered */
+		if (!chan->init_done) {
+			chan = list_next_entry(chan, list);
+			continue;
+		}
+
 		ep = next;
 
 		dev_dbg(vi->dev, "processing endpoint %s\n", ep->full_name);
@@ -464,6 +470,10 @@ int tegra_vi_tpg_graph_init(struct tegra_mc_vi *mc_vi)
 	csi_it = csi->tpg_start;
 
 	list_for_each_entry_from(vi_it, &mc_vi->vi_chans, list) {
+		/* Device not registered */
+		if (!vi_it->init_done)
+			continue;
+
 		list_for_each_entry_from(csi_it, &csi->csi_chans, list) {
 			struct media_entity *source = &csi_it->subdev.entity;
 			struct media_entity *sink = &vi_it->video.entity;

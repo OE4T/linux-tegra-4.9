@@ -138,8 +138,6 @@ int tegra_vi_v4l2_init(struct tegra_mc_vi *vi)
 		goto register_error;
 	}
 
-
-
 	return 0;
 
 register_error:
@@ -182,6 +180,7 @@ int tpg_vi_media_controller_init(struct tegra_mc_vi *mc_vi, int pg_mode)
 {
 	int err = 0, i;
 	struct tegra_channel *item;
+	int count = 0;
 
 	/* Allocate TPG channel */
 	v4l2_ctrl_handler_init(&mc_vi->ctrl_handler, 1);
@@ -196,28 +195,51 @@ int tpg_vi_media_controller_init(struct tegra_mc_vi *mc_vi, int pg_mode)
 		goto ctrl_error;
 	}
 
+	mc_vi->tpg_start = NULL;
 	for (i = 0; i < TPG_CHANNELS; i++) {
 		item = devm_kzalloc(mc_vi->dev, sizeof(*item), GFP_KERNEL);
 		if (!item)
-			return -ENOMEM;
+			continue;
 		item->id = mc_vi->num_channels + i;
 		item->pg_mode = pg_mode;
 		item->vi = mc_vi;
-		list_add_tail(&item->list, &mc_vi->vi_chans);
-		if (i == 0)
-			mc_vi->tpg_start = item;
+
 		err = tegra_channel_init(item);
-		if (err)
-			goto channel_init_error;
+		if (err) {
+			devm_kfree(mc_vi->dev, item);
+			continue;
+		}
 		vi_tpg_fmts_bitmap_init(item);
+		/* only inited tpg channels are added */
+		list_add_tail(&item->list, &mc_vi->vi_chans);
+		mc_vi->num_channels++;
+		if (mc_vi->tpg_start == NULL)
+			mc_vi->tpg_start = item;
 	}
 
 	err = tegra_vi_tpg_graph_init(mc_vi);
 	if (err)
 		goto channel_init_error;
 
-	mc_vi->num_channels += TPG_CHANNELS;
+	list_for_each_entry(item, &mc_vi->vi_chans, list) {
+		if (!item->pg_mode)
+			continue;
+		err = video_register_device(&item->video, VFL_TYPE_GRABBER, -1);
+		if (err < 0) {
+			dev_err(&item->video.dev, "failed to register %s\n",
+				item->video.name);
+			continue;
+		}
+		count++;
+	}
+
+	if (count == 0) {
+		dev_err(mc_vi->dev, "all tpg register failed\n");
+		goto channel_init_error;
+	}
+
 	return err;
+
 channel_init_error:
 	dev_err(mc_vi->dev, "%s: channel init failed\n", __func__);
 	if (!mc_vi->tpg_start)
@@ -229,6 +251,7 @@ ctrl_error:
 	return err;
 }
 EXPORT_SYMBOL(tpg_vi_media_controller_init);
+
 void tpg_vi_media_controller_cleanup(struct tegra_mc_vi *mc_vi)
 {
 	struct tegra_channel *item;
@@ -237,13 +260,15 @@ void tpg_vi_media_controller_cleanup(struct tegra_mc_vi *mc_vi)
 	list_for_each_entry_safe(item, itemn, &mc_vi->vi_chans, list) {
 		if (!item->pg_mode)
 			continue;
+		if (item->video.cdev != NULL)
+		      video_unregister_device(&item->video);
 		tegra_channel_cleanup(item);
 		list_del(&item->list);
 		devm_kfree(mc_vi->dev, item);
 		/* decrement media device entity count */
 		mc_vi->media_dev.entity_id--;
+		mc_vi->num_channels--;
 	}
-	mc_vi->num_channels -= TPG_CHANNELS;
 	mc_vi->tpg_start = NULL;
 	v4l2_ctrl_handler_free(&mc_vi->ctrl_handler);
 }
@@ -293,8 +318,14 @@ int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 	if (err < 0)
 		goto graph_error;
 
+	err = tegra_vi_channels_register(mc_vi);
+	if (err < 0)
+		goto register_error;
+
 	return 0;
 
+register_error:
+	tegra_vi_graph_cleanup(mc_vi);
 graph_error:
 	tegra_vi_channels_cleanup(mc_vi);
 channels_error:
@@ -307,6 +338,7 @@ EXPORT_SYMBOL(tegra_vi_media_controller_init);
 
 void tegra_vi_media_controller_cleanup(struct tegra_mc_vi *mc_vi)
 {
+	tegra_vi_channels_unregister(mc_vi);
 	tegra_vi_graph_cleanup(mc_vi);
 	tegra_vi_channels_cleanup(mc_vi);
 	tegra_vi_v4l2_cleanup(mc_vi);

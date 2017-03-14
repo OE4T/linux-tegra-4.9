@@ -1303,7 +1303,8 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		container_of(to_delayed_work(work), struct tegra_nvhdcp, work);
 	struct tegra_hdmi *hdmi = nvhdcp->hdmi;
 	struct tegra_dc *dc = tegra_dc_hdmi_get_dc(hdmi);
-	int e, alloc_err;
+	int e;
+	int alloc_err = 0;
 	u8 b_caps;
 #if (defined(CONFIG_TEGRA_NVDISPLAY))
 	int hdcp_ta_ret; /* track returns from TA */
@@ -1571,6 +1572,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		}
 	}
 
+	mutex_lock(&nvhdcp->lock);
 #if (defined(CONFIG_TEGRA_NVDISPLAY))
 	*pkt = HDCP_TA_CMD_ENC;
 	*(pkt + HDCP_CMD_OFFSET) = TEGRA_NVHDCP_PORT_HDMI;
@@ -1582,7 +1584,6 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	}
 	enc = true;
 #else
-	mutex_lock(&nvhdcp->lock);
 	tmp = nvhdcp_sor_readl(hdmi, NV_SOR_TMDS_HDCP_CTRL);
 	tmp |= CRYPT_ENABLED;
 	if (b_caps & BCAPS_11) /* HDCP 1.1 ? */
@@ -1630,6 +1631,9 @@ failure:
 	/* Failed because of lack of memory */
 	if (alloc_err == -ENOMEM) {
 		g_fallback = 0;
+		/* No need to unlock the mutex, memory failure
+		 * only happens when the mutex is not held.
+		 */
 		return;
 	}
 

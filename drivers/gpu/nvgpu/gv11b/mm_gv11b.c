@@ -14,7 +14,6 @@
  */
 
 #include <linux/pm_runtime.h>
-#include <linux/dma-mapping.h>
 
 #include "gk20a/gk20a.h"
 

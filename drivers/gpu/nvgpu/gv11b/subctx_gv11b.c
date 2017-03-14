@@ -37,7 +37,7 @@ void gv11b_free_subctx_header(struct channel_gk20a *c)
 		gk20a_gmmu_unmap(c->vm, ctx->mem.gpu_va,
 			ctx->mem.size, gk20a_mem_flag_none);
 
-		gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING, &ctx->mem);
+		gk20a_gmmu_free(g, &ctx->mem);
 	}
 }
 
@@ -51,8 +51,8 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 	gk20a_dbg_fn("");
 
 	if (ctx->mem.gpu_va == 0) {
-		ret = gk20a_gmmu_alloc_attr_sys(g,
-				DMA_ATTR_NO_KERNEL_MAPPING,
+		ret = gk20a_gmmu_alloc_flags_sys(g,
+				NVGPU_DMA_NO_KERNEL_MAPPING,
 				gr->ctx_vars.golden_image_size,
 				&ctx->mem);
 		if (ret) {
@@ -69,8 +69,7 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 		if (!ctx->mem.gpu_va) {
 			gk20a_err(dev_from_gk20a(g),
 				"failed to map ctx header");
-			gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING,
-					&ctx->mem);
+			gk20a_gmmu_free(g, &ctx->mem);
 			return -ENOMEM;
 		}
 		/* Now clear the buffer */

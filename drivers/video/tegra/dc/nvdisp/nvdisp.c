@@ -3466,7 +3466,7 @@ void tegra_dc_reset_imp_state(void)
 			break;
 	}
 
-	if (!master_dc)
+	if (!master_dc || !master_dc->enabled)
 		goto reset_imp_ret;
 
 	/* Copy the relevant settings over. */

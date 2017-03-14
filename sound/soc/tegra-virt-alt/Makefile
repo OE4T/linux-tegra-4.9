@@ -7,7 +7,7 @@ ccflags-y += -I$(src)/../codecs
 # Tegra platform Support
 snd-soc-tegra-virt-alt-ivc-objs := tegra_virt_alt_ivc.o
 
-obj-$(CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM) += snd-soc-tegra-virt-alt-ivc.o
+obj-$(CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM_DEFS) += snd-soc-tegra-virt-alt-ivc.o
 
 snd-soc-tegra210-virt-alt-admaif-objs := tegra210_virt_alt_admaif.o \
 					tegra_asoc_xbar_virt_alt.o \

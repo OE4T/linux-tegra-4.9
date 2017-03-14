@@ -599,6 +599,7 @@
 		clock-names = "serial", "parent";
 		resets = <&tegra_car TEGRA210_CLK_UARTA>;
 		reset-names = "serial";
+		nvidia,adjust-baud-rates = <115200 115200 100>;
 		status = "disabled";
 	};
 
@@ -615,6 +616,7 @@
 		clock-names = "serial", "parent";
 		resets = <&tegra_car TEGRA210_CLK_UARTB>;
 		reset-names = "serial";
+		nvidia,adjust-baud-rates = <115200 115200 100>;
 		status = "disabled";
 	};
 
@@ -631,6 +633,7 @@
 		clock-names = "serial", "parent";
 		resets = <&tegra_car TEGRA210_CLK_UARTC>;
 		reset-names = "serial";
+		nvidia,adjust-baud-rates = <115200 115200 100>;
 		status = "disabled";
 	};
 
@@ -647,6 +650,7 @@
 		clock-names = "serial", "parent";
 		resets = <&tegra_car TEGRA210_CLK_UARTD>;
 		reset-names = "serial";
+		nvidia,adjust-baud-rates = <115200 115200 100>;
 		status = "disabled";
 	};
 

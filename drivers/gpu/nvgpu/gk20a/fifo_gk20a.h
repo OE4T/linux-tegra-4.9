@@ -331,8 +331,8 @@ void gk20a_get_ch_runlist_entry(struct channel_gk20a *ch, u32 *runlist);
 void gk20a_fifo_set_runlist_state(struct gk20a *g, u32 runlists_mask,
 		 u32 runlist_state, int runlist_mutex_state);
 
-u32 gk20a_userd_gp_get(struct gk20a *g, struct channel_gk20a *c);
-void gk20a_userd_gp_put(struct gk20a *g, struct channel_gk20a *c);
+u32 gk20a_fifo_userd_gp_get(struct gk20a *g, struct channel_gk20a *c);
+void gk20a_fifo_userd_gp_put(struct gk20a *g, struct channel_gk20a *c);
 
 bool gk20a_is_fault_engine_subid_gpc(struct gk20a *g, u32 engine_subid);
 #ifdef CONFIG_DEBUG_FS
@@ -351,8 +351,11 @@ void gk20a_dump_eng_status(struct gk20a *g,
 				 struct gk20a_debug_output *o);
 const char *gk20a_decode_ccsr_chan_status(u32 index);
 const char *gk20a_decode_pbdma_chan_eng_ctx_status(u32 index);
+void gk20a_fifo_enable_channel(struct channel_gk20a *ch);
+void gk20a_fifo_disable_channel(struct channel_gk20a *ch);
 
 struct channel_gk20a *gk20a_refch_from_inst_ptr(struct gk20a *g, u64 inst_ptr);
+void gk20a_fifo_channel_unbind(struct channel_gk20a *ch_gk20a);
 
 u32 gk20a_fifo_intr_0_error_mask(struct gk20a *g);
 
@@ -361,5 +364,16 @@ int gk20a_fifo_is_preempt_pending(struct gk20a *g, u32 id, unsigned int id_type,
 int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg);
 void __locked_fifo_preempt_timeout_rc(struct gk20a *g, u32 id,
 					 unsigned int id_type);
+int gk20a_fifo_setup_ramfc(struct channel_gk20a *c,
+			u64 gpfifo_base, u32 gpfifo_entries,
+			unsigned long timeout, u32 flags);
+int gk20a_fifo_set_priority(struct channel_gk20a *ch, u32 priority);
+int gk20a_fifo_set_timeslice(struct channel_gk20a *ch, unsigned int timeslice);
+void gk20a_fifo_setup_ramfc_for_privileged_channel(struct channel_gk20a *c);
+int gk20a_fifo_alloc_inst(struct gk20a *g, struct channel_gk20a *ch);
+void gk20a_fifo_free_inst(struct gk20a *g, struct channel_gk20a *ch);
+int gk20a_fifo_setup_userd(struct channel_gk20a *c);
+u32 gk20a_fifo_pbdma_acquire_val(u64 timeout);
+
 
 #endif /*__GR_GK20A_H__*/

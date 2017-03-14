@@ -80,7 +80,8 @@ int channel_gp10b_commit_userd(struct channel_gk20a *c)
 }
 
 static int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
-			u64 gpfifo_base, u32 gpfifo_entries, u32 flags)
+			u64 gpfifo_base, u32 gpfifo_entries,
+			unsigned long acquire_timeout, u32 flags)
 {
 	struct gk20a *g = c->g;
 	struct mem_desc *mem = &c->inst_block;
@@ -121,7 +122,7 @@ static int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
 	gk20a_mem_wr32(g, mem, ram_fc_target_w(), pbdma_target_engine_sw_f());
 
 	gk20a_mem_wr32(g, mem, ram_fc_acquire_w(),
-		channel_gk20a_pbdma_acquire_val(c));
+		g->ops.fifo.pbdma_acquire_val(acquire_timeout));
 
 	gk20a_mem_wr32(g, mem, ram_fc_runlist_timeslice_w(),
 		pbdma_runlist_timeslice_timeout_128_f() |
@@ -139,7 +140,7 @@ static int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
 		gk20a_mem_wr32(g, mem, ram_fc_config_w(),
 			pbdma_config_auth_level_privileged_f());
 
-		gk20a_channel_setup_ramfc_for_privileged_channel(c);
+		gk20a_fifo_setup_ramfc_for_privileged_channel(c);
 	}
 
 	return channel_gp10b_commit_userd(c);

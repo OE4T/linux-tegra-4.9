@@ -488,7 +488,7 @@ u32 gk20a_ce_create_context_with_cb(struct device *dev,
 
 	/* -1 means default channel priority */
 	if (priority != -1) {
-		err = gk20a_channel_set_priority(ce_ctx->ch, priority);
+		err = gk20a_fifo_set_priority(ce_ctx->ch, priority);
 		if (err) {
 			gk20a_err(ce_ctx->dev,
 				"ce: could not set the channel priority for CE context");
@@ -498,7 +498,7 @@ u32 gk20a_ce_create_context_with_cb(struct device *dev,
 
 	/* -1 means default channel timeslice value */
 	if (timeslice != -1) {
-		err = gk20a_channel_set_timeslice(ce_ctx->ch, timeslice);
+		err = gk20a_fifo_set_timeslice(ce_ctx->ch, timeslice);
 		if (err) {
 			gk20a_err(ce_ctx->dev,
 				"ce: could not set the channel timeslice value for CE context");

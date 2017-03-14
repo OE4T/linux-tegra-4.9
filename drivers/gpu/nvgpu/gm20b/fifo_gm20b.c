@@ -188,16 +188,18 @@ void gm20b_init_fifo(struct gpu_ops *gops)
 {
 	gops->fifo.init_fifo_setup_hw = gk20a_init_fifo_setup_hw;
 	gops->fifo.bind_channel = channel_gm20b_bind;
-	gops->fifo.unbind_channel = channel_gk20a_unbind;
-	gops->fifo.disable_channel = channel_gk20a_disable;
-	gops->fifo.enable_channel = channel_gk20a_enable;
-	gops->fifo.alloc_inst = channel_gk20a_alloc_inst;
-	gops->fifo.free_inst = channel_gk20a_free_inst;
-	gops->fifo.setup_ramfc = channel_gk20a_setup_ramfc;
-	gops->fifo.channel_set_priority = gk20a_channel_set_priority;
-	gops->fifo.channel_set_timeslice = gk20a_channel_set_timeslice;
-	gops->fifo.userd_gp_get = gk20a_userd_gp_get;
-	gops->fifo.userd_gp_put = gk20a_userd_gp_put;
+	gops->fifo.unbind_channel = gk20a_fifo_channel_unbind;
+	gops->fifo.disable_channel = gk20a_fifo_disable_channel;
+	gops->fifo.enable_channel = gk20a_fifo_enable_channel;
+	gops->fifo.alloc_inst = gk20a_fifo_alloc_inst;
+	gops->fifo.free_inst = gk20a_fifo_free_inst;
+	gops->fifo.setup_ramfc = gk20a_fifo_setup_ramfc;
+	gops->fifo.channel_set_priority = gk20a_fifo_set_priority;
+	gops->fifo.channel_set_timeslice = gk20a_fifo_set_timeslice;
+	gops->fifo.setup_userd = gk20a_fifo_setup_userd;
+	gops->fifo.userd_gp_get = gk20a_fifo_userd_gp_get;
+	gops->fifo.userd_gp_put = gk20a_fifo_userd_gp_put;
+	gops->fifo.pbdma_acquire_val = gk20a_fifo_pbdma_acquire_val;
 
 	gops->fifo.preempt_channel = gk20a_fifo_preempt_channel;
 	gops->fifo.preempt_tsg = gk20a_fifo_preempt_tsg;

@@ -398,7 +398,9 @@ struct gpu_ops {
 		int (*alloc_inst)(struct gk20a *g, struct channel_gk20a *ch);
 		void (*free_inst)(struct gk20a *g, struct channel_gk20a *ch);
 		int (*setup_ramfc)(struct channel_gk20a *c, u64 gpfifo_base,
-				u32 gpfifo_entries, u32 flags);
+				u32 gpfifo_entries,
+				unsigned long acquire_timeout,
+				u32 flags);
 		int (*resetup_ramfc)(struct channel_gk20a *c);
 		int (*preempt_channel)(struct gk20a *g, u32 hw_chid);
 		int (*preempt_tsg)(struct gk20a *g, u32 tsgid);
@@ -456,6 +458,8 @@ struct gpu_ops {
 			unsigned int id_type, unsigned int timeout_rc_type);
 		void (*init_pbdma_intr_descs)(struct fifo_gk20a *f);
 		int (*reset_enable_hw)(struct gk20a *g);
+		int (*setup_userd)(struct channel_gk20a *c);
+		u32 (*pbdma_acquire_val)(u64 timeout);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/

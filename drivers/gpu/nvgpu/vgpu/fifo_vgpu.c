@@ -134,7 +134,8 @@ static void vgpu_channel_disable(struct channel_gk20a *ch)
 }
 
 static int vgpu_channel_setup_ramfc(struct channel_gk20a *ch, u64 gpfifo_base,
-				u32 gpfifo_entries, u32 flags)
+				u32 gpfifo_entries,
+				unsigned long acquire_timeout, u32 flags)
 {
 	struct device __maybe_unused *d = dev_from_gk20a(ch->g);
 	struct dma_iommu_mapping *mapping = to_dma_iommu_mapping(d);

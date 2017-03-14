@@ -201,7 +201,6 @@ struct channel_gk20a {
 	struct channel_ctx_gk20a ch_ctx;
 
 	struct mem_desc inst_block;
-	struct mem_desc_sub ramfc;
 
 	u64 userd_iova;
 	u64 userd_gpu_va;
@@ -314,8 +313,6 @@ int gk20a_channel_release(struct inode *inode, struct file *filp);
 struct channel_gk20a *gk20a_get_channel_from_file(int fd);
 void gk20a_channel_update(struct channel_gk20a *c);
 
-void gk20a_init_channel(struct gpu_ops *gops);
-
 /* returns ch if reference was obtained */
 struct channel_gk20a *__must_check _gk20a_channel_get(struct channel_gk20a *ch,
 						      const char *caller);
@@ -336,7 +333,6 @@ struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
 		void *update_fn_data,
 		int runlist_id,
 		bool is_privileged_channel);
-void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a);
 
 int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvgpu_gpfifo *gpfifo,
@@ -351,14 +347,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 			       struct nvgpu_alloc_gpfifo_ex_args *args);
 
-void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a);
-void channel_gk20a_disable(struct channel_gk20a *ch);
-int channel_gk20a_alloc_inst(struct gk20a *g, struct channel_gk20a *ch);
-void channel_gk20a_free_inst(struct gk20a *g, struct channel_gk20a *ch);
-u32 channel_gk20a_pbdma_acquire_val(struct channel_gk20a *c);
-int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
-			u64 gpfifo_base, u32 gpfifo_entries, u32 flags);
-void channel_gk20a_enable(struct channel_gk20a *ch);
 void gk20a_channel_timeout_restart_all_channels(struct gk20a *g);
 
 bool channel_gk20a_is_prealloc_enabled(struct channel_gk20a *c);
@@ -369,13 +357,9 @@ bool channel_gk20a_joblist_is_empty(struct channel_gk20a *c);
 int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 		int timeslice_period,
 		int *__timeslice_timeout, int *__timeslice_scale);
-int gk20a_channel_set_priority(struct channel_gk20a *ch, u32 priority);
-int gk20a_channel_set_timeslice(struct channel_gk20a *ch, unsigned int timeslice);
 int gk20a_channel_set_runlist_interleave(struct channel_gk20a *ch,
 		u32 level);
 void gk20a_channel_event_id_post_event(struct channel_gk20a *ch,
 				       u32 event_id);
-
-void gk20a_channel_setup_ramfc_for_privileged_channel(struct channel_gk20a *c);
 
 #endif /* CHANNEL_GK20A_H */

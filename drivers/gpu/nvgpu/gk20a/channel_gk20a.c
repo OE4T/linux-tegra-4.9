@@ -38,11 +38,7 @@
 #include "dbg_gpu_gk20a.h"
 #include "fence_gk20a.h"
 
-#include <nvgpu/hw/gk20a/hw_ram_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_fifo_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
 
 #define NVMAP_HANDLE_PARAM_SIZE 1
 
@@ -77,11 +73,6 @@ static void channel_gk20a_joblist_delete(struct channel_gk20a *c,
 		struct channel_gk20a_job *job);
 static struct channel_gk20a_job *channel_gk20a_joblist_peek(
 		struct channel_gk20a *c);
-
-static int channel_gk20a_commit_userd(struct channel_gk20a *c);
-static int channel_gk20a_setup_userd(struct channel_gk20a *c);
-
-static void channel_gk20a_bind(struct channel_gk20a *ch_gk20a);
 
 static int channel_gk20a_update_runlist(struct channel_gk20a *c,
 					bool add);
@@ -159,34 +150,6 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 	return 0;
 }
 
-static int channel_gk20a_commit_userd(struct channel_gk20a *c)
-{
-	u32 addr_lo;
-	u32 addr_hi;
-	struct gk20a *g = c->g;
-
-	gk20a_dbg_fn("");
-
-	addr_lo = u64_lo32(c->userd_iova >> ram_userd_base_shift_v());
-	addr_hi = u64_hi32(c->userd_iova);
-
-	gk20a_dbg_info("channel %d : set ramfc userd 0x%16llx",
-		c->hw_chid, (u64)c->userd_iova);
-
-	gk20a_mem_wr32(g, &c->inst_block,
-		       ram_in_ramfc_w() + ram_fc_userd_w(),
-		       gk20a_aperture_mask(g, &g->fifo.userd,
-			pbdma_userd_target_sys_mem_ncoh_f(),
-			pbdma_userd_target_vid_mem_f()) |
-		       pbdma_userd_addr_f(addr_lo));
-
-	gk20a_mem_wr32(g, &c->inst_block,
-		       ram_in_ramfc_w() + ram_fc_userd_hi_w(),
-		       pbdma_userd_hi_addr_f(addr_hi));
-
-	return 0;
-}
-
 int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 		int timeslice_period,
 		int *__timeslice_timeout, int *__timeslice_scale)
@@ -215,253 +178,9 @@ int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 	return 0;
 }
 
-static int channel_gk20a_set_schedule_params(struct channel_gk20a *c)
-{
-	int shift = 0, value = 0;
-
-	gk20a_channel_get_timescale_from_timeslice(c->g,
-		c->timeslice_us, &value, &shift);
-
-	/* disable channel */
-	c->g->ops.fifo.disable_channel(c);
-
-	/* preempt the channel */
-	WARN_ON(c->g->ops.fifo.preempt_channel(c->g, c->hw_chid));
-
-	/* set new timeslice */
-	gk20a_mem_wr32(c->g, &c->inst_block, ram_fc_runlist_timeslice_w(),
-		value | (shift << 12) |
-		fifo_runlist_timeslice_enable_true_f());
-
-	/* enable channel */
-	gk20a_writel(c->g, ccsr_channel_r(c->hw_chid),
-		gk20a_readl(c->g, ccsr_channel_r(c->hw_chid)) |
-		ccsr_channel_enable_set_true_f());
-
-	return 0;
-}
-
-u32 channel_gk20a_pbdma_acquire_val(struct channel_gk20a *c)
-{
-	u32 val, exp, man;
-	u64 timeout;
-	unsigned int val_len;
-
-	val = pbdma_acquire_retry_man_2_f() |
-		pbdma_acquire_retry_exp_2_f();
-
-	if (!c->g->timeouts_enabled || !c->wdt_enabled)
-		return val;
-
-	timeout = gk20a_get_channel_watchdog_timeout(c);
-	timeout *= 80UL;
-	do_div(timeout, 100); /* set acquire timeout to 80% of channel wdt */
-	timeout *= 1000000UL; /* ms -> ns */
-	do_div(timeout, 1024); /* in unit of 1024ns */
-	val_len = fls(timeout >> 32) + 32;
-	if (val_len == 32)
-		val_len = fls(timeout);
-	if (val_len > 16U + pbdma_acquire_timeout_exp_max_v()) { /* man: 16bits */
-		exp = pbdma_acquire_timeout_exp_max_v();
-		man = pbdma_acquire_timeout_man_max_v();
-	} else if (val_len > 16) {
-		exp = val_len - 16;
-		man = timeout >> exp;
-	} else {
-		exp = 0;
-		man = timeout;
-	}
-
-	val |= pbdma_acquire_timeout_exp_f(exp) |
-		pbdma_acquire_timeout_man_f(man) |
-		pbdma_acquire_timeout_en_enable_f();
-
-	return val;
-}
-
-void gk20a_channel_setup_ramfc_for_privileged_channel(struct channel_gk20a *c)
-{
-	struct gk20a *g = c->g;
-	struct mem_desc *mem = &c->inst_block;
-
-	gk20a_dbg_info("channel %d : set ramfc privileged_channel", c->hw_chid);
-
-	/* Enable HCE priv mode for phys mode transfer */
-	gk20a_mem_wr32(g, mem, ram_fc_hce_ctrl_w(),
-		pbdma_hce_ctrl_hce_priv_mode_yes_f());
-}
-
-int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
-			u64 gpfifo_base, u32 gpfifo_entries, u32 flags)
-{
-	struct gk20a *g = c->g;
-	struct mem_desc *mem = &c->inst_block;
-
-	gk20a_dbg_fn("");
-
-	gk20a_memset(g, mem, 0, 0, ram_fc_size_val_v());
-
-	gk20a_mem_wr32(g, mem, ram_fc_gp_base_w(),
-		pbdma_gp_base_offset_f(
-		u64_lo32(gpfifo_base >> pbdma_gp_base_rsvd_s())));
-
-	gk20a_mem_wr32(g, mem, ram_fc_gp_base_hi_w(),
-		pbdma_gp_base_hi_offset_f(u64_hi32(gpfifo_base)) |
-		pbdma_gp_base_hi_limit2_f(ilog2(gpfifo_entries)));
-
-	gk20a_mem_wr32(g, mem, ram_fc_signature_w(),
-		 c->g->ops.fifo.get_pbdma_signature(c->g));
-
-	gk20a_mem_wr32(g, mem, ram_fc_formats_w(),
-		pbdma_formats_gp_fermi0_f() |
-		pbdma_formats_pb_fermi1_f() |
-		pbdma_formats_mp_fermi0_f());
-
-	gk20a_mem_wr32(g, mem, ram_fc_pb_header_w(),
-		pbdma_pb_header_priv_user_f() |
-		pbdma_pb_header_method_zero_f() |
-		pbdma_pb_header_subchannel_zero_f() |
-		pbdma_pb_header_level_main_f() |
-		pbdma_pb_header_first_true_f() |
-		pbdma_pb_header_type_inc_f());
-
-	gk20a_mem_wr32(g, mem, ram_fc_subdevice_w(),
-		pbdma_subdevice_id_f(1) |
-		pbdma_subdevice_status_active_f() |
-		pbdma_subdevice_channel_dma_enable_f());
-
-	gk20a_mem_wr32(g, mem, ram_fc_target_w(), pbdma_target_engine_sw_f());
-
-	gk20a_mem_wr32(g, mem, ram_fc_acquire_w(),
-		channel_gk20a_pbdma_acquire_val(c));
-
-	gk20a_mem_wr32(g, mem, ram_fc_runlist_timeslice_w(),
-		fifo_runlist_timeslice_timeout_128_f() |
-		fifo_runlist_timeslice_timescale_3_f() |
-		fifo_runlist_timeslice_enable_true_f());
-
-	gk20a_mem_wr32(g, mem, ram_fc_pb_timeslice_w(),
-		fifo_pb_timeslice_timeout_16_f() |
-		fifo_pb_timeslice_timescale_0_f() |
-		fifo_pb_timeslice_enable_true_f());
-
-	gk20a_mem_wr32(g, mem, ram_fc_chid_w(), ram_fc_chid_id_f(c->hw_chid));
-
-	if (c->is_privileged_channel)
-		gk20a_channel_setup_ramfc_for_privileged_channel(c);
-
-	return channel_gk20a_commit_userd(c);
-}
-
-static int channel_gk20a_setup_userd(struct channel_gk20a *c)
-{
-	struct gk20a *g = c->g;
-	struct mem_desc *mem = &g->fifo.userd;
-	u32 offset = c->hw_chid * g->fifo.userd_entry_size / sizeof(u32);
-
-	gk20a_dbg_fn("");
-
-	gk20a_mem_wr32(g, mem, offset + ram_userd_put_w(), 0);
-	gk20a_mem_wr32(g, mem, offset + ram_userd_get_w(), 0);
-	gk20a_mem_wr32(g, mem, offset + ram_userd_ref_w(), 0);
-	gk20a_mem_wr32(g, mem, offset + ram_userd_put_hi_w(), 0);
-	gk20a_mem_wr32(g, mem, offset + ram_userd_ref_threshold_w(), 0);
-	gk20a_mem_wr32(g, mem, offset + ram_userd_gp_top_level_get_w(), 0);
-	gk20a_mem_wr32(g, mem, offset + ram_userd_gp_top_level_get_hi_w(), 0);
-	gk20a_mem_wr32(g, mem, offset + ram_userd_get_hi_w(), 0);
-	gk20a_mem_wr32(g, mem, offset + ram_userd_gp_get_w(), 0);
-	gk20a_mem_wr32(g, mem, offset + ram_userd_gp_put_w(), 0);
-
-	return 0;
-}
-
-static void channel_gk20a_bind(struct channel_gk20a *c)
-{
-	struct gk20a *g = c->g;
-	u32 inst_ptr = gk20a_mm_inst_block_addr(g, &c->inst_block)
-		>> ram_in_base_shift_v();
-
-	gk20a_dbg_info("bind channel %d inst ptr 0x%08x",
-		c->hw_chid, inst_ptr);
-
-
-	gk20a_writel(g, ccsr_channel_r(c->hw_chid),
-		(gk20a_readl(g, ccsr_channel_r(c->hw_chid)) &
-		 ~ccsr_channel_runlist_f(~0)) |
-		 ccsr_channel_runlist_f(c->runlist_id));
-
-	gk20a_writel(g, ccsr_channel_inst_r(c->hw_chid),
-		ccsr_channel_inst_ptr_f(inst_ptr) |
-		gk20a_aperture_mask(g, &c->inst_block,
-		 ccsr_channel_inst_target_sys_mem_ncoh_f(),
-		 ccsr_channel_inst_target_vid_mem_f()) |
-		ccsr_channel_inst_bind_true_f());
-
-	gk20a_writel(g, ccsr_channel_r(c->hw_chid),
-		(gk20a_readl(g, ccsr_channel_r(c->hw_chid)) &
-		 ~ccsr_channel_enable_set_f(~0)) |
-		 ccsr_channel_enable_set_true_f());
-
-	wmb();
-	atomic_set(&c->bound, true);
-
-}
-
-void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a)
-{
-	struct gk20a *g = ch_gk20a->g;
-
-	gk20a_dbg_fn("");
-
-	if (atomic_cmpxchg(&ch_gk20a->bound, true, false)) {
-		gk20a_writel(g, ccsr_channel_inst_r(ch_gk20a->hw_chid),
-			ccsr_channel_inst_ptr_f(0) |
-			ccsr_channel_inst_bind_false_f());
-	}
-}
-
-int channel_gk20a_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
-{
-	int err;
-
-	gk20a_dbg_fn("");
-
-	err = gk20a_alloc_inst_block(g, &ch->inst_block);
-	if (err)
-		return err;
-
-	gk20a_dbg_info("channel %d inst block physical addr: 0x%16llx",
-		ch->hw_chid, gk20a_mm_inst_block_addr(g, &ch->inst_block));
-
-	gk20a_dbg_fn("done");
-	return 0;
-}
-
-void channel_gk20a_free_inst(struct gk20a *g, struct channel_gk20a *ch)
-{
-	gk20a_free_inst_block(g, &ch->inst_block);
-}
-
 static int channel_gk20a_update_runlist(struct channel_gk20a *c, bool add)
 {
 	return c->g->ops.fifo.update_runlist(c->g, c->runlist_id, c->hw_chid, add, true);
-}
-
-void channel_gk20a_enable(struct channel_gk20a *ch)
-{
-	/* enable channel */
-	gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
-		gk20a_readl(ch->g, ccsr_channel_r(ch->hw_chid)) |
-		ccsr_channel_enable_set_true_f());
-}
-
-void channel_gk20a_disable(struct channel_gk20a *ch)
-{
-	/* disable channel */
-	gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
-		gk20a_readl(ch->g,
-			ccsr_channel_r(ch->hw_chid)) |
-			ccsr_channel_enable_clr_true_f());
 }
 
 int gk20a_enable_channel_tsg(struct gk20a *g, struct channel_gk20a *ch)
@@ -990,8 +709,6 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	g->ops.gr.free_channel_ctx(ch);
 
 	gk20a_gr_flush_channel_tlb(gr);
-
-	memset(&ch->ramfc, 0, sizeof(struct mem_desc_sub));
 
 	gk20a_gmmu_unmap_free(ch_vm, &ch->gpfifo.mem);
 	nvgpu_big_free(g, ch->gpfifo.pipe);
@@ -1834,6 +1551,7 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	struct vm_gk20a *ch_vm;
 	u32 gpfifo_size;
 	int err = 0;
+	unsigned long acquire_timeout;
 
 	gpfifo_size = args->num_entries;
 
@@ -1851,9 +1569,6 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 		return -EINVAL;
 	}
 	ch_vm = c->vm;
-
-	c->ramfc.offset = 0;
-	c->ramfc.size = ram_in_ramfc_s() / 8;
 
 	if (c->gpfifo.mem.size) {
 		gk20a_err(d, "channel %d :"
@@ -1884,7 +1599,7 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	gk20a_dbg_info("channel %d : gpfifo_base 0x%016llx, size %d",
 		c->hw_chid, c->gpfifo.mem.gpu_va, c->gpfifo.entry_num);
 
-	channel_gk20a_setup_userd(c);
+	g->ops.fifo.setup_userd(c);
 
 	if (!platform->aggressive_sync_destroy_thresh) {
 		nvgpu_mutex_acquire(&c->sync_lock);
@@ -1903,8 +1618,14 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 		}
 	}
 
+	if (!c->g->timeouts_enabled || !c->wdt_enabled)
+		acquire_timeout = 0;
+	else
+		acquire_timeout = gk20a_get_channel_watchdog_timeout(c);
+
 	err = g->ops.fifo.setup_ramfc(c, c->gpfifo.mem.gpu_va,
-					c->gpfifo.entry_num, args->flags);
+					c->gpfifo.entry_num,
+					acquire_timeout, args->flags);
 	if (err)
 		goto clean_up_sync;
 
@@ -1947,19 +1668,6 @@ clean_up:
 	memset(&c->gpfifo, 0, sizeof(struct gpfifo_desc));
 	gk20a_err(d, "fail");
 	return err;
-}
-
-u32 gk20a_userd_gp_get(struct gk20a *g, struct channel_gk20a *c)
-{
-	return gk20a_bar1_readl(g,
-		c->userd_gpu_va + sizeof(u32) * ram_userd_gp_get_w());
-}
-
-void gk20a_userd_gp_put(struct gk20a *g, struct channel_gk20a *c)
-{
-	gk20a_bar1_writel(g,
-		c->userd_gpu_va + sizeof(u32) * ram_userd_gp_put_w(),
-		c->gpfifo.put);
 }
 
 /* Update with this periodically to determine how the gpfifo is draining. */
@@ -2093,7 +1801,7 @@ static void trace_write_pushbuffer_range(struct channel_gk20a *c,
 
 static void __gk20a_channel_timeout_start(struct channel_gk20a *ch)
 {
-	ch->timeout.gp_get = gk20a_userd_gp_get(ch->g, ch);
+	ch->timeout.gp_get = ch->g->ops.fifo.userd_gp_get(ch->g, ch);
 	ch->timeout.running = true;
 	nvgpu_timeout_init(ch->g, &ch->timeout.timer,
 			gk20a_get_channel_watchdog_timeout(ch),
@@ -2225,7 +1933,7 @@ static void gk20a_channel_timeout_handler(struct channel_gk20a *ch)
 	ch->timeout.running = false;
 	nvgpu_raw_spinlock_release(&ch->timeout.lock);
 
-	if (gk20a_userd_gp_get(ch->g, ch) != gp_get) {
+	if (g->ops.fifo.userd_gp_get(ch->g, ch) != gp_get) {
 		/* Channel has advanced, reschedule */
 		gk20a_channel_timeout_start(ch);
 		return;
@@ -3693,55 +3401,6 @@ static int gk20a_channel_event_id_ctrl(struct channel_gk20a *ch,
 	return err;
 }
 
-int gk20a_channel_set_priority(struct channel_gk20a *ch, u32 priority)
-{
-	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		gk20a_err(dev_from_gk20a(ch->g),
-			"invalid operation for TSG!\n");
-		return -EINVAL;
-	}
-
-	/* set priority of graphics channel */
-	switch (priority) {
-	case NVGPU_PRIORITY_LOW:
-		ch->timeslice_us = ch->g->timeslice_low_priority_us;
-		break;
-	case NVGPU_PRIORITY_MEDIUM:
-		ch->timeslice_us = ch->g->timeslice_medium_priority_us;
-		break;
-	case NVGPU_PRIORITY_HIGH:
-		ch->timeslice_us = ch->g->timeslice_high_priority_us;
-		break;
-	default:
-		pr_err("Unsupported priority");
-		return -EINVAL;
-	}
-
-	return channel_gk20a_set_schedule_params(ch);
-}
-
-int gk20a_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
-{
-	struct gk20a *g = ch->g;
-
-	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		gk20a_err(dev_from_gk20a(ch->g),
-			"invalid operation for TSG!\n");
-		return -EINVAL;
-	}
-
-	if (timeslice < g->min_timeslice_us ||
-		timeslice > g->max_timeslice_us)
-		return -EINVAL;
-
-	ch->timeslice_us = timeslice;
-
-	gk20a_dbg(gpu_dbg_sched, "chid=%u timeslice=%u us",
-			 ch->hw_chid, timeslice);
-
-	return channel_gk20a_set_schedule_params(ch);
-}
-
 static int gk20a_channel_zcull_bind(struct channel_gk20a *ch,
 			    struct nvgpu_zcull_bind_args *args)
 {
@@ -3922,21 +3581,6 @@ static int gk20a_ioctl_channel_submit_gpfifo(
 #endif
 clean_up:
 	return ret;
-}
-
-void gk20a_init_channel(struct gpu_ops *gops)
-{
-	gops->fifo.bind_channel = channel_gk20a_bind;
-	gops->fifo.unbind_channel = channel_gk20a_unbind;
-	gops->fifo.disable_channel = channel_gk20a_disable;
-	gops->fifo.enable_channel = channel_gk20a_enable;
-	gops->fifo.alloc_inst = channel_gk20a_alloc_inst;
-	gops->fifo.free_inst = channel_gk20a_free_inst;
-	gops->fifo.setup_ramfc = channel_gk20a_setup_ramfc;
-	gops->fifo.channel_set_priority = gk20a_channel_set_priority;
-	gops->fifo.channel_set_timeslice = gk20a_channel_set_timeslice;
-	gops->fifo.userd_gp_get = gk20a_userd_gp_get;
-	gops->fifo.userd_gp_put = gk20a_userd_gp_put;
 }
 
 long gk20a_channel_ioctl(struct file *filp,

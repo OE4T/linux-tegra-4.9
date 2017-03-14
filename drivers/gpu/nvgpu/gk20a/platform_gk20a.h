@@ -17,7 +17,6 @@
 #define _GK20A_PLATFORM_H_
 
 #include <linux/device.h>
-#include <linux/dma-attrs.h>
 #include <linux/version.h>
 
 #include <nvgpu/lock.h>
@@ -33,7 +32,6 @@ struct secure_page_buffer {
 	void (*destroy)(struct device *, struct secure_page_buffer *);
 	size_t size;
 	u64 iova;
-	struct dma_attrs attrs;
 };
 
 struct gk20a_platform {

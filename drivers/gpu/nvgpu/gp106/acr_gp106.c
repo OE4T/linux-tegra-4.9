@@ -109,12 +109,14 @@ static int gp106_alloc_blob_space(struct gk20a *g,
 	 * Even though this mem_desc wouldn't be used, the wpr region needs to
 	 * be reserved in the allocator.
 	 */
-	err = gk20a_gmmu_alloc_attr_vid_at(g, 0, wpr_inf.size,
-				&g->acr.wpr_dummy, wpr_inf.wpr_base);
+	err = gk20a_gmmu_alloc_flags_vid_at(g,
+			NVGPU_DMA_NO_KERNEL_MAPPING, wpr_inf.size,
+			&g->acr.wpr_dummy, wpr_inf.wpr_base);
 	if (err)
 		return err;
 
-	return gk20a_gmmu_alloc_attr_vid_at(g, 0, wpr_inf.size, mem,
+	return gk20a_gmmu_alloc_flags_vid_at(g,
+			NVGPU_DMA_NO_KERNEL_MAPPING, wpr_inf.size, mem,
 			wpr_inf.nonwpr_base);
 }
 

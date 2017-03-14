@@ -19,7 +19,6 @@
 #define MM_GK20A_H
 
 #include <linux/scatterlist.h>
-#include <linux/dma-attrs.h>
 #include <linux/iommu.h>
 #include <soc/tegra/chip-id.h>
 #include <linux/vmalloc.h>
@@ -80,6 +79,7 @@ struct mem_desc {
 	struct nvgpu_allocator *allocator; /* vidmem only */
 	struct list_head clear_list_entry; /* vidmem only */
 	bool skip_wmb;
+	unsigned long flags;
 };
 
 struct mem_desc_sub {
@@ -545,40 +545,55 @@ u64 gk20a_gmmu_fixed_map(struct vm_gk20a *vm,
 		bool priv,
 		enum gk20a_aperture aperture);
 
+/* Flags for the below gk20a_gmmu_{alloc,alloc_map}_flags* */
+
+/*
+ * Don't create a virtual kernel mapping for the buffer but only allocate it;
+ * this may save some resources. The buffer can be mapped later explicitly.
+ */
+#define NVGPU_DMA_NO_KERNEL_MAPPING	(1 << 0)
+/*
+ * Don't allow building the buffer from individual pages but require a
+ * physically contiguous block.
+ */
+#define NVGPU_DMA_FORCE_CONTIGUOUS	(1 << 1)
+/*
+ * Make the mapping read-only.
+ */
+#define NVGPU_DMA_READ_ONLY		(1 << 2)
+
 int gk20a_gmmu_alloc_map(struct vm_gk20a *vm, size_t size,
 		struct mem_desc *mem);
-int gk20a_gmmu_alloc_map_attr(struct vm_gk20a *vm, enum dma_attr attr,
+int gk20a_gmmu_alloc_map_flags(struct vm_gk20a *vm, unsigned long flags,
 		size_t size, struct mem_desc *mem);
 
 int gk20a_gmmu_alloc_map_sys(struct vm_gk20a *vm, size_t size,
 		struct mem_desc *mem);
-int gk20a_gmmu_alloc_map_attr_sys(struct vm_gk20a *vm, enum dma_attr attr,
+int gk20a_gmmu_alloc_map_flags_sys(struct vm_gk20a *vm, unsigned long flags,
 		size_t size, struct mem_desc *mem);
 
 int gk20a_gmmu_alloc_map_vid(struct vm_gk20a *vm, size_t size,
 		struct mem_desc *mem);
-int gk20a_gmmu_alloc_map_attr_vid(struct vm_gk20a *vm, enum dma_attr attr,
+int gk20a_gmmu_alloc_map_flags_vid(struct vm_gk20a *vm, unsigned long flags,
 		size_t size, struct mem_desc *mem);
 
 void gk20a_gmmu_unmap_free(struct vm_gk20a *vm, struct mem_desc *mem);
 
 int gk20a_gmmu_alloc(struct gk20a *g, size_t size, struct mem_desc *mem);
-int gk20a_gmmu_alloc_attr(struct gk20a *g, enum dma_attr attr, size_t size,
+int gk20a_gmmu_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
 		struct mem_desc *mem);
 
 int gk20a_gmmu_alloc_sys(struct gk20a *g, size_t size, struct mem_desc *mem);
-int gk20a_gmmu_alloc_attr_sys(struct gk20a *g, enum dma_attr attr, size_t size,
-		struct mem_desc *mem);
+int gk20a_gmmu_alloc_flags_sys(struct gk20a *g, unsigned long flags,
+		size_t size, struct mem_desc *mem);
 
 int gk20a_gmmu_alloc_vid(struct gk20a *g, size_t size, struct mem_desc *mem);
-int gk20a_gmmu_alloc_attr_vid(struct gk20a *g, enum dma_attr attr, size_t size,
-		struct mem_desc *mem);
-int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
+int gk20a_gmmu_alloc_flags_vid(struct gk20a *g, unsigned long flags,
+		size_t size, struct mem_desc *mem);
+int gk20a_gmmu_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 		size_t size, struct mem_desc *mem, dma_addr_t at);
 
 void gk20a_gmmu_free(struct gk20a *g, struct mem_desc *mem);
-void gk20a_gmmu_free_attr(struct gk20a *g, enum dma_attr attr,
-		struct mem_desc *mem);
 
 static inline phys_addr_t gk20a_mem_phys(struct mem_desc *mem)
 {

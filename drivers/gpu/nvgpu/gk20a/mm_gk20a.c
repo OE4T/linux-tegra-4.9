@@ -25,6 +25,8 @@
 #include <soc/tegra/chip-id.h>
 #include <linux/vmalloc.h>
 #include <linux/dma-buf.h>
+#include <linux/dma-mapping.h>
+#include <linux/dma-attrs.h>
 #include <linux/lcm.h>
 #include <linux/fdtable.h>
 #include <uapi/linux/nvgpu.h>
@@ -1253,7 +1255,7 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 	if (IS_ENABLED(CONFIG_ARM64))
 		err = gk20a_gmmu_alloc(g, len, &entry->mem);
 	else
-		err = gk20a_gmmu_alloc_attr(g, DMA_ATTR_NO_KERNEL_MAPPING,
+		err = gk20a_gmmu_alloc_flags(g, NVGPU_DMA_NO_KERNEL_MAPPING,
 				len, &entry->mem);
 
 
@@ -1284,15 +1286,7 @@ void free_gmmu_pages(struct vm_gk20a *vm,
 		return;
 	}
 
-	/*
-	 * On arm32 we're limited by vmalloc space, so we do not map pages by
-	 * default.
-	 */
-	if (IS_ENABLED(CONFIG_ARM64))
-		gk20a_gmmu_free(g, &entry->mem);
-	else
-		gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING,
-				&entry->mem);
+	gk20a_gmmu_free(g, &entry->mem);
 }
 
 int map_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry)
@@ -2910,14 +2904,14 @@ u64 gk20a_gmmu_fixed_map(struct vm_gk20a *vm,
 
 int gk20a_gmmu_alloc(struct gk20a *g, size_t size, struct mem_desc *mem)
 {
-	return gk20a_gmmu_alloc_attr(g, 0, size, mem);
+	return gk20a_gmmu_alloc_flags(g, 0, size, mem);
 }
 
-int gk20a_gmmu_alloc_attr(struct gk20a *g, enum dma_attr attr, size_t size,
+int gk20a_gmmu_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
 		struct mem_desc *mem)
 {
 	if (g->mm.vidmem_is_vidmem) {
-		int err = gk20a_gmmu_alloc_attr_vid(g, attr, size, mem);
+		int err = gk20a_gmmu_alloc_flags_vid(g, flags, size, mem);
 
 		if (!err)
 			return 0;
@@ -2927,15 +2921,26 @@ int gk20a_gmmu_alloc_attr(struct gk20a *g, enum dma_attr attr, size_t size,
 		 */
 	}
 
-	return gk20a_gmmu_alloc_attr_sys(g, attr, size, mem);
+	return gk20a_gmmu_alloc_flags_sys(g, flags, size, mem);
 }
 
 int gk20a_gmmu_alloc_sys(struct gk20a *g, size_t size, struct mem_desc *mem)
 {
-	return gk20a_gmmu_alloc_attr_sys(g, 0, size, mem);
+	return gk20a_gmmu_alloc_flags_sys(g, 0, size, mem);
 }
 
-int gk20a_gmmu_alloc_attr_sys(struct gk20a *g, enum dma_attr attr,
+static void gk20a_dma_flags_to_attrs(struct dma_attrs *attrs,
+		unsigned long flags)
+{
+	if (flags & NVGPU_DMA_NO_KERNEL_MAPPING)
+		dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, attrs);
+	if (flags & NVGPU_DMA_FORCE_CONTIGUOUS)
+		dma_set_attr(DMA_ATTR_FORCE_CONTIGUOUS, attrs);
+	if (flags & NVGPU_DMA_READ_ONLY)
+		dma_set_attr(DMA_ATTR_READ_ONLY, attrs);
+}
+
+int gk20a_gmmu_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 		size_t size, struct mem_desc *mem)
 {
 	struct device *d = dev_from_gk20a(g);
@@ -2944,17 +2949,19 @@ int gk20a_gmmu_alloc_attr_sys(struct gk20a *g, enum dma_attr attr,
 
 	gk20a_dbg_fn("");
 
-	if (attr) {
-		DEFINE_DMA_ATTRS(attrs);
-		dma_set_attr(attr, &attrs);
-		if (attr == DMA_ATTR_NO_KERNEL_MAPPING) {
+	if (flags) {
+		DEFINE_DMA_ATTRS(dma_attrs);
+
+		gk20a_dma_flags_to_attrs(&dma_attrs, flags);
+
+		if (flags & NVGPU_DMA_NO_KERNEL_MAPPING) {
 			mem->pages = dma_alloc_attrs(d,
-					size, &iova, GFP_KERNEL, &attrs);
+					size, &iova, GFP_KERNEL, &dma_attrs);
 			if (!mem->pages)
 				return -ENOMEM;
 		} else {
 			mem->cpu_va = dma_alloc_attrs(d,
-					size, &iova, GFP_KERNEL, &attrs);
+					size, &iova, GFP_KERNEL, &dma_attrs);
 			if (!mem->cpu_va)
 				return -ENOMEM;
 		}
@@ -2964,7 +2971,7 @@ int gk20a_gmmu_alloc_attr_sys(struct gk20a *g, enum dma_attr attr,
 			return -ENOMEM;
 	}
 
-	if (attr == DMA_ATTR_NO_KERNEL_MAPPING)
+	if (flags & NVGPU_DMA_NO_KERNEL_MAPPING)
 		err = gk20a_get_sgtable_from_pages(d, &mem->sgt, mem->pages,
 						   iova, size);
 	else {
@@ -2976,6 +2983,7 @@ int gk20a_gmmu_alloc_attr_sys(struct gk20a *g, enum dma_attr attr,
 
 	mem->size = size;
 	mem->aperture = APERTURE_SYSMEM;
+	mem->flags = flags;
 
 	gk20a_dbg_fn("done");
 
@@ -2988,31 +2996,28 @@ fail_free:
 	return err;
 }
 
-static void gk20a_gmmu_free_attr_sys(struct gk20a *g, enum dma_attr attr,
-			  struct mem_desc *mem)
+static void gk20a_gmmu_free_sys(struct gk20a *g, struct mem_desc *mem)
 {
 	struct device *d = dev_from_gk20a(g);
 
 	if (mem->cpu_va || mem->pages) {
-		if (attr) {
-			DEFINE_DMA_ATTRS(attrs);
-			dma_set_attr(attr, &attrs);
-			if (attr == DMA_ATTR_NO_KERNEL_MAPPING) {
-				if (mem->pages)
-					dma_free_attrs(d, mem->size, mem->pages,
-						sg_dma_address(mem->sgt->sgl),
-						&attrs);
+		if (mem->flags) {
+			DEFINE_DMA_ATTRS(dma_attrs);
+
+			gk20a_dma_flags_to_attrs(&dma_attrs, mem->flags);
+
+			if (mem->flags & NVGPU_DMA_NO_KERNEL_MAPPING) {
+				dma_free_attrs(d, mem->size, mem->pages,
+					sg_dma_address(mem->sgt->sgl),
+					&dma_attrs);
 			} else {
-				if (mem->cpu_va)
-					dma_free_attrs(d, mem->size,
-						mem->cpu_va,
-						sg_dma_address(mem->sgt->sgl),
-						&attrs);
+				dma_free_attrs(d, mem->size, mem->cpu_va,
+					sg_dma_address(mem->sgt->sgl),
+					&dma_attrs);
 			}
 		} else {
-			if (mem->cpu_va)
-				dma_free_coherent(d, mem->size, mem->cpu_va,
-						sg_dma_address(mem->sgt->sgl));
+			dma_free_coherent(d, mem->size, mem->cpu_va,
+					sg_dma_address(mem->sgt->sgl));
 		}
 		mem->cpu_va = NULL;
 		mem->pages = NULL;
@@ -3089,13 +3094,14 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct mem_desc *mem)
 
 int gk20a_gmmu_alloc_vid(struct gk20a *g, size_t size, struct mem_desc *mem)
 {
-	return gk20a_gmmu_alloc_attr_vid(g, 0, size, mem);
+	return gk20a_gmmu_alloc_flags_vid(g,
+			NVGPU_DMA_NO_KERNEL_MAPPING, size, mem);
 }
 
-int gk20a_gmmu_alloc_attr_vid(struct gk20a *g, enum dma_attr attr,
+int gk20a_gmmu_alloc_flags_vid(struct gk20a *g, unsigned long flags,
 		size_t size, struct mem_desc *mem)
 {
-	return gk20a_gmmu_alloc_attr_vid_at(g, attr, size, mem, 0);
+	return gk20a_gmmu_alloc_flags_vid_at(g, flags, size, mem, 0);
 }
 
 #if defined(CONFIG_GK20A_VIDMEM)
@@ -3113,7 +3119,7 @@ static u64 __gk20a_gmmu_alloc(struct nvgpu_allocator *allocator, dma_addr_t at,
 }
 #endif
 
-int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
+int gk20a_gmmu_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 		size_t size, struct mem_desc *mem, dma_addr_t at)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
@@ -3129,9 +3135,11 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 	if (!nvgpu_alloc_initialized(&g->mm.vidmem.allocator))
 		return -ENOSYS;
 
-	/* we don't support dma attributes here, except that kernel mappings
-	 * are not done anyway */
-	WARN_ON(attr != 0 && attr != DMA_ATTR_NO_KERNEL_MAPPING);
+	/*
+	 * Our own allocator doesn't have any flags yet, and we can't
+	 * kernel-map these, so require explicit flags.
+	 */
+	WARN_ON(flags != NVGPU_DMA_NO_KERNEL_MAPPING);
 
 	nvgpu_mutex_acquire(&g->mm.vidmem.clear_list_mutex);
 	before_pending = atomic64_read(&g->mm.vidmem.bytes_pending);
@@ -3186,11 +3194,13 @@ fail_physfree:
 #endif
 }
 
-static void gk20a_gmmu_free_attr_vid(struct gk20a *g, enum dma_attr attr,
-			  struct mem_desc *mem)
+static void gk20a_gmmu_free_vid(struct gk20a *g, struct mem_desc *mem)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
 	bool was_empty;
+
+	/* Sanity check - only this supported when allocating. */
+	WARN_ON(mem->flags != NVGPU_DMA_NO_KERNEL_MAPPING);
 
 	if (mem->user_mem) {
 		nvgpu_mutex_acquire(&g->mm.vidmem.clear_list_mutex);
@@ -3216,22 +3226,16 @@ static void gk20a_gmmu_free_attr_vid(struct gk20a *g, enum dma_attr attr,
 #endif
 }
 
-void gk20a_gmmu_free_attr(struct gk20a *g, enum dma_attr attr,
-			  struct mem_desc *mem)
+void gk20a_gmmu_free(struct gk20a *g, struct mem_desc *mem)
 {
 	switch (mem->aperture) {
 	case APERTURE_SYSMEM:
-		return gk20a_gmmu_free_attr_sys(g, attr, mem);
+		return gk20a_gmmu_free_sys(g, mem);
 	case APERTURE_VIDMEM:
-		return gk20a_gmmu_free_attr_vid(g, attr, mem);
+		return gk20a_gmmu_free_vid(g, mem);
 	default:
 		break; /* like free() on "null" memory */
 	}
-}
-
-void gk20a_gmmu_free(struct gk20a *g, struct mem_desc *mem)
-{
-	return gk20a_gmmu_free_attr(g, 0, mem);
 }
 
 /*
@@ -3322,14 +3326,14 @@ u32 gk20a_aperture_mask(struct gk20a *g, struct mem_desc *mem,
 int gk20a_gmmu_alloc_map(struct vm_gk20a *vm, size_t size,
 		struct mem_desc *mem)
 {
-	return gk20a_gmmu_alloc_map_attr(vm, 0, size, mem);
+	return gk20a_gmmu_alloc_map_flags(vm, 0, size, mem);
 }
 
-int gk20a_gmmu_alloc_map_attr(struct vm_gk20a *vm,
-			 enum dma_attr attr, size_t size, struct mem_desc *mem)
+int gk20a_gmmu_alloc_map_flags(struct vm_gk20a *vm, unsigned long flags,
+		size_t size, struct mem_desc *mem)
 {
 	if (vm->mm->vidmem_is_vidmem) {
-		int err = gk20a_gmmu_alloc_map_attr_vid(vm, 0, size, mem);
+		int err = gk20a_gmmu_alloc_map_flags_vid(vm, flags, size, mem);
 
 		if (!err)
 			return 0;
@@ -3339,19 +3343,19 @@ int gk20a_gmmu_alloc_map_attr(struct vm_gk20a *vm,
 		 */
 	}
 
-	return gk20a_gmmu_alloc_map_attr_sys(vm, 0, size, mem);
+	return gk20a_gmmu_alloc_map_flags_sys(vm, flags, size, mem);
 }
 
 int gk20a_gmmu_alloc_map_sys(struct vm_gk20a *vm, size_t size,
 		struct mem_desc *mem)
 {
-	return gk20a_gmmu_alloc_map_attr_sys(vm, 0, size, mem);
+	return gk20a_gmmu_alloc_map_flags_sys(vm, 0, size, mem);
 }
 
-int gk20a_gmmu_alloc_map_attr_sys(struct vm_gk20a *vm,
-			 enum dma_attr attr, size_t size, struct mem_desc *mem)
+int gk20a_gmmu_alloc_map_flags_sys(struct vm_gk20a *vm, unsigned long flags,
+		size_t size, struct mem_desc *mem)
 {
-	int err = gk20a_gmmu_alloc_attr_sys(vm->mm->g, attr, size, mem);
+	int err = gk20a_gmmu_alloc_flags_sys(vm->mm->g, flags, size, mem);
 
 	if (err)
 		return err;
@@ -3371,15 +3375,16 @@ fail_free:
 	return err;
 }
 
-int gk20a_gmmu_alloc_map_vid(struct vm_gk20a *vm, size_t size, struct mem_desc *mem)
+int gk20a_gmmu_alloc_map_vid(struct vm_gk20a *vm, size_t size,
+		struct mem_desc *mem)
 {
-	return gk20a_gmmu_alloc_map_attr_vid(vm, 0, size, mem);
+	return gk20a_gmmu_alloc_map_flags_vid(vm, 0, size, mem);
 }
 
-int gk20a_gmmu_alloc_map_attr_vid(struct vm_gk20a *vm,
-			 enum dma_attr attr, size_t size, struct mem_desc *mem)
+int gk20a_gmmu_alloc_map_flags_vid(struct vm_gk20a *vm, unsigned long flags,
+		size_t size, struct mem_desc *mem)
 {
-	int err = gk20a_gmmu_alloc_attr_vid(vm->mm->g, attr, size, mem);
+	int err = gk20a_gmmu_alloc_flags_vid(vm->mm->g, flags, size, mem);
 
 	if (err)
 		return err;

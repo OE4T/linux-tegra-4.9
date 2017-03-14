@@ -4746,7 +4746,7 @@ int gk20a_pmu_sysmem_surface_alloc(struct gk20a *g, struct mem_desc *mem,
 
 void gk20a_pmu_surface_free(struct gk20a *g, struct mem_desc *mem)
 {
-	gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING, mem);
+	gk20a_gmmu_free(g, mem);
 	memset(mem, 0, sizeof(struct mem_desc));
 }
 

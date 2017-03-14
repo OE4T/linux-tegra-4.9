@@ -1936,8 +1936,8 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 	if (enable_hwpm_ctxsw) {
 		/* Allocate buffer if necessary */
 		if (pm_ctx->mem.gpu_va == 0) {
-			ret = gk20a_gmmu_alloc_attr_sys(g,
-					DMA_ATTR_NO_KERNEL_MAPPING,
+			ret = gk20a_gmmu_alloc_flags_sys(g,
+					NVGPU_DMA_NO_KERNEL_MAPPING,
 					g->gr.ctx_vars.pm_ctxsw_image_size,
 					&pm_ctx->mem);
 			if (ret) {
@@ -1956,8 +1956,7 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 			if (!pm_ctx->mem.gpu_va) {
 				gk20a_err(dev_from_gk20a(g),
 					"failed to map pm ctxt buffer");
-				gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING,
-						&pm_ctx->mem);
+				gk20a_gmmu_free(g, &pm_ctx->mem);
 				c->g->ops.fifo.enable_channel(c);
 				return -ENOMEM;
 			}
@@ -2017,7 +2016,7 @@ clean_up_mem:
 cleanup_pm_buf:
 	gk20a_gmmu_unmap(c->vm, pm_ctx->mem.gpu_va, pm_ctx->mem.size,
 			gk20a_mem_flag_none);
-	gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING, &pm_ctx->mem);
+	gk20a_gmmu_free(g, &pm_ctx->mem);
 	memset(&pm_ctx->mem, 0, sizeof(struct mem_desc));
 
 	gk20a_enable_channel_tsg(g, c);
@@ -2699,7 +2698,7 @@ static void gk20a_gr_destroy_ctx_buffer(struct gk20a *g,
 {
 	if (!desc)
 		return;
-	gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING, &desc->mem);
+	gk20a_gmmu_free(g, &desc->mem);
 	desc->destroy = NULL;
 }
 
@@ -2709,7 +2708,7 @@ static int gk20a_gr_alloc_ctx_buffer(struct gk20a *g,
 {
 	int err = 0;
 
-	err = gk20a_gmmu_alloc_attr_sys(g, DMA_ATTR_NO_KERNEL_MAPPING,
+	err = gk20a_gmmu_alloc_flags_sys(g, NVGPU_DMA_NO_KERNEL_MAPPING,
 				    size, &desc->mem);
 	if (err)
 		return err;
@@ -2952,7 +2951,7 @@ int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 	if (!gr_ctx)
 		return -ENOMEM;
 
-	err = gk20a_gmmu_alloc_attr(g, DMA_ATTR_NO_KERNEL_MAPPING,
+	err = gk20a_gmmu_alloc_flags(g, NVGPU_DMA_NO_KERNEL_MAPPING,
 					gr->ctx_vars.buffer_total_size,
 					&gr_ctx->mem);
 	if (err)
@@ -2972,7 +2971,7 @@ int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 	return 0;
 
  err_free_mem:
-	gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING, &gr_ctx->mem);
+	gk20a_gmmu_free(g, &gr_ctx->mem);
  err_free_ctx:
 	kfree(gr_ctx);
 	gr_ctx = NULL;
@@ -3021,7 +3020,7 @@ void gr_gk20a_free_gr_ctx(struct gk20a *g,
 
 	gk20a_gmmu_unmap(vm, gr_ctx->mem.gpu_va,
 		gr_ctx->mem.size, gk20a_mem_flag_none);
-	gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING, &gr_ctx->mem);
+	gk20a_gmmu_free(g, &gr_ctx->mem);
 	kfree(gr_ctx);
 }
 
@@ -3050,7 +3049,7 @@ static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
 
 	gk20a_dbg_fn("");
 
-	err = gk20a_gmmu_alloc_map_attr_sys(ch_vm, DMA_ATTR_NO_KERNEL_MAPPING,
+	err = gk20a_gmmu_alloc_map_flags_sys(ch_vm, NVGPU_DMA_NO_KERNEL_MAPPING,
 					128 * sizeof(u32), &patch_ctx->mem);
 	if (err)
 		return err;
@@ -3070,7 +3069,7 @@ static void gr_gk20a_free_channel_patch_ctx(struct channel_gk20a *c)
 		gk20a_gmmu_unmap(c->vm, patch_ctx->mem.gpu_va,
 				 patch_ctx->mem.size, gk20a_mem_flag_none);
 
-	gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING, &patch_ctx->mem);
+	gk20a_gmmu_free(g, &patch_ctx->mem);
 	patch_ctx->data_count = 0;
 }
 
@@ -3085,7 +3084,7 @@ static void gr_gk20a_free_channel_pm_ctx(struct channel_gk20a *c)
 		gk20a_gmmu_unmap(c->vm, pm_ctx->mem.gpu_va,
 				 pm_ctx->mem.size, gk20a_mem_flag_none);
 
-		gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING, &pm_ctx->mem);
+		gk20a_gmmu_free(g, &pm_ctx->mem);
 	}
 }
 
@@ -3365,8 +3364,7 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	gk20a_gmmu_free(g, &gr->mmu_wr_mem);
 	gk20a_gmmu_free(g, &gr->mmu_rd_mem);
 
-	gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING,
-			     &gr->compbit_store.mem);
+	gk20a_gmmu_free(g, &gr->compbit_store.mem);
 
 	memset(&gr->compbit_store, 0, sizeof(struct compbit_store_desc));
 

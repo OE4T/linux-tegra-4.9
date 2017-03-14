@@ -49,7 +49,7 @@ static int __nvgpu_semaphore_sea_grow(struct nvgpu_semaphore_sea *sea)
 
 	__lock_sema_sea(sea);
 
-	ret = gk20a_gmmu_alloc_attr_sys(gk20a, DMA_ATTR_NO_KERNEL_MAPPING,
+	ret = gk20a_gmmu_alloc_flags_sys(gk20a, NVGPU_DMA_NO_KERNEL_MAPPING,
 				    PAGE_SIZE * SEMAPHORE_POOL_COUNT,
 				    &sea->sea_mem);
 	if (ret)

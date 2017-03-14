@@ -1411,8 +1411,8 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 		/*TODO in code verify that enable PMU is done,
 			scrubbing etc is done*/
 		/*TODO in code verify that gmmu vm init is done*/
-		err = gk20a_gmmu_alloc_attr_sys(g,
-				DMA_ATTR_READ_ONLY, bl_sz, &acr->hsbl_ucode);
+		err = gk20a_gmmu_alloc_flags_sys(g,
+				NVGPU_DMA_READ_ONLY, bl_sz, &acr->hsbl_ucode);
 		if (err) {
 			gk20a_err(d, "failed to allocate memory\n");
 			goto err_done;

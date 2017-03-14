@@ -95,9 +95,10 @@ static inline void __maybe_unused pmc_write(u32 val, unsigned long reg)
 static void gk20a_tegra_secure_page_destroy(struct device *dev,
 				       struct secure_page_buffer *secure_buffer)
 {
+	DEFINE_DMA_ATTRS(attrs);
 	dma_free_attrs(&tegra_vpr_dev, secure_buffer->size,
 			(void *)(uintptr_t)secure_buffer->iova,
-			secure_buffer->iova, &secure_buffer->attrs);
+			secure_buffer->iova, &attrs);
 }
 
 int gk20a_tegra_secure_page_alloc(struct device *dev)
@@ -118,7 +119,6 @@ int gk20a_tegra_secure_page_alloc(struct device *dev)
 
 	secure_buffer->size = size;
 	secure_buffer->iova = iova;
-	secure_buffer->attrs = attrs;
 	secure_buffer->destroy = gk20a_tegra_secure_page_destroy;
 
 	return 0;

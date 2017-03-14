@@ -482,7 +482,7 @@ static inline void *dma_alloc_attrs(struct device *dev, size_t size,
 {
 	struct dma_map_ops *ops = get_dma_ops(dev);
 	void *cpu_addr;
-
+	*dma_handle = DMA_ERROR_CODE;
 	BUG_ON(!ops);
 
 	if (dma_alloc_from_coherent_attr(dev, size, dma_handle,

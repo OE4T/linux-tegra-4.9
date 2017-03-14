@@ -1403,9 +1403,13 @@ static int wacom_tpc_irq(struct wacom_wac *wacom, size_t len)
 	if (wacom->pen_input)
 		dev_dbg(wacom->pen_input->dev.parent,
 			"%s: received report #%d\n", __func__, data[0]);
-	else if (wacom->touch_input)
+	else
+		return -ENXIO;
+	if (wacom->touch_input)
 		dev_dbg(wacom->touch_input->dev.parent,
 			"%s: received report #%d\n", __func__, data[0]);
+	else
+		return -ENXIO;
 
 	switch (len) {
 	case WACOM_PKGLEN_TPC1FG:

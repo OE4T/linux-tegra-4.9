@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -177,7 +177,6 @@
 			* pix_clk_hz = "";
 			* Sensor pixel clock used for calculations like exposure and framerate
 			*
-			*i2c@c240000
 			*
 			*
 			* inherent_gain = "";
@@ -445,7 +444,7 @@
 		min_bits_per_pixel = <10>;
 		vi_peak_byte_per_pixel = <2>;
 		vi_bw_margin_pct = <25>;
-		max_pixel_rate = <750000>;
+		max_pixel_rate = <600000>;
 		isp_peak_byte_per_pixel = <5>;
 		isp_bw_margin_pct = <25>;
 

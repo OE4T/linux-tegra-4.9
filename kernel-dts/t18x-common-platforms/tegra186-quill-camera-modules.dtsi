@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,17 @@
 #define CAM1_PWDN	TEGRA_MAIN_GPIO(L, 6)
 
 / {
+	tegra-camera-platform {
+		/**
+		* tpg_max_iso = <>;
+		* Max iso bw for 6 streams of tpg
+		* streams * nvcsi_freq * PG_bitrate / RG10 * BPP
+		* 6 * 102Mhz * 32 bits/ 10 bits * 2 Bps
+		* = 3916.8 MBps
+		*/
+		tpg_max_iso = <3916800>;
+	};
+
 	/* set camera gpio direction to output */
 	gpio@2200000 {
 		camera-control-output-low {

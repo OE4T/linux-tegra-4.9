@@ -13,7 +13,6 @@
  * more details.
  */
 
-#include <linux/pm_runtime.h>
 #include <linux/delay.h>
 
 #include "gk20a/gk20a.h"
@@ -50,27 +49,14 @@ static int gm20b_mm_mmu_vpr_info_fetch_wait(struct gk20a *g,
 
 int gm20b_mm_mmu_vpr_info_fetch(struct gk20a *g)
 {
-	int ret = 0;
-
-	gk20a_busy_noresume(g->dev);
-#ifdef CONFIG_PM
-	if (!pm_runtime_active(g->dev))
-		goto fail;
-#endif
-
 	if (gm20b_mm_mmu_vpr_info_fetch_wait(g, VPR_INFO_FETCH_WAIT)) {
-		ret = -ETIME;
-		goto fail;
+		return -ETIME;
 	}
 
 	gk20a_writel(g, fb_mmu_vpr_info_r(),
 			fb_mmu_vpr_info_fetch_true_v());
 
-	ret = gm20b_mm_mmu_vpr_info_fetch_wait(g, VPR_INFO_FETCH_WAIT);
-
-fail:
-	pm_runtime_put(g->dev);
-	return ret;
+	return gm20b_mm_mmu_vpr_info_fetch_wait(g, VPR_INFO_FETCH_WAIT);
 }
 
 static bool gm20b_mm_mmu_debug_mode_enabled(struct gk20a *g)

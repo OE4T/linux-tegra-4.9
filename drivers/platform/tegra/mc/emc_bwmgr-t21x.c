@@ -54,7 +54,54 @@ static u32 bwmgr_t210_ddr3_iso_eff[] = {
 #define DRAM_LPDDR4 1
 #define DRAM_LPDDR3 2 /* On T210 this value is LPDDR3 */
 
-void bwmgr_eff_init(void)
+static int get_iso_bw_table_idx(unsigned long iso_bw)
+{
+	int i = ARRAY_SIZE(bwmgr_t210_iso_bw_table) - 1;
+
+	/* Input is in Hz, iso_bw table's unit is MHz */
+	iso_bw /= 1000000;
+
+	while (i > 0 && bwmgr_t210_iso_bw_table[i] > iso_bw)
+		i--;
+
+	return i;
+}
+
+static unsigned long freq_to_bw(unsigned long freq)
+{
+	if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH_ECC ||
+			bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH ||
+			bwmgr_dram_type == DRAM_TYPE_LPDDR3_2CH ||
+			bwmgr_dram_type == DRAM_TYPE_DDR3_2CH)
+		return freq * 32;
+
+	return freq * 16;
+}
+
+static unsigned long bw_to_freq(unsigned long bw)
+{
+	if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH_ECC ||
+			bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH ||
+			bwmgr_dram_type == DRAM_TYPE_LPDDR3_2CH ||
+			bwmgr_dram_type == DRAM_TYPE_DDR3_2CH)
+		return (bw + 32 - 1) / 32;
+
+	return (bw + 16 - 1) / 16;
+}
+
+static u32 dvfs_latency(u32 ufreq)
+{
+	return 4;
+}
+
+static struct bwmgr_ops bwmgr_ops_t21x = {
+	.get_iso_bw_table_idx = get_iso_bw_table_idx,
+	.freq_to_bw = freq_to_bw,
+	.bw_to_freq = bw_to_freq,
+	.dvfs_latency = dvfs_latency,
+};
+
+struct bwmgr_ops *bwmgr_eff_init_t21x(void)
 {
 	int i;
 	u32 dram;
@@ -99,48 +146,6 @@ void bwmgr_eff_init(void)
 			break;
 		}
 	}
+
+	return &bwmgr_ops_t21x;
 }
-
-int get_iso_bw_table_idx(unsigned long iso_bw)
-{
-	int i = ARRAY_SIZE(bwmgr_t210_iso_bw_table) - 1;
-
-	/* Input is in Hz, iso_bw table's unit is MHz */
-	iso_bw /= 1000000;
-
-	while (i > 0 && bwmgr_t210_iso_bw_table[i] > iso_bw)
-		i--;
-
-	return i;
-}
-EXPORT_SYMBOL(get_iso_bw_table_idx);
-
-unsigned long bwmgr_freq_to_bw(unsigned long freq)
-{
-	if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH_ECC ||
-			bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH ||
-			bwmgr_dram_type == DRAM_TYPE_LPDDR3_2CH ||
-			bwmgr_dram_type == DRAM_TYPE_DDR3_2CH)
-		return freq * 32;
-
-	return freq * 16;
-}
-EXPORT_SYMBOL_GPL(bwmgr_freq_to_bw);
-
-unsigned long bwmgr_bw_to_freq(unsigned long bw)
-{
-	if (bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH_ECC ||
-			bwmgr_dram_type == DRAM_TYPE_LPDDR4_4CH ||
-			bwmgr_dram_type == DRAM_TYPE_LPDDR3_2CH ||
-			bwmgr_dram_type == DRAM_TYPE_DDR3_2CH)
-		return (bw + 32 - 1) / 32;
-
-	return (bw + 16 - 1) / 16;
-}
-EXPORT_SYMBOL_GPL(bwmgr_bw_to_freq);
-
-u32 bwmgr_dvfs_latency(u32 ufreq)
-{
-	return 4;
-}
-EXPORT_SYMBOL_GPL(bwmgr_dvfs_latency);

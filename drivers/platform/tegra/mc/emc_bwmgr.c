@@ -19,6 +19,8 @@
 #include <linux/platform/tegra/isomgr.h>
 #include <linux/debugfs.h>
 
+#include <soc/tegra/chip-id.h>
+
 #define DEFAULT_ISO_EFFICIENCY 10
 #define DEFAULT_EFFICIENCY 70
 #define DEFAULT_EMC_TO_DRAM_FACTOR 2
@@ -50,6 +52,7 @@ static struct {
 	struct clk *emc_clk;
 	struct task_struct *task;
 	bool status;
+	struct bwmgr_ops *ops;
 } bwmgr;
 
 static bool clk_update_disabled;
@@ -66,6 +69,7 @@ static struct {
 	unsigned long req_freq;
 } debug_info;
 
+int get_iso_bw_table_idx(unsigned long iso_bw);
 static void bwmgr_debugfs_init(void);
 
 static inline void bwmgr_lock(void)
@@ -339,21 +343,6 @@ int tegra_bwmgr_notifier_unregister(struct notifier_block *nb)
 }
 EXPORT_SYMBOL_GPL(tegra_bwmgr_notifier_unregister);
 
-/* Should be overrided always */
-void __weak bwmgr_eff_init(void)
-{
-	pr_warn("bwmgr: No support for this SoC. Using default efficiency\n");
-	bwmgr_dram_efficiency = DEFAULT_EFFICIENCY;
-	bwmgr_iso_bw_percentage = DEFAULT_ISO_EFFICIENCY;
-	emc_to_dram_freq_factor = DEFAULT_EMC_TO_DRAM_FACTOR;
-	bwmgr_dram_type = DRAM_TYPE_LPDDR4_4CH;
-}
-
-int __weak get_iso_bw_table_idx(unsigned long iso_bw)
-{
-	return 0;
-}
-
 unsigned long tegra_bwmgr_get_emc_rate(void)
 {
 	if (bwmgr.emc_clk)
@@ -398,6 +387,30 @@ int bwmgr_iso_bw_percentage_max(void)
 }
 EXPORT_SYMBOL_GPL(bwmgr_iso_bw_percentage_max);
 
+int get_iso_bw_table_idx(unsigned long iso_bw)
+{
+	return bwmgr.ops->get_iso_bw_table_idx(iso_bw);
+}
+EXPORT_SYMBOL(get_iso_bw_table_idx);
+
+unsigned long bwmgr_freq_to_bw(unsigned long freq)
+{
+	return bwmgr.ops->freq_to_bw(freq);
+}
+EXPORT_SYMBOL_GPL(bwmgr_freq_to_bw);
+
+unsigned long bwmgr_bw_to_freq(unsigned long bw)
+{
+	return bwmgr.ops->bw_to_freq(bw);
+}
+EXPORT_SYMBOL_GPL(bwmgr_bw_to_freq);
+
+u32 bwmgr_dvfs_latency(u32 ufreq)
+{
+	return bwmgr.ops->dvfs_latency(ufreq);
+}
+EXPORT_SYMBOL_GPL(bwmgr_dvfs_latency);
+
 int __init bwmgr_init(void)
 {
 	int i;
@@ -405,9 +418,19 @@ int __init bwmgr_init(void)
 	long round_rate;
 
 	mutex_init(&bwmgr.lock);
+
 	bwmgr_debugfs_init();
-	bwmgr_eff_init();
 	pmqos_bwmgr_init();
+
+	if (tegra_get_chip_id() == TEGRA210)
+		bwmgr.ops = bwmgr_eff_init_t21x();
+	else if (tegra_get_chip_id() == TEGRA186)
+		bwmgr.ops = bwmgr_eff_init_t18x();
+	else
+		/*
+		 * Fall back to t18x if we are running on a new chip.
+		 */
+		bwmgr.ops = bwmgr_eff_init_t18x();
 
 	dn = of_find_compatible_node(NULL, NULL, "nvidia,bwmgr");
 	if (dn == NULL) {
@@ -736,4 +759,3 @@ static void bwmgr_debugfs_init(void)
 #else
 static void bwmgr_debugfs_init(void) {};
 #endif /* CONFIG_DEBUG_FS */
-

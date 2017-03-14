@@ -87,9 +87,18 @@ extern u32 *bwmgr_dram_iso_eff_table;
 extern int bwmgr_iso_bw_percentage;
 extern enum bwmgr_dram_types bwmgr_dram_type;
 extern int emc_to_dram_freq_factor;
-void bwmgr_eff_init(void);
 
 struct tegra_bwmgr_client;
+
+struct bwmgr_ops {
+	int (*get_iso_bw_table_idx)(unsigned long iso_bw);
+	unsigned long (*freq_to_bw)(unsigned long freq);
+	unsigned long (*bw_to_freq)(unsigned long bw);
+	u32 (*dvfs_latency)(u32 ufreq);
+};
+
+struct bwmgr_ops *bwmgr_eff_init_t21x(void);
+struct bwmgr_ops *bwmgr_eff_init_t18x(void);
 
 #if defined(CONFIG_TEGRA_BWMGR)
 /**
@@ -313,4 +322,3 @@ static inline int tegra_bwmgr_notifier_unregister(struct notifier_block *nb)
 
 #endif /* CONFIG_TEGRA_BWMGR */
 #endif /* __EMC_BWMGR_H */
-

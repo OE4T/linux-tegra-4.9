@@ -3,6 +3,7 @@
  *
  * Copyright (C) 1995-2005 Russell King
  * Copyright (C) 2012 ARM Ltd.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -776,37 +777,3 @@ int pmd_clear_huge(pmd_t *pmd)
 	return 1;
 }
 
-struct dma_contig_early_reserve {
-	phys_addr_t base;
-	unsigned long size;
-};
-
-static struct dma_contig_early_reserve dma_mmu_remap[MAX_CMA_AREAS] __initdata;
-
-static int dma_mmu_remap_num __initdata;
-
-void __init dma_contiguous_early_fixup(phys_addr_t base, unsigned long size)
-{
-	dma_mmu_remap[dma_mmu_remap_num].base = base;
-	dma_mmu_remap[dma_mmu_remap_num].size = size;
-	dma_mmu_remap_num++;
-}
-
-void __init dma_contiguous_remap(void)
-{
-	int i;
-	for (i = 0; i < dma_mmu_remap_num; i++) {
-		phys_addr_t start = dma_mmu_remap[i].base;
-		phys_addr_t end = start + dma_mmu_remap[i].size;
-		unsigned long addr;
-
-		if (start >= end)
-			continue;
-
-		for (addr = start; addr < end; addr += PAGE_SIZE)
-			__create_pgd_mapping(pgd_offset_k(addr), addr,
-					     __phys_to_virt(addr),
-					     PAGE_SIZE, PAGE_KERNEL_EXEC,
-					     early_pgtable_alloc, false);
-	}
-}

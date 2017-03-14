@@ -949,12 +949,16 @@ __releases(&cde_app->mutex)
 	    scatterbuffer_byte_offset < compbits_byte_offset)
 		return -EINVAL;
 
+	err = gk20a_busy(g->dev);
+	if (err)
+		return err;
+
 	nvgpu_mutex_acquire(&g->cde_app.mutex);
 	cde_ctx = gk20a_cde_get_context(g);
 	nvgpu_mutex_release(&g->cde_app.mutex);
 	if (IS_ERR(cde_ctx)) {
 		err = PTR_ERR(cde_ctx);
-		goto exit_unlock;
+		goto exit_idle;
 	}
 
 	/* First, map the buffer to local va */
@@ -962,7 +966,7 @@ __releases(&cde_app->mutex)
 	/* ensure that the compbits buffer has drvdata */
 	err = gk20a_dmabuf_alloc_drvdata(compbits_scatter_buf, g->dev);
 	if (err)
-		goto exit_unlock;
+		goto exit_idle;
 
 	/* compbits don't start at page aligned offset, so we need to align
 	   the region to be mapped */
@@ -1005,7 +1009,7 @@ __releases(&cde_app->mutex)
 	if (!map_vaddr) {
 		dma_buf_put(compbits_scatter_buf);
 		err = -EINVAL;
-		goto exit_unlock;
+		goto exit_idle;
 	}
 
 	if (scatterbuffer_byte_offset &&
@@ -1019,7 +1023,7 @@ __releases(&cde_app->mutex)
 			gk20a_warn(g->dev,
 				   "dma_buf_vmap failed");
 			err = -EINVAL;
-			goto exit_unlock;
+			goto exit_unmap_vaddr;
 		}
 
 		scatter_buffer = surface + scatterbuffer_byte_offset;
@@ -1031,7 +1035,7 @@ __releases(&cde_app->mutex)
 			gk20a_warn(g->dev,
 				   "mm_pin failed");
 			err = -EINVAL;
-			goto exit_unlock;
+			goto exit_unmap_surface;
 		} else {
 			err = g->ops.cde.populate_scatter_buffer(g, sgt,
 					compbits_byte_offset, scatter_buffer,
@@ -1041,7 +1045,7 @@ __releases(&cde_app->mutex)
 			gk20a_mm_unpin(g->dev, compbits_scatter_buf,
 				       sgt);
 			if (err)
-				goto exit_unlock;
+				goto exit_unmap_surface;
 		}
 
 		__cpuc_flush_dcache_area(scatter_buffer, scatterbuffer_size);
@@ -1078,7 +1082,7 @@ __releases(&cde_app->mutex)
 		if (id < 0 || id >= MAX_CDE_USER_PARAMS) {
 			gk20a_warn(cde_ctx->dev, "cde: unknown user parameter");
 			err = -EINVAL;
-			goto exit_unlock;
+			goto exit_unmap_surface;
 		}
 		cde_ctx->user_param_values[id] = param->value;
 	}
@@ -1087,7 +1091,7 @@ __releases(&cde_app->mutex)
 	err = gk20a_cde_patch_params(cde_ctx);
 	if (err) {
 		gk20a_warn(cde_ctx->dev, "cde: failed to patch parameters");
-		goto exit_unlock;
+		goto exit_unmap_surface;
 	}
 
 	gk20a_dbg(gpu_dbg_cde, "cde: buffer=cbc, size=%zu, gpuva=%llx\n",
@@ -1097,10 +1101,12 @@ __releases(&cde_app->mutex)
 	gk20a_dbg(gpu_dbg_cde, "cde: buffer=scatterbuffer, size=%llu, gpuva=%llx\n",
 		 cde_ctx->scatterbuffer_size, cde_ctx->scatterbuffer_vaddr);
 
-
 	/* take always the postfence as it is needed for protecting the
 	 * cde context */
 	flags = __flags | NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET;
+
+	/* gk20a_cde_execute_buffer() will grab a power reference of it's own */
+	gk20a_idle(g->dev);
 
 	/* execute the conversion buffer, combined with init first if it's the
 	 * first time */
@@ -1112,15 +1118,20 @@ __releases(&cde_app->mutex)
 
 	cde_ctx->init_cmd_executed = true;
 
-exit_unlock:
-
 	/* unmap the buffers - channel holds references to them now */
-	if (map_vaddr)
-		gk20a_vm_unmap(cde_ctx->vm, map_vaddr);
-
 	if (surface)
 		dma_buf_vunmap(compbits_scatter_buf, surface);
+	gk20a_vm_unmap(cde_ctx->vm, map_vaddr);
 
+	return err;
+
+exit_unmap_surface:
+	if (surface)
+		dma_buf_vunmap(compbits_scatter_buf, surface);
+exit_unmap_vaddr:
+	gk20a_vm_unmap(cde_ctx->vm, map_vaddr);
+exit_idle:
+	gk20a_idle(g->dev);
 	return err;
 }
 
@@ -1520,10 +1531,6 @@ static int gk20a_buffer_convert_gpu_to_cde(
 	if (!g->cde_app.initialised)
 		return -ENOSYS;
 
-	err = gk20a_busy(g->dev);
-	if (err)
-		return err;
-
 	gk20a_dbg(gpu_dbg_cde, "firmware version = %d\n",
 		g->cde_app.firmware_version);
 
@@ -1539,7 +1546,6 @@ static int gk20a_buffer_convert_gpu_to_cde(
 		err = -EINVAL;
 	}
 
-	gk20a_idle(g->dev);
 	return err;
 }
 

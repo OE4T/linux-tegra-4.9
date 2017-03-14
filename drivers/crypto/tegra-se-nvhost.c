@@ -81,19 +81,22 @@ enum tegra_se_aes_op_mode {
 	SE_AES_OP_MODE_SHA224,	/* Secure Hash Algorithm-224  (SHA224) mode */
 	SE_AES_OP_MODE_SHA256,	/* Secure Hash Algorithm-256  (SHA256) mode */
 	SE_AES_OP_MODE_SHA384,	/* Secure Hash Algorithm-384  (SHA384) mode */
-	SE_AES_OP_MODE_SHA512	/* Secure Hash Algorithm-512  (SHA512) mode */
+	SE_AES_OP_MODE_SHA512,	/* Secure Hash Algorithm-512  (SHA512) mode */
+	SE_AES_OP_MODE_XTS	/* XTS mode */
 };
 
 /* Security Engine key table type */
 enum tegra_se_key_table_type {
 	SE_KEY_TABLE_TYPE_KEY,	/* Key */
 	SE_KEY_TABLE_TYPE_ORGIV,	/* Original IV */
-	SE_KEY_TABLE_TYPE_UPDTDIV	/* Updated IV */
+	SE_KEY_TABLE_TYPE_UPDTDIV,	/* Updated IV */
+	SE_KEY_TABLE_TYPE_XTS_KEY2	/* XTS Key2 */
 };
 
 struct tegra_se_chipdata {
 	unsigned long aes_freq;
 	unsigned int cpu_freq_mhz;
+	bool is_xts_supported;
 };
 
 /* Security Engine Linked List */
@@ -632,6 +635,24 @@ static u32 tegra_se_get_config(struct tegra_se_dev *se_dev,
 			SE_CONFIG_ENC_MODE(MODE_SHA512) |
 				SE_CONFIG_DST(DST_HASHREG);
 		break;
+	case SE_AES_OP_MODE_XTS:
+		if (encrypt) {
+			val = SE_CONFIG_ENC_ALG(ALG_AES_ENC);
+			if (key_len == TEGRA_SE_KEY_256_SIZE)
+				val |= SE_CONFIG_ENC_MODE(MODE_KEY256);
+			else
+				val |= SE_CONFIG_ENC_MODE(MODE_KEY128);
+			val |= SE_CONFIG_DEC_ALG(ALG_NOP);
+		} else {
+			val = SE_CONFIG_DEC_ALG(ALG_AES_DEC);
+			if (key_len == TEGRA_SE_KEY_256_SIZE)
+				val |= SE_CONFIG_DEC_MODE(MODE_KEY256);
+			else
+				val |= SE_CONFIG_DEC_MODE(MODE_KEY128);
+			val |= SE_CONFIG_ENC_ALG(ALG_NOP);
+		}
+			val |= SE_CONFIG_DST(DST_MEMORY);
+		break;
 	default:
 		dev_warn(se_dev->dev, "Invalid operation mode\n");
 		break;
@@ -915,7 +936,9 @@ static int tegra_se_send_key_data(struct tegra_se_dev *se_dev,
 	data_size = SE_KEYTABLE_QUAD_SIZE_BYTES;
 
 	do {
-		pkt = SE_KEYTABLE_SLOT(slot_num) | SE_KEYTABLE_QUAD(quad);
+		if (type == SE_KEY_TABLE_TYPE_XTS_KEY2)
+			pkt = SE_CRYPTO_KEYIV_PKT_SUBKEY_SEL(SUBKEY_SEL_KEY2);
+		pkt |= (SE_KEYTABLE_SLOT(slot_num) | SE_KEYTABLE_QUAD(quad));
 		for (j = 0; j < data_size; j += 4, data_len -= 4) {
 			cpuvaddr[i++] =
 				__nvhost_opcode_nonincr(opcode_addr +
@@ -960,6 +983,20 @@ static u32 tegra_se_get_crypto_config(struct tegra_se_dev *se_dev,
 	unsigned long freq = 0;
 
 	switch (mode) {
+	case SE_AES_OP_MODE_XTS:
+		if (encrypt) {
+			val = SE_CRYPTO_INPUT_SEL(INPUT_MEMORY) |
+				SE_CRYPTO_VCTRAM_SEL(VCTRAM_TWEAK) |
+				SE_CRYPTO_XOR_POS(XOR_BOTH) |
+				SE_CRYPTO_CORE_SEL(CORE_ENCRYPT);
+		} else {
+			val = SE_CRYPTO_INPUT_SEL(INPUT_MEMORY) |
+				SE_CRYPTO_VCTRAM_SEL(VCTRAM_TWEAK) |
+				SE_CRYPTO_XOR_POS(XOR_BOTH) |
+				SE_CRYPTO_CORE_SEL(CORE_DECRYPT);
+		}
+		freq = se_dev->chipdata->aes_freq;
+		break;
 	case SE_AES_OP_MODE_CMAC:
 	case SE_AES_OP_MODE_CBC:
 		if (encrypt) {
@@ -1353,7 +1390,8 @@ static int tegra_se_prepare_cmdbuf(struct tegra_se_dev *se_dev,
 		req_ctx = ablkcipher_request_ctx(req);
 
 		if (req->info) {
-			if (req_ctx->op_mode == SE_AES_OP_MODE_CTR) {
+			if (req_ctx->op_mode == SE_AES_OP_MODE_CTR ||
+				req_ctx->op_mode == SE_AES_OP_MODE_XTS) {
 				tegra_se_send_ctr_seed(se_dev,
 				(u32 *)req->info, se_dev->opcode_addr,
 				cpuvaddr);
@@ -1526,6 +1564,32 @@ static int tegra_se_aes_queue_req(struct tegra_se_dev *se_dev,
 	return err;
 }
 
+static int tegra_se_aes_xts_encrypt(struct ablkcipher_request *req)
+{
+	struct tegra_se_req_context *req_ctx = ablkcipher_request_ctx(req);
+
+	req_ctx->se_dev = se_devices[SE_AES];
+	if (!req_ctx->se_dev)
+		return -ENODEV;
+
+	req_ctx->encrypt = true;
+	req_ctx->op_mode = SE_AES_OP_MODE_XTS;
+	return tegra_se_aes_queue_req(req_ctx->se_dev, req);
+}
+
+static int tegra_se_aes_xts_decrypt(struct ablkcipher_request *req)
+{
+	struct tegra_se_req_context *req_ctx = ablkcipher_request_ctx(req);
+
+	req_ctx->se_dev = se_devices[SE_AES];
+	if (!req_ctx->se_dev)
+		return -ENODEV;
+
+	req_ctx->encrypt = false;
+	req_ctx->op_mode = SE_AES_OP_MODE_XTS;
+	return tegra_se_aes_queue_req(req_ctx->se_dev, req);
+}
+
 static int tegra_se_aes_cbc_encrypt(struct ablkcipher_request *req)
 {
 	struct tegra_se_req_context *req_ctx = ablkcipher_request_ctx(req);
@@ -1684,8 +1748,14 @@ static int tegra_se_aes_setkey(struct crypto_ablkcipher *tfm,
 	se_dev->cmdbuf_list_entry = index;
 
 	/* load the key */
+	if (ctx->op_mode == SE_AES_OP_MODE_XTS)
+		keylen = keylen/2;
 	ret = tegra_se_send_key_data(se_dev, pdata, keylen,
 			ctx->slot->slot_num, SE_KEY_TABLE_TYPE_KEY,
+			se_dev->opcode_addr, cpuvaddr, iova);
+	if (ctx->op_mode == SE_AES_OP_MODE_XTS)
+		ret = tegra_se_send_key_data(se_dev, pdata + keylen, keylen,
+			ctx->slot->slot_num, SE_KEY_TABLE_TYPE_XTS_KEY2,
 			se_dev->opcode_addr, cpuvaddr, iova);
 out:
 	mutex_unlock(&se_dev->mtx);
@@ -2691,6 +2761,26 @@ static struct rng_alg rng_algs[] = { {
 
 static struct crypto_alg aes_algs[] = {
 	{
+		.cra_name = "xts(aes)",
+		.cra_driver_name = "xts-aes-tegra",
+		.cra_priority = 300,
+		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
+		.cra_blocksize = TEGRA_SE_AES_BLOCK_SIZE,
+		.cra_ctxsize  = sizeof(struct tegra_se_aes_context),
+		.cra_alignmask = 0,
+		.cra_type = &crypto_ablkcipher_type,
+		.cra_module = THIS_MODULE,
+		.cra_init = tegra_se_aes_cra_init,
+		.cra_exit = tegra_se_aes_cra_exit,
+		.cra_u.ablkcipher = {
+			.min_keysize = TEGRA_SE_AES_MIN_KEY_SIZE,
+			.max_keysize = TEGRA_SE_AES_MAX_KEY_SIZE,
+			.ivsize = TEGRA_SE_AES_IV_SIZE,
+			.setkey = tegra_se_aes_setkey,
+			.encrypt = tegra_se_aes_xts_encrypt,
+			.decrypt = tegra_se_aes_xts_decrypt,
+		}
+	}, {
 		.cra_name = "cbc(aes)",
 		.cra_driver_name = "cbc-aes-tegra",
 		.cra_priority = 300,
@@ -2937,6 +3027,13 @@ static int tegra_se_nvhost_prepare_poweroff(struct platform_device *pdev)
 static struct tegra_se_chipdata tegra18_se_chipdata = {
 	.aes_freq = 600000000,
 	.cpu_freq_mhz = 2400,
+	.is_xts_supported = false,
+};
+
+static struct tegra_se_chipdata tegra19_se_chipdata = {
+	.aes_freq = 600000000,
+	.cpu_freq_mhz = 2400,
+	.is_xts_supported = true,
 };
 
 static struct nvhost_device_data nvhost_se1_info = {
@@ -3011,6 +3108,24 @@ static struct nvhost_device_data nvhost_se4_info = {
 	.prepare_poweroff = tegra_se_nvhost_prepare_poweroff,
 };
 
+static struct nvhost_device_data t19x_nvhost_se2_info = {
+	.clocks = {{"se", 600000000},
+				{"emc", UINT_MAX,
+				NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+				0, TEGRA_BWMGR_SET_EMC_FLOOR}, {} },
+	NVHOST_MODULE_NO_POWERGATE_ID,
+	.can_powergate          = true,
+	.autosuspend_delay      = 500,
+	.class = NV_SE2_CLASS_ID,
+	.private_data = &tegra19_se_chipdata,
+	.serialize = 1,
+	.push_work_done = 1,
+	.vm_regs                = {{SE_STREAMID_REG_OFFSET, true} },
+	.kernel_only = true,
+	.bwmgr_client_id = TEGRA_BWMGR_CLIENT_SE2,
+	.prepare_poweroff = tegra_se_nvhost_prepare_poweroff,
+};
+
 static struct of_device_id tegra_se_of_match[] = {
 	{
 		.compatible = "nvidia,tegra186-se1-nvhost",
@@ -3024,6 +3139,9 @@ static struct of_device_id tegra_se_of_match[] = {
 	}, {
 		.compatible = "nvidia,tegra186-se4-nvhost",
 		.data = &nvhost_se4_info,
+	}, {
+		.compatible = "nvidia,tegra19x-se2-nvhost",
+		.data = &t19x_nvhost_se2_info,
 	}, {}
 };
 MODULE_DEVICE_TABLE(of, tegra_se_of_match);
@@ -3185,11 +3303,21 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 
 	if (is_algo_supported(node, "aes")) {
+		if (se_dev->chipdata->is_xts_supported) {
+			INIT_LIST_HEAD(&aes_algs[0].cra_list);
+			err = crypto_register_alg(&aes_algs[0]);
+			if (err) {
+				dev_err(se_dev->dev,
+				"crypto_register_alg failed index[0]\n");
+				goto reg_fail;
+			}
+		}
+
 		/* Register all aes_algs except RNG(DRBG), that is,
 		 * ecb,cbc,ofb,ctr and first element in hash_algs that is
 		 * cmac, with SE2/AES1
 		 */
-		for (i = 0; i < ARRAY_SIZE(aes_algs); i++) {
+		for (i = 1; i < ARRAY_SIZE(aes_algs); i++) {
 			INIT_LIST_HEAD(&aes_algs[i].cra_list);
 			err = crypto_register_alg(&aes_algs[i]);
 			if (err) {
@@ -3337,12 +3465,15 @@ static int tegra_se_remove(struct platform_device *pdev)
 	}
 
 	if (is_algo_supported(node, "aes")) {
+		if (se_dev->chipdata->is_xts_supported)
+			crypto_unregister_alg(&aes_algs[0]);
+
 		/* Unregister all aes_algs except RNG(DRBG), that is,
 		 * ecb,cbc,ofb,ctr and first element in hash_algs that is
 		 * cmac, with SE2/AES1
 		 */
-		crypto_unregister_alg(&aes_algs[0]);
-		for (i = 1; i < ARRAY_SIZE(aes_algs); i++)
+		crypto_unregister_alg(&aes_algs[1]);
+		for (i = 2; i < ARRAY_SIZE(aes_algs); i++)
 			crypto_unregister_alg(&aes_algs[i]);
 	}
 

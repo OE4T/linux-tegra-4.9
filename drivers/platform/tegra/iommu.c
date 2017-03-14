@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,9 +13,9 @@
 
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
-#include <linux/tegra_smmu.h>
 #include <linux/dma-contiguous.h>
 #include <linux/tegra-soc.h>
+#include <linux/iommu.h>
 
 #include <soc/tegra/fuse.h>
 
@@ -26,6 +26,12 @@
 #include "../../../arch/arm/mach-tegra/iomap.h"
 #include "../../../arch/arm/mach-tegra/board.h"
 #include <linux/platform/tegra/common.h>
+
+phys_addr_t tegra_carveout_start;
+phys_addr_t tegra_carveout_size;
+phys_addr_t tegra_vpr_start;
+phys_addr_t tegra_vpr_size;
+bool tegra_vpr_resize;
 
 /* FIXME: Use DT reserved-memory node */
 phys_addr_t __weak tegra_fb_start, tegra_fb_size,
@@ -63,12 +69,14 @@ static void carveout_linear_set(struct device *cma_dev)
 
 static void cma_carveout_linear_set(void)
 {
+
 #if defined(CONFIG_DMA_CMA) && defined(CONFIG_TEGRA_NVMAP)
 	if (tegra_vpr_resize) {
 		carveout_linear_set(&tegra_generic_cma_dev);
 		carveout_linear_set(&tegra_vpr_cma_dev);
 	}
 #endif
+
 }
 
 void tegra_fb_linear_set(struct iommu_linear_map *map)

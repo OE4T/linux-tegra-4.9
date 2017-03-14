@@ -13,8 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __LINUX_IOMMU_H
@@ -46,6 +45,16 @@ struct notifier_block;
 
 typedef int (*iommu_fault_handler_t)(struct iommu_domain *,
 			struct device *, unsigned long, int, void *);
+
+struct iommu_linear_map {
+	dma_addr_t start;
+	size_t size;
+};
+
+int iommu_get_linear_map(struct device *dev,
+			struct iommu_linear_map **map);
+
+void tegra_fb_linear_set(struct iommu_linear_map *map);
 
 struct iommu_domain_geometry {
 	dma_addr_t aperture_start; /* First address that can be mapped    */

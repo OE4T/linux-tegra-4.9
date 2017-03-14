@@ -739,6 +739,11 @@ static int tegra_se_pka1_done_verify(struct tegra_se_elp_dev *se_dev)
 	val = se_elp_readl(se_dev, PKA1, TEGRA_SE_PKA1_STATUS_OFFSET);
 	se_elp_writel(se_dev, PKA1, val, TEGRA_SE_PKA1_STATUS_OFFSET);
 
+	/* Write one to clear TRNG interrupt */
+	se_elp_writel(se_dev, PKA1,
+			TEGRA_SE_PKA1_TRNG_ISTAT_RAND_RDY(ELP_ENABLE),
+			TEGRA_SE_PKA1_TRNG_ISTAT_OFFSET);
+
 	val = se_elp_readl(se_dev, PKA1, TEGRA_SE_PKA1_RETURN_CODE_OFFSET);
 
 	abnormal_val = TEGRA_SE_PKA1_RETURN_CODE_STOP_REASON(
@@ -748,8 +753,9 @@ static int tegra_se_pka1_done_verify(struct tegra_se_elp_dev *se_dev)
 		return -EFAULT;
 	}
 
-	val = se_elp_readl(se_dev, PKA1, TEGRA_SE_PKA1_CTRL_SE_INT_STAT_OFFSET);
-	if (val & TEGRA_SE_PKA1_CTRL_SE_INT_STAT_ERR(ELP_TRUE)) {
+	val = se_elp_readl(se_dev, PKA1,
+				TEGRA_SE_PKA1_CTRL_SE_INTR_STATUS_OFFSET);
+	if (val & TEGRA_SE_PKA1_CTRL_SE_INTR_STATUS_ERR(ELP_TRUE)) {
 		dev_err(se_dev->dev, "tegra_se_pka1_irq err: %x\n", val);
 		return -EFAULT;
 	}
@@ -781,10 +787,20 @@ static void tegra_se_set_pka1_op_ready(struct tegra_se_elp_dev *se_dev)
 	val = se_elp_readl(se_dev, PKA1, TEGRA_SE_PKA1_STATUS_OFFSET);
 	se_elp_writel(se_dev, PKA1, val, TEGRA_SE_PKA1_STATUS_OFFSET);
 
-	/* Unmask PKA1 interrupt bit */
+	val = se_elp_readl(se_dev, PKA1, TEGRA_SE_PKA1_TRNG_ISTAT_OFFSET);
+	se_elp_writel(se_dev, PKA1, val, TEGRA_SE_PKA1_TRNG_ISTAT_OFFSET);
+
+	/* Unmask PKA1 & TRNG interrupt bit */
 	se_elp_writel(se_dev, PKA1,
-		TEGRA_SE_PKA1_CTRL_SE_INT_PKA1_MASK(ELP_ENABLE),
-		TEGRA_SE_PKA1_CTRL_SE_INT_MASK_OFFSET);
+		TEGRA_SE_PKA1_CTRL_SE_INTR_MASK_EIP1_TRNG(ELP_ENABLE) |
+		TEGRA_SE_PKA1_CTRL_SE_INTR_MASK_EIP0_PKA(ELP_ENABLE),
+		TEGRA_SE_PKA1_CTRL_SE_INTR_MASK_OFFSET);
+
+	/* Enable GLBL & RAND_RDY for TRNG */
+	se_elp_writel(se_dev, PKA1,
+		TEGRA_SE_PKA1_TRNG_IE_RAND_RDY_EN(ELP_ENABLE) |
+		TEGRA_SE_PKA1_TRNG_IE_GLBL_EN(ELP_ENABLE),
+		TEGRA_SE_PKA1_TRNG_IE_OFFSET);
 
 	/* Enable PKA1 interrupt */
 	se_elp_writel(se_dev, PKA1,
@@ -3073,6 +3089,109 @@ static struct akcipher_alg ecdsa_alg = {
 	},
 };
 
+struct tegra_se_elp_trng_context {
+	struct tegra_se_elp_dev *se_dev;
+};
+
+static int tegra_se_elp_trng_init(struct crypto_tfm *tfm)
+{
+	struct tegra_se_elp_trng_context *trng_ctx = crypto_tfm_ctx(tfm);
+
+	trng_ctx->se_dev = elp_dev;
+	return 0;
+}
+
+static void tegra_se_elp_trng_exit(struct crypto_tfm *tfm)
+{
+	struct tegra_se_elp_trng_context *trng_ctx = crypto_tfm_ctx(tfm);
+
+	trng_ctx->se_dev = NULL;
+}
+
+static void tegra_se_elp_trng_get_data(struct tegra_se_elp_dev *se_dev,
+		u32 *rdata)
+{
+	int i;
+	u32 val;
+
+	for (i = 0; i < 8; i++) {
+		val = se_elp_readl(se_dev, PKA1,
+			TEGRA_SE_PKA1_TRNG_RAND0_OFFSET + i*4);
+		rdata[i] = val;
+	}
+}
+
+static int tegra_se_elp_trng_get_random(struct crypto_rng *tfm,
+		const u8 *src, unsigned int slen,
+		u8 *rdata, unsigned int dlen)
+{
+	struct tegra_se_elp_trng_context *trng_ctx =
+				crypto_tfm_ctx(crypto_rng_tfm(tfm));
+	struct tegra_se_elp_dev *se_dev = trng_ctx->se_dev;
+	int ret = 0, i, num_blocks, data_len = 0;
+	u32 *rand_num;
+
+	rand_num = devm_kzalloc(se_dev->dev, RAND_256, GFP_KERNEL);
+	num_blocks = (dlen / RAND_256);
+	data_len = (dlen % RAND_256);
+	if (data_len == 0)
+		num_blocks = num_blocks - 1;
+
+	clk_prepare_enable(se_dev->c);
+
+	ret = tegra_se_acquire_pka1_mutex(se_dev);
+	if (ret) {
+		dev_err(se_dev->dev, "PKA1 Mutex acquire failed\n");
+		goto clk_dis;
+	}
+
+	tegra_se_set_pka1_op_ready(se_dev);
+
+	for (i = 0; i <= num_blocks; i++) {
+		se_elp_writel(se_dev, PKA1,
+			TEGRA_SE_PKA1_TRNG_CTRL_CMD(ELP_ENABLE),
+			TEGRA_SE_PKA1_TRNG_CTRL_OFFSET);
+
+		ret = tegra_se_check_pka1_op_done(se_dev);
+		if (ret)
+			goto rel_mutex;
+
+		tegra_se_elp_trng_get_data(se_dev, rand_num);
+		if (data_len && (i == num_blocks))
+			memcpy(rdata + i*RAND_256, rand_num, data_len);
+		else
+			memcpy(rdata + i*RAND_256, rand_num, RAND_256);
+	}
+
+	devm_kfree(se_dev->dev, rand_num);
+rel_mutex:
+	tegra_se_release_pka1_mutex(se_dev);
+clk_dis:
+	clk_disable_unprepare(se_dev->c);
+	return ret;
+}
+
+static int tegra_se_elp_trng_reset(struct crypto_rng *tfm, const u8 *seed,
+		unsigned int slen)
+{
+	return 0;
+}
+
+static struct rng_alg trng_alg = {
+	.generate       = tegra_se_elp_trng_get_random,
+	.seed           = tegra_se_elp_trng_reset,
+	.base           = {
+		.cra_name = "trng_elp",
+		.cra_driver_name = "trng_elp-tegra",
+		.cra_priority = 300,
+		.cra_flags = CRYPTO_ALG_TYPE_RNG,
+		.cra_ctxsize = sizeof(struct tegra_se_elp_trng_context),
+		.cra_module = THIS_MODULE,
+		.cra_init = tegra_se_elp_trng_init,
+		.cra_exit = tegra_se_elp_trng_exit,
+	}
+};
+
 static struct tegra_se_elp_chipdata tegra18_se_chipdata = {
 	.use_key_slot = true,
 	.rng1_supported = true,
@@ -3188,14 +3307,23 @@ static int tegra_se_elp_probe(struct platform_device *pdev)
 	err = crypto_register_akcipher(&ecdsa_alg);
 	if (err) {
 		dev_err(se_dev->dev,
-			"crypto_register_alg ecdsa failed\n");
+			"crypto_register_akcipher ecdsa failed\n");
 		goto ecdsa_fail;
+	}
+
+	err = crypto_register_rng(&trng_alg);
+	if (err) {
+		dev_err(se_dev->dev,
+			"crypto_register_rng trng failed\n");
+		goto trng_fail;
 	}
 
 	clk_disable_unprepare(se_dev->c);
 	dev_info(se_dev->dev, "%s: complete", __func__);
 	return 0;
 
+trng_fail:
+	crypto_unregister_akcipher(&ecdsa_alg);
 ecdsa_fail:
 	crypto_unregister_akcipher(&pka1_rsa_algs[0]);
 prop_fail:

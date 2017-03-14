@@ -67,7 +67,13 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 	for (lru = LRU_BASE; lru < NR_LRU_LISTS; lru++)
 		pages[lru] = global_node_page_state(NR_LRU_BASE + lru);
 
-	available = si_mem_available();
+	available = si_mem_available()
+#if defined(CONFIG_TEGRA_NVMAP)
+	+ nvmap_page_pool_get_unused_pages();
+#else
+	;
+#endif
+
 
 	show_val_kb(m, "MemTotal:       ", i.totalram);
 	show_val_kb(m, "MemFree:        ", i.freeram);

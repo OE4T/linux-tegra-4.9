@@ -19,6 +19,10 @@
 #include <asm/pgtable.h>
 #include "internal.h"
 
+#if defined(CONFIG_TEGRA_NVMAP)
+#include <linux/nvmap.h>
+#endif
+
 void __attribute__((weak)) arch_report_meminfo(struct seq_file *m)
 {
 }
@@ -146,6 +150,11 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 		    global_node_page_state(NR_SHMEM_THPS) * HPAGE_PMD_NR);
 	show_val_kb(m, "ShmemPmdMapped: ",
 		    global_node_page_state(NR_SHMEM_PMDMAPPED) * HPAGE_PMD_NR);
+#endif
+
+#if defined(CONFIG_TEGRA_NVMAP)
+	show_val_kb(m, "NvMapMemFree:   ", nvmap_page_pool_get_unused_pages());
+	show_val_kb(m, "NvMapMemUsed:   ", nvmap_iovmm_get_used_pages());
 #endif
 
 #ifdef CONFIG_CMA

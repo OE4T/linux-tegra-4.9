@@ -611,6 +611,8 @@ static struct tegra_dc_shift_clk_div tegra_dsi_get_shift_clk_div(
 	 * holds the real value of shift_clk_div.
 	 */
 	shift_clk_div = dsi->default_shift_clk_div;
+	if (WARN(!shift_clk_div.div, "shift_clk_div.div is 0\n"))
+		return shift_clk_div;
 
 	/* Calculate shift_clk_div which can match the video_burst_mode. */
 	if (dsi->info.video_burst_mode >=

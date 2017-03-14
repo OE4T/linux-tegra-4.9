@@ -1183,8 +1183,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	if (dc->out_ops->vrr_update_monspecs)
 		dc->out_ops->vrr_update_monspecs(dc, &info->modelist);
 
-	if (fb_mem)
-		tegra_fb_set_par(info);
+	tegra_fb_set_par(info);
 
 	if (register_framebuffer(info)) {
 		dev_err(&ndev->dev, "failed to register framebuffer\n");

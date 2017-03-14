@@ -468,8 +468,9 @@ static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
 	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return true;
 	return tegra_nvdisp_is_powered(dc->powergate_id);
-#endif
+#else
 	return tegra_powergate_is_powered(dc->powergate_id);
+#endif
 }
 
 void tegra_dc_powergate_locked(struct tegra_dc *dc);

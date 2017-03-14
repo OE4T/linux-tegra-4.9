@@ -5278,7 +5278,7 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 		dc->out->prepoweroff();
 
 	if (dc->out_ops && dc->out_ops->vrr_enable &&
-		dc->out->vrr && dc->out->vrr->capability) {
+		dc->out && dc->out->vrr && dc->out->vrr->capability) {
 		dc->out_ops->vrr_enable(dc, 0);
 		/* TODO: Fix properly. Bug 1644102. */
 		tegra_dc_set_act_vfp(dc, dc->mode.v_front_porch);

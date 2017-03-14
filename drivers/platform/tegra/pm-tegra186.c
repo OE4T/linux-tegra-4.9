@@ -20,8 +20,8 @@
 #include <linux/debugfs.h>
 #include <linux/module.h>
 #include <linux/pm.h>
+#include <linux/tegra-pm.h>
 
-static struct dentry *debugfs_dir;
 static u32 shutdown_state;
 
 #define SMC_PM_FUNC	0xC2FFFE00
@@ -29,43 +29,6 @@ static u32 shutdown_state;
 #define SYSTEM_SHUTDOWN_STATE_FULL_POWER_OFF 0
 #define SYSTEM_SHUTDOWN_STATE_SC8 8
 #define SMC_GET_CLK_COUNT 0x2
-#define NR_SMC_REGS	6
-#define SMC_ENUM_MAX	0xFF
-
-struct pm_regs {
-		u64 args[NR_SMC_REGS];
-};
-
-static noinline notrace int __send_smc(u8 func, struct pm_regs *regs)
-{
-	u32 ret = SMC_PM_FUNC | (func & SMC_ENUM_MAX);
-
-	asm volatile (
-	"       mov     x0, %0 \n"
-	"       ldp     x1, x2, [%1, #16 * 0] \n"
-	"       ldp     x3, x4, [%1, #16 * 1] \n"
-	"       ldp     x5, x6, [%1, #16 * 2] \n"
-	"       isb \n"
-	"       smc     #0 \n"
-	"       mov     %0, x0 \n"
-	"       stp     x0, x1, [%1, #16 * 0] \n"
-	"       stp     x2, x3, [%1, #16 * 1] \n"
-	: "+r" (ret)
-	: "r" (regs)
-	: "x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8",
-	"x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17");
-	return ret;
-}
-
-#define send_smc(func, regs) \
-({ \
-	int __ret = __send_smc(func, regs); \
-	if (__ret) { \
-		pr_err("%s: failed (ret=%d)\n", __func__, __ret); \
-		return __ret; \
-	} \
-	__ret; \
-})
 
 /**
  * Specify state for SYSTEM_SHUTDOWN
@@ -76,8 +39,9 @@ static noinline notrace int __send_smc(u8 func, struct pm_regs *regs)
 static int tegra_set_shutdown_mode(u32 shutdown_state)
 {
 	struct pm_regs regs;
+	u32 smc_func = SMC_PM_FUNC | (SMC_SET_SHUTDOWN_MODE & SMC_ENUM_MAX);
 	regs.args[0] = shutdown_state;
-	return send_smc(SMC_SET_SHUTDOWN_MODE, &regs);
+	return send_smc(smc_func, &regs);
 }
 EXPORT_SYMBOL(tegra_set_shutdown_mode);
 
@@ -96,11 +60,12 @@ int tegra_get_clk_counter(u32 mpidr, u32 midr, u32 *coreclk,
 {
 	struct pm_regs regs;
 	int ret;
+	u32 smc_func = SMC_PM_FUNC | (SMC_GET_CLK_COUNT & SMC_ENUM_MAX);
 
 	regs.args[0] = mpidr;
 	regs.args[1] = midr;
 
-	ret = send_smc(SMC_GET_CLK_COUNT, &regs);
+	ret = send_smc(smc_func, &regs);
 
 	*coreclk = (u32)regs.args[1];
 	*refclk = (u32)regs.args[2];
@@ -150,7 +115,7 @@ static int __init tegra18_suspend_debugfs_init(void)
 {
 	struct dentry *dfs_file, *system_state_debugfs;
 
-	system_state_debugfs = debugfs_create_dir("system_states", NULL);
+	system_state_debugfs = return_system_states_dir();
 	if (!system_state_debugfs)
 		goto err_out;
 
@@ -162,18 +127,11 @@ static int __init tegra18_suspend_debugfs_init(void)
 	return 0;
 
 err_out:
-	pr_err("%s: Couldn't create debugfs node for system_states\n", __func__);
-	debugfs_remove_recursive(system_state_debugfs);
+	pr_err("%s: Couldn't create debugfs node for shutdown\n", __func__);
 	return -ENOMEM;
 
 }
 module_init(tegra18_suspend_debugfs_init);
-
-static void tegra18_suspend_debugfs_exit(void)
-{
-		debugfs_remove_recursive(debugfs_dir);
-}
-module_exit(tegra18_suspend_debugfs_exit);
 
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("Tegra T18x Suspend Mode debugfs");

@@ -1751,7 +1751,7 @@ static int monitor_get(void *data, u64 *val)
 	u64 freq = clk->gpc_pll.clk_in;
 	u32 count1, count2;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
 
@@ -1789,7 +1789,7 @@ static int monitor_get(void *data, u64 *val)
 	gk20a_writel(g, therm_clk_slowdown_r(0), clk_slowdown_save);
 	nvgpu_mutex_release(&g->clk.clk_mutex);
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 	if (count1 != count2)
 		return -EBUSY;
@@ -1807,7 +1807,7 @@ static int voltage_get(void *data, u64 *val)
 	if (clk->gpc_pll.mode != GPC_PLL_MODE_DVFS)
 		return -ENOSYS;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
 
@@ -1820,7 +1820,7 @@ static int voltage_get(void *data, u64 *val)
 
 	nvgpu_mutex_release(&g->clk.clk_mutex);
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 	return 0;
 }
 DEFINE_SIMPLE_ATTRIBUTE(voltage_fops, voltage_get, NULL, "%llu\n");

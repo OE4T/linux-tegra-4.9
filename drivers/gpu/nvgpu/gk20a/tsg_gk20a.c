@@ -550,7 +550,7 @@ static int gk20a_tsg_ioctl_set_priority(struct gk20a *g,
 		goto done;
 	}
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g), "failed to power on gpu");
 		goto done;
@@ -558,7 +558,7 @@ static int gk20a_tsg_ioctl_set_priority(struct gk20a *g,
 
 	err = gk20a_tsg_set_priority(g, tsg, arg->priority);
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 done:
 	nvgpu_mutex_release(&sched->control_lock);
 	return err;
@@ -577,7 +577,7 @@ static int gk20a_tsg_ioctl_set_runlist_interleave(struct gk20a *g,
 		err = -EPERM;
 		goto done;
 	}
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g), "failed to power on gpu");
 		goto done;
@@ -585,7 +585,7 @@ static int gk20a_tsg_ioctl_set_runlist_interleave(struct gk20a *g,
 
 	err = gk20a_tsg_set_runlist_interleave(tsg, arg->level);
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 done:
 	nvgpu_mutex_release(&sched->control_lock);
 	return err;
@@ -604,13 +604,13 @@ static int gk20a_tsg_ioctl_set_timeslice(struct gk20a *g,
 		err = -EPERM;
 		goto done;
 	}
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g), "failed to power on gpu");
 		goto done;
 	}
 	err = gk20a_tsg_set_timeslice(tsg, arg->timeslice_us);
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 done:
 	nvgpu_mutex_release(&sched->control_lock);
 	return err;
@@ -641,11 +641,11 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 	}
 
 	if (!g->gr.sw_ready) {
-		err = gk20a_busy(g->dev);
+		err = gk20a_busy(g);
 		if (err)
 			return err;
 
-		gk20a_idle(g->dev);
+		gk20a_idle(g);
 	}
 
 	switch (cmd) {
@@ -668,33 +668,33 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 
 	case NVGPU_IOCTL_TSG_ENABLE:
 		{
-		err = gk20a_busy(g->dev);
+		err = gk20a_busy(g);
 		if (err) {
 			gk20a_err(g->dev,
 			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
 			return err;
 		}
 		gk20a_enable_tsg(tsg);
-		gk20a_idle(g->dev);
+		gk20a_idle(g);
 		break;
 		}
 
 	case NVGPU_IOCTL_TSG_DISABLE:
 		{
-		err = gk20a_busy(g->dev);
+		err = gk20a_busy(g);
 		if (err) {
 			gk20a_err(g->dev,
 			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
 			return err;
 		}
 		gk20a_disable_tsg(tsg);
-		gk20a_idle(g->dev);
+		gk20a_idle(g);
 		break;
 		}
 
 	case NVGPU_IOCTL_TSG_PREEMPT:
 		{
-		err = gk20a_busy(g->dev);
+		err = gk20a_busy(g);
 		if (err) {
 			gk20a_err(g->dev,
 			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
@@ -702,7 +702,7 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		}
 		/* preempt TSG */
 		err = g->ops.fifo.preempt_tsg(g, tsg->tsgid);
-		gk20a_idle(g->dev);
+		gk20a_idle(g);
 		break;
 		}
 

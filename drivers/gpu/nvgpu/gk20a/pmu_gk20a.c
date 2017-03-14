@@ -5231,7 +5231,7 @@ int gk20a_pmu_load_update(struct gk20a *g)
 void gk20a_pmu_get_load_counters(struct gk20a *g, u32 *busy_cycles,
 				 u32 *total_cycles)
 {
-	if (!g->power_on || gk20a_busy(g->dev)) {
+	if (!g->power_on || gk20a_busy(g)) {
 		*busy_cycles = 0;
 		*total_cycles = 0;
 		return;
@@ -5242,20 +5242,20 @@ void gk20a_pmu_get_load_counters(struct gk20a *g, u32 *busy_cycles,
 	rmb();
 	*total_cycles = pwr_pmu_idle_count_value_v(
 		gk20a_readl(g, pwr_pmu_idle_count_r(2)));
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 }
 
 void gk20a_pmu_reset_load_counters(struct gk20a *g)
 {
 	u32 reg_val = pwr_pmu_idle_count_reset_f(1);
 
-	if (!g->power_on || gk20a_busy(g->dev))
+	if (!g->power_on || gk20a_busy(g))
 		return;
 
 	gk20a_writel(g, pwr_pmu_idle_count_r(2), reg_val);
 	wmb();
 	gk20a_writel(g, pwr_pmu_idle_count_r(1), reg_val);
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 }
 
 void gk20a_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
@@ -5499,13 +5499,13 @@ static int mscg_stat_show(struct seq_file *s, void *data)
 
 	/* Don't unnecessarily power on the device */
 	if (g->power_on) {
-		err = gk20a_busy(g->dev);
+		err = gk20a_busy(g);
 		if (err)
 			return err;
 
 		gk20a_pmu_get_pg_stats(g,
 			PMU_PG_ELPG_ENGINE_ID_MS, &pg_stat_data);
-		gk20a_idle(g->dev);
+		gk20a_idle(g);
 	}
 	total_ingating = g->pg_ingating_time_us +
 			(u64)pg_stat_data.ingating_time;
@@ -5557,13 +5557,13 @@ static int mscg_transitions_show(struct seq_file *s, void *data)
 	int err;
 
 	if (g->power_on) {
-		err = gk20a_busy(g->dev);
+		err = gk20a_busy(g);
 		if (err)
 			return err;
 
 		gk20a_pmu_get_pg_stats(g,
 			PMU_PG_ELPG_ENGINE_ID_MS, &pg_stat_data);
-		gk20a_idle(g->dev);
+		gk20a_idle(g);
 	}
 	total_gating_cnt = g->pg_gating_cnt + pg_stat_data.gating_cnt;
 
@@ -5593,13 +5593,13 @@ static int elpg_stat_show(struct seq_file *s, void *data)
 
 	/* Don't unnecessarily power on the device */
 	if (g->power_on) {
-		err = gk20a_busy(g->dev);
+		err = gk20a_busy(g);
 		if (err)
 			return err;
 
 		gk20a_pmu_get_pg_stats(g,
 			PMU_PG_ELPG_ENGINE_ID_GRAPHICS, &pg_stat_data);
-		gk20a_idle(g->dev);
+		gk20a_idle(g);
 	}
 	total_ingating = g->pg_ingating_time_us +
 			(u64)pg_stat_data.ingating_time;
@@ -5650,13 +5650,13 @@ static int elpg_transitions_show(struct seq_file *s, void *data)
 	int err;
 
 	if (g->power_on) {
-		err = gk20a_busy(g->dev);
+		err = gk20a_busy(g);
 		if (err)
 			return err;
 
 		gk20a_pmu_get_pg_stats(g,
 			PMU_PG_ELPG_ENGINE_ID_GRAPHICS, &pg_stat_data);
-		gk20a_idle(g->dev);
+		gk20a_idle(g);
 	}
 	total_gating_cnt = g->pg_gating_cnt + pg_stat_data.gating_cnt;
 
@@ -5772,7 +5772,7 @@ static ssize_t perfmon_events_enable_write(struct file *file,
 
 	/* Don't turn on gk20a unnecessarily */
 	if (g->power_on) {
-		err = gk20a_busy(g->dev);
+		err = gk20a_busy(g);
 		if (err)
 			return err;
 
@@ -5783,7 +5783,7 @@ static ssize_t perfmon_events_enable_write(struct file *file,
 			g->pmu.perfmon_sampling_enabled = false;
 			pmu_perfmon_stop_sampling(&(g->pmu));
 		}
-		gk20a_idle(g->dev);
+		gk20a_idle(g);
 	} else {
 		g->pmu.perfmon_sampling_enabled = val ? true : false;
 	}

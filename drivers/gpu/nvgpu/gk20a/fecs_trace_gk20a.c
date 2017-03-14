@@ -332,7 +332,7 @@ static int gk20a_fecs_trace_poll(struct gk20a *g)
 	int cnt;
 	int err;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (unlikely(err))
 		return err;
 
@@ -372,7 +372,7 @@ static int gk20a_fecs_trace_poll(struct gk20a *g)
 
 done:
 	nvgpu_mutex_release(&trace->poll_lock);
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 	return err;
 }
 

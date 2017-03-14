@@ -136,13 +136,14 @@ int gk20a_gr_debug_dump(struct device *dev)
 static int gk20a_gr_debug_show(struct seq_file *s, void *unused)
 {
 	struct device *dev = s->private;
+	struct gk20a *g = gk20a_get_platform(dev)->g;
 	struct gk20a_debug_output o = {
 		.fn = gk20a_debug_write_to_seqfile,
 		.ctx = s,
 	};
 	int err;
 
-	err = gk20a_busy(dev);
+	err = gk20a_busy(g);
 	if (err) {
 		gk20a_err(dev, "failed to power on gpu: %d", err);
 		return -EINVAL;
@@ -150,7 +151,7 @@ static int gk20a_gr_debug_show(struct seq_file *s, void *unused)
 
 	gk20a_gr_dump_regs(dev, &o);
 
-	gk20a_idle(dev);
+	gk20a_idle(g);
 
 	return 0;
 }
@@ -183,7 +184,7 @@ static int gk20a_debug_show(struct seq_file *s, void *unused)
 
 	g = gk20a_get_platform(dev)->g;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err) {
 		gk20a_err(g->dev, "failed to power on gpu: %d", err);
 		return -EFAULT;
@@ -193,7 +194,7 @@ static int gk20a_debug_show(struct seq_file *s, void *unused)
 	if (g->ops.debug.show_dump)
 		g->ops.debug.show_dump(g, &o);
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 	return 0;
 }
 

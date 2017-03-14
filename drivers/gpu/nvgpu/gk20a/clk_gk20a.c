@@ -759,7 +759,7 @@ static int monitor_get(void *data, u64 *val)
 	u64 freq = clk->gpc_pll.clk_in;
 	u32 count1, count2;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
 
@@ -783,7 +783,7 @@ static int monitor_get(void *data, u64 *val)
 	do_div(freq, ncycle);
 	*val = freq;
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 	if (count1 != count2)
 		return -EBUSY;

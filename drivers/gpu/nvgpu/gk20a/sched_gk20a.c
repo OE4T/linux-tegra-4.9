@@ -233,13 +233,13 @@ static int gk20a_sched_dev_ioctl_tsg_set_timeslice(
 	if (!kref_get_unless_zero(&tsg->refcount))
 		return -ENXIO;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		goto done;
 
 	err = gk20a_tsg_set_timeslice(tsg, arg->timeslice);
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 done:
 	kref_put(&tsg->refcount, gk20a_tsg_release);
@@ -266,13 +266,13 @@ static int gk20a_sched_dev_ioctl_tsg_set_runlist_interleave(
 	if (!kref_get_unless_zero(&tsg->refcount))
 		return -ENXIO;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		goto done;
 
 	err = gk20a_tsg_set_runlist_interleave(tsg, arg->runlist_interleave);
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 done:
 	kref_put(&tsg->refcount, gk20a_tsg_release);
@@ -389,11 +389,11 @@ int gk20a_sched_dev_open(struct inode *inode, struct file *filp)
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "g=%p", g);
 
 	if (!sched->sw_ready) {
-		err = gk20a_busy(g->dev);
+		err = gk20a_busy(g);
 		if (err)
 			goto free_ref;
 
-		gk20a_idle(g->dev);
+		gk20a_idle(g);
 	}
 
 	if (!nvgpu_mutex_tryacquire(&sched->busy_lock)) {
@@ -538,7 +538,7 @@ static int gk20a_sched_debugfs_show(struct seq_file *s, void *unused)
 	int i;
 	int err;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
 
@@ -563,7 +563,7 @@ static int gk20a_sched_debugfs_show(struct seq_file *s, void *unused)
 
 	nvgpu_mutex_release(&sched->status_lock);
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 	return 0;
 }
@@ -597,13 +597,13 @@ void gk20a_sched_ctrl_tsg_added(struct gk20a *g, struct tsg_gk20a *tsg)
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);
 
 	if (!sched->sw_ready) {
-		err = gk20a_busy(g->dev);
+		err = gk20a_busy(g);
 		if (err) {
 			WARN_ON(err);
 			return;
 		}
 
-		gk20a_idle(g->dev);
+		gk20a_idle(g);
 	}
 
 	nvgpu_mutex_acquire(&sched->status_lock);

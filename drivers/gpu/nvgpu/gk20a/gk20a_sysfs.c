@@ -48,7 +48,7 @@ static ssize_t elcg_enable_store(struct device *dev,
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
 
@@ -60,7 +60,7 @@ static ssize_t elcg_enable_store(struct device *dev,
 		gr_gk20a_init_cg_mode(g, ELCG_MODE, ELCG_RUN);
 	}
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 	dev_info(dev, "ELCG is %s.\n", g->elcg_enabled ? "enabled" :
 			"disabled");
@@ -93,7 +93,7 @@ static ssize_t blcg_enable_store(struct device *dev,
 	else
 		g->blcg_enabled = false;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
 
@@ -117,7 +117,7 @@ static ssize_t blcg_enable_store(struct device *dev,
 	if (g->ops.clock_gating.blcg_xbar_load_gating_prod)
 		g->ops.clock_gating.blcg_xbar_load_gating_prod(g,
 			g->blcg_enabled);
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 	dev_info(dev, "BLCG is %s.\n", g->blcg_enabled ? "enabled" :
 			"disabled");
@@ -156,7 +156,7 @@ static ssize_t slcg_enable_store(struct device *dev,
 	 * init. Therefore, it would be incongruous to add it here. Once
 	 * it is added to init, we should add it here too.
 	 */
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
 
@@ -184,7 +184,7 @@ static ssize_t slcg_enable_store(struct device *dev,
 		g->ops.clock_gating.slcg_pmu_load_gating_prod(g, g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_xbar_load_gating_prod)
 		g->ops.clock_gating.slcg_xbar_load_gating_prod(g, g->slcg_enabled);
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 	dev_info(dev, "SLCG is %s.\n", g->slcg_enabled ? "enabled" :
 			"disabled");
@@ -289,6 +289,8 @@ static ssize_t railgate_enable_store(struct device *dev,
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	unsigned long railgate_enable = 0;
+	/* dev is guaranteed to be valid here. Ok to de-reference */
+	struct gk20a *g = get_gk20a(dev);
 	int err = 0;
 
 	if (kstrtoul(buf, 10, &railgate_enable) < 0)
@@ -296,12 +298,12 @@ static ssize_t railgate_enable_store(struct device *dev,
 
 	if (railgate_enable && !platform->can_railgate) {
 		/* release extra ref count */
-		gk20a_idle(dev);
+		gk20a_idle(g);
 		platform->can_railgate = true;
 		platform->user_railgate_disabled = false;
 	} else if (railgate_enable == 0 && platform->can_railgate) {
 		/* take extra ref count */
-		err = gk20a_busy(dev);
+		err = gk20a_busy(g);
 		if (err)
 			return err;
 		platform->can_railgate = false;
@@ -348,10 +350,10 @@ static ssize_t railgate_delay_store(struct device *dev,
 		dev_err(dev, "Invalid powergate delay\n");
 
 	/* wake-up system to make rail-gating delay effective immediately */
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 	return count;
 }
@@ -417,13 +419,13 @@ static ssize_t gk20a_load_show(struct device *dev,
 	if (!g->power_on) {
 		busy_time = 0;
 	} else {
-		err = gk20a_busy(g->dev);
+		err = gk20a_busy(g);
 		if (err)
 			return err;
 
 		gk20a_pmu_load_update(g);
 		gk20a_pmu_load_norm(g, &busy_time);
-		gk20a_idle(g->dev);
+		gk20a_idle(g);
 	}
 
 	res = snprintf(buf, PAGE_SIZE, "%u\n", busy_time);
@@ -445,7 +447,7 @@ static ssize_t elpg_enable_store(struct device *dev,
 	if (!g->power_on) {
 		g->elpg_enabled = val ? true : false;
 	} else {
-		err = gk20a_busy(g->dev);
+		err = gk20a_busy(g);
 		if (err)
 			return -EAGAIN;
 		/*
@@ -468,7 +470,7 @@ static ssize_t elpg_enable_store(struct device *dev,
 				gk20a_pmu_pg_global_enable(g, false);
 			}
 		}
-		gk20a_idle(g->dev);
+		gk20a_idle(g);
 	}
 	dev_info(dev, "ELPG is %s.\n", g->elpg_enabled ? "enabled" :
 			"disabled");
@@ -500,7 +502,7 @@ static ssize_t mscg_enable_store(struct device *dev,
 	if (!g->power_on) {
 		g->mscg_enabled = val ? true : false;
 	} else {
-		err = gk20a_busy(g->dev);
+		err = gk20a_busy(g);
 		if (err)
 			return -EAGAIN;
 		/*
@@ -532,7 +534,7 @@ static ssize_t mscg_enable_store(struct device *dev,
 			}
 			g->mscg_enabled = false;
 		}
-		gk20a_idle(g->dev);
+		gk20a_idle(g);
 	}
 	dev_info(dev, "MSCG is %s.\n", g->mscg_enabled ? "enabled" :
 			"disabled");
@@ -617,7 +619,7 @@ static ssize_t aelpg_enable_store(struct device *dev,
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
 
@@ -636,7 +638,7 @@ static ssize_t aelpg_enable_store(struct device *dev,
 	} else {
 		dev_info(dev, "PMU is not ready, AELPG request failed\n");
 	}
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 	dev_info(dev, "AELPG is %s.\n", g->aelpg_enabled ? "enabled" :
 			"disabled");
@@ -674,9 +676,9 @@ static ssize_t allow_all_enable_store(struct device *dev,
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	g->allow_all = (val ? true : false);
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 	return count;
 }
@@ -811,7 +813,7 @@ static ssize_t tpc_fs_mask_read(struct device *dev,
 	u32 tpc_fs_mask = 0;
 	int err = 0;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
 
@@ -822,7 +824,7 @@ static ssize_t tpc_fs_mask_read(struct device *dev,
 				(gr->max_tpc_per_gpc_count * gpc_index);
 	}
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 	return snprintf(buf, PAGE_SIZE, "0x%x\n", tpc_fs_mask);
 }

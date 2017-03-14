@@ -764,6 +764,7 @@ __releases(&cde_app->mutex)
 			struct gk20a_cde_ctx, ctx_deleter_work);
 	struct gk20a_cde_app *cde_app = &cde_ctx->g->cde_app;
 	struct device *dev = cde_ctx->dev;
+	struct gk20a *g = cde_ctx->g;
 	int err;
 
 	/* someone has just taken it? engine deletion started? */
@@ -773,7 +774,7 @@ __releases(&cde_app->mutex)
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx,
 			"cde: attempting to delete temporary %p", cde_ctx);
 
-	err = gk20a_busy(dev);
+	err = gk20a_busy(g);
 	if (err) {
 		/* this context would find new use anyway later, so not freeing
 		 * here does not leak anything */
@@ -801,7 +802,7 @@ __releases(&cde_app->mutex)
 
 out:
 	nvgpu_mutex_release(&cde_app->mutex);
-	gk20a_idle(dev);
+	gk20a_idle(g);
 }
 
 static struct gk20a_cde_ctx *gk20a_cde_do_get_context(struct gk20a *g)
@@ -949,7 +950,7 @@ __releases(&cde_app->mutex)
 	    scatterbuffer_byte_offset < compbits_byte_offset)
 		return -EINVAL;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
 
@@ -1106,7 +1107,7 @@ __releases(&cde_app->mutex)
 	flags = __flags | NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET;
 
 	/* gk20a_cde_execute_buffer() will grab a power reference of it's own */
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 	/* execute the conversion buffer, combined with init first if it's the
 	 * first time */
@@ -1131,7 +1132,7 @@ exit_unmap_surface:
 exit_unmap_vaddr:
 	gk20a_vm_unmap(cde_ctx->vm, map_vaddr);
 exit_idle:
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 	return err;
 }
 
@@ -1283,7 +1284,7 @@ __releases(&cde_app->mutex)
 	if (!cde_app->initialised)
 		return -ENOSYS;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
 
@@ -1297,7 +1298,7 @@ __releases(&cde_app->mutex)
 
 	nvgpu_mutex_release(&cde_app->mutex);
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 	return err;
 }
 

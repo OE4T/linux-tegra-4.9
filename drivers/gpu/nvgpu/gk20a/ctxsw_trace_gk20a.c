@@ -249,7 +249,7 @@ static int gk20a_ctxsw_dev_ioctl_poll(struct gk20a_ctxsw_dev *dev)
 
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "");
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
 
@@ -259,7 +259,7 @@ static int gk20a_ctxsw_dev_ioctl_poll(struct gk20a_ctxsw_dev *dev)
 	if (likely(!err))
 		err = g->ops.fecs_trace.poll(g);
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 	return err;
 }
 
@@ -287,7 +287,7 @@ int gk20a_ctxsw_dev_open(struct inode *inode, struct file *filp)
 		goto free_ref;
 	}
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		goto free_ref;
 
@@ -330,7 +330,7 @@ done:
 	nvgpu_mutex_release(&dev->write_lock);
 
 idle:
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 free_ref:
 	if (err)
 		gk20a_put(g);

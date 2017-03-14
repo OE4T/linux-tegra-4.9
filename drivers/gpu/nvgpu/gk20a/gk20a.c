@@ -1434,24 +1434,26 @@ static int gk20a_can_busy(struct gk20a *g)
 	return 1;
 }
 
-int gk20a_busy(struct device *dev)
+int gk20a_busy(struct gk20a *g)
 {
 	int ret = 0;
-	struct gk20a *g;
-	struct gk20a_platform *platform;
+	struct device *dev;
 
-	if (!dev)
-		return -ENODEV;
-
-	g = get_gk20a(dev);
-	platform = gk20a_get_platform(dev);
-
-	if (!g || !gk20a_can_busy(g))
+	if (!g)
 		return -ENODEV;
 
 	atomic_inc(&g->usage_count);
 
 	down_read(&g->busy_lock);
+
+	if (!gk20a_can_busy(g)) {
+		ret = -ENODEV;
+		atomic_dec(&g->usage_count);
+		goto fail;
+	}
+
+	dev = g->dev;
+
 	if (pm_runtime_enabled(dev)) {
 		ret = pm_runtime_get_sync(dev);
 		if (ret < 0) {
@@ -1484,22 +1486,21 @@ void gk20a_idle_nosuspend(struct device *dev)
 	pm_runtime_put_noidle(dev);
 }
 
-void gk20a_idle(struct device *dev)
+void gk20a_idle(struct gk20a *g)
 {
-	struct gk20a_platform *platform;
-	struct gk20a *g;
-
-	if (!dev)
-		return;
-
-	g = get_gk20a(dev);
-	platform = gk20a_get_platform(dev);
+	struct device *dev;
 
 	atomic_dec(&g->usage_count);
+	down_read(&g->busy_lock);
+
+	dev = g->dev;
+
+	if (!(dev && gk20a_can_busy(g)))
+		goto fail;
 
 	if (pm_runtime_enabled(dev)) {
 #ifdef CONFIG_PM
-		if (atomic_read(&dev->power.usage_count) == 1)
+		if (atomic_read(&g->dev->power.usage_count) == 1)
 			gk20a_scale_notify_idle(dev);
 #endif
 
@@ -1509,6 +1510,8 @@ void gk20a_idle(struct device *dev)
 	} else {
 		gk20a_scale_notify_idle(dev);
 	}
+fail:
+	up_read(&g->busy_lock);
 }
 
 void gk20a_disable(struct gk20a *g, u32 units)

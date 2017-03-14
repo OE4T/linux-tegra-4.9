@@ -59,11 +59,11 @@ int gk20a_as_alloc_share(struct gk20a_as *as,
 	as_share->id = generate_as_share_id(as_share->as);
 
 	/* this will set as_share->vm. */
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		goto failed;
 	err = g->ops.mm.vm_alloc_share(as_share, big_page_size, flags);
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 	if (err)
 		goto failed;
@@ -87,14 +87,14 @@ int gk20a_as_release_share(struct gk20a_as_share *as_share)
 
 	gk20a_dbg_fn("");
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 
 	if (err)
 		goto release_fail;
 
 	err = gk20a_vm_release_share(as_share);
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 release_fail:
 	release_as_share_id(as_share->as, as_share->id);
@@ -375,7 +375,7 @@ long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			return -EFAULT;
 	}
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
 
@@ -449,7 +449,7 @@ long gk20a_as_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 	}
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ))
 		if (copy_to_user((void __user *)arg, buf, _IOC_SIZE(cmd)))

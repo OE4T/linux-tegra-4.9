@@ -74,10 +74,10 @@ int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
 	priv->g = g;
 
 	if (!g->gr.sw_ready) {
-		err = gk20a_busy(g->dev);
+		err = gk20a_busy(g);
 		if (err)
 			goto free_ref;
-		gk20a_idle(g->dev);
+		gk20a_idle(g);
 	}
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
@@ -393,7 +393,7 @@ static int nvgpu_gpu_ioctl_set_mmu_debug_mode(
 		struct gk20a *g,
 		struct nvgpu_gpu_mmu_debug_mode_args *args)
 {
-	if (gk20a_busy(g->dev)) {
+	if (gk20a_busy(g)) {
 		gk20a_err(dev_from_gk20a(g), "failed to power on gpu\n");
 		return -EINVAL;
 	}
@@ -402,7 +402,7 @@ static int nvgpu_gpu_ioctl_set_mmu_debug_mode(
 	g->ops.fb.set_debug_mode(g, args->state == 1);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 	return 0;
 }
 
@@ -653,7 +653,7 @@ static inline int get_timestamps_zipper(struct gk20a *g,
 	u32 gpu_timestamp_hi_new = 0;
 	u32 gpu_timestamp_hi_old = 0;
 
-	if (gk20a_busy(g->dev)) {
+	if (gk20a_busy(g)) {
 		gk20a_err(dev_from_gk20a(g), "GPU not powered on\n");
 		err = -EINVAL;
 		goto end;
@@ -681,7 +681,7 @@ static inline int get_timestamps_zipper(struct gk20a *g,
 	}
 
 end:
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 	return err;
 }
 
@@ -721,7 +721,7 @@ static int nvgpu_gpu_get_gpu_time(
 	u64 time;
 	int err;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
 
@@ -729,7 +729,7 @@ static int nvgpu_gpu_get_gpu_time(
 	if (!err)
 		args->gpu_timestamp = time;
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 	return err;
 }
 
@@ -1218,7 +1218,7 @@ static int nvgpu_gpu_get_voltage(struct gk20a *g,
 	if (!(g->gpu_characteristics.flags & NVGPU_GPU_FLAGS_SUPPORT_GET_VOLTAGE))
 		return -EINVAL;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 	    return err;
 
@@ -1236,7 +1236,7 @@ static int nvgpu_gpu_get_voltage(struct gk20a *g,
 		err = -EINVAL;
 	}
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 	return err;
 }
@@ -1254,13 +1254,13 @@ static int nvgpu_gpu_get_current(struct gk20a *g,
 	if (!(g->gpu_characteristics.flags & NVGPU_GPU_FLAGS_SUPPORT_GET_CURRENT))
 		return -EINVAL;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
 
 	err = pmgr_pwr_devices_get_current(g, &args->currnt);
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 	return err;
 }
@@ -1278,13 +1278,13 @@ static int nvgpu_gpu_get_power(struct gk20a *g,
 	if (!(g->gpu_characteristics.flags & NVGPU_GPU_FLAGS_SUPPORT_GET_POWER))
 		return -EINVAL;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
 
 	err = pmgr_pwr_devices_get_power(g, &args->power);
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 	return err;
 }
@@ -1303,13 +1303,13 @@ static int nvgpu_gpu_get_temperature(struct gk20a *g,
 	if (!g->ops.therm.get_internal_sensor_curr_temp)
 		return -EINVAL;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
 
 	err = g->ops.therm.get_internal_sensor_curr_temp(g, &temp_f24_8);
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 	args->temp_f24_8 = (s32)temp_f24_8;
 
@@ -1330,13 +1330,13 @@ static int nvgpu_gpu_set_therm_alert_limit(struct gk20a *g,
 	if (!g->ops.therm.configure_therm_alert)
 		return -EINVAL;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err)
 		return err;
 
 	err = g->ops.therm.configure_therm_alert(g, args->temp_f24_8);
 
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 	return err;
 }
@@ -1371,11 +1371,11 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	}
 
 	if (!g->gr.sw_ready) {
-		err = gk20a_busy(g->dev);
+		err = gk20a_busy(g);
 		if (err)
 			return err;
 
-		gk20a_idle(g->dev);
+		gk20a_idle(g);
 	}
 
 	switch (cmd) {
@@ -1439,11 +1439,11 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		}
 
 		if (!err) {
-			err = gk20a_busy(dev);
+			err = gk20a_busy(g);
 			if (!err) {
 				err = g->ops.gr.zbc_set_table(g, &g->gr,
 							     zbc_val);
-				gk20a_idle(dev);
+				gk20a_idle(g);
 			}
 		}
 

@@ -1230,7 +1230,7 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 
 	int err;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g), "failed to release a channel!");
 		goto channel_release;
@@ -1239,7 +1239,7 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 	trace_gk20a_channel_release(dev_name(g->dev));
 
 	gk20a_channel_close(ch);
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 
 channel_release:
 	gk20a_put(g);
@@ -1395,14 +1395,14 @@ static int __gk20a_channel_open(struct gk20a *g, struct file *filp, s32 runlist_
 		goto free_ref;
 	}
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(g);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g), "failed to power on, %d", err);
 		goto fail_busy;
 	}
 	/* All the user space channel should be non privilege */
 	ch = gk20a_open_new_channel(g, runlist_id, false);
-	gk20a_idle(g->dev);
+	gk20a_idle(g);
 	if (!ch) {
 		gk20a_err(dev_from_gk20a(g),
 			"failed to get f");
@@ -2693,7 +2693,7 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 
 		channel_gk20a_free_job(c, job);
 		job_finished = 1;
-		gk20a_idle(g->dev);
+		gk20a_idle(g);
 
 		if (!clean_all) {
 			/* Timeout isn't supported here so don't touch it. */
@@ -3120,7 +3120,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			return -EINVAL;
 
 		/* released by job cleanup via syncpt or sema interrupt */
-		err = gk20a_busy(g->dev);
+		err = gk20a_busy(g);
 		if (err) {
 			gk20a_err(d, "failed to host gk20a to submit gpfifo, process %s",
 				current->comm);
@@ -3227,7 +3227,7 @@ clean_up:
 	gk20a_fence_put(pre_fence);
 	gk20a_fence_put(post_fence);
 	if (need_deferred_cleanup)
-		gk20a_idle(g->dev);
+		gk20a_idle(g);
 	return err;
 }
 
@@ -3930,7 +3930,8 @@ long gk20a_channel_ioctl(struct file *filp,
 {
 	struct channel_priv *priv = filp->private_data;
 	struct channel_gk20a *ch = priv->c;
-	struct device *dev = ch->g->dev;
+	struct gk20a *g = ch->g;
+	struct device *dev = g->dev;
 	u8 buf[NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE] = {0};
 	int err = 0;
 
@@ -3967,7 +3968,7 @@ long gk20a_channel_ioctl(struct file *filp,
 	case NVGPU_IOCTL_CHANNEL_SET_NVMAP_FD:
 		break;
 	case NVGPU_IOCTL_CHANNEL_ALLOC_OBJ_CTX:
-		err = gk20a_busy(dev);
+		err = gk20a_busy(g);
 		if (err) {
 			dev_err(dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -3976,14 +3977,14 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = ch->g->ops.gr.alloc_obj_ctx(ch,
 				(struct nvgpu_alloc_obj_ctx_args *)buf);
-		gk20a_idle(dev);
+		gk20a_idle(g);
 		break;
 	case NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO_EX:
 	{
 		struct nvgpu_alloc_gpfifo_ex_args *alloc_gpfifo_ex_args =
 			(struct nvgpu_alloc_gpfifo_ex_args *)buf;
 
-		err = gk20a_busy(dev);
+		err = gk20a_busy(g);
 		if (err) {
 			dev_err(dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -3993,11 +3994,11 @@ long gk20a_channel_ioctl(struct file *filp,
 
 		if (!is_power_of_2(alloc_gpfifo_ex_args->num_entries)) {
 			err = -EINVAL;
-			gk20a_idle(dev);
+			gk20a_idle(g);
 			break;
 		}
 		err = gk20a_alloc_channel_gpfifo(ch, alloc_gpfifo_ex_args);
-		gk20a_idle(dev);
+		gk20a_idle(g);
 		break;
 	}
 	case NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO:
@@ -4006,7 +4007,7 @@ long gk20a_channel_ioctl(struct file *filp,
 		struct nvgpu_alloc_gpfifo_args *alloc_gpfifo_args =
 			(struct nvgpu_alloc_gpfifo_args *)buf;
 
-		err = gk20a_busy(dev);
+		err = gk20a_busy(g);
 		if (err) {
 			dev_err(dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -4027,7 +4028,7 @@ long gk20a_channel_ioctl(struct file *filp,
 		alloc_gpfifo_ex_args.flags = alloc_gpfifo_args->flags;
 
 		err = gk20a_alloc_channel_gpfifo(ch, &alloc_gpfifo_ex_args);
-		gk20a_idle(dev);
+		gk20a_idle(g);
 		break;
 	}
 	case NVGPU_IOCTL_CHANNEL_SUBMIT_GPFIFO:
@@ -4035,7 +4036,7 @@ long gk20a_channel_ioctl(struct file *filp,
 				(struct nvgpu_submit_gpfifo_args *)buf);
 		break;
 	case NVGPU_IOCTL_CHANNEL_WAIT:
-		err = gk20a_busy(dev);
+		err = gk20a_busy(g);
 		if (err) {
 			dev_err(dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -4052,10 +4053,10 @@ long gk20a_channel_ioctl(struct file *filp,
 
 		nvgpu_mutex_acquire(&ch->ioctl_lock);
 
-		gk20a_idle(dev);
+		gk20a_idle(g);
 		break;
 	case NVGPU_IOCTL_CHANNEL_ZCULL_BIND:
-		err = gk20a_busy(dev);
+		err = gk20a_busy(g);
 		if (err) {
 			dev_err(dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -4064,10 +4065,10 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = gk20a_channel_zcull_bind(ch,
 				(struct nvgpu_zcull_bind_args *)buf);
-		gk20a_idle(dev);
+		gk20a_idle(g);
 		break;
 	case NVGPU_IOCTL_CHANNEL_SET_ERROR_NOTIFIER:
-		err = gk20a_busy(dev);
+		err = gk20a_busy(g);
 		if (err) {
 			dev_err(dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -4076,11 +4077,11 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = gk20a_init_error_notifier(ch,
 				(struct nvgpu_set_error_notifier *)buf);
-		gk20a_idle(dev);
+		gk20a_idle(g);
 		break;
 #ifdef CONFIG_GK20A_CYCLE_STATS
 	case NVGPU_IOCTL_CHANNEL_CYCLE_STATS:
-		err = gk20a_busy(dev);
+		err = gk20a_busy(g);
 		if (err) {
 			dev_err(dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -4089,7 +4090,7 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = gk20a_channel_cycle_stats(ch,
 				(struct nvgpu_cycle_stats_args *)buf);
-		gk20a_idle(dev);
+		gk20a_idle(g);
 		break;
 #endif
 	case NVGPU_IOCTL_CHANNEL_SET_TIMEOUT:
@@ -4123,7 +4124,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			ch->has_timedout;
 		break;
 	case NVGPU_IOCTL_CHANNEL_SET_PRIORITY:
-		err = gk20a_busy(dev);
+		err = gk20a_busy(g);
 		if (err) {
 			dev_err(dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -4133,12 +4134,12 @@ long gk20a_channel_ioctl(struct file *filp,
 		err = ch->g->ops.fifo.channel_set_priority(ch,
 			((struct nvgpu_set_priority_args *)buf)->priority);
 
-		gk20a_idle(dev);
+		gk20a_idle(g);
 		gk20a_channel_trace_sched_param(
 			trace_gk20a_channel_set_priority, ch);
 		break;
 	case NVGPU_IOCTL_CHANNEL_ENABLE:
-		err = gk20a_busy(dev);
+		err = gk20a_busy(g);
 		if (err) {
 			dev_err(dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -4149,10 +4150,10 @@ long gk20a_channel_ioctl(struct file *filp,
 			ch->g->ops.fifo.enable_channel(ch);
 		else
 			err = -ENOSYS;
-		gk20a_idle(dev);
+		gk20a_idle(g);
 		break;
 	case NVGPU_IOCTL_CHANNEL_DISABLE:
-		err = gk20a_busy(dev);
+		err = gk20a_busy(g);
 		if (err) {
 			dev_err(dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -4163,10 +4164,10 @@ long gk20a_channel_ioctl(struct file *filp,
 			ch->g->ops.fifo.disable_channel(ch);
 		else
 			err = -ENOSYS;
-		gk20a_idle(dev);
+		gk20a_idle(g);
 		break;
 	case NVGPU_IOCTL_CHANNEL_PREEMPT:
-		err = gk20a_busy(dev);
+		err = gk20a_busy(g);
 		if (err) {
 			dev_err(dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -4174,10 +4175,10 @@ long gk20a_channel_ioctl(struct file *filp,
 			break;
 		}
 		err = gk20a_fifo_preempt(ch->g, ch);
-		gk20a_idle(dev);
+		gk20a_idle(g);
 		break;
 	case NVGPU_IOCTL_CHANNEL_FORCE_RESET:
-		err = gk20a_busy(dev);
+		err = gk20a_busy(g);
 		if (err) {
 			dev_err(dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -4186,7 +4187,7 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = ch->g->ops.fifo.force_reset_ch(ch,
 				NVGPU_CHANNEL_RESETCHANNEL_VERIF_ERROR, true);
-		gk20a_idle(dev);
+		gk20a_idle(g);
 		break;
 	case NVGPU_IOCTL_CHANNEL_EVENT_ID_CTRL:
 		err = gk20a_channel_event_id_ctrl(ch,
@@ -4194,7 +4195,7 @@ long gk20a_channel_ioctl(struct file *filp,
 		break;
 #ifdef CONFIG_GK20A_CYCLE_STATS
 	case NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT:
-		err = gk20a_busy(dev);
+		err = gk20a_busy(g);
 		if (err) {
 			dev_err(dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -4203,7 +4204,7 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = gk20a_channel_cycle_stats_snapshot(ch,
 				(struct nvgpu_cycle_stats_snapshot_args *)buf);
-		gk20a_idle(dev);
+		gk20a_idle(g);
 		break;
 #endif
 	case NVGPU_IOCTL_CHANNEL_WDT:
@@ -4211,7 +4212,7 @@ long gk20a_channel_ioctl(struct file *filp,
 				(struct nvgpu_channel_wdt_args *)buf);
 		break;
 	case NVGPU_IOCTL_CHANNEL_SET_RUNLIST_INTERLEAVE:
-		err = gk20a_busy(dev);
+		err = gk20a_busy(g);
 		if (err) {
 			dev_err(dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -4221,12 +4222,12 @@ long gk20a_channel_ioctl(struct file *filp,
 		err = gk20a_channel_set_runlist_interleave(ch,
 			((struct nvgpu_runlist_interleave_args *)buf)->level);
 
-		gk20a_idle(dev);
+		gk20a_idle(g);
 		gk20a_channel_trace_sched_param(
 			trace_gk20a_channel_set_runlist_interleave, ch);
 		break;
 	case NVGPU_IOCTL_CHANNEL_SET_TIMESLICE:
-		err = gk20a_busy(dev);
+		err = gk20a_busy(g);
 		if (err) {
 			dev_err(dev,
 				"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -4236,13 +4237,13 @@ long gk20a_channel_ioctl(struct file *filp,
 		err = ch->g->ops.fifo.channel_set_timeslice(ch,
 			((struct nvgpu_timeslice_args *)buf)->timeslice_us);
 
-		gk20a_idle(dev);
+		gk20a_idle(g);
 		gk20a_channel_trace_sched_param(
 			trace_gk20a_channel_set_timeslice, ch);
 		break;
 	case NVGPU_IOCTL_CHANNEL_SET_PREEMPTION_MODE:
 		if (ch->g->ops.gr.set_preemption_mode) {
-			err = gk20a_busy(dev);
+			err = gk20a_busy(g);
 			if (err) {
 				dev_err(dev,
 					"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -4252,7 +4253,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			err = ch->g->ops.gr.set_preemption_mode(ch,
 			     ((struct nvgpu_preemption_mode_args *)buf)->graphics_preempt_mode,
 			     ((struct nvgpu_preemption_mode_args *)buf)->compute_preempt_mode);
-			gk20a_idle(dev);
+			gk20a_idle(g);
 		} else {
 			err = -EINVAL;
 		}
@@ -4262,7 +4263,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			bool boost =
 				((struct nvgpu_boosted_ctx_args *)buf)->boost;
 
-			err = gk20a_busy(dev);
+			err = gk20a_busy(g);
 			if (err) {
 				dev_err(dev,
 					"%s: failed to host gk20a for ioctl cmd: 0x%x",
@@ -4270,7 +4271,7 @@ long gk20a_channel_ioctl(struct file *filp,
 				break;
 			}
 			err = ch->g->ops.gr.set_boosted_ctx(ch, boost);
-			gk20a_idle(dev);
+			gk20a_idle(g);
 		} else {
 			err = -EINVAL;
 		}

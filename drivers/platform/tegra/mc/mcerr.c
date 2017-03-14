@@ -3,7 +3,7 @@
  *
  * MC error code common to T3x and T11x. T20 has been left alone.
  *
- * Copyright (c) 2010-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -495,6 +495,25 @@ DEFINE_SIMPLE_ATTRIBUTE(mcerr_throttle_debugfs_fops, __get_throttle,
 			__set_throttle, "%llu\n");
 
 /*
+ * This function will return true for the tegra chip versions
+ * which support emc error handling and returns false for chips
+ * which does not support emc error handling
+ */
+static int tegra_soc_emc_err_handling(struct platform_device *pdev)
+{
+	bool emc_err_handling;
+	const void *prop;
+
+	prop = of_get_property(pdev->dev.of_node, "compatible", NULL);
+	if (prop && strcmp(prop, "nvidia,tegra-mc") == 0)
+		emc_err_handling = false;
+	else
+		emc_err_handling = true;
+
+	return emc_err_handling;
+}
+
+/*
  * This will always be successful. However, if something goes wrong in the
  * init a message will be printed to the kernel log. Since this is a
  * non-essential piece of the kernel no reason to fail the entire MC init
@@ -558,7 +577,8 @@ int tegra_mcerr_init(struct dentry *mc_parent, struct platform_device *pdev)
 		goto done;
 	}
 
-	tegra_emcerr_init(mc_parent, pdev);
+	if (tegra_soc_emc_err_handling(pdev))
+		tegra_emcerr_init(mc_parent, pdev);
 
 	if (!mc_parent)
 		goto done;

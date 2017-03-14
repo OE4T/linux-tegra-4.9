@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,14 +18,6 @@
 
 #include <linux/kernel.h>
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 void tegra_emcerr_init(struct dentry *mc_parent,
 					struct platform_device *pdev);
-#else
-static void tegra_emcerr_init(struct dentry *mc_parent,
-					struct platform_device *pdev)
-{
-}
-#endif
-
 #endif

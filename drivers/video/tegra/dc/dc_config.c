@@ -219,7 +219,7 @@ u32 *tegra_dc_parse_feature(struct tegra_dc *dc, int win_idx, int operation)
 	}
 
 	idx = tegra_dc_get_feature(feature, win_idx, option);
-	if (IS_ERR_VALUE(idx))
+	if (idx < 0)
 		return NULL;
 	entry = &feature->entries[idx];
 
@@ -308,7 +308,7 @@ int tegra_dc_feature_has_scan_column(struct tegra_dc *dc, int win_idx)
 
 	idx = tegra_dc_get_feature(dc->feature, win_idx,
 		TEGRA_DC_FEATURE_INVERT_TYPE);
-	if (IS_ERR_VALUE(idx))
+	if (idx < 0)
 		return 0;
 
 	entry = &dc->feature->entries[idx];

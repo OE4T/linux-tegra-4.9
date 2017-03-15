@@ -22,6 +22,7 @@
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 #include "gk20a/bus_gk20a.h"
+#include "gk20a/pramin_gk20a.h"
 
 #include "gp10b/gr_gp10b.h"
 #include "gp10b/fecs_trace_gp10b.h"
@@ -250,6 +251,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gp10b_init_cde_ops(gops);
 	gp10b_init_therm_ops(gops);
 	gk20a_init_tsg_ops(gops);
+	gk20a_init_pramin_ops(gops);
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	gk20a_init_css_ops(gops);
 #endif

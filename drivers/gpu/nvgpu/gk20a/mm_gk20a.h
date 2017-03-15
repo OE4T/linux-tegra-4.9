@@ -460,6 +460,9 @@ enum gmmu_pgsz_gk20a __get_pte_size_fixed_map(struct vm_gk20a *vm,
 					      u64 base, u64 size);
 enum gmmu_pgsz_gk20a __get_pte_size(struct vm_gk20a *vm, u64 base, u64 size);
 
+struct nvgpu_page_alloc *
+get_vidmem_page_alloc(struct scatterlist *sgl);
+
 /*
  * Buffer accessors - wrap between begin() and end() if there is no permanent
  * kernel mapping for this buffer.

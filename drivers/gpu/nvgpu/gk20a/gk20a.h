@@ -40,6 +40,7 @@ struct dbg_profiler_object_data;
 
 #include "../../../arch/arm/mach-tegra/iomap.h"
 
+#include <nvgpu/pramin.h>
 #include <nvgpu/acr/nvgpu_acr.h>
 
 #include "as_gk20a.h"
@@ -69,6 +70,8 @@ struct dbg_profiler_object_data;
 #define WRITE_ONCE(x, val) \
 			x = val
 #endif
+
+struct page_alloc_chunk;
 
 /* PTIMER_REF_FREQ_HZ corresponds to a period of 32 nanoseconds.
     32 ns is the resolution of ptimer. */
@@ -647,6 +650,13 @@ struct gpu_ops {
 				struct vm_gk20a *vm, u32 big_page_size);
 		bool (*mmu_fault_pending)(struct gk20a *g);
 	} mm;
+	struct {
+		u32 (*enter)(struct gk20a *g, struct mem_desc *mem,
+			     struct page_alloc_chunk *chunk, u32 w);
+		void (*exit)(struct gk20a *g, struct mem_desc *mem,
+			     struct page_alloc_chunk *chunk);
+		u32 (*data032_r)(u32 i);
+	} pramin;
 	struct {
 		int (*init_therm_setup_hw)(struct gk20a *g);
 		int (*elcg_init_idle_filters)(struct gk20a *g);

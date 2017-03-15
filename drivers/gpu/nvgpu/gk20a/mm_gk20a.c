@@ -32,6 +32,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/timers.h>
+#include <nvgpu/pramin.h>
 #include <nvgpu/allocator.h>
 #include <nvgpu/semaphore.h>
 #include <nvgpu/page_allocator.h>
@@ -50,13 +51,6 @@
 #include <nvgpu/hw/gk20a/hw_flush_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
 
-/*
- * Flip this to force all gk20a_mem* accesses via PRAMIN from the start of the
- * boot, even for buffers that would work via cpu_va. In runtime, the flag is
- * in debugfs, called "force_pramin".
- */
-#define GK20A_FORCE_PRAMIN_DEFAULT false
-
 #if defined(CONFIG_GK20A_VIDMEM)
 static void gk20a_vidmem_clear_mem_worker(struct work_struct *work);
 #endif
@@ -74,7 +68,7 @@ is_vidmem_page_alloc(u64 addr)
 	return !!(addr & 1ULL);
 }
 
-static inline struct nvgpu_page_alloc *
+struct nvgpu_page_alloc *
 get_vidmem_page_alloc(struct scatterlist *sgl)
 {
 	u64 addr;
@@ -121,151 +115,6 @@ void gk20a_mem_end(struct gk20a *g, struct mem_desc *mem)
 	mem->cpu_va = NULL;
 }
 
-/* WARNING: returns pramin_window_lock taken, complement with pramin_exit() */
-static u32 gk20a_pramin_enter(struct gk20a *g, struct mem_desc *mem,
-		struct page_alloc_chunk *chunk, u32 w)
-{
-	u64 bufbase = chunk->base;
-	u64 addr = bufbase + w * sizeof(u32);
-	u32 hi = (u32)((addr & ~(u64)0xfffff)
-		>> bus_bar0_window_target_bar0_window_base_shift_v());
-	u32 lo = (u32)(addr & 0xfffff);
-	u32 win = gk20a_aperture_mask(g, mem,
-			bus_bar0_window_target_sys_mem_noncoherent_f(),
-			bus_bar0_window_target_vid_mem_f()) |
-		bus_bar0_window_base_f(hi);
-
-	gk20a_dbg(gpu_dbg_mem,
-			"0x%08x:%08x begin for %p,%p at [%llx,%llx] (sz %llx)",
-			hi, lo, mem, chunk, bufbase,
-			bufbase + chunk->length, chunk->length);
-
-	WARN_ON(!bufbase);
-
-	nvgpu_spinlock_acquire(&g->mm.pramin_window_lock);
-
-	if (g->mm.pramin_window != win) {
-		gk20a_writel(g, bus_bar0_window_r(), win);
-		gk20a_readl(g, bus_bar0_window_r());
-		g->mm.pramin_window = win;
-	}
-
-	return lo;
-}
-
-static void gk20a_pramin_exit(struct gk20a *g, struct mem_desc *mem,
-			struct page_alloc_chunk *chunk)
-{
-	gk20a_dbg(gpu_dbg_mem, "end for %p,%p", mem, chunk);
-
-	nvgpu_spinlock_release(&g->mm.pramin_window_lock);
-}
-
-/*
- * Batch innerloop for the function below once per each PRAMIN range (some
- * 4B..1MB at a time). "start" reg goes as-is to gk20a_{readl,writel}.
- */
-typedef void (*pramin_access_batch_fn)(struct gk20a *g, u32 start, u32 words,
-		u32 **arg);
-
-/*
- * The PRAMIN range is 1 MB, must change base addr if a buffer crosses that.
- * This same loop is used for read/write/memset. Offset and size in bytes.
- * One call to "loop" is done per range, with "arg" supplied.
- */
-static inline void pramin_access_batched(struct gk20a *g, struct mem_desc *mem,
-		u32 offset, u32 size, pramin_access_batch_fn loop, u32 **arg)
-{
-	struct nvgpu_page_alloc *alloc = NULL;
-	struct page_alloc_chunk *chunk = NULL;
-	u32 byteoff, start_reg, until_end, n;
-
-	alloc = get_vidmem_page_alloc(mem->sgt->sgl);
-	list_for_each_entry(chunk, &alloc->alloc_chunks, list_entry) {
-		if (offset >= chunk->length)
-			offset -= chunk->length;
-		else
-			break;
-	}
-
-	offset /= sizeof(u32);
-
-	while (size) {
-		byteoff = gk20a_pramin_enter(g, mem, chunk, offset);
-		start_reg = pram_data032_r(byteoff / sizeof(u32));
-		until_end = SZ_1M - (byteoff & (SZ_1M - 1));
-
-		n = min3(size, until_end, (u32)(chunk->length - offset));
-
-		loop(g, start_reg, n / sizeof(u32), arg);
-
-		/* read back to synchronize accesses */
-		gk20a_readl(g, start_reg);
-		gk20a_pramin_exit(g, mem, chunk);
-
-		size -= n;
-
-		if (n == (chunk->length - offset)) {
-			chunk = list_next_entry(chunk, list_entry);
-			offset = 0;
-		} else {
-			offset += n / sizeof(u32);
-		}
-	}
-}
-
-static inline void pramin_access_batch_rd_n(struct gk20a *g, u32 start,
-	u32 words, u32 **arg)
-{
-	u32 r = start, *dest_u32 = *arg;
-
-	if (!g->regs) {
-		__gk20a_warn_on_no_regs();
-		return;
-	}
-
-	while (words--) {
-		*dest_u32++ = gk20a_readl(g, r);
-		r += sizeof(u32);
-	}
-
-	*arg = dest_u32;
-}
-
-static inline void pramin_access_batch_wr_n(struct gk20a *g, u32 start,
-		u32 words, u32 **arg)
-{
-	u32 r = start, *src_u32 = *arg;
-
-	if (!g->regs) {
-		__gk20a_warn_on_no_regs();
-		return;
-	}
-
-	while (words--) {
-		writel_relaxed(*src_u32++, g->regs + r);
-		r += sizeof(u32);
-	}
-
-	*arg = src_u32;
-}
-
-static inline void pramin_access_batch_set(struct gk20a *g, u32 start,
-		u32 words, u32 **arg)
-{
-	u32 r = start, repeat = **arg;
-
-	if (!g->regs) {
-		__gk20a_warn_on_no_regs();
-		return;
-	}
-
-	while (words--) {
-		writel_relaxed(repeat, g->regs + r);
-		r += sizeof(u32);
-	}
-}
-
 u32 gk20a_mem_rd32(struct gk20a *g, struct mem_desc *mem, u32 w)
 {
 	u32 data = 0;
@@ -282,8 +131,8 @@ u32 gk20a_mem_rd32(struct gk20a *g, struct mem_desc *mem, u32 w)
 		u32 value;
 		u32 *p = &value;
 
-		pramin_access_batched(g, mem, w * sizeof(u32), sizeof(u32),
-				pramin_access_batch_rd_n, &p);
+		nvgpu_pramin_access_batched(g, mem, w * sizeof(u32),
+				sizeof(u32), pramin_access_batch_rd_n, &p);
 
 		data = value;
 
@@ -319,7 +168,7 @@ void gk20a_mem_rd_n(struct gk20a *g, struct mem_desc *mem,
 	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
 		u32 *dest_u32 = dest;
 
-		pramin_access_batched(g, mem, offset, size,
+		nvgpu_pramin_access_batched(g, mem, offset, size,
 				pramin_access_batch_rd_n, &dest_u32);
 	} else {
 		WARN_ON("Accessing unallocated mem_desc");
@@ -340,8 +189,8 @@ void gk20a_mem_wr32(struct gk20a *g, struct mem_desc *mem, u32 w, u32 data)
 		u32 value = data;
 		u32 *p = &value;
 
-		pramin_access_batched(g, mem, w * sizeof(u32), sizeof(u32),
-				pramin_access_batch_wr_n, &p);
+		nvgpu_pramin_access_batched(g, mem, w * sizeof(u32),
+				sizeof(u32), pramin_access_batch_wr_n, &p);
 		if (!mem->skip_wmb)
 			wmb();
 	} else {
@@ -374,7 +223,7 @@ void gk20a_mem_wr_n(struct gk20a *g, struct mem_desc *mem, u32 offset,
 	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
 		u32 *src_u32 = src;
 
-		pramin_access_batched(g, mem, offset, size,
+		nvgpu_pramin_access_batched(g, mem, offset, size,
 				pramin_access_batch_wr_n, &src_u32);
 		if (!mem->skip_wmb)
 			wmb();
@@ -406,7 +255,7 @@ void gk20a_memset(struct gk20a *g, struct mem_desc *mem, u32 offset,
 		u32 repeat_value = c | (c << 8) | (c << 16) | (c << 24);
 		u32 *p = &repeat_value;
 
-		pramin_access_batched(g, mem, offset, size,
+		nvgpu_pramin_access_batched(g, mem, offset, size,
 				pramin_access_batch_set, &p);
 		if (!mem->skip_wmb)
 			wmb();
@@ -844,13 +693,6 @@ static int gk20a_alloc_sysmem_flush(struct gk20a *g)
 	return gk20a_gmmu_alloc_sys(g, SZ_4K, &g->mm.sysmem_flush);
 }
 
-static void gk20a_init_pramin(struct mm_gk20a *mm)
-{
-	mm->pramin_window = 0;
-	nvgpu_spinlock_init(&mm->pramin_window_lock);
-	mm->force_pramin = GK20A_FORCE_PRAMIN_DEFAULT;
-}
-
 #if defined(CONFIG_GK20A_VIDMEM)
 static int gk20a_vidmem_clear_all(struct gk20a *g)
 {
@@ -1013,7 +855,7 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 		       (int)(mm->channel.user_size >> 20),
 		       (int)(mm->channel.kernel_size >> 20));
 
-	gk20a_init_pramin(mm);
+	nvgpu_init_pramin(mm);
 
 	mm->vidmem.ce_ctx_id = (u32)~0;
 

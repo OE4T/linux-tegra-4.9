@@ -30,11 +30,13 @@ nvgpu-y := \
 	common/mm/buddy_allocator.o \
 	common/mm/page_allocator.o \
 	common/mm/lockless_allocator.o \
+	common/pramin.o \
 	common/nvgpu_common.o \
 	common/semaphore.o \
 	common/vbios/bios.o \
 	gk20a/gk20a.o \
 	gk20a/bus_gk20a.o \
+	gk20a/pramin_gk20a.o \
 	gk20a/sched_gk20a.o \
 	gk20a/as_gk20a.o \
 	gk20a/ctrl_gk20a.o \

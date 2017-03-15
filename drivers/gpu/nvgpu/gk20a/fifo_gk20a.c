@@ -1566,21 +1566,25 @@ static bool gk20a_fifo_handle_mmu_fault(
 			tsg = &g->fifo.tsg[ch->tsgid];
 
 		/* check if engine reset should be deferred */
-		if ((ch || tsg) && gk20a_fifo_should_defer_engine_reset(g,
-				engine_id, f.engine_subid_v, fake_fault)) {
-			g->fifo.deferred_fault_engines |= BIT(engine_id);
+		if (engine_id != FIFO_INVAL_ENGINE_ID) {
+			bool defer = gk20a_fifo_should_defer_engine_reset(g,
+						engine_id, f.engine_subid_v,
+						fake_fault);
+			if ((ch || tsg) && defer) {
+				g->fifo.deferred_fault_engines |= BIT(engine_id);
 
-			/* handled during channel free */
-			g->fifo.deferred_reset_pending = true;
-			gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
-				   "sm debugger attached,"
-				   " deferring channel recovery to channel free");
-		} else if (engine_id != FIFO_INVAL_ENGINE_ID) {
-			/* if lock is already taken, a reset is taking place
-			so no need to repeat */
-			if (nvgpu_mutex_tryacquire(&g->fifo.gr_reset_mutex)) {
-				gk20a_fifo_reset_engine(g, engine_id);
-				nvgpu_mutex_release(&g->fifo.gr_reset_mutex);
+				/* handled during channel free */
+				g->fifo.deferred_reset_pending = true;
+				gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+					   "sm debugger attached,"
+					   " deferring channel recovery to channel free");
+			} else {
+				/* if lock is already taken, a reset is taking place
+				so no need to repeat */
+				if (nvgpu_mutex_tryacquire(&g->fifo.gr_reset_mutex)) {
+					gk20a_fifo_reset_engine(g, engine_id);
+					nvgpu_mutex_release(&g->fifo.gr_reset_mutex);
+				}
 			}
 		}
 

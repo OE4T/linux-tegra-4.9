@@ -24,6 +24,11 @@
 
 static int pstate_sw_setup(struct gk20a *g);
 
+void gk20a_deinit_pstate_support(struct gk20a *g)
+{
+	nvgpu_mutex_destroy(&g->perf_pmu.pstatesobjs.pstate_mutex);
+}
+
 /*sw setup for pstate components*/
 int gk20a_init_pstate_support(struct gk20a *g)
 {
@@ -333,7 +338,10 @@ static int pstate_sw_setup(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	init_waitqueue_head(&g->perf_pmu.pstatesobjs.pstate_notifier_wq);
-	nvgpu_mutex_init(&g->perf_pmu.pstatesobjs.pstate_mutex);
+
+	err = nvgpu_mutex_init(&g->perf_pmu.pstatesobjs.pstate_mutex);
+	if (err)
+		return err;
 
 	err = boardobjgrpconstruct_e32(&g->perf_pmu.pstatesobjs.super);
 	if (err) {
@@ -364,6 +372,8 @@ static int pstate_sw_setup(struct gk20a *g)
 
 	err = parse_pstate_table_5x(g, hdr);
 done:
+	if (err)
+		nvgpu_mutex_destroy(&g->perf_pmu.pstatesobjs.pstate_mutex);
 	return err;
 }
 

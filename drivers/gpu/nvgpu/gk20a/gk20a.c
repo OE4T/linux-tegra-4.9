@@ -459,6 +459,10 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	if (g->ops.clk.suspend_clk_support)
 		ret |= g->ops.clk.suspend_clk_support(g);
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	if (g->ops.pmupstate)
+		gk20a_deinit_pstate_support(g);
+#endif
 	g->power_on = false;
 
 	/* Decrement platform power refcount */

@@ -54,6 +54,7 @@ struct pstates {
 };
 
 int gk20a_init_pstate_support(struct gk20a *g);
+void gk20a_deinit_pstate_support(struct gk20a *g);
 int gk20a_init_pstate_pmu_support(struct gk20a *g);
 
 struct clk_set_info *pstate_get_clk_set_info(struct gk20a *g, u32 pstate_num,

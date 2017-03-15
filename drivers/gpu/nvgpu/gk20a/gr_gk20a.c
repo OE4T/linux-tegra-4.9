@@ -8583,7 +8583,7 @@ int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 	bool locked_down;
 	bool no_error_pending;
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
-	bool mmu_debug_mode_enabled = g->ops.mm.is_debug_mode_enabled(g);
+	bool mmu_debug_mode_enabled = g->ops.fb.is_debug_mode_enabled(g);
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
 	u32 offset =

@@ -349,6 +349,7 @@ struct gpu_ops {
 	} gr;
 	const char *name;
 	struct {
+		void (*init_hw)(struct gk20a *g);
 		void (*init_fs_state)(struct gk20a *g);
 		void (*reset)(struct gk20a *g);
 		void (*init_uncompressed_kind_map)(struct gk20a *g);
@@ -358,6 +359,10 @@ struct gpu_ops {
 		unsigned int (*compression_page_size)(struct gk20a *g);
 		unsigned int (*compressible_page_size)(struct gk20a *g);
 		void (*dump_vpr_wpr_info)(struct gk20a *g);
+		int (*vpr_info_fetch)(struct gk20a *g);
+		bool (*is_debug_mode_enabled)(struct gk20a *g);
+		void (*set_debug_mode)(struct gk20a *g, bool enable);
+		void (*tlb_invalidate)(struct gk20a *g, struct mem_desc *pdb);
 	} fb;
 	struct {
 		void (*slcg_bus_load_gating_prod)(struct gk20a *g, bool prod);
@@ -573,8 +578,6 @@ struct gpu_ops {
 	} fecs_trace;
 	struct {
 		bool (*support_sparse)(struct gk20a *g);
-		bool (*is_debug_mode_enabled)(struct gk20a *g);
-		void (*set_debug_mode)(struct gk20a *g, bool enable);
 		u64 (*gmmu_map)(struct vm_gk20a *vm,
 				u64 map_offset,
 				struct sg_table *sgt,
@@ -607,7 +610,6 @@ struct gpu_ops {
 		void (*l2_invalidate)(struct gk20a *g);
 		void (*l2_flush)(struct gk20a *g, bool invalidate);
 		void (*cbc_clean)(struct gk20a *g);
-		void (*tlb_invalidate)(struct vm_gk20a *vm);
 		void (*set_big_page_size)(struct gk20a *g,
 					  struct mem_desc *mem, int size);
 		u32 (*get_big_page_sizes)(void);

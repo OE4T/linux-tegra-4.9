@@ -679,9 +679,6 @@ void gk20a_vm_put_buffers(struct vm_gk20a *vm,
 			  struct mapped_buffer_node **mapped_buffers,
 			  int num_buffers);
 
-/* invalidate tlbs for the vm area */
-void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm);
-
 /* find buffer corresponding to va */
 int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 			 struct dma_buf **dmabuf,

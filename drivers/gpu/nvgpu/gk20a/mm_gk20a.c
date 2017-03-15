@@ -42,7 +42,6 @@
 #include "kind_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_gmmu_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_fb_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_bus_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ram_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pram_gk20a.h>
@@ -1084,9 +1083,7 @@ int gk20a_init_mm_setup_hw(struct gk20a *g)
 		mm->use_full_comp_tag_line =
 			g->ops.fb.set_use_full_comp_tag_line(g);
 
-	gk20a_writel(g, fb_niso_flush_sysmem_addr_r(),
-		     g->ops.mm.get_iova_addr(g, g->mm.sysmem_flush.sgt->sgl, 0)
-		     >> 8);
+	g->ops.fb.init_hw(g);
 
 	if (g->ops.mm.bar1_bind)
 		g->ops.mm.bar1_bind(g, &mm->bar1.inst_block);
@@ -1538,7 +1535,7 @@ void gk20a_vm_mapping_batch_finish_locked(
 
 	if (mapping_batch->need_tlb_invalidate) {
 		struct gk20a *g = gk20a_from_vm(vm);
-		g->ops.mm.tlb_invalidate(vm);
+		g->ops.fb.tlb_invalidate(g, &vm->pdb.mem);
 	}
 }
 
@@ -1959,7 +1956,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 	}
 
 	if (!batch)
-		g->ops.mm.tlb_invalidate(vm);
+		g->ops.fb.tlb_invalidate(g, &vm->pdb.mem);
 	else
 		batch->need_tlb_invalidate = true;
 
@@ -2018,7 +2015,7 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 
 	if (!batch) {
 		gk20a_mm_l2_flush(g, true);
-		g->ops.mm.tlb_invalidate(vm);
+		g->ops.fb.tlb_invalidate(g, &vm->pdb.mem);
 	} else {
 		if (!batch->gpu_l2_flushed) {
 			gk20a_mm_l2_flush(g, true);
@@ -5344,70 +5341,6 @@ int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 	return 0;
 }
 
-void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
-{
-	struct gk20a *g = gk20a_from_vm(vm);
-	struct nvgpu_timeout timeout;
-	u32 addr_lo;
-	u32 data;
-
-	gk20a_dbg_fn("");
-
-	/* pagetables are considered sw states which are preserved after
-	   prepare_poweroff. When gk20a deinit releases those pagetables,
-	   common code in vm unmap path calls tlb invalidate that touches
-	   hw. Use the power_on flag to skip tlb invalidation when gpu
-	   power is turned off */
-
-	if (!g->power_on)
-		return;
-
-	addr_lo = u64_lo32(gk20a_mem_get_base_addr(g, &vm->pdb.mem, 0) >> 12);
-
-	nvgpu_mutex_acquire(&g->mm.tlb_lock);
-
-	trace_gk20a_mm_tlb_invalidate(dev_name(g->dev));
-
-	nvgpu_timeout_init(g, &timeout, 1000, NVGPU_TIMER_RETRY_TIMER);
-
-	do {
-		data = gk20a_readl(g, fb_mmu_ctrl_r());
-		if (fb_mmu_ctrl_pri_fifo_space_v(data) != 0)
-			break;
-		udelay(2);
-	} while (!nvgpu_timeout_expired_msg(&timeout,
-					 "wait mmu fifo space"));
-
-	if (nvgpu_timeout_peek_expired(&timeout))
-		goto out;
-
-	nvgpu_timeout_init(g, &timeout, 1000, NVGPU_TIMER_RETRY_TIMER);
-
-	gk20a_writel(g, fb_mmu_invalidate_pdb_r(),
-		fb_mmu_invalidate_pdb_addr_f(addr_lo) |
-		gk20a_aperture_mask(g, &vm->pdb.mem,
-		  fb_mmu_invalidate_pdb_aperture_sys_mem_f(),
-		  fb_mmu_invalidate_pdb_aperture_vid_mem_f()));
-
-	gk20a_writel(g, fb_mmu_invalidate_r(),
-		fb_mmu_invalidate_all_va_true_f() |
-		fb_mmu_invalidate_trigger_true_f());
-
-	do {
-		data = gk20a_readl(g, fb_mmu_ctrl_r());
-		if (fb_mmu_ctrl_pri_fifo_empty_v(data) !=
-			fb_mmu_ctrl_pri_fifo_empty_false_f())
-			break;
-		udelay(2);
-	} while (!nvgpu_timeout_expired_msg(&timeout,
-					 "wait mmu invalidate"));
-
-	trace_gk20a_mm_tlb_invalidate_done(dev_name(g->dev));
-
-out:
-	nvgpu_mutex_release(&g->mm.tlb_lock);
-}
-
 int gk20a_mm_suspend(struct gk20a *g)
 {
 	gk20a_dbg_fn("");
@@ -5421,31 +5354,6 @@ int gk20a_mm_suspend(struct gk20a *g)
 
 	gk20a_dbg_fn("done");
 	return 0;
-}
-
-bool gk20a_mm_mmu_debug_mode_enabled(struct gk20a *g)
-{
-	u32 debug_ctrl = gk20a_readl(g, fb_mmu_debug_ctrl_r());
-	return fb_mmu_debug_ctrl_debug_v(debug_ctrl) ==
-		fb_mmu_debug_ctrl_debug_enabled_v();
-}
-
-static void gk20a_mm_mmu_set_debug_mode(struct gk20a *g, bool enable)
-{
-	u32 reg_val, debug_ctrl;
-
-	reg_val = gk20a_readl(g, fb_mmu_debug_ctrl_r());
-	if (enable) {
-		debug_ctrl = fb_mmu_debug_ctrl_debug_enabled_f();
-		g->mmu_debug_ctrl = true;
-	} else {
-		debug_ctrl = fb_mmu_debug_ctrl_debug_disabled_f();
-		g->mmu_debug_ctrl = false;
-	}
-
-	reg_val = set_field(reg_val,
-				fb_mmu_debug_ctrl_debug_m(), debug_ctrl);
-	gk20a_writel(g, fb_mmu_debug_ctrl_r(), reg_val);
 }
 
 u32 gk20a_mm_get_physical_addr_bits(struct gk20a *g)
@@ -5510,8 +5418,6 @@ void gk20a_mm_debugfs_init(struct device *dev)
 
 void gk20a_init_mm(struct gpu_ops *gops)
 {
-	gops->mm.is_debug_mode_enabled = gk20a_mm_mmu_debug_mode_enabled;
-	gops->mm.set_debug_mode = gk20a_mm_mmu_set_debug_mode;
 	gops->mm.gmmu_map = gk20a_locked_gmmu_map;
 	gops->mm.gmmu_unmap = gk20a_locked_gmmu_unmap;
 	gops->mm.vm_remove = gk20a_vm_remove_support;
@@ -5521,7 +5427,6 @@ void gk20a_init_mm(struct gpu_ops *gops)
 	gops->mm.l2_invalidate = gk20a_mm_l2_invalidate;
 	gops->mm.l2_flush = gk20a_mm_l2_flush;
 	gops->mm.cbc_clean = gk20a_mm_cbc_clean;
-	gops->mm.tlb_invalidate = gk20a_mm_tlb_invalidate;
 	gops->mm.get_iova_addr = gk20a_mm_iova_addr;
 	gops->mm.get_physical_addr_bits = gk20a_mm_get_physical_addr_bits;
 	gops->mm.get_mmu_levels = gk20a_mm_get_mmu_levels;

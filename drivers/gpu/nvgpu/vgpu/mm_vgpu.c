@@ -498,11 +498,11 @@ static void vgpu_mm_l2_flush(struct gk20a *g, bool invalidate)
 	vgpu_cache_maint(vgpu_get_handle(g), op);
 }
 
-static void vgpu_mm_tlb_invalidate(struct vm_gk20a *vm)
+static void vgpu_mm_tlb_invalidate(struct gk20a *g, struct mem_desc *pdb)
 {
 	gk20a_dbg_fn("");
 
-	gk20a_err(dev_from_vm(vm), "%s: call to RM server not supported",
+	gk20a_err(g->dev, "%s: call to RM server not supported",
 		__func__);
 }
 
@@ -523,8 +523,8 @@ static void vgpu_mm_mmu_set_debug_mode(struct gk20a *g, bool enable)
 
 void vgpu_init_mm_ops(struct gpu_ops *gops)
 {
-	gops->mm.is_debug_mode_enabled = NULL;
-	gops->mm.set_debug_mode = vgpu_mm_mmu_set_debug_mode;
+	gops->fb.is_debug_mode_enabled = NULL;
+	gops->fb.set_debug_mode = vgpu_mm_mmu_set_debug_mode;
 	gops->mm.gmmu_map = vgpu_locked_gmmu_map;
 	gops->mm.gmmu_unmap = vgpu_locked_gmmu_unmap;
 	gops->mm.vm_remove = vgpu_vm_remove_support;
@@ -533,7 +533,7 @@ void vgpu_init_mm_ops(struct gpu_ops *gops)
 	gops->mm.fb_flush = vgpu_mm_fb_flush;
 	gops->mm.l2_invalidate = vgpu_mm_l2_invalidate;
 	gops->mm.l2_flush = vgpu_mm_l2_flush;
-	gops->mm.tlb_invalidate = vgpu_mm_tlb_invalidate;
+	gops->fb.tlb_invalidate = vgpu_mm_tlb_invalidate;
 	gops->mm.get_physical_addr_bits = gk20a_mm_get_physical_addr_bits;
 	gops->mm.get_iova_addr = gk20a_mm_iova_addr;
 	gops->mm.init_mm_setup_hw = NULL;

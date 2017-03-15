@@ -13,8 +13,13 @@
 
 #ifndef FB_GK20A_H
 #define FB_GK20A_H
+
 struct gk20a;
+struct mem_desc;
 
 void gk20a_init_fb(struct gpu_ops *gops);
 void fb_gk20a_reset(struct gk20a *g);
+void gk20a_fb_init_hw(struct gk20a *g);
+void gk20a_fb_tlb_invalidate(struct gk20a *g, struct mem_desc *pdb);
+
 #endif

@@ -19,7 +19,6 @@ struct gk20a;
 
 #define PDE_ADDR_START(x, y)	((x) &  ~((0x1UL << (y)) - 1))
 #define PDE_ADDR_END(x, y)	((x) | ((0x1UL << (y)) - 1))
-#define VPR_INFO_FETCH_WAIT	(5)
 
 void gm20b_init_mm(struct gpu_ops *gops);
 int gm20b_mm_mmu_vpr_info_fetch(struct gk20a *g);

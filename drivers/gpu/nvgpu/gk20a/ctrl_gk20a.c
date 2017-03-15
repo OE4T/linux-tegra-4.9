@@ -385,7 +385,7 @@ static int nvgpu_gpu_ioctl_set_mmu_debug_mode(
 	}
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-	g->ops.mm.set_debug_mode(g, args->state == 1);
+	g->ops.fb.set_debug_mode(g, args->state == 1);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	gk20a_idle(g->dev);

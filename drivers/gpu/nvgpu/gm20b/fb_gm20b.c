@@ -22,6 +22,9 @@
 #include <nvgpu/hw/gm20b/hw_fb_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_top_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_gmmu_gm20b.h>
+#include <nvgpu/hw/gm20b/hw_gr_gm20b.h>
+
+#define VPR_INFO_FETCH_WAIT	(5)
 
 static void fb_gm20b_init_fs_state(struct gk20a *g)
 {
@@ -140,15 +143,84 @@ static void gm20b_fb_dump_vpr_wpr_info(struct gk20a *g)
 
 }
 
+static int gm20b_fb_vpr_info_fetch_wait(struct gk20a *g,
+					    unsigned int msec)
+{
+	struct nvgpu_timeout timeout;
+
+	nvgpu_timeout_init(g, &timeout, msec, NVGPU_TIMER_CPU_TIMER);
+
+	do {
+		u32 val;
+
+		val = gk20a_readl(g, fb_mmu_vpr_info_r());
+		if (fb_mmu_vpr_info_fetch_v(val) ==
+		    fb_mmu_vpr_info_fetch_false_v())
+			return 0;
+
+	} while (!nvgpu_timeout_expired(&timeout));
+
+	return -ETIMEDOUT;
+}
+
+int gm20b_fb_vpr_info_fetch(struct gk20a *g)
+{
+	if (gm20b_fb_vpr_info_fetch_wait(g, VPR_INFO_FETCH_WAIT)) {
+		return -ETIME;
+	}
+
+	gk20a_writel(g, fb_mmu_vpr_info_r(),
+			fb_mmu_vpr_info_fetch_true_v());
+
+	return gm20b_fb_vpr_info_fetch_wait(g, VPR_INFO_FETCH_WAIT);
+}
+
+static bool gm20b_fb_debug_mode_enabled(struct gk20a *g)
+{
+	u32 debug_ctrl = gk20a_readl(g, gr_gpcs_pri_mmu_debug_ctrl_r());
+	return gr_gpcs_pri_mmu_debug_ctrl_debug_v(debug_ctrl) ==
+		gr_gpcs_pri_mmu_debug_ctrl_debug_enabled_v();
+}
+
+static void gm20b_fb_set_debug_mode(struct gk20a *g, bool enable)
+{
+	u32 reg_val, fb_debug_ctrl, gpc_debug_ctrl;
+
+	if (enable) {
+		fb_debug_ctrl = fb_mmu_debug_ctrl_debug_enabled_f();
+		gpc_debug_ctrl = gr_gpcs_pri_mmu_debug_ctrl_debug_enabled_f();
+		g->mmu_debug_ctrl = true;
+	} else {
+		fb_debug_ctrl = fb_mmu_debug_ctrl_debug_disabled_f();
+		gpc_debug_ctrl = gr_gpcs_pri_mmu_debug_ctrl_debug_disabled_f();
+		g->mmu_debug_ctrl = false;
+	}
+
+	reg_val = gk20a_readl(g, fb_mmu_debug_ctrl_r());
+	reg_val = set_field(reg_val,
+			fb_mmu_debug_ctrl_debug_m(), fb_debug_ctrl);
+	gk20a_writel(g, fb_mmu_debug_ctrl_r(), reg_val);
+
+	reg_val = gk20a_readl(g, gr_gpcs_pri_mmu_debug_ctrl_r());
+	reg_val = set_field(reg_val,
+			gr_gpcs_pri_mmu_debug_ctrl_debug_m(), gpc_debug_ctrl);
+	gk20a_writel(g, gr_gpcs_pri_mmu_debug_ctrl_r(), reg_val);
+}
+
 void gm20b_init_fb(struct gpu_ops *gops)
 {
 	gops->fb.reset = fb_gk20a_reset;
+	gops->fb.init_hw = gk20a_fb_init_hw;
 	gops->fb.init_fs_state = fb_gm20b_init_fs_state;
 	gops->fb.set_mmu_page_size = gm20b_fb_set_mmu_page_size;
 	gops->fb.set_use_full_comp_tag_line = gm20b_fb_set_use_full_comp_tag_line;
 	gops->fb.compression_page_size = gm20b_fb_compression_page_size;
 	gops->fb.compressible_page_size = gm20b_fb_compressible_page_size;
+	gops->fb.vpr_info_fetch = gm20b_fb_vpr_info_fetch;
 	gops->fb.dump_vpr_wpr_info = gm20b_fb_dump_vpr_wpr_info;
+	gops->fb.is_debug_mode_enabled = gm20b_fb_debug_mode_enabled;
+	gops->fb.set_debug_mode = gm20b_fb_set_debug_mode;
+	gops->fb.tlb_invalidate = gk20a_fb_tlb_invalidate;
 	gm20b_init_uncompressed_kind_map();
 	gm20b_init_kind_attr();
 }

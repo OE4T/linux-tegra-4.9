@@ -1083,7 +1083,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	}
 
 	/* Restore the debug setting */
-	g->ops.mm.set_debug_mode(g, g->mmu_debug_ctrl);
+	g->ops.fb.set_debug_mode(g, g->mmu_debug_ctrl);
 
 	gk20a_channel_resume(g);
 	set_user_nice(current, nice_value);

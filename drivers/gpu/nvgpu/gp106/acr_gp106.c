@@ -394,8 +394,6 @@ static int gp106_prepare_ucode_blob(struct gk20a *g)
 	}
 	plsfm = &lsfm_l;
 	memset((void *)plsfm, 0, sizeof(struct ls_flcn_mgr_v1));
-	gp106_dbg_pmu("fetching GMMU regs\n");
-	gm20b_mm_mmu_vpr_info_fetch(g);
 	gr_gk20a_init_ctxsw_ucode(g);
 
 	g->ops.pmu.get_wpr(g, &wpr_inf);

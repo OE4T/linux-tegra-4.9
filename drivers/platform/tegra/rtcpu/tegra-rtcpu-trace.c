@@ -42,7 +42,7 @@
 #define NV(p) "nvidia," #p
 
 #define WORK_INTERVAL_DEFAULT		100
-#define EXCEPTION_STR_LENGTH		2048
+#define EXCEPTION_STR_LENGTH		1024
 
 /*
  * Private driver data structure
@@ -85,6 +85,7 @@ struct tegra_rtcpu_trace {
 
 	/* copy of the latest */
 	struct camrtc_trace_armv7_exception copy_last_exception;
+	char last_exception_str_long[EXCEPTION_STR_LENGTH];
 	char last_exception_str[EXCEPTION_STR_LENGTH];
 	struct camrtc_event_struct copy_last_event;
 
@@ -200,7 +201,7 @@ static void rtcpu_trace_invalidate_entries(struct tegra_rtcpu_trace *tracer,
 }
 
 static void rtcpu_trace_exception(struct tegra_rtcpu_trace *tracer,
-	struct camrtc_trace_armv7_exception *exc)
+	struct camrtc_trace_armv7_exception *exc, bool do_long)
 {
 	static char *s_str_exc_type[] = {
 		"Invalid (Reset)",
@@ -215,15 +216,29 @@ static void rtcpu_trace_exception(struct tegra_rtcpu_trace *tracer,
 
 	struct seq_buf sb;
 	unsigned int i, count;
+	char *buf = tracer->last_exception_str_long;
+	size_t buf_size = sizeof(tracer->last_exception_str_long);
+	unsigned int max_callstack_count = CAMRTC_TRACE_CALLSTACK_MAX;
 
-	seq_buf_init(&sb, tracer->last_exception_str,
-		sizeof(tracer->last_exception_str));
+	if (do_long == false) {
+		buf = tracer->last_exception_str;
+		buf_size = sizeof(tracer->last_exception_str);
+		max_callstack_count = CAMRTC_TRACE_CALLSTACK_MIN;
+	}
 
-	seq_buf_printf(&sb, "Type: %u (%s)\n", exc->type,
+	seq_buf_init(&sb, buf, buf_size);
+
+	if (do_long == false) {
+		seq_buf_printf(&sb, " \n");
+		seq_buf_printf(&sb, " \n");
+		seq_buf_printf(&sb, "############# RTCPU EXCEPTION #"
+		"#############\n");
+	}
+
+	seq_buf_printf(&sb, "%s\n",
 		(exc->type < ARRAY_SIZE(s_str_exc_type)) ?
 			s_str_exc_type[exc->type] : "Unknown");
 
-	seq_buf_printf(&sb, "General Purpose Registers\n");
 	seq_buf_printf(&sb,
 	    "  R0:  %08x R1:  %08x R2:  %08x R4:  %08x\n",
 	    exc->gpr.r0, exc->gpr.r1, exc->gpr.r2, exc->gpr.r3);
@@ -237,8 +252,6 @@ static void rtcpu_trace_exception(struct tegra_rtcpu_trace *tracer,
 	    "  R12: %08x SP:  %08x LR:  %08x PC:  %08x\n",
 	    exc->gpr.r12, exc->gpr.sp, exc->gpr.lr, exc->gpr.pc);
 
-	seq_buf_printf(&sb,
-	    "General Purpose Registers in previous mode\n");
 	if (exc->type == CAMRTC_ARMV7_EXCEPTION_FIQ) {
 		seq_buf_printf(&sb,
 		    "  R8: %08x R9: %08x R10: %08x R11: %08x, R12: %08x\n",
@@ -249,11 +262,9 @@ static void rtcpu_trace_exception(struct tegra_rtcpu_trace *tracer,
 	seq_buf_printf(&sb, "  SP: %08x LR: %08x\n",
 	    exc->gpr.sp_prev, exc->gpr.lr_prev);
 
-	seq_buf_printf(&sb, "Program Status Registers\n");
 	seq_buf_printf(&sb, "  CPSR: %08x SPSR: %08x\n",
 	    exc->cpsr, exc->spsr);
 
-	seq_buf_printf(&sb, "Coprocessor Registers\n");
 	seq_buf_printf(&sb, "  DFSR: %08x DFAR: %08x ADFSR: %08x\n",
 	    exc->dfsr, exc->dfar, exc->adfsr);
 	seq_buf_printf(&sb, "  IFSR: %08x IFAR: %08x AIFSR: %08x\n",
@@ -267,13 +278,20 @@ static void rtcpu_trace_exception(struct tegra_rtcpu_trace *tracer,
 		seq_buf_printf(&sb, "Callstack\n");
 
 	for (i = 0; i < count; ++i) {
-		if (i >= CAMRTC_TRACE_CALLSTACK_MAX) {
+		if (i >= max_callstack_count) {
 			seq_buf_printf(&sb, "  ... [skipping %u entries]\n",
 				count - i);
 			break;
 		}
 		seq_buf_printf(&sb, "  [%08x]: %08x\n",
 			exc->callstack[i].lr_stack_addr, exc->callstack[i].lr);
+	}
+
+	if (do_long == false) {
+		seq_buf_printf(&sb, "###############################"
+		"#############\n");
+		seq_buf_printf(&sb, " \n");
+		seq_buf_printf(&sb, " \n");
 	}
 }
 
@@ -792,13 +810,13 @@ static void rtcpu_trace_worker(struct work_struct *work)
 			    (tracer->exceptions_base +
 			     CAMRTC_TRACE_EXCEPTION_SIZE * old_next);
 
-			rtcpu_trace_exception(tracer, exc);
+			rtcpu_trace_exception(tracer, exc, true);
+			rtcpu_trace_exception(tracer, exc, false);
 			++tracer->n_exceptions;
 			memcpy(&tracer->copy_last_exception, exc,
 			    sizeof(tracer->copy_last_exception));
 
-			dev_err(tracer->dev, "Detected an exception.\n%s",
-			    tracer->last_exception_str);
+			printk("%s", tracer->last_exception_str);
 
 			if (++old_next == header->exception_entries)
 				old_next = 0;
@@ -877,7 +895,7 @@ static int rtcpu_trace_debugfs_last_exception_read(
 {
 	struct tegra_rtcpu_trace *tracer = file->private;
 
-	seq_puts(file, tracer->last_exception_str);
+	seq_puts(file, tracer->last_exception_str_long);
 
 	return 0;
 }

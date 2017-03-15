@@ -57,6 +57,7 @@
 
 /* Depth of call stack */
 #define CAMRTC_TRACE_CALLSTACK_MAX	32U
+#define CAMRTC_TRACE_CALLSTACK_MIN	4U
 
 /*
  * Trace memory header

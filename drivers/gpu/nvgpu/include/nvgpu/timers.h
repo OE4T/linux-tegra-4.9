@@ -77,13 +77,11 @@ int nvgpu_timeout_init(struct gk20a *g, struct nvgpu_timeout *timeout,
 int nvgpu_timeout_peek_expired(struct nvgpu_timeout *timeout);
 
 #define nvgpu_timeout_expired(__timeout)				\
-	__nvgpu_timeout_expired_msg(__timeout,				\
-				  __builtin_return_address(0), "")
+	__nvgpu_timeout_expired_msg(__timeout, (void *)_THIS_IP_, "")
 
 #define nvgpu_timeout_expired_msg(__timeout, fmt, args...)		\
-	__nvgpu_timeout_expired_msg(__timeout,				\
-				  __builtin_return_address(0),		\
-				  fmt, ##args)
+	__nvgpu_timeout_expired_msg(__timeout, (void *)_THIS_IP_,	\
+				    fmt, ##args)
 
 /*
  * Don't use this directly.

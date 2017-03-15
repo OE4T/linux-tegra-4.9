@@ -3,6 +3,8 @@
  *
  * Multiple GPIO state based based on extcon class driver.
  *
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ *
  * Author: Laxman Dewangan <ldewangan@nvidia.com>
  *
  * Based on extcon-gpio driver by
@@ -59,6 +61,7 @@ struct gpio_extcon_platform_data {
 	int cable_detect_delay;
 	int init_state;
 	bool wakeup_source;
+	int cable_id;
 };
 
 struct gpio_extcon_info {
@@ -84,7 +87,6 @@ static void gpio_extcon_scan_work(struct work_struct *work)
 					struct gpio_extcon_info, work);
 	int gstate = 0;
 	int i;
-	unsigned int id = EXTCON_NONE;
 
 	for (i = 0; i < gpex->pdata->n_gpio; ++i) {
 		state = gpio_get_value_cansleep(gpex->pdata->gpios[i].gpio);
@@ -95,7 +97,8 @@ static void gpio_extcon_scan_work(struct work_struct *work)
 	for (i = 0; i < gpex->pdata->n_cable_states; ++i) {
 		if (gpex->pdata->cable_states[i].gstate == gstate) {
 			cstate = gpex->pdata->cable_states[i].cstate;
-			id = cstate;
+			if (cstate)
+				gpex->pdata->cable_id = cstate;
 			break;
 		}
 	}
@@ -105,8 +108,12 @@ static void gpio_extcon_scan_work(struct work_struct *work)
 		cstate = 0;
 	}
 
-	dev_info(gpex->dev, "Cable state %d\n", cstate);
-	extcon_set_state_sync(gpex->edev, id, cstate);
+	dev_info(gpex->dev, "Cable state:%d, cable id:%d\n",
+			!!cstate, gpex->pdata->cable_id);
+	if (!gpex->pdata->cable_id)
+		return;
+
+	extcon_set_state_sync(gpex->edev, gpex->pdata->cable_id, !!cstate);
 }
 
 static void gpio_extcon_notifier_timer(unsigned long _data)

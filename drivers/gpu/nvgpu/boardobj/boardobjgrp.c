@@ -409,7 +409,7 @@ u32 boardobjgrp_pmuset_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp)
 		gk20a_pmu_vidmem_surface_alloc(g, &pcmd->surf.vidmem_desc,
 			pcmd->fbsize);
 	}
-	gk20a_mem_wr_n(g, &pcmd->surf.vidmem_desc, 0, pcmd->buf, pcmd->fbsize);
+	nvgpu_mem_wr_n(g, &pcmd->surf.vidmem_desc, 0, pcmd->buf, pcmd->fbsize);
 
 	/* Send the SET PMU CMD to the PMU */
 	status = boardobjgrp_pmucmdsend(g, pboardobjgrp,
@@ -488,7 +488,7 @@ boardobjgrp_pmugetstatus_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp,
 		goto boardobjgrp_pmugetstatus_exit;
 	}
 
-	gk20a_mem_wr_n(g, &pcmd->surf.vidmem_desc, 0, pset->buf, pset->hdrsize);
+	nvgpu_mem_wr_n(g, &pcmd->surf.vidmem_desc, 0, pset->buf, pset->hdrsize);
 	/* Send the GET_STATUS PMU CMD to the PMU */
 	status = boardobjgrp_pmucmdsend(g, pboardobjgrp,
 				&pboardobjgrp->pmu.getstatus);
@@ -499,7 +499,7 @@ boardobjgrp_pmugetstatus_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp,
 	}
 
 	/*copy the data back to sysmem buffer that belongs to command*/
-	gk20a_mem_rd_n(g, &pcmd->surf.vidmem_desc, 0, pcmd->buf, pcmd->fbsize);
+	nvgpu_mem_rd_n(g, &pcmd->surf.vidmem_desc, 0, pcmd->buf, pcmd->fbsize);
 
 boardobjgrp_pmugetstatus_exit:
 	return status;

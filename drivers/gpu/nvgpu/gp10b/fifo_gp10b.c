@@ -33,18 +33,18 @@ static void gp10b_set_pdb_fault_replay_flags(struct gk20a *g,
 
 	gk20a_dbg_fn("");
 
-	val = gk20a_mem_rd32(g, mem,
+	val = nvgpu_mem_rd32(g, mem,
 			ram_in_page_dir_base_fault_replay_tex_w());
 	val &= ~ram_in_page_dir_base_fault_replay_tex_m();
 	val |= ram_in_page_dir_base_fault_replay_tex_true_f();
-	gk20a_mem_wr32(g, mem,
+	nvgpu_mem_wr32(g, mem,
 		ram_in_page_dir_base_fault_replay_tex_w(), val);
 
-	val = gk20a_mem_rd32(g, mem,
+	val = nvgpu_mem_rd32(g, mem,
 			ram_in_page_dir_base_fault_replay_gcc_w());
 	val &= ~ram_in_page_dir_base_fault_replay_gcc_m();
 	val |= ram_in_page_dir_base_fault_replay_gcc_true_f();
-	gk20a_mem_wr32(g, mem,
+	nvgpu_mem_wr32(g, mem,
 		ram_in_page_dir_base_fault_replay_gcc_w(), val);
 
 	gk20a_dbg_fn("done");
@@ -64,14 +64,14 @@ int channel_gp10b_commit_userd(struct channel_gk20a *c)
 	gk20a_dbg_info("channel %d : set ramfc userd 0x%16llx",
 		c->hw_chid, (u64)c->userd_iova);
 
-	gk20a_mem_wr32(g, &c->inst_block,
+	nvgpu_mem_wr32(g, &c->inst_block,
 		       ram_in_ramfc_w() + ram_fc_userd_w(),
 		       (g->mm.vidmem_is_vidmem ?
 			pbdma_userd_target_sys_mem_ncoh_f() :
 			pbdma_userd_target_vid_mem_f()) |
 		       pbdma_userd_addr_f(addr_lo));
 
-	gk20a_mem_wr32(g, &c->inst_block,
+	nvgpu_mem_wr32(g, &c->inst_block,
 		       ram_in_ramfc_w() + ram_fc_userd_hi_w(),
 		       pbdma_userd_hi_addr_f(addr_hi));
 
@@ -87,25 +87,25 @@ static int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
 
 	gk20a_dbg_fn("");
 
-	gk20a_memset(g, mem, 0, 0, ram_fc_size_val_v());
+	nvgpu_memset(g, mem, 0, 0, ram_fc_size_val_v());
 
-	gk20a_mem_wr32(g, mem, ram_fc_gp_base_w(),
+	nvgpu_mem_wr32(g, mem, ram_fc_gp_base_w(),
 		pbdma_gp_base_offset_f(
 		u64_lo32(gpfifo_base >> pbdma_gp_base_rsvd_s())));
 
-	gk20a_mem_wr32(g, mem, ram_fc_gp_base_hi_w(),
+	nvgpu_mem_wr32(g, mem, ram_fc_gp_base_hi_w(),
 		pbdma_gp_base_hi_offset_f(u64_hi32(gpfifo_base)) |
 		pbdma_gp_base_hi_limit2_f(ilog2(gpfifo_entries)));
 
-	gk20a_mem_wr32(g, mem, ram_fc_signature_w(),
+	nvgpu_mem_wr32(g, mem, ram_fc_signature_w(),
 		 c->g->ops.fifo.get_pbdma_signature(c->g));
 
-	gk20a_mem_wr32(g, mem, ram_fc_formats_w(),
+	nvgpu_mem_wr32(g, mem, ram_fc_formats_w(),
 		pbdma_formats_gp_fermi0_f() |
 		pbdma_formats_pb_fermi1_f() |
 		pbdma_formats_mp_fermi0_f());
 
-	gk20a_mem_wr32(g, mem, ram_fc_pb_header_w(),
+	nvgpu_mem_wr32(g, mem, ram_fc_pb_header_w(),
 		pbdma_pb_header_priv_user_f() |
 		pbdma_pb_header_method_zero_f() |
 		pbdma_pb_header_subchannel_zero_f() |
@@ -113,17 +113,17 @@ static int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
 		pbdma_pb_header_first_true_f() |
 		pbdma_pb_header_type_inc_f());
 
-	gk20a_mem_wr32(g, mem, ram_fc_subdevice_w(),
+	nvgpu_mem_wr32(g, mem, ram_fc_subdevice_w(),
 		pbdma_subdevice_id_f(1) |
 		pbdma_subdevice_status_active_f() |
 		pbdma_subdevice_channel_dma_enable_f());
 
-	gk20a_mem_wr32(g, mem, ram_fc_target_w(), pbdma_target_engine_sw_f());
+	nvgpu_mem_wr32(g, mem, ram_fc_target_w(), pbdma_target_engine_sw_f());
 
-	gk20a_mem_wr32(g, mem, ram_fc_acquire_w(),
+	nvgpu_mem_wr32(g, mem, ram_fc_acquire_w(),
 		g->ops.fifo.pbdma_acquire_val(acquire_timeout));
 
-	gk20a_mem_wr32(g, mem, ram_fc_runlist_timeslice_w(),
+	nvgpu_mem_wr32(g, mem, ram_fc_runlist_timeslice_w(),
 		pbdma_runlist_timeslice_timeout_128_f() |
 		pbdma_runlist_timeslice_timescale_3_f() |
 		pbdma_runlist_timeslice_enable_true_f());
@@ -132,11 +132,11 @@ static int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
 		gp10b_set_pdb_fault_replay_flags(c->g, mem);
 
 
-	gk20a_mem_wr32(g, mem, ram_fc_chid_w(), ram_fc_chid_id_f(c->hw_chid));
+	nvgpu_mem_wr32(g, mem, ram_fc_chid_w(), ram_fc_chid_id_f(c->hw_chid));
 
 	if (c->is_privileged_channel) {
 		/* Set privilege level for channel */
-		gk20a_mem_wr32(g, mem, ram_fc_config_w(),
+		nvgpu_mem_wr32(g, mem, ram_fc_config_w(),
 			pbdma_config_auth_level_privileged_f());
 
 		gk20a_fifo_setup_ramfc_for_privileged_channel(c);
@@ -158,7 +158,7 @@ static int gp10b_fifo_resetup_ramfc(struct channel_gk20a *c)
 
 	gk20a_dbg_fn("");
 
-	v = gk20a_mem_rd32(c->g, &c->inst_block,
+	v = nvgpu_mem_rd32(c->g, &c->inst_block,
 			ram_fc_allowed_syncpoints_w());
 	old_syncpt = pbdma_allowed_syncpoints_0_index_v(v);
 	if (c->sync)
@@ -178,7 +178,7 @@ static int gp10b_fifo_resetup_ramfc(struct channel_gk20a *c)
 
 		v |= pbdma_allowed_syncpoints_0_index_f(new_syncpt);
 
-		gk20a_mem_wr32(c->g, &c->inst_block,
+		nvgpu_mem_wr32(c->g, &c->inst_block,
 				ram_fc_allowed_syncpoints_w(), v);
 	}
 

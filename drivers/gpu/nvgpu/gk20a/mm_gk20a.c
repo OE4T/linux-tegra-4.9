@@ -34,6 +34,7 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/pramin.h>
 #include <nvgpu/list.h>
+#include <nvgpu/mem_desc.h>
 #include <nvgpu/allocator.h>
 #include <nvgpu/semaphore.h>
 #include <nvgpu/page_allocator.h>
@@ -139,7 +140,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				   bool umapped_pte, int rw_flag,
 				   bool sparse,
 				   bool priv,
-				   enum gk20a_aperture aperture);
+				   enum nvgpu_aperture aperture);
 static int __must_check gk20a_init_system_vm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_bar1_vm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_hwpm(struct mm_gk20a *mm);
@@ -945,7 +946,7 @@ int map_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry)
 				 sg_phys(entry->mem.sgt->sgl),
 				 entry->mem.size);
 	} else {
-		int err = gk20a_mem_begin(g, &entry->mem);
+		int err = nvgpu_mem_begin(g, &entry->mem);
 
 		if (err)
 			return err;
@@ -971,7 +972,7 @@ void unmap_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry)
 				 sg_phys(entry->mem.sgt->sgl),
 				 entry->mem.size);
 	} else {
-		gk20a_mem_end(g, &entry->mem);
+		nvgpu_mem_end(g, &entry->mem);
 	}
 }
 
@@ -1510,7 +1511,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			bool sparse,
 			bool priv,
 			struct vm_gk20a_mapping_batch *batch,
-			enum gk20a_aperture aperture)
+			enum nvgpu_aperture aperture)
 {
 	int err = 0;
 	bool allocated = false;
@@ -1543,7 +1544,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 		  sgt ? lo32((u64)sg_phys(sgt->sgl)) : 0,
 		  vm->gmmu_page_sizes[pgsz_idx] >> 10, vm_aspace_id(vm),
 		  ctag_lines, ctag_offset,
-		  kind_v, flags, gk20a_aperture_str(aperture));
+		  kind_v, flags, nvgpu_aperture_str(aperture));
 
 	err = update_gmmu_ptes_locked(vm, pgsz_idx,
 				      sgt,
@@ -1634,7 +1635,7 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 	}
 }
 
-static enum gk20a_aperture gk20a_dmabuf_aperture(struct gk20a *g,
+static enum nvgpu_aperture gk20a_dmabuf_aperture(struct gk20a *g,
 		struct dma_buf *dmabuf)
 {
 	struct gk20a *buf_owner = gk20a_vidmem_buf_owner(dmabuf);
@@ -1723,7 +1724,7 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 		  vm_aspace_id(vm),
 		  mapped_buffer->ctag_lines, mapped_buffer->ctag_offset,
 		  mapped_buffer->flags,
-		  gk20a_aperture_str(gk20a_dmabuf_aperture(g, dmabuf)));
+		  nvgpu_aperture_str(gk20a_dmabuf_aperture(g, dmabuf)));
 
 	if (sgt)
 		*sgt = mapped_buffer->sgt;
@@ -1941,11 +1942,11 @@ int gk20a_vidbuf_access_memory(struct gk20a *g, struct dma_buf *dmabuf,
 
 	switch (cmd) {
 	case NVGPU_DBG_GPU_IOCTL_ACCESS_FB_MEMORY_CMD_READ:
-		gk20a_mem_rd_n(g, mem, offset, buffer, size);
+		nvgpu_mem_rd_n(g, mem, offset, buffer, size);
 		break;
 
 	case NVGPU_DBG_GPU_IOCTL_ACCESS_FB_MEMORY_CMD_WRITE:
-		gk20a_mem_wr_n(g, mem, offset, buffer, size);
+		nvgpu_mem_wr_n(g, mem, offset, buffer, size);
 		break;
 
 	default:
@@ -1959,7 +1960,7 @@ int gk20a_vidbuf_access_memory(struct gk20a *g, struct dma_buf *dmabuf,
 }
 
 static u64 gk20a_mm_get_align(struct gk20a *g, struct scatterlist *sgl,
-			      enum gk20a_aperture aperture)
+			      enum nvgpu_aperture aperture)
 {
 	u64 align = 0, chunk_align = 0;
 	u64 buf_addr;
@@ -2030,7 +2031,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	u32 ctag_map_win_ctagline = 0;
 	struct vm_reserved_va_node *va_node = NULL;
 	u32 ctag_offset;
-	enum gk20a_aperture aperture;
+	enum nvgpu_aperture aperture;
 
 	if (user_mapped && vm->userspace_managed &&
 	    !(flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)) {
@@ -2462,7 +2463,7 @@ static u64 __gk20a_gmmu_map(struct vm_gk20a *vm,
 			    u32 flags,
 			    int rw_flag,
 			    bool priv,
-			    enum gk20a_aperture aperture)
+			    enum nvgpu_aperture aperture)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	u64 vaddr;
@@ -2496,7 +2497,7 @@ u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 		   u32 flags,
 		   int rw_flag,
 		   bool priv,
-		   enum gk20a_aperture aperture)
+		   enum nvgpu_aperture aperture)
 {
 	return __gk20a_gmmu_map(vm, sgt, 0, size, flags, rw_flag, priv,
 			aperture);
@@ -2512,7 +2513,7 @@ u64 gk20a_gmmu_fixed_map(struct vm_gk20a *vm,
 			 u32 flags,
 			 int rw_flag,
 			 bool priv,
-			 enum gk20a_aperture aperture)
+			 enum nvgpu_aperture aperture)
 {
 	return __gk20a_gmmu_map(vm, sgt, addr, size, flags, rw_flag, priv,
 			aperture);
@@ -2851,7 +2852,7 @@ static void gk20a_gmmu_free_vid(struct gk20a *g, struct mem_desc *mem)
 			schedule_work(&g->mm.vidmem.clear_mem_worker);
 		}
 	} else {
-		gk20a_memset(g, mem, 0, 0, mem->size);
+		nvgpu_memset(g, mem, 0, 0, mem->size);
 		nvgpu_free(mem->allocator,
 			   (u64)get_vidmem_page_alloc(mem->sgt->sgl));
 		gk20a_free_sgtable(g, &mem->sgt);
@@ -3170,7 +3171,7 @@ u64 gk20a_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl,
 void gk20a_pde_wr32(struct gk20a *g, struct gk20a_mm_entry *entry,
 		size_t w, size_t data)
 {
-	gk20a_mem_wr32(g, &entry->mem, entry->woffset + w, data);
+	nvgpu_mem_wr32(g, &entry->mem, entry->woffset + w, data);
 }
 
 u64 gk20a_pde_addr(struct gk20a *g, struct gk20a_mm_entry *entry)
@@ -3191,7 +3192,7 @@ static inline u32 big_valid_pde0_bits(struct gk20a *g,
 {
 	u64 pte_addr = gk20a_pde_addr(g, entry);
 	u32 pde0_bits =
-		gk20a_aperture_mask(g, &entry->mem,
+		nvgpu_aperture_mask(g, &entry->mem,
 		  gmmu_pde_aperture_big_sys_mem_ncoh_f(),
 		  gmmu_pde_aperture_big_video_memory_f()) |
 		gmmu_pde_address_big_sys_f(
@@ -3205,7 +3206,7 @@ static inline u32 small_valid_pde1_bits(struct gk20a *g,
 {
 	u64 pte_addr = gk20a_pde_addr(g, entry);
 	u32 pde1_bits =
-		gk20a_aperture_mask(g, &entry->mem,
+		nvgpu_aperture_mask(g, &entry->mem,
 		  gmmu_pde_aperture_small_sys_mem_ncoh_f(),
 		  gmmu_pde_aperture_small_video_memory_f()) |
 		gmmu_pde_vol_small_true_f() | /* tbd: why? */
@@ -3230,7 +3231,7 @@ static int update_gmmu_pde_locked(struct vm_gk20a *vm,
 			   u32 kind_v, u64 *ctag,
 			   bool cacheable, bool unammped_pte,
 			   int rw_flag, bool sparse, bool priv,
-			   enum gk20a_aperture aperture)
+			   enum nvgpu_aperture aperture)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	bool small_valid, big_valid;
@@ -3275,7 +3276,7 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			   u32 kind_v, u64 *ctag,
 			   bool cacheable, bool unmapped_pte,
 			   int rw_flag, bool sparse, bool priv,
-			   enum gk20a_aperture aperture)
+			   enum nvgpu_aperture aperture)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	int ctag_shift = ilog2(g->ops.fb.compression_page_size(g));
@@ -3296,7 +3297,7 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 		if (priv)
 			pte_w[0] |= gmmu_pte_privilege_true_f();
 
-		pte_w[1] = __gk20a_aperture_mask(g, aperture,
+		pte_w[1] = __nvgpu_aperture_mask(g, aperture,
 			  gmmu_pte_aperture_sys_mem_ncoh_f(),
 			  gmmu_pte_aperture_video_memory_f()) |
 			gmmu_pte_kind_f(kind_v) |
@@ -3379,7 +3380,7 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 				    bool sparse,
 				    int lvl,
 				    bool priv,
-				    enum gk20a_aperture aperture)
+				    enum nvgpu_aperture aperture)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	const struct gk20a_mmu_level *l = &vm->mmu_levels[lvl];
@@ -3477,7 +3478,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				   int rw_flag,
 				   bool sparse,
 				   bool priv,
-				   enum gk20a_aperture aperture)
+				   enum nvgpu_aperture aperture)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	int ctag_granularity = g->ops.fb.compression_page_size(g);
@@ -4735,14 +4736,14 @@ void gk20a_mm_init_pdb(struct gk20a *g, struct mem_desc *inst_block,
 
 	gk20a_dbg_info("pde pa=0x%llx", pdb_addr);
 
-	gk20a_mem_wr32(g, inst_block, ram_in_page_dir_base_lo_w(),
-		gk20a_aperture_mask(g, &vm->pdb.mem,
+	nvgpu_mem_wr32(g, inst_block, ram_in_page_dir_base_lo_w(),
+		nvgpu_aperture_mask(g, &vm->pdb.mem,
 		  ram_in_page_dir_base_target_sys_mem_ncoh_f(),
 		  ram_in_page_dir_base_target_vid_mem_f()) |
 		ram_in_page_dir_base_vol_true_f() |
 		ram_in_page_dir_base_lo_f(pdb_addr_lo));
 
-	gk20a_mem_wr32(g, inst_block, ram_in_page_dir_base_hi_w(),
+	nvgpu_mem_wr32(g, inst_block, ram_in_page_dir_base_hi_w(),
 		ram_in_page_dir_base_hi_f(pdb_addr_hi));
 }
 
@@ -4756,10 +4757,10 @@ void gk20a_init_inst_block(struct mem_desc *inst_block, struct vm_gk20a *vm,
 
 	g->ops.mm.init_pdb(g, inst_block, vm);
 
-	gk20a_mem_wr32(g, inst_block, ram_in_adr_limit_lo_w(),
+	nvgpu_mem_wr32(g, inst_block, ram_in_adr_limit_lo_w(),
 		u64_lo32(vm->va_limit - 1) & ~0xfff);
 
-	gk20a_mem_wr32(g, inst_block, ram_in_adr_limit_hi_w(),
+	nvgpu_mem_wr32(g, inst_block, ram_in_adr_limit_hi_w(),
 		ram_in_adr_limit_hi_f(u64_hi32(vm->va_limit - 1)));
 
 	if (big_page_size && g->ops.mm.set_big_page_size)

@@ -135,7 +135,7 @@ void gk20a_fb_tlb_invalidate(struct gk20a *g, struct mem_desc *pdb)
 
 	gk20a_writel(g, fb_mmu_invalidate_pdb_r(),
 		fb_mmu_invalidate_pdb_addr_f(addr_lo) |
-		gk20a_aperture_mask(g, pdb,
+		nvgpu_aperture_mask(g, pdb,
 		  fb_mmu_invalidate_pdb_aperture_sys_mem_f(),
 		  fb_mmu_invalidate_pdb_aperture_vid_mem_f()));
 

@@ -138,7 +138,7 @@ static int gk20a_bus_bar1_bind(struct gk20a *g, struct mem_desc *bar1_inst)
 	gk20a_dbg_info("bar1 inst block ptr: 0x%08x", ptr_v);
 
 	gk20a_writel(g, bus_bar1_block_r(),
-		     gk20a_aperture_mask(g, bar1_inst,
+		     nvgpu_aperture_mask(g, bar1_inst,
 		       bus_bar1_block_target_sys_mem_ncoh_f(),
 		       bus_bar1_block_target_vid_mem_f()) |
 		     bus_bar1_block_mode_virtual_f() |

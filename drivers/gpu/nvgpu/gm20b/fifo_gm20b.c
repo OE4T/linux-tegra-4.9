@@ -41,7 +41,7 @@ static void channel_gm20b_bind(struct channel_gk20a *c)
 
 	gk20a_writel(g, ccsr_channel_inst_r(c->hw_chid),
 		ccsr_channel_inst_ptr_f(inst_ptr) |
-		gk20a_aperture_mask(g, &c->inst_block,
+		nvgpu_aperture_mask(g, &c->inst_block,
 		 ccsr_channel_inst_target_sys_mem_ncoh_f(),
 		 ccsr_channel_inst_target_vid_mem_f()) |
 		ccsr_channel_inst_bind_true_f());

@@ -3141,7 +3141,7 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	if (count != 0) {
 		gk20a_writel(g, fifo_runlist_base_r(),
 			fifo_runlist_base_ptr_f(u64_lo32(runlist_iova >> 12)) |
-			gk20a_aperture_mask(g, &runlist->mem[new_buf],
+			nvgpu_aperture_mask(g, &runlist->mem[new_buf],
 			  fifo_runlist_base_target_sys_mem_ncoh_f(),
 			  fifo_runlist_base_target_vid_mem_f()));
 	}
@@ -3901,7 +3901,7 @@ static void gk20a_fifo_channel_bind(struct channel_gk20a *c)
 
 	gk20a_writel(g, ccsr_channel_inst_r(c->hw_chid),
 		ccsr_channel_inst_ptr_f(inst_ptr) |
-		gk20a_aperture_mask(g, &c->inst_block,
+		nvgpu_aperture_mask(g, &c->inst_block,
 		 ccsr_channel_inst_target_sys_mem_ncoh_f(),
 		 ccsr_channel_inst_target_vid_mem_f()) |
 		ccsr_channel_inst_bind_true_f());
@@ -3943,14 +3943,14 @@ static int gk20a_fifo_commit_userd(struct channel_gk20a *c)
 	gk20a_dbg_info("channel %d : set ramfc userd 0x%16llx",
 		c->hw_chid, (u64)c->userd_iova);
 
-	gk20a_mem_wr32(g, &c->inst_block,
+	nvgpu_mem_wr32(g, &c->inst_block,
 		       ram_in_ramfc_w() + ram_fc_userd_w(),
-		       gk20a_aperture_mask(g, &g->fifo.userd,
+		       nvgpu_aperture_mask(g, &g->fifo.userd,
 			pbdma_userd_target_sys_mem_ncoh_f(),
 			pbdma_userd_target_vid_mem_f()) |
 		       pbdma_userd_addr_f(addr_lo));
 
-	gk20a_mem_wr32(g, &c->inst_block,
+	nvgpu_mem_wr32(g, &c->inst_block,
 		       ram_in_ramfc_w() + ram_fc_userd_hi_w(),
 		       pbdma_userd_hi_addr_f(addr_hi));
 
@@ -3967,25 +3967,25 @@ int gk20a_fifo_setup_ramfc(struct channel_gk20a *c,
 
 	gk20a_dbg_fn("");
 
-	gk20a_memset(g, mem, 0, 0, ram_fc_size_val_v());
+	nvgpu_memset(g, mem, 0, 0, ram_fc_size_val_v());
 
-	gk20a_mem_wr32(g, mem, ram_fc_gp_base_w(),
+	nvgpu_mem_wr32(g, mem, ram_fc_gp_base_w(),
 		pbdma_gp_base_offset_f(
 		u64_lo32(gpfifo_base >> pbdma_gp_base_rsvd_s())));
 
-	gk20a_mem_wr32(g, mem, ram_fc_gp_base_hi_w(),
+	nvgpu_mem_wr32(g, mem, ram_fc_gp_base_hi_w(),
 		pbdma_gp_base_hi_offset_f(u64_hi32(gpfifo_base)) |
 		pbdma_gp_base_hi_limit2_f(ilog2(gpfifo_entries)));
 
-	gk20a_mem_wr32(g, mem, ram_fc_signature_w(),
+	nvgpu_mem_wr32(g, mem, ram_fc_signature_w(),
 		 c->g->ops.fifo.get_pbdma_signature(c->g));
 
-	gk20a_mem_wr32(g, mem, ram_fc_formats_w(),
+	nvgpu_mem_wr32(g, mem, ram_fc_formats_w(),
 		pbdma_formats_gp_fermi0_f() |
 		pbdma_formats_pb_fermi1_f() |
 		pbdma_formats_mp_fermi0_f());
 
-	gk20a_mem_wr32(g, mem, ram_fc_pb_header_w(),
+	nvgpu_mem_wr32(g, mem, ram_fc_pb_header_w(),
 		pbdma_pb_header_priv_user_f() |
 		pbdma_pb_header_method_zero_f() |
 		pbdma_pb_header_subchannel_zero_f() |
@@ -3993,27 +3993,27 @@ int gk20a_fifo_setup_ramfc(struct channel_gk20a *c,
 		pbdma_pb_header_first_true_f() |
 		pbdma_pb_header_type_inc_f());
 
-	gk20a_mem_wr32(g, mem, ram_fc_subdevice_w(),
+	nvgpu_mem_wr32(g, mem, ram_fc_subdevice_w(),
 		pbdma_subdevice_id_f(1) |
 		pbdma_subdevice_status_active_f() |
 		pbdma_subdevice_channel_dma_enable_f());
 
-	gk20a_mem_wr32(g, mem, ram_fc_target_w(), pbdma_target_engine_sw_f());
+	nvgpu_mem_wr32(g, mem, ram_fc_target_w(), pbdma_target_engine_sw_f());
 
-	gk20a_mem_wr32(g, mem, ram_fc_acquire_w(),
+	nvgpu_mem_wr32(g, mem, ram_fc_acquire_w(),
 		g->ops.fifo.pbdma_acquire_val(timeout));
 
-	gk20a_mem_wr32(g, mem, ram_fc_runlist_timeslice_w(),
+	nvgpu_mem_wr32(g, mem, ram_fc_runlist_timeslice_w(),
 		fifo_runlist_timeslice_timeout_128_f() |
 		fifo_runlist_timeslice_timescale_3_f() |
 		fifo_runlist_timeslice_enable_true_f());
 
-	gk20a_mem_wr32(g, mem, ram_fc_pb_timeslice_w(),
+	nvgpu_mem_wr32(g, mem, ram_fc_pb_timeslice_w(),
 		fifo_pb_timeslice_timeout_16_f() |
 		fifo_pb_timeslice_timescale_0_f() |
 		fifo_pb_timeslice_enable_true_f());
 
-	gk20a_mem_wr32(g, mem, ram_fc_chid_w(), ram_fc_chid_id_f(c->hw_chid));
+	nvgpu_mem_wr32(g, mem, ram_fc_chid_w(), ram_fc_chid_id_f(c->hw_chid));
 
 	if (c->is_privileged_channel)
 		gk20a_fifo_setup_ramfc_for_privileged_channel(c);
@@ -4035,7 +4035,7 @@ static int channel_gk20a_set_schedule_params(struct channel_gk20a *c)
 	WARN_ON(c->g->ops.fifo.preempt_channel(c->g, c->hw_chid));
 
 	/* set new timeslice */
-	gk20a_mem_wr32(c->g, &c->inst_block, ram_fc_runlist_timeslice_w(),
+	nvgpu_mem_wr32(c->g, &c->inst_block, ram_fc_runlist_timeslice_w(),
 		value | (shift << 12) |
 		fifo_runlist_timeslice_enable_true_f());
 
@@ -4102,7 +4102,7 @@ void gk20a_fifo_setup_ramfc_for_privileged_channel(struct channel_gk20a *c)
 	gk20a_dbg_info("channel %d : set ramfc privileged_channel", c->hw_chid);
 
 	/* Enable HCE priv mode for phys mode transfer */
-	gk20a_mem_wr32(g, mem, ram_fc_hce_ctrl_w(),
+	nvgpu_mem_wr32(g, mem, ram_fc_hce_ctrl_w(),
 		pbdma_hce_ctrl_hce_priv_mode_yes_f());
 }
 
@@ -4114,16 +4114,16 @@ int gk20a_fifo_setup_userd(struct channel_gk20a *c)
 
 	gk20a_dbg_fn("");
 
-	gk20a_mem_wr32(g, mem, offset + ram_userd_put_w(), 0);
-	gk20a_mem_wr32(g, mem, offset + ram_userd_get_w(), 0);
-	gk20a_mem_wr32(g, mem, offset + ram_userd_ref_w(), 0);
-	gk20a_mem_wr32(g, mem, offset + ram_userd_put_hi_w(), 0);
-	gk20a_mem_wr32(g, mem, offset + ram_userd_ref_threshold_w(), 0);
-	gk20a_mem_wr32(g, mem, offset + ram_userd_gp_top_level_get_w(), 0);
-	gk20a_mem_wr32(g, mem, offset + ram_userd_gp_top_level_get_hi_w(), 0);
-	gk20a_mem_wr32(g, mem, offset + ram_userd_get_hi_w(), 0);
-	gk20a_mem_wr32(g, mem, offset + ram_userd_gp_get_w(), 0);
-	gk20a_mem_wr32(g, mem, offset + ram_userd_gp_put_w(), 0);
+	nvgpu_mem_wr32(g, mem, offset + ram_userd_put_w(), 0);
+	nvgpu_mem_wr32(g, mem, offset + ram_userd_get_w(), 0);
+	nvgpu_mem_wr32(g, mem, offset + ram_userd_ref_w(), 0);
+	nvgpu_mem_wr32(g, mem, offset + ram_userd_put_hi_w(), 0);
+	nvgpu_mem_wr32(g, mem, offset + ram_userd_ref_threshold_w(), 0);
+	nvgpu_mem_wr32(g, mem, offset + ram_userd_gp_top_level_get_w(), 0);
+	nvgpu_mem_wr32(g, mem, offset + ram_userd_gp_top_level_get_hi_w(), 0);
+	nvgpu_mem_wr32(g, mem, offset + ram_userd_get_hi_w(), 0);
+	nvgpu_mem_wr32(g, mem, offset + ram_userd_gp_get_w(), 0);
+	nvgpu_mem_wr32(g, mem, offset + ram_userd_gp_put_w(), 0);
 
 	return 0;
 }

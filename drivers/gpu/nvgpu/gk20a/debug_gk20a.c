@@ -87,7 +87,7 @@ static void gk20a_debug_dump_all_channel_status_ramfc(struct gk20a *g,
 
 		ch_state[chid]->pid = ch->pid;
 		ch_state[chid]->refs = atomic_read(&ch->ref_count);
-		gk20a_mem_rd_n(g, &ch->inst_block, 0,
+		nvgpu_mem_rd_n(g, &ch->inst_block, 0,
 				&ch_state[chid]->inst_block[0],
 				ram_in_alloc_size_v());
 		gk20a_channel_put(ch);

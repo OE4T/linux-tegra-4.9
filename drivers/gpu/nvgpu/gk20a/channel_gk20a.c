@@ -2124,7 +2124,7 @@ static void gk20a_submit_append_priv_cmdbuf(struct channel_gk20a *c,
 			pbdma_gp_entry1_length_f(cmd->size)
 	};
 
-	gk20a_mem_wr_n(g, gpfifo_mem, c->gpfifo.put * sizeof(x),
+	nvgpu_mem_wr_n(g, gpfifo_mem, c->gpfifo.put * sizeof(x),
 			&x, sizeof(x));
 
 	if (cmd->mem->aperture == APERTURE_SYSMEM)
@@ -2207,10 +2207,10 @@ static int gk20a_submit_append_gpfifo(struct channel_gk20a *c,
 		int length1 = len - length0;
 		void *src2 = (u8 *)cpu_src + length0;
 
-		gk20a_mem_wr_n(c->g, gpfifo_mem, start, cpu_src, length0);
-		gk20a_mem_wr_n(c->g, gpfifo_mem, 0, src2, length1);
+		nvgpu_mem_wr_n(c->g, gpfifo_mem, start, cpu_src, length0);
+		nvgpu_mem_wr_n(c->g, gpfifo_mem, 0, src2, length1);
 	} else {
-		gk20a_mem_wr_n(c->g, gpfifo_mem, start, cpu_src, len);
+		nvgpu_mem_wr_n(c->g, gpfifo_mem, start, cpu_src, len);
 
 	}
 

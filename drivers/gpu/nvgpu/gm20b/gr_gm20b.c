@@ -862,7 +862,7 @@ static void gr_gm20b_update_ctxsw_preemption_mode(struct gk20a *g,
 
 	if (gr_ctx->compute_preempt_mode == NVGPU_COMPUTE_PREEMPTION_MODE_CTA) {
 		gk20a_dbg_info("CTA: %x", cta_preempt_option);
-		gk20a_mem_wr(g, mem,
+		nvgpu_mem_wr(g, mem,
 				ctxsw_prog_main_image_preemption_options_o(),
 				cta_preempt_option);
 	}
@@ -1022,15 +1022,15 @@ static int gr_gm20b_update_pc_sampling(struct channel_gk20a *c,
 
 	mem = &ch_ctx->gr_ctx->mem;
 
-	if (gk20a_mem_begin(c->g, mem))
+	if (nvgpu_mem_begin(c->g, mem))
 		return -ENOMEM;
 
-	v = gk20a_mem_rd(c->g, mem, ctxsw_prog_main_image_pm_o());
+	v = nvgpu_mem_rd(c->g, mem, ctxsw_prog_main_image_pm_o());
 	v &= ~ctxsw_prog_main_image_pm_pc_sampling_m();
 	v |= ctxsw_prog_main_image_pm_pc_sampling_f(enable);
-	gk20a_mem_wr(c->g, mem, ctxsw_prog_main_image_pm_o(), v);
+	nvgpu_mem_wr(c->g, mem, ctxsw_prog_main_image_pm_o(), v);
 
-	gk20a_mem_end(c->g, mem);
+	nvgpu_mem_end(c->g, mem);
 
 	gk20a_dbg_fn("done");
 
@@ -1112,9 +1112,9 @@ static void gr_gm20b_enable_cde_in_fecs(struct gk20a *g, struct mem_desc *mem)
 {
 	u32 cde_v;
 
-	cde_v = gk20a_mem_rd(g, mem, ctxsw_prog_main_image_ctl_o());
+	cde_v = nvgpu_mem_rd(g, mem, ctxsw_prog_main_image_ctl_o());
 	cde_v |=  ctxsw_prog_main_image_ctl_cde_enabled_f();
-	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_ctl_o(), cde_v);
+	nvgpu_mem_wr(g, mem, ctxsw_prog_main_image_ctl_o(), cde_v);
 }
 
 static void gr_gm20b_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)

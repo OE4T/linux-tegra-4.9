@@ -636,11 +636,11 @@ static int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 	pa = gk20a_mm_inst_block_addr(g, &trace->trace_buf);
 	if (!pa)
 		return -ENOMEM;
-	aperture = gk20a_aperture_mask(g, &trace->trace_buf,
+	aperture = nvgpu_aperture_mask(g, &trace->trace_buf,
 			ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_target_sys_mem_noncoherent_f(),
 			ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_target_vid_mem_f());
 
-	if (gk20a_mem_begin(g, mem))
+	if (nvgpu_mem_begin(g, mem))
 		return -ENOMEM;
 
 	lo = u64_lo32(pa);
@@ -649,19 +649,19 @@ static int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 	gk20a_dbg(gpu_dbg_ctxsw, "addr_hi=%x addr_lo=%x count=%d", hi,
 		lo, GK20A_FECS_TRACE_NUM_RECORDS);
 
-	gk20a_mem_wr(g, mem,
+	nvgpu_mem_wr(g, mem,
 		ctxsw_prog_main_image_context_timestamp_buffer_ptr_o(),
 		lo);
-	gk20a_mem_wr(g, mem,
+	nvgpu_mem_wr(g, mem,
 		ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_o(),
 		ctxsw_prog_main_image_context_timestamp_buffer_ptr_v_f(hi) |
 		aperture);
-	gk20a_mem_wr(g, mem,
+	nvgpu_mem_wr(g, mem,
 		ctxsw_prog_main_image_context_timestamp_buffer_control_o(),
 		ctxsw_prog_main_image_context_timestamp_buffer_control_num_records_f(
 			GK20A_FECS_TRACE_NUM_RECORDS));
 
-	gk20a_mem_end(g, mem);
+	nvgpu_mem_end(g, mem);
 
 	/* pid (process identifier) in user space, corresponds to tgid (thread
 	 * group id) in kernel space.

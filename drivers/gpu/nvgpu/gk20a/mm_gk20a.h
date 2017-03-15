@@ -220,7 +220,7 @@ struct gk20a_mmu_level {
 			   u32 kind_v, u64 *ctag,
 			   bool cacheable, bool unmapped_pte,
 			   int rw_flag, bool sparse, bool priv,
-			   enum gk20a_aperture aperture);
+			   enum nvgpu_aperture aperture);
 	size_t entry_size;
 };
 
@@ -514,7 +514,7 @@ u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 		u32 flags,
 		int rw_flag,
 		bool priv,
-		enum gk20a_aperture aperture);
+		enum nvgpu_aperture aperture);
 u64 gk20a_gmmu_fixed_map(struct vm_gk20a *vm,
 		struct sg_table **sgt,
 		u64 addr,
@@ -522,7 +522,7 @@ u64 gk20a_gmmu_fixed_map(struct vm_gk20a *vm,
 		u32 flags,
 		int rw_flag,
 		bool priv,
-		enum gk20a_aperture aperture);
+		enum nvgpu_aperture aperture);
 
 /* Flags for the below gk20a_gmmu_{alloc,alloc_map}_flags* */
 
@@ -589,9 +589,9 @@ static inline phys_addr_t gk20a_mem_phys(struct mem_desc *mem)
 	return 0;
 }
 
-u32 __gk20a_aperture_mask(struct gk20a *g, enum gk20a_aperture aperture,
+u32 __nvgpu_aperture_mask(struct gk20a *g, enum nvgpu_aperture aperture,
 		u32 sysmem_mask, u32 vidmem_mask);
-u32 gk20a_aperture_mask(struct gk20a *g, struct mem_desc *mem,
+u32 nvgpu_aperture_mask(struct gk20a *g, struct mem_desc *mem,
 		u32 sysmem_mask, u32 vidmem_mask);
 
 void gk20a_pde_wr32(struct gk20a *g, struct gk20a_mm_entry *entry,
@@ -612,7 +612,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			bool sparse,
 			bool priv,
 			struct vm_gk20a_mapping_batch *batch,
-			enum gk20a_aperture aperture);
+			enum nvgpu_aperture aperture);
 
 void gk20a_gmmu_unmap(struct vm_gk20a *vm,
 		u64 vaddr,

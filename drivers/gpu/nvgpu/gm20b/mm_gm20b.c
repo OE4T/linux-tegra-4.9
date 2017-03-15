@@ -28,7 +28,7 @@ static void gm20b_mm_set_big_page_size(struct gk20a *g,
 	gk20a_dbg_fn("");
 
 	gk20a_dbg_info("big page size %d\n", size);
-	val = gk20a_mem_rd32(g, mem, ram_in_big_page_size_w());
+	val = nvgpu_mem_rd32(g, mem, ram_in_big_page_size_w());
 	val &= ~ram_in_big_page_size_m();
 
 	if (size == SZ_64K)
@@ -36,7 +36,7 @@ static void gm20b_mm_set_big_page_size(struct gk20a *g,
 	else
 		val |= ram_in_big_page_size_128kb_f();
 
-	gk20a_mem_wr32(g, mem, ram_in_big_page_size_w(), val);
+	nvgpu_mem_wr32(g, mem, ram_in_big_page_size_w(), val);
 	gk20a_dbg_fn("done");
 }
 

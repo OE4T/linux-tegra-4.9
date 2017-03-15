@@ -701,7 +701,7 @@ static void lsfm_init_wpr_contents(struct gk20a *g,
 	 */
 	while (pnode) {
 		/* Flush WPR header to memory*/
-		gk20a_mem_wr_n(g, ucode, i * sizeof(pnode->wpr_header),
+		nvgpu_mem_wr_n(g, ucode, i * sizeof(pnode->wpr_header),
 				&pnode->wpr_header, sizeof(pnode->wpr_header));
 
 		gp106_dbg_pmu("wpr header");
@@ -717,7 +717,7 @@ static void lsfm_init_wpr_contents(struct gk20a *g,
 				pnode->wpr_header.status);
 
 		/*Flush LSB header to memory*/
-		gk20a_mem_wr_n(g, ucode, pnode->wpr_header.lsb_offset,
+		nvgpu_mem_wr_n(g, ucode, pnode->wpr_header.lsb_offset,
 				&pnode->lsb_header, sizeof(pnode->lsb_header));
 
 		gp106_dbg_pmu("lsb header");
@@ -751,13 +751,13 @@ static void lsfm_init_wpr_contents(struct gk20a *g,
 		if (!pnode->ucode_img.header) {
 			/*Populate gen bl and flush to memory*/
 			lsfm_fill_flcn_bl_gen_desc(g, pnode);
-			gk20a_mem_wr_n(g, ucode,
+			nvgpu_mem_wr_n(g, ucode,
 					pnode->lsb_header.bl_data_off,
 					&pnode->bl_gen_desc,
 					pnode->bl_gen_desc_size);
 		}
 		/*Copying of ucode*/
-		gk20a_mem_wr_n(g, ucode, pnode->lsb_header.ucode_off,
+		nvgpu_mem_wr_n(g, ucode, pnode->lsb_header.ucode_off,
 				pnode->ucode_img.data,
 				pnode->ucode_img.data_size);
 		pnode = pnode->next;
@@ -765,7 +765,7 @@ static void lsfm_init_wpr_contents(struct gk20a *g,
 	}
 
 	/* Tag the terminator WPR header with an invalid falcon ID. */
-	gk20a_mem_wr32(g, ucode,
+	nvgpu_mem_wr32(g, ucode,
 			plsfm->managed_flcn_cnt * sizeof(struct lsf_wpr_header) +
 			offsetof(struct lsf_wpr_header, falcon_id),
 			LSF_FALCON_ID_INVALID);
@@ -1124,7 +1124,7 @@ static int gp106_bootstrap_hs_flcn(struct gk20a *g)
 		((struct flcn_acr_desc_v1 *)acr_dmem)->regions.region_props[
 			0].shadowmMem_startaddress = wpr_inf.nonwpr_base >> 8;
 
-		gk20a_mem_wr_n(g, &acr->acr_ucode, 0,
+		nvgpu_mem_wr_n(g, &acr->acr_ucode, 0,
 				acr_ucode_data_t210_load, img_size_in_bytes);
 
 		/*

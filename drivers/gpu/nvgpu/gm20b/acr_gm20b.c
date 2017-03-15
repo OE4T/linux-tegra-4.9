@@ -723,7 +723,7 @@ static void lsfm_init_wpr_contents(struct gk20a *g, struct ls_flcn_mgr *plsfm,
 	 */
 	while (pnode) {
 		/* Flush WPR header to memory*/
-		gk20a_mem_wr_n(g, ucode, i * sizeof(pnode->wpr_header),
+		nvgpu_mem_wr_n(g, ucode, i * sizeof(pnode->wpr_header),
 				&pnode->wpr_header, sizeof(pnode->wpr_header));
 
 		gm20b_dbg_pmu("wpr header");
@@ -739,7 +739,7 @@ static void lsfm_init_wpr_contents(struct gk20a *g, struct ls_flcn_mgr *plsfm,
 				pnode->wpr_header.status);
 
 		/*Flush LSB header to memory*/
-		gk20a_mem_wr_n(g, ucode, pnode->wpr_header.lsb_offset,
+		nvgpu_mem_wr_n(g, ucode, pnode->wpr_header.lsb_offset,
 				&pnode->lsb_header, sizeof(pnode->lsb_header));
 
 		gm20b_dbg_pmu("lsb header");
@@ -773,13 +773,13 @@ static void lsfm_init_wpr_contents(struct gk20a *g, struct ls_flcn_mgr *plsfm,
 		if (!pnode->ucode_img.header) {
 			/*Populate gen bl and flush to memory*/
 			lsfm_fill_flcn_bl_gen_desc(g, pnode);
-			gk20a_mem_wr_n(g, ucode,
+			nvgpu_mem_wr_n(g, ucode,
 					pnode->lsb_header.bl_data_off,
 					&pnode->bl_gen_desc,
 					pnode->bl_gen_desc_size);
 		}
 		/*Copying of ucode*/
-		gk20a_mem_wr_n(g, ucode, pnode->lsb_header.ucode_off,
+		nvgpu_mem_wr_n(g, ucode, pnode->lsb_header.ucode_off,
 				pnode->ucode_img.data,
 				pnode->ucode_img.data_size);
 		pnode = pnode->next;
@@ -787,7 +787,7 @@ static void lsfm_init_wpr_contents(struct gk20a *g, struct ls_flcn_mgr *plsfm,
 	}
 
 	/* Tag the terminator WPR header with an invalid falcon ID. */
-	gk20a_mem_wr32(g, ucode,
+	nvgpu_mem_wr32(g, ucode,
 			plsfm->managed_flcn_cnt * sizeof(struct lsf_wpr_header) +
 			offsetof(struct lsf_wpr_header, falcon_id),
 			LSF_FALCON_ID_INVALID);
@@ -1133,7 +1133,7 @@ static int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 		((struct flcn_acr_desc *)acr_dmem)->regions.no_regions = 2;
 		((struct flcn_acr_desc *)acr_dmem)->wpr_offset = 0;
 
-		gk20a_mem_wr_n(g, &acr->acr_ucode, 0,
+		nvgpu_mem_wr_n(g, &acr->acr_ucode, 0,
 				acr_ucode_data_t210_load, img_size_in_bytes);
 		/*
 		 * In order to execute this binary, we will be using
@@ -1433,7 +1433,7 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 			goto err_free_ucode;
 		}
 
-		gk20a_mem_wr_n(g, &acr->hsbl_ucode, 0, pmu_bl_gm10x, bl_sz);
+		nvgpu_mem_wr_n(g, &acr->hsbl_ucode, 0, pmu_bl_gm10x, bl_sz);
 		gm20b_dbg_pmu("Copied bl ucode to bl_cpuva\n");
 	}
 	/*

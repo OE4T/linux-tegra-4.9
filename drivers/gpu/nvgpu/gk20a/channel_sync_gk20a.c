@@ -46,13 +46,13 @@ static void add_wait_cmd(struct gk20a *g, struct priv_cmd_entry *cmd, u32 off,
 {
 	off = cmd->off + off;
 	/* syncpoint_a */
-	gk20a_mem_wr32(g, cmd->mem, off++, 0x2001001C);
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x2001001C);
 	/* payload */
-	gk20a_mem_wr32(g, cmd->mem, off++, thresh);
+	nvgpu_mem_wr32(g, cmd->mem, off++, thresh);
 	/* syncpoint_b */
-	gk20a_mem_wr32(g, cmd->mem, off++, 0x2001001D);
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x2001001D);
 	/* syncpt_id, switch_en, wait */
-	gk20a_mem_wr32(g, cmd->mem, off++, (id << 8) | 0x10);
+	nvgpu_mem_wr32(g, cmd->mem, off++, (id << 8) | 0x10);
 }
 
 static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
@@ -151,7 +151,7 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 		if (nvhost_syncpt_is_expired_ext(sp->host1x_pdev,
 				wait_id, wait_value)) {
 			/* each wait_cmd is 4 u32s */
-			gk20a_memset(c->g, wait_cmd->mem,
+			nvgpu_memset(c->g, wait_cmd->mem,
 					(wait_cmd->off + i * 4) * sizeof(u32),
 					0, 4 * sizeof(u32));
 		} else
@@ -212,22 +212,22 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 
 	if (wfi_cmd) {
 		/* wfi */
-		gk20a_mem_wr32(c->g, incr_cmd->mem, off++, 0x2001001E);
+		nvgpu_mem_wr32(c->g, incr_cmd->mem, off++, 0x2001001E);
 		/* handle, ignored */
-		gk20a_mem_wr32(c->g, incr_cmd->mem, off++, 0x00000000);
+		nvgpu_mem_wr32(c->g, incr_cmd->mem, off++, 0x00000000);
 	}
 	/* syncpoint_a */
-	gk20a_mem_wr32(c->g, incr_cmd->mem, off++, 0x2001001C);
+	nvgpu_mem_wr32(c->g, incr_cmd->mem, off++, 0x2001001C);
 	/* payload, ignored */
-	gk20a_mem_wr32(c->g, incr_cmd->mem, off++, 0);
+	nvgpu_mem_wr32(c->g, incr_cmd->mem, off++, 0);
 	/* syncpoint_b */
-	gk20a_mem_wr32(c->g, incr_cmd->mem, off++, 0x2001001D);
+	nvgpu_mem_wr32(c->g, incr_cmd->mem, off++, 0x2001001D);
 	/* syncpt_id, incr */
-	gk20a_mem_wr32(c->g, incr_cmd->mem, off++, (sp->id << 8) | 0x1);
+	nvgpu_mem_wr32(c->g, incr_cmd->mem, off++, (sp->id << 8) | 0x1);
 	/* syncpoint_b */
-	gk20a_mem_wr32(c->g, incr_cmd->mem, off++, 0x2001001D);
+	nvgpu_mem_wr32(c->g, incr_cmd->mem, off++, 0x2001001D);
 	/* syncpt_id, incr */
-	gk20a_mem_wr32(c->g, incr_cmd->mem, off++, (sp->id << 8) | 0x1);
+	nvgpu_mem_wr32(c->g, incr_cmd->mem, off++, (sp->id << 8) | 0x1);
 
 	WARN_ON(off - incr_cmd->off != incr_cmd_size);
 
@@ -531,39 +531,39 @@ static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
 		nvgpu_semaphore_incr(s);
 
 	/* semaphore_a */
-	gk20a_mem_wr32(g, cmd->mem, off++, 0x20010004);
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010004);
 	/* offset_upper */
-	gk20a_mem_wr32(g, cmd->mem, off++, (va >> 32) & 0xff);
+	nvgpu_mem_wr32(g, cmd->mem, off++, (va >> 32) & 0xff);
 	/* semaphore_b */
-	gk20a_mem_wr32(g, cmd->mem, off++, 0x20010005);
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010005);
 	/* offset */
-	gk20a_mem_wr32(g, cmd->mem, off++, va & 0xffffffff);
+	nvgpu_mem_wr32(g, cmd->mem, off++, va & 0xffffffff);
 
 	if (acquire) {
 		/* semaphore_c */
-		gk20a_mem_wr32(g, cmd->mem, off++, 0x20010006);
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010006);
 		/* payload */
-		gk20a_mem_wr32(g, cmd->mem, off++,
+		nvgpu_mem_wr32(g, cmd->mem, off++,
 			       nvgpu_semaphore_get_value(s));
 		/* semaphore_d */
-		gk20a_mem_wr32(g, cmd->mem, off++, 0x20010007);
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010007);
 		/* operation: acq_geq, switch_en */
-		gk20a_mem_wr32(g, cmd->mem, off++, 0x4 | (0x1 << 12));
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0x4 | (0x1 << 12));
 	} else {
 		/* semaphore_c */
-		gk20a_mem_wr32(g, cmd->mem, off++, 0x20010006);
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010006);
 		/* payload */
-		gk20a_mem_wr32(g, cmd->mem, off++,
+		nvgpu_mem_wr32(g, cmd->mem, off++,
 			       nvgpu_semaphore_get_value(s));
 		/* semaphore_d */
-		gk20a_mem_wr32(g, cmd->mem, off++, 0x20010007);
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010007);
 		/* operation: release, wfi */
-		gk20a_mem_wr32(g, cmd->mem, off++,
+		nvgpu_mem_wr32(g, cmd->mem, off++,
 				0x2 | ((wfi ? 0x0 : 0x1) << 20));
 		/* non_stall_int */
-		gk20a_mem_wr32(g, cmd->mem, off++, 0x20010008);
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0x20010008);
 		/* ignored */
-		gk20a_mem_wr32(g, cmd->mem, off++, 0);
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0);
 	}
 
 	if (acquire)

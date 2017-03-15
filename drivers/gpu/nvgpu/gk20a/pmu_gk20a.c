@@ -307,7 +307,7 @@ static void printtrace(struct pmu_gk20a *pmu)
 		return;
 
 	/* read pmu traces into system memory buffer */
-	gk20a_mem_rd_n(g, &pmu->trace_buf,
+	nvgpu_mem_rd_n(g, &pmu->trace_buf,
 		       0, tracebuffer, GK20A_PMU_TRACE_BUFSIZE);
 
 	trace = (char *)tracebuffer;
@@ -3155,7 +3155,7 @@ static int gk20a_prepare_ucode(struct gk20a *g)
 	if (err)
 		goto err_release_fw;
 
-	gk20a_mem_wr_n(g, &pmu->ucode, 0, pmu->ucode_image,
+	nvgpu_mem_wr_n(g, &pmu->ucode, 0, pmu->ucode_image,
 			pmu->desc->app_start_offset + pmu->desc->app_size);
 
 	return gk20a_init_pmu(pmu);
@@ -4872,7 +4872,7 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 					(struct flcn_mem_desc_v0 *)
 					pv->pmu_allocation_get_fb_addr(pmu, in));
 
-			gk20a_mem_wr_n(g, seq->in_mem, 0,
+			nvgpu_mem_wr_n(g, seq->in_mem, 0,
 					payload->in.buf, payload->in.fb_size);
 
 		} else {
@@ -5736,7 +5736,7 @@ static int falc_trace_show(struct seq_file *s, void *data)
 		return -ENOMEM;
 
 	/* read pmu traces into system memory buffer */
-	gk20a_mem_rd_n(g, &pmu->trace_buf,
+	nvgpu_mem_rd_n(g, &pmu->trace_buf,
 		       0, tracebuffer, GK20A_PMU_TRACE_BUFSIZE);
 
 	trace = (char *)tracebuffer;

@@ -3,7 +3,7 @@
  *
  * structure declarations for nvmem and nvmap user-space ioctls
  *
- * Copyright (c) 2009-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -156,7 +156,10 @@ struct nvmap_create_handle_from_va {
 	__u64 va;		/* FromVA*/
 	__u32 size;		/* non-zero for partial memory VMA. zero for end of VMA */
 	__u32 flags;		/* wb/wc/uc/iwb, tag etc. */
-	__u32 handle;		/* returns nvmap handle */
+	union {
+		__u32 handle;		/* returns nvmap handle */
+		__u64 size64;		/* used when size is 0 */
+	};
 };
 
 struct nvmap_gup_test {

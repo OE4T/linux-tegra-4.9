@@ -250,7 +250,8 @@ int nvmap_ioctl_create_from_va(struct file *filp, void __user *arg)
 	if (!client)
 		return -ENODEV;
 
-	ref = nvmap_create_handle_from_va(client, op.va, op.size);
+	ref = nvmap_create_handle_from_va(client, op.va,
+			op.size ? op.size : op.size64);
 	if (IS_ERR(ref))
 		return PTR_ERR(ref);
 

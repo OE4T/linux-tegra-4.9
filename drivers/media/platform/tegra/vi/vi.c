@@ -30,6 +30,7 @@
 #include <linux/tegra-soc.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/debugfs.h>
+#include <linux/slab.h>
 
 #include <media/tegra_v4l2_camera.h>
 

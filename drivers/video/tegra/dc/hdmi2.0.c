@@ -508,7 +508,9 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 	dc->connected = is_asserted;
 	tegra_dc_ext_process_hotplug(dc->ndev->id);
 
+#ifdef CONFIG_SWITCH
 	switch_set_state(&hdmi->hpd_switch, is_asserted ? 1 : 0);
+#endif
 }
 
 static int tegra_hdmi_edid_eld_setup(struct tegra_hdmi *hdmi)
@@ -581,7 +583,9 @@ static int tegra_hdmi_disable(struct tegra_hdmi *hdmi)
 	if (!hdmi->enabled) {
 		dc->connected = false;
 		tegra_dc_ext_process_hotplug(dc->ndev->id);
+#ifdef CONFIG_SWITCH
 		switch_set_state(&hdmi->hpd_switch, 0);
+#endif
 		return 0;
 	}
 
@@ -970,16 +974,20 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi->mon_spec_valid = false;
 	hdmi->eld_valid = false;
 	hdmi->device_shutdown = false;
+#ifdef CONFIG_SWITCH
 	hdmi->hpd_switch.name = "hdmi";
 	hdmi->audio_switch.name = "hdmi_audio";
+#endif
 
 	if (hdmi_instance) {
 		snprintf(hdmi->hpd_switch_name, CHAR_BUF_SIZE_MAX,
 			"hdmi%d", hdmi_instance);
 		snprintf(hdmi->audio_switch_name, CHAR_BUF_SIZE_MAX,
 			"hdmi%d_audio", hdmi_instance);
+#ifdef CONFIG_SWITCH
 		hdmi->hpd_switch.name = hdmi->hpd_switch_name;
 		hdmi->audio_switch.name = hdmi->audio_switch_name;
+#endif
 	}
 
 	if (0) {

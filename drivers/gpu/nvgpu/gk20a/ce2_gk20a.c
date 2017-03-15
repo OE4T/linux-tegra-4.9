@@ -342,6 +342,7 @@ static int gk20a_ce_prepare_submit(u64 src_buf,
 int gk20a_init_ce_support(struct gk20a *g)
 {
 	struct gk20a_ce_app *ce_app = &g->ce_app;
+	int err;
 
 	if (ce_app->initialised) {
 		/* assume this happen during poweron/poweroff GPU sequence */
@@ -352,7 +353,10 @@ int gk20a_init_ce_support(struct gk20a *g)
 
 	gk20a_dbg(gpu_dbg_fn, "ce: init");
 
-	nvgpu_mutex_init(&ce_app->app_mutex);
+	err = nvgpu_mutex_init(&ce_app->app_mutex);
+	if (err)
+		return err;
+
 	nvgpu_mutex_acquire(&ce_app->app_mutex);
 
 	INIT_LIST_HEAD(&ce_app->allocated_contexts);
@@ -390,6 +394,7 @@ void gk20a_ce_destroy(struct gk20a *g)
 	ce_app->next_ctx_id = 0;
 
 	nvgpu_mutex_release(&ce_app->app_mutex);
+
 	nvgpu_mutex_destroy(&ce_app->app_mutex);
 }
 
@@ -427,7 +432,11 @@ u32 gk20a_ce_create_context_with_cb(struct device *dev,
 	if (!ce_ctx)
 		return ctx_id;
 
-	nvgpu_mutex_init(&ce_ctx->gpu_ctx_mutex);
+	err = nvgpu_mutex_init(&ce_ctx->gpu_ctx_mutex);
+	if (err) {
+		kfree(ce_ctx);
+		return ctx_id;
+	}
 
 	ce_ctx->g = g;
 	ce_ctx->dev = g->dev;

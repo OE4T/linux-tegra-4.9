@@ -63,7 +63,7 @@
 #include <trace/events/arm_smmu.h>
 
 #include "of_tegra-smmu.h" /* FIXME: to parse implicitly */
-#include "tegra-smmu.h"
+
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include <linux/platform/tegra/tegra-mc-sid.h>
 
@@ -710,7 +710,8 @@ find_identical_smmu_master_cfg(struct arm_smmu_device *smmu,
 		master = container_of(node, struct arm_smmu_master, node);
 
 		/* If we don't have the same number of StreamIDs then we are
-		 * certainly not identical. */
+		 * certainly not identical.
+		 */
 		if (master->cfg->num_streamids != masterspec->args_count)
 			continue;
 
@@ -1299,8 +1300,8 @@ static void arm_smmu_init_context_bank(struct arm_smmu_domain *smmu_domain)
 	/* MAIR0 (stage-1 only) */
 	if (stage1) {
 		reg = (MAIR_ATTR_NC << MAIR_ATTR_SHIFT(MAIR_ATTR_IDX_NC)) |
-		      (MAIR_ATTR_WBRWA << MAIR_ATTR_SHIFT(MAIR_ATTR_IDX_CACHE)) |
-		      (MAIR_ATTR_DEVICE << MAIR_ATTR_SHIFT(MAIR_ATTR_IDX_DEV));
+		    (MAIR_ATTR_WBRWA << MAIR_ATTR_SHIFT(MAIR_ATTR_IDX_CACHE)) |
+		    (MAIR_ATTR_DEVICE << MAIR_ATTR_SHIFT(MAIR_ATTR_IDX_DEV));
 		writel_relaxed(reg, cb_base + ARM_SMMU_CB_S1_MAIR0);
 	}
 
@@ -1343,7 +1344,7 @@ static int arm_smmu_init_domain_context(struct iommu_domain *domain,
 
 	ret = __arm_smmu_alloc_bitmap(smmu->context_map, start,
 				      smmu->num_context_banks);
-	if (IS_ERR_VALUE(ret))
+	if (ret < 0)
 		goto out_unlock;
 
 	cfg->cbndx = ret;
@@ -1365,7 +1366,7 @@ static int arm_smmu_init_domain_context(struct iommu_domain *domain,
 		irq = smmu->irqs[smmu->num_global_irqs + cfg->irptndx];
 		ret = request_irq(irq, arm_smmu_context_fault, IRQF_SHARED,
 			  "arm-smmu-context-fault", domain);
-		if (IS_ERR_VALUE(ret)) {
+		if (ret < 0) {
 			dev_err(smmu->dev,
 				"failed to request context IRQ %d (%u)\n",
 				cfg->irptndx, irq);
@@ -1546,17 +1547,14 @@ static int arm_smmu_master_configure_smrs(struct arm_smmu_device *smmu,
 	}
 
 	smrs = kmalloc_array(cfg->num_streamids, sizeof(*smrs), GFP_KERNEL);
-	if (!smrs) {
-		dev_err(smmu->dev, "failed to allocate %d SMRs\n",
-			cfg->num_streamids);
+	if (!smrs)
 		return -ENOMEM;
-	}
 
 	/* Allocate the SMRs on the SMMU */
 	for (i = 0; i < cfg->num_streamids; ++i) {
 		int idx = __arm_smmu_alloc_bitmap(smmu->smr_map, 0,
 						  smmu->num_mapping_groups);
-		if (IS_ERR_VALUE(idx)) {
+		if (idx < 0) {
 			dev_err(smmu->dev, "failed to allocate free SMR\n");
 			goto err_free_smrs;
 		}
@@ -1881,15 +1879,15 @@ static void arm_smmu_do_linear_map(struct device *dev)
 		int err;
 		DEFINE_DMA_ATTRS(attrs);
 
-		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
-		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, __DMA_ATTR(attrs));
+		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, __DMA_ATTR(attrs));
 
 		while (map && map->size) {
 
 			size_t size = PAGE_ALIGN(map->size);
 
 			err = dma_map_linear_attrs(dev, map->start,
-							size, 0, &attrs);
+						size, 0, __DMA_ATTR(attrs));
 			if (err == DMA_ERROR_CODE)
 				dev_err(dev,
 					"IOVA linear map %pad(%zx) failed\n",
@@ -1931,7 +1929,7 @@ static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	if (!dom_smmu) {
 		/* Now that we have a master, we can finalise the domain */
 		ret = arm_smmu_init_domain_context(domain, smmu);
-		if (IS_ERR_VALUE(ret))
+		if (ret < 0)
 			return ret;
 
 		dom_smmu = smmu_domain->smmu;
@@ -2066,7 +2064,8 @@ static int arm_smmu_alloc_init_pte(struct arm_smmu_device *smmu, pmd_t *pmd,
 
 		pteval &= ~ARM_SMMU_PTE_CONT;
 
-		if (arm_smmu_pte_is_contiguous_range(addr, end, __pfn_to_phys(pfn))) {
+		if (arm_smmu_pte_is_contiguous_range(addr, end,
+							__pfn_to_phys(pfn))) {
 			i = ARM_SMMU_PTE_CONT_ENTRIES;
 			pteval |= ARM_SMMU_PTE_CONT;
 		} else if (pte_val(*pte) &
@@ -3087,7 +3086,7 @@ static void arm_smmu_debugfs_create(struct arm_smmu_device *smmu)
 	regs = (struct debugfs_reg32 *)smmu->perf_regset->regs;
 	for (i = 0; i < smmu->perf_regset->nregs; i++) {
 		debugfs_create_file(regs->name, S_IRUGO | S_IWUSR,
-				dent_gnsr, regs, &smmu_perf_regset_debugfs_fops);
+			dent_gnsr, regs, &smmu_perf_regset_debugfs_fops);
 		regs++;
 	}
 

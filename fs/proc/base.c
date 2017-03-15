@@ -2154,7 +2154,7 @@ proc_map_files_readdir(struct file *file, struct dir_context *ctx)
 
 	for (i = 0; i < nr_files; i++) {
 		p = flex_array_get(fa, i);
-		if (!proc_fill_cache(file, ctx,
+		if (p && !proc_fill_cache(file, ctx,
 				      p->name, p->len,
 				      proc_map_files_instantiate,
 				      task,

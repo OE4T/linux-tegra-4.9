@@ -1048,11 +1048,17 @@ static int dbg_dc_stats_show(struct seq_file *s, void *unused)
 
 	mutex_lock(&dc->lock);
 	seq_printf(s,
-		"underflows: %llu\n"
+		"underflows: %llu\n",
+		dc->stats.underflows);
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	seq_printf(s,
+		"underflow_frames: %llu\n",
+		dc->stats.underflow_frames);
+#else
+	seq_printf(s,
 		"underflows_a: %llu\n"
 		"underflows_b: %llu\n"
 		"underflows_c: %llu\n",
-		dc->stats.underflows,
 		dc->stats.underflows_a,
 		dc->stats.underflows_b,
 		dc->stats.underflows_c);
@@ -1063,10 +1069,6 @@ static int dbg_dc_stats_show(struct seq_file *s, void *unused)
 		dc->stats.underflows_d,
 		dc->stats.underflows_h,
 		dc->stats.underflows_t);
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	seq_printf(s,
-		"underflow_frames: %llu\n",
-		dc->stats.underflow_frames);
 #endif
 	mutex_unlock(&dc->lock);
 

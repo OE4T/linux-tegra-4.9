@@ -766,7 +766,7 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 	/* enable pmc pfifo */
-	gk20a_reset(g, mc_enable_pfifo_enabled_f());
+	g->ops.mc.reset(g, mc_enable_pfifo_enabled_f());
 
 	if (g->ops.clock_gating.slcg_ce2_load_gating_prod)
 		g->ops.clock_gating.slcg_ce2_load_gating_prod(g,
@@ -1249,7 +1249,7 @@ void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 	}
 	if ((engine_enum == ENGINE_GRCE_GK20A) ||
 		(engine_enum == ENGINE_ASYNC_CE_GK20A)) {
-			gk20a_reset(g, engine_info->reset_mask);
+			g->ops.mc.reset(g, engine_info->reset_mask);
 	}
 }
 

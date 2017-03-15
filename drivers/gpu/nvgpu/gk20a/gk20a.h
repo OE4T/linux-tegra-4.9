@@ -748,6 +748,10 @@ struct gpu_ops {
 		void (*isr_thread_nonstall)(struct gk20a *g, u32 intr);
 		void (*isr_nonstall_cb)(struct work_struct *work);
 		u32 intr_mask_restore[4];
+		void (*enable)(struct gk20a *g, u32 units);
+		void (*disable)(struct gk20a *g, u32 units);
+		void (*reset)(struct gk20a *g, u32 units);
+		u32 (*boot_0)(struct gk20a *g, u32 *arch, u32 *impl, u32 *rev);
 	} mc;
 	struct {
 		void (*show_dump)(struct gk20a *g,
@@ -1406,9 +1410,6 @@ void gk20a_busy_noresume(struct device *dev);
 void gk20a_idle_nosuspend(struct device *dev);
 int __must_check gk20a_busy(struct gk20a *g);
 void gk20a_idle(struct gk20a *g);
-void gk20a_disable(struct gk20a *g, u32 units);
-void gk20a_enable(struct gk20a *g, u32 units);
-void gk20a_reset(struct gk20a *g, u32 units);
 int gk20a_do_idle(void);
 int gk20a_do_unidle(void);
 int __gk20a_do_idle(struct device *dev, bool force_reset);

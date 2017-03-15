@@ -50,7 +50,7 @@ static void gk20a_reset_priv_ring(struct gk20a *g)
 {
 	u32 val;
 
-	gk20a_reset(g, mc_enable_priv_ring_enabled_f());
+	g->ops.mc.reset(g, mc_enable_priv_ring_enabled_f());
 
 	val = gk20a_readl(g, pri_ringstation_sys_decode_config_r());
 	val = set_field(val,

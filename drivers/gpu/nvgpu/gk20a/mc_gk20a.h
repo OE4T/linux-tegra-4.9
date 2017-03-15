@@ -24,4 +24,8 @@ irqreturn_t mc_gk20a_isr_nonstall(struct gk20a *g);
 irqreturn_t mc_gk20a_intr_thread_stall(struct gk20a *g);
 void mc_gk20a_intr_thread_nonstall(struct gk20a *g, u32 intr);
 void mc_gk20a_nonstall_cb(struct work_struct *work);
+void gk20a_mc_enable(struct gk20a *g, u32 units);
+void gk20a_mc_disable(struct gk20a *g, u32 units);
+void gk20a_mc_reset(struct gk20a *g, u32 units);
+u32 gk20a_mc_boot_0(struct gk20a *g, u32 *arch, u32 *impl, u32 *rev);
 #endif

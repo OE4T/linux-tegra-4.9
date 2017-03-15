@@ -14,6 +14,7 @@
  */
 
 #include <linux/types.h>
+#include <linux/delay.h>
 #include <trace/events/gk20a.h>
 
 #include "gk20a.h"
@@ -248,6 +249,63 @@ void mc_gk20a_intr_unit_config(struct gk20a *g, bool enable,
 	}
 }
 
+void gk20a_mc_disable(struct gk20a *g, u32 units)
+{
+	u32 pmc;
+
+	gk20a_dbg(gpu_dbg_info, "pmc disable: %08x\n", units);
+
+	nvgpu_spinlock_acquire(&g->mc_enable_lock);
+	pmc = gk20a_readl(g, mc_enable_r());
+	pmc &= ~units;
+	gk20a_writel(g, mc_enable_r(), pmc);
+	nvgpu_spinlock_release(&g->mc_enable_lock);
+}
+
+void gk20a_mc_enable(struct gk20a *g, u32 units)
+{
+	u32 pmc;
+
+	gk20a_dbg(gpu_dbg_info, "pmc enable: %08x\n", units);
+
+	nvgpu_spinlock_acquire(&g->mc_enable_lock);
+	pmc = gk20a_readl(g, mc_enable_r());
+	pmc |= units;
+	gk20a_writel(g, mc_enable_r(), pmc);
+	gk20a_readl(g, mc_enable_r());
+	nvgpu_spinlock_release(&g->mc_enable_lock);
+
+	udelay(20);
+}
+
+void gk20a_mc_reset(struct gk20a *g, u32 units)
+{
+	g->ops.mc.disable(g, units);
+	if (units & gk20a_fifo_get_all_ce_engine_reset_mask(g))
+		udelay(500);
+	else
+		udelay(20);
+	g->ops.mc.enable(g, units);
+}
+
+u32 gk20a_mc_boot_0(struct gk20a *g, u32 *arch, u32 *impl, u32 *rev)
+{
+	u32 val = gk20a_readl(g, mc_boot_0_r());
+
+	if (arch)
+		*arch = mc_boot_0_architecture_v(val) <<
+			NVGPU_GPU_ARCHITECTURE_SHIFT;
+
+	if (impl)
+		*impl = mc_boot_0_implementation_v(val);
+
+	if (rev)
+		*rev = (mc_boot_0_major_revision_v(val) << 4) |
+			mc_boot_0_minor_revision_v(val);
+
+	return val;
+}
+
 void gk20a_init_mc(struct gpu_ops *gops)
 {
 	gops->mc.intr_enable = mc_gk20a_intr_enable;
@@ -257,4 +315,8 @@ void gk20a_init_mc(struct gpu_ops *gops)
 	gops->mc.isr_thread_stall = mc_gk20a_intr_thread_stall;
 	gops->mc.isr_thread_nonstall = mc_gk20a_intr_thread_nonstall;
 	gops->mc.isr_nonstall_cb = mc_gk20a_nonstall_cb;
+	gops->mc.enable = gk20a_mc_enable;
+	gops->mc.disable = gk20a_mc_disable;
+	gops->mc.reset = gk20a_mc_reset;
+	gops->mc.boot_0 = gk20a_mc_boot_0;
 }

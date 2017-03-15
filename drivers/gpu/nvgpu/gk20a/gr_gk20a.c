@@ -4970,10 +4970,10 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 	}
 
 	/* reset gr engine */
-	gk20a_reset(g, mc_enable_pgraph_enabled_f()
-			| mc_enable_blg_enabled_f()
-			| mc_enable_perfmon_enabled_f()
-			| ce_reset_mask);
+	g->ops.mc.reset(g, mc_enable_pgraph_enabled_f() |
+			mc_enable_blg_enabled_f() |
+			mc_enable_perfmon_enabled_f() |
+			ce_reset_mask);
 
 	gr_gk20a_load_gating_prod(g);
 

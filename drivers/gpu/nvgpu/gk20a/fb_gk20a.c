@@ -30,10 +30,10 @@ void fb_gk20a_reset(struct gk20a *g)
 
 	gk20a_dbg_info("reset gk20a fb");
 
-	gk20a_reset(g, mc_enable_pfb_enabled_f()
-			| mc_enable_l2_enabled_f()
-			| mc_enable_xbar_enabled_f()
-			| mc_enable_hub_enabled_f());
+	g->ops.mc.reset(g, mc_enable_pfb_enabled_f() |
+			mc_enable_l2_enabled_f() |
+			mc_enable_xbar_enabled_f() |
+			mc_enable_hub_enabled_f());
 
 	val = gk20a_readl(g, mc_elpg_enable_r());
 	val |= mc_elpg_enable_xbar_enabled_f()

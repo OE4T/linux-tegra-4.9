@@ -2380,7 +2380,7 @@ int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 	if (enable) {
 		int retries = PMU_MEM_SCRUBBING_TIMEOUT_MAX /
 			      PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT;
-		gk20a_enable(g, mc_enable_pwr_enabled_f());
+		g->ops.mc.enable(g, mc_enable_pwr_enabled_f());
 
 		if (g->ops.clock_gating.slcg_pmu_load_gating_prod)
 			g->ops.clock_gating.slcg_pmu_load_gating_prod(g,
@@ -2401,12 +2401,12 @@ int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 			udelay(PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT);
 		} while (--retries || !tegra_platform_is_silicon());
 
-		gk20a_disable(g, mc_enable_pwr_enabled_f());
+		g->ops.mc.disable(g, mc_enable_pwr_enabled_f());
 		gk20a_err(dev_from_gk20a(g), "Falcon mem scrubbing timeout");
 
 		return -ETIMEDOUT;
 	} else {
-		gk20a_disable(g, mc_enable_pwr_enabled_f());
+		g->ops.mc.disable(g, mc_enable_pwr_enabled_f());
 		return 0;
 	}
 }

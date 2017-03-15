@@ -184,5 +184,8 @@ void gp10b_init_mc(struct gpu_ops *gops)
 	gops->mc.isr_thread_stall = mc_gp10b_intr_thread_stall;
 	gops->mc.isr_thread_nonstall = mc_gk20a_intr_thread_nonstall;
 	gops->mc.isr_nonstall_cb = mc_gk20a_nonstall_cb;
-
+	gops->mc.enable = gk20a_mc_enable;
+	gops->mc.disable = gk20a_mc_disable;
+	gops->mc.reset = gk20a_mc_reset;
+	gops->mc.boot_0 = gk20a_mc_boot_0;
 }

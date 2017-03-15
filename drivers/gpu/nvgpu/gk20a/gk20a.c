@@ -54,6 +54,7 @@
 #include "gk20a_scale.h"
 #include "ctxsw_trace_gk20a.h"
 #include "dbg_gpu_gk20a.h"
+#include "mc_gk20a.h"
 #include "hal.h"
 #include "vgpu/vgpu.h"
 #include "pci.h"
@@ -70,7 +71,6 @@
 #include "nvgpu_gpuid_t19x.h"
 #endif
 
-#include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_top_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_fb_gk20a.h>
@@ -263,7 +263,7 @@ static const struct file_operations gk20a_sched_ops = {
 
 void __nvgpu_check_gpu_state(struct gk20a *g)
 {
-	u32 boot_0 = readl(g->regs + mc_boot_0_r());
+	u32 boot_0 = g->ops.mc.boot_0(g, NULL, NULL, NULL);
 
 	if (boot_0 == 0xffffffff) {
 		pr_err("nvgpu: GPU has disappeared from bus!!\n");
@@ -474,18 +474,12 @@ done:
 static int gk20a_detect_chip(struct gk20a *g)
 {
 	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
-	u32 mc_boot_0_value;
+	u32 val;
 
 	if (gpu->arch)
 		return 0;
 
-	mc_boot_0_value = gk20a_readl(g, mc_boot_0_r());
-	gpu->arch = mc_boot_0_architecture_v(mc_boot_0_value) <<
-		NVGPU_GPU_ARCHITECTURE_SHIFT;
-	gpu->impl = mc_boot_0_implementation_v(mc_boot_0_value);
-	gpu->rev =
-		(mc_boot_0_major_revision_v(mc_boot_0_value) << 4) |
-		mc_boot_0_minor_revision_v(mc_boot_0_value);
+	val = gk20a_mc_boot_0(g, &gpu->arch, &gpu->impl, &gpu->rev);
 
 	gk20a_dbg_info("arch: %x, impl: %x, rev: %x\n",
 			g->gpu_characteristics.arch,
@@ -1511,45 +1505,6 @@ void gk20a_idle(struct gk20a *g)
 	}
 fail:
 	up_read(&g->busy_lock);
-}
-
-void gk20a_disable(struct gk20a *g, u32 units)
-{
-	u32 pmc;
-
-	gk20a_dbg(gpu_dbg_info, "pmc disable: %08x\n", units);
-
-	nvgpu_spinlock_acquire(&g->mc_enable_lock);
-	pmc = gk20a_readl(g, mc_enable_r());
-	pmc &= ~units;
-	gk20a_writel(g, mc_enable_r(), pmc);
-	nvgpu_spinlock_release(&g->mc_enable_lock);
-}
-
-void gk20a_enable(struct gk20a *g, u32 units)
-{
-	u32 pmc;
-
-	gk20a_dbg(gpu_dbg_info, "pmc enable: %08x\n", units);
-
-	nvgpu_spinlock_acquire(&g->mc_enable_lock);
-	pmc = gk20a_readl(g, mc_enable_r());
-	pmc |= units;
-	gk20a_writel(g, mc_enable_r(), pmc);
-	gk20a_readl(g, mc_enable_r());
-	nvgpu_spinlock_release(&g->mc_enable_lock);
-
-	udelay(20);
-}
-
-void gk20a_reset(struct gk20a *g, u32 units)
-{
-	gk20a_disable(g, units);
-	if (units & gk20a_fifo_get_all_ce_engine_reset_mask(g))
-		udelay(500);
-	else
-		udelay(20);
-	gk20a_enable(g, units);
 }
 
 #ifdef CONFIG_PM

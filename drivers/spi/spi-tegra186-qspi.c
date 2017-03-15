@@ -969,11 +969,17 @@ static void tegra_qspi_set_gr_registers(struct spi_device *spi)
 {
 	struct tegra_qspi_data *tqspi = spi_master_get_devdata(spi->master);
 	char prod_name[MAX_PROD_NAME];
+	int err;
+
 	if (tqspi->prod_list) {
 		/* If available, initialise the config registers
 		 * for QSPI with the values mentioned in prod list.
 		 */
-		tegra_prod_set_by_name(&tqspi->base, "prod", tqspi->prod_list);
+		err = tegra_prod_set_by_name(&tqspi->base, "prod",
+						tqspi->prod_list);
+		if (err < 0)
+			dev_dbg(tqspi->dev,
+				"failed to set prod for qspi by %d\n", err);
 		if (tqspi->is_ddr_mode)
 			sprintf(prod_name, "prod_c_DDR%d", (tqspi->cur_speed/1000000));
 		else

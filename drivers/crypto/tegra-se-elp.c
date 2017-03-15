@@ -1865,7 +1865,7 @@ clk_dis:
 }
 EXPORT_SYMBOL(tegra_se_pka1_ecc_op);
 
-int tegra_se_pka1_mod_op(struct tegra_se_pka1_mod_request *req)
+static int tegra_se_pka1_mod_op(struct tegra_se_pka1_mod_request *req)
 {
 	struct tegra_se_elp_dev *se_dev;
 	int ret;
@@ -1900,9 +1900,8 @@ clk_dis:
 	return ret;
 }
 
-static int tegra_se_mod_mult(int op_mode, u32 *result,
-			     const u32 *left, const u32 *right,
-			     const u32 *mod, int nbytes)
+static int tegra_se_mod_mult(int op_mode, u32 *result, u32 *left, u32 *right,
+			     u32 *mod, int nbytes)
 {
 	struct tegra_se_pka1_mod_request req;
 	int ret;
@@ -1918,9 +1917,8 @@ static int tegra_se_mod_mult(int op_mode, u32 *result,
 
 	return ret;
 }
-static int tegra_se_mod_add(int op_mode, u32 *result,
-			    const u32 *left, const u32 *right,
-			    const u32 *mod, int nbytes)
+static int tegra_se_mod_add(int op_mode, u32 *result, u32 *left, u32 *right,
+			    u32 *mod, int nbytes)
 {
 	struct tegra_se_pka1_mod_request req;
 	int ret;
@@ -1937,9 +1935,8 @@ static int tegra_se_mod_add(int op_mode, u32 *result,
 	return ret;
 }
 
-static int tegra_se_mod_inv(int op_mode, u32 *result,
-			    const u32 *input,
-			    const u32 *mod, int nbytes)
+static int tegra_se_mod_inv(int op_mode, u32 *result, u32 *input,
+			    u32 *mod, int nbytes)
 {
 	struct tegra_se_pka1_mod_request req;
 	int ret;
@@ -1955,9 +1952,8 @@ static int tegra_se_mod_inv(int op_mode, u32 *result,
 	return ret;
 }
 
-static int tegra_se_mod_reduce(int op_mode, u32 *result,
-			       const u32 *input,
-			       const u32 *mod, int nbytes)
+static int tegra_se_mod_reduce(int op_mode, u32 *result, u32 *input,
+			       u32 *mod, int nbytes)
 {
 	struct tegra_se_pka1_mod_request req;
 	int ret;
@@ -1998,6 +1994,7 @@ static int tegra_se_ecc_point_mult(struct tegra_se_ecc_point *result,
 	return ret;
 }
 
+#if !defined(ECDSA_USE_SHAMIRS_TRICK)
 static int tegra_se_ecc_point_add(struct tegra_se_ecc_point *p1,
 				  struct tegra_se_ecc_point *p2,
 				  const struct tegra_se_ecc_curve *curve,
@@ -2021,9 +2018,10 @@ static int tegra_se_ecc_point_add(struct tegra_se_ecc_point *p1,
 
 	return ret;
 }
+#endif
 
 static int tegra_se_ecc_shamir_trick(u32 *s1,
-				     struct tegra_se_ecc_point *p1,
+				     const struct tegra_se_ecc_point *p1,
 				     u32 *s2,
 				     struct tegra_se_ecc_point *p2,
 				     const struct tegra_se_ecc_curve *curve,
@@ -2755,7 +2753,7 @@ tegra_se_ecdsa_get_ctx(struct crypto_akcipher *tfm)
 	return akcipher_tfm_ctx(tfm);
 }
 
-int tegra_se_ecdsa_sign(struct akcipher_request *req)
+static int tegra_se_ecdsa_sign(struct akcipher_request *req)
 {
 	struct crypto_akcipher *tfm = crypto_akcipher_reqtfm(req);
 	struct tegra_se_ecdsa_ctx *ctx = tegra_se_ecdsa_get_ctx(tfm);
@@ -2805,32 +2803,37 @@ int tegra_se_ecdsa_sign(struct akcipher_request *req)
 		return -ENOMEM;
 
 	/* (x1, y1) = k x G */
-	ret = tegra_se_ecc_point_mult(x1y1, &curve->g, k, curve, nbytes);
+	ret = tegra_se_ecc_point_mult(x1y1, &curve->g, (u32 *)k, curve, nbytes);
 	if (ret)
 		goto exit;
 
 	/* r = x1 mod n */
-	ret = tegra_se_mod_reduce(mod_op_mode, r, x1y1->x, curve->n, nbytes);
+	ret = tegra_se_mod_reduce(mod_op_mode, (u32 *)r, x1y1->x,
+				  curve->n, nbytes);
 	if (ret)
 		goto exit;
 
 	/* k^-1 */
-	ret = tegra_se_mod_inv(mod_op_mode, k_inv, k, curve->n, nbytes);
+	ret = tegra_se_mod_inv(mod_op_mode, (u32 *)k_inv, (u32 *)k,
+			       curve->n, nbytes);
 	if (ret)
 		goto exit;
 
 	/* d . r mod n */
-	ret = tegra_se_mod_mult(mod_op_mode, dr, d, r, curve->n, nbytes);
+	ret = tegra_se_mod_mult(mod_op_mode, (u32 *)dr, (u32 *)d, (u32 *)r,
+				curve->n, nbytes);
 	if (ret)
 		goto exit;
 
 	/* z + dr mod n */
-	ret = tegra_se_mod_add(mod_op_mode, zdr, z, dr, curve->n, nbytes);
+	ret = tegra_se_mod_add(mod_op_mode, (u32 *)zdr, (u32 *)z, (u32 *)dr,
+			       curve->n, nbytes);
 	if (ret)
 		goto exit;
 
 	/* k^-1 . ( z + dr) mod n */
-	ret = tegra_se_mod_mult(mod_op_mode, s, k_inv, zdr, curve->n, nbytes);
+	ret = tegra_se_mod_mult(mod_op_mode, (u32 *)s, (u32 *)k_inv, (u32 *)zdr,
+				curve->n, nbytes);
 	if (ret)
 		goto exit;
 
@@ -2848,7 +2851,7 @@ int tegra_se_ecdsa_sign(struct akcipher_request *req)
 }
 
 
-int tegra_se_ecdsa_verify(struct akcipher_request *req)
+static int tegra_se_ecdsa_verify(struct akcipher_request *req)
 {
 	struct crypto_akcipher *tfm = crypto_akcipher_reqtfm(req);
 	struct tegra_se_ecdsa_ctx *ctx = tegra_se_ecdsa_get_ctx(tfm);
@@ -2887,17 +2890,20 @@ int tegra_se_ecdsa_verify(struct akcipher_request *req)
 	vli_copy_from_buf(s, ndigits, sg_virt(&req->src[2]), nbytes);
 
 	/* w = s^-1 mod n */
-	ret = tegra_se_mod_inv(mod_op_mode, w, s, curve->n, nbytes);
+	ret = tegra_se_mod_inv(mod_op_mode, (u32 *)w, (u32 *)s,
+			       curve->n, nbytes);
 	if (ret)
 		goto exit;
 
 	/* u1 = zw mod n */
-	ret = tegra_se_mod_mult(mod_op_mode, u1, z, w, curve->n, nbytes);
+	ret = tegra_se_mod_mult(mod_op_mode, (u32 *)u1, (u32 *)z, (u32 *)w,
+				curve->n, nbytes);
 	if (ret)
 		goto exit;
 
 	/* u2 = rw mod n */
-	ret = tegra_se_mod_mult(mod_op_mode, u2, r, w, curve->n, nbytes);
+	ret = tegra_se_mod_mult(mod_op_mode, (u32 *)u2, (u32 *)r, (u32 *)w,
+				curve->n, nbytes);
 	if (ret)
 		goto exit;
 
@@ -2905,21 +2911,24 @@ int tegra_se_ecdsa_verify(struct akcipher_request *req)
 	/* Q=(Qx,Qy) */
 	ctx_qx = ctx->public_key;
 	ctx_qy = ctx_qx + ECC_MAX_DIGITS;
-	vli_set(Q->x, ctx_qx, ndigits);
-	vli_set(Q->y, ctx_qy, ndigits);
+	vli_set((u64 *)Q->x, ctx_qx, ndigits);
+	vli_set((u64 *)Q->y, ctx_qy, ndigits);
 
 	/* u1.G + u2.Q => P + Q in Q */
-	ret = tegra_se_ecc_shamir_trick(u1, &curve->g, u2, Q, curve, nbytes);
+	ret = tegra_se_ecc_shamir_trick((u32 *)u1, &curve->g, (u32 *)u2, Q,
+					curve, nbytes);
 	if (ret)
 		goto exit;
 
 	/* v = x mod n */
-	ret = tegra_se_mod_reduce(mod_op_mode, v, Q->x, curve->n, nbytes);
+	ret = tegra_se_mod_reduce(mod_op_mode, (u32 *)v, Q->x,
+				  curve->n, nbytes);
 	if (ret)
 		goto exit;
 #else
 	/* u1 . G */
-	ret = tegra_se_ecc_point_mult(x1y1, &curve->g, u1, curve, nbytes);
+	ret = tegra_se_ecc_point_mult(x1y1, &curve->g, (u32 *)u1,
+				      curve, nbytes);
 	if (ret)
 		goto exit;
 
@@ -2930,7 +2939,7 @@ int tegra_se_ecdsa_verify(struct akcipher_request *req)
 	vli_set(Q->y, ctx_qy, ndigits);
 
 	/* u2 x Q */
-	ret = tegra_se_ecc_point_mult(x2y2, Q, u2, curve, nbytes);
+	ret = tegra_se_ecc_point_mult(x2y2, Q, (u32 *)u2, curve, nbytes);
 	if (ret)
 		goto exit;
 
@@ -2940,7 +2949,8 @@ int tegra_se_ecdsa_verify(struct akcipher_request *req)
 		goto exit;
 
 	/* v = x mod n */
-	ret = tegra_se_mod_reduce(mod_op_mode, v, x2y2->x, curve->n, nbytes);
+	ret = tegra_se_mod_reduce(mod_op_mode, (u32 *)v, x2y2->x,
+				  curve->n, nbytes);
 	if (ret)
 		goto exit;
 #endif
@@ -2953,18 +2963,18 @@ int tegra_se_ecdsa_verify(struct akcipher_request *req)
 	return ret;
 }
 
-int tegra_se_ecdsa_dummy_enc(struct akcipher_request *req)
+static int tegra_se_ecdsa_dummy_enc(struct akcipher_request *req)
 {
 	return -EINVAL;
 }
 
-int tegra_se_ecdsa_dummy_dec(struct akcipher_request *req)
+static int tegra_se_ecdsa_dummy_dec(struct akcipher_request *req)
 {
 	return -EINVAL;
 }
 
-int tegra_se_ecdsa_set_pub_key(struct crypto_akcipher *tfm, const void *key,
-		      unsigned int keylen)
+static int tegra_se_ecdsa_set_pub_key(struct crypto_akcipher *tfm,
+				      const void *key, unsigned int keylen)
 {
 	struct tegra_se_ecdsa_ctx *ctx = tegra_se_ecdsa_get_ctx(tfm);
 	struct ecdsa params;
@@ -3003,8 +3013,8 @@ int tegra_se_ecdsa_set_pub_key(struct crypto_akcipher *tfm, const void *key,
 	return 0;
 }
 
-int tegra_se_ecdsa_set_priv_key(struct crypto_akcipher *tfm, const void *key,
-		       unsigned int keylen)
+static int tegra_se_ecdsa_set_priv_key(struct crypto_akcipher *tfm,
+				       const void *key, unsigned int keylen)
 {
 	struct tegra_se_ecdsa_ctx *ctx = tegra_se_ecdsa_get_ctx(tfm);
 	struct ecdsa params;
@@ -3032,7 +3042,7 @@ int tegra_se_ecdsa_set_priv_key(struct crypto_akcipher *tfm, const void *key,
 	return 0;
 }
 
-int tegra_se_ecdsa_max_size(struct crypto_akcipher *tfm)
+static int tegra_se_ecdsa_max_size(struct crypto_akcipher *tfm)
 {
 	struct tegra_se_ecdsa_ctx *ctx = tegra_se_ecdsa_get_ctx(tfm);
 	int nbytes = ctx->ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
@@ -3041,7 +3051,7 @@ int tegra_se_ecdsa_max_size(struct crypto_akcipher *tfm)
 	return 2 * nbytes;
 }
 
-int tegra_se_ecdsa_init_tfm(struct crypto_akcipher *tfm)
+static int tegra_se_ecdsa_init_tfm(struct crypto_akcipher *tfm)
 {
 	struct tegra_se_ecdsa_ctx *ctx = tegra_se_ecdsa_get_ctx(tfm);
 
@@ -3050,7 +3060,7 @@ int tegra_se_ecdsa_init_tfm(struct crypto_akcipher *tfm)
 	return 0;
 }
 
-void tegra_se_ecdsa_exit_tfm(struct crypto_akcipher *tfm)
+static void tegra_se_ecdsa_exit_tfm(struct crypto_akcipher *tfm)
 {
 }
 

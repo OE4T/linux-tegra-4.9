@@ -12,10 +12,6 @@
  *
  */
 
-#ifdef CONFIG_TEGRA_GK20A
-#include <linux/nvhost.h>
-#endif
-
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/io.h>

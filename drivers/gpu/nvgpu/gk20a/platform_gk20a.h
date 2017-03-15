@@ -35,9 +35,6 @@ struct secure_page_buffer {
 };
 
 struct gk20a_platform {
-#ifdef CONFIG_TEGRA_GK20A
-	u32 syncpt_base;
-#endif
 	/* Populated by the gk20a driver before probing the platform. */
 	struct gk20a *g;
 
@@ -277,8 +274,12 @@ extern struct gk20a_platform vgpu_tegra_platform;
 
 static inline bool gk20a_platform_has_syncpoints(struct device *dev)
 {
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
 	struct gk20a_platform *p = dev_get_drvdata(dev);
 	return p->has_syncpoints && !p->disable_syncpoints;
+#else
+	return false;
+#endif
 }
 
 int gk20a_tegra_busy(struct device *dev);

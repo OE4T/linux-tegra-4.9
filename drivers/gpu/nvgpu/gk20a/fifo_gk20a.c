@@ -21,7 +21,9 @@
 #include <linux/scatterlist.h>
 #include <trace/events/gk20a.h>
 #include <linux/dma-mapping.h>
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
 #include <linux/nvhost.h>
+#endif
 #include <linux/sort.h>
 
 #include <nvgpu/timers.h>
@@ -3714,7 +3716,7 @@ void gk20a_dump_channel_status_ramfc(struct gk20a *g,
 				   atomic_read(&hw_sema->next_value),
 				   nvgpu_hw_sema_addr(hw_sema));
 
-#ifdef CONFIG_TEGRA_GK20A
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
 	if ((pbdma_syncpointb_op_v(syncpointb) == pbdma_syncpointb_op_wait_v())
 		&& (pbdma_syncpointb_wait_switch_v(syncpointb) ==
 			pbdma_syncpointb_wait_switch_en_v()))

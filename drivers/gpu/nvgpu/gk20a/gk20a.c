@@ -1842,8 +1842,7 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	if (g->ops.mm.support_sparse && g->ops.mm.support_sparse(g))
 		gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS;
 
-	if (IS_ENABLED(CONFIG_TEGRA_GK20A) &&
-	    gk20a_platform_has_syncpoints(g->dev))
+	if (gk20a_platform_has_syncpoints(g->dev))
 		gpu->flags |= NVGPU_GPU_FLAGS_HAS_SYNCPOINTS;
 
 	gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_USERSPACE_MANAGED_AS;

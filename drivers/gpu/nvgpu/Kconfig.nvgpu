@@ -75,19 +75,27 @@ config GK20A_CTXSW_TRACE
 	  allows tracking context switches on GR engine, as well as
 	  identifying processes that submitted work.
 
+config TEGRA_GK20A_NVHOST
+	bool "Support interfacing with nvhost hardware"
+	depends on TEGRA_GRHOST || TEGRA_HOST1X
+	depends on GK20A
+	default y
+	help
+	  Enable support in GK20A for the nvhost (host1x) dma engine hardware
+	  that includes things like hardware syncpts. This requires either
+	  TEGRA_GRHOST or TEGRA_HOST1X.
+
 config TEGRA_GK20A
 	bool "Enable the GK20A GPU on Tegra"
-	depends on TEGRA_GRHOST || TEGRA_HOST1X
 	depends on GK20A
 	default y
 	help
 	  Enable support for the GK20A graphics engine on Tegra
 	  by adding a Tegra platfrom interface to the GK20A driver.
-	  The Tegra platform interface requires TEGRA_GRHOST (host1x).
 
 config TEGRA_ACR
 	bool "Enable HS bin support on GM20B GPU on Tegra"
-	depends on GK20A_PMU
+	depends on GK20A && GK20A_PMU
 	default n
 	help
 	  Enable Support for Loading High Secure binary, and using

@@ -27,7 +27,7 @@
 #include "../drivers/staging/android/sync.h"
 #endif
 
-#ifdef CONFIG_TEGRA_GK20A
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
 #include <linux/nvhost.h>
 #include <linux/nvhost_ioctl.h>
 #endif
@@ -262,7 +262,7 @@ int gk20a_fence_from_semaphore(
 	return 0;
 }
 
-#ifdef CONFIG_TEGRA_GK20A
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
 /* Fences that are backed by host1x syncpoints: */
 
 static int gk20a_syncpt_fence_wait(struct gk20a_fence *f, long timeout)
@@ -341,8 +341,11 @@ int gk20a_fence_from_syncpt(
 	return 0;
 }
 #else
-int gk20a_fence_from_syncpt(struct platform_device *host1x_pdev,
-					    u32 id, u32 value, bool wfi)
+int gk20a_fence_from_syncpt(
+		struct gk20a_fence *fence_out,
+		struct platform_device *host1x_pdev,
+		u32 id, u32 value, bool wfi,
+		bool need_sync_fence)
 {
 	return -EINVAL;
 }

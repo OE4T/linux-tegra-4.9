@@ -15,7 +15,9 @@
 
 #include <linux/version.h>
 #include <linux/of_platform.h>
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
 #include <linux/nvhost.h>
+#endif
 #include <linux/debugfs.h>
 #include <linux/platform_data/tegra_edp.h>
 #include <linux/delay.h>
@@ -843,30 +845,36 @@ static void gk20a_tegra_scale_exit(struct device *dev)
 
 void gk20a_tegra_debug_dump(struct device *dev)
 {
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
 
 	if (g->host1x_dev)
 		nvhost_debug_dump_device(g->host1x_dev);
+#endif
 }
 
 int gk20a_tegra_busy(struct device *dev)
 {
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
 
 	if (g->host1x_dev)
 		return nvhost_module_busy_ext(g->host1x_dev);
+#endif
 	return 0;
 }
 
 void gk20a_tegra_idle(struct device *dev)
 {
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
 
 	if (g->host1x_dev)
 		nvhost_module_idle_ext(g->host1x_dev);
+#endif
 }
 
 static int gk20a_tegra_probe(struct device *dev)

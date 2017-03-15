@@ -155,6 +155,8 @@ __releases(&cde_app->mutex)
 	nvgpu_mutex_acquire(&cde_app->mutex);
 	gk20a_cde_stop(g);
 	nvgpu_mutex_release(&cde_app->mutex);
+
+	nvgpu_mutex_destroy(&cde_app->mutex);
 }
 
 void gk20a_cde_suspend(struct gk20a *g)
@@ -1301,7 +1303,10 @@ __releases(&cde_app->mutex)
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx, "cde: init");
 
-	nvgpu_mutex_init(&cde_app->mutex);
+	err = nvgpu_mutex_init(&cde_app->mutex);
+	if (err)
+		return err;
+
 	nvgpu_mutex_acquire(&cde_app->mutex);
 
 	INIT_LIST_HEAD(&cde_app->free_contexts);
@@ -1316,6 +1321,10 @@ __releases(&cde_app->mutex)
 
 	nvgpu_mutex_release(&cde_app->mutex);
 	gk20a_dbg(gpu_dbg_cde_ctx, "cde: init finished: %d", err);
+
+	if (err)
+		nvgpu_mutex_destroy(&cde_app->mutex);
+
 	return err;
 }
 

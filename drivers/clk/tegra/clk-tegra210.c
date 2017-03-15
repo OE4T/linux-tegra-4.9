@@ -24,6 +24,7 @@
 #include <linux/export.h>
 #include <linux/clk/tegra.h>
 #include <dt-bindings/clock/tegra210-car.h>
+#include <dt-bindings/reset/tegra210-car.h>
 #include <linux/iopoll.h>
 
 #include "clk.h"
@@ -220,6 +221,12 @@
 #define SPARE_REG0 0x55c
 #define CLK_M_DIVISOR_SHIFT 2
 #define CLK_M_DIVISOR_MASK 0x3
+
+#define RST_DFLL_DVCO 0x2f4
+#define DVFS_DFLL_RESET_SHIFT 0
+
+#define CLK_RST_CONTROLLER_RST_DEV_Y_SET 0x2a8
+#define CLK_RST_CONTROLLER_RST_DEV_Y_CLR 0x2ac
 
 /*
  * SDM fractional divisor is 16-bit 2's complement signed number within
@@ -3031,6 +3038,9 @@ static int tegra210_reset_assert(unsigned long id)
 {
 	if (id == TEGRA210_RST_DFLL_DVCO)
 		tegra210_clock_assert_dfll_dvco_reset();
+	else if (id == TEGRA210_RST_ADSP)
+		writel(GENMASK(26, 21) | BIT(7),
+			clk_base + CLK_RST_CONTROLLER_RST_DEV_Y_SET);
 	else
 		return -EINVAL;
 
@@ -3041,7 +3051,17 @@ static int tegra210_reset_deassert(unsigned long id)
 {
 	if (id == TEGRA210_RST_DFLL_DVCO)
 		tegra210_clock_deassert_dfll_dvco_reset();
-	else
+	else if (id == TEGRA210_RST_ADSP) {
+		writel(BIT(21), clk_base + CLK_RST_CONTROLLER_RST_DEV_Y_CLR);
+		/*
+		 * Considering adsp cpu clock (min: 12.5MHZ, max: 1GHz)
+		 * a delay of 5us ensures that it's at least
+		 * 6 * adsp_cpu_cycle_period long.
+		 */
+		udelay(5);
+		writel(GENMASK(26, 22) | BIT(7),
+			clk_base + CLK_RST_CONTROLLER_RST_DEV_Y_CLR);
+	} else
 		return -EINVAL;
 
 	return 0;
@@ -3111,8 +3131,8 @@ static void __init tegra210_clock_init(struct device_node *np)
 
 	tegra_super_clk_gen5_init(clk_base, pmc_base, tegra210_clks,
 				  &pll_x_params);
-	tegra_init_special_resets(1, tegra210_reset_assert,
-				tegra210_reset_deassert);
+	tegra_init_special_resets(2, tegra210_reset_assert,
+				  tegra210_reset_deassert);
 	tegra_add_of_provider(np);
 	tegra_register_devclks(devclks, ARRAY_SIZE(devclks));
 

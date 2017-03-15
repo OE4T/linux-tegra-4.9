@@ -505,7 +505,7 @@ int __nvmap_do_cache_maint(struct nvmap_client *client,
 }
 
 int __nvmap_cache_maint(struct nvmap_client *client,
-			       struct nvmap_cache_op *op)
+			       struct nvmap_cache_op_64 *op)
 {
 	struct vm_area_struct *vma;
 	struct nvmap_vma_priv *priv;

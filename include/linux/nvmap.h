@@ -284,6 +284,13 @@ struct nvmap_cache_op {
 	__s32 op;		/* wb/wb_inv/inv */
 };
 
+struct nvmap_cache_op_64 {
+	unsigned long addr;	/* user pointer*/
+	__u32 handle;		/* nvmap handle */
+	__u64 len;		/* bytes to flush */
+	__s32 op;		/* wb/wb_inv/inv */
+};
+
 #ifdef CONFIG_COMPAT
 struct nvmap_cache_op_32 {
 	__u32 addr;		/* user pointer*/
@@ -379,6 +386,7 @@ struct nvmap_available_heaps {
 #endif
 
 #define NVMAP_IOC_CACHE      _IOW(NVMAP_IOC_MAGIC, 12, struct nvmap_cache_op)
+#define NVMAP_IOC_CACHE_64   _IOW(NVMAP_IOC_MAGIC, 12, struct nvmap_cache_op_64)
 #ifdef CONFIG_COMPAT
 #define NVMAP_IOC_CACHE_32  _IOW(NVMAP_IOC_MAGIC, 12, struct nvmap_cache_op_32)
 #endif

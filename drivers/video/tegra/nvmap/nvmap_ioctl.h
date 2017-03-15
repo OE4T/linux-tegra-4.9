@@ -49,7 +49,7 @@ int nvmap_ioctl_get_ivc_heap(struct file *filp, void __user *arg);
 
 int nvmap_map_into_caller_ptr(struct file *filp, void __user *arg, bool is32);
 
-int nvmap_ioctl_cache_maint(struct file *filp, void __user *arg, bool is32);
+int nvmap_ioctl_cache_maint(struct file *filp, void __user *arg, int size);
 
 int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 	size_t op_size);

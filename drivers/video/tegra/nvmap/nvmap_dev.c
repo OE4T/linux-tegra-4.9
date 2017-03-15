@@ -636,12 +636,19 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 #ifdef CONFIG_COMPAT
 	case NVMAP_IOC_CACHE_32:
-		err = nvmap_ioctl_cache_maint(filp, uarg, true);
+		err = nvmap_ioctl_cache_maint(filp, uarg,
+			sizeof(struct nvmap_cache_op_32));
 		break;
 #endif
 
 	case NVMAP_IOC_CACHE:
-		err = nvmap_ioctl_cache_maint(filp, uarg, false);
+		err = nvmap_ioctl_cache_maint(filp, uarg,
+			sizeof(struct nvmap_cache_op));
+		break;
+
+	case NVMAP_IOC_CACHE_64:
+		err = nvmap_ioctl_cache_maint(filp, uarg,
+			sizeof(struct nvmap_cache_op_64));
 		break;
 
 	case NVMAP_IOC_CACHE_LIST:

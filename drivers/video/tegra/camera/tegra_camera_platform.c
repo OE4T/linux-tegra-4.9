@@ -83,6 +83,7 @@ static int tegra_camera_isomgr_register(struct tegra_camera_info *info,
 	u32 isp_bpp = 0;
 	u64 isp_iso_bw = 0;
 	u32 isp_margin_pct = 0;
+	u32 tpg_max_iso = 0;
 	struct device_node *np = dev->of_node;
 
 	dev_dbg(info->dev, "%s++\n", __func__);
@@ -128,6 +129,15 @@ static int tegra_camera_isomgr_register(struct tegra_camera_info *info,
 	if (!info->max_bw) {
 		dev_err(info->dev, "%s: BW must be non-zero\n", __func__);
 		return -EINVAL;
+	}
+
+	ret = of_property_read_u32(np, "tpg_max_iso", &tpg_max_iso);
+	if (ret)
+		tpg_max_iso = 0;
+	else {
+		dev_info(info->dev, "%s tpg_max_iso = %uKBs\n", __func__,
+				tpg_max_iso);
+		info->max_bw = max_t(u64, info->max_bw, tpg_max_iso);
 	}
 
 	dev_info(info->dev, "%s isp_iso_bw=%llu, vi_iso_bw=%llu, max_bw=%llu\n",
@@ -210,14 +220,9 @@ static int tegra_camera_isomgr_release(struct tegra_camera_info *info)
 
 	dev_dbg(info->dev, "%s++\n", __func__);
 
-	/* deallocate isomgr bw */
-	ret = tegra_camera_isomgr_request(info, 0, 4);
-	if (ret) {
-		dev_err(info->dev,
-		"%s: failed to deallocate memory in isomgr\n",
-		__func__);
-		return -ENOMEM;
-	}
+	/* deallocate bypass mode isomgr bw */
+	info->bypass_mode_isobw = 0;
+	return vi_v4l2_update_isobw(0, 1);
 #endif
 
 	return 0;

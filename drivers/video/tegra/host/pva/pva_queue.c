@@ -803,6 +803,40 @@ static int pva_task_write(struct pva_submit_task *task, bool atomic)
 	return 0;
 }
 
+static void pva_completed_task_status(struct pva *pva)
+{
+	struct pva_cmd cmd;
+	u32 nregs, flags;
+	struct pva_mailbox_status_regs status;
+	int err;
+
+	/* Construct the command */
+	flags = PVA_CMD_INT_ON_ERR | PVA_CMD_INT_ON_COMPLETE;
+	nregs = pva_cmd_completed_task(&cmd, flags);
+
+	/* Submit request to PVA and wait for response */
+	err = pva_mailbox_send_cmd_sync(pva, &cmd, nregs, &status);
+	if (err < 0) {
+		nvhost_warn(&pva->pdev->dev,
+			"Failed to check submit task: %d", err);
+		return;
+	}
+
+	/* Check the status returned */
+	nvhost_dbg_info("CCQ_Status4 0x%x\n",
+				status.status[PVA_CCQ_STATUS4_INDEX]);
+
+	nvhost_dbg_info("CCQ_Status5 0x%x\n",
+				status.status[PVA_CCQ_STATUS5_INDEX]);
+
+	nvhost_dbg_info("CCQ_Status6 0x%x\n",
+				status.status[PVA_CCQ_STATUS6_INDEX]);
+
+	nvhost_dbg_info("CCQ_Status7 0x%x\n",
+				status.status[PVA_CCQ_STATUS7_INDEX]);
+
+}
+
 static void pva_task_update(void *priv, int nr_completed)
 {
 	struct pva_submit_task *task = priv;
@@ -810,6 +844,8 @@ static void pva_task_update(void *priv, int nr_completed)
 
 	nvhost_dbg_info("Completed task %p (0x%llx)", task,
 			(u64)task->dma_addr);
+
+	pva_completed_task_status(task->pva);
 
 	/* Unpin job memory. PVA shouldn't be using it anymore */
 	pva_task_unpin_mem(task);

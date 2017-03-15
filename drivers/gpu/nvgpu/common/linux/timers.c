@@ -113,7 +113,7 @@ static int __nvgpu_timeout_expired_msg_retry(struct nvgpu_timeout *timeout,
 			vsnprintf(buf, sizeof(buf), fmt, args);
 
 			dev_err(dev_from_gk20a(g),
-				"No more retries @ 0x%pF %s\n", caller, buf);
+				"No more retries @ %pF %s\n", caller, buf);
 		}
 
 		return -ETIMEDOUT;

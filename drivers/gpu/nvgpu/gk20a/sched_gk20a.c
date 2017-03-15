@@ -640,6 +640,7 @@ int gk20a_sched_ctrl_init(struct gk20a *g)
 {
 	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
 	struct fifo_gk20a *f = &g->fifo;
+	int err;
 
 	if (sched->sw_ready)
 		return 0;
@@ -656,29 +657,47 @@ int gk20a_sched_ctrl_init(struct gk20a *g)
 		return -ENOMEM;
 
 	sched->recent_tsg_bitmap = nvgpu_kzalloc(g, sched->bitmap_size);
-	if (!sched->recent_tsg_bitmap)
+	if (!sched->recent_tsg_bitmap) {
+		err = -ENOMEM;
 		goto free_active;
+	}
 
 	sched->ref_tsg_bitmap = nvgpu_kzalloc(g, sched->bitmap_size);
-	if (!sched->ref_tsg_bitmap)
+	if (!sched->ref_tsg_bitmap) {
+		err = -ENOMEM;
 		goto free_recent;
+	}
 
 	init_waitqueue_head(&sched->readout_wq);
-	nvgpu_mutex_init(&sched->status_lock);
-	nvgpu_mutex_init(&sched->control_lock);
-	nvgpu_mutex_init(&sched->busy_lock);
+
+	err = nvgpu_mutex_init(&sched->status_lock);
+	if (err)
+		goto free_ref;
+
+	err = nvgpu_mutex_init(&sched->control_lock);
+	if (err)
+		goto free_status_lock;
+
+	err = nvgpu_mutex_init(&sched->busy_lock);
+	if (err)
+		goto free_control_lock;
 
 	sched->sw_ready = true;
 
 	return 0;
 
+free_control_lock:
+	nvgpu_mutex_destroy(&sched->control_lock);
+free_status_lock:
+	nvgpu_mutex_destroy(&sched->status_lock);
+free_ref:
+	nvgpu_kfree(g, sched->ref_tsg_bitmap);
 free_recent:
 	nvgpu_kfree(g, sched->recent_tsg_bitmap);
-
 free_active:
 	nvgpu_kfree(g, sched->active_tsg_bitmap);
 
-	return -ENOMEM;
+	return err;
 }
 
 void gk20a_sched_ctrl_cleanup(struct gk20a *g)
@@ -691,5 +710,10 @@ void gk20a_sched_ctrl_cleanup(struct gk20a *g)
 	sched->active_tsg_bitmap = NULL;
 	sched->recent_tsg_bitmap = NULL;
 	sched->ref_tsg_bitmap = NULL;
+
+	nvgpu_mutex_destroy(&sched->status_lock);
+	nvgpu_mutex_destroy(&sched->control_lock);
+	nvgpu_mutex_destroy(&sched->busy_lock);
+
 	sched->sw_ready = false;
 }

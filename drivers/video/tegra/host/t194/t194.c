@@ -322,6 +322,7 @@ struct nvhost_device_data t19_nvdec1_info = {
 	.push_work_done		= true,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
+	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 };
 #endif
 

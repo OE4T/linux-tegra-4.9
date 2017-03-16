@@ -30,6 +30,7 @@
 #include <drm/drm_fixed.h>
 #include <linux/nvhost.h>
 #include <video/tegra_dc_ext_kernel.h>
+#include "dc_extras.h"
 
 #define DSI_NODE		"/host1x/dsi"
 #define SOR_NODE		"/host1x/sor"

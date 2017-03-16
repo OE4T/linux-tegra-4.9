@@ -543,7 +543,7 @@ static u32 devinit_get_pwr_policy_table(struct gk20a *g,
 		goto done;
 	}
 
-	if (packed_hdr->table_entry_size !=
+	if (packed_hdr->table_entry_size <
 			VBIOS_POWER_POLICY_3X_ENTRY_SIZE_2E) {
 		status = -EINVAL;
 		goto done;
@@ -552,7 +552,7 @@ static u32 devinit_get_pwr_policy_table(struct gk20a *g,
 	/* unpack power policy table header */
 	devinit_unpack_pwr_policy_header(&hdr, packed_hdr);
 
-	ptr += VBIOS_POWER_POLICY_3X_HEADER_SIZE_25;
+	ptr += (u32)hdr.header_size;
 
 	for (index = 0; index < hdr.num_table_entries;
 		index++, ptr += (u32)hdr.table_entry_size) {

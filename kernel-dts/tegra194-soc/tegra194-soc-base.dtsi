@@ -31,6 +31,7 @@
 #include "tegra194-soc-uart.dtsi"
 #include "tegra194-soc-ufshc.dtsi"
 #include "tegra194-soc-pwm.dtsi"
+#include "tegra194-soc-i2c.dtsi"
 
 / {
 	compatible = "nvidia,tegra186";

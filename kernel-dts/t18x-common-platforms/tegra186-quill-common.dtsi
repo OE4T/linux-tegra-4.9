@@ -28,6 +28,7 @@
 #include "tegra186-hdmi.dtsi"
 #include "tegra186-dp.dtsi"
 #include "panels/panel-s-edp-uhdtv-15-6.dtsi"
+#include "panels/panel-a-edp-1080p-14-0.dtsi"
 #include "tegra186-quill-pwm-fan.dtsi"
 #include "tegra186-quill-thermal-fan-est.dtsi"
 #include "tegra186-host1x-camera.dtsi"
@@ -1027,6 +1028,9 @@
                 panel-s-edp-uhdtv-15-6-bl {
                         pwms = <&tegra_pwm3 0 5000000>;
                 };
+		panel-a-edp-1080p-14-0-bl {
+			pwms = <&tegra_pwm1 0 1000000>;
+		};
 	};
 
 	tegra_pwm1: pwm@3280000 {

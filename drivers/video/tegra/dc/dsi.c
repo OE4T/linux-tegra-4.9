@@ -1113,7 +1113,7 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 			MIPI_T_TASURE_PS_MAX(DSI_CONVERT_T_PHY_TO_T_PHY_PS(
 			phy_timing->t_tlpx, clk_ps, T_TLPX_HW_INC)));
 		if (err < 0) {
-			dev_warn(&dsi->dc->ndev->dev,
+			dev_dbg(&dsi->dc->ndev->dev,
 				"dsi: TaSure mipi range violated\n");
 			if (!tegra_dsi_ignore_phy_timing_range_violation())
 				goto fail;
@@ -1883,7 +1883,7 @@ static void tegra_dsi_soft_reset(struct tegra_dc_dsi_data *dsi)
 		udelay(line_period);
 		val = tegra_dsi_readl(dsi, DSI_STATUS);
 		if (timeout_cnt++ > DSI_IDLE_TIMEOUT) {
-			dev_warn(&dsi->dc->ndev->dev, "dsi not idle when soft reset\n");
+			dev_dbg(&dsi->dc->ndev->dev, "dsi not idle when soft reset\n");
 			break;
 		}
 	}

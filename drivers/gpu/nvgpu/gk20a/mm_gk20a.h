@@ -341,6 +341,29 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate);
 void gk20a_mm_cbc_clean(struct gk20a *g);
 void gk20a_mm_l2_invalidate(struct gk20a *g);
 
+struct mmu_fault_info {
+	u64	inst_ptr;
+	u32	inst_aperture;
+	u64	fault_addr;
+	u32	fault_addr_aperture;
+	u32	timestamp_lo;
+	u32	timestamp_hi;
+	u32	mmu_engine_id;
+	u32	gpc_id;
+	u32	client_type;
+	u32	client_id;
+	u32	fault_type;
+	u32	access_type;
+	u32	protected_mode;
+	u32	replayable_fault;
+	u32	replay_fault_en;
+	u32	valid;
+	u32	faulted_pbdma;
+	u32	faulted_engine;
+	u32	hw_chid;
+	struct channel_gk20a *refch;
+};
+
 struct mm_gk20a {
 	struct gk20a *g;
 

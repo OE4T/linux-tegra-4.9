@@ -997,7 +997,7 @@ clean_up:
 	return err;
 }
 
-static void gk20a_fifo_handle_runlist_event(struct gk20a *g)
+void gk20a_fifo_handle_runlist_event(struct gk20a *g)
 {
 	u32 runlist_event = gk20a_readl(g, fifo_intr_runlist_r());
 
@@ -1276,7 +1276,7 @@ bool gk20a_is_fault_engine_subid_gpc(struct gk20a *g, u32 engine_subid)
 	return (engine_subid == fifo_intr_mmu_fault_info_engine_subid_gpc_v());
 }
 
-static bool gk20a_fifo_should_defer_engine_reset(struct gk20a *g, u32 engine_id,
+bool gk20a_fifo_should_defer_engine_reset(struct gk20a *g, u32 engine_id,
 		u32 engine_subid, bool fake_fault)
 {
 	u32 engine_enum = ENGINE_INVAL_GK20A;
@@ -1831,9 +1831,9 @@ void gk20a_fifo_recover_tsg(struct gk20a *g, u32 tsgid, bool verbose)
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 }
 
-void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
-			u32 hw_id, bool id_is_tsg,
-			bool id_is_known, bool verbose)
+void gk20a_fifo_teardown_ch_tsg(struct gk20a *g, u32 __engine_ids,
+			u32 hw_id, unsigned int id_type, unsigned int rc_type,
+			 struct mmu_fault_info *mmfault)
 {
 	unsigned long engine_id, i;
 	unsigned long _engine_ids = __engine_ids;
@@ -1843,12 +1843,8 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 	u32 ref_type;
 	u32 ref_id;
 	u32 ref_id_is_tsg = false;
-
-	if (verbose)
-		gk20a_debug_dump(g->dev);
-
-	if (g->ops.ltc.flush)
-		g->ops.ltc.flush(g);
+	bool id_is_known = (id_type != ID_TYPE_UNKNOWN) ? true : false;
+	bool id_is_tsg = (id_type == ID_TYPE_TSG) ? true : false;
 
 	if (id_is_known) {
 		engine_ids = gk20a_fifo_engines_on_id(g, hw_id, id_is_tsg);
@@ -1914,6 +1910,27 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 			| fifo_intr_en_0_sched_error_f(1);
 		gk20a_writel(g, fifo_intr_en_0_r(), val);
 	}
+}
+
+void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
+			u32 hw_id, bool id_is_tsg,
+			bool id_is_known, bool verbose)
+{
+	unsigned int id_type;
+
+	if (verbose)
+		gk20a_debug_dump(g->dev);
+
+	if (g->ops.ltc.flush)
+		g->ops.ltc.flush(g);
+
+	if (id_is_known)
+		id_type = id_is_tsg ? ID_TYPE_TSG : ID_TYPE_CHANNEL;
+	else
+		id_type = ID_TYPE_UNKNOWN;
+
+	g->ops.fifo.teardown_ch_tsg(g, __engine_ids, hw_id, id_type,
+					 RC_TYPE_NORMAL, NULL);
 }
 
 /* force reset channel and tsg (if it's part of one) */
@@ -4225,4 +4242,5 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.userd_gp_get = gk20a_fifo_userd_gp_get;
 	gops->fifo.userd_gp_put = gk20a_fifo_userd_gp_put;
 	gops->fifo.pbdma_acquire_val = gk20a_fifo_pbdma_acquire_val;
+	gops->fifo.teardown_ch_tsg = gk20a_fifo_teardown_ch_tsg;
 }

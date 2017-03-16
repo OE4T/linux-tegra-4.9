@@ -40,6 +40,9 @@
 
 #define GRFIFO_TIMEOUT_CHECK_PERIOD_US 100000
 
+#define RC_TYPE_NORMAL			0
+#define RC_TYPE_MMU_FAULT		1
+
 /*
  * Number of entries in the kickoff latency buffer, used to calculate
  * the profiling and histogram. This number is calculated to be statistically
@@ -376,4 +379,11 @@ int gk20a_fifo_setup_userd(struct channel_gk20a *c);
 u32 gk20a_fifo_pbdma_acquire_val(u64 timeout);
 
 
+void gk20a_fifo_handle_runlist_event(struct gk20a *g);
+bool gk20a_fifo_should_defer_engine_reset(struct gk20a *g, u32 engine_id,
+			u32 engine_subid, bool fake_fault);
+
+void gk20a_fifo_teardown_ch_tsg(struct gk20a *g, u32 __engine_ids,
+			u32 hw_id, unsigned int id_type, unsigned int rc_type,
+			 struct mmu_fault_info *mmfault);
 #endif /*__GR_GK20A_H__*/

@@ -71,6 +71,18 @@
 			override@6 {
 				target = <&sound_card>;
 				_overlay_ {
+					nvidia,audio-routing =
+						"x Headphone Jack",	"x HPO L Playback",
+						"x Headphone Jack",	"x HPO R Playback",
+						"x IN1P",		"x Mic Jack",
+						"x Int Spk",		"x SPO Playback",
+						"x DMIC L1",		"x Int Mic",
+						"x DMIC L2",		"x Int Mic",
+						"x DMIC R1",		"x Int Mic",
+						"x DMIC R2",		"x Int Mic",
+						"l IN",			"l OUT",
+						"s Headphone",		"s OUT",
+						"s IN",			"s Mic";
 					nvidia,dai-link-1 {
 						codec-dai-name = "rt5659-aif1";
 					};

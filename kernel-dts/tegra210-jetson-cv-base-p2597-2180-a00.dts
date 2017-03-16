@@ -339,14 +339,6 @@
 		nvidia,num-codec-link = <5>;
 
 		nvidia,audio-routing =
-			"x Headphone Jack",	"x HPO L Playback",
-			"x Headphone Jack",	"x HPO R Playback",
-			"x IN1P",		"x Mic Jack",
-			"x Int Spk",		"x SPO Playback",
-			"x DMIC L1",		"x Int Mic",
-			"x DMIC L2",		"x Int Mic",
-			"x DMIC R1",		"x Int Mic",
-			"x DMIC R2",		"x Int Mic",
 			"x Headphone",		"x OUT",
 			"x IN",			"x Mic",
 			"y Headphone",		"y OUT",

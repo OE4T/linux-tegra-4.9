@@ -31,6 +31,8 @@
 
 #ifdef CONFIG_DEBUG_FS
 
+#define MAX_PANEL_REG_READ_SIZE	300
+
 static int dbg_dsi_show(struct seq_file *s, void *unused)
 {
 	struct tegra_dc_dsi_data *dsi;
@@ -160,35 +162,33 @@ static int read_panel_get(struct seq_file *s, void *unused)
 	struct tegra_dc_dsi_data *dsi = s->private;
 	struct tegra_dc *dc = dsi->dc;
 	int err = 0;
-	u8 buf[300] = {0};
+	u8 buf[MAX_PANEL_REG_READ_SIZE] = {0};
 	int j = 0 , b = 0 , k;
 	u32 payload_size = 0;
 
 	if (!dsi->enabled) {
 		dev_info(&dc->ndev->dev, " controller suspended\n");
-	return -EINVAL;
-}
+		return -EINVAL;
+	}
 
 	seq_printf(s, "max ret payload size:0x%x\npanel reg addr:0x%x\n",
 					max_ret_payload_size, panel_reg_addr);
-	if (max_ret_payload_size == 0) {
-		seq_puts(s, "echo was not successful\n");
-	return err;
-}
+
+	if ((max_ret_payload_size > MAX_PANEL_REG_READ_SIZE) ||
+			(max_ret_payload_size == 0)) {
+		seq_printf(s, "max reg payload size should be a positive value below 0x%x\n",
+				MAX_PANEL_REG_READ_SIZE);
+		return err;
+	}
+
 	err = tegra_dsi_read_data(dsi->dc, dsi,
 				max_ret_payload_size,
 				panel_reg_addr, buf);
 
-	seq_printf(s, " Read data[%d] ", b);
-
-	for (b = 1; b < (max_ret_payload_size+1); b++) {
-		j = (b*4)-1;
-		for (k = j; k > (j-4); k--)
-			if ((k%4) == 0 && b != max_ret_payload_size) {
-				seq_printf(s, " %x  ", buf[k]);
-				seq_printf(s, "\n Read data[%d] ", b);
-			} else
-				seq_printf(s, " %x ", buf[k]);
+	for (b = 0; b < max_ret_payload_size; b += 4) {
+		seq_printf(s, "\n Read data[%d] ", j++);
+		for (k = b+4; k > b; k--)
+			seq_printf(s, " %x ", buf[k-1]);
 	}
 	seq_puts(s, "\n");
 

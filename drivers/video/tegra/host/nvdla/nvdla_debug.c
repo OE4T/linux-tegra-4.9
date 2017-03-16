@@ -341,8 +341,7 @@ static ssize_t debug_dla_eventmask_set(struct file *file,
 	/*  set event_mask config  */
 	ret = dla_set_trace_event_mask(pdev, nvdla_dev->events_mask);
 	if (ret) {
-		nvdla_dbg_err(pdev,
-			"%s: failed to set event mask.", __func__);
+		nvdla_dbg_err(pdev, "failed to set event mask.");
 		goto set_event_mask_failed;
 	}
 
@@ -393,8 +392,7 @@ static ssize_t debug_dla_enable_trace_set(struct file *file,
 	/*  set trace_enable config  */
 	ret = dla_set_trace_enable(pdev, nvdla_dev->trace_enable);
 	if (ret) {
-		nvdla_dbg_err(pdev,
-			"%s: failed to enable trace events.", __func__);
+		nvdla_dbg_err(pdev, "failed to enable trace events.");
 		goto set_trace_enable_failed;
 	}
 

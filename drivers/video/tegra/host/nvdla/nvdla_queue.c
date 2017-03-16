@@ -405,6 +405,8 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 	struct nvhost_buffers *buffers = task->buffers;
 	struct nvhost_queue *queue = task->queue;
 	struct platform_device *pdev = queue->pool->pdev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
 	struct dla_action_list *postactionl;
 	uint16_t postactionlist_of;
 	u8 *next, *start;
@@ -448,7 +450,8 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 			u32 gos_id, gos_offset;
 
 			/* update GoS backing if available  */
-			if (!nvhost_syncpt_get_gos(pdev, queue->syncpt_id,
+			if (nvdla_dev->is_gos_enabled &&
+			    !nvhost_syncpt_get_gos(pdev, queue->syncpt_id,
 					&gos_id, &gos_offset)) {
 				u32 max;
 
@@ -540,6 +543,8 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 	struct nvhost_buffers *buffers = task->buffers;
 	struct nvhost_queue *queue = task->queue;
 	struct platform_device *pdev = queue->pool->pdev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
 	struct nvhost_master *host = nvhost_get_host(pdev);
 	struct nvhost_syncpt *sp = &host->syncpt;
 	struct dla_action_list *preactionl;
@@ -586,7 +591,8 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 				}
 
 				/* check if GoS backing available */
-				if (!nvhost_syncpt_get_gos(pdev, id, &gos_id,
+				if (nvdla_dev->is_gos_enabled &&
+				    !nvhost_syncpt_get_gos(pdev, id, &gos_id,
 						&gos_offset)) {
 					nvdla_dbg_info(pdev, "pre i:%d syncfd_pt:[%u] gos_id[%u] gos_offset[%u] val[%u]",
 						i, id, gos_id,
@@ -617,7 +623,8 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 					task->prefences[i].syncpoint_index,
 					task->prefences[i].syncpoint_value);
 
-			if (!nvhost_syncpt_get_gos(pdev,
+			if (nvdla_dev->is_gos_enabled &&
+			    !nvhost_syncpt_get_gos(pdev,
 				task->prefences[i].syncpoint_index, &gos_id,
 						&gos_offset)) {
 				nvdla_dbg_info(pdev, "pre i:%d syncpt:[%u] gos_id[%u] gos_offset[%u] val[%u]",

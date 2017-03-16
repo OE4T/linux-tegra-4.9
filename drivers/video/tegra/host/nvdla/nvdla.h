@@ -162,6 +162,7 @@ struct nvdla_cmd_data {
  * @cmd_mem		structure to hold command memory pool
  * @trace_enable	to enable/disable the DLA firmware trace
  * @events_mask		mask to set/reset the different DLA firmware trace event
+ * @is_gos_enabled	flag to check if GoS enabled
  */
 struct nvdla_device {
 	struct platform_device *pdev;
@@ -176,6 +177,7 @@ struct nvdla_device {
 	struct nvdla_cmd_mem cmd_mem;
 	u32 trace_enable;
 	u32 events_mask;
+	bool is_gos_enabled;
 };
 
 /**

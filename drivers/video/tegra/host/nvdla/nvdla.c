@@ -469,7 +469,7 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 
 	ret = nvhost_flcn_finalize_poweron(pdev);
 	if (ret) {
-		nvdla_dbg_err(pdev, "%s: failed to poweron\n", __func__);
+		nvdla_dbg_err(pdev, "failed to poweron\n");
 		goto fail;
 	}
 
@@ -495,24 +495,25 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 
 	ret = nvdla_alloc_dump_region(pdev);
 	if (ret) {
-		nvdla_dbg_err(pdev, "%s: fail alloc dump region\n", __func__);
+		nvdla_dbg_err(pdev, "fail alloc dump region\n");
 		goto fail_to_alloc_dump_reg;
 	}
 
 	ret = nvdla_alloc_trace_region(pdev);
 	if (ret) {
-		nvdla_dbg_err(pdev, "%s: fail alloc trace region\n", __func__);
+		nvdla_dbg_err(pdev, "fail alloc trace region\n");
 		goto fail_to_alloc_trace;
 	}
 
 	ret = nvdla_send_gos_region(pdev);
 	if (ret) {
-		nvdla_dbg_err(pdev, "%s: fail to set gos region\n", __func__);
-		goto fail_to_set_gos_region;
+		nvdla_dbg_err(pdev, "set gos region is failed\n");
+		nvdla_dev->is_gos_enabled = false;
 	}
+	nvdla_dev->is_gos_enabled = true;
+
 	return 0;
 
-fail_to_set_gos_region:
 fail_to_alloc_trace:
 fail_to_alloc_dump_reg:
 fail_to_val_ver:
@@ -626,7 +627,7 @@ static int nvdla_probe(struct platform_device *pdev)
 	if (err)
 		goto err_alloc_cmd_mem;
 
-	nvdla_dbg_info(pdev, "%s: pdata:%p\n", __func__, pdata);
+	nvdla_dbg_info(pdev, "pdata:%p initialized\n", pdata);
 
 	return 0;
 err_alloc_cmd_mem:

@@ -385,6 +385,11 @@ static int nvdla_val_task_submit_input(struct nvdla_ioctl_submit_task *in_task)
 			MAX_NUM_NVDLA_OUT_TASK_STATUS);
 		return -EINVAL;
 	}
+        if (in_task->num_addresses < 1) {
+		pr_err("num addresses[%u] should be min one\n",
+			in_task->num_addresses);
+		return -EINVAL;
+	}
 	if (in_task->num_addresses > NVDLA_MAX_BUFFERS_PER_TASK) {
 		pr_err("num addresses[%u] crossing expected[%d]\n",
 			in_task->num_addresses,
@@ -472,7 +477,7 @@ void nvdla_dump_task(struct nvdla_task *task)
 
 	nvdla_dbg_info(pdev, "dumping input task [%p] parameters:", task);
 	nvdla_dbg_info(pdev, "num_prefences[%u] num_postfences[%u]",
-			task->num_postfences, task->num_postfences);
+			task->num_prefences, task->num_postfences);
 	nvdla_dbg_info(pdev, "num_in_status[%u] num_out_task_status[%u]",
 			task->num_in_task_status, task->num_out_task_status);
 	nvdla_dbg_info(pdev, "num_addresses[%u]", task->num_addresses);

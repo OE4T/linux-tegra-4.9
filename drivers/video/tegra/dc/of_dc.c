@@ -40,7 +40,9 @@
 #include <linux/of_gpio.h>
 #include <linux/nvhost.h>
 #include <linux/timer.h>
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_TRUSTY)
 #include <linux/ote_protocol.h>
+#endif
 #ifdef CONFIG_PINCTRL_CONSUMER
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/pinctrl/consumer.h>

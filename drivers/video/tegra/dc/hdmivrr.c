@@ -28,7 +28,9 @@
 #include <linux/debugfs.h>
 #include <linux/delay.h>
 #include <linux/random.h>
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_TRUSTY)
 #include <linux/ote_protocol.h>
+#endif
 
 #include "dc.h"
 #include "dc_priv.h"

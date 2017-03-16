@@ -49,7 +49,9 @@
 #include <linux/of_address.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/uaccess.h>
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_TRUSTY)
 #include <linux/ote_protocol.h>
+#endif
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/display.h>

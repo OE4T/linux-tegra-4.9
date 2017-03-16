@@ -1856,7 +1856,7 @@ int ext4_mb_find_by_goal(struct ext4_allocation_context *ac,
 		start = ext4_group_first_block_no(ac->ac_sb, e4b->bd_group) +
 			ex.fe_start;
 		/* use do_div to get remainder (would be 64-bit modulo) */
-		if (do_div(start, sbi->s_stripe) == 0) {
+		if (sbi->s_stripe && (do_div(start, sbi->s_stripe) == 0)) {
 			ac->ac_found++;
 			ac->ac_b_ex = ex;
 			ext4_mb_use_best_found(ac, e4b);

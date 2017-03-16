@@ -25,8 +25,6 @@
 #include <linux/backlight.h>
 #include <linux/pwm_backlight.h>
 
-#include <asm/mach-types.h>
-
 #include "../dc.h"
 #include "board-panel.h"
 #include "gpio-names.h"
@@ -352,16 +350,6 @@ static int dsi_j_720p_5_reg_get(struct device *dev)
 		err = PTR_ERR(dvdd_lcd_3v3);
 		dvdd_lcd_3v3 = NULL;
 		goto fail;
-	}
-
-	if (machine_is_dalmore()) {
-		vdd_lcd_bl = regulator_get(dev, "vdd_lcd_bl");
-		if (IS_ERR(vdd_lcd_bl)) {
-			pr_err("vdd_lcd_bl regulator get failed\n");
-			err = PTR_ERR(vdd_lcd_bl);
-			vdd_lcd_bl = NULL;
-			goto fail;
-		}
 	}
 
 	vdd_lcd_bl_en = regulator_get(dev, "vdd_lcd_bl_en");

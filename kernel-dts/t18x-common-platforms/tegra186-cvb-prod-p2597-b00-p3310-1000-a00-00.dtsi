@@ -192,6 +192,7 @@
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 			gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(L, 4) 0>;
+			gpio-open-drain;
 			enable-active-high;
 		};
 
@@ -202,6 +203,7 @@
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 			gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(L, 5) 0>;
+			gpio-open-drain;
 			enable-active-high;
 		};
 

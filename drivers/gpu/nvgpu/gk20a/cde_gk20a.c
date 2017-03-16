@@ -950,8 +950,8 @@ __releases(&cde_app->mutex)
 		return -EINVAL;
 
 	nvgpu_mutex_acquire(&g->cde_app.mutex);
-
 	cde_ctx = gk20a_cde_get_context(g);
+	nvgpu_mutex_release(&g->cde_app.mutex);
 	if (IS_ERR(cde_ctx)) {
 		err = PTR_ERR(cde_ctx);
 		goto exit_unlock;
@@ -1121,7 +1121,6 @@ exit_unlock:
 	if (surface)
 		dma_buf_vunmap(compbits_scatter_buf, surface);
 
-	nvgpu_mutex_release(&g->cde_app.mutex);
 	return err;
 }
 

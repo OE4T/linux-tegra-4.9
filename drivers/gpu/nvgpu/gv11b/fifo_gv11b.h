@@ -15,6 +15,9 @@
 
 #ifndef FIFO_GV11B_H
 #define FIFO_GV11B_H
+
+#define FIFO_INVAL_PBDMA_ID	((u32)~0)
+
 struct gpu_ops;
 void gv11b_init_fifo(struct gpu_ops *gops);
 #endif

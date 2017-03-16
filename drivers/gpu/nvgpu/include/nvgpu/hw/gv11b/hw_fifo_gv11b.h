@@ -318,6 +318,22 @@ static inline u32 fifo_sched_disable_true_v(void)
 {
 	return 0x00000001;
 }
+static inline u32 fifo_runlist_preempt_r(void)
+{
+	return 0x00002638;
+}
+static inline u32 fifo_runlist_preempt_runlist_f(u32 v, u32 i)
+{
+	return (v & 0x1) << (0 + i*1);
+}
+static inline u32 fifo_runlist_preempt_runlist_m(u32 i)
+{
+	return 0x1 << (0 + i*1);
+}
+static inline u32 fifo_runlist_preempt_runlist_pending_v(void)
+{
+	return 0x00000001;
+}
 static inline u32 fifo_preempt_r(void)
 {
 	return 0x00002634;

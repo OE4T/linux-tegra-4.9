@@ -63,6 +63,15 @@ Required properties :
         Must set as following values:
         TEGRA_SOCTHERM_THROT_LEVEL_LOW, TEGRA_SOCTHERM_THROT_LEVEL_MED
         TEGRA_SOCTHERM_THROT_LEVEL_HIGH, TEGRA_SOCTHERM_THROT_LEVEL_NONE
+      - nvidia,gpu-throt-level:This property is for Tegra124 and Tegra210.
+        It is the level of pulse skippers, which used to throttle clock
+	frequencies. It indicates gpu clock throttling depth and can be
+	programmed to any of the following values which represent a throttling
+	percentage:
+	TEGRA_SOCTHERM_THROT_LEVEL_LOW (50%),
+	TEGRA_SOCTHERM_THROT_LEVEL_MED (75%),
+	TEGRA_SOCTHERM_THROT_LEVEL_HIGH (85%),
+	TEGRA_SOCTHERM_THROT_LEVEL_NONE (0%)
       - #cooling-cells: Should be 1. This cooling device only support on/off state.
         See ./thermal.txt for a description of this property.
 

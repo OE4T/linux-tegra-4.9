@@ -891,7 +891,7 @@ int tegra_nvdisp_set_compclk(struct tegra_dc *dc)
 	}
 	dc_other = tegra_dc_get_dc(index);
 	BUG_ON(!dc_other);
-	pr_info(" rate get on compclk %ld\n", rate);
+	pr_debug(" rate get on compclk %ld\n", rate);
 
 	/* save current clock client index */
 	cur_clk_client_index = index;
@@ -1659,7 +1659,7 @@ static int tegra_nvdisp_assign_dc_wins(struct tegra_dc *dc)
 			dev_err(&dc->ndev->dev,
 				"failed to assign window %d\n", idx);
 		} else {
-			dev_info(&dc->ndev->dev,
+			dev_dbg(&dc->ndev->dev,
 				"Window %d assigned to head %d\n", idx,
 				dc->ctrl_num);
 
@@ -1789,7 +1789,7 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	}
 	mutex_unlock(&tegra_nvdisp_lock);
 
-	pr_info(" rate get on hub %ld\n", clk_get_rate(hubclk));
+	pr_debug(" rate get on hub %ld\n", clk_get_rate(hubclk));
 
 	/* Enable OR -- need to enable the connection first */
 	if (dc->out->enable)
@@ -1828,7 +1828,7 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	/* Enable DC clock */
 	tegra_disp_clk_prepare_enable(dc->clk);
 
-	pr_info(" dc clk %ld\n", clk_get_rate(dc->clk));
+	pr_debug(" dc clk %ld\n", clk_get_rate(dc->clk));
 
 	tegra_nvdisp_set_compclk(dc);
 	tegra_dc_get(dc);

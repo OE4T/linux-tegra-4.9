@@ -50,7 +50,6 @@
 #include <linux/tegra_pm_domains.h>
 #include <linux/uaccess.h>
 #include <linux/ote_protocol.h>
-#include <linux/tegra-timer.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/display.h>

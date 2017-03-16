@@ -21,8 +21,6 @@
 #ifndef __NVHOST_KTIME_H
 #define __NVHOST_KTIME_H
 
-#include <linux/version.h>
-
 #ifdef CONFIG_TEGRA_PTP_NOTIFIER
 #include <linux/platform/tegra/ptp-notifier.h>
 

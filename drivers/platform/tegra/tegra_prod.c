@@ -171,6 +171,36 @@ static int tegra_prod_read_node_tupple(struct device *dev,
 	return sindex;
 }
 
+/* Process the tupples and optimise for the register configuration for
+ * Same location.
+ */
+static void tegra_prod_optimise_tupple(struct prod_tuple *p_tuple,
+				       int n_tupple)
+{
+	struct prod_tuple *ti, *tj;
+	u32 mask;
+	int i, j;
+
+	for (i = 0; i < n_tupple; ++i) {
+		ti = p_tuple + i;
+		for (j = i + 1; j < n_tupple; ++j) {
+			tj = p_tuple + j;
+			if (ti->index != tj->index)
+				continue;
+
+			if (ti->addr != tj->addr)
+				continue;
+
+			mask = ti->mask & tj->mask;
+			if (!mask)
+				continue;
+
+			ti->val &= ~mask;
+			ti->mask &= ~mask;
+		}
+	}
+}
+
 /**
  * tegra_prod_parse_dt - Read the prod setting form Device tree.
  * @np:			device node from which the property value is to be read.
@@ -197,11 +227,14 @@ static int tegra_prod_parse_dt(struct device *dev,
 	int ret;
 	int count;
 	u32 pval;
+	bool mask_opt;
 
 	if (!tegra_prod || !tegra_prod->prod_config) {
 		dev_err(dev, "Node %s: Invalid tegra prods list.\n", np->name);
 		return -EINVAL;
 	};
+
+	mask_opt = of_property_read_bool(np_prod, "enable-mask-optimisation");
 
 	ret = of_property_read_u32(np_prod, "#prod-cells", &pval);
 	if (!ret)
@@ -252,6 +285,13 @@ static int tegra_prod_parse_dt(struct device *dev,
 				child->name, t_prod->count, ret);
 			return -EINVAL;
 		}
+
+		/* Optimise the prod configuration */
+		if (mask_opt)
+			tegra_prod_optimise_tupple(t_prod->prod_tuple,
+						   t_prod->count);
+
+
 		n_child++;
 	}
 

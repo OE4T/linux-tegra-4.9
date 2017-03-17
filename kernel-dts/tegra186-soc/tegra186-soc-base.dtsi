@@ -2208,6 +2208,18 @@
 	     };
 	};
 
+	mttcan0-ivc {
+		compatible = "bosch,mttcan-ivc";
+		mboxes = <&aon 3>;
+		status = "disabled";
+	};
+
+	mttcan1-ivc {
+		compatible = "bosch,mttcan-ivc";
+		mboxes = <&aon 4>;
+		status = "disabled";
+	};
+
 	mttcan0: mttcan@c310000 {
 		compatible = "bosch,mttcan";
 		reg = <0x00 0x0c310000 0x00 0x400>,
@@ -2223,7 +2235,6 @@
 		resets = <&tegra_car TEGRA186_RESET_CAN1>;
 		reset-names = "can";
 		status = "disabled";
-		mboxes = <&aon 3>;
 	};
 
 	mttcan1: mttcan@c320000 {
@@ -2241,7 +2252,6 @@
 		resets = <&tegra_car TEGRA186_RESET_CAN2>;
 		reset-names = "can";
 		status = "disabled";
-		mboxes = <&aon 4>;
 	};
 
 	stm@8070000 {

@@ -55,7 +55,6 @@ static bool gv11b_mm_mmu_fault_pending(struct gk20a *g)
 void gv11b_init_mm(struct gpu_ops *gops)
 {
 	gp10b_init_mm(gops);
-	gops->mm.bar1_bind = NULL;
 	gops->mm.is_bar1_supported = gv11b_mm_is_bar1_supported;
 	gops->mm.init_inst_block = gv11b_init_inst_block;
 	gops->mm.init_mm_setup_hw = gk20a_init_mm_setup_hw;

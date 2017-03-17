@@ -21,6 +21,7 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
+#include "gk20a/bus_gk20a.h"
 
 #include "gm20b/gr_gm20b.h"
 
@@ -185,6 +186,7 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->privsecurity = 0;
 	gops->securegpccs = 0;
 
+	gk20a_init_bus(gops);
 	gv11b_init_mc(gops);
 	gv11b_init_ltc(gops);
 	gv11b_init_gr(gops);
@@ -203,7 +205,6 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->name = "gv11b";
 	gops->chip_init_gpu_characteristics = gv11b_init_gpu_characteristics;
 	gops->get_litter_value = gv11b_get_litter_value;
-	gops->read_ptimer = gk20a_read_ptimer;
 
 	c->twod_class = FERMI_TWOD_A;
 	c->threed_class = VOLTA_A;

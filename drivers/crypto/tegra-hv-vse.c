@@ -1309,14 +1309,11 @@ static int tegra_hv_se_setup_ablk_req(struct tegra_virtual_se_dev *se_dev,
 	return 0;
 }
 
-static void tegra_hv_vse_process_new_req(struct crypto_async_request *async_req)
+static void tegra_hv_vse_process_new_req(struct tegra_virtual_se_dev *se_dev)
 {
-	struct tegra_virtual_se_dev *se_dev;
-	struct ablkcipher_request *req = ablkcipher_request_cast(async_req);
-	struct tegra_virtual_se_aes_req_context *req_ctx =
-			ablkcipher_request_ctx(req);
-	struct tegra_virtual_se_aes_context *aes_ctx =
-			crypto_ablkcipher_ctx(crypto_ablkcipher_reqtfm(req));
+	struct ablkcipher_request *req;
+	struct tegra_virtual_se_aes_req_context *req_ctx;
+	struct tegra_virtual_se_aes_context *aes_ctx;
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx = NULL;
 	struct tegra_hv_ivc_cookie *pivck = g_ivck;
 	dma_addr_t cur_addr;
@@ -1326,19 +1323,6 @@ static void tegra_hv_vse_process_new_req(struct crypto_async_request *async_req)
 	int cur_map_cnt = 0;
 	struct tegra_vse_priv_data *priv = NULL;
 	struct tegra_vse_tag *priv_data_ptr;
-
-	se_dev = req_ctx->se_dev;
-	if (!aes_ctx->is_key_slot_allocated) {
-		dev_err(se_dev->dev, "AES Key slot not allocated\n");
-		err = -EINVAL;
-		goto err_exit;
-	}
-
-	se_dev->reqs[se_dev->req_cnt++] = req;
-	se_dev->gather_buf_sz += req->nbytes;
-	if (se_dev->queue.qlen &&
-		(se_dev->req_cnt < TEGRA_HV_VSE_MAX_TASKS_PER_SUBMIT))
-		return;
 
 	priv = devm_kzalloc(se_dev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
@@ -1366,6 +1350,11 @@ static void tegra_hv_vse_process_new_req(struct crypto_async_request *async_req)
 		ivc_tx = &ivc_req_msg->d[k].tx;
 		req_ctx = ablkcipher_request_ctx(req);
 		aes_ctx = crypto_ablkcipher_ctx(crypto_ablkcipher_reqtfm(req));
+		if (unlikely(!aes_ctx->is_key_slot_allocated)) {
+			dev_err(se_dev->dev, "AES Key slot not allocated\n");
+			err = -EINVAL;
+			goto exit;
+		}
 		tegra_hv_vse_prpare_cmd(se_dev, ivc_tx, req_ctx, aes_ctx, req);
 		ivc_tx->args.aes.op.src_ll_num = 1;
 		ivc_tx->args.aes.op.dst_ll_num = 1;
@@ -1432,25 +1421,39 @@ static void tegra_hv_vse_work_handler(struct work_struct *work)
 	struct crypto_async_request *async_req = NULL;
 	struct crypto_async_request *backlog = NULL;
 	unsigned long flags;
+	bool process_requests;
+	struct ablkcipher_request *req;
 
 	mutex_lock(&se_dev->mtx);
 	do {
+		process_requests = false;
 		spin_lock_irqsave(&se_dev->lock, flags);
-		backlog = crypto_get_backlog(&se_dev->queue);
-		async_req = crypto_dequeue_request(&se_dev->queue);
-		if (!async_req)
-			se_dev->work_q_busy = false;
+		do {
+			backlog = crypto_get_backlog(&se_dev->queue);
+			async_req = crypto_dequeue_request(&se_dev->queue);
+			if (!async_req)
+				se_dev->work_q_busy = false;
+			if (backlog) {
+				backlog->complete(backlog, -EINPROGRESS);
+				backlog = NULL;
+			}
+
+			if (async_req) {
+				req = ablkcipher_request_cast(async_req);
+				se_dev->reqs[se_dev->req_cnt] = req;
+				se_dev->gather_buf_sz += req->nbytes;
+				se_dev->req_cnt++;
+				process_requests = true;
+			} else {
+				break;
+			}
+		} while (se_dev->queue.qlen &&
+			(se_dev->req_cnt < TEGRA_HV_VSE_MAX_TASKS_PER_SUBMIT));
 		spin_unlock_irqrestore(&se_dev->lock, flags);
 
-		if (backlog) {
-			backlog->complete(backlog, -EINPROGRESS);
-			backlog = NULL;
-		}
+		if (process_requests)
+			tegra_hv_vse_process_new_req(se_dev);
 
-		if (async_req) {
-			tegra_hv_vse_process_new_req(async_req);
-			async_req = NULL;
-		}
 	} while (se_dev->work_q_busy);
 	mutex_unlock(&se_dev->mtx);
 }
@@ -2843,7 +2846,7 @@ static int tegra_vse_kthread(void *unused)
 				(struct tegra_vse_tag *)ivc_resp_msg->hdr.tag;
 			priv = (struct tegra_vse_priv_data *)p_dat->priv_data;
 			if (!priv) {
-				dev_err(se_dev->dev, "no call back info\n");
+				pr_err("%s no call back info\n", __func__);
 				continue;
 			}
 			se_dev = priv->se_dev;

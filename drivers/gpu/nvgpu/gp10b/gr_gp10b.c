@@ -1759,8 +1759,7 @@ static int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
 		bool *early_exit, bool *ignore_debugger)
 {
 	int ret;
-	bool cilp_enabled = (fault_ch->ch_ctx.gr_ctx->compute_preempt_mode ==
-			NVGPU_COMPUTE_PREEMPTION_MODE_CILP) ;
+	bool cilp_enabled = false;
 	u32 global_mask = 0, dbgr_control0, global_esr_copy;
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
@@ -1768,6 +1767,10 @@ static int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
 
 	*early_exit = false;
 	*ignore_debugger = false;
+
+	if (fault_ch)
+		cilp_enabled = (fault_ch->ch_ctx.gr_ctx->compute_preempt_mode ==
+			NVGPU_COMPUTE_PREEMPTION_MODE_CILP);
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "SM Exception received on gpc %d tpc %d = %u\n",
 			gpc, tpc, global_esr);

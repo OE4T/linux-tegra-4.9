@@ -270,11 +270,13 @@ u32 gk20a_fifo_engine_interrupt_mask(struct gk20a *g);
 u32 gk20a_fifo_get_pbdma_signature(struct gk20a *g);
 u32 gk20a_fifo_get_failing_engine_data(struct gk20a *g,
 		int *__id, bool *__is_tsg);
-bool gk20a_fifo_set_ctx_mmu_error_tsg(struct gk20a *g,
+void gk20a_fifo_set_ctx_mmu_error_tsg(struct gk20a *g,
 		struct tsg_gk20a *tsg);
 void gk20a_fifo_abort_tsg(struct gk20a *g, u32 tsgid, bool preempt);
-bool gk20a_fifo_set_ctx_mmu_error_ch(struct gk20a *g,
-		struct channel_gk20a *ch);
+void gk20a_fifo_set_ctx_mmu_error_ch(struct gk20a *g,
+		struct channel_gk20a *refch);
+bool gk20a_fifo_error_tsg(struct gk20a *g, struct tsg_gk20a *tsg);
+bool gk20a_fifo_error_ch(struct gk20a *g, struct channel_gk20a *refch);
 
 struct channel_gk20a *gk20a_fifo_channel_from_hw_chid(struct gk20a *g,
 		u32 hw_chid);

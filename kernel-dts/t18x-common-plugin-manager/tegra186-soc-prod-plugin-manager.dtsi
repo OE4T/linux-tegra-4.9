@@ -14,17 +14,19 @@
 		soc-prod-a01-fragment {
 			chip-id = "A01", "A01P";
 			override@0 {
-				target = <&csi_mipical_prod_soc_a01>;
+				target = <&mipical_prod_c_cphy_csi_soc_a01>;
 				_overlay_ {
 					status = "okay";
 				};
 			};
-		};
-
-		soc-prod-a02-fragment {
-			chip-id = "A02", "A02P";
-			override@0 {
-				target = <&csi_mipical_prod_soc_a02>;
+			override@1 {
+				target = <&mipical_prod_c_dphy_csi_soc_a01>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@2 {
+				target = <&mipical_prod_c_dphy_dsi_soc_a01>;
 				_overlay_ {
 					status = "okay";
 				};

@@ -1316,6 +1316,7 @@ struct eqos_cfg {
 	uint		iso_bw;
 	uint		eth_iso_enable;
 	u32		phy_max_frame_size; /* max size jumbo frames allowed */
+	bool		phy_apd_mode;	/* Represents PHY AUTO POWER DOWN mode */
 };
 
 struct chan_data {

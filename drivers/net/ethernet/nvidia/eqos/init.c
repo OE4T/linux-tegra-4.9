@@ -960,6 +960,8 @@ int eqos_probe(struct platform_device *pdev)
 		ISO_BW_DEFAULT);
 	get_dt_u32(pdata, "nvidia,eth_iso_enable", &pdt_cfg->eth_iso_enable, 0,
 		1);
+	pdata->dt_cfg.phy_apd_mode = of_property_read_bool(node,
+							   "nvidia,brcm_phy_apd_mode");
 
 #ifndef DISABLE_TRISTATE
 	/* enable tx tri state to save power during init */

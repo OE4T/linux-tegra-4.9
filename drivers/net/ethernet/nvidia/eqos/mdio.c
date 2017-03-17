@@ -47,6 +47,7 @@
  */
 #include "yheader.h"
 #include <linux/tegra_prod.h>
+#include <linux/brcmphy.h>
 
 /*!
 * \brief read MII PHY register, function called by the driver alone
@@ -506,6 +507,10 @@ int eqos_init_phy(struct net_device *dev)
 		phydev->supported &= ~(SUPPORTED_Pause | SUPPORTED_Asym_Pause);
 
 	phydev->advertising = phydev->supported;
+
+	if (pdata->dt_cfg.phy_apd_mode &&
+	    (phydev->drv->phy_id & phydev->drv->phy_id_mask) == PHY_ID_BCM89610)
+		phydev->dev_flags |= PHY_BRCM_AUTO_PWRDWN_ENABLE;
 
 	DBGPR_MDIO("%s: attached to PHY (UID 0x%x) Link = %d\n", dev->name,
 		   phydev->phy_id, phydev->link);

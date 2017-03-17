@@ -431,8 +431,8 @@ int dbg_unbind_single_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 		if ((prof_obj->session_id == dbg_s->id) &&
 			(prof_obj->ch->hw_chid == chid)) {
 			if (prof_obj->has_reservation) {
-				g->profiler_reservation_count--;
-				dbg_s->has_profiler_reservation = false;
+				g->ops.dbg_session_ops.
+				  release_profiler_reservation(dbg_s, prof_obj);
 			}
 			list_del(&prof_obj->prof_obj_entry);
 			kfree(prof_obj);
@@ -533,10 +533,9 @@ int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp)
 	list_for_each_entry_safe(prof_obj, tmp_obj, &g->profiler_objects,
 							prof_obj_entry) {
 		if (prof_obj->session_id == dbg_s->id) {
-			if (prof_obj->has_reservation) {
-				g->global_profiler_reservation_held = false;
-				g->profiler_reservation_count--;
-			}
+			if (prof_obj->has_reservation)
+				g->ops.dbg_session_ops.
+				  release_profiler_reservation(dbg_s, prof_obj);
 			list_del(&prof_obj->prof_obj_entry);
 			kfree(prof_obj);
 		}
@@ -1583,12 +1582,9 @@ static int nvgpu_ioctl_free_profiler_object(
 				err = -EINVAL;
 				break;
 			}
-			if (prof_obj->has_reservation) {
-				if (prof_obj->ch == NULL)
-					g->global_profiler_reservation_held = false;
-				g->profiler_reservation_count--;
-				dbg_s->has_profiler_reservation = false;
-			}
+			if (prof_obj->has_reservation)
+				g->ops.dbg_session_ops.
+				  release_profiler_reservation(dbg_s, prof_obj);
 			list_del(&prof_obj->prof_obj_entry);
 			kfree(prof_obj);
 			obj_found = true;
@@ -1626,6 +1622,51 @@ static struct dbg_profiler_object_data *find_matching_prof_obj(
 	return NULL;
 }
 
+static bool nvgpu_check_and_set_global_reservation(
+				struct dbg_session_gk20a *dbg_s,
+				struct dbg_profiler_object_data *prof_obj)
+{
+	struct gk20a *g = dbg_s->g;
+
+	if (g->profiler_reservation_count == 0) {
+		g->global_profiler_reservation_held = true;
+		g->profiler_reservation_count = 1;
+		dbg_s->has_profiler_reservation = true;
+		prof_obj->has_reservation = true;
+		return true;
+	}
+	return false;
+}
+
+static bool nvgpu_check_and_set_context_reservation(
+				struct dbg_session_gk20a *dbg_s,
+				struct dbg_profiler_object_data *prof_obj)
+{
+	struct gk20a *g = dbg_s->g;
+
+	/* Assumes that we've already checked that no global reservation
+	 * is in effect.
+	 */
+	g->profiler_reservation_count++;
+	dbg_s->has_profiler_reservation = true;
+	prof_obj->has_reservation = true;
+	return true;
+}
+
+static void nvgpu_release_profiler_reservation(struct dbg_session_gk20a *dbg_s,
+				struct dbg_profiler_object_data *prof_obj)
+{
+	struct gk20a *g = dbg_s->g;
+
+	g->profiler_reservation_count--;
+	if (g->profiler_reservation_count < 0)
+		gk20a_err(dev_from_gk20a(g), "Negative reservation count!");
+	dbg_s->has_profiler_reservation = false;
+	prof_obj->has_reservation = false;
+	if (prof_obj->ch == NULL)
+		g->global_profiler_reservation_held = false;
+}
+
 static int nvgpu_profiler_reserve_acquire(struct dbg_session_gk20a *dbg_s,
 								u32 profiler_handle)
 {
@@ -1661,17 +1702,12 @@ static int nvgpu_profiler_reserve_acquire(struct dbg_session_gk20a *dbg_s,
 		/* Global reservations are only allowed if there are no other
 		 * global or per-context reservations currently held
 		 */
-		if (g->profiler_reservation_count > 0) {
+		if (!g->ops.dbg_session_ops.check_and_set_global_reservation(
+							dbg_s, my_prof_obj)) {
 			gk20a_err(dev_from_gk20a(g),
 				"global reserve: have existing reservation");
 			err =  -EBUSY;
-			goto exit;
 		}
-
-		my_prof_obj->has_reservation = true;
-		g->global_profiler_reservation_held = true;
-		g->profiler_reservation_count = 1;
-		dbg_s->has_profiler_reservation = true;
 	} else if (g->global_profiler_reservation_held) {
 		/* If there's a global reservation,
 		 * we can't take a per-context one.
@@ -1679,7 +1715,6 @@ static int nvgpu_profiler_reserve_acquire(struct dbg_session_gk20a *dbg_s,
 		gk20a_err(dev_from_gk20a(g),
 			"per-ctxt reserve: global reservation in effect");
 		err = -EBUSY;
-		goto exit;
 	} else if (gk20a_is_channel_marked_as_tsg(my_prof_obj->ch)) {
 		/* TSG: check that another channel in the TSG
 		 * doesn't already have the reservation
@@ -1697,9 +1732,13 @@ static int nvgpu_profiler_reserve_acquire(struct dbg_session_gk20a *dbg_s,
 			}
 		}
 
-		my_prof_obj->has_reservation = true;
-		g->profiler_reservation_count++;
-		dbg_s->has_profiler_reservation = true;
+		if (!g->ops.dbg_session_ops.check_and_set_context_reservation(
+							dbg_s, my_prof_obj)) {
+			/* Another guest OS has the global reservation */
+			gk20a_err(dev_from_gk20a(g),
+				"per-ctxt reserve: global reservation in effect");
+			err = -EBUSY;
+		}
 	} else {
 		/* channel: check that some other profiler object doesn't
 		 * already have the reservation.
@@ -1717,9 +1756,13 @@ static int nvgpu_profiler_reserve_acquire(struct dbg_session_gk20a *dbg_s,
 			}
 		}
 
-		my_prof_obj->has_reservation = true;
-		g->profiler_reservation_count++;
-		dbg_s->has_profiler_reservation = true;
+		if (!g->ops.dbg_session_ops.check_and_set_context_reservation(
+							dbg_s, my_prof_obj)) {
+			/* Another guest OS has the global reservation */
+			gk20a_err(dev_from_gk20a(g),
+				"per-ctxt reserve: global reservation in effect");
+			err = -EBUSY;
+		}
 	}
 exit:
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
@@ -1746,13 +1789,9 @@ static int nvgpu_profiler_reserve_release(struct dbg_session_gk20a *dbg_s,
 		goto exit;
 	}
 
-	if (prof_obj->has_reservation) {
-		prof_obj->has_reservation = false;
-		if (prof_obj->ch == NULL)
-			g->global_profiler_reservation_held = false;
-		g->profiler_reservation_count--;
-		dbg_s->has_profiler_reservation = false;
-	} else {
+	if (prof_obj->has_reservation)
+		g->ops.dbg_session_ops.release_profiler_reservation(dbg_s, prof_obj);
+	else {
 		gk20a_err(dev_from_gk20a(g), "No reservation found");
 		err = -EINVAL;
 		goto exit;
@@ -1874,4 +1913,10 @@ void gk20a_init_dbg_session_ops(struct gpu_ops *gops)
 {
 	gops->dbg_session_ops.exec_reg_ops = exec_regops_gk20a;
 	gops->dbg_session_ops.dbg_set_powergate = dbg_set_powergate;
+	gops->dbg_session_ops.check_and_set_global_reservation =
+					nvgpu_check_and_set_global_reservation;
+	gops->dbg_session_ops.check_and_set_context_reservation =
+					nvgpu_check_and_set_context_reservation;
+	gops->dbg_session_ops.release_profiler_reservation =
+					nvgpu_release_profiler_reservation;
 };

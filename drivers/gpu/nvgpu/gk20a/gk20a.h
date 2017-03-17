@@ -28,6 +28,7 @@ struct gk20a_fecs_trace;
 struct gk20a_ctxsw_trace;
 struct acr_desc;
 struct nvgpu_mem_alloc_tracker;
+struct dbg_profiler_object_data;
 
 #include <linux/sched.h>
 #include <nvgpu/lock.h>
@@ -758,6 +759,15 @@ struct gpu_ops {
 			    u64 num_ops);
 		int (*dbg_set_powergate)(struct dbg_session_gk20a *dbg_s,
 					u32 mode);
+		bool (*check_and_set_global_reservation)(
+				struct dbg_session_gk20a *dbg_s,
+				struct dbg_profiler_object_data *prof_obj);
+		bool (*check_and_set_context_reservation)(
+				struct dbg_session_gk20a *dbg_s,
+				struct dbg_profiler_object_data *prof_obj);
+		void (*release_profiler_reservation)(
+				struct dbg_session_gk20a *dbg_s,
+				struct dbg_profiler_object_data *prof_obj);
 	} dbg_session_ops;
 	struct {
 		void (*get_program_numbers)(struct gk20a *g,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -100,8 +100,90 @@ static int vgpu_dbg_set_powergate(struct dbg_session_gk20a *dbg_s, __u32 mode)
 	return err;
 }
 
+static int vgpu_sendrecv_prof_cmd(struct dbg_session_gk20a *dbg_s, u32 mode)
+{
+	struct tegra_vgpu_cmd_msg msg;
+	struct tegra_vgpu_prof_mgt_params *p = &msg.params.prof_management;
+	int err = 0;
+
+	msg.cmd = TEGRA_VGPU_CMD_PROF_MGT;
+	msg.handle = vgpu_get_handle(dbg_s->g);
+
+	p->mode = mode;
+
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	err = err ? err : msg.ret;
+	return err;
+}
+
+static bool vgpu_check_and_set_global_reservation(
+				struct dbg_session_gk20a *dbg_s,
+				struct dbg_profiler_object_data *prof_obj)
+{
+	struct gk20a *g = dbg_s->g;
+
+	if (g->profiler_reservation_count > 0)
+		return false;
+
+	/* Check that another guest OS doesn't already have a reservation */
+	if (!vgpu_sendrecv_prof_cmd(dbg_s, TEGRA_VGPU_PROF_GET_GLOBAL)) {
+		g->global_profiler_reservation_held = true;
+		g->profiler_reservation_count = 1;
+		dbg_s->has_profiler_reservation = true;
+		prof_obj->has_reservation = true;
+		return true;
+	}
+	return false;
+}
+
+static bool vgpu_check_and_set_context_reservation(
+				struct dbg_session_gk20a *dbg_s,
+				struct dbg_profiler_object_data *prof_obj)
+{
+	struct gk20a *g = dbg_s->g;
+
+	/* Assumes that we've already checked that no global reservation
+	 * is in effect for this guest.
+	 *
+	 * If our reservation count is non-zero, then no other guest has the
+	 * global reservation; if it is zero, need to check with RM server.
+	 *
+	 */
+	if ((g->profiler_reservation_count != 0) ||
+		!vgpu_sendrecv_prof_cmd(dbg_s, TEGRA_VGPU_PROF_GET_CONTEXT)) {
+		g->profiler_reservation_count++;
+		dbg_s->has_profiler_reservation = true;
+		prof_obj->has_reservation = true;
+		return true;
+	}
+	return false;
+}
+
+static void vgpu_release_profiler_reservation(
+				struct dbg_session_gk20a *dbg_s,
+				struct dbg_profiler_object_data *prof_obj)
+{
+	struct gk20a *g = dbg_s->g;
+
+	dbg_s->has_profiler_reservation = false;
+	prof_obj->has_reservation = false;
+	if (prof_obj->ch == NULL)
+		g->global_profiler_reservation_held = false;
+
+	/* If new reservation count is zero, notify server */
+	g->profiler_reservation_count--;
+	if (g->profiler_reservation_count == 0)
+		vgpu_sendrecv_prof_cmd(dbg_s, TEGRA_VGPU_PROF_RELEASE);
+}
+
 void vgpu_init_dbg_session_ops(struct gpu_ops *gops)
 {
 	gops->dbg_session_ops.exec_reg_ops = vgpu_exec_regops;
 	gops->dbg_session_ops.dbg_set_powergate = vgpu_dbg_set_powergate;
+	gops->dbg_session_ops.check_and_set_global_reservation =
+					vgpu_check_and_set_global_reservation;
+	gops->dbg_session_ops.check_and_set_context_reservation =
+					vgpu_check_and_set_context_reservation;
+	gops->dbg_session_ops.release_profiler_reservation =
+					vgpu_release_profiler_reservation;
 }

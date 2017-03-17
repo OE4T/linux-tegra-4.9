@@ -102,6 +102,7 @@ enum {
 	TEGRA_VGPU_CMD_SUSPEND_CONTEXTS = 66,
 	TEGRA_VGPU_CMD_RESUME_CONTEXTS = 67,
 	TEGRA_VGPU_CMD_CLEAR_SM_ERROR_STATE = 68,
+	TEGRA_VGPU_CMD_PROF_MGT = 72,
 };
 
 struct tegra_vgpu_connect_params {
@@ -469,6 +470,16 @@ struct tegra_vgpu_clear_sm_error_state {
 	u32 sm_id;
 };
 
+enum {
+	TEGRA_VGPU_PROF_GET_GLOBAL = 0,
+	TEGRA_VGPU_PROF_GET_CONTEXT,
+	TEGRA_VGPU_PROF_RELEASE
+};
+
+struct tegra_vgpu_prof_mgt_params {
+	u32 mode;
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -518,6 +529,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_suspend_resume_contexts suspend_contexts;
 		struct tegra_vgpu_suspend_resume_contexts resume_contexts;
 		struct tegra_vgpu_clear_sm_error_state clear_sm_error_state;
+		struct tegra_vgpu_prof_mgt_params prof_management;
 		char padding[192];
 	} params;
 };

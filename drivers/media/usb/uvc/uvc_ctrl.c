@@ -782,7 +782,8 @@ static __s32 uvc_get_le_value(struct uvc_control_mapping *mapping,
 		value |= offset > 0 ? (byte >> offset) : (byte << (-offset));
 		bits -= 8 - (offset > 0 ? offset : 0);
 		offset -= 8;
-		mask = (1 << bits) - 1;
+		if (bits >= 0)
+			mask = (1 << bits) - 1;
 	}
 
 	/* Sign-extend the value if needed. */

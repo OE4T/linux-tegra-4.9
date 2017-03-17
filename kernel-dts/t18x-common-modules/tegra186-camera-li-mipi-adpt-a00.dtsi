@@ -206,7 +206,7 @@
 					max_framerate = "30";
 					min_exp_time = "30";
 					max_exp_time = "660000";
-					embedded_metadata_height = "0";
+					embedded_metadata_height = "1";
 				};
 				mode1 {/*mode IMX185_MODE_1920X1080_CROP_10BIT_30FPS*/
 					mclk_khz = "37125";
@@ -236,7 +236,7 @@
 					max_framerate = "30";
 					min_exp_time = "30";
 					max_exp_time = "660000";
-					embedded_metadata_height = "0";
+					embedded_metadata_height = "1";
 				};
 
 				mode2 {/*mode IMX185_MODE_1920X1080_CROP_60FPS*/
@@ -267,7 +267,7 @@
 					max_framerate = "60";
 					min_exp_time = "30";
 					max_exp_time = "660000";
-					embedded_metadata_height = "0";
+					embedded_metadata_height = "1";
 				};
 
 				mode3 {/*mode IMX185_MODE_1920X1080_CROP_10BIT_60FPS*/
@@ -298,7 +298,7 @@
 					max_framerate = "60";
 					min_exp_time = "30";
 					max_exp_time = "660000";
-					embedded_metadata_height = "0";
+					embedded_metadata_height = "1";
 				};
 				mode4 {/*mode IMX185_MODE_1920X1080_CROP_HDR_30FPS*/
 					mclk_khz = "37125";
@@ -328,7 +328,7 @@
 					max_framerate = "30";
 					min_exp_time = "30";
 					max_exp_time = "660000";
-					embedded_metadata_height = "0";
+					embedded_metadata_height = "1";
 
 					/* WDR related settings */
 					num_control_point = "4";

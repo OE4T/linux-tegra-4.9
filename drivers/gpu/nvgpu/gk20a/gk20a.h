@@ -629,7 +629,6 @@ struct gpu_ops {
 				struct vm_gk20a *vm);
 		u64 (*get_iova_addr)(struct gk20a *g, struct scatterlist *sgl,
 					 u32 flags);
-		int (*bar1_bind)(struct gk20a *g, struct mem_desc *bar1_inst);
 		size_t (*get_vidmem_size)(struct gk20a *g);
 		void (*init_inst_block)(struct mem_desc *inst_block,
 				struct vm_gk20a *vm, u32 big_page_size);
@@ -773,7 +772,13 @@ struct gpu_ops {
 
 	int (*get_litter_value)(struct gk20a *g, int value);
 	int (*chip_init_gpu_characteristics)(struct gk20a *g);
-	int (*read_ptimer)(struct gk20a *g, u64 *value);
+
+	struct {
+		void (*init_hw)(struct gk20a *g);
+		void (*isr)(struct gk20a *g);
+		int (*read_ptimer)(struct gk20a *g, u64 *value);
+		int (*bar1_bind)(struct gk20a *g, struct mem_desc *bar1_inst);
+	} bus;
 
 	int (*bios_init)(struct gk20a *g);
 
@@ -1417,8 +1422,6 @@ int gk20a_wait_for_idle(struct device *dev);
 
 int gk20a_init_gpu_characteristics(struct gk20a *g);
 
-void gk20a_pbus_isr(struct gk20a *g);
-
 int gk20a_user_init(struct device *dev, const char *interface_name,
 		    struct class *class);
 void gk20a_user_deinit(struct device *dev, struct class *class);
@@ -1435,7 +1438,6 @@ static inline u32 scale_ptimer(u32 timeout , u32 scale10x)
 		return (timeout * 10) / scale10x;
 }
 
-int gk20a_read_ptimer(struct gk20a *g, u64 *value);
 extern struct class nvgpu_class;
 
 #define INTERFACE_NAME "nvhost%s-gpu"

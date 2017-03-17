@@ -162,7 +162,7 @@ irqreturn_t mc_gp10b_intr_thread_stall(struct gk20a *g)
 	if (mc_intr_0 & mc_intr_ltc_pending_f())
 		g->ops.ltc.isr(g);
 	if (mc_intr_0 & mc_intr_pbus_pending_f())
-		gk20a_pbus_isr(g);
+		g->ops.bus.isr(g);
 
 	/* sync handled irq counter before re-enabling interrupts */
 	atomic_set(&g->sw_irq_stall_last_handled, hw_irq_count);

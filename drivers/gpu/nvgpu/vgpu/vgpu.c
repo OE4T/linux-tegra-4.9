@@ -362,7 +362,7 @@ void vgpu_init_hal_common(struct gk20a *g)
 	vgpu_init_css_ops(gops);
 #endif
 	gops->chip_init_gpu_characteristics = vgpu_init_gpu_characteristics;
-	gops->read_ptimer = vgpu_read_ptimer;
+	gops->bus.read_ptimer = vgpu_read_ptimer;
 }
 
 static int vgpu_init_hal(struct gk20a *g)

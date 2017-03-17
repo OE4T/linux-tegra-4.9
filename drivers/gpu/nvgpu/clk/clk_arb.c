@@ -1062,7 +1062,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 		goto exit_arb;
 
 #ifdef CONFIG_DEBUG_FS
-	g->ops.read_ptimer(g, &t0);
+	g->ops.bus.read_ptimer(g, &t0);
 #endif
 
 	/* Only one arbiter should be running */
@@ -1248,7 +1248,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	wake_up_interruptible(&arb->request_wq);
 
 #ifdef CONFIG_DEBUG_FS
-	g->ops.read_ptimer(g, &t1);
+	g->ops.bus.read_ptimer(g, &t1);
 
 	debug = arb->debug == &arb->debug_pool[0] ?
 		&arb->debug_pool[1] : &arb->debug_pool[0];

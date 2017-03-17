@@ -45,7 +45,7 @@ static int gp10b_init_mm_setup_hw(struct gk20a *g)
 		     (g->ops.mm.get_iova_addr(g, g->mm.sysmem_flush.sgt->sgl, 0)
 		     >> 8ULL));
 
-	g->ops.mm.bar1_bind(g, inst_block);
+	g->ops.bus.bar1_bind(g, inst_block);
 
 	if (g->ops.mm.init_bar2_mm_hw_setup) {
 		err = g->ops.mm.init_bar2_mm_hw_setup(g);

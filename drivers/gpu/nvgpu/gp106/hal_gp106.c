@@ -21,6 +21,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
+#include "gk20a/bus_gk20a.h"
 
 #include "gp10b/gr_gp10b.h"
 #include "gp10b/fecs_trace_gp10b.h"
@@ -223,6 +224,7 @@ int gp106_init_hal(struct gk20a *g)
 	gops->privsecurity = 1;
 	gops->securegpccs = 1;
 	gops->pmupstate = true;
+	gk20a_init_bus(gops);
 	gp10b_init_mc(gops);
 	gp106_init_gr(gops);
 	gp10b_init_fecs_trace_ops(gops);
@@ -251,7 +253,6 @@ int gp106_init_hal(struct gk20a *g)
 	gops->get_litter_value = gp106_get_litter_value;
 	gops->chip_init_gpu_characteristics = gp106_init_gpu_characteristics;
 	gops->gr_ctx.use_dma_for_fw_bootstrap = true;
-	gops->read_ptimer = gk20a_read_ptimer;
 
 	c->twod_class = FERMI_TWOD_A;
 	c->threed_class = PASCAL_B;

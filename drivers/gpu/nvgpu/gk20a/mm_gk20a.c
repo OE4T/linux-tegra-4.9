@@ -42,12 +42,13 @@
 #include "mm_gk20a.h"
 #include "fence_gk20a.h"
 #include "kind_gk20a.h"
+#include "bus_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_gmmu_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_bus_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ram_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pram_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_bus_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_flush_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
 
@@ -1087,8 +1088,8 @@ int gk20a_init_mm_setup_hw(struct gk20a *g)
 
 	g->ops.fb.init_hw(g);
 
-	if (g->ops.mm.bar1_bind)
-		g->ops.mm.bar1_bind(g, &mm->bar1.inst_block);
+	if (g->ops.bus.bar1_bind)
+		g->ops.bus.bar1_bind(g, &mm->bar1.inst_block);
 
 	if (g->ops.mm.init_bar2_mm_hw_setup) {
 		err = g->ops.mm.init_bar2_mm_hw_setup(g);
@@ -1100,23 +1101,6 @@ int gk20a_init_mm_setup_hw(struct gk20a *g)
 		return -EBUSY;
 
 	gk20a_dbg_fn("done");
-	return 0;
-}
-
-static int gk20a_mm_bar1_bind(struct gk20a *g, struct mem_desc *bar1_inst)
-{
-	u64 iova = gk20a_mm_inst_block_addr(g, bar1_inst);
-	u32 ptr_v = (u32)(iova >> bar1_instance_block_shift_gk20a());
-
-	gk20a_dbg_info("bar1 inst block ptr: 0x%08x", ptr_v);
-
-	gk20a_writel(g, bus_bar1_block_r(),
-		     gk20a_aperture_mask(g, bar1_inst,
-		       bus_bar1_block_target_sys_mem_ncoh_f(),
-		       bus_bar1_block_target_vid_mem_f()) |
-		     bus_bar1_block_mode_virtual_f() |
-		     bus_bar1_block_ptr_f(ptr_v));
-
 	return 0;
 }
 
@@ -5447,7 +5431,6 @@ void gk20a_init_mm(struct gpu_ops *gops)
 	gops->mm.get_mmu_levels = gk20a_mm_get_mmu_levels;
 	gops->mm.init_pdb = gk20a_mm_init_pdb;
 	gops->mm.init_mm_setup_hw = gk20a_init_mm_setup_hw;
-	gops->mm.bar1_bind = gk20a_mm_bar1_bind;
 	gops->mm.init_inst_block = gk20a_init_inst_block;
 	gops->mm.is_bar1_supported = gk20a_mm_is_bar1_supported;
 	gops->mm.mmu_fault_pending = gk20a_fifo_mmu_fault_pending;

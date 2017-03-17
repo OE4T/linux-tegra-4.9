@@ -16,6 +16,7 @@
  */
 
 #include "hal_gk20a.h"
+#include "bus_gk20a.h"
 #include "ltc_gk20a.h"
 #include "fb_gk20a.h"
 #include "gk20a.h"
@@ -147,6 +148,7 @@ int gk20a_init_hal(struct gk20a *g)
 	gops->privsecurity = 0;
 	gops->securegpccs = 0;
 	gops->pmupstate = false;
+	gk20a_init_bus(gops);
 	gk20a_init_mc(gops);
 	gk20a_init_ltc(gops);
 	gk20a_init_gr_ops(gops);
@@ -169,7 +171,6 @@ int gk20a_init_hal(struct gk20a *g)
 	gops->name = "gk20a";
 	gops->chip_init_gpu_characteristics = gk20a_init_gpu_characteristics;
 	gops->get_litter_value = gk20a_get_litter_value;
-	gops->read_ptimer = gk20a_read_ptimer;
 
 	c->twod_class = FERMI_TWOD_A;
 	c->threed_class = KEPLER_C;

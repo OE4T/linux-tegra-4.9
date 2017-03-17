@@ -686,7 +686,7 @@ void gk20a_ctxsw_trace_channel_reset(struct gk20a *g, struct channel_gk20a *ch)
 	if (!g->ctxsw_trace)
 		return;
 
-	g->ops.read_ptimer(g, &entry.timestamp);
+	g->ops.bus.read_ptimer(g, &entry.timestamp);
 	gk20a_ctxsw_trace_write(g, &entry);
 	gk20a_ctxsw_trace_wake_up(g, 0);
 #endif
@@ -706,7 +706,7 @@ void gk20a_ctxsw_trace_tsg_reset(struct gk20a *g, struct tsg_gk20a *tsg)
 	if (!g->ctxsw_trace)
 		return;
 
-	g->ops.read_ptimer(g, &entry.timestamp);
+	g->ops.bus.read_ptimer(g, &entry.timestamp);
 	gk20a_ctxsw_trace_write(g, &entry);
 	gk20a_ctxsw_trace_wake_up(g, 0);
 #endif

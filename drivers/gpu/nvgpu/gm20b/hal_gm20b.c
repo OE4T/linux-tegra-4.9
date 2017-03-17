@@ -18,6 +18,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
+#include "gk20a/bus_gk20a.h"
 
 #include "ltc_gm20b.h"
 #include "ce2_gm20b.h"
@@ -215,6 +216,7 @@ int gm20b_init_hal(struct gk20a *g)
 		}
 	}
 #endif
+	gk20a_init_bus(gops);
 	gm20b_init_mc(gops);
 	gm20b_init_ltc(gops);
 	gm20b_init_gr(gops);
@@ -238,7 +240,6 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->name = "gm20b";
 	gops->chip_init_gpu_characteristics = gk20a_init_gpu_characteristics;
 	gops->get_litter_value = gm20b_get_litter_value;
-	gops->read_ptimer = gk20a_read_ptimer;
 
 	c->twod_class = FERMI_TWOD_A;
 	c->threed_class = MAXWELL_B;

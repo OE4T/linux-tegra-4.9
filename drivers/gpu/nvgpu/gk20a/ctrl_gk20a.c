@@ -725,7 +725,7 @@ static int nvgpu_gpu_get_gpu_time(
 	if (err)
 		return err;
 
-	err = g->ops.read_ptimer(g, &time);
+	err = g->ops.bus.read_ptimer(g, &time);
 	if (!err)
 		args->gpu_timestamp = time;
 

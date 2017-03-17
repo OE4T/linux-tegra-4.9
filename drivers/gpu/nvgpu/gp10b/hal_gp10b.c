@@ -21,6 +21,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
+#include "gk20a/bus_gk20a.h"
 
 #include "gp10b/gr_gp10b.h"
 #include "gp10b/fecs_trace_gp10b.h"
@@ -232,6 +233,7 @@ int gp10b_init_hal(struct gk20a *g)
 	}
 #endif
 
+	gk20a_init_bus(gops);
 	gp10b_init_mc(gops);
 	gp10b_init_gr(gops);
 	gp10b_init_fecs_trace_ops(gops);
@@ -254,7 +256,6 @@ int gp10b_init_hal(struct gk20a *g)
 	gops->name = "gp10b";
 	gops->chip_init_gpu_characteristics = gp10b_init_gpu_characteristics;
 	gops->get_litter_value = gp10b_get_litter_value;
-	gops->read_ptimer = gk20a_read_ptimer;
 
 	c->twod_class = FERMI_TWOD_A;
 	c->threed_class = PASCAL_A;

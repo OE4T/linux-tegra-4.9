@@ -19,6 +19,7 @@
 #include <nvgpu/timers.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/fifo_gk20a.h"
 
 #include "gp10b/fifo_gp10b.h"
 
@@ -105,7 +106,8 @@ static void gv11b_userd_writeback_config(struct gk20a *g)
 }
 
 static int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
-		u64 gpfifo_base, u32 gpfifo_entries, u32 flags)
+		u64 gpfifo_base, u32 gpfifo_entries,
+		unsigned long acquire_timeout, u32 flags)
 {
 	struct gk20a *g = c->g;
 	struct mem_desc *mem = &c->inst_block;
@@ -145,7 +147,7 @@ static int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 		pbdma_target_engine_sw_f());
 
 	gk20a_mem_wr32(g, mem, ram_fc_acquire_w(),
-		channel_gk20a_pbdma_acquire_val(c));
+		g->ops.fifo.pbdma_acquire_val(acquire_timeout));
 
 	gk20a_mem_wr32(g, mem, ram_fc_runlist_timeslice_w(),
 		pbdma_runlist_timeslice_timeout_128_f() |
@@ -165,7 +167,7 @@ static int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 		gk20a_mem_wr32(g, mem, ram_fc_config_w(),
 			pbdma_config_auth_level_privileged_f());
 
-		gk20a_channel_setup_ramfc_for_privileged_channel(c);
+		gk20a_fifo_setup_ramfc_for_privileged_channel(c);
 	}
 
 	/* Enable userd writeback */
@@ -213,7 +215,7 @@ static void channel_gv11b_unbind(struct channel_gk20a *ch)
 {
 	gk20a_dbg_fn("");
 
-	channel_gk20a_unbind(ch);
+	gk20a_fifo_channel_unbind(ch);
 }
 
 static u32 gv11b_fifo_get_num_fifos(struct gk20a *g)

@@ -1287,10 +1287,6 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
 			if (err)
 				return err;
 
-			err = gk20a_busy(dbg_s->dev);
-			if (err)
-				return -EPERM;
-
 			/*do elpg disable before clock gating */
 			gk20a_pmu_pg_global_enable(g, false);
 
@@ -1342,7 +1338,6 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
 			gk20a_pmu_pg_global_enable(g, true);
 
 			gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn, "module idle");
-			gk20a_idle(dbg_s->dev);
 			gk20a_idle(g->dev);
 		}
 
@@ -1437,6 +1432,7 @@ static int nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 		gk20a_err(dev_from_gk20a(g),
 			"session doesn't have a valid reservation");
 	}
+
 
 	err = gk20a_busy(g->dev);
 	if (err) {

@@ -472,19 +472,10 @@ dhdpcie_bus_register(void)
 
 	DHD_ERROR(("%s: pci_module_init failed 0x%x\n", __FUNCTION__, error));
 #else
-	if (!(error = pci_register_driver(&dhdpcie_driver))) {
-		bus_for_each_dev(dhdpcie_driver.driver.bus, NULL, &error, dhdpcie_device_scan);
-		if (!error) {
-			DHD_ERROR(("No Broadcom PCI device enumerated!\n"));
-		} else if (!dhdpcie_init_succeeded) {
-			DHD_ERROR(("%s: dhdpcie initialize failed.\n", __FUNCTION__));
-		} else {
-			return 0;
-		}
+	if (!(error = pci_register_driver(&dhdpcie_driver)))
+		return 0;
 
-		pci_unregister_driver(&dhdpcie_driver);
-		error = BCME_ERROR;
-	}
+	DHD_ERROR(("%s: pci_register_driver failed 0x%x\n", __FUNCTION__, error));
 #endif /* LINUX_VERSION < 2.6.0 */
 
 	return error;

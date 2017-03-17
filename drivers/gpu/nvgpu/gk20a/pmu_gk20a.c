@@ -2374,12 +2374,11 @@ void pmu_enable_irq(struct pmu_gk20a *pmu, bool enable)
 int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
+	struct nvgpu_timeout timeout;
 
 	gk20a_dbg_fn("");
 
 	if (enable) {
-		int retries = PMU_MEM_SCRUBBING_TIMEOUT_MAX /
-			      PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT;
 		g->ops.mc.enable(g, mc_enable_pwr_enabled_f());
 
 		if (g->ops.clock_gating.slcg_pmu_load_gating_prod)
@@ -2389,6 +2388,9 @@ int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 			g->ops.clock_gating.blcg_pmu_load_gating_prod(g,
 					g->blcg_enabled);
 
+		nvgpu_timeout_init(g, &timeout,
+				   PMU_MEM_SCRUBBING_TIMEOUT_MAX / 1000,
+				   NVGPU_TIMER_CPU_TIMER);
 		do {
 			u32 w = gk20a_readl(g, pwr_falcon_dmactl_r()) &
 				(pwr_falcon_dmactl_dmem_scrubbing_m() |
@@ -2399,7 +2401,7 @@ int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 				return 0;
 			}
 			udelay(PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT);
-		} while (--retries || !tegra_platform_is_silicon());
+		} while (!nvgpu_timeout_expired(&timeout));
 
 		g->ops.mc.disable(g, mc_enable_pwr_enabled_f());
 		gk20a_err(dev_from_gk20a(g), "Falcon mem scrubbing timeout");

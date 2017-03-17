@@ -20,7 +20,6 @@
 #include <linux/delay.h>	/* for udelay */
 #include <linux/mm.h>		/* for totalram_pages */
 #include <linux/scatterlist.h>
-#include <soc/tegra/chip-id.h>
 #include <linux/debugfs.h>
 #include <uapi/linux/nvgpu.h>
 #include <linux/vmalloc.h>
@@ -1587,7 +1586,6 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	struct aiv_list_gk20a *sw_ctx_load = &g->gr.ctx_vars.sw_ctx_load;
 	struct av_list_gk20a *sw_method_init = &g->gr.ctx_vars.sw_method_init;
 	u32 last_method_data = 0;
-	int retries = FE_PWR_MODE_TIMEOUT_MAX / FE_PWR_MODE_TIMEOUT_DEFAULT;
 	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	struct ctx_header_desc *ctx = &c->ch_ctx.ctx_header;
 	struct mem_desc *ctxheader = &ctx->mem;
@@ -1603,18 +1601,21 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 		goto clean_up;
 	}
 	if (!platform->is_fmodel) {
+		struct nvgpu_timeout timeout;
+
+		nvgpu_timeout_init(g, &timeout, FE_PWR_MODE_TIMEOUT_MAX / 1000,
+				   NVGPU_TIMER_CPU_TIMER);
 		gk20a_writel(g, gr_fe_pwr_mode_r(),
 			gr_fe_pwr_mode_req_send_f() | gr_fe_pwr_mode_mode_force_on_f());
 		do {
 			u32 req = gr_fe_pwr_mode_req_v(gk20a_readl(g, gr_fe_pwr_mode_r()));
 			if (req == gr_fe_pwr_mode_req_done_v())
 				break;
-			udelay(FE_PWR_MODE_TIMEOUT_MAX);
-		} while (--retries || !tegra_platform_is_silicon());
+			udelay(FE_PWR_MODE_TIMEOUT_DEFAULT);
+		} while (!nvgpu_timeout_expired_msg(&timeout,
+						    "timeout forcing FE on"));
 	}
 
-	if (!retries)
-		gk20a_err(g->dev, "timeout forcing FE on");
 
 	gk20a_writel(g, gr_fecs_ctxsw_reset_ctl_r(),
 			gr_fecs_ctxsw_reset_ctl_sys_halt_disabled_f() |
@@ -1643,19 +1644,20 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	udelay(10);
 
 	if (!platform->is_fmodel) {
+		struct nvgpu_timeout timeout;
+
+		nvgpu_timeout_init(g, &timeout, FE_PWR_MODE_TIMEOUT_MAX / 1000,
+				   NVGPU_TIMER_CPU_TIMER);
 		gk20a_writel(g, gr_fe_pwr_mode_r(),
 			gr_fe_pwr_mode_req_send_f() | gr_fe_pwr_mode_mode_auto_f());
 
-		retries = FE_PWR_MODE_TIMEOUT_MAX / FE_PWR_MODE_TIMEOUT_DEFAULT;
 		do {
 			u32 req = gr_fe_pwr_mode_req_v(gk20a_readl(g, gr_fe_pwr_mode_r()));
 			if (req == gr_fe_pwr_mode_req_done_v())
 				break;
 			udelay(FE_PWR_MODE_TIMEOUT_DEFAULT);
-		} while (--retries || !tegra_platform_is_silicon());
-
-		if (!retries)
-			gk20a_err(g->dev, "timeout setting FE power to auto");
+		} while (!nvgpu_timeout_expired_msg(&timeout,
+						    "timeout setting FE power to auto"));
 	}
 
 	/* clear scc ram */
@@ -4996,13 +4998,14 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 
 static int gr_gk20a_wait_mem_scrubbing(struct gk20a *g)
 {
-	int retries = CTXSW_MEM_SCRUBBING_TIMEOUT_MAX /
-		      CTXSW_MEM_SCRUBBING_TIMEOUT_DEFAULT;
+	struct nvgpu_timeout timeout;
 	bool fecs_scrubbing;
 	bool gpccs_scrubbing;
 
 	gk20a_dbg_fn("");
 
+	nvgpu_timeout_init(g, &timeout, CTXSW_MEM_SCRUBBING_TIMEOUT_MAX / 1000,
+			   NVGPU_TIMER_CPU_TIMER);
 	do {
 		fecs_scrubbing = gk20a_readl(g, gr_fecs_dmactl_r()) &
 			(gr_fecs_dmactl_imem_scrubbing_m() |
@@ -5018,7 +5021,7 @@ static int gr_gk20a_wait_mem_scrubbing(struct gk20a *g)
 		}
 
 		udelay(CTXSW_MEM_SCRUBBING_TIMEOUT_DEFAULT);
-	} while (--retries || !tegra_platform_is_silicon());
+	} while (!nvgpu_timeout_expired(&timeout));
 
 	gk20a_err(dev_from_gk20a(g), "Falcon mem scrubbing timeout");
 	return -ETIMEDOUT;
@@ -8663,8 +8666,7 @@ int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 
 		usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-	} while (!nvgpu_timeout_expired(&timeout)
-			|| !tegra_platform_is_silicon());
+	} while (!nvgpu_timeout_expired(&timeout));
 
 	dbgr_control0 = gk20a_readl(g,
 				gr_gpc0_tpc0_sm_dbgr_control0_r() + offset);

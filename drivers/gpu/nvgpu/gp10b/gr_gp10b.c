@@ -2041,21 +2041,21 @@ static int gr_gp10b_suspend_contexts(struct gk20a *g,
 		struct channel_ctx_gk20a *ch_ctx =
 				&cilp_preempt_pending_ch->ch_ctx;
 		struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
-		unsigned long end_jiffies = jiffies +
-			msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+		struct nvgpu_timeout timeout;
 
 		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
 			"CILP preempt pending, waiting %lu msecs for preemption",
 			gk20a_get_gr_idle_timeout(g));
 
+		nvgpu_timeout_init(g, &timeout, gk20a_get_gr_idle_timeout(g),
+				   NVGPU_TIMER_CPU_TIMER);
 		do {
 			if (!gr_ctx->t18x.cilp_preempt_pending)
 				break;
 
 			usleep_range(delay, delay * 2);
 			delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
-		} while (time_before(jiffies, end_jiffies)
-			|| !tegra_platform_is_silicon());
+		} while (!nvgpu_timeout_expired(&timeout));
 
 		/* If cilp is still pending at this point, timeout */
 		if (gr_ctx->t18x.cilp_preempt_pending)

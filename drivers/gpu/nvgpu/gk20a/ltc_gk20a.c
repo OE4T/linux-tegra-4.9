@@ -17,7 +17,9 @@
  */
 
 #include <linux/kernel.h>
+
 #include <trace/events/gk20a.h>
+#include <nvgpu/timers.h>
 
 #include "gk20a.h"
 
@@ -106,7 +108,6 @@ static int gk20a_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 	int err = 0;
 	struct gr_gk20a *gr = &g->gr;
 	u32 fbp, slice, ctrl1, val, hw_op = 0;
-	int retry = 200;
 	u32 slices_per_fbp =
 		ltc_ltcs_ltss_cbc_param_slices_per_fbp_v(
 			gk20a_readl(g, ltc_ltcs_ltss_cbc_param_r()));
@@ -140,6 +141,9 @@ static int gk20a_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 		     gk20a_readl(g, ltc_ltcs_ltss_cbc_ctrl1_r()) | hw_op);
 
 	for (fbp = 0; fbp < gr->num_fbps; fbp++) {
+		struct nvgpu_timeout timeout;
+
+		nvgpu_timeout_init(g, &timeout, 200, NVGPU_TIMER_RETRY_TIMER);
 		for (slice = 0; slice < slices_per_fbp; slice++) {
 
 
@@ -147,18 +151,15 @@ static int gk20a_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 				fbp * ltc_stride +
 				slice * lts_stride;
 
-			retry = 200;
 			do {
 				val = gk20a_readl(g, ctrl1);
 				if (!(val & hw_op))
 					break;
-				retry--;
 				udelay(5);
 
-			} while (retry >= 0 ||
-					!tegra_platform_is_silicon());
+			} while (!nvgpu_timeout_expired(&timeout));
 
-			if (retry < 0 && tegra_platform_is_silicon()) {
+			if (nvgpu_timeout_peek_expired(&timeout)) {
 				gk20a_err(dev_from_gk20a(g),
 					   "comp tag clear timeout\n");
 				err = -EBUSY;

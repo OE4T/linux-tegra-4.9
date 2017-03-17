@@ -35,10 +35,10 @@
 int sec2_clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout)
 {
 	u32 data = 0;
-	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
+	struct nvgpu_timeout to;
 
-	while (time_before(jiffies, end_jiffies) ||
-			!tegra_platform_is_silicon()) {
+	nvgpu_timeout_init(g, &to, timeout, NVGPU_TIMER_CPU_TIMER);
+	do {
 		gk20a_writel(g, psec_falcon_irqsclr_r(),
 			     gk20a_readl(g, psec_falcon_irqsclr_r()) | (0x10));
 		data = gk20a_readl(g, psec_falcon_irqstat_r());
@@ -46,10 +46,10 @@ int sec2_clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout)
 			psec_falcon_irqstat_halt_true_f())
 			/*halt irq is clear*/
 			break;
-		timeout--;
 		udelay(1);
-	}
-	if (timeout == 0)
+	} while (!nvgpu_timeout_expired(&to));
+
+	if (nvgpu_timeout_peek_expired(&to))
 		return -EBUSY;
 	return 0;
 }
@@ -58,10 +58,10 @@ int sec2_wait_for_halt(struct gk20a *g, unsigned int timeout)
 {
 	u32 data = 0;
 	int completion = -EBUSY;
-	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
+	struct nvgpu_timeout to;
 
-	while (time_before(jiffies, end_jiffies) ||
-			!tegra_platform_is_silicon()) {
+	nvgpu_timeout_init(g, &to, timeout, NVGPU_TIMER_CPU_TIMER);
+	do {
 		data = gk20a_readl(g, psec_falcon_cpuctl_r());
 		if (data & psec_falcon_cpuctl_halt_intr_m()) {
 			/*CPU is halted break*/
@@ -69,21 +69,21 @@ int sec2_wait_for_halt(struct gk20a *g, unsigned int timeout)
 			break;
 		}
 		udelay(1);
-	}
-	if (completion){
+	} while (!nvgpu_timeout_expired(&to));
+
+	if (completion) {
 		gk20a_err(dev_from_gk20a(g), "ACR boot timed out");
+		return completion;
 	}
-	else {
 
-		g->acr.capabilities = gk20a_readl(g, psec_falcon_mailbox1_r());
-		gm20b_dbg_pmu("ACR capabilities %x\n", g->acr.capabilities);
-		data = gk20a_readl(g, psec_falcon_mailbox0_r());
-		if (data) {
+	g->acr.capabilities = gk20a_readl(g, psec_falcon_mailbox1_r());
+	gm20b_dbg_pmu("ACR capabilities %x\n", g->acr.capabilities);
+	data = gk20a_readl(g, psec_falcon_mailbox0_r());
+	if (data) {
 
-			gk20a_err(dev_from_gk20a(g),
-				"ACR boot failed, err %x", data);
-			completion = -EAGAIN;
-		}
+		gk20a_err(dev_from_gk20a(g),
+			"ACR boot failed, err %x", data);
+		completion = -EAGAIN;
 	}
 
 	init_pmu_setup_hw1(g);

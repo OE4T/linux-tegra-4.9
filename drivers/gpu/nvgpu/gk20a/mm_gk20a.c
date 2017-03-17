@@ -22,7 +22,6 @@
 #include <linux/nvhost.h>
 #include <linux/scatterlist.h>
 #include <linux/nvmap.h>
-#include <soc/tegra/chip-id.h>
 #include <linux/vmalloc.h>
 #include <linux/dma-buf.h>
 #include <linux/dma-mapping.h>
@@ -1543,7 +1542,6 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 				struct vm_gk20a_mapping_batch *batch)
 {
 	struct device *d = dev_from_vm(vm);
-	int retries = 10000; /* 50 ms */
 	struct mapped_buffer_node *mapped_buffer;
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
@@ -1556,17 +1554,19 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 	}
 
 	if (mapped_buffer->flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
+		struct nvgpu_timeout timeout;
+
 		nvgpu_mutex_release(&vm->update_gmmu_lock);
 
-		while (retries >= 0 || !tegra_platform_is_silicon()) {
+		nvgpu_timeout_init(vm->mm->g, &timeout, 10000,
+				   NVGPU_TIMER_RETRY_TIMER);
+		do {
 			if (atomic_read(&mapped_buffer->ref.refcount) == 1)
 				break;
-			retries--;
 			udelay(5);
-		}
-		if (retries < 0 && tegra_platform_is_silicon())
-			gk20a_err(d, "sync-unmap failed on 0x%llx",
-								offset);
+		} while (!nvgpu_timeout_expired_msg(&timeout,
+					    "sync-unmap failed on 0x%llx"));
+
 		nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	}
 

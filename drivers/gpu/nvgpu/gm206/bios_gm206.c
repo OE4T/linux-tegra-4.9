@@ -19,6 +19,7 @@
 #include <nvgpu/bios.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvgpu_common.h>
+#include <nvgpu/timers.h>
 
 #include "gk20a/gk20a.h"
 #include "gm20b/fifo_gm20b.h"
@@ -99,13 +100,15 @@ static void upload_data(struct gk20a *g, u32 dst, u8 *src, u32 size, u8 port)
 
 static int gm206_bios_devinit(struct gk20a *g)
 {
-	int retries = PMU_BOOT_TIMEOUT_MAX / PMU_BOOT_TIMEOUT_DEFAULT;
 	int err = 0;
 	int devinit_completed;
+	struct nvgpu_timeout timeout;
 
 	gk20a_dbg_fn("");
 	g->ops.pmu.reset(g);
 
+	nvgpu_timeout_init(g, &timeout, PMU_BOOT_TIMEOUT_MAX / 1000,
+			   NVGPU_TIMER_CPU_TIMER);
 	do {
 		u32 w = gk20a_readl(g, pwr_falcon_dmactl_r()) &
 			(pwr_falcon_dmactl_dmem_scrubbing_m() |
@@ -116,9 +119,13 @@ static int gm206_bios_devinit(struct gk20a *g)
 			break;
 		}
 		udelay(PMU_BOOT_TIMEOUT_DEFAULT);
-	} while (--retries || !tegra_platform_is_silicon());
+	} while (!nvgpu_timeout_expired(&timeout));
 
-	/*  todo check retries */
+	if (nvgpu_timeout_peek_expired(&timeout)) {
+		err = -ETIMEDOUT;
+		goto out;
+	}
+
 	upload_code(g, g->bios.devinit.bootloader_phys_base,
 			g->bios.devinit.bootloader,
 			g->bios.devinit.bootloader_size,
@@ -147,35 +154,39 @@ static int gm206_bios_devinit(struct gk20a *g)
 	gk20a_writel(g, pwr_falcon_cpuctl_r(),
 		pwr_falcon_cpuctl_startcpu_f(1));
 
-	retries = PMU_BOOT_TIMEOUT_MAX / PMU_BOOT_TIMEOUT_DEFAULT;
+	nvgpu_timeout_init(g, &timeout, PMU_BOOT_TIMEOUT_MAX / 1000,
+			   NVGPU_TIMER_CPU_TIMER);
 	do {
 		devinit_completed = pwr_falcon_cpuctl_halt_intr_v(
 				gk20a_readl(g, pwr_falcon_cpuctl_r())) &&
 				    top_scratch1_devinit_completed_v(
 				gk20a_readl(g, top_scratch1_r()));
 		udelay(PMU_BOOT_TIMEOUT_DEFAULT);
-	} while (!devinit_completed && retries--);
+	} while (!devinit_completed && !nvgpu_timeout_expired(&timeout));
+
+	if (nvgpu_timeout_peek_expired(&timeout))
+		err = -ETIMEDOUT;
 
 	gk20a_writel(g, pwr_falcon_irqsclr_r(),
 	     pwr_falcon_irqstat_halt_true_f());
 	gk20a_readl(g, pwr_falcon_irqsclr_r());
 
-	if (!retries)
-		err = -EINVAL;
-
+out:
 	gk20a_dbg_fn("done");
 	return err;
 }
 
 static int gm206_bios_preos(struct gk20a *g)
 {
-	int retries = PMU_BOOT_TIMEOUT_MAX / PMU_BOOT_TIMEOUT_DEFAULT;
 	int err = 0;
 	int val;
+	struct nvgpu_timeout timeout;
 
 	gk20a_dbg_fn("");
 	g->ops.pmu.reset(g);
 
+	nvgpu_timeout_init(g, &timeout, PMU_BOOT_TIMEOUT_MAX / 1000,
+			   NVGPU_TIMER_CPU_TIMER);
 	do {
 		u32 w = gk20a_readl(g, pwr_falcon_dmactl_r()) &
 			(pwr_falcon_dmactl_dmem_scrubbing_m() |
@@ -186,9 +197,13 @@ static int gm206_bios_preos(struct gk20a *g)
 			break;
 		}
 		udelay(PMU_BOOT_TIMEOUT_DEFAULT);
-	} while (--retries || !tegra_platform_is_silicon());
+	} while (!nvgpu_timeout_expired(&timeout));
 
-	/*  todo check retries */
+	if (nvgpu_timeout_peek_expired(&timeout)) {
+		err = -ETIMEDOUT;
+		goto out;
+	}
+
 	upload_code(g, g->bios.preos.bootloader_phys_base,
 			g->bios.preos.bootloader,
 			g->bios.preos.bootloader_size,
@@ -209,20 +224,24 @@ static int gm206_bios_preos(struct gk20a *g)
 	gk20a_writel(g, pwr_falcon_cpuctl_r(),
 		pwr_falcon_cpuctl_startcpu_f(1));
 
-	retries = PMU_BOOT_TIMEOUT_MAX / PMU_BOOT_TIMEOUT_DEFAULT;
+	nvgpu_timeout_init(g, &timeout, PMU_BOOT_TIMEOUT_MAX / 1000,
+			   NVGPU_TIMER_CPU_TIMER);
 	do {
 		val = pwr_falcon_cpuctl_halt_intr_v(
 				gk20a_readl(g, pwr_falcon_cpuctl_r()));
 		udelay(PMU_BOOT_TIMEOUT_DEFAULT);
-	} while (!val && retries--);
+	} while (!val && !nvgpu_timeout_expired(&timeout));
+
+	if (nvgpu_timeout_peek_expired(&timeout)) {
+		err = -ETIMEDOUT;
+		goto out;
+	}
 
 	gk20a_writel(g, pwr_falcon_irqsclr_r(),
 	     pwr_falcon_irqstat_halt_true_f());
 	gk20a_readl(g, pwr_falcon_irqsclr_r());
 
-	if (!retries)
-		err = -EINVAL;
-
+out:
 	gk20a_dbg_fn("done");
 	return err;
 }

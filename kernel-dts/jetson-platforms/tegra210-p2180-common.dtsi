@@ -145,8 +145,7 @@
 				map1 {
 					trip = <&{/thermal-zones/CPU-therm/trips/cpu_heavy}>;
 					cdev-type = "tegra-heavy";
-					cooling-device = <&{/soctherm@0x700E2000/throttle@heavy}
-						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+					cooling-device = <&throttle_heavy 1 1>;
 				};
 				map2 {
 					trip = <&{/thermal-zones/CPU-therm/trips/cpu_throttle}>;
@@ -196,8 +195,7 @@
 				map1 {
 					trip = <&{/thermal-zones/GPU-therm/trips/gpu_heavy}>;
 					cdev-type = "tegra-heavy";
-					cooling-device = <&{/soctherm@0x700E2000/throttle@heavy}
-						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+					cooling-device = <&throttle_heavy 1 1>;
 				};
 				map2 {
 					trip = <&{/thermal-zones/GPU-therm/trips/gpu_throttle}>;

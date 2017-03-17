@@ -517,6 +517,11 @@ static int __init tegra_ictlr_init(struct device_node *node,
 		doorbells[idx].hwirq = irq_to_desc(irq)->irq_data.hwirq - 32;
 		err = request_irq(doorbells[idx].irq, doorbell_handler, 0,
 				  "doorbell", &doorbells[idx]);
+		if (err < 0) {
+			pr_err("doorbell %d irq %d request failure\n",
+				idx, irq);
+			goto out_deregister;
+		}
 	}
 
 	for_each_present_cpu(i)
@@ -534,6 +539,10 @@ static int __init tegra_ictlr_init(struct device_node *node,
 	}
 
 	return register_cpu_notifier(&doorbell_cpu_nb);
+
+out_deregister:
+	for (i = 0; i < idx; i++)
+		free_irq(doorbells[i].irq, &doorbells[i]);
 
 out_unmap:
 	for (i = 0; i < num_ictlrs; i++)

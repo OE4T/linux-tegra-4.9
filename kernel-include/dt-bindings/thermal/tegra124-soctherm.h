@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 - 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014 - 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Mikko Perttunen <mperttunen@nvidia.com>
@@ -24,5 +24,11 @@
 #define TEGRA124_SOCTHERM_SENSOR_MEM 2
 #define TEGRA124_SOCTHERM_SENSOR_PLLX 3
 #define TEGRA124_SOCTHERM_SENSOR_NUM 4
+
+#define TEGRA_SOCTHERM_THROT_LEVEL_NONE 0
+#define TEGRA_SOCTHERM_THROT_LEVEL_LOW 1
+#define TEGRA_SOCTHERM_THROT_LEVEL_MED 2
+#define TEGRA_SOCTHERM_THROT_LEVEL_HIGH 3
+
 
 #endif

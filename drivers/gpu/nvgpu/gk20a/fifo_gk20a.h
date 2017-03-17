@@ -405,4 +405,20 @@ unsigned int gk20a_fifo_handle_pbdma_intr_0(struct gk20a *g, u32 pbdma_id,
 			u32 pbdma_intr_0, u32 *handled, u32 *error_notifier);
 
 u32 gk20a_fifo_default_timeslice_us(struct gk20a *g);
+
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+void gk20a_fifo_add_syncpt_wait_cmd(struct gk20a *g,
+			struct priv_cmd_entry *cmd, u32 off,
+			u32 id, u32 thresh, u64 gpu_va);
+u32 gk20a_fifo_get_syncpt_wait_cmd_size(void);
+void gk20a_fifo_add_syncpt_incr_cmd(struct gk20a *g,
+			bool wfi_cmd, struct priv_cmd_entry *cmd,
+			u32 id, u64 gpu_va);
+u32 gk20a_fifo_get_syncpt_incr_cmd_size(bool wfi_cmd);
+void gk20a_fifo_free_syncpt_buf(struct channel_gk20a *c,
+			struct nvgpu_mem *syncpt_buf);
+int gk20a_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
+			u32 syncpt_id, struct nvgpu_mem *syncpt_buf);
+#endif
+
 #endif /*__GR_GK20A_H__*/

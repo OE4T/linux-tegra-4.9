@@ -499,6 +499,20 @@ struct gpu_ops {
 		unsigned int (*handle_pbdma_intr_0)(struct gk20a *g,
 					u32 pbdma_id, u32 pbdma_intr_0,
 					u32 *handled, u32 *error_notifier);
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+		int (*alloc_syncpt_buf)(struct channel_gk20a *c,
+				u32 syncpt_id, struct nvgpu_mem *syncpt_buf);
+		void (*free_syncpt_buf)(struct channel_gk20a *c,
+				struct nvgpu_mem *syncpt_buf);
+		void (*add_syncpt_wait_cmd)(struct gk20a *g,
+					struct priv_cmd_entry *cmd, u32 off,
+					u32 id, u32 thresh, u64 gpu_va);
+		u32 (*get_syncpt_wait_cmd_size)(void);
+		void (*add_syncpt_incr_cmd)(struct gk20a *g,
+			bool wfi_cmd, struct priv_cmd_entry *cmd,
+			u32 id, u64 gpu_va);
+		u32 (*get_syncpt_incr_cmd_size)(bool wfi_cmd);
+#endif
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/
@@ -1243,6 +1257,13 @@ struct gk20a {
 	/* Some boards might be missing power sensor, preventing
 	 * from monitoring power, current and voltage */
 	bool power_sensor_missing;
+
+#if defined(CONFIG_TEGRA_GK20A_NVHOST) && defined(CONFIG_TEGRA_19x_GPU)
+	phys_addr_t	syncpt_unit_base;
+	size_t		syncpt_unit_size;
+	u32		syncpt_size;
+#endif
+
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)

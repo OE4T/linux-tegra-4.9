@@ -42,21 +42,8 @@ struct gk20a_channel_syncpt {
 	struct channel_gk20a *c;
 	struct platform_device *host1x_pdev;
 	u32 id;
+	struct nvgpu_mem syncpt_buf;
 };
-
-static void add_wait_cmd(struct gk20a *g, struct priv_cmd_entry *cmd, u32 off,
-		u32 id, u32 thresh)
-{
-	off = cmd->off + off;
-	/* syncpoint_a */
-	nvgpu_mem_wr32(g, cmd->mem, off++, 0x2001001C);
-	/* payload */
-	nvgpu_mem_wr32(g, cmd->mem, off++, thresh);
-	/* syncpoint_b */
-	nvgpu_mem_wr32(g, cmd->mem, off++, 0x2001001D);
-	/* syncpt_id, switch_en, wait */
-	nvgpu_mem_wr32(g, cmd->mem, off++, (id << 8) | 0x10);
-}
 
 static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
 		u32 id, u32 thresh, struct priv_cmd_entry *wait_cmd,
@@ -75,14 +62,18 @@ static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
 	if (nvhost_syncpt_is_expired_ext(sp->host1x_pdev, id, thresh))
 		return 0;
 
-	err = gk20a_channel_alloc_priv_cmdbuf(c, 4, wait_cmd);
+	err = gk20a_channel_alloc_priv_cmdbuf(c,
+			c->g->ops.fifo.get_syncpt_wait_cmd_size(), wait_cmd);
 	if (err) {
 		nvgpu_err(c->g,
 				"not enough priv cmd buffer space");
 		return err;
 	}
 
-	add_wait_cmd(c->g, wait_cmd, 0, id, thresh);
+	nvgpu_log(c->g, gpu_dbg_info, "sp->id %d gpu va %llx",
+					id, sp->syncpt_buf.gpu_va);
+	c->g->ops.fifo.add_syncpt_wait_cmd(c->g, wait_cmd, 0, id,
+						thresh, sp->syncpt_buf.gpu_va);
 
 	return 0;
 }
@@ -101,6 +92,7 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 	struct channel_gk20a *c = sp->c;
 	u32 wait_id;
 	int err = 0;
+	u32 wait_cmd_size = 0;
 
 	sync_fence = nvhost_sync_fdget(fd);
 	if (!sync_fence)
@@ -130,8 +122,10 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 		sync_fence_put(sync_fence);
 		return 0;
 	}
-
-	err = gk20a_channel_alloc_priv_cmdbuf(c, 4 * num_wait_cmds, wait_cmd);
+	wait_cmd_size = c->g->ops.fifo.get_syncpt_wait_cmd_size();
+	err = gk20a_channel_alloc_priv_cmdbuf(c,
+		wait_cmd_size * num_wait_cmds,
+		wait_cmd);
 	if (err) {
 		nvgpu_err(c->g,
 				"not enough priv cmd buffer space");
@@ -152,13 +146,16 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 
 		if (nvhost_syncpt_is_expired_ext(sp->host1x_pdev,
 				wait_id, wait_value)) {
-			/* each wait_cmd is 4 u32s */
 			nvgpu_memset(c->g, wait_cmd->mem,
-					(wait_cmd->off + i * 4) * sizeof(u32),
-					0, 4 * sizeof(u32));
-		} else
-			add_wait_cmd(c->g, wait_cmd, i * 4, wait_id,
-					wait_value);
+			(wait_cmd->off + i * wait_cmd_size) * sizeof(u32),
+				0, wait_cmd_size * sizeof(u32));
+		} else {
+			nvgpu_log(c->g, gpu_dbg_info, "sp->id %d gpu va %llx",
+					wait_id, sp->syncpt_buf.gpu_va);
+			c->g->ops.fifo.add_syncpt_wait_cmd(c->g, wait_cmd,
+				i * wait_cmd_size, wait_id, wait_value,
+				sp->syncpt_buf.gpu_va);
+		}
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
 		i++;
 	}
@@ -193,45 +190,21 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 				       bool need_sync_fence)
 {
 	u32 thresh;
-	size_t incr_cmd_size;
-	int off;
 	int err;
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	struct channel_gk20a *c = sp->c;
 
-	incr_cmd_size = 6;
-	if (wfi_cmd)
-		incr_cmd_size += 2;
-
-	err = gk20a_channel_alloc_priv_cmdbuf(c, incr_cmd_size, incr_cmd);
+	err = gk20a_channel_alloc_priv_cmdbuf(c,
+			c->g->ops.fifo.get_syncpt_incr_cmd_size(wfi_cmd),
+			incr_cmd);
 	if (err)
 		return err;
 
-	off = incr_cmd->off;
-
-	/* WAR for hw bug 1491360: syncpt needs to be incremented twice */
-
-	if (wfi_cmd) {
-		/* wfi */
-		nvgpu_mem_wr32(c->g, incr_cmd->mem, off++, 0x2001001E);
-		/* handle, ignored */
-		nvgpu_mem_wr32(c->g, incr_cmd->mem, off++, 0x00000000);
-	}
-	/* syncpoint_a */
-	nvgpu_mem_wr32(c->g, incr_cmd->mem, off++, 0x2001001C);
-	/* payload, ignored */
-	nvgpu_mem_wr32(c->g, incr_cmd->mem, off++, 0);
-	/* syncpoint_b */
-	nvgpu_mem_wr32(c->g, incr_cmd->mem, off++, 0x2001001D);
-	/* syncpt_id, incr */
-	nvgpu_mem_wr32(c->g, incr_cmd->mem, off++, (sp->id << 8) | 0x1);
-	/* syncpoint_b */
-	nvgpu_mem_wr32(c->g, incr_cmd->mem, off++, 0x2001001D);
-	/* syncpt_id, incr */
-	nvgpu_mem_wr32(c->g, incr_cmd->mem, off++, (sp->id << 8) | 0x1);
-
-	WARN_ON(off - incr_cmd->off != incr_cmd_size);
+	nvgpu_log(c->g, gpu_dbg_info, "sp->id %d gpu va %llx",
+				sp->id, sp->syncpt_buf.gpu_va);
+	c->g->ops.fifo.add_syncpt_incr_cmd(c->g, wfi_cmd,
+			incr_cmd, sp->id, sp->syncpt_buf.gpu_va);
 
 	thresh = nvhost_syncpt_incr_max_ext(sp->host1x_pdev, sp->id, 2);
 
@@ -337,6 +310,10 @@ static void gk20a_channel_syncpt_destroy(struct gk20a_channel_sync *s)
 {
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
+
+
+	sp->c->g->ops.fifo.free_syncpt_buf(sp->c, &sp->syncpt_buf);
+
 	nvhost_syncpt_set_min_eq_max_ext(sp->host1x_pdev, sp->id);
 	nvhost_syncpt_put_ref_ext(sp->host1x_pdev, sp->id);
 	nvgpu_kfree(sp->c->g, sp);
@@ -365,6 +342,9 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 		nvgpu_err(c->g, "failed to get free syncpt");
 		return NULL;
 	}
+
+	sp->c->g->ops.fifo.alloc_syncpt_buf(sp->c, sp->id,
+				&sp->syncpt_buf);
 
 	nvhost_syncpt_set_min_eq_max_ext(sp->host1x_pdev, sp->id);
 

@@ -4265,6 +4265,79 @@ u32 gk20a_fifo_pbdma_acquire_val(u64 timeout)
 	return val;
 }
 
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+void gk20a_fifo_add_syncpt_wait_cmd(struct gk20a *g,
+		struct priv_cmd_entry *cmd, u32 off,
+		u32 id, u32 thresh, u64 gpu_va)
+{
+	gk20a_dbg_fn("");
+
+	off = cmd->off + off;
+	/* syncpoint_a */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x2001001C);
+	/* payload */
+	nvgpu_mem_wr32(g, cmd->mem, off++, thresh);
+	/* syncpoint_b */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x2001001D);
+	/* syncpt_id, switch_en, wait */
+	nvgpu_mem_wr32(g, cmd->mem, off++, (id << 8) | 0x10);
+}
+
+u32 gk20a_fifo_get_syncpt_wait_cmd_size(void)
+{
+	return 4;
+}
+
+void gk20a_fifo_add_syncpt_incr_cmd(struct gk20a *g,
+		bool wfi_cmd, struct priv_cmd_entry *cmd,
+		u32 id, u64 gpu_va)
+{
+	u32 off = cmd->off;
+
+	gk20a_dbg_fn("");
+	if (wfi_cmd) {
+		/* wfi */
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0x2001001E);
+		/* handle, ignored */
+		nvgpu_mem_wr32(g, cmd->mem, off++, 0x00000000);
+	}
+	/* syncpoint_a */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x2001001C);
+	/* payload, ignored */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0);
+	/* syncpoint_b */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x2001001D);
+	/* syncpt_id, incr */
+	nvgpu_mem_wr32(g, cmd->mem, off++, (id << 8) | 0x1);
+	/* syncpoint_b */
+	nvgpu_mem_wr32(g, cmd->mem, off++, 0x2001001D);
+	/* syncpt_id, incr */
+	nvgpu_mem_wr32(g, cmd->mem, off++, (id << 8) | 0x1);
+
+}
+
+u32 gk20a_fifo_get_syncpt_incr_cmd_size(bool wfi_cmd)
+{
+	if (wfi_cmd)
+		return 8;
+	else
+		return 6;
+}
+
+void gk20a_fifo_free_syncpt_buf(struct channel_gk20a *c,
+				struct nvgpu_mem *syncpt_buf)
+{
+
+}
+
+int gk20a_fifo_alloc_syncpt_buf(struct channel_gk20a *c,
+			u32 syncpt_id, struct nvgpu_mem *syncpt_buf)
+{
+	return 0;
+}
+#endif
+
+
 void gk20a_init_fifo(struct gpu_ops *gops)
 {
 	gops->fifo.disable_channel = gk20a_fifo_disable_channel;
@@ -4312,4 +4385,14 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.teardown_ch_tsg = gk20a_fifo_teardown_ch_tsg;
 	gops->fifo.handle_sched_error = gk20a_fifo_handle_sched_error;
 	gops->fifo.handle_pbdma_intr_0 = gk20a_fifo_handle_pbdma_intr_0;
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+	gops->fifo.alloc_syncpt_buf = gk20a_fifo_alloc_syncpt_buf;
+	gops->fifo.free_syncpt_buf = gk20a_fifo_free_syncpt_buf;
+	gops->fifo.add_syncpt_wait_cmd = gk20a_fifo_add_syncpt_wait_cmd;
+	gops->fifo.get_syncpt_wait_cmd_size =
+				gk20a_fifo_get_syncpt_wait_cmd_size;
+	gops->fifo.add_syncpt_incr_cmd = gk20a_fifo_add_syncpt_incr_cmd;
+	gops->fifo.get_syncpt_incr_cmd_size =
+				gk20a_fifo_get_syncpt_incr_cmd_size;
+#endif
 }

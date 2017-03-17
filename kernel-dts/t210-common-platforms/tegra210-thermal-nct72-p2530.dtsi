@@ -25,9 +25,9 @@
 
 / {
 	i2c@7000c000 {
-		tegra_nct72: onsemi,nct72@4c {
+		tegra_nct72: temp-sensor@4c {
 			#thermal-sensor-cells = <1>;
-			compatible = "onsemi,nct72";
+			compatible = "ti,tmp451";
 			reg = <0x4c>;
 			sensor-name = "tegra";
 			supported-hwrev = <1>;

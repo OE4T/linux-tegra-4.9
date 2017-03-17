@@ -94,6 +94,7 @@ long vi4_default_ioctl(struct file *file, void *fh,
 	long err = 0;
 
 	switch (_IOC_NR(cmd)) {
+#if defined(CONFIG_TEGRA_CAMERA_RTCPU)
 	case _IOC_NR(VIDIOC_CAPTURE_SETUP):
 		if (chan->bypass)
 			err = vi_capture_setup(chan,
@@ -170,6 +171,7 @@ long vi4_default_ioctl(struct file *file, void *fh,
 			dev_err(&chan->video.dev,
 				"capture get status failed\n");
 		break;
+#endif
 	default:
 		dev_err(&chan->video.dev, "%s:Unknown ioctl\n", __func__);
 		return -ENOIOCTLCMD;
@@ -995,9 +997,11 @@ int vi4_power_on(struct tegra_channel *chan)
 		}
 	}
 
+#if defined(CONFIG_TEGRA_CAMERA_RTCPU)
 	ret = vi_capture_init(chan);
 	if (ret < 0)
 		return ret;
+#endif
 
 	return 0;
 }
@@ -1011,7 +1015,9 @@ void vi4_power_off(struct tegra_channel *chan)
 	vi = chan->vi;
 	csi = vi->csi;
 
+#if defined(CONFIG_TEGRA_CAMERA_RTCPU)
 	vi_capture_shutdown(chan);
+#endif
 
 	if (atomic_dec_and_test(&chan->power_on_refcnt)) {
 		ret = tegra_channel_set_power(chan, 0);

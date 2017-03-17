@@ -124,6 +124,9 @@ static void vi_capture_ivc_status_callback(const void *ivc_resp,
 		vi_capture_request_unpin(chan,
 				status_msg->capture_status_ind.buffer_index);
 		complete(&capture->capture_resp);
+		dev_dbg(chan->vi->dev, "%s: status chan_id %u msg_id %u\n",
+				__func__, status_msg->header.channel_id,
+				status_msg->header.msg_id);
 		break;
 	default:
 		dev_err(chan->vi->dev,
@@ -177,6 +180,7 @@ void vi_capture_shutdown(struct tegra_channel *chan)
 {
 	struct vi_capture *capture = chan->capture_data;
 
+	dev_dbg(chan->vi->dev, "%s--\n", __func__);
 	if (capture == NULL)
 		return;
 
@@ -196,6 +200,8 @@ static int vi_capture_ivc_send_control(struct tegra_channel *chan,
 	uint32_t timeout = HZ;
 	int err = 0;
 
+	dev_dbg(chan->vi->dev, "%s: sending chan_id %u msg_id %u\n",
+			__func__, resp_header.channel_id, resp_header.msg_id);
 	resp_header.msg_id = resp_id;
 	/* Send capture control IVC message */
 	mutex_lock(&capture->control_msg_lock);
@@ -215,7 +221,7 @@ static int vi_capture_ivc_send_control(struct tegra_channel *chan,
 	}
 
 	if (memcmp(&resp_header, &capture->control_resp_msg.header,
-		      sizeof(resp_header)) != 0) {
+			sizeof(resp_header)) != 0) {
 		dev_err(chan->vi->dev,
 			"unexpected response from camera processor\n");
 		err = -EINVAL;
@@ -223,6 +229,9 @@ static int vi_capture_ivc_send_control(struct tegra_channel *chan,
 	}
 
 	mutex_unlock(&capture->control_msg_lock);
+	dev_dbg(chan->vi->dev, "%s: response chan_id %u msg_id %u\n",
+			__func__, capture->control_resp_msg.header.channel_id,
+			capture->control_resp_msg.header.msg_id);
 	return 0;
 
 fail:
@@ -243,19 +252,22 @@ static int pin_memory(struct device *dev,
 	int err = 0;
 
 	buf = dma_buf_get(mem);
-	if (IS_ERR(buf))
+	if (IS_ERR(buf)) {
 		err = PTR_ERR(buf);
 		goto fail;
+	}
 
 	attach = dma_buf_attach(buf, dev);
-	if (IS_ERR(attach))
+	if (IS_ERR(attach)) {
 		err = PTR_ERR(attach);
 		goto fail;
+	}
 
 	sgt = dma_buf_map_attachment(attach, DMA_BIDIRECTIONAL);
-	if (IS_ERR(sgt))
+	if (IS_ERR(sgt)) {
 		err = PTR_ERR(sgt);
 		goto fail;
+	}
 
 	if (sg_dma_address(sgt->sgl) == 0)
 		sg_dma_address(sgt->sgl) = sg_phys(sgt->sgl);
@@ -350,11 +362,10 @@ int vi_capture_setup(struct tegra_channel *chan,
 		return -EEXIST;
 	}
 
-	dev_dbg(&chan->video.dev, "chan flags %u\n", setup->channel_flags);
-	dev_dbg(&chan->video.dev, "chan mask %llx\n", setup->vi_channel_mask);
-	dev_dbg(&chan->video.dev, "queue depth %u\n", setup->queue_depth);
-	dev_dbg(&chan->video.dev, "request size %u\n", setup->request_size);
-	dev_dbg(&chan->video.dev, "request buffer %u\n", setup->mem);
+	dev_dbg(chan->vi->dev, "chan flags %u\n", setup->channel_flags);
+	dev_dbg(chan->vi->dev, "chan mask %llx\n", setup->vi_channel_mask);
+	dev_dbg(chan->vi->dev, "queue depth %u\n", setup->queue_depth);
+	dev_dbg(chan->vi->dev, "request size %u\n", setup->request_size);
 
 	if (setup->vi_channel_mask == CAPTURE_CHANNEL_INVALID_MASK ||
 			setup->channel_flags == 0 ||
@@ -363,6 +374,8 @@ int vi_capture_setup(struct tegra_channel *chan,
 		return -EINVAL;
 
 	/* pin the capture descriptor ring buffer */
+	dev_dbg(chan->vi->dev, "%s: descr buffer handle %u\n",
+			__func__, setup->mem);
 	err = pin_memory(capture->rtcpu_dev, setup->mem, &capture->requests);
 	if (err < 0) {
 		dev_err(chan->vi->dev, "%s: memory setup failed\n", __func__);
@@ -684,23 +697,30 @@ static int vi_capture_request_pin_and_reloc(struct tegra_channel *chan,
 	if (unpins == NULL)
 		return -ENOMEM;
 
+	dev_dbg(chan->vi->dev, "%s: relocating %u surfaces\n",
+			__func__, num_relocs);
 	for (i = 0; i < num_relocs; i++) {
-		uint32_t reloc_relative = request_offset + local_reloc_relatives[i];
+		uint32_t reloc_offset =
+				request_offset + local_reloc_relatives[i];
 		uint64_t surface_raw;
 		struct surface_t *surface;
 		uint32_t mem;
 		uint32_t target_offset;
 		dma_addr_t target_phys_addr;
 
+		dev_dbg(chan->vi->dev,
+			"%s: idx:%i reloc:%u reloc_offset:%u", __func__,
+			i, local_reloc_relatives[i], reloc_offset);
+
 		/* locate page of the request descr buffer relocation is on */
-		if (last_page != reloc_relative >> PAGE_SHIFT) {
+		if (last_page != reloc_offset >> PAGE_SHIFT) {
 			if (reloc_page_addr != NULL)
 				dma_buf_kunmap(capture->requests.buf, last_page,
 						reloc_page_addr);
 
 			reloc_page_addr = dma_buf_kmap(capture->requests.buf,
-					reloc_relative >> PAGE_SHIFT);
-			last_page = reloc_relative >> PAGE_SHIFT;
+					reloc_offset >> PAGE_SHIFT);
+			last_page = reloc_offset >> PAGE_SHIFT;
 
 			if (unlikely(reloc_page_addr == NULL)) {
 				dev_err(chan->vi->dev,
@@ -712,10 +732,12 @@ static int vi_capture_request_pin_and_reloc(struct tegra_channel *chan,
 		/* read surface offset and memory handle from request descr */
 		surface_raw = __raw_readq(
 				(void __iomem *)(reloc_page_addr +
-				(reloc_relative & ~PAGE_MASK)));
-		surface = (struct surface_t *)surface_raw;
+				(reloc_offset & ~PAGE_MASK)));
+		surface = (struct surface_t *)&surface_raw;
 		target_offset = surface->offset;
 		mem = surface->offset_hi;
+		dev_dbg(chan->vi->dev, "%s: hmem:%u offset:%u\n", __func__,
+				target_offset, mem);
 
 		if (mem != prev_mem) {
 			err = pin_memory(capture->rtcpu_dev,
@@ -738,10 +760,10 @@ static int vi_capture_request_pin_and_reloc(struct tegra_channel *chan,
 
 		target_phys_addr = surface_phys_addr + target_offset;
 		/* write relocated physical address to request descr */
-		__raw_writel(
+		__raw_writeq(
 			target_phys_addr,
 			(void __iomem *)(reloc_page_addr +
-				(reloc_relative & ~PAGE_MASK)));
+				(reloc_offset & ~PAGE_MASK)));
 	}
 
 	unpins->num_unpins = pin_count;
@@ -784,7 +806,7 @@ int vi_capture_request(struct tegra_channel *chan,
 
 	if (capture == NULL) {
 		dev_err(chan->vi->dev,
-			 "%s: vi capture uninitialized\n", __func__);
+			"%s: vi capture uninitialized\n", __func__);
 		return -ENODEV;
 	}
 
@@ -806,6 +828,9 @@ int vi_capture_request(struct tegra_channel *chan,
 		return err;
 	}
 
+	dev_dbg(chan->vi->dev, "%s: sending chan_id %u msg_id %u buf:%u\n",
+			__func__, capture_desc.header.channel_id,
+			capture_desc.header.msg_id, req->buffer_index);
 	err = tegra_capture_ivc_capture_submit(&capture_desc,
 			sizeof(capture_desc));
 	if (err < 0) {
@@ -839,7 +864,8 @@ int vi_capture_status(struct tegra_channel *chan,
 		return -ENODEV;
 	}
 
-	dev_dbg(chan->vi->dev, "waiting for status %d\n", timeout_ms);
+	dev_dbg(chan->vi->dev, "%s: waiting for status, timeout:%d ms\n",
+		__func__, timeout_ms);
 
 	ret = wait_for_completion_killable_timeout(
 			&capture->capture_resp,

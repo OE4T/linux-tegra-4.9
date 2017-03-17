@@ -25,15 +25,15 @@
  * @brief		Information needed for buffers
  *
  * pdev			Pointer to NVHOST device
- * buffer_list		List of all the buffers used by a file pointer
- * buffer_list_mutex	Mutex for the buffer list
+ * buffer_tree:		RB tree root for of all the buffers used by a file pointer
+ * buffer_tree_mutex	Mutex for the buffer tree
  * kref			Reference count for the bufferlist
  *
  */
 struct nvhost_buffers {
 	struct platform_device *pdev;
-	struct list_head buffer_list;
-	struct mutex buffer_list_mutex;
+	struct rb_root buffer_tree;
+	struct mutex buffer_tree_mutex;
 	struct kref kref;
 };
 

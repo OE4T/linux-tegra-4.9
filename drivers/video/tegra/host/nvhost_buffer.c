@@ -35,7 +35,7 @@
  * @size:		Size of the buffer
  * @user_map_count:	Buffer reference count from user space
  * @submit_map_count:	Buffer reference count from task submit
- * @pin_list:		List of pinned buffer
+ * @pin_node:		pinned buffer node
  *
  */
 struct nvhost_vm_buffer {
@@ -48,21 +48,55 @@ struct nvhost_vm_buffer {
 
 	s32 user_map_count;
 	s32 submit_map_count;
-	struct list_head pin_list;
+	struct rb_node pin_node;
 };
 
 static struct nvhost_vm_buffer *nvhost_find_map_buffer(
 		struct nvhost_buffers *nvhost_buffers, struct dma_buf *dmabuf)
 {
+	struct rb_root *root = &nvhost_buffers->buffer_tree;
+	struct rb_node *node = root->rb_node;
 	struct nvhost_vm_buffer *vm;
 
-	/* Go through the handles and look for matching dmabuf */
-	list_for_each_entry(vm, &nvhost_buffers->buffer_list, pin_list) {
-		if (vm->dmabuf == dmabuf)
+	/* check in a sorted tree */
+	while (node) {
+		vm = rb_entry(node, struct nvhost_vm_buffer,
+						pin_node);
+
+		if (vm->dmabuf > dmabuf)
+			node = node->rb_left;
+		else if (vm->dmabuf != dmabuf)
+			node = node->rb_right;
+		else
 			return vm;
 	}
 
 	return NULL;
+}
+
+static void nvhost_buffer_insert_map_buffer(struct rb_root *root,
+						struct nvhost_vm_buffer *new_vm)
+{
+	struct rb_node **new_node = &(root->rb_node), *parent = NULL;
+
+	/* Figure out where to put the new node */
+	while (*new_node) {
+		struct nvhost_vm_buffer *vm =
+			rb_entry(*new_node, struct nvhost_vm_buffer,
+						pin_node);
+		parent = *new_node;
+
+		if (vm->dmabuf > new_vm->dmabuf)
+			new_node = &((*new_node)->rb_left);
+		else
+			new_node = &((*new_node)->rb_right);
+	}
+
+	/* Addd new node and rebalance tree */
+	rb_link_node(&new_vm->pin_node, parent, new_node);
+	rb_insert_color(&new_vm->pin_node, root);
+
+	return;
 }
 
 int nvhost_get_iova_addr(struct nvhost_buffers *nvhost_buffers,
@@ -71,7 +105,7 @@ int nvhost_get_iova_addr(struct nvhost_buffers *nvhost_buffers,
 	struct nvhost_vm_buffer *vm;
 	int err = -EINVAL;
 
-	mutex_lock(&nvhost_buffers->buffer_list_mutex);
+	mutex_lock(&nvhost_buffers->buffer_tree_mutex);
 
 	vm = nvhost_find_map_buffer(nvhost_buffers, dmabuf);
 	if (vm) {
@@ -79,7 +113,7 @@ int nvhost_get_iova_addr(struct nvhost_buffers *nvhost_buffers,
 		err = 0;
 	}
 
-	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
+	mutex_unlock(&nvhost_buffers->buffer_tree_mutex);
 
 	return err;
 }
@@ -138,7 +172,8 @@ static void nvhost_free_buffers(struct kref *kref)
 	kfree(nvhost_buffers);
 }
 
-static void nvhost_buffer_unmap(struct nvhost_vm_buffer *vm)
+static void nvhost_buffer_unmap(struct nvhost_buffers *nvhost_buffers,
+					struct nvhost_vm_buffer *vm)
 {
 	nvhost_dbg_fn("");
 
@@ -151,7 +186,7 @@ static void nvhost_buffer_unmap(struct nvhost_vm_buffer *vm)
 	dma_buf_detach(vm->dmabuf, vm->attach);
 	dma_buf_put(vm->dmabuf);
 
-	list_del(&vm->pin_list);
+	rb_erase(&vm->pin_node, &nvhost_buffers->buffer_tree);
 	kfree(vm);
 }
 
@@ -167,8 +202,8 @@ struct nvhost_buffers *nvhost_buffer_init(struct platform_device *pdev)
 	}
 
 	nvhost_buffers->pdev = pdev;
-	mutex_init(&nvhost_buffers->buffer_list_mutex);
-	INIT_LIST_HEAD(&nvhost_buffers->buffer_list);
+	mutex_init(&nvhost_buffers->buffer_tree_mutex);
+	nvhost_buffers->buffer_tree = RB_ROOT;
 	kref_init(&nvhost_buffers->kref);
 
 	return nvhost_buffers;
@@ -186,7 +221,7 @@ int nvhost_buffer_submit_pin(struct nvhost_buffers *nvhost_buffers,
 
 	kref_get(&nvhost_buffers->kref);
 
-	mutex_lock(&nvhost_buffers->buffer_list_mutex);
+	mutex_lock(&nvhost_buffers->buffer_tree_mutex);
 
 	for (i = 0; i < count; i++) {
 
@@ -200,11 +235,11 @@ int nvhost_buffer_submit_pin(struct nvhost_buffers *nvhost_buffers,
 		}
 	}
 
-	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
+	mutex_unlock(&nvhost_buffers->buffer_tree_mutex);
 	return 0;
 
 submit_err:
-	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
+	mutex_unlock(&nvhost_buffers->buffer_tree_mutex);
 
 	count = i;
 
@@ -221,7 +256,7 @@ int nvhost_buffer_pin(struct nvhost_buffers *nvhost_buffers,
 	int i = 0;
 	int err = 0;
 
-	mutex_lock(&nvhost_buffers->buffer_list_mutex);
+	mutex_lock(&nvhost_buffers->buffer_tree_mutex);
 
 	for (i = 0; i < count; i++) {
 
@@ -239,16 +274,17 @@ int nvhost_buffer_pin(struct nvhost_buffers *nvhost_buffers,
 		if (err)
 			goto free_vm;
 
-		list_add_tail(&vm->pin_list, &nvhost_buffers->buffer_list);
+		nvhost_buffer_insert_map_buffer(
+					&nvhost_buffers->buffer_tree, vm);
 	}
 
-	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
+	mutex_unlock(&nvhost_buffers->buffer_tree_mutex);
 	return err;
 
 free_vm:
 	kfree(vm);
 unpin:
-	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
+	mutex_unlock(&nvhost_buffers->buffer_tree_mutex);
 
 	/* free pinned buffers */
 	count = i;
@@ -263,7 +299,7 @@ void nvhost_buffer_submit_unpin(struct nvhost_buffers *nvhost_buffers,
 	struct nvhost_vm_buffer *vm;
 	int i = 0;
 
-	mutex_lock(&nvhost_buffers->buffer_list_mutex);
+	mutex_lock(&nvhost_buffers->buffer_tree_mutex);
 
 	for (i = 0; i < count; i++) {
 
@@ -271,11 +307,11 @@ void nvhost_buffer_submit_unpin(struct nvhost_buffers *nvhost_buffers,
 		if (vm) {
 			if (vm->submit_map_count-- < 0)
 				vm->submit_map_count = 0;
-			nvhost_buffer_unmap(vm);
+			nvhost_buffer_unmap(nvhost_buffers, vm);
 		}
 	}
 
-	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
+	mutex_unlock(&nvhost_buffers->buffer_tree_mutex);
 
 	kref_put(&nvhost_buffers->kref, nvhost_free_buffers);
 }
@@ -285,7 +321,7 @@ void nvhost_buffer_unpin(struct nvhost_buffers *nvhost_buffers,
 {
 	int i = 0;
 
-	mutex_lock(&nvhost_buffers->buffer_list_mutex);
+	mutex_lock(&nvhost_buffers->buffer_tree_mutex);
 
 	for (i = 0; i < count; i++) {
 		struct nvhost_vm_buffer *vm = NULL;
@@ -294,26 +330,31 @@ void nvhost_buffer_unpin(struct nvhost_buffers *nvhost_buffers,
 		if (vm) {
 			if (vm->user_map_count-- < 0)
 				vm->user_map_count = 0;
-			nvhost_buffer_unmap(vm);
+			nvhost_buffer_unmap(nvhost_buffers, vm);
 		}
 	}
 
-	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
+	mutex_unlock(&nvhost_buffers->buffer_tree_mutex);
 }
 
 void nvhost_buffer_put(struct nvhost_buffers *nvhost_buffers)
 {
-	struct nvhost_vm_buffer *vm, *n;
+	struct rb_root *root = &nvhost_buffers->buffer_tree;
+	struct rb_node *node;
+	struct nvhost_vm_buffer *vm;
 
-	mutex_lock(&nvhost_buffers->buffer_list_mutex);
+	mutex_lock(&nvhost_buffers->buffer_tree_mutex);
 
-	list_for_each_entry_safe(vm, n, &nvhost_buffers->buffer_list,
-				 pin_list) {
-		vm->user_map_count = 0;
-		nvhost_buffer_unmap(vm);
+	for (node = rb_first(root); node; node = rb_next(node)) {
+		vm = rb_entry(node, struct nvhost_vm_buffer,
+						pin_node);
+		if (vm) {
+			vm->user_map_count = 0;
+			nvhost_buffer_unmap(nvhost_buffers, vm);
+		}
 	}
 
-	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
+	mutex_unlock(&nvhost_buffers->buffer_tree_mutex);
 
 	kref_put(&nvhost_buffers->kref, nvhost_free_buffers);
 }

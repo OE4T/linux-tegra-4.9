@@ -173,6 +173,7 @@ struct tegra_adma_chip_data {
 	unsigned int global_int_clear;
 	unsigned int global_reg_offset;
 	unsigned int slave_id;
+	unsigned int outstanding_request;
 	struct tegra_adma_war adma_war;
 	int (*tegra_adast_init)(struct platform_device *pdev,
 			void __iomem *adast_addr);
@@ -825,6 +826,7 @@ static int tegra_adma_set_xfer_params(struct tegra_adma_chan *tdc,
 					chip_data->burst_size.mask,
 					chip_data->burst_size.shift);
 	ch_regs->config |= ADMA_CH_CONFIG_WEIGHT_FOR_WRR(1);
+	ch_regs->config |= chip_data->outstanding_request;
 	ch_regs->fifo_ctrl = fifo_ctrl;
 	ch_regs->tc = desc->period_len & ADMA_CH_TC_COUNT_MASK;
 
@@ -1013,6 +1015,7 @@ static const struct tegra_adma_chip_data tegra210_chip_data = {
 	.global_int_clear	= T210_ADMA_GLOBAL_INT_CLEAR,
 	.global_reg_offset	= 0xc00,
 	.slave_id		= 2,
+	.outstanding_request	= 0,
 	.tegra_adast_init	= NULL,
 	.adma_war = {
 		.smp_sta_reg		= T210_SHRD_SMP_STA,
@@ -1053,6 +1056,7 @@ static const struct tegra_adma_chip_data tegra186_chip_data = {
 	.global_int_clear	= T186_ADMA_GLOBAL_INT_CLEAR,
 	.global_reg_offset	= 0,
 	.slave_id		= 4,
+	.outstanding_request	= (0x8 << 4),
 	.tegra_adast_init	= tegra_adast_init,
 	.adma_war = {
 		.smp_sta_reg		= T186_SHRD_SMP_STA,

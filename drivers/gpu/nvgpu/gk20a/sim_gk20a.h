@@ -21,8 +21,9 @@
 #ifndef __SIM_GK20A_H__
 #define __SIM_GK20A_H__
 
-
 struct gk20a;
+struct platform_device;
+
 struct sim_gk20a {
 	struct gk20a *g;
 	struct resource *reg_mem;
@@ -39,24 +40,7 @@ struct sim_gk20a {
 	void (*remove_support)(struct sim_gk20a *);
 };
 
-
-int gk20a_sim_esc_read(struct gk20a *g, char *path, u32 index,
-			  u32 count, u32 *data);
-
-static inline int gk20a_sim_esc_read_no_sim(struct gk20a *g, char *p,
-				     u32 i, u32 c, u32 *d)
-{
-	*d = ~(u32)0;
-	return -1;
-}
-
-static inline int gk20a_sim_esc_readl(struct gk20a *g, char * p, u32 i, u32 *d)
-{
-	if (tegra_cpu_is_asim())
-		return gk20a_sim_esc_read(g, p, i, sizeof(u32), d);
-
-	return gk20a_sim_esc_read_no_sim(g, p, i, sizeof(u32), d);
-}
-
+int gk20a_init_sim_support(struct platform_device *pdev);
+int gk20a_sim_esc_readl(struct gk20a *g, char *path, u32 index, u32 *data);
 
 #endif /*__SIM_GK20A_H__*/

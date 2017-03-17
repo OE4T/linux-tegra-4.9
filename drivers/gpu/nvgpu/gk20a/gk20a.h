@@ -1476,4 +1476,7 @@ int gk20a_railgating_debugfs_init(struct device *dev);
 #endif
 
 int gk20a_secure_page_alloc(struct device *dev);
+void __iomem *gk20a_ioremap_resource(struct platform_device *dev, int i,
+					    struct resource **out);
+
 #endif /* GK20A_H */

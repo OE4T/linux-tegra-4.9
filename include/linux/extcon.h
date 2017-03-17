@@ -78,7 +78,19 @@
 #define EXTCON_JIG		61
 #define EXTCON_MECHANICAL	62
 
-#define EXTCON_NUM		63
+#define EXTCON_USB_QC2		63
+#define EXTCON_USB_MAXIM	64
+#define EXTCON_USB_APPLE_500mA	65
+#define EXTCON_USB_APPLE_1A	66
+#define EXTCON_USB_APPLE_2A	67
+#define EXTCON_USB_ACA_NV	68
+#define EXTCON_USB_ACA_RIDA	69
+#define EXTCON_USB_ACA_RIDB	70
+#define EXTCON_USB_ACA_RIDC	71
+#define EXTCON_USB_Y_CABLE	72
+#define EXTCON_USB_PD		73
+
+#define EXTCON_NUM		74
 
 /*
  * Define the property of supported external connectors.

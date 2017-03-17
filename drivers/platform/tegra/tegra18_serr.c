@@ -25,6 +25,7 @@
 #include <linux/platform/tegra/tegra18_cpu_map.h>
 #include <linux/tegra-mce.h>
 #include <linux/t18x_ari.h>
+#include <soc/tegra/chip-id.h>
 
 /* Denver MCA */
 
@@ -96,19 +97,23 @@ static void tegra18_denver_serr_enable(void)
 	cmd.data = 0;
 	cmd.cmd = TEGRA_ARI_MCA_WRITE_SERR;
 	cmd.idx = TEGRA_ARI_MCA_RD_WR_GLOBAL_CONFIG_REGISTER;
-	tegra_mce_write_uncore_mca(cmd, 1, &error);
+	if (tegra_mce_write_uncore_mca(cmd, 1, &error))
+		pr_err("%s:mce write failed: error=0x%x\n", __func__, error);
 
 	cmd.cmd = TEGRA_ARI_MCA_READ_SERR;
 	cmd.idx = TEGRA_ARI_MCA_RD_WR_CCE;
 	cmd.subidx = TEGRA_ARI_MCA_RD_WR_ASERRX_MISC1;
-	tegra_mce_read_uncore_mca(cmd, &data, &error);
+	if (tegra_mce_read_uncore_mca(cmd, &data, &error))
+		pr_err("%s:mce write failed: error=0x%x\n", __func__, error);
 
 	cmd.cmd = TEGRA_ARI_MCA_WRITE_SERR;
 	/* Disable Error Response (Data abort) on VPR reads.
 	 * set PSN_ERR_CORR_MASK[7] = 1.
 	 */
 	data |= 1 << 19;
-	tegra_mce_write_uncore_mca(cmd, data, &error);
+	if (tegra_mce_write_uncore_mca(cmd, data, &error))
+		pr_err("%s:mce write failed: error=0x%x\n", __func__, error);
+
 }
 
 void tegra18_clear_serr(void)
@@ -123,11 +128,13 @@ void tegra18_clear_serr(void)
 	cmd.subidx = tegra18_logical_to_cpu(core);
 
 	if (tegra_mce_write_uncore_mca(cmd, 1, &error))
-		pr_err("mce write failed\n");
+		pr_err("%s:mce write failed: error=0x%x\n", __func__, error);
 }
 
 static int __init tegra18_serr_init(void)
 {
+	if (tegra_get_chip_id() != TEGRA186)
+		return 0;
 
 	tegra18_denver_serr_enable();
 	tegra18_register_denver_mca_banks();

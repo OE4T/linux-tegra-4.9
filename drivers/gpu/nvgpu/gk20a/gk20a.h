@@ -148,7 +148,6 @@ struct gpu_ops {
 		void (*init_cbc)(struct gk20a *g, struct gr_gk20a *gr);
 		void (*sync_debugfs)(struct gk20a *g);
 		void (*init_fs_state)(struct gk20a *g);
-		void (*elpg_flush)(struct gk20a *g);
 		void (*isr)(struct gk20a *g);
 		u32 (*cbc_fix_config)(struct gk20a *g, int base);
 		void (*flush)(struct gk20a *g);

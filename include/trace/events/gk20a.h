@@ -120,16 +120,6 @@ DEFINE_EVENT(gk20a, gr_gk20a_handle_sw_method,
 	TP_ARGS(name)
 );
 
-DEFINE_EVENT(gk20a, gk20a_mm_g_elpg_flush_locked,
-	TP_PROTO(const char *name),
-	TP_ARGS(name)
-);
-
-DEFINE_EVENT(gk20a, gk20a_mm_g_elpg_flush_locked_done,
-	TP_PROTO(const char *name),
-	TP_ARGS(name)
-);
-
 DECLARE_EVENT_CLASS(gk20a_channel,
 	TP_PROTO(int channel),
 	TP_ARGS(channel),

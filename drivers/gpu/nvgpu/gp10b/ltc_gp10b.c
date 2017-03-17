@@ -216,7 +216,6 @@ void gp10b_init_ltc(struct gpu_ops *gops)
 	gops->ltc.init_fs_state = gp10b_ltc_init_fs_state;
 	gops->ltc.init_comptags = gp10b_ltc_init_comptags;
 	gops->ltc.cbc_ctrl = gm20b_ltc_cbc_ctrl;
-	gops->ltc.elpg_flush = gm20b_ltc_g_elpg_flush_locked;
 	gops->ltc.isr = gp10b_ltc_isr;
 	gops->ltc.cbc_fix_config = gm20b_ltc_cbc_fix_config;
 	gops->ltc.flush = gm20b_flush_ltc;

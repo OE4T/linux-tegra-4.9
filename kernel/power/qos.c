@@ -25,10 +25,10 @@
  * pointer or exits the pm_qos_object will get an opportunity to clean up.
  *
  * Mark Gross <mgross@linux.intel.com>
- * Copyright (c) 2013-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * Support added for bounded constraints
- * Copyright (c) 2013-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION. All rights reserved.
  */
 
 /*#define DEBUG*/
@@ -1138,6 +1138,7 @@ void pm_qos_update_request_timeout(struct pm_qos_request *req, s32 new_value,
 
 	schedule_delayed_work(&req->work, usecs_to_jiffies(timeout_us));
 }
+EXPORT_SYMBOL(pm_qos_update_request_timeout);
 
 /**
  * pm_qos_remove_request - modifies an existing qos request

@@ -44,6 +44,7 @@
 #include <linux/delay.h>
 #include <asm/uaccess.h>
 #include <asm-generic/bug.h>
+#include <linux/dma-mapping.h>
 
 #define DRV_NAME "tegra_hv_vblk"
 
@@ -74,17 +75,16 @@ enum cmd_mode {
 #pragma pack(1)
 struct ivc_blk_request {
 	enum cmd_mode cmd;      /* 0:read 1:write */
-	sector_t blk_offset; /* Blk cursor */
+	uint64_t blk_offset; /* Blk cursor */
 	uint32_t num_blks; /* Total Block number to transfer */
 	uint32_t serial_number;
-	uint32_t total_frame;
+	uint32_t mempool_offset;
 };
 
 struct ivc_blk_result {
 	uint32_t status;        /* 0 for success, < 0 for error */
 	uint32_t num_blks; /* number of blocks to complete */
 	uint32_t serial_number;
-	uint32_t total_frame;
 };
 
 struct virtual_storage_configinfo {
@@ -93,7 +93,6 @@ struct virtual_storage_configinfo {
 	uint32_t hardblk_size;           /* Block Size */
 	uint32_t max_blks_per_io;       /* Limit number of Blocks per I/O*/
 	uint32_t virtual_storage_ver;     /* Version of virtual storage */
-	uint32_t shared_buffer_offset;    /* Storage offset of shared buffer*/
 };
 
 struct combo_cmd_t {
@@ -111,7 +110,17 @@ struct combo_info_t {
 };
 #pragma pack(pop)
 
-static void *shared_buffer;
+#define MAX_VSC_REQS 32
+
+struct vsc_request {
+	struct ivc_blk_request ivc_req;
+	struct request *req;
+	struct req_iterator iter;
+	struct timer_list ivc_timer;
+	void *mempool_virt;
+	uint32_t id;
+	struct vblk_dev* vblkdev;
+};
 
 enum IOCTL_STATUS {
 	IOCTL_SUCCESS = 0,
@@ -150,17 +159,7 @@ struct vblk_dev {
 	struct tegra_hv_ivc_cookie *ivck;
 	struct tegra_hv_ivm_cookie *ivmk;
 	uint32_t devnum;
-	sector_t cur_blk;
-	uint32_t cur_nblk;
-	void *cur_buffer;
-	enum cmd_mode cur_transfer_cmd;
-	uint8_t serial_number;
-	uint8_t total_frame;
-	struct req_iterator iter;
-	struct request *req;
-	struct timer_list ivc_timer;
 	bool initialized;
-	bool ready_to_receive;
 	struct work_struct init;
 	struct work_struct work;
 	struct workqueue_struct *wq;
@@ -172,6 +171,11 @@ struct vblk_dev {
 	spinlock_t queue_lock;
 	enum IOCTL_STATUS ioctl_status;
 	struct completion ioctl_complete;
+	struct vsc_request reqs[MAX_VSC_REQS];
+	DECLARE_BITMAP(pending_reqs, MAX_VSC_REQS);
+	uint32_t max_requests;
+	struct mutex req_lock;
+	struct mutex ivc_lock;
 };
 
 /* MMCSD passthrough commands used */
@@ -192,6 +196,96 @@ struct vblk_dev {
 #define MMC_ERASE_GROUP_START       35     /* S */
 #define MMC_ERASE_GROUP_END         36     /* S */
 #define MMC_ERASE                   38     /* S */
+
+void ivc_timeout_func(unsigned long req);
+
+/**
+ * vblk_get_req: Get a handle to free vsc request.
+ */
+static struct vsc_request *vblk_get_req(struct vblk_dev *vblkdev)
+{
+	struct vsc_request *req = NULL;
+	unsigned long bit;
+
+	mutex_lock(&vblkdev->req_lock);
+	bit = find_first_zero_bit(vblkdev->pending_reqs, vblkdev->max_requests);
+	if (bit < vblkdev->max_requests) {
+		req = &vblkdev->reqs[bit];
+		req->id = bit;
+		req->ivc_req.serial_number = bit;
+		req->vblkdev = vblkdev;
+		set_bit(bit, vblkdev->pending_reqs);
+		init_timer(&req->ivc_timer);
+		req->ivc_timer.data = (unsigned long) req;
+		req->ivc_timer.function = ivc_timeout_func;
+	}
+	mutex_unlock(&vblkdev->req_lock);
+
+	return req;
+}
+
+static struct vsc_request *vblk_get_req_by_sr_num(struct vblk_dev *vblkdev,
+		uint32_t num)
+{
+	struct vsc_request *req;
+
+	if (num >= vblkdev->max_requests)
+		return NULL;
+
+	mutex_lock(&vblkdev->req_lock);
+	req = &vblkdev->reqs[num];
+	if (test_bit(req->id, vblkdev->pending_reqs) == 0) {
+		dev_err(vblkdev->device,
+			"sr_num: Request index %d is not active!\n",
+			req->id);
+		req = NULL;
+	}
+	mutex_unlock(&vblkdev->req_lock);
+
+	/* Assuming serial number is same as index into request array */
+	return req;
+}
+
+/**
+ * vblk_put_req: Free an active vsc request.
+ */
+static void vblk_put_req(struct vsc_request *req)
+{
+	struct vblk_dev *vblkdev;
+
+	vblkdev = req->vblkdev;
+	if (vblkdev == NULL) {
+		pr_err("Request %d does not have valid vblkdev!\n",
+				req->id);
+		return;
+	}
+
+	if (req->id >= vblkdev->max_requests) {
+		dev_err(vblkdev->device, "Request Index %d out of range!\n",
+				req->id);
+		return;
+	}
+
+	mutex_lock(&vblkdev->req_lock);
+	if (req != &vblkdev->reqs[req->id]) {
+		dev_err(vblkdev->device,
+			"Request Index %d does not match with the request!\n",
+				req->id);
+		goto exit;
+	}
+
+	if (test_bit(req->id, vblkdev->pending_reqs) == 0) {
+		dev_err(vblkdev->device,
+			"Request index %d is not active!\n",
+			req->id);
+	} else {
+		clear_bit(req->id, vblkdev->pending_reqs);
+	}
+	memset(req, 0, sizeof(struct vsc_request));
+
+exit:
+	mutex_unlock(&vblkdev->req_lock);
+}
 
 static int vblk_send_config_cmd(struct vblk_dev *vblkdev)
 {
@@ -220,6 +314,7 @@ static int vblk_send_config_cmd(struct vblk_dev *vblkdev)
 	ivc_blk_req->cmd = R_CONFIG;
 	ivc_blk_req->blk_offset = 0;
 	ivc_blk_req->num_blks = 0;
+	ivc_blk_req->mempool_offset = 0;
 
 	dev_info(vblkdev->device, "send config cmd to ivc #%d\n",
 		vblkdev->ivc_id);
@@ -343,96 +438,17 @@ static int vblk_get_configinfo(struct vblk_dev *vblkdev)
 	return 0;
 }
 
-static void io_error_handler(struct vblk_dev *vblkdev)
+static void req_error_handler(struct vblk_dev *vblkdev, struct request *breq)
 {
+	dev_err(vblkdev->device,
+		"Error for request pos %llx direction %d size %x\n",
+		(blk_rq_pos(breq) * (uint64_t)SECTOR_SIZE),
+		rq_data_dir(breq),
+		blk_rq_bytes(breq));
+
 	spin_lock(vblkdev->queue->queue_lock);
-	__blk_end_request_all(vblkdev->req, -EIO);
+	__blk_end_request_all(breq, -EIO);
 	spin_unlock(vblkdev->queue->queue_lock);
-	vblkdev->cur_blk = 0;
-	vblkdev->cur_nblk = 0;
-	vblkdev->cur_buffer = NULL;
-	vblkdev->cur_transfer_cmd = UNKNOWN_CMD;
-	vblkdev->req = NULL;
-}
-
-static void vblk_fetch_request(struct vblk_dev *vblkdev)
-{
-	if (vblkdev->queue != NULL) {
-		spin_lock(vblkdev->queue->queue_lock);
-		vblkdev->req = blk_fetch_request(vblkdev->queue);
-		spin_unlock(vblkdev->queue->queue_lock);
-		if (vblkdev->req != NULL) {
-			if (vblkdev->req->cmd_type != REQ_TYPE_FS) {
-				dev_err(vblkdev->device, "Skip non-fs request\n");
-				io_error_handler(vblkdev);
-			} else
-				return;
-		}
-	}
-	vblkdev->cur_blk = 0;
-	vblkdev->cur_nblk = 0;
-	vblkdev->cur_buffer = NULL;
-	vblkdev->cur_transfer_cmd = UNKNOWN_CMD;
-}
-
-static int next_transfer(struct vblk_dev *vblkdev)
-{
-	struct bio_vec bvec;
-	size_t size;
-	size_t total_size = 0;
-	struct ivc_blk_request *ivc_blk_req;
-
-	ivc_blk_req = (struct ivc_blk_request *)
-		tegra_hv_ivc_write_get_next_frame(vblkdev->ivck);
-	if (IS_ERR_OR_NULL(ivc_blk_req)) {
-		dev_err(vblkdev->device, "can't get empty frame for write\n");
-		return -EIO;
-	}
-
-	if (vblkdev->cur_transfer_cmd == R_TRANSFER)
-		ivc_blk_req->cmd = R_TRANSFER_SHARED_BUF;
-	if (vblkdev->cur_transfer_cmd == W_TRANSFER)
-		ivc_blk_req->cmd = W_TRANSFER_SHARED_BUF;
-
-	ivc_blk_req->blk_offset = vblkdev->cur_blk;
-	ivc_blk_req->num_blks = vblkdev->cur_nblk;
-	ivc_blk_req->serial_number = vblkdev->serial_number;
-	ivc_blk_req->total_frame = vblkdev->total_frame;
-
-	if (vblkdev->cur_transfer_cmd == W_TRANSFER) {
-		rq_for_each_segment(bvec, vblkdev->req, vblkdev->iter) {
-			size = bvec.bv_len;
-			vblkdev->cur_buffer = page_address(bvec.bv_page) +
-						bvec.bv_offset;
-
-			if ((total_size + size) > (vblkdev->cur_nblk *
-				vblkdev->config.hardblk_size))
-				size = (vblkdev->cur_nblk *
-					vblkdev->config.hardblk_size) -
-					total_size;
-
-			memcpy(vblkdev->shared_buffer + total_size,
-				vblkdev->cur_buffer, size);
-			total_size += size;
-			if (total_size == (vblkdev->cur_nblk *
-				vblkdev->config.hardblk_size))
-				goto exit;
-		}
-exit:
-		vblkdev->cur_blk = 0;
-		vblkdev->cur_buffer = NULL;
-	}
-
-	vblkdev->cur_blk = 0;
-
-	if (tegra_hv_ivc_write_advance(vblkdev->ivck)) {
-		dev_err(vblkdev->device, "ivc write failed\n");
-		return -EIO;
-	}
-
-	vblkdev->ready_to_receive = true;
-
-	return 0;
 }
 
 static void ioctl_handler(struct vblk_dev *vblkdev)
@@ -440,7 +456,7 @@ static void ioctl_handler(struct vblk_dev *vblkdev)
 	struct combo_info_t *combo_info;
 	uint8_t *frame_ptr;
 
-	if (vblkdev->ioctl_status == IOCTL_WAIT_BUS && vblkdev->req == NULL) {
+	if (vblkdev->ioctl_status == IOCTL_WAIT_BUS) {
 		frame_ptr = tegra_hv_ivc_write_get_next_frame(vblkdev->ivck);
 		if (IS_ERR_OR_NULL(frame_ptr)) {
 			vblkdev->ioctl_status = IOCTL_FAILURE;
@@ -483,134 +499,294 @@ out:
 	}
 }
 
-static int get_data_from_io_server(struct vblk_dev *vblkdev)
+/**
+ * complete_bio_req: Complete a bio request after server is
+ *		done processing the request.
+ */
+
+static bool complete_bio_req(struct vblk_dev *vblkdev)
 {
 	struct ivc_blk_result *ivc_blk_res;
 	int status = 0;
 	struct bio_vec bvec;
 	size_t size;
 	size_t total_size = 0;
+	struct vsc_request *vsc_req = NULL;
+	struct request *bio_req;
+	void *buffer;
+
+	/* Take a lock to protect concurrent accesses to IVC queue */
+	mutex_lock(&vblkdev->ivc_lock);
+
+	if (!tegra_hv_ivc_can_read(vblkdev->ivck))
+		goto no_valid_io;
 
 	ivc_blk_res = (struct ivc_blk_result *)
 		tegra_hv_ivc_read_get_next_frame(vblkdev->ivck);
 	if (IS_ERR_OR_NULL(ivc_blk_res)) {
 		dev_err(vblkdev->device, "ivc read failed\n");
-		return -EIO;
+		goto no_valid_io;
 	}
 
 	status = ivc_blk_res->status;
-	if (status)
-		dev_err(vblkdev->device, "ivc cmd error = %d\n", status);
-
-	if (vblkdev->serial_number != ivc_blk_res->serial_number) {
-		dev_err(vblkdev->device, "serial_number mismatch!\n");
-		status = -EIO;
+	if (status != 0) {
+		dev_err(vblkdev->device, "Block IO request error = %d\n",
+				status);
 	}
-	if (!status) {
-		if (vblkdev->cur_transfer_cmd == R_TRANSFER) {
-			rq_for_each_segment(bvec, vblkdev->req, vblkdev->iter) {
+
+	vsc_req = vblk_get_req_by_sr_num(vblkdev, ivc_blk_res->serial_number);
+	if (vsc_req == NULL) {
+		dev_err(vblkdev->device, "serial_number mismatch num %d!\n",
+				ivc_blk_res->serial_number);
+		goto no_valid_io;
+	}
+	del_timer_sync(&vsc_req->ivc_timer);
+
+	bio_req = vsc_req->req;
+
+	if ((status == 0) && (bio_req != NULL)) {
+		if (rq_data_dir(bio_req) == READ) {
+			rq_for_each_segment(bvec, bio_req, vsc_req->iter) {
 				size = bvec.bv_len;
-				vblkdev->cur_buffer =
-					page_address(bvec.bv_page) +
+				buffer = page_address(bvec.bv_page) +
 					bvec.bv_offset;
 
-				if ((total_size + size) > (vblkdev->cur_nblk *
-					vblkdev->config.hardblk_size))
-					size = (vblkdev->cur_nblk *
+				if ((total_size + size) >
+					(vsc_req->ivc_req.num_blks *
+						vblkdev->config.hardblk_size))
+					size = (vsc_req->ivc_req.num_blks *
 						vblkdev->config.hardblk_size) -
 						total_size;
-				memcpy(vblkdev->cur_buffer,
-					vblkdev->shared_buffer + total_size,
+				memcpy(buffer,
+					vsc_req->mempool_virt + total_size,
 					size);
 
 				total_size += size;
-				if (total_size == (vblkdev->cur_nblk *
+				if (total_size == (vsc_req->ivc_req.num_blks *
 					vblkdev->config.hardblk_size))
-					goto exit;
+					break;
 			}
 		}
-	}
-exit:
-	if (tegra_hv_ivc_read_advance(vblkdev->ivck)) {
-		dev_err(vblkdev->device, "no empty frame for read\n");
-		return -EIO;
-	}
 
-	return status;
-}
+		spin_lock(vblkdev->queue->queue_lock);
+		if (__blk_end_request(bio_req, 0,
+			vsc_req->ivc_req.num_blks *
+				vblkdev->config.hardblk_size)) {
+			dev_err(vblkdev->device,
+				"Error completing the request!\n");
+		}
+		spin_unlock(vblkdev->queue->queue_lock);
 
-static int fetch_next_req(struct vblk_dev *vblkdev)
-{
-	vblk_fetch_request(vblkdev);
-	if (vblkdev->req == NULL)
-		return -EINVAL;
-
-	vblkdev->cur_transfer_cmd = rq_data_dir(vblkdev->req);
-	vblkdev->serial_number = 0;
-	vblkdev->total_frame = 1;
-	vblkdev->iter.bio = NULL;
-
-	if (blk_rq_bytes(vblkdev->req) > vblkdev->size) {
+	} else if ((bio_req != NULL) && (status != 0)) {
+		req_error_handler(vblkdev, bio_req);
+	} else {
 		dev_err(vblkdev->device,
-			"Request size over I/O limit. 0x%x > 0x%x\n",
-			blk_rq_bytes(vblkdev->req),
-			vblkdev->config.max_blks_per_io);
-		io_error_handler(vblkdev);
-		return -EINVAL;
+			"VSC request %d has null bio request!\n",
+			vsc_req->id);
 	}
 
-	return 0;
+	dma_free_coherent(vblkdev->device,
+		(vsc_req->ivc_req.num_blks * vblkdev->config.hardblk_size),
+		NULL,
+		(dma_addr_t)(vsc_req->mempool_virt - vblkdev->shared_buffer));
+
+	vblk_put_req(vsc_req);
+
+	if (tegra_hv_ivc_read_advance(vblkdev->ivck)) {
+		dev_err(vblkdev->device,
+			"Couldn't increment read frame pointer!\n");
+	}
+
+	mutex_unlock(&vblkdev->ivc_lock);
+
+	return true;
+
+no_valid_io:
+	mutex_unlock(&vblkdev->ivc_lock);
+
+	return false;
 }
 
-static void do_next_bio(struct vblk_dev *vblkdev)
+static bool bio_req_sanity_check(struct vblk_dev *vblkdev,
+		struct request *bio_req)
 {
-	vblkdev->serial_number += 1;
+	uint64_t start_offset = (blk_rq_pos(bio_req) * (uint64_t)SECTOR_SIZE);
+	uint64_t req_bytes = blk_rq_bytes(bio_req);
+	uint64_t max_io_bytes = (vblkdev->config.hardblk_size *
+			vblkdev->config.max_blks_per_io);
 
-	if (((blk_rq_pos(vblkdev->req) * SECTOR_SIZE) %
-			vblkdev->config.hardblk_size) != 0) {
+
+	if ((start_offset >= vblkdev->size) || (req_bytes > vblkdev->size) ||
+		((start_offset + req_bytes) > vblkdev->size))
+	{
+		dev_err(vblkdev->device,
+			"Invalid I/O limit start 0x%llx size 0x%llx > 0x%llx\n",
+			start_offset,
+			req_bytes, vblkdev->size);
+		return false;
+	}
+
+	if ((start_offset % vblkdev->config.hardblk_size) != 0) {
 		dev_err(vblkdev->device, "Unaligned block offset (%lld %d)\n",
-			(long long int)blk_rq_pos(vblkdev->req),
-				vblkdev->config.hardblk_size);
-		io_error_handler(vblkdev);
-		return;
+			start_offset, vblkdev->config.hardblk_size);
+		return false;
 	}
 
-	if (((blk_rq_sectors(vblkdev->req) * SECTOR_SIZE) %
-			vblkdev->config.hardblk_size) != 0) {
+	if ((req_bytes % vblkdev->config.hardblk_size) != 0) {
 		dev_err(vblkdev->device, "Unaligned io length (%lld %d)\n",
-			(long long int)blk_rq_sectors(vblkdev->req),
-				vblkdev->config.hardblk_size);
-		io_error_handler(vblkdev);
-		return;
+			req_bytes, vblkdev->config.hardblk_size);
+		return false;
 	}
 
-	vblkdev->cur_blk = ((blk_rq_pos(vblkdev->req) * SECTOR_SIZE) /
-					vblkdev->config.hardblk_size);
-	vblkdev->cur_nblk = ((blk_rq_sectors(vblkdev->req) * SECTOR_SIZE) /
-					vblkdev->config.hardblk_size);
-
-	if ((vblkdev->cur_blk + vblkdev->cur_nblk) >
-		vblkdev->config.num_blks) {
-		dev_err(vblkdev->device, "Beyond-end write (%lld %d)\n",
-			(long long int)vblkdev->cur_blk, vblkdev->cur_nblk);
-		io_error_handler(vblkdev);
-		return;
+	if (req_bytes > max_io_bytes) {
+		dev_err(vblkdev->device, "Req bytes %llx greater than %llx!\n",
+			req_bytes, max_io_bytes);
+		return false;
 	}
 
-	if (next_transfer(vblkdev))
-		io_error_handler(vblkdev);
+	return true;
+}
 
-	if (timer_pending(&vblkdev->ivc_timer))
-		del_timer_sync(&vblkdev->ivc_timer);
+/**
+ * submit_bio_req: Fetch a bio request and submit it to
+ * server for processing.
+ */
+static bool submit_bio_req(struct vblk_dev *vblkdev)
+{
+	struct vsc_request *vsc_req = NULL;
+	struct request *bio_req = NULL;
+	struct ivc_blk_request *ivc_blk_req;
+	dma_addr_t phys;
+	struct bio_vec bvec;
+	size_t size;
+	size_t total_size = 0;
+	void *buffer;
 
-	vblkdev->ivc_timer.expires = jiffies + transfer_timeout * HZ;
-	add_timer(&vblkdev->ivc_timer);
+	/* Take a lock to protect concurrent accesses to IVC queue */
+	mutex_lock(&vblkdev->ivc_lock);
+
+	if (!tegra_hv_ivc_can_write(vblkdev->ivck))
+		goto bio_exit;
+
+	if (vblkdev->queue == NULL)
+		goto bio_exit;
+
+	vsc_req = vblk_get_req(vblkdev);
+	if (vsc_req == NULL)
+		goto bio_exit;
+
+	spin_lock(vblkdev->queue->queue_lock);
+	bio_req = blk_fetch_request(vblkdev->queue);
+	spin_unlock(vblkdev->queue->queue_lock);
+
+	if (bio_req != NULL) {
+		if (bio_req->cmd_type != REQ_TYPE_FS) {
+			dev_err(vblkdev->device, "Skip non-fs request\n");
+			goto bio_exit;
+		}
+	} else {
+		goto bio_exit;
+	}
+
+	if (rq_data_dir(bio_req) == READ) {
+		vsc_req->ivc_req.cmd = R_TRANSFER_SHARED_BUF;
+	} else if (rq_data_dir(bio_req) == WRITE) {
+		vsc_req->ivc_req.cmd = W_TRANSFER_SHARED_BUF;
+	} else {
+		dev_err(vblkdev->device,
+			"Request direction is not read/write!\n");
+		goto bio_exit;
+	}
+
+	vsc_req->iter.bio = NULL;
+	if (!bio_req_sanity_check(vblkdev, bio_req)) {
+		goto bio_exit;
+	}
+
+	vsc_req->req = bio_req;
+
+	ivc_blk_req = &vsc_req->ivc_req;
+	ivc_blk_req->blk_offset = ((blk_rq_pos(bio_req) *
+			(uint64_t)SECTOR_SIZE) / vblkdev->config.hardblk_size);
+	ivc_blk_req->num_blks = ((blk_rq_sectors(bio_req) * SECTOR_SIZE) /
+					vblkdev->config.hardblk_size);
+
+	vsc_req->mempool_virt = dma_alloc_coherent(vblkdev->device,
+				blk_rq_bytes(bio_req),
+				&phys,
+				GFP_KERNEL);
+	if (phys >= vblkdev->ivmk->size) {
+		dev_err(vblkdev->device,
+			"dma alloc coherent of size %d failed\n",
+			blk_rq_bytes(bio_req));
+		goto bio_exit;
+	}
+
+	ivc_blk_req->mempool_offset = phys;
+	vsc_req->mempool_virt = (vblkdev->shared_buffer + phys);
+
+	if (rq_data_dir(bio_req) == WRITE) {
+		rq_for_each_segment(bvec, bio_req, vsc_req->iter) {
+			size = bvec.bv_len;
+			buffer = page_address(bvec.bv_page) +
+						bvec.bv_offset;
+
+			if ((total_size + size) > (ivc_blk_req->num_blks *
+				vblkdev->config.hardblk_size))
+				size = (ivc_blk_req->num_blks *
+					vblkdev->config.hardblk_size) -
+					total_size;
+
+			memcpy(vsc_req->mempool_virt + total_size, buffer,
+					size);
+			total_size += size;
+			if (total_size == (ivc_blk_req->num_blks *
+				vblkdev->config.hardblk_size))
+				break;
+		}
+	}
+
+	if (!tegra_hv_ivc_write(vblkdev->ivck, ivc_blk_req,
+				sizeof(struct ivc_blk_request))) {
+		dev_err(vblkdev->device,
+			"Request Id %d IVC write failed!\n",
+				vsc_req->id);
+		goto bio_exit;
+	}
+
+	if (timer_pending(&vsc_req->ivc_timer)) {
+		dev_err(vblkdev->device, "Req %d Unexpected timer pending!\n",
+				vsc_req->id);
+		goto bio_exit;
+	}
+
+	vsc_req->ivc_timer.expires = jiffies + transfer_timeout * HZ;
+	add_timer(&vsc_req->ivc_timer);
+
+	mutex_unlock(&vblkdev->ivc_lock);
+
+	return true;
+
+bio_exit:
+	mutex_unlock(&vblkdev->ivc_lock);
+
+	if (vsc_req != NULL) {
+		vblk_put_req(vsc_req);
+	}
+
+	if (bio_req != NULL) {
+		req_error_handler(vblkdev, bio_req);
+		return true;
+	}
+
+	return false;
 }
 
 static void vblk_request_work(struct work_struct *ws)
 {
 	struct vblk_dev *vblkdev =
 		container_of(ws, struct vblk_dev, work);
+	bool req_submitted, req_completed;
 
 	if (tegra_hv_ivc_channel_notified(vblkdev->ivck) != 0)
 		return;
@@ -621,44 +797,41 @@ static void vblk_request_work(struct work_struct *ws)
 			return;
 	}
 
-	if (vblkdev->req != NULL) {
-		if (tegra_hv_ivc_can_read(vblkdev->ivck)) {
-			del_timer_sync(&vblkdev->ivc_timer);
-			if (get_data_from_io_server(vblkdev)) {
-				io_error_handler(vblkdev);
-				return;
-			}
-			vblkdev->ready_to_receive = false;
-		}
+	req_submitted = true;
+	req_completed = true;
+	while (req_submitted || req_completed) {
+		req_completed = complete_bio_req(vblkdev);
 
-		if (vblkdev->ready_to_receive == false) {
-			spin_lock(vblkdev->queue->queue_lock);
-			if (!__blk_end_request(vblkdev->req, 0,
-				vblkdev->cur_nblk *
-				vblkdev->config.hardblk_size)) {
-				spin_unlock(vblkdev->queue->queue_lock);
-
-				if (fetch_next_req(vblkdev))
-					return;
-				do_next_bio(vblkdev);
-			} else {
-				spin_unlock(vblkdev->queue->queue_lock);
-				do_next_bio(vblkdev);
-			}
-		}
-	} else {
-		if (fetch_next_req(vblkdev))
-			return;
-		do_next_bio(vblkdev);
+		req_submitted = submit_bio_req(vblkdev);
 	}
 }
 
-void ivc_timeout_func(unsigned long ldev)
+void ivc_timeout_func(unsigned long req)
 {
-	struct vblk_dev *vblkdev = (struct vblk_dev *)ldev;
+	struct vsc_request *vsc_req = (struct vsc_request *)req;
+	struct vblk_dev *vblkdev = vsc_req->vblkdev;
 
-	dev_err(vblkdev->device, "timeout!!!\n");
-	io_error_handler(vblkdev);
+	dev_err(vblkdev->device, "timeout! For request ID %d\n",
+			vsc_req->id);
+
+	if (vsc_req->id >= vblkdev->max_requests) {
+		dev_err(vblkdev->device, "Timeout happened for invalid"
+			"request id %d\n", vsc_req->id);
+		return;
+	}
+
+	if (test_bit(vsc_req->id, vblkdev->pending_reqs) == 0) {
+		dev_err(vblkdev->device,
+			"Timeout signalled for Inactive request id %d\n",
+				vsc_req->id);
+		return;
+	}
+
+	req_error_handler(vblkdev, vsc_req->req);
+	/* Actual Request slot should get freed when the Server
+	 * responds
+	 * */
+	vsc_req->req = NULL;
 }
 
 /* The simple form of the request function. */
@@ -834,16 +1007,15 @@ const struct block_device_operations vblk_ops = {
 /* Set up virtual device. */
 static void setup_device(struct vblk_dev *vblkdev)
 {
+	uint32_t max_requests;
+	uint32_t max_io_bytes;
+
 	vblkdev->size =
 		vblkdev->config.num_blks * vblkdev->config.hardblk_size;
 
 	spin_lock_init(&vblkdev->lock);
 	spin_lock_init(&vblkdev->queue_lock);
 	mutex_init(&vblkdev->ioctl_lock);
-
-	init_timer(&vblkdev->ivc_timer);
-	vblkdev->ivc_timer.data = (unsigned long) vblkdev;
-	vblkdev->ivc_timer.function = ivc_timeout_func;
 
 	vblkdev->queue = blk_init_queue(vblk_request, &vblkdev->queue_lock);
 	if (vblkdev->queue == NULL) {
@@ -862,9 +1034,37 @@ static void setup_device(struct vblk_dev *vblkdev)
 		vblkdev->config.hardblk_size);
 	blk_queue_physical_block_size(vblkdev->queue,
 		vblkdev->config.hardblk_size);
-	blk_queue_max_hw_sectors(vblkdev->queue,
-		(vblkdev->config.hardblk_size *
-			vblkdev->config.max_blks_per_io) / SECTOR_SIZE);
+
+	/* Set the maximum number of requests possible using
+	 * server returned information */
+	max_io_bytes = (vblkdev->config.hardblk_size *
+				vblkdev->config.max_blks_per_io);
+	max_requests = ((vblkdev->ivmk->size) / max_io_bytes);
+	vblkdev->max_requests = max_requests;
+
+	if (max_requests < MAX_VSC_REQS) {
+		dev_warn(vblkdev->device,
+			"Setting Max requests to %d, consider "
+			"increasing mempool size !\n",
+			vblkdev->max_requests);
+	} else if (max_requests > MAX_VSC_REQS) {
+		vblkdev->max_requests = MAX_VSC_REQS;
+		dev_warn(vblkdev->device,
+			"Reducing the max requests to %d, consider"
+			" supporting more requests for the vblkdev!\n",
+			MAX_VSC_REQS);
+	}
+
+	if (vblkdev->ivck->nframes < vblkdev->max_requests) {
+		dev_warn(vblkdev->device,
+			"IVC frames %d less than possible max requests %d!\n",
+			vblkdev->ivck->nframes, vblkdev->max_requests);
+	}
+
+	mutex_init(&vblkdev->req_lock);
+	mutex_init(&vblkdev->ivc_lock);
+
+	blk_queue_max_hw_sectors(vblkdev->queue, max_io_bytes / SECTOR_SIZE);
 	queue_flag_set_unlocked(QUEUE_FLAG_NONROT, vblkdev->queue);
 
 	/* And the gendisk structure. */
@@ -895,10 +1095,7 @@ static void vblk_init_device(struct work_struct *ws)
 		if (vblk_get_configinfo(vblkdev))
 			return;
 
-		vblkdev->shared_buffer = shared_buffer +
-					vblkdev->config.shared_buffer_offset;
 		vblkdev->initialized = true;
-		vblkdev->req = NULL;
 		setup_device(vblkdev);
 	}
 }
@@ -985,12 +1182,20 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 		goto free_drvdata;
 	}
 
-	shared_buffer = ioremap_cache(ivmk->ipa, ivmk->size);
-	if (IS_ERR_OR_NULL(shared_buffer)) {
+	vblkdev->shared_buffer = ioremap_cache(ivmk->ipa, ivmk->size);
+	if (IS_ERR_OR_NULL(vblkdev->shared_buffer)) {
 		dev_err(dev, "Failed to map mempool area %d\n",
 				vblkdev->ivm_id);
 		ret = -ENOMEM;
 		goto free_mempool;
+	}
+
+	ret = dma_declare_coherent_memory(vblkdev->device, ivmk->ipa,
+				0, ivmk->size,
+			DMA_MEMORY_NOMAP | DMA_MEMORY_EXCLUSIVE);
+	if (!(ret & DMA_MEMORY_NOMAP)) {
+		dev_err(dev, "dma_declare_coherent_memory failed\n");
+		goto unmap_mempool;
 	}
 
 	vblkdev->ivmk = ivmk;
@@ -1001,7 +1206,6 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 		goto unmap_mempool;
 	}
 
-	vblkdev->cur_transfer_cmd = UNKNOWN_CMD;
 	vblkdev->ioctl_status = IOCTL_IDLE;
 	init_completion(&vblkdev->ioctl_complete);
 	vblkdev->initialized = false;
@@ -1043,7 +1247,7 @@ free_cmd_frame:
 	kfree(vblkdev->cmd_frame);
 
 unmap_mempool:
-	iounmap(shared_buffer);
+	iounmap(vblkdev->shared_buffer);
 
 free_mempool:
 	kfree(ivmk);

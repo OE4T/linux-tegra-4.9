@@ -20,7 +20,6 @@
 
 #include <linux/bug.h>
 
-#include <asm/atomic.h>
 #include <asm/barrier.h>
 #include <asm/lse.h>
 

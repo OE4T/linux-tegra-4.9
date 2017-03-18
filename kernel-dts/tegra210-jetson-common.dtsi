@@ -168,6 +168,10 @@
                       <0x0 0x70000008 0x0 0x04>;   /* Strapping options */
         };
 
+	pwm@7000a000 {
+		nvidia,no-clk-sleeping-in-ops;
+	};
+
 	pwm@70110000 {
 		pwm-regulator = <&cpu_ovr_reg>;
 		status = "disabled";

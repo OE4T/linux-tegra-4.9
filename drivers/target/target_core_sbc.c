@@ -835,7 +835,7 @@ sbc_parse_cdb(struct se_cmd *cmd, struct sbc_ops *ops)
 {
 	struct se_device *dev = cmd->se_dev;
 	unsigned char *cdb = cmd->t_task_cdb;
-	unsigned int size;
+	unsigned int size = 0;
 	u32 sectors = 0;
 	sense_reason_t ret;
 

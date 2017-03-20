@@ -2949,7 +2949,7 @@ static int translate_sense_reason(struct se_cmd *cmd, sense_reason_t reason)
 	const struct sense_info *si;
 	u8 *buffer = cmd->sense_buffer;
 	int r = (__force int)reason;
-	u8 asc, ascq;
+	u8 asc = 0, ascq = 0;
 	bool desc_format = target_sense_desc_format(cmd->se_dev);
 
 	if (r < ARRAY_SIZE(sense_info_table) && sense_info_table[r].key)

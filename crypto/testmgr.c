@@ -1935,7 +1935,7 @@ static int __do_test_ecdsa_verify(struct crypto_akcipher *tfm,
 	u8 *m_str = NULL;
 	struct scatterlist src_tab[3], dst;
 	struct tcrypt_result result;
-	unsigned int outbuf_maxlen;
+	int outbuf_maxlen;
 	u8 *outbuf = NULL;
 	unsigned int nbytes;
 	int err, m_size;
@@ -2045,7 +2045,7 @@ static int __do_test_ecdsa_sign_verify(struct crypto_akcipher *tfm,
 	struct scatterlist src_tab[3];
 	struct scatterlist src, dst;
 	struct tcrypt_result result;
-	unsigned int outbuf_maxlen;
+	int outbuf_maxlen;
 	void *outbuf = NULL;
 	unsigned int nbytes;
 	int err;

@@ -386,7 +386,7 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 	if (!h->alloc)
 		return -EFAULT;
 
-	if (elem_size == h_stride && elem_size == sys_stride) {
+	if (elem_size == h_stride && elem_size == sys_stride && (h_offs % 8 == 0)) {
 		elem_size *= count;
 		h_stride = elem_size;
 		sys_stride = elem_size;

@@ -640,14 +640,14 @@ static ssize_t bh1730_debugfs_read_reg(struct file *file,
 		BH1730_REG_DATA1HIGH
 	};
 
-	len = snprintf(buf, PAGE_SIZE,  "lux: %u\n", st->light.hw);
-	len += snprintf(buf + len, PAGE_SIZE - len,  "registers:\n");
+	len = snprintf(buf, sizeof(buf),  "lux: %u\n", st->light.hw);
+	len += snprintf(buf + len, sizeof(buf) - len,  "registers:\n");
 	for (i = 0; i < ARRAY_SIZE(regs); i++) {
 		ret = bh1730_i2c_rd(st, regs[i], &val);
 		if (ret)
-			len += snprintf(buf + len, PAGE_SIZE - len,  "0x%02hhx=ERR\n", regs[i]);
+			len += snprintf(buf + len, sizeof(buf) - len,  "0x%02hhx=ERR\n", regs[i]);
 		else
-			len += snprintf(buf + len, PAGE_SIZE - len,  "0x%02hhx=0x%02hhx\n",
+			len += snprintf(buf + len, sizeof(buf) - len,  "0x%02hhx=0x%02hhx\n",
 					regs[i], val);
 	}
 	buf[len++] = 0;

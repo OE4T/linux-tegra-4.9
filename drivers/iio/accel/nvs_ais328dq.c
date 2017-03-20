@@ -760,7 +760,7 @@ static int stm_id_i2c(struct stm_state *st,
 
 static int stm_of_dt(struct stm_state *st, struct device_node *dn)
 {
-	u32 count;
+	int count;
 	int i;
 	int j;
 

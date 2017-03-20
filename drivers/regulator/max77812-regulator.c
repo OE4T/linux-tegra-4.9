@@ -34,9 +34,9 @@
 #define MAX77812_REG_TOPSYS_INT_M	0x04
 #define MAX77812_REG_TOPSYS_STAT	0x05
 #define MAX77812_REG_EN_CTRL		0x06
-#define MAX77812_REG_STUP_DLY1		0x07
-#define MAX77812_REG_STUP_DLY2		0x08
-#define MAX77812_REG_STUP_DLY3		0x09
+#define MAX77812_REG_STUP_DLY2		0x07
+#define MAX77812_REG_STUP_DLY3		0x08
+#define MAX77812_REG_STUP_DLY4		0x09
 #define MAX77812_REG_SHDN_DLY1		0x0A
 #define MAX77812_REG_SHDN_DLY2		0x0B
 #define MAX77812_REG_SHDN_DLY3		0x0C
@@ -76,6 +76,14 @@
 #define MAX77812_SHDN_SLEW_RATE_MASK		0x70
 #define MAX77812_RAMPDOWN_SLEW_RATE_MASK	0x07
 #define MAX77812_RAMPUP_SLEW_RATE_MASK		0x70
+#define MAX77812_SLEW_RATE_SHIFT		4
+
+#define MAX77812_OP_ACTIVE_DISCHARGE_MASK		BIT(7)
+#define MAX77812_PEAK_CURRENT_LMT_MASK			0x70
+#define MAX77812_SWITCH_FREQ_MASK			0x0C
+#define MAX77812_FORCED_PWM_MASK			BIT(1)
+#define MAX77812_SLEW_RATE_CNTRL_MASK			BIT(0)
+#define MAX77812_START_SHD_DELAY_MASK			0x1F
 
 #define MAX77812_VOUT_MASK		0xFF
 #define MAX77812_VOUT_N_VOLTAGE		0xFF
@@ -93,8 +101,19 @@ static unsigned int slew_rate_table[] = {
 	1250, 2500, 5000, 10000, 20000, 40000, 60000,
 };
 
+static unsigned int peak_current_limit[] = {
+	3000000, 3600000, 4200000, 4800000, 5400000, 6000000,
+	6000000, 7200000,
+};
+
 struct max77812_reg_pdata {
 	struct regulator_init_data *ridata;
+	int peak_current_limit;
+	int switching_freq;
+	bool disable_active_discharge;
+	bool delay_time_step_select;
+	bool enable_forced_pwm;
+	bool disable_slew_rate_cntrl;
 };
 
 struct max77812_regulator {
@@ -171,7 +190,7 @@ static int max77812_reg_init(struct max77812_regulator *max77812)
 		rampdelay = max77802_slew_rate_to_reg(slew_rate_table,
 				ARRAY_SIZE(slew_rate_table),
 				max77812->shutdown_slew_rate);
-		slew_rate |= rampdelay;
+		slew_rate |= (rampdelay << MAX77812_SLEW_RATE_SHIFT);
 		mask |= MAX77812_SHDN_SLEW_RATE_MASK;
 	}
 
@@ -180,8 +199,8 @@ static int max77812_reg_init(struct max77812_regulator *max77812)
 					MAX77812_REG_GLB_CFG1,
 					mask, slew_rate);
 		if (ret < 0) {
-			dev_err(max77812->dev, "slew rate cfg1 update failed %d\n",
-						ret);
+			dev_err(max77812->dev,
+				"slew rate cfg1 update failed %d\n", ret);
 			return ret;
 		}
 	}
@@ -200,22 +219,123 @@ static int max77812_reg_init(struct max77812_regulator *max77812)
 		rampdelay = max77802_slew_rate_to_reg(slew_rate_table,
 				ARRAY_SIZE(slew_rate_table),
 				max77812->ramp_down_slew_rate);
-		slew_rate |= rampdelay;
+		slew_rate |= (rampdelay << MAX77812_SLEW_RATE_SHIFT);
 		mask |= MAX77812_RAMPDOWN_SLEW_RATE_MASK;
 	}
 
 	if (slew_rate && mask) {
 		ret = regmap_update_bits(max77812->rmap,
-					MAX77812_REG_GLB_CFG2,
-					mask, slew_rate);
+					 MAX77812_REG_GLB_CFG2,
+					 mask, slew_rate);
 		if (ret < 0) {
-			dev_err(max77812->dev, "slew rate cfg2 update failed %d\n",
-						ret);
+			dev_err(max77812->dev,
+				"slew rate cfg2 update failed %d\n", ret);
 			return ret;
 		}
 	}
 
 	return 0;
+}
+
+static int max77812_config_init(struct max77812_regulator *max77812, int id)
+{
+	struct max77812_reg_pdata *rpdata = &max77812->reg_pdata[id];
+	u8 rail_config = 0;
+	u8 mask = 0;
+	u8 curnt_lim;
+	u8 switch_freq;
+	u8 reg_addr;
+	int ret;
+
+	if (rpdata->disable_active_discharge) {
+		rail_config &= ~MAX77812_OP_ACTIVE_DISCHARGE_MASK;
+		mask = MAX77812_OP_ACTIVE_DISCHARGE_MASK;
+	}
+
+	if (rpdata->peak_current_limit > 0) {
+		curnt_lim = max77802_slew_rate_to_reg(peak_current_limit,
+				ARRAY_SIZE(peak_current_limit),
+				rpdata->peak_current_limit);
+		rail_config |= (curnt_lim << 4);
+		mask |= MAX77812_PEAK_CURRENT_LMT_MASK;
+	}
+
+	if (rpdata->switching_freq > 0) {
+		if (rpdata->switching_freq == 2)
+			switch_freq = 0;
+		else if (rpdata->switching_freq == 3)
+			switch_freq = 1;
+		else if (rpdata->switching_freq == 4)
+			switch_freq = 2;
+		else
+			switch_freq = 3;
+		rail_config |= (switch_freq << 2);
+		mask |= MAX77812_SWITCH_FREQ_MASK;
+	}
+
+	if (rpdata->enable_forced_pwm) {
+		rail_config |= MAX77812_FORCED_PWM_MASK;
+		mask |= MAX77812_FORCED_PWM_MASK;
+	}
+
+	if (rpdata->disable_slew_rate_cntrl) {
+		rail_config &= ~MAX77812_SLEW_RATE_CNTRL_MASK;
+		mask |= MAX77812_SLEW_RATE_CNTRL_MASK;
+	}
+
+	switch (id) {
+	case MAX77812_REGULATOR_ID_M1:
+		reg_addr = MAX77812_REG_M1_CGF;
+		break;
+	case MAX77812_REGULATOR_ID_M2:
+		reg_addr = MAX77812_REG_M2_CGF;
+		break;
+	case MAX77812_REGULATOR_ID_M3:
+		reg_addr = MAX77812_REG_M3_CGF;
+		break;
+	case MAX77812_REGULATOR_ID_M4:
+		reg_addr = MAX77812_REG_M4_CGF;
+		break;
+	}
+
+	if (rail_config && mask) {
+		ret = regmap_update_bits(max77812->rmap,
+					 reg_addr, mask, rail_config);
+		if (ret < 0) {
+			dev_err(max77812->dev,
+				"reg config update failed %d\n", ret);
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
+static int max77812_of_parse_cb(struct device_node *np,
+				const struct regulator_desc *desc,
+				struct regulator_config *config)
+{
+	struct max77812_regulator *max77812 = config->driver_data;
+	struct max77812_reg_pdata *rpdata = &max77812->reg_pdata[desc->id];
+	u32 pval;
+	int ret;
+
+	rpdata->disable_active_discharge = of_property_read_bool(np,
+				"maxim,disable-active-discharge");
+
+	ret = of_property_read_u32(np, "maxim,peak-current-limit-ua", &pval);
+	rpdata->peak_current_limit = (!ret) ? pval : -1;
+
+	ret = of_property_read_u32(np, "maxim,switching-frequency", &pval);
+	rpdata->switching_freq = (!ret) ? pval : -1;
+
+	rpdata->enable_forced_pwm = of_property_read_bool(np,
+				"maxim,enable-forced-pwm-mode");
+
+	rpdata->disable_slew_rate_cntrl = of_property_read_bool(np,
+				"maxim,disable-slew-rate-control");
+
+	return max77812_config_init(max77812, desc->id);
 }
 
 static struct regulator_ops max77812_regulator_ops = {
@@ -232,6 +352,7 @@ static struct regulator_ops max77812_regulator_ops = {
 		.name = max77812_rails(_name),		\
 		.of_match = of_match_ptr(#_name),		\
 		.regulators_node = of_match_ptr("regulators"),	\
+		.of_parse_cb = max77812_of_parse_cb,		\
 		.supply_name = "vin",			\
 		.id = MAX77812_REGULATOR_ID_##_id,	\
 		.ops = &max77812_regulator_ops,		\

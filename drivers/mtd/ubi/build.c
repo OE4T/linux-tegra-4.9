@@ -1433,8 +1433,13 @@ static int __init ubi_mtd_param_parse(const char *val, struct kernel_param *kp)
 	}
 
 	p = &mtd_dev_param[mtd_devs];
-	strcpy(&p->name[0], tokens[0]);
 
+	if (strlen(tokens[0]) > MTD_PARAM_LEN_MAX) {
+		pr_err("length of tokens[0] exceeds destination p->name[0]\n");
+		return -EINVAL;
+	}
+
+	strcpy(&p->name[0], tokens[0]);
 	token = tokens[1];
 	if (token) {
 		p->vid_hdr_offs = bytes_str_to_int(token);

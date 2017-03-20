@@ -372,14 +372,12 @@ static int bpmp_trywait(int ch, int mrq, void *ob_data, int ob_sz)
 	if (wait_for_completion_timeout(w, timeout))
 		return 0;
 
-	pr_err("%s() wait_for_completion_timeout on ch %d\n", __func__, ch);
+	if (mail_ops->master_acked(mail_ops, ch))
+		return 0;
+
+	pr_err("%s() timed out on ch %d\n", __func__, ch);
 	bpmp_show_req(mrq, ob_data, ob_sz);
 	WARN_ON(1);
-
-	if (mail_ops->master_acked(mail_ops, ch)) {
-		pr_info("channel %d was actually acked\n", ch);
-		return 0;
-	}
 
 	return -ETIMEDOUT;
 }

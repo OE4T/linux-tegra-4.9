@@ -291,8 +291,10 @@ static int lc898212_write_table(struct lc898212 *priv,
 				return err;
 			}
 			while (data != 0) {
-				if (count >= 10)
+				if (count >= 10) {
+					pr_err("%s: Exceed max retry\n", __func__);
 					return -EFAULT; /* focuser not ready */
+				}
 
 				usleep_range(10, 20);
 				err = regmap_read(priv->regmap8, val,
@@ -312,7 +314,7 @@ static int lc898212_write_table(struct lc898212 *priv,
 		else
 			err = regmap_write(priv->regmap8, next->addr, val);
 		if (err) {
-			pr_err("%s:lc898212_write_table:%d", __func__, err);
+			pr_err("%s: %d addr = 0x%x, val = 0x%x\n", __func__, err, next->addr, val);
 			return err;
 		}
 	}

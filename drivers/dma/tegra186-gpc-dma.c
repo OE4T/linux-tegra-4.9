@@ -249,8 +249,9 @@ struct tegra_dma_channel {
 	struct list_head	free_dma_desc;
 	struct list_head	cb_desc;
 
-	/* ISR handler and bottom half of isr handling */
+	/* ISR handler and tasklet for bottom half of isr handling */
 	dma_isr_handler		isr_handler;
+	struct tasklet_struct	tasklet;
 	dma_async_tx_callback	callback;
 	void			*callback_param;
 
@@ -671,7 +672,7 @@ static void handle_cont_sngl_cycle_dma_done(struct tegra_dma_channel *tdc,
 	return;
 }
 
-static irqreturn_t tegra_dma_bh(int irq, void *data)
+static void tegra_dma_tasklet(unsigned long data)
 {
 	struct tegra_dma_channel *tdc = (struct tegra_dma_channel *)data;
 	dma_async_tx_callback callback = NULL;
@@ -695,7 +696,6 @@ static irqreturn_t tegra_dma_bh(int irq, void *data)
 		raw_spin_lock_irqsave(&tdc->lock, flags);
 	}
 	raw_spin_unlock_irqrestore(&tdc->lock, flags);
-	return IRQ_HANDLED;
 }
 
 static void tegra_dma_chan_decode_error(struct tegra_dma_channel *tdc, unsigned int err_status)
@@ -760,9 +760,9 @@ static irqreturn_t tegra_dma_isr(int irq, void *dev_id)
 				tdc->id, status);
 			tegra_dma_dump_chan_regs(tdc);
 		}
+		tasklet_schedule(&tdc->tasklet);
 		raw_spin_unlock_irqrestore(&tdc->lock, flags);
-
-		return IRQ_WAKE_THREAD;
+		return IRQ_HANDLED;
 	}
 
 	raw_spin_unlock_irqrestore(&tdc->lock, flags);
@@ -1819,6 +1819,8 @@ static int tegra_dma_probe(struct platform_device *pdev)
 		tdc->slave_id = -1;
 
 		raw_spin_lock_init(&tdc->lock);
+		tasklet_init(&tdc->tasklet, tegra_dma_tasklet,
+				(unsigned long)tdc);
 
 		INIT_LIST_HEAD(&tdc->pending_sg_req);
 		INIT_LIST_HEAD(&tdc->free_sg_req);
@@ -1874,13 +1876,12 @@ static int tegra_dma_probe(struct platform_device *pdev)
 	for (i = 0; i < cdata->nr_channels; i++) {
 		struct tegra_dma_channel *tdc = &tdma->channels[i];
 
-		ret = devm_request_threaded_irq(&pdev->dev, tdc->irq,
-				tegra_dma_isr, tegra_dma_bh, 0,
-				tdc->name, tdc);
+		ret = devm_request_irq(&pdev->dev, tdc->irq,
+				tegra_dma_isr, 0, tdc->name, tdc);
 		if (ret) {
 			dev_err(&pdev->dev,
-				"request_irq(%d) failed with err %d ch %d\n",
-				tdc->irq, ret, i);
+				"request_irq failed with err %d channel %d\n",
+				i, ret);
 			goto err_irq;
 		}
 	}
@@ -1907,6 +1908,10 @@ static int tegra_dma_probe(struct platform_device *pdev)
 err_unregister_dma_dev:
 	dma_async_device_unregister(&tdma->dma_dev);
 err_irq:
+	while (--i >= 0) {
+		struct tegra_dma_channel *tdc = &tdma->channels[i];
+		tasklet_kill(&tdc->tasklet);
+	}
 	tegra_pd_remove_device(&pdev->dev);
 	return ret;
 }
@@ -1914,8 +1919,16 @@ err_irq:
 static int tegra_dma_remove(struct platform_device *pdev)
 {
 	struct tegra_dma *tdma = platform_get_drvdata(pdev);
+	int i;
+	struct tegra_dma_channel *tdc;
 
 	dma_async_device_unregister(&tdma->dma_dev);
+
+	for (i = 0; i < tdma->chip_data->nr_channels; ++i) {
+		tdc = &tdma->channels[i];
+		tasklet_kill(&tdc->tasklet);
+	}
+
 	tegra_pd_remove_device(&pdev->dev);
 	return 0;
 }

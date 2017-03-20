@@ -616,8 +616,10 @@ static int tegra_crypt_pka1_rsa(struct file *filp, struct tegra_crypto_ctx *ctx,
 		rsa_complete.req_err = 0;
 
 		len = crypto_akcipher_maxsize(tfm);
-		if (len < 0)
+		if (len < 0) {
+			akcipher_request_free(req);
 			return -EINVAL;
+		}
 
 		ret = copy_from_user((void *)xbuf[0],
 				     (void __user *)rsa_req->message, len);

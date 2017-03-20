@@ -53,4 +53,15 @@
 			vdd-supply = <&vdd_3v3>;
 		};
 	};
+
+	i2c@7000d000 {
+		max77620@3c {
+			regulators {
+				ldo6 {
+					regulator-always-on;
+					regulator-boot-on;
+				};
+			};
+		};
+	};
 };

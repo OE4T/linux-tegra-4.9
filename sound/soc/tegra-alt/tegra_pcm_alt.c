@@ -2,7 +2,7 @@
  * tegra_alt_pcm.c - Tegra PCM driver
  *
  * Author: Stephen Warren <swarren@nvidia.com>
- * Copyright (c) 2011-2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * Based on code copyright/by:
  *
@@ -28,7 +28,6 @@
  * 02110-1301 USA
  *
  */
-#include <asm/mach-types.h>
 #include <linux/dma-mapping.h>
 #include <linux/module.h>
 #include <sound/pcm.h>

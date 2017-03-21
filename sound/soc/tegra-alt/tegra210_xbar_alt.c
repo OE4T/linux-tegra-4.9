@@ -1,7 +1,7 @@
 /*
  * tegra210_xbar_alt.c - Tegra210 XBAR driver
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -29,6 +29,7 @@
 #include <linux/tegra-soc.h>
 #include <sound/soc.h>
 #include <linux/clk/tegra.h>
+#include <linux/version.h>
 
 #include "tegra210_xbar_alt.h"
 /* TODO: remove DRV_NAME_T18X after registering properly */
@@ -755,11 +756,13 @@ static const struct snd_soc_dapm_route tegra210_xbar_routes[] = {
 #if defined(CONFIG_ARCH_TEGRA_210_SOC)
 static struct snd_soc_codec_driver tegra210_xbar_codec = {
 	.probe = tegra210_xbar_codec_probe,
-	.dapm_widgets = tegra210_xbar_widgets,
-	.dapm_routes = tegra210_xbar_routes,
-	.num_dapm_widgets = ARRAY_SIZE(tegra210_xbar_widgets),
-	.num_dapm_routes = ARRAY_SIZE(tegra210_xbar_routes),
 	.idle_bias_off = 1,
+	.component_driver = {
+		.dapm_widgets = tegra210_xbar_widgets,
+		.dapm_routes = tegra210_xbar_routes,
+		.num_dapm_widgets = ARRAY_SIZE(tegra210_xbar_widgets),
+		.num_dapm_routes = ARRAY_SIZE(tegra210_xbar_routes),
+	},
 };
 #endif
 static const struct tegra210_xbar_soc_data soc_data_tegra210 = {
@@ -834,12 +837,17 @@ EXPORT_SYMBOL_GPL(tegra210_xbar_set_clock);
 static int tegra210_xbar_registration(struct platform_device *pdev)
 {
 	int ret;
+	int num_dapm_widgets, num_dapm_routes;
 
-	tegra210_xbar_codec.num_dapm_widgets = (NUM_MUX_WIDGETS * 3) +
+	num_dapm_widgets = (NUM_MUX_WIDGETS * 3) +
 				(NUM_DAIS - NUM_MUX_WIDGETS) * 2;
-	tegra210_xbar_codec.num_dapm_routes =
-		(NUM_DAIS - NUM_MUX_WIDGETS) * 2 +
-		(NUM_MUX_WIDGETS * NUM_MUX_INPUT);
+	num_dapm_routes = (NUM_DAIS - NUM_MUX_WIDGETS) * 2 +
+				(NUM_MUX_WIDGETS * NUM_MUX_INPUT);
+
+	tegra210_xbar_codec.component_driver.num_dapm_widgets =
+			num_dapm_widgets;
+	tegra210_xbar_codec.component_driver.num_dapm_routes =
+			num_dapm_routes;
 
 	ret = snd_soc_register_codec(&pdev->dev, &tegra210_xbar_codec,
 				tegra210_xbar_dais, NUM_DAIS);

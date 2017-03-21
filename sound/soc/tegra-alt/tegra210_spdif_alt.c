@@ -1,7 +1,7 @@
 /*
  * tegra210_spdif_alt.c - Tegra210 SPDIF driver
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -373,13 +373,15 @@ static const struct snd_soc_dapm_route tegra210_spdif_routes[] = {
 
 static struct snd_soc_codec_driver tegra210_spdif_codec = {
 	.probe = tegra210_spdif_codec_probe,
-	.dapm_widgets = tegra210_spdif_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra210_spdif_widgets),
-	.dapm_routes = tegra210_spdif_routes,
-	.num_dapm_routes = ARRAY_SIZE(tegra210_spdif_routes),
-	.controls = tegra210_spdif_controls,
-	.num_controls = ARRAY_SIZE(tegra210_spdif_controls),
 	.idle_bias_off = 1,
+	.component_driver = {
+		.dapm_widgets = tegra210_spdif_widgets,
+		.num_dapm_widgets = ARRAY_SIZE(tegra210_spdif_widgets),
+		.dapm_routes = tegra210_spdif_routes,
+		.num_dapm_routes = ARRAY_SIZE(tegra210_spdif_routes),
+		.controls = tegra210_spdif_controls,
+		.num_controls = ARRAY_SIZE(tegra210_spdif_controls),
+	},
 };
 
 static bool tegra210_spdif_wr_rd_reg(struct device *dev, unsigned int reg)

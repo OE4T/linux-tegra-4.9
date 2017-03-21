@@ -719,7 +719,7 @@
 			resets = <&tegra_car TEGRA186_RESET_NVCSI>;
 			clocks = <&tegra_car TEGRA186_CLK_NVCSI>,
 				 <&tegra_car TEGRA186_CLK_NVCSILP>,
-				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
+				 <&tegra_car TEGRA186_CLK_PLLNVCSI>,
 				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 			clock-names = "nvcsi", "nvcsilp", "nvcsi_parent",
 				      "nvcsilp_parent";

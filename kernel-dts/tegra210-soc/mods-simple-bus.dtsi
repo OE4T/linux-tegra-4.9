@@ -882,7 +882,8 @@
 						 <&tegra_car TEGRA210_CLK_NVENC>,
 						 <&tegra_car TEGRA210_CLK_SOR_SAFE>,
 						 <&tegra_car TEGRA210_CLK_PLL_P_OUT_CPU>,
-						 <&tegra_car TEGRA210_CLK_UARTB>,
+                                                 /* hardcoded controller id to 7 for UARTB */
+						 <&tegra_car 7>,
 						 <&tegra_car TEGRA210_CLK_VFIR>,
 						 <&tegra_car TEGRA210_CLK_SPDIF_IN>,
 						 <&tegra_car TEGRA210_CLK_SPDIF_OUT>,

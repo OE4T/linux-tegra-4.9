@@ -3119,9 +3119,15 @@ static int tegra186_padctl_probe(struct platform_device *pdev)
 
 restore_oc_pin:
 	if (padctl->oc_pinctrl)
-		for (i--; i >= 0; i--)
-			pinctrl_select_state(padctl->oc_pinctrl,
-					     padctl->oc_disable[i]);
+		for (i--; i >= 0; i--) {
+			err = pinctrl_select_state(padctl->oc_pinctrl,
+						     padctl->oc_disable[i]);
+			if (err < 0)
+				dev_err(dev,
+					"set pin %d OC disable failed: %d\n",
+					i, err);
+		}
+
 
 free_mailbox:
 	if (!IS_ERR(padctl->mbox_chan)) {
@@ -3148,12 +3154,18 @@ static int tegra186_padctl_remove(struct platform_device *pdev)
 {
 	struct tegra_padctl *padctl = platform_get_drvdata(pdev);
 	int i;
+	int err;
 
 	/* switch all VBUS_ENx pins back to default state */
 	if (padctl->oc_pinctrl)
-		for (i = 0; i < padctl->soc->num_oc_pins; i++)
-			pinctrl_select_state(padctl->oc_pinctrl,
+		for (i = 0; i < padctl->soc->num_oc_pins; i++) {
+			err = pinctrl_select_state(padctl->oc_pinctrl,
 					     padctl->oc_disable[i]);
+			if (err < 0)
+				dev_err(&pdev->dev,
+					"set pin %d OC disable failed: %d\n",
+					i, err);
+		}
 
 	sysfs_remove_group(&pdev->dev.kobj, &padctl_attr_group);
 

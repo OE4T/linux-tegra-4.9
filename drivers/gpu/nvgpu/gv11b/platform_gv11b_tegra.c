@@ -100,8 +100,6 @@ struct gk20a_platform t19x_gpu_tegra_platform = {
 
 	.default_big_page_size	= SZ_64K,
 
-	.has_ce = true,
-
 	.soc_name = "tegra19x",
 
 	.vidmem_is_vidmem = true,

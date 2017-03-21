@@ -726,8 +726,6 @@ clean_up_runlist:
 	return -ENOMEM;
 }
 
-#define GRFIFO_TIMEOUT_CHECK_PERIOD_US 100000
-
 u32 gk20a_fifo_intr_0_error_mask(struct gk20a *g)
 {
 	u32 intr_0_error_mask =
@@ -765,6 +763,7 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	u32 host_num_pbdma = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_PBDMA);
 
 	gk20a_dbg_fn("");
+
 	/* enable pmc pfifo */
 	g->ops.mc.reset(g, mc_enable_pfifo_enabled_f());
 
@@ -784,36 +783,10 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 		mask |= mc_enable_pb_sel_f(mc_enable_pb_0_enabled_v(), i);
 	gk20a_writel(g, mc_enable_pb_r(), mask);
 
-	/* enable pfifo interrupt */
-	gk20a_writel(g, fifo_intr_0_r(), 0xFFFFFFFF);
-	gk20a_writel(g, fifo_intr_en_0_r(), gk20a_fifo_intr_0_en_mask(g));
-	gk20a_writel(g, fifo_intr_en_1_r(), 0x80000000);
-
-	/* enable pbdma interrupt */
-	mask = 0;
-	for (i = 0; i < host_num_pbdma; i++) {
-		intr_stall = gk20a_readl(g, pbdma_intr_stall_r(i));
-		intr_stall &= ~pbdma_intr_stall_lbreq_enabled_f();
-		gk20a_writel(g, pbdma_intr_stall_r(i), intr_stall);
-		gk20a_writel(g, pbdma_intr_0_r(i), 0xFFFFFFFF);
-		gk20a_writel(g, pbdma_intr_en_0_r(i),
-			~pbdma_intr_en_0_lbreq_enabled_f());
-		gk20a_writel(g, pbdma_intr_1_r(i), 0xFFFFFFFF);
-		gk20a_writel(g, pbdma_intr_en_1_r(i),
-			~pbdma_intr_en_0_lbreq_enabled_f());
-	}
-
-	/* TBD: apply overrides */
-
-	/* TBD: BLCG prod */
-
-	/* reset runlist interrupts */
-	gk20a_writel(g, fifo_intr_runlist_r(), ~0);
-
-	/* TBD: do we need those? */
 	timeout = gk20a_readl(g, fifo_fb_timeout_r());
 	timeout = set_field(timeout, fifo_fb_timeout_period_m(),
 			fifo_fb_timeout_period_max_f());
+	gk20a_dbg_info("fifo_fb_timeout reg val = 0x%08x", timeout);
 	gk20a_writel(g, fifo_fb_timeout_r(), timeout);
 
 	/* write pbdma timeout value */
@@ -821,9 +794,9 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 		timeout = gk20a_readl(g, pbdma_timeout_r(i));
 		timeout = set_field(timeout, pbdma_timeout_period_m(),
 				    pbdma_timeout_period_max_f());
+		gk20a_dbg_info("pbdma_timeout reg val = 0x%08x", timeout);
 		gk20a_writel(g, pbdma_timeout_r(i), timeout);
 	}
-
 	if (g->ops.fifo.apply_pb_timeout)
 		g->ops.fifo.apply_pb_timeout(g);
 
@@ -832,6 +805,34 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 		ptimer_scalingfactor10x(platform->ptimer_src_freq));
 	timeout |= fifo_eng_timeout_detection_enabled_f();
 	gk20a_writel(g, fifo_eng_timeout_r(), timeout);
+
+	/* clear and enable pbdma interrupt */
+	for (i = 0; i < host_num_pbdma; i++) {
+		gk20a_writel(g, pbdma_intr_0_r(i), 0xFFFFFFFF);
+		gk20a_writel(g, pbdma_intr_1_r(i), 0xFFFFFFFF);
+
+		intr_stall = gk20a_readl(g, pbdma_intr_stall_r(i));
+		intr_stall &= ~pbdma_intr_stall_lbreq_enabled_f();
+		gk20a_writel(g, pbdma_intr_stall_r(i), intr_stall);
+		gk20a_dbg_info("pbdma id:%u, intr_en_0 0x%08x", i, intr_stall);
+		gk20a_writel(g, pbdma_intr_en_0_r(i), intr_stall);
+
+		gk20a_dbg_info("pbdma id:%u, intr_en_1 0x%08x", i,
+				 ~pbdma_intr_en_0_lbreq_enabled_f());
+		gk20a_writel(g, pbdma_intr_en_1_r(i),
+			~pbdma_intr_en_0_lbreq_enabled_f());
+	}
+
+	/* reset runlist interrupts */
+	gk20a_writel(g, fifo_intr_runlist_r(), ~0);
+
+	/* clear and enable pfifo interrupt */
+	gk20a_writel(g, fifo_intr_0_r(), 0xFFFFFFFF);
+	mask = gk20a_fifo_intr_0_en_mask(g);
+	gk20a_dbg_info("fifo_intr_en_0 0x%08x", mask);
+	gk20a_writel(g, fifo_intr_en_0_r(), mask);
+	gk20a_dbg_info("fifo_intr_en_1 = 0x80000000");
+	gk20a_writel(g, fifo_intr_en_1_r(), 0x80000000);
 
 	gk20a_dbg_fn("done");
 
@@ -3881,4 +3882,5 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.intr_0_error_mask = gk20a_fifo_intr_0_error_mask;
 	gops->fifo.is_preempt_pending = gk20a_fifo_is_preempt_pending;
 	gops->fifo.init_pbdma_intr_descs = gk20a_fifo_init_pbdma_intr_descs;
+	gops->fifo.reset_enable_hw = gk20a_init_fifo_reset_enable_hw;
 }

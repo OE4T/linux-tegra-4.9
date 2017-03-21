@@ -38,6 +38,8 @@
 #define PREEMPT_TIMEOUT_RC		1
 #define PREEMPT_TIMEOUT_NORC		0
 
+#define GRFIFO_TIMEOUT_CHECK_PERIOD_US 100000
+
 /*
  * Number of entries in the kickoff latency buffer, used to calculate
  * the profiling and histogram. This number is calculated to be statistically

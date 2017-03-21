@@ -567,7 +567,8 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		}
 	}
 
-	err = gk20a_init_fifo_reset_enable_hw(g);
+	err = g->ops.fifo.reset_enable_hw(g);
+
 	if (err) {
 		gk20a_err(dev, "failed to reset gk20a fifo");
 		goto done;

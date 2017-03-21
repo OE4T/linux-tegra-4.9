@@ -456,6 +456,7 @@ struct gpu_ops {
 		int (*preempt_ch_tsg)(struct gk20a *g, u32 id,
 			unsigned int id_type, unsigned int timeout_rc_type);
 		void (*init_pbdma_intr_descs)(struct fifo_gk20a *f);
+		int (*reset_enable_hw)(struct gk20a *g);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/

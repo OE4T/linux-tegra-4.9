@@ -22,6 +22,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/lock.h>
+#include <nvgpu/dma.h>
 
 #include "gk20a.h"
 #include "css_gr_gk20a.h"

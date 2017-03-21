@@ -24,6 +24,7 @@
 
 #include <trace/events/gk20a.h>
 
+#include <nvgpu/dma.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/kmem.h>

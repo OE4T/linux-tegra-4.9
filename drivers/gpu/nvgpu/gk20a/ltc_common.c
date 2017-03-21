@@ -21,6 +21,8 @@
 #include <linux/dma-mapping.h>
 #include <linux/delay.h>
 
+#include <nvgpu/dma.h>
+
 #include "gk20a.h"
 #include "gr_gk20a.h"
 

@@ -524,56 +524,6 @@ u64 gk20a_gmmu_fixed_map(struct vm_gk20a *vm,
 		bool priv,
 		enum nvgpu_aperture aperture);
 
-/* Flags for the below gk20a_gmmu_{alloc,alloc_map}_flags* */
-
-/*
- * Don't create a virtual kernel mapping for the buffer but only allocate it;
- * this may save some resources. The buffer can be mapped later explicitly.
- */
-#define NVGPU_DMA_NO_KERNEL_MAPPING	(1 << 0)
-/*
- * Don't allow building the buffer from individual pages but require a
- * physically contiguous block.
- */
-#define NVGPU_DMA_FORCE_CONTIGUOUS	(1 << 1)
-/*
- * Make the mapping read-only.
- */
-#define NVGPU_DMA_READ_ONLY		(1 << 2)
-
-int gk20a_gmmu_alloc_map(struct vm_gk20a *vm, size_t size,
-		struct nvgpu_mem *mem);
-int gk20a_gmmu_alloc_map_flags(struct vm_gk20a *vm, unsigned long flags,
-		size_t size, struct nvgpu_mem *mem);
-
-int gk20a_gmmu_alloc_map_sys(struct vm_gk20a *vm, size_t size,
-		struct nvgpu_mem *mem);
-int gk20a_gmmu_alloc_map_flags_sys(struct vm_gk20a *vm, unsigned long flags,
-		size_t size, struct nvgpu_mem *mem);
-
-int gk20a_gmmu_alloc_map_vid(struct vm_gk20a *vm, size_t size,
-		struct nvgpu_mem *mem);
-int gk20a_gmmu_alloc_map_flags_vid(struct vm_gk20a *vm, unsigned long flags,
-		size_t size, struct nvgpu_mem *mem);
-
-void gk20a_gmmu_unmap_free(struct vm_gk20a *vm, struct nvgpu_mem *mem);
-
-int gk20a_gmmu_alloc(struct gk20a *g, size_t size, struct nvgpu_mem *mem);
-int gk20a_gmmu_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
-		struct nvgpu_mem *mem);
-
-int gk20a_gmmu_alloc_sys(struct gk20a *g, size_t size, struct nvgpu_mem *mem);
-int gk20a_gmmu_alloc_flags_sys(struct gk20a *g, unsigned long flags,
-		size_t size, struct nvgpu_mem *mem);
-
-int gk20a_gmmu_alloc_vid(struct gk20a *g, size_t size, struct nvgpu_mem *mem);
-int gk20a_gmmu_alloc_flags_vid(struct gk20a *g, unsigned long flags,
-		size_t size, struct nvgpu_mem *mem);
-int gk20a_gmmu_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
-		size_t size, struct nvgpu_mem *mem, dma_addr_t at);
-
-void gk20a_gmmu_free(struct gk20a *g, struct nvgpu_mem *mem);
-
 static inline phys_addr_t gk20a_mem_phys(struct nvgpu_mem *mem)
 {
 	/* FIXME: the sgt/sgl may get null if this is accessed e.g. in an isr

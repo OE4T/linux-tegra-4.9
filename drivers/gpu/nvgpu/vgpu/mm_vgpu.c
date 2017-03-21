@@ -16,6 +16,7 @@
 #include <linux/dma-mapping.h>
 
 #include <nvgpu/kmem.h>
+#include <nvgpu/dma.h>
 
 #include "vgpu/vgpu.h"
 #include "gk20a/mm_gk20a.h"

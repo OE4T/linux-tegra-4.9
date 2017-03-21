@@ -15,6 +15,8 @@
 
 #include <linux/delay.h>
 
+#include <nvgpu/dma.h>
+
 #include "fifo_gp10b.h"
 
 #include "gk20a/gk20a.h"

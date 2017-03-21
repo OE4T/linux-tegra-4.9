@@ -26,6 +26,7 @@
 #endif
 #include <linux/sort.h>
 
+#include <nvgpu/dma.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/semaphore.h>
 #include <nvgpu/kmem.h>

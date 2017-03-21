@@ -29,6 +29,7 @@
 #include <linux/bsearch.h>
 #include <trace/events/gk20a.h>
 
+#include <nvgpu/dma.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/nvgpu_common.h>

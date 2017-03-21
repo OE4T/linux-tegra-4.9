@@ -17,6 +17,7 @@
 #include <trace/events/gk20a.h>
 
 #include <nvgpu/kmem.h>
+#include <nvgpu/dma.h>
 
 #include "vgpu/vgpu.h"
 #include "gk20a/ctxsw_trace_gk20a.h"

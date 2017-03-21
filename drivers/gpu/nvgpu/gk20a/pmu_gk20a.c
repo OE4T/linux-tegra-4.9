@@ -26,6 +26,7 @@
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/dma.h>
 
 #include "gk20a.h"
 #include "gr_gk20a.h"

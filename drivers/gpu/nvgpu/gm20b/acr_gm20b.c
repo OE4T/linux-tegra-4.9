@@ -20,6 +20,7 @@
 
 #include <linux/platform/tegra/mc.h>
 
+#include <nvgpu/dma.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/kmem.h>

@@ -26,6 +26,7 @@
 #include <linux/debugfs.h>
 
 #include <nvgpu/kmem.h>
+#include <nvgpu/dma.h>
 
 #include "gk20a.h"
 #include "debug_gk20a.h"

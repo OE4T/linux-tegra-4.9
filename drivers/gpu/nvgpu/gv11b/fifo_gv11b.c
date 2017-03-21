@@ -29,6 +29,7 @@
 #include <nvgpu/hw/gv11b/hw_usermode_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_top_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_gmmu_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
 
 #include "fifo_gv11b.h"
 #include "subctx_gv11b.h"
@@ -684,6 +685,92 @@ static void gv11b_fifo_init_pbdma_intr_descs(struct fifo_gk20a *f)
 		pbdma_intr_0_device_pending_f();
 }
 
+static u32 gv11b_fifo_intr_0_en_mask(struct gk20a *g)
+{
+	u32 intr_0_en_mask;
+
+	intr_0_en_mask = g->ops.fifo.intr_0_error_mask(g);
+
+	intr_0_en_mask |= fifo_intr_0_runlist_event_pending_f() |
+				 fifo_intr_0_pbdma_intr_pending_f();
+
+	return intr_0_en_mask;
+}
+
+int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
+{
+	u32 intr_stall;
+	u32 mask;
+	u32 timeout;
+	unsigned int i;
+	u32 host_num_pbdma = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_PBDMA);
+
+	gk20a_dbg_fn("");
+
+	/* enable pmc pfifo */
+	g->ops.mc.reset(g, mc_enable_pfifo_enabled_f());
+
+	if (g->ops.clock_gating.slcg_ce2_load_gating_prod)
+		g->ops.clock_gating.slcg_ce2_load_gating_prod(g,
+				g->slcg_enabled);
+	if (g->ops.clock_gating.slcg_fifo_load_gating_prod)
+		g->ops.clock_gating.slcg_fifo_load_gating_prod(g,
+				g->slcg_enabled);
+	if (g->ops.clock_gating.blcg_fifo_load_gating_prod)
+		g->ops.clock_gating.blcg_fifo_load_gating_prod(g,
+				g->blcg_enabled);
+
+	/* enable pbdma */
+	mask = 0;
+	for (i = 0; i < host_num_pbdma; ++i)
+		mask |= mc_enable_pb_sel_f(mc_enable_pb_0_enabled_v(), i);
+	gk20a_writel(g, mc_enable_pb_r(), mask);
+
+
+	timeout = gk20a_readl(g, fifo_fb_timeout_r());
+	timeout = set_field(timeout, fifo_fb_timeout_period_m(),
+			fifo_fb_timeout_period_init_f());
+	gk20a_dbg_info("fifo_fb_timeout reg val = 0x%08x", timeout);
+	gk20a_writel(g, fifo_fb_timeout_r(), timeout);
+
+	/* write pbdma timeout value */
+	for (i = 0; i < host_num_pbdma; i++) {
+		timeout = gk20a_readl(g, pbdma_timeout_r(i));
+		timeout = set_field(timeout, pbdma_timeout_period_m(),
+				    pbdma_timeout_period_init_f());
+		gk20a_dbg_info("pbdma_timeout reg val = 0x%08x", timeout);
+		gk20a_writel(g, pbdma_timeout_r(i), timeout);
+	}
+	/* clear and enable pbdma interrupt */
+	for (i = 0; i < host_num_pbdma; i++) {
+		gk20a_writel(g, pbdma_intr_0_r(i), 0xFFFFFFFF);
+		gk20a_writel(g, pbdma_intr_1_r(i), 0xFFFFFFFF);
+
+		intr_stall = gk20a_readl(g, pbdma_intr_stall_r(i));
+		gk20a_dbg_info("pbdma id:%u, intr_en_0 0x%08x", i, intr_stall);
+		gk20a_writel(g, pbdma_intr_en_0_r(i), intr_stall);
+
+		intr_stall = gk20a_readl(g, pbdma_intr_stall_1_r(i));
+		gk20a_dbg_info("pbdma id:%u, intr_en_1 0x%08x", i, intr_stall);
+		gk20a_writel(g, pbdma_intr_en_1_r(i), intr_stall);
+	}
+
+	/* clear runlist interrupts */
+	gk20a_writel(g, fifo_intr_runlist_r(), ~0);
+
+	/* clear and enable pfifo interrupt */
+	gk20a_writel(g, fifo_intr_0_r(), 0xFFFFFFFF);
+	mask = gv11b_fifo_intr_0_en_mask(g);
+	gk20a_dbg_info("fifo_intr_en_0 0x%08x", mask);
+	gk20a_writel(g, fifo_intr_en_0_r(), mask);
+	gk20a_dbg_info("fifo_intr_en_1 = 0x80000000");
+	gk20a_writel(g, fifo_intr_en_1_r(), 0x80000000);
+
+	gk20a_dbg_fn("done");
+
+	return 0;
+}
+
 void gv11b_init_fifo(struct gpu_ops *gops)
 {
 	gp10b_init_fifo(gops);
@@ -712,4 +799,5 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.is_preempt_pending = gv11b_fifo_is_preempt_pending;
 	gops->fifo.preempt_ch_tsg = gv11b_fifo_preempt_ch_tsg;
 	gops->fifo.init_pbdma_intr_descs = gv11b_fifo_init_pbdma_intr_descs;
+	gops->fifo.reset_enable_hw = gv11b_init_fifo_reset_enable_hw;
 }

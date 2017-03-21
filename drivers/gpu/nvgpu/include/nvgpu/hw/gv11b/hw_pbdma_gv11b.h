@@ -618,4 +618,20 @@ static inline u32 pbdma_set_channel_info_veid_f(u32 v)
 {
 	return (v & 0x3f) << 8;
 }
+static inline u32 pbdma_timeout_r(u32 i)
+{
+	return 0x0004012c + i*8192;
+}
+static inline u32 pbdma_timeout_period_m(void)
+{
+	return 0xffffffff << 0;
+}
+static inline u32 pbdma_timeout_period_max_f(void)
+{
+	return 0xffffffff;
+}
+static inline u32 pbdma_timeout_period_init_f(void)
+{
+	return 0x10000;
+}
 #endif

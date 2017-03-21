@@ -298,6 +298,10 @@ static inline u32 fifo_fb_timeout_period_max_f(void)
 {
 	return 0x3fffffff;
 }
+static inline u32 fifo_fb_timeout_period_init_f(void)
+{
+	return 0x3c00;
+}
 static inline u32 fifo_sched_disable_r(void)
 {
 	return 0x00002630;

@@ -624,6 +624,53 @@ static int gv11b_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
 	return ret;
 }
 
+static void gv11b_fifo_init_pbdma_intr_descs(struct fifo_gk20a *f)
+{
+	/*
+	 * These are all errors which indicate something really wrong
+	 * going on in the device
+	 */
+	f->intr.pbdma.device_fatal_0 =
+		pbdma_intr_0_memreq_pending_f() |
+		pbdma_intr_0_memack_timeout_pending_f() |
+		pbdma_intr_0_memack_extra_pending_f() |
+		pbdma_intr_0_memdat_timeout_pending_f() |
+		pbdma_intr_0_memdat_extra_pending_f() |
+		pbdma_intr_0_memflush_pending_f() |
+		pbdma_intr_0_memop_pending_f() |
+		pbdma_intr_0_lbconnect_pending_f() |
+		pbdma_intr_0_lback_timeout_pending_f() |
+		pbdma_intr_0_lback_extra_pending_f() |
+		pbdma_intr_0_lbdat_timeout_pending_f() |
+		pbdma_intr_0_lbdat_extra_pending_f() |
+		pbdma_intr_0_pri_pending_f();
+
+	/*
+	 * These are data parsing, framing errors or others which can be
+	 * recovered from with intervention... or just resetting the
+	 * channel
+	 */
+	f->intr.pbdma.channel_fatal_0 =
+		pbdma_intr_0_gpfifo_pending_f() |
+		pbdma_intr_0_gpptr_pending_f() |
+		pbdma_intr_0_gpentry_pending_f() |
+		pbdma_intr_0_gpcrc_pending_f() |
+		pbdma_intr_0_pbptr_pending_f() |
+		pbdma_intr_0_pbentry_pending_f() |
+		pbdma_intr_0_pbcrc_pending_f() |
+		pbdma_intr_0_method_pending_f() |
+		pbdma_intr_0_methodcrc_pending_f() |
+		pbdma_intr_0_pbseg_pending_f() |
+		pbdma_intr_0_clear_faulted_error_pending_f() |
+		pbdma_intr_0_eng_reset_pending_f() |
+		pbdma_intr_0_semaphore_pending_f() |
+		pbdma_intr_0_signature_pending_f();
+
+	/* Can be used for sw-methods, or represents a recoverable timeout. */
+	f->intr.pbdma.restartable_0 =
+		pbdma_intr_0_device_pending_f();
+}
+
 void gv11b_init_fifo(struct gpu_ops *gops)
 {
 	gp10b_init_fifo(gops);
@@ -651,4 +698,5 @@ void gv11b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.preempt_tsg = gv11b_fifo_preempt_tsg;
 	gops->fifo.is_preempt_pending = gv11b_fifo_is_preempt_pending;
 	gops->fifo.preempt_ch_tsg = gv11b_fifo_preempt_ch_tsg;
+	gops->fifo.init_pbdma_intr_descs = gv11b_fifo_init_pbdma_intr_descs;
 }

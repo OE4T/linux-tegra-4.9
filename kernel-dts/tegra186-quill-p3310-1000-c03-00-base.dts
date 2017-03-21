@@ -151,20 +151,4 @@
 			};
 		};
 	};
-	host1x {
-		nvdisplay@15220000 {
-			bootloader-status = "okay";
-		};
-
-		sor {
-			bootloader-status = "okay";
-			dp-display {
-				bootloader-status = "okay";
-			};
-		};
-
-		dpaux@155c0000 {
-			bootloader-status = "okay";
-		};
-	};
 };

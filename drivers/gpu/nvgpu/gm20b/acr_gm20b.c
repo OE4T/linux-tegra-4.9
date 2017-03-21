@@ -59,14 +59,14 @@ static void lsfm_free_nonpmu_ucode_img_res(struct gk20a *g,
 					   struct flcn_ucode_img *p_img);
 static int lsf_gen_wpr_requirements(struct gk20a *g, struct ls_flcn_mgr *plsfm);
 static void lsfm_init_wpr_contents(struct gk20a *g, struct ls_flcn_mgr *plsfm,
-	struct mem_desc *nonwpr);
+	struct nvgpu_mem *nonwpr);
 static void free_acr_resources(struct gk20a *g, struct ls_flcn_mgr *plsfm);
 static int gm20b_pmu_populate_loader_cfg(struct gk20a *g,
 	void *lsfm, u32 *p_bl_gen_desc_size);
 static int gm20b_flcn_populate_bl_dmem_desc(struct gk20a *g,
 	void *lsfm, u32 *p_bl_gen_desc_size, u32 falconid);
 static int gm20b_alloc_blob_space(struct gk20a *g,
-		size_t size, struct mem_desc *mem);
+		size_t size, struct nvgpu_mem *mem);
 static bool gm20b_is_priv_load(u32 falcon_id);
 static bool gm20b_is_lazy_bootstrap(u32 falcon_id);
 static void gm20b_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf);
@@ -364,7 +364,7 @@ static bool gm20b_is_priv_load(u32 falcon_id)
 }
 
 static int gm20b_alloc_blob_space(struct gk20a *g,
-		size_t size, struct mem_desc *mem)
+		size_t size, struct nvgpu_mem *mem)
 {
 	int err;
 
@@ -707,7 +707,7 @@ static int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
 
 /* Initialize WPR contents */
 static void lsfm_init_wpr_contents(struct gk20a *g, struct ls_flcn_mgr *plsfm,
-	struct mem_desc *ucode)
+	struct nvgpu_mem *ucode)
 {
 	struct lsfm_managed_ucode_img *pnode = plsfm->ucode_img_list;
 	u32 i;

@@ -4743,7 +4743,7 @@ clean_up:
 	return err;
 }
 
-void gk20a_pmu_surface_describe(struct gk20a *g, struct mem_desc *mem,
+void gk20a_pmu_surface_describe(struct gk20a *g, struct nvgpu_mem *mem,
 		struct flcn_mem_desc_v0 *fb)
 {
 	fb->address.lo = u64_lo32(mem->gpu_va);
@@ -4752,7 +4752,7 @@ void gk20a_pmu_surface_describe(struct gk20a *g, struct mem_desc *mem,
 	fb->params |= (GK20A_PMU_DMAIDX_VIRT << 24);
 }
 
-int gk20a_pmu_vidmem_surface_alloc(struct gk20a *g, struct mem_desc *mem,
+int gk20a_pmu_vidmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 size)
 {
 	struct mm_gk20a *mm = &g->mm;
@@ -4768,7 +4768,7 @@ int gk20a_pmu_vidmem_surface_alloc(struct gk20a *g, struct mem_desc *mem,
 	return 0;
 }
 
-int gk20a_pmu_sysmem_surface_alloc(struct gk20a *g, struct mem_desc *mem,
+int gk20a_pmu_sysmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 size)
 {
 	struct mm_gk20a *mm = &g->mm;
@@ -4784,10 +4784,10 @@ int gk20a_pmu_sysmem_surface_alloc(struct gk20a *g, struct mem_desc *mem,
 	return 0;
 }
 
-void gk20a_pmu_surface_free(struct gk20a *g, struct mem_desc *mem)
+void gk20a_pmu_surface_free(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	gk20a_gmmu_free(g, mem);
-	memset(mem, 0, sizeof(struct mem_desc));
+	memset(mem, 0, sizeof(struct nvgpu_mem));
 }
 
 int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
@@ -4860,7 +4860,8 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 			goto clean_up;
 
 		if (payload->in.fb_size != 0x0) {
-			seq->in_mem = nvgpu_kzalloc(g, sizeof(struct mem_desc));
+			seq->in_mem = nvgpu_kzalloc(g,
+						    sizeof(struct nvgpu_mem));
 			if (!seq->in_mem) {
 				err = -ENOMEM;
 				goto clean_up;
@@ -4904,7 +4905,7 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 
 			if (payload->out.fb_size != 0x0) {
 				seq->out_mem = nvgpu_kzalloc(g,
-					sizeof(struct mem_desc));
+					sizeof(struct nvgpu_mem));
 				if (!seq->out_mem) {
 					err = -ENOMEM;
 					goto clean_up;

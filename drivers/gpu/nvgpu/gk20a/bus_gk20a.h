@@ -18,7 +18,7 @@
 
 struct gk20a;
 struct gpu_ops;
-struct mem_desc;
+struct nvgpu_mem;
 
 void gk20a_init_bus(struct gpu_ops *gops);
 

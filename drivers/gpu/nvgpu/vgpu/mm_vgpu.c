@@ -501,7 +501,7 @@ static void vgpu_mm_l2_flush(struct gk20a *g, bool invalidate)
 	vgpu_cache_maint(vgpu_get_handle(g), op);
 }
 
-static void vgpu_mm_tlb_invalidate(struct gk20a *g, struct mem_desc *pdb)
+static void vgpu_mm_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 {
 	gk20a_dbg_fn("");
 

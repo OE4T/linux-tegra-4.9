@@ -34,7 +34,7 @@ static u32 gp10b_mm_get_physical_addr_bits(struct gk20a *g)
 static int gp10b_init_mm_setup_hw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
-	struct mem_desc *inst_block = &mm->bar1.inst_block;
+	struct nvgpu_mem *inst_block = &mm->bar1.inst_block;
 	int err = 0;
 
 	gk20a_dbg_fn("");
@@ -68,7 +68,7 @@ static int gb10b_init_bar2_vm(struct gk20a *g)
 	int err;
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->bar2.vm;
-	struct mem_desc *inst_block = &mm->bar2.inst_block;
+	struct nvgpu_mem *inst_block = &mm->bar2.inst_block;
 	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
 	/* BAR2 aperture size is 32MB */
@@ -96,7 +96,7 @@ clean_up_va:
 static int gb10b_init_bar2_mm_hw_setup(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
-	struct mem_desc *inst_block = &mm->bar2.inst_block;
+	struct nvgpu_mem *inst_block = &mm->bar2.inst_block;
 	u64 inst_pa = gk20a_mm_inst_block_addr(g, inst_block);
 
 	gk20a_dbg_fn("");
@@ -375,7 +375,7 @@ static const struct gk20a_mmu_level *gp10b_mm_get_mmu_levels(struct gk20a *g,
 	return gp10b_mm_levels;
 }
 
-static void gp10b_mm_init_pdb(struct gk20a *g, struct mem_desc *inst_block,
+static void gp10b_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *inst_block,
 		struct vm_gk20a *vm)
 {
 	u64 pdb_addr = gk20a_mem_get_base_addr(g, &vm->pdb.mem, 0);

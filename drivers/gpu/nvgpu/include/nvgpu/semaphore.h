@@ -136,7 +136,7 @@ struct nvgpu_semaphore_sea {
 	struct page *pages[SEMAPHORE_POOL_COUNT];
 	*/
 
-	struct mem_desc sea_mem;
+	struct nvgpu_mem sea_mem;
 
 	/*
 	 * Can't use a regular allocator here since the full range of pools are

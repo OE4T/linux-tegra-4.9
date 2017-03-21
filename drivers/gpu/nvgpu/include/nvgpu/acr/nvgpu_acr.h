@@ -67,8 +67,8 @@ struct wpr_carveout_info {
 };
 
 struct acr_desc {
-	struct mem_desc ucode_blob;
-	struct mem_desc wpr_dummy;
+	struct nvgpu_mem ucode_blob;
+	struct nvgpu_mem wpr_dummy;
 	struct bin_hdr *bl_bin_hdr;
 	struct hsflcn_bl_desc *pmu_hsbl_desc;
 	struct bin_hdr *hsbin_hdr;
@@ -79,9 +79,9 @@ struct acr_desc {
 		struct flcn_acr_desc *acr_dmem_desc;
 		struct flcn_acr_desc_v1 *acr_dmem_desc_v1;
 	};
-	struct mem_desc acr_ucode;
+	struct nvgpu_mem acr_ucode;
 	const struct firmware *hsbl_fw;
-	struct mem_desc hsbl_ucode;
+	struct nvgpu_mem hsbl_ucode;
 	union {
 		struct flcn_bl_dmem_desc bl_dmem_desc;
 		struct flcn_bl_dmem_desc_v1 bl_dmem_desc_v1;

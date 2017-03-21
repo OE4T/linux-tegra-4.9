@@ -95,7 +95,7 @@ static void gk20a_fb_set_debug_mode(struct gk20a *g, bool enable)
 	gk20a_writel(g, fb_mmu_debug_ctrl_r(), reg_val);
 }
 
-void gk20a_fb_tlb_invalidate(struct gk20a *g, struct mem_desc *pdb)
+void gk20a_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 {
 	struct nvgpu_timeout timeout;
 	u32 addr_lo;

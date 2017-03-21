@@ -258,7 +258,7 @@ struct gpu_ops {
 			  struct gr_ctx_desc *gr_ctx);
 		void (*update_ctxsw_preemption_mode)(struct gk20a *g,
 				struct channel_ctx_gk20a *ch_ctx,
-				struct mem_desc *mem);
+				struct nvgpu_mem *mem);
 		int (*update_smpc_ctxsw_mode)(struct gk20a *g,
 				struct channel_gk20a *c,
 				bool enable);
@@ -279,7 +279,7 @@ struct gpu_ops {
 				  u32 expect_delay);
 		void (*init_cyclestats)(struct gk20a *g);
 		void (*enable_cde_in_fecs)(struct gk20a *g,
-				struct mem_desc *mem);
+				struct nvgpu_mem *mem);
 		int (*set_sm_debug_mode)(struct gk20a *g, struct channel_gk20a *ch,
 					u64 sms, bool enable);
 		void (*bpt_reg_info)(struct gk20a *g,
@@ -329,7 +329,7 @@ struct gpu_ops {
 				u32 compute_preempt_mode);
 		int (*set_boosted_ctx)(struct channel_gk20a *ch, bool boost);
 		void (*update_boosted_ctx)(struct gk20a *g,
-					   struct mem_desc *mem,
+					   struct nvgpu_mem *mem,
 					   struct gr_ctx_desc *gr_ctx);
 		int (*fuse_override)(struct gk20a *g);
 		void (*init_sm_id_table)(struct gk20a *g);
@@ -344,11 +344,11 @@ struct gpu_ops {
 		int (*commit_global_timeslice)(struct gk20a *g,
 					struct channel_gk20a *c, bool patch);
 		int (*commit_inst)(struct channel_gk20a *c, u64 gpu_va);
-		void (*restore_context_header)(struct gk20a *g, struct mem_desc *ctxheader);
+		void (*restore_context_header)(struct gk20a *g, struct nvgpu_mem *ctxheader);
 		void (*write_zcull_ptr)(struct gk20a *g,
-					struct mem_desc *mem, u64 gpu_va);
+					struct nvgpu_mem *mem, u64 gpu_va);
 		void (*write_pm_ptr)(struct gk20a *g,
-					struct mem_desc *mem, u64 gpu_va);
+					struct nvgpu_mem *mem, u64 gpu_va);
 		void (*init_elcg_mode)(struct gk20a *g, u32 mode, u32 engine);
 		void (*load_tpc_mask)(struct gk20a *g);
 		int (*inval_icache)(struct gk20a *g, struct channel_gk20a *ch);
@@ -372,7 +372,7 @@ struct gpu_ops {
 		int (*vpr_info_fetch)(struct gk20a *g);
 		bool (*is_debug_mode_enabled)(struct gk20a *g);
 		void (*set_debug_mode)(struct gk20a *g, bool enable);
-		void (*tlb_invalidate)(struct gk20a *g, struct mem_desc *pdb);
+		void (*tlb_invalidate)(struct gk20a *g, struct nvgpu_mem *pdb);
 		void (*hub_isr)(struct gk20a *g);
 	} fb;
 	struct {
@@ -636,7 +636,7 @@ struct gpu_ops {
 		void (*l2_flush)(struct gk20a *g, bool invalidate);
 		void (*cbc_clean)(struct gk20a *g);
 		void (*set_big_page_size)(struct gk20a *g,
-					  struct mem_desc *mem, int size);
+					  struct nvgpu_mem *mem, int size);
 		u32 (*get_big_page_sizes)(void);
 		u32 (*get_physical_addr_bits)(struct gk20a *g);
 		int (*init_mm_setup_hw)(struct gk20a *g);
@@ -646,19 +646,19 @@ struct gpu_ops {
 		void (*remove_bar2_vm)(struct gk20a *g);
 		const struct gk20a_mmu_level *
 			(*get_mmu_levels)(struct gk20a *g, u32 big_page_size);
-		void (*init_pdb)(struct gk20a *g, struct mem_desc *inst_block,
+		void (*init_pdb)(struct gk20a *g, struct nvgpu_mem *inst_block,
 				struct vm_gk20a *vm);
 		u64 (*get_iova_addr)(struct gk20a *g, struct scatterlist *sgl,
 					 u32 flags);
 		size_t (*get_vidmem_size)(struct gk20a *g);
-		void (*init_inst_block)(struct mem_desc *inst_block,
+		void (*init_inst_block)(struct nvgpu_mem *inst_block,
 				struct vm_gk20a *vm, u32 big_page_size);
 		bool (*mmu_fault_pending)(struct gk20a *g);
 	} mm;
 	struct {
-		u32 (*enter)(struct gk20a *g, struct mem_desc *mem,
+		u32 (*enter)(struct gk20a *g, struct nvgpu_mem *mem,
 			     struct page_alloc_chunk *chunk, u32 w);
-		void (*exit)(struct gk20a *g, struct mem_desc *mem,
+		void (*exit)(struct gk20a *g, struct nvgpu_mem *mem,
 			     struct page_alloc_chunk *chunk);
 		u32 (*data032_r)(u32 i);
 	} pramin;
@@ -709,7 +709,7 @@ struct gpu_ops {
 		bool (*is_priv_load)(u32 falcon_id);
 		void (*get_wpr)(struct gk20a *g, struct wpr_carveout_info *inf);
 		int (*alloc_blob_space)(struct gk20a *g,
-				size_t size, struct mem_desc *mem);
+				size_t size, struct nvgpu_mem *mem);
 		int (*pmu_populate_loader_cfg)(struct gk20a *g,
 			void *lsfm,	u32 *p_bl_gen_desc_size);
 		int (*flcn_populate_bl_dmem_desc)(struct gk20a *g,
@@ -820,7 +820,7 @@ struct gpu_ops {
 		void (*init_hw)(struct gk20a *g);
 		void (*isr)(struct gk20a *g);
 		int (*read_ptimer)(struct gk20a *g, u64 *value);
-		int (*bar1_bind)(struct gk20a *g, struct mem_desc *bar1_inst);
+		int (*bar1_bind)(struct gk20a *g, struct nvgpu_mem *bar1_inst);
 	} bus;
 
 	int (*bios_init)(struct gk20a *g);

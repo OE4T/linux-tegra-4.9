@@ -60,7 +60,7 @@ struct gk20a_fecs_trace_hash_ent {
 
 struct gk20a_fecs_trace {
 
-	struct mem_desc trace_buf;
+	struct nvgpu_mem trace_buf;
 	DECLARE_HASHTABLE(pid_hash_table, GK20A_FECS_TRACE_HASH_BITS);
 	struct nvgpu_mutex hash_lock;
 	struct nvgpu_mutex poll_lock;
@@ -620,7 +620,7 @@ static int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 	phys_addr_t pa;
 	struct channel_ctx_gk20a *ch_ctx = &ch->ch_ctx;
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
-	struct mem_desc *mem = &ch_ctx->gr_ctx->mem;
+	struct nvgpu_mem *mem = &ch_ctx->gr_ctx->mem;
 	u32 context_ptr = gk20a_fecs_trace_fecs_context_ptr(ch);
 	pid_t pid;
 	u32 aperture;

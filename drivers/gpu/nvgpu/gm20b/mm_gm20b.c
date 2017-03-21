@@ -21,7 +21,7 @@
 #include <nvgpu/hw/gm20b/hw_ram_gm20b.h>
 
 static void gm20b_mm_set_big_page_size(struct gk20a *g,
-				struct mem_desc *mem, int size)
+				struct nvgpu_mem *mem, int size)
 {
 	u32 val;
 

@@ -21,7 +21,7 @@
 
 struct gk20a;
 struct mm_gk20a;
-struct mem_desc;
+struct nvgpu_mem;
 
 /*
  * This typedef is for functions that get called during the access_batched()
@@ -37,7 +37,7 @@ void pramin_access_batch_rd_n(struct gk20a *g, u32 start, u32 words, u32 **arg);
 void pramin_access_batch_wr_n(struct gk20a *g, u32 start, u32 words, u32 **arg);
 void pramin_access_batch_set(struct gk20a *g, u32 start, u32 words, u32 **arg);
 
-void nvgpu_pramin_access_batched(struct gk20a *g, struct mem_desc *mem,
+void nvgpu_pramin_access_batched(struct gk20a *g, struct nvgpu_mem *mem,
 				 u32 offset, u32 size,
 				 pramin_access_batch_fn loop, u32 **arg);
 

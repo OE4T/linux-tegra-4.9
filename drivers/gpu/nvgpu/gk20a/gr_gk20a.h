@@ -205,7 +205,7 @@ struct gr_gk20a_isr_data {
 
 struct gr_ctx_buffer_desc {
 	void (*destroy)(struct gk20a *, struct gr_ctx_buffer_desc *);
-	struct mem_desc mem;
+	struct nvgpu_mem mem;
 	void *priv;
 };
 
@@ -321,8 +321,8 @@ struct gr_gk20a {
 
 	struct gr_ctx_buffer_desc global_ctx_buffer[NR_GLOBAL_CTX_BUF];
 
-	struct mem_desc mmu_wr_mem;
-	struct mem_desc mmu_rd_mem;
+	struct nvgpu_mem mmu_wr_mem;
+	struct nvgpu_mem mmu_rd_mem;
 
 	u8 *map_tiles;
 	u32 map_tile_count;
@@ -385,7 +385,7 @@ struct gr_gk20a {
 void gk20a_fecs_dump_falcon_stats(struct gk20a *g);
 
 struct gr_ctx_desc {
-	struct mem_desc mem;
+	struct nvgpu_mem mem;
 
 	u32 graphics_preempt_mode;
 	u32 compute_preempt_mode;
@@ -399,7 +399,7 @@ struct gr_ctx_desc {
 };
 
 struct ctx_header_desc {
-	struct mem_desc mem;
+	struct nvgpu_mem mem;
 };
 
 struct gk20a_ctxsw_ucode_segment {
@@ -441,8 +441,8 @@ struct gk20a_ctxsw_ucode_segments {
 
 struct gk20a_ctxsw_ucode_info {
 	u64 *p_va;
-	struct mem_desc inst_blk_desc;
-	struct mem_desc surface_desc;
+	struct nvgpu_mem inst_blk_desc;
+	struct nvgpu_mem surface_desc;
 	struct gk20a_ctxsw_ucode_segments fecs;
 	struct gk20a_ctxsw_ucode_segments gpccs;
 };
@@ -526,7 +526,7 @@ int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr);
 /* pmu */
 int gr_gk20a_fecs_get_reglist_img_size(struct gk20a *g, u32 *size);
 int gr_gk20a_fecs_set_reglist_bind_inst(struct gk20a *g,
-		struct mem_desc *inst_block);
+		struct nvgpu_mem *inst_block);
 int gr_gk20a_fecs_set_reglist_virtual_addr(struct gk20a *g, u64 pmu_va);
 
 void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine);
@@ -717,10 +717,10 @@ void gr_gk20a_init_sm_id_table(struct gk20a *g);
 int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va);
 
 void gr_gk20a_write_zcull_ptr(struct gk20a *g,
-				struct mem_desc *mem, u64 gpu_va);
+				struct nvgpu_mem *mem, u64 gpu_va);
 
 void gr_gk20a_write_pm_ptr(struct gk20a *g,
-				struct mem_desc *mem, u64 gpu_va);
+				struct nvgpu_mem *mem, u64 gpu_va);
 
 
 static inline const char *gr_gk20a_graphics_preempt_mode_name(u32 graphics_preempt_mode)

@@ -165,7 +165,7 @@ u32 boardobjgrp_pmucmd_pmuinithandle_impl(struct gk20a *g,
 	struct boardobjgrp_pmu_cmd *pcmd)
 {
 	u32 status = 0;
-	struct mem_desc *sysmem_desc = &pcmd->surf.sysmem_desc;
+	struct nvgpu_mem *sysmem_desc = &pcmd->surf.sysmem_desc;
 
 	gk20a_dbg_info("");
 

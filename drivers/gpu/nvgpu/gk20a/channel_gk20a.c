@@ -2117,7 +2117,7 @@ static void gk20a_submit_append_priv_cmdbuf(struct channel_gk20a *c,
 		struct priv_cmd_entry *cmd)
 {
 	struct gk20a *g = c->g;
-	struct mem_desc *gpfifo_mem = &c->gpfifo.mem;
+	struct nvgpu_mem *gpfifo_mem = &c->gpfifo.mem;
 	struct nvgpu_gpfifo x = {
 		.entry0 = u64_lo32(cmd->gva),
 		.entry1 = u64_hi32(cmd->gva) |
@@ -2148,7 +2148,7 @@ static int gk20a_submit_append_gpfifo(struct channel_gk20a *c,
 	u32 len = num_entries * sizeof(struct nvgpu_gpfifo);
 	u32 start = c->gpfifo.put * sizeof(struct nvgpu_gpfifo);
 	u32 end = start + len; /* exclusive */
-	struct mem_desc *gpfifo_mem = &c->gpfifo.mem;
+	struct nvgpu_mem *gpfifo_mem = &c->gpfifo.mem;
 	struct nvgpu_gpfifo *cpu_src;
 	int err;
 

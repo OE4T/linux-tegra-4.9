@@ -23,7 +23,7 @@
 
 #include <nvgpu/hw/gm20b/hw_bus_gm20b.h>
 
-static int gm20b_bus_bar1_bind(struct gk20a *g, struct mem_desc *bar1_inst)
+static int gm20b_bus_bar1_bind(struct gk20a *g, struct nvgpu_mem *bar1_inst)
 {
 	struct nvgpu_timeout timeout;
 	int err = 0;

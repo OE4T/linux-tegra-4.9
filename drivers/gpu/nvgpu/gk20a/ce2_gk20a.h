@@ -110,7 +110,7 @@ struct gk20a_gpu_ctx {
 	struct vm_gk20a *vm;
 
 	/* cmd buf mem_desc */
-	struct mem_desc cmd_buf_mem;
+	struct nvgpu_mem cmd_buf_mem;
 
 	struct nvgpu_list_node list;
 

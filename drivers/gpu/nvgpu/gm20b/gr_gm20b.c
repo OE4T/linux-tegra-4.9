@@ -852,7 +852,7 @@ static int gr_gm20b_alloc_gr_ctx(struct gk20a *g,
 
 static void gr_gm20b_update_ctxsw_preemption_mode(struct gk20a *g,
 		struct channel_ctx_gk20a *ch_ctx,
-		struct mem_desc *mem)
+		struct nvgpu_mem *mem)
 {
 	struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
 	u32 cta_preempt_option =
@@ -1012,7 +1012,7 @@ static int gr_gm20b_update_pc_sampling(struct channel_gk20a *c,
 				       bool enable)
 {
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
-	struct mem_desc *mem;
+	struct nvgpu_mem *mem;
 	u32 v;
 
 	gk20a_dbg_fn("");
@@ -1108,7 +1108,7 @@ static void gr_gm20b_init_cyclestats(struct gk20a *g)
 #endif
 }
 
-static void gr_gm20b_enable_cde_in_fecs(struct gk20a *g, struct mem_desc *mem)
+static void gr_gm20b_enable_cde_in_fecs(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	u32 cde_v;
 

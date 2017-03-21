@@ -185,8 +185,8 @@ struct pmu_payload {
 };
 
 struct pmu_surface {
-	struct mem_desc vidmem_desc;
-	struct mem_desc sysmem_desc;
+	struct nvgpu_mem vidmem_desc;
+	struct nvgpu_mem sysmem_desc;
 	struct flcn_mem_desc_v0 params;
 };
 
@@ -204,14 +204,14 @@ struct pmu_sequence {
 		struct pmu_allocation_v2 in_v2;
 		struct pmu_allocation_v3 in_v3;
 	};
-	struct mem_desc *in_mem;
+	struct nvgpu_mem *in_mem;
 	union {
 		struct pmu_allocation_v0 out_v0;
 		struct pmu_allocation_v1 out_v1;
 		struct pmu_allocation_v2 out_v2;
 		struct pmu_allocation_v3 out_v3;
 	};
-	struct mem_desc *out_mem;
+	struct nvgpu_mem *out_mem;
 	u8 *out_payload;
 	pmu_callback callback;
 	void* cb_params;
@@ -314,13 +314,13 @@ struct pmu_gk20a {
 		struct pmu_ucode_desc *desc;
 		struct pmu_ucode_desc_v1 *desc_v1;
 	};
-	struct mem_desc ucode;
+	struct nvgpu_mem ucode;
 
-	struct mem_desc pg_buf;
+	struct nvgpu_mem pg_buf;
 	/* TBD: remove this if ZBC seq is fixed */
-	struct mem_desc seq_buf;
-	struct mem_desc trace_buf;
-	struct mem_desc wpr_buf;
+	struct nvgpu_mem seq_buf;
+	struct nvgpu_mem trace_buf;
+	struct nvgpu_mem wpr_buf;
 	bool buf_loaded;
 
 	struct pmu_sha1_gid gid_info;
@@ -459,12 +459,12 @@ int gk20a_pmu_reset(struct gk20a *g);
 int pmu_idle(struct pmu_gk20a *pmu);
 int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable);
 
-void gk20a_pmu_surface_free(struct gk20a *g, struct mem_desc *mem);
-void gk20a_pmu_surface_describe(struct gk20a *g, struct mem_desc *mem,
+void gk20a_pmu_surface_free(struct gk20a *g, struct nvgpu_mem *mem);
+void gk20a_pmu_surface_describe(struct gk20a *g, struct nvgpu_mem *mem,
 		struct flcn_mem_desc_v0 *fb);
-int gk20a_pmu_vidmem_surface_alloc(struct gk20a *g, struct mem_desc *mem,
+int gk20a_pmu_vidmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 size);
-int gk20a_pmu_sysmem_surface_alloc(struct gk20a *g, struct mem_desc *mem,
+int gk20a_pmu_sysmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 size);
 
 #endif /*__PMU_GK20A_H__*/

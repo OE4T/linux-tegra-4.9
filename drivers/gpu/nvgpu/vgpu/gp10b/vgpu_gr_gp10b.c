@@ -149,7 +149,7 @@ static int vgpu_gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 		u32 attrib_cb_size = (betacb_size + g->gr.alpha_cb_size) *
 				  gr_gpc0_ppc0_cbm_beta_cb_size_v_granularity_v() *
 				  g->gr.max_tpc_count;
-		struct mem_desc *desc;
+		struct nvgpu_mem *desc;
 
 		attrib_cb_size = ALIGN(attrib_cb_size, 128);
 

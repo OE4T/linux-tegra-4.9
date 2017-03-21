@@ -3963,7 +3963,7 @@ int gk20a_fifo_setup_ramfc(struct channel_gk20a *c,
 			u32 flags)
 {
 	struct gk20a *g = c->g;
-	struct mem_desc *mem = &c->inst_block;
+	struct nvgpu_mem *mem = &c->inst_block;
 
 	gk20a_dbg_fn("");
 
@@ -4097,7 +4097,7 @@ int gk20a_fifo_set_priority(struct channel_gk20a *ch, u32 priority)
 void gk20a_fifo_setup_ramfc_for_privileged_channel(struct channel_gk20a *c)
 {
 	struct gk20a *g = c->g;
-	struct mem_desc *mem = &c->inst_block;
+	struct nvgpu_mem *mem = &c->inst_block;
 
 	gk20a_dbg_info("channel %d : set ramfc privileged_channel", c->hw_chid);
 
@@ -4109,7 +4109,7 @@ void gk20a_fifo_setup_ramfc_for_privileged_channel(struct channel_gk20a *c)
 int gk20a_fifo_setup_userd(struct channel_gk20a *c)
 {
 	struct gk20a *g = c->g;
-	struct mem_desc *mem = &g->fifo.userd;
+	struct nvgpu_mem *mem = &g->fifo.userd;
 	u32 offset = c->hw_chid * g->fifo.userd_entry_size / sizeof(u32);
 
 	gk20a_dbg_fn("");

@@ -34,7 +34,7 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/pramin.h>
 #include <nvgpu/list.h>
-#include <nvgpu/mem_desc.h>
+#include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/allocator.h>
 #include <nvgpu/semaphore.h>
 #include <nvgpu/page_allocator.h>
@@ -169,7 +169,7 @@ struct gk20a_dmabuf_priv {
 
 struct gk20a_vidmem_buf {
 	struct gk20a *g;
-	struct mem_desc *mem;
+	struct nvgpu_mem *mem;
 	struct dma_buf *dmabuf;
 	void *dmabuf_priv;
 	void (*dmabuf_priv_delete)(void *);
@@ -457,7 +457,7 @@ static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-void gk20a_remove_vm(struct vm_gk20a *vm, struct mem_desc *inst_block)
+void gk20a_remove_vm(struct vm_gk20a *vm, struct nvgpu_mem *inst_block)
 {
 	struct gk20a *g = vm->mm->g;
 
@@ -1866,7 +1866,7 @@ int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 		nvgpu_mutex_release(&g->mm.vidmem.first_clear_mutex);
 	}
 
-	buf->mem = nvgpu_kzalloc(g, sizeof(struct mem_desc));
+	buf->mem = nvgpu_kzalloc(g, sizeof(struct nvgpu_mem));
 	if (!buf->mem)
 		goto err_kfree;
 
@@ -1931,7 +1931,7 @@ int gk20a_vidbuf_access_memory(struct gk20a *g, struct dma_buf *dmabuf,
 {
 #if defined(CONFIG_GK20A_VIDMEM)
 	struct gk20a_vidmem_buf *vidmem_buf;
-	struct mem_desc *mem;
+	struct nvgpu_mem *mem;
 	int err = 0;
 
 	if (gk20a_dmabuf_aperture(g, dmabuf) != APERTURE_VIDMEM)
@@ -2519,13 +2519,13 @@ u64 gk20a_gmmu_fixed_map(struct vm_gk20a *vm,
 			aperture);
 }
 
-int gk20a_gmmu_alloc(struct gk20a *g, size_t size, struct mem_desc *mem)
+int gk20a_gmmu_alloc(struct gk20a *g, size_t size, struct nvgpu_mem *mem)
 {
 	return gk20a_gmmu_alloc_flags(g, 0, size, mem);
 }
 
 int gk20a_gmmu_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
-		struct mem_desc *mem)
+		struct nvgpu_mem *mem)
 {
 	if (g->mm.vidmem_is_vidmem) {
 		/*
@@ -2549,7 +2549,7 @@ int gk20a_gmmu_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
 	return gk20a_gmmu_alloc_flags_sys(g, flags, size, mem);
 }
 
-int gk20a_gmmu_alloc_sys(struct gk20a *g, size_t size, struct mem_desc *mem)
+int gk20a_gmmu_alloc_sys(struct gk20a *g, size_t size, struct nvgpu_mem *mem)
 {
 	return gk20a_gmmu_alloc_flags_sys(g, 0, size, mem);
 }
@@ -2574,7 +2574,7 @@ static void gk20a_dma_flags_to_attrs(struct dma_attrs *attrs,
 }
 
 int gk20a_gmmu_alloc_flags_sys(struct gk20a *g, unsigned long flags,
-		size_t size, struct mem_desc *mem)
+		size_t size, struct nvgpu_mem *mem)
 {
 	struct device *d = dev_from_gk20a(g);
 	int err;
@@ -2631,7 +2631,7 @@ fail_free:
 	return err;
 }
 
-static void gk20a_gmmu_free_sys(struct gk20a *g, struct mem_desc *mem)
+static void gk20a_gmmu_free_sys(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	struct device *d = dev_from_gk20a(g);
 
@@ -2666,7 +2666,7 @@ static void gk20a_gmmu_free_sys(struct gk20a *g, struct mem_desc *mem)
 }
 
 #if defined(CONFIG_GK20A_VIDMEM)
-static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct mem_desc *mem)
+static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	struct gk20a_fence *gk20a_fence_out = NULL;
 	struct gk20a_fence *gk20a_last_fence = NULL;
@@ -2728,14 +2728,14 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct mem_desc *mem)
 }
 #endif
 
-int gk20a_gmmu_alloc_vid(struct gk20a *g, size_t size, struct mem_desc *mem)
+int gk20a_gmmu_alloc_vid(struct gk20a *g, size_t size, struct nvgpu_mem *mem)
 {
 	return gk20a_gmmu_alloc_flags_vid(g,
 			NVGPU_DMA_NO_KERNEL_MAPPING, size, mem);
 }
 
 int gk20a_gmmu_alloc_flags_vid(struct gk20a *g, unsigned long flags,
-		size_t size, struct mem_desc *mem)
+		size_t size, struct nvgpu_mem *mem)
 {
 	return gk20a_gmmu_alloc_flags_vid_at(g, flags, size, mem, 0);
 }
@@ -2756,7 +2756,7 @@ static u64 __gk20a_gmmu_alloc(struct nvgpu_allocator *allocator, dma_addr_t at,
 #endif
 
 int gk20a_gmmu_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
-		size_t size, struct mem_desc *mem, dma_addr_t at)
+		size_t size, struct nvgpu_mem *mem, dma_addr_t at)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
 	u64 addr;
@@ -2831,7 +2831,7 @@ fail_physfree:
 #endif
 }
 
-static void gk20a_gmmu_free_vid(struct gk20a *g, struct mem_desc *mem)
+static void gk20a_gmmu_free_vid(struct gk20a *g, struct nvgpu_mem *mem)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
 	bool was_empty;
@@ -2863,7 +2863,7 @@ static void gk20a_gmmu_free_vid(struct gk20a *g, struct mem_desc *mem)
 #endif
 }
 
-void gk20a_gmmu_free(struct gk20a *g, struct mem_desc *mem)
+void gk20a_gmmu_free(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	switch (mem->aperture) {
 	case APERTURE_SYSMEM:
@@ -2879,7 +2879,7 @@ void gk20a_gmmu_free(struct gk20a *g, struct mem_desc *mem)
  * If mem is in VIDMEM, return base address in vidmem
  * else return IOVA address for SYSMEM
  */
-u64 gk20a_mem_get_base_addr(struct gk20a *g, struct mem_desc *mem,
+u64 gk20a_mem_get_base_addr(struct gk20a *g, struct nvgpu_mem *mem,
 			    u32 flags)
 {
 	struct nvgpu_page_alloc *alloc;
@@ -2900,14 +2900,14 @@ u64 gk20a_mem_get_base_addr(struct gk20a *g, struct mem_desc *mem,
 }
 
 #if defined(CONFIG_GK20A_VIDMEM)
-static struct mem_desc *get_pending_mem_desc(struct mm_gk20a *mm)
+static struct nvgpu_mem *get_pending_mem_desc(struct mm_gk20a *mm)
 {
-	struct mem_desc *mem = NULL;
+	struct nvgpu_mem *mem = NULL;
 
 	nvgpu_mutex_acquire(&mm->vidmem.clear_list_mutex);
 	if (!nvgpu_list_empty(&mm->vidmem.clear_list_head)) {
 		mem = nvgpu_list_first_entry(&mm->vidmem.clear_list_head,
-				mem_desc, clear_list_entry);
+				nvgpu_mem, clear_list_entry);
 		nvgpu_list_del(&mem->clear_list_entry);
 	}
 	nvgpu_mutex_release(&mm->vidmem.clear_list_mutex);
@@ -2920,7 +2920,7 @@ static void gk20a_vidmem_clear_mem_worker(struct work_struct *work)
 	struct mm_gk20a *mm = container_of(work, struct mm_gk20a,
 					vidmem.clear_mem_worker);
 	struct gk20a *g = mm->g;
-	struct mem_desc *mem;
+	struct nvgpu_mem *mem;
 
 	while ((mem = get_pending_mem_desc(mm)) != NULL) {
 		gk20a_gmmu_clear_vidmem_mem(g, mem);
@@ -2939,13 +2939,13 @@ static void gk20a_vidmem_clear_mem_worker(struct work_struct *work)
 #endif
 
 int gk20a_gmmu_alloc_map(struct vm_gk20a *vm, size_t size,
-		struct mem_desc *mem)
+		struct nvgpu_mem *mem)
 {
 	return gk20a_gmmu_alloc_map_flags(vm, 0, size, mem);
 }
 
 int gk20a_gmmu_alloc_map_flags(struct vm_gk20a *vm, unsigned long flags,
-		size_t size, struct mem_desc *mem)
+		size_t size, struct nvgpu_mem *mem)
 {
 	if (vm->mm->vidmem_is_vidmem) {
 		/*
@@ -2970,13 +2970,13 @@ int gk20a_gmmu_alloc_map_flags(struct vm_gk20a *vm, unsigned long flags,
 }
 
 int gk20a_gmmu_alloc_map_sys(struct vm_gk20a *vm, size_t size,
-		struct mem_desc *mem)
+		struct nvgpu_mem *mem)
 {
 	return gk20a_gmmu_alloc_map_flags_sys(vm, 0, size, mem);
 }
 
 int gk20a_gmmu_alloc_map_flags_sys(struct vm_gk20a *vm, unsigned long flags,
-		size_t size, struct mem_desc *mem)
+		size_t size, struct nvgpu_mem *mem)
 {
 	int err = gk20a_gmmu_alloc_flags_sys(vm->mm->g, flags, size, mem);
 
@@ -2999,14 +2999,14 @@ fail_free:
 }
 
 int gk20a_gmmu_alloc_map_vid(struct vm_gk20a *vm, size_t size,
-		struct mem_desc *mem)
+		struct nvgpu_mem *mem)
 {
 	return gk20a_gmmu_alloc_map_flags_vid(vm,
 			NVGPU_DMA_NO_KERNEL_MAPPING, size, mem);
 }
 
 int gk20a_gmmu_alloc_map_flags_vid(struct vm_gk20a *vm, unsigned long flags,
-		size_t size, struct mem_desc *mem)
+		size_t size, struct nvgpu_mem *mem)
 {
 	int err = gk20a_gmmu_alloc_flags_vid(vm->mm->g, flags, size, mem);
 
@@ -3028,7 +3028,7 @@ fail_free:
 	return err;
 }
 
-void gk20a_gmmu_unmap_free(struct vm_gk20a *vm, struct mem_desc *mem)
+void gk20a_gmmu_unmap_free(struct vm_gk20a *vm, struct nvgpu_mem *mem)
 {
 	if (mem->gpu_va)
 		gk20a_gmmu_unmap(vm, mem->gpu_va, mem->size, gk20a_mem_flag_none);
@@ -4583,7 +4583,7 @@ void gk20a_deinit_vm(struct vm_gk20a *vm)
 	gk20a_vm_free_entries(vm, &vm->pdb, 0);
 }
 
-int gk20a_alloc_inst_block(struct gk20a *g, struct mem_desc *inst_block)
+int gk20a_alloc_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block)
 {
 	struct device *dev = dev_from_gk20a(g);
 	int err;
@@ -4600,13 +4600,13 @@ int gk20a_alloc_inst_block(struct gk20a *g, struct mem_desc *inst_block)
 	return 0;
 }
 
-void gk20a_free_inst_block(struct gk20a *g, struct mem_desc *inst_block)
+void gk20a_free_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block)
 {
 	if (inst_block->size)
 		gk20a_gmmu_free(g, inst_block);
 }
 
-u64 gk20a_mm_inst_block_addr(struct gk20a *g, struct mem_desc *inst_block)
+u64 gk20a_mm_inst_block_addr(struct gk20a *g, struct nvgpu_mem *inst_block)
 {
 	u64 addr;
 	if (g->mm.has_physical_mode)
@@ -4622,7 +4622,7 @@ static int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 	int err;
 	struct vm_gk20a *vm = &mm->bar1.vm;
 	struct gk20a *g = gk20a_from_mm(mm);
-	struct mem_desc *inst_block = &mm->bar1.inst_block;
+	struct nvgpu_mem *inst_block = &mm->bar1.inst_block;
 	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
 	mm->bar1.aperture_size = bar1_aperture_size_mb_gk20a() << 20;
@@ -4653,7 +4653,7 @@ static int gk20a_init_system_vm(struct mm_gk20a *mm)
 	int err;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct gk20a *g = gk20a_from_mm(mm);
-	struct mem_desc *inst_block = &mm->pmu.inst_block;
+	struct nvgpu_mem *inst_block = &mm->pmu.inst_block;
 	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 	u32 low_hole, aperture_size;
 
@@ -4691,7 +4691,7 @@ static int gk20a_init_hwpm(struct mm_gk20a *mm)
 	int err;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct gk20a *g = gk20a_from_mm(mm);
-	struct mem_desc *inst_block = &mm->hwpm.inst_block;
+	struct nvgpu_mem *inst_block = &mm->hwpm.inst_block;
 
 	err = gk20a_alloc_inst_block(g, inst_block);
 	if (err)
@@ -4727,7 +4727,7 @@ static int gk20a_init_ce_vm(struct mm_gk20a *mm)
 			false, false, "ce");
 }
 
-void gk20a_mm_init_pdb(struct gk20a *g, struct mem_desc *inst_block,
+void gk20a_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *inst_block,
 		struct vm_gk20a *vm)
 {
 	u64 pdb_addr = gk20a_mem_get_base_addr(g, &vm->pdb.mem, 0);
@@ -4747,7 +4747,7 @@ void gk20a_mm_init_pdb(struct gk20a *g, struct mem_desc *inst_block,
 		ram_in_page_dir_base_hi_f(pdb_addr_hi));
 }
 
-void gk20a_init_inst_block(struct mem_desc *inst_block, struct vm_gk20a *vm,
+void gk20a_init_inst_block(struct nvgpu_mem *inst_block, struct vm_gk20a *vm,
 		u32 big_page_size)
 {
 	struct gk20a *g = gk20a_from_vm(vm);

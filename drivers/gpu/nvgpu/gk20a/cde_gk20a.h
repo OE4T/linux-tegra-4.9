@@ -222,7 +222,7 @@ struct gk20a_cde_ctx {
 	struct vm_gk20a *vm;
 
 	/* buf converter configuration */
-	struct mem_desc mem[MAX_CDE_BUFS];
+	struct nvgpu_mem mem[MAX_CDE_BUFS];
 	unsigned int num_bufs;
 
 	/* buffer patching params (where should patching be done) */

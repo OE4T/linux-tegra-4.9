@@ -63,7 +63,7 @@ struct fifo_runlist_info_gk20a {
 	unsigned long *active_channels;
 	unsigned long *active_tsgs;
 	/* Each engine has its own SW and HW runlist buffer.*/
-	struct mem_desc mem[MAX_RUNLIST_BUFFERS];
+	struct nvgpu_mem mem[MAX_RUNLIST_BUFFERS];
 	u32  cur_buffer;
 	u32  total_entries;
 	u32  pbdma_bitmask;      /* pbdmas supported for this runlist*/
@@ -166,7 +166,7 @@ struct fifo_gk20a {
 		struct nvgpu_mutex lock;
 	} profile;
 #endif
-	struct mem_desc userd;
+	struct nvgpu_mem userd;
 	u32 userd_entry_size;
 
 	unsigned int used_channels;

@@ -832,7 +832,7 @@ static int gr_gp10b_init_ctx_state(struct gk20a *g)
 }
 
 int gr_gp10b_alloc_buffer(struct vm_gk20a *vm, size_t size,
-			struct mem_desc *mem)
+			struct nvgpu_mem *mem)
 {
 	int err;
 
@@ -1037,7 +1037,7 @@ fail_free_gk20a_ctx:
 static void dump_ctx_switch_stats(struct gk20a *g, struct vm_gk20a *vm,
 		  struct gr_ctx_desc *gr_ctx)
 {
-	struct mem_desc *mem = &gr_ctx->mem;
+	struct nvgpu_mem *mem = &gr_ctx->mem;
 
 	if (nvgpu_mem_begin(g, mem)) {
 		WARN_ON("Cannot map context");
@@ -1108,7 +1108,7 @@ static void gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 
 static void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 		struct channel_ctx_gk20a *ch_ctx,
-		struct mem_desc *mem)
+		struct nvgpu_mem *mem)
 {
 	struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
 	u32 gfxp_preempt_option =
@@ -2072,7 +2072,7 @@ static int gr_gp10b_set_boosted_ctx(struct channel_gk20a *ch,
 {
 	struct gr_ctx_desc *gr_ctx = ch->ch_ctx.gr_ctx;
 	struct gk20a *g = ch->g;
-	struct mem_desc *mem = &gr_ctx->mem;
+	struct nvgpu_mem *mem = &gr_ctx->mem;
 	int err = 0;
 
 	gr_ctx->boosted_ctx = boost;
@@ -2101,7 +2101,7 @@ unmap_ctx:
 	return err;
 }
 
-static void gr_gp10b_update_boosted_ctx(struct gk20a *g, struct mem_desc *mem,
+static void gr_gp10b_update_boosted_ctx(struct gk20a *g, struct nvgpu_mem *mem,
 				       struct gr_ctx_desc *gr_ctx) {
 	u32 v;
 
@@ -2119,7 +2119,7 @@ static int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 	struct gk20a *g = ch->g;
 	struct tsg_gk20a *tsg;
 	struct vm_gk20a *vm;
-	struct mem_desc *mem = &gr_ctx->mem;
+	struct nvgpu_mem *mem = &gr_ctx->mem;
 	u32 class;
 	int err = 0;
 

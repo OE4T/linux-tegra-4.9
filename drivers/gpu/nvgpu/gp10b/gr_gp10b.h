@@ -42,7 +42,7 @@ enum {
 void gp10b_init_gr(struct gpu_ops *ops);
 int gr_gp10b_init_fs_state(struct gk20a *g);
 int gr_gp10b_alloc_buffer(struct vm_gk20a *vm, size_t size,
-			struct mem_desc *mem);
+			struct nvgpu_mem *mem);
 void gr_gp10b_create_sysfs(struct device *dev);
 
 struct ecc_stat {
@@ -95,10 +95,10 @@ struct gr_t18x {
 };
 
 struct gr_ctx_desc_t18x {
-	struct mem_desc preempt_ctxsw_buffer;
-	struct mem_desc spill_ctxsw_buffer;
-	struct mem_desc betacb_ctxsw_buffer;
-	struct mem_desc pagepool_ctxsw_buffer;
+	struct nvgpu_mem preempt_ctxsw_buffer;
+	struct nvgpu_mem spill_ctxsw_buffer;
+	struct nvgpu_mem betacb_ctxsw_buffer;
+	struct nvgpu_mem pagepool_ctxsw_buffer;
 	u32 ctx_id;
 	bool ctx_id_valid;
 	bool cilp_preempt_pending;

@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <nvgpu/mem_desc.h>
+#include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/page_allocator.h>
 
 #include "gk20a/gk20a.h"
@@ -36,14 +36,14 @@ u32 __nvgpu_aperture_mask(struct gk20a *g, enum nvgpu_aperture aperture,
 	return 0;
 }
 
-u32 nvgpu_aperture_mask(struct gk20a *g, struct mem_desc *mem,
+u32 nvgpu_aperture_mask(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 sysmem_mask, u32 vidmem_mask)
 {
 	return __nvgpu_aperture_mask(g, mem->aperture,
 			sysmem_mask, vidmem_mask);
 }
 
-int nvgpu_mem_begin(struct gk20a *g, struct mem_desc *mem)
+int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	void *cpu_va;
 
@@ -66,7 +66,7 @@ int nvgpu_mem_begin(struct gk20a *g, struct mem_desc *mem)
 	return 0;
 }
 
-void nvgpu_mem_end(struct gk20a *g, struct mem_desc *mem)
+void nvgpu_mem_end(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	if (mem->aperture != APERTURE_SYSMEM || g->mm.force_pramin)
 		return;
@@ -75,7 +75,7 @@ void nvgpu_mem_end(struct gk20a *g, struct mem_desc *mem)
 	mem->cpu_va = NULL;
 }
 
-u32 nvgpu_mem_rd32(struct gk20a *g, struct mem_desc *mem, u32 w)
+u32 nvgpu_mem_rd32(struct gk20a *g, struct nvgpu_mem *mem, u32 w)
 {
 	u32 data = 0;
 
@@ -97,19 +97,19 @@ u32 nvgpu_mem_rd32(struct gk20a *g, struct mem_desc *mem, u32 w)
 		data = value;
 
 	} else {
-		WARN_ON("Accessing unallocated mem_desc");
+		WARN_ON("Accessing unallocated nvgpu_mem");
 	}
 
 	return data;
 }
 
-u32 nvgpu_mem_rd(struct gk20a *g, struct mem_desc *mem, u32 offset)
+u32 nvgpu_mem_rd(struct gk20a *g, struct nvgpu_mem *mem, u32 offset)
 {
 	WARN_ON(offset & 3);
 	return nvgpu_mem_rd32(g, mem, offset / sizeof(u32));
 }
 
-void nvgpu_mem_rd_n(struct gk20a *g, struct mem_desc *mem,
+void nvgpu_mem_rd_n(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 offset, void *dest, u32 size)
 {
 	WARN_ON(offset & 3);
@@ -131,11 +131,11 @@ void nvgpu_mem_rd_n(struct gk20a *g, struct mem_desc *mem,
 		nvgpu_pramin_access_batched(g, mem, offset, size,
 				pramin_access_batch_rd_n, &dest_u32);
 	} else {
-		WARN_ON("Accessing unallocated mem_desc");
+		WARN_ON("Accessing unallocated nvgpu_mem");
 	}
 }
 
-void nvgpu_mem_wr32(struct gk20a *g, struct mem_desc *mem, u32 w, u32 data)
+void nvgpu_mem_wr32(struct gk20a *g, struct nvgpu_mem *mem, u32 w, u32 data)
 {
 	if (mem->aperture == APERTURE_SYSMEM && !g->mm.force_pramin) {
 		u32 *ptr = mem->cpu_va;
@@ -154,17 +154,17 @@ void nvgpu_mem_wr32(struct gk20a *g, struct mem_desc *mem, u32 w, u32 data)
 		if (!mem->skip_wmb)
 			wmb();
 	} else {
-		WARN_ON("Accessing unallocated mem_desc");
+		WARN_ON("Accessing unallocated nvgpu_mem");
 	}
 }
 
-void nvgpu_mem_wr(struct gk20a *g, struct mem_desc *mem, u32 offset, u32 data)
+void nvgpu_mem_wr(struct gk20a *g, struct nvgpu_mem *mem, u32 offset, u32 data)
 {
 	WARN_ON(offset & 3);
 	nvgpu_mem_wr32(g, mem, offset / sizeof(u32), data);
 }
 
-void nvgpu_mem_wr_n(struct gk20a *g, struct mem_desc *mem, u32 offset,
+void nvgpu_mem_wr_n(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 		void *src, u32 size)
 {
 	WARN_ON(offset & 3);
@@ -188,11 +188,11 @@ void nvgpu_mem_wr_n(struct gk20a *g, struct mem_desc *mem, u32 offset,
 		if (!mem->skip_wmb)
 			wmb();
 	} else {
-		WARN_ON("Accessing unallocated mem_desc");
+		WARN_ON("Accessing unallocated nvgpu_mem");
 	}
 }
 
-void nvgpu_memset(struct gk20a *g, struct mem_desc *mem, u32 offset,
+void nvgpu_memset(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 		u32 c, u32 size)
 {
 	WARN_ON(offset & 3);
@@ -220,6 +220,6 @@ void nvgpu_memset(struct gk20a *g, struct mem_desc *mem, u32 offset,
 		if (!mem->skip_wmb)
 			wmb();
 	} else {
-		WARN_ON("Accessing unallocated mem_desc");
+		WARN_ON("Accessing unallocated nvgpu_mem");
 	}
 }

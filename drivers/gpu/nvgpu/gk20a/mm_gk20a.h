@@ -24,7 +24,7 @@
 #include <asm/dma-iommu.h>
 #include <asm/cacheflush.h>
 
-#include <nvgpu/mem_desc.h>
+#include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/allocator.h>
 #include <nvgpu/list.h>
 #include <nvgpu/rbtree.h>
@@ -47,7 +47,7 @@ enum gk20a_mem_rw_flag {
 };
 
 struct gpfifo_desc {
-	struct mem_desc mem;
+	struct nvgpu_mem mem;
 	u32 entry_num;
 
 	u32 get;
@@ -61,7 +61,7 @@ struct gpfifo_desc {
 };
 
 struct patch_desc {
-	struct mem_desc mem;
+	struct nvgpu_mem mem;
 	u32 data_count;
 };
 
@@ -72,14 +72,14 @@ struct zcull_ctx_desc {
 };
 
 struct pm_ctx_desc {
-	struct mem_desc mem;
+	struct nvgpu_mem mem;
 	u32 pm_mode;
 };
 
 struct gk20a;
 
 struct compbit_store_desc {
-	struct mem_desc mem;
+	struct nvgpu_mem mem;
 
 	/* The value that is written to the hardware. This depends on
 	 * on the number of ltcs and is not an address. */
@@ -124,7 +124,7 @@ struct gk20a_comptags {
 
 struct gk20a_mm_entry {
 	/* backing for */
-	struct mem_desc mem;
+	struct nvgpu_mem mem;
 	u32 woffset; /* if >0, mem is a shadow copy, owned by another entry */
 	int pgsz;
 	struct gk20a_mm_entry *entries;
@@ -132,7 +132,7 @@ struct gk20a_mm_entry {
 };
 
 struct priv_cmd_queue {
-	struct mem_desc mem;
+	struct nvgpu_mem mem;
 	u32 size;	/* num of entries in words */
 	u32 put;	/* put for priv cmd queue */
 	u32 get;	/* get for priv cmd queue */
@@ -140,7 +140,7 @@ struct priv_cmd_queue {
 
 struct priv_cmd_entry {
 	bool valid;
-	struct mem_desc *mem;
+	struct nvgpu_mem *mem;
 	u32 off;	/* offset in mem, in u32 entries */
 	u64 gva;
 	u32 get;	/* start of entry in queue */
@@ -335,24 +335,24 @@ struct mm_gk20a {
 	struct {
 		u32 aperture_size;
 		struct vm_gk20a vm;
-		struct mem_desc inst_block;
+		struct nvgpu_mem inst_block;
 	} bar1;
 
 	struct {
 		u32 aperture_size;
 		struct vm_gk20a vm;
-		struct mem_desc inst_block;
+		struct nvgpu_mem inst_block;
 	} bar2;
 
 	struct {
 		u32 aperture_size;
 		struct vm_gk20a vm;
-		struct mem_desc inst_block;
+		struct nvgpu_mem inst_block;
 	} pmu;
 
 	struct {
 		/* using pmu vm currently */
-		struct mem_desc inst_block;
+		struct nvgpu_mem inst_block;
 	} hwpm;
 
 	struct {
@@ -367,7 +367,7 @@ struct mm_gk20a {
 	struct nvgpu_mutex tlb_lock;
 	struct nvgpu_mutex priv_lock;
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	struct mem_desc bar2_desc;
+	struct nvgpu_mem bar2_desc;
 #endif
 	/*
 	 * Separate function to cleanup the CE since it requires a channel to
@@ -397,7 +397,7 @@ struct mm_gk20a {
 	/* false if vidmem aperture actually points to sysmem */
 	bool vidmem_is_vidmem;
 
-	struct mem_desc sysmem_flush;
+	struct nvgpu_mem sysmem_flush;
 
 	u32 pramin_window;
 	struct nvgpu_spinlock pramin_window_lock;
@@ -475,11 +475,11 @@ struct nvgpu_page_alloc *get_vidmem_page_alloc(struct scatterlist *sgl);
 #define bar1_instance_block_shift_gk20a() bus_bar1_block_ptr_shift_v()
 #endif
 
-int gk20a_alloc_inst_block(struct gk20a *g, struct mem_desc *inst_block);
-void gk20a_free_inst_block(struct gk20a *g, struct mem_desc *inst_block);
-void gk20a_init_inst_block(struct mem_desc *inst_block, struct vm_gk20a *vm,
+int gk20a_alloc_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block);
+void gk20a_free_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block);
+void gk20a_init_inst_block(struct nvgpu_mem *inst_block, struct vm_gk20a *vm,
 		u32 big_page_size);
-u64 gk20a_mm_inst_block_addr(struct gk20a *g, struct mem_desc *mem);
+u64 gk20a_mm_inst_block_addr(struct gk20a *g, struct nvgpu_mem *mem);
 
 void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 		u64 va_begin, u64 va_end, char *label);
@@ -499,7 +499,7 @@ void gk20a_free_sgtable(struct gk20a *g, struct sg_table **sgt);
 u64 gk20a_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl,
 		u32 flags);
 u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, dma_addr_t iova);
-u64 gk20a_mem_get_base_addr(struct gk20a *g, struct mem_desc *mem,
+u64 gk20a_mem_get_base_addr(struct gk20a *g, struct nvgpu_mem *mem,
 			    u32 flags);
 
 void gk20a_mm_ltc_isr(struct gk20a *g);
@@ -542,39 +542,39 @@ u64 gk20a_gmmu_fixed_map(struct vm_gk20a *vm,
 #define NVGPU_DMA_READ_ONLY		(1 << 2)
 
 int gk20a_gmmu_alloc_map(struct vm_gk20a *vm, size_t size,
-		struct mem_desc *mem);
+		struct nvgpu_mem *mem);
 int gk20a_gmmu_alloc_map_flags(struct vm_gk20a *vm, unsigned long flags,
-		size_t size, struct mem_desc *mem);
+		size_t size, struct nvgpu_mem *mem);
 
 int gk20a_gmmu_alloc_map_sys(struct vm_gk20a *vm, size_t size,
-		struct mem_desc *mem);
+		struct nvgpu_mem *mem);
 int gk20a_gmmu_alloc_map_flags_sys(struct vm_gk20a *vm, unsigned long flags,
-		size_t size, struct mem_desc *mem);
+		size_t size, struct nvgpu_mem *mem);
 
 int gk20a_gmmu_alloc_map_vid(struct vm_gk20a *vm, size_t size,
-		struct mem_desc *mem);
+		struct nvgpu_mem *mem);
 int gk20a_gmmu_alloc_map_flags_vid(struct vm_gk20a *vm, unsigned long flags,
-		size_t size, struct mem_desc *mem);
+		size_t size, struct nvgpu_mem *mem);
 
-void gk20a_gmmu_unmap_free(struct vm_gk20a *vm, struct mem_desc *mem);
+void gk20a_gmmu_unmap_free(struct vm_gk20a *vm, struct nvgpu_mem *mem);
 
-int gk20a_gmmu_alloc(struct gk20a *g, size_t size, struct mem_desc *mem);
+int gk20a_gmmu_alloc(struct gk20a *g, size_t size, struct nvgpu_mem *mem);
 int gk20a_gmmu_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
-		struct mem_desc *mem);
+		struct nvgpu_mem *mem);
 
-int gk20a_gmmu_alloc_sys(struct gk20a *g, size_t size, struct mem_desc *mem);
+int gk20a_gmmu_alloc_sys(struct gk20a *g, size_t size, struct nvgpu_mem *mem);
 int gk20a_gmmu_alloc_flags_sys(struct gk20a *g, unsigned long flags,
-		size_t size, struct mem_desc *mem);
+		size_t size, struct nvgpu_mem *mem);
 
-int gk20a_gmmu_alloc_vid(struct gk20a *g, size_t size, struct mem_desc *mem);
+int gk20a_gmmu_alloc_vid(struct gk20a *g, size_t size, struct nvgpu_mem *mem);
 int gk20a_gmmu_alloc_flags_vid(struct gk20a *g, unsigned long flags,
-		size_t size, struct mem_desc *mem);
+		size_t size, struct nvgpu_mem *mem);
 int gk20a_gmmu_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
-		size_t size, struct mem_desc *mem, dma_addr_t at);
+		size_t size, struct nvgpu_mem *mem, dma_addr_t at);
 
-void gk20a_gmmu_free(struct gk20a *g, struct mem_desc *mem);
+void gk20a_gmmu_free(struct gk20a *g, struct nvgpu_mem *mem);
 
-static inline phys_addr_t gk20a_mem_phys(struct mem_desc *mem)
+static inline phys_addr_t gk20a_mem_phys(struct nvgpu_mem *mem)
 {
 	/* FIXME: the sgt/sgl may get null if this is accessed e.g. in an isr
 	 * during channel deletion - attempt to fix at least null derefs */
@@ -591,7 +591,7 @@ static inline phys_addr_t gk20a_mem_phys(struct mem_desc *mem)
 
 u32 __nvgpu_aperture_mask(struct gk20a *g, enum nvgpu_aperture aperture,
 		u32 sysmem_mask, u32 vidmem_mask);
-u32 nvgpu_aperture_mask(struct gk20a *g, struct mem_desc *mem,
+u32 nvgpu_aperture_mask(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 sysmem_mask, u32 vidmem_mask);
 
 void gk20a_pde_wr32(struct gk20a *g, struct gk20a_mm_entry *entry,
@@ -769,10 +769,10 @@ struct gpu_ops;
 void gk20a_init_mm(struct gpu_ops *gops);
 const struct gk20a_mmu_level *gk20a_mm_get_mmu_levels(struct gk20a *g,
 						      u32 big_page_size);
-void gk20a_mm_init_pdb(struct gk20a *g, struct mem_desc *mem,
+void gk20a_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *mem,
 		struct vm_gk20a *vm);
 
-void gk20a_remove_vm(struct vm_gk20a *vm, struct mem_desc *inst_block);
+void gk20a_remove_vm(struct vm_gk20a *vm, struct nvgpu_mem *inst_block);
 
 int gk20a_big_pages_possible(struct vm_gk20a *vm, u64 base, u64 size);
 

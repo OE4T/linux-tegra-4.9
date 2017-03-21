@@ -114,7 +114,7 @@ gk20a_cs_snapshot_client_from_list(struct nvgpu_list_node *node)
 struct gk20a_cs_snapshot {
 	unsigned long perfmon_ids[PM_BITMAP_SIZE];
 	struct nvgpu_list_node	clients;
-	struct mem_desc		hw_memdesc;
+	struct nvgpu_mem	hw_memdesc;
 	/* pointer to allocated cpu_va memory where GPU place data */
 	struct gk20a_cs_snapshot_fifo_entry	*hw_snapshot;
 	struct gk20a_cs_snapshot_fifo_entry	*hw_end;

@@ -69,7 +69,7 @@ static void lsfm_free_nonpmu_ucode_img_res(struct gk20a *g,
 static int lsf_gen_wpr_requirements(struct gk20a *g,
 		struct ls_flcn_mgr_v1 *plsfm);
 static void lsfm_init_wpr_contents(struct gk20a *g,
-		struct ls_flcn_mgr_v1 *plsfm, struct mem_desc *nonwpr);
+		struct ls_flcn_mgr_v1 *plsfm, struct nvgpu_mem *nonwpr);
 static void free_acr_resources(struct gk20a *g, struct ls_flcn_mgr_v1 *plsfm);
 static int gp106_pmu_populate_loader_cfg(struct gk20a *g,
 	void *lsfm, u32 *p_bl_gen_desc_size);
@@ -98,7 +98,7 @@ static void flcn64_set_dma(struct falc_u64 *dma_addr, u64 value)
 }
 
 static int gp106_alloc_blob_space(struct gk20a *g,
-		size_t size, struct mem_desc *mem)
+		size_t size, struct nvgpu_mem *mem)
 {
 	struct wpr_carveout_info wpr_inf;
 	int err;
@@ -685,7 +685,7 @@ static int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
 
 /* Initialize WPR contents */
 static void lsfm_init_wpr_contents(struct gk20a *g,
-		struct ls_flcn_mgr_v1 *plsfm, struct mem_desc *ucode)
+		struct ls_flcn_mgr_v1 *plsfm, struct nvgpu_mem *ucode)
 {
 	struct lsfm_managed_ucode_img_v2 *pnode = plsfm->ucode_img_list;
 	u32 i;

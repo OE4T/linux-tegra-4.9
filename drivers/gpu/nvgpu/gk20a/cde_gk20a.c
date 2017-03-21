@@ -52,7 +52,7 @@ static void gk20a_deinit_cde_img(struct gk20a_cde_ctx *cde_ctx)
 	unsigned int i;
 
 	for (i = 0; i < cde_ctx->num_bufs; i++) {
-		struct mem_desc *mem = cde_ctx->mem + i;
+		struct nvgpu_mem *mem = cde_ctx->mem + i;
 		gk20a_gmmu_unmap_free(cde_ctx->vm, mem);
 	}
 
@@ -226,7 +226,7 @@ static int gk20a_init_cde_buf(struct gk20a_cde_ctx *cde_ctx,
 			      const struct firmware *img,
 			      struct gk20a_cde_hdr_buf *buf)
 {
-	struct mem_desc *mem;
+	struct nvgpu_mem *mem;
 	int err;
 
 	/* check that the file can hold the buf */
@@ -312,8 +312,8 @@ static int gk20a_init_cde_replace(struct gk20a_cde_ctx *cde_ctx,
 				  const struct firmware *img,
 				  struct gk20a_cde_hdr_replace *replace)
 {
-	struct mem_desc *source_mem;
-	struct mem_desc *target_mem;
+	struct nvgpu_mem *source_mem;
+	struct nvgpu_mem *target_mem;
 	u32 *target_mem_ptr;
 	u64 vaddr;
 	int err;
@@ -362,7 +362,7 @@ static int gk20a_init_cde_replace(struct gk20a_cde_ctx *cde_ctx,
 static int gk20a_cde_patch_params(struct gk20a_cde_ctx *cde_ctx)
 {
 	struct gk20a *g = cde_ctx->g;
-	struct mem_desc *target_mem;
+	struct nvgpu_mem *target_mem;
 	u32 *target_mem_ptr;
 	u64 new_data;
 	int user_id = 0, err;
@@ -451,7 +451,7 @@ static int gk20a_init_cde_param(struct gk20a_cde_ctx *cde_ctx,
 				const struct firmware *img,
 				struct gk20a_cde_hdr_param *param)
 {
-	struct mem_desc *target_mem;
+	struct nvgpu_mem *target_mem;
 
 	if (param->target_buf >= cde_ctx->num_bufs) {
 		gk20a_warn(cde_ctx->dev, "cde: invalid buffer parameter. param idx = %d, target_buf=%u, num_bufs=%u",
@@ -545,7 +545,7 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 
 	gpfifo_elem = *gpfifo;
 	for (i = 0; i < num_elems; i++, cmd_elem++, gpfifo_elem++) {
-		struct mem_desc *target_mem;
+		struct nvgpu_mem *target_mem;
 
 		/* validate the current entry */
 		if (cmd_elem->target_buf >= cde_ctx->num_bufs) {

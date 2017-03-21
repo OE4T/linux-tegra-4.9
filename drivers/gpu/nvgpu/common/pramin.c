@@ -80,7 +80,7 @@ void pramin_access_batch_set(struct gk20a *g, u32 start, u32 words, u32 **arg)
  * This same loop is used for read/write/memset. Offset and size in bytes.
  * One call to "loop" is done per range, with "arg" supplied.
  */
-void nvgpu_pramin_access_batched(struct gk20a *g, struct mem_desc *mem,
+void nvgpu_pramin_access_batched(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 offset, u32 size, pramin_access_batch_fn loop, u32 **arg)
 {
 	struct nvgpu_page_alloc *alloc = NULL;

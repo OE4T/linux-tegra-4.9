@@ -699,7 +699,7 @@ void gr_gk20a_ctx_patch_write(struct gk20a *g,
 	}
 }
 
-static u32 fecs_current_ctx_data(struct gk20a *g, struct mem_desc *inst_block)
+static u32 fecs_current_ctx_data(struct gk20a *g, struct nvgpu_mem *inst_block)
 {
 	u32 ptr = u64_lo32(gk20a_mm_inst_block_addr(g, inst_block)
 			>> ram_in_base_shift_v());
@@ -741,7 +741,7 @@ static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 }
 
 void gr_gk20a_write_zcull_ptr(struct gk20a *g,
-				struct mem_desc *mem, u64 gpu_va)
+				struct nvgpu_mem *mem, u64 gpu_va)
 {
 	u32 va = u64_lo32(gpu_va >> 8);
 
@@ -750,7 +750,7 @@ void gr_gk20a_write_zcull_ptr(struct gk20a *g,
 }
 
 void gr_gk20a_write_pm_ptr(struct gk20a *g,
-				struct mem_desc *mem, u64 gpu_va)
+				struct nvgpu_mem *mem, u64 gpu_va)
 {
 	u32 va = u64_lo32(gpu_va >> 8);
 
@@ -761,9 +761,9 @@ void gr_gk20a_write_pm_ptr(struct gk20a *g,
 static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c)
 {
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
-	struct mem_desc *mem = &ch_ctx->gr_ctx->mem;
+	struct nvgpu_mem *mem = &ch_ctx->gr_ctx->mem;
 	struct ctx_header_desc *ctx = &c->ch_ctx.ctx_header;
-	struct mem_desc *ctxheader = &ctx->mem;
+	struct nvgpu_mem *ctxheader = &ctx->mem;
 	int ret = 0;
 
 	gk20a_dbg_fn("");
@@ -1579,15 +1579,15 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	u32 ctx_header_words;
 	u32 i;
 	u32 data;
-	struct mem_desc *gold_mem = &gr->global_ctx_buffer[GOLDEN_CTX].mem;
-	struct mem_desc *gr_mem = &ch_ctx->gr_ctx->mem;
+	struct nvgpu_mem *gold_mem = &gr->global_ctx_buffer[GOLDEN_CTX].mem;
+	struct nvgpu_mem *gr_mem = &ch_ctx->gr_ctx->mem;
 	u32 err = 0;
 	struct aiv_list_gk20a *sw_ctx_load = &g->gr.ctx_vars.sw_ctx_load;
 	struct av_list_gk20a *sw_method_init = &g->gr.ctx_vars.sw_method_init;
 	u32 last_method_data = 0;
 	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	struct ctx_header_desc *ctx = &c->ch_ctx.ctx_header;
-	struct mem_desc *ctxheader = &ctx->mem;
+	struct nvgpu_mem *ctxheader = &ctx->mem;
 
 	gk20a_dbg_fn("");
 
@@ -1836,7 +1836,7 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 				    bool enable_smpc_ctxsw)
 {
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
-	struct mem_desc *mem;
+	struct nvgpu_mem *mem;
 	u32 data;
 	int ret;
 
@@ -1893,11 +1893,11 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 {
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
 	struct pm_ctx_desc *pm_ctx = &ch_ctx->pm_ctx;
-	struct mem_desc *gr_mem;
+	struct nvgpu_mem *gr_mem;
 	u32 data;
 	u64 virt_addr;
 	struct ctx_header_desc *ctx = &c->ch_ctx.ctx_header;
-	struct mem_desc *ctxheader = &ctx->mem;
+	struct nvgpu_mem *ctxheader = &ctx->mem;
 	int ret;
 
 	gk20a_dbg_fn("");
@@ -2018,7 +2018,7 @@ cleanup_pm_buf:
 	gk20a_gmmu_unmap(c->vm, pm_ctx->mem.gpu_va, pm_ctx->mem.size,
 			gk20a_mem_flag_none);
 	gk20a_gmmu_free(g, &pm_ctx->mem);
-	memset(&pm_ctx->mem, 0, sizeof(struct mem_desc));
+	memset(&pm_ctx->mem, 0, sizeof(struct nvgpu_mem));
 
 	gk20a_enable_channel_tsg(g, c);
 	return ret;
@@ -2035,9 +2035,9 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	u64 virt_addr = 0;
 	u32 v, data;
 	int ret = 0;
-	struct mem_desc *mem = &ch_ctx->gr_ctx->mem;
+	struct nvgpu_mem *mem = &ch_ctx->gr_ctx->mem;
 	struct ctx_header_desc *ctx = &c->ch_ctx.ctx_header;
-	struct mem_desc *ctxheader = &ctx->mem;
+	struct nvgpu_mem *ctxheader = &ctx->mem;
 
 	gk20a_dbg_fn("");
 
@@ -2249,7 +2249,7 @@ static void gr_gk20a_init_ctxsw_ucode_segments(
 
 static int gr_gk20a_copy_ctxsw_ucode_segments(
 	struct gk20a *g,
-	struct mem_desc *dst,
+	struct nvgpu_mem *dst,
 	struct gk20a_ctxsw_ucode_segments *segments,
 	u32 *bootimage,
 	u32 *code, u32 *data)
@@ -2826,7 +2826,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	u64 *g_bfr_va = c->ch_ctx.global_ctx_buffer_va;
 	u64 *g_bfr_size = c->ch_ctx.global_ctx_buffer_size;
 	struct gr_gk20a *gr = &g->gr;
-	struct mem_desc *mem;
+	struct nvgpu_mem *mem;
 	u64 gpu_va;
 	u32 i;
 	gk20a_dbg_fn("");
@@ -5085,7 +5085,7 @@ out:
 static int gr_gk20a_init_access_map(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
-	struct mem_desc *mem = &gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem;
+	struct nvgpu_mem *mem = &gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem;
 	u32 w, nr_pages =
 		DIV_ROUND_UP(gr->ctx_vars.priv_access_map_size,
 			     PAGE_SIZE);
@@ -6645,7 +6645,7 @@ int gr_gk20a_fecs_get_reglist_img_size(struct gk20a *g, u32 *size)
 }
 
 int gr_gk20a_fecs_set_reglist_bind_inst(struct gk20a *g,
-		struct mem_desc *inst_block)
+		struct nvgpu_mem *inst_block)
 {
 	u32 data = fecs_current_ctx_data(g, inst_block);
 
@@ -7131,7 +7131,7 @@ static void gr_gk20a_init_sm_dsm_reg_info(void)
 static int gr_gk20a_ctx_patch_smpc(struct gk20a *g,
 			    struct channel_ctx_gk20a *ch_ctx,
 			    u32 addr, u32 data,
-			    struct mem_desc *mem)
+			    struct nvgpu_mem *mem)
 {
 	u32 num_gpc = g->gr.gpc_count;
 	u32 num_tpc;
@@ -8258,7 +8258,7 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 	struct channel_ctx_gk20a *ch_ctx = &ch->ch_ctx;
 	bool gr_ctx_ready = false;
 	bool pm_ctx_ready = false;
-	struct mem_desc *current_mem = NULL;
+	struct nvgpu_mem *current_mem = NULL;
 	bool ch_is_curr_ctx, restart_gr_ctxsw = false;
 	u32 i, j, offset, v;
 	struct gr_gk20a *gr = &g->gr;

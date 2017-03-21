@@ -27,7 +27,7 @@
 #include <nvgpu/hw/gp10b/hw_top_gp10b.h>
 
 static void gp10b_set_pdb_fault_replay_flags(struct gk20a *g,
-				struct mem_desc *mem)
+				struct nvgpu_mem *mem)
 {
 	u32 val;
 
@@ -83,7 +83,7 @@ static int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
 			unsigned long acquire_timeout, u32 flags)
 {
 	struct gk20a *g = c->g;
-	struct mem_desc *mem = &c->inst_block;
+	struct nvgpu_mem *mem = &c->inst_block;
 
 	gk20a_dbg_fn("");
 

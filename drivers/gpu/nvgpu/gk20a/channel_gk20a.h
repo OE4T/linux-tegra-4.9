@@ -193,7 +193,7 @@ struct channel_gk20a {
 
 	struct channel_ctx_gk20a ch_ctx;
 
-	struct mem_desc inst_block;
+	struct nvgpu_mem inst_block;
 
 	u64 userd_iova;
 	u64 userd_gpu_va;

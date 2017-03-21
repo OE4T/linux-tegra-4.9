@@ -429,13 +429,15 @@ static const struct snd_kcontrol_new tegra210_dmic_controls[] = {
 
 static struct snd_soc_codec_driver tegra210_dmic_codec = {
 	.probe = tegra210_dmic_codec_probe,
-	.dapm_widgets = tegra210_dmic_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra210_dmic_widgets),
-	.dapm_routes = tegra210_dmic_routes,
-	.num_dapm_routes = ARRAY_SIZE(tegra210_dmic_routes),
-	.controls = tegra210_dmic_controls,
-	.num_controls = ARRAY_SIZE(tegra210_dmic_controls),
 	.idle_bias_off = 1,
+	.component_driver = {
+		.dapm_widgets = tegra210_dmic_widgets,
+		.num_dapm_widgets = ARRAY_SIZE(tegra210_dmic_widgets),
+		.dapm_routes = tegra210_dmic_routes,
+		.num_dapm_routes = ARRAY_SIZE(tegra210_dmic_routes),
+		.controls = tegra210_dmic_controls,
+		.num_controls = ARRAY_SIZE(tegra210_dmic_controls),
+	},
 };
 
 /* Regmap callback functions */

@@ -227,14 +227,16 @@ static const struct snd_kcontrol_new tegra210_ope_controls[] = {
 
 static struct snd_soc_codec_driver tegra210_ope_codec = {
 	.probe = tegra210_ope_codec_probe,
-	.dapm_widgets = tegra210_ope_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra210_ope_widgets),
-	.dapm_routes = tegra210_ope_routes,
-	.num_dapm_routes = ARRAY_SIZE(tegra210_ope_routes),
-	.controls = tegra210_ope_controls,
-	.num_controls = ARRAY_SIZE(tegra210_ope_controls),
 	.idle_bias_off = 1,
 	.get_regmap = tegra210_ope_init_regmap,
+	.component_driver = {
+		.dapm_widgets = tegra210_ope_widgets,
+		.num_dapm_widgets = ARRAY_SIZE(tegra210_ope_widgets),
+		.dapm_routes = tegra210_ope_routes,
+		.num_dapm_routes = ARRAY_SIZE(tegra210_ope_routes),
+		.controls = tegra210_ope_controls,
+		.num_controls = ARRAY_SIZE(tegra210_ope_controls),
+	},
 };
 
 static bool tegra210_ope_wr_reg(struct device *dev, unsigned int reg)

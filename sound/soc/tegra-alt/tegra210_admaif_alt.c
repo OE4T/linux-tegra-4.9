@@ -1,7 +1,7 @@
 /*
  * tegra210_admaif_alt.c - Tegra ADMAIF driver
  *
- * Copyright (c) 2016-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1048,26 +1048,29 @@ static int tegra_admaif_codec_probe(struct snd_soc_codec *codec)
 
 static struct snd_soc_codec_driver tegra210_admaif_codec = {
 	.probe = tegra_admaif_codec_probe,
-	.dapm_widgets = tegra_admaif_widgets,
-	.num_dapm_widgets = TEGRA210_ADMAIF_CHANNEL_COUNT * 4,
-	.dapm_routes = tegra_admaif_routes,
-	.num_dapm_routes = TEGRA210_ADMAIF_CHANNEL_COUNT * 6,
-	.controls = tegra210_admaif_controls,
-	.num_controls = ARRAY_SIZE(tegra210_admaif_controls),
 	.idle_bias_off = 1,
+	.component_driver = {
+		.dapm_widgets = tegra_admaif_widgets,
+		.num_dapm_widgets = TEGRA210_ADMAIF_CHANNEL_COUNT * 4,
+		.dapm_routes = tegra_admaif_routes,
+		.num_dapm_routes = TEGRA210_ADMAIF_CHANNEL_COUNT * 6,
+		.controls = tegra210_admaif_controls,
+		.num_controls = ARRAY_SIZE(tegra210_admaif_controls),
+	},
 };
 
 static struct snd_soc_codec_driver tegra186_admaif_codec = {
 	.probe = tegra_admaif_codec_probe,
-	.dapm_widgets = tegra_admaif_widgets,
-	.num_dapm_widgets = TEGRA186_ADMAIF_CHANNEL_COUNT * 4,
-	.dapm_routes = tegra_admaif_routes,
-	.num_dapm_routes = TEGRA186_ADMAIF_CHANNEL_COUNT * 6,
-	.controls = tegra186_admaif_controls,
-	.num_controls = ARRAY_SIZE(tegra186_admaif_controls),
 	.idle_bias_off = 1,
+	.component_driver = {
+		.dapm_widgets = tegra_admaif_widgets,
+		.num_dapm_widgets = TEGRA186_ADMAIF_CHANNEL_COUNT * 4,
+		.dapm_routes = tegra_admaif_routes,
+		.num_dapm_routes = TEGRA186_ADMAIF_CHANNEL_COUNT * 6,
+		.controls = tegra186_admaif_controls,
+		.num_controls = ARRAY_SIZE(tegra186_admaif_controls),
+	},
 };
-
 
 static const struct snd_soc_component_driver tegra_admaif_dai_driver = {
 	.name		= DRV_NAME,

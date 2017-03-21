@@ -543,13 +543,15 @@ static const struct snd_soc_dapm_route tegra210_mvc_routes[] = {
 
 static struct snd_soc_codec_driver tegra210_mvc_codec = {
 	.probe = tegra210_mvc_codec_probe,
-	.dapm_widgets = tegra210_mvc_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra210_mvc_widgets),
-	.dapm_routes = tegra210_mvc_routes,
-	.num_dapm_routes = ARRAY_SIZE(tegra210_mvc_routes),
-	.controls = tegra210_mvc_vol_ctrl,
-	.num_controls = ARRAY_SIZE(tegra210_mvc_vol_ctrl),
 	.idle_bias_off = 1,
+	.component_driver = {
+		.dapm_widgets = tegra210_mvc_widgets,
+		.num_dapm_widgets = ARRAY_SIZE(tegra210_mvc_widgets),
+		.dapm_routes = tegra210_mvc_routes,
+		.num_dapm_routes = ARRAY_SIZE(tegra210_mvc_routes),
+		.controls = tegra210_mvc_vol_ctrl,
+		.num_controls = ARRAY_SIZE(tegra210_mvc_vol_ctrl),
+	},
 };
 
 static bool tegra210_mvc_wr_rd_reg(struct device *dev, unsigned int reg)

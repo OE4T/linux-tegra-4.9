@@ -531,11 +531,13 @@ static struct of_dev_auxdata tegra210_xbar_auxdata[] = {
 
 static struct snd_soc_codec_driver tegra210_xbar_codec = {
 	.probe = tegra_xbar_codec_probe,
-	.dapm_widgets = tegra210_xbar_widgets,
-	.dapm_routes = tegra210_xbar_routes,
-	.num_dapm_widgets = ARRAY_SIZE(tegra210_xbar_widgets),
-	.num_dapm_routes = ARRAY_SIZE(tegra210_xbar_routes),
 	.idle_bias_off = 1,
+	.component_driver = {
+		.dapm_widgets = tegra210_xbar_widgets,
+		.dapm_routes = tegra210_xbar_routes,
+		.num_dapm_widgets = ARRAY_SIZE(tegra210_xbar_widgets),
+		.num_dapm_routes = ARRAY_SIZE(tegra210_xbar_routes),
+	},
 };
 
 static const struct regmap_config tegra210_xbar_regmap_config = {
@@ -550,12 +552,18 @@ static const struct regmap_config tegra210_xbar_regmap_config = {
 static int tegra210_xbar_registration(struct platform_device *pdev)
 {
 	int ret;
+	int num_dapm_widgets, num_dapm_routes;
 
-	tegra210_xbar_codec.num_dapm_widgets = (TEGRA210_NUM_MUX_WIDGETS * 3) +
-				(TEGRA210_NUM_DAIS - TEGRA210_NUM_MUX_WIDGETS) * 2;
-	tegra210_xbar_codec.num_dapm_routes =
+	num_dapm_widgets = (TEGRA210_NUM_MUX_WIDGETS * 3) +
+		(TEGRA210_NUM_DAIS - TEGRA210_NUM_MUX_WIDGETS) * 2;
+	num_dapm_routes =
 		(TEGRA210_NUM_DAIS - TEGRA210_NUM_MUX_WIDGETS) * 2 +
 		(TEGRA210_NUM_MUX_WIDGETS * TEGRA210_NUM_MUX_INPUT);
+
+	tegra210_xbar_codec.component_driver.num_dapm_widgets =
+			num_dapm_widgets;
+	tegra210_xbar_codec.component_driver.num_dapm_routes =
+			num_dapm_routes;
 
 	ret = snd_soc_register_codec(&pdev->dev, &tegra210_xbar_codec,
 				tegra210_xbar_dais, TEGRA210_NUM_DAIS);

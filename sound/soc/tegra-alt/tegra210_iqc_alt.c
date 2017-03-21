@@ -31,13 +31,14 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/of_device.h>
 #include <linux/debugfs.h>
+#include <linux/tegra-soc.h>
 
 #include "tegra210_xbar_alt.h"
 #include "tegra210_iqc_alt.h"
 
 #define DRV_NAME "tegra210-iqc"
 
-static const struct reg_default tegra210_iqc_reg_defaultss[] = {
+static const struct reg_default tegra210_iqc_reg_defaults[] = {
 	{ TEGRA210_IQC_AXBAR_TX_INT_MASK, 0x0000000f},
 	{ TEGRA210_IQC_AXBAR_TX_CIF_CTRL, 0x00007700},
 	{ TEGRA210_IQC_CG, 0x1},
@@ -117,7 +118,7 @@ static int tegra210_iqc_set_audio_cif(struct tegra210_iqc *iqc,
 		return -EINVAL;
 	}
 
-	memset(cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
+	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
 	cif_conf.audio_channels = channels;
 	cif_conf.client_channels = channels;
 	cif_conf.audio_bits = audio_bits;
@@ -233,13 +234,15 @@ static const struct snd_soc_dapm_route tegra210_iqc_routes[] = {
 
 static struct snd_soc_codec_driver tegra210_iqc_codec = {
 	.probe = tegra210_iqc_codec_probe,
-	.dapm_widgets = tegra210_iqc_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra210_iqc_widgets),
-	.dapm_routes = tegra210_iqc_routes,
-	.num_dapm_routes = ARRAY_SIZE(tegra210_iqc_routes),
-	.controls = tegra210_iqc_controls,
-	.num_controls = ARRAY_SIZE(tegra210_iqc_controls),
 	.idle_bias_off = 1,
+	.component_driver = {
+		.dapm_widgets = tegra210_iqc_widgets,
+		.num_dapm_widgets = ARRAY_SIZE(tegra210_iqc_widgets),
+		.dapm_routes = tegra210_iqc_routes,
+		.num_dapm_routes = ARRAY_SIZE(tegra210_iqc_routes),
+		.controls = tegra210_iqc_controls,
+		.num_controls = ARRAY_SIZE(tegra210_iqc_controls),
+	},
 };
 
 static bool tegra210_iqc_wr_reg(struct device *dev, unsigned int reg)

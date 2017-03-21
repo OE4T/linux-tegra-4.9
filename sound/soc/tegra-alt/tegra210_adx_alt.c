@@ -507,11 +507,13 @@ static const struct snd_soc_dapm_route tegra210_adx_routes[] = {
 
 static struct snd_soc_codec_driver tegra210_adx_codec = {
 	.probe = tegra210_adx_codec_probe,
-	.dapm_widgets = tegra210_adx_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra210_adx_widgets),
-	.dapm_routes = tegra210_adx_routes,
-	.num_dapm_routes = ARRAY_SIZE(tegra210_adx_routes),
 	.idle_bias_off = 1,
+	.component_driver = {
+		.dapm_widgets = tegra210_adx_widgets,
+		.num_dapm_widgets = ARRAY_SIZE(tegra210_adx_widgets),
+		.dapm_routes = tegra210_adx_routes,
+		.num_dapm_routes = ARRAY_SIZE(tegra210_adx_routes),
+	},
 };
 
 static bool tegra210_adx_wr_reg(struct device *dev,

@@ -865,13 +865,15 @@ static const struct snd_soc_dapm_route tegra210_i2s_routes[] = {
 
 static struct snd_soc_codec_driver tegra210_i2s_codec = {
 	.probe = tegra210_i2s_codec_probe,
-	.dapm_widgets = tegra210_i2s_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra210_i2s_widgets),
-	.dapm_routes = tegra210_i2s_routes,
-	.num_dapm_routes = ARRAY_SIZE(tegra210_i2s_routes),
-	.controls = tegra210_i2s_controls,
-	.num_controls = ARRAY_SIZE(tegra210_i2s_controls),
 	.idle_bias_off = 1,
+	.component_driver = {
+		.dapm_widgets = tegra210_i2s_widgets,
+		.num_dapm_widgets = ARRAY_SIZE(tegra210_i2s_widgets),
+		.dapm_routes = tegra210_i2s_routes,
+		.num_dapm_routes = ARRAY_SIZE(tegra210_i2s_routes),
+		.controls = tegra210_i2s_controls,
+		.num_controls = ARRAY_SIZE(tegra210_i2s_controls),
+	},
 };
 
 static bool tegra210_i2s_wr_reg(struct device *dev, unsigned int reg)

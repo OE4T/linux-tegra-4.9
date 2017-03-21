@@ -743,13 +743,15 @@ static const struct snd_kcontrol_new tegra210_sfc_controls[] = {
 
 static struct snd_soc_codec_driver tegra210_sfc_codec = {
 	.probe = tegra210_sfc_codec_probe,
-	.dapm_widgets = tegra210_sfc_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra210_sfc_widgets),
-	.dapm_routes = tegra210_sfc_routes,
-	.num_dapm_routes = ARRAY_SIZE(tegra210_sfc_routes),
-	.controls = tegra210_sfc_controls,
-	.num_controls = ARRAY_SIZE(tegra210_sfc_controls),
 	.idle_bias_off = 1,
+	.component_driver = {
+		.dapm_widgets = tegra210_sfc_widgets,
+		.num_dapm_widgets = ARRAY_SIZE(tegra210_sfc_widgets),
+		.dapm_routes = tegra210_sfc_routes,
+		.num_dapm_routes = ARRAY_SIZE(tegra210_sfc_routes),
+		.controls = tegra210_sfc_controls,
+		.num_controls = ARRAY_SIZE(tegra210_sfc_controls),
+	},
 };
 
 static bool tegra210_sfc_wr_reg(struct device *dev, unsigned int reg)

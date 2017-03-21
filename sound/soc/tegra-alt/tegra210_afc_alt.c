@@ -435,13 +435,13 @@ static const struct snd_soc_dapm_route tegra210_afc_routes[] = {
 
 static const struct snd_soc_codec_driver tegra210_afc_codec = {
 	.probe = tegra210_afc_codec_probe,
-	.dapm_widgets = tegra210_afc_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra210_afc_widgets),
-	.dapm_routes = tegra210_afc_routes,
-	.num_dapm_routes = ARRAY_SIZE(tegra210_afc_routes),
-	.controls = tegra210_afc_controls,
-	.num_controls = ARRAY_SIZE(tegra210_afc_controls),
 	.idle_bias_off = 1,
+	.component_driver = {
+		.dapm_widgets = tegra210_afc_widgets,
+		.num_dapm_widgets = ARRAY_SIZE(tegra210_afc_widgets),
+		.dapm_routes = tegra210_afc_routes,
+		.num_dapm_routes = ARRAY_SIZE(tegra210_afc_routes),
+	},
 };
 
 static const struct snd_soc_codec_driver tegra186_afc_codec = {

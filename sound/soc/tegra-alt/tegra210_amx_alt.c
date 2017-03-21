@@ -731,13 +731,15 @@ static struct snd_kcontrol_new tegra210_amx_controls[] = {
 
 static struct snd_soc_codec_driver tegra210_amx_codec = {
 	.probe = tegra210_amx_codec_probe,
-	.dapm_widgets = tegra210_amx_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra210_amx_widgets),
-	.dapm_routes = tegra210_amx_routes,
-	.num_dapm_routes = ARRAY_SIZE(tegra210_amx_routes),
-	.controls = tegra210_amx_controls,
-	.num_controls = ARRAY_SIZE(tegra210_amx_controls),
 	.idle_bias_off = 1,
+	.component_driver = {
+		.dapm_widgets = tegra210_amx_widgets,
+		.num_dapm_widgets = ARRAY_SIZE(tegra210_amx_widgets),
+		.dapm_routes = tegra210_amx_routes,
+		.num_dapm_routes = ARRAY_SIZE(tegra210_amx_routes),
+		.controls = tegra210_amx_controls,
+		.num_controls = ARRAY_SIZE(tegra210_amx_controls),
+	},
 };
 
 static bool tegra210_amx_wr_reg(struct device *dev,

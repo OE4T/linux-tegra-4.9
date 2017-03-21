@@ -540,13 +540,15 @@ static const struct snd_soc_dapm_route tegra210_mixer_routes[] = {
 
 static struct snd_soc_codec_driver tegra210_mixer_codec = {
 	.probe = tegra210_mixer_codec_probe,
-	.dapm_widgets = tegra210_mixer_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra210_mixer_widgets),
-	.dapm_routes = tegra210_mixer_routes,
-	.num_dapm_routes = ARRAY_SIZE(tegra210_mixer_routes),
-	.controls = tegra210_mixer_gain_ctls,
-	.num_controls = ARRAY_SIZE(tegra210_mixer_gain_ctls),
 	.idle_bias_off = 1,
+	.component_driver = {
+		.dapm_widgets = tegra210_mixer_widgets,
+		.num_dapm_widgets = ARRAY_SIZE(tegra210_mixer_widgets),
+		.dapm_routes = tegra210_mixer_routes,
+		.num_dapm_routes = ARRAY_SIZE(tegra210_mixer_routes),
+		.controls = tegra210_mixer_gain_ctls,
+		.num_controls = ARRAY_SIZE(tegra210_mixer_gain_ctls),
+	},
 };
 
 static bool tegra210_mixer_wr_reg(struct device *dev,

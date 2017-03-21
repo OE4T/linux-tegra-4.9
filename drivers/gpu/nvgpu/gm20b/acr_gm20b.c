@@ -369,7 +369,7 @@ static int gm20b_alloc_blob_space(struct gk20a *g,
 {
 	int err;
 
-	err = gk20a_gmmu_alloc_sys(g, size, mem);
+	err = nvgpu_dma_alloc_sys(g, size, mem);
 
 	return err;
 }
@@ -1115,7 +1115,7 @@ static int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 			err = -1;
 			goto err_release_acr_fw;
 		}
-		err = gk20a_gmmu_alloc_map_sys(vm, img_size_in_bytes,
+		err = nvgpu_dma_alloc_map_sys(vm, img_size_in_bytes,
 				&acr->acr_ucode);
 		if (err) {
 			err = -ENOMEM;
@@ -1171,7 +1171,7 @@ static int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 	}
 	return 0;
 err_free_ucode_map:
-	gk20a_gmmu_unmap_free(vm, &acr->acr_ucode);
+	nvgpu_dma_unmap_free(vm, &acr->acr_ucode);
 err_release_acr_fw:
 	release_firmware(acr_fw);
 	acr->acr_fw = NULL;
@@ -1417,7 +1417,7 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 		/*TODO in code verify that enable PMU is done,
 			scrubbing etc is done*/
 		/*TODO in code verify that gmmu vm init is done*/
-		err = gk20a_gmmu_alloc_flags_sys(g,
+		err = nvgpu_dma_alloc_flags_sys(g,
 				NVGPU_DMA_READ_ONLY, bl_sz, &acr->hsbl_ucode);
 		if (err) {
 			gk20a_err(d, "failed to allocate memory\n");
@@ -1475,7 +1475,7 @@ err_unmap_bl:
 	gk20a_gmmu_unmap(vm, acr->hsbl_ucode.gpu_va,
 			acr->hsbl_ucode.size, gk20a_mem_flag_none);
 err_free_ucode:
-	gk20a_gmmu_free(g, &acr->hsbl_ucode);
+	nvgpu_dma_free(g, &acr->hsbl_ucode);
 err_done:
 	release_firmware(hsbl_fw);
 	return err;

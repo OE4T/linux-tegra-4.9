@@ -54,7 +54,7 @@ static void gk20a_deinit_cde_img(struct gk20a_cde_ctx *cde_ctx)
 
 	for (i = 0; i < cde_ctx->num_bufs; i++) {
 		struct nvgpu_mem *mem = cde_ctx->mem + i;
-		gk20a_gmmu_unmap_free(cde_ctx->vm, mem);
+		nvgpu_dma_unmap_free(cde_ctx->vm, mem);
 	}
 
 	nvgpu_kfree(cde_ctx->g, cde_ctx->init_convert_cmd);
@@ -247,7 +247,7 @@ static int gk20a_init_cde_buf(struct gk20a_cde_ctx *cde_ctx,
 
 	/* allocate buf */
 	mem = cde_ctx->mem + cde_ctx->num_bufs;
-	err = gk20a_gmmu_alloc_map_sys(cde_ctx->vm, buf->num_bytes, mem);
+	err = nvgpu_dma_alloc_map_sys(cde_ctx->vm, buf->num_bytes, mem);
 	if (err) {
 		gk20a_warn(cde_ctx->dev, "cde: could not allocate device memory. buffer idx = %d",
 			   cde_ctx->num_bufs);

@@ -509,7 +509,7 @@ static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 
 static int gk20a_alloc_sysmem_flush(struct gk20a *g)
 {
-	return gk20a_gmmu_alloc_sys(g, SZ_4K, &g->mm.sysmem_flush);
+	return nvgpu_dma_alloc_sys(g, SZ_4K, &g->mm.sysmem_flush);
 }
 
 #if defined(CONFIG_GK20A_VIDMEM)
@@ -897,9 +897,9 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 	 * default.
 	 */
 	if (IS_ENABLED(CONFIG_ARM64))
-		err = gk20a_gmmu_alloc(g, len, &entry->mem);
+		err = nvgpu_dma_alloc(g, len, &entry->mem);
 	else
-		err = gk20a_gmmu_alloc_flags(g, NVGPU_DMA_NO_KERNEL_MAPPING,
+		err = nvgpu_dma_alloc_flags(g, NVGPU_DMA_NO_KERNEL_MAPPING,
 				len, &entry->mem);
 
 
@@ -929,7 +929,7 @@ void free_gmmu_pages(struct vm_gk20a *vm,
 		return;
 	}
 
-	gk20a_gmmu_free(g, &entry->mem);
+	nvgpu_dma_free(g, &entry->mem);
 }
 
 int map_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry)
@@ -1756,7 +1756,7 @@ static void gk20a_vidbuf_release(struct dma_buf *dmabuf)
 	if (buf->dmabuf_priv)
 		buf->dmabuf_priv_delete(buf->dmabuf_priv);
 
-	gk20a_gmmu_free(buf->g, buf->mem);
+	nvgpu_dma_free(buf->g, buf->mem);
 	nvgpu_kfree(buf->g, buf);
 }
 
@@ -1873,7 +1873,7 @@ int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 
 	buf->mem->user_mem = true;
 
-	err = gk20a_gmmu_alloc_vid(g, bytes, buf->mem);
+	err = nvgpu_dma_alloc_vid(g, bytes, buf->mem);
 	if (err)
 		goto err_memfree;
 
@@ -1896,7 +1896,7 @@ int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 	return fd;
 
 err_bfree:
-	gk20a_gmmu_free(g, buf->mem);
+	nvgpu_dma_free(g, buf->mem);
 err_memfree:
 	nvgpu_kfree(g, buf->mem);
 err_kfree:
@@ -4199,7 +4199,7 @@ int gk20a_alloc_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block)
 
 	gk20a_dbg_fn("");
 
-	err = gk20a_gmmu_alloc(g, ram_in_alloc_size_v(), inst_block);
+	err = nvgpu_dma_alloc(g, ram_in_alloc_size_v(), inst_block);
 	if (err) {
 		gk20a_err(dev, "%s: memory allocation failed\n", __func__);
 		return err;
@@ -4212,7 +4212,7 @@ int gk20a_alloc_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block)
 void gk20a_free_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block)
 {
 	if (inst_block->size)
-		gk20a_gmmu_free(g, inst_block);
+		nvgpu_dma_free(g, inst_block);
 }
 
 u64 gk20a_mm_inst_block_addr(struct gk20a *g, struct nvgpu_mem *inst_block)

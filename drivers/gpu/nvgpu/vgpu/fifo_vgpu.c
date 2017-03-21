@@ -216,7 +216,7 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 
 			runlist_size  = sizeof(u16) * f->num_channels;
 			for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
-				int err = gk20a_gmmu_alloc_sys(g, runlist_size,
+				int err = nvgpu_dma_alloc_sys(g, runlist_size,
 						&runlist->mem[i]);
 				if (err) {
 					dev_err(d, "memory allocation failed\n");
@@ -260,7 +260,7 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 
 	f->userd_entry_size = 1 << ram_userd_base_shift_v();
 
-	err = gk20a_gmmu_alloc_sys(g, f->userd_entry_size * f->num_channels,
+	err = nvgpu_dma_alloc_sys(g, f->userd_entry_size * f->num_channels,
 			&f->userd);
 	if (err) {
 		dev_err(d, "memory allocation failed\n");
@@ -327,7 +327,7 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 clean_up:
 	gk20a_dbg_fn("fail");
 	/* FIXME: unmap from bar1 */
-	gk20a_gmmu_free(g, &f->userd);
+	nvgpu_dma_free(g, &f->userd);
 
 	memset(&f->userd, 0, sizeof(f->userd));
 

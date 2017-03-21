@@ -39,7 +39,7 @@ int gp10b_replayable_pagefault_buffer_init(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	if (!g->mm.bar2_desc.gpu_va) {
-		err = gk20a_gmmu_alloc_map_sys(vm, rbfb_size,
+		err = nvgpu_dma_alloc_map_sys(vm, rbfb_size,
 						&g->mm.bar2_desc);
 		if (err) {
 			dev_err(dev_from_gk20a(g),
@@ -63,7 +63,7 @@ void gp10b_replayable_pagefault_buffer_deinit(struct gk20a *g)
 {
 	struct vm_gk20a *vm = &g->mm.bar2.vm;
 
-	gk20a_gmmu_unmap_free(vm, &g->mm.bar2_desc);
+	nvgpu_dma_unmap_free(vm, &g->mm.bar2_desc);
 }
 
 u32 gp10b_replayable_pagefault_buffer_get_index(struct gk20a *g)

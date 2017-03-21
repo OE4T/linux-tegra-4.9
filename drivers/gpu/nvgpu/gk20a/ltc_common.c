@@ -70,7 +70,7 @@ static int gk20a_ltc_alloc_phys_cbc(struct gk20a *g,
 {
 	struct gr_gk20a *gr = &g->gr;
 
-	return gk20a_gmmu_alloc_flags_sys(g, NVGPU_DMA_FORCE_CONTIGUOUS,
+	return nvgpu_dma_alloc_flags_sys(g, NVGPU_DMA_FORCE_CONTIGUOUS,
 				    compbit_backing_size,
 				    &gr->compbit_store.mem);
 }
@@ -80,7 +80,7 @@ static int gk20a_ltc_alloc_virt_cbc(struct gk20a *g,
 {
 	struct gr_gk20a *gr = &g->gr;
 
-	return gk20a_gmmu_alloc_flags_sys(g, NVGPU_DMA_NO_KERNEL_MAPPING,
+	return nvgpu_dma_alloc_flags_sys(g, NVGPU_DMA_NO_KERNEL_MAPPING,
 				    compbit_backing_size,
 				    &gr->compbit_store.mem);
 }

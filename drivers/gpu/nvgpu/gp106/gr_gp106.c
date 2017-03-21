@@ -226,11 +226,11 @@ static int gr_gp106_set_ctxsw_preemption_mode(struct gk20a *g,
 	return 0;
 
 fail_free_betacb:
-	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.betacb_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.betacb_ctxsw_buffer);
 fail_free_spill:
-	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.spill_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.spill_ctxsw_buffer);
 fail_free_preempt:
-	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.preempt_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.preempt_ctxsw_buffer);
 fail:
 	return err;
 }

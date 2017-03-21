@@ -3151,7 +3151,7 @@ static int gk20a_prepare_ucode(struct gk20a *g)
 	pmu->ucode_image = (u32 *)((u8 *)pmu->desc +
 			pmu->desc->descriptor_size);
 
-	err = gk20a_gmmu_alloc_map_sys(vm, GK20A_PMU_UCODE_SIZE_MAX,
+	err = nvgpu_dma_alloc_map_sys(vm, GK20A_PMU_UCODE_SIZE_MAX,
 			&pmu->ucode);
 	if (err)
 		goto err_release_fw;
@@ -3225,7 +3225,7 @@ static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	INIT_WORK(&pmu->pg_init, pmu_setup_hw);
 
-	err = gk20a_gmmu_alloc_map_sys(vm, GK20A_PMU_SEQ_BUF_SIZE,
+	err = nvgpu_dma_alloc_map_sys(vm, GK20A_PMU_SEQ_BUF_SIZE,
 			&pmu->seq_buf);
 	if (err) {
 		gk20a_err(d, "failed to allocate memory\n");
@@ -3242,7 +3242,7 @@ static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	pmu->seq_buf.size = GK20A_PMU_SEQ_BUF_SIZE;
 
-	err = gk20a_gmmu_alloc_map(vm, GK20A_PMU_TRACE_BUFSIZE,
+	err = nvgpu_dma_alloc_map(vm, GK20A_PMU_TRACE_BUFSIZE,
 			&pmu->trace_buf);
 	if (err) {
 		gk20a_err(d, "failed to allocate pmu trace buffer\n");
@@ -3255,7 +3255,7 @@ skip_init:
 	gk20a_dbg_fn("done");
 	return 0;
  err_free_seq_buf:
-	gk20a_gmmu_unmap_free(vm, &pmu->seq_buf);
+	nvgpu_dma_unmap_free(vm, &pmu->seq_buf);
  err_free_seq:
 	nvgpu_kfree(g, pmu->seq);
  err_free_mutex:
@@ -4760,7 +4760,7 @@ int gk20a_pmu_vidmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	int err;
 
-	err = gk20a_gmmu_alloc_map_vid(vm, size, mem);
+	err = nvgpu_dma_alloc_map_vid(vm, size, mem);
 	if (err) {
 		gk20a_err(g->dev, "memory allocation failed");
 		return -ENOMEM;
@@ -4776,7 +4776,7 @@ int gk20a_pmu_sysmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	int err;
 
-	err = gk20a_gmmu_alloc_map_sys(vm, size, mem);
+	err = nvgpu_dma_alloc_map_sys(vm, size, mem);
 	if (err) {
 		gk20a_err(g->dev, "failed to allocate memory\n");
 		return -ENOMEM;
@@ -4787,7 +4787,7 @@ int gk20a_pmu_sysmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 
 void gk20a_pmu_surface_free(struct gk20a *g, struct nvgpu_mem *mem)
 {
-	gk20a_gmmu_free(g, mem);
+	nvgpu_dma_free(g, mem);
 	memset(mem, 0, sizeof(struct nvgpu_mem));
 }
 

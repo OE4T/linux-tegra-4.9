@@ -24,7 +24,7 @@ struct vm_gk20a;
 struct nvgpu_mem;
 
 /*
- * Flags for the below gk20a_gmmu_{alloc,alloc_map}_flags*
+ * Flags for the below nvgpu_dma_{alloc,alloc_map}_flags*
  */
 
 /*
@@ -45,7 +45,7 @@ struct nvgpu_mem;
 #define NVGPU_DMA_READ_ONLY		(1 << 2)
 
 /**
- * gk20a_gmmu_alloc - Allocate DMA memory
+ * nvgpu_dma_alloc - Allocate DMA memory
  *
  * @g    - The GPU.
  * @size - Size of the allocation in bytes.
@@ -56,10 +56,10 @@ struct nvgpu_mem;
  * memory can be either placed in VIDMEM or SYSMEM, which ever is more
  * convenient for the driver.
  */
-int gk20a_gmmu_alloc(struct gk20a *g, size_t size, struct nvgpu_mem *mem);
+int nvgpu_dma_alloc(struct gk20a *g, size_t size, struct nvgpu_mem *mem);
 
 /**
- * gk20a_gmmu_alloc_flags - Allocate DMA memory
+ * nvgpu_dma_alloc_flags - Allocate DMA memory
  *
  * @g     - The GPU.
  * @flags - Flags modifying the operation of the DMA allocation.
@@ -77,11 +77,11 @@ int gk20a_gmmu_alloc(struct gk20a *g, size_t size, struct nvgpu_mem *mem);
  *   %NVGPU_DMA_FORCE_CONTIGUOUS
  *   %NVGPU_DMA_READ_ONLY
  */
-int gk20a_gmmu_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
+int nvgpu_dma_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
 		struct nvgpu_mem *mem);
 
 /**
- * gk20a_gmmu_alloc_sys - Allocate DMA memory
+ * nvgpu_dma_alloc_sys - Allocate DMA memory
  *
  * @g    - The GPU.
  * @size - Size of the allocation in bytes.
@@ -91,10 +91,10 @@ int gk20a_gmmu_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
  * Returns 0 on success and a suitable error code when there's an error. This
  * allocates memory specifically in SYSMEM.
  */
-int gk20a_gmmu_alloc_sys(struct gk20a *g, size_t size, struct nvgpu_mem *mem);
+int nvgpu_dma_alloc_sys(struct gk20a *g, size_t size, struct nvgpu_mem *mem);
 
 /**
- * gk20a_gmmu_alloc_flags_sys - Allocate DMA memory
+ * nvgpu_dma_alloc_flags_sys - Allocate DMA memory
  *
  * @g     - The GPU.
  * @flags - Flags modifying the operation of the DMA allocation.
@@ -111,11 +111,11 @@ int gk20a_gmmu_alloc_sys(struct gk20a *g, size_t size, struct nvgpu_mem *mem);
  *   %NVGPU_DMA_FORCE_CONTIGUOUS
  *   %NVGPU_DMA_READ_ONLY
  */
-int gk20a_gmmu_alloc_flags_sys(struct gk20a *g, unsigned long flags,
+int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 		size_t size, struct nvgpu_mem *mem);
 
 /**
- * gk20a_gmmu_alloc_vid - Allocate DMA memory
+ * nvgpu_dma_alloc_vid - Allocate DMA memory
  *
  * @g    - The GPU.
  * @size - Size of the allocation in bytes.
@@ -125,10 +125,10 @@ int gk20a_gmmu_alloc_flags_sys(struct gk20a *g, unsigned long flags,
  * Returns 0 on success and a suitable error code when there's an error. This
  * allocates memory specifically in VIDMEM.
  */
-int gk20a_gmmu_alloc_vid(struct gk20a *g, size_t size, struct nvgpu_mem *mem);
+int nvgpu_dma_alloc_vid(struct gk20a *g, size_t size, struct nvgpu_mem *mem);
 
 /**
- * gk20a_gmmu_alloc_flags_vid - Allocate DMA memory
+ * nvgpu_dma_alloc_flags_vid - Allocate DMA memory
  *
  * @g     - The GPU.
  * @flags - Flags modifying the operation of the DMA allocation.
@@ -144,11 +144,11 @@ int gk20a_gmmu_alloc_vid(struct gk20a *g, size_t size, struct nvgpu_mem *mem);
  *   %NVGPU_DMA_NO_KERNEL_MAPPING
  *
  */
-int gk20a_gmmu_alloc_flags_vid(struct gk20a *g, unsigned long flags,
+int nvgpu_dma_alloc_flags_vid(struct gk20a *g, unsigned long flags,
 		size_t size, struct nvgpu_mem *mem);
 
 /**
- * gk20a_gmmu_alloc_flags_vid_at - Allocate DMA memory
+ * nvgpu_dma_alloc_flags_vid_at - Allocate DMA memory
  *
  * @g     - The GPU.
  * @flags - Flags modifying the operation of the DMA allocation.
@@ -165,29 +165,29 @@ int gk20a_gmmu_alloc_flags_vid(struct gk20a *g, unsigned long flags,
  *
  *   %NVGPU_DMA_NO_KERNEL_MAPPING
  */
-int gk20a_gmmu_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
+int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 		size_t size, struct nvgpu_mem *mem, dma_addr_t at);
 
 /**
- * gk20a_gmmu_free - Free a DMA allocation
+ * nvgpu_dma_free - Free a DMA allocation
  *
  * @g   - The GPU.
  * @mem - An allocation to free.
  *
  * Free memory created with any of:
  *
- *   gk20a_gmmu_alloc()
- *   gk20a_gmmu_alloc_flags()
- *   gk20a_gmmu_alloc_sys()
- *   gk20a_gmmu_alloc_flags_sys()
- *   gk20a_gmmu_alloc_vid()
- *   gk20a_gmmu_alloc_flags_vid()
- *   gk20a_gmmu_alloc_flags_vid_at()
+ *   nvgpu_dma_alloc()
+ *   nvgpu_dma_alloc_flags()
+ *   nvgpu_dma_alloc_sys()
+ *   nvgpu_dma_alloc_flags_sys()
+ *   nvgpu_dma_alloc_vid()
+ *   nvgpu_dma_alloc_flags_vid()
+ *   nvgpu_dma_alloc_flags_vid_at()
  */
-void gk20a_gmmu_free(struct gk20a *g, struct nvgpu_mem *mem);
+void nvgpu_dma_free(struct gk20a *g, struct nvgpu_mem *mem);
 
 /**
- * gk20a_gmmu_alloc_map - Allocate DMA memory and map into GMMU.
+ * nvgpu_dma_alloc_map - Allocate DMA memory and map into GMMU.
  *
  * @vm   - VM context for GMMU mapping.
  * @size - Size of the allocation in bytes.
@@ -198,11 +198,11 @@ void gk20a_gmmu_free(struct gk20a *g, struct nvgpu_mem *mem);
  * either placed in VIDMEM or SYSMEM, which ever is more convenient for the
  * driver.
  */
-int gk20a_gmmu_alloc_map(struct vm_gk20a *vm, size_t size,
+int nvgpu_dma_alloc_map(struct vm_gk20a *vm, size_t size,
 		struct nvgpu_mem *mem);
 
 /**
- * gk20a_gmmu_alloc_map_flags - Allocate DMA memory and map into GMMU.
+ * nvgpu_dma_alloc_map_flags - Allocate DMA memory and map into GMMU.
  *
  * @vm    - VM context for GMMU mapping.
  * @flags - Flags modifying the operation of the DMA allocation.
@@ -221,11 +221,11 @@ int gk20a_gmmu_alloc_map(struct vm_gk20a *vm, size_t size,
  *   %NVGPU_DMA_FORCE_CONTIGUOUS
  *   %NVGPU_DMA_READ_ONLY
  */
-int gk20a_gmmu_alloc_map_flags(struct vm_gk20a *vm, unsigned long flags,
+int nvgpu_dma_alloc_map_flags(struct vm_gk20a *vm, unsigned long flags,
 		size_t size, struct nvgpu_mem *mem);
 
 /**
- * gk20a_gmmu_alloc_map_sys - Allocate DMA memory and map into GMMU.
+ * nvgpu_dma_alloc_map_sys - Allocate DMA memory and map into GMMU.
  *
  * @vm   - VM context for GMMU mapping.
  * @size - Size of the allocation in bytes.
@@ -234,11 +234,11 @@ int gk20a_gmmu_alloc_map_flags(struct vm_gk20a *vm, unsigned long flags,
  * Allocate memory suitable for doing DMA and map that memory into the GMMU.
  * This memory will be placed in SYSMEM.
  */
-int gk20a_gmmu_alloc_map_sys(struct vm_gk20a *vm, size_t size,
+int nvgpu_dma_alloc_map_sys(struct vm_gk20a *vm, size_t size,
 		struct nvgpu_mem *mem);
 
 /**
- * gk20a_gmmu_alloc_map_flags_sys - Allocate DMA memory and map into GMMU.
+ * nvgpu_dma_alloc_map_flags_sys - Allocate DMA memory and map into GMMU.
  *
  * @vm    - VM context for GMMU mapping.
  * @flags - Flags modifying the operation of the DMA allocation.
@@ -255,11 +255,11 @@ int gk20a_gmmu_alloc_map_sys(struct vm_gk20a *vm, size_t size,
  *   %NVGPU_DMA_FORCE_CONTIGUOUS
  *   %NVGPU_DMA_READ_ONLY
  */
-int gk20a_gmmu_alloc_map_flags_sys(struct vm_gk20a *vm, unsigned long flags,
+int nvgpu_dma_alloc_map_flags_sys(struct vm_gk20a *vm, unsigned long flags,
 		size_t size, struct nvgpu_mem *mem);
 
 /**
- * gk20a_gmmu_alloc_map_vid - Allocate DMA memory and map into GMMU.
+ * nvgpu_dma_alloc_map_vid - Allocate DMA memory and map into GMMU.
  *
  * @vm   - VM context for GMMU mapping.
  * @size - Size of the allocation in bytes.
@@ -268,11 +268,11 @@ int gk20a_gmmu_alloc_map_flags_sys(struct vm_gk20a *vm, unsigned long flags,
  * Allocate memory suitable for doing DMA and map that memory into the GMMU.
  * This memory will be placed in VIDMEM.
  */
-int gk20a_gmmu_alloc_map_vid(struct vm_gk20a *vm, size_t size,
+int nvgpu_dma_alloc_map_vid(struct vm_gk20a *vm, size_t size,
 		struct nvgpu_mem *mem);
 
 /**
- * gk20a_gmmu_alloc_map_flags_vid - Allocate DMA memory and map into GMMU.
+ * nvgpu_dma_alloc_map_flags_vid - Allocate DMA memory and map into GMMU.
  *
  * @vm    - VM context for GMMU mapping.
  * @flags - Flags modifying the operation of the DMA allocation.
@@ -289,24 +289,24 @@ int gk20a_gmmu_alloc_map_vid(struct vm_gk20a *vm, size_t size,
  *   %NVGPU_DMA_FORCE_CONTIGUOUS
  *   %NVGPU_DMA_READ_ONLY
  */
-int gk20a_gmmu_alloc_map_flags_vid(struct vm_gk20a *vm, unsigned long flags,
+int nvgpu_dma_alloc_map_flags_vid(struct vm_gk20a *vm, unsigned long flags,
 		size_t size, struct nvgpu_mem *mem);
 
 /**
- * gk20a_gmmu_unmap_free - Free a DMA allocation
+ * nvgpu_dma_unmap_free - Free a DMA allocation
  *
  * @g   - The GPU.
  * @mem - An allocation to free.
  *
  * Free memory created with any of:
  *
- *   gk20a_gmmu_alloc_map()
- *   gk20a_gmmu_alloc_map_flags()
- *   gk20a_gmmu_alloc_map_sys()
- *   gk20a_gmmu_alloc_map_flags_sys()
- *   gk20a_gmmu_alloc_map_vid()
- *   gk20a_gmmu_alloc_map_flags_vid()
+ *   nvgpu_dma_alloc_map()
+ *   nvgpu_dma_alloc_map_flags()
+ *   nvgpu_dma_alloc_map_sys()
+ *   nvgpu_dma_alloc_map_flags_sys()
+ *   nvgpu_dma_alloc_map_vid()
+ *   nvgpu_dma_alloc_map_flags_vid()
  */
-void gk20a_gmmu_unmap_free(struct vm_gk20a *vm, struct nvgpu_mem *mem);
+void nvgpu_dma_unmap_free(struct vm_gk20a *vm, struct nvgpu_mem *mem);
 
 #endif

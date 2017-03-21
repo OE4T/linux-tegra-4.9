@@ -23,7 +23,7 @@
 #include "gk20a/gk20a.h"
 
 #if defined(CONFIG_GK20A_VIDMEM)
-static u64 __gk20a_gmmu_alloc(struct nvgpu_allocator *allocator, dma_addr_t at,
+static u64 __nvgpu_dma_alloc(struct nvgpu_allocator *allocator, dma_addr_t at,
 				size_t size)
 {
 	u64 addr = 0;
@@ -38,11 +38,11 @@ static u64 __gk20a_gmmu_alloc(struct nvgpu_allocator *allocator, dma_addr_t at,
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
-static void gk20a_dma_flags_to_attrs(unsigned long *attrs,
+static void nvgpu_dma_flags_to_attrs(unsigned long *attrs,
 		unsigned long flags)
 #define ATTR_ARG(x) *x
 #else
-static void gk20a_dma_flags_to_attrs(struct dma_attrs *attrs,
+static void nvgpu_dma_flags_to_attrs(struct dma_attrs *attrs,
 		unsigned long flags)
 #define ATTR_ARG(x) x
 #endif
@@ -56,12 +56,12 @@ static void gk20a_dma_flags_to_attrs(struct dma_attrs *attrs,
 #undef ATTR_ARG
 }
 
-int gk20a_gmmu_alloc(struct gk20a *g, size_t size, struct nvgpu_mem *mem)
+int nvgpu_dma_alloc(struct gk20a *g, size_t size, struct nvgpu_mem *mem)
 {
-	return gk20a_gmmu_alloc_flags(g, 0, size, mem);
+	return nvgpu_dma_alloc_flags(g, 0, size, mem);
 }
 
-int gk20a_gmmu_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
+int nvgpu_dma_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
 		struct nvgpu_mem *mem)
 {
 	if (g->mm.vidmem_is_vidmem) {
@@ -71,7 +71,7 @@ int gk20a_gmmu_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
 		 * using gk20a_gmmu_alloc_map and it's vidmem, or if there's a
 		 * difference, the user should use the flag explicitly anyway.
 		 */
-		int err = gk20a_gmmu_alloc_flags_vid(g,
+		int err = nvgpu_dma_alloc_flags_vid(g,
 				flags | NVGPU_DMA_NO_KERNEL_MAPPING,
 				size, mem);
 
@@ -83,15 +83,15 @@ int gk20a_gmmu_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
 		 */
 	}
 
-	return gk20a_gmmu_alloc_flags_sys(g, flags, size, mem);
+	return nvgpu_dma_alloc_flags_sys(g, flags, size, mem);
 }
 
-int gk20a_gmmu_alloc_sys(struct gk20a *g, size_t size, struct nvgpu_mem *mem)
+int nvgpu_dma_alloc_sys(struct gk20a *g, size_t size, struct nvgpu_mem *mem)
 {
-	return gk20a_gmmu_alloc_flags_sys(g, 0, size, mem);
+	return nvgpu_dma_alloc_flags_sys(g, 0, size, mem);
 }
 
-int gk20a_gmmu_alloc_flags_sys(struct gk20a *g, unsigned long flags,
+int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 		size_t size, struct nvgpu_mem *mem)
 {
 	struct device *d = dev_from_gk20a(g);
@@ -103,7 +103,7 @@ int gk20a_gmmu_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 	if (flags) {
 		DEFINE_DMA_ATTRS(dma_attrs);
 
-		gk20a_dma_flags_to_attrs(&dma_attrs, flags);
+		nvgpu_dma_flags_to_attrs(&dma_attrs, flags);
 
 		if (flags & NVGPU_DMA_NO_KERNEL_MAPPING) {
 			mem->pages = dma_alloc_attrs(d,
@@ -149,19 +149,19 @@ fail_free:
 	return err;
 }
 
-int gk20a_gmmu_alloc_vid(struct gk20a *g, size_t size, struct nvgpu_mem *mem)
+int nvgpu_dma_alloc_vid(struct gk20a *g, size_t size, struct nvgpu_mem *mem)
 {
-	return gk20a_gmmu_alloc_flags_vid(g,
+	return nvgpu_dma_alloc_flags_vid(g,
 			NVGPU_DMA_NO_KERNEL_MAPPING, size, mem);
 }
 
-int gk20a_gmmu_alloc_flags_vid(struct gk20a *g, unsigned long flags,
+int nvgpu_dma_alloc_flags_vid(struct gk20a *g, unsigned long flags,
 		size_t size, struct nvgpu_mem *mem)
 {
-	return gk20a_gmmu_alloc_flags_vid_at(g, flags, size, mem, 0);
+	return nvgpu_dma_alloc_flags_vid_at(g, flags, size, mem, 0);
 }
 
-int gk20a_gmmu_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
+int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 		size_t size, struct nvgpu_mem *mem, dma_addr_t at)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
@@ -185,7 +185,7 @@ int gk20a_gmmu_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 
 	nvgpu_mutex_acquire(&g->mm.vidmem.clear_list_mutex);
 	before_pending = atomic64_read(&g->mm.vidmem.bytes_pending);
-	addr = __gk20a_gmmu_alloc(vidmem_alloc, at, size);
+	addr = __nvgpu_dma_alloc(vidmem_alloc, at, size);
 	nvgpu_mutex_release(&g->mm.vidmem.clear_list_mutex);
 	if (!addr) {
 		/*
@@ -237,23 +237,23 @@ fail_physfree:
 #endif
 }
 
-int gk20a_gmmu_alloc_map(struct vm_gk20a *vm, size_t size,
+int nvgpu_dma_alloc_map(struct vm_gk20a *vm, size_t size,
 		struct nvgpu_mem *mem)
 {
-	return gk20a_gmmu_alloc_map_flags(vm, 0, size, mem);
+	return nvgpu_dma_alloc_map_flags(vm, 0, size, mem);
 }
 
-int gk20a_gmmu_alloc_map_flags(struct vm_gk20a *vm, unsigned long flags,
+int nvgpu_dma_alloc_map_flags(struct vm_gk20a *vm, unsigned long flags,
 		size_t size, struct nvgpu_mem *mem)
 {
 	if (vm->mm->vidmem_is_vidmem) {
 		/*
 		 * Force the no-kernel-mapping flag on because we don't support
 		 * the lack of it for vidmem - the user should not care when
-		 * using gk20a_gmmu_alloc_map and it's vidmem, or if there's a
+		 * using nvgpu_dma_alloc_map and it's vidmem, or if there's a
 		 * difference, the user should use the flag explicitly anyway.
 		 */
-		int err = gk20a_gmmu_alloc_map_flags_vid(vm,
+		int err = nvgpu_dma_alloc_map_flags_vid(vm,
 				flags | NVGPU_DMA_NO_KERNEL_MAPPING,
 				size, mem);
 
@@ -265,19 +265,19 @@ int gk20a_gmmu_alloc_map_flags(struct vm_gk20a *vm, unsigned long flags,
 		 */
 	}
 
-	return gk20a_gmmu_alloc_map_flags_sys(vm, flags, size, mem);
+	return nvgpu_dma_alloc_map_flags_sys(vm, flags, size, mem);
 }
 
-int gk20a_gmmu_alloc_map_sys(struct vm_gk20a *vm, size_t size,
+int nvgpu_dma_alloc_map_sys(struct vm_gk20a *vm, size_t size,
 		struct nvgpu_mem *mem)
 {
-	return gk20a_gmmu_alloc_map_flags_sys(vm, 0, size, mem);
+	return nvgpu_dma_alloc_map_flags_sys(vm, 0, size, mem);
 }
 
-int gk20a_gmmu_alloc_map_flags_sys(struct vm_gk20a *vm, unsigned long flags,
+int nvgpu_dma_alloc_map_flags_sys(struct vm_gk20a *vm, unsigned long flags,
 		size_t size, struct nvgpu_mem *mem)
 {
-	int err = gk20a_gmmu_alloc_flags_sys(vm->mm->g, flags, size, mem);
+	int err = nvgpu_dma_alloc_flags_sys(vm->mm->g, flags, size, mem);
 
 	if (err)
 		return err;
@@ -293,21 +293,21 @@ int gk20a_gmmu_alloc_map_flags_sys(struct vm_gk20a *vm, unsigned long flags,
 	return 0;
 
 fail_free:
-	gk20a_gmmu_free(vm->mm->g, mem);
+	nvgpu_dma_free(vm->mm->g, mem);
 	return err;
 }
 
-int gk20a_gmmu_alloc_map_vid(struct vm_gk20a *vm, size_t size,
+int nvgpu_dma_alloc_map_vid(struct vm_gk20a *vm, size_t size,
 		struct nvgpu_mem *mem)
 {
-	return gk20a_gmmu_alloc_map_flags_vid(vm,
+	return nvgpu_dma_alloc_map_flags_vid(vm,
 			NVGPU_DMA_NO_KERNEL_MAPPING, size, mem);
 }
 
-int gk20a_gmmu_alloc_map_flags_vid(struct vm_gk20a *vm, unsigned long flags,
+int nvgpu_dma_alloc_map_flags_vid(struct vm_gk20a *vm, unsigned long flags,
 		size_t size, struct nvgpu_mem *mem)
 {
-	int err = gk20a_gmmu_alloc_flags_vid(vm->mm->g, flags, size, mem);
+	int err = nvgpu_dma_alloc_flags_vid(vm->mm->g, flags, size, mem);
 
 	if (err)
 		return err;
@@ -323,11 +323,11 @@ int gk20a_gmmu_alloc_map_flags_vid(struct vm_gk20a *vm, unsigned long flags,
 	return 0;
 
 fail_free:
-	gk20a_gmmu_free(vm->mm->g, mem);
+	nvgpu_dma_free(vm->mm->g, mem);
 	return err;
 }
 
-static void gk20a_gmmu_free_sys(struct gk20a *g, struct nvgpu_mem *mem)
+static void nvgpu_dma_free_sys(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	struct device *d = dev_from_gk20a(g);
 
@@ -335,7 +335,7 @@ static void gk20a_gmmu_free_sys(struct gk20a *g, struct nvgpu_mem *mem)
 		if (mem->flags) {
 			DEFINE_DMA_ATTRS(dma_attrs);
 
-			gk20a_dma_flags_to_attrs(&dma_attrs, mem->flags);
+			nvgpu_dma_flags_to_attrs(&dma_attrs, mem->flags);
 
 			if (mem->flags & NVGPU_DMA_NO_KERNEL_MAPPING) {
 				dma_free_attrs(d, mem->size, mem->pages,
@@ -361,7 +361,7 @@ static void gk20a_gmmu_free_sys(struct gk20a *g, struct nvgpu_mem *mem)
 	mem->aperture = APERTURE_INVALID;
 }
 
-static void gk20a_gmmu_free_vid(struct gk20a *g, struct nvgpu_mem *mem)
+static void nvgpu_dma_free_vid(struct gk20a *g, struct nvgpu_mem *mem)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
 	bool was_empty;
@@ -393,23 +393,24 @@ static void gk20a_gmmu_free_vid(struct gk20a *g, struct nvgpu_mem *mem)
 #endif
 }
 
-void gk20a_gmmu_free(struct gk20a *g, struct nvgpu_mem *mem)
+void nvgpu_dma_free(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	switch (mem->aperture) {
 	case APERTURE_SYSMEM:
-		return gk20a_gmmu_free_sys(g, mem);
+		return nvgpu_dma_free_sys(g, mem);
 	case APERTURE_VIDMEM:
-		return gk20a_gmmu_free_vid(g, mem);
+		return nvgpu_dma_free_vid(g, mem);
 	default:
 		break; /* like free() on "null" memory */
 	}
 }
 
-void gk20a_gmmu_unmap_free(struct vm_gk20a *vm, struct nvgpu_mem *mem)
+void nvgpu_dma_unmap_free(struct vm_gk20a *vm, struct nvgpu_mem *mem)
 {
 	if (mem->gpu_va)
-		gk20a_gmmu_unmap(vm, mem->gpu_va, mem->size, gk20a_mem_flag_none);
+		gk20a_gmmu_unmap(vm, mem->gpu_va, mem->size,
+				 gk20a_mem_flag_none);
 	mem->gpu_va = 0;
 
-	gk20a_gmmu_free(vm->mm->g, mem);
+	nvgpu_dma_free(vm->mm->g, mem);
 }

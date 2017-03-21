@@ -400,7 +400,7 @@ static int gk20a_fecs_trace_alloc_ring(struct gk20a *g)
 {
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 
-	return gk20a_gmmu_alloc_sys(g, GK20A_FECS_TRACE_NUM_RECORDS
+	return nvgpu_dma_alloc_sys(g, GK20A_FECS_TRACE_NUM_RECORDS
 			* ctxsw_prog_record_timestamp_record_size_in_bytes_v(),
 			&trace->trace_buf);
 }
@@ -409,7 +409,7 @@ static void gk20a_fecs_trace_free_ring(struct gk20a *g)
 {
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 
-	gk20a_gmmu_free(g, &trace->trace_buf);
+	nvgpu_dma_free(g, &trace->trace_buf);
 }
 
 #ifdef CONFIG_DEBUG_FS

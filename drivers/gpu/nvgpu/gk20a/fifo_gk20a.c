@@ -483,7 +483,7 @@ void gk20a_fifo_delete_runlist(struct fifo_gk20a *f)
 	for (runlist_id = 0; runlist_id < f->max_runlists; runlist_id++) {
 		runlist = &f->runlist_info[runlist_id];
 		for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
-			gk20a_gmmu_free(g, &runlist->mem[i]);
+			nvgpu_dma_free(g, &runlist->mem[i]);
 		}
 
 		nvgpu_kfree(g, runlist->active_channels);
@@ -544,9 +544,9 @@ static void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 	nvgpu_vfree(g, f->channel);
 	nvgpu_vfree(g, f->tsg);
 	if (g->ops.mm.is_bar1_supported(g))
-		gk20a_gmmu_unmap_free(&g->mm.bar1.vm, &f->userd);
+		nvgpu_dma_unmap_free(&g->mm.bar1.vm, &f->userd);
 	else
-		gk20a_gmmu_free(g, &f->userd);
+		nvgpu_dma_free(g, &f->userd);
 
 	gk20a_fifo_delete_runlist(f);
 
@@ -686,7 +686,7 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 					f->num_runlist_entries, runlist_size);
 
 		for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
-			int err = gk20a_gmmu_alloc_sys(g, runlist_size,
+			int err = nvgpu_dma_alloc_sys(g, runlist_size,
 					&runlist->mem[i]);
 			if (err) {
 				dev_err(d, "memory allocation failed\n");
@@ -940,12 +940,12 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	nvgpu_mutex_init(&f->free_chs_mutex);
 
 	if (g->ops.mm.is_bar1_supported(g))
-		err = gk20a_gmmu_alloc_map_sys(&g->mm.bar1.vm,
+		err = nvgpu_dma_alloc_map_sys(&g->mm.bar1.vm,
 				   f->userd_entry_size * f->num_channels,
 				   &f->userd);
 
 	else
-		err = gk20a_gmmu_alloc_sys(g, f->userd_entry_size *
+		err = nvgpu_dma_alloc_sys(g, f->userd_entry_size *
 				f->num_channels, &f->userd);
 	if (err) {
 		dev_err(d, "userd memory allocation failed\n");
@@ -980,9 +980,9 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 clean_up:
 	gk20a_dbg_fn("fail");
 	if (g->ops.mm.is_bar1_supported(g))
-		gk20a_gmmu_unmap_free(&g->mm.bar1.vm, &f->userd);
+		nvgpu_dma_unmap_free(&g->mm.bar1.vm, &f->userd);
 	else
-		gk20a_gmmu_free(g, &f->userd);
+		nvgpu_dma_free(g, &f->userd);
 
 	nvgpu_vfree(g, f->channel);
 	f->channel = NULL;

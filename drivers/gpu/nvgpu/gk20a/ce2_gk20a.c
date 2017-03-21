@@ -195,7 +195,7 @@ static void gk20a_ce_delete_gpu_context(struct gk20a_gpu_ctx *ce_ctx)
 
 	if (ce_ctx->cmd_buf_mem.cpu_va) {
 		gk20a_ce_free_command_buffer_stored_fence(ce_ctx);
-		gk20a_gmmu_unmap_free(ce_ctx->vm, &ce_ctx->cmd_buf_mem);
+		nvgpu_dma_unmap_free(ce_ctx->vm, &ce_ctx->cmd_buf_mem);
 	}
 
 	/* free the channel */
@@ -479,7 +479,7 @@ u32 gk20a_ce_create_context_with_cb(struct device *dev,
 	}
 
 	/* allocate command buffer (4096 should be more than enough) from sysmem*/
-	err = gk20a_gmmu_alloc_map_sys(ce_ctx->vm, NVGPU_CE_COMMAND_BUF_SIZE, &ce_ctx->cmd_buf_mem);
+	err = nvgpu_dma_alloc_map_sys(ce_ctx->vm, NVGPU_CE_COMMAND_BUF_SIZE, &ce_ctx->cmd_buf_mem);
 	 if (err) {
 		gk20a_err(ce_ctx->dev,
 			"ce: could not allocate command buffer for CE context");

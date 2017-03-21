@@ -839,7 +839,7 @@ int gr_gp10b_alloc_buffer(struct vm_gk20a *vm, size_t size,
 
 	gk20a_dbg_fn("");
 
-	err = gk20a_gmmu_alloc_sys(vm->mm->g, size, mem);
+	err = nvgpu_dma_alloc_sys(vm->mm->g, size, mem);
 	if (err)
 		return err;
 
@@ -859,7 +859,7 @@ int gr_gp10b_alloc_buffer(struct vm_gk20a *vm, size_t size,
 	return 0;
 
 fail_free:
-	gk20a_gmmu_free(vm->mm->g, mem);
+	nvgpu_dma_free(vm->mm->g, mem);
 	return err;
 }
 
@@ -980,11 +980,11 @@ static int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 	return 0;
 
 fail_free_betacb:
-	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.betacb_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.betacb_ctxsw_buffer);
 fail_free_spill:
-	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.spill_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.spill_ctxsw_buffer);
 fail_free_preempt:
-	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.preempt_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.preempt_ctxsw_buffer);
 fail:
 	return err;
 }
@@ -1098,10 +1098,10 @@ static void gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 	if (g->gr.t18x.ctx_vars.dump_ctxsw_stats_on_channel_close)
 		dump_ctx_switch_stats(g, vm, gr_ctx);
 
-	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.pagepool_ctxsw_buffer);
-	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.betacb_ctxsw_buffer);
-	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.spill_ctxsw_buffer);
-	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.preempt_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.pagepool_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.betacb_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.spill_ctxsw_buffer);
+	nvgpu_dma_unmap_free(vm, &gr_ctx->t18x.preempt_ctxsw_buffer);
 	gr_gk20a_free_gr_ctx(g, vm, gr_ctx);
 	gk20a_dbg_fn("done");
 }

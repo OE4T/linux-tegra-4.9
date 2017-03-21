@@ -523,7 +523,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 
 	gk20a_gr_flush_channel_tlb(gr);
 
-	gk20a_gmmu_unmap_free(ch_vm, &ch->gpfifo.mem);
+	nvgpu_dma_unmap_free(ch_vm, &ch->gpfifo.mem);
 	nvgpu_big_free(g, ch->gpfifo.pipe);
 	memset(&ch->gpfifo, 0, sizeof(struct gpfifo_desc));
 
@@ -899,7 +899,7 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 	size = roundup_pow_of_two(c->gpfifo.entry_num *
 				  2 * 18 * sizeof(u32) / 3);
 
-	err = gk20a_gmmu_alloc_map_sys(ch_vm, size, &q->mem);
+	err = nvgpu_dma_alloc_map_sys(ch_vm, size, &q->mem);
 	if (err) {
 		gk20a_err(d, "%s: memory allocation failed\n", __func__);
 		goto clean_up;
@@ -922,7 +922,7 @@ static void channel_gk20a_free_priv_cmdbuf(struct channel_gk20a *c)
 	if (q->size == 0)
 		return;
 
-	gk20a_gmmu_unmap_free(ch_vm, &q->mem);
+	nvgpu_dma_unmap_free(ch_vm, &q->mem);
 
 	memset(q, 0, sizeof(struct priv_cmd_queue));
 }
@@ -1244,7 +1244,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 		return -EEXIST;
 	}
 
-	err = gk20a_gmmu_alloc_map_sys(ch_vm,
+	err = nvgpu_dma_alloc_map_sys(ch_vm,
 			gpfifo_size * sizeof(struct nvgpu_gpfifo),
 			&c->gpfifo.mem);
 	if (err) {
@@ -1331,7 +1331,7 @@ clean_up_sync:
 	}
 clean_up_unmap:
 	nvgpu_big_free(g, c->gpfifo.pipe);
-	gk20a_gmmu_unmap_free(ch_vm, &c->gpfifo.mem);
+	nvgpu_dma_unmap_free(ch_vm, &c->gpfifo.mem);
 clean_up:
 	memset(&c->gpfifo, 0, sizeof(struct gpfifo_desc));
 	gk20a_err(d, "fail");

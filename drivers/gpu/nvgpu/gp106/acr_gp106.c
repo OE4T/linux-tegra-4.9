@@ -113,13 +113,13 @@ static int gp106_alloc_blob_space(struct gk20a *g,
 	 * Even though this mem_desc wouldn't be used, the wpr region needs to
 	 * be reserved in the allocator.
 	 */
-	err = gk20a_gmmu_alloc_flags_vid_at(g,
+	err = nvgpu_dma_alloc_flags_vid_at(g,
 			NVGPU_DMA_NO_KERNEL_MAPPING, wpr_inf.size,
 			&g->acr.wpr_dummy, wpr_inf.wpr_base);
 	if (err)
 		return err;
 
-	return gk20a_gmmu_alloc_flags_vid_at(g,
+	return nvgpu_dma_alloc_flags_vid_at(g,
 			NVGPU_DMA_NO_KERNEL_MAPPING, wpr_inf.size, mem,
 			wpr_inf.nonwpr_base);
 }
@@ -1094,7 +1094,7 @@ static int gp106_bootstrap_hs_flcn(struct gk20a *g)
 			err = -1;
 			goto err_release_acr_fw;
 		}
-		err = gk20a_gmmu_alloc_map_sys(vm, img_size_in_bytes,
+		err = nvgpu_dma_alloc_map_sys(vm, img_size_in_bytes,
 				&acr->acr_ucode);
 		if (err) {
 			err = -ENOMEM;
@@ -1170,7 +1170,7 @@ static int gp106_bootstrap_hs_flcn(struct gk20a *g)
 
 	return 0;
 err_free_ucode_map:
-	gk20a_gmmu_unmap_free(vm, &acr->acr_ucode);
+	nvgpu_dma_unmap_free(vm, &acr->acr_ucode);
 err_release_acr_fw:
 	release_firmware(acr_fw);
 	acr->acr_fw = NULL;

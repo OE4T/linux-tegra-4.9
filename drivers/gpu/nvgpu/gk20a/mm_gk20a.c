@@ -2929,15 +2929,23 @@ int gk20a_gmmu_alloc_sys(struct gk20a *g, size_t size, struct mem_desc *mem)
 	return gk20a_gmmu_alloc_flags_sys(g, 0, size, mem);
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+static void gk20a_dma_flags_to_attrs(unsigned long *attrs,
+		unsigned long flags)
+#define ATTR_ARG(x) *x
+#else
 static void gk20a_dma_flags_to_attrs(struct dma_attrs *attrs,
 		unsigned long flags)
+#define ATTR_ARG(x) x
+#endif
 {
 	if (flags & NVGPU_DMA_NO_KERNEL_MAPPING)
-		dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, attrs);
+		dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, ATTR_ARG(attrs));
 	if (flags & NVGPU_DMA_FORCE_CONTIGUOUS)
-		dma_set_attr(DMA_ATTR_FORCE_CONTIGUOUS, attrs);
+		dma_set_attr(DMA_ATTR_FORCE_CONTIGUOUS, ATTR_ARG(attrs));
 	if (flags & NVGPU_DMA_READ_ONLY)
-		dma_set_attr(DMA_ATTR_READ_ONLY, attrs);
+		dma_set_attr(DMA_ATTR_READ_ONLY, ATTR_ARG(attrs));
+#undef ATTR_ARG
 }
 
 int gk20a_gmmu_alloc_flags_sys(struct gk20a *g, unsigned long flags,
@@ -2956,12 +2964,14 @@ int gk20a_gmmu_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 
 		if (flags & NVGPU_DMA_NO_KERNEL_MAPPING) {
 			mem->pages = dma_alloc_attrs(d,
-					size, &iova, GFP_KERNEL, &dma_attrs);
+					size, &iova, GFP_KERNEL,
+					__DMA_ATTR(dma_attrs));
 			if (!mem->pages)
 				return -ENOMEM;
 		} else {
 			mem->cpu_va = dma_alloc_attrs(d,
-					size, &iova, GFP_KERNEL, &dma_attrs);
+					size, &iova, GFP_KERNEL,
+					__DMA_ATTR(dma_attrs));
 			if (!mem->cpu_va)
 				return -ENOMEM;
 		}
@@ -3009,11 +3019,11 @@ static void gk20a_gmmu_free_sys(struct gk20a *g, struct mem_desc *mem)
 			if (mem->flags & NVGPU_DMA_NO_KERNEL_MAPPING) {
 				dma_free_attrs(d, mem->size, mem->pages,
 					sg_dma_address(mem->sgt->sgl),
-					&dma_attrs);
+					__DMA_ATTR(dma_attrs));
 			} else {
 				dma_free_attrs(d, mem->size, mem->cpu_va,
 					sg_dma_address(mem->sgt->sgl),
-					&dma_attrs);
+					__DMA_ATTR(dma_attrs));
 			}
 		} else {
 			dma_free_coherent(d, mem->size, mem->cpu_va,

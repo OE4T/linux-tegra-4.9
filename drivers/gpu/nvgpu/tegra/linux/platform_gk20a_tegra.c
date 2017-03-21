@@ -21,6 +21,7 @@
 #include <linux/delay.h>
 #include <uapi/linux/nvgpu.h>
 #include <linux/dma-buf.h>
+#include <linux/dma-attrs.h>
 #include <linux/nvmap.h>
 #include <linux/reset.h>
 #include <linux/tegra_soctherm.h>
@@ -98,7 +99,7 @@ static void gk20a_tegra_secure_page_destroy(struct device *dev,
 	DEFINE_DMA_ATTRS(attrs);
 	dma_free_attrs(&tegra_vpr_dev, secure_buffer->size,
 			(void *)(uintptr_t)secure_buffer->iova,
-			secure_buffer->iova, &attrs);
+			secure_buffer->iova, __DMA_ATTR(attrs));
 }
 
 int gk20a_tegra_secure_page_alloc(struct device *dev)
@@ -113,7 +114,7 @@ int gk20a_tegra_secure_page_alloc(struct device *dev)
 		return -EINVAL;
 
 	(void)dma_alloc_attrs(&tegra_vpr_dev, size, &iova,
-				      DMA_MEMORY_NOMAP, &attrs);
+				      DMA_MEMORY_NOMAP, __DMA_ATTR(attrs));
 	if (dma_mapping_error(&tegra_vpr_dev, iova))
 		return -ENOMEM;
 
@@ -133,7 +134,7 @@ static void gk20a_tegra_secure_destroy(struct gk20a *g,
 		phys_addr_t pa = sg_phys(desc->mem.sgt->sgl);
 		dma_free_attrs(&tegra_vpr_dev, desc->mem.size,
 			(void *)(uintptr_t)pa,
-			pa, &attrs);
+			pa, __DMA_ATTR(attrs));
 		gk20a_free_sgtable(&desc->mem.sgt);
 		desc->mem.sgt = NULL;
 	}
@@ -154,7 +155,7 @@ int gk20a_tegra_secure_alloc(struct device *dev,
 		return -EINVAL;
 
 	(void)dma_alloc_attrs(&tegra_vpr_dev, size, &iova,
-				      DMA_MEMORY_NOMAP, &attrs);
+				      DMA_MEMORY_NOMAP, __DMA_ATTR(attrs));
 	if (dma_mapping_error(&tegra_vpr_dev, iova))
 		return -ENOMEM;
 
@@ -185,7 +186,7 @@ fail_sgt:
 	kfree(sgt);
 fail:
 	dma_free_attrs(&tegra_vpr_dev, desc->mem.size,
-			(void *)(uintptr_t)iova, iova, &attrs);
+			(void *)(uintptr_t)iova, iova, __DMA_ATTR(attrs));
 	return err;
 }
 

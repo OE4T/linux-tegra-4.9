@@ -45,7 +45,15 @@ obj-$(CONFIG_SND_SOC)	+= spear/
 obj-$(CONFIG_SND_SOC)	+= sti/
 obj-$(CONFIG_SND_SOC)	+= sunxi/
 obj-$(CONFIG_SND_SOC)	+= tegra/
+obj-$(CONFIG_SND_SOC)	+= tegra-alt/
+obj-$(CONFIG_SND_SOC)	+= tegra-virt-alt/
+obj-$(CONFIG_SND_SOC)	+= tegra-virtual/
 obj-$(CONFIG_SND_SOC)	+= txx9/
 obj-$(CONFIG_SND_SOC)	+= ux500/
 obj-$(CONFIG_SND_SOC)	+= xtensa/
 obj-$(CONFIG_SND_SOC)	+= zte/
+
+# The wildcard hack is necessary for kernel's make clean.
+ifneq ($(wildcard $(srctree)/../t18x/sound/soc/Makefile*),)
+obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += ../../../t18x/sound/soc/
+endif

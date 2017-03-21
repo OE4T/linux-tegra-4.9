@@ -71,7 +71,7 @@ static int soc_compr_open_fe(struct snd_compr_stream *cstream)
 	struct snd_pcm_substream *fe_substream = fe->pcm->streams[0].substream;
 	struct snd_soc_platform *platform = fe->platform;
 	struct snd_soc_dpcm *dpcm;
-	struct snd_soc_dapm_widget_list *list;
+	struct snd_soc_dapm_widget_list *list = NULL;
 	int stream;
 	int ret = 0;
 
@@ -139,6 +139,8 @@ static int soc_compr_open_fe(struct snd_compr_stream *cstream)
 path_err:
 	dpcm_path_put(&list);
 fe_err:
+	if (list)
+		dpcm_path_put(&list);
 	if (fe->dai_link->compr_ops && fe->dai_link->compr_ops->shutdown)
 		fe->dai_link->compr_ops->shutdown(cstream);
 machine_err:

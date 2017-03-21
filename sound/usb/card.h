@@ -156,6 +156,7 @@ struct snd_usb_substream {
 	} dsd_dop;
 
 	bool trigger_tstamp_pending_update; /* trigger timestamp being updated from initial estimate */
+	unsigned long last_prepare;
 };
 
 struct snd_usb_stream {

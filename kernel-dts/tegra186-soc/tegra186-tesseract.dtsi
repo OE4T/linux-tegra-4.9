@@ -83,15 +83,6 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		echo@0 {
-			compatible = "nvidia,tegra-ivc-cdev";
-			nvidia,devname = "tesseract-echo";
-			nvidia,service = "echo";
-			nvidia,version = <0>;
-			nvidia,group = <1>;
-			nvidia,frame-count = <8>;
-			nvidia,frame-size = <64>;
-		};
 		dbg@1 {
 			compatible = "nvidia,tegra-ivc-cdev";
 			nvidia,devname = "tesseract-debug";
@@ -99,7 +90,7 @@
 			nvidia,version = <0>;
 			nvidia,group = <1>;
 			nvidia,frame-count = <1>;
-			nvidia,frame-size = <4096>;
+			nvidia,frame-size = <512>;
 		};
 		dbg@2 {
 			compatible = "nvidia,tegra186-camera-ivc-protocol-debug";
@@ -108,7 +99,16 @@
 			nvidia,version = <0>;
 			nvidia,group = <1>;
 			nvidia,frame-count = <1>;
-			nvidia,frame-size = <384>;
+			nvidia,frame-size = <512>;
+		};
+		syncpt_disp@0 {
+			compatible = "nvidia,tegra-ivc-syncpt-disp";
+			nvidia,devname = "syncpt_display";
+			nvidia,service = "syncpt_display";
+			nvidia,version = <0>;
+			nvidia,group = <1>;
+			nvidia,frame-count = <8>;
+			nvidia,frame-size = <64>;
 		};
 	};
 

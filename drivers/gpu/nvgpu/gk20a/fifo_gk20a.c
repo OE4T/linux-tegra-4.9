@@ -838,10 +838,12 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	return 0;
 }
 
-static void gk20a_init_fifo_pbdma_intr_descs(struct fifo_gk20a *f)
+static void gk20a_fifo_init_pbdma_intr_descs(struct fifo_gk20a *f)
 {
-	/* These are all errors which indicate something really wrong
-	 * going on in the device. */
+	/*
+	 * These are all errors which indicate something really wrong
+	 * going on in the device
+	 */
 	f->intr.pbdma.device_fatal_0 =
 		pbdma_intr_0_memreq_pending_f() |
 		pbdma_intr_0_memack_timeout_pending_f() |
@@ -858,9 +860,11 @@ static void gk20a_init_fifo_pbdma_intr_descs(struct fifo_gk20a *f)
 		pbdma_intr_0_xbarconnect_pending_f() |
 		pbdma_intr_0_pri_pending_f();
 
-	/* These are data parsing, framing errors or others which can be
+	/*
+	 * These are data parsing, framing errors or others which can be
 	 * recovered from with intervention... or just resetting the
-	 * channel. */
+	 * channel
+	 */
 	f->intr.pbdma.channel_fatal_0 =
 		pbdma_intr_0_gpfifo_pending_f() |
 		pbdma_intr_0_gpptr_pending_f() |
@@ -874,8 +878,7 @@ static void gk20a_init_fifo_pbdma_intr_descs(struct fifo_gk20a *f)
 		pbdma_intr_0_pbseg_pending_f() |
 		pbdma_intr_0_signature_pending_f();
 
-	/* Can be used for sw-methods, or represents
-	 * a recoverable timeout. */
+	/* Can be used for sw-methods, or represents a recoverable timeout. */
 	f->intr.pbdma.restartable_0 =
 		pbdma_intr_0_device_pending_f();
 }
@@ -898,7 +901,8 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 
 	nvgpu_mutex_init(&f->intr.isr.mutex);
 	nvgpu_mutex_init(&f->gr_reset_mutex);
-	gk20a_init_fifo_pbdma_intr_descs(f); /* just filling in data/tables */
+
+	g->ops.fifo.init_pbdma_intr_descs(f); /* just filling in data/tables */
 
 	f->num_channels = g->ops.fifo.get_num_fifos(g);
 	f->runlist_entry_size =  g->ops.fifo.runlist_entry_size();
@@ -3824,4 +3828,5 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.dump_channel_status_ramfc = gk20a_dump_channel_status_ramfc;
 	gops->fifo.intr_0_error_mask = gk20a_fifo_intr_0_error_mask;
 	gops->fifo.is_preempt_pending = gk20a_fifo_is_preempt_pending;
+	gops->fifo.init_pbdma_intr_descs = gk20a_fifo_init_pbdma_intr_descs;
 }

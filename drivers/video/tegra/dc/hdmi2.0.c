@@ -491,7 +491,8 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 	n_display_timings = 0;
 	/*
 	 * If display timing with non-zero pclk is specified in DT,
-	 * skip parsing EDID from monitor.
+	 * skip parsing EDID from monitor. Except if vedid is active.
+	 * In that case force parsing the EDID
 	 */
 	for (idx = 0; idx < dc->out->n_modes; idx++) {
 		if (0 != dc->out->modes->pclk) {
@@ -499,6 +500,11 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 			break;
 		}
 	}
+
+	if (dc->vedid) {
+		n_display_timings = 0;
+	}
+
 	if (dc->fb && 0 == n_display_timings) {
 		tegra_fb_update_monspecs(hdmi->dc->fb, mon_spec,
 					tegra_hdmi_fb_mode_filter);

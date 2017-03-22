@@ -4,6 +4,7 @@ trysource "drivers/video/tegra/nvmap/Kconfig.nvmap"
 
 trysource "../nvhost/drivers/video/tegra/Kconfig.nvhost"
 trysource "drivers/video/tegra/Kconfig.nvhost"
+trysource "../nvidia/drivers/video/tegra/Kconfig.nvidia"
 
 if PLATFORM_TEGRA
 

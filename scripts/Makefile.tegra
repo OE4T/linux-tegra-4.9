@@ -19,5 +19,5 @@ endef
 
 $(foreach suffix, \
 	t18x nvgpu nvgpu-t18x nvhost nvhost-t18x nvmap nvmap-t18x display \
-	t19x, \
+	nvidia t19x, \
 	$(eval $(call tegra_include,$(suffix))))

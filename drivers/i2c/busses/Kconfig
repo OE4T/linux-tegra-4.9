@@ -1227,5 +1227,6 @@ config I2C_OPAL
 
 trysource "../t18x/drivers/i2c/busses/Kconfig.t18x"
 trysource "drivers/i2c/busses/Kconfig.t18x"
+trysource "../nvidia/drivers/i2c/busses/Kconfig.nvidia"
 
 endmenu

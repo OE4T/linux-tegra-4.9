@@ -14,12 +14,10 @@
  */
 
 #include <linux/of_platform.h>
-#include <linux/nvhost.h>
 #include <linux/debugfs.h>
 #include <linux/platform_data/tegra_edp.h>
 #include <linux/dma-buf.h>
 #include <linux/nvmap.h>
-#include <linux/tegra_pm_domains.h>
 #include <linux/reset.h>
 #include <linux/hashtable.h>
 
@@ -57,22 +55,6 @@ static int gv11b_tegra_probe(struct device *dev)
 	return 0;
 }
 
-static int gv11b_tegra_late_probe(struct device *dev)
-{
-	/* Make gk20a power domain a subdomain of host1x */
-	nvhost_register_client_domain(dev_to_genpd(dev));
-	return 0;
-}
-
-static int gv11b_tegra_remove(struct device *dev)
-{
-	/* remove gk20a power subdomain from host1x */
-	nvhost_unregister_client_domain(dev_to_genpd(dev));
-
-	return 0;
-
-}
-
 static bool gv11b_tegra_is_railgated(struct device *dev)
 {
 	bool ret = false;
@@ -105,8 +87,6 @@ struct gk20a_platform t19x_gpu_tegra_platform = {
 	.ptimer_src_freq	= 31250000,
 
 	.probe = gv11b_tegra_probe,
-	.late_probe = gv11b_tegra_late_probe,
-	.remove = gv11b_tegra_remove,
 
 	/* power management callbacks */
 	.suspend = gv11b_tegra_suspend,

@@ -138,10 +138,7 @@ config MS5637
 
 config NVI_BMPX80
 	tristate "Bosch Digital pressure sensor"
-	depends on I2C
-	select IIO_BUFFER
-	select IIO_TRIGGERED_BUFFER
-	select NVS_IIO
+	depends on I2C && IIO_BUFFER && IIO_TRIGGERED_BUFFER && NVS_IIO
 	help
 	  Say yes here to build support for Bosch pressure sensor
 	  that can be connected via Invensense MPU.

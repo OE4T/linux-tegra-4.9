@@ -298,10 +298,7 @@ config STK8BA50
 	  will be called stk8ba50.
 config NVS_AIS328DQ
 	tristate "STMicroelectronics accelerometer AIS328DQ"
-	depends on I2C
-	select IIO_BUFFER
-	select IIO_TRIGGERED_BUFFER
-	select NVS_IIO
+	depends on I2C && IIO_BUFFER && IIO_TRIGGERED_BUFFER && NVS_IIO
 	help
 	  Say yes here to build support for STMicroelectronics AIS328DQ
 	  accelerometer using NVS (NVidia Sensor framework).

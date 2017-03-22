@@ -368,11 +368,7 @@ config VEML6070
 
 config NVS_BH1730FVC
 	tristate "ROHM BH1730FVC ALS"
-	select NVS_IIO
-	select NVS_LIGHT
-	select IIO_BUFFER
-	select IIO_TRIGGERED_BUFFER
-	depends on I2C
+	depends on I2C && IIO_BUFFER && IIO_TRIGGERED_BUFFER && NVS_IIO && NVS_LIGHT
 	help
 	  Say Y here for ROHM Co., Ltd. BH1730FVC
 	  Digital 16bit Serial Output Type
@@ -382,11 +378,7 @@ config NVS_BH1730FVC
 
 config NVS_CM3217
 	tristate "Capella CM3217 ALS"
-	select NVS_IIO
-	select NVS_LIGHT
-	select IIO_BUFFER
-	select IIO_TRIGGERED_BUFFER
-	depends on I2C
+	depends on I2C && IIO_BUFFER && IIO_TRIGGERED_BUFFER && NVS_IIO && NVS_LIGHT
 	help
 	  Say Y here for Capella Microsystems, Inc. CM3217
 	  Ambient Light Sensor (ALS) support.
@@ -395,11 +387,7 @@ config NVS_CM3217
 
 config NVS_CM3218
 	tristate "Capella CM3218 ALS"
-	select NVS_IIO
-	select NVS_LIGHT
-	select IIO_BUFFER
-	select IIO_TRIGGERED_BUFFER
-	depends on I2C
+	depends on I2C && IIO_BUFFER && IIO_TRIGGERED_BUFFER && NVS_IIO && NVS_LIGHT
 	help
 	  Say Y here for Capella Microsystems, Inc. CM3218 and CM32181
 	  Ambient Light Sensor (ALS) driver support.
@@ -408,12 +396,7 @@ config NVS_CM3218
 
 config NVS_ISL2902X
 	tristate "INTERSIL ISL2902X ALS/Proximity"
-	select NVS_IIO
-	select NVS_LIGHT
-	select NVS_PROXIMITY
-	select IIO_BUFFER
-	select IIO_TRIGGERED_BUFFER
-	depends on I2C
+	depends on I2C && IIO_BUFFER && IIO_TRIGGERED_BUFFER && NVS_IIO && NVS_LIGHT && NVS_PROXIMITY
 	help
 	  Say Y here for Intersil ISL29028 and ISL29029
 	  Ambient Light Sensor (ALS) and proximity driver
@@ -424,11 +407,7 @@ config NVS_ISL2902X
 
 config NVS_JSA1127
 	tristate "SOLTEAMOPTO JSA1127 ALS"
-	select NVS_IIO
-	select NVS_LIGHT
-	select IIO_BUFFER
-	select IIO_TRIGGERED_BUFFER
-	depends on I2C
+	depends on I2C && IIO_BUFFER && IIO_TRIGGERED_BUFFER && NVS_IIO && NVS_LIGHT
 	help
 	  Say Y here for Solteamopto JSA1127
 	  Ambient Light Sensor (ALS) driver support.
@@ -436,13 +415,8 @@ config NVS_JSA1127
 	  The driver uses the NVS (NVidia Sensor) IIO, light framework.
 
 config NVS_LTR659
+	depends on I2C && IIO_BUFFER && IIO_TRIGGERED_BUFFER && NVS_IIO && NVS_LIGHT && NVS_PROXIMITY
 	tristate "LITEON LTR-659PS or LTR_558ALS"
-	select NVS_IIO
-	select NVS_LIGHT
-	select NVS_PROXIMITY
-	select IIO_BUFFER
-	select IIO_TRIGGERED_BUFFER
-	depends on I2C
 	help
 	  Say Y here for LITEON LTR-659PS or LTR-558ALS
 	  ALS/proximity sensor driver support.
@@ -452,12 +426,7 @@ config NVS_LTR659
 
 config NVS_MAX4400X
 	tristate "Maxim MAX4400X ALS/Proximity"
-	select NVS_IIO
-	select NVS_LIGHT
-	select NVS_PROXIMITY
-	select IIO_BUFFER
-	select IIO_TRIGGERED_BUFFER
-	depends on I2C
+	depends on I2C && IIO_BUFFER && IIO_TRIGGERED_BUFFER && NVS_IIO && NVS_LIGHT && NVS_PROXIMITY
 	help
 	  Say Y here for Maxim MAX44005 and MAX44006/MAX44008
 	  Ambient Light Sensor (ALS) support.

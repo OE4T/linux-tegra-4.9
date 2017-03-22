@@ -47,11 +47,7 @@ config SX9500
 
 config NVS_IQS2X3
 	tristate "Azoteq IQS253/IQS263 SAR proximity"
-	select NVS_IIO
-	select NVS_PROXIMITY
-	select IIO_BUFFER
-	select IIO_TRIGGERED_BUFFER
-	depends on I2C
+	depends on I2C && IIO_BUFFER && IIO_TRIGGERED_BUFFER && NVS_IIO && NVS_PROXIMITY
 	help
 	  Say Y here for Azoteq IQS253 and IQS263 SAR proximity support.
 

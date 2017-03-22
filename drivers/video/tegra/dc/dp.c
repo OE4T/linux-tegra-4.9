@@ -1769,13 +1769,14 @@ static void tegra_dp_irq_evt_worker(struct work_struct *work)
 	struct tegra_dc_dp_data *dp = container_of(to_delayed_work(work),
 					struct tegra_dc_dp_data,
 					irq_evt_dwork);
+	struct tegra_dc *dc = dp->dc;
 	struct tegra_dc_dpaux_data *dpaux = dp->dpaux;
 	u32 aux_stat = tegra_dpaux_readl(dpaux, DPAUX_DP_AUXSTAT);
 	bool link_stable = !!true;
 	u8 dpcd_200h_205h[DPCD_LINK_SINK_STATUS_REGS] = {0, 0, 0, 0, 0, 0};
 	u32 n_lanes = dp->lt_data.n_lanes;
 
-	tegra_dc_io_start(dp->dc);
+	tegra_dc_io_start(dc);
 
 	if (aux_stat & DPAUX_DP_AUXSTAT_SINKSTAT_ERROR_PENDING) {
 		int cnt;
@@ -1835,19 +1836,39 @@ static void tegra_dp_irq_evt_worker(struct work_struct *work)
 
 		if (test_rq == TEST_LINK_TRAINING) {
 			dp->lt_data.force_trigger = true;
-			tegra_dp_lt_set_pending_evt(&dp->lt_data);
+			link_stable = false;
 		}
-
-		goto done;
 	}
 
-	if (!link_stable)
+	if (!link_stable) {
+		int ret = 0;
+
+		ret = tegra_dc_reserve_common_channel(dc);
+		if (ret) {
+			dev_err(&dc->ndev->dev,
+				"%s: DC %d reserve failed during DP IRQ\n",
+				__func__, dc->ctrl_num);
+
+			goto done;
+		}
+		mutex_lock(&dc->lock);
+
 		tegra_dp_lt_set_pending_evt(&dp->lt_data);
-	else
-		dev_info(&dp->dc->ndev->dev,
+		ret = tegra_dp_lt_wait_for_completion(&dp->lt_data,
+						STATE_DONE_PASS, LT_TIMEOUT_MS);
+
+		mutex_unlock(&dc->lock);
+		tegra_dc_release_common_channel(dc);
+
+		if (!ret)
+			dev_err(&dc->ndev->dev,
+				"dp: link training after IRQ failed\n");
+	} else {
+		dev_info(&dc->ndev->dev,
 			"dp: link stable, ignore irq event\n");
+	}
 done:
-	tegra_dc_io_end(dp->dc);
+	tegra_dc_io_end(dc);
 
 #undef LANE0_1_CR_CE_SL_MASK
 #undef LANE0_CR_CE_SL_MASK

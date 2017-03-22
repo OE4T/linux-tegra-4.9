@@ -111,6 +111,7 @@ int nvhost_vi_prepare_poweroff(struct platform_device *);
 int nvhost_vi_finalize_poweron(struct platform_device *);
 
 void nvhost_vi_reset_all(struct platform_device *);
+struct vi *tegra_vi_get(void);
 
 int tegra_vi_register_mfi_cb(callback cb, void *cb_arg);
 int tegra_vi_unregister_mfi_cb(void);

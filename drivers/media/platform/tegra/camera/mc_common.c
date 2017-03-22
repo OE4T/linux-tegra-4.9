@@ -114,8 +114,18 @@ static int vi_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	switch (ctrl->id) {
 	case V4L2_CID_TEST_PATTERN:
-		vi->pg_mode = ctrl->val;
-		vi->csi->pg_mode = vi->pg_mode;
+		/*
+		 * TPG control is only avaiable to TPG driver,
+		 * it can't be changed to 0 to disable TPG mode.
+		 */
+		if (ctrl->val) {
+			dev_info(&vi->ndev->dev, "Set TPG mode to %d\n",
+				 ctrl->val);
+			vi->pg_mode = ctrl->val;
+			vi->csi->pg_mode = vi->pg_mode;
+		} else
+			dev_warn(&vi->ndev->dev,
+				 "TPG mode can't be disabled for TPG driver\n");
 		break;
 	default:
 		dev_err(vi->dev, "%s:Not valid ctrl\n", __func__);
@@ -133,8 +143,10 @@ void tegra_vi_v4l2_cleanup(struct tegra_mc_vi *vi)
 {
 	v4l2_ctrl_handler_free(&vi->ctrl_handler);
 	v4l2_device_unregister(&vi->v4l2_dev);
-	media_device_unregister(&vi->media_dev);
+	if (!vi->pg_mode)
+		media_device_unregister(&vi->media_dev);
 }
+EXPORT_SYMBOL(tegra_vi_v4l2_cleanup);
 
 static void tegra_vi_notify(struct v4l2_subdev *sd,
 					  unsigned int notification, void *arg)
@@ -159,19 +171,29 @@ int tegra_vi_v4l2_init(struct tegra_mc_vi *vi)
 {
 	int ret;
 
-	vi->pg_mode = 0;
 	vi_tpg_fmts_bitmap_init(vi);
 
-	vi->media_dev.dev = vi->dev;
-	strlcpy(vi->media_dev.model, "NVIDIA Tegra Video Input Device",
-		sizeof(vi->media_dev.model));
-	vi->media_dev.hw_revision = 3;
+	/*
+	 * TPG mode need to reuse the real media_device struct of tegra_vi,
+	 * so bypass the media_device_register() here.
+	 */
+	if (vi->pg_mode) {
+		struct vi *tegra_vi = tegra_vi_get();
+		if (tegra_vi)
+			memcpy(&vi->media_dev, &tegra_vi->mc_vi.media_dev,
+					sizeof(struct media_device));
+	} else {
+		vi->media_dev.dev = vi->dev;
+		strlcpy(vi->media_dev.model, "NVIDIA Tegra Video Input Device",
+				sizeof(vi->media_dev.model));
+		vi->media_dev.hw_revision = 3;
 
-	ret = media_device_register(&vi->media_dev);
-	if (ret < 0) {
-		dev_err(vi->dev, "media device registration failed (%d)\n",
-			ret);
-		return ret;
+		ret = media_device_register(&vi->media_dev);
+		if (ret < 0) {
+			dev_err(vi->dev, "media device registration failed (%d)\n",
+					ret);
+			return ret;
+		}
 	}
 
 	vi->v4l2_dev.mdev = &vi->media_dev;
@@ -208,7 +230,8 @@ ctrl_error:
 	v4l2_ctrl_handler_free(&vi->ctrl_handler);
 	v4l2_device_unregister(&vi->v4l2_dev);
 register_error:
-	media_device_unregister(&vi->media_dev);
+	if (!vi->pg_mode)
+		media_device_unregister(&vi->media_dev);
 	return ret;
 }
 
@@ -256,7 +279,7 @@ static void set_vi_register_base(struct tegra_mc_vi *mc_vi,
 }
 
 int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
-			struct platform_device *pdev)
+				   struct platform_device *pdev)
 {
 	int err = 0;
 	struct nvhost_device_data *pdata = pdev->dev.platform_data;
@@ -267,9 +290,18 @@ int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 	if (err)
 		return err;
 
-	err = vi_parse_dt(mc_vi, pdev);
-	if (err)
-		goto mc_init_fail;
+	if (mc_vi->pg_mode) {
+		mc_vi->chans = devm_kzalloc(&pdev->dev,
+					    sizeof(struct tegra_channel) *
+					    mc_vi->num_channels,
+					    GFP_KERNEL);
+		if (!mc_vi->chans)
+			return -ENOMEM;
+	} else {
+		err = vi_parse_dt(mc_vi, pdev);
+		if (err)
+			goto mc_init_fail;
+	}
 
 	mc_vi->ndev = pdev;
 	mc_vi->dev = &pdev->dev;
@@ -285,7 +317,10 @@ int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 		goto channels_error;
 
 	/* Setup media links between VI and external sensor subdev. */
-	err = tegra_vi_graph_init(mc_vi);
+	if (mc_vi->pg_mode)
+		err = tegra_vi_tpg_graph_init(mc_vi);
+	else
+		err = tegra_vi_graph_init(mc_vi);
 	if (err < 0)
 		goto graph_error;
 

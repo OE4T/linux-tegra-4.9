@@ -129,7 +129,6 @@ static int set_csi_properties(struct tegra_csi_device *csi,
 {
 	struct camera_common_data *s_data = &csi->s_data[0];
 
-	csi->pg_mode = 0;
 	/*
 	* These values are only used for tpg mode
 	* With sensor, CSI power and clock info are provided
@@ -465,16 +464,38 @@ static int tegra_csi_set_format(struct v4l2_subdev *subdev,
 	return 0;
 }
 
+/*
+ * Only use this subdevice media bus ops for test pattern generator,
+ * because CSI device is an separated subdevice which has 6 source
+ * pads to generate test pattern.
+ */
+static struct v4l2_mbus_framefmt tegra_csi_tpg_fmts[] = {
+	{
+		TEGRA_DEF_WIDTH,
+		TEGRA_DEF_HEIGHT,
+		MEDIA_BUS_FMT_SRGGB10_1X10,
+		V4L2_FIELD_NONE,
+		V4L2_COLORSPACE_SRGB
+	},
+	{
+		TEGRA_DEF_WIDTH,
+		TEGRA_DEF_HEIGHT,
+		MEDIA_BUS_FMT_RGBA8888_4X8_LE,
+		V4L2_FIELD_NONE,
+		V4L2_COLORSPACE_SRGB
+	}
+
+};
 /* -----------------------------------------------------------------------------
  * V4L2 Subdevice Operations
  */
 static struct v4l2_subdev_video_ops tegra_csi_video_ops = {
-	.s_stream = tegra_csi_s_stream,
+	.s_stream	= tegra_csi_s_stream,
 };
 
 static struct v4l2_subdev_pad_ops tegra_csi_pad_ops = {
-	.get_fmt		= tegra_csi_get_format,
-	.set_fmt		= tegra_csi_set_format,
+	.get_fmt	= tegra_csi_get_format,
+	.set_fmt	= tegra_csi_set_format,
 };
 
 static struct v4l2_subdev_ops tegra_csi_ops = {
@@ -548,6 +569,29 @@ static int tegra_csi_parse_of(struct tegra_csi_device *csi,
 	return 0;
 }
 
+static int tegra_tpg_csi_parse_data(struct tegra_csi_device *csi,
+				    struct platform_device *pdev)
+{
+	int i;
+
+	csi->ports = devm_kzalloc(&pdev->dev,
+		(csi->num_ports * sizeof(struct tegra_csi_port)), GFP_KERNEL);
+	if (!csi->ports)
+		return -ENOMEM;
+
+	csi->pads = devm_kzalloc(&pdev->dev,
+		(csi->num_ports * sizeof(struct media_pad)), GFP_KERNEL);
+	if (!csi->pads)
+		return -ENOMEM;
+
+	for (i = 0; i < csi->num_ports; i++) {
+		csi->ports[i].num = i;
+		csi->ports[i].lanes = 2;
+	}
+
+	return 0;
+}
+
 int tegra_csi_init(struct tegra_csi_device *csi,
 		struct platform_device *pdev)
 {
@@ -570,14 +614,17 @@ int tegra_csi_init(struct tegra_csi_device *csi,
 EXPORT_SYMBOL(tegra_csi_init);
 
 int tegra_csi_media_controller_init(struct tegra_csi_device *csi,
-				struct platform_device *pdev)
+				    struct platform_device *pdev)
 {
 	struct v4l2_subdev *subdev;
 	int ret, i;
 
 	csi->dev = &pdev->dev;
 
-	ret = tegra_csi_parse_of(csi, pdev);
+	if (csi->pg_mode)
+		ret = tegra_tpg_csi_parse_data(csi, pdev);
+	else
+		ret = tegra_csi_parse_of(csi, pdev);
 	if (ret < 0)
 		return ret;
 
@@ -602,13 +649,19 @@ int tegra_csi_media_controller_init(struct tegra_csi_device *csi,
 		csi->ports[i].format.width = TEGRA_DEF_WIDTH;
 		csi->ports[i].format.height = TEGRA_DEF_HEIGHT;
 
-		csi->pads[i * 2].flags = MEDIA_PAD_FL_SINK;
-		csi->pads[i * 2 + 1].flags = MEDIA_PAD_FL_SOURCE;
+		if (csi->pg_mode)
+			csi->pads[i].flags = MEDIA_PAD_FL_SOURCE;
+		else {
+			csi->pads[i * 2].flags = MEDIA_PAD_FL_SINK;
+			csi->pads[i * 2 + 1].flags = MEDIA_PAD_FL_SOURCE;
+		}
 	}
 
 	/* Initialize media entity */
-	ret = media_entity_init(&subdev->entity, csi->num_ports * 2,
-			csi->pads, 0);
+	ret = media_entity_init(&subdev->entity,
+				csi->pg_mode ? csi->num_ports :
+				csi->num_ports * 2,
+				csi->pads, 0);
 	if (ret < 0)
 		return ret;
 

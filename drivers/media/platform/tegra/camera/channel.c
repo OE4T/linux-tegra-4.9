@@ -1174,10 +1174,16 @@ static void vi_channel_syncpt_free(struct tegra_channel *chan)
 static int tegra_channel_init(struct tegra_mc_vi *vi, unsigned int index)
 {
 	int ret;
-	struct tegra_channel *chan  = &vi->chans[index];
+	struct tegra_channel *chan = &vi->chans[index];
 
 	chan->vi = vi;
-	tegra_vi_get_port_info(chan, vi->dev->of_node, index);
+
+	if (vi->pg_mode) {
+		chan->port = index;
+		chan->numlanes = 2;
+	} else
+		tegra_vi_get_port_info(chan, vi->dev->of_node, index);
+
 	if (csi_port_is_valid(chan->port)) {
 		chan->csibase = vi->iomem + TEGRA_VI_CSI_BASE(chan->port);
 		set_csi_portinfo(vi->csi, chan->port, chan->numlanes);
@@ -1222,7 +1228,7 @@ static int tegra_channel_init(struct tegra_mc_vi *vi, unsigned int index)
 	chan->video.v4l2_dev = &vi->v4l2_dev;
 	chan->video.queue = &chan->queue;
 	snprintf(chan->video.name, sizeof(chan->video.name), "%s-%s-%u",
-		 dev_name(vi->dev), "output", chan->port);
+		 dev_name(vi->dev), vi->pg_mode ? "tpg" : "output", chan->port);
 	chan->video.vfl_type = VFL_TYPE_GRABBER;
 	chan->video.vfl_dir = VFL_DIR_RX;
 	chan->video.release = video_device_release_empty;
@@ -1310,6 +1316,7 @@ int tegra_vi_channels_init(struct tegra_mc_vi *vi)
 	}
 	return 0;
 }
+EXPORT_SYMBOL(tegra_vi_channels_init);
 
 int tegra_vi_channels_cleanup(struct tegra_mc_vi *vi)
 {
@@ -1325,4 +1332,4 @@ int tegra_vi_channels_cleanup(struct tegra_mc_vi *vi)
 	}
 	return 0;
 }
-
+EXPORT_SYMBOL(tegra_vi_channels_cleanup);

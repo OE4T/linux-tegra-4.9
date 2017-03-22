@@ -412,6 +412,44 @@ static int tegra_vi_graph_parse_one(struct tegra_mc_vi *vi,
 	return ret;
 }
 
+int tegra_vi_tpg_graph_init(struct tegra_mc_vi *mc_vi)
+{
+	int err = 0, i;
+	u32 link_flags = MEDIA_LNK_FL_ENABLED;
+	struct tegra_csi_device *csi = mc_vi->csi;
+	struct media_entity *source = &csi->subdev.entity;
+
+	mc_vi->num_subdevs = mc_vi->num_channels;
+	for (i = 0; i < mc_vi->num_channels; i++) {
+		struct tegra_channel *chan = &mc_vi->chans[i];
+		struct media_entity *sink = &chan->video.entity;
+		struct media_pad *source_pad = &csi->pads[i];
+		struct media_pad *sink_pad = &chan->pad;
+
+		/* Use non-bypass mode by default */
+		chan->bypass = 0;
+
+		/* Create the media link. */
+		dev_dbg(mc_vi->dev, "creating %s:%u -> %s:%u link\n",
+			source->name, source_pad->index,
+			sink->name, sink_pad->index);
+
+		err = media_entity_create_link(source, source_pad->index,
+					       sink, sink_pad->index,
+					       link_flags);
+		if (err < 0) {
+			dev_err(mc_vi->dev,
+				"failed to create %s:%u -> %s:%u link\n",
+				source->name, source_pad->index,
+				sink->name, sink_pad->index);
+			return err;
+		}
+		tegra_channel_init_subdevices(chan);
+	}
+
+	return 0;
+}
+
 int tegra_vi_graph_init(struct tegra_mc_vi *vi)
 {
 	struct tegra_vi_graph_entity *entity;

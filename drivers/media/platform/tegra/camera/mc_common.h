@@ -207,6 +207,7 @@ void tegra_channel_write(struct tegra_channel *chan,
 			unsigned int addr, u32 val);
 void tegra_vi_v4l2_cleanup(struct tegra_mc_vi *vi);
 int tegra_vi_v4l2_init(struct tegra_mc_vi *vi);
+int tegra_vi_tpg_graph_init(struct tegra_mc_vi *vi);
 int tegra_vi_graph_init(struct tegra_mc_vi *vi);
 void tegra_vi_graph_cleanup(struct tegra_mc_vi *vi);
 int tegra_vi_channels_init(struct tegra_mc_vi *vi);

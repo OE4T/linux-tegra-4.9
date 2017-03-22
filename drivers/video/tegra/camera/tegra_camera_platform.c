@@ -170,6 +170,7 @@ static int tegra_camera_isomgr_release(struct tegra_camera_info *info)
 {
 #if defined(CONFIG_TEGRA_ISOMGR)
 	int ret = 0;
+
 	dev_dbg(info->dev, "%s++\n", __func__);
 
 	/* deallocate isomgr bw */
@@ -185,6 +186,12 @@ static int tegra_camera_isomgr_release(struct tegra_camera_info *info)
 	return 0;
 }
 
+static int tegra_camera_open(struct inode *inode, struct file *file)
+{
+	return 0;
+}
+
+#if 0
 static int tegra_camera_open(struct inode *inode, struct file *file)
 {
 	struct tegra_camera_info *info;
@@ -252,7 +259,13 @@ err_get_clk:
 	return -ENOENT;
 #endif
 }
+#endif
 
+static int tegra_camera_release(struct inode *inode, struct file *file)
+{
+	return 0;
+}
+#if 0
 static int tegra_camera_release(struct inode *inode, struct file *file)
 {
 
@@ -286,7 +299,14 @@ static int tegra_camera_release(struct inode *inode, struct file *file)
 
 	return 0;
 }
+#endif
 
+static long tegra_camera_ioctl(struct file *file,
+	unsigned int cmd, unsigned long arg)
+{
+	return 0;
+}
+#if 0
 static long tegra_camera_ioctl(struct file *file,
 	unsigned int cmd, unsigned long arg)
 {
@@ -356,6 +376,7 @@ static long tegra_camera_ioctl(struct file *file,
 
 	return 0;
 }
+#endif
 
 static const struct file_operations tegra_camera_ops = {
 	.owner = THIS_MODULE,
@@ -388,12 +409,8 @@ static int tegra_camera_probe(struct platform_device *pdev)
 	}
 	info = devm_kzalloc(tegra_camera_misc.this_device,
 		sizeof(struct tegra_camera_info), GFP_KERNEL);
-	if (!info) {
-		dev_err(tegra_camera_misc.this_device,
-			"Can't allocate memory for %s\n",
-			tegra_camera_misc.name);
+	if (!info)
 		return -ENOMEM;
-	}
 
 	memset(info, 0, sizeof(*info));
 
@@ -420,13 +437,14 @@ static int tegra_camera_probe(struct platform_device *pdev)
 static int tegra_camera_remove(struct platform_device *pdev)
 {
 	struct tegra_camera_info *info = platform_get_drvdata(pdev);
+
 	dev_info(&pdev->dev, "%s:camera_platform_driver remove\n", __func__);
 
 	tegra_vi_unregister_mfi_cb();
+	tegra_camera_isomgr_unregister(info);
+	misc_deregister(&tegra_camera_misc);
 
-    tegra_camera_isomgr_unregister(info);
-
-	return misc_deregister(&tegra_camera_misc);
+	return 0;
 }
 
 static struct platform_driver tegra_camera_driver = {

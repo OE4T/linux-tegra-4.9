@@ -1,7 +1,7 @@
 /**
  * camera_common.h - utilities for tegra camera driver
  *
- * Copyright (c) 2015, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -34,6 +34,7 @@
 #include <media/v4l2-device.h>
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-ctrls.h>
+#include <linux/v4l2-mediabus.h>
 #include <media/soc_camera.h>
 #include <media/nvc_focus.h>
 
@@ -134,7 +135,7 @@ struct camera_common_frmfmt {
 };
 
 struct camera_common_colorfmt {
-	enum v4l2_mbus_pixelcode	code;
+	unsigned int			code;
 	enum v4l2_colorspace		colorspace;
 };
 
@@ -235,9 +236,10 @@ void camera_common_create_debugfs(struct camera_common_data *s_data,
 		const char *name);
 
 const struct camera_common_colorfmt *camera_common_find_datafmt(
-		enum v4l2_mbus_pixelcode code);
-int camera_common_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
-			 enum v4l2_mbus_pixelcode *code);
+		unsigned int code);
+int camera_common_enum_mbus_code(struct v4l2_subdev *sd,
+				struct v4l2_subdev_pad_config *cfg,
+				struct v4l2_subdev_mbus_code_enum *code);
 int camera_common_try_fmt(struct v4l2_subdev *sd,
 			   struct v4l2_mbus_framefmt *mf);
 int camera_common_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf);

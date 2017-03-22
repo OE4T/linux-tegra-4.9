@@ -452,7 +452,7 @@ static void eqos_adjust_link(struct net_device *dev)
 * \retval 0 on success & negative number on failure.
 */
 
-static int eqos_init_phy(struct net_device *dev)
+int eqos_init_phy(struct net_device *dev)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct phy_device *phydev = NULL;
@@ -600,18 +600,8 @@ int eqos_mdio_register(struct net_device *dev)
 		}
 	}
 
-	ret = eqos_init_phy(dev);
-	if (unlikely(ret)) {
-		pr_err("Cannot attach to PHY (error: %d)\n", ret);
-		goto err_out_phy_connect;
-	}
-
 	DBGPR_MDIO("<--eqos_mdio_register\n");
 
-	return ret;
-
- err_out_phy_connect:
-	eqos_mdio_unregister(dev);
 	return ret;
 }
 

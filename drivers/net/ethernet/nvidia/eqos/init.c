@@ -1020,11 +1020,6 @@ int eqos_probe(struct platform_device *pdev)
 		pr_err("%s: MDIO is not present\n\n", DEV_NAME);
 	}
 
-	if (pdata->phydev->drv->low_power_mode) {
-		pdata->phydev->drv->low_power_mode(pdata->phydev, true);
-		phy_stop_interrupts(pdata->phydev);
-	}
-
 	/* enabling and registration of irq with magic wakeup */
 	if (1 == pdata->hw_feat.mgk_sel) {
 		device_set_wakeup_capable(&pdev->dev, 1);
@@ -1355,8 +1350,17 @@ static INT eqos_suspend(struct platform_device *pdev, pm_message_t state)
 	pdata->suspended = 1;
 
 	if (netif_running(dev)) {
-		/* Disable PHY interrupts */
-		phy_stop_interrupts(pdata->phydev);
+		if (pdata->phydev && pdata->phydev->drv &&
+		    pdata->phydev->drv->low_power_mode)
+			pdata->phydev->drv->low_power_mode(pdata->phydev, true);
+
+		/* Stop and disconnect the PHY */
+		if (pdata->phydev) {
+			phy_stop_interrupts(pdata->phydev);
+			phy_stop(pdata->phydev);
+			gpio_set_value(pdata->phy_reset_gpio, 0);
+		}
+
 		eqos_stop_dev(pdata);
 		pdata->hw_stopped = true;
 	}
@@ -1404,6 +1408,17 @@ static INT eqos_resume(struct platform_device *pdev)
 	eqos_clock_init(pdata);
 
 	if (netif_running(dev)) {
+		if (pdata->phydev->drv->low_power_mode) {
+			/* reset the PHY Broadcom PHY needs minimum of 2us delay */
+			pr_err("%s(): exit from iddq-lp mode\n", __func__);
+			gpio_set_value(pdata->phy_reset_gpio, 0);
+			usleep_range(10, 11);
+			gpio_set_value(pdata->phy_reset_gpio, 1);
+			pdata->phydev->drv->low_power_mode(pdata->phydev, false);
+		} else if (!gpio_get_value(pdata->phy_reset_gpio)) {
+			/* deassert phy reset */
+			gpio_set_value(pdata->phy_reset_gpio, 1);
+		}
 		/* first start eqos  */
 		eqos_start_dev(pdata);
 

@@ -1245,6 +1245,18 @@ static int eqos_open(struct net_device *dev)
 	if (!is_valid_ether_addr(dev->dev_addr))
 		return -EADDRNOTAVAIL;
 
+	/* Reset the PHY */
+	gpio_set_value(pdata->phy_reset_gpio, 0);
+	usleep_range(10, 11);
+	gpio_set_value(pdata->phy_reset_gpio, 1);
+
+	/* PHY initialisation */
+	ret = eqos_init_phy(dev);
+	if (ret) {
+		dev_err(&dev->dev, "%s: Cannot attach to PHY (error: %d)\n", __func__, ret);
+		return ret;
+	}
+
 	ret = request_txrx_irqs(pdata);
 	if (ret != Y_SUCCESS)
 		goto err_irq_0;
@@ -1293,6 +1305,19 @@ static int eqos_close(struct net_device *dev)
 	struct desc_if_struct *desc_if = &pdata->desc_if;
 
 	pr_debug("-->%s\n", __func__);
+
+	/* Put PHY in low power mode */
+	if (pdata->phydev && pdata->phydev->drv &&
+	    pdata->phydev->drv->low_power_mode)
+		pdata->phydev->drv->low_power_mode(pdata->phydev, true);
+
+	/* Stop and disconnect the PHY */
+	if (pdata->phydev) {
+		phy_stop(pdata->phydev);
+		phy_disconnect(pdata->phydev);
+		gpio_set_value(pdata->phy_reset_gpio, 0);
+		pdata->phydev = NULL;
+	}
 
 	mutex_lock(&pdata->hw_change_lock);
 	eqos_stop_dev(pdata);
@@ -5728,6 +5753,9 @@ void eqos_stop_dev(struct eqos_prv_data *pdata)
 	/* Unregister broadcasting MAC timestamp to clients */
 	tegra_unregister_hwtime_source();
 #endif
+	/* Stop the PHY state machine */
+	if (pdata->phydev)
+		phy_stop_machine(pdata->phydev);
 
 	/* turn off sources of data into dev */
 	netif_tx_disable(pdata->dev);
@@ -5782,21 +5810,6 @@ void eqos_start_dev(struct eqos_prv_data *pdata)
 	struct desc_if_struct *desc_if = &pdata->desc_if;
 
 	pr_debug("-->%s()\n", __func__);
-
-	if (pdata->phydev->drv->low_power_mode) {
-		/* reset the PHY Broadcom PHY needs minimum of 2us delay */
-		pr_debug("%s(): exit from iddq-lp mode\n", __func__);
-		gpio_set_value(pdata->phy_reset_gpio, 0);
-		usleep_range(10, 11);
-		gpio_set_value(pdata->phy_reset_gpio, 1);
-		pdata->phydev->drv->low_power_mode(pdata->phydev, false);
-		if (pdata->suspended == 0 && netif_running(pdata->dev))
-			phy_start_interrupts(pdata->phydev);
-	} else if (!gpio_get_value(pdata->phy_reset_gpio))
-	{
-		/* deassert phy reset */
-		gpio_set_value(pdata->phy_reset_gpio, 1);
-	}
 
 	/* issue CAR reset to device */
 	hw_if->car_reset(pdata);

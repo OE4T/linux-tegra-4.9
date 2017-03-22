@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -145,7 +145,8 @@ int tegra_ivc_rpc_channel_pm_resume(struct device *dev);
 		.dev_type = &tegra_ivc_channel_type, \
 		.ops.channel = &tegra_ivc_rpc_ ## channel_name ## _chan_ops, \
 	}; \
-	tegra_ivc_module_driver(tegra_ivc_channel_ ## channel_name ## _driver);
+	tegra_ivc_subsys_driver_default( \
+			tegra_ivc_channel_ ## channel_name ## _driver);
 
 /*
  * Remote procedure call

@@ -50,12 +50,17 @@ void tegra_ivc_driver_unregister(struct tegra_ivc_driver *drv);
 	module_driver(drv, tegra_ivc_driver_register, \
 			tegra_ivc_driver_unregister)
 
-#define tegra_ivc_subsys_driver(__driver) \
+#define tegra_ivc_subsys_driver(__driver, __register, __unregister, ...) \
 static int __init __driver##_init(void) \
 { \
-	return tegra_ivc_driver_register(&(__driver)); \
+	return __register(&(__driver) , ##__VA_ARGS__); \
 } \
 subsys_initcall_sync(__driver##_init);
+
+#define tegra_ivc_subsys_driver_default(__driver) \
+tegra_ivc_subsys_driver(__driver, \
+						tegra_ivc_driver_register, \
+						tegra_ivc_driver_unregister)
 
 /* Tegra HSP driver support */
 extern struct device_type tegra_hsp_type;
@@ -87,6 +92,7 @@ struct tegra_ivc_channel {
 	struct tegra_ivc_channel *next;
 	struct mutex ivc_wr_lock;
 	struct tegra_ivc_rpc_data *rpc_priv;
+	bool is_ready;
 };
 
 static inline void *tegra_ivc_channel_get_drvdata(

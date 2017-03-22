@@ -136,6 +136,9 @@ static int camrtc_ivc_dbg_xact(
 	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
 	int ret;
 
+	if (WARN_ON(!ch->is_ready))
+		return -EIO;
+
 	if (timeout == 0)
 		timeout = crd->parameters.completion_timeout;
 
@@ -834,6 +837,7 @@ static int camrtc_debug_probe(struct tegra_ivc_channel *ch)
 	if (unlikely(crd == NULL))
 		return -ENOMEM;
 
+	ch->is_ready = false;
 	crd->parameters.mods_loops = 20;
 
 	if (of_property_read_u32(dev->of_node,
@@ -857,6 +861,12 @@ static int camrtc_debug_probe(struct tegra_ivc_channel *ch)
 	return 0;
 }
 
+static int camrtc_debug_ready(struct tegra_ivc_channel *ch)
+{
+	ch->is_ready = true;
+	return 0;
+}
+
 static void camrtc_debug_remove(struct tegra_ivc_channel *ch)
 {
 	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
@@ -866,6 +876,7 @@ static void camrtc_debug_remove(struct tegra_ivc_channel *ch)
 
 static const struct tegra_ivc_channel_ops tegra_ivc_channel_debug_ops = {
 	.probe	= camrtc_debug_probe,
+	.ready	= camrtc_debug_ready,
 	.remove	= camrtc_debug_remove,
 	.notify	= camrtc_debug_notify,
 };
@@ -885,7 +896,7 @@ static struct tegra_ivc_driver camrtc_debug_driver = {
 	.dev_type	= &tegra_ivc_channel_type,
 	.ops.channel	= &tegra_ivc_channel_debug_ops,
 };
-tegra_ivc_module_driver(camrtc_debug_driver);
+tegra_ivc_subsys_driver_default(camrtc_debug_driver);
 
 MODULE_DESCRIPTION("Debug Driver for Camera RTCPU");
 MODULE_AUTHOR("Pekka Pessi <ppessi@nvidia.com>");

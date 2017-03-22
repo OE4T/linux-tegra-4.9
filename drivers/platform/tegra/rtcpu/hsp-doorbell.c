@@ -136,7 +136,7 @@ static struct tegra_ivc_driver tegra_hsp_doorbell_driver = {
 	.ops.hsp	= &tegra_hsp_doorbell_ops,
 };
 /* A tegra_hsp_type driver must be registered before ivc bus is created */
-tegra_ivc_subsys_driver(tegra_hsp_doorbell_driver);
+tegra_ivc_subsys_driver_default(tegra_hsp_doorbell_driver);
 MODULE_AUTHOR("Remi Denis-Courmont <remid@nvidia.com>");
 MODULE_DESCRIPTION("NVIDIA Tegra HSP doorbell driver");
 MODULE_LICENSE("GPL");

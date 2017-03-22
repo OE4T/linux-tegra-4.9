@@ -82,6 +82,9 @@ static int tegra_capture_ivc_tx(struct tegra_ivc_channel *chan,
 	struct tegra_capture_ivc *civc = tegra_ivc_channel_get_drvdata(chan);
 	int ret;
 
+	if (WARN_ON(!chan->is_ready))
+		return -EIO;
+
 	if (!tegra_ivc_can_write(&chan->ivc)) {
 		ret = wait_event_interruptible(civc->write_q,
 				tegra_ivc_can_write(&chan->ivc));
@@ -336,6 +339,8 @@ static void tegra_capture_ivc_worker(struct work_struct *work)
 					struct tegra_capture_ivc, work);
 	struct tegra_ivc_channel *chan = civc->chan;
 
+	WARN_ON(!chan->is_ready);
+
 	while (tegra_ivc_can_read(&chan->ivc)) {
 		const struct tegra_capture_ivc_resp *msg =
 			tegra_ivc_read_get_next_frame(&chan->ivc);
@@ -394,6 +399,7 @@ static int tegra_capture_ivc_probe(struct tegra_ivc_channel *chan)
 		return ret;
 	}
 
+	chan->is_ready = false;
 	civc->chan = chan;
 	civc->dev = dev;
 
@@ -437,6 +443,12 @@ static int tegra_capture_ivc_probe(struct tegra_ivc_channel *chan)
 	return 0;
 }
 
+static int tegra_capture_ivc_ready(struct tegra_ivc_channel *chan)
+{
+	chan->is_ready = true;
+	return 0;
+}
+
 static void tegra_capture_ivc_remove(struct tegra_ivc_channel *chan)
 {
 	struct tegra_capture_ivc *civc = tegra_ivc_channel_get_drvdata(chan);
@@ -457,6 +469,7 @@ static struct of_device_id tegra_capture_ivc_channel_of_match[] = {
 
 static const struct tegra_ivc_channel_ops tegra_capture_ivc_ops = {
 	.probe	= tegra_capture_ivc_probe,
+	.ready	= tegra_capture_ivc_ready,
 	.remove	= tegra_capture_ivc_remove,
 	.notify	= tegra_capture_ivc_notify,
 };
@@ -472,7 +485,7 @@ static struct tegra_ivc_driver tegra_capture_ivc_driver = {
 	.ops.channel	= &tegra_capture_ivc_ops,
 };
 
-tegra_ivc_module_driver(tegra_capture_ivc_driver);
+tegra_ivc_subsys_driver_default(tegra_capture_ivc_driver);
 MODULE_AUTHOR("Sudhir Vyas <svyas@nvidia.com>");
 MODULE_DESCRIPTION("NVIDIA Tegra Capture IVC driver");
 MODULE_LICENSE("GPL");

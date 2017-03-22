@@ -175,6 +175,8 @@ static void tegra_ivc_channel_vi_notify_process(struct tegra_ivc_channel *chan)
 {
 	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
 
+	WARN_ON(!chan->is_ready);
+
 	wake_up(&ivn->write_q);
 	schedule_work(&ivn->notify_work);
 }
@@ -213,6 +215,9 @@ static int tegra_ivc_vi_notify_send(struct tegra_ivc_channel *chan,
 {
 	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
 	int ret = 0;
+
+	if (WARN_ON(!chan->is_ready))
+		return -EIO;
 
 	while (ret == 0) {
 		DEFINE_WAIT(wait);
@@ -521,6 +526,7 @@ static int tegra_ivc_channel_vi_notify_probe(struct tegra_ivc_channel *chan)
 
 	_ivn = ivn;
 
+	chan->is_ready = false;
 	ivn->vi = tegra_vi_get(&chan->dev);
 	if (IS_ERR(ivn->vi))
 		return PTR_ERR(ivn->vi);
@@ -554,6 +560,12 @@ static int tegra_ivc_channel_vi_notify_probe(struct tegra_ivc_channel *chan)
 	return err;
 }
 
+static int tegra_ivc_channel_vi_notify_ready(struct tegra_ivc_channel *chan)
+{
+	chan->is_ready = true;
+	return 0;
+}
+
 static void tegra_ivc_channel_vi_notify_remove(struct tegra_ivc_channel *chan)
 {
 	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
@@ -578,6 +590,7 @@ static struct of_device_id tegra_ivc_channel_vi_notify_of_match[] = {
 
 static const struct tegra_ivc_channel_ops tegra_ivc_channel_vi_notify_ops = {
 	.probe	= tegra_ivc_channel_vi_notify_probe,
+	.ready	= tegra_ivc_channel_vi_notify_ready,
 	.remove	= tegra_ivc_channel_vi_notify_remove,
 	.notify	= tegra_ivc_channel_vi_notify_process,
 };
@@ -592,7 +605,7 @@ static struct tegra_ivc_driver tegra_ivc_channel_vi_notify_driver = {
 	.dev_type	= &tegra_ivc_channel_type,
 	.ops.channel	= &tegra_ivc_channel_vi_notify_ops,
 };
-tegra_ivc_module_driver(tegra_ivc_channel_vi_notify_driver);
+tegra_ivc_subsys_driver_default(tegra_ivc_channel_vi_notify_driver);
 MODULE_AUTHOR("Remi Denis-Courmont <remid@nvidia.com>");
 MODULE_DESCRIPTION("NVIDIA Tegra IVC VI Notify driver");
 MODULE_LICENSE("GPL");

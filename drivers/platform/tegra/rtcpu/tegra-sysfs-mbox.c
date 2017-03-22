@@ -1,7 +1,7 @@
 /*
  * Tegra sysfs mbox driver for IVC channels
  *
- * Copyright (c) 2015-2016 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -157,7 +157,7 @@ static struct tegra_ivc_driver sysfs_mbox_driver = {
 	.dev_type	= &tegra_ivc_channel_type,
 	.ops.channel	= &tegra_ivc_channel_sysfs_ops,
 };
-tegra_ivc_module_driver(sysfs_mbox_driver);
+tegra_ivc_subsys_driver_default(sysfs_mbox_driver);
 MODULE_AUTHOR("Pekka Pessi <ppessi@nvidia.com>");
 MODULE_DESCRIPTION("Legacy Tegra IVC sysfs driver");
 MODULE_LICENSE("GPL");

@@ -421,8 +421,10 @@ static int tegra_ivc_bus_ready_child(struct device *dev, void *data)
 
 	int ret;
 
-	if (drv == NULL)
-		return -EINVAL;
+	if (drv == NULL) {
+		dev_warn(dev, "ivc channel driver missing\n");
+		return 0;
+	}
 
 	/* TODO: propagate offline status to bus devices */
 	if (!online)

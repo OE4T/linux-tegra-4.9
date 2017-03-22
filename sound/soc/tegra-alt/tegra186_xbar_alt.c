@@ -1,7 +1,7 @@
 /*
  * tegra186_xbar_alt.c - Additional features for T186
  *
- * Copyright (c) 2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -892,12 +892,12 @@ static struct of_dev_auxdata tegra186_xbar_auxdata[] = {
 	OF_DEV_AUXDATA("nvidia,tegra210-adx", ADX2_BASE_ADDR, "tegra210-adx.1", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-adx", ADX3_BASE_ADDR, "tegra210-adx.2", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-adx", ADX4_BASE_ADDR, "tegra210-adx.3", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-afc", AFC1_BASE_ADDR, "tegra210-afc.0", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-afc", AFC2_BASE_ADDR, "tegra210-afc.1", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-afc", AFC3_BASE_ADDR, "tegra210-afc.2", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-afc", AFC4_BASE_ADDR, "tegra210-afc.3", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-afc", AFC5_BASE_ADDR, "tegra210-afc.4", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-afc", AFC6_BASE_ADDR, "tegra210-afc.5", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra186-afc", AFC1_BASE_ADDR, "tegra186-afc.0", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra186-afc", AFC2_BASE_ADDR, "tegra186-afc.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra186-afc", AFC3_BASE_ADDR, "tegra186-afc.2", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra186-afc", AFC4_BASE_ADDR, "tegra186-afc.3", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra186-afc", AFC5_BASE_ADDR, "tegra186-afc.4", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra186-afc", AFC6_BASE_ADDR, "tegra186-afc.5", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-sfc", SFC1_BASE_ADDR, "tegra210-sfc.0", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-sfc", SFC2_BASE_ADDR, "tegra210-sfc.1", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-sfc", SFC3_BASE_ADDR, "tegra210-sfc.2", NULL),

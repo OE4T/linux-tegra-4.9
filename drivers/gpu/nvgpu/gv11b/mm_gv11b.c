@@ -28,7 +28,7 @@ static bool gv11b_mm_is_bar1_supported(struct gk20a *g)
 	return false;
 }
 
-static void gv11b_init_inst_block(struct mem_desc *inst_block,
+static void gv11b_init_inst_block(struct nvgpu_mem *inst_block,
 		struct vm_gk20a *vm, u32 big_page_size)
 {
 	struct gk20a *g = gk20a_from_vm(vm);

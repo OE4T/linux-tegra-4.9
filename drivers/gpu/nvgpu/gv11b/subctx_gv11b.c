@@ -24,7 +24,7 @@
 #include <nvgpu/hw/gv11b/hw_ctxsw_prog_gv11b.h>
 
 static void gv11b_init_subcontext_pdb(struct channel_gk20a *c,
-				struct mem_desc *inst_block);
+				struct nvgpu_mem *inst_block);
 
 void gv11b_free_subctx_header(struct channel_gk20a *c)
 {
@@ -86,7 +86,7 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 }
 
 static void gv11b_init_subcontext_pdb(struct channel_gk20a *c,
-				struct mem_desc *inst_block)
+				struct nvgpu_mem *inst_block)
 {
 	struct gk20a *g = c->g;
 	struct vm_gk20a *vm;
@@ -126,7 +126,7 @@ static void gv11b_init_subcontext_pdb(struct channel_gk20a *c,
 int gv11b_update_subctx_header(struct channel_gk20a *c, u64 gpu_va)
 {
 	struct ctx_header_desc *ctx = &c->ch_ctx.ctx_header;
-	struct mem_desc *gr_mem;
+	struct nvgpu_mem *gr_mem;
 	struct gk20a *g = c->g;
 	int ret = 0;
 	u32 addr_lo, addr_hi;

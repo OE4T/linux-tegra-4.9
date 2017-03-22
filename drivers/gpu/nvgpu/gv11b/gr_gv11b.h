@@ -44,7 +44,7 @@ enum {
 
 void gv11b_init_gr(struct gpu_ops *ops);
 int gr_gv11b_alloc_buffer(struct vm_gk20a *vm, size_t size,
-                        struct mem_desc *mem);
+                        struct nvgpu_mem *mem);
 /*zcull*/
 void gr_gv11b_program_zcull_mapping(struct gk20a *g, u32 zcull_num_entries,
 					u32 *zcull_map_tiles);

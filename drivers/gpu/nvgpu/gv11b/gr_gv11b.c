@@ -642,7 +642,7 @@ static int gr_gv11b_init_ctx_state(struct gk20a *g)
 }
 
 int gr_gv11b_alloc_buffer(struct vm_gk20a *vm, size_t size,
-			struct mem_desc *mem)
+			struct nvgpu_mem *mem)
 {
 	int err;
 
@@ -778,7 +778,7 @@ fail_free_gk20a_ctx:
 static void dump_ctx_switch_stats(struct gk20a *g, struct vm_gk20a *vm,
 		  struct gr_ctx_desc *gr_ctx)
 {
-	struct mem_desc *mem = &gr_ctx->mem;
+	struct nvgpu_mem *mem = &gr_ctx->mem;
 
 	if (nvgpu_mem_begin(g, mem)) {
 		WARN_ON("Cannot map context");
@@ -834,7 +834,7 @@ static void gr_gv11b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 
 static void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 		struct channel_ctx_gk20a *ch_ctx,
-		struct mem_desc *mem)
+		struct nvgpu_mem *mem)
 {
 	struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
 	u32 gfxp_preempt_option =
@@ -1925,7 +1925,7 @@ static int gr_gv11b_commit_global_timeslice(struct gk20a *g,
 }
 
 static void gv11b_restore_context_header(struct gk20a *g,
-					struct mem_desc *ctxheader)
+					struct nvgpu_mem *ctxheader)
 {
 	u32 va_lo, va_hi;
 	struct gr_gk20a *gr = &g->gr;
@@ -1947,7 +1947,7 @@ static void gv11b_restore_context_header(struct gk20a *g,
 			ctxsw_prog_main_image_num_save_ops_o(), 0);
 }
 static void gr_gv11b_write_zcull_ptr(struct gk20a *g,
-				struct mem_desc *mem, u64 gpu_va)
+				struct nvgpu_mem *mem, u64 gpu_va)
 {
 	u32 va_lo, va_hi;
 
@@ -1962,7 +1962,7 @@ static void gr_gv11b_write_zcull_ptr(struct gk20a *g,
 
 
 static void gr_gv11b_write_pm_ptr(struct gk20a *g,
-				struct mem_desc *mem, u64 gpu_va)
+				struct nvgpu_mem *mem, u64 gpu_va)
 {
 	u32 va_lo, va_hi;
 

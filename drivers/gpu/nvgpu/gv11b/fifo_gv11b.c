@@ -112,7 +112,7 @@ static int channel_gv11b_setup_ramfc(struct channel_gk20a *c,
 		unsigned long acquire_timeout, u32 flags)
 {
 	struct gk20a *g = c->g;
-	struct mem_desc *mem = &c->inst_block;
+	struct nvgpu_mem *mem = &c->inst_block;
 	u32 data;
 
 	gk20a_dbg_fn("");
@@ -193,7 +193,7 @@ static void gv11b_ring_channel_doorbell(struct channel_gk20a *c)
 
 static u32 gv11b_userd_gp_get(struct gk20a *g, struct channel_gk20a *c)
 {
-	struct mem_desc *userd_mem = &g->fifo.userd;
+	struct nvgpu_mem *userd_mem = &g->fifo.userd;
 	u32 offset = c->hw_chid * (g->fifo.userd_entry_size / sizeof(u32));
 
 	return nvgpu_mem_rd32(g, userd_mem,
@@ -202,7 +202,7 @@ static u32 gv11b_userd_gp_get(struct gk20a *g, struct channel_gk20a *c)
 
 static void gv11b_userd_gp_put(struct gk20a *g, struct channel_gk20a *c)
 {
-	struct mem_desc *userd_mem = &g->fifo.userd;
+	struct nvgpu_mem *userd_mem = &g->fifo.userd;
 	u32 offset = c->hw_chid * (g->fifo.userd_entry_size / sizeof(u32));
 
 	nvgpu_mem_wr32(g, userd_mem, offset + ram_userd_gp_put_w(),

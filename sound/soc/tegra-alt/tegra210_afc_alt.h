@@ -25,7 +25,7 @@
  */
 #define TEGRA210_AFC_AXBAR_RX_STATUS			0xc
 #define TEGRA210_AFC_AXBAR_RX_CIF_CTRL			0x20
-#define TEGRA210_AFC_AXBAR_RX_CYA				0x24
+#define TEGRA210_AFC_AXBAR_RX_CYA			0x24
 
 /*
  * AFC_AXBAR_TX registers are with respect to AXBAR.
@@ -37,57 +37,49 @@
 #define TEGRA210_AFC_AXBAR_TX_INT_SET			0x58
 #define TEGRA210_AFC_AXBAR_TX_INT_CLEAR			0x5c
 #define TEGRA210_AFC_AXBAR_TX_CIF_CTRL			0x60
-#define TEGRA210_AFC_AXBAR_TX_CYA				0x64
+#define TEGRA210_AFC_AXBAR_TX_CYA			0x64
 
 /* Register offsets from TEGRA210_AFC*_BASE */
-#define TEGRA210_AFC_ENABLE			0x80
-#define TEGRA210_AFC_SOFT_RESET		0x84
-#define TEGRA210_AFC_CG				0x88
-#define TEGRA210_AFC_STATUS			0x8c
-#define TEGRA210_AFC_INT_STATUS		0x90
-#define TEGRA210_AFC_INT_MASK		0x94
-#define TEGRA210_AFC_INT_SET		0x98
-#define TEGRA210_AFC_INT_CLEAR		0x9c
+#define TEGRA210_AFC_ENABLE				0x80
+#define TEGRA210_AFC_SOFT_RESET				0x84
+#define TEGRA210_AFC_CG					0x88
+#define TEGRA210_AFC_STATUS				0x8c
+#define TEGRA210_AFC_INT_STATUS				0x90
+#define TEGRA210_AFC_INT_MASK				0x94
+#define TEGRA210_AFC_INT_SET				0x98
+#define TEGRA210_AFC_INT_CLEAR				0x9c
 
 /* Miscellaneous AFC registers */
-#define TEGRA210_AFC_DEST_I2S_PARAMS		0xa4
-#define TEGRA210_AFC_TXCIF_FIFO_PARAMS		0xa8
+#define TEGRA210_AFC_DEST_I2S_PARAMS			0xa4
+#define TEGRA210_AFC_TXCIF_FIFO_PARAMS			0xa8
 #define TEGRA210_AFC_CLK_PPM_DIFF			0xac
 #define TEGRA210_AFC_DBG_CTRL				0xb0
 #define TEGRA210_AFC_TOTAL_SAMPLES			0xb4
-#define TEGRA210_AFC_DECIMATION_SAMPLES		0xb8
-#define TEGRA210_AFC_INTERPOLATION_SAMPLES	0xbc
+#define TEGRA210_AFC_DECIMATION_SAMPLES			0xb8
+#define TEGRA210_AFC_INTERPOLATION_SAMPLES		0xbc
 #define TEGRA210_AFC_DBG_INTERNAL			0xc0
 
 /* AFC coefficient registers */
-#define TEGRA210_AFC_LCOEF_1_4_0		0xc4
-#define TEGRA210_AFC_LCOEF_1_4_1		0xc8
-#define TEGRA210_AFC_LCOEF_1_4_2		0xcc
-#define TEGRA210_AFC_LCOEF_1_4_3		0xd0
-#define TEGRA210_AFC_LCOEF_1_4_4		0xd4
-#define TEGRA210_AFC_LCOEF_1_4_5		0xd8
-#define TEGRA210_AFC_LCOEF_2_4_0		0xdc
-#define TEGRA210_AFC_LCOEF_2_4_1		0xe0
-#define TEGRA210_AFC_LCOEF_2_4_2		0xe4
+#define TEGRA210_AFC_LCOEF_1_4_0			0xc4
+#define TEGRA210_AFC_LCOEF_1_4_1			0xc8
+#define TEGRA210_AFC_LCOEF_1_4_2			0xcc
+#define TEGRA210_AFC_LCOEF_1_4_3			0xd0
+#define TEGRA210_AFC_LCOEF_1_4_4			0xd4
+#define TEGRA210_AFC_LCOEF_1_4_5			0xd8
+#define TEGRA210_AFC_LCOEF_2_4_0			0xdc
+#define TEGRA210_AFC_LCOEF_2_4_1			0xe0
+#define TEGRA210_AFC_LCOEF_2_4_2			0xe4
 #define TEGRA210_AFC_CYA				0xe8
 
 /* Fields in TEGRA210_AFC_ENABLE */
 #define TEGRA210_AFC_EN_SHIFT				0
-#define TEGRA210_AFC_EN						(1 << TEGRA210_AFC_EN_SHIFT)
+#define TEGRA210_AFC_EN					(1 << TEGRA210_AFC_EN_SHIFT)
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-#define TEGRA_AFC_MODULE_SELECT_SHIFT			27
-#endif
+#define TEGRA186_AFC_MODULE_SELECT_SHIFT		27
 
 #define TEGRA210_AFC_DEST_MODULE_ID_SHIFT		24
 #define TEGRA210_AFC_FIFO_HIGH_THRESHOLD_SHIFT		16
 #define TEGRA210_AFC_FIFO_START_THRESHOLD_SHIFT		8
-
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-#define MAX_I2S_COUNT 6
-#else
-#define MAX_I2S_COUNT 5
-#endif
 
 #define AFC_CLK_PPM_DIFF 50
 
@@ -95,6 +87,9 @@ struct tegra210_afc_soc_data {
 	void (*set_audio_cif)(struct regmap *map,
 			unsigned int reg,
 			struct tegra210_xbar_cif_conf *conf);
+	unsigned int num_i2s;
+	bool flag_module_select;
+	const struct snd_soc_codec_driver *afc_codec;
 };
 
 enum tegra210_afc_threshold_type {

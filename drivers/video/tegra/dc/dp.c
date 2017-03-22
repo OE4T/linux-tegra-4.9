@@ -1969,8 +1969,14 @@ static int tegra_dc_dp_hotplug_init(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 
-	/* SOR partition must be awake for dpaux */
-	tegra_unpowergate_partition(dp->sor->powergate_id);
+	/*
+	 * SOR partition must be awake for dpaux and
+	 * head power domain should be powered for seamless
+	 */
+	if (dc->initialized)
+		tegra_dc_unpowergate_locked(dc);
+	else
+		tegra_unpowergate_partition(dp->sor->powergate_id);
 
 	/*
 	 * dp interrupts are received by dpaux.

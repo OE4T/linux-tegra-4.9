@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,8 +23,8 @@
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
 #include <linux/uaccess.h>
+#include <linux/clk.h>
 
-#include <mach/clk.h>
 #include <linux/platform/tegra/latency_allowance.h>
 
 #include "bus_client.h"
@@ -468,7 +468,7 @@ void nvhost_vi_reset_all(struct platform_device *pdev)
 	struct clk *clk;
 
 	err = nvhost_clk_get(pdev, "cilab", &clk);
-	if (!err && tegra_is_clk_enabled(clk)) {
+	if (!err) {
 		reset_reg[0] = pdata->aperture[0] +
 			T12_VI_CSI_0_SW_RESET;
 		reset_reg[1] = pdata->aperture[0] +
@@ -490,11 +490,11 @@ void nvhost_vi_reset_all(struct platform_device *pdev)
 	}
 
 	err = nvhost_clk_get(pdev, "cilcd", &clk);
-	if (!err && tegra_is_clk_enabled(clk))
+	if (!err)
 		enabled = true;
 
 	err = nvhost_clk_get(pdev, "cile", &clk);
-	if (!err && tegra_is_clk_enabled(clk))
+	if (!err)
 		enabled = true;
 
 	if (enabled) {

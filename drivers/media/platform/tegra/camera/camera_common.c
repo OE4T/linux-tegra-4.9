@@ -31,8 +31,8 @@
 	 master->ops->op(master, __VA_ARGS__) : 0)
 
 static const struct camera_common_colorfmt camera_common_color_fmts[] = {
-	{V4L2_MBUS_FMT_SRGGB10_1X10, V4L2_COLORSPACE_SRGB},
-	{V4L2_MBUS_FMT_SRGGB8_1X8, V4L2_COLORSPACE_SRGB},
+	{MEDIA_BUS_FMT_SRGGB10_1X10, V4L2_COLORSPACE_SRGB},
+	{MEDIA_BUS_FMT_SRGGB8_1X8, V4L2_COLORSPACE_SRGB},
 };
 
 static struct tegra_io_dpd camera_common_csi_io[] = {
@@ -331,7 +331,7 @@ remove_debugfs:
 
 /* Find a data format by a pixel code in an array */
 const struct camera_common_colorfmt *camera_common_find_datafmt(
-		enum v4l2_mbus_pixelcode code)
+		unsigned int code)
 {
 	int i;
 
@@ -342,13 +342,14 @@ const struct camera_common_colorfmt *camera_common_find_datafmt(
 	return NULL;
 }
 
-int camera_common_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
-			 enum v4l2_mbus_pixelcode *code)
+int camera_common_enum_mbus_code(struct v4l2_subdev *sd,
+				struct v4l2_subdev_pad_config *cfg,
+				struct v4l2_subdev_mbus_code_enum *code)
 {
-	if ((unsigned int)index >= ARRAY_SIZE(camera_common_color_fmts))
+	if (code->pad || code->index >= ARRAY_SIZE(camera_common_color_fmts))
 		return -EINVAL;
 
-	*code = camera_common_color_fmts[index].code;
+	code->code = camera_common_color_fmts[code->index].code;
 	return 0;
 }
 
@@ -396,9 +397,9 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 			"%s: invalid resolution supplied to set mode %d %d\n",
 			__func__, mf->width, mf->height);
 
-	if (mf->code != V4L2_MBUS_FMT_SRGGB8_1X8 &&
-		mf->code != V4L2_MBUS_FMT_SRGGB10_1X10)
-		mf->code = V4L2_MBUS_FMT_SRGGB10_1X10;
+	if (mf->code != MEDIA_BUS_FMT_SRGGB8_1X8 &&
+		mf->code != MEDIA_BUS_FMT_SRGGB10_1X10)
+		mf->code = MEDIA_BUS_FMT_SRGGB10_1X10;
 
 	mf->field = V4L2_FIELD_NONE;
 	mf->colorspace = V4L2_COLORSPACE_SRGB;

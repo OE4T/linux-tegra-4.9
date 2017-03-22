@@ -16,8 +16,7 @@
 #include <media/media-entity.h>
 #include <media/v4l2-async.h>
 #include <media/v4l2-ctrls.h>
-
-#include "vi/vi.h"
+#include <media/v4l2-subdev.h>
 
 enum tegra_csi_port_num {
 	PORT_A = 0,

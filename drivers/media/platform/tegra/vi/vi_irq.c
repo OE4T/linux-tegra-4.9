@@ -67,6 +67,7 @@ static const int mask_reg_table[] = {
 static inline void clear_state(struct vi *tegra_vi, int addr)
 {
 	int val;
+
 	val = host1x_readl(tegra_vi->ndev, addr);
 	host1x_writel(tegra_vi->ndev, addr, val);
 }

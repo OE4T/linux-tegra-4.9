@@ -62,8 +62,8 @@ void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan,
 		code.index++;
 	}
 
-	if (0 == bitmap_weight(chan->fmts_bitmap, MAX_FORMAT_NUM)) {
-		index = tegra_core_get_idx_by_code(V4L2_MBUS_FMT_SRGGB10_1X10);
+	if (bitmap_weight(chan->fmts_bitmap, MAX_FORMAT_NUM) == 0) {
+		index = tegra_core_get_idx_by_code(MEDIA_BUS_FMT_SRGGB10_1X10);
 		if (index >= 0)
 			bitmap_set(chan->fmts_bitmap, index, 1);
 	}
@@ -74,12 +74,12 @@ void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan,
  */
 
 static int
-tegra_channel_queue_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
+tegra_channel_queue_setup(struct vb2_queue *vq, const void *parg,
 		     unsigned int *nbuffers, unsigned int *nplanes,
 		     unsigned int sizes[], void *alloc_ctxs[])
 {
+	const struct v4l2_format *fmt = parg;
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
-
 	/* Make sure the image size is large enough. */
 	if (fmt && fmt->fmt.pix.sizeimage < chan->format.sizeimage)
 		return -EINVAL;
@@ -322,20 +322,20 @@ static int tegra_channel_get_subdevices(struct tegra_channel *chan)
 }
 
 static int
-tegra_channel_get_format(struct file *file, void *fh,
-			struct v4l2_format *format)
+__tegra_channel_get_format(struct tegra_channel *chan,
+			struct v4l2_pix_format *pix)
 {
-	struct v4l2_fh *vfh = file->private_data;
-	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
-	struct v4l2_mbus_framefmt mf;
-	struct v4l2_pix_format *pix = &format->fmt.pix;
+	struct tegra_video_format const *vfmt;
+	struct v4l2_subdev_format fmt;
 	int ret = 0;
 	int num_sd = 0;
 	struct v4l2_subdev *sd = chan->subdev[num_sd];
 
 	while (sd != NULL) {
-		ret = v4l2_subdev_call(sd, video, g_mbus_fmt, &mf);
-		if (IS_ERR_VALUE(ret)) {
+		memset(&fmt, 0x0, sizeof(fmt));
+		fmt.pad = 0;
+		ret = v4l2_subdev_call(sd, pad, get_fmt, NULL, &fmt);
+		if (ret) {
 			if (ret == -ENOIOCTLCMD) {
 				num_sd++;
 				if (num_sd < chan->num_subdevs) {
@@ -343,28 +343,40 @@ tegra_channel_get_format(struct file *file, void *fh,
 					continue;
 				} else
 					break;
-			} else
-				return ret;
+			}
 		}
 
-		pix->width = mf.width;
-		pix->height = mf.height;
-		pix->field = mf.field;
-		pix->colorspace = mf.colorspace;
+		v4l2_fill_pix_format(pix, &fmt.format);
+		vfmt = tegra_core_get_format_by_code(fmt.format.code);
+		if (vfmt != NULL) {
+			pix->pixelformat = vfmt->fourcc;
+			pix->bytesperline = pix->width * vfmt->bpp;
+			pix->sizeimage = pix->height * pix->bytesperline;
+		}
 
 		return ret;
 	}
 
-	return -ENODEV;
+	return -ENOTTY;
+}
+
+static int
+tegra_channel_get_format(struct file *file, void *fh,
+			struct v4l2_format *format)
+{
+	struct v4l2_fh *vfh = file->private_data;
+	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
+	struct v4l2_pix_format *pix = &format->fmt.pix;
+
+	return  __tegra_channel_get_format(chan, pix);
 }
 
 static int
 __tegra_channel_try_format(struct tegra_channel *chan,
-			struct v4l2_pix_format *pix,
-			const struct tegra_video_format **fmtinfo)
+			struct v4l2_pix_format *pix)
 {
-	const struct tegra_video_format *info;
-	struct v4l2_mbus_framefmt mf;
+	const struct tegra_video_format *vfmt;
+	struct v4l2_subdev_format fmt;
 	int ret = 0;
 	int num_sd = 0;
 	struct v4l2_subdev *sd = chan->subdev[num_sd];
@@ -372,27 +384,26 @@ __tegra_channel_try_format(struct tegra_channel *chan,
 	/* Retrieve format information and select the default format if the
 	 * requested format isn't supported.
 	 */
-	info = tegra_core_get_format_by_fourcc(pix->pixelformat);
-	if (!info)
-		info = tegra_core_get_format_by_code(TEGRA_VF_DEF);
+	vfmt = tegra_core_get_format_by_fourcc(pix->pixelformat);
+	if (!vfmt) {
+		pix->pixelformat = chan->format.pixelformat;
+		vfmt = tegra_core_get_format_by_fourcc(pix->pixelformat);
+	}
 
-	pix->pixelformat = info->fourcc;
+	pix->pixelformat = vfmt->fourcc;
 	/* Change this when start adding interlace format support */
 	pix->field = V4L2_FIELD_NONE;
 	pix->colorspace = chan->format.colorspace;
 
-	tegra_channel_fmt_align(pix, chan->align, info->bpp);
-
+	tegra_channel_fmt_align(pix, chan->align, vfmt->bpp);
+	fmt.which = V4L2_SUBDEV_FORMAT_TRY;
+	fmt.pad = 0;
 	/* verify with subdevice the format supported */
-	mf.width = pix->width;
-	mf.height = pix->height;
-	mf.field = pix->field;
-	mf.colorspace = pix->colorspace;
-	mf.code = info->code;
+	v4l2_fill_mbus_format(&fmt.format, pix, vfmt->code);
 
 	while (sd != NULL) {
-		ret = v4l2_subdev_call(sd, video, try_mbus_fmt, &mf);
-		if (IS_ERR_VALUE(ret)) {
+		ret = v4l2_subdev_call(sd, pad, set_fmt, NULL, &fmt);
+		if (ret) {
 			if (ret == -ENOIOCTLCMD) {
 				num_sd++;
 				if (num_sd < chan->num_subdevs) {
@@ -400,24 +411,21 @@ __tegra_channel_try_format(struct tegra_channel *chan,
 					continue;
 				} else
 					break;
-			} else
-				return ret;
+			}
 		}
 
-		pix->width = mf.width;
-		pix->height = mf.height;
-		pix->colorspace = mf.colorspace;
+		v4l2_fill_pix_format(pix, &fmt.format);
+		if (ret)
+			pix->bytesperline = pix->width * chan->fmtinfo->bpp;
+		else
+			pix->bytesperline = pix->width * vfmt->bpp;
 
-		tegra_channel_fmt_align(pix, chan->align, info->bpp);
-		if (fmtinfo) {
-			*fmtinfo = info;
-			ret = v4l2_subdev_call(sd, video, s_mbus_fmt, &mf);
-		}
+		pix->sizeimage = pix->height * pix->bytesperline;
 
 		return ret;
 	}
 
-	return -ENODEV;
+	return -ENOTTY;
 }
 
 static int
@@ -426,11 +434,52 @@ tegra_channel_try_format(struct file *file, void *fh,
 {
 	struct v4l2_fh *vfh = file->private_data;
 	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
+
+	return  __tegra_channel_try_format(chan, &format->fmt.pix);
+}
+
+static int
+__tegra_channel_set_format(struct tegra_channel *chan,
+			struct v4l2_pix_format *pix)
+{
+	const struct tegra_video_format *vfmt;
+	struct v4l2_subdev_format fmt;
+	int num_sd = 0;
+	struct v4l2_subdev *sd = chan->subdev[0];
 	int ret = 0;
 
-	ret = __tegra_channel_try_format(chan, &format->fmt.pix, NULL);
+	vfmt = tegra_core_get_format_by_fourcc(pix->pixelformat);
 
-	return ret;
+	fmt.which = V4L2_SUBDEV_FORMAT_ACTIVE;
+	fmt.pad = 0;
+	v4l2_fill_mbus_format(&fmt.format, pix, vfmt->code);
+
+	while (sd != NULL) {
+		ret = v4l2_subdev_call(sd, pad, set_fmt, NULL, &fmt);
+		if (ret) {
+			if (ret == -ENOIOCTLCMD) {
+				num_sd++;
+				if (num_sd < chan->num_subdevs) {
+					sd = chan->subdev[num_sd];
+					continue;
+				} else
+					break;
+			}
+		}
+
+		v4l2_fill_pix_format(pix, &fmt.format);
+		pix->bytesperline = pix->width * vfmt->bpp;
+		pix->sizeimage = pix->height * pix->bytesperline;
+
+		if (!ret) {
+			chan->format = *pix;
+			chan->fmtinfo = vfmt;
+		}
+
+		return ret;
+	}
+
+	return -ENOTTY;
 }
 
 static int
@@ -439,18 +488,17 @@ tegra_channel_set_format(struct file *file, void *fh,
 {
 	struct v4l2_fh *vfh = file->private_data;
 	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
-	const struct tegra_video_format *info = NULL;
 	int ret = 0;
+
+	/* get the supported format by try_fmt */
+	ret = __tegra_channel_try_format(chan, &format->fmt.pix);
+	if (ret)
+		return ret;
 
 	if (vb2_is_busy(&chan->queue))
 		return -EBUSY;
 
-	ret = __tegra_channel_try_format(chan, &format->fmt.pix, &info);
-
-	chan->format = format->fmt.pix;
-	chan->fmtinfo = info;
-
-	return ret;
+	return __tegra_channel_set_format(chan, &format->fmt.pix);
 }
 
 static const struct v4l2_ioctl_ops tegra_channel_ioctl_ops = {

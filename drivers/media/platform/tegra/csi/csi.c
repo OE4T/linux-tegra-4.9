@@ -19,7 +19,7 @@
 #include <linux/platform_device.h>
 
 #include "csi.h"
-
+#include "../camera/core.h"
 /* -----------------------------------------------------------------------------
  * V4L2 Subdevice Video Operations
  */
@@ -30,57 +30,6 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 	return 0;
 }
 
-
-/* -----------------------------------------------------------------------------
- * V4L2 Subdevice Pad Operations
- */
-
-static struct v4l2_mbus_framefmt *
-__tegra_csi_get_pad_format(struct tegra_csi_device *csi,
-		      struct v4l2_subdev_fh *cfg,
-		      unsigned int pad, u32 which)
-{
-	enum tegra_csi_port_num port_num = (pad >> 1);
-
-	switch (which) {
-	case V4L2_SUBDEV_FORMAT_TRY:
-#if defined(CONFIG_VIDEO_V4L2_SUBDEV_API)
-		return v4l2_subdev_get_try_format(cfg, pad);
-#endif
-	case V4L2_SUBDEV_FORMAT_ACTIVE:
-		return &csi->ports[port_num].format;
-	default:
-		return NULL;
-	}
-}
-
-static int tegra_csi_get_format(struct v4l2_subdev *subdev,
-			   struct v4l2_subdev_fh *cfg,
-			   struct v4l2_subdev_format *fmt)
-{
-	struct tegra_csi_device *csi = to_csi(subdev);
-
-	fmt->format = *__tegra_csi_get_pad_format(csi, cfg,
-					fmt->pad, fmt->which);
-	return 0;
-}
-
-static int tegra_csi_set_format(struct v4l2_subdev *subdev,
-			   struct v4l2_subdev_fh *cfg,
-			   struct v4l2_subdev_format *fmt)
-{
-	struct tegra_csi_device *csi = to_csi(subdev);
-	struct v4l2_mbus_framefmt *__format;
-	enum tegra_csi_port_num port_num = (fmt->pad >> 1);
-
-	__format = __tegra_csi_get_pad_format(csi, cfg,
-					fmt->pad, fmt->which);
-	if (__format)
-		csi->ports[port_num].format = *__format;
-
-	return 0;
-}
-
 /* -----------------------------------------------------------------------------
  * V4L2 Subdevice Operations
  */
@@ -88,14 +37,8 @@ static struct v4l2_subdev_video_ops tegra_csi_video_ops = {
 	.s_stream = tegra_csi_s_stream,
 };
 
-static struct v4l2_subdev_pad_ops tegra_csi_pad_ops = {
-	.get_fmt		= tegra_csi_get_format,
-	.set_fmt		= tegra_csi_set_format,
-};
-
 static struct v4l2_subdev_ops tegra_csi_ops = {
 	.video  = &tegra_csi_video_ops,
-	.pad    = &tegra_csi_pad_ops,
 };
 
 /* -----------------------------------------------------------------------------

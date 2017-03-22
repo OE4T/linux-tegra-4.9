@@ -23,7 +23,7 @@ obj-$(CONFIG_TEGRA_LVDS2FPDL_DS90UB947) += ds90ub947-q1.o
 obj-$(CONFIG_TEGRA_DS90UH948Q_DESER)    += ds90uh948q_deser.o
 obj-$(CONFIG_TEGRA_EDP2LVDS_PS8625) += ps8625_edp2lvds.o
 ccflags-y +=-DCOMMON_MIPICAL_SUPPORTED\
-	-Idrivers/media/platform/tegra
+	-I$(srctree)/../nvidia/drivers/media/platform/tegra
 
 ifneq ($(CONFIG_TEGRA_NVDISPLAY),y)
 obj-$(CONFIG_TEGRA_HDMIHDCP) += hdmihdcp.o

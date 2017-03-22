@@ -1906,42 +1906,42 @@
 		};
 
 		tegra_afc1: afc@2907000 {
-			compatible = "nvidia,tegra210-afc";
+			compatible = "nvidia,tegra186-afc";
 			reg = <0x2907000 0x100>;
 			nvidia,ahub-afc-id = <0>;
 			status = "disabled";
 		};
 
 		tegra_afc2: afc@2907100 {
-			compatible = "nvidia,tegra210-afc";
+			compatible = "nvidia,tegra186-afc";
 			reg = <0x2907100 0x100>;
 			nvidia,ahub-afc-id = <1>;
 			status = "disabled";
 		};
 
 		tegra_afc3: afc@2907200 {
-			compatible = "nvidia,tegra210-afc";
+			compatible = "nvidia,tegra186-afc";
 			reg = <0x2907200 0x100>;
 			nvidia,ahub-afc-id = <2>;
 			status = "disabled";
 		};
 
 		tegra_afc4: afc@2907300 {
-			compatible = "nvidia,tegra210-afc";
+			compatible = "nvidia,tegra186-afc";
 			reg = <0x2907300 0x100>;
 			nvidia,ahub-afc-id = <3>;
 			status = "disabled";
 		};
 
 		tegra_afc5: afc@2907400 {
-			compatible = "nvidia,tegra210-afc";
+			compatible = "nvidia,tegra186-afc";
 			reg = <0x2907400 0x100>;
 			nvidia,ahub-afc-id = <4>;
 			status = "disabled";
 		};
 
 		tegra_afc6: afc@2907500 {
-			compatible = "nvidia,tegra210-afc";
+			compatible = "nvidia,tegra186-afc";
 			reg = <0x2907500 0x100>;
 			nvidia,ahub-afc-id = <5>;
 			status = "disabled";

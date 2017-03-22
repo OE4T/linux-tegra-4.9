@@ -977,7 +977,7 @@ skip_periph_reset:
 
 	err = tegra_i2c_set_clk_rate(i2c_dev);
 	if (err < 0)
-		return err;
+		goto exit;
 
 	if (!i2c_dev->is_dvc) {
 		u32 sl_cfg = i2c_readl(i2c_dev, I2C_SL_CNFG);
@@ -993,21 +993,20 @@ skip_periph_reset:
 
 	err = tegra_i2c_flush_fifos(i2c_dev);
 	if (err)
-		goto err;
+		goto exit;
 
 	if (i2c_dev->is_multimaster_mode && i2c_dev->hw->has_slcg_override_reg)
 		i2c_writel(i2c_dev, I2C_MST_CORE_CLKEN_OVR, I2C_CLKEN_OVERRIDE);
 
 	err = tegra_i2c_wait_for_config_load(i2c_dev);
 	if (err)
-		goto err;
+		goto exit;
 
 	if (i2c_dev->irq_disabled) {
 		i2c_dev->irq_disabled = false;
 		enable_irq(i2c_dev->irq);
 	}
-
-err:
+exit:
 	pm_runtime_put(i2c_dev->dev);
 	return err;
 }
@@ -2222,7 +2221,7 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 
 	ret = tegra_i2c_set_clk_rate(i2c_dev);
 	if (ret < 0)
-		return ret;
+		goto unprepare_fast_clk;
 
 	ret = clk_prepare(i2c_dev->div_clk);
 	if (ret < 0) {

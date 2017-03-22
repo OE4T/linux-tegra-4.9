@@ -73,11 +73,11 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 			return -ENOMEM;
 		}
 		/* Now clear the buffer */
-		if (gk20a_mem_begin(g, &ctx->mem))
+		if (nvgpu_mem_begin(g, &ctx->mem))
 			return -ENOMEM;
 
-		gk20a_memset(g, &ctx->mem, 0, 0, ctx->mem.size);
-		gk20a_mem_end(g, &ctx->mem);
+		nvgpu_memset(g, &ctx->mem, 0, 0, ctx->mem.size);
+		nvgpu_mem_end(g, &ctx->mem);
 
 		gv11b_init_subcontext_pdb(c, &c->inst_block);
 
@@ -111,14 +111,14 @@ static void gv11b_init_subcontext_pdb(struct channel_gk20a *c,
 		ram_in_sc_page_dir_base_lo_0_f(pdb_addr_lo);
 	lo = ram_in_sc_page_dir_base_vol_0_w();
 	hi = ram_in_sc_page_dir_base_hi_0_w();
-	gk20a_mem_wr32(g, inst_block, lo, format_word);
-	gk20a_mem_wr32(g, inst_block, hi, pdb_addr_hi);
+	nvgpu_mem_wr32(g, inst_block, lo, format_word);
+	nvgpu_mem_wr32(g, inst_block, hi, pdb_addr_hi);
 
 	/* make subcontext0 address space to valid */
 	/* TODO fix proper hw register definations */
-	gk20a_mem_wr32(g, inst_block, 166, 0x1);
-	gk20a_mem_wr32(g, inst_block, 167, 0);
-	gk20a_mem_wr32(g, inst_block, ram_in_engine_wfi_veid_w(),
+	nvgpu_mem_wr32(g, inst_block, 166, 0x1);
+	nvgpu_mem_wr32(g, inst_block, 167, 0);
+	nvgpu_mem_wr32(g, inst_block, ram_in_engine_wfi_veid_w(),
 			ram_in_engine_wfi_veid_f(0));
 
 }
@@ -136,13 +136,13 @@ int gv11b_update_subctx_header(struct channel_gk20a *c, u64 gpu_va)
 
 	gr_mem = &ctx->mem;
 	g->ops.mm.l2_flush(g, true);
-	if (gk20a_mem_begin(g, gr_mem))
+	if (nvgpu_mem_begin(g, gr_mem))
 		return -ENOMEM;
 
-	gk20a_mem_wr(g, gr_mem,
+	nvgpu_mem_wr(g, gr_mem,
 		ctxsw_prog_main_image_context_buffer_ptr_hi_o(), addr_hi);
-	gk20a_mem_wr(g, gr_mem,
+	nvgpu_mem_wr(g, gr_mem,
 		ctxsw_prog_main_image_context_buffer_ptr_o(), addr_lo);
-	gk20a_mem_end(g, gr_mem);
+	nvgpu_mem_end(g, gr_mem);
 	return ret;
 }

@@ -780,36 +780,36 @@ static void dump_ctx_switch_stats(struct gk20a *g, struct vm_gk20a *vm,
 {
 	struct mem_desc *mem = &gr_ctx->mem;
 
-	if (gk20a_mem_begin(g, mem)) {
+	if (nvgpu_mem_begin(g, mem)) {
 		WARN_ON("Cannot map context");
 		return;
 	}
 	gk20a_err(dev_from_gk20a(g), "ctxsw_prog_main_image_magic_value_o : %x (expect %x)\n",
-		gk20a_mem_rd(g, mem,
+		nvgpu_mem_rd(g, mem,
 				ctxsw_prog_main_image_magic_value_o()),
 		ctxsw_prog_main_image_magic_value_v_value_v());
 
 
 	gk20a_err(dev_from_gk20a(g), "NUM_SAVE_OPERATIONS : %d\n",
-		gk20a_mem_rd(g, mem,
+		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_num_save_ops_o()));
 	gk20a_err(dev_from_gk20a(g), "WFI_SAVE_OPERATIONS : %d\n",
-		gk20a_mem_rd(g, mem,
+		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_num_wfi_save_ops_o()));
 	gk20a_err(dev_from_gk20a(g), "CTA_SAVE_OPERATIONS : %d\n",
-		gk20a_mem_rd(g, mem,
+		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_num_cta_save_ops_o()));
 	gk20a_err(dev_from_gk20a(g), "GFXP_SAVE_OPERATIONS : %d\n",
-		gk20a_mem_rd(g, mem,
+		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_num_gfxp_save_ops_o()));
 	gk20a_err(dev_from_gk20a(g), "CILP_SAVE_OPERATIONS : %d\n",
-		gk20a_mem_rd(g, mem,
+		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_num_cilp_save_ops_o()));
 	gk20a_err(dev_from_gk20a(g),
 		"image gfx preemption option (GFXP is 1) %x\n",
-		gk20a_mem_rd(g, mem,
+		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_graphics_preemption_options_o()));
-	gk20a_mem_end(g, mem);
+	nvgpu_mem_end(g, mem);
 }
 
 static void gr_gv11b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
@@ -847,13 +847,13 @@ static void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 
 	if (gr_ctx->graphics_preempt_mode == NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP) {
 		gk20a_dbg_info("GfxP: %x", gfxp_preempt_option);
-		gk20a_mem_wr(g, mem, ctxsw_prog_main_image_graphics_preemption_options_o(),
+		nvgpu_mem_wr(g, mem, ctxsw_prog_main_image_graphics_preemption_options_o(),
 				gfxp_preempt_option);
 	}
 
 	if (gr_ctx->compute_preempt_mode == NVGPU_COMPUTE_PREEMPTION_MODE_CILP) {
 		gk20a_dbg_info("CILP: %x", cilp_preempt_option);
-		gk20a_mem_wr(g, mem, ctxsw_prog_main_image_compute_preemption_options_o(),
+		nvgpu_mem_wr(g, mem, ctxsw_prog_main_image_compute_preemption_options_o(),
 				cilp_preempt_option);
 	}
 
@@ -862,7 +862,7 @@ static void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 		u32 size;
 		u32 cbes_reserve;
 
-		gk20a_mem_wr(g, mem, ctxsw_prog_main_image_full_preemption_ptr_o(),
+		nvgpu_mem_wr(g, mem, ctxsw_prog_main_image_full_preemption_ptr_o(),
 				gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va >> 8);
 
 		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
@@ -1858,12 +1858,12 @@ static int gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 	addr_hi = u64_hi32(ctx->mem.gpu_va);
 
 	/* point this address to engine_wfi_ptr */
-	gk20a_mem_wr32(c->g, &c->inst_block, ram_in_engine_wfi_target_w(),
+	nvgpu_mem_wr32(c->g, &c->inst_block, ram_in_engine_wfi_target_w(),
 		ram_in_engine_cs_wfi_v() |
 		ram_in_engine_wfi_mode_f(ram_in_engine_wfi_mode_virtual_v()) |
 		ram_in_engine_wfi_ptr_lo_f(addr_lo));
 
-	gk20a_mem_wr32(c->g, &c->inst_block, ram_in_engine_wfi_ptr_hi_w(),
+	nvgpu_mem_wr32(c->g, &c->inst_block, ram_in_engine_wfi_ptr_hi_w(),
 		ram_in_engine_wfi_ptr_hi_f(addr_hi));
 
 	return 0;
@@ -1930,20 +1930,20 @@ static void gv11b_restore_context_header(struct gk20a *g,
 	u32 va_lo, va_hi;
 	struct gr_gk20a *gr = &g->gr;
 
-	va_hi = gk20a_mem_rd(g, ctxheader,
+	va_hi = nvgpu_mem_rd(g, ctxheader,
 			ctxsw_prog_main_image_context_buffer_ptr_hi_o());
-	va_lo = gk20a_mem_rd(g, ctxheader,
+	va_lo = nvgpu_mem_rd(g, ctxheader,
 			ctxsw_prog_main_image_context_buffer_ptr_o());
-	gk20a_mem_wr_n(g, ctxheader, 0,
+	nvgpu_mem_wr_n(g, ctxheader, 0,
                        gr->ctx_vars.local_golden_image,
                        gr->ctx_vars.golden_image_size);
-	gk20a_mem_wr(g, ctxheader,
+	nvgpu_mem_wr(g, ctxheader,
 			ctxsw_prog_main_image_context_buffer_ptr_hi_o(), va_hi);
-	gk20a_mem_wr(g, ctxheader,
+	nvgpu_mem_wr(g, ctxheader,
 			ctxsw_prog_main_image_context_buffer_ptr_o(), va_lo);
-        gk20a_mem_wr(g, ctxheader,
+        nvgpu_mem_wr(g, ctxheader,
 			ctxsw_prog_main_image_num_restore_ops_o(), 0);
-        gk20a_mem_wr(g, ctxheader,
+        nvgpu_mem_wr(g, ctxheader,
 			ctxsw_prog_main_image_num_save_ops_o(), 0);
 }
 static void gr_gv11b_write_zcull_ptr(struct gk20a *g,
@@ -1954,9 +1954,9 @@ static void gr_gv11b_write_zcull_ptr(struct gk20a *g,
 	gpu_va = gpu_va >> 8;
 	va_lo = u64_lo32(gpu_va);
 	va_hi = u64_hi32(gpu_va);
-	gk20a_mem_wr(g, mem,
+	nvgpu_mem_wr(g, mem,
 		ctxsw_prog_main_image_zcull_ptr_o(), va_lo);
-	gk20a_mem_wr(g, mem,
+	nvgpu_mem_wr(g, mem,
 		ctxsw_prog_main_image_zcull_ptr_hi_o(), va_hi);
 }
 
@@ -1969,9 +1969,9 @@ static void gr_gv11b_write_pm_ptr(struct gk20a *g,
 	gpu_va = gpu_va >> 8;
 	va_lo = u64_lo32(gpu_va);
 	va_hi = u64_hi32(gpu_va);
-	gk20a_mem_wr(g, mem,
+	nvgpu_mem_wr(g, mem,
 		ctxsw_prog_main_image_pm_ptr_o(), va_lo);
-	gk20a_mem_wr(g, mem,
+	nvgpu_mem_wr(g, mem,
 		ctxsw_prog_main_image_pm_ptr_hi_o(), va_hi);
 }
 

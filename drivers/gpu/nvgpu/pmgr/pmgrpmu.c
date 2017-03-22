@@ -138,18 +138,20 @@ exit:
 static u32 pmgr_send_i2c_device_topology_to_pmu(struct gk20a *g)
 {
 	struct nv_pmu_pmgr_i2c_device_desc_table i2c_desc_table;
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	u32 idx = platform->ina3221_dcb_index;
 	u32 status = 0;
 
 	/* INA3221 I2C device info */
-	i2c_desc_table.dev_mask = 0x01;
+	i2c_desc_table.dev_mask = (1UL << idx);
 
 	/* INA3221 */
-	i2c_desc_table.devices[0].super.type = 0x4E;
+	i2c_desc_table.devices[idx].super.type = 0x4E;
 
-	i2c_desc_table.devices[0].dcb_index = 0;
-	i2c_desc_table.devices[0].i2c_address = 0x84;
-	i2c_desc_table.devices[0].i2c_flags = 0xC2F;
-	i2c_desc_table.devices[0].i2c_port = 0x2;
+	i2c_desc_table.devices[idx].dcb_index = idx;
+	i2c_desc_table.devices[idx].i2c_address = platform->ina3221_i2c_address;
+	i2c_desc_table.devices[idx].i2c_flags = 0xC2F;
+	i2c_desc_table.devices[idx].i2c_port = 0x2;
 
 	/* Pass the table down the PMU as an object */
 	status = pmgr_pmu_set_object(

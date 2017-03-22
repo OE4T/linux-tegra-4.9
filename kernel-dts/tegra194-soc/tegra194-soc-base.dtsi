@@ -1075,4 +1075,11 @@
 		cpu_suspend = <0xC4000001>;
 		status = "okay";
 	};
+
+	bwmgr {
+		compatible = "nvidia,bwmgr";
+		clocks = <&bpmp_clks TEGRA194_CLK_EMC>;
+		clock-names = "emc";
+		status = "disabled";
+	};
 };

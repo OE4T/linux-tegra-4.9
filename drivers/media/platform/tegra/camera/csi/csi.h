@@ -20,40 +20,10 @@
 #include <linux/platform_device.h>
 
 #include <media/camera_common.h>
-#include "../camera/registers.h"
-#include "../camera/mc_common.h"
+#include <linux/platform_device.h>
 
-#define NVCSI_PHY_0_BASE			0x18000
-#define NVCSI_CIL_PHY_CTRL_0			0x0
-#define		CFG_PHY_MODE			0x1
-#define		CFG_PHY_MODE_SHIFT		0
-#define NVCSI_CIL_CONFIG_0			0x4
-#define		DATA_LANE_A			0x7
-#define		DATA_LANE_A_SHIFT		0
-#define		DATA_LANE_B			0x7
-#define		DATA_LANE_B_SHIFT		8
-#define	NVCSI_CIL_CLKEN_OVERRIDE_CTRL_0		0x8
-#define	NVCSI_CIL_PAD_CONFIG_0			0xc
-#define NVCSI_CIL_LANE_SWIZZLE_CTRL_0		0x10
-
-#define	NVCSI_CIL_A_BASE                        0x18
-#define	SW_RESET_0				0x0
-#define CLKEN_OVERRIDE_CTRL_0			0x4
-#define PAD_CONFIG_0				0x8
-#define		E_INPUT_LP_IO1_SHIFT		22
-#define		E_INPUT_LP_IO0_SHIFT		21
-#define		E_INPUT_LP_CLK			20
-#define		PD_CLK				18
-#define		PD_IO1				17
-#define		PD_IO0				16
-#define	CLK_DESKEW_CTRL_0			0x14
-#define DATA_DESKEW_CTRL_0			0x18
-#define POLARITY_SWIZZLE_CTRL_0			0x40
-#define CONTROL_0				0x44
-#define NVCSI_CIL_B_BASE			0x7c
-
-#define NVCSI_PHY_1_BASE			0x28000
-#define NVCSI_PHY_2_BASE			0x38000
+#include "camera/vi/registers.h"
+#include "camera/vi/t18x_registers.h"
 
 enum tegra_csi_port_num {
 	PORT_A = 0,
@@ -93,6 +63,7 @@ struct tegra_csi_port {
 struct tegra_csi_device {
 	struct device *dev;
 	struct platform_device *pdev;
+	void __iomem *iomem_base;
 	void __iomem *iomem[3];
 	struct clk *clk;
 	struct clk *tpg_clk;
@@ -106,8 +77,8 @@ struct tegra_csi_device {
 	int num_ports;
 	int pg_mode;
 	int num_channels;
-
 	struct tegra_csi_channel *chans;
+	struct tegra_csi_fops *fops;
 };
 
 /*
@@ -149,9 +120,9 @@ int tegra_csi_error(struct tegra_csi_channel *chan,
 			enum tegra_csi_port_num port_num);
 void tegra_csi_tpg_start_streaming(struct tegra_csi_device *csi,
 				enum tegra_csi_port_num port_num);
-void tegra_csi_start_streaming(struct tegra_csi_device *csi,
+void tegra_csi_start_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num);
-void tegra_csi_stop_streaming(struct tegra_csi_device *csi,
+void tegra_csi_stop_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num);
 void tegra_csi_error_recover(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num);

@@ -30,8 +30,8 @@
 #include <media/v4l2-of.h>
 #include <media/tegra_v4l2_camera.h>
 
-#include "camera/mc_common.h"
-#include "csi/csi.h"
+#include "camera/vi/mc_common.h"
+#include "camera/csi/csi.h"
 
 
 /* -----------------------------------------------------------------------------

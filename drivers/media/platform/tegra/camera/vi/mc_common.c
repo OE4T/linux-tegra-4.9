@@ -23,15 +23,9 @@
 #include <media/tegra_camera_platform.h>
 
 #include "dev.h"
-#include "camera/mc_common.h"
+#include "camera/vi/mc_common.h"
 #include "vi/vi.h"
-#include "camera/registers.h"
-
-
-static void vi_write(struct tegra_mc_vi *vi, unsigned int addr, u32 val)
-{
-	writel(val, vi->iomem + addr);
-}
+#include "camera/vi/registers.h"
 
 /* In TPG mode, VI only support 2 formats */
 static void vi_tpg_fmts_bitmap_init(struct tegra_mc_vi *vi)
@@ -45,81 +39,6 @@ static void vi_tpg_fmts_bitmap_init(struct tegra_mc_vi *vi)
 
 	index = tegra_core_get_idx_by_code(MEDIA_BUS_FMT_RGB888_1X32_PADHI);
 	bitmap_set(vi->tpg_fmts_bitmap, index, 1);
-}
-
-int tegra_vi_power_on(struct tegra_mc_vi *vi)
-{
-	int ret;
-
-	if (atomic_add_return(1, &vi->power_on_refcnt) > 1)
-		return 0;
-
-	ret = nvhost_module_busy_ext(vi->ndev);
-	if (ret) {
-		dev_err(vi->dev, "%s:nvhost module is busy\n", __func__);
-		return ret;
-	}
-
-	if (vi->reg) {
-		ret = regulator_enable(vi->reg);
-		if (ret) {
-			dev_err(vi->dev, "%s: enable csi regulator failed.\n",
-					__func__);
-			goto error_regulator_fail;
-		}
-	}
-
-	vi_write(vi, TEGRA_VI_CFG_CG_CTRL, 1);
-
-	/* unpowergate VE */
-	ret = tegra_unpowergate_partition(TEGRA_POWERGATE_VENC);
-	if (ret) {
-		dev_err(vi->dev, "failed to unpower gate VI\n");
-		goto error_unpowergate;
-	}
-
-	/* clock settings */
-	ret = clk_prepare_enable(vi->clk);
-	if (ret) {
-		dev_err(vi->dev, "failed to enable vi clock\n");
-		goto error_clk_enable;
-	}
-
-	ret = clk_set_rate(vi->clk, 0);
-	if (ret) {
-		dev_err(vi->dev, "failed to set vi clock\n");
-		goto error_clk_set_rate;
-	}
-
-	ret = tegra_camera_emc_clk_enable();
-	if (ret)
-		goto err_emc_enable;
-
-	return 0;
-err_emc_enable:
-error_clk_set_rate:
-	clk_disable_unprepare(vi->clk);
-error_clk_enable:
-	tegra_powergate_partition(TEGRA_POWERGATE_VENC);
-error_unpowergate:
-	regulator_disable(vi->reg);
-error_regulator_fail:
-	nvhost_module_idle_ext(vi->ndev);
-
-	return ret;
-}
-
-void tegra_vi_power_off(struct tegra_mc_vi *vi)
-{
-	if (!atomic_dec_and_test(&vi->power_on_refcnt))
-		return;
-
-	tegra_channel_ec_close(vi);
-	tegra_camera_emc_clk_disable();
-	clk_disable_unprepare(vi->clk);
-	tegra_powergate_partition(TEGRA_POWERGATE_VENC);
-	regulator_disable(vi->reg);
-	nvhost_module_idle_ext(vi->ndev);
 }
 
 /* -----------------------------------------------------------------------------
@@ -336,7 +255,6 @@ int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 	mc_vi->ndev = pdev;
 	mc_vi->dev = &pdev->dev;
 	INIT_LIST_HEAD(&mc_vi->entities);
-	mc_vi->bypass = true;
 	mutex_init(&mc_vi->mipical_lock);
 	err = tegra_vi_v4l2_init(mc_vi);
 	if (err < 0)

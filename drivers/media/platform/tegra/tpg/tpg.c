@@ -23,7 +23,7 @@
 #include <linux/module.h>
 
 #include "vi/vi.h"
-#include "csi/csi.h"
+#include "camera/csi/csi.h"
 
 #define TPG_CHANNELS 6
 

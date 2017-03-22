@@ -79,6 +79,8 @@ struct tegra_vi_graph_entity {
 	struct v4l2_subdev *subdev;
 };
 
+struct vi_notify_channel;
+
 /**
  * struct tegra_channel - Tegra video channel
  * @list: list entry in a composite device dmas list
@@ -172,6 +174,9 @@ struct tegra_channel {
 	atomic_t is_streaming;
 	int requested_kbyteps;
 	unsigned long requested_hz;
+
+	struct vi_notify_channel *vnc;
+	int vnc_id;
 };
 
 #define to_tegra_channel(vdev) \
@@ -240,6 +245,8 @@ struct tegra_mc_vi {
 	struct mutex mipical_lock;
 
 	bool bypass;
+
+	struct tegra_vi_fops *fops;
 };
 
 int tegra_vi_get_port_info(struct tegra_channel *chan,
@@ -252,8 +259,10 @@ void tegra_vi_graph_cleanup(struct tegra_mc_vi *vi);
 int tegra_vi_channels_init(struct tegra_mc_vi *vi);
 int tegra_vi_channels_cleanup(struct tegra_mc_vi *vi);
 int tegra_channel_init_subdevices(struct tegra_channel *chan);
-int tegra_vi_power_on(struct tegra_mc_vi *vi);
-void tegra_vi_power_off(struct tegra_mc_vi *vi);
+int tegra_vi2_power_on(struct tegra_mc_vi *vi);
+void tegra_vi2_power_off(struct tegra_mc_vi *vi);
+int tegra_vi4_power_on(struct tegra_mc_vi *vi);
+void tegra_vi4_power_off(struct tegra_mc_vi *vi);
 int tegra_clean_unlinked_channels(struct tegra_mc_vi *vi);
 int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 			struct platform_device *pdev);
@@ -261,4 +270,36 @@ void tegra_vi_media_controller_cleanup(struct tegra_mc_vi *mc_vi);
 void tegra_channel_ec_close(struct tegra_mc_vi *mc_vi);
 void tegra_channel_query_hdmiin_unplug(struct tegra_channel *chan,
 		struct v4l2_event *event);
+
+struct tegra_vi_fops {
+	int (*vi_power_on)(struct tegra_channel *chan);
+	void (*vi_power_off)(struct tegra_channel *chan);
+	int (*vi_start_streaming)(struct vb2_queue *vq, u32 count);
+	int (*vi_stop_streaming)(struct vb2_queue *vq);
+};
+
+struct tegra_csi_fops {
+	int (*csi_power_on)(struct tegra_csi_device *csi);
+	int (*csi_power_off)(struct tegra_csi_device *csi);
+	int (*csi_start_streaming)(struct tegra_csi_channel *chan,
+		enum tegra_csi_port_num port_num);
+	int (*csi_stop_streaming)(struct tegra_csi_channel *chan,
+		enum tegra_csi_port_num port_num);
+};
+
+struct tegra_t210_vi_data {
+	struct nvhost_device_data *info;
+	struct tegra_vi_fops *vi_fops;
+	struct tegra_csi_fops *csi_fops;
+};
+
+struct tegra_vi_data {
+	struct nvhost_device_data *info;
+	struct tegra_vi_fops *vi_fops;
+};
+
+struct tegra_csi_data {
+	struct nvhost_device_data *info;
+	struct tegra_csi_fops *csi_fops;
+};
 #endif

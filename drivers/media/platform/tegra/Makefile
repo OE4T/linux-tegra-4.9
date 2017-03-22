@@ -1,12 +1,13 @@
 GCOV_PROFILE := y
 
-subdir-ccflags-y := -Werror
+#subdir-ccflags-y := -Werror
 #
 # Makefile for the video capture/playback device drivers.
 #
-obj-y				+= csi/
-obj-y				+= camera/
-obj-y				+= vi/
+ifndef CONFIG_ARCH_TEGRA_210_SOC
+obj-y	+= camera/
+endif
+obj-y	+= vi/
 obj-$(CONFIG_VIDEO_CAMERA)	+= regmap_util.o
 obj-$(CONFIG_VIDEO_TEGRA_VI_TPG) += tpg/
 

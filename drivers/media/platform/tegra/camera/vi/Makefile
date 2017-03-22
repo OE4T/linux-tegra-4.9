@@ -1,0 +1,13 @@
+GCOV_PROFILE := y
+ccflags-y += -I../nvhost/drivers/video/tegra/host
+ccflags-y += -Idrivers/video/tegra/host
+ccflags-y += -Idrivers/video/tegra/camera
+ccflags-y += -Idrivers/media/platform/tegra
+ccflags-y += -Werror
+
+ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
+ccflags-y += -I../nvhost-t18x/drivers/video/tegra/host/
+ccflags-y += -I../t18x/drivers/video/tegra/host/
+endif
+
+obj-y += mc_common.o core.o channel.o graph.o vi2_fops.o vi4_fops.o

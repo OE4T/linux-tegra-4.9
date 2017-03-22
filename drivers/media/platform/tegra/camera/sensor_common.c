@@ -105,6 +105,8 @@ static int extract_pixel_format(
 		*format = V4L2_PIX_FMT_SBGGR12;
 	else if (strncmp(pixel_t, "bayer_rggb12", size) == 0)
 		*format = V4L2_PIX_FMT_SRGGB12;
+	else if (strncmp(pixel_t, "bayer_wdr_pwl_rggb12", size) == 0)
+		*format = V4L2_PIX_FMT_SRGGB12;
 	else if (strncmp(pixel_t, "bayer_xbggr10p", size) == 0)
 		*format = V4L2_PIX_FMT_XBGGR10P;
 	else if (strncmp(pixel_t, "bayer_xrggb10p", size) == 0)
@@ -123,6 +125,9 @@ static int sensor_common_parse_image_props(
 {
 	const char *temp_str;
 	int err = 0;
+	const char *phase_str, *mode_str;
+	int depth;
+	char pix_format[24];
 
 	err = read_property_u32(node, "active_w",
 		&image->width);
@@ -145,22 +150,44 @@ static int sensor_common_parse_image_props(
 		goto fail;
 	}
 
-	err = of_property_read_string(node, "pixel_t",
-		&temp_str);
+	/* embedded_metadata_height is optional */
+	read_property_u32(node, "embedded_metadata_height",
+		&image->embedded_metadata_height);
+
+	err = of_property_read_string(node, "pixel_t", &temp_str);
 	if (err) {
 		dev_err(dev, "%s:pixel_t property missing\n", __func__);
-		goto fail;
-	}
 
+		/* check for alternative format string */
+		err = of_property_read_string(node, "pixel_phase", &phase_str);
+		if (err) {
+			dev_err(dev,
+				"%s:pixel_phase property missing\n",
+				__func__);
+			goto fail;
+		}
+		err = of_property_read_string(node, "mode_type", &mode_str);
+		if (err) {
+			dev_err(dev,
+				"%s:mode_type property missing\n",
+				__func__);
+			goto fail;
+		}
+		err = read_property_u32(node, "csi_pixel_bit_depth", &depth);
+		if (err) {
+			dev_err(dev,
+				"%s:csi_pixel_bit_depth property missing\n",
+				__func__);
+			goto fail;
+		}
+		sprintf(pix_format, "%s_%s%d", mode_str, phase_str, depth);
+		temp_str = pix_format;
+	}
 	err = extract_pixel_format(temp_str, &image->pixel_format);
 	if (err) {
 		dev_err(dev, "Unsupported pixel format\n");
 		goto fail;
 	}
-
-	/* ignore err for this prop */
-	read_property_u32(node, "embedded_metadata_height",
-		&image->embedded_metadata_height);
 
 fail:
 	return err;
@@ -256,11 +283,11 @@ static int sensor_common_parse_control_props(
 }
 
 int sensor_common_init_sensor_properties(
-	struct device *dev, struct device_node *node,
+	struct device *dev, struct device_node *np,
 	struct sensor_properties *sensor)
 {
 	char temp_str[OF_MAX_STR_LEN];
-	struct device_node *temp_node;
+	struct device_node *node = NULL;
 	int num_modes = 0;
 	int err, i;
 
@@ -268,8 +295,10 @@ int sensor_common_init_sensor_properties(
 	for (i = 0; num_modes < MAX_NUM_SENSOR_MODES; i++) {
 		snprintf(temp_str, sizeof(temp_str), "%s%d",
 			OF_SENSORMODE_PREFIX, i);
-		temp_node = of_find_node_by_name(node, temp_str);
-		if (temp_node == NULL)
+		of_node_get(np);
+		node = of_get_child_by_name(np, temp_str);
+		of_node_put(node);
+		if (node == NULL)
 			break;
 		num_modes++;
 	}
@@ -280,7 +309,8 @@ int sensor_common_init_sensor_properties(
 		GFP_KERNEL);
 	if (!sensor->sensor_modes) {
 		dev_err(dev, "Failed to allocate memory for sensor modes\n");
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto fail;
 	}
 	memset(sensor->sensor_modes, 0, num_modes *
 	       sizeof(struct sensor_mode_properties));
@@ -288,42 +318,48 @@ int sensor_common_init_sensor_properties(
 	for (i = 0; i < num_modes; i++) {
 		snprintf(temp_str, sizeof(temp_str), "%s%d",
 			OF_SENSORMODE_PREFIX, i);
-
-		temp_node = of_find_node_by_name(node, temp_str);
-		if (temp_node == NULL) {
+		of_node_get(np);
+		node = of_get_child_by_name(np, temp_str);
+		if (node == NULL) {
 			dev_err(dev, "Failed to find mode\n");
-			return -ENODATA;
+			err = -ENODATA;
+			goto fail;
 		};
 
-		err = sensor_common_parse_signal_props(dev, temp_node,
+		err = sensor_common_parse_signal_props(dev, node,
 			&sensor->sensor_modes[i].signal_properties);
 		if (err) {
 			dev_err(dev, "Failed to read signal properties\n");
-			return err;
+			goto fail;
 		}
 
-		err = sensor_common_parse_image_props(dev, temp_node,
+		err = sensor_common_parse_image_props(dev, node,
 			&sensor->sensor_modes[i].image_properties);
 		if (err) {
 			dev_err(dev, "Failed to read image properties\n");
-			return err;
+			goto fail;
 		}
 
-		err = sensor_common_parse_dv_timings(dev, temp_node,
+		err = sensor_common_parse_dv_timings(dev, node,
 			&sensor->sensor_modes[i].dv_timings);
 		if (err) {
 			dev_err(dev, "Failed to read DV timings\n");
-			return err;
+			goto fail;
 		}
 
-		err = sensor_common_parse_control_props(dev, temp_node,
+		err = sensor_common_parse_control_props(dev, node,
 			&sensor->sensor_modes[i].control_properties);
 		if (err) {
 			dev_err(dev, "Failed to read control properties\n");
-			return err;
+			goto fail;
 		}
+		of_node_put(node);
 	}
 
 	return 0;
+
+fail:
+	of_node_put(node);
+	return err;
 }
 EXPORT_SYMBOL(sensor_common_init_sensor_properties);

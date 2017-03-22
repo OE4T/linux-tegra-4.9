@@ -23,7 +23,7 @@
 #include <linux/of.h>
 #include <soc/tegra/tegra_emc.h>
 
-#include "vi.h"
+#include "vi/vi.h"
 #include "tegra_camera_dev_mfi.h"
 #include "tegra_camera_platform.h"
 

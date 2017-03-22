@@ -29,8 +29,8 @@
 #include <media/v4l2-dev.h>
 #include <media/videobuf2-core.h>
 
-#include "camera/core.h"
-#include "csi/csi.h"
+#include "core.h"
+#include "../csi/csi.h"
 
 #define MAX_FORMAT_NUM	64
 #define MAX_SUBDEVICES 4

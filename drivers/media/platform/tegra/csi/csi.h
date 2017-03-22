@@ -19,7 +19,7 @@
 #include <media/v4l2-subdev.h>
 
 #include <media/camera_common.h>
-#include "camera/registers.h"
+#include "../camera/registers.h"
 
 enum tegra_csi_port_num {
 	PORT_A = 0,

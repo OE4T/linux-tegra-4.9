@@ -226,7 +226,7 @@ static int pca9570_debugfs_init(const char *dir_name,
 				struct pca9570 *priv)
 {
 	struct dentry  *dp, *fp;
-	char *dev_name[20];
+	char dev_name[20];
 	struct i2c_client *i2c_client = priv->i2c_client;
 	struct device_node *np = i2c_client->dev.of_node;
 	int err = 0;

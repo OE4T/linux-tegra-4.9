@@ -585,9 +585,8 @@ static int imx185_set_frame_rate(struct imx185 *priv, s64 val)
 		priv->frame_length = IMX185_MAX_FRAME_LENGTH;
 
 	dev_dbg(&priv->i2c_client->dev,
-		"%s: val: %lld, fps: %d, frame_length: %d\n", __func__,
-		val, (val / FIXED_POINT_SCALING_FACTOR),
-		priv->frame_length);
+		"%s: val: %lld, , frame_length: %d\n", __func__,
+		val, priv->frame_length);
 
 	imx185_get_frame_length_regs(reg_list, priv->frame_length);
 
@@ -764,7 +763,6 @@ static int imx185_fuse_id_setup(struct imx185 *priv)
 	int i;
 	struct i2c_client *client = v4l2_get_subdevdata(priv->subdev);
 	struct camera_common_data *s_data = to_camera_common_data(client);
-	struct camera_common_power_rail *pw = &priv->power;
 
 	struct v4l2_ctrl *ctrl;
 	u8 fuse_id[IMX185_FUSE_ID_SIZE];
@@ -776,7 +774,7 @@ static int imx185_fuse_id_setup(struct imx185 *priv)
 
 	for (i = 0; i < IMX185_FUSE_ID_SIZE; i++) {
 		err |= imx185_read_reg(s_data,
-			IMX185_FUSE_ID_ADDR + i, (unsigned int *) &bak);
+			IMX185_FUSE_ID_ADDR + i, &bak);
 		if (!err)
 			fuse_id[i] = bak;
 		else {
@@ -943,8 +941,7 @@ static struct camera_common_pdata *imx185_parse_dt(struct imx185 *priv,
 	}
 
 	err = of_property_read_string(np, "use_sensor_mode_id", &str);
-	if (!err)
-	{
+	if (!err) {
 		if (!strcmp(str, "true"))
 			s_data->use_sensor_mode_id = true;
 		else

@@ -56,6 +56,7 @@ static ov10823_reg fsync_slave[] = {
 	{OV10823_TABLE_END, 0x00}
 };
 
+#ifdef OV10823_UNUSED_MODES
 static ov10823_reg mode_4336x2440_24MhzMCLK[] = {
 
 	/* PLL */
@@ -1391,6 +1392,7 @@ static ov10823_reg mode_4336x1220_60fps_26MhzMCLK[] = {
 
 	{OV10823_TABLE_END, 0x00}
 };
+#endif /* OV10823_UNUSED_MODES */
 
 static ov10823_reg mode_2168x1220_60fps_26MhzMCLK[] = {
 
@@ -1582,12 +1584,22 @@ static ov10823_reg mode_2168x1220_60fps_26MhzMCLK[] = {
 };
 
 enum {
+#ifdef OV10823_UNUSED_MODES
+	OV10823_MODE_4336X2440,
+	OV10823_MODE_3000X2440,
+	OV10823_MODE_2168X1220,
+#endif
 	OV10823_MODE_2168X1220_60FPS,
 	OV10823_MODE_START_STREAM,
 	OV10823_MODE_STOP_STREAM,
 };
 
 static ov10823_reg *mode_table[] = {
+#ifdef OV10823_UNUSED_MODES
+	[OV10823_MODE_4336X2440] = mode_4336x2440_26MhzMCLK,
+	[OV10823_MODE_3000X2440] = mode_3000x2440_26MhzMCLK,
+	[OV10823_MODE_2168X1220] = mode_2168x1220_26MhzMCLK,
+#endif
 	[OV10823_MODE_2168X1220_60FPS] = mode_2168x1220_60fps_26MhzMCLK,
 
 	[OV10823_MODE_START_STREAM] = ov10823_start,
@@ -1615,6 +1627,11 @@ static const int ov10823_60fps[] = {
 };
 
 static const struct camera_common_frmfmt ov10823_frmfmt[] = {
+#ifdef OV10823_UNUSED_MODES
+	{{4336, 2440}, ov10823_30fps, 1, 0, OV10823_MODE_4336X2440},
+	{{3000, 2440}, ov10823_30fps, 1, 0, OV10823_MODE_3000X2440},
+	{{2168, 1220}, ov10823_30fps, 1, 0, OV10823_MODE_2168X1220},
+#endif
 	{{2168, 1220}, ov10823_60fps, 1, 0, OV10823_MODE_2168X1220_60FPS},
 };
 #endif  /* __OV10823_I2C_TABLES__ */

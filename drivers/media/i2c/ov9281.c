@@ -944,7 +944,7 @@ static const struct media_entity_operations ov9281_media_ops = {
 static int ov9281_parse_dt(struct i2c_client *client, struct ov9281 *priv)
 {
 	struct device_node *np = client->dev.of_node;
-	char *fsync_str;
+	const char *fsync_str;
 	int gpio;
 	int err;
 

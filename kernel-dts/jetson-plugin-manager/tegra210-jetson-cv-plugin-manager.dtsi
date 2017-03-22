@@ -80,6 +80,8 @@
 						"x DMIC L2",		"x Int Mic",
 						"x DMIC R1",		"x Int Mic",
 						"x DMIC R2",		"x Int Mic",
+						"y Headphone",		"y OUT",
+						"y IN",			"y Mic",
 						"l IN",			"l OUT",
 						"s Headphone",		"s OUT",
 						"s IN",			"s Mic";

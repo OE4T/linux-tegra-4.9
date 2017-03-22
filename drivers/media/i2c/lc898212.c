@@ -30,6 +30,8 @@
 
 #include <media/camera_common.h>
 
+#include "tegra_camera_dev_mfi.h"
+
 #define LC898212_ACTUATOR_RANGE	1023
 #define LC898212_POS_LOW_DEFAULT	(0)
 #define LC898212_POS_HIGH_DEFAULT	(1023)
@@ -87,7 +89,8 @@ struct lc898212 {
 	struct	regmap				*regmap8;
 	struct	regmap				*regmap16;
 	int					numctrls;
-
+	struct camera_mfi_dev			*cmfi_dev16;
+	bool					support_mfi;
 	struct	v4l2_ctrl			*ctrls[];
 };
 
@@ -182,7 +185,16 @@ static int lc898212_set_position(struct lc898212 *priv, u32 position)
 	/* unsigned 10 bit to signed 16 bit */
 	new_pos = ((s16) position - AF_RANGE / 2) * 64;
 
-	ret = regmap_write(priv->regmap16, LC898212_RZ, (u16) new_pos);
+	if (priv->support_mfi) {
+		ret = tegra_camera_dev_mfi_clear(priv->cmfi_dev16);
+		if (ret)
+			return ret;
+		ret = tegra_camera_dev_mfi_wr_add(priv->cmfi_dev16,
+				LC898212_RZ,
+				(u16) new_pos);
+	} else {
+		ret = regmap_write(priv->regmap16, LC898212_RZ, (u16) new_pos);
+	}
 
 	dev_dbg(&s_data->i2c_client->dev, "%s--\n", __func__);
 	return ret;
@@ -467,6 +479,9 @@ static int lc898212_probe(struct i2c_client *client,
 	int err;
 	struct lc898212 *priv;
 	struct camera_common_focuser_data *common_data;
+	char dev_id[20];
+	const char *p_mfi_str;
+
 	static struct regmap_config lc898212_regmap_config8 = {
 		.reg_bits = 8,
 		.val_bits = 8,
@@ -522,6 +537,33 @@ static int lc898212_probe(struct i2c_client *client,
 	priv->s_data			= common_data;
 	priv->subdev			= &common_data->subdev;
 	priv->subdev->dev		= &client->dev;
+
+	if (client->dev.of_node) {
+		err = of_property_read_string(client->dev.of_node,
+					"support_mfi",
+					&p_mfi_str);
+		if (err < 0) {
+			dev_err(&client->dev,
+					"%s unable to read MFI property\n",
+					__func__);
+			goto ERROR_RET;
+		}
+
+		priv->support_mfi = !strcmp(p_mfi_str, "true") ? true : false;
+
+		if (priv->support_mfi) {
+			strcat(dev_id, "lc898212");
+			err = tegra_camera_dev_mfi_add_regmap(&priv->cmfi_dev16,
+				strcat(dev_id, &dev_name(&client->dev)[0]),
+				priv->regmap16);
+			if (err < 0) {
+				dev_err(&client->dev,
+					"%s unable to add to mfi regmap\n",
+					__func__);
+				goto ERROR_RET;
+			}
+		}
+	}
 
 	err = camera_common_focuser_init(common_data);
 	if (err) {

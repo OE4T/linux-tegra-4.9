@@ -34,9 +34,6 @@
 
 #include "tegra210_xbar_alt.h"
 #include "tegra210_afc_alt.h"
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-#include <sound/tegra_audio.h>
-#endif
 
 #define DRV_NAME "tegra210-afc"
 
@@ -159,11 +156,13 @@ static const char *const tegra210_afc_threshold_type_text[] = {
 	"None", "NO-SFC", "SFC", "SFC-AMX",
 };
 
+static const char *const tegra186_afc_dst_mod_type_text[] = {
+	"None", "I2S1", "I2S2", "I2S3", "I2S4", "I2S5",
+	"I2S6", "DSPK1", "DSPK2",
+};
+
 static const char *const tegra210_afc_dst_mod_type_text[] = {
 	"None", "I2S1", "I2S2", "I2S3", "I2S4", "I2S5",
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	"I2S6", "DSPK1", "DSPK2",
-#endif
 };
 
 static const struct soc_enum tegra210_afc_threshold_config_enum =
@@ -173,6 +172,10 @@ static const struct soc_enum tegra210_afc_threshold_config_enum =
 static const struct soc_enum tegra210_afc_dst_mod_type_enum =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra210_afc_dst_mod_type_text),
 		tegra210_afc_dst_mod_type_text);
+
+static const struct soc_enum tegra186_afc_dst_mod_type_enum =
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra186_afc_dst_mod_type_text),
+		tegra186_afc_dst_mod_type_text);
 
 #define NV_SOC_SINGLE_RANGE_EXT(xname, xmin, xmax, xget, xput) \
 {	.iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname), \
@@ -194,6 +197,19 @@ static const struct snd_kcontrol_new tegra210_afc_controls[] = {
 		tegra210_afc_controls_get, tegra210_afc_controls_put),
 };
 
+static const struct snd_kcontrol_new tegra186_afc_controls[] = {
+	NV_SOC_SINGLE_RANGE_EXT("ppm diff", 0, 100, tegra210_afc_controls_get,
+		tegra210_afc_controls_put),
+	NV_SOC_SINGLE_RANGE_EXT("src burst", 0, 24, tegra210_afc_controls_get,
+		tegra210_afc_controls_put),
+	NV_SOC_SINGLE_RANGE_EXT("start threshold", 0, 63,
+		tegra210_afc_controls_get, tegra210_afc_controls_put),
+	SOC_ENUM_EXT("threshold type", tegra210_afc_threshold_config_enum,
+		tegra210_afc_controls_get, tegra210_afc_controls_put),
+	SOC_ENUM_EXT("dest module name", tegra186_afc_dst_mod_type_enum,
+		tegra210_afc_controls_get, tegra210_afc_controls_put),
+};
+
 static int tegra210_afc_set_thresholds(struct tegra210_afc *afc,
 				unsigned int afc_id)
 {
@@ -204,9 +220,9 @@ static int tegra210_afc_set_thresholds(struct tegra210_afc *afc,
 		return -EINVAL;
 	}
 
-	if (afc->dest_module_num > MAX_I2S_COUNT) {
+	if (afc->dest_module_num > afc->soc_data->num_i2s) {
 		dest_module = 1;
-		dest_module_id = afc->dest_module_num - MAX_I2S_COUNT;
+		dest_module_id = afc->dest_module_num - afc->soc_data->num_i2s;
 	} else {
 		dest_module = 0;
 		dest_module_id = afc->dest_module_num;
@@ -282,9 +298,8 @@ static int tegra210_afc_set_thresholds(struct tegra210_afc *afc,
 	}
 	regmap_write(afc->regmap, TEGRA210_AFC_TXCIF_FIFO_PARAMS, val_afc);
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	val_dst_mod |= dest_module  << 	TEGRA_AFC_MODULE_SELECT_SHIFT;
-#endif
+	if (afc->soc_data->flag_module_select)
+		val_dst_mod |= dest_module  << 	TEGRA186_AFC_MODULE_SELECT_SHIFT;
 
 	val_dst_mod |= dest_module_id << TEGRA210_AFC_DEST_MODULE_ID_SHIFT;
 	regmap_write(afc->regmap, TEGRA210_AFC_DEST_I2S_PARAMS, val_dst_mod);
@@ -414,7 +429,7 @@ static const struct snd_soc_dapm_route tegra210_afc_routes[] = {
 	{ "AFC Transmit", NULL, "AFC TX" },
 };
 
-static struct snd_soc_codec_driver tegra210_afc_codec = {
+static const struct snd_soc_codec_driver tegra210_afc_codec = {
 	.probe = tegra210_afc_codec_probe,
 	.dapm_widgets = tegra210_afc_widgets,
 	.num_dapm_widgets = ARRAY_SIZE(tegra210_afc_widgets),
@@ -422,6 +437,17 @@ static struct snd_soc_codec_driver tegra210_afc_codec = {
 	.num_dapm_routes = ARRAY_SIZE(tegra210_afc_routes),
 	.controls = tegra210_afc_controls,
 	.num_controls = ARRAY_SIZE(tegra210_afc_controls),
+	.idle_bias_off = 1,
+};
+
+static const struct snd_soc_codec_driver tegra186_afc_codec = {
+	.probe = tegra210_afc_codec_probe,
+	.dapm_widgets = tegra210_afc_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(tegra210_afc_widgets),
+	.dapm_routes = tegra210_afc_routes,
+	.num_dapm_routes = ARRAY_SIZE(tegra210_afc_routes),
+	.controls = tegra186_afc_controls,
+	.num_controls = ARRAY_SIZE(tegra186_afc_controls),
 	.idle_bias_off = 1,
 };
 
@@ -490,10 +516,21 @@ static const struct regmap_config tegra210_afc_regmap_config = {
 
 static const struct tegra210_afc_soc_data soc_data_tegra210 = {
 	.set_audio_cif = tegra210_xbar_set_cif,
+	.afc_codec = &tegra210_afc_codec,
+	.num_i2s = 5,
+	.flag_module_select = false,
+};
+
+static const struct tegra210_afc_soc_data soc_data_tegra186 = {
+	.set_audio_cif = tegra210_xbar_set_cif,
+	.afc_codec = &tegra186_afc_codec,
+	.num_i2s = 6,
+	.flag_module_select = true,
 };
 
 static const struct of_device_id tegra210_afc_of_match[] = {
 	{ .compatible = "nvidia,tegra210-afc", .data = &soc_data_tegra210 },
+	{ .compatible = "nvidia,tegra186-afc", .data = &soc_data_tegra186 },
 	{},
 };
 
@@ -522,6 +559,8 @@ static int tegra210_afc_platform_probe(struct platform_device *pdev)
 	}
 
 	afc->soc_data = soc_data;
+
+	dev_set_drvdata(&pdev->dev, afc);
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
@@ -573,15 +612,13 @@ static int tegra210_afc_platform_probe(struct platform_device *pdev)
 	/* Disable SLGC */
 	regmap_write(afc->regmap, TEGRA210_AFC_CG, 0);
 
-	ret = snd_soc_register_codec(&pdev->dev, &tegra210_afc_codec,
+	ret = snd_soc_register_codec(&pdev->dev, afc->soc_data->afc_codec,
 				     tegra210_afc_dais,
 				     ARRAY_SIZE(tegra210_afc_dais));
 	if (ret != 0) {
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
 		goto err_suspend;
 	}
-
-	dev_set_drvdata(&pdev->dev, afc);
 
 	return 0;
 

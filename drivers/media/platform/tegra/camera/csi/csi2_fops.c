@@ -13,16 +13,23 @@
 #include <linux/device.h>
 #include <linux/clk/tegra.h>
 #include "camera/csi/csi.h"
+#include "camera/vi/mc_common.h"
 
-static void csi_write(struct tegra_csi_device *csi, unsigned int addr,
+
+
+static void csi_write(struct tegra_csi_channel *chan, unsigned int addr,
 			u32 val, u8 port)
 {
+	struct tegra_csi_device *csi = chan->csi;
+
 	writel(val, (csi->iomem[port] + addr));
 }
 
-static u32 csi_read(struct tegra_csi_device *csi, unsigned int addr,
+static u32 csi_read(struct tegra_csi_channel *chan, unsigned int addr,
 			u8 port)
 {
+	struct tegra_csi_device *csi = chan->csi;
+
 	return readl((csi->iomem[port] + addr));
 }
 
@@ -60,27 +67,25 @@ int tegra_csi_error(struct tegra_csi_channel *chan,
 {
 	struct tegra_csi_port *port;
 	u32 val;
-	int err = 0, i;
+	int err = 0;
 
-	for (i = 0; i < chan->numports; i++) {
-		port = &chan->ports[i];
-		/*
-		 * only uncorrectable header error and multi-bit
-		 * transmission errors are checked as they cannot be
-		 * corrected automatically
-		 */
-		val = pp_read(port, TEGRA_CSI_PIXEL_PARSER_STATUS);
-		err |= val & 0x4000;
-		pp_write(port, TEGRA_CSI_PIXEL_PARSER_STATUS, val);
+	port = &chan->ports[port_num];
+	/*
+	 * only uncorrectable header error and multi-bit
+	 * transmission errors are checked as they cannot be
+	 * corrected automatically
+	 */
+	val = pp_read(port, TEGRA_CSI_PIXEL_PARSER_STATUS);
+	err |= val & 0x4000;
+	pp_write(port, TEGRA_CSI_PIXEL_PARSER_STATUS, val);
 
-		val = cil_read(port, TEGRA_CSI_CIL_STATUS);
-		err |= val & 0x02;
-		cil_write(port, TEGRA_CSI_CIL_STATUS, val);
+	val = cil_read(port, TEGRA_CSI_CIL_STATUS);
+	err |= val & 0x02;
+	cil_write(port, TEGRA_CSI_CIL_STATUS, val);
 
-		val = cil_read(port, TEGRA_CSI_CILX_STATUS);
-		err |= val & 0x00020020;
-		cil_write(port, TEGRA_CSI_CILX_STATUS, val);
-	}
+	val = cil_read(port, TEGRA_CSI_CILX_STATUS);
+	err |= val & 0x00020020;
+	cil_write(port, TEGRA_CSI_CILX_STATUS, val);
 
 	return err;
 }
@@ -138,7 +143,7 @@ void tegra_csi_error_recover(struct tegra_csi_channel *chan,
 				TEGRA_CSI_CIL_SW_SENSOR_RESET, 0x1);
 			cil_write(port_b,
 				TEGRA_CSI_CIL_SW_SENSOR_RESET, 0x1);
-			csi_write(csi, TEGRA_CSI_CSI_SW_STATUS_RESET, 0x1,
+			csi_write(chan, TEGRA_CSI_CSI_SW_STATUS_RESET, 0x1,
 					port_num >> 1);
 			/* sleep for clock cycles to drain the Rx FIFO */
 			usleep_range(10, 20);
@@ -146,7 +151,7 @@ void tegra_csi_error_recover(struct tegra_csi_channel *chan,
 				TEGRA_CSI_CIL_SW_SENSOR_RESET, 0x0);
 			cil_write(port_b,
 				TEGRA_CSI_CIL_SW_SENSOR_RESET, 0x0);
-			csi_write(csi,
+			csi_write(chan,
 				TEGRA_CSI_CSI_SW_STATUS_RESET,
 				0x0, port_num >> 1);
 			tpg_write(port_a,
@@ -158,14 +163,14 @@ void tegra_csi_error_recover(struct tegra_csi_channel *chan,
 				TEGRA_CSI_PATTERN_GENERATOR_CTRL, PG_ENABLE);
 			cil_write(port,
 				TEGRA_CSI_CIL_SW_SENSOR_RESET, 0x1);
-			csi_write(csi,
+			csi_write(chan,
 				TEGRA_CSI_CSI_SW_STATUS_RESET,
 				0x1, port_num >> 1);
 			/* sleep for clock cycles to drain the Rx FIFO */
 			usleep_range(10, 20);
 			cil_write(port,
 				TEGRA_CSI_CIL_SW_SENSOR_RESET, 0x0);
-			csi_write(csi,
+			csi_write(chan,
 				TEGRA_CSI_CSI_SW_STATUS_RESET,
 				0x0, port_num >> 1);
 			tpg_write(port,
@@ -206,9 +211,22 @@ int csi2_start_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num)
 {
 	struct tegra_csi_device *csi = chan->csi;
-	struct tegra_csi_port *port = &csi->ports[port_num];
+	struct tegra_csi_port *port = &chan->ports[port_num];
+	int csi_port, csi_lanes;
 
-	csi_write(csi, TEGRA_CSI_CLKEN_OVERRIDE, 0, port_num >> 1);
+	csi_port = chan->ports[port_num].num;
+	csi_lanes = chan->ports[port_num].lanes;
+
+	csi->iomem[0] = (csi->iomem_base + TEGRA_CSI_PIXEL_PARSER_0_BASE);
+	csi->iomem[1] = (csi->iomem_base + TEGRA_CSI_PIXEL_PARSER_2_BASE);
+	csi->iomem[2] = (csi->iomem_base + TEGRA_CSI_PIXEL_PARSER_4_BASE);
+
+	port->pixel_parser = csi->iomem[csi_port >> 1] +
+			(csi_port % 2) * TEGRA_CSI_PORT_OFFSET;
+	port->cil = port->pixel_parser + TEGRA_CSI_CIL_OFFSET;
+	port->tpg = port->pixel_parser + TEGRA_CSI_TPG_OFFSET;
+
+	csi_write(chan, TEGRA_CSI_CLKEN_OVERRIDE, 0, csi_port >> 1);
 
 	/* Clean up status */
 	pp_write(port, TEGRA_CSI_PIXEL_PARSER_STATUS, 0xFFFFFFFF);
@@ -230,33 +248,35 @@ int csi2_start_streaming(struct tegra_csi_channel *chan,
 	 * lanes or as a dual camera with 2 lanes available for each
 	 * camera.
 	 */
-	if (port->lanes == 4) {
-		int port_val = ((port_num >> 1) << 1);
-		struct tegra_csi_port *port_a = &csi->ports[port_val];
-		struct tegra_csi_port *port_b = &csi->ports[port_val + 1];
+	if (csi_lanes == 4) {
+		unsigned int cilb_offset;
 
-		cil_write(port_a, TEGRA_CSI_CIL_PAD_CONFIG0,
+		cilb_offset = TEGRA_CSI_CIL_OFFSET + TEGRA_CSI_PORT_OFFSET;
+
+		cil_write(port, TEGRA_CSI_CIL_PAD_CONFIG0,
 				BRICK_CLOCK_A_4X);
-		cil_write(port_b, TEGRA_CSI_CIL_PAD_CONFIG0, 0x0);
-		cil_write(port_b, TEGRA_CSI_CIL_INTERRUPT_MASK, 0x0);
-		cil_write(port_a, TEGRA_CSI_CIL_PHY_CONTROL,
+		csi_write(chan, cilb_offset + TEGRA_CSI_CIL_PAD_CONFIG0, 0x0,
+				csi_port >> 1);
+		csi_write(chan, cilb_offset + TEGRA_CSI_CIL_INTERRUPT_MASK, 0x0,
+				csi_port >> 1);
+		cil_write(port, TEGRA_CSI_CIL_PHY_CONTROL,
 				BYPASS_LP_SEQ | 0xA);
-		cil_write(port_b, TEGRA_CSI_CIL_PHY_CONTROL,
-				BYPASS_LP_SEQ | 0xA);
-		csi_write(csi, TEGRA_CSI_PHY_CIL_COMMAND,
+		csi_write(chan, cilb_offset + TEGRA_CSI_CIL_PHY_CONTROL,
+				BYPASS_LP_SEQ | 0xA, csi_port >> 1);
+		csi_write(chan, TEGRA_CSI_PHY_CIL_COMMAND,
 				CSI_A_PHY_CIL_ENABLE | CSI_B_PHY_CIL_ENABLE,
-				port_num >> 1);
+				csi_port >> 1);
 	} else {
-		u32 val = csi_read(csi, TEGRA_CSI_PHY_CIL_COMMAND,
-					port_num >> 1);
-		int port_val = ((port_num >> 1) << 1);
-		struct tegra_csi_port *port_a = &csi->ports[port_val];
+		u32 val = csi_read(chan, TEGRA_CSI_PHY_CIL_COMMAND,
+					csi_port >> 1);
 
-		cil_write(port_a, TEGRA_CSI_CIL_PAD_CONFIG0, 0x0);
-		val |= ((port->num & 0x1) == PORT_A) ? CSI_A_PHY_CIL_ENABLE :
+		csi_write(chan,
+			TEGRA_CSI_CIL_OFFSET + TEGRA_CSI_CIL_PAD_CONFIG0, 0x0,
+			csi_port >> 1);
+		val |= ((csi_port & 0x1) == PORT_A) ? CSI_A_PHY_CIL_ENABLE :
 			CSI_B_PHY_CIL_ENABLE;
-		csi_write(csi, TEGRA_CSI_PHY_CIL_COMMAND, val,
-				port_num >> 1);
+		csi_write(chan, TEGRA_CSI_PHY_CIL_COMMAND, val,
+				csi_port >> 1);
 	}
 
 	/* CSI pixel parser registers setup */
@@ -271,7 +291,7 @@ int csi2_start_streaming(struct tegra_csi_channel *chan,
 			CSI_PP_CRC_CHECK_ENABLE |  CSI_PP_WC_CHECK |
 			CSI_PP_OUTPUT_FORMAT_STORE | CSI_PPA_PAD_LINE_NOPAD |
 			CSI_PP_HEADER_EC_DISABLE | CSI_PPA_PAD_FRAME_NOPAD |
-			(port->num & 1));
+			(csi_port & 1));
 	pp_write(port, TEGRA_CSI_PIXEL_STREAM_CONTROL1,
 			(0x1 << CSI_PP_TOP_FIELD_FRAME_OFFSET) |
 			(0x1 << CSI_PP_TOP_FIELD_FRAME_MASK_OFFSET));
@@ -280,9 +300,9 @@ int csi2_start_streaming(struct tegra_csi_channel *chan,
 	pp_write(port, TEGRA_CSI_PIXEL_STREAM_EXPECTED_FRAME, 0x0);
 	pp_write(port, TEGRA_CSI_INPUT_STREAM_CONTROL,
 			(0x3f << CSI_SKIP_PACKET_THRESHOLD_OFFSET) |
-			(port->lanes - 1));
+			(csi_lanes - 1));
 
-	if (csi->pg_mode)
+	if (chan->pg_mode)
 		csi2_tpg_start_streaming(csi, port_num);
 
 	pp_write(port, TEGRA_CSI_PIXEL_STREAM_PP_COMMAND,
@@ -294,12 +314,15 @@ int csi2_start_streaming(struct tegra_csi_channel *chan,
 void csi2_stop_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num)
 {
-	struct tegra_csi_device *csi = chan->csi;
-	struct tegra_csi_port *port = &csi->ports[port_num];
+	struct tegra_csi_port *port = &chan->ports[port_num];
 
-	if (csi->pg_mode)
+
+	if (chan->pg_mode)
 		tpg_write(port, TEGRA_CSI_PATTERN_GENERATOR_CTRL, PG_DISABLE);
-
+	if (!port) {
+		pr_err("%s:no port\n", __func__);
+		return;
+	}
 	pp_write(port, TEGRA_CSI_PIXEL_STREAM_PP_COMMAND,
 			(0xF << CSI_PP_START_MARKER_FRAME_MAX_OFFSET) |
 			CSI_PP_DISABLE);
@@ -391,3 +414,11 @@ int csi2_power_off(struct tegra_csi_device *csi)
 
 	return err;
 }
+
+const struct tegra_csi_fops csi2_fops = {
+	.csi_power_on = csi2_power_on,
+	.csi_power_off = csi2_power_off,
+	.csi_start_streaming = csi2_start_streaming,
+	.csi_stop_streaming = csi2_stop_streaming,
+};
+EXPORT_SYMBOL(csi2_fops);

@@ -76,6 +76,7 @@ struct tegra_csi_port {
 struct tegra_csi_device {
 	struct device *dev;
 	struct platform_device *pdev;
+	char devname[32];
 	void __iomem *iomem_base;
 	void __iomem *iomem[3];
 	struct clk *clk;

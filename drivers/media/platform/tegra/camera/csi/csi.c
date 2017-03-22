@@ -108,39 +108,6 @@ void set_csi_portinfo(struct tegra_csi_device *csi,
 }
 EXPORT_SYMBOL(set_csi_portinfo);
 
-static void set_csi_registers(struct tegra_csi_device *csi,
-		void __iomem *regbase)
-{
-	csi->iomem_base = regbase;
-	csi->iomem[0] = (regbase + TEGRA_CSI_PIXEL_PARSER_0_BASE);
-	csi->iomem[1] = (regbase + TEGRA_CSI_PIXEL_PARSER_2_BASE);
-	csi->iomem[2] = (regbase + TEGRA_CSI_PIXEL_PARSER_4_BASE);
-
-	/* calculate per channel tegra_csi_port info based on
-	 * tegra_csi_port_num
-	 *
-	 */
-#if 0
-	for (j = 0; j < 3; j++) {
-		for (i = 0; i < 2; i++) {
-			idx = (j << 1) + i;
-			/* Initialize port register bases */
-			csi->ports[idx].pixel_parser = csi->iomem[j] +
-				i * TEGRA_CSI_PORT_OFFSET;
-			csi->ports[idx].cil = csi->iomem[j] +
-				TEGRA_CSI_CIL_OFFSET +
-				i * TEGRA_CSI_PORT_OFFSET;
-			csi->ports[idx].tpg = csi->iomem[j] +
-				TEGRA_CSI_TPG_OFFSET +
-				i * TEGRA_CSI_PORT_OFFSET;
-
-			csi->ports[idx].num = idx;
-			csi->ports[idx].lanes = 2;
-		}
-	}
-#endif
-}
-
 int tegra_csi_power(struct tegra_csi_device *csi, int enable)
 {
 	int err = 0;
@@ -199,7 +166,7 @@ int csi_mipi_cal(struct tegra_channel *chan, char is_bypass)
 	struct tegra_csi_device *csi;
 	int j;
 
-	csi = tegra_get_mc_csi();
+	csi = NULL; /* WAR: will be removed after CHWI-401 */
 	if (!csi)
 		return -EINVAL;
 
@@ -758,7 +725,7 @@ int tegra_csi_init(struct tegra_csi_device *csi,
 	if (err)
 		return err;
 
-	set_csi_registers(csi, pdata->aperture[0]);
+	csi->iomem_base = pdata->aperture[0];
 
 	err = csi_get_clks(csi, pdev);
 	if (err)
@@ -829,14 +796,16 @@ static int tegra_csi_channel_init_one(struct tegra_csi_channel *chan)
 		chan->pads[1].flags = MEDIA_PAD_FL_SOURCE;
 	}
 	snprintf(sd->name, sizeof(sd->name), "%s-%d",
-			 chan->pg_mode?"tpg":dev_name(csi->dev), chan->port[0]);
+			 chan->pg_mode ? "tpg" :
+			 (strlen(csi->devname) == 0 ?
+			  dev_name(csi->dev) : csi->devname),
+			  chan->port[0]);
 	/* Initialize media entity */
 	ret = media_entity_init(&sd->entity,
 			chan->pg_mode ? 1 : 2,
 			chan->pads, 0);
-	if (ret < 0) {
+	if (ret < 0)
 		return ret;
-	}
 
 	for (i = 0; i < chan->numports; i++) {
 		numlanes = chan->numlanes - (i * MAX_CSI_BLOCK_LANES);
@@ -879,6 +848,12 @@ static int csi_parse_dt(struct tegra_csi_device *csi,
 	struct device_node *node = pdev->dev.of_node;
 	struct tegra_csi_channel *item;
 
+	if (strncmp(node->name, "nvcsi", 5)) {
+		node = of_find_node_by_name(node, "nvcsi");
+		strncpy(csi->devname, "nvcsi", 6);
+	}
+	if (!node)
+		return -EINVAL;
 	err = of_property_read_u32(node, "num-channels", &num_channels);
 	if (err) {
 		dev_err(csi->dev, " Faile to find num of channels, set to 0\n");

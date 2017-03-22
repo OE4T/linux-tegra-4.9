@@ -209,15 +209,16 @@ static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 			if (!init_code)
 				init_code = code.code;
 			/* Look for other formats with the same mbus code */
-			pixel_format_index = tegra_core_get_idx_by_code(code.code,
-				pixel_format_index + 1);
+			pixel_format_index = tegra_core_get_idx_by_code(
+				code.code, pixel_format_index + 1);
 		}
 
 		code.index++;
 	}
 
 	if (!init_code) {
-		pixel_format_index = tegra_core_get_idx_by_code(TEGRA_VF_DEF, 0);
+		pixel_format_index =
+			tegra_core_get_idx_by_code(TEGRA_VF_DEF, 0);
 		if (pixel_format_index >= 0) {
 			bitmap_set(chan->fmts_bitmap, pixel_format_index, 1);
 			init_code = TEGRA_VF_DEF;
@@ -809,6 +810,8 @@ static int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 			struct camera_common_data *s_data =
 				to_camera_common_data(client);
 
+			if (!s_data)
+				break;
 			if (switch_ctrl_qmenu[ctrl->val] == SWITCH_ON) {
 				s_data->override_enable = true;
 				dev_dbg(&chan->video.dev,
@@ -1239,26 +1242,6 @@ static int tegra_channel_open(struct file *fp)
 	if (ret < 0)
 		goto unlock;
 
-#ifdef T210
-	if (atomic_add_return(1, &vi->power_on_refcnt) == 1) {
-		tegra_vi_power_on(vi);
-		tegra_csi_power_on(csi);
-		if (vi->pg_mode)
-			tegra_vi->tpg_opened = true;
-		else
-			tegra_vi->sensor_opened = true;
-	}
-
-	if (!vi->pg_mode &&
-		(atomic_add_return(1, &chan->power_on_refcnt) == 1)) {
-		/* power on sensors connected in channel */
-		tegra_csi_channel_power_on(csi, chan->port);
-		ret = tegra_channel_set_power(chan, 1);
-		if (ret < 0)
-			goto unlock;
-	}
-#endif
-
 	chan->fh = (struct v4l2_fh *)fp->private_data;
 
 unlock:
@@ -1272,10 +1255,6 @@ static int tegra_channel_close(struct file *fp)
 	struct video_device *vdev = video_devdata(fp);
 	struct tegra_channel *chan = video_get_drvdata(vdev);
 	struct tegra_mc_vi *vi = chan->vi;
-#ifdef T210
-	struct vi *tegra_vi = vi->vi;
-	struct tegra_csi_device *csi = vi->csi;
-#endif
 	bool is_singular;
 
 	mutex_lock(&chan->video_lock);
@@ -1286,28 +1265,8 @@ static int tegra_channel_close(struct file *fp)
 		mutex_unlock(&chan->video_lock);
 		return ret;
 	}
-
 	vi->fops->vi_power_off(chan);
-#ifdef T210
-	if (!vi->pg_mode &&
-		atomic_dec_and_test(&chan->power_on_refcnt)) {
-		/* power off sensors connected in channel */
-		tegra_csi_channel_power_off(csi, chan->port);
-		ret = tegra_channel_set_power(chan, 0);
-		if (ret < 0)
-			dev_err(vi->dev, "Failed to power off subdevices\n");
-	}
 
-	/* The last release then turn off power */
-	if (atomic_dec_and_test(&vi->power_on_refcnt)) {
-		tegra_csi_power_off(csi);
-		tegra_vi_power_off(vi);
-		if (vi->pg_mode)
-			tegra_vi->tpg_opened = false;
-		else
-			tegra_vi->sensor_opened = false;
-	}
-#endif
 	mutex_unlock(&chan->video_lock);
 	return ret;
 }

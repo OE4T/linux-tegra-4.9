@@ -149,7 +149,7 @@ static int vi_get_clks(struct tegra_mc_vi *vi, struct platform_device *pdev)
 {
 	int ret = 0;
 
-	vi->clk = devm_clk_get(&pdev->dev, "vi_v4l2");
+	vi->clk = devm_clk_get(&pdev->dev, "vi");
 	if (IS_ERR(vi->clk)) {
 		dev_err(&pdev->dev, "Failed to get vi clock\n");
 		return PTR_ERR(vi->clk);

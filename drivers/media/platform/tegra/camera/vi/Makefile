@@ -9,6 +9,12 @@ ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 ccflags-y += -I../nvhost-t18x/drivers/video/tegra/host/
 ccflags-y += -I../t18x/drivers/video/tegra/host/
 ccflags-y += -I../nvhost/include
+obj-y += mc_common.o core.o channel.o graph.o vi2_fops.o vi4_fops.o
 endif
 
-obj-y += mc_common.o core.o channel.o graph.o vi2_fops.o vi4_fops.o
+ifeq ($(CONFIG_ARCH_TEGRA_210_SOC),y)
+ccflags-y += -I../nvhost-t18x/drivers/video/tegra/host/
+ccflags-y += -I../nvhost/include
+ccflags-y += -I../t18x/drivers/video/tegra/host/
+obj-y += mc_common.o core.o channel.o graph.o vi2_fops.o
+endif

@@ -24,11 +24,6 @@ int csi2_start_streaming(struct tegra_csi_channel *chan,
 void csi2_stop_streaming(struct tegra_csi_channel *chan,
 		enum tegra_csi_port_num port_num);
 
-struct tegra_csi_fops csi2_fops = {
-	.csi_power_on = csi2_power_on,
-	.csi_power_off = csi2_power_off,
-	.csi_start_streaming = csi2_start_streaming,
-	.csi_stop_streaming = csi2_stop_streaming,
-};
+extern struct tegra_csi_fops csi2_fops;
 
 #endif

@@ -16,12 +16,15 @@
 #include <linux/freezer.h>
 #include <media/tegra_camera_platform.h>
 #include "nvhost_acm.h"
-#include "vi/vi.h"
 #include "camera/vi/mc_common.h"
 #include "camera/csi/csi2_fops.h"
+#include "vi/vi.h"
 
-#define FRAMERATE	30
+#define DEFAULT_FRAMERATE	30
+#define DEFAULT_CSI_FREQ	204000000
 #define BPP_MEM		2
+#define NUM_PPC		2
+#define VI_CSI_CLK_SCALE	110
 
 extern void tegra_channel_queued_buf_done(struct tegra_channel *chan,
 					  enum vb2_buffer_state state);
@@ -82,7 +85,23 @@ static void vi_channel_syncpt_free(struct tegra_channel *chan)
 	for (i = 0; i < chan->total_ports; i++)
 		nvhost_syncpt_put_ref_ext(chan->vi->ndev, chan->syncpt[i][0]);
 }
-
+static struct tegra_csi_channel *find_linked_csi_channel(
+	struct tegra_channel *chan, struct tegra_csi_device *csi)
+{
+	struct tegra_csi_channel *csi_it;
+	struct tegra_csi_channel *csi_chan = NULL;
+	int i;
+	/* Find connected csi_channel */
+	list_for_each_entry(csi_it, &csi->csi_chans, list) {
+		for (i = 0; i < chan->num_subdevs; i++) {
+			if (chan->subdev[i] == &csi_it->subdev) {
+				csi_chan = csi_it;
+				break;
+			}
+		}
+	}
+	return csi_chan;
+}
 static int tegra_channel_capture_setup(struct tegra_channel *chan)
 {
 	u32 height = chan->format.height;
@@ -121,17 +140,15 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan)
 static int tegra_channel_enable_stream(struct tegra_channel *chan)
 {
 	int ret = 0, i;
-	struct tegra_csi_channel *csi_chan;
+	struct tegra_csi_channel *csi_chan = NULL;
 	struct tegra_csi_device *csi = chan->vi->csi;
 	/*
 	 * enable pad power and perform calibration before arming
 	 * single shot for first frame after the HW setup is complete
 	 */
 	/* Find connected csi_channel */
-	list_for_each_entry(csi_chan, &csi->csi_chans, list) {
-		if (chan->subdev_on_csi == &csi_chan->subdev)
-			break;
-	}
+	csi_chan = find_linked_csi_channel(chan, csi);
+
 	/* start streaming */
 	if (chan->pg_mode) {
 		for (i = 0; i < chan->valid_ports; i++)
@@ -193,10 +210,8 @@ static void tegra_channel_vi_csi_recover(struct tegra_channel *chan)
 	/* Disable clock gating to enable continuous clock */
 	tegra_channel_write(chan, TEGRA_VI_CFG_CG_CTRL, DISABLE);
 	/* Find connected csi_channel */
-	list_for_each_entry(csi_chan, &csi->csi_chans, list) {
-		if (chan->subdev_on_csi == &csi_chan->subdev)
-			break;
-	}
+	csi_chan = find_linked_csi_channel(chan, csi);
+
 	/* clear CSI state */
 	for (index = 0; index < valid_ports; index++) {
 		tegra_csi_error_recover(csi_chan, index);
@@ -236,10 +251,8 @@ static void tegra_channel_capture_error(struct tegra_channel *chan)
 	struct tegra_csi_device *csi = chan->vi->csi;
 
 	/* Find connected csi_channel */
-	list_for_each_entry(csi_chan, &csi->csi_chans, list) {
-		if (chan->subdev_on_csi == &csi_chan->subdev)
-			break;
-	}
+	csi_chan = find_linked_csi_channel(chan, csi);
+
 	for (index = 0; index < chan->valid_ports; index++) {
 		val = csi_read(chan, index, TEGRA_VI_CSI_ERROR_STATUS);
 		dev_dbg(&chan->video.dev,
@@ -263,10 +276,8 @@ static int tegra_channel_error_status(struct tegra_channel *chan)
 	struct tegra_csi_device *csi = chan->vi->csi;
 
 	/* Find connected csi_channel */
-	list_for_each_entry(csi_chan, &csi->csi_chans, list) {
-		if (chan->subdev_on_csi == &csi_chan->subdev)
-			break;
-	}
+	csi_chan = find_linked_csi_channel(chan, csi);
+
 	for (index = 0; index < chan->valid_ports; index++) {
 		/* Ignore error based on resolution but reset status */
 		val = csi_read(chan, index, TEGRA_VI_CSI_ERROR_STATUS);
@@ -475,22 +486,79 @@ static void tegra_channel_stop_kthreads(struct tegra_channel *chan)
 	mutex_unlock(&chan->stop_kthread_lock);
 }
 
-static void tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
+static int tegra_channel_update_clknbw(
+	struct tegra_channel *chan, u8 on) __maybe_unused;
+static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 {
-	/* width * height * fps * KBytes write to memory
-	 * WAR: Using fix fps until we have a way to set it
-	 */
-	chan->requested_kbyteps = (on > 0 ? 1 : -1) * ((chan->format.width
+	int ret = 0;
+	unsigned long request_pixelrate;
+	struct v4l2_subdev_frame_interval fie;
+	unsigned long csi_freq = 0;
+
+	fie.interval.denominator = DEFAULT_FRAMERATE;
+	fie.interval.numerator = 1;
+
+	if (v4l2_subdev_has_op(chan->subdev_on_csi,
+				video, g_frame_interval))
+		v4l2_subdev_call(chan->subdev_on_csi, video,
+				g_frame_interval, &fie);
+	if (on) {
+		/**
+		 * TODO: use real sensor pixelrate
+		 * See PowerService code
+		 */
+		request_pixelrate = (long long)(chan->format.width
 				* chan->format.height
-				* FRAMERATE * BPP_MEM) / 1000);
-	chan->requested_hz = on > 0 ? chan->format.width * chan->format.height
-				* FRAMERATE : 0;
+				* fie.interval.denominator / 100)
+				* VI_CSI_CLK_SCALE;
+		/* for PG, get csi frequency from nvhost */
+		if (chan->pg_mode) {
+			ret = nvhost_module_get_rate(
+					chan->vi->csi->pdev, &csi_freq, 0);
+			csi_freq = ret ? DEFAULT_CSI_FREQ : csi_freq;
+		} else
+			/* Use default csi4 frequency for t186 for now
+			 * We can't get the frequency from nvhost because
+			 * vi4 does not has access to csi4
+			 */
+			csi_freq = DEFAULT_CSI_FREQ;
+
+		/* VI clk should be slightly faster than CSI clk*/
+		ret = nvhost_module_set_rate(chan->vi->ndev, &chan->video,
+				max(request_pixelrate,
+				csi_freq * VI_CSI_CLK_SCALE * NUM_PPC / 100),
+				0, NVHOST_PIXELRATE);
+		if (ret) {
+			dev_err(chan->vi->dev, "Fail to update vi clk\n");
+			return ret;
+		}
+	} else {
+		ret = nvhost_module_set_rate(chan->vi->ndev, &chan->video, 0, 0,
+				NVHOST_PIXELRATE);
+		if (ret) {
+			dev_err(chan->vi->dev, "Fail to update vi clk\n");
+			return ret;
+		}
+	}
+
+	chan->requested_kbyteps = (on > 0 ? 1 : -1) *
+		((long long)(chan->format.width * chan->format.height
+		* fie.interval.denominator * BPP_MEM) * 115 / 100) / 1000;
+
 	mutex_lock(&chan->vi->bw_update_lock);
 	chan->vi->aggregated_kbyteps += chan->requested_kbyteps;
-	vi_v4l2_update_isobw(chan->vi->aggregated_kbyteps, 0);
-	vi_v4l2_set_la(tegra_vi_get(), 0, 0);
-	update_clk(chan->vi);
+	ret = vi_v4l2_update_isobw(chan->vi->aggregated_kbyteps, 0);
 	mutex_unlock(&chan->vi->bw_update_lock);
+	if (ret)
+		dev_info(chan->vi->dev,
+		"WAR:Calculation not precise.Ignore BW request failure\n");
+#if 0
+	ret = vi4_v4l2_set_la(chan->vi->ndev, 0, 0);
+	if (ret)
+		dev_info(chan->vi->dev,
+		"WAR:Calculation not precise.Ignore LA failure\n");
+#endif
+	return 0;
 }
 
 int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
@@ -498,8 +566,9 @@ int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	struct media_pipeline *pipe = chan->video.entity.pipe;
 	int ret = 0, i;
-	struct tegra_csi_channel *csi_chan;
+	struct tegra_csi_channel *csi_chan = NULL;
 	struct tegra_csi_device *csi = chan->vi->csi;
+	struct v4l2_ctrl *override_ctrl;
 
 	vi_channel_syncpt_init(chan);
 
@@ -528,12 +597,12 @@ int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	}
 	chan->capture_state = CAPTURE_IDLE;
 	/* Find connected csi_channel */
-	list_for_each_entry(csi_chan, &csi->csi_chans, list) {
-		if (chan->subdev_on_csi == &csi_chan->subdev)
-			break;
-	}
+	csi_chan = find_linked_csi_channel(chan, csi);
+
+	if (!csi_chan)
+		goto error_set_stream;
 	for (i = 0; i < chan->valid_ports; i++) {
-		csi2_start_streaming(csi_chan, i);
+		/* csi2_start_streaming(csi_chan, i); */
 		/* ensure sync point state is clean */
 		nvhost_syncpt_set_min_eq_max_ext(chan->vi->ndev,
 							chan->syncpt[i][0]);
@@ -547,6 +616,17 @@ int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	chan->sequence = 0;
 	tegra_channel_init_ring_buffer(chan);
 
+	/* disable override for vi mode */
+	override_ctrl = v4l2_ctrl_find(
+		&chan->ctrl_handler, V4L2_CID_OVERRIDE_ENABLE);
+	if (override_ctrl) {
+		ret = v4l2_ctrl_s_ctrl(override_ctrl, false);
+		if (ret < 0)
+			dev_err(&chan->video.dev,
+				"failed to disable override control\n");
+	} else
+		dev_err(&chan->video.dev,
+			"No override control\n");
 	/* Update clock and bandwidth based on the format */
 	tegra_channel_update_clknbw(chan, 1);
 
@@ -581,7 +661,7 @@ void vi2_channel_stop_streaming(struct vb2_queue *vq)
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	int index;
 	bool is_streaming = atomic_read(&chan->is_streaming);
-	struct tegra_csi_channel *csi_chan;
+	struct tegra_csi_channel *csi_chan = NULL;
 	struct tegra_csi_device *csi = chan->vi->csi;
 
 	if (!chan->bypass) {
@@ -597,12 +677,11 @@ void vi2_channel_stop_streaming(struct vb2_queue *vq)
 		/* Disable clock gating to enable continuous clock */
 		tegra_channel_write(chan, TEGRA_VI_CFG_CG_CTRL, DISABLE);
 		/* Find connected csi_channel */
-		list_for_each_entry(csi_chan, &csi->csi_chans, list) {
-			if (chan->subdev_on_csi == &csi_chan->subdev)
-				break;
-		}
+		csi_chan = find_linked_csi_channel(chan, csi);
+		if (!csi_chan)
+			pr_err("%s, no csi_chan found\n", __func__);
 		for (index = 0; index < chan->valid_ports; index++) {
-			csi2_stop_streaming(csi_chan, index);
+			/* csi2_stop_streaming(csi_chan, index); */
 			/* Always clear single shot if armed at close */
 			if (csi_read(chan, index, TEGRA_VI_CSI_SINGLE_SHOT))
 				tegra_channel_clear_singleshot(chan, index);
@@ -611,7 +690,7 @@ void vi2_channel_stop_streaming(struct vb2_queue *vq)
 		tegra_channel_write(chan, TEGRA_VI_CFG_CG_CTRL, ENABLE);
 	}
 
-	if (!chan->vi->pg_mode) {
+	if (!chan->pg_mode) {
 		tegra_channel_set_stream(chan, false);
 		media_entity_pipeline_stop(&chan->video.entity);
 	}
@@ -626,75 +705,31 @@ int tegra_vi2_power_on(struct tegra_mc_vi *vi)
 {
 	int ret;
 
-	if (atomic_add_return(1, &vi->power_on_refcnt) > 1)
-		return 0;
-
-	ret = nvhost_module_busy_ext(vi->ndev);
+	ret = nvhost_module_busy(vi->ndev);
 	if (ret) {
 		dev_err(vi->dev, "%s:nvhost module is busy\n", __func__);
 		return ret;
 	}
 
-	if (vi->reg) {
-		ret = regulator_enable(vi->reg);
-		if (ret) {
-			dev_err(vi->dev, "%s: enable csi regulator failed.\n",
-					__func__);
-			goto error_regulator_fail;
-		}
-	}
-
 	vi_write(vi, TEGRA_VI_CFG_CG_CTRL, 1);
-
-	/* unpowergate VE */
-	ret = tegra_unpowergate_partition(TEGRA_POWERGATE_VENC);
-	if (ret) {
-		dev_err(vi->dev, "failed to unpower gate VI\n");
-		goto error_unpowergate;
-	}
-
-	/* clock settings */
-	ret = clk_prepare_enable(vi->clk);
-	if (ret) {
-		dev_err(vi->dev, "failed to enable vi clock\n");
-		goto error_clk_enable;
-	}
-
-	ret = clk_set_rate(vi->clk, 0);
-	if (ret) {
-		dev_err(vi->dev, "failed to set vi clock\n");
-		goto error_clk_set_rate;
-	}
 
 	ret = tegra_camera_emc_clk_enable();
 	if (ret)
 		goto err_emc_enable;
 
 	return 0;
+
 err_emc_enable:
-error_clk_set_rate:
-	clk_disable_unprepare(vi->clk);
-error_clk_enable:
-	tegra_powergate_partition(TEGRA_POWERGATE_VENC);
-error_unpowergate:
-	regulator_disable(vi->reg);
-error_regulator_fail:
-	nvhost_module_idle_ext(vi->ndev);
+	nvhost_module_idle(vi->ndev);
 
 	return ret;
 }
 
 void tegra_vi2_power_off(struct tegra_mc_vi *vi)
 {
-	if (!atomic_dec_and_test(&vi->power_on_refcnt))
-		return;
-
 	tegra_channel_ec_close(vi);
 	tegra_camera_emc_clk_disable();
-	clk_disable_unprepare(vi->clk);
-	tegra_powergate_partition(TEGRA_POWERGATE_VENC);
-	regulator_disable(vi->reg);
-	nvhost_module_idle_ext(vi->ndev);
+	nvhost_module_idle(vi->ndev);
 }
 
 int vi2_power_on(struct tegra_channel *chan)
@@ -707,6 +742,10 @@ int vi2_power_on(struct tegra_channel *chan)
 	vi = chan->vi;
 	tegra_vi = vi->vi;
 	csi = vi->csi;
+
+	ret = nvhost_module_add_client(vi->ndev, &chan->video);
+	if (ret)
+		return ret;
 
 	if (atomic_add_return(1, &vi->power_on_refcnt) == 1) {
 		tegra_vi2_power_on(vi);
@@ -756,4 +795,5 @@ void vi2_power_off(struct tegra_channel *chan)
 		else
 			tegra_vi->sensor_opened = false;
 	}
+	nvhost_module_remove_client(vi->ndev, &chan->video);
 }

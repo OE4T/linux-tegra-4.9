@@ -2289,6 +2289,8 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 {
 	u32 pbdma_intr_0 = gk20a_readl(g, pbdma_intr_0_r(pbdma_id));
 	u32 pbdma_intr_1 = gk20a_readl(g, pbdma_intr_1_r(pbdma_id));
+	u32 status = gk20a_readl(g, fifo_pbdma_status_r(pbdma_id));
+
 	u32 handled = 0;
 	u32 error_notifier = NVGPU_CHANNEL_PBDMA_ERROR;
 	bool reset = false;
@@ -2374,7 +2376,6 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 
 	if (reset) {
 		/* Remove the channel from runlist */
-		u32 status = gk20a_readl(g, fifo_pbdma_status_r(pbdma_id));
 		u32 id = fifo_pbdma_status_id_v(status);
 		if (fifo_pbdma_status_id_type_v(status)
 				== fifo_pbdma_status_id_type_chid_v()) {

@@ -397,6 +397,7 @@ struct mmc_host {
 #define MMC_CAP2_ONLY_1V8_SIGNAL_VOLTAGE	(1 << 27)	/* Supports only 1V8 voltage */
 #define MMC_CAP2_NO_SLEEP_CMD	(1 << 28)	/* cannot support sleep mode */
 #define MMC_CAP2_PERIODIC_CACHE_FLUSH	(1 << 29)
+#define MMC_CAP2_EN_CLK_TO_ACCESS_REG		(1 << 30) /* Enable clock to access register */
 
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
 

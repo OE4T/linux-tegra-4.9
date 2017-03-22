@@ -2059,6 +2059,9 @@ void mmc_power_up(struct mmc_host *host, u32 ocr)
 
 	host->ios.vdd = fls(ocr) - 1;
 	host->ios.power_mode = MMC_POWER_UP;
+	if (host->caps2 & MMC_CAP2_EN_CLK_TO_ACCESS_REG)
+		host->ios.clock = host->f_init;
+
 	/* Set initial state and call mmc_set_ios */
 	mmc_set_initial_state(host);
 

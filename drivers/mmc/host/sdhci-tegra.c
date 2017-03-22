@@ -1684,6 +1684,8 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 	if (tegra_host->en_periodic_cflush)
 		host->mmc->caps2 |= MMC_CAP2_PERIODIC_CACHE_FLUSH;
 
+	host->mmc->caps2 |= MMC_CAP2_EN_CLK_TO_ACCESS_REG;
+
 #ifdef CONFIG_MMC_CQ_HCI
 	if (tegra_host->enable_hwcq) {
 		host->mmc->caps2 |= MMC_CAP2_HW_CQ;

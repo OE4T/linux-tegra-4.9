@@ -29,7 +29,7 @@
 #include <media/camera_common.h>
 #include <media/ov5693.h>
 
-#include "cam_dev/camera_gpio.h"
+#include "../platform/tegra/camera/camera_gpio.h"
 
 #include "ov5693_mode_tbls.h"
 
@@ -55,7 +55,7 @@
 #define OV5693_DEFAULT_HDR_MODE	OV5693_MODE_2592X1944_HDR
 #define OV5693_DEFAULT_WIDTH	2592
 #define OV5693_DEFAULT_HEIGHT	1944
-#define OV5693_DEFAULT_DATAFMT	V4L2_MBUS_FMT_SRGGB10_1X10
+#define OV5693_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SRGGB10_1X10
 #define OV5693_DEFAULT_CLK_FREQ	24000000
 
 struct ov5693 {
@@ -522,10 +522,6 @@ exit:
 
 static struct v4l2_subdev_video_ops ov5693_subdev_video_ops = {
 	.s_stream	= ov5693_s_stream,
-	.s_mbus_fmt	= camera_common_s_fmt,
-	.g_mbus_fmt	= camera_common_g_fmt,
-	.try_mbus_fmt	= camera_common_try_fmt,
-	.enum_mbus_fmt	= camera_common_enum_fmt,
 	.g_mbus_config	= camera_common_g_mbus_config,
 };
 
@@ -533,9 +529,37 @@ static struct v4l2_subdev_core_ops ov5693_subdev_core_ops = {
 	.s_power	= camera_common_s_power,
 };
 
+static int ov5693_get_fmt(struct v4l2_subdev *sd,
+		struct v4l2_subdev_pad_config *cfg,
+		struct v4l2_subdev_format *format)
+{
+	return camera_common_g_fmt(sd, &format->format);
+}
+
+static int ov5693_set_fmt(struct v4l2_subdev *sd,
+		struct v4l2_subdev_pad_config *cfg,
+		struct v4l2_subdev_format *format)
+{
+	int ret;
+
+	if (format->which == V4L2_SUBDEV_FORMAT_TRY)
+		ret = camera_common_try_fmt(sd, &format->format);
+	else
+		ret = camera_common_s_fmt(sd, &format->format);
+
+	return ret;
+}
+
+static struct v4l2_subdev_pad_ops ov5693_subdev_pad_ops = {
+	.set_fmt = ov5693_set_fmt,
+	.get_fmt = ov5693_get_fmt,
+	.enum_mbus_code = camera_common_enum_mbus_code,
+};
+
 static struct v4l2_subdev_ops ov5693_subdev_ops = {
 	.core	= &ov5693_subdev_core_ops,
 	.video	= &ov5693_subdev_video_ops,
+	.pad	= &ov5693_subdev_pad_ops,
 };
 
 static struct of_device_id ov5693_of_match[] = {

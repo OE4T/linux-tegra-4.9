@@ -1638,7 +1638,7 @@
 		ranges = <0x02900000 0x0 0x02900000 0x00020000>;
 
 		tegra_admaif: admaif@290f000 {
-			compatible = "nvidia,tegra210-admaif";
+			compatible = "nvidia,tegra186-admaif";
 			reg = <0x290f000 0x1000>;
 			clocks = <&tegra_car TEGRA186_CLK_AHUB>;
 			clock-names = "ahub";

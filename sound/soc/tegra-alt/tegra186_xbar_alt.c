@@ -877,7 +877,7 @@ static struct snd_soc_codec_driver tegra186_xbar_codec = {
 };
 
 static struct of_dev_auxdata tegra186_xbar_auxdata[] = {
-	OF_DEV_AUXDATA("nvidia,tegra210-admaif", ADMAIF_BASE_ADDR, "tegra210-admaif", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra186-admaif", ADMAIF_BASE_ADDR, "tegra186-admaif", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-i2s", I2S1_BASE_ADDR, "tegra210-i2s.0", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-i2s", I2S2_BASE_ADDR, "tegra210-i2s.1", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-i2s", I2S3_BASE_ADDR, "tegra210-i2s.2", NULL),

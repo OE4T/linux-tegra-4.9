@@ -3272,7 +3272,10 @@ u32 gk20a_fifo_get_pbdma_signature(struct gk20a *g)
 struct channel_gk20a *gk20a_fifo_channel_from_hw_chid(struct gk20a *g,
 		u32 hw_chid)
 {
-	return g->fifo.channel + hw_chid;
+	if (hw_chid != FIFO_INVAL_CHANNEL_ID)
+		return g->fifo.channel + hw_chid;
+	else
+		return NULL;
 }
 
 #ifdef CONFIG_DEBUG_FS

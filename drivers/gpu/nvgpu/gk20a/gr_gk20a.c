@@ -5555,14 +5555,40 @@ fail:
 	return -EINVAL;
 }
 
+static void gk20a_gr_set_error_notifier(struct gk20a *g,
+		  struct gr_gk20a_isr_data *isr_data, u32 error_notifier)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	struct channel_gk20a *ch;
+	struct tsg_gk20a *tsg;
+	struct channel_gk20a *ch_tsg;
+
+	if (isr_data->chid != FIFO_INVAL_CHANNEL_ID) {
+		ch = &f->channel[isr_data->chid];
+
+		if (gk20a_is_channel_marked_as_tsg(ch)) {
+			tsg = &g->fifo.tsg[ch->tsgid];
+			down_read(&tsg->ch_list_lock);
+			list_for_each_entry(ch_tsg, &tsg->ch_list, ch_entry) {
+				if (gk20a_channel_get(ch_tsg)) {
+					gk20a_set_error_notifier(ch_tsg,
+							 error_notifier);
+					gk20a_channel_put(ch_tsg);
+				}
+			}
+			up_read(&tsg->ch_list_lock);
+		} else {
+			gk20a_set_error_notifier(ch, error_notifier);
+		}
+	}
+}
+
 static int gk20a_gr_handle_semaphore_timeout_pending(struct gk20a *g,
 		  struct gr_gk20a_isr_data *isr_data)
 {
-	struct fifo_gk20a *f = &g->fifo;
-	struct channel_gk20a *ch = &f->channel[isr_data->chid];
 	gk20a_dbg_fn("");
-	gk20a_set_error_notifier(ch,
-				NVGPU_CHANNEL_GR_SEMAPHORE_TIMEOUT);
+	gk20a_gr_set_error_notifier(g, isr_data,
+			 NVGPU_CHANNEL_GR_SEMAPHORE_TIMEOUT);
 	gk20a_err(dev_from_gk20a(g),
 		   "gr semaphore timeout\n");
 	return -EINVAL;
@@ -5571,11 +5597,9 @@ static int gk20a_gr_handle_semaphore_timeout_pending(struct gk20a *g,
 static int gk20a_gr_intr_illegal_notify_pending(struct gk20a *g,
 		  struct gr_gk20a_isr_data *isr_data)
 {
-	struct fifo_gk20a *f = &g->fifo;
-	struct channel_gk20a *ch = &f->channel[isr_data->chid];
 	gk20a_dbg_fn("");
-	gk20a_set_error_notifier(ch,
-				NVGPU_CHANNEL_GR_ILLEGAL_NOTIFY);
+	gk20a_gr_set_error_notifier(g, isr_data,
+			 NVGPU_CHANNEL_GR_ILLEGAL_NOTIFY);
 	/* This is an unrecoverable error, reset is needed */
 	gk20a_err(dev_from_gk20a(g),
 		   "gr semaphore timeout\n");
@@ -5588,22 +5612,22 @@ static int gk20a_gr_handle_illegal_method(struct gk20a *g,
 	int ret = g->ops.gr.handle_sw_method(g, isr_data->addr,
 			isr_data->class_num, isr_data->offset,
 			isr_data->data_lo);
-	if (ret)
+	if (ret) {
+		gk20a_gr_set_error_notifier(g, isr_data,
+			 NVGPU_CHANNEL_GR_ILLEGAL_NOTIFY);
 		gk20a_err(dev_from_gk20a(g), "invalid method class 0x%08x"
 			", offset 0x%08x address 0x%08x\n",
 			isr_data->class_num, isr_data->offset, isr_data->addr);
-
+	}
 	return ret;
 }
 
 static int gk20a_gr_handle_illegal_class(struct gk20a *g,
 					  struct gr_gk20a_isr_data *isr_data)
 {
-	struct fifo_gk20a *f = &g->fifo;
-	struct channel_gk20a *ch = &f->channel[isr_data->chid];
 	gk20a_dbg_fn("");
-	gk20a_set_error_notifier(ch,
-				NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
+	gk20a_gr_set_error_notifier(g, isr_data,
+			 NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
 	gk20a_err(dev_from_gk20a(g),
 		   "invalid class 0x%08x, offset 0x%08x",
 		   isr_data->class_num, isr_data->offset);
@@ -5626,6 +5650,8 @@ int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
 		   gr_fecs_intr, isr_data->chid);
 
 	if (gr_fecs_intr & gr_fecs_host_int_status_umimp_firmware_method_f(1)) {
+		gk20a_gr_set_error_notifier(g, isr_data,
+			 NVGPU_CHANNEL_FECS_ERR_UNIMP_FIRMWARE_METHOD);
 		gk20a_err(dev_from_gk20a(g),
 			  "firmware method error 0x%08x for offset 0x%04x",
 			  gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(6)),
@@ -5640,35 +5666,34 @@ int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
 static int gk20a_gr_handle_class_error(struct gk20a *g,
 				       struct gr_gk20a_isr_data *isr_data)
 {
-	struct fifo_gk20a *f = &g->fifo;
-	struct channel_gk20a *ch = &f->channel[isr_data->chid];
-	u32 gr_class_error =
-		gr_class_error_code_v(gk20a_readl(g, gr_class_error_r()));
+	u32 gr_class_error;
+
 	gk20a_dbg_fn("");
 
-	gk20a_set_error_notifier(ch,
-			NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
+	gr_class_error =
+		gr_class_error_code_v(gk20a_readl(g, gr_class_error_r()));
+	gk20a_gr_set_error_notifier(g, isr_data,
+			 NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
 	gk20a_err(dev_from_gk20a(g),
-		   "class error 0x%08x, offset 0x%08x, unhandled intr 0x%08x for channel %u\n",
+		   "class error 0x%08x, offset 0x%08x,"
+			" unhandled intr 0x%08x for channel %u\n",
 		   isr_data->class_num, isr_data->offset,
-		   gr_class_error, ch->hw_chid);
+		   gr_class_error, isr_data->chid);
+
 	return -EINVAL;
 }
 
 static int gk20a_gr_handle_firmware_method(struct gk20a *g,
 					   struct gr_gk20a_isr_data *isr_data)
 {
-	struct fifo_gk20a *f = &g->fifo;
-	struct channel_gk20a *ch = &f->channel[isr_data->chid];
-
 	gk20a_dbg_fn("");
 
-	gk20a_set_error_notifier(ch,
-			NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
+	gk20a_gr_set_error_notifier(g, isr_data,
+			 NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
 	gk20a_err(dev_from_gk20a(g),
 		   "firmware method 0x%08x, offset 0x%08x for channel %u\n",
 		   isr_data->class_num, isr_data->offset,
-		   ch->hw_chid);
+		   isr_data->chid);
 	return -EINVAL;
 }
 
@@ -6404,7 +6429,7 @@ int gk20a_gr_isr(struct gk20a *g)
 	if (ch)
 		isr_data.chid = ch->hw_chid;
 	else
-		isr_data.chid = 0xffffffff;
+		isr_data.chid = FIFO_INVAL_CHANNEL_ID;
 
 	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
 		"channel %d: addr 0x%08x, "
@@ -6507,24 +6532,22 @@ int gk20a_gr_isr(struct gk20a *g)
 		if (exception & gr_exception_gpc_m() && need_reset == 0) {
 			bool post_event = false;
 
-			gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "GPC exception pending");
-
+			gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+					 "GPC exception pending");
 
 			fault_ch = gk20a_fifo_channel_from_hw_chid(g,
 							isr_data.chid);
 
+			/*isr_data.chid can be ~0 and fault_ch can be NULL */
 			/* check if any gpc has an exception */
 			need_reset |= gk20a_gr_handle_gpc_exception(g,
 					&post_event, fault_ch, &global_esr);
 
 			/* signal clients waiting on an event */
-			if (gk20a_gr_sm_debugger_attached(g) && post_event && fault_ch) {
+			if (gk20a_gr_sm_debugger_attached(g) &&
+					 post_event && fault_ch) {
 				gk20a_dbg_gpu_post_events(fault_ch);
 			}
-
-			if (need_reset && ch)
-				gk20a_set_error_notifier(ch,
-					NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
 		}
 
 		if (exception & gr_exception_ds_m()) {
@@ -6536,6 +6559,12 @@ int gk20a_gr_isr(struct gk20a *g)
 
 		gk20a_writel(g, gr_intr_r(), gr_intr_exception_reset_f());
 		gr_intr &= ~gr_intr_exception_pending_f();
+
+		if (need_reset) {
+			gk20a_err(dev, "set gr exception notifier");
+			gk20a_gr_set_error_notifier(g, &isr_data,
+					 NVGPU_CHANNEL_GR_EXCEPTION);
+		}
 	}
 
 	if (need_reset) {

@@ -400,6 +400,7 @@ struct tegra_dsi_out {
 	bool		hs_cmd_mode_supported;
 	bool		hs_cmd_mode_on_blank_supported;
 	bool		enable_hs_clock_on_lp_cmd_mode;
+	bool		drm_override_disable;
 	bool		no_pkt_seq_eot; /* 1st generation panel may not
 					 * support eot. Don't set it for
 					 * most panels. */

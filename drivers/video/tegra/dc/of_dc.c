@@ -1186,6 +1186,12 @@ static struct device_node *parse_dsi_settings(struct platform_device *ndev,
 	}
 
 	if (of_property_read_bool(np_dsi,
+			"nvidia,drm-override-disable")) {
+		dsi->drm_override_disable = true;
+		OF_DC_LOG("DRM override disable is true\n");
+	}
+
+	if (of_property_read_bool(np_dsi,
 			"nvidia,set-max-dsi-timeout")) {
 		dsi->set_max_timeout = true;
 		OF_DC_LOG("Set max DSI timeout %d\n",

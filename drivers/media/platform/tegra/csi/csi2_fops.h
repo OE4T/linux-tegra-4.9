@@ -29,6 +29,7 @@ void csi2_error_recover(struct tegra_csi_device *csi,
 		enum tegra_csi_port_num port_num);
 void csi2_stop_streaming(struct tegra_csi_device *csi,
 		enum tegra_csi_port_num port_num);
+int csi2_init(struct tegra_csi_device *csi, struct platform_device *pdev);
 
 struct tegra_csi_fops csi2_fops = {
 	.soc_tpg_start_streaming = csi2_tpg_start_streaming,
@@ -37,6 +38,7 @@ struct tegra_csi_fops csi2_fops = {
 	.soc_status = csi2_status,
 	.soc_error_recover = csi2_error_recover,
 	.soc_stop_streaming = csi2_stop_streaming,
+	.soc_init = csi2_init,
 };
 
 #endif

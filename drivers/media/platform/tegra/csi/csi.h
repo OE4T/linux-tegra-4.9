@@ -20,6 +20,8 @@
 
 #include <media/camera_common.h>
 #include "../camera/registers.h"
+#include <linux/platform_device.h>
+
 
 enum tegra_csi_port_num {
 	PORT_A = 0,
@@ -87,6 +89,8 @@ struct tegra_csi_fops {
 			enum tegra_csi_port_num port_num);
 	void (*soc_stop_streaming)(struct tegra_csi_device *csi,
 			enum tegra_csi_port_num port_num);
+	int (*soc_init)(struct tegra_csi_device *csi,
+			struct platform_device *pdev);
 };
 
 static inline struct tegra_csi_device *to_csi(struct v4l2_subdev *subdev)

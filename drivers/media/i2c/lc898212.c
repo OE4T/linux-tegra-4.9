@@ -187,9 +187,7 @@ static int lc898212_set_position(struct lc898212 *priv, u32 position)
 
 	if (priv->support_mfi) {
 		ret = tegra_camera_dev_mfi_clear(priv->cmfi_dev16);
-		if (ret)
-			return ret;
-		ret = tegra_camera_dev_mfi_wr_add(priv->cmfi_dev16,
+		ret |= tegra_camera_dev_mfi_wr_add(priv->cmfi_dev16,
 				LC898212_RZ,
 				(u16) new_pos);
 	} else {

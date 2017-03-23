@@ -2,7 +2,7 @@
  * arch/arm/mach-tegra/mc.c
  *
  * Copyright (C) 2010 Google, Inc.
- * Copyright (C) 2011-2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (C) 2011-2017, NVIDIA Corporation.  All rights reserved.
  *
  * Author:
  *	Erik Gilling <konkers@google.com>
@@ -116,6 +116,13 @@ int mc_get_carveout_info(struct mc_carveout_info *inf, int *nr,
 	case MC_SECURITY_CARVEOUT2:
 #ifdef MC_SECURITY_CARVEOUT2_BOM
 		MC_SECURITY_CARVEOUT(MC_SECURITY_CARVEOUT2, inf);
+		break;
+#else
+		return -ENODEV;
+#endif
+	case MC_SECURITY_CARVEOUT4:
+#ifdef MC_SECURITY_CARVEOUT4_BOM
+		MC_SECURITY_CARVEOUT(MC_SECURITY_CARVEOUT4, inf);
 		break;
 #else
 		return -ENODEV;

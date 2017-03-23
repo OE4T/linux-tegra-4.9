@@ -24,9 +24,9 @@
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
 #include "gk20a/channel_gk20a.h"
-#include "gk20a/as_gk20a.h"
 #include "gk20a/tsg_gk20a.h"
 #include "ioctl_ctrl.h"
+#include "ioctl_as.h"
 
 #define GK20A_NUM_CDEVS 7
 
@@ -167,9 +167,9 @@ void gk20a_user_deinit(struct device *dev, struct class *class)
 		cdev_del(&g->channel.cdev);
 	}
 
-	if (g->as.node) {
-		device_destroy(class, g->as.cdev.dev);
-		cdev_del(&g->as.cdev);
+	if (g->as_dev.node) {
+		device_destroy(class, g->as_dev.cdev.dev);
+		cdev_del(&g->as_dev.cdev);
 	}
 
 	if (g->ctrl.node) {
@@ -228,7 +228,7 @@ int gk20a_user_init(struct device *dev, const char *interface_name,
 		goto fail;
 
 	err = gk20a_create_device(dev, devno++, interface_name, "-as",
-				  &g->as.cdev, &g->as.node,
+				  &g->as_dev.cdev, &g->as_dev.node,
 				  &gk20a_as_ops,
 				  class);
 	if (err)

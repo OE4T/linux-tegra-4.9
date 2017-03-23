@@ -27,6 +27,7 @@ nvgpu-y := \
 	common/linux/timers.o \
 	common/linux/ioctl.o \
 	common/linux/ioctl_ctrl.o \
+	common/linux/ioctl_as.o \
 	common/mm/nvgpu_allocator.o \
 	common/mm/bitmap_allocator.o \
 	common/mm/buddy_allocator.o \
@@ -35,12 +36,12 @@ nvgpu-y := \
 	common/pramin.o \
 	common/nvgpu_common.o \
 	common/semaphore.o \
+	common/as.o \
 	common/vbios/bios.o \
 	gk20a/gk20a.o \
 	gk20a/bus_gk20a.o \
 	gk20a/pramin_gk20a.o \
 	gk20a/sched_gk20a.o \
-	gk20a/as_gk20a.o \
 	gk20a/ce2_gk20a.o \
 	gk20a/fifo_gk20a.o \
 	gk20a/channel_gk20a.o \

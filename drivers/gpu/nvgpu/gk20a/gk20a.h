@@ -37,13 +37,14 @@ struct dbg_profiler_object_data;
 #include <soc/tegra/chip-id.h>
 #include <linux/version.h>
 #include <linux/atomic.h>
+#include <linux/cdev.h>
 
 #include "../../../arch/arm/mach-tegra/iomap.h"
 
 #include <nvgpu/pramin.h>
 #include <nvgpu/acr/nvgpu_acr.h>
+#include <nvgpu/as.h>
 
-#include "as_gk20a.h"
 #include "clk_gk20a.h"
 #include "ce2_gk20a.h"
 #include "fifo_gk20a.h"
@@ -1040,6 +1041,11 @@ struct gk20a {
 		struct cdev cdev;
 		struct device *node;
 	} ctrl;
+
+	struct {
+		struct cdev cdev;
+		struct device *node;
+	} as_dev;
 
 	struct {
 		struct cdev cdev;

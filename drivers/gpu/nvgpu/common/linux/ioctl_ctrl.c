@@ -205,13 +205,13 @@ static int gk20a_ctrl_alloc_as(
 
 	snprintf(name, sizeof(name), "nvhost-%s-fd%d", g->name, fd);
 
-	file = anon_inode_getfile(name, g->as.cdev.ops, NULL, O_RDWR);
+	file = anon_inode_getfile(name, g->as_dev.cdev.ops, NULL, O_RDWR);
 	if (IS_ERR(file)) {
 		err = PTR_ERR(file);
 		goto clean_up;
 	}
 
-	err = gk20a_as_alloc_share(&g->as, args->big_page_size, args->flags,
+	err = gk20a_as_alloc_share(g, args->big_page_size, args->flags,
 				   &as_share);
 	if (err)
 		goto clean_up_file;

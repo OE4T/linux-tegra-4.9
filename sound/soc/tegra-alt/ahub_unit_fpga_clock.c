@@ -3,7 +3,7 @@
  *
  * Author: Dara Ramesh <dramesh@nvidia.com>
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -27,17 +27,21 @@
 #include <linux/io.h>
 #include <linux/printk.h>
 #include "ahub_unit_fpga_clock.h"
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-#include <sound/tegra_audio.h>
-#endif
 
 static struct ahub_unit_fpga ahub_unit_fpga_private;
 
 static void __iomem *pinmux_base = IO_ADDRESS(NV_ADDRESS_MAP_APB_PP_BASE);
-static void __iomem *ahub_gpio_base = IO_ADDRESS(NV_ADDRESS_MAP_APE_AHUB_GPIO_BASE);
+static void __iomem *ahub_gpio_base =
+			IO_ADDRESS(NV_ADDRESS_MAP_APE_AHUB_GPIO_BASE);
+static void __iomem *rst_clk_base =
+			IO_ADDRESS(NV_ADDRESS_MAP_PPSB_CLK_RST_BASE);
+static void __iomem *t210_i2s5_base =
+			IO_ADDRESS(T210_NV_ADDRESS_MAP_APE_I2S5_BASE);
+static void __iomem *t186_i2s5_base =
+			IO_ADDRESS(T186_NV_ADDRESS_MAP_APE_I2S5_BASE);
 
-static void __iomem *rst_clk_base = IO_ADDRESS(NV_ADDRESS_MAP_PPSB_CLK_RST_BASE);
-static void __iomem *i2s5_base = IO_ADDRESS(NV_ADDRESS_MAP_APE_I2S5_BASE);
+static bool t210_chip;
+static bool t186_chip;
 
 static unsigned int ahub_fpga_misc_i2s_offset[5] = {
 	APE_FPGA_MISC_CLK_SOURCE_I2S1_0,
@@ -148,8 +152,12 @@ void i2s_pinmux_setup(u32 i2s, u32 i2s_b)
 		writel(0x41, pinmux_base + PINMUX_AUX_GPIO_PK1_0);
 		writel(0x41, pinmux_base + PINMUX_AUX_GPIO_PK2_0);
 		writel(0x41, pinmux_base + PINMUX_AUX_GPIO_PK3_0);
-		if (i2s_b)
-			writel(1, i2s5_base + I2S5_CYA_0);
+		if (i2s_b) {
+			if (t210_chip)
+				writel(1, t210_i2s5_base + I2S5_CYA_0);
+			else if (t186_chip)
+				writel(1, t186_i2s5_base + I2S5_CYA_0);
+		}
 		break;
 	}
 }
@@ -602,6 +610,77 @@ void program_dmic_clk(int dmic_clk)
 	#endif
 }
 EXPORT_SYMBOL(program_dmic_clk);
+
+void program_dspk_clk(int dspk_clk)
+{
+	void __iomem *misc_base;
+	struct ahub_unit_fpga *ahub_unit_fpga_private;
+
+	ahub_unit_fpga_private = get_ahub_unit_fpga_private();
+	misc_base = ahub_unit_fpga_private->ape_fpga_misc_base;
+#if !SYSTEM_FPGA
+	writel(0x1, misc_base + APE_FPGA_MISC_CLK_SOURCE_I2C1_0);
+
+	switch (dspk_clk) {
+	case 256000:
+		program_cdc_pll(2, CLK_OUT_4_0960_MHZ);
+		writel(0xf, misc_base + APE_FPGA_MISC_CLK_SOURCE_DSPK1_0);
+		break;
+	case 512000:
+		program_cdc_pll(2, CLK_OUT_4_0960_MHZ);
+		writel(0x7, misc_base + APE_FPGA_MISC_CLK_SOURCE_DSPK1_0);
+		break;
+	case 1024000:
+		program_cdc_pll(2, CLK_OUT_4_0960_MHZ);
+		writel(0x3, misc_base + APE_FPGA_MISC_CLK_SOURCE_DSPK1_0);
+		break;
+	case 1411200:
+		program_cdc_pll(2, CLK_OUT_5_6448_MHZ);
+		writel(0x3, misc_base + APE_FPGA_MISC_CLK_SOURCE_DSPK1_0);
+		break;
+	case 1536000:
+		program_cdc_pll(2, CLK_OUT_6_1440_MHZ);
+		writel(0x3, misc_base + APE_FPGA_MISC_CLK_SOURCE_DSPK1_0);
+		break;
+	case 2048000:
+		program_cdc_pll(2, CLK_OUT_4_0960_MHZ);
+		writel(0x1, misc_base + APE_FPGA_MISC_CLK_SOURCE_DSPK1_0);
+		break;
+	case 2822400:
+		program_cdc_pll(2, CLK_OUT_5_6448_MHZ);
+		writel(0x1, misc_base + APE_FPGA_MISC_CLK_SOURCE_DSPK1_0);
+		break;
+	case 3072000:
+		program_cdc_pll(2, CLK_OUT_6_1440_MHZ);
+		writel(0x1, misc_base + APE_FPGA_MISC_CLK_SOURCE_DSPK1_0);
+		break;
+	case 4096000:
+		program_cdc_pll(2, CLK_OUT_4_0960_MHZ);
+		writel(0x0, misc_base + APE_FPGA_MISC_CLK_SOURCE_DSPK1_0);
+		break;
+	case 5644800:
+		program_cdc_pll(2, CLK_OUT_11_2896_MHZ);
+		writel(0x1, misc_base + APE_FPGA_MISC_CLK_SOURCE_DSPK1_0);
+		break;
+	case 6144000:
+		program_cdc_pll(2, CLK_OUT_12_2888_MHZ);
+		writel(0x1, misc_base + APE_FPGA_MISC_CLK_SOURCE_DSPK1_0);
+		break;
+	case 11289600:
+		program_cdc_pll(2, CLK_OUT_11_2896_MHZ);
+		writel(0x0, misc_base + APE_FPGA_MISC_CLK_SOURCE_DSPK1_0);
+		break;
+	case 12288000:
+		program_cdc_pll(2, CLK_OUT_12_2888_MHZ);
+		writel(0x0, misc_base + APE_FPGA_MISC_CLK_SOURCE_DSPK1_0);
+		break;
+	default:
+		pr_err("Unsupported sample rate and OSR combination\n");
+	}
+#endif
+}
+EXPORT_SYMBOL(program_dspk_clk);
+
 /**
  * AD1937
  */
@@ -1278,18 +1357,19 @@ struct ahub_unit_fpga *get_ahub_unit_fpga_private(void)
 }
 EXPORT_SYMBOL(get_ahub_unit_fpga_private);
 
-void ahub_unit_fpga_init(void)
+void ahub_unit_fpga_init_t210(void)
 {
 	unsigned int i;
 
+	t210_chip = true;
 	ahub_unit_fpga_private.ape_fpga_misc_base =
-		ioremap(NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_BASE, 256);
+		ioremap(T210_NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_BASE, 256);
 	for (i = 0; i < 5; i++)
 		ahub_unit_fpga_private.ape_fpga_misc_i2s_clk_base[i] =
-			ioremap(NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_BASE +
+			ioremap(T210_NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_BASE +
 				ahub_fpga_misc_i2s_offset[i], 0x4);
 	ahub_unit_fpga_private.ape_i2c_base =
-		ioremap(NV_ADDRESS_MAP_APE_AHUB_I2C_BASE, 512);
+		ioremap(T210_NV_ADDRESS_MAP_APE_AHUB_I2C_BASE, 512);
 	ahub_unit_fpga_private.pinmux_base =
 		ioremap(NV_ADDRESS_MAP_APB_PP_BASE, 512);
 	ahub_unit_fpga_private.ape_gpio_base =
@@ -1297,14 +1377,40 @@ void ahub_unit_fpga_init(void)
 	ahub_unit_fpga_private.rst_clk_base =
 		ioremap(NV_ADDRESS_MAP_PPSB_CLK_RST_BASE, 512);
 	ahub_unit_fpga_private.i2s5_cya_base =
-		ioremap(NV_ADDRESS_MAP_APE_I2S5_BASE + I2S5_CYA_0, 0x10);
+		ioremap(T210_NV_ADDRESS_MAP_APE_I2S5_BASE + I2S5_CYA_0, 0x10);
 }
-EXPORT_SYMBOL(ahub_unit_fpga_init);
+EXPORT_SYMBOL(ahub_unit_fpga_init_t210);
+
+void ahub_unit_fpga_init_t186(void)
+{
+	unsigned int i;
+
+	t186_chip = true;
+	ahub_unit_fpga_private.ape_fpga_misc_base =
+		ioremap(T186_NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_BASE, 256);
+	for (i = 0; i < 5; i++)
+		ahub_unit_fpga_private.ape_fpga_misc_i2s_clk_base[i] =
+			ioremap(T186_NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_BASE +
+				ahub_fpga_misc_i2s_offset[i], 0x4);
+	ahub_unit_fpga_private.ape_i2c_base =
+		ioremap(T186_NV_ADDRESS_MAP_APE_AHUB_I2C_BASE, 512);
+	ahub_unit_fpga_private.pinmux_base =
+		ioremap(NV_ADDRESS_MAP_APB_PP_BASE, 512);
+	ahub_unit_fpga_private.ape_gpio_base =
+		ioremap(NV_ADDRESS_MAP_APE_AHUB_GPIO_BASE, 256);
+	ahub_unit_fpga_private.rst_clk_base =
+		ioremap(NV_ADDRESS_MAP_PPSB_CLK_RST_BASE, 512);
+	ahub_unit_fpga_private.i2s5_cya_base =
+		ioremap(T186_NV_ADDRESS_MAP_APE_I2S5_BASE + I2S5_CYA_0, 0x10);
+}
+EXPORT_SYMBOL(ahub_unit_fpga_init_t186);
 
 void ahub_unit_fpga_deinit(void)
 {
 	unsigned int i;
 
+	t210_chip = false;
+	t186_chip = false;
 	iounmap(ahub_unit_fpga_private.ape_fpga_misc_base);
 	for (i = 0; i < 5; i++)
 		iounmap(ahub_unit_fpga_private.ape_fpga_misc_i2s_clk_base[i]);

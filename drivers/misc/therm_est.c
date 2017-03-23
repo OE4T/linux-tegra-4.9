@@ -1,7 +1,7 @@
 /*
  * drivers/misc/therm_est.c
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -155,7 +155,7 @@ static void therm_est_work_func(struct work_struct *work)
 
 	if (est->thz && ((est->cur_temp < est->low_limit) ||
 			(est->cur_temp >= est->high_limit))) {
-		thermal_zone_device_update(est->thz);
+		thermal_zone_device_update(est->thz, THERMAL_EVENT_UNSPECIFIED);
 		therm_est_update_limits(est);
 	}
 
@@ -193,7 +193,7 @@ static int therm_est_trip_update(void *of_data, int trip)
 {
 	struct therm_estimator *est = (struct therm_estimator *)of_data;
 
-	thermal_zone_device_update(est->thz);
+	thermal_zone_device_update(est->thz, THERMAL_EVENT_UNSPECIFIED);
 	therm_est_update_limits(est);
 
 	return 0;

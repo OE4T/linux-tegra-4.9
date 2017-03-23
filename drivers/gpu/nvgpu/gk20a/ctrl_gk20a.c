@@ -24,14 +24,7 @@
 #include <linux/delay.h>
 
 #include "gk20a.h"
-#include "gr_gk20a.h"
 #include "fence_gk20a.h"
-#include "regops_gk20a.h"
-
-#include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_fb_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_timer_gk20a.h>
-
 
 #define HZ_TO_MHZ(a) ((a > 0xF414F9CD7) ? 0xffff : (a >> 32) ? \
 	(u32) ((a * 0x10C8ULL) >> 32) : (u16) ((u32) a/MHZ))
@@ -342,47 +335,16 @@ static int nvgpu_gpu_ioctl_inval_icache(
 		struct gk20a *g,
 		struct nvgpu_gpu_inval_icache_args *args)
 {
-
-	int err = 0;
-	u32	cache_ctrl, regval;
 	struct channel_gk20a *ch;
-	struct nvgpu_dbg_gpu_reg_op ops;
+	int err;
 
 	ch = gk20a_get_channel_from_file(args->channel_fd);
 	if (!ch)
 		return -EINVAL;
 
-	ops.op	   = REGOP(READ_32);
-	ops.type   = REGOP(TYPE_GR_CTX);
-	ops.status = REGOP(STATUS_SUCCESS);
-	ops.value_hi	  = 0;
-	ops.and_n_mask_lo = 0;
-	ops.and_n_mask_hi = 0;
-	ops.offset	 = gr_pri_gpc0_gcc_dbg_r();
-
 	/* Take the global lock, since we'll be doing global regops */
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-
-	err = gr_gk20a_exec_ctx_ops(ch, &ops, 1, 0, 1);
-
-	regval = ops.value_lo;
-
-	if (!err) {
-		ops.op = REGOP(WRITE_32);
-		ops.value_lo = set_field(regval, gr_pri_gpcs_gcc_dbg_invalidate_m(), 1);
-		err = gr_gk20a_exec_ctx_ops(ch, &ops, 1, 1, 0);
-	}
-
-	if (err) {
-		gk20a_err(dev_from_gk20a(g), "Failed to access register\n");
-		goto end;
-	}
-
-	cache_ctrl = gk20a_readl(g, gr_pri_gpc0_tpc0_sm_cache_control_r());
-	cache_ctrl = set_field(cache_ctrl, gr_pri_gpcs_tpcs_sm_cache_control_invalidate_cache_m(), 1);
-	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_cache_control_r(), cache_ctrl);
-
-end:
+	err = g->ops.gr.inval_icache(g, ch);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	return err;
 }
@@ -428,20 +390,10 @@ static int nvgpu_gpu_ioctl_set_debug_mode(
 
 static int nvgpu_gpu_ioctl_trigger_suspend(struct gk20a *g)
 {
-	int err = 0;
-	u32 dbgr_control0;
+	int err;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-	/* assert stop trigger. uniformity assumption: all SMs will have
-	 * the same state in dbg_control0. */
-	dbgr_control0 =
-		gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_control0_r());
-	dbgr_control0 |= gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_enable_f();
-
-	/* broadcast write */
-	gk20a_writel(g,
-		gr_gpcs_tpcs_sm_dbgr_control0_r(), dbgr_control0);
-
+	err = g->ops.gr.trigger_suspend(g);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	return err;
 }
@@ -451,41 +403,16 @@ static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 {
 	int err = 0;
 	struct warpstate *w_state;
-	struct gr_gk20a *gr = &g->gr;
-	u32 gpc, tpc, sm_count, sm_id, size;
-	u32 global_mask;
+	u32 sm_count, size;
 
 	sm_count = g->gr.gpc_count * g->gr.tpc_count;
 	size = sm_count * sizeof(struct warpstate);
 	w_state = kzalloc(size, GFP_KERNEL);
-
-    /* Wait for the SMs to reach full stop. This condition is:
-     * 1) All SMs with valid warps must be in the trap handler (SM_IN_TRAP_MODE)
-     * 2) All SMs in the trap handler must have equivalent VALID and PAUSED warp
-     *    masks.
-     */
-	global_mask = gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f()   |
-			  gr_gpc0_tpc0_sm_hww_global_esr_bpt_pause_pending_f() |
-			  gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f();
+	if (!w_state)
+		return -ENOMEM;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-
-	/* Lock down all SMs */
-	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
-
-		gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
-		tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
-
-		err = gk20a_gr_lock_down_sm(g, gpc, tpc, global_mask, false);
-
-		if (err) {
-			gk20a_err(dev_from_gk20a(g), "sm did not lock down!\n");
-			goto end;
-		}
-	}
-
-	/* Read the warp status */
-	g->ops.gr.bpt_reg_info(g, w_state);
+	g->ops.gr.wait_for_pause(g, w_state);
 
 	/* Copy to user space - pointed by "args->pwarpstate" */
 	if (copy_to_user((void __user *)(uintptr_t)args->pwarpstate, w_state, size)) {
@@ -493,7 +420,6 @@ static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 		err = -EFAULT;
 	}
 
-end:
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	kfree(w_state);
 	return err;
@@ -504,82 +430,29 @@ static int nvgpu_gpu_ioctl_resume_from_pause(struct gk20a *g)
 	int err = 0;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-
-	/* Clear the pause mask to tell the GPU we want to resume everyone */
-	gk20a_writel(g,
-		gr_gpcs_tpcs_sm_dbgr_bpt_pause_mask_r(), 0);
-
-	/* explicitly re-enable forwarding of SM interrupts upon any resume */
-	gk20a_writel(g, gr_gpcs_tpcs_tpccs_tpc_exception_en_r(),
-		gr_gpcs_tpcs_tpccs_tpc_exception_en_sm_enabled_f());
-
-	/* Now resume all sms, write a 0 to the stop trigger
-	 * then a 1 to the run trigger */
-	gk20a_resume_all_sms(g);
-
+	err = g->ops.gr.resume_from_pause(g);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	return err;
 }
 
 static int nvgpu_gpu_ioctl_clear_sm_errors(struct gk20a *g)
 {
-	int ret = 0;
-	u32 gpc_offset, tpc_offset, gpc, tpc;
-	struct gr_gk20a *gr = &g->gr;
-	u32 global_esr;
-	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
-	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
-
-	for (gpc = 0; gpc < gr->gpc_count; gpc++) {
-
-		gpc_offset = gpc_stride * gpc;
-
-		/* check if any tpc has an exception */
-		for (tpc = 0; tpc < gr->tpc_count; tpc++) {
-
-			tpc_offset = tpc_in_gpc_stride * tpc;
-
-			global_esr = gk20a_readl(g,
-					gr_gpc0_tpc0_sm_hww_global_esr_r() +
-					gpc_offset + tpc_offset);
-
-			/* clear the hwws, also causes tpc and gpc
-			 * exceptions to be cleared */
-			gk20a_gr_clear_sm_hww(g, gpc, tpc, global_esr);
-		}
-	}
-
-	return ret;
+	return g->ops.gr.clear_sm_errors(g);
 }
 
 static int nvgpu_gpu_ioctl_has_any_exception(
 		struct gk20a *g,
 		struct nvgpu_gpu_tpc_exception_en_status_args *args)
 {
-	int err = 0;
-	struct gr_gk20a *gr = &g->gr;
-	u32 sm_id, tpc_exception_en = 0;
-	u32 offset, regval, tpc_offset, gpc_offset;
-	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
-	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+	u32 tpc_exception_en;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-
-	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
-
-		tpc_offset = tpc_in_gpc_stride * g->gr.sm_to_cluster[sm_id].tpc_index;
-		gpc_offset = gpc_stride * g->gr.sm_to_cluster[sm_id].gpc_index;
-		offset = tpc_offset + gpc_offset;
-
-		regval = gk20a_readl(g,	gr_gpc0_tpc0_tpccs_tpc_exception_en_r() +
-								offset);
-		/* Each bit represents corresponding enablement state, bit 0 corrsponds to SM0 */
-		tpc_exception_en |= gr_gpc0_tpc0_tpccs_tpc_exception_en_sm_v(regval) << sm_id;
-	}
-
+	tpc_exception_en = g->ops.gr.tpc_enabled_exceptions(g);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
+
 	args->tpc_exception_en_sm_mask = tpc_exception_en;
-	return err;
+
+	return 0;
 }
 
 static int gk20a_ctrl_get_num_vsms(struct gk20a *g,
@@ -648,8 +521,6 @@ static inline int get_timestamps_zipper(struct gk20a *g,
 {
 	int err = 0;
 	unsigned int i = 0;
-	u32 gpu_timestamp_hi_new = 0;
-	u32 gpu_timestamp_hi_old = 0;
 
 	if (gk20a_busy(g)) {
 		gk20a_err(dev_from_gk20a(g), "GPU not powered on\n");
@@ -657,25 +528,12 @@ static inline int get_timestamps_zipper(struct gk20a *g,
 		goto end;
 	}
 
-	/* get zipper reads of gpu and cpu counter values */
-	gpu_timestamp_hi_old = gk20a_readl(g, timer_time_1_r());
 	for (i = 0; i < args->count; i++) {
-		u32 gpu_timestamp_lo = 0;
-		u32 gpu_timestamp_hi = 0;
+		err = g->ops.bus.read_ptimer(g, &args->samples[i].gpu_timestamp);
+		if (err)
+			return err;
 
-		gpu_timestamp_lo = gk20a_readl(g, timer_time_0_r());
 		args->samples[i].cpu_timestamp = get_cpu_timestamp();
-		rmb(); /* maintain zipper read order */
-		gpu_timestamp_hi_new = gk20a_readl(g, timer_time_1_r());
-
-		/* pick the appropriate gpu counter hi bits */
-		gpu_timestamp_hi = (gpu_timestamp_lo & (1L << 31)) ?
-			gpu_timestamp_hi_old : gpu_timestamp_hi_new;
-
-		args->samples[i].gpu_timestamp =
-			((u64)gpu_timestamp_hi << 32) | (u64)gpu_timestamp_lo;
-
-		gpu_timestamp_hi_old = gpu_timestamp_hi_new;
 	}
 
 end:

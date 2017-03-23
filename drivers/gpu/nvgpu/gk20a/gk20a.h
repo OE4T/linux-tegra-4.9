@@ -346,6 +346,12 @@ struct gpu_ops {
 					struct mem_desc *mem, u64 gpu_va);
 		void (*init_elcg_mode)(struct gk20a *g, u32 mode, u32 engine);
 		void (*load_tpc_mask)(struct gk20a *g);
+		int (*inval_icache)(struct gk20a *g, struct channel_gk20a *ch);
+		int (*trigger_suspend)(struct gk20a *g);
+		int (*wait_for_pause)(struct gk20a *g, struct warpstate *w_state);
+		int (*resume_from_pause)(struct gk20a *g);
+		int (*clear_sm_errors)(struct gk20a *g);
+		u32 (*tpc_enabled_exceptions)(struct gk20a *g);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

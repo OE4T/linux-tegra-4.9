@@ -9291,6 +9291,178 @@ static void gr_gk20a_split_ltc_broadcast_addr_stub(struct gk20a *g, u32 addr,
 {
 }
 
+int gr_gk20a_inval_icache(struct gk20a *g, struct channel_gk20a *ch)
+{
+	int err = 0;
+	u32	cache_ctrl, regval;
+	struct nvgpu_dbg_gpu_reg_op ops;
+
+	ops.op	   = REGOP(READ_32);
+	ops.type   = REGOP(TYPE_GR_CTX);
+	ops.status = REGOP(STATUS_SUCCESS);
+	ops.value_hi	  = 0;
+	ops.and_n_mask_lo = 0;
+	ops.and_n_mask_hi = 0;
+	ops.offset	 = gr_pri_gpc0_gcc_dbg_r();
+
+	err = gr_gk20a_exec_ctx_ops(ch, &ops, 1, 0, 1);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "Failed to read register");
+		return err;
+	}
+
+	regval = ops.value_lo;
+
+	ops.op = REGOP(WRITE_32);
+	ops.value_lo = set_field(regval, gr_pri_gpcs_gcc_dbg_invalidate_m(), 1);
+	err = gr_gk20a_exec_ctx_ops(ch, &ops, 1, 1, 0);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "Failed to write register");
+		return err;
+	}
+
+	ops.op	   = REGOP(READ_32);
+	ops.offset = gr_pri_gpc0_tpc0_sm_cache_control_r();
+	err = gr_gk20a_exec_ctx_ops(ch, &ops, 1, 0, 1);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "Failed to read register");
+		return err;
+	}
+
+	cache_ctrl = gk20a_readl(g, gr_pri_gpc0_tpc0_sm_cache_control_r());
+	cache_ctrl = set_field(cache_ctrl, gr_pri_gpcs_tpcs_sm_cache_control_invalidate_cache_m(), 1);
+	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_cache_control_r(), cache_ctrl);
+
+	return 0;
+}
+
+int gr_gk20a_trigger_suspend(struct gk20a *g)
+{
+	int err = 0;
+	u32 dbgr_control0;
+
+	/* assert stop trigger. uniformity assumption: all SMs will have
+	 * the same state in dbg_control0. */
+	dbgr_control0 =
+		gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_control0_r());
+	dbgr_control0 |= gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_enable_f();
+
+	/* broadcast write */
+	gk20a_writel(g,
+		gr_gpcs_tpcs_sm_dbgr_control0_r(), dbgr_control0);
+
+	return err;
+}
+
+int gr_gk20a_wait_for_pause(struct gk20a *g, struct warpstate *w_state)
+{
+	int err = 0;
+	struct gr_gk20a *gr = &g->gr;
+	u32 gpc, tpc, sm_id;
+	u32 global_mask;
+
+	/* Wait for the SMs to reach full stop. This condition is:
+	 * 1) All SMs with valid warps must be in the trap handler (SM_IN_TRAP_MODE)
+	 * 2) All SMs in the trap handler must have equivalent VALID and PAUSED warp
+	 *    masks.
+	*/
+	global_mask = gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f()   |
+			  gr_gpc0_tpc0_sm_hww_global_esr_bpt_pause_pending_f() |
+			  gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f();
+
+	/* Lock down all SMs */
+	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
+
+		gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
+		tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
+
+		err = gk20a_gr_lock_down_sm(g, gpc, tpc, global_mask, false);
+
+		if (err) {
+			gk20a_err(dev_from_gk20a(g), "sm did not lock down!\n");
+			return err;
+		}
+	}
+
+	/* Read the warp status */
+	g->ops.gr.bpt_reg_info(g, w_state);
+
+	return 0;
+}
+
+int gr_gk20a_resume_from_pause(struct gk20a *g)
+{
+	int err = 0;
+
+	/* Clear the pause mask to tell the GPU we want to resume everyone */
+	gk20a_writel(g,
+		gr_gpcs_tpcs_sm_dbgr_bpt_pause_mask_r(), 0);
+
+	/* explicitly re-enable forwarding of SM interrupts upon any resume */
+	gk20a_writel(g, gr_gpcs_tpcs_tpccs_tpc_exception_en_r(),
+		gr_gpcs_tpcs_tpccs_tpc_exception_en_sm_enabled_f());
+
+	/* Now resume all sms, write a 0 to the stop trigger
+	 * then a 1 to the run trigger */
+	gk20a_resume_all_sms(g);
+
+	return err;
+}
+
+int gr_gk20a_clear_sm_errors(struct gk20a *g)
+{
+	int ret = 0;
+	u32 gpc_offset, tpc_offset, gpc, tpc;
+	struct gr_gk20a *gr = &g->gr;
+	u32 global_esr;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+
+	for (gpc = 0; gpc < gr->gpc_count; gpc++) {
+
+		gpc_offset = gpc_stride * gpc;
+
+		/* check if any tpc has an exception */
+		for (tpc = 0; tpc < gr->tpc_count; tpc++) {
+
+			tpc_offset = tpc_in_gpc_stride * tpc;
+
+			global_esr = gk20a_readl(g,
+					gr_gpc0_tpc0_sm_hww_global_esr_r() +
+					gpc_offset + tpc_offset);
+
+			/* clear the hwws, also causes tpc and gpc
+			 * exceptions to be cleared */
+			gk20a_gr_clear_sm_hww(g, gpc, tpc, global_esr);
+		}
+	}
+
+	return ret;
+}
+
+u32 gr_gk20a_tpc_enabled_exceptions(struct gk20a *g)
+{
+	struct gr_gk20a *gr = &g->gr;
+	u32 sm_id, tpc_exception_en = 0;
+	u32 offset, regval, tpc_offset, gpc_offset;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+
+	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
+
+		tpc_offset = tpc_in_gpc_stride * g->gr.sm_to_cluster[sm_id].tpc_index;
+		gpc_offset = gpc_stride * g->gr.sm_to_cluster[sm_id].gpc_index;
+		offset = tpc_offset + gpc_offset;
+
+		regval = gk20a_readl(g,	gr_gpc0_tpc0_tpccs_tpc_exception_en_r() +
+								offset);
+		/* Each bit represents corresponding enablement state, bit 0 corrsponds to SM0 */
+		tpc_exception_en |= gr_gpc0_tpc0_tpccs_tpc_exception_en_sm_v(regval) << sm_id;
+	}
+
+	return tpc_exception_en;
+}
+
 void gk20a_init_gr_ops(struct gpu_ops *gops)
 {
 	gops->gr.access_smpc_reg = gr_gk20a_access_smpc_reg;
@@ -9376,4 +9548,10 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.write_zcull_ptr = gr_gk20a_write_zcull_ptr;
 	gops->gr.write_pm_ptr = gr_gk20a_write_pm_ptr;
 	gops->gr.init_elcg_mode = gr_gk20a_init_elcg_mode;
+	gops->gr.inval_icache = gr_gk20a_inval_icache;
+	gops->gr.trigger_suspend = gr_gk20a_trigger_suspend;
+	gops->gr.wait_for_pause = gr_gk20a_wait_for_pause;
+	gops->gr.resume_from_pause = gr_gk20a_resume_from_pause;
+	gops->gr.clear_sm_errors = gr_gk20a_clear_sm_errors;
+	gops->gr.tpc_enabled_exceptions = gr_gk20a_tpc_enabled_exceptions;
 }

@@ -1609,5 +1609,10 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.write_pm_ptr = gr_gk20a_write_pm_ptr;
 	gops->gr.init_elcg_mode = gr_gk20a_init_elcg_mode;
 	gops->gr.load_tpc_mask = gr_gm20b_load_tpc_mask;
-
+	gops->gr.inval_icache = gr_gk20a_inval_icache;
+	gops->gr.trigger_suspend = gr_gk20a_trigger_suspend;
+	gops->gr.wait_for_pause = gr_gk20a_wait_for_pause;
+	gops->gr.resume_from_pause = gr_gk20a_resume_from_pause;
+	gops->gr.clear_sm_errors = gr_gk20a_clear_sm_errors;
+	gops->gr.tpc_enabled_exceptions = gr_gk20a_tpc_enabled_exceptions;
 }

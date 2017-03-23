@@ -30,6 +30,7 @@
 #include <linux/of_platform.h>
 #include <linux/dma-mapping.h>
 #include <linux/tegra_pm_domains.h>
+#include <linux/platform/tegra/tegra_mc.h>
 
 #include <soc/tegra/chip-id.h>
 
@@ -535,11 +536,11 @@ static int tsec_load_kfuse(struct platform_device *pdev)
 
 int nvhost_tsec_finalize_poweron(struct platform_device *dev)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	u32 timeout;
-	u32 offset;
 	int err = 0;
 	struct flcn *m;
+	struct mc_carveout_info inf;
+	u32 timeout, offset, gsc_base_addr;
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	err = nvhost_tsec_init_sw(dev);
 	if (err)
@@ -571,10 +572,18 @@ int nvhost_tsec_finalize_poweron(struct platform_device *dev)
 				     m->os.code_offset+TSEC_OS_START_OFFSET,
 				     TSEC_OS_START_OFFSET, true);
 
-
 	/* boot tsec */
 	host1x_writel(dev, flcn_bootvec_r(),
 			     flcn_bootvec_vec_f(TSEC_OS_START_OFFSET));
+
+	if (nvhost_is_210()) {
+		/* Populate DEBUGINFO with gsc carveout address */
+		mc_get_carveout_info(&inf, NULL, MC_SECURITY_CARVEOUT4);
+		gsc_base_addr =  inf.base >> 8;
+		host1x_writel(dev, flcn_debuginfo_r(), gsc_base_addr);
+	}
+
+	/* Run TSEC */
 	host1x_writel(dev, flcn_cpuctl_r(),
 			flcn_cpuctl_startcpu_true_f());
 

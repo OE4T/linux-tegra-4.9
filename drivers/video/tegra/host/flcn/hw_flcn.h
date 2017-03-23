@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -157,6 +157,10 @@ static inline u32 flcn_mailbox1_r(void)
 static inline u32 flcn_idlestate_r(void)
 {
 	return 0x0000104c;
+}
+static inline u32 flcn_debuginfo_r(void)
+{
+	return 0x00001094;
 }
 static inline u32 flcn_cgctl_r(void)
 {

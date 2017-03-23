@@ -19,7 +19,7 @@ config SND_SOC_TEGRA_VIRT_T210REF_PCM
 	depends on TEGRA_HV_MANAGER
 	depends on SND_SOC_TEGRA_ALT
 	select SND_SOC_TEGRA_VIRT_IVC_COMM_DEFS
-	select SND_SOC_TEGRA210_ADSP_ALT
+	select SND_SOC_TEGRA210_ADSP_ALT if TEGRA_NVADSP
 	help
 	  Say Y or M if you want to add support for Tegra210 para-virtualized PCM audio.
 	  The pcm driver exposes a number of playback and capture pcm interfaces. It uses

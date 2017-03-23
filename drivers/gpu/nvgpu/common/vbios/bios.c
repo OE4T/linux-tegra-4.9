@@ -65,20 +65,21 @@ struct bit {
 #define TOKEN_ID_VIRT_PTRS 0x56
 #define TOKEN_ID_MEMORY_PTRS 0x4D
 
+#define MEMORY_PTRS_V1 1
+#define MEMORY_PTRS_V2 2
 
-union memory_ptrs {
-	struct {
-		u8 rsvd0[2];
-		u8 mem_strap_data_count;
-		u16 mem_strap_xlat_tbl_ptr;
-		u8 rsvd1[8];
-	} v1 __packed;
-	struct {
-		u8 mem_strap_data_count;
-		u16 mem_strap_xlat_tbl_ptr;
-		u8 rsvd[14];
-	} v2 __packed;
-};
+struct memory_ptrs_v1 {
+	u8 rsvd0[2];
+	u8 mem_strap_data_count;
+	u16 mem_strap_xlat_tbl_ptr;
+	u8 rsvd1[8];
+} __packed;
+
+struct memory_ptrs_v2 {
+	u8 mem_strap_data_count;
+	u16 mem_strap_xlat_tbl_ptr;
+	u8 rsvd[14];
+} __packed;
 
 struct biosdata {
 	u32 version;
@@ -322,17 +323,25 @@ static void nvgpu_bios_parse_nvinit_ptrs(struct gk20a *g, int offset)
 
 static void nvgpu_bios_parse_memory_ptrs(struct gk20a *g, int offset, u8 version)
 {
-	union memory_ptrs memory_ptrs;
+	struct memory_ptrs_v1 v1;
+	struct memory_ptrs_v2 v2;
 
-	if ((version < 1) || (version > 2))
+	switch (version) {
+	case MEMORY_PTRS_V1:
+		memcpy(&v1, &g->bios.data[offset], sizeof(v1));
+		g->bios.mem_strap_data_count = v1.mem_strap_data_count;
+		g->bios.mem_strap_xlat_tbl_ptr = v1.mem_strap_xlat_tbl_ptr;
 		return;
-
-	memcpy(&memory_ptrs, &g->bios.data[offset], sizeof(memory_ptrs));
-
-	g->bios.mem_strap_data_count = (version > 1) ? memory_ptrs.v2.mem_strap_data_count :
-		memory_ptrs.v1.mem_strap_data_count;
-	g->bios.mem_strap_xlat_tbl_ptr = (version > 1) ? memory_ptrs.v2.mem_strap_xlat_tbl_ptr :
-		memory_ptrs.v1.mem_strap_xlat_tbl_ptr;
+	case MEMORY_PTRS_V2:
+		memcpy(&v2, &g->bios.data[offset], sizeof(v2));
+		g->bios.mem_strap_data_count = v2.mem_strap_data_count;
+		g->bios.mem_strap_xlat_tbl_ptr = v2.mem_strap_xlat_tbl_ptr;
+		return;
+	default:
+		gk20a_err(dev_from_gk20a(g),
+			"unknown vbios memory table version %x", version);
+		return;
+	}
 }
 
 static void nvgpu_bios_parse_devinit_appinfo(struct gk20a *g, int dmem_offset)

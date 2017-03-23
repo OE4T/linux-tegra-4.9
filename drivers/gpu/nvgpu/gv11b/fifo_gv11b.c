@@ -428,27 +428,40 @@ static int gv11b_fifo_poll_eng_ctx_status(struct gk20a *g, u32 id,
 				ctx_stat ==
 			 fifo_engine_status_ctx_status_ctxsw_save_v()) {
 
-			if (timeout_rc_type == PREEMPT_TIMEOUT_NORC) {
-			/* called from recovery, eng seems to be hung */
-				if (id == fifo_engine_status_id_v(eng_stat)) {
+			if (id == fifo_engine_status_id_v(eng_stat)) {
+				if (timeout_rc_type == PREEMPT_TIMEOUT_NORC) {
+				/* called from recovery, eng seems to be hung */
 					*reset_eng_bitmask |= BIT(engine_idx);
 					ret = 0;
 					break;
+				} else {
+					gk20a_dbg_info("wait preempt engine. "
+					"ctx_status (valid/save)=%u", ctx_stat);
 				}
+			} else {
+				/* context is not running on the engine */
+				ret = 0;
+				break;
 			}
 
 		} else if (ctx_stat ==
 			 fifo_engine_status_ctx_status_ctxsw_load_v()) {
 
-			if (timeout_rc_type == PREEMPT_TIMEOUT_NORC) {
-			/* called from recovery, eng seems to be hung */
-				if (id ==
-				 fifo_engine_status_next_id_v(eng_stat)) {
+			if (id == fifo_engine_status_next_id_v(eng_stat)) {
 
+				if (timeout_rc_type == PREEMPT_TIMEOUT_NORC) {
+				/* called from recovery, eng seems to be hung */
 					*reset_eng_bitmask |= BIT(engine_idx);
 					ret = 0;
 					break;
+				} else {
+					gk20a_dbg_info("wait preempt engine. "
+					"ctx_status (load)=%u", ctx_stat);
 				}
+			} else {
+				/* context is not running on the engine */
+				ret = 0;
+				break;
 			}
 
 		} else {

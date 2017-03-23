@@ -86,6 +86,28 @@ struct nvdla_submit_args {
 };
 
 /**
+ * struct nvdla_get_fw_ver_args strcture
+ *
+ * @version	Firmware version
+ *
+ */
+struct nvdla_get_fw_ver_args {
+	__u32 version;
+};
+
+/**
+ * struct nvdla_get_q_status_args strcture
+ *
+ * @id		queue id
+ * @fence	fence assigned to queue
+ *
+ */
+struct nvdla_get_q_status_args {
+	__u32 id;
+	__u64 fence;
+};
+
+/**
  * struct nvdla_mem_handle structure for memory handles
  *
  * @handle		handle to buffer allocated in userspace
@@ -180,8 +202,12 @@ struct nvdla_status_notify {
 	_IOW(NVHOST_NVDLA_IOCTL_MAGIC, 4, struct nvdla_submit_args)
 #define NVDLA_IOCTL_SET_QUEUE_STATUS \
 	_IOW(NVHOST_NVDLA_IOCTL_MAGIC, 5, struct nvdla_queue_status_args)
+#define NVDLA_IOCTL_GET_FIRMWARE_VERSION \
+	_IOWR(NVHOST_NVDLA_IOCTL_MAGIC, 6, struct nvdla_get_fw_ver_args)
+#define NVDLA_IOCTL_GET_QUEUE_STATUS \
+	_IOWR(NVHOST_NVDLA_IOCTL_MAGIC, 7, struct nvdla_get_q_status_args)
 #define NVDLA_IOCTL_LAST		\
-		_IOC_NR(NVDLA_IOCTL_SET_QUEUE_STATUS)
+		_IOC_NR(NVDLA_IOCTL_GET_QUEUE_STATUS)
 
 #define NVDLA_IOCTL_MAX_ARG_SIZE  \
 		sizeof(struct nvdla_pin_unpin_args)

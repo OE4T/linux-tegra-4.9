@@ -50,6 +50,30 @@ struct nvdla_private {
 	struct nvhost_buffers *buffers;
 };
 
+static int nvdla_get_fw_ver(struct nvdla_private *priv,
+			struct nvdla_get_fw_ver_args *args)
+{
+	struct platform_device *pdev = priv->pdev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
+	int err = 0;
+
+	nvdla_dbg_fn(pdev, "");
+
+	/* update fw_version if engine is not yet powered on */
+	err = nvhost_module_busy(pdev);
+	if (err)
+		return err;
+
+	args->version = nvdla_dev->fw_version;
+
+	nvdla_dbg_fn(pdev, "version returned[%u]", args->version);
+
+	nvhost_module_idle(pdev);
+
+	return 0;
+}
+
 static int nvdla_set_queue(struct nvdla_private *priv, void *args)
 {
 	struct nvdla_queue_status_args *queue_arg =
@@ -90,6 +114,45 @@ inval_input:
 inval_cmd:
 	return err;
 }
+
+static int nvdla_get_q_status(struct nvdla_private *priv, void *args)
+{
+	struct nvdla_get_q_status_args *queue_arg =
+			(struct nvdla_get_q_status_args *)args;
+	struct nvdla_fence __user *usr_fence =
+		(struct nvdla_fence __user *)(uintptr_t)queue_arg->fence;
+	struct platform_device *pdev = priv->pdev;
+	struct nvhost_queue *queue = priv->queue;
+	struct nvdla_fence fence = {0};
+	int err = 0;
+
+	nvdla_dbg_fn(pdev, "");
+
+	if (!queue) {
+		nvdla_dbg_err(pdev, "invalid queue\n");
+		err = -EINVAL;
+		goto inval_queue;
+	}
+
+	fence.syncpoint_index = queue->syncpt_id;
+	fence.syncpoint_value = nvhost_syncpt_read_maxval(pdev,
+						queue->syncpt_id);
+	nvdla_dbg_info(pdev, "syncpt_id[%u] val[%u]\n", fence.syncpoint_index, fence.syncpoint_value);
+
+        if (copy_to_user(usr_fence, &fence, sizeof(struct nvdla_fence))) {
+		err = -EFAULT;
+		nvdla_dbg_err(pdev, "failed to send fence");
+		goto fail_to_send_fence;
+	}
+	queue_arg->id = queue->id;
+
+	nvdla_dbg_fn(pdev, "done");
+
+inval_queue:
+fail_to_send_fence:
+	return err;
+}
+
 
 static int nvdla_pin(struct nvdla_private *priv, void *arg)
 {
@@ -678,6 +741,12 @@ static long nvdla_ioctl(struct file *file, unsigned int cmd,
 		break;
 	case NVDLA_IOCTL_SET_QUEUE_STATUS:
 		err = nvdla_set_queue(priv, (void *)buf);
+		break;
+	case NVDLA_IOCTL_GET_FIRMWARE_VERSION:
+		err = nvdla_get_fw_ver(priv, (void *)buf);
+		break;
+	case NVDLA_IOCTL_GET_QUEUE_STATUS:
+		err = nvdla_get_q_status(priv, (void *)buf);
 		break;
 	default:
 		nvdla_dbg_err(pdev, "invalid IOCTL CMD");

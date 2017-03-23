@@ -40,10 +40,7 @@ obj-$(CONFIG_TEGRA_WAKEUP_MONITOR)      += tegra_wakeup_monitor.o
 
 obj-y += powergate/
 
-ifeq ($(CONFIG_TEGRA_THERMAL_THROTTLE),y)
-ccflags-y += -I$(srctree)/arch/arm/mach-tegra
-obj-$(CONFIG_ARCH_TEGRA_21x_SOC)        += tegra_throttle.o
-endif
+obj-$(CONFIG_TEGRA_THERMAL_THROTTLE)        += tegra_throttle.o
 
 ifeq ($(CONFIG_CPU_FREQ),y)
 #obj-$(CONFIG_ARCH_TEGRA_21x_SOC)                  += cpu-tegra.o

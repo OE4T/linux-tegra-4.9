@@ -2240,7 +2240,7 @@ int tegra_nvdisp_powergate_partition(int pg_id)
 
 			pr_info("PD DISP%d index%d DOWN\n",
 					 i, nvdisp_pg[i].powergate_id);
-			ret = tegra_powergate_partition(
+			ret = tegra_powergate_partition_with_clk_off(
 						nvdisp_pg[i].powergate_id);
 			if (ret)
 				pr_err("Fail to powergate DISP%d\n", i);
@@ -2320,7 +2320,7 @@ int tegra_nvdisp_unpowergate_partition(int pg_id)
 		if (enable_disp[i] && (nvdisp_pg[i].ref_cnt++ == 0)) {
 			pr_info("PD DISP%d index%d UP\n",
 					i, nvdisp_pg[i].powergate_id);
-			ret = tegra_unpowergate_partition(
+			ret = tegra_unpowergate_partition_with_clk_on(
 						nvdisp_pg[i].powergate_id);
 			if (ret) {
 				pr_err("Fail to Unpowergate DISP%d\n", i);

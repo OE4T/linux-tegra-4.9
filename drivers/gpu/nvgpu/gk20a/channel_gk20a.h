@@ -18,13 +18,8 @@
 #ifndef CHANNEL_GK20A_H
 #define CHANNEL_GK20A_H
 
-#include <linux/log2.h>
-#include <linux/poll.h>
-#include <linux/semaphore.h>
-#include <linux/slab.h>
 #include <linux/stacktrace.h>
 #include <linux/wait.h>
-#include <uapi/linux/nvgpu.h>
 #include <nvgpu/list.h>
 
 #include <nvgpu/lock.h>
@@ -359,8 +354,13 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				bool force_need_sync_fence,
 				struct fifo_profile_gk20a *profile);
 
-int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
-			       struct nvgpu_alloc_gpfifo_ex_args *args);
+int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
+		unsigned int num_entries,
+		unsigned int num_inflight_jobs,
+		u32 flags);
+void gk20a_channel_free_error_notifiers(struct channel_gk20a *ch);
+void gk20a_channel_free_cycle_stats_buffer(struct channel_gk20a *ch);
+int gk20a_channel_free_cycle_stats_snapshot(struct channel_gk20a *ch);
 
 void gk20a_channel_timeout_restart_all_channels(struct gk20a *g);
 

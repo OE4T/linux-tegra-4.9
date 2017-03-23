@@ -23,8 +23,8 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
-#include "gk20a/channel_gk20a.h"
 #include "gk20a/tsg_gk20a.h"
+#include "ioctl_channel.h"
 #include "ioctl_ctrl.h"
 #include "ioctl_as.h"
 

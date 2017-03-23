@@ -19,6 +19,9 @@
 #include <linux/bitops.h>
 #include <linux/rculist.h>
 #include <linux/llist.h>
+#include <linux/uaccess.h>
+#include <linux/poll.h>
+#include <linux/atomic.h>
 
 #include <nvgpu/lock.h>
 #include <nvgpu/kmem.h>

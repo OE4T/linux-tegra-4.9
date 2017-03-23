@@ -22,6 +22,8 @@
 #include <linux/hashtable.h>
 #include <linux/debugfs.h>
 #include <linux/log2.h>
+#include <linux/uaccess.h>
+#include <linux/poll.h>
 #include <trace/events/gk20a.h>
 #include <uapi/linux/nvgpu.h>
 

@@ -17,6 +17,7 @@
 #include <linux/delay.h>
 #include <linux/kernel.h>
 #include <linux/debugfs.h>
+#include <linux/uaccess.h>
 
 #include "gk20a/gk20a.h"
 #include "gm206/bios_gm206.h"

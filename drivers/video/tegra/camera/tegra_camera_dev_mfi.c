@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/camera/tegra_camera_dev_mfi.c
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,7 +23,7 @@
 static LIST_HEAD(cmfidev_list);
 static DEFINE_MUTEX(cmfidev_mutex);
 
-int tegra_camera_dev_mfi_init(void)
+static int tegra_camera_dev_mfi_init(void)
 {
 	INIT_LIST_HEAD(&cmfidev_list);
 
@@ -258,6 +258,8 @@ int tegra_camera_dev_mfi_add_regmap(
 		new_cmfidev->regmap = regmap;
 		new_cmfidev->num_used = 0;
 		new_cmfidev->prev_num_used = 0;
+		if (list_empty(&cmfidev_list))
+			tegra_camera_dev_mfi_init();
 		list_add(&new_cmfidev->list, &cmfidev_list);
 	}
 

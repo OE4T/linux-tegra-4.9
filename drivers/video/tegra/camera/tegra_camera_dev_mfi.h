@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -50,7 +50,6 @@ struct mfi_cb_arg {
 	u8 vi_chan;
 };
 
-int tegra_camera_dev_mfi_init(void);
 void tegra_camera_dev_mfi_cb(void *stub);
 int tegra_camera_dev_mfi_clear(struct camera_mfi_dev *cmfidev);
 int tegra_camera_dev_mfi_wr_add(

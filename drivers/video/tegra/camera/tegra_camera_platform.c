@@ -530,7 +530,6 @@ static int tegra_camera_probe(struct platform_device *pdev)
 		}
 	}
 
-	tegra_camera_dev_mfi_init();
 	tegra_vi_register_mfi_cb(tegra_camera_dev_mfi_cb, NULL);
 
 	platform_set_drvdata(pdev, info);

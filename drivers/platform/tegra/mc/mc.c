@@ -120,6 +120,13 @@ int mc_get_carveout_info(struct mc_carveout_info *inf, int *nr,
 #else
 		return -ENODEV;
 #endif
+	case MC_SECURITY_CARVEOUT4:
+#ifdef MC_SECURITY_CARVEOUT4_BOM
+		MC_SECURITY_CARVEOUT(MC_SECURITY_CARVEOUT4, inf);
+		break;
+#else
+		return -ENODEV;
+#endif
 	default:
 		return -EINVAL;
 	}

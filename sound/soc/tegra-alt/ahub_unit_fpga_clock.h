@@ -1,7 +1,7 @@
 /*
  * ahub_unit_fpga_clock.h
  *
- * Copyright (c) 2013-2015, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,18 +77,17 @@
 #define NV_ADDRESS_MAP_APE_AHUB_FPGA_CAR_BASE		1882050560
 #define NV_ADDRESS_MAP_APE_AHUB_FPGA_CAR_LIMIT		1882054655
 #define NV_ADDRESS_MAP_APE_AHUB_FPGA_CAR_SIZE		4096
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
-#define NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_BASE		1882048512
-#define NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_LIMIT		1882048767
-#endif
+#define T210_NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_BASE		1882048512
+#define T186_NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_BASE             0x0290C800
+#define T210_NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_LIMIT		1882048767
+#define T186_NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_LIMIT            0x0290C8FF
 #define NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_SIZE		256
 
 #if SYSTEM_FPGA
-#define NV_ADDRESS_MAP_APE_AHUB_I2C_BASE			0x7000c000
+#define T210_NV_ADDRESS_MAP_APE_AHUB_I2C_BASE			0x7000c000
 #else
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
-#define NV_ADDRESS_MAP_APE_AHUB_I2C_BASE			1882047744
-#endif
+#define T210_NV_ADDRESS_MAP_APE_AHUB_I2C_BASE			1882047744
+#define T186_NV_ADDRESS_MAP_APE_AHUB_I2C_BASE        0x0290c500
 #define NV_ADDRESS_MAP_APE_AHUB_GPIO_BASE		0x702DC700
 #define APE_AHUB_GPIO_CNF_0	0x0
 #define APE_AHUB_GPIO_OE_0	0x10
@@ -101,10 +100,11 @@
 #define NV_ADDRESS_MAP_APB_PP_BASE				1879048192
 #define NV_ADDRESS_MAP_PPSB_CLK_RST_BASE			1610637312
 
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
-#define NV_ADDRESS_MAP_APE_I2S5_BASE                           0x702d1400
-#endif
+#define T210_NV_ADDRESS_MAP_APE_I2S5_BASE                           0x702d1400
+#define T186_NV_ADDRESS_MAP_APE_I2S5_BASE            0x02901400
 #define I2S5_CYA_0                                             0xb0
+#define APE_FPGA_MISC_CLK_SOURCE_DSPK1_0 0x6c
+#define APE_FPGA_MISC_CLK_SOURCE_DSPK2_0 0x70
 
 #define CDCE906_04_0960_MHz   0
 #define CDCE906_06_1440_MHz   1
@@ -464,9 +464,11 @@ void program_io_expander(void);
 void program_dmic_gpio(void);
 void program_dmic_clk(int dmic_clk);
 void SetMax9485(int freq);
-void ahub_unit_fpga_init(void);
+void ahub_unit_fpga_init_t210(void);
+void ahub_unit_fpga_init_t186(void);
 void ahub_unit_fpga_deinit(void);
 struct ahub_unit_fpga *get_ahub_unit_fpga_private(void);
+void program_dspk_clk(int dspk_clk);
 
 void OnAD1937CaptureAndPlayback(int mode,
 	int codec_data_format,

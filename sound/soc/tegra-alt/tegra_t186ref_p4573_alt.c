@@ -32,7 +32,6 @@
 #include "tegra_asoc_utils_alt.h"
 #include "tegra_asoc_machine_alt.h"
 #include "tegra_asoc_machine_alt_t18x.h"
-#include "tegra186_xbar_alt.h"
 
 #include "../codecs/rt5659.h"
 

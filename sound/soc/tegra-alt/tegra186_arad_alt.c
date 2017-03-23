@@ -404,18 +404,18 @@ static int tegra186_arad_put_prescalar(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-#define SOC_VALUE_ENUM_WIDE(xreg, shift, xmax, xtexts, xvalues) \
+#define ARAD_SOC_VALUE_ENUM_WIDE(xreg, shift, xmax, xtexts, xvalues) \
 {	.reg = xreg, .shift_l = shift, .shift_r = shift, \
 	.items = xmax, .texts = xtexts, .values = xvalues, \
 	.mask = xmax ? roundup_pow_of_two(xmax) - 1 : 0}
 
-#define SOC_VALUE_ENUM_WIDE_DECL(name, xreg, shift, \
+#define ARAD_SOC_VALUE_ENUM_WIDE_DECL(name, xreg, shift, \
 		xtexts, xvalues) \
-	struct soc_enum name = SOC_VALUE_ENUM_WIDE(xreg, shift, \
+	struct soc_enum name = ARAD_SOC_VALUE_ENUM_WIDE(xreg, shift, \
 					ARRAY_SIZE(xtexts), xtexts, xvalues)
 
 #define ARAD_MUX_ENUM_CTRL_DECL(ename, reg)             \
-	SOC_VALUE_ENUM_WIDE_DECL(ename##_enum, reg, 0,  \
+	ARAD_SOC_VALUE_ENUM_WIDE_DECL(ename##_enum, reg, 0,  \
 		tegra186_arad_mux_text, tegra186_arad_mux_value);
 
 static ARAD_MUX_ENUM_CTRL_DECL(numerator1,

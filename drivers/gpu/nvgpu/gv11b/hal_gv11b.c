@@ -26,6 +26,7 @@
 #include "gm20b/gr_gm20b.h"
 
 #include "hal_gv11b.h"
+#include "bus_gv11b.h"
 #include "gr_gv11b.h"
 #include "mc_gv11b.h"
 #include "ltc_gv11b.h"
@@ -186,7 +187,7 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->privsecurity = 0;
 	gops->securegpccs = 0;
 
-	gk20a_init_bus(gops);
+	gv11b_init_bus(gops);
 	gv11b_init_mc(gops);
 	gv11b_init_ltc(gops);
 	gv11b_init_gr(gops);

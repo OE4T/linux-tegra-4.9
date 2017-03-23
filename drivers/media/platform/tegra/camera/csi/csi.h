@@ -96,7 +96,9 @@ struct tegra_csi_device {
 	atomic_t power_ref;
 
 	struct dentry *debugdir;
-	atomic_t tpg_enabled;
+	struct mutex source_update;
+	int tpg_active;
+	int sensor_active;
 };
 
 /*
@@ -119,6 +121,7 @@ struct tegra_csi_channel {
 	unsigned int pg_mode;
 	struct camera_common_data *s_data;
 	unsigned int id;
+	atomic_t is_streaming;
 };
 
 static inline struct tegra_csi_channel *to_csi_chan(struct v4l2_subdev *subdev)

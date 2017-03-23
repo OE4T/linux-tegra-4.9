@@ -16,6 +16,9 @@
 #include "camera/vi/core.h"
 #include "mipical/mipi_cal.h"
 #include "nvcsi/nvcsi.h"
+#include "linux/nvhost_ioctl.h"
+
+#define DEFAULT_TPG_FREQ	102000000
 
 static void csi4_stream_write(struct tegra_csi_channel *chan,
 		unsigned int index, unsigned int addr, u32 val)
@@ -315,6 +318,14 @@ static void csi4_tpg_stop_streaming(struct tegra_csi_channel *chan,
 	csi4_stream_write(chan, csi_port, PP_EN_CTRL, 0);
 	csi4_stream_write(chan, csi_port, TPG_EN_0, 0);
 	csi4_stream_write(chan, csi_port, PG_CTRL, PG_DISABLE);
+
+	mutex_lock(&csi->source_update);
+	if (csi->tpg_active != 0) {
+		mutex_unlock(&csi->source_update);
+		return;
+	}
+	mutex_unlock(&csi->source_update);
+	nvhost_module_remove_client(csi->pdev, csi);
 }
 static int csi4_tpg_start_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num)
@@ -322,11 +333,23 @@ static int csi4_tpg_start_streaming(struct tegra_csi_channel *chan,
 	struct tegra_csi_port *port = &chan->ports[port_num];
 	struct tegra_csi_device *csi = chan->csi;
 	unsigned int val, csi_port, csi_lanes;
+	int ret = 0;
 
 	if (!port->core_format) {
 		dev_err(csi->dev, "Fail to find tegra video fmt");
 		return -EINVAL;
 	}
+
+	mutex_lock(&csi->source_update);
+	if (csi->tpg_active == 1) {
+		mutex_unlock(&csi->source_update);
+		ret = nvhost_module_add_client(csi->pdev, csi);
+		if (ret)
+			return ret;
+		nvhost_module_set_rate(csi->pdev, csi,
+				DEFAULT_TPG_FREQ, 0, NVHOST_CLOCK);
+	} else
+		mutex_unlock(&csi->source_update);
 
 	csi_port = port->num;
 	csi_lanes = port->lanes;

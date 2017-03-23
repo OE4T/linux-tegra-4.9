@@ -122,6 +122,35 @@ void tegra_csi_stop_streaming(struct tegra_csi_channel *chan,
 }
 EXPORT_SYMBOL(tegra_csi_stop_streaming);
 
+static int update_video_source(struct tegra_csi_device *csi, int on, int is_tpg)
+{
+	mutex_lock(&csi->source_update);
+	if (!on) {
+		if (is_tpg)
+			csi->tpg_active--;
+		else
+			csi->sensor_active--;
+		WARN_ON(csi->tpg_active < 0 || csi->sensor_active < 0);
+		goto stream_okay;
+	}
+	if (is_tpg && csi->tpg_active >= 0 && !csi->sensor_active) {
+		csi->tpg_active++;
+		goto stream_okay;
+	}
+	if (!is_tpg && csi->sensor_active >= 0 && !csi->tpg_active) {
+		csi->sensor_active++;
+		goto stream_okay;
+	}
+	mutex_unlock(&csi->source_update);
+	dev_err(csi->dev, "Request rejected for new %s stream\n",
+		is_tpg ? "tpg" : "sensor");
+	dev_err(csi->dev, "Active tpg streams %d, active sensor streams %d\n",
+			csi->tpg_active, csi->sensor_active);
+	return -EINVAL;
+stream_okay:
+	mutex_unlock(&csi->source_update);
+	return 0;
+}
 static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 {
 	struct tegra_csi_device *csi;
@@ -129,9 +158,14 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 	struct tegra_channel *tegra_chan = v4l2_get_subdev_hostdata(subdev);
 	int i, ret = 0;
 
+	if (atomic_read(&chan->is_streaming) == enable)
+		return 0;
 	csi = to_csi(subdev);
 	if (!csi)
 		return -EINVAL;
+	ret = update_video_source(csi, enable, chan->pg_mode);
+	if (ret)
+		return ret;
 	if (!chan->pg_mode) {
 		if (enable) {
 			tegra_mipi_bias_pad_enable();
@@ -139,17 +173,26 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 		} else
 			tegra_mipi_bias_pad_disable();
 	}
-	if (tegra_chan->bypass)
+	if (tegra_chan->bypass) {
+		atomic_set(&chan->is_streaming, enable);
 		return 0;
+	}
 
 	for (i = 0; i < tegra_chan->valid_ports; i++) {
 		if (enable) {
 			ret = tegra_csi_start_streaming(chan, i);
 			if (ret)
-				tegra_csi_stop_streaming(chan, i);
+				goto start_fail;
 		} else
 			tegra_csi_stop_streaming(chan, i);
 	}
+	atomic_set(&chan->is_streaming, enable);
+	return ret;
+start_fail:
+	update_video_source(csi, 0, chan->pg_mode);
+	for (i = 0; i < tegra_chan->valid_ports; i++)
+		tegra_csi_stop_streaming(chan, i);
+	tegra_mipi_bias_pad_disable();
 	return ret;
 }
 
@@ -553,6 +596,7 @@ static int tegra_csi_channel_init_one(struct tegra_csi_channel *chan)
 		return -EINVAL;
 	}
 
+	atomic_set(&chan->is_streaming, 0);
 	sd = &chan->subdev;
 	/* Initialize V4L2 subdevice and media entity */
 	v4l2_subdev_init(sd, &tegra_csi_ops);
@@ -746,8 +790,10 @@ int tegra_csi_media_controller_init(struct tegra_csi_device *csi,
 
 	csi->dev = &pdev->dev;
 	csi->pdev = pdev;
+	csi->tpg_active = 0;
+	csi->sensor_active = 0;
 	atomic_set(&csi->power_ref, 0);
-	atomic_set(&csi->tpg_enabled, 0);
+	mutex_init(&csi->source_update);
 	INIT_LIST_HEAD(&csi->csi_chans);
 	ret = csi_parse_dt(csi, pdev);
 	if (ret < 0)

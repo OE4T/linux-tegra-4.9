@@ -1,7 +1,7 @@
 /*
  * Tegra CSI2 device common APIs
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -185,8 +185,12 @@ static int tpg_clk_enable(struct tegra_csi_device *csi)
 {
 	int err = 0;
 
-	if (atomic_inc_return(&csi->tpg_enabled) != 1)
+	mutex_lock(&csi->source_update);
+	if (csi->tpg_active != 1) {
+		mutex_unlock(&csi->source_update);
 		return 0;
+	}
+	mutex_unlock(&csi->source_update);
 
 	clk_set_rate(csi->plld, TEGRA_CLOCK_TPG);
 	err = clk_prepare_enable(csi->plld);
@@ -211,8 +215,12 @@ static int tpg_clk_disable(struct tegra_csi_device *csi)
 {
 	int err = 0;
 
-	if (!atomic_dec_and_test(&csi->tpg_enabled))
+	mutex_lock(&csi->source_update);
+	if (csi->tpg_active != 0) {
+		mutex_unlock(&csi->source_update);
 		return 0;
+	}
+	mutex_unlock(&csi->source_update);
 	tegra210_csi_source_from_brick();
 	clk_disable_unprepare(csi->plld_dsi);
 	clk_disable_unprepare(csi->plld);

@@ -24,13 +24,13 @@
 #include "vi/vi_notify.h"
 
 #define DEFAULT_FRAMERATE	30
-#define DEFAULT_CSI_FREQ	204000000
 #define BPP_MEM		2
 #define MAX_VI_CHANNEL 12
 #define NUM_PPC		8
 #define VI_CSI_CLK_SCALE	110
 #define SOF_SYNCPT_IDX	0
 #define FE_SYNCPT_IDX	1
+#define PG_BITRATE	32
 
 void tegra_channel_queued_buf_done(struct tegra_channel *chan,
 					  enum vb2_buffer_state state);
@@ -770,8 +770,12 @@ static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 	if (on) {
 		/* for PG, using default frequence */
 		if (chan->pg_mode) {
-			csi_freq = DEFAULT_CSI_FREQ;
-			request_pixelrate = csi_freq * NUM_PPC;
+			ret = nvhost_module_get_rate(chan->vi->csi->pdev,
+				&csi_freq, 0);
+			if (ret)
+				return ret;
+			request_pixelrate = csi_freq * PG_BITRATE /
+				chan->fmtinfo->width;
 		} else {
 			/**
 			 * TODO: use real sensor pixelrate
@@ -794,7 +798,6 @@ static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 			return ret;
 		}
 	} else {
-		csi_freq = DEFAULT_CSI_FREQ;
 		ret = nvhost_module_set_rate(chan->vi->ndev, &chan->video, 0, 0,
 				NVHOST_PIXELRATE);
 		if (ret) {
@@ -803,12 +806,15 @@ static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 		}
 	}
 	if (chan->pg_mode)
-		chan->requested_kbyteps = (on > 0 ? 1 : -1) *
-			((long long)csi_freq * BPP_MEM * 110 / 100) / 1000;
+		chan->requested_kbyteps = on ?
+			(((long long)csi_freq * PG_BITRATE * BPP_MEM /
+			 chan->fmtinfo->width) / 1000) :
+			(-chan->requested_kbyteps);
 	else
-		chan->requested_kbyteps = (on > 0 ? 1 : -1) *
-		(((long long) chan->format.width * chan->format.height
-		* fie.interval.denominator * BPP_MEM) * 115 / 100) / 1000;
+		chan->requested_kbyteps = on ?
+		((((long long) chan->format.width * chan->format.height
+		* fie.interval.denominator * BPP_MEM) * 115 / 100) / 1000) :
+		(-chan->requested_kbyteps);
 
 	mutex_lock(&chan->vi->bw_update_lock);
 	chan->vi->aggregated_kbyteps += chan->requested_kbyteps;

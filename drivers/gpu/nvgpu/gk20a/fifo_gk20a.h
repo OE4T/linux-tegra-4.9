@@ -169,7 +169,7 @@ struct fifo_gk20a {
 	unsigned int used_channels;
 	struct channel_gk20a *channel;
 	/* zero-kref'd channels here */
-	struct list_head free_chs;
+	struct nvgpu_list_node free_chs;
 	struct nvgpu_mutex free_chs_mutex;
 	struct nvgpu_mutex gr_reset_mutex;
 

@@ -296,7 +296,7 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 
 	init_runlist(g, f);
 
-	INIT_LIST_HEAD(&f->free_chs);
+	nvgpu_init_list_node(&f->free_chs);
 	nvgpu_mutex_init(&f->free_chs_mutex);
 
 	for (chid = 0; chid < f->num_channels; chid++) {

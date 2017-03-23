@@ -935,7 +935,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 
 	init_runlist(g, f);
 
-	INIT_LIST_HEAD(&f->free_chs);
+	nvgpu_init_list_node(&f->free_chs);
 	nvgpu_mutex_init(&f->free_chs_mutex);
 
 	if (g->ops.mm.is_bar1_supported(g))

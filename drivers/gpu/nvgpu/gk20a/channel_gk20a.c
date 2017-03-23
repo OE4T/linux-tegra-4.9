@@ -92,10 +92,10 @@ static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f)
 	platform = gk20a_get_platform(f->g->dev);
 
 	nvgpu_mutex_acquire(&f->free_chs_mutex);
-	if (!list_empty(&f->free_chs)) {
-		ch = list_first_entry(&f->free_chs, struct channel_gk20a,
-				free_chs);
-		list_del(&ch->free_chs);
+	if (!nvgpu_list_empty(&f->free_chs)) {
+		ch = nvgpu_list_first_entry(&f->free_chs, channel_gk20a,
+							  free_chs);
+		nvgpu_list_del(&ch->free_chs);
 		WARN_ON(atomic_read(&ch->ref_count));
 		WARN_ON(ch->referenceable);
 		f->used_channels++;
@@ -120,7 +120,7 @@ static void free_channel(struct fifo_gk20a *f,
 	/* refcount is zero here and channel is in a freed/dead state */
 	nvgpu_mutex_acquire(&f->free_chs_mutex);
 	/* add to head to increase visibility of timing-related bugs */
-	list_add(&ch->free_chs, &f->free_chs);
+	nvgpu_list_add(&ch->free_chs, &f->free_chs);
 	f->used_channels--;
 	nvgpu_mutex_release(&f->free_chs_mutex);
 
@@ -3007,7 +3007,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	if (err)
 		goto fail_8;
 
-	list_add(&c->free_chs, &g->fifo.free_chs);
+	nvgpu_list_add(&c->free_chs, &g->fifo.free_chs);
 
 	return 0;
 

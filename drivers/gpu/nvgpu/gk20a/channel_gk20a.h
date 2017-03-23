@@ -25,6 +25,7 @@
 #include <linux/stacktrace.h>
 #include <linux/wait.h>
 #include <uapi/linux/nvgpu.h>
+#include <nvgpu/list.h>
 
 #include <nvgpu/lock.h>
 #include <nvgpu/timers.h>
@@ -157,7 +158,7 @@ struct channel_gk20a_ref_action {
 struct channel_gk20a {
 	struct gk20a *g; /* set only when channel is active */
 
-	struct list_head free_chs;
+	struct nvgpu_list_node free_chs;
 
 	struct nvgpu_spinlock ref_obtain_lock;
 	bool referenceable;
@@ -268,6 +269,13 @@ struct channel_gk20a {
 	u32 runlist_id;
 
 	bool is_privileged_channel;
+};
+
+static inline struct channel_gk20a *
+channel_gk20a_from_free_chs(struct nvgpu_list_node *node)
+{
+	return (struct channel_gk20a *)
+		   ((uintptr_t)node - offsetof(struct channel_gk20a, free_chs));
 };
 
 static inline bool gk20a_channel_as_bound(struct channel_gk20a *ch)

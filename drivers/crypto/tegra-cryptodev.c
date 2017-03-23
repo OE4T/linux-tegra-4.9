@@ -1174,4 +1174,4 @@ late_initcall(tegra_crypto_dev_init);
 
 MODULE_DESCRIPTION("Tegra AES hw device node.");
 MODULE_AUTHOR("NVIDIA Corporation");
-MODULE_LICENSE("GPLv2");
+MODULE_LICENSE("GPL v2");

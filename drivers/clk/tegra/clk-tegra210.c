@@ -1368,6 +1368,7 @@ static const struct pdiv_map pll_qlin_pdiv_to_hw[] = {
 	{ .pdiv = 24, .hw_val = 14 },
 	{ .pdiv = 30, .hw_val = 15 },
 	{ .pdiv = 32, .hw_val = 16 },
+	{ .pdiv =  0, },
 };
 
 static u32 pll_qlin_p_to_pdiv(u32 p, u32 *pdiv)
@@ -1397,6 +1398,7 @@ static const struct pdiv_map pll_expo_pdiv_to_hw[] = {
 	{ .pdiv =  32, .hw_val = 5 },
 	{ .pdiv =  64, .hw_val = 6 },
 	{ .pdiv = 128, .hw_val = 7 },
+	{ .pdiv =   0, },
 };
 
 static u32 pll_expo_p_to_pdiv(u32 p, u32 *pdiv)
@@ -1598,14 +1600,16 @@ static const struct clk_div_table pll_vco_post_div_table[] = {
 	{ .val =  4, .div =  5 },
 	{ .val =  5, .div =  6 },
 	{ .val =  6, .div =  8 },
-	{ .val =  7, .div = 10 },
-	{ .val =  8, .div = 12 },
-	{ .val =  9, .div = 16 },
-	{ .val = 10, .div = 12 },
+	{ .val =  7, .div =  9 },
+	{ .val =  8, .div = 10 },
+	{ .val =  9, .div = 12 },
+	{ .val = 10, .div = 15 },
 	{ .val = 11, .div = 16 },
-	{ .val = 12, .div = 20 },
-	{ .val = 13, .div = 24 },
-	{ .val = 14, .div = 32 },
+	{ .val = 12, .div = 18 },
+	{ .val = 13, .div = 20 },
+	{ .val = 14, .div = 24 },
+	{ .val = 15, .div = 30 },
+	{ .val = 16, .div = 32 },
 	{ .val =  0, .div =  0 },
 };
 

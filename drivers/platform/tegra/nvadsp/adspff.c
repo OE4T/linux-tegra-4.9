@@ -512,6 +512,7 @@ static int adspff_kthread_fn(void *data)
 {
 	int ret = 0;
 	struct adspff_kthread_msg *kmsg;
+	unsigned long flags;
 
 	while (1) {
 		if (kthread_should_stop())
@@ -541,7 +542,9 @@ static int adspff_kthread_fn(void *data)
 				pr_warn("adspff: kthread unsupported msg %d\n",
 					kmsg->msg_id);
 			}
+			spin_lock_irqsave(&adspff_lock, flags);
 			list_del(&kmsg->list);
+			spin_unlock_irqrestore(&adspff_lock, flags);
 			kfree(kmsg);
 		}
 	}

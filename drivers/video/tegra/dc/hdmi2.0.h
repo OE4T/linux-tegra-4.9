@@ -344,6 +344,11 @@ enum {
 	TEGRA_HDMI_BRICK_CLK = 2,
 };
 
+struct tmds_prod_pair {
+	int clk;           /* upper freq of a range. 0:end of the array */
+	const char *name;  /* prod-setting node name */
+};
+
 struct tegra_hdmi {
 	/*
 	 * The following "dpaux" and "sor" fields need to stay at the top of
@@ -401,6 +406,7 @@ struct tegra_hdmi {
 	int ddc_i2c_original_rate;
 	int irq;
 	struct tegra_prod *prod_list;
+	struct tmds_prod_pair *tmds_range;
 	int ddc_refcount;
 	struct mutex ddc_refcount_lock;
 	bool device_shutdown;

@@ -14,19 +14,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/highmem.h>
+#include <linux/uaccess.h>
 #include <linux/cdev.h>
 #include <linux/file.h>
 #include <linux/anon_inodes.h>
-#include <linux/nvgpu.h>
 #include <linux/bitops.h>
 #include <uapi/linux/nvgpu.h>
-#include <linux/delay.h>
 
 #include <nvgpu/kmem.h>
 
-#include "gk20a.h"
-#include "fence_gk20a.h"
+#include "ioctl_ctrl.h"
+#include "gk20a/gk20a.h"
+#include "gk20a/fence_gk20a.h"
 
 #define HZ_TO_MHZ(a) ((a > 0xF414F9CD7) ? 0xffff : (a >> 32) ? \
 	(u32) ((a * 0x10C8ULL) >> 32) : (u16) ((u32) a/MHZ))

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2010 Google, Inc
- * Copyright (c) 2014-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA Corporation. All rights reserved.
  *
  * Author:
  *	Colin Cross <ccross@google.com>
@@ -228,6 +228,7 @@ void tegra_pmc_fuse_control_ps18_latch_set(void);
 void tegra_pmc_fuse_control_ps18_latch_clear(void);
 void tegra_pmc_fuse_disable_mirroring(void);
 void tegra_pmc_fuse_enable_mirroring(void);
+bool tegra_pmc_fuse_is_redirection_enabled(void);
 
 /* Legacy APIs for IO DPD enable/disable */
 /* Tegra io dpd entry - for each supported driver */

@@ -196,7 +196,7 @@
 
 #define PMC_FUSE_CTRL                   0x450
 #define PMC_FUSE_CTRL_ENABLE_REDIRECTION	(1 << 0)
-#define PMC_FUSE_CTRL_DISABLE_REDIRECTION	(1 << 1)
+#define PMC_FUSE_CTRL_ENABLE_REDIRECTION_STICKY	(1 << 1)
 #define PMC_FUSE_CTRL_PS18_LATCH_SET    (1 << 8)
 #define PMC_FUSE_CTRL_PS18_LATCH_CLEAR  (1 << 9)
 
@@ -1510,6 +1510,18 @@ void tegra_pmc_fuse_enable_mirroring(void)
 	}
 }
 EXPORT_SYMBOL(tegra_pmc_fuse_enable_mirroring);
+
+bool tegra_pmc_fuse_is_redirection_enabled(void)
+{
+	u32 val;
+
+	val = tegra_pmc_readl(TEGRA_PMC_FUSE_CTRL);
+	if (val & PMC_FUSE_CTRL_ENABLE_REDIRECTION_STICKY)
+		return true;
+
+	return false;
+}
+EXPORT_SYMBOL(tegra_pmc_fuse_is_redirection_enabled);
 
 #ifdef CONFIG_PM_SLEEP
 static void tegra_pmc_remove_dpd_req(void)

@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/isomgr.c
  *
- * Copyright (c) 2012-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -326,8 +326,50 @@ static struct isoclient_info tegra18x_isoclients[] = {
 	},
 };
 
-static void isomgr_scatter(int client);
+static struct isoclient_info tegra19x_isoclients[] = {
+	{
+		.client = TEGRA_ISO_CLIENT_DISP_0,
+		.name = "disp_0",
+		.bwmgr_id = TEGRA_BWMGR_CLIENT_DISP0,
+	},
+	{
+		.client = TEGRA_ISO_CLIENT_DISP_1,
+		.name = "disp_1",
+		.bwmgr_id = TEGRA_BWMGR_CLIENT_DISP1,
+	},
+	{
+		.client = TEGRA_ISO_CLIENT_DISP_2,
+		.name = "disp_2",
+		.bwmgr_id = TEGRA_BWMGR_CLIENT_DISP2,
+	},
+	{
+		.client = TEGRA_ISO_CLIENT_ISP_A,
+		.name = "isp_a",
+		.bwmgr_id = TEGRA_BWMGR_CLIENT_ISPA,
+	},
+	{
+		.client = TEGRA_ISO_CLIENT_TEGRA_CAMERA,
+		.name = "camera",
+		.bwmgr_id = TEGRA_BWMGR_CLIENT_CAMERA,
+	},
+	{
+		.client = TEGRA_ISO_CLIENT_APE_ADMA,
+		.name = "ape_adma",
+		.bwmgr_id = TEGRA_BWMGR_CLIENT_APE_ADMA,
+	},
+	{
+		.client = TEGRA_ISO_CLIENT_EQOS,
+		.name = "eqos",
+		.bwmgr_id = TEGRA_BWMGR_CLIENT_EQOS,
+	},
+	/* This must be last entry*/
+	{
+		.client = TEGRA_ISO_CLIENT_COUNT,
+		.name = NULL,
+	},
+};
 
+static void isomgr_scatter(int client);
 
 #define ISOMGR_MAGIC  0x150A1C
 static struct isomgr_client {
@@ -444,6 +486,12 @@ static struct isoclient_info *get_iso_client_info(int *length)
 			else
 				isomgr_clients[i].limit_bw_percentage = 100;
 		}
+		break;
+	case TEGRA194:
+		cinfo = tegra19x_isoclients;
+		len = ARRAY_SIZE(tegra19x_isoclients);
+		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++)
+			isomgr_clients[i].limit_bw_percentage = 100;
 		break;
 	default:
 		cinfo = tegra_null_isoclients;

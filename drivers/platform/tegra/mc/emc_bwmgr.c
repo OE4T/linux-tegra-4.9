@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015 - 2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015 - 2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -18,6 +18,7 @@
 #include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/platform/tegra/isomgr.h>
 #include <linux/debugfs.h>
+#include <soc/tegra/chip-id.h>
 
 u8 bwmgr_dram_efficiency;
 u32 *bwmgr_dram_iso_eff_table;
@@ -421,6 +422,14 @@ int __init bwmgr_init(void)
 		pr_err("bwmgr: couldn't get emc clock max rate.\n");
 	} else
 		bwmgr.emc_max_rate = (unsigned long)round_rate;
+
+	/* On some pre-si platforms max rate is acquired via DT */
+	if (tegra_platform_is_sim() || tegra_platform_is_fpga()) {
+		if (of_property_read_u64(dn, "max_rate_Hz", (u64 *) &round_rate) == 0) {
+			pr_err("bwmgr: using max rate from device tree.\n");
+			bwmgr.emc_max_rate = round_rate;
+		}
+	}
 
 	for (i = 0; i < TEGRA_BWMGR_CLIENT_COUNT; i++)
 		purge_client(bwmgr.bwmgr_client + i);

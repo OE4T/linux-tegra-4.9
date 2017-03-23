@@ -75,10 +75,6 @@
 			<0x0 0x0010f000 0x0 0x1000>; /* Straps */
 	};
 
-	sdhci@3440000 {
-		status = "disabled";
-	};
-
 	sdhci@3460000 {
 		/delete-property/ nvidia,enable-hwcq;
 	};

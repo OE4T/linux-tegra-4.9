@@ -381,6 +381,16 @@ static void pva_task_write_surfaces(struct pva_task_surface *hw_surface,
 		hw_surface[i].plane_stride = surface[i].surface_stride;
 		hw_surface[i].num_planes = surface[i].depth;
 		hw_surface[i].layout = surface[i].layout;
+		hw_surface[i].block_height_log2 = surface[i].block_height_log2;
+
+		/* Set bit 39 for block linear surfaces in the address field.
+		*  This bit is used for indicating that memory subsystem should
+		*  convert the block linear format into common block linear format
+		*  that is used by other engines in Tegra. Thebit in itself is
+		*  dropped before making the address translation in SMMU.
+		*/
+		if (surface[i].layout == PVA_TASK_SURFACE_LAYOUT_BLOCK_LINEAR)
+			hw_surface[i].address |= PVA_BIT64(39);
 
 		/* Only DRAM is supported currently */
 		hw_surface[i].memory = 0;

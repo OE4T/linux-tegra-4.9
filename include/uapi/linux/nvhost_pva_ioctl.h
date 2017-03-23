@@ -1,7 +1,7 @@
 /*
  * Tegra PVA Driver ioctls
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -107,6 +107,7 @@ struct pva_status_handle {
  * @width: Width of the surface
  * @height: Height of the surface
  * @layout: Surface layout (pitch linear, block linear)
+ * @block_height_log2: Block height
  *
  * This structure defines a list of surfaces to be delivered for
  * PVA.
@@ -122,7 +123,8 @@ struct pva_surface {
 	__u32 depth;
 	__u32 width;
 	__u32 height;
-	__u32 layout;
+	__u16 layout;
+	__u16 block_height_log2;
 };
 
 /**

@@ -17,7 +17,7 @@
 #include <linux/trusty/trusty_ipc.h>
 #include <linux/ote_protocol.h>
 
-#define OTF_PORT_NAME		"com.nvidia.tos.otf"
+#define OTF_PORT_NAME		"com.nvidia.tos.74629d40-1378-4d17-94d0e0af5d861d88"
 #define OTF_REPROGRAM_KEYS	5
 
 void te_restore_keyslots(void)

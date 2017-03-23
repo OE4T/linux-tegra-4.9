@@ -1,7 +1,7 @@
 /*
  * drivers/misc/therm_fan_est.c
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -133,7 +133,8 @@ static void therm_fan_est_work_func(struct work_struct *work)
 		if (update_flag == true) {
 			pr_debug("%s, cur_temp: %ld, cur_trip_index: %d\n",
 				__func__, est->cur_temp, est->current_trip_index);
-			thermal_zone_device_update(est->thz);
+			thermal_zone_device_update(est->thz,
+						THERMAL_EVENT_UNSPECIFIED);
 		}
 		est->current_trip_index = trip_index - 1;
 	}

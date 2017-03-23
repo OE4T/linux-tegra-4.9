@@ -1,7 +1,7 @@
 /*
  * tegra_t186ref_alt.c - Tegra t186ref Machine driver
  *
- * Copyright (c) 2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -562,7 +562,7 @@ static int tegra_t186ref_driver_probe(struct platform_device *pdev)
 	int ret = 0, i, j;
 
 	/* TODO : Remove ahub_unit_fpga_init() on the silicon bringup */
-	ahub_unit_fpga_init();
+	ahub_unit_fpga_init_t186();
 
 	machine = devm_kzalloc(&pdev->dev, sizeof(struct tegra_t186ref),
 			       GFP_KERNEL);

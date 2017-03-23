@@ -39,7 +39,6 @@
 #include "tegra186_xbar_alt.h"
 #include "tegra186_dspk_alt.h"
 #include "ahub_unit_fpga_clock.h"
-#include "ahub_unit_fpga_clock_t18x.h"
 
 #define DRV_NAME "tegra186-dspk"
 

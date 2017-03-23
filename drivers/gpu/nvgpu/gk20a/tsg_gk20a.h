@@ -22,17 +22,10 @@
 
 struct channel_gk20a;
 struct gpu_ops;
-struct file;
 
 bool gk20a_is_channel_marked_as_tsg(struct channel_gk20a *ch);
-
-
-int gk20a_tsg_dev_release(struct inode *inode, struct file *filp);
-int gk20a_tsg_dev_open(struct inode *inode, struct file *filp);
+struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g);
 void gk20a_tsg_release(struct kref *ref);
-int gk20a_tsg_open(struct gk20a *g, struct file *filp);
-long gk20a_tsg_dev_ioctl(struct file *filp,
-			 unsigned int cmd, unsigned long arg);
 
 int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid);
 void gk20a_init_tsg_ops(struct gpu_ops *gops);
@@ -76,6 +69,8 @@ void gk20a_tsg_event_id_post_event(struct tsg_gk20a *tsg,
 				       int event_id);
 int gk20a_tsg_set_runlist_interleave(struct tsg_gk20a *tsg, u32 level);
 int gk20a_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice);
+int gk20a_tsg_set_priority(struct gk20a *g, struct tsg_gk20a *tsg,
+				u32 priority);
 
 
 #endif /* __TSG_GK20A_H_ */

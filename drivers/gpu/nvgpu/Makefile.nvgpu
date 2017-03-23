@@ -29,6 +29,7 @@ nvgpu-y := \
 	common/linux/ioctl_ctrl.o \
 	common/linux/ioctl_as.o \
 	common/linux/ioctl_channel.o \
+	common/linux/ioctl_tsg.o \
 	common/mm/nvgpu_allocator.o \
 	common/mm/bitmap_allocator.o \
 	common/mm/buddy_allocator.o \

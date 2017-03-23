@@ -24,6 +24,7 @@
 #include <nvgpu/kmem.h>
 
 #include "ioctl_ctrl.h"
+#include "ioctl_tsg.h"
 #include "gk20a/gk20a.h"
 #include "gk20a/fence_gk20a.h"
 
@@ -250,7 +251,7 @@ static int gk20a_ctrl_open_tsg(struct gk20a *g,
 		goto clean_up;
 	}
 
-	err = gk20a_tsg_open(g, file);
+	err = nvgpu_ioctl_tsg_open(g, file);
 	if (err)
 		goto clean_up_file;
 

@@ -23,10 +23,10 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
-#include "gk20a/tsg_gk20a.h"
 #include "ioctl_channel.h"
 #include "ioctl_ctrl.h"
 #include "ioctl_as.h"
+#include "ioctl_tsg.h"
 
 #define GK20A_NUM_CDEVS 7
 
@@ -89,12 +89,12 @@ static const struct file_operations gk20a_prof_ops = {
 
 static const struct file_operations gk20a_tsg_ops = {
 	.owner = THIS_MODULE,
-	.release = gk20a_tsg_dev_release,
-	.open = gk20a_tsg_dev_open,
+	.release = nvgpu_ioctl_tsg_dev_release,
+	.open = nvgpu_ioctl_tsg_dev_open,
 #ifdef CONFIG_COMPAT
-	.compat_ioctl = gk20a_tsg_dev_ioctl,
+	.compat_ioctl = nvgpu_ioctl_tsg_dev_ioctl,
 #endif
-	.unlocked_ioctl = gk20a_tsg_dev_ioctl,
+	.unlocked_ioctl = nvgpu_ioctl_tsg_dev_ioctl,
 };
 
 static const struct file_operations gk20a_ctxsw_ops = {

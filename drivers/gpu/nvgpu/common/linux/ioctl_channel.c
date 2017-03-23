@@ -31,6 +31,7 @@
 #include "gk20a/ctxsw_trace_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/fence_gk20a.h"
+#include "ioctl_channel.h"
 
 /*
  * Although channels do have pointers back to the gk20a struct that they were

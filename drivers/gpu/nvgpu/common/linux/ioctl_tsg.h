@@ -10,15 +10,17 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
-#ifndef __NVGPU_IOCTL_CHANNEL_H__
-#define __NVGPU_IOCTL_CHANNEL_H__
+#ifndef NVGPU_IOCTL_TSG_H
+#define NVGPU_IOCTL_TSG_H
 
-int gk20a_channel_open(struct inode *inode, struct file *filp);
-int gk20a_channel_release(struct inode *inode, struct file *filp);
-long gk20a_channel_ioctl(struct file *filp,
-	unsigned int cmd, unsigned long arg);
+struct inode;
+struct file;
+struct gk20a;
 
-extern const struct file_operations gk20a_event_id_ops;
-extern const struct file_operations gk20a_channel_ops;
+int nvgpu_ioctl_tsg_dev_release(struct inode *inode, struct file *filp);
+int nvgpu_ioctl_tsg_dev_open(struct inode *inode, struct file *filp);
+int nvgpu_ioctl_tsg_open(struct gk20a *g, struct file *filp);
+long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp,
+			       unsigned int cmd, unsigned long arg);
 
 #endif

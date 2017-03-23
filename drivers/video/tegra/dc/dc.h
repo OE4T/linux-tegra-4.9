@@ -931,6 +931,16 @@ struct tegra_dc_hdr {
 #define TEGRA_WIN_FMT_T_Y12___U12V12_N422R      102
 #define TEGRA_WIN_FMT_T_Y12___U12V12_N444	104
 
+/* Note: These values are not intended to be programmed directly into the
+ * DC_WIN_COLOR_DEPTH register. They only signal formats possible through
+ * additional parameters (mainly through the UV swap control).
+ *
+ * The values are chosen to prevent collisions with valid register values,
+ * while fitting into the features 4 32b words bitmap (max value: 127).
+ */
+#define TEGRA_WIN_FMT_T_Y10___U10V10_N420	127
+#define TEGRA_WIN_FMT_T_Y12___U12V12_N420	126
+
 struct tegra_fb_data {
 	int		win;
 

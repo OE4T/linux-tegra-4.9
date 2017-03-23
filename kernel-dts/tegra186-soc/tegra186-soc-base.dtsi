@@ -1691,7 +1691,7 @@
 	};
 
 	tegra_axbar: ahub {
-		compatible = "nvidia,tegra210-axbar";
+		compatible = "nvidia,tegra186-axbar";
 		power-domains = <&ape_pd>;
 		wakeup-disable;
 		reg = <0x0 0x02900800 0x0 0x800>;

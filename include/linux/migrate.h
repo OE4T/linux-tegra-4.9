@@ -44,6 +44,7 @@ extern void putback_movable_page(struct page *page);
 
 extern int migrate_prep(void);
 extern int migrate_prep_local(void);
+extern void migrate_page_states(struct page *newpage, struct page *page);
 extern void migrate_page_copy(struct page *newpage, struct page *page);
 extern int migrate_huge_page_move_mapping(struct address_space *mapping,
 				  struct page *newpage, struct page *page);
@@ -64,6 +65,10 @@ static inline int migrate_pages(struct list_head *l, new_page_t new,
 
 static inline int migrate_prep(void) { return -ENOSYS; }
 static inline int migrate_prep_local(void) { return -ENOSYS; }
+
+static inline void migrate_page_states(struct page *newpage, struct page *page)
+{
+}
 
 static inline void migrate_page_copy(struct page *newpage,
 				     struct page *page) {}

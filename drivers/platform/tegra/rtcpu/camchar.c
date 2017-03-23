@@ -63,7 +63,7 @@ static int tegra_camchar_open(struct inode *in, struct file *f)
 		return -EBUSY;
 
 	ret = tegra_ivc_channel_runtime_get(data->ch);
-	if (ret)
+	if (ret < 0)
 		return ret;
 
 	data->is_open = true;

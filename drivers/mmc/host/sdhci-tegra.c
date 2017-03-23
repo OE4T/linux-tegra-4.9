@@ -1305,6 +1305,15 @@ static void tegra_sdhci_init_pinctrl_info(struct device *dev,
 	}
 }
 
+static void tegra_sdhci_pre_regulator_config(struct sdhci_host *sdhci,
+	int vdd, bool flag)
+{
+	if (!vdd)
+		return;
+
+	tegra_sdhci_configure_e_input(sdhci, flag);
+}
+
 static const struct sdhci_ops tegra_sdhci_ops = {
 	.get_ro     = tegra_sdhci_get_ro,
 	.read_w     = tegra_sdhci_readw,
@@ -1329,6 +1338,7 @@ static const struct sdhci_ops tegra_sdhci_ops = {
 	.platform_resume = tegra_sdhci_post_resume,
 	.card_event = tegra_sdhci_card_event,
 	.dump_vendor_regs = tegra_sdhci_dump_vendor_regs,
+	.pre_regulator_config	= tegra_sdhci_pre_regulator_config,
 };
 
 static const struct sdhci_pltfm_data sdhci_tegra20_pdata = {

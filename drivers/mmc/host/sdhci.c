@@ -49,6 +49,9 @@ static unsigned int debug_quirks2;
 static void sdhci_finish_data(struct sdhci_host *);
 
 static void sdhci_enable_preset_value(struct sdhci_host *host, bool enable);
+static void sdhci_regulator_config_pre(struct mmc_host *mmc, int vdd,
+						bool flag);
+
 #ifdef CONFIG_PM
 static int sdhci_runtime_pm_get(struct sdhci_host *host);
 static int sdhci_runtime_pm_put(struct sdhci_host *host);
@@ -2059,6 +2062,7 @@ static int sdhci_start_signal_voltage_switch(struct mmc_host *mmc,
 
 	ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 
+	sdhci_regulator_config_pre(mmc, ios->vdd, true);
 	switch (ios->signal_voltage) {
 	case MMC_SIGNAL_VOLTAGE_330:
 		if (!(host->flags & SDHCI_SIGNALING_330))
@@ -2529,6 +2533,14 @@ static void sdhci_hs400_enhanced_strobe(struct mmc_host *mmc,
 		host->ops->hs400_enhanced_strobe(host, ios->enhanced_strobe);
 }
 
+static void sdhci_regulator_config_pre(struct mmc_host *mmc, int vdd, bool flag)
+{
+	struct sdhci_host *host = mmc_priv(mmc);
+
+	if (host->ops->pre_regulator_config)
+		host->ops->pre_regulator_config(host, vdd, flag);
+}
+
 static void sdhci_post_init(struct mmc_host *mmc)
 {
 	struct sdhci_host *host = mmc_priv(mmc);
@@ -2557,6 +2569,7 @@ static const struct mmc_host_ops sdhci_ops = {
 	.clear_cqe_intr	= sdhci_clear_cqe_interrupt,
 	.discard_cqe_task	= sdhci_cqe_task_discard_rq,
 	.enable_host_int	= sdhci_enable_host_interrupts,
+	.pre_regulator_config	= sdhci_regulator_config_pre,
 };
 
 /*****************************************************************************\
@@ -3775,6 +3788,7 @@ int sdhci_setup_host(struct sdhci_host *host)
 
 	/* If vqmmc regulator and no 1.8V signalling, then there's no UHS */
 	if (!IS_ERR(mmc->supply.vqmmc)) {
+		sdhci_regulator_config_pre(mmc, 1, true);
 		ret = regulator_enable(mmc->supply.vqmmc);
 		if (!regulator_is_supported_voltage(mmc->supply.vqmmc, 1700000,
 						    1950000))

@@ -1715,12 +1715,16 @@ int mmc_regulator_set_ocr(struct mmc_host *mmc,
 	if (vdd_bit) {
 		mmc_ocrbitnum_to_vdd(vdd_bit, &min_uV, &max_uV);
 
+		if (mmc->ops->pre_regulator_config)
+			mmc->ops->pre_regulator_config(mmc, vdd_bit, true);
 		result = regulator_set_voltage(supply, min_uV, max_uV);
 		if (result == 0 && !mmc->regulator_enabled) {
 			result = regulator_enable(supply);
 			if (!result)
 				mmc->regulator_enabled = true;
 		}
+		if (mmc->ops->pre_regulator_config)
+			mmc->ops->pre_regulator_config(mmc, vdd_bit, false);
 	} else if (mmc->regulator_enabled) {
 		result = regulator_disable(supply);
 		if (result == 0)

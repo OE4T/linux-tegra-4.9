@@ -181,6 +181,8 @@ struct mmc_host_ops {
 	void	(*clear_cqe_intr)(struct mmc_host *host, u32 intmask);
 	void	(*discard_cqe_task)(struct mmc_host *host, u8 tag, bool all);
 	void	(*enable_host_int)(struct mmc_host *host, bool enable);
+	void	(*pre_regulator_config)(struct mmc_host *host, int vdd,
+					bool flag);
 };
 
 struct mmc_card;

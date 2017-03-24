@@ -159,7 +159,7 @@ cpuid_feature_extract_field(u64 features, int field, bool sign)
 {
 	return (sign) ?
 		cpuid_feature_extract_signed_field(features, field) :
-		cpuid_feature_extract_unsigned_field(features, field);
+		(int)cpuid_feature_extract_unsigned_field(features, field);
 }
 
 static inline s64 arm64_ftr_value(const struct arm64_ftr_bits *ftrp, u64 val)

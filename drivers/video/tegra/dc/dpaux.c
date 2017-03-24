@@ -226,8 +226,15 @@ struct tegra_dc_dpaux_data *tegra_dpaux_init_data(struct tegra_dc *dc)
 	tegra_dpaux_get_name(dpaux_name, CHAR_BUF_SIZE_MAX, sor_num);
 
 	/* Find the DPAUX node in DT based on the SOR instance. */
-	np_dpaux = sor_num ? of_find_node_by_path(DPAUX1_NODE) :
-				of_find_node_by_path(DPAUX_NODE);
+	if (sor_num) {
+		/* Note: this is WAR until driver clean-up patches are merged */
+		np_dpaux = tegra_platform_is_vdk() ?
+			of_find_node_by_path("/host1x/dpaux@155D0000") :
+			of_find_node_by_path(DPAUX1_NODE);
+	} else {
+		np_dpaux = of_find_node_by_path(DPAUX_NODE);
+	}
+
 	if (!np_dpaux || ((!of_device_is_available(np_dpaux)) &&
 				(dc->out->type != TEGRA_DC_OUT_FAKE_DP))) {
 		dev_err(&dc->ndev->dev, "%s: no dpaux node found\n", __func__);
@@ -323,8 +330,14 @@ void tegra_dpaux_destroy_data(struct tegra_dc_dpaux_data *dpaux)
 
 	dc = dpaux->dc;
 	sor_num = tegra_dc_which_sor(dc);
-	np_dpaux = sor_num ? of_find_node_by_path(DPAUX1_NODE) :
-			of_find_node_by_path(DPAUX_NODE);
+	if (sor_num) {
+		/* Note: this is WAR until driver clean-up patches are merged */
+		np_dpaux = tegra_platform_is_vdk() ?
+			of_find_node_by_path("/host1x/dpaux@155D0000") :
+			of_find_node_by_path(DPAUX1_NODE);
+	} else {
+		np_dpaux = of_find_node_by_path(DPAUX_NODE);
+	}
 
 	dpaux->prod_list = NULL;
 	if (dpaux->rst)

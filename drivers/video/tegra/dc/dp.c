@@ -2009,10 +2009,17 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	int err;
 	u32 irq;
 	int dp_num = tegra_dc_which_sor(dc);
-	struct device_node *np_dp =
-		dp_num ? of_find_node_by_path(DPAUX1_NODE)
-		: of_find_node_by_path(DPAUX_NODE);
 	struct device_node *np_panel = NULL;
+	struct device_node *np_dp;
+
+	if (dp_num) {
+		/* Note: this is WAR until driver clean-up patches are merged */
+		np_dp = tegra_platform_is_vdk() ?
+			of_find_node_by_path("/host1x/dpaux@155D0000") :
+			of_find_node_by_path(DPAUX1_NODE);
+	} else {
+		np_dp = of_find_node_by_path(DPAUX_NODE);
+	}
 
 	if (!np_dp ||  ((!of_device_is_available(np_dp)) &&
 			(dc->out->type != TEGRA_DC_OUT_FAKE_DP))) {

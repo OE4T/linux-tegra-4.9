@@ -1880,6 +1880,20 @@ struct clk *tegra_clk_register_pll(const char *name, const char *parent_name,
 
 	pll_params->flags |= TEGRA_PLL_BYPASS;
 
+	if (pll_params->adjust_vco) {
+		unsigned long parent_rate;
+		struct clk *parent = __clk_lookup(parent_name);
+
+		if (!parent) {
+			WARN(1, "parent clk %s of %s must be registered 1st\n",
+				parent_name, name);
+			return ERR_PTR(-EINVAL);
+		}
+		parent_rate = clk_get_rate(parent);
+		pll_params->vco_min = pll_params->adjust_vco(pll_params,
+							     parent_rate);
+	}
+
 	pll = _tegra_init_pll(clk_base, pmc, pll_params, lock);
 	if (IS_ERR(pll))
 		return ERR_CAST(pll);

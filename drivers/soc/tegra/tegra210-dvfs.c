@@ -37,6 +37,7 @@
 
 static bool tegra_dvfs_cpu_disabled;
 static bool tegra_dvfs_core_disabled;
+static bool tegra_dvfs_gpu_disabled;
 static int cpu_millivolts[MAX_DVFS_FREQS];
 static int cpu_dfll_millivolts[MAX_DVFS_FREQS];
 static int cpu_lp_millivolts[MAX_DVFS_FREQS];
@@ -907,6 +908,22 @@ int tegra_dvfs_disable_cpu_set(const char *arg, const struct kernel_param *kp)
 	return 0;
 }
 
+int tegra_dvfs_disable_gpu_set(const char *arg, const struct kernel_param *kp)
+{
+	int ret;
+
+	ret = param_set_bool(arg, kp);
+	if (ret)
+		return ret;
+
+	if (tegra_dvfs_gpu_disabled)
+		tegra_dvfs_rail_disable(&tegra210_dvfs_rail_vdd_gpu);
+	else
+		tegra_dvfs_rail_enable(&tegra210_dvfs_rail_vdd_gpu);
+
+	return 0;
+}
+
 int tegra_dvfs_disable_get(char *buffer, const struct kernel_param *kp)
 {
 	return param_get_bool(buffer, kp);
@@ -922,10 +939,17 @@ static struct kernel_param_ops tegra_dvfs_disable_cpu_ops = {
 	.get = tegra_dvfs_disable_get,
 };
 
+static struct kernel_param_ops tegra_dvfs_disable_gpu_ops = {
+	.set = tegra_dvfs_disable_gpu_set,
+	.get = tegra_dvfs_disable_get,
+};
+
 module_param_cb(disable_core, &tegra_dvfs_disable_core_ops,
 	&tegra_dvfs_core_disabled, 0644);
 module_param_cb(disable_cpu, &tegra_dvfs_disable_cpu_ops,
 	&tegra_dvfs_cpu_disabled, 0644);
+module_param_cb(disable_gpu, &tegra_dvfs_disable_gpu_ops,
+	&tegra_dvfs_gpu_disabled, 0644);
 
 static void init_dvfs_one(struct dvfs *d, int max_freq_index)
 {

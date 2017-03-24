@@ -80,6 +80,7 @@ static int tegra_tj_thermal_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	int i, ret = 0, j = 0;
 	struct thermal_zone_device *tzd;
+	int temp;
 
 	struct tj *ptj = devm_kzalloc(dev, sizeof(*ptj), GFP_KERNEL);
 	if (IS_ERR_OR_NULL(ptj))
@@ -127,6 +128,19 @@ static int tegra_tj_thermal_probe(struct platform_device *pdev)
 		}
 		dev_info(dev, "found thermal zone %s + offset %d\n", tzd->type,
 				args.args[0]);
+
+		/*
+		 * To check if thermal sensor of thermal zone driver is already
+		 * initialized, need to check with error code -EINVAL.
+		 * get_temp call returns -EINVAL when thermal sensor driver is
+		 * not initialied.
+		 */
+		if (thermal_zone_get_temp(tzd, &temp) == -EINVAL) {
+			dev_info(dev, "%s driver not initialized.. Deferring the probe\n",
+					tzd->type);
+			return -EPROBE_DEFER;
+		}
+
 		ptj->tzs[i].tzd = tzd;
 		ptj->tzs[i].offset = args.args[0];
 		j++;

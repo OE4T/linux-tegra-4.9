@@ -41,93 +41,6 @@
 static bool is_switch_registered;
 #endif
 
-#if !defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_ARCH_TEGRA_18x_SOC)
-static atomic_t dap_ref_count[5];
-static const char *tegra_dap_group_names[4][4] = {
-	{"dap1_fs_pn0", "dap1_din_pn1", "dap1_dout_pn2", "dap1_sclk_pn3"},
-	{"dap2_fs_pa2", "dap2_din_pa4", "dap2_dout_pa5", "dap2_sclk_pa3"},
-	{"dap3_fs_pp0", "dap3_din_pp1", "dap3_dout_pp2", "dap3_sclk_pp3"},
-	{"dap4_fs_pp4", "dap4_din_pp5", "dap4_dout_pp6", "dap4_sclk_pp7"},
-};
-#define tegra_pinmux_driver "nvidia,tegra124-pinmux"
-
-static inline void tristate_dap(int dap_nr, int tristate)
-{
-	static struct pinctrl_dev *pinctrl_dev = NULL;
-	unsigned long config;
-	int i;
-	int ret;
-
-	if (!pinctrl_dev)
-		pinctrl_dev = pinctrl_get_dev_from_of_compatible(
-					tegra_pinmux_driver);
-	if (!pinctrl_dev) {
-		pr_err("%s(): Pincontrol for Tegra not found\n", __func__);
-		return;
-	}
-
-	config = TEGRA_PINCONF_PACK(TEGRA_PINCONF_PARAM_TRISTATE, tristate);
-	for (i = 0; i < 4; ++i) {
-		ret = pinctrl_set_config_for_group_name(pinctrl_dev,
-				tegra_dap_group_names[dap_nr][i], config);
-		if (ret < 0)
-			pr_err("%s(): Pinconfig for pin %s failed: %d\n",
-				__func__, tegra_dap_group_names[dap_nr][i],
-				ret);
-	}
-}
-
-#define TRISTATE_DAP_PORT(n) \
-static void tristate_dap_##n(bool tristate) \
-{ \
-	if (tristate) { \
-		if (atomic_dec_return(&dap_ref_count[n-1]) == 0) \
-			tristate_dap(n - 1, TEGRA_PIN_ENABLE);	\
-	} else { \
-		if (atomic_inc_return(&dap_ref_count[n-1]) == 1) \
-			tristate_dap(n - 1, TEGRA_PIN_DISABLE);	\
-	} \
-}
-
-TRISTATE_DAP_PORT(1)
-TRISTATE_DAP_PORT(2)
-/*I2S2 and I2S3 for other chips do not map to DAP3 and DAP4 (also
-these pinmux dont exist for other chips), they map to some
-other pinmux*/
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
-	TRISTATE_DAP_PORT(3)
-	TRISTATE_DAP_PORT(4)
-#endif
-
-int tegra_alt_asoc_utils_tristate_dap(int id, bool tristate)
-{
-	switch (id) {
-	case 0:
-		tristate_dap_1(tristate);
-		break;
-	case 1:
-		tristate_dap_2(tristate);
-		break;
-/*I2S2 and I2S3 for other chips do not map to DAP3 and DAP4 (also
-these pinmux dont exist for other chips), they map to some
-other pinmux*/
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
-	case 2:
-		tristate_dap_3(tristate);
-		break;
-	case 3:
-		tristate_dap_4(tristate);
-		break;
-#endif
-	default:
-		pr_warn("Invalid DAP port\n");
-		break;
-	}
-	return 0;
-}
-EXPORT_SYMBOL_GPL(tegra_alt_asoc_utils_tristate_dap);
-#endif
-
 struct clk *tegra_alt_asoc_utils_get_clk(struct device *dev,
 					 bool dev_id,
 					 const char *clk_name)
@@ -142,11 +55,7 @@ EXPORT_SYMBOL_GPL(tegra_alt_asoc_utils_get_clk);
 
 void tegra_alt_asoc_utils_clk_put(struct device *dev, struct clk *clk)
 {
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
-	clk_put(clk);
-#else
 	devm_clk_put(dev, clk);
-#endif
 }
 EXPORT_SYMBOL_GPL(tegra_alt_asoc_utils_clk_put);
 

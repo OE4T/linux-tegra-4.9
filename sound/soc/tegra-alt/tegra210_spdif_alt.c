@@ -171,14 +171,13 @@ static int tegra210_spdif_set_dai_sysclk(struct snd_soc_dai *dai,
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		if (dir == SND_SOC_CLOCK_OUT) {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 			ret = clk_set_parent(spdif->clk_spdif_out,
 						spdif->clk_pll_a_out0);
 			if (ret) {
 				dev_err(dev, "Can't set parent of SPDIF OUT clock\n");
 				return ret;
 			}
-#endif
+
 			ret = clk_set_rate(
 				spdif->clk_spdif_out, spdif_out_clock_rate);
 			if (ret) {
@@ -187,14 +186,13 @@ static int tegra210_spdif_set_dai_sysclk(struct snd_soc_dai *dai,
 				return ret;
 			}
 		} else {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 			ret = clk_set_parent(spdif->clk_spdif_in,
 						spdif->clk_pll_p_out0);
 			if (ret) {
 				dev_err(dev, "Can't set parent of SPDIF IN clock\n");
 				return ret;
 			}
-#endif
+
 			ret = clk_set_rate(
 				spdif->clk_spdif_in, spdif_in_clock_rate);
 			if (ret) {
@@ -474,7 +472,6 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 
 	spdif->soc_data = soc_data;
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 		spdif->clk_pll_a_out0 = devm_clk_get(&pdev->dev, "pll_a_out0");
 		if (IS_ERR(spdif->clk_pll_a_out0)) {
 			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
@@ -488,7 +485,7 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 			ret = PTR_ERR(spdif->clk_pll_p_out0);
 			goto err_spdif_plla_clk_put;
 		}
-#endif
+
 		spdif->clk_spdif_out = devm_clk_get(&pdev->dev, "spdif_out");
 		if (IS_ERR(spdif->clk_spdif_out)) {
 			dev_err(&pdev->dev, "Can't retrieve spdif clock\n");
@@ -615,13 +612,11 @@ err_spdif_out_clk_put:
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
 		devm_clk_put(&pdev->dev, spdif->clk_spdif_out);
 err_spdif_pllp_clk_put:
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
 		devm_clk_put(&pdev->dev, spdif->clk_pll_p_out0);
 err_spdif_plla_clk_put:
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
 		devm_clk_put(&pdev->dev, spdif->clk_pll_a_out0);
-#endif
 err:
 	return ret;
 }

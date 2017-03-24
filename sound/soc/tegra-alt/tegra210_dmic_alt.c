@@ -520,11 +520,8 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 			ret = PTR_ERR(dmic->clk_dmic);
 			goto err;
 		}
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
-		dmic->clk_pll_a_out0 = clk_get_sys(NULL, "pll_a_out0");
-#else
+
 		dmic->clk_pll_a_out0 = devm_clk_get(&pdev->dev, "pll_a_out0");
-#endif
 		if (IS_ERR_OR_NULL(dmic->clk_pll_a_out0)) {
 			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
 			ret = -ENOENT;

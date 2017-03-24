@@ -1191,7 +1191,7 @@ static ssize_t nvsr_dbg_read_write(struct file *file,
 	if (sizeof(buf) <= count)
 		return -EFAULT;
 
-	if (copy_from_user(buf, userbuf, sizeof(buf)))
+	if (copy_from_user(buf, userbuf, count))
 		return -EFAULT;
 
 	buf[count] = '\0';
@@ -1245,7 +1245,7 @@ static ssize_t nvsr_dbg_write_write(struct file *file,
 	if (sizeof(buf) <= count)
 		return -EFAULT;
 
-	if (copy_from_user(buf, userbuf, sizeof(buf)))
+	if (copy_from_user(buf, userbuf, count))
 		return -EFAULT;
 
 	buf[count] = '\0';

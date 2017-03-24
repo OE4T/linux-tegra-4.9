@@ -490,6 +490,9 @@ static ssize_t write_long_data_get_cmd(struct file *file,
 	char *token, *buffer, *orig_buffer;
 	u32 i, j, value;
 
+	if ((count <= 0) || (count > sizeof(long)))
+		return -EINVAL;
+
 	orig_buffer = kzalloc(count + 1, GFP_KERNEL);
 	if (!orig_buffer) {
 		dev_err(&dc->ndev->dev, "Not enough memory for buffer\n");

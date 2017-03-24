@@ -1389,6 +1389,7 @@ int gk20a_do_unidle(void);
 int __gk20a_do_idle(struct device *dev, bool force_reset);
 int __gk20a_do_unidle(struct device *dev);
 
+int gk20a_can_busy(struct gk20a *g);
 void gk20a_driver_start_unload(struct gk20a *g);
 int gk20a_wait_for_idle(struct device *dev);
 
@@ -1431,9 +1432,8 @@ extern struct class nvgpu_class;
 
 #define INTERFACE_NAME "nvhost%s-gpu"
 
-int gk20a_pm_init(struct device *dev);
-int gk20a_pm_finalize_poweron(struct device *dev);
-void gk20a_remove_support(struct gk20a *g);
+int gk20a_prepare_poweroff(struct gk20a *g);
+int gk20a_finalize_poweron(struct gk20a *g);
 
 static inline struct tsg_gk20a *tsg_gk20a_from_ch(struct channel_gk20a *ch)
 {
@@ -1475,9 +1475,5 @@ void gk20a_put(struct gk20a *g);
 #ifdef CONFIG_DEBUG_FS
 int gk20a_railgating_debugfs_init(struct device *dev);
 #endif
-
-int gk20a_secure_page_alloc(struct device *dev);
-void __iomem *gk20a_ioremap_resource(struct platform_device *dev, int i,
-					    struct resource **out);
 
 #endif /* GK20A_H */

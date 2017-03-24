@@ -23,6 +23,7 @@ endif
 obj-$(CONFIG_GK20A) := nvgpu.o
 
 nvgpu-y := \
+	common/linux/module.o \
 	common/linux/kmem.o \
 	common/linux/timers.o \
 	common/linux/ioctl.o \
@@ -34,13 +35,13 @@ nvgpu-y := \
 	common/linux/nvgpu_mem.o \
 	common/linux/dma.o \
 	common/linux/soc.o \
+	common/linux/driver_common.o \
 	common/mm/nvgpu_allocator.o \
 	common/mm/bitmap_allocator.o \
 	common/mm/buddy_allocator.o \
 	common/mm/page_allocator.o \
 	common/mm/lockless_allocator.o \
 	common/pramin.o \
-	common/nvgpu_common.o \
 	common/semaphore.o \
 	common/as.o \
 	common/rbtree.o \
@@ -105,7 +106,7 @@ nvgpu-y := \
 
 nvgpu-$(CONFIG_TEGRA_GK20A) += tegra/linux/platform_gk20a_tegra.o
 nvgpu-$(CONFIG_SYNC) += gk20a/sync_gk20a.o
-nvgpu-$(CONFIG_GK20A_PCI) += pci.o
+nvgpu-$(CONFIG_GK20A_PCI) += common/linux/pci.o
 
 nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	gk20a/platform_vgpu_tegra.o \

@@ -24,6 +24,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
 #include "clk/clk.h"
+#include "module.h"
 
 #include "pci.h"
 

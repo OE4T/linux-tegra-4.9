@@ -228,6 +228,74 @@ void gk20a_init_debug_ops(struct gpu_ops *gops)
 	gops->debug.show_dump = gk20a_debug_show_dump;
 }
 
+#ifdef CONFIG_DEBUG_FS
+static int railgate_residency_show(struct seq_file *s, void *data)
+{
+	struct device *dev = s->private;
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	struct gk20a *g = get_gk20a(dev);
+	unsigned long time_since_last_state_transition_ms;
+	unsigned long total_rail_gate_time_ms;
+	unsigned long total_rail_ungate_time_ms;
+
+	if (platform->is_railgated(dev)) {
+		time_since_last_state_transition_ms =
+				jiffies_to_msecs(jiffies -
+				g->pstats.last_rail_gate_complete);
+		total_rail_ungate_time_ms = g->pstats.total_rail_ungate_time_ms;
+		total_rail_gate_time_ms =
+					g->pstats.total_rail_gate_time_ms +
+					time_since_last_state_transition_ms;
+	} else {
+		time_since_last_state_transition_ms =
+				jiffies_to_msecs(jiffies -
+				g->pstats.last_rail_ungate_complete);
+		total_rail_gate_time_ms = g->pstats.total_rail_gate_time_ms;
+		total_rail_ungate_time_ms =
+					g->pstats.total_rail_ungate_time_ms +
+					time_since_last_state_transition_ms;
+	}
+
+	seq_printf(s, "Time with Rails Gated: %lu ms\n"
+			"Time with Rails UnGated: %lu ms\n"
+			"Total railgating cycles: %lu\n",
+			total_rail_gate_time_ms,
+			total_rail_ungate_time_ms,
+			g->pstats.railgating_cycle_count - 1);
+	return 0;
+
+}
+
+static int railgate_residency_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, railgate_residency_show, inode->i_private);
+}
+
+static const struct file_operations railgate_residency_fops = {
+	.open		= railgate_residency_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+int gk20a_railgating_debugfs_init(struct device *dev)
+{
+	struct dentry *d;
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+
+	if (!platform->can_railgate)
+		return 0;
+
+	d = debugfs_create_file(
+		"railgate_residency", S_IRUGO|S_IWUSR, platform->debugfs, dev,
+						&railgate_residency_fops);
+	if (!d)
+		return -ENOMEM;
+
+	return 0;
+}
+#endif
+
 void gk20a_debug_init(struct device *dev, const char *debugfs_symlink)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);

@@ -103,15 +103,6 @@ int gk20a_init_sim_support(struct platform_device *pdev)
 	struct gk20a *g = get_gk20a(dev);
 	u64 phys;
 
-	g->sim.g = g;
-	g->sim.regs = gk20a_ioremap_resource(pdev, GK20A_SIM_IORESOURCE_MEM,
-					     &g->sim.reg_mem);
-	if (IS_ERR(g->sim.regs)) {
-		nvgpu_err(g, "failed to remap gk20a sim regs\n");
-		err = PTR_ERR(g->sim.regs);
-		goto fail;
-	}
-
 	/* allocate sim event/msg buffers */
 	err = alloc_and_kmap_iopage(g, &g->sim.send_bfr.kvaddr,
 				    &g->sim.send_bfr.phys,

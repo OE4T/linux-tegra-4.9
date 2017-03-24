@@ -16,7 +16,6 @@
 #include <linux/of_platform.h>
 #include <linux/nvhost.h>
 #include <linux/debugfs.h>
-#include <linux/platform_data/tegra_edp.h>
 #include <linux/dma-buf.h>
 #include <linux/nvmap.h>
 #include <linux/reset.h>

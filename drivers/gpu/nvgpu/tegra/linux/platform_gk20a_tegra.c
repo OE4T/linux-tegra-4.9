@@ -26,8 +26,9 @@
 #include <linux/dma-attrs.h>
 #include <linux/nvmap.h>
 #include <linux/reset.h>
+#if defined(CONFIG_TEGRA_CLK_FRAMEWORK) || defined(CONFIG_TEGRA_DVFS)
 #include <linux/tegra_soctherm.h>
-#include <linux/platform/tegra/clock.h>
+#endif
 #if defined(CONFIG_TEGRA_CLK_FRAMEWORK)
 #include <linux/platform/tegra/dvfs.h>
 #endif

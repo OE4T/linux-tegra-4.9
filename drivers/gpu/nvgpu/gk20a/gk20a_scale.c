@@ -22,7 +22,6 @@
 #include <linux/export.h>
 #include <linux/slab.h>
 #include <soc/tegra/chip-id.h>
-#include <linux/platform_data/tegra_edp.h>
 #include <linux/pm_qos.h>
 
 #include <governor.h>

@@ -2133,48 +2133,6 @@ u32 tegra_nvdisp_ihub_read(struct tegra_dc *dc, int win_number,
 	return ret_val;
 }
 
-struct tegra_fb_info *tegra_nvdisp_fb_register(struct platform_device *ndev,
-	struct tegra_dc *dc, struct tegra_fb_data *fb_data,
-	struct resource *fb_mem)
-{
-	void *virt_addr = NULL;
-
-	/* Check fb_data->win is valid before checking for valid window */
-	if (fb_data->win > -1) {
-		/* Assign the given window to current dc */
-		if (!tegra_dc_get_window(dc, fb_data->win)) {
-			dev_err(&ndev->dev, "%s, failed to get window %d for head %d\n",
-				__func__, fb_data->win, dc->ctrl_num);
-			return ERR_PTR(-ENOENT);
-		}
-
-	}
-
-	/* Allocate FBMem if not already allocated */
-	if (!fb_mem->start || !fb_mem->end) {
-		/* lines must be 64B aligned */
-		int stride = round_up(fb_data->xres *
-					fb_data->bits_per_pixel / 8, 64);
-		/* Add space to permit adjustment of start of buffer.
-		 * start of buffer requires 256B alignment. */
-		int fb_size = stride * fb_data->yres + 256;
-
-		if (!fb_size)
-			return ERR_PTR(-ENOENT);
-
-		virt_addr = dma_alloc_writecombine(&ndev->dev, fb_size,
-			&fb_mem->start, GFP_KERNEL);
-		if (!virt_addr) {
-			dev_err(&ndev->dev, "Failed to allocate FBMem\n");
-			return ERR_PTR(-ENOENT);
-		}
-		fb_mem->end = fb_mem->start + fb_size - 1;
-		dev_info(&ndev->dev, "Allocated %d as FBmem\n", fb_size);
-	}
-
-	return tegra_fb_register(ndev, dc, fb_data, fb_mem, virt_addr);
-}
-
 void tegra_nvdisp_enable_crc(struct tegra_dc *dc)
 {
 	mutex_lock(&dc->lock);

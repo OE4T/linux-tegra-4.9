@@ -342,6 +342,9 @@ struct tegra_audio_clk_info {
 	struct tegra_clk_pll_params *pll_params;
 	int clk_id;
 	char *parent;
+	struct clk *(*register_fn)(const char *name, const char *parent_name,
+		void __iomem *clk_base, void __iomem *pmc, unsigned long flags,
+		struct tegra_clk_pll_params *pll_params, spinlock_t *lock);
 };
 
 extern const struct clk_ops tegra_clk_pll_ops;

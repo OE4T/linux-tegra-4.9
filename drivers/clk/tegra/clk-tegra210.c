@@ -2414,7 +2414,8 @@ static struct tegra_devclk devclks[] __initdata = {
 
 static struct tegra_audio_clk_info tegra210_audio_plls[] = {
 	{ "pll_a", &pll_a_params, tegra_clk_pll_a, "pll_ref" },
-	{ "pll_a1", &pll_a1_params, tegra_clk_pll_a1, "pll_ref" },
+	{ "pll_a1", &pll_a1_params, tegra_clk_pll_a1, "pll_ref",
+		tegra_clk_register_pllc_tegra210 },
 };
 
 static struct tegra_pto_table ptodefs[] = {

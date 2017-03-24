@@ -193,9 +193,14 @@ void __init tegra_audio_clk_init(void __iomem *clk_base,
 
 		dt_clk = tegra_lookup_dt_id(info->clk_id, tegra_clks);
 		if (dt_clk) {
-			clk = tegra_clk_register_pll(info->name, info->parent,
-					clk_base, pmc_base, 0, info->pll_params,
-					NULL);
+			if (info->register_fn)
+				clk = info->register_fn(
+					info->name, info->parent, clk_base,
+					pmc_base, 0, info->pll_params, NULL);
+			else
+				clk = tegra_clk_register_pll(
+					info->name, info->parent, clk_base,
+					pmc_base, 0, info->pll_params, NULL);
 			*dt_clk = clk;
 		}
 	}

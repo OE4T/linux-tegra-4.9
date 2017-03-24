@@ -278,6 +278,20 @@ static phys_addr_t pgd_pgtable_alloc(void)
 	return __pa(ptr);
 }
 
+static phys_addr_t __init early_pgd_pgtable_alloc(void)
+{
+	phys_addr_t phys;
+	void *ptr;
+
+	phys = memblock_alloc(PAGE_SIZE, PAGE_SIZE);
+	BUG_ON(!phys);
+	ptr = __va(phys);
+	memset(ptr, 0, PAGE_SIZE);
+	/* Ensure the zeroed page is visible to the page table walker */
+	dsb(ishst);
+	return phys;
+}
+
 /*
  * This function can only be used to modify existing table entries,
  * without allocating new levels of table. Note that this permits the
@@ -291,7 +305,7 @@ void __init create_mapping_noalloc(phys_addr_t phys, unsigned long virt,
 			&phys, virt);
 		return;
 	}
-	__create_pgd_mapping(init_mm.pgd, phys, virt, size, prot, NULL, true);
+	__create_pgd_mapping(init_mm.pgd, phys, virt, size, prot, early_pgd_pgtable_alloc, true);
 }
 
 void __init create_pgd_mapping(struct mm_struct *mm, phys_addr_t phys,

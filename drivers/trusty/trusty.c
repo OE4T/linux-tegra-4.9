@@ -25,6 +25,10 @@
 #include <linux/trusty/smcall.h>
 #include <linux/trusty/sm_err.h>
 #include <linux/trusty/trusty.h>
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
+#include <../virt/tegra/syscalls.h>
+#include <linux/tegra-soc.h>
+#endif
 
 struct trusty_state;
 
@@ -63,6 +67,28 @@ struct trusty_state {
 #define SMC_ARG3		"r3"
 #define SMC_ARCH_EXTENSION	".arch_extension sec\n"
 #define SMC_REGISTERS_TRASHED	"ip"
+#endif
+
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
+int hyp_ipa_translate(uint64_t *ipa)
+{
+	int gid, ret = 0;
+	struct hyp_ipa_pa_info info;
+
+	if (is_tegra_hypervisor_mode()) {
+		ret = hyp_read_gid(&gid);
+		if (ret)
+			return ret;
+
+		memset(&info, 0, sizeof(info));
+		ret = hyp_read_ipa_pa_info(&info, gid, *ipa);
+
+		*ipa = info.base + info.offset;
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL(hyp_ipa_translate);
 #endif
 
 static inline ulong smc(ulong r0, ulong r1, ulong r2, ulong r3)

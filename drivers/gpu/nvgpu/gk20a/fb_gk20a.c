@@ -117,7 +117,7 @@ void gk20a_fb_tlb_invalidate(struct gk20a *g, struct mem_desc *pdb)
 
 	nvgpu_mutex_acquire(&g->mm.tlb_lock);
 
-	trace_gk20a_mm_tlb_invalidate(dev_name(g->dev));
+	trace_gk20a_mm_tlb_invalidate(g->name);
 
 	nvgpu_timeout_init(g, &timeout, 1000, NVGPU_TIMER_RETRY_TIMER);
 
@@ -153,7 +153,7 @@ void gk20a_fb_tlb_invalidate(struct gk20a *g, struct mem_desc *pdb)
 	} while (!nvgpu_timeout_expired_msg(&timeout,
 					 "wait mmu invalidate"));
 
-	trace_gk20a_mm_tlb_invalidate_done(dev_name(g->dev));
+	trace_gk20a_mm_tlb_invalidate_done(g->name);
 
 out:
 	nvgpu_mutex_release(&g->mm.tlb_lock);

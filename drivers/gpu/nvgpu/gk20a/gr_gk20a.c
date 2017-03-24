@@ -5525,7 +5525,7 @@ static int gr_gk20a_handle_sw_method(struct gk20a *g, u32 addr,
 {
 	gk20a_dbg_fn("");
 
-	trace_gr_gk20a_handle_sw_method(dev_name(g->dev));
+	trace_gr_gk20a_handle_sw_method(g->name);
 
 	if (class_num == KEPLER_COMPUTE_A) {
 		switch (offset << 2) {

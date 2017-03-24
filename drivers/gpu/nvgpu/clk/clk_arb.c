@@ -514,7 +514,7 @@ static int nvgpu_clk_arb_install_fd(struct gk20a *g,
 		goto fail;
 	}
 
-	snprintf(name, sizeof(name), "%s-clk-fd%d", dev_name(g->dev), fd);
+	snprintf(name, sizeof(name), "%s-clk-fd%d", g->name, fd);
 	file = anon_inode_getfile(name, fops, dev, O_RDWR);
 	if (IS_ERR(file)) {
 		err = PTR_ERR(file);

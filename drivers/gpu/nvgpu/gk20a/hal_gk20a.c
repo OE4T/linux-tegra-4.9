@@ -168,7 +168,7 @@ int gk20a_init_hal(struct gk20a *g)
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	gk20a_init_css_ops(gops);
 #endif
-	gops->name = "gk20a";
+	g->name = "gk20a";
 	gops->chip_init_gpu_characteristics = gk20a_init_gpu_characteristics;
 	gops->get_litter_value = gk20a_get_litter_value;
 

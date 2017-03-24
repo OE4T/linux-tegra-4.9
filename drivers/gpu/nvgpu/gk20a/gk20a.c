@@ -500,7 +500,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	if (g->power_on)
 		return 0;
 
-	trace_gk20a_finalize_poweron(dev_name(dev));
+	trace_gk20a_finalize_poweron(g->name);
 
 	/* Increment platform power refcount */
 	if (platform->busy) {
@@ -687,7 +687,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 
 	gk20a_scale_resume(dev);
 
-	trace_gk20a_finalize_poweron_done(dev_name(dev));
+	trace_gk20a_finalize_poweron_done(g->name);
 
 	if (platform->has_cde)
 		gk20a_init_cde_support(g);
@@ -793,8 +793,8 @@ static int gk20a_create_device(
 	if (IS_ERR(subdev)) {
 		err = PTR_ERR(dev);
 		cdev_del(cdev);
-		dev_err(dev, "failed to create %s device for %s\n",
-			cdev_name, dev_name(dev));
+		dev_err(dev, "failed to create %s device\n",
+			cdev_name);
 		return err;
 	}
 
@@ -971,7 +971,7 @@ static int gk20a_pm_unrailgate(struct device *dev)
 	g->pstats.railgating_cycle_count++;
 #endif
 
-	trace_gk20a_pm_unrailgate(dev_name(dev));
+	trace_gk20a_pm_unrailgate(g->name);
 
 	if (platform->unrailgate) {
 		nvgpu_mutex_acquire(&platform->railgate_lock);
@@ -1765,7 +1765,7 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->event_ioctl_nr_last = NVGPU_EVENT_IOCTL_LAST;
 	gpu->gpu_va_bit_count = 40;
 
-	strlcpy(gpu->chipname, g->ops.name, sizeof(gpu->chipname));
+	strlcpy(gpu->chipname, g->name, sizeof(gpu->chipname));
 	gpu->max_fbps_count = g->ops.gr.get_max_fbps_count(g);
 	gpu->fbp_en_mask = g->ops.gr.get_fbp_en_mask(g);
 	gpu->max_ltc_per_fbp =  g->ops.gr.get_max_ltc_per_fbp(g);

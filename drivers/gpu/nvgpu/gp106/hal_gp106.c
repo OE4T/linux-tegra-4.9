@@ -249,7 +249,7 @@ int gp106_init_hal(struct gk20a *g)
 	gp106_init_therm_ops(gops);
 	gp106_init_xve_ops(gops);
 
-	gops->name = "gp10x";
+	g->name = "gp10x";
 	gops->get_litter_value = gp106_get_litter_value;
 	gops->chip_init_gpu_characteristics = gp106_init_gpu_characteristics;
 	gops->gr_ctx.use_dma_for_fw_bootstrap = true;

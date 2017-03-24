@@ -427,7 +427,7 @@ int gk20a_tsg_open(struct gk20a *g, struct file *filp)
 
 	dev  = dev_from_gk20a(g);
 
-	gk20a_dbg(gpu_dbg_fn, "tsg: %s", dev_name(dev));
+	gk20a_dbg(gpu_dbg_fn, "tsg: %s", g->name);
 
 	priv = nvgpu_kmalloc(g, sizeof(*priv));
 	if (!priv) {

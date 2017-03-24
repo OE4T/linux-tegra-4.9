@@ -1619,7 +1619,7 @@ static int pll_reg_show(struct seq_file *s, void *data)
 	nvgpu_mutex_acquire(&g->clk.clk_mutex);
 	if (!g->clk.clk_hw_on) {
 		seq_printf(s, "%s powered down - no access to registers\n",
-			   dev_name(dev_from_gk20a(g)));
+			   g->name);
 		nvgpu_mutex_release(&g->clk.clk_mutex);
 		return 0;
 	}
@@ -1666,7 +1666,7 @@ static int pll_reg_raw_show(struct seq_file *s, void *data)
 	nvgpu_mutex_acquire(&g->clk.clk_mutex);
 	if (!g->clk.clk_hw_on) {
 		seq_printf(s, "%s powered down - no access to registers\n",
-			   dev_name(dev_from_gk20a(g)));
+			   g->name);
 		nvgpu_mutex_release(&g->clk.clk_mutex);
 		return 0;
 	}

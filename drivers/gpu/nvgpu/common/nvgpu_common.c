@@ -230,8 +230,8 @@ const struct firmware *nvgpu_request_firmware(struct gk20a *g,
 	if (!current->fs || !fw_name)
 		return NULL;
 
-	BUG_ON(!g->ops.name);
-	fw = do_request_firmware(dev, g->ops.name, fw_name, flags);
+	BUG_ON(!g->name);
+	fw = do_request_firmware(dev, g->name, fw_name, flags);
 
 #ifdef CONFIG_TEGRA_GK20A
 	/* TO BE REMOVED - Support loading from legacy SOC specific path. */

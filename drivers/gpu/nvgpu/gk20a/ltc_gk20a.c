@@ -116,7 +116,7 @@ static int gk20a_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 
 	gk20a_dbg_fn("");
 
-	trace_gk20a_ltc_cbc_ctrl_start(dev_name(g->dev), op, min, max);
+	trace_gk20a_ltc_cbc_ctrl_start(g->name, op, min, max);
 
 	if (gr->compbit_store.mem.size == 0)
 		return 0;
@@ -168,7 +168,7 @@ static int gk20a_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 		}
 	}
 out:
-	trace_gk20a_ltc_cbc_ctrl_done(dev_name(g->dev));
+	trace_gk20a_ltc_cbc_ctrl_done(g->name);
 	nvgpu_mutex_release(&g->mm.l2_op_lock);
 	return err;
 }

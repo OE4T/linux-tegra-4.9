@@ -198,7 +198,6 @@ static int gk20a_ctrl_alloc_as(
 		struct gk20a *g,
 		struct nvgpu_alloc_as_args *args)
 {
-	struct device *dev = g->dev;
 	struct gk20a_as_share *as_share;
 	int err;
 	int fd;
@@ -211,7 +210,7 @@ static int gk20a_ctrl_alloc_as(
 	fd = err;
 
 	name = kasprintf(GFP_KERNEL, "nvhost-%s-fd%d",
-			dev_name(dev), fd);
+			g->name, fd);
 
 	file = anon_inode_getfile(name, g->as.cdev.ops, NULL, O_RDWR);
 	kfree(name);
@@ -241,7 +240,6 @@ clean_up:
 static int gk20a_ctrl_open_tsg(struct gk20a *g,
 			       struct nvgpu_gpu_open_tsg_args *args)
 {
-	struct device *dev = g->dev;
 	int err;
 	int fd;
 	struct file *file;
@@ -253,7 +251,7 @@ static int gk20a_ctrl_open_tsg(struct gk20a *g,
 	fd = err;
 
 	name = kasprintf(GFP_KERNEL, "nvgpu-%s-tsg%d",
-			 dev_name(dev), fd);
+			 g->name, fd);
 
 	file = anon_inode_getfile(name, g->tsg.cdev.ops, NULL, O_RDWR);
 	kfree(name);

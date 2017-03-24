@@ -347,7 +347,6 @@ struct gpu_ops {
 		void (*init_elcg_mode)(struct gk20a *g, u32 mode, u32 engine);
 		void (*load_tpc_mask)(struct gk20a *g);
 	} gr;
-	const char *name;
 	struct {
 		void (*init_hw)(struct gk20a *g);
 		void (*init_fs_state)(struct gk20a *g);
@@ -894,6 +893,8 @@ struct gk20a {
 	struct resource *bar1_mem;
 	void __iomem *bar1;
 	void __iomem *bar1_saved;
+
+	const char *name;
 
 	bool gpu_reset_done;
 	bool power_on;

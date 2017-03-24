@@ -1245,7 +1245,7 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 		goto channel_release;
 	}
 
-	trace_gk20a_channel_release(dev_name(g->dev));
+	trace_gk20a_channel_release(g->name);
 
 	gk20a_channel_close(ch);
 	gk20a_idle(g);
@@ -1396,7 +1396,7 @@ static int __gk20a_channel_open(struct gk20a *g, struct file *filp, s32 runlist_
 	if (!g)
 		return -ENODEV;
 
-	trace_gk20a_channel_open(dev_name(g->dev));
+	trace_gk20a_channel_open(g->name);
 
 	priv = nvgpu_kzalloc(g, sizeof(*priv));
 	if (!priv) {
@@ -1463,7 +1463,7 @@ int gk20a_channel_open_ioctl(struct gk20a *g,
 	fd = err;
 
 	snprintf(name, sizeof(name), "nvhost-%s-fd%d",
-		 dev_name(g->dev), fd);
+		 g->name, fd);
 
 	file = anon_inode_getfile(name, g->channel.cdev.ops, NULL, O_RDWR);
 	if (IS_ERR(file)) {
@@ -2041,7 +2041,7 @@ static void trace_write_pushbuffer(struct channel_gk20a *c,
 		 */
 		for (i = 0; i < words; i += 128U) {
 			trace_gk20a_push_cmdbuf(
-				dev_name(c->g->dev),
+				c->g->name,
 				0,
 				min(words - i, 128U),
 				offset + i * sizeof(u32),
@@ -2442,7 +2442,7 @@ int nvgpu_channel_worker_init(struct gk20a *g)
 	INIT_LIST_HEAD(&g->channel_worker.items);
 	nvgpu_spinlock_init(&g->channel_worker.items_lock);
 	task = kthread_run(gk20a_channel_poll_worker, g,
-			"nvgpu_channel_poll_%s", dev_name(g->dev));
+			"nvgpu_channel_poll_%s", g->name);
 	if (IS_ERR(task)) {
 		gk20a_err(g->dev, "failed to start channel poller thread");
 		return PTR_ERR(task);
@@ -2753,7 +2753,7 @@ static void gk20a_submit_append_priv_cmdbuf(struct channel_gk20a *c,
 			&x, sizeof(x));
 
 	if (cmd->mem->aperture == APERTURE_SYSMEM)
-		trace_gk20a_push_cmdbuf(dev_name(g->dev), 0, cmd->size, 0,
+		trace_gk20a_push_cmdbuf(g->name, 0, cmd->size, 0,
 				cmd->mem->cpu_va + cmd->off * sizeof(u32));
 
 	c->gpfifo.put = (c->gpfifo.put + 1) & (c->gpfifo.entry_num - 1);
@@ -3147,7 +3147,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		}
 	}
 
-	trace_gk20a_channel_submit_gpfifo(dev_name(c->g->dev),
+	trace_gk20a_channel_submit_gpfifo(g->name,
 					  c->hw_chid,
 					  num_entries,
 					  flags,
@@ -3219,7 +3219,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	g->ops.fifo.userd_gp_put(g, c);
 
-	trace_gk20a_channel_submitted_gpfifo(dev_name(c->g->dev),
+	trace_gk20a_channel_submitted_gpfifo(g->name,
 				c->hw_chid,
 				num_entries,
 				flags,

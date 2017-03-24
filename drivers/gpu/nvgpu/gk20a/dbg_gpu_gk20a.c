@@ -123,7 +123,7 @@ static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 
 	dev = g->dev;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "dbg session: %s", dev_name(dev));
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "dbg session: %s", g->name);
 
 	err  = alloc_session(&dbg_session);
 	if (err)
@@ -476,7 +476,7 @@ static int dbg_unbind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	int err;
 
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_gpu_dbg, "%s fd=%d",
-		   dev_name(dbg_s->dev), args->channel_fd);
+		   g->name, args->channel_fd);
 
 	ch = gk20a_get_channel_from_file(args->channel_fd);
 	if (!ch) {
@@ -513,7 +513,7 @@ int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp)
 	struct gk20a *g = dbg_s->g;
 	struct dbg_profiler_object_data *prof_obj, *tmp_obj;
 
-	gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn, "%s", dev_name(dbg_s->dev));
+	gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn, "%s", g->name);
 
 	/* unbind channels */
 	dbg_unbind_all_channels_gk20a(dbg_s);
@@ -561,7 +561,7 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	struct dbg_session_data *session_data;
 
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_gpu_dbg, "%s fd=%d",
-		   dev_name(dbg_s->dev), args->channel_fd);
+		   g->name, args->channel_fd);
 
 	/* even though get_file_channel is doing this it releases it as well */
 	/* by holding it here we'll keep it from disappearing while the
@@ -577,7 +577,7 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 		return -EINVAL;
 	}
 
-	gk20a_dbg_fn("%s hwchid=%d", dev_name(dbg_s->dev), ch->hw_chid);
+	gk20a_dbg_fn("%s hwchid=%d", g->name, ch->hw_chid);
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	nvgpu_mutex_acquire(&ch->dbg_s_lock);
@@ -1262,7 +1262,7 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
 	 /* This function must be called with g->dbg_sessions_lock held */
 
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_gpu_dbg, "%s powergate mode = %d",
-		   dev_name(dbg_s->dev), powermode);
+		   g->name, powermode);
 
 	switch (powermode) {
 	case NVGPU_DBG_GPU_POWERGATE_MODE_DISABLE:
@@ -1352,7 +1352,7 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
 	}
 
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_gpu_dbg, "%s powergate mode = %d done",
-		   dev_name(dbg_s->dev), powermode);
+		   g->name, powermode);
 	return err;
 }
 
@@ -1362,7 +1362,7 @@ static int nvgpu_ioctl_powergate_gk20a(struct dbg_session_gk20a *dbg_s,
 	int err;
 	struct gk20a *g = dbg_s->g;
 	gk20a_dbg_fn("%s  powergate mode = %d",
-		      dev_name(dbg_s->dev), args->mode);
+		      g->name, args->mode);
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	err = g->ops.dbg_session_ops.dbg_set_powergate(dbg_s, args->mode);
@@ -1378,7 +1378,7 @@ static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	struct channel_gk20a *ch_gk20a;
 
 	gk20a_dbg_fn("%s smpc ctxsw mode = %d",
-		     dev_name(dbg_s->dev), args->mode);
+		     g->name, args->mode);
 
 	err = gk20a_busy(g);
 	if (err) {
@@ -1420,7 +1420,7 @@ static int nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	struct channel_gk20a *ch_gk20a;
 
 	gk20a_dbg_fn("%s pm ctxsw mode = %d",
-		     dev_name(dbg_s->dev), args->mode);
+		     g->name, args->mode);
 
 	/* Must have a valid reservation to enable/disable hwpm cxtsw.
 	 * Just print an error message for now, but eventually this should
@@ -1523,7 +1523,7 @@ static int nvgpu_ioctl_allocate_profiler_object(
 	struct gk20a *g = get_gk20a(dbg_s->dev);
 	struct dbg_profiler_object_data *prof_obj;
 
-	gk20a_dbg_fn("%s", dev_name(dbg_s->dev));
+	gk20a_dbg_fn("%s", g->name);
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
@@ -1567,7 +1567,7 @@ static int nvgpu_ioctl_free_profiler_object(
 	bool obj_found = false;
 
 	gk20a_dbg_fn("%s session_id = %d profiler_handle = %x",
-		     dev_name(dbg_s->dev), dbg_s->id, args->profiler_handle);
+		     g->name, dbg_s->id, args->profiler_handle);
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
@@ -1674,7 +1674,7 @@ static int nvgpu_profiler_reserve_acquire(struct dbg_session_gk20a *dbg_s,
 	struct dbg_profiler_object_data *prof_obj, *my_prof_obj;
 	int err = 0;
 
-	gk20a_dbg_fn("%s profiler_handle = %x", dev_name(dbg_s->dev), profiler_handle);
+	gk20a_dbg_fn("%s profiler_handle = %x", g->name, profiler_handle);
 
 	if (g->profiler_reservation_count < 0) {
 		gk20a_err(dev_from_gk20a(g), "Negative reservation count!");
@@ -1776,7 +1776,7 @@ static int nvgpu_profiler_reserve_release(struct dbg_session_gk20a *dbg_s,
 	struct dbg_profiler_object_data *prof_obj;
 	int err = 0;
 
-	gk20a_dbg_fn("%s profiler_handle = %x", dev_name(dbg_s->dev), profiler_handle);
+	gk20a_dbg_fn("%s profiler_handle = %x", g->name, profiler_handle);
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 

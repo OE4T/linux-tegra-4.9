@@ -3740,7 +3740,7 @@ void gk20a_dump_channel_status_ramfc(struct gk20a *g,
 	syncpointb = inst_mem[ram_fc_syncpointb_w()];
 
 	gk20a_debug_output(o, "%d-%s, pid %d, refs: %d: ", hw_chid,
-			dev_name(g->dev),
+			g->name,
 			ch_state->pid,
 			ch_state->refs);
 	gk20a_debug_output(o, "channel status: %s in use %s %s\n",
@@ -3799,7 +3799,7 @@ void gk20a_dump_pbdma_status(struct gk20a *g,
 		u32 status = gk20a_readl(g, fifo_pbdma_status_r(i));
 		u32 chan_status = fifo_pbdma_status_chan_status_v(status);
 
-		gk20a_debug_output(o, "%s pbdma %d: ", dev_name(g->dev), i);
+		gk20a_debug_output(o, "%s pbdma %d: ", g->name, i);
 		gk20a_debug_output(o,
 				"id: %d (%s), next_id: %d (%s) chan status: %s\n",
 				fifo_pbdma_status_id_v(status),
@@ -3832,7 +3832,7 @@ void gk20a_dump_eng_status(struct gk20a *g,
 		u32 status = gk20a_readl(g, fifo_engine_status_r(i));
 		u32 ctx_status = fifo_engine_status_ctx_status_v(status);
 
-		gk20a_debug_output(o, "%s eng %d: ", dev_name(g->dev), i);
+		gk20a_debug_output(o, "%s eng %d: ", g->name, i);
 		gk20a_debug_output(o,
 			"id: %d (%s), next_id: %d (%s), ctx status: %s ",
 			fifo_engine_status_id_v(status),

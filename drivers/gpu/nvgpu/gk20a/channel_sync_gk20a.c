@@ -354,7 +354,7 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 	sp->host1x_pdev = c->g->host1x_dev;
 
 	snprintf(syncpt_name, sizeof(syncpt_name),
-		"%s_%d", dev_name(c->g->dev), c->hw_chid);
+		"%s_%d", c->g->name, c->hw_chid);
 
 	sp->id = nvhost_get_syncpt_host_managed(sp->host1x_pdev,
 						c->hw_chid, syncpt_name);

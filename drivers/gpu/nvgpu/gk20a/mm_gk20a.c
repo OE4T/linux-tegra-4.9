@@ -5146,7 +5146,7 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 	   guarantee that writes are to DRAM. This will be a sysmembar internal
 	   to the L2. */
 
-	trace_gk20a_mm_fb_flush(dev_name(g->dev));
+	trace_gk20a_mm_fb_flush(g->name);
 
 	gk20a_writel(g, flush_fb_flush_r(),
 		flush_fb_flush_pending_busy_f());
@@ -5170,7 +5170,7 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 		ret = -EBUSY;
 	}
 
-	trace_gk20a_mm_fb_flush_done(dev_name(g->dev));
+	trace_gk20a_mm_fb_flush_done(g->name);
 
 	nvgpu_mutex_release(&mm->l2_op_lock);
 
@@ -5184,7 +5184,7 @@ static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 	u32 data;
 	struct nvgpu_timeout timeout;
 
-	trace_gk20a_mm_l2_invalidate(dev_name(g->dev));
+	trace_gk20a_mm_l2_invalidate(g->name);
 
 	nvgpu_timeout_init(g, &timeout, 200, NVGPU_TIMER_RETRY_TIMER);
 
@@ -5211,7 +5211,7 @@ static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 		gk20a_warn(dev_from_gk20a(g),
 			"l2_system_invalidate too many retries");
 
-	trace_gk20a_mm_l2_invalidate_done(dev_name(g->dev));
+	trace_gk20a_mm_l2_invalidate_done(g->name);
 }
 
 void gk20a_mm_l2_invalidate(struct gk20a *g)
@@ -5242,7 +5242,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 
 	nvgpu_mutex_acquire(&mm->l2_op_lock);
 
-	trace_gk20a_mm_l2_flush(dev_name(g->dev));
+	trace_gk20a_mm_l2_flush(g->name);
 
 	/* Flush all dirty lines from the L2 to DRAM. Lines are left in the L2
 	   as clean, so subsequent reads might hit in the L2. */
@@ -5263,7 +5263,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 	} while (!nvgpu_timeout_expired_msg(&timeout,
 					 "l2_flush_dirty too many retries"));
 
-	trace_gk20a_mm_l2_flush_done(dev_name(g->dev));
+	trace_gk20a_mm_l2_flush_done(g->name);
 
 	if (invalidate)
 		gk20a_mm_l2_invalidate_locked(g);

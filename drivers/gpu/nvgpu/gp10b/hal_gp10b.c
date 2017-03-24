@@ -253,7 +253,7 @@ int gp10b_init_hal(struct gk20a *g)
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	gk20a_init_css_ops(gops);
 #endif
-	gops->name = "gp10b";
+	g->name = "gp10b";
 	gops->chip_init_gpu_characteristics = gp10b_init_gpu_characteristics;
 	gops->get_litter_value = gp10b_get_litter_value;
 

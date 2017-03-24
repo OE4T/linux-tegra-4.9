@@ -211,6 +211,7 @@ bool tegra_is_bl_display_initialized(int instance)
 		return false;
 	}
 }
+EXPORT_SYMBOL(tegra_is_bl_display_initialized);
 
 void tegra_get_fb_resource(struct resource *fb_res, int instance)
 {

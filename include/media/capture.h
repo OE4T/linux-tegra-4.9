@@ -47,11 +47,12 @@ struct tegra_channel;
 
 struct vi_capture_setup {
 	uint32_t channel_flags;
+	uint32_t __pad_flags;
 	uint64_t vi_channel_mask;
 	uint32_t queue_depth;
 	uint32_t request_size;
 	uint32_t mem;
-	uint32_t __pad;
+	uint32_t __pad_mem;
 } __VI_CAPTURE_ALIGN;
 
 struct vi_capture_info {

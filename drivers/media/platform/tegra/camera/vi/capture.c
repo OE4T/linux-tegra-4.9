@@ -740,7 +740,7 @@ static int vi_capture_request_pin_and_reloc(struct tegra_channel *chan,
 				target_offset, mem);
 
 		if (mem != prev_mem) {
-			err = pin_memory(capture->rtcpu_dev,
+			err = pin_memory(&chan->vi->ndev->dev,
 					 mem, &unpins->data[pin_count]);
 			if (err < 0) {
 				unpins->num_unpins = pin_count;

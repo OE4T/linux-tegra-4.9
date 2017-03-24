@@ -293,6 +293,12 @@ void tegra_dsi_padctrl_shutdown(struct tegra_dc *dc)
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 	struct tegra_dsi_padctrl *dsi_padctrl = dsi->pad_ctrl;
 
+	if (!dsi_padctrl)
+		return;
+
+	if (dsi_padctrl->reset)
+		reset_control_put(dsi_padctrl->reset);
+
 	/* Power down all DSI pads */
 	tegra_dsi_padctrl_disable(dsi_padctrl);
 

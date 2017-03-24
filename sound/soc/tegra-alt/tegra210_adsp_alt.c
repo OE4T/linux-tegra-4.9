@@ -1672,7 +1672,7 @@ static int tegra210_adsp_pcm_hw_free(struct snd_pcm_substream *substream)
 }
 
 #ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
-static uint32_t tegra_adsp_get_admaif_id(
+static int32_t tegra_adsp_get_admaif_id(
 					struct tegra210_adsp *adsp,
 					uint32_t apm_out_in,
 					int stream)
@@ -1680,7 +1680,7 @@ static uint32_t tegra_adsp_get_admaif_id(
 	int i;
 	uint32_t src;
 	struct tegra210_adsp_app *app = NULL;
-	uint32_t ivc_msg_admaif_id = 0;
+	int32_t ivc_msg_admaif_id = 0;
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		src = apm_out_in;
@@ -1782,7 +1782,14 @@ static uint32_t tegra210_adsp_hv_pcm_trigger(
 					int cmd)
 {
 	int ret = 0;
-	uint32_t ivc_msg_admaif_id = 0;
+	int32_t ivc_msg_admaif_id = 0;
+	uint32_t source;
+
+	source = tegra210_adsp_get_source(adsp, apm_out_in);
+	/* return if this is playback request on NULL-SINK */
+	if (IS_NULL_SINK(adsp->pcm_path[source][SNDRV_PCM_STREAM_PLAYBACK]
+			.be_reg))
+		return 0;
 
 	ivc_msg_admaif_id =
 	tegra_adsp_get_admaif_id(adsp,
@@ -1992,6 +1999,19 @@ static void tegra210_adsp_pcm_free(struct snd_pcm *pcm)
 	}
 }
 
+static int tegra_adsp_get_connected_fe(struct tegra210_adsp *adsp,
+				uint32_t be_reg,
+				int stream)
+{
+	int val;
+
+	for (val = 1; val < (ADSP_FE_COUNT); val++) {
+		if (adsp->pcm_path[val][stream].be_reg == be_reg)
+			break;
+	}
+	return val;
+}
+
 #ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 static void tegra_adsp_set_admaif_id(
 				struct tegra210_adsp *adsp,
@@ -2030,18 +2050,7 @@ static void tegra_adsp_set_admaif_id(
 		}
 	}
 }
-static int tegra_adsp_get_connected_fe(struct tegra210_adsp *adsp,
-				uint32_t be_reg,
-				int stream)
-{
-	unsigned int val;
 
-	for (val = 1; val < (ADSP_FE_COUNT); val++) {
-		if (adsp->pcm_path[val][stream].be_reg == be_reg)
-			break;
-		}
-	return val;
-}
 static int tegra_adsp_admaif_ivc_set_cif(struct tegra210_adsp *adsp,
 				struct snd_pcm_hw_params *params,
 				uint32_t admaif_id,
@@ -2051,10 +2060,15 @@ static int tegra_adsp_admaif_ivc_set_cif(struct tegra210_adsp *adsp,
 {
 	int ret = 0;
 	uint32_t ivc_msg_admaif_id;
+	struct tegra210_adsp_app *app;
 	struct tegra210_virt_audio_cif cif_setting;
 	struct tegra210_virt_audio_cif *cif_conf = NULL;
+	struct tegra210_adsp_pcm_rtd *prtd = NULL;
+	struct snd_pcm_runtime *runtime = NULL;
 	struct nvaudio_ivc_msg  msg;
-	unsigned int value, channels, format, rate;
+	uint32_t value, channels = 2, format = SNDRV_PCM_FORMAT_S16_LE;
+	uint32_t rate = 48000, apm_in_reg, source;
+	uint32_t max_bytes = adsp_pcm_hardware.buffer_bytes_max;
 
 	adsp->hivc_client =
 			nvaudio_ivc_alloc_ctxt(adsp->dev);
@@ -2065,8 +2079,11 @@ static int tegra_adsp_admaif_ivc_set_cif(struct tegra210_adsp *adsp,
 		return ret;
 	}
 
-	channels = params_channels(params);
-	format = params_format(params);
+
+	if (params) {
+		channels = params_channels(params);
+		format = params_format(params);
+	}
 
 	/* overwrite channel, rate, format if we already have FE info */
 	if (stream == SNDRV_PCM_STREAM_CAPTURE) {
@@ -2079,6 +2096,21 @@ static int tegra_adsp_admaif_ivc_set_cif(struct tegra210_adsp *adsp,
 				[ret][SNDRV_PCM_STREAM_PLAYBACK].channels;
 			rate = adsp->pcm_path
 				[ret][SNDRV_PCM_STREAM_PLAYBACK].rate;
+		}
+
+		app = &adsp->apps[be_reg];
+		source = tegra210_adsp_get_source(adsp, app->reg);
+		app = &adsp->apps[source];
+		if (!IS_APM_OUT(app->reg))
+			return 0;
+		apm_in_reg = APM_IN_START + (source - APM_OUT_START);
+
+		if (adsp->apps[apm_in_reg].msg_handler
+			== tegra210_adsp_pcm_msg_handler) {
+			prtd = adsp->apps[apm_in_reg].private_data;
+			runtime = prtd->substream->runtime;
+			max_bytes = frames_to_bytes(runtime,
+					runtime->buffer_size);
 		}
 	} else {
 		ret = tegra_adsp_get_connected_fe(adsp, be_reg,
@@ -2106,21 +2138,29 @@ static int tegra_adsp_admaif_ivc_set_cif(struct tegra210_adsp *adsp,
 		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_8;
 		cif_conf->audio_bits = TEGRA210_AUDIOCIF_BITS_8;
 		adma_params->burst_size = channels/4;
+		adma_params->intr_dur =
+			1000 * max_bytes / (channels * rate);
 		break;
 	case SNDRV_PCM_FORMAT_S16_LE:
 		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_16;
 		cif_conf->audio_bits = TEGRA210_AUDIOCIF_BITS_16;
 		adma_params->burst_size = (channels * 2)/4;
+		adma_params->intr_dur =
+			1000 * max_bytes / (channels * rate * 2);
 		break;
 	case SNDRV_PCM_FORMAT_S24_LE:
 		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_24;
 		cif_conf->audio_bits = TEGRA210_AUDIOCIF_BITS_24;
 		adma_params->burst_size = (channels * 3)/4;
+		adma_params->intr_dur =
+			1000 * max_bytes / (channels * rate * 3);
 		break;
 	case SNDRV_PCM_FORMAT_S32_LE:
 		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_32;
 		cif_conf->audio_bits = TEGRA210_AUDIOCIF_BITS_32;
 		adma_params->burst_size = channels;
+		adma_params->intr_dur =
+			1000 * max_bytes / (channels * rate * 4);
 		break;
 	default:
 		dev_err(adsp->dev, "Wrong format!\n");
@@ -2218,6 +2258,146 @@ static int tegra210_adsp_fe_hw_params(struct snd_pcm_substream *substream,
 					= params_format(params);
 	}
 
+	return 0;
+}
+
+static int tegra210_adsp_null_sink_hw_params(struct snd_soc_dapm_widget *w,
+			struct snd_kcontrol *kcontrol, int event) {
+
+	struct snd_soc_platform *platform = snd_soc_dapm_to_platform(w->dapm);
+	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
+	struct tegra210_adsp_app *app;
+	nvfx_adma_init_params_t adma_params;
+	struct tegra210_adsp_pcm_rtd *prtd = NULL;
+	struct snd_pcm_runtime *runtime = NULL;
+	uint32_t channels = 2, format = SNDRV_PCM_FORMAT_S16_LE, rate = 48000;
+	int32_t source, be_reg = w->reg, apm_in_reg;
+	int  ret, num_params;
+	apm_msg_t apm_msg;
+	uint32_t max_bytes = adsp_pcm_hardware.buffer_bytes_max;
+
+	if (!adsp->adsp_started)
+		return 0;
+
+	memset(&adma_params, 0, sizeof(adma_params));
+	adma_params.mode = ADMA_MODE_CONTINUOUS;
+	adma_params.ahub_channel = 0;
+	adma_params.periods = 4;
+	adma_params.adma_ch_page = adsp->adma_ch_page;
+
+	app = &adsp->apps[be_reg];
+	source = tegra210_adsp_get_source(adsp, app->reg);
+	app = &adsp->apps[source];
+	if (!IS_APM_OUT(app->reg))
+		return 0;
+	apm_in_reg = APM_IN_START + (source - APM_OUT_START);
+
+	if (adsp->apps[apm_in_reg].msg_handler
+			== tegra210_adsp_pcm_msg_handler) {
+		prtd = adsp->apps[apm_in_reg].private_data;
+		runtime = prtd->substream->runtime;
+		max_bytes = frames_to_bytes(runtime, runtime->buffer_size);
+	}
+
+	source = tegra210_adsp_get_source(adsp, app->reg);
+	app = &adsp->apps[source];
+	if (!IS_ADMA(app->reg))
+		return 0;
+
+	ret = tegra_adsp_get_connected_fe(adsp, be_reg,
+				SNDRV_PCM_STREAM_PLAYBACK);
+	if (ret != ADSP_FE_COUNT) {
+		format = adsp->pcm_path
+			[ret][SNDRV_PCM_STREAM_PLAYBACK].format;
+		channels = adsp->pcm_path
+			[ret][SNDRV_PCM_STREAM_PLAYBACK].channels;
+		rate = adsp->pcm_path
+			[ret][SNDRV_PCM_STREAM_PLAYBACK].rate;
+	}
+
+	switch (format) {
+	case SNDRV_PCM_FORMAT_S8:
+		adma_params.intr_dur =
+			1000 * max_bytes / (channels * rate * 1);
+		break;
+	case SNDRV_PCM_FORMAT_S16_LE:
+		adma_params.intr_dur =
+			1000 * max_bytes / (channels * rate * 2);
+		break;
+	case SNDRV_PCM_FORMAT_S24_LE:
+		adma_params.intr_dur =
+			1000 * max_bytes / (channels * rate * 3);
+		break;
+	case SNDRV_PCM_FORMAT_S32_LE:
+		adma_params.intr_dur =
+			1000 * max_bytes / (channels * rate * 4);
+		break;
+	default:
+		dev_err(adsp->dev, "Wrong format!\n");
+		return -EINVAL;
+	}
+
+	adma_params.adma_channel = app->adma_chan;
+	adma_params.direction = ADMA_MEMORY_TO_AHUB;
+	adma_params.event.pvoid = app->apm->output_event.pvoid;
+
+	apm_msg.msgq_msg.size =
+		MSGQ_MSG_WSIZE(apm_fx_set_param_params_t);
+	apm_msg.msg.call_params.size =
+		sizeof(apm_fx_set_param_params_t);
+	apm_msg.msg.call_params.method =
+		nvfx_apm_method_fx_set_param;
+	apm_msg.msg.fx_set_param_params.plugin.pvoid =
+		app->plugin->plugin.pvoid;
+	num_params = 3;
+	apm_msg.msg.fx_set_param_params.params[0] =
+		(sizeof(nvfx_call_params_t) +
+		num_params * sizeof(int32_t));
+
+	apm_msg.msg.fx_set_param_params.params[1] =
+				nvfx_adma_set_null_sink_mode;
+
+	if (event == SND_SOC_DAPM_POST_PMD)
+		/* set adma in playback mode */
+		apm_msg.msg.fx_set_param_params.params[2] = 0;
+	else
+		/* set adma in drain mode */
+		apm_msg.msg.fx_set_param_params.params[2] = 1;
+
+	ret = pm_runtime_get_sync(adsp->dev);
+	if (ret < 0) {
+		dev_err(adsp->dev, "%s pm_runtime_get_sync err 0x%x\n",
+		__func__, ret);
+		return ret;
+	}
+
+	ret = tegra210_adsp_send_msg(app, &apm_msg,
+		TEGRA210_ADSP_MSG_FLAG_SEND |
+		TEGRA210_ADSP_MSG_FLAG_NEED_ACK);
+
+	if (ret < 0) {
+		dev_vdbg(adsp->dev, "apm null-sink msg failed.%d\n", ret);
+		pm_runtime_put(adsp->dev);
+		return ret;
+	}
+
+	if (event == SND_SOC_DAPM_POST_PMD) {
+		pm_runtime_put(adsp->dev);
+		return 0;
+	}
+
+	ret = tegra210_adsp_adma_params_msg(app, &adma_params,
+		TEGRA210_ADSP_MSG_FLAG_SEND);
+	if (ret < 0) {
+		dev_vdbg(adsp->dev, "ADMA param msg failed.%d\n", ret);
+		pm_runtime_put(adsp->dev);
+		return ret;
+	}
+	pm_runtime_put(adsp->dev);
+
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
+	tegra_adsp_set_admaif_id(adsp, 0, be_reg, SNDRV_PCM_STREAM_CAPTURE);
+#endif
 	return 0;
 }
 
@@ -2910,6 +3090,21 @@ static const char * const tegra210_adsp_mux_texts[] = {
 	"ADSP-ADMAIF18",
 	"ADSP-ADMAIF19",
 	"ADSP-ADMAIF20",
+	"NULL-SINK1",
+	"NULL-SINK2",
+	"NULL-SINK3",
+	"NULL-SINK4",
+	"NULL-SINK5",
+	"NULL-SINK6",
+	"NULL-SINK7",
+	"NULL-SINK8",
+	"NULL-SINK9",
+	"NULL-SINK10",
+	"NULL-SINK11",
+	"NULL-SINK12",
+	"NULL-SINK13",
+	"NULL-SINK14",
+	"NULL-SINK15",
 	"APM-IN1",
 	"APM-IN2",
 	"APM-IN3",
@@ -3026,6 +3221,21 @@ static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif17, TEGRA210_ADSP_ADMAIF17);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif18, TEGRA210_ADSP_ADMAIF18);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif19, TEGRA210_ADSP_ADMAIF19);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif20, TEGRA210_ADSP_ADMAIF20);
+static ADSP_MUX_ENUM_CTRL_DECL(null_sink1, TEGRA210_ADSP_NULL_SINK1);
+static ADSP_MUX_ENUM_CTRL_DECL(null_sink2, TEGRA210_ADSP_NULL_SINK2);
+static ADSP_MUX_ENUM_CTRL_DECL(null_sink3, TEGRA210_ADSP_NULL_SINK3);
+static ADSP_MUX_ENUM_CTRL_DECL(null_sink4, TEGRA210_ADSP_NULL_SINK4);
+static ADSP_MUX_ENUM_CTRL_DECL(null_sink5, TEGRA210_ADSP_NULL_SINK5);
+static ADSP_MUX_ENUM_CTRL_DECL(null_sink6, TEGRA210_ADSP_NULL_SINK6);
+static ADSP_MUX_ENUM_CTRL_DECL(null_sink7, TEGRA210_ADSP_NULL_SINK7);
+static ADSP_MUX_ENUM_CTRL_DECL(null_sink8, TEGRA210_ADSP_NULL_SINK8);
+static ADSP_MUX_ENUM_CTRL_DECL(null_sink9, TEGRA210_ADSP_NULL_SINK9);
+static ADSP_MUX_ENUM_CTRL_DECL(null_sink10, TEGRA210_ADSP_NULL_SINK10);
+static ADSP_MUX_ENUM_CTRL_DECL(null_sink11, TEGRA210_ADSP_NULL_SINK11);
+static ADSP_MUX_ENUM_CTRL_DECL(null_sink12, TEGRA210_ADSP_NULL_SINK12);
+static ADSP_MUX_ENUM_CTRL_DECL(null_sink13, TEGRA210_ADSP_NULL_SINK13);
+static ADSP_MUX_ENUM_CTRL_DECL(null_sink14, TEGRA210_ADSP_NULL_SINK14);
+static ADSP_MUX_ENUM_CTRL_DECL(null_sink15, TEGRA210_ADSP_NULL_SINK15);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_in1, TEGRA210_ADSP_APM_IN1);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_in2, TEGRA210_ADSP_APM_IN2);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_in3, TEGRA210_ADSP_APM_IN3);
@@ -3108,6 +3318,12 @@ static ADSP_MUX_ENUM_CTRL_DECL(plugin10, TEGRA210_ADSP_PLUGIN10);
 		SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),		\
 	SND_SOC_DAPM_MUX(sname " MUX", SND_SOC_NOPM, 0, 0, &ename##_ctrl)
 
+#define SND_SOC_DAPM_IN(wname, wreg)					\
+{	.id = snd_soc_dapm_spk, .name = wname, .kcontrol_news = NULL,	\
+	.num_kcontrols = 0, .reg = wreg,				\
+	.event = tegra210_adsp_null_sink_hw_params,			\
+	.event_flags = SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD }
+
 static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	ADSP_EP_WIDGETS("ADSP-FE1", adsp_fe1),
 	ADSP_EP_WIDGETS("ADSP-FE2", adsp_fe2),
@@ -3145,6 +3361,36 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	ADSP_EP_WIDGETS("ADSP-ADMAIF18", adsp_admaif18),
 	ADSP_EP_WIDGETS("ADSP-ADMAIF19", adsp_admaif19),
 	ADSP_EP_WIDGETS("ADSP-ADMAIF20", adsp_admaif20),
+	ADSP_EP_WIDGETS("NULL-SINK1", null_sink1),
+	ADSP_EP_WIDGETS("NULL-SINK2", null_sink2),
+	ADSP_EP_WIDGETS("NULL-SINK3", null_sink3),
+	ADSP_EP_WIDGETS("NULL-SINK4", null_sink4),
+	ADSP_EP_WIDGETS("NULL-SINK5", null_sink5),
+	ADSP_EP_WIDGETS("NULL-SINK6", null_sink6),
+	ADSP_EP_WIDGETS("NULL-SINK7", null_sink7),
+	ADSP_EP_WIDGETS("NULL-SINK8", null_sink8),
+	ADSP_EP_WIDGETS("NULL-SINK9", null_sink9),
+	ADSP_EP_WIDGETS("NULL-SINK10", null_sink10),
+	ADSP_EP_WIDGETS("NULL-SINK11", null_sink11),
+	ADSP_EP_WIDGETS("NULL-SINK12", null_sink12),
+	ADSP_EP_WIDGETS("NULL-SINK13", null_sink13),
+	ADSP_EP_WIDGETS("NULL-SINK14", null_sink14),
+	ADSP_EP_WIDGETS("NULL-SINK15", null_sink15),
+	SND_SOC_DAPM_IN("NULL-SINK1", TEGRA210_ADSP_NULL_SINK1),
+	SND_SOC_DAPM_IN("NULL-SINK2", TEGRA210_ADSP_NULL_SINK2),
+	SND_SOC_DAPM_IN("NULL-SINK3", TEGRA210_ADSP_NULL_SINK3),
+	SND_SOC_DAPM_IN("NULL-SINK4", TEGRA210_ADSP_NULL_SINK4),
+	SND_SOC_DAPM_IN("NULL-SINK5", TEGRA210_ADSP_NULL_SINK5),
+	SND_SOC_DAPM_IN("NULL-SINK6", TEGRA210_ADSP_NULL_SINK6),
+	SND_SOC_DAPM_IN("NULL-SINK7", TEGRA210_ADSP_NULL_SINK7),
+	SND_SOC_DAPM_IN("NULL-SINK8", TEGRA210_ADSP_NULL_SINK8),
+	SND_SOC_DAPM_IN("NULL-SINK9", TEGRA210_ADSP_NULL_SINK9),
+	SND_SOC_DAPM_IN("NULL-SINK10", TEGRA210_ADSP_NULL_SINK10),
+	SND_SOC_DAPM_IN("NULL-SINK11", TEGRA210_ADSP_NULL_SINK11),
+	SND_SOC_DAPM_IN("NULL-SINK12", TEGRA210_ADSP_NULL_SINK12),
+	SND_SOC_DAPM_IN("NULL-SINK13", TEGRA210_ADSP_NULL_SINK13),
+	SND_SOC_DAPM_IN("NULL-SINK14", TEGRA210_ADSP_NULL_SINK14),
+	SND_SOC_DAPM_IN("NULL-SINK15", TEGRA210_ADSP_NULL_SINK15),
 	ADSP_WIDGETS("APM-IN1", apm_in1, TEGRA210_ADSP_APM_IN1),
 	ADSP_WIDGETS("APM-IN2", apm_in2, TEGRA210_ADSP_APM_IN2),
 	ADSP_WIDGETS("APM-IN3", apm_in3, TEGRA210_ADSP_APM_IN3),
@@ -3318,7 +3564,6 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	{ name " MUX",	"ADMA8-TX",	"ADMA8-TX TX"},	\
 	{ name " MUX",	"ADMA9-TX",	"ADMA9-TX TX"},	\
 	{ name " MUX",	"ADMA10-TX",	"ADMA10-TX TX"}
-
 #define ADSP_PLUGIN_ROUTES(name)					\
 	{ name " MUX",	"PLUGIN1-PLACE-HOLDER",	"PLUGIN1-PLACE-HOLDER TX"},		\
 	{ name " MUX",	"PLUGIN2-PLACE-HOLDER",	"PLUGIN2-PLACE-HOLDER TX"},		\
@@ -3335,6 +3580,11 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	{ name " RX",		NULL, name " Receive"},		\
 	{ name " Transmit",	NULL, name " TX"},		\
 	{ name " TX",		NULL, name " MUX"},		\
+	ADSP_APM_OUT_ROUTES(name)
+
+#define ADSP_EP_MUX_ROUTES_NULL_SINK(name)			\
+	{ name " TX",           NULL, name " MUX"},		\
+	{ name,     NULL, name " TX"},				\
 	ADSP_APM_OUT_ROUTES(name)
 
 #define ADSP_APM_IN_MUX_ROUTES(name)				\
@@ -3398,6 +3648,21 @@ static const struct snd_soc_dapm_route tegra210_adsp_routes[] = {
 	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF18"),
 	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF19"),
 	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF20"),
+	ADSP_EP_MUX_ROUTES_NULL_SINK("NULL-SINK1"),
+	ADSP_EP_MUX_ROUTES_NULL_SINK("NULL-SINK2"),
+	ADSP_EP_MUX_ROUTES_NULL_SINK("NULL-SINK3"),
+	ADSP_EP_MUX_ROUTES_NULL_SINK("NULL-SINK4"),
+	ADSP_EP_MUX_ROUTES_NULL_SINK("NULL-SINK5"),
+	ADSP_EP_MUX_ROUTES_NULL_SINK("NULL-SINK6"),
+	ADSP_EP_MUX_ROUTES_NULL_SINK("NULL-SINK7"),
+	ADSP_EP_MUX_ROUTES_NULL_SINK("NULL-SINK8"),
+	ADSP_EP_MUX_ROUTES_NULL_SINK("NULL-SINK9"),
+	ADSP_EP_MUX_ROUTES_NULL_SINK("NULL-SINK10"),
+	ADSP_EP_MUX_ROUTES_NULL_SINK("NULL-SINK11"),
+	ADSP_EP_MUX_ROUTES_NULL_SINK("NULL-SINK12"),
+	ADSP_EP_MUX_ROUTES_NULL_SINK("NULL-SINK13"),
+	ADSP_EP_MUX_ROUTES_NULL_SINK("NULL-SINK14"),
+	ADSP_EP_MUX_ROUTES_NULL_SINK("NULL-SINK15"),
 
 	ADSP_EP_MUX_ROUTES("ADSP-EAVB"),
 

@@ -35,7 +35,11 @@ u32 tegra_read_ram_code(void);
 u32 tegra_read_chipid(void);
 enum tegra_chipid tegra_get_chipid(void);
 
+int tegra_fuse_control_read(unsigned long offset, u32 *value);
+void tegra_fuse_control_write(u32 value, unsigned long offset);
+
 int tegra_fuse_readl(unsigned long offset, u32 *value);
+void tegra_fuse_writel(u32 val, unsigned long offset);
 enum tegra_revision tegra_chip_get_revision(void);
 
 /* TODO: Dummy implementation till upstream fuse driver implements these*/

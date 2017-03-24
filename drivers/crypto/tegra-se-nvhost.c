@@ -1321,7 +1321,7 @@ static int tegra_se_setup_ablk_req(struct tegra_se_dev *se_dev)
 	int i;
 	u32 num_sgs;
 	int chained;
-	int index;
+	int index = 0;
 
 	if (unlikely(se_dev->dynamic_mem)) {
 		se_dev->aes_buf = kmalloc(se_dev->gather_buf_sz, GFP_KERNEL);

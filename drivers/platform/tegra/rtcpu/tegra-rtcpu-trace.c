@@ -42,7 +42,7 @@
 #define NV(p) "nvidia," #p
 
 #define WORK_INTERVAL_DEFAULT		100
-#define EXCEPTION_STR_LENGTH		1024
+#define EXCEPTION_STR_LENGTH		2048
 
 /*
  * Private driver data structure
@@ -65,15 +65,14 @@ struct tegra_rtcpu_trace {
 	dma_addr_t dma_handle_events;
 
 	/* limit */
+	u32 exception_entries;
 	u32 event_entries;
 
 	/* exception pointer */
 	u32 exception_last_idx;
-	struct camrtc_trace_armv7_exception *exception_next;
 
 	/* last pointer */
 	u32 event_last_idx;
-	struct camrtc_event_struct *event_next;
 
 	/* worker */
 	struct delayed_work work;
@@ -83,9 +82,7 @@ struct tegra_rtcpu_trace {
 	u32 n_exceptions;
 	u64 n_events;
 
-	/* copy of the latest */
-	struct camrtc_trace_armv7_exception copy_last_exception;
-	char last_exception_str_long[EXCEPTION_STR_LENGTH];
+	/* copy of the latest exception and event */
 	char last_exception_str[EXCEPTION_STR_LENGTH];
 	struct camrtc_event_struct copy_last_event;
 
@@ -142,37 +139,40 @@ error:
 
 static void rtcpu_trace_init_memory(struct tegra_rtcpu_trace *tracer)
 {
-	struct camrtc_trace_memory_header *header =
-		  (struct camrtc_trace_memory_header *) tracer->trace_memory;
-
 	/* memory map */
 	tracer->dma_handle_pointers = tracer->dma_handle +
 	    offsetof(struct camrtc_trace_memory_header, exception_next_idx);
 	tracer->exceptions_base = tracer->trace_memory +
 	    CAMRTC_TRACE_EXCEPTION_OFFSET;
+	tracer->exception_entries = 7;
 	tracer->dma_handle_exceptions = tracer->dma_handle +
 	    CAMRTC_TRACE_EXCEPTION_OFFSET;
 	tracer->events = tracer->trace_memory + CAMRTC_TRACE_EVENT_OFFSET;
+	tracer->event_entries =
+	    (tracer->trace_memory_size - CAMRTC_TRACE_EVENT_OFFSET) /
+	    CAMRTC_TRACE_EVENT_SIZE;
 	tracer->dma_handle_events = tracer->dma_handle +
 	    CAMRTC_TRACE_EXCEPTION_OFFSET;
 
-	/* header */
-	header->revision = 1;
-	header->exception_offset = CAMRTC_TRACE_EXCEPTION_OFFSET;
-	header->exception_size = CAMRTC_TRACE_EXCEPTION_SIZE;
-	header->exception_entries = 7;
-	header->event_offset = CAMRTC_TRACE_EVENT_OFFSET;
-	header->event_size = CAMRTC_TRACE_EVENT_SIZE;
-	header->event_entries =
-	    (tracer->trace_memory_size - CAMRTC_TRACE_EVENT_OFFSET) /
-	    CAMRTC_TRACE_EVENT_SIZE;
+	{
+		struct camrtc_trace_memory_header header = {
+			.signature[0] = CAMRTC_TRACE_SIGNATURE_1,
+			.signature[1] = CAMRTC_TRACE_SIGNATURE_2,
+			.revision = 1,
+			.exception_offset = CAMRTC_TRACE_EXCEPTION_OFFSET,
+			.exception_size = CAMRTC_TRACE_EXCEPTION_SIZE,
+			.exception_entries = tracer->exception_entries,
+			.event_offset = CAMRTC_TRACE_EVENT_OFFSET,
+			.event_size = CAMRTC_TRACE_EVENT_SIZE,
+			.event_entries = tracer->event_entries,
+		};
 
-	/* information */
-	tracer->event_next = tracer->events;
+		memcpy(tracer->trace_memory, &header, sizeof(header));
 
-	/* validate */
-	header->signature[1] = CAMRTC_TRACE_SIGNATURE_2;
-	header->signature[0] = CAMRTC_TRACE_SIGNATURE_1;
+		dma_sync_single_for_device(tracer->dev,
+			tracer->dma_handle, sizeof(header),
+			DMA_TO_DEVICE);
+	}
 }
 
 /*
@@ -186,24 +186,24 @@ static void rtcpu_trace_invalidate_entries(struct tegra_rtcpu_trace *tracer,
 	/* invalidate cache */
 	if (new_next > old_next) {
 		dma_sync_single_for_cpu(tracer->dev,
-		    dma_handle + old_next * entry_size,
-		    (new_next - old_next) * entry_size,
-		    DMA_FROM_DEVICE);
+			dma_handle + old_next * entry_size,
+			(new_next - old_next) * entry_size,
+			DMA_FROM_DEVICE);
 	} else {
 		dma_sync_single_for_cpu(tracer->dev,
-		    dma_handle + old_next * entry_size,
-		    (entry_count - old_next) * entry_size,
-		    DMA_FROM_DEVICE);
+			dma_handle + old_next * entry_size,
+			(entry_count - old_next) * entry_size,
+			DMA_FROM_DEVICE);
 		dma_sync_single_for_cpu(tracer->dev,
-		    dma_handle, new_next * entry_size,
-		    DMA_FROM_DEVICE);
+			dma_handle, new_next * entry_size,
+			DMA_FROM_DEVICE);
 	}
 }
 
 static void rtcpu_trace_exception(struct tegra_rtcpu_trace *tracer,
-	struct camrtc_trace_armv7_exception *exc, bool do_long)
+	struct camrtc_trace_armv7_exception *exc)
 {
-	static char *s_str_exc_type[] = {
+	static const char * const s_str_exc_type[] = {
 		"Invalid (Reset)",
 		"Undefined instruction",
 		"Invalid (SWI)",
@@ -216,31 +216,22 @@ static void rtcpu_trace_exception(struct tegra_rtcpu_trace *tracer,
 
 	struct seq_buf sb;
 	unsigned int i, count;
-	char *buf = tracer->last_exception_str_long;
-	size_t buf_size = sizeof(tracer->last_exception_str_long);
-	unsigned int max_callstack_count = CAMRTC_TRACE_CALLSTACK_MAX;
-
-	if (do_long == false) {
-		buf = tracer->last_exception_str;
-		buf_size = sizeof(tracer->last_exception_str);
-		max_callstack_count = CAMRTC_TRACE_CALLSTACK_MIN;
-	}
+	char *buf = tracer->last_exception_str;
+	size_t buf_size = sizeof(tracer->last_exception_str);
+	char const header[] =
+		"###################### RTCPU EXCEPTION ######################";
+	char const trailer[] =
+		"#############################################################";
 
 	seq_buf_init(&sb, buf, buf_size);
 
-	if (do_long == false) {
-		seq_buf_printf(&sb, " \n");
-		seq_buf_printf(&sb, " \n");
-		seq_buf_printf(&sb, "############# RTCPU EXCEPTION #"
-		"#############\n");
-	}
-
-	seq_buf_printf(&sb, "%s\n",
+	seq_buf_printf(&sb, "%s %s\n",
+		tracer->log_prefix,
 		(exc->type < ARRAY_SIZE(s_str_exc_type)) ?
 			s_str_exc_type[exc->type] : "Unknown");
 
 	seq_buf_printf(&sb,
-	    "  R0:  %08x R1:  %08x R2:  %08x R4:  %08x\n",
+	    "  R0:  %08x R1:  %08x R2:  %08x R3:  %08x\n",
 	    exc->gpr.r0, exc->gpr.r1, exc->gpr.r2, exc->gpr.r3);
 	seq_buf_printf(&sb,
 	    "  R4:  %08x R5:  %08x R6:  %08x R7:  %08x\n",
@@ -278,21 +269,57 @@ static void rtcpu_trace_exception(struct tegra_rtcpu_trace *tracer,
 		seq_buf_printf(&sb, "Callstack\n");
 
 	for (i = 0; i < count; ++i) {
-		if (i >= max_callstack_count) {
-			seq_buf_printf(&sb, "  ... [skipping %u entries]\n",
-				count - i);
+		if (i >= CAMRTC_TRACE_CALLSTACK_MAX)
 			break;
-		}
 		seq_buf_printf(&sb, "  [%08x]: %08x\n",
 			exc->callstack[i].lr_stack_addr, exc->callstack[i].lr);
 	}
 
-	if (do_long == false) {
-		seq_buf_printf(&sb, "###############################"
-		"#############\n");
-		seq_buf_printf(&sb, " \n");
-		seq_buf_printf(&sb, " \n");
+	if (i < count)
+		seq_buf_printf(&sb, "  ... [skipping %u entries]\n", count - i);
+
+	printk(KERN_INFO "%s\n%s\n%s\n%s%s%s\n%s\n",
+		" ", " ", header, buf, trailer, " ", " ");
+}
+
+static inline void rtcpu_trace_exceptions(struct tegra_rtcpu_trace *tracer)
+{
+	const struct camrtc_trace_memory_header *header = tracer->trace_memory;
+	union {
+		struct camrtc_trace_armv7_exception exc;
+		uint8_t mem[CAMRTC_TRACE_EXCEPTION_SIZE];
+	} exc;
+	u32 old_next = tracer->exception_last_idx;
+	u32 new_next = header->exception_next_idx;
+
+	if (old_next == new_next)
+		return;
+
+	if (new_next >= tracer->exception_entries) {
+		WARN_ON_ONCE(new_next >= tracer->exception_entries);
+		dev_warn_ratelimited(tracer->dev,
+			"exception entry %u outside range 0..%u\n",
+			new_next, tracer->exception_entries - 1);
+		return;
 	}
+
+	rtcpu_trace_invalidate_entries(tracer,
+				tracer->dma_handle_exceptions,
+				old_next, new_next,
+				CAMRTC_TRACE_EXCEPTION_SIZE,
+				tracer->exception_entries);
+
+	while (old_next != new_next) {
+		void *emem = tracer->exceptions_base +
+			CAMRTC_TRACE_EXCEPTION_SIZE * old_next;
+		memcpy(&exc.mem, emem, CAMRTC_TRACE_EXCEPTION_SIZE);
+		rtcpu_trace_exception(tracer, &exc.exc);
+		++tracer->n_exceptions;
+		if (++old_next == tracer->exception_entries)
+			old_next = 0;
+	}
+
+	tracer->exception_last_idx = new_next;
 }
 
 static void rtcpu_trace_base_event(struct camrtc_event_struct *event)
@@ -779,84 +806,58 @@ static void rtcpu_trace_event(struct tegra_rtcpu_trace *tracer,
 	}
 }
 
+static inline void rtcpu_trace_events(struct tegra_rtcpu_trace *tracer)
+{
+	const struct camrtc_trace_memory_header *header = tracer->trace_memory;
+	u32 old_next = tracer->event_last_idx;
+	u32 new_next = header->event_next_idx;
+	struct camrtc_event_struct *event, *last_event;
+
+	while (old_next == new_next)
+		return;
+
+	if (new_next >= tracer->event_entries) {
+		WARN_ON_ONCE(new_next >= tracer->event_entries);
+		dev_warn_ratelimited(tracer->dev,
+			"trace entry %u outside range 0..%u\n",
+			new_next, tracer->event_entries - 1);
+		return;
+	}
+
+	rtcpu_trace_invalidate_entries(tracer,
+				tracer->dma_handle_events,
+				old_next, new_next,
+				CAMRTC_TRACE_EVENT_SIZE,
+				tracer->event_entries);
+
+	/* pull events */
+	while (old_next != new_next) {
+		event = &tracer->events[old_next];
+		last_event = event;
+		rtcpu_trace_event(tracer, event);
+		tracer->n_events++;
+
+		if (++old_next == tracer->event_entries)
+			old_next = 0;
+	}
+
+	tracer->event_last_idx = new_next;
+	tracer->copy_last_event = *last_event;
+}
+
 static void rtcpu_trace_worker(struct work_struct *work)
 {
 	struct tegra_rtcpu_trace *tracer;
-	struct camrtc_trace_memory_header *header;
 
 	tracer = container_of(work, struct tegra_rtcpu_trace, work.work);
-	header = (struct camrtc_trace_memory_header *) tracer->trace_memory;
 
 	/* invalidate the cache line for the pointers */
 	dma_sync_single_for_cpu(tracer->dev, tracer->dma_handle_pointers,
 	    CAMRTC_TRACE_NEXT_IDX_SIZE, DMA_FROM_DEVICE);
 
-	/* exceptions */
-	if (header->exception_next_idx != tracer->exception_last_idx) {
-		u32 old_next = tracer->exception_last_idx;
-		u32 new_next = header->exception_next_idx;
-
-		rtcpu_trace_invalidate_entries(tracer,
-		    tracer->dma_handle_exceptions,
-		    tracer->exception_last_idx,
-		    header->exception_next_idx,
-		    CAMRTC_TRACE_EXCEPTION_SIZE,
-		    header->exception_entries);
-
-		while (old_next != new_next) {
-			struct camrtc_trace_armv7_exception *exc;
-
-			exc = (struct camrtc_trace_armv7_exception *)
-			    (tracer->exceptions_base +
-			     CAMRTC_TRACE_EXCEPTION_SIZE * old_next);
-
-			rtcpu_trace_exception(tracer, exc, true);
-			rtcpu_trace_exception(tracer, exc, false);
-			++tracer->n_exceptions;
-			memcpy(&tracer->copy_last_exception, exc,
-			    sizeof(tracer->copy_last_exception));
-
-			printk("%s", tracer->last_exception_str);
-
-			if (++old_next == header->exception_entries)
-				old_next = 0;
-		}
-
-		tracer->exception_last_idx = new_next;
-	}
-
-	/* events */
-	if (header->event_next_idx != tracer->event_last_idx) {
-		struct camrtc_event_struct *event, *last_event;
-		u32 old_next = tracer->event_last_idx;
-		u32 new_next = header->event_next_idx;
-
-		rtcpu_trace_invalidate_entries(tracer,
-		    tracer->dma_handle_events,
-		    old_next, new_next,
-		    CAMRTC_TRACE_EVENT_SIZE,
-		    header->event_entries);
-
-		/* pull events */
-		event = tracer->event_next;
-
-		while (old_next != new_next) {
-			rtcpu_trace_event(tracer, event);
-			++tracer->n_events;
-
-			last_event = event;
-			if (++old_next == header->event_entries) {
-				event = tracer->events;
-				old_next = 0;
-			} else
-				++event;
-		}
-
-		tracer->event_next = event;
-		tracer->event_last_idx = new_next;
-		memcpy(&tracer->copy_last_event, last_event,
-		    sizeof(tracer->copy_last_event));
-	}
+	/* process exceptions and events */
+	rtcpu_trace_exceptions(tracer);
+	rtcpu_trace_events(tracer);
 
 	/* reschedule */
 	schedule_delayed_work(&tracer->work, tracer->work_interval_jiffies);
@@ -895,7 +896,7 @@ static int rtcpu_trace_debugfs_last_exception_read(
 {
 	struct tegra_rtcpu_trace *tracer = file->private;
 
-	seq_puts(file, tracer->last_exception_str_long);
+	seq_puts(file, tracer->last_exception_str);
 
 	return 0;
 }
@@ -1022,7 +1023,7 @@ struct tegra_rtcpu_trace *tegra_rtcpu_trace_create(struct device *dev)
 	tracer->enable_printk = of_property_read_bool(tracer->of_node,
 						NV(enable-printk));
 
-	tracer->log_prefix = "RTCPU:";
+	tracer->log_prefix = "[RTCPU]";
 	of_property_read_string(tracer->of_node, NV(log-prefix),
 				&tracer->log_prefix);
 

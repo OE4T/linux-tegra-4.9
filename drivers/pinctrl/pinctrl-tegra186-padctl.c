@@ -1840,7 +1840,7 @@ static int tegra186_utmi_phy_power_off(struct phy *phy)
 	return 0;
 }
 
-static int tegra186_utmi_phy_init(struct phy *phy)
+int tegra18x_utmi_vbus_enable(struct phy *phy)
 {
 	struct tegra_padctl *padctl = phy_get_drvdata(phy);
 	int port = utmi_phy_to_port(phy);
@@ -1849,7 +1849,7 @@ static int tegra186_utmi_phy_init(struct phy *phy)
 	if (port < 0)
 		return port;
 
-	dev_dbg(padctl->dev, "phy init UTMI port %d\n",  port);
+	dev_dbg(padctl->dev, "enable vbus-%d\n", port);
 
 	mutex_lock(&padctl->lock);
 
@@ -1868,6 +1868,24 @@ static int tegra186_utmi_phy_init(struct phy *phy)
 			return rc;
 		}
 	}
+
+	mutex_unlock(&padctl->lock);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra18x_utmi_vbus_enable);
+
+static int tegra186_utmi_phy_init(struct phy *phy)
+{
+	struct tegra_padctl *padctl = phy_get_drvdata(phy);
+	int port = utmi_phy_to_port(phy);
+
+	if (port < 0)
+		return port;
+
+	mutex_lock(&padctl->lock);
+
+	dev_dbg(padctl->dev, "phy init UTMI port %d\n",  port);
 
 	mutex_unlock(&padctl->lock);
 

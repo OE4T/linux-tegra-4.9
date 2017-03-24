@@ -69,7 +69,14 @@
 #define MAX77812_REG_M4_CGF		0x32
 #define MAX77812_REG_GLB_CFG1		0x33
 #define MAX77812_REG_GLB_CFG2		0x34
-#define MAX77812_REG_MAX		0x35
+#define MAX77812_REG_GLB_CFG3		0x35
+#define MAX77812_REG_GLB_CFG4		0x36
+#define MAX77812_REG_GLB_CFG5		0x37
+#define MAX77812_REG_GLB_CFG6		0x38
+#define MAX77812_REG_GLB_CFG7		0x39
+#define MAX77812_REG_GLB_CFG8		0x3A
+#define MAX77812_REG_PROT_ACCESS	0xFD
+#define MAX77812_REG_MAX		0xFE
 
 #define MAX77812_REG_EN_CTRL_MASK(n)		BIT(n)
 #define MAX77812_START_SLEW_RATE_MASK		0x07
@@ -126,6 +133,7 @@ struct max77812_regulator {
 	u32 ramp_down_slew_rate;
 	u32 shutdown_slew_rate;
 	u32 softstart_slew_rate;
+	bool skip_protect_reg_access;
 };
 
 static int max77812_regulator_enable(struct regulator_dev *rdev)
@@ -134,8 +142,8 @@ static int max77812_regulator_enable(struct regulator_dev *rdev)
 	int ret;
 
 	ret = regmap_update_bits(max77812->rmap, rdev->desc->enable_reg,
-			rdev->desc->enable_mask,
-			rdev->desc->enable_mask);
+				 rdev->desc->enable_mask,
+				 rdev->desc->enable_mask);
 	if (ret < 0) {
 		dev_err(max77812->dev, "Regulator enable failed: %d\n", ret);
 		return ret;
@@ -150,7 +158,7 @@ static int max77812_regulator_disable(struct regulator_dev *rdev)
 	int ret;
 
 	ret = regmap_update_bits(max77812->rmap, rdev->desc->enable_reg,
-				rdev->desc->enable_mask, 0);
+				 rdev->desc->enable_mask, 0);
 	if (ret < 0) {
 		dev_err(max77812->dev, "Regulator disable failed: %d\n", ret);
 		return ret;
@@ -160,7 +168,7 @@ static int max77812_regulator_disable(struct regulator_dev *rdev)
 }
 
 static u8 max77802_slew_rate_to_reg(const unsigned int sr_limits[],
-			u8 cnt, unsigned int slew_rate)
+				    u8 cnt, unsigned int slew_rate)
 {
 	int i;
 
@@ -177,6 +185,7 @@ static int max77812_reg_init(struct max77812_regulator *max77812)
 	u8 slew_rate = 0;
 	u8 rampdelay = 0;
 	u8 mask = 0;
+	unsigned int val;
 	int ret;
 
 	if (max77812->softstart_slew_rate) {
@@ -196,8 +205,8 @@ static int max77812_reg_init(struct max77812_regulator *max77812)
 
 	if (slew_rate && mask) {
 		ret = regmap_update_bits(max77812->rmap,
-					MAX77812_REG_GLB_CFG1,
-					mask, slew_rate);
+					 MAX77812_REG_GLB_CFG1,
+					 mask, slew_rate);
 		if (ret < 0) {
 			dev_err(max77812->dev,
 				"slew rate cfg1 update failed %d\n", ret);
@@ -234,7 +243,55 @@ static int max77812_reg_init(struct max77812_regulator *max77812)
 		}
 	}
 
+	if (!max77812->skip_protect_reg_access) {
+		ret = regmap_write(max77812->rmap,
+				   MAX77812_REG_PROT_ACCESS, 0x5A);
+		if (ret < 0)
+			goto error;
+
+		ret = regmap_read(max77812->rmap,
+				  MAX77812_REG_PROT_ACCESS, &val);
+		if (ret < 0)
+			goto error;
+
+		if (val != 0x5A) {
+			dev_err(max77812->dev, "prot register unlock failed\n");
+			return -EINVAL;
+		}
+
+		ret = regmap_write(max77812->rmap, MAX77812_REG_GLB_CFG5, 0x3E);
+		if (ret < 0)
+			goto error;
+
+		ret = regmap_write(max77812->rmap, MAX77812_REG_GLB_CFG6, 0x90);
+		if (ret < 0)
+			goto error;
+
+		ret = regmap_write(max77812->rmap, MAX77812_REG_GLB_CFG8, 0x3A);
+		if (ret < 0)
+			goto error;
+
+		ret = regmap_write(max77812->rmap,
+				   MAX77812_REG_PROT_ACCESS, 0x0);
+		if (ret < 0)
+			goto error;
+
+		ret = regmap_read(max77812->rmap,
+				  MAX77812_REG_PROT_ACCESS, &val);
+		if (ret < 0)
+			goto error;
+
+		if (val) {
+			dev_err(max77812->dev, "protect registers lock failed\n");
+			return -EINVAL;
+		}
+	}
+
 	return 0;
+
+error:
+	dev_err(max77812->dev, "protect register access failed %d\n", ret);
+	return ret;
 }
 
 static int max77812_config_init(struct max77812_regulator *max77812, int id)
@@ -376,7 +433,7 @@ static struct regulator_desc max77812_regs_desc[MAX77812_MAX_REGULATORS] = {
 };
 
 static int max77812_reg_parse_dt(struct device *dev,
-		struct max77812_regulator *max77812_regs)
+				 struct max77812_regulator *max77812_regs)
 {
 	struct device_node *np = dev->of_node;
 	u32 pval;
@@ -398,6 +455,9 @@ static int max77812_reg_parse_dt(struct device *dev,
 	if (!ret)
 		max77812_regs->softstart_slew_rate = pval;
 
+	max77812_regs->skip_protect_reg_access = of_property_read_bool(np,
+				"maxim,skip-protect-reg-access");
+
 	return 0;
 }
 
@@ -409,7 +469,7 @@ static const struct regmap_config max77812_regmap_config = {
 };
 
 static int max77812_probe(struct i2c_client *client,
-			const struct i2c_device_id *client_id)
+			  const struct i2c_device_id *client_id)
 {
 	struct device *dev = &client->dev;
 	struct max77812_reg_pdata *rpdata;
@@ -460,7 +520,7 @@ static int max77812_probe(struct i2c_client *client,
 		if (IS_ERR(max77812->rdev[id])) {
 			ret = PTR_ERR(max77812->rdev[id]);
 			dev_err(dev, "regulator %s register failed: %d\n",
-						rdesc->name, ret);
+				rdesc->name, ret);
 			return ret;
 		}
 	}

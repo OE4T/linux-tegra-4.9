@@ -1781,7 +1781,7 @@ tegra_dc_sor_restore_win_and_raster(struct tegra_dc *dc, int *dc_reg_ctx)
 	tegra_dc_writel(dc, dc_reg_ctx[i++], DC_DISP_FRONT_PORCH);
 	tegra_dc_writel(dc, dc_reg_ctx[i++], DC_DISP_DISP_ACTIVE);
 
-	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 }
 
 void tegra_sor_stop_dc(struct tegra_dc_sor_data *sor)

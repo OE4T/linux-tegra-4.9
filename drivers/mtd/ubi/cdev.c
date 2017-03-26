@@ -857,7 +857,10 @@ static long ubi_cdev_ioctl(struct file *file, unsigned int cmd,
 			err = -EFAULT;
 			break;
 		}
-
+		if ((req.vol_id > 128) || (req.vol_id < 0)) {
+			pr_err("Invalid value of volume id %d\n", req.vol_id);
+			return -EINVAL;
+		}
 		err = verify_mkvol_req(ubi, &req);
 		if (err)
 			break;

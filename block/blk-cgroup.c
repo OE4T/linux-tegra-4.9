@@ -983,7 +983,7 @@ blkcg_css_alloc(struct cgroup_subsys_state *parent_css)
 	struct blkcg *blkcg;
 	struct cgroup_subsys_state *ret;
 	int i;
-
+	bool free_blk_cg = false;
 	mutex_lock(&blkcg_pol_mutex);
 
 	if (!parent_css) {
@@ -994,6 +994,7 @@ blkcg_css_alloc(struct cgroup_subsys_state *parent_css)
 			ret = ERR_PTR(-ENOMEM);
 			goto free_blkcg;
 		}
+		free_blk_cg = true;
 	}
 
 	for (i = 0; i < BLKCG_MAX_POLS ; i++) {
@@ -1037,7 +1038,8 @@ free_pd_blkcg:
 		if (blkcg->cpd[i])
 			blkcg_policy[i]->cpd_free_fn(blkcg->cpd[i]);
 free_blkcg:
-	kfree(blkcg);
+	if (free_blk_cg)
+		kfree(blkcg);
 	mutex_unlock(&blkcg_pol_mutex);
 	return ret;
 }

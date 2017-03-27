@@ -643,7 +643,8 @@ static int _tegra_dc_common_enable_frame_lock(struct tegra_dc_common *dc_common)
 	if (frame_lock != dc_common->valid_heads) {
 		for_each_set_bit(i, &frame_lock, max_heads) {
 			dc = tegra_dc_get_dc(i);
-			tegra_dc_enable_disable_frame_lock(dc, false);
+			if (dc)
+				tegra_dc_enable_disable_frame_lock(dc, false);
 		}
 		ret = -EINVAL;
 		goto err_handle;
@@ -686,7 +687,8 @@ static int _tegra_dc_common_disable_frame_lock(
 	if (frame_lock != dc_common->valid_heads) {
 		for_each_set_bit(i, &frame_lock, max_heads) {
 			dc = tegra_dc_get_dc(i);
-			tegra_dc_enable_disable_frame_lock(dc, true);
+			if (dc)
+				tegra_dc_enable_disable_frame_lock(dc, true);
 		}
 		ret = -EINVAL;
 		goto err_handle;

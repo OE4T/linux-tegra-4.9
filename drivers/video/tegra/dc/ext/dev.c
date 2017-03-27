@@ -3375,16 +3375,19 @@ free_and_ret:
 	}
 	case TEGRA_DC_EXT_GET_CAP_INFO:
 	{
+#define NR_ELEMENTS_UPPER_BOUND 16
 		int ret = 0;
-		int nr_elements = 0;
+		unsigned int nr_elements = 0;
 		struct tegra_dc_ext_get_cap_info args;
 		struct tegra_dc_ext_caps *cap_info = NULL;
-
 
 		if (copy_from_user(&args, user_arg, sizeof(args)))
 			return -EFAULT;
 
 		nr_elements = args.nr_elements;
+
+		if (nr_elements > NR_ELEMENTS_UPPER_BOUND)
+			return -EINVAL;
 
 		if (nr_elements > 0) {
 			cap_info = kzalloc(sizeof(*cap_info)
@@ -3397,10 +3400,11 @@ free_and_ret:
 				kfree(cap_info);
 				return -EFAULT;
 			}
-		}
-		ret = tegra_dc_get_cap_info(user, cap_info, nr_elements);
+			ret = tegra_dc_get_cap_info(user, cap_info,
+						    nr_elements);
 
-		kfree(cap_info);
+			kfree(cap_info);
+		}
 
 		return ret;
 	}

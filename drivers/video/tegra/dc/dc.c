@@ -6081,6 +6081,11 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	nvdisp_register_backlight_notifier(dc);
 #endif
 
+	if (!dc->out) {
+		ret = -EINVAL;
+		goto err_put_clk;
+	}
+
 	/* For HDMI|DP, hotplug always supported
 	 * For eDP, hotplug is never supported
 	 * For fake DP, SW hotplug is supported
@@ -6095,7 +6100,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->hotplug_supported = dc->out->hotplug_gpio > 0;
 
 	if ((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
-			dc->out && dc->out->type == TEGRA_DC_OUT_LVDS) {
+		dc->out->type == TEGRA_DC_OUT_LVDS) {
 		struct fb_monspecs specs;
 		struct tegra_dc_lvds_data *lvds = tegra_dc_get_outdata(dc);
 		if (!tegra_edid_get_monspecs(lvds->edid, &specs))

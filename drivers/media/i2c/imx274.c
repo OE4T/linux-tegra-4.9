@@ -53,6 +53,22 @@
 #define IMX274_DEFAULT_HEIGHT	2174
 #define IMX274_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SRGGB10_1X10
 #define IMX274_DEFAULT_CLK_FREQ	24000000
+#define IMX274_VMAX				4550
+#define IMX274_HMAX				263
+#define IMX274_MODE1_OFFSET		112
+#define IMX274_MODE1_SHR_MIN	12
+#define IMX274_ET_FACTOR		400
+
+#define IMX274_SENSOR_INTERNAL_CLK_FREQ	72000000
+#define IMX274_DOL_MODE_CLOCKS_OFFSET	112
+#define IMX274_DOL_4K_MODE_HMAX	1052
+#define IMX274_DOL_4K_MODE_MIN_VMAX	2284
+#define IMX274_DOL_4K_MODE_DEFAULT_RHS1	50
+#define IMX274_DOL_4K_MIN_SHR_DOL1	6
+#define IMX274_DOL_1080P_MODE_HMAX	1040
+#define IMX274_DOL_1080P_MODE_MIN_VMAX	1155
+#define IMX274_DOL_1080P_MODE_DEFAULT_RHS1	38
+#define IMX274_DOL_1080P_MIN_SHR_DOL1	4
 
 struct imx274 {
 	struct camera_common_power_rail	power;
@@ -61,7 +77,10 @@ struct imx274 {
 	struct i2c_client		*i2c_client;
 	struct v4l2_subdev		*subdev;
 	struct media_pad		pad;
-
+	u32				frame_length;
+	u32				vmax_dol;
+	s32				last_coarse_long;
+	s32				last_coarse_short;
 	s32				group_hold_prev;
 	bool				group_hold_en;
 	struct regmap			*regmap;
@@ -156,17 +175,37 @@ static inline void imx274_get_vmax_regs(imx274_reg *regs,
 				u32 vmax)
 {
 	regs->addr = IMX274_VMAX_ADDR_MSB;
-	regs->val = (vmax >> 8) & 0xff;
-	(regs + 1)->addr = IMX274_VMAX_ADDR_LSB;
-	(regs + 1)->val = (vmax) & 0xff;
+	regs->val = (vmax >> 16) & 0x0f;
+	(regs + 1)->addr = IMX274_VMAX_ADDR_MID;
+	(regs + 1)->val = (vmax >> 8) & 0xff;
+	(regs + 2)->addr = IMX274_VMAX_ADDR_LSB;
+	(regs + 2)->val = (vmax) & 0xff;
 }
 
 static inline void imx274_get_shr_regs(imx274_reg *regs,
-				u32 shr)
+				u16 shr)
 {
 	regs->addr = IMX274_SHR_ADDR_MSB;
 	regs->val = (shr >> 8) & 0xff;
 	(regs + 1)->addr = IMX274_SHR_ADDR_LSB;
+	(regs + 1)->val = (shr) & 0xff;
+}
+
+static inline void imx274_get_shr_dol1_regs(imx274_reg *regs,
+				u16 shr)
+{
+	regs->addr = IMX274_SHR_DOL1_ADDR_MSB;
+	regs->val = (shr >> 8) & 0xff;
+	(regs + 1)->addr = IMX274_SHR_DOL1_ADDR_LSB;
+	(regs + 1)->val = (shr) & 0xff;
+}
+
+static inline void imx274_get_shr_dol2_regs(imx274_reg *regs,
+				u16 shr)
+{
+	regs->addr = IMX274_SHR_DOL2_ADDR_MSB;
+	regs->val = (shr >> 8) & 0xff;
+	(regs + 1)->addr = IMX274_SHR_DOL2_ADDR_LSB;
 	(regs + 1)->val = (shr) & 0xff;
 }
 
@@ -186,6 +225,7 @@ static inline int imx274_read_reg(struct camera_common_data *s_data,
 				u16 addr, u8 *val)
 {
 	struct imx274 *priv = (struct imx274 *)s_data->priv;
+
 	return regmap_read(priv->regmap, addr, (unsigned int *) val);
 }
 
@@ -291,9 +331,8 @@ static int imx274_power_off(struct camera_common_data *s_data)
 		if (err) {
 			pr_err("%s failed.\n", __func__);
 			return err;
-		} else {
-			goto power_off_done;
 		}
+		goto power_off_done;
 	}
 
 	usleep_range(1, 2);
@@ -320,6 +359,7 @@ power_off_done:
 static int imx274_power_put(struct imx274 *priv)
 {
 	struct camera_common_power_rail *pw = &priv->power;
+
 	if (unlikely(!pw))
 		return -EFAULT;
 
@@ -391,6 +431,9 @@ static int imx274_power_get(struct imx274 *priv)
 static int imx274_set_gain(struct imx274 *priv, s32 val);
 static int imx274_set_frame_length(struct imx274 *priv, s32 val);
 static int imx274_set_coarse_time(struct imx274 *priv, s32 val);
+static int imx274_set_coarse_time_shr(struct imx274 *priv, s32 val);
+static int imx274_set_coarse_time_shr_dol_short(struct imx274 *priv, s32 val);
+static int imx274_set_coarse_time_shr_dol_long(struct imx274 *priv, s32 val);
 
 static int imx274_s_stream(struct v4l2_subdev *sd, int enable)
 {
@@ -398,6 +441,7 @@ static int imx274_s_stream(struct v4l2_subdev *sd, int enable)
 	struct camera_common_data *s_data = to_camera_common_data(client);
 	struct imx274 *priv = (struct imx274 *)s_data->priv;
 	struct v4l2_control control;
+	int hdr_en;
 	int err;
 
 	dev_dbg(&client->dev, "%s++\n", __func__);
@@ -437,6 +481,26 @@ static int imx274_s_stream(struct v4l2_subdev *sd, int enable)
 		if (err)
 			dev_dbg(&client->dev,
 				"%s: error coarse time override\n", __func__);
+
+		control.id = V4L2_CID_HDR_EN;
+		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
+		if (err < 0) {
+			dev_err(&priv->i2c_client->dev,
+				"could not find device ctrl.\n");
+			return err;
+		}
+
+		hdr_en = switch_ctrl_qmenu[control.value];
+		if (hdr_en == SWITCH_ON) {
+			control.id = V4L2_CID_COARSE_TIME_SHORT;
+			err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
+			err |= imx274_set_coarse_time_shr_dol_short(priv,
+						control.value);
+			if (err)
+				dev_dbg(&client->dev,
+					"%s: error short coarse override\n",
+					 __func__);
+		}
 	}
 
 	if (test_mode) {
@@ -513,7 +577,7 @@ static struct v4l2_subdev_ops imx274_subdev_ops = {
 	.pad	= &imx274_subdev_pad_ops,
 };
 
-static struct of_device_id imx274_of_match[] = {
+static const struct of_device_id imx274_of_match[] = {
 	{ .compatible = "nvidia,imx274", },
 	{ },
 };
@@ -590,32 +654,50 @@ fail:
 
 static int imx274_set_frame_length(struct imx274 *priv, s32 val)
 {
-	imx274_reg reg_list[2];
+	struct camera_common_mode_info *mode = priv->pdata->mode_info;
+	struct camera_common_data *s_data = priv->s_data;
+	struct v4l2_control control;
+	int hdr_en;
+	imx274_reg reg_list[3];
 	int err;
 	u32 frame_length;
 	u32 frame_rate;
 	int i = 0;
 	u8 svr;
-	u32 vmax;
 
 	dev_dbg(&priv->i2c_client->dev,
 		 "%s: val: %u\n", __func__, val);
 
 	frame_length = (u32)val;
 
-	frame_rate = (u32)(IMX274_PIXEL_CLK_HZ /
-				(u32)(frame_length * IMX274_LINE_LENGTH));
+	frame_rate = (u32)(mode[s_data->mode].pixel_clock /
+			(u32)(frame_length * mode[s_data->mode].line_length));
 
 	imx274_read_reg(priv->s_data, IMX274_SVR_ADDR, &svr);
 
-	vmax = (u32)(72000000 /
-			(u32)(frame_rate * IMX274_HMAX * (svr + 1))) - 12;
+	if (s_data->mode == IMX274_MODE_3840X2160_DOL_30FPS) {
+		priv->vmax_dol = (u32)(IMX274_SENSOR_INTERNAL_CLK_FREQ /
+				(frame_rate *
+				IMX274_DOL_4K_MODE_HMAX * (svr + 1)));
+		if (priv->vmax_dol < IMX274_DOL_4K_MODE_MIN_VMAX)
+			priv->vmax_dol = IMX274_DOL_4K_MODE_MIN_VMAX;
+	} else if (s_data->mode == IMX274_MODE_1920X1080_DOL_60FPS) {
+		priv->vmax_dol = (u32)(IMX274_SENSOR_INTERNAL_CLK_FREQ /
+				(frame_rate *
+				IMX274_DOL_1080P_MODE_HMAX * (svr + 1)));
+		if (priv->vmax_dol < IMX274_DOL_1080P_MODE_MIN_VMAX)
+			priv->vmax_dol = IMX274_DOL_1080P_MODE_MIN_VMAX;
+	} else {
+		priv->vmax_dol = (u32)(IMX274_SENSOR_INTERNAL_CLK_FREQ /
+				(u32)(frame_rate *
+				IMX274_HMAX * (svr + 1))) - 12;
+	}
 
-	imx274_get_vmax_regs(reg_list, vmax);
+	imx274_get_vmax_regs(reg_list, priv->vmax_dol);
 
 	imx274_set_group_hold(priv);
 
-	for (i = 0; i < 2; i++) {
+	for (i = 0; i < 3; i++) {
 		err = imx274_write_reg(priv->s_data, reg_list[i].addr,
 			 reg_list[i].val);
 		if (err)
@@ -623,7 +705,36 @@ static int imx274_set_frame_length(struct imx274 *priv, s32 val)
 	}
 
 	dev_dbg(&priv->i2c_client->dev,
-		"%s: frame_rate: %d vmax: %u\n", __func__, frame_rate, vmax);
+		 "%s: PCLK:%lld, FL:%d, LL:%d, fps:%d, VMAX:%d\n", __func__,
+			mode[s_data->mode].pixel_clock,
+			frame_length,
+			mode[s_data->mode].line_length,
+			frame_rate,
+			priv->vmax_dol);
+
+	control.id = V4L2_CID_HDR_EN;
+	err = camera_common_g_ctrl(priv->s_data, &control);
+	if (err < 0) {
+		dev_err(&priv->i2c_client->dev,
+			"could not find device ctrl.\n");
+		return err;
+	}
+
+	hdr_en = switch_ctrl_qmenu[control.value];
+	if ((hdr_en == SWITCH_ON) && (priv->last_coarse_long != 0)) {
+		err = imx274_set_coarse_time_shr_dol_long(priv,
+					priv->last_coarse_long);
+		if (err)
+			dev_err(&priv->i2c_client->dev,
+				"%s: error coarse time dol long\n", __func__);
+
+		err = imx274_set_coarse_time_shr_dol_short(priv,
+					priv->last_coarse_short);
+		if (err)
+			dev_err(&priv->i2c_client->dev,
+				"%s: error coarse time dol short\n", __func__);
+	}
+
 	return 0;
 
 fail:
@@ -632,27 +743,19 @@ fail:
 	return err;
 }
 
-static int imx274_calculate_shr(struct imx274 *priv, u32 rep)
+static u16 imx274_calculate_coarse_time_shr(struct imx274 *priv, u32 rep)
 {
 	u8 svr;
-	int shr;
+	u16 shr;
 	int min;
 	int max;
-	u8 vmax_l;
-	u8 vmax_m;
-	u32 vmax;
 
 	imx274_read_reg(priv->s_data, IMX274_SVR_ADDR, &svr);
-
-	imx274_read_reg(priv->s_data, IMX274_VMAX_ADDR_LSB, &vmax_l);
-	imx274_read_reg(priv->s_data, IMX274_VMAX_ADDR_MSB, &vmax_m);
-
-	vmax = ((vmax_m << 8) + vmax_l);
 
 	min = IMX274_MODE1_SHR_MIN;
 	max = ((svr + 1) * IMX274_VMAX) - 4;
 
-	shr = vmax * (svr + 1) -
+	shr = priv->vmax_dol * (svr + 1) -
 			(rep * IMX274_ET_FACTOR - IMX274_MODE1_OFFSET) /
 			IMX274_HMAX;
 
@@ -663,16 +766,46 @@ static int imx274_calculate_shr(struct imx274 *priv, u32 rep)
 		shr = max;
 
 	dev_dbg(&priv->i2c_client->dev,
-		 "%s: shr: %u vmax: %d\n", __func__, shr, vmax);
+		 "%s: shr: %u vmax: %d\n", __func__, shr, priv->vmax_dol);
 	return shr;
 }
 
 static int imx274_set_coarse_time(struct imx274 *priv, s32 val)
 {
+	struct v4l2_control control;
+	int hdr_en;
+	int err;
+
+	control.id = V4L2_CID_HDR_EN;
+	err = camera_common_g_ctrl(priv->s_data, &control);
+	if (err < 0) {
+		dev_err(&priv->i2c_client->dev,
+			"could not find device ctrl.\n");
+		return err;
+	}
+
+	hdr_en = switch_ctrl_qmenu[control.value];
+
+	if (hdr_en == SWITCH_ON) {
+		err = imx274_set_coarse_time_shr_dol_long(priv, val);
+		if (err)
+			dev_dbg(&priv->i2c_client->dev,
+			"%s: error coarse time dol long override\n", __func__);
+	} else {
+		err = imx274_set_coarse_time_shr(priv, val);
+		if (err)
+			dev_dbg(&priv->i2c_client->dev,
+			"%s: error coarse time SHR override\n", __func__);
+	}
+	return err;
+}
+
+static int imx274_set_coarse_time_shr(struct imx274 *priv, s32 val)
+{
 	imx274_reg reg_list[2];
 	int err;
 	u32 coarse_time;
-	u32 shr;
+	u16 shr;
 	int i = 0;
 
 	coarse_time = val;
@@ -680,7 +813,7 @@ static int imx274_set_coarse_time(struct imx274 *priv, s32 val)
 	dev_dbg(&priv->i2c_client->dev,
 		 "%s: val: %d\n", __func__, coarse_time);
 
-	shr = imx274_calculate_shr(priv, coarse_time);
+	shr = imx274_calculate_coarse_time_shr(priv, coarse_time);
 
 	imx274_get_shr_regs(reg_list, shr);
 	imx274_set_group_hold(priv);
@@ -697,6 +830,164 @@ static int imx274_set_coarse_time(struct imx274 *priv, s32 val)
 fail:
 	dev_dbg(&priv->i2c_client->dev,
 		 "%s: COARSE_TIME control error\n", __func__);
+	return err;
+}
+
+static int imx274_set_coarse_time_shr_dol_short(struct imx274 *priv, s32 val)
+{
+	struct camera_common_mode_info *mode = priv->pdata->mode_info;
+	struct camera_common_data *s_data = priv->s_data;
+	struct v4l2_control control;
+	int hdr_en;
+	imx274_reg reg_list[2];
+	u16 shr_dol1, min_shr, rhs1, hmax;
+	int err;
+	int i = 0;
+	s64 et_short;
+
+	control.id = V4L2_CID_HDR_EN;
+	err = camera_common_g_ctrl(priv->s_data, &control);
+	if (err < 0) {
+		dev_err(&priv->i2c_client->dev,
+			"could not find device ctrl.\n");
+		return err;
+	}
+
+	hdr_en = switch_ctrl_qmenu[control.value];
+	if (hdr_en != SWITCH_ON)  {
+		dev_err(&priv->i2c_client->dev,
+			"%s: error coarse time SHR DOL1 override\n", __func__);
+		goto fail;
+	}
+
+	if (s_data->mode == IMX274_MODE_3840X2160_DOL_30FPS) {
+		rhs1 = IMX274_DOL_4K_MODE_DEFAULT_RHS1;
+		min_shr = IMX274_DOL_4K_MIN_SHR_DOL1;
+		hmax = IMX274_DOL_4K_MODE_HMAX;
+	} else if (s_data->mode == IMX274_MODE_1920X1080_DOL_60FPS) {
+		rhs1 = IMX274_DOL_1080P_MODE_DEFAULT_RHS1;
+		min_shr = IMX274_DOL_1080P_MIN_SHR_DOL1;
+		hmax = IMX274_DOL_1080P_MODE_HMAX;
+	} else {
+		dev_err(&priv->i2c_client->dev,
+			"%s: error, invalid dol mode\n", __func__);
+		err = -EINVAL;
+		goto fail;
+	}
+
+
+	priv->last_coarse_short = val;
+	et_short = mode[s_data->mode].line_length * val *
+		FIXED_POINT_SCALING_FACTOR /
+		mode[s_data->mode].pixel_clock;
+
+	shr_dol1 = rhs1 -
+		(et_short * IMX274_SENSOR_INTERNAL_CLK_FREQ /
+		FIXED_POINT_SCALING_FACTOR  -
+		IMX274_DOL_MODE_CLOCKS_OFFSET) /
+		hmax - 1 / 4;
+
+	if (shr_dol1 <= min_shr)
+		shr_dol1 = min_shr;
+
+	if (shr_dol1 > rhs1 - 2)
+		shr_dol1 = rhs1 - 2;
+
+	dev_dbg(&priv->i2c_client->dev,
+		 "%s: coarse:%d, et:%d, shr_dol1:%d, rhs1:%d, Pclk:%lld, LL:%d, HMAX:%d\n",
+		 __func__,
+		val,
+		(int)(et_short * 1000000 / FIXED_POINT_SCALING_FACTOR),
+		shr_dol1,
+		rhs1,
+		mode[s_data->mode].pixel_clock,
+		mode[s_data->mode].line_length,
+		hmax);
+
+	imx274_get_shr_dol1_regs(reg_list, shr_dol1);
+	imx274_set_group_hold(priv);
+
+	for (i = 0; i < 2; i++) {
+		err = imx274_write_reg(priv->s_data, reg_list[i].addr,
+			 reg_list[i].val);
+		if (err)
+			goto fail;
+	}
+	return 0;
+
+fail:
+	dev_dbg(&priv->i2c_client->dev,
+		 "%s: COARSE_TIME control error\n", __func__);
+	return err;
+}
+
+static int imx274_set_coarse_time_shr_dol_long(struct imx274 *priv, s32 val)
+{
+	struct camera_common_mode_info *mode = priv->pdata->mode_info;
+	struct camera_common_data *s_data = priv->s_data;
+	imx274_reg reg_list[2];
+	u16 shr_dol2, min_shr, hmax, rhs1;
+	s64 et_long;
+	int err;
+	int i = 0;
+
+	if (s_data->mode == IMX274_MODE_3840X2160_DOL_30FPS) {
+		rhs1 = IMX274_DOL_4K_MODE_DEFAULT_RHS1;
+		min_shr = IMX274_DOL_4K_MIN_SHR_DOL1;
+		hmax = IMX274_DOL_4K_MODE_HMAX;
+	} else if (s_data->mode == IMX274_MODE_1920X1080_DOL_60FPS) {
+		rhs1 = IMX274_DOL_1080P_MODE_DEFAULT_RHS1;
+		min_shr = IMX274_DOL_1080P_MIN_SHR_DOL1;
+		hmax = IMX274_DOL_1080P_MODE_HMAX;
+	} else {
+		dev_err(&priv->i2c_client->dev,
+			"%s: error, invalid dol mode\n", __func__);
+		err = -EINVAL;
+		goto fail;
+	}
+
+	priv->last_coarse_long = val;
+	et_long = mode[s_data->mode].line_length * val *
+		FIXED_POINT_SCALING_FACTOR /
+		mode[s_data->mode].pixel_clock;
+
+	shr_dol2 = priv->vmax_dol  -
+		(et_long * IMX274_SENSOR_INTERNAL_CLK_FREQ /
+		FIXED_POINT_SCALING_FACTOR  -
+		IMX274_DOL_MODE_CLOCKS_OFFSET) /
+		hmax - 1 / 4;
+
+	if (shr_dol2 < rhs1 + min_shr)
+		shr_dol2 = rhs1 + min_shr;
+
+	if (shr_dol2 > priv->vmax_dol - 4)
+		shr_dol2 = priv->vmax_dol - 4;
+
+	dev_dbg(&priv->i2c_client->dev,
+		 "%s: coarse:%d, et:%d, shr_dol2:%d, vmax:%d, Pclk:%lld, LL:%d, HMAX:%d\n",
+		 __func__,
+		val,
+		(int)(et_long * 1000000 / FIXED_POINT_SCALING_FACTOR),
+		shr_dol2,
+		priv->vmax_dol,
+		mode[s_data->mode].pixel_clock,
+		mode[s_data->mode].line_length,
+		hmax);
+
+	imx274_get_shr_dol2_regs(reg_list, shr_dol2);
+	imx274_set_group_hold(priv);
+
+	for (i = 0; i < 2; i++) {
+		err = imx274_write_reg(priv->s_data, reg_list[i].addr,
+			 reg_list[i].val);
+		if (err)
+			goto fail;
+	}
+	return 0;
+
+fail:
+	dev_dbg(&priv->i2c_client->dev,
+		 "%s: COARSE_TIME_SHORT control error\n", __func__);
 	return err;
 }
 
@@ -739,7 +1030,7 @@ static int imx274_s_ctrl(struct v4l2_ctrl *ctrl)
 		err = imx274_set_coarse_time(priv, ctrl->val);
 		break;
 	case V4L2_CID_COARSE_TIME_SHORT:
-		err = imx274_set_coarse_time(priv, ctrl->val);
+		err = imx274_set_coarse_time_shr_dol_short(priv, ctrl->val);
 		break;
 	case V4L2_CID_GROUP_HOLD:
 		if (switch_ctrl_qmenu[ctrl->val] == SWITCH_ON) {
@@ -859,6 +1150,10 @@ static struct camera_common_pdata *imx274_parse_dt(struct i2c_client *client)
 	of_property_read_string(node, "iovdd-reg",
 			&board_priv_pdata->regulators.iovdd);
 
+	err = camera_common_parse_sensor_mode(client, board_priv_pdata);
+	if (err)
+		dev_err(&client->dev, "Failed to load mode info %d\n", err);
+
 	return board_priv_pdata;
 
 error:
@@ -869,8 +1164,8 @@ error:
 static int imx274_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	dev_dbg(&client->dev, "%s:\n", __func__);
 
+	dev_dbg(&client->dev, "%s:\n", __func__);
 
 	return 0;
 }

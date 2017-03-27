@@ -41,9 +41,10 @@ struct dbg_profiler_object_data;
 
 #include "../../../arch/arm/mach-tegra/iomap.h"
 
+#include <nvgpu/as.h>
+#include <nvgpu/log.h>
 #include <nvgpu/pramin.h>
 #include <nvgpu/acr/nvgpu_acr.h>
-#include <nvgpu/as.h>
 
 #include "clk_gk20a.h"
 #include "ce2_gk20a.h"
@@ -927,6 +928,9 @@ struct gk20a {
 	bool power_on;
 	bool suspended;
 
+	u32 log_mask;
+	u32 log_trace;
+
 	struct rw_semaphore busy_lock;
 
 	struct clk_gk20a clk;
@@ -1193,88 +1197,11 @@ struct gk20a_cyclestate_buffer_elem {
 	u64 data;
 };
 
-/* debug accessories */
-
-#ifdef CONFIG_DEBUG_FS
-    /* debug info, default is compiled-in but effectively disabled (0 mask) */
-    /*e.g: echo 1 > /d/gk20a.0/dbg_mask */
-    #define GK20A_DEFAULT_DBG_MASK 0
-#else
-    /* manually enable and turn it on the mask */
-    #define GK20A_DEFAULT_DBG_MASK (dbg_info)
-#endif
-
-enum gk20a_dbg_categories {
-	gpu_dbg_info    = BIT(0),  /* lightly verbose info */
-	gpu_dbg_fn      = BIT(2),  /* fn name tracing */
-	gpu_dbg_reg     = BIT(3),  /* register accesses, very verbose */
-	gpu_dbg_pte     = BIT(4),  /* gmmu ptes */
-	gpu_dbg_intr    = BIT(5),  /* interrupts */
-	gpu_dbg_pmu     = BIT(6),  /* gk20a pmu */
-	gpu_dbg_clk     = BIT(7),  /* gk20a clk */
-	gpu_dbg_map     = BIT(8),  /* mem mappings */
-	gpu_dbg_gpu_dbg = BIT(9),  /* gpu debugger/profiler */
-	gpu_dbg_cde     = BIT(10), /* cde info messages */
-	gpu_dbg_cde_ctx = BIT(11), /* cde context usage messages */
-	gpu_dbg_ctxsw   = BIT(12), /* ctxsw tracing */
-	gpu_dbg_sched   = BIT(13), /* sched control tracing */
-	gpu_dbg_map_v   = BIT(14), /* verbose mem mappings */
-	gpu_dbg_sema	= BIT(15), /* semaphore debugging */
-	gpu_dbg_sema_v	= BIT(16), /* verbose semaphore debugging */
-	gpu_dbg_pmu_pstate = BIT(17), /* p state controlled by pmu */
-	gpu_dbg_xv      = BIT(18), /* XVE debugging */
-	gpu_dbg_shutdown = BIT(19), /* GPU shutdown tracing */
-	gpu_dbg_kmem    = BIT(20), /* Kmem tracking debugging */
-	gpu_dbg_mem     = BIT(31), /* memory accesses, very verbose */
-};
-
 /* operations that will need to be executed on non stall workqueue */
 enum gk20a_nonstall_ops {
 	gk20a_nonstall_ops_wakeup_semaphore = BIT(0), /* wake up semaphore */
 	gk20a_nonstall_ops_post_events = BIT(1),
 };
-
-extern u32 gk20a_dbg_mask;
-#ifdef CONFIG_GK20A_TRACE_PRINTK
-extern u32 gk20a_dbg_ftrace;
-#define gk20a_dbg(dbg_mask, format, arg...)				\
-do {									\
-	if (unlikely((dbg_mask) & gk20a_dbg_mask)) {		\
-		if (gk20a_dbg_ftrace)					\
-			trace_printk(format "\n", ##arg);		\
-		else							\
-			pr_info("gk20a %s: " format "\n",		\
-					__func__, ##arg);		\
-	}								\
-} while (0)
-#else
-#define gk20a_dbg(dbg_mask, format, arg...)				\
-do {									\
-	if (unlikely((dbg_mask) & gk20a_dbg_mask)) {		\
-		pr_info("gk20a %s: " format "\n",		\
-				__func__, ##arg);		\
-	}								\
-} while (0)
-#endif
-
-#define gk20a_err(d, fmt, arg...)					\
-	do {								\
-		if (d)							\
-			dev_err(d, "%s: " fmt "\n", __func__, ##arg);	\
-	} while (0)
-
-#define gk20a_warn(d, fmt, arg...)					\
-	do {								\
-		if (d)							\
-			dev_warn(d, "%s: " fmt "\n", __func__, ##arg);	\
-	} while (0)
-
-
-#define gk20a_dbg_fn(fmt, arg...) \
-	gk20a_dbg(gpu_dbg_fn, fmt, ##arg)
-
-#define gk20a_dbg_info(fmt, arg...) \
-	gk20a_dbg(gpu_dbg_info, fmt, ##arg)
 
 void gk20a_init_clk_ops(struct gpu_ops *gops);
 

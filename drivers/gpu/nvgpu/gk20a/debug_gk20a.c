@@ -16,8 +16,9 @@
 #include <linux/seq_file.h>
 #include <linux/io.h>
 
-#include <nvgpu/semaphore.h>
+#include <nvgpu/log.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/semaphore.h>
 
 #include "gk20a.h"
 #include "debug_gk20a.h"
@@ -232,7 +233,6 @@ void gk20a_debug_init(struct device *dev, const char *debugfs_symlink)
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 #ifdef CONFIG_DEBUG_FS
 	struct gk20a *g = platform->g;
-#endif
 
 	platform->debugfs = debugfs_create_dir(dev_name(dev), NULL);
 	if (!platform->debugfs)
@@ -256,15 +256,16 @@ void gk20a_debug_init(struct device *dev, const char *debugfs_symlink)
 	debugfs_create_bool("disable_syncpoints", S_IRUGO|S_IWUSR,
 		platform->debugfs, &platform->disable_syncpoints);
 
+	/* Legacy debugging API. */
 	debugfs_create_u32("dbg_mask", S_IRUGO|S_IWUSR,
-		platform->debugfs, &gk20a_dbg_mask);
+		platform->debugfs, &nvgpu_dbg_mask);
 
-#ifdef CONFIG_GK20A_TRACE_PRINTK
-	debugfs_create_u32("dbg_ftrace", S_IRUGO|S_IWUSR,
-		platform->debugfs, &gk20a_dbg_ftrace);
-#endif
+	/* New debug logging API. */
+	debugfs_create_u32("log_mask", S_IRUGO|S_IWUSR,
+		platform->debugfs, &g->log_mask);
+	debugfs_create_u32("log_trace", S_IRUGO|S_IWUSR,
+		platform->debugfs, &g->log_trace);
 
-#ifdef CONFIG_DEBUG_FS
 	nvgpu_spinlock_init(&g->debugfs_lock);
 
 	g->mm.ltc_enabled = true;

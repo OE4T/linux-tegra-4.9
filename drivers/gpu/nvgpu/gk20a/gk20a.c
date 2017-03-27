@@ -82,11 +82,6 @@
 
 #define GK20A_NUM_CDEVS 7
 
-u32 gk20a_dbg_mask = GK20A_DEFAULT_DBG_MASK;
-#ifdef CONFIG_GK20A_TRACE_PRINTK
-u32 gk20a_dbg_ftrace;
-#endif
-
 #define GK20A_WAIT_FOR_IDLE_MS	2000
 
 static int gk20a_pm_prepare_poweroff(struct device *dev);

@@ -18,6 +18,7 @@
 #include <linux/list.h>
 #include <linux/delay.h>
 
+#include <nvgpu/log.h>
 #include <nvgpu/allocator.h>
 
 #include "gk20a/gk20a.h"

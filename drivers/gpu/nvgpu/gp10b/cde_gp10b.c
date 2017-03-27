@@ -129,9 +129,9 @@ static int gp10b_populate_scatter_buffer(struct gk20a *g,
 	if ((page & 7) != 0)
 		scatter_buffer[page >> 3] = d;
 
-	if (unlikely(gpu_dbg_cde & gk20a_dbg_mask)) {
+	if (nvgpu_log_mask_enabled(g, gpu_dbg_cde)) {
 		gk20a_dbg(gpu_dbg_cde, "scatterBuffer content:");
-		for (i=0; i < page>>3; i++) {
+		for (i = 0; i < page >> 3; i++) {
 			gk20a_dbg(gpu_dbg_cde, " %x", scatter_buffer[i]);
 		}
 	}

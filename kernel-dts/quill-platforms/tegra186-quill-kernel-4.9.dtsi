@@ -25,6 +25,10 @@
 		};
 	};
 
+	hda@3510000 {
+		status = "disabled";
+       };
+
 	aconnect@2a41000 {
 		compatible = "nvidia,tegra210-aconnect";
 		clocks = <&tegra_car TEGRA186_CLK_APE>,

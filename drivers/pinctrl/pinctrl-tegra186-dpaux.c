@@ -48,7 +48,7 @@
 	.kernel_only	= true,			\
 	}
 
-struct nvhost_device_data tegra_dpaux_nvhost_device_data[] = {
+static struct nvhost_device_data tegra_dpaux_nvhost_device_data[] = {
 	DPAUX_NVHOST_DEVICE_DATA(dpaux),
 	DPAUX_NVHOST_DEVICE_DATA(dpaux1),
 };
@@ -306,7 +306,7 @@ static int tegra186_dpaux_pinctrl_probe(struct platform_device *pdev)
 
 static int tegra186_dpaux_probe(struct platform_device *pdev)
 {
-	const struct of_device_id *odev_id;
+	const struct of_device_id *odev_id, *next_id;
 	struct device *dev = &pdev->dev;
 	struct nvhost_device_data *pdata;
 
@@ -314,7 +314,17 @@ static int tegra186_dpaux_probe(struct platform_device *pdev)
 	if (!odev_id)
 		return -ENODEV;
 
-	pdata = (struct nvhost_device_data*)odev_id->data;
+	next_id = odev_id->data;
+	if (!next_id) {
+		dev_err(dev, "ERROR, no data for '%s', please fix\n",
+				odev_id->compatible);
+		return -EINVAL;
+	}
+
+	/*
+	 * TODO: we should not discard const qualifier here
+	 */
+	pdata = (struct nvhost_device_data *)next_id->data;
 	if (!pdata) {
 		/*
 		 * if data is NULL this means that tegra_dpaux_pinctl_of_match
@@ -329,8 +339,8 @@ static int tegra186_dpaux_probe(struct platform_device *pdev)
 	/*
 	 * TODO: here I discard const qualifier, but it is better
 	 * to change nvhost_domain_init to accept const parameter
-         */
-	return nvhost_domain_init((struct of_device_id*)odev_id);
+	 */
+	return nvhost_domain_init((struct of_device_id *)next_id);
 }
 
 static struct of_device_id tegra_dpaux_pinctl_of_match[] = {

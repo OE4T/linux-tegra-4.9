@@ -390,6 +390,8 @@ void gk20a_fifo_reset_pbdma_method(struct gk20a *g, int pbdma_id,
 			 int pbdma_method_index);
 unsigned int gk20a_fifo_handle_pbdma_intr_0(struct gk20a *g, u32 pbdma_id,
 			u32 pbdma_intr_0, u32 *handled, u32 *error_notifier);
+unsigned int gk20a_fifo_handle_pbdma_intr_1(struct gk20a *g, u32 pbdma_id,
+			u32 pbdma_intr_1, u32 *handled, u32 *error_notifier);
 
 u32 gk20a_fifo_default_timeslice_us(struct gk20a *g);
 

@@ -231,6 +231,7 @@ void gm20b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.teardown_ch_tsg = gk20a_fifo_teardown_ch_tsg;
 	gops->fifo.handle_sched_error = gk20a_fifo_handle_sched_error;
 	gops->fifo.handle_pbdma_intr_0 = gk20a_fifo_handle_pbdma_intr_0;
+	gops->fifo.handle_pbdma_intr_1 = gk20a_fifo_handle_pbdma_intr_1;
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 	gops->fifo.alloc_syncpt_buf = gk20a_fifo_alloc_syncpt_buf;
 	gops->fifo.free_syncpt_buf = gk20a_fifo_free_syncpt_buf;

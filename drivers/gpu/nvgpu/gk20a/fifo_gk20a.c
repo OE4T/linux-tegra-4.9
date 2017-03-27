@@ -2391,6 +2391,23 @@ unsigned int gk20a_fifo_handle_pbdma_intr_0(struct gk20a *g, u32 pbdma_id,
 	return rc_type;
 }
 
+unsigned int gk20a_fifo_handle_pbdma_intr_1(struct gk20a *g,
+			u32 pbdma_id, u32 pbdma_intr_1,
+			u32 *handled, u32 *error_notifier)
+{
+	unsigned int rc_type = RC_TYPE_PBDMA_FAULT;
+
+	/*
+	 * all of the interrupts in _intr_1 are "host copy engine"
+	 * related, which is not supported. For now just make them
+	 * channel fatal.
+	 */
+	nvgpu_err(g, "hce err: pbdma_intr_1(%d):0x%08x",
+		pbdma_id, pbdma_intr_1);
+	*handled |= pbdma_intr_1;
+
+	return rc_type;
+}
 static u32 gk20a_fifo_handle_pbdma_intr(struct gk20a *g,
 					struct fifo_gk20a *f,
 					u32 pbdma_id)
@@ -2413,12 +2430,9 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct gk20a *g,
 		gk20a_writel(g, pbdma_intr_0_r(pbdma_id), pbdma_intr_0);
 	}
 
-	/* all intrs in _intr_1 are "host copy engine" related,
-	 * which gk20a doesn't have. for now just make them channel fatal. */
 	if (pbdma_intr_1) {
-		nvgpu_err(g, "channel hce error: pbdma_intr_1(%d): 0x%08x",
-			pbdma_id, pbdma_intr_1);
-		rc_type = RC_TYPE_PBDMA_FAULT;
+		rc_type = g->ops.fifo.handle_pbdma_intr_1(g, pbdma_id,
+				 pbdma_intr_1, &handled, &error_notifier);
 		gk20a_writel(g, pbdma_intr_1_r(pbdma_id), pbdma_intr_1);
 	}
 
@@ -4116,6 +4130,7 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.teardown_ch_tsg = gk20a_fifo_teardown_ch_tsg;
 	gops->fifo.handle_sched_error = gk20a_fifo_handle_sched_error;
 	gops->fifo.handle_pbdma_intr_0 = gk20a_fifo_handle_pbdma_intr_0;
+	gops->fifo.handle_pbdma_intr_1 = gk20a_fifo_handle_pbdma_intr_1;
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 	gops->fifo.alloc_syncpt_buf = gk20a_fifo_alloc_syncpt_buf;
 	gops->fifo.free_syncpt_buf = gk20a_fifo_free_syncpt_buf;

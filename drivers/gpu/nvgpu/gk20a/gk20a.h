@@ -492,6 +492,9 @@ struct gpu_ops {
 		unsigned int (*handle_pbdma_intr_0)(struct gk20a *g,
 					u32 pbdma_id, u32 pbdma_intr_0,
 					u32 *handled, u32 *error_notifier);
+		unsigned int (*handle_pbdma_intr_1)(struct gk20a *g,
+					u32 pbdma_id, u32 pbdma_intr_1,
+					u32 *handled, u32 *error_notifier);
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 		int (*alloc_syncpt_buf)(struct channel_gk20a *c,
 				u32 syncpt_id, struct nvgpu_mem *syncpt_buf);

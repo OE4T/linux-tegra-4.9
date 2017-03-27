@@ -25,6 +25,7 @@
 #define TEGRA124	0x40
 #define TEGRA132	0x13
 #define TEGRA210	0x21
+#define TEGRA210B01	0x21
 #define TEGRA186	0x18
 #define TEGRA194	0x19
 

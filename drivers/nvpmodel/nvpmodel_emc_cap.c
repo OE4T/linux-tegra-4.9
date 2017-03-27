@@ -45,15 +45,15 @@ struct tegra_bwmgr_client *bwmgr_handle;
 static ssize_t emc_iso_cap_show(struct kobject *kobj,
 				struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n", emc_iso_cap);
+	return sprintf(buf, "%lu\n", emc_iso_cap);
 }
 
 static ssize_t emc_iso_cap_store(struct kobject *kobj,
-				struct kobj_attribute *attr, char *buf,
+				struct kobj_attribute *attr, const char *buf,
 				size_t count)
 {
 	int error = 0;
-	sscanf(buf, "%du", &emc_iso_cap);
+	sscanf(buf, "%lu", &emc_iso_cap);
 	error = tegra_bwmgr_set_emc(bwmgr_handle, emc_iso_cap,
 				TEGRA_BWMGR_SET_EMC_ISO_CAP);
 	if (error)

@@ -1014,6 +1014,8 @@ int wl_android_wifi_off(struct net_device *dev)
 		DHD_TRACE(("%s: dev is null\n", __FUNCTION__));
 		return -EINVAL;
 	}
+	wl_fw_assoc_timeout_cancel();
+
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 	tegra_sysfs_off();
 #endif

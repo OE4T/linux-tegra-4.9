@@ -902,6 +902,10 @@ static const struct {
 };
 #endif
 
+/* watchdog work for disconnecting when fw is not associated
+for FW_ASSOC_WATCHDOG_TIME ms */
+static struct fw_assoc_timeout_work fw_assoc_timeout;
+#define FW_ASSOC_WATCHDOG_TIME (5 * 1000) /* msec */
 
 static void wl_add_remove_pm_enable_work(struct bcm_cfg80211 *cfg, bool add_remove,
 	enum wl_handler_del_type type)
@@ -4235,6 +4239,10 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 	}
 
 	RETURN_EIO_IF_NOT_UP(cfg);
+	/* cancel FW assoc timeout watchdog if set */
+	if (fw_assoc_timeout.fw_assoc_watchdog_started) {
+		wl_fw_assoc_timeout_cancel();
+	}
 
 	/*
 	 * Cancel ongoing scan to sync up with sme state machine of cfg80211.
@@ -4565,6 +4573,12 @@ wl_cfg80211_disconnect(struct wiphy *wiphy, struct net_device *dev,
 	else
 		TEGRA_SYSFS_HISTOGRAM_STAT_INC(disconnect_rssi_high);
 #endif
+
+	/* cancel FW assoc timeout watchdog if set */
+	if (fw_assoc_timeout.fw_assoc_watchdog_started) {
+		wl_fw_assoc_timeout_cancel();
+	}
+
 	RETURN_EIO_IF_NOT_UP(cfg);
 	act = *(bool *) wl_read_prof(cfg, dev, WL_PROF_ACT);
 	curbssid = wl_read_prof(cfg, dev, WL_PROF_BSSID);
@@ -5076,6 +5090,50 @@ wl_cfg80211_config_default_mgmt_key(struct wiphy *wiphy,
 	return -EOPNOTSUPP;
 #endif /* MFP */
 }
+static void
+fw_assoc_timeout_fn(struct work_struct *work)
+{
+	struct delayed_work *delay_work = container_of(work, struct delayed_work, work);
+	struct fw_assoc_timeout_work *fw_assoc_timeout = container_of(delay_work, struct fw_assoc_timeout_work, delay_work);
+	struct bcm_cfg80211 *cfg = fw_assoc_timeout->cfg;
+	struct net_device *dev = fw_assoc_timeout->dev;
+	scb_val_t scbval;
+	s32  err = 0;
+	u8 *curbssid = wl_read_prof(cfg, dev, WL_PROF_BSSID);
+
+	scbval.val = WLAN_REASON_DEAUTH_LEAVING;
+	memcpy(&scbval.ea, curbssid, ETHER_ADDR_LEN);
+	scbval.val = htod32(scbval.val);
+	err = wldev_ioctl(dev, WLC_DISASSOC, &scbval, sizeof(scb_val_t), true);
+	if (err < 0) {
+		WL_ERR(("WLC_DISASSOC error %d\n", err));
+	}
+	memset(&cfg->last_roamed_addr, 0, ETHER_ADDR_LEN);
+	/* Disconnect due to zero BSSID */
+	wl_clr_drv_status(cfg, CONNECTED, dev);
+	CFG80211_DISCONNECTED(dev, 0, NULL, 0, false, GFP_KERNEL);
+	wl_link_down(cfg);
+	wl_init_prof(cfg, dev);
+	fw_assoc_timeout->fw_assoc_watchdog_started = FALSE;
+	WL_ERR(("force cfg80211_disconnected\n"));
+}
+
+void
+wl_fw_assoc_timeout_init()
+{
+	INIT_DELAYED_WORK(&fw_assoc_timeout.delay_work, fw_assoc_timeout_fn);
+	fw_assoc_timeout.fw_assoc_watchdog_started = FALSE;
+}
+
+void
+wl_fw_assoc_timeout_cancel()
+{
+	if (delayed_work_pending(&fw_assoc_timeout.delay_work)) {
+		WL_ERR(("cancelling fw_assoc_watchdog work\n"));
+		cancel_delayed_work_sync(&fw_assoc_timeout.delay_work);
+		fw_assoc_timeout.fw_assoc_watchdog_started = FALSE;
+	}
+}
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0))
 static s32
@@ -5097,6 +5155,8 @@ wl_cfg80211_get_station(struct wiphy *wiphy, struct net_device *dev,
 	s8 eabuf[ETHER_ADDR_STR_LEN];
 #endif
 	dhd_pub_t *dhd =  (dhd_pub_t *)(cfg->pub);
+	bool fw_assoc_state = FALSE;
+	u32 dhd_assoc_state = 0;
 	RETURN_EIO_IF_NOT_UP(cfg);
 	if (wl_get_mode_by_netdev(cfg, dev) == WL_MODE_AP) {
 		err = wldev_iovar_getbuf(dev, "sta_info", (struct ether_addr *)mac,
@@ -5143,13 +5203,37 @@ wl_cfg80211_get_station(struct wiphy *wiphy, struct net_device *dev,
 				}
 			}
 		}
-		if (!wl_get_drv_status(cfg, CONNECTED, dev) ||
-			(dhd_is_associated(dhd, 0, &err) == FALSE)) {
-			WL_ERR(("NOT assoc\n"));
-			if (err == -ERESTARTSYS)
+		dhd_assoc_state = wl_get_drv_status(cfg, CONNECTED, dev);
+		fw_assoc_state = dhd_is_associated(dhd, 0, &err);
+		if (!dhd_assoc_state || !fw_assoc_state) {
+			WL_ERR(("NOT assoc, error %d\n", err));
+			if (err == -ENODATA)
 				return err;
+			if (!dhd_assoc_state) {
+				WL_TRACE_HW4(("drv state is not connected \n"));
+			}
+			if (!fw_assoc_state) {
+				WL_TRACE_HW4(("fw state is not associated \n"));
+			}
+			/* Disconnect due to fw is not associated for FW_ASSOC_WATCHDOG_TIME ms.
+			* 'err == 0 or BCME_NOTASSOCIATED' of dhd_is_associated() and '!fw_assoc_state'
+			* means that BSSID is null.
+			*/
+			if (dhd_assoc_state && !fw_assoc_state && (err == BCME_NOTASSOCIATED || !err)) {
+				if (!fw_assoc_timeout.fw_assoc_watchdog_started) {
+					fw_assoc_timeout.dev = dev;
+					fw_assoc_timeout.cfg = cfg;
+					schedule_delayed_work(&fw_assoc_timeout.delay_work, msecs_to_jiffies(FW_ASSOC_WATCHDOG_TIME));
+					fw_assoc_timeout.fw_assoc_watchdog_started = TRUE;
+					WL_INFORM(("fw_assoc_watchdog_started\n"));
+				}
+			}
 			err = -ENODEV;
 			return err;
+		}
+		if (fw_assoc_timeout.fw_assoc_watchdog_started) {
+			WL_INFORM(("cancelling fw_assoc_watchdog work\n"));
+			wl_fw_assoc_timeout_cancel();
 		}
 		curmacp = wl_read_prof(cfg, dev, WL_PROF_BSSID);
 		if (memcmp(mac, curmacp, ETHER_ADDR_LEN)) {
@@ -12113,7 +12197,7 @@ s32 wl_cfg80211_attach(struct net_device *ndev, void *context)
 	cfg->btcoex_info = wl_cfg80211_btcoex_init(cfg->wdev->netdev);
 	if (!cfg->btcoex_info)
 		goto cfg80211_attach_out;
-#endif 
+#endif
 
 	g_bcm_cfg = cfg;
 
@@ -12123,7 +12207,8 @@ s32 wl_cfg80211_attach(struct net_device *ndev, void *context)
 	if (err)
 		goto cfg80211_attach_out;
 #endif
-#endif 
+#endif
+	wl_fw_assoc_timeout_init();
 
 	return err;
 
@@ -12141,13 +12226,14 @@ void wl_cfg80211_detach(void *para)
 	cfg = g_bcm_cfg;
 
 	WL_TRACE(("In\n"));
+	wl_fw_assoc_timeout_cancel();
 
 	wl_add_remove_pm_enable_work(cfg, FALSE, WL_HANDLER_DEL);
 
 #if defined(COEX_DHCP)
 	wl_cfg80211_btcoex_deinit();
 	cfg->btcoex_info = NULL;
-#endif 
+#endif
 
 	wl_setup_rfkill(cfg, FALSE);
 #ifdef DEBUGFS_CFG80211

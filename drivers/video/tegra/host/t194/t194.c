@@ -566,9 +566,44 @@ static void t194_remove_support(struct nvhost_chip_support *op)
 	op->priv = NULL;
 }
 
+bool use_vm_threshold_registers;
+
+static void init_syncpt_thresh_reg(struct nvhost_master *host)
+{
+	unsigned int id = host->info.pts_base;
+	unsigned long val;
+
+	/*
+	 * WAR to bug 200293149: Check which threshold range
+	 * should be used. By default we use the old register
+	 * range for setting the interrupts. If the
+	 * model doesn't support the old range, it will assert
+	 * the interrupt immediately. If this happens, the code
+	 * flags that we should use the VM threshold ranges
+	 * instead.
+	 */
+
+	intr_op().disable_all_syncpt_intrs(&host->intr);
+	intr_op().set_syncpt_threshold(&host->intr, id, 1);
+	intr_op().enable_syncpt_intr(&host->intr, id);
+
+	udelay(10);
+
+	val = host1x_readl(host->dev,
+			host1x_sync_syncpt_thresh_cpu0_int_status_r() +
+			bit_word(id) * 4);
+
+	if (val & bit_mask(id))
+		use_vm_threshold_registers = true;
+
+	intr_op().disable_all_syncpt_intrs(&host->intr);
+}
+
 static void t194_init_regs(struct platform_device *pdev, bool prod)
 {
 	struct nvhost_streamid_mapping *map_regs = t19x_host1x_streamid_mapping;
+
+	init_syncpt_thresh_reg(nvhost_get_host(pdev));
 
 	/* simulator cannot handle following writes - skip them */
 	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())

@@ -349,9 +349,9 @@ static int bridge_serr_hook(struct pt_regs *regs, int reason,
 
 #ifdef CONFIG_DEBUG_FS
 static DEFINE_MUTEX(bridge_mca_mutex);
-static struct dentry *bridge_root;
 static struct dentry *bridge_timeout_dir;
 static struct dentry *bridge_timeout_node;
+static int created_root = false;
 
 static int bridge_mca_show(struct seq_file *file, void *data)
 {
@@ -503,31 +503,17 @@ static int bridge_timeout_dbgfs_init(struct bridge_mca_bank *bank,
 static int bridge_mca_dbgfs_init(void)
 {
 	struct dentry *d;
-	int created_root = false;
-
-	if (bridge_root == NULL) {
+	if (!created_root) {
 		d = debugfs_create_file("tegra_bridge_mca",
-					S_IRUGO, bridge_root,
-					NULL,
-					&bridge_mca_fops);
+				S_IRUGO, NULL, NULL, &bridge_mca_fops);
 		if (IS_ERR_OR_NULL(d)) {
 			pr_err("%s: could not create 'tegra_bridge_mca' node\n",
 			       __func__);
-		goto clean;
+			return PTR_ERR(d);
 		}
-
-		bridge_root = d;
 		created_root = true;
 	}
-
 	return 0;
-
-clean:
-	if (created_root) {
-		debugfs_remove_recursive(bridge_root);
-		bridge_root = NULL;
-	}
-	return PTR_ERR(d);
 }
 #else
 static int bridge_mca_dbgfs_init(void) { return 0; }

@@ -734,7 +734,7 @@ struct vbios_voltage_device_table_1x_header {
 	u8 header_size;
 	u8 table_entry_size;
 	u8 num_table_entries;
-};
+} __packed;
 
 struct vbios_voltage_device_table_1x_entry {
 	u8 type;
@@ -745,7 +745,7 @@ struct vbios_voltage_device_table_1x_entry {
 	u32 param2;
 	u32 param3;
 	u32 param4;
-};
+} __packed;
 
 #define NV_VBIOS_VOLTAGE_DEVICE_1X_ENTRY_TYPE_INVALID	0x00
 #define NV_VBIOS_VOLTAGE_DEVICE_1X_ENTRY_TYPE_PSV		0x02
@@ -796,13 +796,13 @@ struct vbios_voltage_policy_table_1x_header {
 	u8 table_entry_size;
 	u8 num_table_entries;
 	u8 perf_core_vf_seq_policy_idx;
-};
+} __packed;
 
 struct vbios_voltage_policy_table_1x_entry {
 	u8 type;
 	u32 param0;
 	u32 param1;
-};
+} __packed;
 
 #define NV_VBIOS_VOLTAGE_POLICY_1X_ENTRY_TYPE_INVALID		0x00
 #define NV_VBIOS_VOLTAGE_POLICY_1X_ENTRY_TYPE_SINGLE_RAIL	0x01
@@ -870,7 +870,7 @@ struct therm_channel_1x_header {
 	u8 board_pri_ch_idx;
 	u8 mem_pri_ch_idx;
 	u8 pwr_supply_pri_ch_idx;
-};
+} __packed;
 
 struct therm_channel_1x_entry {
 	u8 class_id;
@@ -878,7 +878,7 @@ struct therm_channel_1x_entry {
 	u8 param1;
 	u8 param2;
 	u8 flags;
-};
+} __packed;
 
 #define NV_VBIOS_THERM_CHANNEL_1X_ENTRY_CLASS_DEVICE                       0x01
 

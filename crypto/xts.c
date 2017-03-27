@@ -100,6 +100,7 @@ static int crypt(struct blkcipher_desc *d,
 	u8 *wsrc;
 	u8 *wdst;
 
+	w->nbytes = 0;
 	err = blkcipher_walk_virt(d, w);
 	if (!w->nbytes)
 		return err;

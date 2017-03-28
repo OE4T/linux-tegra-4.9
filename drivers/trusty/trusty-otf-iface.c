@@ -25,6 +25,10 @@ void te_restore_keyslots(void)
 	void *opaque_channel_context = NULL;
 	int ret = 0;
 
+	/* Return if Trusty Device is not enabled */
+	if (!is_trusty_dev_enabled())
+		return;
+
 	ret = te_open_trusted_session(OTF_PORT_NAME, &opaque_channel_context);
 	if (ret) {
 		pr_err("%s:ERROR(%d): Failed to open trusted session\n",

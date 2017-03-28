@@ -68,16 +68,12 @@ static void init_chip_specific(void)
 	cid = tegra_get_chip_id();
 
 	switch (cid) {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	case TEGRA186:
 		tegra_la_get_t18x_specific(&cs);
 		break;
-#endif
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	case TEGRA210:
 		tegra_la_get_t21x_specific(&cs);
 		break;
-#endif
 	default:
 		cs.set_init_la = NULL;
 	}
@@ -160,71 +156,10 @@ static int default_set_la(enum tegra_la_id id, unsigned int bw_mbps)
 
 static void program_scaled_la(struct la_client_info *ci, int la)
 {
-#ifndef CONFIG_ARCH_TEGRA_18x_SOC
-	unsigned long reg_write;
+	if (tegra_get_chip_id() == TEGRA186)
+		return;
 
-	if (ci->id == ID(DISPLAY_0A)) {
-		reg_write =
-		     ((la << MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0A_LOW_SHIFT) &
-		      MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0A_LOW_MASK) |
-		     ((la << MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0A_HIGH_SHIFT) &
-		      MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0A_HIGH_MASK);
-		mc_writel(reg_write, MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0A);
-		la_debug("reg_addr=0x%x, write=0x%x",
-			 (u32)(uintptr_t)MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0A,
-			 (u32)reg_write);
-	} else if (ci->id == ID(DISPLAY_0AB)) {
-		reg_write =
-		    ((la << MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0AB_LOW_SHIFT) &
-		     MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0AB_LOW_MASK) |
-		    ((la << MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0AB_HIGH_SHIFT) &
-		     MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0AB_HIGH_MASK);
-		mc_writel(reg_write, MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0AB);
-		la_debug("reg_addr=0x%x, write=0x%x",
-			 (u32)(uintptr_t)MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0AB,
-			 (u32)reg_write);
-	} else if (ci->id == ID(DISPLAY_0B)) {
-		reg_write =
-		    ((la << MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0B_LOW_SHIFT) &
-		     MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0B_LOW_MASK) |
-		    ((la << MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0B_HIGH_SHIFT) &
-		     MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0B_HIGH_MASK);
-		mc_writel(reg_write, MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0B);
-		la_debug("reg_addr=0x%x, write=0x%x",
-			 (u32)(uintptr_t)MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0B,
-			 (u32)reg_write);
-	} else if (ci->id == ID(DISPLAY_0BB)) {
-		reg_write =
-		    ((la << MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0BB_LOW_SHIFT) &
-		     MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0BB_LOW_MASK) |
-		    ((la << MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0BB_HIGH_SHIFT) &
-		     MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0BB_HIGH_MASK);
-		mc_writel(reg_write, MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0BB);
-		la_debug("reg_addr=0x%x, write=0x%x",
-			 (u32)(uintptr_t)MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0BB,
-			 (u32)reg_write);
-	} else if (ci->id == ID(DISPLAY_0C)) {
-		reg_write =
-		    ((la << MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0C_LOW_SHIFT) &
-		     MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0C_LOW_MASK) |
-		    ((la << MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0C_HIGH_SHIFT) &
-		     MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0C_HIGH_MASK);
-		mc_writel(reg_write, MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0C);
-		la_debug("reg_addr=0x%x, write=0x%x",
-			 (u32)(uintptr_t)MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0C,
-			 (u32)reg_write);
-	} else if (ci->id == ID(DISPLAY_0CB)) {
-		reg_write =
-		    ((la << MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0CB_LOW_SHIFT) &
-		     MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0CB_LOW_MASK) |
-		    ((la << MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0CB_HIGH_SHIFT) &
-		     MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0CB_HIGH_MASK);
-		mc_writel(reg_write, MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0CB);
-		la_debug("reg_addr=0x%x, write=0x%x",
-			 (u32)(uintptr_t)MC_SCALED_LATENCY_ALLOWANCE_DISPLAY0CB,
-			 (u32)reg_write);
-	}
-#endif
+	program_scaled_la_t21x(ci, la);
 }
 
 void program_la(struct la_client_info *ci, int la)

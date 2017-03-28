@@ -44,6 +44,10 @@
 #define XBUFSIZE 8
 #define RNG_DRBG 1
 #define RNG 0
+#define NUM_RSA_ALGO 4
+#define ECC_MODE_MIN_INDEX 7
+#define ECC_MODE_MAX_INDEX 13
+#define MAX_RSA_MSG_LEN 256
 
 struct tegra_crypto_ctx {
 	/*ecb, cbc, ofb, ctr */
@@ -843,6 +847,11 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 			pr_err("%s: copy_from_user fail(%d)\n", __func__, ret);
 			return -EFAULT;
 		}
+		if (crypt_req_32.keylen > TEGRA_CRYPTO_MAX_KEY_SIZE) {
+			pr_err("key length %d exceeds max value %d\n",
+				crypt_req_32.keylen, TEGRA_CRYPTO_MAX_KEY_SIZE);
+			return -EINVAL;
+		}
 		crypt_req.op = crypt_req_32.op;
 		crypt_req.encrypt = crypt_req_32.encrypt;
 		crypt_req.skip_key = crypt_req_32.skip_key;
@@ -1034,6 +1043,11 @@ rng_out:
 			pr_err("%s: copy_from_user fail(%d)\n", __func__, ret);
 			return -EFAULT;
 		}
+		if (sha_req_32.keylen > TEGRA_CRYPTO_MAX_KEY_SIZE) {
+			pr_err("key length %d not within the range [0,%d]\n",
+				sha_req_32.keylen, TEGRA_CRYPTO_MAX_KEY_SIZE);
+			return -EINVAL;
+		}
 		for (i = 0; i < sha_req_32.keylen; i++)
 			sha_req.key[i] = sha_req_32.key[i];
 		sha_req.keylen = sha_req_32.keylen;
@@ -1057,6 +1071,11 @@ rng_out:
 			pr_err("%s: copy_from_user fail(%d)\n", __func__, ret);
 			return -EFAULT;
 		}
+		if (sha_req.keylen > TEGRA_CRYPTO_MAX_KEY_SIZE) {
+			pr_err("key length %d not within the range [0,%d]\n",
+				sha_req.keylen, TEGRA_CRYPTO_MAX_KEY_SIZE);
+			return -EINVAL;
+		}
 		ret = tegra_crypto_sha(filp, ctx, &sha_req);
 		break;
 
@@ -1066,7 +1085,16 @@ rng_out:
 			pr_err("%s: copy_from_user fail(%d)\n", __func__, ret);
 			return -EFAULT;
 		}
-
+		if (rsa_req_ah.algo >= NUM_RSA_ALGO) {
+			pr_err("Invalid value of algo index %d\n",
+				rsa_req_ah.algo);
+			return -EINVAL;
+		}
+		if (rsa_req_ah.msg_len > MAX_RSA_MSG_LEN) {
+			pr_err("Illegal message from user of length = %d\n",
+				rsa_req_ah.msg_len);
+			return -EINVAL;
+		}
 		ret = tegra_crypt_rsa_ahash(filp, ctx, &rsa_req_ah);
 		break;
 
@@ -1075,6 +1103,16 @@ rng_out:
 			sizeof(rsa_req))) {
 			pr_err("%s: copy_from_user fail(%d)\n", __func__, ret);
 			return -EFAULT;
+		}
+		if (rsa_req.msg_len > MAX_RSA_MSG_LEN) {
+			pr_err("Illegal message from user of length = %d\n",
+				rsa_req.msg_len);
+			return -EINVAL;
+		}
+		if (rsa_req.algo >= NUM_RSA_ALGO) {
+			pr_err("Invalid value of algo index %d\n",
+				rsa_req.algo);
+			return -EINVAL;
 		}
 
 		ret = tegra_crypt_rsa(filp, ctx, &rsa_req);
@@ -1099,6 +1137,13 @@ rng_out:
 				__func__, ret);
 			return ret;
 		}
+		if ((pka1_ecc_req.op_mode < ECC_MODE_MIN_INDEX) ||
+			(pka1_ecc_req.op_mode > ECC_MODE_MAX_INDEX)) {
+			pr_err("Invalid value of ecc opmode index %d\n",
+				pka1_ecc_req.op_mode);
+			return -EINVAL;
+		}
+
 		ret = tegra_se_pka1_ecc_op(&pka1_ecc_req);
 		if (ret) {
 			pr_debug("\ntegra_se_pka1_ecc_op failed(%d) for ECC\n",

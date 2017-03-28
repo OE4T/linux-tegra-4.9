@@ -966,6 +966,9 @@ static void gv11b_fb_copy_from_hw_fault_buf(struct gk20a *g,
 static void gv11b_fb_handle_mmu_fault_common(struct gk20a *g,
 			 struct mmu_fault_info *mmfault)
 {
+	unsigned int id_type;
+	u32 act_eng_bitmask = 0;
+
 	if (!mmfault->valid)
 		return;
 
@@ -977,13 +980,23 @@ static void gv11b_fb_handle_mmu_fault_common(struct gk20a *g,
 		 * instance block, the fault cannot be isolated to a
 		 * single context so we need to reset the entire runlist
 		 */
-		nvgpu_log(g, gpu_dbg_intr, "UNBOUND INST");
+		id_type = ID_TYPE_UNKNOWN;
+		nvgpu_log(g, gpu_dbg_intr, "UNBOUND INST BLOCK MMU FAULT");
+
+	} else if (mmfault->refch) {
+		if (gk20a_is_channel_marked_as_tsg(mmfault->refch))
+			id_type = ID_TYPE_TSG;
+		else
+			id_type = ID_TYPE_CHANNEL;
+	} else {
+		id_type = ID_TYPE_UNKNOWN;
 	}
 
-	if (mmfault->refch) {
-		gk20a_channel_put(mmfault->refch);
-		mmfault->refch = NULL;
-	}
+	if (mmfault->faulted_engine != FIFO_INVAL_ENGINE_ID)
+		act_eng_bitmask = BIT(mmfault->faulted_engine);
+
+	g->ops.fifo.teardown_ch_tsg(g, act_eng_bitmask, mmfault->chid,
+					 id_type, RC_TYPE_MMU_FAULT, mmfault);
 }
 
 static void gv11b_fb_handle_mmu_nonreplay_replay_fault(struct gk20a *g,

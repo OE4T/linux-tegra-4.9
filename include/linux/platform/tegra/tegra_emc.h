@@ -99,13 +99,6 @@ struct clk *tegra_emc_predict_parent(unsigned long rate, u32 *div_value);
 void tegra_emc_timing_invalidate(void);
 void tegra_mc_divider_update(struct clk *emc);
 
-#ifdef CONFIG_PM_SLEEP
-void tegra_mc_timing_restore(void);
-#else
-static inline void tegra_mc_timing_restore(void)
-{ }
-#endif
-
 u32 tegra_get_dvfs_clk_change_latency_nsec(unsigned long emc_freq_khz);
 
 #endif

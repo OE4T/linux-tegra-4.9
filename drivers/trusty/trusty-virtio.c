@@ -2,6 +2,7 @@
  * Trusty Virtio driver
  *
  * Copyright (C) 2015 Google, Inc.
+ * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -212,6 +213,7 @@ static void trusty_virtio_reset(struct virtio_device *vdev)
 	struct trusty_ctx *tctx = tvdev->tctx;
 
 	dev_dbg(&vdev->dev, "reset vdev_id=%d\n", tvdev->notifyid);
+	tvdev->vdev_descr->status = 0;
 	trusty_std_call32(tctx->dev->parent, SMC_SC_VDEV_RESET,
 			  tvdev->notifyid, 0, 0);
 }

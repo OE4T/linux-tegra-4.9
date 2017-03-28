@@ -229,7 +229,7 @@ struct tegra_rsa_req_32 {
 
 struct tegra_sha_req {
 	char key[TEGRA_CRYPTO_MAX_KEY_SIZE];
-	int keylen;
+	unsigned int keylen;
 	unsigned char *algo;
 	unsigned char *plaintext;
 	unsigned char *result;
@@ -241,7 +241,7 @@ struct tegra_sha_req {
 #ifdef CONFIG_COMPAT
 struct tegra_sha_req_32 {
 	char key[TEGRA_CRYPTO_MAX_KEY_SIZE];
-	int keylen;
+	unsigned int keylen;
 	__u32 algo;
 	__u32 plaintext;
 	__u32 result;

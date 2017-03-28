@@ -122,22 +122,6 @@ int mc_get_carveout_info(struct mc_carveout_info *inf, int *nr,
 EXPORT_SYMBOL(mc_get_carveout_info);
 
 /*
- * If using T30/DDR3, the 2nd 16 bytes part of DDR3 atom is 2nd line and is
- * discarded in tiling mode.
- */
-int tegra_mc_get_tiled_memory_bandwidth_multiplier(void)
-{
-	int type;
-
-	type = tegra_emc_get_dram_type();
-
-	if (type == DRAM_TYPE_DDR3)
-		return 2;
-	else
-		return 1;
-}
-
-/*
  * API to convert BW in bytes/s to clock frequency.
  *
  * bw: Bandwidth to convert. It can be in any unit - the resulting frequency

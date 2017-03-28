@@ -169,6 +169,8 @@
 				_overlay_ {
 					compatible = "nvidia,tegra186-hsuart";
 					early-print-console-channel;
+					resets = <&tegra_car TEGRA186_RESET_UARTA>;
+					reset-names = "serial";
 				};
 			};
 		};

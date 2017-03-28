@@ -97,7 +97,6 @@
 
 
 static struct la_chip_specific *cs;
-static unsigned int dram_type;
 static unsigned int num_channels;
 static unsigned int row_srt_sz_bytes;
 static unsigned int dram_emc_freq_factor;
@@ -652,8 +651,6 @@ void tegra_la_get_t18x_specific(struct la_chip_specific *cs_la)
 	cs_la->resume = la_resume;
 	cs = cs_la;
 
-	dram_type = tegra_emc_get_dram_type();
-
 	channel_enable = mc_readl(MC_EMEM_ADR_CFG_CHANNEL_ENABLE) &
 					T18X_LA_EMEM_CHANNEL_ENABLE_MASK;
 	num_channels = 0;
@@ -668,30 +665,16 @@ void tegra_la_get_t18x_specific(struct la_chip_specific *cs_la)
 	hi_gd_fpa = 14998;
 	hi_gd_fp5 = 149976;
 
-	if (dram_type == DRAM_TYPE_DDR3) {
-		hi_freq_fp = LA_REAL_TO_FP(1200);
-		lo_freq_fp = 12500;
-		hub_dda_div = 2;
-		r0_dda_div = 1;
-		hi_gd_fpa = 19998;
-		hi_gd_fp5 = 199976;
+	dram_emc_freq_factor = 2;
+	hi_freq_fp = LA_REAL_TO_FP(2132);
+	lo_freq_fp = LA_REAL_TO_FP(25);
+	hub_dda_div = 1;
+	r0_dda_div = 2;
 
-		if (num_channels == 1)
-			dram_width_bytes = 16;
-		else if (num_channels == 2)
-			dram_width_bytes = 32;
-	} else if (dram_type == DRAM_TYPE_LPDDR4) {
-		dram_emc_freq_factor = 2;
-		hi_freq_fp = LA_REAL_TO_FP(2132);
-		lo_freq_fp = LA_REAL_TO_FP(25);
-		hub_dda_div = 1;
-		r0_dda_div = 2;
-
-		if (num_channels == 2)
-			dram_width_bytes = 16;
-		else if (num_channels == 4)
-			dram_width_bytes = 32;
-	}
+	if (num_channels == 2)
+		dram_width_bytes = 16;
+	else if (num_channels == 4)
+		dram_width_bytes = 32;
 
 	adj_lo_freq_fp = lo_freq_fp / 2;
 	lo_gd_fpa = (hi_gd_fpa * adj_lo_freq_fp) / (hi_freq_fp / 2);

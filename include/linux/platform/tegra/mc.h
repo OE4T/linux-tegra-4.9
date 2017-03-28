@@ -134,8 +134,6 @@ static inline void __mc_raw_writel(int idx, u32 val, u32 reg)
 #define mc_readl(reg)       __mc_readl(MC_BROADCAST_CHANNEL, reg)
 #define mc_writel(val, reg) __mc_writel(MC_BROADCAST_CHANNEL, val, reg)
 
-int tegra_mc_get_tiled_memory_bandwidth_multiplier(void);
-
 /*
  * Tegra21 has either dual 32 bit channels (LP4) or a single
  * 64 bit channel (LP3).
@@ -164,6 +162,15 @@ static inline unsigned tegra_emc_dvfs_latency(unsigned int freq_khz)
 	 */
 	return 4;
 }
+
+/*
+ * On very old chips (T30) this was not always one.
+ */
+static inline int tegra_mc_get_tiled_memory_bandwidth_multiplier(void)
+{
+	return 1;
+}
+
 
 #define TEGRA_MC_CLIENT_AFI		0
 #define TEGRA_MC_CLIENT_DC		2

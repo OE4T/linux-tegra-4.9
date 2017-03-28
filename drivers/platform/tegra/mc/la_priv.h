@@ -174,6 +174,7 @@ do { \
  */
 struct la_client_info;
 void program_la(struct la_client_info *ci, int la);
+void program_scaled_la_t21x(struct la_client_info *ci, int la);
 int la_suspend(void);
 void la_resume(void);
 

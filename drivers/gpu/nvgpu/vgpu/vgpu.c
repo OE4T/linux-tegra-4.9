@@ -227,6 +227,16 @@ static void vgpu_remove_support(struct gk20a *g)
 	}
 }
 
+static void vgpu_init_vars(struct gk20a *g)
+{
+	nvgpu_mutex_init(&g->poweroff_lock);
+	g->regs_saved = g->regs;
+	g->bar1_saved = g->bar1;
+
+	INIT_LIST_HEAD(&g->pending_sema_waits);
+	nvgpu_raw_spinlock_init(&g->pending_sema_waits_lock);
+}
+
 static int vgpu_init_support(struct platform_device *pdev)
 {
 	struct resource *r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -582,6 +592,8 @@ int vgpu_probe(struct platform_device *pdev)
 		return err;
 
 	vgpu_init_support(pdev);
+
+	vgpu_init_vars(gk20a);
 
 	init_rwsem(&gk20a->busy_lock);
 

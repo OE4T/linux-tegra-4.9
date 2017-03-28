@@ -1263,8 +1263,7 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 		return -EINVAL;
 	}
 
-	WARN_ON((sizeof(boot_out_type) / sizeof(int)) !=
-		tegra_dc_get_numof_dispheads());
+	WARN_ON(ARRAY_SIZE(boot_out_type) < tegra_dc_get_numof_dispheads());
 
 	if (boot_out_type[dc->ndev->id] == -1)
 		boot_out_type[dc->ndev->id] = dc->pdata->default_out->type;

@@ -2060,7 +2060,6 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 			tegra_codec_links[i].ignore_suspend =
 				of_property_read_bool(subnp, "ignore_suspend");
 
-#ifdef CONFIG_SND_SOC_TEGRA186_DSPK_ALT
 			/* special case to handle specifically for dspk, connected to
 			two mono amplifiers */
 			if (!strcmp(tegra_codec_links[i].name, "dspk-playback-r"))
@@ -2068,7 +2067,6 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 			else if (!strcmp(tegra_codec_links[i].name, "dspk-playback-l"))
 				tegra_codec_links[i].cpu_dai_name = "DAP Left";
 			else
-#endif
 				tegra_codec_links[i].cpu_dai_name = "DAP";
 
 			if (of_property_read_string(subnp, "codec-dai-name",
@@ -2132,13 +2130,11 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 				goto err;
 			}
 
-#ifdef CONFIG_SND_SOC_TEGRA186_DSPK_ALT
 			if (!strcmp(tegra_codec_links[i].name, "dspk-playback-r"))
 				tegra_codec_links[j].codec_dai_name = "CIF Right";
 			else if (!strcmp(tegra_codec_links[i].name, "dspk-playback-l"))
 				tegra_codec_links[j].codec_dai_name = "CIF Left";
 			else
-#endif
 				tegra_codec_links[j].codec_dai_name = "CIF";
 
 			if (of_property_read_string(subnp, "cpu-dai-name",

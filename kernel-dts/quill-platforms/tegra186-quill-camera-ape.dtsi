@@ -50,7 +50,11 @@
 		status = "disabled";
 	};
 
-        adsp_audio {
+    adsp_audio {
 		status = "disabled";
 	};
+
+    i2c@3180000 {
+        compatible = "nvidia,tegra186-i2c";
+    };
 };

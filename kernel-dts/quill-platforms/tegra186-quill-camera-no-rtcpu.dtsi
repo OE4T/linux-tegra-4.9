@@ -33,4 +33,8 @@
 	rtcpu@2993000 {	/* Do not use APE as camera-rtcpu */
 		status = "disabled";
 	};
+
+	i2c@3180000 { /* Do not use RTCPU I2C bus driver */
+		compatible = "nvidia,tegra186-i2c";
+	};
 };

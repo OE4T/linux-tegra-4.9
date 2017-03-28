@@ -126,4 +126,17 @@ extern void tegra210_xusb_pll_hw_sequence_start(void);
 extern void tegra210_sata_pll_hw_control_enable(void);
 extern void tegra210_sata_pll_hw_sequence_start(void);
 
+struct clk;
+static inline void tegra_periph_reset_deassert(struct clk *c) { }
+static inline void tegra_periph_reset_assert(struct clk *c) { }
+
+#ifdef CONFIG_COMMON_CLK
+/* To be implemented for COMMON CLK framework */
+/* Get max rate safe at min voltage in all t-ranges; return zero if unknown */
+static inline long tegra_emc_round_rate_updown(unsigned long rate, bool up)
+{
+       return 0;
+}
+#endif
+
 #endif /* __LINUX_CLK_TEGRA_H_ */

@@ -2260,7 +2260,7 @@ static void gk20a_channel_timeout_check(struct channel_gk20a *ch)
 
 	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
 	timed_out = ch->timeout.running &&
-		nvgpu_timeout_expired(&ch->timeout.timer);
+		nvgpu_timeout_peek_expired(&ch->timeout.timer);
 	nvgpu_raw_spinlock_release(&ch->timeout.lock);
 
 	if (timed_out)

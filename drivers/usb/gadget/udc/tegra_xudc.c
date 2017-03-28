@@ -42,6 +42,7 @@
 #include <linux/usb/tegra_usb_charger.h>
 #include <linux/workqueue.h>
 #include <soc/tegra/chip-id.h>
+#include <linux/platform/tegra/emc_bwmgr.h>
 
 /* XUSB_DEV registers */
 #define SPARAM 0x000
@@ -203,6 +204,10 @@
 #define XUDC_DEVICE_ID_T210     0x0fad
 #define XUDC_DEVICE_ID_T186     0x10e2
 #define XUDC_DEVICE_ID_T194     0x10ff
+
+#define XUDC_EMC_MAX_FREQ	150000000		/* 150 MHz	*/
+#define BOOST_TRIGGER		16384			/* 16 KB	*/
+#define RESTORE_DELAY		msecs_to_jiffies(2*1000)/* 2 sec	*/
 
 #define XUDC_IS_T210(t) \
 	(t->soc ? (t->soc->device_id == XUDC_DEVICE_ID_T210) : false)
@@ -526,6 +531,14 @@ struct tegra_xudc {
 	struct delayed_work non_std_charger_work;
 	u32 current_ma;
 	bool selfpowered;
+
+	struct tegra_bwmgr_client *bwmgr;
+	struct work_struct boost_emc;
+	unsigned long last_boosted;
+	struct delayed_work restore_emc;
+	u32 emc_frequency_required;
+	bool emc_frequency_boosted;
+	bool restore_work_scheduled;
 };
 
 #define XUDC_TRB_MAX_BUFFER_SIZE 65536
@@ -771,6 +784,57 @@ static void tegra_xudc_data_role_work(struct work_struct *work)
 					       data_role_work);
 
 	tegra_xudc_update_data_role(xudc);
+}
+
+static void tegra_xudc_boost_emc_work(struct work_struct *work)
+{
+	struct tegra_xudc *xudc = container_of(work, struct tegra_xudc,
+						boost_emc);
+	unsigned long flags;
+
+	spin_lock_irqsave(&xudc->lock, flags);
+	if (xudc->bwmgr && !xudc->emc_frequency_boosted) {
+		spin_unlock_irqrestore(&xudc->lock, flags);
+		tegra_bwmgr_set_emc(xudc->bwmgr, xudc->emc_frequency_required,
+				TEGRA_BWMGR_SET_EMC_SHARED_BW);
+		dev_dbg(xudc->dev, "Requesting emc bw to %d\n",
+						xudc->emc_frequency_required);
+		spin_lock_irqsave(&xudc->lock, flags);
+		xudc->emc_frequency_boosted = true;
+	}
+
+	if (!xudc->restore_work_scheduled) {
+		schedule_delayed_work(&xudc->restore_emc, RESTORE_DELAY);
+		xudc->restore_work_scheduled = true;
+	}
+	xudc->last_boosted = jiffies;
+	spin_unlock_irqrestore(&xudc->lock, flags);
+}
+
+static void tegra_xudc_restore_emc_work(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct tegra_xudc *xudc = container_of(dwork, struct tegra_xudc,
+						restore_emc);
+	unsigned long flags;
+
+	if (time_is_after_jiffies(xudc->last_boosted + RESTORE_DELAY)) {
+		dev_dbg(xudc->dev, "schedule restore emc work\n");
+		schedule_delayed_work(&xudc->restore_emc, RESTORE_DELAY);
+		return;
+	}
+
+	spin_lock_irqsave(&xudc->lock, flags);
+	if (xudc->bwmgr && xudc->emc_frequency_boosted) {
+		spin_unlock_irqrestore(&xudc->lock, flags);
+		tegra_bwmgr_set_emc(xudc->bwmgr, 0,
+				TEGRA_BWMGR_SET_EMC_SHARED_BW);
+		dev_dbg(xudc->dev, "Restoring emc bw\n");
+		spin_lock_irqsave(&xudc->lock, flags);
+		xudc->emc_frequency_boosted = false;
+		xudc->restore_work_scheduled = false;
+	}
+	spin_unlock_irqrestore(&xudc->lock, flags);
 }
 
 static int tegra_xudc_data_role_notifier(struct notifier_block *nb,
@@ -1166,6 +1230,9 @@ __tegra_xudc_ep_queue(struct tegra_xudc_ep *ep, struct tegra_xudc_request *req)
 
 	req->usb_req.status = -EINPROGRESS;
 	req->usb_req.actual = 0;
+
+	if (req->usb_req.length >= BOOST_TRIGGER)
+		schedule_work(&xudc->boost_emc);
 
 	list_add_tail(&req->list, &ep->queue);
 
@@ -3460,6 +3527,20 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 		goto disable_regulator;
 	}
 
+	xudc->bwmgr = tegra_bwmgr_register(TEGRA_BWMGR_CLIENT_USBD);
+	if (!xudc->bwmgr)
+		dev_err(xudc->dev, "Failed to get bwmgr\n");
+
+	err = of_property_read_u32(xudc->dev->of_node, "emc-frequency",
+					&xudc->emc_frequency_required);
+	if (err) {
+		dev_dbg(xudc->dev, "Error read emc freq, setting default\n");
+		xudc->emc_frequency_required = XUDC_EMC_MAX_FREQ;
+	}
+	dev_dbg(xudc->dev, "EMC frequency: %x\n", xudc->emc_frequency_required);
+	xudc->emc_frequency_boosted = false;
+	xudc->restore_work_scheduled = false;
+
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 	partition_id_xusba = tegra_pd_get_powergate_id(tegra_xusba_pd);
 	partition_id_xusbb = tegra_pd_get_powergate_id(tegra_xusbb_pd);
@@ -3566,6 +3647,8 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 	}
 
 	tegra_xudc_update_data_role(xudc);
+	INIT_DELAYED_WORK(&xudc->restore_emc, tegra_xudc_restore_emc_work);
+	INIT_WORK(&xudc->boost_emc, tegra_xudc_boost_emc_work);
 
 	tegra_pd_add_device(&pdev->dev);
 	pm_runtime_set_active(&pdev->dev);
@@ -3612,6 +3695,10 @@ static int tegra_xudc_remove(struct platform_device *pdev)
 	extcon_unregister_notifier(xudc->data_role_extcon, EXTCON_USB,
 				   &xudc->data_role_nb);
 	cancel_work_sync(&xudc->data_role_work);
+
+	if (xudc->bwmgr)
+		tegra_bwmgr_unregister(xudc->bwmgr);
+
 	usb_del_gadget_udc(&xudc->gadget);
 	tegra_xudc_free_eps(xudc);
 	tegra_xudc_free_event_ring(xudc);

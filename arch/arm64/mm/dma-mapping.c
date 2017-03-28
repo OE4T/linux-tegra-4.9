@@ -1123,21 +1123,6 @@ void __iommu_setup_dma_ops(struct device *dev, u64 dma_base, u64 size,
 	}
 }
 
-void arch_teardown_dma_ops(struct device *dev)
-{
-#if ENABLE_IOMMU_SETUP_DMA_OPS
-	struct iommu_domain *domain = iommu_get_domain_for_dev(dev);
-
-	if (domain) {
-		iommu_detach_device(domain, dev);
-		if (domain->type & __IOMMU_DOMAIN_FAKE_DEFAULT)
-			iommu_domain_free(domain);
-	}
-
-	dev->archdata.dma_ops = NULL;
-#endif
-}
-
 #else
 
 void __iommu_setup_dma_ops(struct device *dev, u64 dma_base, u64 size,
@@ -1164,6 +1149,23 @@ void arch_setup_dma_ops(struct device *dev, u64 dma_base, u64 size,
 	__iommu_setup_dma_ops(dev, dma_base, size, iommu);
 #endif
 }
+
+#ifdef CONFIG_IOMMU_DMA
+void arch_teardown_dma_ops(struct device *dev)
+{
+#if ENABLE_IOMMU_SETUP_DMA_OPS
+	struct iommu_domain *domain = iommu_get_domain_for_dev(dev);
+
+	if (domain) {
+		iommu_detach_device(domain, dev);
+		if (domain->type & __IOMMU_DOMAIN_FAKE_DEFAULT)
+			iommu_domain_free(domain);
+	}
+
+	dev->archdata.dma_ops = NULL;
+#endif
+}
+#endif
 
 /*
  *FIXME: from arm

@@ -25,6 +25,7 @@ obj-$(CONFIG_GK20A) := nvgpu.o
 nvgpu-y := \
 	common/linux/kmem.o \
 	common/linux/timers.o \
+	common/linux/ioctl.o \
 	common/mm/nvgpu_allocator.o \
 	common/mm/bitmap_allocator.o \
 	common/mm/buddy_allocator.o \

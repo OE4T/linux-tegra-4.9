@@ -59,6 +59,8 @@
 #define RAND_128			16	/*bytes*/
 #define RAND_256			32	/*bytes*/
 #define ADV_STATE_FREQ			3
+#define ECC_MIN_BYTES	20
+#define ECC_MAX_BYTES	68
 #define ECC_MAX_WORDS	20
 #define WORD_SIZE_BYTES	4
 #define MAX_PKA1_SIZE	TEGRA_SE_PKA1_RSA4096_INPUT_SIZE
@@ -2084,6 +2086,9 @@ int tegra_se_pka1_ecc_op(struct tegra_se_pka1_ecc_request *req)
 	int ret;
 
 	if (!req)
+		return -EINVAL;
+
+	if (req->size < ECC_MIN_BYTES || req->size > ECC_MAX_BYTES)
 		return -EINVAL;
 
 	ret = tegra_se_pka1_ecc_init(req);

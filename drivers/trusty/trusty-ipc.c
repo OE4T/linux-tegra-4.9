@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Google, Inc.
- * Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1617,7 +1617,6 @@ static void tipc_virtio_remove(struct virtio_device *vdev)
 
 	mutex_lock(&vds->lock);
 	vds->state = VDS_DEAD;
-	vds->vdev = NULL;
 	mutex_unlock(&vds->lock);
 
 	vdev->config->reset(vdev);
@@ -1629,6 +1628,10 @@ static void tipc_virtio_remove(struct virtio_device *vdev)
 	_free_msg_buf_list(&vds->free_buf_list);
 
 	vdev->config->del_vqs(vds->vdev);
+
+	mutex_lock(&vds->lock);
+	vds->vdev = NULL;
+	mutex_unlock(&vds->lock);
 
 	kref_put(&vds->refcount, _free_vds);
 }

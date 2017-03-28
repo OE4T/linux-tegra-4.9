@@ -43,6 +43,8 @@
 		compatible = "nvidia,tegra20-uart", "nvidia,tegra186-hsuart";
 		console-port;
 		sqa-automation-port;
+		/delete-property/ resets;
+		/delete-property/ reset-names;
 		status = "okay";
 	};
 

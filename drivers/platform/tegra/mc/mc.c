@@ -26,8 +26,6 @@
 #include <linux/spinlock.h>
 #include <linux/delay.h>
 #include <linux/debugfs.h>
-#include <soc/tegra/fuse.h>
-#include <soc/tegra/chip-id.h>
 #include <linux/of_device.h>
 #include <linux/of_address.h>
 #include <linux/platform_device.h>
@@ -35,10 +33,9 @@
 #include <linux/platform/tegra/mc-regs-t21x.h>
 #include <linux/platform/tegra/mc.h>
 #include <linux/platform/tegra/mcerr.h>
-
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 #include <linux/platform/tegra/tegra_emc.h>
-#endif
+
+#include <soc/tegra/fuse.h>
 
 #define MC_CLIENT_HOTRESET_CTRL		0x200
 #define MC_CLIENT_HOTRESET_STAT		0x204

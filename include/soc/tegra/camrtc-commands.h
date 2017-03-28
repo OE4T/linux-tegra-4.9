@@ -34,8 +34,10 @@ enum {
 #define RTCPU_FW_VERSION (1)
 #define RTCPU_FW_SM2_VERSION (2)
 #define RTCPU_FW_SM3_VERSION (3)
+/* SM4 firmware can restore itself after suspend */
+#define RTCPU_FW_SM4_VERSION (4)
 
-#define RTCPU_FW_CURRENT_VERSION (RTCPU_FW_SM3_VERSION)
+#define RTCPU_FW_CURRENT_VERSION (RTCPU_FW_SM4_VERSION)
 
 #define RTCPU_IVC_SANS_TRACE (1)
 #define RTCPU_IVC_WITH_TRACE (2)

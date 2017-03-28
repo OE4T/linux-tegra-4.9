@@ -19,6 +19,9 @@
 #ifndef __packed
 #define __packed __attribute__((packed))
 #endif
+#ifndef __aligned
+#define __aligned(_n) __attribute__((aligned(_n)))
+#endif
 #endif
 
 #endif /* INCLUDE_CAMRTC_COMMON_H */

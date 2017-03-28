@@ -15,6 +15,7 @@
 
 #pragma GCC diagnostic error "-Wpadded"
 #define __CAPTURE_IVC_ALIGN __aligned(8)
+#define __CAPTURE_DESCRIPTOR_ALIGN __aligned(64)
 
 typedef uint64_t iova_t __CAPTURE_IVC_ALIGN;
 
@@ -203,7 +204,7 @@ struct vi_channel_config {
 		uint16_t strip_width;
 		uint16_t strip_overfetch;
 
-		/* Not for T186 and below */
+		/* Not for T186 or earlier */
 		uint16_t chunk_first;
 		uint16_t chunk_body;
 		uint16_t chunk_penultimate;
@@ -366,7 +367,10 @@ struct capture_descriptor {
 	struct capture_status status;
 	/* FMLITE result – written by RTCPU */
 	struct vi_fmlite_result fm_result;
-} __CAPTURE_IVC_ALIGN;
+
+	/* Pad to aligned size */
+	uint32_t __pad[2];
+} __CAPTURE_DESCRIPTOR_ALIGN;
 
 #pragma GCC diagnostic ignored "-Wpadded"
 

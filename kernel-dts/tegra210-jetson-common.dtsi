@@ -37,6 +37,8 @@
 		console-port;
 		sqa-automation-port;
 		enable-rx-poll-timer;
+		/delete-property/ resets;
+		/delete-property/ reset-names;
 		status = "okay";
 	};
 

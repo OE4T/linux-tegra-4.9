@@ -46,19 +46,6 @@
 #define MC_CLIENT_HOTRESET_STAT_1	0x974
 #define MC_LATENCY_ALLOWANCE_BASE	MC_LATENCY_ALLOWANCE_AFI_0
 
-#define MC_TIMING_REG_NUM1					\
-	((MC_EMEM_ARB_TIMING_W2R - MC_EMEM_ARB_CFG) / 4 + 1)
-#define MC_TIMING_REG_NUM2					\
-	((MC_EMEM_ARB_MISC1 - MC_EMEM_ARB_DA_TURNS) / 4 + 1)
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-#define MC_TIMING_REG_NUM3	T18X_MC_LATENCY_ALLOWANCE_NUM_REGS
-#elif defined(CONFIG_ARCH_TEGRA_210_SOC)
-#define MC_TIMING_REG_NUM3	T21X_MC_LATENCY_ALLOWANCE_NUM_REGS
-#else
-#define MC_TIMING_REG_NUM3						\
-	((MC_LATENCY_ALLOWANCE_VI_2 - MC_LATENCY_ALLOWANCE_BASE) / 4 + 1)
-#endif
-
 static DEFINE_SPINLOCK(tegra_mc_lock);
 int mc_channels;
 void __iomem *mc;
@@ -136,73 +123,6 @@ int mc_get_carveout_info(struct mc_carveout_info *inf, int *nr,
 	return 0;
 }
 EXPORT_SYMBOL(mc_get_carveout_info);
-
-#if defined(CONFIG_PM_SLEEP) && (defined(CONFIG_ARCH_TEGRA_210_SOC))
-static u32 mc_boot_timing[MC_TIMING_REG_NUM1 + MC_TIMING_REG_NUM2
-			  + MC_TIMING_REG_NUM3 + 4];
-
-static void tegra_mc_timing_save(void)
-{
-	u32 off;
-	u32 *ctx = mc_boot_timing;
-
-	for (off = MC_EMEM_ARB_CFG; off <= MC_EMEM_ARB_TIMING_W2R; off += 4)
-		*ctx++ = mc_readl(off);
-
-	for (off = MC_EMEM_ARB_DA_TURNS; off <= MC_EMEM_ARB_MISC1; off += 4)
-		*ctx++ = mc_readl(off);
-
-	*ctx++ = mc_readl(MC_EMEM_ARB_RING3_THROTTLE);
-	*ctx++ = mc_readl(MC_EMEM_ARB_OVERRIDE);
-	*ctx++ = mc_readl(MC_RESERVED_RSV);
-
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
-	if (tegra_get_chip_id() == TEGRA210)
-		tegra21_mc_latency_allowance_save(&ctx);
-#else
-	for (off = MC_LATENCY_ALLOWANCE_BASE; off <= MC_LATENCY_ALLOWANCE_VI_2;
-		off += 4)
-		*ctx++ = mc_readl(off);
-#endif
-
-	*ctx++ = mc_readl(MC_INTMASK);
-}
-
-void tegra_mc_timing_restore(void)
-{
-	u32 off;
-	u32 *ctx = mc_boot_timing;
-
-	for (off = MC_EMEM_ARB_CFG; off <= MC_EMEM_ARB_TIMING_W2R; off += 4)
-		__mc_raw_writel(MC_BROADCAST_CHANNEL, *ctx++, off);
-
-	for (off = MC_EMEM_ARB_DA_TURNS; off <= MC_EMEM_ARB_MISC1; off += 4)
-		__mc_raw_writel(MC_BROADCAST_CHANNEL, *ctx++, off);
-
-	__mc_raw_writel(MC_BROADCAST_CHANNEL, *ctx++,
-			MC_EMEM_ARB_RING3_THROTTLE);
-	__mc_raw_writel(MC_BROADCAST_CHANNEL, *ctx++,
-			MC_EMEM_ARB_OVERRIDE);
-	__mc_raw_writel(MC_BROADCAST_CHANNEL, *ctx++,
-			MC_RESERVED_RSV);
-
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
-	tegra21_mc_latency_allowance_restore(&ctx);
-#else
-	for (off = MC_LATENCY_ALLOWANCE_BASE; off <= MC_LATENCY_ALLOWANCE_VI_2;
-		off += 4)
-		__mc_raw_writel(MC_BROADCAST_CHANNEL, *ctx++, off);
-#endif
-
-	mc_writel(*ctx++, MC_INTMASK);
-	off = mc_readl(MC_INTMASK);
-
-	mc_writel(0x1, MC_TIMING_CONTROL);
-	off = mc_readl(MC_TIMING_CONTROL);
-}
-#else
-#define tegra_mc_timing_save()
-#endif
 
 /*
  * If using T30/DDR3, the 2nd 16 bytes part of DDR3 atom is 2nd line and is
@@ -480,8 +400,6 @@ static int tegra_mc_probe(struct platform_device *pdev)
 		/* Make channel 0 the same as the MC broadcast range. */
 		mc_regs[0] = mc;
 	}
-
-	tegra_mc_timing_save();
 
 #if defined(CONFIG_TEGRA_MC_EARLY_ACK)
 	reg = mc_readl(MC_EMEM_ARB_OVERRIDE);

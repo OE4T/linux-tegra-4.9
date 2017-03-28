@@ -16,6 +16,8 @@
 #include <linux/err.h>
 #include <linux/fb.h>
 #include <linux/slab.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
 
 #ifdef CONFIG_PMAC_BACKLIGHT
 #include <asm/backlight.h>
@@ -30,6 +32,48 @@ static const char *const backlight_types[] = {
 	[BACKLIGHT_PLATFORM] = "platform",
 	[BACKLIGHT_FIRMWARE] = "firmware",
 };
+
+struct backlight_device *get_backlight_device_by_name(char *name)
+{
+	struct list_head *ptr;
+	struct backlight_device *entry = NULL;
+
+	if (!name)
+		return NULL;
+
+	mutex_lock(&backlight_dev_list_mutex);
+	list_for_each(ptr, &backlight_dev_list) {
+		entry = list_entry(ptr, struct backlight_device, entry);
+		if (strcmp(dev_name(&entry->dev), name) == 0)
+			goto done;
+	}
+	entry = NULL;
+done:
+	mutex_unlock(&backlight_dev_list_mutex);
+	return entry;
+}
+EXPORT_SYMBOL(get_backlight_device_by_name);
+
+struct backlight_device *get_backlight_device_by_node(struct device_node *np)
+{
+	struct list_head *ptr;
+	struct backlight_device *entry = NULL;
+
+	if (!np)
+		return NULL;
+
+	mutex_lock(&backlight_dev_list_mutex);
+	list_for_each(ptr, &backlight_dev_list) {
+		entry = list_entry(ptr, struct backlight_device, entry);
+		if (entry->dev.of_node && (entry->dev.of_node == np))
+			goto done;
+	}
+	entry = NULL;
+done:
+	mutex_unlock(&backlight_dev_list_mutex);
+	return entry;
+}
+EXPORT_SYMBOL(get_backlight_device_by_node);
 
 #if defined(CONFIG_FB) || (defined(CONFIG_FB_MODULE) && \
 			   defined(CONFIG_BACKLIGHT_CLASS_DEVICE_MODULE))
@@ -345,6 +389,8 @@ struct backlight_device *backlight_device_register(const char *name,
 	dev_set_name(&new_bd->dev, "%s", name);
 	dev_set_drvdata(&new_bd->dev, devdata);
 
+	BLOCKING_INIT_NOTIFIER_HEAD(&new_bd->notifier);
+
 	/* Set default properties */
 	if (props) {
 		memcpy(&new_bd->props, props,
@@ -485,6 +531,48 @@ int backlight_unregister_notifier(struct notifier_block *nb)
 	return blocking_notifier_chain_unregister(&backlight_notifier, nb);
 }
 EXPORT_SYMBOL(backlight_unregister_notifier);
+
+/**
+ * backlight_device_register_notifier - get notified of backlight (un)registration
+ * @bl: backlight device
+ * @nb: notifier block with the notifier to call on backlight (un)registration
+ *
+ * @return 0 on success, otherwise a negative error code
+ *
+ * Register a notifier to get notified when backlight devices get registered
+ * or unregistered.
+ */
+int backlight_device_register_notifier(struct backlight_device *bd,
+	struct notifier_block *nb)
+{
+	return blocking_notifier_chain_register(&bd->notifier, nb);
+}
+EXPORT_SYMBOL(backlight_device_register_notifier);
+
+/**
+ * backlight_device_unregister_notifier - unregister a backlight notifier
+ * from device
+ * @bd: Backlight device
+ * @nb: notifier block to unregister
+ *
+ * @return 0 on success, otherwise a negative error code
+ *
+ * Register a notifier to get notified when backlight devices get registered
+ * or unregistered.
+ */
+int backlight_device_unregister_notifier(struct backlight_device *bd,
+	struct notifier_block *nb)
+{
+	return blocking_notifier_chain_unregister(&bd->notifier, nb);
+}
+EXPORT_SYMBOL(backlight_device_unregister_notifier);
+
+int backlight_device_notifier_call_chain(struct backlight_device *bd,
+	unsigned long event, void *data)
+{
+	return blocking_notifier_call_chain(&bd->notifier, event, data);
+}
+EXPORT_SYMBOL(backlight_device_notifier_call_chain);
 
 /**
  * devm_backlight_device_register - resource managed backlight_device_register()

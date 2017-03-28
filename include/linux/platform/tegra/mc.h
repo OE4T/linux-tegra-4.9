@@ -43,6 +43,8 @@ extern void __iomem *mc_regs[MC_MAX_CHANNELS];
 #include <linux/io.h>
 #include <linux/debugfs.h>
 
+#include <soc/tegra/chip-id.h>
+
 /**
  * Check if the MC has more than 1 channel.
  */
@@ -142,11 +144,10 @@ int tegra_mc_get_tiled_memory_bandwidth_multiplier(void);
  */
 static inline int tegra_mc_get_effective_bytes_width(void)
 {
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-	return 8;
-#else
-	return 4;
-#endif
+	if (tegra_get_chip_id() == TEGRA210)
+		return 8;
+	else
+		return 4;
 }
 
 unsigned long tegra_emc_bw_to_freq_req(unsigned long bw);

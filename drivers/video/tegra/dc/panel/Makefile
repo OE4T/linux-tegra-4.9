@@ -22,7 +22,9 @@ GCOV_PROFILE_panel-s-4kuhd-5-46.o := n
 ccflags-y += -Iarch/arm/mach-tegra
 
 ifdef CONFIG_ARCH_TEGRA_210_SOC
+ifndef CONFIG_TEGRA_NVDISPLAY
 obj-y += board-panel.o
+endif
 endif
 obj-y += panel-lgd-wxga-7-0.o
 obj-y += panel-p-wuxga-10-1.o

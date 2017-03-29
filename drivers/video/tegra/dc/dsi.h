@@ -632,4 +632,22 @@ static inline bool is_simple_dsi(struct tegra_dsi_out *dsi_out)
 		 dsi_out->dsi_csi_loopback ||
 		 dsi_out->split_link_type);
 }
+
+
+static inline int tegra_dsi_get_max_active_instances_num(
+	struct tegra_dsi_out *dsi_out)
+{
+	int ret = 0, max_instances = 0;
+	bool simple_dsi = 0;
+
+	max_instances = tegra_dc_get_max_dsi_instance();
+	simple_dsi = is_simple_dsi(dsi_out);
+
+	if (tegra_dc_is_nvdisplay())
+		ret =  simple_dsi ? 2 : max_instances;
+	else
+		ret =  simple_dsi ? 1 : max_instances;
+
+	return ret;
+}
 #endif

@@ -4477,6 +4477,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	struct tegra_dsi_out *dsi_pdata = NULL;
 	int err = 0, i;
 	int dsi_instance;
+	int index = 0;
 
 	char *dsi_io_padctrl_name[4] = {"dsia", "dsib", "dsic", "dsid"};
 	char *dsi_clk_name[4] = {"dsi", "dsib", "dsic", "dsid"};
@@ -4505,8 +4506,8 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	if (!IS_ERR_OR_NULL(of_dev))
 		dsi->regs = of_dev->data;
 
-	dsi->max_instances = is_simple_dsi(dc->out->dsi) ? 1 :
-						tegra_dc_get_max_dsi_instance();
+	dsi->max_instances =
+		tegra_dsi_get_max_active_instances_num(dc->out->dsi);
 	dsi_instance = (int)dc->out->dsi->dsi_instance;
 
 	dsi->base = kzalloc(tegra_dc_get_max_dsi_instance() *
@@ -4545,11 +4546,20 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		goto err_free_dsi_reset;
 	}
 
+	/* Detect when user provides wrong dsi_instance or
+	 * max dsi instances.
+	 */
+	if (dsi_instance && !is_simple_dsi(dc->out->dsi)) {
+		err = -EBUSY;
+		dev_err(&dc->ndev->dev,
+			"dsi: invalid dsi instance/max_instances\n");
+		goto err_free_dsi_reset;
+	}
+
 	for (i = 0; i < dsi->max_instances; i++) {
-		if (is_simple_dsi(dc->out->dsi))
-			base = of_iomap(np_dsi, dsi_instance);
-		else /* ganged type OR split link*/
-			base = of_iomap(np_dsi, i);
+
+		index = i + dsi_instance; /*index for dsi instance*/
+		base = of_iomap(np_dsi, index);
 
 		if (!base) {
 			dev_err(&dc->ndev->dev, "dsi: ioremap failed\n");
@@ -4563,16 +4573,11 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 			goto err_free_dsi_io_padctrl;
 		}
 
-		dsi_clk = dsi_pdata->dsi_instance ?
-				tegra_disp_of_clk_get_by_name(np_dsi,
-				dsi_clk_name[tegra_dc_get_dsi_instance_1()]) :
-				tegra_disp_of_clk_get_by_name(np_dsi,
-				dsi_clk_name[i]);
-		dsi_lp_clk = dsi_pdata->dsi_instance ?
-				tegra_disp_of_clk_get_by_name(np_dsi,
-				dsi_lp_clk_name[tegra_dc_get_dsi_instance_1()])
-				: tegra_disp_of_clk_get_by_name(np_dsi,
-				dsi_lp_clk_name[i]);
+		dsi_clk = tegra_disp_of_clk_get_by_name(np_dsi,
+				dsi_clk_name[index]);
+		dsi_lp_clk = tegra_disp_of_clk_get_by_name(np_dsi,
+				dsi_lp_clk_name[index]);
+
 		if (IS_ERR_OR_NULL(dsi_clk) || IS_ERR_OR_NULL(dsi_lp_clk)) {
 			dev_err(&dc->ndev->dev, "dsi: can't get clock\n");
 			err = -EBUSY;
@@ -4581,7 +4586,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 
 		if (tegra_platform_is_silicon() && tegra_bpmp_running()) {
 			dsi_reset = of_reset_control_get(np_dsi,
-					dsi_reset_name[i]);
+					dsi_reset_name[index]);
 			if (IS_ERR_OR_NULL(dsi_reset)) {
 				dev_err(&dc->ndev->dev,
 					"dsi: can't get reset control\n");
@@ -4592,10 +4597,10 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		}
 
 		dsi_io_padctrl = devm_padctrl_get_from_node(&dc->ndev->dev,
-			np_dsi, dsi_io_padctrl_name[i]);
+			np_dsi, dsi_io_padctrl_name[index]);
 		if (IS_ERR_OR_NULL(dsi_io_padctrl)) {
 			dev_err(&dc->ndev->dev, "dsi: %s IO padctrl unavailable\n",
-				dsi_io_padctrl_name[i]);
+				dsi_io_padctrl_name[index]);
 			dsi_io_padctrl = NULL;
 		}
 

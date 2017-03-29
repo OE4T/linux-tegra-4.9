@@ -222,15 +222,12 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 	/* to avoid misconfigurations when switching between fake DSI types */
 	tegra_dc_reset_fakedsi_panel(dc, dc_outtype);
 
-	dsi->max_instances = is_simple_dsi(dc->out->dsi) ?
-					1 : tegra_dc_get_max_dsi_instance();
+	dsi->max_instances =
+		tegra_dsi_get_max_active_instances_num(dc->out->dsi);
 	dsi_instance = (int)dc->out->dsi->dsi_instance;
 
 	for (i = 0; i < dsi->max_instances; i++) {
-		if (is_simple_dsi(dc->out->dsi))
-			base = of_iomap(np_dsi, dsi_instance);
-		else /* ganged type OR split link*/
-			base = of_iomap(np_dsi, i);
+		base = of_iomap(np_dsi, i + dsi_instance);
 
 		if (!base) {
 			dev_err(&dc->ndev->dev, "dsi: ioremap failed\n");

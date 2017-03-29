@@ -216,8 +216,6 @@ static int tegra_camera_isomgr_request(
 static int tegra_camera_isomgr_release(struct tegra_camera_info *info)
 {
 #if defined(CONFIG_TEGRA_ISOMGR)
-	int ret = 0;
-
 	dev_dbg(info->dev, "%s++\n", __func__);
 
 	/* deallocate bypass mode isomgr bw */

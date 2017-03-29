@@ -3642,19 +3642,10 @@ static int pmu_pg_init_send(struct gk20a *g, u32 pg_engine_id)
 
 	gk20a_dbg_fn("");
 
-	if (tegra_cpu_is_asim()) {
-		/* TBD: calculate threshold for silicon */
-		gk20a_writel(g, pwr_pmu_pg_idlefilth_r(pg_engine_id),
-			PMU_PG_IDLE_THRESHOLD_SIM);
-		gk20a_writel(g, pwr_pmu_pg_ppuidlefilth_r(pg_engine_id),
-			PMU_PG_POST_POWERUP_IDLE_THRESHOLD_SIM);
-	} else {
-		/* TBD: calculate threshold for silicon */
-		gk20a_writel(g, pwr_pmu_pg_idlefilth_r(pg_engine_id),
-			PMU_PG_IDLE_THRESHOLD);
-		gk20a_writel(g, pwr_pmu_pg_ppuidlefilth_r(pg_engine_id),
-			PMU_PG_POST_POWERUP_IDLE_THRESHOLD);
-	}
+	gk20a_writel(g, pwr_pmu_pg_idlefilth_r(pg_engine_id),
+		PMU_PG_IDLE_THRESHOLD);
+	gk20a_writel(g, pwr_pmu_pg_ppuidlefilth_r(pg_engine_id),
+		PMU_PG_POST_POWERUP_IDLE_THRESHOLD);
 
 	if (g->ops.pmu.pmu_pg_init_param)
 		g->ops.pmu.pmu_pg_init_param(g, pg_engine_id);

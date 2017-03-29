@@ -46,6 +46,7 @@
 #endif
 
 #include <linux/platform/tegra/tegra_emc.h>
+#include <soc/tegra/chip-id.h>
 
 #include <nvgpu/kmem.h>
 

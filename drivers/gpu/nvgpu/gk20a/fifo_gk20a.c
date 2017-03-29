@@ -31,6 +31,7 @@
 #include <nvgpu/semaphore.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
+#include <nvgpu/soc.h>
 
 #include "gk20a.h"
 #include "debug_gk20a.h"
@@ -3349,7 +3350,7 @@ static void gk20a_fifo_apply_pb_timeout(struct gk20a *g)
 {
 	u32 timeout;
 
-	if (tegra_platform_is_silicon()) {
+	if (nvgpu_platform_is_silicon(g)) {
 		timeout = gk20a_readl(g, fifo_pb_timeout_r());
 		timeout &= ~fifo_pb_timeout_detection_enabled_f();
 		gk20a_writel(g, fifo_pb_timeout_r(), timeout);

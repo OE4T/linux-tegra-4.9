@@ -34,7 +34,6 @@ struct dbg_profiler_object_data;
 #include <nvgpu/lock.h>
 #include <linux/nvgpu.h>
 #include <linux/irqreturn.h>
-#include <soc/tegra/chip-id.h>
 #include <linux/version.h>
 #include <linux/atomic.h>
 #include <linux/cdev.h>

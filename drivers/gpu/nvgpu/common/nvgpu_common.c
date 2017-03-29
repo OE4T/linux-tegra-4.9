@@ -19,6 +19,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvgpu_common.h>
+#include <nvgpu/soc.h>
 
 #include "gk20a/gk20a_scale.h"
 #include "gk20a/gk20a.h"
@@ -60,7 +61,7 @@ static void nvgpu_init_vars(struct gk20a *g)
 static void nvgpu_init_timeout(struct gk20a *g)
 {
 	g->gr_idle_timeout_default = CONFIG_GK20A_DEFAULT_TIMEOUT;
-	if (tegra_platform_is_silicon())
+	if (nvgpu_platform_is_silicon(g))
 		g->timeouts_enabled = true;
 }
 
@@ -85,17 +86,17 @@ static void nvgpu_init_pm_vars(struct gk20a *g)
 	 * power features and for silicon platforms, read from platform data
 	 */
 	g->slcg_enabled =
-		tegra_platform_is_silicon() ? platform->enable_slcg : false;
+		nvgpu_platform_is_silicon(g) ? platform->enable_slcg : false;
 	g->blcg_enabled =
-		tegra_platform_is_silicon() ? platform->enable_blcg : false;
+		nvgpu_platform_is_silicon(g) ? platform->enable_blcg : false;
 	g->elcg_enabled =
-		tegra_platform_is_silicon() ? platform->enable_elcg : false;
+		nvgpu_platform_is_silicon(g) ? platform->enable_elcg : false;
 	g->elpg_enabled =
-		tegra_platform_is_silicon() ? platform->enable_elpg : false;
+		nvgpu_platform_is_silicon(g) ? platform->enable_elpg : false;
 	g->aelpg_enabled =
-		tegra_platform_is_silicon() ? platform->enable_aelpg : false;
+		nvgpu_platform_is_silicon(g) ? platform->enable_aelpg : false;
 	g->mscg_enabled =
-		tegra_platform_is_silicon() ? platform->enable_mscg : false;
+		nvgpu_platform_is_silicon(g) ? platform->enable_mscg : false;
 
 	/* set default values to aelpg parameters */
 	g->pmu.aelpg_param[0] = APCTRL_SAMPLING_PERIOD_PG_DEFAULT_US;

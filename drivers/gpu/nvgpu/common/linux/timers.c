@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,6 +18,7 @@
 #include <linux/delay.h>
 
 #include <nvgpu/timers.h>
+#include <nvgpu/soc.h>
 
 #include "gk20a/gk20a.h"
 
@@ -31,7 +32,7 @@ static int nvgpu_timeout_is_pre_silicon(struct nvgpu_timeout *timeout)
 	if (timeout->flags & NVGPU_TIMER_NO_PRE_SI)
 		return 0;
 
-	return !tegra_platform_is_silicon();
+	return !nvgpu_platform_is_silicon(timeout->g);
 }
 
 /**

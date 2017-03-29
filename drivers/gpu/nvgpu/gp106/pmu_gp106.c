@@ -71,7 +71,7 @@ static int gp106_pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 				return 0;
 			}
 			udelay(PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT);
-		} while (--retries || !tegra_platform_is_silicon());
+		} while (--retries);
 
 		/* If scrubbing timeout, keep PMU in reset state */
 		gk20a_writel(g, pwr_falcon_engine_r(),

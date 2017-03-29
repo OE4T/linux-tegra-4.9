@@ -618,7 +618,8 @@ int gk20a_ce_execute_ops(struct device *dev,
 		memcpy((void *)&ce_cmd_buf_fence_in,
 				(void *)(cmd_buf_cpu_va + fence_index),
 				sizeof(struct gk20a_fence *));
-		ret = gk20a_fence_wait(ce_cmd_buf_fence_in, gk20a_get_gr_idle_timeout(g));
+		ret = gk20a_fence_wait(g, ce_cmd_buf_fence_in,
+				       gk20a_get_gr_idle_timeout(g));
 
 		gk20a_fence_put(ce_cmd_buf_fence_in);
 		/* Reset the stored last pre-sync */
@@ -645,7 +646,8 @@ int gk20a_ce_execute_ops(struct device *dev,
 	if (methodSize) {
 		/* TODO: Remove CPU pre-fence wait */
 		if (gk20a_fence_in) {
-			ret = gk20a_fence_wait(gk20a_fence_in, gk20a_get_gr_idle_timeout(g));
+			ret = gk20a_fence_wait(g, gk20a_fence_in,
+					       gk20a_get_gr_idle_timeout(g));
 			gk20a_fence_put(gk20a_fence_in);
 			if (ret)
 				goto noop;

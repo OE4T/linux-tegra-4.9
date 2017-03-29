@@ -14,10 +14,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <soc/tegra/chip-id.h>
-
 #include <nvgpu/page_allocator.h>
 #include <nvgpu/log.h>
+#include <nvgpu/soc.h>
 
 #include "gk20a.h"
 
@@ -31,7 +30,7 @@ void gk20a_bus_init_hw(struct gk20a *g)
 	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 
 	/* enable pri timeout only on silicon */
-	if (tegra_platform_is_silicon()) {
+	if (nvgpu_platform_is_silicon(g)) {
 		gk20a_writel(g,
 			timer_pri_timeout_r(),
 			timer_pri_timeout_period_f(
@@ -46,7 +45,7 @@ void gk20a_bus_init_hw(struct gk20a *g)
 			timer_pri_timeout_en_en_disabled_f());
 	}
 
-	if (!tegra_platform_is_silicon())
+	if (!nvgpu_platform_is_silicon(g))
 		gk20a_writel(g, bus_intr_en_0_r(), 0x0);
 	else
 		gk20a_writel(g, bus_intr_en_0_r(),

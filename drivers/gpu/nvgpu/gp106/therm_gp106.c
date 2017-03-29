@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -86,12 +86,6 @@ static int gp106_elcg_init_idle_filters(struct gk20a *g)
 	for (engine_id = 0; engine_id < f->num_engines; engine_id++) {
 		active_engine_id = f->active_engines_list[engine_id];
 		gate_ctrl = gk20a_readl(g, therm_gate_ctrl_r(active_engine_id));
-
-		if (tegra_platform_is_linsim()) {
-			gate_ctrl = set_field(gate_ctrl,
-				therm_gate_ctrl_eng_delay_after_m(),
-				therm_gate_ctrl_eng_delay_after_f(4));
-		}
 
 		gate_ctrl = set_field(gate_ctrl,
 			therm_gate_ctrl_eng_idle_filt_exp_m(),

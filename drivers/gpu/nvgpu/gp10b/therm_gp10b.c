@@ -1,9 +1,7 @@
 /*
- * drivers/gpu/nvgpu/gm20b/therm_gk20a.c
- *
  * GP10B Therm
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,6 +14,8 @@
  */
 
 #include "gk20a/gk20a.h"
+
+#include <nvgpu/soc.h>
 
 #include <nvgpu/hw/gp10b/hw_therm_gp10b.h>
 
@@ -92,7 +92,7 @@ static int gp10b_elcg_init_idle_filters(struct gk20a *g)
 		active_engine_id = f->active_engines_list[engine_id];
 		gate_ctrl = gk20a_readl(g, therm_gate_ctrl_r(active_engine_id));
 
-		if (tegra_platform_is_linsim()) {
+		if (nvgpu_platform_is_simulation(g)) {
 			gate_ctrl = set_field(gate_ctrl,
 				therm_gate_ctrl_eng_delay_after_m(),
 				therm_gate_ctrl_eng_delay_after_f(4));

@@ -31,6 +31,8 @@
 #include "gk20a/gk20a.h"
 #include "clk_gm20b.h"
 
+#include <nvgpu/soc.h>
+
 #include <nvgpu/hw/gm20b/hw_trim_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_timer_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_therm_gm20b.h>
@@ -835,7 +837,7 @@ static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 
 	gk20a_dbg_fn("");
 
-	if (!tegra_platform_is_silicon())
+	if (!nvgpu_platform_is_silicon(g))
 		return 0;
 
 	/* get old coefficients */

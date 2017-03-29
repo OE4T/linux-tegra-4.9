@@ -19,6 +19,7 @@
 
 #include <nvgpu/semaphore.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/soc.h>
 
 #include "gk20a.h"
 #include "channel_gk20a.h"
@@ -80,10 +81,10 @@ static inline bool gk20a_fence_is_valid(struct gk20a_fence *f)
 	return valid;
 }
 
-int gk20a_fence_wait(struct gk20a_fence *f, int timeout)
+int gk20a_fence_wait(struct gk20a *g, struct gk20a_fence *f, int timeout)
 {
 	if (f && gk20a_fence_is_valid(f)) {
-		if (!tegra_platform_is_silicon())
+		if (!nvgpu_platform_is_silicon(g))
 			timeout = (u32)MAX_SCHEDULE_TIMEOUT;
 		return f->ops->wait(f, timeout);
 	}

@@ -532,7 +532,7 @@ fail_to_get_val_args:
 	return err;
 }
 
-void nvdla_dump_task(struct nvdla_task *task)
+static void nvdla_dump_task(struct nvdla_task *task)
 {
 	int i;
 	struct nvhost_queue *queue = task->queue;

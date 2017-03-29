@@ -2301,6 +2301,9 @@ void composite_resume(struct usb_gadget *gadget)
 		}
 
 		maxpower = cdev->config->MaxPower;
+		if (gadget->speed <= USB_SPEED_HIGH &&
+			maxpower > USB_HS_VBUS_MAX_DRAW)
+			maxpower = USB_HS_VBUS_MAX_DRAW;
 
 		usb_gadget_vbus_draw(gadget, maxpower ?
 			maxpower : CONFIG_USB_GADGET_VBUS_DRAW);

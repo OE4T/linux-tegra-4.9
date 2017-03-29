@@ -1126,6 +1126,9 @@ void gk20a_driver_start_unload(struct gk20a *g)
 	g->driver_is_dying = 1;
 	up_write(&g->busy_lock);
 
+	if (gk20a_gpu_is_virtual(g->dev))
+		return;
+
 	gk20a_wait_for_idle(g->dev);
 
 	nvgpu_wait_for_deferred_interrupts(g);

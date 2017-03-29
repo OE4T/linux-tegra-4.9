@@ -452,6 +452,9 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	ret |= gk20a_mm_suspend(g);
 	ret |= gk20a_fifo_suspend(g);
 
+	if (g->ops.pmu.mclk_deinit)
+		g->ops.pmu.mclk_deinit(g);
+
 	/* Disable GPCPLL */
 	if (g->ops.clk.suspend_clk_support)
 		ret |= g->ops.clk.suspend_clk_support(g);

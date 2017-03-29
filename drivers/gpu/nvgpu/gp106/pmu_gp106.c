@@ -439,6 +439,7 @@ void gp106_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.dump_secure_fuses = NULL;
 	gops->pmu.reset = gp106_falcon_reset;
 	gops->pmu.mclk_init = clk_mclkseq_init_mclk_gddr5;
+	gops->pmu.mclk_deinit = clk_mclkseq_deinit_mclk_gddr5;
 	gops->pmu.is_pmu_supported = gp106_is_pmu_supported;
 
 	gk20a_dbg_fn("done");

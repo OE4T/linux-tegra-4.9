@@ -2174,20 +2174,33 @@ done:
 	return status;
 }
 
+void clk_mclkseq_deinit_mclk_gddr5(struct gk20a *g)
+{
+	struct clk_mclk_state *mclk = &g->clk_pmu.clk_mclk;
+
+	nvgpu_mutex_destroy(&mclk->data_lock);
+	nvgpu_mutex_destroy(&mclk->mclk_lock);
+}
+
 int clk_mclkseq_init_mclk_gddr5(struct gk20a *g)
 {
 	struct clk_mclk_state *mclk;
 	int status;
 	struct clk_set_info *p5_info;
 	struct clk_set_info *p0_info;
-
+	int err;
 
 	gk20a_dbg_fn("");
 
 	mclk = &g->clk_pmu.clk_mclk;
 
-	nvgpu_mutex_init(&mclk->mclk_lock);
-	nvgpu_mutex_init(&mclk->data_lock);
+	err = nvgpu_mutex_init(&mclk->mclk_lock);
+	if (err)
+		return err;
+
+	err = nvgpu_mutex_init(&mclk->data_lock);
+	if (err)
+		goto fail_mclk_mutex;
 
 	/* FBPA gain WAR */
 	gk20a_writel(g, fb_fbpa_fbio_iref_byte_rx_ctrl_r(), 0x22222222);
@@ -2196,32 +2209,37 @@ int clk_mclkseq_init_mclk_gddr5(struct gk20a *g)
 
 	/* Parse VBIOS */
 	status = mclk_get_memclk_table(g);
-	if (status < 0)
-		return status;
+	if (status < 0) {
+		err = status;
+		goto fail_data_mutex;
+	}
 
 	/* Load RAM pattern */
 	mclk_memory_load_training_pattern(g);
 
 	p5_info = pstate_get_clk_set_info(g,
 			CTRL_PERF_PSTATE_P5, clkwhich_mclk);
-	if (!p5_info)
-		return -EINVAL;
+	if (!p5_info) {
+		err = -EINVAL;
+		goto fail_data_mutex;
+	}
 
 	p0_info = pstate_get_clk_set_info(g,
 			CTRL_PERF_PSTATE_P0, clkwhich_mclk);
-	if (!p0_info)
-		return -EINVAL;
-
+	if (!p0_info) {
+		err = -EINVAL;
+		goto fail_data_mutex;
+	}
 
 	mclk->p5_min = p5_info->min_mhz;
 	mclk->p0_min = p0_info->min_mhz;
-
 
 	mclk->vreg_buf = nvgpu_kcalloc(g, VREG_COUNT, sizeof(u32));
 	if (!mclk->vreg_buf) {
 		gk20a_err(dev_from_gk20a(g),
 				"unable to allocate memory for VREG");
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto fail_data_mutex;
 	}
 
 #ifdef CONFIG_DEBUG_FS
@@ -2235,6 +2253,12 @@ int clk_mclkseq_init_mclk_gddr5(struct gk20a *g)
 	mclk->init = true;
 
 	return 0;
+
+fail_data_mutex:
+	nvgpu_mutex_destroy(&mclk->data_lock);
+fail_mclk_mutex:
+	nvgpu_mutex_destroy(&mclk->mclk_lock);
+	return err;
 }
 
 int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, u16 val)

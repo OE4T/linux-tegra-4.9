@@ -47,6 +47,7 @@ struct clk_mclk_state {
 };
 
 int clk_mclkseq_init_mclk_gddr5(struct gk20a *g);
+void clk_mclkseq_deinit_mclk_gddr5(struct gk20a *g);
 int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, u16 val);
 
 #endif

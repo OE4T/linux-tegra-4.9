@@ -684,7 +684,7 @@ static int register_smmu_master(struct arm_smmu_device *smmu,
 		return -ENOSPC;
 	}
 
-	master = devm_kzalloc(dev, sizeof(*master), GFP_KERNEL);
+	master = devm_kzalloc(smmu->dev, sizeof(*master), GFP_KERNEL);
 	if (!master)
 		return -ENOMEM;
 
@@ -697,7 +697,7 @@ static int register_smmu_master(struct arm_smmu_device *smmu,
 	}
 
 	/* Make a new master_cfg */
-	master_cfg = devm_kzalloc(dev, sizeof(*master_cfg), GFP_KERNEL);
+	master_cfg = devm_kzalloc(smmu->dev, sizeof(*master_cfg), GFP_KERNEL);
 	if (!master_cfg) {
 		kfree(master);
 		return -ENOMEM;
@@ -2288,6 +2288,37 @@ static int arm_smmu_add_device(struct device *dev)
 	int ret;
 	int i;
 	u64 swgids = 0;
+	struct device_node *np = dev_get_dev_node(dev);
+	struct of_phandle_args args;
+	struct of_phandle_args master_spec;
+	int iommus_idx = 0;
+	bool register_master = false;
+
+	if (!smmu_handle)
+		return -ENODEV;
+	master_spec.args_count = 0;
+
+	while (!of_parse_phandle_with_args(np, "iommus", "#iommu-cells",
+					   iommus_idx++, &args)) {
+		if (args.np == smmu_handle->dev->of_node) {
+			master_spec.np = np;
+			for (i = 0; i < args.args_count; i++) {
+				if (master_spec.args_count >= MAX_MASTER_STREAMIDS) {
+					WARN(1, "> %d stream id's not supported, dev=%s",
+						MAX_MASTER_STREAMIDS, dev_name(dev));
+					of_node_put(args.np);
+					return -ENOSPC;
+				}
+				master_spec.args[master_spec.args_count++] = args.args[i];
+				pr_debug("sid=%d, dev_name=%s\n", args.args[i], dev_name(dev));
+				register_master = true;
+			}
+		}
+		of_node_put(args.np);
+	}
+
+	if (register_master)
+		(void)register_smmu_master(smmu_handle, dev, &master_spec);
 
 	smmu = find_smmu_for_device(dev);
 	if (!smmu)

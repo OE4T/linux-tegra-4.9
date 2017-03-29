@@ -35,6 +35,7 @@
 				"ast-cpu", "ast-dma";
 
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_RCE>;
 
 		clocks =
 			<&tegra_car TEGRA186_CLK_SCE_APB>,

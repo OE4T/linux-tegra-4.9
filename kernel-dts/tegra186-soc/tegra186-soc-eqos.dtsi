@@ -63,6 +63,7 @@
 		resets = <&tegra_car TEGRA186_RESET_EQOS>;
 		reset-names = "eqos_rst";
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_EQOS>;
 		phy-mode = "rgmii";
 		status = "disabled";
 		eqos_cool_dev: eqos-cool-dev {

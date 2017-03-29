@@ -135,85 +135,12 @@
 		#global-interrupts = <2>;
 		interrupts = <0 170 4>,
 			     <0 171 4>;
+		#iommu-cells = <1>;
 
-		mmu-masters = <&host1x				TEGRA_SID_HC
-								TEGRA_SID_HC_VM0
-								TEGRA_SID_HC_VM1
-								TEGRA_SID_HC_VM2
-								TEGRA_SID_HC_VM3
-								TEGRA_SID_HC_VM4
-								TEGRA_SID_HC_VM5
-								TEGRA_SID_HC_VM6
-								TEGRA_SID_HC_VM7>,
-			      <&{/host1x/nvcsi@150c0000}	TEGRA_SID_NVCSI>,
-			      <&{/host1x/vic@15340000}		TEGRA_SID_VIC>,
-			      <&{/host1x/vi@15700000}		TEGRA_SID_VI>,
-			      <&{/host1x/isp@15600000}		TEGRA_SID_ISP>,
-			      <&{/host1x/nvdec@15480000}	TEGRA_SID_NVDEC>,
-			      <&{/host1x/nvenc@154c0000}	TEGRA_SID_NVENC>,
-			      <&{/host1x/nvjpg@15380000}	TEGRA_SID_NVJPG>,
+		mmu-masters = <&{/host1x/vi@15700000}		TEGRA_SID_VI>,
 			      <&{/host1x/nvdisplay@15200000}	TEGRA_SID_NVDISPLAY>,
 			      <&{/host1x/nvdisplay@15210000}	TEGRA_SID_NVDISPLAY>,
-			      <&{/host1x/nvdisplay@15220000}	TEGRA_SID_NVDISPLAY>,
-			      <&{/host1x/tsec@15500000}		TEGRA_SID_TSEC>,
-			      <&{/host1x/tsecb@15100000}	TEGRA_SID_TSECB>,
-			      <&{/host1x/se@15810000}		TEGRA_SID_SE>,
-			      <&{/host1x/se@15820000}		TEGRA_SID_SE1>,
-			      <&{/host1x/se@15830000}		TEGRA_SID_SE2>,
-			      <&{/host1x/se@15840000}		TEGRA_SID_SE3>,
-			      <&{/smmu_test}			TEGRA_SID_SMMU_TEST>,
-			      <&{/gp10b}			TEGRA_SID_GPUB>,
-			      <&host1x_ctx0			TEGRA_SID_HOST1X_CTX0>,
-			      <&host1x_ctx1			TEGRA_SID_HOST1X_CTX1>,
-			      <&host1x_ctx2			TEGRA_SID_HOST1X_CTX2>,
-			      <&host1x_ctx3			TEGRA_SID_HOST1X_CTX3>,
-			      <&host1x_ctx4			TEGRA_SID_HOST1X_CTX4>,
-			      <&host1x_ctx5			TEGRA_SID_HOST1X_CTX5>,
-			      <&host1x_ctx6			TEGRA_SID_HOST1X_CTX6>,
-			      <&host1x_ctx7			TEGRA_SID_HOST1X_CTX7>,
-
-			      /* Non-host devices. */
-			      <&{/adsp@2993000}		TEGRA_SID_APE>,
-			      <&{/rtcpu@2993000}	TEGRA_SID_APE_CAM>,
-			      <&{/ether_qos@2490000}	TEGRA_SID_EQOS>,
-			      <&{/sdhci@3460000}	TEGRA_SID_SDMMC4A>,
-			      <&{/sdhci@3420000}	TEGRA_SID_SDMMC2A>,
-			      <&{/sdhci@3400000}	TEGRA_SID_SDMMC1A>,
-			      <&{/ufshci@2450000}	TEGRA_SID_UFSHC>,
-			      <&{/xhci@3530000}		TEGRA_SID_XUSB_HOST>,
-			      <&{/xudc@3550000}		TEGRA_SID_XUSB_DEV>,
-			      <&{/hda@3510000}		TEGRA_SID_HDA>,
-			      <&tegra_adsp_audio	TEGRA_SID_APE>,
-			      <&{/sound}		TEGRA_SID_APE>,
-			      <&{/sound_ref}		TEGRA_SID_APE>,
-			      <&{/pcie-controller@10003000} TEGRA_SID_AFI>,
-			      <&{/ahci-sata@3507000}	TEGRA_SID_SATA2>,
-			      <&{/aon@c160000}		TEGRA_SID_AON>,
-			      <&{/rtcpu@b000000}	TEGRA_SID_RCE>,
-			      <&{/tesseract@b000000}	TEGRA_SID_RCE>,
-			      <&{/sce@b000000}		TEGRA_SID_SCE>,
-			      <&{/bpmp}			TEGRA_SID_BPMP>,
-			      <&{/dma@2600000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/spi@3210000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/spi@3230000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/spi@3240000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/spi@3270000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/spi@c260000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/serial@3100000}	TEGRA_SID_GPCDMA_0>,
-			      <&{/serial@3110000}	TEGRA_SID_GPCDMA_0>,
-			      <&{/serial@c280000}	TEGRA_SID_GPCDMA_0>,
-			      <&{/serial@3130000}	TEGRA_SID_GPCDMA_0>,
-			      <&{/serial@3140000}	TEGRA_SID_GPCDMA_0>,
-			      <&{/serial@3150000}	TEGRA_SID_GPCDMA_0>,
-			      <&{/serial@c290000}	TEGRA_SID_GPCDMA_0>,
-			      <&{/i2c@3160000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/i2c@c240000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/i2c@3180000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/i2c@3190000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/i2c@31b0000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/i2c@31c0000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/i2c@c250000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/i2c@31e0000}		TEGRA_SID_GPCDMA_0>;
+			      <&{/host1x/nvdisplay@15220000}	TEGRA_SID_NVDISPLAY>;
 
 		status = "disabled";
 
@@ -422,6 +349,7 @@
 	smmu_test: smmu_test {
 		compatible = "nvidia,smmu_test";
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_SMMU_TEST>;
 	};
 
 	mc {
@@ -556,6 +484,7 @@
 		interrupt-parent = <&pm_irq>;
 #endif
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_XUSB_HOST>;
 		status = "disabled";
 		otg-controller = <&tegra_xotg>;
 #ifdef KERNEL_VERSION_4_9
@@ -601,6 +530,7 @@
 		clock-names = "pll_u_480M", "dev", "ss", "pll_e";
 		interrupts = <0 166 0x4>;
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_XUSB_DEV>;
 		status = "disabled";
 		charger-detector = <&tegra_usb_cd>;
 		otg-controller = <&tegra_xotg>;
@@ -711,6 +641,15 @@
 		nvidia,vmid = <1>;
 
 		#stream-id-cells = <9>;
+		iommus = <&smmu TEGRA_SID_HC>,
+			 <&smmu TEGRA_SID_HC_VM0>,
+			 <&smmu TEGRA_SID_HC_VM1>,
+			 <&smmu TEGRA_SID_HC_VM2>,
+			 <&smmu TEGRA_SID_HC_VM3>,
+			 <&smmu TEGRA_SID_HC_VM4>,
+			 <&smmu TEGRA_SID_HC_VM5>,
+			 <&smmu TEGRA_SID_HC_VM6>,
+			 <&smmu TEGRA_SID_HC_VM7>;
 
 		#address-cells = <2>;
 		#size-cells = <2>;
@@ -720,48 +659,56 @@
 		host1x_ctx0: ctx0 {
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_HOST1X_CTX0>;
 			status = "disabled";
 		};
 
 		host1x_ctx1: ctx1 {
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_HOST1X_CTX1>;
 			status = "disabled";
 		};
 
 		host1x_ctx2: ctx2 {
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_HOST1X_CTX2>;
 			status = "disabled";
 		};
 
 		host1x_ctx3: ctx3 {
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_HOST1X_CTX3>;
 			status = "disabled";
 		};
 
 		host1x_ctx4: ctx4 {
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_HOST1X_CTX4>;
 			status = "disabled";
 		};
 
 		host1x_ctx5: ctx5 {
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_HOST1X_CTX5>;
 			status = "disabled";
 		};
 
 		host1x_ctx6: ctx6 {
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_HOST1X_CTX6>;
 			status = "disabled";
 		};
 
 		host1x_ctx7: ctx7 {
 			compatible = "nvidia,tegra186-iommu-context";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_HOST1X_CTX7>;
 			status = "disabled";
 		};
 
@@ -778,6 +725,7 @@
 				      "nvcsilp_parent";
 			interrupts = <0 119 0x04>;
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_NVCSI>;
 			status = "disabled";
 			num-ports = <6>;
 		};
@@ -809,6 +757,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_ISP>;
 			clock-names = "isp";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_ISP>;
 			status = "disabled";
 		};
 
@@ -969,6 +918,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_VIC>;
 			clock-names = "vic";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_VIC>;
 			status = "disabled";
 		};
 
@@ -980,6 +930,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_NVENC>;
 			clock-names = "nvenc";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_NVENC>;
 			status = "disabled";
 		};
 
@@ -992,6 +943,7 @@
 				 <&tegra_car TEGRA186_CLK_KFUSE>;
 			clock-names = "nvdec", "kfuse";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_NVDEC>;
 			status = "disabled";
 		};
 
@@ -1003,6 +955,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_NVJPG>;
 			clock-names = "nvjpg";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_NVJPG>;
 			status = "disabled";
 			interrupts = <0 198 0x04>;
 		};
@@ -1015,6 +968,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_TSEC>;
 			clock-names = "tsec";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_TSEC>;
 			status = "disabled";
 		};
 
@@ -1026,6 +980,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_TSECB>;
 			clock-names = "tsecb";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_TSECB>;
 			status = "disabled";
 		};
 
@@ -1144,6 +1099,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_SE>;
 			clock-names = "se";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_SE>;
 			status = "disabled";
 		};
 
@@ -1157,6 +1113,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_SE>;
 			clock-names = "se";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_SE1>;
 			status = "disabled";
 		};
 
@@ -1170,6 +1127,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_SE>;
 			clock-names = "se";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_SE2>;
 			status = "disabled";
 		};
 
@@ -1183,6 +1141,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_SE>;
 			clock-names = "se";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_SE3>;
 			status = "disabled";
 		};
 	};
@@ -1209,6 +1168,7 @@
 		interrupt-names = "stall", "nonstall";
 		nvidia,host1x = <&host1x>;
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_GPUB>;
 		access-vpr-phys;
 		resets = <&tegra_car TEGRA186_RESET_GPU>;
 		clocks = <&tegra_car TEGRA186_CLK_GPCCLK>,
@@ -1301,6 +1261,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		nvidia,dma-request-selector = <&gpcdma 5>;
 		dmas = <&gpcdma 5>, <&gpcdma 5>;
 		dma-names = "rx", "tx";
@@ -1429,6 +1390,7 @@
 	bpmp {
 		compatible = "nvidia,tegra186-bpmp";
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_BPMP>;
 		reg = <0x0 0x0d000000 0x0 0x00800000>,
 		      <0x0 0x3004e000 0x0 0x00001000>,
 		      <0x0 0x3004f000 0x0 0x00001000>;
@@ -1481,6 +1443,7 @@
 			      0 107 0x04>;
 		#dma-cells = <1>;
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
 		status = "disabled";
 	};
 
@@ -1618,6 +1581,7 @@
 		interrupt-map = <0 0 0 0 &intc 0 72 0x04>;// check this
 
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_AFI>;
 
 		bus-range = <0x00 0xff>;
 		#address-cells = <3>;
@@ -1678,11 +1642,13 @@
 
 	sound {
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_APE>;
 		status = "disabled";
 	};
 
 	sound_ref {
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_APE>;
 		status = "disabled";
 	};
 
@@ -2165,6 +2131,7 @@
 	hda@3510000 {
 		compatible = "nvidia,tegra30-hda";
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_HDA>;
 		reg = <0x0 0x3510000 0x0 0x10000>;
 		nvidia,max-codec-slot = <8>;
 		clocks = <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
@@ -2187,6 +2154,7 @@
 		power-domains = <&adsp_pd>;
 		wakeup-disable;
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_APE>;
 		interrupt-parent = <&tegra_agic>;
 		interrupts = <GIC_SPI INT_ADMA_EOT10 IRQ_TYPE_LEVEL_HIGH
 				ROUTE_TO_ADSP>,
@@ -2272,6 +2240,7 @@
 		resets = <&tegra_car TEGRA186_RESET_ADSP_ALL>;
 		reset-names = "adspall";
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_APE>;
 	};
 
 	eqos_ape@2990000 {
@@ -2727,6 +2696,7 @@
 		reg = <0x0 0x0c1a0000 0x0 0x20000>; /* AON shared semaphore */
 		#mbox-cells = <1>;
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_AON>;
 		status = "disabled";
 		nvidia,hsp-shared-mailbox = <&aon_hsp 2>;
 		nvidia,hsp-shared-mailbox-names = "ivc-pair";

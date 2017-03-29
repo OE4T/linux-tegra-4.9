@@ -36,6 +36,7 @@
 				"ast-cpu", "ast-dma";
 
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_RCE>;
 
 		clocks =
 			<&tegra_car TEGRA186_CLK_SCE_APB>,
@@ -165,6 +166,7 @@
 		reg-names = "ape-evp", "ast-cpu";
 
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_APE_CAM>;
 
 		clocks =
 			<&tegra_car TEGRA186_CLK_APE>,

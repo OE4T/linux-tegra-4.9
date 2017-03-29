@@ -60,6 +60,7 @@
 		       <&tegra_car TEGRA186_CLK_PLLC4_OUT0>;
 		clock-names = "sdmmc", "pll_p", "pll_c4_out0";
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_SDMMC4A>;
 		status = "disabled";
 	};
 
@@ -91,6 +92,7 @@
 		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "sdmmc", "pll_p";
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_SDMMC3A>;
 		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC3_HV>;
 		pad-names = "sdmmc";
 		nvidia,en-periodic-calib;
@@ -128,6 +130,7 @@
 		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "sdmmc", "pll_p";
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_SDMMC2A>;
 		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC2_HV>;
 		pad-names = "sdmmc";
 		status = "disabled";
@@ -160,6 +163,7 @@
 		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "sdmmc", "pll_p";
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_SDMMC1A>;
 		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC1_HV>;
 		pad-names = "sdmmc";
 		nvidia,en-periodic-calib;

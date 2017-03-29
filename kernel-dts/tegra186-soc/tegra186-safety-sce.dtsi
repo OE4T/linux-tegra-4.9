@@ -49,6 +49,7 @@
 		reg-names = "ast-cpu", "ast-dma";
 
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_SCE>;
 
 		/* This property contains ast-region-id, IOVA, ast-region-size */
 		nvidia,ivc-channels = <&tegra_safety_ivc 2 0x90000000 0x10000>;

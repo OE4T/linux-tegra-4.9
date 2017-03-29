@@ -20,6 +20,7 @@
 		reg = <0x0 0x02450000 0x0 0x4000>;
 		interrupts = < 0 TEGRA186_IRQ_UFSHC 0x04 >;
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_UFSHC>;
 		clocks = <&tegra_car TEGRA186_CLK_MPHY_CORE_PLL_FIXED>,
 				<&tegra_car TEGRA186_CLK_MPHY_L0_TX_SYMB>,
 				<&tegra_car TEGRA186_CLK_MPHY_TX_1MHZ_REF> ,

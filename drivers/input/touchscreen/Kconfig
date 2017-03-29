@@ -1214,4 +1214,16 @@ config TOUCHSCREEN_ROHM_BU21023
 	  To compile this driver as a module, choose M here: the
 	  module will be called bu21023_ts.
 
+config TOUCHSCREEN_LR388K7
+	tristate "Sharp LR388K7 touchscreen"
+	depends on SPI_MASTER
+	help
+	  Say Y here if you have a LR388K7 and want to enable
+	  support for the built-in touchscreen.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called lr388k7.
+
 endif

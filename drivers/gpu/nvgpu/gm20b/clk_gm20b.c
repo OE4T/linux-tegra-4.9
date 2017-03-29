@@ -1122,16 +1122,23 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	struct clk_gk20a *clk = &g->clk;
 	unsigned long safe_rate;
 	struct clk *ref, *c;
+	int err;
 
 	gk20a_dbg_fn("");
+
+	err = nvgpu_mutex_init(&clk->clk_mutex);
+	if (err)
+		return err;
 
 	if (clk->sw_ready) {
 		gk20a_dbg_fn("skip init");
 		return 0;
 	}
 
-	if (!gk20a_clk_get(g))
-		return -EINVAL;
+	if (!gk20a_clk_get(g)) {
+		err = -EINVAL;
+		goto fail;
+	}
 
 	/*
 	 * On Tegra GPU clock exposed to frequency governor is a shared user on
@@ -1149,7 +1156,8 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	if (IS_ERR(ref)) {
 		gk20a_err(dev_from_gk20a(g),
 			"failed to get GPCPLL reference clock");
-		return -EINVAL;
+		err = -EINVAL;
+		goto fail;
 	}
 
 	clk->gpc_pll.id = GK20A_GPC_PLL;
@@ -1157,7 +1165,8 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	if (clk->gpc_pll.clk_in == 0) {
 		gk20a_err(dev_from_gk20a(g),
 			"GPCPLL reference clock is zero");
-		return -EINVAL;
+		err = -EINVAL;
+		goto fail;
 	}
 
 	safe_rate = tegra_dvfs_get_fmax_at_vmin_safe_t(c);
@@ -1191,8 +1200,6 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	}
 #endif
 
-	nvgpu_mutex_init(&clk->clk_mutex);
-
 	clk->sw_ready = true;
 
 	gk20a_dbg_fn("done");
@@ -1200,6 +1207,10 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 		clk->gpc_pll.mode == GPC_PLL_MODE_DVFS ? " NA mode," : "",
 		clk->gpc_pll.M, clk->gpc_pll.N, clk->gpc_pll.PL);
 	return 0;
+
+fail:
+	nvgpu_mutex_destroy(&clk->clk_mutex);
+	return err;
 }
 
 
@@ -1587,6 +1598,9 @@ static int gm20b_suspend_clk_support(struct gk20a *g)
 		ret = clk_disable_gpcpll(g, 1);
 	g->clk.clk_hw_on = false;
 	nvgpu_mutex_release(&g->clk.clk_mutex);
+
+	nvgpu_mutex_destroy(&g->clk.clk_mutex);
+
 	return ret;
 }
 

@@ -419,22 +419,30 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 	static int initialized;
 	struct clk *ref;
 	unsigned long ref_rate;
+	int err;
 
 	gk20a_dbg_fn("");
+
+	err = nvgpu_mutex_init(&clk->clk_mutex);
+	if (err)
+		return err;
 
 	if (clk->sw_ready) {
 		gk20a_dbg_fn("skip init");
 		return 0;
 	}
 
-	if (!gk20a_clk_get(g))
-		return -EINVAL;
+	if (!gk20a_clk_get(g)) {
+		err = -EINVAL;
+		goto fail;
+	}
 
 	ref = clk_get_parent(clk_get_parent(clk->tegra_clk));
 	if (IS_ERR(ref)) {
 		gk20a_err(dev_from_gk20a(g),
 			"failed to get GPCPLL reference clock");
-		return -EINVAL;
+		err = -EINVAL;
+		goto fail;
 	}
 	ref_rate = clk_get_rate(ref);
 
@@ -443,7 +451,8 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 	if (clk->gpc_pll.clk_in == 0) {
 		gk20a_err(dev_from_gk20a(g),
 			"GPCPLL reference clock is zero");
-		return -EINVAL;
+		err = -EINVAL;
+		goto fail;
 	}
 
 	/* Decide initial frequency */
@@ -457,12 +466,14 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 		clk->gpc_pll.freq /= pl_to_div[clk->gpc_pll.PL];
 	}
 
-	nvgpu_mutex_init(&clk->clk_mutex);
-
 	clk->sw_ready = true;
 
 	gk20a_dbg_fn("done");
 	return 0;
+
+fail:
+	nvgpu_mutex_destroy(&clk->clk_mutex);
+	return err;
 }
 
 static int gk20a_init_clk_setup_hw(struct gk20a *g)
@@ -684,6 +695,9 @@ static int gk20a_suspend_clk_support(struct gk20a *g)
 	ret = clk_disable_gpcpll(g, 1);
 	g->clk.clk_hw_on = false;
 	nvgpu_mutex_release(&g->clk.clk_mutex);
+
+	nvgpu_mutex_destroy(&g->clk.clk_mutex);
+
 	return ret;
 }
 

@@ -78,18 +78,23 @@ static int gp106_init_clk_support(struct gk20a *g) {
 
 	gk20a_dbg_fn("");
 
-	nvgpu_mutex_init(&clk->clk_mutex);
+	err = nvgpu_mutex_init(&clk->clk_mutex);
+	if (err)
+		return err;
 
 	clk->clk_namemap = (struct namemap_cfg *)
 		nvgpu_kzalloc(g, sizeof(struct namemap_cfg) * NUM_NAMEMAPS);
 
-	if (!clk->clk_namemap)
+	if (!clk->clk_namemap) {
+		nvgpu_mutex_destroy(&clk->clk_mutex);
 		return -ENOMEM;
+	}
 
 	clk->namemap_xlat_table = nvgpu_kcalloc(g, NUM_NAMEMAPS, sizeof(u32));
 
 	if (!clk->namemap_xlat_table) {
 		nvgpu_kfree(g, clk->clk_namemap);
+		nvgpu_mutex_destroy(&clk->clk_mutex);
 		return -ENOMEM;
 	}
 
@@ -265,8 +270,15 @@ err_out:
 }
 #endif /* CONFIG_DEBUG_FS */
 
+static int gp106_suspend_clk_support(struct gk20a *g)
+{
+	nvgpu_mutex_destroy(&g->clk.clk_mutex);
+	return 0;
+}
+
 void gp106_init_clk_ops(struct gpu_ops *gops) {
 	gops->clk.init_clk_support = gp106_init_clk_support;
 	gops->clk.get_crystal_clk_hz = gp106_crystal_clk_hz;
 	gops->clk.measure_freq = gp106_clk_measure_freq;
+	gops->clk.suspend_clk_support = gp106_suspend_clk_support;
 }

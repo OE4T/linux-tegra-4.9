@@ -148,29 +148,6 @@ static inline void ahb_write(struct smmu_device *smmu, u32 val, size_t offs)
 	writel(val, smmu->regs_ahbarb + offs);
 }
 
-static void __smmu_client_ordered(struct smmu_device *smmu, int id)
-{
-	size_t offs;
-	u32 val;
-
-	offs = SMMU_CLIENT_CONF0;
-	offs += (id / BITS_PER_LONG) * sizeof(u32);
-
-	val = smmu_read(smmu, offs);
-	val |= BIT(id % BITS_PER_LONG);
-	smmu_write(smmu, val, offs);
-}
-
-static void smmu_client_ordered(struct smmu_device *smmu)
-{
-	int i, id[] = {
-		/* Add client ID here to be ordered */
-	};
-
-	for (i = 0; i < ARRAY_SIZE(id); i++)
-		__smmu_client_ordered(smmu, id[i]);
-}
-
 #define VA_PAGE_TO_PA(va, page)	\
 	(page_to_phys(page) + ((unsigned long)(va) & ~PAGE_MASK))
 
@@ -424,7 +401,6 @@ static void smmu_setup_regs(struct smmu_device *smmu)
 
 	smmu_write(smmu, val, SMMU_CACHE_CONFIG(_TLB));
 
-	smmu_client_ordered(smmu);
 	if (IS_ENABLED(CONFIG_ARCH_TEGRA_12x_SOC) &&
 	    (tegra_get_chip_id() == TEGRA124))
 		smmu_flush_regs(smmu, 1);

@@ -1,4 +1,4 @@
-/* Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -705,7 +705,7 @@ static int stm_id_i2c(struct stm_state *st,
 
 static int stm_of_dt(struct stm_state *st, struct device_node *dn)
 {
-	u32 count;
+	int count;
 	int i;
 	int j;
 

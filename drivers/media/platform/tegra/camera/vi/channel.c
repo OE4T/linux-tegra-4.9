@@ -1553,6 +1553,21 @@ int tegra_vi_channels_register(struct tegra_mc_vi *vi)
 	int count = 0;
 
 	list_for_each_entry(it, &vi->vi_chans, list) {
+		struct v4l2_subdev *sd = it->subdev_on_csi;
+		bool is_csi = false;
+
+		if (sd) {
+			/*
+			 * If subdevice on csi is csi itself,
+			 * then sensor subdevice is not connected
+			 */
+			is_csi = strstr(sd->name, "nvcsi") != NULL;
+
+			if (is_csi)
+				continue;
+		} else
+			continue;
+
 		if (!it->init_done)
 			continue;
 		ret = video_register_device(&it->video, VFL_TYPE_GRABBER, -1);
@@ -1625,34 +1640,3 @@ int tegra_vi_channels_cleanup(struct tegra_mc_vi *vi)
 	return ret;
 }
 EXPORT_SYMBOL(tegra_vi_channels_cleanup);
-
-int tegra_clean_unlinked_channels(struct tegra_mc_vi *vi)
-{
-	int ret, err = 0;
-	struct tegra_channel *chan;
-
-	list_for_each_entry(chan, &vi->vi_chans, list) {
-		struct v4l2_subdev *sd = chan->subdev_on_csi;
-		bool is_csi = false;
-
-		/*
-		 * If subdevice on csi is csi itself,
-		 * then sensor subdevice is not connected
-		 */
-		if (sd)
-			is_csi = strstr(sd->name, "nvcsi") != NULL;
-
-		if (chan->num_subdevs && !is_csi)
-			continue;
-
-		ret = tegra_channel_cleanup(chan);
-		if (ret < 0) {
-			err = ret;
-			dev_err(vi->dev, "channel cleanup failed, err %d\n",
-					err);
-		}
-	}
-
-	return err;
-}
-EXPORT_SYMBOL(tegra_clean_unlinked_channels);

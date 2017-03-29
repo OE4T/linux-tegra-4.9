@@ -275,18 +275,24 @@ static int __init tegra_board_panel_id(char *options)
 __setup("display_panel=", tegra_board_panel_id);
 
 
-
+#define BOARD_INFO_PATH_LEN 50
 static int tegra_get_board_info_properties(struct board_info *bi,
 		const char *property_name)
 {
 	struct device_node *board_info;
-	char board_info_path[50] = {0};
+	char board_info_path[BOARD_INFO_PATH_LEN+1] = {0};
 	u32 prop_val;
 	int err;
 
 
-	strcpy(board_info_path, "/chosen/");
-	strcat(board_info_path, property_name);
+	if (strlen("/chosen/") + strlen(property_name) > BOARD_INFO_PATH_LEN) {
+		pr_err("property_name too long\n");
+		goto out;
+	}
+
+	strlcpy(board_info_path, "/chosen/", BOARD_INFO_PATH_LEN);
+	strlcat(board_info_path, property_name,
+			BOARD_INFO_PATH_LEN - strlen("/chosen/"));
 
 	board_info = of_find_node_by_path(board_info_path);
 	memset(bi, 0, sizeof(*bi));

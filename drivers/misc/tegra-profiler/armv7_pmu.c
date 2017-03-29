@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/armv7_pmu.c
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -119,6 +119,8 @@ armv7_pmu_pmnc_read(void)
 static inline void
 armv7_pmu_pmnc_write(u32 val)
 {
+	isb();
+
 	/* Write Performance MoNitor Control (PMNC) register */
 	asm volatile("mcr p15, 0, %0, c9, c12, 0" : :
 		     "r"(val & QUADD_ARMV7_PMNC_MASK));
@@ -151,9 +153,10 @@ armv7_pmu_cntenc_write(u32 val)
 static inline void
 armv7_pmu_pmnxsel_write(u32 val)
 {
-	/* Read Performance Counter SELection (PMNXSEL) register */
+	/* Write Performance Counter SELection (PMNXSEL) register */
 	asm volatile("mcr p15, 0, %0, c9, c12, 5" : :
 		     "r" (val & QUADD_ARMV7_SELECT_MASK));
+	isb();
 }
 
 static inline u32

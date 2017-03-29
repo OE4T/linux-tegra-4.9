@@ -33,7 +33,7 @@ static u16 en_panel_rst;
 static u16 en_panel;
 static struct device *dc_dev;
 static struct i2c_client *dsc_i2c_client;
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
 static u8 i2c_bus_num = 0;
 #else
 static u8 i2c_bus_num = 1;

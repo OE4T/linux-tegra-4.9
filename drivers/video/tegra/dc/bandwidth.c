@@ -882,7 +882,7 @@ long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
 	pclk = tegra_dc_get_out_max_pixclock(dc);
 	if (!pclk) {
 		 if (dc->out->type == TEGRA_DC_OUT_HDMI) {
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
 			pclk = KHZ2PICOS(600000); /* 600MHz max */
 #else
 			pclk = KHZ2PICOS(150000); /* 150MHz max */

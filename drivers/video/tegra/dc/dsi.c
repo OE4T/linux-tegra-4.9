@@ -2468,7 +2468,7 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 			tegra_dsi_writel(dsi, 0, init_reg_vs1_ext[i]);
 	}
 
-#ifdef CONFIG_ARCH_TEGRA_210_SOC
+#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
 	if (tegra_platform_is_fpga()) {
 		if (dsi->info.video_data_type ==
 				TEGRA_DSI_VIDEO_TYPE_VIDEO_MODE) {

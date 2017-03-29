@@ -20,15 +20,7 @@
 #include <linux/types.h>
 #include <drm/drm_fixed.h>
 
-#if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 #define DC_N_WINDOWS		6
-#elif defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
-#define DC_N_WINDOWS		5
-#elif defined(CONFIG_ARCH_TEGRA_11x_SOC)
-#define DC_N_WINDOWS		3
-#else  /* Max of all chips */
-#define DC_N_WINDOWS		6
-#endif
 
 struct tegra_dc;
 struct nvmap_handle_ref;

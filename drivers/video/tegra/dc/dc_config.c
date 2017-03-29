@@ -20,7 +20,7 @@
 
 #include "dc_config.h"
 
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
 
 static struct tegra_dc_feature_entry t210_feature_entries_a[] = {
 	{ 0, TEGRA_DC_FEATURE_FORMATS,
@@ -319,7 +319,7 @@ void tegra_dc_feature_register(struct tegra_dc *dc)
 {
 	int i;
 	struct tegra_dc_feature_entry *entry;
-#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
 	if (!dc->ndev->id)
 		dc->feature = &t210_feature_table_a;
 	else

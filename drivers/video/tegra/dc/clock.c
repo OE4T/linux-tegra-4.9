@@ -44,7 +44,7 @@ unsigned long tegra_dc_pclk_round_rate(struct tegra_dc *dc, int pclk)
 		div = DIV_ROUND_UP(rate * 2, pclk);
 	}
 
-#ifdef CONFIG_ARCH_TEGRA_210_SOC
+#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
 	if (dc->out->type == TEGRA_DC_OUT_HDMI)
 		return rate;
 #endif

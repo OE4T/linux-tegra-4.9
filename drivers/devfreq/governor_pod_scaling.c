@@ -22,13 +22,9 @@
  * Power-on-demand clock scaling for nvhost devices
  *
  * devfreq calls nvhost_pod_estimate_freq() for estimating the new
- * frequency for the device. The clocking is done using two properties:
- *
- *  (1) Usually the governor receives actively throughput hints that indicate
- *      whether scaling up or down is required.
- *  (2) The load of the device is estimated using the busy times from the
- *      device profile. This information indicates if the device frequency
- *      should be altered.
+ * frequency for the device. The clocking is done using the load of the device
+ * is estimated using the busy times from the device profile. This information
+ * indicates if the device frequency should be altered.
  *
  */
 
@@ -42,12 +38,6 @@
 #include <linux/tegra-soc.h>
 #include <linux/module.h>
 
-#include <linux/notifier.h>
-#include <linux/tegra-throughput.h>
-
-#include <linux/notifier.h>
-#include <linux/tegra-throughput.h>
-
 #define CREATE_TRACE_POINTS
 #include <trace/events/nvhost_podgov.h>
 
@@ -58,16 +48,10 @@
 
 #define GET_TARGET_FREQ_DONTSCALE	1
 
-/* time frame for load and hint tracking - when events come in at a larger
- * interval, this probably indicates the current estimates are stale
- */
-#define GR3D_TIMEFRAME 1000000 /* 1 sec */
-
-/* the number of frames to use in the running average of load estimates and
- * throughput hints. Choosing 6 frames targets a window of about 100 msec.
- * Large flucutuations in frame times require a window that's large enough to
- * prevent spiky scaling behavior, which in turn exacerbates frame rate
- * instability.
+/* the number of frames to use in the running average of load estimates.
+ * Choosing 6 frames targets a window of about 100 msec.  Large flucutuations
+ * in frame times require a window that's large enough to prevent spiky scaling
+ * behavior, which in turn exacerbates frame rate instability.
  */
 
 static void podgov_enable(struct devfreq *df, int enable);
@@ -84,14 +68,12 @@ struct podgov_info_rec {
 	int			enable;
 	int			init;
 
-	ktime_t			last_throughput_hint;
 	ktime_t			last_scale;
 
 	struct delayed_work	idle_timer;
 
 	unsigned int		p_slowdown_delay;
 	unsigned int		p_block_window;
-	unsigned int		p_use_throughput_hint;
 	unsigned int		p_hint_lo_limit;
 	unsigned int		p_hint_hi_limit;
 	unsigned int		p_scaleup_limit;
@@ -124,8 +106,6 @@ struct podgov_info_rec {
 	struct kobj_attribute	enable_3d_scaling_attr;
 	struct kobj_attribute	user_attr;
 	struct kobj_attribute	freq_request_attr;
-
-	struct notifier_block	throughput_hint_notifier;
 };
 
 /*******************************************************************************
@@ -437,110 +417,6 @@ static void podgov_idle_handler(struct work_struct *work)
 	mutex_unlock(&df->lock);
 }
 
-#ifdef CONFIG_TEGRA_THROUGHPUT
-/*******************************************************************************
- * freqlist_down(podgov, target, steps)
- *
- * This function determines the frequency that is "steps" frequency steps
- * lower compared to the target frequency.
- ******************************************************************************/
-
-static int freqlist_down(struct podgov_info_rec *podgov, unsigned long target,
-		  int steps)
-{
-	int i, pos;
-
-	for (i = podgov->freq_count - 1; i >= 0; i--)
-		if (podgov->freqlist[i] <= target)
-			break;
-
-	pos = max(0, i - steps);
-	return podgov->freqlist[pos];
-}
-
-/*******************************************************************************
- * nvhost_scale_emc_set_throughput_hint(hint)
- *
- * This function can be used to request scaling up or down based on the
- * required throughput
- ******************************************************************************/
-
-static int nvhost_scale_emc_set_throughput_hint(struct notifier_block *nb,
-					      unsigned long action, void *data)
-{
-	struct podgov_info_rec *podgov =
-		container_of(nb, struct podgov_info_rec,
-			     throughput_hint_notifier);
-	struct devfreq *df = podgov->power_manager;
-	struct device *dev = df->dev.parent;
-	int hint = tegra_throughput_get_hint();
-	long idle;
-	unsigned long curr, target;
-	int avg_idle, avg_hint, scale_score;
-	unsigned int smooth;
-
-	/* make sure the device is alive before doing any scaling */
-	pm_runtime_get_noresume(dev);
-	if (!pm_runtime_active(dev)) {
-		pm_runtime_put(dev);
-		return 0;
-	}
-
-	mutex_lock(&df->lock);
-
-	podgov->block--;
-
-	if (!podgov->enable ||
-		!podgov->p_use_throughput_hint ||
-		podgov->block > 0)
-		goto exit_unlock;
-
-	trace_podgov_hint(df->dev.parent, podgov->idle, hint);
-	podgov->last_throughput_hint = ktime_get();
-
-	curr = df->previous_freq;
-	idle = podgov->idle;
-	avg_idle = podgov->idle_avg;
-	smooth = podgov->p_smooth;
-
-	/* compute averages usings exponential-moving-average */
-	avg_hint = ((smooth*podgov->hint_avg + hint)/(smooth+1));
-	podgov->hint_avg = avg_hint;
-
-	/* set the target using avg_hint and avg_idle */
-	target = curr;
-	if (avg_hint < podgov->p_hint_lo_limit) {
-		target = freqlist_up(podgov, curr, 1);
-	} else {
-		scale_score = avg_idle + avg_hint;
-		if (scale_score > podgov->p_scaledown_limit)
-			target = freqlist_down(podgov, curr, 1);
-		else if (scale_score < podgov->p_scaleup_limit
-				&& hint < podgov->p_hint_hi_limit)
-			target = freqlist_up(podgov, curr, 1);
-	}
-
-	/* clamp and apply target */
-	scaling_limit(df, &target);
-	if (target != curr) {
-		podgov->block = podgov->p_smooth;
-		trace_podgov_do_scale(df->dev.parent,
-				      df->previous_freq, target);
-		podgov->adjustment_frequency = target;
-		podgov->adjustment_type = ADJUSTMENT_LOCAL;
-		update_devfreq(df);
-	}
-
-	trace_podgov_print_target(df->dev.parent, idle, avg_idle,
-				  curr / 1000000, target, hint, avg_hint);
-
-exit_unlock:
-	mutex_unlock(&df->lock);
-	pm_runtime_put(dev);
-	return NOTIFY_OK;
-}
-#endif
-
 /*******************************************************************************
  * debugfs interface for controlling 3d clock scaling on the fly
  ******************************************************************************/
@@ -580,7 +456,6 @@ static void nvhost_scale_emc_debug_init(struct devfreq *df)
 	CREATE_PODGOV_FILE(load_target);
 	CREATE_PODGOV_FILE(bias);
 	CREATE_PODGOV_FILE(damp);
-	CREATE_PODGOV_FILE(use_throughput_hint);
 	CREATE_PODGOV_FILE(hint_hi_limit);
 	CREATE_PODGOV_FILE(hint_lo_limit);
 	CREATE_PODGOV_FILE(scaleup_limit);
@@ -784,11 +659,6 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 		podgov->idle;
 	podgov->idle_avg = podgov->idle_avg / (podgov->p_smooth + 1);
 
-	/* if throughput hint enabled, and last hint is recent enough, return */
-	if (podgov->p_use_throughput_hint &&
-		ktime_us_delta(now, podgov->last_throughput_hint) < 1000000)
-		return GET_TARGET_FREQ_DONTSCALE;
-
 	if (dev_stat.busy) {
 		cancel_delayed_work(&podgov->idle_timer);
 		*freq = scaling_state_check(df, now);
@@ -842,7 +712,6 @@ static int nvhost_pod_init(struct devfreq *df)
 	/* Set scaling parameter defaults */
 	podgov->enable = 1;
 	podgov->block = 0;
-	podgov->p_use_throughput_hint = 1;
 
 	if (!strcmp(d->name, "vic03.0")) {
 		podgov->p_load_max = 990;
@@ -871,7 +740,6 @@ static int nvhost_pod_init(struct devfreq *df)
 			podgov->p_scaledown_limit = 1300;
 			podgov->p_smooth = 10;
 			podgov->p_damp = 7;
-			podgov->p_use_throughput_hint = 0;
 			break;
 		default:
 			pr_err("%s: un-supported chip id\n", __func__);
@@ -886,7 +754,6 @@ static int nvhost_pod_init(struct devfreq *df)
 	podgov->p_user = 0;
 
 	/* Reset clock counters */
-	podgov->last_throughput_hint = now;
 	podgov->last_scale = now;
 
 	podgov->power_manager = df;
@@ -937,14 +804,6 @@ static int nvhost_pod_init(struct devfreq *df)
 
 	nvhost_scale_emc_debug_init(df);
 
-	/* register the governor to throughput hint notifier chain */
-#ifdef CONFIG_TEGRA_THROUGHPUT
-	podgov->throughput_hint_notifier.notifier_call =
-		&nvhost_scale_emc_set_throughput_hint;
-	blocking_notifier_chain_register(&throughput_notifier_list,
-					 &podgov->throughput_hint_notifier);
-#endif
-
 	return 0;
 
 err_get_freqs:
@@ -973,10 +832,6 @@ static void nvhost_pod_exit(struct devfreq *df)
 {
 	struct podgov_info_rec *podgov = df->data;
 
-#ifdef CONFIG_TEGRA_THROUGHPUT
-	blocking_notifier_chain_unregister(&throughput_notifier_list,
-					   &podgov->throughput_hint_notifier);
-#endif
 	cancel_delayed_work(&podgov->idle_timer);
 
 	sysfs_remove_file(&df->dev.parent->kobj, &podgov->user_attr.attr);

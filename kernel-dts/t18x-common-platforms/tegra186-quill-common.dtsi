@@ -53,6 +53,11 @@
 		status = "okay";
 	};
 
+	serial@c280000 {
+		compatible = "nvidia,tegra186-hsuart";
+		status = "okay";
+	};
+
 	serial@3130000 {
 		compatible = "nvidia,tegra186-hsuart";
 		dma-names = "tx";

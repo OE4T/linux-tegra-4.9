@@ -43,7 +43,7 @@
 #define DESKEW_TIMEOUT_USEC 300
 
 static struct tegra_csi_device *mc_csi;
-struct tegra_csi_data t18_nvcsi_data = {
+static struct tegra_csi_data t18_nvcsi_data = {
 	.info = (struct nvhost_device_data *)&t18_nvcsi_info,
 	.csi_fops = &csi4_fops,
 };

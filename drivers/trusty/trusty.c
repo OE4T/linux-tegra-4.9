@@ -582,6 +582,8 @@ static int trusty_remove(struct platform_device *pdev)
 	unsigned int cpu;
 	struct trusty_state *s = platform_get_drvdata(pdev);
 
+	of_platform_depopulate(&pdev->dev);
+
 	device_for_each_child(&pdev->dev, NULL, trusty_remove_child);
 
 	for_each_possible_cpu(cpu) {

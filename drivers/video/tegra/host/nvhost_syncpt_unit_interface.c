@@ -270,8 +270,9 @@ int nvhost_syncpt_alloc_gos_backing(struct platform_device *engine_pdev,
 	if (!syncpt_gos_backing)
 		return -ENOMEM;
 
+	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, __DMA_ATTR(attrs));
 	dma_alloc_attrs(&cv_dev_info->offset_dev, sizeof(u32), &offset,
-			DMA_MEMORY_NOMAP, __DMA_ATTR(attrs));
+			GFP_KERNEL, __DMA_ATTR(attrs));
 	err = dma_mapping_error(&cv_dev_info->offset_dev, offset);
 	if (err) {
 		kfree(syncpt_gos_backing);
@@ -313,8 +314,9 @@ int nvhost_syncpt_release_gos_backing(struct nvhost_syncpt *sp,
 		return -EINVAL;
 
 	offset = (dma_addr_t)syncpt_gos_backing->gos_offset;
+	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, __DMA_ATTR(attrs));
 	dma_free_attrs(syncpt_gos_backing->offset_dev, sizeof(u32),
-			(void *)(uintptr_t)offset, offset, __DMA_ATTR(attrs));
+			NULL, offset, __DMA_ATTR(attrs));
 
 	rb_erase(&syncpt_gos_backing->syncpt_gos_backing_entry,
 		 &host->syncpt_backing_head);

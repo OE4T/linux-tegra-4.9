@@ -56,19 +56,20 @@
 	sdhci@700b0400 {
 		tap-delay = <1>;
 		trim-delay = <3>;
-		max-clk-limit = <204000000>;
+		max-clk-limit = <200000000>;
 		ddr-clk-limit = <48000000>;
 		bus-width = <4>;
 		calib-3v3-offsets = <0x007D>;
 		calib-1v8-offsets = <0x7B7B>;
 		compad-vref-3v3 = <0x7>;
 		compad-vref-1v8 = <0x7>;
-		pll_source = "pll_p";
+		pll_source = "pll_p", "pll_c4_out2";
 		resets = <&tegra_car TEGRA210_CLK_SDMMC3>;
 		reset-names = "sdmmc";
 		clocks = <&tegra_car TEGRA210_CLK_SDMMC3>,
-		       <&tegra_car TEGRA210_CLK_PLL_P>;
-		clock-names = "sdmmc", "pll_p";
+		       <&tegra_car TEGRA210_CLK_PLL_P>,
+		       <&tegra_car TEGRA210_CLK_PLL_C4_OUT2>;
+		clock-names = "sdmmc", "pll_p", "pll_c4_out2";
 		keep-power-in-suspend;
 		ignore-pm-notify;
 		non-removable;

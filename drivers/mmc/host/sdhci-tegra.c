@@ -764,9 +764,6 @@ static void tegra_sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 	int rc;
 	u8 vndr_ctrl;
 
-	if (tegra_platform_is_vdk())
-		return;
-
 	host_clk = tegra_sdhci_apply_clk_limits(host, clock);
 
 	if (clock) {
@@ -1457,8 +1454,7 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 	if (IS_ERR(clk)) {
 		dev_err(mmc_dev(host->mmc), "clk err\n");
 		rc = PTR_ERR(clk);
-		if (!tegra_platform_is_vdk())
-			goto err_clk_get;
+		goto err_clk_get;
 	}
 	clk_prepare_enable(clk);
 

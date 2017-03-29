@@ -536,8 +536,7 @@ static void cdma_handle_timeout(struct nvhost_cdma *cdma, bool skip_reset)
 
 	completed = true;
 	for (i = 0; i < cdma->timeout.num_syncpts; ++i) {
-		syncpt_val = nvhost_syncpt_update_min(&dev->syncpt,
-				cdma->timeout.sp[i].id);
+		nvhost_syncpt_update_min(&dev->syncpt, cdma->timeout.sp[i].id);
 
 		if (!nvhost_syncpt_is_expired(&dev->syncpt,
 			cdma->timeout.sp[i].id, cdma->timeout.sp[i].fence))

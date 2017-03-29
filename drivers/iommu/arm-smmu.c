@@ -32,6 +32,7 @@
 #define pr_fmt(fmt) "t19x-arm-smmu: " fmt
 
 #include <linux/delay.h>
+#include <linux/dma-iommu.h>
 #include <linux/dma-mapping.h>
 #include <linux/err.h>
 #include <linux/interrupt.h>
@@ -66,6 +67,10 @@
 
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include <linux/platform/tegra/tegra-mc-sid.h>
+
+#ifndef ENABLE_IOMMU_DMA_OPS
+#define ENABLE_IOMMU_DMA_OPS 0
+#endif
 
 /* Maximum number of stream IDs assigned to a single device */
 #define MAX_MASTER_STREAMIDS		MAX_PHANDLE_ARGS
@@ -1460,6 +1465,8 @@ static struct iommu_domain *arm_smmu_domain_alloc(unsigned type)
 
 	spin_lock_init(&smmu_domain->lock);
 
+	smmu_domain->domain.pgsize_bitmap = SECTION_SIZE |
+					    ARM_SMMU_PTE_CONT_SIZE | PAGE_SIZE;
 	return &smmu_domain->domain;
 
 out_free_domain:
@@ -1966,6 +1973,17 @@ static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 				find_smmu_master(smmu, dev_get_dev_node(dev)));
 	}
 
+#if ENABLE_IOMMU_DMA_OPS
+	if (!iommu_get_dma_cookie(domain)) {
+		if (iommu_dma_init_domain(domain,
+					  domain->geometry.aperture_start,
+					  domain->geometry.aperture_end -
+					  domain->geometry.aperture_start))
+			pr_err("iommu_dma_init_domain failed, %s\n",
+				dev_name(dev));
+	}
+#endif
+
 	arm_smmu_do_linear_map(dev);
 
 	/* Enable stream Id override, which enables SMMU translation for dev */
@@ -2295,6 +2313,7 @@ out_unlock:
 	return ret;
 }
 
+#if !ENABLE_IOMMU_DMA_OPS
 static size_t arm_smmu_map_sg(struct iommu_domain *domain, unsigned long iova,
 			struct scatterlist *sgl, unsigned int npages,
 			unsigned long prot)
@@ -2320,6 +2339,7 @@ static size_t arm_smmu_map_sg(struct iommu_domain *domain, unsigned long iova,
 
 	return 0;
 }
+#endif
 
 static int arm_smmu_map(struct iommu_domain *domain, unsigned long iova,
 			phys_addr_t paddr, size_t size, unsigned long prot)
@@ -2532,7 +2552,11 @@ static const struct iommu_ops arm_smmu_ops = {
 	.attach_dev	= arm_smmu_attach_dev,
 	.detach_dev	= arm_smmu_detach_dev,
 	.get_hwid	= arm_smmu_get_hwid,
+#if ENABLE_IOMMU_DMA_OPS
+	.map_sg		= default_iommu_map_sg,
+#else
 	.map_sg		= arm_smmu_map_sg,
+#endif
 	.map		= arm_smmu_map,
 	.unmap		= arm_smmu_unmap,
 	.iova_to_phys	= arm_smmu_iova_to_phys,

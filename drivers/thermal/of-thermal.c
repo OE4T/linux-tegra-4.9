@@ -51,6 +51,7 @@ struct __thermal_bind_params {
 	unsigned int usage;
 	unsigned long min;
 	unsigned long max;
+	const char *type;
 };
 
 /**
@@ -219,7 +220,8 @@ static int of_thermal_bind(struct thermal_zone_device *thermal,
 	for (i = 0; i < data->num_tbps; i++) {
 		struct __thermal_bind_params *tbp = data->tbps + i;
 
-		if (tbp->cooling_device == cdev->np) {
+		if ((tbp->cooling_device == cdev->np) || (tbp->type &&
+			!strncmp(tbp->type, cdev->type, THERMAL_NAME_LENGTH))) {
 			int ret;
 
 			ret = thermal_zone_bind_cooling_device(thermal,
@@ -248,7 +250,8 @@ static int of_thermal_unbind(struct thermal_zone_device *thermal,
 	for (i = 0; i < data->num_tbps; i++) {
 		struct __thermal_bind_params *tbp = data->tbps + i;
 
-		if (tbp->cooling_device == cdev->np) {
+		if ((tbp->cooling_device == cdev->np) || (tbp->type &&
+			!strncmp(tbp->type, cdev->type, THERMAL_NAME_LENGTH))) {
 			int ret;
 
 			ret = thermal_zone_unbind_cooling_device(thermal,
@@ -440,6 +443,9 @@ thermal_zone_of_add_sensor(struct device_node *zone,
 		tzd->ops->set_emul_temp = of_thermal_set_emul_temp;
 
 	mutex_unlock(&tzd->lock);
+
+	if (tzd->polling_delay)
+		thermal_zone_device_update(tzd, THERMAL_EVENT_UNSPECIFIED);
 
 	return tzd;
 }
@@ -685,6 +691,8 @@ static int thermal_of_populate_bind_params(struct device_node *np,
 	ret = of_property_read_u32(np, "contribution", &prop);
 	if (ret == 0)
 		__tbp->usage = prop;
+
+	__tbp->type =  of_get_property(np, "cdev-type", NULL);
 
 	trip = of_parse_phandle(np, "trip", 0);
 	if (!trip) {
@@ -952,6 +960,29 @@ static inline void of_thermal_free_zone(struct __thermal_zone *tz)
 	kfree(tz);
 }
 
+static int of_parse_thermal_zone_params(struct device_node *np,
+		struct thermal_zone_params *tzp)
+{
+	const char *pstr;
+	struct thermal_governor *gov;
+
+	pstr =  of_get_property(np, "governor-name", NULL);
+	if (!pstr)
+		return 0;
+
+	strlcpy(tzp->governor_name, pstr, THERMAL_NAME_LENGTH);
+
+	gov = thermal_find_governor(tzp->governor_name);
+	if (!gov)
+		return 0;
+	else if (!gov->of_parse)
+		return 0;
+	else if (gov->of_parse(tzp, np))
+		pr_err("failed to parse governor '%s' params\n",
+		       tzp->governor_name);
+	return 0;
+}
+
 /**
  * of_parse_thermal_zones - parse device tree thermal data
  *
@@ -981,6 +1012,7 @@ int __init of_parse_thermal_zones(void)
 		struct thermal_zone_params *tzp;
 		int i, mask = 0;
 		u32 prop;
+		struct device_node *param_child;
 
 		tz = thermal_of_build_thermal_zone(child);
 		if (IS_ERR(tz)) {
@@ -1000,8 +1032,13 @@ int __init of_parse_thermal_zones(void)
 			goto exit_free;
 		}
 
-		/* No hwmon because there might be hwmon drivers registering */
-		tzp->no_hwmon = true;
+		/* Thermal zone params */
+		param_child = of_get_child_by_name(child, "thermal-zone-params");
+		if(!param_child)
+			/* No hwmon because there might be hwmon drivers registering */
+			tzp->no_hwmon = true;
+		else
+			of_parse_thermal_zone_params(param_child, tzp);
 
 		if (!of_property_read_u32(child, "sustainable-power", &prop))
 			tzp->sustainable_power = prop;

@@ -30,6 +30,7 @@
 #include <linux/of_iommu.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+#include <linux/dma-iommu.h>
 #include <linux/dma-mapping.h>
 #include <linux/bitops.h>
 #include <soc/tegra/chip-id.h>
@@ -1022,6 +1023,7 @@ static int smmu_iommu_map(struct iommu_domain *domain, unsigned long iova,
 	return err;
 }
 
+#if !ENABLE_IOMMU_DMA_OPS
 static int smmu_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
 			     struct scatterlist *sgl, int npages, unsigned long prot)
 {
@@ -1106,6 +1108,7 @@ static int smmu_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
 
 	return err;
 }
+#endif
 
 /* Remap a 4MB large page entry to 1024 * 4KB pages entries */
 static int __smmu_iommu_remap_largepage(struct smmu_as *as, dma_addr_t iova)
@@ -1410,6 +1413,17 @@ static int smmu_iommu_attach_dev(struct iommu_domain *domain,
 	as = dom->as[idx];
 	smmu = as->smmu;
 
+#if ENABLE_IOMMU_DMA_OPS
+	if (!iommu_get_dma_cookie(domain)) {
+		if (iommu_dma_init_domain(domain,
+					  domain->geometry.aperture_start,
+					  domain->geometry.aperture_end -
+					  domain->geometry.aperture_start))
+			pr_err("iommu_dma_init_domain failed, %s\n",
+				dev_name(dev));
+	}
+#endif
+
 	area = client->prop->area;
 	while (area && area->size) {
 		DEFINE_DMA_ATTRS(attrs);
@@ -1514,6 +1528,7 @@ static struct iommu_domain *smmu_iommu_domain_alloc(unsigned type)
 	domain->geometry.aperture_end   = smmu->iovmm_base +
 		smmu->page_count * SMMU_PAGE_SIZE - 1;
 	domain->geometry.force_aperture = true;
+	domain->pgsize_bitmap = SMMU_IOMMU_PGSIZES;
 	return domain;
 }
 
@@ -1646,7 +1661,11 @@ static struct iommu_ops smmu_iommu_ops_default = {
 	.attach_dev	= smmu_iommu_attach_dev,
 	.detach_dev	= smmu_iommu_detach_dev,
 	.map		= smmu_iommu_map,
+#if ENABLE_IOMMU_DMA_OPS
+	.map_sg		= default_iommu_map_sg,
+#else
 	.map_sg		= smmu_iommu_map_sg,
+#endif
 	.unmap		= smmu_iommu_unmap,
 	.iova_to_phys	= smmu_iommu_iova_to_phys,
 	.add_device	= smmu_iommu_add_device,
@@ -2387,7 +2406,11 @@ void (*smmu_domain_free)(struct smmu_device *smmu, struct smmu_as *as)
 int (*__smmu_iommu_map_pfn)(struct smmu_as *as, dma_addr_t iova, unsigned long pfn, unsigned long prot) = __smmu_iommu_map_pfn_default;
 int (*__smmu_iommu_map_largepage)(struct smmu_as *as, dma_addr_t iova, phys_addr_t pa, unsigned long prot) = __smmu_iommu_map_largepage_default;
 size_t (*__smmu_iommu_unmap)(struct smmu_as *as, dma_addr_t iova, size_t bytes) = __smmu_iommu_unmap_default;
+#if !ENABLE_IOMMU_DMA_OPS
 int (*__smmu_iommu_map_sg)(struct iommu_domain *domain, unsigned long iova, struct scatterlist *sgl, int npages, unsigned long prot) = smmu_iommu_map_sg;
+#else
+int (*__smmu_iommu_map_sg)(struct iommu_domain *domain, unsigned long iova, struct scatterlist *sgl, int npages, unsigned long prot) = default_iommu_map_sg;
+#endif
 int (*__tegra_smmu_suspend)(struct device *dev) = tegra_smmu_suspend_default;
 int (*__tegra_smmu_resume)(struct device *dev) = tegra_smmu_resume_default;
 int (*__tegra_smmu_probe)(struct platform_device *pdev, struct smmu_device *smmu) = tegra_smmu_probe_default;

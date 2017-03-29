@@ -14,6 +14,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <dt-bindings/clock/tegra194-clock.h>
+#include <dt-bindings/reset/tegra194-reset.h>
+
 / {
 
 	aliases {
@@ -47,8 +50,12 @@
 		nvidia,is-emmc;
 		calib-3v3-offsets = <0x0505>;
 		calib-1v8-offsets = <0x0505>;
+		resets = <&bpmp_resets TEGRA194_RESET_SDMMC4>;
 		reset-names = "sdmmc";
-		clock-names = "sdmmc", "pll_p", "pll_c4_out0";
+		pll_source = "pll_p";
+		clocks = <&bpmp_clks TEGRA194_CLK_SDMMC4>,
+			<&bpmp_clks TEGRA194_CLK_PLLP_OUT0>;
+		clock-names = "sdmmc", "pll_p";
 		#stream-id-cells = <1>;
 		status = "disabled";
 	};

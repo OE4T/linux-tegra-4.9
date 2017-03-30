@@ -182,10 +182,10 @@
 #define I2C_MST_FIFO_STATUS_RX_MASK		0xFF
 #define I2C_MST_FIFO_STATUS_RX_SHIFT		0
 
-#define I2C_MAX_TRANSFER_LEN			4096
-#define I2C_MAX_TRANSACTION_NUMBER		8
-#define I2C_TOTAL_BUFFER_LEN			(I2C_MAX_TRANSFER_LEN * \
-						I2C_MAX_TRANSACTION_NUMBER)
+#define I2C_MAX_XFER_SIZE_4K			4096
+#define I2C_MAX_XFER_SIZE_64k			65536
+/* Allocate maximum of 64K bytes * 4 transfers size buffer*/
+#define I2C_TOTAL_BUFFER_LEN			(I2C_MAX_XFER_SIZE_64k * 4)
 #define I2C_CONFIG_LOAD_TIMEOUT			1000000
 
 /* Define speed modes */
@@ -253,6 +253,7 @@ struct tegra_i2c_hw_feature {
 	bool has_hs_mode_support;
 	bool has_multi_master_support;
 	bool has_mst_fifo_reg;
+	u32 max_packet_transfer_len;
 };
 
 /**
@@ -1761,21 +1762,23 @@ static int tegra_i2c_single_xfer_msg(struct tegra_i2c_dev *i2c_dev,
 static int tegra_i2c_split_i2c_msg_xfer(struct tegra_i2c_dev *i2c_dev,
 	struct i2c_msg *msg, enum msg_end_type end_type)
 {
-	int size, len, ret;
+	u32 len, size, max_xfer_len;
+	int ret;
 	struct i2c_msg temp_msg;
 	u8 *buf = msg->buf;
 	enum msg_end_type temp_end_type;
 
 	size = msg->len;
+	max_xfer_len = i2c_dev->hw->max_packet_transfer_len;
 	temp_msg.flags = msg->flags;
 	temp_msg.addr = msg->addr;
 	temp_end_type = end_type;
 	do {
 		temp_msg.buf = buf;
-		len = min(size, I2C_MAX_TRANSFER_LEN);
+		len = min(size, max_xfer_len);
 		temp_msg.len = len;
 		size -= len;
-		if ((len == I2C_MAX_TRANSFER_LEN) && size)
+		if ((len == max_xfer_len) && size)
 			end_type = MSG_END_CONTINUE;
 		else
 			end_type = temp_end_type;
@@ -1793,24 +1796,25 @@ static int tegra_i2c_multi_pkt_xfer(struct tegra_i2c_dev *i2c_dev,
 {
 	u8 *tx_buff = i2c_dev->tx_pio_buffer;
 	enum msg_end_type end_t, temp_end_t;
-	int tx_len = 0, rx_len = 0, rx_index;
+	u32 tx_len = 0, rx_len = 0, rx_index;
 	struct i2c_msg temp_msg;
-	u16 msg_len;
+	u32 msg_len, max_xfer_len;
 	int i;
 	int ret = 0;
 	u8 *temp_buff;
 
+	max_xfer_len = i2c_dev->hw->max_packet_transfer_len;
 	i2c_dev->use_multi_xfer_complete = true;
 	for (i = 0; i < num; i++) {
 		end_t = tegra_i2c_calc_end_bit(msgs, num, i);
-		/* Split into multiple 4096 byte packets if needed */
+		/* Split into multiple max_xfer_len byte packets if needed */
 		memcpy(&temp_msg, &msgs[i], sizeof(struct i2c_msg));
 		temp_buff = temp_msg.buf;
 		msg_len = msgs[i].len;
 		do {
-			if (msg_len > I2C_MAX_TRANSFER_LEN) {
+			if (msg_len > max_xfer_len) {
 				temp_end_t = MSG_END_CONTINUE;
-				temp_msg.len = I2C_MAX_TRANSFER_LEN;
+				temp_msg.len = max_xfer_len;
 			} else {
 				temp_end_t = end_t;
 				temp_msg.len = msg_len;
@@ -1878,7 +1882,7 @@ static int tegra_i2c_single_pkt_xfer(struct tegra_i2c_dev *i2c_dev,
 			else
 				end_type = MSG_END_REPEAT_START;
 		}
-		if (msgs[i].len > I2C_MAX_TRANSFER_LEN)
+		if ((u32)msgs[i].len > i2c_dev->hw->max_packet_transfer_len)
 			ret = tegra_i2c_split_i2c_msg_xfer(i2c_dev, &msgs[i],
 					end_type);
 		else
@@ -2067,12 +2071,6 @@ static const struct i2c_algorithm tegra_i2c_algo = {
 	.functionality	= tegra_i2c_func,
 };
 
-/* Restricted to 32KB size */
-static struct i2c_adapter_quirks tegra_i2c_quirks = {
-	.max_read_len = I2C_TOTAL_BUFFER_LEN,
-	.max_write_len = I2C_TOTAL_BUFFER_LEN,
-};
-
 static const struct tegra_i2c_hw_feature tegra20_i2c_hw = {
 	.has_continue_xfer_support = false,
 	.has_per_pkt_xfer_complete_irq = false,
@@ -2091,6 +2089,7 @@ static const struct tegra_i2c_hw_feature tegra20_i2c_hw = {
 	.has_hs_mode_support = false,
 	.has_multi_master_support = false,
 	.has_mst_fifo_reg = false,
+	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_4K,
 };
 
 static const struct tegra_i2c_hw_feature tegra30_i2c_hw = {
@@ -2111,6 +2110,7 @@ static const struct tegra_i2c_hw_feature tegra30_i2c_hw = {
 	.has_hs_mode_support = false,
 	.has_multi_master_support = false,
 	.has_mst_fifo_reg = false,
+	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_4K,
 };
 
 static const struct tegra_i2c_hw_feature tegra114_i2c_hw = {
@@ -2131,6 +2131,7 @@ static const struct tegra_i2c_hw_feature tegra114_i2c_hw = {
 	.has_hs_mode_support = false,
 	.has_multi_master_support = false,
 	.has_mst_fifo_reg = false,
+	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_4K,
 };
 
 static const struct tegra_i2c_hw_feature tegra124_i2c_hw = {
@@ -2151,6 +2152,7 @@ static const struct tegra_i2c_hw_feature tegra124_i2c_hw = {
 	.has_hs_mode_support = false,
 	.has_multi_master_support = false,
 	.has_mst_fifo_reg = false,
+	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_4K,
 };
 
 static const struct tegra_i2c_hw_feature tegra210_i2c_hw = {
@@ -2171,6 +2173,7 @@ static const struct tegra_i2c_hw_feature tegra210_i2c_hw = {
 	.has_hs_mode_support = false,
 	.has_multi_master_support = false,
 	.has_mst_fifo_reg = false,
+	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_4K,
 };
 
 static const struct tegra_i2c_hw_feature tegra186_i2c_hw = {
@@ -2191,6 +2194,7 @@ static const struct tegra_i2c_hw_feature tegra186_i2c_hw = {
 	.has_hs_mode_support = false,
 	.has_multi_master_support = false,
 	.has_mst_fifo_reg = false,
+	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_4K,
 };
 
 static const struct tegra_i2c_hw_feature tegra194_i2c_hw = {
@@ -2209,6 +2213,7 @@ static const struct tegra_i2c_hw_feature tegra194_i2c_hw = {
 	.has_reg_write_buffering = false,
 	.has_slcg_support = true,
 	.has_mst_fifo_reg = true,
+	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_64k,
 };
 
 /* Match table for of_platform binding */
@@ -2275,7 +2280,6 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	i2c_dev->phys_addr = phys_addr;
 	i2c_dev->div_clk = div_clk;
 	i2c_dev->adapter.algo = &tegra_i2c_algo;
-	i2c_dev->adapter.quirks = &tegra_i2c_quirks;
 	i2c_dev->irq = irq;
 	i2c_dev->dev = &pdev->dev;
 	i2c_dev->dma_buf_size = I2C_TOTAL_BUFFER_LEN;

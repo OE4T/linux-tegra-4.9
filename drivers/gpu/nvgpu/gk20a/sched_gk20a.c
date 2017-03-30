@@ -26,6 +26,7 @@
 #include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/kmem.h>
+#include <nvgpu/log.h>
 
 #include "ctxsw_trace_gk20a.h"
 #include "gk20a.h"
@@ -330,8 +331,7 @@ static int gk20a_sched_dev_ioctl_get_tsg(struct gk20a_sched_ctrl *sched,
 
 	nvgpu_mutex_acquire(&sched->status_lock);
 	if (NVGPU_SCHED_ISSET(tsgid, sched->ref_tsg_bitmap)) {
-		gk20a_warn(dev_from_gk20a(g),
-			"tsgid=%d already referenced", tsgid);
+		nvgpu_warn(g, "tsgid=%d already referenced", tsgid);
 		/* unlock status_lock as gk20a_tsg_release locks it */
 		nvgpu_mutex_release(&sched->status_lock);
 		kref_put(&tsg->refcount, gk20a_tsg_release);
@@ -363,8 +363,7 @@ static int gk20a_sched_dev_ioctl_put_tsg(struct gk20a_sched_ctrl *sched,
 	nvgpu_mutex_acquire(&sched->status_lock);
 	if (!NVGPU_SCHED_ISSET(tsgid, sched->ref_tsg_bitmap)) {
 		nvgpu_mutex_release(&sched->status_lock);
-		gk20a_warn(dev_from_gk20a(g),
-			"tsgid=%d not previously referenced", tsgid);
+		nvgpu_warn(g, "tsgid=%d not previously referenced", tsgid);
 		return -ENXIO;
 	}
 	NVGPU_SCHED_CLR(tsgid, sched->ref_tsg_bitmap);

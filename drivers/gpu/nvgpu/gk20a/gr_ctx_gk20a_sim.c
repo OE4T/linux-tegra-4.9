@@ -23,6 +23,8 @@
 #include "sim_gk20a.h"
 #include "gr_ctx_gk20a.h"
 
+#include <nvgpu/log.h>
+
 int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 {
 	int err = 0;
@@ -239,8 +241,7 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 	gk20a_dbg(gpu_dbg_info | gpu_dbg_fn, "finished querying grctx info from chiplib");
 	return 0;
 fail:
-	gk20a_err(dev_from_gk20a(g),
-		   "failed querying grctx info from chiplib");
+	nvgpu_err(g, "failed querying grctx info from chiplib");
 	return err;
 
 }

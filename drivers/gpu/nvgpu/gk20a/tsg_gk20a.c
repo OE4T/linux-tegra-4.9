@@ -15,6 +15,7 @@
  */
 
 #include <nvgpu/kmem.h>
+#include <nvgpu/log.h>
 
 #include "gk20a.h"
 #include "tsg_gk20a.h"
@@ -93,7 +94,7 @@ int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg,
 	if (tsg->runlist_id == FIFO_INVAL_TSG_ID)
 		tsg->runlist_id = ch->runlist_id;
 	else if (tsg->runlist_id != ch->runlist_id) {
-		gk20a_err(dev_from_gk20a(tsg->g),
+		nvgpu_err(tsg->g,
 			"Error: TSG channel should be share same runlist ch[%d] tsg[%d]\n",
 			ch->runlist_id, tsg->runlist_id);
 		return -EINVAL;
@@ -260,8 +261,7 @@ struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g)
 	if (g->ops.fifo.tsg_open) {
 		err = g->ops.fifo.tsg_open(tsg);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-				  "tsg %d fifo open failed %d",
+			nvgpu_err(g, "tsg %d fifo open failed %d",
 				  tsg->tsgid, err);
 			goto clean_up;
 		}

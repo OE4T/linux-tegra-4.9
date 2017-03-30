@@ -32,6 +32,8 @@
 #include "gk20a.h"
 #include "gr_gk20a.h"
 
+#include <nvgpu/log.h>
+
 #include <nvgpu/hw/gk20a/hw_ctxsw_prog_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
 
@@ -601,7 +603,7 @@ int gk20a_ctxsw_trace_write(struct gk20a *g,
 
 	write_idx = hdr->write_idx;
 	if (write_idx >= dev->num_ents) {
-		gk20a_err(dev_from_gk20a(dev->g),
+		nvgpu_err(dev->g,
 			"write_idx=%u out of range [0..%u]",
 			write_idx, dev->num_ents);
 		ret = -ENOSPC;

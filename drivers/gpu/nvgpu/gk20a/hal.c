@@ -23,6 +23,8 @@
 #include "nvgpu_gpuid_t19x.h"
 #endif
 
+#include <nvgpu/log.h>
+
 int gpu_init_hal(struct gk20a *g)
 {
 	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
@@ -54,7 +56,7 @@ int gpu_init_hal(struct gk20a *g)
 		break;
 #endif
 	default:
-		gk20a_err(g->dev, "no support for %x", ver);
+		nvgpu_err(g, "no support for %x", ver);
 		return -ENODEV;
 	}
 

@@ -19,6 +19,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/semaphore.h>
+#include <nvgpu/log.h>
 
 #include "gk20a.h"
 #include "debug_gk20a.h"
@@ -145,7 +146,7 @@ static int gk20a_gr_debug_show(struct seq_file *s, void *unused)
 
 	err = gk20a_busy(g);
 	if (err) {
-		gk20a_err(dev, "failed to power on gpu: %d", err);
+		nvgpu_err(g, "failed to power on gpu: %d", err);
 		return -EINVAL;
 	}
 
@@ -186,7 +187,7 @@ static int gk20a_debug_show(struct seq_file *s, void *unused)
 
 	err = gk20a_busy(g);
 	if (err) {
-		gk20a_err(g->dev, "failed to power on gpu: %d", err);
+		nvgpu_err(g, "failed to power on gpu: %d", err);
 		return -EFAULT;
 	}
 

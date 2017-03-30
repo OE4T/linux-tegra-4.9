@@ -31,6 +31,8 @@
 #include "gk20a.h"
 #include "debug_gk20a.h"
 
+#include <nvgpu/log.h>
+
 #include <nvgpu/hw/gk20a/hw_ce2_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
@@ -459,7 +461,7 @@ u32 gk20a_ce_create_context_with_cb(struct device *dev,
 					runlist_id,
 					true);
 	if (!ce_ctx->ch) {
-		gk20a_err(ce_ctx->dev, "ce: gk20a channel not available");
+		nvgpu_err(g, "ce: gk20a channel not available");
 		goto end;
 	}
 	ce_ctx->ch->wdt_enabled = false;
@@ -467,21 +469,21 @@ u32 gk20a_ce_create_context_with_cb(struct device *dev,
 	/* bind the channel to the vm */
 	err = __gk20a_vm_bind_channel(&g->mm.ce.vm, ce_ctx->ch);
 	if (err) {
-		gk20a_err(ce_ctx->dev, "ce: could not bind vm");
+		nvgpu_err(g, "ce: could not bind vm");
 		goto end;
 	}
 
 	/* allocate gpfifo (1024 should be more than enough) */
 	err = gk20a_channel_alloc_gpfifo(ce_ctx->ch, 1024, 0, 0);
 	if (err) {
-		gk20a_err(ce_ctx->dev, "ce: unable to allocate gpfifo");
+		nvgpu_err(g, "ce: unable to allocate gpfifo");
 		goto end;
 	}
 
 	/* allocate command buffer (4096 should be more than enough) from sysmem*/
 	err = nvgpu_dma_alloc_map_sys(ce_ctx->vm, NVGPU_CE_COMMAND_BUF_SIZE, &ce_ctx->cmd_buf_mem);
 	 if (err) {
-		gk20a_err(ce_ctx->dev,
+		nvgpu_err(g,
 			"ce: could not allocate command buffer for CE context");
 		goto end;
 	}
@@ -492,7 +494,7 @@ u32 gk20a_ce_create_context_with_cb(struct device *dev,
 	if (priority != -1) {
 		err = gk20a_fifo_set_priority(ce_ctx->ch, priority);
 		if (err) {
-			gk20a_err(ce_ctx->dev,
+			nvgpu_err(g,
 				"ce: could not set the channel priority for CE context");
 			goto end;
 		}
@@ -502,7 +504,7 @@ u32 gk20a_ce_create_context_with_cb(struct device *dev,
 	if (timeslice != -1) {
 		err = gk20a_fifo_set_timeslice(ce_ctx->ch, timeslice);
 		if (err) {
-			gk20a_err(ce_ctx->dev,
+			nvgpu_err(g,
 				"ce: could not set the channel timeslice value for CE context");
 			goto end;
 		}
@@ -512,7 +514,7 @@ u32 gk20a_ce_create_context_with_cb(struct device *dev,
 	if (runlist_level != -1) {
 		err = gk20a_channel_set_runlist_interleave(ce_ctx->ch, runlist_level);
 		if (err) {
-			gk20a_err(ce_ctx->dev,
+			nvgpu_err(g,
 				"ce: could not set the runlist interleave for CE context");
 			goto end;
 		}

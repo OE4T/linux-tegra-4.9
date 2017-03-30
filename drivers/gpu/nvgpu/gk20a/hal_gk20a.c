@@ -35,6 +35,8 @@
 #include "css_gr_gk20a.h"
 #include "pramin_gk20a.h"
 
+#include <nvgpu/log.h>
+
 #include <nvgpu/hw/gk20a/hw_proj_gk20a.h>
 
 static struct gpu_ops gk20a_ops = {
@@ -132,7 +134,7 @@ static int gk20a_get_litter_value(struct gk20a *g, int value)
 		ret = 0;
 		break;
 	default:
-		gk20a_err(dev_from_gk20a(g), "Missing definition %d", value);
+		nvgpu_err(g, "Missing definition %d", value);
 		BUG();
 		break;
 	}

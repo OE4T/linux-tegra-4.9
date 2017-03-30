@@ -24,6 +24,8 @@
 
 #include "gk20a.h"
 
+#include <nvgpu/log.h>
+
 #include <nvgpu/hw/gk20a/hw_trim_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_timer_gk20a.h>
 
@@ -251,7 +253,7 @@ static int clk_slide_gpc_pll(struct gk20a *g, u32 n)
 	gk20a_readl(g, trim_sys_gpcpll_ndiv_slowdown_r());
 
 	if (ramp_timeout <= 0) {
-		gk20a_err(dev_from_gk20a(g), "gpcpll dynamic ramp timeout");
+		nvgpu_err(g, "gpcpll dynamic ramp timeout");
 		return -ETIMEDOUT;
 	}
 	return 0;
@@ -439,7 +441,7 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 
 	ref = clk_get_parent(clk_get_parent(clk->tegra_clk));
 	if (IS_ERR(ref)) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"failed to get GPCPLL reference clock");
 		err = -EINVAL;
 		goto fail;
@@ -449,7 +451,7 @@ static int gk20a_init_clk_setup_sw(struct gk20a *g)
 	clk->gpc_pll.id = GK20A_GPC_PLL;
 	clk->gpc_pll.clk_in = ref_rate / KHZ;
 	if (clk->gpc_pll.clk_in == 0) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"GPCPLL reference clock is zero");
 		err = -EINVAL;
 		goto fail;
@@ -508,7 +510,7 @@ static int set_pll_target(struct gk20a *g, u32 freq, u32 old_freq)
 		/* gpc_pll.freq is changed to new value here */
 		if (clk_config_pll(clk, &clk->gpc_pll, &gpc_pll_params,
 				   &freq, true)) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				   "failed to set pll target for %d", freq);
 			return -EINVAL;
 		}
@@ -536,8 +538,7 @@ static int set_pll_freq(struct gk20a *g, u32 freq, u32 old_freq)
 	/* Just report error but not restore PLL since dvfs could already change
 	    voltage even when it returns error. */
 	if (err)
-		gk20a_err(dev_from_gk20a(g),
-			"failed to set pll to %d", freq);
+		nvgpu_err(g, "failed to set pll to %d", freq);
 	return err;
 }
 

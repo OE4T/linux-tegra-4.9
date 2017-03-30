@@ -282,7 +282,7 @@ static int gk20a_init_support(struct platform_device *dev)
 	g->regs = gk20a_ioremap_resource(dev, GK20A_BAR0_IORESOURCE_MEM,
 					 &g->reg_mem);
 	if (IS_ERR(g->regs)) {
-		dev_err(dev_from_gk20a(g), "failed to remap gk20a registers\n");
+		nvgpu_err(g, "failed to remap gk20a registers\n");
 		err = PTR_ERR(g->regs);
 		goto fail;
 	}
@@ -290,7 +290,7 @@ static int gk20a_init_support(struct platform_device *dev)
 	g->bar1 = gk20a_ioremap_resource(dev, GK20A_BAR1_IORESOURCE_MEM,
 					 &g->bar1_mem);
 	if (IS_ERR(g->bar1)) {
-		dev_err(dev_from_gk20a(g), "failed to remap gk20a bar1\n");
+		nvgpu_err(g, "failed to remap gk20a bar1\n");
 		err = PTR_ERR(g->bar1);
 		goto fail;
 	}
@@ -411,7 +411,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	if (platform->busy) {
 		err = platform->busy(dev);
 		if (err < 0) {
-			dev_err(dev, "%s: failed to poweron platform dependency\n",
+			nvgpu_err(g, "%s: failed to poweron platform dependency\n",
 				__func__);
 			goto done;
 		}
@@ -467,7 +467,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	if (g->ops.clk.init_clk_support) {
 		err = g->ops.clk.init_clk_support(g);
 		if (err) {
-			gk20a_err(dev, "failed to init gk20a clk");
+			nvgpu_err(g, "failed to init gk20a clk");
 			goto done;
 		}
 	}
@@ -475,7 +475,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	err = g->ops.fifo.reset_enable_hw(g);
 
 	if (err) {
-		gk20a_err(dev, "failed to reset gk20a fifo");
+		nvgpu_err(g, "failed to reset gk20a fifo");
 		goto done;
 	}
 
@@ -484,13 +484,13 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 
 	err = gk20a_init_mm_support(g);
 	if (err) {
-		gk20a_err(dev, "failed to init gk20a mm");
+		nvgpu_err(g, "failed to init gk20a mm");
 		goto done;
 	}
 
 	err = gk20a_init_fifo_support(g);
 	if (err) {
-		gk20a_err(dev, "failed to init gk20a fifo");
+		nvgpu_err(g, "failed to init gk20a fifo");
 		goto done;
 	}
 
@@ -501,7 +501,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 
 	err = gk20a_enable_gr_hw(g);
 	if (err) {
-		gk20a_err(dev, "failed to enable gr");
+		nvgpu_err(g, "failed to enable gr");
 		goto done;
 	}
 
@@ -509,7 +509,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		if (g->ops.pmu.prepare_ucode)
 			err = g->ops.pmu.prepare_ucode(g);
 		if (err) {
-			gk20a_err(dev, "failed to init pmu ucode");
+			nvgpu_err(g, "failed to init pmu ucode");
 			goto done;
 		}
 	}
@@ -518,7 +518,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	if (g->ops.pmupstate) {
 		err = gk20a_init_pstate_support(g);
 		if (err) {
-			gk20a_err(dev, "failed to init pstates");
+			nvgpu_err(g, "failed to init pstates");
 			goto done;
 		}
 	}
@@ -527,21 +527,21 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	if (g->ops.pmu.is_pmu_supported(g)) {
 		err = gk20a_init_pmu_support(g);
 		if (err) {
-			gk20a_err(dev, "failed to init gk20a pmu");
+			nvgpu_err(g, "failed to init gk20a pmu");
 			goto done;
 		}
 	}
 
 	err = gk20a_init_gr_support(g);
 	if (err) {
-		gk20a_err(dev, "failed to init gk20a gr");
+		nvgpu_err(g, "failed to init gk20a gr");
 		goto done;
 	}
 
 	if (g->ops.pmu.mclk_init) {
 		err = g->ops.pmu.mclk_init(g);
 		if (err) {
-			gk20a_err(dev, "failed to set mclk");
+			nvgpu_err(g, "failed to set mclk");
 			/* Indicate error dont goto done */
 		}
 	}
@@ -550,37 +550,37 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	if (g->ops.pmupstate) {
 		err = gk20a_init_pstate_pmu_support(g);
 		if (err) {
-			gk20a_err(dev, "failed to init pstates");
+			nvgpu_err(g, "failed to init pstates");
 			goto done;
 		}
 	}
 
 	err = nvgpu_clk_arb_init_arbiter(g);
 	if (err) {
-		gk20a_err(dev, "failed to init clk arb");
+		nvgpu_err(g, "failed to init clk arb");
 		goto done;
 	}
 #endif
 
 	err = gk20a_init_therm_support(g);
 	if (err) {
-		gk20a_err(dev, "failed to init gk20a therm");
+		nvgpu_err(g, "failed to init gk20a therm");
 		goto done;
 	}
 
 	err = g->ops.chip_init_gpu_characteristics(g);
 	if (err) {
-		gk20a_err(dev, "failed to init gk20a gpu characteristics");
+		nvgpu_err(g, "failed to init gk20a gpu characteristics");
 		goto done;
 	}
 
 	err = gk20a_ctxsw_trace_init(g);
 	if (err)
-		gk20a_warn(dev, "could not initialize ctxsw tracing");
+		nvgpu_warn(g, "could not initialize ctxsw tracing");
 
 	err = gk20a_sched_ctrl_init(g);
 	if (err) {
-		gk20a_err(dev, "failed to init sched control");
+		nvgpu_err(g, "failed to init sched control");
 		goto done;
 	}
 
@@ -619,7 +619,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		speed = 1 << (fls(speed) - 1);
 		err = g->ops.xve.set_speed(g, speed);
 		if (err) {
-			gk20a_err(dev, "Failed to set PCIe bus speed!\n");
+			nvgpu_err(g, "Failed to set PCIe bus speed!\n");
 			goto done;
 		}
 	}
@@ -1312,7 +1312,7 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 	} while (ref_cnt != target_ref_cnt && !nvgpu_timeout_expired(&timeout));
 
 	if (ref_cnt != target_ref_cnt) {
-		gk20a_err(dev, "failed to idle - refcount %d != 1\n",
+		nvgpu_err(g, "failed to idle - refcount %d != 1\n",
 			ref_cnt);
 		goto fail_drop_usage_count;
 	}
@@ -1344,7 +1344,7 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 		if (is_railgated) {
 			return 0;
 		} else {
-			gk20a_err(dev, "failed to idle in timeout\n");
+			nvgpu_err(g, "failed to idle in timeout\n");
 			goto fail_timeout;
 		}
 	} else {

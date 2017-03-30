@@ -17,6 +17,7 @@
 #include <soc/tegra/chip-id.h>
 
 #include <nvgpu/page_allocator.h>
+#include <nvgpu/log.h>
 
 #include "gk20a.h"
 
@@ -126,7 +127,7 @@ int gk20a_read_ptimer(struct gk20a *g, u64 *value)
 	}
 
 	/* too many iterations, bail out */
-	gk20a_err(dev_from_gk20a(g), "failed to read ptimer");
+	nvgpu_err(g, "failed to read ptimer");
 	return -EBUSY;
 }
 

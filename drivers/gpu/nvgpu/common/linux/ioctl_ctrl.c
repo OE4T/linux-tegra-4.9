@@ -28,6 +28,8 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/fence_gk20a.h"
 
+#include <nvgpu/log.h>
+
 #define HZ_TO_MHZ(a) ((a > 0xF414F9CD7) ? 0xffff : (a >> 32) ? \
 	(u32) ((a * 0x10C8ULL) >> 32) : (u16) ((u32) a/MHZ))
 #define MHZ_TO_HZ(a) ((u64)a * MHZ)
@@ -352,7 +354,7 @@ static int nvgpu_gpu_ioctl_set_mmu_debug_mode(
 		struct nvgpu_gpu_mmu_debug_mode_args *args)
 {
 	if (gk20a_busy(g)) {
-		gk20a_err(dev_from_gk20a(g), "failed to power on gpu\n");
+		nvgpu_err(g, "failed to power on gpu\n");
 		return -EINVAL;
 	}
 
@@ -521,7 +523,7 @@ static inline int get_timestamps_zipper(struct gk20a *g,
 	unsigned int i = 0;
 
 	if (gk20a_busy(g)) {
-		gk20a_err(dev_from_gk20a(g), "GPU not powered on\n");
+		nvgpu_err(g, "GPU not powered on\n");
 		err = -EINVAL;
 		goto end;
 	}
@@ -560,7 +562,7 @@ static int nvgpu_gpu_get_cpu_time_correlation_info(
 		get_cpu_timestamp = get_cpu_timestamp_timeofday;
 		break;
 	default:
-		gk20a_err(dev_from_gk20a(g), "invalid cpu clock source id\n");
+		nvgpu_err(g, "invalid cpu clock source id\n");
 		return -EINVAL;
 	}
 
@@ -625,7 +627,7 @@ static int nvgpu_gpu_get_engine_info(
 			break;
 
 		default:
-			gk20a_err(dev_from_gk20a(g), "Unmapped engine enum %u\n",
+			nvgpu_err(g, "Unmapped engine enum %u\n",
 				  engine_enum);
 			continue;
 		}
@@ -677,7 +679,7 @@ static int nvgpu_gpu_alloc_vidmem(struct gk20a *g,
 
 	if (align > roundup_pow_of_two(args->in.size)) {
 		/* log this special case, buddy allocator detail */
-		gk20a_warn(dev_from_gk20a(g),
+		nvgpu_warn(g,
 			"alignment larger than buffer size rounded up to power of 2 is not supported");
 		return -EINVAL;
 	}
@@ -1510,7 +1512,7 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 		break;
 
 	default:
-		dev_dbg(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x", cmd);
+		gk20a_dbg_info("unrecognized gpu ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;
 		break;
 	}

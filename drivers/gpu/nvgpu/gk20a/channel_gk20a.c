@@ -27,6 +27,7 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>
+#include <nvgpu/log.h>
 
 #include "gk20a.h"
 #include "debug_gk20a.h"
@@ -301,7 +302,7 @@ int gk20a_wait_channel_idle(struct channel_gk20a *ch)
 	} while (!nvgpu_timeout_expired(&timeout));
 
 	if (!channel_idle) {
-		gk20a_err(dev_from_gk20a(ch->g), "jobs not freed for channel %d\n",
+		nvgpu_err(ch->g, "jobs not freed for channel %d\n",
 				ch->hw_chid);
 		return -EBUSY;
 	}
@@ -322,7 +323,7 @@ int gk20a_channel_set_runlist_interleave(struct channel_gk20a *ch,
 	int ret;
 
 	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		gk20a_err(dev_from_gk20a(g), "invalid operation for TSG!\n");
+		nvgpu_err(g, "invalid operation for TSG!\n");
 		return -EINVAL;
 	}
 
@@ -362,7 +363,7 @@ void gk20a_set_error_notifier_locked(struct channel_gk20a *ch, __u32 error)
 		ch->error_notifier->info32 = error;
 		ch->error_notifier->status = 0xffff;
 
-		gk20a_err(dev_from_gk20a(ch->g),
+		nvgpu_err(ch->g,
 		    "error notifier set to %d for ch %d", error, ch->hw_chid);
 	}
 }
@@ -398,7 +399,7 @@ static void gk20a_wait_until_counter_is_N(
 			    msecs_to_jiffies(5000)) > 0)
 			break;
 
-		gk20a_warn(dev_from_gk20a(ch->g),
+		nvgpu_warn(ch->g,
 			   "%s: channel %d, still waiting, %s left: %d, waiting for: %d",
 			   caller, ch->hw_chid, counter_name,
 			   atomic_read(counter), wait_value);
@@ -476,7 +477,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	nvgpu_spinlock_acquire(&ch->ref_obtain_lock);
 	if (!ch->referenceable) {
 		nvgpu_spinlock_release(&ch->ref_obtain_lock);
-		gk20a_err(dev_from_gk20a(ch->g),
+		nvgpu_err(ch->g,
 			  "Extra %s() called to channel %u",
 			  __func__, ch->hw_chid);
 		return;
@@ -795,7 +796,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	ch = allocate_channel(f);
 	if (ch == NULL) {
 		/* TBD: we want to make this virtualizable */
-		gk20a_err(dev_from_gk20a(g), "out of hw chids");
+		nvgpu_err(g, "out of hw chids");
 		return NULL;
 	}
 
@@ -813,7 +814,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	if (g->ops.fifo.alloc_inst(g, ch)) {
 		ch->g = NULL;
 		free_channel(f, ch);
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			   "failed to open gk20a channel, out of inst mem");
 		return NULL;
 	}
@@ -873,7 +874,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
    used for inserting commands before/after user submitted buffers. */
 static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 {
-	struct device *d = dev_from_gk20a(c->g);
+	struct gk20a *g = c->g;
 	struct vm_gk20a *ch_vm = c->vm;
 	struct priv_cmd_queue *q = &c->priv_cmd_q;
 	u32 size;
@@ -901,7 +902,7 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 
 	err = nvgpu_dma_alloc_map_sys(ch_vm, size, &q->mem);
 	if (err) {
-		gk20a_err(d, "%s: memory allocation failed\n", __func__);
+		nvgpu_err(g, "%s: memory allocation failed\n", __func__);
 		goto clean_up;
 	}
 
@@ -938,7 +939,7 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 	gk20a_dbg_fn("size %d", orig_size);
 
 	if (!e) {
-		gk20a_err(dev_from_gk20a(c->g),
+		nvgpu_err(c->g,
 			"ch %d: priv cmd entry is null",
 			c->hw_chid);
 		return -EINVAL;
@@ -1016,7 +1017,7 @@ static int channel_gk20a_alloc_job(struct channel_gk20a *c,
 		if (CIRC_SPACE(put, get, c->joblist.pre_alloc.length))
 			*job_out = &c->joblist.pre_alloc.jobs[put];
 		else {
-			gk20a_warn(dev_from_gk20a(c->g),
+			nvgpu_warn(c->g,
 					"out of job ringbuffer space\n");
 			err = -EAGAIN;
 		}
@@ -1231,7 +1232,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 
 	/* an address space needs to have been bound at this point. */
 	if (!gk20a_channel_as_bound(c)) {
-		gk20a_err(d,
+		nvgpu_err(g,
 			    "not bound to an address space at time of gpfifo"
 			    " allocation.");
 		return -EINVAL;
@@ -1239,7 +1240,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 	ch_vm = c->vm;
 
 	if (c->gpfifo.mem.size) {
-		gk20a_err(d, "channel %d :"
+		nvgpu_err(g, "channel %d :"
 			   "gpfifo already allocated", c->hw_chid);
 		return -EEXIST;
 	}
@@ -1248,7 +1249,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 			gpfifo_size * sizeof(struct nvgpu_gpfifo),
 			&c->gpfifo.mem);
 	if (err) {
-		gk20a_err(d, "%s: memory allocation failed\n", __func__);
+		nvgpu_err(g, "%s: memory allocation failed\n", __func__);
 		goto clean_up;
 	}
 
@@ -1334,7 +1335,7 @@ clean_up_unmap:
 	nvgpu_dma_unmap_free(ch_vm, &c->gpfifo.mem);
 clean_up:
 	memset(&c->gpfifo, 0, sizeof(struct gpfifo_desc));
-	gk20a_err(d, "fail");
+	nvgpu_err(g, "fail");
 	return err;
 }
 
@@ -1607,7 +1608,7 @@ static void gk20a_channel_timeout_handler(struct channel_gk20a *ch)
 		return;
 	}
 
-	gk20a_err(dev_from_gk20a(g), "Job on channel %d timed out",
+	nvgpu_err(g, "Job on channel %d timed out",
 		  ch->hw_chid);
 
 	gk20a_debug_dump(g->dev);
@@ -1761,7 +1762,7 @@ static void gk20a_channel_worker_process(struct gk20a *g, int *get)
 			 * other reasons than a channel added in the items list
 			 * currently, so warn and ack the message.
 			 */
-			gk20a_warn(g->dev, "Spurious worker event!");
+			nvgpu_warn(g, "Spurious worker event!");
 			++*get;
 			break;
 		}
@@ -1820,7 +1821,7 @@ int nvgpu_channel_worker_init(struct gk20a *g)
 	task = kthread_run(gk20a_channel_poll_worker, g,
 			"nvgpu_channel_poll_%s", g->name);
 	if (IS_ERR(task)) {
-		gk20a_err(g->dev, "failed to start channel poller thread");
+		nvgpu_err(g, "failed to start channel poller thread");
 		return PTR_ERR(task);
 	}
 	g->channel_worker.poll_task = task;
@@ -1853,7 +1854,7 @@ void gk20a_channel_worker_enqueue(struct channel_gk20a *ch)
 	 * one ref already, so can't fail.
 	 */
 	if (WARN_ON(!gk20a_channel_get(ch))) {
-		gk20a_warn(g->dev, "cannot get ch ref for worker!");
+		nvgpu_warn(g, "cannot get ch ref for worker!");
 		return;
 	}
 
@@ -1876,7 +1877,7 @@ void gk20a_channel_worker_enqueue(struct channel_gk20a *ch)
 int gk20a_free_priv_cmdbuf(struct channel_gk20a *c, struct priv_cmd_entry *e)
 {
 	struct priv_cmd_queue *q = &c->priv_cmd_q;
-	struct device *d = dev_from_gk20a(c->g);
+	struct gk20a *g = c->g;
 
 	if (!e)
 		return 0;
@@ -1885,7 +1886,7 @@ int gk20a_free_priv_cmdbuf(struct channel_gk20a *c, struct priv_cmd_entry *e)
 		/* read the entry's valid flag before reading its contents */
 		rmb();
 		if ((q->get != e->off) && e->off != 0)
-			gk20a_err(d, "requests out-of-order, ch=%d\n",
+			nvgpu_err(g, "requests out-of-order, ch=%d\n",
 				  c->hw_chid);
 		q->get = e->off + e->size;
 	}
@@ -2416,7 +2417,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	 * So, add extra_entries in user request. Also, HW with fifo size N
 	 * can accept only N-1 entreis and so the below condition */
 	if (c->gpfifo.entry_num - 1 < num_entries + extra_entries) {
-		gk20a_err(d, "not enough gpfifo space allocated");
+		nvgpu_err(g, "not enough gpfifo space allocated");
 		return -ENOMEM;
 	}
 
@@ -2430,7 +2431,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	/* an address space needs to have been bound at this point. */
 	if (!gk20a_channel_as_bound(c)) {
-		gk20a_err(d,
+		nvgpu_err(g,
 			    "not bound to an address space at time of gpfifo"
 			    " submission.");
 		return -EINVAL;
@@ -2512,7 +2513,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		/* released by job cleanup via syncpt or sema interrupt */
 		err = gk20a_busy(g);
 		if (err) {
-			gk20a_err(d, "failed to host gk20a to submit gpfifo, process %s",
+			nvgpu_err(g, "failed to host gk20a to submit gpfifo, process %s",
 				current->comm);
 			return err;
 		}

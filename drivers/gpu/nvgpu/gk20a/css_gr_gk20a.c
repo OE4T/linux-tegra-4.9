@@ -27,6 +27,8 @@
 #include "gk20a.h"
 #include "css_gr_gk20a.h"
 
+#include <nvgpu/log.h>
+
 #include <nvgpu/hw/gk20a/hw_perf_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 
@@ -299,8 +301,7 @@ static int css_gr_flush_snapshots(struct channel_gk20a *ch)
 			cur->snapshot->hw_overflow_events_occured++;
 		}
 
-		gk20a_warn(dev_from_gk20a(g),
-			"cyclestats: hardware overflow detected\n");
+		nvgpu_warn(g, "cyclestats: hardware overflow detected");
 	}
 
 	/* process all items in HW buffer */
@@ -340,8 +341,7 @@ static int css_gr_flush_snapshots(struct channel_gk20a *ch)
 					dst_nxt = dst_head;
 			} else {
 				/* client not found - skipping this entry */
-				gk20a_warn(dev_from_gk20a(g),
-					   "cyclestats: orphaned perfmon %u\n",
+				nvgpu_warn(g, "cyclestats: orphaned perfmon %u",
 							src->perfmon_id);
 				goto next_hw_fifo_entry;
 			}
@@ -351,8 +351,7 @@ static int css_gr_flush_snapshots(struct channel_gk20a *ch)
 		if (dst_nxt == dst_get) {
 			/* no data copy, no pointer updates */
 			dst->sw_overflow_events_occured++;
-			gk20a_warn(dev_from_gk20a(g),
-				   "cyclestats: perfmon %u soft overflow\n",
+			nvgpu_warn(g, "cyclestats: perfmon %u soft overflow",
 							src->perfmon_id);
 		} else {
 			*dst_put = *src;
@@ -392,8 +391,7 @@ next_hw_fifo_entry:
 		/* not all entries proceed correctly. some of problems */
 		/* reported as overflows, some as orphaned perfmons,   */
 		/* but it will be better notify with summary about it  */
-		gk20a_warn(dev_from_gk20a(g),
-			   "cyclestats: completed %u from %u entries\n",
+		nvgpu_warn(g, "cyclestats: completed %u from %u entries",
 							completed, pending);
 	}
 

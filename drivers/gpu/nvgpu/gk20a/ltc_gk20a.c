@@ -20,6 +20,7 @@
 
 #include <trace/events/gk20a.h>
 #include <nvgpu/timers.h>
+#include <nvgpu/log.h>
 
 #include "gk20a.h"
 
@@ -160,8 +161,7 @@ static int gk20a_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 			} while (!nvgpu_timeout_expired(&timeout));
 
 			if (nvgpu_timeout_peek_expired(&timeout)) {
-				gk20a_err(dev_from_gk20a(g),
-					   "comp tag clear timeout\n");
+				nvgpu_err(g, "comp tag clear timeout");
 				err = -EBUSY;
 				goto out;
 			}
@@ -186,7 +186,7 @@ static void gk20a_ltc_isr(struct gk20a *g)
 	u32 intr;
 
 	intr = gk20a_readl(g, ltc_ltc0_ltss_intr_r());
-	gk20a_err(dev_from_gk20a(g), "ltc: %08x\n", intr);
+	nvgpu_err(g, "ltc: %08x\n", intr);
 	gk20a_writel(g, ltc_ltc0_ltss_intr_r(), intr);
 }
 
@@ -215,7 +215,7 @@ static int gk20a_determine_L2_size_bytes(struct gk20a *g)
 		 ltc_ltc0_lts0_tstg_cfg1_active_sets_quarter_v()) {
 		sets = 16;
 	} else {
-		dev_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"Unknown constant %u for active sets",
 		       (unsigned)active_sets_value);
 		sets = 0;

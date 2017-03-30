@@ -39,6 +39,7 @@
 #include <nvgpu/allocator.h>
 #include <nvgpu/semaphore.h>
 #include <nvgpu/page_allocator.h>
+#include <nvgpu/log.h>
 
 #include "gk20a.h"
 #include "mm_gk20a.h"
@@ -536,7 +537,7 @@ static int gk20a_vidmem_clear_all(struct gk20a *g)
 			0,
 			NULL);
 	if (err) {
-		gk20a_err(g->dev,
+		nvgpu_err(g,
 			"Failed to clear vidmem region 1 : %d", err);
 		return err;
 	}
@@ -555,7 +556,7 @@ static int gk20a_vidmem_clear_all(struct gk20a *g)
 			0,
 			&gk20a_fence_out);
 	if (err) {
-		gk20a_err(g->dev,
+		nvgpu_err(g,
 			"Failed to clear vidmem region 2 : %d", err);
 		return err;
 	}
@@ -575,7 +576,7 @@ static int gk20a_vidmem_clear_all(struct gk20a *g)
 
 		gk20a_fence_put(gk20a_fence_out);
 		if (err) {
-			gk20a_err(g->dev,
+			nvgpu_err(g,
 				"fence wait failed for CE execute ops");
 			return err;
 		}
@@ -591,7 +592,6 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
 	struct gk20a *g = mm->g;
-	struct device *d = dev_from_gk20a(g);
 	size_t size = g->ops.mm.get_vidmem_size ?
 		g->ops.mm.get_vidmem_size(g) : 0;
 	u64 bootstrap_base, bootstrap_size, base;
@@ -625,7 +625,7 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 					default_page_size,
 					GPU_ALLOC_4K_VIDMEM_PAGES);
 	if (err) {
-		gk20a_err(d, "Failed to register vidmem for size %zu: %d",
+		nvgpu_err(g, "Failed to register vidmem for size %zu: %d",
 				size, err);
 		return err;
 	}
@@ -796,7 +796,7 @@ void gk20a_init_mm_ce_context(struct gk20a *g)
 				NULL);
 
 		if (g->mm.vidmem.ce_ctx_id == (u32)~0)
-			gk20a_err(g->dev,
+			nvgpu_err(g,
 				"Failed to allocate CE context for vidmem page clearing support");
 	}
 #endif
@@ -882,7 +882,6 @@ static void unmap_gmmu_phys_pages(struct gk20a_mm_entry *entry)
 static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 			    struct gk20a_mm_entry *entry)
 {
-	struct device *d = dev_from_vm(vm);
 	struct gk20a *g = gk20a_from_vm(vm);
 	u32 num_pages = 1 << order;
 	u32 len = num_pages * PAGE_SIZE;
@@ -905,7 +904,7 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 
 
 	if (err) {
-		gk20a_err(d, "memory allocation failed");
+		nvgpu_err(g, "memory allocation failed");
 		return -ENOMEM;
 	}
 
@@ -1209,7 +1208,7 @@ void gk20a_vm_put_buffers(struct vm_gk20a *vm,
 static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 				struct vm_gk20a_mapping_batch *batch)
 {
-	struct device *d = dev_from_vm(vm);
+	struct gk20a *g = vm->mm->g;
 	struct mapped_buffer_node *mapped_buffer;
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
@@ -1217,7 +1216,7 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 	mapped_buffer = find_mapped_buffer_locked(vm->mapped_buffers, offset);
 	if (!mapped_buffer) {
 		nvgpu_mutex_release(&vm->update_gmmu_lock);
-		gk20a_err(d, "invalid addr to unmap 0x%llx", offset);
+		nvgpu_err(g, "invalid addr to unmap 0x%llx", offset);
 		return;
 	}
 
@@ -1240,7 +1239,7 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 
 	if (mapped_buffer->user_mapped == 0) {
 		nvgpu_mutex_release(&vm->update_gmmu_lock);
-		gk20a_err(d, "addr already unmapped from user 0x%llx", offset);
+		nvgpu_err(g, "addr already unmapped from user 0x%llx", offset);
 		return;
 	}
 
@@ -1284,7 +1283,7 @@ u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
 
 	offset = nvgpu_alloc(vma, size);
 	if (!offset) {
-		gk20a_err(dev_from_vm(vm),
+		nvgpu_err(vm->mm->g,
 			  "%s oom: sz=0x%llx", vma->name, size);
 		return 0;
 	}
@@ -1405,14 +1404,13 @@ static int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
 {
 	bool kind_compressible;
 	struct gk20a *g = gk20a_from_vm(vm);
-	struct device *d = dev_from_gk20a(g);
 	int ctag_granularity = g->ops.fb.compression_page_size(g);
 
 	if (unlikely(bfr->kind_v == gmmu_pte_kind_invalid_v()))
 		bfr->kind_v = gmmu_pte_kind_pitch_v();
 
 	if (unlikely(!gk20a_kind_is_supported(bfr->kind_v))) {
-		gk20a_err(d, "kind 0x%x not supported", bfr->kind_v);
+		nvgpu_err(g, "kind 0x%x not supported", bfr->kind_v);
 		return -EINVAL;
 	}
 
@@ -1423,7 +1421,7 @@ static int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
 		bfr->uc_kind_v = gk20a_get_uncompressed_kind(bfr->kind_v);
 		if (unlikely(bfr->uc_kind_v == gmmu_pte_kind_invalid_v())) {
 			/* shouldn't happen, but it is worth cross-checking */
-			gk20a_err(d, "comptag kind 0x%x can't be"
+			nvgpu_err(g, "comptag kind 0x%x can't be"
 				   " downgraded to uncompressed kind",
 				   bfr->kind_v);
 			return -EINVAL;
@@ -1432,9 +1430,6 @@ static int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
 	/* comptags only supported for suitable kinds, 128KB pagesize */
 	if (kind_compressible &&
 	    vm->gmmu_page_sizes[pgsz_idx] < g->ops.fb.compressible_page_size(g)) {
-		/*
-		gk20a_warn(d, "comptags specified"
-		" but pagesize being used doesn't support it");*/
 		/* it is safe to fall back to uncompressed as
 		   functionality is not harmed */
 		bfr->kind_v = bfr->uc_kind_v;
@@ -1453,19 +1448,19 @@ static int validate_fixed_buffer(struct vm_gk20a *vm,
 				 u64 map_offset, u64 map_size,
 				 struct vm_reserved_va_node **pva_node)
 {
-	struct device *dev = dev_from_vm(vm);
+	struct gk20a *g = vm->mm->g;
 	struct vm_reserved_va_node *va_node;
 	struct mapped_buffer_node *buffer;
 	u64 map_end = map_offset + map_size;
 
 	/* can wrap around with insane map_size; zero is disallowed too */
 	if (map_end <= map_offset) {
-		gk20a_warn(dev, "fixed offset mapping with invalid map_size");
+		nvgpu_warn(g, "fixed offset mapping with invalid map_size");
 		return -EINVAL;
 	}
 
 	if (map_offset & (vm->gmmu_page_sizes[bfr->pgsz_idx] - 1)) {
-		gk20a_err(dev, "map offset must be buffer page size aligned 0x%llx",
+		nvgpu_err(g, "map offset must be buffer page size aligned 0x%llx",
 			  map_offset);
 		return -EINVAL;
 	}
@@ -1474,13 +1469,13 @@ static int validate_fixed_buffer(struct vm_gk20a *vm,
 	 * userspace-managed address spaces */
 	va_node = addr_to_reservation(vm, map_offset);
 	if (!va_node && !vm->userspace_managed) {
-		gk20a_warn(dev, "fixed offset mapping without space allocation");
+		nvgpu_warn(g, "fixed offset mapping without space allocation");
 		return -EINVAL;
 	}
 
 	/* Mapped area should fit inside va, if there's one */
 	if (va_node && map_end > va_node->vaddr_start + va_node->size) {
-		gk20a_warn(dev, "fixed offset mapping size overflows va node");
+		nvgpu_warn(g, "fixed offset mapping size overflows va node");
 		return -EINVAL;
 	}
 
@@ -1490,7 +1485,7 @@ static int validate_fixed_buffer(struct vm_gk20a *vm,
 	buffer = find_mapped_buffer_less_than_locked(
 		vm->mapped_buffers, map_offset + map_size);
 	if (buffer && buffer->addr + buffer->size > map_offset) {
-		gk20a_warn(dev, "overlapping buffer map requested");
+		nvgpu_warn(g, "overlapping buffer map requested");
 		return -EINVAL;
 	}
 
@@ -1517,7 +1512,6 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 {
 	int err = 0;
 	bool allocated = false;
-	struct device *d = dev_from_vm(vm);
 	struct gk20a *g = gk20a_from_vm(vm);
 	int ctag_granularity = g->ops.fb.compression_page_size(g);
 	u32 ctag_lines = DIV_ROUND_UP_ULL(size, ctag_granularity);
@@ -1527,7 +1521,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 		map_offset = gk20a_vm_alloc_va(vm, size,
 					  pgsz_idx);
 		if (!map_offset) {
-			gk20a_err(d, "failed to allocate va space");
+			nvgpu_err(g, "failed to allocate va space");
 			err = -ENOMEM;
 			goto fail_alloc;
 		}
@@ -1563,7 +1557,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 				      priv,
 				      aperture);
 	if (err) {
-		gk20a_err(d, "failed to update ptes on map");
+		nvgpu_err(g, "failed to update ptes on map");
 		goto fail_validate;
 	}
 
@@ -1577,7 +1571,7 @@ fail_validate:
 	if (allocated)
 		gk20a_vm_free_va(vm, map_offset, size, pgsz_idx);
 fail_alloc:
-	gk20a_err(d, "%s: failed with err=%d\n", __func__, err);
+	nvgpu_err(g, "%s: failed with err=%d\n", __func__, err);
 	return 0;
 }
 
@@ -1596,8 +1590,7 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 	if (va_allocated) {
 		err = gk20a_vm_free_va(vm, vaddr, size, pgsz_idx);
 		if (err) {
-			dev_err(dev_from_vm(vm),
-				"failed to free va");
+			nvgpu_err(g, "failed to free va");
 			return;
 		}
 	}
@@ -1614,8 +1607,7 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 				sparse, 0,
 				APERTURE_INVALID); /* don't care for unmap */
 	if (err)
-		dev_err(dev_from_vm(vm),
-			"failed to update gmmu ptes on unmap");
+		nvgpu_err(g, "failed to update gmmu ptes on unmap");
 
 	/* flush l2 so any dirty lines are written out *now*.
 	 *  also as we could potentially be switching this buffer
@@ -1647,7 +1639,7 @@ static enum nvgpu_aperture gk20a_dmabuf_aperture(struct gk20a *g,
 	} else if (WARN_ON(buf_owner == g && !g->mm.vidmem_is_vidmem)) {
 		/* Looks like our video memory, but this gpu doesn't support
 		 * it. Warn about a bug and bail out */
-		gk20a_warn(dev_from_gk20a(g),
+		nvgpu_warn(g,
 			"dmabuf is our vidmem but we don't have local vidmem");
 		return APERTURE_INVALID;
 	} else if (buf_owner != g) {
@@ -1860,7 +1852,7 @@ int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 		if (!g->mm.vidmem.cleared) {
 			err = gk20a_vidmem_clear_all(g);
 			if (err) {
-				gk20a_err(g->dev,
+				nvgpu_err(g,
 				          "failed to clear whole vidmem");
 				goto err_kfree;
 			}
@@ -2037,7 +2029,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	if (user_mapped && vm->userspace_managed &&
 	    !(flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)) {
-		gk20a_err(d,
+		nvgpu_err(g,
 			  "%s: non-fixed-offset mapping not available on userspace managed address spaces",
 			  __func__);
 		return -EFAULT;
@@ -2068,7 +2060,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 		 * track the difference between those two cases we have
 		 * to fail the mapping when we run out of SMMU space.
 		 */
-		gk20a_warn(d, "oom allocating tracking buffer");
+		nvgpu_warn(g, "oom allocating tracking buffer");
 		goto clean_up;
 	}
 
@@ -2111,7 +2103,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	err = setup_buffer_kind_and_compression(vm, flags, &bfr, bfr.pgsz_idx);
 	if (unlikely(err)) {
-		gk20a_err(d, "failure setting up kind and compression");
+		nvgpu_err(g, "failure setting up kind and compression");
 		goto clean_up;
 	}
 
@@ -2204,7 +2196,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	/* TBD: check for multiple mapping of same buffer */
 	mapped_buffer = nvgpu_kzalloc(g, sizeof(*mapped_buffer));
 	if (!mapped_buffer) {
-		gk20a_warn(d, "oom allocating tracking buffer");
+		nvgpu_warn(g, "oom allocating tracking buffer");
 		goto clean_up;
 	}
 	mapped_buffer->dmabuf      = dmabuf;
@@ -2230,7 +2222,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 	err = insert_mapped_buffer(vm, mapped_buffer);
 	if (err) {
-		gk20a_err(d, "failed to insert into mapped buffer tree");
+		nvgpu_err(g, "failed to insert into mapped buffer tree");
 		goto clean_up;
 	}
 	inserted = true;
@@ -2274,7 +2266,7 @@ int gk20a_vm_get_compbits_info(struct vm_gk20a *vm,
 			       u32 *flags)
 {
 	struct mapped_buffer_node *mapped_buffer;
-	struct device *d = dev_from_vm(vm);
+	struct gk20a *g = vm->mm->g;
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
@@ -2283,7 +2275,7 @@ int gk20a_vm_get_compbits_info(struct vm_gk20a *vm,
 	if (!mapped_buffer || !mapped_buffer->user_mapped)
 	{
 		nvgpu_mutex_release(&vm->update_gmmu_lock);
-		gk20a_err(d, "%s: bad offset 0x%llx", __func__, mapping_gva);
+		nvgpu_err(g, "%s: bad offset 0x%llx", __func__, mapping_gva);
 		return -EFAULT;
 	}
 
@@ -2316,19 +2308,18 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 {
 	struct mapped_buffer_node *mapped_buffer;
 	struct gk20a *g = gk20a_from_vm(vm);
-	struct device *d = dev_from_vm(vm);
 	const bool fixed_mapping =
 		(flags & NVGPU_AS_MAP_BUFFER_COMPBITS_FLAGS_FIXED_OFFSET) != 0;
 
 	if (vm->userspace_managed && !fixed_mapping) {
-		gk20a_err(d,
+		nvgpu_err(g,
 			  "%s: non-fixed-offset mapping is not available on userspace managed address spaces",
 			  __func__);
 		return -EFAULT;
 	}
 
 	if (fixed_mapping && !vm->userspace_managed) {
-		gk20a_err(d,
+		nvgpu_err(g,
 			  "%s: fixed-offset mapping is available only on userspace managed address spaces",
 			  __func__);
 		return -EFAULT;
@@ -2341,13 +2332,13 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 
 	if (!mapped_buffer || !mapped_buffer->user_mapped) {
 		nvgpu_mutex_release(&vm->update_gmmu_lock);
-		gk20a_err(d, "%s: bad offset 0x%llx", __func__, mapping_gva);
+		nvgpu_err(g, "%s: bad offset 0x%llx", __func__, mapping_gva);
 		return -EFAULT;
 	}
 
 	if (!mapped_buffer->ctags_mappable) {
 		nvgpu_mutex_release(&vm->update_gmmu_lock);
-		gk20a_err(d, "%s: comptags not mappable, offset 0x%llx",
+		nvgpu_err(g, "%s: comptags not mappable, offset 0x%llx",
 			  __func__, mapping_gva);
 		return -EFAULT;
 	}
@@ -2366,7 +2357,7 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 
 		if (!mapped_buffer->ctag_map_win_size) {
 			nvgpu_mutex_release(&vm->update_gmmu_lock);
-			gk20a_err(d,
+			nvgpu_err(g,
 				  "%s: mapping 0x%llx does not have "
 				  "mappable comptags",
 				  __func__, mapping_gva);
@@ -2402,7 +2393,7 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 				 * before before the buffer is
 				 * unmapped */
 				nvgpu_mutex_release(&vm->update_gmmu_lock);
-				gk20a_err(d,
+				nvgpu_err(g,
 					  "%s: comptags cannot be mapped into allocated space",
 					  __func__);
 				return -EINVAL;
@@ -2429,7 +2420,7 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 
 		if (!mapped_buffer->ctag_map_win_addr) {
 			nvgpu_mutex_release(&vm->update_gmmu_lock);
-			gk20a_err(d,
+			nvgpu_err(g,
 				  "%s: failed to map comptags for mapping 0x%llx",
 				  __func__, mapping_gva);
 			return -ENOMEM;
@@ -2437,7 +2428,7 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 	} else if (fixed_mapping && *compbits_win_gva &&
 		   mapped_buffer->ctag_map_win_addr != *compbits_win_gva) {
 		nvgpu_mutex_release(&vm->update_gmmu_lock);
-		gk20a_err(d,
+		nvgpu_err(g,
 			  "%s: re-requesting comptags map into mismatching address. buffer offset 0x"
 			  "%llx, existing comptag map at 0x%llx, requested remap 0x%llx",
 			  __func__, mapping_gva,
@@ -2486,7 +2477,7 @@ static u64 __gk20a_gmmu_map(struct vm_gk20a *vm,
 				aperture);
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 	if (!vaddr) {
-		gk20a_err(dev_from_vm(vm), "failed to allocate va space");
+		nvgpu_err(g, "failed to allocate va space");
 		return 0;
 	}
 
@@ -2553,7 +2544,7 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct nvgpu_mem *mem)
 			&gk20a_fence_out);
 
 		if (err) {
-			gk20a_err(g->dev,
+			nvgpu_err(g,
 				"Failed gk20a_ce_execute_ops[%d]", err);
 			return err;
 		}
@@ -2576,7 +2567,7 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct nvgpu_mem *mem)
 
 		gk20a_fence_put(gk20a_last_fence);
 		if (err)
-			gk20a_err(g->dev,
+			nvgpu_err(g,
 				"fence wait failed for CE execute ops");
 	}
 
@@ -2692,7 +2683,7 @@ int gk20a_get_sgtable(struct device *d, struct sg_table **sgt,
 	int err = 0;
 	*sgt = nvgpu_kzalloc(g, sizeof(struct sg_table));
 	if (!(*sgt)) {
-		dev_err(d, "failed to allocate memory\n");
+		nvgpu_err(g, "failed to allocate memory\n");
 		err = -ENOMEM;
 		goto fail;
 	}
@@ -2700,7 +2691,7 @@ int gk20a_get_sgtable(struct device *d, struct sg_table **sgt,
 			cpuva, iova,
 			size);
 	if (err) {
-		dev_err(d, "failed to create sg table\n");
+		nvgpu_err(g, "failed to create sg table\n");
 		goto fail;
 	}
 	sg_dma_address((*sgt)->sgl) = iova;
@@ -2723,14 +2714,14 @@ int gk20a_get_sgtable_from_pages(struct device *d, struct sg_table **sgt,
 
 	*sgt = nvgpu_kzalloc(g, sizeof(struct sg_table));
 	if (!(*sgt)) {
-		dev_err(d, "failed to allocate memory\n");
+		nvgpu_err(g, "failed to allocate memory\n");
 		err = -ENOMEM;
 		goto fail;
 	}
 	err = sg_alloc_table_from_pages(*sgt, pages,
 			DIV_ROUND_UP(size, PAGE_SIZE), 0, size, GFP_KERNEL);
 	if (err) {
-		dev_err(d, "failed to allocate sg_table\n");
+		nvgpu_err(g, "failed to allocate sg_table\n");
 		goto fail;
 	}
 	sg_dma_address((*sgt)->sgl) = iova;
@@ -3049,7 +3040,7 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 			/* get cpu access to the ptes */
 			err = map_gmmu_pages(g, next_pte);
 			if (err) {
-				gk20a_err(dev_from_vm(vm),
+				nvgpu_err(g,
 					   "couldn't map ptes for update as=%d",
 					   vm_aspace_id(vm));
 				return err;
@@ -3113,7 +3104,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 
 	err = map_gmmu_pages(g, &vm->pdb);
 	if (err) {
-		gk20a_err(dev_from_vm(vm),
+		nvgpu_err(g,
 			   "couldn't map ptes for update as=%d",
 			   vm_aspace_id(vm));
 		return err;
@@ -3284,14 +3275,14 @@ void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer,
 
 void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset)
 {
-	struct device *d = dev_from_vm(vm);
+	struct gk20a *g = vm->mm->g;
 	struct mapped_buffer_node *mapped_buffer;
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	mapped_buffer = find_mapped_buffer_locked(vm->mapped_buffers, offset);
 	if (!mapped_buffer) {
 		nvgpu_mutex_release(&vm->update_gmmu_lock);
-		gk20a_err(d, "invalid addr to unmap 0x%llx", offset);
+		nvgpu_err(g, "invalid addr to unmap 0x%llx", offset);
 		return;
 	}
 
@@ -4195,14 +4186,13 @@ void gk20a_deinit_vm(struct vm_gk20a *vm)
 
 int gk20a_alloc_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block)
 {
-	struct device *dev = dev_from_gk20a(g);
 	int err;
 
 	gk20a_dbg_fn("");
 
 	err = nvgpu_dma_alloc(g, ram_in_alloc_size_v(), inst_block);
 	if (err) {
-		gk20a_err(dev, "%s: memory allocation failed\n", __func__);
+		nvgpu_err(g, "%s: memory allocation failed\n", __func__);
 		return err;
 	}
 
@@ -4462,8 +4452,7 @@ static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 	} while (!nvgpu_timeout_expired(&timeout));
 
 	if (nvgpu_timeout_peek_expired(&timeout))
-		gk20a_warn(dev_from_gk20a(g),
-			"l2_system_invalidate too many retries");
+		nvgpu_warn(g, "l2_system_invalidate too many retries");
 
 	trace_gk20a_mm_l2_invalidate_done(g->name);
 }

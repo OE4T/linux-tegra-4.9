@@ -25,6 +25,7 @@
 #include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/kmem.h>
+#include <nvgpu/log.h>
 
 #include "gk20a.h"
 #include "gr_gk20a.h"
@@ -229,7 +230,7 @@ static int gk20a_dbg_gpu_events_ctrl(struct dbg_session_gk20a *dbg_s,
 
 	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 	if (!ch) {
-		gk20a_err(dev_from_gk20a(dbg_s->g),
+		nvgpu_err(dbg_s->g,
 			   "no channel bound to dbg session\n");
 		return -EINVAL;
 	}
@@ -248,7 +249,7 @@ static int gk20a_dbg_gpu_events_ctrl(struct dbg_session_gk20a *dbg_s,
 		break;
 
 	default:
-		gk20a_err(dev_from_gk20a(dbg_s->g),
+		nvgpu_err(dbg_s->g,
 			   "unrecognized dbg gpu events ctrl cmd: 0x%x",
 			   args->cmd);
 		ret = -EINVAL;
@@ -402,7 +403,7 @@ static int nvgpu_dbg_timeout_enable(struct dbg_session_gk20a *dbg_s,
 		break;
 
 	default:
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			   "unrecognized dbg gpu timeout mode : 0x%x",
 			   timeout_mode);
 		err = -EINVAL;
@@ -742,7 +743,7 @@ static int nvgpu_dbg_gpu_ioctl_read_single_sm_error_state(
 				   write_size);
 		nvgpu_mutex_release(&g->dbg_sessions_lock);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g), "copy_to_user failed!\n");
+			nvgpu_err(g, "copy_to_user failed!\n");
 			return err;
 		}
 
@@ -1099,7 +1100,7 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 		break;
 
 	default:
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			   "unrecognized dbg gpu ioctl cmd: 0x%x",
 			   cmd);
 		err = -ENOTTY;
@@ -1146,14 +1147,13 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 	int err = 0, powergate_err = 0;
 	bool is_pg_disabled = false;
 
-	struct device *dev = dbg_s->dev;
 	struct gk20a *g = dbg_s->g;
 	struct channel_gk20a *ch;
 
 	gk20a_dbg_fn("%d ops, max fragment %d", args->num_ops, g->dbg_regops_tmp_buf_ops);
 
 	if (args->num_ops > g->gpu_characteristics.reg_ops_limit) {
-		gk20a_err(dev, "regops limit exceeded");
+		nvgpu_err(g, "regops limit exceeded");
 		return -EINVAL;
 	}
 
@@ -1163,25 +1163,25 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 	}
 
 	if (g->dbg_regops_tmp_buf_ops == 0 || !g->dbg_regops_tmp_buf) {
-		gk20a_err(dev, "reg ops work buffer not allocated");
+		nvgpu_err(g, "reg ops work buffer not allocated");
 		return -ENODEV;
 	}
 
 	if (!dbg_s->id) {
-		gk20a_err(dev, "can't call reg_ops on an unbound debugger session");
+		nvgpu_err(g, "can't call reg_ops on an unbound debugger session");
 		return -EINVAL;
 	}
 
 	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 	if (!dbg_s->is_profiler && !ch) {
-		gk20a_err(dev, "bind a channel before regops for a debugging session");
+		nvgpu_err(g, "bind a channel before regops for a debugging session");
 		return -EINVAL;
 	}
 
 	/* be sure that ctx info is in place */
 	if (!gk20a_gpu_is_virtual(dbg_s->dev) &&
 		!gr_context_info_available(dbg_s, &g->gr)) {
-		gk20a_err(dev, "gr context data not available\n");
+		nvgpu_err(g, "gr context data not available\n");
 		return -ENODEV;
 	}
 
@@ -1221,7 +1221,7 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 
 			if (copy_from_user(g->dbg_regops_tmp_buf,
 					   fragment, fragment_size)) {
-				dev_err(dev, "copy_from_user failed!");
+				nvgpu_err(g, "copy_from_user failed!");
 				err = -EFAULT;
 				break;
 			}
@@ -1233,7 +1233,7 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 
 			if (copy_to_user(fragment, g->dbg_regops_tmp_buf,
 					 fragment_size)) {
-				dev_err(dev, "copy_to_user failed!");
+				nvgpu_err(g, "copy_to_user failed!");
 				err = -EFAULT;
 				break;
 			}
@@ -1255,7 +1255,7 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 		err = powergate_err;
 
 	if (err)
-		gk20a_err(dev, "dbg regops failed");
+		nvgpu_err(g, "dbg regops failed");
 
 	return err;
 }
@@ -1350,7 +1350,7 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s, u32  powermode)
 		break;
 
 	default:
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			   "unrecognized dbg gpu powergate mode: 0x%x",
 			   powermode);
 		err = -ENOTTY;
@@ -1388,7 +1388,7 @@ static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 
 	err = gk20a_busy(g);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g), "failed to poweron");
+		nvgpu_err(g, "failed to poweron");
 		return err;
 	}
 
@@ -1397,7 +1397,7 @@ static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 
 	ch_gk20a = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 	if (!ch_gk20a) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "no bound channel for smpc ctxsw mode update\n");
 		err = -EINVAL;
 		goto clean_up;
@@ -1406,7 +1406,7 @@ static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	err = g->ops.gr.update_smpc_ctxsw_mode(g, ch_gk20a,
 				args->mode == NVGPU_DBG_GPU_SMPC_CTXSW_MODE_CTXSW);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "error (%d) during smpc ctxsw mode update\n", err);
 		goto clean_up;
 	}
@@ -1434,13 +1434,13 @@ static int nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	 * cleaned up.
 	 */
 	if (!dbg_s->has_profiler_reservation) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"session doesn't have a valid reservation");
 	}
 
 	err = gk20a_busy(g);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g), "failed to poweron");
+		nvgpu_err(g, "failed to poweron");
 		return err;
 	}
 
@@ -1449,7 +1449,7 @@ static int nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 
 	ch_gk20a = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 	if (!ch_gk20a) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "no bound channel for pm ctxsw mode update\n");
 		err = -EINVAL;
 		goto clean_up;
@@ -1458,7 +1458,7 @@ static int nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	err = g->ops.gr.update_hwpm_ctxsw_mode(g, ch_gk20a,
 				args->mode == NVGPU_DBG_GPU_HWPM_CTXSW_MODE_CTXSW);
 	if (err)
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "error (%d) during pm ctxsw mode update\n", err);
 
 	/* gk20a would require a WAR to set the core PM_ENABLE bit, not
@@ -1486,7 +1486,7 @@ static int nvgpu_dbg_gpu_ioctl_suspend_resume_sm(
 
 	err = gk20a_busy(g);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g), "failed to poweron");
+		nvgpu_err(g, "failed to poweron");
 		return err;
 	}
 
@@ -1495,7 +1495,7 @@ static int nvgpu_dbg_gpu_ioctl_suspend_resume_sm(
 	/* Suspend GPU context switching */
 	err = gr_gk20a_disable_ctxsw(g);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g), "unable to stop gr ctxsw");
+		nvgpu_err(g, "unable to stop gr ctxsw");
 		/* this should probably be ctx-fatal... */
 		goto clean_up;
 	}
@@ -1512,7 +1512,7 @@ static int nvgpu_dbg_gpu_ioctl_suspend_resume_sm(
 
 	err = gr_gk20a_enable_ctxsw(g);
 	if (err)
-		gk20a_err(dev_from_gk20a(g), "unable to restart ctxsw!\n");
+		nvgpu_err(g, "unable to restart ctxsw!\n");
 
 clean_up:
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
@@ -1544,7 +1544,7 @@ static int nvgpu_ioctl_allocate_profiler_object(
 	else {
 		prof_obj->ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 		if (prof_obj->ch == NULL) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"bind a channel for dbg session");
 			nvgpu_kfree(g, prof_obj);
 			err = -EINVAL;
@@ -1582,7 +1582,7 @@ static int nvgpu_ioctl_free_profiler_object(
 				dbg_profiler_object_data, prof_obj_entry) {
 		if (prof_obj->prof_handle == args->profiler_handle) {
 			if (prof_obj->session_id != dbg_s->id) {
-				gk20a_err(dev_from_gk20a(g),
+				nvgpu_err(g,
 						"invalid handle %x",
 						args->profiler_handle);
 				err = -EINVAL;
@@ -1598,7 +1598,7 @@ static int nvgpu_ioctl_free_profiler_object(
 		}
 	}
 	if (!obj_found) {
-		gk20a_err(dev_from_gk20a(g), "profiler %x not found",
+		nvgpu_err(g, "profiler %x not found",
 							args->profiler_handle);
 		err = -EINVAL;
 	}
@@ -1618,7 +1618,7 @@ static struct dbg_profiler_object_data *find_matching_prof_obj(
 				dbg_profiler_object_data, prof_obj_entry) {
 		if (prof_obj->prof_handle == profiler_handle) {
 			if (prof_obj->session_id != dbg_s->id) {
-				gk20a_err(dev_from_gk20a(g),
+				nvgpu_err(g,
 						"invalid handle %x",
 						profiler_handle);
 				return NULL;
@@ -1667,7 +1667,7 @@ static void nvgpu_release_profiler_reservation(struct dbg_session_gk20a *dbg_s,
 
 	g->profiler_reservation_count--;
 	if (g->profiler_reservation_count < 0)
-		gk20a_err(dev_from_gk20a(g), "Negative reservation count!");
+		nvgpu_err(g, "Negative reservation count!");
 	dbg_s->has_profiler_reservation = false;
 	prof_obj->has_reservation = false;
 	if (prof_obj->ch == NULL)
@@ -1684,7 +1684,7 @@ static int nvgpu_profiler_reserve_acquire(struct dbg_session_gk20a *dbg_s,
 	gk20a_dbg_fn("%s profiler_handle = %x", g->name, profiler_handle);
 
 	if (g->profiler_reservation_count < 0) {
-		gk20a_err(dev_from_gk20a(g), "Negative reservation count!");
+		nvgpu_err(g, "Negative reservation count!");
 		return -EINVAL;
 	}
 
@@ -1694,7 +1694,7 @@ static int nvgpu_profiler_reserve_acquire(struct dbg_session_gk20a *dbg_s,
 	my_prof_obj = find_matching_prof_obj(dbg_s, profiler_handle);
 
 	if (!my_prof_obj) {
-		gk20a_err(dev_from_gk20a(g), "object not found");
+		nvgpu_err(g, "object not found");
 		err = -EINVAL;
 		goto exit;
 	}
@@ -1711,7 +1711,7 @@ static int nvgpu_profiler_reserve_acquire(struct dbg_session_gk20a *dbg_s,
 		 */
 		if (!g->ops.dbg_session_ops.check_and_set_global_reservation(
 							dbg_s, my_prof_obj)) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"global reserve: have existing reservation");
 			err =  -EBUSY;
 		}
@@ -1719,7 +1719,7 @@ static int nvgpu_profiler_reserve_acquire(struct dbg_session_gk20a *dbg_s,
 		/* If there's a global reservation,
 		 * we can't take a per-context one.
 		 */
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"per-ctxt reserve: global reservation in effect");
 		err = -EBUSY;
 	} else if (gk20a_is_channel_marked_as_tsg(my_prof_obj->ch)) {
@@ -1732,7 +1732,7 @@ static int nvgpu_profiler_reserve_acquire(struct dbg_session_gk20a *dbg_s,
 				dbg_profiler_object_data, prof_obj_entry) {
 			if (prof_obj->has_reservation &&
 					(prof_obj->ch->tsgid == my_tsgid)) {
-				gk20a_err(dev_from_gk20a(g),
+				nvgpu_err(g,
 				    "per-ctxt reserve (tsg): already reserved");
 				err = -EBUSY;
 				goto exit;
@@ -1742,7 +1742,7 @@ static int nvgpu_profiler_reserve_acquire(struct dbg_session_gk20a *dbg_s,
 		if (!g->ops.dbg_session_ops.check_and_set_context_reservation(
 							dbg_s, my_prof_obj)) {
 			/* Another guest OS has the global reservation */
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"per-ctxt reserve: global reservation in effect");
 			err = -EBUSY;
 		}
@@ -1756,7 +1756,7 @@ static int nvgpu_profiler_reserve_acquire(struct dbg_session_gk20a *dbg_s,
 				dbg_profiler_object_data, prof_obj_entry) {
 			if (prof_obj->has_reservation &&
 						(prof_obj->ch == my_ch)) {
-				gk20a_err(dev_from_gk20a(g),
+				nvgpu_err(g,
 				    "per-ctxt reserve (ch): already reserved");
 				err = -EBUSY;
 				goto exit;
@@ -1766,7 +1766,7 @@ static int nvgpu_profiler_reserve_acquire(struct dbg_session_gk20a *dbg_s,
 		if (!g->ops.dbg_session_ops.check_and_set_context_reservation(
 							dbg_s, my_prof_obj)) {
 			/* Another guest OS has the global reservation */
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"per-ctxt reserve: global reservation in effect");
 			err = -EBUSY;
 		}
@@ -1791,7 +1791,7 @@ static int nvgpu_profiler_reserve_release(struct dbg_session_gk20a *dbg_s,
 	prof_obj = find_matching_prof_obj(dbg_s, profiler_handle);
 
 	if (!prof_obj) {
-		gk20a_err(dev_from_gk20a(g), "object not found");
+		nvgpu_err(g, "object not found");
 		err = -EINVAL;
 		goto exit;
 	}
@@ -1799,7 +1799,7 @@ static int nvgpu_profiler_reserve_release(struct dbg_session_gk20a *dbg_s,
 	if (prof_obj->has_reservation)
 		g->ops.dbg_session_ops.release_profiler_reservation(dbg_s, prof_obj);
 	else {
-		gk20a_err(dev_from_gk20a(g), "No reservation found");
+		nvgpu_err(g, "No reservation found");
 		err = -EINVAL;
 		goto exit;
 	}
@@ -1854,7 +1854,7 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 
 	err = gk20a_busy(g);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g), "failed to poweron");
+		nvgpu_err(g, "failed to poweron");
 		goto fail_unmap;
 	}
 
@@ -1895,7 +1895,7 @@ static int gk20a_perfbuf_unmap(struct dbg_session_gk20a *dbg_s,
 
 	err = gk20a_busy(g);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g), "failed to poweron");
+		nvgpu_err(g, "failed to poweron");
 		return err;
 	}
 

@@ -20,6 +20,8 @@
 
 #include "gk20a.h"
 
+#include <nvgpu/log.h>
+
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pri_ringmaster_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pri_ringstation_sys_gk20a.h>
@@ -121,6 +123,5 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	} while (cmd != pri_ringmaster_command_cmd_no_cmd_v() && --retry);
 
 	if (retry <= 0)
-		gk20a_warn(dev_from_gk20a(g),
-			"priv ringmaster cmd ack too many retries");
+		nvgpu_warn(g, "priv ringmaster cmd ack too many retries");
 }

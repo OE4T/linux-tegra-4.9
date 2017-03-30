@@ -31,6 +31,8 @@
 #include "clk_gk20a.h"
 #include "gk20a_scale.h"
 
+#include <nvgpu/log.h>
+
 /*
  * gk20a_scale_qos_notify()
  *
@@ -59,8 +61,8 @@ int gk20a_scale_qos_notify(struct notifier_block *nb,
 		pm_qos_read_max_bound(PM_QOS_GPU_FREQ_BOUNDS) * 1000;
 
 	if (profile->qos_min_freq > profile->qos_max_freq) {
-		gk20a_err(g->dev,
-			"QoS: setting invalid limit, min_freq=%lu max_freq=%lu\n",
+		nvgpu_err(g,
+			"QoS: setting invalid limit, min_freq=%lu max_freq=%lu",
 			profile->qos_min_freq, profile->qos_max_freq);
 		profile->qos_min_freq = profile->qos_max_freq;
 	}

@@ -20,6 +20,7 @@
 
 #include <nvgpu/semaphore.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/log.h>
 
 #include "channel_sync_gk20a.h"
 #include "gk20a.h"
@@ -65,8 +66,7 @@ static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
 	int err = 0;
 
 	if (!nvhost_syncpt_is_valid_pt_ext(sp->host1x_pdev, id)) {
-		dev_warn(dev_from_gk20a(c->g),
-				"invalid wait id in gpfifo submit, elided");
+		nvgpu_warn(c->g, "invalid wait id in gpfifo submit, elided");
 		return 0;
 	}
 
@@ -75,7 +75,7 @@ static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
 
 	err = gk20a_channel_alloc_priv_cmdbuf(c, 4, wait_cmd);
 	if (err) {
-		gk20a_err(dev_from_gk20a(c->g),
+		nvgpu_err(c->g,
 				"not enough priv cmd buffer space");
 		return err;
 	}
@@ -131,7 +131,7 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 
 	err = gk20a_channel_alloc_priv_cmdbuf(c, 4 * num_wait_cmds, wait_cmd);
 	if (err) {
-		gk20a_err(dev_from_gk20a(c->g),
+		nvgpu_err(c->g,
 				"not enough priv cmd buffer space");
 		sync_fence_put(sync_fence);
 		return err;
@@ -360,7 +360,7 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 						c->hw_chid, syncpt_name);
 	if (!sp->id) {
 		nvgpu_kfree(c->g, sp);
-		gk20a_err(c->g->dev, "failed to get free syncpt");
+		nvgpu_err(c->g, "failed to get free syncpt");
 		return NULL;
 	}
 
@@ -501,7 +501,7 @@ static void gk20a_channel_semaphore_launcher(
 			fence, fence->name);
 	err = sync_fence_wait(fence, -1);
 	if (err < 0)
-		dev_err(g->dev, "error waiting pre-fence: %d\n", err);
+		nvgpu_err(g, "error waiting pre-fence: %d\n", err);
 
 	gk20a_dbg_info(
 		  "wait completed (%d) for fence %p '%s', triggering gpu work",
@@ -594,8 +594,8 @@ static int gk20a_channel_semaphore_wait_syncpt(
 {
 	struct gk20a_channel_semaphore *sema =
 		container_of(s, struct gk20a_channel_semaphore, ops);
-	struct device *dev = dev_from_gk20a(sema->c->g);
-	gk20a_err(dev, "trying to use syncpoint synchronization");
+	struct gk20a *g = sema->c->g;
+	nvgpu_err(g, "trying to use syncpoint synchronization");
 	return -ENODEV;
 }
 
@@ -707,7 +707,7 @@ static int gk20a_channel_semaphore_wait_fd(
 
 	err = gk20a_channel_alloc_priv_cmdbuf(c, 8, wait_cmd);
 	if (err) {
-		gk20a_err(dev_from_gk20a(c->g),
+		nvgpu_err(c->g,
 				"not enough priv cmd buffer space");
 		goto clean_up_sync_fence;
 	}
@@ -724,7 +724,7 @@ static int gk20a_channel_semaphore_wait_fd(
 	w->ch = c;
 	w->sema = nvgpu_semaphore_alloc(c);
 	if (!w->sema) {
-		gk20a_err(dev_from_gk20a(c->g), "ran out of semaphores");
+		nvgpu_err(c->g, "ran out of semaphores");
 		err = -ENOMEM;
 		goto clean_up_worker;
 	}
@@ -779,7 +779,7 @@ clean_up_sync_fence:
 	sync_fence_put(sync_fence);
 	return err;
 #else
-	gk20a_err(dev_from_gk20a(c->g),
+	nvgpu_err(c->g,
 		  "trying to use sync fds with CONFIG_SYNC disabled");
 	return -ENODEV;
 #endif
@@ -801,7 +801,7 @@ static int __gk20a_channel_semaphore_incr(
 
 	semaphore = nvgpu_semaphore_alloc(c);
 	if (!semaphore) {
-		gk20a_err(dev_from_gk20a(c->g),
+		nvgpu_err(c->g,
 				"ran out of semaphores");
 		return -ENOMEM;
 	}
@@ -809,7 +809,7 @@ static int __gk20a_channel_semaphore_incr(
 	incr_cmd_size = 10;
 	err = gk20a_channel_alloc_priv_cmdbuf(c, incr_cmd_size, incr_cmd);
 	if (err) {
-		gk20a_err(dev_from_gk20a(c->g),
+		nvgpu_err(c->g,
 				"not enough priv cmd buffer space");
 		goto clean_up_sema;
 	}
@@ -889,7 +889,7 @@ static int gk20a_channel_semaphore_incr_user(
 #else
 	struct gk20a_channel_semaphore *sema =
 		container_of(s, struct gk20a_channel_semaphore, ops);
-	gk20a_err(dev_from_gk20a(sema->c->g),
+	nvgpu_err(sema->c->g,
 		  "trying to use sync fds with CONFIG_SYNC disabled");
 	return -ENODEV;
 #endif

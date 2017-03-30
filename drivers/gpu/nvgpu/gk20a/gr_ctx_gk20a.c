@@ -23,6 +23,7 @@
 
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/log.h>
 
 #include "gk20a.h"
 #include "gr_ctx_gk20a.h"
@@ -111,7 +112,6 @@ static bool gr_gk20a_is_firmware_defined(void)
 
 static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 {
-	struct device *d = dev_from_gk20a(g);
 	const struct firmware *netlist_fw;
 	struct netlist_image *netlist = NULL;
 	char name[MAX_NETLIST_NAME];
@@ -135,13 +135,13 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 
 	for (; net < max; net++) {
 		if (g->ops.gr_ctx.get_netlist_name(g, net, name) != 0) {
-			gk20a_warn(d, "invalid netlist index %d", net);
+			nvgpu_warn(g, "invalid netlist index %d", net);
 			continue;
 		}
 
 		netlist_fw = nvgpu_request_firmware(g, name, 0);
 		if (!netlist_fw) {
-			gk20a_warn(d, "failed to load netlist %s", name);
+			nvgpu_warn(g, "failed to load netlist %s", name);
 			continue;
 		}
 
@@ -436,7 +436,7 @@ done:
 		gk20a_dbg_info("netlist image %s loaded", name);
 		return 0;
 	} else {
-		gk20a_err(d, "failed to load netlist image!!");
+		nvgpu_err(g, "failed to load netlist image!!");
 		return err;
 	}
 }

@@ -31,6 +31,8 @@
 #include "gk20a.h"
 #include "gr_gk20a.h"
 
+#include <nvgpu/log.h>
+
 #include <nvgpu/hw/gk20a/hw_ctxsw_prog_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
 
@@ -156,7 +158,7 @@ static int gk20a_fecs_trace_hash_add(struct gk20a *g, u32 context_ptr, pid_t pid
 
 	he = nvgpu_kzalloc(g, sizeof(*he));
 	if (unlikely(!he)) {
-		gk20a_warn(dev_from_gk20a(g),
+		nvgpu_warn(g,
 			"can't alloc new hash entry for context_ptr=%x pid=%d",
 			context_ptr, pid);
 		return -ENOMEM;
@@ -255,7 +257,7 @@ static int gk20a_fecs_trace_ring_read(struct gk20a *g, int index)
 		"consuming record trace=%p read=%d record=%p", trace, index, r);
 
 	if (unlikely(!gk20a_fecs_trace_is_valid_record(r))) {
-		gk20a_warn(dev_from_gk20a(g),
+		nvgpu_warn(g,
 			"trace=%p read=%d record=%p magic_lo=%08x magic_hi=%08x (invalid)",
 			trace, index, r, r->magic_lo, r->magic_hi);
 		return -EINVAL;
@@ -342,7 +344,7 @@ static int gk20a_fecs_trace_poll(struct gk20a *g)
 	nvgpu_mutex_acquire(&trace->poll_lock);
 	write = gk20a_fecs_trace_get_write_index(g);
 	if (unlikely((write < 0) || (write >= GK20A_FECS_TRACE_NUM_RECORDS))) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"failed to acquire write index, write=%d", write);
 		err = write;
 		goto done;
@@ -571,7 +573,7 @@ static int gk20a_fecs_trace_init(struct gk20a *g)
 
 	trace = nvgpu_kzalloc(g, sizeof(struct gk20a_fecs_trace));
 	if (!trace) {
-		gk20a_warn(dev_from_gk20a(g), "failed to allocate fecs_trace");
+		nvgpu_warn(g, "failed to allocate fecs_trace");
 		return -ENOMEM;
 	}
 	g->fecs_trace = trace;
@@ -586,7 +588,7 @@ static int gk20a_fecs_trace_init(struct gk20a *g)
 	BUG_ON(!is_power_of_2(GK20A_FECS_TRACE_NUM_RECORDS));
 	err = gk20a_fecs_trace_alloc_ring(g);
 	if (err) {
-		gk20a_warn(dev_from_gk20a(g), "failed to allocate FECS ring");
+		nvgpu_warn(g, "failed to allocate FECS ring");
 		goto clean_hash_lock;
 	}
 
@@ -754,7 +756,7 @@ static int gk20a_fecs_trace_enable(struct gk20a *g)
 
 	task = kthread_run(gk20a_fecs_trace_periodic_polling, g, __func__);
 	if (unlikely(IS_ERR(task))) {
-		gk20a_warn(dev_from_gk20a(g),
+		nvgpu_warn(g,
 				"failed to create FECS polling task");
 		return PTR_ERR(task);
 	}

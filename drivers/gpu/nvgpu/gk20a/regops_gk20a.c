@@ -25,7 +25,7 @@
 #include "dbg_gpu_gk20a.h"
 #include "regops_gk20a.h"
 
-
+#include <nvgpu/log.h>
 
 static int regop_bsearch_range_cmp(const void *pkey, const void *pelem)
 {
@@ -408,7 +408,7 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 			      ops, num_ops);
 
 	if (!ok) {
-		dev_err(dbg_s->dev, "invalid op(s)");
+		nvgpu_err(g, "invalid op(s)");
 		err = -EINVAL;
 		/* each op has its own err/status */
 		goto clean_up;
@@ -527,7 +527,6 @@ static int validate_reg_op_info(struct dbg_session_gk20a *dbg_s,
 		break;
 	default:
 		op->status |= REGOP(STATUS_UNSUPPORTED_OP);
-		/*gk20a_err(dbg_s->dev, "Invalid regops op %d!", op->op);*/
 		err = -EINVAL;
 		break;
 	}
@@ -546,7 +545,6 @@ static int validate_reg_op_info(struct dbg_session_gk20a *dbg_s,
 	*/
 	default:
 		op->status |= REGOP(STATUS_INVALID_TYPE);
-		/*gk20a_err(dbg_s->dev, "Invalid regops type %d!", op->type);*/
 		err = -EINVAL;
 		break;
 	}
@@ -593,7 +591,7 @@ static bool check_whitelists(struct dbg_session_gk20a *dbg_s,
 	} else if (op->type == REGOP(TYPE_GR_CTX)) {
 		/* it's a context-relative op */
 		if (!ch) {
-			gk20a_err(dbg_s->dev, "can't perform ctx regop unless bound");
+			nvgpu_err(dbg_s->g, "can't perform ctx regop unless bound");
 			op->status = REGOP(STATUS_UNSUPPORTED_OP);
 			return valid;
 		}
@@ -637,7 +635,7 @@ static int validate_reg_op_offset(struct dbg_session_gk20a *dbg_s,
 
 	/* support only 24-bit 4-byte aligned offsets */
 	if (offset & 0xFF000003) {
-		gk20a_err(dbg_s->dev, "invalid regop offset: 0x%x\n", offset);
+		nvgpu_err(dbg_s->g, "invalid regop offset: 0x%x\n", offset);
 		op->status |= REGOP(STATUS_INVALID_OFFSET);
 		return -EINVAL;
 	}
@@ -675,7 +673,7 @@ static int validate_reg_op_offset(struct dbg_session_gk20a *dbg_s,
 	}
 
 	if (!valid) {
-		gk20a_err(dbg_s->dev, "invalid regop offset: 0x%x\n", offset);
+		nvgpu_err(dbg_s->g, "invalid regop offset: 0x%x\n", offset);
 		op->status |= REGOP(STATUS_INVALID_OFFSET);
 		return -EINVAL;
 	}

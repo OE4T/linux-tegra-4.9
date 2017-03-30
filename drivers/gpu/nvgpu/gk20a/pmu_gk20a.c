@@ -27,6 +27,7 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>
+#include <nvgpu/log.h>
 
 #include "gk20a.h"
 #include "gr_gk20a.h"
@@ -314,7 +315,7 @@ static void printtrace(struct pmu_gk20a *pmu)
 	trace = (char *)tracebuffer;
 	trace1 = (u32 *)tracebuffer;
 
-	gk20a_err(dev_from_gk20a(g), "Dump pmutrace");
+	nvgpu_err(g, "Dump pmutrace");
 	for (i = 0; i < GK20A_PMU_TRACE_BUFSIZE; i += 0x40) {
 		for (j = 0; j < 0x40; j++)
 			if (trace1[(i / 4) + j])
@@ -335,7 +336,7 @@ static void printtrace(struct pmu_gk20a *pmu)
 			m += k + 2;
 		}
 		scnprintf((buf + count), 0x40, "%s", (trace+i+20+m));
-		gk20a_err(dev_from_gk20a(g), "%s", buf);
+		nvgpu_err(g, "%s", buf);
 	}
 	nvgpu_kfree(g, tracebuffer);
 }
@@ -2184,8 +2185,7 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 			get_pmu_sequence_out_alloc_ptr_v0;
 		break;
 	default:
-		gk20a_err(dev_from_gk20a(gk20a_from_pmu(pmu)),
-		"PMU code version not supported version: %d\n",
+		nvgpu_err(g, "PMU code version not supported version: %d\n",
 			pmu->desc->app_version);
 		err = -EINVAL;
 		goto fail_pmu_seq;
@@ -2217,14 +2217,12 @@ void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
 	u32 *dst_u32 = (u32*)dst;
 
 	if (size == 0) {
-		gk20a_err(dev_from_gk20a(g),
-			"size is zero");
+		nvgpu_err(g, "size is zero");
 		return;
 	}
 
 	if (src & 0x3) {
-		gk20a_err(dev_from_gk20a(g),
-			"src (0x%08x) not 4-byte aligned", src);
+		nvgpu_err(g, "src (0x%08x) not 4-byte aligned", src);
 		return;
 	}
 
@@ -2263,14 +2261,12 @@ void pmu_copy_to_dmem(struct pmu_gk20a *pmu,
 	u32 *src_u32 = (u32*)src;
 
 	if (size == 0) {
-		gk20a_err(dev_from_gk20a(g),
-			"size is zero");
+		nvgpu_err(g, "size is zero");
 		return;
 	}
 
 	if (dst & 0x3) {
-		gk20a_err(dev_from_gk20a(g),
-			"dst (0x%08x) not 4-byte aligned", dst);
+		nvgpu_err(g, "dst (0x%08x) not 4-byte aligned", dst);
 		return;
 	}
 
@@ -2300,8 +2296,7 @@ void pmu_copy_to_dmem(struct pmu_gk20a *pmu,
 	data = gk20a_readl(g, pwr_falcon_dmemc_r(port)) & addr_mask;
 	size = ALIGN(size, 4);
 	if (data != ((dst + size) & addr_mask)) {
-		gk20a_err(dev_from_gk20a(g),
-			"copy failed. bytes written %d, expected %d",
+		nvgpu_err(g, "copy failed. bytes written %d, expected %d",
 			data - dst, size);
 	}
 	nvgpu_mutex_release(&pmu->pmu_copy_lock);
@@ -2432,7 +2427,7 @@ int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 		} while (!nvgpu_timeout_expired(&timeout));
 
 		g->ops.mc.disable(g, mc_enable_pwr_enabled_f());
-		gk20a_err(dev_from_gk20a(g), "Falcon mem scrubbing timeout");
+		nvgpu_err(g, "Falcon mem scrubbing timeout");
 
 		return -ETIMEDOUT;
 	} else {
@@ -2615,8 +2610,7 @@ static int pmu_seq_acquire(struct pmu_gk20a *pmu,
 	index = find_first_zero_bit(pmu->pmu_seq_tbl,
 				sizeof(pmu->pmu_seq_tbl));
 	if (index >= sizeof(pmu->pmu_seq_tbl)) {
-		gk20a_err(dev_from_gk20a(g),
-			"no free sequence available");
+		nvgpu_err(g, "no free sequence available");
 		nvgpu_mutex_release(&pmu->pmu_seq_lock);
 		return -EAGAIN;
 	}
@@ -2787,7 +2781,7 @@ int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token)
 			gk20a_readl(g, pwr_pmu_mutex_id_r()));
 		if (data == pwr_pmu_mutex_id_value_init_v() ||
 		    data == pwr_pmu_mutex_id_value_not_avail_v()) {
-			gk20a_warn(dev_from_gk20a(g),
+			nvgpu_warn(g,
 				"fail to generate mutex token: val 0x%08x",
 				owner);
 			usleep_range(20, 40);
@@ -2844,8 +2838,7 @@ int pmu_mutex_release(struct pmu_gk20a *pmu, u32 id, u32 *token)
 		gk20a_readl(g, pwr_pmu_mutex_r(mutex->index)));
 
 	if (*token != owner) {
-		gk20a_err(dev_from_gk20a(g),
-			"requester 0x%08x NOT match owner 0x%08x",
+		nvgpu_err(g, "requester 0x%08x NOT match owner 0x%08x",
 			*token, owner);
 		return -EINVAL;
 	}
@@ -2953,8 +2946,7 @@ static int pmu_queue_push(struct pmu_gk20a *pmu,
 	gk20a_dbg_fn("");
 
 	if (!queue->opened && queue->oflag == OFLAG_WRITE){
-		gk20a_err(dev_from_gk20a(gk20a_from_pmu(pmu)),
-			"queue not opened for write");
+		nvgpu_err(gk20a_from_pmu(pmu), "queue not opened for write");
 		return -EINVAL;
 	}
 
@@ -2972,8 +2964,7 @@ static int pmu_queue_pop(struct pmu_gk20a *pmu,
 	*bytes_read = 0;
 
 	if (!queue->opened && queue->oflag == OFLAG_READ){
-		gk20a_err(dev_from_gk20a(gk20a_from_pmu(pmu)),
-			"queue not opened for read");
+		nvgpu_err(gk20a_from_pmu(pmu), "queue not opened for read");
 		return -EINVAL;
 	}
 
@@ -2989,7 +2980,7 @@ static int pmu_queue_pop(struct pmu_gk20a *pmu,
 		used = queue->offset + queue->size - tail;
 
 	if (size > used) {
-		gk20a_warn(dev_from_gk20a(gk20a_from_pmu(pmu)),
+		nvgpu_warn(gk20a_from_pmu(pmu),
 			"queue size smaller than request read");
 		size = used;
 	}
@@ -3008,8 +2999,7 @@ static void pmu_queue_rewind(struct pmu_gk20a *pmu,
 	gk20a_dbg_fn("");
 
 	if (!queue->opened) {
-		gk20a_err(dev_from_gk20a(gk20a_from_pmu(pmu)),
-			"queue not opened");
+		nvgpu_err(gk20a_from_pmu(pmu), "queue not opened");
 		return;
 	}
 
@@ -3132,7 +3122,6 @@ static int gk20a_prepare_ucode(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	int err = 0;
-	struct device *d = dev_from_gk20a(g);
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 
@@ -3141,7 +3130,7 @@ static int gk20a_prepare_ucode(struct gk20a *g)
 
 	pmu->fw = nvgpu_request_firmware(g, GK20A_PMU_UCODE_IMAGE, 0);
 	if (!pmu->fw) {
-		gk20a_err(d, "failed to load pmu ucode!!");
+		nvgpu_err(g, "failed to load pmu ucode!!");
 		return err;
 	}
 
@@ -3173,7 +3162,6 @@ static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
-	struct device *d = dev_from_gk20a(g);
 	unsigned int i;
 	int err = 0;
 	u8 *ptr;
@@ -3228,7 +3216,7 @@ static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	err = nvgpu_dma_alloc_map_sys(vm, GK20A_PMU_SEQ_BUF_SIZE,
 			&pmu->seq_buf);
 	if (err) {
-		gk20a_err(d, "failed to allocate memory\n");
+		nvgpu_err(g, "failed to allocate memory\n");
 		goto err_free_seq;
 	}
 
@@ -3245,7 +3233,7 @@ static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 	err = nvgpu_dma_alloc_map(vm, GK20A_PMU_TRACE_BUFSIZE,
 			&pmu->trace_buf);
 	if (err) {
-		gk20a_err(d, "failed to allocate pmu trace buffer\n");
+		nvgpu_err(g, "failed to allocate pmu trace buffer\n");
 		goto err_free_seq_buf;
 	}
 
@@ -3275,7 +3263,7 @@ static void pmu_handle_pg_buf_config_msg(struct gk20a *g, struct pmu_msg *msg,
 
 	gk20a_dbg_pmu("reply PMU_PG_CMD_ID_ENG_BUF_LOAD PMU_PGENG_GR_BUFFER_IDX_FECS");
 	if (status != 0) {
-		gk20a_err(dev_from_gk20a(g), "PGENG cmd aborted");
+		nvgpu_err(g, "PGENG cmd aborted");
 		/* TBD: disable ELPG */
 		return;
 	}
@@ -3283,7 +3271,7 @@ static void pmu_handle_pg_buf_config_msg(struct gk20a *g, struct pmu_msg *msg,
 	pmu->buf_loaded = (eng_buf_stat->status == PMU_PG_MSG_ENG_BUF_LOADED);
 	if ((!pmu->buf_loaded) &&
 	    (pmu->pmu_state == PMU_STATE_LOADING_PG_BUF))
-		gk20a_err(dev_from_gk20a(g), "failed to load PGENG buffer");
+		nvgpu_err(g, "failed to load PGENG buffer");
 	else {
 	  schedule_work(&pmu->pg_init);
 	}
@@ -3571,7 +3559,7 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 	gk20a_dbg_fn("");
 
 	if (status != 0) {
-		gk20a_err(dev_from_gk20a(g), "ELPG cmd aborted");
+		nvgpu_err(g, "ELPG cmd aborted");
 		/* TBD: disable ELPG */
 		return;
 	}
@@ -3615,7 +3603,7 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 		}
 		break;
 	default:
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"unsupported ELPG message : 0x%04x", elpg_msg->msg);
 	}
 
@@ -3630,7 +3618,7 @@ static void pmu_handle_pg_stat_msg(struct gk20a *g, struct pmu_msg *msg,
 	gk20a_dbg_fn("");
 
 	if (status != 0) {
-		gk20a_err(dev_from_gk20a(g), "ELPG cmd aborted");
+		nvgpu_err(g, "ELPG cmd aborted");
 		/* TBD: disable ELPG */
 		return;
 	}
@@ -3769,7 +3757,7 @@ static u8 get_perfmon_id(struct pmu_gk20a *pmu)
 		break;
 #endif
 	default:
-		gk20a_err(g->dev, "no support for %x", ver);
+		nvgpu_err(g, "no support for %x", ver);
 		BUG();
 	}
 
@@ -3837,8 +3825,7 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 		pmu->sample_buffer = nvgpu_alloc(&pmu->dmem,
 						  2 * sizeof(u16));
 	if (!pmu->sample_buffer) {
-		gk20a_err(dev_from_gk20a(g),
-			  "failed to allocate perfmon sample buffer");
+		nvgpu_err(g, "failed to allocate perfmon sample buffer");
 		return -ENOMEM;
 	}
 
@@ -3893,8 +3880,7 @@ static int pmu_process_init_msg(struct pmu_gk20a *pmu,
 	pmu_copy_from_dmem(pmu, tail,
 		(u8 *)&msg->hdr, PMU_MSG_HDR_SIZE, 0);
 	if (msg->hdr.unit_id != PMU_UNIT_INIT) {
-		gk20a_err(dev_from_gk20a(g),
-			"expecting init msg");
+		nvgpu_err(g, "expecting init msg");
 		return -EINVAL;
 	}
 
@@ -3902,8 +3888,7 @@ static int pmu_process_init_msg(struct pmu_gk20a *pmu,
 		(u8 *)&msg->msg, msg->hdr.size - PMU_MSG_HDR_SIZE, 0);
 
 	if (msg->msg.init.msg_type != PMU_INIT_MSG_TYPE_PMU_INIT) {
-		gk20a_err(dev_from_gk20a(g),
-			"expecting init msg");
+		nvgpu_err(g, "expecting init msg");
 		return -EINVAL;
 	}
 
@@ -3970,8 +3955,7 @@ static bool pmu_read_message(struct pmu_gk20a *pmu, struct pmu_queue *queue,
 
 	err = pmu_queue_open_read(pmu, queue);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g),
-			"fail to open queue %d for read", queue->id);
+		nvgpu_err(g, "fail to open queue %d for read", queue->id);
 		*status = err;
 		return false;
 	}
@@ -3979,8 +3963,7 @@ static bool pmu_read_message(struct pmu_gk20a *pmu, struct pmu_queue *queue,
 	err = pmu_queue_pop(pmu, queue, &msg->hdr,
 			PMU_MSG_HDR_SIZE, &bytes_read);
 	if (err || bytes_read != PMU_MSG_HDR_SIZE) {
-		gk20a_err(dev_from_gk20a(g),
-			"fail to read msg from queue %d", queue->id);
+		nvgpu_err(g, "fail to read msg from queue %d", queue->id);
 		*status = err | -EINVAL;
 		goto clean_up;
 	}
@@ -3991,7 +3974,7 @@ static bool pmu_read_message(struct pmu_gk20a *pmu, struct pmu_queue *queue,
 		err = pmu_queue_pop(pmu, queue, &msg->hdr,
 				PMU_MSG_HDR_SIZE, &bytes_read);
 		if (err || bytes_read != PMU_MSG_HDR_SIZE) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"fail to read msg from queue %d", queue->id);
 			*status = err | -EINVAL;
 			goto clean_up;
@@ -3999,8 +3982,7 @@ static bool pmu_read_message(struct pmu_gk20a *pmu, struct pmu_queue *queue,
 	}
 
 	if (!PMU_UNIT_ID_IS_VALID(msg->hdr.unit_id)) {
-		gk20a_err(dev_from_gk20a(g),
-			"read invalid unit_id %d from queue %d",
+		nvgpu_err(g, "read invalid unit_id %d from queue %d",
 			msg->hdr.unit_id, queue->id);
 			*status = -EINVAL;
 			goto clean_up;
@@ -4011,7 +3993,7 @@ static bool pmu_read_message(struct pmu_gk20a *pmu, struct pmu_queue *queue,
 		err = pmu_queue_pop(pmu, queue, &msg->msg,
 			read_size, &bytes_read);
 		if (err || bytes_read != read_size) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"fail to read msg from queue %d", queue->id);
 			*status = err;
 			goto clean_up;
@@ -4020,8 +4002,7 @@ static bool pmu_read_message(struct pmu_gk20a *pmu, struct pmu_queue *queue,
 
 	err = pmu_queue_close(pmu, queue, true);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g),
-			"fail to close queue %d", queue->id);
+		nvgpu_err(g, "fail to close queue %d", queue->id);
 		*status = err;
 		return false;
 	}
@@ -4031,8 +4012,7 @@ static bool pmu_read_message(struct pmu_gk20a *pmu, struct pmu_queue *queue,
 clean_up:
 	err = pmu_queue_close(pmu, queue, false);
 	if (err)
-		gk20a_err(dev_from_gk20a(g),
-			"fail to close queue %d", queue->id);
+		nvgpu_err(g, "fail to close queue %d", queue->id);
 	return false;
 }
 
@@ -4049,23 +4029,20 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 	seq = &pmu->seq[msg->hdr.seq_id];
 	if (seq->state != PMU_SEQ_STATE_USED &&
 	    seq->state != PMU_SEQ_STATE_CANCELLED) {
-		gk20a_err(dev_from_gk20a(g),
-			"msg for an unknown sequence %d", seq->id);
+		nvgpu_err(g, "msg for an unknown sequence %d", seq->id);
 		return -EINVAL;
 	}
 
 	if (msg->hdr.unit_id == PMU_UNIT_RC &&
 	    msg->msg.rc.msg_type == PMU_RC_MSG_TYPE_UNHANDLED_CMD) {
-		gk20a_err(dev_from_gk20a(g),
-			"unhandled cmd: seq %d", seq->id);
+		nvgpu_err(g, "unhandled cmd: seq %d", seq->id);
 	}
 	else if (seq->state != PMU_SEQ_STATE_CANCELLED) {
 		if (seq->msg) {
 			if (seq->msg->hdr.size >= msg->hdr.size) {
 				memcpy(seq->msg, msg, msg->hdr.size);
 			}  else {
-				gk20a_err(dev_from_gk20a(g),
-					"sequence %d msg buffer too small",
+				nvgpu_err(g, "sequence %d msg buffer too small",
 					seq->id);
 			}
 		}
@@ -4158,7 +4135,7 @@ void gk20a_pmu_save_zbc(struct gk20a *g, u32 entries)
 	pmu_wait_message_cond(pmu, gk20a_get_gr_idle_timeout(g),
 			      &pmu->zbc_save_done, 1);
 	if (!pmu->zbc_save_done)
-		gk20a_err(dev_from_gk20a(g), "ZBC save timeout");
+		nvgpu_err(g, "ZBC save timeout");
 }
 
 static int pmu_perfmon_start_sampling(struct pmu_gk20a *pmu)
@@ -4451,118 +4428,118 @@ void pmu_dump_falcon_stats(struct pmu_gk20a *pmu)
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	unsigned int i;
 
-	gk20a_err(dev_from_gk20a(g), "pwr_falcon_os_r : %d",
+	nvgpu_err(g, "pwr_falcon_os_r : %d",
 		gk20a_readl(g, pwr_falcon_os_r()));
-	gk20a_err(dev_from_gk20a(g), "pwr_falcon_cpuctl_r : 0x%x",
+	nvgpu_err(g, "pwr_falcon_cpuctl_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_cpuctl_r()));
-	gk20a_err(dev_from_gk20a(g), "pwr_falcon_idlestate_r : 0x%x",
+	nvgpu_err(g, "pwr_falcon_idlestate_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_idlestate_r()));
-	gk20a_err(dev_from_gk20a(g), "pwr_falcon_mailbox0_r : 0x%x",
+	nvgpu_err(g, "pwr_falcon_mailbox0_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_mailbox0_r()));
-	gk20a_err(dev_from_gk20a(g), "pwr_falcon_mailbox1_r : 0x%x",
+	nvgpu_err(g, "pwr_falcon_mailbox1_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_mailbox1_r()));
-	gk20a_err(dev_from_gk20a(g), "pwr_falcon_irqstat_r : 0x%x",
+	nvgpu_err(g, "pwr_falcon_irqstat_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_irqstat_r()));
-	gk20a_err(dev_from_gk20a(g), "pwr_falcon_irqmode_r : 0x%x",
+	nvgpu_err(g, "pwr_falcon_irqmode_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_irqmode_r()));
-	gk20a_err(dev_from_gk20a(g), "pwr_falcon_irqmask_r : 0x%x",
+	nvgpu_err(g, "pwr_falcon_irqmask_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_irqmask_r()));
-	gk20a_err(dev_from_gk20a(g), "pwr_falcon_irqdest_r : 0x%x",
+	nvgpu_err(g, "pwr_falcon_irqdest_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_irqdest_r()));
 
 	for (i = 0; i < pwr_pmu_mailbox__size_1_v(); i++)
-		gk20a_err(dev_from_gk20a(g), "pwr_pmu_mailbox_r(%d) : 0x%x",
+		nvgpu_err(g, "pwr_pmu_mailbox_r(%d) : 0x%x",
 			i, gk20a_readl(g, pwr_pmu_mailbox_r(i)));
 
 	for (i = 0; i < pwr_pmu_debug__size_1_v(); i++)
-		gk20a_err(dev_from_gk20a(g), "pwr_pmu_debug_r(%d) : 0x%x",
+		nvgpu_err(g, "pwr_pmu_debug_r(%d) : 0x%x",
 			i, gk20a_readl(g, pwr_pmu_debug_r(i)));
 
 	for (i = 0; i < 6/*NV_PPWR_FALCON_ICD_IDX_RSTAT__SIZE_1*/; i++) {
 		gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
 			pwr_pmu_falcon_icd_cmd_opc_rstat_f() |
 			pwr_pmu_falcon_icd_cmd_idx_f(i));
-		gk20a_err(dev_from_gk20a(g), "pmu_rstat (%d) : 0x%x",
+		nvgpu_err(g, "pmu_rstat (%d) : 0x%x",
 			i, gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 	}
 
 	i = gk20a_readl(g, pwr_pmu_bar0_error_status_r());
-	gk20a_err(dev_from_gk20a(g), "pwr_pmu_bar0_error_status_r : 0x%x", i);
+	nvgpu_err(g, "pwr_pmu_bar0_error_status_r : 0x%x", i);
 	if (i != 0) {
-		gk20a_err(dev_from_gk20a(g), "pwr_pmu_bar0_addr_r : 0x%x",
+		nvgpu_err(g, "pwr_pmu_bar0_addr_r : 0x%x",
 			gk20a_readl(g, pwr_pmu_bar0_addr_r()));
-		gk20a_err(dev_from_gk20a(g), "pwr_pmu_bar0_data_r : 0x%x",
+		nvgpu_err(g, "pwr_pmu_bar0_data_r : 0x%x",
 			gk20a_readl(g, pwr_pmu_bar0_data_r()));
-		gk20a_err(dev_from_gk20a(g), "pwr_pmu_bar0_timeout_r : 0x%x",
+		nvgpu_err(g, "pwr_pmu_bar0_timeout_r : 0x%x",
 			gk20a_readl(g, pwr_pmu_bar0_timeout_r()));
-		gk20a_err(dev_from_gk20a(g), "pwr_pmu_bar0_ctl_r : 0x%x",
+		nvgpu_err(g, "pwr_pmu_bar0_ctl_r : 0x%x",
 			gk20a_readl(g, pwr_pmu_bar0_ctl_r()));
 	}
 
 	i = gk20a_readl(g, pwr_pmu_bar0_fecs_error_r());
-	gk20a_err(dev_from_gk20a(g), "pwr_pmu_bar0_fecs_error_r : 0x%x", i);
+	nvgpu_err(g, "pwr_pmu_bar0_fecs_error_r : 0x%x", i);
 
 	i = gk20a_readl(g, pwr_falcon_exterrstat_r());
-	gk20a_err(dev_from_gk20a(g), "pwr_falcon_exterrstat_r : 0x%x", i);
+	nvgpu_err(g, "pwr_falcon_exterrstat_r : 0x%x", i);
 	if (pwr_falcon_exterrstat_valid_v(i) ==
 			pwr_falcon_exterrstat_valid_true_v()) {
-		gk20a_err(dev_from_gk20a(g), "pwr_falcon_exterraddr_r : 0x%x",
+		nvgpu_err(g, "pwr_falcon_exterraddr_r : 0x%x",
 			gk20a_readl(g, pwr_falcon_exterraddr_r()));
-		gk20a_err(dev_from_gk20a(g), "pmc_enable : 0x%x",
+		nvgpu_err(g, "pmc_enable : 0x%x",
 			gk20a_readl(g, mc_enable_r()));
 	}
 
-	gk20a_err(dev_from_gk20a(g), "pwr_falcon_engctl_r : 0x%x",
+	nvgpu_err(g, "pwr_falcon_engctl_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_engctl_r()));
-	gk20a_err(dev_from_gk20a(g), "pwr_falcon_curctx_r : 0x%x",
+	nvgpu_err(g, "pwr_falcon_curctx_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_curctx_r()));
-	gk20a_err(dev_from_gk20a(g), "pwr_falcon_nxtctx_r : 0x%x",
+	nvgpu_err(g, "pwr_falcon_nxtctx_r : 0x%x",
 		gk20a_readl(g, pwr_falcon_nxtctx_r()));
 
 	gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
 		pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
 		pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_IMB));
-	gk20a_err(dev_from_gk20a(g), "PMU_FALCON_REG_IMB : 0x%x",
+	nvgpu_err(g, "PMU_FALCON_REG_IMB : 0x%x",
 		gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 
 	gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
 		pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
 		pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_DMB));
-	gk20a_err(dev_from_gk20a(g), "PMU_FALCON_REG_DMB : 0x%x",
+	nvgpu_err(g, "PMU_FALCON_REG_DMB : 0x%x",
 		gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 
 	gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
 		pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
 		pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_CSW));
-	gk20a_err(dev_from_gk20a(g), "PMU_FALCON_REG_CSW : 0x%x",
+	nvgpu_err(g, "PMU_FALCON_REG_CSW : 0x%x",
 		gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 
 	gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
 		pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
 		pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_CTX));
-	gk20a_err(dev_from_gk20a(g), "PMU_FALCON_REG_CTX : 0x%x",
+	nvgpu_err(g, "PMU_FALCON_REG_CTX : 0x%x",
 		gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 
 	gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
 		pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
 		pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_EXCI));
-	gk20a_err(dev_from_gk20a(g), "PMU_FALCON_REG_EXCI : 0x%x",
+	nvgpu_err(g, "PMU_FALCON_REG_EXCI : 0x%x",
 		gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 
 	for (i = 0; i < 4; i++) {
 		gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
 			pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
 			pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_PC));
-		gk20a_err(dev_from_gk20a(g), "PMU_FALCON_REG_PC : 0x%x",
+		nvgpu_err(g, "PMU_FALCON_REG_PC : 0x%x",
 			gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 
 		gk20a_writel(g, pwr_pmu_falcon_icd_cmd_r(),
 			pwr_pmu_falcon_icd_cmd_opc_rreg_f() |
 			pwr_pmu_falcon_icd_cmd_idx_f(PMU_FALCON_REG_SP));
-		gk20a_err(dev_from_gk20a(g), "PMU_FALCON_REG_SP : 0x%x",
+		nvgpu_err(g, "PMU_FALCON_REG_SP : 0x%x",
 			gk20a_readl(g, pwr_pmu_falcon_icd_rdata_r()));
 	}
-	gk20a_err(dev_from_gk20a(g), "elpg stat: %d\n",
+	nvgpu_err(g, "elpg stat: %d\n",
 			pmu->elpg_stat);
 
 	/* PMU may crash due to FECS crash. Dump FECS status */
@@ -4600,8 +4577,7 @@ void gk20a_pmu_isr(struct gk20a *g)
 	}
 
 	if (intr & pwr_falcon_irqstat_halt_true_f()) {
-		gk20a_err(dev_from_gk20a(g),
-			"pmu halt intr not implemented");
+		nvgpu_err(g, "pmu halt intr not implemented");
 		pmu_dump_falcon_stats(pmu);
 		if (gk20a_readl(g, pwr_pmu_mailbox_r
 				(PMU_MODE_MISMATCH_STATUS_MAILBOX_R)) ==
@@ -4610,7 +4586,7 @@ void gk20a_pmu_isr(struct gk20a *g)
 				g->ops.pmu.dump_secure_fuses(g);
 	}
 	if (intr & pwr_falcon_irqstat_exterr_true_f()) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"pmu exterr intr not implemented. Clearing interrupt.");
 		pmu_dump_falcon_stats(pmu);
 
@@ -4692,7 +4668,7 @@ static bool pmu_validate_cmd(struct pmu_gk20a *pmu, struct pmu_cmd *cmd,
 	return true;
 
 invalid_cmd:
-	gk20a_err(dev_from_gk20a(g), "invalid pmu cmd :\n"
+	nvgpu_err(g, "invalid pmu cmd :\n"
 		"queue_id=%d,\n"
 		"cmd_size=%d, cmd_unit_id=%d, msg=%p, msg_size=%d,\n"
 		"payload in=%p, in_size=%d, in_offset=%d,\n"
@@ -4736,8 +4712,7 @@ static int pmu_write_cmd(struct pmu_gk20a *pmu, struct pmu_cmd *cmd,
 
 clean_up:
 	if (err)
-		gk20a_err(dev_from_gk20a(g),
-			"fail to write cmd to queue %d", queue_id);
+		nvgpu_err(g, "fail to write cmd to queue %d", queue_id);
 	else
 		gk20a_dbg_fn("done");
 
@@ -4762,7 +4737,7 @@ int gk20a_pmu_vidmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 
 	err = nvgpu_dma_alloc_map_vid(vm, size, mem);
 	if (err) {
-		gk20a_err(g->dev, "memory allocation failed");
+		nvgpu_err(g, "memory allocation failed");
 		return -ENOMEM;
 	}
 
@@ -4778,7 +4753,7 @@ int gk20a_pmu_sysmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 
 	err = nvgpu_dma_alloc_map_sys(vm, size, mem);
 	if (err) {
-		gk20a_err(g->dev, "failed to allocate memory\n");
+		nvgpu_err(g, "failed to allocate memory\n");
 		return -ENOMEM;
 	}
 
@@ -4806,14 +4781,11 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 
 	if ((!cmd) || (!seq_desc) || (!pmu->pmu_ready)) {
 		if (!cmd)
-			gk20a_warn(dev_from_gk20a(g),
-			"%s(): PMU cmd buffer is NULL", __func__);
+			nvgpu_warn(g, "%s(): PMU cmd buffer is NULL", __func__);
 		else if (!seq_desc)
-			gk20a_warn(dev_from_gk20a(g),
-			"%s(): Seq descriptor is NULL", __func__);
+			nvgpu_warn(g, "%s(): Seq descriptor is NULL", __func__);
 		else
-			gk20a_warn(dev_from_gk20a(g),
-			"%s(): PMU is not ready", __func__);
+			nvgpu_warn(g, "%s(): PMU is not ready", __func__);
 
 		WARN_ON(1);
 		return -EINVAL;
@@ -5044,9 +5016,9 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 
 	/* something is not right if we end up in following code path */
 	if (unlikely(pmu->elpg_refcnt > 1)) {
-		gk20a_warn(dev_from_gk20a(g),
-		"%s(): possible elpg refcnt mismatch. elpg refcnt=%d",
-		__func__, pmu->elpg_refcnt);
+		nvgpu_warn(g,
+			"%s(): possible elpg refcnt mismatch. elpg refcnt=%d",
+			__func__, pmu->elpg_refcnt);
 		WARN_ON(1);
 	}
 
@@ -5102,9 +5074,9 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 
 	pmu->elpg_refcnt--;
 	if (pmu->elpg_refcnt > 0) {
-		gk20a_warn(dev_from_gk20a(g),
-		"%s(): possible elpg refcnt mismatch. elpg refcnt=%d",
-		__func__, pmu->elpg_refcnt);
+		nvgpu_warn(g,
+			"%s(): possible elpg refcnt mismatch. elpg refcnt=%d",
+			__func__, pmu->elpg_refcnt);
 		WARN_ON(1);
 		ret = 0;
 		goto exit_unlock;
@@ -5123,8 +5095,7 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 				      &pmu->elpg_stat, PMU_ELPG_STAT_ON);
 
 		if (pmu->elpg_stat != PMU_ELPG_STAT_ON) {
-			gk20a_err(dev_from_gk20a(g),
-				"ELPG_ALLOW_ACK failed, elpg_stat=%d",
+			nvgpu_err(g, "ELPG_ALLOW_ACK failed, elpg_stat=%d",
 				pmu->elpg_stat);
 			pmu_dump_elpg_stats(pmu);
 			pmu_dump_falcon_stats(pmu);
@@ -5175,8 +5146,7 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 				gk20a_get_gr_idle_timeout(g),
 				ptr, PMU_ELPG_STAT_OFF);
 			if (*ptr != PMU_ELPG_STAT_OFF) {
-				gk20a_err(dev_from_gk20a(g),
-					"ELPG_DISALLOW_ACK failed");
+				nvgpu_err(g, "ELPG_DISALLOW_ACK failed");
 					pmu_dump_elpg_stats(pmu);
 					pmu_dump_falcon_stats(pmu);
 				ret = -EBUSY;

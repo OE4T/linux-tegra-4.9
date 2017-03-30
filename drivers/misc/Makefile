@@ -57,7 +57,7 @@ obj-$(CONFIG_EQOS_APE_HWDEP)    += eqos_ape/
 obj-$(CONFIG_TEGRA_PROFILER)	+= tegra-profiler/
 obj-$(CONFIG_NVS)		+= nvs/
 
-obj-$(CONFIG_UID_CPUTIME)	+= uid_cputime.o
+obj-$(CONFIG_UID_SYS_STATS)	+= uid_sys_stats.o
 obj-$(CONFIG_MEMORY_STATE_TIME)	+= memory_state_time.o
 
 lkdtm-$(CONFIG_LKDTM)		+= lkdtm_core.o

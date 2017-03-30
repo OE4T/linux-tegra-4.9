@@ -403,6 +403,7 @@ struct tegra_pcie_soc_data {
 	bool			link_speed_war;
 	bool			dvfs_mselect;
 	bool			dvfs_afi;
+	bool			update_clamp_threshold;
 	struct pcie_dvfs	dvfs_tbl[10][2];
 };
 
@@ -2376,10 +2377,12 @@ static void tegra_pcie_enable_rp_features(struct tegra_pcie_port *port)
 	/* Power mangagement settings */
 	/* Enable clock clamping by default and enable card detect */
 	data = rp_readl(port, NV_PCIE2_RP_PRIV_MISC);
-	data |= PCIE2_RP_PRIV_MISC_CTLR_CLK_CLAMP_THRESHOLD |
-		PCIE2_RP_PRIV_MISC_CTLR_CLK_CLAMP_ENABLE |
-		PCIE2_RP_PRIV_MISC_TMS_CLK_CLAMP_THRESHOLD |
+	data |= PCIE2_RP_PRIV_MISC_CTLR_CLK_CLAMP_ENABLE |
 		PCIE2_RP_PRIV_MISC_TMS_CLK_CLAMP_ENABLE;
+	if (port->pcie->soc_data->update_clamp_threshold) {
+		data |= PCIE2_RP_PRIV_MISC_CTLR_CLK_CLAMP_THRESHOLD |
+			PCIE2_RP_PRIV_MISC_TMS_CLK_CLAMP_THRESHOLD;
+	}
 	rp_writel(port, data, NV_PCIE2_RP_PRIV_MISC);
 
 	/* Enable ASPM - L1 state support by default */
@@ -3232,6 +3235,7 @@ static const struct tegra_pcie_soc_data tegra186_pcie_data = {
 	.num_pcie_regulators =
 			sizeof(t186_rail_names) / sizeof(t186_rail_names[0]),
 	.dvfs_afi = true,
+	.update_clamp_threshold = true,
 	.dvfs_tbl = {
 		{{0, 0}, {0, 0} },
 		{{102000000, 480000000}, {102000000, 480000000} },
@@ -3274,6 +3278,7 @@ static const struct tegra_pcie_soc_data tegra210_pcie_data = {
 	.l1ss_rp_wakeup_war = true,
 	.link_speed_war = true,
 	.dvfs_mselect = true,
+	.update_clamp_threshold = true,
 	.dvfs_tbl = {
 		{{204000000, 102000000}, {408000000, 528000000} } },
 };

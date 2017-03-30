@@ -199,14 +199,20 @@ enum tegra210_adsp_virt_regs {
 									(reg == ADSP_EAVB_START))
 #define IS_ADSP_ADMAIF(reg) 	((reg >= ADSP_ADMAIF_START) && (reg <= ADSP_ADMAIF_END))
 
+#define IS_VALID_INPUT(fe, mask)	((1 << (fe - 1)) & mask)
 /* ADSP_MSG_FLAGs */
 #define TEGRA210_ADSP_MSG_FLAG_SEND	0x0
 #define TEGRA210_ADSP_MSG_FLAG_HOLD	0x1
 #define TEGRA210_ADSP_MSG_FLAG_NEED_ACK 0x2
 
+#define MAX_ADSP_SWITCHES		3
 /* TODO : Remove hard-coding and get data from DTS */
 #define TEGRA210_ADSP_ADMA_CHANNEL_START	10
 #define TEGRA210_ADSP_ADMA_CHANNEL_COUNT	10
+#define TEGRA210_ADSP_ADMA_BITMAP_COUNT		64
+#define TEGRA210_MAX_ADMA_CHANNEL		22
+#define TEGRA186_MAX_ADMA_CHANNEL		32
+
 
 #define TEGRA210_ADSP_ADMA_CHANNEL_START_HV  16
 

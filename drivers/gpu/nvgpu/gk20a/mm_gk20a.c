@@ -2735,7 +2735,15 @@ int gk20a_gmmu_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
 		struct mem_desc *mem)
 {
 	if (g->mm.vidmem_is_vidmem) {
-		int err = gk20a_gmmu_alloc_flags_vid(g, flags, size, mem);
+		/*
+		 * Force the no-kernel-mapping flag on because we don't support
+		 * the lack of it for vidmem - the user should not care when
+		 * using gk20a_gmmu_alloc_map and it's vidmem, or if there's a
+		 * difference, the user should use the flag explicitly anyway.
+		 */
+		int err = gk20a_gmmu_alloc_flags_vid(g,
+				flags | NVGPU_DMA_NO_KERNEL_MAPPING,
+				size, mem);
 
 		if (!err)
 			return 0;
@@ -3012,6 +3020,7 @@ int gk20a_gmmu_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 	mem->size = size;
 	mem->aperture = APERTURE_VIDMEM;
 	mem->allocator = vidmem_alloc;
+	mem->flags = flags;
 
 	nvgpu_init_list_node(&mem->clear_list_entry);
 

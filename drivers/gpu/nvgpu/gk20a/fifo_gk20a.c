@@ -3489,8 +3489,8 @@ static void __gk20a_fifo_profile_free(struct kref *ref)
 {
 	struct fifo_gk20a *f = container_of(ref, struct fifo_gk20a,
 						profile.ref);
-	vfree(f->profile.data);
-	vfree(f->profile.sorted);
+	nvgpu_vfree(f->g, f->profile.data);
+	nvgpu_vfree(f->g, f->profile.sorted);
 }
 
 static int gk20a_fifo_profile_enable(void *data, u64 val)
@@ -3518,8 +3518,8 @@ static int gk20a_fifo_profile_enable(void *data, u64 val)
 							FIFO_PROFILING_ENTRIES *
 							sizeof(u64));
 				if (!(f->profile.data && f->profile.sorted)) {
-					vfree(f->profile.data);
-					vfree(f->profile.sorted);
+					nvgpu_vfree(g, f->profile.data);
+					nvgpu_vfree(g, f->profile.sorted);
 					nvgpu_mutex_release(&f->profile.lock);
 					return -ENOMEM;
 				}

@@ -1126,7 +1126,7 @@ static int vgpu_gr_suspend_resume_contexts(struct gk20a *g,
 
 	size_in = size_out + n * sizeof(u16);
 
-	msg = kmalloc(size_in, GFP_KERNEL);
+	msg = nvgpu_kmalloc(g, size_in);
 	if (!msg)
 		return -ENOMEM;
 
@@ -1159,7 +1159,7 @@ fail:
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	*ctx_resident_ch_fd = channel_fd;
-	kfree(msg);
+	nvgpu_kfree(g, msg);
 
 	return err;
 }

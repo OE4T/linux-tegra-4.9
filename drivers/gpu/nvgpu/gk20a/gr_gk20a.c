@@ -3343,13 +3343,16 @@ int gk20a_comptag_allocator_init(struct gk20a_comptag_allocator *allocator,
 
 void gk20a_comptag_allocator_destroy(struct gk20a_comptag_allocator *allocator)
 {
+	struct gr_gk20a *gr = container_of(allocator,
+					   struct gr_gk20a, comp_tags);
+
 	/*
 	 * called only when exiting the driver (gk20a_remove, or unwinding the
 	 * init stage); no users should be active, so taking the mutex is
 	 * unnecessary here.
 	 */
 	allocator->size = 0;
-	vfree(allocator->bitmap);
+	nvgpu_vfree(gr->g, allocator->bitmap);
 }
 
 static void gk20a_remove_gr_support(struct gr_gk20a *gr)
@@ -3419,7 +3422,7 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.pm_ltc.l);
 	nvgpu_kfree(g, gr->ctx_vars.ctxsw_regs.pm_fbpa.l);
 
-	vfree(gr->ctx_vars.local_golden_image);
+	nvgpu_vfree(g, gr->ctx_vars.local_golden_image);
 	gr->ctx_vars.local_golden_image = NULL;
 
 	if (gr->ctx_vars.hwpm_ctxsw_buffer_offset_map)

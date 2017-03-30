@@ -106,7 +106,7 @@ static void nvgpu_lockless_alloc_destroy(struct nvgpu_allocator *a)
 
 	nvgpu_fini_alloc_debug(a);
 
-	vfree(pa->next);
+	nvgpu_vfree(a->g, pa->next);
 	nvgpu_kfree(nvgpu_alloc_to_gpu(a), pa);
 }
 

@@ -436,7 +436,7 @@ u32 gk20a_ce_create_context_with_cb(struct device *dev,
 
 	err = nvgpu_mutex_init(&ce_ctx->gpu_ctx_mutex);
 	if (err) {
-		kfree(ce_ctx);
+		nvgpu_kfree(g, ce_ctx);
 		return ctx_id;
 	}
 

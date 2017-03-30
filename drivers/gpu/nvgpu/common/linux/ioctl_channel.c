@@ -712,7 +712,7 @@ static int gk20a_channel_event_id_enable(struct channel_gk20a *ch,
 	return 0;
 
 clean_up_free:
-	kfree(event_id_data);
+	nvgpu_kfree(g, event_id_data);
 clean_up_file:
 	fput(file);
 clean_up:

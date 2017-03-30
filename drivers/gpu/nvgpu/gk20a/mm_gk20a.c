@@ -4188,7 +4188,7 @@ static int init_vm_page_tables(struct vm_gk20a *vm)
 	err = gk20a_zalloc_gmmu_page_table(vm, 0, &vm->mmu_levels[0],
 					   &vm->pdb, NULL);
 	if (err) {
-		vfree(vm->pdb.entries);
+		nvgpu_vfree(vm->mm->g, vm->pdb.entries);
 		return err;
 	}
 

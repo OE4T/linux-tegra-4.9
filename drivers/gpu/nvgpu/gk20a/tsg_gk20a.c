@@ -260,7 +260,7 @@ struct tsg_gk20a *gk20a_tsg_open(struct gk20a *g)
 	if (g->ops.fifo.tsg_open) {
 		err = g->ops.fifo.tsg_open(tsg);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g), 
+			gk20a_err(dev_from_gk20a(g),
 				  "tsg %d fifo open failed %d",
 				  tsg->tsgid, err);
 			goto clean_up;

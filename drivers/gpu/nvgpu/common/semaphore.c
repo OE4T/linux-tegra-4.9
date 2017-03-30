@@ -74,7 +74,7 @@ void gk20a_semaphore_sea_destroy(struct gk20a *g)
 		return;
 
 	nvgpu_mutex_destroy(&g->sema_sea->sea_lock);
-	kfree(g->sema_sea);
+	nvgpu_kfree(g, g->sema_sea);
 	g->sema_sea = NULL;
 }
 

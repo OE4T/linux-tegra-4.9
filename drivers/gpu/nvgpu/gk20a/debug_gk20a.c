@@ -61,8 +61,7 @@ static void gk20a_debug_dump_all_channel_status_ramfc(struct gk20a *g,
 	u32 chid;
 	struct ch_state **ch_state;
 
-	ch_state = kzalloc(sizeof(*ch_state)
-				 * f->num_channels, GFP_KERNEL);
+	ch_state = nvgpu_kzalloc(g, sizeof(*ch_state) * f->num_channels);
 	if (!ch_state) {
 		gk20a_debug_output(o, "cannot alloc memory for channels\n");
 		return;

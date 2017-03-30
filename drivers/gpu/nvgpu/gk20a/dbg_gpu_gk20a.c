@@ -85,14 +85,15 @@ static int alloc_session(struct gk20a *g, struct dbg_session_gk20a **_dbg_s)
 	return 0;
 }
 
-static int alloc_profiler(struct dbg_profiler_object_data **_prof)
+static int alloc_profiler(struct gk20a *g,
+			  struct dbg_profiler_object_data **_prof)
 {
 	struct dbg_profiler_object_data *prof;
 	*_prof = NULL;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
 
-	prof = kzalloc(sizeof(*prof), GFP_KERNEL);
+	prof = nvgpu_kzalloc(g, sizeof(*prof));
 	if (!prof)
 		return -ENOMEM;
 
@@ -152,7 +153,7 @@ static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 err_destroy_lock:
 	nvgpu_mutex_destroy(&dbg_session->ch_list_lock);
 err_free_session:
-	kfree(dbg_session);
+	nvgpu_kfree(g, dbg_session);
 free_ref:
 	gk20a_put(g);
 	return err;
@@ -435,7 +436,7 @@ int dbg_unbind_single_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 				  release_profiler_reservation(dbg_s, prof_obj);
 			}
 			list_del(&prof_obj->prof_obj_entry);
-			kfree(prof_obj);
+			nvgpu_kfree(g, prof_obj);
 		}
 	}
 
@@ -537,7 +538,7 @@ int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp)
 				g->ops.dbg_session_ops.
 				  release_profiler_reservation(dbg_s, prof_obj);
 			list_del(&prof_obj->prof_obj_entry);
-			kfree(prof_obj);
+			nvgpu_kfree(g, prof_obj);
 		}
 	}
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
@@ -1527,7 +1528,7 @@ static int nvgpu_ioctl_allocate_profiler_object(
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
-	err = alloc_profiler(&prof_obj);
+	err = alloc_profiler(g, &prof_obj);
 	if (err)
 		goto clean_up;
 
@@ -1540,7 +1541,7 @@ static int nvgpu_ioctl_allocate_profiler_object(
 		if (prof_obj->ch == NULL) {
 			gk20a_err(dev_from_gk20a(g),
 				"bind a channel for dbg session");
-			kfree(prof_obj);
+			nvgpu_kfree(g, prof_obj);
 			err = -EINVAL;
 			goto clean_up;
 		}
@@ -1586,7 +1587,7 @@ static int nvgpu_ioctl_free_profiler_object(
 				g->ops.dbg_session_ops.
 				  release_profiler_reservation(dbg_s, prof_obj);
 			list_del(&prof_obj->prof_obj_entry);
-			kfree(prof_obj);
+			nvgpu_kfree(g, prof_obj);
 			obj_found = true;
 			break;
 		}

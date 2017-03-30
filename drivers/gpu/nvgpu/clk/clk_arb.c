@@ -472,12 +472,12 @@ void nvgpu_clk_arb_cleanup_arbiter(struct gk20a *g)
 		destroy_workqueue(arb->update_work_queue);
 		arb->update_work_queue = NULL;
 
-		kfree(arb->gpc2clk_f_points);
-		kfree(arb->mclk_f_points);
+		nvgpu_kfree(g, arb->gpc2clk_f_points);
+		nvgpu_kfree(g, arb->mclk_f_points);
 
 		for (index = 0; index < 2; index++) {
-			kfree(arb->vf_table_pool[index].gpc2clk_points);
-			kfree(arb->vf_table_pool[index].mclk_points);
+			nvgpu_kfree(g, arb->vf_table_pool[index].gpc2clk_points);
+			nvgpu_kfree(g, arb->vf_table_pool[index].mclk_points);
 		}
 	}
 

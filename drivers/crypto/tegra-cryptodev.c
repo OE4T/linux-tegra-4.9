@@ -1172,6 +1172,12 @@ static int __init tegra_crypto_dev_init(void)
 
 late_initcall(tegra_crypto_dev_init);
 
+static void __exit tegra_crypto_module_exit(void)
+{
+	misc_deregister(&tegra_crypto_device);
+}
+module_exit(tegra_crypto_module_exit);
+
 MODULE_DESCRIPTION("Tegra AES hw device node.");
 MODULE_AUTHOR("NVIDIA Corporation");
 MODULE_LICENSE("GPL v2");

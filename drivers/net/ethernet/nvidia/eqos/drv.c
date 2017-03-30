@@ -2192,7 +2192,21 @@ static void process_tx_completions(struct net_device *dev,
 			pdata->xstats.tx_pkt_n++;
 			dev->stats.tx_packets++;
 		}
-		dev->stats.tx_bytes += ptx_swcx_desc->len;
+
+		/* CTXT descriptors set their len to -1, which is an unsigned
+		 * 16bit field. In case of VLAN, the HW is inserting the vlan
+		 * tag (type + tag) so we should account for that in our
+		 * transmitted total.
+		 */
+		if (ptx_swcx_desc->len != (unsigned short)-1) {
+			dev->stats.tx_bytes += ptx_swcx_desc->len;
+		} else if (hw_if->get_tx_desc_ctxt(ptx_desc)) {
+			unsigned int vltv;
+			TX_CONTEXT_DESC_TDES3_VLTV_RD(ptx_desc->tdes3, vltv);
+			if (vltv == 0x1)
+				dev->stats.tx_bytes += VLAN_HLEN;
+		}
+
 		desc_if->tx_swcx_free(pdata, ptx_swcx_desc);
 
 		/* reset the descriptor so that driver/host can reuse it */

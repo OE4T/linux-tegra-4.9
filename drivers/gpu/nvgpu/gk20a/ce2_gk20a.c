@@ -19,7 +19,6 @@
 
 /*TODO: remove uncecessary */
 #include <linux/delay.h>
-#include <linux/slab.h>
 #include <linux/scatterlist.h>
 #include <trace/events/gk20a.h>
 #include <linux/dma-mapping.h>

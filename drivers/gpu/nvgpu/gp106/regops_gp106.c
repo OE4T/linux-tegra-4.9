@@ -16,7 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/slab.h>
 #include <linux/err.h>
 #include <linux/bsearch.h>
 #include <uapi/linux/nvgpu.h>

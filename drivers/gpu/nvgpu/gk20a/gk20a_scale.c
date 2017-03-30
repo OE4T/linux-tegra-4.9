@@ -19,7 +19,6 @@
 #include <linux/devfreq.h>
 #include <linux/debugfs.h>
 #include <linux/export.h>
-#include <linux/slab.h>
 #include <soc/tegra/chip-id.h>
 #include <linux/pm_qos.h>
 

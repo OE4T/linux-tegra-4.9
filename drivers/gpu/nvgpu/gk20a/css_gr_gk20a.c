@@ -19,7 +19,6 @@
 #include <linux/bitops.h>
 #include <linux/dma-mapping.h>
 #include <linux/dma-buf.h>
-#include <linux/vmalloc.h>
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/lock.h>

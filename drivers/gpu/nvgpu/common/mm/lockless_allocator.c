@@ -15,8 +15,6 @@
  */
 
 #include <linux/kernel.h>
-#include <linux/slab.h>
-#include <linux/vmalloc.h>
 #include <linux/atomic.h>
 
 #include <nvgpu/allocator.h>

@@ -15,7 +15,6 @@
 
 #include <linux/delay.h>
 #include <linux/io.h>
-#include <linux/vmalloc.h>
 #include <linux/version.h>
 #include <soc/tegra/fuse.h>
 

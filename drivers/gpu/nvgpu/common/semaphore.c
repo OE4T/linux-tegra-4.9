@@ -17,7 +17,6 @@
 
 #include <linux/dma-mapping.h>
 #include <linux/highmem.h>
-#include <linux/slab.h>
 
 #include <nvgpu/semaphore.h>
 #include <nvgpu/kmem.h>

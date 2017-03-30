@@ -19,7 +19,6 @@
 #include <linux/fs.h>
 #include <linux/hrtimer.h>
 #include <linux/module.h>
-#include <linux/slab.h>
 #include <nvgpu/lock.h>
 #include <uapi/linux/nvgpu.h>
 

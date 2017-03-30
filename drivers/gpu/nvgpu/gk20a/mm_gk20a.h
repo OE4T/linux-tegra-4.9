@@ -20,8 +20,6 @@
 
 #include <linux/scatterlist.h>
 #include <linux/iommu.h>
-#include <linux/vmalloc.h>
-#include <linux/slab.h>
 #include <linux/version.h>
 #include <asm/dma-iommu.h>
 #include <asm/cacheflush.h>

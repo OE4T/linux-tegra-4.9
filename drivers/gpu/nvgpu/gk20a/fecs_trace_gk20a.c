@@ -12,7 +12,6 @@
  */
 
 #include <asm/barrier.h>
-#include <linux/slab.h>
 #include <linux/kthread.h>
 #include <linux/circ_buf.h>
 #include <linux/delay.h>

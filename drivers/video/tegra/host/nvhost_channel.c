@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010-2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -192,14 +192,19 @@ err_module_busy:
 }
 
 /* Maps free channel with device */
-int nvhost_channel_map(struct nvhost_device_data *pdata,
+int nvhost_channel_map_with_vm(struct nvhost_device_data *pdata,
 			struct nvhost_channel **channel,
-			void *identifier)
+			void *identifier,
+			void *vm_identifier)
 {
 	struct nvhost_master *host = NULL;
 	struct nvhost_channel *ch = NULL;
 	int max_channels = 0;
 	int index = 0;
+
+	/* use vm_identifier if provided */
+	vm_identifier = vm_identifier ?
+		vm_identifier : (void *)(uintptr_t)current->pid;
 
 	if (!pdata) {
 		pr_err("%s: NULL device data\n", __func__);
@@ -253,7 +258,7 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 
 	/* allocate vm */
 	ch->vm = nvhost_vm_allocate(pdata->pdev,
-				    (void *)(uintptr_t)current->pid);
+				    vm_identifier);
 	if (!ch->vm)
 		goto err_alloc_vm;
 
@@ -280,6 +285,13 @@ err_alloc_vm:
 	mutex_unlock(&host->ch_alloc_mutex);
 
 	return -ENOMEM;
+}
+
+int nvhost_channel_map(struct nvhost_device_data *pdata,
+			struct nvhost_channel **channel,
+			void *identifier)
+{
+	return nvhost_channel_map_with_vm(pdata, channel, identifier, NULL);
 }
 EXPORT_SYMBOL(nvhost_channel_map);
 

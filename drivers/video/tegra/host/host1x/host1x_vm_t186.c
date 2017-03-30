@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Virtual Memory Management
  *
- * Copyright (c) 2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,15 +24,24 @@
 #include "nvhost_vm.h"
 #include "iommu_context_dev.h"
 
+/* timeout big enough to not flood the screen with warns */
+#define NVHOST_VM_WAIT_TIMEOUT_MASK (0x3fff)
+
 static int host1x_vm_init(struct nvhost_vm *vm)
 {
 	struct platform_device *pdev;
+	unsigned int i = 0;
 
 	/* wait until we have a context device */
 	do {
 		pdev = iommu_context_dev_allocate();
-		if (!pdev)
+		if (!pdev) {
+			++i;
 			mdelay(1);
+			if ((i & NVHOST_VM_WAIT_TIMEOUT_MASK) == 0)
+				nvhost_err(&vm->pdev->dev,
+					   "host1x_vm_init active waiting for %u ms\n", i);
+		}
 	} while (!pdev);
 
 	vm->pdev = pdev;

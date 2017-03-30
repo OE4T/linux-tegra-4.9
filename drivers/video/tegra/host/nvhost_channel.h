@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010-2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -94,6 +94,11 @@ bool nvhost_channel_is_reset_required(struct nvhost_channel *ch);
 
 int nvhost_channel_abort(struct nvhost_device_data *pdata,
 			void *identifier);
+
+int nvhost_channel_map_with_vm(struct nvhost_device_data *pdata,
+			struct nvhost_channel **channel,
+			void *identifier,
+			void *vm_identifier);
 
 int nvhost_channel_nb_channels(struct nvhost_master *host);
 int nvhost_channel_ch_base(struct nvhost_master *host);

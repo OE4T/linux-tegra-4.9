@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2014-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -376,9 +376,9 @@ static void cdma_timeout_release_mlock(struct nvhost_cdma *cdma)
 
 	/* allocate a new channel to execute recovery. use a stack variable
 	 * as an identifier to ensure that no-one else can get the same
-	 * channel */
+	 * channel. reuse vm context of the timed out channel */
 
-	err = nvhost_channel_map(pdata, &ch, &ch);
+	err = nvhost_channel_map_with_vm(pdata, &ch, &ch, orig_ch->vm->identifier);
 	if (err) {
 		nvhost_err(&pdev->dev, "mlock release failed: failed to allocate recovery channel (%d)\n",
 			   err);

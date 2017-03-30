@@ -455,6 +455,9 @@ static int lr388k7_cmd_queue_read(u8 *p, u32 u32_len)
 	if (!p_queue)
 		return 0;
 
+	if (u32_len > K7_CMD_DATA_SIZE)
+		u32_len = K7_CMD_DATA_SIZE;
+
 	u32_ret = copy_to_user(p, p_queue, u32_len);
 	if (u32_ret != 0)
 		return 0;

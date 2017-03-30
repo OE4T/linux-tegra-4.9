@@ -21,9 +21,11 @@ snd-soc-tegra-alt-t186ref-p2382-objs := \
 snd-soc-tegra-alt-t186ref-bali-objs := \
 				tegra_t186ref_bali_alt.o
 snd-soc-tegra-alt-t186ref-p4573-objs := tegra_t186ref_p4573_alt.o
+snd-soc-tegra-alt-t186ref-m3420-objs := tegra_t186ref_m3420_alt.o
 
 obj-$(CONFIG_SND_SOC_TEGRA_T186REF_FPGA_ALT) += snd-soc-tegra-alt-t186ref.o
 obj-$(CONFIG_SND_SOC_TEGRA_T186REF_MOBILE_ALT) += snd-soc-tegra-alt-t186ref-mobile.o
 obj-$(CONFIG_SND_SOC_TEGRA_T186REF_AUTO_ALT) += snd-soc-tegra-alt-t186ref-p2382.o
 obj-$(CONFIG_SND_SOC_TEGRA_T186REF_AUTO_ALT) += snd-soc-tegra-alt-t186ref-bali.o
 obj-$(CONFIG_SND_SOC_TEGRA_T186REF_P4573_ALT) += snd-soc-tegra-alt-t186ref-p4573.o
+obj-$(CONFIG_SND_SOC_TEGRA_T186REF_M3420_ALT) += snd-soc-tegra-alt-t186ref-m3420.o

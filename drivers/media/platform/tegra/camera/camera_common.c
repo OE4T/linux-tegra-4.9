@@ -469,6 +469,9 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 
 	mf->field = V4L2_FIELD_NONE;
 	mf->colorspace = V4L2_COLORSPACE_SRGB;
+	mf->xfer_func = V4L2_XFER_FUNC_DEFAULT;
+	mf->ycbcr_enc = V4L2_YCBCR_ENC_DEFAULT;
+	mf->quantization = V4L2_QUANTIZATION_DEFAULT;
 
 	return err;
 }
@@ -506,6 +509,9 @@ int camera_common_g_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	mf->width	= s_data->fmt_width;
 	mf->height	= s_data->fmt_height;
 	mf->field	= V4L2_FIELD_NONE;
+	mf->xfer_func = fmt->xfer_func;
+	mf->ycbcr_enc = fmt->ycbcr_enc;
+	mf->quantization = fmt->quantization;
 
 	return 0;
 }

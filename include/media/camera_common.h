@@ -186,6 +186,9 @@ struct camera_common_colorfmt {
 	unsigned int			code;
 	enum v4l2_colorspace		colorspace;
 	int				pix_fmt;
+	enum v4l2_xfer_func		xfer_func;
+	enum v4l2_ycbcr_encoding	ycbcr_enc;
+	enum v4l2_quantization		quantization;
 };
 
 struct camera_common_data;

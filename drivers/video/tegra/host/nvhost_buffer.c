@@ -1,7 +1,7 @@
 /*
  * NVHOST buffer management for T194
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -145,7 +145,7 @@ static void nvhost_buffer_unmap(struct nvhost_vm_buffer *vm)
 {
 	nvhost_dbg_fn("");
 
-	if ((vm->user_map_count != 0) &&
+	if ((vm->user_map_count != 0) ||
 		(vm->submit_map_count != 0))
 		return;
 

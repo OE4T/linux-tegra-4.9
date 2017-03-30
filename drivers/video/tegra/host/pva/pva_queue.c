@@ -845,10 +845,10 @@ static void pva_task_update(void *priv, int nr_completed)
 	nvhost_dbg_info("Completed task %p (0x%llx)", task,
 			(u64)task->dma_addr);
 
-	pva_completed_task_status(task->pva);
-
 	/* Unpin job memory. PVA shouldn't be using it anymore */
 	pva_task_unpin_mem(task);
+
+	pva_completed_task_status(task->pva);
 
 	/* Drop PM runtime reference of PVA */
 	nvhost_module_idle(task->pva->pdev);

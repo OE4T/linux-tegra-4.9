@@ -37,9 +37,7 @@
 #include <linux/spinlock_types.h>
 
 /* DEBUG */
-#ifndef DEBUG_LR388K7
-#define DEBUG_LR388K7
-#endif
+/* #define DEBUG_LR388K7 */
 
 /* ACTIVE */
 /* #define ACTIVE_ENABLE */
@@ -1185,7 +1183,6 @@ static ssize_t lr388k7_ts_check_state_show(struct device *dev,
 		       u32RES
 		       );
 }
-#endif
 
 #define LR388K7_LOG_MAX_SIZE (2 * 1024 * 1024)
 #define LR388K7_LOG_DATA_SIZE (512)
@@ -1283,6 +1280,7 @@ static ssize_t lr388k7_ts_log_show(struct device *dev,
 
 	return (ssize_t)(s - buf);
 }
+#endif /* DEBUG_LR388K7 */
 
 static DEVICE_ATTR(force_cap, 0660, lr388k7_ts_force_cap_show,
 			lr388k7_ts_force_cap_store);
@@ -1652,26 +1650,16 @@ static void lr388k7_touch_report(void *p)
 #endif /* #if defined(PROTOCOL_A) */
 
 
-static int access_num;
-static spinlock_t dev_spin_lock;
+static atomic_t open_count = ATOMIC_INIT(0);
 
 static int dev_open(struct inode *inode, struct file *filp)
 {
-#if defined(DEBUG_LR388K7)
-	dev_info(&g_spi->dev, "dev_open\n");
-#endif
-
-	spin_lock(&dev_spin_lock);
-
-	if (access_num) {
-		spin_unlock(&dev_spin_lock);
+	if (atomic_read(&open_count)) {
 		dev_err(&g_spi->dev, "already open : %d\n", -EBUSY);
 		return -EBUSY;
 	}
-
-	access_num++;
-	spin_unlock(&dev_spin_lock);
-
+	atomic_set(&open_count, 1);
+	dev_info(&g_spi->dev, "dev_open\n");
 	return 0;
 }
 
@@ -1679,18 +1667,13 @@ static int dev_release(struct inode *inode, struct file *filp)
 {
 	struct lr388k7 *ts = spi_get_drvdata(g_spi);
 
-#if defined(DEBUG_LR388K7)
 	dev_info(&g_spi->dev, "dev_release\n");
-#endif
 	if (!ts)
 		return -EINVAL;
 
 	g_st_state.b_is_init_finish = 0;
 
-	spin_lock(&dev_spin_lock);
-	access_num--;
-	spin_unlock(&dev_spin_lock);
-
+	atomic_set(&open_count, 0);
 	/* Reset assert */
 	gpio_set_value_cansleep(ts->gpio_reset, 0);
 	g_st_state.b_is_reset = true;
@@ -2124,7 +2107,9 @@ static long dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 static void lr388k7_init_parameter(void)
 {
+#if defined(DEBUG_LR388K7)
 	unsigned long flags;
+#endif
 	g_u8_mode = K7_DEFAULT_MODE;
 	g_u8_scan = K7_SCAN_STATE_IDLE;
 	g_st_state.u32_pid = 0;
@@ -2144,12 +2129,12 @@ static void lr388k7_init_parameter(void)
 	g_st_dbg.u8Test = 0;
 	g_u16_wakeup_enable = 0;
 
-	access_num = 0;
-
+#if defined(DEBUG_LR388K7)
 	spin_lock_irqsave(&lr388k7log_lock, flags);
 	g_log_front = 0;
 	g_log_rear = 0;
 	spin_unlock_irqrestore(&lr388k7log_lock, flags);
+#endif
 }
 
 static void lr388k7_init_ts(void)

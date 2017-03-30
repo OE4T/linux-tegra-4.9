@@ -3241,6 +3241,24 @@ static const struct tegra_pcie_soc_data tegra186_pcie_data = {
 		{{204000000, 480000000}, {408000000, 640000000} } },
 };
 
+static const struct tegra_pcie_soc_data tegra210b01_pcie_data = {
+	.num_ports = 2,
+	.pcie_regulator_names = t210_rail_names,
+	.num_pcie_regulators =
+			sizeof(t210_rail_names) / sizeof(t210_rail_names[0]),
+	.program_uphy = true,
+	.program_clkreq_as_bi_dir = true,
+	.enable_wrap = true,
+	.mbist_war = true,
+	.perf_war = true,
+	.updateFC_timer_expire_war = true,
+	.l1ss_rp_wakeup_war = true,
+	.link_speed_war = true,
+	.dvfs_mselect = true,
+	.dvfs_tbl = {
+		{{204000000, 102000000}, {408000000, 528000000} } },
+};
+
 static const struct tegra_pcie_soc_data tegra210_pcie_data = {
 	.num_ports = 2,
 	.pcie_regulator_names = t210_rail_names,
@@ -3270,6 +3288,7 @@ static const struct tegra_pcie_soc_data tegra124_pcie_data = {
 
 static struct of_device_id tegra_pcie_of_match[] = {
 	{ .compatible = "nvidia,tegra186-pcie", .data = &tegra186_pcie_data },
+	{ .compatible = "nvidia,tegra210b01-pcie", .data = &tegra210b01_pcie_data },
 	{ .compatible = "nvidia,tegra210-pcie", .data = &tegra210_pcie_data },
 	{ .compatible = "nvidia,tegra124-pcie", .data = &tegra124_pcie_data },
 	{ }

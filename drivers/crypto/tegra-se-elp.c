@@ -3206,6 +3206,15 @@ clk_dis:
 	return err;
 }
 
+static int tegra_se_elp_remove(struct platform_device *pdev)
+{
+	crypto_unregister_akcipher(&ecdsa_alg);
+	crypto_unregister_akcipher(&pka1_rsa_algs[0]);
+	crypto_unregister_kpp(&ecdh_algs[0]);
+
+	return 0;
+}
+
 #ifdef CONFIG_PM_SLEEP
 static int tegra_se_elp_suspend(struct device *dev)
 {
@@ -3248,6 +3257,7 @@ MODULE_DEVICE_TABLE(of, tegra_se_elp_of_match);
 
 static struct platform_driver tegra_se_elp_driver = {
 	.probe  = tegra_se_elp_probe,
+	.remove  = tegra_se_elp_remove,
 	.driver = {
 		.name   = "tegra-se-elp",
 		.owner  = THIS_MODULE,

@@ -40,6 +40,7 @@ nvgpu-y := \
 	common/nvgpu_common.o \
 	common/semaphore.o \
 	common/as.o \
+	common/rbtree.o \
 	common/vbios/bios.o \
 	gk20a/gk20a.o \
 	gk20a/bus_gk20a.o \

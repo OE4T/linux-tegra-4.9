@@ -243,7 +243,7 @@ static int hda_tegra_enable_clocks(struct hda_tegra *hda)
 
 	rc = clk_prepare_enable(hda->hda_clk);
 	if (rc)
-		return rc;
+		goto err;
 	rc = clk_prepare_enable(hda->hda2codec_2x_clk);
 	if (rc)
 		goto disable_hda;
@@ -257,6 +257,7 @@ disable_codec_2x:
 	clk_disable_unprepare(hda->hda2codec_2x_clk);
 disable_hda:
 	clk_disable_unprepare(hda->hda_clk);
+err:
 	if (hda->is_power_on) {
 		rc = tegra_powergate_partition(hda->partition_id);
 		if (rc < 0) {

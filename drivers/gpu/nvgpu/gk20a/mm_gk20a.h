@@ -27,6 +27,7 @@
 #include <asm/cacheflush.h>
 
 #include <nvgpu/allocator.h>
+#include <nvgpu/list.h>
 
 #ifdef CONFIG_ARM64
 #define outer_flush_range(a, b)
@@ -76,9 +77,16 @@ struct mem_desc {
 	bool fixed; /* vidmem only */
 	bool user_mem; /* vidmem only */
 	struct nvgpu_allocator *allocator; /* vidmem only */
-	struct list_head clear_list_entry; /* vidmem only */
+	struct nvgpu_list_node clear_list_entry; /* vidmem only */
 	bool skip_wmb;
 	unsigned long flags;
+};
+
+static inline struct mem_desc *
+mem_desc_from_clear_list_entry(struct nvgpu_list_node *node)
+{
+	return (struct mem_desc *)
+		((uintptr_t)node - offsetof(struct mem_desc, clear_list_entry));
 };
 
 struct mem_desc_sub {
@@ -416,7 +424,7 @@ struct mm_gk20a {
 		volatile bool cleared;
 		struct nvgpu_mutex first_clear_mutex;
 
-		struct list_head clear_list_head;
+		struct nvgpu_list_node clear_list_head;
 		struct nvgpu_mutex clear_list_mutex;
 
 		struct work_struct clear_mem_worker;

@@ -823,7 +823,7 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 
 	INIT_WORK(&mm->vidmem.clear_mem_worker, gk20a_vidmem_clear_mem_worker);
 	atomic64_set(&mm->vidmem.bytes_pending, 0);
-	INIT_LIST_HEAD(&mm->vidmem.clear_list_head);
+	nvgpu_init_list_node(&mm->vidmem.clear_list_head);
 	nvgpu_mutex_init(&mm->vidmem.clear_list_mutex);
 
 	gk20a_dbg_info("registered vidmem: %zu MB", size / SZ_1M);
@@ -3012,7 +3012,7 @@ int gk20a_gmmu_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 	mem->aperture = APERTURE_VIDMEM;
 	mem->allocator = vidmem_alloc;
 
-	INIT_LIST_HEAD(&mem->clear_list_entry);
+	nvgpu_init_list_node(&mem->clear_list_entry);
 
 	gk20a_dbg_fn("done at 0x%llx size %zu", addr, size);
 
@@ -3038,8 +3038,8 @@ static void gk20a_gmmu_free_vid(struct gk20a *g, struct mem_desc *mem)
 
 	if (mem->user_mem) {
 		nvgpu_mutex_acquire(&g->mm.vidmem.clear_list_mutex);
-		was_empty = list_empty(&g->mm.vidmem.clear_list_head);
-		list_add_tail(&mem->clear_list_entry,
+		was_empty = nvgpu_list_empty(&g->mm.vidmem.clear_list_head);
+		nvgpu_list_add_tail(&mem->clear_list_entry,
 			      &g->mm.vidmem.clear_list_head);
 		atomic64_add(mem->size, &g->mm.vidmem.bytes_pending);
 		nvgpu_mutex_release(&g->mm.vidmem.clear_list_mutex);
@@ -3102,10 +3102,11 @@ static struct mem_desc *get_pending_mem_desc(struct mm_gk20a *mm)
 	struct mem_desc *mem = NULL;
 
 	nvgpu_mutex_acquire(&mm->vidmem.clear_list_mutex);
-	mem = list_first_entry_or_null(&mm->vidmem.clear_list_head,
-			struct mem_desc, clear_list_entry);
-	if (mem)
-		list_del_init(&mem->clear_list_entry);
+	if (!nvgpu_list_empty(&mm->vidmem.clear_list_head)) {
+		mem = nvgpu_list_first_entry(&mm->vidmem.clear_list_head,
+				mem_desc, clear_list_entry);
+		nvgpu_list_del(&mem->clear_list_entry);
+	}
 	nvgpu_mutex_release(&mm->vidmem.clear_list_mutex);
 
 	return mem;

@@ -190,7 +190,7 @@ struct channel_gk20a {
 	struct nvgpu_mutex ioctl_lock;
 
 	int tsgid;
-	struct list_head ch_entry; /* channel's entry in TSG */
+	struct nvgpu_list_node ch_entry; /* channel's entry in TSG */
 
 	struct channel_gk20a_joblist joblist;
 	struct nvgpu_allocator fence_allocator;
@@ -276,6 +276,13 @@ channel_gk20a_from_free_chs(struct nvgpu_list_node *node)
 {
 	return (struct channel_gk20a *)
 		   ((uintptr_t)node - offsetof(struct channel_gk20a, free_chs));
+};
+
+static inline struct channel_gk20a *
+channel_gk20a_from_ch_entry(struct nvgpu_list_node *node)
+{
+	return (struct channel_gk20a *)
+	   ((uintptr_t)node - offsetof(struct channel_gk20a, ch_entry));
 };
 
 static inline bool gk20a_channel_as_bound(struct channel_gk20a *ch)

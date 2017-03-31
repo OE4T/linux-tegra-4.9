@@ -44,7 +44,7 @@ int gk20a_enable_tsg(struct tsg_gk20a *tsg)
 	struct channel_gk20a *ch;
 
 	down_read(&tsg->ch_list_lock);
-	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
 		g->ops.fifo.enable_channel(ch);
 	}
 	up_read(&tsg->ch_list_lock);
@@ -58,7 +58,7 @@ int gk20a_disable_tsg(struct tsg_gk20a *tsg)
 	struct channel_gk20a *ch;
 
 	down_read(&tsg->ch_list_lock);
-	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+	nvgpu_list_for_each_entry(ch, &tsg->ch_list, channel_gk20a, ch_entry) {
 		g->ops.fifo.disable_channel(ch);
 	}
 	up_read(&tsg->ch_list_lock);
@@ -127,7 +127,7 @@ int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg,
 	}
 
 	down_write(&tsg->ch_list_lock);
-	list_add_tail(&ch->ch_entry, &tsg->ch_list);
+	nvgpu_list_add_tail(&ch->ch_entry, &tsg->ch_list);
 	up_write(&tsg->ch_list_lock);
 
 	kref_get(&tsg->refcount);
@@ -145,7 +145,7 @@ int gk20a_tsg_unbind_channel(struct channel_gk20a *ch)
 	struct tsg_gk20a *tsg = &f->tsg[ch->tsgid];
 
 	down_write(&tsg->ch_list_lock);
-	list_del_init(&ch->ch_entry);
+	nvgpu_list_del(&ch->ch_entry);
 	up_write(&tsg->ch_list_lock);
 
 	kref_put(&tsg->refcount, gk20a_tsg_release);
@@ -168,7 +168,7 @@ int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid)
 	tsg->in_use = false;
 	tsg->tsgid = tsgid;
 
-	INIT_LIST_HEAD(&tsg->ch_list);
+	nvgpu_init_list_node(&tsg->ch_list);
 	init_rwsem(&tsg->ch_list_lock);
 
 	INIT_LIST_HEAD(&tsg->event_id_list);

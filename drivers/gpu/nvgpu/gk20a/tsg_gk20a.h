@@ -45,7 +45,7 @@ struct tsg_gk20a {
 
 	struct kref refcount;
 
-	struct list_head ch_list;
+	struct nvgpu_list_node ch_list;
 	int num_active_channels;
 	struct rw_semaphore ch_list_lock;
 

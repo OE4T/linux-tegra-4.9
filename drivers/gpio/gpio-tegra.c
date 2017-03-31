@@ -513,13 +513,19 @@ static int dbg_gpio_show(struct seq_file *s, void *unused)
 	struct tegra_gpio_info *tgi = s->private;
 	int i;
 	int j;
+	char x, y;
 
+	x = ' ';
+	y = 'A';
+
+	seq_printf(s, "Name:Bank:Port CNF OE OUT IN INT_STA INT_ENB INT_LVL\n");
 	for (i = 0; i < tgi->bank_count; i++) {
 		for (j = 0; j < 4; j++) {
 			int gpio = tegra_gpio_compose(i, j, 0);
+
 			seq_printf(s,
-				"%d:%d %02x %02x %02x %02x %02x %02x %06x\n",
-				i, j,
+			     "%c%c: %d:%d %02x %02x %02x %02x %02x %02x %06x\n",
+				x, y, i, j,
 				tegra_gpio_readl(tgi, GPIO_CNF(tgi, gpio)),
 				tegra_gpio_readl(tgi, GPIO_OE(tgi, gpio)),
 				tegra_gpio_readl(tgi, GPIO_OUT(tgi, gpio)),
@@ -527,6 +533,15 @@ static int dbg_gpio_show(struct seq_file *s, void *unused)
 				tegra_gpio_readl(tgi, GPIO_INT_STA(tgi, gpio)),
 				tegra_gpio_readl(tgi, GPIO_INT_ENB(tgi, gpio)),
 				tegra_gpio_readl(tgi, GPIO_INT_LVL(tgi, gpio)));
+
+			if (x != ' ')
+				x++;
+			if (y == 'Z') {
+				y = 'A';
+				x = 'A';
+			} else {
+				y++;
+			};
 		}
 	}
 	return 0;

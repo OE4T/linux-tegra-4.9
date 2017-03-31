@@ -1000,8 +1000,8 @@ static int smmu_iommu_map(struct iommu_domain *domain, unsigned long iova,
 }
 
 #if !ENABLE_IOMMU_DMA_OPS
-static int smmu_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
-			     struct scatterlist *sgl, int npages, unsigned long prot)
+static size_t smmu_iommu_map_sg(struct iommu_domain *domain, unsigned long iova,
+	struct scatterlist *sgl, unsigned int npages, unsigned long prot)
 {
 	int err = 0;
 	unsigned long iova_base = iova;
@@ -2383,9 +2383,9 @@ int (*__smmu_iommu_map_pfn)(struct smmu_as *as, dma_addr_t iova, unsigned long p
 int (*__smmu_iommu_map_largepage)(struct smmu_as *as, dma_addr_t iova, phys_addr_t pa, unsigned long prot) = __smmu_iommu_map_largepage_default;
 size_t (*__smmu_iommu_unmap)(struct smmu_as *as, dma_addr_t iova, size_t bytes) = __smmu_iommu_unmap_default;
 #if !ENABLE_IOMMU_DMA_OPS
-int (*__smmu_iommu_map_sg)(struct iommu_domain *domain, unsigned long iova, struct scatterlist *sgl, int npages, unsigned long prot) = smmu_iommu_map_sg;
+size_t (*__smmu_iommu_map_sg)(struct iommu_domain *domain, unsigned long iova, struct scatterlist *sgl, unsigned int npages, unsigned long prot) = smmu_iommu_map_sg;
 #else
-int (*__smmu_iommu_map_sg)(struct iommu_domain *domain, unsigned long iova, struct scatterlist *sgl, int npages, unsigned long prot) = default_iommu_map_sg;
+size_t (*__smmu_iommu_map_sg)(struct iommu_domain *domain, unsigned long iova, struct scatterlist *sgl, unsigned int npages, unsigned long prot) = default_iommu_map_sg;
 #endif
 int (*__tegra_smmu_suspend)(struct device *dev) = tegra_smmu_suspend_default;
 int (*__tegra_smmu_resume)(struct device *dev) = tegra_smmu_resume_default;

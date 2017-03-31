@@ -446,13 +446,15 @@ static const struct snd_soc_codec_driver tegra210_afc_codec = {
 
 static const struct snd_soc_codec_driver tegra186_afc_codec = {
 	.probe = tegra210_afc_codec_probe,
-	.dapm_widgets = tegra210_afc_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra210_afc_widgets),
-	.dapm_routes = tegra210_afc_routes,
-	.num_dapm_routes = ARRAY_SIZE(tegra210_afc_routes),
-	.controls = tegra186_afc_controls,
-	.num_controls = ARRAY_SIZE(tegra186_afc_controls),
 	.idle_bias_off = 1,
+	.component_driver = {
+		.dapm_widgets = tegra210_afc_widgets,
+		.num_dapm_widgets = ARRAY_SIZE(tegra210_afc_widgets),
+		.dapm_routes = tegra210_afc_routes,
+		.num_dapm_routes = ARRAY_SIZE(tegra210_afc_routes),
+		.controls = tegra186_afc_controls,
+		.num_controls = ARRAY_SIZE(tegra186_afc_controls),
+	},
 };
 
 static bool tegra210_afc_wr_rd_reg(struct device *dev, unsigned int reg)

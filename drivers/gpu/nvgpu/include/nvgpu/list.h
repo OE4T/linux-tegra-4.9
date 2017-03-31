@@ -56,6 +56,12 @@ static inline int nvgpu_list_empty(struct nvgpu_list_node *head)
 	return head->next == head;
 }
 
+static inline void nvgpu_list_move(struct nvgpu_list_node *node, struct nvgpu_list_node *head)
+{
+	nvgpu_list_del(node);
+	nvgpu_list_add(node, head);
+}
+
 #define nvgpu_list_entry(ptr, type, member)	\
 	type ## _from_ ## member(ptr)
 

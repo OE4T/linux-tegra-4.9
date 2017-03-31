@@ -90,7 +90,7 @@ static char __init *find_link(int major, int minor, int ino,
 	q->minor = minor;
 	q->ino = ino;
 	q->mode = mode;
-	strcpy(q->name, name);
+	strlcpy(q->name, name, sizeof(q->name));
 	q->next = NULL;
 	*p = q;
 	return NULL;

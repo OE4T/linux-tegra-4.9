@@ -1,7 +1,6 @@
 config SND_SOC_TEGRA_ALT_186
-        def_bool y
-        depends on SND_SOC_TEGRA_ALT
-        depends on ARCH_TEGRA_APE
+	def_bool y
+	depends on SND_SOC_TEGRA_ALT
 	depends on ARCH_TEGRA_18x_SOC
 
 config SND_SOC_TEGRA186_DSPK_ALT

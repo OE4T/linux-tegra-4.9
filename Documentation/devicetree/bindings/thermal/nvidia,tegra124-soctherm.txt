@@ -44,7 +44,7 @@ Required properties :
   incorrect.
 - throttle-cfgs: A sub-node which is a container of configuration for each
     hardware throttle events. These events can be set as cooling devices.
-  * throttle events: Sub-nodes must be named as "light" or "heavy".
+  * throttle events: Sub-nodes must be named as "light", "heavy", "oc1" - "oc5".
       Properties:
       - nvidia,priority: Each throttles has its own throttle settings, so the
         SW need to set priorities for various throttle, the HW arbiter can select
@@ -65,15 +65,29 @@ Required properties :
         TEGRA_SOCTHERM_THROT_LEVEL_HIGH, TEGRA_SOCTHERM_THROT_LEVEL_NONE
       - nvidia,gpu-throt-level:This property is for Tegra124 and Tegra210.
         It is the level of pulse skippers, which used to throttle clock
-	frequencies. It indicates gpu clock throttling depth and can be
-	programmed to any of the following values which represent a throttling
-	percentage:
-	TEGRA_SOCTHERM_THROT_LEVEL_LOW (50%),
-	TEGRA_SOCTHERM_THROT_LEVEL_MED (75%),
-	TEGRA_SOCTHERM_THROT_LEVEL_HIGH (85%),
-	TEGRA_SOCTHERM_THROT_LEVEL_NONE (0%)
+        frequencies. It indicates gpu clock throttling depth and can be
+        programmed to any of the following values which represent a throttling
+        percentage:
+        TEGRA_SOCTHERM_THROT_LEVEL_LOW (50%),
+        TEGRA_SOCTHERM_THROT_LEVEL_MED (75%),
+        TEGRA_SOCTHERM_THROT_LEVEL_HIGH (85%),
+        TEGRA_SOCTHERM_THROT_LEVEL_NONE (0%)
       - #cooling-cells: Should be 1. This cooling device only support on/off state.
         See ./thermal.txt for a description of this property.
+      Optional properties: The following properties are T210 specific and
+      valid only for OCx throttle events.
+      - nvidia,count-threshold: Specifies the number of OC events that are
+        required for triggering an interrupt. Interrupts are not triggered if
+        the property is missing. A value of 0 will interrupt on every OC alarm.
+      - nvidia,polarity-active-low: Configures the polarity of the OC alaram
+        signal. Accepted values are 1 for assert low and 0 for assert high.
+        Default value is 0.
+      - nvidia,alarm-filter: Number of clocks to filter event. When the filter
+        expires (which means the OC event has not occurred for a long time),
+        the counter is cleared and filter is rearmed. Default value is 0.
+      - nvidia,throttle-period: Specifies the number of uSec for which
+        throttling is engaged after the OC event is deasserted. Default value
+        is 0.
 
 Note:
 - the "critical" type trip points will be set to SOC_THERM hardware as the

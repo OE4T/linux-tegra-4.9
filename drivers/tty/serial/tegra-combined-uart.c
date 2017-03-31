@@ -59,16 +59,45 @@ static int uart_null_func(struct uart_port *port)
 	return 0;
 }
 
-static int uart_shutdown(struct uart_port *port)
+static void tegra_combined_uart_disable_sm_irq(void)
 {
 	u32 reg_val;
 	/*
-	 * disable interrupt
 	 * WARNING: HSP_INT_IE_0 is not protected for RMW.
 	 */
 	reg_val = readl(top0_cmn_base + HSP_INT_IE_0);
 	reg_val &= ~(1 << MBOX0_FULL_BIT);
 	writel(reg_val, top0_cmn_base + HSP_INT_IE_0);
+}
+
+static void tegra_combined_uart_enable_sm_irq(void)
+{
+	u32 reg_val;
+	/*
+	 * WARNING: HSP_INT_IE_0 is not protected for RMW.
+	 */
+	reg_val = readl(top0_cmn_base + HSP_INT_IE_0);
+	reg_val |= (1 << MBOX0_FULL_BIT);
+	writel(reg_val, top0_cmn_base + HSP_INT_IE_0);
+}
+
+static int tegra_combined_uart_suspend(struct device *dev)
+{
+	tegra_combined_uart_disable_sm_irq();
+
+	return 0;
+}
+
+static int tegra_combined_uart_resume(struct device *dev)
+{
+	tegra_combined_uart_enable_sm_irq();
+
+	return 0;
+}
+
+static int uart_shutdown(struct uart_port *port)
+{
+	tegra_combined_uart_disable_sm_irq();
 	/* free IRQ */
 	free_irq(tegra_combined_uart_port.irq, port);
 
@@ -222,13 +251,13 @@ static irqreturn_t tegra_combined_uart_rx(int irq, void *dev_id)
 
 	tegra_combined_uart_handle_rx_msg(reg_val);
 	spin_unlock_irqrestore(&mbox_lock, flags);
+
 	return IRQ_HANDLED;
 }
 
 static int tegra_combined_uart_startup(struct uart_port *port)
 {
 	int ret;
-	u32 reg_val;
 	/* allocate IRQ */
 	ret = request_irq(tegra_combined_uart_port.irq, tegra_combined_uart_rx,
 		0, "combined_uart rx", port);
@@ -236,13 +265,9 @@ static int tegra_combined_uart_startup(struct uart_port *port)
 		pr_err("%s: request_irq error\n", __func__);
 		return ret;
 	}
-	/*
-	 * enable interrupt
-	 * WARNING: HSP_INT_IE_0 is not protected for RMW.
-	 */
-	reg_val = readl(top0_cmn_base + HSP_INT_IE_0);
-	reg_val |= (1 << MBOX0_FULL_BIT);
-	writel(reg_val, top0_cmn_base + HSP_INT_IE_0);
+
+	tegra_combined_uart_enable_sm_irq();
+
 	return ret;
 }
 
@@ -306,6 +331,7 @@ err_mapping:
 		iounmap(top0_mbox01_base);
 	if (top0_cmn_base != NULL && !IS_ERR(top0_cmn_base))
 		iounmap(top0_cmn_base);
+
 	return ret;
 }
 
@@ -317,6 +343,7 @@ static int tegra_combined_uart_remove(struct platform_device *pdev)
 	iounmap(spe_mbox_reg);
 	iounmap(top0_mbox01_base);
 	iounmap(top0_cmn_base);
+
 	return 0;
 }
 
@@ -398,12 +425,22 @@ static struct uart_driver tegra_combined_uart_driver = {
 	.nr		= 1,
 };
 
+#ifdef CONFIG_PM
+static const struct dev_pm_ops tegra_combined_uart_pm_ops = {
+	.suspend = tegra_combined_uart_suspend,
+	.resume = tegra_combined_uart_resume,
+};
+#endif
+
 static struct platform_driver tegra_combined_uart_platform_driver = {
 	.probe		= tegra_combined_uart_probe,
 	.remove		= tegra_combined_uart_remove,
 	.driver		= {
 		.name	= "tegra-combined-uart",
 		.of_match_table = of_match_ptr(tegra_combined_uart_of_match),
+#ifdef CONFIG_PM
+		.pm = &tegra_combined_uart_pm_ops,
+#endif
 	},
 };
 

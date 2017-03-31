@@ -808,8 +808,10 @@ static const struct snd_soc_dapm_route tegra186_xbar_routes[] = {
 static struct snd_soc_codec_driver tegra186_xbar_codec = {
 	.probe = tegra_xbar_codec_probe,
 	.idle_bias_off = 1,
-	.dapm_widgets = tegra186_xbar_widgets,
-	.dapm_routes = tegra186_xbar_routes,
+	.component_driver = {
+		.dapm_widgets = tegra186_xbar_widgets,
+		.dapm_routes = tegra186_xbar_routes,
+	},
 };
 
 static struct of_dev_auxdata tegra186_xbar_auxdata[] = {
@@ -861,12 +863,18 @@ static struct of_dev_auxdata tegra186_xbar_auxdata[] = {
 int tegra186_xbar_registration(struct platform_device *pdev)
 {
 	int ret;
+	int num_dapm_widgets, num_dapm_routes;
 
-	tegra186_xbar_codec.num_dapm_widgets = (TEGRA186_NUM_MUX_WIDGETS * 3) +
+	num_dapm_widgets = (TEGRA186_NUM_MUX_WIDGETS * 3) +
 				(TEGRA186_NUM_DAIS - TEGRA186_NUM_MUX_WIDGETS) * 2;
-	tegra186_xbar_codec.num_dapm_routes =
+	num_dapm_routes =
 		(TEGRA186_NUM_DAIS - TEGRA186_NUM_MUX_WIDGETS) * 2 +
 		(TEGRA186_NUM_MUX_WIDGETS * TEGRA186_NUM_MUX_INPUT);
+
+	tegra186_xbar_codec.component_driver.num_dapm_widgets =
+			num_dapm_widgets;
+	tegra186_xbar_codec.component_driver.num_dapm_routes =
+			num_dapm_routes;
 
 	ret = snd_soc_register_codec(&pdev->dev, &tegra186_xbar_codec,
 				tegra186_xbar_dais, TEGRA186_NUM_DAIS);

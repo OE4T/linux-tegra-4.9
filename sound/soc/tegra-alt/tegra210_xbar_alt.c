@@ -558,7 +558,7 @@ static int tegra210_xbar_registration(struct platform_device *pdev)
 
 	num_dapm_widgets = (TEGRA210_NUM_MUX_WIDGETS * 3) +
 				(TEGRA210_NUM_DAIS - TEGRA210_NUM_MUX_WIDGETS) * 2;
-	num_dapm_routes = 
+	num_dapm_routes =
 		(TEGRA210_NUM_DAIS - TEGRA210_NUM_MUX_WIDGETS) * 2 +
 		(TEGRA210_NUM_MUX_WIDGETS * TEGRA210_NUM_MUX_INPUT);
 

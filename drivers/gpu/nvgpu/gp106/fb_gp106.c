@@ -11,7 +11,6 @@
  * more details.
  */
 
-#include <linux/types.h>
 #include <linux/delay.h>
 
 #include "gk20a/gk20a.h"

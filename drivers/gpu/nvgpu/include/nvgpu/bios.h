@@ -14,7 +14,7 @@
 #ifndef NVGPU_BIOS_H
 #define NVGPU_BIOS_H
 
-#include <linux/types.h>
+#include <nvgpu/types.h>
 
 struct gk20a;
 

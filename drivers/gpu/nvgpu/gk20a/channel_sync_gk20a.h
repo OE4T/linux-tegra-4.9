@@ -18,8 +18,6 @@
 #ifndef _GK20A_CHANNEL_SYNC_H_
 #define _GK20A_CHANNEL_SYNC_H_
 
-#include <linux/types.h>
-
 struct gk20a_channel_sync;
 struct priv_cmd_entry;
 struct channel_gk20a;

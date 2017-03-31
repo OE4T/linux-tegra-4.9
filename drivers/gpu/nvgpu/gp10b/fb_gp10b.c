@@ -13,8 +13,6 @@
  * more details.
  */
 
-#include <linux/types.h>
-
 #include "gk20a/gk20a.h"
 #include "gm20b/fb_gm20b.h"
 #include "gk20a/kind_gk20a.h"

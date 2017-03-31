@@ -13,8 +13,6 @@
  * more details.
  */
 
-#include <linux/types.h>
-
 #include <dt-bindings/memory/tegra-swgroup.h>
 
 #include "gk20a/gk20a.h"

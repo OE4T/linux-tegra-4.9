@@ -13,7 +13,6 @@
  * more details.
  */
 
-#include <linux/types.h>
 #include <trace/events/gk20a.h>
 
 #include "gk20a/gk20a.h"

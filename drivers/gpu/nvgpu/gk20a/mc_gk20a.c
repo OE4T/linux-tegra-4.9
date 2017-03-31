@@ -13,7 +13,6 @@
  * more details.
  */
 
-#include <linux/types.h>
 #include <linux/delay.h>
 #include <trace/events/gk20a.h>
 

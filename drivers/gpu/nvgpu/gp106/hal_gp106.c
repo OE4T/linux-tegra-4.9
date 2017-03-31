@@ -13,10 +13,7 @@
  * more details.
  */
 
-#include <linux/types.h>
 #include <linux/printk.h>
-
-#include <linux/types.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"

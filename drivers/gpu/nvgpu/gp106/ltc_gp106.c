@@ -11,8 +11,6 @@
  * more details.
  */
 
-#include <linux/types.h>
-
 #include "gk20a/gk20a.h"
 #include "gm20b/ltc_gm20b.h"
 #include "gp10b/ltc_gp10b.h"

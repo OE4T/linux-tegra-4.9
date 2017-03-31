@@ -14,7 +14,6 @@
  */
 
 #include <linux/delay.h>
-#include <linux/types.h>
 
 #include "fifo_gp10b.h"
 

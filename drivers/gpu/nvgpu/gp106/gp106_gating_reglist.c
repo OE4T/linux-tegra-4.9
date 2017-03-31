@@ -16,7 +16,6 @@
 #ifndef __gp106_gating_reglist_h__
 #define __gp106_gating_reglist_h__
 
-#include <linux/types.h>
 #include "gp106_gating_reglist.h"
 
 struct gating_desc {

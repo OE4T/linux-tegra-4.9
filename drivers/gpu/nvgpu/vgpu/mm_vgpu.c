@@ -220,9 +220,10 @@ static void vgpu_vm_remove_support(struct vm_gk20a *vm)
 	}
 
 	/* destroy remaining reserved memory areas */
-	list_for_each_entry_safe(va_node, va_node_tmp, &vm->reserved_va_list,
-		reserved_va_list) {
-		list_del(&va_node->reserved_va_list);
+	nvgpu_list_for_each_entry_safe(va_node, va_node_tmp,
+			&vm->reserved_va_list,
+			vm_reserved_va_node, reserved_va_list) {
+		nvgpu_list_del(&va_node->reserved_va_list);
 		nvgpu_kfree(g, va_node);
 	}
 
@@ -409,7 +410,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 
 	nvgpu_mutex_init(&vm->update_gmmu_lock);
 	kref_init(&vm->ref);
-	INIT_LIST_HEAD(&vm->reserved_va_list);
+	nvgpu_init_list_node(&vm->reserved_va_list);
 
 	vm->enable_ctag = true;
 

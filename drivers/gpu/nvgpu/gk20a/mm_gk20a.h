@@ -200,7 +200,7 @@ struct mapped_buffer_node {
 	struct vm_gk20a *vm;
 	struct rb_node node;
 	struct list_head unmap_list;
-	struct list_head va_buffers_list;
+	struct nvgpu_list_node va_buffers_list;
 	struct vm_reserved_va_node *va_node;
 	u64 addr;
 	u64 size;
@@ -226,13 +226,27 @@ struct mapped_buffer_node {
 	bool va_allocated;
 };
 
+static inline struct mapped_buffer_node *
+mapped_buffer_node_from_va_buffers_list(struct nvgpu_list_node *node)
+{
+	return (struct mapped_buffer_node *)
+		((uintptr_t)node - offsetof(struct mapped_buffer_node, va_buffers_list));
+};
+
 struct vm_reserved_va_node {
-	struct list_head reserved_va_list;
-	struct list_head va_buffers_list;
+	struct nvgpu_list_node reserved_va_list;
+	struct nvgpu_list_node va_buffers_list;
 	u32 pgsz_idx;
 	u64 vaddr_start;
 	u64 size;
 	bool sparse;
+};
+
+static inline struct vm_reserved_va_node *
+vm_reserved_va_node_from_reserved_va_list(struct nvgpu_list_node *node)
+{
+	return (struct vm_reserved_va_node *)
+		((uintptr_t)node - offsetof(struct vm_reserved_va_node, reserved_va_list));
 };
 
 struct gk20a_mmu_level {
@@ -296,7 +310,7 @@ struct vm_gk20a {
 
 	struct rb_root mapped_buffers;
 
-	struct list_head reserved_va_list;
+	struct nvgpu_list_node reserved_va_list;
 
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	u64 handle;

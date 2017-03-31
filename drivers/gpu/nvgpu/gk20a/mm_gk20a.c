@@ -1274,7 +1274,8 @@ static struct vm_reserved_va_node *addr_to_reservation(struct vm_gk20a *vm,
 						       u64 addr)
 {
 	struct vm_reserved_va_node *va_node;
-	list_for_each_entry(va_node, &vm->reserved_va_list, reserved_va_list)
+	nvgpu_list_for_each_entry(va_node, &vm->reserved_va_list,
+			vm_reserved_va_node, reserved_va_list)
 		if (addr >= va_node->vaddr_start &&
 		    addr < (u64)va_node->vaddr_start + (u64)va_node->size)
 			return va_node;
@@ -2429,7 +2430,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	mapped_buffer->user_mapped = user_mapped ? 1 : 0;
 	mapped_buffer->own_mem_ref = user_mapped;
 	INIT_LIST_HEAD(&mapped_buffer->unmap_list);
-	INIT_LIST_HEAD(&mapped_buffer->va_buffers_list);
+	nvgpu_init_list_node(&mapped_buffer->va_buffers_list);
 	kref_init(&mapped_buffer->ref);
 
 	err = insert_mapped_buffer(&vm->mapped_buffers, mapped_buffer);
@@ -2444,7 +2445,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	gk20a_dbg_info("allocated va @ 0x%llx", map_offset);
 
 	if (va_node) {
-		list_add_tail(&mapped_buffer->va_buffers_list,
+		nvgpu_list_add_tail(&mapped_buffer->va_buffers_list,
 			      &va_node->va_buffers_list);
 		mapped_buffer->va_node = va_node;
 	}
@@ -3877,8 +3878,8 @@ void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer,
 
 	/* remove from mapped buffer tree and remove list, free */
 	rb_erase(&mapped_buffer->node, &vm->mapped_buffers);
-	if (!list_empty(&mapped_buffer->va_buffers_list))
-		list_del(&mapped_buffer->va_buffers_list);
+	if (!nvgpu_list_empty(&mapped_buffer->va_buffers_list))
+		nvgpu_list_del(&mapped_buffer->va_buffers_list);
 
 	/* keep track of mapped buffers */
 	if (mapped_buffer->user_mapped)
@@ -3960,9 +3961,10 @@ static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
 	}
 
 	/* destroy remaining reserved memory areas */
-	list_for_each_entry_safe(va_node, va_node_tmp, &vm->reserved_va_list,
-		reserved_va_list) {
-		list_del(&va_node->reserved_va_list);
+	nvgpu_list_for_each_entry_safe(va_node, va_node_tmp,
+			&vm->reserved_va_list,
+			vm_reserved_va_node, reserved_va_list) {
+		nvgpu_list_del(&va_node->reserved_va_list);
 		nvgpu_kfree(vm->mm->g, va_node);
 	}
 
@@ -4395,7 +4397,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 
 	nvgpu_mutex_init(&vm->update_gmmu_lock);
 	kref_init(&vm->ref);
-	INIT_LIST_HEAD(&vm->reserved_va_list);
+	nvgpu_init_list_node(&vm->reserved_va_list);
 
 	/*
 	 * This is only necessary for channel address spaces. The best way to
@@ -4539,8 +4541,8 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 	va_node->vaddr_start = vaddr_start;
 	va_node->size = (u64)args->page_size * (u64)args->pages;
 	va_node->pgsz_idx = pgsz_idx;
-	INIT_LIST_HEAD(&va_node->va_buffers_list);
-	INIT_LIST_HEAD(&va_node->reserved_va_list);
+	nvgpu_init_list_node(&va_node->va_buffers_list);
+	nvgpu_init_list_node(&va_node->reserved_va_list);
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
@@ -4569,7 +4571,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 
 		va_node->sparse = true;
 	}
-	list_add_tail(&va_node->reserved_va_list, &vm->reserved_va_list);
+	nvgpu_list_add_tail(&va_node->reserved_va_list, &vm->reserved_va_list);
 
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
@@ -4608,13 +4610,14 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 		/* Decrement the ref count on all buffers in this va_node. This
 		 * allows userspace to let the kernel free mappings that are
 		 * only used by this va_node. */
-		list_for_each_entry_safe(buffer, n,
-			&va_node->va_buffers_list, va_buffers_list) {
-			list_del_init(&buffer->va_buffers_list);
+		nvgpu_list_for_each_entry_safe(buffer, n,
+			  &va_node->va_buffers_list,
+			  mapped_buffer_node, va_buffers_list) {
+			nvgpu_list_del(&buffer->va_buffers_list);
 			kref_put(&buffer->ref, gk20a_vm_unmap_locked_kref);
 		}
 
-		list_del(&va_node->reserved_va_list);
+		nvgpu_list_del(&va_node->reserved_va_list);
 
 		/* if this was a sparse mapping, free the va */
 		if (va_node->sparse)

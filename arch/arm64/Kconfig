@@ -234,6 +234,7 @@ config SMP
 
 config SWIOTLB
 	def_bool y
+	depends on !ARCH_TEGRA
 
 config IOMMU_HELPER
 	def_bool SWIOTLB

@@ -107,8 +107,6 @@ static size_t  scrncapt_copy_dcbuf(void *pDst,
 	 */
 	{
 		void *vaddr_src;
-		void *vaddr_min = (void *)PAGE_OFFSET;
-		void *vaddr_max = __va(memblock_end_of_DRAM() - 1);
 		struct scatterlist *sg;
 		unsigned int  i;
 		size_t  ofs, l;
@@ -125,14 +123,11 @@ static size_t  scrncapt_copy_dcbuf(void *pDst,
 				break;
 			l = sg->length;
 			l = (len < (ofs + l)) ? len - ofs : l;
-			vaddr_src = sg_virt(sg);
-			if (vaddr_src >= vaddr_min && vaddr_src <= vaddr_max) {
-				memcpy((char *)pDst + ofs, vaddr_src, l);
-			} else {
-				vaddr_src = ioremap_cache(sg_phys(sg), l);
-				memcpy((char *)pDst + ofs, vaddr_src, l);
-				iounmap(vaddr_src);
-			}
+
+			vaddr_src = ioremap_cache(sg_phys(sg), l);
+			memcpy((char *)pDst + ofs, vaddr_src, l);
+			iounmap(vaddr_src);
+
 			ofs += l;
 			if (sg->offset) {
 				pr_debug("@@!! %s.%d: sgl[].offset:%d\n",

@@ -26,6 +26,7 @@
 
 #include <nvgpu/allocator.h>
 #include <nvgpu/list.h>
+#include <nvgpu/rbtree.h>
 
 #ifdef CONFIG_ARM64
 #define outer_flush_range(a, b)
@@ -196,7 +197,7 @@ struct priv_cmd_entry {
 
 struct mapped_buffer_node {
 	struct vm_gk20a *vm;
-	struct rb_node node;
+	struct nvgpu_rbtree_node node;
 	struct list_head unmap_list;
 	struct nvgpu_list_node va_buffers_list;
 	struct vm_reserved_va_node *va_node;
@@ -229,6 +230,13 @@ mapped_buffer_node_from_va_buffers_list(struct nvgpu_list_node *node)
 {
 	return (struct mapped_buffer_node *)
 		((uintptr_t)node - offsetof(struct mapped_buffer_node, va_buffers_list));
+};
+
+static inline struct mapped_buffer_node *
+mapped_buffer_from_rbtree_node(struct nvgpu_rbtree_node *node)
+{
+	return (struct mapped_buffer_node *)
+		  ((uintptr_t)node - offsetof(struct mapped_buffer_node, node));
 };
 
 struct vm_reserved_va_node {
@@ -306,7 +314,7 @@ struct vm_gk20a {
 	struct nvgpu_allocator user;
 	struct nvgpu_allocator user_lp;
 
-	struct rb_root mapped_buffers;
+	struct nvgpu_rbtree_node *mapped_buffers;
 
 	struct nvgpu_list_node reserved_va_list;
 

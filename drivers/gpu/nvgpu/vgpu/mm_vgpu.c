@@ -202,7 +202,7 @@ static void vgpu_vm_remove_support(struct vm_gk20a *vm)
 	struct vm_reserved_va_node *va_node, *va_node_tmp;
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_as_share_params *p = &msg.params.as_share;
-	struct rb_node *node;
+	struct nvgpu_rbtree_node *node = NULL;
 	int err;
 
 	gk20a_dbg_fn("");
@@ -211,12 +211,11 @@ static void vgpu_vm_remove_support(struct vm_gk20a *vm)
 	/* TBD: add a flag here for the unmap code to recognize teardown
 	 * and short-circuit any otherwise expensive operations. */
 
-	node = rb_first(&vm->mapped_buffers);
+	nvgpu_rbtree_enum_start(0, &node, vm->mapped_buffers);
 	while (node) {
-		mapped_buffer =
-			container_of(node, struct mapped_buffer_node, node);
+		mapped_buffer = mapped_buffer_from_rbtree_node(node);
 		gk20a_vm_unmap_locked(mapped_buffer, NULL);
-		node = rb_first(&vm->mapped_buffers);
+		nvgpu_rbtree_enum_start(0, &node, vm->mapped_buffers);
 	}
 
 	/* destroy remaining reserved memory areas */
@@ -406,7 +405,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 	if (err)
 		goto clean_up_user_allocator;
 
-	vm->mapped_buffers = RB_ROOT;
+	vm->mapped_buffers = NULL;
 
 	nvgpu_mutex_init(&vm->update_gmmu_lock);
 	kref_init(&vm->ref);

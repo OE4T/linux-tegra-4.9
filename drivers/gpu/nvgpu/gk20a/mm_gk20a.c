@@ -311,10 +311,10 @@ static inline u32 lo32(u64 f)
 }
 
 static struct mapped_buffer_node *find_mapped_buffer_locked(
-					struct rb_root *root, u64 addr);
+				struct nvgpu_rbtree_node *root, u64 addr);
 static struct mapped_buffer_node *find_mapped_buffer_reverse_locked(
-				struct rb_root *root, struct dma_buf *dmabuf,
-				u32 kind);
+			struct nvgpu_rbtree_node *root, struct dma_buf *dmabuf,
+			u32 kind);
 static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				   enum gmmu_pgsz_gk20a pgsz_idx,
 				   struct sg_table *sgt, u64 buffer_offset,
@@ -1289,7 +1289,7 @@ int gk20a_vm_get_buffers(struct vm_gk20a *vm,
 {
 	struct mapped_buffer_node *mapped_buffer;
 	struct mapped_buffer_node **buffer_list;
-	struct rb_node *node;
+	struct nvgpu_rbtree_node *node = NULL;
 	int i = 0;
 
 	if (vm->userspace_managed) {
@@ -1307,16 +1307,15 @@ int gk20a_vm_get_buffers(struct vm_gk20a *vm,
 		return -ENOMEM;
 	}
 
-	node = rb_first(&vm->mapped_buffers);
+	nvgpu_rbtree_enum_start(0, &node, vm->mapped_buffers);
 	while (node) {
-		mapped_buffer =
-			container_of(node, struct mapped_buffer_node, node);
+		mapped_buffer = mapped_buffer_from_rbtree_node(node);
 		if (mapped_buffer->user_mapped) {
 			buffer_list[i] = mapped_buffer;
 			kref_get(&mapped_buffer->ref);
 			i++;
 		}
-		node = rb_next(&mapped_buffer->node);
+		nvgpu_rbtree_enum_next(&node, node);
 	}
 
 	BUG_ON(i != vm->num_user_mapped_buffers);
@@ -1396,7 +1395,7 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
-	mapped_buffer = find_mapped_buffer_locked(&vm->mapped_buffers, offset);
+	mapped_buffer = find_mapped_buffer_locked(vm->mapped_buffers, offset);
 	if (!mapped_buffer) {
 		nvgpu_mutex_release(&vm->update_gmmu_lock);
 		gk20a_err(d, "invalid addr to unmap 0x%llx", offset);
@@ -1488,104 +1487,81 @@ int gk20a_vm_free_va(struct vm_gk20a *vm,
 	return 0;
 }
 
-static int insert_mapped_buffer(struct rb_root *root,
+
+static void remove_mapped_buffer(struct vm_gk20a *vm,
 				struct mapped_buffer_node *mapped_buffer)
 {
-	struct rb_node **new_node = &(root->rb_node), *parent = NULL;
+	nvgpu_rbtree_unlink(&mapped_buffer->node, &vm->mapped_buffers);
+}
 
-	/* Figure out where to put new node */
-	while (*new_node) {
-		struct mapped_buffer_node *cmp_with =
-			container_of(*new_node, struct mapped_buffer_node,
-				     node);
+static int insert_mapped_buffer(struct vm_gk20a *vm,
+				struct mapped_buffer_node *mapped_buffer)
+{
+	mapped_buffer->node.key_start = mapped_buffer->addr;
+	mapped_buffer->node.key_end = mapped_buffer->addr + mapped_buffer->size;
 
-		parent = *new_node;
-
-		if (cmp_with->addr > mapped_buffer->addr) /* u64 cmp */
-			new_node = &((*new_node)->rb_left);
-		else if (cmp_with->addr != mapped_buffer->addr) /* u64 cmp */
-			new_node = &((*new_node)->rb_right);
-		else
-			return -EINVAL; /* no fair dup'ing */
-	}
-
-	/* Add new node and rebalance tree. */
-	rb_link_node(&mapped_buffer->node, parent, new_node);
-	rb_insert_color(&mapped_buffer->node, root);
+	nvgpu_rbtree_insert(&mapped_buffer->node, &vm->mapped_buffers);
 
 	return 0;
 }
 
 static struct mapped_buffer_node *find_mapped_buffer_reverse_locked(
-				struct rb_root *root, struct dma_buf *dmabuf,
-				u32 kind)
+			struct nvgpu_rbtree_node *root, struct dma_buf *dmabuf,
+			u32 kind)
 {
-	struct rb_node *node = rb_first(root);
+	struct nvgpu_rbtree_node *node = NULL;
+
+	nvgpu_rbtree_enum_start(0, &node, root);
+
 	while (node) {
 		struct mapped_buffer_node *mapped_buffer =
-			container_of(node, struct mapped_buffer_node, node);
+				mapped_buffer_from_rbtree_node(node);
+
 		if (mapped_buffer->dmabuf == dmabuf &&
 		    kind == mapped_buffer->kind)
 			return mapped_buffer;
-		node = rb_next(&mapped_buffer->node);
+
+		nvgpu_rbtree_enum_next(&node, node);
 	}
+
 	return NULL;
 }
 
 static struct mapped_buffer_node *find_mapped_buffer_locked(
-					struct rb_root *root, u64 addr)
+				struct nvgpu_rbtree_node *root, u64 addr)
 {
+	struct nvgpu_rbtree_node *node = NULL;
 
-	struct rb_node *node = root->rb_node;
-	while (node) {
-		struct mapped_buffer_node *mapped_buffer =
-			container_of(node, struct mapped_buffer_node, node);
-		if (mapped_buffer->addr > addr) /* u64 cmp */
-			node = node->rb_left;
-		else if (mapped_buffer->addr != addr) /* u64 cmp */
-			node = node->rb_right;
-		else
-			return mapped_buffer;
-	}
-	return NULL;
+	nvgpu_rbtree_search(addr, &node, root);
+	if (!node)
+		return NULL;
+
+	return mapped_buffer_from_rbtree_node(node);
 }
 
 static struct mapped_buffer_node *find_mapped_buffer_range_locked(
-					struct rb_root *root, u64 addr)
+				struct nvgpu_rbtree_node *root, u64 addr)
 {
-	struct rb_node *node = root->rb_node;
-	while (node) {
-		struct mapped_buffer_node *m =
-			container_of(node, struct mapped_buffer_node, node);
-		if (m->addr <= addr && m->addr + m->size > addr)
-			return m;
-		else if (m->addr > addr) /* u64 cmp */
-			node = node->rb_left;
-		else
-			node = node->rb_right;
-	}
-	return NULL;
+	struct nvgpu_rbtree_node *node = NULL;
+
+	nvgpu_rbtree_range_search(addr, &node, root);
+	if (!node)
+		return NULL;
+
+	return mapped_buffer_from_rbtree_node(node);
 }
 
 /* find the first mapped buffer with GPU VA less than addr */
 static struct mapped_buffer_node *find_mapped_buffer_less_than_locked(
-	struct rb_root *root, u64 addr)
+	struct nvgpu_rbtree_node *root, u64 addr)
 {
-	struct rb_node *node = root->rb_node;
-	struct mapped_buffer_node *ret = NULL;
+	struct nvgpu_rbtree_node *node = NULL;
 
-	while (node) {
-		struct mapped_buffer_node *mapped_buffer =
-			container_of(node, struct mapped_buffer_node, node);
-		if (mapped_buffer->addr >= addr)
-			node = node->rb_left;
-		else {
-			ret = mapped_buffer;
-			node = node->rb_right;
-		}
-	}
+	nvgpu_rbtree_less_than_search(addr, &node, root);
+	if (!node)
+		return NULL;
 
-	return ret;
+	return mapped_buffer_from_rbtree_node(node);
 }
 
 #define BFR_ATTRS (sizeof(nvmap_bfr_param)/sizeof(nvmap_bfr_param[0]))
@@ -1693,7 +1669,7 @@ static int validate_fixed_buffer(struct vm_gk20a *vm,
 	 * mappings by checking the buffer with the highest GPU VA
 	 * that is less than our buffer end */
 	buffer = find_mapped_buffer_less_than_locked(
-		&vm->mapped_buffers, map_offset + map_size);
+		vm->mapped_buffers, map_offset + map_size);
 	if (buffer && buffer->addr + buffer->size > map_offset) {
 		gk20a_warn(dev, "overlapping buffer map requested");
 		return -EINVAL;
@@ -1877,7 +1853,7 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 	struct mapped_buffer_node *mapped_buffer = NULL;
 
 	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET) {
-		mapped_buffer = find_mapped_buffer_locked(&vm->mapped_buffers,
+		mapped_buffer = find_mapped_buffer_locked(vm->mapped_buffers,
 							  offset_align);
 		if (!mapped_buffer)
 			return 0;
@@ -1887,7 +1863,7 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 			return 0;
 	} else {
 		mapped_buffer =
-			find_mapped_buffer_reverse_locked(&vm->mapped_buffers,
+			find_mapped_buffer_reverse_locked(vm->mapped_buffers,
 						  dmabuf, kind);
 		if (!mapped_buffer)
 			return 0;
@@ -2433,7 +2409,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	nvgpu_init_list_node(&mapped_buffer->va_buffers_list);
 	kref_init(&mapped_buffer->ref);
 
-	err = insert_mapped_buffer(&vm->mapped_buffers, mapped_buffer);
+	err = insert_mapped_buffer(vm, mapped_buffer);
 	if (err) {
 		gk20a_err(d, "failed to insert into mapped buffer tree");
 		goto clean_up;
@@ -2456,7 +2432,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 clean_up:
 	if (inserted) {
-		rb_erase(&mapped_buffer->node, &vm->mapped_buffers);
+		remove_mapped_buffer(vm, mapped_buffer);
 		if (user_mapped)
 			vm->num_user_mapped_buffers--;
 	}
@@ -2483,7 +2459,7 @@ int gk20a_vm_get_compbits_info(struct vm_gk20a *vm,
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
-	mapped_buffer = find_mapped_buffer_locked(&vm->mapped_buffers, mapping_gva);
+	mapped_buffer = find_mapped_buffer_locked(vm->mapped_buffers, mapping_gva);
 
 	if (!mapped_buffer || !mapped_buffer->user_mapped)
 	{
@@ -2542,7 +2518,7 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
 	mapped_buffer =
-		find_mapped_buffer_locked(&vm->mapped_buffers, mapping_gva);
+		find_mapped_buffer_locked(vm->mapped_buffers, mapping_gva);
 
 	if (!mapped_buffer || !mapped_buffer->user_mapped) {
 		nvgpu_mutex_release(&vm->update_gmmu_lock);
@@ -3274,7 +3250,7 @@ dma_addr_t gk20a_mm_gpuva_to_iova_base(struct vm_gk20a *vm, u64 gpu_vaddr)
 	struct gk20a *g = gk20a_from_vm(vm);
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
-	buffer = find_mapped_buffer_locked(&vm->mapped_buffers, gpu_vaddr);
+	buffer = find_mapped_buffer_locked(vm->mapped_buffers, gpu_vaddr);
 	if (buffer)
 		addr = g->ops.mm.get_iova_addr(g, buffer->sgt->sgl,
 				buffer->flags);
@@ -3886,7 +3862,7 @@ void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer,
 		       mapped_buffer->sgt);
 
 	/* remove from mapped buffer tree and remove list, free */
-	rb_erase(&mapped_buffer->node, &vm->mapped_buffers);
+	remove_mapped_buffer(vm, mapped_buffer);
 	if (!nvgpu_list_empty(&mapped_buffer->va_buffers_list))
 		nvgpu_list_del(&mapped_buffer->va_buffers_list);
 
@@ -3908,7 +3884,7 @@ void gk20a_vm_unmap(struct vm_gk20a *vm, u64 offset)
 	struct mapped_buffer_node *mapped_buffer;
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
-	mapped_buffer = find_mapped_buffer_locked(&vm->mapped_buffers, offset);
+	mapped_buffer = find_mapped_buffer_locked(vm->mapped_buffers, offset);
 	if (!mapped_buffer) {
 		nvgpu_mutex_release(&vm->update_gmmu_lock);
 		gk20a_err(d, "invalid addr to unmap 0x%llx", offset);
@@ -3939,7 +3915,7 @@ static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
 {
 	struct mapped_buffer_node *mapped_buffer;
 	struct vm_reserved_va_node *va_node, *va_node_tmp;
-	struct rb_node *node;
+	struct nvgpu_rbtree_node *node = NULL;
 	struct gk20a *g = vm->mm->g;
 
 	gk20a_dbg_fn("");
@@ -3961,12 +3937,11 @@ static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
 	/* TBD: add a flag here for the unmap code to recognize teardown
 	 * and short-circuit any otherwise expensive operations. */
 
-	node = rb_first(&vm->mapped_buffers);
+	nvgpu_rbtree_enum_start(0, &node, vm->mapped_buffers);
 	while (node) {
-		mapped_buffer =
-			container_of(node, struct mapped_buffer_node, node);
+		mapped_buffer = mapped_buffer_from_rbtree_node(node);
 		gk20a_vm_unmap_locked(mapped_buffer, NULL);
-		node = rb_first(&vm->mapped_buffers);
+		nvgpu_rbtree_enum_start(0, &node, vm->mapped_buffers);
 	}
 
 	/* destroy remaining reserved memory areas */
@@ -4402,7 +4377,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	if (err)
 		goto clean_up_allocators;
 
-	vm->mapped_buffers = RB_ROOT;
+	vm->mapped_buffers = NULL;
 
 	nvgpu_mutex_init(&vm->update_gmmu_lock);
 	kref_init(&vm->ref);
@@ -5199,7 +5174,7 @@ int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 
-	mapped_buffer = find_mapped_buffer_range_locked(&vm->mapped_buffers,
+	mapped_buffer = find_mapped_buffer_range_locked(vm->mapped_buffers,
 							gpu_va);
 	if (!mapped_buffer) {
 		nvgpu_mutex_release(&vm->update_gmmu_lock);

@@ -254,18 +254,25 @@ struct gk20a_cde_ctx {
 
 	bool init_cmd_executed;
 
-	struct list_head list;
+	struct nvgpu_list_node list;
 	bool is_temporary;
 	bool in_use;
 	struct delayed_work ctx_deleter_work;
+};
+
+static inline struct gk20a_cde_ctx *
+gk20a_cde_ctx_from_list(struct nvgpu_list_node *node)
+{
+	return (struct gk20a_cde_ctx *)
+		((uintptr_t)node - offsetof(struct gk20a_cde_ctx, list));
 };
 
 struct gk20a_cde_app {
 	bool initialised;
 	struct nvgpu_mutex mutex;
 
-	struct list_head free_contexts;
-	struct list_head used_contexts;
+	struct nvgpu_list_node free_contexts;
+	struct nvgpu_list_node used_contexts;
 	unsigned int ctx_count;
 	unsigned int ctx_usecount;
 	unsigned int ctx_count_top;

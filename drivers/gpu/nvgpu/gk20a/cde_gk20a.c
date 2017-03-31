@@ -85,7 +85,7 @@ __must_hold(&cde_app->mutex)
 	gk20a_channel_close(ch);
 
 	/* housekeeping on app */
-	list_del(&cde_ctx->list);
+	nvgpu_list_del(&cde_ctx->list);
 	cde_ctx->g->cde_app.ctx_count--;
 	nvgpu_kfree(g, cde_ctx);
 }
@@ -120,14 +120,14 @@ __must_hold(&cde_app->mutex)
 	 * deinitialised; no new jobs are started. deleter works may be only at
 	 * waiting for the mutex or before, going to abort */
 
-	list_for_each_entry_safe(cde_ctx, cde_ctx_save,
-			&cde_app->free_contexts, list) {
+	nvgpu_list_for_each_entry_safe(cde_ctx, cde_ctx_save,
+			&cde_app->free_contexts, gk20a_cde_ctx, list) {
 		gk20a_cde_cancel_deleter(cde_ctx, true);
 		gk20a_cde_remove_ctx(cde_ctx);
 	}
 
-	list_for_each_entry_safe(cde_ctx, cde_ctx_save,
-			&cde_app->used_contexts, list) {
+	nvgpu_list_for_each_entry_safe(cde_ctx, cde_ctx_save,
+			&cde_app->used_contexts, gk20a_cde_ctx, list) {
 		gk20a_cde_cancel_deleter(cde_ctx, true);
 		gk20a_cde_remove_ctx(cde_ctx);
 	}
@@ -172,13 +172,13 @@ __releases(&cde_app->mutex)
 
 	nvgpu_mutex_acquire(&cde_app->mutex);
 
-	list_for_each_entry_safe(cde_ctx, cde_ctx_save,
-			&cde_app->free_contexts, list) {
+	nvgpu_list_for_each_entry_safe(cde_ctx, cde_ctx_save,
+			&cde_app->free_contexts, gk20a_cde_ctx, list) {
 		gk20a_cde_cancel_deleter(cde_ctx, false);
 	}
 
-	list_for_each_entry_safe(cde_ctx, cde_ctx_save,
-			&cde_app->used_contexts, list) {
+	nvgpu_list_for_each_entry_safe(cde_ctx, cde_ctx_save,
+			&cde_app->used_contexts, gk20a_cde_ctx, list) {
 		gk20a_cde_cancel_deleter(cde_ctx, false);
 	}
 
@@ -196,7 +196,7 @@ __must_hold(&cde_app->mutex)
 	if (IS_ERR(cde_ctx))
 		return PTR_ERR(cde_ctx);
 
-	list_add(&cde_ctx->list, &cde_app->free_contexts);
+	nvgpu_list_add(&cde_ctx->list, &cde_app->free_contexts);
 	cde_app->ctx_count++;
 	if (cde_app->ctx_count > cde_app->ctx_count_top)
 		cde_app->ctx_count_top = cde_app->ctx_count;
@@ -747,7 +747,7 @@ __releases(&cde_app->mutex)
 
 	if (cde_ctx->in_use) {
 		cde_ctx->in_use = false;
-		list_move(&cde_ctx->list, &cde_app->free_contexts);
+		nvgpu_list_move(&cde_ctx->list, &cde_app->free_contexts);
 		cde_app->ctx_usecount--;
 	} else {
 		gk20a_dbg_info("double release cde context %p", cde_ctx);
@@ -819,9 +819,9 @@ __must_hold(&cde_app->mutex)
 
 	/* idle context available? */
 
-	if (!list_empty(&cde_app->free_contexts)) {
-		cde_ctx = list_first_entry(&cde_app->free_contexts,
-				struct gk20a_cde_ctx, list);
+	if (!nvgpu_list_empty(&cde_app->free_contexts)) {
+		cde_ctx = nvgpu_list_first_entry(&cde_app->free_contexts,
+				gk20a_cde_ctx, list);
 		gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx,
 				"cde: got free %p count=%d use=%d max=%d",
 				cde_ctx, cde_app->ctx_count,
@@ -831,7 +831,7 @@ __must_hold(&cde_app->mutex)
 
 		/* deleter work may be scheduled, but in_use prevents it */
 		cde_ctx->in_use = true;
-		list_move(&cde_ctx->list, &cde_app->used_contexts);
+		nvgpu_list_move(&cde_ctx->list, &cde_app->used_contexts);
 		cde_app->ctx_usecount++;
 
 		/* cancel any deletions now that ctx is in use */
@@ -859,7 +859,7 @@ __must_hold(&cde_app->mutex)
 	cde_app->ctx_count++;
 	if (cde_app->ctx_count > cde_app->ctx_count_top)
 		cde_app->ctx_count_top = cde_app->ctx_count;
-	list_add(&cde_ctx->list, &cde_app->used_contexts);
+	nvgpu_list_add(&cde_ctx->list, &cde_app->used_contexts);
 
 	return cde_ctx;
 }
@@ -907,7 +907,7 @@ static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct gk20a *g)
 		return ERR_PTR(ret);
 	}
 
-	INIT_LIST_HEAD(&cde_ctx->list);
+	nvgpu_init_list_node(&cde_ctx->list);
 	cde_ctx->is_temporary = false;
 	cde_ctx->in_use = false;
 	INIT_DELAYED_WORK(&cde_ctx->ctx_deleter_work,
@@ -1321,8 +1321,8 @@ __releases(&cde_app->mutex)
 
 	nvgpu_mutex_acquire(&cde_app->mutex);
 
-	INIT_LIST_HEAD(&cde_app->free_contexts);
-	INIT_LIST_HEAD(&cde_app->used_contexts);
+	nvgpu_init_list_node(&cde_app->free_contexts);
+	nvgpu_init_list_node(&cde_app->used_contexts);
 	cde_app->ctx_count = 0;
 	cde_app->ctx_count_top = 0;
 	cde_app->ctx_usecount = 0;

@@ -27,6 +27,7 @@
 #include <linux/idr.h>
 #include <linux/workqueue.h>
 #include <linux/hashtable.h>
+#include <soc/tegra/chip-id.h>
 
 /*
  * hack
@@ -247,9 +248,14 @@ const struct config_option nvdumper_config[] = {
 	(uint64_t)offsetof(struct vm_area_struct, vm_flags)
 },
 {
-	"f_dentry",
+	"f_path",
 	"file",
-	(uint64_t)offsetof(struct file, f_path.dentry)
+	(uint64_t)offsetof(struct file, f_path)
+},
+{
+	"dentry",
+	"path",
+	(uint64_t)offsetof(struct path, dentry)
 },
 {
 	"d_name",
@@ -330,6 +336,46 @@ const struct config_option nvdumper_config[] = {
 	"task",
 	"worker",
 	(uint64_t)offsetof(struct worker, task)
+},
+{
+	"sku_id",
+	"tegra_sku_info",
+	(uint64_t)offsetof(struct tegra_sku_info, sku_id)
+},
+{
+	"cpu_speedo_value",
+	"tegra_sku_info",
+	(uint64_t)offsetof(struct tegra_sku_info, cpu_speedo_value)
+},
+{
+	"cpu_iddq_value",
+	"tegra_sku_info",
+	(uint64_t)offsetof(struct tegra_sku_info, cpu_iddq_value)
+},
+{
+	"soc_speedo_value",
+	"tegra_sku_info",
+	(uint64_t)offsetof(struct tegra_sku_info, soc_speedo_value)
+},
+{
+	"soc_iddq_value",
+	"tegra_sku_info",
+	(uint64_t)offsetof(struct tegra_sku_info, soc_iddq_value)
+},
+{
+	"gpu_speedo_value",
+	"tegra_sku_info",
+	(uint64_t)offsetof(struct tegra_sku_info, gpu_speedo_value)
+},
+{
+	"gpu_iddq_value",
+	"tegra_sku_info",
+	(uint64_t)offsetof(struct tegra_sku_info, gpu_iddq_value)
+},
+{
+	"id_and_rev",
+	"tegra_sku_info",
+	(uint64_t)offsetof(struct tegra_sku_info, id_and_rev)
 }
 };
 

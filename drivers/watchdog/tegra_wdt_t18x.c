@@ -24,6 +24,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/of_irq.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
@@ -42,6 +43,10 @@
 #define WDT_ENABLED_ON_INIT	1
 #define WDT_ENABLED_USERSPACE	2
 
+struct tegra_wdt_t18x_soc {
+	bool unmask_hw_irq;
+};
+
 struct tegra_wdt_t18x {
 	struct device		*dev;
 	struct watchdog_device	wdt;
@@ -50,6 +55,7 @@ struct tegra_wdt_t18x {
 	void __iomem		*wdt_timer;
 	void __iomem		*wdt_tke;
 	struct dentry		*root;
+	const struct tegra_wdt_t18x_soc	*soc;
 	u32			config;
 	int			irq;
 	int			hwirq;
@@ -193,7 +199,7 @@ static int __tegra_wdt_t18x_enable(struct tegra_wdt_t18x *twdt_t18x)
 	u32 val;
 
 	/* Unmask IRQ. This has to be called after every WDT power gate */
-	if (!tegra_platform_is_linsim())
+	if (twdt_t18x->soc->unmask_hw_irq)
 		writel(TOP_TKE_TKEIE_WDT_MASK(twdt_t18x->index),
 		       twdt_t18x->wdt_tke + TOP_TKE_TKEIE(twdt_t18x->hwirq));
 
@@ -393,6 +399,7 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	ret = of_property_read_u32(np, "nvidia,shutdown-timeout", &pval);
 	twdt_t18x->shutdown_timeout = (ret) ? SHUTDOWN_TIMEOUT : pval;
 
+	twdt_t18x->soc = of_device_get_match_data(&pdev->dev);
 	twdt_t18x->dev = &pdev->dev;
 	twdt_t18x->wdt.info = &tegra_wdt_t18x_info;
 	twdt_t18x->wdt.ops = &tegra_wdt_t18x_ops;
@@ -645,8 +652,17 @@ static const struct dev_pm_ops tegra_wdt_t18x_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(tegra_wdt_t18x_suspend, tegra_wdt_t18x_resume)
 };
 
+static const struct tegra_wdt_t18x_soc t18x_wdt_silicon = {
+	.unmask_hw_irq = true,
+};
+
+static const struct tegra_wdt_t18x_soc t18x_wdt_sim = {
+	.unmask_hw_irq = false,
+};
+
 static const struct of_device_id tegra_wdt_t18x_match[] = {
-	{ .compatible = "nvidia,tegra-wdt-t18x", },
+	{ .compatible = "nvidia,tegra-wdt-t18x", .data = &t18x_wdt_silicon},
+	{ .compatible = "nvidia,tegra-wdt-t18x-linsim", .data = &t18x_wdt_sim},
 	{}
 };
 MODULE_DEVICE_TABLE(of, tegra_wdt_t18x_match);

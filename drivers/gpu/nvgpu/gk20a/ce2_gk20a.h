@@ -91,7 +91,7 @@ struct gk20a_ce_app {
 	struct nvgpu_mutex app_mutex;
 	int app_state;
 
-	struct list_head allocated_contexts;
+	struct nvgpu_list_node allocated_contexts;
 	u32 ctx_count;
 	u32 next_ctx_id;
 };
@@ -112,13 +112,20 @@ struct gk20a_gpu_ctx {
 	/* cmd buf mem_desc */
 	struct mem_desc cmd_buf_mem;
 
-	struct list_head list;
+	struct nvgpu_list_node list;
 
 	u64 submitted_seq_number;
 	u64 completed_seq_number;
 
 	u32 cmd_buf_read_queue_offset;
 	u32 cmd_buf_end_queue_offset;
+};
+
+static inline struct gk20a_gpu_ctx *
+gk20a_gpu_ctx_from_list(struct nvgpu_list_node *node)
+{
+	return (struct gk20a_gpu_ctx *)
+		((uintptr_t)node - offsetof(struct gk20a_gpu_ctx, list));
 };
 
 /* global CE app related apis */

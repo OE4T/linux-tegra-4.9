@@ -110,8 +110,8 @@ static void gk20a_ce_notify_all_user(struct gk20a *g, u32 event)
 
 	nvgpu_mutex_acquire(&ce_app->app_mutex);
 
-	list_for_each_entry_safe(ce_ctx, ce_ctx_save,
-			&ce_app->allocated_contexts, list) {
+	nvgpu_list_for_each_entry_safe(ce_ctx, ce_ctx_save,
+			&ce_app->allocated_contexts, gk20a_gpu_ctx, list) {
 		if (ce_ctx->user_event_callback) {
 			ce_ctx->user_event_callback(ce_ctx->ctx_id,
 				event);
@@ -187,7 +187,7 @@ static void gk20a_ce_free_command_buffer_stored_fence(struct gk20a_gpu_ctx *ce_c
 /* assume this api should need to call under nvgpu_mutex_acquire(&ce_app->app_mutex) */
 static void gk20a_ce_delete_gpu_context(struct gk20a_gpu_ctx *ce_ctx)
 {
-	struct list_head *list = &ce_ctx->list;
+	struct nvgpu_list_node *list = &ce_ctx->list;
 
 	ce_ctx->gpu_ctx_state = NVGPU_CE_GPU_CTX_DELETED;
 
@@ -204,7 +204,7 @@ static void gk20a_ce_delete_gpu_context(struct gk20a_gpu_ctx *ce_ctx)
 
 	/* housekeeping on app */
 	if (list->prev && list->next)
-		list_del(list);
+		nvgpu_list_del(list);
 
 	nvgpu_mutex_release(&ce_ctx->gpu_ctx_mutex);
 	nvgpu_mutex_destroy(&ce_ctx->gpu_ctx_mutex);
@@ -361,7 +361,7 @@ int gk20a_init_ce_support(struct gk20a *g)
 
 	nvgpu_mutex_acquire(&ce_app->app_mutex);
 
-	INIT_LIST_HEAD(&ce_app->allocated_contexts);
+	nvgpu_init_list_node(&ce_app->allocated_contexts);
 	ce_app->ctx_count = 0;
 	ce_app->next_ctx_id = 0;
 	ce_app->initialised = true;
@@ -386,12 +386,12 @@ void gk20a_ce_destroy(struct gk20a *g)
 
 	nvgpu_mutex_acquire(&ce_app->app_mutex);
 
-	list_for_each_entry_safe(ce_ctx, ce_ctx_save,
-			&ce_app->allocated_contexts, list) {
+	nvgpu_list_for_each_entry_safe(ce_ctx, ce_ctx_save,
+			&ce_app->allocated_contexts, gk20a_gpu_ctx, list) {
 		gk20a_ce_delete_gpu_context(ce_ctx);
 	}
 
-	INIT_LIST_HEAD(&ce_app->allocated_contexts);
+	nvgpu_init_list_node(&ce_app->allocated_contexts);
 	ce_app->ctx_count = 0;
 	ce_app->next_ctx_id = 0;
 
@@ -520,7 +520,7 @@ u32 gk20a_ce_create_context_with_cb(struct device *dev,
 
 	nvgpu_mutex_acquire(&ce_app->app_mutex);
 	ctx_id = ce_ctx->ctx_id = ce_app->next_ctx_id;
-	list_add(&ce_ctx->list, &ce_app->allocated_contexts);
+	nvgpu_list_add(&ce_ctx->list, &ce_app->allocated_contexts);
 	++ce_app->next_ctx_id;
 	++ce_app->ctx_count;
 	nvgpu_mutex_release(&ce_app->app_mutex);
@@ -570,8 +570,8 @@ int gk20a_ce_execute_ops(struct device *dev,
 
 	nvgpu_mutex_acquire(&ce_app->app_mutex);
 
-	list_for_each_entry_safe(ce_ctx, ce_ctx_save,
-			&ce_app->allocated_contexts, list) {
+	nvgpu_list_for_each_entry_safe(ce_ctx, ce_ctx_save,
+			&ce_app->allocated_contexts, gk20a_gpu_ctx, list) {
 		if (ce_ctx->ctx_id == ce_ctx_id) {
 			found = true;
 			break;
@@ -706,8 +706,8 @@ void gk20a_ce_delete_context_priv(struct gk20a *g,
 
 	nvgpu_mutex_acquire(&ce_app->app_mutex);
 
-	list_for_each_entry_safe(ce_ctx, ce_ctx_save,
-			&ce_app->allocated_contexts, list) {
+	nvgpu_list_for_each_entry_safe(ce_ctx, ce_ctx_save,
+			&ce_app->allocated_contexts, gk20a_gpu_ctx, list) {
 		if (ce_ctx->ctx_id == ce_ctx_id) {
 			gk20a_ce_delete_gpu_context(ce_ctx);
 			--ce_app->ctx_count;

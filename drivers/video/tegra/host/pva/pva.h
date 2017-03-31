@@ -23,6 +23,7 @@
 
 #include <linux/dma-attrs.h>
 #include <linux/mutex.h>
+#include <linux/version.h>
 
 #include "nvhost_queue.h"
 #include "pva_regs.h"
@@ -96,7 +97,11 @@ struct pva_fw {
 	struct pva_dma_alloc_info priv1_buffer;
 	struct pva_dma_alloc_info priv2_buffer;
 	u32 priv2_reg_offset;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	struct dma_attrs attrs;
+#else
+	unsigned long attrs;
+#endif
 
 	u32 trace_buffer_size;
 };

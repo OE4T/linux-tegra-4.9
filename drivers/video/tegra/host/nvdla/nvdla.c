@@ -23,6 +23,7 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#include <linux/dma-attrs.h>
 #include <linux/dma-mapping.h>
 #include <linux/uaccess.h>
 
@@ -85,7 +86,7 @@ static int nvdla_alloc_cmd_memory(struct platform_device *pdev)
 	nvdla_dev->cmd_mem.va = dma_alloc_attrs(&pdev->dev,
 			MAX_CMD_SIZE * MAX_COMMANDS_PER_DEVICE,
 			&nvdla_dev->cmd_mem.pa, GFP_KERNEL,
-			&attrs);
+			__DMA_ATTR(attrs));
 
 	if (nvdla_dev->cmd_mem.va == NULL) {
 		err = -ENOMEM;
@@ -107,7 +108,8 @@ static int nvdla_free_cmd_memory(struct platform_device *pdev)
 	/* free memory for command */
 	dma_free_attrs(&pdev->dev,
 			MAX_CMD_SIZE * MAX_COMMANDS_PER_DEVICE,
-			nvdla_dev->cmd_mem.va, nvdla_dev->cmd_mem.pa, &attrs);
+			nvdla_dev->cmd_mem.va, nvdla_dev->cmd_mem.pa,
+			__DMA_ATTR(attrs));
 
 	nvdla_dev->cmd_mem.alloc_table = 0;
 
@@ -247,7 +249,7 @@ static int nvdla_alloc_trace_region(struct platform_device *pdev)
 		/* allocate trace region */
 		m->trace_dump_va = dma_alloc_attrs(&pdev->dev,
 				   TRACE_BUFFER_SIZE, &m->trace_dump_pa,
-				   GFP_KERNEL, &attrs);
+				   GFP_KERNEL, __DMA_ATTR(attrs));
 
 		if (!m->trace_dump_va) {
 			nvdla_dbg_err(pdev,
@@ -291,7 +293,7 @@ trace_send_cmd_failed:
 alloc_trace_cmd_failed:
 	if (m->trace_dump_pa) {
 		dma_free_attrs(&pdev->dev, TRACE_BUFFER_SIZE,
-			m->trace_dump_va, m->trace_dump_pa, &attrs);
+			m->trace_dump_va, m->trace_dump_pa, __DMA_ATTR(attrs));
 		m->trace_dump_va = NULL;
 		m->trace_dump_pa = 0;
 	}
@@ -326,7 +328,7 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 	if (!m->debug_dump_va) {
 		m->debug_dump_va = dma_alloc_attrs(&pdev->dev,
 				   DEBUG_BUFFER_SIZE, &m->debug_dump_pa,
-				   GFP_KERNEL, &attrs);
+				   GFP_KERNEL, __DMA_ATTR(attrs));
 		if (!m->debug_dump_va) {
 			nvdla_dbg_err(pdev, "debug dump dma alloc failed");
 			err = -ENOMEM;
@@ -372,7 +374,7 @@ region_send_cmd_failed:
 set_region_failed:
 	if (m->debug_dump_pa) {
 		dma_free_attrs(&pdev->dev, DEBUG_BUFFER_SIZE,
-			m->debug_dump_va, m->debug_dump_pa, &attrs);
+			m->debug_dump_va, m->debug_dump_pa, __DMA_ATTR(attrs));
 		m->debug_dump_va = NULL;
 		m->debug_dump_pa = 0;
 	}
@@ -662,7 +664,7 @@ static int __exit nvdla_remove(struct platform_device *pdev)
 	if (m->trace_dump_pa) {
 		dma_free_attrs(&pdev->dev, TRACE_BUFFER_SIZE,
 			       m->trace_dump_va, m->trace_dump_pa,
-			       &attrs);
+			       __DMA_ATTR(attrs));
 		m->trace_dump_va = NULL;
 		m->trace_dump_pa = 0;
 	}
@@ -670,7 +672,7 @@ static int __exit nvdla_remove(struct platform_device *pdev)
 	if (m->debug_dump_pa) {
 		dma_free_attrs(&pdev->dev, DEBUG_BUFFER_SIZE,
 			       m->debug_dump_va, m->debug_dump_pa,
-			       &attrs);
+			       __DMA_ATTR(attrs));
 		m->debug_dump_va = NULL;
 		m->debug_dump_pa = 0;
 	}

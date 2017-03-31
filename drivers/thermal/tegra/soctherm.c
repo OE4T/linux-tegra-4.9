@@ -362,6 +362,10 @@ struct tsensor_hw_pllx_offset {
 static struct soctherm_oc_irq_chip_data soc_irq_cdata;
 static struct tsensor_hw_pllx_offset hw_pllx;
 static DEFINE_SPINLOCK(soctherm_lock);
+static void throttlectl_cpu_mn(struct tegra_soctherm *ts,
+			       enum soctherm_throttle_id throt);
+static void throttlectl_gpu_level(struct tegra_soctherm *ts,
+				enum soctherm_throttle_id throt);
 
 /**
  * ccroc_writel() - writes a value to a CCROC register
@@ -1567,6 +1571,223 @@ static int tempoverride_set(void *data, u64 val)
 DEFINE_SIMPLE_ATTRIBUTE(tempoverride_fops, tempoverride_get,
 		tempoverride_set, "%lld\n");
 
+static int mode_get(void *data, u64 *val)
+{
+	struct soctherm_throt_cfg *stc = data;
+
+	*val = stc->oc_cfg.mode;
+
+	return 0;
+}
+
+static int mode_set(void *data, u64 val)
+{
+	u32 r;
+	struct soctherm_throt_cfg *stc = data;
+	struct soctherm_throt_cfg *start = stc - stc->id;
+	struct tegra_soctherm *ts;
+
+	ts = container_of(start, struct tegra_soctherm, throt_cfgs[0]);
+	stc->oc_cfg.mode = val;
+	r = readl(ts->regs + ALARM_CFG(stc->id));
+	r = REG_SET_MASK(r, OC1_CFG_THROTTLE_MODE_MASK, stc->oc_cfg.mode);
+	writel(r, ts->regs + ALARM_CFG(stc->id));
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(mode_fops, mode_get, mode_set, "%lld\n");
+
+static int thresh_get(void *data, u64 *val)
+{
+	struct soctherm_throt_cfg *stc = data;
+
+	*val = stc->oc_cfg.alarm_cnt_thresh;
+
+	return 0;
+}
+
+static int thresh_set(void *data, u64 val)
+{
+	struct soctherm_throt_cfg *stc = data;
+	struct soctherm_throt_cfg *start = stc - stc->id;
+	struct tegra_soctherm *ts;
+
+	ts = container_of(start, struct tegra_soctherm, throt_cfgs[0]);
+	stc->oc_cfg.alarm_cnt_thresh = val;
+	writel(stc->oc_cfg.alarm_cnt_thresh,
+		ts->regs + ALARM_CNT_THRESHOLD(stc->id));
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(thresh_fops, thresh_get, thresh_set, "%lld\n");
+
+static int filter_get(void *data, u64 *val)
+{
+	struct soctherm_throt_cfg *stc = data;
+
+	*val = stc->oc_cfg.alarm_filter;
+
+	return 0;
+}
+
+static int filter_set(void *data, u64 val)
+{
+	struct soctherm_throt_cfg *stc = data;
+	struct soctherm_throt_cfg *start = stc - stc->id;
+	struct tegra_soctherm *ts;
+
+	ts = container_of(start, struct tegra_soctherm, throt_cfgs[0]);
+	stc->oc_cfg.alarm_filter = val;
+	writel(stc->oc_cfg.alarm_filter, ts->regs + ALARM_FILTER(stc->id));
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(filter_fops, filter_get, filter_set, "%lld\n");
+
+static int period_get(void *data, u64 *val)
+{
+	struct soctherm_throt_cfg *stc = data;
+
+	*val = stc->oc_cfg.throt_period;
+
+	return 0;
+}
+
+static int period_set(void *data, u64 val)
+{
+	struct soctherm_throt_cfg *stc = data;
+	struct soctherm_throt_cfg *start = stc - stc->id;
+	struct tegra_soctherm *ts;
+
+	ts = container_of(start, struct tegra_soctherm, throt_cfgs[0]);
+	stc->oc_cfg.throt_period = val;
+	writel(stc->oc_cfg.throt_period,
+		ts->regs + ALARM_THROTTLE_PERIOD(stc->id));
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(period_fops, period_get, period_set, "%lld\n");
+
+static int polarity_get(void *data, u64 *val)
+{
+	struct soctherm_throt_cfg *stc = data;
+
+	*val = stc->oc_cfg.active_low;
+
+	return 0;
+}
+
+static int polarity_set(void *data, u64 val)
+{
+	u32 r;
+	struct soctherm_throt_cfg *stc = data;
+	struct soctherm_throt_cfg *start = stc - stc->id;
+	struct tegra_soctherm *ts;
+
+	ts = container_of(start, struct tegra_soctherm, throt_cfgs[0]);
+	stc->oc_cfg.active_low = val;
+	r = readl(ts->regs + ALARM_CFG(stc->id));
+	r = REG_SET_MASK(r, OC1_CFG_ALARM_POLARITY_MASK,
+			stc->oc_cfg.active_low);
+	writel(r, ts->regs + ALARM_CFG(stc->id));
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(polarity_fops, polarity_get, polarity_set, "%lld\n");
+
+static int level_set(void *data, u64 val)
+{
+	struct soctherm_throt_cfg *stc = data;
+	struct soctherm_throt_cfg *start = stc - stc->id;
+	struct tegra_soctherm *ts;
+
+	ts = container_of(start, struct tegra_soctherm, throt_cfgs[0]);
+	if (val <= TEGRA_SOCTHERM_THROT_LEVEL_HIGH)
+		stc->gpu_throt_level = val;
+
+	throttlectl_gpu_level(ts, stc->id);
+
+	return 0;
+}
+
+static int level_get(void *data, u64 *val)
+{
+	struct soctherm_throt_cfg *stc = data;
+
+	*val = stc->gpu_throt_level;
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(lvl_fops, level_get, level_set, "%lld\n");
+
+static int depth_set(void *data, u64 val)
+{
+	struct soctherm_throt_cfg *stc = data;
+	struct soctherm_throt_cfg *start = stc - stc->id;
+	struct tegra_soctherm *ts;
+
+	ts = container_of(start, struct tegra_soctherm, throt_cfgs[0]);
+	if (val <= 100)
+		stc->cpu_throt_depth = val;
+
+	throttlectl_cpu_mn(ts, stc->id);
+
+	return 0;
+}
+
+static int depth_get(void *data, u64 *val)
+{
+	struct soctherm_throt_cfg *stc = data;
+
+	*val = stc->cpu_throt_depth;
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(depth_fops, depth_get, depth_set, "%lld\n");
+
+static struct dentry *soctherm_throttle_debug_init(struct dentry *root,
+					struct platform_device *pdev)
+{
+	struct tegra_soctherm *ts = platform_get_drvdata(pdev);
+	struct soctherm_throt_cfg *stc;
+	struct dentry *dir, *sdir, *file;
+	int i;
+
+	dir = debugfs_create_dir("throttle-cfg", root);
+	if (!dir) {
+		pr_err("unable to create throttle-cfg\n");
+		return NULL;
+	}
+
+	for (i = 0; i < THROTTLE_SIZE; i++) {
+		stc = &ts->throt_cfgs[i];
+		sdir = debugfs_create_dir(stc->name, dir);
+		if (!sdir)
+			return NULL;
+
+		file = debugfs_create_file("cpu", 0644, sdir, stc, &depth_fops);
+		file = file ? debugfs_create_file("gpu", 0644, sdir, stc,
+				&lvl_fops) : file;
+		if (stc->id < THROTTLE_OC1)
+			continue;
+
+		file = file ? debugfs_create_file("polarity", 0644, sdir, stc,
+				&polarity_fops) : file;
+		file = file ? debugfs_create_file("mode", 0644, sdir, stc,
+				&mode_fops) : file;
+		file = file ? debugfs_create_file("threshold", 0644, sdir, stc,
+				&thresh_fops) : file;
+		file = file ? debugfs_create_file("filter", 0644, sdir, stc,
+				&filter_fops) : file;
+		file = file ? debugfs_create_file("period", 0644, sdir, stc,
+				&period_fops) : file;
+		if (!file)
+			return NULL;
+	}
+
+	return file;
+}
+
 static void soctherm_debug_init(struct platform_device *pdev)
 {
 	struct tegra_soctherm *tegra = platform_get_drvdata(pdev);
@@ -1586,6 +1807,7 @@ static void soctherm_debug_init(struct platform_device *pdev)
 	file = (file) ? debugfs_create_file("tempoverride", 0644,
 			root, tegra, &tempoverride_fops) : file;
 
+	file = (file) ? soctherm_throttle_debug_init(root, pdev) : file;
 	if (!file) {
 		dev_err(&pdev->dev, "failed to create debugfs file\n");
 		debugfs_remove_recursive(tegra->debugfs_dir);

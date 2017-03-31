@@ -133,7 +133,9 @@ static void __iomem *emc1_base;
 static void __iomem *mc_base;
 void __iomem *clk_base;
 static unsigned long emc_max_rate;
+#ifdef CONFIG_PM_SLEEP
 static unsigned long emc_override_rate;
+#endif
 unsigned long dram_over_temp_state = TEGRA_DRAM_OVER_TEMP_NONE;
 static struct emc_stats tegra_emc_stats;
 struct emc_table *tegra_emc_table;

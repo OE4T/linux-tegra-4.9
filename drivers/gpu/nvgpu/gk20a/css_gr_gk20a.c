@@ -118,7 +118,7 @@ static int css_gr_create_shared_data(struct gr_gk20a *gr)
 	if (!data)
 		return -ENOMEM;
 
-	INIT_LIST_HEAD(&data->clients);
+	nvgpu_init_list_node(&data->clients);
 	gr->cs_data = data;
 
 	return 0;
@@ -243,14 +243,12 @@ static void css_gr_free_shared_data(struct gr_gk20a *gr)
 
 
 static struct gk20a_cs_snapshot_client*
-css_gr_search_client(struct list_head *clients, u32 perfmon)
+css_gr_search_client(struct nvgpu_list_node *clients, u32 perfmon)
 {
-	struct list_head *pos;
+	struct gk20a_cs_snapshot_client *client;
 
-	list_for_each(pos, clients) {
-		struct gk20a_cs_snapshot_client *client =
-			container_of(pos,
-				struct gk20a_cs_snapshot_client, list);
+	nvgpu_list_for_each_entry(client, clients,
+			gk20a_cs_snapshot_client,  list) {
 		if (CONTAINS_PERFMON(client, perfmon))
 			return client;
 	}
@@ -284,7 +282,7 @@ static int css_gr_flush_snapshots(struct channel_gk20a *ch)
 	if (!css)
 		return -EINVAL;
 
-	if (list_empty(&css->clients))
+	if (nvgpu_list_empty(&css->clients))
 		return -EBADF;
 
 	/* check data available */
@@ -296,11 +294,8 @@ static int css_gr_flush_snapshots(struct channel_gk20a *ch)
 		return 0;
 
 	if (hw_overflow) {
-		struct list_head *pos;
-
-		list_for_each(pos, &css->clients) {
-			cur = container_of(pos,
-				struct gk20a_cs_snapshot_client, list);
+		nvgpu_list_for_each_entry(cur, &css->clients,
+				gk20a_cs_snapshot_client, list) {
 			cur->snapshot->hw_overflow_events_occured++;
 		}
 
@@ -445,7 +440,7 @@ static int css_gr_free_client_data(struct gk20a *g,
 	int ret = 0;
 
 	if (client->list.next && client->list.prev)
-		list_del(&client->list);
+		nvgpu_list_del(&client->list);
 
 	if (client->perfmon_start && client->perfmon_count
 					&& g->ops.css.release_perfmon_ids) {
@@ -524,7 +519,7 @@ static int css_gr_create_client_data(struct gk20a *g,
 		}
 	}
 
-	list_add_tail(&cur->list, &data->clients);
+	nvgpu_list_add_tail(&cur->list, &data->clients);
 	*client = cur;
 
 	return 0;
@@ -590,7 +585,7 @@ failed:
 			*cs_client = NULL;
 		}
 
-		if (list_empty(&gr->cs_data->clients))
+		if (nvgpu_list_empty(&gr->cs_data->clients))
 			css_gr_free_shared_data(gr);
 	}
 	nvgpu_mutex_release(&gr->cs_lock);
@@ -620,7 +615,7 @@ int gr_gk20a_css_detach(struct channel_gk20a *ch,
 			g->ops.css.detach_snapshot(ch, cs_client);
 
 		ret = css_gr_free_client_data(g, data, cs_client);
-		if (list_empty(&data->clients))
+		if (nvgpu_list_empty(&data->clients))
 			css_gr_free_shared_data(gr);
 	} else {
 		ret = -EBADF;

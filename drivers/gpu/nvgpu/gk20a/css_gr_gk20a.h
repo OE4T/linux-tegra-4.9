@@ -88,13 +88,20 @@ struct gk20a_cs_snapshot_fifo_entry {
 
 /* cycle stats snapshot client data (e.g. associated with channel) */
 struct gk20a_cs_snapshot_client {
-	struct list_head	list;
+	struct nvgpu_list_node	list;
 	u32			dmabuf_fd;
 	struct dma_buf		*dma_handler;
 	struct gk20a_cs_snapshot_fifo	*snapshot;
 	u32			snapshot_size;
 	u32			perfmon_start;
 	u32			perfmon_count;
+};
+
+static inline struct gk20a_cs_snapshot_client *
+gk20a_cs_snapshot_client_from_list(struct nvgpu_list_node *node)
+{
+	return (struct gk20a_cs_snapshot_client *)
+		((uintptr_t)node - offsetof(struct gk20a_cs_snapshot_client, list));
 };
 
 /* should correlate with size of gk20a_cs_snapshot_fifo_entry::perfmon_id */
@@ -106,7 +113,7 @@ struct gk20a_cs_snapshot_client {
 /* cycle stats snapshot control structure for one HW entry and many clients */
 struct gk20a_cs_snapshot {
 	unsigned long perfmon_ids[PM_BITMAP_SIZE];
-	struct list_head	clients;
+	struct nvgpu_list_node	clients;
 	struct mem_desc		hw_memdesc;
 	/* pointer to allocated cpu_va memory where GPU place data */
 	struct gk20a_cs_snapshot_fifo_entry	*hw_snapshot;

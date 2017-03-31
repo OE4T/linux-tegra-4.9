@@ -239,7 +239,8 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA148;
 	else if (of_machine_is_compatible("nvidia,tegra124"))
 		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA124;
-	else if (of_machine_is_compatible("nvidia,tegra210"))
+	else if (of_machine_is_compatible("nvidia,tegra210")  ||
+		of_machine_is_compatible("nvidia,tegra210b01"))
 		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA210;
 	else if (of_machine_is_compatible("nvidia,tegra186"))
 		data->soc = TEGRA_ASOC_UTILS_SOC_TEGRA186;

@@ -1,7 +1,7 @@
 /*
  * tegra_asoc_machine_alt.c - Tegra xbar dai link for machine drivers
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1772,7 +1772,8 @@ struct snd_soc_dai_link *tegra_machine_get_dai_link(void)
 	struct snd_soc_dai_link *link = tegra124_xbar_dai_links;
 	unsigned int size = TEGRA124_XBAR_DAI_LINKS;
 
-	if (of_machine_is_compatible("nvidia,tegra210")) {
+	if (of_machine_is_compatible("nvidia,tegra210")  ||
+		of_machine_is_compatible("nvidia,tegra210b01")) {
 		link = tegra210_xbar_dai_links;
 		size = TEGRA210_XBAR_DAI_LINKS;
 	}
@@ -1809,9 +1810,10 @@ EXPORT_SYMBOL_GPL(tegra_machine_remove_dai_link);
 int tegra_machine_append_dai_link(struct snd_soc_dai_link *link,
 		unsigned int link_size)
 {
-	unsigned int size1 = of_machine_is_compatible("nvidia,tegra210") ?
-				TEGRA210_XBAR_DAI_LINKS :
-				TEGRA124_XBAR_DAI_LINKS;
+	unsigned int size1 = (of_machine_is_compatible("nvidia,tegra210") ||
+			of_machine_is_compatible("nvidia,tegra210b01")) ?
+			TEGRA210_XBAR_DAI_LINKS :
+			TEGRA124_XBAR_DAI_LINKS;
 	unsigned int size2 = link_size;
 
 	if (!tegra_asoc_machine_links) {
@@ -1883,7 +1885,8 @@ struct snd_soc_codec_conf *tegra_machine_get_codec_conf(void)
 	struct snd_soc_codec_conf *conf = tegra124_xbar_codec_conf;
 	unsigned int size = TEGRA124_XBAR_CODEC_CONF;
 
-	if (of_machine_is_compatible("nvidia,tegra210")) {
+	if (of_machine_is_compatible("nvidia,tegra210")  ||
+		of_machine_is_compatible("nvidia,tegra210b01")) {
 		conf = tegra210_xbar_codec_conf;
 		size = TEGRA210_XBAR_CODEC_CONF;
 	}
@@ -1915,9 +1918,10 @@ EXPORT_SYMBOL_GPL(tegra_machine_remove_codec_conf);
 int tegra_machine_append_codec_conf(struct snd_soc_codec_conf *conf,
 		unsigned int conf_size)
 {
-	unsigned int size1 = of_machine_is_compatible("nvidia,tegra210") ?
-				TEGRA210_XBAR_CODEC_CONF :
-				TEGRA124_XBAR_CODEC_CONF;
+	unsigned int size1 = (of_machine_is_compatible("nvidia,tegra210") ||
+			of_machine_is_compatible("nvidia,tegra210b01")) ?
+			TEGRA210_XBAR_CODEC_CONF :
+			TEGRA124_XBAR_CODEC_CONF;
 	unsigned int size2 = conf_size;
 
 	if (!tegra_asoc_codec_conf) {
@@ -2232,9 +2236,10 @@ EXPORT_SYMBOL_GPL(tegra_machine_new_codec_conf);
 /* This function is valid when dai_link is initiated from the DT */
 unsigned int tegra_machine_get_codec_dai_link_idx(const char *codec_name)
 {
-	unsigned int idx = of_machine_is_compatible("nvidia,tegra210") ?
-				TEGRA210_XBAR_DAI_LINKS :
-				TEGRA124_XBAR_DAI_LINKS;
+	unsigned int idx = (of_machine_is_compatible("nvidia,tegra210")   ||
+			of_machine_is_compatible("nvidia,tegra210b01")) ?
+			TEGRA210_XBAR_DAI_LINKS :
+			TEGRA124_XBAR_DAI_LINKS;
 
 	if (num_dai_links <= idx)
 		goto err;
@@ -2266,7 +2271,8 @@ unsigned int tegra_machine_get_bclk_ratio(
 	if (!bclk_ratio)
 		goto err;
 
-	idx = idx - (of_machine_is_compatible("nvidia,tegra210") ?
+	idx = idx - ((of_machine_is_compatible("nvidia,tegra210") ||
+			of_machine_is_compatible("nvidia,tegra210b01")) ?
 			TEGRA210_XBAR_DAI_LINKS :
 			TEGRA124_XBAR_DAI_LINKS);
 
@@ -2291,7 +2297,8 @@ unsigned int tegra_machine_get_rx_mask(
 	if (!rx_mask)
 		goto err;
 
-	idx = idx - (of_machine_is_compatible("nvidia,tegra210") ?
+	idx = idx - ((of_machine_is_compatible("nvidia,tegra210") ||
+			of_machine_is_compatible("nvidia,tegra210b01")) ?
 			TEGRA210_XBAR_DAI_LINKS :
 			TEGRA124_XBAR_DAI_LINKS);
 
@@ -2316,7 +2323,8 @@ unsigned int tegra_machine_get_tx_mask(
 	if (!tx_mask)
 		goto err;
 
-	idx = idx - (of_machine_is_compatible("nvidia,tegra210") ?
+	idx = idx - ((of_machine_is_compatible("nvidia,tegra210")   ||
+			of_machine_is_compatible("nvidia,tegra210b01")) ?
 			TEGRA210_XBAR_DAI_LINKS :
 			TEGRA124_XBAR_DAI_LINKS);
 

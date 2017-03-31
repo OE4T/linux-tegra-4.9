@@ -124,7 +124,7 @@ int tegra_camera_dev_mfi_wr_add(
 	int err = -ENODEV;
 	struct camera_mfi_dev *itr = NULL;
 
-	if (cmfidev->name == NULL || !strcmp(cmfidev->name, "")) {
+	if (!strcmp(cmfidev->name, "")) {
 		err = -EINVAL;
 		goto cmfi_wr_add_end;
 	}
@@ -159,7 +159,7 @@ int tegra_camera_dev_mfi_clear(struct camera_mfi_dev *cmfidev)
 		goto cmfidev_clear_end;
 	}
 
-	if (cmfidev->name == NULL || !strcmp(cmfidev->name, "")) {
+	if (!strcmp(cmfidev->name, "")) {
 		err = -EINVAL;
 		goto cmfidev_clear_end;
 	}

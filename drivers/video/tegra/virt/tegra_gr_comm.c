@@ -503,7 +503,7 @@ int tegra_gr_comm_send(u32 virt_ctx, u32 peer, u32 index, void *data,
 	if (!tegra_hv_ivc_can_write(ivc_ctx->cookie)) {
 		ret = wait_event_timeout(ivc_ctx->wq,
 				tegra_hv_ivc_can_write(ivc_ctx->cookie),
-				msecs_to_jiffies(250));
+				msecs_to_jiffies(500));
 		if (!ret) {
 			dev_err(&ivc_ctx->pdev->dev,
 				"%s timeout waiting for buffer\n", __func__);

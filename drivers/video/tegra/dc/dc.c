@@ -4702,7 +4702,7 @@ void tegra_dc_dsc_init(struct tegra_dc *dc)
 
 	/* Link compression is only supported for DSI panels */
 	if ((dc->out->type != TEGRA_DC_OUT_DSI) || !dc->out->dsc_en) {
-		dev_dbg(&dc->ndev->dev,
+		dev_info(&dc->ndev->dev,
 			"Link compression not supported by the panel\n");
 		return;
 	}

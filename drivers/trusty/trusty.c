@@ -29,12 +29,13 @@
 #include <../virt/tegra/syscalls.h>
 #include <linux/tegra-soc.h>
 #endif
+#include "trusty-workitem.h"
 
 struct trusty_state;
 
 struct trusty_work {
 	struct trusty_state *ts;
-	struct work_struct work;
+	workitem_t work;
 };
 
 struct trusty_state {
@@ -401,7 +402,7 @@ static bool dequeue_nop(struct trusty_state *s, u32 *args)
 	return nop;
 }
 
-static void locked_nop_work_func(struct work_struct *work)
+static void locked_nop_work_func(workitem_t *work)
 {
 	int ret;
 	struct trusty_work *tw = container_of(work, struct trusty_work, work);
@@ -417,7 +418,7 @@ static void locked_nop_work_func(struct work_struct *work)
 	dev_dbg(s->dev, "%s: done\n", __func__);
 }
 
-static void nop_work_func(struct work_struct *work)
+static void nop_work_func(workitem_t *work)
 {
 	int ret;
 	bool next;
@@ -478,7 +479,7 @@ void trusty_enqueue_nop(struct device *dev, struct trusty_nop *nop)
 			list_add_tail(&nop->node, &s->nop_queue);
 		spin_unlock_irqrestore(&s->nop_lock, flags);
 	}
-	queue_work(s->nop_wq, &tw->work);
+	schedule_workitem(s->nop_wq, &tw->work);
 	preempt_enable();
 }
 EXPORT_SYMBOL(trusty_enqueue_nop);
@@ -533,7 +534,7 @@ static int trusty_probe(struct platform_device *pdev)
 {
 	int ret;
 	unsigned int cpu;
-	work_func_t work_func;
+	trusty_work_func_t work_func;
 	struct trusty_state *s;
 	struct device_node *node = pdev->dev.of_node;
 
@@ -585,7 +586,7 @@ static int trusty_probe(struct platform_device *pdev)
 		struct trusty_work *tw = per_cpu_ptr(s->nop_works, cpu);
 
 		tw->ts = s;
-		INIT_WORK(&tw->work, work_func);
+		INIT_WORKITEM(&tw->work, work_func);
 	}
 
 	ret = of_platform_populate(pdev->dev.of_node, NULL, NULL, &pdev->dev);
@@ -600,7 +601,7 @@ err_add_children:
 	for_each_possible_cpu(cpu) {
 		struct trusty_work *tw = per_cpu_ptr(s->nop_works, cpu);
 
-		flush_work(&tw->work);
+		flush_workitem(&tw->work);
 	}
 	free_percpu(s->nop_works);
 err_alloc_works:
@@ -630,7 +631,7 @@ static int trusty_remove(struct platform_device *pdev)
 	for_each_possible_cpu(cpu) {
 		struct trusty_work *tw = per_cpu_ptr(s->nop_works, cpu);
 
-		flush_work(&tw->work);
+		flush_workitem(&tw->work);
 	}
 	free_percpu(s->nop_works);
 	destroy_workqueue(s->nop_wq);

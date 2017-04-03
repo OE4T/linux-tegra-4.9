@@ -1551,7 +1551,7 @@ static int tegra210_adsp_pcm_open(struct snd_pcm_substream *substream)
 
 	/* Find out the APM connected with ADSP-FE DAI */
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		for (i = APM_IN_START; i < APM_IN_END; i++) {
+		for (i = APM_IN_START; i <= APM_IN_END; i++) {
 			struct tegra210_adsp_app *app = &adsp->apps[i];
 
 			source = tegra210_adsp_get_source(adsp, app->reg);
@@ -2683,92 +2683,82 @@ static struct snd_soc_dai_ops tegra210_adsp_eavb_dai_ops = {
 	.hw_params	= tegra210_adsp_eavb_hw_params,
 };
 
+#define ADSP_PCM_DAI(id)						\
+	{								\
+		.name = "ADSP PCM" #id,					\
+		.playback = {						\
+			.stream_name = "ADSP PCM" #id " Receive",	\
+			.channels_min = 1,				\
+			.channels_max = 8,				\
+			.rates = SNDRV_PCM_RATE_8000_48000,		\
+			.formats = SNDRV_PCM_FMTBIT_S8 |		\
+				SNDRV_PCM_FMTBIT_S16_LE |		\
+				SNDRV_PCM_FMTBIT_S24_LE |		\
+				SNDRV_PCM_FMTBIT_S32_LE,		\
+		},							\
+		.capture = {						\
+			.stream_name = "ADSP PCM" #id " Transmit",	\
+			.channels_min = 1,				\
+			.channels_max = 8,				\
+			.rates = SNDRV_PCM_RATE_8000_48000,		\
+			.formats = SNDRV_PCM_FMTBIT_S8 |		\
+				SNDRV_PCM_FMTBIT_S16_LE |		\
+				SNDRV_PCM_FMTBIT_S24_LE |		\
+				SNDRV_PCM_FMTBIT_S32_LE,		\
+		},							\
+	}
+
+#define ADSP_COMPR_DAI(id)						\
+	{								\
+		.name = "ADSP COMPR" #id,				\
+		.compress_new = snd_soc_new_compress,			\
+		.playback = {						\
+			.stream_name = "ADSP COMPR" #id " Receive",	\
+			.channels_min = 1,				\
+			.channels_max = 2,				\
+			.rates = SNDRV_PCM_RATE_8000_48000,		\
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,		\
+		},							\
+	}
+
+#define ADSP_EAVB_DAI()						\
+	{								\
+		.name = "ADSP EAVB",					\
+		.playback = {						\
+			.stream_name = "ADSP EAVB Transmit",		\
+			.channels_min = 1,				\
+			.channels_max = 2,				\
+			.rates = SNDRV_PCM_RATE_8000_48000,		\
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,		\
+		},							\
+		.capture = {						\
+			.stream_name = "ADSP EAVB Receive",		\
+			.channels_min = 1,				\
+			.channels_max = 2,				\
+			.rates = SNDRV_PCM_RATE_8000_48000,		\
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,		\
+		},							\
+	}
+
 static struct snd_soc_dai_driver tegra210_adsp_dai[] = {
-	{
-		.name = "ADSP PCM1",
-		.playback = {
-			.stream_name = "ADSP PCM1 Receive",
-			.channels_min = 1,
-			.channels_max = 8,
-			.rates = SNDRV_PCM_RATE_8000_48000,
-			.formats = SNDRV_PCM_FMTBIT_S8 |
-				   SNDRV_PCM_FMTBIT_S16_LE |
-				   SNDRV_PCM_FMTBIT_S24_LE |
-				   SNDRV_PCM_FMTBIT_S32_LE,
-		},
-		.capture = {
-			.stream_name = "ADSP PCM1 Transmit",
-			.channels_min = 1,
-			.channels_max = 8,
-			.rates = SNDRV_PCM_RATE_8000_48000,
-			.formats = SNDRV_PCM_FMTBIT_S8 |
-				   SNDRV_PCM_FMTBIT_S16_LE |
-				   SNDRV_PCM_FMTBIT_S24_LE |
-				   SNDRV_PCM_FMTBIT_S32_LE,
-		},
-	},
-	{
-		.name = "ADSP PCM2",
-		.playback = {
-			.stream_name = "ADSP PCM2 Receive",
-			.channels_min = 1,
-			.channels_max = 8,
-			.rates = SNDRV_PCM_RATE_8000_48000,
-			.formats = SNDRV_PCM_FMTBIT_S8 |
-				   SNDRV_PCM_FMTBIT_S16_LE |
-				   SNDRV_PCM_FMTBIT_S24_LE |
-				   SNDRV_PCM_FMTBIT_S32_LE,
-		},
-		.capture = {
-			.stream_name = "ADSP PCM2 Transmit",
-			.channels_min = 1,
-			.channels_max = 8,
-			.rates = SNDRV_PCM_RATE_8000_48000,
-			.formats = SNDRV_PCM_FMTBIT_S8 |
-				   SNDRV_PCM_FMTBIT_S16_LE |
-				   SNDRV_PCM_FMTBIT_S24_LE |
-				   SNDRV_PCM_FMTBIT_S32_LE,
-		},
-	},
-	{
-		.name = "ADSP COMPR1",
-		.compress_new = snd_soc_new_compress,
-		.playback = {
-			.stream_name = "ADSP COMPR1 Receive",
-			.channels_min = 1,
-			.channels_max = 2,
-			.rates = SNDRV_PCM_RATE_8000_48000,
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
-		},
-	},
-	{
-		.name = "ADSP COMPR2",
-		.compress_new = snd_soc_new_compress,
-		.playback = {
-			.stream_name = "ADSP COMPR2 Receive",
-			.channels_min = 1,
-			.channels_max = 2,
-			.rates = SNDRV_PCM_RATE_8000_48000,
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
-		},
-	},
-	{
-		.name = "ADSP EAVB",
-		.playback = {
-			.stream_name = "ADSP EAVB Transmit",
-			.channels_min = 1,
-			.channels_max = 2,
-			.rates = SNDRV_PCM_RATE_8000_48000,
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
-		},
-		.capture = {
-			.stream_name = "ADSP EAVB Receive",
-			.channels_min = 1,
-			.channels_max = 2,
-			.rates = SNDRV_PCM_RATE_8000_48000,
-			.formats = SNDRV_PCM_FMTBIT_S16_LE,
-		},
-	},
+	ADSP_PCM_DAI(1),
+	ADSP_PCM_DAI(2),
+	ADSP_PCM_DAI(3),
+	ADSP_PCM_DAI(4),
+	ADSP_PCM_DAI(5),
+	ADSP_PCM_DAI(6),
+	ADSP_PCM_DAI(7),
+	ADSP_PCM_DAI(8),
+	ADSP_PCM_DAI(9),
+	ADSP_PCM_DAI(10),
+	ADSP_PCM_DAI(11),
+	ADSP_PCM_DAI(12),
+	ADSP_PCM_DAI(13),
+	ADSP_PCM_DAI(14),
+	ADSP_PCM_DAI(15),
+	ADSP_COMPR_DAI(1),
+	ADSP_COMPR_DAI(2),
+	ADSP_EAVB_DAI(),
 };
 
 #define ADSP_FE_CODEC_DAI(idx)					\
@@ -2847,6 +2837,16 @@ static struct snd_soc_dai_driver tegra210_adsp_codec_dai[] = {
 	ADSP_FE_CODEC_DAI(3),
 	ADSP_FE_CODEC_DAI(4),
 	ADSP_FE_CODEC_DAI(5),
+	ADSP_FE_CODEC_DAI(6),
+	ADSP_FE_CODEC_DAI(7),
+	ADSP_FE_CODEC_DAI(8),
+	ADSP_FE_CODEC_DAI(9),
+	ADSP_FE_CODEC_DAI(10),
+	ADSP_FE_CODEC_DAI(11),
+	ADSP_FE_CODEC_DAI(12),
+	ADSP_FE_CODEC_DAI(13),
+	ADSP_FE_CODEC_DAI(14),
+	ADSP_FE_CODEC_DAI(15),
 	ADSP_EAVB_CODEC_DAI(),
 	ADSP_ADMAIF_CODEC_DAI(1),
 	ADSP_ADMAIF_CODEC_DAI(2),
@@ -2879,6 +2879,16 @@ static const char * const tegra210_adsp_mux_texts[] = {
 	"ADSP-FE3",
 	"ADSP-FE4",
 	"ADSP-FE5",
+	"ADSP-FE6",
+	"ADSP-FE7",
+	"ADSP-FE8",
+	"ADSP-FE9",
+	"ADSP-FE10",
+	"ADSP-FE11",
+	"ADSP-FE12",
+	"ADSP-FE13",
+	"ADSP-FE14",
+	"ADSP-FE15",
 	"ADSP-EAVB",
 	"ADSP-ADMAIF1",
 	"ADSP-ADMAIF2",
@@ -2908,6 +2918,13 @@ static const char * const tegra210_adsp_mux_texts[] = {
 	"APM-IN6",
 	"APM-IN7",
 	"APM-IN8",
+	"APM-IN9",
+	"APM-IN10",
+	"APM-IN11",
+	"APM-IN12",
+	"APM-IN13",
+	"APM-IN14",
+	"APM-IN15",
 	"APM-OUT1",
 	"APM-OUT2",
 	"APM-OUT3",
@@ -2916,6 +2933,13 @@ static const char * const tegra210_adsp_mux_texts[] = {
 	"APM-OUT6",
 	"APM-OUT7",
 	"APM-OUT8",
+	"APM-OUT9",
+	"APM-OUT10",
+	"APM-OUT11",
+	"APM-OUT12",
+	"APM-OUT13",
+	"APM-OUT14",
+	"APM-OUT15",
 	"ADMA1",
 	"ADMA2",
 	"ADMA3",
@@ -2926,6 +2950,11 @@ static const char * const tegra210_adsp_mux_texts[] = {
 	"ADMA8",
 	"ADMA9",
 	"ADMA10",
+	"ADMA11",
+	"ADMA12",
+	"ADMA13",
+	"ADMA14",
+	"ADMA15",
 	"ADMA1-TX",
 	"ADMA2-TX",
 	"ADMA3-TX",
@@ -2936,6 +2965,11 @@ static const char * const tegra210_adsp_mux_texts[] = {
 	"ADMA8-TX",
 	"ADMA9-TX",
 	"ADMA10-TX",
+	"ADMA11-TX",
+	"ADMA12-TX",
+	"ADMA13-TX",
+	"ADMA14-TX",
+	"ADMA15-TX",
 	"PLUGIN1-PLACE-HOLDER",
 	"PLUGIN2-PLACE-HOLDER",
 	"PLUGIN3-PLACE-HOLDER",
@@ -2961,6 +2995,16 @@ static ADSP_MUX_ENUM_CTRL_DECL(adsp_fe2, TEGRA210_ADSP_FRONT_END2);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_fe3, TEGRA210_ADSP_FRONT_END3);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_fe4, TEGRA210_ADSP_FRONT_END4);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_fe5, TEGRA210_ADSP_FRONT_END5);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_fe6, TEGRA210_ADSP_FRONT_END6);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_fe7, TEGRA210_ADSP_FRONT_END7);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_fe8, TEGRA210_ADSP_FRONT_END8);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_fe9, TEGRA210_ADSP_FRONT_END9);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_fe10, TEGRA210_ADSP_FRONT_END10);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_fe11, TEGRA210_ADSP_FRONT_END11);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_fe12, TEGRA210_ADSP_FRONT_END12);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_fe13, TEGRA210_ADSP_FRONT_END13);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_fe14, TEGRA210_ADSP_FRONT_END14);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_fe15, TEGRA210_ADSP_FRONT_END15);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_eavb, TEGRA210_ADSP_EAVB);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif1, TEGRA210_ADSP_ADMAIF1);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif2, TEGRA210_ADSP_ADMAIF2);
@@ -2990,6 +3034,13 @@ static ADSP_MUX_ENUM_CTRL_DECL(apm_in5, TEGRA210_ADSP_APM_IN5);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_in6, TEGRA210_ADSP_APM_IN6);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_in7, TEGRA210_ADSP_APM_IN7);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_in8, TEGRA210_ADSP_APM_IN8);
+static ADSP_MUX_ENUM_CTRL_DECL(apm_in9, TEGRA210_ADSP_APM_IN9);
+static ADSP_MUX_ENUM_CTRL_DECL(apm_in10, TEGRA210_ADSP_APM_IN10);
+static ADSP_MUX_ENUM_CTRL_DECL(apm_in11, TEGRA210_ADSP_APM_IN11);
+static ADSP_MUX_ENUM_CTRL_DECL(apm_in12, TEGRA210_ADSP_APM_IN12);
+static ADSP_MUX_ENUM_CTRL_DECL(apm_in13, TEGRA210_ADSP_APM_IN13);
+static ADSP_MUX_ENUM_CTRL_DECL(apm_in14, TEGRA210_ADSP_APM_IN14);
+static ADSP_MUX_ENUM_CTRL_DECL(apm_in15, TEGRA210_ADSP_APM_IN15);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_out1, TEGRA210_ADSP_APM_OUT1);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_out2, TEGRA210_ADSP_APM_OUT2);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_out3, TEGRA210_ADSP_APM_OUT3);
@@ -2998,6 +3049,13 @@ static ADSP_MUX_ENUM_CTRL_DECL(apm_out5, TEGRA210_ADSP_APM_OUT5);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_out6, TEGRA210_ADSP_APM_OUT6);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_out7, TEGRA210_ADSP_APM_OUT7);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_out8, TEGRA210_ADSP_APM_OUT8);
+static ADSP_MUX_ENUM_CTRL_DECL(apm_out9, TEGRA210_ADSP_APM_OUT9);
+static ADSP_MUX_ENUM_CTRL_DECL(apm_out10, TEGRA210_ADSP_APM_OUT10);
+static ADSP_MUX_ENUM_CTRL_DECL(apm_out11, TEGRA210_ADSP_APM_OUT11);
+static ADSP_MUX_ENUM_CTRL_DECL(apm_out12, TEGRA210_ADSP_APM_OUT12);
+static ADSP_MUX_ENUM_CTRL_DECL(apm_out13, TEGRA210_ADSP_APM_OUT13);
+static ADSP_MUX_ENUM_CTRL_DECL(apm_out14, TEGRA210_ADSP_APM_OUT14);
+static ADSP_MUX_ENUM_CTRL_DECL(apm_out15, TEGRA210_ADSP_APM_OUT15);
 static ADSP_MUX_ENUM_CTRL_DECL(adma1, TEGRA210_ADSP_PLUGIN_ADMA1);
 static ADSP_MUX_ENUM_CTRL_DECL(adma2, TEGRA210_ADSP_PLUGIN_ADMA2);
 static ADSP_MUX_ENUM_CTRL_DECL(adma3, TEGRA210_ADSP_PLUGIN_ADMA3);
@@ -3008,6 +3066,11 @@ static ADSP_MUX_ENUM_CTRL_DECL(adma7, TEGRA210_ADSP_PLUGIN_ADMA7);
 static ADSP_MUX_ENUM_CTRL_DECL(adma8, TEGRA210_ADSP_PLUGIN_ADMA8);
 static ADSP_MUX_ENUM_CTRL_DECL(adma9, TEGRA210_ADSP_PLUGIN_ADMA9);
 static ADSP_MUX_ENUM_CTRL_DECL(adma10, TEGRA210_ADSP_PLUGIN_ADMA10);
+static ADSP_MUX_ENUM_CTRL_DECL(adma11, TEGRA210_ADSP_PLUGIN_ADMA11);
+static ADSP_MUX_ENUM_CTRL_DECL(adma12, TEGRA210_ADSP_PLUGIN_ADMA12);
+static ADSP_MUX_ENUM_CTRL_DECL(adma13, TEGRA210_ADSP_PLUGIN_ADMA13);
+static ADSP_MUX_ENUM_CTRL_DECL(adma14, TEGRA210_ADSP_PLUGIN_ADMA14);
+static ADSP_MUX_ENUM_CTRL_DECL(adma15, TEGRA210_ADSP_PLUGIN_ADMA15);
 static ADSP_MUX_ENUM_CTRL_DECL(adma1_tx, TEGRA210_ADSP_PLUGIN_ADMA1_TX);
 static ADSP_MUX_ENUM_CTRL_DECL(adma2_tx, TEGRA210_ADSP_PLUGIN_ADMA2_TX);
 static ADSP_MUX_ENUM_CTRL_DECL(adma3_tx, TEGRA210_ADSP_PLUGIN_ADMA3_TX);
@@ -3018,6 +3081,11 @@ static ADSP_MUX_ENUM_CTRL_DECL(adma7_tx, TEGRA210_ADSP_PLUGIN_ADMA7_TX);
 static ADSP_MUX_ENUM_CTRL_DECL(adma8_tx, TEGRA210_ADSP_PLUGIN_ADMA8_TX);
 static ADSP_MUX_ENUM_CTRL_DECL(adma9_tx, TEGRA210_ADSP_PLUGIN_ADMA9_TX);
 static ADSP_MUX_ENUM_CTRL_DECL(adma10_tx, TEGRA210_ADSP_PLUGIN_ADMA10_TX);
+static ADSP_MUX_ENUM_CTRL_DECL(adma11_tx, TEGRA210_ADSP_PLUGIN_ADMA11_TX);
+static ADSP_MUX_ENUM_CTRL_DECL(adma12_tx, TEGRA210_ADSP_PLUGIN_ADMA12_TX);
+static ADSP_MUX_ENUM_CTRL_DECL(adma13_tx, TEGRA210_ADSP_PLUGIN_ADMA13_TX);
+static ADSP_MUX_ENUM_CTRL_DECL(adma14_tx, TEGRA210_ADSP_PLUGIN_ADMA14_TX);
+static ADSP_MUX_ENUM_CTRL_DECL(adma15_tx, TEGRA210_ADSP_PLUGIN_ADMA15_TX);
 static ADSP_MUX_ENUM_CTRL_DECL(plugin1, TEGRA210_ADSP_PLUGIN1);
 static ADSP_MUX_ENUM_CTRL_DECL(plugin2, TEGRA210_ADSP_PLUGIN2);
 static ADSP_MUX_ENUM_CTRL_DECL(plugin3, TEGRA210_ADSP_PLUGIN3);
@@ -3046,6 +3114,16 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	ADSP_EP_WIDGETS("ADSP-FE3", adsp_fe3),
 	ADSP_EP_WIDGETS("ADSP-FE4", adsp_fe4),
 	ADSP_EP_WIDGETS("ADSP-FE5", adsp_fe5),
+	ADSP_EP_WIDGETS("ADSP-FE6", adsp_fe6),
+	ADSP_EP_WIDGETS("ADSP-FE7", adsp_fe7),
+	ADSP_EP_WIDGETS("ADSP-FE8", adsp_fe8),
+	ADSP_EP_WIDGETS("ADSP-FE9", adsp_fe9),
+	ADSP_EP_WIDGETS("ADSP-FE10", adsp_fe10),
+	ADSP_EP_WIDGETS("ADSP-FE11", adsp_fe11),
+	ADSP_EP_WIDGETS("ADSP-FE12", adsp_fe12),
+	ADSP_EP_WIDGETS("ADSP-FE13", adsp_fe13),
+	ADSP_EP_WIDGETS("ADSP-FE14", adsp_fe14),
+	ADSP_EP_WIDGETS("ADSP-FE15", adsp_fe15),
 	ADSP_EP_WIDGETS("ADSP-EAVB", adsp_eavb),
 	ADSP_EP_WIDGETS("ADSP-ADMAIF1", adsp_admaif1),
 	ADSP_EP_WIDGETS("ADSP-ADMAIF2", adsp_admaif2),
@@ -3075,6 +3153,13 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	ADSP_WIDGETS("APM-IN6", apm_in6, TEGRA210_ADSP_APM_IN6),
 	ADSP_WIDGETS("APM-IN7", apm_in7, TEGRA210_ADSP_APM_IN7),
 	ADSP_WIDGETS("APM-IN8", apm_in8, TEGRA210_ADSP_APM_IN8),
+	ADSP_WIDGETS("APM-IN9", apm_in9, TEGRA210_ADSP_APM_IN9),
+	ADSP_WIDGETS("APM-IN10", apm_in10, TEGRA210_ADSP_APM_IN10),
+	ADSP_WIDGETS("APM-IN11", apm_in11, TEGRA210_ADSP_APM_IN11),
+	ADSP_WIDGETS("APM-IN12", apm_in12, TEGRA210_ADSP_APM_IN12),
+	ADSP_WIDGETS("APM-IN13", apm_in13, TEGRA210_ADSP_APM_IN13),
+	ADSP_WIDGETS("APM-IN14", apm_in14, TEGRA210_ADSP_APM_IN14),
+	ADSP_WIDGETS("APM-IN15", apm_in15, TEGRA210_ADSP_APM_IN15),
 	ADSP_WIDGETS("APM-OUT1", apm_out1, TEGRA210_ADSP_APM_OUT1),
 	ADSP_WIDGETS("APM-OUT2", apm_out2, TEGRA210_ADSP_APM_OUT2),
 	ADSP_WIDGETS("APM-OUT3", apm_out3, TEGRA210_ADSP_APM_OUT3),
@@ -3083,6 +3168,14 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	ADSP_WIDGETS("APM-OUT6", apm_out6, TEGRA210_ADSP_APM_OUT6),
 	ADSP_WIDGETS("APM-OUT7", apm_out7, TEGRA210_ADSP_APM_OUT7),
 	ADSP_WIDGETS("APM-OUT8", apm_out8, TEGRA210_ADSP_APM_OUT8),
+	ADSP_WIDGETS("APM-OUT9", apm_out9, TEGRA210_ADSP_APM_OUT9),
+	ADSP_WIDGETS("APM-OUT10", apm_out10, TEGRA210_ADSP_APM_OUT10),
+	ADSP_WIDGETS("APM-OUT11", apm_out11, TEGRA210_ADSP_APM_OUT11),
+	ADSP_WIDGETS("APM-OUT12", apm_out12, TEGRA210_ADSP_APM_OUT12),
+	ADSP_WIDGETS("APM-OUT13", apm_out13, TEGRA210_ADSP_APM_OUT13),
+	ADSP_WIDGETS("APM-OUT14", apm_out14, TEGRA210_ADSP_APM_OUT14),
+	ADSP_WIDGETS("APM-OUT15", apm_out15, TEGRA210_ADSP_APM_OUT15),
+
 	ADSP_WIDGETS("ADMA1", adma1, TEGRA210_ADSP_PLUGIN_ADMA1),
 	ADSP_WIDGETS("ADMA2", adma2, TEGRA210_ADSP_PLUGIN_ADMA2),
 	ADSP_WIDGETS("ADMA3", adma3, TEGRA210_ADSP_PLUGIN_ADMA3),
@@ -3093,6 +3186,11 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	ADSP_WIDGETS("ADMA8", adma8, TEGRA210_ADSP_PLUGIN_ADMA8),
 	ADSP_WIDGETS("ADMA9", adma9, TEGRA210_ADSP_PLUGIN_ADMA9),
 	ADSP_WIDGETS("ADMA10", adma10, TEGRA210_ADSP_PLUGIN_ADMA10),
+	ADSP_WIDGETS("ADMA11", adma11, TEGRA210_ADSP_PLUGIN_ADMA11),
+	ADSP_WIDGETS("ADMA12", adma12, TEGRA210_ADSP_PLUGIN_ADMA12),
+	ADSP_WIDGETS("ADMA13", adma13, TEGRA210_ADSP_PLUGIN_ADMA13),
+	ADSP_WIDGETS("ADMA14", adma14, TEGRA210_ADSP_PLUGIN_ADMA14),
+	ADSP_WIDGETS("ADMA15", adma15, TEGRA210_ADSP_PLUGIN_ADMA15),
 	ADSP_WIDGETS("ADMA1-TX", adma1_tx, TEGRA210_ADSP_PLUGIN_ADMA1_TX),
 	ADSP_WIDGETS("ADMA2-TX", adma2_tx, TEGRA210_ADSP_PLUGIN_ADMA2_TX),
 	ADSP_WIDGETS("ADMA3-TX", adma3_tx, TEGRA210_ADSP_PLUGIN_ADMA3_TX),
@@ -3102,8 +3200,12 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	ADSP_WIDGETS("ADMA7-TX", adma7_tx, TEGRA210_ADSP_PLUGIN_ADMA7_TX),
 	ADSP_WIDGETS("ADMA8-TX", adma8_tx, TEGRA210_ADSP_PLUGIN_ADMA8_TX),
 	ADSP_WIDGETS("ADMA9-TX", adma9_tx, TEGRA210_ADSP_PLUGIN_ADMA9_TX),
-	ADSP_WIDGETS("ADMA10-TX", adma10_tx,
-					TEGRA210_ADSP_PLUGIN_ADMA10_TX),
+	ADSP_WIDGETS("ADMA10-TX", adma10_tx, TEGRA210_ADSP_PLUGIN_ADMA10_TX),
+	ADSP_WIDGETS("ADMA11-TX", adma11_tx, TEGRA210_ADSP_PLUGIN_ADMA11_TX),
+	ADSP_WIDGETS("ADMA12-TX", adma12_tx, TEGRA210_ADSP_PLUGIN_ADMA12_TX),
+	ADSP_WIDGETS("ADMA13-TX", adma13_tx, TEGRA210_ADSP_PLUGIN_ADMA13_TX),
+	ADSP_WIDGETS("ADMA14-TX", adma14_tx, TEGRA210_ADSP_PLUGIN_ADMA14_TX),
+	ADSP_WIDGETS("ADMA15-TX", adma15_tx, TEGRA210_ADSP_PLUGIN_ADMA15_TX),
 	ADSP_WIDGETS("PLUGIN1-PLACE-HOLDER", plugin1, TEGRA210_ADSP_PLUGIN1),
 	ADSP_WIDGETS("PLUGIN2-PLACE-HOLDER", plugin2, TEGRA210_ADSP_PLUGIN2),
 	ADSP_WIDGETS("PLUGIN3-PLACE-HOLDER", plugin3, TEGRA210_ADSP_PLUGIN3),
@@ -3122,6 +3224,16 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	{ name " MUX",		"ADSP-FE3", "ADSP-FE3 RX"},	\
 	{ name " MUX",		"ADSP-FE4", "ADSP-FE4 RX"},	\
 	{ name " MUX",		"ADSP-FE5", "ADSP-FE5 RX"},	\
+	{ name " MUX",		"ADSP-FE6", "ADSP-FE6 RX"},	\
+	{ name " MUX",		"ADSP-FE7", "ADSP-FE7 RX"},	\
+	{ name " MUX",		"ADSP-FE8", "ADSP-FE8 RX"},	\
+	{ name " MUX",		"ADSP-FE9", "ADSP-FE9 RX"},	\
+	{ name " MUX",		"ADSP-FE10", "ADSP-FE10 RX"},	\
+	{ name " MUX",		"ADSP-FE11", "ADSP-FE11 RX"},	\
+	{ name " MUX",		"ADSP-FE12", "ADSP-FE12 RX"},	\
+	{ name " MUX",		"ADSP-FE13", "ADSP-FE13 RX"},	\
+	{ name " MUX",		"ADSP-FE14", "ADSP-FE14 RX"},	\
+	{ name " MUX",		"ADSP-FE15", "ADSP-FE15 RX"},	\
 	{ name " MUX",		"ADSP-ADMAIF1", "ADSP-ADMAIF1 RX"}, \
 	{ name " MUX",		"ADSP-ADMAIF2", "ADSP-ADMAIF2 RX"}, \
 	{ name " MUX",		"ADSP-ADMAIF3", "ADSP-ADMAIF3 RX"}, \
@@ -3152,7 +3264,15 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	{ name " MUX",	"APM-IN5",	"APM-IN5 TX"},		\
 	{ name " MUX",	"APM-IN6",	"APM-IN6 TX"},		\
 	{ name " MUX",	"APM-IN7",	"APM-IN7 TX"},		\
-	{ name " MUX",	"APM-IN8",	"APM-IN8 TX"}
+	{ name " MUX",	"APM-IN8",	"APM-IN8 TX"},		\
+	{ name " MUX",	"APM-IN9",	"APM-IN9 TX"},		\
+	{ name " MUX",	"APM-IN10",	"APM-IN10 TX"},		\
+	{ name " MUX",	"APM-IN11",	"APM-IN11 TX"},		\
+	{ name " MUX",	"APM-IN12",	"APM-IN12 TX"},		\
+	{ name " MUX",	"APM-IN13",	"APM-IN13 TX"},		\
+	{ name " MUX",	"APM-IN14",	"APM-IN14 TX"},		\
+	{ name " MUX",	"APM-IN15",	"APM-IN15 TX"}
+
 
 #define ADSP_APM_OUT_ROUTES(name)				\
 	{ name " MUX",		"APM-OUT1", "APM-OUT1 TX"},	\
@@ -3162,7 +3282,15 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	{ name " MUX",		"APM-OUT5", "APM-OUT5 TX"},	\
 	{ name " MUX",		"APM-OUT6", "APM-OUT6 TX"},	\
 	{ name " MUX",		"APM-OUT7", "APM-OUT7 TX"},	\
-	{ name " MUX",		"APM-OUT8", "APM-OUT8 TX"}
+	{ name " MUX",		"APM-OUT8", "APM-OUT8 TX"},	\
+	{ name " MUX",		"APM-OUT9", "APM-OUT9 TX"},	\
+	{ name " MUX",		"APM-OUT10", "APM-OUT10 TX"},	\
+	{ name " MUX",		"APM-OUT11", "APM-OUT11 TX"},	\
+	{ name " MUX",		"APM-OUT12", "APM-OUT12 TX"},	\
+	{ name " MUX",		"APM-OUT13", "APM-OUT13 TX"},	\
+	{ name " MUX",		"APM-OUT14", "APM-OUT14 TX"},	\
+	{ name " MUX",		"APM-OUT15", "APM-OUT15 TX"}
+
 
 #define ADSP_ADMA_ROUTES(name)					\
 	{ name " MUX",	"ADMA1",	"ADMA1 TX"},		\
@@ -3175,6 +3303,11 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	{ name " MUX",	"ADMA8",	"ADMA8 TX"},		\
 	{ name " MUX",	"ADMA9",	"ADMA9 TX"},		\
 	{ name " MUX",	"ADMA10",	"ADMA10 TX"},		\
+	{ name " MUX",	"ADMA11",	"ADMA11 TX"},		\
+	{ name " MUX",	"ADMA12",	"ADMA12 TX"},		\
+	{ name " MUX",	"ADMA13",	"ADMA13 TX"},		\
+	{ name " MUX",	"ADMA14",	"ADMA14 TX"},		\
+	{ name " MUX",	"ADMA15",	"ADMA15 TX"},		\
 	{ name " MUX",	"ADMA1-TX",	"ADMA1-TX TX"},	\
 	{ name " MUX",	"ADMA2-TX",	"ADMA2-TX TX"},	\
 	{ name " MUX",	"ADMA3-TX",	"ADMA3-TX TX"},	\
@@ -3235,6 +3368,16 @@ static const struct snd_soc_dapm_route tegra210_adsp_routes[] = {
 	ADSP_EP_MUX_ROUTES("ADSP-FE3"),
 	ADSP_EP_MUX_ROUTES("ADSP-FE4"),
 	ADSP_EP_MUX_ROUTES("ADSP-FE5"),
+	ADSP_EP_MUX_ROUTES("ADSP-FE6"),
+	ADSP_EP_MUX_ROUTES("ADSP-FE7"),
+	ADSP_EP_MUX_ROUTES("ADSP-FE8"),
+	ADSP_EP_MUX_ROUTES("ADSP-FE9"),
+	ADSP_EP_MUX_ROUTES("ADSP-FE10"),
+	ADSP_EP_MUX_ROUTES("ADSP-FE11"),
+	ADSP_EP_MUX_ROUTES("ADSP-FE12"),
+	ADSP_EP_MUX_ROUTES("ADSP-FE13"),
+	ADSP_EP_MUX_ROUTES("ADSP-FE14"),
+	ADSP_EP_MUX_ROUTES("ADSP-FE15"),
 	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF1"),
 	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF2"),
 	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF3"),
@@ -3266,6 +3409,13 @@ static const struct snd_soc_dapm_route tegra210_adsp_routes[] = {
 	ADSP_APM_IN_MUX_ROUTES("APM-IN6"),
 	ADSP_APM_IN_MUX_ROUTES("APM-IN7"),
 	ADSP_APM_IN_MUX_ROUTES("APM-IN8"),
+	ADSP_APM_IN_MUX_ROUTES("APM-IN9"),
+	ADSP_APM_IN_MUX_ROUTES("APM-IN10"),
+	ADSP_APM_IN_MUX_ROUTES("APM-IN11"),
+	ADSP_APM_IN_MUX_ROUTES("APM-IN12"),
+	ADSP_APM_IN_MUX_ROUTES("APM-IN13"),
+	ADSP_APM_IN_MUX_ROUTES("APM-IN14"),
+	ADSP_APM_IN_MUX_ROUTES("APM-IN15"),
 
 	ADSP_APM_OUT_MUX_ROUTES("APM-OUT1"),
 	ADSP_APM_OUT_MUX_ROUTES("APM-OUT2"),
@@ -3275,6 +3425,13 @@ static const struct snd_soc_dapm_route tegra210_adsp_routes[] = {
 	ADSP_APM_OUT_MUX_ROUTES("APM-OUT6"),
 	ADSP_APM_OUT_MUX_ROUTES("APM-OUT7"),
 	ADSP_APM_OUT_MUX_ROUTES("APM-OUT8"),
+	ADSP_APM_OUT_MUX_ROUTES("APM-OUT9"),
+	ADSP_APM_OUT_MUX_ROUTES("APM-OUT10"),
+	ADSP_APM_OUT_MUX_ROUTES("APM-OUT11"),
+	ADSP_APM_OUT_MUX_ROUTES("APM-OUT12"),
+	ADSP_APM_OUT_MUX_ROUTES("APM-OUT13"),
+	ADSP_APM_OUT_MUX_ROUTES("APM-OUT14"),
+	ADSP_APM_OUT_MUX_ROUTES("APM-OUT15"),
 
 	ADSP_ADMA_MUX_ROUTES("ADMA1"),
 	ADSP_ADMA_MUX_ROUTES("ADMA2"),
@@ -3286,6 +3443,11 @@ static const struct snd_soc_dapm_route tegra210_adsp_routes[] = {
 	ADSP_ADMA_MUX_ROUTES("ADMA8"),
 	ADSP_ADMA_MUX_ROUTES("ADMA9"),
 	ADSP_ADMA_MUX_ROUTES("ADMA10"),
+	ADSP_ADMA_MUX_ROUTES("ADMA11"),
+	ADSP_ADMA_MUX_ROUTES("ADMA12"),
+	ADSP_ADMA_MUX_ROUTES("ADMA13"),
+	ADSP_ADMA_MUX_ROUTES("ADMA14"),
+	ADSP_ADMA_MUX_ROUTES("ADMA15"),
 	ADSP_ADMA_OUT_MUX_ROUTES("ADMA1-TX"),
 	ADSP_ADMA_OUT_MUX_ROUTES("ADMA2-TX"),
 	ADSP_ADMA_OUT_MUX_ROUTES("ADMA3-TX"),
@@ -3296,6 +3458,11 @@ static const struct snd_soc_dapm_route tegra210_adsp_routes[] = {
 	ADSP_ADMA_OUT_MUX_ROUTES("ADMA8-TX"),
 	ADSP_ADMA_OUT_MUX_ROUTES("ADMA9-TX"),
 	ADSP_ADMA_OUT_MUX_ROUTES("ADMA10-TX"),
+	ADSP_ADMA_OUT_MUX_ROUTES("ADMA11-TX"),
+	ADSP_ADMA_OUT_MUX_ROUTES("ADMA12-TX"),
+	ADSP_ADMA_OUT_MUX_ROUTES("ADMA13-TX"),
+	ADSP_ADMA_OUT_MUX_ROUTES("ADMA14-TX"),
+	ADSP_ADMA_OUT_MUX_ROUTES("ADMA15-TX"),
 
 	ADSP_PLUGIN_MUX_ROUTES("PLUGIN1-PLACE-HOLDER"),
 	ADSP_PLUGIN_MUX_ROUTES("PLUGIN2-PLACE-HOLDER"),
@@ -3738,6 +3905,20 @@ static int tegra210_adsp_apm_put(struct snd_kcontrol *kcontrol,
 	SOC_SINGLE_EXT("APM7 " xname, TEGRA210_ADSP_APM_IN7, 0, xmax, 0,\
 	tegra210_adsp_apm_get, tegra210_adsp_apm_put),	\
 	SOC_SINGLE_EXT("APM8 " xname, TEGRA210_ADSP_APM_IN8, 0, xmax, 0,\
+	tegra210_adsp_apm_get, tegra210_adsp_apm_put),	\
+	SOC_SINGLE_EXT("APM9 " xname, TEGRA210_ADSP_APM_IN9, 0, xmax, 0,\
+	tegra210_adsp_apm_get, tegra210_adsp_apm_put),	\
+	SOC_SINGLE_EXT("APM10 " xname, TEGRA210_ADSP_APM_IN10, 0, xmax, 0,\
+	tegra210_adsp_apm_get, tegra210_adsp_apm_put),	\
+	SOC_SINGLE_EXT("APM11 " xname, TEGRA210_ADSP_APM_IN11, 0, xmax, 0,\
+	tegra210_adsp_apm_get, tegra210_adsp_apm_put),	\
+	SOC_SINGLE_EXT("APM12 " xname, TEGRA210_ADSP_APM_IN12, 0, xmax, 0,\
+	tegra210_adsp_apm_get, tegra210_adsp_apm_put),	\
+	SOC_SINGLE_EXT("APM13 " xname, TEGRA210_ADSP_APM_IN13, 0, xmax, 0,\
+	tegra210_adsp_apm_get, tegra210_adsp_apm_put),	\
+	SOC_SINGLE_EXT("APM14 " xname, TEGRA210_ADSP_APM_IN14, 0, xmax, 0,\
+	tegra210_adsp_apm_get, tegra210_adsp_apm_put),	\
+	SOC_SINGLE_EXT("APM15 " xname, TEGRA210_ADSP_APM_IN15, 0, xmax, 0,\
 	tegra210_adsp_apm_get, tegra210_adsp_apm_put)
 
 /* Any new addition of control should be added after PLUGIN controls otherwise
@@ -3806,6 +3987,16 @@ static const struct snd_kcontrol_new tegra210_adsp_controls[] = {
 		TEGRA210_ADSP_PLUGIN_ADMA9),
 	SND_SOC_PARAM_EXT("ADMA10 set params",
 		TEGRA210_ADSP_PLUGIN_ADMA10),
+	SND_SOC_PARAM_EXT("ADMA11 set params",
+		TEGRA210_ADSP_PLUGIN_ADMA11),
+	SND_SOC_PARAM_EXT("ADMA12 set params",
+		TEGRA210_ADSP_PLUGIN_ADMA12),
+	SND_SOC_PARAM_EXT("ADMA13 set params",
+		TEGRA210_ADSP_PLUGIN_ADMA13),
+	SND_SOC_PARAM_EXT("ADMA14 set params",
+		TEGRA210_ADSP_PLUGIN_ADMA14),
+	SND_SOC_PARAM_EXT("ADMA15 set params",
+		TEGRA210_ADSP_PLUGIN_ADMA15),
 	SND_SOC_PARAM_EXT("ADMA1-TX set params",
 		TEGRA210_ADSP_PLUGIN_ADMA1_TX),
 	SND_SOC_PARAM_EXT("ADMA2-TX set params",
@@ -3826,6 +4017,17 @@ static const struct snd_kcontrol_new tegra210_adsp_controls[] = {
 		TEGRA210_ADSP_PLUGIN_ADMA9_TX),
 	SND_SOC_PARAM_EXT("ADMA10-TX set params",
 		TEGRA210_ADSP_PLUGIN_ADMA10_TX),
+	SND_SOC_PARAM_EXT("ADMA11-TX set params",
+		TEGRA210_ADSP_PLUGIN_ADMA11_TX),
+	SND_SOC_PARAM_EXT("ADMA12-TX set params",
+		TEGRA210_ADSP_PLUGIN_ADMA12_TX),
+	SND_SOC_PARAM_EXT("ADMA13-TX set params",
+		TEGRA210_ADSP_PLUGIN_ADMA13_TX),
+	SND_SOC_PARAM_EXT("ADMA14-TX set params",
+		TEGRA210_ADSP_PLUGIN_ADMA14_TX),
+	SND_SOC_PARAM_EXT("ADMA15-TX set params",
+		TEGRA210_ADSP_PLUGIN_ADMA15_TX),
+
 	APM_CONTROL("Priority", APM_PRIORITY_MAX),
 	APM_CONTROL("Min ADSP Clock", INT_MAX),
 	APM_CONTROL("Input Mode", INT_MAX),

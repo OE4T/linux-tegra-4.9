@@ -460,7 +460,8 @@ u32 gk20a_ce_create_context_with_cb(struct device *dev,
 	if (!ce_ctx->ch) {
 		gk20a_err(ce_ctx->dev, "ce: gk20a channel not available");
 		goto end;
-	 }
+	}
+	ce_ctx->ch->wdt_enabled = false;
 
 	/* bind the channel to the vm */
 	err = __gk20a_vm_bind_channel(&g->mm.ce.vm, ce_ctx->ch);

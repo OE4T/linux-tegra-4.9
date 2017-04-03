@@ -11,7 +11,6 @@
 #define _DT_BINDINGS_DRIVER_INFO_H
 
 /* For the time being, declare us also as kernel 4.4 */
-#define KERNEL_VERSION_4_4
 #define KERNEL_VERSION_4_9
 
 /*

@@ -477,6 +477,76 @@
 		status = "disabled";
 	};
 
+#ifdef KERNEL_VERSION_4_9
+	xusb_padctl: xusb_padctl@3520000 {
+		compatible = "nvidia,tegra18x-xusb-padctl";
+		reg = <0x0 0x3520000 0x0 0x1000>, <0x0 0x03540000 0x0 0x1000>;
+		reg-names = "padctl", "ao";
+		resets = <&tegra_car TEGRA186_RESET_XUSB_PADCTL>;
+		reset-names = "padctl";
+		status = "disabled";
+
+		pads {
+			usb2 {
+				clocks = <&tegra_car TEGRA186_CLK_USB2_TRK>;
+				clock-names = "trk";
+				lanes {
+					usb2-0 {
+						status = "disabled";
+						#phy-cells = <0>;
+					};
+					usb2-1 {
+						status = "disabled";
+						#phy-cells = <0>;
+					};
+					usb2-2 {
+						status = "disabled";
+						#phy-cells = <0>;
+					};
+				};
+			};
+			usb3 {
+				lanes {
+					usb3-0 {
+						status = "disabled";
+						#phy-cells = <0>;
+					};
+					usb3-1 {
+						status = "disabled";
+						#phy-cells = <0>;
+					};
+					usb3-2 {
+						status = "disabled";
+						#phy-cells = <0>;
+					};
+				};
+			};
+		};
+
+		ports {
+			usb2-0 {
+				status = "disabled";
+			};
+			usb2-1 {
+				status = "disabled";
+			};
+			usb2-2 {
+				status = "disabled";
+			};
+			usb3-0 {
+				status = "disabled";
+			};
+			usb3-1 {
+				status = "disabled";
+			};
+			usb3-2 {
+				status = "disabled";
+			};
+		};
+
+	};
+#endif
+
 	tegra_xhci: xhci@3530000 {
 		compatible = "nvidia,tegra186-xhci";
 		reg = <0x0 0x03530000 0x0 0x8000>,
@@ -485,11 +555,27 @@
 #ifdef WAKEUP_VIA_PM_IRQ_INTERRUPT_CONTROLLER
 		interrupt-parent = <&pm_irq>;
 #endif
+		#stream-id-cells = <1>;
+		status = "disabled";
+		otg-controller = <&tegra_xotg>;
+#ifdef KERNEL_VERSION_4_9
+		interrupts = <0 163 0x4>, <0 164 0x4>, <0 167 0x4>;
+		clocks = <&tegra_car TEGRA186_CLK_XUSB_HOST>,
+			<&tegra_car TEGRA186_CLK_XUSB_FALCON>,
+			<&tegra_car TEGRA186_CLK_XUSB_SS>,
+			<&tegra_car TEGRA186_CLK_XUSB_CORE_SS>,
+			<&tegra_car TEGRA186_CLK_CLK_M>, /* FIXME: HS souce */
+			<&tegra_car TEGRA186_CLK_XUSB_FS>,
+			<&tegra_car TEGRA186_CLK_PLLU>,
+			<&tegra_car TEGRA186_CLK_CLK_M>,
+			<&tegra_car TEGRA186_CLK_PLLE>;
+		clock-names = "xusb_host", "xusb_falcon_src", "xusb_ss", "xusb_ss_src", "xusb_hs_src",
+			"xusb_fs_src", "pll_u_480m", "clk_m", "pll_e";
+		nvidia,xusb-padctl = <&xusb_padctl>;
+#else
 		interrupts = <0 163 0x4>, <0 167 0x4>;
 		mboxes = <&xusb_mbox>;
 		mbox-names = "xusb";
-		#stream-id-cells = <1>;
-		status = "disabled";
 		clocks = <&tegra_car TEGRA186_CLK_XUSB_HOST>,
 			<&tegra_car TEGRA186_CLK_XUSB_FALCON>,
 			<&tegra_car TEGRA186_CLK_XUSB_SS>,
@@ -501,7 +587,7 @@
 			<&tegra_car TEGRA186_CLK_PLLE>;
 		clock-names = "host", "falcon_src", "ss", "ss_src", "hs_src",
 			"fs_src", "pll_u_480M", "clk_m", "pll_e";
-		otg-controller = <&tegra_xotg>;
+#endif
 	};
 
 	tegra_xudc: xudc@3550000 {
@@ -518,6 +604,9 @@
 		status = "disabled";
 		charger-detector = <&tegra_usb_cd>;
 		otg-controller = <&tegra_xotg>;
+#ifdef KERNEL_VERSION_4_9
+		nvidia,xusb-padctl = <&xusb_padctl>;
+#endif
 	};
 
 	tegra_xusb_padctl: pinctrl@3520000 {

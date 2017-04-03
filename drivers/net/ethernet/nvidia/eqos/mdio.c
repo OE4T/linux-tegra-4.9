@@ -30,7 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -250,6 +250,7 @@ static INT eqos_mdio_reset(struct mii_bus *bus)
 	return 0;
 }
 
+#ifdef YDEBUG
 /*!
  * \details This function is invoked by other functions to get the PHY register
  * dump. This function is used during development phase for debug purpose.
@@ -315,6 +316,7 @@ void dump_phy_registers(struct eqos_prv_data *pdata)
 
 	pr_err("\n****************************************************\n");
 }
+#endif
 
 /*!
 * \brief API to adjust link parameters.

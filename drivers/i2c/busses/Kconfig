@@ -920,6 +920,17 @@ config I2C_TEGRA_HV
           partition by using IVC (Inter VM Commuication) framework.
           IVC support is a prerequisite for this driver.
 
+config I2C_TEGRA_SLAVE
+	tristate "NVIDIA Tegra internal I2C slave controller"
+	depends on ARCH_TEGRA
+	select I2C_SLAVE
+	help
+	  If you say yes to this option, support will be included for the
+	  I2C slave controller embedded in NVIDIA Tegra SOCs.
+
+	  This driver supports byte mode where for byte read/write interrupt
+	  is generated.
+
 config I2C_UNIPHIER
 	tristate "UniPhier FIFO-less I2C controller"
 	depends on ARCH_UNIPHIER || COMPILE_TEST

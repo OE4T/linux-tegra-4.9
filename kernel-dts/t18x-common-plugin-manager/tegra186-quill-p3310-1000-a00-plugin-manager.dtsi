@@ -77,6 +77,19 @@
 			ids = "<3310-1000-500";
 			odm-data = "enable-xusb-on-uphy-lane0";
 			override@0 {
+#ifdef KERNEL_VERSION_4_9
+				target = <&xusb_padctl>;
+				_overlay_ {
+					ports {
+						usb2-2 {
+							status = "okay";
+						};
+						usb3-0 {
+							status = "okay";
+						};
+					};
+				};
+#else
 				target = <&tegra_xusb_padctl_pinmux_default>;
 				_overlay_ {
 					e3325-usb3-std-A-HS {
@@ -86,9 +99,19 @@
 						status = "okay";
 					};
 				};
+#endif
 			};
 			override@1 {
 				target = <&{/xhci@3530000}>;
+#ifdef KERNEL_VERSION_4_9
+				_overlay_ {
+					phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
+						<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-2}>,
+						<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-0}>,
+						<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-1}>;
+					phy-names = "usb2-1", "usb2-2", "usb3-0", "usb3-1";
+				};
+#else
 				_overlay_ {
 					phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
 							<&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>,
@@ -97,6 +120,7 @@
 							<&tegra_xusb_padctl TEGRA_PADCTL_PHY_USB3_P(0)>;
 					phy-names = "utmi-0", "utmi-1", "usb3-1", "utmi-2", "usb3-0";
 				};
+#endif
 			};
 			override@2 {
 				target = <&tegra_main_gpio>;
@@ -180,6 +204,13 @@
 			ids = ">=3310-1000-500";
 			override@0 {
 				target = <&{/xhci@3530000}>;
+#ifdef KERNEL_VERSION_4_9
+				_overlay_ {
+					phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
+						<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-0}>;
+					phy-names = "usb2-1", "usb3-0";
+				};
+#else
 				_overlay_ {
 					phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
 						<&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>,
@@ -187,8 +218,23 @@
 						<&tegra_xusb_padctl TEGRA_PADCTL_PHY_USB3_P(0)>;
 					phy-names = "utmi-0", "utmi-1", "utmi-2", "usb3-0";
 				};
+#endif
 			};
 			override@1 {
+#ifdef KERNEL_VERSION_4_9
+				target = <&xusb_padctl>;
+				_overlay_ {
+					ports {
+						usb3-1 {
+							status = "disabled";
+						};
+						usb3-0 {
+							nvidia,usb2-companion = <1>;
+							status = "okay";
+						};
+					};
+				};
+#else
 				target = <&tegra_xusb_padctl_pinmux_default>;
 				_overlay_ {
 					usb3-std-A-port2 {
@@ -198,6 +244,7 @@
 						status = "okay";
 					};
 				};
+#endif
 			};
 		};
 		fragment-500-e3325-pcie {
@@ -206,11 +253,18 @@
 			odm-data = "enable-pcie-on-uphy-lane0";
 			override@0 {
 				target = <&{/xhci@3530000}>;
+#ifdef KERNEL_VERSION_4_9
+				_overlay_ {
+					phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>;
+					phy-names = "usb2-1";
+				};
+#else
 				_overlay_ {
 					phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
 						<&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>;
 					phy-names = "utmi-0", "utmi-1";
 				};
+#endif
 			};
 			override@1 {
 				target = <&tegra_xusb_padctl_pinmux_default>;

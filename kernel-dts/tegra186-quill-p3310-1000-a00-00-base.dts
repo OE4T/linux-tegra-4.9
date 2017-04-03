@@ -66,12 +66,28 @@
 		phy-names = "otg-usb2";
 	};
 
+#ifdef KERNEL_VERSION_4_9
+	xudc@3550000 {
+		status = "okay";
+		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>;
+		phy-names = "usb2";
+	};
+#else
 	xudc@3550000 {
 		status = "okay";
 		phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
 		phy-names = "usb2";
 	};
+#endif
 
+#ifdef KERNEL_VERSION_4_9
+	xhci@3530000 {
+		status = "okay";
+		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
+			<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-1}>;
+		phy-names = "usb2-1", "usb3-1";
+	};
+#else
 	xhci@3530000 {
 		status = "okay";
 		phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
@@ -79,7 +95,64 @@
 			<&tegra_xusb_padctl TEGRA_PADCTL_PHY_USB3_P(1)>;
 		phy-names = "utmi-0", "utmi-1", "usb3-1";
 	};
+#endif
 
+#ifdef KERNEL_VERSION_4_9
+	xusb_padctl@3520000 {
+		status = "okay";
+
+		pads {
+			usb2 {
+				lanes {
+					usb2-0 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb2-1 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb2-2 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+				};
+			};
+			usb3 {
+				lanes {
+					usb3-0 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb3-1 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb3-2 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+				};
+			};
+		};
+
+		ports {
+			usb2-0 {
+				status = "okay";
+				mode = "otg";
+			};
+			usb2-1 {
+				status = "okay";
+				mode = "host";
+				vbus-supply = <&vdd_usb1_5v>;
+			};
+			usb3-1 {
+				nvidia,usb2-companion = <1>;
+				status = "okay";
+			};
+		};
+	};
+#endif
 	pinctrl@3520000 {
 		status = "okay";
 		pinctrl-0 = <&tegra_xusb_padctl_pinmux_default>;

@@ -902,7 +902,7 @@ void gic_dist_restore(struct gic_chip_data *gic)
 
 	writel_relaxed(GICD_DISABLE, dist_base + GIC_DIST_CTRL);
 
-	for (i = 0; i < DIV_ROUND_UP(gic_irqs, 16); i++)
+	for (i = 1; i < DIV_ROUND_UP(gic_irqs, 16); i++)
 		writel_relaxed(gic->saved_spi_conf[i],
 			dist_base + GIC_DIST_CONFIG + i * 4);
 
@@ -1000,7 +1000,7 @@ void gic_cpu_restore(struct gic_chip_data *gic)
 	}
 
 	ptr = raw_cpu_ptr(gic->saved_ppi_conf);
-	for (i = 0; i < DIV_ROUND_UP(32, 16); i++)
+	for (i = 1; i < DIV_ROUND_UP(32, 16); i++)
 		writel_relaxed(ptr[i], dist_base + GIC_DIST_CONFIG + i * 4);
 
 	for (i = 0; i < DIV_ROUND_UP(32, 4); i++)

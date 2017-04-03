@@ -793,14 +793,19 @@ static int br_port_slave_changelink(struct net_device *brdev,
 				    struct nlattr *tb[],
 				    struct nlattr *data[])
 {
+	struct net_bridge_port *br_port;
 	struct net_bridge *br = netdev_priv(brdev);
 	int ret;
 
 	if (!data)
 		return 0;
 
+	br_port = br_port_get_rtnl(dev);
+	if (br_port == NULL)
+		return -ENODEV;
+
 	spin_lock_bh(&br->lock);
-	ret = br_setport(br_port_get_rtnl(dev), data);
+	ret = br_setport(br_port, data);
 	spin_unlock_bh(&br->lock);
 
 	return ret;
@@ -810,7 +815,13 @@ static int br_port_fill_slave_info(struct sk_buff *skb,
 				   const struct net_device *brdev,
 				   const struct net_device *dev)
 {
-	return br_port_fill_attrs(skb, br_port_get_rtnl(dev));
+	struct net_bridge_port *br_port;
+
+	br_port = br_port_get_rtnl(dev);
+	if (br_port == NULL)
+		return -ENODEV;
+
+	return br_port_fill_attrs(skb, br_port);
 }
 
 static size_t br_port_get_slave_size(const struct net_device *brdev,

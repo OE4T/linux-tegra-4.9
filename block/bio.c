@@ -1405,7 +1405,6 @@ static void __bio_unmap_user(struct bio *bio)
 void bio_unmap_user(struct bio *bio)
 {
 	__bio_unmap_user(bio);
-	bio_put(bio);
 }
 
 static void bio_map_kern_endio(struct bio *bio)

@@ -16,7 +16,7 @@
 / {
 	plugin-manager {
 		fragement@0 {
-			odm-data = "enable-tegra-wdt";
+			odm-data = "enable-tegra-wdt", "enable-denver-wdt";
 			override@0 {
 				target = <&tegra_wdt>;
 				_overlay_ {

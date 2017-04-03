@@ -1745,30 +1745,6 @@
 
 	};
 
-	sata@70020000 {
-		compatible = "nvidia,tegra210-ahci-sata";
-		reg = <0x0 0x70027000 0x0 0x00002000>, /* SATA AHCI */
-		    <0x0 0x70021000 0x0 0x00006000>, /* SATA Config */
-		    <0x0 0x70020000 0x0 0x00001000>, /* SATA IPFS */
-		    <0x0 0x70001100 0x0 0x00000034>; /* SATA AUX */
-		reg-names = "sata-ahci", "sata-config", "sata-ipfs", "sata-aux";
-		interrupts = <0 23 0x04>;
-		clocks = <&tegra_car TEGRA210_CLK_SATA>,
-		       <&tegra_car TEGRA210_CLK_SATA_OOB>,
-		       <&tegra_car TEGRA210_CLK_PLL_P>;
-		clock-names = "sata", "sata-oob", "pllp";
-		resets = <&tegra_car TEGRA210_CLK_SATA>,
-		       <&tegra_car TEGRA210_CLK_SATA_OOB>,
-		       <&tegra_car TEGRA210_CLK_SATA_COLD>;
-		reset-names = "sata", "sata-oob", "sata-cold";
-		iommus = <&smmu TEGRA_SWGROUP_SATA2>;
-		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_SATA_P(0)>;
-		phy-names = "sata-phy";
-		nvidia,disable-features = "devslp", "dipm";
-		nvidia,link-flags = "max_power";
-		status = "disabled";
-	};
-
 	i2c1: i2c@7000c000 {
 		#address-cells = <1>;
 		#size-cells = <0>;

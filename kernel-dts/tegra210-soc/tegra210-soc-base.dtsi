@@ -422,10 +422,10 @@
 	timer {
 		compatible = "arm,armv8-timer";
 		interrupt-parent = <&intc>;
-		interrupts = <1 11 0xf01
-			      1 14 0xf01
-			      1 11 0xf01
-			      1 10 0xf01>;
+		interrupts = <GIC_PPI 11 IRQ_TYPE_NONE
+			      GIC_PPI 14 IRQ_TYPE_NONE
+			      GIC_PPI 11 IRQ_TYPE_NONE
+			      GIC_PPI 10 IRQ_TYPE_NONE>;
 		clock-frequency = <19200000>;
 		status = "disabled";
 	};

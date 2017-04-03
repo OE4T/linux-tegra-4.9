@@ -18,9 +18,6 @@
 #include <dt-bindings/thermal/thermal.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/linux/driver-info.h>
-#if defined(KERNEL_VERSION_3_18)
-#include "tegra186-spmic-override-property.dtsi"
-#endif
 
 / {
 	bpmp_i2c {

@@ -468,11 +468,6 @@ static void fan_ramping_work_func(struct work_struct *work)
 	struct fan_dev_data *fan_data = container_of(dwork, struct
 						fan_dev_data, fan_ramp_work);
 
-	if (!fan_data) {
-		dev_err(fan_data->dev, "Fan data is null\n");
-		return;
-	}
-
 	mutex_lock(&fan_data->fan_state_lock);
 	if (!fan_data->fan_temp_control_flag) {
 		mutex_unlock(&fan_data->fan_state_lock);

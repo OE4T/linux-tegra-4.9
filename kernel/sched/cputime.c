@@ -663,7 +663,6 @@ static void cputime_adjust(struct task_cputime *curr,
 	 * 'update' will ensure things converge to the observed ratio.
 	 */
 	if (stime == 0) {
-		utime = rtime;
 		goto update;
 	}
 

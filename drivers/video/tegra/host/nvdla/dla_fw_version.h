@@ -20,7 +20,7 @@
 #define _DLA_FW_VERSION_H_
 
 #define FIRMWARE_VERSION_MAJOR		0x00
-#define FIRMWARE_VERSION_MINOR		0x07
+#define FIRMWARE_VERSION_MINOR		0x08
 #define FIRMWARE_VERSION_SUBMINOR	0x00
 
 static inline uint32_t dla_version(void)

@@ -27,8 +27,9 @@
 #include <linux/uaccess.h>
 #include <linux/sched.h>
 
+#include <media/vi.h>
+
 #include "vi_notify.h"
-#include "vi.h"
 
 /* XXX: move ioctls to include/linux/ (after T18X merge) */
 #include <linux/nvhost_vi_ioctl.h>

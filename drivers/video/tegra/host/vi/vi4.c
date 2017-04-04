@@ -29,11 +29,11 @@
 #include "dev.h"
 #include "nvhost_acm.h"
 #include "vi_notify.h"
-#include "vi4.h"
+#include <video/vi4.h>
 #include "t186/t186.h"
 #include <linux/nvhost_vi_ioctl.h>
 #include <linux/platform/tegra/latency_allowance.h>
-#include "camera/vi/mc_common.h"
+#include <media/mc_common.h>
 #include "camera/vi/vi4_fops.h"
 
 #define VI_CFG_INTERRUPT_STATUS_0		0x0044

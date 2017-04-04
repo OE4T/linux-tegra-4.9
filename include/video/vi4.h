@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/vi/vi4.h
- *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2015-2016 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2017 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,7 +19,7 @@
 #ifndef __TEGRA_VI4_H__
 #define __TEGRA_VI4_H__
 
-#include "camera/vi/mc_common.h"
+#include <media/mc_common.h>
 
 struct reset_control;
 

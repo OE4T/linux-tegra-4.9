@@ -19,10 +19,11 @@
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 
+#include <video/vi4.h>
+
 #include "dev.h"
 #include "nvhost_acm.h"
 #include "vi/vi_notify.h"
-#include "vi/vi4.h"
 
 #define VI_NOTIFY_FIFO_TAG_0_0			0x4000
 #define VI_NOTIFY_FIFO_TIMESTAMP_0_0		(VI_NOTIFY_FIFO_TAG_0_0 + 4)

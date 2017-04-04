@@ -691,6 +691,7 @@ void *rhashtable_walk_next(struct rhashtable_iter *iter)
 	struct rhashtable *ht = iter->ht;
 	struct rhash_head *p = iter->p;
 	bool rhlist = ht->rhlist;
+	int skip;
 
 	if (p) {
 		if (!rhlist || !(list = rcu_dereference(list->next))) {
@@ -701,7 +702,7 @@ void *rhashtable_walk_next(struct rhashtable_iter *iter)
 	}
 
 	for (; iter->slot < tbl->size; iter->slot++) {
-		int skip = iter->skip;
+		skip = iter->skip;
 
 		rht_for_each_rcu(p, tbl, iter->slot) {
 			if (rhlist) {

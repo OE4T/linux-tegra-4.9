@@ -39,6 +39,7 @@
 #include <soc/tegra/fuse.h>
 #include <soc/tegra/chip-id.h>
 #include <crypto/scatterwalk.h>
+#include <soc/tegra/pmc.h>
 #include <crypto/algapi.h>
 #include <crypto/aes.h>
 #include <crypto/akcipher.h>
@@ -116,7 +117,6 @@ struct tegra_se_chipdata {
 struct tegra_se_dev {
 	struct device *dev;
 	void __iomem *io_reg;	/* se device memory/io */
-	void __iomem *pmc_io_reg;	/* pmc device memory/io */
 	int irq;	/* irq allocated */
 	spinlock_t lock;	/* spin lock */
 	struct clk *pclk;	/* Security Engine clock */
@@ -2568,25 +2568,12 @@ static int tegra_se_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	if (!res) {
-		err = -ENXIO;
-		dev_err(se_dev->dev, "platform_get_resource failed\n");
-		goto err_pmc;
-	}
-
-	se_dev->pmc_io_reg = ioremap(res->start, resource_size(res));
-	if (!se_dev->pmc_io_reg) {
-		err = -ENOMEM;
-		dev_err(se_dev->dev, "pmc ioremap failed\n");
-		goto err_pmc;
-	}
 
 	se_dev->irq = platform_get_irq(pdev, 0);
 	if (!se_dev->irq) {
 		err = -ENODEV;
 		dev_err(se_dev->dev, "platform_get_irq failed\n");
-		goto err_irq;
+		goto err_pmc;
 	}
 
 	/* Initialize the clock */
@@ -2787,8 +2774,6 @@ free_res:
 	if (se_dev->pclk)
 		clk_put(se_dev->pclk);
 
-err_irq:
-	iounmap(se_dev->pmc_io_reg);
 err_pmc:
 	iounmap(se_dev->io_reg);
 
@@ -2846,7 +2831,6 @@ static int tegra_se_remove(struct platform_device *pdev)
 		se_dev->ctx_save_buf = NULL;
 	}
 	iounmap(se_dev->io_reg);
-	iounmap(se_dev->pmc_io_reg);
 	kfree(se_dev);
 	sg_tegra_se_dev = NULL;
 
@@ -3398,8 +3382,12 @@ static int se_suspend(struct device *dev, bool polling)
 	}
 
 	/* Write lp context buffer address into PMC scratch register */
-	writel(page_to_phys(vmalloc_to_page(se_dev->ctx_save_buf)),
-		se_dev->pmc_io_reg + PMC_SCRATCH43_REG_OFFSET);
+	err = tegra_pmc_save_se_context_buffer_address
+		(page_to_phys(vmalloc_to_page(se_dev->ctx_save_buf)));
+	if (err != 0) {
+		dev_info(se_dev->dev, "failed to save SE context buffer address\n");
+		goto out;
+	}
 
 	/* Saves SRK in secure scratch */
 	err = tegra_se_save_SRK(se_dev);

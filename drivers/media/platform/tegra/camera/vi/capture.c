@@ -14,6 +14,7 @@
 
 #include <linux/completion.h>
 #include <linux/dma-buf.h>
+#include <linux/dma-mapping.h>
 #include <linux/nvhost.h>
 #include <linux/of_platform.h>
 #include <linux/printk.h>
@@ -51,6 +52,7 @@ struct vi_capture {
 	struct device *rtcpu_dev;
 	struct tegra_channel *vi_channel;
 	struct vi_capture_buf requests;
+	size_t request_buf_size;
 	uint32_t request_size;
 
 	uint32_t syncpts[CAPTURE_CHANNEL_MAX_NUM_SPS];
@@ -108,6 +110,7 @@ static void vi_capture_ivc_status_callback(const void *ivc_resp,
 	struct CAPTURE_MSG *status_msg = (struct CAPTURE_MSG *)ivc_resp;
 	struct vi_capture *capture = (struct vi_capture *)pcontext;
 	struct tegra_channel *chan = capture->vi_channel;
+	uint32_t buffer_index;
 
 	if (unlikely(capture == NULL)) {
 		dev_err(chan->vi->dev, "%s: invalid context", __func__);
@@ -121,8 +124,12 @@ static void vi_capture_ivc_status_callback(const void *ivc_resp,
 
 	switch (status_msg->header.msg_id) {
 	case CAPTURE_STATUS_IND:
-		vi_capture_request_unpin(chan,
-				status_msg->capture_status_ind.buffer_index);
+		buffer_index = status_msg->capture_status_ind.buffer_index;
+		vi_capture_request_unpin(chan, buffer_index);
+		dma_sync_single_range_for_cpu(capture->rtcpu_dev,
+		    capture->requests.iova,
+		    buffer_index * capture->request_size,
+		    capture->request_size, DMA_FROM_DEVICE);
 		complete(&capture->capture_resp);
 		dev_dbg(chan->vi->dev, "%s: status chan_id %u msg_id %u\n",
 				__func__, status_msg->header.channel_id,
@@ -382,6 +389,7 @@ int vi_capture_setup(struct tegra_channel *chan,
 		return -EFAULT;
 	}
 	capture->request_size = setup->request_size;
+	capture->request_buf_size = setup->request_size * setup->queue_depth;
 
 	/* allocate for unpin list based on queue depth */
 	capture->unpins_list = devm_kzalloc(chan->vi->dev,
@@ -681,7 +689,6 @@ static int vi_capture_request_pin_and_reloc(struct tegra_channel *chan,
 	uint32_t prev_mem = 0;
 	int last_page = -1;
 	dma_addr_t surface_phys_addr = 0;
-	dma_addr_t surface_prev_addr = 0;
 	int i, pin_count = 0;
 	int err = 0;
 
@@ -737,7 +744,7 @@ static int vi_capture_request_pin_and_reloc(struct tegra_channel *chan,
 		target_offset = surface->offset;
 		mem = surface->offset_hi;
 		dev_dbg(chan->vi->dev, "%s: hmem:%u offset:%u\n", __func__,
-				target_offset, mem);
+				mem, target_offset);
 
 		if (mem != prev_mem) {
 			err = pin_memory(&chan->vi->ndev->dev,
@@ -746,7 +753,6 @@ static int vi_capture_request_pin_and_reloc(struct tegra_channel *chan,
 				unpins->num_unpins = pin_count;
 				goto fail;
 			}
-			surface_prev_addr = unpins->data[i].iova;
 			surface_phys_addr = unpins->data[i].iova;
 
 			mutex_lock(&capture->unpins_list_lock);
@@ -755,15 +761,23 @@ static int vi_capture_request_pin_and_reloc(struct tegra_channel *chan,
 			mutex_unlock(&capture->unpins_list_lock);
 
 			pin_count++;
-		} else
-			surface_phys_addr = surface_prev_addr;
+		}
 
 		target_phys_addr = surface_phys_addr + target_offset;
+		dev_dbg(chan->vi->dev, "%s: surface addr %lx at desc %lx\n",
+		    __func__, (unsigned long)target_phys_addr,
+		    (unsigned long)reloc_page_addr +
+		    (reloc_offset & ~PAGE_MASK));
+
 		/* write relocated physical address to request descr */
 		__raw_writeq(
 			target_phys_addr,
 			(void __iomem *)(reloc_page_addr +
 				(reloc_offset & ~PAGE_MASK)));
+
+		dma_sync_single_range_for_device(capture->rtcpu_dev,
+		    capture->requests.iova, request_offset,
+		    capture->request_size, DMA_TO_DEVICE);
 	}
 
 	unpins->num_unpins = pin_count;

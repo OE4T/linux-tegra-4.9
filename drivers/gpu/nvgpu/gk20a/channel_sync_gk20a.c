@@ -399,7 +399,14 @@ struct wait_fence_work {
 	struct channel_gk20a *ch;
 	struct nvgpu_semaphore *sema;
 	struct gk20a *g;
-	struct list_head entry;
+	struct nvgpu_list_node entry;
+};
+
+static inline struct wait_fence_work *
+wait_fence_work_from_entry(struct nvgpu_list_node *node)
+{
+	return (struct wait_fence_work *)
+		((uintptr_t)node - offsetof(struct wait_fence_work, entry));
 };
 
 /*
@@ -413,7 +420,7 @@ static void gk20a_add_pending_sema_wait(struct gk20a *g,
 					struct wait_fence_work *work)
 {
 	nvgpu_raw_spinlock_acquire(&g->pending_sema_waits_lock);
-	list_add(&work->entry, &g->pending_sema_waits);
+	nvgpu_list_add(&work->entry, &g->pending_sema_waits);
 	nvgpu_raw_spinlock_release(&g->pending_sema_waits_lock);
 }
 
@@ -422,10 +429,10 @@ static void gk20a_add_pending_sema_wait(struct gk20a *g,
  * then delete the entire pending list.
  */
 static void gk20a_start_sema_wait_cancel(struct gk20a *g,
-					 struct list_head *list)
+					 struct nvgpu_list_node *list)
 {
 	nvgpu_raw_spinlock_acquire(&g->pending_sema_waits_lock);
-	list_replace_init(&g->pending_sema_waits, list);
+	nvgpu_list_replace_init(&g->pending_sema_waits, list);
 	nvgpu_raw_spinlock_release(&g->pending_sema_waits_lock);
 }
 
@@ -448,18 +455,18 @@ static void gk20a_start_sema_wait_cancel(struct gk20a *g,
 void gk20a_channel_cancel_pending_sema_waits(struct gk20a *g)
 {
 	struct wait_fence_work *work;
-	struct list_head local_pending_sema_waits;
+	struct nvgpu_list_node local_pending_sema_waits;
 
 	gk20a_start_sema_wait_cancel(g, &local_pending_sema_waits);
 
-	while (!list_empty(&local_pending_sema_waits)) {
+	while (!nvgpu_list_empty(&local_pending_sema_waits)) {
 		int ret;
 
-		work = list_first_entry(&local_pending_sema_waits,
-					struct wait_fence_work,
+		work = nvgpu_list_first_entry(&local_pending_sema_waits,
+					wait_fence_work,
 					entry);
 
-		list_del_init(&work->entry);
+		nvgpu_list_del(&work->entry);
 
 		/*
 		 * Only nvgpu_kfree() work if the cancel is successful.
@@ -486,8 +493,8 @@ static void gk20a_channel_semaphore_launcher(
 	 * otherwise it's possible that the deterministic submit path suffers.
 	 */
 	nvgpu_raw_spinlock_acquire(&g->pending_sema_waits_lock);
-	if (!list_empty(&g->pending_sema_waits))
-		list_del_init(&w->entry);
+	if (!nvgpu_list_empty(&g->pending_sema_waits))
+		nvgpu_list_del(&w->entry);
 	nvgpu_raw_spinlock_release(&g->pending_sema_waits_lock);
 
 	gk20a_dbg_info("waiting for pre fence %p '%s'",

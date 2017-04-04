@@ -1009,7 +1009,7 @@ struct gk20a {
 	struct nvgpu_semaphore_sea *sema_sea;
 
 	/* List of pending SW semaphore waits. */
-	struct list_head pending_sema_waits;
+	struct nvgpu_list_node pending_sema_waits;
 	struct nvgpu_raw_spinlock pending_sema_waits_lock;
 
 	/* held while manipulating # of debug/profiler sessions present */

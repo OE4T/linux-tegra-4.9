@@ -51,7 +51,7 @@ static void nvgpu_init_vars(struct gk20a *g)
 	g->dev->dma_parms = &g->dma_parms;
 	dma_set_max_seg_size(g->dev, UINT_MAX);
 
-	INIT_LIST_HEAD(&g->pending_sema_waits);
+	nvgpu_init_list_node(&g->pending_sema_waits);
 	nvgpu_raw_spinlock_init(&g->pending_sema_waits_lock);
 
 	nvgpu_init_list_node(&g->profiler_objects);

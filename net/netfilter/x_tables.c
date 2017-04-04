@@ -834,6 +834,8 @@ void *xt_copy_counters_from_user(const void __user *user, unsigned int len,
 		/* structures only differ in size due to alignment */
 		struct compat_xt_counters_info compat_tmp;
 
+		memset(compat_tmp.name, 0, XT_TABLE_MAXNAMELEN);
+
 		if (len <= sizeof(compat_tmp))
 			return ERR_PTR(-EINVAL);
 

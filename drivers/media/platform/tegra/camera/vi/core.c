@@ -15,7 +15,7 @@
 #include <linux/of.h>
 #include <linux/platform_device.h>
 
-#include "camera/vi/mc_common.h"
+#include <media/mc_common.h>
 
 static const struct tegra_video_format tegra_default_format[] = {
 	{

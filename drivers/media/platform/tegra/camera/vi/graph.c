@@ -28,10 +28,11 @@
 #include <media/v4l2-device.h>
 #include <media/v4l2-of.h>
 #include <media/tegra_v4l2_camera.h>
+#include <media/mc_common.h>
+#include <media/csi.h>
 
-#include "camera/vi/mc_common.h"
-#include "camera/csi/csi.h"
-#include "vi/vi4.h"
+#include <video/vi4.h>
+
 #include "nvcsi/nvcsi.h"
 
 /* -----------------------------------------------------------------------------

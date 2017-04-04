@@ -21,13 +21,13 @@
 #include <media/camera_common.h>
 #include <media/v4l2-event.h>
 #include <media/tegra_camera_platform.h>
+#include <media/vi.h>
+#include <media/vi2_registers.h>
+
+#include <video/vi4.h>
 
 #include "dev.h"
-#include "camera/vi/mc_common.h"
-#include "vi/vi.h"
-#include "vi/vi4.h"
 #include "host1x/host1x.h"
-#include "camera/vi/registers.h"
 
 /* In TPG mode, VI only support 2 formats */
 static void vi_tpg_fmts_bitmap_init(struct tegra_channel *chan)

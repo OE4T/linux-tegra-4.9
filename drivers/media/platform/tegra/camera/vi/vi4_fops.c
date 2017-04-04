@@ -15,12 +15,12 @@
 #include <linux/tegra-powergate.h>
 #include <media/capture.h>
 #include <media/tegra_camera_platform.h>
+#include <media/mc_common.h>
+#include <media/vi4_registers.h>
+#include <video/vi4.h>
 #include "linux/nvhost_ioctl.h"
-#include "mc_common.h"
 #include "nvhost_acm.h"
 #include "vi4_formats.h"
-#include "vi4_registers.h"
-#include "vi/vi4.h"
 #include "vi/vi_notify.h"
 #include <media/sensor_common.h>
 

@@ -22,9 +22,10 @@
 #include <linux/module.h>
 #include <linux/debugfs.h>
 
-#include "camera/vi/mc_common.h"
-#include "camera/csi/csi.h"
-#include "vi/vi4.h"
+#include <media/mc_common.h>
+#include <media/csi.h>
+#include <video/vi4.h>
+
 #include "nvcsi/nvcsi.h"
 #include "host1x/host1x.h"
 

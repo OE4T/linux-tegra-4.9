@@ -32,11 +32,10 @@
 #include <media/camera_common.h>
 #include <media/tegra_camera_platform.h>
 #include <media/v4l2-dv-timings.h>
+#include <media/vi.h>
 
 #include <linux/clk/tegra.h>
 
-#include "mc_common.h"
-#include "vi/vi.h"
 #include "mipical/mipi_cal.h"
 
 #define TPG_CSI_GROUP_ID	10

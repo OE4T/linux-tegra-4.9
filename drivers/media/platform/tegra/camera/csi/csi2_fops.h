@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -15,7 +15,7 @@
 #ifndef __CSI2_H__
 #define __CSI2_H__
 
-#include "csi.h"
+#include <media/csi.h>
 
 int csi2_start_streaming(struct tegra_csi_channel *chan,
 		enum tegra_csi_port_num port_num);

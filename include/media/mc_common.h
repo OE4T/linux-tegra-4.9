@@ -28,10 +28,10 @@
 #include <media/v4l2-device.h>
 #include <media/v4l2-dev.h>
 #include <media/videobuf2-core.h>
+#include <media/tegra_camera_core.h>
+#include <media/csi.h>
 #include <linux/workqueue.h>
 
-#include "core.h"
-#include "../csi/csi.h"
 
 #define MAX_FORMAT_NUM	64
 #define	MAX_SUBDEVICES	4

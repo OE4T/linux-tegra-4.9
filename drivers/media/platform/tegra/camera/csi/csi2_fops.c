@@ -12,11 +12,12 @@
 
 #include <linux/device.h>
 #include <linux/clk/tegra.h>
-#include "camera/csi/csi.h"
-#include "camera/vi/mc_common.h"
+
+#include <media/csi.h>
+#include <media/mc_common.h>
+
 #include "mipical/mipi_cal.h"
 #include "nvhost_acm.h"
-#include <linux/clk/tegra.h>
 
 static void csi_write(struct tegra_csi_channel *chan, unsigned int addr,
 			u32 val, u8 port)

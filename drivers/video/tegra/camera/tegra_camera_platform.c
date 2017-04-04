@@ -23,10 +23,9 @@
 #include <linux/of.h>
 #include <soc/tegra/tegra_emc.h>
 
-#include "vi/vi.h"
-#include "tegra_camera_dev_mfi.h"
+#include <media/vi.h>
+#include <media/tegra_camera_dev_mfi.h>
 #include <media/tegra_camera_platform.h>
-#include "camera_priv_defs.h"
 
 #define CAMDEV_NAME "tegra_camera_ctrl"
 

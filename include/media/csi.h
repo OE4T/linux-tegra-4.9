@@ -17,13 +17,11 @@
 #include <media/v4l2-async.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-subdev.h>
-#include <linux/platform_device.h>
-
 #include <media/camera_common.h>
-#include <linux/platform_device.h>
+#include <media/vi2_registers.h>
+#include <media/csi4_registers.h>
 
-#include "camera/vi/registers.h"
-#include "camera/csi/csi4_registers.h"
+#include <linux/platform_device.h>
 
 #define MAX_CSI_BLOCK_LANES 4
 

@@ -13,7 +13,7 @@
 #ifndef __VI2_FORMATS_H_
 #define __VI2_FORMATS_H_
 
-#include "camera/vi/core.h"
+#include <media/tegra_camera_core.h>
 
 /*
  * These go into the TEGRA_VI_CSI_n_IMAGE_DEF registers bits 23:16

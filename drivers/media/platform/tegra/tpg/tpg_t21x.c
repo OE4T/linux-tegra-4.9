@@ -3,7 +3,7 @@
  *
  * Tegra VI test pattern generator driver
  *
- * Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,9 +22,9 @@
 #include <linux/module.h>
 #include <linux/debugfs.h>
 
-#include "camera/vi/mc_common.h"
-#include "camera/csi/csi.h"
-#include "vi/vi.h"
+#include <media/mc_common.h>
+#include <media/csi.h>
+#include <media/vi.h>
 #include "host1x/host1x.h"
 
 /*

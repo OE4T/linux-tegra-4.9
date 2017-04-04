@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Frank Chen <frankc@nvidia.com>
  *
@@ -15,7 +15,7 @@
 #ifndef __CSI4_H__
 #define __CSI4_H__
 
-#include "csi.h"
+#include <media/csi.h>
 
 int csi4_power_on(struct tegra_csi_device *csi);
 int csi4_power_off(struct tegra_csi_device *csi);

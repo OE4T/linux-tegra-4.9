@@ -23,11 +23,10 @@
 #include <media/v4l2-async.h>
 #include <media/v4l2-ctrls.h>
 #include <media/camera_common.h>
+#include <media/vi.h>
+#include <media/csi.h>
 
 #include "dev.h"
-#include "vi/vi.h"
-#include "camera/csi/csi.h"
-#include "camera/vi/mc_common.h"
 #include "mipical/mipi_cal.h"
 #include "linux/nvhost.h"
 

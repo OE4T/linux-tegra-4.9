@@ -29,8 +29,7 @@
 #include <linux/of_gpio.h>
 
 #include <media/camera_common.h>
-
-#include "tegra_camera_dev_mfi.h"
+#include <media/tegra_camera_dev_mfi.h>
 
 #define LC898212_ACTUATOR_RANGE	1023
 #define LC898212_POS_LOW_DEFAULT	(0)

@@ -18,7 +18,7 @@
 
 #include <linux/slab.h>
 
-#include "tegra_camera_dev_mfi.h"
+#include <media/tegra_camera_dev_mfi.h>
 
 static LIST_HEAD(cmfidev_list);
 static DEFINE_MUTEX(cmfidev_mutex);

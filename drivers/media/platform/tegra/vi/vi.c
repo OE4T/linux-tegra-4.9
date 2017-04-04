@@ -33,17 +33,16 @@
 #include <linux/slab.h>
 
 #include <media/tegra_v4l2_camera.h>
+#include <media/tegra_camera_dev_mfi.h>
+#include <media/vi.h>
 
 #include "dev.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
 #include "t210/t210.h"
-#include "vi/vi.h"
 #include "vi/vi_irq.h"
 #include "camera/vi/vi2_fops.h"
 #include "camera/csi/csi2_fops.h"
-
-#include "tegra_camera_dev_mfi.h"
 
 #define MAX_DEVID_LENGTH	16
 #define TEGRA_VI_NAME		"tegra_vi"

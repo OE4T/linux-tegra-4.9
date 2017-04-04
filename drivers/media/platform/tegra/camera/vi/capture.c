@@ -20,10 +20,10 @@
 #include <linux/scatterlist.h>
 #include <linux/tegra-capture-ivc.h>
 #include <media/capture.h>
+#include <media/mc_common.h>
 
 #include "soc/tegra/camrtc-capture.h"
 #include "soc/tegra/camrtc-capture-messages.h"
-#include "mc_common.h"
 
 
 #define CAPTURE_CHANNEL_UNKNOWN_RESP 0xFFFFFFFF

@@ -16,10 +16,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <media/camera_common.h>
+#include <media/mc_common.h>
 #include <linux/of_graph.h>
 #include <linux/string.h>
 #include <soc/tegra/pmc.h>
-#include "camera/vi/mc_common.h"
 
 #define has_s_op(master, op) \
 	(master->ops && master->ops->op)

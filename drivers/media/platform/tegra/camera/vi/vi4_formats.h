@@ -13,7 +13,7 @@
 #ifndef __VI4_FORMATS_H_
 #define __VI4_FORMATS_H_
 
-#include "camera/vi/core.h"
+#include <media/tegra_camera_core.h>
 
 /*
  * These go into the VI_CHn_PIXFMT_FORMAT register bits 7:0

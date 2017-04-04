@@ -10,10 +10,10 @@
  * published by the Free Software Foundation.
  */
 #include <linux/clk/tegra.h>
+#include <media/csi.h>
+#include <media/csi4_registers.h>
+#include <media/tegra_camera_core.h>
 #include "nvhost_acm.h"
-#include "camera/csi/csi.h"
-#include "camera/csi/csi4_registers.h"
-#include "camera/vi/core.h"
 #include "mipical/mipi_cal.h"
 #include "nvcsi/nvcsi.h"
 #include "linux/nvhost_ioctl.h"

@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/vi/vi.h
- *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2012-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -25,7 +23,7 @@
 #include <linux/tegra-powergate.h>
 #include <linux/clk/tegra.h>
 
-#include "camera/vi/mc_common.h"
+#include <media/mc_common.h>
 #include "chip_support.h"
 
 #define VI_CFG_INTERRUPT_MASK_0				0x8c

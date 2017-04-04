@@ -15,11 +15,10 @@
 #include <linux/kthread.h>
 #include <linux/freezer.h>
 #include <media/tegra_camera_platform.h>
+#include <media/vi.h>
 #include "nvhost_acm.h"
-#include "camera/vi/mc_common.h"
 #include "camera/csi/csi2_fops.h"
 #include "vi2_formats.h"
-#include "vi/vi.h"
 
 #define DEFAULT_FRAMERATE	30
 #define DEFAULT_CSI_FREQ	204000000

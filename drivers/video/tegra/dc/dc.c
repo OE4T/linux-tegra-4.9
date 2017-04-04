@@ -6146,7 +6146,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			(dc->out->type == TEGRA_DC_OUT_DP ||
 				dc->out->type == TEGRA_DC_OUT_NVSR_DP)) {
 			tegra_disp_clk_prepare_enable(dc->clk);
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+#if defined CONFIG_ARCH_TEGRA_210_SOC && !defined(CONFIG_TEGRA_NVDISPLAY)
 			dc->rst = of_reset_control_get(np, "dc_rst");
 			if (IS_ERR_OR_NULL(dc->rst)) {
 				dev_err(&dc->ndev->dev,

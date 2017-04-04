@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -31,6 +31,8 @@
 #define ARI_BANK_PRINTF		0
 #define ARI_MCA_SAVE_PREBOOT	0
 #define ARI_MCA_CONTROL_ACCESS	0
+
+#define ARI_MCA_VERBOSE_MODE 0
 
 /* MCA bank handling functions */
 
@@ -449,11 +451,31 @@ static void print_mca(struct seq_file *file, const char *fmt, ...)
 	} else {
 		vaf.fmt = fmt;
 		vaf.va = &args;
+#if ARI_MCA_VERBOSE_MODE
 		pr_crit("%pV", &vaf);
+#else
+		pr_debug("%pV", &vaf);
+#endif
 	}
 
 	va_end(args);
 }
+
+#if ARI_MCA_VERBOSE_MODE
+#define pr_info_mca print_mca
+#else
+static void pr_info_mca(struct seq_file *file, const char *fmt, ...)
+{
+	va_list args;
+	struct va_format vaf;
+
+	va_start(args, fmt);
+	vaf.fmt = fmt;
+	vaf.va = &args;
+	pr_info("%pV", &vaf);
+	va_end(args);
+}
+#endif
 
 static void print_mca_bits(struct seq_file *file, struct ari_bits *table,
 			   u64 value)
@@ -464,6 +486,20 @@ static void print_mca_bits(struct seq_file *file, struct ari_bits *table,
 		if (value & table[i].mask)
 			print_mca(file, "\t%s\n", table[i].name);
 }
+
+#if ARI_MCA_VERBOSE_MODE
+	pr_info_mca_bits print_mca_bits
+#else
+static void pr_info_mca_bits(struct seq_file *file, struct ari_bits *table,
+			     u64 value)
+{
+	int i;
+
+	for (i = 0; table[i].name; i += 1)
+		if (value & table[i].mask)
+			pr_info("\t%s\n", table[i].name);
+}
+#endif
 
 static void print_mca_table(struct seq_file *file, char *msg, char *table[],
 			    u64 table_len, u64 value)
@@ -537,17 +573,17 @@ static void print_address(struct seq_file *file, u64 addr)
 
 	addr_type = get_mca_addr_type(addr);
 
-	print_mca(file, "\tAddress Type = %sSecure %s\n",
+	pr_info_mca(file, "\tAddress Type = %sSecure %s\n",
 		  (addr_type & 0x01) ? "Non-" : "",
 		  (addr_type & 0x02) ? "MMIO" : "DRAM");
 
 	phys_addr = get_mca_addr_addr(addr);
 	res = locate_resource(&iomem_resource, phys_addr);
 	if (res == NULL)
-		print_mca(file, "\tAddress = 0x%llx (Unknown Device)\n",
+		pr_info_mca(file, "\tAddress = 0x%llx (Unknown Device)\n",
 			  phys_addr);
 	else
-		print_mca(file, "\tAddress = 0x%llx -- %s + 0x%llx\n",
+		pr_info_mca(file, "\tAddress = 0x%llx -- %s + 0x%llx\n",
 			  phys_addr, res->name, phys_addr - res->start);
 }
 
@@ -814,7 +850,6 @@ static void print_mca_roc_cce(struct seq_file *file,
 
 	if (psn_err) {
 		psn_info = get_mca_roc_cce_more_info_poison_info_d1(more_info);
-		mca_bank->clear_serr = false;
 		if (psn_info & MCA_ARI_ROC_CCE_PSN_VPR_READ_FAIL ||
 		    psn_info & MCA_ARI_ROC_CCE_PSN_VPR_WRITE_FAIL ||
 		    psn_info & MCA_ARI_ROC_CCE_PSN_GSC_READ_FAIL ||
@@ -824,7 +859,7 @@ static void print_mca_roc_cce(struct seq_file *file,
 		    psn_info & MCA_ARI_ROC_CCE_PSN_ILL_MTS_ACCESS)
 			mca_bank->clear_serr = true;
 		print_mca(file, "\t\tPoison Info = 0x%llx\n", psn_info);
-		print_mca_bits(file, roc_cce_psn_bits, psn_info);
+		pr_info_mca_bits(file, roc_cce_psn_bits, psn_info);
 	}
 
 	if (perr || mh_err || stat_err) {
@@ -1167,10 +1202,10 @@ static void unregister_ari_mca_banks(void)
 static void print_bank(struct ari_mca_bank *mca_bank)
 {
 
-	pr_crit("**************************************\n");
+	pr_debug("**************************************\n");
 	pr_crit("%s Machine Check Error:\n", mca_bank->name);
 	print_bank_info(NULL, mca_bank);
-	pr_crit("**************************************\n");
+	pr_debug("**************************************\n");
 }
 
 static int ari_serr_hook(struct pt_regs *regs, int reason,
@@ -1190,7 +1225,7 @@ static int ari_serr_hook(struct pt_regs *regs, int reason,
 		if (status & SERRi_STATUS_VAL) {
 			save_bank(bank, 0);
 			print_bank(bank);
-			clear_serr = bank->clear_serr;
+			clear_serr = true;
 			retval = clear_serr;
 		}
 	}

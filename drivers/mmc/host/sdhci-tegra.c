@@ -1485,8 +1485,6 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 	if (!en_boot_part_access)
 		host->mmc->caps2 |= MMC_CAP2_BOOTPART_NOACC;
 
-	if (tegra_platform_is_vdk())
-		host->mmc->caps |= MMC_CAP2_NO_EXTENDED_GP;
 #ifdef CONFIG_MMC_CQ_HCI
 	if (tegra_host->enable_hwcq) {
 		host->mmc->caps2 |= MMC_CAP2_HW_CQ;

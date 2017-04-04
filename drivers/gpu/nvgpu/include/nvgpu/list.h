@@ -62,6 +62,15 @@ static inline void nvgpu_list_move(struct nvgpu_list_node *node, struct nvgpu_li
 	nvgpu_list_add(node, head);
 }
 
+static inline void nvgpu_list_replace_init(struct nvgpu_list_node *old_node, struct nvgpu_list_node *new_node)
+{
+	new_node->next = old_node->next;
+	new_node->next->prev = new_node;
+	new_node->prev = old_node->prev;
+	new_node->prev->next = new_node;
+	nvgpu_init_list_node(old_node);
+}
+
 #define nvgpu_list_entry(ptr, type, member)	\
 	type ## _from_ ## member(ptr)
 

@@ -671,6 +671,18 @@ static int register_smmu_master(struct arm_smmu_device *smmu,
 
 	master = find_smmu_master(smmu, masterspec->np);
 	if (master) {
+		/* Silently ignore if the master is attempted to
+		 * register with same propoerties as before.
+		 */
+		if (master->cfg->num_streamids == masterspec->args_count) {
+			for (i = 0; i < master->cfg->num_streamids; ++i) {
+				if (master->cfg->streamids[i] == masterspec->args[i])
+					continue;
+				break;
+			}
+			if (i == master->cfg->num_streamids)
+				return 0;
+		}
 		dev_err(dev,
 			"rejecting multiple registrations for master device %s\n",
 			masterspec->np->name);

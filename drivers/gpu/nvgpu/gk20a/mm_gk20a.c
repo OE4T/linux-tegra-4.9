@@ -163,7 +163,7 @@ struct gk20a_dmabuf_priv {
 
 	int pin_count;
 
-	struct list_head states;
+	struct nvgpu_list_node states;
 
 	u64 buffer_id;
 };
@@ -232,9 +232,10 @@ static void gk20a_mm_delete_priv(void *_priv)
 	}
 
 	/* Free buffer states */
-	list_for_each_entry_safe(s, s_tmp, &priv->states, list) {
+	nvgpu_list_for_each_entry_safe(s, s_tmp, &priv->states,
+				gk20a_buffer_state, list) {
 		gk20a_fence_put(s->fence);
-		list_del(&s->list);
+		nvgpu_list_del(&s->list);
 		nvgpu_kfree(g, s);
 	}
 
@@ -4067,7 +4068,7 @@ int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev)
 	}
 
 	nvgpu_mutex_init(&priv->lock);
-	INIT_LIST_HEAD(&priv->states);
+	nvgpu_init_list_node(&priv->states);
 	priv->buffer_id = ++priv_count;
 	priv->g = g;
 	dma_buf_set_drvdata(dmabuf, dev, priv, gk20a_mm_delete_priv);
@@ -4101,7 +4102,7 @@ int gk20a_dmabuf_get_state(struct dma_buf *dmabuf, struct device *dev,
 
 	nvgpu_mutex_acquire(&priv->lock);
 
-	list_for_each_entry(s, &priv->states, list)
+	nvgpu_list_for_each_entry(s, &priv->states, gk20a_buffer_state, list)
 		if (s->offset == offset)
 			goto out;
 
@@ -4113,9 +4114,9 @@ int gk20a_dmabuf_get_state(struct dma_buf *dmabuf, struct device *dev,
 	}
 
 	s->offset = offset;
-	INIT_LIST_HEAD(&s->list);
+	nvgpu_init_list_node(&s->list);
 	nvgpu_mutex_init(&s->lock);
-	list_add_tail(&s->list, &priv->states);
+	nvgpu_list_add_tail(&s->list, &priv->states);
 
 out:
 	nvgpu_mutex_release(&priv->lock);

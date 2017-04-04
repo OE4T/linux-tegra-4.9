@@ -87,7 +87,7 @@ struct compbit_store_desc {
 };
 
 struct gk20a_buffer_state {
-	struct list_head list;
+	struct nvgpu_list_node list;
 
 	/* The valid compbits and the fence must be changed atomically. */
 	struct nvgpu_mutex lock;
@@ -106,6 +106,13 @@ struct gk20a_buffer_state {
 	/* This struct reflects the state of the buffer when this
 	 * fence signals. */
 	struct gk20a_fence *fence;
+};
+
+static inline struct gk20a_buffer_state *
+gk20a_buffer_state_from_list(struct nvgpu_list_node *node)
+{
+	return (struct gk20a_buffer_state *)
+		((uintptr_t)node - offsetof(struct gk20a_buffer_state, list));
 };
 
 enum gmmu_pgsz_gk20a {

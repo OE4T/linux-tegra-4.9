@@ -1389,7 +1389,7 @@ static struct filter_pred *create_pred(struct filter_parse_state *ps,
 		return NULL;
 	}
 
-	strcpy(pred.regex.pattern, operand2);
+	strlcpy(pred.regex.pattern, operand2, sizeof(pred.regex.pattern));
 	pred.regex.len = strlen(pred.regex.pattern);
 	pred.field = field;
 	return init_pred(ps, field, &pred) ? NULL : &pred;

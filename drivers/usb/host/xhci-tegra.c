@@ -829,6 +829,8 @@ static int tegra_xusb_phy_enable(struct tegra_xusb *tegra)
 			phy_exit(tegra->phys[i]);
 			goto disable_phy;
 		}
+		if (i == USB2_PHY)
+			tegra_phy_xusb_utmi_pad_power_on(tegra->phys[i]);
 	}
 
 	return 0;
@@ -1642,6 +1644,8 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 		if (!do_wakeup)
 			phy_init(tegra->phys[i]);
 		phy_power_on(tegra->phys[i]);
+		if (i == USB2_PHY)
+			 tegra_phy_xusb_utmi_pad_power_on(tegra->phys[i]);
 	}
 
 	tegra_xusb_config(tegra);

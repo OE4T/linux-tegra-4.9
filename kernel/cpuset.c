@@ -1468,7 +1468,13 @@ static int cpuset_can_attach(struct cgroup_taskset *tset)
 	int ret;
 
 	/* used later by cpuset_attach() */
-	cpuset_attach_old_cs = task_cs(cgroup_taskset_first(tset, &css));
+	task = cgroup_taskset_first(tset, &css);
+
+	if (task)
+		cpuset_attach_old_cs = task_cs(task);
+	else
+		return 0;
+
 	cs = css_cs(css);
 
 	mutex_lock(&cpuset_mutex);

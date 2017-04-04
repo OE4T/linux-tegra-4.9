@@ -53,32 +53,6 @@
 
 	};
 
-	reserved-memory {
-		vpr-carveout {
-			alloc-ranges = <0x0 0x0 0x2 0x00000000>;
-			status = "okay";
-		};
-
-		shared-dma-carveout {
-			compatible = "shared-dma-pool";
-			reusable;
-			alloc-ranges = <0x0 0x0 0x1 0x0>;
-			status = "okay";
-			size = <0x0 0x10000000>; /* 256MB */
-			linux,cma-default;
-		};
-	};
-
-	tegra-carveouts {
-		status = "okay";
-	};
-
-	miscreg@00100000 {
-		compatible = "nvidia,tegra186-miscreg";
-		reg = <0x0 0x00100000 0x0 0xf000>, /* Chipid */
-			<0x0 0x0010f000 0x0 0x1000>; /* Straps */
-	};
-
 	sdhci@3460000 {
 		/delete-property/ nvidia,enable-hwcq;
 	};

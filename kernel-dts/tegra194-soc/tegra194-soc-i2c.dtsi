@@ -37,7 +37,7 @@
 		#stream-id-cells = <1>;
 		compatible = "nvidia,tegra194-i2c";
 		reg = <0x0 0x3160000 0x0 0x100>;
-		interrupts = <0 TEGRA186_IRQ_I2C1 0x04>;
+		interrupts = <0 TEGRA194_IRQ_I2C1 0x04>;
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&bpmp_clks TEGRA194_CLK_I2C1
@@ -53,7 +53,7 @@
 		#stream-id-cells = <1>;
 		compatible = "nvidia,tegra194-i2c";
 		reg = <0x0 0xc240000 0x0 0x100>;
-		interrupts = <0 TEGRA186_IRQ_I2C2 0x04>;
+		interrupts = <0 TEGRA194_IRQ_I2C2 0x04>;
 		status = "disabled";
 		clock-frequency = <100000>;
 		clocks = <&bpmp_clks TEGRA194_CLK_I2C2
@@ -69,7 +69,7 @@
 		#stream-id-cells = <1>;
 		compatible = "nvidia,tegra194-i2c";
 		reg = <0x0 0x3180000 0x0 0x100>;
-		interrupts = <0 TEGRA186_IRQ_I2C3 0x04>;
+		interrupts = <0 TEGRA194_IRQ_I2C3 0x04>;
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&bpmp_clks TEGRA194_CLK_I2C3
@@ -85,7 +85,7 @@
 		#stream-id-cells = <1>;
 		compatible = "nvidia,tegra194-i2c";
 		reg = <0x0 0x3190000 0x0 0x100>;
-		interrupts = <0 TEGRA186_IRQ_I2C4 0x04>;
+		interrupts = <0 TEGRA194_IRQ_I2C4 0x04>;
 		status = "disabled";
 		clock-frequency = <100000>;
 		clocks = <&bpmp_clks TEGRA194_CLK_I2C4
@@ -109,7 +109,7 @@
 		#stream-id-cells = <1>;
 		compatible = "nvidia,tegra194-i2c";
 		reg = <0x0 0x31b0000 0x0 0x100>;
-		interrupts = <0 TEGRA186_IRQ_I2C6 0x04>;
+		interrupts = <0 TEGRA194_IRQ_I2C6 0x04>;
 		status = "disabled";
 		clock-frequency = <100000>;
 		clocks = <&bpmp_clks TEGRA194_CLK_I2C6
@@ -125,7 +125,7 @@
 		#stream-id-cells = <1>;
 		compatible = "nvidia,tegra194-i2c";
 		reg = <0x0 0x31c0000 0x0 0x100>;
-		interrupts = <0 TEGRA186_IRQ_I2C7 0x04>;
+		interrupts = <0 TEGRA194_IRQ_I2C7 0x04>;
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&bpmp_clks TEGRA194_CLK_I2C7
@@ -141,7 +141,7 @@
 		#stream-id-cells = <1>;
 		compatible = "nvidia,tegra194-i2c";
 		reg = <0x0 0xc250000 0x0 0x100>;
-		interrupts = <0 TEGRA186_IRQ_I2C8 0x04>;
+		interrupts = <0 TEGRA194_IRQ_I2C8 0x04>;
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&bpmp_clks TEGRA194_CLK_I2C8
@@ -157,7 +157,7 @@
 		#stream-id-cells = <1>;
 		compatible = "nvidia,tegra194-i2c";
 		reg = <0x0 0x31e0000 0x0 0x100>;
-		interrupts = <0 TEGRA186_IRQ_I2C9 0x04>;
+		interrupts = <0 TEGRA194_IRQ_I2C9 0x04>;
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&bpmp_clks TEGRA194_CLK_I2C9

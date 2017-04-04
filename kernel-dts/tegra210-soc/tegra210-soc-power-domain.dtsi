@@ -103,6 +103,12 @@
 			partition-id = <TEGRA210_POWER_DOMAIN_SATA>;
 		};
 
+		sor_pd: sor-pd {
+			compatible = "nvidia,tegra210-sor-pd";
+			#power-domain-cells = <0>;
+			partition-id = <TEGRA210_POWER_DOMAIN_SOR>;
+		};
+
 		disa_pd: disa-pd {
 			compatible = "nvidia,tegra210-disa-pd";
 			#power-domain-cells = <0>;

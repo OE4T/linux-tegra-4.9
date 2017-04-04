@@ -1653,7 +1653,6 @@ static void gk20a_channel_poll_timeouts(struct gk20a *g)
 {
 	unsigned int chid;
 
-	gk20a_dbg_fn("");
 
 	for (chid = 0; chid < g->fifo.num_channels; chid++) {
 		struct channel_gk20a *ch = &g->fifo.channel[chid];

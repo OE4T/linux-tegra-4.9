@@ -47,13 +47,13 @@ nvgpu_dbg_gpu_get_session_channel(struct dbg_session_gk20a *dbg_s)
 	struct gk20a *g = dbg_s->g;
 
 	nvgpu_mutex_acquire(&dbg_s->ch_list_lock);
-	if (list_empty(&dbg_s->ch_list)) {
+	if (nvgpu_list_empty(&dbg_s->ch_list)) {
 		nvgpu_mutex_release(&dbg_s->ch_list_lock);
 		return NULL;
 	}
 
-	ch_data = list_first_entry(&dbg_s->ch_list,
-				   struct dbg_session_channel_data,
+	ch_data = nvgpu_list_first_entry(&dbg_s->ch_list,
+				   dbg_session_channel_data,
 				   ch_entry);
 	ch = g->fifo.channel + ch_data->chid;
 
@@ -138,7 +138,7 @@ static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 	dbg_session->is_timeout_disabled = false;
 
 	init_waitqueue_head(&dbg_session->dbg_events.wait_queue);
-	INIT_LIST_HEAD(&dbg_session->ch_list);
+	nvgpu_init_list_node(&dbg_session->ch_list);
 	err = nvgpu_mutex_init(&dbg_session->ch_list_lock);
 	if (err)
 		goto err_free_session;
@@ -305,7 +305,8 @@ void gk20a_dbg_gpu_post_events(struct channel_gk20a *ch)
 	/* guard against the session list being modified */
 	nvgpu_mutex_acquire(&ch->dbg_s_lock);
 
-	list_for_each_entry(session_data, &ch->dbg_s_list, dbg_s_entry) {
+	nvgpu_list_for_each_entry(session_data, &ch->dbg_s_list,
+				dbg_session_data, dbg_s_entry) {
 		dbg_s = session_data->dbg_s;
 		if (dbg_s->dbg_events.events_enabled) {
 			gk20a_dbg(gpu_dbg_gpu_dbg, "posting event on session id %d",
@@ -333,7 +334,8 @@ bool gk20a_dbg_gpu_broadcast_stop_trigger(struct channel_gk20a *ch)
 	/* guard against the session list being modified */
 	nvgpu_mutex_acquire(&ch->dbg_s_lock);
 
-	list_for_each_entry(session_data, &ch->dbg_s_list, dbg_s_entry) {
+	nvgpu_list_for_each_entry(session_data, &ch->dbg_s_list,
+				dbg_session_data, dbg_s_entry) {
 		dbg_s = session_data->dbg_s;
 		if (dbg_s->broadcast_stop_trigger) {
 			gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn | gpu_dbg_intr,
@@ -358,7 +360,8 @@ int gk20a_dbg_gpu_clear_broadcast_stop_trigger(struct channel_gk20a *ch)
 	/* guard against the session list being modified */
 	nvgpu_mutex_acquire(&ch->dbg_s_lock);
 
-	list_for_each_entry(session_data, &ch->dbg_s_list, dbg_s_entry) {
+	nvgpu_list_for_each_entry(session_data, &ch->dbg_s_list,
+				dbg_session_data, dbg_s_entry) {
 		dbg_s = session_data->dbg_s;
 		if (dbg_s->broadcast_stop_trigger) {
 			gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn | gpu_dbg_intr,
@@ -440,10 +443,10 @@ int dbg_unbind_single_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 		}
 	}
 
-	list_del_init(&ch_data->ch_entry);
+	nvgpu_list_del(&ch_data->ch_entry);
 
 	session_data = ch_data->session_data;
-	list_del_init(&session_data->dbg_s_entry);
+	nvgpu_list_del(&session_data->dbg_s_entry);
 	nvgpu_kfree(dbg_s->g, session_data);
 
 	fput(ch_data->ch_f);
@@ -459,7 +462,8 @@ static int dbg_unbind_all_channels_gk20a(struct dbg_session_gk20a *dbg_s)
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	nvgpu_mutex_acquire(&dbg_s->ch_list_lock);
-	list_for_each_entry_safe(ch_data, tmp, &dbg_s->ch_list, ch_entry)
+	nvgpu_list_for_each_entry_safe(ch_data, tmp, &dbg_s->ch_list,
+				dbg_session_channel_data, ch_entry)
 		dbg_unbind_single_channel_gk20a(dbg_s, ch_data);
 	nvgpu_mutex_release(&dbg_s->ch_list_lock);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
@@ -486,7 +490,8 @@ static int dbg_unbind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	}
 
 	nvgpu_mutex_acquire(&dbg_s->ch_list_lock);
-	list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry) {
+	nvgpu_list_for_each_entry(ch_data, &dbg_s->ch_list,
+				dbg_session_channel_data, ch_entry) {
 		if (ch->hw_chid == ch_data->chid) {
 			channel_found = true;
 			break;
@@ -591,7 +596,7 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	ch_data->ch_f = f;
 	ch_data->channel_fd = args->channel_fd;
 	ch_data->chid = ch->hw_chid;
-	INIT_LIST_HEAD(&ch_data->ch_entry);
+	nvgpu_init_list_node(&ch_data->ch_entry);
 
 	session_data = nvgpu_kzalloc(g, sizeof(*session_data));
 	if (!session_data) {
@@ -600,13 +605,13 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 		return -ENOMEM;
 	}
 	session_data->dbg_s = dbg_s;
-	INIT_LIST_HEAD(&session_data->dbg_s_entry);
+	nvgpu_init_list_node(&session_data->dbg_s_entry);
 	ch_data->session_data = session_data;
 
-	list_add(&session_data->dbg_s_entry, &ch->dbg_s_list);
+	nvgpu_list_add(&session_data->dbg_s_entry, &ch->dbg_s_list);
 
 	nvgpu_mutex_acquire(&dbg_s->ch_list_lock);
-	list_add_tail(&ch_data->ch_entry, &dbg_s->ch_list);
+	nvgpu_list_add_tail(&ch_data->ch_entry, &dbg_s->ch_list);
 	nvgpu_mutex_release(&dbg_s->ch_list_lock);
 
 	nvgpu_mutex_release(&ch->dbg_s_lock);

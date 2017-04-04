@@ -224,7 +224,7 @@ struct channel_gk20a {
 	struct gk20a_cs_snapshot_client *cs_client;
 #endif
 	struct nvgpu_mutex dbg_s_lock;
-	struct list_head dbg_s_list;
+	struct nvgpu_list_node dbg_s_list;
 
 	struct list_head event_id_list;
 	struct nvgpu_mutex event_id_list_lock;

@@ -2641,7 +2641,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	nvgpu_raw_spinlock_init(&c->timeout.lock);
 
 	INIT_LIST_HEAD(&c->joblist.dynamic.jobs);
-	INIT_LIST_HEAD(&c->dbg_s_list);
+	nvgpu_init_list_node(&c->dbg_s_list);
 	INIT_LIST_HEAD(&c->event_id_list);
 	INIT_LIST_HEAD(&c->worker_item);
 

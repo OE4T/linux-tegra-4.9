@@ -69,7 +69,7 @@ struct dbg_session_gk20a {
 	struct gk20a              *g;
 
 	/* list of bound channels, if any */
-	struct list_head ch_list;
+	struct nvgpu_list_node ch_list;
 	struct nvgpu_mutex ch_list_lock;
 
 	/* event support */
@@ -82,15 +82,29 @@ struct dbg_session_gk20a {
 
 struct dbg_session_data {
 	struct dbg_session_gk20a *dbg_s;
-	struct list_head dbg_s_entry;
+	struct nvgpu_list_node dbg_s_entry;
+};
+
+static inline struct dbg_session_data *
+dbg_session_data_from_dbg_s_entry(struct nvgpu_list_node *node)
+{
+	return (struct dbg_session_data *)
+	     ((uintptr_t)node - offsetof(struct dbg_session_data, dbg_s_entry));
 };
 
 struct dbg_session_channel_data {
 	struct file          *ch_f;
 	int channel_fd;
 	int chid;
-	struct list_head ch_entry;
+	struct nvgpu_list_node ch_entry;
 	struct dbg_session_data *session_data;
+};
+
+static inline struct dbg_session_channel_data *
+dbg_session_channel_data_from_ch_entry(struct nvgpu_list_node *node)
+{
+	return (struct dbg_session_channel_data *)
+	((uintptr_t)node - offsetof(struct dbg_session_channel_data, ch_entry));
 };
 
 struct dbg_profiler_object_data {

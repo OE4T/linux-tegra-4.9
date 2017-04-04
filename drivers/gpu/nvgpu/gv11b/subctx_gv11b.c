@@ -16,6 +16,8 @@
  * this program.
  */
 
+#include <nvgpu/dma.h>
+
 #include "gk20a/gk20a.h"
 
 #include "gv11b/subctx_gv11b.h"

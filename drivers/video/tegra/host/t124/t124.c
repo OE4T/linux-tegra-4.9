@@ -23,6 +23,8 @@
 
 #include <linux/platform/tegra/mc.h>
 
+#include <media/vi.h>
+
 #include "dev.h"
 #include "nvhost_channel.h"
 #include "nvhost_job.h"
@@ -33,9 +35,6 @@
 #include "syncpt_t124.h"
 #include "tsec/tsec.h"
 #include "flcn/flcn.h"
-#if defined(CONFIG_VIDEO_TEGRA_VI) || defined(CONFIG_VIDEO_TEGRA_VI_MODULE)
-#include "vi.h"
-#endif
 #include "isp/isp.h"
 #include "isp/isp_isr_v1.h"
 #include "scale_emc.h"

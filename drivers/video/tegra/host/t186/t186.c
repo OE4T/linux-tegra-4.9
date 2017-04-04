@@ -37,9 +37,7 @@
 #if defined(CONFIG_TEGRA_GRHOST_NVCSI)
 #include "nvcsi/nvcsi.h"
 #endif
-#if defined(CONFIG_VIDEO_TEGRA_VI) || defined(CONFIG_VIDEO_TEGRA_VI_MODULE)
-#include "vi/vi4.h"
-#endif
+#include <video/vi4.h>
 #include "nvdec/nvdec.h"
 #include "hardware_t186.h"
 

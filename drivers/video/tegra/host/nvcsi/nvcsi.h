@@ -21,7 +21,7 @@
 #ifndef __NVHOST_NVCSI_H__
 #define __NVHOST_NVCSI_H__
 
-#include "camera/csi/csi.h"
+#include <media/csi.h>
 
 /* STREAM REGISTERS */
 #define NVCSI_STREAM_0_ERROR_STATUS2VI_MASK		0x10090

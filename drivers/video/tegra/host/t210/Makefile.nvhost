@@ -1,9 +1,6 @@
 GCOV_PROFILE := y
 ccflags-y += -I$(srctree)/../nvhost/drivers/video/tegra/host
 ccflags-y += -Idrivers/video/tegra/host
-ccflags-y += -Idrivers/video/tegra/camera
-ccflags-y += -Idrivers/media/platform/tegra
-ccflags-y += -Idrivers/media/platform/tegra/vi
 ccflags-y += -I$(srctree)/../nvhost/drivers/video/tegra/host/t124
 ccflags-y += -Idrivers/video/tegra/host/t124
 ccflags-y += -I$(srctree)/../nvidia/include

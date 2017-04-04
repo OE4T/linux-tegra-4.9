@@ -26,6 +26,8 @@
 #include <linux/platform/tegra/emc_bwmgr.h>
 #endif
 
+#include <media/vi.h>
+
 #include "dev.h"
 #include "nvhost_job.h"
 #include "class_ids.h"
@@ -39,9 +41,6 @@
 #include "flcn/flcn.h"
 #include "nvdec/nvdec.h"
 #include "tsec/tsec.h"
-#if defined(CONFIG_VIDEO_TEGRA_VI) || defined(CONFIG_VIDEO_TEGRA_VI_MODULE)
-#include "vi.h"
-#endif
 #include "isp/isp.h"
 #include "isp/isp_isr_v1.h"
 

@@ -31,13 +31,14 @@
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 
+#include <media/mc_common.h>
+#include <media/csi.h>
+
 #include "dev.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
 #include "t186/t186.h"
 #include "nvcsi.h"
-#include "camera/vi/mc_common.h"
-#include "camera/csi/csi.h"
 #include "camera/csi/csi4_fops.h"
 
 #define DESKEW_TIMEOUT_USEC 300

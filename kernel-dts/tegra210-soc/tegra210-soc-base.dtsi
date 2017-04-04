@@ -2056,6 +2056,9 @@
 		hw-pllx-offsets = <TEGRA124_SOCTHERM_SENSOR_CPU 1000 7000
 				TEGRA124_SOCTHERM_SENSOR_GPU 2000 4000>;
 
+		nvidia,thermtrips = <TEGRA124_SOCTHERM_SENSOR_CPU 102500
+				TEGRA124_SOCTHERM_SENSOR_GPU 103000>;
+
 		throttle-cfgs {
 			throttle_heavy: heavy {
 				nvidia,priority = <100>;

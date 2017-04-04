@@ -270,7 +270,7 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 	struct vring_desc *desc;
 	unsigned int i, n, avail, descs_used, uninitialized_var(prev), err_idx;
 	int head;
-	bool indirect;
+	bool indirect, prev_initialized = false;
 
 	START_USE(vq);
 
@@ -343,6 +343,7 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
 			prev = i;
+			prev_initialized = true;
 			i = virtio16_to_cpu(_vq->vdev, desc[i].next);
 		}
 	}
@@ -356,10 +357,15 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
 			prev = i;
+			prev_initialized = true;
 			i = virtio16_to_cpu(_vq->vdev, desc[i].next);
 		}
 	}
 	/* Last one doesn't continue. */
+
+	if (!prev_initialized)
+		return EINVAL; //sg is not valid
+
 	desc[prev].flags &= cpu_to_virtio16(_vq->vdev, ~VRING_DESC_F_NEXT);
 
 	if (indirect) {

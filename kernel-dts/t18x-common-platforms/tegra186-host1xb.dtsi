@@ -61,6 +61,15 @@
                 #size-cells = <2>;
 
 		#stream-id-cells = <9>;
+		iommus = <&smmu TEGRA_SID_HC>,
+			<&smmu TEGRA_SID_HC_VM0>,
+			<&smmu TEGRA_SID_HC_VM1>,
+			<&smmu TEGRA_SID_HC_VM2>,
+			<&smmu TEGRA_SID_HC_VM3>,
+			<&smmu TEGRA_SID_HC_VM4>,
+			<&smmu TEGRA_SID_HC_VM5>,
+			<&smmu TEGRA_SID_HC_VM6>,
+			<&smmu TEGRA_SID_HC_VM7>;
 
 		ranges;
 
@@ -84,6 +93,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_ISP>;
 			clock-names = "isp";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_ISP>;
 			status = "okay";
 		};
 
@@ -95,6 +105,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_VIC>;
 			clock-names = "vic";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_VIC>;
 			status = "okay";
 		};
 
@@ -106,6 +117,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_NVENC>;
 			clock-names = "nvenc";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_NVENC>;
 			status = "okay";
 		};
 
@@ -118,6 +130,7 @@
 				 <&tegra_car TEGRA186_CLK_KFUSE>;
 			clock-names = "nvdec", "kfuse";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_NVDEC>;
 			status = "okay";
 		};
 
@@ -129,6 +142,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_NVJPG>;
 			clock-names = "nvjpg";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_NVJPG>;
 			status = "okay";
 			interrupts = <0 198 0x04>;
 		};
@@ -140,6 +154,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_TSEC>;
 			clock-names = "tsec";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_TSEC>;
 			status = "okay";
 		};
 
@@ -150,6 +165,7 @@
 			clocks = <&tegra_car TEGRA186_CLK_TSECB>;
 			clock-names = "tsecb";
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_TSECB>;
 			status = "okay";
 		};
 	};

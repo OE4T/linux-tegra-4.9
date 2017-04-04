@@ -1982,7 +1982,7 @@ static void init_cgroup_root(struct cgroup_root *root,
 	if (opts->release_agent)
 		strcpy(root->release_agent_path, opts->release_agent);
 	if (opts->name)
-		strcpy(root->name, opts->name);
+		strlcpy(root->name, opts->name, sizeof(root->name));
 	if (opts->cpuset_clone_children)
 		set_bit(CGRP_CPUSET_CLONE_CHILDREN, &root->cgrp.flags);
 }

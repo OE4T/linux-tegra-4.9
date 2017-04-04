@@ -1,4 +1,4 @@
-/* Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2016 - 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -161,6 +161,7 @@ struct dfsh_state {
 	unsigned int errs;		/* error count */
 	unsigned int enabled_msk;	/* global enable status */
 	unsigned int enabled[DEV_N];	/* dev enable status */
+	unsigned int fw_version;	/* mcu firmware version */
 	int gpio_rst;			/* GPIO reset */
 	int gpio_boot0;			/* GPIO boot0 */
 	int gpio_rst_asrt_pol;		/* GPIO reset assert polarity */
@@ -460,10 +461,14 @@ static int dfsh_nvs_read(void *client, int snsr_id, char *buf)
 	struct dfsh_state *st = (struct dfsh_state *)client;
 	ssize_t t;
 
-	t = sprintf(buf, "DFSH driver v.%u\n", DFSH_DRIVER_VERSION);
+	t = snprintf(buf, PAGE_SIZE, "DFSH driver v.%u\n", DFSH_DRIVER_VERSION);
+	t += snprintf(buf + t, PAGE_SIZE - t, "DFSH MCU FW v.%u.%u.%u\n",
+		(st->fw_version >> 24 & 0xFF), (st->fw_version >> 16 & 0xFF),
+		(st->fw_version >> 8 & 0xFF));
 	/* device tree parameters */
-	t += sprintf(buf + t, "gpio_reset=%d\n", st->gpio_rst);
-	t += sprintf(buf + t, "gpio_reset_assert_polarity=%d\n",
+	t += snprintf(buf + t, PAGE_SIZE - t, "gpio_boot0=%d\n", st->gpio_boot0);
+	t += snprintf(buf + t, PAGE_SIZE - t, "gpio_reset=%d\n", st->gpio_rst);
+	t += snprintf(buf + t, PAGE_SIZE - t, "gpio_reset_assert_polarity=%d\n",
 		     st->gpio_rst_asrt_pol);
 	return t;
 }
@@ -543,8 +548,16 @@ static inline void dfsh_parse_pkt(struct tty_struct *tty, unsigned char c)
 					}
 				} else if (st->pkt.header.type == MSG_MCU) {
 					/* message from MCU */
-					dev_info(tty->dev, "received cmd:%x\n",
-					      st->pkt.payload.mcu_payload.cmd);
+					dev_dbg(tty->dev, "received MCU cmd response:%x\n",
+					      st->pkt.payload.mcu_payload.rsp);
+					if ((st->pkt.payload.mcu_payload.rsp & RSP_MASK) ==
+						RSP_VER) {
+						st->fw_version = st->pkt.payload.mcu_payload.rsp;
+						dev_info(tty->dev, "MCU FW v.%u.%u.%u\n",
+							(st->fw_version >> 24 & 0xFF),
+							(st->fw_version >> 16 & 0xFF),
+							(st->fw_version >> 8  & 0xFF));
+					}
 				} else {
 					dfsh_err(st);
 				}
@@ -701,6 +714,7 @@ static int dfsh_of_dt(struct dfsh_state *st, struct device_node *dn)
 
 static int dfsh_open(struct tty_struct *tty)
 {
+	uint32_t cmd = CMD_VERSION;
 	uint8_t i, n;
 	int ret;
 
@@ -740,6 +754,8 @@ static int dfsh_open(struct tty_struct *tty)
 	st->tty_close = false;
 	mutex_init(&st->tty_write_lock);
 
+	/* Get MCU firmware version */
+	dfsh_write_cmd(st, (uint8_t *)&cmd, sizeof(cmd));
 
 	dev_info(tty->dev, "%s done\n", __func__);
 	return 0;

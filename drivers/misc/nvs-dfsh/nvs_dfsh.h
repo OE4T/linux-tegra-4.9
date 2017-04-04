@@ -1,4 +1,4 @@
-/* Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -62,6 +62,7 @@
 #define CMD_END				CMD_CAM_CAM2_PWDN_LOW
 
 /* Responses from sensor hub to AP */
+#define RSP_MASK			0x000000FF
 #define RSP_VER				0x20
 #define RSP_PING			0x21
 #define RSP_START_TS		0x22
@@ -78,6 +79,8 @@
 #define RSP_CAM_CAM1_PWDN_LOW	0x2C
 #define RSP_CAM_CAM2_PWDN_HIGH	0x2D
 #define RSP_CAM_CAM2_PWDN_LOW	0x2E
+
+
 
 /* Packet payload structures */
 struct __attribute__ ((__packed__)) camera_payload_t {

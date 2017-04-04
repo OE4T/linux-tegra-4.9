@@ -424,6 +424,7 @@ enum pmc_regs {
 	TEGRA_PMC_SCRATCH0,
 	TEGRA_PMC_SCRATCH1,
 	TEGRA_PMC_SCRATCH41,
+	TEGRA_PMC_SCRATCH43,
 	TEGRA_PMC_SCRATCH54,
 	TEGRA_PMC_SCRATCH55,
 	TEGRA_PMC_RST_STATUS,
@@ -1079,6 +1080,20 @@ unsigned long tegra_pmc_sata_pwrgt_get(void)
 	return tegra_pmc_readl(TEGRA_PMC_SATA_PWRGT_0);
 }
 EXPORT_SYMBOL(tegra_pmc_sata_pwrgt_get);
+
+int tegra_pmc_save_se_context_buffer_address(u32 add)
+{
+	tegra_pmc_writel(add, TEGRA_PMC_SCRATCH43);
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_pmc_save_se_context_buffer_address);
+
+u32 tegra_pmc_get_se_context_buffer_address(void)
+{
+	return tegra_pmc_readl(TEGRA_PMC_SCRATCH43);
+}
+EXPORT_SYMBOL(tegra_pmc_get_se_context_buffer_address);
 
 /* cleans io dpd settings from bootloader during kernel init */
 static void _tegra_bl_io_dpd_cleanup(void)
@@ -3812,6 +3827,7 @@ static const unsigned long tegra210_register_map[TEGRA_PMC_MAX_REG] = {
 	[TEGRA_PMC_SCRATCH0]		=  0x50,
 	[TEGRA_PMC_SCRATCH1]		=  0x54,
 	[TEGRA_PMC_SCRATCH41]		=  0x140,
+	[TEGRA_PMC_SCRATCH43]		=  0x22c,
 	[TEGRA_PMC_SCRATCH54]		=  0x258,
 	[TEGRA_PMC_SCRATCH55]		=  0x25c,
 	[TEGRA_PMC_LED_BREATHING_CTRL]	= 0xb48,

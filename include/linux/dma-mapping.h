@@ -508,7 +508,7 @@ static inline void dma_free_attrs(struct device *dev, size_t size,
 	BUG_ON(!ops);
 	WARN_ON(irqs_disabled());
 
-	if (dma_release_from_coherent_attr(dev, get_order(size), cpu_addr,
+	if (dma_release_from_coherent_attr(dev, size, cpu_addr,
 					   attrs, dma_handle))
 		return;
 

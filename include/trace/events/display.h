@@ -3,7 +3,7 @@
  *
  * Display event logging to ftrace.
  *
- * Copyright (c) 2012-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -255,32 +255,54 @@ TRACE_EVENT(window_update,
 	)
 );
 
+typedef void (*display_syncpt_notifier)(unsigned int, unsigned int,
+				unsigned int, unsigned int, unsigned long long);
+
 DECLARE_EVENT_CLASS(display_syncpt_notifier,
-	TP_PROTO(unsigned int syncpt_val),
-	TP_ARGS(syncpt_val),
+	TP_PROTO(unsigned int ctrl_num, unsigned int win_num,
+		unsigned int syncpt_val, unsigned int buf_handle,
+		unsigned long long timestamp),
+	TP_ARGS(ctrl_num, win_num, syncpt_val, buf_handle, timestamp),
 	TP_STRUCT__entry(
-		__field(	u32,		syncpt_val_value)
+		__field(u32, ctrl_num)
+		__field(u32, win_num)
+		__field(u32, syncpt_val_value)
+		__field(u32, buf_handle)
+		__field(u64, timestamp)
 	),
 	TP_fast_assign(
+		__entry->ctrl_num = ctrl_num;
+		__entry->win_num = win_num;
 		__entry->syncpt_val_value = syncpt_val;
+		__entry->buf_handle = buf_handle;
+		__entry->timestamp = timestamp;
 	),
-	TP_printk("Sync Point Value for Latency Measurement:%u ",
-		__entry->syncpt_val_value)
+	TP_printk("Flip: ctrl_num=%u win_num=%u"
+		 " syncpt=%u buf_handle=%u timestamp=%lld",
+		__entry->ctrl_num, __entry->win_num,
+		__entry->syncpt_val_value,
+		__entry->buf_handle, __entry->timestamp)
 );
 
 DEFINE_EVENT(display_syncpt_notifier, flip_rcvd_syncpt_upd,
-	TP_PROTO(unsigned int syncpt_val),
-	TP_ARGS(syncpt_val)
+	TP_PROTO(unsigned int ctrl_num, unsigned int win_num,
+		unsigned int syncpt_val, unsigned int buf_handle,
+		unsigned long long timestamp),
+	TP_ARGS(ctrl_num, win_num, syncpt_val, buf_handle, timestamp)
 );
 
 DEFINE_EVENT(display_syncpt_notifier, sync_wt_ovr_syncpt_upd,
-	TP_PROTO(unsigned int syncpt_val),
-	TP_ARGS(syncpt_val)
+	TP_PROTO(unsigned int ctrl_num, unsigned int win_num,
+		unsigned int syncpt_val, unsigned int buf_handle,
+		unsigned long long timestamp),
+	TP_ARGS(ctrl_num, win_num, syncpt_val, buf_handle, timestamp)
 );
 
 DEFINE_EVENT(display_syncpt_notifier, scanout_syncpt_upd,
-	TP_PROTO(unsigned int syncpt_val),
-	TP_ARGS(syncpt_val)
+	TP_PROTO(unsigned int ctrl_num, unsigned int win_num,
+		unsigned int syncpt_val, unsigned int buf_handle,
+		unsigned long long timestamp),
+	TP_ARGS(ctrl_num, win_num, syncpt_val, buf_handle, timestamp)
 );
 
 TRACE_EVENT(scanout_vrr_stats,

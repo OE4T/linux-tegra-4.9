@@ -1295,4 +1295,7 @@ struct nvdisp_isoclient_bw_info {
 	u32				hubclk_at_res_bw;	/* Hz */
 };
 #endif
+
+/* Timestamp in nsec in TSC timebase */
+u64 tegra_dc_get_tsc_time(void);
 #endif

@@ -144,6 +144,8 @@ struct tegra_dc_ext_scanline_data {
 
 static int tegra_dc_ext_set_vblank(struct tegra_dc_ext *ext, bool enable);
 static void tegra_dc_ext_unpin_window(struct tegra_dc_ext_win *win);
+static void tegra_dc_flip_trace(struct tegra_dc_ext_flip_data *data,
+				display_syncpt_notifier trace_fn);
 
 static inline s64 tegra_timespec_to_ns(const struct tegra_timespec *ts)
 {
@@ -871,6 +873,31 @@ static void tegra_dc_ext_unpin_handles(struct tegra_dc_dmabuf *unpin_handles[],
 	}
 }
 
+static void tegra_dc_flip_trace(struct tegra_dc_ext_flip_data *data,
+				display_syncpt_notifier trace_fn)
+{
+	struct tegra_dc *dc = data->ext->dc;
+	struct tegra_dc_ext_flip_win *win;
+	struct tegra_dc_ext_flip_windowattr_v2 *attr;
+	int win_num;
+	u64 timestamp;
+	int i;
+
+	timestamp = tegra_dc_get_tsc_time();
+
+	for (i = 0; i < data->act_window_num; i++) {
+		win = &data->win[i];
+		attr = &win->attr;
+		win_num = attr->index;
+
+		if (win_num < 0 || !test_bit(win_num, &dc->valid_windows))
+			continue;
+
+		(*trace_fn)(dc->ctrl_num, win_num,
+			win->syncpt_max, attr->buff_id, timestamp);
+	}
+}
+
 static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 {
 	struct tegra_dc_ext_flip_data *data =
@@ -1076,7 +1103,8 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 	 */
 	BUG_ON(show_background);
 
-	trace_sync_wt_ovr_syncpt_upd((data->win[win_num-1]).syncpt_max);
+	if (trace_sync_wt_ovr_syncpt_upd_enabled())
+		tegra_dc_flip_trace(data, trace_sync_wt_ovr_syncpt_upd);
 
 	if (dc->enabled && !skip_flip)
 		tegra_dc_set_hdr(dc, &data->hdr_data, data->hdr_cache_dirty);
@@ -1098,7 +1126,10 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 			wait_for_vblank);
 		/* TODO: implement swapinterval here */
 		tegra_dc_sync_windows(wins, nr_win);
-		trace_scanout_syncpt_upd((data->win[win_num-1]).syncpt_max);
+
+		if (trace_scanout_syncpt_upd_enabled())
+			tegra_dc_flip_trace(data, trace_scanout_syncpt_upd);
+
 		if (dc->out->vrr)
 			trace_scanout_vrr_stats((data->win[win_num-1]).syncpt_max
 							, dc->out->vrr->dcb);
@@ -1699,7 +1730,8 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 		*syncpt_id = post_sync_id;
 	}
 
-	trace_flip_rcvd_syncpt_upd(post_sync_val);
+	if (trace_flip_rcvd_syncpt_upd_enabled())
+		tegra_dc_flip_trace(data, trace_flip_rcvd_syncpt_upd);
 
 	/* Avoid queueing timestamps on Android, to disable skipping flips */
 #ifndef CONFIG_ANDROID

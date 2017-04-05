@@ -4379,7 +4379,7 @@ bool tegra_dc_does_vsync_separate(struct tegra_dc *dc, s64 new_ts, s64 old_ts)
 }
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0))
-static inline u64 tegra_dc_get_tsc_time(void)
+inline u64 tegra_dc_get_tsc_time(void)
 {
 	struct timecounter *tc;
 	cycle_t value;
@@ -4395,7 +4395,7 @@ static inline u64 tegra_dc_get_tsc_time(void)
 	return 0;
 }
 #else
-static inline u64 tegra_dc_get_tsc_time(void)
+inline u64 tegra_dc_get_tsc_time(void)
 {
 	/* TBD: Add support for kernel 4.9 */
 	/* arch_timer_get_timecounter() doesn't exist in 4.9 */

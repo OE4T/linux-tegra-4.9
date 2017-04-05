@@ -56,16 +56,13 @@ struct bpmp_clk_req {
 };
 
 #define BPMP_CLK_CMD(cmd, id) ((id) | ((cmd) << 24))
-#define MAX_PARENTS MRQ_CLK_MAX_PARENTS
 
 struct possible_parents {
 	u8	num_of_parents;
-	s32	clk_ids[MAX_PARENTS];
+	s32	clk_ids[MRQ_CLK_MAX_PARENTS];
 };
 
-static struct clk **clks;
 static const char **clk_names;
-static int max_clk_id;
 static struct clk_onecell_data clk_data;
 
 static int bpmp_send_clk_message_atomic(struct bpmp_clk_req *req, int size,
@@ -313,37 +310,32 @@ const struct clk_ops  tegra_clk_bpmp_mux_ops = {
 	.unprepare = clk_bpmp_disable,
 };
 
-struct clk *tegra_clk_register_bpmp(const char *name, int parent,
-		const char **parent_names, int *parent_ids, int num_parents,
-		unsigned long flags, int clk_num, int bpmp_flags)
+static struct clk *tegra_clk_register_bpmp(const char *name, int parent,
+		const char **parent_names, int *parent_ids,
+		uint32_t num_parents, int clk_num, uint32_t flags)
 {
+	const uint32_t mux_div_flags = BPMP_CLK_HAS_MUX | BPMP_CLK_HAS_SET_RATE;
 	struct tegra_clk_bpmp *bpmp_clk;
 	struct clk *clk;
 	struct clk_init_data init;
 
-	if (num_parents > 1)
-		bpmp_clk = kzalloc(sizeof(*bpmp_clk) + num_parents
-				   * sizeof(int), GFP_KERNEL);
-	else
-		bpmp_clk = kzalloc(sizeof(*bpmp_clk), GFP_KERNEL);
-
+	bpmp_clk = kzalloc(sizeof(*bpmp_clk) + num_parents * sizeof(int),
+			GFP_KERNEL);
 	if (!bpmp_clk) {
 		pr_err("%s: unable to allocate clock %s\n", __func__, name);
 		return ERR_PTR(-ENOMEM);
 	}
 
 	init.name = name;
-
-	init.flags = flags;
-
+	init.flags = 0;
 	init.parent_names = parent_names;
 	init.num_parents = num_parents;
-	if ((bpmp_flags & (BPMP_CLK_HAS_MUX | BPMP_CLK_HAS_SET_RATE))
-		== (BPMP_CLK_HAS_MUX | BPMP_CLK_HAS_SET_RATE))
+
+	if ((flags & mux_div_flags) == mux_div_flags)
 		init.ops = &tegra_clk_bpmp_mux_rate_ops;
-	else if (bpmp_flags & BPMP_CLK_HAS_SET_RATE)
+	else if (flags & BPMP_CLK_HAS_SET_RATE)
 		init.ops = &tegra_clk_bpmp_rate_ops;
-	else if (bpmp_flags & BPMP_CLK_HAS_MUX)
+	else if (flags & BPMP_CLK_HAS_MUX)
 		init.ops = &tegra_clk_bpmp_mux_ops;
 	else
 		init.ops = &tegra_clk_bpmp_gate_ops;
@@ -368,42 +360,33 @@ struct clk *tegra_clk_register_bpmp(const char *name, int parent,
 	return clk;
 }
 
-static int clk_bpmp_init(int clk_num)
+static int clk_bpmp_init(uint32_t clk_num);
+
+static int clk_init_parents(uint32_t clk_num, uint32_t flags,
+		struct possible_parents *parents, const char **parent_names)
 {
-	struct clk *clk;
-	const char *parent_names[MAX_PARENTS];
-	struct possible_parents parents;
-	u32 flags, parent;
-	int j, num_parents, err;
-	char name[MRQ_CLK_NAME_MAXLEN];
+	uint32_t num_parents;
+	uint32_t j;
+	int p_id;
+	int err;
 
-	if (clk_num > max_clk_id || clk_num < 0) {
-		pr_err("clk_bpmp_init: invalid clk_num %d\n", clk_num);
-		return -EINVAL;
-	}
+	num_parents = parents->num_of_parents;
 
-	if (!IS_ERR_OR_NULL(clks[clk_num]))
-		return 0;
-
-	err = clk_bpmp_get_all_info(clk_num, &flags, &parent,
-				    &parents, name);
-	if (err < 0)
-		return 0;
-
-	num_parents = parents.num_of_parents;
 	if (num_parents > 1 && !(flags & BPMP_CLK_HAS_MUX)) {
 		pr_err("clk-bpmp: inconsistent data from BPMP."
 		       " Clock %d has more than one parent but no mux.\n",
 			clk_num);
 		return -EINVAL;
 	}
+
 	if (num_parents > 0 && (flags & BPMP_CLK_IS_ROOT)) {
 		pr_err("clk-bpmp: inconsistent data from BPMP."
 		       " Clock %d has parents but it's declared as root.\n",
 			clk_num);
 		return -EINVAL;
 	}
-	if (num_parents > MAX_PARENTS || num_parents < 0) {
+
+	if (num_parents > MRQ_CLK_MAX_PARENTS) {
 		pr_err("clk-bpmp: inconsistent data from BPMP."
 		       " Clock %d has too many parents.\n",
 		       clk_num);
@@ -411,7 +394,13 @@ static int clk_bpmp_init(int clk_num)
 	}
 
 	for (j = 0; j < num_parents; j++) {
-		int p_id = parents.clk_ids[j];
+		p_id = parents->clk_ids[j];
+		if (p_id < 0 || p_id >= clk_data.clk_num) {
+			pr_err("%s() bad clk num %d\n", __func__, p_id);
+			parent_names[j] = "ERR!";
+			continue;
+		}
+
 		err = clk_bpmp_init(p_id);
 		if (err) {
 			pr_err("clk-bpmp: unable to initialize clk %d\n",
@@ -419,7 +408,8 @@ static int clk_bpmp_init(int clk_num)
 			parent_names[j] = "ERR!";
 			continue;
 		}
-		if (IS_ERR_OR_NULL(clks[p_id])) {
+
+		if (IS_ERR_OR_NULL(clk_data.clks[p_id])) {
 			pr_err("clk-bpmp: clk %d not initialized."
 			       " How did this happen?\n",
 			       p_id);
@@ -427,22 +417,43 @@ static int clk_bpmp_init(int clk_num)
 			parent_names[j] = "ERR!";
 			continue;
 		}
+
 		parent_names[j] = clk_names[p_id];
 	}
 
+	return 0;
+}
+
+static int clk_bpmp_init(uint32_t clk_num)
+{
+	struct clk *clk;
+	const char *parent_names[MRQ_CLK_MAX_PARENTS];
+	struct possible_parents parents;
+	u32 flags, parent;
+	int err;
+	char name[MRQ_CLK_NAME_MAXLEN];
+
+	if (!IS_ERR_OR_NULL(clk_data.clks[clk_num]))
+		return 0;
+
+	err = clk_bpmp_get_all_info(clk_num, &flags, &parent, &parents, name);
+	if (err)
+		return err;
+
+	err = clk_init_parents(clk_num, flags, &parents, parent_names);
+	if (err)
+		return err;
+
 	if (flags & BPMP_CLK_IS_ROOT && !(flags & BPMP_CLK_HAS_SET_RATE)) {
 		int64_t rate;
-		unsigned long clk_flags = 0;
 		rate = clk_bpmp_get_rate_clk_num(clk_num);
-		clk = clk_register_fixed_rate(NULL, name, NULL, clk_flags,
-					      rate);
-	} else if (num_parents == 1) {
-		clk = tegra_clk_register_bpmp(name, parent, parent_names, NULL,
-					      num_parents, 0, clk_num, flags);
+		clk = clk_register_fixed_rate(NULL, name, NULL, 0, rate);
 	} else {
-		clk = tegra_clk_register_bpmp(name, parent,
-					      parent_names, &parents.clk_ids[0],
-					      num_parents, 0, clk_num, flags);
+		clk = tegra_clk_register_bpmp(name, parent, parent_names,
+				parents.clk_ids,
+				parents.num_of_parents,
+				clk_num,
+				flags);
 	}
 
 	err = clk_register_clkdev(clk, name, "tegra-clk-debug");
@@ -450,8 +461,10 @@ static int clk_bpmp_init(int clk_num)
 		pr_err("clk_register_clkdev() returned %d for clk %s\n",
 		       err, name);
 
-	clks[clk_num] = clk;
+	clk_data.clks[clk_num] = clk;
+
 	clk_names[clk_num] = kstrdup(name, GFP_KERNEL);
+
 	return 0;
 }
 
@@ -459,7 +472,7 @@ static struct clk *tegra_of_clk_src_onecell_get(struct of_phandle_args *clkspec,
 	void *data)
 {
 	struct clk_onecell_data *clk_data = data;
-	unsigned int idx = clkspec->args[0];
+	uint32_t idx = clkspec->args[0];
 	int err;
 
 	if (idx >= clk_data->clk_num) {
@@ -467,43 +480,55 @@ static struct clk *tegra_of_clk_src_onecell_get(struct of_phandle_args *clkspec,
 		return ERR_PTR(-EINVAL);
 	}
 
-	BUG_ON(clk_data->clks != clks);
 	mutex_lock(&clk_reg_lock);
-	if (!clks[idx]) {
+
+	if (!clk_data->clks[idx]) {
 		err = clk_bpmp_init(idx);
 		if (err < 0) {
 			pr_err("clk-bpmp: failed to initialize clk %d\n", idx);
-			clks[idx] = ERR_PTR(-EINVAL);
+			clk_data->clks[idx] = ERR_PTR(-EINVAL);
 		}
 	}
+
 	mutex_unlock(&clk_reg_lock);
 
-	return clks[idx];
+	return clk_data->clks[idx];
 }
 
-struct clk **tegra_bpmp_clk_init(struct device_node *np)
+int tegra_bpmp_clk_init(struct device_node *np)
 {
-	if (clk_bpmp_get_max_clk_id(&max_clk_id) || max_clk_id < 0) {
-		pr_err("clk-bpmp: unable to retrieve clk data\n");
-		return ERR_PTR(-ENODEV);
+	struct clk **clks;
+	int max_clk_id = 0;
+	int r;
+
+	pr_info("Registering BPMP clocks...\n");
+
+	r = clk_bpmp_get_max_clk_id(&max_clk_id);
+	if (r || max_clk_id < 0) {
+		pr_err("failed to retrieve clk data (r %d, max_clk_id %d)\n",
+				max_clk_id, r);
+		return -ENODEV;
 	}
 
 	clks = kzalloc((max_clk_id + 1) * sizeof(struct clk *), GFP_KERNEL);
 	if (!clks) {
 		WARN_ON(1);
-		return ERR_PTR(-ENOMEM);
+		return -ENOMEM;
 	}
 
 	clk_names = kzalloc((max_clk_id + 1) * sizeof(char *), GFP_KERNEL);
 	if (!clk_names) {
 		WARN_ON(1);
 		kfree(clks);
-		return ERR_PTR(-ENOMEM);
+		return -ENOMEM;
 	}
 
 	clk_data.clks = clks;
 	clk_data.clk_num = max_clk_id + 1;
-	of_clk_add_provider(np, tegra_of_clk_src_onecell_get, &clk_data);
 
-	return clks;
+	r = of_clk_add_provider(np, tegra_of_clk_src_onecell_get, &clk_data);
+
+	pr_info("clock init %s\n", r ? "failed" : "ok");
+
+	return r;
 }

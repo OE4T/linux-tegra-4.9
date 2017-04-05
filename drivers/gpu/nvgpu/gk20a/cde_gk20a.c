@@ -1122,8 +1122,6 @@ __releases(&cde_app->mutex)
 	cde_ctx->init_cmd_executed = true;
 
 	/* unmap the buffers - channel holds references to them now */
-	if (surface)
-		dma_buf_vunmap(compbits_scatter_buf, surface);
 	gk20a_vm_unmap(cde_ctx->vm, map_vaddr);
 
 	return err;

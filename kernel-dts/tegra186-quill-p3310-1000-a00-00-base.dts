@@ -77,6 +77,7 @@
 		status = "okay";
 		phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
 		phy-names = "usb2";
+		emc-frequency = <150000000>;
 	};
 #endif
 

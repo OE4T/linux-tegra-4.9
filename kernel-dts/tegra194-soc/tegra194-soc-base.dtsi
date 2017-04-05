@@ -156,7 +156,11 @@
 					    TEGRA_SID(NVENC1)
 					    TEGRA_SID(PVA0)
 					    TEGRA_SID(PVA1)
-					    TEGRA_SID(NVDEC1)>;
+					    TEGRA_SID(NVDEC1)
+					    TEGRA_SID(SE)
+					    TEGRA_SID(SE1)
+					    TEGRA_SID(SE2)
+					    TEGRA_SID(SE3)>;
 				sid-list-len = <12>;
 			};
 			rce_domain {
@@ -881,7 +885,10 @@
 			resets = <&bpmp_resets TEGRA194_RESET_SE>;
 			clocks = <&bpmp_clks TEGRA194_CLK_SE>;
 			clock-names = "se";
+
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_SE>;
+
 			status = "okay";
 		};
 
@@ -893,7 +900,10 @@
 			resets = <&bpmp_resets TEGRA194_RESET_SE>;
 			clocks = <&bpmp_clks TEGRA194_CLK_SE>;
 			clock-names = "se";
+
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_SE1>;
+
 			status = "okay";
 		};
 
@@ -905,7 +915,10 @@
 			resets = <&bpmp_resets TEGRA194_RESET_SE>;
 			clocks = <&bpmp_clks TEGRA194_CLK_SE>;
 			clock-names = "se";
+
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_SE2>;
+
 			status = "okay";
 		};
 
@@ -917,7 +930,10 @@
 			resets = <&bpmp_resets TEGRA194_RESET_SE>;
 			clocks = <&bpmp_clks TEGRA194_CLK_SE>;
 			clock-names = "se";
+
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_SE3>;
+
 			status = "okay";
 		};
 	}; // host1x

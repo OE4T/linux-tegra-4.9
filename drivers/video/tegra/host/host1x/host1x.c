@@ -92,6 +92,16 @@ static LIST_HEAD(nvhost_masters);
 static DEFINE_MUTEX(nvhost_masters_lock);
 static bool vhost_init_done;
 
+struct nvhost_master *nvhost_get_prim_host(void)
+{
+	struct nvhost_master *host;
+
+	mutex_lock(&nvhost_masters_lock);
+	host = list_first_entry(&nvhost_masters, struct nvhost_master, list);
+	mutex_unlock(&nvhost_masters_lock);
+	return host;
+}
+
 static int nvhost_ctrlrelease(struct inode *inode, struct file *filp)
 {
 	struct nvhost_ctrl_userctx *priv = filp->private_data;

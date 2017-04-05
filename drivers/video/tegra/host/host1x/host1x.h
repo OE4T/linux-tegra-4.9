@@ -191,6 +191,8 @@ static inline void nvhost_set_private_data(struct platform_device *_dev,
 	pdata->private_data = priv_data;
 }
 
+struct nvhost_master *nvhost_get_prim_host(void);
+
 static inline struct nvhost_master *nvhost_get_host(
 	struct platform_device *_dev)
 {

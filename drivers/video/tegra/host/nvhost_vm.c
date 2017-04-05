@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Virtual Memory
  *
- * Copyright (c) 2014-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -145,7 +145,7 @@ int nvhost_vm_map_static(struct platform_device *pdev,
 static void nvhost_vm_deinit(struct kref *kref)
 {
 	struct nvhost_vm *vm = container_of(kref, struct nvhost_vm, kref);
-	struct nvhost_master *host = nvhost_get_host(vm->pdev);
+	struct nvhost_master *host = nvhost_get_prim_host();
 
 	trace_nvhost_vm_deinit(vm);
 
@@ -177,7 +177,7 @@ struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev,
 				     void *identifier)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
-	struct nvhost_master *host = nvhost_get_host(pdev);
+	struct nvhost_master *host = nvhost_get_prim_host();
 	struct nvhost_vm *vm;
 	int err;
 

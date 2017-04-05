@@ -1007,17 +1007,25 @@ int eqos_probe(struct platform_device *pdev)
 		ndev->dev_addr[4] = mac_addr[4];
 		ndev->dev_addr[5] = mac_addr[5];
 	}
+
+	pdata->use_fixed_phy = false;
+	if (of_phy_is_fixed_link(node)) {
+		ret = eqos_fixed_phy_register(ndev);
+		if (ret) {
+			netdev_err(ndev, "Failed to register fixed PHY device\n");
+			return ret;
+		}
+	}
+
 	pdata->interface = eqos_get_phy_interface(pdata);
 	/* Bypass PHYLIB for TBI, RTBI and SGMII interface */
-	if (1 == pdata->hw_feat.sma_sel) {
+	if (1 == pdata->hw_feat.sma_sel && !pdata->use_fixed_phy) {
 		ret = eqos_mdio_register(ndev);
 		if (ret < 0) {
 			pr_err("MDIO bus (id %d) registration failed\n",
 			       pdata->bus_id);
 			goto err_out_mdio_reg;
 		}
-	} else {
-		pr_err("%s: MDIO is not present\n\n", DEV_NAME);
 	}
 
 	/* enabling and registration of irq with magic wakeup */

@@ -430,15 +430,15 @@ int dbg_unbind_single_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	/* If there's a profiler ctx reservation record associated with this
 	 * session/channel pair, release it.
 	 */
-	list_for_each_entry_safe(prof_obj, tmp_obj, &g->profiler_objects,
-							prof_obj_entry) {
+	nvgpu_list_for_each_entry_safe(prof_obj, tmp_obj, &g->profiler_objects,
+				dbg_profiler_object_data, prof_obj_entry) {
 		if ((prof_obj->session_id == dbg_s->id) &&
 			(prof_obj->ch->hw_chid == chid)) {
 			if (prof_obj->has_reservation) {
 				g->ops.dbg_session_ops.
 				  release_profiler_reservation(dbg_s, prof_obj);
 			}
-			list_del(&prof_obj->prof_obj_entry);
+			nvgpu_list_del(&prof_obj->prof_obj_entry);
 			nvgpu_kfree(g, prof_obj);
 		}
 	}
@@ -536,13 +536,13 @@ int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp)
 	/* Per-context profiler objects were released when we called
 	 * dbg_unbind_all_channels. We could still have global ones.
 	 */
-	list_for_each_entry_safe(prof_obj, tmp_obj, &g->profiler_objects,
-							prof_obj_entry) {
+	nvgpu_list_for_each_entry_safe(prof_obj, tmp_obj, &g->profiler_objects,
+				dbg_profiler_object_data, prof_obj_entry) {
 		if (prof_obj->session_id == dbg_s->id) {
 			if (prof_obj->has_reservation)
 				g->ops.dbg_session_ops.
 				  release_profiler_reservation(dbg_s, prof_obj);
-			list_del(&prof_obj->prof_obj_entry);
+			nvgpu_list_del(&prof_obj->prof_obj_entry);
 			nvgpu_kfree(g, prof_obj);
 		}
 	}
@@ -1555,9 +1555,9 @@ static int nvgpu_ioctl_allocate_profiler_object(
 	/* Return handle to client */
 	args->profiler_handle = prof_obj->prof_handle;
 
-	INIT_LIST_HEAD(&prof_obj->prof_obj_entry);
+	nvgpu_init_list_node(&prof_obj->prof_obj_entry);
 
-	list_add(&prof_obj->prof_obj_entry, &g->profiler_objects);
+	nvgpu_list_add(&prof_obj->prof_obj_entry, &g->profiler_objects);
 clean_up:
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	return  err;
@@ -1578,8 +1578,8 @@ static int nvgpu_ioctl_free_profiler_object(
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
 	/* Remove profiler object from the list, if a match is found */
-	list_for_each_entry_safe(prof_obj, tmp_obj, &g->profiler_objects,
-							prof_obj_entry) {
+	nvgpu_list_for_each_entry_safe(prof_obj, tmp_obj, &g->profiler_objects,
+				dbg_profiler_object_data, prof_obj_entry) {
 		if (prof_obj->prof_handle == args->profiler_handle) {
 			if (prof_obj->session_id != dbg_s->id) {
 				gk20a_err(dev_from_gk20a(g),
@@ -1591,7 +1591,7 @@ static int nvgpu_ioctl_free_profiler_object(
 			if (prof_obj->has_reservation)
 				g->ops.dbg_session_ops.
 				  release_profiler_reservation(dbg_s, prof_obj);
-			list_del(&prof_obj->prof_obj_entry);
+			nvgpu_list_del(&prof_obj->prof_obj_entry);
 			nvgpu_kfree(g, prof_obj);
 			obj_found = true;
 			break;
@@ -1614,7 +1614,8 @@ static struct dbg_profiler_object_data *find_matching_prof_obj(
 	struct gk20a *g = dbg_s->g;
 	struct dbg_profiler_object_data *prof_obj;
 
-	list_for_each_entry(prof_obj, &g->profiler_objects, prof_obj_entry) {
+	nvgpu_list_for_each_entry(prof_obj, &g->profiler_objects,
+				dbg_profiler_object_data, prof_obj_entry) {
 		if (prof_obj->prof_handle == profiler_handle) {
 			if (prof_obj->session_id != dbg_s->id) {
 				gk20a_err(dev_from_gk20a(g),
@@ -1727,8 +1728,8 @@ static int nvgpu_profiler_reserve_acquire(struct dbg_session_gk20a *dbg_s,
 		 */
 		int my_tsgid = my_prof_obj->ch->tsgid;
 
-		list_for_each_entry(prof_obj, &g->profiler_objects,
-							prof_obj_entry) {
+		nvgpu_list_for_each_entry(prof_obj, &g->profiler_objects,
+				dbg_profiler_object_data, prof_obj_entry) {
 			if (prof_obj->has_reservation &&
 					(prof_obj->ch->tsgid == my_tsgid)) {
 				gk20a_err(dev_from_gk20a(g),
@@ -1751,8 +1752,8 @@ static int nvgpu_profiler_reserve_acquire(struct dbg_session_gk20a *dbg_s,
 		 */
 		struct channel_gk20a *my_ch = my_prof_obj->ch;
 
-		list_for_each_entry(prof_obj, &g->profiler_objects,
-							prof_obj_entry) {
+		nvgpu_list_for_each_entry(prof_obj, &g->profiler_objects,
+				dbg_profiler_object_data, prof_obj_entry) {
 			if (prof_obj->has_reservation &&
 						(prof_obj->ch == my_ch)) {
 				gk20a_err(dev_from_gk20a(g),

@@ -112,7 +112,14 @@ struct dbg_profiler_object_data {
 	u32 prof_handle;
 	struct channel_gk20a *ch;
 	bool has_reservation;
-	struct list_head prof_obj_entry;
+	struct nvgpu_list_node prof_obj_entry;
+};
+
+static inline struct dbg_profiler_object_data *
+dbg_profiler_object_data_from_prof_obj_entry(struct nvgpu_list_node *node)
+{
+	return (struct dbg_profiler_object_data *)
+	((uintptr_t)node - offsetof(struct dbg_profiler_object_data, prof_obj_entry));
 };
 
 int dbg_unbind_single_channel_gk20a(struct dbg_session_gk20a *dbg_s,

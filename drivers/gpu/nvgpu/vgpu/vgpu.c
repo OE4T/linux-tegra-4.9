@@ -260,7 +260,7 @@ static int vgpu_init_support(struct platform_device *pdev)
 	nvgpu_mutex_init(&g->dbg_sessions_lock);
 	nvgpu_mutex_init(&g->client_lock);
 
-	INIT_LIST_HEAD(&g->profiler_objects);
+	nvgpu_init_list_node(&g->profiler_objects);
 
 	g->dbg_regops_tmp_buf = nvgpu_kzalloc(g, SZ_4K);
 	if (!g->dbg_regops_tmp_buf) {

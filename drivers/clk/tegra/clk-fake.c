@@ -58,26 +58,17 @@ static const struct clk_ops fclk_ops = {
 
 static struct clk_onecell_data clk_data;
 
-int tegra_fake_clks_init(struct device_node *np)
+struct clk *tegra_fclk_init(int clk_num, char *name, size_t sz)
 {
-	const int num_clks = 1023;
+	struct fclk *fclk;
 	struct clk_init_data init;
-	struct fclk *fclks;
-	struct clk **pclks;
-	char name[32];
-	const size_t sz = sizeof(name);
-	int i;
-	int r;
 
-	fclks = kcalloc(num_clks + 1, sizeof(*fclks), GFP_KERNEL);
-	if (!fclks)
-		return -ENOMEM;
+	fclk = kzalloc(sizeof(*fclk), GFP_KERNEL);
+	if (!fclk)
+		return ERR_PTR(-ENOMEM);
 
-	pclks = kcalloc(num_clks + 1, sizeof(*pclks), GFP_KERNEL);
-	if (!pclks) {
-		kfree(fclks);
-		return -ENOMEM;
-	}
+	snprintf(name, sz, "fclk%3d", clk_num);
+	name[sz - 1] = 0;
 
 	init.name = name;
 	init.flags = 0;
@@ -85,31 +76,56 @@ int tegra_fake_clks_init(struct device_node *np)
 	init.parent_names = NULL;
 	init.ops = &fclk_ops;
 
-	pclks[0] = ERR_PTR(-EINVAL);
+	fclk->hw.init = &init;
 
-	for (i = 1; i <= num_clks; i++) {
-		snprintf(name, sz, "fclk.%d", i);
-		name[sz - 1] = 0;
-		fclks[i].hw.init = &init;
+	return clk_register(NULL, &fclk->hw);
+}
 
-		pclks[i] = clk_register(NULL, &fclks[i].hw);
-		if (IS_ERR_OR_NULL(pclks[i])) {
-			r = PTR_ERR(pclks[i]);
-			pr_err("failed to register clk %s (%d)\n", name, r);
-			goto err_out;
-		}
+static struct clk *tegra_of_clk_src_fclkget(struct of_phandle_args *clkspec,
+		void *data)
+{
+	struct clk_onecell_data *clk_data = data;
+	unsigned int idx = clkspec->args[0];
+	char name[16];
+	const size_t sz = sizeof(name);
+	struct clk *clk;
+	int r;
+
+	if (idx >= clk_data->clk_num) {
+		pr_err("%s() bad clk idx %d\n", __func__, idx);
+		return ERR_PTR(-EINVAL);
+	}
+
+	if (clk_data->clks[idx])
+		return clk_data->clks[idx];
+
+	clk = tegra_fclk_init(idx, name, sz);
+
+	if (IS_ERR_OR_NULL(clk)) {
+		r = PTR_ERR(clk);
+		pr_err("%s() failed to init clk %d (%d)\n", __func__, idx, r);
+		clk = ERR_PTR(-EINVAL);
+	}
+
+	clk_data->clks[idx] = clk;
+
+	return clk;
+}
+
+int tegra_fake_clks_init(struct device_node *np)
+{
+	const int num_clks = 1023;
+	struct clk **pclks;
+
+	pclks = kcalloc(num_clks + 1, sizeof(*pclks), GFP_KERNEL);
+	if (!pclks) {
+		WARN_ON(1);
+		return -ENOMEM;
 	}
 
 	clk_data.clks = pclks;
+
 	clk_data.clk_num = num_clks;
 
-	r = of_clk_add_provider(np, of_clk_src_onecell_get, &clk_data);
-	if (!r)
-		return 0;
-
-err_out:
-	kfree(fclks);
-	kfree(pclks);
-
-	return r;
+	return of_clk_add_provider(np, tegra_of_clk_src_fclkget, &clk_data);
 }

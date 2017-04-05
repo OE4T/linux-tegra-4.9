@@ -1927,7 +1927,7 @@ static int soctherm_hw_pllx_offsets_parse(struct platform_device *pdev)
 		return r;
 	}
 
-	for (j = 0; j < max_num_props; j = j + ele_per_prop) {
+	for (j = 0; j < n; j = j + ele_per_prop) {
 		if (off[j] >= TEGRA124_SOCTHERM_SENSOR_NUM ||
 			off[j] == TEGRA124_SOCTHERM_SENSOR_PLLX)
 			continue;

@@ -3773,6 +3773,8 @@ static void hci_sched_acl_pkt(struct hci_dev *hdev)
 				break;
 
 			skb = skb_dequeue(&chan->data_q);
+			if (skb == NULL)
+				break;
 
 			hci_conn_enter_active_mode(chan->conn,
 						   bt_cb(skb)->force_active);
@@ -3821,6 +3823,8 @@ static void hci_sched_acl_blk(struct hci_dev *hdev)
 				break;
 
 			skb = skb_dequeue(&chan->data_q);
+			if (skb == NULL)
+				break;
 
 			blocks = __get_blocks(hdev, skb);
 			if (blocks > hdev->block_cnt)
@@ -3947,6 +3951,8 @@ static void hci_sched_le(struct hci_dev *hdev)
 				break;
 
 			skb = skb_dequeue(&chan->data_q);
+			if (skb == NULL)
+				break;
 
 			hci_send_frame(hdev, skb);
 			hdev->le_last_tx = jiffies;

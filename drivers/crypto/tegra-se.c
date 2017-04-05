@@ -26,6 +26,7 @@
 #include <linux/errno.h>
 #include <linux/kernel.h>
 #include <linux/clk.h>
+#include <linux/delay.h>
 #include <linux/platform_device.h>
 #include <linux/scatterlist.h>
 #include <linux/dma-mapping.h>
@@ -38,6 +39,7 @@
 #include <linux/errno.h>
 #include <soc/tegra/fuse.h>
 #include <soc/tegra/chip-id.h>
+#include <soc/tegra/ahb.h>
 #include <crypto/scatterwalk.h>
 #include <soc/tegra/pmc.h>
 #include <crypto/algapi.h>
@@ -112,6 +114,7 @@ struct tegra_se_chipdata {
 	bool mccif_supported;
 	bool rsa_key_rw_op;
 	u32 aes_keydata_reg_sz;
+	bool ahb_ack;
 };
 
 struct tegra_se_dev {
@@ -141,6 +144,7 @@ struct tegra_se_dev {
 	bool work_q_busy;	/* Work queue busy status */
 	bool polling;
 	struct tegra_se_chipdata *chipdata; /* chip specific data */
+	u32 ahb_id;
 };
 
 static struct tegra_se_dev *sg_tegra_se_dev;
@@ -711,7 +715,7 @@ static int tegra_se_start_operation(struct tegra_se_dev *se_dev, u32 nbytes,
 {
 	u32 nblocks = nbytes / TEGRA_SE_AES_BLOCK_SIZE;
 	int ret = 0, err = 0;
-	u32 val = 0;
+	u32 val = 0, timeout = TEGRA_SE_TIMEOUT_1S;
 
 	if ((tegra_get_chip_id() == TEGRA114) &&
 				nblocks > SE_MAX_LAST_BLOCK_SIZE)
@@ -754,6 +758,7 @@ static int tegra_se_start_operation(struct tegra_se_dev *se_dev, u32 nbytes,
 		if (!SE_OP_DONE(val, OP_DONE)) {
 			dev_err(se_dev->dev, "\nAbrupt end of operation\n");
 			err = -EINVAL;
+			goto exit;
 		}
 	} else {
 		ret = wait_for_completion_timeout(&se_dev->complete,
@@ -761,9 +766,37 @@ static int tegra_se_start_operation(struct tegra_se_dev *se_dev, u32 nbytes,
 		if (ret == 0) {
 			dev_err(se_dev->dev, "operation timed out no interrupt\n");
 			err = -ETIMEDOUT;
+			goto exit;
 		}
 	}
 
+	if (se_dev->chipdata->ahb_ack) {
+		/* Ensure data is out from SE using MEM_INTERFACE signal */
+		val = se_readl(se_dev, SE_STATUS_REG_OFFSET);
+		while (val & SE_STATUS_MEM_INTERFACE(MEM_INTERFACE_BUSY)) {
+			if (!timeout) {
+				dev_err(se_dev->dev, "mem operation timeout\n");
+				err = -ETIMEDOUT;
+				goto exit;
+			}
+			udelay(1);
+			timeout--;
+			val = se_readl(se_dev, SE_STATUS_REG_OFFSET);
+		}
+
+		timeout = TEGRA_SE_TIMEOUT_1S;
+		while (tegra_ahb_is_mem_wrque_busy(se_dev->ahb_id)) {
+			if (!timeout) {
+				dev_err(se_dev->dev, "mem operation timeout\n");
+				err = -ETIMEDOUT;
+				goto exit;
+			}
+			udelay(1);
+			timeout--;
+		}
+	}
+
+exit:
 	return err;
 }
 
@@ -2468,6 +2501,7 @@ static struct tegra_se_chipdata tegra_se_chipdata = {
 	.mccif_supported = false,
 	.rsa_key_rw_op = true,
 	.aes_keydata_reg_sz = 128,
+	.ahb_ack = false,
 };
 
 static struct tegra_se_chipdata tegra11_se_chipdata = {
@@ -2486,6 +2520,7 @@ static struct tegra_se_chipdata tegra11_se_chipdata = {
 	.mccif_supported = false,
 	.rsa_key_rw_op = true,
 	.aes_keydata_reg_sz = 128,
+	.ahb_ack = false,
 };
 
 static struct tegra_se_chipdata tegra21_se_chipdata = {
@@ -2504,6 +2539,26 @@ static struct tegra_se_chipdata tegra21_se_chipdata = {
 	.mccif_supported = true,
 	.rsa_key_rw_op = false,
 	.aes_keydata_reg_sz = 32,
+	.ahb_ack = false,
+};
+
+static struct tegra_se_chipdata tegra210b01_se_chipdata = {
+	.rsa_supported = true,
+	.cprng_supported = false,
+	.drbg_supported = true,
+	.const_freq = true,
+	.aes_freq = 510000000,
+	.rng_freq = 510000000,
+	.sha1_freq = 510000000,
+	.sha224_freq = 510000000,
+	.sha256_freq = 510000000,
+	.sha384_freq = 510000000,
+	.sha512_freq = 510000000,
+	.rsa_freq = 510000000,
+	.mccif_supported = true,
+	.rsa_key_rw_op = false,
+	.aes_keydata_reg_sz = 32,
+	.ahb_ack = true,
 };
 
 static struct of_device_id tegra_se_of_match[] = {
@@ -2514,6 +2569,10 @@ static struct of_device_id tegra_se_of_match[] = {
 	{
 		.compatible = "nvidia,tegra210-se",
 		.data = &tegra21_se_chipdata,
+	},
+	{
+		.compatible = "nvidia,tegra210b01-se",
+		.data = &tegra210b01_se_chipdata,
 	}, {
 	}
 };
@@ -2548,6 +2607,16 @@ static int tegra_se_probe(struct platform_device *pdev)
 	} else {
 		se_dev->chipdata =
 			(struct tegra_se_chipdata *)pdev->id_entry->driver_data;
+	}
+
+	if (se_dev->chipdata->ahb_ack) {
+		val = tegra_ahb_get_master_id(&pdev->dev);
+		if (val < 0) {
+			err = -EINVAL;
+			dev_err(&pdev->dev, "Error: AHB master id not found\n");
+			goto fail;
+		} else
+			se_dev->ahb_id = val;
 	}
 
 	spin_lock_init(&se_dev->lock);

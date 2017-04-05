@@ -69,7 +69,7 @@ TRACE_EVENT(nvhost_pva_write,
 		__entry->arg2 = arg2;
 		),
 
-	TP_printk("time: %llu\tmajor: 0x%u\tminor: %u\tflags: 0x%x\t"
+	TP_printk("time: %llu\tmajor: 0x%x\tminor: 0x%x\tflags: 0x%x\t"
 		"sequence: 0x%x\targ1: %u\targ2: %u",
 		__entry->delta_time, __entry->major, __entry->minor,
 		__entry->flags, __entry->sequence, __entry->arg1, __entry->arg2)
@@ -77,5 +77,11 @@ TRACE_EVENT(nvhost_pva_write,
 
 #endif /*  _TRACE_NVHOST_PVA_H */
 
+/* This part must be outside protection */
+#undef TRACE_INCLUDE_PATH
+#undef TRACE_INCLUDE_FILE
+#define TRACE_INCLUDE_PATH ../../../nvhost-t19x/include/trace/events/
+
+#define TRACE_INCLUDE_FILE nvhost_pva
 /* This part must be outside protection */
 #include <trace/define_trace.h>

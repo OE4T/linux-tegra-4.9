@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -196,8 +196,7 @@ enum pva_threshold_id {
 	THRESHOLD_VPU_CRIT_ERRORS = 11,
 	THRESHOLD_VPU_ERRORS = 12,
 	THRESHOLD_PVA_ERRORS = 13,
-	THRESHOLD_PVA_TRACE_OFFSET = 14,
-	THRESHOLD_LAST = 14,		/* must be updated as new ones added */
+	THRESHOLD_LAST = 13,		/* must be updated as new ones added */
 };
 
 /*

@@ -1,7 +1,7 @@
 /*
  * NVHOST Buffer Management Header
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,12 +22,12 @@
 #include <linux/dma-buf.h>
 
 /**
- * nvhost_buffers - Information needed for buffers
+ * @brief		Information needed for buffers
  *
- * @pdev:		Pointer to NVHOST device
- * @buffer_list:	List of all the buffers used by a file pointer
- * @buffer_list_mutex:	Mutex for the buffer list
- * @kref:		Reference count for the bufferlist
+ * pdev			Pointer to NVHOST device
+ * buffer_list		List of all the buffers used by a file pointer
+ * buffer_list_mutex	Mutex for the buffer list
+ * kref			Reference count for the bufferlist
  *
  */
 struct nvhost_buffers {
@@ -38,100 +38,99 @@ struct nvhost_buffers {
 };
 
 /**
- * nvhost_buffer_init - Initialize the nvhost_buffer per open request
- *
- * @nvhost_buffers:	Pointer to nvhost_buffers struct
- *
- * Return:		nvhost_buffers pointer on success or negative on error
+ * @brief			Initialize the nvhost_buffer per open request
  *
  * This function allocates nvhost_buffers struct and init the bufferlist
  * and mutex.
+ *
+ * @param nvhost_buffers	Pointer to nvhost_buffers struct
+ * @return			nvhost_buffers pointer on success
+ *					or negative on error
+ *
  */
 struct nvhost_buffers *nvhost_buffer_init(struct platform_device *pdev);
 
 /**
- * nvhost_buffer_pin - Pin the memhandle using dma_buf functions
- *
- * @nvhost_buffers:	Pointer to nvhost_buffers struct
- * @handles:		Pointer to MemHandle list
- * @count:		Number of memhandles in the list
- *
- * Return: 0 on success or negative on error
+ * @brief			Pin the memhandle using dma_buf functions
  *
  * This function maps the buffer memhandle list passed from user side
  * to device iova.
+ *
+ * @param nvhost_buffers	Pointer to nvhost_buffers struct
+ * @param dmabufs		Pointer to dmabuffer list
+ * @param count			Number of memhandles in the list
+ * @return			0 on success or negative on error
+ *
  */
-int nvhost_buffer_pin(struct nvhost_buffers *nvhost_buffers, u32 *handles,
+int nvhost_buffer_pin(struct nvhost_buffers *nvhost_buffers,
+			struct dma_buf **dmabufs,
 			u32 count);
 
 /**
- * nvhost_buffer_unpin - UnPins the mapped address space.
+ * @brief			UnPins the mapped address space.
  *
- * @nvhost_buffers:	Pointer to nvhost_buffer struct
- * @handles:		Pointer to MemHandle list
- * @count:		Number of memhandles in the list
- *
- * Return: None
+ * @param nvhost_buffers	Pointer to nvhost_buffer struct
+ * @param dmabufs		Pointer to dmabuffer list
+ * @param count			Number of memhandles in the list
+ * @return			None
  *
  */
-void nvhost_buffer_unpin(struct nvhost_buffers *nvhost_buffers, u32 *handles,
+void nvhost_buffer_unpin(struct nvhost_buffers *nvhost_buffers,
+				struct dma_buf **dmabufs,
 				u32 count);
 
 /**
- * nvhost_buffer_submit_pin - Pin the mapped buffer for a task submit
- *
- * @nvhost_buffers:	Pointer to nvhost_buffer struct
- * @handles:		Pointer to MemHandle list
- * @count:		Number of memhandles in the list
- * @paddr:		Pointer to IOVA list
- * @psize:		Pointer to size of buffer to return
- *
- * Return: 0 on success or negative on error
+ * @brief			Pin the mapped buffer for a task submit
  *
  * This function increased the reference count for a mapped buffer during
  * task submission.
+ *
+ * @param nvhost_buffers	Pointer to nvhost_buffer struct
+ * @param dmabufs		Pointer to dmabuffer list
+ * @param count			Number of memhandles in the list
+ * @param paddr			Pointer to IOVA list
+ * @param psize			Pointer to size of buffer to return
+ * @return			0 on success or negative on error
+ *
  */
 int nvhost_buffer_submit_pin(struct nvhost_buffers *nvhost_buffers,
-				u32 *handles, u32 count,
+				struct dma_buf **dmabufs, u32 count,
 				dma_addr_t *paddr, size_t *psize);
 
 /**
- * nvhost_buffer_unpin - UnPins the mapped address space on task completion.
- *
- * @nvhost_buffers:	Pointer to nvhost_buffer struct
- * @handles:		Pointer to MemHandle list
- * @count:		Number of memhandles in the list
- *
- * Return: None
+ * @brief		UnPins the mapped address space on task completion.
  *
  * This function decrease the reference count for a mapped buffer when the
  * task get completed or aborted.
+ *
+ * @param nvhost_buffers	Pointer to nvhost_buffer struct
+ * @param dmabufs		Pointer to dmabuffer list
+ * @param count			Number of memhandles in the list
+ * @return			None
+ *
  */
 void nvhost_buffer_submit_unpin(struct nvhost_buffers *nvhost_buffers,
-					u32 *handles, u32 count);
+					struct dma_buf **dmabufs, u32 count);
 
 /**
- * nvhost_buffer_put - Cleanup all the buffers in the list
+ * @brief			Cleanup all the buffers in the list
  *
- * @nvhost_buffer:	Pointer to nvhost_buffer struct
- *
- * Return: None
+ * @param nvhost_buffers	Pointer to nvhost_buffer struct
+ * @return			None
  *
  */
 void nvhost_buffer_put(struct nvhost_buffers *nvhost_buffers);
 
 /**
- * nvhost_get_iova_addr - returns dma buf and dma addr for a given handle
+ * @brief		Returns dma buf and dma addr for a given handle
  *
- * @nvhost_buffer:	Pointer to nvhost_buffer struct
- * @handle:		MemHandle to search for
- * @dmabuf:		dma buf pointer to return
- * @addr:		dma_addr_t pointer to return
- *
- * Return: 0 on success or negative on error
+ * @param nvhost_buffers	Pointer to nvhost_buffer struct
+ * @param dmabuf		dma buf pointer to search for
+ * @param addr			dma_addr_t pointer to return
+ * @return			0 on success or negative on error
  *
  */
-int nvhost_get_iova_addr(struct nvhost_buffers *nvhost_buffers, u32 handle,
-			struct dma_buf **dmabuf, dma_addr_t *addr);
+int nvhost_get_iova_addr(struct nvhost_buffers *nvhost_buffers,
+			struct dma_buf *dmabuf, dma_addr_t *addr);
 
 #endif /*__NVHOST_NVHOST_BUFFER_H__ */

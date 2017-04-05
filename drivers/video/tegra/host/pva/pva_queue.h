@@ -29,6 +29,7 @@ extern struct nvhost_queue_ops pva_queue_ops;
 struct pva_parameter_ext {
 	dma_addr_t dma_addr;
 	size_t size;
+	struct dma_buf *dmabuf;
 };
 
 /**

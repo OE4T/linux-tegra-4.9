@@ -220,6 +220,12 @@ struct nvdla_task {
 	size_t buf_size;
 	int timeout;
 	int pool_index;
+
+	struct dma_buf *memory_dmabuf[NVDLA_MAX_BUFFERS_PER_TASK];
+	struct dma_buf *prefences_sem_dmabuf[MAX_NUM_NVDLA_PREFENCES];
+	struct dma_buf *in_task_status_dmabuf[MAX_NUM_NVDLA_IN_TASK_STATUS];
+	struct dma_buf *postfences_sem_dmabuf[MAX_NUM_NVDLA_POSTFENCES];
+	struct dma_buf *out_task_status_dmabuf[MAX_NUM_NVDLA_OUT_TASK_STATUS];
 };
 
 struct dla_mem_addr {

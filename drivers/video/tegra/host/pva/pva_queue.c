@@ -199,62 +199,57 @@ static void pva_task_unpin_mem(struct pva_submit_task *task)
 {
 	int i;
 
-#define UNPIN_MEMORY(dst_name, src_name)				\
+#define UNPIN_MEMORY(dst_name)						\
 	do {								\
-		if ((src_name) != 0 && (dst_name).dma_addr != 0)	\
+		if (((dst_name).dmabuf) != 0 &&				\
+				((dst_name).dma_addr != 0)) {		\
 			nvhost_buffer_submit_unpin(task->buffers,	\
-				&(src_name), 1);			\
+				&((dst_name).dmabuf), 1);		\
+			dma_buf_put((dst_name).dmabuf);			\
+		}							\
 	} while (0)
 
 	for (i = 0; i < task->num_input_surfaces; i++) {
-		UNPIN_MEMORY(task->input_surfaces_ext[i],
-			task->input_surfaces[i].surface_handle);
-		UNPIN_MEMORY(task->input_surface_rois_ext[i],
-			task->input_surfaces[i].roi_handle);
+		UNPIN_MEMORY(task->input_surfaces_ext[i]);
+		UNPIN_MEMORY(task->input_surface_rois_ext[i]);
 	}
 
 
 	for (i = 0; i < task->num_output_surfaces; i++) {
-		UNPIN_MEMORY(task->output_surfaces_ext[i],
-			task->output_surfaces[i].surface_handle);
-		UNPIN_MEMORY(task->output_surface_rois_ext[i],
-			task->output_surfaces[i].roi_handle);
+		UNPIN_MEMORY(task->output_surfaces_ext[i]);
+		UNPIN_MEMORY(task->output_surface_rois_ext[i]);
 	}
 
 	for (i = 0; i < task->num_prefences; i++) {
 		if ((task->prefences[i].type == PVA_FENCE_TYPE_SEMAPHORE)
 			&& task->prefences[i].semaphore_handle)
-			UNPIN_MEMORY(task->prefences_sema_ext[i],
-				task->prefences[i].semaphore_handle);
+			UNPIN_MEMORY(task->prefences_sema_ext[i]);
 	}
 
 	for (i = 0; i < task->num_postfences; i++) {
 		if ((task->postfences[i].type == PVA_FENCE_TYPE_SEMAPHORE)
 			&& task->postfences[i].semaphore_handle)
-			UNPIN_MEMORY(task->postfences_sema_ext[i],
-				task->postfences[i].semaphore_handle);
+			UNPIN_MEMORY(task->postfences_sema_ext[i]);
 	}
 
 	for (i = 0; i < task->num_input_task_status; i++) {
 		if (task->input_task_status[i].handle) {
-			UNPIN_MEMORY(task->input_task_status_ext[i],
-				task->input_task_status[i].handle);
+			UNPIN_MEMORY(task->input_task_status_ext[i]);
 		}
 	}
 
 	for (i = 0; i < task->num_output_task_status; i++) {
 		if (task->output_task_status[i].handle) {
-			UNPIN_MEMORY(task->output_task_status_ext[i],
-				task->output_task_status[i].handle);
+			UNPIN_MEMORY(task->output_task_status_ext[i]);
 		}
 	}
 
-	UNPIN_MEMORY(task->input_scalars_ext, task->input_scalars.handle);
-	UNPIN_MEMORY(task->input_rois_ext, task->input_rois.handle);
-	UNPIN_MEMORY(task->input_2dpoint_ext, task->input_2dpoint.handle);
-	UNPIN_MEMORY(task->output_scalars_ext, task->output_scalars.handle);
-	UNPIN_MEMORY(task->output_rois_ext, task->output_rois.handle);
-	UNPIN_MEMORY(task->output_2dpoint_ext, task->output_2dpoint.handle);
+	UNPIN_MEMORY(task->input_scalars_ext);
+	UNPIN_MEMORY(task->input_rois_ext);
+	UNPIN_MEMORY(task->input_2dpoint_ext);
+	UNPIN_MEMORY(task->output_scalars_ext);
+	UNPIN_MEMORY(task->output_rois_ext);
+	UNPIN_MEMORY(task->output_2dpoint_ext);
 
 #undef UNPIN_MEMORY
 }
@@ -264,32 +259,42 @@ static int pva_task_pin_mem(struct pva_submit_task *task)
 	int err;
 	int i;
 
-#define PIN_MEMORY(dst_name, src_name)					\
+#define PIN_MEMORY(dst_name, dmabuf_fd)					\
 	do {								\
-		if ((src_name) != 0) {					\
-			err = nvhost_buffer_submit_pin(task->buffers,	\
-				&(src_name), 1,				\
+		if (!(dmabuf_fd)) {					\
+			err = -EFAULT;					\
+			goto err_map_handle;				\
+		}							\
+		((dst_name).dmabuf) = dma_buf_get(dmabuf_fd);		\
+		if (IS_ERR_OR_NULL((dst_name).dmabuf)) {		\
+			(dst_name).dmabuf = NULL;			\
+			err = -EFAULT;					\
+			goto err_map_handle;				\
+		}							\
+		err = nvhost_buffer_submit_pin(task->buffers,		\
+				&(dst_name).dmabuf, 1,			\
 				&(dst_name).dma_addr,			\
 				&(dst_name).size);			\
-			if (err < 0)					\
-				goto err_map_handle;			\
-		}							\
+		if (err < 0)						\
+			goto err_map_handle;				\
 	} while (0)
 
 	/* Pin input surfaces */
 	for (i = 0; i < task->num_input_surfaces; i++) {
 		PIN_MEMORY(task->input_surfaces_ext[i],
 			task->input_surfaces[i].surface_handle);
-		PIN_MEMORY(task->input_surface_rois_ext[i],
-			task->input_surfaces[i].roi_handle);
+		if (task->input_surfaces[i].roi_handle)
+			PIN_MEMORY(task->input_surface_rois_ext[i],
+				task->input_surfaces[i].roi_handle);
 	}
 
 	/* ...and then output surfaces */
 	for (i = 0; i < task->num_output_surfaces; i++) {
 		PIN_MEMORY(task->output_surfaces_ext[i],
 			task->output_surfaces[i].surface_handle);
-		PIN_MEMORY(task->output_surface_rois_ext[i],
-			task->output_surfaces[i].roi_handle);
+		if (task->output_surfaces[i].roi_handle)
+			PIN_MEMORY(task->output_surface_rois_ext[i],
+				task->output_surfaces[i].roi_handle);
 	}
 
 	/* check fence semaphore_type before memory pin */
@@ -325,12 +330,27 @@ static int pva_task_pin_mem(struct pva_submit_task *task)
 	}
 
 	/* Pin rest */
-	PIN_MEMORY(task->input_scalars_ext, task->input_scalars.handle);
-	PIN_MEMORY(task->input_rois_ext, task->input_rois.handle);
-	PIN_MEMORY(task->input_2dpoint_ext, task->input_2dpoint.handle);
-	PIN_MEMORY(task->output_scalars_ext, task->output_scalars.handle);
-	PIN_MEMORY(task->output_rois_ext, task->output_rois.handle);
-	PIN_MEMORY(task->output_2dpoint_ext, task->output_2dpoint.handle);
+	if (task->input_scalars.handle)
+		PIN_MEMORY(task->input_scalars_ext,
+			task->input_scalars.handle);
+
+	if (task->input_rois.handle)
+		PIN_MEMORY(task->input_rois_ext, task->input_rois.handle);
+
+	if (task->input_2dpoint.handle)
+		PIN_MEMORY(task->input_2dpoint_ext,
+			task->input_2dpoint.handle);
+
+	if (task->output_scalars.handle)
+		PIN_MEMORY(task->output_scalars_ext,
+			task->output_scalars.handle);
+
+	if (task->output_rois.handle)
+		PIN_MEMORY(task->output_rois_ext, task->output_rois.handle);
+
+	if (task->output_2dpoint.handle)
+		PIN_MEMORY(task->output_2dpoint_ext,
+			task->output_2dpoint.handle);
 
 #undef PIN_MEMORY
 

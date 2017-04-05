@@ -257,6 +257,8 @@ static int pva_pin(struct pva_private *priv, void *arg)
 {
 	u32 *handles;
 	int err = 0;
+	int i = 0;
+	struct dma_buf *dmabufs[PVA_MAX_PIN_BUFFERS];
 	struct pva_pin_unpin_args *buf_list = (struct pva_pin_unpin_args *)arg;
 	u32 count = buf_list->num_buffers;
 
@@ -273,7 +275,21 @@ static int pva_pin(struct pva_private *priv, void *arg)
 		goto pva_buffer_cpy_err;
 	}
 
-	err = nvhost_buffer_pin(priv->buffers, handles, count);
+	/* get the dmabuf pointer from the fd handle */
+	for (i = 0; i < count; i++) {
+		dmabufs[i] = dma_buf_get(handles[i]);
+		if (IS_ERR_OR_NULL(dmabufs[i])) {
+			err = -EFAULT;
+			goto pva_buffer_get_err;
+		}
+	}
+
+	err = nvhost_buffer_pin(priv->buffers, dmabufs, count);
+
+pva_buffer_get_err:
+	count = i;
+	for (i = 0; i < count; i++)
+		dma_buf_put(dmabufs[i]);
 
 pva_buffer_cpy_err:
 	kfree(handles);
@@ -283,7 +299,9 @@ pva_buffer_cpy_err:
 static int pva_unpin(struct pva_private *priv, void *arg)
 {
 	u32 *handles;
+	int i = 0;
 	int err = 0;
+	struct dma_buf *dmabufs[PVA_MAX_PIN_BUFFERS];
 	struct pva_pin_unpin_args *buf_list = (struct pva_pin_unpin_args *)arg;
 	u32 count = buf_list->num_buffers;
 
@@ -300,7 +318,18 @@ static int pva_unpin(struct pva_private *priv, void *arg)
 		goto pva_buffer_cpy_err;
 	}
 
-	nvhost_buffer_unpin(priv->buffers, handles, count);
+	/* get the dmabuf pointer and clean valid ones */
+	for (i = 0; i < count; i++) {
+		dmabufs[i] = dma_buf_get(handles[i]);
+		if (IS_ERR_OR_NULL(dmabufs[i]))
+			continue;
+	}
+
+	nvhost_buffer_unpin(priv->buffers, dmabufs, count);
+
+	count = i;
+	for (i = 0; i < count; i++)
+		dma_buf_put(dmabufs[i]);
 
 pva_buffer_cpy_err:
 	kfree(handles);

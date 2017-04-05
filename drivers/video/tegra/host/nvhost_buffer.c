@@ -33,74 +33,72 @@
  * @sgt:		Pointer to sg_table struct
  * @addr:		Physical address of the buffer
  * @size:		Size of the buffer
- * @memhandle:		MemHandle of the buffer passed from user space
  * @user_map_count:	Buffer reference count from user space
  * @submit_map_count:	Buffer reference count from task submit
  * @pin_list:		List of pinned buffer
  *
  */
 struct nvhost_vm_buffer {
-	struct dma_buf *buf;
+	struct dma_buf *dmabuf;
 	struct dma_buf_attachment *attach;
 	struct sg_table *sgt;
 
 	dma_addr_t addr;
 	size_t size;
-	u32 memhandle;
 
 	s32 user_map_count;
 	s32 submit_map_count;
 	struct list_head pin_list;
 };
 
-int nvhost_get_iova_addr(struct nvhost_buffers *nvhost_buffers, u32 handle,
-			struct dma_buf **dmabuf, dma_addr_t *addr)
-{
-	struct nvhost_vm_buffer *vm;
-
-	list_for_each_entry(vm, &nvhost_buffers->buffer_list, pin_list) {
-		if (vm->memhandle == handle) {
-			*dmabuf = vm->buf;
-			*addr = vm->addr;
-			return 0;
-		}
-	}
-
-	return -EINVAL;
-}
-
 static struct nvhost_vm_buffer *nvhost_find_map_buffer(
-		struct nvhost_buffers *nvhost_buffers, u32 handle)
+		struct nvhost_buffers *nvhost_buffers, struct dma_buf *dmabuf)
 {
 	struct nvhost_vm_buffer *vm;
 
+	/* Go through the handles and look for matching dmabuf */
 	list_for_each_entry(vm, &nvhost_buffers->buffer_list, pin_list) {
-		if (vm->memhandle == handle)
+		if (vm->dmabuf == dmabuf)
 			return vm;
 	}
 
 	return NULL;
 }
 
-static int nvhost_buffer_map(struct platform_device *pdev, u32 mem_id,
-			struct nvhost_vm_buffer *vm)
+int nvhost_get_iova_addr(struct nvhost_buffers *nvhost_buffers,
+			struct dma_buf *dmabuf, dma_addr_t *addr)
 {
-	struct dma_buf *buf;
+	struct nvhost_vm_buffer *vm;
+	int err = -EINVAL;
+
+	mutex_lock(&nvhost_buffers->buffer_list_mutex);
+
+	vm = nvhost_find_map_buffer(nvhost_buffers, dmabuf);
+	if (vm) {
+		*addr = vm->addr;
+		err = 0;
+	}
+
+	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
+
+	return err;
+}
+
+static int nvhost_buffer_map(struct platform_device *pdev,
+				struct dma_buf *dmabuf,
+				struct nvhost_vm_buffer *vm)
+{
 	struct dma_buf_attachment *attach;
 	struct sg_table *sgt;
 	dma_addr_t addr;
 	int err = 0;
 
-	buf = dma_buf_get(mem_id);
-	if (IS_ERR_OR_NULL(buf)) {
-		err = PTR_ERR(buf);
-		dev_err(&pdev->dev, "dma_buf_get failed: %d\n", err);
-		goto buf_get_err;
-	}
+	/* increase dmabuf refcount */
+	get_dma_buf(dmabuf);
 
-	attach = dma_buf_attach(buf, &pdev->dev);
+	attach = dma_buf_attach(dmabuf, &pdev->dev);
 	if (IS_ERR_OR_NULL(attach)) {
-		err = PTR_ERR(buf);
+		err = PTR_ERR(dmabuf);
 		dev_err(&pdev->dev, "dma_attach failed: %d\n", err);
 		goto buf_attach_err;
 	}
@@ -118,26 +116,25 @@ static int nvhost_buffer_map(struct platform_device *pdev, u32 mem_id,
 
 	vm->sgt = sgt;
 	vm->attach = attach;
-	vm->buf = buf;
-	vm->size = buf->size;
+	vm->dmabuf = dmabuf;
+	vm->size = dmabuf->size;
 	vm->addr = addr;
-	vm->memhandle = mem_id;
 	vm->user_map_count = 1;
 
 	return err;
 
 buf_map_err:
-	dma_buf_detach(buf, attach);
+	dma_buf_detach(dmabuf, attach);
 buf_attach_err:
-	dma_buf_put(buf);
-buf_get_err:
+	dma_buf_put(dmabuf);
 	return err;
 }
 
 static void nvhost_free_buffers(struct kref *kref)
 {
-	struct nvhost_buffers *nvhost_buffers = container_of(kref,
-					struct nvhost_buffers, kref);
+	struct nvhost_buffers *nvhost_buffers =
+		container_of(kref, struct nvhost_buffers, kref);
+
 	kfree(nvhost_buffers);
 }
 
@@ -151,8 +148,8 @@ static void nvhost_buffer_unmap(struct nvhost_vm_buffer *vm)
 
 	dma_buf_unmap_attachment(vm->attach, vm->sgt,
 				DMA_BIDIRECTIONAL);
-	dma_buf_detach(vm->buf, vm->attach);
-	dma_buf_put(vm->buf);
+	dma_buf_detach(vm->dmabuf, vm->attach);
+	dma_buf_put(vm->dmabuf);
 
 	list_del(&vm->pin_list);
 	kfree(vm);
@@ -181,8 +178,8 @@ nvhost_buffer_init_err:
 }
 
 int nvhost_buffer_submit_pin(struct nvhost_buffers *nvhost_buffers,
-				u32 *handles, u32 count,
-				dma_addr_t *paddr, size_t *psize)
+			     struct dma_buf **dmabufs, u32 count,
+			     dma_addr_t *paddr, size_t *psize)
 {
 	struct nvhost_vm_buffer *vm;
 	int i = 0;
@@ -193,7 +190,7 @@ int nvhost_buffer_submit_pin(struct nvhost_buffers *nvhost_buffers,
 
 	for (i = 0; i < count; i++) {
 
-		vm = nvhost_find_map_buffer(nvhost_buffers, handles[i]);
+		vm = nvhost_find_map_buffer(nvhost_buffers, dmabufs[i]);
 		if (vm) {
 			vm->submit_map_count++;
 			paddr[i] = vm->addr;
@@ -210,12 +207,14 @@ submit_err:
 	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
 
 	count = i;
-	nvhost_buffer_submit_unpin(nvhost_buffers, handles, count);
+
+	nvhost_buffer_submit_unpin(nvhost_buffers, dmabufs, count);
 
 	return -EINVAL;
 }
 
-int nvhost_buffer_pin(struct nvhost_buffers *nvhost_buffers, u32 *handles,
+int nvhost_buffer_pin(struct nvhost_buffers *nvhost_buffers,
+			struct dma_buf **dmabufs,
 			u32 count)
 {
 	struct nvhost_vm_buffer *vm;
@@ -226,7 +225,7 @@ int nvhost_buffer_pin(struct nvhost_buffers *nvhost_buffers, u32 *handles,
 
 	for (i = 0; i < count; i++) {
 
-		vm = nvhost_find_map_buffer(nvhost_buffers, handles[i]);
+		vm = nvhost_find_map_buffer(nvhost_buffers, dmabufs[i]);
 		if (vm) {
 			vm->user_map_count++;
 			continue;
@@ -236,7 +235,7 @@ int nvhost_buffer_pin(struct nvhost_buffers *nvhost_buffers, u32 *handles,
 		if (!vm)
 			goto unpin;
 
-		err = nvhost_buffer_map(nvhost_buffers->pdev, handles[i], vm);
+		err = nvhost_buffer_map(nvhost_buffers->pdev, dmabufs[i], vm);
 		if (err)
 			goto free_vm;
 
@@ -253,13 +252,13 @@ unpin:
 
 	/* free pinned buffers */
 	count = i;
-	nvhost_buffer_unpin(nvhost_buffers, handles, count);
+	nvhost_buffer_unpin(nvhost_buffers, dmabufs, count);
 
 	return err;
 }
 
 void nvhost_buffer_submit_unpin(struct nvhost_buffers *nvhost_buffers,
-					u32 *handles, u32 count)
+				struct dma_buf **dmabufs, u32 count)
 {
 	struct nvhost_vm_buffer *vm;
 	int i = 0;
@@ -268,7 +267,7 @@ void nvhost_buffer_submit_unpin(struct nvhost_buffers *nvhost_buffers,
 
 	for (i = 0; i < count; i++) {
 
-		vm = nvhost_find_map_buffer(nvhost_buffers, handles[i]);
+		vm = nvhost_find_map_buffer(nvhost_buffers, dmabufs[i]);
 		if (vm) {
 			if (vm->submit_map_count-- < 0)
 				vm->submit_map_count = 0;
@@ -281,8 +280,8 @@ void nvhost_buffer_submit_unpin(struct nvhost_buffers *nvhost_buffers,
 	kref_put(&nvhost_buffers->kref, nvhost_free_buffers);
 }
 
-void nvhost_buffer_unpin(struct nvhost_buffers *nvhost_buffers, u32 *handles,
-				u32 count)
+void nvhost_buffer_unpin(struct nvhost_buffers *nvhost_buffers,
+			 struct dma_buf **dmabufs, u32 count)
 {
 	int i = 0;
 
@@ -291,7 +290,7 @@ void nvhost_buffer_unpin(struct nvhost_buffers *nvhost_buffers, u32 *handles,
 	for (i = 0; i < count; i++) {
 		struct nvhost_vm_buffer *vm = NULL;
 
-		vm = nvhost_find_map_buffer(nvhost_buffers, handles[i]);
+		vm = nvhost_find_map_buffer(nvhost_buffers, dmabufs[i]);
 		if (vm) {
 			if (vm->user_map_count-- < 0)
 				vm->user_map_count = 0;

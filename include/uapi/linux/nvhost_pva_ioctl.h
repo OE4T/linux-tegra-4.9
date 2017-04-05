@@ -80,7 +80,7 @@ struct pva_pin_unpin_args {
 	__u32 reserved;
 };
 
-#define PVA_MAX_PIN_BUFFERS	256
+#define PVA_MAX_PIN_BUFFERS	64
 
 /**
  * struct pva_ioctl_status_handle - A handle to a status structure

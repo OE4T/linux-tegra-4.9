@@ -46,6 +46,8 @@
 		reg-names = "sata-ahci", "sata-config", "sata-ipfs", "sata-aux";
 		interrupts = <0 197 0x04>;
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_SATA2>;
+
 		clocks = <&bpmp_clks TEGRA194_CLK_SATA>,
 			<&bpmp_clks TEGRA194_CLK_SATA_OOB>,
 			<&bpmp_clks TEGRA194_CLK_PLLP>,

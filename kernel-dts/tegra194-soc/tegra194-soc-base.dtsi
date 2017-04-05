@@ -124,33 +124,13 @@
 
 		status = "disabled";
 
-		mmu-masters = <&host1x				TEGRA_SID_HC
-								TEGRA_SID_HC_VM0
-								TEGRA_SID_HC_VM1
-								TEGRA_SID_HC_VM2
-								TEGRA_SID_HC_VM3
-								TEGRA_SID_HC_VM4
-								TEGRA_SID_HC_VM5
-								TEGRA_SID_HC_VM6
-								TEGRA_SID_HC_VM7>,
-			      <&{/host1x/vi-thi@15f00000}	TEGRA_SID_VI>,
-			      <&{/host1x/vic@15340000}		TEGRA_SID_VIC>,
-			      <&{/host1x/nvdec@15480000}	TEGRA_SID_NVDEC>,
-			      <&{/host1x/nvenc@154c0000}	TEGRA_SID_NVENC>,
-			      <&{/host1x/nvjpg@15380000}	TEGRA_SID_NVJPG>,
-			      <&{/rtcpu@bc00000}		TEGRA_SID_RCE>,
-			      <&{/host1x/nvdla0@15880000}	TEGRA_SID_NVDLA0>,
-			      <&{/host1x/nvdla1@158c0000}	TEGRA_SID_NVDLA1>,
+		#iommu-cells = <1>;
+
+		mmu-masters = <&{/host1x/vi-thi@15f00000}	TEGRA_SID_VI>,
 			      <&{/host1x/nvdisplay@15200000}	TEGRA_SID_NVDISPLAY>,
 			      <&{/host1x/nvdisplay@15210000}	TEGRA_SID_NVDISPLAY>,
 			      <&{/host1x/nvdisplay@15220000}	TEGRA_SID_NVDISPLAY>,
-			      <&{/host1x/nvdisplay@15230000}	TEGRA_SID_NVDISPLAY>,
-			      <&{/host1x/nvenc1@15a80000}	TEGRA_SID_NVENC1>,
-			      <&{/bpmp}				TEGRA_SID_BPMP>,
-			      <&{/host1x/pva0}			TEGRA_SID_PVA0>,
-			      <&{/host1x/pva1}			TEGRA_SID_PVA1>,
-			      <&{/host1x/nvdec1@15140000}	TEGRA_SID_NVDEC1>,
-			      <&{/ahci-sata@3507000}		TEGRA_SID_SATA2>;
+			      <&{/host1x/nvdisplay@15230000}	TEGRA_SID_NVDISPLAY>;
 
 		domains {
 			bpmp_domain {
@@ -290,6 +270,7 @@
 	bpmp {
 		compatible = "nvidia,tegra186-bpmp";
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_BPMP>;
 		reg = <0x0 0x0d000000 0x0 0x00800000>,
 		      <0x0 0x4004e000 0x0 0x00001000>,
 		      <0x0 0x4004f000 0x0 0x00001000>;
@@ -321,6 +302,16 @@
 		nvidia,vmid = <1>;
 
 		#stream-id-cells = <9>;
+		iommus = <&smmu TEGRA_SID_HC>,
+			 <&smmu TEGRA_SID_HC_VM0>,
+			 <&smmu TEGRA_SID_HC_VM1>,
+			 <&smmu TEGRA_SID_HC_VM2>,
+			 <&smmu TEGRA_SID_HC_VM3>,
+			 <&smmu TEGRA_SID_HC_VM4>,
+			 <&smmu TEGRA_SID_HC_VM5>,
+			 <&smmu TEGRA_SID_HC_VM6>,
+			 <&smmu TEGRA_SID_HC_VM7>;
+
 		#address-cells = <2>;
 		#size-cells = <2>;
 
@@ -334,6 +325,7 @@
 			clock-names = "vic";
 
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_VIC>;
 		};
 
 		nvjpg@15380000 {
@@ -344,6 +336,7 @@
 			clock-names = "nvjpg";
 
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_NVJPG>;
 		};
 
 		nvdec@15480000 {
@@ -355,6 +348,7 @@
 			clock-names = "nvdec", "kfuse";
 
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_NVDEC>;
 		};
 
 		nvdec1@15140000 {
@@ -367,6 +361,7 @@
 			clock-names = "nvdec", "kfuse";
 
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_NVDEC1>;
 		};
 
 		nvenc@154c0000 {
@@ -377,6 +372,7 @@
 			clock-names = "nvenc";
 
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_NVENC>;
 		};
 
 		nvenc1@15a80000 {
@@ -388,6 +384,7 @@
 			clock-names = "nvenc";
 
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_NVENC1>;
 		};
 
 		nvdla0: nvdla0@15880000 {
@@ -401,6 +398,7 @@
 			clock-names = "nvdla0", "nvdla0_flcn";
 
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_NVDLA0>;
 		};
 
 		nvdla1: nvdla1@158c0000 {
@@ -414,6 +412,7 @@
 			clock-names = "nvdla1", "nvdla1_flcn";
 
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_NVDLA1>;
 		};
 
 		head0: nvdisplay@15200000 {
@@ -856,6 +855,7 @@
 			clock-names = "axi", "vps0", "vps1";
 
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_PVA0>;
 		};
 
 		pva1: pva1 {
@@ -870,6 +870,7 @@
 			clock-names = "axi", "vps0", "vps1";
 
 			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_PVA1>;
 		};
 
 		se@15810000 {

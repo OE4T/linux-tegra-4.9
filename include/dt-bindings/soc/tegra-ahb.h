@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -11,13 +11,12 @@
  * more details.
  */
 
-#ifndef __SOC_TEGRA_AHB_H__
-#define __SOC_TEGRA_AHB_H__
+#ifndef _DT_BINDINGS_TEGRA_AHB_H_
+#define _DT_BINDINGS_TEGRA_AHB_H_
 
-extern int tegra_ahb_enable_smmu(struct device_node *ahb);
+#define TEGRA_AHB_MASTER_ID_SE	14
+#define TEGRA_AHB_MASTER_ID_SE2	13
 
-int tegra_ahb_get_master_id(struct device *dev);
+#define TEGRA_AHB_MASTER_ID_MAX	31
 
-bool tegra_ahb_is_mem_wrque_busy(u32 mst_id);
-
-#endif /* __SOC_TEGRA_AHB_H__ */
+#endif

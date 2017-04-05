@@ -36,19 +36,12 @@
 
 static void __init tegra_bpmp_clock_init(struct device_node *np)
 {
-	int err;
-
-	pr_info("Registering BPMP clocks...\n");
-	err = PTR_RET(tegra_bpmp_clk_init(np));
-	pr_info("...done\n");
-
-	if (err)
-		pr_err("Failed to initialize BPMP clocks. err: %d\n", err);
+	tegra_bpmp_clk_init(np);
 }
 
 static void __init tegra186_clock_init(struct device_node *np)
 {
-	tegra_bpmp_clock_init(np);
+	tegra_bpmp_clk_init(np);
 
 	/* Nvdisp linsim clock hack */
 	if (tegra_platform_is_linsim() || tegra_platform_is_fpga()) {

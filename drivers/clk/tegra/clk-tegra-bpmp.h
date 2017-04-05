@@ -19,11 +19,6 @@
 
 int tegra_fake_clks_init(struct device_node *np);
 struct clk *tegra_fclk_init(int clk_num, char *name, size_t sz);
-
-struct clk *tegra_clk_register_bpmp(const char *name, int parent,
-		const char **parent_names, int *parent_ids, int num_parents,
-		unsigned long flags, int clk_num, int bpmp_flags);
-
-struct clk **tegra_bpmp_clk_init(struct device_node *np);
+int tegra_bpmp_clk_init(struct device_node *np);
 
 #endif

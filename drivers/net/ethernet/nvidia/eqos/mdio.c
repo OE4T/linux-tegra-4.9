@@ -517,6 +517,31 @@ int eqos_init_phy(struct net_device *dev)
 	return 0;
 }
 
+int eqos_fixed_phy_register(struct net_device *ndev)
+{
+	struct eqos_prv_data *pdata = netdev_priv(ndev);
+	struct device_node *np = pdata->pdev->dev.of_node;
+	struct device_node *phy_node;
+	struct phy_device *phydev;
+
+	if (!np)
+		return -ENODEV;
+
+	if ((of_phy_register_fixed_link(np) < 0))
+		return -ENODEV;
+
+	phy_node = of_node_get(np);
+
+	phydev = of_phy_connect(ndev, phy_node, &eqos_adjust_link,
+				0, pdata->interface);
+	if (!phydev)
+		return -ENODEV;
+
+	pdata->use_fixed_phy = true;
+	pdata->phydev = phydev;
+
+	return 0;
+}
 /*!
 * \brief API to register mdio.
 *

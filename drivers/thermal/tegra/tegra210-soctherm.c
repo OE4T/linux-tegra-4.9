@@ -136,6 +136,13 @@ struct tsensor_group_offsets tegra210_tsensor_group_offsets[] = {
 	{.ttg = &tegra210_tsensor_group_pll,},
 };
 
+struct tsensor_group_thermtrips tegra210_tsensor_thermtrips[] = {
+	{.id = TEGRA124_SOCTHERM_SENSOR_NUM},
+	{.id = TEGRA124_SOCTHERM_SENSOR_NUM},
+	{.id = TEGRA124_SOCTHERM_SENSOR_NUM},
+	{.id = TEGRA124_SOCTHERM_SENSOR_NUM},
+};
+
 static const struct tegra_tsensor tegra210_tsensors[] = {
 	{
 		.name = "cpu0",
@@ -245,4 +252,5 @@ const struct tegra_soctherm_soc tegra210_soctherm = {
 	.thresh_grain = TEGRA210_THRESH_GRAIN,
 	.bptt = TEGRA210_BPTT,
 	.use_ccroc = false,
+	.thermtrips = tegra210_tsensor_thermtrips,
 };

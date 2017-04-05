@@ -117,6 +117,11 @@ struct tsensor_group_offsets {
 	const struct tegra_tsensor_group *ttg;
 };
 
+struct tsensor_group_thermtrips {
+	u8 id;
+	u32 temp;
+};
+
 struct tegra_soctherm_soc {
 	const struct tegra_tsensor *tsensors;
 	const unsigned int num_tsensors;
@@ -127,6 +132,7 @@ struct tegra_soctherm_soc {
 	const int thresh_grain;
 	const unsigned int bptt;
 	const bool use_ccroc;
+	struct tsensor_group_thermtrips *thermtrips;
 };
 
 #ifdef CONFIG_ARCH_TEGRA_124_SOC

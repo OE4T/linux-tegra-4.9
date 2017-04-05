@@ -605,6 +605,21 @@ find_throttle_cfg_by_name(struct tegra_soctherm *ts, const char *name)
 	return NULL;
 }
 
+static int tsensor_group_thermtrip_get(struct tegra_soctherm *ts, int id)
+{
+	int i, temp = min_low_temp;
+	struct tsensor_group_thermtrips *tt = ts->soc->thermtrips;
+
+	if (tt) {
+		for (i = 0; i < ts->soc->num_ttgs; i++) {
+			if (tt[i].id == id)
+				return tt[i].temp;
+		}
+	}
+
+	return temp;
+}
+
 static int tegra_thermctl_set_trip_temp(void *data, int trip, int temp)
 {
 	struct tegra_thermctl_zone *zone = data;
@@ -623,7 +638,11 @@ static int tegra_thermctl_set_trip_temp(void *data, int trip, int temp)
 		return ret;
 
 	if (type == THERMAL_TRIP_CRITICAL) {
-		return thermtrip_program(dev, sg, temp);
+		/* dont allow if soctherm has thermtrips property in DT */
+		if (min_low_temp == tsensor_group_thermtrip_get(ts, sg->id))
+			return thermtrip_program(dev, sg, temp);
+		else
+			return 0;
 	} else if (type == THERMAL_TRIP_HOT) {
 		int i;
 
@@ -789,28 +808,22 @@ static int tegra_soctherm_set_hwtrips(struct device *dev,
 {
 	struct tegra_soctherm *ts = dev_get_drvdata(dev);
 	struct soctherm_throt_cfg *stc;
-	int i, trip, temperature;
-	int ret;
+	int i, trip, temperature, ret;
 
-	ret = tz->ops->get_crit_temp(tz, &temperature);
-	if (ret) {
-		dev_info(dev, "thermtrip: %s: missing critical temperature\n",
-			 sg->name);
-		goto set_throttle;
-	}
+	temperature = tsensor_group_thermtrip_get(ts, sg->id);
+	if (min_low_temp == temperature)
+		if (tz->ops->get_crit_temp(tz, &temperature))
+			temperature = max_high_temp;
+
+	dev_info(dev, "thermtrip: will shut down when %s reaches %d mC\n",
+		 sg->name, temperature);
 
 	ret = thermtrip_program(dev, sg, temperature);
 	if (ret) {
-		dev_err(dev, "thermtrip: %s: error during enable\n",
-			sg->name);
+		dev_err(dev, "thermtrip: %s: error during enable\n", sg->name);
 		return ret;
 	}
 
-	dev_info(dev,
-		 "thermtrip: will shut down when %s reaches %d mC\n",
-		 sg->name, temperature);
-
-set_throttle:
 	ret = get_hot_temp(tz, &trip, &temperature);
 	if (ret) {
 		dev_info(dev, "throttrip: %s: missing hot temperature\n",
@@ -1895,6 +1908,44 @@ static struct thermal_cooling_device_ops throt_cooling_ops = {
 	.set_cur_state = throt_set_cdev_state,
 };
 
+static int soctherm_thermtrips_parse(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+	struct tegra_soctherm *ts = dev_get_drvdata(dev);
+	struct tsensor_group_thermtrips *tt = ts->soc->thermtrips;
+	const int max_num_prop = ts->soc->num_ttgs * 2;
+	int i = 0, j = 0, r, n;
+	u32 off[max_num_prop];
+
+	if (!tt)
+		return 0;
+
+	n = of_property_count_u32_elems(dev->of_node, "nvidia,thermtrips");
+	if (n <= 0) {
+		dev_err(dev, "invalid dt prop: thermtrips:%d\n", n);
+		return n;
+	}
+
+	n = min(max_num_prop, n);
+	r = of_property_read_u32_array(dev->of_node, "nvidia,thermtrips",
+					off, n);
+	if (r) {
+		dev_err(dev, "invalid num ele: thermtrips:%d\n", r);
+		return r;
+	}
+
+	for (j = 0; j < n; j = j + 2) {
+		if (off[j] >= TEGRA124_SOCTHERM_SENSOR_NUM)
+			continue;
+
+		tt[i].id = off[j];
+		tt[i].temp = off[j+1];
+		i++;
+	}
+
+	return 0;
+}
+
 static int soctherm_hw_pllx_offsets_parse(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -2598,6 +2649,7 @@ static int tegra_soctherm_probe(struct platform_device *pdev)
 
 	soctherm_init_hw_throt_cdev(pdev);
 
+	soctherm_thermtrips_parse(pdev);
 	soctherm_hw_pllx_offsets_parse(pdev);
 	soctherm_init(pdev);
 	soctherm_debug_init(pdev);

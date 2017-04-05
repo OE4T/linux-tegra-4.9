@@ -42,6 +42,12 @@ Required properties :
     soctherm hardware after offsetting has been applied.
   Offsets are disabled if one or more elements of a triplet are missing or
   incorrect.
+- nvidia, thermtrips : When present, this property specifies the temperature at
+  which the soctherm hardware will assert the thermal trigger signal to the
+  Power Management IC, which can be configured to reset or shutdown the device.
+  It is an array of pairs where each pair represents a tsensor id followed by a
+  temperature in milli Celcius. In the absence of this property the critical
+  trip point will be used for thermtrip temperature.
 - throttle-cfgs: A sub-node which is a container of configuration for each
     hardware throttle events. These events can be set as cooling devices.
   * throttle events: Sub-nodes must be named as "light", "heavy", "oc1" - "oc5".
@@ -90,9 +96,10 @@ Required properties :
         is 0.
 
 Note:
-- the "critical" type trip points will be set to SOC_THERM hardware as the
-shut down temperature. Once the temperature of this thermal zone is higher
-than it, the system will be shutdown or reset by hardware.
+- the "critical" type trip points will be used to set the temperature at which
+the SOC_THERM hardware will assert a thermal trigger if the thermtrips property
+is missing. When the thermtrips property is present the breach of a critical
+trip point is reported back to the thermal framework.
 - the "hot" type trip points will be set to SOC_THERM hardware as the throttle
 temperature. Once the the temperature of this thermal zone is higher
 than it, it will trigger the HW throttle event.

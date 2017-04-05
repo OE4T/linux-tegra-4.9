@@ -2139,6 +2139,7 @@ struct clk *tegra_clk_register_pllm(const char *name, const char *parent_name,
 	if (IS_ERR(pll))
 		return ERR_CAST(pll);
 
+	pll_params->flags |= TEGRA_PLL_BYPASS;
 	clk = _tegra_clk_register_pll(pll, name, parent_name, flags,
 				      &tegra_clk_pll_ops);
 	if (IS_ERR(clk))
@@ -2694,7 +2695,6 @@ struct clk *tegra_clk_register_pllmb(const char *name, const char *parent_name,
 		pll_params->vco_min = pll_params->adjust_vco(pll_params,
 							     parent_rate);
 
-	pll_params->flags |= TEGRA_PLL_BYPASS;
 	pll_params->flags |= TEGRA_PLLMB;
 	pll = _tegra_init_pll(clk_base, pmc, pll_params, lock);
 	if (IS_ERR(pll))

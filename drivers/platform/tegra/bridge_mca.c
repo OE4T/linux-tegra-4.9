@@ -517,7 +517,8 @@ static int bridge_mca_dbgfs_init(void)
 }
 #else
 static int bridge_mca_dbgfs_init(void) { return 0; }
-static int bridge_bridge_dbgfs_init(void) { return 0; }
+static int bridge_timeout_dbgfs_init(struct bridge_mca_bank *bank,
+		struct device *dev) { return 0; }
 #endif
 
 #define AXIAPB_TIMEOUT_TIMER	0x2c8

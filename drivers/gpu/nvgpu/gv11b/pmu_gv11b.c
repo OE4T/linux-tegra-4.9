@@ -31,7 +31,7 @@
 
 static bool gv11b_is_pmu_supported(struct gk20a *g)
 {
-	return false;
+	return true;
 }
 
 static int gv11b_pmu_bootstrap(struct pmu_gk20a *pmu)

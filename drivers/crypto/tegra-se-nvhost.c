@@ -48,6 +48,9 @@
 #include <crypto/internal/akcipher.h>
 #include <crypto/sha.h>
 #include <linux/tegra_pm_domains.h>
+#include <crypto/internal/kpp.h>
+#include <crypto/kpp.h>
+#include <crypto/dh.h>
 #include <linux/version.h>
 #include <linux/pm_qos.h>
 #include <linux/jiffies.h>
@@ -65,6 +68,7 @@
 #define NV_SE3_CLASS_ID		0x3C
 #define NV_SE4_CLASS_ID		0x3D
 #define NUM_SE_ALGO	5
+#define MIN_DH_SZ_BITS	1536
 
 #define __nvhost_opcode_nonincr(x, y)	nvhost_opcode_nonincr((x) / 4, (y))
 #define __nvhost_opcode_incr(x, y)	nvhost_opcode_incr((x) / 4, (y))
@@ -140,6 +144,7 @@ struct tegra_se_dev {
 	u32 dst_ll_size;        /* Size of destination linked list buffer */
 	struct tegra_se_ll *src_ll;
 	struct tegra_se_ll *dst_ll;
+	u32 *dh_buf1, *dh_buf2;
 	struct ablkcipher_request *reqs[SE_MAX_TASKS_PER_SUBMIT];
 	int req_cnt;
 	u32 syncpt_id;
@@ -237,6 +242,17 @@ struct tegra_se_aes_cmac_context {
 	dma_addr_t dma_addr;	/* DMA address of local buffer */
 	u32 buflen;	/* local buffer length */
 	u8	*buffer;	/* local buffer pointer */
+};
+
+struct tegra_se_dh_context {
+	struct tegra_se_dev *se_dev;	/* Security Engine device */
+	struct tegra_se_rsa_slot *slot;	/* Security Engine rsa key slot */
+	void *key;
+	void *p;
+	void *g;
+	unsigned int key_size;
+	unsigned int p_size;
+	unsigned int g_size;
 };
 
 /* Security Engine key slot */
@@ -1298,17 +1314,20 @@ static int tegra_map_sg(struct device *dev, struct scatterlist *sg,
 			struct tegra_se_ll *se_ll, u32 total)
 {
 	u32 total_loop = 0;
+	int ret = 0;
 
 	total_loop = total;
 	while (sg) {
-		dma_map_sg(dev, sg, 1, dir);
+		ret = dma_map_sg(dev, sg, nents, dir);
+		if (!ret)
+			return ret;
 		se_ll->addr = sg_dma_address(sg);
 		se_ll->data_len = min(sg->length, total_loop);
 		total_loop -= min(sg->length, total_loop);
 		sg = sg_next(sg);
 		se_ll++;
 	}
-	return nents;
+	return ret;
 }
 
 static int tegra_se_setup_ablk_req(struct tegra_se_dev *se_dev)
@@ -2735,6 +2754,383 @@ static void tegra_se_rsa_exit(struct crypto_akcipher *tfm)
 	ctx->slot = NULL;
 }
 
+static inline struct tegra_se_dh_context *tegra_se_dh_get_ctx(
+						struct crypto_kpp *tfm)
+{
+	return kpp_tfm_ctx(tfm);
+}
+
+static int tegra_se_dh_check_params_length(unsigned int p_len)
+{
+	return (p_len < MIN_DH_SZ_BITS) ? -EINVAL : 0;
+}
+
+static int tegra_se_dh_set_params(struct tegra_se_dh_context *ctx,
+							struct dh *params)
+{
+	if (unlikely(!params->p || !params->g))
+		return -EINVAL;
+
+	if (tegra_se_dh_check_params_length(params->p_size << 3))
+		return -EINVAL;
+
+	ctx->key = (void *)params->key;
+	ctx->key_size = params->key_size;
+	if (!ctx->key)
+		return -EINVAL;
+
+	ctx->p = (void *)params->p;
+	ctx->p_size = params->p_size;
+	if (!ctx->p)
+		return -EINVAL;
+
+	ctx->g = (void *)params->g;
+	ctx->g_size = params->g_size;
+	if (!ctx->g)
+		return -EINVAL;
+
+	if (ctx->g_size > ctx->p_size)
+		return -EINVAL;
+
+	return 0;
+}
+
+static int tegra_se_dh_setkey(struct crypto_kpp *tfm)
+{
+	struct tegra_se_dh_context *ctx = tegra_se_dh_get_ctx(tfm);
+	struct tegra_se_dev *se_dev;
+	u32 module_key_length = 0;
+	u32 exponent_key_length = 0;
+	u32 pkt, val;
+	u32 key_size_words;
+	u32 key_word_size = 4;
+	u32 *pkeydata, *cmdbuf_cpuvaddr = NULL;
+	struct tegra_se_rsa_slot *pslot;
+	u32 cmdbuf_num_words = 0;
+	dma_addr_t cmdbuf_iova = 0;
+	int i = 0, err, j;
+
+	if (!ctx)
+		return -EINVAL;
+
+	se_dev = ctx->se_dev;
+	pkeydata = (u32 *)ctx->key;
+
+	/* Allocate rsa key slot */
+	if (!ctx->slot) {
+		pslot = tegra_se_alloc_rsa_key_slot();
+		if (!pslot) {
+			dev_err(se_dev->dev, "no free key slot\n");
+			return -ENOMEM;
+		}
+		ctx->slot = pslot;
+	}
+
+	module_key_length = ctx->p_size;
+	exponent_key_length = ctx->key_size;
+
+	if (!(((module_key_length / 64) >= 1) &&
+				((module_key_length / 64) <= 4)))
+		return -EINVAL;
+
+	cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent, SZ_64K,
+				&cmdbuf_iova, GFP_KERNEL, __DMA_ATTR(attrs));
+	if (!cmdbuf_cpuvaddr)
+		return -ENOMEM;
+
+	cmdbuf_cpuvaddr[i++] =
+		__nvhost_opcode_nonincr(se_dev->opcode_addr +
+			SE_RSA_OPERATION_OFFSET, 1);
+	cmdbuf_cpuvaddr[i++] = SE_OPERATION_WRSTALL(WRSTALL_TRUE);
+
+	if (exponent_key_length) {
+		key_size_words = (exponent_key_length / key_word_size);
+		/* Write exponent */
+		for (j = (key_size_words - 1); j >= 0; j--) {
+			pkt = RSA_KEY_NUM(ctx->slot->slot_num) |
+				RSA_KEY_TYPE(RSA_KEY_TYPE_EXP) |
+				RSA_KEY_PKT_WORD_ADDR(j);
+			val = SE_RSA_KEYTABLE_PKT(pkt);
+			cmdbuf_cpuvaddr[i++] =
+			__nvhost_opcode_nonincr(se_dev->opcode_addr +
+				SE_RSA_KEYTABLE_ADDR_OFFSET, 1);
+			cmdbuf_cpuvaddr[i++] = val;
+			cmdbuf_cpuvaddr[i++] =
+			__nvhost_opcode_nonincr(se_dev->opcode_addr +
+				SE_RSA_KEYTABLE_DATA_OFFSET, 1);
+			cmdbuf_cpuvaddr[i++] = be32_to_cpu(*pkeydata++);
+		}
+	}
+
+	if (module_key_length) {
+		pkeydata = (u32 *)ctx->p;
+		key_size_words = (module_key_length / key_word_size);
+		/* Write modulus */
+		for (j = (key_size_words - 1); j >= 0; j--) {
+			pkt = RSA_KEY_NUM(ctx->slot->slot_num) |
+				RSA_KEY_TYPE(RSA_KEY_TYPE_MOD) |
+				RSA_KEY_PKT_WORD_ADDR(j);
+			val = SE_RSA_KEYTABLE_PKT(pkt);
+			cmdbuf_cpuvaddr[i++] =
+			__nvhost_opcode_nonincr(se_dev->opcode_addr +
+				SE_RSA_KEYTABLE_ADDR_OFFSET, 1);
+			cmdbuf_cpuvaddr[i++] = val;
+			cmdbuf_cpuvaddr[i++] =
+			__nvhost_opcode_nonincr(se_dev->opcode_addr +
+				SE_RSA_KEYTABLE_DATA_OFFSET, 1);
+			cmdbuf_cpuvaddr[i++] = be32_to_cpu(*pkeydata++);
+		}
+	}
+
+	cmdbuf_cpuvaddr[i++] =
+		__nvhost_opcode_nonincr(se_dev->opcode_addr +
+			SE_RSA_OPERATION_OFFSET, 1);
+	cmdbuf_cpuvaddr[i++] = SE_OPERATION_WRSTALL(WRSTALL_TRUE)
+		| SE_OPERATION_LASTBUF(LASTBUF_TRUE)
+			| SE_OPERATION_OP(OP_DUMMY);
+	cmdbuf_num_words = i;
+
+	err = tegra_se_channel_submit_gather(se_dev,
+			cmdbuf_cpuvaddr, cmdbuf_iova,
+			0, cmdbuf_num_words, false);
+	if (err)
+		dev_err(se_dev->dev, "%s: channel_submit failed\n", __func__);
+
+	dma_free_attrs(se_dev->dev->parent,
+		SZ_64K, cmdbuf_cpuvaddr, cmdbuf_iova, __DMA_ATTR(attrs));
+
+	return err;
+}
+
+static void tegra_se_fix_endianness(struct tegra_se_dev *se_dev,
+				    struct scatterlist *sg, u32 num_sgs,
+				    int nbytes, bool be)
+{
+	int j, k;
+
+	sg_copy_to_buffer(sg, num_sgs, se_dev->dh_buf1, nbytes);
+
+	for (j = (nbytes / 4 - 1), k = 0; j >= 0; j--, k++) {
+		if (be)
+			se_dev->dh_buf2[k] = be32_to_cpu(se_dev->dh_buf1[j]);
+		else
+			se_dev->dh_buf2[k] = cpu_to_be32(se_dev->dh_buf1[j]);
+	}
+
+	sg_copy_from_buffer(sg, num_sgs, se_dev->dh_buf2, nbytes);
+}
+
+static int tegra_se_dh_compute_value(struct kpp_request *req)
+{
+	struct crypto_kpp *tfm = NULL;
+	struct tegra_se_dh_context *dh_ctx = NULL;
+	struct tegra_se_dev *se_dev;
+	struct scatterlist *src_sg;
+	struct tegra_se_ll *src_ll, *dst_ll;
+	u32 num_src_sgs, num_dst_sgs;
+	u8 *base_buff = NULL;
+	struct scatterlist src;
+	u32 *cmdbuf_cpuvaddr = NULL;
+	dma_addr_t cmdbuf_iova = 0;
+	u32 cmdbuf_num_words = 0, i = 0;
+	int err, total, j, zpad_sz;
+	u32 val;
+
+	if (!req)
+		return -EINVAL;
+
+	tfm = crypto_kpp_reqtfm(req);
+
+	if (!tfm)
+		return -EINVAL;
+	dh_ctx = tegra_se_dh_get_ctx(tfm);
+
+	if (!dh_ctx || !dh_ctx->slot)
+		return -EINVAL;
+
+	se_dev = dh_ctx->se_dev;
+
+	if (req->src) {
+		src_sg = req->src;
+		total = req->src_len;
+	} else {
+		base_buff = (u8 *)devm_kzalloc(se_dev->dev,
+					       dh_ctx->p_size, GFP_KERNEL);
+		if (!base_buff)
+			return -ENOMEM;
+
+		if (dh_ctx->g_size < dh_ctx->p_size) {
+			zpad_sz = dh_ctx->p_size - dh_ctx->g_size;
+
+			for (j = 0; j < zpad_sz; j++)
+				base_buff[j] = 0x0;
+			for (j = zpad_sz; j < dh_ctx->p_size; j++)
+				base_buff[j] = *(u8 *)(dh_ctx->g++);
+
+			dh_ctx->g_size = dh_ctx->p_size;
+		} else {
+			memcpy(base_buff, (u8 *)(dh_ctx->g), dh_ctx->g_size);
+		}
+
+		sg_init_one(&src, base_buff, dh_ctx->g_size);
+
+		src_sg = &src;
+		total = dh_ctx->g_size;
+	}
+
+	num_src_sgs = tegra_se_count_sgs(src_sg, total);
+	num_dst_sgs = tegra_se_count_sgs(req->dst, req->dst_len);
+	if ((num_src_sgs > SE_MAX_SRC_SG_COUNT) ||
+			(num_dst_sgs > SE_MAX_DST_SG_COUNT)) {
+		dev_err(se_dev->dev, "num of SG buffers are more\n");
+		err = -EINVAL;
+		goto free;
+	}
+
+	tegra_se_fix_endianness(se_dev, src_sg, num_src_sgs, total, true);
+
+	*se_dev->src_ll_buf = num_src_sgs - 1;
+	*se_dev->dst_ll_buf = num_dst_sgs - 1;
+	src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
+	dst_ll = (struct tegra_se_ll *)(se_dev->dst_ll_buf + 1);
+
+	err = tegra_map_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE,
+			   se_dev->src_ll, total);
+	if (!err) {
+		dev_err(se_dev->dev, "%s: tegra_map_sg failed\n", __func__);
+		err = -EINVAL;
+		goto free;
+	}
+	err = tegra_map_sg(se_dev->dev, req->dst, 1, DMA_FROM_DEVICE,
+			   se_dev->dst_ll, req->dst_len);
+	if (!err) {
+		dev_err(se_dev->dev, "%s: tegra_map_sg failed\n", __func__);
+		err = -EINVAL;
+		goto unmap_src;
+	}
+
+	cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent, SZ_4K,
+				 &cmdbuf_iova, GFP_KERNEL, __DMA_ATTR(attrs));
+	if (!cmdbuf_cpuvaddr) {
+		dev_err(se_dev->dev, "%s: dma_alloc_attrs failed\n", __func__);
+		err = -ENOMEM;
+		goto unmap_dst;
+	}
+
+	cmdbuf_cpuvaddr[i++] =
+		__nvhost_opcode_nonincr(se_dev->opcode_addr +
+			SE_RSA_OPERATION_OFFSET, 1);
+	cmdbuf_cpuvaddr[i++] = SE_OPERATION_WRSTALL(WRSTALL_TRUE);
+
+	val = SE_CONFIG_ENC_ALG(ALG_RSA) |
+		SE_CONFIG_DEC_ALG(ALG_NOP) |
+		SE_CONFIG_DST(DST_MEMORY);
+	cmdbuf_cpuvaddr[i++] = __nvhost_opcode_incr(se_dev->opcode_addr, 8);
+	cmdbuf_cpuvaddr[i++] = val;
+	cmdbuf_cpuvaddr[i++] = RSA_KEY_SLOT(dh_ctx->slot->slot_num);
+	cmdbuf_cpuvaddr[i++] = (dh_ctx->p_size / 64) - 1;
+	cmdbuf_cpuvaddr[i++] = (dh_ctx->key_size / 4);
+	cmdbuf_cpuvaddr[i++] = (u32)(se_dev->src_ll->addr);
+	cmdbuf_cpuvaddr[i++] = (u32)(SE_ADDR_HI_MSB(MSB(se_dev->src_ll->addr))
+				| SE_ADDR_HI_SZ(se_dev->src_ll->data_len));
+	cmdbuf_cpuvaddr[i++] = (u32)(se_dev->dst_ll->addr);
+	cmdbuf_cpuvaddr[i++] = (u32)(SE_ADDR_HI_MSB(MSB(se_dev->dst_ll->addr))
+				| SE_ADDR_HI_SZ(se_dev->dst_ll->data_len));
+
+	cmdbuf_cpuvaddr[i++] =
+		__nvhost_opcode_nonincr(se_dev->opcode_addr +
+			SE_RSA_OPERATION_OFFSET, 1);
+	cmdbuf_cpuvaddr[i++] = SE_OPERATION_WRSTALL(WRSTALL_TRUE)
+		| SE_OPERATION_LASTBUF(LASTBUF_TRUE)
+			| SE_OPERATION_OP(OP_START);
+
+	cmdbuf_num_words = i;
+
+	err = tegra_se_channel_submit_gather(se_dev,
+			cmdbuf_cpuvaddr, cmdbuf_iova,
+			0, cmdbuf_num_words, false);
+	if (err) {
+		dev_err(se_dev->dev, "%s: channel_submit failed\n", __func__);
+		goto exit;
+	}
+
+	tegra_se_fix_endianness(se_dev, req->dst, num_dst_sgs,
+				req->dst_len, false);
+exit:
+	dma_free_attrs(se_dev->dev->parent,
+		SZ_4K, cmdbuf_cpuvaddr, cmdbuf_iova, __DMA_ATTR(attrs));
+unmap_dst:
+	tegra_unmap_sg(se_dev->dev, req->dst, DMA_FROM_DEVICE, req->dst_len);
+unmap_src:
+	tegra_unmap_sg(se_dev->dev, src_sg, DMA_TO_DEVICE, total);
+free:
+	if (!req->src)
+		devm_kfree(se_dev->dev, base_buff);
+
+	return err;
+}
+
+static int tegra_se_dh_set_secret(struct crypto_kpp *tfm, void *buf,
+							unsigned int len)
+{
+	struct tegra_se_dh_context *ctx = tegra_se_dh_get_ctx(tfm);
+	struct dh params;
+
+	ctx->se_dev = se_devices[SE_RSA];
+
+	if (crypto_dh_decode_key(buf, len, &params) < 0) {
+		dev_err(ctx->se_dev->dev, "DH buffer decode failed\n");
+		return -EINVAL;
+	}
+
+	if (tegra_se_dh_set_params(ctx, &params) < 0) {
+		dev_err(ctx->se_dev->dev, "Failed to set DH params\n");
+		return -EINVAL;
+	}
+
+	if (tegra_se_dh_setkey(tfm) < 0) {
+		dev_err(ctx->se_dev->dev, "Failed to set DH Key\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int tegra_se_dh_max_size(struct crypto_kpp *tfm)
+{
+	struct tegra_se_dh_context *ctx = tegra_se_dh_get_ctx(tfm);
+
+	return ctx->p_size;
+}
+
+static void tegra_se_dh_exit_tfm(struct crypto_kpp *tfm)
+{
+	struct tegra_se_dh_context *ctx = tegra_se_dh_get_ctx(tfm);
+
+	tegra_se_rsa_free_key_slot(ctx->slot);
+
+	ctx->key = NULL;
+	ctx->p = NULL;
+	ctx->g = NULL;
+}
+
+static struct kpp_alg dh_algs[] = {
+	{
+	.set_secret = tegra_se_dh_set_secret,
+	.generate_public_key = tegra_se_dh_compute_value,
+	.compute_shared_secret = tegra_se_dh_compute_value,
+	.max_size = tegra_se_dh_max_size,
+	.exit = tegra_se_dh_exit_tfm,
+	.base = {
+		.cra_name = "dh",
+		.cra_driver_name = "tegra-se-dh",
+		.cra_priority = 300,
+		.cra_module = THIS_MODULE,
+		.cra_ctxsize = sizeof(struct tegra_se_dh_context),
+		}
+	}
+};
+
 static struct rng_alg rng_algs[] = { {
 		.generate	= tegra_se_rng_drbg_get_random,
 		.seed		= tegra_se_rng_drbg_reset,
@@ -3325,7 +3721,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 
 	if (is_algo_supported(node, "sha")) {
-		/* Register all SHA algorithms in hash_algs with SE3 */
+		/* Register all SHA algorithms in hash_algs with SE4 */
 		for (i = 1; i < 6; i++) {
 			err = crypto_register_ahash(&hash_algs[i]);
 			if (err) {
@@ -3337,6 +3733,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 
 	node = of_node_get(se_dev->dev->of_node);
+
 	err = of_property_read_u32(node, "pka0-rsa-priority", &val);
 	if (!err)
 		rsa_alg.base.cra_priority = val;
@@ -3346,12 +3743,26 @@ static int tegra_se_probe(struct platform_device *pdev)
 		strcpy(rsa_alg.base.cra_name, rsa_name);
 
 	if (is_algo_supported(node, "rsa")) {
-		/* Register RSA algorithm in rsa_alg with SE4 */
+		/* Register RSA algorithm in rsa_alg with SE3 */
 		err = crypto_register_akcipher(&rsa_alg);
 		if (err) {
 			dev_err(se_dev->dev, "crypto_register_akcipher fail");
 			goto reg_fail;
 		}
+		err = crypto_register_kpp(&dh_algs[0]);
+		if (err) {
+			dev_err(se_dev->dev, "crypto_register_kpp fail");
+			goto reg_fail;
+		}
+
+		se_dev->dh_buf1 = (u32 *)devm_kzalloc(se_dev->dev,
+						TEGRA_SE_RSA2048_INPUT_SIZE,
+						GFP_KERNEL);
+		se_dev->dh_buf2 = (u32 *)devm_kzalloc(se_dev->dev,
+						TEGRA_SE_RSA2048_INPUT_SIZE,
+						GFP_KERNEL);
+		if (!se_dev->dh_buf1 || !se_dev->dh_buf2)
+			goto reg_fail;
 	}
 
 	if (is_algo_supported(node, "drbg")) {
@@ -3466,14 +3877,15 @@ static int tegra_se_remove(struct platform_device *pdev)
 		crypto_unregister_ahash(&hash_algs[0]);
 
 	if (is_algo_supported(node, "sha")) {
-		/* Unregister all 5 SHA algorithms in hash_algs with SE3 */
+		/* Unregister all 5 SHA algorithms in hash_algs with SE4 */
 		for (i = 1; i < 6; i++)
 			crypto_unregister_ahash(&hash_algs[i]);
 	}
 
 	if (is_algo_supported(node, "rsa")) {
-		/* Unregister RSA algorithm in rsa_alg with SE4 */
+		/* Unregister RSA and DH algorithms in rsa_alg with SE3 */
 		crypto_unregister_akcipher(&rsa_alg);
+		crypto_unregister_kpp(&dh_algs[0]);
 	}
 
 	tegra_se_free_ll_buf(se_dev);

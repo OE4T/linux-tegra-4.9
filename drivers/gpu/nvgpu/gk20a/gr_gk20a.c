@@ -1943,7 +1943,7 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 			}
 
 			pm_ctx->mem.gpu_va = gk20a_gmmu_map(c->vm,
-							&pm_ctx->mem.sgt,
+							&pm_ctx->mem.priv.sgt,
 							pm_ctx->mem.size,
 							NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 							gk20a_mem_flag_none, true,
@@ -2205,7 +2205,7 @@ static int gr_gk20a_init_ctxsw_ucode_vaspace(struct gk20a *g)
 
 	/* Map ucode surface to GMMU */
 	ucode_info->surface_desc.gpu_va = gk20a_gmmu_map(vm,
-					&ucode_info->surface_desc.sgt,
+					&ucode_info->surface_desc.priv.sgt,
 					ucode_info->surface_desc.size,
 					0, /* flags */
 					gk20a_mem_flag_read_only,
@@ -2823,13 +2823,14 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	gk20a_dbg_fn("");
 
 	/* Circular Buffer */
-	if (!c->vpr || (gr->global_ctx_buffer[CIRCULAR_VPR].mem.sgt == NULL)) {
+	if (!c->vpr ||
+	    (gr->global_ctx_buffer[CIRCULAR_VPR].mem.priv.sgt == NULL)) {
 		mem = &gr->global_ctx_buffer[CIRCULAR].mem;
 	} else {
 		mem = &gr->global_ctx_buffer[CIRCULAR_VPR].mem;
 	}
 
-	gpu_va = gk20a_gmmu_map(ch_vm, &mem->sgt, mem->size,
+	gpu_va = gk20a_gmmu_map(ch_vm, &mem->priv.sgt, mem->size,
 				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				gk20a_mem_flag_none, true, mem->aperture);
 	if (!gpu_va)
@@ -2838,13 +2839,14 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	g_bfr_size[CIRCULAR_VA] = mem->size;
 
 	/* Attribute Buffer */
-	if (!c->vpr || (gr->global_ctx_buffer[ATTRIBUTE_VPR].mem.sgt == NULL)) {
+	if (!c->vpr ||
+	    (gr->global_ctx_buffer[ATTRIBUTE_VPR].mem.priv.sgt == NULL)) {
 		mem = &gr->global_ctx_buffer[ATTRIBUTE].mem;
 	} else {
 		mem = &gr->global_ctx_buffer[ATTRIBUTE_VPR].mem;
 	}
 
-	gpu_va = gk20a_gmmu_map(ch_vm, &mem->sgt, mem->size,
+	gpu_va = gk20a_gmmu_map(ch_vm, &mem->priv.sgt, mem->size,
 				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				gk20a_mem_flag_none, false, mem->aperture);
 	if (!gpu_va)
@@ -2853,13 +2855,14 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	g_bfr_size[ATTRIBUTE_VA] = mem->size;
 
 	/* Page Pool */
-	if (!c->vpr || (gr->global_ctx_buffer[PAGEPOOL_VPR].mem.sgt == NULL)) {
+	if (!c->vpr ||
+	    (gr->global_ctx_buffer[PAGEPOOL_VPR].mem.priv.sgt == NULL)) {
 		mem = &gr->global_ctx_buffer[PAGEPOOL].mem;
 	} else {
 		mem = &gr->global_ctx_buffer[PAGEPOOL_VPR].mem;
 	}
 
-	gpu_va = gk20a_gmmu_map(ch_vm, &mem->sgt, mem->size,
+	gpu_va = gk20a_gmmu_map(ch_vm, &mem->priv.sgt, mem->size,
 				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				gk20a_mem_flag_none, true, mem->aperture);
 	if (!gpu_va)
@@ -2869,7 +2872,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 
 	/* Golden Image */
 	mem = &gr->global_ctx_buffer[GOLDEN_CTX].mem;
-	gpu_va = gk20a_gmmu_map(ch_vm, &mem->sgt, mem->size, 0,
+	gpu_va = gk20a_gmmu_map(ch_vm, &mem->priv.sgt, mem->size, 0,
 				gk20a_mem_flag_none, true, mem->aperture);
 	if (!gpu_va)
 		goto clean_up;
@@ -2878,7 +2881,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 
 	/* Priv register Access Map */
 	mem = &gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem;
-	gpu_va = gk20a_gmmu_map(ch_vm, &mem->sgt, mem->size, 0,
+	gpu_va = gk20a_gmmu_map(ch_vm, &mem->priv.sgt, mem->size, 0,
 				gk20a_mem_flag_none, true, mem->aperture);
 	if (!gpu_va)
 		goto clean_up;
@@ -2950,7 +2953,7 @@ int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 		goto err_free_ctx;
 
 	gr_ctx->mem.gpu_va = gk20a_gmmu_map(vm,
-					&gr_ctx->mem.sgt,
+					&gr_ctx->mem.priv.sgt,
 					gr_ctx->mem.size,
 					NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_FALSE,
 					gk20a_mem_flag_none, true,
@@ -3196,7 +3199,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 	}
 
 	/* allocate patch buffer */
-	if (ch_ctx->patch_ctx.mem.sgt == NULL) {
+	if (ch_ctx->patch_ctx.mem.priv.sgt == NULL) {
 		err = gr_gk20a_alloc_channel_patch_ctx(g, c);
 		if (err) {
 			nvgpu_err(g,
@@ -4735,7 +4738,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	/* init mmu debug buffer */
-	addr = g->ops.mm.get_iova_addr(g, gr->mmu_wr_mem.sgt->sgl, 0);
+	addr = g->ops.mm.get_iova_addr(g, gr->mmu_wr_mem.priv.sgt->sgl, 0);
 	addr >>= fb_mmu_debug_wr_addr_alignment_v();
 
 	gk20a_writel(g, fb_mmu_debug_wr_r(),
@@ -4745,7 +4748,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 		     fb_mmu_debug_wr_vol_false_f() |
 		     fb_mmu_debug_wr_addr_f(addr));
 
-	addr = g->ops.mm.get_iova_addr(g, gr->mmu_rd_mem.sgt->sgl, 0);
+	addr = g->ops.mm.get_iova_addr(g, gr->mmu_rd_mem.priv.sgt->sgl, 0);
 	addr >>= fb_mmu_debug_rd_addr_alignment_v();
 
 	gk20a_writel(g, fb_mmu_debug_rd_r(),
@@ -8405,7 +8408,7 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 				}
 				if (!pm_ctx_ready) {
 					/* Make sure ctx buffer was initialized */
-					if (!ch_ctx->pm_ctx.mem.pages) {
+					if (!ch_ctx->pm_ctx.mem.priv.pages) {
 						nvgpu_err(g,
 							"Invalid ctx buffer");
 						err = -EINVAL;

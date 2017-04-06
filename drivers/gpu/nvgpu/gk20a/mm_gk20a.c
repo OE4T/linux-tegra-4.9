@@ -817,27 +817,28 @@ static int alloc_gmmu_phys_pages(struct vm_gk20a *vm, u32 order,
 		gk20a_dbg(gpu_dbg_pte, "alloc_pages failed");
 		goto err_out;
 	}
-	entry->mem.sgt = nvgpu_kzalloc(g, sizeof(*entry->mem.sgt));
-	if (!entry->mem.sgt) {
+	entry->mem.priv.sgt = nvgpu_kzalloc(g, sizeof(*entry->mem.priv.sgt));
+	if (!entry->mem.priv.sgt) {
 		gk20a_dbg(gpu_dbg_pte, "cannot allocate sg table");
 		goto err_alloced;
 	}
-	err = sg_alloc_table(entry->mem.sgt, 1, GFP_KERNEL);
+	err = sg_alloc_table(entry->mem.priv.sgt, 1, GFP_KERNEL);
 	if (err) {
 		gk20a_dbg(gpu_dbg_pte, "sg_alloc_table failed");
 		goto err_sg_table;
 	}
-	sg_set_page(entry->mem.sgt->sgl, pages, len, 0);
+	sg_set_page(entry->mem.priv.sgt->sgl, pages, len, 0);
 	entry->mem.cpu_va = page_address(pages);
 	memset(entry->mem.cpu_va, 0, len);
 	entry->mem.size = len;
 	entry->mem.aperture = APERTURE_SYSMEM;
-	FLUSH_CPU_DCACHE(entry->mem.cpu_va, sg_phys(entry->mem.sgt->sgl), len);
+	FLUSH_CPU_DCACHE(entry->mem.cpu_va,
+			 sg_phys(entry->mem.priv.sgt->sgl), len);
 
 	return 0;
 
 err_sg_table:
-	nvgpu_kfree(vm->mm->g, entry->mem.sgt);
+	nvgpu_kfree(vm->mm->g, entry->mem.priv.sgt);
 err_alloced:
 	__free_pages(pages, order);
 err_out:
@@ -854,9 +855,9 @@ static void free_gmmu_phys_pages(struct vm_gk20a *vm,
 	free_pages((unsigned long)entry->mem.cpu_va, get_order(entry->mem.size));
 	entry->mem.cpu_va = NULL;
 
-	sg_free_table(entry->mem.sgt);
-	nvgpu_kfree(vm->mm->g, entry->mem.sgt);
-	entry->mem.sgt = NULL;
+	sg_free_table(entry->mem.priv.sgt);
+	nvgpu_kfree(vm->mm->g, entry->mem.priv.sgt);
+	entry->mem.priv.sgt = NULL;
 	entry->mem.size = 0;
 	entry->mem.aperture = APERTURE_INVALID;
 }
@@ -864,16 +865,16 @@ static void free_gmmu_phys_pages(struct vm_gk20a *vm,
 static int map_gmmu_phys_pages(struct gk20a_mm_entry *entry)
 {
 	FLUSH_CPU_DCACHE(entry->mem.cpu_va,
-			 sg_phys(entry->mem.sgt->sgl),
-			 entry->mem.sgt->sgl->length);
+			 sg_phys(entry->mem.priv.sgt->sgl),
+			 entry->mem.priv.sgt->sgl->length);
 	return 0;
 }
 
 static void unmap_gmmu_phys_pages(struct gk20a_mm_entry *entry)
 {
 	FLUSH_CPU_DCACHE(entry->mem.cpu_va,
-			 sg_phys(entry->mem.sgt->sgl),
-			 entry->mem.sgt->sgl->length);
+			 sg_phys(entry->mem.priv.sgt->sgl),
+			 entry->mem.priv.sgt->sgl->length);
 }
 
 static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
@@ -941,7 +942,7 @@ int map_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry)
 			return 0;
 
 		FLUSH_CPU_DCACHE(entry->mem.cpu_va,
-				 sg_phys(entry->mem.sgt->sgl),
+				 sg_phys(entry->mem.priv.sgt->sgl),
 				 entry->mem.size);
 	} else {
 		int err = nvgpu_mem_begin(g, &entry->mem);
@@ -967,7 +968,7 @@ void unmap_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry)
 			return;
 
 		FLUSH_CPU_DCACHE(entry->mem.cpu_va,
-				 sg_phys(entry->mem.sgt->sgl),
+				 sg_phys(entry->mem.priv.sgt->sgl),
 				 entry->mem.size);
 	} else {
 		nvgpu_mem_end(g, &entry->mem);
@@ -1028,9 +1029,9 @@ static int gk20a_zalloc_gmmu_page_table(struct vm_gk20a *vm,
 
 	gk20a_dbg(gpu_dbg_pte, "entry = 0x%p, addr=%08llx, size %d, woff %x",
 		  entry,
-		  (entry->mem.sgt && entry->mem.aperture == APERTURE_SYSMEM) ?
-		    g->ops.mm.get_iova_addr(g, entry->mem.sgt->sgl, 0)
-		    : 0,
+		  (entry->mem.priv.sgt &&
+		   entry->mem.aperture == APERTURE_SYSMEM) ?
+		  g->ops.mm.get_iova_addr(g, entry->mem.priv.sgt->sgl, 0) : 0,
 		  order, entry->woffset);
 	if (err)
 		return err;
@@ -1726,7 +1727,7 @@ static struct sg_table *gk20a_vidbuf_map_dma_buf(
 {
 	struct gk20a_vidmem_buf *buf = attach->dmabuf->priv;
 
-	return buf->mem->sgt;
+	return buf->mem->priv.sgt;
 }
 
 static void gk20a_vidbuf_unmap_dma_buf(struct dma_buf_attachment *attach,
@@ -2398,7 +2399,7 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 			g->ops.mm.gmmu_map(
 				vm,
 				!fixed_mapping ? 0 : *compbits_win_gva, /* va */
-				g->gr.compbit_store.mem.sgt,
+				g->gr.compbit_store.mem.priv.sgt,
 				cacheline_offset_start, /* sg offset */
 				mapped_buffer->ctag_map_win_size, /* size */
 				small_pgsz_index,
@@ -2518,7 +2519,7 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct nvgpu_mem *mem)
 	if (g->mm.vidmem.ce_ctx_id == (u32)~0)
 		return -EINVAL;
 
-	alloc = get_vidmem_page_alloc(mem->sgt->sgl);
+	alloc = get_vidmem_page_alloc(mem->priv.sgt->sgl);
 
 	nvgpu_list_for_each_entry(chunk, &alloc->alloc_chunks,
 				  page_alloc_chunk, list_entry) {
@@ -2580,14 +2581,14 @@ u64 gk20a_mem_get_base_addr(struct gk20a *g, struct nvgpu_mem *mem,
 	u64 addr;
 
 	if (mem->aperture == APERTURE_VIDMEM) {
-		alloc = get_vidmem_page_alloc(mem->sgt->sgl);
+		alloc = get_vidmem_page_alloc(mem->priv.sgt->sgl);
 
 		/* This API should not be used with > 1 chunks */
 		WARN_ON(alloc->nr_chunks != 1);
 
 		addr = alloc->base;
 	} else {
-		addr = g->ops.mm.get_iova_addr(g, mem->sgt->sgl, flags);
+		addr = g->ops.mm.get_iova_addr(g, mem->priv.sgt->sgl, flags);
 	}
 
 	return addr;
@@ -2619,8 +2620,8 @@ static void gk20a_vidmem_clear_mem_worker(struct work_struct *work)
 	while ((mem = get_pending_mem_desc(mm)) != NULL) {
 		gk20a_gmmu_clear_vidmem_mem(g, mem);
 		nvgpu_free(mem->allocator,
-			   (u64)get_vidmem_page_alloc(mem->sgt->sgl));
-		gk20a_free_sgtable(g, &mem->sgt);
+			   (u64)get_vidmem_page_alloc(mem->priv.sgt->sgl));
+		gk20a_free_sgtable(g, &mem->priv.sgt);
 
 		WARN_ON(atomic64_sub_return(mem->size,
 					&g->mm.vidmem.bytes_pending) < 0);
@@ -2774,7 +2775,7 @@ u64 gk20a_pde_addr(struct gk20a *g, struct gk20a_mm_entry *entry)
 	u64 base;
 
 	if (g->mm.has_physical_mode)
-		base = sg_phys(entry->mem.sgt->sgl);
+		base = sg_phys(entry->mem.priv.sgt->sgl);
 	else
 		base = gk20a_mem_get_base_addr(g, &entry->mem, 0);
 

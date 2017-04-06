@@ -107,10 +107,10 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 		nvgpu_dma_flags_to_attrs(&dma_attrs, flags);
 
 		if (flags & NVGPU_DMA_NO_KERNEL_MAPPING) {
-			mem->pages = dma_alloc_attrs(d,
+			mem->priv.pages = dma_alloc_attrs(d,
 					size, &iova, GFP_KERNEL,
 					__DMA_ATTR(dma_attrs));
-			if (!mem->pages)
+			if (!mem->priv.pages)
 				return -ENOMEM;
 		} else {
 			mem->cpu_va = dma_alloc_attrs(d,
@@ -126,10 +126,12 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 	}
 
 	if (flags & NVGPU_DMA_NO_KERNEL_MAPPING)
-		err = gk20a_get_sgtable_from_pages(d, &mem->sgt, mem->pages,
+		err = gk20a_get_sgtable_from_pages(d, &mem->priv.sgt,
+						   mem->priv.pages,
 						   iova, size);
 	else {
-		err = gk20a_get_sgtable(d, &mem->sgt, mem->cpu_va, iova, size);
+		err = gk20a_get_sgtable(d, &mem->priv.sgt, mem->cpu_va,
+					iova, size);
 		memset(mem->cpu_va, 0, size);
 	}
 	if (err)
@@ -137,7 +139,7 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 
 	mem->size = size;
 	mem->aperture = APERTURE_SYSMEM;
-	mem->flags = flags;
+	mem->priv.flags = flags;
 
 	gk20a_dbg_fn("done");
 
@@ -146,7 +148,7 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 fail_free:
 	dma_free_coherent(d, size, mem->cpu_va, iova);
 	mem->cpu_va = NULL;
-	mem->sgt = NULL;
+	mem->priv.sgt = NULL;
 	return err;
 }
 
@@ -204,23 +206,23 @@ int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 	else
 		mem->fixed = false;
 
-	mem->sgt = nvgpu_kzalloc(g, sizeof(struct sg_table));
-	if (!mem->sgt) {
+	mem->priv.sgt = nvgpu_kzalloc(g, sizeof(struct sg_table));
+	if (!mem->priv.sgt) {
 		err = -ENOMEM;
 		goto fail_physfree;
 	}
 
-	err = sg_alloc_table(mem->sgt, 1, GFP_KERNEL);
+	err = sg_alloc_table(mem->priv.sgt, 1, GFP_KERNEL);
 	if (err)
 		goto fail_kfree;
 
-	set_vidmem_page_alloc(mem->sgt->sgl, addr);
-	sg_set_page(mem->sgt->sgl, NULL, size, 0);
+	set_vidmem_page_alloc(mem->priv.sgt->sgl, addr);
+	sg_set_page(mem->priv.sgt->sgl, NULL, size, 0);
 
 	mem->size = size;
 	mem->aperture = APERTURE_VIDMEM;
 	mem->allocator = vidmem_alloc;
-	mem->flags = flags;
+	mem->priv.flags = flags;
 
 	nvgpu_init_list_node(&mem->clear_list_entry);
 
@@ -229,7 +231,7 @@ int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 	return 0;
 
 fail_kfree:
-	nvgpu_kfree(g, mem->sgt);
+	nvgpu_kfree(g, mem->priv.sgt);
 fail_physfree:
 	nvgpu_free(&g->mm.vidmem.allocator, addr);
 	return err;
@@ -283,7 +285,7 @@ int nvgpu_dma_alloc_map_flags_sys(struct vm_gk20a *vm, unsigned long flags,
 	if (err)
 		return err;
 
-	mem->gpu_va = gk20a_gmmu_map(vm, &mem->sgt, size, 0,
+	mem->gpu_va = gk20a_gmmu_map(vm, &mem->priv.sgt, size, 0,
 				     gk20a_mem_flag_none, false,
 				     mem->aperture);
 	if (!mem->gpu_va) {
@@ -313,7 +315,7 @@ int nvgpu_dma_alloc_map_flags_vid(struct vm_gk20a *vm, unsigned long flags,
 	if (err)
 		return err;
 
-	mem->gpu_va = gk20a_gmmu_map(vm, &mem->sgt, size, 0,
+	mem->gpu_va = gk20a_gmmu_map(vm, &mem->priv.sgt, size, 0,
 				     gk20a_mem_flag_none, false,
 				     mem->aperture);
 	if (!mem->gpu_va) {
@@ -332,31 +334,31 @@ static void nvgpu_dma_free_sys(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	struct device *d = dev_from_gk20a(g);
 
-	if (mem->cpu_va || mem->pages) {
-		if (mem->flags) {
+	if (mem->cpu_va || mem->priv.pages) {
+		if (mem->priv.flags) {
 			DEFINE_DMA_ATTRS(dma_attrs);
 
-			nvgpu_dma_flags_to_attrs(&dma_attrs, mem->flags);
+			nvgpu_dma_flags_to_attrs(&dma_attrs, mem->priv.flags);
 
-			if (mem->flags & NVGPU_DMA_NO_KERNEL_MAPPING) {
-				dma_free_attrs(d, mem->size, mem->pages,
-					sg_dma_address(mem->sgt->sgl),
+			if (mem->priv.flags & NVGPU_DMA_NO_KERNEL_MAPPING) {
+				dma_free_attrs(d, mem->size, mem->priv.pages,
+					sg_dma_address(mem->priv.sgt->sgl),
 					__DMA_ATTR(dma_attrs));
 			} else {
 				dma_free_attrs(d, mem->size, mem->cpu_va,
-					sg_dma_address(mem->sgt->sgl),
+					sg_dma_address(mem->priv.sgt->sgl),
 					__DMA_ATTR(dma_attrs));
 			}
 		} else {
 			dma_free_coherent(d, mem->size, mem->cpu_va,
-					sg_dma_address(mem->sgt->sgl));
+					sg_dma_address(mem->priv.sgt->sgl));
 		}
 		mem->cpu_va = NULL;
-		mem->pages = NULL;
+		mem->priv.pages = NULL;
 	}
 
-	if (mem->sgt)
-		gk20a_free_sgtable(g, &mem->sgt);
+	if (mem->priv.sgt)
+		gk20a_free_sgtable(g, &mem->priv.sgt);
 
 	mem->size = 0;
 	mem->aperture = APERTURE_INVALID;
@@ -368,7 +370,7 @@ static void nvgpu_dma_free_vid(struct gk20a *g, struct nvgpu_mem *mem)
 	bool was_empty;
 
 	/* Sanity check - only this supported when allocating. */
-	WARN_ON(mem->flags != NVGPU_DMA_NO_KERNEL_MAPPING);
+	WARN_ON(mem->priv.flags != NVGPU_DMA_NO_KERNEL_MAPPING);
 
 	if (mem->user_mem) {
 		nvgpu_mutex_acquire(&g->mm.vidmem.clear_list_mutex);
@@ -385,8 +387,8 @@ static void nvgpu_dma_free_vid(struct gk20a *g, struct nvgpu_mem *mem)
 	} else {
 		nvgpu_memset(g, mem, 0, 0, mem->size);
 		nvgpu_free(mem->allocator,
-			   (u64)get_vidmem_page_alloc(mem->sgt->sgl));
-		gk20a_free_sgtable(g, &mem->sgt);
+			   (u64)get_vidmem_page_alloc(mem->priv.sgt->sgl));
+		gk20a_free_sgtable(g, &mem->priv.sgt);
 
 		mem->size = 0;
 		mem->aperture = APERTURE_INVALID;

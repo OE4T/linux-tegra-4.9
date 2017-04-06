@@ -954,7 +954,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		f->channel[chid].userd_iova =
-			g->ops.mm.get_iova_addr(g, f->userd.sgt->sgl, 0)
+			g->ops.mm.get_iova_addr(g, f->userd.priv.sgt->sgl, 0)
 			+ chid * f->userd_entry_size;
 		f->channel[chid].userd_gpu_va =
 			f->userd.gpu_va + chid * f->userd_entry_size;
@@ -3148,7 +3148,7 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	new_buf = !runlist->cur_buffer;
 
 	runlist_iova = g->ops.mm.get_iova_addr(
-			g, runlist->mem[new_buf].sgt->sgl, 0);
+			g, runlist->mem[new_buf].priv.sgt->sgl, 0);
 
 	gk20a_dbg_info("runlist_id : %d, switch to new buffer 0x%16llx",
 		runlist_id, (u64)runlist_iova);

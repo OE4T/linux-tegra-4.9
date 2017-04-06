@@ -1075,7 +1075,7 @@ static int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 	u32 *acr_ucode_header_t210_load;
 	u32 *acr_ucode_data_t210_load;
 
-	start = g->ops.mm.get_iova_addr(g, acr->ucode_blob.sgt->sgl, 0);
+	start = g->ops.mm.get_iova_addr(g, acr->ucode_blob.priv.sgt->sgl, 0);
 	size = acr->ucode_blob.size;
 
 	gm20b_dbg_pmu("");
@@ -1419,7 +1419,8 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 			goto err_done;
 		}
 
-		acr->hsbl_ucode.gpu_va = gk20a_gmmu_map(vm, &acr->hsbl_ucode.sgt,
+		acr->hsbl_ucode.gpu_va = gk20a_gmmu_map(vm,
+				&acr->hsbl_ucode.priv.sgt,
 				bl_sz,
 				0, /* flags */
 				gk20a_mem_flag_read_only, false,

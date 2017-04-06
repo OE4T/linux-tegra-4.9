@@ -138,13 +138,13 @@ static void gk20a_tegra_secure_destroy(struct gk20a *g,
 {
 	DEFINE_DMA_ATTRS(attrs);
 
-	if (desc->mem.sgt) {
-		phys_addr_t pa = sg_phys(desc->mem.sgt->sgl);
+	if (desc->mem.priv.sgt) {
+		phys_addr_t pa = sg_phys(desc->mem.priv.sgt->sgl);
 		dma_free_attrs(&tegra_vpr_dev, desc->mem.size,
 			(void *)(uintptr_t)pa,
 			pa, __DMA_ATTR(attrs));
-		gk20a_free_sgtable(g, &desc->mem.sgt);
-		desc->mem.sgt = NULL;
+		gk20a_free_sgtable(g, &desc->mem.priv.sgt);
+		desc->mem.priv.sgt = NULL;
 	}
 }
 
@@ -184,7 +184,7 @@ int gk20a_tegra_secure_alloc(struct device *dev,
 
 	desc->destroy = gk20a_tegra_secure_destroy;
 
-	desc->mem.sgt = sgt;
+	desc->mem.priv.sgt = sgt;
 	desc->mem.size = size;
 	desc->mem.aperture = APERTURE_SYSMEM;
 

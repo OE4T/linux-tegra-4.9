@@ -60,7 +60,7 @@ static int __nvgpu_semaphore_sea_grow(struct nvgpu_semaphore_sea *sea)
 	if (ret)
 		goto out;
 
-	sea->ro_sg_table = sea->sea_mem.sgt;
+	sea->ro_sg_table = sea->sea_mem.priv.sgt;
 	sea->size = SEMAPHORE_POOL_COUNT;
 	sea->map_size = SEMAPHORE_POOL_COUNT * PAGE_SIZE;
 
@@ -154,7 +154,7 @@ struct nvgpu_semaphore_pool *nvgpu_semaphore_pool_alloc(
 
 	page_idx = (unsigned long)ret;
 
-	p->page = sea->sea_mem.pages[page_idx];
+	p->page = sea->sea_mem.priv.pages[page_idx];
 	p->ro_sg_table = sea->ro_sg_table;
 	p->page_idx = page_idx;
 	p->sema_sea = sea;

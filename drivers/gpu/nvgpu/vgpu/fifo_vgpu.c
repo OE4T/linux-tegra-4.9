@@ -270,7 +270,7 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 	}
 
 	/* bar1 va */
-	f->userd.gpu_va = vgpu_bar1_map(g, &f->userd.sgt, f->userd.size);
+	f->userd.gpu_va = vgpu_bar1_map(g, &f->userd.priv.sgt, f->userd.size);
 	if (!f->userd.gpu_va) {
 		dev_err(d, "gmmu mapping failed\n");
 		goto clean_up;
@@ -304,7 +304,7 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		f->channel[chid].userd_iova =
-			g->ops.mm.get_iova_addr(g, f->userd.sgt->sgl, 0)
+			g->ops.mm.get_iova_addr(g, f->userd.priv.sgt->sgl, 0)
 				+ chid * f->userd_entry_size;
 		f->channel[chid].userd_gpu_va =
 			f->userd.gpu_va + chid * f->userd_entry_size;

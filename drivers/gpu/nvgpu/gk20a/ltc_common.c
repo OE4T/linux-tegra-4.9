@@ -96,7 +96,7 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 		compbit_store_iova = gk20a_mem_phys(&gr->compbit_store.mem);
 	else
 		compbit_store_iova = g->ops.mm.get_iova_addr(g,
-				gr->compbit_store.mem.sgt->sgl, 0);
+				gr->compbit_store.mem.priv.sgt->sgl, 0);
 
 	compbit_base_post_divide64 = compbit_store_iova >>
 		ltc_ltcs_ltss_cbc_base_alignment_shift_v();

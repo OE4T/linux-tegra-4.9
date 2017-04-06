@@ -57,7 +57,7 @@ int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
 		return -EBUSY;
 	}
 
-	cpu_va = vmap(mem->pages,
+	cpu_va = vmap(mem->priv.pages,
 			PAGE_ALIGN(mem->size) >> PAGE_SHIFT,
 			0, pgprot_writecombine(PAGE_KERNEL));
 

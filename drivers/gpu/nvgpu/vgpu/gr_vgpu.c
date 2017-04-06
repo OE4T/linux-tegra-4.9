@@ -558,7 +558,7 @@ static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 	}
 
 	/* allocate patch buffer */
-	if (ch_ctx->patch_ctx.mem.pages == NULL) {
+	if (ch_ctx->patch_ctx.mem.priv.pages == NULL) {
 		err = vgpu_gr_alloc_channel_patch_ctx(g, c);
 		if (err) {
 			nvgpu_err(g, "fail to allocate patch buffer");

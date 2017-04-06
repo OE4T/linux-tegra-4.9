@@ -41,7 +41,7 @@ static int gp10b_init_mm_setup_hw(struct gk20a *g)
 	g->ops.fb.set_mmu_page_size(g);
 
 	gk20a_writel(g, fb_niso_flush_sysmem_addr_r(),
-		     (g->ops.mm.get_iova_addr(g, g->mm.sysmem_flush.sgt->sgl, 0)
+		     (g->ops.mm.get_iova_addr(g, g->mm.sysmem_flush.priv.sgt->sgl, 0)
 		     >> 8ULL));
 
 	g->ops.bus.bar1_bind(g, inst_block);

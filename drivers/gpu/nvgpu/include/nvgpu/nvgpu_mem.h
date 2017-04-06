@@ -17,9 +17,10 @@
 #ifndef __NVGPU_NVGPU_MEM_H__
 #define __NVGPU_NVGPU_MEM_H__
 
-#include <linux/types.h>
-
+#include <nvgpu/types.h>
 #include <nvgpu/list.h>
+
+#include <nvgpu/linux/nvgpu_mem.h>
 
 struct page;
 struct sg_table;
@@ -39,18 +40,32 @@ enum nvgpu_aperture {
 };
 
 struct nvgpu_mem {
-	void *cpu_va; /* sysmem only */
-	struct page **pages; /* sysmem only */
-	struct sg_table *sgt;
-	enum nvgpu_aperture aperture;
-	size_t size;
-	u64 gpu_va;
-	bool fixed; /* vidmem only */
-	bool user_mem; /* vidmem only */
-	struct nvgpu_allocator *allocator; /* vidmem only */
-	struct nvgpu_list_node clear_list_entry; /* vidmem only */
-	bool skip_wmb;
-	unsigned long flags;
+	/*
+	 * Populated for all nvgpu_mem structs - vidmem or system.
+	 */
+	enum nvgpu_aperture			 aperture;
+	size_t					 size;
+	u64					 gpu_va;
+	bool					 skip_wmb;
+
+	/*
+	 * Only populated for a sysmem allocation.
+	 */
+	void					*cpu_va;
+
+	/*
+	 * Fields only populated for vidmem allocations.
+	 */
+	bool					 fixed;
+	bool					 user_mem;
+	struct nvgpu_allocator			*allocator;
+	struct nvgpu_list_node			 clear_list_entry;
+
+	/*
+	 * This is defined by the system specific header. It can be empty if
+	 * there's no system specific stuff for a given system.
+	 */
+	struct nvgpu_mem_priv			 priv;
 };
 
 static inline struct nvgpu_mem *
@@ -59,11 +74,6 @@ nvgpu_mem_from_clear_list_entry(struct nvgpu_list_node *node)
 	return (struct nvgpu_mem *)
 		((uintptr_t)node - offsetof(struct nvgpu_mem,
 					    clear_list_entry));
-};
-
-struct nvgpu_mem_sub {
-	u32 offset;
-	u32 size;
 };
 
 static inline const char *nvgpu_aperture_str(enum nvgpu_aperture aperture)

@@ -539,7 +539,7 @@ static inline phys_addr_t gk20a_mem_phys(struct nvgpu_mem *mem)
 {
 	/* FIXME: the sgt/sgl may get null if this is accessed e.g. in an isr
 	 * during channel deletion - attempt to fix at least null derefs */
-	struct sg_table *sgt = mem->sgt;
+	struct sg_table *sgt = mem->priv.sgt;
 
 	if (sgt) {
 		struct scatterlist *sgl = sgt->sgl;

@@ -44,9 +44,10 @@ void fb_gk20a_reset(struct gk20a *g)
 
 void gk20a_fb_init_hw(struct gk20a *g)
 {
-	gk20a_writel(g, fb_niso_flush_sysmem_addr_r(),
-		     g->ops.mm.get_iova_addr(g, g->mm.sysmem_flush.sgt->sgl, 0)
-		     >> 8);
+	u32 addr = g->ops.mm.get_iova_addr(g,
+			g->mm.sysmem_flush.priv.sgt->sgl, 0) >> 8;
+
+	gk20a_writel(g, fb_niso_flush_sysmem_addr_r(), addr);
 }
 
 static void gk20a_fb_set_mmu_page_size(struct gk20a *g)

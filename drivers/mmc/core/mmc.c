@@ -2154,6 +2154,28 @@ static int mmc_reset(struct mmc_host *host)
 	return mmc_init_card(host, card->ocr, card);
 }
 
+static int mmc_power_restore(struct mmc_host *host)
+{
+	int err = 0;
+
+	mmc_claim_host(host);
+	err = mmc_init_card(host, host->card->ocr, host->card);
+	mmc_release_host(host);
+	return err;
+}
+
+static int mmc_power_save(struct mmc_host *host)
+{
+	/* Disable enhanced strobe support if supported by both host and card */
+	if (host->card->ext_csd.strobe_support &&
+		(host->caps2 & MMC_CAP2_HS400_ES) &&
+		(host->ops->hs400_enhanced_strobe)) {
+		host->ios.enhanced_strobe = true;
+		host->ops->hs400_enhanced_strobe(host, &host->ios);
+	}
+	return 0;
+}
+
 static const struct mmc_bus_ops mmc_ops = {
 	.remove = mmc_remove,
 	.detect = mmc_detect,
@@ -2164,6 +2186,8 @@ static const struct mmc_bus_ops mmc_ops = {
 	.alive = mmc_alive,
 	.shutdown = mmc_shutdown,
 	.reset = mmc_reset,
+	.power_restore = mmc_power_restore,
+	.power_save = mmc_power_save,
 };
 
 /*

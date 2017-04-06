@@ -72,7 +72,7 @@ int sec2_wait_for_halt(struct gk20a *g, unsigned int timeout)
 	} while (!nvgpu_timeout_expired(&to));
 
 	if (completion) {
-		gk20a_err(dev_from_gk20a(g), "ACR boot timed out");
+		nvgpu_err(g, "ACR boot timed out");
 		return completion;
 	}
 
@@ -81,8 +81,7 @@ int sec2_wait_for_halt(struct gk20a *g, unsigned int timeout)
 	data = gk20a_readl(g, psec_falcon_mailbox0_r());
 	if (data) {
 
-		gk20a_err(dev_from_gk20a(g),
-			"ACR boot failed, err %x", data);
+		nvgpu_err(g, "ACR boot failed, err %x", data);
 		completion = -EAGAIN;
 	}
 
@@ -100,14 +99,12 @@ void sec2_copy_to_dmem(struct pmu_gk20a *pmu,
 	u32 *src_u32 = (u32*)src;
 
 	if (size == 0) {
-		gk20a_err(dev_from_gk20a(g),
-			"size is zero");
+		nvgpu_err(g, "size is zero");
 		return;
 	}
 
 	if (dst & 0x3) {
-		gk20a_err(dev_from_gk20a(g),
-			"dst (0x%08x) not 4-byte aligned", dst);
+		nvgpu_err(g, "dst (0x%08x) not 4-byte aligned", dst);
 		return;
 	}
 
@@ -137,8 +134,7 @@ void sec2_copy_to_dmem(struct pmu_gk20a *pmu,
 	data = gk20a_readl(g, psec_falcon_dmemc_r(port)) & addr_mask;
 	size = ALIGN(size, 4);
 	if (data != dst + size) {
-		gk20a_err(dev_from_gk20a(g),
-			"copy failed. bytes written %d, expected %d",
+		nvgpu_err(g, "copy failed. bytes written %d, expected %d",
 			data - dst, size);
 	}
 	nvgpu_mutex_release(&pmu->pmu_copy_lock);

@@ -522,7 +522,7 @@ static ssize_t xve_link_speed_write(struct file *filp,
 	else if (strncmp(kbuff, "Gen3", check_len) == 0)
 		link_speed = GPU_XVE_SPEED_8P0;
 	else
-		gk20a_err(g->dev, "%s: Unknown PCIe speed: %s\n",
+		nvgpu_err(g, "%s: Unknown PCIe speed: %s\n",
 			  __func__, kbuff);
 
 	if (!link_speed)

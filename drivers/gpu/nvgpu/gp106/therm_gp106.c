@@ -32,13 +32,12 @@ static int gp106_get_internal_sensor_curr_temp(struct gk20a *g, u32 *temp_f24_8)
 
 	if (!(therm_temp_sensor_tsense_state_v(readval) &
 		therm_temp_sensor_tsense_state_valid_v())) {
-		gk20a_err(dev_from_gk20a(g),
-			"Attempt to read temperature while sensor is OFF!\n");
+		nvgpu_err(g,
+			"Attempt to read temperature while sensor is OFF!");
 		err = -EINVAL;
 	} else if (therm_temp_sensor_tsense_state_v(readval) &
 		therm_temp_sensor_tsense_state_shadow_v()) {
-		gk20a_err(dev_from_gk20a(g),
-			"Reading temperature from SHADOWed sensor!\n");
+		nvgpu_err(g, "Reading temperature from SHADOWed sensor!");
 	}
 
 	// Convert from F9.5 -> F27.5 -> F24.8.
@@ -71,7 +70,7 @@ static void gp106_therm_debugfs_init(struct gk20a *g) {
 	dbgentry = debugfs_create_file(
 		"temp", S_IRUGO, platform->debugfs, g, &therm_ctrl_fops);
 	if (!dbgentry)
-		gk20a_err(dev_from_gk20a(g), "debugfs entry create failed for therm_curr_temp");
+		nvgpu_err(g, "debugfs entry create failed for therm_curr_temp");
 }
 #endif
 

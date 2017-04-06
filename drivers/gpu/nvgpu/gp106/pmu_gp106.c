@@ -77,7 +77,7 @@ static int gp106_pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 		gk20a_writel(g, pwr_falcon_engine_r(),
 			pwr_falcon_engine_reset_true_f());
 		gk20a_readl(g, pwr_falcon_engine_r());
-		gk20a_err(dev_from_gk20a(g), "Falcon mem scrubbing timeout");
+		nvgpu_err(g, "Falcon mem scrubbing timeout");
 		return -ETIMEDOUT;
 	} else {
 		/* DISBALE */
@@ -202,7 +202,7 @@ static void pmu_handle_param_msg(struct gk20a *g, struct pmu_msg *msg,
 	gk20a_dbg_fn("");
 
 	if (status != 0) {
-		gk20a_err(dev_from_gk20a(g), "PG PARAM cmd aborted");
+		nvgpu_err(g, "PG PARAM cmd aborted");
 		return;
 	}
 
@@ -222,7 +222,7 @@ static int gp106_pg_param_init(struct gk20a *g, u32 pg_engine_id)
 
 		status = init_rppg(g);
 		if (status != 0) {
-			gk20a_err(dev_from_gk20a(g), "RPPG init Failed");
+			nvgpu_err(g, "RPPG init Failed");
 			return -1;
 		}
 
@@ -386,8 +386,7 @@ static int gp106_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 				&g->ops.pmu.lspmuwprinitdone, 1);
 		/* check again if it still not ready indicate an error */
 		if (!g->ops.pmu.lspmuwprinitdone) {
-			gk20a_err(dev_from_gk20a(g),
-				"PMU not ready to load LSF");
+			nvgpu_err(g, "PMU not ready to load LSF");
 			return -ETIMEDOUT;
 		}
 	}

@@ -167,8 +167,7 @@ static int gr_gp106_set_ctxsw_preemption_mode(struct gk20a *g,
 					g->gr.t18x.ctx_vars.preempt_image_size,
 					&gr_ctx->t18x.preempt_ctxsw_buffer);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-				  "cannot allocate preempt buffer");
+			nvgpu_err(g, "cannot allocate preempt buffer");
 			goto fail;
 		}
 
@@ -176,8 +175,7 @@ static int gr_gp106_set_ctxsw_preemption_mode(struct gk20a *g,
 					spill_size,
 					&gr_ctx->t18x.spill_ctxsw_buffer);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-				  "cannot allocate spill buffer");
+			nvgpu_err(g, "cannot allocate spill buffer");
 			goto fail_free_preempt;
 		}
 
@@ -185,8 +183,7 @@ static int gr_gp106_set_ctxsw_preemption_mode(struct gk20a *g,
 					attrib_cb_size,
 					&gr_ctx->t18x.betacb_ctxsw_buffer);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-				  "cannot allocate beta buffer");
+			nvgpu_err(g, "cannot allocate beta buffer");
 			goto fail_free_spill;
 		}
 
@@ -194,8 +191,7 @@ static int gr_gp106_set_ctxsw_preemption_mode(struct gk20a *g,
 					pagepool_size,
 					&gr_ctx->t18x.pagepool_ctxsw_buffer);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-				  "cannot allocate page pool");
+			nvgpu_err(g, "cannot allocate page pool");
 			goto fail_free_betacb;
 		}
 

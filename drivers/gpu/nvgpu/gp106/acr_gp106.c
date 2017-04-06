@@ -150,7 +150,7 @@ static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 	pmu_fw = nvgpu_request_firmware(g, GM20B_PMU_UCODE_IMAGE,
 					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 	if (!pmu_fw) {
-		gk20a_err(dev_from_gk20a(g), "failed to load pmu ucode!!");
+		nvgpu_err(g, "failed to load pmu ucode!!");
 		return -ENOENT;
 	}
 	g->acr.pmu_fw = pmu_fw;
@@ -160,14 +160,14 @@ static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 	pmu_desc = nvgpu_request_firmware(g, GM20B_PMU_UCODE_DESC,
 					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 	if (!pmu_desc) {
-		gk20a_err(dev_from_gk20a(g), "failed to load pmu ucode desc!!");
+		nvgpu_err(g, "failed to load pmu ucode desc!!");
 		err = -ENOENT;
 		goto release_img_fw;
 	}
 	pmu_sig = nvgpu_request_firmware(g, GM20B_PMU_UCODE_SIG,
 					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 	if (!pmu_sig) {
-		gk20a_err(dev_from_gk20a(g), "failed to load pmu sig!!");
+		nvgpu_err(g, "failed to load pmu sig!!");
 		err = -ENOENT;
 		goto release_desc;
 	}
@@ -177,8 +177,7 @@ static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 
 	err = gk20a_init_pmu(pmu);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to set function pointers\n");
+		nvgpu_err(g, "failed to set function pointers");
 		goto release_sig;
 	}
 
@@ -229,11 +228,11 @@ static int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 			break;
 		default:
-			gk20a_err(g->dev, "no support for GPUID %x", ver);
+			nvgpu_err(g, "no support for GPUID %x", ver);
 	}
 
 	if (!fecs_sig) {
-		gk20a_err(dev_from_gk20a(g), "failed to load fecs sig");
+		nvgpu_err(g, "failed to load fecs sig");
 		return -ENOENT;
 	}
 	lsf_desc = nvgpu_kzalloc(g, sizeof(struct lsf_ucode_desc_v1));
@@ -315,11 +314,11 @@ static int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 			break;
 		default:
-			gk20a_err(g->dev, "no support for GPUID %x", ver);
+			nvgpu_err(g, "no support for GPUID %x", ver);
 	}
 
 	if (!gpccs_sig) {
-		gk20a_err(dev_from_gk20a(g), "failed to load gpccs sig");
+		nvgpu_err(g, "failed to load gpccs sig");
 		return -ENOENT;
 	}
 	lsf_desc = nvgpu_kzalloc(g, sizeof(struct lsf_ucode_desc_v1));
@@ -1067,7 +1066,7 @@ static int gp106_bootstrap_hs_flcn(struct gk20a *g)
 				GM20B_HSBIN_PMU_UCODE_IMAGE,
 				NVGPU_REQUEST_FIRMWARE_NO_SOC);
 		if (!acr_fw) {
-			gk20a_err(dev_from_gk20a(g), "pmu ucode get fail");
+			nvgpu_err(g, "pmu ucode get fail");
 			return -ENOENT;
 		}
 		acr->acr_fw = acr_fw;
@@ -1090,7 +1089,7 @@ static int gp106_bootstrap_hs_flcn(struct gk20a *g)
 						acr->fw_hdr->patch_loc),
 					(u32 *)(acr_fw->data +
 						acr->fw_hdr->patch_sig)) < 0) {
-			gk20a_err(dev_from_gk20a(g), "patch signatures fail");
+			nvgpu_err(g, "patch signatures fail");
 			err = -1;
 			goto err_release_acr_fw;
 		}

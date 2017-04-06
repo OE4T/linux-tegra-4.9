@@ -192,8 +192,7 @@ static u32 gp106_get_rate_cntr(struct gk20a *g, struct namemap_cfg *c) {
 	} while ((--retries) && (cntr = gk20a_readl(g, c->cntr.reg_cntr_addr)));
 
 	if (!retries) {
-		gk20a_err(dev_from_gk20a(g),
-             "unable to settle counter reset, bailing");
+		nvgpu_err(g, "unable to settle counter reset, bailing");
 		goto read_err;
 	}
 	/* Program counter */

@@ -30,7 +30,7 @@ static int gr_gp106_get_netlist_name(struct gk20a *g, int index, char *name)
 					GP106_NETLIST_IMAGE_FW_NAME);
 			break;
 		default:
-			gk20a_err(g->dev, "no support for GPUID %x", ver);
+			nvgpu_err(g, "no support for GPUID %x", ver);
 	}
 
 	return 0;

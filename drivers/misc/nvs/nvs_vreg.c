@@ -11,6 +11,7 @@
  */
 
 
+#include <linux/module.h>
 #include <linux/device.h>
 #include <linux/regulator/consumer.h>
 
@@ -41,6 +42,7 @@ int nvs_vregs_disable(struct device *dev, struct regulator_bulk_data *vregs,
 		ret |= nvs_vreg_dis(dev, &vregs[i - 1]);
 	return ret;
 }
+EXPORT_SYMBOL_GPL(nvs_vregs_disable);
 
 int nvs_vreg_en(struct device *dev, struct regulator_bulk_data *vreg)
 {
@@ -71,6 +73,7 @@ int nvs_vregs_enable(struct device *dev, struct regulator_bulk_data *vregs,
 	}
 	return ret;
 }
+EXPORT_SYMBOL_GPL(nvs_vregs_enable);
 
 void nvs_vregs_exit(struct device *dev, struct regulator_bulk_data *vregs,
 		    unsigned int vregs_n)
@@ -85,6 +88,7 @@ void nvs_vregs_exit(struct device *dev, struct regulator_bulk_data *vregs,
 		}
 	}
 }
+EXPORT_SYMBOL_GPL(nvs_vregs_exit);
 
 int nvs_vregs_init(struct device *dev, struct regulator_bulk_data *vregs,
 		   unsigned int vregs_n, char **vregs_name)
@@ -107,6 +111,7 @@ int nvs_vregs_init(struct device *dev, struct regulator_bulk_data *vregs,
 	}
 	return ret;
 }
+EXPORT_SYMBOL_GPL(nvs_vregs_init);
 
 int nvs_vregs_sts(struct regulator_bulk_data *vregs, unsigned int vregs_n)
 {
@@ -129,4 +134,8 @@ int nvs_vregs_sts(struct regulator_bulk_data *vregs, unsigned int vregs_n)
 	}
 	return ret;
 }
+EXPORT_SYMBOL_GPL(nvs_vregs_sts);
 
+MODULE_LICENSE("GPL v2");
+MODULE_DESCRIPTION("NVidiaInvensense driver");
+MODULE_AUTHOR("NVIDIA Corporation");

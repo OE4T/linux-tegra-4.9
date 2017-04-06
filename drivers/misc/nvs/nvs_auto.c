@@ -11,6 +11,7 @@
  */
 
 
+#include <linux/module.h>
 #include <linux/nvs.h>
 
 
@@ -28,3 +29,6 @@ struct nvs_fn_if *nvs_auto(void)
 	return NULL;
 }
 
+MODULE_LICENSE("GPL v2");
+MODULE_DESCRIPTION("NVidiaInvensense driver");
+MODULE_AUTHOR("NVIDIA Corporation");

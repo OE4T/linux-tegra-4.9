@@ -1830,3 +1830,6 @@ int nvs_probe(void **handle, void *dev_client, struct device *dev,
 	return ret;
 }
 
+MODULE_LICENSE("GPL v2");
+MODULE_DESCRIPTION("NVidiaInvensense driver");
+MODULE_AUTHOR("NVIDIA Corporation");

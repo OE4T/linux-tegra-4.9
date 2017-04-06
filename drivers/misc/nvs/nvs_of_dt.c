@@ -11,6 +11,7 @@
  */
 
 
+#include <linux/module.h>
 #include <linux/nvs.h>
 #include <linux/of.h>
 #include <linux/string.h>
@@ -21,7 +22,7 @@ const char * const nvs_float_significances[] = {
 	"micro",
 	"nano",
 };
-EXPORT_SYMBOL(nvs_float_significances);
+EXPORT_SYMBOL_GPL(nvs_float_significances);
 
 /**
  * nvs_of_dt - NVS sensor device tree configuration.
@@ -296,4 +297,8 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 
 	return cfg_changes;
 }
+EXPORT_SYMBOL_GPL(nvs_of_dt);
 
+MODULE_LICENSE("GPL v2");
+MODULE_DESCRIPTION("NVidiaInvensense driver");
+MODULE_AUTHOR("NVIDIA Corporation");

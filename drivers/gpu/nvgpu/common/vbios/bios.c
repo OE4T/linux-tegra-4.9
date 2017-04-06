@@ -236,7 +236,7 @@ int nvgpu_bios_parse_rom(struct gk20a *g)
 
 		if (pci_rom->sig != PCI_EXP_ROM_SIG &&
 		    pci_rom->sig != PCI_EXP_ROM_SIG_NV) {
-			gk20a_err(g->dev, "invalid VBIOS signature");
+			nvgpu_err(g, "invalid VBIOS signature");
 			return -EINVAL;
 		}
 
@@ -338,8 +338,7 @@ static void nvgpu_bios_parse_memory_ptrs(struct gk20a *g, int offset, u8 version
 		g->bios.mem_strap_xlat_tbl_ptr = v2.mem_strap_xlat_tbl_ptr;
 		return;
 	default:
-		gk20a_err(dev_from_gk20a(g),
-			"unknown vbios memory table version %x", version);
+		nvgpu_err(g, "unknown vbios memory table version %x", version);
 		return;
 	}
 }
@@ -467,7 +466,7 @@ static int nvgpu_bios_parse_falcon_ucode_table(struct gk20a *g, int offset)
 					 g->bios.expansion_rom_offset);
 
 			if (err)
-				gk20a_err(dev_from_gk20a(g),
+				nvgpu_err(g,
 					  "could not parse devinit ucode desc");
 		} else if (entry.target_id == TARGET_ID_PMU &&
 		    entry.application_id == APPLICATION_ID_PRE_OS) {
@@ -482,7 +481,7 @@ static int nvgpu_bios_parse_falcon_ucode_table(struct gk20a *g, int offset)
 					 g->bios.expansion_rom_offset);
 
 			if (err)
-				gk20a_err(dev_from_gk20a(g),
+				nvgpu_err(g,
 					  "could not parse preos ucode desc");
 		}
 
@@ -508,8 +507,7 @@ static void nvgpu_bios_parse_falcon_data_v2(struct gk20a *g, int offset)
 			g->bios.expansion_rom_offset);
 
 	if (err)
-		gk20a_err(dev_from_gk20a(g),
-			  "could not parse falcon ucode table");
+		nvgpu_err(g, "could not parse falcon ucode table");
 }
 
 void *nvgpu_bios_get_perf_table_ptrs(struct gk20a *g,
@@ -552,10 +550,10 @@ void *nvgpu_bios_get_perf_table_ptrs(struct gk20a *g,
 				perf_table_ptr =
 					&g->bios.data[perf_table_id_offset];
 		} else
-			gk20a_warn(g->dev, "PERF TABLE ID %d is NULL",
+			nvgpu_warn(g, "PERF TABLE ID %d is NULL",
 					table_id);
 	} else
-		gk20a_warn(g->dev, "INVALID PERF TABLE ID - %d ", table_id);
+		nvgpu_warn(g, "INVALID PERF TABLE ID - %d ", table_id);
 
 	return (void *)perf_table_ptr;
 }
@@ -746,7 +744,7 @@ int nvgpu_bios_execute_script(struct gk20a *g, u32 offset)
 			break;
 
 		default:
-			gk20a_err(dev_from_gk20a(g), "opcode: 0x%02x", opcode);
+			nvgpu_err(g, "opcode: 0x%02x", opcode);
 			end = true;
 			status = -EINVAL;
 			break;

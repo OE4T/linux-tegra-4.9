@@ -68,7 +68,7 @@ static u32 rppg_send_cmd(struct gk20a *g, struct nv_pmu_rppg_cmd *prppg_cmd)
 			prppg_cmd->stats_reset.ctrl_id;
 		break;
 	default:
-		gk20a_err(dev_from_gk20a(g), "Inivalid RPPG command %d",
+		nvgpu_err(g, "Inivalid RPPG command %d",
 			prppg_cmd->cmn.cmd_id);
 		return -1;
 	}
@@ -76,7 +76,7 @@ static u32 rppg_send_cmd(struct gk20a *g, struct nv_pmu_rppg_cmd *prppg_cmd)
 	status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL, PMU_COMMAND_QUEUE_HPQ,
 			pmu_handle_rppg_init_msg, &success, &seq, ~0);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g), "Unable to submit parameter command %d",
+		nvgpu_err(g, "Unable to submit parameter command %d",
 			prppg_cmd->cmn.cmd_id);
 		goto exit;
 	}
@@ -86,7 +86,7 @@ static u32 rppg_send_cmd(struct gk20a *g, struct nv_pmu_rppg_cmd *prppg_cmd)
 			&success, 1);
 		if (success == 0) {
 			status = -EINVAL;
-			gk20a_err(dev_from_gk20a(g), "Ack for the parameter command %x",
+			nvgpu_err(g, "Ack for the parameter command %x",
 				prppg_cmd->cmn.cmd_id);
 		}
 	}
@@ -127,7 +127,7 @@ u32 init_rppg(struct gk20a *g)
 
 	status = rppg_init(g);
 	if (status != 0) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"Failed to initialize RPPG in PMU: 0x%08x", status);
 		return status;
 	}
@@ -135,7 +135,7 @@ u32 init_rppg(struct gk20a *g)
 
 	status = rppg_ctrl_init(g, NV_PMU_RPPG_CTRL_ID_GR);
 	if (status != 0) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"Failed to initialize RPPG_CTRL: GR in PMU: 0x%08x",
 			status);
 		return status;
@@ -143,7 +143,7 @@ u32 init_rppg(struct gk20a *g)
 
 	status = rppg_ctrl_init(g, NV_PMU_RPPG_CTRL_ID_MS);
 	if (status != 0) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"Failed to initialize RPPG_CTRL: MS in PMU: 0x%08x",
 			status);
 		return status;

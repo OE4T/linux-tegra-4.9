@@ -201,7 +201,7 @@ static void nvgpu_pmu_handle_param_lpwr_msg(struct gk20a *g,
 	gk20a_dbg_fn("");
 
 	if (status != 0) {
-		gk20a_err(dev_from_gk20a(g), "LWPR PARAM cmd aborted");
+		nvgpu_err(g, "LWPR PARAM cmd aborted");
 		return;
 	}
 
@@ -252,7 +252,7 @@ int nvgpu_lwpr_mclk_change(struct gk20a *g, u32 pstate)
 			&ack_status, 1);
 		if (ack_status == 0) {
 			status = -EINVAL;
-			gk20a_err(dev_from_gk20a(g), "MCLK-CHANGE ACK failed");
+			nvgpu_err(g, "MCLK-CHANGE ACK failed");
 		}
 	}
 
@@ -285,7 +285,7 @@ u32 nvgpu_lpwr_post_init(struct gk20a *g)
 		&ack_status, 1);
 	if (ack_status == 0) {
 		status = -EINVAL;
-		gk20a_err(dev_from_gk20a(g), "post-init ack failed");
+		nvgpu_err(g, "post-init ack failed");
 	}
 
 	return status;

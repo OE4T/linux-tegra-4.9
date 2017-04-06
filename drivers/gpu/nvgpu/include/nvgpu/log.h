@@ -163,20 +163,6 @@ extern u32 nvgpu_dbg_mask;
 					DEBUG, fmt "\n", ##arg);	\
 	} while (0)
 
-#define gk20a_err(d, fmt, arg...)					\
-	do {								\
-		__nvgpu_log_msg(NULL, __func__, __LINE__, ERROR,	\
-				fmt "\n", ##arg);			\
-		(void)(d);						\
-	} while (0)
-
-#define gk20a_warn(d, fmt, arg...)					\
-	do {								\
-		__nvgpu_log_msg(NULL, __func__, __LINE__, WARNING,	\
-				fmt "\n", ##arg);			\
-		(void)(d);						\
-	} while (0)
-
 /*
  * Some convenience macros.
  */

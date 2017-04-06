@@ -130,6 +130,7 @@ void tegra18_clear_serr(void)
 	if (tegra_mce_write_uncore_mca(cmd, 1, &error))
 		pr_err("%s:mce write failed: error=0x%x\n", __func__, error);
 }
+EXPORT_SYMBOL_GPL(tegra18_clear_serr);
 
 static int __init tegra18_serr_init(void)
 {

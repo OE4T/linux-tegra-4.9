@@ -78,7 +78,7 @@ static int vgpu_channel_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 	p->pid = (u64)current->tgid;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	if (err || msg.ret) {
-		gk20a_err(dev_from_gk20a(g), "fail");
+		nvgpu_err(g, "fail");
 		return -ENOMEM;
 	}
 
@@ -365,21 +365,20 @@ static int vgpu_init_fifo_setup_hw(struct gk20a *g)
 		smp_mb();
 
 		if (v1 != gk20a_bar1_readl(g, bar1_vaddr)) {
-			gk20a_err(dev_from_gk20a(g), "bar1 broken @ gk20a!");
+			nvgpu_err(g, "bar1 broken @ gk20a!");
 			return -EINVAL;
 		}
 
 		gk20a_bar1_writel(g, bar1_vaddr, v2);
 
 		if (v2 != gk20a_bar1_readl(g, bar1_vaddr)) {
-			gk20a_err(dev_from_gk20a(g), "bar1 broken @ gk20a!");
+			nvgpu_err(g, "bar1 broken @ gk20a!");
 			return -EINVAL;
 		}
 
 		/* is it visible to the cpu? */
 		if (*cpu_vaddr != v2) {
-			gk20a_err(dev_from_gk20a(g),
-				"cpu didn't see bar1 write @ %p!",
+			nvgpu_err(g, "cpu didn't see bar1 write @ %p!",
 				cpu_vaddr);
 		}
 
@@ -426,7 +425,7 @@ static int vgpu_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 
 	if (err || msg.ret) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"preempt channel %d failed\n", hw_chid);
 		err = -ENOMEM;
 	}
@@ -450,7 +449,7 @@ static int vgpu_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 	err = err ? err : msg.ret;
 
 	if (err) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"preempt tsg %u failed\n", tsgid);
 	}
 
@@ -722,7 +721,7 @@ int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info)
 	if (!ch)
 		return 0;
 
-	gk20a_err(dev_from_gk20a(g), "fifo intr (%d) on ch %u",
+	nvgpu_err(g, "fifo intr (%d) on ch %u",
 		info->type, info->chid);
 
 	trace_gk20a_channel_reset(ch->hw_chid, ch->tsgid);

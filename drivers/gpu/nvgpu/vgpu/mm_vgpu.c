@@ -105,7 +105,7 @@ static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 		map_offset = gk20a_vm_alloc_va(vm, size,
 					  pgsz_idx);
 		if (!map_offset) {
-			gk20a_err(d, "failed to allocate va space\n");
+			nvgpu_err(g, "failed to allocate va space\n");
 			err = -ENOMEM;
 			goto fail;
 		}
@@ -133,7 +133,7 @@ static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 				vm->gmmu_page_sizes[gmmu_page_size_big]) {
 			pgsz_idx = gmmu_page_size_big;
 		} else {
-			gk20a_err(d, "invalid kernel page size %d\n",
+			nvgpu_err(g, "invalid kernel page size %d\n",
 				page_size);
 			goto fail;
 		}
@@ -155,7 +155,7 @@ static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 
 	return map_offset;
 fail:
-	gk20a_err(d, "%s: failed with err=%d\n", __func__, err);
+	nvgpu_err(g, "%s: failed with err=%d\n", __func__, err);
 	return 0;
 }
 
@@ -294,7 +294,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 	gk20a_dbg_fn("");
 
 	if (userspace_managed) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "userspace-managed address spaces not yet supported");
 		return -ENOSYS;
 	}
@@ -506,8 +506,7 @@ static void vgpu_mm_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 {
 	gk20a_dbg_fn("");
 
-	gk20a_err(g->dev, "%s: call to RM server not supported",
-		__func__);
+	nvgpu_err(g, "call to RM server not supported");
 }
 
 static void vgpu_mm_mmu_set_debug_mode(struct gk20a *g, bool enable)

@@ -106,7 +106,7 @@ static void vgpu_handle_channel_event(struct gk20a *g,
 {
 	if (info->id >= g->fifo.num_channels ||
 		info->event_id >= NVGPU_IOCTL_CHANNEL_EVENT_ID_MAX) {
-		gk20a_err(g->dev, "invalid channel event");
+		nvgpu_err(g, "invalid channel event");
 		return;
 	}
 
@@ -118,7 +118,7 @@ static void vgpu_handle_channel_event(struct gk20a *g,
 		struct channel_gk20a *ch = &g->fifo.channel[info->id];
 
 		if (!gk20a_channel_get(ch)) {
-			gk20a_err(g->dev, "invalid channel %d for event %d",
+			nvgpu_err(g, "invalid channel %d for event %d",
 					(int)info->id, (int)info->event_id);
 			return;
 		}
@@ -179,7 +179,7 @@ static int vgpu_intr_thread(void *dev_id)
 			vgpu_gr_handle_sm_esr_event(g, &msg->info.sm_esr);
 			break;
 		default:
-			gk20a_err(g->dev, "unknown event %u", msg->event);
+			nvgpu_err(g, "unknown event %u", msg->event);
 			break;
 		}
 
@@ -349,8 +349,7 @@ static int vgpu_read_ptimer(struct gk20a *g, u64 *value)
 	if (!err)
 		*value = p->time;
 	else
-		gk20a_err(dev_from_gk20a(g),
-			"vgpu read ptimer failed, err=%d", err);
+		nvgpu_err(g, "vgpu read ptimer failed, err=%d", err);
 
 	return err;
 }
@@ -393,7 +392,7 @@ static int vgpu_init_hal(struct gk20a *g)
 		err = vgpu_gp10b_init_hal(g);
 		break;
 	default:
-		gk20a_err(g->dev, "no support for %x", ver);
+		nvgpu_err(g, "no support for %x", ver);
 		err = -ENODEV;
 		break;
 	}
@@ -423,25 +422,25 @@ int vgpu_pm_finalize_poweron(struct device *dev)
 
 	err = vgpu_init_mm_support(g);
 	if (err) {
-		gk20a_err(dev, "failed to init gk20a mm");
+		nvgpu_err(g, "failed to init gk20a mm");
 		goto done;
 	}
 
 	err = vgpu_init_fifo_support(g);
 	if (err) {
-		gk20a_err(dev, "failed to init gk20a fifo");
+		nvgpu_err(g, "failed to init gk20a fifo");
 		goto done;
 	}
 
 	err = vgpu_init_gr_support(g);
 	if (err) {
-		gk20a_err(dev, "failed to init gk20a gr");
+		nvgpu_err(g, "failed to init gk20a gr");
 		goto done;
 	}
 
 	err = g->ops.chip_init_gpu_characteristics(g);
 	if (err) {
-		gk20a_err(dev, "failed to init gk20a gpu characteristics");
+		nvgpu_err(g, "failed to init gk20a gpu characteristics");
 		goto done;
 	}
 
@@ -459,6 +458,7 @@ static int vgpu_qos_notify(struct notifier_block *nb,
 	struct gk20a_scale_profile *profile =
 			container_of(nb, struct gk20a_scale_profile,
 			qos_notify_block);
+	struct gk20a *g = get_gk20a(profile->dev);
 	struct tegra_vgpu_cmd_msg msg = {};
 	struct tegra_vgpu_gpu_clk_rate_params *p = &msg.params.gpu_clk_rate;
 	u32 max_freq;
@@ -474,7 +474,7 @@ static int vgpu_qos_notify(struct notifier_block *nb,
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	err = err ? err : msg.ret;
 	if (err)
-		gk20a_err(profile->dev, "%s failed, err=%d", __func__, err);
+		nvgpu_err(g, "%s failed, err=%d", __func__, err);
 
 	return NOTIFY_OK; /* need notify call further */
 }
@@ -536,13 +536,13 @@ static int vgpu_get_constants(struct gk20a *g)
 	err = err ? err : msg.ret;
 
 	if (unlikely(err)) {
-		gk20a_err(g->dev, "%s failed, err=%d", __func__, err);
+		nvgpu_err(g, "%s failed, err=%d", __func__, err);
 		return err;
 	}
 
 	if (unlikely(p->gpc_count > TEGRA_VGPU_MAX_GPC_COUNT ||
 		p->max_tpc_per_gpc_count > TEGRA_VGPU_MAX_TPC_COUNT_PER_GPC)) {
-		gk20a_err(g->dev, "gpc_count %d max_tpc_per_gpc %d overflow",
+		nvgpu_err(g, "gpc_count %d max_tpc_per_gpc %d overflow",
 			(int)p->gpc_count, (int)p->max_tpc_per_gpc_count);
 		return -EINVAL;
 	}

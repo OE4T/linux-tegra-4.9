@@ -38,7 +38,7 @@ static int vgpu_tsg_open(struct tsg_gk20a *tsg)
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	err = err ? err : msg.ret;
 	if (err) {
-		gk20a_err(dev_from_gk20a(tsg->g),
+		nvgpu_err(tsg->g,
 			"vgpu_tsg_open failed, tsgid %d", tsg->tsgid);
 	}
 
@@ -66,7 +66,7 @@ static int vgpu_tsg_bind_channel(struct tsg_gk20a *tsg,
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	err = err ? err : msg.ret;
 	if (err) {
-		gk20a_err(dev_from_gk20a(tsg->g),
+		nvgpu_err(tsg->g,
 			"vgpu_tsg_bind_channel failed, ch %d tsgid %d",
 			ch->hw_chid, tsg->tsgid);
 		gk20a_tsg_unbind_channel(ch);

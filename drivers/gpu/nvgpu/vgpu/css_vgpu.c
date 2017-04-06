@@ -157,7 +157,7 @@ static int vgpu_css_attach(struct channel_gk20a *ch,
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	err = err ? err : msg.ret;
 	if (err)
-		gk20a_err(dev_from_gk20a(g), "%s failed", __func__);
+		nvgpu_err(g, "failed");
 	else
 		cs_client->perfmon_start = p->perfmon_start;
 
@@ -185,7 +185,7 @@ static int vgpu_css_detach(struct channel_gk20a *ch,
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	err = err ? err : msg.ret;
 	if (err)
-		gk20a_err(dev_from_gk20a(g), "%s failed", __func__);
+		nvgpu_err(g, "failed");
 
 	return err;
 }

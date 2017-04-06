@@ -88,7 +88,7 @@ static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 			err = g->ops.gr.set_ctxsw_preemption_mode(g, gr_ctx, vm,
 			    class, graphics_preempt_mode, compute_preempt_mode);
 			if (err) {
-				gk20a_err(dev_from_gk20a(g),
+				nvgpu_err(g,
 					"set_ctxsw_preemption_mode failed");
 				goto fail;
 			}
@@ -254,7 +254,7 @@ static int vgpu_gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 	return err;
 
 fail:
-	gk20a_err(dev_from_gk20a(g), "%s failed %d", __func__, err);
+	nvgpu_err(g, "%s failed %d", __func__, err);
 	return err;
 }
 
@@ -297,8 +297,7 @@ static int vgpu_gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 						graphics_preempt_mode,
 						compute_preempt_mode);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-					"set_ctxsw_preemption_mode failed");
+			nvgpu_err(g, "set_ctxsw_preemption_mode failed");
 			return err;
 		}
 	} else {

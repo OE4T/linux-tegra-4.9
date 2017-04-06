@@ -294,7 +294,7 @@ int vgpu_gr_alloc_gr_ctx(struct gk20a *g,
 	err = err ? err : msg.ret;
 
 	if (unlikely(err)) {
-		gk20a_err(dev_from_gk20a(g), "fail to alloc gr_ctx");
+		nvgpu_err(g, "fail to alloc gr_ctx");
 		gk20a_vm_free_va(vm, gr_ctx->mem.gpu_va,
 				 gr_ctx->mem.size, gmmu_page_size_kernel);
 		nvgpu_kfree(g, gr_ctx);
@@ -485,15 +485,13 @@ static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 
 	/* an address space needs to have been bound at this point.*/
 	if (!gk20a_channel_as_bound(c)) {
-		gk20a_err(dev_from_gk20a(g),
-			   "not bound to address space at time"
+		nvgpu_err(g, "not bound to address space at time"
 			   " of grctx allocation");
 		return -EINVAL;
 	}
 
 	if (!g->ops.gr.is_valid_class(g, args->class_num)) {
-		gk20a_err(dev_from_gk20a(g),
-			   "invalid obj class 0x%x", args->class_num);
+		nvgpu_err(g, "invalid obj class 0x%x", args->class_num);
 		err = -EINVAL;
 		goto out;
 	}
@@ -512,15 +510,14 @@ static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 			if (!err)
 				err = vgpu_gr_ch_bind_gr_ctx(c);
 			if (err) {
-				gk20a_err(dev_from_gk20a(g),
-					"fail to allocate gr ctx buffer");
+				nvgpu_err(g, "fail to allocate gr ctx buffer");
 				goto out;
 			}
 		} else {
 			/*TBD: needs to be more subtle about which is
 			 * being allocated as some are allowed to be
 			 * allocated along same channel */
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"too many classes alloc'd on same channel");
 			err = -EINVAL;
 			goto out;
@@ -536,7 +533,7 @@ static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 			if (!err)
 				err = vgpu_gr_tsg_bind_gr_ctx(tsg);
 			if (err) {
-				gk20a_err(dev_from_gk20a(g),
+				nvgpu_err(g,
 					"fail to allocate TSG gr ctx buffer, err=%d", err);
 				gk20a_vm_put(tsg->vm);
 				tsg->vm = NULL;
@@ -547,8 +544,7 @@ static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 		ch_ctx->gr_ctx = tsg->tsg_gr_ctx;
 		err = vgpu_gr_ch_bind_gr_ctx(c);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-				"fail to bind gr ctx buffer");
+			nvgpu_err(g, "fail to bind gr ctx buffer");
 			goto out;
 		}
 	}
@@ -556,8 +552,7 @@ static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 	/* commit gr ctx buffer */
 	err = vgpu_gr_commit_inst(c, ch_ctx->gr_ctx->mem.gpu_va);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g),
-			"fail to commit gr ctx buffer");
+		nvgpu_err(g, "fail to commit gr ctx buffer");
 		goto out;
 	}
 
@@ -565,8 +560,7 @@ static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 	if (ch_ctx->patch_ctx.mem.pages == NULL) {
 		err = vgpu_gr_alloc_channel_patch_ctx(g, c);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-				"fail to allocate patch buffer");
+			nvgpu_err(g, "fail to allocate patch buffer");
 			goto out;
 		}
 	}
@@ -575,8 +569,7 @@ static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 	if (!ch_ctx->global_ctx_buffer_mapped) {
 		err = vgpu_gr_map_global_ctx_buffers(g, c);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-				"fail to map global ctx buffer");
+			nvgpu_err(g, "fail to map global ctx buffer");
 			goto out;
 		}
 		gr_gk20a_elpg_protected_call(g,
@@ -588,8 +581,7 @@ static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 		err = gr_gk20a_elpg_protected_call(g,
 				vgpu_gr_load_golden_ctx_image(g, c));
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-				"fail to load golden ctx image");
+			nvgpu_err(g, "fail to load golden ctx image");
 			goto out;
 		}
 		c->first_init = true;
@@ -602,7 +594,7 @@ out:
 	   can be reused so no need to release them.
 	   2. golden image load is a one time thing so if
 	   they pass, no need to undo. */
-	gk20a_err(dev_from_gk20a(g), "fail");
+	nvgpu_err(g, "fail");
 	return err;
 }
 
@@ -651,7 +643,7 @@ static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	g->ops.gr.init_fs_state(g);
 	return 0;
 cleanup:
-	gk20a_err(dev_from_gk20a(g), "%s: out of memory", __func__);
+	nvgpu_err(g, "out of memory");
 
 	nvgpu_kfree(g, gr->gpc_tpc_count);
 	gr->gpc_tpc_count = NULL;
@@ -905,7 +897,7 @@ static int vgpu_gr_init_gr_setup_sw(struct gk20a *g)
 	return 0;
 
 clean_up:
-	gk20a_err(dev_from_gk20a(g), "fail");
+	nvgpu_err(g, "fail");
 	vgpu_remove_gr_support(gr);
 	return err;
 }
@@ -928,8 +920,7 @@ int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info)
 
 	if (info->type != TEGRA_VGPU_GR_INTR_NOTIFY &&
 		info->type != TEGRA_VGPU_GR_INTR_SEMAPHORE)
-		gk20a_err(dev_from_gk20a(g), "gr intr (%d) on ch %u",
-			info->type, info->chid);
+		nvgpu_err(g, "gr intr (%d) on ch %u", info->type, info->chid);
 
 	switch (info->type) {
 	case TEGRA_VGPU_GR_INTR_NOTIFY:
@@ -1186,7 +1177,7 @@ void vgpu_gr_handle_sm_esr_event(struct gk20a *g,
 	struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_states;
 
 	if (info->sm_id >= g->gr.no_of_sm) {
-		gk20a_err(g->dev, "invalid smd_id %d / %d",
+		nvgpu_err(g, "invalid smd_id %d / %d",
 			info->sm_id, g->gr.no_of_sm);
 		return;
 	}

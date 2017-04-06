@@ -54,7 +54,6 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 				enum nvgpu_aperture aperture)
 {
 	int err = 0;
-	struct device *d = dev_from_vm(vm);
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_as_map_ex_params *p = &msg.params.as_map_ex;
@@ -82,7 +81,7 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 	if (!map_offset) {
 		map_offset = gk20a_vm_alloc_va(vm, size, pgsz_idx);
 		if (!map_offset) {
-			gk20a_err(d, "failed to allocate va space");
+			nvgpu_err(g, "failed to allocate va space");
 			err = -ENOMEM;
 			goto fail;
 		}
@@ -140,7 +139,7 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 				vm->gmmu_page_sizes[gmmu_page_size_big]) {
 			pgsz_idx = gmmu_page_size_big;
 		} else {
-			gk20a_err(d, "invalid kernel page size %d\n",
+			nvgpu_err(g, "invalid kernel page size %d\n",
 				page_size);
 			goto fail;
 		}
@@ -171,7 +170,7 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 fail:
 	if (handle)
 		tegra_gr_comm_oob_put_ptr(handle);
-	gk20a_err(d, "%s: failed with err=%d\n", __func__, err);
+	nvgpu_err(g, "%s: failed with err=%d\n", __func__, err);
 	return 0;
 }
 

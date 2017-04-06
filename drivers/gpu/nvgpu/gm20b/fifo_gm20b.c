@@ -21,6 +21,7 @@
 #include "fifo_gm20b.h"
 
 #include <nvgpu/timers.h>
+#include <nvgpu/log.h>
 
 #include <nvgpu/hw/gm20b/hw_ccsr_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_ram_gm20b.h>
@@ -64,7 +65,7 @@ static inline u32 gm20b_engine_id_to_mmu_id(struct gk20a *g, u32 engine_id)
 	if (engine_info) {
 		fault_id = engine_info->fault_id;
 	} else {
-		gk20a_err(g->dev, "engine_id is not in active list/invalid %d", engine_id);
+		nvgpu_err(g, "engine_id is not in active list/invalid %d", engine_id);
 	}
 	return fault_id;
 }
@@ -80,8 +81,7 @@ static void gm20b_fifo_trigger_mmu_fault(struct gk20a *g,
 	/* trigger faults for all bad engines */
 	for_each_set_bit(engine_id, &engine_ids, 32) {
 		if (!gk20a_fifo_is_valid_engine_id(g, engine_id)) {
-			gk20a_err(dev_from_gk20a(g),
-				  "faulting unknown engine %ld", engine_id);
+			nvgpu_err(g, "faulting unknown engine %ld", engine_id);
 		} else {
 			u32 mmu_id = gm20b_engine_id_to_mmu_id(g,
 								engine_id);
@@ -107,7 +107,7 @@ static void gm20b_fifo_trigger_mmu_fault(struct gk20a *g,
 	} while (!nvgpu_timeout_expired(&timeout));
 
 	if (ret)
-		gk20a_err(dev_from_gk20a(g), "mmu fault timeout");
+		nvgpu_err(g, "mmu fault timeout");
 
 	/* release mmu fault trigger */
 	for_each_set_bit(engine_id, &engine_ids, 32)
@@ -136,7 +136,7 @@ static void gm20b_device_info_data_parse(struct gk20a *g,
 			    top_device_info_data_fault_id_enum_v(table_entry);
 		}
 	} else
-		gk20a_err(g->dev, "unknown device_info_data %d",
+		nvgpu_err(g, "unknown device_info_data %d",
 				top_device_info_data_type_v(table_entry));
 }
 

@@ -121,7 +121,7 @@ static void gm20b_fb_dump_vpr_wpr_info(struct gk20a *g)
 	val &= ~0x3;
 	val |= fb_mmu_vpr_info_index_addr_lo_v();
 	gk20a_writel(g, fb_mmu_vpr_info_r(), val);
-	gk20a_err(dev_from_gk20a(g), "VPR: %08x %08x %08x %08x",
+	nvgpu_err(g, "VPR: %08x %08x %08x %08x",
 		gk20a_readl(g, fb_mmu_vpr_info_r()),
 		gk20a_readl(g, fb_mmu_vpr_info_r()),
 		gk20a_readl(g, fb_mmu_vpr_info_r()),
@@ -131,7 +131,7 @@ static void gm20b_fb_dump_vpr_wpr_info(struct gk20a *g)
 	val &= ~0xf;
 	val |= (fb_mmu_wpr_info_index_allow_read_v());
 	gk20a_writel(g, fb_mmu_wpr_info_r(), val);
-	gk20a_err(dev_from_gk20a(g), "WPR: %08x %08x %08x %08x %08x %08x",
+	nvgpu_err(g, "WPR: %08x %08x %08x %08x %08x %08x",
 		gk20a_readl(g, fb_mmu_wpr_info_r()),
 		gk20a_readl(g, fb_mmu_wpr_info_r()),
 		gk20a_readl(g, fb_mmu_wpr_info_r()),

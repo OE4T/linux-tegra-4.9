@@ -21,6 +21,7 @@
 #include <dt-bindings/soc/gm20b-fuse.h>
 
 #include <nvgpu/kmem.h>
+#include <nvgpu/log.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
@@ -754,8 +755,7 @@ static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 				(1 << LSF_FALCON_ID_GPCCS));
 		}
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-				"Unable to recover GR falcon");
+			nvgpu_err(g, "Unable to recover GR falcon");
 			return err;
 		}
 
@@ -775,8 +775,7 @@ static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 			err = g->ops.pmu.load_lsfalcon_ucode(g, falcon_id_mask);
 
 			if (err) {
-				gk20a_err(dev_from_gk20a(g),
-						"Unable to boot GPCCS\n");
+				nvgpu_err(g, "Unable to boot GPCCS");
 				return err;
 			}
 		}
@@ -1294,7 +1293,7 @@ static int gm20b_gr_update_sm_error_state(struct gk20a *g,
 
 	err = gr_gk20a_disable_ctxsw(g);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g), "unable to stop gr ctxsw\n");
+		nvgpu_err(g, "unable to stop gr ctxsw");
 		goto fail;
 	}
 
@@ -1356,7 +1355,7 @@ static int gm20b_gr_clear_sm_error_state(struct gk20a *g,
 
 	err = gr_gk20a_disable_ctxsw(g);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g), "unable to stop gr ctxsw\n");
+		nvgpu_err(g, "unable to stop gr ctxsw");
 		goto fail;
 	}
 
@@ -1434,8 +1433,7 @@ static int gm20b_gr_fuse_override(struct gk20a *g)
 			gm20b_gr_tpc_disable_override(g, value);
 			break;
 		default:
-			gk20a_err(dev_from_gk20a(g),
-				"ignore unknown fuse override %08x", fuse);
+			nvgpu_err(g, "ignore unknown fuse override %08x", fuse);
 			break;
 		}
 	}

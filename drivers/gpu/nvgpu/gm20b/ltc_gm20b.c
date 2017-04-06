@@ -153,8 +153,7 @@ int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 			} while (!nvgpu_timeout_expired(&timeout));
 
 			if (nvgpu_timeout_peek_expired(&timeout)) {
-				gk20a_err(dev_from_gk20a(g),
-					   "comp tag clear timeout\n");
+				nvgpu_err(g, "comp tag clear timeout");
 				err = -EBUSY;
 				goto out;
 			}
@@ -201,8 +200,7 @@ void gm20b_ltc_isr(struct gk20a *g)
 	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
 
 	mc_intr = gk20a_readl(g, mc_intr_ltc_r());
-	gk20a_err(dev_from_gk20a(g), "mc_ltc_intr: %08x",
-		  mc_intr);
+	nvgpu_err(g, "mc_ltc_intr: %08x", mc_intr);
 	for (ltc = 0; ltc < g->ltc_count; ltc++) {
 		if ((mc_intr & 1 << ltc) == 0)
 			continue;
@@ -210,7 +208,7 @@ void gm20b_ltc_isr(struct gk20a *g)
 			ltc_intr = gk20a_readl(g, ltc_ltc0_lts0_intr_r() +
 					   ltc_stride * ltc +
 					   lts_stride * slice);
-			gk20a_err(dev_from_gk20a(g), "ltc%d, slice %d: %08x",
+			nvgpu_err(g, "ltc%d, slice %d: %08x",
 				  ltc, slice, ltc_intr);
 			gk20a_writel(g, ltc_ltc0_lts0_intr_r() +
 					   ltc_stride * ltc +
@@ -226,8 +224,7 @@ u32 gm20b_ltc_cbc_fix_config(struct gk20a *g, int base)
 	if (val == 2) {
 		return base * 2;
 	} else if (val != 1) {
-		gk20a_err(dev_from_gk20a(g),
-			"Invalid number of active ltcs: %08x\n", val);
+		nvgpu_err(g, "Invalid number of active ltcs: %08x\n", val);
 	}
 
 	return base;
@@ -335,8 +332,7 @@ static int gm20b_determine_L2_size_bytes(struct gk20a *g)
 		 ltc_ltc0_lts0_tstg_cfg1_active_sets_quarter_v()) {
 		sets = 16;
 	} else {
-		dev_err(dev_from_gk20a(g),
-			"Unknown constant %u for active sets",
+		nvgpu_err(g, "Unknown constant %u for active sets",
 		       (unsigned)active_sets_value);
 		sets = 0;
 	}

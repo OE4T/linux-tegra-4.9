@@ -242,8 +242,7 @@ static int gm20b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 				&g->ops.pmu.lspmuwprinitdone, 1);
 		/* check again if it still not ready indicate an error */
 		if (!g->ops.pmu.lspmuwprinitdone) {
-			gk20a_err(dev_from_gk20a(g),
-				"PMU not ready to load LSF");
+			nvgpu_err(g, "PMU not ready to load LSF");
 			return -ETIMEDOUT;
 		}
 	}
@@ -266,12 +265,12 @@ static void pmu_dump_security_fuses_gm20b(struct gk20a *g)
 {
 	u32 val;
 
-	gk20a_err(dev_from_gk20a(g), "FUSE_OPT_SEC_DEBUG_EN_0 : 0x%x",
+	nvgpu_err(g, "FUSE_OPT_SEC_DEBUG_EN_0 : 0x%x",
 			gk20a_readl(g, fuse_opt_sec_debug_en_r()));
-	gk20a_err(dev_from_gk20a(g), "FUSE_OPT_PRIV_SEC_EN_0 : 0x%x",
+	nvgpu_err(g, "FUSE_OPT_PRIV_SEC_EN_0 : 0x%x",
 			gk20a_readl(g, fuse_opt_priv_sec_en_r()));
 	tegra_fuse_readl(FUSE_GCPLEX_CONFIG_FUSE_0, &val);
-	gk20a_err(dev_from_gk20a(g), "FUSE_GCPLEX_CONFIG_FUSE_0 : 0x%x",
+	nvgpu_err(g, "FUSE_GCPLEX_CONFIG_FUSE_0 : 0x%x",
 			val);
 }
 

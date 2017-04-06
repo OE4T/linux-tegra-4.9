@@ -310,7 +310,7 @@ static int clk_config_calibration_params(struct gk20a *g)
 		 * (non-production config), report error, but allow to use
 		 * boot internal calibration with default slope.
 		 */
-		gk20a_err(dev_from_gk20a(g), "ADC coeff are not fused\n");
+		nvgpu_err(g, "ADC coeff are not fused");
 		return -EINVAL;
 	}
 	return 0;
@@ -532,7 +532,7 @@ static int clk_enbale_pll_dvfs(struct gk20a *g)
 	} while (delay > 0);
 
 	if (delay <= 0) {
-		gk20a_err(dev_from_gk20a(g), "GPCPLL calibration timeout");
+		nvgpu_err(g, "GPCPLL calibration timeout");
 		return -ETIMEDOUT;
 	}
 
@@ -564,8 +564,7 @@ static void clk_setup_slide(struct gk20a *g, u32 clk_u)
 		step_b = 0x05;
 		break;
 	default:
-		gk20a_err(dev_from_gk20a(g), "Unexpected reference rate %u kHz",
-			  clk_u);
+		nvgpu_err(g, "Unexpected reference rate %u kHz", clk_u);
 		BUG();
 	}
 
@@ -671,7 +670,7 @@ static int clk_slide_gpc_pll(struct gk20a *g, struct pll *gpll)
 	gk20a_readl(g, trim_sys_gpcpll_ndiv_slowdown_r());
 
 	if (ramp_timeout <= 0) {
-		gk20a_err(dev_from_gk20a(g), "gpcpll dynamic ramp timeout");
+		nvgpu_err(g, "gpcpll dynamic ramp timeout");
 		return -ETIMEDOUT;
 	}
 	return 0;
@@ -1041,7 +1040,7 @@ static int clk_program_na_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 
 		ret = clk_program_gpc_pll(g, &gpll_safe, 1);
 		if (ret) {
-			gk20a_err(dev_from_gk20a(g), "Safe dvfs program fail\n");
+			nvgpu_err(g, "Safe dvfs program fail");
 			return ret;
 		}
 	}
@@ -1154,8 +1153,7 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 #endif
 
 	if (IS_ERR(ref)) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to get GPCPLL reference clock");
+		nvgpu_err(g, "failed to get GPCPLL reference clock");
 		err = -EINVAL;
 		goto fail;
 	}
@@ -1163,8 +1161,7 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	clk->gpc_pll.id = GK20A_GPC_PLL;
 	clk->gpc_pll.clk_in = clk_get_rate(ref) / KHZ;
 	if (clk->gpc_pll.clk_in == 0) {
-		gk20a_err(dev_from_gk20a(g),
-			"GPCPLL reference clock is zero");
+		nvgpu_err(g, "GPCPLL reference clock is zero");
 		err = -EINVAL;
 		goto fail;
 	}
@@ -1327,8 +1324,7 @@ int gm20b_register_gpcclk(struct gk20a *g) {
 	clk->hw.init = &init;
 	c = clk_register(g->dev, &clk->hw);
 	if (IS_ERR(c)) {
-		gk20a_err(dev_from_gk20a(g),
-			  "Failed to register GPCPLL clock");
+		nvgpu_err(g, "Failed to register GPCPLL clock");
 		return -EINVAL;
 	}
 
@@ -1405,8 +1401,7 @@ static int set_pll_target(struct gk20a *g, u32 freq, u32 old_freq)
 		/* gpc_pll.freq is changed to new value here */
 		if (clk_config_pll(clk, &clk->gpc_pll, &gpc_pll_params,
 				   &freq, true)) {
-			gk20a_err(dev_from_gk20a(g),
-				   "failed to set pll target for %d", freq);
+			nvgpu_err(g, "failed to set pll target for %d", freq);
 			return -EINVAL;
 		}
 	}
@@ -1442,8 +1437,7 @@ static int set_pll_freq(struct gk20a *g, int allow_slide)
 	 * Just report error but not restore PLL since dvfs could already change
 	 * voltage even when programming failed.
 	 */
-	gk20a_err(dev_from_gk20a(g), "failed to set pll to %d",
-		  clk->gpc_pll.freq);
+	nvgpu_err(g, "failed to set pll to %d", clk->gpc_pll.freq);
 	return err;
 }
 

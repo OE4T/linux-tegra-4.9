@@ -134,7 +134,7 @@ static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	gm20b_dbg_pmu("requesting PMU ucode in GM20B\n");
 	pmu_fw = nvgpu_request_firmware(g, GM20B_PMU_UCODE_IMAGE, 0);
 	if (!pmu_fw) {
-		gk20a_err(dev_from_gk20a(g), "failed to load pmu ucode!!");
+		nvgpu_err(g, "failed to load pmu ucode!!");
 		return -ENOENT;
 	}
 	g->acr.pmu_fw = pmu_fw;
@@ -143,13 +143,13 @@ static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	gm20b_dbg_pmu("requesting PMU ucode desc in GM20B\n");
 	pmu_desc = nvgpu_request_firmware(g, GM20B_PMU_UCODE_DESC, 0);
 	if (!pmu_desc) {
-		gk20a_err(dev_from_gk20a(g), "failed to load pmu ucode desc!!");
+		nvgpu_err(g, "failed to load pmu ucode desc!!");
 		err = -ENOENT;
 		goto release_img_fw;
 	}
 	pmu_sig = nvgpu_request_firmware(g, GM20B_PMU_UCODE_SIG, 0);
 	if (!pmu_sig) {
-		gk20a_err(dev_from_gk20a(g), "failed to load pmu sig!!");
+		nvgpu_err(g, "failed to load pmu sig!!");
 		err = -ENOENT;
 		goto release_desc;
 	}
@@ -197,7 +197,7 @@ static int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 
 	fecs_sig = nvgpu_request_firmware(g, GM20B_FECS_UCODE_SIG, 0);
 	if (!fecs_sig) {
-		gk20a_err(dev_from_gk20a(g), "failed to load fecs sig");
+		nvgpu_err(g, "failed to load fecs sig");
 		return -ENOENT;
 	}
 	lsf_desc = nvgpu_kzalloc(g, sizeof(struct lsf_ucode_desc));
@@ -267,7 +267,7 @@ static int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 
 	gpccs_sig = nvgpu_request_firmware(g, T18x_GPCCS_UCODE_SIG, 0);
 	if (!gpccs_sig) {
-		gk20a_err(dev_from_gk20a(g), "failed to load gpccs sig");
+		nvgpu_err(g, "failed to load gpccs sig");
 		return -ENOENT;
 	}
 	lsf_desc = nvgpu_kzalloc(g, sizeof(struct lsf_ucode_desc));
@@ -412,12 +412,12 @@ int prepare_ucode_blob(struct gk20a *g)
 
 	sgt = nvgpu_kzalloc(g, sizeof(*sgt));
 	if (!sgt) {
-		gk20a_err(dev_from_gk20a(g), "failed to allocate memory\n");
+		nvgpu_err(g, "failed to allocate memory");
 		return -ENOMEM;
 	}
 	err = sg_alloc_table(sgt, 1, GFP_KERNEL);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g), "failed to allocate sg_table\n");
+		nvgpu_err(g, "failed to allocate sg_table");
 		goto free_sgt;
 	}
 	page = phys_to_page(wpr_addr);
@@ -1088,7 +1088,7 @@ static int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 		/*First time init case*/
 		acr_fw = nvgpu_request_firmware(g, GM20B_HSBIN_PMU_UCODE_IMAGE, 0);
 		if (!acr_fw) {
-			gk20a_err(dev_from_gk20a(g), "pmu ucode get fail");
+			nvgpu_err(g, "pmu ucode get fail");
 			return -ENOENT;
 		}
 		acr->acr_fw = acr_fw;
@@ -1111,7 +1111,7 @@ static int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 						acr->fw_hdr->patch_loc),
 					(u32 *)(acr_fw->data +
 						acr->fw_hdr->patch_sig)) < 0) {
-			gk20a_err(dev_from_gk20a(g), "patch signatures fail");
+			nvgpu_err(g, "patch signatures fail");
 			err = -1;
 			goto err_release_acr_fw;
 		}
@@ -1386,7 +1386,6 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
-	struct device *d = dev_from_gk20a(g);
 	int err = 0;
 	u32 bl_sz;
 	struct acr_desc *acr = &g->acr;
@@ -1399,7 +1398,7 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 		hsbl_fw = nvgpu_request_firmware(g,
 			GM20B_HSBIN_PMU_BL_UCODE_IMAGE, 0);
 		if (!hsbl_fw) {
-			gk20a_err(dev_from_gk20a(g), "pmu ucode load fail");
+			nvgpu_err(g, "pmu ucode load fail");
 			return -ENOENT;
 		}
 		acr->hsbl_fw = hsbl_fw;
@@ -1420,7 +1419,7 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 		err = nvgpu_dma_alloc_flags_sys(g,
 				NVGPU_DMA_READ_ONLY, bl_sz, &acr->hsbl_ucode);
 		if (err) {
-			gk20a_err(d, "failed to allocate memory\n");
+			nvgpu_err(g, "failed to allocate memory\n");
 			goto err_done;
 		}
 
@@ -1430,7 +1429,7 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 				gk20a_mem_flag_read_only, false,
 				acr->hsbl_ucode.aperture);
 		if (!acr->hsbl_ucode.gpu_va) {
-			gk20a_err(d, "failed to map pmu ucode memory!!");
+			nvgpu_err(g, "failed to map pmu ucode memory!!");
 			goto err_free_ucode;
 		}
 
@@ -1506,7 +1505,7 @@ static int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout_ms)
 	} while (!nvgpu_timeout_expired(&timeout));
 
 	if (ret) {
-		gk20a_err(dev_from_gk20a(g), "ACR boot timed out");
+		nvgpu_err(g, "ACR boot timed out");
 		return ret;
 	}
 
@@ -1514,8 +1513,7 @@ static int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout_ms)
 	gm20b_dbg_pmu("ACR capabilities %x\n", g->acr.capabilities);
 	data = gk20a_readl(g, pwr_falcon_mailbox0_r());
 	if (data) {
-		gk20a_err(dev_from_gk20a(g),
-			  "ACR boot failed, err %x", data);
+		nvgpu_err(g, "ACR boot failed, err %x", data);
 		ret = -EAGAIN;
 	}
 

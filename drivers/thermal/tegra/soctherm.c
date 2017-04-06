@@ -1565,6 +1565,77 @@ static int temp_set(void *data, u64 val)
 }
 DEFINE_SIMPLE_ATTRIBUTE(temp_fops, temp_get, temp_set, "%lld\n");
 
+static void soctherm_hw_pllx_offsets_init(struct tegra_soctherm *tegra);
+static int max_off_get(void *data, u64 *val)
+{
+	struct tegra_thermctl_zone *z = data;
+	u32 r;
+
+	r = readl(z->ts->regs + SENSOR_HW_PLLX_OFFSET_MAX);
+	*val = REG_GET_MASK(r, z->sg->hw_pllx_offset_mask);
+
+	return 0;
+}
+
+static int max_off_set(void *data, u64 val)
+{
+	struct tegra_thermctl_zone *z = data;
+	struct tsensor_group_offsets *toffs = z->ts->soc->toffs;
+	u32 id = z->sg->id;
+	int i;
+
+	for (i = 0; i < z->ts->soc->num_ttgs; i++)
+		if (toffs[i].ttg->id == id)
+			break;
+
+	toffs[i].max = val;
+	soctherm_hw_pllx_offsets_init(z->ts);
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(max_fops, max_off_get, max_off_set, "%lld\n");
+
+static int min_off_get(void *data, u64 *val)
+{
+	struct tegra_thermctl_zone *z = data;
+	u32 r;
+
+	r = readl(z->ts->regs + SENSOR_HW_PLLX_OFFSET_MIN);
+	*val = REG_GET_MASK(r, z->sg->hw_pllx_offset_mask);
+
+	return 0;
+}
+
+static int min_off_set(void *data, u64 val)
+{
+	struct tegra_thermctl_zone *z = data;
+	struct tsensor_group_offsets *toffs = z->ts->soc->toffs;
+	u32 id = z->sg->id;
+	int i;
+
+	for (i = 0; i < z->ts->soc->num_ttgs; i++)
+		if (toffs[i].ttg->id == id)
+			break;
+
+	toffs[i].min = val;
+	soctherm_hw_pllx_offsets_init(z->ts);
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(min_fops, min_off_get, min_off_set, "%lld\n");
+
+static int hw_pllx_offsetting_set(void *data, u64 val)
+{
+	bool low_v = (val) ? true : false;
+
+	tegra_soctherm_cpu_tsens_invalidate(low_v);
+	tegra_soctherm_gpu_tsens_invalidate(low_v);
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(hw_pllx_off_fops, NULL, hw_pllx_offsetting_set,
+			"%lld\n");
+
 static int thermtrip_get(void *data, u64 *val)
 {
 
@@ -1865,6 +1936,9 @@ static void soctherm_debug_init(struct platform_device *pdev)
 	file = (file) ? debugfs_create_file("tempoverride", 0644,
 			root, tegra, &tempoverride_fops) : file;
 
+	file = (file) ? debugfs_create_file("pllx_offset_en", 0644, root, NULL,
+					&hw_pllx_off_fops) : file;
+
 	file = (file) ? soctherm_throttle_debug_init(root, pdev) : file;
 	if (!file) {
 		dev_err(&pdev->dev, "failed to create debugfs file\n");
@@ -1887,6 +1961,10 @@ static void soctherm_debug_temp_add(struct tegra_thermctl_zone *z)
 	if (tsensor_group_thermtrip_get(z->ts, z->sg->id) > 0) {
 		debugfs_create_file("thermtrip", 0644, dir, z, &tt_fops);
 		debugfs_create_file("thermtrip_en", 0644, dir, z, &tt_en_fops);
+	}
+	if (z->sg->id != TEGRA124_SOCTHERM_SENSOR_PLLX) {
+		debugfs_create_file("pllx_offset_max", 0644, dir, z, &max_fops);
+		debugfs_create_file("pllx_offset_min", 0644, dir, z, &min_fops);
 	}
 
 	return;

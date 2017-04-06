@@ -1878,34 +1878,70 @@ static int gk20a_channel_poll_worker(void *arg)
 	return 0;
 }
 
+static int __nvgpu_channel_worker_start(struct gk20a *g)
+{
+	char thread_name[64];
+	int err = 0;
+
+	if (nvgpu_thread_is_running(&g->channel_worker.poll_task))
+		return err;
+
+	nvgpu_mutex_acquire(&g->channel_worker.start_lock);
+
+	/*
+	 * We don't want to grab a mutex on every channel update so we check
+	 * again if the worker has been initialized before creating a new thread
+	 */
+
+	/*
+	 * Mutexes have implicit barriers, so there is no risk of a thread
+	 * having a stale copy of the poll_task variable as the call to
+	 * thread_is_running is volatile
+	 */
+
+	if (nvgpu_thread_is_running(&g->channel_worker.poll_task)) {
+		nvgpu_mutex_release(&g->channel_worker.start_lock);
+		return err;
+	}
+
+	snprintf(thread_name, sizeof(thread_name),
+			"nvgpu_channel_poll_%s", g->name);
+
+	err = nvgpu_thread_create(&g->channel_worker.poll_task, g,
+			gk20a_channel_poll_worker, thread_name);
+
+	nvgpu_mutex_release(&g->channel_worker.start_lock);
+	return err;
+}
 /**
  * Initialize the channel worker's metadata and start the background thread.
  */
 int nvgpu_channel_worker_init(struct gk20a *g)
 {
 	int err;
-	char thread_name[64];
 
 	nvgpu_atomic_set(&g->channel_worker.put, 0);
 	nvgpu_cond_init(&g->channel_worker.wq);
 	nvgpu_init_list_node(&g->channel_worker.items);
 	nvgpu_spinlock_init(&g->channel_worker.items_lock);
-	snprintf(thread_name, sizeof(thread_name),
-			"nvgpu_channel_poll_%s", g->name);
+	err = nvgpu_mutex_init(&g->channel_worker.start_lock);
+	if (err)
+		goto error_check;
 
-	err = nvgpu_thread_create(&g->channel_worker.poll_task, g,
-			gk20a_channel_poll_worker, thread_name);
+	err = __nvgpu_channel_worker_start(g);
+error_check:
 	if (err) {
 		nvgpu_err(g, "failed to start channel poller thread");
 		return err;
 	}
-
 	return 0;
 }
 
 void nvgpu_channel_worker_deinit(struct gk20a *g)
 {
+	nvgpu_mutex_acquire(&g->channel_worker.start_lock);
 	nvgpu_thread_stop(&g->channel_worker.poll_task);
+	nvgpu_mutex_release(&g->channel_worker.start_lock);
 }
 
 /**
@@ -1922,6 +1958,14 @@ static void gk20a_channel_worker_enqueue(struct channel_gk20a *ch)
 	struct gk20a *g = ch->g;
 
 	gk20a_dbg_fn("");
+
+	/*
+	 * Warn if worker thread cannot run
+	 */
+	if (WARN_ON(__nvgpu_channel_worker_start(g))) {
+		nvgpu_warn(g, "channel worker cannot run!");
+		return;
+	}
 
 	/*
 	 * Ref released when this item gets processed. The caller should hold

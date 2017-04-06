@@ -1215,6 +1215,7 @@ struct gk20a {
 		struct nvgpu_cond wq;
 		struct nvgpu_list_node items;
 		struct nvgpu_spinlock items_lock;
+		struct nvgpu_mutex start_lock;
 	} channel_worker;
 
 	struct gk20a_scale_profile *scale_profile;

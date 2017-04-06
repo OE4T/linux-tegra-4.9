@@ -40,6 +40,7 @@ int ad193x_probe(struct device *dev, struct regmap *regmap,
 #define AD193X_DAC_SERFMT_MASK		0xC0
 #define AD193X_DAC_SERFMT_STEREO	(0 << 6)
 #define AD193X_DAC_SERFMT_TDM		(1 << 6)
+#define AD193X_DAC_SERFMT_AUX		(2 << 6)
 #define AD193X_DAC_CTRL1        0x03
 #define AD193X_DAC_CHAN_SHFT    1
 #define AD193X_DAC_CHAN_MASK    (3 << AD193X_DAC_CHAN_SHFT)

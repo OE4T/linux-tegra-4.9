@@ -751,7 +751,7 @@ void nvgpu_kmem_fini(struct gk20a *g, int flags)
 		if (flags & NVGPU_KMEM_FINI_WARN) {
 			WARN(1, "Letting %d allocs leak!!\n", count);
 		} else if (flags & NVGPU_KMEM_FINI_BUG) {
-			gk20a_err(g->dev, "Letting %d allocs leak!!\n", count);
+			nvgpu_err(g, "Letting %d allocs leak!!\n", count);
 			BUG();
 		}
 	}

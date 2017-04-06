@@ -25,6 +25,7 @@
 #include <nvgpu/semaphore.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/log.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/debug_gk20a.h"
@@ -182,7 +183,6 @@ static int gk20a_channel_set_wdt_status(struct channel_gk20a *ch,
 static int gk20a_init_error_notifier(struct channel_gk20a *ch,
 		struct nvgpu_set_error_notifier *args)
 {
-	struct device *dev = dev_from_gk20a(ch->g);
 	struct dma_buf *dmabuf;
 	void *va;
 	u64 end = args->offset + sizeof(struct nvgpu_notification);
@@ -203,7 +203,7 @@ static int gk20a_init_error_notifier(struct channel_gk20a *ch,
 
 	if (end > dmabuf->size || end < sizeof(struct nvgpu_notification)) {
 		dma_buf_put(dmabuf);
-		gk20a_err(dev, "gk20a_init_error_notifier: invalid offset\n");
+		nvgpu_err(ch->g, "gk20a_init_error_notifier: invalid offset\n");
 		return -EINVAL;
 	}
 
@@ -255,7 +255,7 @@ int gk20a_channel_release(struct inode *inode, struct file *filp)
 
 	err = gk20a_busy(g);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g), "failed to release a channel!");
+		nvgpu_err(g, "failed to release a channel!");
 		goto channel_release;
 	}
 
@@ -295,14 +295,14 @@ static int __gk20a_channel_open(struct gk20a *g,
 
 	err = gk20a_busy(g);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g), "failed to power on, %d", err);
+		nvgpu_err(g, "failed to power on, %d", err);
 		goto fail_busy;
 	}
 	/* All the user space channel should be non privilege */
 	ch = gk20a_open_new_channel(g, runlist_id, false);
 	gk20a_idle(g);
 	if (!ch) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"failed to get f");
 		err = -ENOMEM;
 		goto fail_busy;
@@ -388,7 +388,6 @@ static int gk20a_channel_wait_semaphore(struct channel_gk20a *ch,
 					ulong id, u32 offset,
 					u32 payload, long timeout)
 {
-	struct device *dev = ch->g->dev;
 	struct dma_buf *dmabuf;
 	void *data;
 	u32 *semaphore;
@@ -401,13 +400,13 @@ static int gk20a_channel_wait_semaphore(struct channel_gk20a *ch,
 
 	dmabuf = dma_buf_get(id);
 	if (IS_ERR(dmabuf)) {
-		gk20a_err(dev, "invalid notifier nvmap handle 0x%lx", id);
+		nvgpu_err(ch->g, "invalid notifier nvmap handle 0x%lx", id);
 		return -EINVAL;
 	}
 
 	data = dma_buf_kmap(dmabuf, offset >> PAGE_SHIFT);
 	if (!data) {
-		gk20a_err(dev, "failed to map notifier memory");
+		nvgpu_err(ch->g, "failed to map notifier memory");
 		ret = -EINVAL;
 		goto cleanup_put;
 	}
@@ -433,8 +432,8 @@ cleanup_put:
 static int gk20a_channel_wait(struct channel_gk20a *ch,
 			      struct nvgpu_wait_args *args)
 {
-	struct device *d = dev_from_gk20a(ch->g);
 	struct dma_buf *dmabuf;
+	struct gk20a *g = ch->g;
 	struct notification *notif;
 	struct timespec tv;
 	u64 jiffies;
@@ -462,20 +461,20 @@ static int gk20a_channel_wait(struct channel_gk20a *ch,
 
 		dmabuf = dma_buf_get(id);
 		if (IS_ERR(dmabuf)) {
-			gk20a_err(d, "invalid notifier nvmap handle 0x%lx",
+			nvgpu_err(g, "invalid notifier nvmap handle 0x%lx",
 				   id);
 			return -EINVAL;
 		}
 
 		if (end > dmabuf->size || end < sizeof(struct notification)) {
 			dma_buf_put(dmabuf);
-			gk20a_err(d, "invalid notifier offset\n");
+			nvgpu_err(g, "invalid notifier offset\n");
 			return -EINVAL;
 		}
 
 		notif = dma_buf_vmap(dmabuf);
 		if (!notif) {
-			gk20a_err(d, "failed to map notifier memory");
+			nvgpu_err(g, "failed to map notifier memory");
 			return -ENOMEM;
 		}
 
@@ -742,7 +741,7 @@ static int gk20a_channel_event_id_ctrl(struct channel_gk20a *ch,
 		break;
 
 	default:
-		gk20a_err(dev_from_gk20a(ch->g),
+		nvgpu_err(ch->g,
 			   "unrecognized channel event id cmd: 0x%x",
 			   args->cmd);
 		err = -EINVAL;

@@ -23,6 +23,7 @@
 #include <linux/anon_inodes.h>
 
 #include <nvgpu/kmem.h>
+#include <nvgpu/log.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/tsg_gk20a.h"
@@ -188,8 +189,7 @@ static int gk20a_tsg_event_id_ctrl(struct gk20a *g, struct tsg_gk20a *tsg,
 		break;
 
 	default:
-		gk20a_err(dev_from_gk20a(tsg->g),
-			   "unrecognized tsg event id cmd: 0x%x",
+		nvgpu_err(tsg->g, "unrecognized tsg event id cmd: 0x%x",
 			   args->cmd);
 		err = -EINVAL;
 		break;
@@ -274,7 +274,7 @@ static int gk20a_tsg_ioctl_set_priority(struct gk20a *g,
 
 	err = gk20a_busy(g);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g), "failed to power on gpu");
+		nvgpu_err(g, "failed to power on gpu");
 		goto done;
 	}
 
@@ -301,7 +301,7 @@ static int gk20a_tsg_ioctl_set_runlist_interleave(struct gk20a *g,
 	}
 	err = gk20a_busy(g);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g), "failed to power on gpu");
+		nvgpu_err(g, "failed to power on gpu");
 		goto done;
 	}
 
@@ -328,7 +328,7 @@ static int gk20a_tsg_ioctl_set_timeslice(struct gk20a *g,
 	}
 	err = gk20a_busy(g);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g), "failed to power on gpu");
+		nvgpu_err(g, "failed to power on gpu");
 		goto done;
 	}
 	err = gk20a_tsg_set_timeslice(tsg, arg->timeslice_us);
@@ -392,7 +392,7 @@ long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		{
 		err = gk20a_busy(g);
 		if (err) {
-			gk20a_err(g->dev,
+			nvgpu_err(g,
 			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
 			return err;
 		}
@@ -405,7 +405,7 @@ long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		{
 		err = gk20a_busy(g);
 		if (err) {
-			gk20a_err(g->dev,
+			nvgpu_err(g,
 			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
 			return err;
 		}
@@ -418,7 +418,7 @@ long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		{
 		err = gk20a_busy(g);
 		if (err) {
-			gk20a_err(g->dev,
+			nvgpu_err(g,
 			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
 			return err;
 		}
@@ -455,8 +455,7 @@ long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		}
 
 	default:
-		gk20a_err(dev_from_gk20a(g),
-			   "unrecognized tsg gpu ioctl cmd: 0x%x",
+		nvgpu_err(g, "unrecognized tsg gpu ioctl cmd: 0x%x",
 			   cmd);
 		err = -ENOTTY;
 		break;

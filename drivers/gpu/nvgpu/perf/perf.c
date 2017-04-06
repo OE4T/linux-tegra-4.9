@@ -30,8 +30,7 @@ static void perfrpc_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 	gk20a_dbg_info("");
 
 	if (msg->msg.perf.msg_type != NV_PMU_PERF_MSG_ID_RPC) {
-		gk20a_err(dev_from_gk20a(g),
-		"unsupported msg for VFE LOAD RPC %x",
+		nvgpu_err(g, "unsupported msg for VFE LOAD RPC %x",
 		msg->msg.perf.msg_type);
 		return;
 	}
@@ -97,8 +96,7 @@ u32 perf_pmu_vfe_load(struct gk20a *g)
 			&seqdesc, ~0);
 
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
-			  "unable to post perf RPC cmd %x",
+		nvgpu_err(g, "unable to post perf RPC cmd %x",
 			  cmd.cmd.perf.cmd_type);
 		goto done;
 	}
@@ -109,7 +107,7 @@ u32 perf_pmu_vfe_load(struct gk20a *g)
 
 	if (handler.success == 0) {
 		status = -EINVAL;
-		gk20a_err(dev_from_gk20a(g), "rpc call to load VFE failed");
+		nvgpu_err(g, "rpc call to load VFE failed");
 	}
 done:
 	return status;

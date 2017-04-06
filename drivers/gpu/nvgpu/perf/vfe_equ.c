@@ -34,8 +34,7 @@ static u32 _vfe_equs_pmudatainit(struct gk20a *g,
 
 	status = boardobjgrp_pmudatainit_e255(g, pboardobjgrp, pboardobjgrppmu);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
-			  "error updating pmu boardobjgrp for vfe equ 0x%x",
+		nvgpu_err(g, "error updating pmu boardobjgrp for vfe equ 0x%x",
 			  status);
 		goto done;
 	}
@@ -74,7 +73,7 @@ u32 vfe_equ_sw_setup(struct gk20a *g)
 
 	status = boardobjgrpconstruct_e255(&g->perf_pmu.vfe_equobjs.super);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "error creating boardobjgrp for clk domain, status - 0x%x",
 			  status);
 		goto done;
@@ -88,7 +87,7 @@ u32 vfe_equ_sw_setup(struct gk20a *g)
 	status = BOARDOBJGRP_PMU_CMD_GRP_SET_CONSTRUCT(g, pboardobjgrp,
 			perf, PERF, vfe_equ, VFE_EQU);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error constructing PMU_BOARDOBJ_CMD_GRP_SET interface - 0x%x",
 			status);
 		goto done;
@@ -223,8 +222,7 @@ static u32 devinit_get_vfe_equ_table(struct gk20a *g,
 			break;
 
 		default:
-			gk20a_err(dev_from_gk20a(g),
-				  "unrecognized output id @vfeequ index %d",
+			nvgpu_err(g, "unrecognized output id @vfeequ index %d",
 				  index);
 			goto done;
 		}
@@ -278,7 +276,7 @@ static u32 devinit_get_vfe_equ_table(struct gk20a *g,
 					CTRL_PERF_VFE_EQU_COMPARE_FUNCTION_GREATER;
 				break;
 			default:
-				gk20a_err(dev_from_gk20a(g),
+				nvgpu_err(g,
 					  "invalid vfe compare index %x type %x ",
 					  index, cmp_func);
 				status = -EINVAL;
@@ -295,8 +293,7 @@ static u32 devinit_get_vfe_equ_table(struct gk20a *g,
 		}
 		default:
 			status = -EINVAL;
-			gk20a_err(dev_from_gk20a(g),
-				"Invalid equ[%d].type = 0x%x.",
+			nvgpu_err(g, "Invalid equ[%d].type = 0x%x.",
 				index, (u8)equ.type);
 			goto done;
 		}
@@ -305,7 +302,7 @@ static u32 devinit_get_vfe_equ_table(struct gk20a *g,
 		pequ = construct_vfe_equ(g, (void *)&equ_data);
 
 		if (pequ == NULL) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 			"error constructing vfe_equ boardobj %d", index);
 			status = -EINVAL;
 			goto done;
@@ -314,8 +311,7 @@ static u32 devinit_get_vfe_equ_table(struct gk20a *g,
 		status = boardobjgrp_objinsert(&pvfeequobjs->super.super,
 					       (struct boardobj *)pequ, index);
 		if (status) {
-			gk20a_err(dev_from_gk20a(g),
-				  "error adding vfe_equ boardobj %d", index);
+			nvgpu_err(g, "error adding vfe_equ boardobj %d", index);
 			status = -EINVAL;
 			goto done;
 		}

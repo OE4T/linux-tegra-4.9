@@ -21,7 +21,7 @@ u32 therm_domain_sw_setup(struct gk20a *g)
 
 	status = therm_device_sw_setup(g);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error creating boardobjgrp for therm devices, status - 0x%x",
 			status);
 		goto exit;
@@ -29,7 +29,7 @@ u32 therm_domain_sw_setup(struct gk20a *g)
 
 	status = therm_channel_sw_setup(g);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error creating boardobjgrp for therm channel, status - 0x%x",
 			status);
 		goto exit;

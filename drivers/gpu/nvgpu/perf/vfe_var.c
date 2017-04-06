@@ -40,7 +40,7 @@ static u32 _vfe_vars_pmudatainit(struct gk20a *g,
 
 	status = boardobjgrp_pmudatainit_e32(g, pboardobjgrp, pboardobjgrppmu);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error updating pmu boardobjgrp for vfe var 0x%x",
 			 status);
 		goto done;
@@ -100,7 +100,7 @@ u32 vfe_var_sw_setup(struct gk20a *g)
 
 	status = boardobjgrpconstruct_e32(&g->perf_pmu.vfe_varobjs.super);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "error creating boardobjgrp for clk domain, status - 0x%x",
 			  status);
 		goto done;
@@ -114,7 +114,7 @@ u32 vfe_var_sw_setup(struct gk20a *g)
 	status = BOARDOBJGRP_PMU_CMD_GRP_SET_CONSTRUCT(g, pboardobjgrp,
 			perf, PERF, vfe_var, VFE_VAR);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "error constructing PMU_BOARDOBJ_CMD_GRP_SET interface - 0x%x",
 			 status);
 		goto done;
@@ -132,7 +132,7 @@ u32 vfe_var_sw_setup(struct gk20a *g)
 				&g->perf_pmu.vfe_varobjs.super.super,
 				perf, PERF, vfe_var, VFE_VAR);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 		"error constructing PMU_BOARDOBJ_CMD_GRP_GET_STATUS interface - 0x%x",
 			status);
 		goto done;
@@ -196,14 +196,14 @@ u32 dev_init_get_vfield_info(struct gk20a *g,
 	memcpy(&vregheader, vfieldregtableptr, VFIELD_REG_HEADER_SIZE);
 
 	if (vregheader.version != VBIOS_VFIELD_REG_TABLE_VERSION_1_0) {
-		gk20a_err(dev_from_gk20a(g), "invalid vreg header version");
+		nvgpu_err(g, "invalid vreg header version");
 		goto done;
 	}
 
 	memcpy(&vheader, vfieldtableptr, VFIELD_HEADER_SIZE);
 
 	if (vregheader.version != VBIOS_VFIELD_TABLE_VERSION_1_0) {
-		gk20a_err(dev_from_gk20a(g), "invalid vfield header version");
+		nvgpu_err(g, "invalid vfield header version");
 		goto done;
 	}
 
@@ -660,13 +660,13 @@ static u32 vfe_var_construct_single_sensed_fuse(struct gk20a *g,
 	dev_init_get_vfield_info(g, pvfevar);
 	/*check whether fuse segment got initialized*/
 	if (pvfevar->vfield_info.fuse.segment_count == 0) {
-		gk20a_err(dev_from_gk20a(g), "unable to get fuse reg info %x",
+		nvgpu_err(g, "unable to get fuse reg info %x",
 			pvfevar->vfield_info.v_field_id);
 		status = -EINVAL;
 		goto exit;
 	}
 	if (pvfevar->vfield_ver_info.fuse.segment_count == 0) {
-		gk20a_err(dev_from_gk20a(g), "unable to get fuse reg info %x",
+		nvgpu_err(g, "unable to get fuse reg info %x",
 			pvfevar->vfield_ver_info.v_field_id_ver);
 		status = -EINVAL;
 		goto exit;
@@ -997,7 +997,7 @@ static u32 devinit_get_vfe_var_table(struct gk20a *g,
 
 		pvar = construct_vfe_var(g, &var_data);
 		if (pvar == NULL) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				  "error constructing vfe_var boardobj %d",
 				  index);
 			status = -EINVAL;
@@ -1007,8 +1007,7 @@ static u32 devinit_get_vfe_var_table(struct gk20a *g,
 		status = boardobjgrp_objinsert(&pvfevarobjs->super.super,
 					       (struct boardobj *)pvar, index);
 		if (status) {
-			gk20a_err(dev_from_gk20a(g),
-			"error adding vfe_var boardobj %d", index);
+			nvgpu_err(g, "error adding vfe_var boardobj %d", index);
 			status = -EINVAL;
 			goto done;
 		}

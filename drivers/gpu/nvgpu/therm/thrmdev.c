@@ -124,7 +124,7 @@ static u32 devinit_get_therm_device_table(struct gk20a *g,
 					therm_device_size, therm_device_data.boardobj.type);
 
 		if (!boardobj) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"unable to create thermal device for %d type %d",
 				index, therm_device_data.boardobj.type);
 			status = -EINVAL;
@@ -135,7 +135,7 @@ static u32 devinit_get_therm_device_table(struct gk20a *g,
 				boardobj, obj_index);
 
 		if (status) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 			"unable to insert thermal device boardobj for %d", index);
 			status = -EINVAL;
 			goto done;
@@ -158,7 +158,7 @@ u32 therm_device_sw_setup(struct gk20a *g)
 	/* Construct the Super Class and override the Interfaces */
 	status = boardobjgrpconstruct_e32(&g->therm_pmu.therm_deviceobjs.super);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "error creating boardobjgrp for therm devices, status - 0x%x",
 			  status);
 		goto done;
@@ -179,7 +179,7 @@ u32 therm_device_sw_setup(struct gk20a *g)
 	status = BOARDOBJGRP_PMU_CMD_GRP_SET_CONSTRUCT(g, pboardobjgrp,
 			therm, THERM, therm_device, THERM_DEVICE);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "error constructing PMU_BOARDOBJ_CMD_GRP_SET interface - 0x%x",
 			  status);
 		goto done;

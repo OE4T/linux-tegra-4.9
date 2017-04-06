@@ -29,15 +29,13 @@ static void therm_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 		(struct therm_pmucmdhandler_params *)param;
 
 	if (msg->msg.therm.msg_type != NV_PMU_THERM_MSG_ID_RPC) {
-		gk20a_err(dev_from_gk20a(g),
-			"unknow msg %x",
+		nvgpu_err(g, "unknow msg %x",
 			msg->msg.pmgr.msg_type);
 		return;
 	}
 
 	if (!phandlerparams->prpccall->b_supported)
-		gk20a_err(dev_from_gk20a(g),
-			"RPC msg %x failed",
+		nvgpu_err(g, "RPC msg %x failed",
 			msg->msg.pmgr.msg_type);
 	else
 		phandlerparams->success = 1;
@@ -52,7 +50,7 @@ u32 therm_send_pmgr_tables_to_pmu(struct gk20a *g)
 		pboardobjgrp = &g->therm_pmu.therm_deviceobjs.super.super;
 		status = pboardobjgrp->pmuinithandle(g, pboardobjgrp);
 		if (status) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"therm_send_pmgr_tables_to_pmu - therm_device failed %x",
 				status);
 			goto exit;
@@ -64,7 +62,7 @@ u32 therm_send_pmgr_tables_to_pmu(struct gk20a *g)
 		pboardobjgrp = &g->therm_pmu.therm_channelobjs.super.super;
 		status = pboardobjgrp->pmuinithandle(g, pboardobjgrp);
 		if (status) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"therm_send_pmgr_tables_to_pmu - therm_channel failed %x",
 				status);
 			goto exit;
@@ -90,7 +88,7 @@ static u32 therm_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 				seq_desc,
 				timeout);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"unable to post therm cmd for unit %x cmd id %x size %x",
 			cmd->hdr.unit_id, cmd->cmd.therm.cmd_type, cmd->hdr.size);
 		goto exit;
@@ -104,7 +102,7 @@ static u32 therm_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 				&handlerparams->success, 1);
 
 		if (handlerparams->success == 0) {
-			gk20a_err(dev_from_gk20a(g), "could not process cmd\n");
+			nvgpu_err(g, "could not process cmd\n");
 			status = -ETIMEDOUT;
 			goto exit;
 		}
@@ -225,7 +223,7 @@ u32 therm_configure_therm_alert(struct gk20a *g)
 
 	status = therm_enable_slct_notification_request(g);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"therm_enable_slct_notification_request-failed %d",
 			status);
 		goto exit;
@@ -233,7 +231,7 @@ u32 therm_configure_therm_alert(struct gk20a *g)
 
 	status = therm_send_slct_configuration_to_pmu(g);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"therm_send_slct_configuration_to_pmu-failed %d",
 			status);
 		goto exit;
@@ -241,7 +239,7 @@ u32 therm_configure_therm_alert(struct gk20a *g)
 
 	status = therm_set_warn_temp_limit(g);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"therm_set_warn_temp_limit-failed %d",
 			status);
 		goto exit;

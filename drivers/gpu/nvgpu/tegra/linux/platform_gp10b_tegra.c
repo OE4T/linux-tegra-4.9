@@ -84,7 +84,7 @@ int gp10b_tegra_get_clocks(struct device *dev)
 
 		c = clk_get(dev, tegra_gp10b_clocks[i].name);
 		if (IS_ERR(c)) {
-			gk20a_err(dev, "cannot get clock %s",
+			nvgpu_err(platform->g, "cannot get clock %s",
 					tegra_gp10b_clocks[i].name);
 		} else {
 			clk_set_rate(c, rate);
@@ -125,6 +125,7 @@ static void gp10b_tegra_scale_exit(struct device *dev)
 static int gp10b_tegra_probe(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	struct gk20a *g = platform->g;
 	struct device_node *np = dev->of_node;
 	struct device_node *host1x_node;
 	struct platform_device *host1x_pdev;
@@ -132,14 +133,14 @@ static int gp10b_tegra_probe(struct device *dev)
 
 	host1x_ptr = of_get_property(np, "nvidia,host1x", NULL);
 	if (!host1x_ptr) {
-		gk20a_err(dev, "host1x device not available");
+		nvgpu_err(g, "host1x device not available");
 		return -ENOSYS;
 	}
 
 	host1x_node = of_find_node_by_phandle(be32_to_cpup(host1x_ptr));
 	host1x_pdev = of_find_device_by_node(host1x_node);
 	if (!host1x_pdev) {
-		gk20a_err(dev, "host1x device not available");
+		nvgpu_err(g, "host1x device not available");
 		return -ENOSYS;
 	}
 

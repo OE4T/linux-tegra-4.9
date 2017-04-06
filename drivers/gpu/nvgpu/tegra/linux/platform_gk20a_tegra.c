@@ -166,12 +166,12 @@ int gk20a_tegra_secure_alloc(struct device *dev,
 
 	sgt = nvgpu_kzalloc(platform->g, sizeof(*sgt));
 	if (!sgt) {
-		gk20a_err(dev, "failed to allocate memory\n");
+		nvgpu_err(platform->g, "failed to allocate memory");
 		goto fail;
 	}
 	err = sg_alloc_table(sgt, 1, GFP_KERNEL);
 	if (err) {
-		gk20a_err(dev, "failed to allocate sg_table\n");
+		nvgpu_err(platform->g, "failed to allocate sg_table");
 		goto fail_sgt;
 	}
 	page = phys_to_page(iova);
@@ -427,7 +427,7 @@ static int gk20a_tegra_railgate(struct device *dev)
 	return 0;
 
 err_power_off:
-	gk20a_err(dev, "Could not railgate GPU");
+	nvgpu_err(get_gk20a(dev), "Could not railgate GPU");
 	return ret;
 }
 
@@ -463,12 +463,12 @@ static int gk20a_tegra_unrailgate(struct device *dev)
 	if (!first) {
 		ret = clk_enable(platform->clk[0]);
 		if (ret) {
-			gk20a_err(dev, "could not turn on gpu pll");
+			nvgpu_err(platform->g, "could not turn on gpu pll");
 			goto err_clk_on;
 		}
 		ret = clk_enable(platform->clk[1]);
 		if (ret) {
-			gk20a_err(dev, "could not turn on pwr clock");
+			nvgpu_err(platform->g, "could not turn on pwr clock");
 			goto err_clk_on;
 		}
 	}
@@ -581,7 +581,7 @@ static int gm20b_tegra_railgate(struct device *dev)
 	return 0;
 
 err_power_off:
-	gk20a_err(dev, "Could not railgate GPU");
+	nvgpu_err(platform->g, "Could not railgate GPU");
 	return ret;
 }
 
@@ -595,6 +595,7 @@ err_power_off:
 static int gm20b_tegra_unrailgate(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	struct gk20a *g = platform->g;
 	int ret = 0;
 	bool first = false;
 
@@ -625,7 +626,7 @@ static int gm20b_tegra_unrailgate(struct device *dev)
 	if (!platform->clk_reset) {
 		platform->clk_reset = clk_get(dev, "gpu_gate");
 		if (IS_ERR(platform->clk_reset)) {
-			gk20a_err(dev, "fail to get gpu reset clk\n");
+			nvgpu_err(g, "fail to get gpu reset clk");
 			goto err_clk_on;
 		}
 	}
@@ -633,25 +634,25 @@ static int gm20b_tegra_unrailgate(struct device *dev)
 	if (!first) {
 		ret = clk_prepare_enable(platform->clk_reset);
 		if (ret) {
-			gk20a_err(dev, "could not turn on gpu_gate");
+			nvgpu_err(g, "could not turn on gpu_gate");
 			goto err_clk_on;
 		}
 
 		ret = clk_prepare_enable(platform->clk[0]);
 		if (ret) {
-			gk20a_err(dev, "could not turn on gpu pll");
+			nvgpu_err(g, "could not turn on gpu pll");
 			goto err_clk_on;
 		}
 		ret = clk_prepare_enable(platform->clk[1]);
 		if (ret) {
-			gk20a_err(dev, "could not turn on pwr clock");
+			nvgpu_err(g, "could not turn on pwr clock");
 			goto err_clk_on;
 		}
 
 		if (platform->clk[3]) {
 			ret = clk_prepare_enable(platform->clk[3]);
 			if (ret) {
-				gk20a_err(dev, "could not turn on fuse clock");
+				nvgpu_err(g, "could not turn on fuse clock");
 				goto err_clk_on;
 			}
 		}

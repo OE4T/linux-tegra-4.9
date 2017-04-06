@@ -36,7 +36,7 @@ static unsigned long nvgpu_linux_clk_get_rate(struct gk20a *g, u32 api_domain)
 		ret = clk_get_rate(platform->clk[1]);
 		break;
 	default:
-		gk20a_err(g->dev, "unknown clock: %u", api_domain);
+		nvgpu_err(g, "unknown clock: %u", api_domain);
 		ret = 0;
 		break;
 	}
@@ -61,7 +61,7 @@ static int nvgpu_linux_clk_set_rate(struct gk20a *g,
 		ret = clk_set_rate(platform->clk[1], rate);
 		break;
 	default:
-		gk20a_err(g->dev, "unknown clock: %u", api_domain);
+		nvgpu_err(g, "unknown clock: %u", api_domain);
 		ret = -EINVAL;
 		break;
 	}

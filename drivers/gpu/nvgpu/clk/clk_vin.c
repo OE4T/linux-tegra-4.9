@@ -252,7 +252,7 @@ u32 clk_vin_sw_setup(struct gk20a *g)
 
 	status = boardobjgrpconstruct_e32(&g->clk_pmu.avfs_vinobjs.super);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error creating boardobjgrp for clk vin, statu - 0x%x",
 			status);
 		goto done;
@@ -266,7 +266,7 @@ u32 clk_vin_sw_setup(struct gk20a *g)
 	status = BOARDOBJGRP_PMU_CMD_GRP_SET_CONSTRUCT(g, pboardobjgrp,
 			clk, CLK, clk_vin_device, CLK_VIN_DEVICE);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error constructing PMU_BOARDOBJ_CMD_GRP_SET interface - 0x%x",
 			status);
 		goto done;
@@ -290,7 +290,7 @@ u32 clk_vin_sw_setup(struct gk20a *g)
 			status = read_vin_cal_slope_intercept_fuse(g,
 					pvindev->id, &slope, &intercept);
 			if (status) {
-				gk20a_err(dev_from_gk20a(g),
+				nvgpu_err(g,
 				"err reading vin cal for id %x", pvindev->id);
 				goto done;
 			}
@@ -304,7 +304,7 @@ u32 clk_vin_sw_setup(struct gk20a *g)
 				&g->clk_pmu.avfs_vinobjs.super.super,
 				clk, CLK, clk_vin_device, CLK_VIN_DEVICE);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error constructing PMU_BOARDOBJ_CMD_GRP_SET interface - 0x%x",
 			status);
 		goto done;

@@ -29,7 +29,7 @@ struct clk *gk20a_clk_get(struct gk20a *g)
 
 		clk = clk_get_sys(clk_dev_id, "gpu");
 		if (IS_ERR(clk)) {
-			gk20a_err(dev, "fail to get tegra gpu clk %s/gpu\n",
+			nvgpu_err(g, "fail to get tegra gpu clk %s/gpu\n",
 				  clk_dev_id);
 			return NULL;
 		}

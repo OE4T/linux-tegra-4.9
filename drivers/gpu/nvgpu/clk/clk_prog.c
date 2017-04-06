@@ -46,8 +46,7 @@ static u32 _clk_progs_pmudatainit(struct gk20a *g,
 
 	status = boardobjgrp_pmudatainit_e32(g, pboardobjgrp, pboardobjgrppmu);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
-			  "error updating pmu boardobjgrp for clk prog 0x%x",
+		nvgpu_err(g, "error updating pmu boardobjgrp for clk prog 0x%x",
 			  status);
 		goto done;
 	}
@@ -89,7 +88,7 @@ u32 clk_prog_sw_setup(struct gk20a *g)
 
 	status = boardobjgrpconstruct_e255(&g->clk_pmu.clk_progobjs.super);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "error creating boardobjgrp for clk prog, status - 0x%x",
 			  status);
 		goto done;
@@ -103,7 +102,7 @@ u32 clk_prog_sw_setup(struct gk20a *g)
 	status = BOARDOBJGRP_PMU_CMD_GRP_SET_CONSTRUCT(g, pboardobjgrp,
 			clk, CLK, clk_prog, CLK_PROG);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error constructing PMU_BOARDOBJ_CMD_GRP_SET interface - 0x%x",
 			status);
 		goto done;
@@ -118,8 +117,7 @@ u32 clk_prog_sw_setup(struct gk20a *g)
 
 	status = clk_domain_clk_prog_link(g, &g->clk_pmu);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
-			  "error constructing VF point board objects");
+		nvgpu_err(g, "error constructing VF point board objects");
 		goto done;
 	}
 
@@ -265,8 +263,7 @@ static u32 devinit_get_clk_prog_table(struct gk20a *g,
 			break;
 
 		default:
-			gk20a_err(dev_from_gk20a(g),
-				  "invalid source %d", prog_type);
+			nvgpu_err(g, "invalid source %d", prog_type);
 			status = -EINVAL;
 			goto done;
 		}
@@ -346,16 +343,15 @@ static u32 devinit_get_clk_prog_table(struct gk20a *g,
 
 
 		default:
-			gk20a_err(dev_from_gk20a(g),
-				  "source issue %d", prog_type);
+			nvgpu_err(g, "source issue %d", prog_type);
 				  status = -EINVAL;
 			goto done;
 		}
 
 		pprog = construct_clk_prog(g, (void *)&prog_data);
 		if (pprog == NULL) {
-			gk20a_err(dev_from_gk20a(g),
-			"error constructing clk_prog boardobj %d", i);
+			nvgpu_err(g,
+				  "error constructing clk_prog boardobj %d", i);
 			status = -EINVAL;
 			goto done;
 		}
@@ -363,8 +359,7 @@ static u32 devinit_get_clk_prog_table(struct gk20a *g,
 		status = boardobjgrp_objinsert(&pclkprogobjs->super.super,
 			(struct boardobj *)pprog, i);
 		if (status) {
-			gk20a_err(dev_from_gk20a(g),
-				  "error adding clk_prog boardobj %d", i);
+			nvgpu_err(g, "error adding clk_prog boardobj %d", i);
 			status = -EINVAL;
 			goto done;
 		}
@@ -930,7 +925,7 @@ static u32 vflookup_prog_1x_master
 		for (j = pvfentry->vf_point_idx_first;
 			j <= pvfentry->vf_point_idx_last; j++) {
 			pvfpoint = CLK_CLK_VF_POINT_GET(pclk, j);
-			gk20a_err(dev_from_gk20a(g), "v %x c %x",
+			nvgpu_err(g, "v %x c %x",
 				clkvfpointvoltageuvget(g, pvfpoint),
 				clkvfpointfreqmhzget(g, pvfpoint));
 		}

@@ -706,14 +706,12 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 	/* Get allowed memory ranges */
 	if (g->ops.clk_arb.get_arbiter_clk_range(g, CTRL_CLK_DOMAIN_GPC2CLK,
 			&gpc2clk_min, &gpc2clk_max) < 0) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to fetch GPC2CLK range");
+		nvgpu_err(g, "failed to fetch GPC2CLK range");
 		goto exit_vf_table;
 	}
 	if (g->ops.clk_arb.get_arbiter_clk_range(g, CTRL_CLK_DOMAIN_MCLK,
 			&mclk_min, &mclk_max) < 0) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to fetch MCLK range");
+		nvgpu_err(g, "failed to fetch MCLK range");
 		goto exit_vf_table;
 	}
 
@@ -722,20 +720,17 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 
 	if (clk_domain_get_f_points(arb->g, CTRL_CLK_DOMAIN_GPC2CLK,
 		&table->gpc2clk_num_points, arb->gpc2clk_f_points)) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to fetch GPC2CLK frequency points");
+		nvgpu_err(g, "failed to fetch GPC2CLK frequency points");
 		goto exit_vf_table;
 	}
 
 	if (clk_domain_get_f_points(arb->g, CTRL_CLK_DOMAIN_MCLK,
 		&table->mclk_num_points, arb->mclk_f_points)) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to fetch MCLK frequency points");
+		nvgpu_err(g, "failed to fetch MCLK frequency points");
 		goto exit_vf_table;
 	}
 	if (!table->mclk_num_points || !table->gpc2clk_num_points) {
-		gk20a_err(dev_from_gk20a(g),
-			"empty queries to f points mclk %d gpc2clk %d",
+		nvgpu_err(g, "empty queries to f points mclk %d gpc2clk %d",
 			table->mclk_num_points, table->gpc2clk_num_points);
 		status = -EINVAL;
 		goto exit_vf_table;
@@ -749,15 +744,13 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 	p5_info = pstate_get_clk_set_info(g,
 			CTRL_PERF_PSTATE_P5, clkwhich_mclk);
 	if (!p5_info) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to get MCLK P5 info");
+		nvgpu_err(g, "failed to get MCLK P5 info");
 		goto exit_vf_table;
 	}
 	p0_info = pstate_get_clk_set_info(g,
 			CTRL_PERF_PSTATE_P0, clkwhich_mclk);
 	if (!p0_info) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to get MCLK P0 info");
+		nvgpu_err(g, "failed to get MCLK P0 info");
 		goto exit_vf_table;
 	}
 
@@ -775,7 +768,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 				&table->mclk_points[j].mem_mhz, &mclk_voltuv,
 				CTRL_VOLT_DOMAIN_LOGIC);
 			if (status < 0) {
-				gk20a_err(dev_from_gk20a(g),
+				nvgpu_err(g,
 					"failed to get MCLK LOGIC voltage");
 				goto exit_vf_table;
 			}
@@ -784,8 +777,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 				&mclk_voltuv_sram,
 				CTRL_VOLT_DOMAIN_SRAM);
 			if (status < 0) {
-				gk20a_err(dev_from_gk20a(g),
-					"failed to get MCLK SRAM voltage");
+				nvgpu_err(g, "failed to get MCLK SRAM voltage");
 				goto exit_vf_table;
 			}
 
@@ -815,8 +807,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 			CTRL_PERF_PSTATE_P5, clkwhich_gpc2clk);
 	if (!p5_info) {
 		status = -EINVAL;
-		gk20a_err(dev_from_gk20a(g),
-			"failed to get GPC2CLK P5 info");
+		nvgpu_err(g, "failed to get GPC2CLK P5 info");
 		goto exit_vf_table;
 	}
 
@@ -824,8 +815,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 			CTRL_PERF_PSTATE_P0, clkwhich_gpc2clk);
 	if (!p0_info) {
 		status = -EINVAL;
-		gk20a_err(dev_from_gk20a(g),
-			"failed to get GPC2CLK P0 info");
+		nvgpu_err(g, "failed to get GPC2CLK P0 info");
 		goto exit_vf_table;
 	}
 
@@ -847,7 +837,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 			setfllclk.gpc2clkmhz = arb->gpc2clk_f_points[i];
 			status = clk_get_fll_clks(g, &setfllclk);
 			if (status < 0) {
-				gk20a_err(dev_from_gk20a(g),
+				nvgpu_err(g,
 					"failed to get GPC2CLK slave clocks");
 				goto exit_vf_table;
 			}
@@ -888,8 +878,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 			clkwhich_sys2clk);
 		if (!p5_info) {
 			status = -EINVAL;
-			gk20a_err(dev_from_gk20a(g),
-				"failed to get SYS2CLK P5 info");
+			nvgpu_err(g, "failed to get SYS2CLK P5 info");
 			goto exit_vf_table;
 		}
 
@@ -915,8 +904,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 			}
 			/* no VF exists that satisfies condition */
 			if (j == table->gpc2clk_num_points) {
-				gk20a_err(dev_from_gk20a(g),
-					"NO SYS2CLK VF point possible");
+				nvgpu_err(g, "NO SYS2CLK VF point possible");
 				status = -EINVAL;
 				goto exit_vf_table;
 			}
@@ -928,8 +916,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 			clkwhich_xbar2clk);
 		if (!p5_info) {
 			status = -EINVAL;
-			gk20a_err(dev_from_gk20a(g),
-				"failed to get SYS2CLK P5 info");
+			nvgpu_err(g, "failed to get SYS2CLK P5 info");
 			goto exit_vf_table;
 		}
 
@@ -954,8 +941,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 			/* no VF exists that satisfies condition */
 			if (j == table->gpc2clk_num_points) {
 				status = -EINVAL;
-				gk20a_err(dev_from_gk20a(g),
-					"NO XBAR2CLK VF point possible");
+				nvgpu_err(g, "NO XBAR2CLK VF point possible");
 
 				goto exit_vf_table;
 			}
@@ -966,8 +952,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 						&alt_gpc2clk, &gpc2clk_voltuv,
 						CTRL_VOLT_DOMAIN_LOGIC);
 		if (status < 0) {
-			gk20a_err(dev_from_gk20a(g),
-				"failed to get GPC2CLK LOGIC voltage");
+			nvgpu_err(g, "failed to get GPC2CLK LOGIC voltage");
 			goto exit_vf_table;
 		}
 
@@ -976,8 +961,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 						&gpc2clk_voltuv_sram,
 						CTRL_VOLT_DOMAIN_SRAM);
 		if (status < 0) {
-			gk20a_err(dev_from_gk20a(g),
-				"failed to get GPC2CLK SRAM voltage");
+			nvgpu_err(g, "failed to get GPC2CLK SRAM voltage");
 			goto exit_vf_table;
 		}
 
@@ -1017,8 +1001,7 @@ static void nvgpu_clk_arb_run_vf_table_cb(struct work_struct *work)
 	/* get latest vf curve from pmu */
 	err = clk_vf_point_cache(g);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g),
-			"failed to cache VF table");
+		nvgpu_err(g, "failed to cache VF table");
 		nvgpu_clk_arb_set_global_alarm(g,
 			EVENT(ALARM_VF_TABLE_UPDATE_FAILED));
 		if (arb->update_work_queue)
@@ -1288,8 +1271,7 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 
 exit_arb:
 	if (status < 0) {
-		gk20a_err(dev_from_gk20a(g),
-				"Error in arbiter update");
+		nvgpu_err(g, "Error in arbiter update");
 		nvgpu_clk_arb_set_global_alarm(g,
 			EVENT(ALARM_CLOCK_ARBITER_FAILED));
 	}
@@ -1856,7 +1838,7 @@ static u8 nvgpu_clk_arb_find_vf_point(struct nvgpu_clk_arb *arb,
 		if (!table)
 			continue;
 		if ((!table->gpc2clk_num_points) || (!table->mclk_num_points)) {
-			gk20a_err(dev_from_gk20a(arb->g), "found empty table");
+			nvgpu_err(arb->g, "found empty table");
 			goto find_exit;
 		}
 		/* First we check MCLK to find out which PSTATE we are

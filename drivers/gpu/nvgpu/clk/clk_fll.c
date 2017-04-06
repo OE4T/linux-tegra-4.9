@@ -45,7 +45,7 @@ static u32 _clk_fll_devgrp_pmudatainit_super(struct gk20a *g,
 
 	status = boardobjgrp_pmudatainit_e32(g, pboardobjgrp, pboardobjgrppmu);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g), "failed to init fll pmuobjgrp");
+		nvgpu_err(g, "failed to init fll pmuobjgrp");
 		return status;
 	}
 	pset->lut_num_entries = pfll_objs->lut_num_entries;
@@ -118,7 +118,7 @@ u32 clk_fll_sw_setup(struct gk20a *g)
 
 	status = boardobjgrpconstruct_e32(&g->clk_pmu.avfs_fllobjs.super);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 		"error creating boardobjgrp for fll, status - 0x%x", status);
 		goto done;
 	}
@@ -130,7 +130,7 @@ u32 clk_fll_sw_setup(struct gk20a *g)
 	status = BOARDOBJGRP_PMU_CMD_GRP_SET_CONSTRUCT(g, pboardobjgrp,
 			clk, CLK, clk_fll_device, CLK_FLL_DEVICE);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "error constructing PMU_BOARDOBJ_CMD_GRP_SET interface - 0x%x",
 			  status);
 		goto done;
@@ -155,7 +155,7 @@ u32 clk_fll_sw_setup(struct gk20a *g)
 				&g->clk_pmu.avfs_fllobjs.super.super,
 				clk, CLK, clk_fll_device, CLK_FLL_DEVICE);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "error constructing PMU_BOARDOBJ_CMD_GRP_SET interface - 0x%x",
 			  status);
 		goto done;
@@ -179,7 +179,7 @@ u32 clk_fll_sw_setup(struct gk20a *g)
 				&pfllobjs->lut_prog_master_mask.super,
 				BOARDOBJ_GET_IDX(pfll));
 			if (status) {
-				gk20a_err(dev_from_gk20a(g), "err setting lutprogmask");
+				nvgpu_err(g, "err setting lutprogmask");
 				goto done;
 			}
 			pfll_master = pfll;
@@ -188,7 +188,7 @@ u32 clk_fll_sw_setup(struct gk20a *g)
 			g, pfllobjs, pfll_master, pfll);
 
 		if (status) {
-			gk20a_err(dev_from_gk20a(g), "err setting lutslavemask");
+			nvgpu_err(g, "err setting lutslavemask");
 			goto done;
 		}
 	}

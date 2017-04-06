@@ -1979,7 +1979,7 @@ static void mclk_seq_pmucmdhandler(struct gk20a *g, struct pmu_msg *_msg,
 	gk20a_dbg_info("");
 
 	if (status != 0) {
-		gk20a_err(dev_from_gk20a(g), "mclk seq_script cmd aborted");
+		nvgpu_err(g, "mclk seq_script cmd aborted");
 		msg_status = -ENOENT;
 		goto status_update;
 	}
@@ -2088,8 +2088,7 @@ static int mclk_get_memclk_table(struct gk20a *g)
 			}
 
 			if (shadow_idx > fb_fbpa_fbio_delay_priv_max_v()) {
-				gk20a_err(dev_from_gk20a(g),
-				"invalid shadow reg script index");
+				nvgpu_err(g, "invalid shadow reg script index");
 				status = -EINVAL;
 				goto done;
 			}
@@ -2140,8 +2139,8 @@ static int mclk_get_memclk_table(struct gk20a *g)
 			}
 
 			if (cmd_idx > fb_fbpa_fbio_cmd_delay_cmd_priv_max_v()) {
-				gk20a_err(dev_from_gk20a(g),
-				"invalid shadow reg cmd script index");
+				nvgpu_err(g,
+					"invalid shadow reg cmd script index");
 				status = -EINVAL;
 				goto done;
 			}
@@ -2236,8 +2235,7 @@ int clk_mclkseq_init_mclk_gddr5(struct gk20a *g)
 
 	mclk->vreg_buf = nvgpu_kcalloc(g, VREG_COUNT, sizeof(u32));
 	if (!mclk->vreg_buf) {
-		gk20a_err(dev_from_gk20a(g),
-				"unable to allocate memory for VREG");
+		nvgpu_err(g, "unable to allocate memory for VREG");
 		err = -ENOMEM;
 		goto fail_data_mutex;
 	}
@@ -2318,8 +2316,7 @@ int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, u16 val)
 		}
 		break;
 	default:
-		gk20a_err(dev_from_gk20a(g),
-			"Illegal MCLK clock change");
+		nvgpu_err(g, "Illegal MCLK clock change");
 		status = -EINVAL;
 		goto exit_status;
 	}
@@ -2368,8 +2365,7 @@ int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, u16 val)
 			mclk_seq_pmucmdhandler,
 			&seq_completion_status, &seqdesc, ~0);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
-			"unable to post seq script exec cmd for unit %x ",
+		nvgpu_err(g, "unable to post seq script exec cmd for unit %x",
 			cmd.hdr.unit_id);
 		goto exit_status;
 	}
@@ -2377,8 +2373,7 @@ int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, u16 val)
 	pmu_wait_message_cond(&g->pmu, (gk20a_get_gr_idle_timeout(g)),
 			&seq_completion_status, 0);
 	if (seq_completion_status != 0) {
-		gk20a_err(dev_from_gk20a(g),
-			"seq_script update failed");
+		nvgpu_err(g, "seq_script update failed");
 		status = -EBUSY;
 		goto exit_status;
 	}

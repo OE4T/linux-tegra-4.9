@@ -36,8 +36,7 @@ static void clkrpc_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 	gk20a_dbg_info("");
 
 	if (msg->msg.clk.msg_type != NV_PMU_CLK_MSG_ID_RPC) {
-		gk20a_err(dev_from_gk20a(g),
-			  "unsupported msg for VFE LOAD RPC %x",
+		nvgpu_err(g, "unsupported msg for VFE LOAD RPC %x",
 			  msg->msg.clk.msg_type);
 		return;
 	}
@@ -99,8 +98,7 @@ int clk_pmu_freq_controller_load(struct gk20a *g, bool bload)
 			&seqdesc, ~0);
 
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
-			"unable to post clk RPC cmd %x",
+		nvgpu_err(g, "unable to post clk RPC cmd %x",
 			cmd.cmd.clk.cmd_type);
 		goto done;
 	}
@@ -110,7 +108,7 @@ int clk_pmu_freq_controller_load(struct gk20a *g, bool bload)
 			&handler.success, 1);
 
 	if (handler.success == 0) {
-		gk20a_err(dev_from_gk20a(g), "rpc call to load freq cntlr cal failed");
+		nvgpu_err(g, "rpc call to load freq cntlr cal failed");
 		status = -EINVAL;
 	}
 
@@ -159,8 +157,7 @@ u32 clk_pmu_vin_load(struct gk20a *g)
 			&seqdesc, ~0);
 
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
-			"unable to post clk RPC cmd %x",
+		nvgpu_err(g, "unable to post clk RPC cmd %x",
 			cmd.cmd.clk.cmd_type);
 		goto done;
 	}
@@ -170,7 +167,7 @@ u32 clk_pmu_vin_load(struct gk20a *g)
 			&handler.success, 1);
 
 	if (handler.success == 0) {
-		gk20a_err(dev_from_gk20a(g), "rpc call to load vin cal failed");
+		nvgpu_err(g, "rpc call to load vin cal failed");
 		status = -EINVAL;
 	}
 
@@ -258,8 +255,7 @@ static u32 clk_pmu_vf_inject(struct gk20a *g, struct set_fll_clk *setfllclk)
 			&seqdesc, ~0);
 
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
-			  "unable to post clk RPC cmd %x",
+		nvgpu_err(g, "unable to post clk RPC cmd %x",
 			  cmd.cmd.clk.cmd_type);
 		goto done;
 	}
@@ -269,7 +265,7 @@ static u32 clk_pmu_vf_inject(struct gk20a *g, struct set_fll_clk *setfllclk)
 			&handler.success, 1);
 
 	if (handler.success == 0) {
-		gk20a_err(dev_from_gk20a(g), "rpc call to inject clock failed");
+		nvgpu_err(g, "rpc call to inject clock failed");
 		status = -EINVAL;
 	}
 done:
@@ -359,8 +355,7 @@ int clk_set_fll_clks(struct gk20a *g, struct set_fll_clk *setfllclk)
 	status = clk_pmu_vf_inject(g, setfllclk);
 
 	if (status)
-		gk20a_err(dev_from_gk20a(g),
-			"vf inject to change clk failed");
+		nvgpu_err(g, "vf inject to change clk failed");
 
 	/* save regime ids */
 	status = set_regime_id(g, CTRL_CLK_DOMAIN_XBAR2CLK,

@@ -81,7 +81,7 @@ static u32 _clk_domains_pmudatainit_3x(struct gk20a *g,
 
 	status = boardobjgrp_pmudatainit_e32(g, pboardobjgrp, pboardobjgrppmu);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "error updating pmu boardobjgrp for clk domain 0x%x",
 			  status);
 		goto done;
@@ -142,7 +142,7 @@ u32 clk_domain_sw_setup(struct gk20a *g)
 
 	status = boardobjgrpconstruct_e32(&g->clk_pmu.clk_domainobjs.super);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "error creating boardobjgrp for clk domain, status - 0x%x",
 			  status);
 		goto done;
@@ -156,7 +156,7 @@ u32 clk_domain_sw_setup(struct gk20a *g)
 	status = BOARDOBJGRP_PMU_CMD_GRP_SET_CONSTRUCT(g, pboardobjgrp,
 			clk, CLK, clk_domain, CLK_DOMAIN);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "error constructing PMU_BOARDOBJ_CMD_GRP_SET interface - 0x%x",
 			  status);
 		goto done;
@@ -379,7 +379,7 @@ static u32 devinit_get_clocks_table(struct gk20a *g,
 			break;
 
 		default:
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				  "error reading clock domain entry %d", index);
 			status = -EINVAL;
 			goto done;
@@ -388,7 +388,7 @@ static u32 devinit_get_clocks_table(struct gk20a *g,
 		pclkdomain_dev = construct_clk_domain(g,
 				(void *)&clk_domain_data);
 		if (pclkdomain_dev == NULL) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				  "unable to construct clock domain boardobj for %d",
 				  index);
 			status = -EINVAL;
@@ -397,7 +397,7 @@ static u32 devinit_get_clocks_table(struct gk20a *g,
 		status = boardobjgrp_objinsert(&pclkdomainobjs->super.super,
 				(struct boardobj *)pclkdomain_dev, index);
 		if (status) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 			"unable to insert clock domain boardobj for %d", index);
 			status = -EINVAL;
 			goto done;
@@ -1097,7 +1097,7 @@ u32 clk_domain_clk_prog_link(struct gk20a *g, struct clk_pmupstate *pclk)
 			struct clk_domain *, pdomain, i) {
 		status = pdomain->clkdomainclkproglink(g, pclk, pdomain);
 		if (status) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				  "error flattening VF for CLK DOMAIN - 0x%x",
 				  pdomain->domain);
 			goto done;

@@ -287,7 +287,7 @@ static u32 clk_get_freq_controller_table(struct gk20a *g,
 						(void *)&freq_controller_data);
 
 		if (pclk_freq_cntr == NULL) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"unable to construct clock freq cntlr boardobj for %d",
 				entry_idx);
 			status = -EINVAL;
@@ -298,7 +298,7 @@ static u32 clk_get_freq_controller_table(struct gk20a *g,
 				&pclk_freq_controllers->super.super,
 				(struct boardobj *)pclk_freq_cntr, entry_idx);
 		if (status) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 			"unable to insert clock freq cntlr boardobj for");
 			status = -EINVAL;
 			goto done;
@@ -363,7 +363,7 @@ static u32 _clk_freq_controllers_pmudatainit(struct gk20a *g,
 
 	status = boardobjgrp_pmudatainit_e32(g, pboardobjgrp, pboardobjgrppmu);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error updating pmu boardobjgrp for clk freq ctrs 0x%x",
 			 status);
 		goto done;
@@ -391,7 +391,7 @@ u32 clk_freq_controller_sw_setup(struct gk20a *g)
 	pclk_freq_controllers = &g->clk_pmu.clk_freq_controllers;
 	status = boardobjgrpconstruct_e32(&pclk_freq_controllers->super);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error creating boardobjgrp for clk FCT, status - 0x%x",
 			status);
 		goto done;
@@ -413,7 +413,7 @@ u32 clk_freq_controller_sw_setup(struct gk20a *g)
 	status = BOARDOBJGRP_PMU_CMD_GRP_SET_CONSTRUCT(g, pboardobjgrp,
 			clk, CLK, clk_freq_controller, CLK_FREQ_CONTROLLER);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "error constructing PMU_BOARDOBJ_CMD_GRP_SET interface - 0x%x",
 			  status);
 		goto done;
@@ -421,8 +421,7 @@ u32 clk_freq_controller_sw_setup(struct gk20a *g)
 
 	status = clk_get_freq_controller_table(g, pclk_freq_controllers);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
-			"error reading freq controller table - 0x%x",
+		nvgpu_err(g, "error reading freq controller table - 0x%x",
 			status);
 		goto done;
 	}

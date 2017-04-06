@@ -193,14 +193,14 @@ u32 boardobjgrp_pmuinithandle_impl(struct gk20a *g,
 	status = boardobjgrp_pmucmd_pmuinithandle_impl(g, pboardobjgrp,
 		&pboardobjgrp->pmu.set);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g), "failed to init pmu set cmd");
+		nvgpu_err(g, "failed to init pmu set cmd");
 		goto boardobjgrp_pmuinithandle_exit;
 	}
 
 	status = boardobjgrp_pmucmd_pmuinithandle_impl(g, pboardobjgrp,
 		&pboardobjgrp->pmu.getstatus);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g), "failed to init get status command");
+		nvgpu_err(g, "failed to init get status command");
 		goto boardobjgrp_pmuinithandle_exit;
 	}
 
@@ -212,7 +212,7 @@ u32 boardobjgrp_pmuinithandle_impl(struct gk20a *g,
 	/* Send the BOARDOBJGRP to the pmu via RM_PMU_BOARDOBJ_CMD_GRP. */
 	status = pboardobjgrp->pmuset(g, pboardobjgrp);
 	if (status)
-		gk20a_err(dev_from_gk20a(g), "failed to send boardobg grp to PMU");
+		nvgpu_err(g, "failed to send boardobg grp to PMU");
 
 boardobjgrp_pmuinithandle_exit:
 	return status;
@@ -277,8 +277,7 @@ u32 boardobjgrp_pmudatainit_legacy(struct gk20a *g,
 		/* Obtain pointer to the current instance of the Object from the Group */
 		pboardobj = pboardobjgrp->objgetbyidx(pboardobjgrp, index);
 		if (NULL == pboardobj) {
-			gk20a_err(dev_from_gk20a(g),
-				"could not get object instance");
+			nvgpu_err(g, "could not get object instance");
 			status = -EINVAL;
 			goto boardobjgrppmudatainit_legacy_done;
 		}
@@ -287,15 +286,14 @@ u32 boardobjgrp_pmudatainit_legacy(struct gk20a *g,
 				(struct nv_pmu_boardobjgrp *)pboardobjgrppmu,
 				&ppmudata, index);
 		if (status) {
-			gk20a_err(dev_from_gk20a(g),
-				"could not get object instance");
+			nvgpu_err(g, "could not get object instance");
 			goto boardobjgrppmudatainit_legacy_done;
 		}
 
 		/* Initialize the PMU Data */
 		status = pboardobj->pmudatainit(g, pboardobj, ppmudata);
 		if (status) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"could not parse pmu for device %d", index);
 			goto boardobjgrppmudatainit_legacy_done;
 		}
@@ -326,8 +324,7 @@ u32 boardobjgrp_pmudatainit_super(struct gk20a *g, struct boardobjgrp
 	status = pboardobjgrp->pmuhdrdatainit(g, pboardobjgrp, pboardobjgrppmu,
 							pboardobjgrp->mask);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
-			"unable to init boardobjgrp pmuhdr data");
+		nvgpu_err(g, "unable to init boardobjgrp pmuhdr data");
 		goto boardobjgrppmudatainit_super_done;
 	}
 
@@ -336,15 +333,14 @@ u32 boardobjgrp_pmudatainit_super(struct gk20a *g, struct boardobjgrp
 				(struct nv_pmu_boardobjgrp *)pboardobjgrppmu,
 				&ppmudata, index);
 		if (status) {
-			gk20a_err(dev_from_gk20a(g),
-				"could not get object instance");
+			nvgpu_err(g, "could not get object instance");
 			goto boardobjgrppmudatainit_super_done;
 		}
 
 		/* Initialize the PMU Data and send to PMU */
 		status = pboardobj->pmudatainit(g, pboardobj, ppmudata);
 		if (status) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"could not parse pmu for device %d", index);
 			goto boardobjgrppmudatainit_super_done;
 		}
@@ -390,8 +386,7 @@ u32 boardobjgrp_pmuset_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp)
 	status = pboardobjgrp->pmudatainit(g, pboardobjgrp,
 			pcmd->buf);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
-			"could not parse pmu data");
+		nvgpu_err(g, "could not parse pmu data");
 		goto boardobjgrp_pmuset_exit;
 	}
 
@@ -415,7 +410,7 @@ u32 boardobjgrp_pmuset_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp)
 	status = boardobjgrp_pmucmdsend(g, pboardobjgrp,
 			pcmd);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g), "could not send SET CMD to PMU");
+		nvgpu_err(g, "could not send SET CMD to PMU");
 		goto boardobjgrp_pmuset_exit;
 	}
 
@@ -484,7 +479,7 @@ boardobjgrp_pmugetstatus_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp,
 	status = pboardobjgrp->pmuhdrdatainit(g, pboardobjgrp,
 					pcmd->buf, mask);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g), "could not init PMU HDR data");
+		nvgpu_err(g, "could not init PMU HDR data");
 		goto boardobjgrp_pmugetstatus_exit;
 	}
 
@@ -493,8 +488,7 @@ boardobjgrp_pmugetstatus_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp,
 	status = boardobjgrp_pmucmdsend(g, pboardobjgrp,
 				&pboardobjgrp->pmu.getstatus);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
-				"could not send GET_STATUS cmd to PMU");
+		nvgpu_err(g, "could not send GET_STATUS cmd to PMU");
 		goto boardobjgrp_pmugetstatus_exit;
 	}
 
@@ -668,7 +662,7 @@ static void boardobjgrp_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 	pgrpmsg = &msg->msg.boardobj.grp;
 
 	if (pgrpmsg->class_id != pboardobjgrp->pmu.classid) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"Unrecognized GRP type: unit %x class id=0x%02x cmd id %x",
 			msg->hdr.unit_id, pboardobjgrp->pmu.classid,
 			pgrpcmd->id);
@@ -676,7 +670,7 @@ static void boardobjgrp_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 	}
 
 	if (msg->msg.boardobj.msg_type != pgrpcmd->msgid) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"unsupported msg for unit %x class %x cmd id %x msg %x",
 			msg->hdr.unit_id, pboardobjgrp->pmu.classid,
 			pgrpcmd->id, msg->msg.boardobj.msg_type);
@@ -684,7 +678,7 @@ static void boardobjgrp_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 	}
 
 	if (msg->msg.boardobj.grp_set.flcn_status != 0) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"cmd abort for unit %x class %x cmd id %x status %x",
 			msg->hdr.unit_id, pboardobjgrp->pmu.classid,
 			pgrpcmd->id,
@@ -695,7 +689,7 @@ static void boardobjgrp_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 	phandlerparams->success = pgrpmsg->b_success ? 1 : 0;
 
 	if (!pgrpmsg->b_success) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"failed GRPCMD: msgtype=0x%x, classid=0x%x, cmd id %x",
 			pgrpmsg->msg_type, pgrpmsg->class_id,
 			pgrpcmd->id);
@@ -756,7 +750,7 @@ static u32 boardobjgrp_pmucmdsend(struct gk20a *g,
 				(void *)&handlerparams,
 				&seqdesc, ~0);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"unable to post boardobj grp cmd for unit %x cmd id %x",
 			cmd.hdr.unit_id, pcmd->id);
 		goto boardobjgrp_pmucmdsend_exit;
@@ -765,7 +759,7 @@ static u32 boardobjgrp_pmucmdsend(struct gk20a *g,
 			gk20a_get_gr_idle_timeout(g),
 			&handlerparams.success, 1);
 	if (handlerparams.success == 0) {
-		gk20a_err(dev_from_gk20a(g), "could not process cmd\n");
+		nvgpu_err(g, "could not process cmd");
 		status = -ETIMEDOUT;
 		goto boardobjgrp_pmucmdsend_exit;
 	}

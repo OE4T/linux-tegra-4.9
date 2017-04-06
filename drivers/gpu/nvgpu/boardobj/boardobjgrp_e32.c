@@ -81,7 +81,7 @@ u32 boardobjgrp_pmuhdrdatainit_e32(struct gk20a *g,
 				mask->bitcount,
 				&pgrpe32->obj_mask.super);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g), "e32 init:failed export grpmask");
+		nvgpu_err(g, "e32 init:failed export grpmask");
 		return status;
 	}
 

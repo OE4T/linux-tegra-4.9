@@ -360,6 +360,21 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 		csi_write(chan, index,
 			TEGRA_VI_CSI_SURFACE0_STRIDE, bytes_per_line);
 
+		if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16) {
+			/*
+			 * Program surface 1 for UV plane,
+			 * with offset sizeimage from Y plane
+			 */
+			csi_write(chan,
+				index, TEGRA_VI_CSI_SURFACE1_OFFSET_MSB, 0x0);
+			csi_write(chan, index,
+				TEGRA_VI_CSI_SURFACE1_OFFSET_LSB,
+				(buf->addr + chan->format.sizeimage / 2 +
+				chan->buffer_offset[index]));
+			csi_write(chan, index,
+				TEGRA_VI_CSI_SURFACE1_STRIDE, bytes_per_line);
+		}
+
 		/* Program syncpoints */
 		thresh[index] = nvhost_syncpt_incr_max_ext(chan->vi->ndev,
 					chan->syncpt[index][0], 1);
@@ -452,6 +467,21 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 			(buf->addr + chan->buffer_offset[index]));
 		csi_write(chan, index,
 			TEGRA_VI_CSI_SURFACE0_STRIDE, bytes_per_line);
+
+		if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16) {
+			/*
+			 * Program surface 1 for UV plane,
+			 * with offset sizeimage from Y plane
+			 */
+			csi_write(chan, index,
+				TEGRA_VI_CSI_SURFACE1_OFFSET_MSB, 0x0);
+			csi_write(chan, index,
+				TEGRA_VI_CSI_SURFACE1_OFFSET_LSB,
+				(buf->addr + chan->format.sizeimage / 2 +
+				chan->buffer_offset[index]));
+			csi_write(chan, index,
+				TEGRA_VI_CSI_SURFACE1_STRIDE, bytes_per_line);
+		}
 
 		/* Program syncpoints */
 		thresh[index] = nvhost_syncpt_incr_max_ext(chan->vi->ndev,

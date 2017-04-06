@@ -34,14 +34,19 @@
 #define CLK_RST_CONTROLLER_RST_DEV_NVDISPLAY0_CLR_0 0x800008
 #define CLK_RST_CONTROLLER_CLK_OUT_ENB_NVDISPLAY0_SET_0 0x801004
 
+static void __init tegra_bpmp_staged_clock_init(struct device_node *np)
+{
+	tegra_bpmp_clk_init(np, 1);
+}
+
 static void __init tegra_bpmp_clock_init(struct device_node *np)
 {
-	tegra_bpmp_clk_init(np);
+	tegra_bpmp_clk_init(np, 0);
 }
 
 static void __init tegra186_clock_init(struct device_node *np)
 {
-	tegra_bpmp_clk_init(np);
+	tegra_bpmp_clk_init(np, 0);
 
 	/* Nvdisp linsim clock hack */
 	if (tegra_platform_is_linsim() || tegra_platform_is_fpga()) {
@@ -68,12 +73,14 @@ static void __init tegra_of_fake_clks_init(struct device_node *np)
 
 static const struct of_device_id tegra_clock_ids[] __initconst = {
 	{ .compatible = "nvidia,tegra-fake-clks",
-	  .data = tegra_of_fake_clks_init },
+		.data = tegra_of_fake_clks_init },
 	{ .compatible = "nvidia,tegra18x-car",
-	  .data = tegra186_clock_init },
+		.data = tegra186_clock_init },
 	{ .compatible = "nvidia,tegra-bpmp-clks",
-	  .data = tegra_bpmp_clock_init },
-	{},
+		.data = tegra_bpmp_clock_init },
+	{ .compatible = "nvidia,tegra-bpmp-staged-clks",
+		.data = tegra_bpmp_staged_clock_init },
+	{}
 };
 
 static struct tegra_pto_table emc_pto = {

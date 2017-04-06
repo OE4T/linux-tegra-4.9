@@ -514,6 +514,8 @@ static int dbg_unbind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	return err;
 }
 
+static int gk20a_perfbuf_release_locked(struct gk20a *g, u64 offset);
+
 int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp)
 {
 	struct dbg_session_gk20a *dbg_s = filp->private_data;
@@ -533,6 +535,10 @@ int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp)
 	g->ops.dbg_session_ops.dbg_set_powergate(dbg_s,
 				NVGPU_DBG_GPU_POWERGATE_MODE_ENABLE);
 	nvgpu_dbg_timeout_enable(dbg_s, NVGPU_DBG_GPU_IOCTL_TIMEOUT_ENABLE);
+
+	/* If this session owned the perf buffer, release it */
+	if (g->perfbuf.owner == dbg_s)
+		gk20a_perfbuf_release_locked(g, g->perfbuf.offset);
 
 	/* Per-context profiler objects were released when we called
 	 * dbg_unbind_all_channels. We could still have global ones.
@@ -1821,16 +1827,39 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 		struct nvgpu_dbg_gpu_perfbuf_map_args *args)
 {
 	struct gk20a *g = dbg_s->g;
+	struct mm_gk20a *mm = &g->mm;
+	struct vm_gk20a *vm = &mm->perfbuf.vm;
 	int err;
 	u32 virt_size;
 	u32 virt_addr_lo;
 	u32 virt_addr_hi;
 	u32 inst_pa_page;
+	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
-	if (!g->allow_all)
-		return -EACCES;
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
-	err = gk20a_vm_map_buffer(&g->mm.pmu.vm,
+	if (g->perfbuf.owner) {
+		nvgpu_mutex_release(&g->dbg_sessions_lock);
+		return -EBUSY;
+	}
+
+	err = gk20a_init_vm(mm, vm, big_page_size,
+			big_page_size << 10,
+			NV_MM_DEFAULT_KERNEL_SIZE,
+			NV_MM_DEFAULT_KERNEL_SIZE + NV_MM_DEFAULT_USER_SIZE,
+			false, false, "perfbuf");
+	if (err) {
+		nvgpu_mutex_release(&g->dbg_sessions_lock);
+		return err;
+	}
+
+	err = gk20a_alloc_inst_block(g, &mm->perfbuf.inst_block);
+	if (err)
+		goto err_remove_vm;
+
+	g->ops.mm.init_inst_block(&mm->perfbuf.inst_block, vm, 0);
+
+	err = gk20a_vm_map_buffer(vm,
 			args->dmabuf_fd,
 			&args->offset,
 			0,
@@ -1839,23 +1868,21 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 			args->mapping_size,
 			NULL);
 	if (err)
-		return err;
+		goto err_remove_vm;
 
-	/* perf output buffer may not cross a 4GB boundary - with a separate va
-	 * smaller than that, it won't */
+	/* perf output buffer may not cross a 4GB boundary */
 	virt_size = u64_lo32(args->mapping_size);
 	virt_addr_lo = u64_lo32(args->offset);
 	virt_addr_hi = u64_hi32(args->offset);
-	/* but check anyway */
-	if (args->offset + virt_size > SZ_4G) {
+	if (u64_hi32(args->offset) != u64_hi32(args->offset + virt_size)) {
 		err = -EINVAL;
-		goto fail_unmap;
+		goto err_unmap;
 	}
 
 	err = gk20a_busy(g);
 	if (err) {
 		nvgpu_err(g, "failed to poweron");
-		goto fail_unmap;
+		goto err_unmap;
 	}
 
 	/* address and size are aligned to 32 bytes, the lowest bits read back
@@ -1866,7 +1893,8 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 	gk20a_writel(g, perf_pmasys_outsize_r(), virt_size);
 
 	/* this field is aligned to 4K */
-	inst_pa_page = gk20a_mm_inst_block_addr(g, &g->mm.hwpm.inst_block) >> 12;
+	inst_pa_page = gk20a_mm_inst_block_addr(g,
+						&mm->perfbuf.inst_block) >> 12;
 
 	/* A write to MEM_BLOCK triggers the block bind operation. MEM_BLOCK
 	 * should be written last */
@@ -1877,23 +1905,24 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 
 	gk20a_idle(g);
 
+	g->perfbuf.owner = dbg_s;
+	g->perfbuf.offset = args->offset;
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
+
 	return 0;
 
-fail_unmap:
-	gk20a_vm_unmap_buffer(&g->mm.pmu.vm, args->offset, NULL);
+err_unmap:
+	gk20a_vm_unmap_buffer(vm, args->offset, NULL);
+err_remove_vm:
+	gk20a_remove_vm(vm, &mm->perfbuf.inst_block);
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	return err;
 }
 
-static int gk20a_perfbuf_unmap(struct dbg_session_gk20a *dbg_s,
-		struct nvgpu_dbg_gpu_perfbuf_unmap_args *args)
+/* must be called with dbg_sessions_lock held */
+static int gk20a_perfbuf_disable_locked(struct gk20a *g)
 {
-	struct gk20a *g = dbg_s->g;
-	int err;
-
-	if (!g->allow_all)
-		return -EACCES;
-
-	err = gk20a_busy(g);
+	int err = gk20a_busy(g);
 	if (err) {
 		nvgpu_err(g, "failed to poweron");
 		return err;
@@ -1911,9 +1940,43 @@ static int gk20a_perfbuf_unmap(struct dbg_session_gk20a *dbg_s,
 
 	gk20a_idle(g);
 
-	gk20a_vm_unmap_buffer(&g->mm.pmu.vm, args->offset, NULL);
-
 	return 0;
+}
+
+static int gk20a_perfbuf_release_locked(struct gk20a *g, u64 offset)
+{
+	struct mm_gk20a *mm = &g->mm;
+	struct vm_gk20a *vm = &mm->perfbuf.vm;
+	int err;
+
+	err = gk20a_perfbuf_disable_locked(g);
+
+	gk20a_vm_unmap_buffer(vm, offset, NULL);
+	gk20a_remove_vm(vm, &mm->perfbuf.inst_block);
+
+	g->perfbuf.owner = NULL;
+	g->perfbuf.offset = 0;
+	return err;
+}
+
+static int gk20a_perfbuf_unmap(struct dbg_session_gk20a *dbg_s,
+		struct nvgpu_dbg_gpu_perfbuf_unmap_args *args)
+{
+	struct gk20a *g = dbg_s->g;
+	int err;
+
+	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
+	if ((g->perfbuf.owner != dbg_s) ||
+					(g->perfbuf.offset != args->offset)) {
+		nvgpu_mutex_release(&g->dbg_sessions_lock);
+		return -EINVAL;
+	}
+
+	err = gk20a_perfbuf_release_locked(g, args->offset);
+
+	nvgpu_mutex_release(&g->dbg_sessions_lock);
+
+	return err;
 }
 
 void gk20a_init_dbg_session_ops(struct gpu_ops *gops)

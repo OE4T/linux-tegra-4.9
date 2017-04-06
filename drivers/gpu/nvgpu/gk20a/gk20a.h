@@ -1027,6 +1027,12 @@ struct gk20a {
 	struct nvgpu_dbg_gpu_reg_op *dbg_regops_tmp_buf;
 	u32 dbg_regops_tmp_buf_ops;
 
+	/* For perfbuf mapping */
+	struct {
+		struct dbg_session_gk20a *owner;
+		u64 offset;
+	} perfbuf;
+
 	/* For profiler reservations */
 	struct nvgpu_list_node profiler_objects;
 	bool global_profiler_reservation_held;

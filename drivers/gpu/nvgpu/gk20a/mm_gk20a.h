@@ -363,6 +363,11 @@ struct mm_gk20a {
 
 	struct {
 		struct vm_gk20a vm;
+		struct nvgpu_mem inst_block;
+	} perfbuf;
+
+	struct {
+		struct vm_gk20a vm;
 	} cde;
 
 	struct {

@@ -1565,6 +1565,52 @@ static int temp_set(void *data, u64 val)
 }
 DEFINE_SIMPLE_ATTRIBUTE(temp_fops, temp_get, temp_set, "%lld\n");
 
+static int thermtrip_get(void *data, u64 *val)
+{
+
+	struct tegra_thermctl_zone *z = data;
+	u32 r;
+
+	r = readl(z->ts->regs + THERMCTL_THERMTRIP_CTL);
+	*val = REG_GET_MASK(r, z->sg->thermtrip_threshold_mask);
+	*val *= z->ts->soc->thresh_grain;
+
+	return 0;
+}
+
+static int thermtrip_set(void *data, u64 val)
+{
+	struct tegra_thermctl_zone *z = data;
+
+	return thermtrip_program(z->dev, z->sg, (int)val);
+}
+DEFINE_SIMPLE_ATTRIBUTE(tt_fops, thermtrip_get, thermtrip_set, "%lld\n");
+
+static int thermtrip_en_get(void *data, u64 *val)
+{
+	struct tegra_thermctl_zone *z = data;
+	u32 r;
+
+	r = readl(z->ts->regs + THERMCTL_THERMTRIP_CTL);
+	*val = REG_GET_MASK(r, z->sg->thermtrip_enable_mask);
+
+	return 0;
+}
+
+static int thermtrip_en_set(void *data, u64 val)
+{
+	struct tegra_thermctl_zone *z = data;
+	u32 r;
+
+	r = readl(z->ts->regs + THERMCTL_THERMTRIP_CTL);
+	r = REG_SET_MASK(r, z->sg->thermtrip_enable_mask, !!val);
+	writel(r, z->ts->regs + THERMCTL_THERMTRIP_CTL);
+
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(tt_en_fops, thermtrip_en_get,
+			thermtrip_en_set, "%lld\n");
+
 static int tempoverride_get(void *data, u64 *val)
 {
 	struct tegra_soctherm *tegra = data;
@@ -1800,7 +1846,6 @@ static struct dentry *soctherm_throttle_debug_init(struct dentry *root,
 
 	return file;
 }
-
 static void soctherm_debug_init(struct platform_device *pdev)
 {
 	struct tegra_soctherm *tegra = platform_get_drvdata(pdev);
@@ -1830,10 +1875,21 @@ static void soctherm_debug_init(struct platform_device *pdev)
 
 static void soctherm_debug_temp_add(struct tegra_thermctl_zone *z)
 {
-	char n[32];
+	struct dentry *dir;
 
-	snprintf(n, sizeof(n), "%stemp", z->sg->name);
-	debugfs_create_file(n, 0644, z->ts->debugfs_dir, z, &temp_fops);
+	dir = debugfs_create_dir(z->sg->name, z->ts->debugfs_dir);
+	if (!dir) {
+		dev_err(z->dev, "%s error id:%d\n", __func__, z->sg->id);
+		return;
+	}
+
+	debugfs_create_file("temp", 0644, dir, z, &temp_fops);
+	if (tsensor_group_thermtrip_get(z->ts, z->sg->id) > 0) {
+		debugfs_create_file("thermtrip", 0644, dir, z, &tt_fops);
+		debugfs_create_file("thermtrip_en", 0644, dir, z, &tt_en_fops);
+	}
+
+	return;
 }
 
 #else

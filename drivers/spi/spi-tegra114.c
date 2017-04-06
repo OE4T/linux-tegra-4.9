@@ -57,6 +57,7 @@
 #define SPI_IDLE_SDA_MASK			(3 << 18)
 #define SPI_CS_SS_VAL				(1 << 20)
 #define SPI_CS_SW_HW				(1 << 21)
+#define SPI_CMD1_GR_MASK			0x7FFFA000
 /* SPI_CS_POL_INACTIVE bits are default high */
 						/* n from 0 to 3 */
 #define SPI_CS_POL_INACTIVE(n)			(1 << (22 + (n)))
@@ -184,6 +185,11 @@
 #define SPI_DEFAULT_RX_TAP_DELAY		10
 #define SPI_DEFAULT_TX_TAP_DELAY		0
 #define SPI_FIFO_FLUSH_MAX_DELAY		2000
+
+static bool prefer_last_used_cs;
+module_param_named(prefer_last_used_cs, prefer_last_used_cs, bool, 0644);
+MODULE_PARM_DESC(prefer_last_used_cs,
+		 "Skip default CS command update at end of each transaction");
 
 struct tegra_spi_chip_data {
 	bool intr_mask_reg;
@@ -1446,11 +1452,14 @@ static int tegra_spi_transfer_one_message(struct spi_master *master,
 		msg->actual_length += xfer->len;
 
 complete_xfer:
+		if (prefer_last_used_cs)
+			cmd1 = tspi->command1_reg;
+		else
+			cmd1 = tspi->def_command1_reg;
 		if (ret < 0 || skip) {
 			if (cstate && cstate->cs_gpio_valid)
 				gpio_set_value(spi->cs_gpio, gval);
-			tegra_spi_writel(tspi, tspi->def_command1_reg,
-					SPI_COMMAND1);
+			tegra_spi_writel(tspi, cmd1, SPI_COMMAND1);
 			tegra_spi_transfer_delay(xfer->delay_usecs);
 			goto exit;
 		} else if (list_is_last(&xfer->transfer_list,
@@ -1460,35 +1469,39 @@ complete_xfer:
 			else {
 				if (cstate && cstate->cs_gpio_valid)
 					gpio_set_value(spi->cs_gpio, gval);
-				tegra_spi_writel(tspi, tspi->def_command1_reg,
-						SPI_COMMAND1);
+				tegra_spi_writel(tspi, cmd1, SPI_COMMAND1);
 				tegra_spi_transfer_delay(xfer->delay_usecs);
 			}
 		} else if (xfer->cs_change) {
 			if (cstate && cstate->cs_gpio_valid)
 				gpio_set_value(spi->cs_gpio, gval);
-			tegra_spi_writel(tspi, tspi->def_command1_reg,
-					SPI_COMMAND1);
+			tegra_spi_writel(tspi, cmd1, SPI_COMMAND1);
 			tegra_spi_transfer_delay(xfer->delay_usecs);
 		}
 
 	}
 	ret = 0;
 exit:
-	/* CS de-assert is required before clock goes to it's default state. */
-	cmd1 = tegra_spi_readl(tspi, SPI_COMMAND1);
+	if (prefer_last_used_cs)
+		cmd1 = SPI_CMD1_GR_MASK & tspi->command1_reg;
+	else
+		cmd1 = tegra_spi_readl(tspi, SPI_COMMAND1);
+	/* CS de-assert is required before clock
+	 * goes to it's default state.
+	 */
 	if (!tspi->is_hw_based_cs) {
 		if (spi->mode & SPI_CS_HIGH) {
-			/* Active high. Reset the value to make it deactive */
+			/* Active high. Reset to deactive */
 			cmd1 &= ~SPI_CS_SS_VAL;
 		} else {
-			/* Active low. Set the value to make it deactive */
+			/* Active low. Set to deactive */
 			cmd1 |= SPI_CS_SS_VAL;
 		}
 	}
 
 	tegra_spi_writel(tspi, cmd1, SPI_COMMAND1);
-	tegra_spi_writel(tspi, tspi->def_command1_reg, SPI_COMMAND1);
+	if (!prefer_last_used_cs)
+		tegra_spi_writel(tspi, tspi->def_command1_reg, SPI_COMMAND1);
 
 	msg->status = ret;
 	spi_finalize_current_message(master);

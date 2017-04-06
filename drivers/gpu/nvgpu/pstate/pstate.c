@@ -118,7 +118,7 @@ int gk20a_init_pstate_pmu_support(struct gk20a *g)
 
 	err = volt_pmu_send_load_cmd_to_pmu(g);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"Failed to send VOLT LOAD CMD to PMU: status = 0x%08x.",
 			err);
 		return err;
@@ -209,7 +209,7 @@ struct pstate *pstate_construct(struct gk20a *g, void *args)
 	if ((tmp->super.type != CTRL_PERF_PSTATE_TYPE_3X) ||
 	    (pstate_construct_3x(g, (struct boardobj **)&pstate,
 			    sizeof(struct pstate), args)))
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error constructing pstate num=%u", tmp->num);
 
 	return pstate;
@@ -223,7 +223,7 @@ int pstate_insert(struct gk20a *g, struct pstate *pstate, int index)
 	err = boardobjgrp_objinsert(&pstates->super.super,
 			(struct boardobj *)pstate, index);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "error adding pstate boardobj %d", index);
 		return err;
 	}
@@ -345,7 +345,7 @@ static int pstate_sw_setup(struct gk20a *g)
 
 	err = boardobjgrpconstruct_e32(&g->perf_pmu.pstatesobjs.super);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "error creating boardobjgrp for pstates, err=%d",
 			  err);
 		goto done;
@@ -356,15 +356,13 @@ static int pstate_sw_setup(struct gk20a *g)
 			g->bios.perf_token, PERFORMANCE_TABLE);
 
 	if (!hdr) {
-		gk20a_err(dev_from_gk20a(g),
-				"performance table not found");
+		nvgpu_err(g, "performance table not found");
 		err = -EINVAL;
 		goto done;
 	}
 
 	if (hdr->version != VBIOS_PSTATE_TABLE_VERSION_5X) {
-		gk20a_err(dev_from_gk20a(g),
-				"unknown/unsupported clocks table version=0x%02x",
+		nvgpu_err(g, "unknown/unsupported clocks table version=0x%02x",
 				hdr->version);
 		err = -EINVAL;
 		goto done;

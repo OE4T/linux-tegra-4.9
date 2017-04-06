@@ -2031,10 +2031,12 @@ static int bmp_probe(struct i2c_client *client,
 
 	bmp_pm_init(st);
 	ret = bmp_id_i2c(st, id);
-	if (ret == -EAGAIN)
+	if (ret == -EAGAIN) {
+		ret = -EPROBE_DEFER;
 		goto bmp_probe_exit;
-	else if (ret)
+	} else if (ret) {
 		goto bmp_probe_err;
+	}
 
 	bmp_init_hw(st);
 	bmp_pm(st, false);
@@ -2130,7 +2132,7 @@ static void __exit bmp_exit(void)
 late_initcall(bmp_init);
 module_exit(bmp_exit);
 
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("BMPX80 driver");
 MODULE_AUTHOR("NVIDIA Corporation");
 

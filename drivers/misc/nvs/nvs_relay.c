@@ -181,7 +181,7 @@ static void __exit nvs_exit(void)
 subsys_initcall(nvs_init);
 module_exit(nvs_exit);
 
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("NVidia Sensor relay framework");
 MODULE_AUTHOR("NVIDIA Corporation");
 

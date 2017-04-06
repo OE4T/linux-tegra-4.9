@@ -148,3 +148,6 @@ struct nvs_fn_if *nvs_input(void)
 	return &nvs_fn_if_input;
 }
 
+MODULE_LICENSE("GPL v2");
+MODULE_DESCRIPTION("NVidiaInvensense driver");
+MODULE_AUTHOR("NVIDIA Corporation");

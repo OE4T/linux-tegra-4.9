@@ -1974,3 +1974,8 @@ struct nvs_fn_if *nvs_iio(void)
 	return &nvs_fn_if_iio;
 }
 
+EXPORT_SYMBOL_GPL(nvs_iio);
+
+MODULE_LICENSE("GPL v2");
+MODULE_DESCRIPTION("NVidiaInvensense driver");
+MODULE_AUTHOR("NVIDIA Corporation");

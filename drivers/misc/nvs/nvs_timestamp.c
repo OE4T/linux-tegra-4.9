@@ -11,6 +11,7 @@
  */
 
 
+#include <linux/module.h>
 #include <linux/time.h>
 #include <linux/ktime.h>
 #include <linux/timekeeping.h>
@@ -23,4 +24,9 @@ s64 nvs_timestamp(void)
 	get_monotonic_boottime(&ts);
 	return timespec_to_ns(&ts);
 }
+EXPORT_SYMBOL_GPL(nvs_timestamp);
+
+MODULE_LICENSE("GPL v2");
+MODULE_DESCRIPTION("NVidiaInvensense driver");
+MODULE_AUTHOR("NVIDIA Corporation");
 

@@ -244,6 +244,7 @@ int nvs_dsm_iio(int dev_id, bool connect, int snsr_id, unsigned char *uuid)
 		dev_info(&st->pd->dev, "%s err=%d\n", __func__, ret);
 	return ret;
 }
+EXPORT_SYMBOL_GPL(nvs_dsm_iio);
 
 int nvs_dsm_input(int dev_id, bool connect, int snsr_id, unsigned char *uuid)
 {
@@ -519,7 +520,7 @@ static struct platform_driver dsm_driver = {
 };
 module_platform_driver(dsm_driver);
 
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("NVidia Sensor DSM driver");
 MODULE_AUTHOR("NVIDIA Corporation");
 

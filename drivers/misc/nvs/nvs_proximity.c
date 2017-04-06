@@ -189,6 +189,7 @@
  */
 
 
+#include <linux/module.h>
 #include <linux/of.h>
 #include <linux/version.h>
 #include <linux/nvs_proximity.h>
@@ -242,6 +243,7 @@ ssize_t nvs_proximity_dbg(struct nvs_proximity *np, char *buf)
 	t += snprintf(buf + t, PAGE_SIZE - t, "report=%u\n", np->report);
 	return t;
 }
+EXPORT_SYMBOL_GPL(nvs_proximity_dbg);
 
 static void nvs_proximity_interpolate(int x1, s64 x2, int x3,
 				      int y1, u32 *y2, int y3)
@@ -521,6 +523,7 @@ int nvs_proximity_read(struct nvs_proximity *np)
 	}
 	return nvs_proximity_poll_delay(np, ret, poll_delay, report_delay_min);
 }
+EXPORT_SYMBOL_GPL(nvs_proximity_read);
 
 /**
  * nvs_proximity_enable - called when the proximity sensor is
@@ -557,6 +560,7 @@ int nvs_proximity_enable(struct nvs_proximity *np)
 		np->proximity_binary_hw = true;
 	return 0;
 }
+EXPORT_SYMBOL_GPL(nvs_proximity_enable);
 
 /**
  * nvs_proximity_of_dt - called during system boot for
@@ -593,6 +597,7 @@ int nvs_proximity_of_dt(struct nvs_proximity *np, const struct device_node *dn,
 		np->proximity_binary_hw = false;
 	return 0;
 }
+EXPORT_SYMBOL_GPL(nvs_proximity_of_dt);
 
 /**
  * nvs_proximity_threshold_calibrate_lo - runtime mechanism to
@@ -612,6 +617,7 @@ void nvs_proximity_threshold_calibrate_lo(struct nvs_proximity *np, int lo)
 		np->cfg->thresh_lo = lo;
 	}
 }
+EXPORT_SYMBOL_GPL(nvs_proximity_threshold_calibrate_lo);
 
 /**
  * nvs_proximity_threshold_calibrate_hi - runtime mechanism to
@@ -631,4 +637,8 @@ void nvs_proximity_threshold_calibrate_hi(struct nvs_proximity *np, int hi)
 		np->cfg->thresh_hi = hi;
 	}
 }
+EXPORT_SYMBOL_GPL(nvs_proximity_threshold_calibrate_hi);
 
+MODULE_LICENSE("GPL v2");
+MODULE_DESCRIPTION("NVidiaInvensense driver");
+MODULE_AUTHOR("NVIDIA Corporation");

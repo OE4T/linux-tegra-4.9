@@ -162,6 +162,7 @@
  */
 
 
+#include <linux/module.h>
 #include <linux/of.h>
 #include <linux/version.h>
 #include <linux/nvs_light.h>
@@ -271,6 +272,7 @@ ssize_t nvs_light_dbg(struct nvs_light *nl, char *buf)
 	}
 	return t;
 }
+EXPORT_SYMBOL_GPL(nvs_light_dbg);
 
 static u32 nvs_light_interpolate(int x1, s64 x2, int x3, int y1, int y3)
 {
@@ -525,6 +527,7 @@ int nvs_light_read(struct nvs_light *nl)
 		ret = RET_POLL_NEXT; /* poll for next sample */
 	return ret;
 }
+EXPORT_SYMBOL_GPL(nvs_light_read);
 
 /**
  * nvs_light_enable - called when the light sensor is enabled.
@@ -551,6 +554,7 @@ int nvs_light_enable(struct nvs_light *nl)
 		nl->calibration_en = false;
 	return 0;
 }
+EXPORT_SYMBOL_GPL(nvs_light_enable);
 
 /**
  * nvs_light_of_dt - called during system boot to acquire
@@ -652,6 +656,7 @@ int nvs_light_of_dt(struct nvs_light *nl, const struct device_node *np,
 
 	return ret_t;
 }
+EXPORT_SYMBOL_GPL(nvs_light_of_dt);
 
 /**
  * nvs_light_resolution - runtime mechanism to modify nld_i_lo.
@@ -693,6 +698,7 @@ int nvs_light_resolution(struct nvs_light *nl, int resolution)
 		nvs_light_nld(nl, nl->nld_i_lo);
 	return 0;
 }
+EXPORT_SYMBOL_GPL(nvs_light_resolution);
 
 /**
  * nvs_light_max_range - runtime mechanism to modify nld_i_hi.
@@ -734,6 +740,7 @@ int nvs_light_max_range(struct nvs_light *nl, int max_range)
 		nvs_light_nld(nl, nl->nld_i_hi);
 	return 0;
 }
+EXPORT_SYMBOL_GPL(nvs_light_max_range);
 
 /**
  * nvs_light_threshold_calibrate_lo - runtime mechanism to
@@ -782,6 +789,7 @@ int nvs_light_threshold_calibrate_lo(struct nvs_light *nl, int lo)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(nvs_light_threshold_calibrate_lo);
 
 /**
  * nvs_light_threshold_calibrate_hi - runtime mechanism to
@@ -830,4 +838,8 @@ int nvs_light_threshold_calibrate_hi(struct nvs_light *nl, int hi)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(nvs_light_threshold_calibrate_hi);
 
+MODULE_LICENSE("GPL v2");
+MODULE_DESCRIPTION("NVidiaInvensense driver");
+MODULE_AUTHOR("NVIDIA Corporation");

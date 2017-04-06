@@ -256,7 +256,7 @@ static int nvgpu_pci_init_support(struct pci_dev *pdev)
 	g->regs = ioremap(pci_resource_start(pdev, 0),
 			  pci_resource_len(pdev, 0));
 	if (IS_ERR(g->regs)) {
-		gk20a_err(dev_from_gk20a(g), "failed to remap gk20a registers");
+		nvgpu_err(g, "failed to remap gk20a registers");
 		err = PTR_ERR(g->regs);
 		goto fail;
 	}
@@ -264,7 +264,7 @@ static int nvgpu_pci_init_support(struct pci_dev *pdev)
 	g->bar1 = ioremap(pci_resource_start(pdev, 1),
 			  pci_resource_len(pdev, 1));
 	if (IS_ERR(g->bar1)) {
-		gk20a_err(dev_from_gk20a(g), "failed to remap gk20a bar1");
+		nvgpu_err(g, "failed to remap gk20a bar1");
 		err = PTR_ERR(g->bar1);
 		goto fail;
 	}
@@ -350,7 +350,7 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 
 	g = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
 	if (!g) {
-		gk20a_err(&pdev->dev, "couldn't allocate gk20a support");
+		nvgpu_err(g, "couldn't allocate gk20a support");
 		return -ENOMEM;
 	}
 
@@ -374,7 +374,7 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 #if defined(CONFIG_PCI_MSI)
 	err = pci_enable_msi(pdev);
 	if (err) {
-		gk20a_err(&pdev->dev,
+		nvgpu_err(g,
 			"MSI could not be enabled, falling back to legacy");
 		g->msi_enabled = false;
 	} else
@@ -395,7 +395,7 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 #endif
 			IRQF_SHARED, "nvgpu", g);
 	if (err) {
-		gk20a_err(&pdev->dev,
+		nvgpu_err(g,
 			"failed to request irq @ %d", g->irq_stall);
 		return err;
 	}
@@ -411,7 +411,7 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 		return err;
 
 	if (strchr(dev_name(&pdev->dev), '%')) {
-		gk20a_err(&pdev->dev, "illegal character in device name");
+		nvgpu_err(g, "illegal character in device name");
 		return -EINVAL;
 	}
 
@@ -424,7 +424,7 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 
 	err = nvgpu_pci_pm_init(&pdev->dev);
 	if (err) {
-		gk20a_err(&pdev->dev, "pm init failed");
+		nvgpu_err(g, "pm init failed");
 		return err;
 	}
 

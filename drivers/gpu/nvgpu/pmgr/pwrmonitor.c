@@ -80,7 +80,7 @@ static u32 _pwr_channel_state_init(struct gk20a *g)
 	BOARDOBJGRP_FOR_EACH_INDEX_IN_MASK(32, indx, objmask) {
 		pchannel = PMGR_PWR_MONITOR_GET_PWR_CHANNEL(g, indx);
 		if (pchannel == NULL) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"PMGR_PWR_MONITOR_GET_PWR_CHANNEL-failed %d", indx);
 			return -EINVAL;
 		}
@@ -107,7 +107,7 @@ static u32 _pwr_domains_pmudatainit_sensor(struct gk20a *g,
 
 	status = boardobj_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			  "error updating pmu boardobjgrp for pwr sensor 0x%x",
 			  status);
 		goto done;
@@ -263,7 +263,7 @@ static u32 devinit_get_pwr_topology_table(struct gk20a *g,
 					pwr_topology_size, pwr_topology_data.boardobj.type);
 
 		if (!boardobj) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"unable to create pwr topology for %d type %d",
 				index, pwr_topology_data.boardobj.type);
 			status = -EINVAL;
@@ -274,7 +274,7 @@ static u32 devinit_get_pwr_topology_table(struct gk20a *g,
 				boardobj, obj_index);
 
 		if (status) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"unable to insert pwr topology boardobj for %d", index);
 			status = -EINVAL;
 			goto done;
@@ -300,7 +300,7 @@ u32 pmgr_monitor_sw_setup(struct gk20a *g)
 	status = boardobjgrpconstruct_e32(
 		&g->pmgr_pmu.pmgr_monitorobjs.pwr_channels);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error creating boardobjgrp for pmgr channel, status - 0x%x",
 			status);
 		goto done;
@@ -315,7 +315,7 @@ u32 pmgr_monitor_sw_setup(struct gk20a *g)
 	status = boardobjgrpconstruct_e32(
 			&g->pmgr_pmu.pmgr_monitorobjs.pwr_ch_rels);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error creating boardobjgrp for pmgr channel relationship, status - 0x%x",
 			status);
 		goto done;

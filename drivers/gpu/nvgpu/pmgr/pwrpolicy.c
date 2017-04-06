@@ -53,7 +53,7 @@ static u32 _pwr_policy_limitarbinputset_helper(struct gk20a *g,
 				p_limit_arb->num_inputs].limit_value = limit_value;
 			p_limit_arb->num_inputs++;
 		} else {
-			gk20a_err(g->dev, "No entries remaining for clientIdx=%d",
+			nvgpu_err(g, "No entries remaining for clientIdx=%d",
 				client_idx);
 			status = -EINVAL;
 		}
@@ -100,7 +100,7 @@ static u32 _pwr_policy_limitid_translate(struct gk20a *g,
 			break;
 
 		default:
-			gk20a_err(g->dev, "Unsupported limitId=%d",
+			nvgpu_err(g, "Unsupported limitId=%d",
 				limit_id);
 			status = -EINVAL;
 			break;
@@ -130,7 +130,7 @@ static u32 _pwr_policy_limitarbinputset(struct gk20a *g,
 
 	status = _pwr_policy_limitarbinputset_helper(g, p_limit_arb, client_idx, limit);
 	if (status) {
-		gk20a_err(g->dev,
+		nvgpu_err(g,
 			"Error setting client limit value: status=0x%08x, limitId=0x%x, clientIdx=0x%x, limit=%d",
 			status, limit_id, client_idx, limit);
 		goto exit;
@@ -185,7 +185,7 @@ static u32 _pwr_domains_pmudatainit_hw_threshold(struct gk20a *g,
 
 	status = boardobj_pmudatainit_super(g, board_obj_ptr, ppmudata);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error updating pmu boardobjgrp for pwr sensor 0x%x",
 			status);
 		status = -ENOMEM;
@@ -294,8 +294,7 @@ static struct boardobj *construct_pwr_policy(struct gk20a *g,
 			break;
 
 		default:
-		gk20a_err(g->dev,
-			"Error: unrecognized Power Policy filter type: %d.\n",
+		nvgpu_err(g, "Error: unrecognized Power Policy filter type: %d",
 			pwrpolicy->filter_type);
 	}
 
@@ -385,7 +384,7 @@ static u32 _pwr_policy_construct_WAR_SW_Threshold_policy(struct gk20a *g,
 				pwr_policy_size, ppwrpolicydata->boardobj.type);
 
 	if (!boardobj) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"unable to create pwr policy for type %d", ppwrpolicydata->boardobj.type);
 		status = -EINVAL;
 		goto done;
@@ -395,7 +394,7 @@ static u32 _pwr_policy_construct_WAR_SW_Threshold_policy(struct gk20a *g,
 			boardobj, obj_index);
 
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"unable to insert pwr policy boardobj for %d", obj_index);
 		status = -EINVAL;
 		goto done;
@@ -659,7 +658,7 @@ static u32 devinit_get_pwr_policy_table(struct gk20a *g,
 				pwr_policy_size, pwr_policy_data.boardobj.type);
 
 		if (!boardobj) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"unable to create pwr policy for %d type %d",
 				index, pwr_policy_data.boardobj.type);
 			status = -EINVAL;
@@ -670,7 +669,7 @@ static u32 devinit_get_pwr_policy_table(struct gk20a *g,
 				boardobj, obj_index);
 
 		if (status) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"unable to insert pwr policy boardobj for %d",
 				index);
 			status = -EINVAL;
@@ -687,8 +686,7 @@ static u32 devinit_get_pwr_policy_table(struct gk20a *g,
 					sizeof(struct pwr_policy_sw_threshold),
 					obj_index);
 		if (status) {
-			gk20a_err(dev_from_gk20a(g),
-				"unable to construct_WAR_policy");
+			nvgpu_err(g, "unable to construct_WAR_policy");
 			status = -EINVAL;
 			goto done;
 		}
@@ -712,7 +710,7 @@ u32 pmgr_policy_sw_setup(struct gk20a *g)
 	status = boardobjgrpconstruct_e32(
 		&g->pmgr_pmu.pmgr_policyobjs.pwr_policies);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error creating boardobjgrp for pmgr policy, status - 0x%x",
 			status);
 		goto done;
@@ -721,7 +719,7 @@ u32 pmgr_policy_sw_setup(struct gk20a *g)
 	status = boardobjgrpconstruct_e32(
 		&g->pmgr_pmu.pmgr_policyobjs.pwr_policy_rels);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error creating boardobjgrp for pmgr policy rels, status - 0x%x",
 			status);
 		goto done;
@@ -730,7 +728,7 @@ u32 pmgr_policy_sw_setup(struct gk20a *g)
 	status = boardobjgrpconstruct_e32(
 		&g->pmgr_pmu.pmgr_policyobjs.pwr_violations);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error creating boardobjgrp for pmgr violations, status - 0x%x",
 			status);
 		goto done;

@@ -23,8 +23,7 @@ int pmgr_pwr_devices_get_power(struct gk20a *g, u32 *val)
 
 	status = pmgr_pmu_pwr_devices_query_blocking(g, 1, &payload);
 	if (status)
-		gk20a_err(dev_from_gk20a(g),
-			"pmgr_pwr_devices_get_current_power failed %x",
+		nvgpu_err(g, "pmgr_pwr_devices_get_current_power failed %x",
 			status);
 
 	*val = payload.devices[0].powerm_w;
@@ -39,8 +38,7 @@ int pmgr_pwr_devices_get_current(struct gk20a *g, u32 *val)
 
 	status = pmgr_pmu_pwr_devices_query_blocking(g, 1, &payload);
 	if (status)
-		gk20a_err(dev_from_gk20a(g),
-			"pmgr_pwr_devices_get_current failed %x",
+		nvgpu_err(g, "pmgr_pwr_devices_get_current failed %x",
 			status);
 
 	*val = payload.devices[0].currentm_a;
@@ -55,8 +53,7 @@ int pmgr_pwr_devices_get_voltage(struct gk20a *g, u32 *val)
 
 	status = pmgr_pmu_pwr_devices_query_blocking(g, 1, &payload);
 	if (status)
-		gk20a_err(dev_from_gk20a(g),
-			"pmgr_pwr_devices_get_current_voltage failed %x",
+		nvgpu_err(g, "pmgr_pwr_devices_get_current_voltage failed %x",
 			status);
 
 	*val = payload.devices[0].voltageu_v;
@@ -117,20 +114,17 @@ static void pmgr_debugfs_init(struct gk20a *g) {
 	dbgentry = debugfs_create_file(
 				"power", S_IRUGO, platform->debugfs, g, &pmgr_power_ctrl_fops);
 	if (!dbgentry)
-		gk20a_err(dev_from_gk20a(g),
-				"debugfs entry create failed for power");
+		nvgpu_err(g, "debugfs entry create failed for power");
 
 	dbgentry = debugfs_create_file(
 				"current", S_IRUGO, platform->debugfs, g, &pmgr_current_ctrl_fops);
 	if (!dbgentry)
-		gk20a_err(dev_from_gk20a(g),
-				"debugfs entry create failed for current");
+		nvgpu_err(g, "debugfs entry create failed for current");
 
 	dbgentry = debugfs_create_file(
 				"voltage", S_IRUGO, platform->debugfs, g, &pmgr_voltage_ctrl_fops);
 	if (!dbgentry)
-		gk20a_err(dev_from_gk20a(g),
-				"debugfs entry create failed for voltage");
+		nvgpu_err(g, "debugfs entry create failed for voltage");
 }
 #endif
 
@@ -140,7 +134,7 @@ u32 pmgr_domain_sw_setup(struct gk20a *g)
 
 	status = pmgr_device_sw_setup(g);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error creating boardobjgrp for pmgr devices, status - 0x%x",
 			status);
 		goto exit;
@@ -148,7 +142,7 @@ u32 pmgr_domain_sw_setup(struct gk20a *g)
 
 	status = pmgr_monitor_sw_setup(g);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error creating boardobjgrp for pmgr monitor, status - 0x%x",
 			status);
 		goto exit;
@@ -156,7 +150,7 @@ u32 pmgr_domain_sw_setup(struct gk20a *g)
 
 	status = pmgr_policy_sw_setup(g);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error creating boardobjgrp for pmgr policy, status - 0x%x",
 			status);
 		goto exit;

@@ -17,7 +17,7 @@
 #ifndef NVGPU_LOCK_H
 #define NVGPU_LOCK_H
 
-#include <nvgpu/lock_linux.h>
+#include <nvgpu/linux/lock.h>
 
 /*
  * struct nvgpu_mutex

@@ -34,7 +34,7 @@ struct gk20a;
  * cross OS way of defining the necessary types used by these APIs. Eventually
  * we will need a <nvgpu/types.h> include to handle this.
  */
-#include <nvgpu/kmem_linux.h>
+#include <nvgpu/linux/kmem.h>
 
 /**
  * DOC: Kmem cache support

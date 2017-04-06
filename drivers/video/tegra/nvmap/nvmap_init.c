@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -361,6 +361,7 @@ int __init nvmap_co_setup(struct reserved_mem *rmem)
 	struct nvmap_platform_carveout *co;
 	int ret = 0;
 	struct cma *cma;
+	ulong start = sched_clock();
 
 	co = nvmap_get_carveout_pdata(rmem->name);
 	if (!co)
@@ -371,7 +372,7 @@ int __init nvmap_co_setup(struct reserved_mem *rmem)
 
 	/* IVM carveouts */
 	if (!co->name)
-		return ret;
+		goto finish;
 
 	co->base = rmem->base;
 	co->size = rmem->size;
@@ -383,22 +384,24 @@ int __init nvmap_co_setup(struct reserved_mem *rmem)
 	WARN_ON(!rmem->base);
 	if (dev_get_cma_area(co->cma_dev)) {
 		pr_info("cma area initialed in legacy way already\n");
-		return ret;
+		goto finish;
 	}
 	ret = cma_init_reserved_mem(rmem->base, rmem->size, 0, &cma);
 	if (ret) {
 		pr_info("cma_init_reserved_mem fails for %s\n", rmem->name);
-		return ret;
+		goto finish;
 	}
 
 	dma_contiguous_early_fixup(rmem->base, rmem->size);
 	dev_set_cma_area(co->cma_dev, cma);
 	pr_debug("tegra-carveouts carveout=%s %pa@%pa\n",
 		 rmem->name, &rmem->size, &rmem->base);
-	return ret;
+	goto finish;
 
 skip_cma:
 	co->cma_dev = NULL;
+finish:
+	nvmap_init_time += sched_clock() - start;
 	return ret;
 }
 EXPORT_SYMBOL(nvmap_co_setup);

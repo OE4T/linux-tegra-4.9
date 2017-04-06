@@ -65,6 +65,7 @@
 struct nvmap_device *nvmap_dev;
 EXPORT_SYMBOL(nvmap_dev);
 struct nvmap_stats nvmap_stats;
+ulong nvmap_init_time;
 
 static struct device_dma_parameters nvmap_dma_parameters = {
 	.max_segment_size = UINT_MAX,
@@ -1736,25 +1737,28 @@ int __init nvmap_probe(struct platform_device *pdev)
 	unsigned int i;
 	int e;
 	int generic_carveout_present = 0;
+	ulong start_time = sched_clock();
 
 	if (WARN_ON(nvmap_dev != NULL)) {
 		dev_err(&pdev->dev, "only one nvmap device may be present\n");
-		return -ENODEV;
+		e = -ENODEV;
+		goto finish;
 	}
 
 	nvmap_override_cache_ops();
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
 	if (!dev) {
 		dev_err(&pdev->dev, "out of memory for device\n");
-		return -ENOMEM;
+		e = -ENOMEM;
+		goto finish;
 	}
 
 	nvmap_init(pdev);
 	plat = pdev->dev.platform_data;
 	if (!plat) {
 		dev_err(&pdev->dev, "no platform data?\n");
-		kfree(dev);
-		return -ENODEV;
+		e = -ENODEV;
+		goto free_dev;
 	}
 
 	nvmap_dev = dev;
@@ -1812,6 +1816,10 @@ int __init nvmap_probe(struct platform_device *pdev)
 	nvmap_cache_debugfs_init(nvmap_dev->debug_root);
 	nvmap_dev->handles_by_pid = debugfs_create_dir("handles_by_pid",
 							nvmap_debug_root);
+#if defined(CONFIG_DEBUG_FS)
+	debugfs_create_ulong("nvmap_init_time", S_IRUGO | S_IWUSR,
+				nvmap_dev->debug_root, &nvmap_init_time);
+#endif
 	nvmap_stats_init(nvmap_debug_root);
 	platform_set_drvdata(pdev, dev);
 
@@ -1840,7 +1848,7 @@ int __init nvmap_probe(struct platform_device *pdev)
 		nvmap_page_pool_fini(dev);
 #endif
 
-	return 0;
+	goto finish;
 fail_heaps:
 	for (i = 0; i < dev->nr_carveouts; i++) {
 		struct nvmap_carveout_node *node = &dev->heaps[i];
@@ -1854,7 +1862,10 @@ fail:
 	if (dev->dev_user.minor != MISC_DYNAMIC_MINOR)
 		misc_deregister(&dev->dev_user);
 	nvmap_dev = NULL;
+free_dev:
 	kfree(dev);
+finish:
+	nvmap_init_time += sched_clock() - start_time;
 	return e;
 }
 

@@ -324,6 +324,7 @@ struct nvmap_stats {
 
 extern struct nvmap_stats nvmap_stats;
 extern struct nvmap_device *nvmap_dev;
+extern ulong nvmap_init_time;
 
 void nvmap_stats_inc(enum nvmap_stats_t, size_t size);
 void nvmap_stats_dec(enum nvmap_stats_t, size_t size);

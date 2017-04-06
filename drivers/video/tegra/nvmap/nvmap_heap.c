@@ -3,7 +3,7 @@
  *
  * GPU heap allocator.
  *
- * Copyright (c) 2011-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -439,12 +439,15 @@ void nvmap_heap_destroy(struct nvmap_heap *heap)
 
 int nvmap_heap_init(void)
 {
+	ulong start_time = sched_clock();
+
 	heap_block_cache = KMEM_CACHE(list_block, 0);
 	if (!heap_block_cache) {
 		pr_err("%s: unable to create heap block cache\n", __func__);
 		return -ENOMEM;
 	}
 	pr_info("%s: created heap block cache\n", __func__);
+	nvmap_init_time += sched_clock() - start_time;
 	return 0;
 }
 

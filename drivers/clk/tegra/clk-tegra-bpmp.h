@@ -19,6 +19,6 @@
 
 int tegra_fake_clks_init(struct device_node *np);
 struct clk *tegra_fclk_init(int clk_num, char *name, size_t sz);
-int tegra_bpmp_clk_init(struct device_node *np);
+int tegra_bpmp_clk_init(struct device_node *np, int staged);
 
 #endif

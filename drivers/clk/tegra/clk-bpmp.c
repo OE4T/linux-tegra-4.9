@@ -63,7 +63,13 @@ struct possible_parents {
 };
 
 static const char **clk_names;
-static struct clk_onecell_data clk_data;
+
+struct clk_data {
+	struct clk_onecell_data cell;
+	int staged;
+};
+
+static struct clk_data clk_data;
 
 static int bpmp_send_clk_message_atomic(struct bpmp_clk_req *req, int size,
 				 u8 *reply, int reply_size)
@@ -395,7 +401,7 @@ static int clk_init_parents(uint32_t clk_num, uint32_t flags,
 
 	for (j = 0; j < num_parents; j++) {
 		p_id = parents->clk_ids[j];
-		if (p_id < 0 || p_id >= clk_data.clk_num) {
+		if (p_id < 0 || p_id >= clk_data.cell.clk_num) {
 			pr_err("%s() bad clk num %d\n", __func__, p_id);
 			parent_names[j] = "ERR!";
 			continue;
@@ -409,7 +415,7 @@ static int clk_init_parents(uint32_t clk_num, uint32_t flags,
 			continue;
 		}
 
-		if (IS_ERR_OR_NULL(clk_data.clks[p_id])) {
+		if (IS_ERR_OR_NULL(clk_data.cell.clks[p_id])) {
 			pr_err("clk-bpmp: clk %d not initialized."
 			       " How did this happen?\n",
 			       p_id);
@@ -433,10 +439,23 @@ static int clk_bpmp_init(uint32_t clk_num)
 	int err;
 	char name[MRQ_CLK_NAME_MAXLEN];
 
-	if (!IS_ERR_OR_NULL(clk_data.clks[clk_num]))
+	if (!IS_ERR_OR_NULL(clk_data.cell.clks[clk_num]))
 		return 0;
 
 	err = clk_bpmp_get_all_info(clk_num, &flags, &parent, &parents, name);
+
+	/**
+	 * If the real clk is unavailable and if we are using the
+	 * staged clk provider, allocate and use a dummy clk
+	 */
+	if (err && clk_data.staged) {
+		clk = tegra_fclk_init(clk_num, name, sizeof(name));
+		if (clk) {
+			pr_warn("clock %d is dummy\n", clk_num);
+			goto out;
+		}
+	}
+
 	if (err)
 		return err;
 
@@ -461,7 +480,8 @@ static int clk_bpmp_init(uint32_t clk_num)
 		pr_err("clk_register_clkdev() returned %d for clk %s\n",
 		       err, name);
 
-	clk_data.clks[clk_num] = clk;
+out:
+	clk_data.cell.clks[clk_num] = clk;
 
 	clk_names[clk_num] = kstrdup(name, GFP_KERNEL);
 
@@ -471,31 +491,31 @@ static int clk_bpmp_init(uint32_t clk_num)
 static struct clk *tegra_of_clk_src_onecell_get(struct of_phandle_args *clkspec,
 	void *data)
 {
-	struct clk_onecell_data *clk_data = data;
+	struct clk_data *clk_data = data;
 	uint32_t idx = clkspec->args[0];
 	int err;
 
-	if (idx >= clk_data->clk_num) {
+	if (idx >= clk_data->cell.clk_num) {
 		pr_err("%s: invalid clock index %d\n", __func__, idx);
 		return ERR_PTR(-EINVAL);
 	}
 
 	mutex_lock(&clk_reg_lock);
 
-	if (!clk_data->clks[idx]) {
+	if (!clk_data->cell.clks[idx]) {
 		err = clk_bpmp_init(idx);
 		if (err < 0) {
 			pr_err("clk-bpmp: failed to initialize clk %d\n", idx);
-			clk_data->clks[idx] = ERR_PTR(-EINVAL);
+			clk_data->cell.clks[idx] = ERR_PTR(-EINVAL);
 		}
 	}
 
 	mutex_unlock(&clk_reg_lock);
 
-	return clk_data->clks[idx];
+	return clk_data->cell.clks[idx];
 }
 
-int tegra_bpmp_clk_init(struct device_node *np)
+int tegra_bpmp_clk_init(struct device_node *np, int staged)
 {
 	struct clk **clks;
 	int max_clk_id = 0;
@@ -523,8 +543,9 @@ int tegra_bpmp_clk_init(struct device_node *np)
 		return -ENOMEM;
 	}
 
-	clk_data.clks = clks;
-	clk_data.clk_num = max_clk_id + 1;
+	clk_data.staged = staged;
+	clk_data.cell.clks = clks;
+	clk_data.cell.clk_num = max_clk_id + 1;
 
 	r = of_clk_add_provider(np, tegra_of_clk_src_onecell_get, &clk_data);
 

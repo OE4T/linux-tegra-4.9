@@ -1554,7 +1554,11 @@ static int dbg_hotplug_show(struct seq_file *s, void *unused)
 		return -EINVAL;
 
 	rmb();
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	seq_put_decimal_ll(s, '\0', dc->out->hotplug_state);
+#else
+	seq_put_decimal_ll(s, "", dc->out->hotplug_state);
+#endif
 	seq_putc(s, '\n');
 	return 0;
 }
@@ -2233,7 +2237,11 @@ static int dbg_csc_v2_force_user_csc_show(struct seq_file *m, void *unused)
 	if (win == NULL)
 		return -EINVAL;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	seq_put_decimal_ll(m, '\0', win->force_user_csc);
+#else
+	seq_put_decimal_ll(m, "", win->force_user_csc);
+#endif
 	seq_putc(m, '\n');
 
 	return 0;
@@ -2375,7 +2383,11 @@ static int dbg_ihub_win_num_show(struct seq_file *s, void *unused)
 	if (WARN_ON(!dc || !dc->out))
 		return -EINVAL;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	seq_put_decimal_ll(s, '\0', ihub_win_num);
+#else
+	seq_put_decimal_ll(s, "", ihub_win_num);
+#endif
 	seq_putc(s, '\n');
 	return 0;
 }
@@ -2422,7 +2434,11 @@ static int dbg_ihub_mempool_size_show(struct seq_file *s, void *unused)
 	if (WARN_ON(!dc || !dc->out))
 		return -EINVAL;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	seq_put_decimal_ll(s, '\0', tegra_nvdisp_ihub_read(dc, -1, 0));
+#else
+	seq_put_decimal_ll(s, "", tegra_nvdisp_ihub_read(dc, -1, 0));
+#endif
 	seq_putc(s, '\n');
 	return 0;
 }

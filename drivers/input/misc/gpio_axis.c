@@ -14,6 +14,7 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/gpio.h>
 #include <linux/gpio_event.h>
 #include <linux/interrupt.h>
@@ -190,3 +191,7 @@ err_bad_device_index:
 err_alloc_axis_state_failed:
 	return ret;
 }
+
+MODULE_DESCRIPTION("GPIO axis driver");
+MODULE_AUTHOR("Google, Inc");
+MODULE_LICENSE("GPL v2");

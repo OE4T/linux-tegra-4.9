@@ -14,6 +14,7 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/gpio.h>
 #include <linux/gpio_event.h>
 #include <linux/hrtimer.h>
@@ -438,3 +439,7 @@ err_kp_alloc_failed:
 err_invalid_platform_data:
 	return err;
 }
+
+MODULE_DESCRIPTION("GPIO matrix driver");
+MODULE_AUTHOR("Google, Inc");
+MODULE_LICENSE("GPL v2");

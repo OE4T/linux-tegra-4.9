@@ -14,6 +14,7 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/gpio.h>
 #include <linux/gpio_event.h>
 #include <linux/hrtimer.h>
@@ -388,3 +389,7 @@ err_ws_failed:
 err_ds_alloc_failed:
 	return ret;
 }
+
+MODULE_DESCRIPTION("GPIO input driver");
+MODULE_AUTHOR("Google, Inc");
+MODULE_LICENSE("GPL v2");

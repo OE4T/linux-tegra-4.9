@@ -300,7 +300,7 @@ int gm206_bios_init(struct gk20a *g)
 
 	if (g->gpu_characteristics.vbios_version <
 	    platform->vbios_min_version) {
-		gk20a_err(g->dev, "unsupported VBIOS version %08x",
+		nvgpu_err(g, "unsupported VBIOS version %08x",
 				g->gpu_characteristics.vbios_version);
 		return -EINVAL;
 	}
@@ -311,20 +311,20 @@ int gm206_bios_init(struct gk20a *g)
 	d = debugfs_create_blob("bios", S_IRUGO, platform->debugfs,
 			&g->bios_blob);
 	if (!d)
-		gk20a_err(g->dev, "No debugfs?");
+		nvgpu_err(g, "No debugfs?");
 
 	gk20a_dbg_fn("done");
 
 	err = gm206_bios_devinit(g);
 	if (err) {
-		gk20a_err(g->dev, "devinit failed");
+		nvgpu_err(g, "devinit failed");
 		return err;
 	}
 
 	if (platform->run_preos) {
 		err = gm206_bios_preos(g);
 		if (err) {
-			gk20a_err(g->dev, "pre-os failed");
+			nvgpu_err(g, "pre-os failed");
 			return err;
 		}
 	}

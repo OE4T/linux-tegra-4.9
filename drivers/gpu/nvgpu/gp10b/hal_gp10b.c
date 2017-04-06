@@ -178,7 +178,7 @@ static int gp10b_get_litter_value(struct gk20a *g, int value)
 		ret = 0;
 		break;
 	default:
-		gk20a_err(dev_from_gk20a(g), "Missing definition %d", value);
+		nvgpu_err(g, "Missing definition %d", value);
 		BUG();
 		break;
 	}

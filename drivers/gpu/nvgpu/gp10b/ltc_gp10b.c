@@ -18,6 +18,8 @@
 #include "gk20a/gk20a.h"
 #include "gm20b/ltc_gm20b.h"
 
+#include <nvgpu/log.h>
+
 #include <nvgpu/hw/gp10b/hw_mc_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_ltc_gp10b.h>
 
@@ -128,8 +130,7 @@ static void gp10b_ltc_isr(struct gk20a *g)
 	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
 
 	mc_intr = gk20a_readl(g, mc_intr_ltc_r());
-	gk20a_err(dev_from_gk20a(g), "mc_ltc_intr: %08x",
-		  mc_intr);
+	nvgpu_err(g, "mc_ltc_intr: %08x", mc_intr);
 	for (ltc = 0; ltc < g->ltc_count; ltc++) {
 		if ((mc_intr & 1 << ltc) == 0)
 			continue;
@@ -142,7 +143,7 @@ static void gp10b_ltc_isr(struct gk20a *g)
 				ltc_ltcs_ltss_intr_ecc_sec_error_pending_f()) {
 				u32 ecc_stats_reg_val;
 
-				gk20a_err(dev_from_gk20a(g),
+				nvgpu_err(g,
 					"Single bit error detected in GPU L2!");
 
 				ecc_stats_reg_val =
@@ -162,7 +163,7 @@ static void gp10b_ltc_isr(struct gk20a *g)
 				ltc_ltcs_ltss_intr_ecc_ded_error_pending_f()) {
 				u32 ecc_stats_reg_val;
 
-				gk20a_err(dev_from_gk20a(g),
+				nvgpu_err(g,
 					"Double bit error detected in GPU L2!");
 
 				ecc_stats_reg_val =
@@ -177,7 +178,7 @@ static void gp10b_ltc_isr(struct gk20a *g)
 					ecc_stats_reg_val);
 			}
 
-			gk20a_err(dev_from_gk20a(g), "ltc%d, slice %d: %08x",
+			nvgpu_err(g, "ltc%d, slice %d: %08x",
 				  ltc, slice, ltc_intr);
 			gk20a_writel(g, ltc_ltc0_lts0_intr_r() +
 					   ltc_stride * ltc + lts_stride * slice,

@@ -228,7 +228,7 @@ static void gp10b_device_info_data_parse(struct gk20a *g, u32 table_entry,
 			gk20a_dbg_info("device info: fault_id: %d", *fault_id);
 		}
 	} else
-		gk20a_err(g->dev, "unknown device_info_data %d",
+		nvgpu_err(g, "unknown device_info_data %d",
 			top_device_info_data_type_v(table_entry));
 }
 

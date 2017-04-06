@@ -818,8 +818,7 @@ static int gr_gp10b_init_ctx_state(struct gk20a *g)
 		op.mailbox.ret = &g->gr.t18x.ctx_vars.preempt_image_size;
 		err = gr_gk20a_submit_fecs_method_op(g, op, false);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-					"query preempt image size failed");
+			nvgpu_err(g, "query preempt image size failed");
 			return err;
 		}
 	}
@@ -921,8 +920,7 @@ static int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 					g->gr.t18x.ctx_vars.preempt_image_size,
 					&gr_ctx->t18x.preempt_ctxsw_buffer);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-				  "cannot allocate preempt buffer");
+			nvgpu_err(g, "cannot allocate preempt buffer");
 			goto fail;
 		}
 
@@ -930,8 +928,7 @@ static int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 					spill_size,
 					&gr_ctx->t18x.spill_ctxsw_buffer);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-				  "cannot allocate spill buffer");
+			nvgpu_err(g, "cannot allocate spill buffer");
 			goto fail_free_preempt;
 		}
 
@@ -939,8 +936,7 @@ static int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 					attrib_cb_size,
 					&gr_ctx->t18x.betacb_ctxsw_buffer);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-				  "cannot allocate beta buffer");
+			nvgpu_err(g, "cannot allocate beta buffer");
 			goto fail_free_spill;
 		}
 
@@ -948,8 +944,7 @@ static int gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 					pagepool_size,
 					&gr_ctx->t18x.pagepool_ctxsw_buffer);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-				  "cannot allocate page pool");
+			nvgpu_err(g, "cannot allocate page pool");
 			goto fail_free_betacb;
 		}
 
@@ -1016,8 +1011,7 @@ static int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 			err = g->ops.gr.set_ctxsw_preemption_mode(g, *gr_ctx, vm,
 			    class, graphics_preempt_mode, compute_preempt_mode);
 			if (err) {
-				gk20a_err(dev_from_gk20a(g),
-						"set_ctxsw_preemption_mode failed");
+				nvgpu_err(g, "set_ctxsw_preemption_mode failed");
 				goto fail_free_gk20a_ctx;
 			}
 		} else
@@ -1044,44 +1038,44 @@ static void dump_ctx_switch_stats(struct gk20a *g, struct vm_gk20a *vm,
 		WARN_ON("Cannot map context");
 		return;
 	}
-	gk20a_err(dev_from_gk20a(g), "ctxsw_prog_main_image_magic_value_o : %x (expect %x)\n",
+	nvgpu_err(g, "ctxsw_prog_main_image_magic_value_o : %x (expect %x)",
 		nvgpu_mem_rd(g, mem,
 				ctxsw_prog_main_image_magic_value_o()),
 		ctxsw_prog_main_image_magic_value_v_value_v());
 
-	gk20a_err(dev_from_gk20a(g), "ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi : %x\n",
+	nvgpu_err(g, "ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi : %x",
 		nvgpu_mem_rd(g, mem,
 				ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_o()));
 
-	gk20a_err(dev_from_gk20a(g), "ctxsw_prog_main_image_context_timestamp_buffer_ptr : %x\n",
+	nvgpu_err(g, "ctxsw_prog_main_image_context_timestamp_buffer_ptr : %x",
 		nvgpu_mem_rd(g, mem,
 				ctxsw_prog_main_image_context_timestamp_buffer_ptr_o()));
 
-	gk20a_err(dev_from_gk20a(g), "ctxsw_prog_main_image_context_timestamp_buffer_control : %x\n",
+	nvgpu_err(g, "ctxsw_prog_main_image_context_timestamp_buffer_control : %x",
 		nvgpu_mem_rd(g, mem,
 				ctxsw_prog_main_image_context_timestamp_buffer_control_o()));
 
-	gk20a_err(dev_from_gk20a(g), "NUM_SAVE_OPERATIONS : %d\n",
+	nvgpu_err(g, "NUM_SAVE_OPERATIONS : %d",
 		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_num_save_ops_o()));
-	gk20a_err(dev_from_gk20a(g), "WFI_SAVE_OPERATIONS : %d\n",
+	nvgpu_err(g, "WFI_SAVE_OPERATIONS : %d",
 		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_num_wfi_save_ops_o()));
-	gk20a_err(dev_from_gk20a(g), "CTA_SAVE_OPERATIONS : %d\n",
+	nvgpu_err(g, "CTA_SAVE_OPERATIONS : %d",
 		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_num_cta_save_ops_o()));
-	gk20a_err(dev_from_gk20a(g), "GFXP_SAVE_OPERATIONS : %d\n",
+	nvgpu_err(g, "GFXP_SAVE_OPERATIONS : %d",
 		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_num_gfxp_save_ops_o()));
-	gk20a_err(dev_from_gk20a(g), "CILP_SAVE_OPERATIONS : %d\n",
+	nvgpu_err(g, "CILP_SAVE_OPERATIONS : %d",
 		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_num_cilp_save_ops_o()));
-	gk20a_err(dev_from_gk20a(g),
-		"image gfx preemption option (GFXP is 1) %x\n",
+	nvgpu_err(g,
+		"image gfx preemption option (GFXP is 1) %x",
 		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_graphics_preemption_options_o()));
-	gk20a_err(dev_from_gk20a(g),
-		"image compute preemption option (CTA is 1) %x\n",
+	nvgpu_err(g,
+		"image compute preemption option (CTA is 1) %x",
 		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_compute_preemption_options_o()));
 	nvgpu_mem_end(g, mem);
@@ -1154,8 +1148,7 @@ static void gr_gp10b_update_ctxsw_preemption_mode(struct gk20a *g,
 
 		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-					"can't map patch context");
+			nvgpu_err(g, "can't map patch context");
 			goto out;
 		}
 
@@ -1403,7 +1396,7 @@ static int gr_gp10b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 	} while (!nvgpu_timeout_expired(&timeout));
 
-	gk20a_err(dev_from_gk20a(g),
+	nvgpu_err(g,
 		"timeout, ctxsw busy : %d, gr busy : %d, %08x, %08x, %08x, %08x",
 		ctxsw_active, gr_busy, activity0, activity1, activity2, activity4);
 
@@ -1617,14 +1610,14 @@ static int gr_gp10b_disable_channel_or_tsg(struct gk20a *g, struct channel_gk20a
 
 	ret = gk20a_disable_channel_tsg(g, fault_ch);
 	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 				"CILP: failed to disable channel/TSG!\n");
 		return ret;
 	}
 
 	ret = g->ops.fifo.update_runlist(g, fault_ch->runlist_id, ~0, true, false);
 	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 				"CILP: failed to restart runlist 0!");
 		return ret;
 	}
@@ -1664,7 +1657,7 @@ static int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g, struct channel_gk2
 				"CILP: looking up ctx id");
 		ret = gr_gk20a_get_ctx_id(g, fault_ch, &gr_ctx->t18x.ctx_id);
 		if (ret) {
-			gk20a_err(dev_from_gk20a(g), "CILP: error looking up ctx id!\n");
+			nvgpu_err(g, "CILP: error looking up ctx id!");
 			return ret;
 		}
 		gr_ctx->t18x.ctx_id_valid = true;
@@ -1688,8 +1681,7 @@ static int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g, struct channel_gk2
 			.cond.fail = GR_IS_UCODE_OP_SKIP});
 
 	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-				"CILP: failed to enable ctxsw interrupt!");
+		nvgpu_err(g, "CILP: failed to enable ctxsw interrupt!");
 		return ret;
 	}
 
@@ -1702,8 +1694,7 @@ static int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g, struct channel_gk2
 
 	ret = gr_gp10b_disable_channel_or_tsg(g, fault_ch);
 	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-				"CILP: failed to disable channel!!");
+		nvgpu_err(g, "CILP: failed to disable channel!!");
 		return ret;
 	}
 
@@ -1822,7 +1813,7 @@ static int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "CILP: Setting CILP preempt pending\n");
 			ret = gr_gp10b_set_cilp_preempt_pending(g, fault_ch);
 			if (ret) {
-				gk20a_err(dev_from_gk20a(g), "CILP: error while setting CILP preempt pending!\n");
+				nvgpu_err(g, "CILP: error while setting CILP preempt pending!\n");
 				return ret;
 			}
 
@@ -1912,7 +1903,7 @@ static int gr_gp10b_handle_fecs_error(struct gk20a *g,
 		/* set preempt_pending to false */
 		ret = gr_gp10b_clear_cilp_preempt_pending(g, ch);
 		if (ret) {
-			gk20a_err(dev_from_gk20a(g), "CILP: error while unsetting CILP preempt pending!\n");
+			nvgpu_err(g, "CILP: error while unsetting CILP preempt pending!");
 			gk20a_channel_put(ch);
 			goto clean_up;
 		}
@@ -1976,8 +1967,7 @@ static bool gr_gp10b_suspend_context(struct channel_gk20a *ch,
 		if (gr_ctx->compute_preempt_mode == NVGPU_COMPUTE_PREEMPTION_MODE_CILP) {
 			err = gr_gp10b_set_cilp_preempt_pending(g, ch);
 			if (err)
-				gk20a_err(dev_from_gk20a(g),
-					"unable to set CILP preempt pending\n");
+				nvgpu_err(g, "unable to set CILP preempt pending");
 			else
 				*cilp_preempt_pending = true;
 
@@ -2009,7 +1999,7 @@ static int gr_gp10b_suspend_contexts(struct gk20a *g,
 
 	err = gr_gk20a_disable_ctxsw(g);
 	if (err) {
-		gk20a_err(dev_from_gk20a(g), "unable to stop gr ctxsw");
+		nvgpu_err(g, "unable to stop gr ctxsw");
 		nvgpu_mutex_release(&g->dbg_sessions_lock);
 		goto clean_up;
 	}
@@ -2159,8 +2149,7 @@ static int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 		err = g->ops.gr.set_ctxsw_preemption_mode(g, gr_ctx, vm, class,
 						graphics_preempt_mode, compute_preempt_mode);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-					"set_ctxsw_preemption_mode failed");
+			nvgpu_err(g, "set_ctxsw_preemption_mode failed");
 			return err;
 		}
 	}
@@ -2181,8 +2170,7 @@ static int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 
 		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-					"can't map patch context");
+			nvgpu_err(g, "can't map patch context");
 			goto enable_ch;
 		}
 		g->ops.gr.commit_global_cb_manager(g, ch, true);
@@ -2245,8 +2233,7 @@ static int gp10b_gr_fuse_override(struct gk20a *g)
 			g->gr.t18x.fecs_feature_override_ecc_val = value;
 			break;
 		default:
-			gk20a_err(dev_from_gk20a(g),
-				"ignore unknown fuse override %08x", fuse);
+			nvgpu_err(g, "ignore unknown fuse override %08x", fuse);
 			break;
 		}
 	}

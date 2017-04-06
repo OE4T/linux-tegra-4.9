@@ -42,8 +42,7 @@ int gp10b_replayable_pagefault_buffer_init(struct gk20a *g)
 		err = nvgpu_dma_alloc_map_sys(vm, rbfb_size,
 						&g->mm.bar2_desc);
 		if (err) {
-			dev_err(dev_from_gk20a(g),
-			"%s Error in replayable fault buffer\n", __func__);
+			nvgpu_err(g, "Error in replayable fault buffer");
 			return err;
 		}
 	}
@@ -75,8 +74,8 @@ u32 gp10b_replayable_pagefault_buffer_get_index(struct gk20a *g)
 	get_idx = gk20a_readl(g, fifo_replay_fault_buffer_get_r());
 
 	if (get_idx >= fifo_replay_fault_buffer_size_hw_entries_v())
-		dev_err(dev_from_gk20a(g), "%s Error in replayable fault buffer\n",
-			__func__);
+		nvgpu_err(g, "Error in replayable fault buffer");
+
 	gk20a_dbg_fn("done");
 	return get_idx;
 }
@@ -89,8 +88,8 @@ u32 gp10b_replayable_pagefault_buffer_put_index(struct gk20a *g)
 	put_idx = gk20a_readl(g, fifo_replay_fault_buffer_put_r());
 
 	if (put_idx >= fifo_replay_fault_buffer_size_hw_entries_v())
-		dev_err(dev_from_gk20a(g), "%s Error in UVM\n",
-			__func__);
+		nvgpu_err(g, "Error in UVM");
+
 	gk20a_dbg_fn("done");
 	return put_idx;
 }

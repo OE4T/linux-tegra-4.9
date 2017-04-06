@@ -24,6 +24,8 @@
 #include "pmu_gp10b.h"
 #include "gp10b_sysfs.h"
 
+#include <nvgpu/log.h>
+
 #include <nvgpu/hw/gp10b/hw_pwr_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
 
@@ -192,8 +194,7 @@ int gp10b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 				&g->ops.pmu.lspmuwprinitdone, 1);
 		/* check again if it still not ready indicate an error */
 		if (!g->ops.pmu.lspmuwprinitdone) {
-			gk20a_err(dev_from_gk20a(g),
-				"PMU not ready to load LSF");
+			nvgpu_err(g, "PMU not ready to load LSF");
 			return -ETIMEDOUT;
 		}
 	}
@@ -213,7 +214,7 @@ static void pmu_handle_gr_param_msg(struct gk20a *g, struct pmu_msg *msg,
 	gk20a_dbg_fn("");
 
 	if (status != 0) {
-		gk20a_err(dev_from_gk20a(g), "GR PARAM cmd aborted");
+		nvgpu_err(g, "GR PARAM cmd aborted");
 		/* TBD: disable ELPG */
 		return;
 	}
@@ -378,12 +379,12 @@ static void pmu_dump_security_fuses_gp10b(struct gk20a *g)
 {
 	u32 val;
 
-	gk20a_err(dev_from_gk20a(g), "FUSE_OPT_SEC_DEBUG_EN_0 : 0x%x",
+	nvgpu_err(g, "FUSE_OPT_SEC_DEBUG_EN_0 : 0x%x",
 			gk20a_readl(g, fuse_opt_sec_debug_en_r()));
-	gk20a_err(dev_from_gk20a(g), "FUSE_OPT_PRIV_SEC_EN_0 : 0x%x",
+	nvgpu_err(g, "FUSE_OPT_PRIV_SEC_EN_0 : 0x%x",
 			gk20a_readl(g, fuse_opt_priv_sec_en_r()));
 	tegra_fuse_readl(FUSE_GCPLEX_CONFIG_FUSE_0, &val);
-	gk20a_err(dev_from_gk20a(g), "FUSE_GCPLEX_CONFIG_FUSE_0 : 0x%x",
+	nvgpu_err(g, "FUSE_GCPLEX_CONFIG_FUSE_0 : 0x%x",
 			val);
 }
 

@@ -16,6 +16,8 @@
 #include "gk20a/gk20a.h"
 #include "cde_gp10b.h"
 
+#include <nvgpu/log.h>
+
 enum gp10b_programs {
 	GP10B_PROG_HPASS              = 0,
 	GP10B_PROG_HPASS_4K           = 1,
@@ -46,7 +48,7 @@ static void gp10b_cde_get_program_numbers(struct gk20a *g,
 		}
 		if (g->mm.bypass_smmu) {
 			if (!g->mm.disable_bigpage) {
-				gk20a_warn(g->dev,
+				nvgpu_warn(g,
 					   "when bypass_smmu is 1, disable_bigpage must be 1 too");
 			}
 			hprog |= 1;

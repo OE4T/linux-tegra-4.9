@@ -32,7 +32,7 @@ static ssize_t ecc_enable_store(struct device *dev,
 		err = g->ops.pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd
 			(g, ecc_mask);
 		if (err)
-			dev_err(dev, "ECC override did not happen\n");
+			nvgpu_err(g, "ECC override did not happen\n");
 	} else
 		return -EINVAL;
 	return count;
@@ -51,11 +51,12 @@ static DEVICE_ATTR(ecc_enable, ROOTRW, ecc_enable_read, ecc_enable_store);
 
 void gp10b_create_sysfs(struct device *dev)
 {
+	struct gk20a *g = get_gk20a(dev);
 	int error = 0;
 
 	error |= device_create_file(dev, &dev_attr_ecc_enable);
 	if (error)
-		dev_err(dev, "Failed to create sysfs attributes!\n");
+		nvgpu_err(g, "Failed to create sysfs attributes!\n");
 }
 
 void gp10b_remove_sysfs(struct device *dev)

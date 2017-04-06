@@ -678,7 +678,7 @@ static int gk20a_channel_semaphore_wait_fd(
 					sema->timeline,
 					fp_sema,
 					&c->semaphore_wq,
-					NULL, false, false);
+					false, false);
 			if (err) {
 				nvgpu_semaphore_put(fp_sema);
 				goto clean_up_priv_cmd;
@@ -742,7 +742,7 @@ static int gk20a_channel_semaphore_wait_fd(
 	 *  already signaled
 	 */
 	err = gk20a_fence_from_semaphore(c->g, fence, sema->timeline, w->sema,
-			&c->semaphore_wq, NULL, false, false);
+			&c->semaphore_wq, false, false);
 	if (err)
 		goto clean_up_sema;
 
@@ -787,7 +787,6 @@ clean_up_sync_fence:
 
 static int __gk20a_channel_semaphore_incr(
 		struct gk20a_channel_sync *s, bool wfi_cmd,
-		struct sync_fence *dependency,
 		struct priv_cmd_entry *incr_cmd,
 		struct gk20a_fence *fence,
 		bool need_sync_fence)
@@ -820,7 +819,7 @@ static int __gk20a_channel_semaphore_incr(
 	err = gk20a_fence_from_semaphore(c->g, fence,
 			sp->timeline, semaphore,
 			&c->semaphore_wq,
-			dependency, wfi_cmd,
+			wfi_cmd,
 			need_sync_fence);
 	if (err)
 		goto clean_up_sema;
@@ -839,7 +838,6 @@ static int gk20a_channel_semaphore_incr_wfi(
 {
 	return __gk20a_channel_semaphore_incr(s,
 			true /* wfi */,
-			NULL,
 			entry, fence, true);
 }
 
@@ -854,7 +852,6 @@ static int gk20a_channel_semaphore_incr(
 	 * a fence to user space. */
 	return __gk20a_channel_semaphore_incr(s,
 			false /* no wfi */,
-			NULL,
 			entry, fence, need_sync_fence);
 }
 
@@ -868,22 +865,12 @@ static int gk20a_channel_semaphore_incr_user(
 		bool register_irq)
 {
 #ifdef CONFIG_SYNC
-	struct sync_fence *dependency = NULL;
 	int err;
 
-	if (wait_fence_fd >= 0) {
-		dependency = gk20a_sync_fence_fdget(wait_fence_fd);
-		if (!dependency)
-			return -EINVAL;
-	}
-
-	err = __gk20a_channel_semaphore_incr(s, wfi, dependency,
-					     entry, fence, need_sync_fence);
-	if (err) {
-		if (dependency)
-			sync_fence_put(dependency);
+	err = __gk20a_channel_semaphore_incr(s, wfi, entry, fence,
+			need_sync_fence);
+	if (err)
 		return err;
-	}
 
 	return 0;
 #else

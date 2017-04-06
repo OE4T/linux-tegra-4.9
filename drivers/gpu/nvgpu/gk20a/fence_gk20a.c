@@ -233,7 +233,6 @@ int gk20a_fence_from_semaphore(
 		struct sync_timeline *timeline,
 		struct nvgpu_semaphore *semaphore,
 		wait_queue_head_t *semaphore_wq,
-		struct sync_fence *dependency,
 		bool wfi, bool need_sync_fence)
 {
 	struct gk20a_fence *f = fence_out;
@@ -242,7 +241,7 @@ int gk20a_fence_from_semaphore(
 #ifdef CONFIG_SYNC
 	if (need_sync_fence) {
 		sync_fence = gk20a_sync_fence_create(g, timeline, semaphore,
-					dependency, "f-gk20a-0x%04x",
+					"f-gk20a-0x%04x",
 					nvgpu_semaphore_gpu_ro_va(semaphore));
 		if (!sync_fence)
 			return -1;

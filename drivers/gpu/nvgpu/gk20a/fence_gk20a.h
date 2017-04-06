@@ -58,7 +58,6 @@ int gk20a_fence_from_semaphore(
 		struct sync_timeline *timeline,
 		struct nvgpu_semaphore *semaphore,
 		wait_queue_head_t *semaphore_wq,
-		struct sync_fence *dependency,
 		bool wfi, bool need_sync_fence);
 
 int gk20a_fence_from_syncpt(

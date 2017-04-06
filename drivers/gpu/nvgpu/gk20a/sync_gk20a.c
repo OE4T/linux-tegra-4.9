@@ -47,8 +47,6 @@ struct gk20a_sync_pt {
 	u32				thresh;
 	struct nvgpu_semaphore		*sema;
 	struct gk20a_sync_timeline	*obj;
-	struct sync_fence		*dep;
-	ktime_t				dep_timestamp;
 
 	/*
 	 * Use a spin lock here since it will have better performance
@@ -206,8 +204,6 @@ static void gk20a_sync_pt_free_shared(struct kref *ref)
 		container_of(ref, struct gk20a_sync_pt, refcount);
 	struct gk20a *g = pt->g;
 
-	if (pt->dep)
-		sync_fence_put(pt->dep);
 	if (pt->sema)
 		nvgpu_semaphore_put(pt->sema);
 	nvgpu_kfree(g, pt);
@@ -216,8 +212,7 @@ static void gk20a_sync_pt_free_shared(struct kref *ref)
 static struct gk20a_sync_pt *gk20a_sync_pt_create_shared(
 		struct gk20a *g,
 		struct gk20a_sync_timeline *obj,
-		struct nvgpu_semaphore *sema,
-		struct sync_fence *dependency)
+		struct nvgpu_semaphore *sema)
 {
 	struct gk20a_sync_pt *shared;
 
@@ -231,20 +226,6 @@ static struct gk20a_sync_pt *gk20a_sync_pt_create_shared(
 	shared->sema = sema;
 	shared->thresh = ++obj->max; /* sync framework has a lock */
 
-	/* Store the dependency fence for this pt. */
-	if (dependency) {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
-		if (dependency->status == 0)
-#else
-		if (!atomic_read(&dependency->status))
-#endif
-			shared->dep = dependency;
-		else {
-			shared->dep_timestamp = ktime_get();
-			sync_fence_put(dependency);
-		}
-	}
-
 	nvgpu_spinlock_init(&shared->lock);
 
 	nvgpu_semaphore_get(sema);
@@ -255,8 +236,7 @@ static struct gk20a_sync_pt *gk20a_sync_pt_create_shared(
 static struct sync_pt *gk20a_sync_pt_create_inst(
 		struct gk20a *g,
 		struct gk20a_sync_timeline *obj,
-		struct nvgpu_semaphore *sema,
-		struct sync_fence *dependency)
+		struct nvgpu_semaphore *sema)
 {
 	struct gk20a_sync_pt_inst *pti;
 
@@ -265,7 +245,7 @@ static struct sync_pt *gk20a_sync_pt_create_inst(
 	if (!pti)
 		return NULL;
 
-	pti->shared = gk20a_sync_pt_create_shared(g, obj, sema, dependency);
+	pti->shared = gk20a_sync_pt_create_shared(g, obj, sema);
 	if (!pti->shared) {
 		sync_pt_free(&pti->pt);
 		return NULL;
@@ -303,9 +283,6 @@ static int gk20a_sync_pt_has_signaled(struct sync_pt *sync_pt)
 {
 	struct gk20a_sync_pt *pt = to_gk20a_sync_pt(sync_pt);
 	struct gk20a_sync_timeline *obj = pt->obj;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
-	struct sync_pt *pos;
-#endif
 	bool signaled = true;
 
 	nvgpu_spinlock_acquire(&pt->lock);
@@ -321,29 +298,6 @@ static int gk20a_sync_pt_has_signaled(struct sync_pt *sync_pt)
 						obj->min) == 1)
 			obj->min = pt->thresh;
 
-		/* Release the dependency fence, but get its timestamp
-		 * first.*/
-		if (pt->dep) {
-			s64 ns = 0;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
-			struct list_head *dep_pts = &pt->dep->pt_list_head;
-			list_for_each_entry(pos, dep_pts, pt_list) {
-				ns = max(ns, ktime_to_ns(pos->timestamp));
-			}
-#else
-			struct fence *fence;
-			int i;
-
-			for (i = 0; i < pt->dep->num_fences; i++) {
-				fence = pt->dep->cbs[i].sync_pt;
-				ns = max(ns, ktime_to_ns(fence->timestamp));
-			}
-#endif
-			pt->dep_timestamp = ns_to_ktime(ns);
-			sync_fence_put(pt->dep);
-			pt->dep = NULL;
-		}
-
 		/* Release the semaphore to the pool. */
 		nvgpu_semaphore_put(pt->sema);
 		pt->sema = NULL;
@@ -352,18 +306,6 @@ done:
 	nvgpu_spinlock_release(&pt->lock);
 
 	return signaled;
-}
-
-static inline ktime_t gk20a_sync_pt_duration(struct sync_pt *sync_pt)
-{
-	struct gk20a_sync_pt *pt = to_gk20a_sync_pt(sync_pt);
-	if (!gk20a_sync_pt_has_signaled(sync_pt) || !pt->dep_timestamp.tv64)
-		return ns_to_ktime(0);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
-	return ktime_sub(sync_pt->timestamp, pt->dep_timestamp);
-#else
-	return ktime_sub(sync_pt->base.timestamp, pt->dep_timestamp);
-#endif
 }
 
 static int gk20a_sync_pt_compare(struct sync_pt *a, struct sync_pt *b)
@@ -426,39 +368,13 @@ static void gk20a_sync_pt_value_str(struct sync_pt *sync_pt, char *str,
 		int size)
 {
 	struct gk20a_sync_pt *pt = to_gk20a_sync_pt(sync_pt);
-	ktime_t dur = gk20a_sync_pt_duration(sync_pt);
 
 	if (pt->sema) {
 		gk20a_sync_pt_value_str_for_sema(pt, str, size);
 		return;
 	}
 
-	if (pt->dep) {
-		snprintf(str, size, "(dep: [%p] %s) %d",
-			 pt->dep, pt->dep->name, pt->thresh);
-	} else if (dur.tv64) {
-		struct timeval tv = ktime_to_timeval(dur);
-		snprintf(str, size, "(took %ld.%03ld ms) %d",
-			 tv.tv_sec * 1000 + tv.tv_usec / 1000,
-			 tv.tv_usec % 1000,
-			 pt->thresh);
-	} else {
-		snprintf(str, size, "%d", pt->thresh);
-	}
-}
-
-static int gk20a_sync_fill_driver_data(struct sync_pt *sync_pt,
-		void *data, int size)
-{
-	struct gk20a_sync_pt_info info;
-
-	if (size < (int)sizeof(info))
-		return -ENOMEM;
-
-	info.hw_op_ns = ktime_to_ns(gk20a_sync_pt_duration(sync_pt));
-	memcpy(data, &info, sizeof(info));
-
-	return sizeof(info);
+	snprintf(str, size, "%d", pt->thresh);
 }
 
 static const struct sync_timeline_ops gk20a_sync_timeline_ops = {
@@ -467,7 +383,6 @@ static const struct sync_timeline_ops gk20a_sync_timeline_ops = {
 	.has_signaled = gk20a_sync_pt_has_signaled,
 	.compare = gk20a_sync_pt_compare,
 	.free_pt = gk20a_sync_pt_free_inst,
-	.fill_driver_data = gk20a_sync_fill_driver_data,
 	.timeline_value_str = gk20a_sync_timeline_value_str,
 	.pt_value_str = gk20a_sync_pt_value_str,
 };
@@ -515,7 +430,6 @@ struct sync_fence *gk20a_sync_fence_create(
 		struct gk20a *g,
 		struct sync_timeline *obj,
 		struct nvgpu_semaphore *sema,
-		struct sync_fence *dependency,
 		const char *fmt, ...)
 {
 	char name[30];
@@ -524,7 +438,7 @@ struct sync_fence *gk20a_sync_fence_create(
 	struct sync_fence *fence;
 	struct gk20a_sync_timeline *timeline = to_gk20a_timeline(obj);
 
-	pt = gk20a_sync_pt_create_inst(g, timeline, sema, dependency);
+	pt = gk20a_sync_pt_create_inst(g, timeline, sema);
 	if (pt == NULL)
 		return NULL;
 

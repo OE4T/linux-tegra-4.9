@@ -37,7 +37,6 @@ struct sync_fence *gk20a_sync_fence_create(
 		struct gk20a *g,
 		struct sync_timeline *,
 		struct nvgpu_semaphore *,
-		struct sync_fence *dependency,
 		const char *fmt, ...);
 struct sync_fence *gk20a_sync_fence_fdget(int fd);
 #else

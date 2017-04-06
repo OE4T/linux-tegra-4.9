@@ -1354,10 +1354,6 @@ struct nvgpu_alloc_gpfifo_ex_args {
 	__u32 reserved[5];
 };
 
-struct gk20a_sync_pt_info {
-	__u64 hw_op_ns;
-};
-
 struct nvgpu_fence {
 	__u32 id;        /* syncpoint id or sync fence fd */
 	__u32 value;     /* syncpoint value (discarded when using sync fence) */

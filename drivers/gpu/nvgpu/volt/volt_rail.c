@@ -64,7 +64,7 @@ u32 volt_rail_volt_dev_register(struct gk20a *g, struct voltage_rail
 
 exit:
 	if (status)
-		gk20a_err(dev_from_gk20a(g), "Failed to register VOLTAGE_DEVICE");
+		nvgpu_err(g, "Failed to register VOLTAGE_DEVICE");
 
 	return status;
 }
@@ -94,7 +94,7 @@ static u32 volt_rail_state_init(struct gk20a *g,
 
 	status = boardobjgrpmask_e32_init(&pvolt_rail->volt_dev_mask, NULL);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"Failed to initialize BOARDOBJGRPMASK of VOLTAGE_DEVICEs");
 	}
 
@@ -138,7 +138,7 @@ static u32 volt_rail_init_pmudata_super(struct gk20a *g,
 				prail->volt_dev_mask.super.bitcount,
 				&rail_pmu_data->volt_dev_mask.super);
 	if (status)
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"Failed to export BOARDOBJGRPMASK of VOLTAGE_DEVICEs");
 
 	gk20a_dbg_info("Done");
@@ -370,7 +370,7 @@ u32 volt_rail_sw_setup(struct gk20a *g)
 	status = boardobjgrpconstruct_e32(&g->perf_pmu.volt.volt_rail_metadata.
 			volt_rails);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error creating boardobjgrp for volt rail, status - 0x%x",
 			status);
 		goto done;
@@ -396,7 +396,7 @@ u32 volt_rail_sw_setup(struct gk20a *g)
 	status = BOARDOBJGRP_PMU_CMD_GRP_SET_CONSTRUCT(g, pboardobjgrp,
 			volt, VOLT, volt_rail, VOLT_RAIL);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error constructing PMU_BOARDOBJ_CMD_GRP_SET interface - 0x%x",
 			status);
 		goto done;
@@ -406,7 +406,7 @@ u32 volt_rail_sw_setup(struct gk20a *g)
 		&g->perf_pmu.volt.volt_rail_metadata.volt_rails.super,
 			volt, VOLT, volt_rail, VOLT_RAIL);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"error constructing PMU_BOARDOBJ_CMD_GRP_SET interface - 0x%x",
 			status);
 		goto done;
@@ -418,7 +418,7 @@ u32 volt_rail_sw_setup(struct gk20a *g)
 			     struct voltage_rail *, pvolt_rail, i) {
 		status = volt_rail_state_init(g, pvolt_rail);
 		if (status) {
-			gk20a_err(dev_from_gk20a(g),
+			nvgpu_err(g,
 				"Failure while executing RAIL's state init railIdx = %d",
 				i);
 			goto done;

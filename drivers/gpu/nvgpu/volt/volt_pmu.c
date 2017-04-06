@@ -38,7 +38,7 @@ static void volt_rpc_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 	gk20a_dbg_info("");
 
 	if (msg->msg.volt.msg_type != NV_PMU_VOLT_MSG_ID_RPC) {
-		gk20a_err(dev_from_gk20a(g), "unsupported msg for VOLT RPC %x",
+		nvgpu_err(g, "unsupported msg for VOLT RPC %x",
 			msg->msg.volt.msg_type);
 		return;
 	}
@@ -82,7 +82,7 @@ static u32 volt_pmu_rpc_execute(struct gk20a *g,
 			volt_rpc_pmucmdhandler, (void *)&handler,
 			&seqdesc, ~0);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g), "unable to post volt RPC cmd %x",
+		nvgpu_err(g, "unable to post volt RPC cmd %x",
 			cmd.cmd.volt.cmd_type);
 		goto volt_pmu_rpc_execute;
 	}
@@ -93,7 +93,7 @@ static u32 volt_pmu_rpc_execute(struct gk20a *g,
 
 	if (handler.success == 0) {
 		status = -EINVAL;
-		gk20a_err(dev_from_gk20a(g), "rpc call to volt failed");
+		nvgpu_err(g, "rpc call to volt failed");
 	}
 
 volt_pmu_rpc_execute:
@@ -109,7 +109,7 @@ u32 volt_pmu_send_load_cmd_to_pmu(struct gk20a *g)
 
 	status =  volt_pmu_rpc_execute(g, &rpc_call);
 	if (status)
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"Error while executing LOAD RPC: status = 0x%08x.",
 			status);
 
@@ -126,7 +126,7 @@ static u32 volt_rail_get_voltage(struct gk20a *g,
 	rail_idx = volt_rail_volt_domain_convert_to_idx(g, volt_domain);
 	if ((rail_idx == CTRL_VOLT_RAIL_INDEX_INVALID) ||
 		(!VOLT_RAIL_INDEX_IS_VALID(&g->perf_pmu.volt, rail_idx))) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"failed: volt_domain = %d, voltage rail table = %d.",
 			volt_domain, rail_idx);
 		return -EINVAL;
@@ -139,7 +139,7 @@ static u32 volt_rail_get_voltage(struct gk20a *g,
 	/* Execute the voltage get request via PMU RPC. */
 	status = volt_pmu_rpc_execute(g, &rpc_call);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"Error while executing volt_rail_get_voltage rpc");
 		return status;
 	}
@@ -166,11 +166,10 @@ static u32 volt_policy_set_voltage(struct gk20a *g, u8 client_id,
 				CTRL_VOLT_DOMAIN_INVALID) ||
 			(prail_list->rails[i].voltage_uv ==
 				NV_PMU_VOLT_VALUE_0V_IN_UV)) {
-			gk20a_err(dev_from_gk20a(g), "Invalid voltage domain or target ");
-			gk20a_err(dev_from_gk20a(g), " client_id = %d, listEntry = %d ",
+			nvgpu_err(g, "Invalid voltage domain or target");
+			nvgpu_err(g, " client_id = %d, listEntry = %d",
 					client_id, i);
-			gk20a_err(dev_from_gk20a(g),
-				"volt_domain = %d, voltage_uv = %d uV.",
+			nvgpu_err(g, " volt_domain = %d, voltage_uv = %d uV.",
 				prail_list->rails[i].volt_domain,
 				prail_list->rails[i].voltage_uv);
 			status = -EINVAL;
@@ -196,7 +195,7 @@ static u32 volt_policy_set_voltage(struct gk20a *g, u8 client_id,
 	/* Execute the voltage change request via PMU RPC. */
 	status = volt_pmu_rpc_execute(g, &rpc_call);
 	if (status)
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"Error while executing VOLT_POLICY_SET_VOLTAGE RPC");
 
 exit:
@@ -244,7 +243,7 @@ static int volt_policy_set_noiseaware_vmin(struct gk20a *g,
 	/* Execute the voltage change request via PMU RPC. */
 	status = volt_pmu_rpc_execute(g, &rpc_call);
 	if (status) {
-		gk20a_err(dev_from_gk20a(g),
+		nvgpu_err(g,
 			"Error while executing VOLT_POLICY_SET_VOLTAGE RPC");
 		return -EINVAL;
 	}

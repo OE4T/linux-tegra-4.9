@@ -291,7 +291,7 @@ static int nvcsi_probe(struct platform_device *dev)
 		dev_info(&dev->dev, "failed to get regulator (%d)\n", err);
 
 	nvcsi->irq = platform_get_irq(dev, 0);
-	if (IS_ERR_VALUE(nvcsi->irq)) {
+	if (nvcsi->irq < 0) {
 		dev_err(&dev->dev, "No IRQ available\n");
 		goto err_get_resources;
 	} else {

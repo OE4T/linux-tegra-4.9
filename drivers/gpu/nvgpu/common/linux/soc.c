@@ -25,6 +25,11 @@ bool nvgpu_platform_is_simulation(struct gk20a *g)
 	return tegra_platform_is_linsim() || tegra_platform_is_vdk();
 }
 
+bool nvgpu_platform_is_fpga(struct gk20a *g)
+{
+	return tegra_platform_is_fpga();
+}
+
 bool nvgpu_is_hypervisor_mode(struct gk20a *g)
 {
 	return is_tegra_hypervisor_mode();

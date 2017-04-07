@@ -42,6 +42,8 @@
 
 #define GK20A_GR_MAX_PES_PER_GPC 3
 
+#define GK20A_TIMEOUT_FPGA		100000 /* 100 sec */
+
 struct channel_gk20a;
 
 enum /* global_ctx_buffer */ {

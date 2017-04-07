@@ -24,6 +24,7 @@
 
 #include "gk20a/gk20a_scale.h"
 #include "gk20a/gk20a.h"
+#include "gk20a/gr_gk20a.h"
 
 #define EMC3D_DEFAULT_RATIO 750
 
@@ -64,6 +65,10 @@ static void nvgpu_init_timeout(struct gk20a *g)
 	g->gr_idle_timeout_default = CONFIG_GK20A_DEFAULT_TIMEOUT;
 	if (nvgpu_platform_is_silicon(g))
 		g->timeouts_enabled = true;
+	else if (nvgpu_platform_is_fpga(g)) {
+		g->gr_idle_timeout_default = GK20A_TIMEOUT_FPGA;
+		g->timeouts_enabled = true;
+	}
 }
 
 static void nvgpu_init_timeslice(struct gk20a *g)

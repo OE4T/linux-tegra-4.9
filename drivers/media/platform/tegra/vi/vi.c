@@ -305,6 +305,8 @@ create_debugfs_fail:
 static int nvhost_vi_slcg_handler(struct notifier_block *nb,
 		unsigned long action, void *data)
 {
+	/* TODO: Resolve this during T210 bringup */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	struct clk *clk;
 	int ret = 0;
 
@@ -351,6 +353,7 @@ static int nvhost_vi_slcg_handler(struct notifier_block *nb,
 	}
 
 	clk_put(clk);
+#endif
 
 	return NOTIFY_OK;
 }

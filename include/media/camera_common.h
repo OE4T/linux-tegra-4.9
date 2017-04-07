@@ -29,6 +29,7 @@
 #include <linux/videodev2.h>
 
 #include <linux/kernel.h>
+#include <linux/version.h>
 #include <linux/debugfs.h>
 
 #include <media/v4l2-device.h>
@@ -37,6 +38,7 @@
 #include <linux/v4l2-mediabus.h>
 #include <media/soc_camera.h>
 #include <media/nvc_focus.h>
+#include <media/camera_version_utils.h>
 
 #define V4L2_CID_TEGRA_CAMERA_BASE	(V4L2_CTRL_CLASS_CAMERA | 0x2000)
 

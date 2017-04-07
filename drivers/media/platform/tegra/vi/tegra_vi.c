@@ -241,8 +241,10 @@ static long vi_ioctl(struct file *file,
 	switch (_IOC_NR(cmd)) {
 	case _IOC_NR(NVHOST_VI_IOCTL_ENABLE_TPG): {
 		uint enable;
-		int ret;
+		int ret = 0;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 		struct clk *clk;
+#endif
 
 		if (copy_from_user(&enable,
 			(const void __user *)arg, sizeof(uint))) {
@@ -251,6 +253,7 @@ static long vi_ioctl(struct file *file,
 			return -EFAULT;
 		}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 		clk = clk_get(NULL, "pll_d");
 		if (IS_ERR(clk))
 			return -EINVAL;
@@ -262,6 +265,7 @@ static long vi_ioctl(struct file *file,
 			ret = tegra_clk_cfg_ex(clk,
 				TEGRA_CLK_MIPI_CSI_OUT_ENB, 1);
 		clk_put(clk);
+#endif
 
 		return ret;
 	}

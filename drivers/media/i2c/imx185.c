@@ -384,7 +384,11 @@ static int imx185_s_stream(struct v4l2_subdev *sd, int enable)
 		/* write list of override regs for the asking gain, */
 		/* frame rate and exposure time    */
 		memset(&ctrls, 0, sizeof(ctrls));
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)
+		ctrls.which = V4L2_CTRL_ID2WHICH(V4L2_CID_GAIN);
+#else
 		ctrls.ctrl_class = V4L2_CTRL_ID2CLASS(V4L2_CID_GAIN);
+#endif
 		ctrls.count = 3;
 		ctrls.controls = control;
 
@@ -1066,9 +1070,9 @@ static int imx185_probe(struct i2c_client *client,
 
 #if defined(CONFIG_MEDIA_CONTROLLER)
 	priv->pad.flags = MEDIA_PAD_FL_SOURCE;
-	priv->subdev->entity.type = MEDIA_ENT_T_V4L2_SUBDEV_SENSOR;
 	priv->subdev->entity.ops = &imx185_media_ops;
-	err = media_entity_init(&priv->subdev->entity, 1, &priv->pad, 0);
+	err = tegra_media_entity_init(&priv->subdev->entity, 1,
+				&priv->pad, true, true);
 	if (err < 0) {
 		dev_err(&client->dev, "unable to init media entity\n");
 		return err;

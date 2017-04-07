@@ -1078,7 +1078,8 @@ static void tc358840_format_change(struct v4l2_subdev *sd)
 
 		v4l2_info(sd, "%s: No Signal\n", __func__);
 	} else {
-		if (!v4l2_match_dv_timings(&state->timings, &timings, 0))
+		if (!tegra_v4l2_match_dv_timings(&state->timings,
+				&timings, 0, false))
 			enable_stream(sd, false);
 
 		v4l2_print_dv_timings(sd->name,
@@ -1643,7 +1644,7 @@ static int tc358840_s_dv_timings(struct v4l2_subdev *sd,
 		v4l2_print_dv_timings(sd->name, "tc358840_s_dv_timings: ",
 				timings, false);
 
-	if (v4l2_match_dv_timings(&state->timings, timings, 0)) {
+	if (tegra_v4l2_match_dv_timings(&state->timings, timings, 0, false)) {
 		v4l2_dbg(1, debug, sd, "%s: no change\n", __func__);
 		return 0;
 	}
@@ -2403,9 +2404,9 @@ static int tc358840_probe(struct i2c_client *client, const struct i2c_device_id 
 #if defined(CONFIG_MEDIA_CONTROLLER)
 	state->pad[0].flags = MEDIA_PAD_FL_SOURCE;
 	state->pad[1].flags = MEDIA_PAD_FL_SOURCE;
-	sd->entity.type = MEDIA_ENT_T_V4L2_SUBDEV_SENSOR;
 	sd->entity.ops = &tc358840_media_ops;
-	err = media_entity_init(&sd->entity, 2, state->pad, 0);
+	err = tegra_media_entity_init(&sd->entity, 2,
+				state->pad, true, true);
 	if (err < 0) {
 		dev_err(&client->dev, "unable to init media entity\n");
 		return err;

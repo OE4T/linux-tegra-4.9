@@ -21,7 +21,12 @@
 #include <linux/miscdevice.h>
 #include <linux/clk.h>
 #include <linux/of.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 #include <soc/tegra/tegra_emc.h>
+#else
+#include <linux/platform/tegra/bwmgr_mc.h>
+#endif
 
 #include <media/vi.h>
 #include <media/tegra_camera_dev_mfi.h>
@@ -371,7 +376,11 @@ int vi_v4l2_update_isobw(u32 vi_kbyteps, u32 is_ioctl)
 	bw = info->bypass_mode_isobw + info->vi_mode_isobw;
 
 	/* Use Khz to prevent overflow */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	total_khz = tegra_emc_bw_to_freq_req(bw);
+#else
+	total_khz = bwmgr_bw_to_freq(bw);
+#endif
 	total_khz = min(ULONG_MAX / 1000, total_khz);
 
 	dev_dbg(info->dev, "%s:Set iso bw %lu kbyteps at %lu KHz\n",
@@ -428,7 +437,15 @@ static long tegra_camera_ioctl(struct file *file,
 			return -EFAULT;
 		}
 		/* Use Khz to prevent overflow */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+		/*
+		 * TODO: Need to verify calculation works with the
+		 * latest api and remove this macro
+		 */
 		mc_khz = tegra_emc_bw_to_freq_req(kcopy.bw);
+#else
+		mc_khz = bwmgr_bw_to_freq(kcopy.bw);
+#endif
 		mc_khz = min(ULONG_MAX / 1000, mc_khz);
 
 		if (kcopy.is_iso) {
@@ -518,6 +535,7 @@ static int tegra_camera_probe(struct platform_device *pdev)
 	info->en_max_bw = of_property_read_bool(pdev->dev.of_node,
 		"default-max-bw");
 	if (info->en_max_bw == true) {
+#if defined(CONFIG_TEGRA_ISOMGR)
 		ret = tegra_camera_isomgr_request(info, info->max_bw, 4);
 		if (ret) {
 			dev_err(info->dev,
@@ -525,6 +543,7 @@ static int tegra_camera_probe(struct platform_device *pdev)
 			tegra_camera_isomgr_unregister(info);
 			return -EFAULT;
 		}
+#endif
 	}
 
 	tegra_vi_register_mfi_cb(tegra_camera_dev_mfi_cb, NULL);

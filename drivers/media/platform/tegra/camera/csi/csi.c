@@ -29,6 +29,7 @@
 #include "dev.h"
 #include "mipical/mipi_cal.h"
 #include "linux/nvhost.h"
+#include <linux/version.h>
 
 static int set_csi_properties(struct tegra_csi_device *csi,
 			struct platform_device *pdev)
@@ -650,9 +651,8 @@ static int tegra_csi_channel_init_one(struct tegra_csi_channel *chan)
 			  dev_name(csi->dev) : csi->devname),
 			  chan->port[0]);
 	/* Initialize media entity */
-	ret = media_entity_init(&sd->entity,
-			chan->pg_mode ? 1 : 2,
-			chan->pads, 0);
+	ret = tegra_media_entity_init(&sd->entity, chan->pg_mode ? 1 : 2,
+				chan->pads, true, false);
 	if (ret < 0)
 		return ret;
 
@@ -774,8 +774,10 @@ void tpg_csi_media_controller_cleanup(struct tegra_csi_device *csi)
 			continue;
 		sd = &item->subdev;
 		/* decrement media device entity count */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 		if (sd->entity.parent)
 			sd->entity.parent->entity_id--;
+#endif
 		v4l2_device_unregister_subdev(sd);
 		media_entity_cleanup(&sd->entity);
 		list_del(&item->list);

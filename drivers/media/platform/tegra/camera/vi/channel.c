@@ -171,6 +171,7 @@ static void tegra_channel_fmt_align(struct tegra_channel *chan,
 	 */
 	fmt_align = (denominator == 1) ? numerator : 1;
 	align = lcm(chan->width_align, fmt_align);
+	align = align > 0 ? align : 1;
 	min_width = roundup(TEGRA_MIN_WIDTH, align);
 	max_width = rounddown(TEGRA_MAX_WIDTH, align);
 	temp_width = roundup(bpl, align);
@@ -378,9 +379,14 @@ void tegra_channel_ring_buffer(struct tegra_channel *chan,
 		tegra_channel_init_ring_buffer(chan);
 		return;
 	} else {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 		/* update time stamp of the buffer */
 		vb->timestamp.tv_sec = ts->tv_sec;
 		vb->timestamp.tv_usec = ts->tv_nsec / NSEC_PER_USEC;
+#else
+		/* TODO: granular time code information */
+		vb->timecode.seconds = ts->tv_sec;
+#endif
 	}
 
 	/* release buffer N at N+2 frame start event */
@@ -422,6 +428,26 @@ done:
  * videobuf2 queue operations
  * -----------------------------------------------------------------------------
  */
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)
+static int
+tegra_channel_queue_setup(struct vb2_queue *vq,
+		     unsigned int *nbuffers, unsigned int *nplanes,
+		     unsigned int sizes[], struct device *alloc_devs[])
+{
+	struct tegra_channel *chan = vb2_get_drv_priv(vq);
+
+	*nplanes = 1;
+
+	sizes[0] = chan->format.sizeimage;
+	alloc_devs[0] = chan->vi->dev;
+
+	/* Make sure minimum number of buffers are passed */
+	if (*nbuffers < (QUEUED_BUFFERS - 1))
+		*nbuffers = QUEUED_BUFFERS - 1;
+
+	return 0;
+}
+#else
 static int
 tegra_channel_queue_setup(struct vb2_queue *vq, const void *parg,
 		     unsigned int *nbuffers, unsigned int *nplanes,
@@ -444,6 +470,7 @@ tegra_channel_queue_setup(struct vb2_queue *vq, const void *parg,
 
 	return 0;
 }
+#endif
 
 static int tegra_channel_buffer_prepare(struct vb2_buffer *vb)
 {
@@ -753,7 +780,7 @@ tegra_channel_s_dv_timings(struct file *file, void *fh,
 	if (ret)
 		return ret;
 
-	if (v4l2_match_dv_timings(timings, &curr_timings, 0))
+	if (tegra_v4l2_match_dv_timings(timings, &curr_timings, 0, false))
 		return 0;
 
 	if (vb2_is_busy(&chan->queue))
@@ -935,15 +962,16 @@ static int tegra_channel_setup_controls(struct tegra_channel *chan)
 	struct v4l2_subdev *sd = NULL;
 	struct tegra_mc_vi *vi = chan->vi;
 	int i;
+	int ret = 0;
 
 	/* Initialize the subdev and controls here at first open */
 	sd = chan->subdev[num_sd];
 	while ((sd = chan->subdev[num_sd++]) &&
 		(num_sd <= chan->num_subdevs)) {
 		/* Add control handler for the subdevice */
-		v4l2_ctrl_add_handler(&chan->ctrl_handler,
+		ret = v4l2_ctrl_add_handler(&chan->ctrl_handler,
 					sd->ctrl_handler, NULL);
-		if (chan->ctrl_handler.error)
+		if (ret || chan->ctrl_handler.error)
 			dev_err(chan->vi->dev,
 				"Failed to add sub-device controls\n");
 	}
@@ -967,9 +995,9 @@ static int tegra_channel_setup_controls(struct tegra_channel *chan)
 	vi->fops->vi_add_ctrls(chan);
 
 	if (chan->pg_mode) {
-		v4l2_ctrl_add_handler(&chan->ctrl_handler,
+		ret = v4l2_ctrl_add_handler(&chan->ctrl_handler,
 					&chan->vi->ctrl_handler, NULL);
-		if (chan->ctrl_handler.error)
+		if (ret || chan->ctrl_handler.error)
 			dev_err(chan->vi->dev,
 				"Failed to add VI controls\n");
 	}
@@ -1009,8 +1037,7 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 			break;
 
 		pad = media_entity_remote_pad(pad);
-		if (pad == NULL ||
-		    media_entity_type(pad->entity) != MEDIA_ENT_T_V4L2_SUBDEV)
+		if (pad == NULL || !tegra_is_v4l2_subdev(pad->entity))
 			break;
 
 		if (num_sd >= MAX_SUBDEVICES)
@@ -1295,9 +1322,6 @@ static int tegra_channel_open(struct file *fp)
 	int ret;
 	struct video_device *vdev = video_devdata(fp);
 	struct tegra_channel *chan = video_get_drvdata(vdev);
-#ifdef T210
-	struct vi *tegra_vi;
-#endif
 	struct tegra_mc_vi *vi;
 	struct tegra_csi_device *csi;
 
@@ -1314,9 +1338,6 @@ static int tegra_channel_open(struct file *fp)
 	}
 
 	vi = chan->vi;
-#ifdef T210
-	tegra_vi = vi->vi;
-#endif
 	csi = vi->csi;
 
 	/* The first open then turn on power */
@@ -1377,7 +1398,6 @@ static const struct v4l2_file_operations tegra_channel_fops = {
 
 static int tegra_channel_csi_init(struct tegra_channel *chan)
 {
-	int numlanes = 0;
 	int idx = 0;
 	struct tegra_mc_vi *vi = chan->vi;
 	int ret = 0;
@@ -1406,15 +1426,9 @@ static int tegra_channel_csi_init(struct tegra_channel *chan)
 
 	for (idx = 0; csi_port_is_valid(chan->port[idx]); idx++) {
 		chan->total_ports++;
-		numlanes = chan->numlanes - (idx * MAX_CSI_BLOCK_LANES);
-		numlanes = numlanes > MAX_CSI_BLOCK_LANES ?
-			MAX_CSI_BLOCK_LANES : numlanes;
 		/* maximum of 4 lanes are present per CSI block */
 		chan->csibase[idx] = vi->iomem +
 					TEGRA_VI_CSI_BASE(chan->port[idx]);
-#ifdef T210
-		set_csi_portinfo(vi->csi, chan->port[idx], numlanes);
-#endif
 	}
 	/* based on gang mode valid ports will be updated - set default to 1 */
 	chan->valid_ports = chan->total_ports ? 1 : 0;
@@ -1424,11 +1438,9 @@ static int tegra_channel_csi_init(struct tegra_channel *chan)
 int tegra_channel_init(struct tegra_channel *chan)
 {
 	int ret;
+	int ioctl_value = 0;
 	struct tegra_mc_vi *vi = chan->vi;
 
-#ifdef T210
-	chan->fops = vi->vi->data->channel_fops;
-#endif
 	ret = tegra_channel_csi_init(chan);
 	if (ret)
 		return ret;
@@ -1456,8 +1468,8 @@ int tegra_channel_init(struct tegra_channel *chan)
 
 	/* Initialize the media entity... */
 	chan->pad.flags = MEDIA_PAD_FL_SINK;
-
-	ret = media_entity_init(&chan->video.entity, 1, &chan->pad, 0);
+	ret = tegra_media_entity_init(&chan->video.entity, 1,
+					&chan->pad, false, false);
 	if (ret < 0) {
 		dev_err(&chan->video.dev, "failed to init video entity\n");
 		return ret;
@@ -1484,19 +1496,32 @@ int tegra_channel_init(struct tegra_channel *chan)
 	chan->video.ctrl_handler = &chan->ctrl_handler;
 	chan->video.lock = &chan->video_lock;
 
-	set_bit(_IOC_NR(VIDIOC_G_PRIORITY), chan->video.valid_ioctls);
-	set_bit(_IOC_NR(VIDIOC_S_PRIORITY), chan->video.valid_ioctls);
+	ioctl_value = _IOC_NR(VIDIOC_G_PRIORITY);
+	set_bit(ioctl_value, chan->video.valid_ioctls);
+	ioctl_value = _IOC_NR(VIDIOC_S_PRIORITY);
+	set_bit(ioctl_value, chan->video.valid_ioctls);
 
 	video_set_drvdata(&chan->video, chan);
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)
+	/*
+	 * 4.9 version has bunch of media device initialiation during
+	 * video registration, hence required to be done earlier
+	 */
+	ret = video_register_device(&chan->video, VFL_TYPE_GRABBER, -1);
+	if (ret < 0) {
+		dev_err(chan->vi->dev, "failed to register %s\n",
+			chan->video.name);
+		goto ctrl_init_error;
+	}
+#endif
 
 #if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	/* get the buffers queue... */
-	chan->alloc_ctx = vb2_dma_contig_init_ctx(chan->vi->dev);
-	if (IS_ERR(chan->alloc_ctx)) {
-		dev_err(chan->vi->dev, "failed to init vb2 buffer\n");
-		ret = -ENOMEM;
+	ret = tegra_vb2_dma_init(vi->dev, &chan->alloc_ctx,
+			SZ_64K, &vi->vb2_dma_alloc_refcnt);
+	if (ret < 0)
 		goto vb2_init_error;
-	}
+
 #endif
 
 	chan->queue.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -1517,11 +1542,13 @@ int tegra_channel_init(struct tegra_channel *chan)
 	}
 
 	chan->init_done = true;
+
 	return 0;
 
 vb2_queue_error:
 #if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
-	vb2_dma_contig_cleanup_ctx(chan->alloc_ctx);
+	tegra_vb2_dma_cleanup(vi->dev, chan->alloc_ctx,
+		&vi->vb2_dma_alloc_refcnt);
 vb2_init_error:
 #endif
 	v4l2_ctrl_handler_free(&chan->ctrl_handler);
@@ -1543,7 +1570,8 @@ int tegra_channel_cleanup(struct tegra_channel *chan)
 	v4l2_ctrl_handler_free(&chan->ctrl_handler);
 	vb2_queue_release(&chan->queue);
 #if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
-	vb2_dma_contig_cleanup_ctx(chan->alloc_ctx);
+	tegra_vb2_dma_cleanup(chan->vi->dev, chan->alloc_ctx,
+		&chan->vi->vb2_dma_alloc_refcnt);
 #endif
 
 	media_entity_cleanup(&chan->video.entity);
@@ -1553,6 +1581,7 @@ int tegra_channel_cleanup(struct tegra_channel *chan)
 
 int tegra_vi_channels_register(struct tegra_mc_vi *vi)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	int ret = 0;
 	struct tegra_channel *it;
 	int count = 0;
@@ -1588,7 +1617,7 @@ int tegra_vi_channels_register(struct tegra_mc_vi *vi)
 		dev_err(vi->dev, "all channel register failed\n");
 		return ret;
 	}
-
+#endif
 	return 0;
 }
 

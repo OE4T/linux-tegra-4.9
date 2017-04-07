@@ -211,7 +211,7 @@ int vi_intr_init(struct vi *tegra_vi)
 	dev_dbg(&tegra_vi->ndev->dev, "%s: ++", __func__);
 
 	tegra_vi->vi_irq = platform_get_irq(ndev, 0);
-	if (IS_ERR_VALUE(tegra_vi->vi_irq)) {
+	if (tegra_vi->vi_irq < 0) {
 		dev_err(&tegra_vi->ndev->dev, "missing camera irq\n");
 		return -ENXIO;
 	}

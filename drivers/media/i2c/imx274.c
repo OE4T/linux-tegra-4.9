@@ -1276,9 +1276,9 @@ static int imx274_probe(struct i2c_client *client,
 
 #if defined(CONFIG_MEDIA_CONTROLLER)
 	priv->pad.flags = MEDIA_PAD_FL_SOURCE;
-	priv->subdev->entity.type = MEDIA_ENT_T_V4L2_SUBDEV_SENSOR;
 	priv->subdev->entity.ops = &imx274_media_ops;
-	err = media_entity_init(&priv->subdev->entity, 1, &priv->pad, 0);
+	err = tegra_media_entity_init(&priv->subdev->entity, 1,
+				&priv->pad, true, true);
 	if (err < 0) {
 		dev_err(&client->dev, "unable to init media entity\n");
 		return err;

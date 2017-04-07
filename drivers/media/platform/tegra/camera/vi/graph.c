@@ -150,9 +150,8 @@ static int tegra_vi_graph_build_one(struct tegra_mc_vi *vi,
 			local->name, local_pad->index,
 			remote->name, remote_pad->index);
 
-		ret = media_entity_create_link(local, local_pad->index,
-					       remote, remote_pad->index,
-					       link_flags);
+		ret = tegra_media_create_link(local, local_pad->index, remote,
+				remote_pad->index, link_flags);
 		if (ret < 0) {
 			dev_err(vi->dev,
 				"failed to create %s:%u -> %s:%u link\n",
@@ -245,9 +244,8 @@ static int tegra_vi_graph_build_links(struct tegra_mc_vi *vi)
 			source->name, source_pad->index,
 			sink->name, sink_pad->index);
 
-		ret = media_entity_create_link(source, source_pad->index,
-					       sink, sink_pad->index,
-					       link_flags);
+		ret = tegra_media_create_link(source, source_pad->index,
+				sink, sink_pad->index, link_flags);
 		if (ret < 0) {
 			dev_err(vi->dev,
 				"failed to create %s:%u -> %s:%u link\n",
@@ -494,10 +492,8 @@ int tegra_vi_tpg_graph_init(struct tegra_mc_vi *mc_vi)
 				source->name, source_pad->index,
 				sink->name, sink_pad->index);
 
-			err = media_entity_create_link(source,
-							source_pad->index,
-							sink, sink_pad->index,
-							link_flags);
+			err = tegra_media_create_link(source, source_pad->index,
+					sink, sink_pad->index, link_flags);
 			if (err < 0) {
 				dev_err(mc_vi->dev,
 					"failed to create %s:%u -> %s:%u link\n",

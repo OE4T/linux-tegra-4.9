@@ -7,4 +7,4 @@ ccflags-y += -Werror
 
 obj-y += vi/
 obj-y += csi/
-obj-y += camera_common.o camera_gpio.o sensor_common.o
+obj-y += camera_common.o camera_gpio.o sensor_common.o camera_version_utils.o

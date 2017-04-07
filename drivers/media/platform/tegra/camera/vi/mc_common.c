@@ -88,8 +88,10 @@ void tegra_vi_v4l2_cleanup(struct tegra_mc_vi *vi)
 {
 	v4l2_ctrl_handler_free(&vi->ctrl_handler);
 	v4l2_device_unregister(&vi->v4l2_dev);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	if (!vi->pg_mode)
 		media_device_unregister(&vi->media_dev);
+#endif
 }
 EXPORT_SYMBOL(tegra_vi_v4l2_cleanup);
 
@@ -120,6 +122,7 @@ int tegra_vi_v4l2_init(struct tegra_mc_vi *vi)
 		sizeof(vi->media_dev.model));
 	vi->media_dev.hw_revision = 3;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	ret = media_device_register(&vi->media_dev);
 	if (ret < 0) {
 		dev_err(vi->dev,
@@ -127,6 +130,9 @@ int tegra_vi_v4l2_init(struct tegra_mc_vi *vi)
 			ret);
 		return ret;
 	}
+#else
+	media_device_init(&vi->media_dev);
+#endif
 
 	mutex_init(&vi->bw_update_lock);
 	vi->v4l2_dev.mdev = &vi->media_dev;
@@ -141,7 +147,11 @@ int tegra_vi_v4l2_init(struct tegra_mc_vi *vi)
 	return 0;
 
 register_error:
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	media_device_unregister(&vi->media_dev);
+#else
+	media_device_cleanup(&vi->media_dev);
+#endif
 	return ret;
 }
 
@@ -180,7 +190,6 @@ int tpg_vi_media_controller_init(struct tegra_mc_vi *mc_vi, int pg_mode)
 {
 	int err = 0, i;
 	struct tegra_channel *item;
-	int count = 0;
 
 	/* Allocate TPG channel */
 	v4l2_ctrl_handler_init(&mc_vi->ctrl_handler, 1);
@@ -221,6 +230,8 @@ int tpg_vi_media_controller_init(struct tegra_mc_vi *mc_vi, int pg_mode)
 	if (err)
 		goto channel_init_error;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+	i = 0;
 	list_for_each_entry(item, &mc_vi->vi_chans, list) {
 		if (!item->pg_mode)
 			continue;
@@ -230,13 +241,14 @@ int tpg_vi_media_controller_init(struct tegra_mc_vi *mc_vi, int pg_mode)
 				item->video.name);
 			continue;
 		}
-		count++;
+		i++;
 	}
 
-	if (count == 0) {
+	if (i == 0) {
 		dev_err(mc_vi->dev, "all tpg register failed\n");
 		goto channel_init_error;
 	}
+#endif
 
 	return err;
 
@@ -266,7 +278,9 @@ void tpg_vi_media_controller_cleanup(struct tegra_mc_vi *mc_vi)
 		list_del(&item->list);
 		devm_kfree(mc_vi->dev, item);
 		/* decrement media device entity count */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 		mc_vi->media_dev.entity_id--;
+#endif
 		mc_vi->num_channels--;
 	}
 	mc_vi->tpg_start = NULL;

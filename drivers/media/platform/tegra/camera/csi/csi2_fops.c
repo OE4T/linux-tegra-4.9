@@ -207,7 +207,9 @@ static int tpg_clk_enable(struct tegra_csi_device *csi)
 		dev_err(csi->dev, "pll_d enable failed");
 		goto plld_dsi_err;
 	}
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	tegra210_csi_source_from_plld();
+#endif
 	return err;
 plld_dsi_err:
 	clk_disable_unprepare(csi->plld);
@@ -224,7 +226,9 @@ static int tpg_clk_disable(struct tegra_csi_device *csi)
 		return 0;
 	}
 	mutex_unlock(&csi->source_update);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	tegra210_csi_source_from_brick();
+#endif
 	clk_disable_unprepare(csi->plld_dsi);
 	clk_disable_unprepare(csi->plld);
 

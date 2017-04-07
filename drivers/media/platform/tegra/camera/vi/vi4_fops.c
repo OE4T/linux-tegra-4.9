@@ -846,7 +846,11 @@ static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 {
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
+	/* WAR: With newer version pipe init has some race condition */
+	/* TODO: resolve this issue to block userspace not to cleanup media */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	struct media_pipeline *pipe = chan->video.entity.pipe;
+#endif
 	int ret = 0, i;
 	unsigned long flags;
 	struct v4l2_ctrl *override_ctrl;
@@ -859,9 +863,11 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	unsigned int emb_buf_size = 0;
 
 	vi4_init(chan);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	ret = media_entity_pipeline_start(&chan->video.entity, pipe);
 	if (ret < 0)
 		goto error_pipeline_start;
+#endif
 
 	if (chan->bypass) {
 		ret = tegra_channel_set_stream(chan, true);
@@ -975,8 +981,10 @@ error_capture_setup:
 	if (!chan->pg_mode)
 		tegra_channel_set_stream(chan, false);
 error_set_stream:
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	media_entity_pipeline_stop(&chan->video.entity);
 error_pipeline_start:
+#endif
 	vq->start_streaming_called = 0;
 	tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_QUEUED);
 
@@ -1011,7 +1019,9 @@ int vi4_channel_stop_streaming(struct vb2_queue *vq)
 	}
 
 	tegra_channel_set_stream(chan, false);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	media_entity_pipeline_stop(&chan->video.entity);
+#endif
 
 	if (!chan->bypass)
 		tegra_channel_update_clknbw(chan, 0);

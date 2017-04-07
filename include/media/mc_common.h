@@ -262,6 +262,7 @@ struct tegra_mc_vi {
 
 	bool has_sensors;
 	atomic_t power_on_refcnt;
+	atomic_t vb2_dma_alloc_refcnt;
 	unsigned int link_status;
 	unsigned int subdevs_bound;
 	struct mutex bw_update_lock;

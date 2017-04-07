@@ -96,7 +96,7 @@ int tsec_hdcp_create_context(struct hdcp_context_t *hdcp_context)
 					HDCP_SCRATCH_BUFFER_SIZE,
 					&hdcp_context->dma_handle_scratch,
 					GFP_KERNEL,
-					&attrs);
+					__DMA_ATTR(attrs));
 	if (!hdcp_context->cpuvaddr_scratch) {
 		err = -ENOMEM;
 		goto exit;
@@ -105,7 +105,7 @@ int tsec_hdcp_create_context(struct hdcp_context_t *hdcp_context)
 					HDCP_DCP_KPUB_SIZE_ALIGNED,
 					&hdcp_context->dma_handle_dcp_kpub,
 					GFP_KERNEL,
-					&attrs);
+					__DMA_ATTR(attrs));
 	if (!hdcp_context->cpuvaddr_dcp_kpub) {
 		err = -ENOMEM;
 		goto exit;
@@ -127,7 +127,7 @@ int tsec_hdcp_create_context(struct hdcp_context_t *hdcp_context)
 					HDCP_SRM_SIZE_ALIGNED,
 					&hdcp_context->dma_handle_srm,
 					GFP_KERNEL,
-					&attrs);
+					__DMA_ATTR(attrs));
 	if (!hdcp_context->cpuvaddr_srm) {
 		err = -ENOMEM;
 		goto exit;
@@ -137,7 +137,7 @@ int tsec_hdcp_create_context(struct hdcp_context_t *hdcp_context)
 				HDCP_CERT_SIZE_ALIGNED,
 				&hdcp_context->dma_handle_cert,
 				GFP_KERNEL,
-				&attrs);
+				__DMA_ATTR(attrs));
 
 	if (!hdcp_context->cpuvaddr_cert) {
 		err = -ENOMEM;
@@ -161,7 +161,7 @@ int tsec_hdcp_create_context(struct hdcp_context_t *hdcp_context)
 					HDCP_MTHD_BUF_SIZE,
 					&hdcp_context->dma_handle_mthd_buf,
 					GFP_KERNEL,
-					&attrs);
+					__DMA_ATTR(attrs));
 	if (!hdcp_context->cpuvaddr_mthd_buf) {
 		err = -ENOMEM;
 		goto exit;
@@ -184,7 +184,7 @@ int tsec_hdcp_create_context(struct hdcp_context_t *hdcp_context)
 					HDCP_RCVR_ID_LIST_SIZE,
 					&hdcp_context->dma_handle_rcvr_id_list,
 					GFP_KERNEL,
-					&attrs);
+					__DMA_ATTR(attrs));
 	if (!hdcp_context->cpuvaddr_rcvr_id_list) {
 		err = -ENOMEM;
 		goto exit;
@@ -194,7 +194,7 @@ int tsec_hdcp_create_context(struct hdcp_context_t *hdcp_context)
 					HDCP_CONTENT_BUF_SIZE,
 					&hdcp_context->dma_handle_input_buf,
 					GFP_KERNEL,
-					&attrs);
+					__DMA_ATTR(attrs));
 	if (!hdcp_context->cpuvaddr_input_buf) {
 		err = -ENOMEM;
 		goto exit;
@@ -204,7 +204,7 @@ int tsec_hdcp_create_context(struct hdcp_context_t *hdcp_context)
 					HDCP_CONTENT_BUF_SIZE,
 					&hdcp_context->dma_handle_output_buf,
 					GFP_KERNEL,
-					&attrs);
+					__DMA_ATTR(attrs));
 	if (!hdcp_context->cpuvaddr_output_buf) {
 		err = -ENOMEM;
 		goto exit;
@@ -226,7 +226,7 @@ int tsec_hdcp_free_context(struct hdcp_context_t *hdcp_context)
 			HDCP_SCRATCH_BUFFER_SIZE,
 			hdcp_context->cpuvaddr_scratch,
 			hdcp_context->dma_handle_scratch,
-			&attrs);
+			__DMA_ATTR(attrs));
 		hdcp_context->cpuvaddr_scratch = NULL;
 	}
 	if (hdcp_context->cpuvaddr_dcp_kpub) {
@@ -234,7 +234,7 @@ int tsec_hdcp_free_context(struct hdcp_context_t *hdcp_context)
 			HDCP_DCP_KPUB_SIZE_ALIGNED,
 			hdcp_context->cpuvaddr_dcp_kpub,
 			hdcp_context->dma_handle_dcp_kpub,
-			&attrs);
+			__DMA_ATTR(attrs));
 		hdcp_context->cpuvaddr_dcp_kpub = NULL;
 	}
 	if (hdcp_context->cpuvaddr_srm) {
@@ -242,7 +242,7 @@ int tsec_hdcp_free_context(struct hdcp_context_t *hdcp_context)
 			HDCP_SRM_SIZE_ALIGNED,
 			hdcp_context->cpuvaddr_srm,
 			hdcp_context->dma_handle_srm,
-			&attrs);
+			__DMA_ATTR(attrs));
 		hdcp_context->cpuvaddr_srm = NULL;
 	}
 
@@ -251,7 +251,7 @@ int tsec_hdcp_free_context(struct hdcp_context_t *hdcp_context)
 			HDCP_CERT_SIZE_ALIGNED,
 			hdcp_context->cpuvaddr_cert,
 			hdcp_context->dma_handle_cert,
-			&attrs);
+			__DMA_ATTR(attrs));
 		hdcp_context->cpuvaddr_cert = NULL;
 	}
 
@@ -260,7 +260,7 @@ int tsec_hdcp_free_context(struct hdcp_context_t *hdcp_context)
 			HDCP_MTHD_BUF_SIZE,
 			hdcp_context->cpuvaddr_mthd_buf,
 			hdcp_context->dma_handle_mthd_buf,
-			&attrs);
+			__DMA_ATTR(attrs));
 		hdcp_context->cpuvaddr_mthd_buf = NULL;
 	}
 
@@ -269,7 +269,7 @@ int tsec_hdcp_free_context(struct hdcp_context_t *hdcp_context)
 			HDCP_RCVR_ID_LIST_SIZE,
 			hdcp_context->cpuvaddr_rcvr_id_list,
 			hdcp_context->dma_handle_rcvr_id_list,
-			&attrs);
+			__DMA_ATTR(attrs));
 		hdcp_context->cpuvaddr_rcvr_id_list = NULL;
 	}
 
@@ -278,7 +278,7 @@ int tsec_hdcp_free_context(struct hdcp_context_t *hdcp_context)
 			HDCP_CONTENT_BUF_SIZE,
 			hdcp_context->cpuvaddr_input_buf,
 			hdcp_context->dma_handle_input_buf,
-			&attrs);
+			__DMA_ATTR(attrs));
 		hdcp_context->cpuvaddr_input_buf = NULL;
 	}
 
@@ -287,7 +287,7 @@ int tsec_hdcp_free_context(struct hdcp_context_t *hdcp_context)
 			HDCP_CONTENT_BUF_SIZE,
 			hdcp_context->cpuvaddr_output_buf,
 			hdcp_context->dma_handle_output_buf,
-			&attrs);
+			__DMA_ATTR(attrs));
 		hdcp_context->cpuvaddr_output_buf = NULL;
 	}
 exit:
@@ -390,7 +390,7 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 
 	cpuvaddr = dma_alloc_attrs(tsec->dev.parent, HDCP_MTHD_BUF_SIZE,
 			&dma_handle, GFP_KERNEL,
-			&attrs);
+			__DMA_ATTR(attrs));
 	if (!cpuvaddr) {
 		nvhost_err(&tsec->dev, "Failed to allocate memory\n");
 		return;
@@ -464,7 +464,7 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 
 	dma_free_attrs(tsec->dev.parent,
 		HDCP_MTHD_BUF_SIZE, cpuvaddr,
-		dma_handle, &attrs);
+		dma_handle, __DMA_ATTR(attrs));
 }
 
 
@@ -676,11 +676,11 @@ static int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 	}
 
 	m->size = ucode_fw->size + TSEC_RESERVE;
-	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
+	dma_set_attr(DMA_ATTR_READ_ONLY, __DMA_ATTR(attrs));
 
 	m->mapped = dma_alloc_attrs(&dev->dev,
 				m->size, &m->dma_addr,
-				GFP_KERNEL, &attrs);
+				GFP_KERNEL, __DMA_ATTR(attrs));
 	if (!m->mapped) {
 		dev_err(&dev->dev, "dma memory allocation failed");
 		err = -ENOMEM;
@@ -703,7 +703,7 @@ clean_up:
 	if (m->mapped) {
 		dma_free_attrs(&dev->dev,
 			m->size, m->mapped,
-			m->dma_addr, &attrs);
+			m->dma_addr, __DMA_ATTR(attrs));
 		m->mapped = NULL;
 		m->dma_addr = 0;
 	}
@@ -839,13 +839,13 @@ static int tsec_probe(struct platform_device *dev)
 		}
 		pdata->carveout_size = carveout_size;
 
-		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
-		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, __DMA_ATTR(attrs));
+		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, __DMA_ATTR(attrs));
 		pdata->carveout_addr = dma_map_single_attrs(&dev->dev,
 					       __va(pdata->carveout_addr),
 					       pdata->carveout_size,
 					       DMA_TO_DEVICE,
-					       &attrs);
+					       __DMA_ATTR(attrs));
 		if (dma_mapping_error(&dev->dev, pdata->carveout_addr)) {
 			dev_err(&dev->dev, "mapping to iova failed\n");
 			return -EINVAL;

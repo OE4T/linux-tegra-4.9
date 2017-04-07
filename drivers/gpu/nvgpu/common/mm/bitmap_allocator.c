@@ -132,27 +132,10 @@ static void nvgpu_bitmap_free_fixed(struct nvgpu_allocator *__a,
 static void insert_alloc_metadata(struct nvgpu_bitmap_allocator *a,
 				  struct nvgpu_bitmap_alloc *alloc)
 {
-	struct rb_node **new = &a->allocs.rb_node;
-	struct rb_node *parent = NULL;
-	struct nvgpu_bitmap_alloc *tmp;
+	alloc->alloc_entry.key_start = alloc->base;
+	alloc->alloc_entry.key_end = alloc->base + alloc->length;
 
-	while (*new) {
-		tmp = container_of(*new, struct nvgpu_bitmap_alloc,
-				   alloc_entry);
-
-		parent = *new;
-		if (alloc->base < tmp->base)
-			new = &((*new)->rb_left);
-		else if (alloc->base > tmp->base)
-			new = &((*new)->rb_right);
-		else {
-			WARN_ON("Duplicate entries in RB alloc tree!\n");
-			return;
-		}
-	}
-
-	rb_link_node(&alloc->alloc_entry, parent, new);
-	rb_insert_color(&alloc->alloc_entry, &a->allocs);
+	nvgpu_rbtree_insert(&alloc->alloc_entry, &a->allocs);
 }
 
 /*
@@ -161,25 +144,16 @@ static void insert_alloc_metadata(struct nvgpu_bitmap_allocator *a,
 static struct nvgpu_bitmap_alloc *find_alloc_metadata(
 	struct nvgpu_bitmap_allocator *a, u64 addr)
 {
-	struct rb_node *node = a->allocs.rb_node;
 	struct nvgpu_bitmap_alloc *alloc;
+	struct nvgpu_rbtree_node *node = NULL;
 
-	while (node) {
-		alloc = container_of(node, struct nvgpu_bitmap_alloc,
-				     alloc_entry);
-
-		if (addr < alloc->base)
-			node = node->rb_left;
-		else if (addr > alloc->base)
-			node = node->rb_right;
-		else
-			break;
-	}
-
+	nvgpu_rbtree_search(addr, &node, a->allocs);
 	if (!node)
 		return NULL;
 
-	rb_erase(node, &a->allocs);
+	alloc = nvgpu_bitmap_alloc_from_rbtree_node(node);
+
+	nvgpu_rbtree_unlink(node, &a->allocs);
 
 	return alloc;
 }
@@ -316,17 +290,19 @@ static void nvgpu_bitmap_alloc_destroy(struct nvgpu_allocator *__a)
 {
 	struct nvgpu_bitmap_allocator *a = bitmap_allocator(__a);
 	struct nvgpu_bitmap_alloc *alloc;
-	struct rb_node *node;
+	struct nvgpu_rbtree_node *node;
 
 	/*
 	 * Kill any outstanding allocations.
 	 */
-	while ((node = rb_first(&a->allocs)) != NULL) {
-		alloc = container_of(node, struct nvgpu_bitmap_alloc,
-				     alloc_entry);
+	nvgpu_rbtree_enum_start(0, &node, a->allocs);
+	while (node) {
+		alloc = nvgpu_bitmap_alloc_from_rbtree_node(node);
 
-		rb_erase(node, &a->allocs);
+		nvgpu_rbtree_unlink(node, &a->allocs);
 		nvgpu_kmem_cache_free(a->meta_data_cache, alloc);
+
+		nvgpu_rbtree_enum_start(0, &node, a->allocs);
 	}
 
 	nvgpu_kmem_cache_destroy(a->meta_data_cache);
@@ -419,6 +395,7 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	a->num_bits = length >> a->blk_shift;
 	a->bit_offs = a->base >> a->blk_shift;
 	a->flags = flags;
+	a->allocs = NULL;
 
 	a->bitmap = nvgpu_kcalloc(g, BITS_TO_LONGS(a->num_bits),
 				  sizeof(*a->bitmap));

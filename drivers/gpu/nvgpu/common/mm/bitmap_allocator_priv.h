@@ -17,8 +17,8 @@
 #ifndef BITMAP_ALLOCATOR_PRIV_H
 #define BITMAP_ALLOCATOR_PRIV_H
 
-#include <linux/rbtree.h>
 
+#include <nvgpu/rbtree.h>
 #include <nvgpu/kmem.h>
 
 struct nvgpu_allocator;
@@ -43,7 +43,7 @@ struct nvgpu_bitmap_allocator {
 	u64 next_blk;
 
 	unsigned long *bitmap;		/* The actual bitmap! */
-	struct rb_root allocs;		/* Tree of outstanding allocations. */
+	struct nvgpu_rbtree_node *allocs;  /* Tree of outstanding allocations */
 
 	struct nvgpu_kmem_cache *meta_data_cache;
 
@@ -61,7 +61,14 @@ struct nvgpu_bitmap_allocator {
 struct nvgpu_bitmap_alloc {
 	u64 base;
 	u64 length;
-	struct rb_node alloc_entry;	/* RB tree of allocations. */
+	struct nvgpu_rbtree_node alloc_entry;	/* RB tree of allocations. */
+};
+
+static inline struct nvgpu_bitmap_alloc *
+nvgpu_bitmap_alloc_from_rbtree_node(struct nvgpu_rbtree_node *node)
+{
+	return (struct nvgpu_bitmap_alloc *)
+	((uintptr_t)node - offsetof(struct nvgpu_bitmap_alloc, alloc_entry));
 };
 
 static inline struct nvgpu_bitmap_allocator *bitmap_allocator(

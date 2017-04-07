@@ -103,6 +103,10 @@
 		dpaux@15040000 {
 			status = "okay";
 		};
+
+		dpaux@155c0000 {
+			status = "okay";
+		};
 	};
 
 	mipical {

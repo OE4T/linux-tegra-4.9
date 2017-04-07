@@ -34,7 +34,7 @@
  * function and friends use the preprocessor to concatenate stuff to the start
  * of this string when printing.
  */
-#define LOG_FMT			"nvgpu: %s %33s:%-4d [%s]  %s"
+#define LOG_FMT			"nvgpu: %s %33s:%-4d [%s]  %s\n"
 
 u32 nvgpu_dbg_mask = NVGPU_DEFAULT_DBG_MASK;
 

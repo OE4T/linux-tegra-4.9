@@ -19,10 +19,6 @@
 #ifndef __TEGRA_VGPU_H
 #define __TEGRA_VGPU_H
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-#include <linux/tegra_vgpu_t18x.h>
-#endif
-
 enum {
 	TEGRA_VGPU_MODULE_GPU = 0,
 };
@@ -139,6 +135,7 @@ enum {
 	TEGRA_VGPU_ATTRIB_TPC_COUNT = 19, /* deprecated */
 	TEGRA_VGPU_ATTRIB_GPC0_TPC_COUNT = 20, /* deprecated */
 	TEGRA_VGPU_ATTRIB_MAX_FREQ = 21, /* deprecated */
+	TEGRA_VGPU_ATTRIB_PREEMPT_CTX_SIZE = 64, /* gap to hide T18x IP */
 };
 
 struct tegra_vgpu_attrib_params {
@@ -281,12 +278,26 @@ struct tegra_vgpu_zbc_query_table_params {
 	u32 index_size;       /* [out] size, [in] index */
 };
 
-#define TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAX 4
+enum {
+	TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAIN,
+	TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_SPILL,
+	TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_PAGEPOOL,
+	TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_BETACB,
+	TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_LAST
+};
+
+enum {
+	TEGRA_VGPU_GR_CTXSW_PREEMPTION_MODE_WFI,
+	TEGRA_VGPU_GR_CTXSW_PREEMPTION_MODE_GFX_GFXP,
+	TEGRA_VGPU_GR_CTXSW_PREEMPTION_MODE_COMPUTE_CTA,
+	TEGRA_VGPU_GR_CTXSW_PREEMPTION_MODE_COMPUTE_CILP,
+	TEGRA_VGPU_GR_CTXSW_PREEMPTION_MODE_LAST
+};
 
 struct tegra_vgpu_gr_bind_ctxsw_buffers_params {
 	u64 handle;	/* deprecated */
-	u64 gpu_va[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAX];
-	u64 size[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAX];
+	u64 gpu_va[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_LAST];
+	u64 size[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_LAST];
 	u32 mode;
 	u64 gr_ctx_handle;
 };

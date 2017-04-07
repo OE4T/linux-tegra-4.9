@@ -117,9 +117,6 @@ static int vgpu_gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 				&msg.params.gr_bind_ctxsw_buffers;
 	int err = 0;
 
-	WARN_ON(TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAX !=
-		TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_LAST);
-
 	if (class == PASCAL_A && g->gr.t18x.ctx_vars.force_preemption_gfxp)
 		graphics_preempt_mode = NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP;
 

@@ -39,13 +39,13 @@
 		};
 		CPU-therm {
 			polling-delay		= <0>;
-			polling-delay-passive	= <1000>;
+			polling-delay-passive	= <500>;
 			thermal-sensors		= <&{/soctherm@0x700E2000} TEGRA124_SOCTHERM_SENSOR_CPU>;
 			status = "disabled";
 		};
 		GPU-therm {
 			polling-delay		= <0>;
-			polling-delay-passive	= <1000>;
+			polling-delay-passive	= <500>;
 			thermal-sensors		= <&{/soctherm@0x700E2000} TEGRA124_SOCTHERM_SENSOR_GPU>;
 			status = "disabled";
 		};

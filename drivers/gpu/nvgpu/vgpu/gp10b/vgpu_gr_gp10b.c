@@ -309,6 +309,7 @@ static int vgpu_gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 
 static int vgpu_gr_gp10b_init_ctx_state(struct gk20a *g)
 {
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 	int err;
 
 	gk20a_dbg_fn("");
@@ -317,11 +318,10 @@ static int vgpu_gr_gp10b_init_ctx_state(struct gk20a *g)
 	if (err)
 		return err;
 
-	vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_PREEMPT_CTX_SIZE,
-			&g->gr.t18x.ctx_vars.preempt_image_size);
+	g->gr.t18x.ctx_vars.preempt_image_size =
+			priv->constants.preempt_ctx_size;
 	if (!g->gr.t18x.ctx_vars.preempt_image_size)
-		return -ENXIO;
+		return -EINVAL;
 
 	return 0;
 }

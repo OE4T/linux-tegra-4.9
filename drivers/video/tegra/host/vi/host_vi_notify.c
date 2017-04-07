@@ -198,7 +198,7 @@ static int nvhost_vi_get_irq(struct platform_device *pdev, unsigned num,
 	int err, irq;
 
 	irq = platform_get_irq(pdev, num);
-	if (IS_ERR_VALUE(irq)) {
+	if (irq < 0) {
 		dev_err(&pdev->dev, "missing IRQ\n");
 		return irq;
 	}
@@ -236,12 +236,12 @@ static int nvhost_vi_notify_probe(struct device *dev,
 	memset(hvnd->incr, 0xff, sizeof(hvnd->incr));
 
 	ret = nvhost_vi_get_irq(pdev, 1, nvhost_vi_prio_isr);
-	if (IS_ERR_VALUE(ret))
+	if (ret < 0)
 		return ret;
 	hvnd->prio_irq = ret;
 
 	ret = nvhost_vi_get_irq(pdev, 2, nvhost_vi_notify_isr);
-	if (IS_ERR_VALUE(ret)) {
+	if (ret < 0) {
 		devm_free_irq(&pdev->dev, hvnd->prio_irq, pdev);
 		return ret;
 	}

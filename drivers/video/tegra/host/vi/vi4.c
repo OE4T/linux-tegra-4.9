@@ -103,7 +103,7 @@ int nvhost_vi4_prepare_poweroff(struct platform_device *pdev)
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 
 	host1x_writel(pdev, VI_CFG_INTERRUPT_MASK_0, 0x00000000);
-	if (!IS_ERR_VALUE(vi->error_irq))
+	if (vi->error_irq >= 0)
 		disable_irq(vi->error_irq);
 	return 0;
 }
@@ -119,7 +119,7 @@ int nvhost_vi4_finalize_poweron(struct platform_device *pdev)
 			VI_FMLITE_BUF_OVFL_ERR_MASK |
 			VI_NOTIFY_FIFO_OVFL_ERR_MASK |
 			VI_ISPBUFA_ERR_MASK);
-	if (!IS_ERR_VALUE(vi->error_irq))
+	if (vi->error_irq >= 0)
 		enable_irq(vi->error_irq);
 	return 0;
 }
@@ -360,7 +360,7 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 	}
 
 	vi->error_irq = platform_get_irq(pdev, 0);
-	if (!IS_ERR_VALUE(vi->error_irq)) {
+	if (vi->error_irq >= 0) {
 		err = devm_request_threaded_irq(&pdev->dev, vi->error_irq,
 						NULL, nvhost_vi4_error_isr,
 						IRQF_ONESHOT,

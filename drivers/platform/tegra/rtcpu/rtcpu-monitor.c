@@ -120,7 +120,7 @@ static int tegra_camrtc_mon_wdt_irq_setup(
 	int ret;
 
 	cam_rtcpu_mon->wdt_irq = platform_get_irq_byname(pdev, "wdt-remote");
-	if (IS_ERR_VALUE(cam_rtcpu_mon->wdt_irq))
+	if (cam_rtcpu_mon->wdt_irq < 0)
 		return -ENODEV;
 
 	ret = devm_request_threaded_irq(&pdev->dev, cam_rtcpu_mon->wdt_irq,

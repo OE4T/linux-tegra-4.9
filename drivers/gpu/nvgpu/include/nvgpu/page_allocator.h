@@ -18,11 +18,11 @@
 #define PAGE_ALLOCATOR_PRIV_H
 
 #include <linux/list.h>
-#include <linux/rbtree.h>
 
 #include <nvgpu/allocator.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/list.h>
+#include <nvgpu/rbtree.h>
 
 struct nvgpu_allocator;
 
@@ -110,7 +110,7 @@ struct nvgpu_page_alloc {
 	 */
 	u64 base;
 
-	struct rb_node tree_entry;
+	struct nvgpu_rbtree_node tree_entry;
 
 	/*
 	 * Set if this is a slab alloc. Points back to the slab page that owns
@@ -118,6 +118,13 @@ struct nvgpu_page_alloc {
 	 * set.
 	 */
 	struct page_alloc_slab_page *slab_page;
+};
+
+static inline struct nvgpu_page_alloc *
+nvgpu_page_alloc_from_rbtree_node(struct nvgpu_rbtree_node *node)
+{
+	return (struct nvgpu_page_alloc *)
+	      ((uintptr_t)node - offsetof(struct nvgpu_page_alloc, tree_entry));
 };
 
 struct nvgpu_page_allocator {
@@ -138,7 +145,7 @@ struct nvgpu_page_allocator {
 	u64 page_size;
 	u32 page_shift;
 
-	struct rb_root allocs;		/* Outstanding allocations. */
+	struct nvgpu_rbtree_node *allocs;	/* Outstanding allocations. */
 
 	struct page_alloc_slab *slabs;
 	int nr_slabs;

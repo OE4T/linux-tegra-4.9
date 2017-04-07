@@ -151,28 +151,10 @@ static void __nvgpu_free_pages(struct nvgpu_page_allocator *a,
 static int __insert_page_alloc(struct nvgpu_page_allocator *a,
 			       struct nvgpu_page_alloc *alloc)
 {
-	struct rb_node **new = &a->allocs.rb_node;
-	struct rb_node *parent = NULL;
+	alloc->tree_entry.key_start = alloc->base;
+	alloc->tree_entry.key_end = alloc->base + alloc->length;
 
-	while (*new) {
-		struct nvgpu_page_alloc *tmp =
-			container_of(*new, struct nvgpu_page_alloc,
-				     tree_entry);
-
-		parent = *new;
-		if (alloc->base < tmp->base) {
-			new = &((*new)->rb_left);
-		} else if (alloc->base > tmp->base) {
-			new = &((*new)->rb_right);
-		} else {
-			WARN(1, "Duplicate entries in allocated list!\n");
-			return 0;
-		}
-	}
-
-	rb_link_node(&alloc->tree_entry, parent, new);
-	rb_insert_color(&alloc->tree_entry, &a->allocs);
-
+	nvgpu_rbtree_insert(&alloc->tree_entry, &a->allocs);
 	return 0;
 }
 
@@ -180,24 +162,16 @@ static struct nvgpu_page_alloc *__find_page_alloc(
 	struct nvgpu_page_allocator *a,
 	u64 addr)
 {
-	struct rb_node *node = a->allocs.rb_node;
 	struct nvgpu_page_alloc *alloc;
+	struct nvgpu_rbtree_node *node = NULL;
 
-	while (node) {
-		alloc = container_of(node, struct nvgpu_page_alloc, tree_entry);
-
-		if (addr < alloc->base)
-			node = node->rb_left;
-		else if (addr > alloc->base)
-			node = node->rb_right;
-		else
-			break;
-	}
-
+	nvgpu_rbtree_search(addr, &node, a->allocs);
 	if (!node)
 		return NULL;
 
-	rb_erase(node, &a->allocs);
+	alloc = nvgpu_page_alloc_from_rbtree_node(node);
+
+	nvgpu_rbtree_unlink(node, &a->allocs);
 
 	return alloc;
 }
@@ -906,7 +880,7 @@ int nvgpu_page_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	a->length = length;
 	a->page_size = blk_size;
 	a->page_shift = __ffs(blk_size);
-	a->allocs = RB_ROOT;
+	a->allocs = NULL;
 	a->owner = __a;
 	a->flags = flags;
 

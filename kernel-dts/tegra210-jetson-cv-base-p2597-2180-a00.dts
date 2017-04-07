@@ -802,29 +802,23 @@
 	thermal-zones {
 		CPU-therm {
 			thermal-zone-params {
-				governor-name = "pid_thermal_gov";
-				max_err_temp = <9000>;
-				max_err_gain = <1000>;
-				gain_p = <1000>;
-				gain_d = <0>;
-				up_compensation = <20>;
-				down_compensation = <20>;
+				governor-name = "step_wise";
 			};
 			trips {
 				cpu_critical {
-					temperature = <102500>;
+					temperature = <102000>;
 					hysteresis = <0>;
 					type = "critical";
 					writable;
 				};
 				cpu_heavy {
-					temperature = <98500>;
+					temperature = <100500>;
 					hysteresis = <0>;
 					type = "hot";
 					writable;
 				};
 				cpu_throttle {
-					temperature = <89000>;
+					temperature = <97000>;
 					hysteresis = <0>;
 					type = "passive";
 					writable;
@@ -852,29 +846,23 @@
 		};
 		GPU-therm {
 			thermal-zone-params {
-				governor-name = "pid_thermal_gov";
-				max_err_temp = <9000>;
-				max_err_gain = <1000>;
-				gain_p = <1000>;
-				gain_d = <0>;
-				up_compensation = <20>;
-				down_compensation = <20>;
+				governor-name = "step_wise";
 			};
 			trips {
 				gpu_critical {
-					temperature = <103000>;
+					temperature = <102500>;
 					hysteresis = <0>;
 					type = "critical";
 					writable;
 				};
 				gpu_heavy {
-					temperature = <100000>;
+					temperature = <101000>;
 					hysteresis = <0>;
 					type = "hot";
 					writable;
 				};
 				gpu_throttle {
-					temperature = <90500>;
+					temperature = <97500>;
 					hysteresis = <0>;
 					type = "passive";
 					writable;

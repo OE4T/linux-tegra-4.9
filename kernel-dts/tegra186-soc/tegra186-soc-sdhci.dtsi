@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,6 +13,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#include "tegra186-pin-drive-sdmmc-common.dtsi"
 
 / {
 
@@ -82,6 +84,9 @@
 		cap-mmc-highspeed;
 		cap-sd-highspeed;
 		pwrdet-support;
+		pinctrl-names = "sdmmc_e_33v_enable", "sdmmc_e_33v_disable";
+		pinctrl-0 = <&sdmmc3_e_33V_enable>;
+		pinctrl-1 = <&sdmmc3_e_33V_disable>;
 		compad-vref-3v3 = <0x1>;
 		compad-vref-1v8 = <0x2>;
 		uhs-mask = <0x1C>;
@@ -93,8 +98,6 @@
 		clock-names = "sdmmc", "pll_p";
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_SDMMC3A>;
-		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC3_HV>;
-		pad-names = "sdmmc";
 		nvidia,en-periodic-calib;
 		status = "disabled";
 	};
@@ -119,6 +122,9 @@
 		mmc-ddr-1_8v;
 		mmc-hs200-1_8v;
 		pwrdet-support;
+		pinctrl-names = "sdmmc_e_33v_enable", "sdmmc_e_33v_disable";
+		pinctrl-0 = <&sdmmc2_e_33V_enable>;
+		pinctrl-1 = <&sdmmc2_e_33V_disable>;
 		compad-vref-3v3 = <0x1>;
 		compad-vref-1v8 = <0x2>;
 		uhs-mask = <0x60>;
@@ -131,8 +137,6 @@
 		clock-names = "sdmmc", "pll_p";
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_SDMMC2A>;
-		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC2_HV>;
-		pad-names = "sdmmc";
 		status = "disabled";
 	};
 
@@ -153,6 +157,9 @@
 		cap-mmc-highspeed;
 		cap-sd-highspeed;
 		pwrdet-support;
+		pinctrl-names = "sdmmc_e_33v_enable", "sdmmc_e_33v_disable";
+		pinctrl-0 = <&sdmmc1_e_33V_enable>;
+		pinctrl-1 = <&sdmmc1_e_33V_disable>;
 		compad-vref-3v3 = <0x1>;
 		compad-vref-1v8 = <0x2>;
 		uhs-mask = <0x1C>;
@@ -164,8 +171,6 @@
 		clock-names = "sdmmc", "pll_p";
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_SDMMC1A>;
-		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC1_HV>;
-		pad-names = "sdmmc";
 		nvidia,en-periodic-calib;
 		status = "disabled";
 	 };

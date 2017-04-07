@@ -2808,6 +2808,41 @@ clean_up:
 	return err;
 }
 
+int gk20a_fifo_disable_all_engine_activity(struct gk20a *g,
+					   bool wait_for_idle)
+{
+	unsigned int i;
+	int err = 0, ret = 0;
+	u32 active_engine_id;
+
+	for (i = 0; i < g->fifo.num_engines; i++) {
+		active_engine_id = g->fifo.active_engines_list[i];
+		err = gk20a_fifo_disable_engine_activity(g,
+				&g->fifo.engine_info[active_engine_id],
+				wait_for_idle);
+		if (err) {
+			nvgpu_err(g, "failed to disable engine %d activity\n",
+				active_engine_id);
+			ret = err;
+			break;
+		}
+	}
+
+	if (err) {
+		while (i-- != 0) {
+			active_engine_id = g->fifo.active_engines_list[i];
+			err = gk20a_fifo_enable_engine_activity(g,
+					&g->fifo.engine_info[active_engine_id]);
+			if (err)
+				nvgpu_err(g,
+					"failed to re-enable engine %d activity\n",
+					active_engine_id);
+		}
+	}
+
+	return ret;
+}
+
 static void gk20a_fifo_runlist_reset_engines(struct gk20a *g, u32 runlist_id)
 {
 	struct fifo_gk20a *f = &g->fifo;

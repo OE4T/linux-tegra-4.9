@@ -295,6 +295,9 @@ int tegra_dc_ext_disable(struct tegra_dc_ext *ext)
 
 	set_enable(ext, false);
 
+	/* Flush any scanline work */
+	flush_workqueue(ext->scanline_wq);
+
 	/*
 	 * Disable vblank requests
 	 */
@@ -781,7 +784,7 @@ int tegra_dc_ext_vpulse3(struct tegra_dc_ext *ext,
 	 * Vpulse3 syncpt is invalid OR
 	 * scanline workqueue is not setup, return error
 	 */
-	if (!dc->connected ||
+	if (!dc->enabled || !dc->connected ||
 		vpulse3_sync_id == NVSYNCPT_INVALID ||
 		!ext->scanline_wq) {
 		dev_err(&dc->ndev->dev, "DC not setup\n");

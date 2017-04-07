@@ -47,7 +47,7 @@ struct pva_characteristics_req {
  *
  * @num_vpu: number of vpu per pva
  * @vpu_generation: vpu hardware generation
- * @task_structure_version: highest supported task struct ver
+ * @num_queues: number of queues per pva
  * @reserved: reserved for future use
  * @r5_ucode_version: R5 firmware version
  * @r5_ucode_earliest: 1st version compatible with current running fw
@@ -57,7 +57,8 @@ struct pva_characteristics_req {
 struct pva_characteristics {
 	__u8 num_vpu;
 	__u8 vpu_generation;
-	__u8 reserved[2];
+	__u8 num_queues;
+	__u8 reserved[1];
 	__u32 r5_ucode_version;
 	__u32 r5_ucode_earliest;
 	__u32 r5_vpu_runtime_earliest;

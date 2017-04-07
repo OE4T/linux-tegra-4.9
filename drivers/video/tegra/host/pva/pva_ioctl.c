@@ -357,6 +357,7 @@ static int pva_get_characteristics(struct pva_private *priv,
 
 	memset(&pva_char, 0, out_size);
 	pva_char.num_vpu = 2;
+	pva_char.num_queues = MAX_PVA_QUEUE_COUNT;
 
 	/* if input_size more than output_size, copy kernel struct size */
 	if (in_size > out_size)

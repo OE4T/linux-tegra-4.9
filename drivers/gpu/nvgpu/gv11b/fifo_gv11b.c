@@ -543,35 +543,42 @@ u32 gv11b_fifo_get_runlists_mask(struct gk20a *g, u32 act_eng_bitmask,
 
 	if (id_type != ID_TYPE_UNKNOWN) {
 		if (id_type == ID_TYPE_TSG)
-			runlists_mask = fifo_sched_disable_runlist_m(
+			runlists_mask |= fifo_sched_disable_runlist_m(
 						f->tsg[id].runlist_id);
 		else
-			runlists_mask = fifo_sched_disable_runlist_m(
+			runlists_mask |= fifo_sched_disable_runlist_m(
 						f->channel[id].runlist_id);
-	} else {
-		if (rc_type == RC_TYPE_MMU_FAULT && mmfault) {
-			if (mmfault->faulted_pbdma != FIFO_INVAL_PBDMA_ID)
-				pbdma_bitmask = BIT(mmfault->faulted_pbdma);
+	}
 
-			for (id = 0; id < f->max_runlists; id++) {
+	if (rc_type == RC_TYPE_MMU_FAULT && mmfault) {
+		if (mmfault->faulted_pbdma != FIFO_INVAL_PBDMA_ID)
+			pbdma_bitmask = BIT(mmfault->faulted_pbdma);
 
+		for (id = 0; id < f->max_runlists; id++) {
+
+			runlist = &f->runlist_info[id];
+
+			if (runlist->eng_bitmask & act_eng_bitmask)
+				runlists_mask |=
+				 fifo_sched_disable_runlist_m(id);
+
+			if (runlist->pbdma_bitmask & pbdma_bitmask)
+				runlists_mask |=
+				 fifo_sched_disable_runlist_m(id);
+		}
+	}
+
+	if (id_type == ID_TYPE_UNKNOWN) {
+		for (id = 0; id < f->max_runlists; id++) {
+			if (act_eng_bitmask) {
+				/* eng ids are known */
 				runlist = &f->runlist_info[id];
-
 				if (runlist->eng_bitmask & act_eng_bitmask)
 					runlists_mask |=
-					 fifo_sched_disable_runlist_m(id);
-
-				if (runlist->pbdma_bitmask & pbdma_bitmask)
-					runlists_mask |=
-					 fifo_sched_disable_runlist_m(id);
-				}
-		} else {
-			/* ID is unknown */
-			for (id = 0; id < f->max_runlists; id++) {
-				runlist = &f->runlist_info[id];
-				if (runlist->eng_bitmask & act_eng_bitmask)
-					runlists_mask |=
-					 fifo_sched_disable_runlist_m(id);
+					fifo_sched_disable_runlist_m(id);
+			} else {
+				runlists_mask |=
+					fifo_sched_disable_runlist_m(id);
 			}
 		}
 	}

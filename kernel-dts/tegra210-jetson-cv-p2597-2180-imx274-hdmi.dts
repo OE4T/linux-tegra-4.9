@@ -16,7 +16,7 @@
  */
 
 #include "tegra210-jetson-cv-p2597-2180-a00.dts"
-#include "jetson-platforms/tegra210-jetson-cv-camera-narya-imx274.dtsi"
+#include "jetson-platforms/tegra210-jetson-cv-camera-imx274-hdmi.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

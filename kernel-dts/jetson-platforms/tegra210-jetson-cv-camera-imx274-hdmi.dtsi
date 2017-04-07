@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "tegra210-camera-narya-imx274.dtsi"
+#include "tegra210-camera-imx274-hdmi.dtsi"
 
 #define CAM0_RST_L	TEGRA_GPIO(S, 4)
 #define CAM1_RST_L	TEGRA_GPIO(S, 5)

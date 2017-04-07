@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2007 Patrick McHardy <kaber@trash.net>
+ * Copyright (c) 2008-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -1228,6 +1229,9 @@ static int macvlan_changelink_sources(struct macvlan_dev *vlan, u32 mode,
 	struct nlattr *nla, *head;
 	struct macvlan_source_entry *entry;
 
+	if (!data)
+		return -EINVAL;
+
 	if (data[IFLA_MACVLAN_MACADDR])
 		addr = nla_data(data[IFLA_MACVLAN_MACADDR]);
 
@@ -1257,7 +1261,7 @@ static int macvlan_changelink_sources(struct macvlan_dev *vlan, u32 mode,
 				return ret;
 		}
 
-		if (!data || !data[IFLA_MACVLAN_MACADDR_DATA])
+		if (!data[IFLA_MACVLAN_MACADDR_DATA])
 			return 0;
 
 		head = nla_data(data[IFLA_MACVLAN_MACADDR_DATA]);

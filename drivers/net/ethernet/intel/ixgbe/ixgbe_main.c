@@ -8409,7 +8409,7 @@ static void ixgbe_atr(struct ixgbe_ring *ring,
 				return;
 		} else {
 			__be16 frag_off;
-			u8 l4_hdr;
+			u8 l4_hdr = 0;
 
 			ipv6_skip_exthdr(skb, hdr.network - skb->data +
 					      sizeof(struct ipv6hdr),

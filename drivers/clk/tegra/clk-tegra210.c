@@ -53,6 +53,8 @@
 #define RST_DFLL_DVCO 0x2f4
 #define DVFS_DFLL_RESET_SHIFT 0
 
+#define PLLE_SS_CTRL 0x68
+
 #define PLLC_BASE 0x80
 #define PLLC_OUT 0x84
 #define PLLC_MISC0 0x88
@@ -487,6 +489,13 @@ static struct clk **clks;
 
 #define PLLU_MISC0_WRITE_MASK		0xbfffffff
 #define PLLU_MISC1_WRITE_MASK		0x00000007
+
+/* PLLE */
+#define PLLE_SS_MAX_VAL 0x21
+#define PLLE_SS_INC_VAL (0x1 << 16)
+#define PLLE_SS_INCINTRV_VAL (0x23 << 24)
+#define PLLE_SS_COEFFICIENTS_VAL \
+	(PLLE_SS_MAX_VAL | PLLE_SS_INC_VAL | PLLE_SS_INCINTRV_VAL)
 
 bool tegra210_xusb_pll_hw_sequence_is_enabled(void)
 {
@@ -1896,6 +1905,8 @@ static struct tegra_clk_pll_params pll_e_params = {
 	.lock_enable_bit_idx = PLLE_MISC_LOCK_ENABLE,
 	.lock_delay = 300,
 	.div_nmp = &plle_nmp,
+	.ssc_ctrl_en_mask = PLLE_SS_COEFFICIENTS_VAL,
+	.ssc_ctrl_reg = PLLE_SS_CTRL,
 	.freq_table = pll_e_freq_table,
 	.flags = TEGRA_PLL_FIXED | TEGRA_PLL_LOCK_MISC | TEGRA_PLL_USE_LOCK |
 		 TEGRA_PLL_HAS_LOCK_ENABLE,

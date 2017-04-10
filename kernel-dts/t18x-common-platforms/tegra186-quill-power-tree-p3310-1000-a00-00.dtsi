@@ -126,27 +126,7 @@
 	};
 
 	pmc-iopower {
-		iopower-sys-supply = <&vdd_1v8_ap>;
-		iopower-uart-supply = <&vdd_1v8_ap>;
-		iopower-conn-supply = <&vdd_1v8_ap>;
-		iopower-edp-supply = <&vdd_1v8_ap>;
-		iopower-pex-ctrl-audio-supply = <&vdd_1v8_ap>;
-		iopower-ufs-supply = <&vdd_1v8_ap>;
-		iopower-ddr0-supply = <&spmic_sd0>;
-		iopower-ddr1-supply = <&spmic_sd0>;
-		iopower-csi-dsi-supply = <&spmic_sd1>;
-		iopower-cam-supply = <&vdd_1v8_ap>;
-		iopower-sdmmc4-supply = <&vdd_1v8_ap>;
-		iopower-sdmmc1-hv-supply = <&spmic_ldo3>;
-		iopower-audio-hv-supply = <&vdd_1v8_ap>;
-		iopower-dbg-supply = <&vdd_1v8_ap>;
-		iopower-spi-supply = <&vdd_1v8_ap>;
-		iopower-ao-supply = <&vdd_1v8_ap>;
-		iopower-ao-hv-supply = <&spmic_ldo2>;
-		iopower-dmic-hv-supply =  <&vdd_1v8_ap>;
-		iopower-sdmmc2-hv-supply = <&spmic_sd3>;
-		iopower-sdmmc3-hv-supply =  <&spmic_ldo5>;
-
+		vddio-sys-supply = <&vdd_1v8_ap>;
 		vddio-uart-supply = <&vdd_1v8_ap>;
 		vddio-conn-supply = <&vdd_1v8_ap>;
 		vddio-edp-supply = <&vdd_1v8_ap>;

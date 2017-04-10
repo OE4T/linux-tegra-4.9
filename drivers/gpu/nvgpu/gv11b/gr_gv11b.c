@@ -22,6 +22,7 @@
 
 #include <nvgpu/timers.h>
 #include <nvgpu/dma.h>
+#include <nvgpu/log.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
@@ -234,8 +235,7 @@ static int gr_gv11b_zbc_s_query_table(struct gk20a *g, struct gr_gk20a *gr,
 	u32 index = query_params->index_size;
 
 	if (index >= GK20A_ZBC_TABLE_SIZE) {
-		gk20a_err(dev_from_gk20a(g),
-			"invalid zbc stencil table index\n");
+		nvgpu_err(g, "invalid zbc stencil table index");
 		return -EINVAL;
 	}
 	query_params->depth = gr->zbc_s_tbl[index].stencil;
@@ -332,8 +332,7 @@ static int gr_gv11b_load_stencil_default_tbl(struct gk20a *g,
 	if (!err) {
 		gr->max_default_s_index = 3;
 	} else {
-		gk20a_err(dev_from_gk20a(g),
-			   "fail to load default zbc stencil table\n");
+		nvgpu_err(g, "fail to load default zbc stencil table");
 		return err;
 	}
 
@@ -628,8 +627,7 @@ static int gr_gv11b_init_ctx_state(struct gk20a *g)
 		op.mailbox.ret = &g->gr.t18x.ctx_vars.preempt_image_size;
 		err = gr_gk20a_submit_fecs_method_op(g, op, false);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-					"query preempt image size failed");
+			nvgpu_err(g, "query preempt image size failed");
 			return err;
 		}
 	}
@@ -717,8 +715,7 @@ static int gr_gv11b_alloc_gr_ctx(struct gk20a *g,
 					g->gr.t18x.ctx_vars.preempt_image_size,
 					&(*gr_ctx)->t18x.preempt_ctxsw_buffer);
 		if (err) {
-			gk20a_err(dev_from_gk20a(vm->mm->g),
-				  "cannot allocate preempt buffer");
+			nvgpu_err(vm->mm->g, "cannot allocate preempt buffer");
 			goto fail_free_gk20a_ctx;
 		}
 
@@ -726,8 +723,7 @@ static int gr_gv11b_alloc_gr_ctx(struct gk20a *g,
 					spill_size,
 					&(*gr_ctx)->t18x.spill_ctxsw_buffer);
 		if (err) {
-			gk20a_err(dev_from_gk20a(vm->mm->g),
-				  "cannot allocate spill buffer");
+			nvgpu_err(vm->mm->g, "cannot allocate spill buffer");
 			goto fail_free_preempt;
 		}
 
@@ -735,8 +731,7 @@ static int gr_gv11b_alloc_gr_ctx(struct gk20a *g,
 					attrib_cb_size,
 					&(*gr_ctx)->t18x.betacb_ctxsw_buffer);
 		if (err) {
-			gk20a_err(dev_from_gk20a(vm->mm->g),
-				  "cannot allocate beta buffer");
+			nvgpu_err(vm->mm->g, "cannot allocate beta buffer");
 			goto fail_free_spill;
 		}
 
@@ -744,8 +739,7 @@ static int gr_gv11b_alloc_gr_ctx(struct gk20a *g,
 					pagepool_size,
 					&(*gr_ctx)->t18x.pagepool_ctxsw_buffer);
 		if (err) {
-			gk20a_err(dev_from_gk20a(vm->mm->g),
-				  "cannot allocate page pool");
+			nvgpu_err(vm->mm->g, "cannot allocate page pool");
 			goto fail_free_betacb;
 		}
 
@@ -785,29 +779,28 @@ static void dump_ctx_switch_stats(struct gk20a *g, struct vm_gk20a *vm,
 		WARN_ON("Cannot map context");
 		return;
 	}
-	gk20a_err(dev_from_gk20a(g), "ctxsw_prog_main_image_magic_value_o : %x (expect %x)\n",
+	nvgpu_err(g, "ctxsw_prog_main_image_magic_value_o : %x (expect %x)",
 		nvgpu_mem_rd(g, mem,
 				ctxsw_prog_main_image_magic_value_o()),
 		ctxsw_prog_main_image_magic_value_v_value_v());
 
 
-	gk20a_err(dev_from_gk20a(g), "NUM_SAVE_OPERATIONS : %d\n",
+	nvgpu_err(g, "NUM_SAVE_OPERATIONS : %d",
 		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_num_save_ops_o()));
-	gk20a_err(dev_from_gk20a(g), "WFI_SAVE_OPERATIONS : %d\n",
+	nvgpu_err(g, "WFI_SAVE_OPERATIONS : %d",
 		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_num_wfi_save_ops_o()));
-	gk20a_err(dev_from_gk20a(g), "CTA_SAVE_OPERATIONS : %d\n",
+	nvgpu_err(g, "CTA_SAVE_OPERATIONS : %d",
 		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_num_cta_save_ops_o()));
-	gk20a_err(dev_from_gk20a(g), "GFXP_SAVE_OPERATIONS : %d\n",
+	nvgpu_err(g, "GFXP_SAVE_OPERATIONS : %d",
 		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_num_gfxp_save_ops_o()));
-	gk20a_err(dev_from_gk20a(g), "CILP_SAVE_OPERATIONS : %d\n",
+	nvgpu_err(g, "CILP_SAVE_OPERATIONS : %d",
 		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_num_cilp_save_ops_o()));
-	gk20a_err(dev_from_gk20a(g),
-		"image gfx preemption option (GFXP is 1) %x\n",
+	nvgpu_err(g, "image gfx preemption option (GFXP is 1) %x",
 		nvgpu_mem_rd(g, mem,
 			ctxsw_prog_main_image_graphics_preemption_options_o()));
 	nvgpu_mem_end(g, mem);
@@ -868,8 +861,7 @@ static void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 
 		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
 		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-					"can't map patch context");
+			nvgpu_err(g, "can't map patch context");
 			goto out;
 		}
 
@@ -1118,7 +1110,7 @@ static int gr_gv11b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 
 	} while (!nvgpu_timeout_expired(&timeout));
 
-	gk20a_err(dev_from_gk20a(g),
+	nvgpu_err(g,
 		"timeout, ctxsw busy : %d, gr busy : %d, %08x, %08x, %08x, %08x",
 		ctxsw_active, gr_busy, activity0, activity1, activity2, activity4);
 
@@ -1272,15 +1264,13 @@ static int gr_gv11b_disable_channel_or_tsg(struct gk20a *g, struct channel_gk20a
 
 	ret = gk20a_disable_channel_tsg(g, fault_ch);
 	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-				"CILP: failed to disable channel/TSG!\n");
+		nvgpu_err(g, "CILP: failed to disable channel/TSG!");
 		return ret;
 	}
 
 	ret = g->ops.fifo.update_runlist(g, fault_ch->runlist_id, ~0, true, false);
 	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-				"CILP: failed to restart runlist 0!");
+		nvgpu_err(g, "CILP: failed to restart runlist 0!");
 		return ret;
 	}
 
@@ -1319,7 +1309,7 @@ static int gr_gv11b_set_cilp_preempt_pending(struct gk20a *g, struct channel_gk2
 				"CILP: looking up ctx id");
 		ret = gr_gk20a_get_ctx_id(g, fault_ch, &gr_ctx->t18x.ctx_id);
 		if (ret) {
-			gk20a_err(dev_from_gk20a(g), "CILP: error looking up ctx id!\n");
+			nvgpu_err(g, "CILP: error looking up ctx id!");
 			return ret;
 		}
 		gr_ctx->t18x.ctx_id_valid = true;
@@ -1343,8 +1333,7 @@ static int gr_gv11b_set_cilp_preempt_pending(struct gk20a *g, struct channel_gk2
 			.cond.fail = GR_IS_UCODE_OP_SKIP});
 
 	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-				"CILP: failed to enable ctxsw interrupt!");
+		nvgpu_err(g, "CILP: failed to enable ctxsw interrupt!");
 		return ret;
 	}
 
@@ -1357,8 +1346,7 @@ static int gr_gv11b_set_cilp_preempt_pending(struct gk20a *g, struct channel_gk2
 
 	ret = gr_gv11b_disable_channel_or_tsg(g, fault_ch);
 	if (ret) {
-		gk20a_err(dev_from_gk20a(g),
-				"CILP: failed to disable channel!!");
+		nvgpu_err(g, "CILP: failed to disable channel!!");
 		return ret;
 	}
 
@@ -1472,7 +1460,7 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "CILP: Setting CILP preempt pending\n");
 			ret = gr_gv11b_set_cilp_preempt_pending(g, fault_ch);
 			if (ret) {
-				gk20a_err(dev_from_gk20a(g), "CILP: error while setting CILP preempt pending!\n");
+				nvgpu_err(g, "CILP: error while setting CILP preempt pending!");
 				return ret;
 			}
 
@@ -1562,7 +1550,7 @@ static int gr_gv11b_handle_fecs_error(struct gk20a *g,
 		/* set preempt_pending to false */
 		ret = gr_gv11b_clear_cilp_preempt_pending(g, ch);
 		if (ret) {
-			gk20a_err(dev_from_gk20a(g), "CILP: error while unsetting CILP preempt pending!\n");
+			nvgpu_err(g, "CILP: error while unsetting CILP preempt pending!");
 			gk20a_channel_put(ch);
 			goto clean_up;
 		}
@@ -2002,8 +1990,7 @@ void gr_gv11b_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 				therm_gate_ctrl_eng_clk_auto_f());
 		break;
 	default:
-		gk20a_err(dev_from_gk20a(g),
-			"invalid elcg mode %d", mode);
+		nvgpu_err(g, "invalid elcg mode %d", mode);
 	}
 
 	gk20a_writel(g, therm_gate_ctrl_r(engine), gate_ctrl);

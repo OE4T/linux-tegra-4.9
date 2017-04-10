@@ -875,8 +875,7 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 	/* Disable power management */
 	if (support_gk20a_pmu(g->dev) && g->elpg_enabled) {
 		if (gk20a_pmu_disable_elpg(g))
-			gk20a_err(dev_from_gk20a(g),
-				"failed to set disable elpg");
+			nvgpu_err(g, "failed to set disable elpg");
 	}
 	if (g->ops.clock_gating.slcg_gr_load_gating_prod)
 		g->ops.clock_gating.slcg_gr_load_gating_prod(g,
@@ -943,7 +942,7 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 		gk20a_channel_abort(refch, false);
 		gk20a_channel_put(refch);
 	} else {
-		gk20a_err(dev_from_gk20a(g), "id unknown, abort runlist");
+		nvgpu_err(g, "id unknown, abort runlist");
 		for (runlist_id = 0; runlist_id < g->fifo.max_runlists;
 						 runlist_id++) {
 			if (runlists_mask & BIT(runlist_id))

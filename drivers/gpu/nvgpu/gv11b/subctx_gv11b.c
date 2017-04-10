@@ -16,11 +16,12 @@
  * this program.
  */
 
-#include <nvgpu/dma.h>
-
 #include "gk20a/gk20a.h"
 
 #include "gv11b/subctx_gv11b.h"
+
+#include <nvgpu/dma.h>
+#include <nvgpu/log.h>
 
 #include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_ctxsw_prog_gv11b.h>
@@ -58,8 +59,7 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 				gr->ctx_vars.golden_image_size,
 				&ctx->mem);
 		if (ret) {
-			gk20a_err(dev_from_gk20a(g),
-				"failed to allocate sub ctx header");
+			nvgpu_err(g, "failed to allocate sub ctx header");
 			return ret;
 		}
 		ctx->mem.gpu_va = gk20a_gmmu_map(c->vm,
@@ -69,8 +69,7 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 					gk20a_mem_flag_none, true,
 					ctx->mem.aperture);
 		if (!ctx->mem.gpu_va) {
-			gk20a_err(dev_from_gk20a(g),
-				"failed to map ctx header");
+			nvgpu_err(g, "failed to map ctx header");
 			nvgpu_dma_free(g, &ctx->mem);
 			return -ENOMEM;
 		}

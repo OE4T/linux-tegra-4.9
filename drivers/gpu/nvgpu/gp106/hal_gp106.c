@@ -207,6 +207,13 @@ int gp106_init_gpu_characteristics(struct gk20a *g)
 			NVGPU_GPU_FLAGS_SUPPORT_DEVICE_EVENTS |
 			NVGPU_GPU_FLAGS_SUPPORT_SET_THERM_ALERT_LIMIT;
 
+	/* WAR for missing INA3221 on HW2.5 RevA */
+	if (g->power_sensor_missing) {
+		gpu->flags &= ~(NVGPU_GPU_FLAGS_SUPPORT_GET_VOLTAGE |
+				NVGPU_GPU_FLAGS_SUPPORT_GET_CURRENT |
+				NVGPU_GPU_FLAGS_SUPPORT_GET_POWER);
+	}
+
 	return 0;
 }
 

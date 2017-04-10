@@ -297,6 +297,13 @@ u32 pmgr_device_sw_setup(struct gk20a *g)
 	/* Override the Interfaces */
 	pboardobjgrp->pmudatainstget = _pwr_device_pmudata_instget;
 
+	/* WAR for missing INA3221 on HW2.5 RevA */
+	if (g->power_sensor_missing) {
+		gk20a_warn(dev_from_gk20a(g),
+			"no power sensor, monitoring disabled");
+		goto done;
+	}
+
 	status = devinit_get_pwr_device_table(g, ppwrdeviceobjs);
 	if (status)
 		goto done;

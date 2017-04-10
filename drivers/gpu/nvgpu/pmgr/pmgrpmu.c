@@ -488,6 +488,12 @@ u32 pmgr_send_pmgr_tables_to_pmu(struct gk20a *g)
 		}
 	}
 
+	/* WAR for missing INA3221 on HW2.5 RevA */
+	if (g->power_sensor_missing) {
+		nvgpu_warn(g, "no power device found, skipping power policy");
+		goto exit;
+	}
+
 	if (!(BOARDOBJGRP_IS_EMPTY(
 			&g->pmgr_pmu.pmgr_policyobjs.pwr_policies.super)) ||
 		!(BOARDOBJGRP_IS_EMPTY(

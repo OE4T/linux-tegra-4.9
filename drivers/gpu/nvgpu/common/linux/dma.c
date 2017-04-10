@@ -334,7 +334,8 @@ static void nvgpu_dma_free_sys(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	struct device *d = dev_from_gk20a(g);
 
-	if (mem->cpu_va || mem->priv.pages) {
+	if (!(mem->mem_flags & NVGPU_MEM_FLAG_SHADOW_COPY) &&
+	    (mem->cpu_va || mem->priv.pages)) {
 		if (mem->priv.flags) {
 			DEFINE_DMA_ATTRS(dma_attrs);
 

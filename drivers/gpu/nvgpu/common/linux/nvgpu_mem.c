@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <nvgpu/dma.h>
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/page_allocator.h>
 #include <nvgpu/log.h>
@@ -52,6 +53,14 @@ int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
 	if (mem->aperture != APERTURE_SYSMEM || g->mm.force_pramin)
 		return 0;
 
+	/*
+	 * A CPU mapping is implicitly made for all SYSMEM DMA allocations that
+	 * don't have NVGPU_DMA_NO_KERNEL_MAPPING. Thus we don't need to make
+	 * another CPU mapping.
+	 */
+	if (!(mem->priv.flags & NVGPU_DMA_NO_KERNEL_MAPPING))
+		return 0;
+
 	if (WARN_ON(mem->cpu_va)) {
 		nvgpu_warn(g, "nested");
 		return -EBUSY;
@@ -71,6 +80,13 @@ int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
 void nvgpu_mem_end(struct gk20a *g, struct nvgpu_mem *mem)
 {
 	if (mem->aperture != APERTURE_SYSMEM || g->mm.force_pramin)
+		return;
+
+	/*
+	 * Similar to nvgpu_mem_begin() we don't need to unmap the CPU mapping
+	 * already made by the DMA API.
+	 */
+	if (!(mem->priv.flags & NVGPU_DMA_NO_KERNEL_MAPPING))
 		return;
 
 	vunmap(mem->cpu_va);
@@ -224,4 +240,58 @@ void nvgpu_memset(struct gk20a *g, struct nvgpu_mem *mem, u32 offset,
 	} else {
 		WARN_ON("Accessing unallocated nvgpu_mem");
 	}
+}
+
+/*
+ * Be careful how you use this! You are responsible for correctly freeing this
+ * memory.
+ */
+int nvgpu_mem_create_from_mem(struct gk20a *g,
+			      struct nvgpu_mem *dest, struct nvgpu_mem *src,
+			      int start_page, int nr_pages)
+{
+	int ret;
+	u64 start = start_page * PAGE_SIZE;
+	u64 size = nr_pages * PAGE_SIZE;
+	dma_addr_t new_iova;
+
+	if (src->aperture != APERTURE_SYSMEM)
+		return -EINVAL;
+
+	/* Some silly things a caller might do... */
+	if (size > src->size)
+		return -EINVAL;
+	if ((start + size) > src->size)
+		return -EINVAL;
+
+	dest->mem_flags = src->mem_flags | NVGPU_MEM_FLAG_SHADOW_COPY;
+	dest->aperture  = src->aperture;
+	dest->skip_wmb  = src->skip_wmb;
+	dest->size      = size;
+
+	/*
+	 * Re-use the CPU mapping only if the mapping was made by the DMA API.
+	 */
+	if (!(src->priv.flags & NVGPU_DMA_NO_KERNEL_MAPPING))
+		dest->cpu_va = src->cpu_va + (PAGE_SIZE * start_page);
+
+	dest->priv.pages = src->priv.pages + start_page;
+	dest->priv.flags = src->priv.flags;
+
+	new_iova = sg_dma_address(src->priv.sgt->sgl) ?
+		sg_dma_address(src->priv.sgt->sgl) + start : 0;
+
+	/*
+	 * Make a new SG table that is based only on the subset of pages that
+	 * is passed to us. This table gets freed by the dma free routines.
+	 */
+	if (src->priv.flags & NVGPU_DMA_NO_KERNEL_MAPPING)
+		ret = gk20a_get_sgtable_from_pages(g->dev, &dest->priv.sgt,
+						   src->priv.pages + start_page,
+						   new_iova, size);
+	else
+		ret = gk20a_get_sgtable(g->dev, &dest->priv.sgt, dest->cpu_va,
+					new_iova, size);
+
+	return ret;
 }

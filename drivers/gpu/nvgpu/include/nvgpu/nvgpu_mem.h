@@ -49,6 +49,13 @@ struct nvgpu_mem {
 	bool					 skip_wmb;
 
 	/*
+	 * Set when a nvgpu_mem struct is not a "real" nvgpu_mem struct. Instead
+	 * the struct is just a copy of another nvgpu_mem struct.
+	 */
+#define NVGPU_MEM_FLAG_SHADOW_COPY		 (1 << 0)
+	unsigned long				 mem_flags;
+
+	/*
 	 * Only populated for a sysmem allocation.
 	 */
 	void					*cpu_va;
@@ -85,6 +92,42 @@ static inline const char *nvgpu_aperture_str(enum nvgpu_aperture aperture)
 	};
 	return "UNKNOWN";
 }
+
+/**
+ * nvgpu_mem_create_from_mem - Create a new nvgpu_mem struct from an old one.
+ *
+ * @g          - The GPU.
+ * @dest       - Destination nvgpu_mem to hold resulting memory description.
+ * @src        - Source memory. Must be valid.
+ * @start_page - Starting page to use.
+ * @nr_pages   - Number of pages to place in the new nvgpu_mem.
+ *
+ * Create a new nvgpu_mem struct describing a subsection of the @src nvgpu_mem.
+ * This will create an nvpgu_mem object starting at @start_page and is @nr_pages
+ * long. This currently only works on SYSMEM nvgpu_mems. If this is called on a
+ * VIDMEM nvgpu_mem then this will return an error.
+ *
+ * There is a _major_ caveat to this API: if the source buffer is freed before
+ * the copy is freed then the copy will become invalid. This is a result from
+ * how typical DMA APIs work: we can't call free on the buffer multiple times.
+ * Nor can we call free on parts of a buffer. Thus the only way to ensure that
+ * the entire buffer is actually freed is to call free once on the source
+ * buffer. Since these nvgpu_mem structs are not ref-counted in anyway it is up
+ * to the caller of this API to _ensure_ that the resulting nvgpu_mem buffer
+ * from this API is freed before the source buffer. Otherwise there can and will
+ * be memory corruption.
+ *
+ * The resulting nvgpu_mem should be released with the nvgpu_dma_free() or the
+ * nvgpu_dma_unmap_free() function depending on whether or not the resulting
+ * nvgpu_mem has been mapped.
+ *
+ * This will return 0 on success. An error is returned if the resulting
+ * nvgpu_mem would not make sense or if a new scatter gather table cannot be
+ * created.
+ */
+int nvgpu_mem_create_from_mem(struct gk20a *g,
+			      struct nvgpu_mem *dest, struct nvgpu_mem *src,
+			      int start_page, int nr_pages);
 
 /*
  * Buffer accessors - wrap between begin() and end() if there is no permanent

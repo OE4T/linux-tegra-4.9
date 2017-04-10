@@ -11,8 +11,6 @@
  * more details.
  */
 
-#include <linux/delay.h>
-#include <linux/types.h>
 #include <linux/firmware.h>
 #include <linux/pci.h>
 
@@ -118,7 +116,7 @@ static int gm206_bios_devinit(struct gk20a *g)
 			gk20a_dbg_fn("done");
 			break;
 		}
-		udelay(PMU_BOOT_TIMEOUT_DEFAULT);
+		nvgpu_udelay(PMU_BOOT_TIMEOUT_DEFAULT);
 	} while (!nvgpu_timeout_expired(&timeout));
 
 	if (nvgpu_timeout_peek_expired(&timeout)) {
@@ -161,7 +159,7 @@ static int gm206_bios_devinit(struct gk20a *g)
 				gk20a_readl(g, pwr_falcon_cpuctl_r())) &&
 				    top_scratch1_devinit_completed_v(
 				gk20a_readl(g, top_scratch1_r()));
-		udelay(PMU_BOOT_TIMEOUT_DEFAULT);
+		nvgpu_udelay(PMU_BOOT_TIMEOUT_DEFAULT);
 	} while (!devinit_completed && !nvgpu_timeout_expired(&timeout));
 
 	if (nvgpu_timeout_peek_expired(&timeout))
@@ -196,7 +194,7 @@ static int gm206_bios_preos(struct gk20a *g)
 			gk20a_dbg_fn("done");
 			break;
 		}
-		udelay(PMU_BOOT_TIMEOUT_DEFAULT);
+		nvgpu_udelay(PMU_BOOT_TIMEOUT_DEFAULT);
 	} while (!nvgpu_timeout_expired(&timeout));
 
 	if (nvgpu_timeout_peek_expired(&timeout)) {
@@ -229,7 +227,7 @@ static int gm206_bios_preos(struct gk20a *g)
 	do {
 		val = pwr_falcon_cpuctl_halt_intr_v(
 				gk20a_readl(g, pwr_falcon_cpuctl_r()));
-		udelay(PMU_BOOT_TIMEOUT_DEFAULT);
+		nvgpu_udelay(PMU_BOOT_TIMEOUT_DEFAULT);
 	} while (!val && !nvgpu_timeout_expired(&timeout));
 
 	if (nvgpu_timeout_peek_expired(&timeout)) {

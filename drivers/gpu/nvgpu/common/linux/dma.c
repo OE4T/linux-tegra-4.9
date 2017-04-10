@@ -21,6 +21,8 @@
 #include <nvgpu/lock.h>
 #include <nvgpu/bug.h>
 
+#include <nvgpu/linux/dma.h>
+
 #include "gk20a/gk20a.h"
 
 #if defined(CONFIG_GK20A_VIDMEM)
@@ -126,11 +128,11 @@ int nvgpu_dma_alloc_flags_sys(struct gk20a *g, unsigned long flags,
 	}
 
 	if (flags & NVGPU_DMA_NO_KERNEL_MAPPING)
-		err = gk20a_get_sgtable_from_pages(d, &mem->priv.sgt,
+		err = nvgpu_get_sgtable_from_pages(g, &mem->priv.sgt,
 						   mem->priv.pages,
 						   iova, size);
 	else {
-		err = gk20a_get_sgtable(d, &mem->priv.sgt, mem->cpu_va,
+		err = nvgpu_get_sgtable(g, &mem->priv.sgt, mem->cpu_va,
 					iova, size);
 		memset(mem->cpu_va, 0, size);
 	}
@@ -359,7 +361,7 @@ static void nvgpu_dma_free_sys(struct gk20a *g, struct nvgpu_mem *mem)
 	}
 
 	if (mem->priv.sgt)
-		gk20a_free_sgtable(g, &mem->priv.sgt);
+		nvgpu_free_sgtable(g, &mem->priv.sgt);
 
 	mem->size = 0;
 	mem->aperture = APERTURE_INVALID;
@@ -389,7 +391,7 @@ static void nvgpu_dma_free_vid(struct gk20a *g, struct nvgpu_mem *mem)
 		nvgpu_memset(g, mem, 0, 0, mem->size);
 		nvgpu_free(mem->allocator,
 			   (u64)get_vidmem_page_alloc(mem->priv.sgt->sgl));
-		gk20a_free_sgtable(g, &mem->priv.sgt);
+		nvgpu_free_sgtable(g, &mem->priv.sgt);
 
 		mem->size = 0;
 		mem->aperture = APERTURE_INVALID;
@@ -412,9 +414,74 @@ void nvgpu_dma_free(struct gk20a *g, struct nvgpu_mem *mem)
 void nvgpu_dma_unmap_free(struct vm_gk20a *vm, struct nvgpu_mem *mem)
 {
 	if (mem->gpu_va)
-		gk20a_gmmu_unmap(vm, mem->gpu_va, mem->size,
-				 gk20a_mem_flag_none);
+		gk20a_gmmu_unmap(vm, mem->gpu_va,
+				 mem->size, gk20a_mem_flag_none);
 	mem->gpu_va = 0;
 
 	nvgpu_dma_free(vm->mm->g, mem);
+}
+
+int nvgpu_get_sgtable(struct gk20a *g, struct sg_table **sgt,
+		      void *cpuva, u64 iova, size_t size)
+{
+	int err = 0;
+	struct sg_table *tbl;
+
+	tbl = nvgpu_kzalloc(g, sizeof(struct sg_table));
+	if (!tbl) {
+		err = -ENOMEM;
+		goto fail;
+	}
+
+	err = dma_get_sgtable(dev_from_gk20a(g), tbl, cpuva, iova, size);
+	if (err)
+		goto fail;
+
+	sg_dma_address(tbl->sgl) = iova;
+	*sgt = tbl;
+
+	return 0;
+
+fail:
+	if (tbl)
+		nvgpu_kfree(g, tbl);
+
+	return err;
+}
+
+int nvgpu_get_sgtable_from_pages(struct gk20a *g, struct sg_table **sgt,
+				 struct page **pages, u64 iova, size_t size)
+{
+	int err = 0;
+	struct sg_table *tbl;
+
+	tbl = nvgpu_kzalloc(g, sizeof(struct sg_table));
+	if (!tbl) {
+		err = -ENOMEM;
+		goto fail;
+	}
+
+	err = sg_alloc_table_from_pages(tbl, pages,
+					DIV_ROUND_UP(size, PAGE_SIZE),
+					0, size, GFP_KERNEL);
+	if (err)
+		goto fail;
+
+	sg_dma_address(tbl->sgl) = iova;
+	*sgt = tbl;
+
+	return 0;
+
+fail:
+	if (tbl)
+		nvgpu_kfree(g, tbl);
+
+	return err;
+}
+
+void nvgpu_free_sgtable(struct gk20a *g, struct sg_table **sgt)
+{
+	sg_free_table(*sgt);
+	nvgpu_kfree(g, *sgt);
+	*sgt = NULL;
 }

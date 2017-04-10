@@ -38,6 +38,8 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/log2.h>
 
+#include <nvgpu/linux/dma.h>
+
 #include "gk20a.h"
 #include "mm_gk20a.h"
 #include "fence_gk20a.h"
@@ -2621,7 +2623,7 @@ static void gk20a_vidmem_clear_mem_worker(struct work_struct *work)
 		gk20a_gmmu_clear_vidmem_mem(g, mem);
 		nvgpu_free(mem->allocator,
 			   (u64)get_vidmem_page_alloc(mem->priv.sgt->sgl));
-		gk20a_free_sgtable(g, &mem->priv.sgt);
+		nvgpu_free_sgtable(g, &mem->priv.sgt);
 
 		WARN_ON(atomic64_sub_return(mem->size,
 					&g->mm.vidmem.bytes_pending) < 0);
@@ -2666,75 +2668,6 @@ void gk20a_gmmu_unmap(struct vm_gk20a *vm,
 			false,
 			NULL);
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
-}
-
-/* get sg_table from already allocated buffer */
-int gk20a_get_sgtable(struct device *d, struct sg_table **sgt,
-			void *cpuva, u64 iova,
-			size_t size)
-{
-	struct gk20a *g = get_gk20a(d);
-
-	int err = 0;
-	*sgt = nvgpu_kzalloc(g, sizeof(struct sg_table));
-	if (!(*sgt)) {
-		nvgpu_err(g, "failed to allocate memory\n");
-		err = -ENOMEM;
-		goto fail;
-	}
-	err = dma_get_sgtable(d, *sgt,
-			cpuva, iova,
-			size);
-	if (err) {
-		nvgpu_err(g, "failed to create sg table\n");
-		goto fail;
-	}
-	sg_dma_address((*sgt)->sgl) = iova;
-
-	return 0;
- fail:
-	if (*sgt) {
-		nvgpu_kfree(g, *sgt);
-		*sgt = NULL;
-	}
-	return err;
-}
-
-int gk20a_get_sgtable_from_pages(struct device *d, struct sg_table **sgt,
-			struct page **pages, u64 iova,
-			size_t size)
-{
-	int err = 0;
-	struct gk20a *g = get_gk20a(d);
-
-	*sgt = nvgpu_kzalloc(g, sizeof(struct sg_table));
-	if (!(*sgt)) {
-		nvgpu_err(g, "failed to allocate memory\n");
-		err = -ENOMEM;
-		goto fail;
-	}
-	err = sg_alloc_table_from_pages(*sgt, pages,
-			DIV_ROUND_UP(size, PAGE_SIZE), 0, size, GFP_KERNEL);
-	if (err) {
-		nvgpu_err(g, "failed to allocate sg_table\n");
-		goto fail;
-	}
-	sg_dma_address((*sgt)->sgl) = iova;
-
-	return 0;
- fail:
-	if (*sgt) {
-		nvgpu_kfree(get_gk20a(d), *sgt);
-		*sgt = NULL;
-	}
-	return err;
-}
-
-void gk20a_free_sgtable(struct gk20a *g, struct sg_table **sgt)
-{
-	sg_free_table(*sgt);
-	nvgpu_kfree(g, *sgt);
-	*sgt = NULL;
 }
 
 u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, dma_addr_t iova)

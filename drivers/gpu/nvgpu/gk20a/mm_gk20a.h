@@ -497,16 +497,6 @@ void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 
 int gk20a_mm_suspend(struct gk20a *g);
 
-int gk20a_get_sgtable(struct device *d, struct sg_table **sgt,
-			void *cpuva, u64 iova,
-			size_t size);
-
-int gk20a_get_sgtable_from_pages(struct device *d, struct sg_table **sgt,
-			struct page **pages, u64 iova,
-			size_t size);
-
-void gk20a_free_sgtable(struct gk20a *g, struct sg_table **sgt);
-
 u64 gk20a_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl,
 		u32 flags);
 u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, dma_addr_t iova);

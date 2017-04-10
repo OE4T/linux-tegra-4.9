@@ -25,6 +25,8 @@
 #include <nvgpu/acr/nvgpu_acr.h>
 #include <nvgpu/firmware.h>
 
+#include <nvgpu/linux/dma.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "mm_gm20b.h"
@@ -456,7 +458,7 @@ int prepare_ucode_blob(struct gk20a *g)
 	gm20b_dbg_pmu("prepare ucode blob return 0\n");
 	free_acr_resources(g, plsfm);
  free_sgt:
-	gk20a_free_sgtable(g, &sgt);
+	nvgpu_free_sgtable(g, &sgt);
 	return err;
 }
 

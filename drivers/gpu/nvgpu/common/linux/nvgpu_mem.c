@@ -20,6 +20,8 @@
 #include <nvgpu/log.h>
 #include <nvgpu/bug.h>
 
+#include <nvgpu/linux/dma.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
 
@@ -286,11 +288,11 @@ int nvgpu_mem_create_from_mem(struct gk20a *g,
 	 * is passed to us. This table gets freed by the dma free routines.
 	 */
 	if (src->priv.flags & NVGPU_DMA_NO_KERNEL_MAPPING)
-		ret = gk20a_get_sgtable_from_pages(g->dev, &dest->priv.sgt,
+		ret = nvgpu_get_sgtable_from_pages(g, &dest->priv.sgt,
 						   src->priv.pages + start_page,
 						   new_iova, size);
 	else
-		ret = gk20a_get_sgtable(g->dev, &dest->priv.sgt, dest->cpu_va,
+		ret = nvgpu_get_sgtable(g, &dest->priv.sgt, dest->cpu_va,
 					new_iova, size);
 
 	return ret;

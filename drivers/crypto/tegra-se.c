@@ -3409,7 +3409,7 @@ struct device *get_se_device(void)
 }
 EXPORT_SYMBOL(get_se_device);
 
-static int tegra_se_suspend(struct device *dev)
+static int __maybe_unused tegra_se_suspend(struct device *dev)
 {
 	int ret = 0;
 	ret = se_suspend(dev, false);
@@ -3417,7 +3417,7 @@ static int tegra_se_suspend(struct device *dev)
 	return ret;
 }
 
-static int tegra_se_resume(struct device *dev)
+static int __maybe_unused tegra_se_resume(struct device *dev)
 {
 	struct tegra_se_dev *se_dev = sg_tegra_se_dev;
 
@@ -3464,7 +3464,7 @@ static int tegra_se_runtime_resume(struct device *dev)
 static const struct dev_pm_ops tegra_se_dev_pm_ops = {
 	.runtime_suspend = tegra_se_runtime_suspend,
 	.runtime_resume = tegra_se_runtime_resume,
-#if defined(CONFIG_PM)
+#if 0 /* defined(CONFIG_PM) */
 	.suspend = tegra_se_suspend,
 	.resume = tegra_se_resume,
 #endif

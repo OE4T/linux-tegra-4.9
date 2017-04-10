@@ -119,7 +119,7 @@
 		pinctrl-4 = <&sdmmc1_drv_code_1_8V>;
 		pinctrl-5 = <&sdmmc1_default_drv_code_3_3V>;
 		nvidia,sd-device;
-		wp-gpios = <&gpio TEGRA_GPIO_PZ4 0>;
+		wp-gpios = <&gpio TEGRA_GPIO(Z, 4) 0>;
 		status = "okay";
 	};
 

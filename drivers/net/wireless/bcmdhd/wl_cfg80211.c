@@ -234,6 +234,17 @@ common_iface_combinations[] = {
 };
 #endif /* LINUX_VER >= 3.0 && (WL_IFACE_COMB_NUM_CHANNELS || WL_CFG80211_P2P_DEV_IF) */
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 6, 0))
+enum ieee80211_band {
+	IEEE80211_BAND_2GHZ = NL80211_BAND_2GHZ,
+	IEEE80211_BAND_5GHZ = NL80211_BAND_5GHZ,
+	IEEE80211_BAND_60GHZ = NL80211_BAND_60GHZ,
+
+	/* keep last */
+	IEEE80211_NUM_BANDS
+};
+#endif
+
 /* Data Element Definitions */
 #define WPS_ID_CONFIG_METHODS     0x1008
 #define WPS_ID_REQ_TYPE           0x103A
@@ -5266,6 +5277,9 @@ static s32 wl_cfg80211_suspend(struct wiphy *wiphy)
 	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
 	struct net_info *iter, *next;
 	struct net_device *ndev = bcmcfg_to_prmry_ndev(cfg);
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 7, 0))
+	struct cfg80211_scan_info info = {0};
+#endif
 	unsigned long flags;
 	if (unlikely(!wl_get_drv_status(cfg, READY, ndev))) {
 		WL_INFORM(("device is not ready : status (%d)\n",
@@ -5279,7 +5293,12 @@ static s32 wl_cfg80211_suspend(struct wiphy *wiphy)
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 		TEGRA_SCAN_DONE(cfg->scan_request, true)
 #endif
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 7, 0))
+		info.aborted = true;
+		cfg80211_scan_done(cfg->scan_request, &info);
+#else
 		cfg80211_scan_done(cfg->scan_request, true);
+#endif
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 skip_cfg80211_scan_done:
 #endif
@@ -9862,6 +9881,9 @@ wl_notify_scan_status(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 	struct channel_info channel_inform;
 	struct wl_scan_results *bss_list;
 	struct net_device *ndev = NULL;
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 7, 0))
+	struct cfg80211_scan_info info = {0};
+#endif
 	u32 len = WL_SCAN_BUF_MAX;
 	s32 err = 0;
 	unsigned long flags;
@@ -9912,7 +9934,12 @@ scan_done_out:
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 		TEGRA_SCAN_DONE(cfg->scan_request, false)
 #endif
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 7, 0))
+		info.aborted = false;
+		cfg80211_scan_done(cfg->scan_request, &info);
+#else
 		cfg80211_scan_done(cfg->scan_request, false);
+#endif
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 skip_cfg80211_scan_done:
 #endif
@@ -10744,6 +10771,9 @@ static s32 wl_notify_escan_complete(struct bcm_cfg80211 *cfg,
 	unsigned long flags;
 	struct net_device *dev;
 	struct ieee80211_channel *band_chan_arr = NULL;
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 7, 0))
+	struct cfg80211_scan_info info = {0};
+#endif
 	u32  j, band, channel, array_size;
 	wl_uint32_list_t *list;
 	s32 i;
@@ -10800,7 +10830,12 @@ static s32 wl_notify_escan_complete(struct bcm_cfg80211 *cfg,
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 		TEGRA_SCAN_DONE(cfg->scan_request, aborted)
 #endif
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 7, 0))
+		info.aborted = aborted;
+		cfg80211_scan_done(cfg->scan_request, &info);
+#else
 		cfg80211_scan_done(cfg->scan_request, aborted);
+#endif
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 skip_cfg80211_scan_done:
 #endif
@@ -12770,6 +12805,9 @@ static s32 __wl_cfg80211_down(struct bcm_cfg80211 *cfg)
 #if defined(WL_CFG80211) && defined(WL_ENABLE_P2P_IF)
 	struct net_device *p2p_net = cfg->p2p_net;
 #endif 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 7, 0))
+	struct cfg80211_scan_info info = {0};
+#endif
 	u32 bssidx = 0;
 #ifdef PROP_TXSTATUS_VSDB
 #if defined(BCMSDIO)
@@ -12827,7 +12865,12 @@ if (bcmdhd_prop_txstatus_vsdb) {
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 		TEGRA_SCAN_DONE(cfg->scan_request, true)
 #endif
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 7, 0))
+		info.aborted = true;
+		cfg80211_scan_done(cfg->scan_request, &info);
+#else
 		cfg80211_scan_done(cfg->scan_request, true);
+#endif
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 skip_cfg80211_scan_done:
 #endif
@@ -14237,6 +14280,9 @@ int wl_cfg80211_scan_stop(bcm_struct_cfgdev *cfgdev)
 {
 	struct bcm_cfg80211 *cfg = NULL;
 	struct net_device *ndev = NULL;
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 7, 0))
+	struct cfg80211_scan_info info = {0};
+#endif
 	unsigned long flags;
 	int clear_flag = 0;
 	int ret = 0;
@@ -14258,7 +14304,12 @@ int wl_cfg80211_scan_stop(bcm_struct_cfgdev *cfgdev)
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 		TEGRA_SCAN_DONE(cfg->scan_request, true)
 #endif
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(4, 7, 0))
+		info.aborted = true;
+		cfg80211_scan_done(cfg->scan_request, &info);
+#else
 		cfg80211_scan_done(cfg->scan_request, true);
+#endif
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 skip_cfg80211_scan_done:
 #endif

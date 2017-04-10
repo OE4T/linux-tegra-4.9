@@ -422,6 +422,8 @@ static void eqos_adjust_link(struct net_device *dev)
 	if (new_state)
 		phy_print_status(phydev);
 
+	spin_unlock(&pdata->lock);
+
 	/* At this stage, it could be need to setup the EEE or adjust some
 	 * MAC related HW registers.
 	 */
@@ -429,7 +431,6 @@ static void eqos_adjust_link(struct net_device *dev)
 	pdata->eee_enabled = eqos_eee_init(pdata);
 #endif
 
-	spin_unlock(&pdata->lock);
 	if (speed_changed) {
 		hw_if->set_tx_clk_speed(pdata, phydev->speed);
 		/* recalibrate if speed 10 to 100 or 1000mbps */

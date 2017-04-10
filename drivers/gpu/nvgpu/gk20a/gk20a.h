@@ -481,6 +481,7 @@ struct gpu_ops {
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/
 		u32 cmd_id_zbc_table_update;
+		bool is_pmu_zbc_save_supported;
 		u32 (*get_pmu_cmdline_args_size)(struct pmu_gk20a *pmu);
 		void (*set_pmu_cmdline_args_cpu_freq)(struct pmu_gk20a *pmu,
 			u32 freq);

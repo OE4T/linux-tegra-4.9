@@ -1482,6 +1482,7 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 			set_perfmon_cntr_group_id_v2;
 		g->ops.pmu_ver.get_perfmon_cntr_sz = pmu_perfmon_cntr_sz_v2;
 		g->ops.pmu_ver.cmd_id_zbc_table_update = 16;
+		g->ops.pmu_ver.is_pmu_zbc_save_supported = true;
 		g->ops.pmu_ver.get_pmu_cmdline_args_size =
 			pmu_cmdline_size_v4;
 		g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq =
@@ -1583,6 +1584,7 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 			set_perfmon_cntr_group_id_v2;
 		g->ops.pmu_ver.get_perfmon_cntr_sz = pmu_perfmon_cntr_sz_v2;
 		g->ops.pmu_ver.cmd_id_zbc_table_update = 16;
+		g->ops.pmu_ver.is_pmu_zbc_save_supported = false;
 		g->ops.pmu_ver.get_pmu_cmdline_args_size =
 			pmu_cmdline_size_v5;
 		g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq =
@@ -1690,6 +1692,7 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 			set_perfmon_cntr_group_id_v2;
 		g->ops.pmu_ver.get_perfmon_cntr_sz = pmu_perfmon_cntr_sz_v2;
 		g->ops.pmu_ver.cmd_id_zbc_table_update = 16;
+		g->ops.pmu_ver.is_pmu_zbc_save_supported = true;
 		g->ops.pmu_ver.get_pmu_cmdline_args_size =
 			pmu_cmdline_size_v5;
 		g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq =
@@ -1810,6 +1813,7 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 			set_perfmon_cntr_group_id_v2;
 		g->ops.pmu_ver.get_perfmon_cntr_sz = pmu_perfmon_cntr_sz_v2;
 		g->ops.pmu_ver.cmd_id_zbc_table_update = 16;
+		g->ops.pmu_ver.is_pmu_zbc_save_supported = true;
 		g->ops.pmu_ver.get_pmu_cmdline_args_size =
 			pmu_cmdline_size_v3;
 		g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq =
@@ -1912,6 +1916,7 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 			set_perfmon_cntr_group_id_v2;
 		g->ops.pmu_ver.get_perfmon_cntr_sz = pmu_perfmon_cntr_sz_v2;
 		g->ops.pmu_ver.cmd_id_zbc_table_update = 16;
+		g->ops.pmu_ver.is_pmu_zbc_save_supported = true;
 		g->ops.pmu_ver.get_pmu_cmdline_args_size =
 			pmu_cmdline_size_v2;
 		g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq =
@@ -2007,6 +2012,7 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 		g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_idx =
 				pg_cmd_eng_buf_load_set_dma_idx_v0;
 		g->ops.pmu_ver.cmd_id_zbc_table_update = 16;
+		g->ops.pmu_ver.is_pmu_zbc_save_supported = true;
 		g->ops.pmu_ver.get_perfmon_cntr_ptr = get_perfmon_cntr_ptr_v0;
 		g->ops.pmu_ver.set_perfmon_cntr_ut = set_perfmon_cntr_ut_v0;
 		g->ops.pmu_ver.set_perfmon_cntr_lt = set_perfmon_cntr_lt_v0;
@@ -2108,6 +2114,7 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 		g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_idx =
 				pg_cmd_eng_buf_load_set_dma_idx_v0;
 		g->ops.pmu_ver.cmd_id_zbc_table_update = 14;
+		g->ops.pmu_ver.is_pmu_zbc_save_supported = true;
 		g->ops.pmu_ver.get_perfmon_cntr_ptr = get_perfmon_cntr_ptr_v0;
 		g->ops.pmu_ver.set_perfmon_cntr_ut = set_perfmon_cntr_ut_v0;
 		g->ops.pmu_ver.set_perfmon_cntr_lt = set_perfmon_cntr_lt_v0;
@@ -3435,9 +3442,11 @@ static void pmu_setup_hw_enable_elpg(struct gk20a *g)
 	pmu->initialized = true;
 	pmu->pmu_state = PMU_STATE_STARTED;
 
-	pmu->zbc_ready = true;
-	/* Save zbc table after PMU is initialized. */
-	gk20a_pmu_save_zbc(g, 0xf);
+	if (g->ops.pmu_ver.is_pmu_zbc_save_supported) {
+		/* Save zbc table after PMU is initialized. */
+		pmu->zbc_ready = true;
+		gk20a_pmu_save_zbc(g, 0xf);
+	}
 
 	if (g->elpg_enabled) {
 		/* Init reg with prod values*/

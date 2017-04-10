@@ -26,6 +26,7 @@
 #include <trace/events/gk20a.h>
 
 #include <nvgpu/dma.h>
+#include <nvgpu/gmmu.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/kmem.h>
@@ -83,8 +84,8 @@ __must_hold(&cde_app->mutex)
 
 	/* release mapped memory */
 	gk20a_deinit_cde_img(cde_ctx);
-	gk20a_gmmu_unmap(vm, cde_ctx->backing_store_vaddr,
-			 g->gr.compbit_store.mem.size, 1);
+	nvgpu_gmmu_unmap(vm, &g->gr.compbit_store.mem,
+			 cde_ctx->backing_store_vaddr);
 
 	/* free the channel */
 	gk20a_channel_close(ch);
@@ -1241,7 +1242,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	}
 
 	/* map backing store to gpu virtual space */
-	vaddr = gk20a_gmmu_map(ch->vm, &gr->compbit_store.mem.priv.sgt,
+	vaddr = nvgpu_gmmu_map(ch->vm, &gr->compbit_store.mem,
 			       g->gr.compbit_store.mem.size,
 			       NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 			       gk20a_mem_flag_read_only,
@@ -1272,7 +1273,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	return 0;
 
 err_init_cde_img:
-	gk20a_gmmu_unmap(ch->vm, vaddr, g->gr.compbit_store.mem.size, 1);
+	nvgpu_gmmu_unmap(ch->vm, &g->gr.compbit_store.mem, vaddr);
 err_map_backingstore:
 err_alloc_gpfifo:
 	gk20a_vm_put(ch->vm);

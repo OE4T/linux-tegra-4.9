@@ -509,22 +509,6 @@ bool gk20a_mm_mmu_debug_mode_enabled(struct gk20a *g);
 
 int gk20a_mm_mmu_vpr_info_fetch(struct gk20a *g);
 
-u64 gk20a_gmmu_map(struct vm_gk20a *vm,
-		struct sg_table **sgt,
-		u64 size,
-		u32 flags,
-		int rw_flag,
-		bool priv,
-		enum nvgpu_aperture aperture);
-u64 gk20a_gmmu_fixed_map(struct vm_gk20a *vm,
-		struct sg_table **sgt,
-		u64 addr,
-		u64 size,
-		u32 flags,
-		int rw_flag,
-		bool priv,
-		enum nvgpu_aperture aperture);
-
 static inline phys_addr_t gk20a_mem_phys(struct nvgpu_mem *mem)
 {
 	/* FIXME: the sgt/sgl may get null if this is accessed e.g. in an isr
@@ -564,11 +548,6 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			bool priv,
 			struct vm_gk20a_mapping_batch *batch,
 			enum nvgpu_aperture aperture);
-
-void gk20a_gmmu_unmap(struct vm_gk20a *vm,
-		u64 vaddr,
-		u64 size,
-		int rw_flag);
 
 void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 			u64 vaddr,

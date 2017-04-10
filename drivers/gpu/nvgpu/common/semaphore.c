@@ -14,6 +14,7 @@
  */
 
 #include <nvgpu/dma.h>
+#include <nvgpu/gmmu.h>
 #include <nvgpu/semaphore.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
@@ -197,7 +198,7 @@ int nvgpu_semaphore_pool_map(struct nvgpu_semaphore_pool *p,
 	 */
 	__lock_sema_sea(p->sema_sea);
 
-	addr = gk20a_gmmu_fixed_map(vm, &p->sema_sea->sea_mem.priv.sgt,
+	addr = nvgpu_gmmu_map_fixed(vm, &p->sema_sea->sea_mem,
 				    p->sema_sea->gpu_va,
 				    p->sema_sea->map_size,
 				    0, gk20a_mem_flag_read_only, 0,
@@ -225,7 +226,7 @@ int nvgpu_semaphore_pool_map(struct nvgpu_semaphore_pool *p,
 	if (err)
 		goto fail_unmap;
 
-	addr = gk20a_gmmu_map(vm, &p->rw_mem.priv.sgt, SZ_4K, 0,
+	addr = nvgpu_gmmu_map(vm, &p->rw_mem, SZ_4K, 0,
 			      gk20a_mem_flag_none, 0,
 			      p->rw_mem.aperture);
 
@@ -250,10 +251,7 @@ int nvgpu_semaphore_pool_map(struct nvgpu_semaphore_pool *p,
 fail_free_submem:
 	nvgpu_dma_free(pool_to_gk20a(p), &p->rw_mem);
 fail_unmap:
-	gk20a_gmmu_unmap(vm,
-			 p->sema_sea->sea_mem.gpu_va,
-			 p->sema_sea->map_size,
-			 gk20a_mem_flag_none);
+	nvgpu_gmmu_unmap(vm, &p->sema_sea->sea_mem, p->gpu_va_ro);
 	gpu_sema_dbg(pool_to_gk20a(p),
 		     "  %d: Failed to map semaphore pool!", p->page_idx);
 fail_unlock:
@@ -269,14 +267,8 @@ void nvgpu_semaphore_pool_unmap(struct nvgpu_semaphore_pool *p,
 {
 	__lock_sema_sea(p->sema_sea);
 
-	gk20a_gmmu_unmap(vm,
-			 p->sema_sea->sea_mem.gpu_va,
-			 p->sema_sea->sea_mem.size,
-			 gk20a_mem_flag_none);
-	gk20a_gmmu_unmap(vm,
-			 p->rw_mem.gpu_va,
-			 p->rw_mem.size,
-			 gk20a_mem_flag_none);
+	nvgpu_gmmu_unmap(vm, &p->sema_sea->sea_mem, p->gpu_va_ro);
+	nvgpu_gmmu_unmap(vm, &p->rw_mem, p->gpu_va);
 	nvgpu_dma_free(pool_to_gk20a(p), &p->rw_mem);
 
 	p->gpu_va = 0;

@@ -20,6 +20,7 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/lock.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/gmmu.h>
 
 #include <nvgpu/linux/dma.h>
 
@@ -71,7 +72,7 @@ int nvgpu_dma_alloc_flags(struct gk20a *g, unsigned long flags, size_t size,
 		/*
 		 * Force the no-kernel-mapping flag on because we don't support
 		 * the lack of it for vidmem - the user should not care when
-		 * using gk20a_gmmu_alloc_map and it's vidmem, or if there's a
+		 * using nvgpu_gmmu_alloc_map and it's vidmem, or if there's a
 		 * difference, the user should use the flag explicitly anyway.
 		 */
 		int err = nvgpu_dma_alloc_flags_vid(g,
@@ -285,7 +286,7 @@ int nvgpu_dma_alloc_map_flags_sys(struct vm_gk20a *vm, unsigned long flags,
 	if (err)
 		return err;
 
-	mem->gpu_va = gk20a_gmmu_map(vm, &mem->priv.sgt, size, 0,
+	mem->gpu_va = nvgpu_gmmu_map(vm, mem, size, 0,
 				     gk20a_mem_flag_none, false,
 				     mem->aperture);
 	if (!mem->gpu_va) {
@@ -315,7 +316,7 @@ int nvgpu_dma_alloc_map_flags_vid(struct vm_gk20a *vm, unsigned long flags,
 	if (err)
 		return err;
 
-	mem->gpu_va = gk20a_gmmu_map(vm, &mem->priv.sgt, size, 0,
+	mem->gpu_va = nvgpu_gmmu_map(vm, mem, size, 0,
 				     gk20a_mem_flag_none, false,
 				     mem->aperture);
 	if (!mem->gpu_va) {
@@ -420,8 +421,7 @@ void nvgpu_dma_free(struct gk20a *g, struct nvgpu_mem *mem)
 void nvgpu_dma_unmap_free(struct vm_gk20a *vm, struct nvgpu_mem *mem)
 {
 	if (mem->gpu_va)
-		gk20a_gmmu_unmap(vm, mem->gpu_va,
-				 mem->size, gk20a_mem_flag_none);
+		nvgpu_gmmu_unmap(vm, mem, mem->gpu_va);
 	mem->gpu_va = 0;
 
 	nvgpu_dma_free(vm->mm->g, mem);

@@ -19,6 +19,7 @@
 #include <linux/platform/tegra/mc.h>
 
 #include <nvgpu/dma.h>
+#include <nvgpu/gmmu.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/kmem.h>
@@ -413,7 +414,7 @@ int prepare_ucode_blob(struct gk20a *g)
 
 	page = phys_to_page(wpr_addr);
 	__nvgpu_mem_create_from_pages(g, &g->pmu.wpr_buf, &page, 1);
-	g->pmu.wpr_buf.gpu_va = gk20a_gmmu_map(vm, &g->pmu.wpr_buf.priv.sgt,
+	g->pmu.wpr_buf.gpu_va = nvgpu_gmmu_map(vm, &g->pmu.wpr_buf,
 					       wprsize, 0, gk20a_mem_flag_none,
 					       false, APERTURE_SYSMEM);
 	gm20b_dbg_pmu("wpr mapped gpu va :%llx\n", g->pmu.wpr_buf.gpu_va);
@@ -445,8 +446,7 @@ int prepare_ucode_blob(struct gk20a *g)
 	gm20b_dbg_pmu("prepare ucode blob return 0\n");
 	free_acr_resources(g, plsfm);
 free_sgt:
-	gk20a_gmmu_unmap(vm, g->pmu.wpr_buf.gpu_va,
-			 g->pmu.wpr_buf.size, gk20a_mem_flag_none);
+	nvgpu_gmmu_unmap(vm, &g->pmu.wpr_buf, g->pmu.wpr_buf.gpu_va);
 	return err;
 }
 
@@ -1412,8 +1412,8 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 			goto err_done;
 		}
 
-		acr->hsbl_ucode.gpu_va = gk20a_gmmu_map(vm,
-				&acr->hsbl_ucode.priv.sgt,
+		acr->hsbl_ucode.gpu_va = nvgpu_gmmu_map(vm,
+				&acr->hsbl_ucode,
 				bl_sz,
 				0, /* flags */
 				gk20a_mem_flag_read_only, false,
@@ -1461,8 +1461,7 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 	start_gm20b_pmu(g);
 	return 0;
 err_unmap_bl:
-	gk20a_gmmu_unmap(vm, acr->hsbl_ucode.gpu_va,
-			acr->hsbl_ucode.size, gk20a_mem_flag_none);
+	nvgpu_gmmu_unmap(vm, &acr->hsbl_ucode, acr->hsbl_ucode.gpu_va);
 err_free_ucode:
 	nvgpu_dma_free(g, &acr->hsbl_ucode);
 err_done:

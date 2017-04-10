@@ -197,6 +197,11 @@ void nvgpu_dma_free(struct gk20a *g, struct nvgpu_mem *mem);
  * Note this is different than mapping it into the CPU. This memory can be
  * either placed in VIDMEM or SYSMEM, which ever is more convenient for the
  * driver.
+ *
+ * Note: currently a bug exists in the nvgpu_dma_alloc_map*() routines: you
+ * cannot use nvgpu_gmmu_map() on said buffer - it will overwrite the necessary
+ * information for the DMA unmap routines to actually unmap the buffer. You
+ * will either leak mappings or see GMMU faults.
  */
 int nvgpu_dma_alloc_map(struct vm_gk20a *vm, size_t size,
 		struct nvgpu_mem *mem);

@@ -23,6 +23,8 @@
 
 #include <uapi/linux/nvgpu.h>
 
+#include <nvgpu/gmmu.h>
+
 #include "gk20a/gk20a.h"
 #include "ioctl_as.h"
 

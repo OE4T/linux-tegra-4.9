@@ -21,6 +21,7 @@
 
 #include <nvgpu/dma.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/gmmu.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/log.h>
@@ -1946,8 +1947,8 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 				return ret;
 			}
 
-			pm_ctx->mem.gpu_va = gk20a_gmmu_map(c->vm,
-							&pm_ctx->mem.priv.sgt,
+			pm_ctx->mem.gpu_va = nvgpu_gmmu_map(c->vm,
+							&pm_ctx->mem,
 							pm_ctx->mem.size,
 							NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 							gk20a_mem_flag_none, true,
@@ -2013,8 +2014,7 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 clean_up_mem:
 	nvgpu_mem_end(g, gr_mem);
 cleanup_pm_buf:
-	gk20a_gmmu_unmap(c->vm, pm_ctx->mem.gpu_va, pm_ctx->mem.size,
-			gk20a_mem_flag_none);
+	nvgpu_gmmu_unmap(c->vm, &pm_ctx->mem, pm_ctx->mem.gpu_va);
 	nvgpu_dma_free(g, &pm_ctx->mem);
 	memset(&pm_ctx->mem, 0, sizeof(struct nvgpu_mem));
 
@@ -2198,8 +2198,8 @@ static int gr_gk20a_init_ctxsw_ucode_vaspace(struct gk20a *g)
 	g->ops.mm.init_inst_block(&ucode_info->inst_blk_desc, vm, 0);
 
 	/* Map ucode surface to GMMU */
-	ucode_info->surface_desc.gpu_va = gk20a_gmmu_map(vm,
-					&ucode_info->surface_desc.priv.sgt,
+	ucode_info->surface_desc.gpu_va = nvgpu_gmmu_map(vm,
+					&ucode_info->surface_desc,
 					ucode_info->surface_desc.size,
 					0, /* flags */
 					gk20a_mem_flag_read_only,
@@ -2331,10 +2331,10 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 
 	return 0;
 
- clean_up:
+clean_up:
 	if (ucode_info->surface_desc.gpu_va)
-		gk20a_gmmu_unmap(vm, ucode_info->surface_desc.gpu_va,
-			ucode_info->surface_desc.size, gk20a_mem_flag_none);
+		nvgpu_gmmu_unmap(vm, &ucode_info->surface_desc,
+				 ucode_info->surface_desc.gpu_va);
 	nvgpu_dma_free(g, &ucode_info->surface_desc);
 
 	nvgpu_release_firmware(g, gpccs_fw);
@@ -2824,7 +2824,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 		mem = &gr->global_ctx_buffer[CIRCULAR_VPR].mem;
 	}
 
-	gpu_va = gk20a_gmmu_map(ch_vm, &mem->priv.sgt, mem->size,
+	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size,
 				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				gk20a_mem_flag_none, true, mem->aperture);
 	if (!gpu_va)
@@ -2840,7 +2840,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 		mem = &gr->global_ctx_buffer[ATTRIBUTE_VPR].mem;
 	}
 
-	gpu_va = gk20a_gmmu_map(ch_vm, &mem->priv.sgt, mem->size,
+	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size,
 				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				gk20a_mem_flag_none, false, mem->aperture);
 	if (!gpu_va)
@@ -2856,7 +2856,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 		mem = &gr->global_ctx_buffer[PAGEPOOL_VPR].mem;
 	}
 
-	gpu_va = gk20a_gmmu_map(ch_vm, &mem->priv.sgt, mem->size,
+	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size,
 				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				gk20a_mem_flag_none, true, mem->aperture);
 	if (!gpu_va)
@@ -2866,7 +2866,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 
 	/* Golden Image */
 	mem = &gr->global_ctx_buffer[GOLDEN_CTX].mem;
-	gpu_va = gk20a_gmmu_map(ch_vm, &mem->priv.sgt, mem->size, 0,
+	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size, 0,
 				gk20a_mem_flag_none, true, mem->aperture);
 	if (!gpu_va)
 		goto clean_up;
@@ -2875,7 +2875,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 
 	/* Priv register Access Map */
 	mem = &gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem;
-	gpu_va = gk20a_gmmu_map(ch_vm, &mem->priv.sgt, mem->size, 0,
+	gpu_va = nvgpu_gmmu_map(ch_vm, mem, mem->size, 0,
 				gk20a_mem_flag_none, true, mem->aperture);
 	if (!gpu_va)
 		goto clean_up;
@@ -2885,12 +2885,11 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	c->ch_ctx.global_ctx_buffer_mapped = true;
 	return 0;
 
- clean_up:
+clean_up:
 	for (i = 0; i < NR_GLOBAL_CTX_BUF_VA; i++) {
 		if (g_bfr_va[i]) {
-			gk20a_gmmu_unmap(ch_vm, g_bfr_va[i],
-					 gr->global_ctx_buffer[i].mem.size,
-					 gk20a_mem_flag_none);
+			nvgpu_gmmu_unmap(ch_vm, &gr->global_ctx_buffer[i].mem,
+					 g_bfr_va[i]);
 			g_bfr_va[i] = 0;
 		}
 	}
@@ -2900,6 +2899,7 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 static void gr_gk20a_unmap_global_ctx_buffers(struct channel_gk20a *c)
 {
 	struct vm_gk20a *ch_vm = c->vm;
+	struct gr_gk20a *gr = &c->g->gr;
 	u64 *g_bfr_va = c->ch_ctx.global_ctx_buffer_va;
 	u64 *g_bfr_size = c->ch_ctx.global_ctx_buffer_size;
 	u32 i;
@@ -2908,9 +2908,8 @@ static void gr_gk20a_unmap_global_ctx_buffers(struct channel_gk20a *c)
 
 	for (i = 0; i < NR_GLOBAL_CTX_BUF_VA; i++) {
 		if (g_bfr_va[i]) {
-			gk20a_gmmu_unmap(ch_vm, g_bfr_va[i],
-					 g_bfr_size[i],
-					 gk20a_mem_flag_none);
+			nvgpu_gmmu_unmap(ch_vm, &gr->global_ctx_buffer[i].mem,
+					 g_bfr_va[i]);
 			g_bfr_va[i] = 0;
 			g_bfr_size[i] = 0;
 		}
@@ -2946,8 +2945,8 @@ int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 	if (err)
 		goto err_free_ctx;
 
-	gr_ctx->mem.gpu_va = gk20a_gmmu_map(vm,
-					&gr_ctx->mem.priv.sgt,
+	gr_ctx->mem.gpu_va = nvgpu_gmmu_map(vm,
+					&gr_ctx->mem,
 					gr_ctx->mem.size,
 					NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_FALSE,
 					gk20a_mem_flag_none, true,
@@ -3007,8 +3006,7 @@ void gr_gk20a_free_gr_ctx(struct gk20a *g,
 	if (!gr_ctx || !gr_ctx->mem.gpu_va)
 		return;
 
-	gk20a_gmmu_unmap(vm, gr_ctx->mem.gpu_va,
-		gr_ctx->mem.size, gk20a_mem_flag_none);
+	nvgpu_gmmu_unmap(vm, &gr_ctx->mem, gr_ctx->mem.gpu_va);
 	nvgpu_dma_free(g, &gr_ctx->mem);
 	nvgpu_kfree(g, gr_ctx);
 }
@@ -3055,8 +3053,8 @@ static void gr_gk20a_free_channel_patch_ctx(struct channel_gk20a *c)
 	gk20a_dbg_fn("");
 
 	if (patch_ctx->mem.gpu_va)
-		gk20a_gmmu_unmap(c->vm, patch_ctx->mem.gpu_va,
-				 patch_ctx->mem.size, gk20a_mem_flag_none);
+		nvgpu_gmmu_unmap(c->vm, &patch_ctx->mem,
+				 patch_ctx->mem.gpu_va);
 
 	nvgpu_dma_free(g, &patch_ctx->mem);
 	patch_ctx->data_count = 0;
@@ -3070,8 +3068,7 @@ static void gr_gk20a_free_channel_pm_ctx(struct channel_gk20a *c)
 	gk20a_dbg_fn("");
 
 	if (pm_ctx->mem.gpu_va) {
-		gk20a_gmmu_unmap(c->vm, pm_ctx->mem.gpu_va,
-				 pm_ctx->mem.size, gk20a_mem_flag_none);
+		nvgpu_gmmu_unmap(c->vm, &pm_ctx->mem, pm_ctx->mem.gpu_va);
 
 		nvgpu_dma_free(g, &pm_ctx->mem);
 	}

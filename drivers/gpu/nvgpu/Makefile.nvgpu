@@ -43,6 +43,7 @@ nvgpu-y := \
 	common/mm/buddy_allocator.o \
 	common/mm/page_allocator.o \
 	common/mm/lockless_allocator.o \
+	common/mm/gmmu.o \
 	common/pramin.o \
 	common/semaphore.o \
 	common/as.o \

@@ -244,7 +244,7 @@ cleanup:
 static void nvgpu_buddy_allocator_destroy(struct nvgpu_allocator *__a)
 {
 	int i;
-	struct rb_node *node;
+	struct nvgpu_rbtree_node *node = NULL;
 	struct nvgpu_buddy *bud;
 	struct nvgpu_fixed_alloc *falloc;
 	struct nvgpu_buddy_allocator *a = __a->priv;
@@ -256,22 +256,28 @@ static void nvgpu_buddy_allocator_destroy(struct nvgpu_allocator *__a)
 	/*
 	 * Free the fixed allocs first.
 	 */
-	while ((node = rb_first(&a->fixed_allocs)) != NULL) {
-		falloc = container_of(node,
-				      struct nvgpu_fixed_alloc, alloced_entry);
+	nvgpu_rbtree_enum_start(0, &node, a->fixed_allocs);
+	while (node) {
+		falloc = nvgpu_fixed_alloc_from_rbtree_node(node);
 
-		rb_erase(node, &a->fixed_allocs);
+		nvgpu_rbtree_unlink(node, &a->fixed_allocs);
 		__balloc_do_free_fixed(a, falloc);
+
+		nvgpu_rbtree_enum_start(0, &node, a->fixed_allocs);
 	}
 
 	/*
 	 * And now free all outstanding allocations.
 	 */
-	while ((node = rb_first(&a->alloced_buddies)) != NULL) {
-		bud = container_of(node, struct nvgpu_buddy, alloced_entry);
+	nvgpu_rbtree_enum_start(0, &node, a->alloced_buddies);
+	while (node) {
+		bud = nvgpu_buddy_from_rbtree_node(node);
+
 		balloc_free_buddy(a, bud->start);
 		balloc_blist_add(a, bud);
 		balloc_coalesce(a, bud);
+
+		nvgpu_rbtree_enum_start(0, &node, a->alloced_buddies);
 	}
 
 	/*
@@ -409,24 +415,10 @@ static int balloc_split_buddy(struct nvgpu_buddy_allocator *a,
 static void balloc_alloc_buddy(struct nvgpu_buddy_allocator *a,
 			       struct nvgpu_buddy *b)
 {
-	struct rb_node **new = &(a->alloced_buddies.rb_node);
-	struct rb_node *parent = NULL;
+	b->alloced_entry.key_start = b->start;
+	b->alloced_entry.key_end = b->end;
 
-	while (*new) {
-		struct nvgpu_buddy *bud = container_of(*new, struct nvgpu_buddy,
-						       alloced_entry);
-
-		parent = *new;
-		if (b->start < bud->start)
-			new = &((*new)->rb_left);
-		else if (b->start > bud->start)
-			new = &((*new)->rb_right);
-		else
-			BUG_ON("Duplicate entries in allocated list!\n");
-	}
-
-	rb_link_node(&b->alloced_entry, parent, new);
-	rb_insert_color(&b->alloced_entry, &a->alloced_buddies);
+	nvgpu_rbtree_insert(&b->alloced_entry, &a->alloced_buddies);
 
 	buddy_set_alloced(b);
 	a->buddy_list_alloced[b->order]++;
@@ -441,24 +433,16 @@ static void balloc_alloc_buddy(struct nvgpu_buddy_allocator *a,
 static struct nvgpu_buddy *balloc_free_buddy(struct nvgpu_buddy_allocator *a,
 					     u64 addr)
 {
-	struct rb_node *node = a->alloced_buddies.rb_node;
+	struct nvgpu_rbtree_node *node = NULL;
 	struct nvgpu_buddy *bud;
 
-	while (node) {
-		bud = container_of(node, struct nvgpu_buddy, alloced_entry);
-
-		if (addr < bud->start)
-			node = node->rb_left;
-		else if (addr > bud->start)
-			node = node->rb_right;
-		else
-			break;
-	}
-
+	nvgpu_rbtree_search(addr, &node, a->alloced_buddies);
 	if (!node)
 		return NULL;
 
-	rb_erase(node, &a->alloced_buddies);
+	bud = nvgpu_buddy_from_rbtree_node(node);
+
+	nvgpu_rbtree_unlink(node, &a->alloced_buddies);
 	buddy_clr_alloced(bud);
 	a->buddy_list_alloced[bud->order]--;
 
@@ -539,24 +523,24 @@ static u64 __balloc_do_alloc(struct nvgpu_buddy_allocator *a,
 static int balloc_is_range_free(struct nvgpu_buddy_allocator *a,
 				u64 base, u64 end)
 {
-	struct rb_node *node;
+	struct nvgpu_rbtree_node *node = NULL;
 	struct nvgpu_buddy *bud;
 
-	node = rb_first(&a->alloced_buddies);
+	nvgpu_rbtree_enum_start(0, &node, a->alloced_buddies);
 	if (!node)
 		return 1; /* No allocs yet. */
 
-	bud = container_of(node, struct nvgpu_buddy, alloced_entry);
+	bud = nvgpu_buddy_from_rbtree_node(node);
 
 	while (bud->start < end) {
 		if ((bud->start > base && bud->start < end) ||
 		    (bud->end   > base && bud->end   < end))
 			return 0;
 
-		node = rb_next(node);
+		nvgpu_rbtree_enum_next(&node, node);
 		if (!node)
 			break;
-		bud = container_of(node, struct nvgpu_buddy, alloced_entry);
+		bud = nvgpu_buddy_from_rbtree_node(node);
 	}
 
 	return 1;
@@ -565,27 +549,10 @@ static int balloc_is_range_free(struct nvgpu_buddy_allocator *a,
 static void balloc_alloc_fixed(struct nvgpu_buddy_allocator *a,
 			       struct nvgpu_fixed_alloc *f)
 {
-	struct rb_node **new = &(a->fixed_allocs.rb_node);
-	struct rb_node *parent = NULL;
+	f->alloced_entry.key_start = f->start;
+	f->alloced_entry.key_end = f->end;
 
-	while (*new) {
-		struct nvgpu_fixed_alloc *falloc =
-			container_of(*new, struct nvgpu_fixed_alloc,
-				     alloced_entry);
-
-		BUG_ON(!virt_addr_valid(falloc));
-
-		parent = *new;
-		if (f->start < falloc->start)
-			new = &((*new)->rb_left);
-		else if (f->start > falloc->start)
-			new = &((*new)->rb_right);
-		else
-			BUG_ON("Duplicate entries in allocated list!\n");
-	}
-
-	rb_link_node(&f->alloced_entry, parent, new);
-	rb_insert_color(&f->alloced_entry, &a->fixed_allocs);
+	nvgpu_rbtree_insert(&f->alloced_entry, &a->fixed_allocs);
 }
 
 /*
@@ -597,25 +564,16 @@ static void balloc_alloc_fixed(struct nvgpu_buddy_allocator *a,
 static struct nvgpu_fixed_alloc *balloc_free_fixed(
 	struct nvgpu_buddy_allocator *a, u64 addr)
 {
-	struct rb_node *node = a->fixed_allocs.rb_node;
 	struct nvgpu_fixed_alloc *falloc;
+	struct nvgpu_rbtree_node *node = NULL;
 
-	while (node) {
-		falloc = container_of(node,
-				      struct nvgpu_fixed_alloc, alloced_entry);
-
-		if (addr < falloc->start)
-			node = node->rb_left;
-		else if (addr > falloc->start)
-			node = node->rb_right;
-		else
-			break;
-	}
-
+	nvgpu_rbtree_search(addr, &node, a->fixed_allocs);
 	if (!node)
 		return NULL;
 
-	rb_erase(node, &a->fixed_allocs);
+	falloc = nvgpu_fixed_alloc_from_rbtree_node(node);
+
+	nvgpu_rbtree_unlink(node, &a->fixed_allocs);
 
 	return falloc;
 }
@@ -1137,7 +1095,7 @@ static void nvgpu_buddy_print_stats(struct nvgpu_allocator *__a,
 				    struct seq_file *s, int lock)
 {
 	int i = 0;
-	struct rb_node *node;
+	struct nvgpu_rbtree_node *node = NULL;
 	struct nvgpu_fixed_alloc *falloc;
 	struct nvgpu_alloc_carveout *tmp;
 	struct nvgpu_buddy_allocator *a = __a->priv;
@@ -1183,14 +1141,15 @@ static void nvgpu_buddy_print_stats(struct nvgpu_allocator *__a,
 
 	__alloc_pstat(s, __a, "\n");
 
-	for (node = rb_first(&a->fixed_allocs), i = 1;
-	     node != NULL;
-	     node = rb_next(node)) {
-		falloc = container_of(node,
-				      struct nvgpu_fixed_alloc, alloced_entry);
+	nvgpu_rbtree_enum_start(0, &node, a->fixed_allocs);
+	i = 1;
+	while (node) {
+		falloc = nvgpu_fixed_alloc_from_rbtree_node(node);
 
 		__alloc_pstat(s, __a, "Fixed alloc (%d): [0x%llx -> 0x%llx]\n",
 			      i, falloc->start, falloc->end);
+
+		nvgpu_rbtree_enum_next(&node, a->fixed_allocs);
 	}
 
 	__alloc_pstat(s, __a, "\n");
@@ -1317,8 +1276,8 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 		goto fail;
 	}
 
-	a->alloced_buddies = RB_ROOT;
-	a->fixed_allocs = RB_ROOT;
+	a->alloced_buddies = NULL;
+	a->fixed_allocs = NULL;
 	nvgpu_init_list_node(&a->co_list);
 	err = balloc_init_lists(a);
 	if (err)

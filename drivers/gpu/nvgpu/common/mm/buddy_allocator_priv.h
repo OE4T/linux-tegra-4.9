@@ -17,8 +17,7 @@
 #ifndef BUDDY_ALLOCATOR_PRIV_H
 #define BUDDY_ALLOCATOR_PRIV_H
 
-#include <linux/rbtree.h>
-
+#include <nvgpu/rbtree.h>
 #include <nvgpu/list.h>
 
 struct nvgpu_kmem_cache;
@@ -35,7 +34,7 @@ struct nvgpu_buddy {
 	struct nvgpu_buddy *right;	/* Higher address sub-node. */
 
 	struct nvgpu_list_node buddy_entry;	/* List entry for various lists. */
-	struct rb_node alloced_entry;	/* RB tree of allocations. */
+	struct nvgpu_rbtree_node alloced_entry;	/* RB tree of allocations. */
 
 	u64 start;			/* Start address of this buddy. */
 	u64 end;			/* End address of this buddy. */
@@ -60,6 +59,13 @@ nvgpu_buddy_from_buddy_entry(struct nvgpu_list_node *node)
 {
 	return (struct nvgpu_buddy *)
 		((uintptr_t)node - offsetof(struct nvgpu_buddy, buddy_entry));
+};
+
+static inline struct nvgpu_buddy *
+nvgpu_buddy_from_rbtree_node(struct nvgpu_rbtree_node *node)
+{
+	return (struct nvgpu_buddy *)
+		((uintptr_t)node - offsetof(struct nvgpu_buddy, alloced_entry));
 };
 
 #define __buddy_flag_ops(flag, flag_up)					\
@@ -98,10 +104,17 @@ __buddy_flag_ops(in_list, IN_LIST);
  */
 struct nvgpu_fixed_alloc {
 	struct nvgpu_list_node buddies;	/* List of buddies. */
-	struct rb_node alloced_entry;	/* RB tree of fixed allocations. */
+	struct nvgpu_rbtree_node alloced_entry;	/* RB tree of fixed allocations. */
 
 	u64 start;			/* Start of fixed block. */
 	u64 end;			/* End address. */
+};
+
+static inline struct nvgpu_fixed_alloc *
+nvgpu_fixed_alloc_from_rbtree_node(struct nvgpu_rbtree_node *node)
+{
+	return (struct nvgpu_fixed_alloc *)
+	((uintptr_t)node - offsetof(struct nvgpu_fixed_alloc, alloced_entry));
 };
 
 /*
@@ -130,8 +143,8 @@ struct nvgpu_buddy_allocator {
 	u64 blks;			/* Count of blks in the space. */
 	u64 max_order;			/* Specific maximum order. */
 
-	struct rb_root alloced_buddies;	/* Outstanding allocations. */
-	struct rb_root fixed_allocs;	/* Outstanding fixed allocations. */
+	struct nvgpu_rbtree_node *alloced_buddies;	/* Outstanding allocations. */
+	struct nvgpu_rbtree_node *fixed_allocs;	/* Outstanding fixed allocations. */
 
 	struct nvgpu_list_node co_list;
 

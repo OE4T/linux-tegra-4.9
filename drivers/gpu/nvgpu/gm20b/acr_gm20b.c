@@ -11,12 +11,8 @@
  * more details.
  */
 
-#include <linux/delay.h>	/* for mdelay */
 #include <linux/firmware.h>
-#include <linux/module.h>
 #include <linux/debugfs.h>
-#include <linux/dma-mapping.h>
-#include <linux/io.h>
 
 #include <linux/platform/tegra/mc.h>
 
@@ -1501,7 +1497,7 @@ static int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout_ms)
 			ret = 0;
 			break;
 		}
-		udelay(1);
+		nvgpu_udelay(1);
 	} while (!nvgpu_timeout_expired(&timeout));
 
 	if (ret) {
@@ -1543,7 +1539,7 @@ static int clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout_ms)
 			/*halt irq is clear*/
 			return 0;
 
-		udelay(1);
+		nvgpu_udelay(1);
 	} while (!nvgpu_timeout_expired(&timeout));
 
 	return -ETIMEDOUT;

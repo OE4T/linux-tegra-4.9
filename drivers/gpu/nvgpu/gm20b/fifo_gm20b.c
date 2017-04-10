@@ -13,8 +13,6 @@
  * more details.
  */
 
-#include <linux/delay.h>
-
 #include "gk20a/gk20a.h"
 #include "gk20a/fifo_gk20a.h"
 
@@ -103,7 +101,7 @@ static void gm20b_fifo_trigger_mmu_fault(struct gk20a *g,
 			break;
 		}
 
-		usleep_range(delay, delay * 2);
+		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 	} while (!nvgpu_timeout_expired(&timeout));
 

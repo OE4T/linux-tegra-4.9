@@ -13,8 +13,6 @@
  * more details.
  */
 
-#include <linux/delay.h>
-
 #include <nvgpu/dma.h>
 #include <nvgpu/bug.h>
 

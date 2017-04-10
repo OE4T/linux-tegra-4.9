@@ -13,7 +13,6 @@
  * more details.
  */
 
-#include <linux/delay.h>	/* for udelay */
 #include <soc/tegra/fuse.h>
 
 #include "gk20a/gk20a.h"

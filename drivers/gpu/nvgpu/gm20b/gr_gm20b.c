@@ -13,9 +13,6 @@
  * more details.
  */
 
-#include <linux/delay.h>
-#include <linux/io.h>
-#include <linux/version.h>
 #include <soc/tegra/fuse.h>
 
 #include <dt-bindings/soc/gm20b-fuse.h>

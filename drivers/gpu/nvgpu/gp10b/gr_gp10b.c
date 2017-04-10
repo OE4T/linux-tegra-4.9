@@ -13,8 +13,6 @@
  * more details.
  */
 
-#include <linux/delay.h>
-#include <linux/version.h>
 #include <soc/tegra/fuse.h>
 
 #include <dt-bindings/soc/gm20b-fuse.h>
@@ -1393,7 +1391,7 @@ static int gr_gp10b_wait_empty(struct gk20a *g, unsigned long duration_ms,
 			return 0;
 		}
 
-		usleep_range(delay, delay * 2);
+		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 	} while (!nvgpu_timeout_expired(&timeout));
 
@@ -2044,7 +2042,7 @@ static int gr_gp10b_suspend_contexts(struct gk20a *g,
 			if (!gr_ctx->t18x.cilp_preempt_pending)
 				break;
 
-			usleep_range(delay, delay * 2);
+			nvgpu_usleep_range(delay, delay * 2);
 			delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 		} while (!nvgpu_timeout_expired(&timeout));
 

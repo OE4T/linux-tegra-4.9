@@ -13,7 +13,6 @@
  * more details.
  */
 
-#include <linux/delay.h>	/* for udelay */
 #include <soc/tegra/fuse.h>
 
 #include "gk20a/gk20a.h"
@@ -191,7 +190,7 @@ static int pmu_gm20b_ctx_wait_lsf_ready(struct gk20a *g, u32 timeout_ms,
 		reg = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(0));
 		if (reg == val)
 			return 0;
-		udelay(delay);
+		nvgpu_udelay(delay);
 	} while (!nvgpu_timeout_expired(&timeout));
 
 	return -ETIMEDOUT;

@@ -1862,7 +1862,7 @@ int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 	if (!buf->mem)
 		goto err_kfree;
 
-	buf->mem->user_mem = true;
+	buf->mem->mem_flags |= NVGPU_MEM_FLAG_USER_MEM;
 
 	err = nvgpu_dma_alloc_vid(g, bytes, buf->mem);
 	if (err)

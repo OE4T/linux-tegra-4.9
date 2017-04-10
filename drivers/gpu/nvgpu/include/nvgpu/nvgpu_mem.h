@@ -53,6 +53,21 @@ struct nvgpu_mem {
 	 * the struct is just a copy of another nvgpu_mem struct.
 	 */
 #define NVGPU_MEM_FLAG_SHADOW_COPY		 (1 << 0)
+
+	/*
+	 * Specify that the GVA mapping is a fixed mapping - that is the caller
+	 * chose the GPU VA, not the GMMU mapping function. Only relevant for
+	 * VIDMEM.
+	 */
+#define NVGPU_MEM_FLAG_FIXED			 (1 << 1)
+
+	/*
+	 * Set for user generated VIDMEM allocations. This triggers a special
+	 * cleanup path that clears the vidmem on free. Given that the VIDMEM is
+	 * zeroed on boot this means that all user vidmem allocations are
+	 * therefor zeroed (to prevent leaking information in VIDMEM buffers).
+	 */
+#define NVGPU_MEM_FLAG_USER_MEM			 (1 << 2)
 	unsigned long				 mem_flags;
 
 	/*
@@ -63,8 +78,6 @@ struct nvgpu_mem {
 	/*
 	 * Fields only populated for vidmem allocations.
 	 */
-	bool					 fixed;
-	bool					 user_mem;
 	struct nvgpu_allocator			*allocator;
 	struct nvgpu_list_node			 clear_list_entry;
 

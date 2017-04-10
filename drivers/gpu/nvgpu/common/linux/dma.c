@@ -204,9 +204,7 @@ int nvgpu_dma_alloc_flags_vid_at(struct gk20a *g, unsigned long flags,
 	}
 
 	if (at)
-		mem->fixed = true;
-	else
-		mem->fixed = false;
+		mem->mem_flags |= NVGPU_MEM_FLAG_FIXED;
 
 	mem->priv.sgt = nvgpu_kzalloc(g, sizeof(struct sg_table));
 	if (!mem->priv.sgt) {
@@ -375,7 +373,7 @@ static void nvgpu_dma_free_vid(struct gk20a *g, struct nvgpu_mem *mem)
 	/* Sanity check - only this supported when allocating. */
 	WARN_ON(mem->priv.flags != NVGPU_DMA_NO_KERNEL_MAPPING);
 
-	if (mem->user_mem) {
+	if (mem->mem_flags & NVGPU_MEM_FLAG_USER_MEM) {
 		nvgpu_mutex_acquire(&g->mm.vidmem.clear_list_mutex);
 		was_empty = nvgpu_list_empty(&g->mm.vidmem.clear_list_head);
 		nvgpu_list_add_tail(&mem->clear_list_entry,

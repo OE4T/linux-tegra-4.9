@@ -590,11 +590,16 @@ u16 tegra_edid_get_quant_cap(struct tegra_edid *edid)
 		return 0;
 	}
 
+	/* Below code is dead until Bug 1774621 is fixed
+	 * Hence commenting out so that coverity does not complain
+	 */
+#if 0
 	if (edid->data->rgb_quant_selectable)
 		ret |= FB_CAP_RGB_QUANT_SELECTABLE;
 
 	if (edid->data->yuv_quant_selectable)
 		ret |= FB_CAP_YUV_QUANT_SELECTABLE;
+#endif
 
 	return ret;
 }

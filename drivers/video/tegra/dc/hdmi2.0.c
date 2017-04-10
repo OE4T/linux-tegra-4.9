@@ -1368,12 +1368,17 @@ static u32 tegra_hdmi_get_ex_colorimetry(struct tegra_hdmi *hdmi)
 
 static u32 tegra_hdmi_get_rgb_quant(struct tegra_hdmi *hdmi)
 {
+	/* Below code is dead until Bug 1774621 is fixed.
+	 * Hence commenting it out, to keep coverity happy
+	 */
+#if 0
 	u32 vmode = hdmi->dc->mode.vmode;
 
 	if (tegra_edid_get_quant_cap(hdmi->edid) & FB_CAP_RGB_QUANT_SELECTABLE)
 		return vmode & FB_VMODE_LIMITED_RANGE ?
 			HDMI_AVI_RGB_QUANT_LIMITED : HDMI_AVI_RGB_QUANT_FULL;
 	else
+#endif
 		/*
 		 * The safest way to break the HDMI spec when forcing full range
 		 * on a limited system: send full data with the QUANT_DEFAULT
@@ -1383,12 +1388,18 @@ static u32 tegra_hdmi_get_rgb_quant(struct tegra_hdmi *hdmi)
 
 static u32 tegra_hdmi_get_ycc_quant(struct tegra_hdmi *hdmi)
 {
+	/* Below code is dead until Bug 1774621 is fixed.
+	 * Hence commenting it out, to keep coverity happy
+	 */
+#if 0
+
 	u32 vmode = hdmi->dc->mode.vmode;
 
 	if (tegra_edid_get_quant_cap(hdmi->edid) & FB_CAP_YUV_QUANT_SELECTABLE)
 		return vmode & FB_VMODE_LIMITED_RANGE ?
 			HDMI_AVI_YCC_QUANT_LIMITED : HDMI_AVI_YCC_QUANT_FULL;
 	else
+#endif
 		/*
 		 * The safest way to break the HDMI spec when forcing full range
 		 * on a limited system: send full data with the QUANT_DEFAULT

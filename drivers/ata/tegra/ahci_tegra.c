@@ -806,9 +806,12 @@ static int tegra_ahci_power_on(struct ahci_host_priv *hpriv)
 	if (ret)
 		goto disable_sata_clk;
 
-	ret = tegra_unpowergate_partition(tegra->soc_data->powergate_id);
-	if (ret)
-		goto disable_sata_oob_clk;
+	if (!tegra_powergate_is_powered(tegra->soc_data->powergate_id)) {
+		ret = tegra_unpowergate_partition(
+						tegra->soc_data->powergate_id);
+		if (ret)
+			goto disable_sata_oob_clk;
+	}
 
 	return 0;
 

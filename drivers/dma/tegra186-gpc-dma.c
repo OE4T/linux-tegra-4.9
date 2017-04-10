@@ -218,6 +218,7 @@ struct tegra_dma_desc {
 	struct dma_async_tx_descriptor	txd;
 	int				bytes_requested;
 	int				bytes_transferred;
+	u64				total_bytes_transferred;
 	enum dma_status			dma_status;
 	struct list_head		node;
 	struct list_head		tx_list;
@@ -621,6 +622,7 @@ static void handle_once_dma_done(struct tegra_dma_channel *tdc,
 	sgreq = list_first_entry(&tdc->pending_sg_req, typeof(*sgreq), node);
 	dma_desc = sgreq->dma_desc;
 	dma_desc->bytes_transferred += sgreq->req_len;
+	dma_desc->total_bytes_transferred += sgreq->req_len;
 
 	list_del(&sgreq->node);
 	if (sgreq->last_sg) {
@@ -654,6 +656,7 @@ static void handle_cont_sngl_cycle_dma_done(struct tegra_dma_channel *tdc,
 	sgreq = list_first_entry(&tdc->pending_sg_req, typeof(*sgreq), node);
 	dma_desc = sgreq->dma_desc;
 	dma_desc->bytes_transferred += sgreq->req_len;
+	dma_desc->total_bytes_transferred += sgreq->req_len;
 
 	/* Callback need to be call */
 	if (!dma_desc->cb_count)
@@ -899,6 +902,8 @@ static int tegra_dma_terminate_all(struct dma_chan *dc)
 					typeof(*sgreq), node);
 		sgreq->dma_desc->bytes_transferred +=
 			sgreq->req_len - (wcount * 4);
+		sgreq->dma_desc->total_bytes_transferred +=
+			sgreq->req_len - (wcount * 4);
 	}
 
 skip_dma_stop:
@@ -939,6 +944,9 @@ static enum dma_status tegra_dma_tx_status(struct dma_chan *dc,
 	/* Check on wait_ack desc status */
 	list_for_each_entry(dma_desc, &tdc->free_dma_desc, node) {
 		if (dma_desc->txd.cookie == cookie) {
+			dma_set_bytes_transferred(txstate,
+					dma_desc->total_bytes_transferred);
+
 			residual =  dma_desc->bytes_requested -
 					(dma_desc->bytes_transferred %
 						dma_desc->bytes_requested);
@@ -953,6 +961,16 @@ static enum dma_status tegra_dma_tx_status(struct dma_chan *dc,
 	list_for_each_entry(sg_req, &tdc->pending_sg_req, node) {
 		dma_desc = sg_req->dma_desc;
 		if (dma_desc->txd.cookie == cookie) {
+			u32 wcount, curr_bytes;
+			u64 total_bytes;
+
+			wcount = tdc_read(tdc, TEGRA_GPCDMA_CHAN_XFER_COUNT);
+			curr_bytes = sg_req->req_len - (wcount * 4);
+
+			total_bytes = dma_desc->total_bytes_transferred +
+					curr_bytes;
+			dma_set_bytes_transferred(txstate, total_bytes);
+
 			residual =  dma_desc->bytes_requested -
 					(dma_desc->bytes_transferred %
 						dma_desc->bytes_requested);
@@ -1128,6 +1146,7 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_dma_memset(
 	dma_desc->cb_count = 0;
 	dma_desc->bytes_requested = 0;
 	dma_desc->bytes_transferred = 0;
+	dma_desc->total_bytes_transferred = 0;
 	dma_desc->dma_status = DMA_IN_PROGRESS;
 
 	if ((len & 3) || (dest & 3) ||
@@ -1226,6 +1245,7 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_dma_memcpy(
 	dma_desc->cb_count = 0;
 	dma_desc->bytes_requested = 0;
 	dma_desc->bytes_transferred = 0;
+	dma_desc->total_bytes_transferred = 0;
 	dma_desc->dma_status = DMA_IN_PROGRESS;
 
 	if ((len & 3) || (src & 3) || (dest & 3) ||
@@ -1350,6 +1370,7 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_slave_sg(
 	dma_desc->cb_count = 0;
 	dma_desc->bytes_requested = 0;
 	dma_desc->bytes_transferred = 0;
+	dma_desc->total_bytes_transferred = 0;
 	dma_desc->dma_status = DMA_IN_PROGRESS;
 
 	/* Make transfer requests */
@@ -1535,6 +1556,7 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_dma_cyclic(
 	dma_desc->cb_count = 0;
 
 	dma_desc->bytes_transferred = 0;
+	dma_desc->total_bytes_transferred = 0;
 	dma_desc->bytes_requested = buf_len;
 	remain_len = buf_len;
 

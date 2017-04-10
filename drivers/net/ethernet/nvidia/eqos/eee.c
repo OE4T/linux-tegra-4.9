@@ -373,6 +373,7 @@ bool eqos_eee_init(struct eqos_prv_data *pdata)
 		if (eqos_phy_init_eee(pdata->phydev, 1))
 			goto phy_eee_failed;
 
+		spin_lock(&pdata->lock);
 		if (!pdata->eee_active) {
 			pdata->eee_active = 1;
 			init_timer(&pdata->eee_ctrl_timer);
@@ -400,9 +401,10 @@ bool eqos_eee_init(struct eqos_prv_data *pdata)
 			hw_if->set_eee_pls(pdata->phydev->link);
 		}
 
-		DBGPR_EEE("EEE initialized\n");
-
 		ret = true;
+		spin_unlock(&pdata->lock);
+
+		DBGPR_EEE("EEE initialized\n");
 	}
 
 	DBGPR_EEE("<--eqos_eee_init\n");

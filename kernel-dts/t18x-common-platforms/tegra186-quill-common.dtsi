@@ -1045,19 +1045,19 @@
 		};
 	};
 
-	tegra_pwm1: pwm@3280000 {
+	pwm@3280000 {
 		status = "okay";
 	};
 
-	tegra_pwm2: pwm@3290000 {
+	pwm@3290000 {
 		status = "okay";
 	};
 
-	tegra_pwm3: pwm@32a0000 {
+	pwm@32a0000 {
 		status = "okay";
 	};
 
-	tegra_pwm4: pwm@c340000 {
+	pwm@c340000 {
 		status = "okay";
 	};
 

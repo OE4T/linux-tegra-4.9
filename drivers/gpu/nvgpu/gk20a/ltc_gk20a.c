@@ -155,7 +155,7 @@ static int gk20a_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 				val = gk20a_readl(g, ctrl1);
 				if (!(val & hw_op))
 					break;
-				udelay(5);
+				nvgpu_udelay(5);
 
 			} while (!nvgpu_timeout_expired(&timeout));
 

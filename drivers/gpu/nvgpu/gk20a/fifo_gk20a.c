@@ -17,10 +17,7 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <linux/delay.h>
-#include <linux/scatterlist.h>
 #include <trace/events/gk20a.h>
-#include <linux/dma-mapping.h>
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 #include <linux/nvhost.h>
 #endif
@@ -1735,7 +1732,7 @@ static void gk20a_fifo_trigger_mmu_fault(struct gk20a *g,
 				fifo_intr_0_mmu_fault_pending_f())
 			break;
 
-		usleep_range(delay, delay * 2);
+		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 	} while (!nvgpu_timeout_expired_msg(&timeout, "mmu fault timeout"));
 
@@ -2533,7 +2530,7 @@ int gk20a_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 			break;
 		}
 
-		usleep_range(delay, delay * 2);
+		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 	} while (!nvgpu_timeout_expired_msg(&timeout, "preempt timeout"));
 
@@ -2901,7 +2898,7 @@ static int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id)
 			break;
 		}
 
-		usleep_range(delay, delay * 2);
+		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 	} while (!nvgpu_timeout_expired(&timeout));
 
@@ -3348,7 +3345,7 @@ int gk20a_fifo_wait_engine_idle(struct gk20a *g)
 				break;
 			}
 
-			usleep_range(delay, delay * 2);
+			nvgpu_usleep_range(delay, delay * 2);
 			delay = min_t(unsigned long,
 					delay << 1, GR_IDLE_CHECK_MAX);
 		} while (!nvgpu_timeout_expired(&timeout));

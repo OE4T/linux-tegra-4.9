@@ -16,12 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/delay.h>
-#include <linux/highmem.h>
 #include <linux/log2.h>
-#include <linux/nvhost.h>
 #include <linux/scatterlist.h>
-#include <linux/nvmap.h>
 #include <linux/dma-buf.h>
 #include <linux/dma-mapping.h>
 #include <linux/dma-attrs.h>
@@ -1231,7 +1227,7 @@ static void gk20a_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 		do {
 			if (atomic_read(&mapped_buffer->ref.refcount) == 1)
 				break;
-			udelay(5);
+			nvgpu_udelay(5);
 		} while (!nvgpu_timeout_expired_msg(&timeout,
 					    "sync-unmap failed on 0x%llx"));
 
@@ -1382,8 +1378,6 @@ static struct mapped_buffer_node *find_mapped_buffer_less_than_locked(
 
 	return mapped_buffer_from_rbtree_node(node);
 }
-
-#define BFR_ATTRS (sizeof(nvmap_bfr_param)/sizeof(nvmap_bfr_param[0]))
 
 struct buffer_attrs {
 	struct sg_table *sgt;
@@ -4403,7 +4397,7 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 		    flush_fb_flush_pending_v(data) ==
 			flush_fb_flush_pending_busy_v()) {
 				gk20a_dbg_info("fb_flush 0x%x", data);
-				udelay(5);
+				nvgpu_udelay(5);
 		} else
 			break;
 	} while (!nvgpu_timeout_expired(&timeout));
@@ -4446,7 +4440,7 @@ static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 			flush_l2_system_invalidate_pending_busy_v()) {
 				gk20a_dbg_info("l2_system_invalidate 0x%x",
 						data);
-				udelay(5);
+				nvgpu_udelay(5);
 		} else
 			break;
 	} while (!nvgpu_timeout_expired(&timeout));
@@ -4500,7 +4494,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 		    flush_l2_flush_dirty_pending_v(data) ==
 			flush_l2_flush_dirty_pending_busy_v()) {
 				gk20a_dbg_info("l2_flush_dirty 0x%x", data);
-				udelay(5);
+				nvgpu_udelay(5);
 		} else
 			break;
 	} while (!nvgpu_timeout_expired_msg(&timeout,
@@ -4545,7 +4539,7 @@ void gk20a_mm_cbc_clean(struct gk20a *g)
 		    flush_l2_clean_comptags_pending_v(data) ==
 			flush_l2_clean_comptags_pending_busy_v()) {
 				gk20a_dbg_info("l2_clean_comptags 0x%x", data);
-				udelay(5);
+				nvgpu_udelay(5);
 		} else
 			break;
 	} while (!nvgpu_timeout_expired_msg(&timeout,

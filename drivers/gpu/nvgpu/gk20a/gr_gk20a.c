@@ -17,14 +17,7 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <linux/delay.h>	/* for udelay */
-#include <linux/mm.h>		/* for totalram_pages */
-#include <linux/scatterlist.h>
-#include <linux/debugfs.h>
-#include <uapi/linux/nvgpu.h>
-#include <linux/dma-mapping.h>
 #include <linux/firmware.h>
-#include <linux/nvhost.h>
 #include <trace/events/gk20a.h>
 
 #include <nvgpu/dma.h>
@@ -370,7 +363,7 @@ int gr_gk20a_wait_idle(struct gk20a *g, unsigned long duration_ms,
 			return 0;
 		}
 
-		usleep_range(delay, delay * 2);
+		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 
 	} while (!nvgpu_timeout_expired(&timeout));
@@ -406,7 +399,7 @@ int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long duration_ms,
 			return 0;
 		}
 
-		usleep_range(delay, delay * 2);
+		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 	} while (!nvgpu_timeout_expired(&timeout));
 
@@ -507,10 +500,10 @@ int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 		}
 
 		if (sleepduringwait) {
-			usleep_range(delay, delay * 2);
+			nvgpu_usleep_range(delay, delay * 2);
 			delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 		} else
-			udelay(delay);
+			nvgpu_udelay(delay);
 	}
 
 	if (check == WAIT_UCODE_TIMEOUT) {
@@ -1613,7 +1606,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 			u32 req = gr_fe_pwr_mode_req_v(gk20a_readl(g, gr_fe_pwr_mode_r()));
 			if (req == gr_fe_pwr_mode_req_done_v())
 				break;
-			udelay(FE_PWR_MODE_TIMEOUT_DEFAULT);
+			nvgpu_udelay(FE_PWR_MODE_TIMEOUT_DEFAULT);
 		} while (!nvgpu_timeout_expired_msg(&timeout,
 						    "timeout forcing FE on"));
 	}
@@ -1630,7 +1623,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 			gr_fecs_ctxsw_reset_ctl_gpc_context_reset_enabled_f() |
 			gr_fecs_ctxsw_reset_ctl_be_context_reset_enabled_f());
 	gk20a_readl(g, gr_fecs_ctxsw_reset_ctl_r());
-	udelay(10);
+	nvgpu_udelay(10);
 
 	gk20a_writel(g, gr_fecs_ctxsw_reset_ctl_r(),
 			gr_fecs_ctxsw_reset_ctl_sys_halt_disabled_f() |
@@ -1643,7 +1636,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 			gr_fecs_ctxsw_reset_ctl_gpc_context_reset_disabled_f() |
 			gr_fecs_ctxsw_reset_ctl_be_context_reset_disabled_f());
 	gk20a_readl(g, gr_fecs_ctxsw_reset_ctl_r());
-	udelay(10);
+	nvgpu_udelay(10);
 
 	if (!platform->is_fmodel) {
 		struct nvgpu_timeout timeout;
@@ -1657,7 +1650,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 			u32 req = gr_fe_pwr_mode_req_v(gk20a_readl(g, gr_fe_pwr_mode_r()));
 			if (req == gr_fe_pwr_mode_req_done_v())
 				break;
-			udelay(FE_PWR_MODE_TIMEOUT_DEFAULT);
+			nvgpu_udelay(FE_PWR_MODE_TIMEOUT_DEFAULT);
 		} while (!nvgpu_timeout_expired_msg(&timeout,
 						    "timeout setting FE power to auto"));
 	}
@@ -2369,7 +2362,7 @@ void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 
 	while ((gk20a_readl(g, gr_fecs_ctxsw_status_1_r()) &
 			gr_fecs_ctxsw_status_1_arb_busy_m()) && retries) {
-		udelay(FECS_ARB_CMD_TIMEOUT_DEFAULT);
+		nvgpu_udelay(FECS_ARB_CMD_TIMEOUT_DEFAULT);
 		retries--;
 	}
 	if (!retries) {
@@ -2400,7 +2393,7 @@ void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 	retries = FECS_ARB_CMD_TIMEOUT_MAX / FECS_ARB_CMD_TIMEOUT_DEFAULT;
 	val = gk20a_readl(g, gr_fecs_arb_ctx_cmd_r());
 	while (gr_fecs_arb_ctx_cmd_cmd_v(val) && retries) {
-		udelay(FECS_ARB_CMD_TIMEOUT_DEFAULT);
+		nvgpu_udelay(FECS_ARB_CMD_TIMEOUT_DEFAULT);
 		retries--;
 		val = gk20a_readl(g, gr_fecs_arb_ctx_cmd_r());
 	}
@@ -2417,7 +2410,7 @@ void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 	retries = FECS_ARB_CMD_TIMEOUT_MAX / FECS_ARB_CMD_TIMEOUT_DEFAULT;
 	val = (gk20a_readl(g, gr_fecs_arb_ctx_cmd_r()));
 	while (gr_fecs_arb_ctx_cmd_cmd_v(val) && retries) {
-		udelay(FECS_ARB_CMD_TIMEOUT_DEFAULT);
+		nvgpu_udelay(FECS_ARB_CMD_TIMEOUT_DEFAULT);
 		retries--;
 		val = gk20a_readl(g, gr_fecs_arb_ctx_cmd_r());
 	}
@@ -5021,7 +5014,7 @@ static int gr_gk20a_wait_mem_scrubbing(struct gk20a *g)
 			return 0;
 		}
 
-		udelay(CTXSW_MEM_SCRUBBING_TIMEOUT_DEFAULT);
+		nvgpu_udelay(CTXSW_MEM_SCRUBBING_TIMEOUT_DEFAULT);
 	} while (!nvgpu_timeout_expired(&timeout));
 
 	nvgpu_err(g, "Falcon mem scrubbing timeout");
@@ -8663,7 +8656,7 @@ int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 			return -EFAULT;
 		}
 
-		usleep_range(delay, delay * 2);
+		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 	} while (!nvgpu_timeout_expired(&timeout));
 

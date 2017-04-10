@@ -16,11 +16,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/delay.h>	/* for mdelay */
-
 #include "gk20a.h"
 
 #include <nvgpu/log.h>
+#include <nvgpu/timers.h>
 
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pri_ringmaster_gk20a.h>
@@ -62,7 +61,7 @@ static void gk20a_reset_priv_ring(struct gk20a *g)
 
 	gk20a_writel(g, pri_ringmaster_global_ctl_r(),
 			pri_ringmaster_global_ctl_ring_reset_asserted_f());
-	udelay(20);
+	nvgpu_udelay(20);
 	gk20a_writel(g, pri_ringmaster_global_ctl_r(),
 			pri_ringmaster_global_ctl_ring_reset_deasserted_f());
 
@@ -119,7 +118,7 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	do {
 		cmd = pri_ringmaster_command_cmd_v(
 			gk20a_readl(g, pri_ringmaster_command_r()));
-		usleep_range(20, 40);
+		nvgpu_usleep_range(20, 40);
 	} while (cmd != pri_ringmaster_command_cmd_no_cmd_v() && --retry);
 
 	if (retry <= 0)

@@ -14,11 +14,12 @@
  */
 
 #include <trace/events/gk20a.h>
-#include <linux/delay.h>
 
 #include "gk20a.h"
 #include "kind_gk20a.h"
 #include "fb_gk20a.h"
+
+#include <nvgpu/timers.h>
 
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_fb_gk20a.h>
@@ -124,7 +125,7 @@ void gk20a_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 		data = gk20a_readl(g, fb_mmu_ctrl_r());
 		if (fb_mmu_ctrl_pri_fifo_space_v(data) != 0)
 			break;
-		udelay(2);
+		nvgpu_udelay(2);
 	} while (!nvgpu_timeout_expired_msg(&timeout,
 					 "wait mmu fifo space"));
 
@@ -148,7 +149,7 @@ void gk20a_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 		if (fb_mmu_ctrl_pri_fifo_empty_v(data) !=
 			fb_mmu_ctrl_pri_fifo_empty_false_f())
 			break;
-		udelay(2);
+		nvgpu_udelay(2);
 	} while (!nvgpu_timeout_expired_msg(&timeout,
 					 "wait mmu invalidate"));
 

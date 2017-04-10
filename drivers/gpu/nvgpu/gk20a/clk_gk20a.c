@@ -17,7 +17,6 @@
  */
 
 #include <linux/clk.h>
-#include <linux/delay.h>	/* for mdelay */
 #include <linux/module.h>
 #include <linux/debugfs.h>
 #include <linux/clk/tegra.h>
@@ -26,6 +25,7 @@
 
 #include <nvgpu/log.h>
 #include <nvgpu/soc.h>
+#include <nvgpu/timers.h>
 #include <nvgpu/bug.h>
 
 #include <nvgpu/hw/gk20a/hw_trim_gk20a.h>
@@ -223,7 +223,7 @@ static int clk_slide_gpc_pll(struct gk20a *g, u32 n)
 	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
 	coeff = set_field(coeff, trim_sys_gpcpll_coeff_ndiv_m(),
 			trim_sys_gpcpll_coeff_ndiv_f(n));
-	udelay(1);
+	nvgpu_udelay(1);
 	gk20a_writel(g, trim_sys_gpcpll_coeff_r(), coeff);
 
 	/* dynamic ramp to new ndiv */
@@ -231,11 +231,11 @@ static int clk_slide_gpc_pll(struct gk20a *g, u32 n)
 	data = set_field(data,
 			trim_sys_gpcpll_ndiv_slowdown_en_dynramp_m(),
 			trim_sys_gpcpll_ndiv_slowdown_en_dynramp_yes_f());
-	udelay(1);
+	nvgpu_udelay(1);
 	gk20a_writel(g, trim_sys_gpcpll_ndiv_slowdown_r(), data);
 
 	do {
-		udelay(1);
+		nvgpu_udelay(1);
 		ramp_timeout--;
 		data = gk20a_readl(
 			g, trim_gpc_bcast_gpcpll_ndiv_slowdown_debug_r());
@@ -304,7 +304,7 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 	data = gk20a_readl(g, trim_sys_sel_vco_r());
 	data = set_field(data, trim_sys_sel_vco_gpc2clk_out_m(),
 		trim_sys_sel_vco_gpc2clk_out_bypass_f());
-	udelay(2);
+	nvgpu_udelay(2);
 	gk20a_writel(g, trim_sys_sel_vco_r(), data);
 
 	/* get out from IDDQ */
@@ -314,7 +314,7 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 				trim_sys_gpcpll_cfg_iddq_power_on_v());
 		gk20a_writel(g, trim_sys_gpcpll_cfg_r(), cfg);
 		gk20a_readl(g, trim_sys_gpcpll_cfg_r());
-		udelay(gpc_pll_params.iddq_exit_delay);
+		nvgpu_udelay(gpc_pll_params.iddq_exit_delay);
 	}
 
 	/* disable PLL before changing coefficients */
@@ -353,7 +353,7 @@ static int clk_program_gpc_pll(struct gk20a *g, struct clk_gk20a *clk,
 		cfg = gk20a_readl(g, trim_sys_gpcpll_cfg_r());
 		if (cfg & trim_sys_gpcpll_cfg_pll_lock_true_f())
 			goto pll_locked;
-		udelay(2);
+		nvgpu_udelay(2);
 	} while (--timeout > 0);
 
 	/* PLL is messed up. What can we do here? */
@@ -372,7 +372,7 @@ pll_locked:
 	data = gk20a_readl(g, trim_sys_gpc2clk_out_r());
 	data = set_field(data, trim_sys_gpc2clk_out_vcodiv_m(),
 		trim_sys_gpc2clk_out_vcodiv_by1_f());
-	udelay(2);
+	nvgpu_udelay(2);
 	gk20a_writel(g, trim_sys_gpc2clk_out_r(), data);
 
 	/* slide up to target NDIV */
@@ -791,10 +791,10 @@ static int monitor_get(void *data, u64 *val)
 	/* It should take about 8us to finish 100 cycle of 12MHz.
 	   But longer than 100us delay is required here. */
 	gk20a_readl(g, trim_gpc_clk_cntr_ncgpcclk_cfg_r(0));
-	udelay(2000);
+	nvgpu_udelay(2000);
 
 	count1 = gk20a_readl(g, trim_gpc_clk_cntr_ncgpcclk_cnt_r(0));
-	udelay(100);
+	nvgpu_udelay(100);
 	count2 = gk20a_readl(g, trim_gpc_clk_cntr_ncgpcclk_cnt_r(0));
 	freq *= trim_gpc_clk_cntr_ncgpcclk_cnt_value_v(count2);
 	do_div(freq, ncycle);

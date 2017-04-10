@@ -17,9 +17,7 @@
  */
 
 #include <linux/module.h>
-#include <linux/dma-mapping.h>
 #include <linux/string.h>
-#include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/export.h>
@@ -30,7 +28,6 @@
 #include <linux/thermal.h>
 #include <asm/cacheflush.h>
 #include <linux/debugfs.h>
-#include <nvgpu/lock.h>
 #include <linux/clk/tegra.h>
 #include <linux/kthread.h>
 #include <linux/platform/tegra/common.h>
@@ -1181,7 +1178,7 @@ int gk20a_wait_for_idle(struct device *dev)
 
 	while ((atomic_read(&g->usage_count) != target_usage_count)
 			&& (wait_length-- >= 0))
-		msleep(20);
+		nvgpu_msleep(20);
 
 	if (wait_length < 0) {
 		pr_warn("%s: Timed out waiting for idle (%d)!\n",
@@ -1336,7 +1333,7 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 
 	/* check and wait until GPU is idle (with a timeout) */
 	do {
-		msleep(1);
+		nvgpu_msleep(1);
 		ref_cnt = atomic_read(&dev->power.usage_count);
 	} while (ref_cnt != target_ref_cnt && !nvgpu_timeout_expired(&timeout));
 
@@ -1362,11 +1359,11 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 		pm_runtime_put_sync(dev);
 
 		/* add sufficient delay to allow GPU to rail gate */
-		msleep(platform->railgate_delay);
+		nvgpu_msleep(platform->railgate_delay);
 
 		/* check in loop if GPU is railgated or not */
 		do {
-			msleep(1);
+			nvgpu_msleep(1);
 			is_railgated = platform->is_railgated(dev);
 		} while (!is_railgated && !nvgpu_timeout_expired(&timeout));
 
@@ -1397,7 +1394,7 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 		/* railgate GPU */
 		platform->railgate(dev);
 
-		udelay(10);
+		nvgpu_udelay(10);
 
 		g->forced_reset = true;
 		return 0;

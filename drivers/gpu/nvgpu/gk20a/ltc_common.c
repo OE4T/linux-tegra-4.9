@@ -18,9 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/dma-mapping.h>
-#include <linux/delay.h>
-
 #include <nvgpu/dma.h>
 
 #include "gk20a.h"

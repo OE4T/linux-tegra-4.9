@@ -16,11 +16,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/delay.h>	/* for mdelay */
 #include <linux/firmware.h>
 #include <linux/module.h>
 #include <linux/debugfs.h>
-#include <linux/dma-mapping.h>
 #include <linux/uaccess.h>
 
 #include <nvgpu/nvgpu_common.h>
@@ -2326,7 +2324,7 @@ int pmu_idle(struct pmu_gk20a *pmu)
 					    idle_stat))
 			return -EBUSY;
 
-		usleep_range(100, 200);
+		nvgpu_usleep_range(100, 200);
 	} while (1);
 
 	gk20a_dbg_fn("done");
@@ -2424,7 +2422,7 @@ int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 				gk20a_dbg_fn("done");
 				return 0;
 			}
-			udelay(PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT);
+			nvgpu_udelay(PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT);
 		} while (!nvgpu_timeout_expired(&timeout));
 
 		g->ops.mc.disable(g, mc_enable_pwr_enabled_f());
@@ -2785,7 +2783,7 @@ int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token)
 			nvgpu_warn(g,
 				"fail to generate mutex token: val 0x%08x",
 				owner);
-			usleep_range(20, 40);
+			nvgpu_usleep_range(20, 40);
 			continue;
 		}
 
@@ -2812,7 +2810,7 @@ int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token)
 				pwr_pmu_mutex_id_release_value_f(owner));
 			gk20a_writel(g, pwr_pmu_mutex_id_release_r(), data);
 
-			usleep_range(20, 40);
+			nvgpu_usleep_range(20, 40);
 			continue;
 		}
 	} while (max_retry-- > 0);
@@ -3448,7 +3446,7 @@ static void pmu_setup_hw_enable_elpg(struct gk20a *g)
 		gk20a_pmu_enable_elpg(g);
 	}
 
-	udelay(50);
+	nvgpu_udelay(50);
 
 	/* Enable AELPG */
 	if (g->aelpg_enabled) {
@@ -4335,7 +4333,7 @@ int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout_ms,
 		if (gk20a_readl(g, pwr_falcon_irqstat_r()) & servicedpmuint)
 			gk20a_pmu_isr(g);
 
-		usleep_range(delay, delay * 2);
+		nvgpu_usleep_range(delay, delay * 2);
 		delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
 	} while (!nvgpu_timeout_expired(&timeout));
 
@@ -4689,7 +4687,7 @@ static int pmu_write_cmd(struct pmu_gk20a *pmu, struct pmu_cmd *cmd,
 	do {
 		err = pmu_queue_open_write(pmu, queue, cmd->hdr.size);
 		if (err == -EAGAIN && !nvgpu_timeout_expired(&timeout))
-			usleep_range(1000, 2000);
+			nvgpu_usleep_range(1000, 2000);
 		else
 			break;
 	} while (1);

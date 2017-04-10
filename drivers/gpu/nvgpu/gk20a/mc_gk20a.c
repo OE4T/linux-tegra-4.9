@@ -13,12 +13,12 @@
  * more details.
  */
 
-#include <linux/delay.h>
 #include <trace/events/gk20a.h>
 
 #include "gk20a.h"
 #include "mc_gk20a.h"
 
+#include <nvgpu/timers.h>
 #include <nvgpu/atomic.h>
 
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
@@ -276,16 +276,16 @@ void gk20a_mc_enable(struct gk20a *g, u32 units)
 	gk20a_readl(g, mc_enable_r());
 	nvgpu_spinlock_release(&g->mc_enable_lock);
 
-	udelay(20);
+	nvgpu_udelay(20);
 }
 
 void gk20a_mc_reset(struct gk20a *g, u32 units)
 {
 	g->ops.mc.disable(g, units);
 	if (units & gk20a_fifo_get_all_ce_engine_reset_mask(g))
-		udelay(500);
+		nvgpu_udelay(500);
 	else
-		udelay(20);
+		nvgpu_udelay(20);
 	g->ops.mc.enable(g, units);
 }
 

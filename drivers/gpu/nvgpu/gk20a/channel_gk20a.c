@@ -16,8 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/list.h>
-#include <linux/delay.h>
 #include <linux/kthread.h>
 #include <trace/events/gk20a.h>
 #include <linux/dma-buf.h>
@@ -301,7 +299,7 @@ int gk20a_wait_channel_idle(struct channel_gk20a *ch)
 		if (channel_idle)
 			break;
 
-		usleep_range(1000, 3000);
+		nvgpu_usleep_range(1000, 3000);
 	} while (!nvgpu_timeout_expired(&timeout));
 
 	if (!channel_idle) {

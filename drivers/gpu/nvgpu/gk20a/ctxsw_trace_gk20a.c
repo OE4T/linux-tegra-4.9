@@ -14,12 +14,10 @@
 #include <asm/barrier.h>
 #include <linux/kthread.h>
 #include <linux/circ_buf.h>
-#include <linux/delay.h>
 #include <linux/wait.h>
 #include <linux/ktime.h>
 #include <linux/hashtable.h>
 #include <linux/debugfs.h>
-#include <linux/log2.h>
 #include <linux/uaccess.h>
 #include <linux/poll.h>
 #include <trace/events/gk20a.h>

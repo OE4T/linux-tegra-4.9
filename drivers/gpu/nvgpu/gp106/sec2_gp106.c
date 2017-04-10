@@ -11,8 +11,6 @@
  * more details.
  */
 
-#include <linux/delay.h>	/* for udelay */
-
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 
@@ -46,7 +44,7 @@ int sec2_clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout)
 			psec_falcon_irqstat_halt_true_f())
 			/*halt irq is clear*/
 			break;
-		udelay(1);
+		nvgpu_udelay(1);
 	} while (!nvgpu_timeout_expired(&to));
 
 	if (nvgpu_timeout_peek_expired(&to))
@@ -68,7 +66,7 @@ int sec2_wait_for_halt(struct gk20a *g, unsigned int timeout)
 			completion = 0;
 			break;
 		}
-		udelay(1);
+		nvgpu_udelay(1);
 	} while (!nvgpu_timeout_expired(&to));
 
 	if (completion) {

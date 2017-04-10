@@ -11,8 +11,6 @@
  * more details.
  */
 
-#include <linux/delay.h>
-
 #include "gk20a/gk20a.h"
 #include "gp10b/fb_gp10b.h"
 
@@ -31,7 +29,7 @@ static void gp106_fb_reset(struct gk20a *g)
 			gk20a_dbg_fn("done");
 			break;
 		}
-		udelay(HW_SCRUB_TIMEOUT_DEFAULT);
+		nvgpu_udelay(HW_SCRUB_TIMEOUT_DEFAULT);
 	} while (--retries);
 }
 

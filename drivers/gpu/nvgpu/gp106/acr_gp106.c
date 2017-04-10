@@ -11,12 +11,8 @@
  * more details.
  */
 
-#include <linux/delay.h>	/* for mdelay */
 #include <linux/firmware.h>
-#include <linux/module.h>
 #include <linux/debugfs.h>
-#include <linux/dma-mapping.h>
-#include <linux/io.h>
 
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/kmem.h>
@@ -1163,7 +1159,7 @@ static int gp106_bootstrap_hs_flcn(struct gk20a *g)
 	/* sec2 reset - to keep it idle */
 	gk20a_writel(g, psec_falcon_engine_r(),
 		pwr_falcon_engine_reset_true_f());
-	udelay(10);
+	nvgpu_udelay(10);
 	gk20a_writel(g, psec_falcon_engine_r(),
 		pwr_falcon_engine_reset_false_f());
 

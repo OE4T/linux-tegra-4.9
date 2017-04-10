@@ -14,7 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/delay.h>
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 
@@ -92,7 +91,7 @@ static void xve_reset_gpu_gp106(struct gk20a *g)
 	/*
 	 * Don't access GPU until _after_ it's back out of reset!
 	 */
-	msleep(100);
+	nvgpu_msleep(100);
 	g->ops.xve.xve_writel(g, xve_reset_r(), 0);
 }
 
@@ -530,7 +529,7 @@ static ssize_t xve_link_speed_write(struct file *filp,
 		return -EINVAL;
 
 	/* Brief pause... To help rate limit this. */
-	msleep(250);
+	nvgpu_msleep(250);
 
 	/*
 	 * And actually set the speed. Yay.

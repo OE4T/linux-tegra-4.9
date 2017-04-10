@@ -16,9 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/err.h>
-#include <uapi/linux/nvgpu.h>
-
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/regops_gk20a.h"

@@ -16,11 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/delay.h>	/* for mdelay */
-#include <linux/module.h>
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
-#include <soc/tegra/fuse.h>
 
 #include <nvgpu/kmem.h>
 
@@ -188,7 +185,7 @@ static u32 gp106_get_rate_cntr(struct gk20a *g, struct namemap_cfg *c) {
 	/* Wait for reset to happen */
 	retries = CLK_DEFAULT_CNTRL_SETTLE_RETRIES;
 	do {
-		udelay(CLK_DEFAULT_CNTRL_SETTLE_USECS);
+		nvgpu_udelay(CLK_DEFAULT_CNTRL_SETTLE_USECS);
 	} while ((--retries) && (cntr = gk20a_readl(g, c->cntr.reg_cntr_addr)));
 
 	if (!retries) {
@@ -206,7 +203,7 @@ static u32 gp106_get_rate_cntr(struct gk20a *g, struct namemap_cfg *c) {
 					c->cntr.reg_ctrl_idx);
 	gk20a_readl(g, c->cntr.reg_ctrl_addr);
 
-	udelay(XTAL_CNTR_DELAY);
+	nvgpu_udelay(XTAL_CNTR_DELAY);
 
 	cntr = XTAL_SCALE_TO_KHZ * gk20a_readl(g, c->cntr.reg_cntr_addr);
 

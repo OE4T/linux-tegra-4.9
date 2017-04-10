@@ -11,8 +11,6 @@
  * more details.
  */
 
-#include <linux/delay.h>	/* for udelay */
-
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 
@@ -70,7 +68,7 @@ static int gp106_pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 				gk20a_dbg_fn("done");
 				return 0;
 			}
-			udelay(PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT);
+			nvgpu_udelay(PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT);
 		} while (--retries);
 
 		/* If scrubbing timeout, keep PMU in reset state */
@@ -103,7 +101,7 @@ static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
 
 			pmu_enable_irq(pmu, false);
 			gp106_pmu_enable_hw(pmu, false);
-			udelay(10);
+			nvgpu_udelay(10);
 		}
 	} else {
 		gp106_pmu_enable_hw(pmu, true);
@@ -113,7 +111,7 @@ static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
 		err = pmu_idle(pmu);
 		if (err)
 			return err;
-		udelay(5);
+		nvgpu_udelay(5);
 		pmu_enable_irq(pmu, true);
 	}
 
@@ -155,7 +153,7 @@ static int gp106_sec2_reset(struct gk20a *g)
 	//sec2 reset
 	gk20a_writel(g, psec_falcon_engine_r(),
 			pwr_falcon_engine_reset_true_f());
-	udelay(10);
+	nvgpu_udelay(10);
 	gk20a_writel(g, psec_falcon_engine_r(),
 			pwr_falcon_engine_reset_false_f());
 

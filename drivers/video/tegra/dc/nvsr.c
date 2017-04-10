@@ -562,7 +562,7 @@ static int tegra_dc_nvsr_update_timings(struct tegra_dc_nvsr_data *nvsr)
 static int tegra_nvsr_read_dpaux(struct tegra_dc_nvsr_data *nvsr,
 	u32 reg, u32 size, u32 *val)
 {
-	int ret, i;
+	int ret;
 	u32 aux_stat;
 	u8 data[DP_AUX_MAX_BYTES] = {0};
 
@@ -572,9 +572,10 @@ static int tegra_nvsr_read_dpaux(struct tegra_dc_nvsr_data *nvsr,
 		"DPAUX read failed: reg = 0x%x, size = %d, aux_stat = %d\n",
 		reg, size, aux_stat);
 
-	*val = 0;
-	for (i = 0; i < DP_AUX_MAX_BYTES; i++)
-		*val |= data[i] << (i * 8);
+	if (size > DP_AUX_MAX_BYTES)
+		return -EINVAL;
+
+	memcpy(val, data, size);
 
 	return 0;
 }

@@ -16,6 +16,7 @@
 
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/page_allocator.h>
+#include <nvgpu/log.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
@@ -51,7 +52,7 @@ int nvgpu_mem_begin(struct gk20a *g, struct nvgpu_mem *mem)
 		return 0;
 
 	if (WARN_ON(mem->cpu_va)) {
-		gk20a_warn(dev_from_gk20a(g), "nested %s", __func__);
+		nvgpu_warn(g, "nested");
 		return -EBUSY;
 	}
 

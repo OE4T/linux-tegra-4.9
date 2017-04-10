@@ -92,3 +92,15 @@ config BCMDHD_CUSTOM_NET_PERF_TEGRA
 	  Enable custom network performance boost for Tegra platform.
 	  Dynamically boosts clock frequencies based on network traffic
 	  requirements.
+
+config BCMDHD_QMONITOR
+	bool "Monitoring the DHD queue utilization"
+	depends on BCMDHD
+	---help---
+	  The feature allows monitoring the DHD queue utilization
+	  to get the percentage of a time period where the number of
+	  pending packets is above a configurable theshold.
+	  Based on IOVAR "qtime_percent" results, the server indicates
+	  to the Video Encoder if its bitrate can be increased or
+	  must be decreased. Currently, this works only with P2P interfaces
+	  and with PROP_TXSTATUS.

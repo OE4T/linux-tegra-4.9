@@ -29,10 +29,6 @@ const char string_dpc_pkt[] = "dpc called";
 const char dummy_inf[] = "dummy:";
 int bcmdhd_irq_number;
 
-static DEVICE_ATTR(ping, S_IRUGO | S_IWUSR,
-	tegra_sysfs_histogram_ping_show,
-	tegra_sysfs_histogram_ping_store);
-
 static DEVICE_ATTR(rssi, S_IRUGO | S_IWUSR,
 	tegra_sysfs_histogram_rssi_show,
 	tegra_sysfs_histogram_rssi_store);
@@ -50,7 +46,6 @@ static DEVICE_ATTR(tcpdump, S_IRUGO | S_IWUSR,
 	tegra_sysfs_histogram_tcpdump_store);
 
 static struct attribute *tegra_sysfs_entries_histogram[] = {
-	&dev_attr_ping.attr,
 	&dev_attr_rssi.attr,
 	&dev_attr_scan.attr,
 	&dev_attr_stat.attr,
@@ -126,7 +121,6 @@ tegra_sysfs_register(struct device *dev)
 
 	/* start sysfs work */
 #if 0
-	tegra_sysfs_histogram_ping_work_start();
 	tegra_sysfs_histogram_rssi_work_start();
 	tegra_sysfs_histogram_scan_work_start();
 	tegra_sysfs_histogram_stat_work_start();
@@ -150,7 +144,6 @@ tegra_sysfs_unregister(struct device *dev)
 	tegra_sysfs_histogram_stat_work_stop();
 	tegra_sysfs_histogram_scan_work_stop();
 	tegra_sysfs_histogram_rssi_work_stop();
-	tegra_sysfs_histogram_ping_work_stop();
 
 	/* remove debugfs */
 	if (tegra_debugfs_root) {
@@ -174,7 +167,6 @@ tegra_sysfs_on(void)
 	tegra_sysfs_wifi_on = 1;
 
 	/* resume (start) sysfs work */
-	tegra_sysfs_histogram_ping_work_start();
 	tegra_sysfs_histogram_rssi_work_start();
 	tegra_sysfs_histogram_scan_work_start();
 	tegra_sysfs_histogram_stat_work_start();
@@ -195,7 +187,6 @@ tegra_sysfs_off(void)
 	tegra_sysfs_histogram_stat_work_stop();
 	tegra_sysfs_histogram_scan_work_stop();
 	tegra_sysfs_histogram_rssi_work_stop();
-	tegra_sysfs_histogram_ping_work_stop();
 
 }
 
@@ -213,7 +204,6 @@ tegra_sysfs_suspend(void)
 	tegra_sysfs_histogram_stat_work_stop();
 	tegra_sysfs_histogram_scan_work_stop();
 	tegra_sysfs_histogram_rssi_work_stop();
-	tegra_sysfs_histogram_ping_work_stop();
 
 }
 
@@ -227,7 +217,6 @@ tegra_sysfs_resume(void)
 		return;
 
 	/* resume (start) sysfs work */
-	tegra_sysfs_histogram_ping_work_start();
 	tegra_sysfs_histogram_rssi_work_start();
 	tegra_sysfs_histogram_scan_work_start();
 	tegra_sysfs_histogram_stat_work_start();

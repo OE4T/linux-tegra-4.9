@@ -261,7 +261,6 @@ endif
 
 ifneq ($(CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA),)
   DHDOFILES += dhd_custom_sysfs_tegra.o
-  DHDOFILES += dhd_custom_sysfs_tegra_ping.o
   DHDOFILES += dhd_custom_sysfs_tegra_rssi.o
   DHDOFILES += dhd_custom_sysfs_tegra_scan.o
   DHDOFILES += dhd_custom_sysfs_tegra_stat.o

@@ -216,7 +216,6 @@ ifneq ($(CONFIG_BCMDHD_SDIO),)
   DHDCFLAGS += -DBDC -DDHD_BCMEVENTS -DMMC_SDIO_ABORT
   DHDCFLAGS += -DBCMSDIO -DBCMLXSDMMC -DUSE_SDIOFIFO_IOVAR
   DHDCFLAGS += -DPROP_TXSTATUS
-  DHDCFLAGS += -DQMONITOR
 endif
 
 ifeq ($(CONFIG_BCMDHD_HW_OOB),y)
@@ -225,6 +224,9 @@ else
   DHDCFLAGS += -DSDIO_ISR_THREAD
 endif
 
+ifeq ($(CONFIG_BCMDHD_QMONITOR),y)
+  DHDCFLAGS += -DQMONITOR
+endif
 #EXTRA_LDFLAGS += --strip-debug
 
 EXTRA_CFLAGS += -Wno-date-time
@@ -243,12 +245,11 @@ DHDOFILES := dhd_pno.o dhd_common.o dhd_ip.o dhd_custom_gpio.o \
 
 ifneq ($(CONFIG_BCMDHD_SDIO),)
   DHDOFILES += bcmsdh.o bcmsdh_linux.o bcmsdh_sdmmc.o bcmsdh_sdmmc_linux.o
-  DHDOFILES += dhd_cdc.o dhd_wlfc.o dhd_sdio.o dhd_qmon.o
+  DHDOFILES += dhd_cdc.o dhd_wlfc.o dhd_sdio.o
 endif
 
 ifneq ($(CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA),)
   DHDOFILES += dhd_custom_sysfs_tegra.o
-  DHDOFILES += dhd_custom_sysfs_tegra_ping.o
   DHDOFILES += dhd_custom_sysfs_tegra_rssi.o
   DHDOFILES += dhd_custom_sysfs_tegra_scan.o
   DHDOFILES += dhd_custom_sysfs_tegra_stat.o
@@ -258,6 +259,10 @@ endif
 
 ifneq ($(CONFIG_BCMDHD_CUSTOM_NET_PERF_TEGRA),)
   DHDOFILES += dhd_custom_net_perf_tegra.o
+endif
+
+ifeq ($(CONFIG_BCMDHD_QMONITOR),y)
+  DHDOFILES += dhd_qmon.o
 endif
 
 bcmdhd-objs := $(DHDOFILES)

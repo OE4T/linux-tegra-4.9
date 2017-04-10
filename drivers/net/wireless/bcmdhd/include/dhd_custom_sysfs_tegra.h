@@ -52,30 +52,6 @@ tegra_sysfs_suspend(void);
 void
 tegra_sysfs_resume(void);
 
-/* ping histogram */
-
-void
-tegra_sysfs_histogram_ping_request(struct sk_buff *skb);
-
-void
-tegra_sysfs_histogram_ping_reply(struct sk_buff *skb);
-
-void
-tegra_sysfs_histogram_ping_work_start(void);
-
-void
-tegra_sysfs_histogram_ping_work_stop(void);
-
-ssize_t
-tegra_sysfs_histogram_ping_show(struct device *dev,
-	struct device_attribute *attr,
-	char *buf);
-
-ssize_t
-tegra_sysfs_histogram_ping_store(struct device *dev,
-	struct device_attribute *attr,
-	const char *buf, size_t count);
-
 /* rssi histogram */
 
 void

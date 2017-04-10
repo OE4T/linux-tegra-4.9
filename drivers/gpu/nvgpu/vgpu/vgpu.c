@@ -233,7 +233,7 @@ static void vgpu_init_vars(struct gk20a *g)
 	g->regs_saved = g->regs;
 	g->bar1_saved = g->bar1;
 
-	INIT_LIST_HEAD(&g->pending_sema_waits);
+	nvgpu_init_list_node(&g->pending_sema_waits);
 	nvgpu_raw_spinlock_init(&g->pending_sema_waits_lock);
 }
 

@@ -21,6 +21,10 @@
 
 #include <nvgpu/types.h>
 
+#ifdef CONFIG_TEGRA_19x_GPU
+#include <linux/tegra_vgpu_t19x.h>
+#endif
+
 enum {
 	TEGRA_VGPU_MODULE_GPU = 0,
 };
@@ -454,6 +458,7 @@ struct tegra_vgpu_constants_params {
 	u8 force_preempt_mode;
 	u32 default_timeslice_us;
 	u32 preempt_ctx_size;
+	u32 channel_base;
 };
 
 struct tegra_vgpu_channel_cyclestats_snapshot_params {
@@ -555,6 +560,9 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_perfbuf_mgt_params perfbuf_management;
 		struct tegra_vgpu_get_timestamps_zipper_params get_timestamps_zipper;
 		struct tegra_vgpu_get_gpu_freq_table_params get_gpu_freq_table;
+#ifdef CONFIG_TEGRA_19x_GPU
+		union tegra_vgpu_t19x_params t19x;
+#endif
 		char padding[192];
 	} params;
 };

@@ -325,6 +325,8 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 	f->deferred_reset_pending = false;
 	nvgpu_mutex_init(&f->deferred_reset_mutex);
 
+	f->channel_base = priv->constants.channel_base;
+
 	f->sw_ready = true;
 
 	gk20a_dbg_fn("done");

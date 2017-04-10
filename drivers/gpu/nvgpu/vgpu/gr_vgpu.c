@@ -35,7 +35,7 @@ static void vgpu_gr_detect_sm_arch(struct gk20a *g)
 			priv->constants.sm_arch_warp_count;
 }
 
-static int vgpu_gr_commit_inst(struct channel_gk20a *c, u64 gpu_va)
+int vgpu_gr_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 {
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_ch_ctx_params *p = &msg.params.ch_ctx;
@@ -422,6 +422,8 @@ static void vgpu_gr_free_channel_ctx(struct channel_gk20a *c)
 {
 	gk20a_dbg_fn("");
 
+	if (c->g->ops.fifo.free_channel_ctx_header)
+		c->g->ops.fifo.free_channel_ctx_header(c);
 	vgpu_gr_unmap_global_ctx_buffers(c);
 	vgpu_gr_free_channel_patch_ctx(c);
 	vgpu_gr_free_channel_pm_ctx(c);
@@ -551,7 +553,7 @@ static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 	}
 
 	/* commit gr ctx buffer */
-	err = vgpu_gr_commit_inst(c, ch_ctx->gr_ctx->mem.gpu_va);
+	err = g->ops.gr.commit_inst(c, ch_ctx->gr_ctx->mem.gpu_va);
 	if (err) {
 		nvgpu_err(g, "fail to commit gr ctx buffer");
 		goto out;
@@ -1227,6 +1229,7 @@ void vgpu_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.clear_sm_error_state = vgpu_gr_clear_sm_error_state;
 	gops->gr.suspend_contexts = vgpu_gr_suspend_contexts;
 	gops->gr.resume_contexts = vgpu_gr_resume_contexts;
+	gops->gr.commit_inst = vgpu_gr_commit_inst;
 	gops->gr.dump_gr_regs = NULL;
 	gops->gr.set_boosted_ctx = NULL;
 	gops->gr.update_boosted_ctx = NULL;

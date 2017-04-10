@@ -41,6 +41,9 @@
 #include "intr.h"
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "nvgpu_gpuid_t19x.h"
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+#include "vgpu/vgpu_t19x.h"
+#endif
 #endif
 #include "os_linux.h"
 
@@ -242,6 +245,10 @@ static struct of_device_id tegra_gk20a_of_match[] = {
 #ifdef CONFIG_TEGRA_19x_GPU
 	{ .compatible = TEGRA_19x_GPU_COMPAT_TEGRA,
 		.data = &t19x_gpu_tegra_platform },
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+	{ .compatible = TEGRA_19x_VGPU_COMPAT_TEGRA,
+		.data = &t19x_vgpu_tegra_platform },
+#endif
 #endif
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	{ .compatible = "nvidia,tegra124-gk20a-vgpu",

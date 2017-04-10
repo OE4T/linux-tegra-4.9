@@ -24,6 +24,7 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/debug.h>
 #include <nvgpu/bus.h>
+#include <nvgpu/soc.h>
 
 #include "vgpu/vgpu.h"
 #include "vgpu/fecs_trace_vgpu.h"
@@ -37,6 +38,11 @@
 
 #include "common/linux/module.h"
 #include "common/linux/os_linux.h"
+
+#ifdef CONFIG_TEGRA_19x_GPU
+#include <vgpu/vgpu_t19x.h>
+#include <nvgpu_gpuid_t19x.h>
+#endif
 
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 
@@ -268,14 +274,14 @@ static int vgpu_init_support(struct platform_device *pdev)
 		goto fail;
 	}
 
-	regs = devm_ioremap_resource(&pdev->dev, r);
-	if (IS_ERR(regs)) {
-		dev_err(dev_from_gk20a(g), "failed to remap gk20a regs\n");
-		err = PTR_ERR(g->bar1);
-		goto fail;
-	}
-
 	if (r->name && !strcmp(r->name, "/vgpu")) {
+		regs = devm_ioremap_resource(&pdev->dev, r);
+		if (IS_ERR(regs)) {
+			dev_err(dev_from_gk20a(g),
+				"failed to remap gk20a regs\n");
+			err = PTR_ERR(regs);
+			goto fail;
+		}
 		g->bar1 = regs;
 		g->bar1_mem = r;
 	}
@@ -458,6 +464,11 @@ static int vgpu_init_hal(struct gk20a *g)
 		gk20a_dbg_info("gp10b detected");
 		err = vgpu_gp10b_init_hal(g);
 		break;
+#ifdef CONFIG_TEGRA_19x_GPU
+	case TEGRA_19x_GPUID:
+		err = vgpu_t19x_init_hal(g);
+		break;
+#endif
 	default:
 		nvgpu_err(g, "no support for %x", ver);
 		err = -ENODEV;
@@ -580,6 +591,9 @@ static int vgpu_pm_init(struct device *dev)
 	int err = 0;
 
 	gk20a_dbg_fn("");
+
+	if (nvgpu_platform_is_simulation(g))
+		return 0;
 
 	__pm_runtime_disable(dev, false);
 

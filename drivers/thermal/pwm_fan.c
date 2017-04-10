@@ -505,7 +505,7 @@ static void fan_ramping_work_func(struct work_struct *work)
 			dev_err(fan_data->dev,
 				" Coudn't enable vdd-fan\n");
 		else {
-			dev_info(fan_data->dev,
+			dev_dbg(fan_data->dev,
 				" Enabled vdd-fan\n");
 			fan_data->is_fan_reg_enabled = true;
 		}
@@ -516,7 +516,7 @@ static void fan_ramping_work_func(struct work_struct *work)
 			dev_err(fan_data->dev,
 				" Couldn't disable vdd-fan\n");
 		else {
-			dev_info(fan_data->dev,
+			dev_dbg(fan_data->dev,
 				" Disabled vdd-fan\n");
 			fan_data->is_fan_reg_enabled = false;
 		}
@@ -1226,7 +1226,7 @@ static int pwm_fan_suspend(struct platform_device *pdev, pm_message_t state)
 		if (err < 0)
 			dev_err(&pdev->dev, "Not able to disable Fan regulator\n");
 		else {
-			dev_info(fan_data->dev,
+			dev_dbg(fan_data->dev,
 				" Disabled vdd-fan\n");
 			fan_data->is_fan_reg_enabled = false;
 		}
@@ -1252,7 +1252,7 @@ static int pwm_fan_resume(struct platform_device *pdev)
 		return err;
 	}
 
-	dev_info(fan_data->dev, "Enabled vdd-fan\n");
+	dev_dbg(fan_data->dev, "Enabled vdd-fan\n");
 	fan_data->is_fan_reg_enabled = true;
 
 	gpio_free(fan_data->pwm_gpio);

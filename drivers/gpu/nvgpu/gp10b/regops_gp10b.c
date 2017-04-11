@@ -17,13 +17,14 @@
  */
 
 #include <linux/err.h>
-#include <linux/bsearch.h>
 #include <uapi/linux/nvgpu.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/regops_gk20a.h"
 #include "regops_gp10b.h"
+
+#include <nvgpu/bsearch.h>
 
 static const struct regop_offset_range gp10b_global_whitelist_ranges[] = {
 	{ 0x000004f0,   1},

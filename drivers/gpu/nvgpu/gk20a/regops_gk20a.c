@@ -17,7 +17,6 @@
  */
 
 #include <linux/err.h>
-#include <linux/bsearch.h>
 #include <uapi/linux/nvgpu.h>
 
 #include "gk20a.h"
@@ -26,6 +25,7 @@
 #include "regops_gk20a.h"
 
 #include <nvgpu/log.h>
+#include <nvgpu/bsearch.h>
 
 static int regop_bsearch_range_cmp(const void *pkey, const void *pelem)
 {

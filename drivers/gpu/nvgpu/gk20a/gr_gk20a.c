@@ -26,7 +26,6 @@
 #include <linux/firmware.h>
 #include <linux/nvhost.h>
 #include <linux/sort.h>
-#include <linux/bsearch.h>
 #include <trace/events/gk20a.h>
 
 #include <nvgpu/dma.h>
@@ -34,6 +33,7 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/log.h>
+#include <nvgpu/bsearch.h>
 
 #include "gk20a.h"
 #include "kind_gk20a.h"

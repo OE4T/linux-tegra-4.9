@@ -840,13 +840,13 @@ static size_t __smmu_iommu_unmap_pages(struct smmu_as *as, dma_addr_t iova,
 			unsigned int *rest = &as->pte_count[pdn];
 			size_t pte_bytes = sizeof(*pte) * count;
 
+			trace_smmu_set_pte(as->asid,
+					   iova, 0, count * PAGE_SIZE, 0);
+
 			for (i = 0; i < count; i++) {
 				if (pte[i] == _PTE_VACANT(iova + i * PAGE_SIZE))
 					WARN(1, "error:unmap req on vacant pte, iova=%llx",
 						(u64)(iova + i * PAGE_SIZE));
-				trace_smmu_set_pte(as->asid,
-						   iova + i * PAGE_SIZE, 0,
-						   PAGE_SIZE, 0);
 			}
 			*rest -= count;
 			if (*rest) {

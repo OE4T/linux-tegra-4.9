@@ -2266,20 +2266,20 @@ static void init_spi_pinctrl(struct lr388k7 *ts, struct device *dev)
 
 	pin = devm_pinctrl_get(dev);
 	if (IS_ERR(pin)) {
-		dev_err(dev, "missing pinctrl device\n");
+		dev_info(dev, "missing pinctrl device.\n");
 		return;
 	}
 	ts->pinctrl = pin;
 
 	active = pinctrl_lookup_state(pin, "spi_intf_normal");
 	if (IS_ERR_OR_NULL(active)) {
-		dev_err(dev, "missing spi_intf_normal state\n");
+		dev_info(dev, "missing spi_intf_normal state.\n");
 		goto out;
 	}
 	ts->spi_intf_en = active;
 	inactive = pinctrl_lookup_state(pin, "spi_intf_lowpower");
 	if (IS_ERR_OR_NULL(active)) {
-		dev_err(dev, "missing spi_intf_lowpower state\n");
+		dev_info(dev, "missing spi_intf_lowpower state.\n");
 		goto out;
 	}
 	ts->spi_intf_dis = inactive;

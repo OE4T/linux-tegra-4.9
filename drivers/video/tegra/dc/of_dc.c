@@ -2220,23 +2220,15 @@ static int dc_dp_out_disable(struct device *dev)
 {
 	if (of_dp_pwr) {
 		regulator_disable(of_dp_pwr);
-		devm_regulator_put(of_dp_pwr);
-		of_dp_pwr = NULL;
 	}
 	if (of_dp_pll) {
 		regulator_disable(of_dp_pll);
-		devm_regulator_put(of_dp_pll);
-		of_dp_pll = NULL;
 	}
 	if (of_edp_sec_mode) {
 		regulator_disable(of_edp_sec_mode);
-		devm_regulator_put(of_edp_sec_mode);
-		of_edp_sec_mode = NULL;
 	}
 	if (of_dp_pad) {
 		regulator_disable(of_dp_pad);
-		devm_regulator_put(of_dp_pad);
-		of_dp_pad = NULL;
 	}
 	return 0;
 }
@@ -2291,8 +2283,6 @@ static int dc_dp_out_postsuspend(void)
 {
 	if (of_dp_hdmi_5v0) {
 		regulator_disable(of_dp_hdmi_5v0);
-		devm_regulator_put(of_dp_hdmi_5v0);
-		of_dp_hdmi_5v0 = NULL;
 	}
 
 	return 0;
@@ -2303,8 +2293,8 @@ static int dc_hdmi_out_enable(struct device *dev)
 	int err = 0;
 
 	if (!of_hdmi_dp_reg) {
-		of_hdmi_dp_reg = regulator_get(dev, "avdd_hdmi");
-		if (IS_ERR_OR_NULL(of_hdmi_dp_reg)) {
+		of_hdmi_dp_reg = devm_regulator_get(dev, "avdd_hdmi");
+		if (IS_ERR(of_hdmi_dp_reg)) {
 			dev_err(dev, "%s: couldn't get regulator %s\n",
 					__func__, "avdd_hdmi");
 			of_hdmi_dp_reg = NULL;
@@ -2319,12 +2309,11 @@ static int dc_hdmi_out_enable(struct device *dev)
 		goto dc_hdmi_out_en_fail;
 	}
 	if (!of_hdmi_pll) {
-		of_hdmi_pll = regulator_get(dev, "avdd_hdmi_pll");
-		if (IS_ERR_OR_NULL(of_hdmi_pll)) {
+		of_hdmi_pll = devm_regulator_get(dev, "avdd_hdmi_pll");
+		if (IS_ERR(of_hdmi_pll)) {
 			dev_err(dev, "%s: couldn't get regulator %s\n",
 					__func__, "avdd_hdmi_pll");
 			of_hdmi_pll = NULL;
-			regulator_put(of_hdmi_dp_reg);
 			of_hdmi_dp_reg = NULL;
 			err = PTR_ERR(of_hdmi_pll);
 			goto dc_hdmi_out_en_fail;
@@ -2359,14 +2348,10 @@ static int dc_hdmi_out_disable(struct device *dev)
 
 	if (of_hdmi_dp_reg) {
 		regulator_disable(of_hdmi_dp_reg);
-		regulator_put(of_hdmi_dp_reg);
-		of_hdmi_dp_reg = NULL;
 	}
 
 	if (of_hdmi_pll) {
 		regulator_disable(of_hdmi_pll);
-		regulator_put(of_hdmi_pll);
-		of_hdmi_pll = NULL;
 	}
 
 	return 0;
@@ -2377,8 +2362,8 @@ static int dc_hdmi_hotplug_init(struct device *dev)
 	int err = 0;
 
 	if (!of_hdmi_vddio) {
-		of_hdmi_vddio = regulator_get(dev, "vdd_hdmi_5v0");
-		if (IS_ERR_OR_NULL(of_hdmi_vddio)) {
+		of_hdmi_vddio = devm_regulator_get(dev, "vdd_hdmi_5v0");
+		if (IS_ERR(of_hdmi_vddio)) {
 			err = PTR_ERR(of_hdmi_vddio);
 			dev_err(dev, "%s: couldn't get regulator %s, %d\n",
 					__func__, "vdd_hdmi_5v0", err);
@@ -2390,8 +2375,6 @@ static int dc_hdmi_hotplug_init(struct device *dev)
 	if (err < 0) {
 		dev_err(dev, "%s: couldn't enable regulator %s, %d\n",
 				__func__, "vdd_hdmi_5v0", err);
-		regulator_put(of_hdmi_vddio);
-		of_hdmi_vddio = NULL;
 		goto dc_hdmi_hotplug_init_fail;
 	}
 dc_hdmi_hotplug_init_fail:
@@ -2402,8 +2385,6 @@ static int dc_hdmi_postsuspend(void)
 {
 	if (of_hdmi_vddio) {
 		regulator_disable(of_hdmi_vddio);
-		regulator_put(of_hdmi_vddio);
-		of_hdmi_vddio = NULL;
 	}
 	return 0;
 }

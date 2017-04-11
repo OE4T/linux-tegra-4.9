@@ -186,7 +186,6 @@ int tegra_dc_destroy_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 	}
 
 	if (dsi->avdd_dsi_csi) {
-		regulator_put(dsi->avdd_dsi_csi);
 		dsi->avdd_dsi_csi = NULL;
 	}
 
@@ -236,8 +235,8 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 		dsi->base[i] = base;
 	}
 
-	dsi->avdd_dsi_csi =  regulator_get(&dc->ndev->dev, "avdd_dsi_csi");
-	if (IS_ERR_OR_NULL(dsi->avdd_dsi_csi)) {
+	dsi->avdd_dsi_csi =  devm_regulator_get(&dc->ndev->dev, "avdd_dsi_csi");
+	if (IS_ERR(dsi->avdd_dsi_csi)) {
 		dev_err(&dc->ndev->dev, "dsi: avdd_dsi_csi reg get failed\n");
 		err = -ENODEV;
 		goto err_release_regs;
@@ -257,7 +256,7 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 
 err_release_regs:
 	if (dsi->avdd_dsi_csi)
-		regulator_put(dsi->avdd_dsi_csi);
+		dsi->avdd_dsi_csi = NULL;
 
 err_iounmap:
 	for (; i >= 0; i--) {

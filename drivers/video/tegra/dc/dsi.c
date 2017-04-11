@@ -5080,14 +5080,16 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	if (tegra_platform_is_silicon() && tegra_bpmp_running()) {
 #endif
-		dsi->avdd_dsi_csi =  regulator_get(&dc->ndev->dev,
-			"avdd_dsi_csi");
-		if (IS_ERR_OR_NULL(dsi->avdd_dsi_csi)) {
-			dev_err(&dc->ndev->dev,
-				"dsi: avdd_dsi_csi reg get failed\n");
-			err = -ENODEV;
-			dsi->avdd_dsi_csi = NULL;
-			goto err_reg;
+		if (!dsi->avdd_dsi_csi) {
+			dsi->avdd_dsi_csi =  devm_regulator_get(&dc->ndev->dev,
+				"avdd_dsi_csi");
+			if (IS_ERR(dsi->avdd_dsi_csi)) {
+				dev_err(&dc->ndev->dev,
+					"dsi: avdd_dsi_csi reg get failed\n");
+				err = -ENODEV;
+				dsi->avdd_dsi_csi = NULL;
+				goto err_reg;
+			}
 		}
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	} else {
@@ -5120,16 +5122,10 @@ err:
 
 static void tegra_dc_dsi_destroy(struct tegra_dc *dc)
 {
-	struct regulator *avdd_dsi_csi;
-	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
-
-	avdd_dsi_csi = dsi->avdd_dsi_csi;
-
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 	tegra_dsi_padctrl_shutdown(dc);
 #endif
 	_tegra_dc_dsi_destroy(dc);
-	regulator_put(avdd_dsi_csi);
 }
 
 /*

@@ -65,7 +65,14 @@ struct channel_gk20a_job {
 	struct gk20a_fence *post_fence;
 	struct priv_cmd_entry *wait_cmd;
 	struct priv_cmd_entry *incr_cmd;
-	struct list_head list;
+	struct nvgpu_list_node list;
+};
+
+static inline struct channel_gk20a_job *
+channel_gk20a_job_from_list(struct nvgpu_list_node *node)
+{
+	return (struct channel_gk20a_job *)
+	((uintptr_t)node - offsetof(struct channel_gk20a_job, list));
 };
 
 struct channel_gk20a_joblist {
@@ -79,7 +86,7 @@ struct channel_gk20a_joblist {
 	} pre_alloc;
 
 	struct {
-		struct list_head jobs;
+		struct nvgpu_list_node jobs;
 		struct nvgpu_spinlock lock;
 	} dynamic;
 

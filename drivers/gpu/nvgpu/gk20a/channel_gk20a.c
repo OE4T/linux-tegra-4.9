@@ -243,8 +243,9 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 			tmp_get = (tmp_get + 1) % ch->joblist.pre_alloc.length;
 		}
 	} else {
-		list_for_each_entry_safe(job, n,
-				&ch->joblist.dynamic.jobs, list) {
+		nvgpu_list_for_each_entry_safe(job, n,
+				&ch->joblist.dynamic.jobs,
+				channel_gk20a_job, list) {
 			if (job->post_fence->semaphore) {
 				__nvgpu_semaphore_release(
 					job->post_fence->semaphore, true);
@@ -1079,9 +1080,9 @@ static struct channel_gk20a_job *channel_gk20a_joblist_peek(
 			job = &c->joblist.pre_alloc.jobs[get];
 		}
 	} else {
-		if (!list_empty(&c->joblist.dynamic.jobs))
-			job = list_first_entry(&c->joblist.dynamic.jobs,
-				       struct channel_gk20a_job, list);
+		if (!nvgpu_list_empty(&c->joblist.dynamic.jobs))
+			job = nvgpu_list_first_entry(&c->joblist.dynamic.jobs,
+				       channel_gk20a_job, list);
 	}
 
 	return job;
@@ -1094,7 +1095,7 @@ static void channel_gk20a_joblist_add(struct channel_gk20a *c,
 		c->joblist.pre_alloc.put = (c->joblist.pre_alloc.put + 1) %
 				(c->joblist.pre_alloc.length);
 	} else {
-		list_add_tail(&job->list, &c->joblist.dynamic.jobs);
+		nvgpu_list_add_tail(&job->list, &c->joblist.dynamic.jobs);
 	}
 }
 
@@ -1105,7 +1106,7 @@ static void channel_gk20a_joblist_delete(struct channel_gk20a *c,
 		c->joblist.pre_alloc.get = (c->joblist.pre_alloc.get + 1) %
 				(c->joblist.pre_alloc.length);
 	} else {
-		list_del_init(&job->list);
+		nvgpu_list_del(&job->list);
 	}
 }
 
@@ -1117,7 +1118,7 @@ bool channel_gk20a_joblist_is_empty(struct channel_gk20a *c)
 		return !(CIRC_CNT(put, get, c->joblist.pre_alloc.length));
 	}
 
-	return list_empty(&c->joblist.dynamic.jobs);
+	return nvgpu_list_empty(&c->joblist.dynamic.jobs);
 }
 
 bool channel_gk20a_is_prealloc_enabled(struct channel_gk20a *c)
@@ -2644,7 +2645,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	nvgpu_spinlock_init(&c->joblist.dynamic.lock);
 	nvgpu_raw_spinlock_init(&c->timeout.lock);
 
-	INIT_LIST_HEAD(&c->joblist.dynamic.jobs);
+	nvgpu_init_list_node(&c->joblist.dynamic.jobs);
 	nvgpu_init_list_node(&c->dbg_s_list);
 	nvgpu_init_list_node(&c->event_id_list);
 	nvgpu_init_list_node(&c->worker_item);

@@ -26,6 +26,7 @@
 
 #include <nvgpu/log.h>
 #include <nvgpu/soc.h>
+#include <nvgpu/bug.h>
 
 #include <nvgpu/hw/gk20a/hw_trim_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_timer_gk20a.h>

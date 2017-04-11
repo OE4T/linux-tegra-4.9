@@ -33,6 +33,7 @@
 #include <nvgpu/soc.h>
 #include <nvgpu/atomic.h>
 #include <nvgpu/sort.h>
+#include <nvgpu/bug.h>
 
 #include "gk20a.h"
 #include "debug_gk20a.h"

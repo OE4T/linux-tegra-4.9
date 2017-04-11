@@ -20,6 +20,7 @@
 #include <nvgpu/allocator.h>
 #include <nvgpu/page_allocator.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/bug.h>
 
 #include "buddy_allocator_priv.h"
 

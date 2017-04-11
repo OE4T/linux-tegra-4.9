@@ -22,6 +22,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
 #include <nvgpu/atomic.h>
+#include <nvgpu/bug.h>
 
 #include "channel_sync_gk20a.h"
 #include "gk20a.h"

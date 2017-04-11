@@ -49,6 +49,7 @@
 #include <soc/tegra/chip-id.h>
 
 #include <nvgpu/kmem.h>
+#include <nvgpu/bug.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/hal_gk20a.h"

@@ -19,6 +19,7 @@
 
 #include <nvgpu/dma.h>
 #include <nvgpu/lock.h>
+#include <nvgpu/bug.h>
 
 #include "gk20a/gk20a.h"
 

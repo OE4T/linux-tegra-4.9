@@ -29,6 +29,7 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/log.h>
 #include <nvgpu/atomic.h>
+#include <nvgpu/bug.h>
 
 #include "gk20a.h"
 #include "debug_gk20a.h"

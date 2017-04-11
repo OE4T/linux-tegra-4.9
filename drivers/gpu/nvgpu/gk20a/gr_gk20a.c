@@ -34,6 +34,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/bsearch.h>
 #include <nvgpu/sort.h>
+#include <nvgpu/bug.h>
 
 #include "gk20a.h"
 #include "kind_gk20a.h"

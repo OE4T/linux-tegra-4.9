@@ -22,6 +22,8 @@
 #include "gm206/bios_gm206.h"
 #include "gp106/xve_gp106.h"
 
+#include <nvgpu/bug.h>
+
 #include <nvgpu/hw/gp106/hw_xp_gp106.h>
 #include <nvgpu/hw/gp106/hw_xve_gp106.h>
 

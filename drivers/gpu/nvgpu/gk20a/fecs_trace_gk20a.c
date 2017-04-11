@@ -24,6 +24,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>
+#include <nvgpu/bug.h>
 
 #include "ctxsw_trace_gk20a.h"
 #include "fecs_trace_gk20a.h"

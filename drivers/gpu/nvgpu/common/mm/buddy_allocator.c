@@ -16,6 +16,7 @@
 
 #include <nvgpu/allocator.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/bug.h>
 
 #include "gk20a/mm_gk20a.h"
 #include "gk20a/platform_gk20a.h"

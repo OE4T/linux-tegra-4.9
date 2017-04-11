@@ -32,6 +32,7 @@
 #include "clk_gm20b.h"
 
 #include <nvgpu/soc.h>
+#include <nvgpu/bug.h>
 
 #include <nvgpu/hw/gm20b/hw_trim_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_timer_gm20b.h>

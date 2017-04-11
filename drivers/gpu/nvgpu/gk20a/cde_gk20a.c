@@ -29,6 +29,7 @@
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
+#include <nvgpu/bug.h>
 
 #include "gk20a.h"
 #include "channel_gk20a.h"

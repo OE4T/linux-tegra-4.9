@@ -20,6 +20,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/soc.h>
+#include <nvgpu/bug.h>
 
 #include "gk20a/gk20a_scale.h"
 #include "gk20a/gk20a.h"

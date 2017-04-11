@@ -22,6 +22,7 @@
 
 #include <nvgpu/bitops.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/bug.h>
 
 #include "ioctl_ctrl.h"
 #include "ioctl_tsg.h"

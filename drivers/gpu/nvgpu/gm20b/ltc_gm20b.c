@@ -18,6 +18,7 @@
 #include "gk20a/gk20a.h"
 
 #include <nvgpu/timers.h>
+#include <nvgpu/bug.h>
 
 #include <nvgpu/hw/gm20b/hw_mc_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_ltc_gm20b.h>

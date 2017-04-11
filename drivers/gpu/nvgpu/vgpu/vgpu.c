@@ -20,6 +20,7 @@
 #include <linux/pm_qos.h>
 
 #include <nvgpu/kmem.h>
+#include <nvgpu/bug.h>
 
 #include "vgpu/vgpu.h"
 #include "vgpu/fecs_trace_vgpu.h"

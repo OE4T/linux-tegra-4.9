@@ -16,6 +16,7 @@
 #include <linux/delay.h>
 
 #include <nvgpu/dma.h>
+#include <nvgpu/bug.h>
 
 #include "fifo_gp10b.h"
 

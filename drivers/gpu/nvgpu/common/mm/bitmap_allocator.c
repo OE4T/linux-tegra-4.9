@@ -17,6 +17,7 @@
 #include <nvgpu/bitops.h>
 #include <nvgpu/allocator.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/bug.h>
 
 #include "bitmap_allocator_priv.h"
 

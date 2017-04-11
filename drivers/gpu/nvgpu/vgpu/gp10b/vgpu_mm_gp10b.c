@@ -18,6 +18,8 @@
 #include "vgpu_mm_gp10b.h"
 #include "gk20a/mm_gk20a.h"
 
+#include <nvgpu/bug.h>
+
 static int vgpu_gp10b_init_mm_setup_hw(struct gk20a *g)
 {
 	g->mm.bypass_smmu = true;

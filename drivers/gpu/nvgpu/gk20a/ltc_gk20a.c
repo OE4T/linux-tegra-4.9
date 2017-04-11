@@ -19,6 +19,7 @@
 #include <trace/events/gk20a.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/log.h>
+#include <nvgpu/bug.h>
 
 #include "gk20a.h"
 

@@ -1,7 +1,5 @@
 /*
- * Virtualized GPU CE2
- *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -12,24 +10,11 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
+#ifndef __NVGPU_BUG_H__
+#define __NVGPU_BUG_H__
 
-#include "vgpu/vgpu.h"
+#ifdef __KERNEL__
+#include <linux/bug.h>
+#endif
 
-#include <nvgpu/bug.h>
-
-int vgpu_ce2_nonstall_isr(struct gk20a *g,
-			struct tegra_vgpu_ce2_nonstall_intr_info *info)
-{
-	gk20a_dbg_fn("");
-
-	switch (info->type) {
-	case TEGRA_VGPU_CE2_NONSTALL_INTR_NONBLOCKPIPE:
-		gk20a_channel_semaphore_wakeup(g, true);
-		break;
-	default:
-		WARN_ON(1);
-		break;
-	}
-
-	return 0;
-}
+#endif

@@ -28,6 +28,7 @@
 #include "css_gr_gk20a.h"
 
 #include <nvgpu/log.h>
+#include <nvgpu/bug.h>
 
 #include <nvgpu/hw/gk20a/hw_perf_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>

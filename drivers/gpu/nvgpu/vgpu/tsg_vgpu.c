@@ -22,6 +22,8 @@
 #include "gk20a/tsg_gk20a.h"
 #include "vgpu.h"
 
+#include <nvgpu/bug.h>
+
 static int vgpu_tsg_open(struct tsg_gk20a *tsg)
 {
 	struct tegra_vgpu_cmd_msg msg = {};

@@ -40,6 +40,7 @@
 #include <nvgpu/semaphore.h>
 #include <nvgpu/page_allocator.h>
 #include <nvgpu/log.h>
+#include <nvgpu/bug.h>
 
 #include "gk20a.h"
 #include "mm_gk20a.h"

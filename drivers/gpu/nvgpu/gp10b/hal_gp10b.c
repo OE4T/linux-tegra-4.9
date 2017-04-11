@@ -44,6 +44,8 @@
 
 #include "gp10b.h"
 
+#include <nvgpu/bug.h>
+
 #include <nvgpu/hw/gp10b/hw_proj_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
 

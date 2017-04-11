@@ -16,6 +16,8 @@
 #include "gk20a/pmu_gk20a.h"
 #include "clk/clk_arb.h"
 
+#include <nvgpu/bug.h>
+
 struct perfrpc_pmucmdhandler_params {
 	struct nv_pmu_perf_rpc *prpccall;
 	u32 success;

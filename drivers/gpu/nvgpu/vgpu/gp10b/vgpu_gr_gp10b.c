@@ -13,6 +13,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>
+#include <nvgpu/bug.h>
 
 #include "vgpu/vgpu.h"
 #include "vgpu/gm20b/vgpu_gr_gm20b.h"

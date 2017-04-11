@@ -36,6 +36,7 @@
 #include "pramin_gk20a.h"
 
 #include <nvgpu/log.h>
+#include <nvgpu/bug.h>
 
 #include <nvgpu/hw/gk20a/hw_proj_gk20a.h>
 

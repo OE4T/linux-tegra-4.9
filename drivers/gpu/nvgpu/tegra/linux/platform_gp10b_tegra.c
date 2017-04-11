@@ -28,6 +28,7 @@
 #include <soc/tegra/tegra_powergate.h>
 
 #include <nvgpu/kmem.h>
+#include <nvgpu/bug.h>
 
 #include "clk.h"
 

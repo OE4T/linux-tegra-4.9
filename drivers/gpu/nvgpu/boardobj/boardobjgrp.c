@@ -17,6 +17,8 @@
 #include "ctrl/ctrlboardobj.h"
 #include "boardobj.h"
 
+#include <nvgpu/bug.h>
+
 static boardobjgrp_objinsert   boardobjgrp_objinsert_final;
 static boardobjgrp_objgetbyidx   boardobjgrp_objgetbyidx_final;
 static boardobjgrp_objgetnext   boardobjgrp_objgetnext_final;

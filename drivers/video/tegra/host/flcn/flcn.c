@@ -640,6 +640,10 @@ static struct of_device_id tegra_flcn_of_match[] = {
 	{ .compatible = "nvidia,tegra194-vi-thi",
 		.data = (struct nvhost_device_data *)&t19_vi_thi_info },
 #endif
+#if defined(CONFIG_TEGRA_GRHOST_ISP)
+	{ .compatible = "nvidia,tegra194-isp-thi",
+		.data = (struct nvhost_device_data *)&t19_isp_thi_info },
+#endif
 #if defined(CONFIG_TEGRA_GRHOST_VIC)
 	{ .compatible = "nvidia,tegra194-vic",
 		.data = (struct nvhost_device_data *)&t19_vic_info },

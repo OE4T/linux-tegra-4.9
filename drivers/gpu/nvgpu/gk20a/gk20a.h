@@ -35,7 +35,6 @@ struct dbg_profiler_object_data;
 #include <linux/nvgpu.h>
 #include <linux/irqreturn.h>
 #include <linux/version.h>
-#include <linux/atomic.h>
 #include <linux/cdev.h>
 
 #include "../../../arch/arm/mach-tegra/iomap.h"

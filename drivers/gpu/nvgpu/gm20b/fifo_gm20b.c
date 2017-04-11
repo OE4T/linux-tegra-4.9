@@ -22,6 +22,7 @@
 
 #include <nvgpu/timers.h>
 #include <nvgpu/log.h>
+#include <nvgpu/atomic.h>
 
 #include <nvgpu/hw/gm20b/hw_ccsr_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_ram_gm20b.h>

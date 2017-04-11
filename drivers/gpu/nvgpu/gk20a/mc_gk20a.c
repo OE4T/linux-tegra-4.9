@@ -19,6 +19,8 @@
 #include "gk20a.h"
 #include "mc_gk20a.h"
 
+#include <nvgpu/atomic.h>
+
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 
 void mc_gk20a_nonstall_cb(struct work_struct *work)

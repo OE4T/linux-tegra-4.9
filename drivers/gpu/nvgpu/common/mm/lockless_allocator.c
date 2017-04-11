@@ -14,8 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/atomic.h>
-
+#include <nvgpu/atomic.h>
 #include <nvgpu/allocator.h>
 #include <nvgpu/kmem.h>
 

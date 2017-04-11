@@ -33,6 +33,7 @@
 #include "gr_gk20a.h"
 
 #include <nvgpu/log.h>
+#include <nvgpu/atomic.h>
 
 #include <nvgpu/hw/gk20a/hw_ctxsw_prog_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>

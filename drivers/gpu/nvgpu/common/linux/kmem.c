@@ -16,7 +16,6 @@
 
 #include <linux/mutex.h>
 #include <linux/slab.h>
-#include <linux/atomic.h>
 #include <linux/rbtree.h>
 #include <linux/debugfs.h>
 #include <linux/spinlock.h>
@@ -25,6 +24,7 @@
 #include <linux/stacktrace.h>
 
 #include <nvgpu/kmem.h>
+#include <nvgpu/atomic.h>
 
 #include "gk20a/gk20a.h"
 

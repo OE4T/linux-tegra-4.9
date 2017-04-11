@@ -20,6 +20,7 @@
 
 #include <nvgpu/log.h>
 #include <nvgpu/allocator.h>
+#include <nvgpu/atomic.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"

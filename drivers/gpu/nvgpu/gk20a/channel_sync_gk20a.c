@@ -21,6 +21,7 @@
 #include <nvgpu/semaphore.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
+#include <nvgpu/atomic.h>
 
 #include "channel_sync_gk20a.h"
 #include "gk20a.h"

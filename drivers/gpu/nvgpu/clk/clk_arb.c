@@ -19,11 +19,11 @@
 #include <linux/llist.h>
 #include <linux/uaccess.h>
 #include <linux/poll.h>
-#include <linux/atomic.h>
 
 #include <nvgpu/bitops.h>
 #include <nvgpu/lock.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/atomic.h>
 
 #include "gk20a/gk20a.h"
 #include "clk/clk_arb.h"

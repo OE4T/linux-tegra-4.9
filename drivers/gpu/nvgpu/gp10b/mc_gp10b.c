@@ -18,6 +18,8 @@
 
 #include "mc_gp10b.h"
 
+#include <nvgpu/atomic.h>
+
 #include <nvgpu/hw/gp10b/hw_mc_gp10b.h>
 
 void mc_gp10b_intr_enable(struct gk20a *g)

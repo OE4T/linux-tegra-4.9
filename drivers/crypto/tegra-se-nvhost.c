@@ -780,6 +780,14 @@ static int tegra_se_channel_submit_gather(struct tegra_se_dev *se_dev,
 		}
 	}
 
+	err = nvhost_module_busy(se_dev->pdev);
+	if (err) {
+		dev_err(se_dev->dev,
+			"nvhost_module_busy failed for se_dev\n");
+		kfree(priv);
+		return err;
+	}
+
 	if (!se_dev->channel) {
 		err = nvhost_channel_map(pdata, &se_dev->channel, pdata);
 		if (err) {
@@ -884,6 +892,8 @@ error:
 	nvhost_job_put(job);
 	job = NULL;
 exit:
+	nvhost_module_idle(se_dev->pdev);
+
 	if (err)
 		kfree(priv);
 	return err;

@@ -1158,6 +1158,10 @@ struct gk20a {
 	struct nvgpu_mem_alloc_tracker *vmallocs;
 	struct nvgpu_mem_alloc_tracker *kmallocs;
 #endif
+
+	/* Some boards might be missing power sensor, preventing
+	 * from monitoring power, current and voltage */
+	bool power_sensor_missing;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)

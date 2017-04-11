@@ -303,6 +303,12 @@ int gm206_bios_init(struct gk20a *g)
 		return -EINVAL;
 	}
 
+	/* WAR for missing INA3221 on HW2.5 RevA */
+	g->power_sensor_missing =
+		(g->pci_vendor_id == PCI_VENDOR_ID_NVIDIA) &&
+		(g->pci_device_id == 0x1c75) &&
+		(g->gpu_characteristics.vbios_version == 0x86065300);
+
 	g->bios_blob.data = g->bios.data;
 	g->bios_blob.size = g->bios.size;
 

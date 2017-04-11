@@ -24,7 +24,6 @@
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
 #include <linux/nvhost.h>
 #endif
-#include <linux/sort.h>
 
 #include <nvgpu/dma.h>
 #include <nvgpu/timers.h>
@@ -33,6 +32,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/soc.h>
 #include <nvgpu/atomic.h>
+#include <nvgpu/sort.h>
 
 #include "gk20a.h"
 #include "debug_gk20a.h"

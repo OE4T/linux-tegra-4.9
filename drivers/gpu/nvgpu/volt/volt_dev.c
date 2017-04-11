@@ -11,8 +11,7 @@
  * more details.
  */
 
-#include <linux/sort.h>
-
+#include <nvgpu/sort.h>
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 #include <nvgpu/bios.h>
 #include <nvgpu/kmem.h>

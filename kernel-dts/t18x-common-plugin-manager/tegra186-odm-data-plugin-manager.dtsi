@@ -16,7 +16,7 @@
 / {
 	plugin-manager {
 		fragement@0 {
-			odm-data = "enable-tegra-wdt", "enable-denver-wdt";
+			odm-data = "enable-denver-wdt";
 			override@0 {
 				target = <&tegra_wdt>;
 				_overlay_ {
@@ -26,7 +26,7 @@
 		};
 
 		fragement@1 {
-			odm-data = "disable-tegra-wdt";
+			odm-data = "disable-denver-wdt";
 			override@0 {
 				target = <&tegra_pmc>;
 				_overlay_ {
@@ -46,9 +46,8 @@
 		};
 
 		fragement@4 {
-			odm-data = "enable-tegra-wdt",
-					"enable-pmic-wdt",
-					"enable-denver-wdt";
+			odm-data = "enable-pmic-wdt",
+				   "enable-denver-wdt";
 			override@0 {
 				target = <&soft_wdt>;
 				_overlay_ {

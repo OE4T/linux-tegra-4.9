@@ -3,7 +3,7 @@
  *
  * Tegra T194 HOST1X Register Definitions
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -31,15 +31,15 @@
 #define NV_HOST1X_SYNCPT_NB_PTS 704
 #define NV_HOST1X_NB_MLOCKS 24
 
-#define NV_HOST1X_MLOCK_ID_NVCSI	7
-#define NV_HOST1X_MLOCK_ID_ISP		8
-#define NV_HOST1X_MLOCK_ID_VI		16
-#define NV_HOST1X_MLOCK_ID_VIC		17
-#define NV_HOST1X_MLOCK_ID_NVENC	18
-#define NV_HOST1X_MLOCK_ID_NVDEC	19
-#define NV_HOST1X_MLOCK_ID_NVJPG	20
-#define NV_HOST1X_MLOCK_ID_TSEC		21
-#define NV_HOST1X_MLOCK_ID_TSECB	22
+#define NV_HOST1X_MLOCK_ID_NVCSI	8
+#define NV_HOST1X_MLOCK_ID_ISP		9
+#define NV_HOST1X_MLOCK_ID_VI		17
+#define NV_HOST1X_MLOCK_ID_VIC		18
+#define NV_HOST1X_MLOCK_ID_NVENC	19
+#define NV_HOST1X_MLOCK_ID_NVDEC	20
+#define NV_HOST1X_MLOCK_ID_NVJPG	21
+#define NV_HOST1X_MLOCK_ID_TSEC		22
+#define NV_HOST1X_MLOCK_ID_TSECB	23
 #define NV_HOST1X_MLOCK_ID_NVENC1	28
 #define NV_HOST1X_MLOCK_ID_NVDEC1	30
 

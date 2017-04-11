@@ -80,6 +80,9 @@ static inline void nvgpu_list_replace_init(struct nvgpu_list_node *old_node, str
 #define nvgpu_list_first_entry(ptr, type, member)	\
 	nvgpu_list_entry((ptr)->next, type, member)
 
+#define nvgpu_list_last_entry(ptr, type, member)	\
+	nvgpu_list_entry((ptr)->prev, type, member)
+
 #define nvgpu_list_for_each_entry(pos, head, type, member)	\
 	for (pos = nvgpu_list_first_entry(head, type, member);	\
 		&pos->member != (head);				\

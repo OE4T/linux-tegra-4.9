@@ -2216,7 +2216,6 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	mapped_buffer->va_allocated = va_allocated;
 	mapped_buffer->user_mapped = user_mapped ? 1 : 0;
 	mapped_buffer->own_mem_ref = user_mapped;
-	INIT_LIST_HEAD(&mapped_buffer->unmap_list);
 	nvgpu_init_list_node(&mapped_buffer->va_buffers_list);
 	kref_init(&mapped_buffer->ref);
 

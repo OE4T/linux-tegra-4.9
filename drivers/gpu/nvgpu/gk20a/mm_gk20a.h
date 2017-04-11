@@ -158,7 +158,6 @@ struct priv_cmd_entry {
 struct mapped_buffer_node {
 	struct vm_gk20a *vm;
 	struct nvgpu_rbtree_node node;
-	struct list_head unmap_list;
 	struct nvgpu_list_node va_buffers_list;
 	struct vm_reserved_va_node *va_node;
 	u64 addr;

@@ -222,9 +222,11 @@ static int sensor_common_parse_control_props(
 
 	err = read_property_u32(node, "gain_factor",
 		&control->gain_factor);
-	if (err)
-		dev_err(dev, "%s:%s:property missing\n",
+	if (err) {
+		dev_dbg(dev, "%s:%s:property missing\n",
 			__func__, "gain_factor");
+		return 0;
+	}
 
 	err = read_property_u32(node, "framerate_factor",
 		&control->framerate_factor);
@@ -277,7 +279,6 @@ static int sensor_common_parse_control_props(
 	if (err)
 		dev_err(dev, "%s:%s:property missing\n",
 			__func__, "max_exp_time");
-
 
 	return err;
 }

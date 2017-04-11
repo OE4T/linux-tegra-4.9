@@ -1073,6 +1073,13 @@ static int tegra_vcm30t124_wm8731_put_rate(struct snd_kcontrol *kcontrol,
 	/* set the rate control flag */
 	machine->wm_rate_via_kcontrol = ucontrol->value.integer.value[0];
 
+	if (machine->wm_rate_via_kcontrol >=
+		sizeof(tegra_vcm30t124_srate_values)/
+		sizeof(tegra_vcm30t124_srate_values[0])) {
+		dev_err(card->dev, "Parameter out of bounds\n");
+		return -EINVAL;
+	}
+
 	/* update the dai params rate */
 	dai_params->rate_min =
 		tegra_vcm30t124_srate_values[machine->wm_rate_via_kcontrol];
@@ -1103,6 +1110,13 @@ static int tegra_vcm30t124_ad1937_put_rate(struct snd_kcontrol *kcontrol,
 	/* set the rate control flag */
 	machine->ad_rate_via_kcontrol = ucontrol->value.integer.value[0];
 
+	if (machine->ad_rate_via_kcontrol >=
+		sizeof(tegra_vcm30t124_srate_values)/
+		sizeof(tegra_vcm30t124_srate_values[0])) {
+		dev_err(card->dev, "Parameter out of bounds\n");
+		return -EINVAL;
+	}
+
 	/* update the dai params rate */
 	dai_params->rate_min =
 		tegra_vcm30t124_srate_values[machine->ad_rate_via_kcontrol];
@@ -1132,6 +1146,13 @@ static int tegra_vcm30t124_ak4618_put_rate(struct snd_kcontrol *kcontrol,
 
 	/* set the rate control flag */
 	machine->ak_rate_via_kcontrol = ucontrol->value.integer.value[0];
+
+	if (machine->ak_rate_via_kcontrol >=
+		sizeof(tegra_vcm30t124_srate_values)/
+		sizeof(tegra_vcm30t124_srate_values[0])) {
+		dev_err(card->dev, "Parameter out of bounds\n");
+		return -EINVAL;
+	}
 
 	/* update the dai params rate */
 	dai_params->rate_min =

@@ -619,8 +619,15 @@ static void parse_driver_options(struct arm_smmu_device *smmu)
 	} while (arm_smmu_options[++i].opt);
 
 	/* FIXME: remove if linsim is fixed */
-	if (tegra_platform_is_sim())
-		smmu->options |= ARM_SMMU_OPT_SECURE_CFG_ACCESS;
+	if (tegra_platform_is_sim()) {
+		u64 nvcl;
+
+		if (!of_property_read_u64(smmu->dev->of_node,
+					"nvidia,changelist",  &nvcl)) {
+			if (nvcl < 38424879)
+				smmu->options |= ARM_SMMU_OPT_SECURE_CFG_ACCESS;
+		}
+	}
 }
 
 static struct device_node *dev_get_dev_node(struct device *dev)

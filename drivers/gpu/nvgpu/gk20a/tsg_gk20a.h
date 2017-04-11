@@ -52,7 +52,7 @@ struct tsg_gk20a {
 
 	u32 interleave_level;
 
-	struct list_head event_id_list;
+	struct nvgpu_list_node event_id_list;
 	struct nvgpu_mutex event_id_list_lock;
 
 	u32 runlist_id;

@@ -55,8 +55,8 @@ static int gk20a_tsg_get_event_data_from_id(struct tsg_gk20a *tsg,
 	bool event_found = false;
 
 	nvgpu_mutex_acquire(&tsg->event_id_list_lock);
-	list_for_each_entry(local_event_id_data, &tsg->event_id_list,
-						 event_id_node) {
+	nvgpu_list_for_each_entry(local_event_id_data, &tsg->event_id_list,
+					gk20a_event_id_data, event_id_node) {
 		if (local_event_id_data->event_id == event_id) {
 			event_found = true;
 			break;
@@ -148,10 +148,10 @@ static int gk20a_tsg_event_id_enable(struct tsg_gk20a *tsg,
 	if (err)
 		goto clean_up_free;
 
-	INIT_LIST_HEAD(&event_id_data->event_id_node);
+	nvgpu_init_list_node(&event_id_data->event_id_node);
 
 	nvgpu_mutex_acquire(&tsg->event_id_list_lock);
-	list_add_tail(&event_id_data->event_id_node, &tsg->event_id_list);
+	nvgpu_list_add_tail(&event_id_data->event_id_node, &tsg->event_id_list);
 	nvgpu_mutex_release(&tsg->event_id_list_lock);
 
 	fd_install(local_fd, file);

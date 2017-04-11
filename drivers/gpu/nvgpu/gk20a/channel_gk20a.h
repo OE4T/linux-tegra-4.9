@@ -109,7 +109,14 @@ struct gk20a_event_id_data {
 
 	wait_queue_head_t event_id_wq;
 	struct nvgpu_mutex lock;
-	struct list_head event_id_node;
+	struct nvgpu_list_node event_id_node;
+};
+
+static inline struct gk20a_event_id_data *
+gk20a_event_id_data_from_event_id_node(struct nvgpu_list_node *node)
+{
+	return (struct gk20a_event_id_data *)
+	((uintptr_t)node - offsetof(struct gk20a_event_id_data, event_id_node));
 };
 
 /*
@@ -226,7 +233,7 @@ struct channel_gk20a {
 	struct nvgpu_mutex dbg_s_lock;
 	struct nvgpu_list_node dbg_s_list;
 
-	struct list_head event_id_list;
+	struct nvgpu_list_node event_id_list;
 	struct nvgpu_mutex event_id_list_lock;
 
 	bool has_timedout;

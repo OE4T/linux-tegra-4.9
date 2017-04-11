@@ -828,10 +828,11 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 
 	/* unhook all events created on this channel */
 	nvgpu_mutex_acquire(&ch->event_id_list_lock);
-	list_for_each_entry_safe(event_id_data, event_id_data_temp,
+	nvgpu_list_for_each_entry_safe(event_id_data, event_id_data_temp,
 				&ch->event_id_list,
+				gk20a_event_id_data,
 				event_id_node) {
-		list_del_init(&event_id_data->event_id_node);
+		nvgpu_list_del(&event_id_data->event_id_node);
 	}
 	nvgpu_mutex_release(&ch->event_id_list_lock);
 
@@ -2644,7 +2645,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 
 	INIT_LIST_HEAD(&c->joblist.dynamic.jobs);
 	nvgpu_init_list_node(&c->dbg_s_list);
-	INIT_LIST_HEAD(&c->event_id_list);
+	nvgpu_init_list_node(&c->event_id_list);
 	INIT_LIST_HEAD(&c->worker_item);
 
 	err = nvgpu_mutex_init(&c->ioctl_lock);

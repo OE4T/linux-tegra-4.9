@@ -145,7 +145,7 @@ int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid)
 	nvgpu_init_list_node(&tsg->ch_list);
 	init_rwsem(&tsg->ch_list_lock);
 
-	INIT_LIST_HEAD(&tsg->event_id_list);
+	nvgpu_init_list_node(&tsg->event_id_list);
 	err = nvgpu_mutex_init(&tsg->event_id_list_lock);
 	if (err) {
 		tsg->in_use = true; /* make this TSG unusable */
@@ -297,10 +297,11 @@ void gk20a_tsg_release(struct kref *ref)
 
 	/* unhook all events created on this TSG */
 	nvgpu_mutex_acquire(&tsg->event_id_list_lock);
-	list_for_each_entry_safe(event_id_data, event_id_data_temp,
+	nvgpu_list_for_each_entry_safe(event_id_data, event_id_data_temp,
 				&tsg->event_id_list,
+				gk20a_event_id_data,
 				event_id_node) {
-		list_del_init(&event_id_data->event_id_node);
+		nvgpu_list_del(&event_id_data->event_id_node);
 	}
 	nvgpu_mutex_release(&tsg->event_id_list_lock);
 

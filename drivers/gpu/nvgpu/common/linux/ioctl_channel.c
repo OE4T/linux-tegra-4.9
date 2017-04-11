@@ -574,13 +574,13 @@ static int gk20a_event_id_release(struct inode *inode, struct file *filp)
 		struct tsg_gk20a *tsg = g->fifo.tsg + event_id_data->id;
 
 		nvgpu_mutex_acquire(&tsg->event_id_list_lock);
-		list_del_init(&event_id_data->event_id_node);
+		nvgpu_list_del(&event_id_data->event_id_node);
 		nvgpu_mutex_release(&tsg->event_id_list_lock);
 	} else {
 		struct channel_gk20a *ch = g->fifo.channel + event_id_data->id;
 
 		nvgpu_mutex_acquire(&ch->event_id_list_lock);
-		list_del_init(&event_id_data->event_id_node);
+		nvgpu_list_del(&event_id_data->event_id_node);
 		nvgpu_mutex_release(&ch->event_id_list_lock);
 	}
 
@@ -697,10 +697,10 @@ static int gk20a_channel_event_id_enable(struct channel_gk20a *ch,
 	err = nvgpu_mutex_init(&event_id_data->lock);
 	if (err)
 		goto clean_up_free;
-	INIT_LIST_HEAD(&event_id_data->event_id_node);
+	nvgpu_init_list_node(&event_id_data->event_id_node);
 
 	nvgpu_mutex_acquire(&ch->event_id_list_lock);
-	list_add_tail(&event_id_data->event_id_node, &ch->event_id_list);
+	nvgpu_list_add_tail(&event_id_data->event_id_node, &ch->event_id_list);
 	nvgpu_mutex_release(&ch->event_id_list_lock);
 
 	fd_install(local_fd, file);

@@ -53,7 +53,14 @@ struct nvgpu_semaphore_int {
 	u32 nr_incrs;			/* Number of increments programmed. */
 	struct nvgpu_semaphore_pool *p;	/* Pool that owns this sema. */
 	struct channel_gk20a *ch;	/* Channel that owns this sema. */
-	struct list_head hw_sema_list;	/* List of HW semaphores. */
+	struct nvgpu_list_node hw_sema_list;	/* List of HW semaphores. */
+};
+
+static inline struct nvgpu_semaphore_int *
+nvgpu_semaphore_int_from_hw_sema_list(struct nvgpu_list_node *node)
+{
+	return (struct nvgpu_semaphore_int *)
+	 ((uintptr_t)node - offsetof(struct nvgpu_semaphore_int, hw_sema_list));
 };
 
 /*
@@ -75,13 +82,13 @@ struct nvgpu_semaphore {
  */
 struct nvgpu_semaphore_pool {
 	struct page *page;			/* This pool's page of memory */
-	struct list_head pool_list_entry;	/* Node for list of pools. */
+	struct nvgpu_list_node pool_list_entry;	/* Node for list of pools. */
 	void *cpu_va;				/* CPU access to the pool. */
 	u64 gpu_va;				/* GPU access to the pool. */
 	u64 gpu_va_ro;				/* GPU access to the pool. */
 	int page_idx;				/* Index into sea bitmap. */
 
-	struct list_head hw_semas;		/* List of HW semas. */
+	struct nvgpu_list_node hw_semas;	/* List of HW semas. */
 	DECLARE_BITMAP(semas_alloced, PAGE_SIZE / SEMAPHORE_SIZE);
 
 	struct nvgpu_semaphore_sea *sema_sea;	/* Sea that owns this pool. */
@@ -110,6 +117,14 @@ struct nvgpu_semaphore_pool {
 	struct kref ref;
 };
 
+static inline struct nvgpu_semaphore_pool *
+nvgpu_semaphore_pool_from_pool_list_entry(struct nvgpu_list_node *node)
+{
+	return (struct nvgpu_semaphore_pool *)
+		((uintptr_t)node -
+		offsetof(struct nvgpu_semaphore_pool, pool_list_entry));
+};
+
 /*
  * A sea of semaphores pools. Each pool is owned by a single VM. Since multiple
  * channels can share a VM each channel gets it's own HW semaphore from the
@@ -117,7 +132,7 @@ struct nvgpu_semaphore_pool {
  * signifies when a particular job is done.
  */
 struct nvgpu_semaphore_sea {
-	struct list_head pool_list;	/* List of pools in this sea. */
+	struct nvgpu_list_node pool_list;	/* List of pools in this sea. */
 	struct gk20a *gk20a;
 
 	size_t size;			/* Number of pages available. */

@@ -94,7 +94,7 @@ struct nvgpu_semaphore_sea *nvgpu_semaphore_sea_create(struct gk20a *g)
 	g->sema_sea->size = 0;
 	g->sema_sea->page_count = 0;
 	g->sema_sea->gk20a = g;
-	INIT_LIST_HEAD(&g->sema_sea->pool_list);
+	nvgpu_init_list_node(&g->sema_sea->pool_list);
 	if (nvgpu_mutex_init(&g->sema_sea->sea_lock))
 		goto cleanup_free;
 
@@ -157,11 +157,12 @@ struct nvgpu_semaphore_pool *nvgpu_semaphore_pool_alloc(
 	p->ro_sg_table = sea->ro_sg_table;
 	p->page_idx = page_idx;
 	p->sema_sea = sea;
-	INIT_LIST_HEAD(&p->hw_semas);
+	nvgpu_init_list_node(&p->hw_semas);
+	nvgpu_init_list_node(&p->pool_list_entry);
 	kref_init(&p->ref);
 
 	sea->page_count++;
-	list_add(&p->pool_list_entry, &sea->pool_list);
+	nvgpu_list_add(&p->pool_list_entry, &sea->pool_list);
 	__unlock_sema_sea(sea);
 
 	gpu_sema_dbg("Allocated semaphore pool: page-idx=%d", p->page_idx);
@@ -300,7 +301,8 @@ void nvgpu_semaphore_pool_unmap(struct nvgpu_semaphore_pool *p,
 	nvgpu_kfree(p->sema_sea->gk20a, p->rw_sg_table);
 	p->rw_sg_table = NULL;
 
-	list_for_each_entry(hw_sema, &p->hw_semas, hw_sema_list)
+	nvgpu_list_for_each_entry(hw_sema, &p->hw_semas,
+			nvgpu_semaphore_int, hw_sema_list)
 		/*
 		 * Make sure the mem addresses are all NULL so if this gets
 		 * reused we will fault.
@@ -324,12 +326,13 @@ static void nvgpu_semaphore_pool_free(struct kref *ref)
 	WARN_ON(p->gpu_va || p->rw_sg_table || p->ro_sg_table);
 
 	__lock_sema_sea(s);
-	list_del(&p->pool_list_entry);
+	nvgpu_list_del(&p->pool_list_entry);
 	clear_bit(p->page_idx, s->pools_alloced);
 	s->page_count--;
 	__unlock_sema_sea(s);
 
-	list_for_each_entry_safe(hw_sema, tmp, &p->hw_semas, hw_sema_list)
+	nvgpu_list_for_each_entry_safe(hw_sema, tmp, &p->hw_semas,
+				nvgpu_semaphore_int, hw_sema_list)
 		nvgpu_kfree(p->sema_sea->gk20a, hw_sema);
 
 	nvgpu_mutex_destroy(&p->pool_lock);
@@ -393,8 +396,9 @@ static int __nvgpu_init_hw_sema(struct channel_gk20a *ch)
 	atomic_set(&hw_sema->next_value, 0);
 	hw_sema->value = p->cpu_va + hw_sema->offset;
 	writel(0, hw_sema->value);
+	nvgpu_init_list_node(&hw_sema->hw_sema_list);
 
-	list_add(&hw_sema->hw_sema_list, &p->hw_semas);
+	nvgpu_list_add(&hw_sema->hw_sema_list, &p->hw_semas);
 
 	nvgpu_mutex_release(&p->pool_lock);
 
@@ -421,7 +425,7 @@ void nvgpu_semaphore_free_hw_sema(struct channel_gk20a *ch)
 	clear_bit(ch->hw_sema->idx, p->semas_alloced);
 
 	/* Make sure that when the ch is re-opened it will get a new HW sema. */
-	list_del(&ch->hw_sema->hw_sema_list);
+	nvgpu_list_del(&ch->hw_sema->hw_sema_list);
 	nvgpu_kfree(ch->g, ch->hw_sema);
 	ch->hw_sema = NULL;
 

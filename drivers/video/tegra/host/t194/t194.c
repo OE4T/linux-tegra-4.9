@@ -114,6 +114,20 @@ static int nvhost_vi_thi_t194_finalize_poweron(struct platform_device *dev)
 }
 #endif
 
+#if defined(CONFIG_TEGRA_GRHOST_ISP)
+static inline u32 isp_thi_csb_afbif_streamid_ctl(void)
+{
+	return 0x00002088U;
+}
+
+static int nvhost_isp_thi_t194_finalize_poweron(struct platform_device *dev)
+{
+	host1x_writel(dev, isp_thi_csb_afbif_streamid_ctl(), 0);
+
+	return nvhost_flcn_t194_finalize_poweron(dev);
+}
+#endif
+
 #if defined(CONFIG_TEGRA_GRHOST_NVDEC)
 static int nvhost_nvdec_t194_finalize_poweron(struct platform_device *dev)
 {
@@ -214,6 +228,28 @@ struct nvhost_device_data t19_vi_thi_info = {
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.version		= NVHOST_ENCODE_FLCN_VER(0, 0),
 	.firmware_name		= "nvhost_vi10.fw",
+	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
+};
+#endif
+
+#ifdef CONFIG_TEGRA_GRHOST_ISP
+struct nvhost_device_data t19_isp_thi_info = {
+	.devfs_name		= "isp-thi",
+	.version		= NVHOST_ENCODE_FLCN_VER(5, 0),
+	.num_channels		= 1,
+	.moduleid		= NVHOST_MODULE_ISP,
+	.class			= NV_VIDEO_STREAMING_ISP_CLASS_ID,
+	.modulemutexes		= {NV_HOST1X_MLOCK_ID_ISP},
+	.keepalive		= true,
+	.can_powergate          = true,
+	.autosuspend_delay      = 500,
+	.poweron_reset		= true,
+	.clocks			= {
+		{"isp", UINT_MAX},
+	},
+	.finalize_poweron	= nvhost_isp_thi_t194_finalize_poweron,
+	.vm_regs		= {{0x30, true}, {0x34, false} },
+	.firmware_name		= "nvhost_isp050.fw",
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 };
 #endif

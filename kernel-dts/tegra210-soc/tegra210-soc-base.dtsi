@@ -1870,9 +1870,6 @@
 		interrupts = < 0 19 0x04 >;
 		aux-device-name = "sdhci-tegra.2";
 		iommus = <&smmu TEGRA_SWGROUP_SDMMC3A>;
-		pwrdet-support;
-		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC3>;
-		pad-names = "sdmmc";
 		nvidia,runtime-pm-type = <0>;
 		clocks = <&tegra_car TEGRA210_CLK_SDMMC4>;
 		clock-names = "sdmmc";
@@ -1900,9 +1897,6 @@
 		interrupts = < 0 14 0x04 >;
 		aux-device-name = "sdhci-tegra.0";
 		iommus = <&smmu TEGRA_SWGROUP_SDMMC1A>;
-		pwrdet-support;
-		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC1>;
-		pad-names = "sdmmc";
 		nvidia,runtime-pm-type = <1>;
 		clocks = <&tegra_car TEGRA210_CLK_SDMMC1>;
 		clock-names = "sdmmc";

@@ -17,8 +17,9 @@
 #ifndef BUDDY_ALLOCATOR_PRIV_H
 #define BUDDY_ALLOCATOR_PRIV_H
 
-#include <linux/list.h>
 #include <linux/rbtree.h>
+
+#include <nvgpu/list.h>
 
 struct nvgpu_kmem_cache;
 struct nvgpu_allocator;
@@ -33,7 +34,7 @@ struct nvgpu_buddy {
 	struct nvgpu_buddy *left;	/* Lower address sub-node. */
 	struct nvgpu_buddy *right;	/* Higher address sub-node. */
 
-	struct list_head buddy_entry;	/* List entry for various lists. */
+	struct nvgpu_list_node buddy_entry;	/* List entry for various lists. */
 	struct rb_node alloced_entry;	/* RB tree of allocations. */
 
 	u64 start;			/* Start address of this buddy. */
@@ -52,6 +53,13 @@ struct nvgpu_buddy {
 	 */
 #define BALLOC_PTE_SIZE_ANY	-1
 	int pte_size;
+};
+
+static inline struct nvgpu_buddy *
+nvgpu_buddy_from_buddy_entry(struct nvgpu_list_node *node)
+{
+	return (struct nvgpu_buddy *)
+		((uintptr_t)node - offsetof(struct nvgpu_buddy, buddy_entry));
 };
 
 #define __buddy_flag_ops(flag, flag_up)					\
@@ -89,7 +97,7 @@ __buddy_flag_ops(in_list, IN_LIST);
  * Keeps info for a fixed allocation.
  */
 struct nvgpu_fixed_alloc {
-	struct list_head buddies;	/* List of buddies. */
+	struct nvgpu_list_node buddies;	/* List of buddies. */
 	struct rb_node alloced_entry;	/* RB tree of fixed allocations. */
 
 	u64 start;			/* Start of fixed block. */
@@ -125,7 +133,7 @@ struct nvgpu_buddy_allocator {
 	struct rb_root alloced_buddies;	/* Outstanding allocations. */
 	struct rb_root fixed_allocs;	/* Outstanding fixed allocations. */
 
-	struct list_head co_list;
+	struct nvgpu_list_node co_list;
 
 	struct nvgpu_kmem_cache *buddy_cache;
 
@@ -134,7 +142,7 @@ struct nvgpu_buddy_allocator {
 	 */
 #define GPU_BALLOC_ORDER_LIST_LEN	(GPU_BALLOC_MAX_ORDER + 1)
 
-	struct list_head buddy_list[GPU_BALLOC_ORDER_LIST_LEN];
+	struct nvgpu_list_node buddy_list[GPU_BALLOC_ORDER_LIST_LEN];
 	u64 buddy_list_len[GPU_BALLOC_ORDER_LIST_LEN];
 	u64 buddy_list_split[GPU_BALLOC_ORDER_LIST_LEN];
 	u64 buddy_list_alloced[GPU_BALLOC_ORDER_LIST_LEN];
@@ -162,7 +170,7 @@ static inline struct nvgpu_buddy_allocator *buddy_allocator(
 	return (struct nvgpu_buddy_allocator *)(a)->priv;
 }
 
-static inline struct list_head *balloc_get_order_list(
+static inline struct nvgpu_list_node *balloc_get_order_list(
 	struct nvgpu_buddy_allocator *a, int order)
 {
 	return &a->buddy_list[order];

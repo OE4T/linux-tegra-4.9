@@ -22,6 +22,7 @@
 #include <linux/platform_device.h>
 
 #include <nvgpu/lock.h>
+#include <nvgpu/list.h>
 
 /* #define ALLOCATOR_DEBUG */
 
@@ -101,7 +102,14 @@ struct nvgpu_alloc_carveout {
 	/*
 	 * For usage by the allocator implementation.
 	 */
-	struct list_head co_entry;
+	struct nvgpu_list_node co_entry;
+};
+
+static inline struct nvgpu_alloc_carveout *
+nvgpu_alloc_carveout_from_co_entry(struct nvgpu_list_node *node)
+{
+	return (struct nvgpu_alloc_carveout *)
+	((uintptr_t)node - offsetof(struct nvgpu_alloc_carveout, co_entry));
 };
 
 #define NVGPU_CARVEOUT(__name, __base, __length)	\

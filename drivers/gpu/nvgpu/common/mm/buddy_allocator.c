@@ -117,7 +117,7 @@ static struct nvgpu_buddy *balloc_new_buddy(struct nvgpu_buddy_allocator *a,
 
 static void __balloc_buddy_list_add(struct nvgpu_buddy_allocator *a,
 				    struct nvgpu_buddy *b,
-				    struct list_head *list)
+				    struct nvgpu_list_node *list)
 {
 	if (buddy_is_in_list(b)) {
 		alloc_dbg(balloc_owner(a),
@@ -133,9 +133,9 @@ static void __balloc_buddy_list_add(struct nvgpu_buddy_allocator *a,
 	 */
 	if (a->flags & GPU_ALLOC_GVA_SPACE &&
 	    b->pte_size == gmmu_page_size_big)
-		list_add_tail(&b->buddy_entry, list);
+		nvgpu_list_add_tail(&b->buddy_entry, list);
 	else
-		list_add(&b->buddy_entry, list);
+		nvgpu_list_add(&b->buddy_entry, list);
 
 	buddy_set_in_list(b);
 }
@@ -150,7 +150,7 @@ static void __balloc_buddy_list_rem(struct nvgpu_buddy_allocator *a,
 		BUG();
 	}
 
-	list_del_init(&b->buddy_entry);
+	nvgpu_list_del(&b->buddy_entry);
 	buddy_clr_in_list(b);
 }
 
@@ -208,7 +208,7 @@ static int balloc_init_lists(struct nvgpu_buddy_allocator *a)
 
 	/* First make sure the LLs are valid. */
 	for (i = 0; i < GPU_BALLOC_ORDER_LIST_LEN; i++)
-		INIT_LIST_HEAD(balloc_get_order_list(a, i));
+		nvgpu_init_list_node(balloc_get_order_list(a, i));
 
 	while (bstart < bend) {
 		order = __balloc_max_order_in(a, bstart, bend);
@@ -225,9 +225,10 @@ static int balloc_init_lists(struct nvgpu_buddy_allocator *a)
 
 cleanup:
 	for (i = 0; i < GPU_BALLOC_ORDER_LIST_LEN; i++) {
-		if (!list_empty(balloc_get_order_list(a, i))) {
-			buddy = list_first_entry(balloc_get_order_list(a, i),
-					struct nvgpu_buddy, buddy_entry);
+		if (!nvgpu_list_empty(balloc_get_order_list(a, i))) {
+			buddy = nvgpu_list_first_entry(
+					balloc_get_order_list(a, i),
+					nvgpu_buddy, buddy_entry);
 			balloc_blist_rem(a, buddy);
 			nvgpu_kmem_cache_free(a->buddy_cache, buddy);
 		}
@@ -278,9 +279,10 @@ static void nvgpu_buddy_allocator_destroy(struct nvgpu_allocator *__a)
 	for (i = 0; i < GPU_BALLOC_ORDER_LIST_LEN; i++) {
 		BUG_ON(a->buddy_list_alloced[i] != 0);
 
-		while (!list_empty(balloc_get_order_list(a, i))) {
-			bud = list_first_entry(balloc_get_order_list(a, i),
-					       struct nvgpu_buddy, buddy_entry);
+		while (!nvgpu_list_empty(balloc_get_order_list(a, i))) {
+			bud = nvgpu_list_first_entry(
+						balloc_get_order_list(a, i),
+						nvgpu_buddy, buddy_entry);
 			balloc_blist_rem(a, bud);
 			nvgpu_kmem_cache_free(a->buddy_cache, bud);
 		}
@@ -471,16 +473,16 @@ static struct nvgpu_buddy *__balloc_find_buddy(struct nvgpu_buddy_allocator *a,
 	struct nvgpu_buddy *bud;
 
 	if (order > a->max_order ||
-	    list_empty(balloc_get_order_list(a, order)))
+	    nvgpu_list_empty(balloc_get_order_list(a, order)))
 		return NULL;
 
 	if (a->flags & GPU_ALLOC_GVA_SPACE &&
 	    pte_size == gmmu_page_size_big)
-		bud = list_last_entry(balloc_get_order_list(a, order),
-				      struct nvgpu_buddy, buddy_entry);
+		bud = nvgpu_list_last_entry(balloc_get_order_list(a, order),
+				      nvgpu_buddy, buddy_entry);
 	else
-		bud = list_first_entry(balloc_get_order_list(a, order),
-				       struct nvgpu_buddy, buddy_entry);
+		bud = nvgpu_list_first_entry(balloc_get_order_list(a, order),
+				       nvgpu_buddy, buddy_entry);
 
 	if (pte_size != BALLOC_PTE_SIZE_ANY &&
 	    pte_size != bud->pte_size &&
@@ -645,7 +647,7 @@ static struct nvgpu_buddy *__balloc_make_fixed_buddy(
 	struct nvgpu_buddy_allocator *a, u64 base, u64 order, int pte_size)
 {
 	struct nvgpu_buddy *bud = NULL;
-	struct list_head *order_list;
+	struct nvgpu_list_node *order_list;
 	u64 cur_order = order, cur_base = base;
 
 	/*
@@ -661,7 +663,8 @@ static struct nvgpu_buddy *__balloc_make_fixed_buddy(
 		int found = 0;
 
 		order_list = balloc_get_order_list(a, cur_order);
-		list_for_each_entry(bud, order_list, buddy_entry) {
+		nvgpu_list_for_each_entry(bud, order_list,
+					nvgpu_buddy, buddy_entry) {
 			if (bud->start == cur_base) {
 				/*
 				 * Make sure page size matches if it's smaller
@@ -774,10 +777,10 @@ static u64 __balloc_do_alloc_fixed(struct nvgpu_buddy_allocator *a,
 	return base;
 
 err_and_cleanup:
-	while (!list_empty(&falloc->buddies)) {
-		struct nvgpu_buddy *bud = list_first_entry(&falloc->buddies,
-							   struct nvgpu_buddy,
-							   buddy_entry);
+	while (!nvgpu_list_empty(&falloc->buddies)) {
+		struct nvgpu_buddy *bud = nvgpu_list_first_entry(
+						&falloc->buddies,
+						nvgpu_buddy, buddy_entry);
 
 		__balloc_buddy_list_rem(a, bud);
 		balloc_free_buddy(a, bud->start);
@@ -792,9 +795,9 @@ static void __balloc_do_free_fixed(struct nvgpu_buddy_allocator *a,
 {
 	struct nvgpu_buddy *bud;
 
-	while (!list_empty(&falloc->buddies)) {
-		bud = list_first_entry(&falloc->buddies,
-				       struct nvgpu_buddy,
+	while (!nvgpu_list_empty(&falloc->buddies)) {
+		bud = nvgpu_list_first_entry(&falloc->buddies,
+				       nvgpu_buddy,
 				       buddy_entry);
 		__balloc_buddy_list_rem(a, bud);
 
@@ -896,7 +899,7 @@ static u64 __nvgpu_balloc_fixed_buddy(struct nvgpu_allocator *__a,
 	if (!falloc)
 		goto fail;
 
-	INIT_LIST_HEAD(&falloc->buddies);
+	nvgpu_init_list_node(&falloc->buddies);
 	falloc->start = base;
 	falloc->end = base + len;
 
@@ -1018,7 +1021,8 @@ static bool nvgpu_buddy_reserve_is_possible(struct nvgpu_buddy_allocator *a,
 	 * Not the fastest approach but we should not have that many carveouts
 	 * for any reasonable allocator.
 	 */
-	list_for_each_entry(tmp, &a->co_list, co_entry) {
+	nvgpu_list_for_each_entry(tmp, &a->co_list,
+				nvgpu_alloc_carveout, co_entry) {
 		if ((co_base >= tmp->base &&
 		     co_base < (tmp->base + tmp->length)) ||
 		    (co_end >= tmp->base &&
@@ -1059,7 +1063,7 @@ static int nvgpu_buddy_reserve_co(struct nvgpu_allocator *__a,
 		goto done;
 	}
 
-	list_add(&co->co_entry, &a->co_list);
+	nvgpu_list_add(&co->co_entry, &a->co_list);
 
 done:
 	alloc_unlock(__a);
@@ -1074,7 +1078,7 @@ static void nvgpu_buddy_release_co(struct nvgpu_allocator *__a,
 {
 	alloc_lock(__a);
 
-	list_del_init(&co->co_entry);
+	nvgpu_list_del(&co->co_entry);
 	nvgpu_free(__a, co->base);
 
 	alloc_unlock(__a);
@@ -1149,10 +1153,11 @@ static void nvgpu_buddy_print_stats(struct nvgpu_allocator *__a,
 	if (lock)
 		alloc_lock(__a);
 
-	if (!list_empty(&a->co_list)) {
+	if (!nvgpu_list_empty(&a->co_list)) {
 		__alloc_pstat(s, __a, "\n");
 		__alloc_pstat(s, __a, "Carveouts:\n");
-		list_for_each_entry(tmp, &a->co_list, co_entry)
+		nvgpu_list_for_each_entry(tmp, &a->co_list,
+					nvgpu_alloc_carveout, co_entry)
 			__alloc_pstat(s, __a,
 				      "  CO %2d: %-20s 0x%010llx + 0x%llx\n",
 				      i++, tmp->name, tmp->base, tmp->length);
@@ -1313,7 +1318,7 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 
 	a->alloced_buddies = RB_ROOT;
 	a->fixed_allocs = RB_ROOT;
-	INIT_LIST_HEAD(&a->co_list);
+	nvgpu_init_list_node(&a->co_list);
 	err = balloc_init_lists(a);
 	if (err)
 		goto fail;

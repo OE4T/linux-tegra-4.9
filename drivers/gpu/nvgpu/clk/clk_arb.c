@@ -163,6 +163,9 @@ struct nvgpu_clk_arb {
 	u16 mclk_default_mhz;
 	u32 voltuv_actual;
 
+	u16 gpc2clk_min, gpc2clk_max;
+	u16 mclk_min, mclk_max;
+
 	struct work_struct update_fn_work;
 	struct workqueue_struct *update_work_queue;
 	struct work_struct vf_table_fn_work;
@@ -690,8 +693,7 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 	int status = -EINVAL;
 	u32 gpc2clk_voltuv = 0, mclk_voltuv = 0;
 	u32 gpc2clk_voltuv_sram = 0, mclk_voltuv_sram = 0;
-	u16 gpc2clk_min, gpc2clk_max, clk_cur;
-	u16 mclk_min, mclk_max;
+	u16 clk_cur;
 	u32 num_points;
 
 	struct clk_set_info *p5_info, *p0_info;
@@ -706,12 +708,14 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 
 	/* Get allowed memory ranges */
 	if (g->ops.clk_arb.get_arbiter_clk_range(g, CTRL_CLK_DOMAIN_GPC2CLK,
-			&gpc2clk_min, &gpc2clk_max) < 0) {
+						&arb->gpc2clk_min,
+						&arb->gpc2clk_max) < 0) {
 		nvgpu_err(g, "failed to fetch GPC2CLK range");
 		goto exit_vf_table;
 	}
 	if (g->ops.clk_arb.get_arbiter_clk_range(g, CTRL_CLK_DOMAIN_MCLK,
-			&mclk_min, &mclk_max) < 0) {
+						&arb->mclk_min,
+						&arb->mclk_max) < 0) {
 		nvgpu_err(g, "failed to fetch MCLK range");
 		goto exit_vf_table;
 	}
@@ -758,8 +762,8 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 	for (i = 0, j = 0, num_points = 0, clk_cur = 0;
 			i < table->mclk_num_points; i++) {
 
-		if ((arb->mclk_f_points[i] >= mclk_min) &&
-			(arb->mclk_f_points[i] <= mclk_max) &&
+		if ((arb->mclk_f_points[i] >= arb->mclk_min) &&
+			(arb->mclk_f_points[i] <= arb->mclk_max) &&
 			(arb->mclk_f_points[i] != clk_cur)) {
 
 			table->mclk_points[j].mem_mhz = arb->mclk_f_points[i];
@@ -829,8 +833,8 @@ static int nvgpu_clk_arb_update_vf_table(struct nvgpu_clk_arb *arb)
 			i < table->gpc2clk_num_points; i++) {
 		struct set_fll_clk setfllclk;
 
-		if ((arb->gpc2clk_f_points[i] >= gpc2clk_min) &&
-			(arb->gpc2clk_f_points[i] <= gpc2clk_max) &&
+		if ((arb->gpc2clk_f_points[i] >= arb->gpc2clk_min) &&
+			(arb->gpc2clk_f_points[i] <= arb->gpc2clk_max) &&
 			(arb->gpc2clk_f_points[i] != clk_cur)) {
 
 			table->gpc2clk_points[j].gpc_mhz =
@@ -1110,8 +1114,20 @@ static void nvgpu_clk_arb_run_arbiter_cb(struct work_struct *work)
 	gpc2clk_target = (gpc2clk_target > 0) ? gpc2clk_target :
 			arb->gpc2clk_default_mhz;
 
+	if (gpc2clk_target < arb->gpc2clk_min)
+		gpc2clk_target = arb->gpc2clk_min;
+
+	if (gpc2clk_target > arb->gpc2clk_max)
+		gpc2clk_target = arb->gpc2clk_max;
+
 	mclk_target = (mclk_target > 0) ? mclk_target:
 			arb->mclk_default_mhz;
+
+	if (mclk_target < arb->mclk_min)
+		mclk_target = arb->mclk_min;
+
+	if (mclk_target > arb->mclk_max)
+		mclk_target = arb->mclk_max;
 
 	sys2clk_target = 0;
 	xbar2clk_target = 0;

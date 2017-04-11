@@ -109,17 +109,6 @@ static inline u32 nvdisp_win_read(struct tegra_dc_win *win, u32 off)
 	u32 reg;
 	struct tegra_dc *dc = win->dc;
 
-#if 0
-	if (likely(tegra_platform_is_silicon())) {
-		BUG_ON(!nvhost_module_powered_ext(dc->ndev));
-		if (WARN(!tegra_is_clk_enabled(dc->clk),
-			"DC is clock-gated.\n") ||
-			WARN(!tegra_powergate_is_powered(
-			dc->powergate_id), "DC is power-gated.\n"))
-			return 0;
-	}
-#endif
-
 	/* assuming we create three instances of dc for the three heads */
 	reg = NVDISP_WIN_ADDR(dc->ctrl_num, win->idx, off);
 	ret = readl(dc->base + reg);
@@ -132,17 +121,6 @@ static inline void nvdisp_win_write(struct tegra_dc_win *win, u32 val, u32 off)
 {
 	u32 reg;
 	struct tegra_dc *dc = win->dc;
-
-#if 0
-	if (likely(tegra_platform_is_silicon())) {
-		BUG_ON(!nvhost_module_powered_ext(dc->ndev));
-		if (WARN(!tegra_is_clk_enabled(dc->clk),
-			"DC is clock-gated.\n") ||
-			WARN(!tegra_powergate_is_powered(
-			dc->powergate_id), "DC is power-gated.\n"))
-			return;
-	}
-#endif
 
 	reg = NVDISP_WIN_ADDR(dc->ctrl_num, win->idx, off);
 	trace_display_writel(dc, val, dc->base + reg);

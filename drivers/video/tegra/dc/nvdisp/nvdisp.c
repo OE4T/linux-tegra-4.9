@@ -3666,12 +3666,10 @@ void reg_dump(struct tegra_dc *dc, void *data,
 	int i;
 	char buff[256];
 	const char winname[] = "ABCDEFT";
-	#if 0
+
 	/* If gated, quietly return. */
-	if (!tegra_powergate_is_powered(dc->powergate_id)){
+	if (!tegra_dc_is_powered(dc))
 		return;
-	}
-	#endif
 
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);

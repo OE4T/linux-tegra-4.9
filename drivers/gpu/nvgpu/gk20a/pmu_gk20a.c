@@ -42,7 +42,7 @@
 
 #define GK20A_PMU_UCODE_IMAGE	"gpmu_ucode.bin"
 
-#define PMU_MEM_SCRUBBING_TIMEOUT_MAX 1000
+#define PMU_MEM_SCRUBBING_TIMEOUT_MAX 2000
 #define PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT 10
 
 #define gk20a_dbg_pmu(fmt, arg...) \

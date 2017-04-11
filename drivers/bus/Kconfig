@@ -143,8 +143,8 @@ config SUNXI_RSB
 
 config TEGRA_ACONNECT
 	tristate "Tegra ACONNECT Bus Driver"
-	depends on ARCH_TEGRA_210_SOC
 	depends on OF && PM
+	depends on ARCH_TEGRA || COMPILE_TEST
 	select PM_CLK
 	help
 	  Driver for the Tegra ACONNECT bus which is used to interface with

@@ -118,6 +118,18 @@ int nvgpu_log_mask_enabled(struct gk20a *g, u32 log_mask);
 #define nvgpu_warn(g, fmt, arg...)					\
 	__nvgpu_log_msg(g, __func__, __LINE__, WARNING, fmt, ##arg)
 
+/**
+ * nvgpu_info - Print an info message
+ *
+ * @g        - The GPU.
+ * @fmt      - A format string (printf style).
+ * @arg...   - Arguments for the format string.
+ *
+ * Unconditionally print an information message.
+ */
+#define nvgpu_info(g, fmt, arg...)					\
+	__nvgpu_log_msg(g, __func__, __LINE__, DEBUG, fmt, ##arg)
+
 /*
  * Some convenience macros.
  */

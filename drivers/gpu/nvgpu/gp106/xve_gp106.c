@@ -15,7 +15,6 @@
  */
 
 #include <linux/delay.h>
-#include <linux/kernel.h>
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 

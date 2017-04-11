@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/gk20a/kind_gk20a.c
- *
  * GK20A memory kind management
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,8 +16,6 @@
  * this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  */
-#include <linux/bitops.h>
-#include <linux/compiler.h>
 
 #include "kind_gk20a.h"
 

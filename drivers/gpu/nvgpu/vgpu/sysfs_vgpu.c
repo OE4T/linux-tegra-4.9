@@ -12,7 +12,6 @@
  */
 
 #include <linux/device.h>
-#include <linux/kernel.h>
 #include <linux/gk20a.h>
 
 #include "vgpu/vgpu.h"

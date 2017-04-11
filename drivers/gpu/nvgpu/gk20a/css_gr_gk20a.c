@@ -16,10 +16,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/bitops.h>
 #include <linux/dma-mapping.h>
 #include <linux/dma-buf.h>
 
+#include <nvgpu/bitops.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/lock.h>
 #include <nvgpu/dma.h>

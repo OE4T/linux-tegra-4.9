@@ -17,6 +17,9 @@
 #ifndef __NVGPU_DEBUGGING_H__
 #define __NVGPU_DEBUGGING_H__
 
+#include <nvgpu/types.h>
+#include <nvgpu/bitops.h>
+
 struct gk20a;
 
 enum nvgpu_log_type {

@@ -16,6 +16,8 @@
 #ifndef BUS_GK20A_H
 #define BUS_GK20A_H
 
+#include <nvgpu/types.h>
+
 struct gk20a;
 struct gpu_ops;
 struct nvgpu_mem;

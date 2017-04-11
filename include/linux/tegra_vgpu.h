@@ -19,6 +19,8 @@
 #ifndef __TEGRA_VGPU_H
 #define __TEGRA_VGPU_H
 
+#include <nvgpu/types.h>
+
 enum {
 	TEGRA_VGPU_MODULE_GPU = 0,
 };

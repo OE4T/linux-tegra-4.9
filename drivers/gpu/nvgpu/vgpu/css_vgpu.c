@@ -15,8 +15,6 @@
  */
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 
-#include <linux/kernel.h>
-#include <linux/nvhost.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra_vgpu.h>
 

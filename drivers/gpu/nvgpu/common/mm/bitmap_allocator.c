@@ -14,9 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/kernel.h>
-#include <linux/bitops.h>
-
+#include <nvgpu/bitops.h>
 #include <nvgpu/allocator.h>
 #include <nvgpu/kmem.h>
 

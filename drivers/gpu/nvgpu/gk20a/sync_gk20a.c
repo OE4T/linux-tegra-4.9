@@ -14,7 +14,6 @@
  */
 
 #include <linux/version.h>
-#include <linux/kernel.h>
 #include <linux/file.h>
 #include <linux/fs.h>
 #include <linux/hrtimer.h>

@@ -16,8 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/kernel.h>
-
 #include <trace/events/gk20a.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/log.h>

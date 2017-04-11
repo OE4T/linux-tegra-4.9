@@ -21,6 +21,7 @@
 #ifndef __KIND_GK20A_H__
 #define __KIND_GK20A_H__
 
+#include <nvgpu/bitops.h>
 
 void gk20a_init_uncompressed_kind_map(void);
 void gk20a_init_kind_attr(void);

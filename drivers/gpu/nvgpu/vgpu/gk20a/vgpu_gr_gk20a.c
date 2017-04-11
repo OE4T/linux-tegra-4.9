@@ -11,8 +11,6 @@
  * more details.
  */
 
-#include <linux/kernel.h>
-
 #include "gk20a/gk20a.h"
 #include "vgpu_gr_gk20a.h"
 

@@ -18,9 +18,9 @@
 #include <linux/cdev.h>
 #include <linux/file.h>
 #include <linux/anon_inodes.h>
-#include <linux/bitops.h>
 #include <uapi/linux/nvgpu.h>
 
+#include <nvgpu/bitops.h>
 #include <nvgpu/kmem.h>
 
 #include "ioctl_ctrl.h"

@@ -18,8 +18,6 @@
 #ifndef __HAL_GK20A__
 #define __HAL_GK20A__
 
-#include <linux/kernel.h>
-
 struct gk20a;
 
 int gk20a_init_hal(struct gk20a *g);

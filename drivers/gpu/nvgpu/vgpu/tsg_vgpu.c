@@ -14,7 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/kernel.h>
 #include <linux/tegra_vgpu.h>
 
 #include "gk20a/gk20a.h"

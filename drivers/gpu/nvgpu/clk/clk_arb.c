@@ -15,14 +15,13 @@
 #include <linux/cdev.h>
 #include <linux/file.h>
 #include <linux/anon_inodes.h>
-#include <linux/nvgpu.h>
-#include <linux/bitops.h>
 #include <linux/rculist.h>
 #include <linux/llist.h>
 #include <linux/uaccess.h>
 #include <linux/poll.h>
 #include <linux/atomic.h>
 
+#include <nvgpu/bitops.h>
 #include <nvgpu/lock.h>
 #include <nvgpu/kmem.h>
 

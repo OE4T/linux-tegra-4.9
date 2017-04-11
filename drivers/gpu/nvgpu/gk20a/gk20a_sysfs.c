@@ -21,7 +21,6 @@
 #include <linux/version.h>
 #include <linux/device.h>
 #include <linux/pm_runtime.h>
-#include <linux/kernel.h>
 #include <linux/fb.h>
 #include <linux/gk20a.h>
 #include <linux/clk/tegra.h>

@@ -701,9 +701,9 @@ static int gk20a_pm_unrailgate(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
-#ifdef CONFIG_DEBUG_FS
 	struct gk20a *g = get_gk20a(dev);
 
+#ifdef CONFIG_DEBUG_FS
 	g->pstats.last_rail_ungate_start = jiffies;
 	if (g->pstats.railgating_cycle_count >= 1)
 		g->pstats.total_rail_gate_time_ms =

@@ -262,6 +262,25 @@ static void cdma_kick(struct nvhost_cdma *cdma)
 	}
 }
 
+static int host1x_wait_dmaput_eq_dmaget(struct nvhost_cdma *cdma)
+{
+	struct nvhost_channel *ch = cdma_to_channel(cdma);
+	unsigned long end_jiffies = jiffies + msecs_to_jiffies(10);
+	u32 dmaput, dmaget;
+
+	while (time_before(jiffies, end_jiffies) ||
+		      tegra_platform_is_linsim() || tegra_platform_is_vdk()) {
+		dmaput = host1x_channel_readl(ch, host1x_channel_dmaput_r());
+		dmaget = host1x_channel_readl(ch, host1x_channel_dmaget_r());
+		if (dmaput == dmaget)
+			return 0;
+
+		usleep_range(90, 100);
+	}
+
+	return -ETIMEDOUT;
+}
+
 static void cdma_stop(struct nvhost_cdma *cdma)
 {
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
@@ -274,6 +293,9 @@ static void cdma_stop(struct nvhost_cdma *cdma)
 	mutex_lock(&cdma->lock);
 	if (cdma->running) {
 		nvhost_cdma_wait_locked(cdma, CDMA_EVENT_SYNC_QUEUE_EMPTY);
+		if (host1x_wait_dmaput_eq_dmaget(cdma))
+			pr_warn("%s: DMAPUT != DMAGET for channel %d, stopping CDMA\n",
+				__func__, ch->chid);
 		host1x_channel_writel(ch, host1x_channel_dmactrl_r(),
 				host1x_channel_dmactrl(true, false, false));
 		cdma->running = false;

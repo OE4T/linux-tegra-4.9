@@ -608,6 +608,7 @@ struct dma_tx_state {
 	dma_cookie_t last;
 	dma_cookie_t used;
 	u32 residue;
+	u64 total_bytes_transferred;
 };
 
 /**

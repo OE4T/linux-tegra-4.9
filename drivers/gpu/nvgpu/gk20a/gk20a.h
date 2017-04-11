@@ -1107,7 +1107,7 @@ struct gk20a {
 		struct task_struct *poll_task;
 		atomic_t put;
 		wait_queue_head_t wq;
-		struct list_head items;
+		struct nvgpu_list_node items;
 		struct nvgpu_spinlock items_lock;
 	} channel_worker;
 

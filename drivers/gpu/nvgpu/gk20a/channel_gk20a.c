@@ -1736,7 +1736,7 @@ static void gk20a_channel_worker_process(struct gk20a *g, int *get)
 	gk20a_dbg_fn("");
 
 	while (__gk20a_channel_worker_pending(g, *get)) {
-		struct channel_gk20a *ch;
+		struct channel_gk20a *ch = NULL;
 
 		/*
 		 * If a channel is on the list, it's guaranteed to be handled
@@ -1751,11 +1751,12 @@ static void gk20a_channel_worker_process(struct gk20a *g, int *get)
 		 * enqueue are harmless.
 		 */
 		nvgpu_spinlock_acquire(&g->channel_worker.items_lock);
-		ch = list_first_entry_or_null(&g->channel_worker.items,
-				struct channel_gk20a,
+		if (!nvgpu_list_empty(&g->channel_worker.items)) {
+			ch = nvgpu_list_first_entry(&g->channel_worker.items,
+				channel_gk20a,
 				worker_item);
-		if (ch)
-			list_del_init(&ch->worker_item);
+			nvgpu_list_del(&ch->worker_item);
+		}
 		nvgpu_spinlock_release(&g->channel_worker.items_lock);
 
 		if (!ch) {
@@ -1818,7 +1819,7 @@ int nvgpu_channel_worker_init(struct gk20a *g)
 
 	atomic_set(&g->channel_worker.put, 0);
 	init_waitqueue_head(&g->channel_worker.wq);
-	INIT_LIST_HEAD(&g->channel_worker.items);
+	nvgpu_init_list_node(&g->channel_worker.items);
 	nvgpu_spinlock_init(&g->channel_worker.items_lock);
 	task = kthread_run(gk20a_channel_poll_worker, g,
 			"nvgpu_channel_poll_%s", g->name);
@@ -1861,7 +1862,7 @@ void gk20a_channel_worker_enqueue(struct channel_gk20a *ch)
 	}
 
 	nvgpu_spinlock_acquire(&g->channel_worker.items_lock);
-	if (!list_empty(&ch->worker_item)) {
+	if (!nvgpu_list_empty(&ch->worker_item)) {
 		/*
 		 * Already queued, so will get processed eventually.
 		 * The worker is probably awake already.
@@ -1870,7 +1871,7 @@ void gk20a_channel_worker_enqueue(struct channel_gk20a *ch)
 		gk20a_channel_put(ch);
 		return;
 	}
-	list_add_tail(&ch->worker_item, &g->channel_worker.items);
+	nvgpu_list_add_tail(&ch->worker_item, &g->channel_worker.items);
 	nvgpu_spinlock_release(&g->channel_worker.items_lock);
 
 	__gk20a_channel_worker_wakeup(g);
@@ -2646,7 +2647,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	INIT_LIST_HEAD(&c->joblist.dynamic.jobs);
 	nvgpu_init_list_node(&c->dbg_s_list);
 	nvgpu_init_list_node(&c->event_id_list);
-	INIT_LIST_HEAD(&c->worker_item);
+	nvgpu_init_list_node(&c->worker_item);
 
 	err = nvgpu_mutex_init(&c->ioctl_lock);
 	if (err)

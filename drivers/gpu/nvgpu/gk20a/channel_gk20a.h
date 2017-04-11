@@ -217,7 +217,7 @@ struct channel_gk20a {
 
 	struct channel_gk20a_timeout timeout;
 	/* for job cleanup handling in the background worker */
-	struct list_head worker_item;
+	struct nvgpu_list_node worker_item;
 
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	struct {
@@ -282,6 +282,13 @@ channel_gk20a_from_ch_entry(struct nvgpu_list_node *node)
 {
 	return (struct channel_gk20a *)
 	   ((uintptr_t)node - offsetof(struct channel_gk20a, ch_entry));
+};
+
+static inline struct channel_gk20a *
+channel_gk20a_from_worker_item(struct nvgpu_list_node *node)
+{
+	return (struct channel_gk20a *)
+	   ((uintptr_t)node - offsetof(struct channel_gk20a, worker_item));
 };
 
 static inline bool gk20a_channel_as_bound(struct channel_gk20a *ch)

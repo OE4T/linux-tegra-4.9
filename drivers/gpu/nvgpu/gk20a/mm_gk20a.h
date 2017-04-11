@@ -153,7 +153,6 @@ struct priv_cmd_entry {
 	u64 gva;
 	u32 get;	/* start of entry in queue */
 	u32 size;	/* in words */
-	struct list_head list;	/* node for lists */
 };
 
 struct mapped_buffer_node {

@@ -96,7 +96,7 @@ int nvgpu_log_mask_enabled(struct gk20a *g, u32 log_mask);
  * Print a message if the log_mask matches the enabled debugging.
  */
 #define nvgpu_log(g, log_mask, fmt, arg...)				\
-	__nvgpu_log_dbg(g, log_mask, __func__, __LINE__, fmt, ##arg);	\
+	__nvgpu_log_dbg(g, log_mask, __func__, __LINE__, fmt, ##arg)
 
 /**
  * nvgpu_err - Print an error

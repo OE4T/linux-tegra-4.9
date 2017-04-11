@@ -17,7 +17,6 @@
 #include <linux/delay.h>
 #include <linux/wait.h>
 #include <linux/ktime.h>
-#include <linux/nvgpu.h>
 #include <linux/hashtable.h>
 #include <linux/debugfs.h>
 #include <linux/log2.h>

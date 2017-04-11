@@ -32,7 +32,6 @@ struct dbg_profiler_object_data;
 
 #include <linux/sched.h>
 #include <nvgpu/lock.h>
-#include <linux/nvgpu.h>
 #include <linux/irqreturn.h>
 #include <linux/version.h>
 #include <linux/cdev.h>

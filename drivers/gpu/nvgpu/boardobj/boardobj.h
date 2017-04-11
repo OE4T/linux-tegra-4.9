@@ -16,7 +16,6 @@
 
 struct boardobj;
 
-#include <linux/nvgpu.h>
 #include "gk20a/pmu_gk20a.h"
 #include "ctrl/ctrlboardobj.h"
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>

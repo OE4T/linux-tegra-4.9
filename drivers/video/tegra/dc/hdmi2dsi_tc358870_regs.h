@@ -337,7 +337,6 @@
 #define MASK_HSYNC_WIDTH_INIT				0x00000001
 #define DSI_HBPR				0x0190
 #define MASK_HBPR_INIT					0x00000096
-
 #define DSI_RX_STATE_INT_MASK				0x01A4
 
 #define DSITX_INTERNAL_STAT			0x01B0
@@ -383,7 +382,7 @@
 #define MASK_MPLBW_33					(1 << 16)
 #define MASK_MPLBW_50					(2 << 16)
 #define MASK_MPLBW_MAX					(3 << 16)
-#define MASK_PLL_FBD					0x000000FF
+#define MASK_PLL_FBD					0x000001FF
 #define SET_PLL_FBD(fbd)				((fbd) & MASK_PLL_FBD)
 #define MASK_PLL_FRS					0x00000C00
 #define SET_PLL_FRS(frs)			(((frs) << 10) & MASK_PLL_FRS)

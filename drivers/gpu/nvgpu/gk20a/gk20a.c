@@ -732,32 +732,60 @@ static int gk20a_pm_unrailgate(struct device *dev)
 static void gk20a_pm_shutdown(struct platform_device *pdev)
 {
 	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a *g = platform->g;
+	int err;
 
-	dev_info(&pdev->dev, "shutting down");
+	nvgpu_info(g, "shutting down");
 
-	gk20a_driver_start_unload(platform->g);
+	gk20a_driver_start_unload(g);
 
 	/* If GPU is already railgated,
 	 * just prevent more requests, and return */
 	if (platform->is_railgated && platform->is_railgated(&pdev->dev)) {
 		__pm_runtime_disable(&pdev->dev, false);
+		nvgpu_info(g, "already railgated, shut down complete");
 		return;
 	}
 
 	/* Prevent more requests by disabling Runtime PM */
 	__pm_runtime_disable(&pdev->dev, false);
 
-	gk20a_wait_for_idle(&pdev->dev);
+	err = gk20a_wait_for_idle(&pdev->dev);
+	if (err) {
+		nvgpu_err(g, "failed to idle GPU, err=%d", err);
+		goto finish;
+	}
 
-	/* Be ready for rail-gate after this point */
+	err = gk20a_fifo_disable_all_engine_activity(g, true);
+	if (err) {
+		nvgpu_err(g, "failed to disable engine activity, err=%d",
+			err);
+		goto finish;
+	}
+
+	err = gk20a_fifo_wait_engine_idle(g);
+	if (err) {
+		nvgpu_err(g, "failed to idle engines, err=%d",
+			err);
+		goto finish;
+	}
+
 	if (gk20a_gpu_is_virtual(&pdev->dev))
-		vgpu_pm_prepare_poweroff(&pdev->dev);
+		err = vgpu_pm_prepare_poweroff(&pdev->dev);
 	else
-		gk20a_pm_prepare_poweroff(&pdev->dev);
+		err = gk20a_pm_prepare_poweroff(&pdev->dev);
+	if (err) {
+		nvgpu_err(g, "failed to prepare for poweroff, err=%d",
+			err);
+		goto finish;
+	}
 
-	gk20a_pm_railgate(&pdev->dev);
+	err = gk20a_pm_railgate(&pdev->dev);
+	if (err)
+		nvgpu_err(g, "failed to railgate, err=%d", err);
 
-	dev_info(&pdev->dev, "shut down complete\n");
+finish:
+	nvgpu_info(g, "shut down complete\n");
 }
 
 #ifdef CONFIG_PM

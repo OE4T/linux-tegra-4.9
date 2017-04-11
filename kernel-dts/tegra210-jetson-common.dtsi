@@ -213,15 +213,15 @@
 			status = "okay";
 			reg = <1>;
 			compatible = "pwm-regulator";
-			pwms = <&tegra_pwm 1 4880>;
+			pwms = <&tegra_pwm 1 8000>;
 			regulator-name = "vdd-gpu";
 			regulator-min-microvolt = <710000>;
 			regulator-max-microvolt = <1320000>;
 			regulator-init-microvolt = <1000000>;
 			regulator-n-voltages = <62>;
-			regulator-enable-ramp-delay = <1000>;
+			regulator-enable-ramp-delay = <2000>;
 			enable-gpio = <&max77620 6 0>;
-			regulator-settling-time-us = <80>;
+			regulator-settling-time-us = <160>;
                 };
 
 	};

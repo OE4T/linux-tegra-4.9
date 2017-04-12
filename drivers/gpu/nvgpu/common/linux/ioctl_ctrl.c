@@ -393,16 +393,23 @@ static int nvgpu_gpu_ioctl_trigger_suspend(struct gk20a *g)
 {
 	int err;
 
+	err = gk20a_busy(g);
+	if (err)
+	    return err;
+
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	err = g->ops.gr.trigger_suspend(g);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
+
+	gk20a_idle(g);
+
 	return err;
 }
 
 static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 		struct nvgpu_gpu_wait_pause_args *args)
 {
-	int err = 0;
+	int err;
 	struct warpstate *w_state;
 	u32 sm_count, size;
 
@@ -411,6 +418,10 @@ static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 	w_state = nvgpu_kzalloc(g, size);
 	if (!w_state)
 		return -ENOMEM;
+
+	err = gk20a_busy(g);
+	if (err)
+		goto out_free;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	g->ops.gr.wait_for_pause(g, w_state);
@@ -422,23 +433,45 @@ static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 	}
 
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
+
+	gk20a_idle(g);
+
+out_free:
 	nvgpu_kfree(g, w_state);
+
 	return err;
 }
 
 static int nvgpu_gpu_ioctl_resume_from_pause(struct gk20a *g)
 {
-	int err = 0;
+	int err;
+
+	err = gk20a_busy(g);
+	if (err)
+	    return err;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	err = g->ops.gr.resume_from_pause(g);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
+
+	gk20a_idle(g);
+
 	return err;
 }
 
 static int nvgpu_gpu_ioctl_clear_sm_errors(struct gk20a *g)
 {
-	return g->ops.gr.clear_sm_errors(g);
+	int err;
+
+	err = gk20a_busy(g);
+	if (err)
+		return err;
+
+	err = g->ops.gr.clear_sm_errors(g);
+
+	gk20a_idle(g);
+
+	return err;
 }
 
 static int nvgpu_gpu_ioctl_has_any_exception(

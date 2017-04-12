@@ -841,18 +841,16 @@ static void tegra_unmap_sg(struct device *dev, struct scatterlist *sg,
 	}
 }
 
-static int tegra_se_count_sgs(struct scatterlist *sl, u32 nbytes, int *chained)
+static int tegra_se_count_sgs(struct scatterlist *sl, u32 nbytes)
 {
-	struct scatterlist *sg = sl;
 	int sg_nents = 0;
 
-	*chained = 0;
-	while (sg) {
+	while (sl) {
 		sg_nents++;
 		nbytes -= min(sl->length, nbytes);
-		if (!sg_is_last(sg) && (sg + 1)->length == 0)
-			*chained = 1;
-		sg = sg_next(sg);
+		if (!nbytes)
+			break;
+		sl = sg_next(sl);
 	}
 
 	return sg_nents;
@@ -963,11 +961,10 @@ static int tegra_se_setup_ablk_req(struct tegra_se_dev *se_dev,
 	struct scatterlist *src_sg, *dst_sg;
 	struct tegra_se_ll *src_ll, *dst_ll;
 	u32 total, num_src_sgs, num_dst_sgs;
-	int src_chained, dst_chained;
 	int ret = 0;
 
-	num_src_sgs = tegra_se_count_sgs(req->src, req->nbytes, &src_chained);
-	num_dst_sgs = tegra_se_count_sgs(req->dst, req->nbytes, &dst_chained);
+	num_src_sgs = tegra_se_count_sgs(req->src, req->nbytes);
+	num_dst_sgs = tegra_se_count_sgs(req->dst, req->nbytes);
 
 	if ((num_src_sgs > SE_MAX_SRC_SG_COUNT) ||
 		(num_dst_sgs > SE_MAX_DST_SG_COUNT)) {
@@ -1137,9 +1134,8 @@ static int tegra_se_aes_queue_req(struct ablkcipher_request *req)
 	unsigned long flags;
 	bool idle = true;
 	int err = 0;
-	int chained;
 
-	if (!tegra_se_count_sgs(req->src, req->nbytes, &chained))
+	if (!tegra_se_count_sgs(req->src, req->nbytes))
 		return -EINVAL;
 
 	spin_lock_irqsave(&se_dev->lock, flags);
@@ -1441,7 +1437,6 @@ static int tegra_se_sha_update(struct ahash_request *req)
 	u32 total, num_sgs;
 	unsigned long freq = 0;
 	int err = 0;
-	int chained;
 
 	if (!req->nbytes)
 		return -EINVAL;
@@ -1480,7 +1475,7 @@ static int tegra_se_sha_update(struct ahash_request *req)
 	mutex_lock(&se_hw_lock);
 	pm_runtime_get_sync(se_dev->dev);
 
-	num_sgs = tegra_se_count_sgs(req->src, req->nbytes, &chained);
+	num_sgs = tegra_se_count_sgs(req->src, req->nbytes);
 	if ((num_sgs > SE_MAX_SRC_SG_COUNT)) {
 		dev_err(se_dev->dev, "num of SG buffers are more\n");
 		pm_runtime_put(se_dev->dev);
@@ -1618,7 +1613,6 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 	unsigned int sg_flags = SG_MITER_ATOMIC;
 	u8 *temp_buffer = NULL;
 	bool use_orig_iv = true;
-	int chained;
 
 	/* take access to the hw */
 	mutex_lock(&se_hw_lock);
@@ -1645,7 +1639,7 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 
 	/* first process all blocks except last block */
 	if (blocks_to_process) {
-		num_sgs = tegra_se_count_sgs(req->src, req->nbytes, &chained);
+		num_sgs = tegra_se_count_sgs(req->src, req->nbytes);
 		if (num_sgs > SE_MAX_SRC_SG_COUNT) {
 			dev_err(se_dev->dev, "num of SG buffers are more\n");
 			goto out;
@@ -1696,7 +1690,7 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 
 	/* get the last block bytes from the sg_dma buffer using miter */
 	src_sg = req->src;
-	num_sgs = tegra_se_count_sgs(req->src, req->nbytes, &chained);
+	num_sgs = tegra_se_count_sgs(req->src, req->nbytes);
 	sg_flags |= SG_MITER_FROM_SG;
 	cmac_ctx->buffer = dma_alloc_coherent(se_dev->dev,
 				TEGRA_SE_AES_BLOCK_SIZE,
@@ -2111,7 +2105,7 @@ static int tegra_se_rsa_op(struct akcipher_request *req)
 	struct tegra_se_dev *se_dev = sg_tegra_se_dev;
 	struct tegra_se_ll *src_ll, *dst_ll;
 	u32 num_src_sgs, num_dst_sgs;
-	int chained, ret = 0;
+	int ret = 0;
 	u32 val = 0;
 
 	if (!req)
@@ -2137,8 +2131,8 @@ static int tegra_se_rsa_op(struct akcipher_request *req)
 	if (req->src_len != rsa_ctx->mod_len)
 		return -EINVAL;
 
-	num_src_sgs = tegra_se_count_sgs(req->src, req->src_len, &chained);
-	num_dst_sgs = tegra_se_count_sgs(req->dst, req->dst_len, &chained);
+	num_src_sgs = tegra_se_count_sgs(req->src, req->src_len);
+	num_dst_sgs = tegra_se_count_sgs(req->dst, req->dst_len);
 	if ((num_src_sgs > SE_MAX_SRC_SG_COUNT) ||
 			(num_dst_sgs > SE_MAX_DST_SG_COUNT)) {
 		dev_err(se_dev->dev, "num of SG buffers are more\n");

@@ -1847,7 +1847,7 @@ void nvgpu_channel_worker_deinit(struct gk20a *g)
  * because in that case it has been scheduled already but has not yet been
  * processed.
  */
-void gk20a_channel_worker_enqueue(struct channel_gk20a *ch)
+static void gk20a_channel_worker_enqueue(struct channel_gk20a *ch)
 {
 	struct gk20a *g = ch->g;
 

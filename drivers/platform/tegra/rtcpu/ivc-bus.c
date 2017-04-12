@@ -299,6 +299,7 @@ static int tegra_ivc_bus_start(struct device *dev)
 		container_of(dev, struct tegra_ivc_bus, dev);
 	struct device_node *dn = bus->dev.parent->of_node;
 	struct of_phandle_args reg_spec;
+	const char *status;
 	int i, ret;
 
 	for (i = 0;
@@ -309,6 +310,16 @@ static int tegra_ivc_bus_start(struct device *dev)
 
 		for_each_child_of_node(reg_spec.np, ch_node) {
 			struct tegra_ivc_channel *chan;
+
+			ret = of_property_read_string(ch_node,
+					"status", &status);
+
+			if (ret == 0) {
+				ret = strcmp(status, "disabled");
+
+				if (ret == 0)
+					continue;
+			}
 
 			chan = tegra_ivc_channel_create(dev, ch_node,
 							&bus->regions[i]);

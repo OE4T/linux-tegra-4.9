@@ -52,7 +52,7 @@
 #define DVFS_SAFE_MARGIN	10	/* 10% */
 static unsigned long dvfs_safe_max_freq;
 
-static struct pll_parms gpc_pll_params = {
+static struct pll_parms gpc_pll_params_b1 = {
 	128000,  2600000,	/* freq */
 	1300000, 2600000,	/* vco */
 	12000,   38400,		/* u */
@@ -66,6 +66,23 @@ static struct pll_parms gpc_pll_params = {
 	40,			/* Lock delay in NA mode */
 	5,			/* IDDQ mode exit delay */
 };
+
+static struct pll_parms gpc_pll_params_c1 = {
+	128000,  2600000,	/* freq */
+	1300000, 2600000,	/* vco */
+	19200,   38400,		/* u */
+	1, 255,			/* M */
+	8, 255,			/* N */
+	1, 31,			/* PL */
+	0, 0,			/* DFS_COEFF */
+	0, 0,			/* ADC char coeff - to be read from fuses */
+	0x7 << 3,		/* vco control in NA mode */
+	500,			/* Locking and ramping timeout */
+	40,			/* Lock delay in NA mode */
+	5,			/* IDDQ mode exit delay */
+};
+
+static struct pll_parms gpc_pll_params;
 
 #ifdef CONFIG_DEBUG_FS
 static int clk_gm20b_debugfs_init(struct gk20a *g);
@@ -110,11 +127,11 @@ static inline u32 div_to_pl(u32 div)
  * Post divider tarnsition is glitchless only if there is common "1" in binary
  * representation of old and new settings.
  */
-static u32 get_interim_pldiv(u32 old_pl, u32 new_pl)
+static u32 get_interim_pldiv(struct gk20a *g, u32 old_pl, u32 new_pl)
 {
 	u32 pl;
 
-	if (old_pl & new_pl)
+	if ((g->clk.gpc_pll.id == GM20B_GPC_PLL_C1) || (old_pl & new_pl))
 		return 0;
 
 	pl = old_pl | BIT(ffs(new_pl) - 1);	/* pl never 0 */
@@ -891,7 +908,7 @@ static int clk_program_gpc_pll(struct gk20a *g, struct pll *gpll_new,
 	coeff = gk20a_readl(g, trim_sys_gpcpll_coeff_r());
 	if (pldiv_only) {
 		/* Insert interim PLDIV state if necessary */
-		u32 interim_pl = get_interim_pldiv(gpll_new->PL, gpll.PL);
+		u32 interim_pl = get_interim_pldiv(g, gpll_new->PL, gpll.PL);
 		if (interim_pl) {
 			coeff = set_field(coeff,
 				trim_sys_gpcpll_coeff_pldiv_m(),
@@ -1135,6 +1152,9 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 		return 0;
 	}
 
+	gpc_pll_params = (clk->gpc_pll.id == GM20B_GPC_PLL_C1) ?
+		gpc_pll_params_c1 : gpc_pll_params_b1;
+
 	if (!gk20a_clk_get(g)) {
 		err = -EINVAL;
 		goto fail;
@@ -1159,7 +1179,6 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 		goto fail;
 	}
 
-	clk->gpc_pll.id = GK20A_GPC_PLL;
 	clk->gpc_pll.clk_in = clk_get_rate(ref) / KHZ;
 	if (clk->gpc_pll.clk_in == 0) {
 		nvgpu_err(g, "GPCPLL reference clock is zero");
@@ -1201,9 +1220,11 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	clk->sw_ready = true;
 
 	gk20a_dbg_fn("done");
-	dev_info(dev_from_gk20a(g), "GPCPLL initial settings:%s M=%u, N=%u, P=%u",
+	nvgpu_info(g,
+		"GPCPLL initial settings:%s M=%u, N=%u, P=%u (id = %u)",
 		clk->gpc_pll.mode == GPC_PLL_MODE_DVFS ? " NA mode," : "",
-		clk->gpc_pll.M, clk->gpc_pll.N, clk->gpc_pll.PL);
+		clk->gpc_pll.M, clk->gpc_pll.N, clk->gpc_pll.PL,
+		clk->gpc_pll.id);
 	return 0;
 
 fail:
@@ -1623,7 +1644,7 @@ DEFINE_SIMPLE_ATTRIBUTE(rate_fops, rate_get, rate_set, "%llu\n");
 static int pll_reg_show(struct seq_file *s, void *data)
 {
 	struct gk20a *g = s->private;
-	u32 reg, m, n, pl, f;
+	u32 reg, m, n, pl, f, d, dmax, doffs;
 
 	nvgpu_mutex_acquire(&g->clk.clk_mutex);
 	if (!g->clk.clk_hw_on) {
@@ -1651,6 +1672,12 @@ static int pll_reg_show(struct seq_file *s, void *data)
 	f = g->clk.gpc_pll.clk_in * n / (m * pl_to_div(pl));
 	seq_printf(s, "coef = 0x%x : m = %u : n = %u : pl = %u", reg, m, n, pl);
 	seq_printf(s, " : pll_f(gpu_f) = %u(%u) kHz\n", f, f/2);
+	reg = gk20a_readl(g, trim_sys_gpcpll_dvfs0_r());
+	d = trim_sys_gpcpll_dvfs0_dfs_coeff_v(reg);
+	dmax = trim_sys_gpcpll_dvfs0_dfs_det_max_v(reg);
+	doffs = trim_sys_gpcpll_dvfs0_dfs_dc_offset_v(reg);
+	seq_printf(s, "dvfs0 = 0x%x : d = %u : dmax = %u : doffs = %u\n",
+		   reg, d, dmax, doffs);
 	nvgpu_mutex_release(&g->clk.clk_mutex);
 	return 0;
 }

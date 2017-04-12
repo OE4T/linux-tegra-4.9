@@ -21,6 +21,7 @@
 #include <uapi/linux/nvgpu.h>
 
 #include "gk20a/gk20a.h"
+#include "ioctl_as.h"
 
 static int gk20a_as_ioctl_bind_channel(
 		struct gk20a_as_share *as_share,

@@ -275,9 +275,12 @@ static void mttcan_rx_hwtstamp(struct mttcan_priv *priv,
 			       struct sk_buff *skb, struct ttcanfd_frame msg)
 {
 	u64 ns;
+	unsigned long flags;
 	struct skb_shared_hwtstamps *hwtstamps = skb_hwtstamps(skb);
 
+	raw_spin_lock_irqsave(&priv->tc_lock, flags);
 	ns = timecounter_cyc2time(&priv->tc, msg.tstamp);
+	raw_spin_unlock_irqrestore(&priv->tc_lock, flags);
 	memset(hwtstamps, 0, sizeof(struct skb_shared_hwtstamps));
 	hwtstamps->hwtstamp = ns_to_ktime(ns);
 }
@@ -947,10 +950,10 @@ static void mttcan_timer_cb(unsigned long data)
 	u64 tref;
 	struct mttcan_priv *priv = (struct mttcan_priv *)data;
 
-	spin_lock_irqsave(&priv->tc_lock, flags);
+	raw_spin_lock_irqsave(&priv->tc_lock, flags);
 	tref = get_ptp_hwtime();
 	timecounter_init(&priv->tc, &priv->cc, tref);
-	spin_unlock_irqrestore(&priv->tc_lock, flags);
+	raw_spin_unlock_irqrestore(&priv->tc_lock, flags);
 	mod_timer(&priv->timer,
 			jiffies + (msecs_to_jiffies(MTTCAN_HWTS_ROLLOVER)));
 }
@@ -1220,7 +1223,6 @@ static netdev_tx_t mttcan_start_xmit(struct sk_buff *skb,
 	/* Write Tx message to controller */
 	msg_no = ttcan_tx_msg_buffer_write(priv->ttcan,
 			(struct ttcanfd_frame *)frame);
-
 	if (msg_no < 0)
 		msg_no = ttcan_tx_fifo_queue_msg(priv->ttcan,
 				(struct ttcanfd_frame *)frame);
@@ -1316,10 +1318,10 @@ static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
 				priv->ttcan->bt_config.nominal.bitrate;
 			priv->cc.shift = 0;
 
-			spin_lock_irqsave(&priv->tc_lock, flags);
+			raw_spin_lock_irqsave(&priv->tc_lock, flags);
 			tref = get_ptp_hwtime();
 			timecounter_init(&priv->tc, &priv->cc, tref);
-			spin_unlock_irqrestore(&priv->tc_lock, flags);
+			raw_spin_unlock_irqrestore(&priv->tc_lock, flags);
 			mod_timer(&priv->timer, jiffies +
 				(msecs_to_jiffies(MTTCAN_HWTS_ROLLOVER)));
 		} else
@@ -1479,10 +1481,10 @@ static int mttcan_notifier(struct notifier_block *nb,
 		container_of(nb, struct mttcan_priv, ttcan_nb);
 
 	/* disable context switch between EAVB and CAN counter reads */
-	spin_lock_irqsave(&priv->tc_lock, flags);
+	raw_spin_lock_irqsave(&priv->tc_lock, flags);
 	tref = get_ptp_hwtime();
 	timecounter_init(&priv->tc, &priv->cc, tref);
-	spin_unlock_irqrestore(&priv->tc_lock, flags);
+	raw_spin_unlock_irqrestore(&priv->tc_lock, flags);
 
 	return NOTIFY_OK;
 }

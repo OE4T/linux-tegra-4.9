@@ -94,7 +94,7 @@ struct mttcan_priv {
 	struct mbox_client cl;
 	struct completion xfer_completion;
 	struct mbox_chan *mbox;
-	spinlock_t tc_lock;
+	raw_spinlock_t tc_lock;
 	spinlock_t tslock;
 	void __iomem *regs;
 	void __iomem *mres;

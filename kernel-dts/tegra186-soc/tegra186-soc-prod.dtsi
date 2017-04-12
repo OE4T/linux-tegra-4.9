@@ -25,7 +25,6 @@
 	pcie-controller@10003000 {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 			prod_c_pad {
 				prod = <
 					0x000000C8 0xFFFFFFFF 0x80b880b8	// PADS_REFCLK_CFG0		31:0	 0x80b880b8
@@ -38,7 +37,6 @@
 	ether_qos@2490000 {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 			eqos_pad_ctrl {
 				prod = <
 					0x00008800 0x9800000F 0x88000007	// ETHER_QOS_SDMEMCOMPPADCTRL_0
@@ -73,8 +71,6 @@
 	sdhci@3460000 {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
-
 			prod_c_ds {
 				prod = <0x00000100 0x00FF0000 0x00090000
 					0x000001E0 0x0000000F 0x00000007
@@ -134,7 +130,6 @@
 	sdhci@3440000 {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 			prod_c_ds {
 				prod = <0x00000100 0x00FF0000 0x000B0000
 					0x000001E0 0x0000000F 0x00000001
@@ -199,7 +194,6 @@
 	sdhci@3420000 {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 			comp-vref-default {
 				prod = <0x00001E0 0x0000000F 0x7>;
 			};
@@ -279,7 +273,6 @@
 	sdhci@3400000 {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 			prod_c_ds {
 				prod = <0x00000100 0x00FF0000 0x000B0000
 					0x000001E0 0x0000000F 0x00000001
@@ -345,7 +338,6 @@
 	xusb_padctl@3520000 {
 		prod-settings {
 			#prod-cells = <4>;
-			mask-one-style;
 			prod_c_bias {
 				prod = <0 0x284 0x00000038 0x38>;
 			};
@@ -367,7 +359,6 @@
 	pinctrl@3520000 {
 		prod-settings {
 			#prod-cells = <4>;
-			mask-one-style;
 			prod_c_bias {
 				prod = <0 0x284 0x00000038 0x38>;
 			};
@@ -426,7 +417,6 @@
 	ahci-sata@3507000 {
 		prod-settings {
 			#prod-cells = <4>;
-			mask-one-style;
 			prod {
 				prod = <
 					1 0x0000052C 0xFFFFFFFF 0x00031CE0	// T_SATA0_SPARE_3		31:0
@@ -441,7 +431,6 @@
 		dmic@2904200 {
 			prod-settings {
 				#prod-cells = <4>;
-				mask-one-style;
 				prod {
 					prod = <
 						1 0x00000028 0x0000ffff 0x00006441	// T_SATA0_SPARE_3		31:0
@@ -455,7 +444,6 @@
 		dspk@2905100 {
 			prod-settings {
 				#prod-cells = <4>;
-				mask-one-style;
 				prod {
 					prod = <
 						1 0x00000008 0x00000fff 0x00000441	// T_SATA0_SPARE_3		31:0
@@ -470,7 +458,6 @@
 		sor1 {
 			prod-settings {
 				#prod-cells = <3>;
-				mask-one-style;
 				prod_list_hdmi_soc = "prod_c_hdmi_0m_54m", "prod_c_hdmi_54m_111m",
 						     "prod_c_hdmi_111m_223m", "prod_c_hdmi_223m_300m",
 						     "prod_c_hdmi_300m_600m";
@@ -628,7 +615,6 @@
 		sor {
 			prod-settings {
 				#prod-cells = <3>;
-				mask-one-style;
 				prod_list_hdmi_soc = "prod_c_hdmi_0m_54m", "prod_c_hdmi_54m_111m",
 						     "prod_c_hdmi_111m_223m", "prod_c_hdmi_223m_300m",
 						     "prod_c_hdmi_300m_600m";
@@ -785,8 +771,6 @@
 		dpaux@155c0000 {
 			prod-settings {
 				#prod-cells = <3>;
-				mask-one-style;
-
 				prod_c_dpaux_dp {
 					prod = <
 						0x00000124 0x000037fe 0x000024c2	//DPAUX_HYBRID_PADCTL_0		13:12=AUX_CMH		0x02
@@ -805,8 +789,6 @@
 		dpaux@15040000 {
 			prod-settings {
 				#prod-cells = <3>;
-				mask-one-style;
-
 				prod_c_dpaux_dp {
 					prod = <
 						0x00000124 0x000037fe 0x000024c2	//DPAUX_HYBRID_PADCTL_0		13:12=AUX_CMH		0x02
@@ -826,7 +808,6 @@
 		dsi {
 			prod-settings {
 				#prod-cells = <3>;
-				mask-one-style;
 				dsi-padctrl-prod {
 					prod = < 0x00000024 0x03F0FC3F 0x00000000	/* DSI_PADCTL_A_OUTPUT_DELAY_TRIMMER_0 */
 						0x00000028 0x00333333 0x00000000	/* DSI_PADCTL_A_PRE_EMPHASIS_0 */
@@ -856,7 +837,6 @@
 	csi_mipical {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 			prod {
 				soc {
 					prod = <
@@ -905,7 +885,6 @@
 	mipical {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 			prod {
 /* SOC dtsi entries : module=DC, manual=mipi_cal, chip_rev is DC,  mode = DSI */
 				soc {

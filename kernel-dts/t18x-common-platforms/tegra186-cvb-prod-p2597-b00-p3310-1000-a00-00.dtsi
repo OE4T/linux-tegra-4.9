@@ -116,9 +116,9 @@
 		gpio@21 {
 			vpp-vmm-rails {
 				gpio-hog;
-				gpios = <2 0 3 0>;
+				gpios = <2 0>;
 				output-high;
-				label = "vpp-en-rail", "vmm-en-rail";
+				label = "vmm-en-rail";
 			};
 		};
 

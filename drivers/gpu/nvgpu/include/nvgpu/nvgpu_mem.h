@@ -68,6 +68,16 @@ struct nvgpu_mem {
 	 * therefor zeroed (to prevent leaking information in VIDMEM buffers).
 	 */
 #define NVGPU_MEM_FLAG_USER_MEM			 (1 << 2)
+
+	/*
+	 * Internal flag that specifies this struct has not been made with DMA
+	 * memory and as a result should not try to use the DMA routines for
+	 * freeing the backing memory.
+	 *
+	 * However, this will not stop the DMA API from freeing other parts of
+	 * nvgpu_mem in a system specific way.
+	 */
+#define __NVGPU_MEM_FLAG_NO_DMA			 (1 << 3)
 	unsigned long				 mem_flags;
 
 	/*

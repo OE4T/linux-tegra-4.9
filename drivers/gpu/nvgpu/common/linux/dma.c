@@ -335,6 +335,7 @@ static void nvgpu_dma_free_sys(struct gk20a *g, struct nvgpu_mem *mem)
 	struct device *d = dev_from_gk20a(g);
 
 	if (!(mem->mem_flags & NVGPU_MEM_FLAG_SHADOW_COPY) &&
+	    !(mem->mem_flags & __NVGPU_MEM_FLAG_NO_DMA) &&
 	    (mem->cpu_va || mem->priv.pages)) {
 		if (mem->priv.flags) {
 			DEFINE_DMA_ATTRS(dma_attrs);
@@ -357,6 +358,13 @@ static void nvgpu_dma_free_sys(struct gk20a *g, struct nvgpu_mem *mem)
 		mem->cpu_va = NULL;
 		mem->priv.pages = NULL;
 	}
+
+	/*
+	 * When this flag is set we expect that pages is still populated but not
+	 * by the DMA API.
+	 */
+	if (mem->mem_flags & __NVGPU_MEM_FLAG_NO_DMA)
+		nvgpu_kfree(g, mem->priv.pages);
 
 	if (mem->priv.sgt)
 		nvgpu_free_sgtable(g, &mem->priv.sgt);

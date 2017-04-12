@@ -27,6 +27,7 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/tsg_gk20a.h"
+#include "ioctl_tsg.h"
 #include "ioctl_channel.h"
 
 struct tsg_private {

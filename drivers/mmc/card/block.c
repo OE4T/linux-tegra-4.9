@@ -3,7 +3,7 @@
  *
  * Copyright 2002 Hewlett-Packard Company
  * Copyright 2005-2008 Pierre Ossman
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Use consistent with the GNU GPL is permitted,
  * provided that this copyright notice is
@@ -794,6 +794,15 @@ static int __mmc_blk_ioctl_cmd(struct mmc_card *card, struct mmc_blk_data *md,
 		return err;
 	}
 
+	if (mmc_card_cmdq(card)) {
+		err = mmc_cmdq_initiate_halt(card->host, true);
+		if (err) {
+			pr_err("%s: %s: CQE Halt failed. err = %d\n",
+				mmc_hostname(card->host), __func__, err);
+			return err;
+		}
+	}
+
 	mmc_wait_for_req(card->host, &mrq);
 
 	if (cmd.error) {
@@ -882,12 +891,12 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 
 cmd_done:
 	mmc_blk_put(md);
-cmd_err:
 	if (mmc_card_cmdq_pause(card)) {
 		mmc_cmdq_pause(card, false);
 		mmc_release_host(card->host);
 	}
 
+cmd_err:
 	kfree(idata->buf);
 	kfree(idata);
 	return ioc_err ? ioc_err : err;
@@ -965,16 +974,16 @@ static int mmc_blk_ioctl_multi_cmd(struct block_device *bdev,
 
 cmd_done:
 	mmc_blk_put(md);
+	if (mmc_card_cmdq_pause(card)) {
+		mmc_cmdq_pause(card, false);
+		mmc_release_host(card->host);
+	}
 cmd_err:
 	for (i = 0; i < num_of_cmds; i++) {
 		kfree(idata[i]->buf);
 		kfree(idata[i]);
 	}
 	kfree(idata);
-	if (mmc_card_cmdq_pause(card)) {
-		mmc_cmdq_pause(card, false);
-		mmc_release_host(card->host);
-	}
 	return ioc_err ? ioc_err : err;
 }
 
@@ -1019,7 +1028,7 @@ static int mmc_blk_hw_cmdq_switch(struct mmc_card *card,
 	bool cmdq_mode = !!mmc_card_cmdq(card);
 	struct mmc_host *host = card->host;
 
-	if (!(card->host->caps2 & MMC_CAP2_HW_CQ) ||
+	if (!(host->caps2 & MMC_CAP2_HW_CQ) ||
 		!card->ext_csd.cmdq_support ||
 		(enable && !(md->flags & MMC_BLK_CMD_QUEUE)) ||
 		(cmdq_mode == enable)) {
@@ -1034,6 +1043,12 @@ static int mmc_blk_hw_cmdq_switch(struct mmc_card *card,
 					       __func__);
 				return -EIO;
 			}
+		} else {
+			/* Wait till all issued cq requests are processed,
+			 * to make sure that no pending requests are exist
+			 * in device queue before disabling CQ mode.
+			 */
+			mmc_wait_hw_cmdq_empty(host);
 		}
 
 		ret = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
@@ -1049,30 +1064,27 @@ static int mmc_blk_hw_cmdq_switch(struct mmc_card *card,
 		}
 
 		/* enable host controller command queue engine */
-		if (enable)
-			ret = host->cmdq_ops->enable(card->host);
-		else
-			host->cmdq_ops->disable(card->host, true);
-		if (ret) {
-			pr_err("%s: failed to enable host controller cqe %d\n",
-				md->disk->disk_name, ret);
-			/* disable CQ mode in card */
-			ret = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
-				EXT_CSD_CMDQ_MODE_EN, 0,
-				card->ext_csd.generic_cmd6_time);
+		if (enable) {
+			mmc_card_set_cmdq(card);
+			ret = host->cmdq_ops->enable(host);
+			if (ret) {
+				pr_err("%s: enable host cntr cqe failed:%d\n",
+						md->disk->disk_name, ret);
+				/* disable CQ mode in card */
+				ret = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
+					EXT_CSD_CMDQ_MODE_EN, 0,
+					card->ext_csd.generic_cmd6_time);
+			}
 			goto out;
+		} else {
+			/* disable host controller command queue engine */
+			host->cmdq_ops->disable(host, true);
+			if (host->ops && host->ops->enable_host_int)
+				host->ops->enable_host_int(host, true);
 		}
 	} else {
-		pr_err("%s: No cmdq ops defined\n", __func__);
-		return -EOPNOTSUPP;
-	}
-
-	if (enable)
-		mmc_card_set_cmdq(card);
-	else {
-		if (card->host->ops && card->host->ops->enable_host_int)
-			card->host->ops->enable_host_int(card->host, true);
-		mmc_card_clr_cmdq(card);
+		pr_err("%s: No cmdq ops defined !!!\n", __func__);
+		ret = -ENOTSUPP;
 	}
 out:
 	return ret;
@@ -1092,12 +1104,6 @@ static inline int mmc_blk_part_switch(struct mmc_card *card,
 
 		if (md->part_type == EXT_CSD_PART_CONFIG_ACC_RPMB)
 			mmc_retune_pause(card->host);
-		if (md->part_type) {
-			/* disable CQ mode for non-user data partitions */
-			ret = mmc_blk_hw_cmdq_switch(card, md, false);
-			if (ret)
-				return ret;
-		}
 
 		part_config &= ~EXT_CSD_PART_CONFIG_ACC_MASK;
 		part_config |= md->part_type;
@@ -2510,7 +2516,7 @@ EXPORT_SYMBOL(mmc_blk_cmdq_issue_discard_rq);
 int mmc_blk_cmdq_issue_secdiscard_rq(struct mmc_queue *mq, struct request *req)
 {
 	struct mmc_card *card = mq->card;
-	struct mmc_host *host;
+	struct mmc_host *host = card->host;
 	struct mmc_blk_data *md = mq->data;
 	struct mmc_cmdq_context_info *ctx_info;
 	struct mmc_queue_req *active_mqrq;
@@ -2519,11 +2525,7 @@ int mmc_blk_cmdq_issue_secdiscard_rq(struct mmc_queue *mq, struct request *req)
 	unsigned int from, nr, arg, nbytes;
 	int type = MMC_BLK_DISCARD;
 
-	BUG_ON(!card);
-	host = card->host;
-	BUG_ON(!host);
-
-	BUG_ON((tag < 0) || (tag > card->ext_csd.cmdq_depth));
+	WARN_ON((tag < 0) || (tag > card->ext_csd.cmdq_depth));
 
 	if (!mmc_can_secure_erase_trim(card)) {
 		ret = -EOPNOTSUPP;
@@ -2534,7 +2536,7 @@ int mmc_blk_cmdq_issue_secdiscard_rq(struct mmc_queue *mq, struct request *req)
 	ctx_info = &host->cmdq_ctx;
 
 	down(&ctx_info->thread_sem);
-	BUG_ON(test_and_set_bit(tag, &host->cmdq_ctx.active_reqs));
+	WARN_ON(test_and_set_bit(tag, &host->cmdq_ctx.active_reqs));
 	ctx_info->active_qbr = true;
 
 	active_mqrq = &mq->mqrq_cmdq[req->tag];
@@ -2564,12 +2566,10 @@ int mmc_blk_cmdq_issue_secdiscard_rq(struct mmc_queue *mq, struct request *req)
 		if (ret)
 			goto out;
 	}
-
-	if (!ret)
-		mmc_blk_reset_success(md, type);
+	mmc_blk_reset_success(md, type);
 
 out:
-	BUG_ON(!test_and_clear_bit(cmdq_req->tag, &ctx_info->active_reqs));
+	WARN_ON(!test_and_clear_bit(cmdq_req->tag, &ctx_info->active_reqs));
 	ctx_info->active_qbr = false;
 	blk_end_request(req, 0, nbytes);
 	up(&ctx_info->thread_sem);
@@ -2674,10 +2674,10 @@ int mmc_blk_cmdq_complete_rq(struct request *rq)
 		return 0;
 	}
 
-	blk_end_request(rq, 0, cmdq_req->data.bytes_xfered);
-
 	if (test_and_clear_bit(0, &ctx_info->req_starved))
 		blk_run_queue(rq->q);
+
+	blk_end_request(rq, 0, cmdq_req->data.bytes_xfered);
 	return 0;
 }
 

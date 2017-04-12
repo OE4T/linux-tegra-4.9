@@ -1,7 +1,7 @@
 /*
  *  linux/include/linux/mmc/core.h
  *
- * Copyright (C) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (C) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -188,6 +188,7 @@ extern int mmc_cmdq_discard_task(struct mmc_host *host, u32 tag, bool all);
 extern int mmc_cmdq_support_qbr(struct mmc_host *host);
 extern void mmc_wait_hw_cmdq_empty(struct mmc_host *host);
 extern void mmc_cmdq_pause(struct mmc_card *card, bool pause);
+extern int mmc_cmdq_initiate_halt(struct mmc_host *host, bool halt);
 
 #define MMC_ERASE_ARG		0x00000000
 #define MMC_SECURE_ERASE_ARG	0x80000000

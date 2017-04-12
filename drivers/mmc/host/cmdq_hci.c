@@ -1,5 +1,5 @@
 /* Copyright (c) 2014, The Linux Foundation. All rights reserved.
- * Copyright (C) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (C) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -381,7 +381,7 @@ static void cmdq_disable(struct mmc_host *mmc, bool soft)
 				cq_host->desc_dma_base);
 		if (cq_host->trans_desc_base)
 			dma_free_coherent(mmc_dev(cq_host->mmc),
-				cq_host->data_size, cq_host->desc_base,
+				cq_host->data_size, cq_host->trans_desc_base,
 				cq_host->trans_desc_dma_base);
 	}
 	cq_host->enabled = false;
@@ -764,8 +764,6 @@ static int cmdq_halt(struct mmc_host *mmc, bool halt)
 			cmdq_dumpregs(cq_host);
 			cmdq_writel(cq_host, cmdq_readl(cq_host, CQCTL) & 0x1FE,
 			    CQCTL);
-			if (cq_host->ops->runtime_pm_put)
-				cq_host->ops->runtime_pm_put(mmc);
 			err = -ETIMEDOUT;
 		}
 	} else {

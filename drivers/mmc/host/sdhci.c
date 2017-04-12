@@ -73,9 +73,13 @@ static void sdhci_runtime_pm_bus_off(struct sdhci_host *host)
 static void sdhci_enable_host_interrupts(struct mmc_host *mmc, bool enable)
 {
 	struct sdhci_host *host;
+	u32 status;
 
 	host = mmc_priv(mmc);
 
+	sdhci_runtime_pm_get(host);
+	status = sdhci_readl(host, SDHCI_INT_STATUS);
+	sdhci_writel(host, status, SDHCI_INT_STATUS);
 	if (enable) {
 		host->ier = host->ier & ~SDHCI_INT_CMDQ_EN;
 		host->ier |= SDHCI_INT_RESPONSE | SDHCI_INT_DATA_END;
@@ -85,7 +89,6 @@ static void sdhci_enable_host_interrupts(struct mmc_host *mmc, bool enable)
 		host->ier |= SDHCI_INT_CMDQ_EN | SDHCI_INT_ERROR_MASK;
 		host->flags &= ~SDHCI_FORCE_PIO_MODE;
 	}
-	sdhci_runtime_pm_get(host);
 	sdhci_writel(host, host->ier, SDHCI_INT_ENABLE);
 	sdhci_writel(host, host->ier, SDHCI_SIGNAL_ENABLE);
 	sdhci_runtime_pm_put(host);
@@ -162,6 +165,7 @@ static inline bool sdhci_data_line_cmd(struct mmc_command *cmd)
 }
 
 #ifdef CONFIG_MMC_CQ_HCI
+static void sdhci_clear_cqe_interrupt(struct mmc_host *mmc, u32 intmask);
 static void sdhci_clear_set_irqs(struct sdhci_host *host, u32 clear, u32 set)
 {
 	host->ier &= ~clear;
@@ -982,6 +986,10 @@ static void sdhci_set_transfer_mode(struct sdhci_host *host,
 	struct mmc_data *data = cmd->data;
 
 	if (data == NULL) {
+		/* Do nothing for tuning commands */
+		if ((cmd->opcode == MMC_SEND_TUNING_BLOCK) ||
+			(cmd->opcode == MMC_SEND_TUNING_BLOCK_HS200))
+			return;
 		if (host->quirks2 &
 			SDHCI_QUIRK2_CLEAR_TRANSFERMODE_REG_BEFORE_CMD) {
 			sdhci_writew(host, 0x0, SDHCI_TRANSFER_MODE);
@@ -1608,7 +1616,7 @@ static void sdhci_clear_cqe_interrupt(struct mmc_host *mmc, u32 intmask)
 			SDHCI_INT_CMDQ);
 	sdhci_writel(host, mask, SDHCI_INT_STATUS);
 
-	if (!cq_host->data) {
+	if ((mask & SDHCI_INT_DATA_MASK) && !cq_host->data) {
 		pr_err("%s: Got data interrupt 0x%08x even "
 			"though no data operation was in progress.\n",
 			mmc_hostname(host->mmc), (unsigned)intmask);
@@ -2932,11 +2940,22 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 		goto out;
 	}
 
-	if (host->mmc->card && (mmc_card_cmdq(host->mmc->card) &&
-			host->cq_host->enabled)) {
-		pr_debug("*** %s: cmdq intr: 0x%08x\n",
+	if (intmask & SDHCI_INT_CMDQ) {
+		if (host->mmc->card && (mmc_card_cmdq(host->mmc->card) &&
+				host->cq_host->enabled)) {
+			pr_debug("*** %s: cmdq intr: 0x%08x\n",
 				mmc_hostname(host->mmc), intmask);
-		result = sdhci_cmdq_irq(host->mmc, intmask);
+			result = sdhci_cmdq_irq(host->mmc, intmask);
+		} else {
+			pr_err("%s: cqe intr: 0x%08x, but cqe not enabled\n",
+				mmc_hostname(host->mmc), intmask);
+			pr_err("%s: cqe status card side(%d), host side(%d)\n",
+				mmc_hostname(host->mmc),
+				mmc_card_cmdq(host->mmc->card),
+				host->cq_host->enabled);
+			sdhci_clear_cqe_interrupt(host->mmc, intmask);
+			result = IRQ_NONE;
+		}
 		goto out;
 	}
 
@@ -3356,7 +3375,10 @@ EXPORT_SYMBOL_GPL(__sdhci_read_caps);
 static void sdhci_cmdq_clear_set_irqs(struct mmc_host *mmc, u32 clear, u32 set)
 {
 	struct sdhci_host *host = mmc_priv(mmc);
+	u32 status;
 
+	status = sdhci_readl(host, SDHCI_INT_STATUS);
+	sdhci_writel(host, status, SDHCI_INT_STATUS);
 	sdhci_clear_set_irqs(host, SDHCI_INT_ALL_MASK,
 			SDHCI_INT_CMDQ_EN | SDHCI_INT_ERROR_MASK);
 }

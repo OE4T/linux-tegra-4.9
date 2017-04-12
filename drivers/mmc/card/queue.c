@@ -3,7 +3,7 @@
  *
  *  Copyright (C) 2003 Russell King, All Rights Reserved.
  *  Copyright 2006-2007 Pierre Ossman
- *  Copyright (c) 2015-2016 NVIDIA CORPORATION. All rights reserved.
+ *  Copyright (c) 2015-2017 NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -320,7 +320,7 @@ int mmc_init_queue(struct mmc_queue *mq, struct mmc_card *card,
 	mq->card = card;
 	if ((card->host->caps2 & MMC_CAP2_HW_CQ) &&
 		card->ext_csd.cmdq_support &&
-		(area_type == MMC_BLK_DATA_AREA_MAIN)) {
+		(area_type != MMC_BLK_DATA_AREA_RPMB)) {
 		mq->queue = blk_init_queue(mmc_cmdq_dispatch_req, lock);
 		if (!mq->queue)
 			return -ENOMEM;

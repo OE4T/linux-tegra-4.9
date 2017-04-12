@@ -257,7 +257,7 @@ static ssize_t scanline_show(struct device *device,
 	unsigned h_count;
 
 	if (WARN_ON(!dc) || !dc->enabled ||
-		WARN_ON(!tegra_powergate_is_powered(dc->powergate_id))) {
+		WARN_ON(!tegra_dc_is_powered(dc))) {
 		dev_err(&dc->ndev->dev, "%s: DC not enabled.\n", __func__);
 		return -ENXIO;
 	}

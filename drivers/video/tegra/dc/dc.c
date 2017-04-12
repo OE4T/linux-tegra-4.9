@@ -719,7 +719,7 @@ void reg_dump(struct tegra_dc *dc, void *data,
 	unsigned long cmd_state;
 
 	/* If gated, quietly return. */
-	if (!tegra_powergate_is_powered(dc->powergate_id))
+	if (!tegra_dc_is_powered(dc))
 		return;
 
 	mutex_lock(&dc->lock);
@@ -5255,7 +5255,7 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 	if (dc->out_ops && dc->out_ops->disable)
 		dc->out_ops->disable(dc);
 
-	if (tegra_powergate_is_powered(dc->powergate_id))
+	if (tegra_dc_is_powered(dc))
 		tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
 
 	disable_irq_nosync(dc->irq);

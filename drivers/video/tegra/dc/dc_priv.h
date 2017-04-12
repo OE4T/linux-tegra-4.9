@@ -80,6 +80,52 @@ static inline int tegra_dc_is_clk_enabled(struct clk *clk)
 #endif
 }
 
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
+static inline void tegra_dc_powergate_locked(struct tegra_dc *dc)
+{
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	tegra_nvdisp_powergate_dc(dc);
+#else
+	tegra_powergate_partition(dc->powergate_id);
+#endif
+}
+
+static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc)
+{
+	int ret;
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	ret = tegra_nvdisp_unpowergate_dc(dc);
+#else
+	ret = tegra_unpowergate_partition(dc->powergate_id);
+#endif
+	if (ret < 0)
+		dev_err(&dc->ndev->dev, "%s: could not unpowergate %d\n",
+							__func__, ret);
+}
+
+static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
+{
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
+		return true;
+
+	return tegra_nvdisp_is_powered(dc);
+#else
+	return tegra_powergate_is_powered(dc->powergate_id);
+#endif
+}
+
+void tegra_dc_powergate_locked(struct tegra_dc *dc);
+void tegra_dc_unpowergate_locked(struct tegra_dc *dc);
+#else /* !CONFIG_PM_GENERIC_DOMAINS */
+static inline void tegra_dc_powergate_locked(struct tegra_dc *dc) { }
+static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc) { }
+static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
+{
+	return true;
+}
+#endif /* CONFIG_PM_GENERIC_DOMAINS */
+
 static inline unsigned long tegra_dc_is_accessible(struct tegra_dc *dc)
 {
 #if !defined(CONFIG_TEGRA_NVDISPLAY)
@@ -87,8 +133,8 @@ static inline unsigned long tegra_dc_is_accessible(struct tegra_dc *dc)
 		BUG_ON(!nvhost_module_powered_ext(dc->ndev));
 		if (WARN(!tegra_dc_is_clk_enabled(dc->clk),
 			"DC is clock-gated.\n") ||
-			WARN(!tegra_powergate_is_powered(
-			dc->powergate_id), "DC is power-gated.\n"))
+			WARN(!tegra_dc_is_powered(dc),
+			"DC is power-gated.\n"))
 			return 1;
 	}
 #endif
@@ -448,52 +494,6 @@ static inline void tegra_disp_clk_disable_unprepare(struct clk *clk)
 #endif
 		clk_disable_unprepare(clk);
 }
-
-#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
-static inline void tegra_dc_powergate_locked(struct tegra_dc *dc)
-{
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	tegra_nvdisp_powergate_dc(dc);
-#else
-	tegra_powergate_partition(dc->powergate_id);
-#endif
-}
-
-static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc)
-{
-	int ret;
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	ret = tegra_nvdisp_unpowergate_dc(dc);
-#else
-	ret = tegra_unpowergate_partition(dc->powergate_id);
-#endif
-	if (ret < 0)
-		dev_err(&dc->ndev->dev, "%s: could not unpowergate %d\n",
-							__func__, ret);
-}
-
-static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
-{
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
-		return true;
-
-	return tegra_nvdisp_is_powered(dc);
-#else
-	return tegra_powergate_is_powered(dc->powergate_id);
-#endif
-}
-
-void tegra_dc_powergate_locked(struct tegra_dc *dc);
-void tegra_dc_unpowergate_locked(struct tegra_dc *dc);
-#else /* !CONFIG_PM_GENERIC_DOMAINS */
-static inline void tegra_dc_powergate_locked(struct tegra_dc *dc) { }
-static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc) { }
-static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
-{
-	return true;
-}
-#endif /* CONFIG_PM_GENERIC_DOMAINS */
 
 static inline void tegra_dc_set_edid(struct tegra_dc *dc,
 	struct tegra_edid *edid)

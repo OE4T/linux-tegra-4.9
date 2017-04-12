@@ -28,6 +28,7 @@
 #include <linux/io.h>
 #include <linux/of.h>
 #include <linux/of_iommu.h>
+#include <linux/of_platform.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/dma-iommu.h>
@@ -1613,6 +1614,7 @@ static int smmu_iommu_add_device(struct device *dev)
 {
 	int err;
 	u64 swgids;
+	struct iommu_group *group;
 
 	if (!smmu_handle) {
 		dev_err(dev, "No map available yet!!!\n");
@@ -1623,11 +1625,34 @@ static int smmu_iommu_add_device(struct device *dev)
 	if (swgids_is_error(swgids))
 		return -ENODEV;
 
+	group = iommu_group_alloc();
+	if (IS_ERR(group)) {
+		dev_err(dev, "Failed to allocate IOMMU group\n");
+		return PTR_ERR(group);
+	}
+
+	err = iommu_group_add_device(group, dev);
+	iommu_group_put(group);
+	if (err)
+		goto out_put_group;
+
 	err = __smmu_iommu_add_device(dev, swgids);
 	if (err)
-		return err;
-
+		goto out_put_group;
 	return 0;
+
+out_put_group:
+	dev_err(dev, "%s failed\n", __func__);
+	iommu_group_put(group);
+	return err;
+}
+
+static void smmu_iommu_remove_device(struct device *dev)
+{
+	dev_dbg(dev, "Detaching %s from map %p\n", dev_name(dev),
+		to_dma_iommu_mapping(dev));
+	arm_iommu_detach_device(dev);
+	iommu_group_remove_device(dev);
 }
 
 static struct iommu_ops smmu_iommu_ops_default = {
@@ -1645,6 +1670,7 @@ static struct iommu_ops smmu_iommu_ops_default = {
 	.unmap		= smmu_iommu_unmap,
 	.iova_to_phys	= smmu_iommu_iova_to_phys,
 	.add_device	= smmu_iommu_add_device,
+	.remove_device	= smmu_iommu_remove_device,
 	.pgsize_bitmap	= SMMU_IOMMU_PGSIZES,
 };
 
@@ -2399,76 +2425,23 @@ void (*free_pdir)(struct smmu_as *as) = free_pdir_default;
 struct iommu_ops *smmu_iommu_ops = &smmu_iommu_ops_default;
 const struct file_operations *smmu_debugfs_stats_fops = &smmu_debugfs_stats_fops_default;
 
-static int tegra_smmu_device_notifier(struct notifier_block *nb,
-				      unsigned long event, void *_dev)
-{
-	u64 swgids;
-	struct device *dev = _dev;
-	const char * const event_to_string[] = {
-		"-----",
-		"ADD_DEVICE",
-		"DEL_DEVICE",
-		"REMOVED_DEVICE",
-		"BIND_DRIVER",
-		"BOUND_DRIVER",
-		"UNBIND_DRIVER",
-		"UNBOUND_DRIVER",
-	};
-
-	swgids = tegra_smmu_get_swgids(dev);
-	if (swgids_is_error(swgids))
-		goto end;
-	/* dev is a smmu client */
-
-	pr_debug("%s() dev=%s swgids=%llx event=%s ops=%p\n",
-		__func__, dev_name(dev), swgids,
-		event_to_string[event], get_dma_ops(dev));
-
-	switch (event) {
-	case BUS_NOTIFY_BIND_DRIVER:
-		if (get_dma_ops(dev) != &arm_dma_ops)
-			break;
-
-		__smmu_iommu_add_device(dev, swgids);
-		break;
-	case BUS_NOTIFY_UNBOUND_DRIVER:
-		dev_dbg(dev, "Detaching %s from map %p\n", dev_name(dev),
-			to_dma_iommu_mapping(dev));
-		arm_iommu_detach_device(dev);
-		break;
-	default:
-		break;
-	}
-
-end:
-	return NOTIFY_DONE;
-}
-
-static struct notifier_block tegra_smmu_device_nb = {
-	.notifier_call = tegra_smmu_device_notifier,
-};
-
-struct notifier_block tegra_smmu_device_pci_nb = {
-	.notifier_call = tegra_smmu_device_notifier,
-};
-
 #ifdef CONFIG_PLATFORM_ENABLE_IOMMU
 
 void tegra_smmu_map_misc_device(struct device *dev)
 {
-	tegra_smmu_device_notifier(&tegra_smmu_device_nb,
-				   BUS_NOTIFY_BIND_DRIVER, dev);
+	smmu_iommu_add_device(dev);
 }
 EXPORT_SYMBOL(tegra_smmu_map_misc_device);
 
 void tegra_smmu_unmap_misc_device(struct device *dev)
 {
-	tegra_smmu_device_notifier(&tegra_smmu_device_nb,
-				   BUS_NOTIFY_UNBOUND_DRIVER, dev);
+	smmu_iommu_remove_device(dev);
 }
 EXPORT_SYMBOL(tegra_smmu_unmap_misc_device);
 
 #endif
+
+static bool init_done;
 
 static int tegra_smmu_init(void)
 {
@@ -2477,9 +2450,7 @@ static int tegra_smmu_init(void)
 	err = platform_driver_register(&tegra_smmu_driver);
 	if (err)
 		return err;
-	if (IS_ENABLED(CONFIG_ARM_DMA_USE_IOMMU))
-		bus_register_notifier(&platform_bus_type,
-				      &tegra_smmu_device_nb);
+	init_done = true;
 	return 0;
 }
 
@@ -2496,14 +2467,27 @@ static void __exit tegra_smmu_exit(void)
 	if (IS_ENABLED(CONFIG_ARM_DMA_USE_IOMMU)) {
 		bus_for_each_dev(&platform_bus_type, NULL, NULL,
 				 tegra_smmu_remove_map);
-		bus_unregister_notifier(&platform_bus_type,
-					&tegra_smmu_device_nb);
 	}
 	platform_driver_unregister(&tegra_smmu_driver);
 }
 
-core_initcall(tegra_smmu_init);
 module_exit(tegra_smmu_exit);
+
+static int __init tegra_smmu_of_setup(struct device_node *np)
+{
+	struct platform_device *pdev;
+
+	if (!init_done)
+		tegra_smmu_init();
+
+	pdev = of_platform_device_create(np, NULL, platform_bus_type.dev_root);
+	if (IS_ERR(pdev))
+		return PTR_ERR(pdev);
+
+	of_iommu_set_ops(np, (struct iommu_ops *)&smmu_iommu_ops);
+	return 0;
+}
+IOMMU_OF_DECLARE(tegra_smmu_of, "nvidia,tegra210-smmu", tegra_smmu_of_setup);
 
 MODULE_DESCRIPTION("IOMMU API for SMMU in Tegra SoC");
 MODULE_AUTHOR("Hiroshi DOYU <hdoyu@nvidia.com>");

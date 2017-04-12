@@ -41,6 +41,7 @@
 
 struct tegra_pwm_soc {
 	unsigned int num_channels;
+	unsigned long max_clk_limit;
 };
 
 struct tegra_pwm_chip {
@@ -212,6 +213,18 @@ static int tegra_pwm_probe(struct platform_device *pdev)
 	/* Read PWM clock rate from source */
 	pwm->clk_rate = clk_get_rate(pwm->clk);
 
+	/* Limit the maximum clock rate */
+	if (pwm->soc->max_clk_limit &&
+	    (pwm->clk_rate > pwm->soc->max_clk_limit)) {
+		ret = clk_set_rate(pwm->clk, pwm->soc->max_clk_limit);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "Failed to set max clk rate: %d\n",
+				ret);
+			return ret;
+		}
+		pwm->clk_rate = clk_get_rate(pwm->clk);
+	}
+
 	if (no_clk_sleeping_in_ops) {
 		ret = clk_prepare(pwm->clk);
 		if (ret) {
@@ -294,10 +307,12 @@ static int tegra_pwm_resume(struct device *dev)
 
 static const struct tegra_pwm_soc tegra20_pwm_soc = {
 	.num_channels = 4,
+	.max_clk_limit = 48000000UL, /* 48 MHz */
 };
 
 static const struct tegra_pwm_soc tegra186_pwm_soc = {
 	.num_channels = 1,
+	.max_clk_limit = 102000000UL, /*102 MHz */
 };
 
 static const struct of_device_id tegra_pwm_of_match[] = {

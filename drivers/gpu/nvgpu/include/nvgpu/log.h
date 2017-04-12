@@ -25,7 +25,8 @@ struct gk20a;
 enum nvgpu_log_type {
 	ERROR,
 	WARNING,
-	DEBUG
+	DEBUG,
+	INFO,
 };
 
 /*
@@ -131,7 +132,7 @@ int nvgpu_log_mask_enabled(struct gk20a *g, u32 log_mask);
  * Unconditionally print an information message.
  */
 #define nvgpu_info(g, fmt, arg...)					\
-	__nvgpu_log_msg(g, __func__, __LINE__, DEBUG, fmt, ##arg)
+	__nvgpu_log_msg(g, __func__, __LINE__, INFO, fmt, ##arg)
 
 /*
  * Some convenience macros.

@@ -41,7 +41,8 @@ u32 nvgpu_dbg_mask = NVGPU_DEFAULT_DBG_MASK;
 static const char *log_types[] = {
 	"ERR",
 	"WRN",
-	"DBG"
+	"DBG",
+	"INFO",
 };
 
 int nvgpu_log_mask_enabled(struct gk20a *g, u32 log_mask)
@@ -83,6 +84,9 @@ static void __nvgpu_really_print_log(u32 trace, const char *gpu_name,
 		 * separately from the Linux kernel. Perhaps this is a bug in
 		 * nvgpu.
 		 */
+		pr_info(LOG_FMT, name, func_name, line, log_type, log);
+		break;
+	case INFO:
 		pr_info(LOG_FMT, name, func_name, line, log_type, log);
 		break;
 	case WARNING:

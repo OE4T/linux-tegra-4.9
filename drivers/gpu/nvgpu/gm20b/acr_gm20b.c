@@ -22,6 +22,7 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/kmem.h>
+#include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/acr/nvgpu_acr.h>
 #include <nvgpu/firmware.h>
 
@@ -386,7 +387,6 @@ int prepare_ucode_blob(struct gk20a *g)
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct wpr_carveout_info wpr_inf;
-	struct sg_table *sgt;
 	struct page *page;
 
 	if (g->acr.ucode_blob.cpu_va) {
@@ -411,24 +411,11 @@ int prepare_ucode_blob(struct gk20a *g)
 	gm20b_dbg_pmu("wpr carveout base:%llx\n", wpr_inf.wpr_base);
 	gm20b_dbg_pmu("wpr carveout size :%x\n", wprsize);
 
-	sgt = nvgpu_kzalloc(g, sizeof(*sgt));
-	if (!sgt) {
-		nvgpu_err(g, "failed to allocate memory");
-		return -ENOMEM;
-	}
-	err = sg_alloc_table(sgt, 1, GFP_KERNEL);
-	if (err) {
-		nvgpu_err(g, "failed to allocate sg_table");
-		goto free_sgt;
-	}
 	page = phys_to_page(wpr_addr);
-	sg_set_page(sgt->sgl, page, wprsize, 0);
-	/* This bypasses SMMU for WPR during gmmu_map. */
-	sg_dma_address(sgt->sgl) = 0;
-
-	g->pmu.wpr_buf.gpu_va = gk20a_gmmu_map(vm, &sgt, wprsize,
-						0, gk20a_mem_flag_none, false,
-						APERTURE_SYSMEM);
+	__nvgpu_mem_create_from_pages(g, &g->pmu.wpr_buf, &page, 1);
+	g->pmu.wpr_buf.gpu_va = gk20a_gmmu_map(vm, &g->pmu.wpr_buf.priv.sgt,
+					       wprsize, 0, gk20a_mem_flag_none,
+					       false, APERTURE_SYSMEM);
 	gm20b_dbg_pmu("wpr mapped gpu va :%llx\n", g->pmu.wpr_buf.gpu_va);
 
 	/* Discover all managed falcons*/
@@ -457,8 +444,9 @@ int prepare_ucode_blob(struct gk20a *g)
 	}
 	gm20b_dbg_pmu("prepare ucode blob return 0\n");
 	free_acr_resources(g, plsfm);
- free_sgt:
-	nvgpu_free_sgtable(g, &sgt);
+free_sgt:
+	gk20a_gmmu_unmap(vm, g->pmu.wpr_buf.gpu_va,
+			 g->pmu.wpr_buf.size, gk20a_mem_flag_none);
 	return err;
 }
 

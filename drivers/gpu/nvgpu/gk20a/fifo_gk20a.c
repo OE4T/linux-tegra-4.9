@@ -3626,8 +3626,8 @@ static unsigned int __gk20a_fifo_create_stats(struct gk20a *g,
 	/* build ranges */
 	for (index = 0; index < PERCENTILE_RANGES; index++)
 		percentiles[index] =
-			g->fifo.profile.sorted[(PERCENTILE_WIDTH * index *
-						nelem)/100];
+			g->fifo.profile.sorted[(PERCENTILE_WIDTH * (index + 1) *
+						nelem)/100 - 1];
 	return nelem;
 }
 

@@ -576,16 +576,16 @@ static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
 	}
 
 	if (acquire)
-		gpu_sema_verbose_dbg("(A) c=%d ACQ_GE %-4u owner=%-3d"
+		gpu_sema_verbose_dbg(g, "(A) c=%d ACQ_GE %-4u owner=%-3d"
 				     "va=0x%llx cmd_mem=0x%llx b=0x%llx off=%u",
 				     ch, nvgpu_semaphore_get_value(s),
 				     s->hw_sema->ch->hw_chid, va, cmd->gva,
 				     cmd->mem->gpu_va, ob);
 	else
-		gpu_sema_verbose_dbg("(R) c=%d INCR %u (%u) va=0x%llx "
+		gpu_sema_verbose_dbg(g, "(R) c=%d INCR %u (%u) va=0x%llx "
 				     "cmd_mem=0x%llx b=0x%llx off=%u",
 				     ch, nvgpu_semaphore_get_value(s),
-				     readl(s->hw_sema->value), va, cmd->gva,
+				     nvgpu_semaphore_read(s), va, cmd->gva,
 				     cmd->mem->gpu_va, ob);
 }
 

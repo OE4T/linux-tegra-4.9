@@ -14,23 +14,22 @@
 #ifndef SEMAPHORE_GK20A_H
 #define SEMAPHORE_GK20A_H
 
-#include <linux/delay.h>
-
 #include <nvgpu/log.h>
-#include <nvgpu/allocator.h>
+#include <nvgpu/timers.h>
 #include <nvgpu/atomic.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/kref.h>
 #include <nvgpu/list.h>
+#include <nvgpu/nvgpu_mem.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
 #include "gk20a/channel_gk20a.h"
 
-#define gpu_sema_dbg(fmt, args...)		\
-	gk20a_dbg(gpu_dbg_sema, fmt, ##args)
-#define gpu_sema_verbose_dbg(fmt, args...)	\
-	gk20a_dbg(gpu_dbg_sema_v, fmt, ##args)
+#define gpu_sema_dbg(g, fmt, args...)		\
+	nvgpu_log(g, gpu_dbg_sema, fmt, ##args)
+#define gpu_sema_verbose_dbg(g, fmt, args...)	\
+	nvgpu_log(g, gpu_dbg_sema_v, fmt, ##args)
 
 /*
  * Max number of channels that can be used is 512. This of course needs to be
@@ -50,7 +49,6 @@ struct nvgpu_semaphore_int {
 	int idx;			/* Semaphore index. */
 	u32 offset;			/* Offset into the pool. */
 	atomic_t next_value;		/* Next available value. */
-	u32 *value;			/* Current value (access w/ readl()). */
 	u32 nr_incrs;			/* Number of increments programmed. */
 	struct nvgpu_semaphore_pool *p;	/* Pool that owns this sema. */
 	struct channel_gk20a *ch;	/* Channel that owns this sema. */
@@ -82,9 +80,7 @@ struct nvgpu_semaphore {
  * A semaphore pool. Each address space will own exactly one of these.
  */
 struct nvgpu_semaphore_pool {
-	struct page *page;			/* This pool's page of memory */
 	struct nvgpu_list_node pool_list_entry;	/* Node for list of pools. */
-	void *cpu_va;				/* CPU access to the pool. */
 	u64 gpu_va;				/* GPU access to the pool. */
 	u64 gpu_va_ro;				/* GPU access to the pool. */
 	int page_idx;				/* Index into sea bitmap. */
@@ -98,15 +94,10 @@ struct nvgpu_semaphore_pool {
 
 	/*
 	 * This is the address spaces's personal RW table. Other channels will
-	 * ultimately map this page as RO.
+	 * ultimately map this page as RO. This is a sub-nvgpu_mem from the
+	 * sea's mem.
 	 */
-	struct sg_table *rw_sg_table;
-
-	/*
-	 * This is to keep track of whether the pool has had its sg_table
-	 * updated during sea resizing.
-	 */
-	struct sg_table *ro_sg_table;
+	struct nvgpu_mem rw_mem;
 
 	int mapped;
 
@@ -148,11 +139,12 @@ struct nvgpu_semaphore_sea {
 	 */
 	int page_count;			/* Pages allocated to pools. */
 
-	struct sg_table *ro_sg_table;
 	/*
-	struct page *pages[SEMAPHORE_POOL_COUNT];
-	*/
-
+	 * The read-only memory for the entire semaphore sea. Each semaphore
+	 * pool needs a sub-nvgpu_mem that will be mapped as RW in its address
+	 * space. This sea_mem cannot be freed until all semaphore_pools have
+	 * been freed.
+	 */
 	struct nvgpu_mem sea_mem;
 
 	/*
@@ -224,12 +216,26 @@ static inline u64 nvgpu_hw_sema_addr(struct nvgpu_semaphore_int *hw_sema)
 		hw_sema->offset;
 }
 
+static inline u32 __nvgpu_semaphore_read(struct nvgpu_semaphore_int *hw_sema)
+{
+	return nvgpu_mem_rd(hw_sema->ch->g,
+			    &hw_sema->p->rw_mem, hw_sema->offset);
+}
+
+/*
+ * Read the underlying value from a semaphore.
+ */
+static inline u32 nvgpu_semaphore_read(struct nvgpu_semaphore *s)
+{
+	return __nvgpu_semaphore_read(s->hw_sema);
+}
+
 /*
  * TODO: handle wrap around... Hmm, how to do this?
  */
 static inline bool nvgpu_semaphore_is_released(struct nvgpu_semaphore *s)
 {
-	u32 sema_val = readl(s->hw_sema->value);
+	u32 sema_val = nvgpu_semaphore_read(s);
 
 	/*
 	 * If the underlying semaphore value is greater than or equal to
@@ -242,14 +248,6 @@ static inline bool nvgpu_semaphore_is_released(struct nvgpu_semaphore *s)
 static inline bool nvgpu_semaphore_is_acquired(struct nvgpu_semaphore *s)
 {
 	return !nvgpu_semaphore_is_released(s);
-}
-
-/*
- * Read the underlying value from a semaphore.
- */
-static inline u32 nvgpu_semaphore_read(struct nvgpu_semaphore *s)
-{
-	return readl(s->hw_sema->value);
 }
 
 static inline u32 nvgpu_semaphore_get_value(struct nvgpu_semaphore *s)
@@ -269,6 +267,7 @@ static inline u32 nvgpu_semaphore_next_value(struct nvgpu_semaphore *s)
 static inline void __nvgpu_semaphore_release(struct nvgpu_semaphore *s,
 					     bool force)
 {
+	struct nvgpu_semaphore_int *hw_sema = s->hw_sema;
 	u32 current_val;
 	u32 val = nvgpu_semaphore_get_value(s);
 	int attempts = 0;
@@ -282,7 +281,7 @@ static inline void __nvgpu_semaphore_release(struct nvgpu_semaphore *s,
 	while ((current_val = nvgpu_semaphore_read(s)) < (val - 1)) {
 		if (force)
 			break;
-		msleep(100);
+		nvgpu_msleep(100);
 		attempts += 1;
 		if (attempts > 100) {
 			WARN(1, "Stall on sema release!");
@@ -297,10 +296,10 @@ static inline void __nvgpu_semaphore_release(struct nvgpu_semaphore *s,
 	if (current_val >= val)
 		return;
 
-	writel(val, s->hw_sema->value);
+	nvgpu_mem_wr(hw_sema->ch->g, &hw_sema->p->rw_mem, hw_sema->offset, val);
 
-	gpu_sema_verbose_dbg("(c=%d) WRITE %u",
-			     s->hw_sema->ch->hw_chid, val);
+	gpu_sema_verbose_dbg(hw_sema->p->sema_sea->gk20a,
+			     "(c=%d) WRITE %u", hw_sema->ch->hw_chid, val);
 }
 
 static inline void nvgpu_semaphore_release(struct nvgpu_semaphore *s)
@@ -324,7 +323,8 @@ static inline void nvgpu_semaphore_incr(struct nvgpu_semaphore *s)
 	atomic_set(&s->value, atomic_add_return(1, &s->hw_sema->next_value));
 	s->incremented = 1;
 
-	gpu_sema_verbose_dbg("INCR sema for c=%d (%u)",
+	gpu_sema_verbose_dbg(s->hw_sema->p->sema_sea->gk20a,
+			     "INCR sema for c=%d (%u)",
 			     s->hw_sema->ch->hw_chid,
 			     nvgpu_semaphore_next_value(s));
 }

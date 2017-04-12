@@ -41,6 +41,7 @@
 #include <media/v4l2-device.h>
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-of.h>
+#include <media/tegra-v4l2-camera.h>
 #include <media/camera_common.h>
 
 #include <media/i2c/tc358840.h>

@@ -26,6 +26,7 @@
 #include <linux/of_gpio.h>
 
 #include <media/tegra_v4l2_camera.h>
+#include <media/tegra-v4l2-camera.h>
 #include <media/camera_common.h>
 #include <media/ov10823.h>
 
@@ -122,7 +123,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 /* Do not change the name field for the controls! */
 	{
 		.ops = &ov10823_ctrl_ops,
-		.id = V4L2_CID_GAIN,
+		.id = TEGRA_CAMERA_CID_GAIN,
 		.name = "Gain",
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.flags = V4L2_CTRL_FLAG_SLIDER,
@@ -133,7 +134,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 	{
 		.ops = &ov10823_ctrl_ops,
-		.id = V4L2_CID_FRAME_LENGTH,
+		.id = TEGRA_CAMERA_CID_FRAME_LENGTH,
 		.name = "Frame Length",
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.flags = V4L2_CTRL_FLAG_SLIDER,
@@ -144,7 +145,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 	{
 		.ops = &ov10823_ctrl_ops,
-		.id = V4L2_CID_COARSE_TIME,
+		.id = TEGRA_CAMERA_CID_COARSE_TIME,
 		.name = "Coarse Time",
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.flags = V4L2_CTRL_FLAG_SLIDER,
@@ -155,7 +156,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 	{
 		.ops = &ov10823_ctrl_ops,
-		.id = V4L2_CID_GROUP_HOLD,
+		.id = TEGRA_CAMERA_CID_GROUP_HOLD,
 		.name = "Group Hold",
 		.type = V4L2_CTRL_TYPE_INTEGER_MENU,
 		.min = 0,
@@ -166,7 +167,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 	{
 		.ops = &ov10823_ctrl_ops,
-		.id = V4L2_CID_HDR_EN,
+		.id = TEGRA_CAMERA_CID_HDR_EN,
 		.name = "HDR enable",
 		.type = V4L2_CTRL_TYPE_INTEGER_MENU,
 		.min = 0,
@@ -177,7 +178,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 	{
 		.ops = &ov10823_ctrl_ops,
-		.id = V4L2_CID_OTP_DATA,
+		.id = TEGRA_CAMERA_CID_OTP_DATA,
 		.name = "OTP Data",
 		.type = V4L2_CTRL_TYPE_STRING,
 		.flags = V4L2_CTRL_FLAG_READ_ONLY,
@@ -187,7 +188,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 	{
 		.ops = &ov10823_ctrl_ops,
-		.id = V4L2_CID_FUSE_ID,
+		.id = TEGRA_CAMERA_CID_FUSE_ID,
 		.name = "Fuse ID",
 		.type = V4L2_CTRL_TYPE_STRING,
 		.flags = V4L2_CTRL_FLAG_READ_ONLY,
@@ -426,21 +427,21 @@ static int ov10823_s_stream(struct v4l2_subdev *sd, int enable)
 		/* write list of override regs for the asking frame length, */
 		/* coarse integration time, and gain. Failures to write */
 		/* overrides are non-fatal. */
-		control.id = V4L2_CID_GAIN;
+		control.id = TEGRA_CAMERA_CID_GAIN;
 		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
 		err |= ov10823_set_gain(priv, control.value);
 		if (err)
 			dev_dbg(&client->dev,
 				"%s: error gain override\n", __func__);
 
-		control.id = V4L2_CID_FRAME_LENGTH;
+		control.id = TEGRA_CAMERA_CID_FRAME_LENGTH;
 		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
 		err |= ov10823_set_frame_length(priv, control.value);
 		if (err)
 			dev_dbg(&client->dev,
 				"%s: error frame length override\n", __func__);
 
-		control.id = V4L2_CID_COARSE_TIME;
+		control.id = TEGRA_CAMERA_CID_COARSE_TIME;
 		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
 		err |= ov10823_set_coarse_time(priv, control.value);
 		if (err)
@@ -707,7 +708,7 @@ static int ov10823_otp_setup(struct ov10823 *priv)
 				   OV10823_OTP_SRAM_START_ADDR,
 				   OV10823_OTP_SIZE);
 
-	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, V4L2_CID_OTP_DATA);
+	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, TEGRA_CAMERA_CID_OTP_DATA);
 	if (!ctrl) {
 		dev_err(&priv->i2c_client->dev,
 			"could not find device ctrl.\n");
@@ -741,7 +742,7 @@ static int ov10823_fuse_id_setup(struct ov10823 *priv)
 				   OV10823_FUSE_ID_OTP_BASE_ADDR,
 				   OV10823_FUSE_ID_SIZE);
 
-	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, V4L2_CID_FUSE_ID);
+	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, TEGRA_CAMERA_CID_FUSE_ID);
 	if (!ctrl) {
 		dev_err(&priv->i2c_client->dev,
 			"could not find device ctrl.\n");
@@ -788,16 +789,16 @@ static int ov10823_s_ctrl(struct v4l2_ctrl *ctrl)
 		return 0;
 
 	switch (ctrl->id) {
-	case V4L2_CID_GAIN:
+	case TEGRA_CAMERA_CID_GAIN:
 		err = ov10823_set_gain(priv, ctrl->val);
 		break;
-	case V4L2_CID_FRAME_LENGTH:
+	case TEGRA_CAMERA_CID_FRAME_LENGTH:
 		err = ov10823_set_frame_length(priv, ctrl->val);
 		break;
-	case V4L2_CID_COARSE_TIME:
+	case TEGRA_CAMERA_CID_COARSE_TIME:
 		err = ov10823_set_coarse_time(priv, ctrl->val);
 		break;
-	case V4L2_CID_GROUP_HOLD:
+	case TEGRA_CAMERA_CID_GROUP_HOLD:
 		if (switch_ctrl_qmenu[ctrl->val] == SWITCH_ON) {
 			priv->group_hold_en = true;
 		} else {
@@ -805,7 +806,7 @@ static int ov10823_s_ctrl(struct v4l2_ctrl *ctrl)
 			err = ov10823_set_group_hold(priv);
 		}
 		break;
-	case V4L2_CID_HDR_EN:
+	case TEGRA_CAMERA_CID_HDR_EN:
 		break;
 	default:
 		pr_err("%s: unknown ctrl id.\n", __func__);

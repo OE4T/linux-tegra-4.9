@@ -28,6 +28,7 @@
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 
+#include <media/tegra-v4l2-camera.h>
 #include <media/camera_common.h>
 #include <media/tegra_camera_dev_mfi.h>
 
@@ -428,7 +429,7 @@ static int lc898212_s_stream(struct v4l2_subdev *sd, int enable)
 		return err;
 
 	/* write override registers for focus position */
-	control.id = V4L2_CID_FOCUS_ABSOLUTE;
+	control.id = TEGRA_CAMERA_CID_FOCUS_ABSOLUTE;
 	err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
 	err |= lc898212_set_position(priv, control.value);
 	if (err)

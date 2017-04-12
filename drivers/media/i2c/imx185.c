@@ -27,6 +27,7 @@
 #include <linux/of_gpio.h>
 
 #include <media/tegra_v4l2_camera.h>
+#include <media/tegra-v4l2-camera.h>
 #include <media/camera_common.h>
 #include "imx185_mode_tbls.h"
 
@@ -96,7 +97,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 /* Do not change the name field for the controls! */
 	{
 		.ops = &imx185_ctrl_ops,
-		.id = V4L2_CID_GAIN,
+		.id = TEGRA_CAMERA_CID_GAIN,
 		.name = "Gain",
 		.type = V4L2_CTRL_TYPE_INTEGER64,
 		.flags = V4L2_CTRL_FLAG_SLIDER,
@@ -107,7 +108,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 	{
 		.ops = &imx185_ctrl_ops,
-		.id = V4L2_CID_EXPOSURE,
+		.id = TEGRA_CAMERA_CID_EXPOSURE,
 		.name = "Exposure",
 		.type = V4L2_CTRL_TYPE_INTEGER64,
 		.flags = V4L2_CTRL_FLAG_SLIDER,
@@ -118,7 +119,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 	{
 		.ops = &imx185_ctrl_ops,
-		.id = V4L2_CID_FRAME_RATE,
+		.id = TEGRA_CAMERA_CID_FRAME_RATE,
 		.name = "Frame Rate",
 		.type = V4L2_CTRL_TYPE_INTEGER64,
 		.flags = V4L2_CTRL_FLAG_SLIDER,
@@ -129,7 +130,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 	{
 		.ops = &imx185_ctrl_ops,
-		.id = V4L2_CID_GROUP_HOLD,
+		.id = TEGRA_CAMERA_CID_GROUP_HOLD,
 		.name = "Group Hold",
 		.type = V4L2_CTRL_TYPE_INTEGER_MENU,
 		.min = 0,
@@ -140,7 +141,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 	{
 		.ops = &imx185_ctrl_ops,
-		.id = V4L2_CID_HDR_EN,
+		.id = TEGRA_CAMERA_CID_HDR_EN,
 		.name = "HDR enable",
 		.type = V4L2_CTRL_TYPE_INTEGER_MENU,
 		.min = 0,
@@ -151,7 +152,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 	{
 		.ops = &imx185_ctrl_ops,
-		.id = V4L2_CID_FUSE_ID,
+		.id = TEGRA_CAMERA_CID_FUSE_ID,
 		.name = "Fuse ID",
 		.type = V4L2_CTRL_TYPE_STRING,
 		.flags = V4L2_CTRL_FLAG_READ_ONLY,
@@ -161,7 +162,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 	{
 		.ops = &imx185_ctrl_ops,
-		.id = V4L2_CID_SENSOR_MODE_ID,
+		.id = TEGRA_CAMERA_CID_SENSOR_MODE_ID,
 		.name = "Sensor Mode",
 		.type = V4L2_CTRL_TYPE_INTEGER64,
 		.flags = V4L2_CTRL_FLAG_SLIDER,
@@ -385,16 +386,16 @@ static int imx185_s_stream(struct v4l2_subdev *sd, int enable)
 		/* frame rate and exposure time    */
 		memset(&ctrls, 0, sizeof(ctrls));
 #if LINUX_VERSION_CODE > KERNEL_VERSION(4, 9, 0)
-		ctrls.which = V4L2_CTRL_ID2WHICH(V4L2_CID_GAIN);
+		ctrls.which = V4L2_CTRL_ID2WHICH(TEGRA_CAMERA_CID_GAIN);
 #else
-		ctrls.ctrl_class = V4L2_CTRL_ID2CLASS(V4L2_CID_GAIN);
+		ctrls.ctrl_class = V4L2_CTRL_ID2CLASS(TEGRA_CAMERA_CID_GAIN);
 #endif
 		ctrls.count = 3;
 		ctrls.controls = control;
 
-		control[0].id = V4L2_CID_GAIN;
-		control[1].id = V4L2_CID_FRAME_RATE;
-		control[2].id = V4L2_CID_EXPOSURE;
+		control[0].id = TEGRA_CAMERA_CID_GAIN;
+		control[1].id = TEGRA_CAMERA_CID_FRAME_RATE;
+		control[2].id = TEGRA_CAMERA_CID_EXPOSURE;
 
 		err = v4l2_g_ext_ctrls(&priv->ctrl_handler, &ctrls);
 		if (err == 0) {
@@ -592,7 +593,7 @@ static int imx185_set_frame_rate(struct imx185 *priv, s64 val)
 	}
 
 	/* check hdr enable ctrl */
-	control.id = V4L2_CID_HDR_EN;
+	control.id = TEGRA_CAMERA_CID_HDR_EN;
 	err = camera_common_g_ctrl(priv->s_data, &control);
 	if (err < 0) {
 		dev_err(&priv->i2c_client->dev,
@@ -626,7 +627,7 @@ static int imx185_set_exposure(struct imx185 *priv, s64 val)
 		 "%s: val: %lld\n", __func__, val);
 
 	/* check hdr enable ctrl */
-	control.id = V4L2_CID_HDR_EN;
+	control.id = TEGRA_CAMERA_CID_HDR_EN;
 	err = camera_common_g_ctrl(priv->s_data, &control);
 	if (err < 0) {
 		dev_err(&priv->i2c_client->dev,
@@ -777,7 +778,7 @@ static int imx185_fuse_id_setup(struct imx185 *priv)
 		}
 	}
 
-	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, V4L2_CID_FUSE_ID);
+	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, TEGRA_CAMERA_CID_FUSE_ID);
 	if (!ctrl) {
 		dev_err(&priv->i2c_client->dev,
 			"could not find device ctrl.\n");
@@ -828,21 +829,21 @@ static int imx185_s_ctrl(struct v4l2_ctrl *ctrl)
 		return 0;
 
 	switch (ctrl->id) {
-	case V4L2_CID_GAIN:
+	case TEGRA_CAMERA_CID_GAIN:
 		err = imx185_set_gain(priv, *ctrl->p_new.p_s64);
 		break;
-	case V4L2_CID_EXPOSURE:
+	case TEGRA_CAMERA_CID_EXPOSURE:
 		err = imx185_set_exposure(priv, *ctrl->p_new.p_s64);
 		break;
-	case V4L2_CID_FRAME_RATE:
+	case TEGRA_CAMERA_CID_FRAME_RATE:
 		err = imx185_set_frame_rate(priv, *ctrl->p_new.p_s64);
 		break;
-	case V4L2_CID_GROUP_HOLD:
+	case TEGRA_CAMERA_CID_GROUP_HOLD:
 		err = imx185_set_group_hold(priv, ctrl->val);
 		break;
-	case V4L2_CID_HDR_EN:
+	case TEGRA_CAMERA_CID_HDR_EN:
 		break;
-	case V4L2_CID_SENSOR_MODE_ID:
+	case TEGRA_CAMERA_CID_SENSOR_MODE_ID:
 		s_data->sensor_mode_id = (int) (*ctrl->p_new.p_s64);
 		break;
 	default:

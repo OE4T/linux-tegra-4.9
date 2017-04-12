@@ -27,6 +27,7 @@
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 
+#include <media/tegra-v4l2-camera.h>
 #include <media/camera_common.h>
 #include <media/soc_camera.h>
 #include <media/imx219.h>
@@ -86,7 +87,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 /* Do not change the name field for the controls! */
 	{
 		.ops = &imx219_ctrl_ops,
-		.id = V4L2_CID_GAIN,
+		.id = TEGRA_CAMERA_CID_GAIN,
 		.name = "Gain",
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.flags = V4L2_CTRL_FLAG_SLIDER,
@@ -97,7 +98,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 	{
 		.ops = &imx219_ctrl_ops,
-		.id = V4L2_CID_FRAME_LENGTH,
+		.id = TEGRA_CAMERA_CID_FRAME_LENGTH,
 		.name = "Frame Length",
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.flags = V4L2_CTRL_FLAG_SLIDER,
@@ -108,7 +109,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 	{
 		.ops = &imx219_ctrl_ops,
-		.id = V4L2_CID_COARSE_TIME,
+		.id = TEGRA_CAMERA_CID_COARSE_TIME,
 		.name = "Coarse Time",
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.flags = V4L2_CTRL_FLAG_SLIDER,
@@ -119,7 +120,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 	{
 		.ops = &imx219_ctrl_ops,
-		.id = V4L2_CID_GROUP_HOLD,
+		.id = TEGRA_CAMERA_CID_GROUP_HOLD,
 		.name = "Group Hold",
 		.type = V4L2_CTRL_TYPE_INTEGER_MENU,
 		.min = 0,
@@ -130,7 +131,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 	{
 		.ops = &imx219_ctrl_ops,
-		.id = V4L2_CID_HDR_EN,
+		.id = TEGRA_CAMERA_CID_HDR_EN,
 		.name = "HDR enable",
 		.type = V4L2_CTRL_TYPE_INTEGER_MENU,
 		.min = 0,
@@ -141,7 +142,7 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 	{
 		.ops = &imx219_ctrl_ops,
-		.id = V4L2_CID_FUSE_ID,
+		.id = TEGRA_CAMERA_CID_FUSE_ID,
 		.name = "Fuse ID",
 		.type = V4L2_CTRL_TYPE_STRING,
 		.flags = V4L2_CTRL_FLAG_READ_ONLY,
@@ -556,21 +557,21 @@ static int imx219_s_ctrl(struct v4l2_ctrl *ctrl)
 		return 0;
 
 	switch (ctrl->id) {
-	case V4L2_CID_GAIN:
+	case TEGRA_CAMERA_CID_GAIN:
 		err = imx219_set_gain(priv, ctrl->val);
 		break;
-	case V4L2_CID_FRAME_LENGTH:
+	case TEGRA_CAMERA_CID_FRAME_LENGTH:
 		err = imx219_set_frame_length(priv, ctrl->val);
 		break;
-	case V4L2_CID_COARSE_TIME:
+	case TEGRA_CAMERA_CID_COARSE_TIME:
 		err = imx219_set_coarse_time(priv, ctrl->val);
 		break;
-	case V4L2_CID_GROUP_HOLD:
+	case TEGRA_CAMERA_CID_GROUP_HOLD:
 		err = imx219_set_group_hold(priv, ctrl->val);
 		break;
-	case V4L2_CID_HDR_EN:
+	case TEGRA_CAMERA_CID_HDR_EN:
 		break;
-	case V4L2_CID_FUSE_ID:
+	case TEGRA_CAMERA_CID_FUSE_ID:
 		break;
 	default:
 		pr_err("%s: unknown ctrl id.\n", __func__);

@@ -29,6 +29,7 @@
 #include <media/v4l2-ioctl.h>
 #include <media/videobuf2-core.h>
 #include <media/videobuf2-dma-contig.h>
+#include <media/tegra-v4l2-camera.h>
 #include <media/camera_common.h>
 #include <media/tegra_camera_platform.h>
 #include <media/v4l2-dv-timings.h>
@@ -847,7 +848,7 @@ int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 				struct tegra_channel, ctrl_handler);
 
 	switch (ctrl->id) {
-	case V4L2_CID_VI_BYPASS_MODE:
+	case TEGRA_CAMERA_CID_VI_BYPASS_MODE:
 		if (switch_ctrl_qmenu[ctrl->val] == SWITCH_ON)
 			chan->bypass = true;
 		else if (chan->vi->bypass) {
@@ -859,7 +860,7 @@ int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 		} else
 			chan->bypass = false;
 		break;
-	case V4L2_CID_OVERRIDE_ENABLE:
+	case TEGRA_CAMERA_CID_OVERRIDE_ENABLE:
 		{
 			struct v4l2_subdev *sd = chan->subdev_on_csi;
 			struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -884,14 +885,14 @@ int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 			}
 		}
 		break;
-	case V4L2_CID_VI_HEIGHT_ALIGN:
+	case TEGRA_CAMERA_CID_VI_HEIGHT_ALIGN:
 		chan->height_align = ctrl->val;
 		tegra_channel_update_format(chan, chan->format.width,
 				chan->format.height,
 				chan->format.pixelformat,
 				&chan->fmtinfo->bpp, 0);
 		break;
-	case V4L2_CID_VI_SIZE_ALIGN:
+	case TEGRA_CAMERA_CID_VI_SIZE_ALIGN:
 		chan->size_align = size_align_ctrl_qmenu[ctrl->val];
 		tegra_channel_update_format(chan, chan->format.width,
 				chan->format.height,
@@ -913,7 +914,7 @@ static const struct v4l2_ctrl_ops channel_ctrl_ops = {
 static const struct v4l2_ctrl_config common_custom_ctrls[] = {
 	{
 		.ops = &channel_ctrl_ops,
-		.id = V4L2_CID_VI_BYPASS_MODE,
+		.id = TEGRA_CAMERA_CID_VI_BYPASS_MODE,
 		.name = "Bypass Mode",
 		.type = V4L2_CTRL_TYPE_INTEGER_MENU,
 		.def = 0,
@@ -924,7 +925,7 @@ static const struct v4l2_ctrl_config common_custom_ctrls[] = {
 	},
 	{
 		.ops = &channel_ctrl_ops,
-		.id = V4L2_CID_OVERRIDE_ENABLE,
+		.id = TEGRA_CAMERA_CID_OVERRIDE_ENABLE,
 		.name = "Override Enable",
 		.type = V4L2_CTRL_TYPE_INTEGER_MENU,
 		.def = 0,
@@ -935,7 +936,7 @@ static const struct v4l2_ctrl_config common_custom_ctrls[] = {
 	},
 	{
 		.ops = &channel_ctrl_ops,
-		.id = V4L2_CID_VI_HEIGHT_ALIGN,
+		.id = TEGRA_CAMERA_CID_VI_HEIGHT_ALIGN,
 		.name = "Height Align",
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.min = 1,
@@ -945,7 +946,7 @@ static const struct v4l2_ctrl_config common_custom_ctrls[] = {
 	},
 	{
 		.ops = &channel_ctrl_ops,
-		.id = V4L2_CID_VI_SIZE_ALIGN,
+		.id = TEGRA_CAMERA_CID_VI_SIZE_ALIGN,
 		.name = "Size Align",
 		.type = V4L2_CTRL_TYPE_INTEGER_MENU,
 		.def = 0,
@@ -979,8 +980,8 @@ static int tegra_channel_setup_controls(struct tegra_channel *chan)
 	/* Add new custom controls */
 	for (i = 0; i < ARRAY_SIZE(common_custom_ctrls); i++) {
 		/* don't create override control for pg mode */
-		if (common_custom_ctrls[i].id == V4L2_CID_OVERRIDE_ENABLE &&
-			chan->pg_mode)
+		if (common_custom_ctrls[i].id ==
+			TEGRA_CAMERA_CID_OVERRIDE_ENABLE && chan->pg_mode)
 			continue;
 		v4l2_ctrl_new_custom(&chan->ctrl_handler,
 			&common_custom_ctrls[i], NULL);

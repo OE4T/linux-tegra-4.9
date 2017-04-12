@@ -15,6 +15,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <linux/types.h>
+#include <media/tegra-v4l2-camera.h>
 #include <media/camera_common.h>
 #include <media/mc_common.h>
 #include <linux/of_graph.h>
@@ -433,7 +435,7 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		 mf->width, mf->height);
 
 	/* check hdr enable ctrl */
-	hdr_control.id = V4L2_CID_HDR_EN;
+	hdr_control.id = TEGRA_CAMERA_CID_HDR_EN;
 
 	err = v4l2_g_ctrl(s_data->ctrl_handler, &hdr_control);
 	if (err < 0) {

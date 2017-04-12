@@ -1,7 +1,7 @@
 /*
  * include/linux/tegra-pm.h
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -19,6 +19,8 @@
 
 #ifndef _LINUX_TEGRA_PM_H_
 #define _LINUX_TEGRA_PM_H_
+
+#include <linux/dcache.h>
 
 /* Core state 0-9 */
 #define TEGRA210_CPUIDLE_C4	4
@@ -39,6 +41,19 @@
 
 #define TEGRA_PM_SUSPEND	0x0001
 #define TEGRA_PM_RESUME		0x0002
+
+#define NR_SMC_REGS		6
+
+#ifdef CONFIG_PM
+#define SMC_FAKE_SYS_SUSPEND 0xC2000000
+#define FAKE_SYSTEM_SUSPEND_MODE 7
+#define SMC_ENUM_MAX	0xFF
+
+#endif
+
+struct pm_regs {
+		u64 args[NR_SMC_REGS];
+};
 
 enum tegra_suspend_mode {
 	TEGRA_SUSPEND_NONE = 0,
@@ -111,6 +126,9 @@ int tegra_unregister_pm_notifier(struct notifier_block *nb);
 int tegra_pm_notifier_call_chain(unsigned int val);
 void tegra_log_suspend_entry_time(void);
 void tegra_log_resume_time(void);
+struct dentry *return_system_states_dir(void);
+int send_smc(u32 smc_func, struct pm_regs *regs);
+
 #else
 static inline int tegra_suspend_dram(enum tegra_suspend_mode mode, unsigned int flags)
 	{ return 0; }
@@ -122,6 +140,10 @@ static inline int tegra_pm_notifier_call_chain(unsigned int val)
 	{ return 0; }
 static inline void tegra_log_suspend_entry_time(void) { }
 static inline void tegra_log_resume_time(void) { }
+static struct dentry *return_system_state_debugfs(void)
+	{return NULL; }
+static int send_smc(u32 smc_func, struct pm_regs *regs)
+	{return 0; }
 #endif
 
 #endif /* _LINUX_TEGRA_PM_H_ */

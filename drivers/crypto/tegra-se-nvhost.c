@@ -670,18 +670,16 @@ static void tegra_unmap_sg(struct device *dev, struct scatterlist *sg,
 	}
 }
 
-static int tegra_se_count_sgs(struct scatterlist *sl, u32 nbytes, int *chained)
+static int tegra_se_count_sgs(struct scatterlist *sl, u32 nbytes)
 {
-	struct scatterlist *sg = sl;
 	int sg_nents = 0;
 
-	*chained = 0;
-	while (sg) {
+	while (sl) {
 		sg_nents++;
 		nbytes -= min(sl->length, nbytes);
-		if (!sg_is_last(sg) && (sg + 1)->length == 0)
-			*chained = 1;
-		sg = sg_next(sg);
+		if (!nbytes)
+			break;
+		sl = sg_next(sl);
 	}
 
 	return sg_nents;
@@ -695,7 +693,6 @@ static void tegra_se_complete_callback(void *priv, int nr_completed)
 	struct tegra_se_dev *se_dev;
 	void *buf;
 	u32 num_sgs;
-	int chained;
 
 	se_dev = priv_data->se_dev;
 	atomic_set(&se_dev->cmdbuf_addr_list[priv_data->cmdbuf_node].free, 1);
@@ -719,7 +716,7 @@ static void tegra_se_complete_callback(void *priv, int nr_completed)
 			return;
 		}
 
-		num_sgs = tegra_se_count_sgs(req->dst, req->nbytes, &chained);
+		num_sgs = tegra_se_count_sgs(req->dst, req->nbytes);
 		if (num_sgs == 1)
 			memcpy(sg_virt(req->dst), buf, req->nbytes);
 		else
@@ -1320,7 +1317,6 @@ static int tegra_se_setup_ablk_req(struct tegra_se_dev *se_dev)
 	void *buf;
 	int i;
 	u32 num_sgs;
-	int chained;
 	int index = 0;
 
 	if (unlikely(se_dev->dynamic_mem)) {
@@ -1352,7 +1348,7 @@ static int tegra_se_setup_ablk_req(struct tegra_se_dev *se_dev)
 	for (i = 0; i < se_dev->req_cnt; i++) {
 		req = se_dev->reqs[i];
 
-		num_sgs = tegra_se_count_sgs(req->src, req->nbytes, &chained);
+		num_sgs = tegra_se_count_sgs(req->src, req->nbytes);
 
 		if (num_sgs == 1)
 			memcpy(buf, sg_virt(req->src), req->nbytes);
@@ -1545,9 +1541,8 @@ static int tegra_se_aes_queue_req(struct tegra_se_dev *se_dev,
 				struct ablkcipher_request *req)
 {
 	int err = 0;
-	int chained;
 
-	if (!tegra_se_count_sgs(req->src, req->nbytes, &chained))
+	if (!tegra_se_count_sgs(req->src, req->nbytes))
 		return -EINVAL;
 
 	mutex_lock(&se_dev->lock);
@@ -1919,7 +1914,6 @@ static int tegra_se_sha_final(struct ahash_request *req)
 	struct scatterlist *src_sg;
 	u32 total, num_sgs;
 	int err = 0;
-	int chained;
 	u32 mode;
 
 	struct tegra_se_sha_zero_length_vector zero_vec[] = {
@@ -2004,7 +1998,7 @@ static int tegra_se_sha_final(struct ahash_request *req)
 
 	se_dev = se_devices[SE_SHA];
 
-	num_sgs = tegra_se_count_sgs(req->src, req->nbytes, &chained);
+	num_sgs = tegra_se_count_sgs(req->src, req->nbytes);
 	if ((num_sgs > SE_MAX_SRC_SG_COUNT)) {
 		dev_err(se_dev->dev, "num of SG buffers are more\n");
 		return -EINVAL;
@@ -2094,7 +2088,6 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 	unsigned int sg_flags = SG_MITER_ATOMIC;
 	u8 *temp_buffer = NULL;
 	bool use_orig_iv = true;
-	int chained;
 
 	se_dev = se_devices[SE_CMAC];
 
@@ -2122,7 +2115,7 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 
 	/* first process all blocks except last block */
 	if (blocks_to_process) {
-		num_sgs = tegra_se_count_sgs(req->src, req->nbytes, &chained);
+		num_sgs = tegra_se_count_sgs(req->src, req->nbytes);
 		if (num_sgs > SE_MAX_SRC_SG_COUNT) {
 			dev_err(se_dev->dev, "num of SG buffers are more\n");
 			goto out;
@@ -2166,7 +2159,7 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 
 	/* get the last block bytes from the sg_dma buffer using miter */
 	src_sg = req->src;
-	num_sgs = tegra_se_count_sgs(req->src, req->nbytes, &chained);
+	num_sgs = tegra_se_count_sgs(req->src, req->nbytes);
 	sg_flags |= SG_MITER_FROM_SG;
 	sg_miter_start(&miter, req->src, num_sgs, sg_flags);
 	local_irq_save(flags);
@@ -2666,7 +2659,6 @@ static int tegra_se_rsa_op(struct akcipher_request *req)
 	struct tegra_se_dev *se_dev;
 	u32 num_src_sgs, num_dst_sgs;
 	int err = 0;
-	int chained;
 
 	se_dev = se_devices[SE_RSA];
 
@@ -2692,8 +2684,8 @@ static int tegra_se_rsa_op(struct akcipher_request *req)
 	if (req->src_len != rsa_ctx->mod_len)
 		return -EINVAL;
 
-	num_src_sgs = tegra_se_count_sgs(req->src, req->src_len, &chained);
-	num_dst_sgs = tegra_se_count_sgs(req->dst, req->dst_len, &chained);
+	num_src_sgs = tegra_se_count_sgs(req->src, req->src_len);
+	num_dst_sgs = tegra_se_count_sgs(req->dst, req->dst_len);
 	if ((num_src_sgs > SE_MAX_SRC_SG_COUNT) ||
 			(num_dst_sgs > SE_MAX_DST_SG_COUNT)) {
 		dev_err(se_dev->dev, "num of SG buffers are more\n");

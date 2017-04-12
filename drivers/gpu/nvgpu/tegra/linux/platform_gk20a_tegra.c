@@ -943,15 +943,20 @@ static int gk20a_tegra_probe(struct device *dev)
 		platform->can_railgate = false;
 	}
 
-	/* WAR for bug 1547668: Disable railgating and scaling irrespective of
-	 * platform data if the rework has not been made. */
-
+	platform->g->clk.gpc_pll.id = GK20A_GPC_PLL;
 	if (tegra_get_chip_id() == TEGRA210) {
+		/* WAR for bug 1547668: Disable railgating and scaling
+		   irrespective of platform data if the rework was not made. */
 		np = of_find_node_by_path("/gpu-dvfs-rework");
 		if (!(np && of_device_is_available(np))) {
 			platform->devfreq_governor = "";
 			dev_warn(dev, "board does not support scaling");
 		}
+		platform->g->clk.gpc_pll.id = GM20B_GPC_PLL_B1;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+		if (tegra_chip_get_revision() > TEGRA210_REVISION_A04p)
+			platform->g->clk.gpc_pll.id = GM20B_GPC_PLL_C1;
+#endif
 	}
 
 	if (tegra_get_chip_id() == TEGRA132)

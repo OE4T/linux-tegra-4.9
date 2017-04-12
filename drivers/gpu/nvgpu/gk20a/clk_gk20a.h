@@ -24,6 +24,9 @@
 enum {
 	/* only one PLL for gk20a */
 	GK20A_GPC_PLL = 0,
+	/* 2 PLL revisions for gm20b */
+	GM20B_GPC_PLL_B1,
+	GM20B_GPC_PLL_C1,
 };
 
 enum gpc_pll_mode {

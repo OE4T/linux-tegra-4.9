@@ -578,12 +578,12 @@
 		compatible = "nvidia,tegra186-tachometer";
 		reg = <0x0 0x039c0000 0x0 0x10>;
 		#stream-id-cells = <1>;
+		#pwm-cells = <2>;
 		clocks = <&tegra_car TEGRA186_CLK_TACH>;
 		clock-names = "tach";
 		resets = <&tegra_car TEGRA186_RESET_TACH>;
 		reset-names = "tach";
 		pulse-per-rev = <2>;
-		sampling-window = <2>;
 		capture-window-length = <2>;
 		status = "disabled";
 	};

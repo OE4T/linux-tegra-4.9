@@ -149,4 +149,8 @@
 		reg = <0x0 0x70000800 0x0 0x64>,   /* Chip revision */
 		      <0x0 0x7000e864 0x0 0x04>;   /* Strapping options */
 	};
+
+	i2c@7000c700 {
+		nvidia,restrict_clk_rate_change_runtime;
+	};
 };

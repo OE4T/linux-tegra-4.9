@@ -409,6 +409,15 @@ static inline u32 tegra_nvdisp_win_swap_uv(struct tegra_dc_win *win)
 		win->fmt = TEGRA_DC_EXT_FMT_T_Y12___U12V12_N444;
 		swap_uv = 1;
 		break;
+
+	case TEGRA_DC_EXT_FMT_T_Y10___V10U10_N420:
+	case TEGRA_DC_EXT_FMT_T_Y10___U10V10_N422:
+	case TEGRA_DC_EXT_FMT_T_Y10___U10V10_N444:
+	case TEGRA_DC_EXT_FMT_T_Y12___V12U12_N420:
+	case TEGRA_DC_EXT_FMT_T_Y12___U12V12_N422:
+	case TEGRA_DC_EXT_FMT_T_Y12___U12V12_N444:
+		swap_uv = 1;
+		break;
 	}
 
 	return swap_uv;

@@ -34,6 +34,8 @@
 #include <linux/platform/tegra/tegra18_emc.h>
 #include <linux/platform/tegra/tegra_emc_err.h>
 
+#include <soc/tegra/chip-id.h>
+
 static struct mc_ecc_err_log ecc_log;
 static u32 mc_emem_arb_misc1;
 static u32 mc_emem_arb_cfg;
@@ -721,6 +723,9 @@ static int mc_ecc_err_init(struct dentry *mc_parent,
 void tegra_emcerr_init(struct dentry *mc_parent, struct platform_device *pdev)
 {
 	u32 mc_ecc_control = mc_readl(MC_ECC_CONTROL);
+
+	if (tegra_get_chip_id() != TEGRA186)
+		return;
 
 	if (mc_ecc_control & 1) {
 		pr_info("DRAM ECC enabled-MC_ECC_CONTROL:0x%08x\n",

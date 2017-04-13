@@ -1754,7 +1754,8 @@ static int tegra_pcie_module_power_ungate(struct generic_pm_domain *genpd)
 			return ret;
 		}
 	}
-	ret = tegra_unpowergate_partition_with_clk_on(tpd->partition_id);
+	if (!tegra_powergate_is_powered(tpd->partition_id))
+		ret = tegra_unpowergate_partition(tpd->partition_id);
 	return ret;
 }
 
@@ -1861,7 +1862,7 @@ static int tegra_pcie_module_power_gate(struct generic_pm_domain *genpd)
 	if (!tpd || (tpd->partition_id < 0))
 		return -EINVAL;
 
-	ret = tegra_powergate_partition_with_clk_off(tpd->partition_id);
+	ret = tegra_powergate_partition(tpd->partition_id);
 	if (ret)
 		return ret;
 

@@ -1232,6 +1232,16 @@ static void i2c_dev_set_name(struct i2c_adapter *adap,
 
 int i2c_set_adapter_bus_clk_rate(struct i2c_adapter *adap, int bus_rate)
 {
+	int ret;
+
+	if (adap->is_bus_clk_rate_supported) {
+		ret = adap->is_bus_clk_rate_supported(adap, bus_rate);
+		if (!ret) {
+			dev_err(&adap->dev, "clk rate %d not supported\n",
+				bus_rate);
+			return -EPERM;
+		}
+	}
 	i2c_lock_adapter(adap);
 	adap->bus_clk_rate = bus_rate;
 	i2c_unlock_adapter(adap);
@@ -1621,17 +1631,10 @@ static ssize_t set_bus_clk_rate(struct device *dev,
 	bool ret;
 
 	bus_clk_rate = memparse(p, &p);
-	if (adap->is_bus_clk_rate_supported) {
-		ret = adap->is_bus_clk_rate_supported(adap, bus_clk_rate);
-		if (!ret) {
-			dev_info(dev, "clock rate %d not supported\n",
-					bus_clk_rate);
-			goto exit;
-		}
-	}
-	dev_info(dev, "Setting clock rate %d on next transfer\n", bus_clk_rate);
-	adap->bus_clk_rate = bus_clk_rate;
-exit:
+	ret = i2c_set_adapter_bus_clk_rate(adap, bus_clk_rate);
+	if (!ret)
+		dev_info(dev, "Setting clock rate %d on next transfer\n",
+				bus_clk_rate);
 	return count;
 }
 static DEVICE_ATTR(bus_clk_rate, S_IRUGO | S_IWUSR, show_bus_clk_rate,

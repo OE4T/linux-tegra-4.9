@@ -75,7 +75,7 @@ struct sensor_cfg snsr_list[] = {
 			.ival		= 0,
 			.fval		= 250000,
 		},
-		.delay_us_min		= 10000,
+		.delay_us_min		= 5000,
 		.delay_us_max		= 255000,
 		.matrix			= { 1, 0, 0, 0, 1, 0, 0, 0, 1 },
 		.scale			= {
@@ -107,7 +107,7 @@ struct sensor_cfg snsr_list[] = {
 			.ival		= 6,
 			.fval		= 500000,
 		},
-		.delay_us_min		= 10000,
+		.delay_us_min		= 5000,
 		.delay_us_max		= 255000,
 		.matrix			= { 1, 0, 0, 0, 1, 0, 0, 0, 1 },
 		.scale			= {

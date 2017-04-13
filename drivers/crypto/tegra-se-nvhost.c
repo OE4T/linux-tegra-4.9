@@ -3257,7 +3257,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 		err = tegra_init_key_slot(se_dev);
 		if (err) {
 			dev_err(se_dev->dev, "init_key_slot failed\n");
-			goto fail;
+			return err;
 		}
 	}
 
@@ -3265,7 +3265,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 		err = tegra_init_rsa_key_slot(se_dev);
 		if (err) {
 			dev_err(se_dev->dev, "init_rsa_key_slot failed\n");
-			goto fail;
+			return err;
 		}
 	}
 
@@ -3275,7 +3275,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 				WQ_HIGHPRI | WQ_UNBOUND, 1);
 	if (!se_dev->se_work_q) {
 		dev_err(se_dev->dev, "alloc_workqueue failed\n");
-		goto fail;
+		return -ENOMEM;
 	}
 
 	err = tegra_se_alloc_ll_buf(se_dev, SE_MAX_SRC_SG_COUNT,
@@ -3427,8 +3427,6 @@ reg_fail:
 ll_alloc_fail:
 	if (se_dev->se_work_q)
 		destroy_workqueue(se_dev->se_work_q);
-fail:
-	platform_set_drvdata(pdev, NULL);
 
 	return err;
 }

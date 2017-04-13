@@ -523,7 +523,7 @@ static inline void writel_relaxed_iso(u32 val,
 {
 	int smmu_id, offset;
 
-	offset = virt_addr - smmu_handle->base[0];
+	offset = abs(virt_addr - smmu_handle->base[0]);
 	if (iso_smmu) {
 		if (smmu_handle->iso_smmu_id < 0)
 			return;
@@ -543,7 +543,7 @@ static inline void writeq_relaxed_iso(u64 val,
 {
 	int smmu_id, offset;
 
-	offset = virt_addr - smmu_handle->base[0];
+	offset = abs(virt_addr - smmu_handle->base[0]);
 	if (iso_smmu) {
 		if (smmu_handle->iso_smmu_id < 0)
 			return;
@@ -562,7 +562,7 @@ static inline void writeq_relaxed_iso(u64 val,
 static inline void fn(type val, volatile void __iomem *virt_addr) \
 { \
 	int smmu_id, offset; \
-	offset = virt_addr - smmu_handle->base[0]; \
+	offset = abs(virt_addr - smmu_handle->base[0]); \
 	for (smmu_id = 0; smmu_id < smmu_handle->num_smmus; smmu_id++) \
 		call(val, smmu_handle->base[smmu_id] + offset); \
 }
@@ -867,7 +867,7 @@ static void arm_smmu_tlb_sync(struct arm_smmu_device *smmu, bool iso_client)
 {
 	int smmu_id = 0;
 	void __iomem *gr0_base = ARM_SMMU_GR0(smmu);
-	u32 gr0_offset = gr0_base - smmu->base[0];
+	u32 gr0_offset = abs(gr0_base - smmu->base[0]);
 
 	if (tegra_platform_is_sim() || arm_smmu_gr0_tlbiallnsnh)
 		writel_relaxed_iso(0, gr0_base + ARM_SMMU_GR0_TLBIALLNSNH,
@@ -1058,7 +1058,7 @@ static irqreturn_t arm_smmu_context_fault(int irq, void *dev)
 		int smmu_id = 0;
 
 		cb_base = ARM_SMMU_CB_BASE(smmu);
-		cb_offset = cb_base - smmu->base[0];
+		cb_offset = abs(cb_base - smmu->base[0]);
 		fsr_offset = ARM_SMMU_CB(smmu, i) + ARM_SMMU_CB_FSR;
 		gr1 = ARM_SMMU_GR1(smmu);
 
@@ -1114,8 +1114,8 @@ static irqreturn_t arm_smmu_global_fault(int irq, void *dev)
 	void __iomem *gr0_base = ARM_SMMU_GR0_NS(smmu);
 	int smmu_id = 0;
 
-	cb_offset = cb_base - smmu->base[0];
-	gr0_offset = gr0_base - smmu->base[0];
+	cb_offset = abs(cb_base - smmu->base[0]);
+	gr0_offset = abs(gr0_base - smmu->base[0]);
 
 	while (smmu_id < smmu->num_smmus) {
 
@@ -2573,7 +2573,7 @@ static void arm_smmu_device_reset(struct arm_smmu_device *smmu)
 	void __iomem *cb_base;
 	int i = 0, smmu_id = 0;
 	u32 reg;
-	u32 gr0_offset = gr0_base - smmu->base[0];
+	u32 gr0_offset = abs(gr0_base - smmu->base[0]);
 
 	/* clear global FSR */
 	while (smmu_id < smmu->num_smmus) {

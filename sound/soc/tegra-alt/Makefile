@@ -2,7 +2,7 @@ GCOV_PROFILE := y
 
 subdir-ccflags-y := -Werror
 
-subdir-ccflags-y += -I$(srctree)/../t18x
+subdir-ccflags-y += -I$(srctree)/../nvidia
 subdir-ccflags-y += -I$(srctree)
 subdir-ccflags-y += -I$(srctree)/sound/soc/tegra-virt-alt/
 

@@ -108,17 +108,24 @@ static struct tachometer_dev *of_tach_get(struct device *dev)
 {
 	struct device_node *np = dev->of_node;
 	struct tachometer_dev *tach;
+	int ret;
 
 	tach = kzalloc(sizeof(*tach), GFP_KERNEL);
 	if (IS_ERR(tach))
 		return ERR_PTR(-ENOMEM);
 
-	of_property_read_u32(np, "sampling-window", &tach->win_len);
+	ret = of_property_read_u32(np, "sampling-window", &tach->win_len);
+	if (ret < 0)
+		of_property_read_u32(np, "capture-window-length",
+				     &tach->win_len);
 	of_property_read_u32(np, "min-rps", &tach->min_rps);
 	of_property_read_u32(np, "max-rps", &tach->max_rps);
 	of_property_read_u32(np, "pulse-per-rev", &tach->pulse_per_rev);
 	tach->enable_clk_gate =
 		of_property_read_bool(np, "nvidia,enable-clock-gate");
+	if (!tach->enable_clk_gate)
+		tach->enable_clk_gate = of_property_read_bool(np,
+						"enable-dynamic-clock-gating");
 
 	return tach;
 }

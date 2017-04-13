@@ -129,6 +129,7 @@ struct tegra210_adsp_app {
 	uint32_t reg;
 	uint32_t adma_chan; /* Valid for only ADMA app */
 	uint32_t fe:1; /* Whether the app is used as a FE APM */
+	uint32_t fe_playback_triggered:1; /* if app is playback FE, indicates whether in triggered state or inactive */
 	uint32_t connect:1; /* if app is connected to a source */
 	uint32_t priority; /* Valid for only APM app */
 	uint32_t min_adsp_clock; /* Min ADSP clock required in MHz */
@@ -2057,10 +2058,10 @@ static uint32_t tegra210_adsp_hv_pcm_trigger(
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			ret = tegra_ivc_start_playback(adsp,
-					ivc_msg_admaif_id, false);
+					ivc_msg_admaif_id, true);
 		} else {
 			ret = tegra_ivc_start_capture(adsp,
-				ivc_msg_admaif_id, false);
+				ivc_msg_admaif_id, true);
 		}
 
 		if (ret < 0) {
@@ -2073,10 +2074,10 @@ static uint32_t tegra210_adsp_hv_pcm_trigger(
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 		if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
 			ret = tegra_ivc_stop_playback(adsp,
-					ivc_msg_admaif_id, false);
+					ivc_msg_admaif_id, true);
 		} else {
 			ret = tegra_ivc_stop_capture(adsp,
-					ivc_msg_admaif_id, false);
+					ivc_msg_admaif_id, true);
 		}
 
 		if (ret < 0) {
@@ -2108,14 +2109,28 @@ static int tegra210_adsp_pcm_trigger(struct snd_pcm_substream *substream,
 
 #ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 	if (of_device_is_compatible(node, "nvidia,tegra210-adsp-audio-hv")) {
+
+		/*
+		 * Start playback/capture trigger handled here
+		 * Stop capture trigger handled here
+		 * Stop playback handled in fe_widget_event()
+		 */
+		if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) && (cmd == SNDRV_PCM_TRIGGER_STOP)) {
+			prtd->fe_apm->fe_playback_triggered = 0;
+			return 0;
+		}
+
 		ret = tegra210_adsp_hv_pcm_trigger(adsp,
-					prtd->fe_apm->reg,
+					prtd->fe_apm->reg, /* apm_out_in */
 					substream->stream,
 					cmd);
 		if (ret < 0) {
-			pr_err("%s: error during hv_pcm_trigger\n", __func__);
+			dev_err(prtd->dev, "error on ivc_send");
 			return ret;
 		}
+
+		if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) && (cmd == SNDRV_PCM_TRIGGER_START))
+			prtd->fe_apm->fe_playback_triggered = 1;
 	}
 #endif
 
@@ -3170,6 +3185,131 @@ static int tegra210_adsp_init_put(struct snd_kcontrol *kcontrol,
 	return 1;
 }
 
+/*
+ * ADSP FE DAPM Widget Event
+ * Widget event allows realizing ADSP FE switch use cases
+ *
+ * Start Playback trigger calls handled by pcm_trigger()
+ *
+ * Path Connect when ADSP FE is in triggered state
+ * (Sequence: Start trigger -> Path disconnect -> Path connect)
+ * handled by fe_widget_event() in SND_SOC_DAPM_PRE_PMU event handling
+ *
+ * Stop Playback trigger calls and Path disconnect during playback
+ * handled by fe_widget_event() in SND_SOC_DAPM_POST_PMD event handling
+ */
+static int tegra210_adsp_fe_widget_event(struct snd_soc_dapm_widget *w,
+				struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_platform *platform = snd_soc_dapm_to_platform(w->dapm);
+	struct tegra210_adsp *adsp = snd_soc_platform_get_drvdata(platform);
+	struct tegra210_adsp_app *apm;
+	struct device *dev = adsp->dev;
+	struct device_node *node = dev->of_node;
+	int i;
+	int ret = 0;
+	uint32_t source;
+
+	/* Handle only HV environment ADSP FE events */
+	if (!of_device_is_compatible(node, "nvidia,tegra210-adsp-audio-hv"))
+		return 0;
+
+	if (!IS_ADSP_FE(w->reg))
+		return 0;
+
+	/* Find out APM connected to ADSP-FE */
+	for (i = APM_IN_START; i <= APM_IN_END; i++) {
+		apm = &adsp->apps[i];
+		source = tegra210_adsp_get_source(adsp, apm->reg);
+		if (source == w->reg)
+			break;
+	}
+
+	if (!IS_APM_IN(i)) {
+		dev_err(adsp->dev, "%s ADSP-FE %d not connected to any APM-IN\n",
+				__func__, w->reg);
+		return -1;
+	}
+
+	ret = pm_runtime_get_sync(adsp->dev);
+	if (ret < 0) {
+		dev_err(adsp->dev, "%s pm_runtime_get_sync error 0x%x\n",
+				__func__, ret);
+		goto err_put;
+	}
+
+	/*
+	 * PRE_PMU: Send Start playback/capture IVC to Audio Server and
+	 * active state message to ADSP
+	 *
+	 * POST_PMD: Send Stop playback/capture IVC to Audio Server and
+	 * inactive state message to ADSP. Flush messages will be sent to
+	 * ADSP during pcm_close().
+	 */
+	if (event == SND_SOC_DAPM_PRE_PMU) {
+		dev_info(adsp->dev, "connect event on APM %d, ADSP-FE %d\n",
+				(i + 1) - APM_IN_START, w->reg);
+
+		/*
+		 * For trigger playback, pcm_trigger calls will handle ivc and adsp messages
+		 *
+		 * When ADSP FE is in triggered state, path disconnect and connect is done,
+		 * widget event will send IVC and ADSP messages
+		 */
+		if (!apm->fe_playback_triggered) {
+			ret = 0;
+			goto err_put;
+		}
+
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
+		ret = tegra210_adsp_hv_pcm_trigger(adsp,
+					apm->reg,                  /* apm_out_in */
+					SNDRV_PCM_STREAM_PLAYBACK, /* playback */
+					SNDRV_PCM_TRIGGER_START);  /* PCM START */
+		if (ret < 0) {
+			pr_err("%s: error during hv_pcm_trigger\n", __func__);
+			goto err_put;
+		}
+#endif
+
+		ret = tegra210_adsp_send_state_msg(apm, nvfx_state_active,
+			TEGRA210_ADSP_MSG_FLAG_SEND | TEGRA210_ADSP_MSG_FLAG_NEED_ACK);
+		if (ret < 0) {
+			dev_err(adsp->dev, "Failed to set state active");
+			goto err_put;
+		}
+
+	} else if (event == SND_SOC_DAPM_POST_PMD) {
+		dev_info(adsp->dev, "disconnect event on APM %d, ADSP-FE %d\n",
+				(i + 1) - APM_IN_START, w->reg);
+
+		ret = tegra210_adsp_send_state_msg(apm, nvfx_state_inactive,
+			TEGRA210_ADSP_MSG_FLAG_SEND | TEGRA210_ADSP_MSG_FLAG_NEED_ACK);
+		if (ret < 0) {
+			dev_err(adsp->dev, "Failed to set state inactive.");
+			goto err_put;
+		}
+
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
+		ret = tegra210_adsp_hv_pcm_trigger(adsp,
+					apm->reg,                  /* apm_out_in */
+					SNDRV_PCM_STREAM_PLAYBACK, /* playback */
+					SNDRV_PCM_TRIGGER_STOP);   /* PCM STOP */
+		if (ret < 0) {
+			pr_err("%s: error during hv_pcm_trigger\n", __func__);
+			goto err_put;
+		}
+#endif
+	} else {
+		pr_err("%s: error. unknown event: %d\n", __func__, event);
+		ret = -1;
+		goto err_put;
+	}
+err_put:
+	pm_runtime_put(adsp->dev);
+	return ret;
+}
+
 /* DAPM widget event */
 static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 				struct snd_kcontrol *kcontrol, int event)
@@ -3727,6 +3867,15 @@ static ADSP_MUX_ENUM_CTRL_DECL(plugin20, TEGRA210_ADSP_PLUGIN20);
 	SND_SOC_DAPM_AIF_OUT(sname " TX", NULL, 0, SND_SOC_NOPM, 0, 0),	\
 	SND_SOC_DAPM_MUX(sname " MUX", SND_SOC_NOPM, 0, 0, &ename##_ctrl)
 
+#define ADSP_FE_WIDGETS(sname, ename, reg)					\
+	SND_SOC_DAPM_AIF_IN_E(sname " RX", NULL, 0, reg,		\
+		TEGRA210_ADSP_WIDGET_EN_SHIFT, 0, tegra210_adsp_fe_widget_event, \
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),	\
+	SND_SOC_DAPM_AIF_OUT_E(sname " TX", NULL, 0, reg,		\
+		TEGRA210_ADSP_WIDGET_EN_SHIFT, 0, NULL, \
+			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),	\
+	SND_SOC_DAPM_MUX(sname " MUX", SND_SOC_NOPM, 0, 0, &ename##_ctrl)
+
 #define ADSP_WIDGETS(sname, ename, reg)					\
 	SND_SOC_DAPM_AIF_OUT_E(sname " TX", NULL, 0, reg,		\
 		TEGRA210_ADSP_WIDGET_EN_SHIFT, 0, tegra210_adsp_widget_event, \
@@ -3740,21 +3889,21 @@ static ADSP_MUX_ENUM_CTRL_DECL(plugin20, TEGRA210_ADSP_PLUGIN20);
 	.event_flags = SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD }
 
 static struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
-	ADSP_EP_WIDGETS("ADSP-FE1", adsp_fe1),
-	ADSP_EP_WIDGETS("ADSP-FE2", adsp_fe2),
-	ADSP_EP_WIDGETS("ADSP-FE3", adsp_fe3),
-	ADSP_EP_WIDGETS("ADSP-FE4", adsp_fe4),
-	ADSP_EP_WIDGETS("ADSP-FE5", adsp_fe5),
-	ADSP_EP_WIDGETS("ADSP-FE6", adsp_fe6),
-	ADSP_EP_WIDGETS("ADSP-FE7", adsp_fe7),
-	ADSP_EP_WIDGETS("ADSP-FE8", adsp_fe8),
-	ADSP_EP_WIDGETS("ADSP-FE9", adsp_fe9),
-	ADSP_EP_WIDGETS("ADSP-FE10", adsp_fe10),
-	ADSP_EP_WIDGETS("ADSP-FE11", adsp_fe11),
-	ADSP_EP_WIDGETS("ADSP-FE12", adsp_fe12),
-	ADSP_EP_WIDGETS("ADSP-FE13", adsp_fe13),
-	ADSP_EP_WIDGETS("ADSP-FE14", adsp_fe14),
-	ADSP_EP_WIDGETS("ADSP-FE15", adsp_fe15),
+	ADSP_FE_WIDGETS("ADSP-FE1", adsp_fe1, TEGRA210_ADSP_FRONT_END1),
+	ADSP_FE_WIDGETS("ADSP-FE2", adsp_fe2, TEGRA210_ADSP_FRONT_END2),
+	ADSP_FE_WIDGETS("ADSP-FE3", adsp_fe3, TEGRA210_ADSP_FRONT_END3),
+	ADSP_FE_WIDGETS("ADSP-FE4", adsp_fe4, TEGRA210_ADSP_FRONT_END4),
+	ADSP_FE_WIDGETS("ADSP-FE5", adsp_fe5, TEGRA210_ADSP_FRONT_END5),
+	ADSP_FE_WIDGETS("ADSP-FE6", adsp_fe6, TEGRA210_ADSP_FRONT_END6),
+	ADSP_FE_WIDGETS("ADSP-FE7", adsp_fe7, TEGRA210_ADSP_FRONT_END7),
+	ADSP_FE_WIDGETS("ADSP-FE8", adsp_fe8, TEGRA210_ADSP_FRONT_END8),
+	ADSP_FE_WIDGETS("ADSP-FE9", adsp_fe9, TEGRA210_ADSP_FRONT_END9),
+	ADSP_FE_WIDGETS("ADSP-FE10", adsp_fe10, TEGRA210_ADSP_FRONT_END10),
+	ADSP_FE_WIDGETS("ADSP-FE11", adsp_fe11, TEGRA210_ADSP_FRONT_END11),
+	ADSP_FE_WIDGETS("ADSP-FE12", adsp_fe12, TEGRA210_ADSP_FRONT_END12),
+	ADSP_FE_WIDGETS("ADSP-FE13", adsp_fe13, TEGRA210_ADSP_FRONT_END13),
+	ADSP_FE_WIDGETS("ADSP-FE14", adsp_fe14, TEGRA210_ADSP_FRONT_END14),
+	ADSP_FE_WIDGETS("ADSP-FE15", adsp_fe15, TEGRA210_ADSP_FRONT_END15),
 	ADSP_EP_WIDGETS("ADSP-EAVB", adsp_eavb),
 	ADSP_EP_WIDGETS("ADSP-ADMAIF1", adsp_admaif1),
 	ADSP_EP_WIDGETS("ADSP-ADMAIF2", adsp_admaif2),

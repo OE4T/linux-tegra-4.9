@@ -342,6 +342,7 @@ struct tegra_i2c_dev {
 	bool use_single_xfer_complete;
 	bool use_multi_xfer_complete;
 	bool disable_multi_pkt_mode;
+	bool restrict_clk_rate_change_runtime;
 };
 
 static void dvc_writel(struct tegra_i2c_dev *i2c_dev, u32 val, unsigned long reg)
@@ -2053,6 +2054,8 @@ static void tegra_i2c_parse_dt(struct tegra_i2c_dev *i2c_dev)
 			"nvidia,clock-always-on");
 	i2c_dev->disable_multi_pkt_mode = of_property_read_bool(np,
 			"nvidia,disable-multi-pkt-mode");
+	i2c_dev->restrict_clk_rate_change_runtime = of_property_read_bool(np,
+			"nvidia,restrict_clk_rate_change_runtime");
 }
 
 static bool tegra_i2c_clk_rate_supported(void *data, unsigned long bus_clk_rate)
@@ -2060,6 +2063,8 @@ static bool tegra_i2c_clk_rate_supported(void *data, unsigned long bus_clk_rate)
 	struct i2c_adapter *adap = (struct i2c_adapter *)data;
 	struct tegra_i2c_dev *i2c_dev = i2c_get_adapdata(adap);
 
+	if (i2c_dev->restrict_clk_rate_change_runtime)
+		return false;
 	if (bus_clk_rate == I2C_HS_MODE && !i2c_dev->hw->has_hs_mode_support)
 		return false;
 

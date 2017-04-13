@@ -108,9 +108,9 @@
 	/* HACK: Populate earlier than other device */
 	smmu: iommu@12000000{
 		compatible = "t19x,arm,mmu-500";
-		reg = <0x0 0x10000000 0x0 0x01000000>, /* SMMU2 16MB */
+		reg = <0x0 0x12000000 0x0 0x01000000>, /* SMMU0 16MB */
 		      <0x0 0x11000000 0x0 0x01000000>, /* SMMU1 16MB */
-		      <0x0 0x12000000 0x0 0x01000000>; /* SMMU0 16MB */
+		      <0x0 0x10000000 0x0 0x01000000>; /* SMMU2 16MB */
 
 		#global-interrupts = <6>;
 		interrupts = <0 170 4>,

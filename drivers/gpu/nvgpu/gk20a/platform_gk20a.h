@@ -49,12 +49,6 @@ struct gk20a_platform {
 
 	/* Should be populated at probe. */
 	bool has_syncpoints;
-	/* Debugfs knob for forcing syncpt support off in runtime. */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
-	u32 disable_syncpoints;
-#else
-	bool disable_syncpoints;
-#endif
 
 	/* channel limit after which to start aggressive sync destroy */
 	unsigned int aggressive_sync_destroy_thresh;
@@ -270,16 +264,6 @@ extern struct gk20a_platform gp10b_tegra_platform;
 extern struct gk20a_platform vgpu_tegra_platform;
 #endif
 #endif
-
-static inline bool gk20a_platform_has_syncpoints(struct device *dev)
-{
-#ifdef CONFIG_TEGRA_GK20A_NVHOST
-	struct gk20a_platform *p = dev_get_drvdata(dev);
-	return p->has_syncpoints && !p->disable_syncpoints;
-#else
-	return false;
-#endif
-}
 
 int gk20a_tegra_busy(struct device *dev);
 void gk20a_tegra_idle(struct device *dev);

@@ -107,6 +107,7 @@ static void nvgpu_init_pm_vars(struct gk20a *g)
 	g->default_pri_timeout = platform->default_pri_timeout;
 	g->aggressive_sync_destroy = platform->aggressive_sync_destroy;
 	g->aggressive_sync_destroy_thresh = platform->aggressive_sync_destroy_thresh;
+	g->has_syncpoints = platform->has_syncpoints;
 
 	/* set default values to aelpg parameters */
 	g->pmu.aelpg_param[0] = APCTRL_SAMPLING_PERIOD_PG_DEFAULT_US;

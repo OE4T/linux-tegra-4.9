@@ -324,8 +324,8 @@ void gk20a_debug_init(struct device *dev, const char *debugfs_symlink)
 	debugfs_create_u32("ch_wdt_timeout_ms", S_IRUGO|S_IWUSR,
 		platform->debugfs, &platform->ch_wdt_timeout_ms);
 
-	debugfs_create_bool("disable_syncpoints", S_IRUGO|S_IWUSR,
-		platform->debugfs, &platform->disable_syncpoints);
+	debugfs_create_u32("disable_syncpoints", S_IRUGO|S_IWUSR,
+		platform->debugfs, &g->disable_syncpoints);
 
 	/* Legacy debugging API. */
 	debugfs_create_u32("dbg_mask", S_IRUGO|S_IWUSR,

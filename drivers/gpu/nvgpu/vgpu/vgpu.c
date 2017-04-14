@@ -240,6 +240,7 @@ static void vgpu_init_vars(struct gk20a *g, struct gk20a_platform *platform)
 
 	g->aggressive_sync_destroy = platform->aggressive_sync_destroy;
 	g->aggressive_sync_destroy_thresh = platform->aggressive_sync_destroy_thresh;
+	g->has_syncpoints = platform->has_syncpoints;
 }
 
 static int vgpu_init_support(struct platform_device *pdev)

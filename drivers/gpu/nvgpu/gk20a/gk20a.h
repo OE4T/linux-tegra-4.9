@@ -999,6 +999,10 @@ struct gk20a {
 	unsigned int aggressive_sync_destroy_thresh;
 	bool aggressive_sync_destroy;
 
+	bool has_syncpoints;
+	/* Debugfs knob for forcing syncpt support off in runtime. */
+	u32 disable_syncpoints;
+
 	u32 emc3d_ratio;
 
 #ifdef CONFIG_DEBUG_FS
@@ -1496,5 +1500,14 @@ void gk20a_put(struct gk20a *g);
 #ifdef CONFIG_DEBUG_FS
 int gk20a_railgating_debugfs_init(struct device *dev);
 #endif
+
+static inline bool gk20a_platform_has_syncpoints(struct gk20a *g)
+{
+#ifdef CONFIG_TEGRA_GK20A_NVHOST
+	return g->has_syncpoints && !g->disable_syncpoints;
+#else
+	return false;
+#endif
+}
 
 #endif /* GK20A_H */

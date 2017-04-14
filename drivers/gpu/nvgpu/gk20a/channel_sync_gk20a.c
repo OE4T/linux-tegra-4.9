@@ -966,7 +966,7 @@ void gk20a_channel_sync_destroy(struct gk20a_channel_sync *sync)
 struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c)
 {
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
-	if (gk20a_platform_has_syncpoints(c->g->dev))
+	if (gk20a_platform_has_syncpoints(c->g))
 		return gk20a_channel_syncpt_create(c);
 #endif
 	return gk20a_channel_semaphore_create(c);
@@ -974,7 +974,7 @@ struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c)
 
 bool gk20a_channel_sync_needs_sync_framework(struct channel_gk20a *c)
 {
-	if (gk20a_platform_has_syncpoints(c->g->dev))
+	if (gk20a_platform_has_syncpoints(c->g))
 		return false;
 	return true;
 }

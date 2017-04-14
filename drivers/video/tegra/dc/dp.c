@@ -2581,15 +2581,16 @@ static int tegra_dp_vsc_col_ext_enable(struct tegra_dc_dp_data *dp)
 {
 	struct tegra_dc_sor_data *sor = dp->sor;
 	unsigned long ret;
+	u32 nv_sor_dp_misc1_override_reg = nv_sor_dp_misc1_override();
 
-	ret = tegra_dc_sor_poll_register(sor, NV_SOR_DP_MISC1_OVERRIDE,
+	ret = tegra_dc_sor_poll_register(sor, nv_sor_dp_misc1_override_reg,
 					NV_SOR_DP_MISC1_OVERRIDE_CNTL_TRIGGER,
 					NV_SOR_DP_MISC1_OVERRIDE_CNTL_DONE,
 					100, TEGRA_SOR_TIMEOUT_MS);
 	if (!ret) {
-		tegra_sor_writel(sor, NV_SOR_DP_MISC1_BIT6_0,
+		tegra_sor_writel(sor, nv_sor_dp_misc1_bit6(),
 				NV_SOR_DP_MISC1_BIT6_0_SET);
-		tegra_sor_writel(sor, NV_SOR_DP_MISC1_OVERRIDE,
+		tegra_sor_writel(sor, nv_sor_dp_misc1_override_reg,
 				NV_SOR_DP_MISC1_OVERRIDE_CNTL_TRIGGER |
 				NV_SOR_DP_MISC1_OVERRIDE_ENABLE);
 
@@ -2607,13 +2608,14 @@ static int tegra_dp_vsc_col_ext_disable(struct tegra_dc_dp_data *dp)
 {
 	struct tegra_dc_sor_data *sor = dp->sor;
 	unsigned long ret;
+	u32 nv_sor_dp_misc1_override_reg = nv_sor_dp_misc1_override();
 
-	ret = tegra_dc_sor_poll_register(sor, NV_SOR_DP_MISC1_OVERRIDE,
+	ret = tegra_dc_sor_poll_register(sor, nv_sor_dp_misc1_override_reg,
 					NV_SOR_DP_MISC1_OVERRIDE_CNTL_TRIGGER,
 					NV_SOR_DP_MISC1_OVERRIDE_CNTL_DONE,
 					100, TEGRA_SOR_TIMEOUT_MS);
 	if (!ret) {
-		tegra_sor_writel(sor, NV_SOR_DP_MISC1_OVERRIDE,
+		tegra_sor_writel(sor, nv_sor_dp_misc1_override_reg,
 				NV_SOR_DP_MISC1_OVERRIDE_CNTL_TRIGGER |
 				NV_SOR_DP_MISC1_OVERRIDE_DISABLE);
 

@@ -273,7 +273,7 @@ static ssize_t test_settings_set(struct file *file, const char __user *buf,
 	tegra_dp_update_link_config(dp);
 
 	/* configure dynamic color range */
-	tegra_sor_write_field(sor, NV_HEAD_STATE0(dc->ctrl_num),
+	tegra_sor_write_field(sor, nv_sor_head_state0(dc->ctrl_num),
 			NV_HEAD_STATE0_DYNRANGE_DEFAULT_MASK,
 			test_settings->dynrange_val);
 
@@ -291,14 +291,14 @@ static ssize_t test_settings_set(struct file *file, const char __user *buf,
 	/* set TX_PU */
 	if (test_settings->disable_tx_pu) {
 		tegra_sor_write_field(sor,
-				NV_SOR_DP_PADCTL(sor->portnum),
+				nv_sor_dp_padctl(sor->portnum),
 				NV_SOR_DP_PADCTL_TX_PU_ENABLE |
 				NV_SOR_DP_PADCTL_TX_PU_VALUE_DEFAULT_MASK,
 				NV_SOR_DP_PADCTL_TX_PU_DISABLE);
 	} else {
 		max_tx_pu = dp->pdata->lt_data[DP_TX_PU].data[POST_CURSOR2_L0]
 		[test_settings->drive_strength][test_settings->preemphasis];
-		tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
+		tegra_sor_write_field(sor, nv_sor_dp_padctl(sor->portnum),
 				NV_SOR_DP_PADCTL_TX_PU_VALUE_DEFAULT_MASK,
 				(max_tx_pu <<
 				NV_SOR_DP_PADCTL_TX_PU_VALUE_SHIFT |

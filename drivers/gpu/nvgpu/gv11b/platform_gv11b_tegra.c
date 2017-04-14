@@ -28,7 +28,7 @@
 
 #include "gp10b/platform_gp10b.h"
 
-#include "platform_tegra.h"
+#include "tegra/linux/platform_gk20a_tegra.h"
 #include "gr_gv11b.h"
 #include "nvgpu_gpuid_t19x.h"
 

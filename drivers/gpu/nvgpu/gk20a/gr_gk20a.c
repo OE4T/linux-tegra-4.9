@@ -17,7 +17,6 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <linux/firmware.h>
 #include <trace/events/gk20a.h>
 
 #include <nvgpu/dma.h>
@@ -28,6 +27,7 @@
 #include <nvgpu/bsearch.h>
 #include <nvgpu/sort.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/firmware.h>
 
 #include "gk20a.h"
 #include "kind_gk20a.h"
@@ -2272,8 +2272,8 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct gk20a_ctxsw_bootloader_desc *fecs_boot_desc;
 	struct gk20a_ctxsw_bootloader_desc *gpccs_boot_desc;
-	const struct firmware *fecs_fw;
-	const struct firmware *gpccs_fw;
+	struct nvgpu_firmware *fecs_fw;
+	struct nvgpu_firmware *gpccs_fw;
 	u32 *fecs_boot_image;
 	u32 *gpccs_boot_image;
 	struct gk20a_ctxsw_ucode_info *ucode_info = &g->ctxsw_ucode_info;
@@ -2292,7 +2292,7 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 
 	gpccs_fw = nvgpu_request_firmware(g, GK20A_GPCCS_UCODE_IMAGE, 0);
 	if (!gpccs_fw) {
-		release_firmware(fecs_fw);
+		nvgpu_release_firmware(g, fecs_fw);
 		nvgpu_err(g, "failed to load gpccs ucode!!");
 		return -ENOENT;
 	}
@@ -2321,7 +2321,7 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 		g->gr.ctx_vars.ucode.fecs.inst.l,
 		g->gr.ctx_vars.ucode.fecs.data.l);
 
-	release_firmware(fecs_fw);
+	nvgpu_release_firmware(g, fecs_fw);
 	fecs_fw = NULL;
 
 	gr_gk20a_copy_ctxsw_ucode_segments(g, &ucode_info->surface_desc,
@@ -2330,7 +2330,7 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 		g->gr.ctx_vars.ucode.gpccs.inst.l,
 		g->gr.ctx_vars.ucode.gpccs.data.l);
 
-	release_firmware(gpccs_fw);
+	nvgpu_release_firmware(g, gpccs_fw);
 	gpccs_fw = NULL;
 
 	err = gr_gk20a_init_ctxsw_ucode_vaspace(g);
@@ -2345,9 +2345,9 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 			ucode_info->surface_desc.size, gk20a_mem_flag_none);
 	nvgpu_dma_free(g, &ucode_info->surface_desc);
 
-	release_firmware(gpccs_fw);
+	nvgpu_release_firmware(g, gpccs_fw);
 	gpccs_fw = NULL;
-	release_firmware(fecs_fw);
+	nvgpu_release_firmware(g, fecs_fw);
 	fecs_fw = NULL;
 
 	return err;

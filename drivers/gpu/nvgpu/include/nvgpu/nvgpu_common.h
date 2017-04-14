@@ -25,11 +25,4 @@ int nvgpu_probe(struct gk20a *g,
 		const char *interface_name,
 		struct class *class);
 
-#define NVGPU_REQUEST_FIRMWARE_NO_WARN		BIT(0)
-#define NVGPU_REQUEST_FIRMWARE_NO_SOC		BIT(1)
-
-const struct firmware *nvgpu_request_firmware(struct gk20a *g,
-					      const char *fw_name,
-					      int flags);
-
 #endif

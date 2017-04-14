@@ -15,7 +15,6 @@
  */
 
 #include <linux/dma-mapping.h>
-#include <linux/firmware.h>
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvgpu_common.h>
@@ -199,71 +198,6 @@ int nvgpu_probe(struct gk20a *g,
 	kref_init(&g->refcount);
 
 	return 0;
-}
-
-static const struct firmware *do_request_firmware(struct device *dev,
-		const char *prefix, const char *fw_name, int flags)
-{
-	const struct firmware *fw;
-	char *fw_path = NULL;
-	int path_len, err;
-
-	if (prefix) {
-		path_len = strlen(prefix) + strlen(fw_name);
-		path_len += 2; /* for the path separator and zero terminator*/
-
-		fw_path = nvgpu_kzalloc(get_gk20a(dev),
-					sizeof(*fw_path) * path_len);
-		if (!fw_path)
-			return NULL;
-
-		sprintf(fw_path, "%s/%s", prefix, fw_name);
-		fw_name = fw_path;
-	}
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
-	err = request_firmware(&fw, fw_name, dev);
-#else
-	if (flags & NVGPU_REQUEST_FIRMWARE_NO_WARN)
-		err = request_firmware_direct(&fw, fw_name, dev);
-	else
-		err = request_firmware(&fw, fw_name, dev);
-#endif
-
-	nvgpu_kfree(get_gk20a(dev), fw_path);
-	if (err)
-		return NULL;
-	return fw;
-}
-
-/* This is a simple wrapper around request_firmware that takes 'fw_name' and
- * applies an IP specific relative path prefix to it. The caller is
- * responsible for calling release_firmware later. */
-const struct firmware *nvgpu_request_firmware(struct gk20a *g,
-					      const char *fw_name,
-					      int flags)
-{
-	struct device *dev = g->dev;
-	const struct firmware *fw;
-
-	/* current->fs is NULL when calling from SYS_EXIT.
-	   Add a check here to prevent crash in request_firmware */
-	if (!current->fs || !fw_name)
-		return NULL;
-
-	BUG_ON(!g->name);
-	fw = do_request_firmware(dev, g->name, fw_name, flags);
-
-#ifdef CONFIG_TEGRA_GK20A
-	/* TO BE REMOVED - Support loading from legacy SOC specific path. */
-	if (!fw && !(flags & NVGPU_REQUEST_FIRMWARE_NO_SOC)) {
-		struct gk20a_platform *platform = gk20a_get_platform(dev);
-		fw = do_request_firmware(dev,
-				platform->soc_name, fw_name, flags);
-	}
-#endif
-
-	return fw;
 }
 
 /**

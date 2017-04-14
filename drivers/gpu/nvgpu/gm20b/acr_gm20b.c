@@ -11,7 +11,6 @@
  * more details.
  */
 
-#include <linux/firmware.h>
 #include <linux/debugfs.h>
 
 #include <linux/platform/tegra/mc.h>
@@ -21,6 +20,7 @@
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/acr/nvgpu_acr.h>
+#include <nvgpu/firmware.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
@@ -123,7 +123,7 @@ void gm20b_init_secure_pmu(struct gpu_ops *gops)
 
 static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 {
-	const struct firmware *pmu_fw, *pmu_desc, *pmu_sig;
+	struct nvgpu_firmware *pmu_fw, *pmu_desc, *pmu_sig;
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct lsf_ucode_desc *lsf_desc;
 	int err;
@@ -174,21 +174,21 @@ static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	p_img->header = NULL;
 	p_img->lsf_desc = (struct lsf_ucode_desc *)lsf_desc;
 	gm20b_dbg_pmu("requesting PMU ucode in GM20B exit\n");
-	release_firmware(pmu_sig);
+	nvgpu_release_firmware(g, pmu_sig);
 	return 0;
 release_sig:
-	release_firmware(pmu_sig);
+	nvgpu_release_firmware(g, pmu_sig);
 release_desc:
-	release_firmware(pmu_desc);
+	nvgpu_release_firmware(g, pmu_desc);
 release_img_fw:
-	release_firmware(pmu_fw);
+	nvgpu_release_firmware(g, pmu_fw);
 	return err;
 }
 
 static int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 {
 	struct lsf_ucode_desc *lsf_desc;
-	const struct firmware *fecs_sig;
+	struct nvgpu_firmware *fecs_sig;
 	int err;
 
 	fecs_sig = nvgpu_request_firmware(g, GM20B_FECS_UCODE_SIG, 0);
@@ -244,18 +244,18 @@ static int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	p_img->header = NULL;
 	p_img->lsf_desc = (struct lsf_ucode_desc *)lsf_desc;
 	gm20b_dbg_pmu("fecs fw loaded\n");
-	release_firmware(fecs_sig);
+	nvgpu_release_firmware(g, fecs_sig);
 	return 0;
 free_lsf_desc:
 	nvgpu_kfree(g, lsf_desc);
 rel_sig:
-	release_firmware(fecs_sig);
+	nvgpu_release_firmware(g, fecs_sig);
 	return err;
 }
 static int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 {
 	struct lsf_ucode_desc *lsf_desc;
-	const struct firmware *gpccs_sig;
+	struct nvgpu_firmware *gpccs_sig;
 	int err;
 
 	if (g->ops.securegpccs == false)
@@ -315,12 +315,12 @@ static int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	p_img->header = NULL;
 	p_img->lsf_desc = (struct lsf_ucode_desc *)lsf_desc;
 	gm20b_dbg_pmu("gpccs fw loaded\n");
-	release_firmware(gpccs_sig);
+	nvgpu_release_firmware(g, gpccs_sig);
 	return 0;
 free_lsf_desc:
 	nvgpu_kfree(g, lsf_desc);
 rel_sig:
-	release_firmware(gpccs_sig);
+	nvgpu_release_firmware(g, gpccs_sig);
 	return err;
 }
 
@@ -1070,7 +1070,7 @@ static int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 	u32 status, size;
 	u64 start;
 	struct acr_desc *acr = &g->acr;
-	const struct firmware *acr_fw = acr->acr_fw;
+	struct nvgpu_firmware *acr_fw = acr->acr_fw;
 	struct flcn_bl_dmem_desc *bl_dmem_desc = &acr->bl_dmem_desc;
 	u32 *acr_ucode_header_t210_load;
 	u32 *acr_ucode_data_t210_load;
@@ -1169,7 +1169,7 @@ static int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 err_free_ucode_map:
 	nvgpu_dma_unmap_free(vm, &acr->acr_ucode);
 err_release_acr_fw:
-	release_firmware(acr_fw);
+	nvgpu_release_firmware(g, acr_fw);
 	acr->acr_fw = NULL;
 	return err;
 }
@@ -1385,7 +1385,7 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 	int err = 0;
 	u32 bl_sz;
 	struct acr_desc *acr = &g->acr;
-	const struct firmware *hsbl_fw = acr->hsbl_fw;
+	struct nvgpu_firmware *hsbl_fw = acr->hsbl_fw;
 	struct hsflcn_bl_desc *pmu_bl_gm10x_desc;
 	u32 *pmu_bl_gm10x = NULL;
 	gm20b_dbg_pmu("");
@@ -1472,7 +1472,7 @@ err_unmap_bl:
 err_free_ucode:
 	nvgpu_dma_free(g, &acr->hsbl_ucode);
 err_done:
-	release_firmware(hsbl_fw);
+	nvgpu_release_firmware(g, hsbl_fw);
 	return err;
 }
 

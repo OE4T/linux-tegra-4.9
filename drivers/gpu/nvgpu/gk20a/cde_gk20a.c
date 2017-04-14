@@ -17,7 +17,6 @@
  */
 
 #include <linux/dma-mapping.h>
-#include <linux/firmware.h>
 #include <linux/fs.h>
 #include <linux/debugfs.h>
 #include <linux/dma-buf.h>
@@ -30,6 +29,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/firmware.h>
 
 #include "gk20a.h"
 #include "channel_gk20a.h"
@@ -226,7 +226,7 @@ out:
 }
 
 static int gk20a_init_cde_buf(struct gk20a_cde_ctx *cde_ctx,
-			      const struct firmware *img,
+			      struct nvgpu_firmware *img,
 			      struct gk20a_cde_hdr_buf *buf)
 {
 	struct nvgpu_mem *mem;
@@ -314,7 +314,7 @@ static int gk20a_replace_data(struct gk20a_cde_ctx *cde_ctx, void *target,
 }
 
 static int gk20a_init_cde_replace(struct gk20a_cde_ctx *cde_ctx,
-				  const struct firmware *img,
+				  struct nvgpu_firmware *img,
 				  struct gk20a_cde_hdr_replace *replace)
 {
 	struct nvgpu_mem *source_mem;
@@ -454,7 +454,7 @@ static int gk20a_cde_patch_params(struct gk20a_cde_ctx *cde_ctx)
 }
 
 static int gk20a_init_cde_param(struct gk20a_cde_ctx *cde_ctx,
-				const struct firmware *img,
+				struct nvgpu_firmware *img,
 				struct gk20a_cde_hdr_param *param)
 {
 	struct nvgpu_mem *target_mem;
@@ -497,7 +497,7 @@ static int gk20a_init_cde_param(struct gk20a_cde_ctx *cde_ctx,
 }
 
 static int gk20a_init_cde_required_class(struct gk20a_cde_ctx *cde_ctx,
-					 const struct firmware *img,
+					 struct nvgpu_firmware *img,
 					 u32 required_class)
 {
 	struct gk20a *g = cde_ctx->g;
@@ -521,7 +521,7 @@ static int gk20a_init_cde_required_class(struct gk20a_cde_ctx *cde_ctx,
 }
 
 static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
-				  const struct firmware *img,
+				  struct nvgpu_firmware *img,
 				  u32 op,
 				  struct gk20a_cde_cmd_elem *cmd_elem,
 				  u32 num_elems)
@@ -622,7 +622,7 @@ static int gk20a_cde_pack_cmdbufs(struct gk20a_cde_ctx *cde_ctx)
 }
 
 static int gk20a_init_cde_img(struct gk20a_cde_ctx *cde_ctx,
-			      const struct firmware *img)
+			      struct nvgpu_firmware *img)
 {
 	struct gk20a *g = cde_ctx->g;
 	struct gk20a_cde_app *cde_app = &cde_ctx->g->cde_app;
@@ -1202,7 +1202,7 @@ __releases(&cde_app->mutex)
 static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 {
 	struct gk20a *g = cde_ctx->g;
-	const struct firmware *img;
+	struct nvgpu_firmware *img;
 	struct channel_gk20a *ch;
 	struct gr_gk20a *gr = &g->gr;
 	int err = 0;
@@ -1265,7 +1265,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	}
 
 	/* initialisation done */
-	release_firmware(img);
+	nvgpu_release_firmware(g, img);
 
 	return 0;
 
@@ -1276,7 +1276,7 @@ err_alloc_gpfifo:
 	gk20a_vm_put(ch->vm);
 err_commit_va:
 err_get_gk20a_channel:
-	release_firmware(img);
+	nvgpu_release_firmware(g, img);
 	nvgpu_err(g, "cde: couldn't initialise buffer converter: %d", err);
 	return err;
 }

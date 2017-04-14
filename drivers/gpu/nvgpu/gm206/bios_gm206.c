@@ -11,13 +11,13 @@
  * more details.
  */
 
-#include <linux/firmware.h>
 #include <linux/pci.h>
 
 #include <nvgpu/bios.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/timers.h>
+#include <nvgpu/firmware.h>
 
 #include "gk20a/gk20a.h"
 #include "gm20b/fifo_gm20b.h"
@@ -249,7 +249,7 @@ int gm206_bios_init(struct gk20a *g)
 	unsigned int i;
 	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	struct dentry *d;
-	const struct firmware *bios_fw;
+	struct nvgpu_firmware *bios_fw;
 	int err;
 	struct pci_dev *pdev = to_pci_dev(g->dev);
 	char rom_name[sizeof(BIOS_OVERLAY_NAME_FORMATTED)];
@@ -273,7 +273,7 @@ int gm206_bios_init(struct gk20a *g)
 		memcpy(g->bios.data, &bios_fw->data[ROM_FILE_PAYLOAD_OFFSET],
 		       g->bios.size);
 
-		release_firmware(bios_fw);
+		nvgpu_release_firmware(g, bios_fw);
 	} else {
 		gk20a_dbg_info("reading bios from EEPROM");
 		g->bios.size = BIOS_SIZE;
@@ -336,7 +336,7 @@ int gm206_bios_init(struct gk20a *g)
 	return 0;
 
 free_firmware:
-	release_firmware(bios_fw);
+	nvgpu_release_firmware(g, bios_fw);
 	return err;
 }
 

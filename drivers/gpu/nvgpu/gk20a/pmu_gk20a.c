@@ -16,7 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/firmware.h>
 #include <linux/module.h>
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
@@ -27,6 +26,7 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/log.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/firmware.h>
 
 #include "gk20a.h"
 #include "gr_gk20a.h"
@@ -3099,12 +3099,14 @@ static int pmu_queue_close(struct pmu_gk20a *pmu,
 
 void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
 {
+	struct gk20a *g = gk20a_from_pmu(pmu);
+
 	gk20a_dbg_fn("");
 
 	if (nvgpu_alloc_initialized(&pmu->dmem))
 		nvgpu_alloc_destroy(&pmu->dmem);
 
-	release_firmware(pmu->fw);
+	nvgpu_release_firmware(g, pmu->fw);
 
 	nvgpu_mutex_destroy(&pmu->elpg_mutex);
 	nvgpu_mutex_destroy(&pmu->pg_mutex);
@@ -3157,7 +3159,7 @@ static int gk20a_prepare_ucode(struct gk20a *g)
 	return gk20a_init_pmu(pmu);
 
  err_release_fw:
-	release_firmware(pmu->fw);
+	nvgpu_release_firmware(g, pmu->fw);
 	pmu->fw = NULL;
 
 	return err;

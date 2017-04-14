@@ -11,7 +11,6 @@
  * more details.
  */
 
-#include <linux/firmware.h>
 #include <linux/module.h>
 #include <linux/uaccess.h>
 

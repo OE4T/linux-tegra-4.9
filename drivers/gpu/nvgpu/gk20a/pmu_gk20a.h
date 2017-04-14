@@ -25,6 +25,8 @@
 #include <nvgpu/flcnif_cmn.h>
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 
+struct nvgpu_firmware;
+
 /* defined by pmu hw spec */
 #define GK20A_PMU_VA_SIZE		(512 * 1024 * 1024)
 #define GK20A_PMU_UCODE_SIZE_MAX	(256 * 1024)
@@ -394,7 +396,7 @@ struct pmu_gk20a {
 	u32 aelpg_param[5];
 	u32 override_done;
 
-	const struct firmware *fw;
+	struct nvgpu_firmware *fw;
 };
 
 int gk20a_init_pmu_support(struct gk20a *g);

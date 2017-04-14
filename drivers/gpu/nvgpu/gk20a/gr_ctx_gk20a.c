@@ -19,11 +19,10 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <linux/firmware.h>
-
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
+#include <nvgpu/firmware.h>
 
 #include "gk20a.h"
 #include "gr_ctx_gk20a.h"
@@ -112,7 +111,7 @@ static bool gr_gk20a_is_firmware_defined(void)
 
 static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 {
-	const struct firmware *netlist_fw;
+	struct nvgpu_firmware *netlist_fw;
 	struct netlist_image *netlist = NULL;
 	char name[MAX_NETLIST_NAME];
 	u32 i, major_v = ~0, major_v_hw, netlist_num;
@@ -392,7 +391,7 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 		g->gr.ctx_vars.valid = true;
 		g->gr.netlist = net;
 
-		release_firmware(netlist_fw);
+		nvgpu_release_firmware(g, netlist_fw);
 		gk20a_dbg_fn("done");
 		goto done;
 
@@ -427,7 +426,7 @@ clean_up:
 		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.perf_pma.l);
 		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_rop.l);
 		nvgpu_kfree(g, g->gr.ctx_vars.ctxsw_regs.pm_ucgpc.l);
-		release_firmware(netlist_fw);
+		nvgpu_release_firmware(g, netlist_fw);
 		err = -ENOENT;
 	}
 

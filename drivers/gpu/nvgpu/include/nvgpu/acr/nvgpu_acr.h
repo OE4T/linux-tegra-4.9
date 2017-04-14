@@ -21,6 +21,8 @@
 #include "acr_objlsfm.h"
 #include "acr_objflcn.h"
 
+struct nvgpu_firmware;
+
 #define MAX_SUPPORTED_LSFM 3 /*PMU, FECS, GPCCS*/
 
 #define ACR_COMPLETION_TIMEOUT_MS 10000 /*in msec */
@@ -74,20 +76,20 @@ struct acr_desc {
 	struct bin_hdr *hsbin_hdr;
 	struct acr_fw_header *fw_hdr;
 	u32 pmu_args;
-	const struct firmware *acr_fw;
+	struct nvgpu_firmware *acr_fw;
 	union{
 		struct flcn_acr_desc *acr_dmem_desc;
 		struct flcn_acr_desc_v1 *acr_dmem_desc_v1;
 	};
 	struct nvgpu_mem acr_ucode;
-	const struct firmware *hsbl_fw;
+	struct nvgpu_firmware *hsbl_fw;
 	struct nvgpu_mem hsbl_ucode;
 	union {
 		struct flcn_bl_dmem_desc bl_dmem_desc;
 		struct flcn_bl_dmem_desc_v1 bl_dmem_desc_v1;
 	};
-	const struct firmware *pmu_fw;
-	const struct firmware *pmu_desc;
+	struct nvgpu_firmware *pmu_fw;
+	struct nvgpu_firmware *pmu_desc;
 	u32 capabilities;
 };
 

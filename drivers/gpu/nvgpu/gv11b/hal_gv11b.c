@@ -182,7 +182,7 @@ int gv11b_init_hal(struct gk20a *g)
 	struct gpu_ops *gops = &g->ops;
 	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
 
-	*gops = gv11b_ops;
+	gops->clock_gating = gv11b_ops.clock_gating;
 
 	/* boot in non-secure modes for time beeing */
 	gops->privsecurity = 0;

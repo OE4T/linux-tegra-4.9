@@ -24,6 +24,7 @@
 
 #include "gk20a/platform_gk20a.h"
 #include "gk20a/gk20a.h"
+#include "tegra/linux/clk.h"
 
 #include "gp10b/platform_gp10b.h"
 
@@ -50,6 +51,7 @@ static int gv11b_tegra_probe(struct device *dev)
 	platform->g->mm.vidmem_is_vidmem = platform->vidmem_is_vidmem;
 
 	gp10b_tegra_get_clocks(dev);
+	nvgpu_linux_init_clk_support(platform->g);
 
 	return 0;
 }

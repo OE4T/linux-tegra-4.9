@@ -1312,7 +1312,7 @@ bool gk20a_fifo_should_defer_engine_reset(struct gk20a *g, u32 engine_id,
 }
 
 /* caller must hold a channel reference */
-bool gk20a_fifo_ch_timeout_debug_dump_state(struct gk20a *g,
+static bool gk20a_fifo_ch_timeout_debug_dump_state(struct gk20a *g,
 		struct channel_gk20a *refch)
 {
 	bool verbose = true;
@@ -1331,7 +1331,7 @@ bool gk20a_fifo_ch_timeout_debug_dump_state(struct gk20a *g,
 }
 
 /* caller must hold a channel reference */
-void gk20a_fifo_set_has_timedout_and_wake_up_wqs(struct gk20a *g,
+static void gk20a_fifo_set_has_timedout_and_wake_up_wqs(struct gk20a *g,
 		struct channel_gk20a *refch)
 {
 	if (refch) {
@@ -3748,7 +3748,7 @@ static const char * const ccsr_chan_status_str[] = {
 	"on_eng_pending_acq_ctx_reload",
 };
 
-const char * const pbdma_chan_eng_ctx_status_str[] = {
+static const char * const pbdma_chan_eng_ctx_status_str[] = {
 	"invalid",
 	"valid",
 	"NA",

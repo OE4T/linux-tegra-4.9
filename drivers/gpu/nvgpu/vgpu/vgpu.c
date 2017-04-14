@@ -229,7 +229,7 @@ static void vgpu_remove_support(struct gk20a *g)
 	}
 }
 
-static void vgpu_init_vars(struct gk20a *g)
+static void vgpu_init_vars(struct gk20a *g, struct gk20a_platform *platform)
 {
 	nvgpu_mutex_init(&g->poweroff_lock);
 	g->regs_saved = g->regs;
@@ -237,6 +237,9 @@ static void vgpu_init_vars(struct gk20a *g)
 
 	nvgpu_init_list_node(&g->pending_sema_waits);
 	nvgpu_raw_spinlock_init(&g->pending_sema_waits_lock);
+
+	g->aggressive_sync_destroy = platform->aggressive_sync_destroy;
+	g->aggressive_sync_destroy_thresh = platform->aggressive_sync_destroy_thresh;
 }
 
 static int vgpu_init_support(struct platform_device *pdev)
@@ -595,7 +598,7 @@ int vgpu_probe(struct platform_device *pdev)
 
 	vgpu_init_support(pdev);
 
-	vgpu_init_vars(gk20a);
+	vgpu_init_vars(gk20a, platform);
 
 	init_rwsem(&gk20a->busy_lock);
 

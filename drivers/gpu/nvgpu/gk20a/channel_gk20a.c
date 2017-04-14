@@ -81,9 +81,7 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f)
 {
 	struct channel_gk20a *ch = NULL;
-	struct gk20a_platform *platform;
-
-	platform = gk20a_get_platform(f->g->dev);
+	struct gk20a *g = f->g;
 
 	nvgpu_mutex_acquire(&f->free_chs_mutex);
 	if (!nvgpu_list_empty(&f->free_chs)) {
@@ -96,10 +94,10 @@ static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f)
 	}
 	nvgpu_mutex_release(&f->free_chs_mutex);
 
-	if (platform->aggressive_sync_destroy_thresh &&
+	if (g->aggressive_sync_destroy_thresh &&
 			(f->used_channels >
-			 platform->aggressive_sync_destroy_thresh))
-		platform->aggressive_sync_destroy = true;
+			 g->aggressive_sync_destroy_thresh))
+		g->aggressive_sync_destroy = true;
 
 	return ch;
 }
@@ -107,7 +105,6 @@ static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f)
 static void free_channel(struct fifo_gk20a *f,
 		struct channel_gk20a *ch)
 {
-	struct gk20a_platform *platform;
 	struct gk20a *g = f->g;
 
 	trace_gk20a_release_used_channel(ch->hw_chid);
@@ -123,12 +120,10 @@ static void free_channel(struct fifo_gk20a *f,
 	 * this is fine then because no new channels would be created.
 	 */
 	if (!g->driver_is_dying) {
-		platform = gk20a_get_platform(g->dev);
-
-		if (platform->aggressive_sync_destroy_thresh &&
+		if (g->aggressive_sync_destroy_thresh &&
 			(f->used_channels <
-			 platform->aggressive_sync_destroy_thresh))
-			platform->aggressive_sync_destroy = false;
+			 g->aggressive_sync_destroy_thresh))
+			g->aggressive_sync_destroy = false;
 	}
 }
 
@@ -1218,8 +1213,6 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 		u32 flags)
 {
 	struct gk20a *g = c->g;
-	struct device *d = dev_from_gk20a(g);
-	struct gk20a_platform *platform = gk20a_get_platform(d);
 	struct vm_gk20a *ch_vm;
 	u32 gpfifo_size;
 	int err = 0;
@@ -1273,7 +1266,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 
 	g->ops.fifo.setup_userd(c);
 
-	if (!platform->aggressive_sync_destroy_thresh) {
+	if (!g->aggressive_sync_destroy_thresh) {
 		nvgpu_mutex_acquire(&c->sync_lock);
 		c->sync = gk20a_channel_sync_create(c);
 		if (!c->sync) {
@@ -1968,7 +1961,6 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 {
 	struct vm_gk20a *vm;
 	struct channel_gk20a_job *job;
-	struct gk20a_platform *platform;
 	struct gk20a *g;
 	int job_finished = 0;
 	bool watchdog_on = false;
@@ -1984,7 +1976,6 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 
 	vm = c->vm;
 	g = c->g;
-	platform = gk20a_get_platform(g->dev);
 
 	/*
 	 * If !clean_all, we're in a condition where watchdog isn't supported
@@ -2037,10 +2028,10 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 		if (c->sync) {
 			c->sync->signal_timeline(c->sync);
 
-			if (platform->aggressive_sync_destroy_thresh) {
+			if (g->aggressive_sync_destroy_thresh) {
 				nvgpu_mutex_acquire(&c->sync_lock);
 				if (atomic_dec_and_test(&c->sync->refcount) &&
-						platform->aggressive_sync_destroy) {
+						g->aggressive_sync_destroy) {
 					gk20a_channel_sync_destroy(c->sync);
 					c->sync = NULL;
 				}
@@ -2243,7 +2234,6 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 				      u32 flags)
 {
 	struct gk20a *g = c->g;
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	bool need_sync_fence = false;
 	bool new_sync_created = false;
 	int wait_fence_fd = -1;
@@ -2258,7 +2248,7 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 	if (force_need_sync_fence)
 		need_sync_fence = true;
 
-	if (platform->aggressive_sync_destroy_thresh) {
+	if (g->aggressive_sync_destroy_thresh) {
 		nvgpu_mutex_acquire(&c->sync_lock);
 		if (!c->sync) {
 			c->sync = gk20a_channel_sync_create(c);

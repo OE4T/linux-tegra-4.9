@@ -996,6 +996,9 @@ struct gk20a {
 
 	u32 default_pri_timeout;
 
+	unsigned int aggressive_sync_destroy_thresh;
+	bool aggressive_sync_destroy;
+
 	u32 emc3d_ratio;
 
 #ifdef CONFIG_DEBUG_FS

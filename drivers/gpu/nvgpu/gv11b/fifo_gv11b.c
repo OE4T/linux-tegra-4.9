@@ -1082,7 +1082,6 @@ int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
 	u32 timeout;
 	unsigned int i;
 	u32 host_num_pbdma = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_PBDMA);
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	gk20a_dbg_fn("");
 
@@ -1140,7 +1139,7 @@ int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
 	/* enable ctxsw timeout */
 	timeout = GRFIFO_TIMEOUT_CHECK_PERIOD_US;
 	timeout = scale_ptimer(timeout,
-		ptimer_scalingfactor10x(platform->ptimer_src_freq));
+		ptimer_scalingfactor10x(g->ptimer_src_freq));
 	timeout |= fifo_eng_ctxsw_timeout_detection_enabled_f();
 	gk20a_writel(g, fifo_eng_ctxsw_timeout_r(), timeout);
 

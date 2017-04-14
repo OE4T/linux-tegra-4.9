@@ -1218,8 +1218,6 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 err_iounmap_fb:
 	dma_free_attrs(&ndev->dev, BLANK_LINE_SIZE, tegra_fb->blank_base,
 		       tegra_fb->blank_start, __DMA_ATTR(attrs));
-	if (fb_base)
-		iounmap(fb_base);
 err_free_fbmem:
 	tegra_fb_release_fbmem(tegra_fb);
 err_free:
@@ -1241,7 +1239,6 @@ void tegra_fb_unregister(struct tegra_fb_info *fb_info)
 
 	tegra_fb_release_fbmem(fb_info);
 	unregister_framebuffer(info);
-	iounmap(info->screen_base);
 	framebuffer_release(info);
 	dev_info(dev, "fb unregistered\n");
 }

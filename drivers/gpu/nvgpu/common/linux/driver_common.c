@@ -113,6 +113,8 @@ static void nvgpu_init_pm_vars(struct gk20a *g)
 	g->has_syncpoints = platform->has_syncpoints;
 	g->ptimer_src_freq = platform->ptimer_src_freq;
 	g->support_pmu = support_gk20a_pmu(g->dev);
+	g->can_railgate = platform->can_railgate_init;
+	g->railgate_delay = platform->railgate_delay_init;
 
 	/* set default values to aelpg parameters */
 	g->pmu.aelpg_param[0] = APCTRL_SAMPLING_PERIOD_PG_DEFAULT_US;

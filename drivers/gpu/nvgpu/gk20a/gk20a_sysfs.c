@@ -288,7 +288,6 @@ static DEVICE_ATTR(ptimer_src_freq,
 static ssize_t railgate_enable_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	unsigned long railgate_enable = 0;
 	/* dev is guaranteed to be valid here. Ok to de-reference */
 	struct gk20a *g = get_gk20a(dev);
@@ -297,21 +296,21 @@ static ssize_t railgate_enable_store(struct device *dev,
 	if (kstrtoul(buf, 10, &railgate_enable) < 0)
 		return -EINVAL;
 
-	if (railgate_enable && !platform->can_railgate) {
+	if (railgate_enable && !g->can_railgate) {
 		/* release extra ref count */
 		gk20a_idle(g);
-		platform->can_railgate = true;
-		platform->user_railgate_disabled = false;
-	} else if (railgate_enable == 0 && platform->can_railgate) {
+		g->can_railgate = true;
+		g->user_railgate_disabled = false;
+	} else if (railgate_enable == 0 && g->can_railgate) {
 		/* take extra ref count */
 		err = gk20a_busy(g);
 		if (err)
 			return err;
-		platform->can_railgate = false;
-		platform->user_railgate_disabled = true;
+		g->can_railgate = false;
+		g->user_railgate_disabled = true;
 	}
 
-	dev_info(dev, "railgate is %s.\n", platform->can_railgate ?
+	dev_info(dev, "railgate is %s.\n", g->can_railgate ?
 		"enabled" : "disabled");
 
 	return count;
@@ -320,9 +319,9 @@ static ssize_t railgate_enable_store(struct device *dev,
 static ssize_t railgate_enable_read(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	struct gk20a *g = get_gk20a(dev);
 
-	return snprintf(buf, PAGE_SIZE, "%d\n", platform->can_railgate ? 1 : 0);
+	return snprintf(buf, PAGE_SIZE, "%d\n", g->can_railgate ? 1 : 0);
 }
 
 static DEVICE_ATTR(railgate_enable, ROOTRW, railgate_enable_read,
@@ -333,20 +332,19 @@ static ssize_t railgate_delay_store(struct device *dev,
 				    struct device_attribute *attr,
 				    const char *buf, size_t count)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int railgate_delay = 0, ret = 0;
 	struct gk20a *g = get_gk20a(dev);
 	int err;
 
-	if (!platform->can_railgate) {
+	if (!g->can_railgate) {
 		dev_info(dev, "does not support power-gating\n");
 		return count;
 	}
 
 	ret = sscanf(buf, "%d", &railgate_delay);
 	if (ret == 1 && railgate_delay >= 0) {
-		platform->railgate_delay = railgate_delay;
-		pm_runtime_set_autosuspend_delay(dev, platform->railgate_delay);
+		g->railgate_delay = railgate_delay;
+		pm_runtime_set_autosuspend_delay(dev, g->railgate_delay);
 	} else
 		dev_err(dev, "Invalid powergate delay\n");
 
@@ -361,9 +359,9 @@ static ssize_t railgate_delay_store(struct device *dev,
 static ssize_t railgate_delay_show(struct device *dev,
 				   struct device_attribute *attr, char *buf)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	struct gk20a *g = get_gk20a(dev);
 
-	return snprintf(buf, PAGE_SIZE, "%d\n", platform->railgate_delay);
+	return snprintf(buf, PAGE_SIZE, "%d\n", g->railgate_delay);
 }
 static DEVICE_ATTR(railgate_delay, ROOTRW, railgate_delay_show,
 		   railgate_delay_store);

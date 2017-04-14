@@ -397,15 +397,13 @@ void gk20a_driver_start_unload(struct gk20a *g)
 int gk20a_wait_for_idle(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
-	struct gk20a_platform *platform;
 	int wait_length = 150; /* 3 second overall max wait. */
 	int target_usage_count = 0;
 
 	if (!g)
 		return -ENODEV;
 
-	platform = dev_get_drvdata(dev);
-	if (platform->user_railgate_disabled)
+	if (g->user_railgate_disabled)
 		target_usage_count = 1;
 
 	while ((atomic_read(&g->usage_count) != target_usage_count)
@@ -467,7 +465,7 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	 * that depends on job tracking. (Here, fast means strictly no
 	 * metadata, just the gpfifo contents are copied and gp_put updated).
 	 */
-	if (!platform->can_railgate)
+	if (!g->can_railgate)
 		gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_SUBMIT_NO_JOBTRACKING;
 
 	/*
@@ -476,7 +474,7 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	 * provided that the user doesn't request anything that depends on
 	 * deferred cleanup.
 	 */
-	if (!platform->can_railgate
+	if (!g->can_railgate
 	    && !gk20a_channel_sync_needs_sync_framework(g))
 		gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_SUBMIT_FULL;
 

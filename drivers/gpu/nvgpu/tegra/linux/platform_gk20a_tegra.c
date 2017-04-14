@@ -955,7 +955,7 @@ static int gk20a_tegra_probe(struct device *dev)
 
 	if (joint_xpu_rail) {
 		gk20a_dbg_info("XPU rails are joint\n");
-		platform->can_railgate = false;
+		platform->g->can_railgate = false;
 	}
 
 	platform->g->clk.gpc_pll.id = GK20A_GPC_PLL;
@@ -1051,8 +1051,8 @@ struct gk20a_platform gk20a_tegra_platform = {
 	.aggressive_sync_destroy_thresh = 64,
 
 	/* power management configuration */
-	.railgate_delay		= 500,
-	.can_railgate		= true,
+	.railgate_delay_init	= 500,
+	.can_railgate_init	= true,
 	.can_elpg               = true,
 	.enable_slcg            = true,
 	.enable_blcg            = true,
@@ -1108,8 +1108,8 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.aggressive_sync_destroy_thresh = 64,
 
 	/* power management configuration */
-	.railgate_delay		= 500,
-	.can_railgate           = true,
+	.railgate_delay_init	= 500,
+	.can_railgate_init	= true,
 	.can_elpg               = true,
 	.enable_slcg            = true,
 	.enable_blcg            = true,

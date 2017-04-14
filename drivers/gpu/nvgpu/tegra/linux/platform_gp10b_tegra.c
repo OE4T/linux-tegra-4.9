@@ -382,10 +382,10 @@ struct gk20a_platform gp10b_tegra_platform = {
 	.has_syncpoints = true,
 
 	/* power management configuration */
-	.railgate_delay		= 500,
+	.railgate_delay_init	= 500,
 
 	/* power management configuration */
-	.can_railgate           = true,
+	.can_railgate_init	= true,
 	.enable_elpg            = true,
 	.can_elpg               = true,
 	.enable_blcg		= true,

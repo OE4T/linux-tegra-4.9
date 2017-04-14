@@ -39,10 +39,7 @@ struct gk20a_platform {
 	struct gk20a *g;
 
 	/* Should be populated at probe. */
-	bool can_railgate;
-
-	/* Set by User while disabling railgating */
-	bool user_railgate_disabled;
+	bool can_railgate_init;
 
 	/* Should be populated at probe. */
 	bool can_elpg;
@@ -77,7 +74,7 @@ struct gk20a_platform {
 #endif
 
 	/* Delay before rail gated */
-	int railgate_delay;
+	int railgate_delay_init;
 
 	/* Second Level Clock Gating: true = enable false = disable */
 	bool enable_slcg;

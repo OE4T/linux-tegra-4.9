@@ -64,8 +64,8 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.remove = nvgpu_pci_tegra_remove,
 
 	/* power management configuration */
-	.railgate_delay		= 500,
-	.can_railgate		= false,
+	.railgate_delay_init	= 500,
+	.can_railgate_init	= false,
 	.can_elpg = true,
 	.enable_elpg = true,
 	.enable_elcg = false,
@@ -98,8 +98,8 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.remove = nvgpu_pci_tegra_remove,
 
 	/* power management configuration */
-	.railgate_delay		= 500,
-	.can_railgate		= false,
+	.railgate_delay_init	= 500,
+	.can_railgate_init	= false,
 	.can_elpg = true,
 	.enable_elpg = true,
 	.enable_elcg = false,
@@ -132,8 +132,8 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.remove = nvgpu_pci_tegra_remove,
 
 	/* power management configuration */
-	.railgate_delay		= 500,
-	.can_railgate		= false,
+	.railgate_delay_init	= 500,
+	.can_railgate_init	= false,
 	.can_elpg = true,
 	.enable_elpg = true,
 	.enable_elcg = false,
@@ -166,8 +166,8 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.remove = nvgpu_pci_tegra_remove,
 
 	/* power management configuration */
-	.railgate_delay		= 500,
-	.can_railgate		= false,
+	.railgate_delay_init	= 500,
+	.can_railgate_init	= false,
 	.can_elpg = true,
 	.enable_elpg = true,
 	.enable_elcg = false,
@@ -311,14 +311,14 @@ static const struct dev_pm_ops nvgpu_pci_pm_ops = {
 static int nvgpu_pci_pm_init(struct device *dev)
 {
 #ifdef CONFIG_PM
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a *g = get_gk20a(dev);
 
-	if (!platform->can_railgate) {
+	if (!g->can_railgate) {
 		pm_runtime_disable(dev);
 	} else {
-		if (platform->railgate_delay)
+		if (g->railgate_delay)
 			pm_runtime_set_autosuspend_delay(dev,
-				platform->railgate_delay);
+				g->railgate_delay);
 
 		/*
 		 * Runtime PM for PCI devices is disabled by default,

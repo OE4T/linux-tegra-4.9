@@ -312,7 +312,7 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 	 * If User disables rail gating, we take one more
 	 * extra refcount
 	 */
-	if (platform->user_railgate_disabled)
+	if (g->user_railgate_disabled)
 		target_ref_cnt = 2;
 	else
 		target_ref_cnt = 1;
@@ -339,7 +339,7 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 	nvgpu_timeout_init(g, &timeout, GK20A_WAIT_FOR_IDLE_MS,
 			   NVGPU_TIMER_CPU_TIMER);
 
-	if (platform->can_railgate && !force_reset) {
+	if (g->can_railgate && !force_reset) {
 		/*
 		 * Case 1 : GPU railgate is supported
 		 *
@@ -349,7 +349,7 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 		pm_runtime_put_sync(dev);
 
 		/* add sufficient delay to allow GPU to rail gate */
-		nvgpu_msleep(platform->railgate_delay);
+		nvgpu_msleep(g->railgate_delay);
 
 		/* check in loop if GPU is railgated or not */
 		do {
@@ -757,7 +757,7 @@ static int gk20a_pm_suspend(struct device *dev)
 	struct gk20a *g = get_gk20a(dev);
 	int ret = 0;
 
-	if (platform->user_railgate_disabled)
+	if (g->user_railgate_disabled)
 		gk20a_idle_nosuspend(dev);
 
 	if (atomic_read(&dev->power.usage_count) > 1) {
@@ -780,7 +780,7 @@ static int gk20a_pm_suspend(struct device *dev)
 	return 0;
 
 fail:
-	if (platform->user_railgate_disabled)
+	if (g->user_railgate_disabled)
 		gk20a_busy_noresume(dev);
 
 	return ret;
@@ -789,10 +789,9 @@ fail:
 static int gk20a_pm_resume(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
 
-	if (platform->user_railgate_disabled)
+	if (g->user_railgate_disabled)
 		gk20a_busy_noresume(dev);
 
 	if (!g->suspended)
@@ -815,19 +814,19 @@ static const struct dev_pm_ops gk20a_pm_ops = {
 
 int gk20a_pm_init(struct device *dev)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	struct gk20a *g = get_gk20a(dev);
 	int err = 0;
 
 	gk20a_dbg_fn("");
 
 	/* Initialise pm runtime */
-	if (platform->railgate_delay) {
+	if (g->railgate_delay) {
 		pm_runtime_set_autosuspend_delay(dev,
-				 platform->railgate_delay);
+				 g->railgate_delay);
 		pm_runtime_use_autosuspend(dev);
 	}
 
-	if (platform->can_railgate) {
+	if (g->can_railgate) {
 		pm_runtime_enable(dev);
 		if (!pm_runtime_enabled(dev))
 			gk20a_pm_unrailgate(dev);

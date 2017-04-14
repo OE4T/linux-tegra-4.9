@@ -285,8 +285,9 @@ int gk20a_railgating_debugfs_init(struct device *dev)
 {
 	struct dentry *d;
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	struct gk20a *g = get_gk20a(dev);
 
-	if (!platform->can_railgate)
+	if (!g->can_railgate)
 		return 0;
 
 	d = debugfs_create_file(

@@ -27,16 +27,13 @@
 
 void gk20a_bus_init_hw(struct gk20a *g)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
-
 	/* enable pri timeout only on silicon */
 	if (nvgpu_platform_is_silicon(g)) {
 		gk20a_writel(g,
 			timer_pri_timeout_r(),
 			timer_pri_timeout_period_f(
-				platform->default_pri_timeout ?
-					platform->default_pri_timeout :
-								0x186A0) |
+				g->default_pri_timeout ?
+					g->default_pri_timeout : 0x186A0) |
 			timer_pri_timeout_en_en_enabled_f());
 	} else {
 		gk20a_writel(g,

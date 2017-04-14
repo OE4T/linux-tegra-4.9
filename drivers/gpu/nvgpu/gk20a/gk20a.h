@@ -987,6 +987,8 @@ struct gk20a {
 	bool forced_reset;
 	bool allow_all;
 
+	u32 default_pri_timeout;
+
 	u32 emc3d_ratio;
 
 #ifdef CONFIG_DEBUG_FS

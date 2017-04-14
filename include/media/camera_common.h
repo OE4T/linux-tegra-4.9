@@ -255,6 +255,8 @@ const struct camera_common_colorfmt *camera_common_find_datafmt(
 int camera_common_enum_mbus_code(struct v4l2_subdev *sd,
 				struct v4l2_subdev_pad_config *cfg,
 				struct v4l2_subdev_mbus_code_enum *code);
+int camera_common_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
+			unsigned int *code);
 int camera_common_try_fmt(struct v4l2_subdev *sd,
 			   struct v4l2_mbus_framefmt *mf);
 int camera_common_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf);

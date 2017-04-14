@@ -270,7 +270,7 @@ struct tegra_mc_vi {
 
 	bool bypass;
 
-	struct tegra_vi_fops *fops;
+	const struct tegra_vi_fops *fops;
 
 	dma_addr_t emb_buf;
 	void *emb_buf_addr;
@@ -317,6 +317,16 @@ const struct tegra_video_format *tegra_core_get_format_by_fourcc(
 		struct tegra_channel *chan, u32 fourcc);
 void tegra_core_get_description_by_idx(struct tegra_channel *chan,
 		unsigned int index, __u8 *description);
+void tegra_channel_queued_buf_done(struct tegra_channel *chan,
+					  enum vb2_buffer_state state);
+int tegra_channel_set_stream(struct tegra_channel *chan, bool on);
+void tegra_channel_ring_buffer(struct tegra_channel *chan,
+			       struct vb2_v4l2_buffer *vb,
+			       struct timespec *ts, int state);
+struct tegra_channel_buffer *dequeue_buffer(struct tegra_channel *chan);
+void tegra_channel_init_ring_buffer(struct tegra_channel *chan);
+void free_ring_buffers(struct tegra_channel *chan, int frames);
+int tegra_channel_set_power(struct tegra_channel *chan, bool on);
 
 struct tegra_vi_fops {
 	int (*vi_power_on)(struct tegra_channel *chan);
@@ -344,17 +354,17 @@ struct tegra_csi_fops {
 
 struct tegra_t210_vi_data {
 	struct nvhost_device_data *info;
-	struct tegra_vi_fops *vi_fops;
-	struct tegra_csi_fops *csi_fops;
+	const struct tegra_vi_fops *vi_fops;
+	const struct tegra_csi_fops *csi_fops;
 };
 
 struct tegra_vi_data {
 	struct nvhost_device_data *info;
-	struct tegra_vi_fops *vi_fops;
+	const struct tegra_vi_fops *vi_fops;
 };
 
 struct tegra_csi_data {
 	struct nvhost_device_data *info;
-	struct tegra_csi_fops *csi_fops;
+	const struct tegra_csi_fops *csi_fops;
 };
 #endif

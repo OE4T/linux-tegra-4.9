@@ -22,6 +22,7 @@
 #include "nvhost_acm.h"
 #include "vi4_formats.h"
 #include "vi/vi_notify.h"
+#include "vi4_fops.h"
 #include <media/sensor_common.h>
 
 #define DEFAULT_FRAMERATE	30
@@ -33,16 +34,6 @@
 #define FE_SYNCPT_IDX	1
 #define PG_BITRATE	32
 
-void tegra_channel_queued_buf_done(struct tegra_channel *chan,
-					  enum vb2_buffer_state state);
-int tegra_channel_set_stream(struct tegra_channel *chan, bool on);
-void tegra_channel_ring_buffer(struct tegra_channel *chan,
-		struct vb2_v4l2_buffer *vb,
-		struct timespec *ts, int state);
-struct tegra_channel_buffer *dequeue_buffer(struct tegra_channel *chan);
-void tegra_channel_init_ring_buffer(struct tegra_channel *chan);
-void free_ring_buffers(struct tegra_channel *chan, int frames);
-int tegra_channel_set_power(struct tegra_channel *chan, bool on);
 static void tegra_channel_stop_kthreads(struct tegra_channel *chan);
 static int tegra_channel_stop_increments(struct tegra_channel *chan);
 static void tegra_channel_notify_status_callback(
@@ -52,7 +43,7 @@ static void tegra_channel_notify_status_callback(
 static void tegra_channel_error_worker(struct work_struct *status_work);
 static void tegra_channel_notify_error_callback(void *);
 
-u32 csimux_config_stream[] = {
+static u32 csimux_config_stream[] = {
 	CSIMUX_CONFIG_STREAM_0,
 	CSIMUX_CONFIG_STREAM_1,
 	CSIMUX_CONFIG_STREAM_2,
@@ -78,7 +69,7 @@ static void vi4_channel_write(struct tegra_channel *chan,
 		chan->vi->iomem + VI4_CHANNEL_OFFSET * (index + 1) + addr);
 }
 
-void vi4_init_video_formats(struct tegra_channel *chan)
+static void vi4_init_video_formats(struct tegra_channel *chan)
 {
 	int i;
 
@@ -87,7 +78,7 @@ void vi4_init_video_formats(struct tegra_channel *chan)
 		chan->video_formats[i] = &vi4_video_formats[i];
 }
 
-long vi4_default_ioctl(struct file *file, void *fh,
+static long vi4_default_ioctl(struct file *file, void *fh,
 			bool use_prio, unsigned int cmd, void *arg)
 {
 	struct v4l2_fh *vfh = file->private_data;
@@ -182,7 +173,7 @@ long vi4_default_ioctl(struct file *file, void *fh,
 }
 
 
-int tegra_vi4_s_ctrl(struct v4l2_ctrl *ctrl)
+static int tegra_vi4_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct tegra_channel *chan = container_of(ctrl->handler,
 				struct tegra_channel, ctrl_handler);
@@ -217,7 +208,7 @@ static const struct v4l2_ctrl_config vi4_custom_ctrls[] = {
 	},
 };
 
-int vi4_add_ctrls(struct tegra_channel *chan)
+static int vi4_add_ctrls(struct tegra_channel *chan)
 {
 	int i;
 
@@ -845,7 +836,7 @@ static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 	return 0;
 }
 
-int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
+static int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 {
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	/* WAR: With newer version pipe init has some race condition */
@@ -991,7 +982,7 @@ error_pipeline_start:
 	return ret;
 }
 
-int vi4_channel_stop_streaming(struct vb2_queue *vq)
+static int vi4_channel_stop_streaming(struct vb2_queue *vq)
 {
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	bool is_streaming = atomic_read(&chan->is_streaming);
@@ -1058,7 +1049,7 @@ void tegra_vi4_power_off(struct tegra_mc_vi *vi)
 	nvhost_module_idle(vi->ndev);
 }
 
-int vi4_power_on(struct tegra_channel *chan)
+static int vi4_power_on(struct tegra_channel *chan)
 {
 	int ret = 0;
 	struct tegra_mc_vi *vi;
@@ -1095,7 +1086,7 @@ int vi4_power_on(struct tegra_channel *chan)
 	return 0;
 }
 
-void vi4_power_off(struct tegra_channel *chan)
+static void vi4_power_off(struct tegra_channel *chan)
 {
 	int ret = 0;
 	struct tegra_mc_vi *vi;
@@ -1143,3 +1134,13 @@ static void tegra_channel_notify_error_callback(void *client_data)
 
 	schedule_work(&chan->error_work);
 }
+
+struct tegra_vi_fops vi4_fops = {
+	.vi_power_on = vi4_power_on,
+	.vi_power_off = vi4_power_off,
+	.vi_start_streaming = vi4_channel_start_streaming,
+	.vi_stop_streaming = vi4_channel_stop_streaming,
+	.vi_add_ctrls = vi4_add_ctrls,
+	.vi_init_video_formats = vi4_init_video_formats,
+	.vi_default_ioctl = vi4_default_ioctl,
+};

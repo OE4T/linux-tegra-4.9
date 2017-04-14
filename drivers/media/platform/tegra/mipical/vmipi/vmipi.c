@@ -27,7 +27,7 @@
 #include "mipi_cal.h"
 #include "vmipi.h"
 
-const char *tegra_vmipi_cmd[] = {
+static const char *tegra_vmipi_cmd[] = {
 	"TEGRA_VMIPI_CMD_CALIBRATE",
 	"TEGRA_VMIPI_CMD_BIAS_PAD_ENABLE",
 	"TEGRA_VMIPI_CMD_BIAS_PAD_DISABLE",

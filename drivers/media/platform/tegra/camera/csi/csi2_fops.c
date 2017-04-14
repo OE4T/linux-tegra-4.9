@@ -18,6 +18,7 @@
 
 #include "mipical/mipi_cal.h"
 #include "nvhost_acm.h"
+#include "csi2_fops.h"
 
 static void csi_write(struct tegra_csi_channel *chan, unsigned int addr,
 			u32 val, u8 port)
@@ -260,7 +261,7 @@ static int csi2_tpg_start_streaming(struct tegra_csi_channel *chan,
 	return 0;
 }
 
-int csi2_start_streaming(struct tegra_csi_channel *chan,
+static int csi2_start_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num)
 {
 	struct tegra_csi_port *port = &chan->ports[port_num];
@@ -355,7 +356,7 @@ int csi2_start_streaming(struct tegra_csi_channel *chan,
 	return 0;
 }
 
-void csi2_stop_streaming(struct tegra_csi_channel *chan,
+static void csi2_stop_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num)
 {
 	struct tegra_csi_port *port = &chan->ports[port_num];
@@ -374,7 +375,7 @@ void csi2_stop_streaming(struct tegra_csi_channel *chan,
 			CSI_PP_DISABLE);
 }
 
-int csi2_hw_init(struct tegra_csi_device *csi)
+static int csi2_hw_init(struct tegra_csi_device *csi)
 {
 	int i, csi_port;
 	struct tegra_csi_channel *it;
@@ -406,7 +407,7 @@ int csi2_hw_init(struct tegra_csi_device *csi)
 	return 0;
 }
 
-int csi2_mipi_cal(struct tegra_csi_channel *chan)
+static int csi2_mipi_cal(struct tegra_csi_channel *chan)
 {
 	unsigned int lanes, num_ports, val, csi_port;
 	struct tegra_csi_port *port;
@@ -449,11 +450,11 @@ int csi2_mipi_cal(struct tegra_csi_channel *chan)
 	return tegra_mipi_calibration(lanes);
 }
 
-int csi2_power_on(struct tegra_csi_device *csi)
+static int csi2_power_on(struct tegra_csi_device *csi)
 {
 	return 0;
 }
-int csi2_power_off(struct tegra_csi_device *csi)
+static int csi2_power_off(struct tegra_csi_device *csi)
 {
 	return 0;
 }

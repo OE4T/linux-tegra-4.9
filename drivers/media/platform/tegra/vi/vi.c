@@ -47,7 +47,7 @@
 #define MAX_DEVID_LENGTH	16
 #define TEGRA_VI_NAME		"tegra_vi"
 
-struct vi *tegra_vi;
+static struct vi *tegra_vi;
 
 struct vi *tegra_vi_get(void)
 {

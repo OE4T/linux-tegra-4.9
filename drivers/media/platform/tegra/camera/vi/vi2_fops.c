@@ -18,6 +18,7 @@
 #include <media/vi.h>
 #include "nvhost_acm.h"
 #include "camera/csi/csi2_fops.h"
+#include "vi2_fops.h"
 #include "vi2_formats.h"
 
 #define DEFAULT_FRAMERATE	30
@@ -26,17 +27,7 @@
 #define NUM_PPC		2
 #define VI_CSI_CLK_SCALE	110
 
-extern void tegra_channel_queued_buf_done(struct tegra_channel *chan,
-					  enum vb2_buffer_state state);
 static void tegra_channel_stop_kthreads(struct tegra_channel *chan);
-extern int tegra_channel_set_stream(struct tegra_channel *chan, bool on);
-extern void tegra_channel_ring_buffer(struct tegra_channel *chan,
-				struct vb2_v4l2_buffer *vb,
-				struct timespec *ts, int state);
-extern struct tegra_channel_buffer *dequeue_buffer(struct tegra_channel *chan);
-extern void tegra_channel_init_ring_buffer(struct tegra_channel *chan);
-extern void free_ring_buffers(struct tegra_channel *chan, int frames);
-extern int tegra_channel_set_power(struct tegra_channel *chan, bool on);
 
 static void vi_write(struct tegra_mc_vi *vi, unsigned int addr, u32 val)
 {
@@ -85,7 +76,7 @@ static void vi_channel_syncpt_free(struct tegra_channel *chan)
 		nvhost_syncpt_put_ref_ext(chan->vi->ndev, chan->syncpt[i][0]);
 }
 
-void vi2_init_video_formats(struct tegra_channel *chan)
+static void vi2_init_video_formats(struct tegra_channel *chan)
 {
 	int i;
 
@@ -94,7 +85,7 @@ void vi2_init_video_formats(struct tegra_channel *chan)
 		chan->video_formats[i] = &vi2_video_formats[i];
 }
 
-int tegra_vi2_s_ctrl(struct v4l2_ctrl *ctrl)
+static int tegra_vi2_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct tegra_channel *chan = container_of(ctrl->handler,
 				struct tegra_channel, ctrl_handler);
@@ -129,7 +120,7 @@ static const struct v4l2_ctrl_config vi2_custom_ctrls[] = {
 	},
 };
 
-int vi2_add_ctrls(struct tegra_channel *chan)
+static int vi2_add_ctrls(struct tegra_channel *chan)
 {
 	int i;
 
@@ -283,8 +274,8 @@ static void tegra_channel_vi_csi_recover(struct tegra_channel *chan)
 	/* re-init VI and CSI */
 	tegra_channel_capture_setup(chan);
 	for (index = 0; index < valid_ports; index++) {
-		csi2_stop_streaming(csi_chan, index);
-		csi2_start_streaming(csi_chan, index);
+		csi->fops->csi_stop_streaming(csi_chan, index);
+		csi->fops->csi_start_streaming(csi_chan, index);
 		nvhost_syncpt_set_min_eq_max_ext(chan->vi->ndev,
 						chan->syncpt[index][0]);
 	}
@@ -635,7 +626,7 @@ static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 	return 0;
 }
 
-int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
+static int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
 {
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	/* WAR: With newer version pipe init has some race condition */
@@ -730,7 +721,7 @@ error_pipeline_start:
 	return ret;
 }
 
-void vi2_channel_stop_streaming(struct vb2_queue *vq)
+static int vi2_channel_stop_streaming(struct vb2_queue *vq)
 {
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	int index;
@@ -771,6 +762,7 @@ void vi2_channel_stop_streaming(struct vb2_queue *vq)
 		tegra_channel_update_clknbw(chan, 0);
 
 	vi_channel_syncpt_free(chan);
+	return 0;
 }
 
 int tegra_vi2_power_on(struct tegra_mc_vi *vi)
@@ -804,7 +796,7 @@ void tegra_vi2_power_off(struct tegra_mc_vi *vi)
 	nvhost_module_idle(vi->ndev);
 }
 
-int vi2_power_on(struct tegra_channel *chan)
+static int vi2_power_on(struct tegra_channel *chan)
 {
 	int ret = 0;
 	struct tegra_mc_vi *vi;
@@ -833,7 +825,7 @@ int vi2_power_on(struct tegra_channel *chan)
 	return ret;
 }
 
-void vi2_power_off(struct tegra_channel *chan)
+static void vi2_power_off(struct tegra_channel *chan)
 {
 	int ret = 0;
 	struct tegra_mc_vi *vi;
@@ -860,3 +852,12 @@ void vi2_power_off(struct tegra_channel *chan)
 	}
 	nvhost_module_remove_client(vi->ndev, &chan->video);
 }
+
+struct tegra_vi_fops vi2_fops = {
+	.vi_power_on = vi2_power_on,
+	.vi_power_off = vi2_power_off,
+	.vi_start_streaming = vi2_channel_start_streaming,
+	.vi_stop_streaming = vi2_channel_stop_streaming,
+	.vi_add_ctrls = vi2_add_ctrls,
+	.vi_init_video_formats = vi2_init_video_formats,
+};

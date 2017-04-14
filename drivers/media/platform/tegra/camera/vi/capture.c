@@ -692,7 +692,7 @@ static int vi_capture_request_pin_and_reloc(struct tegra_channel *chan,
 	uint32_t num_relocs = req->num_relocs;
 	uint32_t __user *reloc_relatives =
 			(uint32_t __user *)(uintptr_t)req->reloc_relatives;
-	uint32_t local_reloc_relatives[num_relocs];
+	uint32_t local_reloc_relatives[VI_NUM_ATOMP_SURFACES];
 	struct vi_capture_unpins *unpins;
 	uint32_t request_offset = req->buffer_index * capture->request_size;
 	void *reloc_page_addr = NULL;

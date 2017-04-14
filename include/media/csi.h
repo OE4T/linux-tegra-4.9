@@ -88,7 +88,7 @@ struct tegra_csi_device {
 	int num_channels;
 	struct list_head csi_chans;
 	struct tegra_csi_channel *tpg_start;
-	struct tegra_csi_fops *fops;
+	const struct tegra_csi_fops *fops;
 	const struct tpg_frmfmt *tpg_frmfmt_table;
 	unsigned int tpg_frmfmt_table_size;
 	atomic_t power_ref;

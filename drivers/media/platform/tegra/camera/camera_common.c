@@ -78,7 +78,7 @@ static const char *camera_common_csi_io_pads[] = {
 	"csif",
 };
 
-bool camera_common_verify_code(struct tegra_channel *chan, unsigned int code)
+static bool camera_common_verify_code(struct tegra_channel *chan, unsigned int code)
 {
 	int i;
 
@@ -265,18 +265,18 @@ ssize_t camera_common_debugfs_write(
 	if (copy_from_user(&buffer, buf, sizeof(buffer)))
 		goto debugfs_write_fail;
 
-	if (sscanf(buf, "0x%x 0x%x", &address, &data) == 2)
+	if (sscanf(buffer, "0x%x 0x%x", &address, &data) == 2)
 		goto set_attr;
-	if (sscanf(buf, "0X%x 0X%x", &address, &data) == 2)
+	if (sscanf(buffer, "0X%x 0X%x", &address, &data) == 2)
 		goto set_attr;
-	if (sscanf(buf, "%d %d", &address, &data) == 2)
+	if (sscanf(buffer, "%d %d", &address, &data) == 2)
 		goto set_attr;
 
-	if (sscanf(buf, "0x%x 0x%x", &address, &data) == 1)
+	if (sscanf(buffer, "0x%x 0x%x", &address, &data) == 1)
 		goto read;
-	if (sscanf(buf, "0X%x 0X%x", &address, &data) == 1)
+	if (sscanf(buffer, "0X%x 0X%x", &address, &data) == 1)
 		goto read;
-	if (sscanf(buf, "%d %d", &address, &data) == 1)
+	if (sscanf(buffer, "%d %d", &address, &data) == 1)
 		goto read;
 
 	dev_err(&client->dev, "SYNTAX ERROR: %s\n", buf);
@@ -402,23 +402,6 @@ int camera_common_enum_mbus_code(struct v4l2_subdev *sd,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(camera_common_enum_mbus_code);
-
-int camera_common_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
-			unsigned int *code)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct camera_common_data *s_data = to_camera_common_data(client);
-
-	if (s_data->num_color_fmts < 1 || !s_data->color_fmts) {
-		s_data->color_fmts = camera_common_color_fmts;
-		s_data->num_color_fmts = ARRAY_SIZE(camera_common_color_fmts);
-	}
-
-	if ((unsigned int)index >= s_data->num_color_fmts)
-		return -EINVAL;
-	*code = s_data->color_fmts[index].code;
-	return 0;
-}
 
 int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 {

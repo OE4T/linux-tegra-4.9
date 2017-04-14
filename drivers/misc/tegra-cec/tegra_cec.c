@@ -649,6 +649,7 @@ static int tegra_cec_probe(struct platform_device *pdev)
 	return 0;
 
 cec_error:
+	cancel_work_sync(&cec->work);
 	clk_disable(cec->clk);
 	clk_put(cec->clk);
 #if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)

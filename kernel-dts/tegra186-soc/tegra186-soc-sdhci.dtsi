@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <dt-bindings/linux/driver-info.h>
 #include "tegra186-pin-drive-sdmmc-common.dtsi"
 
 / {
@@ -98,6 +99,10 @@
 		clock-names = "sdmmc", "pll_p";
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_SDMMC3A>;
+#ifdef KERNEL_VERSION_4_9
+		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC3_HV>;
+		pad-names = "sdmmc";
+#endif
 		nvidia,en-periodic-calib;
 		status = "disabled";
 	};
@@ -137,6 +142,10 @@
 		clock-names = "sdmmc", "pll_p";
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_SDMMC2A>;
+#ifdef KERNEL_VERSION_4_9
+		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC2_HV>;
+		pad-names = "sdmmc";
+#endif
 		status = "disabled";
 	};
 
@@ -171,6 +180,10 @@
 		clock-names = "sdmmc", "pll_p";
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_SDMMC1A>;
+#ifdef KERNEL_VERSION_4_9
+		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC1_HV>;
+		pad-names = "sdmmc";
+#endif
 		nvidia,en-periodic-calib;
 		status = "disabled";
 	 };

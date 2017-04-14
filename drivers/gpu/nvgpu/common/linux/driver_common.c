@@ -102,6 +102,8 @@ static void nvgpu_init_pm_vars(struct gk20a *g)
 		nvgpu_platform_is_silicon(g) ? platform->enable_aelpg : false;
 	g->mscg_enabled =
 		nvgpu_platform_is_silicon(g) ? platform->enable_mscg : false;
+	g->can_elpg =
+		nvgpu_platform_is_silicon(g) ? platform->can_elpg : false;
 
 	/* set default values to aelpg parameters */
 	g->pmu.aelpg_param[0] = APCTRL_SAMPLING_PERIOD_PG_DEFAULT_US;

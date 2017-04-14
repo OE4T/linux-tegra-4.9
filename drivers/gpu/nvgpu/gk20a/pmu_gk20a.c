@@ -3326,12 +3326,11 @@ void pmu_setup_hw(struct work_struct *work)
 {
 	struct pmu_gk20a *pmu = container_of(work, struct pmu_gk20a, pg_init);
 	struct gk20a *g = gk20a_from_pmu(pmu);
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	switch (pmu->pmu_state) {
 	case PMU_STATE_INIT_RECEIVED:
 		gk20a_dbg_pmu("pmu starting");
-		if (platform->can_elpg)
+		if (g->can_elpg)
 			pmu_init_powergating(g);
 		break;
 	case PMU_STATE_ELPG_BOOTED:

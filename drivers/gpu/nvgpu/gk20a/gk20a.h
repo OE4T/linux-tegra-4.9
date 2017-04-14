@@ -981,6 +981,7 @@ struct gk20a {
 	bool elcg_enabled;
 	bool elpg_enabled;
 	bool aelpg_enabled;
+	bool can_elpg;
 	bool mscg_enabled;
 	bool forced_idle;
 	bool forced_reset;

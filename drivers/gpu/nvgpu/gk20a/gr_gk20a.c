@@ -3231,7 +3231,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		u32 lockboost_mask;
 		u32 lockboost;
 
-		if (support_gk20a_pmu(g->dev)) {
+		if (g->support_pmu) {
 			err = gk20a_pmu_disable_elpg(g);
 			if (err) {
 				nvgpu_err(g,
@@ -3281,7 +3281,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 
 		args->flags |= NVGPU_ALLOC_OBJ_FLAGS_LOCKBOOST_ZERO;
 
-		if (support_gk20a_pmu(g->dev))
+		if (g->support_pmu)
 			gk20a_pmu_enable_elpg(g);
 	}
 

@@ -3548,7 +3548,7 @@ int gk20a_init_pmu_support(struct gk20a *g)
 	if (err)
 		return err;
 
-	if (support_gk20a_pmu(g->dev)) {
+	if (g->support_pmu) {
 		err = gk20a_init_pmu_setup_sw(g);
 		if (err)
 			return err;
@@ -4945,7 +4945,7 @@ int gk20a_pmu_pg_global_enable(struct gk20a *g, u32 enable_pg)
 			if (g->ops.pmu.pmu_lpwr_enable_pg)
 				status = g->ops.pmu.pmu_lpwr_enable_pg(g,
 						true);
-		} else if (support_gk20a_pmu(g->dev))
+		} else if (g->support_pmu)
 			status = gk20a_pmu_enable_elpg(g);
 	} else if (enable_pg == false) {
 		if (g->ops.pmu.pmu_pg_engines_feature_list &&
@@ -4955,7 +4955,7 @@ int gk20a_pmu_pg_global_enable(struct gk20a *g, u32 enable_pg)
 			if (g->ops.pmu.pmu_lpwr_disable_pg)
 				status = g->ops.pmu.pmu_lpwr_disable_pg(g,
 						true);
-		} else if (support_gk20a_pmu(g->dev))
+		} else if (g->support_pmu)
 			status = gk20a_pmu_disable_elpg(g);
 	}
 
@@ -5008,7 +5008,7 @@ int gk20a_pmu_enable_elpg(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	if (!support_gk20a_pmu(g->dev))
+	if (!g->support_pmu)
 		return ret;
 
 	nvgpu_mutex_acquire(&pmu->elpg_mutex);
@@ -5070,7 +5070,7 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 	if (g->ops.pmu.pmu_pg_supported_engines_list)
 		pg_engine_id_list = g->ops.pmu.pmu_pg_supported_engines_list(g);
 
-	if (!support_gk20a_pmu(g->dev))
+	if (!g->support_pmu)
 		return ret;
 
 	nvgpu_mutex_acquire(&pmu->elpg_mutex);
@@ -5188,7 +5188,7 @@ int gk20a_pmu_destroy(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	if (!support_gk20a_pmu(g->dev))
+	if (!g->support_pmu)
 		return 0;
 
 	/* make sure the pending operations are finished before we continue */

@@ -544,14 +544,14 @@ void gk20a_gr_clear_sm_hww(struct gk20a *g,
 #define gr_gk20a_elpg_protected_call(g, func) \
 	({ \
 		int err = 0; \
-		if (support_gk20a_pmu(g->dev) && g->elpg_enabled) {\
+		if (g->support_pmu && g->elpg_enabled) {\
 			err = gk20a_pmu_disable_elpg(g); \
 			if (err) \
 				gk20a_pmu_enable_elpg(g); \
 		} \
 		if (!err) { \
 			err = func; \
-			if (support_gk20a_pmu(g->dev) && g->elpg_enabled) \
+			if (g->support_pmu && g->elpg_enabled) \
 				gk20a_pmu_enable_elpg(g); \
 		} \
 		err; \

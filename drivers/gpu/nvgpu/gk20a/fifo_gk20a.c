@@ -1231,7 +1231,7 @@ void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 		nvgpu_err(g, "unsupported engine_id %d", engine_id);
 
 	if (engine_enum == ENGINE_GR_GK20A) {
-		if (support_gk20a_pmu(g->dev) && g->elpg_enabled)
+		if (g->support_pmu && g->elpg_enabled)
 			gk20a_pmu_disable_elpg(g);
 		/* resetting engine will alter read/write index.
 		 * need to flush circular buffer before re-enabling FECS.
@@ -1244,7 +1244,7 @@ void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 		/* resetting engine using mc_enable_r() is not
 		enough, we do full init sequence */
 		gk20a_gr_reset(g);
-		if (support_gk20a_pmu(g->dev) && g->elpg_enabled)
+		if (g->support_pmu && g->elpg_enabled)
 			gk20a_pmu_enable_elpg(g);
 	}
 	if ((engine_enum == ENGINE_GRCE_GK20A) ||
@@ -1479,7 +1479,7 @@ static bool gk20a_fifo_handle_mmu_fault(
 	g->fifo.deferred_reset_pending = false;
 
 	/* Disable power management */
-	if (support_gk20a_pmu(g->dev) && g->elpg_enabled)
+	if (g->support_pmu && g->elpg_enabled)
 		gk20a_pmu_disable_elpg(g);
 	if (g->ops.clock_gating.slcg_gr_load_gating_prod)
 		g->ops.clock_gating.slcg_gr_load_gating_prod(g,
@@ -1678,7 +1678,7 @@ static bool gk20a_fifo_handle_mmu_fault(
 		     gr_gpfifo_ctl_semaphore_access_enabled_f());
 
 	/* It is safe to enable ELPG again. */
-	if (support_gk20a_pmu(g->dev) && g->elpg_enabled)
+	if (g->support_pmu && g->elpg_enabled)
 		gk20a_pmu_enable_elpg(g);
 	return verbose;
 }

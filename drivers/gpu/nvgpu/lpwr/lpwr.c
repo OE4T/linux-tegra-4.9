@@ -363,7 +363,7 @@ int nvgpu_lpwr_enable_pg(struct gk20a *g, bool pstate_lock)
 	is_rppg_supported = nvgpu_lpwr_is_rppg_supported(g,
 			present_pstate);
 	if (is_rppg_supported) {
-		if (support_gk20a_pmu(g->dev) && g->elpg_enabled)
+		if (g->support_pmu && g->elpg_enabled)
 			status = gk20a_pmu_enable_elpg(g);
 	}
 
@@ -393,7 +393,7 @@ int nvgpu_lpwr_disable_pg(struct gk20a *g, bool pstate_lock)
 	is_rppg_supported = nvgpu_lpwr_is_rppg_supported(g,
 			present_pstate);
 	if (is_rppg_supported) {
-		if (support_gk20a_pmu(g->dev) && g->elpg_enabled) {
+		if (g->support_pmu && g->elpg_enabled) {
 			status = gk20a_pmu_disable_elpg(g);
 			if (status)
 				goto exit_unlock;

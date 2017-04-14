@@ -1005,6 +1005,8 @@ struct gk20a {
 	/* Debugfs knob for forcing syncpt support off in runtime. */
 	u32 disable_syncpoints;
 
+	bool support_pmu;
+
 	u32 emc3d_ratio;
 
 #ifdef CONFIG_DEBUG_FS

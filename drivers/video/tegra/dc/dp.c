@@ -2737,6 +2737,8 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	if (!dp->dc->initialized) {
+		tegra_sor_clk_switch_setup(sor, true);
+
 		/* switch to macro feedback clock */
 		clk_set_parent(sor->src_switch_clk, sor->brick_clk);
 
@@ -2883,6 +2885,8 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 	tegra_dc_sor_detach(dp->sor);
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
+	tegra_sor_clk_switch_setup(dp->sor, false);
+
 	/* switch back to SOR safe clock */
 	clk_set_parent(dp->sor->src_switch_clk, dp->sor->safe_clk);
 #endif

@@ -329,6 +329,19 @@ static inline u32 nv_sor_dp_int_enable(void)
 		return NV_SOR_DP_INT_ENABLE;
 }
 
+void __attribute((weak)) tegra_sor_clk_switch_setup_t19x(
+					struct tegra_dc_sor_data *, bool);
+
+static inline void tegra_sor_clk_switch_setup(struct tegra_dc_sor_data *sor,
+					bool flag)
+{
+	if (!sor)
+		return;
+
+	if (tegra_dc_is_t19x())
+		tegra_sor_clk_switch_setup_t19x(sor, flag);
+}
+
 static inline int tegra_sor_get_ctrl_num(struct tegra_dc_sor_data *sor)
 {
 	return (!sor || !sor->base) ? -ENODEV : sor->ctrl_num;

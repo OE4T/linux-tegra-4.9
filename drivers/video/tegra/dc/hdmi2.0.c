@@ -570,6 +570,7 @@ static int tegra_hdmi_controller_disable(struct tegra_hdmi *hdmi)
 	}
 
 	tegra_dc_sor_detach(sor);
+	tegra_sor_clk_switch_setup(sor, false);
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_SAFE_CLK);
 	tegra_sor_power_lanes(sor, 4, false);
 	tegra_sor_hdmi_pad_power_down(sor);
@@ -2321,6 +2322,7 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	tegra_sor_pad_cal_power(sor, true);
 	tegra_hdmi_config_tmds(hdmi);
 	tegra_sor_pad_cal_power(sor, false);
+	tegra_sor_clk_switch_setup(sor, true);
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_BRICK_CLK);
 	tegra_dc_sor_attach(sor);
 	/* enable hdcp */

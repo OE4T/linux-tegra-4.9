@@ -290,6 +290,7 @@
 #define NV_SOR_PLL1						(0x18)
 #define NV_SOR_PLL2						(0x19)
 #define NV_SOR_PLL3						(0x1a)
+#define NV_SOR_PLL4						(-1)
 #endif
 
 #define NV_SOR_PLL0_ICHPMP_SHFIT				(24)

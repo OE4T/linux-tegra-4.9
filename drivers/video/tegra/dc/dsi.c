@@ -4518,9 +4518,9 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	return 0;
 
 err_dc_clk_put:
-	clk_put(dc_clk);
+	tegra_disp_clk_put(&dc->ndev->dev, dc_clk);
 err_dsi_fixed_clk_put:
-	clk_put(dsi_fixed_clk);
+	tegra_disp_clk_put(&dc->ndev->dev, dsi_fixed_clk);
 err_dsi_clk_put:
 	for (i = 0; i < dsi->max_instances; i++) {
 		if (dsi->dsi_lp_clk[i])
@@ -4569,7 +4569,7 @@ static void _tegra_dc_dsi_destroy(struct tegra_dc *dc)
 	for (i = 0; i < dsi->max_instances; i++) {
 		iounmap(dsi->base[i]);
 	}
-	clk_put(dsi->dc_clk);
+	tegra_disp_clk_put(&dc->ndev->dev, dsi->dc_clk);
 	for (i = 0; i < dsi->max_instances; i++)
 		clk_put(dsi->dsi_clk[i]);
 

@@ -28,9 +28,7 @@
 
 void gk20a_enable_priv_ring(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
-
-	if (platform->is_fmodel)
+	if (g->is_fmodel)
 		return;
 
 	if (g->ops.clock_gating.slcg_priring_load_gating_prod)
@@ -75,9 +73,8 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	s32 retry = 100;
 	u32 gpc;
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
-	if (platform->is_fmodel)
+	if (g->is_fmodel)
 		return;
 
 	status0 = gk20a_readl(g, pri_ringmaster_intr_status0_r());

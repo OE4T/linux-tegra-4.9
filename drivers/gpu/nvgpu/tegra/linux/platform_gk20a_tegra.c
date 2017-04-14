@@ -112,12 +112,13 @@ static void gk20a_tegra_secure_page_destroy(struct device *dev,
 int gk20a_tegra_secure_page_alloc(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	struct gk20a *g = get_gk20a(dev);
 	struct secure_page_buffer *secure_buffer = &platform->secure_buffer;
 	DEFINE_DMA_ATTRS(attrs);
 	dma_addr_t iova;
 	size_t size = PAGE_SIZE;
 
-	if (platform->is_fmodel)
+	if (g->is_fmodel)
 		return -EINVAL;
 
 	(void)dma_alloc_attrs(&tegra_vpr_dev, size, &iova,
@@ -389,10 +390,11 @@ done:
 
 static int gk20a_tegra_railgate(struct device *dev)
 {
+	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
 
-	if (platform->is_fmodel ||
+	if (g->is_fmodel ||
 	    !tegra_dvfs_is_rail_up(platform->gpu_rail))
 		return 0;
 
@@ -442,11 +444,12 @@ err_power_off:
 
 static int gk20a_tegra_unrailgate(struct device *dev)
 {
+	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
 	bool first = false;
 
-	if (platform->is_fmodel)
+	if (g->is_fmodel)
 		return 0;
 
 	if (!platform->gpu_rail) {
@@ -517,10 +520,11 @@ err_clk_on:
 
 static bool gk20a_tegra_is_railgated(struct device *dev)
 {
+	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	bool ret = false;
 
-	if (!platform->is_fmodel)
+	if (!g->is_fmodel)
 		ret = !tegra_dvfs_is_rail_up(platform->gpu_rail);
 
 	return ret;
@@ -534,10 +538,11 @@ static bool gk20a_tegra_is_railgated(struct device *dev)
 
 static int gm20b_tegra_railgate(struct device *dev)
 {
+	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
 
-	if (platform->is_fmodel ||
+	if (g->is_fmodel ||
 	    !tegra_dvfs_is_rail_up(platform->gpu_rail))
 		return 0;
 
@@ -601,7 +606,7 @@ static int gm20b_tegra_unrailgate(struct device *dev)
 	int ret = 0;
 	bool first = false;
 
-	if (platform->is_fmodel)
+	if (g->is_fmodel)
 		return 0;
 
 #ifdef CONFIG_TEGRA_CLK_FRAMEWORK

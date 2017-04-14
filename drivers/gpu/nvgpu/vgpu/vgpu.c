@@ -18,6 +18,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/pm_runtime.h>
 #include <linux/pm_qos.h>
+#include <soc/tegra/chip-id.h>
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
@@ -574,8 +575,8 @@ int vgpu_probe(struct platform_device *pdev)
 	}
 
 	gk20a->dev = dev;
-
-	gk20a->is_fmodel = platform->is_fmodel;
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
+		gk20a->is_fmodel = true;
 
 	nvgpu_kmem_init(gk20a);
 

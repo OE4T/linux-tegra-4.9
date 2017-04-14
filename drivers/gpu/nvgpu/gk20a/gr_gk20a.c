@@ -380,10 +380,9 @@ int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long duration_ms,
 {
 	u32 val;
 	u32 delay = expect_delay;
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	struct nvgpu_timeout timeout;
 
-	if (platform->is_fmodel)
+	if (g->is_fmodel)
 		return 0;
 
 	gk20a_dbg_fn("");
@@ -1581,7 +1580,6 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	struct aiv_list_gk20a *sw_ctx_load = &g->gr.ctx_vars.sw_ctx_load;
 	struct av_list_gk20a *sw_method_init = &g->gr.ctx_vars.sw_method_init;
 	u32 last_method_data = 0;
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	struct ctx_header_desc *ctx = &c->ch_ctx.ctx_header;
 	struct nvgpu_mem *ctxheader = &ctx->mem;
 
@@ -1595,7 +1593,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	if (gr->ctx_vars.golden_image_initialized) {
 		goto clean_up;
 	}
-	if (!platform->is_fmodel) {
+	if (!g->is_fmodel) {
 		struct nvgpu_timeout timeout;
 
 		nvgpu_timeout_init(g, &timeout, FE_PWR_MODE_TIMEOUT_MAX / 1000,
@@ -1638,7 +1636,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	gk20a_readl(g, gr_fecs_ctxsw_reset_ctl_r());
 	nvgpu_udelay(10);
 
-	if (!platform->is_fmodel) {
+	if (!g->is_fmodel) {
 		struct nvgpu_timeout timeout;
 
 		nvgpu_timeout_init(g, &timeout, FE_PWR_MODE_TIMEOUT_MAX / 1000,
@@ -2580,11 +2578,10 @@ static void gr_gk20a_load_falcon_with_bootloader(struct gk20a *g)
 int gr_gk20a_load_ctxsw_ucode(struct gk20a *g)
 {
 	int err;
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	gk20a_dbg_fn("");
 
-	if (platform->is_fmodel) {
+	if (g->is_fmodel) {
 		gk20a_writel(g, gr_fecs_ctxsw_mailbox_r(7),
 			gr_fecs_ctxsw_mailbox_value_f(0xc0de7777));
 		gk20a_writel(g, gr_gpccs_ctxsw_mailbox_r(7),

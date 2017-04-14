@@ -442,9 +442,7 @@ done:
 
 int gr_gk20a_init_ctx_vars(struct gk20a *g, struct gr_gk20a *gr)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
-
-	if (platform->is_fmodel)
+	if (g->is_fmodel)
 		return gr_gk20a_init_ctx_vars_sim(g, gr);
 	else
 		return gr_gk20a_init_ctx_vars_fw(g, gr);

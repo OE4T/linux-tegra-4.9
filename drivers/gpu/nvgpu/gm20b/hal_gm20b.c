@@ -183,14 +183,13 @@ int gm20b_init_hal(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
 	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	u32 val;
 
 	gops->clock_gating = gm20b_ops.clock_gating;
 	gops->securegpccs = false;
 	gops->pmupstate = false;
 #ifdef CONFIG_TEGRA_ACR
-	if (platform->is_fmodel) {
+	if (g->is_fmodel) {
 		gops->privsecurity = 1;
 	} else {
 		val = gk20a_readl(g, fuse_opt_priv_sec_en_r());
@@ -202,7 +201,7 @@ int gm20b_init_hal(struct gk20a *g)
 		}
 	}
 #else
-	if (platform->is_fmodel) {
+	if (g->is_fmodel) {
 		gk20a_dbg_info("running ASIM with PRIV security disabled");
 		gops->privsecurity = 0;
 	} else {

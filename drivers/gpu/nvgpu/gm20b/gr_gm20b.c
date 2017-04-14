@@ -725,11 +725,10 @@ static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 	u32 reg_offset = gr_gpcs_gpccs_falcon_hwcfg_r() -
 	  gr_fecs_falcon_hwcfg_r();
 	u8 falcon_id_mask = 0;
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	gk20a_dbg_fn("");
 
-	if (platform->is_fmodel) {
+	if (g->is_fmodel) {
 		gk20a_writel(g, gr_fecs_ctxsw_mailbox_r(7),
 			gr_fecs_ctxsw_mailbox_value_f(0xc0de7777));
 		gk20a_writel(g, gr_gpccs_ctxsw_mailbox_r(7),

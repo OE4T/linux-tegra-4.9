@@ -91,9 +91,8 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 	u64 compbit_base_post_multiply64;
 	u64 compbit_store_iova;
 	u64 compbit_base_post_divide64;
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
-	if (platform->is_fmodel)
+	if (g->is_fmodel)
 		compbit_store_iova = gk20a_mem_phys(&gr->compbit_store.mem);
 	else
 		compbit_store_iova = g->ops.mm.get_iova_addr(g,

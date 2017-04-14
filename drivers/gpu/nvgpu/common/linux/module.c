@@ -212,11 +212,6 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	if (g->irq_stall != g->irq_nonstall)
 		disable_irq(g->irq_nonstall);
 
-	/*
-	 * is_fmodel needs to be in gk20a struct for deferred teardown
-	*/
-	g->is_fmodel = platform->is_fmodel;
-
 	/* Decrement platform power refcount */
 	if (platform->idle)
 		platform->idle(dev);
@@ -885,7 +880,7 @@ static int gk20a_probe(struct platform_device *dev)
 	gk20a->dev = &dev->dev;
 
 	if (nvgpu_platform_is_simulation(gk20a))
-		platform->is_fmodel = true;
+		gk20a->is_fmodel = true;
 
 	nvgpu_kmem_init(gk20a);
 

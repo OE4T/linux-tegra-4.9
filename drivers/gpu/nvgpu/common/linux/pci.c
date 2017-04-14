@@ -402,11 +402,6 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	}
 	disable_irq(g->irq_stall);
 
-	/*
-	 * is_fmodel needs to be in gk20a struct for deferred teardown
-	 */
-	g->is_fmodel = platform->is_fmodel;
-
 	err = nvgpu_pci_init_support(pdev);
 	if (err)
 		return err;

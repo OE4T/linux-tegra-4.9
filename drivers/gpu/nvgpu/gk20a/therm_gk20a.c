@@ -117,7 +117,6 @@ int gk20a_elcg_init_idle_filters(struct gk20a *g)
 	u32 engine_id;
 	u32 active_engine_id = 0;
 	struct fifo_gk20a *f = &g->fifo;
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	gk20a_dbg_fn("");
 
@@ -125,7 +124,7 @@ int gk20a_elcg_init_idle_filters(struct gk20a *g)
 		active_engine_id = f->active_engines_list[engine_id];
 		gate_ctrl = gk20a_readl(g, therm_gate_ctrl_r(active_engine_id));
 
-		if (platform->is_fmodel) {
+		if (g->is_fmodel) {
 			gate_ctrl = set_field(gate_ctrl,
 				therm_gate_ctrl_eng_delay_after_m(),
 				therm_gate_ctrl_eng_delay_after_f(4));

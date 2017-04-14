@@ -19,26 +19,26 @@
 #ifndef __camera_common__
 #define __camera_common__
 
+#include <linux/clk.h>
+#include <linux/debugfs.h>
 #include <linux/delay.h>
 #include <linux/fs.h>
 #include <linux/i2c.h>
+#include <linux/kernel.h>
 #include <linux/regmap.h>
-#include <linux/clk.h>
 #include <linux/regulator/consumer.h>
 #include <linux/platform_device.h>
+#include <linux/v4l2-mediabus.h>
+#include <linux/version.h>
 #include <linux/videodev2.h>
 
-#include <linux/kernel.h>
-#include <linux/version.h>
-#include <linux/debugfs.h>
-
+#include <media/camera_version_utils.h>
+#include <media/nvc_focus.h>
+#include <media/sensor_common.h>
+#include <media/soc_camera.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-ctrls.h>
-#include <linux/v4l2-mediabus.h>
-#include <media/soc_camera.h>
-#include <media/nvc_focus.h>
-#include <media/camera_version_utils.h>
 
 /*
  * Scaling factor for converting a Q10.22 fixed point value
@@ -75,13 +75,6 @@ struct camera_common_regulators {
 	const char *vcmvdd;
 };
 
-struct camera_common_mode_info {
-	u32	width;
-	u32 height;
-	u32 line_length;
-	u64 pixel_clock;
-};
-
 struct camera_common_pdata {
 	const char *mclk_name; /* NULL for default default_mclk */
 	const char *parentclk_name; /* NULL for no parent clock*/
@@ -94,7 +87,6 @@ struct camera_common_pdata {
 	struct camera_common_regulators regulators;
 	bool use_cam_gpio;
 	bool has_eeprom;
-	struct camera_common_mode_info *mode_info;
 };
 
 struct camera_common_eeprom_data {
@@ -179,6 +171,8 @@ struct camera_common_data {
 	struct v4l2_subdev			subdev;
 	struct v4l2_ctrl			**ctrls;
 
+	struct sensor_properties		sensor_props;
+
 	void	*priv;
 	int	numctrls;
 	int	csi_port;
@@ -244,8 +238,6 @@ int camera_common_parse_clocks(struct i2c_client *client,
 			struct camera_common_pdata *pdata);
 int camera_common_parse_ports(struct i2c_client *client,
 			      struct camera_common_data *s_data);
-int camera_common_parse_sensor_mode(struct i2c_client *client,
-			struct camera_common_pdata *pdata);
 
 int camera_common_debugfs_show(struct seq_file *s, void *unused);
 ssize_t camera_common_debugfs_write(

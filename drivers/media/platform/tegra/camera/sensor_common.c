@@ -68,8 +68,12 @@ static int sensor_common_parse_signal_props(
 		&signal->num_lanes);
 	read_property_u32(node, "mclk_khz",
 		&signal->mclk_freq);
-	read_property_u64(node, "pix_clk_hz",
+	err = read_property_u64(node, "pix_clk_hz",
 		&signal->pixel_clock.val);
+	if (err) {
+		dev_err(dev, "%s:pix_clk_hz property missing\n", __func__);
+		return err;
+	}
 	read_property_u32(node, "cil_settletime",
 		&signal->cil_settletime);
 	/* initialize default if this prop not available */
@@ -294,6 +298,9 @@ int sensor_common_init_sensor_properties(
 	int num_modes = 0;
 	int err, i;
 
+	if (sensor == NULL)
+		return -EINVAL;
+
 	/* get number of modes */
 	for (i = 0; num_modes < MAX_NUM_SENSOR_MODES; i++) {
 		snprintf(temp_str, sizeof(temp_str), "%s%d",
@@ -313,10 +320,8 @@ int sensor_common_init_sensor_properties(
 	if (!sensor->sensor_modes) {
 		dev_err(dev, "Failed to allocate memory for sensor modes\n");
 		err = -ENOMEM;
-		goto fail;
+		goto alloc_fail;
 	}
-	memset(sensor->sensor_modes, 0, num_modes *
-	       sizeof(struct sensor_mode_properties));
 
 	for (i = 0; i < num_modes; i++) {
 		snprintf(temp_str, sizeof(temp_str), "%s%d",
@@ -324,36 +329,42 @@ int sensor_common_init_sensor_properties(
 		of_node_get(np);
 		node = of_get_child_by_name(np, temp_str);
 		if (node == NULL) {
-			dev_err(dev, "Failed to find mode\n");
+			dev_err(dev, "Failed to find %s\n", temp_str);
 			err = -ENODATA;
 			goto fail;
 		};
 
+		dev_dbg(dev, "parsing for %s props\n", temp_str);
+
 		err = sensor_common_parse_signal_props(dev, node,
 			&sensor->sensor_modes[i].signal_properties);
 		if (err) {
-			dev_err(dev, "Failed to read signal properties\n");
+			dev_err(dev, "Failed to read %s signal props\n",
+				temp_str);
 			goto fail;
 		}
 
 		err = sensor_common_parse_image_props(dev, node,
 			&sensor->sensor_modes[i].image_properties);
 		if (err) {
-			dev_err(dev, "Failed to read image properties\n");
+			dev_err(dev, "Failed to read %s image props\n",
+				temp_str);
 			goto fail;
 		}
 
 		err = sensor_common_parse_dv_timings(dev, node,
 			&sensor->sensor_modes[i].dv_timings);
 		if (err) {
-			dev_err(dev, "Failed to read DV timings\n");
+			dev_err(dev, "Failed to read %s DV timings\n",
+				temp_str);
 			goto fail;
 		}
 
 		err = sensor_common_parse_control_props(dev, node,
 			&sensor->sensor_modes[i].control_properties);
 		if (err) {
-			dev_err(dev, "Failed to read control properties\n");
+			dev_err(dev, "Failed to read %s control props\n",
+				temp_str);
 			goto fail;
 		}
 		of_node_put(node);
@@ -362,6 +373,8 @@ int sensor_common_init_sensor_properties(
 	return 0;
 
 fail:
+	devm_kfree(dev, sensor->sensor_modes);
+alloc_fail:
 	of_node_put(node);
 	return err;
 }

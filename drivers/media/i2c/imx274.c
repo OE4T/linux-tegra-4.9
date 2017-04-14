@@ -655,8 +655,9 @@ fail:
 
 static int imx274_set_frame_length(struct imx274 *priv, s32 val)
 {
-	struct camera_common_mode_info *mode = priv->pdata->mode_info;
 	struct camera_common_data *s_data = priv->s_data;
+	const struct sensor_mode_properties *mode =
+		&s_data->sensor_props.sensor_modes[s_data->mode];
 	struct v4l2_control control;
 	int hdr_en;
 	imx274_reg reg_list[3];
@@ -671,8 +672,9 @@ static int imx274_set_frame_length(struct imx274 *priv, s32 val)
 
 	frame_length = (u32)val;
 
-	frame_rate = (u32)(mode[s_data->mode].pixel_clock /
-			(u32)(frame_length * mode[s_data->mode].line_length));
+	frame_rate = (u32)(mode->signal_properties.pixel_clock.val /
+			(u32)(frame_length *
+			mode->image_properties.line_length));
 
 	imx274_read_reg(priv->s_data, IMX274_SVR_ADDR, &svr);
 
@@ -707,9 +709,9 @@ static int imx274_set_frame_length(struct imx274 *priv, s32 val)
 
 	dev_dbg(&priv->i2c_client->dev,
 		 "%s: PCLK:%lld, FL:%d, LL:%d, fps:%d, VMAX:%d\n", __func__,
-			mode[s_data->mode].pixel_clock,
+			mode->signal_properties.pixel_clock.val,
 			frame_length,
-			mode[s_data->mode].line_length,
+			mode->image_properties.line_length,
 			frame_rate,
 			priv->vmax_dol);
 
@@ -836,15 +838,16 @@ fail:
 
 static int imx274_set_coarse_time_shr_dol_short(struct imx274 *priv, s32 val)
 {
-	struct camera_common_mode_info *mode = priv->pdata->mode_info;
 	struct camera_common_data *s_data = priv->s_data;
+	const struct sensor_mode_properties *mode =
+		&s_data->sensor_props.sensor_modes[s_data->mode];
 	struct v4l2_control control;
 	int hdr_en;
 	imx274_reg reg_list[2];
 	u16 shr_dol1, min_shr, rhs1, hmax;
 	int err;
 	int i = 0;
-	s64 et_short;
+	u64 et_short;
 
 	control.id = TEGRA_CAMERA_CID_HDR_EN;
 	err = camera_common_g_ctrl(priv->s_data, &control);
@@ -878,9 +881,9 @@ static int imx274_set_coarse_time_shr_dol_short(struct imx274 *priv, s32 val)
 
 
 	priv->last_coarse_short = val;
-	et_short = mode[s_data->mode].line_length * val *
+	et_short = mode->image_properties.line_length * val *
 		FIXED_POINT_SCALING_FACTOR /
-		mode[s_data->mode].pixel_clock;
+		mode->signal_properties.pixel_clock.val;
 
 	shr_dol1 = rhs1 -
 		(et_short * IMX274_SENSOR_INTERNAL_CLK_FREQ /
@@ -901,8 +904,8 @@ static int imx274_set_coarse_time_shr_dol_short(struct imx274 *priv, s32 val)
 		(int)(et_short * 1000000 / FIXED_POINT_SCALING_FACTOR),
 		shr_dol1,
 		rhs1,
-		mode[s_data->mode].pixel_clock,
-		mode[s_data->mode].line_length,
+		mode->signal_properties.pixel_clock.val,
+		mode->image_properties.line_length,
 		hmax);
 
 	imx274_get_shr_dol1_regs(reg_list, shr_dol1);
@@ -924,11 +927,12 @@ fail:
 
 static int imx274_set_coarse_time_shr_dol_long(struct imx274 *priv, s32 val)
 {
-	struct camera_common_mode_info *mode = priv->pdata->mode_info;
 	struct camera_common_data *s_data = priv->s_data;
+	const struct sensor_mode_properties *mode =
+		&s_data->sensor_props.sensor_modes[s_data->mode];
 	imx274_reg reg_list[2];
 	u16 shr_dol2, min_shr, hmax, rhs1;
-	s64 et_long;
+	u64 et_long;
 	int err;
 	int i = 0;
 
@@ -948,9 +952,9 @@ static int imx274_set_coarse_time_shr_dol_long(struct imx274 *priv, s32 val)
 	}
 
 	priv->last_coarse_long = val;
-	et_long = mode[s_data->mode].line_length * val *
+	et_long = mode->image_properties.line_length * val *
 		FIXED_POINT_SCALING_FACTOR /
-		mode[s_data->mode].pixel_clock;
+		mode->signal_properties.pixel_clock.val;
 
 	shr_dol2 = priv->vmax_dol  -
 		(et_long * IMX274_SENSOR_INTERNAL_CLK_FREQ /
@@ -971,8 +975,8 @@ static int imx274_set_coarse_time_shr_dol_long(struct imx274 *priv, s32 val)
 		(int)(et_long * 1000000 / FIXED_POINT_SCALING_FACTOR),
 		shr_dol2,
 		priv->vmax_dol,
-		mode[s_data->mode].pixel_clock,
-		mode[s_data->mode].line_length,
+		mode->signal_properties.pixel_clock.val,
+		mode->image_properties.line_length,
 		hmax);
 
 	imx274_get_shr_dol2_regs(reg_list, shr_dol2);
@@ -1106,7 +1110,8 @@ error:
 
 MODULE_DEVICE_TABLE(of, imx274_of_match);
 
-static struct camera_common_pdata *imx274_parse_dt(struct i2c_client *client)
+static struct camera_common_pdata *imx274_parse_dt(struct i2c_client *client,
+				const struct camera_common_data *s_data)
 {
 	struct device_node *node = client->dev.of_node;
 	struct camera_common_pdata *board_priv_pdata;
@@ -1151,8 +1156,7 @@ static struct camera_common_pdata *imx274_parse_dt(struct i2c_client *client)
 	of_property_read_string(node, "iovdd-reg",
 			&board_priv_pdata->regulators.iovdd);
 
-	err = camera_common_parse_sensor_mode(client, board_priv_pdata);
-	if (err)
+	if (s_data->sensor_props.num_modes == 0)
 		dev_err(&client->dev, "Failed to load mode info %d\n", err);
 
 	return board_priv_pdata;
@@ -1218,7 +1222,7 @@ static int imx274_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
-	priv->pdata = imx274_parse_dt(client);
+	priv->pdata = imx274_parse_dt(client, common_data);
 	if (!priv->pdata) {
 		dev_err(&client->dev, " unable to get platform data\n");
 		return -EFAULT;

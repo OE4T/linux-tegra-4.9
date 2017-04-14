@@ -254,7 +254,11 @@ static int tegra_vi_graph_build_links(struct tegra_mc_vi *vi)
 			break;
 		}
 
-		tegra_channel_init_subdevices(chan);
+		if (tegra_channel_init_subdevices(chan) < 0) {
+			dev_err(vi->dev, "Failed to initialize sub-devices\n");
+			chan->init_done = false;
+		}
+
 		chan = list_next_entry(chan, list);
 	} while (next != NULL);
 

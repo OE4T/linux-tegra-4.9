@@ -857,7 +857,6 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	struct v4l2_subdev *sd;
 	struct i2c_client *client;
 	struct device_node *node;
-	struct sensor_properties sensor_props;
 	struct sensor_mode_properties *sensor_mode;
 	struct camera_common_data *s_data;
 	unsigned int emb_buf_size = 0;
@@ -884,17 +883,15 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	client = v4l2_get_subdevdata(sd);
 	node = client->dev.of_node;
 	s_data = to_camera_common_data(client);
+	if (s_data == NULL) {
+		dev_err(&chan->video.dev,
+			"Camera common data missing!\n");
+		return -EINVAL;
+	}
 
 	/* get sensor properties from DT */
 	if (node != NULL) {
-		ret = sensor_common_init_sensor_properties(sd->dev, node, &sensor_props);
-		if (ret < 0)
-			goto error_capture_setup;
-
-		if (s_data != NULL)
-			sensor_mode = &sensor_props.sensor_modes[s_data->mode];
-		else
-			sensor_mode = &sensor_props.sensor_modes[0];
+		sensor_mode = &s_data->sensor_props.sensor_modes[s_data->mode];
 
 		chan->embedded_data_width =
 			sensor_mode->image_properties.width;

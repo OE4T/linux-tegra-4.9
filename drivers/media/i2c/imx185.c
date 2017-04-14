@@ -564,18 +564,19 @@ static int imx185_set_frame_rate(struct imx185 *priv, s64 val)
 {
 	imx185_reg reg_list[3];
 	int err;
-	s64 frame_length;
-	struct camera_common_mode_info *mode = priv->pdata->mode_info;
+	u32 frame_length;
 	struct camera_common_data *s_data = priv->s_data;
+	const struct sensor_mode_properties *mode =
+		&s_data->sensor_props.sensor_modes[s_data->mode];
 	struct v4l2_control control;
 	int hdr_en;
 	int i = 0;
 
-	frame_length = mode[s_data->mode].pixel_clock *
+	frame_length = mode->signal_properties.pixel_clock.val *
 		FIXED_POINT_SCALING_FACTOR /
-		mode[s_data->mode].line_length / val;
+		mode->image_properties.line_length / val;
 
-	priv->frame_length = (u32) frame_length;
+	priv->frame_length = frame_length;
 	if (priv->frame_length > IMX185_MAX_FRAME_LENGTH)
 		priv->frame_length = IMX185_MAX_FRAME_LENGTH;
 
@@ -652,16 +653,18 @@ static int imx185_set_exposure(struct imx185 *priv, s64 val)
 
 static int imx185_set_coarse_time(struct imx185 *priv, s64 val)
 {
-	struct camera_common_mode_info *mode = priv->pdata->mode_info;
 	struct camera_common_data *s_data = priv->s_data;
+	const struct sensor_mode_properties *mode =
+		&s_data->sensor_props.sensor_modes[s_data->mode];
 	imx185_reg reg_list[3];
 	int err;
 	u32 coarse_time_shs1;
 	u32 reg_shs1;
 	int i = 0;
 
-	coarse_time_shs1 = mode[s_data->mode].pixel_clock * val /
-		mode[s_data->mode].line_length / FIXED_POINT_SCALING_FACTOR;
+	coarse_time_shs1 = mode->signal_properties.pixel_clock.val *
+		val / mode->image_properties.line_length /
+		FIXED_POINT_SCALING_FACTOR;
 
 	if (priv->frame_length == 0)
 		priv->frame_length = IMX185_MIN_FRAME_LENGTH;
@@ -691,8 +694,9 @@ fail:
 
 static int imx185_set_coarse_time_hdr(struct imx185 *priv, s64 val)
 {
-	struct camera_common_mode_info *mode = priv->pdata->mode_info;
 	struct camera_common_data *s_data = priv->s_data;
+	const struct sensor_mode_properties *mode =
+		&s_data->sensor_props.sensor_modes[s_data->mode];
 	imx185_reg reg_list_shs1[3];
 	imx185_reg reg_list_shs2[3];
 	u32 coarse_time_shs1;
@@ -708,8 +712,8 @@ static int imx185_set_coarse_time_hdr(struct imx185 *priv, s64 val)
 	priv->last_wdr_et_val = val;
 
 	/*WDR, update SHS1 as short ET, and SHS2 is 16x of short*/
-	coarse_time_shs1 = mode[s_data->mode].pixel_clock * val /
-		mode[s_data->mode].line_length /
+	coarse_time_shs1 = mode->signal_properties.pixel_clock.val *
+		val / mode->image_properties.line_length /
 		FIXED_POINT_SCALING_FACTOR / 16;
 	if (coarse_time_shs1 < IMX185_MIN_SHS1_1080P_HDR)
 		coarse_time_shs1 = IMX185_MIN_SHS1_1080P_HDR;
@@ -916,8 +920,7 @@ error:
 
 MODULE_DEVICE_TABLE(of, imx185_of_match);
 
-static struct camera_common_pdata *imx185_parse_dt(struct imx185 *priv,
-				struct i2c_client *client,
+static struct camera_common_pdata *imx185_parse_dt(struct i2c_client *client,
 				struct camera_common_data *s_data)
 {
 	struct device_node *np = client->dev.of_node;
@@ -956,8 +959,7 @@ static struct camera_common_pdata *imx185_parse_dt(struct imx185 *priv,
 		board_priv_pdata->reset_gpio = 0;
 	}
 
-	err = camera_common_parse_sensor_mode(client, board_priv_pdata);
-	if (err)
+	if (s_data->sensor_props.num_modes == 0)
 		dev_err(&client->dev, "Failed to load mode info %d\n", err);
 
 	return board_priv_pdata;
@@ -1014,7 +1016,7 @@ static int imx185_probe(struct i2c_client *client,
 	}
 
 	if (client->dev.of_node)
-		priv->pdata = imx185_parse_dt(priv, client, common_data);
+		priv->pdata = imx185_parse_dt(client, common_data);
 	if (!priv->pdata) {
 		dev_err(&client->dev, "unable to get platform data\n");
 		return -EFAULT;

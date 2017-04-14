@@ -38,6 +38,7 @@
 #include <media/tegra-v4l2-camera.h>
 
 struct sensor_properties {
+	/* sensor_modes points to an array of mode properties */
 	struct sensor_mode_properties *sensor_modes;
 	u32 num_modes;
 };

@@ -900,7 +900,8 @@ int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 				&chan->fmtinfo->bpp, 0);
 		break;
 	default:
-		dev_err(&chan->video.dev, "%s:Not valid ctrl\n", __func__);
+		dev_err(&chan->video.dev, "%s: Invalid ctrl %u\n",
+			__func__, ctrl->id);
 		return -EINVAL;
 	}
 
@@ -955,7 +956,136 @@ static const struct v4l2_ctrl_config common_custom_ctrls[] = {
 		.menu_skip_mask = 0,
 		.qmenu_int = size_align_ctrl_qmenu,
 	},
+	{
+		.ops = &channel_ctrl_ops,
+		.id = TEGRA_CAMERA_CID_SENSOR_MODES,
+		.name = "Sensor Modes",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_READ_ONLY,
+		.min = 0,
+		.max = MAX_NUM_SENSOR_MODES,
+		.def = MAX_NUM_SENSOR_MODES,
+		.step = 1,
+	},
+	{
+		.ops = &channel_ctrl_ops,
+		.id = TEGRA_CAMERA_CID_SENSOR_SIGNAL_PROPERTIES,
+		.name = "Sensor Signal Properties",
+		.type = V4L2_CTRL_TYPE_U32,
+		.flags = V4L2_CTRL_FLAG_HAS_PAYLOAD |
+			 V4L2_CTRL_FLAG_READ_ONLY,
+		.min = 0,
+		.max = 0xFFFFFFFF,
+		.step = 1,
+		.def = 0,
+		.dims = { MAX_NUM_SENSOR_MODES,
+			  SENSOR_SIGNAL_PROPERTIES_CID_SIZE },
+	},
+	{
+		.ops = &channel_ctrl_ops,
+		.id = TEGRA_CAMERA_CID_SENSOR_IMAGE_PROPERTIES,
+		.name = "Sensor Image Properties",
+		.type = V4L2_CTRL_TYPE_U32,
+		.flags = V4L2_CTRL_FLAG_HAS_PAYLOAD |
+			 V4L2_CTRL_FLAG_READ_ONLY,
+		.min = 0,
+		.max = 0xFFFFFFFF,
+		.step = 1,
+		.def = 0,
+		.dims = { MAX_NUM_SENSOR_MODES,
+			  SENSOR_IMAGE_PROPERTIES_CID_SIZE },
+	},
+	{
+		.ops = &channel_ctrl_ops,
+		.id = TEGRA_CAMERA_CID_SENSOR_CONTROL_PROPERTIES,
+		.name = "Sensor Control Properties",
+		.type = V4L2_CTRL_TYPE_U32,
+		.flags = V4L2_CTRL_FLAG_HAS_PAYLOAD |
+			 V4L2_CTRL_FLAG_READ_ONLY,
+		.min = 0,
+		.max = 0xFFFFFFFF,
+		.step = 1,
+		.def = 0,
+		.dims = { MAX_NUM_SENSOR_MODES,
+			  SENSOR_CONTROL_PROPERTIES_CID_SIZE },
+	},
+	{
+		.ops = &channel_ctrl_ops,
+		.id = TEGRA_CAMERA_CID_SENSOR_DV_TIMINGS,
+		.name = "Sensor DV Timings",
+		.type = V4L2_CTRL_TYPE_U32,
+		.flags = V4L2_CTRL_FLAG_HAS_PAYLOAD |
+			 V4L2_CTRL_FLAG_READ_ONLY,
+		.min = 0,
+		.max = 0xFFFFFFFF,
+		.step = 1,
+		.def = 0,
+		.dims = { MAX_NUM_SENSOR_MODES,
+			  SENSOR_DV_TIMINGS_CID_SIZE },
+	},
 };
+
+#define GET_TEGRA_CAMERA_CTRL(id, c)					\
+do {									\
+	c = v4l2_ctrl_find(&chan->ctrl_handler, TEGRA_CAMERA_CID_##id);	\
+	if (!c) {							\
+		dev_err(chan->vi->dev, "%s: could not find ctrl %s\n",	\
+			__func__, "##id");				\
+		return -EINVAL;						\
+	}								\
+} while (0)
+
+static int tegra_channel_sensorprops_setup(struct tegra_channel *chan)
+{
+	const struct i2c_client *client =
+			v4l2_get_subdevdata(chan->subdev_on_csi);
+	const struct camera_common_data *s_data =
+			to_camera_common_data(client);
+	const struct sensor_mode_properties *modes;
+	struct v4l2_ctrl *ctrl_modes;
+	struct v4l2_ctrl *ctrl_signalprops;
+	struct v4l2_ctrl *ctrl_imageprops;
+	struct v4l2_ctrl *ctrl_controlprops;
+	struct v4l2_ctrl *ctrl_dvtimings;
+	u32 i;
+
+	GET_TEGRA_CAMERA_CTRL(SENSOR_MODES, ctrl_modes);
+	GET_TEGRA_CAMERA_CTRL(SENSOR_SIGNAL_PROPERTIES, ctrl_signalprops);
+	GET_TEGRA_CAMERA_CTRL(SENSOR_IMAGE_PROPERTIES, ctrl_imageprops);
+	GET_TEGRA_CAMERA_CTRL(SENSOR_CONTROL_PROPERTIES, ctrl_controlprops);
+	GET_TEGRA_CAMERA_CTRL(SENSOR_DV_TIMINGS, ctrl_dvtimings);
+
+	ctrl_modes->val = s_data->sensor_props.num_modes;
+	ctrl_modes->cur.val = s_data->sensor_props.num_modes;
+
+	modes = s_data->sensor_props.sensor_modes;
+	for (i = 0; i < s_data->sensor_props.num_modes; i++) {
+		void *ptr = NULL;
+		u32 size;
+
+		size = sizeof(struct sensor_signal_properties);
+		ptr = ctrl_signalprops->p_new.p + (i * size);
+		memcpy(ptr, &modes[i].signal_properties, size);
+
+		size = sizeof(struct sensor_image_properties);
+		ptr = ctrl_imageprops->p_new.p + (i * size);
+		memcpy(ptr, &modes[i].image_properties, size);
+
+		size = sizeof(struct sensor_control_properties);
+		ptr = ctrl_controlprops->p_new.p + (i * size);
+		memcpy(ptr, &modes[i].control_properties, size);
+
+		size = sizeof(struct sensor_dv_timings);
+		ptr = ctrl_dvtimings->p_new.p + (i * size);
+		memcpy(ptr, &modes[i].dv_timings, size);
+	}
+	ctrl_signalprops->p_cur.p = ctrl_signalprops->p_new.p;
+	ctrl_imageprops->p_cur.p = ctrl_imageprops->p_new.p;
+	ctrl_controlprops->p_cur.p = ctrl_controlprops->p_new.p;
+	ctrl_dvtimings->p_cur.p = ctrl_dvtimings->p_new.p;
+
+	return 0;
+}
 
 static int tegra_channel_setup_controls(struct tegra_channel *chan)
 {
@@ -1004,11 +1134,50 @@ static int tegra_channel_setup_controls(struct tegra_channel *chan)
 	}
 
 	/* setup the controls */
-	return v4l2_ctrl_handler_setup(&chan->ctrl_handler);
+	ret = v4l2_ctrl_handler_setup(&chan->ctrl_handler);
+	if (ret < 0)
+		goto error;
+
+	return 0;
+
+error:
+	v4l2_ctrl_handler_free(&chan->ctrl_handler);
+	return ret;
+}
+
+static void tegra_channel_free_sensor_properties(
+		const struct v4l2_subdev *sensor_sd)
+{
+	struct device *sensor_dev = sensor_sd->dev;
+	const struct i2c_client *client = v4l2_get_subdevdata(sensor_sd);
+	struct camera_common_data *s_data = to_camera_common_data(client);
+
+	if (sensor_dev == NULL || s_data == NULL)
+		return;
+
+	if (s_data->sensor_props.sensor_modes)
+		devm_kfree(sensor_dev, s_data->sensor_props.sensor_modes);
+
+	s_data->sensor_props.sensor_modes = NULL;
+}
+
+static int tegra_channel_init_sensor_properties(
+		const struct v4l2_subdev *sensor_sd)
+{
+	struct device *sensor_dev = sensor_sd->dev;
+	const struct i2c_client *client = v4l2_get_subdevdata(sensor_sd);
+	struct camera_common_data *s_data = to_camera_common_data(client);
+
+	if (sensor_dev == NULL || s_data == NULL)
+		return -EINVAL;
+
+	return sensor_common_init_sensor_properties(sensor_dev,
+		sensor_dev->of_node, &s_data->sensor_props);
 }
 
 int tegra_channel_init_subdevices(struct tegra_channel *chan)
 {
+	int ret = 0;
 	struct media_entity *entity;
 	struct media_pad *pad;
 	struct v4l2_subdev *sd;
@@ -1066,7 +1235,39 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 	if (chan->num_subdevs)
 		tegra_channel_fmts_bitmap_init(chan);
 
-	return tegra_channel_setup_controls(chan);
+	ret = tegra_channel_setup_controls(chan);
+	if (ret < 0) {
+		dev_err(chan->vi->dev, "%s: failed to setup controls\n",
+			__func__);
+		goto fail;
+	}
+
+	/*
+	 * If subdev on csi is csi or channel is in pg mode
+	 * then don't look for sensor props
+	 */
+	if (strstr(chan->subdev_on_csi->name, "nvcsi") != NULL ||
+			chan->pg_mode)
+		return 0;
+
+	ret = tegra_channel_init_sensor_properties(chan->subdev_on_csi);
+	if (ret < 0) {
+		dev_err(chan->vi->dev,
+			"%s: failed to initialize sensor props\n", __func__);
+		goto fail;
+	}
+
+	ret = tegra_channel_sensorprops_setup(chan);
+	if (ret < 0) {
+		dev_err(chan->vi->dev, "%s: failed to setup sensor props\n",
+			__func__);
+		goto fail;
+	}
+
+	return 0;
+fail:
+	tegra_channel_free_sensor_properties(chan->subdev_on_csi);
+	return ret;
 }
 
 static int

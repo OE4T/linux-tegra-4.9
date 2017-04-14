@@ -994,6 +994,10 @@ static const int imx185_60fps[] = {
 	60,
 };
 
+/*
+ * WARNING: frmfmt ordering need to match mode definition in
+ * device tree!
+ */
 static const struct camera_common_frmfmt imx185_frmfmt[] = {
 	{{1920, 1080}, imx185_30fps, 1, 0,
 			IMX185_MODE_1920X1080_CROP_30FPS},
@@ -1005,5 +1009,6 @@ static const struct camera_common_frmfmt imx185_frmfmt[] = {
 			IMX185_MODE_1920X1080_CROP_10BIT_60FPS},
 	{{1920, 1080}, imx185_30fps, 1, 1,
 			IMX185_MODE_1920X1080_CROP_HDR_30FPS},
+	/* Add modes with no device tree support after below */
 };
 #endif /* __IMX185_I2C_TABLES__ */

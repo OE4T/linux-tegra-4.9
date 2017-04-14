@@ -156,7 +156,7 @@ static struct lc898212_reg lc898212_init_setting[] = {
 	{LC898212_REG_ACCESS, LC898212_TABLE_END, 0x00}
 };
 
-const struct of_device_id lc898212_of_match[] = {
+const static struct of_device_id lc898212_of_match[] = {
 	{ .compatible = "nvidia,lc898212", },
 	{ },
 };

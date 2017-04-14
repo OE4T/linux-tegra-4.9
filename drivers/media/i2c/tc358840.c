@@ -47,6 +47,7 @@
 #include <media/i2c/tc358840.h>
 #include "tc358840_regs.h"
 
+#define MAX_DATABUF 10
 
 static int debug;
 module_param(debug, int, 0644);
@@ -211,8 +212,9 @@ static void i2c_wr(struct v4l2_subdev *sd, u16 reg, u8 *values, u32 n)
 	struct i2c_client *client = state->i2c_client;
 	int err, i;
 	struct i2c_msg msg;
-	u8 data[2 + n];
+	u8 data[MAX_DATABUF];
 
+	WARN_ON(MAX_DATABUF < (2 + n));
 	msg.addr = client->addr;
 	msg.buf = data;
 	msg.len = 2 + n;
@@ -702,7 +704,9 @@ static void tc358840_set_splitter(struct v4l2_subdev *sd)
 		i2c_wr16_and_or(sd, SPLITTX1_CTRL, ~(MASK_IFEN | MASK_LCD_CSEL),
 				MASK_SPBP);
 
-		i2c_wr16_and_or(sd, SPLITTX0_SPLIT, (u16)~(MASK_TX1SEL | MASK_EHW), 0);
+		i2c_wr16_and_or(sd, SPLITTX0_SPLIT, (u16)(0x0000ffff &
+							  ~(MASK_TX1SEL |
+							    MASK_EHW)), 0);
 	} else {
 		i2c_wr16_and_or(sd, SPLITTX0_CTRL, ~(MASK_IFEN | MASK_LCD_CSEL | MASK_SPBP), 0);
 		i2c_wr16_and_or(sd, SPLITTX1_CTRL, ~(MASK_IFEN | MASK_LCD_CSEL | MASK_SPBP), 0);

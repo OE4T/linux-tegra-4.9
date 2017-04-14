@@ -83,7 +83,7 @@ static const struct regmap_config sensor_regmap_config = {
 	.cache_type = REGCACHE_RBTREE,
 };
 
-u16 ov23850_to_gain(u32 rep, int shift)
+static u16 ov23850_to_gain(u32 rep, int shift)
 {
 	u16 gain;
 	int gain_int;
@@ -617,7 +617,7 @@ static struct v4l2_subdev_ops ov23850_subdev_ops = {
 	.pad	= &ov23850_subdev_pad_ops,
 };
 
-const struct of_device_id ov23850_of_match[] = {
+const static struct of_device_id ov23850_of_match[] = {
 	{ .compatible = "nvidia,ov23850", },
 	{ },
 };

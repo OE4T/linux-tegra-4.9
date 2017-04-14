@@ -500,7 +500,7 @@ static struct v4l2_subdev_ops imx185_subdev_ops = {
 	.pad = &imx185_subdev_pad_ops,
 };
 
-const struct of_device_id imx185_of_match[] = {
+const static struct of_device_id imx185_of_match[] = {
 	{ .compatible = "nvidia,imx185",},
 	{ },
 };

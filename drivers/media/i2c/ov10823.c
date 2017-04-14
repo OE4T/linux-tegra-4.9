@@ -88,7 +88,7 @@ static const struct regmap_config sensor_regmap_config = {
 	.cache_type = REGCACHE_RBTREE,
 };
 
-u16 ov10823_to_gain(u32 rep, int shift)
+static u16 ov10823_to_gain(u32 rep, int shift)
 {
 	u16 gain;
 	int gain_int;

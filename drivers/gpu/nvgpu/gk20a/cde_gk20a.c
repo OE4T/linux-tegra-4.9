@@ -20,6 +20,7 @@
 #include <linux/fs.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
+#include "platform_gk20a.h"
 #endif
 #include <linux/dma-buf.h>
 

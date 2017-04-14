@@ -15,6 +15,7 @@
 #include <linux/wait.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
+#include "platform_gk20a.h"
 #endif
 #include <linux/uaccess.h>
 #include <linux/poll.h>

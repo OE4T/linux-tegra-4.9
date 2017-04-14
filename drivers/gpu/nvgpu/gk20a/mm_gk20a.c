@@ -41,6 +41,7 @@
 #include <nvgpu/linux/dma.h>
 
 #include "gk20a.h"
+#include "platform_gk20a.h"
 #include "mm_gk20a.h"
 #include "fence_gk20a.h"
 #include "kind_gk20a.h"
@@ -1262,16 +1263,16 @@ u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
 	struct nvgpu_allocator *vma = vm->vma[gmmu_pgsz_idx];
 	u64 offset;
 	u64 gmmu_page_size = vm->gmmu_page_sizes[gmmu_pgsz_idx];
+	struct gk20a *g = vm->mm->g;
 
 	if (gmmu_pgsz_idx >= gmmu_nr_page_sizes) {
-		dev_warn(dev_from_vm(vm),
+		nvgpu_warn(g,
 			 "invalid page size requested in gk20a vm alloc");
 		return 0;
 	}
 
 	if ((gmmu_pgsz_idx == gmmu_page_size_big) && !vm->big_pages) {
-		dev_warn(dev_from_vm(vm),
-			 "unsupportd page size requested");
+		nvgpu_warn(g, "unsupportd page size requested");
 		return 0;
 
 	}

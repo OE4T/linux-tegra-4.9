@@ -27,6 +27,7 @@
 #include <trace/events/gk20a.h>
 
 #include "gk20a.h"
+#include "platform_gk20a.h"
 #include "channel_sync_gk20a.h"
 
 #include "ctxsw_trace_gk20a.h"

@@ -26,9 +26,14 @@
 #include <nvgpu/atomic.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/kref.h>
+#include <nvgpu/log.h>
 
 #include "gk20a/gk20a.h"
 #include "clk/clk_arb.h"
+
+#ifdef CONFIG_DEBUG_FS
+#include "gk20a/platform_gk20a.h"
+#endif
 
 #define MAX_F_POINTS 256
 #define DEFAULT_EVENT_NUMBER 32
@@ -1482,8 +1487,7 @@ static long nvgpu_clk_arb_ioctl_event_dev(struct file *filp, unsigned int cmd,
 				(struct nvgpu_gpu_set_event_filter_args *)buf);
 		break;
 	default:
-		dev_dbg(dev_from_gk20a(g),
-				"unrecognized event ioctl cmd: 0x%x", cmd);
+		nvgpu_warn(g, "unrecognized event ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;
 	}
 

@@ -21,6 +21,7 @@
 #include <nvgpu/firmware.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/platform_gk20a.h"
 
 static const struct firmware *do_request_firmware(struct device *dev,
 		const char *prefix, const char *fw_name, int flags)

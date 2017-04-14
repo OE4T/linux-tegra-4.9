@@ -33,6 +33,10 @@
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
 
+#ifdef CONFIG_DEBUG_FS
+#include "platform_gk20a.h"
+#endif
+
 static u32 ce2_nonblockpipe_isr(struct gk20a *g, u32 fifo_intr)
 {
 	gk20a_dbg(gpu_dbg_intr, "ce2 non-blocking pipe interrupt\n");

@@ -37,8 +37,11 @@
 #include "regops_gk20a.h"
 #include "dbg_gpu_gk20a.h"
 #include "debug_gk20a.h"
-#include "platform_gk20a.h"
 #include "ctxsw_trace_gk20a.h"
+
+#ifdef CONFIG_DEBUG_FS
+#include "platform_gk20a.h"
+#endif
 
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_ctxsw_prog_gk20a.h>

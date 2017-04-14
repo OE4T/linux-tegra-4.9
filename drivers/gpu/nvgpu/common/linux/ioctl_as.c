@@ -26,6 +26,7 @@
 #include <nvgpu/gmmu.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/platform_gk20a.h"
 #include "ioctl_as.h"
 
 static int gk20a_as_ioctl_bind_channel(

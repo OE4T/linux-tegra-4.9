@@ -25,6 +25,7 @@
 #include <nvgpu/linux/dma.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/platform_gk20a.h"
 
 #if defined(CONFIG_GK20A_VIDMEM)
 static u64 __nvgpu_dma_alloc(struct nvgpu_allocator *allocator, dma_addr_t at,

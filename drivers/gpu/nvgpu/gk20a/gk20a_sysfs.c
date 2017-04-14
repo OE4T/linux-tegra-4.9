@@ -31,6 +31,7 @@
 #include <nvgpu/kmem.h>
 
 #include "gk20a.h"
+#include "gk20a/platform_gk20a.h"
 #include "gr_gk20a.h"
 #include "fifo_gk20a.h"
 #include "pmu_gk20a.h"

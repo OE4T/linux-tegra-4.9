@@ -28,6 +28,7 @@
 #include "ioctl_ctrl.h"
 #include "ioctl_tsg.h"
 #include "gk20a/gk20a.h"
+#include "gk20a/platform_gk20a.h"
 #include "gk20a/fence_gk20a.h"
 
 #include <nvgpu/log.h>

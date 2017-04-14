@@ -21,6 +21,8 @@
 
 #include <nvgpu/lock.h>
 
+#include "gk20a.h"
+
 #define GK20A_CLKS_MAX		4
 
 struct gk20a;
@@ -251,5 +253,37 @@ extern struct gk20a_platform vgpu_tegra_platform;
 int gk20a_tegra_busy(struct device *dev);
 void gk20a_tegra_idle(struct device *dev);
 void gk20a_tegra_debug_dump(struct device *pdev);
+
+static inline struct gk20a *get_gk20a(struct device *dev)
+{
+	return gk20a_get_platform(dev)->g;
+}
+static inline struct device *dev_from_gk20a(struct gk20a *g)
+{
+	return g->dev;
+}
+static inline struct gk20a *gk20a_from_dev(struct device *dev)
+{
+	if (!dev)
+		return NULL;
+
+	return ((struct gk20a_platform *)dev_get_drvdata(dev))->g;
+}
+static inline bool gk20a_gpu_is_virtual(struct device *dev)
+{
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+
+	return platform->virtual_dev;
+}
+
+static inline int support_gk20a_pmu(struct device *dev)
+{
+	if (IS_ENABLED(CONFIG_GK20A_PMU)) {
+		/* gPMU is not supported for vgpu */
+		return !gk20a_gpu_is_virtual(dev);
+	}
+
+	return 0;
+}
 
 #endif

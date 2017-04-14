@@ -21,6 +21,7 @@
 #include <nvgpu/soc.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/platform_gk20a.h"
 
 /*
  * Returns 1 if the platform is pre-Si and should ignore the timeout checking.

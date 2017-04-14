@@ -20,6 +20,7 @@
 #include <nvgpu/firmware.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/platform_gk20a.h"
 #include "gm20b/fifo_gm20b.h"
 #include "bios_gm206.h"
 

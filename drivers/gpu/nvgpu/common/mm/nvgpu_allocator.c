@@ -20,7 +20,9 @@
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
+#ifdef CONFIG_DEBUG_FS
 #include "gk20a/platform_gk20a.h"
+#endif
 
 u32 nvgpu_alloc_tracing_on;
 

@@ -29,6 +29,7 @@
 #endif
 
 #include "gk20a/gk20a.h"
+#include "gk20a/platform_gk20a.h"
 #include "clk_gm20b.h"
 
 #include <nvgpu/soc.h>

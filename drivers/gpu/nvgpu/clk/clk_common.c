@@ -17,6 +17,7 @@
 #include <linux/clk.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/platform_gk20a.h"
 
 struct clk *gk20a_clk_get(struct gk20a *g)
 {

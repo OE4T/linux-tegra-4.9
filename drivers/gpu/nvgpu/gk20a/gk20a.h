@@ -58,7 +58,6 @@ struct dbg_profiler_object_data;
 #include "pmu_gk20a.h"
 #include "priv_ring_gk20a.h"
 #include "therm_gk20a.h"
-#include "platform_gk20a.h"
 #include "gm20b/acr_gm20b.h"
 #include "cde_gk20a.h"
 #include "debug_gk20a.h"
@@ -1232,11 +1231,6 @@ static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)
 		g->gr_idle_timeout_default : MAX_SCHEDULE_TIMEOUT;
 }
 
-static inline struct gk20a *get_gk20a(struct device *dev)
-{
-	return gk20a_get_platform(dev)->g;
-}
-
 enum BAR0_DEBUG_OPERATION {
 	BARO_ZERO_NOP = 0,
 	OP_END = 'DONE',
@@ -1352,17 +1346,6 @@ static inline u32 gk20a_bar1_readl(struct gk20a *g, u32 b)
 }
 
 /* convenience */
-static inline struct device *dev_from_gk20a(struct gk20a *g)
-{
-	return g->dev;
-}
-static inline struct gk20a *gk20a_from_dev(struct device *dev)
-{
-	if (!dev)
-		return NULL;
-
-	return ((struct gk20a_platform *)dev_get_drvdata(dev))->g;
-}
 static inline struct gk20a *gk20a_from_as(struct gk20a_as *as)
 {
 	return container_of(as, struct gk20a, as);
@@ -1417,23 +1400,6 @@ enum {
 	KEPLER_DMA_COPY_A         = 0xA0B5,
 	KEPLER_CHANNEL_GPFIFO_C   = 0xA26F,
 };
-
-static inline bool gk20a_gpu_is_virtual(struct device *dev)
-{
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-
-	return platform->virtual_dev;
-}
-
-static inline int support_gk20a_pmu(struct device *dev)
-{
-	if (IS_ENABLED(CONFIG_GK20A_PMU)) {
-		/* gPMU is not supported for vgpu */
-		return !gk20a_gpu_is_virtual(dev);
-	}
-
-	return 0;
-}
 
 void gk20a_create_sysfs(struct device *dev);
 void gk20a_remove_sysfs(struct device *dev);

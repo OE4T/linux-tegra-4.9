@@ -20,6 +20,7 @@
 
 #include "clk.h"
 #include "gk20a/gk20a.h"
+#include "gk20a/platform_gk20a.h"
 
 static unsigned long nvgpu_linux_clk_get_rate(struct gk20a *g, u32 api_domain)
 {

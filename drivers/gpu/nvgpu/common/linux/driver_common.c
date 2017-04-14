@@ -23,6 +23,7 @@
 
 #include "gk20a/gk20a_scale.h"
 #include "gk20a/gk20a.h"
+#include "gk20a/platform_gk20a.h"
 #include "module.h"
 
 #define EMC3D_DEFAULT_RATIO 750

@@ -16,6 +16,7 @@
 #include <linux/platform_device.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/platform_gk20a.h"
 #include "gp10b_sysfs.h"
 
 #include <nvgpu/hw/gp10b/hw_gr_gp10b.h>

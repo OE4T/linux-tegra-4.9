@@ -25,6 +25,7 @@
 #include <nvgpu/log.h>
 
 #include "gk20a.h"
+#include "gk20a/platform_gk20a.h"
 #include "debug_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_ram_gk20a.h>

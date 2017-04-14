@@ -15,6 +15,7 @@
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/platform_gk20a.h"
 #include "gm206/bios_gm206.h"
 #include "gk20a/pmu_gk20a.h"
 

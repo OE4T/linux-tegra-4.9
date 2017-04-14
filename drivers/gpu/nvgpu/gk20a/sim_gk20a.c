@@ -19,6 +19,7 @@
 #include <linux/platform_device.h>
 
 #include "gk20a.h"
+#include "platform_gk20a.h"
 
 #include <nvgpu/log.h>
 

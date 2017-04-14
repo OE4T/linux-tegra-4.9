@@ -16,6 +16,7 @@
 #include <nvgpu/dma.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/platform_gk20a.h"
 #include "gm20b/mm_gm20b.h"
 #include "mm_gp10b.h"
 #include "rpfb_gp10b.h"

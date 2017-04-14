@@ -45,6 +45,10 @@
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
 
+#ifdef CONFIG_DEBUG_FS
+#include "platform_gk20a.h"
+#endif
+
 #define FECS_METHOD_WFI_RESTORE 0x80000
 
 static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,

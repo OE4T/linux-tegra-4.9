@@ -16,12 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/module.h>
-#ifdef CONFIG_DEBUG_FS
-#include <linux/debugfs.h>
-#endif
-#include <linux/uaccess.h>
-
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/timers.h>
 #include <nvgpu/kmem.h>
@@ -39,6 +33,12 @@
 
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "nvgpu_gpuid_t19x.h"
+#endif
+
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#include <linux/uaccess.h>
+#include "platform_gk20a.h"
 #endif
 
 #define GK20A_PMU_UCODE_IMAGE	"gpmu_ucode.bin"

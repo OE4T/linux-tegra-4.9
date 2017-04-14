@@ -30,6 +30,7 @@
 #include <nvgpu/soc.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/platform_gk20a.h"
 #include "vgpu/vgpu.h"
 #include "gk20a/gk20a_scale.h"
 #include "gk20a/ctxsw_trace_gk20a.h"

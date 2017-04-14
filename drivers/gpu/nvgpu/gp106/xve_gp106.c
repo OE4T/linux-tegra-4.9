@@ -23,6 +23,10 @@
 #include "gm206/bios_gm206.h"
 #include "gp106/xve_gp106.h"
 
+#ifdef CONFIG_DEBUG_FS
+#include "gk20a/platform_gk20a.h"
+#endif
+
 #include <nvgpu/bug.h>
 
 #include <nvgpu/hw/gp106/hw_xp_gp106.h>

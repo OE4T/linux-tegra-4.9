@@ -23,6 +23,9 @@
 #include <nvgpu/kmem.h>
 
 #include "gk20a/gk20a.h"
+#ifdef CONFIG_DEBUG_FS
+#include "gk20a/platform_gk20a.h"
+#endif
 
 #include "clk_gp106.h"
 #include "clk/clk_arb.h"

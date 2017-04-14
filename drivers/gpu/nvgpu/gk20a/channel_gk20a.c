@@ -2378,7 +2378,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct fifo_profile_gk20a *profile)
 {
 	struct gk20a *g = c->g;
-	struct device *d = dev_from_gk20a(g);
 	struct priv_cmd_entry *wait_cmd = NULL;
 	struct priv_cmd_entry *incr_cmd = NULL;
 	struct gk20a_fence *pre_fence = NULL;
@@ -2394,12 +2393,9 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	bool need_deferred_cleanup = false;
 	struct nvgpu_gpfifo __user *user_gpfifo = args ?
 		(struct nvgpu_gpfifo __user *)(uintptr_t)args->gpfifo : NULL;
-	struct gk20a_platform *platform;
 
 	if (g->driver_is_dying)
 		return -ENODEV;
-
-	platform = gk20a_get_platform(d);
 
 	if (c->has_timedout)
 		return -ETIMEDOUT;

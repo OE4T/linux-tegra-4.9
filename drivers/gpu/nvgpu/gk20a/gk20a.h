@@ -996,6 +996,8 @@ struct gk20a {
 
 	u32 default_pri_timeout;
 
+	u32 ptimer_src_freq;
+
 	unsigned int aggressive_sync_destroy_thresh;
 	bool aggressive_sync_destroy;
 

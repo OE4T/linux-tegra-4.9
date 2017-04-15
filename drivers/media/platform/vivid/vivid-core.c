@@ -208,7 +208,8 @@ static int vidioc_querycap(struct file *file, void  *priv,
 	struct vivid_dev *dev = video_drvdata(file);
 
 	strcpy(cap->driver, "vivid");
-	strcpy(cap->card, "vivid");
+	snprintf(cap->card, sizeof(cap->card),
+			"%s", dev->v4l2_dev.name);
 	snprintf(cap->bus_info, sizeof(cap->bus_info),
 			"platform:%s", dev->v4l2_dev.name);
 

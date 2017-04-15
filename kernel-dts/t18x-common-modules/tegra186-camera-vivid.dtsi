@@ -215,7 +215,7 @@
 				orientation = "1";
 				drivernode0 {
 					/* Declare PCL support driver (classically known as guid)  */
-					pcl_id = "v4l2_sensor";
+					pcl_id = "v4l2_sensor_virtual";
 					/* Driver v4l2 device name */
 					devname = "vivid-000";
 					/* Declare the device-tree hierarchy to driver instance */

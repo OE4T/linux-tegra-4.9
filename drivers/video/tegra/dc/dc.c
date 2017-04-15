@@ -5743,7 +5743,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #elif !defined(CONFIG_TEGRA_NVDISPLAY)
 	int isomgr_client_id = -1;
 #endif
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	struct clk *emc_la_clk;
+#endif
 	struct device_node *np = ndev->dev.of_node;
 	struct resource *fb_mem = NULL;
 	char clk_name[16];
@@ -6009,38 +6011,36 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	}
 
 #ifndef CONFIG_TEGRA_ISOMGR
-		/*
-		 * The emc is a shared clock, it will be set based on
-		 * the requirements for each user on the bus.
-		 */
-		snprintf(clk_name, sizeof(clk_name), "disp%u_emc",
-				dc->ctrl_num + 1);
-		emc_clk = tegra_disp_clk_get(&ndev->dev, clk_name);
-		if (IS_ERR_OR_NULL(emc_clk)) {
-			dev_err(&ndev->dev, "can't get %s clock\n", clk_name);
-			ret = -ENOENT;
-			goto err_put_clk;
-		}
-		dc->emc_clk = emc_clk;
+	/*
+	 * The emc is a shared clock, it will be set based on
+	 * the requirements for each user on the bus.
+	 */
+	snprintf(clk_name, sizeof(clk_name), "disp%u_emc",
+			dc->ctrl_num + 1);
+	emc_clk = tegra_disp_clk_get(&ndev->dev, clk_name);
+	if (IS_ERR_OR_NULL(emc_clk)) {
+		dev_err(&ndev->dev, "can't get %s clock\n", clk_name);
+		ret = -ENOENT;
+		goto err_put_clk;
+	}
+	dc->emc_clk = emc_clk;
 #endif
-		/*
-		 * The emc_la clock is being added to set the floor value
-		 * for emc depending on the LA calculaions for each window
-		 */
-#ifdef CONFIG_TEGRA_NVDISPLAY
-		emc_la_clk = tegra_disp_clk_get(&ndev->dev, "emc_latency");
-#else
-		snprintf(clk_name, sizeof(clk_name), "disp%u_la_emc",
-				dc->ctrl_num + 1);
-		emc_la_clk = tegra_disp_clk_get(&ndev->dev, clk_name);
+	/*
+	 * The emc_la clock is being added to set the floor value
+	 * for emc depending on the LA calculaions for each window
+	 */
+#ifndef CONFIG_TEGRA_NVDISPLAY
+	snprintf(clk_name, sizeof(clk_name), "disp%u_la_emc",
+			dc->ctrl_num + 1);
+	emc_la_clk = tegra_disp_clk_get(&ndev->dev, clk_name);
+	if (IS_ERR_OR_NULL(emc_la_clk)) {
+		dev_err(&ndev->dev, "can't get %s clock\n", clk_name);
+		ret = -ENOENT;
+		goto err_put_clk;
+	}
+	dc->emc_la_clk = emc_la_clk;
+	clk_set_rate(dc->emc_la_clk, 0);
 #endif
-		if (IS_ERR_OR_NULL(emc_la_clk)) {
-			dev_err(&ndev->dev, "can't get %s clock\n", clk_name);
-			ret = -ENOENT;
-			goto err_put_clk;
-		}
-		dc->emc_la_clk = emc_la_clk;
-		clk_set_rate(dc->emc_la_clk, 0);
 
 	dc->ext = tegra_dc_ext_register(ndev, dc);
 	if (IS_ERR_OR_NULL(dc->ext)) {
@@ -6233,7 +6233,9 @@ err_disable_dc:
 #elif !defined(CONFIG_TEGRA_ISOMGR)
 	tegra_disp_clk_put(&ndev->dev, emc_clk);
 #endif
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_disp_clk_put(&ndev->dev, dc->emc_la_clk);
+#endif
 err_put_clk:
 #ifdef CONFIG_SWITCH
 	if (dc->switchdev_registered)
@@ -6300,7 +6302,9 @@ static int tegra_dc_remove(struct platform_device *ndev)
 #else
 	tegra_disp_clk_put(&ndev->dev, dc->emc_clk);
 #endif
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_disp_clk_put(&ndev->dev, dc->emc_la_clk);
+#endif
 
 	tegra_disp_clk_put(&ndev->dev, dc->clk);
 	iounmap(dc->base);

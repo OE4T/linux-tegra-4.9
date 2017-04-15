@@ -441,8 +441,9 @@
 				      "nvdisplayhub", "nvdisplay_p0",
 				      "nvdisplay_p1", "nvdisplay_p2",
 				      "nvdisplay_p3", "pllp_display",
-				      "plld2", "plld3",
-				      "pll_d", "emc", "emc_latency";
+				      "pll_d", "plld2",
+				      "plld3", "plld4",
+				      "emc";
 			clocks = <&clk32k_in>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAYHUB>,
@@ -455,11 +456,16 @@
 				 */
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
-				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
-				 <&bpmp_clks TEGRA194_CLK_PLLD3>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD>,
-				 <&bpmp_clks TEGRA194_CLK_EMC>,
-				 <&bpmp_clks TEGRA194_CLK_CLK_M>;
+				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				 /* todo: fix TEGRA194_CLK_PLLD3 VDK crash */
+				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				/*
+				 * todo: TEGRA194_CLK_PLLD4 not defined
+				 *       yet so use TEGRA194_CLK_PLLD3
+				 */
+				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				 <&bpmp_clks TEGRA194_CLK_EMC>;
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
 				      "wgrp3", "wgrp4", "wgrp5", "head0";
 			resets = <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_MISC>,
@@ -487,8 +493,9 @@
 				      "nvdisplayhub", "nvdisplay_p0",
 				      "nvdisplay_p1", "nvdisplay_p2",
 				      "nvdisplay_p3", "pllp_display",
-				      "plld2", "plld3",
-				      "pll_d", "disp2_emc", "emc_latency";
+				      "pll_d", "plld2",
+				      "plld3", "plld4",
+				      "disp2_emc";
 			clocks = <&clk32k_in>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAYHUB>,
@@ -501,11 +508,16 @@
 				 */
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
-				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
-				 <&bpmp_clks TEGRA194_CLK_PLLD3>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD>,
-				 <&bpmp_clks TEGRA194_CLK_EMC>,
-				 <&bpmp_clks TEGRA194_CLK_CLK_M>;
+				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				 /* todo: fix TEGRA194_CLK_PLLD3 VDK crash */
+				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				/*
+				 * todo: TEGRA194_CLK_PLLD4 not defined
+				 *       yet so use TEGRA194_CLK_PLLD3
+				 */
+				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				 <&bpmp_clks TEGRA194_CLK_EMC>;
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
 				      "wgrp3", "wgrp4", "wgrp5", "head1";
 			resets = <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_MISC>,
@@ -533,8 +545,9 @@
 				      "nvdisplayhub", "nvdisplay_p0",
 				      "nvdisplay_p1", "nvdisplay_p2",
 				      "nvdisplay_p3", "pllp_display",
-				      "plld2", "plld3",
-				      "pll_d", "disp3_emc", "emc_latency";
+				      "pll_d", "plld2",
+				      "plld3", "plld4",
+				      "disp3_emc";
 			clocks = <&clk32k_in>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAYHUB>,
@@ -547,11 +560,16 @@
 				 */
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
-				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
-				 <&bpmp_clks TEGRA194_CLK_PLLD3>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD>,
-				 <&bpmp_clks TEGRA194_CLK_EMC>,
-				 <&bpmp_clks TEGRA194_CLK_CLK_M>;
+				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				 /* todo: fix TEGRA194_CLK_PLLD3 VDK crash */
+				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				/*
+				 * todo: TEGRA194_CLK_PLLD4 not defined
+				 *       yet so use TEGRA194_CLK_PLLD3
+				 */
+				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				 <&bpmp_clks TEGRA194_CLK_EMC>;
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
 				      "wgrp3", "wgrp4", "wgrp5", "head2";
 			resets = <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_MISC>,
@@ -579,8 +597,9 @@
 				      "nvdisplayhub", "nvdisplay_p0",
 				      "nvdisplay_p1", "nvdisplay_p2",
 				      "nvdisplay_p3", "pllp_display",
-				      "plld2", "plld3",
-				      "pll_d", "disp4_emc", "emc_latency";
+				      "pll_d", "plld2",
+				      "plld3", "plld4",
+				      "disp4_emc";
 			clocks = <&clk32k_in>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_DISP>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAYHUB>,
@@ -593,11 +612,16 @@
 				 */
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
-				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
-				 <&bpmp_clks TEGRA194_CLK_PLLD3>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD>,
-				 <&bpmp_clks TEGRA194_CLK_EMC>,
-				 <&bpmp_clks TEGRA194_CLK_CLK_M>;
+				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				 /* todo: fix TEGRA194_CLK_PLLD3 VDK crash */
+				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				/*
+				 * todo: TEGRA194_CLK_PLLD4 not defined
+				 *       yet so use TEGRA194_CLK_PLLD3
+				 */
+				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
+				 <&bpmp_clks TEGRA194_CLK_EMC>;
 			reset-names = "misc", "wgrp0", "wgrp1", "wgrp2",
 				      "wgrp3", "wgrp4", "wgrp5", "head3";
 			resets = <&bpmp_resets TEGRA194_RESET_NVDISPLAY0_MISC>,

@@ -2,6 +2,7 @@
  * Common function shared by Linux WEXT, cfg80211 and p2p drivers
  *
  * Copyright (C) 1999-2015, Broadcom Corporation
+ * Copyright (C) 2017 NVIDIA Corporation. All rights reserved.
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -411,9 +412,6 @@ int wldev_set_country(
 	scb_val_t scbval;
 	char smbuf[WLC_IOCTL_SMLEN];
 
-	if (!country_code)
-		return error;
-
 	bzero(&scbval, sizeof(scb_val_t));
 	error = wldev_iovar_getbuf(dev, "country", NULL, 0, &cspec, sizeof(cspec), NULL);
 	if (error < 0) {
@@ -421,34 +419,43 @@ int wldev_set_country(
 		return error;
 	}
 
-	if ((error < 0) ||
-	    (strncmp(country_code, cspec.country_abbrev, WLC_CNTRY_BUF_SZ) != 0)) {
+	/* Skip setting same country code provided again */
+	if (country_code &&
+	    (strncmp(country_code, cspec.country_abbrev, WLC_CNTRY_BUF_SZ) == 0))
+		return 0;
 
-		if (user_enforced) {
-			bzero(&scbval, sizeof(scb_val_t));
-			error = wldev_ioctl(dev, WLC_DISASSOC, &scbval, sizeof(scb_val_t), true);
-			if (error < 0) {
-				WLDEV_ERROR(("%s: set country failed due to Disassoc error %d\n",
-					__FUNCTION__, error));
-				return error;
-			}
-		}
+	/* Reset existing country code if none provided */
+	if (!country_code)
+		goto set_cur_ccode;
 
-		cspec.rev = -1;
-		memcpy(cspec.country_abbrev, country_code, WLC_CNTRY_BUF_SZ);
-		memcpy(cspec.ccode, country_code, WLC_CNTRY_BUF_SZ);
-		dhd_get_customized_country_code(dev, (char *)&cspec.country_abbrev, &cspec);
-		error = wldev_iovar_setbuf(dev, "country", &cspec, sizeof(cspec),
-			smbuf, sizeof(smbuf), NULL);
+	if (user_enforced) {
+		bzero(&scbval, sizeof(scb_val_t));
+		error = wldev_ioctl(dev, WLC_DISASSOC, &scbval, sizeof(scb_val_t), true);
 		if (error < 0) {
-			WLDEV_ERROR(("%s: set country for %s as %s rev %d failed\n",
-				__FUNCTION__, country_code, cspec.ccode, cspec.rev));
+			WLDEV_ERROR(("%s: set country failed due to Disassoc error %d\n",
+				__FUNCTION__, error));
 			return error;
 		}
-		dhd_bus_country_set(dev, &cspec, notify);
-		WLDEV_ERROR(("%s: set country for %s as %s rev %d\n",
-			__FUNCTION__, country_code, cspec.ccode, cspec.rev));
 	}
+
+	cspec.rev = -1;
+	memcpy(cspec.country_abbrev, country_code, WLC_CNTRY_BUF_SZ);
+	memcpy(cspec.ccode, country_code, WLC_CNTRY_BUF_SZ);
+	dhd_get_customized_country_code(dev, (char *)&cspec.country_abbrev, &cspec);
+
+set_cur_ccode:
+
+	error = wldev_iovar_setbuf(dev, "country", &cspec, sizeof(cspec),
+		smbuf, sizeof(smbuf), NULL);
+	if (error < 0) {
+		WLDEV_ERROR(("%s: set country for %s as %s rev %d failed\n",
+			__FUNCTION__, country_code, cspec.ccode, cspec.rev));
+		return error;
+	}
+	dhd_bus_country_set(dev, &cspec, notify);
+	WLDEV_ERROR(("%s: set country for %s as %s rev %d\n",
+		__FUNCTION__, country_code, cspec.ccode, cspec.rev));
+
 	return 0;
 }
 

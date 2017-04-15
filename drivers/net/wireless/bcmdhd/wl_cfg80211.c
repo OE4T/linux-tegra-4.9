@@ -4,7 +4,7 @@
  * Copyright (C) 1999-2015, Broadcom Corporation
  * 
  * Portions contributed by Nvidia
- * Copyright (C) 2015 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2015-2017 NVIDIA Corporation. All rights reserved.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -9183,6 +9183,15 @@ wl_notify_connect_status(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 					"event : %d, reason=%d from " MACDBG "\n",
 					ndev->name, event, ntoh32(e->reason),
 					MAC2STRDBG((u8*)(&e->addr))));
+				/* Re-set existing country code to restore channel
+				 * flags on DFS channels
+				 */
+				if ((cfg->channel >= 50) && (cfg->channel <= 144)) {
+					err = wldev_set_country(ndev, NULL, true, false);
+					if (err < 0) {
+						WL_ERR(("%s: failed to reset ccode (%d)\n", __func__, err));
+					}
+				}
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 				if (ntoh32(e->reason) == 15) {
 					TEGRA_SYSFS_HISTOGRAM_STAT_INC(connect_fail_reason_15);
@@ -14599,9 +14608,20 @@ const wl_event_msg_t *e, void *data)
 	chanspec_t chanspec;
 
 	WL_ERR(("%s\n", __FUNCTION__));
+	/* Re-set existing country code to restore channel
+	 * flags on DFS channels
+	 */
+	if (cfg && cfgdev) {
+		ndev = cfgdev_to_wlc_ndev(cfgdev, cfg);
+		error = wldev_set_country(ndev, NULL, true, false);
+		if (error < 0) {
+			WL_ERR(("%s: failed to reset ccode (%d)\n", __func__, error));
+		}
+	}
+
 	if (e->status)
 		return -1;
-	if (cfgdev) {
+	if (cfg && cfgdev) {
 		ndev = cfgdev_to_wlc_ndev(cfgdev, cfg);
 		wiphy = bcmcfg_to_wiphy(cfg);
 		error = wldev_iovar_getint(ndev, "chanspec", &chsp);

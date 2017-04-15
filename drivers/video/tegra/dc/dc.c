@@ -3576,7 +3576,7 @@ int tegra_dc_get_source_physical_address(u8 *phy_address)
 	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
 		dc = tegra_dc_get_dc(i);
 
-		if (dc && dc->edid && dc->out &&
+		if (dc && dc->enabled && dc->edid && dc->out &&
 			(dc->out->type == TEGRA_DC_OUT_HDMI))
 			return tegra_edid_get_source_physical_address(dc->edid,
 				phy_address);

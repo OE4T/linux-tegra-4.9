@@ -425,7 +425,10 @@ void tegra_phy_xusb_utmi_pad_power_on(struct phy *phy)
 
 	usb2->powered_on = true;
 }
+#if 0
+/* TODO: pad power saving */
 EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_power_on);
+#endif
 
 void tegra_phy_xusb_utmi_pad_power_down(struct phy *phy)
 {
@@ -463,7 +466,10 @@ void tegra_phy_xusb_utmi_pad_power_down(struct phy *phy)
 	tegra186_utmi_bias_pad_power_off(padctl);
 	usb2->powered_on = false;
 }
+#if 0
+/* TODO: pad power saving */
 EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_power_down);
+#endif
 
 static int tegra186_utmi_phy_power_on(struct phy *phy)
 {
@@ -550,11 +556,14 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 	reg |= RPD_CTRL(priv->calib.rpd_ctrl);
 	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL1(index));
 
+	/* TODO: pad power saving */
+	tegra_phy_xusb_utmi_pad_power_on(phy);
 	return 0;
 }
 
 static int tegra186_utmi_phy_power_off(struct phy *phy)
 {
+	/* TODO: pad power saving */
 	tegra_phy_xusb_utmi_pad_power_down(phy);
 
 	return 0;

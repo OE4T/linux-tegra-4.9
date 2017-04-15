@@ -39,6 +39,4 @@ int tegra_xusb_padctl_enable_phy_wake(struct tegra_xusb_padctl *padctl,
 				      struct phy *phy);
 int tegra_xusb_padctl_disable_phy_wake(struct tegra_xusb_padctl *padctl,
 				       struct phy *phy);
-void tegra_phy_xusb_utmi_pad_power_on(struct phy *phy);
-void tegra_phy_xusb_utmi_pad_power_down(struct phy *phy);
 #endif /* PHY_TEGRA_XUSB_H */

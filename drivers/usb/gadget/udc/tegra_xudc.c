@@ -622,7 +622,6 @@ static void tegra_xudc_device_mode_on(struct tegra_xudc *xudc)
 
 	xudc->device_mode = true;
 	spin_unlock_irqrestore(&xudc->lock, flags);
-	tegra_phy_xusb_utmi_pad_power_on(xudc->utmi_phy);
 }
 
 static void tegra_xudc_device_mode_off(struct tegra_xudc *xudc)
@@ -663,7 +662,6 @@ static void tegra_xudc_device_mode_off(struct tegra_xudc *xudc)
 
 	xudc->device_mode = false;
 	spin_unlock_irqrestore(&xudc->lock, flags);
-	tegra_phy_xusb_utmi_pad_power_down(xudc->utmi_phy);
 
 	/* Wait for disconnect event. */
 	if (connected)

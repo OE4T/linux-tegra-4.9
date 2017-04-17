@@ -521,6 +521,36 @@ int pwm_apply_state(struct pwm_device *pwm, struct pwm_state *state)
 
 			pwm->state.enabled = state->enabled;
 		}
+
+		if (state->double_period != pwm->state.double_period) {
+			if (state->double_period > state->period)
+				return -EINVAL;
+
+			if (!pwm->chip->ops->set_double_pulse_period)
+				return -ENOTSUPP;
+
+			err = pwm->chip->ops->set_double_pulse_period(
+					pwm->chip, pwm, state->double_period);
+			if (err)
+				return err;
+
+			pwm->state.double_period = state->double_period;
+		}
+
+		if (state->ramp_time != pwm->state.ramp_time) {
+			if (state->ramp_time > state->duty_cycle)
+				return -EINVAL;
+
+			if (!pwm->chip->ops->set_ramp_time)
+				return -ENOTSUPP;
+
+			err = pwm->chip->ops->set_ramp_time(
+					pwm->chip, pwm, state->double_period);
+			if (err)
+				return err;
+
+			pwm->state.ramp_time = state->ramp_time;
+		}
 	}
 
 	return 0;

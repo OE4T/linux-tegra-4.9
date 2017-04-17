@@ -21,6 +21,7 @@
 #include <soc/tegra/fuse.h>
 
 #include <nvgpu/timers.h>
+#include <nvgpu/gmmu.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/log.h>
 
@@ -534,8 +535,8 @@ int gr_gv11b_alloc_buffer(struct vm_gk20a *vm, size_t size,
 	if (err)
 		return err;
 
-	mem->gpu_va = gk20a_gmmu_map(vm,
-				&mem->priv.sgt,
+	mem->gpu_va = nvgpu_gmmu_map(vm,
+				mem,
 				size,
 				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				gk20a_mem_flag_none,

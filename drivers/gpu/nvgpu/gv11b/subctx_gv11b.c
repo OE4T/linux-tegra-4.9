@@ -22,6 +22,7 @@
 
 #include <nvgpu/dma.h>
 #include <nvgpu/log.h>
+#include <nvgpu/gmmu.h>
 
 #include <nvgpu/hw/gv11b/hw_ram_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_ctxsw_prog_gv11b.h>
@@ -38,8 +39,7 @@ void gv11b_free_subctx_header(struct channel_gk20a *c)
 	gk20a_dbg_fn("");
 
 	if (ctx->mem.gpu_va) {
-		gk20a_gmmu_unmap(c->vm, ctx->mem.gpu_va,
-			ctx->mem.size, gk20a_mem_flag_none);
+		nvgpu_gmmu_unmap(c->vm, &ctx->mem, ctx->mem.gpu_va);
 
 		nvgpu_dma_free(g, &ctx->mem);
 	}
@@ -63,8 +63,8 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 			nvgpu_err(g, "failed to allocate sub ctx header");
 			return ret;
 		}
-		ctx->mem.gpu_va = gk20a_gmmu_map(c->vm,
-					&ctx->mem.priv.sgt,
+		ctx->mem.gpu_va = nvgpu_gmmu_map(c->vm,
+					&ctx->mem,
 					ctx->mem.size,
 					NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 					gk20a_mem_flag_none, true,

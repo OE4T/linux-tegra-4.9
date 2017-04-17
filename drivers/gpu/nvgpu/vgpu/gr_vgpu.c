@@ -526,7 +526,7 @@ static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 	} else {
 		if (!tsg->tsg_gr_ctx) {
 			tsg->vm = c->vm;
-			gk20a_vm_get(tsg->vm);
+			nvgpu_vm_get(tsg->vm);
 			err = g->ops.gr.alloc_gr_ctx(g, &tsg->tsg_gr_ctx,
 						c->vm,
 						args->class_num,
@@ -536,7 +536,7 @@ static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 			if (err) {
 				nvgpu_err(g,
 					"fail to allocate TSG gr ctx buffer, err=%d", err);
-				gk20a_vm_put(tsg->vm);
+				nvgpu_vm_put(tsg->vm);
 				tsg->vm = NULL;
 				goto out;
 			}

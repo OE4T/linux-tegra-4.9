@@ -60,7 +60,7 @@ void gm20b_init_mm(struct gpu_ops *gops)
 	gops->mm.support_sparse = gm20b_mm_support_sparse;
 	gops->mm.gmmu_map = gk20a_locked_gmmu_map;
 	gops->mm.gmmu_unmap = gk20a_locked_gmmu_unmap;
-	gops->mm.vm_remove = gk20a_vm_remove_support;
+	gops->mm.vm_remove = nvgpu_vm_remove_support;
 	gops->mm.vm_alloc_share = gk20a_vm_alloc_share;
 	gops->mm.vm_bind_channel = gk20a_vm_bind_channel;
 	gops->mm.fb_flush = gk20a_mm_fb_flush;

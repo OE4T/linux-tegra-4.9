@@ -74,7 +74,7 @@ static int gb10b_init_bar2_vm(struct gk20a *g)
 	/* BAR2 aperture size is 32MB */
 	mm->bar2.aperture_size = 32 << 20;
 	gk20a_dbg_info("bar2 vm size = 0x%x", mm->bar2.aperture_size);
-	gk20a_init_vm(mm, vm, big_page_size, SZ_4K,
+	nvgpu_init_vm(mm, vm, big_page_size, SZ_4K,
 		mm->bar2.aperture_size - SZ_4K,
 		mm->bar2.aperture_size, false, false, "bar2");
 
@@ -88,7 +88,7 @@ static int gb10b_init_bar2_vm(struct gk20a *g)
 	return 0;
 
 clean_up_va:
-	gk20a_deinit_vm(vm);
+	nvgpu_deinit_vm(vm);
 	return err;
 }
 

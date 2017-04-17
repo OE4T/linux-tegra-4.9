@@ -289,7 +289,7 @@ void gk20a_tsg_release(struct kref *ref)
 		tsg->tsg_gr_ctx = NULL;
 	}
 	if (tsg->vm) {
-		gk20a_vm_put(tsg->vm);
+		nvgpu_vm_put(tsg->vm);
 		tsg->vm = NULL;
 	}
 

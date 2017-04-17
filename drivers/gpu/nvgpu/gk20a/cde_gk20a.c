@@ -46,6 +46,12 @@
 #include <nvgpu/hw/gk20a/hw_ccsr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 
+/*
+ * Currently this code uses nvgpu_vm_map() since it takes dmabuf FDs from the
+ * CDE ioctls. That has to change - instead this needs to take an nvgpu_mem.
+ */
+#include "common/linux/vm_priv.h"
+
 static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx);
 static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct gk20a *g);
 
@@ -1016,8 +1022,8 @@ __releases(&cde_app->mutex)
 
 
 	/* map the destination buffer */
-	get_dma_buf(compbits_scatter_buf); /* a ref for gk20a_vm_map */
-	map_vaddr = gk20a_vm_map(cde_ctx->vm, compbits_scatter_buf, 0,
+	get_dma_buf(compbits_scatter_buf); /* a ref for nvgpu_vm_map */
+	map_vaddr = nvgpu_vm_map(cde_ctx->vm, compbits_scatter_buf, 0,
 				 NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				 compbits_kind, NULL, true,
 				 gk20a_mem_flag_none,
@@ -1136,7 +1142,7 @@ __releases(&cde_app->mutex)
 	cde_ctx->init_cmd_executed = true;
 
 	/* unmap the buffers - channel holds references to them now */
-	gk20a_vm_unmap(cde_ctx->vm, map_vaddr);
+	nvgpu_vm_unmap(cde_ctx->vm, map_vaddr);
 
 	return err;
 
@@ -1144,7 +1150,7 @@ exit_unmap_surface:
 	if (surface)
 		dma_buf_vunmap(compbits_scatter_buf, surface);
 exit_unmap_vaddr:
-	gk20a_vm_unmap(cde_ctx->vm, map_vaddr);
+	nvgpu_vm_unmap(cde_ctx->vm, map_vaddr);
 exit_idle:
 	gk20a_idle(g);
 	return err;
@@ -1277,7 +1283,7 @@ err_init_cde_img:
 	nvgpu_gmmu_unmap(ch->vm, &g->gr.compbit_store.mem, vaddr);
 err_map_backingstore:
 err_alloc_gpfifo:
-	gk20a_vm_put(ch->vm);
+	nvgpu_vm_put(ch->vm);
 err_commit_va:
 err_get_gk20a_channel:
 	nvgpu_release_firmware(g, img);

@@ -39,6 +39,13 @@
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 
 /*
+ * This is required for nvgpu_vm_find_buffer() which is used in the tracing
+ * code. Once we can get and access userspace buffers without requiring
+ * direct dma_buf usage this can be removed.
+ */
+#include "common/linux/vm_priv.h"
+
+/*
  * Although channels do have pointers back to the gk20a struct that they were
  * created under in cases where the driver is killed that pointer can be bad.
  * The channel memory can be freed before the release() function for a given
@@ -550,7 +557,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	/*
 	 * When releasing the channel we unbind the VM - so release the ref.
 	 */
-	gk20a_vm_put(ch_vm);
+	nvgpu_vm_put(ch_vm);
 
 	nvgpu_spinlock_acquire(&ch->update_fn_lock);
 	ch->update_fn = NULL;
@@ -1399,7 +1406,7 @@ static void trace_write_pushbuffer(struct channel_gk20a *c,
 		int err;
 
 		words = pbdma_gp_entry1_length_v(g->entry1);
-		err = gk20a_vm_find_buffer(c->vm, gpu_va, &dmabuf, &offset);
+		err = nvgpu_vm_find_buffer(c->vm, gpu_va, &dmabuf, &offset);
 		if (!err)
 			mem = dma_buf_vmap(dmabuf);
 	}
@@ -1901,7 +1908,7 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 	bool pre_alloc_enabled = channel_gk20a_is_prealloc_enabled(c);
 
 	if (!skip_buffer_refcounting) {
-		err = gk20a_vm_get_buffers(vm, &mapped_buffers,
+		err = nvgpu_vm_get_buffers(vm, &mapped_buffers,
 					&num_mapped_buffers);
 		if (err)
 			return err;
@@ -1940,7 +1947,7 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 	return 0;
 
 err_put_buffers:
-	gk20a_vm_put_buffers(vm, mapped_buffers, num_mapped_buffers);
+	nvgpu_vm_put_buffers(vm, mapped_buffers, num_mapped_buffers);
 
 	return err;
 }
@@ -2039,7 +2046,7 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 		}
 
 		if (job->num_mapped_buffers)
-			gk20a_vm_put_buffers(vm, job->mapped_buffers,
+			nvgpu_vm_put_buffers(vm, job->mapped_buffers,
 				job->num_mapped_buffers);
 
 		/* Remove job from channel's job list before we close the

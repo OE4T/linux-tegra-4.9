@@ -22,6 +22,8 @@
 #include "vgpu/vgpu.h"
 #include "gk20a/mm_gk20a.h"
 
+#include "common/linux/vm_priv.h"
+
 static int vgpu_init_mm_setup_sw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
@@ -216,7 +218,7 @@ static void vgpu_vm_remove_support(struct vm_gk20a *vm)
 	nvgpu_rbtree_enum_start(0, &node, vm->mapped_buffers);
 	while (node) {
 		mapped_buffer = mapped_buffer_from_rbtree_node(node);
-		gk20a_vm_unmap_locked(mapped_buffer, NULL);
+		nvgpu_vm_unmap_locked(mapped_buffer, NULL);
 		nvgpu_rbtree_enum_start(0, &node, vm->mapped_buffers);
 	}
 
@@ -454,7 +456,7 @@ static int vgpu_vm_bind_channel(struct gk20a_as_share *as_share,
 	}
 
 	if (ch->vm)
-		gk20a_vm_get(ch->vm);
+		nvgpu_vm_get(ch->vm);
 
 	return err;
 }

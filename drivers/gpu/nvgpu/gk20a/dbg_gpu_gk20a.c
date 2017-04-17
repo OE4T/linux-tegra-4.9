@@ -26,6 +26,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
+#include <nvgpu/vm.h>
 
 #include "gk20a.h"
 #include "gk20a/platform_gk20a.h"
@@ -36,6 +37,14 @@
 #include <nvgpu/hw/gk20a/hw_therm_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_gr_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_perf_gk20a.h>
+
+/*
+ * Currently this code uses nvgpu_vm_map_buffer() since it takes dmabuf FDs from
+ * the dbg ioctls. That has to change; this needs to hide the usage of dmabufs
+ * in Linux specific code. All core driver usage of mapping must be done through
+ * nvgpu_gmmu_map().
+ */
+#include "common/linux/vm_priv.h"
 
 /*
  * API to get first channel from the list of all channels
@@ -1844,7 +1853,7 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 		return -EBUSY;
 	}
 
-	err = gk20a_init_vm(mm, vm, big_page_size,
+	err = nvgpu_init_vm(mm, vm, big_page_size,
 			big_page_size << 10,
 			NV_MM_DEFAULT_KERNEL_SIZE,
 			NV_MM_DEFAULT_KERNEL_SIZE + NV_MM_DEFAULT_USER_SIZE,
@@ -1860,7 +1869,7 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 
 	g->ops.mm.init_inst_block(&mm->perfbuf.inst_block, vm, 0);
 
-	err = gk20a_vm_map_buffer(vm,
+	err = nvgpu_vm_map_buffer(vm,
 			args->dmabuf_fd,
 			&args->offset,
 			0,
@@ -1913,7 +1922,7 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 	return 0;
 
 err_unmap:
-	gk20a_vm_unmap_buffer(vm, args->offset, NULL);
+	nvgpu_vm_unmap_buffer(vm, args->offset, NULL);
 err_remove_vm:
 	gk20a_remove_vm(vm, &mm->perfbuf.inst_block);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
@@ -1952,7 +1961,7 @@ static int gk20a_perfbuf_release_locked(struct gk20a *g, u64 offset)
 
 	err = gk20a_perfbuf_disable_locked(g);
 
-	gk20a_vm_unmap_buffer(vm, offset, NULL);
+	nvgpu_vm_unmap_buffer(vm, offset, NULL);
 	gk20a_remove_vm(vm, &mm->perfbuf.inst_block);
 
 	g->perfbuf.owner = NULL;

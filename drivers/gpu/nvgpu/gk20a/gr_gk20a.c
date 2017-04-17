@@ -3182,14 +3182,14 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 	} else {
 		if (!tsg->tsg_gr_ctx) {
 			tsg->vm = c->vm;
-			gk20a_vm_get(tsg->vm);
+			nvgpu_vm_get(tsg->vm);
 			err = gr_gk20a_alloc_tsg_gr_ctx(g, tsg,
 							args->class_num,
 							args->flags);
 			if (err) {
 				nvgpu_err(g,
 					"fail to allocate TSG gr ctx buffer");
-				gk20a_vm_put(tsg->vm);
+				nvgpu_vm_put(tsg->vm);
 				tsg->vm = NULL;
 				goto out;
 			}

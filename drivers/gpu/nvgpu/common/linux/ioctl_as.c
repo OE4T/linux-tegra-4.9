@@ -28,6 +28,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
 #include "ioctl_as.h"
+#include "vm_priv.h"
 
 static int gk20a_as_ioctl_bind_channel(
 		struct gk20a_as_share *as_share,
@@ -72,7 +73,7 @@ static int gk20a_as_ioctl_map_buffer_ex(
 {
 	gk20a_dbg_fn("");
 
-	return gk20a_vm_map_buffer(as_share->vm, args->dmabuf_fd,
+	return nvgpu_vm_map_buffer(as_share->vm, args->dmabuf_fd,
 				   &args->offset, args->flags,
 				   args->kind,
 				   args->buffer_offset,
@@ -85,7 +86,7 @@ static int gk20a_as_ioctl_map_buffer(
 		struct nvgpu_as_map_buffer_args *args)
 {
 	gk20a_dbg_fn("");
-	return gk20a_vm_map_buffer(as_share->vm, args->dmabuf_fd,
+	return nvgpu_vm_map_buffer(as_share->vm, args->dmabuf_fd,
 				   &args->o_a.offset,
 				   args->flags, NV_KIND_DEFAULT,
 				   0, 0, NULL);
@@ -97,7 +98,7 @@ static int gk20a_as_ioctl_unmap_buffer(
 		struct nvgpu_as_unmap_buffer_args *args)
 {
 	gk20a_dbg_fn("");
-	return gk20a_vm_unmap_buffer(as_share->vm, args->offset, NULL);
+	return nvgpu_vm_unmap_buffer(as_share->vm, args->offset, NULL);
 }
 
 static int gk20a_as_ioctl_map_buffer_batch(
@@ -123,7 +124,7 @@ static int gk20a_as_ioctl_map_buffer_batch(
 	    args->num_maps > g->gpu_characteristics.map_buffer_batch_limit)
 		return -EINVAL;
 
-	gk20a_vm_mapping_batch_start(&batch);
+	nvgpu_vm_mapping_batch_start(&batch);
 
 	for (i = 0; i < args->num_unmaps; ++i) {
 		struct nvgpu_as_unmap_buffer_args unmap_args;
@@ -134,14 +135,14 @@ static int gk20a_as_ioctl_map_buffer_batch(
 			break;
 		}
 
-		err = gk20a_vm_unmap_buffer(as_share->vm, unmap_args.offset,
+		err = nvgpu_vm_unmap_buffer(as_share->vm, unmap_args.offset,
 					    &batch);
 		if (err)
 			break;
 	}
 
 	if (err) {
-		gk20a_vm_mapping_batch_finish(as_share->vm, &batch);
+		nvgpu_vm_mapping_batch_finish(as_share->vm, &batch);
 
 		args->num_unmaps = i;
 		args->num_maps = 0;
@@ -158,7 +159,7 @@ static int gk20a_as_ioctl_map_buffer_batch(
 			break;
 		}
 
-		err = gk20a_vm_map_buffer(
+		err = nvgpu_vm_map_buffer(
 			as_share->vm, map_args.dmabuf_fd,
 			&map_args.offset, map_args.flags,
 			map_args.kind,
@@ -169,7 +170,7 @@ static int gk20a_as_ioctl_map_buffer_batch(
 			break;
 	}
 
-	gk20a_vm_mapping_batch_finish(as_share->vm, &batch);
+	nvgpu_vm_mapping_batch_finish(as_share->vm, &batch);
 
 	if (err)
 		args->num_maps = i;
@@ -228,7 +229,7 @@ static int gk20a_as_ioctl_get_buffer_compbits_info(
 		struct nvgpu_as_get_buffer_compbits_info_args *args)
 {
 	gk20a_dbg_fn("");
-	return gk20a_vm_get_compbits_info(as_share->vm,
+	return nvgpu_vm_get_compbits_info(as_share->vm,
 					  args->mapping_gva,
 					  &args->compbits_win_size,
 					  &args->compbits_win_ctagline,
@@ -241,7 +242,7 @@ static int gk20a_as_ioctl_map_buffer_compbits(
 		struct nvgpu_as_map_buffer_compbits_args *args)
 {
 	gk20a_dbg_fn("");
-	return gk20a_vm_map_compbits(as_share->vm,
+	return nvgpu_vm_map_compbits(as_share->vm,
 				     args->mapping_gva,
 				     &args->compbits_win_gva,
 				     &args->mapping_iova,

@@ -28,6 +28,7 @@
 #include <nvgpu/allocator.h>
 #include <nvgpu/list.h>
 #include <nvgpu/rbtree.h>
+#include <nvgpu/kref.h>
 
 #ifdef CONFIG_ARM64
 #define outer_flush_range(a, b)

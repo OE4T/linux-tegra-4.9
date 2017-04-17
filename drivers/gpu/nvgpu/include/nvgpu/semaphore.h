@@ -14,7 +14,6 @@
 #ifndef SEMAPHORE_GK20A_H
 #define SEMAPHORE_GK20A_H
 
-#include <linux/kref.h>
 #include <linux/list.h>
 #include <linux/delay.h>
 
@@ -22,6 +21,7 @@
 #include <nvgpu/allocator.h>
 #include <nvgpu/atomic.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/kref.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"

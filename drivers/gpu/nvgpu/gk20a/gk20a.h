@@ -42,6 +42,7 @@ struct dbg_profiler_object_data;
 #include <nvgpu/log.h>
 #include <nvgpu/pramin.h>
 #include <nvgpu/acr/nvgpu_acr.h>
+#include <nvgpu/kref.h>
 
 #include "clk_gk20a.h"
 #include "ce2_gk20a.h"

@@ -17,6 +17,7 @@
 #define __TSG_GK20A_H_
 
 #include <nvgpu/lock.h>
+#include <nvgpu/kref.h>
 
 #define NVGPU_INVALID_TSG_ID (-1)
 

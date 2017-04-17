@@ -17,8 +17,9 @@
 #ifndef _GK20A_FENCE_H_
 #define _GK20A_FENCE_H_
 
-#include <linux/kref.h>
 #include <linux/wait.h>
+
+#include <nvgpu/kref.h>
 
 struct platform_device;
 struct sync_timeline;

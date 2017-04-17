@@ -25,6 +25,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/atomic.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/kref.h>
 
 #include "gk20a/gk20a.h"
 #include "clk/clk_arb.h"

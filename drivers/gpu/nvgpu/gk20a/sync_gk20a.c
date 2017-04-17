@@ -24,6 +24,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/semaphore.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/kref.h>
 
 #include "../drivers/staging/android/sync.h"
 

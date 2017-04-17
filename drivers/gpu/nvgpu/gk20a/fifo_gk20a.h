@@ -25,6 +25,8 @@
 #include "tsg_gk20a.h"
 #include "debug_gk20a.h"
 
+#include <nvgpu/kref.h>
+
 #define MAX_RUNLIST_BUFFERS		2
 
 #define FIFO_INVAL_ENGINE_ID		((u32)~0)

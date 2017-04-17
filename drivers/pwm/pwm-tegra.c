@@ -55,6 +55,8 @@ struct tegra_pwm_chip {
 	const struct tegra_pwm_soc *soc;
 	bool			pretty_good_algo;
 	int			num_user;
+	int			clk_init_rate;
+	int			clk_curr_rate;
 	struct pinctrl		*pinctrl;
 	struct pinctrl_state	*suspend_state;
 	struct pinctrl_state	*resume_state;
@@ -113,6 +115,7 @@ static long tegra_get_optimal_rate(struct tegra_pwm_chip *pc,
 		dev_err(pc->dev, "Not able to set proper rate: %d\n", ret);
 		return ret;
 	}
+	pc->clk_curr_rate = clk_get_rate(pc->clk);
 	return dn - 1;
 }
 
@@ -143,6 +146,17 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 		rate = tegra_get_optimal_rate(pc, duty_ns, period_ns);
 		if (rate >= 0)
 			goto timing_done;
+	} else {
+		if (pc->clk_init_rate != pc->clk_curr_rate) {
+			err = clk_set_rate(pc->clk, pc->clk_init_rate);
+			if (err < 0) {
+				dev_err(pc->dev,
+					"Not able to set proper rate: %d\n",
+					err);
+				return err;
+			}
+			pc->clk_curr_rate = pc->clk_init_rate;
+		}
 	}
 
 	/*
@@ -270,8 +284,11 @@ static int tegra_pwm_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+
 	reset_control_deassert(pwm->rst);
 
+	pwm->clk_init_rate = clk_get_rate(pwm->clk);
+	pwm->clk_curr_rate = pwm->clk_init_rate;
 	pwm->chip.dev = &pdev->dev;
 	pwm->chip.ops = &tegra_pwm_ops;
 	pwm->chip.base = -1;

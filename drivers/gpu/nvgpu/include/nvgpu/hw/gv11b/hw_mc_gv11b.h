@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -241,5 +241,9 @@ static inline u32 mc_elpg_enable_pfb_enabled_f(void)
 static inline u32 mc_elpg_enable_hub_enabled_f(void)
 {
 	return 0x20000000;
+}
+static inline u32 mc_elpg_enable_l2_enabled_f(void)
+{
+	return 0x8;
 }
 #endif

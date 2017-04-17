@@ -630,4 +630,24 @@ static inline u32 fifo_cfg0_pbdma_fault_id_v(u32 r)
 {
 	return (r >> 16) & 0xff;
 }
+static inline u32 fifo_fb_iface_r(void)
+{
+	return 0x000026f0;
+}
+static inline u32 fifo_fb_iface_control_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 fifo_fb_iface_control_enable_f(void)
+{
+	return 0x1;
+}
+static inline u32 fifo_fb_iface_status_v(u32 r)
+{
+	return (r >> 4) & 0x1;
+}
+static inline u32 fifo_fb_iface_status_enabled_f(void)
+{
+	return 0x10;
+}
 #endif

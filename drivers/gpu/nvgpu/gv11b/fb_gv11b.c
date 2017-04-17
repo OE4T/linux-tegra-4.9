@@ -24,6 +24,61 @@
 
 #include <nvgpu/hw/gv11b/hw_gmmu_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_fb_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
+#include <nvgpu/hw/gv11b/hw_fifo_gv11b.h>
+
+static void gv11b_init_nvlink_soc_credits(struct gk20a *g)
+{
+	void __iomem *soc1 = ioremap(0x02b10010, 4096);
+	void __iomem *soc2 = ioremap(0x02b20010, 4096);
+	void __iomem *soc3 = ioremap(0x02b30010, 4096);
+	void __iomem *soc4 = ioremap(0x02b40010, 4096);
+
+	gk20a_dbg_info("init nvlink soc credits");
+
+	writel_relaxed(0x14050000, soc1);
+	writel_relaxed(0x08020000, soc1 + 4);
+	writel_relaxed(0x14050000, soc2);
+	writel_relaxed(0x08020000, soc2 + 4);
+	writel_relaxed(0x14050000, soc3);
+	writel_relaxed(0x08020000, soc3 + 4);
+	writel_relaxed(0x14050000, soc4);
+	writel_relaxed(0x08020000, soc4 + 4);
+
+}
+
+static void gv11b_fb_reset(struct gk20a *g)
+{
+	u32 val;
+
+	gk20a_dbg_info("reset gv11b fb");
+
+	g->ops.mc.reset(g, mc_enable_pfb_enabled_f() |
+				mc_enable_l2_enabled_f() |
+				mc_enable_xbar_enabled_f() |
+				mc_enable_hub_enabled_f());
+
+	val = gk20a_readl(g, mc_elpg_enable_r());
+	val |= mc_elpg_enable_xbar_enabled_f() |
+		mc_elpg_enable_pfb_enabled_f() |
+		mc_elpg_enable_l2_enabled_f() |
+		mc_elpg_enable_hub_enabled_f();
+	gk20a_writel(g, mc_elpg_enable_r(), val);
+
+	/* fs hub should be out of reset by now */
+	gv11b_init_nvlink_soc_credits(g);
+
+	val = gk20a_readl(g, fifo_fb_iface_r());
+	gk20a_dbg_info("fifo_fb_iface val = 0x%x", val);
+	if (!(val & fifo_fb_iface_control_enable_f() &&
+		val & fifo_fb_iface_status_enabled_f())) {
+		gk20a_dbg_info("fifo_fb_iface set control enable");
+		gk20a_writel(g, fifo_fb_iface_r(),
+				fifo_fb_iface_control_enable_f());
+		val = gk20a_readl(g, fifo_fb_iface_r());
+		gk20a_dbg_info("fifo_fb_iface val = 0x%x", val);
+	}
+}
 
 static void gv11b_init_uncompressed_kind_map(void)
 {
@@ -94,6 +149,8 @@ void gv11b_init_fb(struct gpu_ops *gops)
 {
 	gp10b_init_fb(gops);
 	gops->fb.hub_isr = gv11b_fb_hub_isr;
+	gops->fb.reset = gv11b_fb_reset;
+
 	gv11b_init_uncompressed_kind_map();
 	gv11b_init_kind_attr();
 

@@ -120,6 +120,7 @@ struct tegra210_adsp_pcm_rtd {
 	struct device *dev;
 	struct snd_pcm_substream *substream;
 	struct tegra210_adsp_app *fe_apm;
+	snd_pcm_uframes_t prev_appl_ptr;
 };
 
 struct tegra210_adsp_compr_rtd {
@@ -1114,14 +1115,47 @@ static int tegra210_adsp_app_default_msg_handler(struct tegra210_adsp_app *app,
 	return 0;
 }
 
+static int tegra210_adsp_pcm_ack(struct snd_pcm_substream *substream)
+{
+	struct tegra210_adsp_pcm_rtd *prtd = substream->runtime->private_data;
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	size_t pos;
+	int ret = 0;
+
+	dev_vdbg(prtd->dev, "%s %d", __func__, (int)runtime->control->appl_ptr);
+
+	pos = frames_to_bytes(runtime,
+		runtime->control->appl_ptr % runtime->buffer_size);
+	ret = tegra210_adsp_send_pos_msg(prtd->fe_apm, pos,
+		TEGRA210_ADSP_MSG_FLAG_SEND);
+	if (ret < 0) {
+		dev_err(prtd->dev, "Failed to send write position.");
+		return ret;
+	}
+
+	return ret;
+}
+
 static int tegra210_adsp_pcm_msg_handler(struct tegra210_adsp_app *app,
 					apm_msg_t *apm_msg)
 {
 	struct tegra210_adsp_pcm_rtd *prtd = app->private_data;
+	struct snd_pcm_runtime *runtime;
 
 	switch (apm_msg->msg.call_params.method) {
 	case nvfx_apm_method_set_position:
+		if (!prtd && !prtd->substream)
+			return 0;
+		runtime = prtd->substream->runtime;
 		snd_pcm_period_elapsed(prtd->substream);
+
+		if ((IS_MMAP_ACCESS(runtime->access))) {
+			if (prtd->prev_appl_ptr !=
+				runtime->control->appl_ptr) {
+				prtd->prev_appl_ptr = runtime->control->appl_ptr;
+				tegra210_adsp_pcm_ack(prtd->substream);
+			}
+		}
 		break;
 	case nvfx_apm_method_ack:
 		complete(app->msg_complete);
@@ -1799,6 +1833,7 @@ static uint32_t tegra210_adsp_hv_pcm_trigger(
 static int tegra210_adsp_pcm_trigger(struct snd_pcm_substream *substream,
 				     int cmd)
 {
+	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct tegra210_adsp_pcm_rtd *prtd = substream->runtime->private_data;
 #ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 	struct tegra210_adsp *adsp = prtd->fe_apm->adsp;
@@ -1833,6 +1868,12 @@ static int tegra210_adsp_pcm_trigger(struct snd_pcm_substream *substream,
 			dev_err(prtd->dev, "Failed to set state");
 			return ret;
 		}
+
+		if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) &&
+			(IS_MMAP_ACCESS(runtime->access))) {
+			prtd->prev_appl_ptr = runtime->control->appl_ptr;
+			tegra210_adsp_pcm_ack(substream);
+		}
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
@@ -1860,26 +1901,6 @@ static int tegra210_adsp_pcm_trigger(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static int tegra210_adsp_pcm_ack(struct snd_pcm_substream *substream)
-{
-	struct tegra210_adsp_pcm_rtd *prtd = substream->runtime->private_data;
-	struct snd_pcm_runtime *runtime = substream->runtime;
-	size_t pos;
-	int ret = 0;
-
-	dev_vdbg(prtd->dev, "%s %d", __func__, (int)runtime->control->appl_ptr);
-
-	pos = frames_to_bytes(runtime,
-		runtime->control->appl_ptr % runtime->buffer_size);
-	ret = tegra210_adsp_send_pos_msg(prtd->fe_apm, pos,
-		TEGRA210_ADSP_MSG_FLAG_SEND);
-	if (ret < 0) {
-		dev_err(prtd->dev, "Failed to send write position.");
-		return ret;
-	}
-
-	return ret;
-}
 
 static snd_pcm_uframes_t tegra210_adsp_pcm_pointer(
 		struct snd_pcm_substream *substream)
@@ -2206,6 +2227,8 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_soc_dai *dai)
 {
 	struct tegra210_adsp *adsp = snd_soc_dai_get_drvdata(dai);
+	struct tegra210_adsp_pcm_rtd *prtd = NULL;
+	struct snd_pcm_runtime *runtime = NULL;
 #ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 	struct device *dev = adsp->dev;
 	struct device_node *node = dev->of_node;
@@ -2214,7 +2237,7 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 	nvfx_adma_init_params_t adma_params;
 	uint32_t be_reg = dai->id;
 	uint32_t admaif_id = be_reg - ADSP_ADMAIF_START + 1;
-	uint32_t source;
+	uint32_t source, apm_in_reg;
 	int i, ret;
 
 	dev_vdbg(adsp->dev, "%s : stream %d admaif %d\n",
@@ -2257,6 +2280,17 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 		if (!IS_APM_OUT(app->reg))
 			return 0;
 
+		apm_in_reg = APM_IN_START + (source - APM_OUT_START);
+
+		/* not needed for IO-IO and compr */
+		if (adsp->apps[apm_in_reg].msg_handler
+				== tegra210_adsp_pcm_msg_handler) {
+			prtd = adsp->apps[apm_in_reg].private_data;
+			runtime = prtd->substream->runtime;
+			if ((IS_MMAP_ACCESS(runtime->access)))
+				adma_params.periods = 4;
+		}
+
 		source = tegra210_adsp_get_source(adsp, app->reg);
 		app = &adsp->apps[source];
 		if (!IS_ADMA(app->reg))
@@ -2278,13 +2312,23 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 			source = tegra210_adsp_get_source(adsp, app->reg);
 			if (!IS_APM_IN(source))
 				continue;
-
 			app = &adsp->apps[source];
+
+			/* not needed for IO-IO and compr */
+			if (app->msg_handler ==
+					tegra210_adsp_pcm_msg_handler) {
+				prtd = adsp->apps[source].private_data;
+				runtime = prtd->substream->runtime;
+			}
 			source = tegra210_adsp_get_source(adsp, app->reg);
 			if (source != be_reg)
 				continue;
 
+			if (runtime && (IS_MMAP_ACCESS(runtime->access)))
+				adma_params.periods = 4;
+
 			app = &adsp->apps[i];
+
 			adma_params.adma_channel = app->adma_chan;
 			adma_params.direction = ADMA_AHUB_TO_MEMORY;
 			adma_params.event.pvoid = app->apm->input_event.pvoid;

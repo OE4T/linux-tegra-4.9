@@ -3,7 +3,7 @@
  *
  * Tegra pulse-width-modulation controller driver
  *
- * Copyright (c) 2010-2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010, NVIDIA Corporation.
  * Based on arch/arm/plat-mxc/pwm.c by Sascha Hauer <s.hauer@pengutronix.de>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -52,10 +52,6 @@ struct tegra_pwm_chip {
 	void __iomem *regs;
 
 	const struct tegra_pwm_soc *soc;
-	bool			pretty_good_algo;
-	int			num_user;
-	int			clk_init_rate;
-	int			clk_curr_rate;
 };
 
 static inline struct tegra_pwm_chip *to_tegra_pwm_chip(struct pwm_chip *chip)
@@ -72,47 +68,6 @@ static inline void pwm_writel(struct tegra_pwm_chip *chip, unsigned int num,
 			     unsigned long val)
 {
 	writel(val, chip->regs + (num << 4));
-}
-
-static int tegra_get_optimal_rate(struct tegra_pwm_chip *pc,
-				int duty_ns, int period_ns)
-{
-	unsigned long due_dp, dn, due_dm;
-	unsigned long p_rate, in_rate, rate, hz;
-	int ret;
-
-	p_rate = clk_get_rate(clk_get_parent(pc->clk));
-
-	/* Round rate/128 to nearest integer */
-	rate = DIV_ROUND_CLOSEST(p_rate, 128);
-
-	/* Round (10^9 ns)/period_ns to nearest integer */
-	hz = DIV_ROUND_CLOSEST(NSEC_PER_SEC, period_ns);
-
-	/* Round rate/(128*hz) to nearest integer; we assume hz >= 49Hz */
-	due_dp = DIV_ROUND_CLOSEST(rate, hz);
-
-	/* Round due_dp/257 up to next largest integer */
-	dn = DIV_ROUND_UP(due_dp, 257);
-
-	/* Round due_dp/dn to nearest integer */
-	due_dm = DIV_ROUND_CLOSEST(due_dp, dn);
-
-	/*
-	 * Make sure that the freq division will fit in the register's
-	 * frequency divider field.
-	 */
-	if ((dn - 1) >> PWM_SCALE_WIDTH)
-		return -EINVAL;
-
-	in_rate = (2 * p_rate) / (due_dm - 1);
-	ret = clk_set_rate(pc->clk, in_rate);
-	if (ret < 0) {
-		dev_err(pc->dev, "Not able to set proper rate: %d\n", ret);
-		return ret;
-	}
-	pc->clk_curr_rate = clk_get_rate(pc->clk);
-	return dn - 1;
 }
 
 static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
@@ -134,23 +89,6 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	do_div(c, period_ns);
 
 	val = (u32)c << PWM_DUTY_SHIFT;
-
-	if (pc->pretty_good_algo) {
-		rate = tegra_get_optimal_rate(pc, duty_ns, period_ns);
-		if (rate >= 0)
-			goto timing_done;
-	} else {
-		if (pc->clk_init_rate != pc->clk_curr_rate) {
-			err = clk_set_rate(pc->clk, pc->clk_init_rate);
-			if (err < 0) {
-				dev_err(pc->dev,
-					"Not able to set proper rate: %d\n",
-					err);
-				return err;
-			}
-			pc->clk_curr_rate = pc->clk_init_rate;
-		}
-	}
 
 	/*
 	 * Compute the prescaler value for which (1 << PWM_DUTY_WIDTH)
@@ -176,7 +114,6 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	if (rate >> PWM_SCALE_WIDTH)
 		return -EINVAL;
 
-timing_done:
 	val |= rate << PWM_SCALE_SHIFT;
 
 	/*
@@ -191,6 +128,7 @@ timing_done:
 		val |= PWM_ENABLE;
 
 	pwm_writel(pc, pwm->hwpwm, val);
+
 	/*
 	 * If the PWM is not enabled, turn the clock off again to save power.
 	 */
@@ -256,15 +194,9 @@ static int tegra_pwm_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, pwm);
 
-	if (pdev->dev.of_node)
-		pwm->pretty_good_algo = of_property_read_bool(pdev->dev.of_node,
-						"pwm,use-pretty-good-alogorithm");
-
-	pwm->clk = devm_clk_get(&pdev->dev, "pwm");
-	if (IS_ERR(pwm->clk)) {
-		dev_err(&pdev->dev, "PWM clock get failed\n");
+	pwm->clk = devm_clk_get(&pdev->dev, NULL);
+	if (IS_ERR(pwm->clk))
 		return PTR_ERR(pwm->clk);
-	}
 
 	pwm->rst = devm_reset_control_get(&pdev->dev, "pwm");
 	if (IS_ERR(pwm->rst)) {
@@ -273,11 +205,8 @@ static int tegra_pwm_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-
 	reset_control_deassert(pwm->rst);
 
-	pwm->clk_init_rate = clk_get_rate(pwm->clk);
-	pwm->clk_curr_rate = pwm->clk_init_rate;
 	pwm->chip.dev = &pdev->dev;
 	pwm->chip.ops = &tegra_pwm_ops;
 	pwm->chip.base = -1;

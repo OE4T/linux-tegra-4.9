@@ -800,6 +800,7 @@ struct resource *locate_resource(struct resource *root, resource_size_t addr)
 
 	return res;
 }
+EXPORT_SYMBOL_GPL(locate_resource);
 
 /*
  * Insert a resource into the resource tree. If successful, return NULL,

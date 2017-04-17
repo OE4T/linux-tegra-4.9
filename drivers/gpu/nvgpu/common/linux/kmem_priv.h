@@ -17,7 +17,7 @@
 #ifndef __KMEM_PRIV_H__
 #define __KMEM_PRIV_H__
 
-#include <linux/rbtree.h>
+#include <nvgpu/rbtree.h>
 
 #define __pstat(s, fmt, msg...)				\
 	do {						\
@@ -61,8 +61,14 @@ struct nvgpu_mem_alloc {
 	unsigned long size;
 	unsigned long real_size;
 
-	/* Ugh - linux specific. Will need to be abstracted. */
-	struct rb_node allocs_entry;
+	struct nvgpu_rbtree_node allocs_entry;
+};
+
+static inline struct nvgpu_mem_alloc *
+nvgpu_mem_alloc_from_rbtree_node(struct nvgpu_rbtree_node *node)
+{
+	return (struct nvgpu_mem_alloc *)
+	((uintptr_t)node - offsetof(struct nvgpu_mem_alloc, allocs_entry));
 };
 
 /*
@@ -71,7 +77,7 @@ struct nvgpu_mem_alloc {
 struct nvgpu_mem_alloc_tracker {
 	const char *name;
 	struct nvgpu_kmem_cache *allocs_cache;
-	struct rb_root allocs;
+	struct nvgpu_rbtree_node *allocs;
 	struct mutex lock;
 
 	u64 bytes_alloced;

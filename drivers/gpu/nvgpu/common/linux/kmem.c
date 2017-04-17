@@ -16,7 +16,6 @@
 
 #include <linux/mutex.h>
 #include <linux/slab.h>
-#include <linux/rbtree.h>
 #include <linux/debugfs.h>
 #include <linux/spinlock.h>
 #include <linux/seq_file.h>
@@ -73,53 +72,26 @@ static void kmem_print_mem_alloc(struct gk20a *g,
 static int nvgpu_add_alloc(struct nvgpu_mem_alloc_tracker *tracker,
 			   struct nvgpu_mem_alloc *alloc)
 {
-	struct rb_node **new = &tracker->allocs.rb_node;
-	struct rb_node *parent = NULL;
+	alloc->allocs_entry.key_start = alloc->addr;
+	alloc->allocs_entry.key_end = alloc->addr + alloc->size;
 
-	while (*new) {
-		struct nvgpu_mem_alloc *tmp = rb_entry(*new,
-						       struct nvgpu_mem_alloc,
-						       allocs_entry);
-
-		parent = *new;
-
-		if (alloc->addr < tmp->addr)
-			new = &(*new)->rb_left;
-		else if (alloc->addr > tmp->addr)
-			new = &(*new)->rb_right;
-		else
-			return -EINVAL;
-	}
-
-	/* Put the new node there */
-	rb_link_node(&alloc->allocs_entry, parent, new);
-	rb_insert_color(&alloc->allocs_entry, &tracker->allocs);
-
+	nvgpu_rbtree_insert(&alloc->allocs_entry, &tracker->allocs);
 	return 0;
 }
 
 static struct nvgpu_mem_alloc *nvgpu_rem_alloc(
 	struct nvgpu_mem_alloc_tracker *tracker, u64 alloc_addr)
 {
-	struct rb_node *node = tracker->allocs.rb_node;
 	struct nvgpu_mem_alloc *alloc;
+	struct nvgpu_rbtree_node *node = NULL;
 
-	while (node) {
-		alloc = container_of(node,
-				     struct nvgpu_mem_alloc, allocs_entry);
-
-		if (alloc_addr < alloc->addr)
-			node = node->rb_left;
-		else if (alloc_addr > alloc->addr)
-			node = node->rb_right;
-		else
-			break;
-	}
-
+	nvgpu_rbtree_search(alloc_addr, &node, tracker->allocs);
 	if (!node)
 		return NULL;
 
-	rb_erase(node, &tracker->allocs);
+	alloc = nvgpu_mem_alloc_from_rbtree_node(node);
+
+	nvgpu_rbtree_unlink(node, &tracker->allocs);
 
 	return alloc;
 }
@@ -417,7 +389,7 @@ static void print_histogram(struct nvgpu_mem_alloc_tracker *tracker,
 	u64 nr_buckets;
 	unsigned int *buckets;
 	unsigned int total_allocs;
-	struct rb_node *node;
+	struct nvgpu_rbtree_node *node;
 	static const char histogram_line[] =
 		"++++++++++++++++++++++++++++++++++++++++";
 
@@ -443,15 +415,13 @@ static void print_histogram(struct nvgpu_mem_alloc_tracker *tracker,
 	 * should go in. Round the size down to the nearest power of two to
 	 * find the right bucket.
 	 */
-	for (node = rb_first(&tracker->allocs);
-	     node != NULL;
-	     node = rb_next(node)) {
+	nvgpu_rbtree_enum_start(0, &node, tracker->allocs);
+	while (node) {
 		int b;
 		u64 bucket_min;
-		struct nvgpu_mem_alloc *alloc;
+		struct nvgpu_mem_alloc *alloc =
+			nvgpu_mem_alloc_from_rbtree_node(node);
 
-		alloc = container_of(node, struct nvgpu_mem_alloc,
-				     allocs_entry);
 		bucket_min = (u64)rounddown_pow_of_two(alloc->size);
 		if (bucket_min < tracker->min_alloc)
 			bucket_min = tracker->min_alloc;
@@ -469,6 +439,8 @@ static void print_histogram(struct nvgpu_mem_alloc_tracker *tracker,
 			b--;
 
 		buckets[b]++;
+
+		nvgpu_rbtree_enum_next(&node, node);
 	}
 
 	total_allocs = 0;
@@ -569,17 +541,16 @@ static int __kmem_traces_dump_tracker(struct gk20a *g,
 				      struct nvgpu_mem_alloc_tracker *tracker,
 				      struct seq_file *s)
 {
-	struct rb_node *node;
+	struct nvgpu_rbtree_node *node;
 
-	for (node = rb_first(&tracker->allocs);
-	     node != NULL;
-	     node = rb_next(node)) {
-		struct nvgpu_mem_alloc *alloc;
-
-		alloc = container_of(node, struct nvgpu_mem_alloc,
-				     allocs_entry);
+	nvgpu_rbtree_enum_start(0, &node, tracker->allocs);
+	while (node) {
+		struct nvgpu_mem_alloc *alloc =
+			nvgpu_mem_alloc_from_rbtree_node(node);
 
 		kmem_print_mem_alloc(g, alloc, s);
+
+		nvgpu_rbtree_enum_next(&node, node);
 	}
 
 	return 0;
@@ -647,21 +618,19 @@ static int __do_check_for_outstanding_allocs(
 	struct nvgpu_mem_alloc_tracker *tracker,
 	const char *type, bool silent)
 {
-	struct rb_node *node;
+	struct nvgpu_rbtree_node *node;
 	int count = 0;
 
-	for (node = rb_first(&tracker->allocs);
-	     node != NULL;
-	     node = rb_next(node)) {
-		struct nvgpu_mem_alloc *alloc;
-
-		alloc = container_of(node, struct nvgpu_mem_alloc,
-				     allocs_entry);
+	nvgpu_rbtree_enum_start(0, &node, tracker->allocs);
+	while (node) {
+		struct nvgpu_mem_alloc *alloc =
+			nvgpu_mem_alloc_from_rbtree_node(node);
 
 		if (!silent)
 			kmem_print_mem_alloc(g, alloc, NULL);
 
 		count++;
+		nvgpu_rbtree_enum_next(&node, node);
 	}
 
 	return count;
@@ -690,17 +659,20 @@ static int check_for_outstanding_allocs(struct gk20a *g, bool silent)
 static void do_nvgpu_kmem_cleanup(struct nvgpu_mem_alloc_tracker *tracker,
 				  void (*force_free_func)(const void *))
 {
-	struct rb_node *node;
+	struct nvgpu_rbtree_node *node;
 
-	while ((node = rb_first(&tracker->allocs)) != NULL) {
-		struct nvgpu_mem_alloc *alloc;
+	nvgpu_rbtree_enum_start(0, &node, tracker->allocs);
+	while (node) {
+		struct nvgpu_mem_alloc *alloc =
+			nvgpu_mem_alloc_from_rbtree_node(node);
 
-		alloc = container_of(node, struct nvgpu_mem_alloc,
-				     allocs_entry);
 		if (force_free_func)
 			force_free_func((void *)alloc->addr);
 
+		nvgpu_rbtree_unlink(node, &tracker->allocs);
 		kfree(alloc);
+
+		nvgpu_rbtree_enum_start(0, &node, tracker->allocs);
 	}
 }
 
@@ -772,8 +744,8 @@ int nvgpu_kmem_init(struct gk20a *g)
 	g->vmallocs->name = "vmalloc";
 	g->kmallocs->name = "kmalloc";
 
-	g->vmallocs->allocs = RB_ROOT;
-	g->kmallocs->allocs = RB_ROOT;
+	g->vmallocs->allocs = NULL;
+	g->kmallocs->allocs = NULL;
 
 	mutex_init(&g->vmallocs->lock);
 	mutex_init(&g->kmallocs->lock);

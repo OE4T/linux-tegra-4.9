@@ -123,6 +123,7 @@ bool tegra_cpu_is_asim(void)
 
 	return false;
 }
+EXPORT_SYMBOL_GPL(tegra_cpu_is_asim);
 
 bool tegra_cpu_is_dsim(void)
 {

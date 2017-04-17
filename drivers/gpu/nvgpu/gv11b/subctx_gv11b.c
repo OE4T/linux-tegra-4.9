@@ -64,7 +64,7 @@ int gv11b_alloc_subctx_header(struct channel_gk20a *c)
 			return ret;
 		}
 		ctx->mem.gpu_va = gk20a_gmmu_map(c->vm,
-					&ctx->mem.sgt,
+					&ctx->mem.priv.sgt,
 					ctx->mem.size,
 					NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 					gk20a_mem_flag_none, true,
@@ -99,7 +99,7 @@ static void gv11b_init_subcontext_pdb(struct channel_gk20a *c,
 	gk20a_dbg_fn("");
 	/* load main pdb as veid0 pdb also */
 	vm = c->vm;
-	pdb_addr = g->ops.mm.get_iova_addr(g, vm->pdb.mem.sgt->sgl, 0);
+	pdb_addr = g->ops.mm.get_iova_addr(g, vm->pdb.mem.priv.sgt->sgl, 0);
 	pdb_addr_lo = u64_lo32(pdb_addr >> ram_in_base_shift_v());
 	pdb_addr_hi = u64_hi32(pdb_addr);
 	format_word = ram_in_sc_page_dir_base_target_f(

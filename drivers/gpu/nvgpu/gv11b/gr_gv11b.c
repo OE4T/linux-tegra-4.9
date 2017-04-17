@@ -652,7 +652,7 @@ int gr_gv11b_alloc_buffer(struct vm_gk20a *vm, size_t size,
 		return err;
 
 	mem->gpu_va = gk20a_gmmu_map(vm,
-				&mem->sgt,
+				&mem->priv.sgt,
 				size,
 				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 				gk20a_mem_flag_none,

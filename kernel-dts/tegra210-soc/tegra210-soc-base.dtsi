@@ -52,7 +52,7 @@
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x0>;
 			enable-method = "psci";
-			cpu-idle-states = <&C7 &CC6 &CC7 &SC2 &SC3 &SC4 &SC7>;
+			cpu-idle-states = <&C7 &CC6 &CC7>;
 			errata_hwcaps = <0x7>;
 			cpu-ipc = <1024>;
 			next-level-cache = <&L2>;
@@ -64,7 +64,7 @@
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x1>;
 			enable-method = "psci";
-			cpu-idle-states = <&C7 &CC6 &CC7 &SC2 &SC3 &SC4 &SC7>;
+			cpu-idle-states = <&C7 &CC6 &CC7>;
 			errata_hwcaps = <0x7>;
 			cpu-ipc = <1024>;
 			next-level-cache = <&L2>;
@@ -76,7 +76,7 @@
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x2>;
 			enable-method = "psci";
-			cpu-idle-states = <&C7 &CC6 &CC7 &SC2 &SC3 &SC4 &SC7>;
+			cpu-idle-states = <&C7 &CC6 &CC7>;
 			errata_hwcaps = <0x7>;
 			cpu-ipc = <1024>;
 			next-level-cache = <&L2>;
@@ -88,7 +88,7 @@
 			compatible = "arm,cortex-a57-64bit", "arm,armv8";
 			reg = <0x0 0x3>;
 			enable-method = "psci";
-			cpu-idle-states = <&C7 &CC6 &CC7 &SC2 &SC3 &SC4 &SC7>;
+			cpu-idle-states = <&C7 &CC6 &CC7>;
 			errata_hwcaps = <0x7>;
 			cpu-ipc = <1024>;
 			next-level-cache = <&L2>;
@@ -123,42 +123,6 @@
 				min-residency-us = <1000>;
 				idle-state-name = "cc7-cluster-railgated";
 				status = "okay";
-			};
-
-			SC2: sc2 {
-				compatible = "arm,idle-state";
-				arm,psci-suspend-param = <0x40000007>;
-				wakeup-latency-us = <600>;
-				min-residency-us = <1500>;
-				idle-state-name = "sc2-dram-sr-mc-cg";
-				status = "okay";
-			};
-
-			SC3: sc3 {
-				compatible = "arm,idle-state";
-				arm,psci-suspend-param = <0x40000007>;
-				wakeup-latency-us = <700>;
-				min-residency-us = <1600>;
-				idle-state-name = "sc3-dram-sr-mc-cg-mempll-disabled";
-				status = "okay";
-			};
-
-			SC4: sc4 {
-				compatible = "arm,idle-state";
-				arm,psci-suspend-param = <0x40000007>;
-				wakeup-latency-us = <3000>;
-				min-residency-us = <5000>;
-				idle-state-name = "sc4-dram-sr-mc-cg-mempll-pllp-disabled";
-				status = "okay";
-			};
-
-			SC7: sc7 {
-				compatible = "arm,idle-state";
-				arm,psci-suspend-param = <0x4000001B>;
-				wakeup-latency-us = <5000>;
-				min-residency-us = <10000>;
-				idle-state-name = "sc7-vdd-soc-off";
-				status = "disabled";
 			};
 		};
 

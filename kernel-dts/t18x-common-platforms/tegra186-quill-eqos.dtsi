@@ -40,6 +40,7 @@
 		nvidia,phy-intr-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(M, 5) 0>;
 		nvidia,phy-max-frame-size = <10>;	/* size in kbytes */
 		nvidia,eth_iso_enable = <1>; /*0=enable, 1=disable */
+		nvidia,brcm_phy_apd_mode;
         };
 
 	thermal-zones {

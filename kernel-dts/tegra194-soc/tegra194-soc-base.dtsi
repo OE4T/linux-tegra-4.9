@@ -139,6 +139,11 @@
 				sid-list = <TEGRA_SID_BPMP>;
 				sid-list-len = <1>;
 			};
+			gpcdma_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_GPCDMA_0>;
+				sid-list-len = <1>;
+			};
 			host1x_domain {
 				address-space = <&host1x_as>;
 				sid-list = <TEGRA_SID(HC)>;
@@ -1006,7 +1011,10 @@
 			0 106 0x04
 			0 107 0x04>;
 		#dma-cells = <1>;
+
 		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+
 		status = "disabled";
 	};
 

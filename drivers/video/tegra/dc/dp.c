@@ -672,6 +672,10 @@ static int tegra_dc_dp_i2c_xfer(struct tegra_dc *dc, struct i2c_msg *msgs,
 	u32 len = 0;
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 
+	/* No physical panel and/or emulator is attached in simulation. */
+	if (tegra_platform_is_sim())
+		return -EINVAL;
+
 	for (i = 0; i < num; ++i) {
 		pmsg = &msgs[i];
 

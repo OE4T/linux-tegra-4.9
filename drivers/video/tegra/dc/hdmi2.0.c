@@ -182,6 +182,10 @@ static int tegra_hdmi_ddc_i2c_xfer(struct tegra_dc *dc,
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 	int ret;
 
+	/* No physical panel and/or emulator is attached in simulation. */
+	if (tegra_platform_is_sim())
+		return -EINVAL;
+
 	_tegra_hdmi_ddc_enable(hdmi);
 	ret = i2c_transfer(hdmi->ddc_i2c_client->adapter, msgs, num);
 	_tegra_hdmi_ddc_disable(hdmi);

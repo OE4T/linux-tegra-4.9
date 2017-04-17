@@ -104,11 +104,6 @@ EXPORT_SYMBOL(dma_buf_get_drvdata);
  */
 static bool dmabuf_stop_disabling_lazy_unmapping;
 
-void devm_dma_buf_release(struct device *dev, void *res)
-{
-	/* noop */
-}
-
 /**
  * dma_buf_disable_lazy_unmapping - Set device specific data to disable
  * lazy unmapping for that specific device. Once disabled, lazy unmapping
@@ -119,20 +114,13 @@ void devm_dma_buf_release(struct device *dev, void *res)
  */
 int dma_buf_disable_lazy_unmapping(struct device *device)
 {
-	void *data;
-
 	if (!IS_ENABLED(CONFIG_DMABUF_DEFERRED_UNMAPPING))
 		return 0;
 
 	if (dmabuf_stop_disabling_lazy_unmapping)
 		return -EINVAL;
 
-	data = devres_alloc(devm_dma_buf_release,
-			sizeof(bool), GFP_KERNEL);
-	if (unlikely(!data))
-		return -ENOMEM;
-
-	devres_add(device, data);
+	device->no_dmabuf_defer_unmap = 1;
 	return 0;
 }
 EXPORT_SYMBOL(dma_buf_disable_lazy_unmapping);
@@ -146,8 +134,7 @@ static bool dmabuf_can_defer_unmap(struct dma_buf *dmabuf,
 	if (!(dmabuf->flags & DMABUF_CAN_DEFER_UNMAP))
 		return false;
 
-	return (devres_find(device, devm_dma_buf_release,
-				NULL, NULL) == NULL);
+	return !device->no_dmabuf_defer_unmap;
 }
 
 static int dma_buf_release(struct inode *inode, struct file *file)

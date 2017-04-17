@@ -856,6 +856,7 @@ struct device {
 
 	bool			offline_disabled:1;
 	bool			offline:1;
+	bool			no_dmabuf_defer_unmap:1;
 };
 
 static inline struct device *kobj_to_dev(struct kobject *kobj)

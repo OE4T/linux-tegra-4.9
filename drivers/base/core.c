@@ -711,6 +711,7 @@ void device_initialize(struct device *dev)
 #ifdef CONFIG_GENERIC_MSI_IRQ
 	INIT_LIST_HEAD(&dev->msi_list);
 #endif
+	dev->no_dmabuf_defer_unmap = 0;
 }
 EXPORT_SYMBOL_GPL(device_initialize);
 

@@ -46,6 +46,7 @@
 #include <soc/tegra/chip-id.h>
 #include <linux/clk.h>
 #include <linux/reset.h>
+#include <linux/tegra_prod.h>
 #include "yheader.h"
 #include "yapphdr.h"
 
@@ -3260,10 +3261,13 @@ static INT eqos_pad_calibrate(struct eqos_prv_data *pdata)
 	ret = 0;
 
  calibration_failed:
-	/* 6. Disable field PAD_E_INPUT_OR_E_PWRD in
-	 * reg ETHER_QOS_SDMEMCOMPPADCTRL_0 to save power.
-	 */
-	PAD_CRTL_E_INPUT_OR_E_PWRD_WR(0);
+	/* 6. Re-program the ETHER_QOS_SDMEMCOMPPADCTRL_0 to save power */
+	if (pdata->prod_list) {
+		if (tegra_prod_set_by_name((void *)&eqos_base_addr, "prod",
+					   pdata->prod_list))
+			dev_info(&pdev->dev,"fail to enable eqos pad ctrl prod settings\n");
+	}
+
 
 	pr_debug("<--%s()\n", __func__);
 

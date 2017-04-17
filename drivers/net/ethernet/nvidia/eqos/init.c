@@ -889,7 +889,7 @@ int eqos_probe(struct platform_device *pdev)
 		pdata->prod_list = NULL;
 	}
 	if (pdata->prod_list) {
-		if (tegra_prod_set_by_name((void *)&eqos_base_addr, "eqos_pad_ctrl",
+		if (tegra_prod_set_by_name((void *)&eqos_base_addr, "prod",
 					   pdata->prod_list))
 			dev_info(&pdev->dev,
 				 "fail to enable eqos pad ctrl prod settings\n");

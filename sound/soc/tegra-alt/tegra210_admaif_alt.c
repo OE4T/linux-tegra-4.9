@@ -308,7 +308,10 @@ static int tegra_admaif_set_pack_mode(struct regmap *map, unsigned int reg,
 static int tegra_admaif_prepare(struct snd_pcm_substream *substream,
 				struct snd_soc_dai *dai)
 {
-	tegra_isomgr_adma_setbw(substream, true);
+	struct tegra_admaif *admaif = snd_soc_dai_get_drvdata(dai);
+
+	if (admaif->soc_data->is_isomgr_client)
+		tegra_isomgr_adma_setbw(substream, true);
 
 	return 0;
 }
@@ -322,7 +325,10 @@ static int tegra_admaif_startup(struct snd_pcm_substream *substream,
 static void tegra_admaif_shutdown(struct snd_pcm_substream *substream,
 				struct snd_soc_dai *dai)
 {
-	tegra_isomgr_adma_setbw(substream, false);
+	struct tegra_admaif *admaif = snd_soc_dai_get_drvdata(dai);
+
+	if (admaif->soc_data->is_isomgr_client)
+		tegra_isomgr_adma_setbw(substream, false);
 }
 
 static int tegra_admaif_hw_params(struct snd_pcm_substream *substream,
@@ -992,6 +998,7 @@ static struct tegra_admaif_soc_data soc_data_tegra210 = {
 		.global_enable = 0x700,
 		.tx_enable = 0x300,
 	},
+	.is_isomgr_client = false,
 };
 
 static struct tegra_admaif_soc_data soc_data_tegra186 = {
@@ -1004,7 +1011,7 @@ static struct tegra_admaif_soc_data soc_data_tegra186 = {
 		.global_enable = 0xd00,
 		.tx_enable = 0x500,
 	},
-
+	.is_isomgr_client = true,
 };
 
 
@@ -1119,7 +1126,8 @@ static int tegra_admaif_probe(struct platform_device *pdev)
 			goto err_pm_disable;
 	}
 
-	tegra_isomgr_adma_register();
+	if (admaif->soc_data->is_isomgr_client)
+		tegra_isomgr_adma_register();
 
 	for (i = 0; i < admaif->soc_data->num_ch; i++) {
 		admaif->playback_dma_data[i].addr = res->start +
@@ -1224,7 +1232,10 @@ err:
 
 static int tegra_admaif_remove(struct platform_device *pdev)
 {
-	tegra_isomgr_adma_unregister();
+	struct tegra_admaif *admaif = dev_get_drvdata(&pdev->dev);
+
+	if (admaif->soc_data->is_isomgr_client)
+		tegra_isomgr_adma_unregister();
 
 	snd_soc_unregister_component(&pdev->dev);
 

@@ -163,6 +163,7 @@ struct tegra_admaif_soc_data {
 	void (*set_audio_cif)(struct regmap *map,
 			unsigned int reg,
 			struct tegra210_xbar_cif_conf *cif_conf);
+	bool is_isomgr_client;
 };
 
 struct tegra_admaif {

@@ -183,6 +183,8 @@
 			regulator-max-microvolt = <5000000>;
 			gpio = <&gpio_i2c_0_74 12 1>;
 			enable-active-high;
+			regulator-always-on;
+			regulator-boot-on;
 		};
 
 		vdd_usb0_5v: regulator@4 {

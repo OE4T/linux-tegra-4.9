@@ -230,6 +230,8 @@
 					regulator-min-microvolt = <1050000>;
 					regulator-max-microvolt = <1050000>;
 					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
+					regulator-always-on;
+					regulator-boot-on;
 				};
 
 				spmic_ldo8: ldo8 {

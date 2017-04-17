@@ -167,7 +167,6 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 
 	/* Consider two digit precision in PWM_SCALE_WIDTH rate calculation */
 	hz = ns100 * precision;
-	hz += period_ns / 2;
 	do_div(hz, period_ns);
 
 	rate = DIV_ROUND_CLOSEST((rate * precision), hz);

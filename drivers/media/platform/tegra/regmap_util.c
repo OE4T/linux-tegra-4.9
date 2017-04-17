@@ -98,6 +98,8 @@ regmap_util_write_table_8(struct regmap *regmap,
 	return 0;
 }
 
+EXPORT_SYMBOL_GPL(regmap_util_write_table_8);
+
 int
 regmap_util_write_table_16_as_8(struct regmap *regmap,
 				const struct reg_16 table[],
@@ -171,3 +173,6 @@ regmap_util_write_table_16_as_8(struct regmap *regmap,
 	}
 	return 0;
 }
+
+EXPORT_SYMBOL_GPL(regmap_util_write_table_16_as_8);
+

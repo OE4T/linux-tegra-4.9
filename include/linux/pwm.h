@@ -55,6 +55,7 @@ enum {
  * @enabled: PWM enabled status
  * @double_period: Doble pulse period.
  * @ramp_time: Ramp up/down time.
+ * @capture_win_len: Window length for captureing PWM signal.
  */
 struct pwm_state {
 	unsigned int period;
@@ -63,6 +64,7 @@ struct pwm_state {
 	bool enabled;
 	unsigned int double_period;
 	unsigned int ramp_time;
+	unsigned int capture_win_len;
 };
 
 /**
@@ -181,6 +183,25 @@ static inline unsigned int pwm_get_ramp_time(const struct pwm_device *pwm)
 	return state.ramp_time;
 }
 
+static inline int pwm_set_capture_window_length(struct pwm_device *pwm,
+						int win_len)
+{
+	if (pwm)
+		pwm->state.capture_win_len = win_len;
+
+	return 0;
+}
+
+static inline unsigned int pwm_get_capture_window_length(
+					const struct pwm_device *pwm)
+{
+	struct pwm_state state;
+
+	pwm_get_state(pwm, &state);
+
+	return state.capture_win_len;
+}
+
 static inline void pwm_get_args(const struct pwm_device *pwm,
 				struct pwm_args *args)
 {
@@ -293,6 +314,7 @@ pwm_set_relative_duty_cycle(struct pwm_state *state, unsigned int duty_cycle,
  *	       registered.
  * @set_ramp_time: Set PWM ramp up/down time.
  * @set_double_pulse_period: Set double pulse period time.
+ * @set_capture_window_length: Set PWM capture window length.
  * @dbg_show: optional routine to show contents in debugfs
  * @owner: helps prevent removal of modules exporting active PWMs
  */
@@ -316,6 +338,9 @@ struct pwm_ops {
 	int (*set_double_pulse_period)(struct pwm_chip *chip,
 				       struct pwm_device *pwm,
 				       int period);
+	int (*set_capture_window_length)(struct pwm_chip *chip,
+					 struct pwm_device *pwm,
+					 int window_length);
 #ifdef CONFIG_DEBUG_FS
 	void (*dbg_show)(struct pwm_chip *chip, struct seq_file *s);
 #endif
@@ -354,10 +379,12 @@ struct pwm_chip {
  * struct pwm_capture - PWM capture data
  * @period: period of the PWM signal (in nanoseconds)
  * @duty_cycle: duty cycle of the PWM signal (in nanoseconds)
+ * @rpm: Revolution per minute.
  */
 struct pwm_capture {
 	unsigned int period;
 	unsigned int duty_cycle;
+	unsigned int rpm;
 };
 
 #if IS_ENABLED(CONFIG_PWM)
@@ -700,5 +727,25 @@ static inline void pwmchip_sysfs_unexport_children(struct pwm_chip *chip)
 {
 }
 #endif /* CONFIG_PWM_SYSFS */
+
+/**
+ * pwm_get_rpm(): Get PWM RPM.
+ * @pwm: PWM device
+ *
+ * Read PWM signal and return RPM value.
+ *
+ * Returns positive integer for valid RPM else negative error.
+ */
+static inline int pwm_get_rpm(struct pwm_device *pwm)
+{
+	struct pwm_capture result;
+	int err;
+
+	err = pwm_capture(pwm, &result, 0);
+	if (err < 0)
+		return err;
+
+	return result.rpm;
+}
 
 #endif /* __LINUX_PWM_H */

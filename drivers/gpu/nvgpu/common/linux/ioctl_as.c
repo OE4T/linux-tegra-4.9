@@ -16,6 +16,8 @@
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
 
+#include <nvgpu/log2.h>
+
 #include <trace/events/gk20a.h>
 
 #include <uapi/linux/nvgpu.h>

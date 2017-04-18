@@ -16,7 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/log2.h>
 #include <linux/scatterlist.h>
 #include <linux/dma-buf.h>
 #include <linux/dma-mapping.h>
@@ -37,6 +36,7 @@
 #include <nvgpu/page_allocator.h>
 #include <nvgpu/log.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/log2.h>
 
 #include "gk20a.h"
 #include "mm_gk20a.h"

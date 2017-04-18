@@ -121,13 +121,6 @@ static struct dvfs cpu_dvfs = {
 };
 
 /* CPU DVFS tables */
-static unsigned long cpu_max_freq[] = {
-/* speedo_id	0	 1	  2	   3	    4	     5 */
-		1912500, 1912500, 2218500, 1785000, 1632000, 1912500,
-/* speedo_id	6	 7	  8	   9	    10 */
-		2014500, 1734000, 1683000, 1555500, 1504500
-};
-
 #define CPU_PLL_CVB_TABLE \
 	.pll_min_millivolts = 950, \
 	.speedo_scale = 100,	\
@@ -983,7 +976,7 @@ static bool match_dvfs_one(const char *name, int dvfs_speedo_id,
 	return true;
 }
 
-static int set_cpu_dvfs_data(unsigned long max_freq, struct cpu_dvfs *d,
+static int set_cpu_dvfs_data(struct cpu_dvfs *d,
 			     struct dvfs *cpu_dvfs, int *max_freq_index)
 {
 	int i, mv, dfll_mv, min_mv, min_dfll_mv, num_freqs;
@@ -1369,13 +1362,11 @@ static int init_cpu_dvfs_table(int *cpu_max_freq_index)
 	int cpu_speedo_id = tegra_sku_info.cpu_speedo_id;
 	int cpu_process_id = tegra_sku_info.cpu_process_id;
 
-	BUG_ON(cpu_speedo_id >= ARRAY_SIZE(cpu_max_freq));
 	for (ret = 0, i = 0; i <  ARRAY_SIZE(cpu_fv_dvfs_table); i++) {
 		struct cpu_dvfs *d = &cpu_fv_dvfs_table[i];
-		unsigned long max_freq = cpu_max_freq[cpu_speedo_id];
 		if (match_dvfs_one("cpu dvfs", d->speedo_id, d->process_id,
 				   cpu_speedo_id, cpu_process_id)) {
-			ret = set_cpu_dvfs_data(max_freq,
+			ret = set_cpu_dvfs_data(
 				d, &cpu_dvfs, cpu_max_freq_index);
 			if (ret)
 				return ret;

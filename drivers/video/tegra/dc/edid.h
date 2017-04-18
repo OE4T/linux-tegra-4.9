@@ -99,6 +99,7 @@ enum {
 
 struct tegra_edid_pvt;
 
+#define EDID_BYTES_PER_BLOCK	128
 #define EDID_BASE_HEADER_SIZE 8
 static const unsigned char edid_base_header[EDID_BASE_HEADER_SIZE] = {
 	0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00

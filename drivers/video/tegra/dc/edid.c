@@ -177,7 +177,7 @@ static int tegra_edid_i2c_divide_rate(struct tegra_edid *edid)
 int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data)
 {
 	u8 block_buf[] = {block >> 1};
-	u8 cmd_buf[] = {(block % 0x2) * 128};
+	u8 cmd_buf[] = {(block % 0x2) * EDID_BYTES_PER_BLOCK};
 	u8 i;
 	u8 last_checksum = 0;
 	size_t attempt_cnt = 0;
@@ -197,7 +197,7 @@ int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data)
 		{
 			.addr = 0x50,
 			.flags = I2C_M_RD,
-			.len = 128,
+			.len = EDID_BYTES_PER_BLOCK,
 			.buf = data,
 		}};
 	struct i2c_msg *m;
@@ -228,7 +228,7 @@ int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data)
 			}
 		}
 
-		for (i = 0; i < 128; i++)
+		for (i = 0; i < EDID_BYTES_PER_BLOCK; i++)
 			checksum += data[i];
 		if (checksum != 0) {
 			/*
@@ -727,9 +727,9 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 	data = new_data->dc_edid.buf;
 
 	if (edid->dc->vedid) {
-		memcpy(data, edid->dc->vedid_data, 128);
+		memcpy(data, edid->dc->vedid_data, EDID_BYTES_PER_BLOCK);
 		/* checksum new edid */
-		for (i = 0; i < 128; i++)
+		for (i = 0; i < EDID_BYTES_PER_BLOCK; i++)
 			checksum += data[i];
 		if (checksum != 0) {
 			pr_err("%s: checksum failed\n", __func__);
@@ -737,7 +737,7 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 			goto fail;
 		}
 	} else if (use_fallback) {
-		memcpy(data, default_720p_edid, 128);
+		memcpy(data, default_720p_edid, EDID_BYTES_PER_BLOCK);
 		/* no checksum test needed */
 	} else {
 		ret = tegra_edid_read_block(edid, 0, data);
@@ -772,10 +772,11 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 
 	for (i = 1; i <= extension_blocks; i++) {
 		if (edid->dc->vedid) {
-			memcpy(data + i * 128,
-				edid->dc->vedid_data + i * 128, 128);
-			for (j = 0; j < 128; j++)
-				checksum += data[i * 128 + j];
+			memcpy(data + i * EDID_BYTES_PER_BLOCK,
+				edid->dc->vedid_data + i * EDID_BYTES_PER_BLOCK,
+				EDID_BYTES_PER_BLOCK);
+			for (j = 0; j < EDID_BYTES_PER_BLOCK; j++)
+				checksum += data[i * EDID_BYTES_PER_BLOCK + j];
 			if (checksum != 0) {
 				pr_err("%s: checksum failed\n", __func__);
 				ret = -EINVAL;
@@ -783,19 +784,24 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 			}
 		} else if (use_fallback) {
 			/* only one extension block, verified above */
-			memcpy(data + i * 128,
-				default_720p_edid + i * 128, 128);
+			memcpy(data + i * EDID_BYTES_PER_BLOCK,
+				default_720p_edid + i * EDID_BYTES_PER_BLOCK,
+				EDID_BYTES_PER_BLOCK);
 		} else {
-			ret = tegra_edid_read_block(edid, i, data + i * 128);
+			ret = tegra_edid_read_block(edid, i,
+				data + i * EDID_BYTES_PER_BLOCK);
 			if (ret < 0)
 				goto fail;
 		}
 
-		if (data[i * 128] == 0x2) {
-			fb_edid_add_monspecs(data + i * 128, specs);
-
-			tegra_edid_parse_ext_block(data + i * 128,
-					data[i * 128 + 2], new_data);
+		if (data[i * EDID_BYTES_PER_BLOCK] == 0x2) {
+			fb_edid_add_monspecs(
+				data + i * EDID_BYTES_PER_BLOCK,
+				specs);
+			tegra_edid_parse_ext_block(
+				data + i * EDID_BYTES_PER_BLOCK,
+				data[i * EDID_BYTES_PER_BLOCK + 2],
+				new_data);
 
 			if (new_data->support_stereo) {
 				for (j = 0; j < specs->modedb_len; j++) {
@@ -872,7 +878,7 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 	if (use_fallback)
 		edid->errors |= EDID_ERRORS_USING_FALLBACK;
 
-	new_data->dc_edid.len = i * 128;
+	new_data->dc_edid.len = i * EDID_BYTES_PER_BLOCK;
 
 	mutex_lock(&edid->lock);
 	old_data = edid->data;

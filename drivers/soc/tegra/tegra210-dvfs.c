@@ -141,6 +141,27 @@ static struct dvfs_rail *tegra210_dvfs_rails[] = {
 	[VDD_GPU_INDEX] = &tegra210_dvfs_rail_vdd_gpu,
 };
 
+static struct dvfs_rail tegra210b01_dvfs_rail_vdd_cpu = {
+	.reg_id = "vdd-cpu",
+	.max_millivolts = 1125,
+	.step = VDD_SAFE_STEP,
+	.step_up = 1125,
+	.jmp_to_zero = true,
+	.dfll_mode = true,
+	.alignment = {
+		.step_uv = 5000, /* 5.0mV */
+	},
+	.stats = {
+		.bin_uv = 5000, /* 5.0mV */
+	},
+};
+
+static struct dvfs_rail *tegra210b01_dvfs_rails[] = {
+	[VDD_CPU_INDEX] = &tegra210b01_dvfs_rail_vdd_cpu,
+	[VDD_CORE_INDEX] = &tegra210_dvfs_rail_vdd_core,
+	[VDD_GPU_INDEX] = &tegra210_dvfs_rail_vdd_gpu,
+};
+
 static struct dvfs_rail vdd_cpu_rail;
 static struct dvfs_rail vdd_gpu_rail;
 static struct dvfs_rail vdd_core_rail;
@@ -454,6 +475,41 @@ static struct cpu_dvfs cpu_fv_dvfs_table[] = {
 		CPU_PLL_CVB_TABLE,
 	},
 };
+
+#define CPUB01_PLL_CVB_TABLE	\
+	.speedo_scale = 100,	\
+	.voltage_scale = 1000,	\
+	.cvb_pll_table = {	\
+		/* f	                c0,       c1,       c2 */   \
+		{  204000000UL, {        0,        0,        0 } }, \
+		{  306000000UL, {        0,        0,        0 } }, \
+		{  408000000UL, {        0,        0,        0 } }, \
+		{  510000000UL, {        0,        0,        0 } }, \
+		{  612000000UL, {        0,        0,        0 } }, \
+		{  714000000UL, {        0,        0,        0 } }, \
+		{  816000000UL, {        0,        0,        0 } }, \
+		{  918000000UL, {        0,        0,        0 } }, \
+		{ 1020000000UL, {  1120000,        0,        0 } }, \
+		{ 1122000000UL, {  1120000,        0,        0 } }, \
+		{ 1224000000UL, {  1120000,        0,        0 } }, \
+		{ 1326000000UL, {  1120000,        0,        0 } }, \
+		{ 1428000000UL, {  1120000,        0,        0 } }, \
+		{ 1581000000UL, {  1120000,        0,        0 } }, \
+		{ 1683000000UL, {  1120000,        0,        0 } }, \
+		{ 1785000000UL, {  1120000,        0,        0 } }, \
+		{ 0,	        { } }, \
+	}, \
+	.pll_min_millivolts = 800
+
+static struct cpu_dvfs cpub01_fv_dvfs_table[] = {
+	{
+		.speedo_id = -1,
+		.process_id = -1,
+		.max_mv = 1120,
+		CPUB01_PLL_CVB_TABLE,
+	},
+};
+
 
 /* CPU LP DVFS tables */
 static unsigned long cpu_lp_max_freq[] = {
@@ -1997,6 +2053,30 @@ static struct tegra_dvfs_data tegra210_dvfs_data = {
 	.core_caps_ucm2 = tegra210_core_therm_caps_ucm2,
 };
 
+static struct tegra_dvfs_data tegra210b01_dvfs_data = {
+	.rails = tegra210b01_dvfs_rails,
+	.rails_num = ARRAY_SIZE(tegra210b01_dvfs_rails),
+	.cpu_fv_table = cpub01_fv_dvfs_table,
+	.cpu_fv_table_size = ARRAY_SIZE(cpub01_fv_dvfs_table),
+	.gpu_cvb_table = gpu_cvb_dvfs_table,
+	.gpu_cvb_table_size = ARRAY_SIZE(gpu_cvb_dvfs_table),
+
+	.core_mv = core_voltages_mv,
+	.core_vf_table = core_dvfs_table,
+	.core_vf_table_size = ARRAY_SIZE(core_dvfs_table),
+	.spi_vf_table = spi_dvfs_table,
+	.spi_slave_vf_table = spi_slave_dvfs_table,
+	.qspi_sdr_vf_table = qspi_sdr_dvfs_table,
+	.qspi_ddr_vf_table = qspi_ddr_dvfs_table,
+	.sor1_dp_vf_table = sor1_dp_dvfs_table,
+	.get_core_min_mv = get_core_sku_min_mv,
+	.get_core_max_mv = get_core_sku_max_mv,
+
+	.core_floors = tegra210_core_therm_floors,
+	.core_caps = tegra210_core_therm_caps,
+	.core_caps_ucm2 = tegra210_core_therm_caps_ucm2,
+};
+
 static int tegra210x_init_dvfs(struct device *dev, bool cpu_lp_init)
 {
 	int soc_speedo_id = tegra_sku_info.soc_speedo_id;
@@ -2103,6 +2183,6 @@ int tegra210_init_dvfs(struct device *dev)
 
 int tegra210b01_init_dvfs(struct device *dev)
 {
-	init_dvfs_data(&tegra210_dvfs_data);
+	init_dvfs_data(&tegra210b01_dvfs_data);
 	return tegra210x_init_dvfs(dev, false);
 }

@@ -1004,6 +1004,8 @@ int tegra_vmipi_probe(struct platform_device *pdev)
 		return err;
 	}
 
+	mutex_init(&mipi->lock);
+
 	err = tegra_mipi_misc_register(mipi);
 	if (err)
 		tegra_vmipi_deinit();

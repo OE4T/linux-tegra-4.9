@@ -2,6 +2,9 @@
  * DHD Bus Module for PCIE
  *
  * Copyright (C) 1999-2015, Broadcom Corporation
+ *
+ * Portions contributed by Nvidia
+ * Copyright (C) 2015-2017 NVIDIA Corporation. All rights reserved.
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -96,7 +99,6 @@ static int dhdpcie_bus_membytes(dhd_bus_t *bus, bool write, ulong address, uint8
 static int dhdpcie_bus_doiovar(dhd_bus_t *bus, const bcm_iovar_t *vi, uint32 actionid,
 	const char *name, void *params,
 	int plen, void *arg, int len, int val_size);
-static int dhdpcie_bus_lpback_req(struct  dhd_bus *bus, uint32 intval);
 static int dhdpcie_bus_dmaxfer_req(struct  dhd_bus *bus,
 	uint32 len, uint32 srcdelay, uint32 destdelay);
 static int dhdpcie_bus_download_state(dhd_bus_t *bus, bool enter);
@@ -3603,26 +3605,6 @@ dhdpcie_bus_doiovar(dhd_bus_t *bus, const bcm_iovar_t *vi, uint32 actionid, cons
 exit:
 	return bcmerror;
 } /* dhdpcie_bus_doiovar */
-
-/** Transfers bytes from host to dongle using pio mode */
-static int
-dhdpcie_bus_lpback_req(struct  dhd_bus *bus, uint32 len)
-{
-	if (bus->dhd == NULL) {
-		DHD_ERROR(("bus not inited\n"));
-		return 0;
-	}
-	if (bus->dhd->prot == NULL) {
-		DHD_ERROR(("prot is not inited\n"));
-		return 0;
-	}
-	if (bus->dhd->busstate != DHD_BUS_DATA) {
-		DHD_ERROR(("not in a readystate to LPBK  is not inited\n"));
-		return 0;
-	}
-	dhdmsgbuf_lpbk_req(bus->dhd, len);
-	return 0;
-}
 
 int
 dhdpcie_bus_suspend(struct dhd_bus *bus, bool state)

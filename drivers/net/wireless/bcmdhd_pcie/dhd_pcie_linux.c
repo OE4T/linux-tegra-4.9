@@ -2,6 +2,9 @@
  * Linux DHD Bus Module for PCIE
  *
  * Copyright (C) 1999-2015, Broadcom Corporation
+ *
+ * Portions contributed by Nvidia
+ * Copyright (C) 2015-2017 NVIDIA Corporation. All rights reserved.
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -439,26 +442,6 @@ int dhdpcie_pci_suspend_resume(dhd_bus_t *bus, bool state)
 	}
 	return rc;
 }
-
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0))
-static int dhdpcie_device_scan(struct device *dev, void *data)
-{
-	struct pci_dev *pcidev;
-	int *cnt = data;
-
-	pcidev = container_of(dev, struct pci_dev, dev);
-	if (pcidev->vendor != 0x14e4)
-		return 0;
-
-	DHD_INFO(("Found Broadcom PCI device 0x%04x\n", pcidev->device));
-	*cnt += 1;
-	if (pcidev->driver && strcmp(pcidev->driver->name, dhdpcie_driver.name))
-		DHD_ERROR(("Broadcom PCI Device 0x%04x has allocated with driver %s\n",
-			pcidev->device, pcidev->driver->name));
-
-	return 0;
-}
-#endif /* LINUX_VERSION >= 2.6.0 */
 
 int
 dhdpcie_bus_register(void)

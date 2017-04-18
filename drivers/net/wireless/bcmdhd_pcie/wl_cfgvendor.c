@@ -2,6 +2,9 @@
  * Linux cfg80211 Vendor Extension Code
  *
  * Copyright (C) 1999-2015, Broadcom Corporation
+ *
+ * Portions contributed by Nvidia
+ * Copyright (C) 2015-2017 NVIDIA Corporation. All rights reserved.
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -1086,7 +1089,6 @@ wl_cfgvendor_rtt_cancel_config(struct wiphy *wiphy, struct wireless_dev *wdev,
 	int target_idx = 0;
 	const struct nlattr *iter;
 	struct ether_addr *mac_list = NULL;
-	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
 
 	if (len <= 0) {
 		err = -EINVAL;

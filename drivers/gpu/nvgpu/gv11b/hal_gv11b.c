@@ -20,6 +20,7 @@
 #include <linux/tegra_gpu_t19x.h>
 
 #include "gk20a/gk20a.h"
+#include "gk20a/css_gr_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/bus_gk20a.h"
 
@@ -203,6 +204,9 @@ int gv11b_init_hal(struct gk20a *g)
 	gv11b_init_regops(gops);
 	gv11b_init_therm_ops(gops);
 	gk20a_init_tsg_ops(gops);
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	gk20a_init_css_ops(gops);
+#endif
 	g->name = "gv11b";
 	gops->chip_init_gpu_characteristics = gv11b_init_gpu_characteristics;
 	gops->get_litter_value = gv11b_get_litter_value;

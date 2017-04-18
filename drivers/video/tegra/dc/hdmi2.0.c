@@ -688,8 +688,13 @@ static int hdmi_recheck_edid(struct tegra_hdmi *hdmi, int *match)
 
 	if (tegra_platform_is_sim())
 		return 0;
-
-	ret = read_edid_into_buffer(hdmi, tmp, sizeof(tmp));
+	if (hdmi->dc->vedid) {
+		/* Use virtual EDID if it is present. */
+		memcpy(tmp, hdmi->dc->vedid_data, EDID_BYTES_PER_BLOCK);
+		ret = EDID_BYTES_PER_BLOCK;
+	} else {
+		ret = read_edid_into_buffer(hdmi, tmp, sizeof(tmp));
+	}
 	dev_info(&hdmi->dc->ndev->dev, "%s: read_edid_into_buffer() returned %d\n",
 		__func__, ret);
 	if (ret > 0) {

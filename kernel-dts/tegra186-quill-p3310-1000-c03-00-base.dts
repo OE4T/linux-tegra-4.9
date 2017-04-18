@@ -85,6 +85,7 @@
 	pcie-controller@10003000 {
 		pci@1,0 {
 			nvidia,num-lanes = <4>;
+			nvidia,disable-clock-request;
 		};
 		pci@2,0 {
 			nvidia,num-lanes = <0>;

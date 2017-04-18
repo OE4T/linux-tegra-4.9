@@ -356,6 +356,10 @@ static int __test_hash(struct crypto_ahash *tfm, struct hash_testvec *template,
 			hexdump(result, crypto_ahash_digestsize(tfm));
 			ret = -EINVAL;
 			goto out;
+		} else {
+			pr_info("alg: hash: Test %d passed for %s\n",
+				j, algo);
+			hexdump(result, crypto_ahash_digestsize(tfm));
 		}
 	}
 
@@ -1175,6 +1179,10 @@ static int __test_skcipher(struct crypto_skcipher *tfm, int enc,
 			hexdump(q, template[i].rlen);
 			ret = -EINVAL;
 			goto out;
+		} else {
+			pr_info("alg: skcipher%s: Test %d passed on %s for %s\n",
+				d, j, e, algo);
+			hexdump(q, template[i].rlen);
 		}
 
 		if (template[i].iv_out &&

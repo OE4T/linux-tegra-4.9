@@ -1295,7 +1295,7 @@ static long gm20b_round_rate(struct clk_hw *hw, unsigned long rate,
 	return rate_gpc2clk_to_gpu(tmp_pll.freq);
 }
 
-const struct clk_ops gk20a_clk_ops = {
+static const struct clk_ops gm20b_clk_ops = {
 	.prepare = gm20b_clk_prepare,
 	.unprepare = gm20b_clk_unprepare,
 	.is_prepared = gm20b_clk_is_prepared,
@@ -1316,7 +1316,7 @@ int gm20b_register_gpcclk(struct gk20a *g) {
 		return err;
 
 	init.name = "gpcclk";
-	init.ops = &gk20a_clk_ops;
+	init.ops = &gm20b_clk_ops;
 	init.parent_names = &parent_name;
 	init.num_parents = 1;
 	init.flags = 0;

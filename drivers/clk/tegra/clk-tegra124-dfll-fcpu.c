@@ -628,7 +628,8 @@ static int tegra124_dfll_fcpu_probe(struct platform_device *pdev)
 	soc->cvb = tegra_cvb_add_opp_table(soc->dev, fcpu_data->cpu_cvb_tables,
 					   fcpu_data->cpu_cvb_tables_size,
 					   &align, process_id, speedo_id,
-					   speedo_value, soc->max_freq);
+					   speedo_value, soc->max_freq,
+					   &soc->min_millivolts);
 	soc->alignment = align;
 
 	if (IS_ERR(soc->cvb)) {

@@ -75,7 +75,7 @@ int tegra_round_voltage(int mv, const struct rail_alignment *align, int up)
 
 static int build_opp_table(struct device *dev, const struct cvb_table *table,
 			   struct rail_alignment *align,
-			   int speedo_value, unsigned long max_freq)
+			   int speedo_value, unsigned long max_freq, int *vmin)
 {
 	int i, ret, dfll_mv, min_mv, max_mv;
 
@@ -89,6 +89,11 @@ static int build_opp_table(struct device *dev, const struct cvb_table *table,
 
 	min_mv = tegra_round_voltage(table->min_millivolts, align, UP);
 	max_mv = tegra_round_voltage(table->max_millivolts, align, DOWN);
+
+	dfll_mv = tegra_get_cvb_voltage(
+		speedo_value, table->speedo_scale, &table->vmin_coefficients);
+	dfll_mv = tegra_round_cvb_voltage(dfll_mv, table->voltage_scale, align);
+	min_mv = max(min_mv, dfll_mv);
 
 	for (i = 0; i < MAX_DVFS_FREQS; i++) {
 		const struct cvb_table_freq_entry *entry = &table->entries[i];
@@ -106,6 +111,9 @@ static int build_opp_table(struct device *dev, const struct cvb_table *table,
 			return ret;
 	}
 
+	if (vmin)
+		*vmin = min_mv;
+
 	return 0;
 }
 
@@ -118,6 +126,7 @@ static int build_opp_table(struct device *dev, const struct cvb_table *table,
  * @speedo_value: speedo value of the HW module
  * @max_rate: highest safe clock rate
  * @opp_dev: the struct device * for which the OPP table is built
+ * @vmin: final minimum voltage returned to the caller
  *
  * On Tegra, a CVB table encodes the relationship between operating voltage
  * and safe maximal frequency for a given module (e.g. GPU or CPU). This
@@ -130,7 +139,7 @@ const struct cvb_table *
 tegra_cvb_add_opp_table(struct device *dev, const struct cvb_table *tables,
 			size_t count, struct rail_alignment *align,
 			int process_id, int speedo_id, int speedo_value,
-			unsigned long max_freq)
+			unsigned long max_freq, int *vmin)
 {
 	size_t i;
 	int ret;
@@ -144,7 +153,8 @@ tegra_cvb_add_opp_table(struct device *dev, const struct cvb_table *tables,
 		if (table->process_id != -1 && table->process_id != process_id)
 			continue;
 
-		ret = build_opp_table(dev, table, align, speedo_value, max_freq);
+		ret = build_opp_table(dev, table, align, speedo_value,
+					max_freq, vmin);
 		return ret ? ERR_PTR(ret) : table;
 	}
 

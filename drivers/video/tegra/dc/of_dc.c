@@ -384,6 +384,7 @@ static int tegra_dc_parse_panel_ops(struct platform_device *ndev,
 
 	if (of_device_is_compatible(panel_np, "dsi,1080p")        ||
 	    of_device_is_compatible(panel_np, "dsi,2820x720")     ||
+	    of_device_is_compatible(panel_np, "dsi,25x16")     ||
 	    of_device_is_compatible(panel_np, "s,wuxga-8-0-mods") ||
 	    of_device_is_compatible(panel_np, "dp, display")      ||
 	    of_device_is_compatible(panel_np, "hdmi,display"))

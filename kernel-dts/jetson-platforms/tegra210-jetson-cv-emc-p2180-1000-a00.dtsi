@@ -30,6 +30,8 @@
 			"pll_mb", "pll_mb_ud", "pll_p_ud", "emc_override";
 		#thermal-sensor-cells = <0>;
 		nvidia,use-ram-code;
+		#address-cells = <0x00000001>;
+		#size-cells = <0x00000000>;
 		emc-table@0 {
 			reg = <0x00000000>;
 			#address-cells = <0x00000001>;

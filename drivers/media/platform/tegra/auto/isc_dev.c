@@ -467,8 +467,8 @@ static int isc_dev_remove(struct i2c_client *client)
 
 	dev_dbg(&client->dev, "%s\n", __func__);
 	isc_dev_debugfs_remove(info);
-	isc_delete_lst(info->pdata->pdev, client);
 
+	/* remove only isc_dev_info not i2c_client itself */
 	pdev = info->pdata->pdev;
 
 	if (info->dev)

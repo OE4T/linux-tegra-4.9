@@ -561,13 +561,16 @@ static const struct file_operations isc_mgr_fileops = {
 static void isc_mgr_del(struct isc_mgr_priv *isc_mgr)
 {
 	struct isc_mgr_platform_data *pd = isc_mgr->pdata;
-	struct isc_mgr_client *isc_dev;
+	struct isc_mgr_client *isc_dev = NULL;
 	int i;
 
 	mutex_lock(&isc_mgr->mutex);
 	list_for_each_entry(isc_dev, &isc_mgr->dev_list, list) {
-		list_del(&isc_dev->list);
-		i2c_unregister_device(isc_dev->client);
+		/* remove i2c_clients that isc-mgr created */
+		if (isc_dev->client != NULL) {
+			i2c_unregister_device(isc_dev->client);
+			isc_dev->client = NULL;
+		}
 	}
 	mutex_unlock(&isc_mgr->mutex);
 

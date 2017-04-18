@@ -15,6 +15,7 @@
 
 #include "tegra210b01-soc-base.dtsi"
 #include "tegra210-soc/tegra210-bthrot-cdev.dtsi"
+#include <tegra210-soc/tegra210-sdhci.dtsi>
 
 / {
 	aliases {
@@ -441,18 +442,27 @@
 	};
 
 	sdhci@700b0600 {
+		tap-delay = <9>;
+		trim-delay = <13>;
+		dqs-trim-delay = <40>;
 		status = "disabled";
 	};
 
 	sdhci@700b0400 {
+		tap-delay = <11>;
+		trim-delay = <18>;
 		status = "disabled";
 	};
 
 	sdhci@700b0200 {
+		tap-delay = <8>;
+		trim-delay = <13>;
 		status = "disabled";
 	};
 
 	sdhci@700b0000 {
+		tap-delay = <11>;
+		trim-delay = <14>;
 		status = "disabled";
 	};
 

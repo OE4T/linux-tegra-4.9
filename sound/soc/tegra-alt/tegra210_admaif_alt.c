@@ -1023,6 +1023,7 @@ static int tegra_admaif_probe(struct platform_device *pdev)
 	void __iomem *regs;
 	struct resource *res;
 	const struct of_device_id *match;
+	unsigned int buffer_size;
 
 	match = of_match_device(tegra_admaif_of_match, &pdev->dev);
 	if (!match) {
@@ -1142,6 +1143,15 @@ static int tegra_admaif_probe(struct platform_device *pdev)
 			ret = -ENODEV;
 			goto err_suspend;
 		}
+		buffer_size = 0;
+		if (of_property_read_u32_index(pdev->dev.of_node,
+				"dma-buffer-size",
+				(i * 2) + 1,
+				&buffer_size) < 0) {
+			dev_dbg(&pdev->dev,
+				"Missing property nvidia,dma-buffer-size\n");
+		}
+		admaif->playback_dma_data[i].buffer_size = buffer_size;
 
 		admaif->capture_dma_data[i].wrap = 4;
 		admaif->capture_dma_data[i].width = 32;
@@ -1155,6 +1165,15 @@ static int tegra_admaif_probe(struct platform_device *pdev)
 			ret = -ENODEV;
 			goto err_suspend;
 		}
+		buffer_size = 0;
+		if (of_property_read_u32_index(pdev->dev.of_node,
+				"dma-buffer-size",
+				(i * 2),
+				&buffer_size) < 0) {
+			dev_dbg(&pdev->dev,
+				"Missing property nvidia,dma-buffer-size\n");
+		}
+		admaif->capture_dma_data[i].buffer_size = buffer_size;
 	}
 
 	ret = snd_soc_register_component(&pdev->dev,

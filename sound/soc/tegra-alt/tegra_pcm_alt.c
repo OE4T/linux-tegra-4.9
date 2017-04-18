@@ -232,6 +232,8 @@ static int tegra_alt_pcm_dma_allocate(struct snd_soc_pcm_runtime *rtd,
 {
 	struct snd_card *card = rtd->card->snd_card;
 	struct snd_pcm *pcm = rtd->pcm;
+	struct tegra_alt_pcm_dma_params *dmap;
+	size_t buffer_size = size;
 	int ret = 0;
 
 	if (!card->dev->dma_mask)
@@ -239,18 +241,26 @@ static int tegra_alt_pcm_dma_allocate(struct snd_soc_pcm_runtime *rtd,
 	if (!card->dev->coherent_dma_mask)
 		card->dev->coherent_dma_mask = tegra_dma_mask;
 
+	dmap = snd_soc_dai_get_dma_data(rtd->cpu_dai,
+			pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].substream);
+	if (dmap->buffer_size > size)
+		buffer_size = dmap->buffer_size;
 	if (pcm->streams[SNDRV_PCM_STREAM_PLAYBACK].substream) {
 		ret = tegra_alt_pcm_preallocate_dma_buffer(pcm,
 						SNDRV_PCM_STREAM_PLAYBACK,
-						size);
+						buffer_size);
 		if (ret)
 			goto err;
 	}
 
+	dmap = snd_soc_dai_get_dma_data(rtd->cpu_dai,
+			pcm->streams[SNDRV_PCM_STREAM_CAPTURE].substream);
+	if (dmap->buffer_size > size)
+		buffer_size = dmap->buffer_size;
 	if (pcm->streams[SNDRV_PCM_STREAM_CAPTURE].substream) {
 		ret = tegra_alt_pcm_preallocate_dma_buffer(pcm,
 						SNDRV_PCM_STREAM_CAPTURE,
-						size);
+						buffer_size);
 		if (ret)
 			goto err_free_play;
 	}

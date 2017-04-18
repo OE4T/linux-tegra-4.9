@@ -299,8 +299,7 @@ u32 pmgr_device_sw_setup(struct gk20a *g)
 
 	/* WAR for missing INA3221 on HW2.5 RevA */
 	if (g->power_sensor_missing) {
-		gk20a_warn(dev_from_gk20a(g),
-			"no power sensor, monitoring disabled");
+		nvgpu_warn(g, "no power sensor, monitoring disabled");
 		goto done;
 	}
 

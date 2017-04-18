@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra xHCI host controller driver
  *
- * Copyright (C) 2014 NVIDIA Corporation
+ * Copyright (C) 2014-2017 NVIDIA Corporation
  * Copyright (C) 2014 Google, Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -816,27 +816,36 @@ static void tegra_xusb_clk_disable(struct tegra_xusb *tegra)
 
 static int tegra_xusb_phy_enable(struct tegra_xusb *tegra)
 {
-	unsigned int i;
-	int err;
+	int i, j, err;
 
-	for (i = 0; i < tegra->num_phys; i++) {
-		err = phy_init(tegra->phys[i]);
-		if (err)
-			goto disable_phy;
+	for (i = 0; i < MAX_PHY_TYPES; i++) {
+		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
+			err = phy_init(tegra->typed_phys[i][j]);
+			if (err)
+				goto disable_phy;
 
-		err = phy_power_on(tegra->phys[i]);
-		if (err) {
-			phy_exit(tegra->phys[i]);
-			goto disable_phy;
+			err = phy_power_on(tegra->typed_phys[i][j]);
+			if (err) {
+				phy_exit(tegra->typed_phys[i][j]);
+				goto disable_phy;
+			}
+
+			if (i == USB2_PHY)
+				tegra_phy_xusb_utmi_pad_power_on(tegra->
+							typed_phys[i][j]);
 		}
 	}
 
 	return 0;
 
 disable_phy:
-	while (i--) {
-		phy_power_off(tegra->phys[i]);
-		phy_exit(tegra->phys[i]);
+	for (; i >= 0; i--) {
+		for (j = j - 1; j >= 0; j--) {
+			phy_power_off(tegra->typed_phys[i][j]);
+			phy_exit(tegra->typed_phys[i][j]);
+		}
+		if (i)
+			j = tegra->soc->num_typed_phys[i - 1];
 	}
 
 	return err;
@@ -1618,7 +1627,7 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 	struct device *dev = tegra->dev;
 	struct tegra_xusb_mbox_msg msg;
 	bool do_wakeup = runtime ? true : device_may_wakeup(dev);
-	unsigned int i;
+	unsigned int i, j;
 	int ret;
 
 	dev_info(dev, "exiting ELPG\n");
@@ -1638,10 +1647,15 @@ static int tegra_xhci_exit_elpg(struct tegra_xusb *tegra, bool runtime)
 	if (do_wakeup)
 		tegra_xhci_disable_phy_sleepwalk_wake(tegra);
 
-	for (i = 0; i < tegra->num_phys; i++) {
-		if (!do_wakeup)
-			phy_init(tegra->phys[i]);
-		phy_power_on(tegra->phys[i]);
+	for (i = 0; i < MAX_PHY_TYPES; i++) {
+		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
+			if (!do_wakeup)
+				phy_init(tegra->typed_phys[i][j]);
+			phy_power_on(tegra->typed_phys[i][j]);
+			if (i == USB2_PHY)
+				tegra_phy_xusb_utmi_pad_power_on(tegra->
+							typed_phys[i][j]);
+		}
 	}
 
 	tegra_xusb_config(tegra);

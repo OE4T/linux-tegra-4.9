@@ -344,8 +344,9 @@
 #define PCIE2_RP_L1_PM_SUBSTATES_CYA_CM_RTIME_SHIFT		(8)
 #define PCIE2_RP_L1_PM_SUBSTATES_CYA_T_PWRN_SCL_MASK		(0x3 << 16)
 #define PCIE2_RP_L1_PM_SUBSTATES_CYA_T_PWRN_SCL_SHIFT		(16)
-#define PCIE2_RP_L1_PM_SUBSTATES_CYA_T_PWRN_VAL_MASK		(0xF8 << 19)
+#define PCIE2_RP_L1_PM_SUBSTATES_CYA_T_PWRN_VAL_MASK		(0x1F << 19)
 #define PCIE2_RP_L1_PM_SUBSTATES_CYA_T_PWRN_VAL_SHIFT		(19)
+#define PCIE2_RP_L1_PM_SUBSTATES_CYA_HIDE_CAP			(0x1 << 24)
 
 #define NV_PCIE2_RP_L1_PM_SUBSTATES_1_CYA			0x00000C04
 #define PCIE2_RP_L1_PM_SUBSTATES_1_CYA_PWR_OFF_DLY_MASK	(0x1FFF)
@@ -996,7 +997,7 @@ static void tegra_pcie_configure_aspm(void)
 		ctrl = tegra_pcie_port_get_pex_ctrl(port);
 		/* AFI_PEX_STATUS is AFI_PEX_CTRL + 4 */
 		val = afi_readl(port->pcie, ctrl + 4);
-		if (val & 0x1) {
+		if ((val & 0x1) || (port->disable_clock_request)) {
 			i |= PCIE_LINK_STATE_CLKPM;
 			/* disable PADS2PLLE control */
 			val = afi_readl(port->pcie, AFI_PLLE_CONTROL);
@@ -1009,6 +1010,9 @@ static void tegra_pcie_configure_aspm(void)
 			i |= PCIE_LINK_STATE_L0S;
 
 		pci_disable_link_state_locked(pdev, i);
+
+		if (port->disable_clock_request)
+			continue;
 
 		if (pcie->soc_data->program_clkreq_as_bi_dir) {
 			/* check if L1SS capability is supported */
@@ -2399,6 +2403,13 @@ static void tegra_pcie_enable_rp_features(struct tegra_pcie_port *port)
 
 	/* unhide AER capability */
 	tegra_pcie_enable_aer(port, true);
+
+	/* Disable L1SS capability advertisement if CLKREQ is not present */
+	if (port->disable_clock_request) {
+		data = rp_readl(port, NV_PCIE2_RP_L1_PM_SUBSTATES_CYA);
+		data |= PCIE2_RP_L1_PM_SUBSTATES_CYA_HIDE_CAP;
+		rp_writel(port, data, NV_PCIE2_RP_L1_PM_SUBSTATES_CYA);
+	}
 
 	/* program timers for L1 substate support */
 	/* set cm_rtime = 30us and t_pwr_on = 70us as per HW team */

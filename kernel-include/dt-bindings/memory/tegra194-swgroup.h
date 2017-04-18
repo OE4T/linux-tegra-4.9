@@ -1,7 +1,9 @@
+#ifndef _DT_BINDINGS_MEMORY_TEGRA194_SWGROUP_H
+#define _DT_BINDINGS_MEMORY_TEGRA194_SWGROUP_H
 /*
  * This is the t19x specific component of the new SID dt-binding.
  */
-#define TEGRA_SID_RCE		0x2A	/* 42 */
+#define TEGRA_SID_RCE		0x2a	/* 42 */
 
 #define TEGRA_SID_MIU		0x50	/* 80 */
 
@@ -21,3 +23,5 @@
 #define TEGRA_SID_PCIE5		0x5B	/* 91 */
 
 #define TEGRA_SID_NVDEC1	0x5C	/* 92 */
+
+#endif

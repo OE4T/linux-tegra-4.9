@@ -35,6 +35,36 @@
 /* Margin % applied to PLL CVB tables */
 #define CVB_PLL_MARGIN	30
 
+#define VDD_CPU_INDEX	0
+#define VDD_CORE_INDEX	1
+#define VDD_GPU_INDEX	2
+
+struct tegra_dvfs_data {
+	struct dvfs_rail **rails;
+	int rails_num;
+	struct cpu_dvfs *cpu_fv_table;
+	int cpu_fv_table_size;
+	struct cvb_dvfs *gpu_cvb_table;
+	int gpu_cvb_table_size;
+	const int *core_mv;
+	struct dvfs *core_vf_table;
+
+	int core_vf_table_size;
+	struct dvfs *spi_vf_table;
+	struct dvfs *spi_slave_vf_table;
+	struct dvfs *qspi_sdr_vf_table;
+	struct dvfs *qspi_ddr_vf_table;
+	struct dvfs *sor1_dp_vf_table;
+	int (*get_core_min_mv)(void);
+	int (*get_core_max_mv)(void);
+
+	struct dvfs_therm_limits *core_floors;
+	struct dvfs_therm_limits *core_caps;
+	struct dvfs_therm_limits *core_caps_ucm2;
+};
+
+struct tegra_dvfs_data *dvfs_data;
+
 static bool tegra_dvfs_cpu_disabled;
 static bool tegra_dvfs_core_disabled;
 static bool tegra_dvfs_gpu_disabled;
@@ -88,7 +118,6 @@ static struct dvfs_rail tegra210_dvfs_rail_vdd_core = {
 	.stats = {
 		.bin_uv = 12500, /* 12.5mV */
 	},
-	.therm_floors = tegra210_core_therm_floors,
 	.is_ready = false,
 };
 
@@ -107,9 +136,19 @@ static struct dvfs_rail tegra210_dvfs_rail_vdd_gpu = {
 };
 
 static struct dvfs_rail *tegra210_dvfs_rails[] = {
-	&tegra210_dvfs_rail_vdd_cpu,
-	&tegra210_dvfs_rail_vdd_core,
-	&tegra210_dvfs_rail_vdd_gpu,
+	[VDD_CPU_INDEX] = &tegra210_dvfs_rail_vdd_cpu,
+	[VDD_CORE_INDEX] = &tegra210_dvfs_rail_vdd_core,
+	[VDD_GPU_INDEX] = &tegra210_dvfs_rail_vdd_gpu,
+};
+
+static struct dvfs_rail vdd_cpu_rail;
+static struct dvfs_rail vdd_gpu_rail;
+static struct dvfs_rail vdd_core_rail;
+
+static struct dvfs_rail *vdd_dvfs_rails[] = {
+	[VDD_CPU_INDEX] = &vdd_cpu_rail,
+	[VDD_CORE_INDEX] = &vdd_core_rail,
+	[VDD_GPU_INDEX] = &vdd_gpu_rail,
 };
 
 static struct dvfs cpu_dvfs = {
@@ -117,7 +156,7 @@ static struct dvfs cpu_dvfs = {
 	.millivolts	= cpu_millivolts,
 	.dfll_millivolts = cpu_dfll_millivolts,
 	.auto_dvfs	= true,
-	.dvfs_rail	= &tegra210_dvfs_rail_vdd_cpu,
+	.dvfs_rail	= &vdd_cpu_rail,
 };
 
 /* CPU DVFS tables */
@@ -474,7 +513,7 @@ static struct dvfs cpu_lp_dvfs = {
 	.clk_name	= "cclk_lp",
 	.millivolts	= cpu_lp_millivolts,
 	.auto_dvfs	= true,
-	.dvfs_rail	= &tegra210_dvfs_rail_vdd_cpu,
+	.dvfs_rail	= &vdd_cpu_rail,
 	.freqs_mult	= KHZ,
 };
 
@@ -548,7 +587,7 @@ static struct dvfs cpu_lp_dvfs = {
 static struct dvfs gpu_dvfs = {
 	.clk_name       = "gbus",
 	.auto_dvfs      = true,
-	.dvfs_rail      = &tegra210_dvfs_rail_vdd_gpu,
+	.dvfs_rail      = &vdd_gpu_rail,
 };
 
 static struct cvb_dvfs gpu_cvb_dvfs_table[] = {
@@ -627,9 +666,11 @@ static unsigned long gpu_cap_rates[MAX_THERMAL_LIMITS];
 static struct clk *vgpu_cap_clk;
 
 /* Core DVFS tables */
-static const int core_millivolts[MAX_DVFS_FREQS] = {
+static const int core_voltages_mv[MAX_DVFS_FREQS] = {
 	800, 825, 850, 875, 900, 925, 950, 975, 1000, 1025, 1050, 1062, 1075, 1100, 1125
 };
+
+static int core_millivolts[MAX_DVFS_FREQS];
 
 #define CORE_DVFS(_clk_name, _speedo_id, _process_id, _auto, _mult, _freqs...) \
 	{							\
@@ -640,7 +681,7 @@ static const int core_millivolts[MAX_DVFS_FREQS] = {
 		.freqs_mult	= _mult,			\
 		.millivolts	= core_millivolts,		\
 		.auto_dvfs	= _auto,			\
-		.dvfs_rail	= &tegra210_dvfs_rail_vdd_core,	\
+		.dvfs_rail	= &vdd_core_rail,	\
 	}
 
 static struct dvfs core_dvfs_table[] = {
@@ -878,9 +919,9 @@ int tegra_dvfs_disable_core_set(const char *arg, const struct kernel_param *kp)
 		return ret;
 
 	if (tegra_dvfs_core_disabled)
-		tegra_dvfs_rail_disable(&tegra210_dvfs_rail_vdd_core);
+		tegra_dvfs_rail_disable(&vdd_core_rail);
 	else
-		tegra_dvfs_rail_enable(&tegra210_dvfs_rail_vdd_core);
+		tegra_dvfs_rail_enable(&vdd_core_rail);
 
 	return 0;
 }
@@ -894,9 +935,9 @@ int tegra_dvfs_disable_cpu_set(const char *arg, const struct kernel_param *kp)
 		return ret;
 
 	if (tegra_dvfs_cpu_disabled)
-		tegra_dvfs_rail_disable(&tegra210_dvfs_rail_vdd_cpu);
+		tegra_dvfs_rail_disable(&vdd_cpu_rail);
 	else
-		tegra_dvfs_rail_enable(&tegra210_dvfs_rail_vdd_cpu);
+		tegra_dvfs_rail_enable(&vdd_cpu_rail);
 
 	return 0;
 }
@@ -910,9 +951,9 @@ int tegra_dvfs_disable_gpu_set(const char *arg, const struct kernel_param *kp)
 		return ret;
 
 	if (tegra_dvfs_gpu_disabled)
-		tegra_dvfs_rail_disable(&tegra210_dvfs_rail_vdd_gpu);
+		tegra_dvfs_rail_disable(&vdd_gpu_rail);
 	else
-		tegra_dvfs_rail_enable(&tegra210_dvfs_rail_vdd_gpu);
+		tegra_dvfs_rail_enable(&vdd_gpu_rail);
 
 	return 0;
 }
@@ -991,19 +1032,19 @@ static int set_cpu_dvfs_data(struct cpu_dvfs *d,
 		return -EPROBE_DEFER;
 
 	min_dfll_mv = d->min_mv;
-	if (min_dfll_mv < tegra210_dvfs_rail_vdd_cpu.min_millivolts) {
+	if (min_dfll_mv < vdd_cpu_rail.min_millivolts) {
 		pr_debug("tegra210_dvfs: dfll min %dmV below rail min %dmV\n",
-			 min_dfll_mv, tegra210_dvfs_rail_vdd_cpu.min_millivolts);
-		min_dfll_mv = tegra210_dvfs_rail_vdd_cpu.min_millivolts;
+			 min_dfll_mv, vdd_cpu_rail.min_millivolts);
+		min_dfll_mv = vdd_cpu_rail.min_millivolts;
 	}
 	min_dfll_mv = tegra_round_voltage(min_dfll_mv, align, true);
 	d->max_mv = tegra_round_voltage(d->max_mv, align, false);
 
 	min_mv = d->pll_min_millivolts;
-	if (min_mv < tegra210_dvfs_rail_vdd_cpu.min_millivolts) {
+	if (min_mv < vdd_cpu_rail.min_millivolts) {
 		pr_debug("tegra210_dvfs: pll min %dmV below rail min %dmV\n",
-			 min_mv, tegra210_dvfs_rail_vdd_cpu.min_millivolts);
-		min_mv = tegra210_dvfs_rail_vdd_cpu.min_millivolts;
+			 min_mv, vdd_cpu_rail.min_millivolts);
+		min_mv = vdd_cpu_rail.min_millivolts;
 	}
 	min_mv = tegra_round_voltage(min_mv, align, true);
 
@@ -1083,18 +1124,18 @@ static int set_cpu_lp_dvfs_data(unsigned long max_freq, struct cpu_dvfs *d,
 				struct dvfs *cpu_lp_dvfs, int *max_freq_index)
 {
 	int i, mv, min_mv;
-	struct rail_alignment *align = &tegra210_dvfs_rail_vdd_cpu.alignment;
+	struct rail_alignment *align = &vdd_cpu_rail.alignment;
 
 	min_mv = d->min_mv;
-	if (min_mv < tegra210_dvfs_rail_vdd_cpu.min_millivolts) {
+	if (min_mv < vdd_cpu_rail.min_millivolts) {
 		pr_debug("tegra210_dvfs: scpu min %dmV below rail min %dmV\n",
-			 min_mv, tegra210_dvfs_rail_vdd_cpu.min_millivolts);
-		min_mv = tegra210_dvfs_rail_vdd_cpu.min_millivolts;
+			 min_mv, vdd_cpu_rail.min_millivolts);
+		min_mv = vdd_cpu_rail.min_millivolts;
 	}
 	min_mv = tegra_round_voltage(min_mv, align, true);
 
 	d->max_mv = tegra_round_voltage(d->max_mv, align, false);
-	BUG_ON(d->max_mv > tegra210_dvfs_rail_vdd_cpu.max_millivolts);
+	BUG_ON(d->max_mv > vdd_cpu_rail.max_millivolts);
 	cpu_lp_dvfs->dvfs_rail->nominal_millivolts =
 		max(cpu_lp_dvfs->dvfs_rail->nominal_millivolts, d->max_mv);
 
@@ -1155,13 +1196,13 @@ int of_tegra_dvfs_init(const struct of_device_id *matches)
  * and overwrite DVFS table, respectively.
  */
 
-static struct dvfs *qspi_dvfs = &qspi_sdr_dvfs_table[0];
+static struct dvfs *qspi_dvfs;
 
 static int of_update_qspi_dvfs(struct device_node *dn)
 {
 	if (of_device_is_available(dn)) {
 		if (of_get_property(dn, "nvidia,x4-is-ddr", NULL))
-			qspi_dvfs = &qspi_ddr_dvfs_table[0];
+			qspi_dvfs = &dvfs_data->qspi_ddr_vf_table[0];
 	}
 	return 0;
 }
@@ -1174,6 +1215,8 @@ static struct of_device_id tegra210_dvfs_qspi_of_match[] = {
 static void init_qspi_dvfs(int soc_speedo_id, int core_process_id,
 				  int core_nominal_mv_index)
 {
+	qspi_dvfs = &dvfs_data->qspi_sdr_vf_table[0];
+
 	of_tegra_dvfs_init(tegra210_dvfs_qspi_of_match);
 
 	if (match_dvfs_one(qspi_dvfs->clk_name, qspi_dvfs->speedo_id,
@@ -1191,10 +1234,10 @@ static struct {
 	u64 address;
 	struct dvfs *d;
 } spi_map[] = {
-	{ 0x7000d400, &spi_dvfs_table[0] },
-	{ 0x7000d600, &spi_dvfs_table[1] },
-	{ 0x7000d800, &spi_dvfs_table[2] },
-	{ 0x7000da00, &spi_dvfs_table[3] },
+	{ 0x7000d400, },
+	{ 0x7000d600, },
+	{ 0x7000d800, },
+	{ 0x7000da00, },
 };
 
 static int of_update_spi_slave_dvfs(struct device_node *dn)
@@ -1212,7 +1255,7 @@ static int of_update_spi_slave_dvfs(struct device_node *dn)
 
 	for (i = 0; i < ARRAY_SIZE(spi_map); i++) {
 		if (spi_map[i].address == addr) {
-			spi_map[i].d = &spi_slave_dvfs_table[i];
+			spi_map[i].d = &dvfs_data->spi_slave_vf_table[i];
 			break;
 		}
 	}
@@ -1230,6 +1273,9 @@ static void init_spi_dvfs(int soc_speedo_id, int core_process_id,
 {
 	int i;
 
+	for (i = 0; i <  ARRAY_SIZE(spi_map); i++)
+		spi_map[i].d = &dvfs_data->spi_vf_table[i];
+
 	of_tegra_dvfs_init(tegra21_dvfs_spi_slave_of_match);
 
 	for (i = 0; i <  ARRAY_SIZE(spi_map); i++) {
@@ -1244,7 +1290,7 @@ static void init_spi_dvfs(int soc_speedo_id, int core_process_id,
 static void init_sor1_dvfs(int soc_speedo_id, int core_process_id,
 			   int core_nominal_mv_index)
 {
-	struct dvfs *sor1_dp_dvfs = &sor1_dp_dvfs_table[0];
+	struct dvfs *sor1_dp_dvfs = &dvfs_data->sor1_dp_vf_table[0];
 	struct clk *c;
 
 	c = clk_get_sys(sor1_dp_dvfs->clk_name, sor1_dp_dvfs->clk_name);
@@ -1262,7 +1308,7 @@ static void init_sor1_dvfs(int soc_speedo_id, int core_process_id,
 
 }
 
-static int get_core_speedo_mv(void)
+static int get_core_sku_max_mv(void)
 {
 	int speedo_rev = tegra_sku_info.speedo_rev;
 
@@ -1313,7 +1359,7 @@ static int get_core_sku_min_mv(void)
 static int get_core_nominal_mv_index(int speedo_id)
 {
 	int i;
-	int mv = get_core_speedo_mv();
+	int mv = dvfs_data->get_core_max_mv();
 
 	if (mv < 0)
 		return mv;
@@ -1336,7 +1382,7 @@ static int get_core_nominal_mv_index(int speedo_id)
 static int get_core_min_mv_index(void)
 {
 	int i;
-	int mv = get_core_sku_min_mv();
+	int mv = dvfs_data->get_core_min_mv();
 
 	if (mv < 0)
 		return mv;
@@ -1356,14 +1402,16 @@ static int get_core_min_mv_index(void)
 	return i - 1;
 }
 
-static int init_cpu_dvfs_table(int *cpu_max_freq_index)
+static int init_cpu_dvfs_table(struct cpu_dvfs *fv_dvfs_table,
+			       int table_size, int *cpu_max_freq_index)
 {
 	int i, ret;
 	int cpu_speedo_id = tegra_sku_info.cpu_speedo_id;
 	int cpu_process_id = tegra_sku_info.cpu_process_id;
 
-	for (ret = 0, i = 0; i <  ARRAY_SIZE(cpu_fv_dvfs_table); i++) {
-		struct cpu_dvfs *d = &cpu_fv_dvfs_table[i];
+	for (ret = 0, i = 0; i < table_size; i++) {
+		struct cpu_dvfs *d = &fv_dvfs_table[i];
+
 		if (match_dvfs_one("cpu dvfs", d->speedo_id, d->process_id,
 				   cpu_speedo_id, cpu_process_id)) {
 			ret = set_cpu_dvfs_data(
@@ -1373,7 +1421,7 @@ static int init_cpu_dvfs_table(int *cpu_max_freq_index)
 			break;
 		}
 	}
-	BUG_ON(i == ARRAY_SIZE(cpu_fv_dvfs_table));
+	BUG_ON(i == table_size);
 
 	return ret;
 }
@@ -1687,7 +1735,7 @@ static int set_gpu_dvfs_data(struct device_node *node, unsigned long max_freq,
 	int i, j, thermal_ranges, mv, min_mv, err;
 	struct cvb_dvfs_table *table = NULL;
 	int speedo = tegra_sku_info.gpu_speedo_value;
-	struct dvfs_rail *rail = &tegra210_dvfs_rail_vdd_gpu;
+	struct dvfs_rail *rail = &vdd_gpu_rail;
 	struct rail_alignment *align = &rail->alignment;
 
 	d->max_mv = tegra_round_voltage(d->max_mv, align, false);
@@ -1812,15 +1860,17 @@ static int set_gpu_dvfs_data(struct device_node *node, unsigned long max_freq,
 }
 
 static void init_gpu_dvfs_table(struct device_node *node,
-				int *gpu_max_freq_index)
+	struct cvb_dvfs *cvb_dvfs_table, int table_size,
+	int *gpu_max_freq_index)
 {
 	int i, ret;
 	int gpu_speedo_id = tegra_sku_info.gpu_speedo_id;
 	int gpu_process_id = tegra_sku_info.gpu_process_id;
 
-	for (ret = 0, i = 0; i < ARRAY_SIZE(gpu_cvb_dvfs_table); i++) {
-		struct cvb_dvfs *d = &gpu_cvb_dvfs_table[i];
+	for (ret = 0, i = 0; i < table_size; i++) {
+		struct cvb_dvfs *d = &cvb_dvfs_table[i];
 		unsigned long max_freq = d->max_freq;
+
 		if (match_dvfs_one("gpu cvb", d->speedo_id, d->process_id,
 				   gpu_speedo_id, gpu_process_id)) {
 			ret = set_gpu_dvfs_data(node, max_freq,
@@ -1828,7 +1878,7 @@ static void init_gpu_dvfs_table(struct device_node *node,
 			break;
 		}
 	}
-	BUG_ON((i == ARRAY_SIZE(gpu_cvb_dvfs_table)) || ret);
+	BUG_ON((i == table_size) || ret);
 }
 
 static void init_core_dvfs_table(int soc_speedo_id, int core_process_id)
@@ -1852,29 +1902,29 @@ static void init_core_dvfs_table(int soc_speedo_id, int core_process_id)
 	 */
 	core_nominal_mv_index = get_core_nominal_mv_index(soc_speedo_id);
 	if (core_nominal_mv_index < 0) {
-		tegra210_dvfs_rail_vdd_core.disabled = true;
+		vdd_core_rail.disabled = true;
 		tegra_dvfs_core_disabled = true;
 		core_nominal_mv_index = 0;
 	}
 
 	core_min_mv_index = get_core_min_mv_index();
 	if (core_min_mv_index < 0) {
-		tegra210_dvfs_rail_vdd_core.disabled = true;
+		vdd_core_rail.disabled = true;
 		tegra_dvfs_core_disabled = true;
 		core_min_mv_index = 0;
 	}
 
-	tegra210_dvfs_rail_vdd_core.nominal_millivolts =
+	vdd_core_rail.nominal_millivolts =
 		core_millivolts[core_nominal_mv_index];
-	tegra210_dvfs_rail_vdd_core.min_millivolts =
+	vdd_core_rail.min_millivolts =
 		core_millivolts[core_min_mv_index];
 
 	/*
 	 * Search core dvfs table for speedo/process matching entries and
 	 * initialize dvfs-ed clocks
 	 */
-	for (i = 0; i < ARRAY_SIZE(core_dvfs_table); i++) {
-		struct dvfs *d = &core_dvfs_table[i];
+	for (i = 0; i < dvfs_data->core_vf_table_size; i++) {
+		struct dvfs *d = &dvfs_data->core_vf_table[i];
 		if (!match_dvfs_one(d->clk_name, d->speedo_id,
 			d->process_id, soc_speedo_id, core_process_id))
 			continue;
@@ -1894,6 +1944,51 @@ static void init_core_dvfs_table(int soc_speedo_id, int core_process_id)
 	init_spi_dvfs(soc_speedo_id, core_process_id, core_nominal_mv_index);
 }
 
+static void init_dvfs_data(struct tegra_dvfs_data *data)
+{
+	int i;
+	static bool initialized;
+
+	if (initialized)
+		return;
+
+	initialized = true;
+
+	dvfs_data = data;
+
+	BUG_ON(dvfs_data->rails_num != ARRAY_SIZE(vdd_dvfs_rails));
+	vdd_cpu_rail = *dvfs_data->rails[VDD_CPU_INDEX];
+	vdd_core_rail = *dvfs_data->rails[VDD_CORE_INDEX];
+	vdd_gpu_rail = *dvfs_data->rails[VDD_GPU_INDEX];
+
+	for (i = 0; i < MAX_DVFS_FREQS; i++)
+		core_millivolts[i] = dvfs_data->core_mv[i];
+}
+
+static struct tegra_dvfs_data tegra210_dvfs_data = {
+	.rails = tegra210_dvfs_rails,
+	.rails_num = ARRAY_SIZE(tegra210_dvfs_rails),
+	.cpu_fv_table = cpu_fv_dvfs_table,
+	.cpu_fv_table_size = ARRAY_SIZE(cpu_fv_dvfs_table),
+	.gpu_cvb_table = gpu_cvb_dvfs_table,
+	.gpu_cvb_table_size = ARRAY_SIZE(gpu_cvb_dvfs_table),
+
+	.core_mv = core_voltages_mv,
+	.core_vf_table = core_dvfs_table,
+	.core_vf_table_size = ARRAY_SIZE(core_dvfs_table),
+	.spi_vf_table = spi_dvfs_table,
+	.spi_slave_vf_table = spi_slave_dvfs_table,
+	.qspi_sdr_vf_table = qspi_sdr_dvfs_table,
+	.qspi_ddr_vf_table = qspi_ddr_dvfs_table,
+	.sor1_dp_vf_table = sor1_dp_dvfs_table,
+	.get_core_min_mv = get_core_sku_min_mv,
+	.get_core_max_mv = get_core_sku_max_mv,
+
+	.core_floors = tegra210_core_therm_floors,
+	.core_caps = tegra210_core_therm_caps,
+	.core_caps_ucm2 = tegra210_core_therm_caps_ucm2,
+};
+
 int tegra210_init_dvfs(struct device *dev)
 {
 	int soc_speedo_id = tegra_sku_info.soc_speedo_id;
@@ -1905,27 +2000,26 @@ int tegra210_init_dvfs(struct device *dev)
 	int gpu_max_freq_index = 0;
 	struct device_node *node = dev->of_node;
 
-	tegra_dvfs_init_rails_lists(tegra210_dvfs_rails,
-				    ARRAY_SIZE(tegra210_dvfs_rails));
+	init_dvfs_data(&tegra210_dvfs_data);
+	tegra_dvfs_init_rails_lists(vdd_dvfs_rails, dvfs_data->rails_num);
 	init_core_dvfs_table(soc_speedo_id, core_process_id);
 
-
 	/* Get rails alignment, defer probe if regulators are not ready */
-	for (i = 0; i <  ARRAY_SIZE(tegra210_dvfs_rails); i++) {
+	for (i = 0; i <  dvfs_data->rails_num; i++) {
 		struct regulator *reg;
 		unsigned int step_uv;
 		int min_uV, max_uV, ret;
 
-		reg = regulator_get(dev, tegra210_dvfs_rails[i]->reg_id);
+		reg = regulator_get(dev, vdd_dvfs_rails[i]->reg_id);
 		if (IS_ERR(reg)) {
 			pr_info("tegra_dvfs: Unable to get %s rail for step info, defering probe\n",
-					tegra210_dvfs_rails[i]->reg_id);
+					vdd_dvfs_rails[i]->reg_id);
 			return -EPROBE_DEFER;
 		}
 
 		ret = regulator_get_constraint_voltages(reg, &min_uV, &max_uV);
 		if (!ret)
-			tegra210_dvfs_rails[i]->alignment.offset_uv = min_uV;
+			vdd_dvfs_rails[i]->alignment.offset_uv = min_uV;
 
 		step_uv = regulator_get_linear_step(reg); /* 1st try get step */
 		if (!step_uv && !ret) {    /* if no step, try to calculate it */
@@ -1935,8 +2029,8 @@ int tegra210_init_dvfs(struct device *dev)
 				step_uv = (max_uV - min_uV) / (n_voltages - 1);
 		}
 		if (step_uv) {
-			tegra210_dvfs_rails[i]->alignment.step_uv = step_uv;
-			tegra210_dvfs_rails[i]->stats.bin_uv = step_uv;
+			vdd_dvfs_rails[i]->alignment.step_uv = step_uv;
+			vdd_dvfs_rails[i]->stats.bin_uv = step_uv;
 		}
 		regulator_put(reg);
 	}
@@ -1946,7 +2040,8 @@ int tegra210_init_dvfs(struct device *dev)
 	 * frequency, minimum  and nominal voltage for each CPU cluster, and
 	 * combined rail limits (fast CPU should be initialized 1st).
 	 */
-	ret = init_cpu_dvfs_table(&cpu_max_freq_index);
+	ret = init_cpu_dvfs_table(dvfs_data->cpu_fv_table,
+		dvfs_data->cpu_fv_table_size, &cpu_max_freq_index);
 	if (ret)
 		goto out;
 
@@ -1958,16 +2053,17 @@ int tegra210_init_dvfs(struct device *dev)
 	 * Construct GPU DVFS table from CVB data; find GPU maximum frequency,
 	 * and nominal voltage.
 	 */
-	init_gpu_dvfs_table(node, &gpu_max_freq_index);
+	init_gpu_dvfs_table(node, dvfs_data->gpu_cvb_table,
+		dvfs_data->gpu_cvb_table_size, &gpu_max_freq_index);
 
 	/* Init core thermal floors abd caps */
-	tegra210_dvfs_rail_vdd_core.therm_caps =
-		ucm2 ? tegra210_core_therm_caps_ucm2 : tegra210_core_therm_caps;
-	tegra_dvfs_core_init_therm_limits(&tegra210_dvfs_rail_vdd_core);
+	vdd_core_rail.therm_floors = dvfs_data->core_floors;
+	vdd_core_rail.therm_caps =
+		ucm2 ? dvfs_data->core_caps_ucm2 : dvfs_data->core_caps;
+	tegra_dvfs_core_init_therm_limits(&vdd_core_rail);
 
 	/* Init rail structures and dependencies */
-	tegra_dvfs_init_rails(tegra210_dvfs_rails,
-			      ARRAY_SIZE(tegra210_dvfs_rails));
+	tegra_dvfs_init_rails(vdd_dvfs_rails, dvfs_data->rails_num);
 
 	/*
 	 * Initialize matching cpu dvfs entry already found when nominal
@@ -1977,8 +2073,8 @@ int tegra210_init_dvfs(struct device *dev)
 	init_dvfs_one(&cpu_lp_dvfs, cpu_lp_max_freq_index);
 	init_dvfs_one(&gpu_dvfs, gpu_max_freq_index);
 
-	for (i = 0; i < ARRAY_SIZE(tegra210_dvfs_rails); i++) {
-		struct dvfs_rail *rail = tegra210_dvfs_rails[i];
+	for (i = 0; i < dvfs_data->rails_num; i++) {
+		struct dvfs_rail *rail = vdd_dvfs_rails[i];
 		pr_info("tegra dvfs: %s: nominal %dmV, offset %duV, step %duV, scaling %s\n",
 			rail->reg_id, rail->nominal_millivolts,
 			rail->alignment.offset_uv, rail->alignment.step_uv,

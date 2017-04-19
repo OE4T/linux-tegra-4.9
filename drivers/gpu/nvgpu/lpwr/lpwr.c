@@ -337,6 +337,7 @@ u32 nvgpu_lpwr_is_rppg_supported(struct gk20a *g, u32 pstate_num)
 int nvgpu_lpwr_enable_pg(struct gk20a *g, bool pstate_lock)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	u32  status = 0;
 	u32 is_mscg_supported = 0;
 	u32 is_rppg_supported = 0;
@@ -363,7 +364,7 @@ int nvgpu_lpwr_enable_pg(struct gk20a *g, bool pstate_lock)
 	is_rppg_supported = nvgpu_lpwr_is_rppg_supported(g,
 			present_pstate);
 	if (is_rppg_supported) {
-		if (g->support_pmu && g->elpg_enabled)
+		if (g->support_pmu && platform->can_elpg)
 			status = gk20a_pmu_enable_elpg(g);
 	}
 

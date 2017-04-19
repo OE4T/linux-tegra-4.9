@@ -3541,21 +3541,19 @@ static int handle_pte_fault(struct fault_env *fe)
 	if (!pte_present(entry))
 		return do_swap_page(fe, entry);
 
-	if (pte_protnone(entry) && vma_is_accessible(fe->vma)) {
-		if (fe->vma->vm_ops && fe->vma->vm_ops->fixup_prot &&
-			fe->vma->vm_ops->fault) {
-			pgoff_t pgoff = (((fe->address & PAGE_MASK)
-					- fe->vma->vm_start) >> PAGE_SHIFT) +
-					fe->vma->vm_pgoff;
-			if (!fe->vma->vm_ops->fixup_prot(fe->vma,
-					fe->address & PAGE_MASK, pgoff))
-				return VM_FAULT_SIGSEGV; /* access not granted */
-			fix_prot = true;
-		} else {
-			return do_numa_page(fe, entry);
-		}
-	}
+	if (pte_protnone(entry) && vma_is_accessible(fe->vma))
+		return do_numa_page(fe, entry);
 
+	if (fe->vma->vm_ops && fe->vma->vm_ops->fixup_prot &&
+		fe->vma->vm_ops->fault) {
+		pgoff_t pgoff = (((fe->address & PAGE_MASK)
+				- fe->vma->vm_start) >> PAGE_SHIFT) +
+				fe->vma->vm_pgoff;
+		if (!fe->vma->vm_ops->fixup_prot(fe->vma,
+				fe->address & PAGE_MASK, pgoff))
+			return VM_FAULT_SIGSEGV; /* access not granted */
+		fix_prot = true;
+	}
 	fe->ptl = pte_lockptr(fe->vma->vm_mm, fe->pmd);
 	spin_lock(fe->ptl);
 	if (unlikely(!pte_same(*fe->pte, entry)))

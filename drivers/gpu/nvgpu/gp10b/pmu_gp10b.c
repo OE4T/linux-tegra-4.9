@@ -23,7 +23,6 @@
 #include "gm20b/pmu_gm20b.h"
 
 #include "pmu_gp10b.h"
-#include "gp10b_sysfs.h"
 
 #include <nvgpu/hw/gp10b/hw_pwr_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>

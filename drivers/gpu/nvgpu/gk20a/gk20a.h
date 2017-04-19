@@ -1419,9 +1419,6 @@ enum {
 	KEPLER_CHANNEL_GPFIFO_C   = 0xA26F,
 };
 
-void gk20a_create_sysfs(struct device *dev);
-void gk20a_remove_sysfs(struct device *dev);
-
 #define GK20A_BAR0_IORESOURCE_MEM 0
 #define GK20A_BAR1_IORESOURCE_MEM 1
 #define GK20A_SIM_IORESOURCE_MEM 2

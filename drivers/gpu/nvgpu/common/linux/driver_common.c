@@ -28,6 +28,7 @@
 #include "gk20a/platform_gk20a.h"
 #include "module.h"
 #include "os_linux.h"
+#include "sysfs.h"
 
 #define EMC3D_DEFAULT_RATIO 750
 
@@ -190,7 +191,7 @@ int nvgpu_probe(struct gk20a *g,
 
 	nvgpu_init_mm_vars(g);
 
-	gk20a_create_sysfs(g->dev);
+	nvgpu_create_sysfs(g->dev);
 	gk20a_debug_init(g, debugfs_symlink);
 
 	g->dbg_regops_tmp_buf = nvgpu_kzalloc(g, SZ_4K);

@@ -31,8 +31,8 @@
 #include <nvgpu/enabled.h>
 #include <nvgpu/debug.h>
 
-#include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
+#include "sysfs.h"
 #include "vgpu/vgpu.h"
 #include "gk20a/gk20a_scale.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
@@ -985,7 +985,7 @@ static int __exit gk20a_remove(struct platform_device *pdev)
 
 	gk20a_debug_deinit(g);
 
-	gk20a_remove_sysfs(dev);
+	nvgpu_remove_sysfs(dev);
 
 	if (platform->secure_buffer.destroy)
 		platform->secure_buffer.destroy(g,

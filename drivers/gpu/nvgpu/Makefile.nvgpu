@@ -43,6 +43,7 @@ nvgpu-y := \
 	common/linux/thread.o \
 	common/linux/vm.o \
 	common/linux/intr.o \
+	common/linux/sysfs.o \
 	common/mm/nvgpu_allocator.o \
 	common/mm/bitmap_allocator.o \
 	common/mm/buddy_allocator.o \
@@ -85,7 +86,6 @@ nvgpu-y := \
 	gk20a/gr_ctx_gk20a_sim.o \
 	gk20a/gr_ctx_gk20a.o \
 	gk20a/gk20a_gating_reglist.o \
-	gk20a/gk20a_sysfs.o \
 	gk20a/ltc_gk20a.o \
 	gk20a/fb_gk20a.o \
 	gk20a/hal.o \
@@ -186,7 +186,6 @@ nvgpu-y += \
 	gp10b/cde_gp10b.o \
 	gp10b/therm_gp10b.o \
 	gp10b/fecs_trace_gp10b.o \
-	gp10b/gp10b_sysfs.o \
 	gp10b/priv_ring_gp10b.o \
 	gp10b/gp10b.o \
 	gp106/hal_gp106.o \

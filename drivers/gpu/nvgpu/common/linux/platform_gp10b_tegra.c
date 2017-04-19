@@ -38,7 +38,6 @@
 #include "gk20a/gk20a_scale.h"
 
 #include "platform_gk20a_tegra.h"
-#include "gp10b/gp10b_sysfs.h"
 #include "gp10b/platform_gp10b.h"
 #include "platform_gp10b_tegra.h"
 
@@ -161,9 +160,6 @@ static int gp10b_tegra_late_probe(struct device *dev)
 	/* Cause early VPR resize */
 	gk20a_tegra_secure_page_alloc(dev);
 
-	/*Create GP10B specific sysfs*/
-	gp10b_create_sysfs(dev);
-
 	/* Initialise tegra specific scaling quirks */
 	gp10b_tegra_scale_init(dev);
 	return 0;
@@ -172,8 +168,6 @@ static int gp10b_tegra_late_probe(struct device *dev)
 int gp10b_tegra_remove(struct device *dev)
 {
 	gr_gp10b_remove_sysfs(dev);
-	/*Remove GP10B specific sysfs*/
-	gp10b_remove_sysfs(dev);
 
 	/* deinitialise tegra specific scaling quirks */
 	gp10b_tegra_scale_exit(dev);

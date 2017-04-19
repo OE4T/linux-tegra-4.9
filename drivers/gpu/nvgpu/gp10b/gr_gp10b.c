@@ -31,7 +31,6 @@
 
 #include "gm20b/gr_gm20b.h"
 #include "gp10b/gr_gp10b.h"
-#include "gp10b_sysfs.h"
 
 #include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fifo_gp10b.h>
@@ -2291,6 +2290,8 @@ static int gr_gp10b_init_preemption_state(struct gk20a *g)
 			gr_debug_2_gfxp_wfi_always_injects_wfi_m(),
 			gr_debug_2_gfxp_wfi_always_injects_wfi_enabled_f());
 	gk20a_writel(g, gr_debug_2_r(), debug_2);
+
+	g->gr.czf_bypass = gr_gpc0_prop_debug1_czf_bypass_init_v();
 
 	return 0;
 }

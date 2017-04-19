@@ -29,7 +29,7 @@
 #include "module.h"
 #include "intr.h"
 #include "gp106/pmu_mclk_gp106.h"
-
+#include "sysfs.h"
 #include "pci.h"
 
 #include "os_linux.h"
@@ -491,7 +491,7 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 	debugfs_remove_recursive(platform->debugfs_alias);
 #endif
 
-	gk20a_remove_sysfs(g->dev);
+	nvgpu_remove_sysfs(g->dev);
 
 	if (platform->remove)
 		platform->remove(g->dev);

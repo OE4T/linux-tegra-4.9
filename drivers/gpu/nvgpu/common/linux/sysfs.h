@@ -1,7 +1,5 @@
 /*
- * GP10B specific sysfs files
- *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -11,12 +9,16 @@
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef NVGPU_SYSFS_H
+#define NVGPU_SYSFS_H
 
-#ifndef _GP10B_SYSFS_H_
-#define _GP10B_SYSFS_H_
+struct device;
 
-void gp10b_create_sysfs(struct device *dev);
-void gp10b_remove_sysfs(struct device *dev);
+int nvgpu_create_sysfs(struct device *dev);
+void nvgpu_remove_sysfs(struct device *dev);
 
-#endif /*_GP10B_SYSFS_H_*/
+#endif

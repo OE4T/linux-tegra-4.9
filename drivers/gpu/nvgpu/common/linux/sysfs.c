@@ -1,8 +1,4 @@
 /*
- * drivers/video/tegra/host/gk20a/gk20a_sysfs.c
- *
- * GK20A Graphics
- *
  * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -22,18 +18,15 @@
 #include <linux/device.h>
 #include <linux/pm_runtime.h>
 #include <linux/fb.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
 #include <soc/tegra/tegra-dvfs.h>
-#endif
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/nvhost.h>
 
-#include "gk20a.h"
+#include "sysfs.h"
 #include "gk20a/platform_gk20a.h"
-#include "gr_gk20a.h"
-#include "fifo_gk20a.h"
-#include "pmu_gk20a.h"
+#include "gk20a/pmu_gk20a.h"
+#include "gk20a/gr_gk20a.h"
 
 #define PTIMER_FP_FACTOR			1000000
 
@@ -63,7 +56,7 @@ static ssize_t elcg_enable_store(struct device *dev,
 
 	gk20a_idle(g);
 
-	dev_info(dev, "ELCG is %s.\n", g->elcg_enabled ? "enabled" :
+	nvgpu_info(g, "ELCG is %s.", g->elcg_enabled ? "enabled" :
 			"disabled");
 
 	return count;
@@ -99,28 +92,35 @@ static ssize_t blcg_enable_store(struct device *dev,
 		return err;
 
 	if (g->ops.clock_gating.blcg_bus_load_gating_prod)
-		g->ops.clock_gating.blcg_bus_load_gating_prod(g, g->blcg_enabled);
+		g->ops.clock_gating.blcg_bus_load_gating_prod(g,
+				g->blcg_enabled);
 	if (g->ops.clock_gating.blcg_ce_load_gating_prod)
 		g->ops.clock_gating.blcg_ce_load_gating_prod(g,
-					g->blcg_enabled);
+				g->blcg_enabled);
 	if (g->ops.clock_gating.blcg_ctxsw_firmware_load_gating_prod)
-		g->ops.clock_gating.blcg_ctxsw_firmware_load_gating_prod(g, g->blcg_enabled);
+		g->ops.clock_gating.blcg_ctxsw_firmware_load_gating_prod(g,
+				g->blcg_enabled);
 	if (g->ops.clock_gating.blcg_fb_load_gating_prod)
-		g->ops.clock_gating.blcg_fb_load_gating_prod(g, g->blcg_enabled);
+		g->ops.clock_gating.blcg_fb_load_gating_prod(g,
+				g->blcg_enabled);
 	if (g->ops.clock_gating.blcg_fifo_load_gating_prod)
-		g->ops.clock_gating.blcg_fifo_load_gating_prod(g, g->blcg_enabled);
+		g->ops.clock_gating.blcg_fifo_load_gating_prod(g,
+				g->blcg_enabled);
 	if (g->ops.clock_gating.blcg_gr_load_gating_prod)
-		g->ops.clock_gating.blcg_gr_load_gating_prod(g, g->blcg_enabled);
+		g->ops.clock_gating.blcg_gr_load_gating_prod(g,
+				g->blcg_enabled);
 	if (g->ops.clock_gating.blcg_ltc_load_gating_prod)
-		g->ops.clock_gating.blcg_ltc_load_gating_prod(g, g->blcg_enabled);
+		g->ops.clock_gating.blcg_ltc_load_gating_prod(g,
+				g->blcg_enabled);
 	if (g->ops.clock_gating.blcg_pmu_load_gating_prod)
-		g->ops.clock_gating.blcg_pmu_load_gating_prod(g, g->blcg_enabled);
+		g->ops.clock_gating.blcg_pmu_load_gating_prod(g,
+				g->blcg_enabled);
 	if (g->ops.clock_gating.blcg_xbar_load_gating_prod)
 		g->ops.clock_gating.blcg_xbar_load_gating_prod(g,
-			g->blcg_enabled);
+				g->blcg_enabled);
 	gk20a_idle(g);
 
-	dev_info(dev, "BLCG is %s.\n", g->blcg_enabled ? "enabled" :
+	nvgpu_info(g, "BLCG is %s.", g->blcg_enabled ? "enabled" :
 			"disabled");
 
 	return count;
@@ -162,32 +162,44 @@ static ssize_t slcg_enable_store(struct device *dev,
 		return err;
 
 	if (g->ops.clock_gating.slcg_bus_load_gating_prod)
-		g->ops.clock_gating.slcg_bus_load_gating_prod(g, g->slcg_enabled);
+		g->ops.clock_gating.slcg_bus_load_gating_prod(g,
+				g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_ce2_load_gating_prod)
-		g->ops.clock_gating.slcg_ce2_load_gating_prod(g, g->slcg_enabled);
+		g->ops.clock_gating.slcg_ce2_load_gating_prod(g,
+				g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_chiplet_load_gating_prod)
-		g->ops.clock_gating.slcg_chiplet_load_gating_prod(g, g->slcg_enabled);
+		g->ops.clock_gating.slcg_chiplet_load_gating_prod(g,
+				g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_ctxsw_firmware_load_gating_prod)
-		g->ops.clock_gating.slcg_ctxsw_firmware_load_gating_prod(g, g->slcg_enabled);
+		g->ops.clock_gating.slcg_ctxsw_firmware_load_gating_prod(g,
+				g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_fb_load_gating_prod)
-		g->ops.clock_gating.slcg_fb_load_gating_prod(g, g->slcg_enabled);
+		g->ops.clock_gating.slcg_fb_load_gating_prod(g,
+				g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_fifo_load_gating_prod)
-		g->ops.clock_gating.slcg_fifo_load_gating_prod(g, g->slcg_enabled);
+		g->ops.clock_gating.slcg_fifo_load_gating_prod(g,
+				g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_gr_load_gating_prod)
-		g->ops.clock_gating.slcg_gr_load_gating_prod(g, g->slcg_enabled);
+		g->ops.clock_gating.slcg_gr_load_gating_prod(g,
+				g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_ltc_load_gating_prod)
-		g->ops.clock_gating.slcg_ltc_load_gating_prod(g, g->slcg_enabled);
+		g->ops.clock_gating.slcg_ltc_load_gating_prod(g,
+				g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_perf_load_gating_prod)
-		g->ops.clock_gating.slcg_perf_load_gating_prod(g, g->slcg_enabled);
+		g->ops.clock_gating.slcg_perf_load_gating_prod(g,
+				g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_priring_load_gating_prod)
-		g->ops.clock_gating.slcg_priring_load_gating_prod(g, g->slcg_enabled);
+		g->ops.clock_gating.slcg_priring_load_gating_prod(g,
+				g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_pmu_load_gating_prod)
-		g->ops.clock_gating.slcg_pmu_load_gating_prod(g, g->slcg_enabled);
+		g->ops.clock_gating.slcg_pmu_load_gating_prod(g,
+				g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_xbar_load_gating_prod)
-		g->ops.clock_gating.slcg_xbar_load_gating_prod(g, g->slcg_enabled);
+		g->ops.clock_gating.slcg_xbar_load_gating_prod(g,
+				g->slcg_enabled);
 	gk20a_idle(g);
 
-	dev_info(dev, "SLCG is %s.\n", g->slcg_enabled ? "enabled" :
+	nvgpu_info(g, "SLCG is %s.", g->slcg_enabled ? "enabled" :
 			"disabled");
 
 	return count;
@@ -207,13 +219,14 @@ static ssize_t ptimer_scale_factor_show(struct device *dev,
 					struct device_attribute *attr,
 					char *buf)
 {
+	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	u32 src_freq_hz = platform->ptimer_src_freq;
 	u32 scaling_factor_fp;
 	ssize_t res;
 
 	if (!src_freq_hz) {
-		dev_err(dev, "reference clk_m rate is not set correctly\n");
+		nvgpu_err(g, "reference clk_m rate is not set correctly");
 		return -EINVAL;
 	}
 
@@ -239,12 +252,13 @@ static ssize_t ptimer_ref_freq_show(struct device *dev,
 					struct device_attribute *attr,
 					char *buf)
 {
+	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	u32 src_freq_hz = platform->ptimer_src_freq;
 	ssize_t res;
 
 	if (!src_freq_hz) {
-		dev_err(dev, "reference clk_m rate is not set correctly\n");
+		nvgpu_err(g, "reference clk_m rate is not set correctly");
 		return -EINVAL;
 	}
 
@@ -263,12 +277,13 @@ static ssize_t ptimer_src_freq_show(struct device *dev,
 					struct device_attribute *attr,
 					char *buf)
 {
+	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	u32 src_freq_hz = platform->ptimer_src_freq;
 	ssize_t res;
 
 	if (!src_freq_hz) {
-		dev_err(dev, "reference clk_m rate is not set correctly\n");
+		nvgpu_err(g, "reference clk_m rate is not set correctly");
 		return -EINVAL;
 	}
 
@@ -310,7 +325,7 @@ static ssize_t railgate_enable_store(struct device *dev,
 		g->user_railgate_disabled = true;
 	}
 
-	dev_info(dev, "railgate is %s.\n", g->can_railgate ?
+	nvgpu_info(g, "railgate is %s.", g->can_railgate ?
 		"enabled" : "disabled");
 
 	return count;
@@ -337,7 +352,7 @@ static ssize_t railgate_delay_store(struct device *dev,
 	int err;
 
 	if (!g->can_railgate) {
-		dev_info(dev, "does not support power-gating\n");
+		nvgpu_info(g, "does not support power-gating");
 		return count;
 	}
 
@@ -346,7 +361,7 @@ static ssize_t railgate_delay_store(struct device *dev,
 		g->railgate_delay = railgate_delay;
 		pm_runtime_set_autosuspend_delay(dev, g->railgate_delay);
 	} else
-		dev_err(dev, "Invalid powergate delay\n");
+		nvgpu_err(g, "Invalid powergate delay");
 
 	/* wake-up system to make rail-gating delay effective immediately */
 	err = gk20a_busy(g);
@@ -471,7 +486,7 @@ static ssize_t elpg_enable_store(struct device *dev,
 		}
 		gk20a_idle(g);
 	}
-	dev_info(dev, "ELPG is %s.\n", g->elpg_enabled ? "enabled" :
+	nvgpu_info(g, "ELPG is %s.", g->elpg_enabled ? "enabled" :
 			"disabled");
 
 	return count;
@@ -535,7 +550,7 @@ static ssize_t mscg_enable_store(struct device *dev,
 		}
 		gk20a_idle(g);
 	}
-	dev_info(dev, "MSCG is %s.\n", g->mscg_enabled ? "enabled" :
+	nvgpu_info(g, "MSCG is %s.", g->mscg_enabled ? "enabled" :
 			"disabled");
 
 	return count;
@@ -638,11 +653,11 @@ static ssize_t aelpg_enable_store(struct device *dev,
 			status = nvgpu_pmu_ap_send_command(g, &ap_cmd, false);
 		}
 	} else {
-		dev_info(dev, "PMU is not ready, AELPG request failed\n");
+		nvgpu_info(g, "PMU is not ready, AELPG request failed");
 	}
 	gk20a_idle(g);
 
-	dev_info(dev, "AELPG is %s.\n", g->aelpg_enabled ? "enabled" :
+	nvgpu_info(g, "AELPG is %s.", g->aelpg_enabled ? "enabled" :
 			"disabled");
 
 	return count;
@@ -744,7 +759,7 @@ static ssize_t force_idle_store(struct device *dev,
 			err = __gk20a_do_idle(g, false);
 			if (!err) {
 				g->forced_idle = 1;
-				dev_info(dev, "gpu is idle : %d\n",
+				nvgpu_info(g, "gpu is idle : %d",
 					g->forced_idle);
 			}
 		}
@@ -755,7 +770,7 @@ static ssize_t force_idle_store(struct device *dev,
 			err = __gk20a_do_unidle(g);
 			if (!err) {
 				g->forced_idle = 0;
-				dev_info(dev, "gpu is idle : %d\n",
+				nvgpu_info(g, "gpu is idle : %d",
 					g->forced_idle);
 			}
 		}
@@ -886,8 +901,35 @@ static ssize_t max_timeslice_us_store(struct device *dev,
 static DEVICE_ATTR(max_timeslice_us, ROOTRW, max_timeslice_us_read,
 		   max_timeslice_us_store);
 
+static ssize_t czf_bypass_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct gk20a *g = get_gk20a(dev);
+	unsigned long val;
 
-void gk20a_remove_sysfs(struct device *dev)
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	if (val >= 4)
+		return -EINVAL;
+
+	g->gr.czf_bypass = val;
+
+	return count;
+}
+
+static ssize_t czf_bypass_read(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct gk20a *g = get_gk20a(dev);
+
+	return sprintf(buf, "%d\n", g->gr.czf_bypass);
+}
+
+static DEVICE_ATTR(czf_bypass, ROOTRW, czf_bypass_read, czf_bypass_store);
+
+
+void nvgpu_remove_sysfs(struct device *dev)
 {
 	device_remove_file(dev, &dev_attr_elcg_enable);
 	device_remove_file(dev, &dev_attr_blcg_enable);
@@ -919,6 +961,8 @@ void gk20a_remove_sysfs(struct device *dev)
 	nvgpu_nvhost_remove_symlink(get_gk20a(dev));
 #endif
 
+	device_remove_file(dev, &dev_attr_czf_bypass);
+
 	if (strcmp(dev_name(dev), "gpu.0")) {
 		struct kobject *kobj = &dev->kobj;
 		struct device *parent = container_of((kobj->parent),
@@ -927,8 +971,9 @@ void gk20a_remove_sysfs(struct device *dev)
 	}
 }
 
-void gk20a_create_sysfs(struct device *dev)
+int nvgpu_create_sysfs(struct device *dev)
 {
+	struct gk20a *g = get_gk20a(dev);
 	int error = 0;
 
 	error |= device_create_file(dev, &dev_attr_elcg_enable);
@@ -958,8 +1003,10 @@ void gk20a_create_sysfs(struct device *dev)
 	error |= device_create_file(dev, &dev_attr_max_timeslice_us);
 
 #ifdef CONFIG_TEGRA_GK20A_NVHOST
-	error |= nvgpu_nvhost_create_symlink(get_gk20a(dev));
+	error |= nvgpu_nvhost_create_symlink(g);
 #endif
+
+	error |= device_create_file(dev, &dev_attr_czf_bypass);
 
 	if (strcmp(dev_name(dev), "gpu.0")) {
 		struct kobject *kobj = &dev->kobj;
@@ -970,6 +1017,7 @@ void gk20a_create_sysfs(struct device *dev)
 	}
 
 	if (error)
-		dev_err(dev, "Failed to create sysfs attributes!\n");
+		nvgpu_err(g, "Failed to create sysfs attributes!\n");
 
+	return error;
 }

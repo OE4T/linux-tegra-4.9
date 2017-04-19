@@ -66,11 +66,12 @@ out:
 	return ret;
 }
 
-void gk20a_semaphore_sea_destroy(struct gk20a *g)
+void nvgpu_semaphore_sea_destroy(struct gk20a *g)
 {
 	if (!g->sema_sea)
 		return;
 
+	nvgpu_dma_free(g, &g->sema_sea->sea_mem);
 	nvgpu_mutex_destroy(&g->sema_sea->sea_lock);
 	nvgpu_kfree(g, g->sema_sea);
 	g->sema_sea = NULL;

@@ -490,9 +490,9 @@ void nvgpu_clk_arb_cleanup_arbiter(struct gk20a *g)
 			nvgpu_kfree(g, arb->vf_table_pool[index].mclk_points);
 		}
 		nvgpu_mutex_destroy(&g->clk_arb->pstate_lock);
+		nvgpu_kfree(g, g->clk_arb);
+		g->clk_arb = NULL;
 	}
-	nvgpu_kfree(g, g->clk_arb);
-	g->clk_arb = NULL;
 }
 
 static int nvgpu_clk_arb_install_fd(struct gk20a *g,

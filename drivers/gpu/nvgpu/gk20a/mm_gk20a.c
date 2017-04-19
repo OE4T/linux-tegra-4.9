@@ -393,7 +393,7 @@ static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 	nvgpu_vm_put(mm->pmu.vm);
 	nvgpu_vm_put(mm->cde.vm);
 
-	gk20a_semaphore_sea_destroy(g);
+	nvgpu_semaphore_sea_destroy(g);
 	gk20a_vidmem_destroy(g);
 	nvgpu_pd_cache_fini(g);
 }

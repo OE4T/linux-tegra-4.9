@@ -1233,6 +1233,7 @@ struct gk20a {
 #ifdef CONFIG_DEBUG_FS
 	struct debugfs_blob_wrapper bios_blob;
 #endif
+	bool bios_is_init;
 
 	struct nvgpu_clk_arb *clk_arb;
 

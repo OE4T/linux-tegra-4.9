@@ -160,7 +160,7 @@ struct nvgpu_semaphore_sea {
  * Semaphore sea functions.
  */
 struct nvgpu_semaphore_sea *nvgpu_semaphore_sea_create(struct gk20a *gk20a);
-void gk20a_semaphore_sea_destroy(struct gk20a *g);
+void nvgpu_semaphore_sea_destroy(struct gk20a *g);
 int nvgpu_semaphore_sea_map(struct nvgpu_semaphore_pool *sea,
 			    struct vm_gk20a *vm);
 void nvgpu_semaphore_sea_unmap(struct nvgpu_semaphore_pool *sea,

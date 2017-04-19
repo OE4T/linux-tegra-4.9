@@ -177,6 +177,9 @@ int gp106_bios_init(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
+	if (g->bios_is_init)
+		return 0;
+
 	gk20a_dbg_info("reading bios from EEPROM");
 	g->bios.size = BIOS_SIZE;
 	g->bios.data = nvgpu_vmalloc(g, BIOS_SIZE);
@@ -195,12 +198,13 @@ int gp106_bios_init(struct gk20a *g)
 
 	err = nvgpu_bios_parse_rom(g);
 	if (err)
-		return err;
+		goto free_firmware;
 
 	if (g->gpu_characteristics.vbios_version < g->vbios_min_version) {
 		nvgpu_err(g, "unsupported VBIOS version %08x",
 				g->gpu_characteristics.vbios_version);
-		return -EINVAL;
+		err = -EINVAL;
+		goto free_firmware;
 	}
 
 	/* WAR for HW2.5 RevA (INA3221 is missing) */
@@ -216,25 +220,37 @@ int gp106_bios_init(struct gk20a *g)
 
 	d = debugfs_create_blob("bios", S_IRUGO, l->debugfs,
 			&g->bios_blob);
-	if (!d)
+	if (!d) {
+		err = -EINVAL;
 		nvgpu_err(g, "No debugfs?");
+		goto free_firmware;
+	}
 #endif
-
 	gk20a_dbg_fn("done");
 
 	err = gp106_bios_devinit(g);
 	if (err) {
 		nvgpu_err(g, "devinit failed");
-		return err;
+		goto free_debugfs;
 	}
 
 	if (nvgpu_is_enabled(g, NVGPU_PMU_RUN_PREOS)) {
 		err = gp106_bios_preos(g);
 		if (err) {
 			nvgpu_err(g, "pre-os failed");
-			return err;
+			goto free_debugfs;
 		}
 	}
+	g->bios_is_init = true;
 
 	return 0;
+free_debugfs:
+#ifdef CONFIG_DEBUG_FS
+	debugfs_remove(d);
+#endif
+free_firmware:
+	if (g->bios.data)
+		nvgpu_vfree(g, g->bios.data);
+	return err;
 }
+

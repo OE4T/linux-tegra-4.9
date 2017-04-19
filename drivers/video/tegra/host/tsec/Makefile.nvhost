@@ -5,6 +5,10 @@ ccflags-y += -Idrivers/video/tegra/host
 ccflags-y += -Idrivers/video/tegra/dc
 ccflags-y += -Werror
 
+ifeq ($(CONFIG_TEGRA_T19X_GRHOST),y)
+ccflags-y += -I$(srctree)/../nvhost-t19x/drivers/video/tegra/host/
+endif
+
 nvhost-tsec-objs  = \
 	tsec.o
 

@@ -118,6 +118,37 @@
 
 	pinmux@700008d4 {
 		status = "okay";
+		sdmmc1_drv_code_1_8V: sdmmc1_drv_code {
+			sdmmc1 {
+				nvidia,pins = "drive_sdmmc1";
+				nvidia,pull-down-strength = <8>;
+				nvidia,pull-up-strength = <8>;
+			};
+		};
+
+		sdmmc1_default_drv_code_3_3V: sdmmc1_default_drv_code {
+			sdmmc1 {
+				nvidia,pins = "drive_sdmmc1";
+				nvidia,pull-down-strength = <8>;
+				nvidia,pull-up-strength = <8>;
+			};
+		};
+
+		sdmmc3_drv_code_1_8V: sdmmc3_drv_code {
+			sdmmc3 {
+				nvidia,pins = "drive_sdmmc3";
+				nvidia,pull-down-strength = <8>;
+				nvidia,pull-up-strength = <8>;
+			};
+		};
+
+		sdmmc3_default_drv_code_3_3V: sdmmc3_default_drv_code {
+			sdmmc3 {
+				nvidia,pins = "drive_sdmmc3";
+				nvidia,pull-down-strength = <8>;
+				nvidia,pull-up-strength = <8>;
+			};
+		};
         };
 
 	gpio@6000d000 {

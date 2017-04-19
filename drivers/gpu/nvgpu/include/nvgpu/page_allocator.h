@@ -17,8 +17,6 @@
 #ifndef PAGE_ALLOCATOR_PRIV_H
 #define PAGE_ALLOCATOR_PRIV_H
 
-#include <linux/list.h>
-
 #include <nvgpu/allocator.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/list.h>
@@ -46,9 +44,9 @@ struct nvgpu_allocator;
  * assumed to be 64k) the allocation is satisfied by one of the buckets.
  */
 struct page_alloc_slab {
-	struct list_head empty;
-	struct list_head partial;
-	struct list_head full;
+	struct nvgpu_list_node empty;
+	struct nvgpu_list_node partial;
+	struct nvgpu_list_node full;
 
 	int nr_empty;
 	int nr_partial;
@@ -75,7 +73,14 @@ struct page_alloc_slab_page {
 	enum slab_page_state state;
 
 	struct page_alloc_slab *owner;
-	struct list_head list_entry;
+	struct nvgpu_list_node list_entry;
+};
+
+static inline struct page_alloc_slab_page *
+page_alloc_slab_page_from_list_entry(struct nvgpu_list_node *node)
+{
+	return (struct page_alloc_slab_page *)
+	((uintptr_t)node - offsetof(struct page_alloc_slab_page, list_entry));
 };
 
 struct page_alloc_chunk {

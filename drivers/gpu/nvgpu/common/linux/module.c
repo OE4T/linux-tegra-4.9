@@ -655,6 +655,9 @@ static void gk20a_pm_shutdown(struct platform_device *pdev)
 	if (gk20a_gpu_is_virtual(&pdev->dev))
 		return;
 
+	if (!g->power_on)
+		goto finish;
+
 	gk20a_driver_start_unload(g);
 
 	/* If GPU is already railgated,

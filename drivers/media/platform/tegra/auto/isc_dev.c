@@ -25,15 +25,119 @@
 #include <linux/uaccess.h>
 #include <linux/module.h>
 #include <linux/regmap.h>
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
 #include <media/isc-dev.h>
 #include <media/isc-mgr.h>
 
 #include "isc-dev-priv.h"
+#include "isc-mgr-priv.h"
 
 /* i2c payload size is only 12 bit */
 #define MAX_MSG_SIZE	(0xFFF - 1)
 
 /*#define DEBUG_I2C_TRAFFIC*/
+
+/* ISC Dev Debugfs functions
+ *
+ *    - isc_dev_debugfs_init
+ *    - isc_dev_debugfs_remove
+ *    - i2c_oft_get
+ *    - i2c_oft_set
+ *    - i2c_val_get
+ *    - i2c_oft_set
+ */
+static int i2c_val_get(void *data, u64 *val)
+{
+	struct isc_dev_info *isc_dev = data;
+	u8 temp = 0;
+
+	if (isc_dev_raw_rd(isc_dev, isc_dev->reg_off, 0, &temp, 1)) {
+		dev_err(isc_dev->dev, "ERR:%s failed\n", __func__);
+		return -EIO;
+	}
+	*val = (u64)temp;
+	return 0;
+}
+
+static int i2c_val_set(void *data, u64 val)
+{
+	struct isc_dev_info *isc_dev = data;
+	u8 temp[3];
+
+	temp[2] = val & 0xff;
+	if (isc_dev_raw_wr(isc_dev, isc_dev->reg_off, temp, 1)) {
+		dev_err(isc_dev->dev, "ERR:%s failed\n", __func__);
+		return -EIO;
+	}
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(isc_val_fops, i2c_val_get, i2c_val_set, "0x%02llx\n");
+
+static int i2c_oft_get(void *data, u64 *val)
+{
+	struct isc_dev_info *isc_dev = data;
+
+	*val = (u64)isc_dev->reg_off;
+	return 0;
+}
+
+static int i2c_oft_set(void *data, u64 val)
+{
+	struct isc_dev_info *isc_dev = data;
+
+	isc_dev->reg_off = (typeof(isc_dev->reg_off))val;
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(isc_oft_fops, i2c_oft_get, i2c_oft_set, "0x%02llx\n");
+
+int isc_dev_debugfs_init(struct isc_dev_info *isc_dev)
+{
+	struct isc_mgr_priv *isc_mgr = NULL;
+	struct dentry *d;
+
+	dev_dbg(isc_dev->dev, "%s %s\n", __func__, isc_dev->devname);
+
+	if (isc_dev->pdata)
+		isc_mgr = dev_get_drvdata(isc_dev->pdata->pdev);
+
+	isc_dev->d_entry = debugfs_create_dir(
+		isc_dev->devname,
+		isc_mgr ? isc_mgr->d_entry : NULL);
+	if (isc_dev->d_entry == NULL) {
+		dev_err(isc_dev->dev, "%s: create dir failed\n", __func__);
+		return -ENOMEM;
+	}
+
+	d = debugfs_create_file("val", S_IRUGO|S_IWUSR, isc_dev->d_entry,
+		(void *)isc_dev, &isc_val_fops);
+	if (!d) {
+		dev_err(isc_dev->dev, "%s: create file failed\n", __func__);
+		debugfs_remove_recursive(isc_dev->d_entry);
+		isc_dev->d_entry = NULL;
+	}
+
+	d = debugfs_create_file("offset", S_IRUGO|S_IWUSR, isc_dev->d_entry,
+		(void *)isc_dev, &isc_oft_fops);
+	if (!d) {
+		dev_err(isc_dev->dev, "%s: create file failed\n", __func__);
+		debugfs_remove_recursive(isc_dev->d_entry);
+		isc_dev->d_entry = NULL;
+	}
+
+	return 0;
+}
+
+int isc_dev_debugfs_remove(struct isc_dev_info *isc_dev)
+{
+	if (isc_dev->d_entry == NULL)
+		return 0;
+	debugfs_remove_recursive(isc_dev->d_entry);
+	isc_dev->d_entry = NULL;
+	return 0;
+}
 
 static void isc_dev_dump(
 	const char *str,

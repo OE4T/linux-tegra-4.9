@@ -857,241 +857,10 @@ static int nct1008_thermal_set_limits(int sensor,
 	return 0;
 }
 
-#ifdef CONFIG_THERMAL
-
-static int nct1008_ext_get_temp(struct thermal_zone_device *thz, int *temp)
-{
-	struct nct1008_data *data = thz->devdata;
-
-	return nct1008_get_temp_common(EXT, data, temp);
-}
 
 static int nct1008_ext_get_temp_as_sensor(void *data, int *temp)
 {
 	return nct1008_get_temp_common(EXT, (struct nct1008_data *) data, temp);
-}
-
-static int nct1008_ext_bind(struct thermal_zone_device *thz,
-			    struct thermal_cooling_device *cdev)
-{
-	struct nct1008_data *data = thz->devdata;
-	int i;
-	struct nct1008_sensor_platform_data *sensor;
-
-	sensor = &data->plat_data.sensors[EXT];
-
-	for (i = 0; i < sensor->num_trips; i++) {
-		if (!strcmp(sensor->trips[i].cdev_type, cdev->type))
-			thermal_zone_bind_cooling_device(thz, i, cdev,
-					sensor->trips[i].upper,
-					sensor->trips[i].lower,
-					THERMAL_WEIGHT_DEFAULT);
-	}
-
-	return 0;
-}
-
-
-static int nct1008_unbind(int sensor,
-				struct thermal_zone_device *thz,
-				struct thermal_cooling_device *cdev)
-{
-	struct nct1008_data *data = thz->devdata;
-	int i;
-
-	struct nct1008_sensor_platform_data *sensor_data;
-
-	sensor_data = &data->plat_data.sensors[sensor];
-
-	for (i = 0; i < sensor_data->num_trips; i++) {
-		if (!strcmp(sensor_data->trips[i].cdev_type, cdev->type))
-			thermal_zone_unbind_cooling_device(thz, i, cdev);
-	}
-	return 0;
-}
-
-/* Helper function that is called in order to unbind external sensor from the
-   cooling device. */
-static inline int nct1008_ext_unbind(struct thermal_zone_device *thz,
-					struct thermal_cooling_device *cdev)
-{
-	return nct1008_unbind(EXT, thz, cdev);
-}
-
-/* Helper function that is called in order to unbind local sensor from the
-   cooling device. */
-static inline int nct1008_loc_unbind(struct thermal_zone_device *thz,
-					struct thermal_cooling_device *cdev)
-{
-	return nct1008_unbind(LOC, thz, cdev);
-}
-
-/* This function reads the temperature value set for the given trip point. */
-static int nct1008_get_trip_temp(int sensor, struct thermal_zone_device *thz,
-					int trip, int *temp)
-{
-	struct nct1008_data *data = thz->devdata;
-	struct thermal_trip_info *trip_state =
-		&data->plat_data.sensors[sensor].trips[trip];
-
-	*temp = trip_state->trip_temp;
-
-	if (trip_state->trip_type != THERMAL_TRIP_PASSIVE)
-		return 0;
-
-	if (thz->temperature >= *temp) {
-		trip_state->tripped = true;
-	} else if (trip_state->tripped) {
-		*temp -= trip_state->hysteresis;
-		if (thz->temperature < *temp)
-			trip_state->tripped = false;
-	}
-
-	return 0;
-}
-
-/* This function reads the temperature value set for the given trip point for
-   the local sensor. */
-static inline int nct1008_loc_get_trip_temp(struct thermal_zone_device *thz,
-						int trip, int *temp)
-{
-	return nct1008_get_trip_temp(LOC, thz, trip, temp);
-}
-
-/* This function reads the temperature value set for the given trip point for
-	the remote sensor. */
-static inline int nct1008_ext_get_trip_temp(struct thermal_zone_device *thz,
-						int trip, int *temp)
-{
-	return nct1008_get_trip_temp(EXT, thz, trip, temp);
-}
-
-/* This function allows setting trip point temperature for the sensor
-   specified. */
-static int nct1008_set_trip_temp(int sensor, struct thermal_zone_device *thz,
-					int trip, int temp)
-{
-	struct nct1008_data *data = thz->devdata;
-
-	data->plat_data.sensors[sensor].trips[trip].trip_temp = temp;
-	return 0;
-}
-
-/* This function allows setting trip point temperature for the local sensor. */
-static inline int nct1008_loc_set_trip_temp(struct thermal_zone_device *thz,
-						int trip, int temp)
-{
-	return nct1008_set_trip_temp(LOC, thz, trip, temp);
-}
-
-/* This function allows setting trip point temperature for the external
- * sensor. */
-static inline int nct1008_ext_set_trip_temp(struct thermal_zone_device *thz,
-						int trip, int temp)
-{
-	return nct1008_set_trip_temp(EXT, thz, trip, temp);
-}
-
-static int nct1008_loc_set_trips(void *of_data, int low, int high)
-{
-	struct nct1008_data *data = (struct nct1008_data *)of_data;
-
-	nct1008_thermal_set_limits(LOC, data, low, high);
-
-	return 0;
-}
-
-static int nct1008_ext_set_trips(void *of_data, int low, int high)
-{
-	struct nct1008_data *data = (struct nct1008_data *)of_data;
-
-	nct1008_thermal_set_limits(EXT, data, low, high);
-
-	return 0;
-}
-
-/* This function return the trip point type for the sensor specified. */
-static int nct1008_get_trip_type(int sensor,
-					struct thermal_zone_device *thz,
-					int trip,
-					enum thermal_trip_type *type)
-{
-	struct nct1008_data *data = thz->devdata;
-
-	*type = data->plat_data.sensors[sensor].trips[trip].trip_type;
-	return 0;
-}
-
-/* This function return the trip point type for the local sensor. */
-static inline int nct1008_loc_get_trip_type(struct thermal_zone_device *thz,
-						int trip,
-						enum thermal_trip_type *type)
-{
-	return nct1008_get_trip_type(LOC, thz, trip, type);
-}
-
-/* This function return the trip point type for the external sensor. */
-static inline int nct1008_ext_get_trip_type(struct thermal_zone_device *thz,
-						int trip,
-						enum thermal_trip_type *type)
-{
-	return nct1008_get_trip_type(EXT, thz, trip, type);
-}
-
-static int nct1008_get_trip_hyst(int sensor, struct thermal_zone_device *thz,
-						int trip, int *hyst)
-{
-	struct nct1008_data *data = thz->devdata;
-
-	*hyst = data->plat_data.sensors[sensor].trips[trip].hysteresis;
-	return 0;
-}
-
-static inline int  nct1008_loc_get_trip_hyst(struct thermal_zone_device *thz,
-						int trip, int *hyst)
-{
-	return nct1008_get_trip_hyst(LOC, thz, trip, hyst);
-}
-
-static inline int  nct1008_ext_get_trip_hyst(struct thermal_zone_device *thz,
-						int trip, int *hyst)
-{
-	return nct1008_get_trip_hyst(EXT, thz, trip, hyst);
-}
-
-/* This function returns value of trend for the temperature change, depending
-   on the trip point type. */
-static int nct1008_get_trend(struct thermal_zone_device *thz,
-				int trip,
-				enum thermal_trend *trend)
-{
-	int trip_temp, trip_hyst;
-	enum thermal_trip_type trip_type;
-
-	thz->ops->get_trip_temp(thz, trip, &trip_temp);
-	thz->ops->get_trip_type(thz, trip, &trip_type);
-	thz->ops->get_trip_hyst(thz, trip, &trip_hyst);
-
-	switch (trip_type) {
-	case THERMAL_TRIP_ACTIVE:
-		if (thz->temperature >= trip_temp)
-			*trend = THERMAL_TREND_RAISING;
-		else
-			*trend = THERMAL_TREND_DROPPING;
-		break;
-	case THERMAL_TRIP_PASSIVE:
-		if (thz->temperature > thz->last_temperature)
-			*trend = THERMAL_TREND_RAISING;
-		else if (thz->temperature < (thz->last_temperature - trip_hyst))
-			*trend = THERMAL_TREND_DROPPING;
-		else
-			*trend = THERMAL_TREND_STABLE;
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	return 0;
 }
 
 static int nct1008_get_trend_as_sensor(int sensor, void *data, int trip,
@@ -1141,67 +910,28 @@ static inline int nct1008_ext_get_trend_as_sensor(void *data, int trip,
 	return nct1008_get_trend_as_sensor(EXT, data, trip, trend);
 }
 
-/* Helper function to get temperature of the local sensor. */
-static int nct1008_loc_get_temp(struct thermal_zone_device *thz, int *temp)
-{
-	struct nct1008_data *data = thz->devdata;
-
-	return nct1008_get_temp_common(LOC, data, temp);
-}
-
 static int nct1008_loc_get_temp_as_sensor(void *data, int *temp)
 {
 	return nct1008_get_temp_common(LOC, (struct nct1008_data *) data, temp);
 }
-/* Helper function to bind local sensor with the cooling device specified. */
-static int nct1008_loc_bind(struct thermal_zone_device *thz,
-				struct thermal_cooling_device *cdev)
+
+static int nct1008_loc_set_trips(void *of_data, int low, int high)
 {
-	struct nct1008_data *data = thz->devdata;
-	struct i2c_client *client = data->client;
-	int i;
-	struct nct1008_sensor_platform_data *sensor_data;
+	struct nct1008_data *data = (struct nct1008_data *)of_data;
 
-	dev_dbg(&client->dev, "%s: LOC-sensor bind %s, %s attempt\n",
-		 data->chip_name, thz->type, cdev->type);
-
-	sensor_data = &data->plat_data.sensors[LOC];
-
-	for (i = 0; i < sensor_data->num_trips; i++) {
-		if (!strcmp(sensor_data->trips[i].cdev_type, cdev->type)) {
-			thermal_zone_bind_cooling_device(thz, i, cdev,
-				sensor_data->trips[i].upper,
-				sensor_data->trips[i].lower,
-				THERMAL_WEIGHT_DEFAULT);
-			break;
-		}
-	}
+	nct1008_thermal_set_limits(LOC, data, low, high);
 
 	return 0;
 }
 
-static struct thermal_zone_device_ops nct_loc_ops = {
-	.get_temp = nct1008_loc_get_temp,
-	.bind = nct1008_loc_bind,
-	.unbind = nct1008_loc_unbind,
-	.get_trip_type = nct1008_loc_get_trip_type,
-	.get_trip_temp = nct1008_loc_get_trip_temp,
-	.get_trip_hyst = nct1008_loc_get_trip_hyst,
-	.set_trip_temp = nct1008_loc_set_trip_temp,
-	.get_trend = nct1008_get_trend,
-};
+static int nct1008_ext_set_trips(void *of_data, int low, int high)
+{
+	struct nct1008_data *data = (struct nct1008_data *)of_data;
 
-static struct thermal_zone_device_ops nct_ext_ops = {
-	.get_temp = nct1008_ext_get_temp,
-	.bind = nct1008_ext_bind,
-	.unbind = nct1008_ext_unbind,
-	.get_trip_type = nct1008_ext_get_trip_type,
-	.get_trip_temp = nct1008_ext_get_trip_temp,
-	.get_trip_hyst = nct1008_ext_get_trip_hyst,
-	.set_trip_temp = nct1008_ext_set_trip_temp,
-	.get_trend = nct1008_get_trend,
-};
-#endif /* CONFIG_THERMAL */
+	nct1008_thermal_set_limits(EXT, data, low, high);
+
+	return 0;
+}
 
 static int nct1008_enable(struct i2c_client *client)
 {
@@ -1633,13 +1363,6 @@ static struct nct1008_platform_data *nct1008_dt_parse(struct i2c_client *client)
 		goto err_parse_dt;
 	}
 
-	pdata->loc_name = of_get_property(np, "sensor-name", NULL);
-	if (pdata->loc_name == NULL) {
-		dev_err(&client->dev,
-			"Cannot found the name\n");
-		goto err_parse_dt;
-	}
-
 	if (client->irq == 0)
 		client->irq = -1;
 
@@ -1747,12 +1470,7 @@ static int nct1008_probe(struct i2c_client *client,
 	struct nct1008_platform_data *pdata;
 	struct thermal_zone_device *zone_device;
 	int err;
-	int i;
-	u64 mask = 0;
-	char nct_loc_name[THERMAL_NAME_LENGTH];
-	char nct_ext_name[THERMAL_NAME_LENGTH];
 	bool ext_err;
-	struct nct1008_sensor_platform_data *sensor_data;
 
 	if (client->dev.of_node) {
 		dev_info(&client->dev, "find device tree node, parsing dt\n");
@@ -1829,19 +1547,6 @@ static int nct1008_probe(struct i2c_client *client,
 		goto error;
 	}
 
-#ifdef CONFIG_THERMAL
-	if (data->plat_data.loc_name) {
-		strcpy(nct_loc_name, "Tboard_");
-		strcpy(nct_ext_name, "Tdiode_");
-		strncat(nct_loc_name, data->plat_data.loc_name,
-			(THERMAL_NAME_LENGTH - strlen("Tboard_")) - 1);
-		strncat(nct_ext_name, data->plat_data.loc_name,
-			(THERMAL_NAME_LENGTH - strlen("Tdiode_")) - 1);
-	} else {
-		strcpy(nct_loc_name, "Tboard");
-		strcpy(nct_ext_name, "Tdiode");
-	}
-
 	if (client->dev.of_node) {
 		/* Config for the Local sensor. */
 		zone_device = thermal_zone_of_sensor_register(&client->dev, LOC,
@@ -1856,46 +1561,8 @@ static int nct1008_probe(struct i2c_client *client,
 
 		if (!IS_ERR_OR_NULL(zone_device))
 			data->sensors[EXT].thz = zone_device;
-	} else {
-		sensor_data = &data->plat_data.sensors[LOC];
-
-		/* Config for the Local sensor. */
-		mask = 0;
-		for (i = 0; i < sensor_data->num_trips; i++)
-			if (data->plat_data.sensors[LOC].trips[i].mask)
-				mask |= 1ULL << i;
-
-		data->sensors[LOC].thz =
-			thermal_zone_device_register(nct_loc_name,
-						sensor_data->num_trips,
-						mask,
-						data,
-						&nct_loc_ops,
-						sensor_data->tzp,
-						2000,
-						0);
-
-		/* Config for the External sensor. */
-		mask = 0;
-		for (i = 0; i < data->plat_data.sensors[EXT].num_trips; i++)
-			if (data->plat_data.sensors[EXT].trips[i].mask > 0)
-				mask |= 1ULL << i;
-
-		/* register External sensor if connection is good  */
-		data->sensors[EXT].thz = ext_err ? NULL :
-			thermal_zone_device_register(nct_ext_name,
-				data->plat_data.sensors[EXT].num_trips,
-				mask,
-				data,
-				&nct_ext_ops,
-				data->plat_data.sensors[EXT].tzp,
-				data->plat_data.sensors[EXT].passive_delay,
-				data->plat_data.sensors[EXT].polling_delay);
 	}
 
-	if (!IS_ERR_OR_NULL(data->sensors[EXT].thz))
-		shutdown_warn_saved_temp = data->sensors[EXT].thz->temperature;
-#endif
 	return 0;
 
 error:

@@ -28,21 +28,24 @@
 #include <linux/thermal.h>
 #include <linux/platform_data/thermal_sensors.h>
 
-struct nct1008_data;
+enum nct1008_chip {
+	NCT1008,
+	NCT72,
+	TMP451,
+	MAX6649
+};
 
-enum nct1008_chip { NCT1008, NCT72, TMP451, MAX6649 };
-
-enum nct1008_sensors { LOC, EXT, SENSORS_COUNT };
+enum nct1008_sensors {
+	LOC,
+	EXT,
+	SENSORS_COUNT
+};
 
 struct nct1008_sensor_platform_data {
 	int shutdown_limit;
 	long suspend_limit_hi;
 	long suspend_limit_lo;
-	int passive_delay;
-	int polling_delay;
-
 	struct thermal_trip_info trips[THERMAL_MAX_TRIPS];
-	struct thermal_zone_params *tzp;
 	int num_trips;
 };
 
@@ -52,7 +55,6 @@ struct nct1008_platform_data {
 	int offset;
 	int alpha;
 	int beta;
-	const char *loc_name;
 	struct nct1008_sensor_platform_data sensors[SENSORS_COUNT];
 	int (*suspend_with_wakeup)(void);
 	bool extended_range;

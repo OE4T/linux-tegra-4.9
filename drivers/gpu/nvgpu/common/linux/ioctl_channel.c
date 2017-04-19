@@ -16,7 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/list.h>
 #include <trace/events/gk20a.h>
 #include <linux/file.h>
 #include <linux/anon_inodes.h>
@@ -26,6 +25,7 @@
 #include <nvgpu/timers.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/log.h>
+#include <nvgpu/list.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/debug_gk20a.h"

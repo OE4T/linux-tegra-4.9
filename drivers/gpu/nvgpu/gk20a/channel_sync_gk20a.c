@@ -15,7 +15,6 @@
 
 #include <linux/gk20a.h>
 
-#include <linux/list.h>
 #include <linux/version.h>
 
 #include <nvgpu/semaphore.h>
@@ -23,6 +22,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/atomic.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/list.h>
 
 #include "channel_sync_gk20a.h"
 #include "gk20a.h"

@@ -292,6 +292,30 @@
 					hysteresis = <1000>; /* millicelsius */
 					type = "active";
 				};
+
+				cpu_vmax1: cpu-vmax1 {
+					temperature = <66000>;
+					hysteresis = <1000>;
+					type = "active";
+				};
+
+				cpu_vmax2: cpu-vmax2 {
+					temperature = <86000>;
+					hysteresis = <1000>;
+					type = "active";
+				};
+
+				gpu_vmax1: gpu-vmax1 {
+					temperature = <83000>;
+					hysteresis = <1000>;
+					type = "active";
+				};
+
+				core_vmax1: core-vmax1 {
+					temperature = <86000>;
+					hysteresis = <1000>;
+					type = "active";
+				};
 			};
 
 			cooling-maps {

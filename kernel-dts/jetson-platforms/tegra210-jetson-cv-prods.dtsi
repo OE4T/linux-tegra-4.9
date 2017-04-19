@@ -19,7 +19,6 @@
 / {
 	pinmux@700008d4 {
 		prod-settings {
-			mask-one-style;
 			i2c0_override_prod {
 				nvidia,prod-boot-init;
 				prod = <
@@ -56,7 +55,6 @@
 	i2c@7000c700 {
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 			prod {
 				prod = <
 					0x0000006C 0xFFFFFFFF 0x00140002
@@ -69,7 +67,6 @@
 		sor1 {
 			prod-settings {
 				#prod-cells = <3>;
-				mask-one-style;
 				prod_list_hdmi_board = "prod_c_hdmi_0m_54m", "prod_c_hdmi_54m_75m",
 				                       "prod_c_hdmi_75m_150m", "prod_c_hdmi_150m_300m",
 				                       "prod_c_hdmi_300m_600m";

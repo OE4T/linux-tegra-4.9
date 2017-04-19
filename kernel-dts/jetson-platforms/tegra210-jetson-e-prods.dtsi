@@ -21,7 +21,6 @@
 		sor1 {
 			prod-settings {
 				#prod-cells = <3>;
-				mask-one-style;
 				prod_list_hdmi_board = "prod_c_hdmi_54m_75m", "prod_c_hdmi_75m_150m",
 						       "prod_c_hdmi_150m_300m", "prod_c_hdmi_300m_600m";
 				prod_c_hdmi_54m_75m {

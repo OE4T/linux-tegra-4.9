@@ -16,7 +16,6 @@
 #include <linux/circ_buf.h>
 #include <linux/wait.h>
 #include <linux/ktime.h>
-#include <linux/hashtable.h>
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #include <linux/poll.h>

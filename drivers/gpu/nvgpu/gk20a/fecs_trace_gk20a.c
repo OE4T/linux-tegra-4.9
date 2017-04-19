@@ -14,12 +14,12 @@
 #include <asm/barrier.h>
 #include <linux/kthread.h>
 #include <linux/circ_buf.h>
-#include <linux/hashtable.h>
 #include <linux/debugfs.h>
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/hashtable.h>
 
 #include "ctxsw_trace_gk20a.h"
 #include "fecs_trace_gk20a.h"

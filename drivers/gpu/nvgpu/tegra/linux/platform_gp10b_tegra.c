@@ -19,7 +19,6 @@
 #include <linux/dma-buf.h>
 #include <linux/nvmap.h>
 #include <linux/reset.h>
-#include <linux/hashtable.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
 
 #include <uapi/linux/nvgpu.h>
@@ -29,6 +28,7 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/hashtable.h>
 
 #include "clk.h"
 

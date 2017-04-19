@@ -734,7 +734,7 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 
 {
 	struct fb_event event;
-	int i;
+	int i, b_locked_fb_info = 0;
 	int blank = FB_BLANK_NORMAL;
 	struct tegra_dc *dc = fb_info->win.dc;
 	struct fb_videomode fb_mode;
@@ -744,22 +744,17 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 		return;
 	}
 
-	mutex_lock(&fb_info->info->lock);
+	console_lock();
+	b_locked_fb_info = lock_fb_info(fb_info->info);
 	fb_destroy_modedb(fb_info->info->monspecs.modedb);
-
 	fb_destroy_modelist(&fb_info->info->modelist);
-
 	event.info = fb_info->info;
-	event.data = &blank;
-
 	/* Notify layers above fb.c that the hardware is unavailable */
-	fb_info->info->state = FBINFO_STATE_SUSPENDED;
+	fb_set_suspend(fb_info->info, true);
 
 	if (specs == NULL) {
-		struct tegra_dc_mode mode;
 		memset(&fb_info->info->monspecs, 0x0,
 		       sizeof(fb_info->info->monspecs));
-		memset(&mode, 0x0, sizeof(mode));
 
 		/*
 		 * reset video mode properties to prevent garbage being
@@ -768,12 +763,11 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 		fb_info->info->mode = (struct fb_videomode*) NULL;
 
 		if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)) {
-			blank = FB_BLANK_POWERDOWN;
-			console_lock();
 			fb_add_videomode(&tegra_dc_vga_mode, &fb_info->info->modelist);
 			fb_videomode_to_var(&fb_info->info->var, &tegra_dc_vga_mode);
+			blank = FB_BLANK_POWERDOWN;
+			event.data = &blank;
 			fb_notifier_call_chain(FB_EVENT_BLANK, &event);
-			console_unlock();
 		} else {
 			/* For L4T - After the next hotplug, framebuffer console will
 			 * use the old variable screeninfo by default, only video-mode
@@ -782,8 +776,9 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 			memset(&fb_info->info->var, 0x0, sizeof(fb_info->info->var));
 		}
 
-		tegra_dc_set_mode(dc, &mode);
-		mutex_unlock(&fb_info->info->lock);
+		if (b_locked_fb_info)
+			unlock_fb_info(fb_info->info);
+		console_unlock();
 		return;
 	}
 
@@ -814,23 +809,26 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 				sizeof(struct fb_videomode));
 	}
 
-	event.info = fb_info->info;
 	/* Restoring to state running. */
-	fb_info->info->state =  FBINFO_STATE_RUNNING;
+	fb_info->info->state = FBINFO_STATE_RUNNING;
 	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)) {
-		console_lock();
+		blank = FB_BLANK_POWERDOWN;
+		event.data = &blank;
+		fb_notifier_call_chain(FB_EVENT_BLANK, &event);
 		tegra_dc_set_fb_mode(fb_info->win.dc, &fb_mode, false);
 		fb_videomode_to_var(&fb_info->info->var, &fb_mode);
+		/* event.data not used for FB_EVENT_MODE_CHANGE */
 		fb_notifier_call_chain(FB_EVENT_MODE_CHANGE_ALL, &event);
+		/* event.data not used for FB_EVENT_NEW_MODELIST */
 		fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);
-		fb_notifier_call_chain(FB_EVENT_BLANK, &event);
 		blank = FB_BLANK_UNBLANK;
 		fb_notifier_call_chain(FB_EVENT_BLANK, &event);
-		console_unlock();
 	} else {
 		fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);
 	}
-	mutex_unlock(&fb_info->info->lock);
+	if (b_locked_fb_info)
+		unlock_fb_info(fb_info->info);
+	console_unlock();
 }
 
 void tegra_fb_update_fix(struct tegra_fb_info *fb_info,
@@ -839,8 +837,10 @@ void tegra_fb_update_fix(struct tegra_fb_info *fb_info,
 	struct tegra_dc *dc = fb_info->win.dc;
 	struct tegra_edid *dc_edid = dc->edid;
 	struct fb_fix_screeninfo *fix = &fb_info->info->fix;
+	int	b_locked_fb_info;
 
-	mutex_lock(&fb_info->info->lock);
+	console_lock();
+	b_locked_fb_info = lock_fb_info(fb_info->info);
 
 	/* FB_CAP_* and TEGRA_DC_* color depth flags are shifted by 1 */
 	BUILD_BUG_ON((TEGRA_DC_Y420_30 << 1) != FB_CAP_Y420_DC_30);
@@ -857,7 +857,9 @@ void tegra_fb_update_fix(struct tegra_fb_info *fb_info,
 
 	fix->colorimetry = tegra_edid_get_ex_colorimetry(dc_edid);
 
-	mutex_unlock(&fb_info->info->lock);
+	if (b_locked_fb_info)
+		unlock_fb_info(fb_info->info);
+	console_unlock();
 }
 
 struct fb_var_screeninfo *tegra_fb_get_var(struct tegra_fb_info *fb_info)
@@ -1075,7 +1077,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 		ret = -ENOMEM;
 		goto err;
 	}
-
+	info->node = -1;	/* Set by register_framebuffer */
 	tegra_fb = info->par;
 	tegra_fb->ndev = ndev;
 	tegra_fb->fb_mem = fb_mem;
@@ -1122,7 +1124,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	info->pseudo_palette = pseudo_palette;
 	info->screen_base = fb_base;
 	info->screen_size = fb_size;
-
+	info->state = FBINFO_STATE_SUSPENDED;
 	strlcpy(info->fix.id, "tegra_fb", sizeof(info->fix.id));
 	info->fix.type		= FB_TYPE_PACKED_PIXELS;
 	info->fix.visual	= FB_VISUAL_TRUECOLOR;

@@ -129,6 +129,7 @@ static const struct cfg_param {
 	{"nvidia,preemp",		TEGRA_PINCONF_PARAM_PREEMP},
 	{"nvidia,rfu-in",		TEGRA_PINCONF_PARAM_RFU_IN},
 	{"nvidia,special-function",	TEGRA_PINCONF_PARAM_GPIO_MODE},
+	{"nvidia,pad-power",		TEGRA_PINCONF_PARAM_PAD_POWER},
 };
 
 static int tegra_pinctrl_dt_subnode_to_map(struct pinctrl_dev *pctldev,
@@ -562,6 +563,12 @@ static int tegra_pinconf_reg(struct tegra_pmx *pmx,
 		*reg = g->mux_reg;
 		*bit = g->rfu_in_bit;
 		*width = 4;
+		break;
+	case TEGRA_PINCONF_PARAM_PAD_POWER:
+		*bank = g->pad_bank;
+		*reg = g->pad_reg;
+		*bit = g->pad_bit;
+		*width = 1;
 		break;
 	default:
 		dev_err(pmx->dev, "Invalid config param %04x\n", param);

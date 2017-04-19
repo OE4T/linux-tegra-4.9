@@ -59,6 +59,8 @@ enum tegra_pinconf_param {
 	TEGRA_PINCONF_PARAM_PREEMP,
 	/* argument: Integer, range is HW-dependent */
 	TEGRA_PINCONF_PARAM_RFU_IN,
+	/* argument: Boolean */
+	TEGRA_PINCONF_PARAM_PAD_POWER,
 };
 
 enum tegra_pinconf_pull {
@@ -129,6 +131,9 @@ struct tegra_function {
  * @slwf_width:		Slew Falling field width.
  * @drvtype_bit:	Drive type register bit.
  * @drvtype_width:	Drive type field width.
+ * @pad_bank:		Register bank for the PAD control.
+ * @pad_reg:		Register address for PAD control.
+ * @pad_bit:		PAD control bit.
  *
  * -1 in a *_reg field means that feature is unsupported for this group.
  * *_bank and *_reg values are irrelevant when *_reg is -1.
@@ -151,11 +156,13 @@ struct tegra_pingroup {
 	s32 tri_reg;
 	s32 drv_reg;
 	s32 parked_reg;
+	s32 pad_reg;
 	u32 mux_bank:2;
 	u32 pupd_bank:2;
 	u32 tri_bank:2;
 	u32 drv_bank:2;
 	u32 parked_bank:2;
+	u32 pad_bank:2;
 	s32 mux_bit:6;
 	s32 pupd_bit:6;
 	s32 tri_bit:6;
@@ -185,6 +192,7 @@ struct tegra_pingroup {
 	s32 slwf_width:6;
 	s32 drvtype_width:6;
 	s32 rfu_in_width:6;
+	s32 pad_bit:6;
 };
 
 /**

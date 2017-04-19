@@ -1165,12 +1165,6 @@ int tegra_setup_dvfs(struct clk *c, struct dvfs *d)
 {
 	cleanup_dvfs_table(d);
 
-	if (!d->num_freqs || (d->freqs[d->num_freqs - 1] == d->freqs[0])) {
-		if (d->num_freqs)
-			clk_set_max_rate(c, d->freqs[0]);
-		return 0;
-	}
-
 	d->clk = c;
 
 	mutex_lock(&dvfs_lock);

@@ -25,6 +25,7 @@
 #include <soc/tegra/tegra-ivc-rpc.h>
 
 #include "camrtc-i2c-common.h"
+#include "i2c-rtcpu-clk-config.h"
 
 /*
  * I2C IVC Single driver internal data structure
@@ -33,27 +34,6 @@
 #define TEGRA_I2C_SINGLE_MAX_DEV	4
 
 #define I2C_CAMRTC_RPC_TIMEOUT_MS   250
-
-/* Define speed modes */
-#define I2C_STANDARD_MODE			100000
-#define I2C_FAST_MODE				400000
-#define I2C_FAST_MODE_PLUS			1000000
-#define I2C_HS_MODE				3500000
-
-#define I2C_CLK_DIVISOR				0x06c
-#define I2C_CLK_DIVISOR_STD_FAST_MODE_SHIFT	16
-#define I2C_CLK_MULTIPLIER_STD_FAST_MODE	8
-#define I2C_CLK_DIVISOR_HS_MODE_MASK		0xFFFF
-
-#define I2C_INTERFACE_TIMING_0                  0x94
-#define I2C_TLOW_MASK                           0x3F
-#define I2C_THIGH_SHIFT                         8
-#define I2C_THIGH_MASK                          (0x3F << I2C_THIGH_SHIFT)
-
-#define I2C_HS_INTERFACE_TIMING			0x9c
-#define I2C_HS_TLOW_MASK			0x3F
-#define I2C_HS_THIGH_SHIFT                         8
-#define I2C_HS_THIGH_MASK			(0x3F << I2C_THIGH_SHIFT)
 
 struct tegra_i2c_ivc_dev {
 	/* IVC RPC */
@@ -94,168 +74,16 @@ struct tegra_i2c_single {
 	struct device *dev;
 	struct i2c_adapter adapter;
 	struct tegra_i2c_ivc_dev *ivc_dev;
+	struct tegra_i2c_clk_config i2c_clk_config;
 	bool is_shutdown;
 	bool is_suspended;
-	struct clk *div_clk;
-	struct clk *slow_clk;
-	struct reset_control *rst;
-	void __iomem *base;
-	u32 bus_clk_rate;
-	bool is_clkon_always;
-	u16 clk_divisor_non_hs_mode;
-	u32 low_clock_count;
-	u32 high_clock_count;
-	u32 hs_low_clock_count;
-	u32 hs_high_clock_count;
-	int clk_divisor_hs_mode;
 };
-
-static u32 i2c_readl(struct tegra_i2c_single *i2c_dev, unsigned long reg)
-{
-	return readl(i2c_dev->base + reg);
-}
-
-static inline int tegra_i2c_clock_enable(struct tegra_i2c_single *i2c_dev)
-{
-	int ret;
-	ret = clk_enable(i2c_dev->div_clk);
-	if (ret < 0) {
-		dev_err(i2c_dev->dev,
-			"Enabling div clk failed, err %d\n", ret);
-		goto err;
-	}
-
-	if (i2c_dev->slow_clk) {
-		ret = clk_enable(i2c_dev->slow_clk);
-		if (ret < 0) {
-			dev_err(i2c_dev->dev,
-				"Enabling slow clk failed, err %d\n", ret);
-			clk_disable(i2c_dev->div_clk);
-		}
-	}
-err:
-	return ret;
-}
-
-static inline void tegra_i2c_clock_disable(struct tegra_i2c_single *i2c_dev)
-{
-	clk_disable(i2c_dev->div_clk);
-	if (i2c_dev->slow_clk)
-		clk_disable(i2c_dev->slow_clk);
-}
-
-static void tegra_i2c_get_clk_parameters(struct tegra_i2c_single *i2c_dev)
-{
-	u32 val;
-
-	val = i2c_readl(i2c_dev, I2C_INTERFACE_TIMING_0);
-	i2c_dev->low_clock_count = val & I2C_TLOW_MASK;
-	i2c_dev->high_clock_count = (val & I2C_THIGH_MASK) >> I2C_THIGH_SHIFT;
-
-	val = i2c_readl(i2c_dev, I2C_HS_INTERFACE_TIMING);
-	i2c_dev->hs_low_clock_count = val & I2C_HS_TLOW_MASK;
-	i2c_dev->hs_high_clock_count = ((val & I2C_HS_THIGH_MASK)
-		>> I2C_HS_THIGH_SHIFT);
-
-	val = i2c_readl(i2c_dev, I2C_CLK_DIVISOR);
-	i2c_dev->clk_divisor_hs_mode = val & I2C_CLK_DIVISOR_HS_MODE_MASK;
-	i2c_dev->clk_divisor_non_hs_mode = (val >>
-			I2C_CLK_DIVISOR_STD_FAST_MODE_SHIFT);
-}
-
-static int tegra_i2c_set_clk_rate(struct tegra_i2c_single *i2c_dev)
-{
-	u32 clk_multiplier = I2C_CLK_MULTIPLIER_STD_FAST_MODE;
-	int ret = 0;
-
-
-	switch (i2c_dev->bus_clk_rate) {
-	case I2C_HS_MODE:
-		clk_multiplier = (i2c_dev->hs_low_clock_count +
-				i2c_dev->hs_high_clock_count + 2);
-		clk_multiplier *= (i2c_dev->clk_divisor_hs_mode + 1);
-		break;
-	case I2C_FAST_MODE_PLUS:
-	case I2C_STANDARD_MODE:
-	case I2C_FAST_MODE:
-	default:
-		clk_multiplier = (i2c_dev->low_clock_count +
-				  i2c_dev->high_clock_count + 2);
-		clk_multiplier *= (i2c_dev->clk_divisor_non_hs_mode + 1);
-		break;
-	}
-
-	ret = clk_set_rate(i2c_dev->div_clk,
-			   i2c_dev->bus_clk_rate * clk_multiplier);
-	if (ret) {
-		dev_err(i2c_dev->dev, "Clock rate change failed %d\n", ret);
-		return ret;
-	}
-
-	return ret;
-}
-
-static int tegra_i2c_init(struct tegra_i2c_single *i2c_dev)
-{
-	u32 val;
-	int err = 0;
-
-	err = tegra_i2c_clock_enable(i2c_dev);
-	if (err < 0) {
-		dev_err(i2c_dev->dev, "Clock enable failed %d\n", err);
-		return err;
-	}
-
-	reset_control_assert(i2c_dev->rst);
-	udelay(2);
-	reset_control_deassert(i2c_dev->rst);
-
-	/* Make sure clock divisor programmed correctly */
-	if (i2c_dev->bus_clk_rate == I2C_HS_MODE) {
-		i2c_dev->clk_divisor_hs_mode = 2;
-	} else {
-		val = i2c_readl(i2c_dev, I2C_CLK_DIVISOR);
-		i2c_dev->clk_divisor_hs_mode =
-			val & I2C_CLK_DIVISOR_HS_MODE_MASK;
-	}
-
-	tegra_i2c_get_clk_parameters(i2c_dev);
-
-	err = tegra_i2c_set_clk_rate(i2c_dev);
-	if (err < 0)
-		return err;
-
-	tegra_i2c_clock_disable(i2c_dev);
-	return err;
-}
 
 static void tegra_i2c_parse_dt(struct tegra_i2c_single *i2c_dev)
 {
 	struct device_node *np = i2c_dev->dev->of_node;
-	i2c_dev->is_clkon_always = of_property_read_bool(np,
-			"nvidia,clock-always-on");
-}
-
-static u32 tegra_i2c_get_clk_freq(struct device_node *np)
-{
-	int ret;
-	u32 bus_clk_rate;
-
-	ret = of_property_read_u32(np, "clock-frequency",
-			&bus_clk_rate);
-	if (ret)
-		bus_clk_rate = 100000; /* default clock rate */
-
-	return bus_clk_rate;
-}
-
-static u32 tegra_i2c_get_reg_base(struct device_node *np)
-{
-	u32 reg_vals[4] = {0};
-
-	of_property_read_u32_array(np, "reg", reg_vals, 4);
-
-	return reg_vals[1];
+	i2c_dev->i2c_clk_config.is_clkon_always =
+		of_property_read_bool(np, "nvidia,clock-always-on");
 }
 
 /*
@@ -308,6 +136,7 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	int ret = 0;
 	int i;
 	struct tegra_i2c_ivc_dev *ivc_dev;
+	struct tegra_i2c_clk_config *i2c_clk_config;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 
@@ -361,57 +190,59 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	if (!i2c_dev)
 		return -ENOMEM;
 
-	i2c_dev->base = base;
-	i2c_dev->div_clk = div_clk;
-	i2c_dev->slow_clk = slow_clk;
 	i2c_dev->dev = &pdev->dev;
 	i2c_dev->ivc_dev = ivc_dev;
 	i2c_dev->is_shutdown = false;
 	i2c_dev->is_suspended = false;
-	i2c_dev->rst = devm_reset_control_get(&pdev->dev, "i2c");
-	if (IS_ERR(i2c_dev->rst)) {
-		dev_err(&pdev->dev, "missing controller reset");
-		return PTR_ERR(i2c_dev->rst);
+
+	i2c_clk_config = &i2c_dev->i2c_clk_config;
+	i2c_clk_config->base = base;
+	i2c_clk_config->div_clk = div_clk;
+	i2c_clk_config->slow_clk = slow_clk;
+	i2c_clk_config->rst = devm_reset_control_get(&pdev->dev, "i2c");
+	if (IS_ERR(i2c_clk_config->rst)) {
+		dev_err(i2c_dev->dev, "missing controller reset");
+		return PTR_ERR(i2c_clk_config->rst);
 	}
 
-	i2c_dev->bus_clk_rate = tegra_i2c_get_clk_freq(
+	i2c_clk_config->bus_clk_rate = tegra_i2c_get_clk_freq(
 			i2c_dev->dev->of_node);
 	tegra_i2c_parse_dt(i2c_dev);
 
 	platform_set_drvdata(pdev, i2c_dev);
 
-	i2c_dev->clk_divisor_non_hs_mode = 0x19;
-	if (i2c_dev->bus_clk_rate == I2C_FAST_MODE_PLUS)
-		i2c_dev->clk_divisor_non_hs_mode = 0x10;
+	i2c_clk_config->clk_divisor_non_hs_mode = 0x19;
+	if (i2c_clk_config->bus_clk_rate == I2C_FAST_MODE_PLUS)
+		i2c_clk_config->clk_divisor_non_hs_mode = 0x10;
 
-	ret = clk_prepare(i2c_dev->div_clk);
+	ret = clk_prepare(i2c_clk_config->div_clk);
 	if (ret < 0) {
 		dev_err(i2c_dev->dev, "Clock prepare failed %d\n", ret);
 		goto fail;
 	}
-	if (i2c_dev->slow_clk) {
-		ret = clk_prepare(i2c_dev->slow_clk);
+	if (i2c_clk_config->slow_clk) {
+		ret = clk_prepare(i2c_clk_config->slow_clk);
 		if (ret < 0) {
 			dev_err(i2c_dev->dev, "slow clk prep failed %d\n", ret);
 			goto unprepare_div_clk;
 		}
 	}
 
-	ret = tegra_i2c_clock_enable(i2c_dev);
+	ret = tegra_i2c_rtcpu_clock_enable(i2c_clk_config);
 	if (ret < 0) {
 		dev_err(i2c_dev->dev, "div_clk enable failed %d\n",
 			ret);
 		goto unprepare_slow_clk;
 	}
 
-	ret = tegra_i2c_init(i2c_dev);
+	ret = tegra_i2c_rtcpu_clock_init(i2c_clk_config);
 	if (ret) {
-		dev_err(&pdev->dev, "Failed to initialize i2c controller");
+		dev_err(i2c_dev->dev, "Failed to initialize i2c controller");
 		goto disable_clk;
 	}
 
 	/* Probe the I2C hardware */
-	pm_runtime_enable(&pdev->dev);
+	pm_runtime_enable(i2c_dev->dev);
 
 	/* Register I2C bus */
 	i2c_set_adapdata(&i2c_dev->adapter, i2c_dev);
@@ -426,25 +257,25 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 
 	ret = i2c_add_numbered_adapter(&i2c_dev->adapter);
 	if (ret) {
-		dev_err(&pdev->dev, "Cannot add I2C adapter: %d\n", ret);
+		dev_err(i2c_dev->dev, "Cannot add I2C adapter: %d\n", ret);
 		goto disable_clk;
 	}
 
 	pm_runtime_enable(&i2c_dev->adapter.dev);
 
-	BUG_ON(!i2c_dev->ivc_dev->chan->is_ready);
+	BUG_ON(!ivc_dev->chan->is_ready);
 
 	return 0;
 
 disable_clk:
-	tegra_i2c_clock_disable(i2c_dev);
+	tegra_i2c_rtcpu_clock_disable(i2c_clk_config);
 
 unprepare_slow_clk:
-	if (i2c_dev->slow_clk)
-		clk_unprepare(i2c_dev->slow_clk);
+	if (i2c_clk_config->slow_clk)
+		clk_unprepare(i2c_clk_config->slow_clk);
 
 unprepare_div_clk:
-	clk_unprepare(i2c_dev->div_clk);
+	clk_unprepare(i2c_clk_config->div_clk);
 
 fail:
 	devm_kfree(&pdev->dev, i2c_dev);
@@ -532,13 +363,7 @@ static int __init tegra_i2c_init_driver(void)
 	return platform_driver_register(&tegra_i2c_driver);
 }
 
-static void __exit tegra_i2c_exit_driver(void)
-{
-	platform_driver_unregister(&tegra_i2c_driver);
-}
-
 subsys_initcall(tegra_i2c_init_driver);
-module_exit(tegra_i2c_exit_driver);
 
 /*
  * I2C interface

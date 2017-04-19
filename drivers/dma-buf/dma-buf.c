@@ -168,8 +168,10 @@ static int dma_buf_release(struct inode *inode, struct file *file)
 
 		list_del(&attach->node);
 		if (dmabuf_can_defer_unmap(dmabuf, attach->dev)) {
-			attach->dmabuf->ops->unmap_dma_buf(attach, attach->sg_table,
-								DMA_BIDIRECTIONAL);
+			/* sg_table is -ENOMEM if map fails before release */
+			if (!IS_ERR_OR_NULL(attach->sg_table))
+				attach->dmabuf->ops->unmap_dma_buf(attach,
+					attach->sg_table, DMA_BIDIRECTIONAL);
 			if (dmabuf->ops->detach)
 				dmabuf->ops->detach(dmabuf, attach);
 			kzfree(attach);

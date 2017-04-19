@@ -146,6 +146,16 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 	return 0;
 }
 
+u32 gk20a_channel_get_timeslice(struct channel_gk20a *ch)
+{
+	struct gk20a *g = ch->g;
+
+	if (!ch->timeslice_us)
+		return g->ops.fifo.default_timeslice_us(g);
+
+	return ch->timeslice_us;
+}
+
 int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 		int timeslice_period,
 		int *__timeslice_timeout, int *__timeslice_scale)

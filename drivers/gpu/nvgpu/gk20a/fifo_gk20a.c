@@ -2920,12 +2920,22 @@ void gk20a_get_tsg_runlist_entry(struct tsg_gk20a *tsg, u32 *runlist)
 			ram_rl_entry_timeslice_timeout_f(tsg->timeslice_timeout);
 	else
 		runlist_entry_0 |=
-			ram_rl_entry_timeslice_scale_3_f() |
-			ram_rl_entry_timeslice_timeout_128_f();
+			ram_rl_entry_timeslice_scale_f(
+				NVGPU_FIFO_DEFAULT_TIMESLICE_SCALE) |
+			ram_rl_entry_timeslice_timeout_f(
+				NVGPU_FIFO_DEFAULT_TIMESLICE_TIMEOUT);
 
 	runlist[0] = runlist_entry_0;
 	runlist[1] = 0;
 
+}
+
+u32 gk20a_fifo_default_timeslice_us(struct gk20a *g)
+{
+	return (((u64)(NVGPU_FIFO_DEFAULT_TIMESLICE_TIMEOUT <<
+				NVGPU_FIFO_DEFAULT_TIMESLICE_SCALE) *
+			(u64)g->ptimer_src_freq) /
+			(u64)PTIMER_REF_FREQ_HZ);
 }
 
 void gk20a_get_ch_runlist_entry(struct channel_gk20a *ch, u32 *runlist)

@@ -340,6 +340,12 @@ done:
 	return err;
 }
 
+static int gk20a_tsg_ioctl_get_timeslice(struct gk20a *g,
+	struct tsg_gk20a *tsg, struct nvgpu_timeslice_args *arg)
+{
+	arg->timeslice_us = gk20a_tsg_get_timeslice(tsg);
+	return 0;
+}
 
 long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 			     unsigned long arg)
@@ -452,6 +458,12 @@ long nvgpu_ioctl_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 	case NVGPU_IOCTL_TSG_SET_TIMESLICE:
 		{
 		err = gk20a_tsg_ioctl_set_timeslice(g, tsg,
+			(struct nvgpu_timeslice_args *)buf);
+		break;
+		}
+	case NVGPU_IOCTL_TSG_GET_TIMESLICE:
+		{
+		err = gk20a_tsg_ioctl_get_timeslice(g, tsg,
 			(struct nvgpu_timeslice_args *)buf);
 		break;
 		}

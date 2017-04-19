@@ -655,8 +655,11 @@ static int vgpu_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
 	p->handle = ch->virt_ctx;
 	p->timeslice_us = timeslice;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
-	WARN_ON(err || msg.ret);
-	return err ? err : msg.ret;
+	err = err ? err : msg.ret;
+	WARN_ON(err);
+	if (!err)
+		ch->timeslice_us = p->timeslice_us;
+	return err;
 }
 
 static int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
@@ -776,6 +779,13 @@ int vgpu_fifo_nonstall_isr(struct gk20a *g,
 	return 0;
 }
 
+u32 vgpu_fifo_default_timeslice_us(struct gk20a *g)
+{
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
+
+	return priv->constants.default_timeslice_us;
+}
+
 void vgpu_init_fifo_ops(struct gpu_ops *gops)
 {
 	gops->fifo.bind_channel = vgpu_channel_bind;
@@ -794,4 +804,5 @@ void vgpu_init_fifo_ops(struct gpu_ops *gops)
 	gops->fifo.channel_set_timeslice = vgpu_channel_set_timeslice;
 	gops->fifo.force_reset_ch = vgpu_fifo_force_reset_ch;
 	gops->fifo.init_engine_info = vgpu_fifo_init_engine_info;
+	gops->fifo.default_timeslice_us = vgpu_fifo_default_timeslice_us;
 }

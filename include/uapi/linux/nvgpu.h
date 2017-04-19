@@ -968,11 +968,13 @@ struct nvgpu_gpu_set_event_filter_args {
 	_IOW(NVGPU_TSG_IOCTL_MAGIC, 8, struct nvgpu_runlist_interleave_args)
 #define NVGPU_IOCTL_TSG_SET_TIMESLICE \
 	_IOW(NVGPU_TSG_IOCTL_MAGIC, 9, struct nvgpu_timeslice_args)
+#define NVGPU_IOCTL_TSG_GET_TIMESLICE \
+	_IOR(NVGPU_TSG_IOCTL_MAGIC, 10, struct nvgpu_timeslice_args)
 
 #define NVGPU_TSG_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_event_id_ctrl_args)
 #define NVGPU_TSG_IOCTL_LAST		\
-	_IOC_NR(NVGPU_IOCTL_TSG_SET_TIMESLICE)
+	_IOC_NR(NVGPU_IOCTL_TSG_GET_TIMESLICE)
 
 
 /*
@@ -1632,9 +1634,11 @@ struct nvgpu_boosted_ctx_args {
 	_IOW(NVGPU_IOCTL_MAGIC, 123, struct nvgpu_alloc_gpfifo_ex_args)
 #define NVGPU_IOCTL_CHANNEL_SET_BOOSTED_CTX	\
 	_IOW(NVGPU_IOCTL_MAGIC, 124, struct nvgpu_boosted_ctx_args)
+#define NVGPU_IOCTL_CHANNEL_GET_TIMESLICE \
+	_IOW(NVGPU_IOCTL_MAGIC, 125, struct nvgpu_timeslice_args)
 
 #define NVGPU_IOCTL_CHANNEL_LAST	\
-	_IOC_NR(NVGPU_IOCTL_CHANNEL_SET_BOOSTED_CTX)
+	_IOC_NR(NVGPU_IOCTL_CHANNEL_GET_TIMESLICE)
 #define NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvgpu_alloc_gpfifo_ex_args)
 
 /*

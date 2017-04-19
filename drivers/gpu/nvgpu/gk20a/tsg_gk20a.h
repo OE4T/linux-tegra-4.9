@@ -70,6 +70,7 @@ void gk20a_tsg_event_id_post_event(struct tsg_gk20a *tsg,
 				       int event_id);
 int gk20a_tsg_set_runlist_interleave(struct tsg_gk20a *tsg, u32 level);
 int gk20a_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice);
+u32 gk20a_tsg_get_timeslice(struct tsg_gk20a *tsg);
 int gk20a_tsg_set_priority(struct gk20a *g, struct tsg_gk20a *tsg,
 				u32 priority);
 

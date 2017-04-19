@@ -1125,6 +1125,10 @@ long gk20a_channel_ioctl(struct file *filp,
 		gk20a_channel_trace_sched_param(
 			trace_gk20a_channel_set_timeslice, ch);
 		break;
+	case NVGPU_IOCTL_CHANNEL_GET_TIMESLICE:
+		((struct nvgpu_timeslice_args *)buf)->timeslice_us =
+			gk20a_channel_get_timeslice(ch);
+		break;
 	case NVGPU_IOCTL_CHANNEL_SET_PREEMPTION_MODE:
 		if (ch->g->ops.gr.set_preemption_mode) {
 			err = gk20a_busy(ch->g);

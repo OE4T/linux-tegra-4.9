@@ -445,6 +445,7 @@ struct gpu_ops {
 		int (*channel_set_timeslice)(struct channel_gk20a *ch,
 					u32 timeslice);
 		int (*tsg_set_timeslice)(struct tsg_gk20a *tsg, u32 timeslice);
+		u32 (*default_timeslice_us)(struct gk20a *);
 		int (*force_reset_ch)(struct channel_gk20a *ch,
 					u32 err_code, bool verbose);
 		int (*engine_enum_from_type)(struct gk20a *g, u32 engine_type,

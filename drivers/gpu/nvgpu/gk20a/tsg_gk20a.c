@@ -211,6 +211,16 @@ int gk20a_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
 	return g->ops.fifo.tsg_set_timeslice(tsg, timeslice);
 }
 
+u32 gk20a_tsg_get_timeslice(struct tsg_gk20a *tsg)
+{
+	struct gk20a *g = tsg->g;
+
+	if (!tsg->timeslice_us)
+		return g->ops.fifo.default_timeslice_us(g);
+
+	return tsg->timeslice_us;
+}
+
 static void release_used_tsg(struct fifo_gk20a *f, struct tsg_gk20a *tsg)
 {
 	nvgpu_mutex_acquire(&f->tsg_inuse_mutex);

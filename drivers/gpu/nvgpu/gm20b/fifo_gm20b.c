@@ -195,6 +195,7 @@ void gm20b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.setup_ramfc = gk20a_fifo_setup_ramfc;
 	gops->fifo.channel_set_priority = gk20a_fifo_set_priority;
 	gops->fifo.channel_set_timeslice = gk20a_fifo_set_timeslice;
+	gops->fifo.default_timeslice_us = gk20a_fifo_default_timeslice_us;
 	gops->fifo.setup_userd = gk20a_fifo_setup_userd;
 	gops->fifo.userd_gp_get = gk20a_fifo_userd_gp_get;
 	gops->fifo.userd_gp_put = gk20a_fifo_userd_gp_put;

@@ -47,6 +47,9 @@
 #define RC_TYPE_PBDMA_FAULT		2
 #define RC_TYPE_NO_RC			0xff
 
+#define NVGPU_FIFO_DEFAULT_TIMESLICE_TIMEOUT	128UL
+#define NVGPU_FIFO_DEFAULT_TIMESLICE_SCALE	3UL
+
 /*
  * Number of entries in the kickoff latency buffer, used to calculate
  * the profiling and histogram. This number is calculated to be statistically
@@ -399,4 +402,6 @@ void gk20a_fifo_reset_pbdma_method(struct gk20a *g, int pbdma_id,
 			 int pbdma_method_index);
 unsigned int gk20a_fifo_handle_pbdma_intr_0(struct gk20a *g, u32 pbdma_id,
 			u32 pbdma_intr_0, u32 *handled, u32 *error_notifier);
+
+u32 gk20a_fifo_default_timeslice_us(struct gk20a *g);
 #endif /*__GR_GK20A_H__*/

@@ -545,7 +545,8 @@ static int tegra_dc_handle_latency_allowance(struct tegra_dc *dc,
 			err = tegra_check_disp_latency_allowance(
 				la_id_tab[dc->ndev->id][w->idx],
 				emc_freq_hz, bw, disp_params);
-			return err;
+			ret = err;
+			break;
 		}
 
 		err = tegra_set_disp_latency_allowance(
@@ -566,6 +567,8 @@ static int tegra_dc_handle_latency_allowance(struct tegra_dc *dc,
 
 		emc_freq_hz = next_freq;
 	}
+
+	clk_put(emc_clk);
 
 	return ret;
 }

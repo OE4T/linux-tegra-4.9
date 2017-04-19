@@ -32,6 +32,8 @@
 
 #define TEGRA_I2C_SINGLE_MAX_DEV	4
 
+#define I2C_CAMRTC_RPC_TIMEOUT_MS   250
+
 /* Define speed modes */
 #define I2C_STANDARD_MODE			100000
 #define I2C_FAST_MODE				400000
@@ -816,7 +818,7 @@ static int tegra_ivc_i2c_add_single(
 	ivc_dev->rpc_i2c_req.response = &ivc_dev->rpc_i2c_rsp;
 	ivc_dev->rpc_i2c_req.callback = NULL;
 	ivc_dev->rpc_i2c_req.callback_param = NULL;
-	ivc_dev->rpc_i2c_req.timeout_ms = 100;
+	ivc_dev->rpc_i2c_req.timeout_ms = I2C_CAMRTC_RPC_TIMEOUT_MS;
 	ivc_dev->chan->is_ready = true;
 
 	atomic_inc(&ivc_dev->in_add_single);
@@ -826,7 +828,7 @@ static int tegra_ivc_i2c_add_single(
 fail_remove_chan:
 	tegra_ivc_rpc_channel_remove(chan);
 	ivc_dev->is_failed = true;
-	return 0;
+	return ret;
 }
 
 static void tegra_ivc_i2c_add_single_worker(struct work_struct *work)
@@ -862,33 +864,12 @@ static struct tegra_ivc_rpc_ops tegra_ivc_rpc_user_ops = {
 };
 
 /* Platform device */
-static struct platform_device *tegra_i2c_get(struct device *dev)
-{
-	struct device_node *i2c_node;
-	struct platform_device *i2c_pdev;
-
-	i2c_node = of_parse_phandle(dev->of_node, "device", 0);
-	if (i2c_node == NULL) {
-		dev_err(dev, "cannot get VI device");
-		return ERR_PTR(-ENODEV);
-	}
-
-	i2c_pdev = of_find_device_by_node(i2c_node);
-	of_node_put(i2c_node);
-
-	if (i2c_pdev == NULL)
-		return ERR_PTR(-EPROBE_DEFER);
-
-	return i2c_pdev;
-}
-
 static int tegra_ivc_rpc_i2c_single_probe(struct tegra_ivc_channel *chan)
 {
 	int ret;
 	int i;
 	struct tegra_i2c_ivc_dev *ivc_dev;
-	struct platform_device *i2c_dev;
-	struct device_node *np;
+	struct device_node *i2c_node;
 
 	/* Find an empty slot */
 	for (i = 0; i < TEGRA_I2C_SINGLE_MAX_DEV; ++i) {
@@ -899,16 +880,13 @@ static int tegra_ivc_rpc_i2c_single_probe(struct tegra_ivc_channel *chan)
 	if (i == TEGRA_I2C_SINGLE_MAX_DEV)
 		return -ENOMEM;
 
-	i2c_dev = tegra_i2c_get(&chan->dev);
-	if (IS_ERR(i2c_dev)) {
-		dev_err(&chan->dev, "Cannot read property device: %ld\n",
-			PTR_ERR(i2c_dev));
-		return PTR_ERR(i2c_dev);
-	}
-
-	np = i2c_dev->dev.of_node;
-
 	ivc_dev = g_ivc_devs + i;
+
+	i2c_node = of_parse_phandle(chan->dev.of_node, "device", 0);
+	if (i2c_node == NULL) {
+		dev_err(&chan->dev, "Cannot get i2c device node");
+		return -ENODEV;
+	}
 
 	/* Read properties */
 	ret = of_property_read_string(chan->dev.of_node, "nvidia,service",
@@ -927,18 +905,19 @@ static int tegra_ivc_rpc_i2c_single_probe(struct tegra_ivc_channel *chan)
 	}
 
 	chan->is_ready = false;
-	ivc_dev->is_taken = true;
 	ivc_dev->is_failed = false;
-	ivc_dev->reg_base = tegra_i2c_get_reg_base(np);
-	ivc_dev->bus_clk_rate = tegra_i2c_get_clk_freq(np);
+	ivc_dev->reg_base = tegra_i2c_get_reg_base(i2c_node);
+	ivc_dev->bus_clk_rate = tegra_i2c_get_clk_freq(i2c_node);
 	atomic_set(&ivc_dev->in_add_single, 1);
 	ivc_dev->chan = chan;
 	tegra_ivc_channel_set_drvdata(chan, ivc_dev);
 	INIT_WORK(&ivc_dev->work, tegra_ivc_i2c_add_single_worker);
+	ivc_dev->is_taken = true;
 
 	return 0;
 
 fail_free_ivc_dev:
+	devm_kfree(&chan->dev, ivc_dev);
 	return ret;
 }
 

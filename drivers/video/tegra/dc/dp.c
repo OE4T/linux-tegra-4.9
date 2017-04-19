@@ -73,8 +73,8 @@ static struct tegra_hpd_ops hpd_ops;
 
 static int dp_instance;
 
-static inline void tegra_dc_dp_debugfs_create(struct tegra_dc_dp_data *dp);
-static inline void tegra_dc_dp_debugfs_remove(struct tegra_dc_dp_data *dp);
+static void tegra_dc_dp_debugfs_create(struct tegra_dc_dp_data *dp);
+static void tegra_dc_dp_debugfs_remove(struct tegra_dc_dp_data *dp);
 static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp);
 static inline void tegra_dp_default_int(struct tegra_dc_dp_data *dp,
 					bool enable);

@@ -37,7 +37,7 @@
  */
 #define GK20A_FECS_TRACE_NUM_RECORDS		(1 << 6)
 #define GK20A_FECS_TRACE_HASH_BITS		8 /* 2^8 */
-#define GK20A_FECS_TRACE_FRAME_PERIOD_NS	(1000000000ULL/60ULL)
+#define GK20A_FECS_TRACE_FRAME_PERIOD_US	(1000000ULL/60ULL)
 #define GK20A_FECS_TRACE_PTIMER_SHIFT		5
 
 struct gk20a_fecs_trace_record {
@@ -379,13 +379,13 @@ done:
 static int gk20a_fecs_trace_periodic_polling(void *arg)
 {
 	struct gk20a *g = (struct gk20a *)arg;
-	struct timespec ts = ns_to_timespec(GK20A_FECS_TRACE_FRAME_PERIOD_NS);
 
 	pr_info("%s: running\n", __func__);
 
 	while (!kthread_should_stop()) {
 
-		hrtimer_nanosleep(&ts, NULL, HRTIMER_MODE_REL, CLOCK_MONOTONIC);
+		nvgpu_usleep_range(GK20A_FECS_TRACE_FRAME_PERIOD_US,
+				   GK20A_FECS_TRACE_FRAME_PERIOD_US * 2);
 
 		gk20a_fecs_trace_poll(g);
 	}

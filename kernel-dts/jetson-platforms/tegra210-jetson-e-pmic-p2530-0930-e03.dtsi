@@ -218,6 +218,8 @@
 					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
 					maxim,active-fps-power-up-slot = <7>;
 					maxim,active-fps-power-down-slot = <0>;
+					regulator-always-on;
+					regulator-boot-on;
 				};
 
 				max77620_ldo7: ldo7 {

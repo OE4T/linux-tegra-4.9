@@ -157,5 +157,40 @@
 			enable-active-high;
 			startup-delay-us = <250000>;
 		};
+
+		vdd_disp_3v0: regulator@12 {
+			compatible = "regulator-fixed-sync";
+			reg = <12>;
+			regulator-name = "vdd-disp-3v0";
+			regulator-min-microvolt = <3000000>;
+			regulator-max-microvolt = <3000000>;
+			gpio = <&gpio TEGRA_GPIO(I, 3) 0>;
+			regulator-boot-on;
+			enable-active-high;
+			regulator-enable-ramp-delay = <232>;
+		};
+
+		vdd_fan: regulator@13 {
+			compatible = "regulator-fixed-sync";
+			reg = <13>;
+			regulator-name = "vdd-fan";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio TEGRA_GPIO(E, 4) 0>;
+			regulator-enable-ramp-delay = <284>;
+			regulator-disable-ramp-delay = <6200>;
+		};
+
+		usb_vbus1: regulator@14 {
+			compatible = "regulator-fixed-sync";
+			reg = <14>;
+			regulator-name = "usb-vbus1";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio TEGRA_GPIO(CC, 4) 0>;
+			enable-active-high;
+			gpio-open-drain;
+			vin-supply = <&vdd_3v3>;
+		};
 	};
 };

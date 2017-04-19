@@ -6,7 +6,6 @@
 		spi-max-frequency = <12000000>;
 		prod-settings {
 			#prod-cells = <3>;
-			mask-one-style;
 			prod_c_cs0 {
 			    prod = <0x04 0x00000fc0 0x00000400>;
 			};

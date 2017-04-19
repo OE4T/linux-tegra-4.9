@@ -168,7 +168,7 @@
 					    TEGRA_SID(SE1)
 					    TEGRA_SID(SE2)
 					    TEGRA_SID(SE3)>;
-				sid-list-len = <12>;
+				sid-list-len = <17>;
 			};
 			rce_domain {
 				address-space = <&camera_as>;

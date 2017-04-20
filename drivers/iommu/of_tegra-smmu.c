@@ -324,14 +324,16 @@ int tegra_smmu_of_parse_sids(struct device *dev)
 			goto free_mem;
 		}
 
-		i = of_property_count_elems_of_size(child, "sid-list", 4);
-		prop->sid_list = devm_kcalloc(dev, i, sizeof(*prop->sid_list),
+		prop->nr_sids = of_property_count_u32_elems(child, "sid-list");
+		if (prop->nr_sids < 0)
+			goto free_mem;
+		prop->sid_list = devm_kcalloc(dev, prop->nr_sids,
+					      sizeof(*prop->sid_list),
 					      GFP_KERNEL);
 		if (!prop->sid_list) {
 			err = -ENOMEM;
 			goto free_mem;
 		}
-		prop->nr_sids = i;
 
 		/* Read the SIDs. */
 		i = 0;
@@ -355,8 +357,11 @@ int tegra_smmu_of_parse_sids(struct device *dev)
 
 free_mem:
 	kfree(sid_list);
-	list_for_each_entry_safe(prop, temp, &smmu_addr_spaces, list)
+	list_for_each_entry_safe(prop, temp, &smmu_addr_spaces, list) {
+		if (prop->sid_list)
+			devm_kfree(dev, prop->sid_list);
 		devm_kfree(dev, prop);
+	}
 	return err;
 }
 

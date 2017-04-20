@@ -1345,6 +1345,7 @@ static int tegra_dc_ext_pin_windows(struct tegra_dc_ext_user *user,
 {
 	int i, ret;
 	struct tegra_dc *dc = user->ext->dc;
+	u32 map_buffer_flag = DMA_TO_DEVICE;
 
 	for (i = 0; i < win_num; i++) {
 		struct tegra_dc_ext_flip_win *flip_win = &flip_wins[i];
@@ -1366,17 +1367,22 @@ static int tegra_dc_ext_pin_windows(struct tegra_dc_ext_user *user,
 		if (index < 0 || !test_bit(index, &dc->valid_windows))
 			continue;
 
-		ret = tegra_dc_ext_pin_window(user, flip_win->attr.buff_id,
-					      &flip_win->handle[TEGRA_DC_Y],
-					      &flip_win->phys_addr);
+		if (tegra_dc_is_t19x())
+			map_buffer_flag =
+				tegra_dc_ext_get_map_buffer_flag(wins[i].flags);
+
+		ret = tegra_dc_ext_pin_window(user,
+				flip_win->attr.buff_id,
+				&flip_win->handle[TEGRA_DC_Y],
+				&flip_win->phys_addr, map_buffer_flag);
 		if (ret)
 			return ret;
 
 		if (flip_win->attr.buff_id_u) {
 			ret = tegra_dc_ext_pin_window(user,
-					      flip_win->attr.buff_id_u,
-					      &flip_win->handle[TEGRA_DC_U],
-					      &flip_win->phys_addr_u);
+				flip_win->attr.buff_id_u,
+				&flip_win->handle[TEGRA_DC_U],
+				&flip_win->phys_addr_u, map_buffer_flag);
 			if (ret)
 				return ret;
 		} else {
@@ -1386,9 +1392,9 @@ static int tegra_dc_ext_pin_windows(struct tegra_dc_ext_user *user,
 
 		if (flip_win->attr.buff_id_v) {
 			ret = tegra_dc_ext_pin_window(user,
-					      flip_win->attr.buff_id_v,
-					      &flip_win->handle[TEGRA_DC_V],
-					      &flip_win->phys_addr_v);
+				flip_win->attr.buff_id_v,
+				&flip_win->handle[TEGRA_DC_V],
+				&flip_win->phys_addr_v, map_buffer_flag);
 			if (ret)
 				return ret;
 		} else {
@@ -1403,9 +1409,9 @@ static int tegra_dc_ext_pin_windows(struct tegra_dc_ext_user *user,
 			if (!cde_buff_id)
 				cde_buff_id = flip_win->attr.buff_id;
 			ret = tegra_dc_ext_pin_window(user,
-					      cde_buff_id,
-					      &flip_win->handle[TEGRA_DC_CDE],
-					      &flip_win->phys_addr_cde);
+				cde_buff_id,
+				&flip_win->handle[TEGRA_DC_CDE],
+				&flip_win->phys_addr_cde, map_buffer_flag);
 			if (ret)
 				return ret;
 #else

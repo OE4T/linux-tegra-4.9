@@ -791,6 +791,7 @@ void __attribute__((weak)) tegra_dc_enable_sor_t18x(struct tegra_dc *dc,
 			int sor_num, bool enable);
 void __attribute__((weak)) tegra_dc_enable_sor_t19x(struct tegra_dc *dc,
 			int sor_num, bool enable);
+u32 __attribute__((weak)) tegra_dc_ext_get_map_buffer_flag(u32 flags);
 
 struct tegra_dc_pd_table *tegra_dc_get_disp_pd_table(void);
 

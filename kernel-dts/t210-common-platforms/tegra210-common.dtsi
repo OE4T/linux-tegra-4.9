@@ -49,10 +49,7 @@
 
 	pmc@7000e400 {
 		nvidia,restrict-voltage-switch;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_iopad_default>;
-
-                pinctrl_iopad_default: iopad-defaults {
+                iopad-defaults {
                         pex-io-pads {
 				pins = "pex-bias", "pex-clk1", "pex-clk2";
 				low-power-enable;

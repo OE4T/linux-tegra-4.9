@@ -19,7 +19,6 @@
 #include <linux/kthread.h>
 #include <trace/events/gk20a.h>
 #include <linux/dma-buf.h>
-#include <linux/circ_buf.h>
 
 #include <nvgpu/semaphore.h>
 #include <nvgpu/timers.h>
@@ -29,6 +28,7 @@
 #include <nvgpu/atomic.h>
 #include <nvgpu/bug.h>
 #include <nvgpu/list.h>
+#include <nvgpu/circ_buf.h>
 
 #include "gk20a.h"
 #include "debug_gk20a.h"

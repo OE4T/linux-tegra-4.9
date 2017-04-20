@@ -1874,6 +1874,10 @@ static void init_gpu_dvfs_table(struct device_node *node,
 	for (ret = 0, i = 0; i < table_size; i++) {
 		struct cvb_dvfs *d = &cvb_dvfs_table[i];
 		unsigned long max_freq = d->max_freq;
+		u32 f;
+
+		if (!of_property_read_u32(node, "nvidia,gpu-max-freq-khz", &f))
+			max_freq = min(max_freq, (unsigned long)f);
 
 		if (match_dvfs_one("gpu cvb", d->speedo_id, d->process_id,
 				   gpu_speedo_id, gpu_process_id)) {

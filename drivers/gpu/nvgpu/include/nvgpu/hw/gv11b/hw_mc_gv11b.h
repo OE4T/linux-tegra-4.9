@@ -142,10 +142,6 @@ static inline u32 mc_enable_pmedia_v(u32 r)
 {
 	return (r >> 4) & 0x1;
 }
-static inline u32 mc_enable_priv_ring_enabled_f(void)
-{
-	return 0x20;
-}
 static inline u32 mc_enable_ce0_m(void)
 {
 	return 0x1 << 6;

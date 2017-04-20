@@ -386,26 +386,6 @@ static inline u32 gmmu_pte_kind_z16_ms16_2cz_v(void)
 {
 	return 0x0000005f;
 }
-static inline u32 gmmu_pte_kind_z16_4cz_v(void)
-{
-	return 0x0000000c;
-}
-static inline u32 gmmu_pte_kind_z16_ms2_4cz_v(void)
-{
-	return 0x0000000d;
-}
-static inline u32 gmmu_pte_kind_z16_ms4_4cz_v(void)
-{
-	return 0x0000000e;
-}
-static inline u32 gmmu_pte_kind_z16_ms8_4cz_v(void)
-{
-	return 0x0000000f;
-}
-static inline u32 gmmu_pte_kind_z16_ms16_4cz_v(void)
-{
-	return 0x00000010;
-}
 static inline u32 gmmu_pte_kind_s8z24_v(void)
 {
 	return 0x00000011;

@@ -1090,7 +1090,8 @@ static ssize_t bits_per_pixel_set(struct file *file, const char __user *buf,
 
 #ifdef CONFIG_SWITCH
 	if (tegra_edid_audio_supported(dp->hpd_data.edid)
-				&& tegra_dc_is_ext_dp_panel(dp->dc)) {
+				&& tegra_dc_is_ext_dp_panel(dp->dc) &&
+				dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
 		switch_set_state(&dp->audio_switch, 0);
 		msleep(1);
 		pr_info("audio_switch toggle 0\n");
@@ -2790,7 +2791,8 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 
 #ifdef CONFIG_SWITCH
 	if (tegra_edid_audio_supported(dp->hpd_data.edid)
-				&& tegra_dc_is_ext_dp_panel(dc)) {
+				&& tegra_dc_is_ext_dp_panel(dc) &&
+				dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
 		pr_info("dp_audio switch 1\n");
 		switch_set_state(&dp->audio_switch, 1);
 	}
@@ -2831,7 +2833,10 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 	dp->prod_list = NULL;
 
 #ifdef CONFIG_SWITCH
-	switch_dev_unregister(&dp->audio_switch);
+	if (tegra_dc_is_ext_dp_panel(dc) &&
+		dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
+		switch_dev_unregister(&dp->audio_switch);
+	}
 #endif
 
 	kfree(dp->hpd_switch_name);
@@ -2893,7 +2898,8 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 
 #ifdef CONFIG_SWITCH
 	if (tegra_edid_audio_supported(dp->hpd_data.edid)
-				&& tegra_dc_is_ext_dp_panel(dc)) {
+				&& tegra_dc_is_ext_dp_panel(dc) &&
+				dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
 		pr_info("dp_audio switch 0\n");
 		switch_set_state(&dp->audio_switch, 0);
 	}

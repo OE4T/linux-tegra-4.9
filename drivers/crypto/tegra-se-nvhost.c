@@ -1120,8 +1120,11 @@ static int tegra_se_send_sha_data(struct tegra_se_dev *se_dev,
 	if (!cmdbuf_cpuvaddr)
 		return -ENOMEM;
 	while (total) {
-		if (src_ll->data_len & SE_BUFF_SIZE_MASK)
+		if (src_ll->data_len & SE_BUFF_SIZE_MASK) {
+			dma_free_attrs(se_dev->dev->parent, SZ_4K,
+			       cmdbuf_cpuvaddr, cmdbuf_iova, __DMA_ATTR(attrs));
 			return -EINVAL;
+		}
 
 		if (total == count) {
 			cmdbuf_cpuvaddr[i++] =

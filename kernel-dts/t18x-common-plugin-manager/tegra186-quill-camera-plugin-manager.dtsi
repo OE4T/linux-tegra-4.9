@@ -1088,13 +1088,6 @@
 					};
 				};
 			};
-			/* I2C default */
-			override@73 {
-				target = <&cam_i2c>;
-				_overlay_ {
-					compatible = "nvidia,tegra186-i2c";
-				};
-			};
 		};
 
 		/* E3322 camera board */

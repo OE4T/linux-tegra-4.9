@@ -28,6 +28,7 @@
 #include <trace/events/nvhost.h>
 
 #include "dev.h"
+#include "nvhost_pd.h"
 
 static int nvhost_module_power_on(struct generic_pm_domain *domain);
 static int nvhost_module_power_off(struct generic_pm_domain *domain);

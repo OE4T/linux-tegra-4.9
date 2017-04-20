@@ -25,5 +25,6 @@ void nvhost_pd_slcg_install_workaround(struct nvhost_device_data *pdata,
 				       struct generic_pm_domain *pd);
 void nvhost_pd_slcg_remove_workaround(struct nvhost_device_data *pdata,
 				      struct generic_pm_domain *pd);
+int nvhost_domain_init(struct of_device_id *matches);
 
 #endif

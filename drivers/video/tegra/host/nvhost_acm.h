@@ -28,6 +28,7 @@
 #include <linux/pm_domain.h>
 #include <linux/pm_runtime.h>
 #include <linux/nvhost.h>
+#include "nvhost_pd.h"
 
 /* Sets clocks and powergating state for a module */
 int nvhost_clk_get(struct platform_device *dev, char *name, struct clk **clk);
@@ -54,6 +55,4 @@ static inline bool nvhost_module_powered(struct platform_device *dev)
 /* common runtime pm and power domain APIs */
 int nvhost_module_enable_clk(struct device *dev);
 int nvhost_module_disable_clk(struct device *dev);
-
-int nvhost_domain_init(struct of_device_id *matches);
 #endif

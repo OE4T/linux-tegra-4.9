@@ -377,20 +377,25 @@
 	};
 
 	pmc@7000e400 {
-		io-pad-defaults {
-			audio-hv {
-				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
+		iopad-defaults {
+			audio-hv-pads {
+				pins = "audio-hv";
+				nvidia,power-source-voltage = <TEGRA_IO_PAD_VOLTAGE_1800000UV>;
 			};
 
-			spi-hv {
-				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
+			spi-hv-pads {
+				pins = "spi-hv";
+				nvidia,power-source-voltage = <TEGRA_IO_PAD_VOLTAGE_1800000UV>;
 			};
 
-			gpio {
-				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
+			gpio-pads {
+				pins = "gpio";
+				nvidia,power-source-voltage = <TEGRA_IO_PAD_VOLTAGE_1800000UV>;
 			};
-			sdmmc3 {
-				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
+
+			sdmmc3-pads {
+				pins = "sdmmc3";
+				nvidia,power-source-voltage = <TEGRA_IO_PAD_VOLTAGE_1800000UV>;
 			};
 		};
 	};

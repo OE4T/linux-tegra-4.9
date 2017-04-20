@@ -64,18 +64,17 @@
 
 	pmc@7000e400 {
 		nvidia,invert-interrupt;
-
-		io-pad-defaults {
-			audio-hv {
-				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
-			};
-
-			spi-hv {
-				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;
-			};
-		};
-
 		iopad-defaults {
+			audio-hv-pads {
+				pins = "audio-hv";
+				nvidia,power-source-voltage = <TEGRA_IO_PAD_VOLTAGE_1800000UV>;
+			};
+
+			spi-hv-pads {
+				pins = "spi-hv";
+				nvidia,power-source-voltage = <TEGRA_IO_PAD_VOLTAGE_1800000UV>;
+			};
+
 			sdmmc-io-pads {
 				pins = "sdmmc1";
 				nvidia,enable-voltage-switching;

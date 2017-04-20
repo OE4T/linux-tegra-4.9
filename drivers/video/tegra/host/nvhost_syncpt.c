@@ -26,6 +26,7 @@
 #include <linux/export.h>
 #include <linux/delay.h>
 #include <trace/events/nvhost.h>
+#include <soc/tegra/chip-id.h>
 #include "nvhost_syncpt.h"
 #include "debug.h"
 
@@ -773,6 +774,13 @@ static int nvhost_syncpt_timeline_attr(struct nvhost_master *host,
 {
 	char name[MAX_SYNCPT_LENGTH];
 	struct kobject *kobj;
+
+	/*
+	 * The large number of sysfs files causes long boot times
+	 * on FPGA due to restorecon/ueventd.
+	 */
+	if (tegra_platform_is_fpga())
+		return 0;
 
 	/* Create one directory per sync point */
 	snprintf(name, sizeof(name), "%d", i);

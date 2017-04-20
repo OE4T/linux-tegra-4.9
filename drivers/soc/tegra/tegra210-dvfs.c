@@ -1740,6 +1740,10 @@ static int set_gpu_dvfs_data(struct device_node *node, unsigned long max_freq,
 
 	d->max_mv = tegra_round_voltage(d->max_mv, align, false);
 	min_mv = d->pll_min_millivolts;
+	mv = tegra_get_cvb_voltage(
+		speedo, d->speedo_scale, &d->cvb_vmin.cvb_pll_param);
+	mv = tegra_round_cvb_voltage(mv, d->voltage_scale, align);
+	min_mv = max(min_mv, mv);
 	if (min_mv < rail->min_millivolts) {
 		pr_debug("tegra21_dvfs: gpu min %dmV below rail min %dmV\n",
 			 min_mv, rail->min_millivolts);

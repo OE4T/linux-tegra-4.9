@@ -3138,11 +3138,11 @@ static int tegra_se_probe(struct platform_device *pdev)
 
 #if defined(CONFIG_PM)
 	if (!se_dev->chipdata->drbg_supported)
-		se_dev->ctx_save_buf = dmam_alloc_coherent(&pdev->dev,
+		se_dev->ctx_save_buf = dma_alloc_coherent(se_dev->dev,
 			SE_CONTEXT_BUFER_SIZE, &se_dev->ctx_save_buf_adr,
 			GFP_KERNEL | GFP_DMA32);
 	else
-		se_dev->ctx_save_buf = dmam_alloc_coherent(&pdev->dev,
+		se_dev->ctx_save_buf = dma_alloc_coherent(se_dev->dev,
 			SE_CONTEXT_DRBG_BUFER_SIZE,
 			&se_dev->ctx_save_buf_adr, GFP_KERNEL | GFP_DMA32);
 
@@ -3176,14 +3176,20 @@ static int tegra_se_probe(struct platform_device *pdev)
 			err = PTR_ERR(se_dev->enclk);
 			dev_err(se_dev->dev,
 				"entropy clock init failed(%d)\n", err);
-			goto fail_ctx_buf;
+			goto fail_clk_get;
 		}
 	}
 
 	dev_info(se_dev->dev, "%s: complete", __func__);
 	return 0;
 
+fail_clk_get:
+#if defined(CONFIG_PM)
+	dma_free_coherent(se_dev->dev, !se_dev->chipdata->drbg_supported ?
+			  SE_CONTEXT_BUFER_SIZE : SE_CONTEXT_DRBG_BUFER_SIZE,
+			  se_dev->ctx_save_buf, se_dev->ctx_save_buf_adr);
 fail_ctx_buf:
+#endif
 	if (is_algo_supported(se_dev, rsa_alg.base.cra_name))
 		crypto_unregister_kpp(&dh_algs[0]);
 fail_kpp:
@@ -3226,6 +3232,11 @@ static int tegra_se_remove(struct platform_device *pdev)
 	if (se_work_q)
 		destroy_workqueue(se_work_q);
 
+#if defined(CONFIG_PM)
+	dma_free_coherent(se_dev->dev, !se_dev->chipdata->drbg_supported ?
+			  SE_CONTEXT_BUFER_SIZE : SE_CONTEXT_DRBG_BUFER_SIZE,
+			  se_dev->ctx_save_buf, se_dev->ctx_save_buf_adr);
+#endif
 	if (is_algo_supported(se_dev, rsa_alg.base.cra_name)) {
 		crypto_unregister_akcipher(&rsa_alg);
 		crypto_unregister_kpp(&dh_algs[0]);

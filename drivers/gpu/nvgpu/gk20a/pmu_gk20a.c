@@ -41,7 +41,7 @@
 
 #define GK20A_PMU_UCODE_IMAGE	"gpmu_ucode.bin"
 
-#define PMU_MEM_SCRUBBING_TIMEOUT_MAX 2000
+#define PMU_MEM_SCRUBBING_TIMEOUT_MAX 1000
 #define PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT 10
 
 #define gk20a_dbg_pmu(fmt, arg...) \
@@ -2315,7 +2315,7 @@ int pmu_idle(struct pmu_gk20a *pmu)
 	struct nvgpu_timeout timeout;
 	u32 idle_stat;
 
-	nvgpu_timeout_init(g, &timeout, 2000, NVGPU_TIMER_CPU_TIMER);
+	nvgpu_timeout_init(g, &timeout, 2000, NVGPU_TIMER_RETRY_TIMER);
 
 	/* wait for pmu idle */
 	do {
@@ -2418,8 +2418,9 @@ int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 					g->blcg_enabled);
 
 		nvgpu_timeout_init(g, &timeout,
-				   PMU_MEM_SCRUBBING_TIMEOUT_MAX / 1000,
-				   NVGPU_TIMER_CPU_TIMER);
+				   PMU_MEM_SCRUBBING_TIMEOUT_MAX /
+					PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT,
+				   NVGPU_TIMER_RETRY_TIMER);
 		do {
 			u32 w = gk20a_readl(g, pwr_falcon_dmactl_r()) &
 				(pwr_falcon_dmactl_dmem_scrubbing_m() |

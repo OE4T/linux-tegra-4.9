@@ -105,8 +105,10 @@ static int gm206_bios_devinit(struct gk20a *g)
 	gk20a_dbg_fn("");
 	g->ops.pmu.reset(g);
 
-	nvgpu_timeout_init(g, &timeout, PMU_BOOT_TIMEOUT_MAX / 1000,
-			   NVGPU_TIMER_CPU_TIMER);
+	nvgpu_timeout_init(g, &timeout,
+			   PMU_BOOT_TIMEOUT_MAX /
+				PMU_BOOT_TIMEOUT_DEFAULT,
+			   NVGPU_TIMER_RETRY_TIMER);
 	do {
 		u32 w = gk20a_readl(g, pwr_falcon_dmactl_r()) &
 			(pwr_falcon_dmactl_dmem_scrubbing_m() |
@@ -152,8 +154,10 @@ static int gm206_bios_devinit(struct gk20a *g)
 	gk20a_writel(g, pwr_falcon_cpuctl_r(),
 		pwr_falcon_cpuctl_startcpu_f(1));
 
-	nvgpu_timeout_init(g, &timeout, PMU_BOOT_TIMEOUT_MAX / 1000,
-			   NVGPU_TIMER_CPU_TIMER);
+	nvgpu_timeout_init(g, &timeout,
+			   PMU_BOOT_TIMEOUT_MAX /
+				PMU_BOOT_TIMEOUT_DEFAULT,
+			   NVGPU_TIMER_RETRY_TIMER);
 	do {
 		devinit_completed = pwr_falcon_cpuctl_halt_intr_v(
 				gk20a_readl(g, pwr_falcon_cpuctl_r())) &&
@@ -183,8 +187,10 @@ static int gm206_bios_preos(struct gk20a *g)
 	gk20a_dbg_fn("");
 	g->ops.pmu.reset(g);
 
-	nvgpu_timeout_init(g, &timeout, PMU_BOOT_TIMEOUT_MAX / 1000,
-			   NVGPU_TIMER_CPU_TIMER);
+	nvgpu_timeout_init(g, &timeout,
+			   PMU_BOOT_TIMEOUT_MAX /
+				PMU_BOOT_TIMEOUT_DEFAULT,
+			   NVGPU_TIMER_RETRY_TIMER);
 	do {
 		u32 w = gk20a_readl(g, pwr_falcon_dmactl_r()) &
 			(pwr_falcon_dmactl_dmem_scrubbing_m() |
@@ -222,7 +228,9 @@ static int gm206_bios_preos(struct gk20a *g)
 	gk20a_writel(g, pwr_falcon_cpuctl_r(),
 		pwr_falcon_cpuctl_startcpu_f(1));
 
-	nvgpu_timeout_init(g, &timeout, PMU_BOOT_TIMEOUT_MAX / 1000,
+	nvgpu_timeout_init(g, &timeout,
+			   PMU_BOOT_TIMEOUT_MAX /
+				PMU_BOOT_TIMEOUT_DEFAULT,
 			   NVGPU_TIMER_CPU_TIMER);
 	do {
 		val = pwr_falcon_cpuctl_halt_intr_v(

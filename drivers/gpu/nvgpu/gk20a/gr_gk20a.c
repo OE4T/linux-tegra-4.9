@@ -1596,8 +1596,10 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	if (!g->is_fmodel) {
 		struct nvgpu_timeout timeout;
 
-		nvgpu_timeout_init(g, &timeout, FE_PWR_MODE_TIMEOUT_MAX / 1000,
-				   NVGPU_TIMER_CPU_TIMER);
+		nvgpu_timeout_init(g, &timeout,
+				   FE_PWR_MODE_TIMEOUT_MAX /
+					FE_PWR_MODE_TIMEOUT_DEFAULT,
+				   NVGPU_TIMER_RETRY_TIMER);
 		gk20a_writel(g, gr_fe_pwr_mode_r(),
 			gr_fe_pwr_mode_req_send_f() | gr_fe_pwr_mode_mode_force_on_f());
 		do {
@@ -1639,8 +1641,10 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	if (!g->is_fmodel) {
 		struct nvgpu_timeout timeout;
 
-		nvgpu_timeout_init(g, &timeout, FE_PWR_MODE_TIMEOUT_MAX / 1000,
-				   NVGPU_TIMER_CPU_TIMER);
+		nvgpu_timeout_init(g, &timeout,
+				   FE_PWR_MODE_TIMEOUT_MAX /
+					FE_PWR_MODE_TIMEOUT_DEFAULT,
+				   NVGPU_TIMER_RETRY_TIMER);
 		gk20a_writel(g, gr_fe_pwr_mode_r(),
 			gr_fe_pwr_mode_req_send_f() | gr_fe_pwr_mode_mode_auto_f());
 
@@ -4998,8 +5002,10 @@ static int gr_gk20a_wait_mem_scrubbing(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	nvgpu_timeout_init(g, &timeout, CTXSW_MEM_SCRUBBING_TIMEOUT_MAX / 1000,
-			   NVGPU_TIMER_CPU_TIMER);
+	nvgpu_timeout_init(g, &timeout,
+			   CTXSW_MEM_SCRUBBING_TIMEOUT_MAX /
+				CTXSW_MEM_SCRUBBING_TIMEOUT_DEFAULT,
+			   NVGPU_TIMER_RETRY_TIMER);
 	do {
 		fecs_scrubbing = gk20a_readl(g, gr_fecs_dmactl_r()) &
 			(gr_fecs_dmactl_imem_scrubbing_m() |

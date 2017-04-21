@@ -41,6 +41,7 @@ obj-$(CONFIG_PWM_STMPE)		+= pwm-stmpe.o
 obj-$(CONFIG_PWM_SUN4I)		+= pwm-sun4i.o
 obj-$(CONFIG_PWM_TEGRA)		+= pwm-tegra.o
 obj-$(CONFIG_PWM_TEGRA_PMC_BLINK)	+= pwm-tegra-pmc-blink.o
+obj-$(CONFIG_PWM_TEGRA_PMC_SOFT_LED_BLINK)	+= pwm-tegra-pmc-led-soft-blink.o
 obj-$(CONFIG_PWM_TEGRA_TACHOMETER)	+= pwm-tegra-tachometer.o
 obj-$(CONFIG_PWM_TEGRA_DFLL)	+= pwm-tegra-dfll.o
 obj-$(CONFIG_PWM_TIECAP)	+= pwm-tiecap.o

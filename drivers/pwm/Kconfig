@@ -445,6 +445,14 @@ config PWM_TEGRA_DFLL
 	  To compile this driver as a module, choose M here: the module
 	  will be called pwm-tegra-dfll.
 
+config PWM_TEGRA_PMC_SOFT_LED_BLINK
+	tristate "NVIDIA Tegra PMC Soft LED Blink driver"
+	depends on ARCH_TEGRA
+	help
+	  NVIDIA Tegra PMC LED soft blink control the LED blinking and
+	  blinking control is a PWM signal,PWM driver support for the
+	  PMC LED soft blink module found on NVIDIA Tegra SoCs.
+
 config  PWM_TIECAP
 	tristate "ECAP PWM support"
 	depends on ARCH_OMAP2PLUS || ARCH_DAVINCI_DA8XX

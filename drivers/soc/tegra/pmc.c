@@ -369,6 +369,14 @@
 #define PMC_RST_SOURCE_MASK			0x3C
 #define PMC_RST_SOURCE_SHIFT			0x2
 
+#define TEGRA210_PMC_DPD_PADS_ORIDE_BLINK	BIT(20)
+#define TEGRA210_PMC_CTRL_BLINK_EN		BIT(7)
+
+/*** Tegra210b01 led soft blink **/
+#define PMC_LED_BREATHING_EN		BIT(0)
+#define PMC_SHORT_LOW_PERIOD_EN	BIT(1)
+#define PMC_LED_SOFT_BLINK_1CYCLE_NS	32000000
+
 struct io_dpd_reg_info {
 	u32 req_reg_off;
 	u8 dpd_code_lsb;
@@ -424,6 +432,12 @@ enum pmc_regs {
 	TEGRA_PMC_UFSHC_PWR_CNTRL_0,
 	TEGRA_PMC_E_33V_PWR,
 	TEGRA_PMC_E_18V_PWR,
+	TEGRA_PMC_LED_BREATHING_CTRL,
+	TEGRA_PMC_LED_BREATHING_COUNTER0,
+	TEGRA_PMC_LED_BREATHING_COUNTER1,
+	TEGRA_PMC_LED_BREATHING_COUNTER2,
+	TEGRA_PMC_LED_BREATHING_COUNTER3,
+	TEGRA_PMC_LED_BREATHING_STATUS,
 
 	/* Last entry */
 	TEGRA_PMC_MAX_REG,
@@ -2900,8 +2914,6 @@ int tegra_pmc_nvcsi_cdef_brick_dpd_disable(void)
 }
 EXPORT_SYMBOL(tegra_pmc_nvcsi_cdef_brick_dpd_disable);
 
-#define TEGRA210_PMC_DPD_PADS_ORIDE_BLINK		BIT(20)
-#define TEGRA210_PMC_CTRL_BLINK_EN			BIT(7)
 int tegra_pmc_pwm_blink_enable(void)
 {
 	tegra_pmc_register_update(TEGRA_PMC_DPD_PADS_ORIDE,
@@ -2954,6 +2966,107 @@ int tegra_pmc_pwm_blink_config(int duty_ns, int period_ns)
 	return 0;
 }
 EXPORT_SYMBOL(tegra_pmc_pwm_blink_config);
+
+int tegra_pmc_soft_led_blink_enable(void)
+{
+	tegra_pmc_register_update(TEGRA_PMC_DPD_PADS_ORIDE,
+				  TEGRA210_PMC_DPD_PADS_ORIDE_BLINK,
+				  TEGRA210_PMC_DPD_PADS_ORIDE_BLINK);
+
+	tegra_pmc_register_update(TEGRA_PMC_CNTRL,
+				  TEGRA210_PMC_CTRL_BLINK_EN, 0);
+
+	tegra_pmc_register_update(TEGRA_PMC_LED_BREATHING_CTRL,
+				  PMC_LED_BREATHING_EN,
+				  PMC_LED_BREATHING_EN);
+	return 0;
+}
+EXPORT_SYMBOL(tegra_pmc_soft_led_blink_enable);
+
+int tegra_pmc_soft_led_blink_disable(void)
+{
+	tegra_pmc_register_update(TEGRA_PMC_DPD_PADS_ORIDE,
+				  TEGRA210_PMC_DPD_PADS_ORIDE_BLINK,
+				  TEGRA210_PMC_DPD_PADS_ORIDE_BLINK);
+
+	tegra_pmc_register_update(TEGRA_PMC_LED_BREATHING_CTRL,
+				  PMC_LED_BREATHING_EN, 0);
+	return 0;
+}
+EXPORT_SYMBOL(tegra_pmc_soft_led_blink_disable);
+
+int tegra_pmc_soft_led_blink_configure(int duty_cycle_ns, int ll_period_ns,
+				       int ramp_time_ns)
+{
+	int plateau_cnt;
+	int plateau_ns;
+	int period;
+
+	if (duty_cycle_ns) {
+		plateau_ns = duty_cycle_ns - (2 * ramp_time_ns);
+		if (plateau_ns < 0) {
+			dev_err(pmc->dev, "duty cycle is less than 2xramptime:\n");
+			return -EINVAL;
+		}
+
+		plateau_cnt = plateau_ns / PMC_LED_SOFT_BLINK_1CYCLE_NS;
+		tegra_pmc_writel(plateau_cnt, TEGRA_PMC_LED_BREATHING_COUNTER1);
+	}
+
+	if (ll_period_ns) {
+		period = ll_period_ns / PMC_LED_SOFT_BLINK_1CYCLE_NS;
+		tegra_pmc_writel(period, TEGRA_PMC_LED_BREATHING_COUNTER3);
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_pmc_soft_led_blink_configure);
+
+int tegra_pmc_soft_led_blink_set_ramptime(int ramp_time_ns)
+{
+	u32 nsteps;
+	u32 rt_nanoseconds = 0;
+
+	if (ramp_time_ns < 0)
+		return -EINVAL;
+
+	/* (n + 1) x (n + 2) * 1 cycle = ramp_time */
+	/* 1 cycle = 1/32 KHz duration = 32000000ns*/
+	for (nsteps = 0; rt_nanoseconds < ramp_time_ns; nsteps++) {
+		rt_nanoseconds = (nsteps * nsteps) + (3 * nsteps) + 2;
+		rt_nanoseconds = rt_nanoseconds * PMC_LED_SOFT_BLINK_1CYCLE_NS;
+	}
+
+	tegra_pmc_writel(nsteps - 1, TEGRA_PMC_LED_BREATHING_COUNTER0);
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_pmc_soft_led_blink_set_ramptime);
+
+int tegra_pmc_soft_led_blink_set_short_period(int short_low_period_ns)
+{
+	u32 period;
+
+	if (short_low_period_ns < 0)
+		return -EINVAL;
+
+	if (short_low_period_ns) {
+		/* enable and configure short low period */
+		period = short_low_period_ns / PMC_LED_SOFT_BLINK_1CYCLE_NS;
+
+		tegra_pmc_writel(period, TEGRA_PMC_LED_BREATHING_COUNTER2);
+		tegra_pmc_register_update(TEGRA_PMC_LED_BREATHING_CTRL,
+					  PMC_SHORT_LOW_PERIOD_EN,
+					  PMC_SHORT_LOW_PERIOD_EN);
+	} else {
+		/* disable short low period */
+		tegra_pmc_register_update(TEGRA_PMC_LED_BREATHING_CTRL,
+					  PMC_SHORT_LOW_PERIOD_EN, 0);
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_pmc_soft_led_blink_set_short_period);
 
 static int tegra_pmc_parse_dt(struct tegra_pmc *pmc, struct device_node *np)
 {
@@ -3701,6 +3814,12 @@ static const unsigned long tegra210_register_map[TEGRA_PMC_MAX_REG] = {
 	[TEGRA_PMC_SCRATCH41]		=  0x140,
 	[TEGRA_PMC_SCRATCH54]		=  0x258,
 	[TEGRA_PMC_SCRATCH55]		=  0x25c,
+	[TEGRA_PMC_LED_BREATHING_CTRL]	= 0xb48,
+	[TEGRA_PMC_LED_BREATHING_COUNTER0]	= 0xb4c,
+	[TEGRA_PMC_LED_BREATHING_COUNTER1]	= 0xb50,
+	[TEGRA_PMC_LED_BREATHING_COUNTER2]	= 0xb54,
+	[TEGRA_PMC_LED_BREATHING_COUNTER3]	= 0xb58,
+	[TEGRA_PMC_LED_BREATHING_STATUS]	= 0xb5c,
 };
 
 static const char * const tegra210_powergates[] = {

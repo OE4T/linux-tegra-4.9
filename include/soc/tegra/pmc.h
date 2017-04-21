@@ -212,6 +212,13 @@ int tegra_pmc_pwm_blink_enable(void);
 int tegra_pmc_pwm_blink_disable(void);
 int tegra_pmc_pwm_blink_config(int duty_ns, int period_ns);
 
+int tegra_pmc_soft_led_blink_enable(void);
+int tegra_pmc_soft_led_blink_disable(void);
+int tegra_pmc_soft_led_blink_configure(int duty_cycle_ns, int ll_period_ns,
+				       int ramp_time_ns);
+int tegra_pmc_soft_led_blink_set_ramptime(int ramp_time_ns);
+int tegra_pmc_soft_led_blink_set_short_period(int short_low_period_ns);
+
 /* T210 USB2 SLEEPWALK APIs */
 struct tegra_utmi_pad_config {
 	u32 tctrl;

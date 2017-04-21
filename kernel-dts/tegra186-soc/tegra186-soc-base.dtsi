@@ -594,6 +594,11 @@
 			0x0 0xC390000 0x0 0x2fff>;
 		#padcontroller-cells = <1>;
 		status = "disabled";
+		pinctrl-names = "default";
+		pinctrl-0 = <&iopad_default>;
+		iopad_default: iopad-defaults {
+		};
+
 	};
 
 	tegra_aowake: pmc@c370000 {

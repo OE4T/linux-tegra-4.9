@@ -1997,7 +1997,7 @@ static struct tegra_dvfs_data tegra210_dvfs_data = {
 	.core_caps_ucm2 = tegra210_core_therm_caps_ucm2,
 };
 
-int tegra210_init_dvfs(struct device *dev)
+static int tegra210x_init_dvfs(struct device *dev, bool cpu_lp_init)
 {
 	int soc_speedo_id = tegra_sku_info.soc_speedo_id;
 	int core_process_id = tegra_sku_info.soc_process_id;
@@ -2008,7 +2008,6 @@ int tegra210_init_dvfs(struct device *dev)
 	int gpu_max_freq_index = 0;
 	struct device_node *node = dev->of_node;
 
-	init_dvfs_data(&tegra210_dvfs_data);
 	tegra_dvfs_init_rails_lists(vdd_dvfs_rails, dvfs_data->rails_num);
 	init_core_dvfs_table(soc_speedo_id, core_process_id);
 
@@ -2053,9 +2052,11 @@ int tegra210_init_dvfs(struct device *dev)
 	if (ret)
 		goto out;
 
-	init_cpu_lp_dvfs_table(&cpu_lp_max_freq_index);
-	if (ret)
-		goto out;
+	if (cpu_lp_init) {
+		ret = init_cpu_lp_dvfs_table(&cpu_lp_max_freq_index);
+		if (ret)
+			goto out;
+	}
 
 	/*
 	 * Construct GPU DVFS table from CVB data; find GPU maximum frequency,
@@ -2078,7 +2079,8 @@ int tegra210_init_dvfs(struct device *dev)
 	 * voltage was determined
 	 */
 	init_dvfs_one(&cpu_dvfs, cpu_max_freq_index);
-	init_dvfs_one(&cpu_lp_dvfs, cpu_lp_max_freq_index);
+	if (cpu_lp_init)
+		init_dvfs_one(&cpu_lp_dvfs, cpu_lp_max_freq_index);
 	init_dvfs_one(&gpu_dvfs, gpu_max_freq_index);
 
 	for (i = 0; i < dvfs_data->rails_num; i++) {
@@ -2091,4 +2093,16 @@ int tegra210_init_dvfs(struct device *dev)
 	return 0;
 out:
 	return ret;
+}
+
+int tegra210_init_dvfs(struct device *dev)
+{
+	init_dvfs_data(&tegra210_dvfs_data);
+	return tegra210x_init_dvfs(dev, true);
+}
+
+int tegra210b01_init_dvfs(struct device *dev)
+{
+	init_dvfs_data(&tegra210_dvfs_data);
+	return tegra210x_init_dvfs(dev, false);
 }

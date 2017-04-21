@@ -25,6 +25,7 @@
 #include <dt-bindings/thermal/tegra124-soctherm.h>
 #include <dt-bindings/thermal/tegra210-trips.h>
 #include <tegra210-soc/tegra210-prods.dtsi>
+#include <t210-common-platforms/tegra210-platform-common-padvoltage-default.dtsi>
 #include <t210-common-platforms/tegra210-ers-touch-e1937-1000-a00.dtsi>
 #include <tegra210-soc/tegra210-modem-common.dtsi>
 #include <tegra210-soc/tegra210-trusty.dtsi>

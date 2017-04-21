@@ -228,8 +228,13 @@ static inline int imx185_read_reg(struct camera_common_data *s_data,
 				u16 addr, u8 *val)
 {
 	struct imx185 *priv = (struct imx185 *)s_data->priv;
+	int err = 0;
+	u32 reg_val = 0;
 
-	return regmap_read(priv->regmap, addr, (unsigned int *) val);
+	err = regmap_read(priv->regmap, addr, &reg_val);
+	*val = reg_val & 0xFF;
+
+	return err;
 }
 
 static int imx185_write_reg(struct camera_common_data *s_data,

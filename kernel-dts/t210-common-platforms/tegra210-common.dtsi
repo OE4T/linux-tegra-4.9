@@ -20,6 +20,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/gpio/tegra-gpio.h>
 #include <tegra210-soc/tegra210-prods.dtsi>
+#include <t210-common-platforms/tegra210-platform-common-padvoltage-default.dtsi>
 #include <t210-common-platforms/tegra210-ers-touch-e1937-1000-a00.dtsi>
 #include <tegra210-soc/tegra210-modem-common.dtsi>
 #include <tegra210-soc/tegra210-trusty.dtsi>

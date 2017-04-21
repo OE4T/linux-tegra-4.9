@@ -30,12 +30,7 @@ struct smmu_map_prop {
 	struct list_head list;
 	struct dma_iommu_mapping *map;
 
-	/*
-	 * ARM SMMU uses SIDs not SWGIDs. Define an array here since the amount
-	 * of memory used here is much less than the minimum granularity of
-	 * kmalloc() allocations.
-	 */
-	u16 sid_list[MAX_PHANDLE_ARGS];
+	u16 *sid_list;
 	int nr_sids;
 };
 

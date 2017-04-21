@@ -324,15 +324,22 @@ int tegra_smmu_of_parse_sids(struct device *dev)
 			goto free_mem;
 		}
 
+		i = of_property_count_elems_of_size(child, "sid-list", 4);
+		prop->sid_list = devm_kcalloc(dev, i, sizeof(*prop->sid_list),
+					      GFP_KERNEL);
+		if (!prop->sid_list) {
+			err = -ENOMEM;
+			goto free_mem;
+		}
+		prop->nr_sids = i;
+
 		/* Read the SIDs. */
 		i = 0;
 		of_property_for_each_u32(child, "sid-list",
 						property, cur, sid) {
 			sid_list[sid]++;
-			prop->sid_list[i] = sid;
-			i++;
+			prop->sid_list[i++] = sid;
 		}
-		prop->nr_sids = i;
 	}
 
 	for (i = 0; i < SMMU_MAX_SIDS; i++) {

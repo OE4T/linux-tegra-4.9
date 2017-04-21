@@ -312,8 +312,7 @@ static int tegra_cam_rtcpu_apply_clks(struct device *dev,
 	return 0;
 }
 
-static int tegra_cam_rtcpu_apply_resets(struct device *dev,
-					int (*func)(struct reset_control *))
+static int tegra_camrtc_deassert_resets(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
 	int i, ret;
@@ -322,14 +321,34 @@ static int tegra_cam_rtcpu_apply_resets(struct device *dev,
 		if (rtcpu->resets[i] == NULL)
 			continue;
 
-		ret = (*func)(rtcpu->resets[i]);
+		ret = reset_control_deassert(rtcpu->resets[i]);
 		if (ret) {
 			dev_err(dev, "reset %s failed: %d\n",
 				rtcpu->pdata->reset_names[i], ret);
+			return ret;
 		}
 	}
 
 	return 0;
+}
+
+static void tegra_camrtc_assert_resets(struct device *dev)
+{
+	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
+	int j, ret;
+
+	for (j = 0; j < ARRAY_SIZE(rtcpu->resets); j++) {
+		int i = ARRAY_SIZE(rtcpu->resets) - 1 - j;
+
+		if (rtcpu->resets[i] == NULL)
+			continue;
+
+		ret = reset_control_assert(rtcpu->resets[i]);
+		if (ret) {
+			dev_err(dev, "asserting reset %s failed: %d\n",
+				rtcpu->pdata->reset_names[i], ret);
+		}
+	}
 }
 
 static int tegra_camrtc_wait_for_wfi(struct device *dev)
@@ -518,7 +537,7 @@ static int tegra_camrtc_poweron(struct device *dev)
 		return ret;
 	}
 
-	ret = tegra_cam_rtcpu_apply_resets(dev, reset_control_deassert);
+	ret = tegra_camrtc_deassert_resets(dev);
 	if (ret) {
 		dev_err(dev, "failed to deassert %s resets: %d\n",
 			rtcpu->name, ret);
@@ -580,16 +599,7 @@ int tegra_camrtc_poweroff(struct device *dev)
 			rtcpu->pm_base + TEGRA_PM_R5_CTRL_0);
 	}
 
-#ifndef BUG200243073
-	ret = tegra_cam_rtcpu_apply_resets(dev, reset_control_assert);
-#else
-	ret = tegra_cam_rtcpu_apply_resets(dev, reset_control_reset);
-#endif
-	if (ret) {
-		dev_err(dev, "failed to assert %s resets: %d\n",
-			rtcpu->name, ret);
-		return ret;
-	}
+	tegra_camrtc_assert_resets(dev);
 
 	ret = tegra_cam_rtcpu_apply_clks(dev,
 				tegra_cam_rtcpu_clk_disable_unprepare);
@@ -943,11 +953,9 @@ int tegra_camrtc_halt(struct device *dev)
 	int ret;
 
 	ret = tegra_cam_rtcpu_cmd_remote_suspend(dev);
-	if (ret) {
-		dev_err(dev, "failed to suspend camera rtcpu firmware: %d\n",
+	if (ret)
+		dev_warn(dev, "failed to suspend firmware: %d (ignored)\n",
 			ret);
-		return ret;
-	}
 
 	ret = tegra_camrtc_poweroff(dev);
 	if (ret)

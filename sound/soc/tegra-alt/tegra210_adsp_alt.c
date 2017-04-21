@@ -1144,7 +1144,7 @@ static int tegra210_adsp_pcm_msg_handler(struct tegra210_adsp_app *app,
 
 	switch (apm_msg->msg.call_params.method) {
 	case nvfx_apm_method_set_position:
-		if (!prtd && !prtd->substream)
+		if (!prtd || !prtd->substream)
 			return 0;
 		runtime = prtd->substream->runtime;
 		snd_pcm_period_elapsed(prtd->substream);

@@ -46,6 +46,7 @@ struct dbg_profiler_object_data;
 #include <nvgpu/pramin.h>
 #include <nvgpu/acr/nvgpu_acr.h>
 #include <nvgpu/kref.h>
+#include <nvgpu/falcon.h>
 
 #include "clk_gk20a.h"
 #include "ce2_gk20a.h"
@@ -869,6 +870,9 @@ struct gpu_ops {
 		void (*enable_shadow_rom)(struct gk20a *g);
 		void (*disable_shadow_rom)(struct gk20a *g);
 	} xve;
+	struct {
+		void (*falcon_hal_sw_init)(struct nvgpu_falcon *flcn);
+	} falcon;
 };
 
 struct nvgpu_bios_ucode {
@@ -944,6 +948,10 @@ struct gk20a {
 
 	struct rw_semaphore busy_lock;
 
+	struct nvgpu_falcon pmu_flcn;
+	struct nvgpu_falcon sec2_flcn;
+	struct nvgpu_falcon fecs_flcn;
+	struct nvgpu_falcon gpccs_flcn;
 	struct clk_gk20a clk;
 	struct fifo_gk20a fifo;
 	struct gr_gk20a gr;

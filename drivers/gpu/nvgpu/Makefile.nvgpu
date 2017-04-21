@@ -47,6 +47,7 @@ nvgpu-y := \
 	common/as.o \
 	common/rbtree.o \
 	common/vbios/bios.o \
+	common/falcon/falcon.o \
 	gk20a/gk20a.o \
 	gk20a/bus_gk20a.o \
 	gk20a/pramin_gk20a.o \

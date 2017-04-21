@@ -20,23 +20,29 @@
 / {
 	gpio@2200000 {
 		camera-control-output-low {
+			status = "disabled";
 		};
 
 		camera-control-output-high {
+			status = "disabled";
 		};
 
 		camera-control-input {
+			status = "disabled";
 		};
 	};
 
 	gpio@c2f0000 {
 		camera-control-output-low {
+			status = "disabled";
 		};
 
 		camera-control-output-high {
+			status = "disabled";
 		};
 
 		camera-control-input {
+			status = "disabled";
 		};
 	};
 
@@ -165,6 +171,7 @@
 						gpios = <CAM0_RST_L 0 CAM0_PWDN 0>;
 						label = "cam0-rst", "cam0-pwdn";
 						output-low;
+						status = "okay";
 					};
 					camera-control-output-high {
 						status = "disabled";
@@ -436,6 +443,7 @@
 						label = "cam0-rst", "cam0-pwdn",
 							"cam1-rst", "cam1-pwdn";
 						output-low;
+						status = "okay";
 					};
 					camera-control-output-high {
 						status = "disabled";
@@ -473,6 +481,7 @@
 						label = "cam0-rst", "cam0-pwdn",
 							"cam1-rst", "cam1-pwdn";
 						output-low;
+						status = "okay";
 					};
 				};
 			};
@@ -1047,6 +1056,7 @@
 						label = "cam0-rst", "cam0-pwdn",
 							"cam1-rst", "cam1-pwdn";
 						output-low;
+						status = "okay";
 					};
 					camera-control-output-high {
 						status = "disabled";
@@ -1644,6 +1654,7 @@
 						gpios = <CAM0_PWDN 0>;
 						label = "cam0-pwdn";
 						output-low;
+						status = "okay";
 					};
 					camera-control-output-high {
 						gpio-hog;
@@ -1944,6 +1955,7 @@
 						gpios = <CAM0_RST_L 0>;
 						label = "cam0-rst";
 						output-high;
+						status = "okay";
 					};
 				};
 			};

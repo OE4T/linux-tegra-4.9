@@ -372,8 +372,11 @@ static inline int tegra124_init_dvfs(struct device *node)
 
 #ifdef CONFIG_TEGRA_210_DVFS
 int tegra210_init_dvfs(struct device *node);
+int tegra210b01_init_dvfs(struct device *node);
 #else
 static inline int tegra210_init_dvfs(struct device *node)
+{ return -EINVAL; }
+static inline int tegra210b01_init_dvfs(struct device *node)
 { return -EINVAL; }
 #endif
 

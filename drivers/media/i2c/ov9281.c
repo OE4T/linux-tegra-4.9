@@ -441,14 +441,6 @@ static int ov9281_set_frame_length(struct ov9281 *priv, s32 val)
 	u16 frame_length;
 	int err;
 
-	/*
-	 * This is a workaround for nvbug 1865041, where setting the VTS
-	 * timing registers when the sensor is set up for fsync master or
-	 * slave leads to streaming instability.
-	 */
-	if (priv->fsync != OV9281_FSYNC_NONE)
-		return 0;
-
 	frame_length = (u16)val;
 
 	dev_dbg(&priv->i2c_client->dev,
@@ -813,7 +805,14 @@ static int ov9281_s_ctrl(struct v4l2_ctrl *ctrl)
 		err = ov9281_set_gain(priv, ctrl->val);
 		break;
 	case TEGRA_CAMERA_CID_FRAME_LENGTH:
-		err = ov9281_set_frame_length(priv, ctrl->val);
+		/*
+		 * This is a workaround for nvbug 1865041, where setting the
+		 * VTS timing registers when the sensor is set up for fsync
+		 * master or slave leads to instability if streaming has
+		 * already started.
+		 */
+		if (priv->fsync == OV9281_FSYNC_NONE)
+			err = ov9281_set_frame_length(priv, ctrl->val);
 		break;
 	case TEGRA_CAMERA_CID_COARSE_TIME:
 		err = ov9281_set_coarse_time(priv, ctrl->val);

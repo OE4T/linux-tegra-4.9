@@ -129,8 +129,11 @@ int tegra_hdmi_setup_hda_presence(int sor_num)
 	if (sor_num < 0 || sor_num >= tegra_dc_get_numof_dispsors())
 		return -EINVAL;
 
+	if (!hda_inst)
+		return -EAGAIN;
+
 	hda = &hda_inst[sor_num];
-	if (!hda || !hda->valid)
+	if (!hda->valid)
 		return -EAGAIN;
 
 	if (hda->sink == SINK_HDMI && to_hdmi(hda->client_data)->dvi)
@@ -309,8 +312,11 @@ int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq,
 	if (sor_num < 0 || sor_num >= tegra_dc_get_numof_dispsors())
 		return -EINVAL;
 
+	if (!hda_inst)
+		return -ENODEV;
+
 	hda = &hda_inst[sor_num];
-	if (!hda || !hda->valid)
+	if (!hda->valid)
 		return -ENODEV;
 
 	if (hda->sink == SINK_HDMI && to_hdmi(hda->client_data)->dvi)
@@ -351,8 +357,11 @@ int tegra_hdmi_audio_null_sample_inject(bool on,
 	if (sor_num < 0 || sor_num >= tegra_dc_get_numof_dispsors())
 		return -EINVAL;
 
+	if (!hda_inst)
+		return -ENODEV;
+
 	hda = &hda_inst[sor_num];
-	if (!hda || !hda->valid)
+	if (!hda->valid)
 		return -ENODEV;
 
 	if (on && !hda->null_sample_inject)
@@ -567,7 +576,7 @@ void tegra_hda_reset_data(void *hda_handle)
 	struct tegra_dc_sor_data *sor;
 	struct tegra_dc_hda_data *hda = (struct tegra_dc_hda_data *)hda_handle;
 
-	if (!hda)
+	if (!hda || !hda_inst)
 		return;
 
 	if (hda->sink == SINK_HDMI) {

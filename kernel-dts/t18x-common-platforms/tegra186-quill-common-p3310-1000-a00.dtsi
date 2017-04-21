@@ -30,10 +30,7 @@
 
 	pmc@c360000 {
 		nvidia,restrict-voltage-switch;
-		pinctrl-names = "default";
-		pinctrl-0 = <&iopad_default>;
-
-		iopad_default: iopad-defaults {
+		iopad-defaults {
 			sdmmc-io-pads {
 				pins = "sdmmc1-hv", "sdmmc2-hv", "sdmmc3-hv";
 				nvidia,enable-voltage-switching;

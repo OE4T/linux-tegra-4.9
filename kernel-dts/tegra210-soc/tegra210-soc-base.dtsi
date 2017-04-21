@@ -1134,45 +1134,6 @@
 		status = "disabled";
 		clocks = <&tegra_car TEGRA210_CLK_PCLK>;
 		clock-names = "pclk";
-		clear-all-io-pads-dpd;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_iopad_default>;
-		pinctrl_iopad_default: iopad-defaults {
-			audio-pads {
-				pins = "audio";
-				nvidia,power-source-voltage = <TEGRA_IO_PAD_VOLTAGE_1800000UV>;
-			};
-
-			cam-pads {
-				pins = "cam";
-				nvidia,power-source-voltage = <TEGRA_IO_PAD_VOLTAGE_1800000UV>;
-			};
-
-			dbg-pads {
-				pins = "dbg";
-				nvidia,power-source-voltage = <TEGRA_IO_PAD_VOLTAGE_1800000UV>;
-			};
-
-			dmic-pads {
-				pins = "dmic";
-				nvidia,power-source-voltage = <TEGRA_IO_PAD_VOLTAGE_1800000UV>;
-			};
-
-			pex-ctrl-pads {
-				pins = "pex-ctrl";
-				nvidia,power-source-voltage = <TEGRA_IO_PAD_VOLTAGE_1800000UV>;
-			};
-
-			spi-pads {
-				pins = "spi";
-				nvidia,power-source-voltage = <TEGRA_IO_PAD_VOLTAGE_1800000UV>;
-			};
-
-			uart-pads {
-				pins = "uart";
-				nvidia,power-source-voltage = <TEGRA_IO_PAD_VOLTAGE_1800000UV>;
-			};
-		};
 
 		pex_io_dpd_disable_state: pex_en {
 			pex-io-dpd-signals-dis {

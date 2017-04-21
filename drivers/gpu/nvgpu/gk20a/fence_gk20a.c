@@ -16,6 +16,7 @@
 #include <linux/gk20a.h>
 #include <linux/file.h>
 #include <linux/version.h>
+#include <linux/fs.h>
 
 #include <nvgpu/semaphore.h>
 #include <nvgpu/kmem.h>

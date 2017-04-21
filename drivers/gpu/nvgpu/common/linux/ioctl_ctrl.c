@@ -18,6 +18,7 @@
 #include <linux/cdev.h>
 #include <linux/file.h>
 #include <linux/anon_inodes.h>
+#include <linux/fs.h>
 #include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/bitops.h>

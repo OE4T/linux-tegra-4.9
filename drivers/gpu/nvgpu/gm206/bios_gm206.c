@@ -256,7 +256,9 @@ int gm206_bios_init(struct gk20a *g)
 {
 	unsigned int i;
 	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+#ifdef CONFIG_DEBUG_FS
 	struct dentry *d;
+#endif
 	struct nvgpu_firmware *bios_fw;
 	int err;
 	struct pci_dev *pdev = to_pci_dev(g->dev);
@@ -317,6 +319,7 @@ int gm206_bios_init(struct gk20a *g)
 		(g->pci_device_id == 0x1c75) &&
 		(g->gpu_characteristics.vbios_version == 0x86065300);
 
+#ifdef CONFIG_DEBUG_FS
 	g->bios_blob.data = g->bios.data;
 	g->bios_blob.size = g->bios.size;
 
@@ -324,6 +327,7 @@ int gm206_bios_init(struct gk20a *g)
 			&g->bios_blob);
 	if (!d)
 		nvgpu_err(g, "No debugfs?");
+#endif
 
 	gk20a_dbg_fn("done");
 

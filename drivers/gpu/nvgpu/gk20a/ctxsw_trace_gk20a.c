@@ -15,7 +15,6 @@
 #include <linux/kthread.h>
 #include <linux/wait.h>
 #include <linux/ktime.h>
-#include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #include <linux/poll.h>
 #include <trace/events/gk20a.h>

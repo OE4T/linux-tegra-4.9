@@ -17,7 +17,9 @@
  */
 
 #include <linux/module.h>
+#ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
+#endif
 #include <linux/uaccess.h>
 
 #include <nvgpu/nvgpu_common.h>

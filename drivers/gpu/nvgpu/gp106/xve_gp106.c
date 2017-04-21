@@ -14,8 +14,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
+#endif
 
 #include "gk20a/gk20a.h"
 #include "gm206/bios_gm206.h"
@@ -498,6 +500,7 @@ static void xve_available_speeds_gp106(struct gk20a *g, u32 *speed_mask)
 	*speed_mask = GPU_XVE_SPEED_2P5 | GPU_XVE_SPEED_5P0;
 }
 
+#ifdef CONFIG_DEBUG_FS
 static ssize_t xve_link_speed_write(struct file *filp,
 				    const char __user *buff,
 				    size_t len, loff_t *off)
@@ -621,6 +624,7 @@ static const struct file_operations xve_link_control_status_fops = {
 	.llseek = seq_lseek,
 	.release = single_release,
 };
+#endif
 
 static int xve_sw_init_gp106(struct device *dev)
 {

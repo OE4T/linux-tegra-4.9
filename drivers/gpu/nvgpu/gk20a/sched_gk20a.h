@@ -17,6 +17,7 @@
 struct gk20a;
 struct gpu_ops;
 struct tsg_gk20a;
+struct poll_table_struct;
 
 struct gk20a_sched_ctrl {
 	struct gk20a *g;

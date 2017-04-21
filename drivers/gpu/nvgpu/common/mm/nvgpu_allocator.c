@@ -150,13 +150,13 @@ int __nvgpu_alloc_common_init(struct nvgpu_allocator *a, struct gk20a *g,
 	return 0;
 }
 
+#ifdef CONFIG_DEBUG_FS
 void nvgpu_alloc_print_stats(struct nvgpu_allocator *__a,
 			     struct seq_file *s, int lock)
 {
 	__a->ops->print_stats(__a, s, lock);
 }
 
-#ifdef CONFIG_DEBUG_FS
 static int __alloc_show(struct seq_file *s, void *unused)
 {
 	struct nvgpu_allocator *a = s->private;

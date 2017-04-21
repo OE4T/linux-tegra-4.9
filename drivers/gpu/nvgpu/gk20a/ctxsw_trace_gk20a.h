@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,7 +24,7 @@ struct channel_ctx_gk20a;
 struct gk20a_ctxsw_dev;
 struct gk20a_fecs_trace;
 struct tsg_gk20a;
-
+struct poll_table_struct;
 
 int gk20a_ctxsw_dev_release(struct inode *inode, struct file *filp);
 int gk20a_ctxsw_dev_open(struct inode *inode, struct file *filp);

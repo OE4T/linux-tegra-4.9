@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,7 +14,10 @@
 #include "gk20a/gk20a.h"
 #include "pwrdev.h"
 #include "pmgrpmu.h"
+
+#ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
+#endif
 
 int pmgr_pwr_devices_get_power(struct gk20a *g, u32 *val)
 {

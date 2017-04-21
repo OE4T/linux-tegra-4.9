@@ -13,7 +13,9 @@
 
 #include <asm/barrier.h>
 #include <linux/kthread.h>
+#ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
+#endif
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>

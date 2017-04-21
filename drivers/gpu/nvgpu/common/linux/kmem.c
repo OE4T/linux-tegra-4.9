@@ -479,6 +479,7 @@ static void print_histogram(struct nvgpu_mem_alloc_tracker *tracker,
 	}
 }
 
+#ifdef CONFIG_DEBUG_FS
 /**
  * nvgpu_kmem_print_stats - Print kmem tracking stats.
  *
@@ -515,7 +516,6 @@ void nvgpu_kmem_print_stats(struct nvgpu_mem_alloc_tracker *tracker,
 	unlock_tracker(tracker);
 }
 
-#if defined(CONFIG_DEBUG_FS)
 static int __kmem_tracking_show(struct seq_file *s, void *unused)
 {
 	struct nvgpu_mem_alloc_tracker *tracker = s->private;

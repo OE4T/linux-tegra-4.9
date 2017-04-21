@@ -12,7 +12,9 @@
  */
 
 #include "therm_gp106.h"
+#ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
+#endif
 #include "therm/thrmpmu.h"
 
 #include <nvgpu/hw/gp106/hw_therm_gp106.h>

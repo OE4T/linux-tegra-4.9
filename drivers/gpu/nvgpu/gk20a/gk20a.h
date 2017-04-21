@@ -35,6 +35,9 @@ struct dbg_profiler_object_data;
 #include <linux/irqreturn.h>
 #include <linux/version.h>
 #include <linux/cdev.h>
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#endif
 
 #include "../../../arch/arm/mach-tegra/iomap.h"
 
@@ -150,7 +153,9 @@ struct gpu_ops {
 					    struct zbc_entry *s_val,
 					    u32 index);
 		void (*init_cbc)(struct gk20a *g, struct gr_gk20a *gr);
+#ifdef CONFIG_DEBUG_FS
 		void (*sync_debugfs)(struct gk20a *g);
+#endif
 		void (*init_fs_state)(struct gk20a *g);
 		void (*isr)(struct gk20a *g);
 		u32 (*cbc_fix_config)(struct gk20a *g, int base);
@@ -669,7 +674,9 @@ struct gpu_ops {
 	struct {
 		int (*init_therm_setup_hw)(struct gk20a *g);
 		int (*elcg_init_idle_filters)(struct gk20a *g);
+#ifdef CONFIG_DEBUG_FS
 		void (*therm_debugfs_init)(struct gk20a *g);
+#endif
 		int (*get_internal_sensor_curr_temp)(struct gk20a *g, u32 *temp_f24_8);
 		void (*get_internal_sensor_limits)(s32 *max_24_8,
 							s32 *min_24_8);
@@ -1140,7 +1147,9 @@ struct gk20a {
 	u32 tpc_fs_mask_user;
 
 	struct nvgpu_bios bios;
+#ifdef CONFIG_DEBUG_FS
 	struct debugfs_blob_wrapper bios_blob;
+#endif
 
 	struct nvgpu_clk_arb *clk_arb;
 

@@ -310,6 +310,7 @@ static void nvgpu_bitmap_alloc_destroy(struct nvgpu_allocator *__a)
 	nvgpu_kfree(nvgpu_alloc_to_gpu(__a), a);
 }
 
+#ifdef CONFIG_DEBUG_FS
 static void nvgpu_bitmap_print_stats(struct nvgpu_allocator *__a,
 				     struct seq_file *s, int lock)
 {
@@ -329,6 +330,7 @@ static void nvgpu_bitmap_print_stats(struct nvgpu_allocator *__a,
 	__alloc_pstat(s, __a, "  Outstanding   = 0x%llx\n",
 		      a->bytes_alloced - a->bytes_freed);
 }
+#endif
 
 static const struct nvgpu_allocator_ops bitmap_ops = {
 	.alloc		= nvgpu_bitmap_alloc,
@@ -344,7 +346,9 @@ static const struct nvgpu_allocator_ops bitmap_ops = {
 
 	.fini		= nvgpu_bitmap_alloc_destroy,
 
+#ifdef CONFIG_DEBUG_FS
 	.print_stats	= nvgpu_bitmap_print_stats,
+#endif
 };
 
 

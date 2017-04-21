@@ -12,9 +12,12 @@
  *
  */
 
+#ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
+#endif
 #include <linux/seq_file.h>
 #include <linux/io.h>
+#include <linux/fs.h>
 
 #include <nvgpu/log.h>
 #include <nvgpu/kmem.h>
@@ -298,8 +301,8 @@ int gk20a_railgating_debugfs_init(struct device *dev)
 
 void gk20a_debug_init(struct device *dev, const char *debugfs_symlink)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
 #ifdef CONFIG_DEBUG_FS
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a *g = platform->g;
 
 	platform->debugfs = debugfs_create_dir(dev_name(dev), NULL);

@@ -463,8 +463,10 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 	gk20a_user_deinit(g->dev, &nvgpu_pci_class);
 	gk20a_dbg(gpu_dbg_shutdown, "User de-init done.\b");
 
+#ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(platform->debugfs);
 	debugfs_remove_recursive(platform->debugfs_alias);
+#endif
 
 	gk20a_remove_sysfs(g->dev);
 

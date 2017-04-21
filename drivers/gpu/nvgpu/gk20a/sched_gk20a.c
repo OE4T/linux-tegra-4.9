@@ -13,7 +13,9 @@
 
 #include <asm/barrier.h>
 #include <linux/wait.h>
+#ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
+#endif
 #include <linux/uaccess.h>
 #include <linux/poll.h>
 #include <uapi/linux/nvgpu.h>

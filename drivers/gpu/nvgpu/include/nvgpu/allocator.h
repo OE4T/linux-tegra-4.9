@@ -17,7 +17,6 @@
 #ifndef NVGPU_ALLOCATOR_H
 #define NVGPU_ALLOCATOR_H
 
-#include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/platform_device.h>
 
@@ -74,9 +73,11 @@ struct nvgpu_allocator_ops {
 	/* Destructor. */
 	void (*fini)(struct nvgpu_allocator *allocator);
 
+#ifdef CONFIG_DEBUG_FS
 	/* Debugging. */
 	void (*print_stats)(struct nvgpu_allocator *allocator,
 			    struct seq_file *s, int lock);
+#endif
 };
 
 struct nvgpu_allocator {
@@ -246,8 +247,10 @@ u64  nvgpu_alloc_space(struct nvgpu_allocator *a);
 
 void nvgpu_alloc_destroy(struct nvgpu_allocator *allocator);
 
+#ifdef CONFIG_DEBUG_FS
 void nvgpu_alloc_print_stats(struct nvgpu_allocator *a,
 			     struct seq_file *s, int lock);
+#endif
 
 static inline struct gk20a *nvgpu_alloc_to_gpu(struct nvgpu_allocator *a)
 {

@@ -16,8 +16,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
-#include <linux/uaccess.h>
+#endif
 
 #include <nvgpu/kmem.h>
 

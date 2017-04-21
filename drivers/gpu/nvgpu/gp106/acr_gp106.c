@@ -11,7 +11,9 @@
  * more details.
  */
 
+#ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
+#endif
 
 #include <nvgpu/nvgpu_common.h>
 #include <nvgpu/kmem.h>

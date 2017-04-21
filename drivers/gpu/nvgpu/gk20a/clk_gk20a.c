@@ -18,7 +18,9 @@
 
 #include <linux/clk.h>
 #include <linux/module.h>
+#ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
+#endif
 #include <linux/clk/tegra.h>
 
 #include "gk20a.h"

@@ -15,6 +15,7 @@
 
 #include <linux/cdev.h>
 #include <linux/uaccess.h>
+#include <linux/fs.h>
 
 #include <nvgpu/log2.h>
 

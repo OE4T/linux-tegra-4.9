@@ -18,7 +18,9 @@
 
 #include <linux/dma-mapping.h>
 #include <linux/fs.h>
+#ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
+#endif
 #include <linux/dma-buf.h>
 
 #include <trace/events/gk20a.h>
@@ -1662,6 +1664,7 @@ int gk20a_mark_compressible_write(struct gk20a *g, u32 buffer_fd,
 	return 0;
 }
 
+#ifdef CONFIG_DEBUG_FS
 static ssize_t gk20a_cde_reload_write(struct file *file,
 	const char __user *userbuf, size_t count, loff_t *ppos)
 {
@@ -1694,3 +1697,4 @@ void gk20a_cde_debugfs_init(struct device *dev)
 	debugfs_create_file("reload_cde_firmware", S_IWUSR, platform->debugfs,
 			    g, &gk20a_cde_reload_fops);
 }
+#endif

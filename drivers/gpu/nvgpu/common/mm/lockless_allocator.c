@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -106,6 +106,7 @@ static void nvgpu_lockless_alloc_destroy(struct nvgpu_allocator *a)
 	nvgpu_kfree(nvgpu_alloc_to_gpu(a), pa);
 }
 
+#ifdef CONFIG_DEBUG_FS
 static void nvgpu_lockless_print_stats(struct nvgpu_allocator *a,
 				   struct seq_file *s, int lock)
 {
@@ -122,6 +123,7 @@ static void nvgpu_lockless_print_stats(struct nvgpu_allocator *a,
 	__alloc_pstat(s, a, "  Number free   = %d\n",
 		      pa->nr_nodes - atomic_read(&pa->nr_allocs));
 }
+#endif
 
 static const struct nvgpu_allocator_ops pool_ops = {
 	.alloc		= nvgpu_lockless_alloc,
@@ -134,7 +136,9 @@ static const struct nvgpu_allocator_ops pool_ops = {
 
 	.fini		= nvgpu_lockless_alloc_destroy,
 
+#ifdef CONFIG_DEBUG_FS
 	.print_stats	= nvgpu_lockless_print_stats,
+#endif
 };
 
 int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,

@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/gk20a/therm_gk20a.c
- *
  * GK20A Therm
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,9 +12,8 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "gk20a.h"
@@ -105,8 +102,10 @@ int gk20a_init_therm_support(struct gk20a *g)
 	if (err)
 		return err;
 
+#ifdef CONFIG_DEBUG_FS
 	if (g->ops.therm.therm_debugfs_init)
 	    g->ops.therm.therm_debugfs_init(g);
+#endif
 
 	return err;
 }

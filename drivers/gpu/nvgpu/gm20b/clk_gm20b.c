@@ -18,8 +18,10 @@
 
 #include <linux/version.h>
 #include <linux/clk.h>
+#ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
+#endif
 #include <linux/clk/tegra.h>
 #include <soc/tegra/fuse.h>
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))

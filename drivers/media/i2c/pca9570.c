@@ -336,7 +336,6 @@ const struct of_device_id pca9570_of_match[] = {
 	{ .compatible = "nvidia,pca9570", },
 	{ },
 };
-MODULE_DEVICE_TABLE(of, imx185_of_match);
 MODULE_DEVICE_TABLE(i2c, pca9570_id);
 
 static struct i2c_driver pca9570_i2c_driver = {

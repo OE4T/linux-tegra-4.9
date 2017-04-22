@@ -2454,11 +2454,12 @@ static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp)
 {
 	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return;
-	/* Seamless prevent reset */
-	if (dp->dc->initialized)
-		return;
 
 	if (!dp || !dp->dpaux)
+		return;
+
+	/* Seamless prevent reset */
+	if (dp->dc->initialized)
 		return;
 
 	/* Use only if bpmp is enabled */

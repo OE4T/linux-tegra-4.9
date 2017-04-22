@@ -5626,6 +5626,7 @@ int tegra_dc_update_winmask(struct tegra_dc *dc, unsigned long winmask)
 	struct tegra_dc *dc_other;
 	struct tegra_dc_win *win;
 	int i, j, ret = 0;
+	int win_idx = -1;
 
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	return -EINVAL;
@@ -5646,8 +5647,12 @@ int tegra_dc_update_winmask(struct tegra_dc *dc, unsigned long winmask)
 		j = dc->ndev->id;
 		win = tegra_dc_get_window(dc, i);
 		/* is window already owned by this dc? */
-		if (win && win->dc && (win->dc == dc))
+		if (win && win->dc && (win->dc == dc)) {
+			/* get first valid window index for fb win index */
+			if (win_idx == -1)
+				win_idx = i;
 			continue;
+		}
 		/* is window already owned by other dc? */
 		for (j = 0; j < tegra_dc_get_numof_dispheads(); j++) {
 			dc_other = tegra_dc_get_dc(j);
@@ -5665,6 +5670,10 @@ int tegra_dc_update_winmask(struct tegra_dc *dc, unsigned long winmask)
 				goto exit;
 			}
 		}
+
+		/* get first valid window index for fb win index */
+		if (win_idx == -1)
+			win_idx = i;
 	}
 
 	/* attach window happens on device enable call and
@@ -5673,12 +5682,9 @@ int tegra_dc_update_winmask(struct tegra_dc *dc, unsigned long winmask)
 
 	dc->pdata->win_mask = winmask;
 	dc->valid_windows = winmask;
-	/* cleanup the valid window bits */
-	if (!winmask) {
-		/* disable the fb win_index */
-		tegra_fb_set_win_index(dc, winmask);
-		dc->pdata->fb->win = -1;
-	}
+
+	tegra_fb_set_win_index(dc, winmask);
+	dc->pdata->fb->win = win_idx;
 
 exit:
 	mutex_unlock(&dc->lock);

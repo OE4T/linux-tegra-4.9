@@ -2796,10 +2796,14 @@ int tegra_dc_enable_update_and_act(struct tegra_dc *dc, u32 update_mask,
 						0, 1, TEGRA_DC_POLL_TIMEOUT_MS);
 }
 
-static int tegra_dc_set_next(struct tegra_dc *dc)
+/* Set dc at the next available index in the tegra_dcs array. */
+static int tegra_dc_set(struct tegra_dc *dc)
 {
-	int i;
 	int ret = -EBUSY;
+	int i;
+
+	if (!dc)
+		return -EINVAL;
 
 	mutex_lock(&tegra_dc_lock);
 
@@ -2816,17 +2820,24 @@ static int tegra_dc_set_next(struct tegra_dc *dc)
 	return ret;
 }
 
-/*
- * If index == -1, set dc at next available index. This is to be called only
- * when registering dc in DT case. For non DT case & when removing the device
- * (dc == NULL), index should be accordingly.
- */
-static int tegra_dc_set(struct tegra_dc *dc, int index)
+/* Clear this dc from its current slot in the tegra_dcs array. */
+static void tegra_dc_clear(struct tegra_dc *dc)
 {
-	if ((index == -1) && (dc != NULL)) /* DT register case */
-		return tegra_dc_set_next(dc);
-	else
-		return -EINVAL;
+	int i;
+
+	if (!dc)
+		return;
+
+	mutex_lock(&tegra_dc_lock);
+
+	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
+		if (tegra_dcs[i] == dc) {
+			tegra_dcs[i] = NULL;
+			break;
+		}
+	}
+
+	mutex_unlock(&tegra_dc_lock);
 }
 
 unsigned int tegra_dc_has_multiple_dc(void)
@@ -5807,7 +5818,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	if (!irq)
 		goto err_free;
 
-	ndev->id = tegra_dc_set(dc, -1);
+	ndev->id = tegra_dc_set(dc);
 	if (ndev->id < 0) {
 		dev_err(&ndev->dev, "can't add dc\n");
 		goto err_free;
@@ -6276,8 +6287,8 @@ err_iounmap_reg:
 	kfree(fb_mem);
 err_release_resource_reg:
 err_free:
+	tegra_dc_clear(dc);
 	kfree(dc);
-	tegra_dc_set(NULL, ndev->id);
 
 	return ret;
 }
@@ -6337,8 +6348,8 @@ static int tegra_dc_remove(struct platform_device *ndev)
 
 	tegra_disp_clk_put(&ndev->dev, dc->clk);
 	iounmap(dc->base);
+	tegra_dc_clear(dc);
 	kfree(dc);
-	tegra_dc_set(NULL, ndev->id);
 
 	return 0;
 }

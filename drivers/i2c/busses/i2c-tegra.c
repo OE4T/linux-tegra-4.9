@@ -254,6 +254,7 @@ struct tegra_i2c_hw_feature {
 	bool has_multi_master_support;
 	bool has_mst_fifo_reg;
 	u32 max_packet_transfer_len;
+	bool need_continue_xfer_workaround;
 };
 
 /**
@@ -1904,6 +1905,9 @@ static int tegra_i2c_is_multi_pkt_supported(struct tegra_i2c_dev *i2c_dev,
 	if (i2c_dev->disable_multi_pkt_mode)
 		return false;
 
+	if (!i2c_dev->hw->need_continue_xfer_workaround)
+		return true;
+
 	for (i = 0; i < num; i++) {
 		if (msgs[i].flags & I2C_M_NOSTART)
 			return false;
@@ -2095,6 +2099,7 @@ static const struct tegra_i2c_hw_feature tegra20_i2c_hw = {
 	.has_multi_master_support = false,
 	.has_mst_fifo_reg = false,
 	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_4K,
+	.need_continue_xfer_workaround = true,
 };
 
 static const struct tegra_i2c_hw_feature tegra30_i2c_hw = {
@@ -2116,6 +2121,7 @@ static const struct tegra_i2c_hw_feature tegra30_i2c_hw = {
 	.has_multi_master_support = false,
 	.has_mst_fifo_reg = false,
 	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_4K,
+	.need_continue_xfer_workaround = true,
 };
 
 static const struct tegra_i2c_hw_feature tegra114_i2c_hw = {
@@ -2137,6 +2143,7 @@ static const struct tegra_i2c_hw_feature tegra114_i2c_hw = {
 	.has_multi_master_support = false,
 	.has_mst_fifo_reg = false,
 	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_4K,
+	.need_continue_xfer_workaround = true,
 };
 
 static const struct tegra_i2c_hw_feature tegra124_i2c_hw = {
@@ -2158,6 +2165,7 @@ static const struct tegra_i2c_hw_feature tegra124_i2c_hw = {
 	.has_multi_master_support = false,
 	.has_mst_fifo_reg = false,
 	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_4K,
+	.need_continue_xfer_workaround = true,
 };
 
 static const struct tegra_i2c_hw_feature tegra210_i2c_hw = {
@@ -2179,6 +2187,7 @@ static const struct tegra_i2c_hw_feature tegra210_i2c_hw = {
 	.has_multi_master_support = false,
 	.has_mst_fifo_reg = false,
 	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_4K,
+	.need_continue_xfer_workaround = true,
 };
 
 static const struct tegra_i2c_hw_feature tegra186_i2c_hw = {
@@ -2200,6 +2209,7 @@ static const struct tegra_i2c_hw_feature tegra186_i2c_hw = {
 	.has_multi_master_support = false,
 	.has_mst_fifo_reg = false,
 	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_4K,
+	.need_continue_xfer_workaround = true,
 };
 
 static const struct tegra_i2c_hw_feature tegra194_i2c_hw = {
@@ -2219,6 +2229,7 @@ static const struct tegra_i2c_hw_feature tegra194_i2c_hw = {
 	.has_slcg_support = true,
 	.has_mst_fifo_reg = true,
 	.max_packet_transfer_len = I2C_MAX_XFER_SIZE_64k,
+	.need_continue_xfer_workaround = false,
 };
 
 /* Match table for of_platform binding */

@@ -1460,6 +1460,16 @@ static int get_core_sku_min_mv(void)
 	}
 }
 
+static int get_coreb01_sku_max_mv(void)
+{
+	return 1120;
+}
+
+static int get_coreb01_sku_min_mv(void)
+{
+	return 800;
+}
+
 static int get_core_nominal_mv_index(int speedo_id)
 {
 	int i;
@@ -2120,8 +2130,8 @@ static struct tegra_dvfs_data tegra210b01_dvfs_data = {
 	.qspi_sdr_vf_table = qspi_sdr_dvfs_table,
 	.qspi_ddr_vf_table = qspi_ddr_dvfs_table,
 	.sor1_dp_vf_table = sor1_dp_dvfs_table,
-	.get_core_min_mv = get_core_sku_min_mv,
-	.get_core_max_mv = get_core_sku_max_mv,
+	.get_core_min_mv = get_coreb01_sku_min_mv,
+	.get_core_max_mv = get_coreb01_sku_max_mv,
 
 	.core_floors = tegra210_core_therm_floors,
 	.core_caps = tegra210_core_therm_caps,

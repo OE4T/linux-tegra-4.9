@@ -1,4 +1,5 @@
 GCOV_PROFILE := y
 ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
         obj-$(CONFIG_TEGRA_NVDISPLAY) += nvdisp/
+        obj-$(CONFIG_TEGRA_NVDISPLAY) += ext/
 endif

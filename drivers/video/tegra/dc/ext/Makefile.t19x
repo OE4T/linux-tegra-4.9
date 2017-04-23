@@ -1,0 +1,4 @@
+GCOV_PROFILE := y
+ccflags-y += -I$(srctree)/../display/drivers/video/tegra/dc
+
+obj-y += util_t19x.o

@@ -63,6 +63,7 @@ nvgpu-y := \
 	gk20a/kind_gk20a.o \
 	gk20a/mm_gk20a.o \
 	gk20a/pmu_gk20a.o \
+	gk20a/flcn_gk20a.o \
 	gk20a/priv_ring_gk20a.o \
 	gk20a/fence_gk20a.o \
 	gk20a/therm_gk20a.o \

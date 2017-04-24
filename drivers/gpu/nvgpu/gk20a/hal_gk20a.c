@@ -3,7 +3,7 @@
  *
  * GK20A Tegra HAL interface.
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,6 +26,7 @@
 #include "fecs_trace_gk20a.h"
 #include "mm_gk20a.h"
 #include "mc_gk20a.h"
+#include "flcn_gk20a.h"
 #include "pmu_gk20a.h"
 #include "clk_gk20a.h"
 #include "regops_gk20a.h"
@@ -162,6 +163,7 @@ int gk20a_init_hal(struct gk20a *g)
 	gk20a_init_ce2(gops);
 	gk20a_init_gr_ctx(gops);
 	gk20a_init_mm(gops);
+	gk20a_falcon_init_hal(gops);
 	gk20a_init_pmu_ops(gops);
 	gk20a_init_clk_ops(gops);
 	gk20a_init_regops(gops);

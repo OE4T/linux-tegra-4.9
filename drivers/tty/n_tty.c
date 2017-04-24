@@ -217,6 +217,14 @@ static ssize_t chars_in_buffer(struct tty_struct *tty)
 	return n;
 }
 
+int n_tty_buffer_get_count(struct tty_struct *tty)
+{
+	struct n_tty_data *ldata = tty->disc_data;
+
+	return read_cnt(ldata);
+}
+EXPORT_SYMBOL(n_tty_buffer_get_count);
+
 /**
  *	n_tty_write_wakeup	-	asynchronous I/O notifier
  *	@tty: tty device

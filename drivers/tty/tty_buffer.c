@@ -450,6 +450,19 @@ int tty_buffer_get_level(struct tty_port *port)
 }
 EXPORT_SYMBOL(tty_buffer_get_level);
 
+int tty_buffer_get_count(struct tty_port *port)
+{
+	struct tty_bufhead *buf = &port->buf;
+	int level_percent = 0;
+
+	mutex_lock(&buf->lock);
+	level_percent = buf->current_data_count;
+	mutex_unlock(&buf->lock);
+
+	return level_percent;
+}
+EXPORT_SYMBOL(tty_buffer_get_count);
+
 static int
 receive_buf(struct tty_ldisc *ld, struct tty_buffer *head, int count)
 {

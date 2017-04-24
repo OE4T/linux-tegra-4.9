@@ -151,7 +151,7 @@ static u32 pmgr_send_i2c_device_topology_to_pmu(struct gk20a *g)
 	i2c_desc_table.devices[idx].dcb_index = idx;
 	i2c_desc_table.devices[idx].i2c_address = platform->ina3221_i2c_address;
 	i2c_desc_table.devices[idx].i2c_flags = 0xC2F;
-	i2c_desc_table.devices[idx].i2c_port = 0x2;
+	i2c_desc_table.devices[idx].i2c_port = platform->ina3221_i2c_port;
 
 	/* Pass the table down the PMU as an object */
 	status = pmgr_pmu_set_object(

@@ -23,6 +23,11 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
 
+int vm_aspace_id(struct vm_gk20a *vm)
+{
+	return vm->as_share ? vm->as_share->id : -1;
+}
+
 void nvgpu_vm_mapping_batch_start(struct vm_gk20a_mapping_batch *mapping_batch)
 {
 	memset(mapping_batch, 0, sizeof(*mapping_batch));
@@ -52,7 +57,7 @@ void nvgpu_vm_mapping_batch_finish(struct vm_gk20a *vm,
 
 void nvgpu_vm_remove_support_nofree(struct vm_gk20a *vm)
 {
-	struct mapped_buffer_node *mapped_buffer;
+	struct nvgpu_mapped_buf *mapped_buffer;
 	struct vm_reserved_va_node *va_node, *va_node_tmp;
 	struct nvgpu_rbtree_node *node = NULL;
 	struct gk20a *g = vm->mm->g;
@@ -118,7 +123,7 @@ void nvgpu_vm_put(struct vm_gk20a *vm)
 	kref_put(&vm->ref, nvgpu_vm_remove_support_kref);
 }
 
-void gk20a_remove_vm(struct vm_gk20a *vm, struct nvgpu_mem *inst_block)
+void nvgpu_remove_vm(struct vm_gk20a *vm, struct nvgpu_mem *inst_block)
 {
 	struct gk20a *g = vm->mm->g;
 
@@ -126,4 +131,60 @@ void gk20a_remove_vm(struct vm_gk20a *vm, struct nvgpu_mem *inst_block)
 
 	gk20a_free_inst_block(g, inst_block);
 	nvgpu_vm_remove_support_nofree(vm);
+}
+
+int nvgpu_insert_mapped_buf(struct vm_gk20a *vm,
+			    struct nvgpu_mapped_buf *mapped_buffer)
+{
+	mapped_buffer->node.key_start = mapped_buffer->addr;
+	mapped_buffer->node.key_end = mapped_buffer->addr + mapped_buffer->size;
+
+	nvgpu_rbtree_insert(&mapped_buffer->node, &vm->mapped_buffers);
+
+	return 0;
+}
+
+void nvgpu_remove_mapped_buf(struct vm_gk20a *vm,
+			     struct nvgpu_mapped_buf *mapped_buffer)
+{
+	nvgpu_rbtree_unlink(&mapped_buffer->node, &vm->mapped_buffers);
+}
+
+struct nvgpu_mapped_buf *__nvgpu_vm_find_mapped_buf(
+	struct vm_gk20a *vm, u64 addr)
+{
+	struct nvgpu_rbtree_node *node = NULL;
+	struct nvgpu_rbtree_node *root = vm->mapped_buffers;
+
+	nvgpu_rbtree_search(addr, &node, root);
+	if (!node)
+		return NULL;
+
+	return mapped_buffer_from_rbtree_node(node);
+}
+
+struct nvgpu_mapped_buf *__nvgpu_vm_find_mapped_buf_range(
+	struct vm_gk20a *vm, u64 addr)
+{
+	struct nvgpu_rbtree_node *node = NULL;
+	struct nvgpu_rbtree_node *root = vm->mapped_buffers;
+
+	nvgpu_rbtree_range_search(addr, &node, root);
+	if (!node)
+		return NULL;
+
+	return mapped_buffer_from_rbtree_node(node);
+}
+
+struct nvgpu_mapped_buf *__nvgpu_vm_find_mapped_buf_less_than(
+	struct vm_gk20a *vm, u64 addr)
+{
+	struct nvgpu_rbtree_node *node = NULL;
+	struct nvgpu_rbtree_node *root = vm->mapped_buffers;
+
+	nvgpu_rbtree_less_than_search(addr, &node, root);
+	if (!node)
+		return NULL;
+
+	return mapped_buffer_from_rbtree_node(node);
 }

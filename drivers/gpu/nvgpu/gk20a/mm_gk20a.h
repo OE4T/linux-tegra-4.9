@@ -140,52 +140,9 @@ struct priv_cmd_entry {
 	u32 size;	/* in words */
 };
 
-struct mapped_buffer_node {
-	struct vm_gk20a *vm;
-	struct nvgpu_rbtree_node node;
-	struct nvgpu_list_node va_buffers_list;
-	struct vm_reserved_va_node *va_node;
-	u64 addr;
-	u64 size;
-	struct dma_buf *dmabuf;
-	struct sg_table *sgt;
-	struct kref ref;
-	u32 user_mapped;
-	bool own_mem_ref;
-	u32 pgsz_idx;
-	u32 ctag_offset;
-	u32 ctag_lines;
-	u32 ctag_allocated_lines;
-
-	/* For comptag mapping, these are the mapping window parameters */
-	bool ctags_mappable;
-	u64 ctag_map_win_addr; /* non-zero if mapped */
-	u64 ctag_map_win_size; /* non-zero if ctags_mappable */
-	u32 ctag_map_win_ctagline; /* ctagline at win start, set if
-				    * ctags_mappable */
-
-	u32 flags;
-	u32 kind;
-	bool va_allocated;
-};
-
-static inline struct mapped_buffer_node *
-mapped_buffer_node_from_va_buffers_list(struct nvgpu_list_node *node)
-{
-	return (struct mapped_buffer_node *)
-		((uintptr_t)node - offsetof(struct mapped_buffer_node, va_buffers_list));
-};
-
-static inline struct mapped_buffer_node *
-mapped_buffer_from_rbtree_node(struct nvgpu_rbtree_node *node)
-{
-	return (struct mapped_buffer_node *)
-		  ((uintptr_t)node - offsetof(struct mapped_buffer_node, node));
-};
-
 struct vm_reserved_va_node {
 	struct nvgpu_list_node reserved_va_list;
-	struct nvgpu_list_node va_buffers_list;
+	struct nvgpu_list_node buffer_list_head;
 	u32 pgsz_idx;
 	u64 vaddr_start;
 	u64 size;
@@ -431,11 +388,6 @@ static inline phys_addr_t gk20a_mem_phys(struct nvgpu_mem *mem)
 	return 0;
 }
 
-u32 __nvgpu_aperture_mask(struct gk20a *g, enum nvgpu_aperture aperture,
-		u32 sysmem_mask, u32 vidmem_mask);
-u32 nvgpu_aperture_mask(struct gk20a *g, struct nvgpu_mem *mem,
-		u32 sysmem_mask, u32 vidmem_mask);
-
 void gk20a_pde_wr32(struct gk20a *g, struct gk20a_mm_entry *entry,
 		size_t w, size_t data);
 u64 gk20a_pde_addr(struct gk20a *g, struct gk20a_mm_entry *entry);
@@ -531,8 +483,6 @@ const struct gk20a_mmu_level *gk20a_mm_get_mmu_levels(struct gk20a *g,
 						      u32 big_page_size);
 void gk20a_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *mem,
 		struct vm_gk20a *vm);
-
-void gk20a_remove_vm(struct vm_gk20a *vm, struct nvgpu_mem *inst_block);
 
 int gk20a_big_pages_possible(struct vm_gk20a *vm, u64 base, u64 size);
 

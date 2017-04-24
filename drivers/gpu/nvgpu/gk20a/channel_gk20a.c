@@ -1406,7 +1406,7 @@ static void trace_write_pushbuffer(struct channel_gk20a *c,
 		int err;
 
 		words = pbdma_gp_entry1_length_v(g->entry1);
-		err = nvgpu_vm_find_buffer(c->vm, gpu_va, &dmabuf, &offset);
+		err = nvgpu_vm_find_buf(c->vm, gpu_va, &dmabuf, &offset);
 		if (!err)
 			mem = dma_buf_vmap(dmabuf);
 	}
@@ -1903,7 +1903,7 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 				 bool skip_buffer_refcounting)
 {
 	struct vm_gk20a *vm = c->vm;
-	struct mapped_buffer_node **mapped_buffers = NULL;
+	struct nvgpu_mapped_buf **mapped_buffers = NULL;
 	int err = 0, num_mapped_buffers = 0;
 	bool pre_alloc_enabled = channel_gk20a_is_prealloc_enabled(c);
 

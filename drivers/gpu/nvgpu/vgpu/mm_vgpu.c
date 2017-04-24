@@ -202,7 +202,7 @@ static void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 static void vgpu_vm_remove_support(struct vm_gk20a *vm)
 {
 	struct gk20a *g = vm->mm->g;
-	struct mapped_buffer_node *mapped_buffer;
+	struct nvgpu_mapped_buf *mapped_buffer;
 	struct vm_reserved_va_node *va_node, *va_node_tmp;
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_as_share_params *p = &msg.params.as_share;

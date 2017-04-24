@@ -25,12 +25,24 @@ struct dma_buf;
 struct vm_gk20a;
 struct vm_gk20a_mapping_batch;
 
+struct buffer_attrs {
+	struct sg_table *sgt;
+	u64 size;
+	u64 align;
+	u32 ctag_offset;
+	u32 ctag_lines;
+	u32 ctag_allocated_lines;
+	int pgsz_idx;
+	u8 kind_v;
+	u8 uc_kind_v;
+	bool ctag_user_mappable;
+};
+
 u64 nvgpu_vm_map(struct vm_gk20a *vm,
 		 struct dma_buf *dmabuf,
 		 u64 offset_align,
-		 u32 flags /*NVGPU_AS_MAP_BUFFER_FLAGS_*/,
+		 u32 flags,
 		 int kind,
-		 struct sg_table **sgt,
 		 bool user_mapped,
 		 int rw_flag,
 		 u64 buffer_offset,
@@ -59,4 +71,24 @@ void nvgpu_vm_unmap(struct vm_gk20a *vm, u64 offset);
 int nvgpu_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 			 struct dma_buf **dmabuf,
 			 u64 *offset);
+
+enum nvgpu_aperture gk20a_dmabuf_aperture(struct gk20a *g,
+					  struct dma_buf *dmabuf);
+int validate_fixed_buffer(struct vm_gk20a *vm,
+			  struct buffer_attrs *bfr,
+			  u64 map_offset, u64 map_size,
+			  struct vm_reserved_va_node **pva_node);
+int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
+				      u32 flags,
+				      struct buffer_attrs *bfr,
+				      enum gmmu_pgsz_gk20a pgsz_idx);
+int gk20a_alloc_comptags(struct gk20a *g,
+			 struct device *dev,
+			 struct dma_buf *dmabuf,
+			 struct gk20a_comptag_allocator *allocator,
+			 u32 lines, bool user_mappable,
+			 u64 *ctag_map_win_size,
+			 u32 *ctag_map_win_ctagline);
+void gk20a_vm_unmap_locked_kref(struct kref *ref);
+
 #endif

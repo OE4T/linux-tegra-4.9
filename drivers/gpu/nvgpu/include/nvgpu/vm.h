@@ -26,7 +26,10 @@
 #include <nvgpu/allocator.h>
 
 struct vm_gk20a;
-struct mapped_buffer_node;
+struct vm_reserved_va_node;
+struct buffer_attrs;
+struct gk20a_comptag_allocator;
+
 
 /**
  * This header contains the OS agnostic APIs for dealing with VMs. Most of the
@@ -43,6 +46,50 @@ struct vm_gk20a_mapping_batch {
 	bool gpu_l2_flushed;
 	bool need_tlb_invalidate;
 };
+
+struct nvgpu_mapped_buf {
+	struct vm_gk20a *vm;
+	struct nvgpu_rbtree_node node;
+	struct nvgpu_list_node buffer_list;
+	struct vm_reserved_va_node *va_node;
+	u64 addr;
+	u64 size;
+	struct dma_buf *dmabuf;
+	struct sg_table *sgt;
+	struct kref ref;
+	u32 user_mapped;
+	bool own_mem_ref;
+	u32 pgsz_idx;
+	u32 ctag_offset;
+	u32 ctag_lines;
+	u32 ctag_allocated_lines;
+
+	/* For comptag mapping, these are the mapping window parameters */
+	bool ctags_mappable;
+	u64 ctag_map_win_addr; /* non-zero if mapped */
+	u64 ctag_map_win_size; /* non-zero if ctags_mappable */
+	u32 ctag_map_win_ctagline; /* ctagline at win start, set if
+				    * ctags_mappable */
+
+	u32 flags;
+	u32 kind;
+	bool va_allocated;
+};
+
+static inline struct nvgpu_mapped_buf *
+nvgpu_mapped_buf_from_buffer_list(struct nvgpu_list_node *node)
+{
+	return (struct nvgpu_mapped_buf *)
+		((uintptr_t)node - offsetof(struct nvgpu_mapped_buf,
+					    buffer_list));
+}
+
+static inline struct nvgpu_mapped_buf *
+mapped_buffer_from_rbtree_node(struct nvgpu_rbtree_node *node)
+{
+	return (struct nvgpu_mapped_buf *)
+		  ((uintptr_t)node - offsetof(struct nvgpu_mapped_buf, node));
+}
 
 struct vm_gk20a {
 	struct mm_gk20a *mm;
@@ -102,6 +149,8 @@ struct vm_gk20a {
 void nvgpu_vm_get(struct vm_gk20a *vm);
 void nvgpu_vm_put(struct vm_gk20a *vm);
 
+int vm_aspace_id(struct vm_gk20a *vm);
+
 /* batching eliminates redundant cache flushes and invalidates */
 void nvgpu_vm_mapping_batch_start(struct vm_gk20a_mapping_batch *batch);
 void nvgpu_vm_mapping_batch_finish(
@@ -112,23 +161,44 @@ void nvgpu_vm_mapping_batch_finish_locked(
 
 /* get reference to all currently mapped buffers */
 int nvgpu_vm_get_buffers(struct vm_gk20a *vm,
-			 struct mapped_buffer_node ***mapped_buffers,
+			 struct nvgpu_mapped_buf ***mapped_buffers,
 			 int *num_buffers);
 
 /* put references on the given buffers */
 void nvgpu_vm_put_buffers(struct vm_gk20a *vm,
-			  struct mapped_buffer_node **mapped_buffers,
+			  struct nvgpu_mapped_buf **mapped_buffers,
 			  int num_buffers);
 
 /* Note: batch may be NULL if unmap op is not part of a batch */
 int nvgpu_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset,
 			  struct vm_gk20a_mapping_batch *batch);
 
-void nvgpu_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer,
+void nvgpu_vm_unmap_locked(struct nvgpu_mapped_buf *mapped_buffer,
 			   struct vm_gk20a_mapping_batch *batch);
+
+/*
+ * These all require the VM update lock to be held.
+ */
+struct nvgpu_mapped_buf *__nvgpu_vm_find_mapped_buf(
+	struct vm_gk20a *vm, u64 addr);
+struct nvgpu_mapped_buf *__nvgpu_vm_find_mapped_buf_range(
+	struct vm_gk20a *vm, u64 addr);
+struct nvgpu_mapped_buf *__nvgpu_vm_find_mapped_buf_less_than(
+	struct vm_gk20a *vm, u64 addr);
+
+int nvgpu_vm_find_buf(struct vm_gk20a *vm, u64 gpu_va,
+		      struct dma_buf **dmabuf,
+		      u64 *offset);
+
+int nvgpu_insert_mapped_buf(struct vm_gk20a *vm,
+			    struct nvgpu_mapped_buf *mapped_buffer);
+void nvgpu_remove_mapped_buf(struct vm_gk20a *vm,
+			     struct nvgpu_mapped_buf *mapped_buffer);
 
 void nvgpu_vm_remove_support_nofree(struct vm_gk20a *vm);
 void nvgpu_vm_remove_support(struct vm_gk20a *vm);
+
+void nvgpu_remove_vm(struct vm_gk20a *vm, struct nvgpu_mem *inst_block);
 
 int nvgpu_init_vm(struct mm_gk20a *mm,
 		struct vm_gk20a *vm,

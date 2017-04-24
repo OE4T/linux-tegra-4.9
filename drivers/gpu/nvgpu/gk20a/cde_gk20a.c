@@ -1025,7 +1025,7 @@ __releases(&cde_app->mutex)
 	get_dma_buf(compbits_scatter_buf); /* a ref for nvgpu_vm_map */
 	map_vaddr = nvgpu_vm_map(cde_ctx->vm, compbits_scatter_buf, 0,
 				 NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-				 compbits_kind, NULL, true,
+				 compbits_kind, true,
 				 gk20a_mem_flag_none,
 				 map_offset, map_size,
 				 NULL);

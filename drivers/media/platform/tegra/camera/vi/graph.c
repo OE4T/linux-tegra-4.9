@@ -289,10 +289,18 @@ static int tegra_vi_graph_notify_complete(struct v4l2_async_notifier *notifier)
 		return ret;
 
 	ret = v4l2_device_register_subdev_nodes(&vi->v4l2_dev);
-	if (ret < 0)
+	if (ret < 0) {
 		dev_err(vi->dev, "failed to register subdev nodes\n");
+		return ret;
+	}
 
 	vi->link_status++;
+
+	ret = tegra_vi_channels_register(vi);
+	if (ret < 0) {
+		dev_err(vi->dev, "failed to register vi channels\n");
+		return ret;
+	}
 
 	return ret;
 }

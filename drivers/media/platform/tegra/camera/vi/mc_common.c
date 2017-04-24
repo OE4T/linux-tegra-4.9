@@ -331,14 +331,8 @@ int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 	if (err < 0)
 		goto graph_error;
 
-	err = tegra_vi_channels_register(mc_vi);
-	if (err < 0)
-		goto register_error;
-
 	return 0;
 
-register_error:
-	tegra_vi_graph_cleanup(mc_vi);
 graph_error:
 	tegra_vi_channels_cleanup(mc_vi);
 channels_error:

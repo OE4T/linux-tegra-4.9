@@ -89,6 +89,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.hardcode_sw_threshold = true,
 	.ina3221_dcb_index = 0,
 	.ina3221_i2c_address = 0x84,
+	.ina3221_i2c_port = 0x2,
 	},
 	{ /* DEVICE=0x1c36 */
 	/* ptimer src frequency in hz */
@@ -123,6 +124,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.hardcode_sw_threshold = true,
 	.ina3221_dcb_index = 0,
 	.ina3221_i2c_address = 0x84,
+	.ina3221_i2c_port = 0x2,
 	},
 	{ /* DEVICE=0x1c37 */
 	/* ptimer src frequency in hz */
@@ -157,6 +159,7 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.hardcode_sw_threshold = true,
 	.ina3221_dcb_index = 0,
 	.ina3221_i2c_address = 0x84,
+	.ina3221_i2c_port = 0x2,
 	},
 	{ /* DEVICE=0x1c75 */
 	/* ptimer src frequency in hz */
@@ -187,10 +190,11 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.ch_wdt_timeout_ms = 7000,
 
 	.vidmem_is_vidmem = true,
-	.vbios_min_version = 0x86064700,
+	.vbios_min_version = 0x86065600,
 	.hardcode_sw_threshold = false,
 	.ina3221_dcb_index = 1,
 	.ina3221_i2c_address = 0x80,
+	.ina3221_i2c_port = 0x1,
 	}
 };
 

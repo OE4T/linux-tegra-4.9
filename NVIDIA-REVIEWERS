@@ -285,7 +285,7 @@ F:	drivers/platform/tegra/mc/*
 F:	drivers/staging/android/ion/*
 F:	drivers/staging/android/ion/tegra/*
 F:	drivers/video/tegra/nvmap/*
-F:	drivers/platform/tegra/iommu.c
+F:	drivers/platform/tegra/tegra_fd.c
 F:	include/linux/mm.h
 F:	include/linux/vmstat.h
 F:	mm/*

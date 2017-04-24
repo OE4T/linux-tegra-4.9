@@ -203,7 +203,6 @@ F:	drivers/platform/tegra/iomap_t18x.h
 F:	drivers/platform/tegra/mc/*
 F:	drivers/iommu/
 F:	drivers/video/tegra/nvmap/
-F:	drivers/platform/tegra/mc/
 F:	drivers/char/hmm_dmirror.h
 F:	drivers/char/hmm_dmirror.c
 F:	include/dt-bindings/memory/

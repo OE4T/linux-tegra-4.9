@@ -30,6 +30,8 @@ obj-y                                   += tegra18_emc.o
 obj-y                                   += tegra18x_la.o
 obj-y                                   += tegra186-mc-sid.o
 
+obj-y					+= tegra_fd.o
+
 ifdef CONFIG_ARCH_TEGRA_19x_SOC
 
 ccflags-y += -Werror

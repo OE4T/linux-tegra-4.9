@@ -1087,10 +1087,8 @@
 			0x0 0xC390000 0x0 0x2fff>;
 		#padcontroller-cells = <1>;
 		status = "disabled";
-		io-pad-defaults { /* subnode for padctrl */
-			status = "disabled";
-		};
 	};
+
 	gv11b {
 		compatible = "nvidia,gv11b";
 		reg = <0x0 0x17000000 0x0 0x1000000

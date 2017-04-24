@@ -2911,10 +2911,8 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 	struct s_tx_context_desc *TX_CONTEXT_DESC =
 	    GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
 	UINT varcsum_enable;
-#ifdef EQOS_ENABLE_VLAN_TAG
 	UINT varvlan_pkt;
 	UINT varvt;
-#endif
 	INT i;
 	INT start_index = ptx_ring->cur_tx;
 	INT original_start_index = ptx_ring->cur_tx;
@@ -2928,42 +2926,39 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 
 	pr_debug("-->pre_transmit: qinx = %u\n", qinx);
 
-#ifdef EQOS_ENABLE_VLAN_TAG
+	/* prepare CONTEXT descriptor for TSO and/or VLAN tagging */
 	TX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_RD(tx_pkt_features->
 						   pkt_attributes, varvlan_pkt);
-	if (varvlan_pkt == 0x1) {
-		/* put vlan tag in contex descriptor and set other control
-		 * bits accordingly */
-		TX_PKT_FEATURES_VLAN_TAG_VT_RD(tx_pkt_features->vlan_tag,
-					       varvt);
-		TX_CONTEXT_DESC_TDES3_VT_WR(TX_CONTEXT_DESC->tdes3, varvt);
-		TX_CONTEXT_DESC_TDES3_VLTV_WR(TX_CONTEXT_DESC->tdes3, 0x1);
-		TX_CONTEXT_DESC_TDES3_CTXT_WR(TX_CONTEXT_DESC->tdes3, 0x1);
-		TX_CONTEXT_DESC_TDES3_OWN_WR(TX_CONTEXT_DESC->tdes3, 0x1);
 
-		original_start_index = ptx_ring->cur_tx;
-		INCR_TX_DESC_INDEX(ptx_ring->cur_tx, 1);
-		start_index = ptx_ring->cur_tx;
-		ptx_desc = GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
-		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, ptx_ring->cur_tx);
-		desc_cnt--;
-	}
-#endif				/* EQOS_ENABLE_VLAN_TAG */
-
-	/* prepare CONTEXT descriptor for TSO */
 	TX_PKT_FEATURES_PKT_ATTRIBUTES_TSO_ENABLE_RD(tx_pkt_features->
 						     pkt_attributes,
 						     vartso_enable);
-	if (vartso_enable) {
-		/* get MSS and update */
-		TX_PKT_FEATURES_MSS_MSS_RD(tx_pkt_features->mss, varmss);
-		TX_CONTEXT_DESC_TDES2_MSS_WR(TX_CONTEXT_DESC->tdes2, varmss);
-		/* set MSS valid, CTXT and OWN bits */
-		TX_CONTEXT_DESC_TDES3_TCMSSV_WR(TX_CONTEXT_DESC->tdes3, 0x1);
+	if (varvlan_pkt || vartso_enable) {
 		TX_CONTEXT_DESC_TDES3_CTXT_WR(TX_CONTEXT_DESC->tdes3, 0x1);
-		TX_CONTEXT_DESC_TDES3_OWN_WR(TX_CONTEXT_DESC->tdes3, 0x1);
 
-		ptx_ring->default_mss = tx_pkt_features->mss;
+		if (varvlan_pkt) {
+			/* put vlan tag in contex descriptor and set other
+			 * control bits accordingly
+			 */
+			TX_PKT_FEATURES_VLAN_TAG_VT_RD(
+					tx_pkt_features->vlan_tag, varvt);
+			TX_CONTEXT_DESC_TDES3_VT_WR(TX_CONTEXT_DESC->tdes3,
+						    varvt);
+			TX_CONTEXT_DESC_TDES3_VLTV_WR(TX_CONTEXT_DESC->tdes3,
+						      0x1);
+		}
+
+		if (vartso_enable) {
+			/* get MSS and update */
+			TX_PKT_FEATURES_MSS_MSS_RD(tx_pkt_features->mss,
+						   varmss);
+			TX_CONTEXT_DESC_TDES2_MSS_WR(TX_CONTEXT_DESC->tdes2,
+						     varmss);
+			/* set MSS valid bit */
+			TX_CONTEXT_DESC_TDES3_TCMSSV_WR(TX_CONTEXT_DESC->tdes3,
+							0x1);
+			ptx_ring->default_mss = tx_pkt_features->mss;
+		}
 
 		original_start_index = ptx_ring->cur_tx;
 		INCR_TX_DESC_INDEX(ptx_ring->cur_tx, 1);
@@ -3073,6 +3068,10 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 	ptx_desc = GET_TX_DESC_PTR(qinx, start_index);
 	TX_NORMAL_DESC_TDES3_OWN_WR(ptx_desc->tdes3, 0x1);
 
+	/* set OWN bit of context descriptor */
+	if (original_start_index != start_index)
+		TX_CONTEXT_DESC_TDES3_OWN_WR(TX_CONTEXT_DESC->tdes3, 0x1);
+
 #ifdef EQOS_ENABLE_TX_DESC_DUMP
 	dump_tx_desc(pdata, original_start_index, (ptx_ring->cur_tx - 1),
 		     1, qinx);
@@ -3080,6 +3079,7 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 
 	/* issue a poll command to Tx DMA by writing address
 	 * of next immediate free descriptor */
+	wmb();
 	DMA_TDTP_TPDR_WR(qinx, GET_TX_DESC_DMA_ADDR(qinx, ptx_ring->cur_tx));
 
 	if (pdata->eee_enabled) {

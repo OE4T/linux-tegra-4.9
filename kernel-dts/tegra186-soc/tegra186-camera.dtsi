@@ -96,17 +96,6 @@
 			nvidia,frame-count = <16>;
 			nvidia,frame-size = <64>;
 		};
-		i2c@480 {
-			compatible = "nvidia,tegra186-camera-ivc-rpc-i2c-single";
-			reg = <0x0480>, <0x8480>;
-			reg-names = "rx", "tx";
-			nvidia,service = "i2c3-control";
-			nvidia,version = <0>;
-			nvidia,group = <1>;
-			nvidia,frame-count = <8>;
-			nvidia,frame-size = <128>;
-			device = <&cam_i2c>;
-		};
 		vinotify@12c0 {
 			compatible = "nvidia,tegra186-camera-ivc-protocol-vinotify";
 			reg = <0x012C0>, <0x92C0>;

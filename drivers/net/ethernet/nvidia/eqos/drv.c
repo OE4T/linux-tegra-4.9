@@ -1082,6 +1082,7 @@ static void eqos_default_tx_confs_single_q(struct eqos_prv_data *pdata,
 					   UINT qinx)
 {
 	struct eqos_tx_queue *queue_data = GET_TX_QUEUE_PTR(qinx);
+	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct tx_ring *ptx_ring =
 	    GET_TX_WRAPPER_DESC(qinx);
 
@@ -1098,6 +1099,7 @@ static void eqos_default_tx_confs_single_q(struct eqos_prv_data *pdata,
 	ptx_ring->vlan_tag_present = 0;
 	ptx_ring->context_setup = 0;
 	ptx_ring->default_mss = 0;
+	hw_if->enable_vlan_desc_control(pdata);
 
 	pr_debug("<--eqos_default_tx_confs_single_q\n");
 }
@@ -1753,19 +1755,15 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 #endif
 		vlan_tag |= (skb->priority << 13);
 		ptx_ring->vlan_tag_present = 1;
-		if (vlan_tag != ptx_ring->vlan_tag_id ||
-		    ptx_ring->context_setup == 1) {
-			ptx_ring->vlan_tag_id = vlan_tag;
-			if (Y_TRUE == ptx_ring->tx_vlan_tag_via_reg) {
-				pr_err("VLAN control info update via reg\n");
-				hw_if->enable_vlan_reg_control(ptx_ring);
-			} else {
-				hw_if->enable_vlan_desc_control(pdata);
-				TX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_WR
-				    (tx_pkt_features->pkt_attributes, 1);
-				TX_PKT_FEATURES_VLAN_TAG_VT_WR
-				    (tx_pkt_features->vlan_tag, vlan_tag);
-			}
+		ptx_ring->vlan_tag_id = vlan_tag;
+		if (Y_TRUE == ptx_ring->tx_vlan_tag_via_reg) {
+			pr_err("VLAN control info update via reg\n");
+			hw_if->enable_vlan_reg_control(ptx_ring);
+		} else {
+			TX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_WR
+			    (tx_pkt_features->pkt_attributes, 1);
+			TX_PKT_FEATURES_VLAN_TAG_VT_WR
+			    (tx_pkt_features->vlan_tag, vlan_tag);
 		}
 		pdata->xstats.tx_vlan_pkt_n++;
 	}

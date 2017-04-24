@@ -106,6 +106,7 @@ static void gk20a_tegra_secure_page_destroy(struct device *dev,
 				       struct secure_page_buffer *secure_buffer)
 {
 	DEFINE_DMA_ATTRS(attrs);
+	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, __DMA_ATTR(attrs));
 	dma_free_attrs(&tegra_vpr_dev, secure_buffer->size,
 			(void *)(uintptr_t)secure_buffer->iova,
 			secure_buffer->iova, __DMA_ATTR(attrs));
@@ -123,8 +124,9 @@ int gk20a_tegra_secure_page_alloc(struct device *dev)
 	if (g->is_fmodel)
 		return -EINVAL;
 
+	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, __DMA_ATTR(attrs));
 	(void)dma_alloc_attrs(&tegra_vpr_dev, size, &iova,
-				      DMA_MEMORY_NOMAP, __DMA_ATTR(attrs));
+				      GFP_KERNEL, __DMA_ATTR(attrs));
 	if (dma_mapping_error(&tegra_vpr_dev, iova))
 		return -ENOMEM;
 
@@ -142,6 +144,7 @@ static void gk20a_tegra_secure_destroy(struct gk20a *g,
 
 	if (desc->mem.priv.sgt) {
 		phys_addr_t pa = sg_phys(desc->mem.priv.sgt->sgl);
+		dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, __DMA_ATTR(attrs));
 		dma_free_attrs(&tegra_vpr_dev, desc->mem.size,
 			(void *)(uintptr_t)pa,
 			pa, __DMA_ATTR(attrs));
@@ -164,8 +167,9 @@ int gk20a_tegra_secure_alloc(struct device *dev,
 	if (!platform->secure_alloc_ready)
 		return -EINVAL;
 
+	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, __DMA_ATTR(attrs));
 	(void)dma_alloc_attrs(&tegra_vpr_dev, size, &iova,
-				      DMA_MEMORY_NOMAP, __DMA_ATTR(attrs));
+				      GFP_KERNEL, __DMA_ATTR(attrs));
 	if (dma_mapping_error(&tegra_vpr_dev, iova))
 		return -ENOMEM;
 

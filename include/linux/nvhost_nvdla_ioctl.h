@@ -79,7 +79,7 @@ struct nvdla_pin_unpin_args {
 struct nvdla_submit_args {
 	__u64 tasks;
 	__u16 num_tasks;
-#define MAX_TASKS_PER_SUBMIT	32
+#define MAX_TASKS_PER_SUBMIT		24
 #define NVDLA_SUBMIT_FLAGS_ATOMIC	(1 << 0)
 	__u16 flags;
 	__u32 version;
@@ -134,6 +134,7 @@ struct nvdla_mem_handle {
  * @output_task_status		pointer to output task status struct table
  * @num_addresses		total number of addressed passed in structure
  * @address_list		pointer to address list
+ * @timeout			task timeout
  *
  */
 struct nvdla_ioctl_submit_task {
@@ -152,6 +153,7 @@ struct nvdla_ioctl_submit_task {
 	__u64 input_task_status;
 	__u64 output_task_status;
 	__u64 address_list;
+	__u64 timeout;
 };
 
 /**

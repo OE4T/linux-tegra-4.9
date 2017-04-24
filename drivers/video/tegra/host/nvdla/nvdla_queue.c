@@ -806,6 +806,7 @@ int nvdla_fill_task_desc(struct nvdla_task *task)
 	task_desc->version = DLA_DESCRIPTOR_VERSION;
 	task_desc->engine_id = DLA_ENGINE_ID;
 	task_desc->size = nvdla_get_task_desc_size();
+	task_desc->timeout = task->timeout;
 
 	/* update current task sequeue, make sure wrap around condition */
 	queue->sequence = queue->sequence + 1;

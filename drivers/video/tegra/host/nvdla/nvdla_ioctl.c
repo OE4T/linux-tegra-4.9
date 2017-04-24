@@ -518,6 +518,7 @@ static int nvdla_fill_task(struct nvhost_queue *queue,
 	task->num_in_task_status = local_task->num_input_task_status;
 	task->num_out_task_status = local_task->num_output_task_status;
 	task->num_addresses = local_task->num_addresses;
+	task->timeout = local_task->timeout;
 
 	/* assign memory for local task action lists and buf handles */
 	mem = task;

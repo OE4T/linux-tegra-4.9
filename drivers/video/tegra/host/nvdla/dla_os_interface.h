@@ -174,6 +174,7 @@ struct dla_task_descriptor {
 	uint64_t address_list;
 	uint16_t num_addresses;
 	uint16_t status;
+	uint64_t timeout;
 } __attribute__ ((packed, aligned(4)));
 
 struct dla_action_list {

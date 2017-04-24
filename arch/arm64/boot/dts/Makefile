@@ -40,8 +40,10 @@ DTCCPP_FLAGS += -I$(tegra-dtstree)/platform/tegra/common/kernel-dts
 ifeq ($(CONFIG_ARCH_TEGRA_210_SOC),y)
 DTC_FLAGS += -i $(tegra-dtstree)/soc/t210/kernel-dts
 DTC_FLAGS += -i $(tegra-dtstree)/platform/t210/common/kernel-dts
+DTC_FLAGS += -i $(tegra-dtstree)/platform/t210b01/common/kernel-dts
 DTCCPP_FLAGS += -I$(tegra-dtstree)/soc/t210/kernel-dts
 DTCCPP_FLAGS += -I$(tegra-dtstree)/platform/t210/common/kernel-dts
+DTCCPP_FLAGS += -I$(tegra-dtstree)/platform/t210b01/common/kernel-dts
 endif
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)

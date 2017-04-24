@@ -126,20 +126,6 @@
 
 #define SDHOST_LOW_VOLT_MIN	1800000
 
-const char *auto_calib_offset_prods[] = {
-	"autocal-pu-pd-offset-default-3v3", /* DS */
-	"autocal-pu-pd-offset-hs-3v3", /* MMC HS */
-	"autocal-pu-pd-offset-hs-3v3", /* SD HS */
-	"autocal-pu-pd-offset-default-1v8", /* SDR12 */
-	"autocal-pu-pd-offset-hs-1v8", /* SDR25 */
-	"autocal-pu-pd-offset-sdr50-1v8", /* SDR50 */
-	"autocal-pu-pd-offset-sdr104-1v8", /* SDR104 */
-	"autocal-pu-pd-offset-default-1v8", /* DDR50 */
-	"autocal-pu-pd-offset-default-1v8", /* DDR52 */
-	"autocal-pu-pd-offset-hs200-1v8", /* HS200 */
-	"autocal-pu-pd-offset-hs400-1v8", /* HS400 */
-};
-
 static char prod_device_states[MMC_TIMING_COUNTER][20] = {
 	"prod_c_ds", /* MMC_TIMING_LEGACY */
 	"prod_c_hs", /* MMC_TIMING_MMC_HS */

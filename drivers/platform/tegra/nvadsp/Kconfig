@@ -1,6 +1,5 @@
 config TEGRA_NVADSP
 	bool "Enable Host ADSP driver"
-	depends on ARCH_TEGRA_APE
 	default n
 	help
 	  Enables support for Host ADSP driver.
@@ -54,7 +53,6 @@ config TEGRA_ADSP_FILEIO
 
 config TEGRA_EMC_APE_DFS
 	bool "Enable emc dfs due to APE"
-	depends on ARCH_TEGRA_APE
 	default n
 	help
 	  Enable emc dfs due to APE DRAM access

@@ -1,7 +1,7 @@
 /*
  * GM20B GPC MMU
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
 *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,6 +16,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/kind_gk20a.h"
 #include "gk20a/fb_gk20a.h"
+#include "gm20b/fb_gm20b.h"
 
 #include <nvgpu/hw/gm20b/hw_fb_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_top_gm20b.h>

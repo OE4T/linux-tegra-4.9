@@ -3979,7 +3979,7 @@ static const u8 tegra210_cpu_powergates[] = {
 	_lponly_(24, pex-bias, 4, DPD)			\
 	_lponly_(25, pex-clk1, 5, DPD)			\
 	_lponly_(26, pex-clk2, 6, DPD)			\
-	_pvonly_(27, pex-ctrl, 0, 11, DPD2)		\
+	_pvonly_(27, pex-ctrl, 11, 11, DPD2)		\
 	_lp_n_pv_(28, sdmmc1, 1, 12, 12, DPD2)		\
 	_lp_n_pv_(29, sdmmc3, 2, 13, 13, DPD2)		\
 	_lp_n_pv_(30, spi, 14, 22, 22, DPD2)		\
@@ -3989,7 +3989,8 @@ static const u8 tegra210_cpu_powergates[] = {
 	_lponly_(34, usb1, 10, DPD)			\
 	_lponly_(35, usb2, 11, DPD)			\
 	_lponly_(36, usb3, 18, DPD)			\
-	_lponly_(37, usb-bias, 12, DPD)
+	_lponly_(37, usb-bias, 12, DPD)			\
+	_pvonly_(38, sys, 12, UINT_MAX, DPD)
 
 static const struct tegra_pmc_io_pad_soc tegra210_io_pads[] = {
 	TEGRA210_IO_PAD_TABLE(TEGRA210_IO_PAD_LPONLY, TEGRA210_IO_PAD_PVONLY,

@@ -945,7 +945,7 @@ struct adsp_module *load_adsp_dynamic_module(const char *appname,
 
 error_release_fw:
 	release_firmware(fw);
-	return IS_ERR_VALUE(ret) ? ERR_PTR(ret) : mod;
+	return ret ? ERR_PTR(ret) : mod;
 
 unload_module:
 	unload_adsp_module(mod);

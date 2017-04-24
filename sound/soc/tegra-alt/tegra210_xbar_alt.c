@@ -597,7 +597,7 @@ static const struct of_device_id tegra210_xbar_of_match[] = {
 	{},
 };
 
-int tegra210_xbar_probe(struct platform_device *pdev)
+static int tegra210_xbar_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *match;
 	struct tegra_xbar_soc_data *soc_data;

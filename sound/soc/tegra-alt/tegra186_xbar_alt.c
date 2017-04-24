@@ -860,7 +860,7 @@ static struct of_dev_auxdata tegra186_xbar_auxdata[] = {
 };
 
 
-int tegra186_xbar_registration(struct platform_device *pdev)
+static int tegra186_xbar_registration(struct platform_device *pdev)
 {
 	int ret;
 	int num_dapm_widgets, num_dapm_routes;
@@ -901,7 +901,6 @@ int tegra186_xbar_registration(struct platform_device *pdev)
 
 	return 0;
 }
-EXPORT_SYMBOL_GPL(tegra186_xbar_registration);
 
 static const struct regmap_config tegra186_xbar_regmap_config = {
 	.reg_bits = 32,
@@ -930,7 +929,7 @@ static const struct of_device_id tegra186_xbar_of_match[] = {
 	{},
 };
 
-int tegra186_xbar_probe(struct platform_device *pdev)
+static int tegra186_xbar_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *match;
 	struct tegra_xbar_soc_data *soc_data;

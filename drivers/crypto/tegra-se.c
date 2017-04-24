@@ -118,6 +118,7 @@ struct tegra_se_chipdata {
 	bool rsa_key_rw_op;
 	u32 aes_keydata_reg_sz;
 	bool ahb_ack;
+	bool handle_sc7;
 };
 
 struct tegra_se_dev {
@@ -2852,6 +2853,7 @@ static struct tegra_se_chipdata tegra_se_chipdata = {
 	.rsa_key_rw_op = true,
 	.aes_keydata_reg_sz = 128,
 	.ahb_ack = false,
+	.handle_sc7 = true,
 };
 
 static struct tegra_se_chipdata tegra11_se_chipdata = {
@@ -2871,6 +2873,7 @@ static struct tegra_se_chipdata tegra11_se_chipdata = {
 	.rsa_key_rw_op = true,
 	.aes_keydata_reg_sz = 128,
 	.ahb_ack = false,
+	.handle_sc7 = true,
 };
 
 static struct tegra_se_chipdata tegra21_se_chipdata = {
@@ -2890,6 +2893,7 @@ static struct tegra_se_chipdata tegra21_se_chipdata = {
 	.rsa_key_rw_op = false,
 	.aes_keydata_reg_sz = 32,
 	.ahb_ack = false,
+	.handle_sc7 = true,
 };
 
 static struct tegra_se_chipdata tegra210b01_se_chipdata = {
@@ -2909,6 +2913,7 @@ static struct tegra_se_chipdata tegra210b01_se_chipdata = {
 	.rsa_key_rw_op = false,
 	.aes_keydata_reg_sz = 32,
 	.ahb_ack = true,
+	.handle_sc7 = false,
 };
 
 static struct of_device_id tegra_se_of_match[] = {
@@ -3706,6 +3711,11 @@ static int se_suspend(struct device *dev, bool polling)
 		return -ENODEV;
 
 	save_se_device = dev;
+
+	if (!se_dev->chipdata->handle_sc7) {
+		/* SC7 is handled in Secure OS drivers */
+		return 0;
+	}
 
 	se_dev->polling = polling;
 

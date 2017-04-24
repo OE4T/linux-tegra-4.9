@@ -637,10 +637,6 @@ static void t194_init_regs(struct platform_device *pdev, bool prod)
 
 	init_syncpt_thresh_reg(nvhost_get_host(pdev));
 
-	/* simulator cannot handle following writes - skip them */
-	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
-		return;
-
 	while (map_regs->host1x_offset) {
 		host1x_hypervisor_writel(pdev,
 					 map_regs->host1x_offset,

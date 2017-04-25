@@ -95,3 +95,13 @@ inline u32 nv_sor_dp_int_enable_t19x(void)
 	return NV_SOR_DP_INT_ENABLE_T19X;
 }
 
+/* This function either blocks or unblocks the SOR AFIFO. */
+inline void tegra_sor_clk_switch_setup_t19x(struct tegra_dc_sor_data *sor,
+					bool unblock)
+{
+	tegra_sor_write_field(sor, NV_SOR_DP_LINKCTL(sor->portnum),
+			NV_SOR_DP_LINKCTL_ASYNC_FIFO_BLOCK_MASK,
+			(unblock ? NV_SOR_DP_LINKCTL_ASYNC_FIFO_BLOCK_NO :
+			NV_SOR_DP_LINKCTL_ASYNC_FIFO_BLOCK_YES));
+}
+

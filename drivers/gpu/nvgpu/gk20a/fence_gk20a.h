@@ -17,8 +17,6 @@
 #ifndef _GK20A_FENCE_H_
 #define _GK20A_FENCE_H_
 
-#include <linux/wait.h>
-
 #include <nvgpu/kref.h>
 
 struct platform_device;
@@ -42,7 +40,7 @@ struct gk20a_fence {
 
 	/* Valid for fences created from semaphores: */
 	struct nvgpu_semaphore *semaphore;
-	wait_queue_head_t *semaphore_wq;
+	struct nvgpu_cond *semaphore_wq;
 
 	/* Valid for fences created from syncpoints: */
 	struct platform_device *host1x_pdev;
@@ -59,7 +57,7 @@ int gk20a_fence_from_semaphore(
 		struct gk20a_fence *fence_out,
 		struct sync_timeline *timeline,
 		struct nvgpu_semaphore *semaphore,
-		wait_queue_head_t *semaphore_wq,
+		struct nvgpu_cond *semaphore_wq,
 		bool wfi, bool need_sync_fence);
 
 int gk20a_fence_from_syncpt(

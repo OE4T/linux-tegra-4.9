@@ -413,8 +413,8 @@ static int gk20a_channel_wait_semaphore(struct channel_gk20a *ch,
 
 	semaphore = data + (offset & ~PAGE_MASK);
 
-	remain = wait_event_interruptible_timeout(
-			ch->semaphore_wq,
+	remain = NVGPU_COND_WAIT_INTERRUPTIBLE(
+			&ch->semaphore_wq,
 			*semaphore == payload || ch->has_timedout,
 			timeout);
 

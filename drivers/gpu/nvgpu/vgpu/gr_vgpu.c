@@ -928,7 +928,7 @@ int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info)
 		wake_up(&ch->notifier_wq);
 		break;
 	case TEGRA_VGPU_GR_INTR_SEMAPHORE:
-		wake_up_interruptible_all(&ch->semaphore_wq);
+		nvgpu_cond_broadcast_interruptible(&ch->semaphore_wq);
 		break;
 	case TEGRA_VGPU_GR_INTR_SEMAPHORE_TIMEOUT:
 		gk20a_set_error_notifier(ch,

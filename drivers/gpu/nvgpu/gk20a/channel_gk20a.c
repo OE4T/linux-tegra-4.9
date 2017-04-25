@@ -252,7 +252,7 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 	nvgpu_mutex_release(&ch->joblist.cleanup_lock);
 
 	if (released_job_semaphore)
-		wake_up_interruptible_all(&ch->semaphore_wq);
+		nvgpu_cond_broadcast_interruptible(&ch->semaphore_wq);
 
 	/*
 	 * When closing the channel, this scheduled update holds one ref which
@@ -850,7 +850,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	 * an address space bound and allocate a gpfifo and grctx. */
 
 	init_waitqueue_head(&ch->notifier_wq);
-	init_waitqueue_head(&ch->semaphore_wq);
+	nvgpu_cond_init(&ch->semaphore_wq);
 
 	ch->update_fn = NULL;
 	ch->update_fn_data = NULL;
@@ -2783,7 +2783,8 @@ void gk20a_channel_semaphore_wakeup(struct gk20a *g, bool post_events)
 		struct channel_gk20a *c = g->fifo.channel+chid;
 		if (gk20a_channel_get(c)) {
 			if (atomic_read(&c->bound)) {
-				wake_up_interruptible_all(&c->semaphore_wq);
+				nvgpu_cond_broadcast_interruptible(
+						&c->semaphore_wq);
 				if (post_events) {
 					if (gk20a_is_channel_marked_as_tsg(c)) {
 						struct tsg_gk20a *tsg =

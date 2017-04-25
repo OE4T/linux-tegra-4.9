@@ -208,8 +208,8 @@ static int nvgpu_semaphore_fence_wait(struct gk20a_fence *f, long timeout)
 	if (!nvgpu_semaphore_is_acquired(f->semaphore))
 		return 0;
 
-	remain = wait_event_interruptible_timeout(
-		*f->semaphore_wq,
+	remain = NVGPU_COND_WAIT_INTERRUPTIBLE(
+		f->semaphore_wq,
 		!nvgpu_semaphore_is_acquired(f->semaphore),
 		timeout);
 	if (remain == 0 && nvgpu_semaphore_is_acquired(f->semaphore))
@@ -235,7 +235,7 @@ int gk20a_fence_from_semaphore(
 		struct gk20a_fence *fence_out,
 		struct sync_timeline *timeline,
 		struct nvgpu_semaphore *semaphore,
-		wait_queue_head_t *semaphore_wq,
+		struct nvgpu_cond *semaphore_wq,
 		bool wfi, bool need_sync_fence)
 {
 	struct gk20a_fence *f = fence_out;

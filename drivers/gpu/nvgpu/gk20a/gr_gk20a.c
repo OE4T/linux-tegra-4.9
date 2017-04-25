@@ -5703,7 +5703,7 @@ static int gk20a_gr_handle_semaphore_pending(struct gk20a *g,
 			NVGPU_IOCTL_CHANNEL_EVENT_ID_GR_SEMAPHORE_WRITE_AWAKEN);
 	}
 
-	wake_up_interruptible_all(&ch->semaphore_wq);
+	nvgpu_cond_broadcast(&ch->semaphore_wq);
 
 	return 0;
 }

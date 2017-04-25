@@ -710,7 +710,7 @@ static void vgpu_fifo_set_ctx_mmu_error(struct gk20a *g,
 	ch->has_timedout = true;
 	wmb();
 	/* unblock pending waits */
-	wake_up(&ch->semaphore_wq);
+	nvgpu_cond_broadcast_interruptible(&ch->semaphore_wq);
 	wake_up(&ch->notifier_wq);
 }
 

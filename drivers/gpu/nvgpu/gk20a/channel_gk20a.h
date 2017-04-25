@@ -218,7 +218,7 @@ struct channel_gk20a {
 	struct priv_cmd_queue priv_cmd_q;
 
 	wait_queue_head_t notifier_wq;
-	wait_queue_head_t semaphore_wq;
+	struct nvgpu_cond semaphore_wq;
 
 	u32 timeout_accumulated_ms;
 	u32 timeout_gpfifo_get;

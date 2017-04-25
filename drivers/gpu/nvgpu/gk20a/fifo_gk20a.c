@@ -1338,7 +1338,7 @@ static void gk20a_fifo_set_has_timedout_and_wake_up_wqs(struct gk20a *g,
 		refch->has_timedout = true;
 		wmb();
 		/* unblock pending waits */
-		wake_up(&refch->semaphore_wq);
+		nvgpu_cond_broadcast_interruptible(&refch->semaphore_wq);
 		wake_up(&refch->notifier_wq);
 	}
 }

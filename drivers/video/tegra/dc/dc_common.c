@@ -119,7 +119,7 @@ static struct of_device_id tegra_display_common_of_match[] = {
 };
 #endif
 
-static unsigned int max_heads;
+static int max_heads;
 static struct tegra_dc_common *dc_common;
 
 /**
@@ -1018,7 +1018,7 @@ static int tegra_dc_common_probe(struct platform_device *pdev)
 	}
 
 	max_heads = tegra_dc_get_numof_dispheads();
-	if (!max_heads) {
+	if (max_heads <= 0) {
 		dev_err(&pdev->dev, "max no. of heads isn't configured\n");
 		return -ENOENT;
 	}

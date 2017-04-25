@@ -32,6 +32,7 @@ struct dbg_profiler_object_data;
 
 #include <linux/sched.h>
 #include <nvgpu/lock.h>
+#include <nvgpu/thread.h>
 #include <linux/irqreturn.h>
 #include <linux/version.h>
 #include <linux/cdev.h>
@@ -1142,7 +1143,7 @@ struct gk20a {
 	wait_queue_head_t sw_irq_nonstall_last_handled_wq;
 
 	struct gk20a_channel_worker {
-		struct task_struct *poll_task;
+		struct nvgpu_thread poll_task;
 		atomic_t put;
 		wait_queue_head_t wq;
 		struct nvgpu_list_node items;

@@ -16,7 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/kthread.h>
 #include <trace/events/gk20a.h>
 #include <linux/dma-buf.h>
 
@@ -1780,7 +1779,7 @@ static int gk20a_channel_poll_worker(void *arg)
 	gk20a_dbg_fn("");
 
 	start_wait = jiffies;
-	while (!kthread_should_stop()) {
+	while (!nvgpu_thread_should_stop(&worker->poll_task)) {
 		bool got_events;
 
 		got_events = wait_event_timeout(
@@ -1804,26 +1803,29 @@ static int gk20a_channel_poll_worker(void *arg)
  */
 int nvgpu_channel_worker_init(struct gk20a *g)
 {
-	struct task_struct *task;
+	int err;
+	char thread_name[64];
 
 	atomic_set(&g->channel_worker.put, 0);
 	init_waitqueue_head(&g->channel_worker.wq);
 	nvgpu_init_list_node(&g->channel_worker.items);
 	nvgpu_spinlock_init(&g->channel_worker.items_lock);
-	task = kthread_run(gk20a_channel_poll_worker, g,
+	snprintf(thread_name, sizeof(thread_name),
 			"nvgpu_channel_poll_%s", g->name);
-	if (IS_ERR(task)) {
+
+	err = nvgpu_thread_create(&g->channel_worker.poll_task, g,
+			gk20a_channel_poll_worker, thread_name);
+	if (err) {
 		nvgpu_err(g, "failed to start channel poller thread");
-		return PTR_ERR(task);
+		return err;
 	}
-	g->channel_worker.poll_task = task;
 
 	return 0;
 }
 
 void nvgpu_channel_worker_deinit(struct gk20a *g)
 {
-	kthread_stop(g->channel_worker.poll_task);
+	nvgpu_thread_stop(&g->channel_worker.poll_task);
 }
 
 /**

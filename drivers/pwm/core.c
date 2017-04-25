@@ -556,7 +556,7 @@ int pwm_apply_state(struct pwm_device *pwm, struct pwm_state *state)
 			if (!pwm->chip->ops->set_capture_window_length)
 				return -ENOTSUPP;
 
-			err = pwm->chip->ops->set_ramp_time(
+			err = pwm->chip->ops->set_capture_window_length(
 					pwm->chip, pwm, state->capture_win_len);
 			if (err)
 				return err;

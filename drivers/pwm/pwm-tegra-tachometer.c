@@ -149,8 +149,7 @@ static int pwm_tegra_tacho_capture(struct pwm_chip *chip,
 	if (tach0 & TACH_FAN_TACH0_OVERFLOW_MASK) {
 		/* Fan is stalled, clear overflow state by writing 1 */
 		dev_info(ptt->dev, "Tachometer Overflow is detected\n");
-		tachometer_writel(ptt, TACH_FAN_TACH0_OVERFLOW_MASK,
-				  TACH_FAN_TACH0);
+		tachometer_writel(ptt, tach0, TACH_FAN_TACH0);
 	}
 
 	if (ptt->enable_clk_gate)
@@ -327,4 +326,5 @@ module_platform_driver(tegra_tach_driver);
 
 MODULE_DESCRIPTION("PWM based NVIDIA Tegra Tachometer driver");
 MODULE_AUTHOR("Laxman Dewangan <ldewangan@nvidia.com>");
+MODULE_AUTHOR("R Raj Kumar <rrajk@nvidia.com>");
 MODULE_LICENSE("GPL v2");

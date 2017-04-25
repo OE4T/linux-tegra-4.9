@@ -28,6 +28,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/list.h>
 #include <nvgpu/circ_buf.h>
+#include <nvgpu/cond.h>
 
 #include "gk20a.h"
 #include "debug_gk20a.h"
@@ -385,11 +386,11 @@ void gk20a_channel_free_error_notifiers(struct channel_gk20a *ch)
 
 static void gk20a_wait_until_counter_is_N(
 	struct channel_gk20a *ch, atomic_t *counter, int wait_value,
-	wait_queue_head_t *wq, const char *caller, const char *counter_name)
+	struct nvgpu_cond *c, const char *caller, const char *counter_name)
 {
 	while (true) {
-		if (wait_event_timeout(
-			    *wq,
+		if (NVGPU_COND_WAIT(
+			    c,
 			    atomic_read(counter) == wait_value,
 			    msecs_to_jiffies(5000)) > 0)
 			break;
@@ -712,7 +713,7 @@ void _gk20a_channel_put(struct channel_gk20a *ch, const char *caller)
 	gk20a_channel_save_ref_source(ch, channel_gk20a_ref_action_put);
 	trace_gk20a_channel_put(ch->hw_chid, caller);
 	atomic_dec(&ch->ref_count);
-	wake_up_all(&ch->ref_count_dec_wq);
+	nvgpu_cond_broadcast(&ch->ref_count_dec_wq);
 
 	/* More puts than gets. Channel is probably going to get
 	 * stuck. */
@@ -2624,7 +2625,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	nvgpu_spinlock_init(&c->ref_obtain_lock);
 	atomic_set(&c->ref_count, 0);
 	c->referenceable = false;
-	init_waitqueue_head(&c->ref_count_dec_wq);
+	nvgpu_cond_init(&c->ref_count_dec_wq);
 
 #if GK20A_CHANNEL_REFCOUNT_TRACKING
 	nvgpu_spinlock_init(&c->ref_actions_lock);

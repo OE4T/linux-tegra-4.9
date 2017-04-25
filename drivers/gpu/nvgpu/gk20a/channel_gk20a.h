@@ -24,6 +24,7 @@
 
 #include <nvgpu/lock.h>
 #include <nvgpu/timers.h>
+#include <nvgpu/cond.h>
 
 struct gk20a;
 struct gr_gk20a;
@@ -169,7 +170,7 @@ struct channel_gk20a {
 	struct nvgpu_spinlock ref_obtain_lock;
 	bool referenceable;
 	atomic_t ref_count;
-	wait_queue_head_t ref_count_dec_wq;
+	struct nvgpu_cond ref_count_dec_wq;
 #if GK20A_CHANNEL_REFCOUNT_TRACKING
 	/*
 	 * Ring buffer for most recent refcount gets and puts. Protected by

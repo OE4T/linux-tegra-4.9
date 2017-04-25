@@ -1449,6 +1449,11 @@ static int tegra_se_sha_init(struct ahash_request *req)
 	return 0;
 }
 
+static int tegra_se_shash_init(struct shash_desc *desc)
+{
+	return 0;
+}
+
 static int tegra_se_sha_update(struct ahash_request *req)
 {
 	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
@@ -1591,9 +1596,142 @@ static int tegra_se_sha_final(struct ahash_request *req)
 	return err;
 }
 
+static int tegra_se_shash_update(struct shash_desc *desc,
+				const u8 *data, unsigned int len)
+{
+	struct tegra_se_sha_context *sha_ctx = crypto_shash_ctx(desc->tfm);
+	struct tegra_se_dev *se_dev = sg_tegra_se_dev;
+	struct tegra_se_ll *src_ll;
+	u32 *temp_virt = NULL;
+	unsigned long freq = 0;
+	int err = 0;
+	dma_addr_t tmp_buf_adr;	/* Destination buffer dma address */
+
+	switch (crypto_shash_digestsize(desc->tfm)) {
+	case SHA1_DIGEST_SIZE:
+		sha_ctx->op_mode = SE_AES_OP_MODE_SHA1;
+		freq = se_dev->chipdata->sha1_freq;
+		break;
+
+	case SHA224_DIGEST_SIZE:
+		sha_ctx->op_mode = SE_AES_OP_MODE_SHA224;
+		freq = se_dev->chipdata->sha224_freq;
+		break;
+
+	case SHA256_DIGEST_SIZE:
+		sha_ctx->op_mode = SE_AES_OP_MODE_SHA256;
+		freq = se_dev->chipdata->sha256_freq;
+		break;
+
+	case SHA384_DIGEST_SIZE:
+		sha_ctx->op_mode = SE_AES_OP_MODE_SHA384;
+		freq = se_dev->chipdata->sha384_freq;
+		break;
+
+	case SHA512_DIGEST_SIZE:
+		sha_ctx->op_mode = SE_AES_OP_MODE_SHA512;
+		freq = se_dev->chipdata->sha512_freq;
+		break;
+
+	default:
+		return -EINVAL;
+	}
+
+	mutex_lock(&se_hw_lock);
+	pm_runtime_get_sync(se_dev->dev);
+
+	temp_virt = dma_alloc_coherent(se_dev->dev, len,
+				&tmp_buf_adr, GFP_KERNEL);
+	if (temp_virt == NULL) {
+		pr_err("\ndma_alloc_coherent failed\n");
+		err = -EINVAL;
+		goto exit;
+	}
+
+	dma_sync_single_for_device(se_dev->dev, tmp_buf_adr,
+					len, DMA_TO_DEVICE);
+
+	/* copy client buffer to local dmaable buffer*/
+	memcpy(temp_virt, data, len);
+
+	/* Prepare linked list for HW */
+	*se_dev->src_ll_buf =  0;
+	src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
+	src_ll->addr = tmp_buf_adr;
+	src_ll->data_len = len;
+
+	tegra_se_config_algo(se_dev, sha_ctx->op_mode, false, 0);
+	tegra_se_config_sha(se_dev, len, freq);
+	err = tegra_se_start_operation(se_dev, 0, false, true);
+	if (err != 0)
+		goto exit;
+
+exit:
+	pm_runtime_put(se_dev->dev);
+	mutex_unlock(&se_hw_lock);
+
+	return err;
+}
+
+static int tegra_se_shash_final(struct shash_desc *desc, u8 *out)
+{
+	struct tegra_se_sha_context *sha_ctx = crypto_shash_ctx(desc->tfm);
+	struct tegra_se_dev *se_dev = sg_tegra_se_dev;
+	int err = 0;
+
+	switch (crypto_shash_digestsize(desc->tfm)) {
+	case SHA1_DIGEST_SIZE:
+		sha_ctx->op_mode = SE_AES_OP_MODE_SHA1;
+		break;
+	case SHA224_DIGEST_SIZE:
+		sha_ctx->op_mode = SE_AES_OP_MODE_SHA224;
+		break;
+	case SHA256_DIGEST_SIZE:
+		sha_ctx->op_mode = SE_AES_OP_MODE_SHA256;
+		break;
+	case SHA384_DIGEST_SIZE:
+		sha_ctx->op_mode = SE_AES_OP_MODE_SHA384;
+		break;
+	case SHA512_DIGEST_SIZE:
+		sha_ctx->op_mode = SE_AES_OP_MODE_SHA512;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	/* take access to the hw */
+	mutex_lock(&se_hw_lock);
+	pm_runtime_get_sync(se_dev->dev);
+
+	/* read hash result */
+	tegra_se_read_hash_result(se_dev, out,
+		crypto_shash_digestsize(desc->tfm), true);
+
+	if ((sha_ctx->op_mode == SE_AES_OP_MODE_SHA384) ||
+		(sha_ctx->op_mode == SE_AES_OP_MODE_SHA512)) {
+		u32 *result = (u32 *)out;
+		u32 temp, i;
+
+		for (i = 0; i < crypto_shash_digestsize
+					(desc->tfm) / 4; i += 2) {
+			temp = result[i];
+			result[i] = result[i + 1];
+			result[i + 1] = temp;
+		}
+	}
+	pm_runtime_put(se_dev->dev);
+	mutex_unlock(&se_hw_lock);
+	return err;
+}
 static int tegra_se_sha_digest(struct ahash_request *req)
 {
 	return tegra_se_sha_init(req) ?: tegra_se_sha_final(req);
+}
+
+static int tegra_se_shash_digest(struct shash_desc *desc,
+			const u8 *data, unsigned int len, u8 *out)
+{
+	return tegra_se_shash_final(desc, out);
 }
 
 static int tegra_se_sha_cra_init(struct crypto_tfm *tfm)
@@ -1604,6 +1742,18 @@ static int tegra_se_sha_cra_init(struct crypto_tfm *tfm)
 }
 
 static void tegra_se_sha_cra_exit(struct crypto_tfm *tfm)
+{
+	/* do nothing */
+}
+
+static int tegra_se_shash_cra_init(struct crypto_tfm *tfm)
+{
+	unsigned int *hash = crypto_tfm_ctx(tfm);
+	*hash = 0;
+	return 0;
+}
+
+static void tegra_se_shash_cra_exit(struct crypto_tfm *tfm)
 {
 	/* do nothing */
 }
@@ -2790,6 +2940,105 @@ static struct ahash_alg hash_algs[] = {
 	}
 };
 
+static struct shash_alg shash_algs[] = {
+{
+		.init = tegra_se_shash_init,
+		.update = tegra_se_shash_update,
+		.final = tegra_se_shash_final,
+		.digest = tegra_se_shash_digest,
+		.digestsize = SHA1_DIGEST_SIZE,
+		.statesize = SHA1_STATE_SIZE,
+		.base = {
+			.cra_name = "sha1",
+			.cra_driver_name = "tegra-se-sha1-shash",
+			.cra_priority = 100,
+			.cra_flags = CRYPTO_ALG_TYPE_SHASH,
+			.cra_blocksize = SHA1_BLOCK_SIZE,
+			.cra_ctxsize = sizeof(struct tegra_se_sha_context),
+			.cra_alignmask = 0,
+			.cra_module = THIS_MODULE,
+			.cra_init = tegra_se_shash_cra_init,
+			.cra_exit = tegra_se_shash_cra_exit,
+		}
+	}, {
+		.init = tegra_se_shash_init,
+		.update = tegra_se_shash_update,
+		.final = tegra_se_shash_final,
+		.digest = tegra_se_shash_digest,
+		.digestsize = SHA224_DIGEST_SIZE,
+		.statesize = SHA224_STATE_SIZE,
+		.base = {
+			.cra_name = "sha224",
+			.cra_driver_name = "tegra-se-sha224-shash",
+			.cra_priority = 100,
+			.cra_flags = CRYPTO_ALG_TYPE_SHASH,
+			.cra_blocksize = SHA224_DIGEST_SIZE,
+			.cra_ctxsize = sizeof(struct tegra_se_sha_context),
+			.cra_alignmask = 0,
+			.cra_module = THIS_MODULE,
+			.cra_init = tegra_se_shash_cra_init,
+			.cra_exit = tegra_se_shash_cra_exit,
+		}
+	}, {
+		.init = tegra_se_shash_init,
+		.update = tegra_se_shash_update,
+		.final = tegra_se_shash_final,
+		.digest = tegra_se_shash_digest,
+		.digestsize = SHA256_DIGEST_SIZE,
+		.statesize = SHA256_STATE_SIZE,
+		.base = {
+			.cra_name = "sha256",
+			.cra_driver_name = "tegra-se-sha256-shash",
+			.cra_priority = 100,
+			.cra_flags = CRYPTO_ALG_TYPE_SHASH,
+			.cra_blocksize = SHA256_BLOCK_SIZE,
+			.cra_ctxsize = sizeof(struct tegra_se_sha_context),
+			.cra_alignmask = 0,
+			.cra_module = THIS_MODULE,
+			.cra_init = tegra_se_shash_cra_init,
+			.cra_exit = tegra_se_shash_cra_exit,
+		}
+	}, {
+		.init = tegra_se_shash_init,
+		.update = tegra_se_shash_update,
+		.final = tegra_se_shash_final,
+		.digest = tegra_se_shash_digest,
+		.digestsize = SHA384_DIGEST_SIZE,
+		.statesize = SHA384_STATE_SIZE,
+		.base = {
+			.cra_name = "sha384",
+			.cra_driver_name = "tegra-se-sha384-shash",
+			.cra_priority = 100,
+			.cra_flags = CRYPTO_ALG_TYPE_SHASH,
+			.cra_blocksize = SHA384_BLOCK_SIZE,
+			.cra_ctxsize = sizeof(struct tegra_se_sha_context),
+			.cra_alignmask = 0,
+			.cra_module = THIS_MODULE,
+			.cra_init = tegra_se_shash_cra_init,
+			.cra_exit = tegra_se_shash_cra_exit,
+		}
+	}, {
+		.init = tegra_se_shash_init,
+		.update = tegra_se_shash_update,
+		.final = tegra_se_shash_final,
+		.digest = tegra_se_shash_digest,
+		.digestsize = SHA512_DIGEST_SIZE,
+		.statesize = SHA512_STATE_SIZE,
+		.base = {
+			.cra_name = "sha512",
+			.cra_driver_name = "tegra-se-sha512-shash",
+			.cra_priority = 100,
+			.cra_flags = CRYPTO_ALG_TYPE_SHASH,
+			.cra_blocksize = SHA512_BLOCK_SIZE,
+			.cra_ctxsize = sizeof(struct tegra_se_sha_context),
+			.cra_alignmask = 0,
+			.cra_module = THIS_MODULE,
+			.cra_init = tegra_se_shash_cra_init,
+			.cra_exit = tegra_se_shash_cra_exit,
+		}
+	}
+};
+
 static struct akcipher_alg rsa_alg = {
 	.encrypt = tegra_se_rsa_op,
 	.decrypt = tegra_se_rsa_op,
@@ -3087,12 +3336,24 @@ static int tegra_se_probe(struct platform_device *pdev)
 		}
 	}
 
+	for (j = 0; j < ARRAY_SIZE(shash_algs); j++) {
+		if (is_algo_supported(se_dev, shash_algs[j].base.cra_name)) {
+			err = crypto_register_shash(&shash_algs[j]);
+			if (err) {
+				dev_err(se_dev->dev,
+				"crypto_register_shash alg failed index[%d] err: %d\n",
+				j, err);
+				goto fail_shash;
+			}
+		}
+	}
+
 	for (j = 0; j < ARRAY_SIZE(hash_algs); j++) {
 		if (is_algo_supported(se_dev, hash_algs[j].halg.base.cra_name)) {
 			err = crypto_register_ahash(&hash_algs[j]);
 			if (err) {
 				dev_err(se_dev->dev,
-				"crypto_register_sha alg failed index[%d] err: %d \n",
+				"crypto_register_sha alg failed index[%d] err: %d\n",
 				j, err);
 				goto fail_ahash;
 			}
@@ -3206,6 +3467,11 @@ fail_akcipher:
 			crypto_unregister_ahash(&hash_algs[k]);
 	}
 fail_ahash:
+	for (k = 0; k < j; k++) {
+		if (is_algo_supported(se_dev, shash_algs[k].base.cra_name))
+			crypto_unregister_shash(&shash_algs[k]);
+	}
+fail_shash:
 	for (k = 0; k < i; k++) {
 		if (is_algo_supported(se_dev, aes_algs[k].cra_name))
 			crypto_unregister_alg(&aes_algs[k]);
@@ -3249,6 +3515,10 @@ static int tegra_se_remove(struct platform_device *pdev)
 	for (i = 0; i < ARRAY_SIZE(hash_algs); i++) {
 		if (is_algo_supported(se_dev, hash_algs[i].halg.base.cra_name))
 			crypto_unregister_ahash(&hash_algs[i]);
+	}
+	for (i = 0; i < ARRAY_SIZE(shash_algs); i++) {
+		if (is_algo_supported(se_dev, shash_algs[i].base.cra_name))
+			crypto_unregister_shash(&shash_algs[i]);
 	}
 	for (i = 0; i < ARRAY_SIZE(aes_algs); i++) {
 		if (is_algo_supported(se_dev, aes_algs[i].cra_name))
@@ -3952,4 +4222,3 @@ MODULE_DESCRIPTION("Tegra Crypto algorithm support");
 MODULE_AUTHOR("NVIDIA Corporation");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("tegra-se");
-

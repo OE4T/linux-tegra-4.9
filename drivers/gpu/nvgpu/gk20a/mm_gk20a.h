@@ -140,22 +140,6 @@ struct priv_cmd_entry {
 	u32 size;	/* in words */
 };
 
-struct vm_reserved_va_node {
-	struct nvgpu_list_node reserved_va_list;
-	struct nvgpu_list_node buffer_list_head;
-	u32 pgsz_idx;
-	u64 vaddr_start;
-	u64 size;
-	bool sparse;
-};
-
-static inline struct vm_reserved_va_node *
-vm_reserved_va_node_from_reserved_va_list(struct nvgpu_list_node *node)
-{
-	return (struct vm_reserved_va_node *)
-		((uintptr_t)node - offsetof(struct vm_reserved_va_node, reserved_va_list));
-};
-
 struct gk20a;
 struct channel_gk20a;
 
@@ -442,10 +426,6 @@ struct nvgpu_as_free_space_args;
 int gk20a_vm_alloc_share(struct gk20a_as_share *as_share, u32 big_page_size,
 			 u32 flags);
 int gk20a_vm_release_share(struct gk20a_as_share *as_share);
-int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
-			 struct nvgpu_as_alloc_space_args *args);
-int gk20a_vm_free_space(struct gk20a_as_share *as_share,
-			struct nvgpu_as_free_space_args *args);
 int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
 			  struct channel_gk20a *ch);
 int __gk20a_vm_bind_channel(struct vm_gk20a *vm, struct channel_gk20a *ch);
@@ -491,5 +471,6 @@ extern const struct gk20a_mmu_level gk20a_mm_levels_128k[];
 
 int gk20a_mm_get_buffer_info(struct device *dev, int dmabuf_fd,
 			     u64 *buffer_id, u64 *buffer_len);
+void gk20a_vm_unmap_locked_kref(struct kref *ref);
 
 #endif /* MM_GK20A_H */

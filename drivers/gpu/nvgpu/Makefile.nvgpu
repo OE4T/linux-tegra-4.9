@@ -47,6 +47,7 @@ nvgpu-y := \
 	common/mm/lockless_allocator.o \
 	common/mm/gmmu.o \
 	common/mm/vm.o \
+	common/mm/vm_area.o \
 	common/pramin.o \
 	common/semaphore.o \
 	common/as.o \

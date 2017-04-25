@@ -24,6 +24,7 @@
 #include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/gmmu.h>
+#include <nvgpu/vm_area.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
@@ -56,7 +57,8 @@ static int gk20a_as_ioctl_alloc_space(
 		struct nvgpu_as_alloc_space_args *args)
 {
 	gk20a_dbg_fn("");
-	return gk20a_vm_alloc_space(as_share, args);
+	return nvgpu_vm_area_alloc(as_share->vm, args->pages, args->page_size,
+				   &args->o_a.offset, args->flags);
 }
 
 static int gk20a_as_ioctl_free_space(
@@ -64,7 +66,7 @@ static int gk20a_as_ioctl_free_space(
 		struct nvgpu_as_free_space_args *args)
 {
 	gk20a_dbg_fn("");
-	return gk20a_vm_free_space(as_share, args);
+	return nvgpu_vm_area_free(as_share->vm, args->offset);
 }
 
 static int gk20a_as_ioctl_map_buffer_ex(

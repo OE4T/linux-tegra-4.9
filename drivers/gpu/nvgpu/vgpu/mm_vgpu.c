@@ -18,6 +18,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/vm_area.h>
 
 #include "vgpu/vgpu.h"
 #include "gk20a/mm_gk20a.h"
@@ -203,7 +204,7 @@ static void vgpu_vm_remove_support(struct vm_gk20a *vm)
 {
 	struct gk20a *g = vm->mm->g;
 	struct nvgpu_mapped_buf *mapped_buffer;
-	struct vm_reserved_va_node *va_node, *va_node_tmp;
+	struct nvgpu_vm_area *vm_area, *vm_area_tmp;
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_as_share_params *p = &msg.params.as_share;
 	struct nvgpu_rbtree_node *node = NULL;
@@ -223,11 +224,11 @@ static void vgpu_vm_remove_support(struct vm_gk20a *vm)
 	}
 
 	/* destroy remaining reserved memory areas */
-	nvgpu_list_for_each_entry_safe(va_node, va_node_tmp,
-			&vm->reserved_va_list,
-			vm_reserved_va_node, reserved_va_list) {
-		nvgpu_list_del(&va_node->reserved_va_list);
-		nvgpu_kfree(g, va_node);
+	nvgpu_list_for_each_entry_safe(vm_area, vm_area_tmp,
+			&vm->vm_area_list,
+			nvgpu_vm_area, vm_area_list) {
+		nvgpu_list_del(&vm_area->vm_area_list);
+		nvgpu_kfree(g, vm_area);
 	}
 
 	msg.cmd = TEGRA_VGPU_CMD_AS_FREE_SHARE;
@@ -413,7 +414,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 
 	nvgpu_mutex_init(&vm->update_gmmu_lock);
 	kref_init(&vm->ref);
-	nvgpu_init_list_node(&vm->reserved_va_list);
+	nvgpu_init_list_node(&vm->vm_area_list);
 
 	vm->enable_ctag = true;
 

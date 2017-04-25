@@ -26,6 +26,7 @@
 #include <trace/events/gk20a.h>
 
 #include <nvgpu/vm.h>
+#include <nvgpu/vm_area.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/kmem.h>
 #include <nvgpu/timers.h>
@@ -1065,19 +1066,6 @@ u32 pte_index_from_vaddr(struct vm_gk20a *vm,
 	return ret;
 }
 
-static struct vm_reserved_va_node *addr_to_reservation(struct vm_gk20a *vm,
-						       u64 addr)
-{
-	struct vm_reserved_va_node *va_node;
-	nvgpu_list_for_each_entry(va_node, &vm->reserved_va_list,
-			vm_reserved_va_node, reserved_va_list)
-		if (addr >= va_node->vaddr_start &&
-		    addr < (u64)va_node->vaddr_start + (u64)va_node->size)
-			return va_node;
-
-	return NULL;
-}
-
 int nvgpu_vm_get_buffers(struct vm_gk20a *vm,
 			 struct nvgpu_mapped_buf ***mapped_buffers,
 			 int *num_buffers)
@@ -1297,57 +1285,6 @@ int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
 		bfr->ctag_lines = DIV_ROUND_UP_ULL(bfr->size, ctag_granularity);
 	else
 		bfr->ctag_lines = 0;
-
-	return 0;
-}
-
-int validate_fixed_buffer(struct vm_gk20a *vm,
-			  struct buffer_attrs *bfr,
-			  u64 map_offset, u64 map_size,
-			  struct vm_reserved_va_node **pva_node)
-{
-	struct gk20a *g = vm->mm->g;
-	struct vm_reserved_va_node *va_node;
-	struct nvgpu_mapped_buf *buffer;
-	u64 map_end = map_offset + map_size;
-
-	/* can wrap around with insane map_size; zero is disallowed too */
-	if (map_end <= map_offset) {
-		nvgpu_warn(g, "fixed offset mapping with invalid map_size");
-		return -EINVAL;
-	}
-
-	if (map_offset & (vm->gmmu_page_sizes[bfr->pgsz_idx] - 1)) {
-		nvgpu_err(g, "map offset must be buffer page size aligned 0x%llx",
-			  map_offset);
-		return -EINVAL;
-	}
-
-	/* Find the space reservation, but it's ok to have none for
-	 * userspace-managed address spaces */
-	va_node = addr_to_reservation(vm, map_offset);
-	if (!va_node && !vm->userspace_managed) {
-		nvgpu_warn(g, "fixed offset mapping without space allocation");
-		return -EINVAL;
-	}
-
-	/* Mapped area should fit inside va, if there's one */
-	if (va_node && map_end > va_node->vaddr_start + va_node->size) {
-		nvgpu_warn(g, "fixed offset mapping size overflows va node");
-		return -EINVAL;
-	}
-
-	/* check that this mapping does not collide with existing
-	 * mappings by checking the buffer with the highest GPU VA
-	 * that is less than our buffer end */
-	buffer = __nvgpu_vm_find_mapped_buf_less_than(
-		vm, map_offset + map_size);
-	if (buffer && buffer->addr + buffer->size > map_offset) {
-		nvgpu_warn(g, "overlapping buffer map requested");
-		return -EINVAL;
-	}
-
-	*pva_node = va_node;
 
 	return 0;
 }
@@ -1850,22 +1787,22 @@ int nvgpu_vm_map_compbits(struct vm_gk20a *vm,
 		if (fixed_mapping) {
 			struct buffer_attrs bfr;
 			int err;
-			struct vm_reserved_va_node *va_node = NULL;
+			struct nvgpu_vm_area *vm_area = NULL;
 
 			memset(&bfr, 0, sizeof(bfr));
 
 			bfr.pgsz_idx = small_pgsz_index;
 
-			err = validate_fixed_buffer(
-				vm, &bfr, *compbits_win_gva,
-				mapped_buffer->ctag_map_win_size, &va_node);
+			err = nvgpu_vm_area_validate_buffer(
+				vm, *compbits_win_gva, mapped_buffer->ctag_map_win_size,
+				bfr.pgsz_idx, &vm_area);
 
 			if (err) {
 				nvgpu_mutex_release(&vm->update_gmmu_lock);
 				return err;
 			}
 
-			if (va_node) {
+			if (vm_area) {
 				/* this would create a dangling GPU VA
 				 * pointer if the space is freed
 				 * before before the buffer is
@@ -2564,8 +2501,8 @@ void nvgpu_vm_unmap_locked(struct nvgpu_mapped_buf *mapped_buffer,
 		mapped_buffer->pgsz_idx,
 		mapped_buffer->va_allocated,
 		gk20a_mem_flag_none,
-		mapped_buffer->va_node ?
-		  mapped_buffer->va_node->sparse : false,
+		mapped_buffer->vm_area ?
+		  mapped_buffer->vm_area->sparse : false,
 		batch);
 
 	gk20a_dbg(gpu_dbg_map,
@@ -2712,13 +2649,13 @@ int gk20a_big_pages_possible(struct vm_gk20a *vm, u64 base, u64 size)
 enum gmmu_pgsz_gk20a __get_pte_size_fixed_map(struct vm_gk20a *vm,
 					      u64 base, u64 size)
 {
-	struct vm_reserved_va_node *node;
+	struct nvgpu_vm_area *vm_area;
 
-	node = addr_to_reservation(vm, base);
-	if (!node)
+	vm_area = nvgpu_vm_area_find(vm, base);
+	if (!vm_area)
 		return gmmu_page_size_small;
 
-	return node->pgsz_idx;
+	return vm_area->pgsz_idx;
 }
 
 /*
@@ -3012,7 +2949,7 @@ int nvgpu_init_vm(struct mm_gk20a *mm,
 
 	nvgpu_mutex_init(&vm->update_gmmu_lock);
 	kref_init(&vm->ref);
-	nvgpu_init_list_node(&vm->reserved_va_list);
+	nvgpu_init_list_node(&vm->vm_area_list);
 
 	/*
 	 * This is only necessary for channel address spaces. The best way to
@@ -3098,158 +3035,6 @@ int gk20a_vm_release_share(struct gk20a_as_share *as_share)
 	nvgpu_vm_put(vm);
 
 	return 0;
-}
-
-
-int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
-			 struct nvgpu_as_alloc_space_args *args)
-
-{
-	int err = -ENOMEM;
-	int pgsz_idx = gmmu_page_size_small;
-	struct nvgpu_allocator *vma;
-	struct vm_gk20a *vm = as_share->vm;
-	struct gk20a *g = vm->mm->g;
-	struct vm_reserved_va_node *va_node;
-	u64 vaddr_start = 0;
-	int page_sizes = gmmu_nr_page_sizes;
-
-	gk20a_dbg_fn("flags=0x%x pgsz=0x%x nr_pages=0x%x o/a=0x%llx",
-			args->flags, args->page_size, args->pages,
-			args->o_a.offset);
-
-	if (!vm->big_pages)
-		page_sizes--;
-
-	for (; pgsz_idx < page_sizes; pgsz_idx++) {
-		if (vm->gmmu_page_sizes[pgsz_idx] == args->page_size)
-			break;
-	}
-
-	if (pgsz_idx >= page_sizes) {
-		err = -EINVAL;
-		goto clean_up;
-	}
-
-	va_node = nvgpu_kzalloc(g, sizeof(*va_node));
-	if (!va_node) {
-		err = -ENOMEM;
-		goto clean_up;
-	}
-
-	vma = vm->vma[pgsz_idx];
-	if (args->flags & NVGPU_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET)
-		vaddr_start = nvgpu_alloc_fixed(vma, args->o_a.offset,
-						(u64)args->pages *
-						(u64)args->page_size,
-						args->page_size);
-	else
-		vaddr_start = nvgpu_alloc(vma,
-					  (u64)args->pages *
-					  (u64)args->page_size);
-
-	if (!vaddr_start) {
-		nvgpu_kfree(g, va_node);
-		goto clean_up;
-	}
-
-	va_node->vaddr_start = vaddr_start;
-	va_node->size = (u64)args->page_size * (u64)args->pages;
-	va_node->pgsz_idx = pgsz_idx;
-	nvgpu_init_list_node(&va_node->buffer_list_head);
-	nvgpu_init_list_node(&va_node->reserved_va_list);
-
-	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
-
-	/* mark that we need to use sparse mappings here */
-	if (args->flags & NVGPU_AS_ALLOC_SPACE_FLAGS_SPARSE) {
-		u64 map_offset = g->ops.mm.gmmu_map(vm, vaddr_start,
-					 NULL,
-					 0,
-					 va_node->size,
-					 pgsz_idx,
-					 0,
-					 0,
-					 args->flags,
-					 gk20a_mem_flag_none,
-					 false,
-					 true,
-					 false,
-					 NULL,
-					 APERTURE_INVALID);
-		if (!map_offset) {
-			nvgpu_mutex_release(&vm->update_gmmu_lock);
-			nvgpu_free(vma, vaddr_start);
-			nvgpu_kfree(g, va_node);
-			goto clean_up;
-		}
-
-		va_node->sparse = true;
-	}
-	nvgpu_list_add_tail(&va_node->reserved_va_list, &vm->reserved_va_list);
-
-	nvgpu_mutex_release(&vm->update_gmmu_lock);
-
-	args->o_a.offset = vaddr_start;
-	err = 0;
-
-clean_up:
-	return err;
-}
-
-int gk20a_vm_free_space(struct gk20a_as_share *as_share,
-			struct nvgpu_as_free_space_args *args)
-{
-	int err = -ENOMEM;
-	int pgsz_idx;
-	struct nvgpu_allocator *vma;
-	struct vm_gk20a *vm = as_share->vm;
-	struct vm_reserved_va_node *va_node;
-	struct gk20a *g = gk20a_from_vm(vm);
-
-	gk20a_dbg_fn("pgsz=0x%x nr_pages=0x%x o/a=0x%llx", args->page_size,
-			args->pages, args->offset);
-
-	/* determine pagesz idx */
-	pgsz_idx = __get_pte_size(vm, args->offset,
-				  args->page_size * args->pages);
-
-	vma = vm->vma[pgsz_idx];
-	nvgpu_free(vma, args->offset);
-
-	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
-	va_node = addr_to_reservation(vm, args->offset);
-	if (va_node) {
-		struct nvgpu_mapped_buf *buffer, *n;
-
-		/* Decrement the ref count on all buffers in this va_node. This
-		 * allows userspace to let the kernel free mappings that are
-		 * only used by this va_node. */
-		nvgpu_list_for_each_entry_safe(buffer, n,
-			  &va_node->buffer_list_head,
-			  nvgpu_mapped_buf, buffer_list) {
-			nvgpu_list_del(&buffer->buffer_list);
-			kref_put(&buffer->ref, gk20a_vm_unmap_locked_kref);
-		}
-
-		nvgpu_list_del(&va_node->reserved_va_list);
-
-		/* if this was a sparse mapping, free the va */
-		if (va_node->sparse)
-			g->ops.mm.gmmu_unmap(vm,
-					va_node->vaddr_start,
-					va_node->size,
-					va_node->pgsz_idx,
-					true,
-					gk20a_mem_flag_none,
-					true,
-					NULL);
-		nvgpu_kfree(g, va_node);
-	}
-	nvgpu_mutex_release(&vm->update_gmmu_lock);
-	err = 0;
-
-	return err;
 }
 
 int __gk20a_vm_bind_channel(struct vm_gk20a *vm, struct channel_gk20a *ch)

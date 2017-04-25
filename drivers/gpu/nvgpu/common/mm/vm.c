@@ -15,6 +15,7 @@
  */
 
 #include <nvgpu/vm.h>
+#include <nvgpu/vm_area.h>
 #include <nvgpu/lock.h>
 #include <nvgpu/list.h>
 #include <nvgpu/rbtree.h>
@@ -58,7 +59,7 @@ void nvgpu_vm_mapping_batch_finish(struct vm_gk20a *vm,
 void nvgpu_vm_remove_support_nofree(struct vm_gk20a *vm)
 {
 	struct nvgpu_mapped_buf *mapped_buffer;
-	struct vm_reserved_va_node *va_node, *va_node_tmp;
+	struct nvgpu_vm_area *vm_area, *vm_area_tmp;
 	struct nvgpu_rbtree_node *node = NULL;
 	struct gk20a *g = vm->mm->g;
 
@@ -86,11 +87,11 @@ void nvgpu_vm_remove_support_nofree(struct vm_gk20a *vm)
 	}
 
 	/* destroy remaining reserved memory areas */
-	nvgpu_list_for_each_entry_safe(va_node, va_node_tmp,
-			&vm->reserved_va_list,
-			vm_reserved_va_node, reserved_va_list) {
-		nvgpu_list_del(&va_node->reserved_va_list);
-		nvgpu_kfree(vm->mm->g, va_node);
+	nvgpu_list_for_each_entry_safe(vm_area, vm_area_tmp,
+			&vm->vm_area_list,
+			nvgpu_vm_area, vm_area_list) {
+		nvgpu_list_del(&vm_area->vm_area_list);
+		nvgpu_kfree(vm->mm->g, vm_area);
 	}
 
 	nvgpu_deinit_vm(vm);

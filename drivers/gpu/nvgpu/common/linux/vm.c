@@ -20,6 +20,7 @@
 #include <nvgpu/log.h>
 #include <nvgpu/lock.h>
 #include <nvgpu/rbtree.h>
+#include <nvgpu/vm_area.h>
 #include <nvgpu/page_allocator.h>
 
 #include "gk20a/gk20a.h"
@@ -196,7 +197,7 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 	struct scatterlist *sgl;
 	u64 ctag_map_win_size = 0;
 	u32 ctag_map_win_ctagline = 0;
-	struct vm_reserved_va_node *va_node = NULL;
+	struct nvgpu_vm_area *vm_area = NULL;
 	u32 ctag_offset;
 	enum nvgpu_aperture aperture;
 
@@ -256,9 +257,8 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 
 	/* Check if we should use a fixed offset for mapping this buffer */
 	if (flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)  {
-		err = validate_fixed_buffer(vm, &bfr,
-					    offset_align, mapping_size,
-					    &va_node);
+		err = nvgpu_vm_area_validate_buffer(vm, offset_align, mapping_size,
+						    bfr.pgsz_idx, &vm_area);
 		if (err)
 			goto clean_up;
 
@@ -376,10 +376,10 @@ u64 nvgpu_vm_map(struct vm_gk20a *vm,
 	if (user_mapped)
 		vm->num_user_mapped_buffers++;
 
-	if (va_node) {
+	if (vm_area) {
 		nvgpu_list_add_tail(&mapped_buffer->buffer_list,
-			      &va_node->buffer_list_head);
-		mapped_buffer->va_node = va_node;
+			      &vm_area->buffer_list_head);
+		mapped_buffer->vm_area = vm_area;
 	}
 
 	nvgpu_mutex_release(&vm->update_gmmu_lock);

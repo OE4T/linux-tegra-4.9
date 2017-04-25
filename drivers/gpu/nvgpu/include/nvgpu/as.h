@@ -17,14 +17,14 @@
 
 struct vm_gk20a;
 
-struct gk20a_as_share {
-	struct gk20a_as *as;
-	int id;
-	struct vm_gk20a *vm;
-};
-
 struct gk20a_as {
 	int last_share_id; /* dummy allocator for now */
+};
+
+struct gk20a_as_share {
+	struct gk20a_as *as;
+	struct vm_gk20a *vm;
+	int id;
 };
 
 int gk20a_as_release_share(struct gk20a_as_share *as_share);

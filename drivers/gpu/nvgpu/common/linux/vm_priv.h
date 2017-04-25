@@ -77,7 +77,7 @@ enum nvgpu_aperture gk20a_dmabuf_aperture(struct gk20a *g,
 int validate_fixed_buffer(struct vm_gk20a *vm,
 			  struct buffer_attrs *bfr,
 			  u64 map_offset, u64 map_size,
-			  struct vm_reserved_va_node **pva_node);
+			  struct nvgpu_vm_area **pva_node);
 int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
 				      u32 flags,
 				      struct buffer_attrs *bfr,
@@ -89,6 +89,5 @@ int gk20a_alloc_comptags(struct gk20a *g,
 			 u32 lines, bool user_mappable,
 			 u64 *ctag_map_win_size,
 			 u32 *ctag_map_win_ctagline);
-void gk20a_vm_unmap_locked_kref(struct kref *ref);
 
 #endif

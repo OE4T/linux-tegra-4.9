@@ -114,7 +114,7 @@ static int gv11b_tegra_suspend(struct device *dev)
 }
 
 struct gk20a_platform t19x_gpu_tegra_platform = {
-	.has_syncpoints = false,
+	.has_syncpoints = true,
 
 	/* power management configuration */
 

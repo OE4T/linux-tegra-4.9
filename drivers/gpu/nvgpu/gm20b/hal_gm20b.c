@@ -17,6 +17,7 @@
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 #include "gk20a/bus_gk20a.h"
+#include "gk20a/flcn_gk20a.h"
 
 #include "ltc_gm20b.h"
 #include "ce2_gm20b.h"
@@ -225,6 +226,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gm20b_init_ce2(gops);
 	gm20b_init_gr_ctx(gops);
 	gm20b_init_mm(gops);
+	gk20a_falcon_init_hal(gops);
 	gm20b_init_pmu_ops(gops);
 	gm20b_init_clk_ops(gops);
 	gm20b_init_regops(gops);

@@ -241,6 +241,9 @@ int gk20a_finalize_poweron(struct gk20a *g)
 		goto done;
 	}
 
+	/* init interface layer support for PMU falcon */
+	nvgpu_flcn_sw_init(g, FALCON_ID_PMU);
+
 	if (g->ops.pmu.is_pmu_supported(g)) {
 		if (g->ops.pmu.prepare_ucode)
 			err = g->ops.pmu.prepare_ucode(g);

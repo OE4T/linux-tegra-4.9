@@ -135,16 +135,6 @@ struct tegra_se_elp_dev {
 
 static struct tegra_se_elp_dev *elp_dev;
 
-struct tegra_se_rng1_request {
-	u32 size;
-	u32 *rdata;
-	u32 *rdata1;
-	u32 *rdata2;
-	u32 *rdata3;
-	bool test_full_cmd_flow;
-	bool adv_state_on;
-};
-
 struct tegra_se_pka1_ecc_request {
 	struct tegra_se_elp_dev *se_dev;
 	struct tegra_se_pka1_slot *slot;
@@ -1687,24 +1677,6 @@ static int tegra_se_execute_rng1_ctrl_cmd(unsigned int cmd)
 	return 0;
 }
 
-static int tegra_se_check_rng1_result(struct tegra_se_rng1_request *req)
-{
-	u32 i, val;
-	struct tegra_se_elp_dev *se_dev = elp_dev;
-
-	for (i = 0; i < 4; i++) {
-		val = se_elp_readl(se_dev, RNG1,
-				   TEGRA_SE_RNG1_RAND0_OFFSET + i * 4);
-		if (!val) {
-			dev_err(se_dev->dev, "No random data from RAND\n");
-			return -EINVAL;
-		}
-		se_dev->rdata[i] = val;
-	}
-
-	return 0;
-}
-
 static int tegra_se_check_rng1_alarms(void)
 {
 	u32 val;
@@ -1718,274 +1690,6 @@ static int tegra_se_check_rng1_alarms(void)
 
 	return 0;
 }
-
-static void tegra_se_rng1_feed_npa_data(void)
-{
-	int i;
-	u32 data, r;
-	struct tegra_se_elp_dev *se_dev = elp_dev;
-
-	for (i = 0; i < 16; i++) {
-		get_random_bytes(&r, sizeof(int));
-		data = r & 0xffffffff;
-		se_elp_writel(se_dev, RNG1, data,
-			      TEGRA_SE_RNG1_NPA_DATA0_OFFSET + i * 4);
-	}
-}
-
-static int tegra_se_rng1_do(struct tegra_se_elp_dev *se_dev,
-			       struct tegra_se_rng1_request *req)
-{
-	u32 *rand_num;
-	int i, j, k, ret;
-	bool adv_state = false;
-
-	rand_num = devm_kzalloc(se_dev->dev,
-				(sizeof(*rand_num) * (RAND_256 / 4)),
-				GFP_KERNEL);
-	if (!rand_num)
-		return -ENOMEM;
-
-	tegra_se_set_rng1_smode(true, false);
-	tegra_se_set_rng1_mode(RNG1_MODE_SEC_ALG);
-	/* Generate Noise */
-	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_NOISE);
-	if (ret)
-		return ret;
-	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_CREATE_STATE);
-	if (ret)
-		return ret;
-
-	for (i = 0; i < req->size/RAND_128; i++) {
-		if (i && req->adv_state_on && (i % ADV_STATE_FREQ == 0)) {
-			ret = tegra_se_execute_rng1_ctrl_cmd
-						(RNG1_CMD_ADVANCE_STATE);
-			if (ret)
-				return ret;
-			adv_state = true;
-		}
-		ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_RANDOM);
-		if (ret)
-			return ret;
-
-		ret = tegra_se_check_rng1_result(req);
-		if (ret) {
-			dev_err(se_dev->dev, "RNG1 Failed for Sub-Step 1\n");
-			return ret;
-		}
-
-		for (k = (4 * i), j = 0; k < 4 * (i + 1); k++, j++)
-			rand_num[k] = se_dev->rdata[j];
-
-		if (adv_state) {
-			ret = tegra_se_execute_rng1_ctrl_cmd
-						(RNG1_CMD_ADVANCE_STATE);
-			if (ret)
-				return ret;
-			if ((i+1) < req->size/RAND_128) {
-				ret = tegra_se_execute_rng1_ctrl_cmd
-							(RNG1_CMD_GEN_NOISE);
-				if (ret)
-					return ret;
-				ret = tegra_se_execute_rng1_ctrl_cmd
-							(RNG1_CMD_RENEW_STATE);
-				if (ret)
-					return ret;
-			}
-		}
-	}
-
-	for (k = 0; k < (RAND_256 / 4); k++)
-		req->rdata[k] = rand_num[k];
-
-	tegra_se_check_rng1_alarms();
-
-	if (!req->test_full_cmd_flow)
-		return ret;
-
-	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_ZEROIZE);
-	if (ret)
-		return ret;
-
-	tegra_se_set_rng1_smode(true, false);
-	tegra_se_set_rng1_mode(RNG1_MODE_ADDIN_PRESENT);
-
-	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_NOISE);
-	if (ret)
-		return ret;
-	tegra_se_rng1_feed_npa_data();
-	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_CREATE_STATE);
-	if (ret)
-		return ret;
-	tegra_se_rng1_feed_npa_data();
-	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_REFRESH_ADDIN);
-	if (ret)
-		return ret;
-
-	for (i = 0; i < req->size/RAND_128; i++) {
-		if (i && req->adv_state_on && (i % ADV_STATE_FREQ == 0)) {
-			ret = tegra_se_execute_rng1_ctrl_cmd
-						(RNG1_CMD_ADVANCE_STATE);
-			if (ret)
-				return ret;
-			tegra_se_rng1_feed_npa_data();
-			ret = tegra_se_execute_rng1_ctrl_cmd
-						(RNG1_CMD_REFRESH_ADDIN);
-			if (ret)
-				return ret;
-			adv_state = true;
-		}
-		ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_RANDOM);
-		if (ret)
-			return ret;
-
-		ret = tegra_se_check_rng1_result(req);
-		if (ret) {
-			dev_err(se_dev->dev, "RNG1 Failed for Sub-Step 2\n");
-			return ret;
-		}
-
-		for (k = (4 * i), j = 0; k < 4 * (i + 1); k++, j++)
-			rand_num[k] = se_dev->rdata[j];
-
-		if (adv_state) {
-			ret = tegra_se_execute_rng1_ctrl_cmd
-						(RNG1_CMD_ADVANCE_STATE);
-			if (ret)
-				return ret;
-			if ((i + 1) < req->size / RAND_128) {
-				ret = tegra_se_execute_rng1_ctrl_cmd
-							(RNG1_CMD_GEN_NOISE);
-				if (ret)
-					return ret;
-				tegra_se_rng1_feed_npa_data();
-				ret = tegra_se_execute_rng1_ctrl_cmd
-							(RNG1_CMD_RENEW_STATE);
-				if (ret)
-					return ret;
-				tegra_se_rng1_feed_npa_data();
-				ret = tegra_se_execute_rng1_ctrl_cmd
-						(RNG1_CMD_REFRESH_ADDIN);
-				if (ret)
-					return ret;
-			}
-		}
-	}
-
-	for (k = 0; k < (RAND_256 / 4); k++)
-		req->rdata1[k] = rand_num[k];
-
-	tegra_se_check_rng1_alarms();
-
-	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_ZEROIZE);
-	if (ret)
-		return ret;
-
-	tegra_se_set_rng1_smode(true, true);
-	tegra_se_set_rng1_mode(RNG1_MODE_ADDIN_PRESENT);
-
-	tegra_se_rng1_feed_npa_data();
-	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_NONCE);
-	if (ret)
-		return ret;
-	tegra_se_rng1_feed_npa_data();
-	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_NONCE);
-	if (ret)
-		return ret;
-	tegra_se_rng1_feed_npa_data();
-	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_CREATE_STATE);
-	if (ret)
-		return ret;
-	tegra_se_rng1_feed_npa_data();
-	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_REFRESH_ADDIN);
-	if (ret)
-		return ret;
-
-	for (i = 0; i < req->size / RAND_128; i++) {
-		if (i && req->adv_state_on && (i % ADV_STATE_FREQ == 0)) {
-			ret = tegra_se_execute_rng1_ctrl_cmd
-					(RNG1_CMD_ADVANCE_STATE);
-			if (ret)
-				return ret;
-			tegra_se_rng1_feed_npa_data();
-			ret =
-			tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_REFRESH_ADDIN);
-			if (ret)
-				return ret;
-			adv_state = true;
-		}
-		ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_RANDOM);
-		if (ret)
-			return ret;
-
-		ret = tegra_se_check_rng1_result(req);
-		if (ret) {
-			dev_err(se_dev->dev, "RNG1 Failed for Sub-Step 3\n");
-			return ret;
-		}
-
-		for (k = (4 * i), j = 0; k < 4 * (i + 1); k++, j++)
-			rand_num[k] = se_dev->rdata[j];
-
-		if (adv_state) {
-			ret = tegra_se_execute_rng1_ctrl_cmd
-						(RNG1_CMD_ADVANCE_STATE);
-			if (ret)
-				return ret;
-			if ((i + 1) < req->size / RAND_128) {
-				ret = tegra_se_execute_rng1_ctrl_cmd
-							(RNG1_CMD_GEN_NONCE);
-				if (ret)
-					return ret;
-				tegra_se_rng1_feed_npa_data();
-				ret = tegra_se_execute_rng1_ctrl_cmd
-							(RNG1_CMD_RENEW_STATE);
-				if (ret)
-					return ret;
-				tegra_se_rng1_feed_npa_data();
-				ret = tegra_se_execute_rng1_ctrl_cmd
-						(RNG1_CMD_REFRESH_ADDIN);
-				if (ret)
-					return ret;
-			}
-		}
-	}
-
-	for (k = 0; k < (RAND_256 / 4); k++)
-		req->rdata2[k] = rand_num[k];
-
-	tegra_se_check_rng1_alarms();
-
-	return tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_ZEROIZE);
-}
-
-int tegra_se_rng1_op(struct tegra_se_rng1_request *req)
-{
-	struct tegra_se_elp_dev *se_dev = elp_dev;
-	int ret;
-
-	clk_prepare_enable(se_dev->c);
-	ret = tegra_se_acquire_rng1_mutex(se_dev);
-	if (ret) {
-		dev_err(se_dev->dev, "RNG1 Mutex acquire failed\n");
-		clk_disable_unprepare(se_dev->c);
-		return ret;
-	}
-
-	ret = tegra_se_check_rng1_status(se_dev);
-	if (ret) {
-		dev_err(se_dev->dev, "RNG1 initial state is wrong\n");
-		goto rel_mutex;
-	}
-
-	ret = tegra_se_rng1_do(se_dev, req);
-rel_mutex:
-	tegra_se_release_rng1_mutex(se_dev);
-	clk_disable_unprepare(se_dev->c);
-
-	return ret;
-}
-EXPORT_SYMBOL(tegra_se_rng1_op);
 
 static int tegra_se_pka1_get_precomp(struct tegra_se_pka1_rsa_context *ctx,
 				     struct tegra_se_pka1_ecc_request *ecc_req,
@@ -3089,6 +2793,162 @@ static struct akcipher_alg ecdsa_alg = {
 	},
 };
 
+struct tegra_se_elp_rng_context {
+	struct tegra_se_elp_dev *se_dev;
+};
+
+static int tegra_se_elp_get_rng1_result(struct crypto_rng *tfm, u32 *rdata)
+{
+	struct tegra_se_elp_rng_context *rng_ctx = crypto_rng_ctx(tfm);
+	struct tegra_se_elp_dev *se_dev = rng_ctx->se_dev;
+	u32 i, val;
+
+	for (i = 0; i < 4; i++) {
+		val = se_elp_readl(se_dev, RNG1,
+				TEGRA_SE_RNG1_RAND0_OFFSET + i*4);
+		if (!val) {
+			dev_err(se_dev->dev, "\nNo random data from RAND\n");
+			return -EINVAL;
+		}
+		rdata[i] = val;
+	}
+
+	return 0;
+}
+
+static int tegra_se_elp_rng_get(struct crypto_rng *tfm,
+		u8 *rdata, unsigned int dlen)
+{
+	struct tegra_se_elp_rng_context *rng_ctx = crypto_rng_ctx(tfm);
+	struct tegra_se_elp_dev *se_dev = rng_ctx->se_dev;
+	int i, ret = 0;
+	u32 *rand_num, *temp_rand;
+
+	if (dlen < RAND_128 || (dlen % RAND_128 != 0))
+		return -EINVAL;
+
+	rand_num = devm_kzalloc(se_dev->dev, dlen, GFP_KERNEL);
+	if (!rand_num)
+		return -EINVAL;
+
+	temp_rand = rand_num;
+	tegra_se_set_rng1_smode(true, false);
+	tegra_se_set_rng1_mode(RNG1_MODE_SEC_ALG);
+
+	/* Generate Noise */
+	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_NOISE);
+	if (ret)
+		goto ret;
+	ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_CREATE_STATE);
+	if (ret)
+		goto ret;
+
+	for (i = 0; i < dlen/RAND_128; i++) {
+		ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_RANDOM);
+		if (ret)
+			goto ret;
+
+		ret = tegra_se_elp_get_rng1_result(tfm, rand_num);
+		if (ret) {
+			dev_err(se_dev->dev, "\nRNG1 Failed for Sub-Step 1\n");
+			goto ret;
+		}
+
+		ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_ADVANCE_STATE);
+		if (ret)
+			goto ret;
+		if ((i+1) < dlen/RAND_128) {
+			rand_num += 4;
+			ret = tegra_se_execute_rng1_ctrl_cmd(
+				RNG1_CMD_GEN_NOISE);
+			if (ret)
+				goto ret;
+			ret =
+				tegra_se_execute_rng1_ctrl_cmd(
+					RNG1_CMD_RENEW_STATE);
+			if (ret)
+				goto ret;
+		}
+	}
+
+	memcpy(rdata, temp_rand, dlen);
+
+	tegra_se_check_rng1_alarms();
+	tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_ZEROIZE);
+	ret = dlen;
+ret:
+	devm_kfree(se_dev->dev, temp_rand);
+
+	return ret;
+}
+
+static int tegra_se_elp_rng_get_random(struct crypto_rng *tfm,
+		const u8 *src, unsigned int slen,
+		u8 *rdata, unsigned int dlen)
+{
+	struct tegra_se_elp_rng_context *rng_ctx = crypto_rng_ctx(tfm);
+	struct tegra_se_elp_dev *se_dev = rng_ctx->se_dev;
+	int ret = 0;
+
+	clk_prepare_enable(se_dev->c);
+	ret = tegra_se_acquire_rng1_mutex(se_dev);
+	if (ret) {
+		dev_err(se_dev->dev, "\n RNG Mutex acquire failed\n");
+		clk_disable_unprepare(se_dev->c);
+		return ret;
+	}
+
+	ret = tegra_se_check_rng1_status(se_dev);
+	if (ret) {
+		dev_err(se_dev->dev, "\n RNG1 initial state is wrong\n");
+		goto rel_mutex;
+	}
+
+	ret = tegra_se_elp_rng_get(tfm, rdata, dlen);
+
+rel_mutex:
+	tegra_se_release_rng1_mutex(se_dev);
+	clk_disable_unprepare(se_dev->c);
+	return ret;
+
+}
+
+static int tegra_se_elp_rng_seed(struct crypto_rng *tfm, const u8 *seed,
+		unsigned int slen)
+{
+	return 0;
+}
+
+static int tegra_se_elp_rng_init(struct crypto_tfm *tfm)
+{
+	struct tegra_se_elp_rng_context *rng_ctx = crypto_tfm_ctx(tfm);
+
+	rng_ctx->se_dev = elp_dev;
+	return 0;
+}
+
+static void tegra_se_elp_rng_exit(struct crypto_tfm *tfm)
+{
+	struct tegra_se_elp_rng_context *rng_ctx = crypto_tfm_ctx(tfm);
+
+	rng_ctx->se_dev = NULL;
+}
+
+static struct rng_alg rng_alg = {
+	.generate       = tegra_se_elp_rng_get_random,
+	.seed           = tegra_se_elp_rng_seed,
+	.base           = {
+			.cra_name = "rng1_elp",
+			.cra_driver_name = "rng1-elp-tegra",
+			.cra_priority = 300,
+			.cra_flags = CRYPTO_ALG_TYPE_RNG,
+			.cra_ctxsize = sizeof(struct tegra_se_elp_rng_context),
+			.cra_module = THIS_MODULE,
+			.cra_init = tegra_se_elp_rng_init,
+			.cra_exit = tegra_se_elp_rng_exit,
+	}
+};
+
 struct tegra_se_elp_trng_context {
 	struct tegra_se_elp_dev *se_dev;
 };
@@ -3318,10 +3178,21 @@ static int tegra_se_elp_probe(struct platform_device *pdev)
 		goto trng_fail;
 	}
 
+	if (se_dev->chipdata->rng1_supported) {
+		err = crypto_register_rng(&rng_alg);
+		if (err) {
+			dev_err(se_dev->dev,
+				"crypto_register_rng failed\n");
+			goto rng_fail;
+		}
+	}
+
 	clk_disable_unprepare(se_dev->c);
 	dev_info(se_dev->dev, "%s: complete", __func__);
 	return 0;
 
+rng_fail:
+	crypto_unregister_rng(&trng_alg);
 trng_fail:
 	crypto_unregister_akcipher(&ecdsa_alg);
 ecdsa_fail:
@@ -3336,6 +3207,12 @@ clk_dis:
 
 static int tegra_se_elp_remove(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
+	struct tegra_se_elp_dev *se_dev = dev_get_drvdata(dev);
+
+	crypto_unregister_rng(&trng_alg);
+	if (se_dev->chipdata->rng1_supported)
+		crypto_unregister_rng(&rng_alg);
 	crypto_unregister_akcipher(&ecdsa_alg);
 	crypto_unregister_akcipher(&pka1_rsa_algs[0]);
 	crypto_unregister_kpp(&ecdh_algs[0]);

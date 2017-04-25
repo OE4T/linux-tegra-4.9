@@ -1,23 +1,17 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
  *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __ABI_MACH_T194_POWERGATE_T194_H_
@@ -28,22 +22,22 @@
 #define TEGRA194_POWER_DOMAIN_DISPB	3
 #define TEGRA194_POWER_DOMAIN_DISPC	4
 #define TEGRA194_POWER_DOMAIN_ISPA	5
-#define TEGRA194_POWER_DOMAIN_NVDEC	6
+#define TEGRA194_POWER_DOMAIN_NVDECA	6
 #define TEGRA194_POWER_DOMAIN_NVJPG	7
 #define TEGRA194_POWER_DOMAIN_NVENCA	8
 #define TEGRA194_POWER_DOMAIN_NVENCB	9
-#define TEGRA194_POWER_DOMAIN_PCX	10
+#define TEGRA194_POWER_DOMAIN_NVDECB	10
 #define TEGRA194_POWER_DOMAIN_SAX	11
 #define TEGRA194_POWER_DOMAIN_VE	12
 #define TEGRA194_POWER_DOMAIN_VIC	13
 #define TEGRA194_POWER_DOMAIN_XUSBA	14
 #define TEGRA194_POWER_DOMAIN_XUSBB	15
 #define TEGRA194_POWER_DOMAIN_XUSBC	16
-#define TEGRA194_POWER_DOMAIN_PCIEX8AA	17
-#define TEGRA194_POWER_DOMAIN_PCIEX4AA	18
-#define TEGRA194_POWER_DOMAIN_PCIEX1AA	19
+#define TEGRA194_POWER_DOMAIN_PCIEX8A	17
+#define TEGRA194_POWER_DOMAIN_PCIEX4A	18
+#define TEGRA194_POWER_DOMAIN_PCIEX1A	19
 #define TEGRA194_POWER_DOMAIN_NVL	20
-#define TEGRA194_POWER_DOMAIN_PCIEX8BA	21
+#define TEGRA194_POWER_DOMAIN_PCIEX8B	21
 #define TEGRA194_POWER_DOMAIN_PVAA	22
 #define TEGRA194_POWER_DOMAIN_PVAB	23
 #define TEGRA194_POWER_DOMAIN_DLAA	24

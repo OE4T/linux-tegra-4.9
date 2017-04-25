@@ -16,6 +16,7 @@
 #include "tegra210b01-soc-base.dtsi"
 #include "tegra210-soc/tegra210-bthrot-cdev.dtsi"
 #include <tegra210-soc/tegra210-sdhci.dtsi>
+#include "tegra210b01-soc-prods.dtsi"
 
 / {
 	aliases {

@@ -1,0 +1,26 @@
+/*
+ * tegra210b01-soc-prod.dtsi: SOC specific DTSI file Prod nodes.
+ *
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+/ {
+        pinmux@700008d4 {
+                prod-settings {
+                        #prod-cells = <4>;
+                        eqos {
+                                status = "disabled";
+                                nvidia,prod-boot-init;
+                                prod = <0 0x8 0x00000001 0x00000000>;
+			};
+		};
+	};
+};

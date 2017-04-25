@@ -282,7 +282,7 @@ struct gr_gk20a {
 #define GR_NETLIST_STATIC_A	'A'
 	int netlist;
 
-	wait_queue_head_t init_wq;
+	struct nvgpu_cond init_wq;
 	int initialized;
 
 	u32 num_fbps;

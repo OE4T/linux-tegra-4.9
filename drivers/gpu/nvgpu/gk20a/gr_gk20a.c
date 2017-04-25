@@ -5269,7 +5269,7 @@ int gk20a_init_gr_support(struct gk20a *g)
 	gr_gk20a_enable_elcg(g);
 	/* GR is inialized, signal possible waiters */
 	g->gr.initialized = true;
-	wake_up(&g->gr.init_wq);
+	nvgpu_cond_signal(&g->gr.init_wq);
 
 	return 0;
 }
@@ -5277,7 +5277,7 @@ int gk20a_init_gr_support(struct gk20a *g)
 /* Wait until GR is initialized */
 void gk20a_gr_wait_initialized(struct gk20a *g)
 {
-	wait_event(g->gr.init_wq, g->gr.initialized);
+	NVGPU_COND_WAIT(&g->gr.init_wq, g->gr.initialized, 0);
 }
 
 #define NVA297_SET_ALPHA_CIRCULAR_BUFFER_SIZE	0x02dc
@@ -8600,7 +8600,7 @@ void gr_gk20a_commit_global_pagepool(struct gk20a *g,
 
 void gk20a_init_gr(struct gk20a *g)
 {
-	init_waitqueue_head(&g->gr.init_wq);
+	nvgpu_cond_init(&g->gr.init_wq);
 }
 
 static bool gr_gk20a_is_tpc_addr(struct gk20a *g, u32 addr)

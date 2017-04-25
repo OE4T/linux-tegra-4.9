@@ -229,6 +229,7 @@ int tegra_fuse_control_read(unsigned long offset, u32 *value)
 
 	return 0;
 }
+EXPORT_SYMBOL_GPL(tegra_fuse_control_read);
 
 void tegra_fuse_control_write(u32 value, unsigned long offset)
 {
@@ -237,6 +238,7 @@ void tegra_fuse_control_write(u32 value, unsigned long offset)
 
 	fuse->control_write(fuse, value, offset);
 }
+EXPORT_SYMBOL_GPL(tegra_fuse_control_write);
 
 u32 tegra_fuse_get_subrevision(void)
 {

@@ -15,7 +15,6 @@
 
 #define pr_fmt(fmt)	"nvmap: %s() " fmt, __func__
 
-#include <linux/fdtable.h>
 #include <linux/list.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
@@ -29,6 +28,7 @@
 #include <linux/seq_file.h>
 #include <linux/stringify.h>
 #include <linux/of.h>
+#include <linux/platform/tegra/tegra_fd.h>
 
 #include <trace/events/nvmap.h>
 
@@ -731,8 +731,7 @@ int __nvmap_dmabuf_fd(struct nvmap_client *client,
 	 * __FD_SETSIZE limitation issue for select(),
 	 * pselect() syscalls.
 	 */
-	return __alloc_fd(current->files, start_fd,
-			  sysctl_nr_open, flags);
+	return tegra_alloc_fd(current->files, start_fd, flags);
 }
 
 int nvmap_get_dmabuf_fd(struct nvmap_client *client, struct nvmap_handle *h)

@@ -651,7 +651,7 @@
 		sor1: sor1 {
 			status = "disabled";
 			compatible = "nvidia,tegra194-sor1";
-			reg = <0x0 0x15540000 0x0 0x40000>;
+			reg = <0x0 0x15B40000 0x0 0x40000>;
 
 			nvidia,sor-ctrlnum = <1>;
 			nvidia,dpaux = <&dpaux1>;
@@ -689,7 +689,7 @@
 		sor2: sor2 {
 			status = "disabled";
 			compatible = "nvidia,tegra194-sor1";
-			reg = <0x0 0x15580000 0x0 0x40000>;
+			reg = <0x0 0x15B80000 0x0 0x40000>;
 
 			nvidia,sor-ctrlnum = <2>;
 			nvidia,dpaux = <&dpaux2>;
@@ -731,7 +731,7 @@
 		sor3: sor3 {
 			status = "disabled";
 			compatible = "nvidia,tegra194-sor1";
-			reg = <0x0 0x155C0000 0x0 0x40000>;
+			reg = <0x0 0x15BC0000 0x0 0x40000>;
 
 			nvidia,sor-ctrlnum = <3>;
 			nvidia,dpaux = <&dpaux3>;

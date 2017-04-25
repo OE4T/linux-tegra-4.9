@@ -32,6 +32,7 @@ nvgpu-y := \
 	common/linux/ioctl_channel.o \
 	common/linux/ioctl_tsg.o \
 	common/linux/log.o \
+	common/linux/cond.o \
 	common/linux/nvgpu_mem.o \
 	common/linux/dma.o \
 	common/linux/soc.o \

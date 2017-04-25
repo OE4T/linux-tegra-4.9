@@ -14,6 +14,9 @@
 #ifndef __FALCON_H__
 #define __FALCON_H__
 
+#include <nvgpu/types.h>
+#include <nvgpu/lock.h>
+
 /*
  * Falcon Id Defines
  */
@@ -86,16 +89,6 @@ enum flcn_hwcfg_write {
 	FALCON_ITF_EN
 };
 
-/*
- * Falcon sub unit Id Defines
- */
-enum flcn_unit_status {
-	IS_FALCON_IN_RESET = 0x0,
-	IS_FALCON_CPU_HALTED,
-	IS_FALCON_IDLE,
-	IS_FALCON_MEM_SURBBING_DONE
-};
-
 #define FALCON_MEM_SCRUBBING_TIMEOUT_MAX 1000
 #define FALCON_MEM_SCRUBBING_TIMEOUT_DEFAULT 10
 
@@ -128,16 +121,17 @@ struct nvgpu_falcon_version_ops {
 	void (*write_dmatrfbase)(struct nvgpu_falcon *flcn, u32 addr);
 };
 
+/* ops which are falcon engine specific */
+struct nvgpu_falcon_engine_dependency_ops {
+	int (*reset_eng)(struct gk20a *g);
+};
+
 struct nvgpu_falcon_ops {
-	void (*reset)(struct nvgpu_falcon *flcn, bool enable);
-	void (*enable_irq)(struct nvgpu_falcon *flcn, bool enable);
-	void (*fbif_transcfg)(struct nvgpu_falcon *flcn);
-	u32 (*read_hwcfg)(struct nvgpu_falcon *flcn,
-		enum flcn_hwcfg_read cfg_type);
-	void (*write_hwcfg)(struct nvgpu_falcon *flcn,
-		enum flcn_hwcfg_write cfg_type, u32 cfg_data);
-	bool (*get_unit_status)(struct nvgpu_falcon *flcn,
-		enum flcn_unit_status unit_id);
+	int (*reset)(struct nvgpu_falcon *flcn);
+	void (*set_irq)(struct nvgpu_falcon *flcn, bool enable);
+	bool (*is_falcon_cpu_halted)(struct nvgpu_falcon *flcn);
+	bool (*is_falcon_idle)(struct nvgpu_falcon *flcn);
+	bool (*is_falcon_scrubbing_done)(struct nvgpu_falcon *flcn);
 	int (*copy_from_dmem)(struct nvgpu_falcon *flcn, u32 src, u8 *dst,
 		u32 size, u8 port);
 	int (*copy_to_dmem)(struct nvgpu_falcon *flcn, u32 dst, u8 *src,
@@ -159,20 +153,25 @@ struct nvgpu_falcon {
 	u32 flcn_id;
 	u32 flcn_base;
 	u32 flcn_core_rev;
+	bool is_falcon_supported;
+	bool is_interrupt_enabled;
+	u32 intr_mask;
+	u32 intr_dest;
 	bool isr_enabled;
 	struct nvgpu_mutex isr_mutex;
 	struct nvgpu_mutex copy_lock;
 	struct nvgpu_falcon_ops flcn_ops;
 	struct nvgpu_falcon_version_ops flcn_vops;
+	struct nvgpu_falcon_engine_dependency_ops flcn_engine_dep_ops;
 };
 
 int nvgpu_flcn_wait_idle(struct nvgpu_falcon *flcn);
-int nvgpu_flcn_enable_hw(struct nvgpu_falcon *flcn, bool enable);
 int nvgpu_flcn_reset(struct nvgpu_falcon *flcn);
-void nvgpu_flcn_enable_irq(struct nvgpu_falcon *flcn, bool enable);
-void nvgpu_flcn_fbif_transcfg(struct nvgpu_falcon *flcn);
-bool nvgpu_flcn_get_unit_status(struct nvgpu_falcon *flcn,
-	enum flcn_unit_status unit_id);
+void nvgpu_flcn_set_irq(struct nvgpu_falcon *flcn, bool enable,
+	u32 intr_mask, u32 intr_dest);
+bool nvgpu_flcn_get_mem_scrubbing_status(struct nvgpu_falcon *flcn);
+bool nvgpu_flcn_get_cpu_halted_status(struct nvgpu_falcon *flcn);
+bool nvgpu_flcn_get_idle_status(struct nvgpu_falcon *flcn);
 int nvgpu_flcn_copy_from_mem(struct nvgpu_falcon *flcn,
 	enum flcn_mem_type mem_type, u32 src, u8 *dst, u32 size, u8 port);
 int nvgpu_flcn_copy_to_mem(struct nvgpu_falcon *flcn,

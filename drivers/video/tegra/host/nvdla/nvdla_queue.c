@@ -474,7 +474,8 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 
 		/* update action */
 		switch (task->postfences[i].type) {
-		case NVDLA_FENCE_TYPE_SYNCPT: {
+		case NVDLA_FENCE_TYPE_SYNCPT:
+		case NVDLA_FENCE_TYPE_SYNC_FD: {
 			dma_addr_t syncpt_addr;
 			u32 gos_id, gos_offset;
 

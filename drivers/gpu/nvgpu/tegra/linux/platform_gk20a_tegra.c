@@ -343,7 +343,8 @@ static void gk20a_tegra_calibrate_emc(struct device *dev,
 }
 
 #ifdef CONFIG_TEGRA_BWMGR
-void gm20b_bwmgr_set_rate(struct gk20a_platform *platform, bool enb)
+#ifdef CONFIG_TEGRA_DVFS
+static void gm20b_bwmgr_set_rate(struct gk20a_platform *platform, bool enb)
 {
 	struct gk20a_scale_profile *profile = platform->g->scale_profile;
 	struct gk20a_emc_params *params;
@@ -356,6 +357,7 @@ void gm20b_bwmgr_set_rate(struct gk20a_platform *platform, bool enb)
 	rate = (enb) ? params->freq_last_set : 0;
 	tegra_bwmgr_set_emc(params->bwmgr_cl, rate, TEGRA_BWMGR_SET_EMC_FLOOR);
 }
+#endif
 
 static void gm20b_tegra_postscale(struct device *dev, unsigned long freq)
 {

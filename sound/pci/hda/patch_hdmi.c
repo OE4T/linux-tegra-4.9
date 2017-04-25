@@ -1486,9 +1486,6 @@ static bool hdmi_present_sense_via_verbs(struct hdmi_spec_per_pin *per_pin,
 		codec->addr, pin_nid, eld->monitor_present, eld->eld_valid);
 
 	if (eld->eld_valid) {
-		memset(&eld->info, 0, sizeof(struct parsed_hdmi_eld));
-		hdmi_update_lpcm_sad_eld(codec, pin_nid, eld);
-
 		if (spec->ops.pin_get_eld(codec, pin_nid, eld->eld_buffer,
 						     &eld->eld_size) < 0)
 			eld->eld_valid = false;
@@ -1497,6 +1494,9 @@ static bool hdmi_present_sense_via_verbs(struct hdmi_spec_per_pin *per_pin,
 						    eld->eld_size) < 0)
 				eld->eld_valid = false;
 		}
+
+		hdmi_update_lpcm_sad_eld(codec, pin_nid, eld);
+
 		if (!eld->eld_valid && repoll)
 			do_repoll = true;
 	}

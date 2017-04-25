@@ -142,37 +142,6 @@ struct max77812_regulator {
 	bool skip_protect_reg_access;
 };
 
-static int max77812_regulator_enable(struct regulator_dev *rdev)
-{
-	struct max77812_regulator *max77812 = rdev_get_drvdata(rdev);
-	int ret;
-
-	ret = regmap_update_bits(max77812->rmap, rdev->desc->enable_reg,
-				 rdev->desc->enable_mask,
-				 rdev->desc->enable_mask);
-	if (ret < 0) {
-		dev_err(max77812->dev, "Regulator enable failed: %d\n", ret);
-		return ret;
-	}
-
-	return ret;
-}
-
-static int max77812_regulator_disable(struct regulator_dev *rdev)
-{
-	struct max77812_regulator *max77812 = rdev_get_drvdata(rdev);
-	int ret;
-
-	ret = regmap_update_bits(max77812->rmap, rdev->desc->enable_reg,
-				 rdev->desc->enable_mask, 0);
-	if (ret < 0) {
-		dev_err(max77812->dev, "Regulator disable failed: %d\n", ret);
-		return ret;
-	}
-
-	return ret;
-}
-
 static u8 max77802_slew_rate_to_reg(const unsigned int sr_limits[],
 				    u8 cnt, unsigned int slew_rate)
 {
@@ -402,8 +371,9 @@ static int max77812_of_parse_cb(struct device_node *np,
 }
 
 static struct regulator_ops max77812_regulator_ops = {
-	.enable = max77812_regulator_enable,
-	.disable = max77812_regulator_disable,
+	.enable = regulator_enable_regmap,
+	.disable = regulator_disable_regmap,
+	.is_enabled = regulator_is_enabled_regmap,
 	.list_voltage = regulator_list_voltage_linear,
 	.map_voltage = regulator_map_voltage_linear,
 	.get_voltage_sel = regulator_get_voltage_sel_regmap,

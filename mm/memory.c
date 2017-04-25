@@ -3492,6 +3492,7 @@ static inline bool vma_is_accessible(struct vm_area_struct *vma)
 static int handle_pte_fault(struct fault_env *fe)
 {
 	pte_t entry;
+	pteval_t prot_vm_none = pgprot_val(vm_get_page_prot(VM_NONE));
 	bool fix_prot = false;
 
 	if (unlikely(pmd_none(*fe->pmd))) {
@@ -3545,7 +3546,8 @@ static int handle_pte_fault(struct fault_env *fe)
 		return do_numa_page(fe, entry);
 
 	if (fe->vma->vm_ops && fe->vma->vm_ops->fixup_prot &&
-		fe->vma->vm_ops->fault) {
+		fe->vma->vm_ops->fault &&
+		((prot_vm_none & pte_val(entry)) == prot_vm_none)) {
 		pgoff_t pgoff = (((fe->address & PAGE_MASK)
 				- fe->vma->vm_start) >> PAGE_SHIFT) +
 				fe->vma->vm_pgoff;

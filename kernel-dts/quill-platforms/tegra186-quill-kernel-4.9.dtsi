@@ -25,10 +25,6 @@
 		};
 	};
 
-	hda@3510000 {
-		status = "disabled";
-       };
-
 	/delete-node/ ahub;
 	/delete-node/ agic-controller@2a41000;
 	/delete-node/ adma@2930000;

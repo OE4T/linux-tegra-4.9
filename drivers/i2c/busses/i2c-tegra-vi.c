@@ -2011,7 +2011,8 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	if (i2c_dev->hw->has_regulator) {
 		i2c_dev->reg = devm_regulator_get(&pdev->dev, "avdd_dsi_csi");
 		if (IS_ERR(i2c_dev->reg)) {
-			dev_err(&pdev->dev, "could not get regulator");
+			if (PTR_ERR(i2c_dev->reg) != -EPROBE_DEFER)
+				dev_err(&pdev->dev, "could not get regulator");
 			return PTR_ERR(i2c_dev->reg);
 		}
 	}

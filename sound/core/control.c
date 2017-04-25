@@ -1248,7 +1248,7 @@ static int snd_ctl_elem_add(struct snd_ctl_file *file,
 	};
 	struct snd_card *card = file->card;
 	struct snd_kcontrol *kctl;
-	unsigned int count;
+	int count;
 	unsigned int access;
 	long private_size;
 	struct user_element *ue;

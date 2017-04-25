@@ -15,11 +15,16 @@
 
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/pinctrl/pinmux.h>
 
 #include "pinctrl-tegra.h"
+
+struct tegra210_pinctrl_soc {
+	bool lpdr_support;
+};
 
 /*
  * Most pins affected by the pinmux can also be GPIOs. Define these first.
@@ -1385,7 +1390,7 @@ static struct tegra_function tegra210_functions[] = {
 		.lpbk_bit = -1,						\
 	}
 
-static const struct tegra_pingroup tegra210_groups[] = {
+static struct tegra_pingroup tegra210_groups[] = {
 	/*       pg_name,              f0,         f1,     f2,    f3,    r,      hsm, drvtype, e_io_hv, lpdr, rdrv,  drvdn_b, drvdn_w, drvup_b, drvup_w, slwr_b, slwr_w, slwf_b, slwf_w, lpbk */
 	PINGROUP(sdmmc1_clk_pm0,       SDMMC1,     RSVD1,  RSVD2, RSVD3, 0x3000, Y,   Y,       N,       N,	0x8d4,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1, 0),
 	PINGROUP(sdmmc1_cmd_pm1,       SDMMC1,     SPI3,   RSVD2, RSVD3, 0x3004, Y,   Y,       N,       N,	-1,    -1,      -1,      -1,      -1,      -1,     -1,     -1,     -1, -1),
@@ -1597,12 +1602,39 @@ static const struct tegra_pinctrl_soc_data tegra210_pinctrl = {
 
 static int tegra210_pinctrl_probe(struct platform_device *pdev)
 {
+	const struct tegra210_pinctrl_soc *soc;
+	struct tegra_pingroup *g;
+	int i;
+
+	soc = of_device_get_match_data(&pdev->dev);
+	if (soc->lpdr_support) {
+		for (i = 0; i < tegra210_pinctrl.ngroups; ++i) {
+			g = &tegra210_groups[i];
+			if (g->mux_reg >= 0)
+				g->lpdr_bit = 8;
+		}
+	}
+
 	return tegra_pinctrl_probe(pdev, &tegra210_pinctrl);
 }
 
+static const struct tegra210_pinctrl_soc tegra210_pinctrl_soc_data = {
+	.lpdr_support = false,
+};
+
+static const struct tegra210_pinctrl_soc tegra210b01_pinctrl_soc_data = {
+	.lpdr_support = true,
+};
+
 static const struct of_device_id tegra210_pinctrl_of_match[] = {
-	{ .compatible = "nvidia,tegra210-pinmux", },
-	{ },
+	{
+		.compatible = "nvidia,tegra210-pinmux",
+		.data = &tegra210_pinctrl_soc_data,
+	}, {
+		.compatible = "nvidia,tegra210b01-pinmux",
+		.data = &tegra210b01_pinctrl_soc_data,
+	}, {
+	},
 };
 MODULE_DEVICE_TABLE(of, tegra210_pinctrl_of_match);
 

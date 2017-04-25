@@ -20,11 +20,13 @@
 #include <linux/tegra_vgpu.h>
 #include "gk20a/gk20a.h"
 
+#include <nvgpu/thread.h>
+
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 
 struct vgpu_priv_data {
 	u64 virt_handle;
-	struct task_struct *intr_handler;
+	struct nvgpu_thread intr_handler;
 	struct tegra_vgpu_constants_params constants;
 };
 

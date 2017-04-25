@@ -13,7 +13,6 @@
  * more details.
  */
 
-#include <linux/kthread.h>
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/pm_runtime.h>
@@ -134,6 +133,7 @@ static void vgpu_handle_channel_event(struct gk20a *g,
 static int vgpu_intr_thread(void *dev_id)
 {
 	struct gk20a *g = dev_id;
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
 	while (true) {
 		struct tegra_vgpu_intr_msg *msg;
@@ -188,7 +188,7 @@ static int vgpu_intr_thread(void *dev_id)
 		tegra_gr_comm_release(handle);
 	}
 
-	while (!kthread_should_stop())
+	while (!nvgpu_thread_should_stop(&priv->intr_handler))
 		msleep(10);
 	return 0;
 }
@@ -219,7 +219,7 @@ static void vgpu_remove_support(struct gk20a *g)
 				TEGRA_GR_COMM_ID_SELF, TEGRA_VGPU_QUEUE_INTR,
 				&msg, sizeof(msg));
 	WARN_ON(err);
-	kthread_stop(priv->intr_handler);
+	nvgpu_thread_stop(&priv->intr_handler);
 
 	/* free mappings to registers, etc*/
 
@@ -650,9 +650,10 @@ int vgpu_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	priv->intr_handler = kthread_run(vgpu_intr_thread, gk20a, "gk20a");
-	if (IS_ERR(priv->intr_handler))
-		return -ENOMEM;
+	err = nvgpu_thread_create(&priv->intr_handler, gk20a,
+			vgpu_intr_thread, "gk20a");
+	if (err)
+		return err;
 
 	gk20a_debug_init(dev, "gpu.0");
 

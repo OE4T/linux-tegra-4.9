@@ -21,7 +21,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/dma-attrs.h>
 #include <linux/lcm.h>
-#include <linux/fdtable.h>
+#include <linux/platform/tegra/tegra_fd.h>
 #include <uapi/linux/nvgpu.h>
 #include <trace/events/gk20a.h>
 
@@ -1874,7 +1874,7 @@ int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 		goto err_bfree;
 	}
 
-	fd = __alloc_fd(current->files, 1024, sysctl_nr_open, O_RDWR);
+	fd = tegra_alloc_fd(current->files, 1024, O_RDWR);
 	if (fd < 0) {
 		/* ->release frees what we have done */
 		dma_buf_put(buf->dmabuf);

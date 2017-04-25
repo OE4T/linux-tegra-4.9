@@ -217,7 +217,8 @@ static void tegra_se_ecc_free_point(struct tegra_se_elp_dev *se_dev,
 	devm_kfree(se_dev->dev, p);
 }
 
-const struct tegra_se_ecc_curve *tegra_se_ecc_get_curve(unsigned int curve_id)
+static const struct tegra_se_ecc_curve *tegra_se_ecc_get_curve(
+						unsigned int curve_id)
 {
 	switch (curve_id) {
 	/* In FIPS mode only allow P256 and higher */

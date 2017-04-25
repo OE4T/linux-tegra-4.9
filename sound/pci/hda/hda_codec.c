@@ -2943,7 +2943,7 @@ static unsigned int hda_set_power_state(struct hda_codec *codec,
 
 	/* this delay seems necessary to avoid click noise at power-down */
 	if (power_state == AC_PWRST_D3) {
-#ifndef CONFIG_SND_HDA_TEGRA
+#if !IS_ENABLED(CONFIG_SND_HDA_TEGRA)
 		if (codec->depop_delay < 0)
 			msleep(codec_has_epss(codec) ? 10 : 100);
 		else if (codec->depop_delay > 0)

@@ -12,7 +12,6 @@
  */
 
 #include <asm/barrier.h>
-#include <linux/kthread.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #endif
@@ -22,6 +21,7 @@
 #include <nvgpu/bug.h>
 #include <nvgpu/hashtable.h>
 #include <nvgpu/circ_buf.h>
+#include <nvgpu/thread.h>
 
 #include "ctxsw_trace_gk20a.h"
 #include "fecs_trace_gk20a.h"
@@ -65,7 +65,7 @@ struct gk20a_fecs_trace {
 	DECLARE_HASHTABLE(pid_hash_table, GK20A_FECS_TRACE_HASH_BITS);
 	struct nvgpu_mutex hash_lock;
 	struct nvgpu_mutex poll_lock;
-	struct task_struct *poll_task;
+	struct nvgpu_thread poll_task;
 };
 
 #ifdef CONFIG_GK20A_CTXSW_TRACE
@@ -382,10 +382,11 @@ done:
 static int gk20a_fecs_trace_periodic_polling(void *arg)
 {
 	struct gk20a *g = (struct gk20a *)arg;
+	struct gk20a_fecs_trace *trace = g->fecs_trace;
 
 	pr_info("%s: running\n", __func__);
 
-	while (!kthread_should_stop()) {
+	while (!nvgpu_thread_should_stop(&trace->poll_task)) {
 
 		nvgpu_usleep_range(GK20A_FECS_TRACE_FRAME_PERIOD_US,
 				   GK20A_FECS_TRACE_FRAME_PERIOD_US * 2);
@@ -708,7 +709,7 @@ static int gk20a_fecs_trace_deinit(struct gk20a *g)
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 
 	gk20a_fecs_trace_debugfs_cleanup(g);
-	kthread_stop(trace->poll_task);
+	nvgpu_thread_stop(&trace->poll_task);
 	gk20a_fecs_trace_free_ring(g);
 	gk20a_fecs_trace_free_hash_table(g);
 
@@ -737,13 +738,13 @@ static int gk20a_gr_max_entries(struct gk20a *g,
 static int gk20a_fecs_trace_enable(struct gk20a *g)
 {
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
-	struct task_struct *task;
 	int write;
+	int err = 0;
 
 	if (!trace)
 		return -EINVAL;
 
-	if  (trace->poll_task)
+	if (nvgpu_thread_is_running(&trace->poll_task))
 		return 0;
 
 	/* drop data in hw buffer */
@@ -752,13 +753,13 @@ static int gk20a_fecs_trace_enable(struct gk20a *g)
 	write = gk20a_fecs_trace_get_write_index(g);
 	gk20a_fecs_trace_set_read_index(g, write);
 
-	task = kthread_run(gk20a_fecs_trace_periodic_polling, g, __func__);
-	if (unlikely(IS_ERR(task))) {
+	err = nvgpu_thread_create(&trace->poll_task, g,
+			gk20a_fecs_trace_periodic_polling, __func__);
+	if (err) {
 		nvgpu_warn(g,
 				"failed to create FECS polling task");
-		return PTR_ERR(task);
+		return err;
 	}
-	trace->poll_task = task;
 
 	return 0;
 }
@@ -767,10 +768,8 @@ static int gk20a_fecs_trace_disable(struct gk20a *g)
 {
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 
-	if (trace->poll_task) {
-		kthread_stop(trace->poll_task);
-		trace->poll_task = NULL;
-	}
+	if (nvgpu_thread_is_running(&trace->poll_task))
+		nvgpu_thread_stop(&trace->poll_task);
 
 	return -EPERM;
 }
@@ -779,7 +778,7 @@ static bool gk20a_fecs_trace_is_enabled(struct gk20a *g)
 {
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 
-	return (trace && trace->poll_task);
+	return (trace && nvgpu_thread_is_running(&trace->poll_task));
 }
 
 

@@ -944,7 +944,7 @@
 						 <&tegra_car TEGRA210_CLK_XUSB_FS_SRC>,
 						 <&tegra_car TEGRA210_CLK_XUSB_SS_SRC>,
 						 <&tegra_car TEGRA210_CLK_XUSB_DEV_SRC>,
-						 <&tegra_car TEGRA210_CLK_XUSB_DEV>,
+						 <&tegra_car TEGRA210_RST_XUSB_DEV>,
 						 <&tegra_car TEGRA210_CLK_XUSB_HS_SRC>,
 						 <&tegra_car TEGRA210_CLK_SCLK>,
 						 <&tegra_car TEGRA210_CLK_HCLK>,

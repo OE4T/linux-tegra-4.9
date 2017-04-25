@@ -724,7 +724,7 @@ static void vgpu_fifo_set_ctx_mmu_error(struct gk20a *g,
 	wmb();
 	/* unblock pending waits */
 	nvgpu_cond_broadcast_interruptible(&ch->semaphore_wq);
-	wake_up(&ch->notifier_wq);
+	nvgpu_cond_broadcast_interruptible(&ch->notifier_wq);
 }
 
 int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info)

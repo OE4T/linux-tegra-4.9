@@ -5873,7 +5873,7 @@ static int gk20a_gr_handle_notify_pending(struct gk20a *g,
 	nvgpu_mutex_release(&ch->cyclestate.cyclestate_buffer_mutex);
 #endif
 	gk20a_dbg_fn("");
-	wake_up(&ch->notifier_wq);
+	nvgpu_cond_broadcast_interruptible(&ch->notifier_wq);
 	return 0;
 }
 

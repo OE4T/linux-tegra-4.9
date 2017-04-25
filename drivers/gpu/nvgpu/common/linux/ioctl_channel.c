@@ -476,8 +476,8 @@ static int gk20a_channel_wait(struct channel_gk20a *ch,
 
 		/* user should set status pending before
 		 * calling this ioctl */
-		remain = wait_event_interruptible_timeout(
-				ch->notifier_wq,
+		remain = NVGPU_COND_WAIT_INTERRUPTIBLE(
+				&ch->notifier_wq,
 				notif->status == 0 || ch->has_timedout,
 				timeout);
 

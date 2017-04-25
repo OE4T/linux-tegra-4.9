@@ -867,7 +867,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	/* The channel is *not* runnable at this point. It still needs to have
 	 * an address space bound and allocate a gpfifo and grctx. */
 
-	init_waitqueue_head(&ch->notifier_wq);
+	nvgpu_cond_init(&ch->notifier_wq);
 	nvgpu_cond_init(&ch->semaphore_wq);
 
 	ch->update_fn = NULL;

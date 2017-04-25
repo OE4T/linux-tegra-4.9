@@ -925,7 +925,7 @@ int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info)
 
 	switch (info->type) {
 	case TEGRA_VGPU_GR_INTR_NOTIFY:
-		wake_up(&ch->notifier_wq);
+		nvgpu_cond_broadcast_interruptible(&ch->notifier_wq);
 		break;
 	case TEGRA_VGPU_GR_INTR_SEMAPHORE:
 		nvgpu_cond_broadcast_interruptible(&ch->semaphore_wq);

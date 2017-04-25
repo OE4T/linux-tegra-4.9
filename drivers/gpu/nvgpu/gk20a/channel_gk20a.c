@@ -1689,7 +1689,7 @@ static int __gk20a_channel_worker_wakeup(struct gk20a *g)
 	 */
 
 	put = atomic_inc_return(&g->channel_worker.put);
-	wake_up(&g->channel_worker.wq);
+	nvgpu_cond_signal(&g->channel_worker.wq);
 
 	return put;
 }
@@ -1783,8 +1783,8 @@ static int gk20a_channel_poll_worker(void *arg)
 	while (!nvgpu_thread_should_stop(&worker->poll_task)) {
 		bool got_events;
 
-		got_events = wait_event_timeout(
-				worker->wq,
+		got_events = NVGPU_COND_WAIT(
+				&worker->wq,
 				__gk20a_channel_worker_pending(g, get),
 				timeout) > 0;
 
@@ -1808,7 +1808,7 @@ int nvgpu_channel_worker_init(struct gk20a *g)
 	char thread_name[64];
 
 	atomic_set(&g->channel_worker.put, 0);
-	init_waitqueue_head(&g->channel_worker.wq);
+	nvgpu_cond_init(&g->channel_worker.wq);
 	nvgpu_init_list_node(&g->channel_worker.items);
 	nvgpu_spinlock_init(&g->channel_worker.items_lock);
 	snprintf(thread_name, sizeof(thread_name),

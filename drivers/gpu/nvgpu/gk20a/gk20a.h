@@ -1166,7 +1166,7 @@ struct gk20a {
 	struct gk20a_channel_worker {
 		struct nvgpu_thread poll_task;
 		atomic_t put;
-		wait_queue_head_t wq;
+		struct nvgpu_cond wq;
 		struct nvgpu_list_node items;
 		struct nvgpu_spinlock items_lock;
 	} channel_worker;

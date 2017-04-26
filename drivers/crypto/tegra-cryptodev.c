@@ -627,98 +627,6 @@ out:
 	return ret;
 }
 
-static int tegra_crypt_rng1(struct tegra_se_rng1_request *rng1_req)
-{
-	struct tegra_se_rng1_request temp_rng1_req;
-	int ret;
-
-	temp_rng1_req.size = rng1_req->size;
-	temp_rng1_req.test_full_cmd_flow = rng1_req->test_full_cmd_flow;
-	temp_rng1_req.adv_state_on = rng1_req->adv_state_on;
-
-	temp_rng1_req.rdata = kzalloc(rng1_req->size, GFP_KERNEL);
-	if (!temp_rng1_req.rdata) {
-		ret = -ENOMEM;
-		goto exit;
-	}
-
-	ret = copy_from_user(temp_rng1_req.rdata,
-			     (void __user *)rng1_req->rdata, rng1_req->size);
-	if (ret) {
-		ret = -EFAULT;
-		pr_debug("%s: copy_from_user failed (%d) for rng1_req\n",
-			 __func__, ret);
-		goto rdata_free;
-	}
-
-	temp_rng1_req.rdata1 = kzalloc(rng1_req->size, GFP_KERNEL);
-	if (!temp_rng1_req.rdata1) {
-		ret = -ENOMEM;
-		goto rdata_free;
-	}
-
-	ret = copy_from_user(temp_rng1_req.rdata1,
-			     (void __user *)rng1_req->rdata1, rng1_req->size);
-	if (ret) {
-		ret = -EFAULT;
-		pr_debug("%s: copy_from_user failed (%d) for rng1_req\n",
-			 __func__, ret);
-		goto rdata1_free;
-	}
-
-	temp_rng1_req.rdata2 = kzalloc(rng1_req->size, GFP_KERNEL);
-	if (!temp_rng1_req.rdata2) {
-		ret = -ENOMEM;
-		goto rdata1_free;
-	}
-
-	ret = copy_from_user(temp_rng1_req.rdata2,
-			     (void __user *)rng1_req->rdata2, rng1_req->size);
-	if (ret) {
-		ret = -EFAULT;
-		pr_debug("%s: copy_from_user failed (%d) for rng1_req\n",
-			 __func__, ret);
-		goto rdata2_free;
-	}
-
-	ret = tegra_se_rng1_op(&temp_rng1_req);
-	if (ret) {
-		pr_debug("\ntegra_se_rng1_op failed(%d) for RNG1\n", ret);
-		goto rdata2_free;
-	}
-
-	ret = copy_to_user((void __user *)rng1_req->rdata, temp_rng1_req.rdata,
-			   rng1_req->size);
-	if (ret) {
-		ret = -EFAULT;
-		pr_debug("%s: copy_to_user failed (%d)\n", __func__, ret);
-		goto rdata2_free;
-	}
-
-	ret = copy_to_user((void __user *)rng1_req->rdata1,
-			   temp_rng1_req.rdata1, rng1_req->size);
-	if (ret) {
-		ret = -EFAULT;
-		pr_debug("%s: copy_to_user failed (%d)\n", __func__, ret);
-		goto rdata2_free;
-	}
-
-	ret = copy_to_user((void __user *)rng1_req->rdata2,
-			   temp_rng1_req.rdata2, rng1_req->size);
-	if (ret) {
-		ret = -EFAULT;
-		pr_debug("%s: copy_to_user failed (%d)\n", __func__, ret);
-	}
-rdata2_free:
-	kfree(temp_rng1_req.rdata2);
-rdata1_free:
-	kfree(temp_rng1_req.rdata1);
-rdata_free:
-	kfree(temp_rng1_req.rdata);
-exit:
-	return ret;
-}
-
 static int tegra_crypt_pka1_ecc(struct tegra_se_pka1_ecc_request *ecc_req)
 {
 	struct tegra_se_pka1_ecc_request temp_ecc_req;
@@ -1276,7 +1184,6 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 	struct crypto_rng *tfm = NULL;
 	struct tegra_pka1_rsa_request pka1_rsa_req;
 	struct tegra_se_pka1_ecc_request pka1_ecc_req;
-	struct tegra_se_rng1_request rng1_req;
 	struct tegra_crypt_req crypt_req;
 	struct tegra_rng_req rng_req;
 	struct tegra_sha_req sha_req;
@@ -1607,15 +1514,48 @@ rng_out:
 		break;
 
 	case TEGRA_CRYPTO_IOCTL_RNG1_REQ:
-		if (copy_from_user(&rng1_req, (void __user *)arg,
-				   sizeof(rng1_req))) {
-			ret = -EFAULT;
-			pr_err("%s: copy_from_user fail(%d) for rng1_req\n",
-				__func__, ret);
-			return ret;
+		if (copy_from_user(&rng_req, (void __user *)arg,
+			sizeof(rng_req))) {
+			pr_err("%s: copy_from_user fail(%d)\n",
+					__func__, ret);
+			return -EFAULT;
 		}
 
-		ret = tegra_crypt_rng1(&rng1_req);
+		rng = kzalloc(rng_req.nbytes, GFP_KERNEL);
+		if (!rng)
+			return -ENODATA;
+
+		ctx->rng = crypto_alloc_rng("rng1-elp-tegra",
+			CRYPTO_ALG_TYPE_RNG, 0);
+		if (IS_ERR(ctx->rng)) {
+			pr_err("Failed to alloc rng1: %ld\n",
+						PTR_ERR(ctx->rng));
+			ret = PTR_ERR(ctx->rng);
+			goto rng1_out;
+		}
+
+		tfm = ctx->rng;
+		filp->private_data = ctx;
+		ret = crypto_rng_get_bytes(ctx->rng, rng,
+				rng_req.nbytes);
+
+		if (ret != rng_req.nbytes) {
+			pr_err("rng failed");
+			ret = -ENODATA;
+			goto free_rng1_tfm;
+		}
+
+		ret = copy_to_user((void __user *)rng_req.rdata,
+			(const void *)rng, rng_req.nbytes);
+		if (ret) {
+			ret = -EFAULT;
+			pr_err("%s: copy_to_user fail(%d)\n", __func__, ret);
+			goto free_rng1_tfm;
+		}
+free_rng1_tfm:
+		crypto_free_rng(tfm);
+rng1_out:
+		kfree(rng);
 		break;
 
 	default:

@@ -1986,6 +1986,11 @@ static int dvfs_table_show(struct seq_file *s, void *data)
 	mutex_lock(&dvfs_lock);
 
 	list_for_each_entry(rail, &dvfs_rail_list, node) {
+		seq_printf(s, "%-8s table version: %s\n",
+			   rail->reg_id, rail->nvver ? : "N/A");
+	}
+
+	list_for_each_entry(rail, &dvfs_rail_list, node) {
 		list_for_each_entry(d, &rail->dvfs, reg_node) {
 			bool mv_done = false;
 			v_pll =  dvfs_get_millivolts_pll(d);

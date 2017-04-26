@@ -90,8 +90,7 @@ struct tegra_mipi {
 	struct tegra_mipi_prod_csi *prod_csi;
 	struct tegra_mipi_prod_dsi *prod_dsi;
 	/* If use tegra_prod framework */
-	struct tegra_prod *prod_gr_csi;
-	struct tegra_prod *prod_gr_dsi;
+	struct tegra_prod *prod_list;
 	const struct tegra_mipi_soc *soc;
 	void __iomem *io;
 	atomic_t refcount;
@@ -125,6 +124,9 @@ struct tegra_mipi_soc {
 	int (*parse_cfg)(struct platform_device *pdev, struct tegra_mipi *mipi);
 	u8 virtual_dev;
 };
+
+static int tegra_mipical_prodset_helper(struct tegra_mipi *mipi,
+					char *prod_node);
 
 static int mipical_write(struct regmap *map,
 		unsigned int reg, unsigned int val)
@@ -614,9 +616,10 @@ static int _tegra_mipi_calibration(struct tegra_mipi *mipi, int lanes)
 	mutex_unlock(&mipi->lock);
 	return err;
 }
+
 static int tegra_mipical_using_prod(struct tegra_mipi *mipi, int lanes)
 {
-	int err = 0;
+	int err = -1, val = 0;
 
 	mutex_lock(&mipi->lock);
 
@@ -624,19 +627,45 @@ static int tegra_mipical_using_prod(struct tegra_mipi *mipi, int lanes)
 	clear_all(mipi);
 
 	/* Apply MIPI_CAL PROD_Set */
-	if (lanes & (CSIA|CSIB|CSIC|CSID|CSIE|CSIF)) {
-		if (!IS_ERR(mipi->prod_gr_csi))
-			err = tegra_prod_set_by_name(&mipi->io, "prod",
-					mipi->prod_gr_csi);
-	} else {
-		if (!IS_ERR(mipi->prod_gr_dsi))
-			err = tegra_prod_set_by_name(&mipi->io,
-					"prod", mipi->prod_gr_dsi);
+	regmap_read(mipi->regmap, ADDR(MIPI_CAL_MODE), &val);
+
+	if (val & SEL_DPHY_CPHY) { /*CPHY*/
+
+		err = tegra_mipical_prodset_helper(mipi, "prod");
+		if (err)
+			goto prod_set_fail;
+
+		err = tegra_mipical_prodset_helper(mipi, "prod_c_cphy_csi");
+		if (err)
+			goto prod_set_fail;
+
+	} else { /*DPHY*/
+
+		if (lanes & (CSIA|CSIB|CSIC|CSID|CSIE|CSIF)) { /*DPHY_CSI*/
+			err = tegra_mipical_prodset_helper(mipi, "prod");
+			if (err)
+				goto prod_set_fail;
+
+			err = tegra_mipical_prodset_helper(mipi,
+									"prod_c_dphy_csi");
+			if (err)
+				goto prod_set_fail;
+
+		} else { /*DPHY_DSI*/
+
+			err = tegra_mipical_prodset_helper(mipi, "prod");
+			if (err)
+				goto prod_set_fail;
+
+			err = tegra_mipical_prodset_helper(mipi,
+									"prod_c_dphy_dsi");
+			if (err)
+				goto prod_set_fail;
+
+		}
+
 	}
-	if (err) {
-		dev_err(mipi->dev, "tegra_prod set failed\n");
-		goto err_unlock;
-	}
+
 	/*Select lanes */
 	select_lanes(mipi, lanes);
 	/* Start calibration */
@@ -648,7 +677,7 @@ static int tegra_mipical_using_prod(struct tegra_mipi *mipi, int lanes)
 	if (err)
 		timeout_ct++;
 #endif
-err_unlock:
+prod_set_fail:
 	mutex_unlock(&mipi->lock);
 	return err;
 
@@ -773,32 +802,41 @@ static void print_config(struct tegra_mipi *mipi)
 static int tegra_prod_get_config(struct platform_device *pdev,
 				struct tegra_mipi *mipi)
 {
-	struct device_node *np;
-
-	if (mipi->prod_gr_dsi != NULL && mipi->prod_gr_csi != NULL)
+	if (mipi->prod_list != NULL)
 		return 0;
 
-	np = of_find_node_by_name(NULL, "mipical");
-	if (!np) {
-		pr_err("%s: Can not find dsi prod node\n", __func__);
-	} else {
-		mipi->prod_gr_dsi =
-				devm_tegra_prod_get_from_node(mipi->dev, np);
-		if (IS_ERR(mipi->prod_gr_dsi))
-			dev_err(mipi->dev, "Fail to get DSI PROD settings\n");
-	}
+	mipi->prod_list = devm_tegra_prod_get(&pdev->dev);
 
-	np = of_find_node_by_name(NULL, "csi_mipical");
-	if (!np) {
-		pr_err("%s: Can not find csi_mipical node\n", __func__);
-	} else {
-		mipi->prod_gr_csi =
-				devm_tegra_prod_get_from_node(mipi->dev, np);
-		if (IS_ERR(mipi->prod_gr_csi))
-			dev_err(mipi->dev, "Fail to get CSI PROD settings\n");
+	if (IS_ERR(mipi->prod_list)) {
+		pr_err("%s: Can not find mipical prod node\n", __func__);
+		return -ENODEV;
 	}
 
 	return 0;
+}
+
+static int tegra_mipical_prodset_helper(struct tegra_mipi *mipi,
+					char *prod_node)
+{
+	int err = -ENODEV;
+	bool supported_prod = false;
+
+	if (IS_ERR(mipi->prod_list) || !prod_node)
+		return -EINVAL;
+
+	supported_prod = tegra_prod_by_name_supported(mipi->prod_list,
+						prod_node);
+
+	if (supported_prod == true) {
+		err = tegra_prod_set_by_name(&mipi->io, prod_node,
+						mipi->prod_list);
+		if (err) {
+			dev_err(mipi->dev, "%s: prod set (%s) fail (err=%d)\n",
+						__func__, prod_node, err);
+		}
+	}
+
+	return err;
 }
 
 static int tegra_mipi_parse_config(struct platform_device *pdev,

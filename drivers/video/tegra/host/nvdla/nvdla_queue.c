@@ -142,8 +142,9 @@ static int nvdla_unmap_task_memory(struct nvdla_task *task)
 
 	/* unpin prefences memory */
 	for (ii = 0; ii < task->num_prefences; ii++) {
-		if (task->prefences[ii].type == NVDLA_FENCE_TYPE_SEMAPHORE &&
-			task->prefences[ii].sem_handle) {
+		if ((task->prefences[ii].type == NVDLA_FENCE_TYPE_SEMAPHORE ||
+		   task->prefences[ii].type == NVDLA_FENCE_TYPE_TS_SEMAPHORE) &&
+		   task->prefences[ii].sem_handle) {
 			nvhost_buffer_submit_unpin(task->buffers,
 				&task->prefences_sem_dmabuf[ii], 1);
 			dma_buf_put(task->prefences_sem_dmabuf[ii]);
@@ -461,14 +462,18 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 
 			if (nvhost_buffer_submit_pin(buffers,
 					&task->out_task_status_dmabuf[j],
-					1, &dma_addr, &dma_size))
+					1, &dma_addr, &dma_size)) {
+				nvdla_dbg_err(pdev, "fail to pin out status");
 				break;
+			}
 
 			next = add_status_action(next, POSTACTION_TASK_STATUS,
 				dma_addr + task->out_task_status[j].offset,
 				task->out_task_status[j].status);
 	}
 
+	/* reset fence counter */
+	task->fence_counter = 0;
 	/* fill all postactions */
 	for (i = 0; i < task->num_postfences; i++) {
 
@@ -490,9 +495,11 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 					queue->syncpt_id);
 				nvdla_dbg_info(pdev, "post i:%d syncpt:[%u] gos_id[%u] gos_offset[%u] val[%u]",
 					i, queue->syncpt_id, gos_id,
-					gos_offset, max + 1);
+					gos_offset,
+					max + task->fence_counter + 1);
 				next = add_gos_action(next, POSTACTION_GOS,
-					gos_id, gos_offset, max + 1);
+					gos_id, gos_offset,
+					max + task->fence_counter + 1);
 			}
 
 			/* For postaction also update MSS addr */
@@ -500,6 +507,8 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 					queue->syncpt_id);
 			next = add_fence_action(next, POSTACTION_SEM,
 					syncpt_addr, 1);
+
+			task->fence_counter = task->fence_counter + 1;
 
 			nvdla_dbg_info(pdev, "post i:%d syncpt:[%u] mss:[%pad]",
 					i, queue->syncpt_id, &syncpt_addr);
@@ -529,8 +538,10 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 
 			if (nvhost_buffer_submit_pin(buffers,
 					&task->postfences_sem_dmabuf[i],
-					1, &dma_addr, &dma_size))
+					1, &dma_addr, &dma_size)) {
+				nvdla_dbg_err(pdev, "fail to pin OUT TSSEM");
 				break;
+			}
 
 			next = add_fence_action(next, POSTACTION_TS_SEM,
 				dma_addr + task->postfences[i].sem_offset,
@@ -557,8 +568,10 @@ static int nvdla_fill_postactions(struct nvdla_task *task)
 
 			if (nvhost_buffer_submit_pin(buffers,
 					&task->postfences_sem_dmabuf[i],
-					1, &dma_addr, &dma_size))
+					1, &dma_addr, &dma_size)) {
+				nvdla_dbg_err(pdev, "fail to pin OUT SEM");
 				break;
+			}
 
 			next = add_fence_action(next, POSTACTION_SEM,
 				dma_addr + task->postfences[i].sem_offset,
@@ -698,7 +711,8 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 			}
 			break;
 		}
-		case NVDLA_FENCE_TYPE_SEMAPHORE: {
+		case NVDLA_FENCE_TYPE_SEMAPHORE:
+		case NVDLA_FENCE_TYPE_TS_SEMAPHORE: {
 			dma_addr_t dma_addr;
 			size_t dma_size;
 
@@ -718,8 +732,10 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 
 			if (nvhost_buffer_submit_pin(buffers,
 					&task->prefences_sem_dmabuf[i],
-					1, &dma_addr, &dma_size))
+					1, &dma_addr, &dma_size)) {
+				nvdla_dbg_err(pdev, "fail to pin IN SEM");
 				break;
+			}
 
 			next = add_fence_action(next, PREACTION_SEM_GE,
 				dma_addr + task->prefences[i].sem_offset,
@@ -754,8 +770,10 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 
 			if (nvhost_buffer_submit_pin(buffers,
 					&task->in_task_status_dmabuf[j],
-					1, &dma_addr, &dma_size))
+					1, &dma_addr, &dma_size)) {
+				nvdla_dbg_err(pdev, "fail to pin in status");
 				break;
+			}
 
 			next = add_status_action(next, PREACTION_TASK_STATUS,
 				dma_addr + task->in_task_status[j].offset,
@@ -849,7 +867,8 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 	struct nvdla_cmd_data cmd_data;
 	uint32_t method_data;
 	uint32_t method_id;
-	int err = 0;
+	uint32_t counter;
+	int i, err = 0;
 
 	nvdla_dbg_fn(pdev, "");
 
@@ -876,10 +895,12 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 	nvdla_dbg_info(pdev, "task[%p] added to list", task);
 
 	/* get fence from nvhost */
-	task->fence = nvhost_syncpt_incr_max(task->sp, queue->syncpt_id, 1);
+	task->fence = nvhost_syncpt_incr_max(task->sp, queue->syncpt_id,
+						task->fence_counter);
 
-	nvdla_dbg_fn(pdev, "syncpt[%d] fence[%d] task[%p]", queue->syncpt_id,
-				task->fence, task);
+	nvdla_dbg_fn(pdev, "syncpt[%d] fence[%d] task[%p] fence_counter[%u]",
+				queue->syncpt_id, task->fence,
+				task, task->fence_counter);
 
 	/* get syncpoint reference */
 	nvhost_syncpt_get_ref(task->sp, queue->syncpt_id);
@@ -896,9 +917,23 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 	if (err)
 		goto fail_to_register;
 
-	/* Pass fence as through 0th postfences */
-	task->postfences[0].syncpoint_index = queue->syncpt_id;
-	task->postfences[0].syncpoint_value = task->fence;
+	/* Update postfences for all */
+	counter = task->fence_counter - 1;
+	for (i = 0; i < task->num_postfences; i++) {
+		if ((task->postfences[i].type == NVDLA_FENCE_TYPE_SYNCPT) ||
+		    (task->postfences[i].type == NVDLA_FENCE_TYPE_SYNC_FD)) {
+			task->postfences[i].syncpoint_index =
+					queue->syncpt_id;
+			task->postfences[i].syncpoint_value =
+					task->fence - counter;
+
+			nvdla_dbg_info(pdev, "[%d] postfence set[%u]:[%u]",
+				i, task->postfences[i].syncpoint_index,
+				task->postfences[i].syncpoint_value);
+
+			counter = counter - 1;
+		}
+	}
 
 	/* prepare command */
 	cmd_data.method_id = method_id;

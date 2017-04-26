@@ -213,6 +213,7 @@ struct nvdla_task {
 	u32 num_out_task_status;
 	u32 num_addresses;
 	u32 fence;
+	u32 fence_counter;
 	struct kref ref;
 	struct list_head list;
 	struct dla_task_descriptor *task_desc;

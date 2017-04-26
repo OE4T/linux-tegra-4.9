@@ -921,9 +921,11 @@ static void tegra_se_send_ctr_seed(struct tegra_se_dev *se_dev, u32 *pdata,
 	se_dev->cmdbuf_cnt = i;
 }
 
-static int tegra_se_send_key_data(struct tegra_se_dev *se_dev,
-	u8 *pdata, u32 data_len, u8 slot_num, enum tegra_se_key_table_type type,
-		unsigned int opcode_addr, u32 *cpuvaddr, dma_addr_t iova)
+static int tegra_se_send_key_data(struct tegra_se_dev *se_dev, u8 *pdata,
+				  u32 data_len, u8 slot_num,
+				  enum tegra_se_key_table_type type,
+				  unsigned int opcode_addr, u32 *cpuvaddr,
+				  dma_addr_t iova, bool callback)
 {
 	u32 data_size;
 	u32 *pdata_buf = (u32 *)pdata;
@@ -993,7 +995,7 @@ static int tegra_se_send_key_data(struct tegra_se_dev *se_dev,
 	if (type == SE_KEY_TABLE_TYPE_KEY) {
 		err = tegra_se_channel_submit_gather(se_dev,
 			cpuvaddr,
-			iova, 0, cmdbuf_num_words, true);
+			iova, 0, cmdbuf_num_words, callback);
 	}
 
 	return err;
@@ -1428,7 +1430,8 @@ static int tegra_se_prepare_cmdbuf(struct tegra_se_dev *se_dev,
 					TEGRA_SE_AES_IV_SIZE,
 					aes_ctx->slot->slot_num,
 					SE_KEY_TABLE_TYPE_ORGIV,
-					se_dev->opcode_addr, cpuvaddr, iova);
+					se_dev->opcode_addr, cpuvaddr,
+					iova, true);
 			}
 		}
 
@@ -1779,11 +1782,11 @@ static int tegra_se_aes_setkey(struct crypto_ablkcipher *tfm,
 		keylen = keylen/2;
 	ret = tegra_se_send_key_data(se_dev, pdata, keylen,
 			ctx->slot->slot_num, SE_KEY_TABLE_TYPE_KEY,
-			se_dev->opcode_addr, cpuvaddr, iova);
+			se_dev->opcode_addr, cpuvaddr, iova, true);
 	if (ctx->op_mode == SE_AES_OP_MODE_XTS)
 		ret = tegra_se_send_key_data(se_dev, pdata + keylen, keylen,
 			ctx->slot->slot_num, SE_KEY_TABLE_TYPE_XTS_KEY2,
-			se_dev->opcode_addr, cpuvaddr, iova);
+			se_dev->opcode_addr, cpuvaddr, iova, true);
 out:
 	mutex_unlock(&se_dev->mtx);
 	return ret;
@@ -2169,7 +2172,7 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 		ret = tegra_se_send_key_data(se_dev, piv, TEGRA_SE_AES_IV_SIZE,
 			cmac_ctx->slot->slot_num, SE_KEY_TABLE_TYPE_ORGIV,
 			se_dev->opcode_addr, se_dev->aes_cmdbuf_cpuvaddr,
-			se_dev->aes_cmdbuf_iova);
+			se_dev->aes_cmdbuf_iova, false);
 
 		req_ctx->crypto_config = tegra_se_get_crypto_config(se_dev,
 			req_ctx->op_mode, true, cmac_ctx->slot->slot_num, true);
@@ -2249,12 +2252,12 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 		ret = tegra_se_send_key_data(se_dev, piv, TEGRA_SE_AES_IV_SIZE,
 			cmac_ctx->slot->slot_num, SE_KEY_TABLE_TYPE_ORGIV,
 			se_dev->opcode_addr, se_dev->aes_cmdbuf_cpuvaddr,
-			se_dev->aes_cmdbuf_iova);
+			se_dev->aes_cmdbuf_iova, false);
 	} else {
 		ret = tegra_se_send_key_data(se_dev, piv, TEGRA_SE_AES_IV_SIZE,
 			cmac_ctx->slot->slot_num, SE_KEY_TABLE_TYPE_UPDTDIV,
 			se_dev->opcode_addr, se_dev->aes_cmdbuf_cpuvaddr,
-			se_dev->aes_cmdbuf_iova);
+			se_dev->aes_cmdbuf_iova, false);
 	}
 
 	req_ctx->config = tegra_se_get_config(se_dev, req_ctx->op_mode,
@@ -2362,7 +2365,7 @@ static int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 	ret = tegra_se_send_key_data(se_dev, (u8 *)key, keylen,
 			ctx->slot->slot_num, SE_KEY_TABLE_TYPE_KEY,
 			se_dev->opcode_addr, se_dev->aes_cmdbuf_cpuvaddr,
-			se_dev->aes_cmdbuf_iova);
+			se_dev->aes_cmdbuf_iova, false);
 	if (ret) {
 		dev_err(se_dev->dev,
 			"tegra_se_send_key_data for loading cmac key failed\n");
@@ -2376,7 +2379,7 @@ static int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 	ret = tegra_se_send_key_data(se_dev, piv, TEGRA_SE_AES_IV_SIZE,
 			ctx->slot->slot_num, SE_KEY_TABLE_TYPE_ORGIV,
 			se_dev->opcode_addr, se_dev->aes_cmdbuf_cpuvaddr,
-			se_dev->aes_cmdbuf_iova);
+			se_dev->aes_cmdbuf_iova, false);
 	if (ret) {
 		dev_err(se_dev->dev,
 			"tegra_se_send_key_data for loading cmac iv failed\n");

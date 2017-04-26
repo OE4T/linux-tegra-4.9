@@ -129,6 +129,8 @@ struct dvfs_rail {
 	struct dvfs_therm_limits *therm_caps;
 	int therm_caps_size;
 	int therm_cap_idx;
+
+	char *nvver;
 };
 
 enum dfll_range {

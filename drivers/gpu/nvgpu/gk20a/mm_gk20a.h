@@ -412,14 +412,6 @@ int nvgpu_vm_get_compbits_info(struct vm_gk20a *vm,
 			       u32 *mapping_ctagline,
 			       u32 *flags);
 
-u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
-		     u64 size,
-		     enum gmmu_pgsz_gk20a gmmu_pgsz_idx);
-
-int gk20a_vm_free_va(struct vm_gk20a *vm,
-		     u64 offset, u64 size,
-		     enum gmmu_pgsz_gk20a pgsz_idx);
-
 /* vm-as interface */
 struct nvgpu_as_alloc_space_args;
 struct nvgpu_as_free_space_args;

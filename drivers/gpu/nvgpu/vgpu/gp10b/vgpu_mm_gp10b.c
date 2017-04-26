@@ -81,7 +81,7 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 
 	/* Allocate (or validate when map_offset != 0) the virtual address. */
 	if (!map_offset) {
-		map_offset = gk20a_vm_alloc_va(vm, size, pgsz_idx);
+		map_offset = __nvgpu_vm_alloc_va(vm, size, pgsz_idx);
 		if (!map_offset) {
 			nvgpu_err(g, "failed to allocate va space");
 			err = -ENOMEM;

@@ -242,4 +242,17 @@ int nvgpu_init_vm(struct mm_gk20a *mm,
 		char *name);
 void nvgpu_deinit_vm(struct vm_gk20a *vm);
 
+/*
+ * These are private to the VM code but are unfortunately used by the vgpu code.
+ * It appears to be used for an optimization in reducing the number of server
+ * requests to the vgpu server. Basically the vgpu implementation of
+ * map_global_ctx_buffers() sends a bunch of VA ranges over to the RM server.
+ * Ideally the RM server can just batch mappings but until such a time this
+ * will be used by the vgpu code.
+ */
+u64 __nvgpu_vm_alloc_va(struct vm_gk20a *vm, u64 size,
+			enum gmmu_pgsz_gk20a pgsz_idx);
+int __nvgpu_vm_free_va(struct vm_gk20a *vm, u64 addr,
+		       enum gmmu_pgsz_gk20a pgsz_idx);
+
 #endif

@@ -1192,57 +1192,6 @@ static void nvgpu_vm_unmap_user(struct vm_gk20a *vm, u64 offset,
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 }
 
-u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
-		      u64 size,
-		      enum gmmu_pgsz_gk20a gmmu_pgsz_idx)
-
-{
-	struct nvgpu_allocator *vma = vm->vma[gmmu_pgsz_idx];
-	u64 offset;
-	u64 gmmu_page_size = vm->gmmu_page_sizes[gmmu_pgsz_idx];
-	struct gk20a *g = vm->mm->g;
-
-	if (gmmu_pgsz_idx >= gmmu_nr_page_sizes) {
-		nvgpu_warn(g,
-			 "invalid page size requested in gk20a vm alloc");
-		return 0;
-	}
-
-	if ((gmmu_pgsz_idx == gmmu_page_size_big) && !vm->big_pages) {
-		nvgpu_warn(g, "unsupportd page size requested");
-		return 0;
-
-	}
-
-	/* Be certain we round up to gmmu_page_size if needed */
-	size = (size + ((u64)gmmu_page_size - 1)) & ~((u64)gmmu_page_size - 1);
-	gk20a_dbg_info("size=0x%llx @ pgsz=%dKB", size,
-			vm->gmmu_page_sizes[gmmu_pgsz_idx]>>10);
-
-	offset = nvgpu_alloc(vma, size);
-	if (!offset) {
-		nvgpu_err(vm->mm->g,
-			  "%s oom: sz=0x%llx", vma->name, size);
-		return 0;
-	}
-
-	gk20a_dbg_fn("%s found addr: 0x%llx", vma->name, offset);
-	return offset;
-}
-
-int gk20a_vm_free_va(struct vm_gk20a *vm,
-		     u64 offset, u64 size,
-		     enum gmmu_pgsz_gk20a pgsz_idx)
-{
-	struct nvgpu_allocator *vma = vm->vma[pgsz_idx];
-
-	gk20a_dbg_info("%s free addr=0x%llx, size=0x%llx",
-			vma->name, offset, size);
-	nvgpu_free(vma, offset);
-
-	return 0;
-}
-
 int setup_buffer_kind_and_compression(struct vm_gk20a *vm,
 				      u32 flags,
 				      struct buffer_attrs *bfr,
@@ -1313,7 +1262,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 
 	/* Allocate (or validate when map_offset != 0) the virtual address. */
 	if (!map_offset) {
-		map_offset = gk20a_vm_alloc_va(vm, size,
+		map_offset = __nvgpu_vm_alloc_va(vm, size,
 					  pgsz_idx);
 		if (!map_offset) {
 			nvgpu_err(g, "failed to allocate va space");
@@ -1364,7 +1313,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 	return map_offset;
 fail_validate:
 	if (allocated)
-		gk20a_vm_free_va(vm, map_offset, size, pgsz_idx);
+		__nvgpu_vm_free_va(vm, map_offset, pgsz_idx);
 fail_alloc:
 	nvgpu_err(g, "%s: failed with err=%d\n", __func__, err);
 	return 0;
@@ -1383,7 +1332,7 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 	struct gk20a *g = gk20a_from_vm(vm);
 
 	if (va_allocated) {
-		err = gk20a_vm_free_va(vm, vaddr, size, pgsz_idx);
+		err = __nvgpu_vm_free_va(vm, vaddr, pgsz_idx);
 		if (err) {
 			nvgpu_err(g, "failed to free va");
 			return;

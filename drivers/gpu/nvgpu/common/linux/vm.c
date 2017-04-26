@@ -394,7 +394,7 @@ clean_up:
 	}
 	nvgpu_kfree(g, mapped_buffer);
 	if (va_allocated)
-		gk20a_vm_free_va(vm, map_offset, bfr.size, bfr.pgsz_idx);
+		__nvgpu_vm_free_va(vm, map_offset, bfr.pgsz_idx);
 	if (!IS_ERR(bfr.sgt))
 		gk20a_mm_unpin(g->dev, dmabuf, bfr.sgt);
 

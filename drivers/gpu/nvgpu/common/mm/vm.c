@@ -29,6 +29,54 @@ int vm_aspace_id(struct vm_gk20a *vm)
 	return vm->as_share ? vm->as_share->id : -1;
 }
 
+u64 __nvgpu_vm_alloc_va(struct vm_gk20a *vm, u64 size,
+			enum gmmu_pgsz_gk20a pgsz_idx)
+
+{
+	struct gk20a *g = vm->mm->g;
+	struct nvgpu_allocator *vma = NULL;
+	u64 addr;
+	u64 page_size = vm->gmmu_page_sizes[pgsz_idx];
+
+	vma = vm->vma[pgsz_idx];
+
+	if (pgsz_idx >= gmmu_nr_page_sizes) {
+		nvgpu_err(g, "(%s) invalid page size requested", vma->name);
+		return 0;
+	}
+
+	if ((pgsz_idx == gmmu_page_size_big) && !vm->big_pages) {
+		nvgpu_err(g, "(%s) unsupportd page size requested", vma->name);
+		return 0;
+	}
+
+	/* Be certain we round up to page_size if needed */
+	size = (size + ((u64)page_size - 1)) & ~((u64)page_size - 1);
+	nvgpu_log(g, gpu_dbg_map, "size=0x%llx @ pgsz=%dKB", size,
+		  vm->gmmu_page_sizes[pgsz_idx] >> 10);
+
+	addr = nvgpu_alloc(vma, size);
+	if (!addr) {
+		nvgpu_err(g, "(%s) oom: sz=0x%llx", vma->name, size);
+		return 0;
+	}
+
+	nvgpu_log(g, gpu_dbg_map, "(%s) addr: 0x%llx", vma->name, addr);
+	return addr;
+}
+
+int __nvgpu_vm_free_va(struct vm_gk20a *vm, u64 addr,
+		       enum gmmu_pgsz_gk20a pgsz_idx)
+{
+	struct gk20a *g = vm->mm->g;
+	struct nvgpu_allocator *vma = vm->vma[pgsz_idx];
+
+	nvgpu_log(g, gpu_dbg_map, "(%s) addr: 0x%llx", vma->name, addr);
+	nvgpu_free(vma, addr);
+
+	return 0;
+}
+
 void nvgpu_vm_mapping_batch_start(struct vm_gk20a_mapping_batch *mapping_batch)
 {
 	memset(mapping_batch, 0, sizeof(*mapping_batch));

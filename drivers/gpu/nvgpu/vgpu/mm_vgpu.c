@@ -106,7 +106,7 @@ static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 
 	/* Allocate (or validate when map_offset != 0) the virtual address. */
 	if (!map_offset) {
-		map_offset = gk20a_vm_alloc_va(vm, size,
+		map_offset = __nvgpu_vm_alloc_va(vm, size,
 					  pgsz_idx);
 		if (!map_offset) {
 			nvgpu_err(g, "failed to allocate va space\n");
@@ -180,7 +180,7 @@ static void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 	gk20a_dbg_fn("");
 
 	if (va_allocated) {
-		err = gk20a_vm_free_va(vm, vaddr, size, pgsz_idx);
+		err = __nvgpu_vm_free_va(vm, vaddr, pgsz_idx);
 		if (err) {
 			dev_err(dev_from_vm(vm),
 				"failed to free va");

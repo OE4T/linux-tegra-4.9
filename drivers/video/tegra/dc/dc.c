@@ -2337,6 +2337,30 @@ static const struct file_operations dbg_measure_refresh_ops = {
 	.release = single_release,
 };
 
+static int dbg_hw_index_show(struct seq_file *m, void *unused)
+{
+	struct tegra_dc *dc = m->private;
+
+	if (WARN_ON(!dc || !dc->out))
+		return -EINVAL;
+
+	seq_printf(m, "Hardware index: %d\n", dc->ctrl_num);
+
+	return 0;
+}
+
+static int dbg_hw_index_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_hw_index_show, inode->i_private);
+}
+
+static const struct file_operations dbg_hw_index_ops = {
+	.open = dbg_hw_index_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static void tegra_dc_remove_debugfs(struct tegra_dc *dc)
 {
 	if (dc->debugdir)
@@ -2466,7 +2490,7 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 #endif
 	char   devname[50];
 
-	snprintf(devname, sizeof(devname), "tegradc.%d", dc->ctrl_num);
+	snprintf(devname, sizeof(devname), "tegradc.%d", dc->ndev->id);
 	dc->debugdir = debugfs_create_dir(devname, NULL);
 	if (!dc->debugdir)
 		goto remove_out;
@@ -2576,6 +2600,11 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 
 	retval = debugfs_create_file("measure_refresh", S_IRUGO, dc->debugdir,
 				dc, &dbg_measure_refresh_ops);
+	if (!retval)
+		goto remove_out;
+
+	retval = debugfs_create_file("hw_index", S_IRUGO, dc->debugdir,
+				dc, &dbg_hw_index_ops);
 	if (!retval)
 		goto remove_out;
 

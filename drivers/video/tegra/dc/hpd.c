@@ -53,12 +53,6 @@ static void set_hpd_state(struct tegra_hpd_data *data,
 
 static void hpd_disable(struct tegra_hpd_data *data)
 {
-#ifdef CONFIG_SWITCH
-	if (data->hpd_switch.name) {
-		switch_set_state(&data->hpd_switch, 0);
-		pr_info("hpd: hpd_switch 0\n");
-	}
-#endif
 	if (data->dc->connected) {
 		pr_info("hpd: DC from connected to disconnected\n");
 		data->dc->connected = false;
@@ -72,6 +66,12 @@ static void hpd_disable(struct tegra_hpd_data *data)
 		data->ops->disable(data->drv_data);
 
 	tegra_dc_ext_process_hotplug(data->dc->ndev->id);
+#ifdef CONFIG_SWITCH
+	if (data->hpd_switch.name) {
+		switch_set_state(&data->hpd_switch, 0);
+		pr_info("hpd: hpd_switch 0\n");
+	}
+#endif
 }
 
 /* returns bytes read, or negative error */
@@ -149,15 +149,16 @@ static void edid_read_notify(struct tegra_hpd_data *data)
 				(data->ops->get_mode_filter(data->drv_data)) :
 				NULL);
 	tegra_fb_update_fix(data->dc->fb, &data->mon_spec);
-#ifdef CONFIG_SWITCH
-	if (data->hpd_switch.name) {
-		switch_set_state(&data->hpd_switch, 1);
-		pr_info("hpd: Display connected, hpd_switch 1\n");
-	}
-#endif
+
 	data->dc->connected = true;
 
 	tegra_dc_ext_process_hotplug(data->dc->ndev->id);
+#ifdef CONFIG_SWITCH
+		if (data->hpd_switch.name) {
+			switch_set_state(&data->hpd_switch, 1);
+			pr_info("hpd: Display connected, hpd_switch 1\n");
+		}
+#endif
 
 	if (data->ops->edid_notify)
 		data->ops->edid_notify(data->drv_data);
@@ -190,7 +191,6 @@ static void hpd_plug_state(struct tegra_hpd_data *data)
 		 * Nothing plugged in, so we are finished. Go to the
 		 * DONE_DISABLED state and stay there until the next HPD event.
 		 */
-		hpd_disable(data);
 		set_hpd_state(data, STATE_DONE_DISABLED, -1);
 	}
 }

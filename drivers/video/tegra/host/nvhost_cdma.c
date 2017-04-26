@@ -233,10 +233,7 @@ static void cdma_start_timer_locked(struct nvhost_cdma *cdma,
  */
 static void stop_cdma_timer_locked(struct nvhost_cdma *cdma)
 {
-	bool ret = true;
-
-	while (ret)
-		ret = cancel_delayed_work_sync(&cdma->timeout.wq);
+	cancel_delayed_work_sync(&cdma->timeout.wq);
 
 	cdma->timeout.clientid = 0;
 }

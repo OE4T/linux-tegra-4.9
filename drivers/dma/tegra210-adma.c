@@ -1180,6 +1180,8 @@ static int tegra_adma_probe(struct platform_device *pdev)
 	if (ret)
 		goto clk_destroy;
 
+	spin_lock_init(&tdma->global_lock);
+
 	pm_runtime_enable(&pdev->dev);
 
 	ret = pm_runtime_get_sync(&pdev->dev);

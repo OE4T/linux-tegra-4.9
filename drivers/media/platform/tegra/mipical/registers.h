@@ -18,6 +18,7 @@
  * at offset 0
  */
 #define MIPI_CAL_MODE		0x00
+#define SEL_DPHY_CPHY		(1 << 0)
 
 /* T210 register offset*/
 #define MIPI_CAL_CTRL		0x00

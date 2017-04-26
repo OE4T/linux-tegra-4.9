@@ -29,6 +29,10 @@
 	/delete-node/ agic-controller@2a41000;
 	/delete-node/ adma@2930000;
 
+	adsp@2993000 {
+		status = "disabled";
+	};
+
 	aconnect@2a41000 {
 		compatible = "nvidia,tegra210-aconnect";
 		clocks = <&tegra_car TEGRA186_CLK_APE>,
@@ -36,7 +40,7 @@
 		clock-names = "ape", "apb2ape";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		ranges = <0x2900000 0x0 0x2900000 0x0AFFFFF>;
+		ranges;
 		status = "okay";
 
 		tegra_agic: agic@2a41000 {
@@ -492,6 +496,64 @@
 				clock-names = "dspk", "pll_a_out0", "sync_dspk";
 				status = "okay";
 			};
+		};
+
+		adsp_4_9@2993000 {
+			status = "okay";
+			compatible = "nvidia,tegra18x-adsp";
+			nvidia,adsp_os_secload;
+			interrupt-parent = <&tegra_agic>;
+			reg = <0x02993000 0x1000>, /* AMC */
+				<0x02990000 0x2000>, /* AMISC */
+				<0x0 0x1>, /* ABRIDGE */
+				<0x0290C800 0x1>, /* FPGA RESET REG */
+				<0x029B0000 0x90000>, /* AHSP */
+				<0x40000000 0xC0000000>, /* DRAM MAP1 */
+				<0x0 0x1>; /* DRAM MAP2 */
+			nvidia,adsp_mem = <0x5EF00000 0x01000000>, /* ADSP OS */
+				<0x5F700000 0x00800000>, /* ADSP APP */
+				<0x3F813000 0x5000>, /* ARAM ALIAS 0 */
+				<0x5FD00000 0x200000>; /* ACSR */
+			nvidia,adsp_unit_fpga_reset = <0x07F00040 0x00000040>;
+			nvidia,adsp-evp-base = <0x02993700 0x00000040>;
+			interrupts = <GIC_SPI INT_AMISC_MBOX_EMPTY1 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_HOST_INTF0>, /* MBOX SEND */
+				     <GIC_SPI INT_AMISC_MBOX_FULL0 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_HOST_INTF0>,  /* MBOX RECV */
+				     <GIC_SPI INT_ATKE_WDT_IRQ IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_HOST_INTF0>, /* ATKE Watchdog */
+				     <GIC_SPI INT_WFI IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_HOST_INTF0>, /* WFI */
+				     <GIC_SPI INT_AMC_ERR IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_HOST_INTF0>, /* AMC ERR IRQ */
+				     <GIC_SPI INT_ADSP_ACTMON IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_HOST_INTF0>, /* ADSP ACTMON IRQ */
+				     <GIC_SPI INT_AMISC_MBOX_EMPTY0 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_ADSP>, /* ADSP MBOX SEND */
+				     <GIC_SPI INT_AMISC_MBOX_FULL1 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_ADSP>, /* ADSP MBOX RECV */
+				     <GIC_SPI INT_AMISC_MBOX_FULL2 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_ADSP>, /* ADSP FIQ HANDLER */
+				     <GIC_SPI INT_ATKE_TMR0 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_ADSP>, /* ATKE TIMER 0 */
+				     <GIC_SPI INT_ATKE_TMR1 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_ADSP>, /* ATKE TIMER 1 */
+				     <GIC_SPI INT_ATKE_TMR2 IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_ADSP>, /* ATKE TIMER 2 */
+				     <GIC_SPI INT_SHSP2APE_DB IRQ_TYPE_LEVEL_HIGH
+					ROUTE_TO_ADSP>; /* SHSP2APE */
+			clocks = <&tegra_car TEGRA186_CLK_APE>,
+				<&tegra_car TEGRA186_CLK_APB2APE>,
+				<&tegra_car TEGRA186_CLK_ADSPNEON>,
+				<&tegra_car TEGRA186_CLK_ADSP>,
+				<&tegra_car TEGRA186_CLK_ACLK>,
+				<&tegra_car TEGRA186_CLK_EMC>;
+			clock-names = "adsp.ape", "adsp.apb2ape", "adspneon",
+					"adsp", "aclk", "adsp.emc";
+			resets = <&tegra_car TEGRA186_RESET_ADSP_ALL>;
+			reset-names = "adspall";
+			#stream-id-cells = <1>;
+			iommus = <&smmu TEGRA_SID_APE>;
 		};
 	};
 

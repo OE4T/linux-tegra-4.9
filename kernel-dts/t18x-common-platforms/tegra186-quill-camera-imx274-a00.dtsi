@@ -32,8 +32,8 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 			skip_mux_detect = "yes";
-			vif-supply = <&en_vdd_cam>;
-			vcc_lp = "vif";
+			vcc-supply = <&en_vdd_cam>;
+			vcc_lp = "vcc";
 
 			i2c@0 {
 				reg = <0>;

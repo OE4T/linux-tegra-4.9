@@ -2663,20 +2663,6 @@ static const struct tegra_pingroup tegra186_groups[] = {
 
 };
 
-static int tegra186_pinctrl_suspend(u32 *pg_data)
-{
-	return 0;
-}
-
-static void tegra186_pinctrl_resume(u32 *pg_data)
-{
-}
-
-static int tegra186_gpio_request_enable(unsigned pin)
-{
-	return 0;
-}
-
 static const struct tegra_pinctrl_soc_data tegra186_pinctrl = {
 	.ngpios = NUM_GPIOS,
 	.pins = tegra186_pins,
@@ -2686,9 +2672,6 @@ static const struct tegra_pinctrl_soc_data tegra186_pinctrl = {
 	.groups = tegra186_groups,
 	.ngroups = ARRAY_SIZE(tegra186_groups),
 	.is_gpio_reg_support = true,
-	.suspend = tegra186_pinctrl_suspend,
-	.resume = tegra186_pinctrl_resume,
-	.gpio_request_enable = tegra186_gpio_request_enable,
 	.hsm_in_mux = false,
 	.schmitt_in_mux = true,
 	.drvtype_in_mux = true,

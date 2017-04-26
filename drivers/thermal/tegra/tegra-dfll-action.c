@@ -235,10 +235,28 @@ static const struct of_device_id tegra_dfll_cdev_match[] = {
 	{},
 };
 
+#ifdef CONFIG_PM_SLEEP
+int tegra_dfll_cdev_resume(struct device *dev)
+{
+	struct tegra_dfll_cdev_data *dfll_cdev_data = dev_get_drvdata(dev);
+	dfll_cdev_data->cdev->updated = false;
+
+	return 0;
+}
+
+static const struct dev_pm_ops tegra_dfll_cdev_pm_ops = {
+	.resume_noirq = tegra_dfll_cdev_resume,
+};
+#define DFLL_CDEV_PM (&tegra_dfll_cdev_pm_ops)
+#else
+#define DFLL_CDEV_PM (NULL)
+#endif
+
 static struct platform_driver tegra_dfll_cdev_driver = {
 	.driver = {
 		.name   = "tegra_dfll_action",
 		.of_match_table = tegra_dfll_cdev_match,
+		.pm = DFLL_CDEV_PM,
 	},
 	.probe = tegra_dfll_cdev_probe,
 	.remove = tegra_dfll_cdev_remove,

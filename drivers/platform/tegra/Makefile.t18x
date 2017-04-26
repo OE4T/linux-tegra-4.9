@@ -18,7 +18,6 @@ obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += pm-irq-t18x.o
 ifeq ($(CONFIG_PM_SLEEP),y)
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += wakeups-t18x.o
 endif
-obj-y += mc/
 obj-y += powergate/
 obj-$(CONFIG_TEGRA_AON) += tegra-aon.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra18_cpu_debugfs.o

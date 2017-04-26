@@ -16,3 +16,4 @@ KBUILD_CFLAGS += -I$(srctree)/../t19x/include
 obj-y += iommu/
 obj-y += platform/
 obj-y += video/
+obj-y += pinctrl/

@@ -2384,15 +2384,26 @@ static void tegra_dsi_mipi_calibration(struct tegra_dc_dsi_data *dsi)
 
 	tegra_dsi_writel(dsi, 0, DSI_PAD_CONTROL_4_VS1);
 
+	/* When switch to the 16ff pad brick in T210, the clock lane
+	 * termination control is separated from data lane termination.
+	 * This change of the mipi cal brings in a bug that the DSI pad
+	 * clock termination code can't be loaded in one time calibration.
+	 * SW WAR to trigger calibration twice.
+	 */
 	if (dsi->info.ganged_type || dsi->info.dsi_csi_loopback) {
+		tegra_mipi_calibration(DSIA|DSIB|DSIC|DSID);
 		tegra_mipi_calibration(DSIA|DSIB|DSIC|DSID);
 	} else {
 		/* Calibrate DSI 0 */
-		if (dsi->info.dsi_instance == DSI_INSTANCE_0)
+		if (dsi->info.dsi_instance == DSI_INSTANCE_0) {
 			tegra_mipi_calibration(DSIA|DSIB);
+			tegra_mipi_calibration(DSIA|DSIB);
+		}
 		/* Calibrate DSI 1 */
-		if (dsi->info.dsi_instance == DSI_INSTANCE_1)
+		if (dsi->info.dsi_instance == DSI_INSTANCE_1) {
 			tegra_mipi_calibration(DSIC|DSID);
+			tegra_mipi_calibration(DSIC|DSID);
+		}
 	}
 #if !defined(CONFIG_TEGRA_NVDISPLAY)
 	tegra_disp_clk_disable_unprepare(clk72mhz);

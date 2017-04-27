@@ -169,7 +169,7 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	if (err)
 		goto fail;
 
-	a->next = vzalloc(sizeof(*a->next) * count);
+	a->next = nvgpu_vzalloc(g, sizeof(*a->next) * count);
 	if (!a->next) {
 		err = -ENOMEM;
 		goto fail;

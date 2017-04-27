@@ -45,27 +45,6 @@ void gk20a_enable_priv_ring(struct gk20a *g)
 
 }
 
-static void gk20a_reset_priv_ring(struct gk20a *g)
-{
-	u32 val;
-
-	g->ops.mc.reset(g, mc_enable_priv_ring_enabled_f());
-
-	val = gk20a_readl(g, pri_ringstation_sys_decode_config_r());
-	val = set_field(val,
-			pri_ringstation_sys_decode_config_ring_m(),
-			pri_ringstation_sys_decode_config_ring_drop_on_ring_not_started_f());
-	gk20a_writel(g, pri_ringstation_sys_decode_config_r(), val);
-
-	gk20a_writel(g, pri_ringmaster_global_ctl_r(),
-			pri_ringmaster_global_ctl_ring_reset_asserted_f());
-	nvgpu_udelay(20);
-	gk20a_writel(g, pri_ringmaster_global_ctl_r(),
-			pri_ringmaster_global_ctl_ring_reset_deasserted_f());
-
-	gk20a_enable_priv_ring(g);
-}
-
 void gk20a_priv_ring_isr(struct gk20a *g)
 {
 	u32 status0, status1;
@@ -82,12 +61,6 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 
 	gk20a_dbg(gpu_dbg_intr, "ringmaster intr status0: 0x%08x,"
 		"status1: 0x%08x", status0, status1);
-
-	if (pri_ringmaster_intr_status0_ring_start_conn_fault_v(status0) != 0 ||
-	    pri_ringmaster_intr_status0_disconnect_fault_v(status0) != 0 ||
-	    pri_ringmaster_intr_status0_overflow_fault_v(status0) != 0) {
-		gk20a_reset_priv_ring(g);
-	}
 
 	if (pri_ringmaster_intr_status0_gbl_write_error_sys_v(status0) != 0) {
 		gk20a_dbg(gpu_dbg_intr, "SYS write error. ADR %08x WRDAT %08x INFO %08x, CODE %08x",

@@ -21,6 +21,8 @@
 
 static void gp106_fb_reset(struct gk20a *g)
 {
+	u32 val;
+
 	int retries = HW_SCRUB_TIMEOUT_MAX / HW_SCRUB_TIMEOUT_DEFAULT;
 	/* wait for memory to be accessible */
 	do {
@@ -31,6 +33,10 @@ static void gp106_fb_reset(struct gk20a *g)
 		}
 		nvgpu_udelay(HW_SCRUB_TIMEOUT_DEFAULT);
 	} while (--retries);
+
+	val = gk20a_readl(g, fb_mmu_priv_level_mask_r());
+	val &= ~fb_mmu_priv_level_mask_write_violation_m();
+	gk20a_writel(g, fb_mmu_priv_level_mask_r(), val);
 }
 
 void gp106_init_fb(struct gpu_ops *gops)

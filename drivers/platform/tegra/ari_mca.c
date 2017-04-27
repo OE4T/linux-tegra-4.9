@@ -24,7 +24,9 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/tegra-mce.h>
+#include <linux/t18x_ari.h>
 #include <linux/platform/tegra/ari_mca.h>
+#include <linux/platform/tegra/tegra18_cpu_map.h>
 #include <linux/ioport.h>
 #include <soc/tegra/chip-id.h>
 
@@ -1208,6 +1210,22 @@ static void print_bank(struct ari_mca_bank *mca_bank)
 	pr_debug("**************************************\n");
 }
 
+void ari_clear_serr(void)
+{
+	int core = smp_processor_id();
+	mca_cmd_t cmd;
+	u32 error = 0;
+
+	cmd.data = 0;
+	cmd.cmd = TEGRA_ARI_MCA_CLEAR_SERR;
+	cmd.idx = tegra18_logical_to_cluster(core) + 1;
+	cmd.subidx = tegra18_logical_to_cpu(core);
+
+	if (tegra_mce_write_uncore_mca(cmd, 1, &error))
+		pr_err("%s:mce write failed: error=0x%x\n", __func__, error);
+}
+EXPORT_SYMBOL_GPL(ari_clear_serr);
+
 static int ari_serr_hook(struct pt_regs *regs, int reason,
 			unsigned int esr, void *priv)
 {
@@ -1230,7 +1248,7 @@ static int ari_serr_hook(struct pt_regs *regs, int reason,
 		}
 	}
 	if (clear_serr)
-		tegra18_clear_serr();
+		ari_clear_serr();
 	raw_spin_unlock_irqrestore(&ari_mca_lock, flags);
 	return retval;
 }

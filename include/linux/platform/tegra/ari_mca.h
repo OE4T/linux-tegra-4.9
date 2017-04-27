@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -244,4 +244,4 @@ enum {
 #define get_mca_addr_type(_x_)		MCA_ARI_EXTRACT(_x_, 41, 40)
 #define get_mca_addr_addr(_x_)		MCA_ARI_EXTRACT(_x_, 39, 0)
 
-void tegra18_clear_serr(void);
+void ari_clear_serr(void);

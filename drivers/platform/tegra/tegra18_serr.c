@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,7 +22,6 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/platform/tegra/denver_mca.h>
-#include <linux/platform/tegra/tegra18_cpu_map.h>
 #include <linux/tegra-mce.h>
 #include <linux/t18x_ari.h>
 #include <soc/tegra/chip-id.h>
@@ -115,22 +114,6 @@ static void tegra18_denver_serr_enable(void)
 		pr_err("%s:mce write failed: error=0x%x\n", __func__, error);
 
 }
-
-void tegra18_clear_serr(void)
-{
-	int core = smp_processor_id();
-	mca_cmd_t cmd;
-	u32 error = 0;
-
-	cmd.data = 0;
-	cmd.cmd = TEGRA_ARI_MCA_CLEAR_SERR;
-	cmd.idx = tegra18_logical_to_cluster(core) + 1;
-	cmd.subidx = tegra18_logical_to_cpu(core);
-
-	if (tegra_mce_write_uncore_mca(cmd, 1, &error))
-		pr_err("%s:mce write failed: error=0x%x\n", __func__, error);
-}
-EXPORT_SYMBOL_GPL(tegra18_clear_serr);
 
 static int __init tegra18_serr_init(void)
 {

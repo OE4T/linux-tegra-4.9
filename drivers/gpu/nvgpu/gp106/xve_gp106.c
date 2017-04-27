@@ -670,13 +670,13 @@ static void xve_rearm_msi_gp106(struct gk20a *g)
 
 static void xve_enable_shadow_rom_gp106(struct gk20a *g)
 {
-	g->ops.xve.xve_writel(g, NV_PCFG + xve_rom_ctrl_r(),
+	g->ops.xve.xve_writel(g, xve_rom_ctrl_r(),
 			xve_rom_ctrl_rom_shadow_enabled_f());
 }
 
 static void xve_disable_shadow_rom_gp106(struct gk20a *g)
 {
-	g->ops.xve.xve_writel(g, NV_PCFG + xve_rom_ctrl_r(),
+	g->ops.xve.xve_writel(g, xve_rom_ctrl_r(),
 			xve_rom_ctrl_rom_shadow_disabled_f());
 }
 

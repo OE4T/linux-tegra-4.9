@@ -319,4 +319,16 @@ static inline u32 host1x_sync_common_icg_en_override_0_r(void)
 {
 	return 0x2aa8;
 }
+static inline u32 host1x_sync_syncpt_ram_init_0_r(void)
+{
+	return 0x2b44;
+}
+static inline u32 host1x_sync_syncpt_ram_init_0_ram_init_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 host1x_sync_syncpt_ram_init_0_ram_init_done_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
 #endif

@@ -631,9 +631,33 @@ static void init_syncpt_thresh_reg(struct nvhost_master *host)
 	intr_op().disable_all_syncpt_intrs(&host->intr);
 }
 
+#define SYNCPT_RAM_INIT_TIMEOUT_MS	1000
+
 static void t194_init_regs(struct platform_device *pdev, bool prod)
 {
 	struct nvhost_streamid_mapping *map_regs = t19x_host1x_streamid_mapping;
+	u32 ram_init;
+	ktime_t now, start = ktime_get();
+
+	/* Ensure that HW has finished initializing syncpt RAM prior to use */
+	for (;;) {
+		ram_init = host1x_readl(pdev,
+					host1x_sync_syncpt_ram_init_0_r());
+		if (!host1x_sync_syncpt_ram_init_0_ram_init_v(ram_init)) {
+			pr_info("%s: Host1x HW syncpt ram init disabled\n",
+				__func__);
+			break;
+		}
+		if (host1x_sync_syncpt_ram_init_0_ram_init_done_v(ram_init))
+			break;
+
+		now = ktime_get();
+		if (ktime_ms_delta(now, start) >= SYNCPT_RAM_INIT_TIMEOUT_MS) {
+			pr_err("%s: Timed out waiting for syncpt ram init!\n",
+				__func__);
+			break;
+		}
+	}
 
 	init_syncpt_thresh_reg(nvhost_get_host(pdev));
 

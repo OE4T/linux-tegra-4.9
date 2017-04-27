@@ -705,7 +705,8 @@ static int __init arch_timer_register(void)
 	case PHYS_NONSECURE_PPI:
 		err = request_percpu_irq(ppi, arch_timer_handler_phys,
 					 "arch_timer", arch_timer_evt);
-		if (!err && arch_timer_ppi[PHYS_NONSECURE_PPI]) {
+		if (!err && arch_timer_ppi[PHYS_NONSECURE_PPI] &&
+				IS_ENABLED(CONFIG_ARM)) {
 			ppi = arch_timer_ppi[PHYS_NONSECURE_PPI];
 			err = request_percpu_irq(ppi, arch_timer_handler_phys,
 						 "arch_timer", arch_timer_evt);
@@ -849,9 +850,14 @@ static int __init arch_timer_init(void)
 			arch_timer_uses_ppi = HYP_PPI;
 			has_ppi = !!arch_timer_ppi[HYP_PPI];
 		} else {
-			arch_timer_uses_ppi = PHYS_SECURE_PPI;
-			has_ppi = (!!arch_timer_ppi[PHYS_SECURE_PPI] ||
+			if (IS_ENABLED(CONFIG_ARM64)) {
+				arch_timer_uses_ppi = PHYS_NONSECURE_PPI;
+				has_ppi = !!arch_timer_ppi[PHYS_NONSECURE_PPI];
+			} else {
+				arch_timer_uses_ppi = PHYS_SECURE_PPI;
+				has_ppi = (!!arch_timer_ppi[PHYS_SECURE_PPI] ||
 				   !!arch_timer_ppi[PHYS_NONSECURE_PPI]);
+			}
 		}
 
 		if (!has_ppi) {

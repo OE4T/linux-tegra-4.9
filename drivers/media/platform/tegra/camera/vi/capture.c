@@ -53,6 +53,7 @@ struct vi_capture {
 	struct tegra_channel *vi_channel;
 	struct vi_capture_buf requests;
 	size_t request_buf_size;
+	uint32_t queue_depth;
 	uint32_t request_size;
 
 	uint32_t syncpts[CAPTURE_CHANNEL_MAX_NUM_SPS];
@@ -388,12 +389,13 @@ int vi_capture_setup(struct tegra_channel *chan,
 		dev_err(chan->vi->dev, "%s: memory setup failed\n", __func__);
 		return -EFAULT;
 	}
+	capture->queue_depth = setup->queue_depth;
 	capture->request_size = setup->request_size;
 	capture->request_buf_size = setup->request_size * setup->queue_depth;
 
 	/* allocate for unpin list based on queue depth */
 	capture->unpins_list = devm_kzalloc(chan->vi->dev,
-			sizeof(struct vi_capture_unpins) * setup->queue_depth,
+			sizeof(struct vi_capture_unpins) * capture->queue_depth,
 			GFP_KERNEL);
 	if (unlikely(capture->unpins_list == NULL)) {
 		dev_err(chan->vi->dev, "failed to allocate unpins array\n");
@@ -480,6 +482,7 @@ int vi_capture_reset(struct tegra_channel *chan,
 	struct vi_capture *capture = chan->capture_data;
 	struct CAPTURE_CONTROL_MSG control_desc;
 	struct CAPTURE_CONTROL_MSG *resp_msg = &capture->control_resp_msg;
+	int i;
 	int err = 0;
 
 	if (capture == NULL) {
@@ -510,6 +513,9 @@ int vi_capture_reset(struct tegra_channel *chan,
 		err = -EINVAL;
 	}
 
+	for (i = 0; i < capture->queue_depth; i++)
+		vi_capture_request_unpin(chan, i);
+
 	return 0;
 
 submit_fail:
@@ -522,6 +528,7 @@ int vi_capture_release(struct tegra_channel *chan,
 	struct vi_capture *capture = chan->capture_data;
 	struct CAPTURE_CONTROL_MSG control_desc;
 	struct CAPTURE_CONTROL_MSG *resp_msg = &capture->control_resp_msg;
+	int i;
 	int err = 0;
 	int ret = 0;
 
@@ -553,9 +560,6 @@ int vi_capture_release(struct tegra_channel *chan,
 		err = -EINVAL;
 	}
 
-	vi_capture_release_syncpts(chan);
-	unpin_memory(&capture->requests);
-
 	ret = tegra_capture_ivc_unregister_capture_cb(capture->channel_id);
 	if (ret < 0 && err == 0) {
 		dev_err(chan->vi->dev,
@@ -569,6 +573,12 @@ int vi_capture_release(struct tegra_channel *chan,
 			"failed to unregister control callback\n");
 		err = ret;
 	}
+
+	for (i = 0; i < capture->queue_depth; i++)
+		vi_capture_request_unpin(chan, i);
+
+	vi_capture_release_syncpts(chan);
+	unpin_memory(&capture->requests);
 
 	capture->channel_id = CAPTURE_CHANNEL_INVALID_ID;
 

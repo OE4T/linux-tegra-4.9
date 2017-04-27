@@ -224,7 +224,7 @@ static int denver_mca_handler(void)
 		}
 	}
 	if (clear_serr)
-		tegra18_clear_serr();
+		ari_clear_serr();
 	raw_spin_unlock_irqrestore(&denver_mca_lock, flags);
 	return 1;
 }
@@ -254,7 +254,7 @@ static int denver_assert_mca_handler(void)
 				}
 			}
 			if (clear_serr)
-				tegra18_clear_serr();
+				ari_clear_serr();
 			raw_spin_unlock_irqrestore(&denver_mca_lock, flags);
 		}
 	}

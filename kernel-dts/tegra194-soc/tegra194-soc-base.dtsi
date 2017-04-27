@@ -1022,7 +1022,7 @@
 	};
 
 	tegra_pinctrl: pinmux: pinmux@2430000 {
-		compatible = "nvidia,tegra186-pinmux";
+		compatible = "nvidia,tegra194-pinmux";
 		reg = <0x0 0x2430000 0x0 0x15000
 			0x0 0xc300000 0x0 0x4000>;
 		#gpio-range-cells = <3>;

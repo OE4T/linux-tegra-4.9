@@ -367,6 +367,48 @@ static int vgpu_read_ptimer(struct gk20a *g, u64 *value)
 	return err;
 }
 
+int vgpu_get_timestamps_zipper(struct gk20a *g,
+		u32 source_id, u32 count,
+		struct nvgpu_cpu_time_correlation_sample *samples)
+{
+	struct tegra_vgpu_cmd_msg msg = {0};
+	struct tegra_vgpu_get_timestamps_zipper_params *p =
+			&msg.params.get_timestamps_zipper;
+	int err;
+	u32 i;
+
+	gk20a_dbg_fn("");
+
+	if (count > TEGRA_VGPU_GET_TIMESTAMPS_ZIPPER_MAX_COUNT) {
+		nvgpu_err(g, "count %u overflow", count);
+		return -EINVAL;
+	}
+
+	if (source_id != NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_TSC) {
+		nvgpu_err(g, "source_id %u not supported", source_id);
+		return -EINVAL;
+	}
+
+	msg.cmd = TEGRA_VGPU_CMD_GET_TIMESTAMPS_ZIPPER;
+	msg.handle = vgpu_get_handle(g);
+	p->source_id = TEGRA_VGPU_GET_TIMESTAMPS_ZIPPER_SRC_ID_TSC;
+	p->count = count;
+
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	err = err ? err : msg.ret;
+	if (err) {
+		nvgpu_err(g, "vgpu get timestamps zipper failed, err=%d", err);
+		return err;
+	}
+
+	for (i = 0; i < count; i++) {
+		samples[i].cpu_timestamp = p->samples[i].cpu_timestamp;
+		samples[i].gpu_timestamp = p->samples[i].gpu_timestamp;
+	}
+
+	return err;
+}
+
 void vgpu_init_hal_common(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
@@ -384,6 +426,7 @@ void vgpu_init_hal_common(struct gk20a *g)
 #endif
 	gops->chip_init_gpu_characteristics = vgpu_init_gpu_characteristics;
 	gops->bus.read_ptimer = vgpu_read_ptimer;
+	gops->bus.get_timestamps_zipper = vgpu_get_timestamps_zipper;
 }
 
 static int vgpu_init_hal(struct gk20a *g)

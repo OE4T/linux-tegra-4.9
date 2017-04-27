@@ -63,6 +63,7 @@ struct nvgpu_nvhost_dev;
 #include "priv_ring_gk20a.h"
 #include "therm_gk20a.h"
 #include "gm20b/acr_gm20b.h"
+#include "gk20a/bus_gk20a.h"
 #include "cde_gk20a.h"
 #include "sched_gk20a.h"
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
@@ -905,6 +906,9 @@ struct gpu_ops {
 		void (*init_hw)(struct gk20a *g);
 		void (*isr)(struct gk20a *g);
 		int (*read_ptimer)(struct gk20a *g, u64 *value);
+		int (*get_timestamps_zipper)(struct gk20a *g,
+			u32 source_id, u32 count,
+			struct nvgpu_cpu_time_correlation_sample *);
 		int (*bar1_bind)(struct gk20a *g, struct nvgpu_mem *bar1_inst);
 	} bus;
 

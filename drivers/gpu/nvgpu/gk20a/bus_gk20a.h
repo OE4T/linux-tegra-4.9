@@ -22,10 +22,19 @@ struct gk20a;
 struct gpu_ops;
 struct nvgpu_mem;
 
+struct nvgpu_cpu_time_correlation_sample {
+	u64 cpu_timestamp;
+	u64 gpu_timestamp;
+};
+
 void gk20a_init_bus(struct gpu_ops *gops);
 
 void gk20a_bus_isr(struct gk20a *g);
 int gk20a_read_ptimer(struct gk20a *g, u64 *value);
 void gk20a_bus_init_hw(struct gk20a *g);
+
+int gk20a_get_timestamps_zipper(struct gk20a *g,
+		u32 source_id, u32 count,
+		struct nvgpu_cpu_time_correlation_sample *samples);
 
 #endif /* GK20A_H */

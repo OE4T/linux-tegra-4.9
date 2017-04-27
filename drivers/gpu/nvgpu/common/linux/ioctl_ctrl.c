@@ -533,76 +533,34 @@ static int gk20a_ctrl_get_buffer_info(
 					&args->out.id, &args->out.length);
 }
 
-static inline u64 get_cpu_timestamp_tsc(void)
-{
-	return ((u64) get_cycles());
-}
-
-static inline u64 get_cpu_timestamp_jiffies(void)
-{
-	return (get_jiffies_64() - INITIAL_JIFFIES);
-}
-
-static inline u64 get_cpu_timestamp_timeofday(void)
-{
-	struct timeval tv;
-
-	do_gettimeofday(&tv);
-	return timeval_to_jiffies(&tv);
-}
-
-static inline int get_timestamps_zipper(struct gk20a *g,
-		u64 (*get_cpu_timestamp)(void),
-		struct nvgpu_gpu_get_cpu_time_correlation_info_args *args)
-{
-	int err = 0;
-	unsigned int i = 0;
-
-	if (gk20a_busy(g)) {
-		nvgpu_err(g, "GPU not powered on");
-		err = -EINVAL;
-		goto end;
-	}
-
-	for (i = 0; i < args->count; i++) {
-		err = g->ops.bus.read_ptimer(g, &args->samples[i].gpu_timestamp);
-		if (err)
-			return err;
-
-		args->samples[i].cpu_timestamp = get_cpu_timestamp();
-	}
-
-end:
-	gk20a_idle(g);
-	return err;
-}
-
 static int nvgpu_gpu_get_cpu_time_correlation_info(
 	struct gk20a *g,
 	struct nvgpu_gpu_get_cpu_time_correlation_info_args *args)
 {
-	int err = 0;
-	u64 (*get_cpu_timestamp)(void) = NULL;
+	struct nvgpu_cpu_time_correlation_sample *samples;
+	int err;
+	u32 i;
 
 	if (args->count > NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_MAX_COUNT)
 		return -EINVAL;
 
-	switch (args->source_id) {
-	case NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_TSC:
-		get_cpu_timestamp = get_cpu_timestamp_tsc;
-		break;
-	case NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_JIFFIES:
-		get_cpu_timestamp = get_cpu_timestamp_jiffies;
-		break;
-	case NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_TIMEOFDAY:
-		get_cpu_timestamp = get_cpu_timestamp_timeofday;
-		break;
-	default:
-		nvgpu_err(g, "invalid cpu clock source id");
-		return -EINVAL;
+	samples = nvgpu_kzalloc(g, args->count *
+		sizeof(struct nvgpu_cpu_time_correlation_sample));
+	if (!samples) {
+		return -ENOMEM;
 	}
 
-	err = get_timestamps_zipper(g, get_cpu_timestamp, args);
+	err = g->ops.bus.get_timestamps_zipper(g,
+			args->source_id, args->count, samples);
+	if (!err) {
+		for (i = 0; i < args->count; i++) {
+			args->samples[i].cpu_timestamp = samples[i].cpu_timestamp;
+			args->samples[i].gpu_timestamp = samples[i].gpu_timestamp;
+		}
+	}
+
+	nvgpu_kfree(g, samples);
+
 	return err;
 }
 

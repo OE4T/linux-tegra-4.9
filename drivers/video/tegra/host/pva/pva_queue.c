@@ -201,7 +201,7 @@ static void pva_task_unpin_mem(struct pva_submit_task *task)
 
 #define UNPIN_MEMORY(dst_name)						\
 	do {								\
-		if (((dst_name).dmabuf) != 0 &&				\
+		if ((((dst_name).dmabuf) != NULL) &&			\
 				((dst_name).dma_addr != 0)) {		\
 			nvhost_buffer_submit_unpin(task->buffers,	\
 				&((dst_name).dmabuf), 1);		\

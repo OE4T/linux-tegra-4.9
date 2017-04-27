@@ -85,7 +85,8 @@ void gk20a_init_fence(struct gk20a_fence *f,
 /* Fence operations */
 void gk20a_fence_put(struct gk20a_fence *f);
 struct gk20a_fence *gk20a_fence_get(struct gk20a_fence *f);
-int gk20a_fence_wait(struct gk20a *g, struct gk20a_fence *f, int timeout);
+int gk20a_fence_wait(struct gk20a *g, struct gk20a_fence *f,
+							unsigned long timeout);
 bool gk20a_fence_is_expired(struct gk20a_fence *f);
 int gk20a_fence_install_fd(struct gk20a_fence *f);
 

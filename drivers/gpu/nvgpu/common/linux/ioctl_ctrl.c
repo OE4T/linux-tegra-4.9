@@ -32,7 +32,7 @@
 
 #include <nvgpu/log.h>
 
-#define HZ_TO_MHZ(a) ((a > 0xF414F9CD7) ? 0xffff : (a >> 32) ? \
+#define HZ_TO_MHZ(a) ((a > 0xF414F9CD7ULL) ? 0xffff : (a >> 32) ? \
 	(u32) ((a * 0x10C8ULL) >> 32) : (u16) ((u32) a/MHZ))
 #define MHZ_TO_HZ(a) ((u64)a * MHZ)
 

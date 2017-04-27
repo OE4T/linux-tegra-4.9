@@ -49,6 +49,15 @@
 #define ECC_MODE_MAX_INDEX 13
 #define MAX_RSA_MSG_LEN 256
 
+enum tegra_se_pka1_ecc_type {
+	ECC_POINT_MUL,
+	ECC_POINT_ADD,
+	ECC_POINT_DOUBLE,
+	ECC_POINT_VER,
+	ECC_SHAMIR_TRICK,
+	ECC_INVALID,
+};
+
 struct tegra_crypto_ctx {
 	/*ecb, cbc, ofb, ctr */
 	struct crypto_skcipher *aes_tfm[4];
@@ -591,6 +600,276 @@ out:
 	return ret;
 }
 
+static int tegra_crypt_rng1(struct tegra_se_rng1_request *rng1_req)
+{
+	struct tegra_se_rng1_request temp_rng1_req;
+	int ret;
+
+	temp_rng1_req.size = rng1_req->size;
+	temp_rng1_req.test_full_cmd_flow = rng1_req->test_full_cmd_flow;
+	temp_rng1_req.adv_state_on = rng1_req->adv_state_on;
+
+	temp_rng1_req.rdata = kzalloc(rng1_req->size, GFP_KERNEL);
+	if (!temp_rng1_req.rdata) {
+		ret = -ENOMEM;
+		goto exit;
+	}
+
+	ret = copy_from_user(temp_rng1_req.rdata,
+			     (void __user *)rng1_req->rdata, rng1_req->size);
+	if (ret) {
+		ret = -EFAULT;
+		pr_debug("%s: copy_from_user failed (%d) for rng1_req\n",
+			 __func__, ret);
+		goto rdata_free;
+	}
+
+	temp_rng1_req.rdata1 = kzalloc(rng1_req->size, GFP_KERNEL);
+	if (!temp_rng1_req.rdata1) {
+		ret = -ENOMEM;
+		goto rdata_free;
+	}
+
+	ret = copy_from_user(temp_rng1_req.rdata1,
+			     (void __user *)rng1_req->rdata1, rng1_req->size);
+	if (ret) {
+		ret = -EFAULT;
+		pr_debug("%s: copy_from_user failed (%d) for rng1_req\n",
+			 __func__, ret);
+		goto rdata1_free;
+	}
+
+	temp_rng1_req.rdata2 = kzalloc(rng1_req->size, GFP_KERNEL);
+	if (!temp_rng1_req.rdata2) {
+		ret = -ENOMEM;
+		goto rdata1_free;
+	}
+
+	ret = copy_from_user(temp_rng1_req.rdata2,
+			     (void __user *)rng1_req->rdata2, rng1_req->size);
+	if (ret) {
+		ret = -EFAULT;
+		pr_debug("%s: copy_from_user failed (%d) for rng1_req\n",
+			 __func__, ret);
+		goto rdata2_free;
+	}
+
+	ret = tegra_se_rng1_op(&temp_rng1_req);
+	if (ret) {
+		pr_debug("\ntegra_se_rng1_op failed(%d) for RNG1\n", ret);
+		goto rdata2_free;
+	}
+
+	ret = copy_to_user((void __user *)rng1_req->rdata, temp_rng1_req.rdata,
+			   rng1_req->size);
+	if (ret) {
+		ret = -EFAULT;
+		pr_debug("%s: copy_to_user failed (%d)\n", __func__, ret);
+		goto rdata2_free;
+	}
+
+	ret = copy_to_user((void __user *)rng1_req->rdata1,
+			   temp_rng1_req.rdata1, rng1_req->size);
+	if (ret) {
+		ret = -EFAULT;
+		pr_debug("%s: copy_to_user failed (%d)\n", __func__, ret);
+		goto rdata2_free;
+	}
+
+	ret = copy_to_user((void __user *)rng1_req->rdata2,
+			   temp_rng1_req.rdata2, rng1_req->size);
+	if (ret) {
+		ret = -EFAULT;
+		pr_debug("%s: copy_to_user failed (%d)\n", __func__, ret);
+	}
+rdata2_free:
+	kfree(temp_rng1_req.rdata2);
+rdata1_free:
+	kfree(temp_rng1_req.rdata1);
+rdata_free:
+	kfree(temp_rng1_req.rdata);
+exit:
+	return ret;
+}
+
+static int tegra_crypt_pka1_ecc(struct tegra_se_pka1_ecc_request *ecc_req)
+{
+	struct tegra_se_pka1_ecc_request temp_ecc_req;
+	int ret;
+
+	if ((ecc_req->op_mode < ECC_MODE_MIN_INDEX) ||
+	    (ecc_req->op_mode > ECC_MODE_MAX_INDEX)) {
+		pr_err("Invalid value of ecc opmode index %d\n",
+			ecc_req->op_mode);
+		return -EINVAL;
+	}
+
+	temp_ecc_req.op_mode = ecc_req->op_mode;
+	temp_ecc_req.size = ecc_req->size;
+	temp_ecc_req.type = ecc_req->type;
+
+	temp_ecc_req.modulus = kzalloc(ecc_req->size, GFP_KERNEL);
+	if (!temp_ecc_req.modulus) {
+		ret = -ENOMEM;
+		goto mod_fail;
+	}
+	temp_ecc_req.curve_param_a = kzalloc(ecc_req->size, GFP_KERNEL);
+	if (!temp_ecc_req.curve_param_a) {
+		ret = -ENOMEM;
+		goto param_a_fail;
+	}
+	temp_ecc_req.curve_param_b = kzalloc(ecc_req->size, GFP_KERNEL);
+	if (!temp_ecc_req.curve_param_b) {
+		ret = -ENOMEM;
+		goto param_b_fail;
+	}
+	temp_ecc_req.base_pt_x = kzalloc(ecc_req->size, GFP_KERNEL);
+	if (!temp_ecc_req.base_pt_x) {
+		ret =  -ENOMEM;
+		goto base_px_fail;
+	}
+	temp_ecc_req.base_pt_y = kzalloc(ecc_req->size, GFP_KERNEL);
+	if (!temp_ecc_req.base_pt_y) {
+		ret = -ENOMEM;
+		goto base_py_fail;
+	}
+	temp_ecc_req.res_pt_x = kzalloc(ecc_req->size, GFP_KERNEL);
+	if (!temp_ecc_req.res_pt_x) {
+		ret = -ENOMEM;
+		goto res_px_fail;
+	}
+	temp_ecc_req.res_pt_y = kzalloc(ecc_req->size, GFP_KERNEL);
+	if (!temp_ecc_req.res_pt_y) {
+		ret = -ENOMEM;
+		goto res_py_fail;
+	}
+	temp_ecc_req.key = kzalloc(ecc_req->size, GFP_KERNEL);
+	if (!temp_ecc_req.key) {
+		ret = -ENOMEM;
+		goto key_fail;
+	}
+
+	ret = copy_from_user(temp_ecc_req.modulus,
+			     (void __user *)ecc_req->modulus, ecc_req->size);
+	if (ret) {
+		ret = -EFAULT;
+		pr_debug("%s: copy_from_user failed (%d)\n", __func__, ret);
+		goto free_all;
+	}
+
+	ret = copy_from_user(temp_ecc_req.curve_param_a,
+			     (void __user *)ecc_req->curve_param_a,
+			     ecc_req->size);
+	if (ret) {
+		ret = -EFAULT;
+		pr_debug("%s: copy_from_user failed (%d)\n", __func__, ret);
+		goto free_all;
+	}
+
+	if ((ecc_req->type == ECC_POINT_VER) ||
+	    (ecc_req->type == ECC_SHAMIR_TRICK)) {
+		ret = copy_from_user(temp_ecc_req.curve_param_b,
+				     (void __user *)ecc_req->curve_param_b,
+				     ecc_req->size);
+		if (ret) {
+			ret = -EFAULT;
+			pr_debug("%s: copy_from_user failed (%d)\n",
+				 __func__, ret);
+			goto free_all;
+		}
+	}
+
+	if (ecc_req->type != ECC_POINT_DOUBLE) {
+		ret = copy_from_user(temp_ecc_req.base_pt_x,
+				     (void __user *)ecc_req->base_pt_x,
+				     ecc_req->size);
+		if (ret) {
+			ret = -EFAULT;
+			pr_debug("%s: copy_from_user failed (%d)\n",
+				__func__, ret);
+			goto free_all;
+		}
+
+		ret = copy_from_user(temp_ecc_req.base_pt_y,
+				     (void __user *)ecc_req->base_pt_y,
+				     ecc_req->size);
+		if (ret) {
+			ret = -EFAULT;
+			pr_debug("%s: copy_from_user failed (%d)\n",
+				__func__, ret);
+			goto free_all;
+		}
+	}
+
+	ret = copy_from_user(temp_ecc_req.res_pt_x,
+			     (void __user *)ecc_req->res_pt_x, ecc_req->size);
+	if (ret) {
+		ret = -EFAULT;
+		pr_debug("%s: copy_from_user failed (%d)\n", __func__, ret);
+		goto free_all;
+	}
+
+	ret = copy_from_user(temp_ecc_req.res_pt_y,
+			     (void __user *)ecc_req->res_pt_y, ecc_req->size);
+	if (ret) {
+		ret = -EFAULT;
+		pr_debug("%s: copy_from_user failed (%d)\n", __func__, ret);
+		goto free_all;
+	}
+
+	if ((ecc_req->type == ECC_POINT_MUL) ||
+	    (ecc_req->type == ECC_SHAMIR_TRICK)) {
+		ret = copy_from_user(temp_ecc_req.key,
+				     (void __user *)ecc_req->key,
+				     ecc_req->size);
+		if (ret) {
+			ret = -EFAULT;
+			pr_debug("%s: copy_from_user failed (%d)\n",
+				 __func__, ret);
+			goto free_all;
+		}
+	}
+
+	ret = tegra_se_pka1_ecc_op(&temp_ecc_req);
+	if (ret) {
+		pr_debug("\ntegra_se_pka1_ecc_op failed(%d) for ECC\n", ret);
+		goto free_all;
+	}
+
+	ret = copy_to_user((void __user *)ecc_req->res_pt_x,
+			   temp_ecc_req.res_pt_x, ecc_req->size);
+	if (ret) {
+		ret = -EFAULT;
+		pr_debug("%s: copy_to_user failed (%d)\n", __func__, ret);
+		goto free_all;
+	}
+
+	ret = copy_to_user((void __user *)ecc_req->res_pt_y,
+			   temp_ecc_req.res_pt_y, ecc_req->size);
+	if (ret) {
+		ret = -EFAULT;
+		pr_debug("%s: copy_to_user failed (%d)\n", __func__, ret);
+	}
+free_all:
+		kfree(temp_ecc_req.key);
+key_fail:
+		kfree(temp_ecc_req.res_pt_y);
+res_py_fail:
+		kfree(temp_ecc_req.res_pt_x);
+res_px_fail:
+		kfree(temp_ecc_req.base_pt_y);
+base_py_fail:
+		kfree(temp_ecc_req.base_pt_x);
+base_px_fail:
+		kfree(temp_ecc_req.curve_param_b);
+param_b_fail:
+		kfree(temp_ecc_req.curve_param_a);
+param_a_fail:
+		kfree(temp_ecc_req.modulus);
+mod_fail:
+	return ret;
+}
+
 static int tegra_crypt_pka1_rsa(struct file *filp, struct tegra_crypto_ctx *ctx,
 				struct tegra_pka1_rsa_request *rsa_req)
 {
@@ -1030,7 +1309,6 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 			pr_err("%s: copy_from_user fail(%d)\n", __func__, ret);
 			return -EFAULT;
 		}
-
 		ret = process_crypt_req(filp, ctx, &crypt_req);
 		break;
 
@@ -1173,7 +1451,6 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 			ret = -ENODATA;
 			goto free_tfm;
 		}
-
 		ret = copy_to_user((void __user *)rng_req.rdata,
 			(const void *)rng, rng_req.nbytes);
 		if (ret) {
@@ -1298,28 +1575,8 @@ rng_out:
 				__func__, ret);
 			return ret;
 		}
-		if ((pka1_ecc_req.op_mode < ECC_MODE_MIN_INDEX) ||
-			(pka1_ecc_req.op_mode > ECC_MODE_MAX_INDEX)) {
-			pr_err("Invalid value of ecc opmode index %d\n",
-				pka1_ecc_req.op_mode);
-			return -EINVAL;
-		}
 
-		ret = tegra_se_pka1_ecc_op(&pka1_ecc_req);
-		if (ret) {
-			pr_debug("\ntegra_se_pka1_ecc_op failed(%d) for ECC\n",
-				 ret);
-			return ret;
-		}
-
-		ret = copy_to_user((void __user *)arg, &pka1_ecc_req,
-				   sizeof(pka1_ecc_req));
-		if (ret) {
-			ret = -EFAULT;
-			pr_debug("%s: copy_to_user failed (%d)\n", __func__,
-				 ret);
-			return ret;
-		}
+		ret = tegra_crypt_pka1_ecc(&pka1_ecc_req);
 		break;
 
 	case TEGRA_CRYPTO_IOCTL_RNG1_REQ:
@@ -1331,22 +1588,9 @@ rng_out:
 			return ret;
 		}
 
-		ret = tegra_se_rng1_op(&rng1_req);
-		if (ret) {
-			pr_debug("\ntegra_se_rng1_op failed(%d) for RNG1\n",
-				  ret);
-			return ret;
-		}
-
-		ret = copy_to_user((void __user *)arg, &rng1_req,
-				   sizeof(rng1_req));
-		if (ret) {
-			ret = -EFAULT;
-			pr_debug("%s: copy_to_user failed (%d) for rng1_req\n",
-				 __func__, ret);
-			return ret;
-		}
+		ret = tegra_crypt_rng1(&rng1_req);
 		break;
+
 	default:
 		pr_debug("invalid ioctl code(%d)", ioctl_num);
 		return -EINVAL;

@@ -37,7 +37,9 @@
 
 #define CMDBUF_SIZE		128
 #define NV_DISPLAY_CLASS_ID	0x70
-#define HEAD_WORD_OFFSET	0x4000
+#define T18X_HEAD_WORD_OFFSET	0x4000
+#define T210_HEAD_WORD_OFFSET	0x10000
+#define HEAD_WORD_OFFSET	head_offset
 
 #define WAIT_TYPE_PROGRAM_REG			(1<<0)
 #define WAIT_TYPE_CHECK_GEN_ACT_PROMOTION	(1<<1)
@@ -120,6 +122,7 @@ static struct of_device_id tegra_display_common_of_match[] = {
 #endif
 
 static int max_heads;
+static int head_offset;
 static struct tegra_dc_common *dc_common;
 
 /**
@@ -1002,6 +1005,20 @@ static inline void tegra_dc_common_remove_debugfs(
 		struct tegra_dc_common *dc_common) { };
 #endif /* CONFIG_DEBUGFS */
 
+static int tegra_dc_common_assign_head_offset(void)
+{
+	int ret = 0;
+
+	if (tegra_dc_is_t21x())
+		head_offset = T210_HEAD_WORD_OFFSET;
+	else if (tegra_dc_is_t18x())
+		head_offset = T18X_HEAD_WORD_OFFSET;
+	else
+		ret = -ENOENT;
+
+	return ret;
+}
+
 static int tegra_dc_common_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -1021,6 +1038,12 @@ static int tegra_dc_common_probe(struct platform_device *pdev)
 	if (max_heads <= 0) {
 		dev_err(&pdev->dev, "max no. of heads isn't configured\n");
 		return -ENOENT;
+	}
+
+	ret = tegra_dc_common_assign_head_offset();
+	if (ret) {
+		dev_err(&pdev->dev, "can't assign head_offset in tegra_dc_common\n");
+		return ret;
 	}
 
 	dc_common = devm_kzalloc(&pdev->dev, sizeof(*dc_common), GFP_KERNEL);
@@ -1169,7 +1192,14 @@ static struct platform_driver tegra_dc_common_driver = {
 
 static int __init tegra_dc_common_module_init(void)
 {
-	trace_printk("Module init being called for dc_common\n");
+	int ret = 0;
+
+	ret = tegra_dc_hw_init();
+	if (ret) {
+		printk(KERN_ERR "tegradccommon module_init failed\n");
+		return ret;
+	}
+
 	return platform_driver_register(&tegra_dc_common_driver);
 }
 

@@ -792,6 +792,7 @@ void __attribute__((weak)) tegra_dc_populate_t18x_hw_data(
 	struct tegra_dc_hw_data *);
 void __attribute__((weak)) tegra_dc_populate_t19x_hw_data(
 	struct tegra_dc_hw_data *);
+int tegra_dc_hw_init(void);
 
 bool __attribute__((weak)) tegra_dc_is_t21x(void);
 bool __attribute__((weak)) tegra_dc_is_t18x(void);

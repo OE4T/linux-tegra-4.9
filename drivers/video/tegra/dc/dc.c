@@ -6796,6 +6796,32 @@ void tegra_dc_populate_t21x_hw_data(struct tegra_dc_hw_data *hw_data)
 	hw_data->version = TEGRA_DC_HW_T210;
 }
 
+/**
+ * tegra_dc_hw_init - Initializes hardware specific data for dc.
+ *
+ * The only call(entry point) to this function as of today should
+ * be from dc_common. Since dc_common needs to be probed before
+ * tegradc and the former also needs some hardware related info,
+ * dc_common initializes hw data in its module_init(). The order
+ * of calls to module_init() is kept as dc_common's followed by
+ * tegra_dc's module_init().
+ *
+ * Return: 0 if success else corresponding error number from
+ * @tegra_dc_assign_hw_data().
+ */
+int tegra_dc_hw_init(void)
+{
+	int ret;
+
+	tegra_dc_populate_t21x_hw_data(&t21x_hw_data);
+	tegra_dc_populate_t18x_hw_data(&t18x_hw_data);
+	tegra_dc_populate_t19x_hw_data(&t19x_hw_data);
+
+	ret = tegra_dc_assign_hw_data();
+
+	return ret;
+}
+
 static struct platform_driver tegra_dc_driver = {
 	.driver = {
 		.name = "tegradc",
@@ -6816,31 +6842,27 @@ static struct platform_driver tegra_dc_driver = {
 static int __init tegra_dc_module_init(void)
 {
 	int ret;
+	int max_heads;
 #if defined(CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT) && defined(CONFIG_DEBUG_FS)
 	int i;
 #endif
+	max_heads = tegra_dc_get_numof_dispheads();
+	if (max_heads < 0) {
+		printk(KERN_ERR "tegradc module_init failed\n");
+		return -ENOENT;
+	}
 
-	tegra_dc_populate_t21x_hw_data(&t21x_hw_data);
-	tegra_dc_populate_t18x_hw_data(&t18x_hw_data);
-	tegra_dc_populate_t19x_hw_data(&t19x_hw_data);
-
-	ret = tegra_dc_assign_hw_data();
-	if (ret)
-		return ret;
-
-	tegra_dcs = kzalloc(tegra_dc_get_numof_dispheads() *
-				sizeof(struct tegra_dc *), GFP_KERNEL);
+	tegra_dcs = kzalloc(max_heads *	sizeof(struct tegra_dc *), GFP_KERNEL);
 	if (!tegra_dcs)
 		return -ENOMEM;
 
 #if defined(CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT) && defined(CONFIG_DEBUG_FS)
-	boot_out_type = kzalloc(tegra_dc_get_numof_dispheads() *
-				sizeof(int), GFP_KERNEL);
+	boot_out_type = kzalloc(max_heads * sizeof(int), GFP_KERNEL);
 	if (!boot_out_type) {
 		kfree(tegra_dcs);
 		return -ENOMEM;
 	}
-	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++)
+	for (i = 0; i < max_heads; i++)
 		boot_out_type[i] = -1;
 #endif
 

@@ -1,7 +1,7 @@
 /*
  * NVIDIA GPU HAL interface.
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -15,6 +15,7 @@
 
 #include "gk20a.h"
 #include "hal_gk20a.h"
+#include "hal.h"
 #include "gm20b/hal_gm20b.h"
 #include "gp10b/hal_gp10b.h"
 #include "gp106/hal_gp106.h"

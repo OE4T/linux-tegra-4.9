@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/mm.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
 #include <linux/debugfs.h>
@@ -36,6 +37,101 @@
  * named.
  */
 static atomic_t kmem_cache_id;
+
+void *__nvgpu_big_alloc(struct gk20a *g, size_t size, bool clear)
+{
+	void *p;
+
+	if (size > PAGE_SIZE) {
+		if (clear)
+			p = nvgpu_vzalloc(g, size);
+		else
+			p = nvgpu_vmalloc(g, size);
+	} else {
+		if (clear)
+			p = nvgpu_kzalloc(g, size);
+		else
+			p = nvgpu_kmalloc(g, size);
+	}
+
+	return p;
+}
+
+void nvgpu_big_free(struct gk20a *g, void *p)
+{
+	/*
+	 * This will have to be fixed eventually. Allocs that use
+	 * nvgpu_big_[mz]alloc() will need to remember the size of the alloc
+	 * when freeing.
+	 */
+	if (virt_addr_valid(p))
+		nvgpu_kfree(g, p);
+	else
+		nvgpu_vfree(g, p);
+}
+
+void *__nvgpu_kmalloc(struct gk20a *g, size_t size, unsigned long ip)
+{
+#ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
+	return __nvgpu_track_kmalloc(g, size, ip);
+#else
+	return kmalloc(size, GFP_KERNEL);
+#endif
+}
+
+void *__nvgpu_kzalloc(struct gk20a *g, size_t size, unsigned long ip)
+{
+#ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
+	return __nvgpu_track_kzalloc(g, size, ip);
+#else
+	return kzalloc(size, GFP_KERNEL);
+#endif
+}
+
+void *__nvgpu_kcalloc(struct gk20a *g, size_t n, size_t size, unsigned long ip)
+{
+#ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
+	return __nvgpu_track_kcalloc(g, n, size, ip);
+#else
+	return kcalloc(n, size, GFP_KERNEL);
+#endif
+}
+
+void *__nvgpu_vmalloc(struct gk20a *g, unsigned long size, unsigned long ip)
+{
+#ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
+	return __nvgpu_track_vmalloc(g, size, ip);
+#else
+	return vmalloc(size);
+#endif
+}
+
+void *__nvgpu_vzalloc(struct gk20a *g, unsigned long size, unsigned long ip)
+{
+#ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
+	return __nvgpu_track_vzalloc(g, size, ip);
+#else
+	return vzalloc(size);
+#endif
+}
+
+void __nvgpu_kfree(struct gk20a *g, void *addr)
+{
+#ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
+	__nvgpu_track_kfree(g, addr);
+#else
+	kfree(addr);
+#endif
+}
+
+void __nvgpu_vfree(struct gk20a *g, void *addr)
+{
+#ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
+	__nvgpu_track_vfree(g, addr);
+#else
+	vfree(addr);
+#endif
+}
 
 #ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
 

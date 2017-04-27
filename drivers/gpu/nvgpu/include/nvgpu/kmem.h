@@ -17,6 +17,8 @@
 #ifndef __NVGPU_KMEM_H__
 #define __NVGPU_KMEM_H__
 
+#include <nvgpu/types.h>
+
 /*
  * Incase this isn't defined already.
  */
@@ -29,12 +31,10 @@ struct gk20a;
 /*
  * When there's other implementations make sure they are included instead of
  * Linux when not compiling on Linux!
- *
- * Also note this is above any usage of size_t. At the moment we don't have a
- * cross OS way of defining the necessary types used by these APIs. Eventually
- * we will need a <nvgpu/types.h> include to handle this.
  */
+#ifdef __KERNEL__
 #include <nvgpu/linux/kmem.h>
+#endif
 
 /**
  * DOC: Kmem cache support
@@ -224,24 +224,10 @@ void nvgpu_kmem_fini(struct gk20a *g, int flags);
 #define NVGPU_KMEM_FINI_WARN			(1 << 2)
 #define NVGPU_KMEM_FINI_BUG			(1 << 3)
 
-static inline void *__nvgpu_big_alloc(struct gk20a *g, size_t size, bool clear)
-{
-	void *p;
-
-	if (size > PAGE_SIZE) {
-		if (clear)
-			p = nvgpu_vzalloc(g, size);
-		else
-			p = nvgpu_vmalloc(g, size);
-	} else {
-		if (clear)
-			p = nvgpu_kzalloc(g, size);
-		else
-			p = nvgpu_kmalloc(g, size);
-	}
-
-	return p;
-}
+/*
+ * Implemented by the OS interface.
+ */
+void *__nvgpu_big_alloc(struct gk20a *g, size_t size, bool clear);
 
 /**
  * nvgpu_big_malloc - Pick virtual or physical alloc based on @size
@@ -289,17 +275,6 @@ static inline void *nvgpu_big_zalloc(struct gk20a *g, size_t size)
  * @g - The GPU.
  * @p - A pointer allocated by nvgpu_big_zalloc() or nvgpu_big_malloc().
  */
-static inline void nvgpu_big_free(struct gk20a *g, void *p)
-{
-	/*
-	 * This will have to be fixed eventually. Allocs that use
-	 * nvgpu_big_[mz]alloc() will need to remember the size of the alloc
-	 * when freeing.
-	 */
-	if (virt_addr_valid(p))
-		nvgpu_kfree(g, p);
-	else
-		nvgpu_vfree(g, p);
-}
+void nvgpu_big_free(struct gk20a *g, void *p);
 
 #endif /* __NVGPU_KMEM_H__ */

@@ -17,12 +17,6 @@
 #ifndef __NVGPU_KMEM_LINUX_H__
 #define __NVGPU_KMEM_LINUX_H__
 
-#include <linux/mm.h>
-#include <linux/slab.h>
-#include <linux/vmalloc.h>
-
-#include <asm/page.h>
-
 struct gk20a;
 struct device;
 
@@ -51,73 +45,12 @@ static inline void nvgpu_kmem_debugfs_init(struct device *dev)
  * These are the Linux implementations of the various kmem functions defined by
  * nvgpu. This should not be included directly - instead include <nvgpu/kmem.h>.
  */
-
-static inline void *__nvgpu_kmalloc(struct gk20a *g, size_t size,
-				    unsigned long ip)
-{
-#ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
-	return __nvgpu_track_vmalloc(g, size, ip);
-#else
-	return kmalloc(size, GFP_KERNEL);
-#endif
-}
-
-static inline void *__nvgpu_kzalloc(struct gk20a *g, size_t size,
-				    unsigned long ip)
-{
-#ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
-	return __nvgpu_track_kzalloc(g, size, ip);
-#else
-	return kzalloc(size, GFP_KERNEL);
-#endif
-}
-
-static inline void *__nvgpu_kcalloc(struct gk20a *g, size_t n, size_t size,
-				    unsigned long ip)
-{
-#ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
-	return __nvgpu_track_kcalloc(g, n, size, ip);
-#else
-	return kcalloc(n, size, GFP_KERNEL);
-#endif
-}
-
-static inline void *__nvgpu_vmalloc(struct gk20a *g, unsigned long size,
-				    unsigned long ip)
-{
-#ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
-	return __nvgpu_track_vmalloc(g, size, ip);
-#else
-	return vmalloc(size);
-#endif
-}
-
-static inline void *__nvgpu_vzalloc(struct gk20a *g, unsigned long size,
-				    unsigned long ip)
-{
-#ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
-	return __nvgpu_track_vzalloc(g, size, ip);
-#else
-	return vzalloc(size);
-#endif
-}
-
-static inline void __nvgpu_kfree(struct gk20a *g, void *addr)
-{
-#ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
-	__nvgpu_track_kfree(g, addr);
-#else
-	kfree(addr);
-#endif
-}
-
-static inline void __nvgpu_vfree(struct gk20a *g, void *addr)
-{
-#ifdef CONFIG_NVGPU_TRACK_MEM_USAGE
-	__nvgpu_track_vfree(g, addr);
-#else
-	vfree(addr);
-#endif
-}
+void *__nvgpu_kmalloc(struct gk20a *g, size_t size, unsigned long ip);
+void *__nvgpu_kzalloc(struct gk20a *g, size_t size, unsigned long ip);
+void *__nvgpu_kcalloc(struct gk20a *g, size_t n, size_t size, unsigned long ip);
+void *__nvgpu_vmalloc(struct gk20a *g, unsigned long size, unsigned long ip);
+void *__nvgpu_vzalloc(struct gk20a *g, unsigned long size, unsigned long ip);
+void __nvgpu_kfree(struct gk20a *g, void *addr);
+void __nvgpu_vfree(struct gk20a *g, void *addr);
 
 #endif

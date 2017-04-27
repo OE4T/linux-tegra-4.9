@@ -29,4 +29,12 @@ config TEGRA_HV_WATCHDOG
 	  To compile this driver as a module, choose M here: the
 	  module will be called tegra_hv_wdt.
 
+config SOFT_PLATFORM_WATCHDOG
+	tristate "Software watchdog platform driver"
+	select WATCHDOG_CORE
+	help 
+	  A software monitoring watchdog platform device driver. This will fail to
+	  reboot your system from some situations that the hardware watchdog will
+	  recover from. Equally it's a lot cheaper to install.
+
 endif

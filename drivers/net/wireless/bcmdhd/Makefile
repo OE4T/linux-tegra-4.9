@@ -229,7 +229,6 @@ ifeq ($(CONFIG_BCMDHD_QMONITOR),y)
 endif
 #EXTRA_LDFLAGS += --strip-debug
 
-EXTRA_CFLAGS += -Wno-date-time
 EXTRA_CFLAGS += $(DHDCFLAGS) -DDHD_DEBUG
 EXTRA_CFLAGS += -DSRCBASE=\"$(src)\"
 EXTRA_CFLAGS += -I$(src)/include/ -I$(src)/

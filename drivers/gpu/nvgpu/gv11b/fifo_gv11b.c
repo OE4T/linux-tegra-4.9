@@ -532,7 +532,7 @@ static void gv11b_reset_pbdma_faulted_tsg(struct tsg_gk20a *tsg)
 	up_read(&tsg->ch_list_lock);
 }
 
-u32 gv11b_fifo_get_runlists_mask(struct gk20a *g, u32 act_eng_bitmask,
+static u32 gv11b_fifo_get_runlists_mask(struct gk20a *g, u32 act_eng_bitmask,
 			u32 id, unsigned int id_type, unsigned int rc_type,
 			 struct mmu_fault_info *mmfault)
 {
@@ -639,7 +639,7 @@ static int gv11b_fifo_poll_runlist_preempt_pending(struct gk20a *g,
 	return ret;
 }
 
-int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
+static int gv11b_fifo_is_preempt_pending(struct gk20a *g, u32 id,
 		 unsigned int id_type, unsigned int timeout_rc_type)
 {
 	struct fifo_gk20a *f = &g->fifo;
@@ -856,7 +856,7 @@ static int gv11b_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
 
 }
 
-void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
+static void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 			u32 id, unsigned int id_type, unsigned int rc_type,
 			 struct mmu_fault_info *mmfault)
 {
@@ -1075,7 +1075,7 @@ static u32 gv11b_fifo_intr_0_en_mask(struct gk20a *g)
 	return intr_0_en_mask;
 }
 
-int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
+static int gv11b_init_fifo_reset_enable_hw(struct gk20a *g)
 {
 	u32 intr_stall;
 	u32 mask;

@@ -1963,7 +1963,7 @@ static void gr_gv11b_write_pm_ptr(struct gk20a *g,
 		ctxsw_prog_main_image_pm_ptr_hi_o(), va_hi);
 }
 
-void gr_gv11b_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
+static void gr_gv11b_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 {
 	u32 gate_ctrl;
 

@@ -74,7 +74,7 @@ static void gv11b_ltc_init_fs_state(struct gk20a *g)
 				ltc_intr);
 }
 
-u32 gv11b_ltc_cbc_fix_config(struct gk20a *g, int base)
+static u32 gv11b_ltc_cbc_fix_config(struct gk20a *g, int base)
 {
 	u32 val = gk20a_readl(g, ltc_ltcs_ltss_cbc_num_active_ltcs_r());
 

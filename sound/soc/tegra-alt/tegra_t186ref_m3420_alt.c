@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/clk.h>
 #include <linux/module.h>
 #include <sound/soc.h>
 
@@ -28,28 +29,47 @@
 
 struct tegra_t186ref_m3420 {
 	struct tegra_asoc_audio_clock_info audio_clock;
+	struct mutex lock;
 	unsigned int num_codec_links;
+	unsigned int clk_ena_count;
 };
 
-static int tegra_t186ref_m3420_i2s_init(struct snd_soc_pcm_runtime *rtd)
+static int tegra_t186ref_m3420_clocks_init(struct snd_soc_pcm_runtime *rtd,
+					   int srate)
 {
-	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct snd_soc_card *card = rtd->card;
 	struct tegra_t186ref_m3420 *machine = snd_soc_card_get_drvdata(card);
-	const struct snd_soc_pcm_stream *dai_params = rtd->dai_link->params;
-	const char *name = rtd->dai_link->name;
-	unsigned int idx, mclk, clk_out_rate;
+	unsigned int mclk, clk_out_rate;
 	int err = 0;
 
-	/* Default sampling rate*/
-	clk_out_rate = dai_params->rate_min * 256;
+	/*
+	 * Clocks only need to be configured once for any playback sessions
+	 * and so if they are enabled, then they have been configured and
+	 * we are done.
+	 */
+	if (machine->clk_ena_count)
+		goto out;
+
+	switch (srate) {
+	case 32000:
+	case 44100:
+	case 48000:
+		machine->audio_clock.mclk_scale = 256;
+		break;
+	case 96000:
+		machine->audio_clock.mclk_scale = 128;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	clk_out_rate = srate * machine->audio_clock.mclk_scale;
 	mclk = clk_out_rate * 2;
 
 	tegra_alt_asoc_utils_set_parent(&machine->audio_clock, true);
 
 	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
-					    dai_params->rate_min, mclk,
-					    clk_out_rate);
+					    srate, mclk, clk_out_rate);
 	if (err < 0) {
 		dev_err(card->dev, "Can't configure clocks\n");
 		return err;
@@ -61,20 +81,22 @@ static int tegra_t186ref_m3420_i2s_init(struct snd_soc_pcm_runtime *rtd)
 		return err;
 	}
 
-	/* set bclk ratio */
-	if (cpu_dai->driver->ops->set_bclk_ratio) {
-		idx = tegra_machine_get_codec_dai_link_idx_t18x(name);
-		idx = idx - TEGRA186_XBAR_DAI_LINKS;
-		err = snd_soc_dai_set_bclk_ratio(cpu_dai,
-			tegra_machine_get_bclk_ratio_t18x(rtd));
-		if (err < 0) {
-			dev_err(card->dev, "%s cpu DAI bclk not set\n",
-				cpu_dai->name);
-			return err;
-		}
+	/*
+	 * Clocks are enabled here and NOT in machine start-up because for
+	 * Tegra186 we cannot the pll_a's p-divider if the pll is enabled
+	 * and we cannot get the exact frequency we need. So enable it now
+	 * once we have set the clock rates for the playback scenario.
+	 */
+	err = tegra_alt_asoc_utils_clk_enable(&machine->audio_clock);
+	if (err < 0) {
+		dev_err(card->dev, "Can't enable clocks\n");
+		return err;
 	}
 
-	return err;
+out:
+	machine->clk_ena_count++;
+
+	return 0;
 }
 
 static int tegra_t186ref_m3420_hw_params(struct snd_pcm_substream *substream,
@@ -84,12 +106,24 @@ static int tegra_t186ref_m3420_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
 	struct snd_soc_pcm_stream *stream;
-	unsigned int idx = tegra_machine_get_codec_dai_link_idx_t18x(name);
+	struct tegra_t186ref_m3420 *machine = snd_soc_card_get_drvdata(card);
+	unsigned int idx;
+	int err = 0;
+
+	mutex_lock(&machine->lock);
+	err = tegra_t186ref_m3420_clocks_init(rtd, params_rate(params));
+	mutex_unlock(&machine->lock);
+	if (err)
+		return err;
+
+	idx = tegra_machine_get_codec_dai_link_idx_t18x(name);
 
 	stream = (struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 	stream->rate_min = params_rate(params);
 
-	return 0;
+	return snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai, 0,
+				      machine->audio_clock.clk_out_rate,
+				      SND_SOC_CLOCK_IN);
 }
 
 static int tegra_t186ref_m3420_i2s1_hw_params(
@@ -124,49 +158,42 @@ static int tegra_t186ref_m3420_i2s4_hw_params(
 					     "i2s-playback-4");
 }
 
-static int tegra_t186ref_m3420_startup(struct snd_pcm_substream *substream)
-{
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct tegra_t186ref_m3420 *machine;
-
-	machine = snd_soc_card_get_drvdata(rtd->card);
-	tegra_alt_asoc_utils_clk_enable(&machine->audio_clock);
-
-	return 0;
-}
-
 static void tegra_t186ref_m3420_shutdown(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct tegra_t186ref_m3420 *machine;
 
 	machine = snd_soc_card_get_drvdata(rtd->card);
-	tegra_alt_asoc_utils_clk_disable(&machine->audio_clock);
 
-	return;
+	mutex_lock(&machine->lock);
+
+	if (machine->clk_ena_count > 0) {
+		machine->clk_ena_count--;
+
+		if (!machine->clk_ena_count)
+			tegra_alt_asoc_utils_clk_disable(&machine->audio_clock);
+	}
+
+	mutex_unlock(&machine->lock);
 }
 
 static struct snd_soc_ops tegra_t186ref_m3420_i2s1_ops = {
 	.hw_params = tegra_t186ref_m3420_i2s1_hw_params,
-	.startup = tegra_t186ref_m3420_startup,
 	.shutdown = tegra_t186ref_m3420_shutdown,
 };
 
 static struct snd_soc_ops tegra_t186ref_m3420_i2s2_ops = {
 	.hw_params = tegra_t186ref_m3420_i2s2_hw_params,
-	.startup = tegra_t186ref_m3420_startup,
 	.shutdown = tegra_t186ref_m3420_shutdown,
 };
 
 static struct snd_soc_ops tegra_t186ref_m3420_i2s3_ops = {
 	.hw_params = tegra_t186ref_m3420_i2s3_hw_params,
-	.startup = tegra_t186ref_m3420_startup,
 	.shutdown = tegra_t186ref_m3420_shutdown,
 };
 
 static struct snd_soc_ops tegra_t186ref_m3420_i2s4_ops = {
 	.hw_params = tegra_t186ref_m3420_i2s4_hw_params,
-	.startup = tegra_t186ref_m3420_startup,
 	.shutdown = tegra_t186ref_m3420_shutdown,
 };
 
@@ -223,18 +250,6 @@ static int dai_link_setup(struct platform_device *pdev)
 						    &machine->num_codec_links);
 	if (!codec_links)
 		return err;
-
-	/* set codec init */
-	for (i = 0; i < machine->num_codec_links; i++) {
-		if (!codec_links[i].name)
-			continue;
-
-		if (strstr(codec_links[i].name, "i2s-playback-1") ||
-		    strstr(codec_links[i].name, "i2s-playback-2") ||
-		    strstr(codec_links[i].name, "i2s-playback-3") ||
-		    strstr(codec_links[i].name, "i2s-playback-4"))
-			codec_links[i].init = tegra_t186ref_m3420_i2s_init;
-	}
 
 	tegra_t186ref_codec_conf = tegra_machine_new_codec_conf(pdev,
 		tegra_t186ref_codec_conf,
@@ -322,6 +337,7 @@ static int tegra_t186ref_m3420_driver_probe(struct platform_device *pdev)
 	card->dev = &pdev->dev;
 	platform_set_drvdata(pdev, card);
 	snd_soc_card_set_drvdata(card, machine);
+	mutex_init(&machine->lock);
 	clocks = &machine->audio_clock;
 
 	err = snd_soc_of_parse_card_name(card, "nvidia,model");

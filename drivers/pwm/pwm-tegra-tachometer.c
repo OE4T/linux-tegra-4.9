@@ -288,6 +288,7 @@ static int pwm_tegra_tach_remove(struct platform_device *pdev)
 
 static const struct of_device_id pwm_tegra_tach_of_match[] = {
 	{ .compatible = "nvidia,pwm-tegra186-tachometer" },
+	{ .compatible = "nvidia,pwm-tegra194-tachometer" },
 	{}
 };
 MODULE_DEVICE_TABLE(of, tegra_tach_of_match);

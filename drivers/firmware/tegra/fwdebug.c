@@ -448,7 +448,7 @@ out:
 	return ret;
 }
 
-int bpmp_fwdebug_uninit(struct dentry *root)
+static int bpmp_fwdebug_uninit(struct dentry *root)
 {
 	mutex_lock(&lock);
 

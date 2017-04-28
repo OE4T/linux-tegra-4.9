@@ -38,6 +38,7 @@
 
 #include "platform_tegra.h"
 #include "gp10b/gp10b_sysfs.h"
+#include "gp10b/platform_gp10b.h"
 
 #include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_ltc_gp10b.h>

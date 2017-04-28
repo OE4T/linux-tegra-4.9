@@ -26,7 +26,33 @@
 		#address-cells = <2>;
 		#size-cells = <0>;
 
-		cpu@0 {
+		cpu-map {
+			cluster0 {
+				core0 {
+					cpu = <&denver_0>;
+				};
+				core1 {
+					cpu = <&denver_1>;
+				};
+			};
+
+			cluster1 {
+				core0 {
+					cpu = <&cpu_a57_0>;
+				};
+				core1 {
+					cpu = <&cpu_a57_1>;
+				};
+				core2 {
+					cpu = <&cpu_a57_2>;
+				};
+				core3 {
+					cpu = <&cpu_a57_3>;
+				};
+			};
+		};
+
+		denver_0: cpu@0 {
 			device_type = "cpu";
 			compatible = "nvidia,denver", "arm,armv8";
 			reg = <0x0 0x0>;
@@ -34,9 +60,10 @@
 			cpu-idle-states = <&DENVER_C6 &DENVER_C7>;
 			cpu-ipc = <1024>;
 			next-level-cache = <&L2_DENVER>;
+			capacity-dmips-mhz = <1024>;
 		};
 
-		cpu@1 {
+		denver_1: cpu@1 {
 			device_type = "cpu";
 			compatible = "nvidia,denver", "arm,armv8";
 			reg = <0x0 0x1>;
@@ -44,6 +71,7 @@
 			cpu-idle-states = <&DENVER_C6 &DENVER_C7>;
 			cpu-ipc = <1024>;
 			next-level-cache = <&L2_DENVER>;
+			capacity-dmips-mhz = <1024>;
 		};
 
 		cpu_a57_0: cpu@2 {
@@ -54,6 +82,7 @@
 			cpu-idle-states = <&A57_C7>;
 			cpu-ipc = <752>;
 			next-level-cache = <&L2_A57>;
+			capacity-dmips-mhz = <752>;
 		};
 
 		cpu_a57_1: cpu@3 {
@@ -64,6 +93,7 @@
 			cpu-idle-states = <&A57_C7>;
 			cpu-ipc = <752>;
 			next-level-cache = <&L2_A57>;
+			capacity-dmips-mhz = <752>;
 		};
 
 		cpu_a57_2: cpu@4 {
@@ -74,6 +104,7 @@
 			cpu-idle-states = <&A57_C7>;
 			cpu-ipc = <752>;
 			next-level-cache = <&L2_A57>;
+			capacity-dmips-mhz = <752>;
 		};
 
 		cpu_a57_3: cpu@5 {
@@ -84,6 +115,7 @@
 			cpu-idle-states = <&A57_C7>;
 			cpu-ipc = <752>;
 			next-level-cache = <&L2_A57>;
+			capacity-dmips-mhz = <752>;
 		};
 
 		L2_A57: l2-cache0 {

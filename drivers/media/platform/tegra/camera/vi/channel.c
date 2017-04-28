@@ -567,12 +567,7 @@ int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 	if (atomic_read(&chan->is_streaming) == on)
 		return 0;
 
-	/* Enable CSI before sensor. Reason is as follows:
-	 * CSI is able to catch the very first clk transition.
-	 * Ensure mipi calibration is done before transmission/first frame data.
-	 * TODO:Ensure deskew is setup properly before first deskew sync signal.
-	 */
-	for (num_sd = 0; num_sd < chan->num_subdevs; num_sd++) {
+	for (num_sd = chan->num_subdevs - 1; num_sd >= 0; num_sd--) {
 		struct v4l2_subdev *sd = chan->subdev[num_sd];
 		int err = 0;
 
@@ -580,9 +575,9 @@ int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 		if (!ret && err < 0 && err != -ENOIOCTLCMD)
 			ret = err;
 	}
+
 	atomic_set(&chan->is_streaming, on);
-	if (!chan->pg_mode && on)
-		ret = tegra_mipical_nonblock_check_stat(&chan->mipical_ctx);
+
 	return ret;
 }
 

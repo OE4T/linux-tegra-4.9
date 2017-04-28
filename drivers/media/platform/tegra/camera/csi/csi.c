@@ -88,7 +88,7 @@ int tegra_csi_power(struct tegra_csi_device *csi, int enable)
 }
 EXPORT_SYMBOL(tegra_csi_power);
 
-static int tegra_csi_s_power(struct v4l2_subdev *subdev, int enable)
+int tegra_csi_s_power(struct v4l2_subdev *subdev, int enable)
 {
 	int err = 0;
 	struct tegra_csi_device *csi = to_csi(subdev);

@@ -994,7 +994,7 @@ static int tegra_mipi_misc_register(struct tegra_mipi *mipi)
 	return err;
 }
 
-static int tegra_vmipi_probe(struct platform_device *pdev)
+int tegra_vmipi_probe(struct platform_device *pdev)
 {
 	int err;
 

@@ -13,12 +13,10 @@
 #include <media/csi.h>
 #include <media/csi4_registers.h>
 #include <media/tegra_camera_core.h>
-#include <media/mc_common.h>
 #include "nvhost_acm.h"
 #include "mipical/mipi_cal.h"
 #include "nvcsi/nvcsi.h"
 #include "linux/nvhost_ioctl.h"
-#include "csi4_fops.h"
 
 #define DEFAULT_TPG_FREQ	102000000
 
@@ -292,7 +290,7 @@ static void csi4_cil_check_status(struct tegra_csi_channel *chan, int port_num)
 }
 
 
-static int csi4_power_on(struct tegra_csi_device *csi)
+int csi4_power_on(struct tegra_csi_device *csi)
 {
 	int err = 0;
 
@@ -303,7 +301,7 @@ static int csi4_power_on(struct tegra_csi_device *csi)
 	return err;
 }
 
-static int csi4_power_off(struct tegra_csi_device *csi)
+int csi4_power_off(struct tegra_csi_device *csi)
 {
 	nvhost_module_idle(csi->pdev);
 
@@ -403,7 +401,7 @@ static int csi4_tpg_start_streaming(struct tegra_csi_channel *chan,
 			((chan->pg_mode - 1) << PG_MODE_OFFSET) | PG_ENABLE);
 	return 0;
 }
-static int csi4_hw_init(struct tegra_csi_device *csi)
+int csi4_hw_init(struct tegra_csi_device *csi)
 {
 	csi->iomem[0] = csi->iomem_base + TEGRA_CSI_STREAM_0_BASE;
 	csi->iomem[1] = csi->iomem_base + TEGRA_CSI_STREAM_2_BASE;
@@ -411,7 +409,7 @@ static int csi4_hw_init(struct tegra_csi_device *csi)
 
 	return 0;
 }
-static int csi4_start_streaming(struct tegra_csi_channel *chan,
+int csi4_start_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num)
 {
 	struct tegra_csi_device *csi = chan->csi;
@@ -434,7 +432,7 @@ static int csi4_start_streaming(struct tegra_csi_channel *chan,
 	return ret;
 }
 
-static void csi4_stop_streaming(struct tegra_csi_channel *chan,
+void csi4_stop_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num)
 {
 	struct tegra_csi_device *csi = chan->csi;
@@ -456,7 +454,7 @@ static void csi4_stop_streaming(struct tegra_csi_channel *chan,
 	}
 }
 
-static void csi4_override_format(struct tegra_csi_channel *chan,
+void csi4_override_format(struct tegra_csi_channel *chan,
 		enum tegra_csi_port_num port_num)
 {
 	struct tegra_csi_port *port = &chan->ports[port_num];
@@ -480,7 +478,7 @@ static void csi4_override_format(struct tegra_csi_channel *chan,
 	csi4_stream_write(chan, csi_port, PG_IMAGE_SIZE, val);
 }
 
-static int csi4_mipi_cal(struct tegra_csi_channel *chan,
+int csi4_mipi_cal(struct tegra_csi_channel *chan,
 		  struct tegra_mipi_context **ctx)
 {
 	unsigned int lanes, num_ports, port, addr;
@@ -532,12 +530,3 @@ static int csi4_mipi_cal(struct tegra_csi_channel *chan,
 	}
 	return tegra_mipical_nonblock(ctx, lanes, DEFAULT_MIPICAL_TIMEOUTMS);
 }
-struct tegra_csi_fops csi4_fops = {
-	.csi_power_on = csi4_power_on,
-	.csi_power_off = csi4_power_off,
-	.csi_start_streaming = csi4_start_streaming,
-	.csi_stop_streaming = csi4_stop_streaming,
-	.csi_override_format = csi4_override_format,
-	.mipical = csi4_mipi_cal,
-	.hw_init = csi4_hw_init,
-};

@@ -272,7 +272,7 @@ struct tegra_mc_vi {
 
 	bool bypass;
 
-	const struct tegra_vi_fops *fops;
+	struct tegra_vi_fops *fops;
 
 	dma_addr_t emb_buf;
 	void *emb_buf_addr;
@@ -293,6 +293,10 @@ int tegra_vi_channels_init(struct tegra_mc_vi *vi);
 int tegra_channel_cleanup(struct tegra_channel *chan);
 int tegra_vi_channels_cleanup(struct tegra_mc_vi *vi);
 int tegra_channel_init_subdevices(struct tegra_channel *chan);
+int tegra_vi2_power_on(struct tegra_mc_vi *vi);
+void tegra_vi2_power_off(struct tegra_mc_vi *vi);
+int tegra_vi4_power_on(struct tegra_mc_vi *vi);
+void tegra_vi4_power_off(struct tegra_mc_vi *vi);
 int tegra_clean_unlinked_channels(struct tegra_mc_vi *vi);
 int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl);
 int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
@@ -315,16 +319,6 @@ const struct tegra_video_format *tegra_core_get_format_by_fourcc(
 		struct tegra_channel *chan, u32 fourcc);
 void tegra_core_get_description_by_idx(struct tegra_channel *chan,
 		unsigned int index, __u8 *description);
-void tegra_channel_queued_buf_done(struct tegra_channel *chan,
-					  enum vb2_buffer_state state);
-int tegra_channel_set_stream(struct tegra_channel *chan, bool on);
-void tegra_channel_ring_buffer(struct tegra_channel *chan,
-			       struct vb2_v4l2_buffer *vb,
-			       struct timespec *ts, int state);
-struct tegra_channel_buffer *dequeue_buffer(struct tegra_channel *chan);
-void tegra_channel_init_ring_buffer(struct tegra_channel *chan);
-void free_ring_buffers(struct tegra_channel *chan, int frames);
-int tegra_channel_set_power(struct tegra_channel *chan, bool on);
 
 struct tegra_vi_fops {
 	int (*vi_power_on)(struct tegra_channel *chan);
@@ -353,17 +347,17 @@ struct tegra_csi_fops {
 
 struct tegra_t210_vi_data {
 	struct nvhost_device_data *info;
-	const struct tegra_vi_fops *vi_fops;
-	const struct tegra_csi_fops *csi_fops;
+	struct tegra_vi_fops *vi_fops;
+	struct tegra_csi_fops *csi_fops;
 };
 
 struct tegra_vi_data {
 	struct nvhost_device_data *info;
-	const struct tegra_vi_fops *vi_fops;
+	struct tegra_vi_fops *vi_fops;
 };
 
 struct tegra_csi_data {
 	struct nvhost_device_data *info;
-	const struct tegra_csi_fops *csi_fops;
+	struct tegra_csi_fops *csi_fops;
 };
 #endif

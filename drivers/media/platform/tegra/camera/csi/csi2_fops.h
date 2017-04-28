@@ -15,6 +15,13 @@
 #ifndef __CSI2_H__
 #define __CSI2_H__
 
-extern const struct tegra_csi_fops csi2_fops;
+#include <media/csi.h>
+
+int csi2_start_streaming(struct tegra_csi_channel *chan,
+		enum tegra_csi_port_num port_num);
+void csi2_stop_streaming(struct tegra_csi_channel *chan,
+		enum tegra_csi_port_num port_num);
+
+extern struct tegra_csi_fops csi2_fops;
 
 #endif

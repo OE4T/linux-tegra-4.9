@@ -56,4 +56,12 @@
 	pinmux@700008d4 {
 		compatible = "nvidia,tegra210b01-pinmux", "nvidia,tegra210-pinmux";
 	};
+
+	clock {
+		compatible = "nvidia,tegra210b01-car", "nvidia,tegra210-car";
+	};
+
+	clock@70110000 {
+		compatible = "nvidia,tegra210b01-dfll", "nvidia,tegra210-dfll";
+	};
 };

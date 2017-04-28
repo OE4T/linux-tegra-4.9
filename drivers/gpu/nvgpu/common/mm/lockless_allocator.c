@@ -79,10 +79,9 @@ static void nvgpu_lockless_free(struct nvgpu_allocator *a, u64 addr)
 {
 	struct nvgpu_lockless_allocator *pa = a->priv;
 	int head, ret;
-	u64 cur_idx, rem;
+	u64 cur_idx;
 
 	cur_idx = addr - pa->base;
-	rem = do_div(cur_idx, pa->blk_size);
 
 	while (1) {
 		head = ACCESS_ONCE(pa->head);
@@ -148,7 +147,7 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	int i;
 	int err;
 	int nr_nodes;
-	u64 count, rem;
+	u64 count;
 	struct nvgpu_lockless_allocator *a;
 
 	if (!blk_size)
@@ -159,7 +158,6 @@ int nvgpu_lockless_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	 * In order to control memory footprint, we require count < INT_MAX
 	 */
 	count = length;
-	rem = do_div(count, blk_size);
 	if (!base || !count || count > INT_MAX)
 		return -EINVAL;
 

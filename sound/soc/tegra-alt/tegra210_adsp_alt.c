@@ -4403,34 +4403,21 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC)) {
-			adsp->ahub_clk = clk_get_sys("tegra210-adsp", "ahub");
-			if (IS_ERR(adsp->ahub_clk)) {
-				dev_err(&pdev->dev, "Error: Missing AHUB clock\n");
-				ret = PTR_ERR(adsp->ahub_clk);
-				goto err;
-			}
-			adsp->ape_clk = clk_get_sys(NULL, "adsp.ape");
-			if (IS_ERR(adsp->ape_clk)) {
-				dev_err(&pdev->dev, "Error: Missing APE clock\n");
-				ret = PTR_ERR(adsp->ape_clk);
-				goto err;
-			}
-		} else {
-			adsp->ahub_clk = devm_clk_get(&pdev->dev, "ahub");
-			if (IS_ERR(adsp->ahub_clk)) {
-				dev_err(&pdev->dev, "Error: Missing AHUB clock\n");
-				ret = PTR_ERR(adsp->ahub_clk);
-				goto err;
-			}
+		adsp->ahub_clk = devm_clk_get(&pdev->dev, "ahub");
+		if (IS_ERR(adsp->ahub_clk)) {
+			dev_err(&pdev->dev, "Error: Missing AHUB clock\n");
+			ret = PTR_ERR(adsp->ahub_clk);
+			goto err;
+		}
 
-			adsp->ape_clk = devm_clk_get(&pdev->dev, "ape");
-			if (IS_ERR(adsp->ape_clk)) {
-				dev_err(&pdev->dev, "Error: Missing APE clock\n");
-				ret = PTR_ERR(adsp->ape_clk);
-				goto err;
-			}
+		adsp->ape_clk = devm_clk_get(&pdev->dev, "ape");
+		if (IS_ERR(adsp->ape_clk)) {
+			dev_err(&pdev->dev, "Error: Missing APE clock\n");
+			ret = PTR_ERR(adsp->ape_clk);
+			goto err;
+		}
 
+		if (!IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC)) {
 			adsp->apb2ape_clk = devm_clk_get(&pdev->dev, "apb2ape");
 			if (IS_ERR(adsp->apb2ape_clk)) {
 				dev_err(&pdev->dev, "Error: Missing APB2APE clock\n");

@@ -14,11 +14,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NVGPU_ALLOCATOR_H
-#define NVGPU_ALLOCATOR_H
+#ifndef __NVGPU_ALLOCATOR_H__
+#define __NVGPU_ALLOCATOR_H__
 
 #include <linux/seq_file.h>
-#include <linux/platform_device.h>
 
 #include <nvgpu/lock.h>
 #include <nvgpu/list.h>

@@ -14,8 +14,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/mm.h>
-
 #include <nvgpu/bitops.h>
 #include <nvgpu/allocator.h>
 #include <nvgpu/page_allocator.h>
@@ -27,6 +25,22 @@
 
 #define palloc_dbg(a, fmt, arg...)			\
 	alloc_dbg(palloc_owner(a), fmt, ##arg)
+
+/*
+ * Since some Linux headers are still leaked into common code this is necessary
+ * for some builds.
+ */
+#ifdef PAGE_SIZE
+#undef PAGE_SIZE
+#undef PAGE_ALIGN
+#endif
+
+/*
+ * VIDMEM page size is 4k.
+ */
+#define PAGE_SIZE		0x1000
+#define PAGE_ALIGN(addr)	((addr + (PAGE_SIZE - 1)) &		\
+				 ((typeof(addr)) ~(PAGE_SIZE - 1)))
 
 /*
  * Handle the book-keeping for these operations.
@@ -186,7 +200,7 @@ static struct page_alloc_slab_page *alloc_slab_page(
 	slab_page = nvgpu_kmem_cache_alloc(a->slab_page_cache);
 	if (!slab_page) {
 		palloc_dbg(a, "OOM: unable to alloc slab_page struct!\n");
-		return ERR_PTR(-ENOMEM);
+		return NULL;
 	}
 
 	memset(slab_page, 0, sizeof(*slab_page));
@@ -195,7 +209,7 @@ static struct page_alloc_slab_page *alloc_slab_page(
 	if (!slab_page->page_addr) {
 		nvgpu_kmem_cache_free(a->slab_page_cache, slab_page);
 		palloc_dbg(a, "OOM: vidmem is full!\n");
-		return ERR_PTR(-ENOMEM);
+		return NULL;
 	}
 
 	nvgpu_init_list_node(&slab_page->list_entry);
@@ -259,8 +273,8 @@ static int __do_slab_alloc(struct nvgpu_page_allocator *a,
 
 	if (!slab_page) {
 		slab_page = alloc_slab_page(a, slab);
-		if (IS_ERR(slab_page))
-			return PTR_ERR(slab_page);
+		if (!slab_page)
+			return -ENOMEM;
 	}
 
 	/*
@@ -500,7 +514,7 @@ fail_cleanup:
 	}
 	nvgpu_kmem_cache_free(a->alloc_cache, alloc);
 fail:
-	return ERR_PTR(-ENOMEM);
+	return NULL;
 }
 
 static struct nvgpu_page_alloc *__nvgpu_alloc_pages(
@@ -514,7 +528,7 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_pages(
 	pages = ALIGN(len, a->page_size) >> a->page_shift;
 
 	alloc = __do_nvgpu_alloc_pages(a, pages);
-	if (IS_ERR(alloc)) {
+	if (!alloc) {
 		palloc_dbg(a, "Alloc 0x%llx (%llu) (failed)\n",
 			   pages << a->page_shift, pages);
 		return NULL;
@@ -652,7 +666,7 @@ fail:
 		nvgpu_kmem_cache_free(a->chunk_cache, c);
 	if (alloc)
 		nvgpu_kmem_cache_free(a->alloc_cache, alloc);
-	return ERR_PTR(-ENOMEM);
+	return NULL;
 }
 
 /*
@@ -673,7 +687,7 @@ static u64 nvgpu_page_alloc_fixed(struct nvgpu_allocator *__a,
 	alloc_lock(__a);
 
 	alloc = __nvgpu_alloc_pages_fixed(a, base, aligned_len, 0);
-	if (IS_ERR(alloc)) {
+	if (!alloc) {
 		alloc_unlock(__a);
 		return 0;
 	}

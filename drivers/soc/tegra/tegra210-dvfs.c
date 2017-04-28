@@ -1689,11 +1689,10 @@ static int init_gpu_rail_thermal_scaling(struct device_node *node,
 
 	cdev_node = of_find_compatible_node(NULL, NULL,
 				"nvidia,tegra210-rail-scaling-cdev");
+	if (!cdev_node || !of_device_is_available(cdev_node))
+		return 1;
 
 	rail->vts_of_node = cdev_node;
-
-	if (!cdev_node)
-		return 1;
 
 	thermal_ranges = of_parse_dvfs_rail_cdev_trips(cdev_node,
 		&rail->vts_trips_table[0], &rail->vts_floors_table[0],
@@ -1783,10 +1782,10 @@ static int init_gpu_rail_thermal_caps(struct device_node *node,
 
 	cdev_node = of_find_compatible_node(NULL, NULL,
 				"nvidia,tegra210-rail-vmax-cdev");
-	rail->vmax_of_node = cdev_node;
-
-	if (!cdev_node)
+	if (!cdev_node || !of_device_is_available(cdev_node))
 		return 0;
+
+	rail->vmax_of_node = cdev_node;
 
 	vgpu_cap_clk = of_clk_get_by_name(cdev_node, "cap-clk");
 	if (IS_ERR(vgpu_cap_clk))

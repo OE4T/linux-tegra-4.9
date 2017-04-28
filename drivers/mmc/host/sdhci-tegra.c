@@ -1458,7 +1458,7 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 		goto err_parse_dt;
 	sdhci_tegra_parse_dt(pdev);
 
-	clk_src_data = devm_kzalloc(&pdev->dev, sizeof(clk_src_data),
+	clk_src_data = devm_kzalloc(&pdev->dev, sizeof(*clk_src_data),
 		GFP_KERNEL);
 	if (IS_ERR_OR_NULL(clk_src_data)) {
 		dev_err(mmc_dev(host->mmc),

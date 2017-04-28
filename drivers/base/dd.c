@@ -200,6 +200,7 @@ void device_unblock_probing(void)
 	defer_all_probes = false;
 	driver_deferred_probe_trigger();
 }
+EXPORT_SYMBOL_GPL(device_unblock_probing);
 
 /**
  * deferred_probe_initcall() - Enable probing of deferred devices

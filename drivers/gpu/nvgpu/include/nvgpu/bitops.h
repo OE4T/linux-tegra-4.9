@@ -15,6 +15,7 @@
 
 #ifdef __KERNEL__
 #include <linux/bitops.h>
+#include <linux/bitmap.h>
 #endif
 
 #endif

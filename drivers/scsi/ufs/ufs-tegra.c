@@ -1009,7 +1009,7 @@ out:
 	return ret;
 }
 
-static int ufs_tegra_hce_enable_notify(const struct ufs_hba *hba,
+static int ufs_tegra_hce_enable_notify(struct ufs_hba *hba,
 		enum ufs_notify_change_status status)
 {
 	const struct ufs_tegra_host *ufs_tegra = hba->priv;

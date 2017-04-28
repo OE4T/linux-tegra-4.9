@@ -374,7 +374,7 @@ EXPORT_SYMBOL_GPL(cpu_topology);
 
 /* sd energy functions */
 static inline
-const struct sched_group_energy * const cpu_cluster_energy(int cpu)
+const struct sched_group_energy * cpu_cluster_energy(int cpu)
 {
 	struct sched_group_energy *sge = sge_array[cpu][SD_LEVEL1];
 
@@ -387,7 +387,7 @@ const struct sched_group_energy * const cpu_cluster_energy(int cpu)
 }
 
 static inline
-const struct sched_group_energy * const cpu_core_energy(int cpu)
+const struct sched_group_energy * cpu_core_energy(int cpu)
 {
 	struct sched_group_energy *sge = sge_array[cpu][SD_LEVEL0];
 

@@ -120,7 +120,6 @@ static unsigned int peak_current_limit[] = {
 };
 
 struct max77812_reg_pdata {
-	struct regulator_init_data *ridata;
 	int peak_current_limit;
 	int switching_freq;
 	bool disable_active_discharge;
@@ -522,7 +521,6 @@ static int max77812_probe(struct i2c_client *client,
 
 		config.regmap = max77812->rmap;
 		config.dev = dev;
-		config.init_data = rpdata->ridata;
 		config.driver_data = max77812;
 
 		max77812->rdev[id] = devm_regulator_register(dev,

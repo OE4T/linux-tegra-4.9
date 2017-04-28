@@ -377,6 +377,7 @@ static struct regulator_ops max77812_regulator_ops = {
 	.map_voltage = regulator_map_voltage_linear,
 	.get_voltage_sel = regulator_get_voltage_sel_regmap,
 	.set_voltage_sel = regulator_set_voltage_sel_regmap,
+	.set_voltage_time_sel = regulator_set_voltage_time_sel,
 };
 
 #define MAX77812_REGULATOR_DESC(_id, _name, _en_bit)		\
@@ -421,14 +422,20 @@ static int max77812_reg_parse_dt(struct device *dev,
 	ret = of_property_read_u32(np, "maxim,ramp-down-slew-rate", &pval);
 	if (!ret)
 		max77812_regs->ramp_down_slew_rate = pval;
-
-	ret = of_property_read_u32(np, "maxim,shutdown-slew-rate", &pval);
-	if (!ret)
-		max77812_regs->shutdown_slew_rate = pval;
+	else
+		max77812_regs->ramp_down_slew_rate =
+					max77812_regs->ramp_up_slew_rate;
 
 	ret = of_property_read_u32(np, "maxim,soft-start-slew-rate", &pval);
 	if (!ret)
 		max77812_regs->softstart_slew_rate = pval;
+
+	ret = of_property_read_u32(np, "maxim,shutdown-slew-rate", &pval);
+	if (!ret)
+		max77812_regs->shutdown_slew_rate = pval;
+	else
+		 max77812_regs->shutdown_slew_rate =
+					max77812_regs->softstart_slew_rate;
 
 	max77812_regs->skip_protect_reg_access = of_property_read_bool(np,
 				"maxim,skip-protect-reg-access");
@@ -531,6 +538,14 @@ static int max77812_probe(struct i2c_client *client,
 				max77812->rdesc[id]->name, ret);
 			return ret;
 		}
+
+		if (!max77812->rdev[id]->constraints->enable_time)
+			max77812->rdev[id]->constraints->enable_time =
+					max77812->softstart_slew_rate;
+
+		 if (!max77812->rdev[id]->constraints->ramp_delay)
+				max77812->rdev[id]->constraints->ramp_delay =
+					max77812->ramp_up_slew_rate;
 	}
 
 	return 0;

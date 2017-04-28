@@ -17,8 +17,6 @@
 #ifndef MIPI_CAL_H
 #define MIPI_CAL_H
 
-#include <linux/completion.h>
-
 #define DSID	(1 << 31)
 #define DSIC	(1 << 30)
 #define DSIB	(1 << 29)
@@ -31,25 +29,10 @@
 #define CSIA	(1 << 20)
 #define MIPI_CPHY	1
 
-struct tegra_mipi_context {
-	/* Caller Settings */
-	int lanes;
-	unsigned int timeoutms;
-	/* Internal Vars */
-	int cal_done;
-	struct completion kthread_finish;
-	struct task_struct *mipical_kthread;
-};
-
 #ifdef CONFIG_TEGRA_MIPI_CAL
 int tegra_mipi_bias_pad_enable(void);
 int tegra_mipi_bias_pad_disable(void);
 int tegra_mipi_calibration(int lanes);
-
-int tegra_mipical_nonblock(struct tegra_mipi_context **handle,
-			   unsigned int lanes, unsigned int timeoutms);
-int tegra_mipical_nonblock_check_stat(struct tegra_mipi_context **handle);
-
 #else
 static inline int tegra_mipi_bias_pad_enable(void)
 {

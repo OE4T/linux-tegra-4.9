@@ -1,7 +1,7 @@
 /*
  * Power off driver for Maxim MAX77620 device.
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Chaitanya Bandi <bandik@nvidia.com>
  *
@@ -371,6 +371,7 @@ static struct platform_device_id max77620_poweroff_devtype[] = {
 	{
 		.name = "max20024-power",
 	},
+	{},
 };
 
 static struct platform_driver max77620_poweroff_driver = {

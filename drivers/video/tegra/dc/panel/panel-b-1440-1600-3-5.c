@@ -37,7 +37,7 @@ static struct tegra_panel_instance panel_instance[] = {
 	},
 };
 
-int dsi_b_1440_1600_3_5_enable(struct device *dev)
+static int dsi_b_1440_1600_3_5_enable(struct device *dev)
 {
 	struct regulator *avdd_lcd_var;
 	struct regulator *avee_lcd_var;
@@ -160,7 +160,7 @@ fail:
 	return err;
 }
 
-int dsi_b_1440_1600_3_5_disable(struct device *dev)
+static int dsi_b_1440_1600_3_5_disable(struct device *dev)
 {
 	int err = 0;
 	struct regulator *avdd_lcd_var;

@@ -3770,7 +3770,7 @@ static int gr_gk20a_init_map_tiles(struct gk20a *g, struct gr_gk20a *gr)
 	}
 
 	if (gr->map_tiles == NULL) {
-		gr->map_tiles = nvgpu_kzalloc(g, num_gpcs * sizeof(u8));
+		gr->map_tiles = nvgpu_kzalloc(g, map_tile_count * sizeof(u8));
 		if (gr->map_tiles == NULL) {
 			ret = -ENOMEM;
 			goto clean_up;

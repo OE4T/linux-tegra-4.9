@@ -70,14 +70,6 @@ struct tegra_dc_ext_lut32 {
 #define TEGRA_DC_EXT_SET_LUT32 \
 		_IOW('D', 0x0A, struct tegra_dc_ext_lut32)
 
-struct tegra_dc_ext_feature32 {
-	__u32 length;
-	__u32 entries;		/* pointer to array of 32-bit entries */
-};
-
-#define TEGRA_DC_EXT_GET_FEATURES32 \
-		_IOW('D', 0x0B, struct tegra_dc_ext_feature32)
-
 struct tegra_dc_ext_flip_2_32 {
 	__u32 __user win;	/* struct tegra_dc_ext_flip_windowattr */
 	__u8 win_num;
@@ -2235,21 +2227,6 @@ static int tegra_dc_ext_get_status(struct tegra_dc_ext_user *user,
 	return 0;
 }
 
-static int tegra_dc_ext_get_feature(struct tegra_dc_ext_user *user,
-				   struct tegra_dc_ext_feature *feature)
-{
-	struct tegra_dc *dc = user->ext->dc;
-	struct tegra_dc_feature *table = dc->feature;
-
-	if (dc->enabled && feature->entries) {
-		feature->length = table->num_entries;
-		memcpy(feature->entries, table->entries, table->num_entries *
-					sizeof(struct tegra_dc_feature_entry));
-	}
-
-	return 0;
-}
-
 #ifdef CONFIG_COMPAT
 static int dev_cpy_from_usr_compat(
 			struct tegra_dc_ext_flip_windowattr_v2 *outptr,
@@ -3019,47 +2996,6 @@ free_and_ret:
 			return -EFAULT;
 
 		return tegra_dc_ext_set_lut(user, &args);
-	}
-
-#ifdef CONFIG_COMPAT
-	case TEGRA_DC_EXT_GET_FEATURES32:
-	{
-		struct tegra_dc_ext_feature32 args;
-		struct tegra_dc_ext_feature tmp;
-		int ret;
-
-		if (copy_from_user(&args, user_arg, sizeof(args)))
-			return -EFAULT;
-
-		/* convert 32-bit to 64-bit version */
-		tmp.length = args.length;
-		tmp.entries = compat_ptr(args.entries);
-
-		ret = tegra_dc_ext_get_feature(user, &tmp);
-
-		/* convert back to 32-bit version, tmp.entries not modified */
-		args.length = tmp.length;
-
-		if (copy_to_user(user_arg, &args, sizeof(args)))
-			return -EFAULT;
-
-		return ret;
-	}
-#endif
-	case TEGRA_DC_EXT_GET_FEATURES:
-	{
-		struct tegra_dc_ext_feature args;
-		int ret;
-
-		if (copy_from_user(&args, user_arg, sizeof(args)))
-			return -EFAULT;
-
-		ret = tegra_dc_ext_get_feature(user, &args);
-
-		if (copy_to_user(user_arg, &args, sizeof(args)))
-			return -EFAULT;
-
-		return ret;
 	}
 
 	case TEGRA_DC_EXT_CURSOR_CLIP:

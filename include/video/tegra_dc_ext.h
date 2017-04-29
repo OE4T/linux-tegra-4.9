@@ -846,12 +846,6 @@ struct tegra_dc_ext_status {
 	__u32 pad[3];
 };
 
-struct tegra_dc_ext_feature {
-	__u32 length;
-	__u32 __user *entries;
-};
-
-
 /*
  * Tegra Display Screen Capture
  *
@@ -1037,9 +1031,6 @@ struct tegra_dc_ext_scanline_info {
 
 #define TEGRA_DC_EXT_SET_LUT \
 	_IOW('D', 0x0A, struct tegra_dc_ext_lut)
-
-#define TEGRA_DC_EXT_GET_FEATURES \
-	_IOW('D', 0x0B, struct tegra_dc_ext_feature)
 
 #define TEGRA_DC_EXT_CURSOR_CLIP \
 	_IOW('D', 0x0C, __s32)

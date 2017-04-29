@@ -40,7 +40,7 @@ struct i2c_client_list {
 };
 
 static LIST_HEAD(ds90uh949_i2c_list);
-DEFINE_MUTEX(i2c_list_mutex);
+static DEFINE_MUTEX(i2c_list_mutex);
 
 int hdmi2fpd_enable(struct tegra_dc *dc)
 {

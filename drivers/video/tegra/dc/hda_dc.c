@@ -31,7 +31,7 @@
 #include "dp.h"
 #include "hda_dc.h"
 
-DEFINE_MUTEX(hda_lock);
+static DEFINE_MUTEX(hda_lock);
 static struct tegra_dc_hda_data *hda_inst;
 
 #define to_hdmi(DATA)	((struct tegra_hdmi *)DATA)

@@ -1377,8 +1377,7 @@ bool gk20a_channel_update_and_check_timeout(struct channel_gk20a *ch,
 
 static u32 gk20a_get_channel_watchdog_timeout(struct channel_gk20a *ch)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
-	return platform->ch_wdt_timeout_ms;
+	return ch->g->ch_wdt_timeout_ms;
 }
 
 static u32 get_gp_free_count(struct channel_gk20a *c)
@@ -1490,9 +1489,7 @@ static void __gk20a_channel_timeout_start(struct channel_gk20a *ch)
  */
 static void gk20a_channel_timeout_start(struct channel_gk20a *ch)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
-
-	if (!ch->g->timeouts_enabled || !platform->ch_wdt_timeout_ms)
+	if (!ch->g->timeouts_enabled || !gk20a_get_channel_watchdog_timeout(ch))
 		return;
 
 	if (!ch->wdt_enabled)

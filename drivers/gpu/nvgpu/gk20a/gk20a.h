@@ -976,6 +976,7 @@ struct gk20a {
 #else
 	bool timeouts_enabled;
 #endif
+	unsigned int ch_wdt_timeout_ms;
 
 	struct nvgpu_mutex poweroff_lock;
 

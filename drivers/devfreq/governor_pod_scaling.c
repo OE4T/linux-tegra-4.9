@@ -1,9 +1,5 @@
 /*
- * drivers/video/tegra/host/gr3d/pod_scaling.c
- *
- * Tegra Graphics Host 3D clock scaling
- *
- * Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,7 +31,6 @@
 #include <linux/export.h>
 #include <linux/slab.h>
 #include <linux/clk/tegra.h>
-#include <soc/tegra/chip-id.h>
 #include <linux/module.h>
 
 #define CREATE_TRACE_POINTS
@@ -48,12 +43,6 @@
 
 #define GET_TARGET_FREQ_DONTSCALE	1
 
-/* the number of frames to use in the running average of load estimates.
- * Choosing 6 frames targets a window of about 100 msec.  Large flucutuations
- * in frame times require a window that's large enough to prevent spiky scaling
- * behavior, which in turn exacerbates frame rate instability.
- */
-
 static void podgov_enable(struct devfreq *df, int enable);
 static void podgov_set_user_ctl(struct devfreq *df, int enable);
 
@@ -64,17 +53,12 @@ static struct devfreq_governor nvhost_podgov;
  ******************************************************************************/
 
 struct podgov_info_rec {
-
 	int			enable;
 	int			init;
 
 	ktime_t			last_scale;
 
 	unsigned int		p_block_window;
-	unsigned int		p_hint_lo_limit;
-	unsigned int		p_hint_hi_limit;
-	unsigned int		p_scaleup_limit;
-	unsigned int		p_scaledown_limit;
 	unsigned int		p_smooth;
 	int			p_damp;
 	int			p_load_max;
@@ -96,8 +80,7 @@ struct podgov_info_rec {
 
 	unsigned int		idle_avg;
 	int			freq_avg;
-	unsigned int		hint_avg;
-	int			block;
+
 	struct kobj_attribute	enable_3d_scaling_attr;
 	struct kobj_attribute	user_attr;
 	struct kobj_attribute	freq_request_attr;
@@ -386,10 +369,6 @@ static void nvhost_scale_emc_debug_init(struct devfreq *df)
 	CREATE_PODGOV_FILE(load_target);
 	CREATE_PODGOV_FILE(bias);
 	CREATE_PODGOV_FILE(damp);
-	CREATE_PODGOV_FILE(hint_hi_limit);
-	CREATE_PODGOV_FILE(hint_lo_limit);
-	CREATE_PODGOV_FILE(scaleup_limit);
-	CREATE_PODGOV_FILE(scaledown_limit);
 	CREATE_PODGOV_FILE(smooth);
 #undef CREATE_PODGOV_FILE
 }
@@ -617,7 +596,6 @@ static int nvhost_pod_init(struct devfreq *df)
 	struct podgov_info_rec *podgov;
 	struct platform_device *d = to_platform_device(df->dev.parent);
 	ktime_t now = ktime_get();
-	enum tegra_chipid cid = tegra_get_chipid();
 
 	struct kobj_attribute *attr = NULL;
 
@@ -628,44 +606,14 @@ static int nvhost_pod_init(struct devfreq *df)
 
 	/* Set scaling parameter defaults */
 	podgov->enable = 1;
-	podgov->block = 0;
 
-	if (!strcmp(d->name, "vic03.0")) {
-		podgov->p_load_max = 990;
-		podgov->p_load_target = 250;
-		podgov->p_bias = 80;
-		podgov->p_hint_lo_limit = 500;
-		podgov->p_hint_hi_limit = 997;
-		podgov->p_scaleup_limit = 1100;
-		podgov->p_scaledown_limit = 1300;
-		podgov->p_smooth = 60;
-		podgov->p_damp = 2;
-	} else {
-		switch (cid) {
-		case TEGRA_CHIPID_TEGRA14:
-		case TEGRA_CHIPID_TEGRA11:
-		case TEGRA_CHIPID_TEGRA12:
-		case TEGRA_CHIPID_TEGRA13:
-		case TEGRA_CHIPID_TEGRA21:
-		case TEGRA_CHIPID_TEGRA18:
-			podgov->p_load_max = 900;
-			podgov->p_load_target = 700;
-			podgov->p_bias = 80;
-			podgov->p_hint_lo_limit = 500;
-			podgov->p_hint_hi_limit = 997;
-			podgov->p_scaleup_limit = 1100;
-			podgov->p_scaledown_limit = 1300;
-			podgov->p_smooth = 10;
-			podgov->p_damp = 7;
-			break;
-		default:
-			pr_err("%s: un-supported chip id\n", __func__);
-			goto err_unsupported_chip_id;
-			break;
-		}
-	}
-
+	podgov->p_load_max = 900;
+	podgov->p_load_target = 700;
+	podgov->p_bias = 80;
+	podgov->p_smooth = 10;
+	podgov->p_damp = 7;
 	podgov->p_block_window = 50000;
+
 	podgov->adjustment_type = ADJUSTMENT_DEVICE_REQ;
 	podgov->p_user = 0;
 
@@ -713,7 +661,6 @@ static int nvhost_pod_init(struct devfreq *df)
 
 	podgov->idle_avg = 0;
 	podgov->freq_avg = 0;
-	podgov->hint_avg = 0;
 
 	nvhost_scale_emc_debug_init(df);
 
@@ -731,7 +678,6 @@ err_create_request_sysfs_entry:
 			  &podgov->enable_3d_scaling_attr.attr);
 err_create_enable_sysfs_entry:
 	dev_err(&d->dev, "failed to create sysfs attributes");
-err_unsupported_chip_id:
 	kfree(podgov);
 err_alloc_podgov:
 	return -ENOMEM;

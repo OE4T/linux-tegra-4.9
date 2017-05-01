@@ -58,6 +58,9 @@
 #define MC_INT_DECERR_GENERALIZED_CARVEOUT	(1<<17)
 #define MC_INT_WCAM_ERR				(1<<19)
 
+/* hub common int status */
+#define MC_HUBC_INT_SCRUB_ECC_WR_ACK		(1 << 0)
+
 #define MC_ERR_DECERR_EMEM		(2)
 #define MC_ERR_SECURITY_TRUSTZONE	(3)
 #define MC_ERR_SECURITY_CARVEOUT	(4)
@@ -122,6 +125,33 @@ struct mcerr_chip_specific {
 	 */
 	int (*mcerr_debugfs_show)(struct seq_file *s, void *v);
 
+	/* Disable MC Error interrupt.
+	 *
+	 * Called in hard irq context to disable interrupt till
+	 * soft irq handler logs the MC Error.
+	 */
+	void (*disable_interrupt)(unsigned int irq);
+
+	/* Enable MC Error interrupt.
+	 *
+	 * Called from soft irq context after MC Error is logged.
+	 */
+	void (*enable_interrupt)(unsigned int irq);
+
+	/* Clear MC Error interrupt.
+	 *
+	 * Called from soft irq context during MC Error print throttle.
+	 */
+	void (*clear_interrupt)(unsigned int irq);
+
+	/* Log MC Error fault and clear interrupt source
+	 *
+	 * Called in soft irq context.
+	 * As soon as interrupt status is cleared MC would be ready to
+	 * hold next MC Error info.
+	 */
+	void (*log_mcerr_fault)(unsigned int irq);
+
 	/* Numeric fields that must be set by the different chips. */
 	unsigned int nr_clients;
 
@@ -143,6 +173,14 @@ struct mcerr_chip_specific {
 	{ .sig = _sig, .msg = _msg, .flags = _flags,			\
 			.stat_reg = _stat_reg, .addr_reg = _addr_reg }
 
+#define mcerr_pr(fmt, ...)					\
+	do {							\
+		if (!mcerr_silenced) {				\
+			trace_printk(fmt, ##__VA_ARGS__);	\
+			pr_err(fmt, ##__VA_ARGS__);		\
+		}						\
+	} while (0)
+
 /*
  * Error MMA tracking.
  */
@@ -159,5 +197,6 @@ struct arb_emem_intr_info {
  */
 extern struct mc_client mc_clients[];
 extern void mcerr_chip_specific_setup(struct mcerr_chip_specific *spec);
+extern u32  mcerr_silenced;
 
 #endif /* __MCERR_H */

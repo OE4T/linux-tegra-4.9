@@ -1185,7 +1185,7 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 	}
 
 	/* be sure that ctx info is in place */
-	if (!gk20a_gpu_is_virtual(dbg_s->dev) &&
+	if (!g->is_virtual &&
 		!gr_context_info_available(dbg_s, &g->gr)) {
 		nvgpu_err(g, "gr context data not available\n");
 		return -ENODEV;
@@ -1196,7 +1196,7 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 	 * on other channels */
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 
-	if (!dbg_s->is_pg_disabled && !gk20a_gpu_is_virtual(dbg_s->dev)) {
+	if (!dbg_s->is_pg_disabled && !g->is_virtual) {
 		/* In the virtual case, the server will handle
 		 * disabling/enabling powergating when processing reg ops
 		 */

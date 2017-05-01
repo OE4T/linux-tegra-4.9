@@ -198,7 +198,7 @@ int gp10b_init_hal(struct gk20a *g)
 	if (g->is_fmodel) {
 		gops->privsecurity = 0;
 		gops->securegpccs = 0;
-	} else if (gk20a_gpu_is_virtual(g->dev)) {
+	} else if (g->is_virtual) {
 		gops->privsecurity = 1;
 		gops->securegpccs = 1;
 	} else {

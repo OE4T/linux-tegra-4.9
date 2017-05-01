@@ -1017,6 +1017,8 @@ struct gk20a {
 
 	bool support_pmu;
 
+	bool is_virtual;
+
 	u32 emc3d_ratio;
 
 #ifdef CONFIG_DEBUG_FS

@@ -583,6 +583,8 @@ int vgpu_probe(struct platform_device *pdev)
 	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		gk20a->is_fmodel = true;
 
+	gk20a->is_virtual = true;
+
 	nvgpu_kmem_init(gk20a);
 
 	priv = nvgpu_kzalloc(gk20a, sizeof(*priv));

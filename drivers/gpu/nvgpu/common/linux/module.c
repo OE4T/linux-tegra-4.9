@@ -96,8 +96,6 @@ int gk20a_busy(struct gk20a *g)
 		}
 	}
 
-	gk20a_scale_notify_busy(dev);
-
 fail:
 	up_read(&g->busy_lock);
 
@@ -121,16 +119,8 @@ void gk20a_idle(struct gk20a *g)
 		return;
 
 	if (pm_runtime_enabled(dev)) {
-#ifdef CONFIG_PM
-		if (atomic_read(&g->dev->power.usage_count) == 1)
-			gk20a_scale_notify_idle(dev);
-#endif
-
 		pm_runtime_mark_last_busy(dev);
 		pm_runtime_put_sync_autosuspend(dev);
-
-	} else {
-		gk20a_scale_notify_idle(dev);
 	}
 }
 

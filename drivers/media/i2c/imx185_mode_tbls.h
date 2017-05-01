@@ -37,7 +37,7 @@ static imx185_reg imx185_start[] = {
 	{0x3000, 0x00 },
 	{IMX185_TABLE_WAIT_MS, IMX185_WAIT_MS_START},
 	{0x3002, 0x00},
-	{0x3049, 0x0a},
+	{0x3049, 0x02},
 	{IMX185_TABLE_WAIT_MS, IMX185_WAIT_MS_STREAM},
 	{ IMX185_TABLE_END, 0x00 }
 };

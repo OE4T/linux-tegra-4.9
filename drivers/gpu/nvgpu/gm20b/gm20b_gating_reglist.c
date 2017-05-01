@@ -178,7 +178,6 @@ static const struct gating_desc gm20b_blcg_fb[] = {
 	{.addr = 0x00100d30, .prod = 0x0000c242, .disable = 0x00000000},
 	{.addr = 0x00100d3c, .prod = 0x00000242, .disable = 0x00000000},
 	{.addr = 0x00100d48, .prod = 0x0000c242, .disable = 0x00000000},
-	{.addr = 0x00100d1c, .prod = 0x00000042, .disable = 0x00000000},
 	{.addr = 0x00100c98, .prod = 0x00000242, .disable = 0x00000000},
 };
 

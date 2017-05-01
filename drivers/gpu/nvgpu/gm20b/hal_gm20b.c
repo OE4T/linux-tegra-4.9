@@ -1,7 +1,7 @@
 /*
  * GM20B Graphics
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,6 +18,7 @@
 #include "gk20a/css_gr_gk20a.h"
 #include "gk20a/bus_gk20a.h"
 #include "gk20a/flcn_gk20a.h"
+#include "gk20a/priv_ring_gk20a.h"
 
 #include "ltc_gm20b.h"
 #include "ce2_gm20b.h"
@@ -218,6 +219,7 @@ int gm20b_init_hal(struct gk20a *g)
 #endif
 	gk20a_init_bus(gops);
 	gm20b_init_mc(gops);
+	gk20a_init_priv_ring(gops);
 	gm20b_init_ltc(gops);
 	gm20b_init_gr(gops);
 	gm20b_init_ltc(gops);

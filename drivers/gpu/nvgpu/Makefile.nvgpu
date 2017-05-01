@@ -165,6 +165,7 @@ nvgpu-y += \
 	gp10b/therm_gp10b.o \
 	gp10b/fecs_trace_gp10b.o \
 	gp10b/gp10b_sysfs.o \
+	gp10b/priv_ring_gp10b.o \
 	gp10b/gp10b.o \
 	gp106/hal_gp106.o \
 	gp106/mm_gp106.o \

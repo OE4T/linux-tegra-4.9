@@ -886,6 +886,9 @@ struct gpu_ops {
 	struct {
 		void (*falcon_hal_sw_init)(struct nvgpu_falcon *flcn);
 	} falcon;
+	struct {
+		void (*isr)(struct gk20a *g);
+	} priv_ring;
 };
 
 struct nvgpu_bios_ucode {

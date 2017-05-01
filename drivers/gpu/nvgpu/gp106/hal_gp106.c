@@ -27,6 +27,7 @@
 #include "gp10b/ce_gp10b.h"
 #include "gp10b/regops_gp10b.h"
 #include "gp10b/cde_gp10b.h"
+#include "gp10b/priv_ring_gp10b.h"
 
 #include "gp106/fifo_gp106.h"
 #include "gp106/regops_gp106.h"
@@ -232,6 +233,7 @@ int gp106_init_hal(struct gk20a *g)
 	gops->pmupstate = true;
 	gk20a_init_bus(gops);
 	gp10b_init_mc(gops);
+	gp10b_init_priv_ring(gops);
 	gp106_init_gr(gops);
 	gp10b_init_fecs_trace_ops(gops);
 	gp106_init_ltc(gops);

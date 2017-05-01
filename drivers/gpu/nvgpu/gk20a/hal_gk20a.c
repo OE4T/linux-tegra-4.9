@@ -35,6 +35,7 @@
 #include "dbg_gpu_gk20a.h"
 #include "css_gr_gk20a.h"
 #include "pramin_gk20a.h"
+#include "priv_ring_gk20a.h"
 
 #include <nvgpu/log.h>
 #include <nvgpu/bug.h>
@@ -155,6 +156,7 @@ int gk20a_init_hal(struct gk20a *g)
 	gops->pmupstate = false;
 	gk20a_init_bus(gops);
 	gk20a_init_mc(gops);
+	gk20a_init_priv_ring(gops);
 	gk20a_init_ltc(gops);
 	gk20a_init_gr_ops(gops);
 	gk20a_init_fecs_trace_ops(gops);

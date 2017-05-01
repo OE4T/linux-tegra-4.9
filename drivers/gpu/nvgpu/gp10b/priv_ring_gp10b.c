@@ -1,7 +1,7 @@
 /*
- * GK20A priv ring
+ * GP10B priv ring
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,36 +16,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "gk20a.h"
+#include "gk20a/gk20a.h"
 
 #include <nvgpu/log.h>
 #include <nvgpu/timers.h>
 
-#include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_pri_ringmaster_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_pri_ringstation_sys_gk20a.h>
-#include <nvgpu/hw/gk20a/hw_pri_ringstation_gpc_gk20a.h>
+#include <nvgpu/hw/gp10b/hw_mc_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_pri_ringmaster_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_pri_ringstation_sys_gp10b.h>
+#include <nvgpu/hw/gp10b/hw_pri_ringstation_gpc_gp10b.h>
 
-void gk20a_enable_priv_ring(struct gk20a *g)
-{
-	if (g->is_fmodel)
-		return;
-
-	if (g->ops.clock_gating.slcg_priring_load_gating_prod)
-		g->ops.clock_gating.slcg_priring_load_gating_prod(g,
-				g->slcg_enabled);
-
-	gk20a_writel(g,pri_ringmaster_command_r(),
-			0x4);
-
-	gk20a_writel(g, pri_ringstation_sys_decode_config_r(),
-			0x2);
-
-	gk20a_readl(g, pri_ringstation_sys_decode_config_r());
-
-}
-
-void gk20a_priv_ring_isr(struct gk20a *g)
+static void gp10b_priv_ring_isr(struct gk20a *g)
 {
 	u32 status0, status1;
 	u32 cmd;
@@ -59,11 +40,11 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	status0 = gk20a_readl(g, pri_ringmaster_intr_status0_r());
 	status1 = gk20a_readl(g, pri_ringmaster_intr_status1_r());
 
-	gk20a_dbg(gpu_dbg_intr, "ringmaster intr status0: 0x%08x,"
+	nvgpu_err(g, "ringmaster intr status0: 0x%08x,"
 		"status1: 0x%08x", status0, status1);
 
 	if (pri_ringmaster_intr_status0_gbl_write_error_sys_v(status0) != 0) {
-		gk20a_dbg(gpu_dbg_intr, "SYS write error. ADR %08x WRDAT %08x INFO %08x, CODE %08x",
+		nvgpu_err(g, "SYS write error. ADR %08x WRDAT %08x INFO %08x, CODE %08x",
 			gk20a_readl(g, pri_ringstation_sys_priv_error_adr_r()),
 			gk20a_readl(g, pri_ringstation_sys_priv_error_wrdat_r()),
 			gk20a_readl(g, pri_ringstation_sys_priv_error_info_r()),
@@ -72,7 +53,7 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 
 	for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
 		if (status1 & BIT(gpc)) {
-			gk20a_dbg(gpu_dbg_intr, "GPC%u write error. ADR %08x WRDAT %08x INFO %08x, CODE %08x", gpc,
+			nvgpu_err(g, "GPC%u write error. ADR %08x WRDAT %08x INFO %08x, CODE %08x", gpc,
 				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_adr_r() + gpc * gpc_stride),
 				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_wrdat_r() + gpc * gpc_stride),
 				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_info_r() + gpc * gpc_stride),
@@ -95,7 +76,7 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 		nvgpu_warn(g, "priv ringmaster cmd ack too many retries");
 }
 
-void gk20a_init_priv_ring(struct gpu_ops *gops)
+void gp10b_init_priv_ring(struct gpu_ops *gops)
 {
-	gops->priv_ring.isr = gk20a_priv_ring_isr;
+	gops->priv_ring.isr = gp10b_priv_ring_isr;
 }

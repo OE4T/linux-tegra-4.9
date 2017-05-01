@@ -1,5 +1,5 @@
 /*
- * GK20A PRIV ringmaster
+ * GP10B PRIV ringmaster
  *
  * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -12,13 +12,11 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
-#ifndef __PRIV_RING_GK20A_H__
-#define __PRIV_RING_GK20A_H__
+#ifndef __PRIV_RING_GP10B_H__
+#define __PRIV_RING_GP10B_H__
 
 struct gpu_ops;
 
-void gk20a_priv_ring_isr(struct gk20a *g);
-void gk20a_enable_priv_ring(struct gk20a *g);
-void gk20a_init_priv_ring(struct gpu_ops *gops);
+void gp10b_init_priv_ring(struct gpu_ops *gops);
 
-#endif /*__PRIV_RING_GK20A_H__*/
+#endif /*__PRIV_RING_GP10B_H__*/

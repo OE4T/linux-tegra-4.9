@@ -5392,7 +5392,7 @@ void tegra_dc_blank_wins(struct tegra_dc *dc, unsigned windows)
 	}
 
 	/* Skip update for linsim */
-	if (!tegra_platform_is_linsim() && !tegra_platform_is_vdk()) {
+	if (!tegra_platform_is_linsim()) {
 		tegra_dc_update_windows(dcwins, nr_win, NULL, true, false);
 		tegra_dc_sync_windows(dcwins, nr_win);
 	}

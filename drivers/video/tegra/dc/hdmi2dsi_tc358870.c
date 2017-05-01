@@ -637,7 +637,6 @@ int dcs_panel_command(struct tc358870_state *state,
 				} else {
 					i2c_wr16(state, DCSCMD_Q,
 					LONG_PKT_MASK | DSI_DCS_LONG_WRITE);
-					i2c_wr16(state, DCSCMD_Q, len);
 					while (len) {
 						if (len >= 2) {
 							data0 =

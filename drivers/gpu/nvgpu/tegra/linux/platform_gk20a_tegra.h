@@ -1,7 +1,7 @@
 /*
  * GK20A Platform (SoC) Interface
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,17 +13,13 @@
  * more details.
  */
 
-#ifndef _NVGPU_PLATFORM_TEGRA_H_
-#define _NVGPU_PLATFORM_TEGRA_H_
+#ifndef _NVGPU_PLATFORM_GK20A_TEGRA_H_
+#define _NVGPU_PLATFORM_GK20A_TEGRA_H_
 
-#include <nvgpu/types.h>
+struct device;
+struct gk20a;
 
-struct platform_device;
-struct gr_ctx_buffer_desc;
-
-int gk20a_tegra_secure_alloc(struct device *dev,
-			     struct gr_ctx_buffer_desc *desc,
-			     size_t size);
+void gk20a_tegra_init_secure_alloc(struct gk20a *g);
 int gk20a_tegra_secure_page_alloc(struct device *dev);
 
 #endif

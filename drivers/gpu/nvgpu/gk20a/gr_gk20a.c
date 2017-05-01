@@ -2722,7 +2722,6 @@ static void gr_gk20a_free_global_ctx_buffers(struct gk20a *g)
 
 static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	struct gr_gk20a *gr = &g->gr;
 	int attr_buffer_size, err;
 	struct device *dev = g->dev;
@@ -2744,8 +2743,8 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	if (err)
 		goto clean_up;
 
-	if (platform->secure_alloc)
-		platform->secure_alloc(dev,
+	if (g->ops.mm.secure_alloc)
+		g->ops.mm.secure_alloc(dev,
 				       &gr->global_ctx_buffer[CIRCULAR_VPR],
 				       cb_buffer_size);
 
@@ -2756,8 +2755,8 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	if (err)
 		goto clean_up;
 
-	if (platform->secure_alloc)
-		platform->secure_alloc(dev,
+	if (g->ops.mm.secure_alloc)
+		g->ops.mm.secure_alloc(dev,
 				       &gr->global_ctx_buffer[PAGEPOOL_VPR],
 				       pagepool_buffer_size);
 
@@ -2768,13 +2767,10 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 	if (err)
 		goto clean_up;
 
-	if (platform->secure_alloc)
-		platform->secure_alloc(dev,
+	if (g->ops.mm.secure_alloc)
+		g->ops.mm.secure_alloc(dev,
 				       &gr->global_ctx_buffer[ATTRIBUTE_VPR],
 				       attr_buffer_size);
-
-	if (platform->secure_buffer.destroy)
-		platform->secure_buffer.destroy(dev, &platform->secure_buffer);
 
 	gk20a_dbg_info("golden_image_size : %d",
 		   gr->ctx_vars.golden_image_size);

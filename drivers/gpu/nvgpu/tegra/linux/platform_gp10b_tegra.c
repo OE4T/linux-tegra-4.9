@@ -36,7 +36,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/gk20a_scale.h"
 
-#include "platform_tegra.h"
+#include "platform_gk20a_tegra.h"
 #include "gp10b/gp10b_sysfs.h"
 #include "gp10b/platform_gp10b.h"
 
@@ -163,12 +163,16 @@ static int gp10b_tegra_probe(struct device *dev)
 
 	gp10b_tegra_get_clocks(dev);
 	nvgpu_linux_init_clk_support(platform->g);
+	gk20a_tegra_init_secure_alloc(platform->g);
 
 	return 0;
 }
 
 static int gp10b_tegra_late_probe(struct device *dev)
 {
+	/* Cause early VPR resize */
+	gk20a_tegra_secure_page_alloc(dev);
+
 	/*Create GP10B specific sysfs*/
 	gp10b_create_sysfs(dev);
 
@@ -422,9 +426,6 @@ struct gk20a_platform gp10b_tegra_platform = {
 	.devfreq_governor = "nvhost_podgov",
 
 	.qos_notify = gk20a_scale_qos_notify,
-
-	.secure_alloc = gk20a_tegra_secure_alloc,
-	.secure_page_alloc = gk20a_tegra_secure_page_alloc,
 
 	.reset_assert = gp10b_tegra_reset_assert,
 	.reset_deassert = gp10b_tegra_reset_deassert,

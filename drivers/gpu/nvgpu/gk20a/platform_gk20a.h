@@ -148,21 +148,7 @@ struct gk20a_platform {
 	/* Powerdown platform dependencies */
 	void (*idle)(struct device *dev);
 
-	/* This function is called to allocate secure memory (memory that the
-	 * CPU cannot see). The function should fill the context buffer
-	 * descriptor (especially fields destroy, sgt, size).
-	 */
-	int (*secure_alloc)(struct device *dev,
-			    struct gr_ctx_buffer_desc *desc,
-			    size_t size);
-
-	/* Function to allocate a secure buffer of PAGE_SIZE at probe time.
-	 * This is also helpful to trigger secure memory resizing
-	 * while GPU is off
-	 */
-	int (*secure_page_alloc)(struct device *dev);
 	struct secure_page_buffer secure_buffer;
-	bool secure_alloc_ready;
 
 	/* Device is going to be suspended */
 	int (*suspend)(struct device *);

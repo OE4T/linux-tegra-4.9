@@ -110,6 +110,8 @@ static void gk20a_tegra_secure_page_destroy(struct device *dev,
 	dma_free_attrs(&tegra_vpr_dev, secure_buffer->size,
 			(void *)(uintptr_t)secure_buffer->iova,
 			secure_buffer->iova, __DMA_ATTR(attrs));
+
+	secure_buffer->destroy = NULL;
 }
 
 int gk20a_tegra_secure_page_alloc(struct device *dev)
@@ -153,7 +155,7 @@ static void gk20a_tegra_secure_destroy(struct gk20a *g,
 	}
 }
 
-int gk20a_tegra_secure_alloc(struct device *dev,
+static int gk20a_tegra_secure_alloc(struct device *dev,
 			     struct gr_ctx_buffer_desc *desc,
 			     size_t size)
 {
@@ -163,9 +165,6 @@ int gk20a_tegra_secure_alloc(struct device *dev,
 	struct sg_table *sgt;
 	struct page *page;
 	int err = 0;
-
-	if (!platform->secure_alloc_ready)
-		return -EINVAL;
 
 	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, __DMA_ATTR(attrs));
 	(void)dma_alloc_attrs(&tegra_vpr_dev, size, &iova,
@@ -193,6 +192,9 @@ int gk20a_tegra_secure_alloc(struct device *dev,
 	desc->mem.priv.sgt = sgt;
 	desc->mem.size = size;
 	desc->mem.aperture = APERTURE_SYSMEM;
+
+	if (platform->secure_buffer.destroy)
+		platform->secure_buffer.destroy(dev, &platform->secure_buffer);
 
 	return err;
 
@@ -896,6 +898,11 @@ void gk20a_tegra_idle(struct device *dev)
 #endif
 }
 
+void gk20a_tegra_init_secure_alloc(struct gk20a *g)
+{
+	g->ops.mm.secure_alloc = gk20a_tegra_secure_alloc;
+}
+
 static int gk20a_tegra_probe(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
@@ -974,6 +981,7 @@ static int gk20a_tegra_probe(struct device *dev)
 
 	gk20a_tegra_get_clocks(dev);
 	nvgpu_linux_init_clk_support(platform->g);
+	gk20a_tegra_init_secure_alloc(platform->g);
 
 	if (platform->clk_register) {
 		ret = platform->clk_register(platform->g);
@@ -988,8 +996,11 @@ static int gk20a_tegra_probe(struct device *dev)
 	return 0;
 }
 
-static int gk20a_tegra_late_probe(struct device *dev)
+int gk20a_tegra_late_probe(struct device *dev)
 {
+	/* Cause early VPR resize */
+	gk20a_tegra_secure_page_alloc(dev);
+
 	/* Initialise tegra specific scaling quirks */
 	gk20a_tegra_scale_init(dev);
 
@@ -1085,8 +1096,6 @@ struct gk20a_platform gk20a_tegra_platform = {
 	.devfreq_governor = "nvhost_podgov",
 	.qos_notify = gk20a_scale_qos_notify,
 
-	.secure_alloc = gk20a_tegra_secure_alloc,
-	.secure_page_alloc = gk20a_tegra_secure_page_alloc,
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 
 	.soc_name = "tegra12x",
@@ -1157,8 +1166,6 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.devfreq_governor = "nvhost_podgov",
 	.qos_notify = gk20a_scale_qos_notify,
 
-	.secure_alloc = gk20a_tegra_secure_alloc,
-	.secure_page_alloc = gk20a_tegra_secure_page_alloc,
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 
 	.has_cde = true,

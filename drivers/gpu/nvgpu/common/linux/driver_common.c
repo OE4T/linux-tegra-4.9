@@ -134,20 +134,6 @@ static void nvgpu_init_mm_vars(struct gk20a *g)
 	nvgpu_mutex_init(&g->mm.priv_lock);
 }
 
-static int gk20a_secure_page_alloc(struct device *dev)
-{
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	int err = 0;
-
-	if (platform->secure_page_alloc) {
-		err = platform->secure_page_alloc(dev);
-		if (!err)
-			platform->secure_alloc_ready = true;
-	}
-
-	return err;
-}
-
 int nvgpu_probe(struct gk20a *g,
 		const char *debugfs_symlink,
 		const char *interface_name,
@@ -177,11 +163,6 @@ int nvgpu_probe(struct gk20a *g,
 	/* Initialise scaling */
 	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
 		gk20a_scale_init(g->dev);
-
-	err = gk20a_secure_page_alloc(g->dev);
-	if (err)
-		dev_err(g->dev,
-			"failed to allocate secure buffer %d\n", err);
 
 	if (platform->late_probe) {
 		err = platform->late_probe(g->dev);

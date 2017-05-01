@@ -45,10 +45,12 @@
 							<TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_1_PARAM 0xFB 0x01 0x0>,
 							<TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_1_PARAM 0xC0 0x80 0x0>,
 							<TEGRA_DSI_PACKET_CMD DSI_DCS_LONG_WRITE 0x08 0x0 0x0 0x05 0x00 0xBE 0x00 0x18 0x00 0x14 0x00 0x0 0x0>,
+							/* Set display mode to Video mode  */
+							<TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_1_PARAM 0xBB 0x03 0x0>,
 							<TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_1_PARAM 0x35 0x00 0x0>,
 							/* Scan direction */
 							<TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_1_PARAM 0x36 0x00 0x0>;
-				nvidia,dsi-n-init-cmd = <15>;
+				nvidia,dsi-n-init-cmd = <16>;
 				nvidia,dsi-postvideo-cmd =
 							/* MCAP */
 							<TEGRA_DSI_PACKET_CMD DSI_GENERIC_SHORT_WRITE_2_PARAMS 0xB0 0x00 0x0>,
@@ -98,10 +100,12 @@
 							<TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_1_PARAM 0xFB 0x01 0x0>,
 							<TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_1_PARAM 0xC0 0x80 0x0>,
 							<TEGRA_DSI_PACKET_CMD DSI_DCS_LONG_WRITE 0x08 0x0 0x0 0x05 0x00 0xBE 0x00 0x18 0x00 0x14 0x00 0x0 0x0>,
+							/* Set display mode to Video mode  */
+							<TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_1_PARAM 0xBB 0x03 0x0>,
 							<TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_1_PARAM 0x35 0x00 0x0>,
 							/* Reverse scan direction for 2nd panel */
 							<TEGRA_DSI_PACKET_CMD DSI_DCS_WRITE_1_PARAM 0x36 0x03 0x0>;
-				nvidia,dsi-n-init-cmd = <15>;
+				nvidia,dsi-n-init-cmd = <16>;
 				nvidia,dsi-postvideo-cmd =
 							/* MCAP */
 							<TEGRA_DSI_PACKET_CMD DSI_GENERIC_SHORT_WRITE_2_PARAMS 0xB0 0x00 0x0>,

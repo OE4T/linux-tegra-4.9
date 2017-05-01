@@ -450,11 +450,7 @@
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P0>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P1>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
-				/*
-				 * todo: TEGRA194_CLK_NVDISPLAY_P3 not defined
-				 *       yet so use TEGRA194_CLK_NVDISPLAY_P2
-				 */
-				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P3>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
@@ -502,11 +498,7 @@
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P0>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P1>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
-				/*
-				 * todo: TEGRA194_CLK_NVDISPLAY_P3 not defined
-				 *       yet so use TEGRA194_CLK_NVDISPLAY_P2
-				 */
-				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P3>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
@@ -554,11 +546,7 @@
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P0>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P1>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
-				/*
-				 * todo: TEGRA194_CLK_NVDISPLAY_P3 not defined
-				 *       yet so use TEGRA194_CLK_NVDISPLAY_P2
-				 */
-				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P3>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD2>,
@@ -606,11 +594,7 @@
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P0>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P1>,
 				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
-				/*
-				 * todo: TEGRA194_CLK_NVDISPLAY_P3 not defined
-				 *       yet so use TEGRA194_CLK_NVDISPLAY_P2
-				 */
-				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P2>,
+				 <&bpmp_clks TEGRA194_CLK_NVDISPLAY_P3>,
 				 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD>,
 				 <&bpmp_clks TEGRA194_CLK_PLLD2>,

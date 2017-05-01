@@ -362,6 +362,7 @@ void gk20a_scale_init(struct device *dev)
 		profile->devfreq_profile.get_dev_status =
 			gk20a_scale_get_dev_status;
 		profile->devfreq_profile.get_cur_freq = get_cur_freq;
+		profile->devfreq_profile.polling_ms = 25;
 
 		devfreq = devfreq_add_device(dev,
 					&profile->devfreq_profile,

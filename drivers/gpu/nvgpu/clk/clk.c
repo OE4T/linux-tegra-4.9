@@ -49,14 +49,18 @@ int clk_pmu_freq_controller_load(struct gk20a *g, bool bload)
 {
 	struct pmu_cmd cmd;
 	struct pmu_msg msg;
-	struct pmu_payload payload = { {0} };
+	struct pmu_payload payload;
 	u32 status;
 	u32 seqdesc;
-	struct nv_pmu_clk_rpc rpccall = {0};
-	struct clkrpc_pmucmdhandler_params handler = {0};
+	struct nv_pmu_clk_rpc rpccall;
+	struct clkrpc_pmucmdhandler_params handler;
 	struct nv_pmu_clk_load *clkload;
 	struct clk_freq_controllers *pclk_freq_controllers;
 	struct ctrl_boardobjgrp_mask_e32 *load_mask;
+
+	memset(&payload, 0, sizeof(struct pmu_payload));
+	memset(&rpccall, 0, sizeof(struct nv_pmu_clk_rpc));
+	memset(&handler, 0, sizeof(struct clkrpc_pmucmdhandler_params));
 
 	pclk_freq_controllers = &g->clk_pmu.clk_freq_controllers;
 	rpccall.function = NV_PMU_CLK_RPC_ID_LOAD;
@@ -120,12 +124,16 @@ u32 clk_pmu_vin_load(struct gk20a *g)
 {
 	struct pmu_cmd cmd;
 	struct pmu_msg msg;
-	struct pmu_payload payload = { {0} };
+	struct pmu_payload payload;
 	u32 status;
 	u32 seqdesc;
-	struct nv_pmu_clk_rpc rpccall = {0};
-	struct clkrpc_pmucmdhandler_params handler = {0};
+	struct nv_pmu_clk_rpc rpccall;
+	struct clkrpc_pmucmdhandler_params handler;
 	struct nv_pmu_clk_load *clkload;
+
+	memset(&payload, 0, sizeof(struct pmu_payload));
+	memset(&rpccall, 0, sizeof(struct nv_pmu_clk_rpc));
+	memset(&handler, 0, sizeof(struct clkrpc_pmucmdhandler_params));
 
 	rpccall.function = NV_PMU_CLK_RPC_ID_LOAD;
 	clkload = &rpccall.params.clk_load;
@@ -179,12 +187,16 @@ static u32 clk_pmu_vf_inject(struct gk20a *g, struct set_fll_clk *setfllclk)
 {
 	struct pmu_cmd cmd;
 	struct pmu_msg msg;
-	struct pmu_payload payload = { {0} };
+	struct pmu_payload payload;
 	u32 status;
 	u32 seqdesc;
-	struct nv_pmu_clk_rpc rpccall = {0};
-	struct clkrpc_pmucmdhandler_params handler = {0};
+	struct nv_pmu_clk_rpc rpccall;
+	struct clkrpc_pmucmdhandler_params handler;
 	struct nv_pmu_clk_vf_change_inject *vfchange;
+
+	memset(&payload, 0, sizeof(struct pmu_payload));
+	memset(&rpccall, 0, sizeof(struct nv_pmu_clk_rpc));
+	memset(&handler, 0, sizeof(struct clkrpc_pmucmdhandler_params));
 
 	if ((setfllclk->gpc2clkmhz == 0) || (setfllclk->xbar2clkmhz == 0) ||
 		(setfllclk->sys2clkmhz == 0) || (setfllclk->voltuv == 0))

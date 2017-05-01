@@ -81,12 +81,16 @@ static u32 pmgr_pmu_set_object(struct gk20a *g,
 		u16 fb_size,
 		void *pobj)
 {
-	struct pmu_cmd cmd = { {0} };
-	struct pmu_payload payload = { {0} };
+	struct pmu_cmd cmd;
+	struct pmu_payload payload;
 	struct nv_pmu_pmgr_cmd_set_object *pcmd;
 	u32 status;
 	u32 seqdesc;
-	struct pmgr_pmucmdhandler_params handlerparams = {0};
+	struct pmgr_pmucmdhandler_params handlerparams;
+
+	memset(&payload, 0, sizeof(struct pmu_payload));
+	memset(&cmd, 0, sizeof(struct pmu_cmd));
+	memset(&handlerparams, 0, sizeof(struct pmgr_pmucmdhandler_params));
 
 	cmd.hdr.unit_id = PMU_UNIT_PMGR;
 	cmd.hdr.size = (u32)sizeof(struct nv_pmu_pmgr_cmd_set_object) +
@@ -360,12 +364,16 @@ u32 pmgr_pmu_pwr_devices_query_blocking(
 		u32 pwr_dev_mask,
 		struct nv_pmu_pmgr_pwr_devices_query_payload *ppayload)
 {
-	struct pmu_cmd cmd = { {0} };
-	struct pmu_payload payload = { {0} };
+	struct pmu_cmd cmd;
+	struct pmu_payload payload;
 	struct nv_pmu_pmgr_cmd_pwr_devices_query *pcmd;
 	u32 status;
 	u32 seqdesc;
-	struct pmgr_pmucmdhandler_params handlerparams = {0};
+	struct pmgr_pmucmdhandler_params handlerparams;
+
+	memset(&payload, 0, sizeof(struct pmu_payload));
+	memset(&cmd, 0, sizeof(struct pmu_cmd));
+	memset(&handlerparams, 0, sizeof(struct pmgr_pmucmdhandler_params));
 
 	cmd.hdr.unit_id = PMU_UNIT_PMGR;
 	cmd.hdr.size = (u32)sizeof(struct nv_pmu_pmgr_cmd_pwr_devices_query) +

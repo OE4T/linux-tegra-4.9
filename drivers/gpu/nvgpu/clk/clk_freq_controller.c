@@ -144,7 +144,8 @@ static u32 clk_freq_controller_construct_pi(struct gk20a *g,
 	return status;
 }
 
-struct clk_freq_controller *clk_clk_freq_controller_construct(struct gk20a *g,
+static struct clk_freq_controller *clk_clk_freq_controller_construct(
+	struct gk20a *g,
 	void *pargs)
 {
 	struct boardobj *board_obj_ptr = NULL;

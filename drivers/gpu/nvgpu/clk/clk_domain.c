@@ -31,7 +31,8 @@ static u32 devinit_get_clocks_table(struct gk20a *g,
 static u32 clk_domain_pmudatainit_super(struct gk20a *g, struct boardobj
 	*board_obj_ptr,	struct nv_pmu_boardobj *ppmudata);
 
-const struct vbios_clocks_table_1x_hal_clock_entry vbiosclktbl1xhalentry[] = {
+static const struct vbios_clocks_table_1x_hal_clock_entry
+		vbiosclktbl1xhalentry[] = {
 	{ clkwhich_gpc2clk,    true,  },
 	{ clkwhich_xbar2clk,   true,  },
 	{ clkwhich_mclk,       false, },

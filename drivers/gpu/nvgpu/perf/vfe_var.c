@@ -161,7 +161,7 @@ u32 vfe_var_pmu_setup(struct gk20a *g)
 	return status;
 }
 
-u32 dev_init_get_vfield_info(struct gk20a *g,
+static u32 dev_init_get_vfield_info(struct gk20a *g,
 	struct vfe_var_single_sensed_fuse *pvfevar)
 {
 	u8 *vfieldtableptr = NULL;

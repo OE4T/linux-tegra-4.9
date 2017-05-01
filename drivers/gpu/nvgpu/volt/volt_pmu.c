@@ -51,12 +51,17 @@ static void volt_rpc_pmucmdhandler(struct gk20a *g, struct pmu_msg *msg,
 static u32 volt_pmu_rpc_execute(struct gk20a *g,
 	struct nv_pmu_volt_rpc *prpc_call)
 {
-	struct pmu_cmd cmd = { { 0 } };
-	struct pmu_msg msg = { { 0 } };
-	struct pmu_payload payload = { { 0 } };
+	struct pmu_cmd cmd;
+	struct pmu_msg msg;
+	struct pmu_payload payload;
 	u32 status = 0;
 	u32 seqdesc;
-	struct volt_rpc_pmucmdhandler_params handler = {0};
+	struct volt_rpc_pmucmdhandler_params handler;
+
+	memset(&payload, 0, sizeof(struct pmu_payload));
+	memset(&cmd, 0, sizeof(struct pmu_cmd));
+	memset(&msg, 0, sizeof(struct pmu_msg));
+	memset(&handler, 0, sizeof(struct volt_rpc_pmucmdhandler_params));
 
 	cmd.hdr.unit_id = PMU_UNIT_VOLT;
 	cmd.hdr.size = (u32)sizeof(struct nv_pmu_volt_cmd) +

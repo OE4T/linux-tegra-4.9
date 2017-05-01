@@ -2262,7 +2262,7 @@ fail_mclk_mutex:
 int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, u16 val)
 {
 	struct clk_mclk_state *mclk;
-	struct pmu_payload payload = { {0} };
+	struct pmu_payload payload;
 	struct nv_pmu_seq_cmd cmd;
 	struct nv_pmu_seq_cmd_run_script *pseq_cmd;
 	u32 seqdesc;
@@ -2276,6 +2276,8 @@ int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, u16 val)
 	enum gk20a_mclk_speed speed;
 
 	gk20a_dbg_info("");
+
+	memset(&payload, 0, sizeof(struct pmu_payload));
 
 	mclk = &g->clk_pmu.clk_mclk;
 

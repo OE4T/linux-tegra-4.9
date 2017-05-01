@@ -228,6 +228,60 @@ static const char *t186_intr_info[] = {
 	NULL,
 };
 
+/* reported in MC_INTSTATUS_0 */
+static const struct mc_error hub_mc_errors[] = {
+	MC_ERR(MC_INT_DECERR_EMEM,
+	       "EMEM address decode error",
+	       0, MC_ERR_STATUS, MC_ERR_ADR),
+	MC_ERR(MC_INT_SECURITY_VIOLATION,
+	       "non secure access to secure region",
+	       0, MC_ERR_STATUS, MC_ERR_ADR),
+	MC_ERR(MC_INT_DECERR_VPR,
+	       "MC request violates VPR requirements",
+	       0, MC_ERR_VPR_STATUS, MC_ERR_VPR_ADR),
+	MC_ERR(MC_INT_SECERR_SEC,
+	       "MC request violated SEC carveout requirements",
+	       0, MC_ERR_SEC_STATUS, MC_ERR_SEC_ADR),
+	MC_ERR(MC_INT_DECERR_MTS,
+	       "MTS carveout access violation",
+	       0, MC_ERR_MTS_STATUS, MC_ERR_MTS_ADR),
+	MC_ERR(MC_INT_DECERR_GENERALIZED_CARVEOUT,
+	       "GSC access violation", 0,
+	       MC_ERR_GENERALIZED_CARVEOUT_STATUS,
+	       MC_ERR_GENERALIZED_CARVEOUT_ADR),
+
+	/* combination interrupts */
+	MC_ERR(MC_INT_DECERR_EMEM | MC_INT_SECURITY_VIOLATION,
+	       "non secure access to secure region",
+	       0, MC_ERR_STATUS, MC_ERR_ADR),
+	MC_ERR(MC_INT_DECERR_GENERALIZED_CARVEOUT | MC_INT_DECERR_EMEM,
+	       "EMEM GSC access violation", 0,
+	       MC_ERR_GENERALIZED_CARVEOUT_STATUS,
+	       MC_ERR_GENERALIZED_CARVEOUT_ADR),
+
+	/* NULL terminate. */
+	MC_ERR(0, NULL, 0, 0, 0),
+};
+
+/* reported in MC_CH_INTSTATUS_0 */
+static const struct mc_error ch_mc_errors[] = {
+	MC_ERR(MC_INT_WCAM_ERR, "WCAM error", E_TWO_STATUS,
+	       MC_WCAM_IRQ_P0_STATUS0,
+	       MC_WCAM_IRQ_P1_STATUS0),
+
+	/* NULL terminate. */
+	MC_ERR(0, NULL, 0, 0, 0),
+};
+
+/* reported in MC_HUBC_INTSTATUS_0 */
+static const struct mc_error hubc_mc_errors[] = {
+	MC_ERR(MC_HUBC_INT_SCRUB_ECC_WR_ACK,
+	       "ECC scrub complete", E_NO_STATUS, 0, 0),
+
+	/* NULL terminate. */
+	MC_ERR(0, NULL, 0, 0, 0),
+};
+
 enum {
 	INTSTATUS_CH0 = 0,
 	INTSTATUS_CH1 = 1,
@@ -235,15 +289,69 @@ enum {
 	INTSTATUS_CH3 = 3,
 	INTSTATUS_HUB0 = 16,
 	INTSTATUS_HUB1 = 17,
-	INTSTATUS_BROADCAST = 24,
+	INTSTATUS_HUBC = 24,
 };
 
-irqreturn_t tegra_mc_error_hard_irq_ovr(int irq, void *data)
-{
-	u32 local_intstatus;
-	u32 g_intstatus = mc_readl(MC_GLOBAL_INTSTATUS);
+#define MC_INTSTATUS_CLEAR 0x00033340
+#define MC_CH_INTSTATUS_CLEAR 0x00080200
+#define MC_HUBC_INTSTATUS_CLEAR 0x00000001
+#define MC_GLOBAL_INTSTATUS_CLEAR 0x0103000F
 
-	trace_printk("MCERR detected.\n");
+static void clear_interrupt(unsigned int irq)
+{
+	mc_writel(MC_INTSTATUS_CLEAR, MC_INTSTATUS);
+	mc_writel(MC_CH_INTSTATUS_CLEAR, MC_CH_INTSTATUS);
+	mc_writel(MC_HUBC_INTSTATUS_CLEAR, MC_HUBC_INTSTATUS);
+	mc_writel(MC_GLOBAL_INTSTATUS_CLEAR, MC_GLOBAL_INTSTATUS);
+}
+
+static void log_fault(int src_chan, const struct mc_error *fault)
+{
+	phys_addr_t addr;
+	struct mc_client *client;
+	u32 status, write, secure, client_id;
+
+	if (fault->flags & E_NO_STATUS) {
+		mcerr_pr("MC fault - no status: %s\n", fault->msg);
+		return;
+	}
+
+	status = __mc_readl(src_chan, fault->stat_reg);
+	addr = __mc_readl(src_chan, fault->addr_reg);
+
+	if (fault->flags & E_TWO_STATUS) {
+		mcerr_pr("MC fault - %s\n", fault->msg);
+		mcerr_pr("status: 0x%08x status2: 0x%08llx\n",
+			status, addr);
+		return;
+	}
+
+	secure = !!(status & MC_ERR_STATUS_SECURE);
+	write = !!(status & MC_ERR_STATUS_WRITE);
+	client_id = status & 0xff;
+	client = &mc_clients[client_id <= mc_client_last
+			     ? client_id : mc_client_last];
+
+	/*
+	 * LPAE: make sure we get the extra 2 physical address bits available
+	 * and pass them down to the printing function.
+	 */
+	addr |= (((phys_addr_t)(status & MC_ERR_STATUS_ADR_HI)) << 12);
+
+	mcerr_pr("(%d) %s: %s\n", client->swgid, client->name, fault->msg);
+	mcerr_pr("  status = 0x%08x; addr = 0x%08llx\n", status,
+		 (long long unsigned int)addr);
+	mcerr_pr("  secure: %s, access-type: %s\n",
+		secure ? "yes" : "no", write ? "write" : "read");
+}
+
+static void log_mcerr_fault(unsigned int irq)
+{
+	int faults_handled = 0;
+	const struct mc_error *err;
+	int mc_channel = MC_BROADCAST_CHANNEL;
+	u32 int_status, ch_int_status, hubc_int_status;
+	u32 g_intstatus = mc_readl(MC_GLOBAL_INTSTATUS);
 
 	/*
 	 * If multiple interrupts come in just handle the first one we see. The
@@ -252,38 +360,64 @@ irqreturn_t tegra_mc_error_hard_irq_ovr(int irq, void *data)
 	 */
 	if (g_intstatus & (1 << INTSTATUS_CH0) ||
 	    g_intstatus & (1 << INTSTATUS_HUB0)) {
-		mc_err_channel = 0;
+		mc_channel = 0;
 	} else if (g_intstatus & (1 << INTSTATUS_CH1) ||
 		   g_intstatus & (1 << INTSTATUS_HUB1)) {
-		mc_err_channel = 1;
+		mc_channel = 1;
 	} else if (g_intstatus & (1 << INTSTATUS_CH2)) {
-		mc_err_channel = 2;
+		mc_channel = 2;
 	} else if (g_intstatus & (1 << INTSTATUS_CH3)) {
-		mc_err_channel = 3;
-	} else if (g_intstatus & (1 << INTSTATUS_BROADCAST)) {
-		mc_err_channel = MC_BROADCAST_CHANNEL;
+		mc_channel = 3;
+	} else if (g_intstatus & (1 << INTSTATUS_HUBC)) {
+		mc_channel = MC_BROADCAST_CHANNEL;
 	} else {
 		trace_printk("mcerr: unknown source (intstatus = 0x%08x)\n",
 			     g_intstatus);
-		return IRQ_NONE;
+		return;
 	}
 
-	/* prevent new interrupts unti we've handled this one */
-	mc_writel(0, MC_INTMASK);
-	mc_readl(MC_INTMASK);
+	int_status = __mc_readl(mc_channel, MC_INTSTATUS);
+	ch_int_status = __mc_readl(mc_channel, MC_CH_INTSTATUS);
+	hubc_int_status = __mc_readl(mc_channel, MC_HUBC_INTSTATUS);
 
-	/* clear the current interrupt to prevent it firing again */
-	local_intstatus = __mc_readl(mc_err_channel, MC_INTSTATUS);
-	__mc_writel(mc_err_channel, local_intstatus, MC_INTSTATUS);
+	for (err = hub_mc_errors; err->sig && err->msg; err++) {
+		if ((int_status & mc_int_mask) != err->sig)
+			continue;
+		log_fault(mc_channel, err);
+		__mc_writel(mc_channel, int_status, MC_INTSTATUS);
+		faults_handled++;
+		break;
+	}
 
-	mc_writel(g_intstatus, MC_GLOBAL_INTSTATUS);
+	for (err = ch_mc_errors; err->sig && err->msg; err++) {
+		if ((ch_int_status) != err->sig)
+			continue;
+		log_fault(mc_channel, err);
+		__mc_writel(mc_channel, ch_int_status, MC_CH_INTSTATUS);
+		faults_handled++;
+		break;
+	}
 
-	return IRQ_WAKE_THREAD;
+	for (err = hubc_mc_errors; err->sig && err->msg; err++) {
+		if ((hubc_int_status) != err->sig)
+			continue;
+		log_fault(mc_channel, err);
+		__mc_writel(mc_channel, hubc_int_status, MC_HUBC_INTSTATUS);
+		faults_handled++;
+		break;
+	}
+
+	if (!faults_handled)
+		pr_err("unknown mcerr fault, int_status=0x%08x, "
+			"ch_int_status=0x%08x, hubc_int_status=0x%08x\n",
+			int_status, ch_int_status, hubc_int_status);
 }
 
 void mcerr_chip_specific_setup(struct mcerr_chip_specific *spec)
 {
 	spec->nr_clients = ARRAY_SIZE(mc_clients);
 	spec->intr_descriptions = t186_intr_info;
+	spec->clear_interrupt = clear_interrupt;
+	spec->log_mcerr_fault = log_mcerr_fault;
 	return;
 }

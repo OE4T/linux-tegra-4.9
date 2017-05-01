@@ -70,9 +70,6 @@ struct podgov_info_rec {
 
 	ktime_t			last_scale;
 
-	struct delayed_work	idle_timer;
-
-	unsigned int		p_slowdown_delay;
 	unsigned int		p_block_window;
 	unsigned int		p_hint_lo_limit;
 	unsigned int		p_hint_hi_limit;
@@ -90,8 +87,6 @@ struct podgov_info_rec {
 
 	int			adjustment_type;
 	unsigned long		adjustment_frequency;
-
-	int			last_event_type;
 
 	struct devfreq		*power_manager;
 	struct dentry		*debugdir;
@@ -124,14 +119,6 @@ enum podgov_adjustment_type {
 };
 
 
-static void stop_podgov_workers(struct podgov_info_rec *podgov)
-{
-	/* idle_timer can rearm itself */
-	do {
-		cancel_delayed_work_sync(&podgov->idle_timer);
-	} while (delayed_work_pending(&podgov->idle_timer));
-}
-
 /*******************************************************************************
  * scaling_limit(df, freq)
  *
@@ -144,29 +131,6 @@ static void scaling_limit(struct devfreq *df, unsigned long *freq)
 		*freq = df->min_freq;
 	else if (*freq > df->max_freq)
 		*freq = df->max_freq;
-}
-
-/*******************************************************************************
- * nvhost_pod_suspend(dev)
- *
- * Prepare the device for suspend
- ******************************************************************************/
-
-static void nvhost_pod_suspend(struct devfreq *df)
-{
-	struct podgov_info_rec *podgov;
-
-	mutex_lock(&df->lock);
-
-	podgov = df->data;
-	if (!(df->governor == &nvhost_podgov &&
-	      podgov && podgov->enable)) {
-		mutex_unlock(&df->lock);
-		return;
-	}
-	mutex_unlock(&df->lock);
-
-	stop_podgov_workers(podgov);
 }
 
 /*******************************************************************************
@@ -211,8 +175,6 @@ static void podgov_enable(struct devfreq *df, int enable)
 	mutex_unlock(&df->lock);
 
 	pm_runtime_put(dev);
-
-	stop_podgov_workers(podgov);
 
 	return;
 
@@ -260,8 +222,6 @@ static void podgov_set_user_ctl(struct devfreq *df, int user)
 
 	mutex_unlock(&df->lock);
 	pm_runtime_put(dev);
-
-	stop_podgov_workers(podgov);
 
 	return;
 
@@ -388,36 +348,6 @@ static int freqlist_up(struct podgov_info_rec *podgov, unsigned long target,
 }
 
 /*******************************************************************************
- * podgov_idle_handler(work)
- *
- * This handler is called after the device has been idle long enough. This
- * handler forms a (positive) feedback loop by notifying idle to the device.
- ******************************************************************************/
-
-static void podgov_idle_handler(struct work_struct *work)
-{
-	struct delayed_work *idle_timer =
-		container_of(work, struct delayed_work, work);
-	struct podgov_info_rec *podgov =
-		container_of(idle_timer, struct podgov_info_rec, idle_timer);
-	struct devfreq *df = podgov->power_manager;
-
-	mutex_lock(&df->lock);
-
-	if (!podgov->enable) {
-		mutex_unlock(&df->lock);
-		return;
-	}
-
-	if (!podgov->last_event_type &&
-	    df->previous_freq > df->min_freq &&
-	    podgov->p_user == false)
-		update_devfreq(df);
-
-	mutex_unlock(&df->lock);
-}
-
-/*******************************************************************************
  * debugfs interface for controlling 3d clock scaling on the fly
  ******************************************************************************/
 
@@ -461,7 +391,6 @@ static void nvhost_scale_emc_debug_init(struct devfreq *df)
 	CREATE_PODGOV_FILE(scaleup_limit);
 	CREATE_PODGOV_FILE(scaledown_limit);
 	CREATE_PODGOV_FILE(smooth);
-	CREATE_PODGOV_FILE(slowdown_delay);
 #undef CREATE_PODGOV_FILE
 }
 
@@ -601,8 +530,8 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 				    unsigned long *freq)
 {
 	struct podgov_info_rec *podgov = df->data;
-	struct devfreq_dev_status dev_stat;
-	int stat;
+	struct devfreq_dev_status *dev_stat;
+	int err;
 	ktime_t now;
 
 	/* Ensure maximal clock when scaling is disabled */
@@ -619,16 +548,17 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 		return 0;
 	}
 
-	stat = df->profile->get_dev_status(df->dev.parent, &dev_stat);
-	if (stat < 0)
-		return stat;
+	err = devfreq_update_stats(df);
+	if (err)
+		return err;
 
-	if (dev_stat.total_time == 0) {
-		*freq = dev_stat.current_frequency;
+	dev_stat = &df->last_status;
+
+	if (dev_stat->total_time == 0) {
+		*freq = dev_stat->current_frequency;
 		return 0;
 	}
 
-	stat = 0;
 	now = ktime_get();
 
 	/* Local adjustments (i.e. requests from kernel threads) are
@@ -649,32 +579,23 @@ static int nvhost_pod_estimate_freq(struct devfreq *df,
 		return 0;
 	}
 
-	*freq = dev_stat.current_frequency;
+	*freq = dev_stat->current_frequency;
 
 	/* Sustain local variables */
-	podgov->last_event_type = dev_stat.busy;
-	podgov->idle = 1000 * (dev_stat.total_time - dev_stat.busy_time);
-	podgov->idle = podgov->idle / dev_stat.total_time;
+	podgov->idle = 1000 * (dev_stat->total_time - dev_stat->busy_time);
+	podgov->idle = podgov->idle / dev_stat->total_time;
 	podgov->idle_avg = (podgov->p_smooth * podgov->idle_avg) +
 		podgov->idle;
 	podgov->idle_avg = podgov->idle_avg / (podgov->p_smooth + 1);
 
-	if (dev_stat.busy) {
-		cancel_delayed_work(&podgov->idle_timer);
-		*freq = scaling_state_check(df, now);
-	} else {
-		/* Launch a work to slowdown the gpu */
-		*freq = scaling_state_check(df, now);
-		schedule_delayed_work(&podgov->idle_timer,
-			msecs_to_jiffies(podgov->p_slowdown_delay));
-	}
+	*freq = scaling_state_check(df, now);
 
 	if (!(*freq)) {
-		*freq = dev_stat.current_frequency;
+		*freq = dev_stat->current_frequency;
 		return 0;
 	}
 
-	if (freqlist_up(podgov, *freq, 0) == dev_stat.current_frequency)
+	if (freqlist_up(podgov, *freq, 0) == dev_stat->current_frequency)
 		return 0;
 
 	podgov->last_scale = now;
@@ -698,18 +619,12 @@ static int nvhost_pod_init(struct devfreq *df)
 	ktime_t now = ktime_get();
 	enum tegra_chipid cid = tegra_get_chipid();
 
-	struct devfreq_dev_status dev_stat;
-	int stat = 0;
-
 	struct kobj_attribute *attr = NULL;
 
 	podgov = kzalloc(sizeof(struct podgov_info_rec), GFP_KERNEL);
 	if (!podgov)
 		goto err_alloc_podgov;
 	df->data = (void *)podgov;
-
-	/* Initialise workers */
-	INIT_DELAYED_WORK(&podgov->idle_timer, podgov_idle_handler);
 
 	/* Set scaling parameter defaults */
 	podgov->enable = 1;
@@ -750,7 +665,6 @@ static int nvhost_pod_init(struct devfreq *df)
 		}
 	}
 
-	podgov->p_slowdown_delay = 10;
 	podgov->p_block_window = 50000;
 	podgov->adjustment_type = ADJUSTMENT_DEVICE_REQ;
 	podgov->p_user = 0;
@@ -759,9 +673,6 @@ static int nvhost_pod_init(struct devfreq *df)
 	podgov->last_scale = now;
 
 	podgov->power_manager = df;
-
-	/* Get the current status of the device */
-	stat = df->profile->get_dev_status(df->dev.parent, &dev_stat);
 
 	attr = &podgov->enable_3d_scaling_attr;
 	attr->attr.name = "enable_3d_scaling";
@@ -806,6 +717,8 @@ static int nvhost_pod_init(struct devfreq *df)
 
 	nvhost_scale_emc_debug_init(df);
 
+	devfreq_monitor_start(df);
+
 	return 0;
 
 err_get_freqs:
@@ -834,7 +747,7 @@ static void nvhost_pod_exit(struct devfreq *df)
 {
 	struct podgov_info_rec *podgov = df->data;
 
-	cancel_delayed_work(&podgov->idle_timer);
+	devfreq_monitor_stop(df);
 
 	sysfs_remove_file(&df->dev.parent->kobj, &podgov->user_attr.attr);
 	sysfs_remove_file(&df->dev.parent->kobj,
@@ -859,8 +772,14 @@ static int nvhost_pod_event_handler(struct devfreq *df,
 	case DEVFREQ_GOV_STOP:
 		nvhost_pod_exit(df);
 		break;
+	case DEVFREQ_GOV_INTERVAL:
+		devfreq_interval_update(df, (unsigned int *)data);
+		break;
 	case DEVFREQ_GOV_SUSPEND:
-		nvhost_pod_suspend(df);
+		devfreq_monitor_suspend(df);
+		break;
+	case DEVFREQ_GOV_RESUME:
+		devfreq_monitor_resume(df);
 		break;
 	default:
 		break;

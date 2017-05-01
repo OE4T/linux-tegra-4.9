@@ -456,8 +456,6 @@ const struct gk20a_mmu_level *gk20a_mm_get_mmu_levels(struct gk20a *g,
 void gk20a_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *mem,
 		struct vm_gk20a *vm);
 
-int gk20a_big_pages_possible(struct vm_gk20a *vm, u64 base, u64 size);
-
 extern const struct gk20a_mmu_level gk20a_mm_levels_64k[];
 extern const struct gk20a_mmu_level gk20a_mm_levels_128k[];
 

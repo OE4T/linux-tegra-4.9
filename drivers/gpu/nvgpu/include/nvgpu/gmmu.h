@@ -63,6 +63,12 @@ struct gk20a_mmu_level {
 	size_t entry_size;
 };
 
+int nvgpu_zalloc_gmmu_page_table(struct vm_gk20a *vm,
+				 enum gmmu_pgsz_gk20a pgsz_idx,
+				 const struct gk20a_mmu_level *l,
+				 struct gk20a_mm_entry *entry,
+				 struct gk20a_mm_entry *prev_entry);
+
 /**
  * nvgpu_gmmu_map - Map memory into the GMMU.
  *

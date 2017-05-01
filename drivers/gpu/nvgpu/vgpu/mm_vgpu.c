@@ -364,7 +364,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 	if (user_vma_start < user_vma_limit) {
 		snprintf(name, sizeof(name), "gk20a_as_%d-%dKB", as_share->id,
 			 gmmu_page_sizes[gmmu_page_size_small] >> 10);
-		if (!gk20a_big_pages_possible(vm, user_vma_start,
+		if (!nvgpu_big_pages_possible(vm, user_vma_start,
 					      user_vma_limit - user_vma_start))
 			vm->big_pages = false;
 
@@ -391,7 +391,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 
 	snprintf(name, sizeof(name), "gk20a_as_%dKB-sys",
 		 gmmu_page_sizes[gmmu_page_size_kernel] >> 10);
-	if (!gk20a_big_pages_possible(vm, kernel_vma_start,
+	if (!nvgpu_big_pages_possible(vm, kernel_vma_start,
 				     kernel_vma_limit - kernel_vma_start))
 		vm->big_pages = false;
 

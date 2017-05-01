@@ -181,6 +181,7 @@ void nvgpu_vm_get(struct vm_gk20a *vm);
 void nvgpu_vm_put(struct vm_gk20a *vm);
 
 int vm_aspace_id(struct vm_gk20a *vm);
+int nvgpu_big_pages_possible(struct vm_gk20a *vm, u64 base, u64 size);
 
 /* batching eliminates redundant cache flushes and invalidates */
 void nvgpu_vm_mapping_batch_start(struct vm_gk20a_mapping_batch *batch);
@@ -194,7 +195,6 @@ void nvgpu_vm_mapping_batch_finish_locked(
 int nvgpu_vm_get_buffers(struct vm_gk20a *vm,
 			 struct nvgpu_mapped_buf ***mapped_buffers,
 			 int *num_buffers);
-
 /* put references on the given buffers */
 void nvgpu_vm_put_buffers(struct vm_gk20a *vm,
 			  struct nvgpu_mapped_buf **mapped_buffers,
@@ -220,7 +220,6 @@ struct nvgpu_mapped_buf *__nvgpu_vm_find_mapped_buf_less_than(
 int nvgpu_vm_find_buf(struct vm_gk20a *vm, u64 gpu_va,
 		      struct dma_buf **dmabuf,
 		      u64 *offset);
-
 int nvgpu_insert_mapped_buf(struct vm_gk20a *vm,
 			    struct nvgpu_mapped_buf *mapped_buffer);
 void nvgpu_remove_mapped_buf(struct vm_gk20a *vm,
@@ -228,8 +227,7 @@ void nvgpu_remove_mapped_buf(struct vm_gk20a *vm,
 
 void nvgpu_vm_remove_support_nofree(struct vm_gk20a *vm);
 void nvgpu_vm_remove_support(struct vm_gk20a *vm);
-
-void nvgpu_remove_vm(struct vm_gk20a *vm, struct nvgpu_mem *inst_block);
+void nvgpu_vm_remove(struct vm_gk20a *vm, struct nvgpu_mem *inst_block);
 
 int nvgpu_init_vm(struct mm_gk20a *mm,
 		struct vm_gk20a *vm,

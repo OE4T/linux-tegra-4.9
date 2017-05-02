@@ -624,6 +624,9 @@ static int submit_get_syncpoints(struct nvhost_submit_args *args,
 	int err;
 	u32 i;
 
+	if (args->num_syncpt_incrs > NVHOST_SUBMIT_MAX_NUM_SYNCPT_INCRS)
+		return -EINVAL;
+
 	/*
 	 * Go through each syncpoint from userspace. Here we:
 	 * - Copy syncpoint information

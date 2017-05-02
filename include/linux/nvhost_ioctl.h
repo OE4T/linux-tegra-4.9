@@ -206,6 +206,7 @@ struct nvhost32_submit_args {
 } __packed;
 
 #define NVHOST_SUBMIT_FLAG_SYNC_FENCE_FD	0
+#define NVHOST_SUBMIT_MAX_NUM_SYNCPT_INCRS	10
 
 struct nvhost_submit_args {
 	__u32 submit_version;

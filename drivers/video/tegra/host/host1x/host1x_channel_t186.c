@@ -384,7 +384,7 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	struct nvhost_syncpt *sp = &nvhost_get_host(job->ch->dev)->syncpt;
 	u32 prev_max = 0;
 	int err, i;
-	void *completed_waiters[job->num_syncpts];
+	void *completed_waiters[NVHOST_SUBMIT_MAX_NUM_SYNCPT_INCRS];
 	int streamid;
 
 	memset(completed_waiters, 0, sizeof(void *) * job->num_syncpts);

@@ -4935,9 +4935,6 @@ static void gr_gk20a_load_gating_prod(struct gk20a *g)
 	if (g->ops.clock_gating.blcg_bus_load_gating_prod)
 		g->ops.clock_gating.blcg_bus_load_gating_prod(g,
 				g->blcg_enabled);
-	if (g->ops.clock_gating.blcg_ce_load_gating_prod)
-		g->ops.clock_gating.blcg_ce_load_gating_prod(g,
-				g->blcg_enabled);
 	if (g->ops.clock_gating.blcg_gr_load_gating_prod)
 		g->ops.clock_gating.blcg_gr_load_gating_prod(g,
 				g->blcg_enabled);
@@ -4957,9 +4954,6 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 {
 	u32 gpfifo_ctrl, pmc_en;
 	u32 err = 0;
-	u32 ce_reset_mask;
-
-	ce_reset_mask = gk20a_fifo_get_all_ce_engine_reset_mask(g);
 
 	/* disable fifo access */
 	pmc_en = gk20a_readl(g, mc_enable_r());
@@ -4972,8 +4966,7 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 	/* reset gr engine */
 	g->ops.mc.reset(g, mc_enable_pgraph_enabled_f() |
 			mc_enable_blg_enabled_f() |
-			mc_enable_perfmon_enabled_f() |
-			ce_reset_mask);
+			mc_enable_perfmon_enabled_f());
 
 	gr_gk20a_load_gating_prod(g);
 

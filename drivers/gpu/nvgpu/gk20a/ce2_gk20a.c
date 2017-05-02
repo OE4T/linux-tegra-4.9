@@ -339,6 +339,18 @@ int gk20a_init_ce_support(struct gk20a *g)
 {
 	struct gk20a_ce_app *ce_app = &g->ce_app;
 	int err;
+	u32 ce_reset_mask;
+
+	ce_reset_mask = gk20a_fifo_get_all_ce_engine_reset_mask(g);
+
+	g->ops.mc.reset(g, ce_reset_mask);
+
+	if (g->ops.clock_gating.slcg_ce2_load_gating_prod)
+		g->ops.clock_gating.slcg_ce2_load_gating_prod(g,
+				g->slcg_enabled);
+	if (g->ops.clock_gating.blcg_ce_load_gating_prod)
+		g->ops.clock_gating.blcg_ce_load_gating_prod(g,
+				g->blcg_enabled);
 
 	if (ce_app->initialised) {
 		/* assume this happen during poweron/poweroff GPU sequence */

@@ -767,9 +767,6 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	/* enable pmc pfifo */
 	g->ops.mc.reset(g, mc_enable_pfifo_enabled_f());
 
-	if (g->ops.clock_gating.slcg_ce2_load_gating_prod)
-		g->ops.clock_gating.slcg_ce2_load_gating_prod(g,
-				g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_fifo_load_gating_prod)
 		g->ops.clock_gating.slcg_fifo_load_gating_prod(g,
 				g->slcg_enabled);

@@ -17,16 +17,16 @@
 	plugin-manager {
 		fragment-e3320-a00@1 {
 			ids = "3320-1000-000", "3320-1100-000";
-			overrides@0 {
-				target = <&{/i2c@3160000/tps65132@3e/outp}>;
-				_overlay_ {
-					ti,enable-gpio = <&gpio_i2c_0_21 2 0>;
-				};
-			};
 			overrides@1 {
-				target = <&{/i2c@3160000/tps65132@3e/outn}>;
+				target = <&{/i2c@3160000/tps65132@3e}>;
 				_overlay_ {
-					ti,enable-gpio = <&gpio_i2c_0_21 3 0>;
+					status = "okay";
+					outp {
+						ti,enable-gpio = <&gpio_i2c_0_21 2 0>;
+					};
+					outn {
+						ti,enable-gpio = <&gpio_i2c_0_21 3 0>;
+					};
 				};
 			};
 			overrides@2 {
@@ -59,19 +59,19 @@
 
 		fragment-e3320-a01@1 {
 			ids = "3320-1000-100", "3320-1000-200";
-			overrides@0 {
-				target = <&{/i2c@3160000/tps65132@3e/outp}>;
-				_overlay_ {
-					ti,enable-gpio = <&gpio_i2c_0_77 4 0>;
-				};
-			};
 			overrides@1 {
-				target = <&{/i2c@3160000/tps65132@3e/outn}>;
+				target = <&{/i2c@3160000/tps65132@3e}>;
 				_overlay_ {
-					delete-target-property = "ti,disable-active-discharge";
-					ti,enable-gpio = <&gpio_i2c_0_21 2 0>;
-					ti,active-discharge-gpio = <&gpio_i2c_0_21 3 0>;
-					ti,active-discharge-time = <2000>; /* in us */
+					status = "okay";
+					outp {
+						ti,enable-gpio = <&gpio_i2c_0_77 4 0>;
+					};
+					outn {
+						delete-target-property = "ti,disable-active-discharge";
+						ti,enable-gpio = <&gpio_i2c_0_21 2 0>;
+						ti,active-discharge-gpio = <&gpio_i2c_0_21 3 0>;
+						ti,active-discharge-time = <2000>; /* in us */
+					};
 				};
 			};
 			overrides@2 {

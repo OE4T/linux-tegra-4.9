@@ -137,17 +137,14 @@
 			bpmp_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_BPMP>;
-				sid-list-len = <1>;
 			};
 			gpcdma_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_GPCDMA_0>;
-				sid-list-len = <1>;
 			};
 			host1x_domain {
 				address-space = <&host1x_as>;
 				sid-list = <TEGRA_SID(HC)>;
-				sid-list-len = <1>;
 			};
 			host1x_client_domain {
 				address-space = <&host1x_client_as>;
@@ -168,12 +165,10 @@
 					    TEGRA_SID(SE1)
 					    TEGRA_SID(SE2)
 					    TEGRA_SID(SE3)>;
-				sid-list-len = <17>;
 			};
 			rce_domain {
 				address-space = <&camera_as>;
 				sid-list = <TEGRA_SID(RCE)>;
-				sid-list-len = <1>;
 			};
 		};
 

@@ -18,6 +18,8 @@
 #include "nvdisp.h"
 #include "hw_nvdisp_nvdisp.h"
 
+#define TEGRA_WINBUF_ADDR_FLAG_BLOCKLINEAR ((dma_addr_t)0x1 << 39)
+
 static struct tegra_dc_pd_clk_info t19x_disp_pd0_clk_info[] = {
 	{
 		.name = "nvdisplayhub",
@@ -188,4 +190,14 @@ void tegra_dc_populate_t19x_hw_data(struct tegra_dc_hw_data *hw_data)
 	hw_data->pd_table = &t19x_disp_pd_table;
 	hw_data->valid = true;
 	hw_data->version = TEGRA_DC_HW_T19x;
+}
+
+dma_addr_t nvdisp_t19x_get_addr_flag(struct tegra_dc_win *win)
+{
+	dma_addr_t addr_flag = 0x0;
+
+	if (win->flags & TEGRA_WIN_FLAG_BLOCKLINEAR)
+		addr_flag |= TEGRA_WINBUF_ADDR_FLAG_BLOCKLINEAR;
+
+	return addr_flag;
 }

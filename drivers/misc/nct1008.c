@@ -194,10 +194,12 @@ struct nct1008_data {
 	struct nct1008_sensor_data sensors[SENSORS_COUNT];
 };
 
+static const unsigned long THERM_WARN_RANGE_HIGH_OFFSET = 3000;
+static unsigned long nct1008_shutdown_warning_cur_state;
+static long shutdown_warn_saved_temp;
+
 static int conv_period_ms_table[] =
 	{16000, 8000, 4000, 2000, 1000, 500, 250, 125, 63, 32, 16};
-
-static void nct1008_setup_shutdown_warning(struct nct1008_data *data);
 
 static inline s16 value_to_temperature(bool extended, u8 value)
 {
@@ -457,7 +459,6 @@ static ssize_t nct1008_set_temp_overheat(struct device *dev,
 		goto error;
 
 	data->plat_data.sensors[EXT].shutdown_limit = num;
-	nct1008_setup_shutdown_warning(data);
 
 	return count;
 error:
@@ -740,11 +741,6 @@ static struct attribute *nct1008_attributes[] = {
 static const struct attribute_group nct1008_attr_group = {
 	.attrs = nct1008_attributes,
 };
-
-static const unsigned long THERM_WARN_RANGE_HIGH_OFFSET = 3000;
-static unsigned long nct1008_shutdown_warning_cur_state;
-static long shutdown_warn_saved_temp;
-
 static int nct1008_shutdown_warning_get_max_state(
 					struct thermal_cooling_device *cdev,
 					unsigned long *max_state)
@@ -1051,38 +1047,6 @@ static void nct1008_power_control(struct nct1008_data *data, bool is_enable)
 	mutex_unlock(&data->mutex);
 }
 
-static void nct1008_setup_shutdown_warning(struct nct1008_data *data)
-{
-	static struct thermal_cooling_device *cdev;
-	long limit = data->plat_data.sensors[EXT].shutdown_limit * 1000;
-	long warn_temp = limit - THERM_WARN_RANGE_HIGH_OFFSET;
-	int i;
-	struct nct1008_sensor_platform_data *sensor_data;
-
-	if (cdev)
-		thermal_cooling_device_unregister(cdev);
-	cdev = thermal_cooling_device_register("shutdown_warning", data,
-					&nct1008_shutdown_warning_ops);
-	if (IS_ERR_OR_NULL(cdev)) {
-		cdev = NULL;
-		return;
-	}
-
-	sensor_data = &data->plat_data.sensors[EXT];
-
-	for (i = 0; i < sensor_data->num_trips; i++) {
-		if (!strcmp(sensor_data->trips[i].cdev_type,
-						"shutdown_warning")) {
-			sensor_data->trips[i].trip_temp = warn_temp;
-			break;
-		}
-	}
-
-	pr_info("%s: Enabled overheat logging at %ld.%02ldC\n",
-			data->chip_name,
-			warn_temp / 1000, (warn_temp % 1000) / 10);
-}
-
 /*
  * CP2 = Tdiode - Tchuck at 105C in Q5.2 format
  * CP1 = Tdiode - Tchuck at 25C in Q5.2 format
@@ -1167,6 +1131,7 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 {
 	struct i2c_client *client = data->client;
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
+	static struct thermal_cooling_device *cdev;
 	u8 value;
 	s16 temp;
 	u8 temp2;
@@ -1319,7 +1284,11 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 	data->sensors[LOC].current_hi_limit =
 		value_to_temperature(pdata->extended_range, value);
 
-	nct1008_setup_shutdown_warning(data);
+	cdev = thermal_cooling_device_register("shutdown_warning", data,
+					&nct1008_shutdown_warning_ops);
+	if (IS_ERR_OR_NULL(cdev))
+		dev_err(&client->dev,
+			"shutdown_warning cdev registration failed %d\n", ret);
 
 	return 0;
 error:

@@ -45,8 +45,6 @@ struct nct1008_sensor_platform_data {
 	int shutdown_limit;
 	long suspend_limit_hi;
 	long suspend_limit_lo;
-	struct thermal_trip_info trips[THERMAL_MAX_TRIPS];
-	int num_trips;
 };
 
 struct nct1008_platform_data {

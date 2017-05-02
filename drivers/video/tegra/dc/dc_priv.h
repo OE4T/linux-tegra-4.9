@@ -801,6 +801,11 @@ void __attribute__((weak)) tegra_dc_enable_sor_t18x(struct tegra_dc *dc,
 void __attribute__((weak)) tegra_dc_enable_sor_t19x(struct tegra_dc *dc,
 			int sor_num, bool enable);
 
+void __attribute__((weak)) tegra_nvdisp_update_per_flip_output_lut(
+	struct tegra_dc *dc,
+	struct tegra_dc_ext_cmu_v2 *user_cmu_v2,
+	bool new_cmu_values);
+
 struct tegra_dc_pd_table *tegra_dc_get_disp_pd_table(void);
 
 int tegra_fb_release_fbmem(struct tegra_fb_info *);

@@ -154,6 +154,7 @@
 #define TEGRA_DC_EXT_FLIP_FLAG_DEGAMMA_SRGB	(2 << 16)
 #define TEGRA_DC_EXT_FLIP_FLAG_DEGAMMA_YUV_8_10	(4 << 16)
 #define TEGRA_DC_EXT_FLIP_FLAG_DEGAMMA_YUV_12	(8 << 16)
+/*End of window specific flip flags*/
 /*Passthrough condition for running 4K HDMI*/
 #define TEGRA_DC_EXT_FLIP_HEAD_FLAG_YUVBYPASS	(1 << 0)
 #define TEGRA_DC_EXT_FLIP_HEAD_FLAG_VRR_MODE	(1 << 1)
@@ -162,6 +163,16 @@
 /* Flag for HDR_DATA handling */
 #define TEGRA_DC_EXT_FLIP_FLAG_HDR_ENABLE	(1 << 0)
 #define TEGRA_DC_EXT_FLIP_FLAG_HDR_DATA_UPDATED (1 << 1)
+/*
+ * Following flag is used when TEGRA_DC_EXT_FLIP_USER_DATA_CMU_V2 is used.
+* FLAG_CMU_V2_UPDATE: this flag is valid only when
+ *                      tegra_dc_ext_cmu_v2.cmu_enable = true.
+ *                      If flag is present, driver will update LUT
+ *                      values provided from userspace.
+ *                      If flag is not present then driver will program LUT
+ *                      from cached values.
+ */
+#define TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CMU_V2	(1 << 0)
 /* Flags for post-syncpt handling */
 /* Bits 1:0 are reserved for the post-syncpt type */
 #define TEGRA_DC_EXT_FLIP_FLAG_POST_SYNCPT_TYPE_SHIFT	0
@@ -392,6 +403,7 @@ enum tegra_dc_ext_flip_data_type {
 	TEGRA_DC_EXT_FLIP_USER_DATA_IMP_TAG, /* only valid during FLIP */
 	TEGRA_DC_EXT_FLIP_USER_DATA_POST_SYNCPT,
 	TEGRA_DC_EXT_FLIP_USER_DATA_CSC_V2,
+	TEGRA_DC_EXT_FLIP_USER_DATA_CMU_V2,
 };
 
 /*
@@ -520,6 +532,11 @@ struct tegra_dc_ext_udata_csc_v2 {
 	__u8 reserved[17];
 } __attribute__((__packed__));
 
+struct tegra_dc_ext_udata_cmu_v2 {
+	__u64 __user cmu_v2; /* pointer to "tegra_dc_ext_cmu_v2" */
+	__u8 reserved[18];
+} __attribute__((__packed__));
+
 /* size of the this struct is 32 bytes */
 struct tegra_dc_ext_flip_user_data {
 	__u8 data_type;
@@ -534,6 +551,7 @@ struct tegra_dc_ext_flip_user_data {
 		struct tegra_dc_ext_imp_flip_tag imp_tag;
 		struct tegra_dc_ext_syncpt post_syncpt; /* out */
 		struct tegra_dc_ext_udata_csc_v2 csc_v2;
+		struct tegra_dc_ext_udata_cmu_v2 cmu_v2;
 	};
 } __attribute__((__packed__));
 
@@ -841,8 +859,8 @@ struct tegra_dc_ext_cmu {
 struct tegra_dc_ext_cmu_v2 {
 	__u16 cmu_enable;
 	__u16 lut_size;
-	__u16 lut_range;
-	__u16 lut_mode;
+	__u16 lut_range; /* ignored in the driver */
+	__u16 lut_mode; /* ignored in the driver */
 	__u64 rgb[TEGRA_DC_EXT_LUT_SIZE_1025 + 1];
 };
 

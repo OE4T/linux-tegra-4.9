@@ -127,6 +127,9 @@ struct tegra_dc_ext_flip_data {
 	bool hdr_cache_dirty;
 	bool imp_dirty;
 	u64 imp_session_id;
+	bool cmu_update_needed; /* this is needed for ENABLE or DISABLE */
+	bool new_cmu_values; /* this is to be used only when ENABLE */
+	struct tegra_dc_ext_cmu_v2 user_cmu_v2;
 };
 
 struct tegra_dc_ext_scanline_data {
@@ -1120,6 +1123,12 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 			(dc->out->type == TEGRA_DC_OUT_DP) ||
 			(dc->out->type == TEGRA_DC_OUT_FAKE_DP)))
 				lock_flip = true;
+		/* call tegra_dc_update_postcomp */
+		if (!tegra_dc_is_t21x())
+			if (data->cmu_update_needed)
+				tegra_nvdisp_update_per_flip_output_lut(dc,
+					&data->user_cmu_v2,
+					data->new_cmu_values);
 		tegra_dc_update_windows(wins, nr_win,
 			data->dirty_rect_valid ? data->dirty_rect : NULL,
 			wait_for_vblank, lock_flip);
@@ -1444,6 +1453,50 @@ static void tegra_dc_ext_unpin_window(struct tegra_dc_ext_win *win)
 	tegra_dc_ext_unpin_handles(unpin_handles, nr_unpin);
 }
 
+static int tegra_dc_ext_configure_cmu_v2_user_data(
+	struct tegra_dc_ext_flip_data *flip_kdata,
+	struct tegra_dc_ext_flip_user_data *flip_udata)
+{
+	int ret = 0;
+	size_t size;
+	struct tegra_dc *dc;
+	struct tegra_dc_ext_cmu_v2 *kcmu_v2;
+	struct tegra_dc_ext_udata_cmu_v2 *udata_cmu_v2;
+	struct tegra_dc_ext_cmu_v2 *ucmu_v2;
+
+	if (!flip_kdata || !flip_udata)
+		return -EINVAL;
+
+	dc = flip_kdata->ext->dc;
+
+	udata_cmu_v2 = &flip_udata->cmu_v2;
+	ucmu_v2 = (struct tegra_dc_ext_cmu_v2 *)udata_cmu_v2->cmu_v2;
+
+	kcmu_v2 = &flip_kdata->user_cmu_v2;
+	size = sizeof(kcmu_v2->cmu_enable);
+	/* copying only cmu_enable now */
+	if (copy_from_user(kcmu_v2,
+		(void __user *) (uintptr_t)ucmu_v2, size)) {
+		return -EFAULT;
+	}
+
+	/* copying rest of the cmu_v2 struct after checking for update flag */
+	if (kcmu_v2->cmu_enable) {
+		if (flip_udata->flags & TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CMU_V2) {
+			size = sizeof(kcmu_v2) - size;
+			if (copy_from_user(&kcmu_v2->lut_size,
+				(void __user *) (uintptr_t)&ucmu_v2->lut_size,
+				size)) {
+				return -EFAULT;
+			}
+			flip_kdata->new_cmu_values = true;
+		}
+	}
+	flip_kdata->cmu_update_needed = true;
+
+	return ret;
+}
+
 static int tegra_dc_ext_read_csc_v2_user_data(
 	struct tegra_dc_ext_flip_data *flip_kdata,
 	struct tegra_dc_ext_flip_user_data *flip_udata)
@@ -1580,6 +1633,13 @@ static int tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 
 			ret = tegra_dc_ext_read_csc_v2_user_data(data,
 							&flip_user_data[i]);
+			if (ret)
+				return ret;
+
+			break;
+		case TEGRA_DC_EXT_FLIP_USER_DATA_CMU_V2:
+			ret = tegra_dc_ext_configure_cmu_v2_user_data(data,
+				&flip_user_data[i]);
 			if (ret)
 				return ret;
 

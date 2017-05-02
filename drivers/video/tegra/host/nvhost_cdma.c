@@ -125,7 +125,17 @@ static u32 nvhost_push_buffer_space(struct push_buffer *pb)
 
 u32 nvhost_push_buffer_putptr(struct push_buffer *pb)
 {
-	return pb->dma_addr + pb->cur;
+	return pb->cur;
+}
+
+dma_addr_t nvhost_push_buffer_start(struct push_buffer *pb)
+{
+	return pb->dma_addr;
+}
+
+dma_addr_t nvhost_push_buffer_end(struct push_buffer *pb)
+{
+	return pb->dma_addr + PUSH_BUFFER_SIZE + 4;
 }
 
 /**

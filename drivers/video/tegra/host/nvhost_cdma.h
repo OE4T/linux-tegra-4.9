@@ -107,6 +107,8 @@ struct nvhost_cdma {
 void nvhost_push_buffer_destroy(struct push_buffer *pb);
 int nvhost_push_buffer_alloc(struct push_buffer *pb);
 u32 nvhost_push_buffer_putptr(struct push_buffer *pb);
+dma_addr_t nvhost_push_buffer_start(struct push_buffer *pb);
+dma_addr_t nvhost_push_buffer_end(struct push_buffer *pb);
 
 int	nvhost_cdma_init(struct platform_device *pdev,
 			 struct nvhost_cdma *cdma);

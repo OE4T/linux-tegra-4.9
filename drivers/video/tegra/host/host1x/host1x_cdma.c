@@ -71,7 +71,7 @@ static int push_buffer_init(struct push_buffer *pb)
 
 	/* put the restart at the end of pushbuffer memory */
 	*(pb->mapped + (PUSH_BUFFER_SIZE >> 2)) =
-		nvhost_opcode_restart(pb->dma_addr);
+		nvhost_opcode_restart(0);
 
 	return 0;
 
@@ -145,7 +145,7 @@ static void cdma_timeout_pb_cleanup(struct nvhost_cdma *cdma, u32 getptr,
 	u32 getidx;
 
 	/* NOP all the PB slots */
-	getidx = getptr - pb->dma_addr;
+	getidx = getptr;
 	while (nr_slots--) {
 		u32 *p = (u32 *)((uintptr_t)pb->mapped + getidx);
 		*(p++) = NVHOST_OPCODE_NOOP;
@@ -163,6 +163,7 @@ static void cdma_timeout_pb_cleanup(struct nvhost_cdma *cdma, u32 getptr,
 static void cdma_start(struct nvhost_cdma *cdma)
 {
 	struct nvhost_channel *ch;
+	dma_addr_t pb_start, pb_end;
 
 	if (cdma->running)
 		return;
@@ -178,10 +179,14 @@ static void cdma_start(struct nvhost_cdma *cdma)
 	host1x_channel_writel(ch, host1x_channel_dmactrl_r(),
 		host1x_channel_dmactrl(true, false, false));
 
-	/* set base, put, end pointer (all of memory) */
-	host1x_channel_writel(ch, host1x_channel_dmastart_r(), 0);
+	/* set base, put, end pointer */
+	pb_start = nvhost_push_buffer_start(&cdma->push_buffer);
+	host1x_channel_writel(ch, host1x_channel_dmastart_r(), pb_start);
+
 	host1x_channel_writel(ch, host1x_channel_dmaput_r(), cdma->last_put);
-	host1x_channel_writel(ch, host1x_channel_dmaend_r(), 0xFFFFFFFF);
+
+	pb_end = nvhost_push_buffer_end(&cdma->push_buffer);
+	host1x_channel_writel(ch, host1x_channel_dmaend_r(), pb_end);
 
 	/* reset GET */
 	host1x_channel_writel(ch, host1x_channel_dmactrl_r(),
@@ -204,6 +209,7 @@ static void cdma_timeout_restart(struct nvhost_cdma *cdma, u32 getptr)
 {
 	struct nvhost_master *dev = cdma_to_dev(cdma);
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
+	dma_addr_t pb_start, pb_end;
 
 	if (cdma->running)
 		return;
@@ -213,9 +219,11 @@ static void cdma_timeout_restart(struct nvhost_cdma *cdma, u32 getptr)
 	host1x_channel_writel(ch, host1x_channel_dmactrl_r(),
 			host1x_channel_dmactrl(true, false, false));
 
-	/* set base, end pointer (all of memory) */
-	host1x_channel_writel(ch, host1x_channel_dmastart_r(), 0);
-	host1x_channel_writel(ch, host1x_channel_dmaend_r(), 0xFFFFFFFF);
+	/* set base, end pointer */
+	pb_start = nvhost_push_buffer_start(&cdma->push_buffer);
+	host1x_channel_writel(ch, host1x_channel_dmastart_r(), pb_start);
+	pb_end = nvhost_push_buffer_end(&cdma->push_buffer);
+	host1x_channel_writel(ch, host1x_channel_dmaend_r(), pb_end);
 
 	/* set GET, by loading the value in PUT (then reset GET) */
 	host1x_channel_writel(ch, host1x_channel_dmaput_r(), getptr);

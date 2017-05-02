@@ -679,6 +679,9 @@ static int isc_mgr_release(struct inode *inode, struct file *file)
 {
 	struct isc_mgr_priv *isc_mgr = file->private_data;
 
+	if (pwm_is_enabled(isc_mgr->pwm))
+		pwm_disable(isc_mgr->pwm);
+
 	isc_mgr_misc_ctrl(isc_mgr, false);
 
 	/* disable irq if irq is in use, when device is closed */

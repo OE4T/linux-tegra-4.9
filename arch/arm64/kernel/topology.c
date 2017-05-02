@@ -2,6 +2,7 @@
  * arch/arm64/kernel/topology.c
  *
  * Copyright (C) 2011,2013,2014 Linaro Limited.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Based on the arm32 version written by Vincent Guittot in turn based on
  * arch/sh/kernel/topology.c
@@ -417,21 +418,6 @@ static struct sched_domain_topology_level arm64_topology[] = {
 	{ NULL, },
 };
 
-static void update_cpu_capacity(unsigned int cpu)
-{
-	unsigned long capacity = SCHED_CAPACITY_SCALE;
-
-	if (cpu_core_energy(cpu)) {
-		int max_cap_idx = cpu_core_energy(cpu)->nr_cap_states - 1;
-		capacity = cpu_core_energy(cpu)->cap_states[max_cap_idx].cap;
-	}
-
-	set_capacity_scale(cpu, capacity);
-
-	pr_info("CPU%d: update cpu_capacity %lu\n",
-		cpu, arch_scale_cpu_capacity(NULL, cpu));
-}
-
 static void update_siblings_masks(unsigned int cpuid)
 {
 	struct cpu_topology *cpu_topo, *cpuid_topo = &cpu_topology[cpuid];
@@ -493,7 +479,6 @@ void store_cpu_topology(unsigned int cpuid)
 
 topology_populated:
 	update_siblings_masks(cpuid);
-	update_cpu_capacity(cpuid);
 }
 
 static void __init reset_cpu_topology(void)

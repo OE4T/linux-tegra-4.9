@@ -681,7 +681,6 @@
 		compatible = "nvidia,tegra210-spi";
 		reg = <0x0 0x7000d400 0x0 0x200>;
 		interrupts = <0 59 0x04>;
-		nvidia,dma-request-selector = <&apbdma 15>;
 		iommus = <&smmu TEGRA_SWGROUP_PPCS>;
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -701,7 +700,6 @@
 		compatible = "nvidia,tegra210-spi";
 		reg = <0x0 0x7000d600 0x0 0x200>;
 		interrupts = <0 82 0x04>;
-		nvidia,dma-request-selector = <&apbdma 16>;
 		iommus = <&smmu TEGRA_SWGROUP_PPCS>;
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -721,7 +719,6 @@
 		compatible = "nvidia,tegra210-spi";
 		reg = <0x0 0x7000d800 0x0 0x200>;
 		interrupts = <0 83 0x04>;
-		nvidia,dma-request-selector = <&apbdma 17>;
 		iommus = <&smmu TEGRA_SWGROUP_PPCS>;
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -741,7 +738,6 @@
 		compatible = "nvidia,tegra210-spi";
 		reg = <0x0 0x7000da00 0x0 0x200>;
 		interrupts = <0 93 0x04>;
-		nvidia,dma-request-selector = <&apbdma 18>;
 		iommus = <&smmu TEGRA_SWGROUP_PPCS>;
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -761,7 +757,6 @@
 		compatible = "nvidia,tegra210-qspi";
 		reg = <0x0 0x70410000 0x0 0x1000>;
 		interrupts = <0 10 0x04>;
-		nvidia,dma-request-selector = <&apbdma 5>;
 		iommus = <&smmu TEGRA_SWGROUP_PPCS>;
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -1930,7 +1925,6 @@
 	dtv@7000c300 {
 		compatible = "nvidia,tegra210-dtv";
 		reg = <0x0 0x7000c300 0x0 0x100>;
-		nvidia,dma-request-selector = <11>;
 		dmas = <&apbdma 11>;
 		dma-names = "rx";
 		status = "disabled";

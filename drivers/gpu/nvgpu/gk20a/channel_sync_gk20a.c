@@ -972,9 +972,7 @@ struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c)
 	return gk20a_channel_semaphore_create(c);
 }
 
-bool gk20a_channel_sync_needs_sync_framework(struct channel_gk20a *c)
+bool gk20a_channel_sync_needs_sync_framework(struct gk20a *g)
 {
-	if (gk20a_platform_has_syncpoints(c->g))
-		return false;
-	return true;
+	return !gk20a_platform_has_syncpoints(g);
 }

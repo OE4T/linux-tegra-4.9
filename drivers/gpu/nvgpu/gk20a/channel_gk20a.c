@@ -2468,7 +2468,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			return -EINVAL;
 
 		need_sync_framework = force_need_sync_fence ||
-			gk20a_channel_sync_needs_sync_framework(c) ||
+			gk20a_channel_sync_needs_sync_framework(g) ||
 			(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE &&
 			(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT ||
 			 flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET));

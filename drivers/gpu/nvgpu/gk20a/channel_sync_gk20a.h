@@ -99,7 +99,7 @@ struct gk20a_channel_sync {
 
 void gk20a_channel_sync_destroy(struct gk20a_channel_sync *sync);
 struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c);
-bool gk20a_channel_sync_needs_sync_framework(struct channel_gk20a *c);
+bool gk20a_channel_sync_needs_sync_framework(struct gk20a *g);
 
 #ifdef CONFIG_SYNC
 void gk20a_channel_cancel_pending_sema_waits(struct gk20a *g);

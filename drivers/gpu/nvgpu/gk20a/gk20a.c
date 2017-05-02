@@ -461,6 +461,25 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	if (gk20a_platform_has_syncpoints(g))
 		gpu->flags |= NVGPU_GPU_FLAGS_HAS_SYNCPOINTS;
 
+	/*
+	 * Railgating needs job tracking which prevents fast submits. They're
+	 * supported otherwise, provided that the user doesn't request anything
+	 * that depends on job tracking. (Here, fast means strictly no
+	 * metadata, just the gpfifo contents are copied and gp_put updated).
+	 */
+	if (!platform->can_railgate)
+		gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_SUBMIT_NO_JOBTRACKING;
+
+	/*
+	 * Railgating and sync framework require deferred job cleanup which
+	 * prevents deterministic submits. They're supported otherwise,
+	 * provided that the user doesn't request anything that depends on
+	 * deferred cleanup.
+	 */
+	if (!platform->can_railgate
+	    && !gk20a_channel_sync_needs_sync_framework(g))
+		gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_SUBMIT_FULL;
+
 	gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_USERSPACE_MANAGED_AS;
 	gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_TSG;
 	gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_MAP_COMPBITS;

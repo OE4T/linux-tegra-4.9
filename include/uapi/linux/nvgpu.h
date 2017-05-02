@@ -137,6 +137,10 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_SUPPORT_FECS_CTXSW_TRACE	(1ULL << 16)
 /* NVGPU_AS_IOCTL_MAP_BUFFER_COMPBITS is available */
 #define NVGPU_GPU_FLAGS_SUPPORT_MAP_COMPBITS		(1ULL << 17)
+/* Fast deterministic submits with no job tracking are supported */
+#define NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_SUBMIT_NO_JOBTRACKING (1ULL << 18)
+/* Deterministic submits are supported even with job tracking */
+#define NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_SUBMIT_FULL (1ULL << 19)
 
 struct nvgpu_gpu_characteristics {
 	__u32 arch;
@@ -1348,8 +1352,22 @@ struct nvgpu_alloc_gpfifo_args {
 struct nvgpu_alloc_gpfifo_ex_args {
 	__u32 num_entries;
 	__u32 num_inflight_jobs;
-#define NVGPU_ALLOC_GPFIFO_EX_FLAGS_VPR_ENABLED		(1 << 0) /* set owner channel of this gpfifo as a vpr channel */
-#define NVGPU_ALLOC_GPFIFO_EX_FLAGS_DETERMINISTIC	(1 << 1) /* channel shall exhibit deterministic behavior in the submit path */
+/* Set owner channel of this gpfifo as a vpr channel. */
+#define NVGPU_ALLOC_GPFIFO_EX_FLAGS_VPR_ENABLED		(1 << 0)
+/*
+ * Channel shall exhibit deterministic behavior in the submit path.
+ *
+ * With this flag, any submits with in-kernel job tracking also require that
+ * num_inflight_jobs is nonzero, and additionally that
+ * NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_SUBMIT_FULL is found in gpu
+ * characteristics.flags.
+ *
+ * Note that fast submits (with no in-kernel job tracking) are also
+ * deterministic and are supported if the characteristics flags contain
+ * NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_SUBMIT_NO_JOBTRACKING; this flag or
+ * num_inflight_jobs are not necessary in that case.
+ */
+#define NVGPU_ALLOC_GPFIFO_EX_FLAGS_DETERMINISTIC	(1 << 1)
 	__u32 flags;
 	__u32 reserved[5];
 };

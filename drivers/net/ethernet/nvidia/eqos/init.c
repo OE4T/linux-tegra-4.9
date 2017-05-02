@@ -713,7 +713,7 @@ int eqos_probe(struct platform_device *pdev)
 	int tx_irqs[MAX_CHANS];
 	struct hw_if_struct *hw_if = NULL;
 	struct desc_if_struct *desc_if = NULL;
-	struct resource *res, *pads;
+	struct resource *res;
 	const struct of_device_id *match;
 	struct device_node *node = pdev->dev.of_node;
 	u8 mac_addr[6];
@@ -961,21 +961,12 @@ int eqos_probe(struct platform_device *pdev)
 	get_dt_u32(pdata, "nvidia,eth_iso_enable", &pdt_cfg->eth_iso_enable, 0,
 		1);
 
-	pads = platform_get_resource_byname(pdev, IORESOURCE_MEM, "eqos_pads");
-	pdata->pads = devm_ioremap_nocache(&pdev->dev, pads->start,
-			resource_size(pads));
-	if (!(pdata->pads)) {
-		dev_err(&pdev->dev, "Failed to map PAD registers\n");
-		return -EADDRNOTAVAIL;
-	}
 #ifndef DISABLE_TRISTATE
-	if (pdata->prod_list) {
-		if (tegra_prod_set_by_name(&pdata->pads, "tx_tristate_enable",
-							pdata->prod_list)) {
-			dev_info(&pdata->pdev->dev,
-					"failed to enable pad prod settings\n");
-		}
-	}
+	/* enable tx tri state to save power during init */
+	ret = pinctrl_pm_select_idle_state(&pdev->dev);
+	if (ret < 0)
+		dev_err(&pdev->dev, "setting tx_tristate_enable \
+			state failed with %d\n",ret);
 #endif
 	pdata->num_chans = num_chans;
 	pdata->rx_buffer_len = EQOS_RX_BUF_LEN;

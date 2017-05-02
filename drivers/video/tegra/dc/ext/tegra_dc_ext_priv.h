@@ -145,7 +145,7 @@ extern struct class *tegra_dc_ext_class;
 
 extern int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 id,
 				   struct tegra_dc_dmabuf **handle,
-				   dma_addr_t *phys_addr, u32 map_buffer_flag);
+				   dma_addr_t *phys_addr);
 
 extern int tegra_dc_ext_get_cursor(struct tegra_dc_ext_user *user);
 extern int tegra_dc_ext_put_cursor(struct tegra_dc_ext_user *user);

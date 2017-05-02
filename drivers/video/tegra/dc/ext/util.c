@@ -26,7 +26,7 @@
 
 int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 fd,
 			    struct tegra_dc_dmabuf **dc_buf,
-			    dma_addr_t *phys_addr, u32 map_buffer_flag)
+			    dma_addr_t *phys_addr)
 {
 	struct tegra_dc_ext *ext = user->ext;
 	struct tegra_dc_dmabuf *dc_dmabuf;
@@ -50,7 +50,7 @@ int tegra_dc_ext_pin_window(struct tegra_dc_ext_user *user, u32 fd,
 		goto attach_fail;
 
 	dc_dmabuf->sgt = dma_buf_map_attachment(dc_dmabuf->attach,
-		map_buffer_flag);
+						DMA_TO_DEVICE);
 	if (IS_ERR_OR_NULL(dc_dmabuf->sgt))
 		goto sgt_fail;
 

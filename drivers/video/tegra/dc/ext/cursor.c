@@ -143,8 +143,7 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 
 	old_handle = ext->cursor.cur_handle;
 
-	ret = tegra_dc_ext_pin_window(user, args->buff_id,
-		&handle, &phys_addr, DMA_TO_DEVICE);
+	ret = tegra_dc_ext_pin_window(user, args->buff_id, &handle, &phys_addr);
 	if (ret)
 		goto unlock;
 

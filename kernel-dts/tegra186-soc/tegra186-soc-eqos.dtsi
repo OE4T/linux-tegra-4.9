@@ -18,6 +18,7 @@
  *
  */
 
+#include <dt-bindings/pinctrl/pinctrl-tegra.h>
 
 #define MAKE_EQOS_TRIP(name, temp, hyst) \
 	eqos_##name: eqos-##name@temp { \
@@ -35,11 +36,30 @@
 
 
 / {
-        ether_qos@2490000 {
-                compatible = "nvidia,eqos";
-                reg = <0x0 0x02490000 0x0 0x10000        /* EQOS Base Register */
-		       0x0 0x02439000 0x0 0x00000074>;   /* PADS registers */
-		reg-names = "eqos_base", "eqos_pads";
+
+	pinmux@2430000 {
+		eqos_tx_tri_state_idle: eqos_idle {
+			eqos {
+				nvidia,pins = "eqos_td3_pe4","eqos_td2_pe3",
+						"eqos_td1_pe2","eqos_td0_pe1",
+						"eqos_txc_pe0","eqos_tx_ctl_pe5";
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+			};
+		};
+		eqos_tx_tri_state_default: eqos_default {
+			eqos {
+				nvidia,pins = "eqos_td3_pe4","eqos_td2_pe3",
+						"eqos_td1_pe2","eqos_td0_pe1",
+						"eqos_txc_pe0","eqos_tx_ctl_pe5";
+				nvidia,tristate = <TEGRA_PIN_DISABLE>;
+			};
+		};
+	};
+
+	ether_qos@2490000 {
+		compatible = "nvidia,eqos";
+		reg = <0x0 0x02490000 0x0 0x10000>;    /* EQOS Base Register */
+		reg-names = "eqos_base";
 		interrupts = 	<0 194 0x4>,	/* common */
 				<0 195 0x4>,	/* power */
 				<0 190 0x4>,	/* rx0 */
@@ -66,6 +86,9 @@
 		iommus = <&smmu TEGRA_SID_EQOS>;
 		phy-mode = "rgmii";
 		status = "disabled";
+		pinctrl-names = "idle", "default";
+		pinctrl-0 = <&eqos_tx_tri_state_idle>;
+		pinctrl-1 = <&eqos_tx_tri_state_default>;
 		eqos_cool_dev: eqos-cool-dev {
 			cooling-min-state = <0>;
 			cooling-max-state = <5>;

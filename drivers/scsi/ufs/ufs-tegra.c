@@ -1220,6 +1220,14 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 		if (err)
 			goto out_host_free;
 
+		err = ufs_tegra_host_clk_enable(dev, "mphy_force_ls_mode",
+				ufs_tegra->mphy_force_ls_mode);
+		if (err)
+			goto out_host_free;
+		usleep_range(1000, 2000);
+		clk_disable_unprepare(ufs_tegra->mphy_force_ls_mode);
+		usleep_range(1000, 2000);
+
 		err = ufs_tegra_enable_ufs_clks(ufs_tegra);
 		if (err)
 			goto out_host_free;

@@ -3,7 +3,7 @@
  *  providing keys and microphone audio functionality
  *
  * Copyright (C) 2014 Google, Inc.
- * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -387,6 +387,8 @@ struct snd_atvr {
 #define ATVR_REMOVE 1
 #define TS_HOSTCMD_REPORT_SIZE 33
 #define JAR_HOSTCMD_REPORT_SIZE 19
+
+static void atvr_hid_miss_stats_inc(void);
 
 static int atvr_mic_ctrl(struct hid_device *hdev, bool enable)
 {
@@ -1523,6 +1525,7 @@ static void atvr_pepper_button_release(struct work_struct *work)
 
 	hid_report_raw_event(shdr_dev->hdev, 0, fake_button_up,
 			     sizeof(fake_button_up), 0);
+	atvr_hid_miss_stats_inc();
 }
 
 static int atvr_jarvis_break_events(struct hid_device *hdev,
@@ -1922,6 +1925,44 @@ static struct hid_driver atvr_driver = {
 	.remove = atvr_remove,
 };
 
+static int hid_miss_stats;
+static struct mutex hid_miss_stats_lock;
+
+static void atvr_hid_miss_stats_inc(void)
+{
+	mutex_lock(&hid_miss_stats_lock);
+	hid_miss_stats++;
+	mutex_unlock(&hid_miss_stats_lock);
+}
+
+static ssize_t atvr_show_hid_miss_stats(struct device_driver *driver, char *buf)
+{
+	int stats;
+
+	mutex_lock(&hid_miss_stats_lock);
+	stats = hid_miss_stats;
+	mutex_unlock(&hid_miss_stats_lock);
+
+	return sprintf(buf, "%d", stats);
+}
+
+static ssize_t atvr_store_hid_miss_stats(struct device_driver *driver,
+					 const char *buf, size_t count)
+{
+	int val;
+
+	if (!kstrtoint(buf, 0, &val) && val == 0) {
+		mutex_lock(&hid_miss_stats_lock);
+		hid_miss_stats = 0;
+		mutex_unlock(&hid_miss_stats_lock);
+	}
+
+	return count;
+}
+
+static DRIVER_ATTR(hid_miss_stats, S_IRUGO | S_IWUSR,
+		   atvr_show_hid_miss_stats, atvr_store_hid_miss_stats);
+
 static int atvr_init(void)
 {
 	int ret;
@@ -1932,9 +1973,19 @@ static int atvr_init(void)
 		pr_err("%s: failed to create shdr_mic_switch\n", __func__);
 
 	ret = hid_register_driver(&atvr_driver);
-	if (ret)
+	if (ret) {
 		pr_err("%s: can't register SHIELD Remote driver\n",
 			__func__);
+		goto err_hid_register;
+	}
+
+	mutex_init(&hid_miss_stats_lock);
+	ret = driver_create_file(&atvr_driver.driver,
+				 &driver_attr_hid_miss_stats);
+	if (ret) {
+		pr_err("%s: failed to create driver sysfs node\n", __func__);
+		goto err_attr_hid_miss_stats;
+	}
 
 #if (DEBUG_WITH_MISC_DEVICE == 1)
 	pcm_dev_node.minor = MISC_DYNAMIC_MINOR;
@@ -1972,6 +2023,14 @@ static int atvr_init(void)
 #endif
 
 	return ret;
+
+err_attr_hid_miss_stats:
+	hid_unregister_driver(&atvr_driver);
+	mutex_destroy(&hid_miss_stats_lock);
+err_hid_register:
+	switch_dev_unregister(&shdr_mic_switch);
+	mutex_destroy(&snd_cards_lock);
+	return ret;
 }
 
 static void atvr_exit(void)
@@ -1982,8 +2041,10 @@ static void atvr_exit(void)
 	misc_deregister(&pcm_dev_node);
 #endif
 
+	driver_remove_file(&atvr_driver.driver, &driver_attr_hid_miss_stats);
 	hid_unregister_driver(&atvr_driver);
 	mutex_destroy(&snd_cards_lock);
+	mutex_destroy(&hid_miss_stats_lock);
 }
 
 module_init(atvr_init);

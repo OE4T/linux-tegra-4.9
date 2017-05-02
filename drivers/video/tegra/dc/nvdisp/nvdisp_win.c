@@ -421,6 +421,7 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 	u32 win_options, win_params, swap_uv;
 	fixed20_12 h_offset, v_offset;
 	int err = 0;
+	uint64_t addr_flag = 0x0;
 
 	bool yuv = tegra_dc_is_yuv(win->fmt);
 	bool yuvp = tegra_dc_is_yuv_planar(win->fmt);
@@ -451,6 +452,8 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 		goto attr_fail;
 	}
 
+	if (tegra_dc_is_t19x())
+		addr_flag = nvdisp_t19x_get_addr_flag(win);
 	swap_uv = tegra_nvdisp_win_swap_uv(win);
 	nvdisp_win_write(win, tegra_dc_fmt(win->fmt), win_color_depth_r());
 	nvdisp_win_write(win, win_wgrp_params_swap_uv_f(swap_uv),
@@ -501,6 +504,7 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 		win_set_cropped_size_in_width_f(dfixed_trunc(win->w)),
 		win_set_cropped_size_in_r());
 
+	win->phys_addr |= addr_flag;
 	nvdisp_win_write(win, tegra_dc_reg_l32(win->phys_addr),
 		win_start_addr_r());
 	nvdisp_win_write(win, tegra_dc_reg_h32(win->phys_addr),
@@ -511,6 +515,9 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 		win_set_planar_storage_r());
 
 	if (yuvp) {
+		win->phys_addr_u |= addr_flag;
+		win->phys_addr_v |= addr_flag;
+
 		nvdisp_win_write(win, tegra_dc_reg_l32(win->phys_addr_u),
 			win_start_addr_u_r());
 		nvdisp_win_write(win, tegra_dc_reg_h32(win->phys_addr_u),
@@ -525,6 +532,7 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 			win_set_planar_storage_uv_uv1_f(win->stride_uv>>6),
 			win_set_planar_storage_uv_r());
 	} else if (yuvsp) {
+		win->phys_addr_u |= addr_flag;
 		nvdisp_win_write(win, tegra_dc_reg_l32(win->phys_addr_u),
 			win_start_addr_u_r());
 		nvdisp_win_write(win, tegra_dc_reg_h32(win->phys_addr_u),
@@ -582,6 +590,7 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 
 	if (tegra_dc_feature_has_interlace(dc, win->idx) &&
 		(dc->mode.vmode == FB_VMODE_INTERLACED)) {
+			win->phys_addr2 |= addr_flag;
 			nvdisp_win_write(win,
 				tegra_dc_reg_l32(win->phys_addr2),
 				win_start_addr_fld2_r());
@@ -589,6 +598,8 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 				tegra_dc_reg_h32(win->phys_addr2),
 				win_start_addr_fld2_hi_r());
 		if (yuvp) {
+			win->phys_addr_u2 |= addr_flag;
+			win->phys_addr_v2 |= addr_flag;
 			nvdisp_win_write(win,
 				tegra_dc_reg_l32(win->phys_addr_u2),
 				win_start_addr_fld2_u_r());
@@ -602,6 +613,7 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 				tegra_dc_reg_h32(win->phys_addr_v2),
 				win_start_addr_fld2_hi_v_r());
 		} else if (yuvsp) {
+			win->phys_addr_u2 |= addr_flag;
 			nvdisp_win_write(win,
 				tegra_dc_reg_l32(win->phys_addr_u2),
 				win_start_addr_fld2_u_r());

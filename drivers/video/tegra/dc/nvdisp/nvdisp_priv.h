@@ -1,7 +1,7 @@
 /*
  * t18x/drivers/video/tegra/nvdisp/nvdisp_priv.h
  *
- * Copyright (c) 2014 - 2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014 - 2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -145,6 +145,8 @@ static inline bool tegra_dc_is_yuv_12bpc(int fmt)
 }
 
 void nvdisp_clock_init(struct tegra_dc *dc);
+dma_addr_t __attribute__((weak))
+	nvdisp_t19x_get_addr_flag(struct tegra_dc_win *win);
 
 #endif
 

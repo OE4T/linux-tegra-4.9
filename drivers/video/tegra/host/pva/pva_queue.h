@@ -30,6 +30,7 @@ struct pva_parameter_ext {
 	dma_addr_t dma_addr;
 	size_t size;
 	struct dma_buf *dmabuf;
+	bool cvsram;
 };
 
 /**

@@ -256,6 +256,8 @@ static void pva_task_unpin_mem(struct pva_submit_task *task)
 
 static int pva_task_pin_mem(struct pva_submit_task *task)
 {
+	const u32 cvsram_base = 0x50000000;
+	const u32 cvsram_sz = 0x400000;
 	int err;
 	int i;
 
@@ -281,8 +283,23 @@ static int pva_task_pin_mem(struct pva_submit_task *task)
 
 	/* Pin input surfaces */
 	for (i = 0; i < task->num_input_surfaces; i++) {
-		PIN_MEMORY(task->input_surfaces_ext[i],
-			task->input_surfaces[i].surface_handle);
+		/* HACK: nvmap doesn't support CVNAS yet */
+		if (task->input_surfaces[i].surface_handle == 0) {
+			u32 offset = task->input_surfaces[i].surface_offset;
+
+			if (offset > cvsram_sz) {
+				err = -EINVAL;
+				goto err_map_handle;
+			}
+
+			task->input_surfaces_ext[i].dma_addr = cvsram_base;
+			task->input_surfaces_ext[i].size = cvsram_sz - offset;
+			task->input_surfaces_ext[i].cvsram = true;
+		} else {
+			PIN_MEMORY(task->input_surfaces_ext[i],
+				task->input_surfaces[i].surface_handle);
+		}
+
 		if (task->input_surfaces[i].roi_handle)
 			PIN_MEMORY(task->input_surface_rois_ext[i],
 				task->input_surfaces[i].roi_handle);
@@ -290,8 +307,23 @@ static int pva_task_pin_mem(struct pva_submit_task *task)
 
 	/* ...and then output surfaces */
 	for (i = 0; i < task->num_output_surfaces; i++) {
-		PIN_MEMORY(task->output_surfaces_ext[i],
-			task->output_surfaces[i].surface_handle);
+		/* HACK: nvmap doesn't support CVNAS yet */
+		if (task->output_surfaces[i].surface_handle == 0) {
+			u32 offset = task->output_surfaces[i].surface_offset;
+
+			if (offset > cvsram_sz) {
+				err = -EINVAL;
+				goto err_map_handle;
+			}
+
+			task->output_surfaces_ext[i].dma_addr = cvsram_base;
+			task->output_surfaces_ext[i].size = cvsram_sz - offset;
+			task->output_surfaces_ext[i].cvsram = true;
+		} else {
+			PIN_MEMORY(task->output_surfaces_ext[i],
+				task->output_surfaces[i].surface_handle);
+		}
+
 		if (task->output_surfaces[i].roi_handle)
 			PIN_MEMORY(task->output_surface_rois_ext[i],
 				task->output_surfaces[i].roi_handle);
@@ -370,9 +402,11 @@ static void pva_task_write_surfaces(struct pva_task_surface *hw_surface,
 	int i;
 
 	for (i = 0; i < count; i++) {
-		hw_surface[i].address = surface_ext[i].dma_addr;
+		hw_surface[i].address = surface_ext[i].dma_addr +
+			surface[i].surface_offset;
 		hw_surface[i].surface_size = surface_ext[i].size;
-		hw_surface[i].roi_addr = roi_ext[i].dma_addr;
+		hw_surface[i].roi_addr = roi_ext[i].dma_addr +
+			surface[i].roi_offset;
 		hw_surface[i].roi_size = roi_ext[i].size;
 		hw_surface[i].format = surface[i].format;
 		hw_surface[i].width = surface[i].width;
@@ -393,7 +427,7 @@ static void pva_task_write_surfaces(struct pva_task_surface *hw_surface,
 			hw_surface[i].address |= PVA_BIT64(39);
 
 		/* Only DRAM is supported currently */
-		hw_surface[i].memory = 0;
+		hw_surface[i].memory = surface_ext[i].cvsram;
 	}
 }
 

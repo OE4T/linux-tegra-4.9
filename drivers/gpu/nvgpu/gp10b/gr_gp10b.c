@@ -27,6 +27,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
+#include "gk20a/regops_gk20a.h"
 
 #include "gm20b/gr_gm20b.h"
 #include "gp10b/gr_gp10b.h"
@@ -2304,6 +2305,22 @@ static void gr_gp10b_write_preemption_ptr(struct gk20a *g,
 
 }
 
+int gr_gp10b_set_czf_bypass(struct gk20a *g, struct channel_gk20a *ch)
+{
+	struct nvgpu_dbg_gpu_reg_op ops;
+
+	ops.op     = REGOP(WRITE_32);
+	ops.type   = REGOP(TYPE_GR_CTX);
+	ops.status = REGOP(STATUS_SUCCESS);
+	ops.value_hi      = 0;
+	ops.and_n_mask_lo = gr_gpc0_prop_debug1_czf_bypass_m();
+	ops.and_n_mask_hi = 0;
+	ops.offset   = gr_gpc0_prop_debug1_r();
+	ops.value_lo = gr_gpc0_prop_debug1_czf_bypass_f(
+		g->gr.czf_bypass);
+
+	return __gr_gk20a_exec_ctx_ops(ch, &ops, 1, 1, 0, false);
+}
 
 void gp10b_init_gr(struct gpu_ops *gops)
 {
@@ -2355,4 +2372,5 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.load_smid_config = gr_gp10b_load_smid_config;
 	gops->gr.set_boosted_ctx = gr_gp10b_set_boosted_ctx;
 	gops->gr.update_boosted_ctx = gr_gp10b_update_boosted_ctx;
+	gops->gr.set_czf_bypass = gr_gp10b_set_czf_bypass;
 }

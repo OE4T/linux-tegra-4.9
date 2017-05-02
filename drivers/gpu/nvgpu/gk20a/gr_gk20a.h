@@ -320,6 +320,7 @@ struct gr_gk20a {
 	u32 alpha_cb_default_size;
 	u32 alpha_cb_size;
 	u32 timeslice_mode;
+	u32 czf_bypass;
 
 	struct gr_ctx_buffer_desc global_ctx_buffer[NR_GLOBAL_CTX_BUF];
 
@@ -563,6 +564,10 @@ struct nvgpu_dbg_gpu_reg_op;
 int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 			  struct nvgpu_dbg_gpu_reg_op *ctx_ops, u32 num_ops,
 			  u32 num_ctx_wr_ops, u32 num_ctx_rd_ops);
+int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
+			    struct nvgpu_dbg_gpu_reg_op *ctx_ops, u32 num_ops,
+			    u32 num_ctx_wr_ops, u32 num_ctx_rd_ops,
+			    bool ch_is_curr_ctx);
 int gr_gk20a_get_ctx_buffer_offsets(struct gk20a *g,
 				    u32 addr,
 				    u32 max_offsets,

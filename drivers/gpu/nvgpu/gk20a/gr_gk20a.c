@@ -3312,6 +3312,9 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		c->first_init = true;
 	}
 
+	if (g->ops.gr.set_czf_bypass)
+		g->ops.gr.set_czf_bypass(g, c);
+
 	gk20a_dbg_fn("done");
 	return 0;
 out:
@@ -8236,43 +8239,26 @@ bool gk20a_is_channel_ctx_resident(struct channel_gk20a *ch)
 	return ret;
 }
 
-int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
-			  struct nvgpu_dbg_gpu_reg_op *ctx_ops, u32 num_ops,
-			  u32 num_ctx_wr_ops, u32 num_ctx_rd_ops)
+int __gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
+			    struct nvgpu_dbg_gpu_reg_op *ctx_ops, u32 num_ops,
+			    u32 num_ctx_wr_ops, u32 num_ctx_rd_ops,
+			    bool ch_is_curr_ctx)
 {
 	struct gk20a *g = ch->g;
 	struct channel_ctx_gk20a *ch_ctx = &ch->ch_ctx;
 	bool gr_ctx_ready = false;
 	bool pm_ctx_ready = false;
 	struct nvgpu_mem *current_mem = NULL;
-	bool ch_is_curr_ctx, restart_gr_ctxsw = false;
 	u32 i, j, offset, v;
 	struct gr_gk20a *gr = &g->gr;
 	u32 max_offsets = gr->max_gpc_count * gr->max_tpc_per_gpc_count;
 	u32 *offsets = NULL;
 	u32 *offset_addrs = NULL;
 	u32 ctx_op_nr, num_ctx_ops[2] = {num_ctx_wr_ops, num_ctx_rd_ops};
-	int err, pass;
+	int err = 0, pass;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "wr_ops=%d rd_ops=%d",
 		   num_ctx_wr_ops, num_ctx_rd_ops);
-
-	/* disable channel switching.
-	 * at that point the hardware state can be inspected to
-	 * determine if the context we're interested in is current.
-	 */
-	err = gr_gk20a_disable_ctxsw(g);
-	if (err) {
-		nvgpu_err(g, "unable to stop gr ctxsw");
-		/* this should probably be ctx-fatal... */
-		goto cleanup;
-	}
-
-	restart_gr_ctxsw = true;
-
-	ch_is_curr_ctx = gk20a_is_channel_ctx_resident(ch);
-
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "is curr ctx=%d", ch_is_curr_ctx);
 
 	if (ch_is_curr_ctx) {
 		for (pass = 0; pass < 2; pass++) {
@@ -8497,12 +8483,40 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 	if (pm_ctx_ready)
 		nvgpu_mem_end(g, &ch_ctx->pm_ctx.mem);
 
-	if (restart_gr_ctxsw) {
-		int tmp_err = gr_gk20a_enable_ctxsw(g);
-		if (tmp_err) {
-			nvgpu_err(g, "unable to restart ctxsw!\n");
-			err = tmp_err;
-		}
+	return err;
+}
+
+int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
+			  struct nvgpu_dbg_gpu_reg_op *ctx_ops, u32 num_ops,
+			  u32 num_ctx_wr_ops, u32 num_ctx_rd_ops)
+{
+	struct gk20a *g = ch->g;
+	int err, tmp_err;
+	bool ch_is_curr_ctx;
+
+	/* disable channel switching.
+	 * at that point the hardware state can be inspected to
+	 * determine if the context we're interested in is current.
+	 */
+	err = gr_gk20a_disable_ctxsw(g);
+	if (err) {
+		nvgpu_err(g, "unable to stop gr ctxsw");
+		/* this should probably be ctx-fatal... */
+		return err;
+	}
+
+	ch_is_curr_ctx = gk20a_is_channel_ctx_resident(ch);
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "is curr ctx=%d",
+		  ch_is_curr_ctx);
+
+	err = __gr_gk20a_exec_ctx_ops(ch, ctx_ops, num_ops, num_ctx_wr_ops,
+				      num_ctx_rd_ops, ch_is_curr_ctx);
+
+	tmp_err = gr_gk20a_enable_ctxsw(g);
+	if (tmp_err) {
+		nvgpu_err(g, "unable to restart ctxsw!\n");
+		err = tmp_err;
 	}
 
 	return err;

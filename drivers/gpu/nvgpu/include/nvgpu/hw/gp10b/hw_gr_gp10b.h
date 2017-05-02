@@ -4270,4 +4270,20 @@ static inline u32 gr_gpcs_tc_debug0_limit_coalesce_buffer_size_m(void)
 {
 	return 0xff << 0;
 }
+static inline u32 gr_gpc0_prop_debug1_r(void)
+{
+	return 0x00500400;
+}
+static inline u32 gr_gpc0_prop_debug1_czf_bypass_f(u32 v)
+{
+	return (v & 0x3) << 14;
+}
+static inline u32 gr_gpc0_prop_debug1_czf_bypass_m(void)
+{
+	return 0x3 << 14;
+}
+static inline u32 gr_gpc0_prop_debug1_czf_bypass_init_v(void)
+{
+	return 0x00000001;
+}
 #endif

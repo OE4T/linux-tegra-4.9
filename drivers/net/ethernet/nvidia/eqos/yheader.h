@@ -91,6 +91,7 @@
 #include <linux/mdio.h>
 #include <linux/thermal.h>
 #include <linux/platform/tegra/ptp-notifier.h>
+#include <linux/pinctrl/consumer.h>
 
 #define L32(data) ((data)&0xFFFFFFFF)
 #define H32(data) (((data)&0xFFFFFFFF00000000)>>32)
@@ -1541,7 +1542,6 @@ struct eqos_prv_data {
 #endif
 	tegra_isomgr_handle isomgr_handle;
 	struct tegra_prod       *prod_list;
-	void __iomem *pads;
 };
 
 typedef enum {

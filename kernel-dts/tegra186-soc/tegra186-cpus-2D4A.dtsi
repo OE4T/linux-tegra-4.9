@@ -61,6 +61,7 @@
 			cpu-ipc = <1024>;
 			next-level-cache = <&L2_DENVER>;
 			capacity-dmips-mhz = <1024>;
+			sched-energy-costs = <&CPU_COST_DENVER &CPU_COST_DENVER>;
 		};
 
 		denver_1: cpu@1 {
@@ -72,6 +73,7 @@
 			cpu-ipc = <1024>;
 			next-level-cache = <&L2_DENVER>;
 			capacity-dmips-mhz = <1024>;
+			sched-energy-costs = <&CPU_COST_DENVER &CPU_COST_DENVER>;
 		};
 
 		cpu_a57_0: cpu@2 {
@@ -83,6 +85,7 @@
 			cpu-ipc = <752>;
 			next-level-cache = <&L2_A57>;
 			capacity-dmips-mhz = <752>;
+			sched-energy-costs = <&CPU_COST_A57 &CPU_COST_A57>;
 		};
 
 		cpu_a57_1: cpu@3 {
@@ -94,6 +97,7 @@
 			cpu-ipc = <752>;
 			next-level-cache = <&L2_A57>;
 			capacity-dmips-mhz = <752>;
+			sched-energy-costs = <&CPU_COST_A57 &CPU_COST_A57>;
 		};
 
 		cpu_a57_2: cpu@4 {
@@ -105,6 +109,7 @@
 			cpu-ipc = <752>;
 			next-level-cache = <&L2_A57>;
 			capacity-dmips-mhz = <752>;
+			sched-energy-costs = <&CPU_COST_A57 &CPU_COST_A57>;
 		};
 
 		cpu_a57_3: cpu@5 {
@@ -116,6 +121,7 @@
 			cpu-ipc = <752>;
 			next-level-cache = <&L2_A57>;
 			capacity-dmips-mhz = <752>;
+			sched-energy-costs = <&CPU_COST_A57 &CPU_COST_A57>;
 		};
 
 		L2_A57: l2-cache0 {
@@ -149,4 +155,6 @@
 		interrupts = <0 290 0x4>;
 		interrupt-affinity = <&{/cpus/cpu@0}>;
 	};
+
+	#include "tegra186-cpus-energy.dtsi"
 };

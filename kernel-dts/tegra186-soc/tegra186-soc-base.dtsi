@@ -154,12 +154,10 @@
 			gpu_domain {
 				address-space = <&gpu_as>;
 				sid-list = <TEGRA_SID_GPUB>;
-				sid-list-len = <1>;
 			};
 			host1x_domain {
 				address-space = <&host1x_as>;
 				sid-list = <TEGRA_SID(HC)>;
-				sid-list-len = <1>;
 			};
 			host1x_client_domain {
 				address-space = <&host1x_client_as>;
@@ -170,133 +168,107 @@
 					    TEGRA_SID(RCE_1X)
 					    TEGRA_SID(SE) TEGRA_SID(SE1)
 					    TEGRA_SID(SE2) TEGRA_SID(SE3)>;
-				sid-list-len = <15>;
 			};
 			host1x0_domain {
 				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX0>;
-				sid-list-len = <1>;
 			};
 			host1x1_domain {
 				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX1>;
-				sid-list-len = <1>;
 			};
 			host1x2_domain {
 				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX2>;
-				sid-list-len = <1>;
 			};
 			host1x3_domain {
 				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX3>;
-				sid-list-len = <1>;
 			};
 			host1x4_domain {
 				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX4>;
-				sid-list-len = <1>;
 			};
 			host1x5_domain {
 				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX5>;
-				sid-list-len = <1>;
 			};
 			host1x6_domain {
 				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX6>;
-				sid-list-len = <1>;
 			};
 			host1x7_domain {
 				address-space = <&host1x_client_as>;
 				sid-list = <TEGRA_SID_HOST1X_CTX7>;
-				sid-list-len = <1>;
 			};
 
 			hda_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_HDA>;
-				sid-list-len = <1>;
 			};
 			sdmmc1a_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_SDMMC1A>;
-				sid-list-len = <1>;
 			};
 			sdmmc2a_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_SDMMC2A>;
-				sid-list-len = <1>;
 			};
 			sdmmc3a_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_SDMMC3A>;
-				sid-list-len = <1>;
 			};
 			sdmmc4a_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_SDMMC4A>;
-				sid-list-len = <1>;
 			};
 			ape_domain {
 				address-space = <&ape_as>;
 				sid-list = <TEGRA_SID(APE) TEGRA_SID(EQOS)>;
-				sid-list-len = <2>;
 			};
 			xusb_host_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_XUSB_HOST>;
-				sid-list-len = <1>;
 			};
 			xusb_dev_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_XUSB_DEV>;
-				sid-list-len = <1>;
 			};
 			gpcdma_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_GPCDMA_0>;
-				sid-list-len = <1>;
 			};
 			bpmp_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_BPMP>;
-				sid-list-len = <1>;
 			};
 			sce_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_SCE>;
-				sid-list-len = <1>;
 			};
 			aon_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_AON>;
-				sid-list-len = <1>;
 			};
 			afi_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_AFI>;
-				sid-list-len = <1>;
 			};
 			sata2_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_SATA2>;
-				sid-list-len = <1>;
 			};
 			smmu_test_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_SMMU_TEST>;
-				sid-list-len = <1>;
 			};
 			ufshci_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_UFSHC>;
-				sid-list-len = <1>;
 			};
 			rtcpu_domain {
 				address-space = <&camera_as>;
 				sid-list = <TEGRA_SID_RCE TEGRA_SID_APE_CAM>;
-				sid-list-len = <2>;
 			};
 		};
 

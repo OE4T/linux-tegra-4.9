@@ -21,14 +21,6 @@ config TEGRA_MC
 	help
 	  Enable Tegra MC.
 
-config TEGRA_MC_DOMAINS
-	bool "Enable Tegra MC PM domain"
-	depends on TEGRA_MC
-	depends on PM_GENERIC_DOMAINS
-	default n
-	help
-	  When enabled, clock gates MC when it's not needed.
-
 config TEGRA_WAKEUP_MONITOR
 	bool "Enable tegra wakeup monitor"
 	depends on PM_SLEEP && ANDROID_INTF_ALARM_DEV

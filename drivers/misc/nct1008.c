@@ -173,6 +173,7 @@ struct nct1008_sensor_data {
 	struct thermal_zone_device *thz;
 	long current_hi_limit;
 	long current_lo_limit;
+	int shutdown_limit;
 	int temp;
 };
 
@@ -190,7 +191,6 @@ struct nct1008_data {
 	int conv_period_ms;
 	int nct_disabled;
 	int stop_workqueue;
-
 	struct nct1008_sensor_data sensors[SENSORS_COUNT];
 };
 
@@ -460,7 +460,7 @@ static ssize_t nct1008_set_temp_overheat(struct device *dev,
 	if (err < 0)
 		goto error;
 
-	data->plat_data.sensors[EXT].shutdown_limit = num;
+	data->sensors[EXT].shutdown_limit = num;
 
 	return count;
 error:
@@ -760,7 +760,7 @@ static int nct1008_shutdown_warning_get_cur_state(
 					unsigned long *cur_state)
 {
 	struct nct1008_data *data = cdev->devdata;
-	long limit = data->plat_data.sensors[EXT].shutdown_limit * 1000;
+	long limit = data->sensors[EXT].shutdown_limit * 1000;
 	int temp;
 
 	if (nct1008_get_temp_common(EXT, data, &temp))
@@ -779,7 +779,7 @@ static int nct1008_shutdown_warning_set_cur_state(
 					unsigned long cur_state)
 {
 	struct nct1008_data *data = cdev->devdata;
-	long limit = data->plat_data.sensors[EXT].shutdown_limit * 1000;
+	long limit = data->sensors[EXT].shutdown_limit * 1000;
 	int temp;
 
 	if (nct1008_get_temp_common(EXT, data, &temp))
@@ -1160,7 +1160,7 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 
 	/* Local temperature h/w shutdown limit */
 	value = temperature_to_value(pdata->extended_range,
-					pdata->sensors[LOC].shutdown_limit);
+					data->sensors[LOC].shutdown_limit);
 	ret = nct1008_write_reg(client, LOC_THERM_LIMIT, value);
 	if (ret)
 		goto error;
@@ -1195,7 +1195,7 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 
 	/* External temperature h/w shutdown limit. */
 	value = temperature_to_value(pdata->extended_range,
-					pdata->sensors[EXT].shutdown_limit);
+					data->sensors[EXT].shutdown_limit);
 	ret = nct1008_write_reg(client, EXT_THERM_LIMIT_WR, value);
 	if (ret)
 		goto error;
@@ -1385,7 +1385,8 @@ static int nct1008_dt_parse(struct i2c_client *client,
 	for_each_child_of_node(np, child_sensor) {
 		if (of_property_read_u32(child_sensor, "shutdown-limit", &proc))
 			goto err_parse_dt;
-		pdata->sensors[index].shutdown_limit = proc;
+
+		data->sensors[index].shutdown_limit = proc;
 		index++;
 	}
 

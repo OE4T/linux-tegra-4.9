@@ -41,17 +41,12 @@ enum nct1008_sensors {
 	SENSORS_COUNT
 };
 
-struct nct1008_sensor_platform_data {
-	int shutdown_limit;
-};
-
 struct nct1008_platform_data {
 	bool supported_hwrev;
 	int conv_rate;
 	int offset;
 	int alpha;
 	int beta;
-	struct nct1008_sensor_platform_data sensors[SENSORS_COUNT];
 	bool extended_range;
 	bool fuse_offset;
 };

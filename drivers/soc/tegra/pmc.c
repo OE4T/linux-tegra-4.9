@@ -3956,8 +3956,8 @@ static const u8 tegra210_cpu_powergates[] = {
 	TEGRA_POWERGATE_CPU3,
 };
 
-#define TEGRA210_IO_PAD_CONFIG(_pin, _npins, _name, _dpd,	\
-			       _vbit, _iopower, _reg)		\
+#define TEGRA210X_IO_PAD_CONFIG(_pin, _npins, _name, _dpd,	\
+			       _vbit, _iopower, _reg, _bds)	\
 	{							\
 		.name =  #_name,				\
 		.pins = {(_pin)},				\
@@ -3969,12 +3969,17 @@ static const u8 tegra210_cpu_powergates[] = {
 		.dpd_status_reg = TEGRA_PMC_IO_##_reg##_STATUS,	\
 		.dpd_timer_reg = TEGRA_PMC_SEL_DPD_TIM,		\
 		.dpd_sample_reg = TEGRA_PMC_IO_DPD_SAMPLE,	\
-		.bdsdmem_cfc = false,				\
+		.bdsdmem_cfc = _bds,				\
 		.io_pad_pwr_det_enable_reg = TEGRA_PMC_PWR_DET_ENABLE, \
 		.io_pad_pwr_det_val_reg = TEGRA_PMC_PWR_DET_VAL, \
 		.pad_uv_0 = TEGRA_IO_PAD_VOLTAGE_1800000UV,	\
 		.pad_uv_1 = TEGRA_IO_PAD_VOLTAGE_3300000UV,	\
 	},
+
+#define TEGRA210_IO_PAD_CONFIG(_pin, _npins, _name, _dpd,	\
+			       _vbit, _iopower, _reg)		\
+	TEGRA210X_IO_PAD_CONFIG(_pin, _npins, _name, _dpd,	\
+				_vbit, _iopower, _reg, false)
 
 /**
  * All IO pads of Tegra SoCs do not support the low power and multi level
@@ -4082,6 +4087,89 @@ static const struct tegra_pmc_soc tegra210_pmc_soc = {
 	.descs = tegra210_io_pads_pinctrl_desc,
 	.rmap = tegra210_register_map,
 	.has_misc_base_address = false,
+};
+
+#define TEGRA210B01_IO_PAD_LP_N_PV(_pin, _name, _dpd, _vbit, _io, _reg, _bds) \
+	TEGRA210X_IO_PAD_CONFIG(_pin, 1, _name, _dpd, _vbit, _io, _reg, _bds)
+
+#define TEGRA210B01_IO_PAD_DESC_LP_N_PV(_pin, _name, _dpd, _vbit, _io, _reg, \
+					_bds) \
+	TEGRA210_IO_PAD_DESC_LP(_pin, _name, _dpd, _reg)
+
+#define TEGRA210B01_IO_PAD_TABLE(_lponly_, _pvonly_, _lp_n_pv_)	\
+	_lp_n_pv_(0, audio, 17, 5, 5, DPD, false)	\
+	_lp_n_pv_(1, audio-hv, 29, 18, 18, DPD2, true)	\
+	_lp_n_pv_(2, cam, 4, 10, 10, DPD2, false)	\
+	_lponly_(3, csia, 0, DPD)			\
+	_lponly_(4, csib, 1, DPD)			\
+	_lponly_(5, csic, 10, DPD2)			\
+	_lponly_(6, csid, 11, DPD2)			\
+	_lponly_(7, csie, 12, DPD2)			\
+	_lponly_(8, csif, 13, DPD2)			\
+	_lp_n_pv_(9, dbg, 25, 19, 19, DPD, false)	\
+	_lponly_(10, debug-nonao, 26, DPD)		\
+	_lp_n_pv_(11, dmic, 18, 20, 20, DPD2, false)	\
+	_lponly_(12, dp, 19, DPD2)			\
+	_lponly_(13, dsi, 2, DPD)			\
+	_lponly_(14, dsib, 7, DPD2)			\
+	_lponly_(15, dsic, 8, DPD2)			\
+	_lponly_(16, dsid, 9, DPD2)			\
+	_lponly_(17, emmc, 3, DPD2)			\
+	_lponly_(18, emmc2, 5, DPD2)			\
+	_lp_n_pv_(19, gpio, 27, 21, 21, DPD, true)	\
+	_lponly_(20, hdmi, 28, DPD)			\
+	_lponly_(21, hsic, 19, DPD)			\
+	_lponly_(22, lvds, 25, DPD2)			\
+	_lponly_(23, mipi-bias, 3, DPD)			\
+	_lponly_(24, pex-bias, 4, DPD)			\
+	_lponly_(25, pex-clk1, 5, DPD)			\
+	_lponly_(26, pex-clk2, 6, DPD)			\
+	_pvonly_(27, pex-ctrl, 11, 11, DPD2)		\
+	_lp_n_pv_(28, sdmmc1, 1, 12, 12, DPD2, true)	\
+	_lp_n_pv_(29, sdmmc3, 2, 13, 13, DPD2, true)	\
+	_lp_n_pv_(30, spi, 14, 22, 22, DPD2, false)	\
+	_lp_n_pv_(31, spi-hv, 15, 23, 23, DPD2, false)	\
+	_lp_n_pv_(32, uart, 14, 2, 2, DPD, false)	\
+	_lponly_(33, usb0, 9, DPD)			\
+	_lponly_(34, usb1, 10, DPD)			\
+	_lponly_(35, usb2, 11, DPD)			\
+	_lponly_(36, usb3, 18, DPD)			\
+	_lponly_(37, usb-bias, 12, DPD)			\
+	_pvonly_(38, sys, 12, UINT_MAX, DPD)
+
+static const struct tegra_pmc_io_pad_soc tegra210b01_io_pads[] = {
+	TEGRA210B01_IO_PAD_TABLE(TEGRA210_IO_PAD_LPONLY, TEGRA210_IO_PAD_PVONLY,
+			      TEGRA210B01_IO_PAD_LP_N_PV)
+};
+
+static const struct pinctrl_pin_desc tegra210b01_io_pads_pinctrl_desc[] = {
+	TEGRA210B01_IO_PAD_TABLE(TEGRA210_IO_PAD_DESC_LP,
+		TEGRA210_IO_PAD_DESC_PV, TEGRA210B01_IO_PAD_DESC_LP_N_PV)
+};
+
+static const struct tegra_pmc_soc tegra210b01_pmc_soc = {
+	.num_powergates = ARRAY_SIZE(tegra210_powergates),
+	.powergates = tegra210_powergates,
+	.num_cpu_powergates = ARRAY_SIZE(tegra210_cpu_powergates),
+	.cpu_powergates = tegra210_cpu_powergates,
+	.has_tsense_reset = true,
+	.has_gpu_clamps = true,
+	.has_ps18 = true,
+	.has_bootrom_command = true,
+	.has_pclk_clock = true,
+	.has_interrupt_polarity_support = true,
+	.show_legacy_reset_status = true,
+	.has_reboot_base_address = false,
+	.skip_lp0_vector_setup = false,
+	.skip_legacy_pmc_init = false,
+	.skip_power_gate_debug_fs_init = false,
+	.skip_restart_register = false,
+	.skip_arm_pm_restart = false,
+	.num_io_pads = ARRAY_SIZE(tegra210b01_io_pads),
+	.io_pads = tegra210b01_io_pads,
+	.num_descs = ARRAY_SIZE(tegra210b01_io_pads_pinctrl_desc),
+	.descs = tegra210b01_io_pads_pinctrl_desc,
+	.rmap = tegra210_register_map,
 };
 
 /* Tegra 186 register map */
@@ -4268,6 +4356,10 @@ static const struct of_device_id tegra_pmc_match[] = {
 	{ .compatible = "nvidia,tegra194-pmc", .data = &tegra194_pmc_soc },
 	{ .compatible = "nvidia,tegra186-pmc", .data = &tegra186_pmc_soc },
 	{ .compatible = "nvidia,tegra210-pmc", .data = &tegra210_pmc_soc },
+	{
+		.compatible = "nvidia,tegra210b01-pmc",
+		.data = &tegra210b01_pmc_soc
+	},
 	{ .compatible = "nvidia,tegra132-pmc", .data = &tegra124_pmc_soc },
 	{ .compatible = "nvidia,tegra124-pmc", .data = &tegra124_pmc_soc },
 	{ .compatible = "nvidia,tegra114-pmc", .data = &tegra114_pmc_soc },

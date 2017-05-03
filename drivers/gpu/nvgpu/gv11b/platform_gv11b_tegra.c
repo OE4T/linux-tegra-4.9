@@ -30,6 +30,7 @@
 
 #include "platform_tegra.h"
 #include "gr_gv11b.h"
+#include "nvgpu_gpuid_t19x.h"
 
 
 static int gv11b_tegra_probe(struct device *dev)

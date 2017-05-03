@@ -194,6 +194,34 @@ static inline u32 gr_exception_en_fe_m(void)
 {
 	return 0x1 << 0;
 }
+static inline u32 gr_exception_en_fe_enabled_f(void)
+{
+	return 0x1;
+}
+static inline u32 gr_exception_en_gpc_m(void)
+{
+	return 0x1 << 24;
+}
+static inline u32 gr_exception_en_gpc_enabled_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 gr_exception_en_memfmt_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 gr_exception_en_memfmt_enabled_f(void)
+{
+	return 0x2;
+}
+static inline u32 gr_exception_en_ds_m(void)
+{
+	return 0x1 << 4;
+}
+static inline u32 gr_exception_en_ds_enabled_f(void)
+{
+	return 0x10;
+}
 static inline u32 gr_exception1_en_r(void)
 {
 	return 0x00400130;

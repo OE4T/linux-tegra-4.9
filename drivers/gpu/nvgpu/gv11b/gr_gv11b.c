@@ -284,6 +284,29 @@ static int gr_gv11b_handle_lrf_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 }
 
+static void gr_gv11b_enable_exceptions(struct gk20a *g)
+{
+	struct gr_gk20a *gr = &g->gr;
+	u32 reg_val;
+
+	/*
+	 * clear exceptions :
+	 * other than SM : hww_esr are reset in *enable_hww_excetpions*
+	 * SM            : cleared in *set_hww_esr_report_mask*
+	 */
+
+	/* enable exceptions */
+	gk20a_writel(g, gr_exception2_en_r(), 0x0); /* BE not enabled */
+	gk20a_writel(g, gr_exception1_en_r(), (1 << gr->gpc_count) - 1);
+
+	reg_val = gr_exception_en_fe_enabled_f() |
+			gr_exception_en_memfmt_enabled_f() |
+			gr_exception_en_ds_enabled_f() |
+			gr_exception_en_gpc_enabled_f();
+	gk20a_writel(g, gr_exception_en_r(), reg_val);
+
+}
+
 static int gr_gv11b_handle_cbu_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			bool *post_event, struct channel_gk20a *fault_ch,
 			u32 *hww_global_esr)
@@ -2375,6 +2398,7 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.handle_gcc_exception = gr_gv11b_handle_gcc_exception;
 	gops->gr.handle_tex_exception = gr_gv11b_handle_tex_exception;
 	gops->gr.enable_gpc_exceptions = gr_gv11b_enable_gpc_exceptions;
+	gops->gr.enable_exceptions = gr_gv11b_enable_exceptions;
 	gops->gr.mask_hww_warp_esr = gv11b_mask_hww_warp_esr;
 	gops->gr.pre_process_sm_exception =
 		gr_gv11b_pre_process_sm_exception;

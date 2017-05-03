@@ -344,14 +344,6 @@
 		int_mask   = <0xf3140>;
 		ecc_int_mask   = <0x1c00>;
 
-		/*
-		 * For A01 chips there is a bug in the way the GPU generates AXIDs.
-		 * This means there can be re-ordering the GPU did not expect for
-		 * sequences of writes to the same address. As such for A01, we
-		 * simply make sure all GPU writes are ordered.
-		 */
-		order-gpu-writes;
-
 		channels   = <4>;
 	};
 

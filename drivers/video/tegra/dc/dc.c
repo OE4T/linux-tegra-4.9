@@ -5218,6 +5218,8 @@ static bool _tegra_dc_enable(struct tegra_dc *dc)
 		return false;
 	}
 
+	tegra_dc_client_handle_event(dc, NOTIFY_DC_ENABLED_EVENT);
+
 	return true;
 }
 
@@ -5474,6 +5476,8 @@ static void _tegra_dc_disable(struct tegra_dc *dc)
 	pm_runtime_put(&dc->ndev->dev);
 
 	tegra_log_suspend_entry_time();
+
+	tegra_dc_client_handle_event(dc, NOTIFY_DC_DISABLED_EVENT);
 }
 
 void tegra_dc_disable(struct tegra_dc *dc)
@@ -6762,6 +6766,53 @@ int tegra_dc_get_numof_dispwindows(void)
 	return hw_data->nwins;
 }
 EXPORT_SYMBOL(tegra_dc_get_numof_dispwindows);
+
+/* tegra_dc_get_max_lines() - gets v_total for current mode
+ * @disp_id : the display id of the concerned head.
+ *
+ * Return : v_total if successful else error value.
+ */
+int tegra_dc_get_max_lines(int disp_id)
+{
+	int max_lines;
+	struct tegra_dc *dc;
+	struct tegra_dc_mode *m;
+
+	dc = tegra_dc_get_dc(disp_id);
+	if (!dc)
+		return -ENODEV;
+
+	m = &dc->mode;
+
+	max_lines = m->v_back_porch + m->v_active +
+			m->v_front_porch + m->v_sync_width;
+
+	return max_lines;
+}
+EXPORT_SYMBOL(tegra_dc_get_max_lines);
+
+/* tegra_dc_get_addr_info() - gets the base address for a head
+ * @disp_id : the display id of the concerned head.
+ * @res : ptr to the resource from the caller.
+ *
+ * Return : 0 if successful else error value.
+ */
+int tegra_dc_get_addr_info(int disp_id, struct resource *res)
+{
+	int ret;
+	struct tegra_dc *dc;
+
+	dc = tegra_dc_get_dc(disp_id);
+	if (!dc || !res)
+		return -ENODEV;
+
+	ret = of_address_to_resource(dc->ndev->dev.of_node, 0, res);
+	if (ret)
+		return ret;
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_dc_get_addr_info);
 
 int tegra_dc_get_numof_dispsors(void)
 {

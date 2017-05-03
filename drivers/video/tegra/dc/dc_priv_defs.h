@@ -63,6 +63,8 @@ static inline u32 ALL_UF_INT(void)
 #define EMC_BW_TO_FREQ(bw) (DDR_BW_TO_FREQ(bw) * 2)
 #endif
 
+#define MAX_NO_DC_CLIENTS 8
+
 struct tegra_dc;
 
 struct tegra_dc_blend {
@@ -225,6 +227,31 @@ struct tegra_dc_hw_data {
 	int nsors;
 	struct tegra_dc_pd_table *pd_table;
 	enum tegra_dc_hw version;
+};
+
+/*
+ * struct tegra_dc_client_data - stores all per client specific data for
+ * required for notifying when the requested events occur.
+ * @registered : flag to keep track of client's registration status.
+ * @usr_ctx : stores any context provided by the client.
+ * @callback_fn : array of callback functions requested by the client. The
+ * indices are controlled by the corresponding event_type.
+ */
+struct tegra_dc_client_data {
+	bool registered;
+	void *usr_ctx;
+	void *callback_fn[MAX_EVENT];
+};
+
+/*
+ * struct tegra_dc_clients_info - Used to store info regarding all the clients
+ * registered with a specific head.
+ * @client_id_map : a pool of resource for client ids under a specific head.
+ * @client_data : array storing all individual client's info.
+ */
+struct tegra_dc_clients_info {
+	unsigned long client_id_map;
+	struct tegra_dc_client_data client_data[MAX_NO_DC_CLIENTS];
 };
 
 struct tegra_dc {
@@ -434,5 +461,6 @@ struct tegra_dc {
 	u32 dbg_fe_count;
 	struct frame_lock_info frm_lck_info;
 	unsigned long act_req_mask;
+	struct tegra_dc_clients_info clients_info;
 };
 #endif

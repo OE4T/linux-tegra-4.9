@@ -194,4 +194,140 @@ int tegra_dc_get_panel_sync_rate(void);
 unsigned long tegra_dc_readl_exported(struct tegra_dc *, unsigned long);
 void tegra_dc_writel_exported(struct tegra_dc *, unsigned long, unsigned long);
 
+/* Forward Declaration. Please see below for structure details */
+struct tegra_dc_client;
+
+/*
+ * tegra_dc_notify_dc_enabled_event - callback function to notify client
+ * when dc is enabled.
+ * @disp_id: logical id represented by suffix to fb device, i.e. 0 for
+ * fb0, 1 for fb1 etc.
+ * @usr_ctx: Any user context if present.
+ *
+ * Return: void
+ */
+typedef void (*tegra_dc_notify_dc_enabled_event)(int disp_id, void *usr_ctx);
+
+/*
+ * tegra_dc_notify_dc_disabled_event- callback function to notify client
+ * when dc is disabled.
+ * @disp_id: logical id represented by suffix to fb device, i.e. 0 for
+ * fb0, 1 for fb1 etc.
+ * @usr_ctx: Any user context if present.
+ *
+ * Return: void
+ */
+typedef void (*tegra_dc_notify_dc_disabled_event)(int disp_id, void *usr_ctx);
+
+/*
+ * tegra_dc_notify_modeset_event - callback function to notify the
+ * client when modeset occurs.
+ * @disp_id: logical id represented by suffix to fb device, i.e. 0 for
+ * fb0, 1 for fb1 etc.
+ * @usr_ctx: Any user context if present.
+ */
+typedef void (*tegra_dc_notify_modeset_event)(int disp_id, void *usr_ctx);
+
+/*
+ * tegra_dc_get_max_lines() - Get the base address of a head
+ * @disp_id: logical id represented by suffix to fb device, i.e. 0 for
+ * fb0, 1 for fb1 etc.
+ *
+ * Return : v_total for the current display if successful else an error value.
+ */
+int tegra_dc_get_max_lines(int disp_id);
+
+/*
+ * tegra_dc_get_addr_info() - Get the base address of a head
+ * @disp_id: logical id represented by suffix to fb device, i.e. 0 for
+ * fb0, 1 for fb1 etc.
+ * @res : ptr to resource info to be filled by dc driver.
+ *
+ * Return : 0 if successful else an error value.
+ */
+int tegra_dc_get_addr_info(int disp_id, struct resource *res);
+
+/*
+ * tegra_dc_register_client() - used by clients to register to dc driver
+ * @client : pointer to client's data
+ *
+ * Return: 0 if no errors else corresponding error value.
+ */
+int tegra_dc_register_client(struct tegra_dc_client *client);
+
+/*
+ * tegra_dc_unregister_client() - used by clients to unregister to dc driver
+ * @client : pointer to client's data
+ *
+ * Return: 0 if no errors else corresponding error value.
+ */
+int tegra_dc_unregister_client(struct tegra_dc_client *client);
+
+/*
+ * enum tegra_dc_client_cllbck_event_type - defines all the supported events
+ * on which a dc_client can request a callback
+ * @NOTIFY_DC_ENABLED_EVENT : when dc is enabled
+ * @NOTIFY_DC_DISABLED_EVENT : when dc is disabled
+ * @NOTIFY_MODESET_EVENT : when a modeset occurs
+ * @MAX_EVENT : max no. of supported events.
+ */
+enum tegra_dc_client_cllbck_event_type {
+	NOTIFY_DC_ENABLED_EVENT,
+	NOTIFY_DC_DISABLED_EVENT,
+	NOTIFY_MODESET_EVENT,
+	MAX_EVENT
+};
+
+/*
+ * struct tegra_dc_client_callbck_data - data structure to be used by dc
+ * clients for registering callback functions.
+ * @callback_type : states the type of callback function.
+ * @reserved0 : reserved for future pointer.
+ * @reserved1 : reserved for future use (data_type of the future pointer above)
+ * @callback_fn : ptr to the callback function.
+ *
+ * This is meant to be scalable and backward compatible in future if we plan to
+ * extend the number of callback functions rather than going of fixed array or
+ * list of callback functions.
+ */
+struct tegra_dc_client_callbck_data {
+	u32 callback_type;
+	u64 reserved0;
+	u32 reserved1;
+	void *callback_fn;
+};
+
+/*
+ * struct tegra_dc_client - structure to be used by external clients
+ * registering with dc driver for notifications.
+ */
+struct tegra_dc_client {
+	/*
+	 * @disp_id: Used to specify the head to which the client has
+	 * registered to receive notifications. To be filled by the client.
+	 * This particularly is the fb#id of the head and not the hardware id
+	 * for the heads.
+	 */
+	int disp_id;
+	/*
+	 * @client_id: Allocated by dc driver to keep track of regsitered
+	 * clients per head.
+	 */
+	int client_id;
+	/*
+	 * @user_ctx: Stores any context provided by the client.
+	 */
+	void *usr_ctx;
+	/*
+	 * @nr_callbacks: Used to specify the number of callback functions
+	 * the client wants to register for.
+	 */
+	int nr_callbacks;
+	/*
+	 * @callback_data: Points to the callback data that has info regarding
+	 * the callback fucntions registered by the client.
+	 */
+	struct tegra_dc_client_callbck_data *callback_data;
+};
+
 #endif

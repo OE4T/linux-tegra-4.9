@@ -394,32 +394,3 @@ int tegra_pd_get_powergate_id(const struct of_device_id *dev_id)
 	return partition_id;
 }
 EXPORT_SYMBOL(tegra_pd_get_powergate_id);
-
-int tegra_pd_add_domain(struct of_device_id *dev_id,
-					struct generic_pm_domain *gpd)
-{
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-	struct tegra_pm_domain *tpd;
-	struct device_node *dn = NULL;
-
-	for_each_matching_node(dn, dev_id) {
-		tpd = to_tegra_pd(gpd);
-		if (!gpd)
-			return -ENOMEM;
-
-		gpd->name = (char *)dn->name;
-
-		if (of_property_read_bool(dn, "is_off"))
-			tpd->is_off = true;
-		if (of_property_read_u32(dn, "partition-id",
-						&tpd->partition_id))
-			return -EINVAL;
-		pm_genpd_init(gpd, NULL, tpd->is_off);
-		of_genpd_add_provider_simple(dn, gpd);
-
-		attach_subdomain(dn);
-	}
-#endif
-	return 0;
-}
-EXPORT_SYMBOL(tegra_pd_add_domain);

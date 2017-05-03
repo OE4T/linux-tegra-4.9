@@ -91,6 +91,7 @@ struct mc_error {
 #define E_SMMU       (1<<0)
 #define E_NO_STATUS  (1<<1) /* No status/addr */
 #define E_TWO_STATUS (1<<2) /* Two status registers, no addr */
+#define E_VPR        (1<<3) /* VPR violation */
 
 extern int mc_client_last;
 extern u32 mc_int_mask;

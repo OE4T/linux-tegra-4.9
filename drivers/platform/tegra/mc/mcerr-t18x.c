@@ -238,7 +238,7 @@ static const struct mc_error hub_mc_errors[] = {
 	       0, MC_ERR_STATUS, MC_ERR_ADR),
 	MC_ERR(MC_INT_DECERR_VPR,
 	       "MC request violates VPR requirements",
-	       0, MC_ERR_VPR_STATUS, MC_ERR_VPR_ADR),
+	       E_VPR, MC_ERR_VPR_STATUS, MC_ERR_VPR_ADR),
 	MC_ERR(MC_INT_SECERR_SEC,
 	       "MC request violated SEC carveout requirements",
 	       0, MC_ERR_SEC_STATUS, MC_ERR_SEC_ADR),
@@ -310,6 +310,18 @@ static void log_fault(int src_chan, const struct mc_error *fault)
 	phys_addr_t addr;
 	struct mc_client *client;
 	u32 status, write, secure, client_id;
+
+
+	if (fault->flags & E_VPR)
+		mcerr_pr("vpr base=%x:%x, size=%x, ctrl=%x, override:(%x, %x, %x, %x)\n",
+			 mc_readl(MC_VIDEO_PROTECT_BOM_ADR_HI),
+			 mc_readl(MC_VIDEO_PROTECT_BOM),
+			 mc_readl(MC_VIDEO_PROTECT_SIZE_MB),
+			 mc_readl(MC_VIDEO_PROTECT_REG_CTRL),
+			 mc_readl(MC_VIDEO_PROTECT_VPR_OVERRIDE),
+			 mc_readl(MC_VIDEO_PROTECT_VPR_OVERRIDE1),
+			 mc_readl(MC_VIDEO_PROTECT_GPU_OVERRIDE_0),
+			 mc_readl(MC_VIDEO_PROTECT_GPU_OVERRIDE_1));
 
 	if (fault->flags & E_NO_STATUS) {
 		mcerr_pr("MC fault - no status: %s\n", fault->msg);

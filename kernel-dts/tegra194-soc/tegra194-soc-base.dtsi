@@ -120,7 +120,7 @@
 			     <0 240 4>,
 			     <0 241 4>;
 
-		iso-smmu-id = <0>;
+		iso-smmu-id = <2>;
 
 		status = "disabled";
 

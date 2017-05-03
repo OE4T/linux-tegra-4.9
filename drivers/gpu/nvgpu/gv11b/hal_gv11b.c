@@ -191,6 +191,10 @@ static int gv11b_get_litter_value(struct gk20a *g, int value)
 	case GPU_LIT_FBPA_STRIDE:
 		ret = proj_fbpa_stride_v();
 		break;
+	case GPU_LIT_SM_PRI_STRIDE:
+		ret = proj_sm_stride_v();
+		break;
+
 	default:
 		break;
 	}

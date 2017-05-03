@@ -154,4 +154,8 @@ static inline u32 proj_scal_max_tpc_per_gpc_v(void)
 {
 	return 0x00000008;
 }
+static inline u32 proj_sm_stride_v(void)
+{
+	return 0x00000080;
+}
 #endif

@@ -29,17 +29,18 @@
 #include "nvcsi/nvcsi.h"
 #include "host1x/host1x.h"
 
-/* PG generate 1 pixel per nvcsi_clk:
- * ((width + hblank) * height + vblank) * fps = nvcsi_clk_freq
+/* PG generate 32 bit per nvcsi_clk:
+ * clks_per_line = width * bits_per_pixel / 32
+ * ((clks_per_line + hblank) * height + vblank) * fps * lanes = nvcsi_clk_freq
  *
  */
 const struct tpg_frmfmt tegra18x_csi_tpg_frmfmt[] = {
-	{{1280, 720}, V4L2_PIX_FMT_SRGGB10, 120, 183, 1},
-	{{1920, 1080}, V4L2_PIX_FMT_SRGGB10, 60, 181, 1},
-	{{3840, 2160}, V4L2_PIX_FMT_SRGGB10, 20, 900, 1},
-	{{1280, 720}, V4L2_PIX_FMT_RGB32, 60, 3351, 0xffff},
-	{{1920, 1080}, V4L2_PIX_FMT_RGB32, 30, 4315, 0xffff},
-	{{3840, 2160}, V4L2_PIX_FMT_RGB32, 20, 851, 0xffff},
+	{{1280, 720}, V4L2_PIX_FMT_SRGGB10, 120, 180, 100},
+	{{1920, 1080}, V4L2_PIX_FMT_SRGGB10, 60, 180, 100},
+	{{3840, 2160}, V4L2_PIX_FMT_SRGGB10, 20,  90, 100},
+	{{1280, 720}, V4L2_PIX_FMT_RGB32, 60, 210, 100},
+	{{1920, 1080}, V4L2_PIX_FMT_RGB32, 30, 120, 100},
+	{{3840, 2160}, V4L2_PIX_FMT_RGB32, 8, 120, 100},
 };
 
 #define TPG_PORT_IDX	0

@@ -2133,16 +2133,6 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 			virt_addr_hi);
 	}
 
-	nvgpu_mem_wr(g, mem, ctxsw_prog_main_image_zcull_o(),
-				ch_ctx->zcull_ctx.ctx_sw_mode);
-
-	if (ctxheader->gpu_va)
-		g->ops.gr.write_zcull_ptr(g, ctxheader,
-					ch_ctx->zcull_ctx.gpu_va);
-	else
-		g->ops.gr.write_zcull_ptr(g, mem,
-					ch_ctx->zcull_ctx.gpu_va);
-
 	/* Update main header region of the context buffer with the info needed
 	 * for PM context switching, including mode and possibly a pointer to
 	 * the PM backing store.

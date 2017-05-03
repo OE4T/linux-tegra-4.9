@@ -87,7 +87,7 @@ static const struct mc_error mc_errors[] = {
 	       0, MC_ERR_STATUS, MC_ERR_ADR),
 	MC_ERR(MC_INT_DECERR_VPR,
 	       "MC request violates VPR requirements",
-	       0, MC_ERR_VPR_STATUS, MC_ERR_VPR_ADR),
+	       E_VPR, MC_ERR_VPR_STATUS, MC_ERR_VPR_ADR),
 	MC_ERR(MC_INT_SECURITY_VIOLATION,
 	       "non secure access to secure region",
 	       0, MC_ERR_STATUS, MC_ERR_ADR),
@@ -109,11 +109,11 @@ static const struct mc_error mc_errors[] = {
 	       E_SMMU, MC_ERR_SEC_STATUS, MC_ERR_SEC_ADR),
 	MC_ERR(MC_INT_INVALID_SMMU_PAGE | MC_INT_DECERR_VPR,
 	       "VPR SMMU address translation fault",
-	       E_SMMU, MC_ERR_VPR_STATUS, MC_ERR_VPR_ADR),
+	       E_VPR | E_SMMU, MC_ERR_VPR_STATUS, MC_ERR_VPR_ADR),
 	MC_ERR(MC_INT_INVALID_SMMU_PAGE | MC_INT_DECERR_VPR |
 	       MC_INT_DECERR_EMEM,
 	       "EMEM decode error on PDE or PTE entry on VPR context",
-	       E_SMMU, MC_ERR_VPR_STATUS, MC_ERR_VPR_ADR),
+	       E_VPR | E_SMMU, MC_ERR_VPR_STATUS, MC_ERR_VPR_ADR),
 
 	/*
 	 * MTS access violation.
@@ -352,6 +352,17 @@ static void mcerr_default_print(const struct mc_error *err,
 {
 	if (smmu_info)
 		smmu_dump_pagetable(client->swgid, addr);
+
+	if (err->flags & E_VPR)
+		mcerr_pr("vpr base=%x:%x, size=%x, ctrl=%x, override:(%x, %x, %x, %x)\n",
+			 mc_readl(MC_VIDEO_PROTECT_BOM_ADR_HI),
+			 mc_readl(MC_VIDEO_PROTECT_BOM),
+			 mc_readl(MC_VIDEO_PROTECT_SIZE_MB),
+			 mc_readl(MC_VIDEO_PROTECT_REG_CTRL),
+			 mc_readl(MC_VIDEO_PROTECT_VPR_OVERRIDE),
+			 mc_readl(MC_VIDEO_PROTECT_VPR_OVERRIDE1),
+			 mc_readl(MC_VIDEO_PROTECT_GPU_OVERRIDE_0),
+			 mc_readl(MC_VIDEO_PROTECT_GPU_OVERRIDE_1));
 
 	mcerr_pr("(%d) %s: %s\n", client->swgid, client->name, err->msg);
 	mcerr_pr("  status = 0x%08x; addr = 0x%08llx\n", status,

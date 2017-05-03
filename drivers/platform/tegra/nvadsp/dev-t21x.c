@@ -25,6 +25,7 @@
 
 #include "dev.h"
 #include "amc.h"
+#include "dev-t21x.h"
 
 #ifdef CONFIG_PM
 static void nvadsp_clocks_disable(struct platform_device *pdev)

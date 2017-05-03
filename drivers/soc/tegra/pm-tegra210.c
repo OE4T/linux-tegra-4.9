@@ -44,9 +44,6 @@ enum tegra210_idle_index {
 	C7_IDX = 0,
 	CC6_IDX,
 	CC7_IDX,
-	SC2_IDX,
-	SC3_IDX,
-	SC4_IDX,
 	IDLE_STATE_MAX,
 };
 
@@ -120,45 +117,10 @@ static int tegra_bpmp_tolerate_idle(int cpu, int ccxtl, int scxtl)
 	return tegra_bpmp_send(MRQ_TOLERATE_IDLE, data, sizeof(data));
 }
 
-static int tegra_bpmp_do_idle(int cpu, int ccxtl, int scxtl)
-{
-	int32_t tl;
-	int32_t data[3];
-
-	data[0] = cpu_to_le32(cpu);
-	data[1] = cpu_to_le32(ccxtl);
-	data[2] = cpu_to_le32(scxtl);
-
-	return tegra_bpmp_send_receive_atomic(MRQ_DO_IDLE, data, sizeof(data),
-					      &tl, sizeof(tl)) ?: tl;
-}
-
 static int proc_idle_state_enter(int cpu, int idle_state)
 {
 	flowctrl_write_cc4_ctrl(cpu,
 		t210_pm_data.cc4_no_retention ? 0xfffffffd : 0xffffffff);
-
-	if (idle_state == t210_pm_data.idle_state_idx[C7_IDX]) {
-		/* C7 */
-	} else if (idle_state == t210_pm_data.idle_state_idx[CC6_IDX]) {
-		/* CC6 */
-		if (tegra_bpmp_do_idle(cpu, TEGRA_PM_CC6, TEGRA_PM_SC1))
-			return -EPERM;
-	} else if (idle_state == t210_pm_data.idle_state_idx[CC7_IDX]) {
-		/* CC7 */
-		if (tegra_bpmp_do_idle(cpu, TEGRA_PM_CC7, TEGRA_PM_SC1))
-			return -EPERM;
-	} else if (idle_state == t210_pm_data.idle_state_idx[SC2_IDX]) {
-		/* SC2 */
-		tegra_bpmp_tolerate_idle(cpu, TEGRA_PM_CC4, TEGRA_PM_SC2);
-	} else if (idle_state == t210_pm_data.idle_state_idx[SC3_IDX]) {
-		/* SC3 */
-		tegra_bpmp_tolerate_idle(cpu, TEGRA_PM_CC4, TEGRA_PM_SC3);
-	} else if (idle_state == t210_pm_data.idle_state_idx[SC4_IDX]) {
-		/* SC4 */
-		tegra_bpmp_tolerate_idle(cpu, TEGRA_PM_CC4, TEGRA_PM_SC4);
-	} else
-		return -EPERM;
 
 	return 0;
 }
@@ -166,23 +128,6 @@ static int proc_idle_state_enter(int cpu, int idle_state)
 static void proc_idle_state_exit(int cpu, int idle_state)
 {
 	flowctrl_write_cc4_ctrl(cpu, 0);
-
-	if (idle_state == t210_pm_data.idle_state_idx[C7_IDX]) {
-		/* C7 */
-	} else if (idle_state == t210_pm_data.idle_state_idx[CC6_IDX]) {
-		/* CC6 */
-	} else if (idle_state == t210_pm_data.idle_state_idx[CC7_IDX]) {
-		/* CC7 */
-	} else if (idle_state == t210_pm_data.idle_state_idx[SC2_IDX]) {
-		/* SC2 */
-		tegra_bpmp_tolerate_idle(cpu, TEGRA_PM_CC1, TEGRA_PM_SC1);
-	} else if (idle_state == t210_pm_data.idle_state_idx[SC3_IDX]) {
-		/* SC3 */
-		tegra_bpmp_tolerate_idle(cpu, TEGRA_PM_CC1, TEGRA_PM_SC1);
-	} else if (idle_state == t210_pm_data.idle_state_idx[SC4_IDX]) {
-		/* SC4 */
-		tegra_bpmp_tolerate_idle(cpu, TEGRA_PM_CC1, TEGRA_PM_SC1);
-	}
 }
 
 static int tegra210_cpu_pm_notifier(struct notifier_block *self,
@@ -557,12 +502,6 @@ static int __init tegra210_pm_init(void)
 				tegra_of_idle_state_idx_from_name("cc6");
 	t210_pm_data.idle_state_idx[CC7_IDX] =
 				tegra_of_idle_state_idx_from_name("cc7");
-	t210_pm_data.idle_state_idx[SC2_IDX] =
-				tegra_of_idle_state_idx_from_name("sc2");
-	t210_pm_data.idle_state_idx[SC3_IDX] =
-				tegra_of_idle_state_idx_from_name("sc3");
-	t210_pm_data.idle_state_idx[SC4_IDX] =
-				tegra_of_idle_state_idx_from_name("sc4");
 
 	tegra210_cpu_pm_register_notifier(&tegra210_cpu_pm_nb);
 	register_cpu_notifier(&tegra210_cpu_nb);

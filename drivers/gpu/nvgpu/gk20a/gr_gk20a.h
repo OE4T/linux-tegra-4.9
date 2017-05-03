@@ -710,6 +710,7 @@ int gr_gk20a_resume_contexts(struct gk20a *g,
 			      struct dbg_session_gk20a *dbg_s,
 			      int *ctx_resident_ch_fd);
 void gk20a_gr_enable_gpc_exceptions(struct gk20a *g);
+void gk20a_gr_enable_exceptions(struct gk20a *g);
 int gr_gk20a_inval_icache(struct gk20a *g, struct channel_gk20a *ch);
 int gr_gk20a_trigger_suspend(struct gk20a *g);
 int gr_gk20a_wait_for_pause(struct gk20a *g, struct warpstate *w_state);

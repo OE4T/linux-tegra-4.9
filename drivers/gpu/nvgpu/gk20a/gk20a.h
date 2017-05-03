@@ -314,6 +314,7 @@ struct gpu_ops {
 		int (*handle_gpc_gpccs_exception)(struct gk20a *g, u32 gpc,
 						u32 gpc_exception);
 		void (*enable_gpc_exceptions)(struct gk20a *g);
+		void (*enable_exceptions)(struct gk20a *g);
 		void (*create_gr_sysfs)(struct device *dev);
 		u32 (*get_lrf_tex_ltc_dram_override)(struct gk20a *g);
 		int (*record_sm_error_state)(struct gk20a *g,

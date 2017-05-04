@@ -77,7 +77,6 @@ void dump_mailbox_regs(void)
 	dev_info(&nvadsp_pdev->dev, "dumping hwmailbox registers ...\n");
 	PRINT_HWMBOX(recv_hwmbox());
 	PRINT_HWMBOX(send_hwmbox());
-	dev_info(&nvadsp_pdev->dev, "end of dump ....\n");
 }
 
 static void hwmboxq_init(struct hwmbox_queue *queue)

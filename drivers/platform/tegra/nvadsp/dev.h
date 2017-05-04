@@ -130,7 +130,9 @@ typedef int (*pm_init) (struct platform_device *pdev);
 
 struct nvadsp_chipdata {
 	struct nvadsp_hwmb	hwmb;
-	u32	            adsp_state_hwmbox;
+	u32			adsp_state_hwmbox;
+	u32			adsp_thread_hwmbox;
+	u32			adsp_irq_hwmbox;
 	reset_init		reset_init;
 	os_init			os_init;
 #ifdef CONFIG_PM

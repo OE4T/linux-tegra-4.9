@@ -69,6 +69,17 @@
 #define PLUGIN_SET_PARAMS_IDX	1
 #define PLUGIN_SEND_BYTES_IDX	11
 
+static const unsigned int tegra210_adsp_rates[] = {
+	8000, 11025, 12000, 16000, 22050,
+	24000, 32000, 44100, 48000
+};
+
+static const struct snd_pcm_hw_constraint_list
+	tegra210_adsp_rate_constraints = {
+	.count = ARRAY_SIZE(tegra210_adsp_rates),
+	.list = tegra210_adsp_rates,
+};
+
 static struct tegra210_adsp_app_desc {
 	const char *name;
 	const char *fw_name;
@@ -2234,6 +2245,15 @@ static int tegra210_adsp_admaif_hv_hw_params(
 	return ret;
 }
 #endif
+
+static int tegra210_adsp_fe_startup(struct snd_pcm_substream *substream,
+		struct snd_soc_dai *cpu_dai)
+{
+	return snd_pcm_hw_constraint_list(substream->runtime, 0,
+			SNDRV_PCM_HW_PARAM_RATE,
+			&tegra210_adsp_rate_constraints);
+}
+
 static int tegra210_adsp_fe_hw_params(struct snd_pcm_substream *substream,
 				struct snd_pcm_hw_params *params,
 				struct snd_soc_dai *dai)
@@ -2853,6 +2873,7 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 }
 static struct snd_soc_dai_ops tegra210_adsp_fe_dai_ops = {
 	.hw_params      = tegra210_adsp_fe_hw_params,
+	.startup	= tegra210_adsp_fe_startup,
 };
 
 static struct snd_soc_dai_ops tegra210_adsp_admaif_dai_ops = {

@@ -1364,6 +1364,9 @@ static int rt5659_headset_detect(struct snd_soc_codec *codec, int jack_insert)
 		case 1:
 			rt5659->jack_type = SND_JACK_HEADSET;
 			rt5659_enable_push_button_irq(codec, true);
+			snd_soc_update_bits(codec, RT5659_PWR_ANLG_2,
+				RT5659_PWR_BST1 | RT5659_PWR_BST1_P,
+				RT5659_PWR_BST1 | RT5659_PWR_BST1_P);
 			break;
 		default:
 			snd_soc_write(codec, RT5659_PWR_ANLG_1, reg_63);
@@ -1377,6 +1380,9 @@ static int rt5659_headset_detect(struct snd_soc_codec *codec, int jack_insert)
 	} else {
 		if (rt5659->jack_type == SND_JACK_HEADSET) {
 			rt5659_enable_push_button_irq(codec, false);
+			snd_soc_update_bits(codec, RT5659_PWR_ANLG_2,
+				RT5659_PWR_BST1 | RT5659_PWR_BST1_P, 0);
+		}
 		rt5659->jack_type = 0;
 
 		manage_dapm_pin(codec, "LDO2", false);
@@ -2489,16 +2495,16 @@ static const struct snd_soc_dapm_widget rt5659_dapm_widgets[] = {
 		RT5659_DMIC_2_EN_SFT, 0, set_dmic_power, SND_SOC_DAPM_POST_PMU),
 
 	/* Boost */
-	SND_SOC_DAPM_PGA("BST1", RT5659_PWR_ANLG_2,
-		RT5659_PWR_BST1_P_BIT, 0, NULL, 0),
+	SND_SOC_DAPM_PGA("BST1", SND_SOC_NOPM,
+		0, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("BST2", RT5659_PWR_ANLG_2,
 		RT5659_PWR_BST2_P_BIT, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("BST3", RT5659_PWR_ANLG_2,
 		RT5659_PWR_BST3_P_BIT, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("BST4", RT5659_PWR_ANLG_2,
 		RT5659_PWR_BST4_P_BIT, 0, NULL, 0),
-	SND_SOC_DAPM_SUPPLY("BST1 Power", RT5659_PWR_ANLG_2,
-		RT5659_PWR_BST1_BIT, 0, NULL, 0),
+	SND_SOC_DAPM_SUPPLY("BST1 Power", SND_SOC_NOPM,
+		0, 0, NULL, 0),
 	SND_SOC_DAPM_SUPPLY("BST2 Power", RT5659_PWR_ANLG_2,
 		RT5659_PWR_BST2_BIT, 0, NULL, 0),
 	SND_SOC_DAPM_SUPPLY("BST3 Power", RT5659_PWR_ANLG_2,

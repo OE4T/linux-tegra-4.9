@@ -1284,7 +1284,48 @@ static void get_adsp_state(void)
 	case ADSP_BOOTSTRAP2_OS_LOAD_COMPLETE:
 		msg = "bootstrap2: ADSP OS successfully loaded";
 		break;
-
+	case ADSP_SUSPEND_BEGINS:
+		msg = "suspend: begins";
+		break;
+	case ADSP_SUSPEND_MBX_SEND_COMPLETE:
+		msg = "suspend: mbox send complete";
+		break;
+	case ADSP_SUSPEND_DISABLED_TIMERS:
+		msg = "suspend: timers disabled";
+		break;
+	case ADSP_SUSPEND_DISABLED_INTS:
+		msg = "suspend: interrupts disabled";
+		break;
+	case ADSP_SUSPEND_ARAM_SAVED:
+		msg = "suspend: aram saved";
+		break;
+	case ADSP_SUSPEND_AMC_SAVED:
+		msg = "suspend: amc saved";
+		break;
+	case ADSP_SUSPEND_AMISC_SAVED:
+		msg = "suspend: amisc saved";
+		break;
+	case ADSP_SUSPEND_L1_CACHE_DISABLED:
+		msg = "suspend: l1 cache disabled";
+		break;
+	case ADSP_SUSPEND_L2_CACHE_DISABLED:
+		msg = "suspend: l2 cache disabled";
+		break;
+	case ADSP_RESUME_ADSP:
+		msg = "resume: beings";
+		break;
+	case ADSP_RESUME_AMISC_RESTORED:
+		msg = "resume: amisc restored";
+		break;
+	case ADSP_RESUME_AMC_RESTORED:
+		msg = "resume: amc restored";
+		break;
+	case ADSP_RESUME_ARAM_RESTORED:
+		msg = "resume: aram restored";
+		break;
+	case ADSP_RESUME_COMPLETE:
+		msg = "resume: complete";
+		break;
 	default:
 		msg = "Unrecognized ADSP state!!";
 		break;

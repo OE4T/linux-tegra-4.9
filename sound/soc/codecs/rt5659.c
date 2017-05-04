@@ -4137,7 +4137,7 @@ static int rt5659_i2c_probe(struct i2c_client *i2c,
 {
 	struct rt5659_platform_data *pdata = dev_get_platdata(&i2c->dev);
 	struct rt5659_priv *rt5659;
-	int ret;
+	int ret, jack_gpio;
 	unsigned int val;
 
 	rt5659 = devm_kzalloc(&i2c->dev, sizeof(struct rt5659_priv),
@@ -4146,6 +4146,7 @@ static int rt5659_i2c_probe(struct i2c_client *i2c,
 	if (rt5659 == NULL)
 		return -ENOMEM;
 
+	rt5659->i2c = i2c;
 	i2c_set_clientdata(i2c, rt5659);
 
 	if (pdata)
@@ -4326,7 +4327,14 @@ static int rt5659_i2c_probe(struct i2c_client *i2c,
 
 	INIT_DELAYED_WORK(&rt5659->jack_detect_work, rt5659_jack_detect_work);
 
-	if (i2c->irq) {
+	jack_gpio = of_get_gpio(rt5659->i2c->dev.of_node, 0);
+	if (gpio_is_valid(jack_gpio)) {
+		rt5659->i2c->irq = gpio_to_irq(jack_gpio);
+		dev_dbg(&i2c->dev, "irq = %d, assigned for jack interrupt handling\n",
+			rt5659->i2c->irq);
+	}
+
+	if (rt5659->i2c->irq) {
 		ret = devm_request_threaded_irq(&i2c->dev, i2c->irq, NULL,
 			rt5659_irq, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING
 			| IRQF_ONESHOT, "rt5659", rt5659);

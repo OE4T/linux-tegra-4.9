@@ -3784,6 +3784,11 @@ static int rt5659_suspend(struct snd_soc_codec *codec)
 
 	regcache_cache_only(rt5659->regmap, true);
 	regcache_mark_dirty(rt5659->regmap);
+	if (rt5659->i2c->irq) {
+		/* disable jack interrupts during system suspend */
+		disable_irq(rt5659->i2c->irq);
+	}
+
 	return 0;
 }
 
@@ -3793,6 +3798,10 @@ static int rt5659_resume(struct snd_soc_codec *codec)
 
 	regcache_cache_only(rt5659->regmap, false);
 	regcache_sync(rt5659->regmap);
+	if (rt5659->i2c->irq) {
+		rt5659_irq(0, rt5659);
+		enable_irq(rt5659->i2c->irq);
+	}
 
 	return 0;
 }

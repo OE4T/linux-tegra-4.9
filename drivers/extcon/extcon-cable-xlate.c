@@ -1,7 +1,7 @@
 /*
  * extcon-cable-xlate: Cable translator based on different cable states.
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Laxman Dewangan <ldewangan@nvidia.com>
  *
@@ -264,8 +264,8 @@ static struct ecx_platform_data *ecx_get_pdata_from_dt(
 	if (!pdata)
 		return ERR_PTR(-ENOMEM);
 
-	of_property_read_string(np, "extcon-name", &pdata->name);
-	if (!pdata->name)
+	ret = of_property_read_string(np, "extcon-name", &pdata->name);
+	if (ret < 0)
 		pdata->name = np->name;
 
 	ret = of_property_read_u32(np, "cable-insert-delay", &pval);

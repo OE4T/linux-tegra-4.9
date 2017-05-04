@@ -1,7 +1,7 @@
 /*
  * tegra210_amx_alt.h - Definitions for Tegra210 AMX driver
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -186,6 +186,7 @@ struct tegra210_amx {
 	int input_channels[TEGRA210_AMX_NUM_INPUTS];
 	int output_channels;
 	const struct tegra210_amx_soc_data *soc_data;
+	bool is_shutdown;
 };
 
 #endif

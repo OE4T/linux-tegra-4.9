@@ -95,6 +95,7 @@ int tegra_xbar_put_value_enum(struct snd_kcontrol *kcontrol,
 			struct snd_ctl_elem_value *ucontrol);
 bool tegra_xbar_volatile_reg(struct device *dev, unsigned int reg);
 int tegra_xbar_remove(struct platform_device *pdev);
+void tegra_xbar_shutdown(struct platform_device *pdev);
 int tegra_xbar_runtime_resume(struct device *dev);
 int tegra_xbar_runtime_suspend(struct device *dev);
 int tegra_xbar_suspend(struct device *dev);

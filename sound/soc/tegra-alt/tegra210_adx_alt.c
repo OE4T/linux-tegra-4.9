@@ -1,7 +1,7 @@
 /*
  * tegra210_adx_alt.c - Tegra210 ADX driver
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -266,11 +266,14 @@ static int tegra210_adx_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(adx->regmap, false);
-	regcache_sync(adx->regmap);
 
-	/* update the map ram */
-	tegra210_adx_update_map_ram(adx);
-	tegra210_adx_set_in_byte_mask(adx);
+	if (!adx->is_shutdown) {
+		regcache_sync(adx->regmap);
+
+		/* update the map ram */
+		tegra210_adx_update_map_ram(adx);
+		tegra210_adx_set_in_byte_mask(adx);
+	}
 
 	return 0;
 }
@@ -645,6 +648,7 @@ static int tegra210_adx_platform_probe(struct platform_device *pdev)
 	}
 
 	adx->soc_data = soc_data;
+	adx->is_shutdown = false;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
@@ -714,6 +718,13 @@ err:
 	return ret;
 }
 
+static void tegra210_adx_platform_shutdown(struct platform_device *pdev)
+{
+	struct tegra210_adx *adx = dev_get_drvdata(&pdev->dev);
+
+	adx->is_shutdown = true;
+}
+
 static int tegra210_adx_platform_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
@@ -740,6 +751,7 @@ static struct platform_driver tegra210_adx_driver = {
 	},
 	.probe = tegra210_adx_platform_probe,
 	.remove = tegra210_adx_platform_remove,
+	.shutdown = tegra210_adx_platform_shutdown,
 };
 module_platform_driver(tegra210_adx_driver);
 

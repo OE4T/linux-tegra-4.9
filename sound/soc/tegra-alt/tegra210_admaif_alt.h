@@ -176,6 +176,7 @@ struct tegra_admaif {
 	int *override_channels;
 	int *tx_mono_to_stereo;
 	int *rx_stereo_to_mono;
+	bool is_shutdown;
 };
 
 #endif

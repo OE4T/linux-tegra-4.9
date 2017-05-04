@@ -1,7 +1,7 @@
 /*
  * tegra210_ope_alt.h - Definitions for Tegra210 OPE driver
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -86,6 +86,7 @@ struct tegra210_ope {
 	struct regmap *peq_regmap;
 	struct regmap *mbdrc_regmap;
 	const struct tegra210_ope_soc_data *soc_data;
+	bool is_shutdown;
 };
 
 extern int tegra210_peq_init(struct platform_device *pdev, int id);

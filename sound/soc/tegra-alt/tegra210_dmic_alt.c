@@ -1,7 +1,7 @@
 /*
  * tegra210_dmic_alt.c - Tegra210 DMIC driver
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -123,7 +123,9 @@ static int tegra210_dmic_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(dmic->regmap, false);
-	regcache_sync(dmic->regmap);
+
+	if (!dmic->is_shutdown)
+		regcache_sync(dmic->regmap);
 
 	return 0;
 }
@@ -512,6 +514,7 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 	}
 
 	dmic->soc_data = soc_data;
+	dmic->is_shutdown = false;
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		dmic->clk_dmic = devm_clk_get(&pdev->dev, NULL);
@@ -651,6 +654,13 @@ err:
 	return ret;
 }
 
+static void tegra210_dmic_platform_shutdown(struct platform_device *pdev)
+{
+	struct tegra210_dmic *dmic = dev_get_drvdata(&pdev->dev);
+
+	dmic->is_shutdown = true;
+}
+
 static int tegra210_dmic_platform_remove(struct platform_device *pdev)
 {
 	struct tegra210_dmic *dmic;
@@ -682,6 +692,7 @@ static struct platform_driver tegra210_dmic_driver = {
 	},
 	.probe = tegra210_dmic_platform_probe,
 	.remove = tegra210_dmic_platform_remove,
+	.shutdown = tegra210_dmic_platform_shutdown,
 };
 module_platform_driver(tegra210_dmic_driver)
 

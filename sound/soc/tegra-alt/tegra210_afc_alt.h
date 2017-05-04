@@ -103,6 +103,7 @@ enum tegra210_afc_threshold_type {
 struct tegra210_afc {
 	struct regmap *regmap;
 	const struct tegra210_afc_soc_data *soc_data;
+	bool is_shutdown;
 
 	/* mandatory control to be set */
 	unsigned int dest_module_num;

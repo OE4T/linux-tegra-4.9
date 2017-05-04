@@ -1,7 +1,7 @@
 /*
  * tegra210_spdif_alt.c - Tegra210 SPDIF driver
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -116,7 +116,9 @@ static int tegra210_spdif_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(spdif->regmap, false);
-	regcache_sync(spdif->regmap);
+
+	if (!spdif->is_shutdown)
+		regcache_sync(spdif->regmap);
 
 	return 0;
 }
@@ -471,6 +473,7 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 	}
 
 	spdif->soc_data = soc_data;
+	spdif->is_shutdown = false;
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		spdif->clk_pll_a_out0 = devm_clk_get(&pdev->dev, "pll_a_out0");
 		if (IS_ERR(spdif->clk_pll_a_out0)) {
@@ -621,6 +624,13 @@ err:
 	return ret;
 }
 
+static void tegra210_spdif_platform_shutdown(struct platform_device *pdev)
+{
+	struct tegra210_spdif *spdif = dev_get_drvdata(&pdev->dev);
+
+	spdif->is_shutdown = true;
+}
+
 static int tegra210_spdif_platform_remove(struct platform_device *pdev)
 {
 	struct tegra210_spdif *spdif = dev_get_drvdata(&pdev->dev);
@@ -654,6 +664,7 @@ static struct platform_driver tegra210_spdif_driver = {
 	},
 	.probe = tegra210_spdif_platform_probe,
 	.remove = tegra210_spdif_platform_remove,
+	.shutdown = tegra210_spdif_platform_shutdown,
 };
 module_platform_driver(tegra210_spdif_driver);
 

@@ -273,6 +273,7 @@ struct tegra_xbar {
 	struct clk *clk_apb2ape;
 	struct regmap *regmap;
 	const struct tegra_xbar_soc_data *soc_data;
+	bool is_shutdown;
 };
 
 /* Extension of soc_bytes structure defined in sound/soc.h */

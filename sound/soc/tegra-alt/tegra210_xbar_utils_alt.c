@@ -279,7 +279,9 @@ int tegra_xbar_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(xbar->regmap, false);
-	regcache_sync(xbar->regmap);
+
+	if (!xbar->is_shutdown)
+		regcache_sync(xbar->regmap);
 
 	return 0;
 }
@@ -310,6 +312,12 @@ int tegra_xbar_suspend(struct device *dev)
 }
 EXPORT_SYMBOL_GPL(tegra_xbar_suspend);
 #endif
+
+void tegra_xbar_shutdown(struct platform_device *pdev)
+{
+	xbar->is_shutdown = true;
+}
+EXPORT_SYMBOL_GPL(tegra_xbar_shutdown);
 
 int tegra_xbar_remove(struct platform_device *pdev)
 {
@@ -355,6 +363,7 @@ int tegra_xbar_probe(struct platform_device *pdev,
 	}
 
 	xbar->soc_data = soc_data;
+	xbar->is_shutdown = false;
 
 	platform_set_drvdata(pdev, xbar);
 

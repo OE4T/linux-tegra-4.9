@@ -1,7 +1,7 @@
 /*
  * tegra210_mixer_alt.c - Tegra210 MIXER driver
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -99,7 +99,9 @@ static int tegra210_mixer_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(mixer->regmap, false);
-	regcache_sync(mixer->regmap);
+
+	if (!mixer->is_shutdown)
+		regcache_sync(mixer->regmap);
 
 	return 0;
 }
@@ -718,6 +720,7 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
 	}
 
 	mixer->soc_data = soc_data;
+	mixer->is_shutdown = false;
 	mixer->gain_coeff[0] = 0;
 	mixer->gain_coeff[1] = 0;
 	mixer->gain_coeff[2] = 0;
@@ -804,6 +807,13 @@ err:
 	return ret;
 }
 
+static void tegra210_mixer_platform_shutdown(struct platform_device *pdev)
+{
+	struct tegra210_mixer *mixer = dev_get_drvdata(&pdev->dev);
+
+	mixer->is_shutdown = true;
+}
+
 static int tegra210_mixer_platform_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
@@ -830,6 +840,7 @@ static struct platform_driver tegra210_mixer_driver = {
 	},
 	.probe = tegra210_mixer_platform_probe,
 	.remove = tegra210_mixer_platform_remove,
+	.shutdown = tegra210_mixer_platform_shutdown,
 };
 module_platform_driver(tegra210_mixer_driver);
 

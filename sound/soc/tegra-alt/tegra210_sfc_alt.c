@@ -1,7 +1,7 @@
 /*
  * tegra210_sfc_alt.c - Tegra210 SFC driver
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -86,7 +86,9 @@ static int tegra210_sfc_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(sfc->regmap, false);
-	regcache_sync(sfc->regmap);
+
+	if (!sfc->is_shutdown)
+		regcache_sync(sfc->regmap);
 
 	return 0;
 }
@@ -888,6 +890,7 @@ static int tegra210_sfc_platform_probe(struct platform_device *pdev)
 	}
 
 	sfc->soc_data = soc_data;
+	sfc->is_shutdown = false;
 
 	/* initialize default output srate */
 	sfc->srate_out = TEGRA210_SFC_FS48;
@@ -960,6 +963,13 @@ err:
 	return ret;
 }
 
+static void tegra210_sfc_platform_shutdown(struct platform_device *pdev)
+{
+	struct tegra210_sfc *sfc = dev_get_drvdata(&pdev->dev);
+
+	sfc->is_shutdown = true;
+}
+
 static int tegra210_sfc_platform_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
@@ -986,6 +996,7 @@ static struct platform_driver tegra210_sfc_driver = {
 	},
 	.probe = tegra210_sfc_platform_probe,
 	.remove = tegra210_sfc_platform_remove,
+	.shutdown = tegra210_sfc_platform_shutdown,
 };
 module_platform_driver(tegra210_sfc_driver)
 

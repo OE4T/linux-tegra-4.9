@@ -75,9 +75,12 @@ static int tegra210_ope_runtime_resume(struct device *dev)
 	regcache_cache_only(ope->regmap, false);
 	regcache_cache_only(ope->peq_regmap, false);
 	regcache_cache_only(ope->mbdrc_regmap, false);
-	regcache_sync(ope->regmap);
-	regcache_sync(ope->peq_regmap);
-	regcache_sync(ope->mbdrc_regmap);
+
+	if (!ope->is_shutdown) {
+		regcache_sync(ope->regmap);
+		regcache_sync(ope->peq_regmap);
+		regcache_sync(ope->mbdrc_regmap);
+	}
 
 	return 0;
 }
@@ -361,6 +364,7 @@ static int tegra210_ope_platform_probe(struct platform_device *pdev)
 	}
 
 	ope->soc_data = soc_data;
+	ope->is_shutdown = false;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {
@@ -448,6 +452,13 @@ err:
 	return ret;
 }
 
+static void tegra210_ope_platform_shutdown(struct platform_device *pdev)
+{
+	struct tegra210_ope *ope = dev_get_drvdata(&pdev->dev);
+
+	ope->is_shutdown = true;
+}
+
 static int tegra210_ope_platform_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
@@ -474,6 +485,7 @@ static struct platform_driver tegra210_ope_driver = {
 	},
 	.probe = tegra210_ope_platform_probe,
 	.remove = tegra210_ope_platform_remove,
+	.shutdown = tegra210_ope_platform_shutdown,
 };
 module_platform_driver(tegra210_ope_driver)
 

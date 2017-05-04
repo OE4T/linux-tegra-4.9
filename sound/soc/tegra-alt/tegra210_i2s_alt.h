@@ -234,6 +234,7 @@ struct tegra210_i2s {
 	unsigned int loopback;
 	bool enable_cya;
 	unsigned int rx_fifo_th; /* should be programmed interms of frames */
+	bool is_shutdown;
 };
 
 #endif

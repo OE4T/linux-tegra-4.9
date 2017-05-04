@@ -258,7 +258,8 @@ static int tegra_admaif_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(admaif->regmap, false);
-	regcache_sync(admaif->regmap);
+	if (!admaif->is_shutdown)
+		regcache_sync(admaif->regmap);
 
 	return 0;
 }
@@ -319,6 +320,11 @@ static int tegra_admaif_prepare(struct snd_pcm_substream *substream,
 static int tegra_admaif_startup(struct snd_pcm_substream *substream,
 				struct snd_soc_dai *dai)
 {
+	struct tegra_admaif *admaif = snd_soc_dai_get_drvdata(dai);
+
+	if (admaif->is_shutdown)
+		return -ENODEV;
+
 	return 0;
 }
 
@@ -1048,6 +1054,7 @@ static int tegra_admaif_probe(struct platform_device *pdev)
 	admaif->refcnt = 0;
 
 	admaif->soc_data = (struct tegra_admaif_soc_data *)match->data;
+	admaif->is_shutdown = false;
 
 	admaif->capture_dma_data = devm_kzalloc(&pdev->dev,
 			sizeof(struct tegra_alt_pcm_dma_params) *
@@ -1230,6 +1237,13 @@ err:
 	return ret;
 }
 
+static void tegra_admaif_platform_shutdown(struct platform_device *pdev)
+{
+	struct tegra_admaif *admaif = dev_get_drvdata(&pdev->dev);
+
+	admaif->is_shutdown = true;
+}
+
 static int tegra_admaif_remove(struct platform_device *pdev)
 {
 	struct tegra_admaif *admaif = dev_get_drvdata(&pdev->dev);
@@ -1259,6 +1273,7 @@ static const struct dev_pm_ops tegra_admaif_pm_ops = {
 static struct platform_driver tegra_admaif_driver = {
 	.probe = tegra_admaif_probe,
 	.remove = tegra_admaif_remove,
+	.shutdown = tegra_admaif_platform_shutdown,
 	.driver = {
 		.name = DRV_NAME,
 		.owner = THIS_MODULE,

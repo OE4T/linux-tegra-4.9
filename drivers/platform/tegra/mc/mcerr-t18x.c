@@ -18,6 +18,10 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#define pr_fmt(fmt) "mc-err: " fmt
+
+#include <linux/bitops.h>
+#include <linux/of.h>
 #include <linux/platform/tegra/mcerr.h>
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include <linux/interrupt.h>
@@ -204,8 +208,8 @@ static const char *t186_intr_info[] = {
 	NULL,
 	"secerr",	/* Bit 8 */
 	"arb-emem",
-	"smmu-err",
-	"apb_err",
+	NULL,
+	NULL,
 	"decerr-vpr",	/* Bit 12 */
 	"decerr-sec",
 	NULL,
@@ -370,17 +374,17 @@ static void log_mcerr_fault(unsigned int irq)
 	 * HW only keeps track of 1 interrupt's data and we don't know which
 	 * particular fault is actually being kept...
 	 */
-	if (g_intstatus & (1 << INTSTATUS_CH0) ||
-	    g_intstatus & (1 << INTSTATUS_HUB0)) {
+	if (g_intstatus & (BIT(INTSTATUS_CH0)) ||
+	    g_intstatus & (BIT(INTSTATUS_HUB0))) {
 		mc_channel = 0;
-	} else if (g_intstatus & (1 << INTSTATUS_CH1) ||
-		   g_intstatus & (1 << INTSTATUS_HUB1)) {
+	} else if (g_intstatus & (BIT(INTSTATUS_CH1)) ||
+		   g_intstatus & (BIT(INTSTATUS_HUB1))) {
 		mc_channel = 1;
-	} else if (g_intstatus & (1 << INTSTATUS_CH2)) {
+	} else if (g_intstatus & (BIT(INTSTATUS_CH2))) {
 		mc_channel = 2;
-	} else if (g_intstatus & (1 << INTSTATUS_CH3)) {
+	} else if (g_intstatus & (BIT(INTSTATUS_CH3))) {
 		mc_channel = 3;
-	} else if (g_intstatus & (1 << INTSTATUS_HUBC)) {
+	} else if (g_intstatus & (BIT(INTSTATUS_HUBC))) {
 		mc_channel = MC_BROADCAST_CHANNEL;
 	} else {
 		trace_printk("mcerr: unknown source (intstatus = 0x%08x)\n",

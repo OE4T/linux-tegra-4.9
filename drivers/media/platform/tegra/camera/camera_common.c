@@ -22,6 +22,7 @@
 #include <linux/of_graph.h>
 #include <linux/string.h>
 #include <soc/tegra/pmc.h>
+#include <trace/events/camera_common.h>
 
 #define has_s_op(master, op) \
 	(master->ops && master->ops->op)
@@ -734,6 +735,7 @@ int camera_common_s_power(struct v4l2_subdev *sd, int on)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct camera_common_data *s_data = to_camera_common_data(client);
 
+	trace_camera_common_s_power("status", on);
 	if (on) {
 		err = camera_common_mclk_enable(s_data);
 		if (err)

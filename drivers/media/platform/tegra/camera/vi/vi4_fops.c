@@ -24,7 +24,7 @@
 #include "vi/vi_notify.h"
 #include "vi4_fops.h"
 #include <media/sensor_common.h>
-
+#include <trace/events/camera_common.h>
 #define DEFAULT_FRAMERATE	30
 #define BPP_MEM		2
 #define MAX_VI_CHANNEL 12
@@ -398,6 +398,7 @@ static void tegra_channel_notify_status_callback(
 		status->capture_id, status->st, status->vc);
 
 	schedule_work(&chan->status_work);
+	trace_tegra_channel_notify_status_callback("");
 }
 
 static int tegra_channel_notify_enable(
@@ -535,6 +536,7 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan,
 		return err;
 	}
 
+	trace_tegra_channel_capture_setup(chan, index);
 	vnc_id = chan->vnc_id[index];
 
 	vi4_write(chan, csimux_config_stream[csi_port], 0x1);
@@ -590,7 +592,6 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan,
 	dev_dbg(chan->vi->dev,
 		"Create Surface with imgW=%d, imgH=%d, memFmt=%d\n",
 		width, height, format);
-
 	return 0;
 }
 
@@ -630,7 +631,7 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
 
 	tegra_channel_ring_buffer(chan, vb, &ts, state);
-
+	trace_tegra_channel_capture_frame("sof", ts);
 	return 0;
 }
 
@@ -712,6 +713,7 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 	chan->capture_state = CAPTURE_IDLE;
 
 	tegra_channel_ring_buffer(chan, &buf->buf, &ts, state);
+	trace_tegra_channel_capture_done("eof", ts);
 }
 
 static int tegra_channel_kthread_capture_start(void *data)

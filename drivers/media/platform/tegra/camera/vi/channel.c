@@ -36,6 +36,8 @@
 #include <media/vi.h>
 
 #include <linux/clk/tegra.h>
+#define CREATE_TRACE_POINTS
+#include <trace/events/camera_common.h>
 
 #include "mipical/mipi_cal.h"
 
@@ -568,6 +570,7 @@ int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 
 	if (atomic_read(&chan->is_streaming) == on)
 		return 0;
+	trace_tegra_channel_set_stream("enable", on);
 
 	if (on) {
 		/* Enable CSI before sensor. Reason is as follows:
@@ -578,6 +581,7 @@ int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 		for (num_sd = 0; num_sd < chan->num_subdevs; num_sd++) {
 			sd = chan->subdev[num_sd];
 
+			trace_tegra_channel_set_stream(sd->name, on);
 			err = v4l2_subdev_call(sd, video, s_stream, on);
 			if (!ret && err < 0 && err != -ENOIOCTLCMD)
 				ret = err;
@@ -586,6 +590,7 @@ int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 		for (num_sd = chan->num_subdevs - 1; num_sd >= 0; num_sd--) {
 			sd = chan->subdev[num_sd];
 
+			trace_tegra_channel_set_stream(sd->name, on);
 			err = v4l2_subdev_call(sd, video, s_stream, on);
 			if (!ret && err < 0 && err != -ENOIOCTLCMD)
 				ret = err;
@@ -603,10 +608,12 @@ int tegra_channel_set_power(struct tegra_channel *chan, bool on)
 	int err = 0;
 	struct v4l2_subdev *sd;
 
+	trace_tegra_channel_set_power("status", on);
 	if (on) {
 		for (num_sd = 0; num_sd < chan->num_subdevs; num_sd++) {
 			sd = chan->subdev[num_sd];
 
+			trace_tegra_channel_set_power(sd->name, on);
 			err = v4l2_subdev_call(sd, core, s_power, on);
 			if (!ret && err < 0 && err != -ENOIOCTLCMD)
 				ret = err;
@@ -615,6 +622,7 @@ int tegra_channel_set_power(struct tegra_channel *chan, bool on)
 		for (num_sd = chan->num_subdevs - 1; num_sd >= 0; num_sd--) {
 			sd = chan->subdev[num_sd];
 
+			trace_tegra_channel_set_power(sd->name, on);
 			err = v4l2_subdev_call(sd, core, s_power, on);
 			if (!ret && err < 0 && err != -ENOIOCTLCMD)
 				ret = err;
@@ -1563,6 +1571,7 @@ static int tegra_channel_open(struct file *fp)
 	struct tegra_mc_vi *vi;
 	struct tegra_csi_device *csi;
 
+	trace_tegra_channel_open(vdev->name);
 	mutex_lock(&chan->video_lock);
 	ret = v4l2_fh_open(fp);
 	if (ret || !v4l2_fh_is_singular_file(fp)) {
@@ -1604,6 +1613,7 @@ static int tegra_channel_close(struct file *fp)
 	struct tegra_mc_vi *vi = chan->vi;
 	bool is_singular;
 
+	trace_tegra_channel_close(vdev->name);
 	mutex_lock(&chan->video_lock);
 	is_singular = v4l2_fh_is_singular_file(fp);
 	ret = _vb2_fop_release(fp, NULL);

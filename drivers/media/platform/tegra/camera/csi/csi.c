@@ -25,6 +25,7 @@
 #include <media/camera_common.h>
 #include <media/vi.h>
 #include <media/csi.h>
+#include <trace/events/camera_common.h>
 
 #include "dev.h"
 #include "mipical/mipi_cal.h"
@@ -75,6 +76,7 @@ int tegra_csi_power(struct tegra_csi_device *csi, int enable)
 {
 	int err = 0;
 
+	trace_csi_s_power("enable", enable);
 	if (enable) {
 		tegra_mipi_bias_pad_enable();
 		err = csi->fops->csi_power_on(csi);
@@ -162,6 +164,7 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 
 	if (atomic_read(&chan->is_streaming) == enable)
 		return 0;
+	trace_csi_s_stream("enable", enable);
 	csi = to_csi(subdev);
 	if (!csi)
 		return -EINVAL;

@@ -20,7 +20,7 @@
 #include "camera/csi/csi2_fops.h"
 #include "vi2_fops.h"
 #include "vi2_formats.h"
-
+#include <trace/events/camera_common.h>
 #define DEFAULT_FRAMERATE	30
 #define DEFAULT_CSI_FREQ	204000000
 #define BPP_MEM		2
@@ -432,7 +432,7 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 	}
 
 	tegra_channel_ring_buffer(chan, vb, &ts, state);
-
+	trace_tegra_channel_capture_frame("sof", ts);
 	return 0;
 }
 
@@ -504,6 +504,7 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 	chan->capture_state = CAPTURE_IDLE;
 
 	tegra_channel_ring_buffer(chan, &buf->buf, &ts, state);
+	trace_tegra_channel_capture_done("mw_ack_done", ts);
 }
 
 static int tegra_channel_kthread_capture_start(void *data)

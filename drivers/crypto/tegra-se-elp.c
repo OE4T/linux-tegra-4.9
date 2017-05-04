@@ -58,15 +58,6 @@
 #define WORD_SIZE_BYTES	4
 #define MAX_PKA1_SIZE	TEGRA_SE_PKA1_RSA4096_INPUT_SIZE
 
-enum tegra_se_pka_mod_type {
-	MOD_MULT,
-	MOD_ADD,
-	MOD_SUB,
-	MOD_REDUCE,
-	MOD_DIV,
-	MOD_INV,
-};
-
 enum tegra_se_pka1_ecc_type {
 	ECC_POINT_MUL,
 	ECC_POINT_ADD,
@@ -148,21 +139,6 @@ struct tegra_se_pka1_ecc_request {
 	bool pv_ok;
 };
 
-struct tegra_se_pka1_mod_request {
-	struct tegra_se_elp_dev *se_dev;
-	u32 *result;
-	u32 *modulus;
-	u32 *m;
-	u32 *r2;
-	u32 size;
-	u32 op_mode;
-	u32 type;
-	u32 *base_pt_x;
-	u32 *base_pt_y;
-	u32 *res_pt_x;
-	u32 *res_pt_y;
-};
-
 struct tegra_se_pka1_rsa_context {
 	struct tegra_se_elp_dev *se_dev;
 	struct tegra_se_pka1_slot *slot;
@@ -186,9 +162,8 @@ struct tegra_se_pka1_slot {
 
 static LIST_HEAD(key_slot);
 
-static u32 pka1_op_size[] = {512, 768, 1024, 1536, 2048, 3072, 4096,
-			     160, 192, 224, 256, 384, 512, 640,
-			     160, 192, 224, 256, 384, 512, 640};
+static u32 pka1_op_size[] = {512, 768, 1024, 1536, 2048, 3072, 4096, 160, 192,
+			     224, 256, 384, 512, 640};
 
 struct tegra_se_ecdh_context {
 	struct tegra_se_elp_dev *se_dev;
@@ -334,17 +309,11 @@ static inline u32 num_words(int mode)
 	case SE_ELP_OP_MODE_ECC192:
 	case SE_ELP_OP_MODE_ECC224:
 	case SE_ELP_OP_MODE_ECC256:
-	case SE_ELP_OP_MODE_MOD160:
-	case SE_ELP_OP_MODE_MOD192:
-	case SE_ELP_OP_MODE_MOD224:
-	case SE_ELP_OP_MODE_MOD256:
 		words = pka1_op_size[SE_ELP_OP_MODE_ECC256] / 32;
 		break;
 	case SE_ELP_OP_MODE_RSA512:
 	case SE_ELP_OP_MODE_ECC384:
 	case SE_ELP_OP_MODE_ECC512:
-	case SE_ELP_OP_MODE_MOD384:
-	case SE_ELP_OP_MODE_MOD512:
 		words = pka1_op_size[SE_ELP_OP_MODE_RSA512] / 32;
 		break;
 	case SE_ELP_OP_MODE_RSA768:
@@ -1075,9 +1044,7 @@ static void tegra_se_set_pka1_ecc_key(struct tegra_se_pka1_ecc_request *req)
 }
 
 static int tegra_se_pka1_precomp(struct tegra_se_pka1_rsa_context *ctx,
-				 struct tegra_se_pka1_ecc_request *ecc_req,
-				 struct tegra_se_pka1_mod_request *mod_req,
-				 u32 op)
+				 struct tegra_se_pka1_ecc_request *req, u32 op)
 {
 	int ret, i, op_mode;
 	u16 nwords;
@@ -1091,20 +1058,13 @@ static int tegra_se_pka1_precomp(struct tegra_se_pka1_rsa_context *ctx,
 		nwords = ctx->modlen / WORD_SIZE_BYTES;
 		op_mode = ctx->op_mode;
 		se_dev = ctx->se_dev;
-	} else if (ecc_req) {
-		MOD = ecc_req->modulus;
-		M = ecc_req->m;
-		R2 = ecc_req->r2;
-		nwords = ecc_req->size / WORD_SIZE_BYTES;
-		op_mode = ecc_req->op_mode;
-		se_dev = ecc_req->se_dev;
 	} else {
-		MOD = mod_req->modulus;
-		M = mod_req->m;
-		R2 = mod_req->r2;
-		nwords = mod_req->size / WORD_SIZE_BYTES;
-		op_mode = mod_req->op_mode;
-		se_dev = mod_req->se_dev;
+		MOD = req->modulus;
+		M = req->m;
+		R2 = req->r2;
+		nwords = req->size / WORD_SIZE_BYTES;
+		op_mode = req->op_mode;
+		se_dev = req->se_dev;
 	}
 
 	if (op_mode == SE_ELP_OP_MODE_ECC521)
@@ -1245,233 +1205,6 @@ static void tegra_se_pka1_ecc_exit(struct tegra_se_pka1_ecc_request *req)
 
 	if (req->op_mode == SE_ELP_OP_MODE_ECC521)
 		return;
-
-	devm_kfree(se_dev->dev, req->m);
-	devm_kfree(se_dev->dev, req->r2);
-}
-
-static int tegra_se_mod_op_mode(int nbytes)
-{
-	int mode;
-
-	switch (nbytes) {
-	case 20:
-		mode = SE_ELP_OP_MODE_MOD160;
-		break;
-	case 24:
-		mode = SE_ELP_OP_MODE_MOD192;
-		break;
-	case 28:
-		mode = SE_ELP_OP_MODE_MOD224;
-		break;
-	case 32:
-		mode = SE_ELP_OP_MODE_MOD256;
-		break;
-	case 48:
-		mode = SE_ELP_OP_MODE_MOD384;
-		break;
-	case 64:
-		mode = SE_ELP_OP_MODE_MOD512;
-		break;
-	default:
-		mode = -EINVAL;
-		break;
-	}
-	return mode;
-}
-
-static void tegra_se_pka1_mod_fill_input(struct tegra_se_pka1_mod_request *req)
-{
-	struct tegra_se_elp_dev *se_dev = req->se_dev;
-	u32 *PX, *PY;
-	u32 *MOD, *M, *R2;
-	u32 i = 0;
-
-	MOD = req->modulus;
-	M = req->m;
-	R2 = req->r2;
-
-	if (req->type == MOD_MULT ||
-	    req->type == MOD_ADD ||
-	    req->type == MOD_SUB) {
-		PX = req->base_pt_x;
-		PY = req->base_pt_y;
-		for (i = 0; i < req->size/4; i++) {
-			se_elp_writel(se_dev, PKA1, *PX++,
-				      reg_bank_offset(BANK_A,
-						      0,
-						      req->op_mode) + (i*4));
-
-			se_elp_writel(se_dev, PKA1, *PY++,
-				      reg_bank_offset(BANK_B,
-						      0,
-						      req->op_mode) + (i*4));
-		}
-
-	}
-	if (req->type == MOD_REDUCE) {
-		PX = req->base_pt_x;
-		for (i = 0; i < req->size/4; i++) {
-			se_elp_writel(se_dev, PKA1, *PX++,
-				      reg_bank_offset(BANK_C,
-						      0, req->op_mode) + (i*4));
-		}
-
-	}
-	if (req->type == MOD_DIV) {
-		PX = req->base_pt_x;
-		PY = req->base_pt_y;
-		for (i = 0; i < req->size/4; i++) {
-			se_elp_writel(se_dev, PKA1, *PX++,
-				      reg_bank_offset(BANK_A,
-						      0,
-						      req->op_mode) + (i*4));
-
-			se_elp_writel(se_dev, PKA1, *PY++,
-				      reg_bank_offset(BANK_C,
-						      0,
-						      req->op_mode) + (i*4));
-		}
-	}
-	if (req->type == MOD_INV) {
-		PX = req->base_pt_x;
-		for (i = 0; i < req->size/4; i++) {
-			se_elp_writel(se_dev, PKA1, *PX++,
-				      reg_bank_offset(BANK_A,
-						      0, req->op_mode) + (i*4));
-		}
-	}
-}
-
-static u32 pka_ctrl_partial_radix(u32 mode)
-{
-	u32 base_words;
-	u32 operand_words;
-	u32 partial_radix = 0;
-
-	base_words = num_words(mode);
-	operand_words = pka1_op_size[mode] / 32;
-	if (base_words)
-		partial_radix = operand_words % base_words;
-
-	return partial_radix;
-}
-
-static void tegra_se_program_pka1_mod(struct tegra_se_pka1_mod_request *req)
-{
-	struct tegra_se_elp_dev *se_dev = req->se_dev;
-	u32 om = req->op_mode;
-	u32 val;
-
-	if (req->type == MOD_MULT) {
-		se_elp_writel(se_dev, PKA1,
-			      TEGRA_SE_PKA1_ENTRY_MODMULT,
-			      TEGRA_SE_PKA1_PRG_ENTRY_OFFSET);
-	} else if (req->type == MOD_ADD) {
-		se_elp_writel(se_dev, PKA1,
-			      TEGRA_SE_PKA1_ENTRY_MODADD,
-			      TEGRA_SE_PKA1_PRG_ENTRY_OFFSET);
-	} else if (req->type == MOD_SUB) {
-		se_elp_writel(se_dev, PKA1,
-			      TEGRA_SE_PKA1_ENTRY_MODSUB,
-			      TEGRA_SE_PKA1_PRG_ENTRY_OFFSET);
-	} else if (req->type == MOD_REDUCE) {
-		se_elp_writel(se_dev, PKA1,
-			      TEGRA_SE_PKA1_ENTRY_REDUCE,
-			      TEGRA_SE_PKA1_PRG_ENTRY_OFFSET);
-	} else if (req->type == MOD_DIV) {
-		se_elp_writel(se_dev, PKA1,
-			      TEGRA_SE_PKA1_ENTRY_MODDIV,
-			      TEGRA_SE_PKA1_PRG_ENTRY_OFFSET);
-	} else if (req->type == MOD_INV) {
-		se_elp_writel(se_dev, PKA1,
-			      TEGRA_SE_PKA1_ENTRY_MODINV,
-			      TEGRA_SE_PKA1_PRG_ENTRY_OFFSET);
-	}
-
-	se_elp_writel(se_dev, PKA1,
-		      TEGRA_SE_PKA1_INT_ENABLE_IE_IRQ_EN(ELP_ENABLE),
-		      TEGRA_SE_PKA1_INT_ENABLE_OFFSET);
-
-	val = TEGRA_SE_PKA1_CTRL_BASE_RADIX(pka1_ctrl_base(req->op_mode)) |
-		TEGRA_SE_PKA1_CTRL_PARTIAL_RADIX(pka_ctrl_partial_radix(om)) |
-		TEGRA_SE_PKA1_CTRL_GO(TEGRA_SE_PKA1_CTRL_GO_START);
-
-	se_elp_writel(se_dev, PKA1, val, TEGRA_SE_PKA1_CTRL_OFFSET);
-}
-
-static void tegra_se_read_pka1_mod_result(struct tegra_se_pka1_mod_request *req)
-{
-	struct tegra_se_elp_dev *se_dev = req->se_dev;
-	u32 *RES = req->result;
-	u32 val, i;
-
-	if (req->type == MOD_MULT ||
-	    req->type == MOD_ADD ||
-	    req->type == MOD_SUB ||
-	    req->type == MOD_REDUCE) {
-		for (i = 0; i < req->size/4; i++) {
-			val = se_elp_readl(se_dev, PKA1,
-					reg_bank_offset(BANK_A,
-							0,
-							req->op_mode) + (i*4));
-			*RES = le32_to_cpu(val);
-			RES++;
-		}
-	} else if (req->type == MOD_DIV ||
-		   req->type == MOD_INV) {
-		for (i = 0; i < req->size/4; i++) {
-			val = se_elp_readl(se_dev, PKA1,
-					reg_bank_offset(BANK_C,
-							0,
-							req->op_mode) + (i*4));
-			*RES = le32_to_cpu(val);
-			RES++;
-		}
-	}
-}
-
-static int tegra_se_pka1_mod_do(struct tegra_se_pka1_mod_request *req)
-{
-	struct tegra_se_elp_dev *se_dev = req->se_dev;
-	int ret;
-
-	tegra_se_pka1_mod_fill_input(req);
-
-	tegra_se_program_pka1_mod(req);
-
-	ret = tegra_se_check_pka1_op_done(se_dev);
-	if (ret)
-		return ret;
-
-	tegra_se_read_pka1_mod_result(req);
-
-	return ret;
-}
-
-static int tegra_se_pka1_mod_init(struct tegra_se_pka1_mod_request *req)
-{
-	struct tegra_se_elp_dev *se_dev = elp_dev;
-	int len = req->size;
-
-	req->se_dev = se_dev;
-
-	req->m = devm_kzalloc(se_dev->dev, len, GFP_KERNEL);
-	if (!req->m)
-		return -ENOMEM;
-
-	req->r2 = devm_kzalloc(se_dev->dev, len, GFP_KERNEL);
-	if (!req->r2) {
-		devm_kfree(se_dev->dev, req->m);
-		return -ENOMEM;
-	}
-
-	return 0;
-}
-
-static void tegra_se_pka1_mod_exit(struct tegra_se_pka1_mod_request *req)
-{
-	struct tegra_se_elp_dev *se_dev = req->se_dev;
 
 	devm_kfree(se_dev->dev, req->m);
 	devm_kfree(se_dev->dev, req->r2);
@@ -1683,34 +1416,29 @@ static int tegra_se_check_rng1_alarms(void)
 }
 
 static int tegra_se_pka1_get_precomp(struct tegra_se_pka1_rsa_context *ctx,
-				     struct tegra_se_pka1_ecc_request *ecc_req,
-				     struct tegra_se_pka1_mod_request *mod_req)
+				     struct tegra_se_pka1_ecc_request *req)
 {
 	int ret;
 	struct tegra_se_elp_dev *se_dev;
 
 	if (ctx)
 		se_dev = ctx->se_dev;
-	else if (ecc_req)
-		se_dev = ecc_req->se_dev;
-	else if (mod_req)
-		se_dev = mod_req->se_dev;
 	else
-		return -EINVAL;
+		se_dev = req->se_dev;
 
-	ret = tegra_se_pka1_precomp(ctx, ecc_req, mod_req, PRECOMP_RINV);
+	ret = tegra_se_pka1_precomp(ctx, req, PRECOMP_RINV);
 	if (ret) {
 		dev_err(se_dev->dev,
 			"RINV: tegra_se_pka1_precomp Failed(%d)\n", ret);
 		return ret;
 	}
-	ret = tegra_se_pka1_precomp(ctx, ecc_req, mod_req, PRECOMP_M);
+	ret = tegra_se_pka1_precomp(ctx, req, PRECOMP_M);
 	if (ret) {
 		dev_err(se_dev->dev,
 			"M: tegra_se_pka1_precomp Failed(%d)\n", ret);
 		return ret;
 	}
-	ret = tegra_se_pka1_precomp(ctx, ecc_req, mod_req, PRECOMP_R2);
+	ret = tegra_se_pka1_precomp(ctx, req, PRECOMP_R2);
 	if (ret)
 		dev_err(se_dev->dev,
 			"R2: tegra_se_pka1_precomp Failed(%d)\n", ret);
@@ -1815,7 +1543,7 @@ int tegra_se_pka1_ecc_op(struct tegra_se_pka1_ecc_request *req)
 		goto clk_dis;
 	}
 
-	ret = tegra_se_pka1_get_precomp(NULL, req, NULL);
+	ret = tegra_se_pka1_get_precomp(NULL, req);
 	if (ret)
 		goto exit;
 
@@ -1829,110 +1557,6 @@ clk_dis:
 	return ret;
 }
 EXPORT_SYMBOL(tegra_se_pka1_ecc_op);
-
-static int tegra_se_pka1_mod_op(struct tegra_se_pka1_mod_request *req)
-{
-	struct tegra_se_elp_dev *se_dev;
-	int ret;
-
-	if (!req)
-		return -EINVAL;
-
-	ret = tegra_se_pka1_mod_init(req);
-	if (ret)
-		return ret;
-
-	se_dev = req->se_dev;
-	clk_prepare_enable(se_dev->c);
-
-	ret = tegra_se_acquire_pka1_mutex(se_dev);
-	if (ret) {
-		dev_err(se_dev->dev, "PKA1 Mutex acquire failed\n");
-		goto clk_dis;
-	}
-
-	ret = tegra_se_pka1_get_precomp(NULL, NULL, req);
-	if (ret)
-		goto exit;
-
-	ret = tegra_se_pka1_mod_do(req);
-exit:
-	tegra_se_release_pka1_mutex(se_dev);
-clk_dis:
-	clk_disable_unprepare(se_dev->c);
-	tegra_se_pka1_mod_exit(req);
-
-	return ret;
-}
-
-static int tegra_se_mod_mult(int op_mode, u32 *result, u32 *left, u32 *right,
-			     u32 *mod, int nbytes)
-{
-	struct tegra_se_pka1_mod_request req;
-	int ret;
-
-	req.op_mode = op_mode;
-	req.size = nbytes;
-	req.type = MOD_MULT;
-	req.modulus = mod;
-	req.base_pt_x = left;
-	req.base_pt_y = right;
-	req.result = result;
-	ret = tegra_se_pka1_mod_op(&req);
-
-	return ret;
-}
-static int tegra_se_mod_add(int op_mode, u32 *result, u32 *left, u32 *right,
-			    u32 *mod, int nbytes)
-{
-	struct tegra_se_pka1_mod_request req;
-	int ret;
-
-	req.op_mode = op_mode;
-	req.size = nbytes;
-	req.type = MOD_ADD;
-	req.modulus = mod;
-	req.base_pt_x = left;
-	req.base_pt_y = right;
-	req.result = result;
-	ret = tegra_se_pka1_mod_op(&req);
-
-	return ret;
-}
-
-static int tegra_se_mod_inv(int op_mode, u32 *result, u32 *input,
-			    u32 *mod, int nbytes)
-{
-	struct tegra_se_pka1_mod_request req;
-	int ret;
-
-	req.op_mode = op_mode;
-	req.size = nbytes;
-	req.type = MOD_INV;
-	req.modulus = mod;
-	req.base_pt_x = input;
-	req.result = result;
-	ret = tegra_se_pka1_mod_op(&req);
-
-	return ret;
-}
-
-static int tegra_se_mod_reduce(int op_mode, u32 *result, u32 *input,
-			       u32 *mod, int nbytes)
-{
-	struct tegra_se_pka1_mod_request req;
-	int ret;
-
-	req.op_mode = op_mode;
-	req.size = nbytes;
-	req.type = MOD_REDUCE;
-	req.modulus = mod;
-	req.base_pt_x = input;
-	req.result = result;
-	ret = tegra_se_pka1_mod_op(&req);
-
-	return ret;
-}
 
 static int tegra_se_ecc_point_mult(struct tegra_se_ecc_point *result,
 				   const struct tegra_se_ecc_point *point,
@@ -2196,7 +1820,7 @@ static int tegra_se_pka1_rsa_setkey(struct crypto_akcipher *tfm,
 	if (ret)
 		goto rel_mutex;
 
-	ret = tegra_se_pka1_get_precomp(ctx, NULL, NULL);
+	ret = tegra_se_pka1_get_precomp(ctx, NULL);
 	if (ret)
 		goto rel_mutex;
 

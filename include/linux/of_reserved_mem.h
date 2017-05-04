@@ -2,6 +2,7 @@
 #define __OF_RESERVED_MEM_H
 
 #include <linux/device.h>
+#include <linux/of.h>
 
 struct of_phandle_args;
 struct reserved_mem_ops;
@@ -71,11 +72,18 @@ static inline void fdt_reserved_mem_save_node(unsigned long node,
  */
 static inline int of_reserved_mem_device_init(struct device *dev)
 {
-	int ret, idx = 0;
+	int ret = -ENODEV, idx = 0, max = 0;
+
+	if (!dev)
+		return ret;
+
+	while (of_parse_phandle(dev->of_node, "memory-region", max))
+		max++;
 
 	do {
-		ret = of_reserved_mem_device_init_by_idx(dev, dev->of_node, idx++);
-	} while (!ret);
+		ret = of_reserved_mem_device_init_by_idx(dev,
+			dev->of_node, idx++);
+	} while (!ret && (idx != max));
 	return ret;
 }
 

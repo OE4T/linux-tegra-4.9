@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 Google, Inc.
+ * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -131,4 +132,5 @@ int trusty_call32_mem_buf(struct device *dev, u32 smcnr,
 					 (u32)(pg_inf.attr >> 32), size);
 	}
 }
+EXPORT_SYMBOL(trusty_call32_mem_buf);
 

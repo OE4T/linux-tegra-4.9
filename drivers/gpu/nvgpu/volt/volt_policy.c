@@ -69,7 +69,7 @@ static u32 construct_volt_policy_split_rail(struct gk20a *g,
 	return status;
 }
 
-u32 volt_policy_pmu_data_init_split_rail(struct gk20a *g,
+static u32 volt_policy_pmu_data_init_split_rail(struct gk20a *g,
 	struct boardobj *pboardobj, struct nv_pmu_boardobj *ppmudata)
 {
 	u32 status = 0;

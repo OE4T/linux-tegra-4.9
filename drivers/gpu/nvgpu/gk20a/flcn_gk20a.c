@@ -34,7 +34,7 @@ static void gk20a_falcon_ops(struct nvgpu_falcon *flcn)
 	flcn_vops->write_dmatrfbase = NULL;
 }
 
-void gk20a_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
+static void gk20a_falcon_hal_sw_init(struct nvgpu_falcon *flcn)
 {
 	struct gk20a *g = flcn->g;
 

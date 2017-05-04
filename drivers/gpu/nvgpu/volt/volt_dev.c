@@ -29,7 +29,7 @@
 #define VOLT_DEV_PWM_VOLTAGE_STEPS_INVALID	0
 #define VOLT_DEV_PWM_VOLTAGE_STEPS_DEFAULT	1
 
-u32 volt_device_pmu_data_init_super(struct gk20a *g,
+static u32 volt_device_pmu_data_init_super(struct gk20a *g,
 	struct boardobj *pboard_obj, struct nv_pmu_boardobj *ppmudata)
 {
 	u32 status;
@@ -73,7 +73,7 @@ static u32 volt_device_pmu_data_init_pwm(struct gk20a *g,
 	return status;
 }
 
-u32 construct_volt_device(struct gk20a *g,
+static u32 construct_volt_device(struct gk20a *g,
 	struct boardobj **ppboardobj, u16 size, void *pargs)
 {
 	struct voltage_device *ptmp_dev = (struct voltage_device *)pargs;
@@ -101,7 +101,8 @@ u32 construct_volt_device(struct gk20a *g,
 	return status;
 }
 
-u32 construct_pwm_volt_device(struct gk20a *g, struct boardobj **ppboardobj,
+static u32 construct_pwm_volt_device(struct gk20a *g,
+		struct boardobj **ppboardobj,
 		u16 size, void *pargs)
 {
 	struct boardobj *pboard_obj = NULL;
@@ -129,7 +130,8 @@ u32 construct_pwm_volt_device(struct gk20a *g, struct boardobj **ppboardobj,
 }
 
 
-struct voltage_device_entry *volt_dev_construct_dev_entry_pwm(struct gk20a *g,
+static struct voltage_device_entry *volt_dev_construct_dev_entry_pwm(
+		struct gk20a *g,
 		u32 voltage_uv, void *pargs)
 {
 	struct voltage_device_pwm_entry *pentry = NULL;
@@ -164,7 +166,7 @@ static u8 volt_dev_operation_type_convert(u8 vbios_type)
 	return CTRL_VOLT_DEVICE_OPERATION_TYPE_INVALID;
 }
 
-struct voltage_device *volt_volt_device_construct(struct gk20a *g,
+static struct voltage_device *volt_volt_device_construct(struct gk20a *g,
 		void *pargs)
 {
 	struct boardobj *pboard_obj = NULL;
@@ -436,7 +438,8 @@ static int volt_device_volt_cmp(const void *a, const void *b)
 	return (int)a_entry->voltage_uv - (int)b_entry->voltage_uv;
 }
 
-u32 volt_device_state_init(struct gk20a *g, struct voltage_device *pvolt_dev)
+static u32 volt_device_state_init(struct gk20a *g,
+			struct voltage_device *pvolt_dev)
 {
 	u32 status = 0;
 	struct voltage_rail *pRail = NULL;

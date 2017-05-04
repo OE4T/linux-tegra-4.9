@@ -2197,7 +2197,6 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 	num_sgs = tegra_se_count_sgs(req->src, req->nbytes);
 	sg_flags |= SG_MITER_FROM_SG;
 	sg_miter_start(&miter, req->src, num_sgs, sg_flags);
-	local_irq_save(flags);
 	total = 0;
 	cmac_ctx->buffer = dma_alloc_coherent(se_dev->dev,
 				TEGRA_SE_AES_BLOCK_SIZE,
@@ -2205,6 +2204,7 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 	if (!cmac_ctx->buffer)
 		goto out;
 
+	local_irq_save(flags);
 	temp_buffer = cmac_ctx->buffer;
 	while (sg_miter_next(&miter) && total < req->nbytes) {
 		unsigned int len;

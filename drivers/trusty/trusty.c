@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2013 Google, Inc.
- * Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -486,6 +486,7 @@ int is_trusty_dev_enabled(void)
 
 	return trusty_dev_status;
 }
+EXPORT_SYMBOL(is_trusty_dev_enabled);
 
 static int trusty_probe(struct platform_device *pdev)
 {

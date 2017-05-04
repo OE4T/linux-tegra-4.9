@@ -1160,11 +1160,25 @@ static void print_agic_irq_states(void)
 	}
 }
 
+static void dump_thread_name(struct platform_device *pdev, u32 val)
+{
+	dev_info(&pdev->dev, "%s: adsp current thread: %c%c%c%c\n",
+		 __func__,
+		 (val >> 24) & 0xFF, (val >> 16) & 0xFF,
+		 (val >> 8) & 0xFF, (val >> 0) & 0xFF);
+}
+
+static void dump_irq_num(struct platform_device *pdev, u32 val)
+{
+	dev_info(&pdev->dev, "%s: adsp current/last irq : %d\n",
+		 __func__, val);
+}
+
 static void get_adsp_state(void)
 {
-	uint32_t val;
 	struct nvadsp_drv_data *drv_data;
 	struct device *dev;
+	uint32_t val;
 	char *msg;
 
 	if (!priv.pdev) {
@@ -1277,6 +1291,12 @@ static void get_adsp_state(void)
 	}
 
 	dev_info(dev, "%s: %s\n", __func__, msg);
+
+	val = hwmbox_readl(drv_data->chip_data->adsp_thread_hwmbox);
+	dump_thread_name(priv.pdev, val);
+
+	val = hwmbox_readl(drv_data->chip_data->adsp_irq_hwmbox);
+	dump_irq_num(priv.pdev, val);
 }
 
 

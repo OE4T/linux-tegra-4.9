@@ -24,6 +24,7 @@
 
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/of_device.h>
 #include <linux/interrupt.h>
 #include <linux/spinlock.h>
 #include <linux/stat.h>
@@ -39,6 +40,10 @@
 #include <linux/platform/tegra/mcerr.h>
 #include <linux/platform/tegra/tegra_emc_err.h>
 
+static const struct of_device_id __mcerr_of_table_sentinel
+	__used __section(__mcerr_of_table_end);
+extern struct of_device_id __mcerr_of_table;
+
 static bool mcerr_throttle_enabled = true;
 u32  mcerr_silenced;
 static atomic_t error_count;
@@ -47,12 +52,7 @@ static void unthrottle_prints(struct work_struct *work);
 static DECLARE_DELAYED_WORK(unthrottle_prints_work, unthrottle_prints);
 static struct dentry *mcerr_debugfs_dir;
 u32 mc_int_mask;
-
-/*
- * Chip specific functions.
- */
-static struct mcerr_chip_specific chip_specific;
-static struct mcerr_chip_specific *cs_ops;
+static struct mcerr_ops *mcerr_ops;
 
 static void unthrottle_prints(struct work_struct *work)
 {
@@ -80,13 +80,13 @@ static irqreturn_t tegra_mcerr_thread(int irq, void *data)
 		schedule_delayed_work(&unthrottle_prints_work, HZ/2);
 		if (count == MAX_PRINTS)
 			mcerr_pr("Too many MC errors; throttling prints\n");
-		cs_ops->clear_interrupt(irq);
+		mcerr_ops->clear_interrupt(irq);
 		goto exit;
 	}
 
-	cs_ops->log_mcerr_fault(irq);
+	mcerr_ops->log_mcerr_fault(irq);
 exit:
-	cs_ops->enable_interrupt(irq);
+	mcerr_ops->enable_interrupt(irq);
 
 	return IRQ_HANDLED;
 }
@@ -104,7 +104,7 @@ static irqreturn_t tegra_mcerr_hard_irq(int irq, void *data)
 	  * The first MC Error is good enough to point out potential memory
 	  * access issues in SW and allow debugging further.
 	  */
-	cs_ops->disable_interrupt(irq);
+	mcerr_ops->disable_interrupt(irq);
 	return IRQ_WAKE_THREAD;
 }
 
@@ -118,19 +118,19 @@ static int mcerr_default_debugfs_show(struct seq_file *s, void *v)
 
 	seq_printf(s, "%-18s %-18s", "swgroup", "client");
 	for (i = 0; i < (sizeof(u32) * 8); i++) {
-		if (chip_specific.intr_descriptions[i])
+		if (mcerr_ops->intr_descriptions[i])
 			seq_printf(s, " %-12s",
-				   chip_specific.intr_descriptions[i]);
+				   mcerr_ops->intr_descriptions[i]);
 	}
 	seq_puts(s, "\n");
 
-	for (i = 0; i < chip_specific.nr_clients; i++) {
+	for (i = 0; i < mcerr_ops->nr_clients; i++) {
 		do_print = 0;
 
 		/* Only print clients who actually have errors. */
 		for (j = 0; j < (sizeof(u32) * 8); j++) {
-			if (chip_specific.intr_descriptions[j] &&
-			    mc_clients[i].intr_counts[j]) {
+			if (mcerr_ops->intr_descriptions[j] &&
+			    mcerr_ops->mc_clients[i].intr_counts[j]) {
 				do_print = 1;
 				break;
 			}
@@ -138,13 +138,13 @@ static int mcerr_default_debugfs_show(struct seq_file *s, void *v)
 
 		if (do_print) {
 			seq_printf(s, "%-18s %-18s",
-				   mc_clients[i].name,
-				   mc_clients[i].swgroup);
+				   mcerr_ops->mc_clients[i].name,
+				   mcerr_ops->mc_clients[i].swgroup);
 			for (j = 0; j < (sizeof(u32) * 8); j++) {
-				if (!chip_specific.intr_descriptions[j])
+				if (!mcerr_ops->intr_descriptions[j])
 					continue;
 				seq_printf(s, " %-12u",
-					   mc_clients[i].intr_counts[j]);
+					   mcerr_ops->mc_clients[i].intr_counts[j]);
 			}
 			seq_puts(s, "\n");
 		}
@@ -155,7 +155,7 @@ static int mcerr_default_debugfs_show(struct seq_file *s, void *v)
 
 static int mcerr_debugfs_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, chip_specific.mcerr_debugfs_show, NULL);
+	return single_open(file, mcerr_ops->mcerr_debugfs_show, NULL);
 }
 
 static const struct file_operations mcerr_debugfs_fops = {
@@ -181,28 +181,31 @@ static int __set_throttle(void *data, u64 val)
 DEFINE_SIMPLE_ATTRIBUTE(mcerr_throttle_debugfs_fops, __get_throttle,
 			__set_throttle, "%llu\n");
 
-/*
- * This will always be successful. However, if something goes wrong in the
- * init a message will be printed to the kernel log. Since this is a
- * non-essential piece of the kernel no reason to fail the entire MC init
- * if this fails.
- */
 int tegra_mcerr_init(struct dentry *mc_parent, struct platform_device *pdev)
 {
 	int irq;
 	const void *prop;
+	struct device_node *np;
+	const struct of_device_id *match, *matches = &__mcerr_of_table;
 
-	chip_specific.enable_interrupt   = enable_interrupt;
-	chip_specific.disable_interrupt  = disable_interrupt;
-	chip_specific.mcerr_debugfs_show = mcerr_default_debugfs_show;
+	for_each_matching_node_and_match(np, matches, &match) {
+		const of_mcerr_init_fn init_fn = match->data;
 
-	/*
-	 * mcerr_chip_specific_setup() can override any of the default
-	 * functions as it wishes.
-	 */
-	mcerr_chip_specific_setup(&chip_specific);
-	if (chip_specific.nr_clients == 0 ||
-	    chip_specific.intr_descriptions == NULL) {
+		mcerr_ops = init_fn(np);
+	}
+
+	if (!mcerr_ops || !mcerr_ops->clear_interrupt ||
+		!mcerr_ops->log_mcerr_fault) {
+		pr_err("invalid mcerr ops. disabling mcerr.\n");
+		goto fail;
+	}
+
+	mcerr_ops->mcerr_debugfs_show = mcerr_ops->mcerr_debugfs_show ?: mcerr_default_debugfs_show;
+	mcerr_ops->enable_interrupt = mcerr_ops->enable_interrupt ?: enable_interrupt;
+	mcerr_ops->disable_interrupt = mcerr_ops->disable_interrupt ?: disable_interrupt;
+
+	if (mcerr_ops->nr_clients == 0 ||
+	    mcerr_ops->intr_descriptions == NULL) {
 		pr_err("Missing necessary chip_specific functionality!\n");
 		return -ENODEV;
 	}
@@ -229,7 +232,10 @@ int tegra_mcerr_init(struct dentry *mc_parent, struct platform_device *pdev)
 		goto done;
 	}
 
-	tegra_emcerr_init(mc_parent, pdev);
+	/* This need to be fixed to work for all SOC's. */
+	prop = of_get_property(pdev->dev.of_node,"compatible", NULL);
+	if (prop && strcmp(prop, "nvidia,tegra-t18x-mc") == 0)
+		tegra_emcerr_init(mc_parent, pdev);
 
 	if (!mc_parent)
 		goto done;
@@ -248,4 +254,7 @@ int tegra_mcerr_init(struct dentry *mc_parent, struct platform_device *pdev)
 	debugfs_create_u32("quiet", 0644, mcerr_debugfs_dir, &mcerr_silenced);
 done:
 	return 0;
+fail:
+	pr_err("init failied\n");
+	return -EINVAL;
 }

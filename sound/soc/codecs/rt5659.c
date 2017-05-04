@@ -4343,6 +4343,8 @@ static int rt5659_i2c_probe(struct i2c_client *i2c,
 		break;
 	}
 
+	regmap_update_bits(rt5659->regmap, RT5659_CLK_DET, 0x4, 0x4);
+
 	INIT_DELAYED_WORK(&rt5659->jack_detect_work, rt5659_jack_detect_work);
 
 	jack_gpio = of_get_gpio(rt5659->i2c->dev.of_node, 0);

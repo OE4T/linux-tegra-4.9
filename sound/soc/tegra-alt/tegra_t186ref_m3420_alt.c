@@ -208,7 +208,7 @@ static void dai_set_ops(struct snd_soc_ops *ops, unsigned int idx_start,
 		tegra_machine_set_dai_ops(i, ops);
 }
 
-static void dai_link_setup(struct platform_device *pdev)
+static int dai_link_setup(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 	struct tegra_t186ref_m3420 *machine = snd_soc_card_get_drvdata(card);
@@ -216,13 +216,13 @@ static void dai_link_setup(struct platform_device *pdev)
 	struct snd_soc_codec_conf *tegra_t186ref_codec_conf = NULL;
 	struct snd_soc_dai_link *dai_links = NULL;
 	struct snd_soc_dai_link *codec_links = NULL;
-	int i;
+	int i, err = -ENODEV;
 
 	/* set new codec links and conf */
 	codec_links = tegra_machine_new_codec_links(pdev, codec_links,
 						    &machine->num_codec_links);
 	if (!codec_links)
-		goto err_alloc_dai_link;
+		return err;
 
 	/* set codec init */
 	for (i = 0; i < machine->num_codec_links; i++) {
@@ -245,11 +245,11 @@ static void dai_link_setup(struct platform_device *pdev)
 	/* get the xbar dai link/codec conf structure */
 	dai_links = tegra_machine_get_dai_link_t18x();
 	if (!dai_links)
-		goto err_alloc_dai_link;
+		goto err_alloc_codec_conf;
 
 	tegra_machine_codec_conf = tegra_machine_get_codec_conf_t18x();
 	if (!tegra_machine_codec_conf)
-		goto err_alloc_dai_link;
+		goto err_alloc_codec_conf;
 
 	/* set ADMAIF dai_ops */
 	dai_set_ops(&tegra_t186ref_m3420_i2s1_ops, TEGRA186_DAI_LINK_ADMAIF1,
@@ -291,12 +291,14 @@ static void dai_link_setup(struct platform_device *pdev)
 	tegra_machine_codec_conf = tegra_machine_get_codec_conf_t18x();
 	card->codec_conf = tegra_machine_codec_conf;
 
-	return;
+	return 0;
 
+err_alloc_codec_conf:
+	tegra_machine_remove_codec_conf();
 err_alloc_dai_link:
 	tegra_machine_remove_dai_link();
-	tegra_machine_remove_codec_conf();
-	return;
+
+	return err;
 }
 
 static int tegra_t186ref_m3420_driver_probe(struct platform_device *pdev)
@@ -342,7 +344,11 @@ static int tegra_t186ref_m3420_driver_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	dai_link_setup(pdev);
+	err = dai_link_setup(pdev);
+	if (err) {
+		dev_err(&pdev->dev, "Failed to configured DAIs!\n");
+		return err;
+	}
 
 	err = tegra_alt_asoc_utils_init(clocks, &pdev->dev, card);
 	if (err)

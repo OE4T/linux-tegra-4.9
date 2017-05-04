@@ -612,7 +612,6 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 	soc_data = (struct tegra_xbar_soc_data *)match->data;
 
 	ret = tegra_xbar_probe(pdev, soc_data);
-
 err:
 	return ret;
 }
@@ -626,6 +625,7 @@ static const struct dev_pm_ops tegra210_xbar_pm_ops = {
 static struct platform_driver tegra210_xbar_driver = {
 	.probe = tegra210_xbar_probe,
 	.remove = tegra_xbar_remove,
+	.shutdown = tegra_xbar_shutdown,
 	.driver = {
 		.name = DRV_NAME,
 		.owner = THIS_MODULE,

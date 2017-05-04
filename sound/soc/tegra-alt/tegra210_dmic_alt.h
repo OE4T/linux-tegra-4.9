@@ -1,7 +1,7 @@
 /*
  * tegra210_dmic_alt.h - Definitions for Tegra210 DMIC driver
  *
- * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -132,6 +132,7 @@ struct tegra210_dmic {
 	int boost_gain; /* with 100x factor */
 	int ch_select;
 	int tx_mono_to_stereo;
+	bool is_shutdown;
 };
 
 #endif

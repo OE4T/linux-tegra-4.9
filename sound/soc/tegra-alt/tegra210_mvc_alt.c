@@ -69,11 +69,14 @@ static int tegra210_mvc_runtime_resume(struct device *dev)
 	struct tegra210_mvc *mvc = dev_get_drvdata(dev);
 
 	regcache_cache_only(mvc->regmap, false);
-	regcache_sync(mvc->regmap);
 
-	regmap_update_bits(mvc->regmap, TEGRA210_MVC_CTRL,
-		TEGRA210_MVC_CURVE_TYPE_MASK,
-		mvc->curve_type << TEGRA210_MVC_CURVE_TYPE_SHIFT);
+	if (!mvc->is_shutdown) {
+		regcache_sync(mvc->regmap);
+
+		regmap_update_bits(mvc->regmap, TEGRA210_MVC_CTRL,
+			TEGRA210_MVC_CURVE_TYPE_MASK,
+			mvc->curve_type << TEGRA210_MVC_CURVE_TYPE_SHIFT);
+	}
 
 	return 0;
 }
@@ -639,6 +642,7 @@ static int tegra210_mvc_platform_probe(struct platform_device *pdev)
 	}
 
 	mvc->soc_data = soc_data;
+	mvc->is_shutdown = false;
 
 	mvc->poly_n1 = 16;
 	mvc->poly_n2 = 63;
@@ -724,6 +728,13 @@ err:
 	return ret;
 }
 
+static void tegra210_mvc_platform_shutdown(struct platform_device *pdev)
+{
+	struct tegra210_mvc *mvc = dev_get_drvdata(&pdev->dev);
+
+	mvc->is_shutdown = true;
+}
+
 static int tegra210_mvc_platform_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
@@ -750,6 +761,7 @@ static struct platform_driver tegra210_mvc_driver = {
 	},
 	.probe = tegra210_mvc_platform_probe,
 	.remove = tegra210_mvc_platform_remove,
+	.shutdown = tegra210_mvc_platform_shutdown,
 };
 module_platform_driver(tegra210_mvc_driver)
 

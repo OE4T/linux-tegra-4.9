@@ -958,6 +958,7 @@ static const struct dev_pm_ops tegra186_xbar_pm_ops = {
 static struct platform_driver tegra186_xbar_driver = {
 	.probe = tegra186_xbar_probe,
 	.remove = tegra_xbar_remove,
+	.shutdown = tegra_xbar_shutdown,
 	.driver = {
 		.name = DRV_NAME,
 		.owner = THIS_MODULE,

@@ -278,7 +278,7 @@ struct ufs_tegra_host {
 	struct regulator *vddio_ufs;
 	struct regulator *vddio_ufs_ap;
 	struct padctrl *ufs_padctrl;
-
+	u32 vs_burst;
 	/* Hibernate entry support is broken
 	   WAR is suggested to fix hibernate entry functionality
 	 */

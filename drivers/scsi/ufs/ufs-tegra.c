@@ -1041,6 +1041,7 @@ static int ufs_tegra_hce_enable_notify(struct ufs_hba *hba,
 
 static void ufs_tegra_unipro_post_linkup(struct ufs_hba *hba)
 {
+	struct ufs_tegra_host *ufs_tegra = hba->priv;
 	/* set cport connection status = 1 */
 	ufshcd_dme_set(hba, UIC_ARG_MIB(T_CONNECTIONSTATE), 0x1);
 
@@ -1059,15 +1060,24 @@ static void ufs_tegra_unipro_post_linkup(struct ufs_hba *hba)
 	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_PWRMODEUSERDATA1), 0xffff);
 	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_PWRMODEUSERDATA2), 0x7fff);
 
+	/* After link start configuration request from Host controller,
+	 * burst closure delay needs to be configured.
+	 */
+	ufshcd_dme_set(hba, UIC_ARG_MIB(VS_TXBURSTCLOSUREDELAY),
+					ufs_tegra->vs_burst);
+
 }
 
 static void ufs_tegra_unipro_pre_linkup(struct ufs_hba *hba)
 {
+	struct ufs_tegra_host *ufs_tegra = hba->priv;
 	/* Unipro LCC disable */
 	ufshcd_dme_set(hba, UIC_ARG_MIB(PA_Local_TX_LCC_Enable), 0x0);
 	/* Before link start configuration request from Host controller,
-	 * burst closure delay needs to be configured to 0
+	 * burst closure delay needs to be configured to 0[7:0]
 	 */
+	ufshcd_dme_get(hba, UIC_ARG_MIB(VS_TXBURSTCLOSUREDELAY),
+			&ufs_tegra->vs_burst);
 	ufshcd_dme_set(hba, UIC_ARG_MIB(VS_TXBURSTCLOSUREDELAY), 0x0);
 }
 

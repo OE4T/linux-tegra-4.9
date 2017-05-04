@@ -260,7 +260,7 @@ static int nct1008_get_temp_common(int sensor,
 					int *temp)
 {
 	struct i2c_client *client = data->client;
-	struct nct1008_platform_data *pdata = client->dev.platform_data;
+	struct nct1008_platform_data *pdata = &data->plat_data;
 	struct nct1008_sensor_data *sensorp;
 	s16 temp_hi;
 	s16 temp_lo = 0;
@@ -332,11 +332,12 @@ static int nct1008_get_temp_common(int sensor,
 }
 
 static ssize_t nct1008_show_temp(struct device *dev,
-	struct device_attribute *attr, char *buf)
+				struct device_attribute *attr,
+				char *buf)
 {
 	struct i2c_client *client = to_i2c_client(dev);
-	struct nct1008_platform_data *pdata = client->dev.platform_data;
 	struct nct1008_data *data = i2c_get_clientdata(client);
+	struct nct1008_platform_data *pdata = &data->plat_data;
 
 	s16 temp1 = 0;
 	s16 temp = 0;
@@ -383,7 +384,8 @@ static ssize_t nct1008_show_temp_overheat(struct device *dev,
 				char *buf)
 {
 	struct i2c_client *client = to_i2c_client(dev);
-	struct nct1008_platform_data *pdata = client->dev.platform_data;
+	struct nct1008_data *data = i2c_get_clientdata(client);
+	struct nct1008_platform_data *pdata = &data->plat_data;
 	int value;
 	s16 temp, temp2;
 
@@ -471,7 +473,8 @@ static ssize_t nct1008_show_temp_alert(struct device *dev,
 				char *buf)
 {
 	struct i2c_client *client = to_i2c_client(dev);
-	struct nct1008_platform_data *pdata = client->dev.platform_data;
+	struct nct1008_data *data = i2c_get_clientdata(client);
+	struct nct1008_platform_data *pdata = &data->plat_data;
 	int value;
 	s16 temp_hi, temp_lo;
 	/* External Temperature Throttling hi-limit */
@@ -500,7 +503,8 @@ static ssize_t nct1008_set_temp_alert(struct device *dev,
 	int value;
 	int err;
 	struct i2c_client *client = to_i2c_client(dev);
-	struct nct1008_platform_data *pdata = client->dev.platform_data;
+	struct nct1008_data *data = i2c_get_clientdata(client);
+	struct nct1008_platform_data *pdata = &data->plat_data;
 
 	if (kstrtol(buf, 0, &num)) {
 		dev_err(dev, "\n file: %s, line=%d return %s() ", __FILE__,
@@ -535,9 +539,10 @@ static ssize_t nct1008_show_sensor_temp(int sensor, struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
 	struct i2c_client *client = to_i2c_client(dev);
-	struct nct1008_platform_data *pdata = client->dev.platform_data;
+	struct nct1008_data *data = i2c_get_clientdata(client);
+	struct nct1008_platform_data *pdata = &data->plat_data;
 	s16 temp_value;
-	int data = 0;
+	int val = 0;
 	int data_lo;
 
 	if (!dev || !buf || !attr)
@@ -553,14 +558,14 @@ static ssize_t nct1008_show_sensor_temp(int sensor, struct device *dev,
 		goto error;
 	}
 
-	data = nct1008_read_reg(client, NCT_REG(sensor, TEMP_RD_HI));
-	if (data < 0) {
+	val = nct1008_read_reg(client, NCT_REG(sensor, TEMP_RD_HI));
+	if (val < 0) {
 		dev_err(&client->dev, "%s: failed to read "
-			"ext_temperature, i2c error=%d\n", __func__, data);
+			"ext_temperature, i2c error=%d\n", __func__, val);
 		goto error;
 	}
 
-	temp_value = value_to_temperature(pdata->extended_range, data);
+	temp_value = value_to_temperature(pdata->extended_range, val);
 
 	return snprintf(buf, MAX_STR_PRINT, "%d.%d\n", temp_value,
 		(25 * (data_lo >> 6)));
@@ -1130,7 +1135,7 @@ static int nct1008_offsets_program(struct i2c_client *client)
 static int nct1008_configure_sensor(struct nct1008_data *data)
 {
 	struct i2c_client *client = data->client;
-	struct nct1008_platform_data *pdata = client->dev.platform_data;
+	struct nct1008_platform_data *pdata = &data->plat_data;
 	static struct thermal_cooling_device *cdev;
 	u8 value;
 	s16 temp;
@@ -1311,13 +1316,15 @@ static int nct1008_configure_irq(struct nct1008_data *data)
 			data);
 }
 
-static struct nct1008_platform_data *nct1008_dt_parse(struct i2c_client *client)
+static int nct1008_dt_parse(struct i2c_client *client,
+			struct nct1008_data *data)
 {
 	struct device_node *np = client->dev.of_node;
 	struct device_node *child_sensor;
-	struct nct1008_platform_data *pdata;
+	struct nct1008_platform_data *pdata = &data->plat_data;
 	int nct72_gpio;
 	unsigned int proc, index = 0;
+
 	if (!np) {
 		dev_err(&client->dev,
 			"Cannot found the DT node\n");
@@ -1325,13 +1332,6 @@ static struct nct1008_platform_data *nct1008_dt_parse(struct i2c_client *client)
 	}
 
 	dev_info(&client->dev, "starting parse dt\n");
-	pdata = devm_kzalloc(&client->dev, sizeof(*pdata), GFP_KERNEL);
-	if (!pdata) {
-		dev_err(&client->dev,
-			"Parse DT fails at malloc pdata\n");
-		goto err_parse_dt;
-	}
-
 	if (client->irq == 0)
 		client->irq = -1;
 
@@ -1345,16 +1345,16 @@ static struct nct1008_platform_data *nct1008_dt_parse(struct i2c_client *client)
 
 	if (of_property_read_u32(np, "conv-rate", &proc))
 		goto err_parse_dt;
-	pdata->conv_rate = proc;
 
+	pdata->conv_rate = proc;
 	if (of_property_read_u32(np, "supported-hwrev", &proc))
 		goto err_parse_dt;
-	pdata->supported_hwrev = (bool) proc;
 
+	pdata->supported_hwrev = (bool) proc;
 	if (of_property_read_u32(np, "extended-rage", &proc))
 		goto err_parse_dt;
-	pdata->extended_range = (bool) proc;
 
+	pdata->extended_range = (bool) proc;
 	pdata->offset = 0;
 	pdata->fuse_offset = false;
 	if (!of_property_read_u32(np, "offset", &proc))
@@ -1370,11 +1370,11 @@ static struct nct1008_platform_data *nct1008_dt_parse(struct i2c_client *client)
 		dev_info(&client->dev, "programming offset of 0C\n");
 
 	if (of_property_read_bool(np, "temp-alert-gpio")) {
-		nct72_gpio = of_get_named_gpio(
-			np,  "temp-alert-gpio", 0);
+		nct72_gpio = of_get_named_gpio(np,  "temp-alert-gpio", 0);
 		if (gpio_request(nct72_gpio, "temp_alert") < 0)
 			dev_err(&client->dev,
 				"%s gpio request error\n", __FILE__);
+
 		if (gpio_direction_input(nct72_gpio) < 0) {
 			dev_err(&client->dev,
 				"%s gpio direction_input fail\n", __FILE__);
@@ -1391,11 +1391,11 @@ static struct nct1008_platform_data *nct1008_dt_parse(struct i2c_client *client)
 
 	dev_info(&client->dev, "success parsing dt\n");
 	client->dev.platform_data = pdata;
-	return pdata;
+	return 0;
 
 err_parse_dt:
 	dev_err(&client->dev, "Parsing device tree data error.\n");
-	return NULL;
+	return -EINVAL;
 }
 
 static struct thermal_zone_of_device_ops loc_sops = {
@@ -1430,32 +1430,27 @@ static int nct1008_probe(struct i2c_client *client,
 				const struct i2c_device_id *id)
 {
 	struct nct1008_data *data;
-	struct nct1008_platform_data *pdata;
 	struct thermal_zone_device *zone_device;
 	int err;
 	bool ext_err;
 
-	if (client->dev.of_node) {
-		dev_info(&client->dev, "find device tree node, parsing dt\n");
-		pdata = nct1008_dt_parse(client);
-		if (IS_ERR_OR_NULL(pdata)) {
-			err = PTR_ERR(pdata);
-			dev_err(&client->dev,
-				"Parsing of node failed, %d\n", err);
-			return err;
-		}
+	if (!client->dev.of_node) {
+		dev_err(&client->dev, "missing device tree node\n");
+		return -EINVAL;
 	}
 
+	dev_info(&client->dev, "find device tree node, parsing dt\n");
 	data = kzalloc(sizeof(struct nct1008_data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
 
+	err = nct1008_dt_parse(client, data);
+	if (err)
+		return err;
+
 	data->client = client;
 	data->chip = id->driver_data;
 	strlcpy(data->chip_name, id->name, I2C_NAME_SIZE);
-	memcpy(&data->plat_data, client->dev.platform_data,
-		sizeof(struct nct1008_platform_data));
-
 	i2c_set_clientdata(client, data);
 	mutex_init(&data->mutex);
 

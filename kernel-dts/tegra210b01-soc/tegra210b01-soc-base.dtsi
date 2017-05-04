@@ -64,4 +64,6 @@
 	clock@70110000 {
 		compatible = "nvidia,tegra210b01-dfll", "nvidia,tegra210-dfll";
 	};
+
+	/delete-node/ dtv@7000c300;
 };

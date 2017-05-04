@@ -496,10 +496,6 @@
 		status = "okay";
 	};
 
-	dtv@7000c300 {
-		status = "disabled";
-	};
-
 	xudc@700d0000 {
 		status = "disabled";
 	};

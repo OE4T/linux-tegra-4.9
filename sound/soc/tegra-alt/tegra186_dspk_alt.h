@@ -187,6 +187,7 @@ struct tegra186_dspk {
 	struct pinctrl_state *pin_active_state;
 	struct pinctrl_state *pin_idle_state;
 	unsigned int rx_fifo_th; /* threshold in terms of frames */
+	bool is_shutdown;
 };
 
 #endif

@@ -1,7 +1,7 @@
 /*
  * tegra186_asrc_alt.h - Definitions for Tegra186 ASRC driver
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -180,6 +180,7 @@ struct tegra186_asrc {
 	struct tasklet_struct   tasklet;
 	struct list_head task_desc;
 	int active_dai_count;
+	bool is_shutdown;
 };
 int tegra186_asrc_set_source(int id, int source);
 int tegra186_asrc_event(int id, enum asrc_task_event event, int status);

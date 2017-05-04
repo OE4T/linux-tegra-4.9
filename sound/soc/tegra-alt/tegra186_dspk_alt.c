@@ -139,7 +139,9 @@ static int tegra186_dspk_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(dspk->regmap, false);
-	regcache_sync(dspk->regmap);
+
+	if (!dspk->is_shutdown)
+		regcache_sync(dspk->regmap);
 	return 0;
 }
 
@@ -468,6 +470,7 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 	}
 
 	dspk->soc_data = soc_data;
+	dspk->is_shutdown = false;
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		dspk->clk_dspk = devm_clk_get(&pdev->dev, NULL);
@@ -602,7 +605,12 @@ err:
 	return ret;
 }
 
+static void tegra186_dspk_platform_shutdown(struct platform_device *pdev)
+{
+	struct tegra186_dspk *dspk = dev_get_drvdata(&pdev->dev);
 
+	dspk->is_shutdown = true;
+}
 
 static int tegra186_dspk_platform_remove(struct platform_device *pdev)
 {
@@ -636,6 +644,7 @@ static struct platform_driver tegra186_dspk_driver = {
 	},
 	.probe = tegra186_dspk_platform_probe,
 	.remove = tegra186_dspk_platform_remove,
+	.shutdown = tegra186_dspk_platform_shutdown,
 };
 module_platform_driver(tegra186_dspk_driver);
 

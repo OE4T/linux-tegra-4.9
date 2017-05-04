@@ -38,7 +38,7 @@ static int gv11b_tegra_probe(struct device *dev)
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 
 	platform->bypass_smmu = !device_is_iommuable(dev);
-	platform->disable_bigpage = false;
+	platform->disable_bigpage = platform->bypass_smmu;
 
 	platform->g->gr.t18x.ctx_vars.dump_ctxsw_stats_on_channel_close
 		= false;

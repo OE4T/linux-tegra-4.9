@@ -2518,8 +2518,8 @@ static int tegra_se_pka1_rsa_setkey(struct crypto_akcipher *tfm,
 		goto clk_dis;
 	}
 
-	modlen = (keylen >> 16);
-	explen = (keylen & (0xFFFF));
+	modlen = (keylen >> SE_PKA1_RSA_MOD_SHIFT);
+	explen = (keylen & SE_PKA1_RSA_EXP_BITS);
 
 	if ((modlen < 64) || (modlen > 512))
 		return -EINVAL;

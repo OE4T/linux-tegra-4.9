@@ -4584,6 +4584,57 @@ skip_pad_config:
 	return 0;
 }
 
+#ifdef CONFIG_DEBUG_FS
+static int io_pad_show(struct seq_file *s, void *data)
+{
+	unsigned int i;
+
+	for (i = 0; i < pmc->soc->num_io_pads; i++) {
+		const struct tegra_pmc_io_pad_soc *pad = &pmc->soc->io_pads[i];
+		seq_printf(s, "%16s: dpd = %2d, v = %2d io_power = %2d ",
+			   pad->name, pad->dpd, pad->voltage, pad->io_power);
+		seq_printf(s, "pins[0] = %2d npins = %2d dpdreq = 0x%-3x ",
+			   pad->pins[0], pad->npins, pad->dpd_req_reg);
+		seq_printf(s, "dpdsts = 0x%-3x dpdtmr = 0x%-3x ",
+			   pad->dpd_status_reg, pad->dpd_timer_reg);
+		seq_printf(s, "dpdsmpl = 0x%-3x ", pad->dpd_sample_reg);
+		seq_printf(s, "bds = %d detenb = 0x%-3x detval = 0x%-3x ",
+			   pad->bdsdmem_cfc, pad->io_pad_pwr_det_enable_reg,
+			   pad->io_pad_pwr_det_val_reg);
+		seq_printf(s, "pad_uv_0 = %d pad_uv_1 = %d\n",
+			   pad->pad_uv_0, pad->pad_uv_1);
+	}
+
+	return 0;
+}
+
+static int io_pad_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, io_pad_show, inode->i_private);
+}
+
+static const struct file_operations io_pad_fops = {
+	.open = io_pad_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
+static void tegra_pmc_io_pad_debugfs_init(struct device *dev)
+{
+	struct dentry *d;
+
+	d = debugfs_create_file("tegra-pmc-io-pads", S_IRUGO, NULL, NULL,
+				&io_pad_fops);
+	if (!d)
+		dev_err(dev, "Error in creating the debugFS for pmc-io-pad\n");
+}
+#else
+static void tegra_pmc_io_pad_debugfs_init(struct device *dev)
+{
+}
+#endif
+
 static int tegra_pmc_iopower_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -4613,6 +4664,7 @@ static int tegra_pmc_iopower_probe(struct platform_device *pdev)
 	}
 
 	dev_info(dev, "NO_IOPOWER setting 0x%x\n", pwrio_disabled_mask);
+	tegra_pmc_io_pad_debugfs_init(dev);
 	return 0;
 }
 

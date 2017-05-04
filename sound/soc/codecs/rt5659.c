@@ -4372,7 +4372,14 @@ static int rt5659_i2c_probe(struct i2c_client *i2c,
 
 static int rt5659_i2c_remove(struct i2c_client *i2c)
 {
+	struct rt5659_priv *rt5659 = i2c_get_clientdata(i2c);
+
 	snd_soc_unregister_codec(&i2c->dev);
+	if (i2c->irq) {
+		/* disable jack interrupts during system suspend */
+		disable_irq(i2c->irq);
+	}
+	cancel_delayed_work_sync(&rt5659->jack_detect_work);
 
 	return 0;
 }

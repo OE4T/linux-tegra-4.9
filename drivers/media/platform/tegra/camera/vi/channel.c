@@ -1550,8 +1550,8 @@ static int tegra_channel_open(struct file *fp)
 	return 0;
 
 fail:
+	_vb2_fop_release(fp, NULL);
 	mutex_unlock(&chan->video_lock);
-	tegra_channel_close(fp);
 	return ret;
 }
 

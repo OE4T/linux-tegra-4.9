@@ -388,6 +388,23 @@ void gk20a_debug_init(struct device *dev, const char *debugfs_symlink)
 					S_IRUGO|S_IWUSR,
 					platform->debugfs,
 					&g->runlist_interleave);
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	g->gr.t18x.ctx_vars.debugfs_force_preemption_gfxp =
+		debugfs_create_bool("force_preemption_gfxp", S_IRUGO|S_IWUSR,
+		platform->debugfs,
+		&g->gr.t18x.ctx_vars.force_preemption_gfxp);
+
+	g->gr.t18x.ctx_vars.debugfs_force_preemption_cilp =
+		debugfs_create_bool("force_preemption_cilp", S_IRUGO|S_IWUSR,
+		platform->debugfs,
+		&g->gr.t18x.ctx_vars.force_preemption_cilp);
+
+	g->gr.t18x.ctx_vars.debugfs_dump_ctxsw_stats =
+		debugfs_create_bool("dump_ctxsw_stats_on_channel_close",
+			S_IRUGO|S_IWUSR, platform->debugfs,
+			&g->gr.t18x.
+				ctx_vars.dump_ctxsw_stats_on_channel_close);
+#endif
 
 	gr_gk20a_debugfs_init(g);
 	gk20a_pmu_debugfs_init(g->dev);

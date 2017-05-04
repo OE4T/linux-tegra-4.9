@@ -159,23 +159,6 @@ static int gp10b_tegra_probe(struct device *dev)
 	platform->g->gr.t18x.ctx_vars.force_preemption_gfxp = false;
 	platform->g->gr.t18x.ctx_vars.force_preemption_cilp = false;
 
-	platform->g->gr.t18x.ctx_vars.debugfs_force_preemption_gfxp =
-		debugfs_create_bool("force_preemption_gfxp", S_IRUGO|S_IWUSR,
-			platform->debugfs,
-			&platform->g->gr.t18x.ctx_vars.force_preemption_gfxp);
-
-	platform->g->gr.t18x.ctx_vars.debugfs_force_preemption_cilp =
-		debugfs_create_bool("force_preemption_cilp", S_IRUGO|S_IWUSR,
-			platform->debugfs,
-			&platform->g->gr.t18x.ctx_vars.force_preemption_cilp);
-
-	platform->g->gr.t18x.ctx_vars.debugfs_dump_ctxsw_stats =
-		debugfs_create_bool("dump_ctxsw_stats_on_channel_close",
-			S_IRUGO|S_IWUSR,
-			platform->debugfs,
-			&platform->g->gr.t18x.
-				ctx_vars.dump_ctxsw_stats_on_channel_close);
-
 	platform->g->mm.vidmem_is_vidmem = platform->vidmem_is_vidmem;
 
 	gp10b_tegra_get_clocks(dev);

@@ -21,6 +21,7 @@
 #include <linux/notifier.h>
 #include <linux/tegra-mce.h>
 #include <soc/tegra/chip-id.h>
+#include <soc/tegra/fuse.h>
 #include <linux/t18x_ari.h>
 #include <linux/module.h>
 
@@ -554,10 +555,13 @@ static struct debugfs_entry mce_dbg_attrs[] = {
 	{ NULL, NULL, 0 }
 };
 
-static __init int t18x_mce_debugfs_probe(struct platform_device *pdev)
+static __init int t18x_mce_debugfs_init(void)
 {
 	struct dentry *dent;
 	struct debugfs_entry *fent;
+
+	if (tegra_get_chipid() != TEGRA_CHIPID_TEGRA18)
+		return -ENODEV;
 
 	mce_debugfs_root = debugfs_create_dir("tegra_mce", NULL);
 	if (!mce_debugfs_root)
@@ -579,21 +583,7 @@ abort:
 	return -EFAULT;
 }
 
-static const struct of_device_id t18x_mce_debugfs_of[] __initconst = {
-	{ .compatible = "nvidia,tegra186-mce" },
-	{}
-};
-
-static struct platform_driver t18x_mce_debugfs_driver __refdata = {
-	.probe = t18x_mce_debugfs_probe,
-	.driver = {
-		.owner = THIS_MODULE,
-		.name = "t18x_mce_debugfs",
-		.of_match_table = of_match_ptr(t18x_mce_debugfs_of)
-	}
-};
-
-module_platform_driver(t18x_mce_debugfs_driver);
+module_init(t18x_mce_debugfs_init);
 #endif
 
 static phys_addr_t sregdump_phys; /* secure register addr to access */

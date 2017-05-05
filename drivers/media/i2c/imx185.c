@@ -30,6 +30,8 @@
 #include <media/tegra-v4l2-camera.h>
 #include <media/camera_common.h>
 #include "imx185_mode_tbls.h"
+#define CREATE_TRACE_POINTS
+#include <trace/events/imx185.h>
 
 #define IMX185_DEFAULT_MODE	IMX185_MODE_1920X1080_CROP_30FPS
 #define IMX185_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SRGGB12_1X12
@@ -363,6 +365,7 @@ static int imx185_s_stream(struct v4l2_subdev *sd, int enable)
 
 	dev_dbg(&client->dev, "%s++ enable %d\n", __func__, enable);
 
+	trace_imx185_s_stream(sd->name, enable, s_data->mode);
 	if (!enable) {
 		err =  imx185_write_table(priv,
 			mode_table[IMX185_MODE_STOP_STREAM]);

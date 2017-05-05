@@ -30,8 +30,9 @@
 #include <media/tegra-v4l2-camera.h>
 #include <media/camera_common.h>
 #include <media/ov23850.h>
-
 #include "ov23850_mode_tbls.h"
+#define CREATE_TRACE_POINTS
+#include <trace/events/ov23850.h>
 
 #define OV23850_MAX_COARSE_DIFF		0x20
 
@@ -490,7 +491,7 @@ static int ov23850_s_stream(struct v4l2_subdev *sd, int enable)
 	int err;
 
 	dev_dbg(&client->dev, "%s++\n", __func__);
-
+	trace_ov23850_s_stream(sd->name, enable, s_data->mode);
 	if (!enable) {
 		err = ov23850_write_table(priv,
 			mode_table[OV23850_MODE_STOP_STREAM]);

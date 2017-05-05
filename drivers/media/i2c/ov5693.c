@@ -25,14 +25,15 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
-
 #include <media/tegra-v4l2-camera.h>
 #include <media/camera_common.h>
 #include <media/ov5693.h>
-
 #include "../platform/tegra/camera/camera_gpio.h"
-
 #include "ov5693_mode_tbls.h"
+
+#define CREATE_TRACE_POINTS
+#include <trace/events/ov5693.h>
+
 
 #define OV5693_MAX_COARSE_DIFF		6
 
@@ -504,6 +505,7 @@ static int ov5693_s_stream(struct v4l2_subdev *sd, int enable)
 
 	dev_dbg(&client->dev, "%s++\n", __func__);
 
+	trace_ov5693_s_stream(sd->name, enable, s_data->mode);
 	if (!enable) {
 		ov5693_update_ctrl_range(priv, OV5693_MAX_FRAME_LENGTH);
 

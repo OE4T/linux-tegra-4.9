@@ -394,16 +394,6 @@ static int csi2_hw_init(struct tegra_csi_device *csi)
 			port->tpg = port->pixel_parser + TEGRA_CSI_TPG_OFFSET;
 		}
 	}
-	csi->plld = devm_clk_get(csi->dev, "pll_d");
-	if (IS_ERR(csi->plld)) {
-		dev_err(csi->dev, "Fail to get pll_d\n");
-		return PTR_ERR(csi->plld);
-	}
-	csi->plld_dsi = devm_clk_get(csi->dev, "pll_d_dsi_out");
-	if (IS_ERR(csi->plld_dsi)) {
-		dev_err(csi->dev, "Fail to get pll_d_dsi_out\n");
-		return PTR_ERR(csi->plld_dsi);
-	}
 	return 0;
 }
 

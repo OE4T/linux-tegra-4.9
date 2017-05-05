@@ -307,52 +307,44 @@ static int nvhost_vi_slcg_handler(struct notifier_block *nb,
 {
 	/* TODO: Resolve this during T210 bringup */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
-	struct clk *clk;
 	int ret = 0;
 
 	struct nvhost_device_data *pdata =
 		container_of(nb, struct nvhost_device_data,
 			toggle_slcg_notifier);
 	struct vi *tegra_vi = (struct vi *)pdata->private_data;
+	struct tegra_csi_device *csi = &tegra_vi->csi;
 
 	if (tegra_vi->mc_vi.pg_mode)
 		return NOTIFY_OK;
 
-	clk = clk_get(NULL, "pll_d");
-	if (IS_ERR(clk))
-		return -EINVAL;
-
 	/* Make CSI sourced from PLL_D */
-	ret = tegra_clk_cfg_ex(clk, TEGRA_CLK_PLLD_CSI_OUT_ENB, 1);
+	tegra210_csi_source_from_plld();
+	ret = clk_prepare_enable(csi->plld);
 	if (ret) {
-		dev_err(&pdata->pdev->dev,
-		"%s: failed to select CSI source pll_d: %d\n",
-		__func__, ret);
+		dev_err(tegra_vi->dev, "pll_d enable failed");
 		return ret;
 	}
 
-	/* Enable PLL_D */
-	ret = clk_prepare_enable(clk);
+	ret = clk_prepare_enable(csi->plld_dsi);
 	if (ret) {
-		dev_err(&pdata->pdev->dev, "Can't enable pll_d: %d\n", ret);
-		return ret;
+		dev_err(tegra_vi->dev, "pll_d enable failed");
+		goto plld_dsi_err;
 	}
 
 	udelay(1);
 
 	/* Disable PLL_D */
-	clk_disable_unprepare(clk);
+	clk_disable_unprepare(csi->plld_dsi);
+	clk_disable_unprepare(csi->plld);
 
 	/* Restore CSI source */
-	ret = tegra_clk_cfg_ex(clk, TEGRA_CLK_MIPI_CSI_OUT_ENB, 1);
-	if (ret) {
-		dev_err(&pdata->pdev->dev,
-		"%s: failed to restore csi source: %d\n",
-		__func__, ret);
-		return ret;
-	}
+	tegra210_csi_source_from_brick();
+	return NOTIFY_OK;
 
-	clk_put(clk);
+plld_dsi_err:
+	clk_disable_unprepare(csi->plld);
+	tegra210_csi_source_from_brick();
 #endif
 
 	return NOTIFY_OK;
@@ -452,6 +444,16 @@ static int vi_probe(struct platform_device *dev)
 			goto camera_i2c_unregister;
 	}
 
+	tegra_vi->csi.plld = devm_clk_get(&dev->dev, "pll_d");
+	if (IS_ERR(tegra_vi->csi.plld)) {
+		dev_err(&dev->dev, "Fail to get pll_d\n");
+		return PTR_ERR(tegra_vi->csi.plld);
+	}
+	tegra_vi->csi.plld_dsi = devm_clk_get(&dev->dev, "pll_d_dsi_out");
+	if (IS_ERR(tegra_vi->csi.plld_dsi)) {
+		dev_err(&dev->dev, "Fail to get pll_d_dsi_out\n");
+		return PTR_ERR(tegra_vi->csi.plld_dsi);
+	}
 #ifdef CONFIG_TEGRA_CAMERA
 	tegra_vi->camera = tegra_camera_register(dev);
 	if (!tegra_vi->camera) {

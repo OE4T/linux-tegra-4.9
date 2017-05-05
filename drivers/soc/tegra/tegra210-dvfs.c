@@ -46,9 +46,11 @@ struct tegra_dvfs_data {
 	int cpu_fv_table_size;
 	struct cvb_dvfs *gpu_cvb_table;
 	int gpu_cvb_table_size;
+	struct dvb_dvfs *emc_dvb_table;
+	int emc_dvb_table_size;
+
 	const int *core_mv;
 	struct dvfs *core_vf_table;
-
 	int core_vf_table_size;
 	struct dvfs *spi_vf_table;
 	struct dvfs *spi_slave_vf_table;
@@ -768,6 +770,27 @@ static struct dvfs_therm_limits vdd_gpu_therm_caps_table[MAX_THERMAL_LIMITS];
 static struct dvfs_therm_limits vdd_gpu_therm_caps_ucm2_table[MAX_THERMAL_LIMITS];
 static unsigned long gpu_cap_rates[MAX_THERMAL_LIMITS];
 static struct clk *vgpu_cap_clk;
+
+/* EMC DVFS tables */
+static struct dvb_dvfs emcb01_dvb_dvfs_table[] = {
+	{
+		.speedo_id = -1,
+		.freqs_mult = KHZ,
+		.dvb_table = {
+			{ 40800,   { 800, 800, 800, } },
+			{ 68000,   { 800, 800, 800, } },
+			{ 102000,  { 800, 800, 800, } },
+			{ 204000,  { 800, 800, 800, } },
+			{ 408000,  { 812, 812, 812, } },
+			{ 665600,  { 825, 825, 825, } },
+			{ 800000,  { 825, 825, 825, } },
+			{ 1065600, { 837, 837, 837, } },
+			{ 1331200, { 850, 850, 850, } },
+			{ 1600000, { 887, 887, 887, } },
+			{ 0, { } },
+		},
+	},
+};
 
 /* Core DVFS tables */
 static const int core_voltages_mv[MAX_DVFS_FREQS] = {
@@ -1556,7 +1579,7 @@ static int init_cpu_lp_dvfs_table(int *cpu_lp_max_freq_index)
 	return ret;
 }
 
-static void adjust_emc_dvfs_table(struct dvfs *d)
+static void adjust_emc_dvfs_from_timing_table(struct dvfs *d)
 {
 	unsigned long rate;
 	int i;
@@ -1572,6 +1595,60 @@ static void adjust_emc_dvfs_table(struct dvfs *d)
 		if (rate)
 			d->freqs[i] = rate;
 	}
+}
+
+static unsigned long dvb_predict_rate(
+	int process_id, struct dvb_dvfs *dvbd, int mv)
+{
+	int i;
+	unsigned long rate = 0;
+
+	for (i = 0; i < MAX_DVFS_FREQS; i++) {
+		if (!dvbd->dvb_table[i].freq)
+			break;
+		if (dvbd->dvb_table[i].mvolts[process_id] > mv)
+			break;
+		rate = dvbd->dvb_table[i].freq * dvbd->freqs_mult;
+	}
+
+	return rate;
+}
+
+static void adjust_emc_dvfs_from_dvb_table(
+	int process_id, struct dvb_dvfs *dvbd, struct dvfs *d)
+{
+	unsigned long rate;
+	int i;
+
+	if (process_id > MAX_PROCESS_ID) {
+		WARN(1, "Process id %d above emc dvb table max\n", process_id);
+		return;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(core_millivolts); i++) {
+		if (core_millivolts[i] == 0)
+			return;
+
+		rate = dvb_predict_rate(process_id, dvbd, core_millivolts[i]);
+		if (rate)
+			d->freqs[i] = rate;
+	}
+}
+
+static struct dvb_dvfs *get_emc_dvb_dvfs(int speedo_id)
+{
+	int i;
+
+	if (dvfs_data->emc_dvb_table) {
+		for (i = 0; i < dvfs_data->emc_dvb_table_size; i++) {
+			struct dvb_dvfs *dvbd = &dvfs_data->emc_dvb_table[i];
+
+			if (dvbd->speedo_id == -1 ||
+			    dvbd->speedo_id == speedo_id)
+				return dvbd;
+		}
+	}
+	return NULL;
 }
 
 /*
@@ -2051,12 +2128,20 @@ static void init_core_dvfs_table(int soc_speedo_id, int core_process_id)
 		init_dvfs_one(d, core_nominal_mv_index);
 
 		/*
-		 * EMC dvfs is board dependent, the EMC scaling frequencies are
+		 * If EMC DVB table is installed, use it to set EMC VF opps.
+		 * Otherwise, EMC dvfs is board dependent, EMC frequencies are
 		 * determined by the Tegra BCT and the board specific EMC DFS
 		 * table owned by EMC driver.
 		 */
-		if (!strcmp(d->clk_name, "emc") && tegra210_emc_is_ready())
-			adjust_emc_dvfs_table(d);
+		if (!strcmp(d->clk_name, "emc") && tegra210_emc_is_ready()) {
+			struct dvb_dvfs *dvbd = get_emc_dvb_dvfs(soc_speedo_id);
+
+			if (dvbd)
+				adjust_emc_dvfs_from_dvb_table(
+					core_process_id, dvbd, d);
+			else
+				adjust_emc_dvfs_from_timing_table(d);
+		}
 	}
 
 	init_qspi_dvfs(soc_speedo_id, core_process_id, core_nominal_mv_index);
@@ -2116,6 +2201,8 @@ static struct tegra_dvfs_data tegra210b01_dvfs_data = {
 	.cpu_fv_table_size = ARRAY_SIZE(cpub01_fv_dvfs_table),
 	.gpu_cvb_table = gpub01_cvb_dvfs_table,
 	.gpu_cvb_table_size = ARRAY_SIZE(gpub01_cvb_dvfs_table),
+	.emc_dvb_table = emcb01_dvb_dvfs_table,
+	.emc_dvb_table_size = ARRAY_SIZE(emcb01_dvb_dvfs_table),
 
 	.core_mv = core_voltages_mv,
 	.core_vf_table = core_dvfs_table,

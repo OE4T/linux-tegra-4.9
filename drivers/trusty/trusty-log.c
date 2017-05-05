@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 Google, Inc.
+ * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -272,3 +273,6 @@ static struct platform_driver trusty_log_driver = {
 };
 
 module_platform_driver(trusty_log_driver);
+MODULE_DESCRIPTION("Trusty log dirver");
+MODULE_AUTHOR("Google, Inc");
+MODULE_LICENSE("GPL v2");

@@ -24,8 +24,6 @@
 #include <media/vi.h>
 #include <media/vi2_registers.h>
 
-#include <video/vi4.h>
-
 #include "dev.h"
 #include "host1x/host1x.h"
 

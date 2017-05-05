@@ -31,8 +31,6 @@
 #include <media/mc_common.h>
 #include <media/csi.h>
 
-#include <video/vi4.h>
-
 #include "nvcsi/nvcsi.h"
 
 /* -----------------------------------------------------------------------------

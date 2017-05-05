@@ -628,3 +628,6 @@ static void __exit trusty_driver_exit(void)
 
 subsys_initcall(trusty_driver_init);
 module_exit(trusty_driver_exit);
+MODULE_DESCRIPTION("Trusty core dirver");
+MODULE_AUTHOR("Google, Inc");
+MODULE_LICENSE("GPL v2");

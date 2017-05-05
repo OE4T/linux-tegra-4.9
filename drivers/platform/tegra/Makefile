@@ -18,6 +18,7 @@ obj-$(CONFIG_OF_TEGRA_IOMMU_SMMU)       += iommu.o
 obj-$(CONFIG_TEGRA_BOOTLOADER_DEBUG)    += tegra_bootloader_debug.o
 obj-$(CONFIG_TEGRA_BOOTLOADER_DEBUG_INIT) += tegra_bootloader_debug_init.o
 
+obj-y					+= tegra_vpr.o
 obj-y					+= smc-calls.o
 
 obj-$(CONFIG_TEGRA_NVADSP)		+= nvadsp/

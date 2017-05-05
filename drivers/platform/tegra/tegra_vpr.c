@@ -16,13 +16,12 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/gk20a.h>
-#include <linux/smc-calls.h>
 #include <linux/ote_protocol.h>
 #include <linux/delay.h>
 
-phys_addr_t tegra_vpr_start;
-phys_addr_t tegra_vpr_size;
-bool tegra_vpr_resize;
+extern phys_addr_t tegra_vpr_start;
+extern phys_addr_t tegra_vpr_size;
+extern bool tegra_vpr_resize;
 static DEFINE_MUTEX(vpr_lock);
 
 static int tegra_vpr_arg(char *options)
@@ -71,6 +70,11 @@ struct dma_resize_notifier_ops vpr_dev_ops = {
 	.resize = tegra_update_resize_cfg
 };
 EXPORT_SYMBOL(vpr_dev_ops);
+
+/* SMC Definitions*/
+#define TE_SMC_PROGRAM_VPR 0x82000003
+
+uint32_t invoke_smc(uint32_t arg0, uintptr_t arg1, uintptr_t arg2);
 
 int tegra_set_vpr_params(void *vpr_base, size_t vpr_size)
 {

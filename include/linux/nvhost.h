@@ -277,6 +277,9 @@ struct nvhost_device_data {
 	 */
 	void (*reset)(struct platform_device *dev);
 
+	/* Mask for the module reset clamp bit */
+	u32 reset_clamp_mask;
+
 	/* Device is busy. */
 	void (*busy)(struct platform_device *);
 

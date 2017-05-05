@@ -6489,22 +6489,6 @@ static int energy_aware_wake_cpu(struct task_struct *p, int target, int sync)
 		}
 	}
 
-	if (target_cpu != task_cpu(p)) {
-		struct energy_env eenv = {
-			.util_delta	= task_util(p),
-			.src_cpu	= task_cpu(p),
-			.dst_cpu	= target_cpu,
-			.task		= p,
-		};
-
-		/* Not enough spare capacity on previous cpu */
-		if (cpu_overutilized(task_cpu(p)))
-			return target_cpu;
-
-		if (energy_diff(&eenv) >= 0)
-			return task_cpu(p);
-	}
-
 	return target_cpu;
 }
 

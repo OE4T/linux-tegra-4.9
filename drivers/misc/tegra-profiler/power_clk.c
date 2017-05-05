@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/power_clk.c
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -251,12 +251,9 @@ read_source(struct power_clk_source *s, int cpu)
 	case QUADD_POWER_CLK_GPU:
 		/* update gpu frequency */
 		mutex_lock(&s->lock);
-		s->clkp = clk_get_sys("3d", NULL);
-		if (!IS_ERR_OR_NULL(s->clkp)) {
+		if (s->clkp)
 			s->data[0].value =
 				clk_get_rate(s->clkp) / 1000;
-			clk_put(s->clkp);
-		}
 		pr_debug("QUADD_POWER_CLK_GPU, value: %lu\n",
 			 s->data[0].value);
 		mutex_unlock(&s->lock);
@@ -265,12 +262,9 @@ read_source(struct power_clk_source *s, int cpu)
 	case QUADD_POWER_CLK_EMC:
 		/* update emc frequency */
 		mutex_lock(&s->lock);
-		s->clkp = clk_get_sys("cpu", "emc");
-		if (!IS_ERR_OR_NULL(s->clkp)) {
+		if (s->clkp)
 			s->data[0].value =
 				clk_get_rate(s->clkp) / 1000;
-			clk_put(s->clkp);
-		}
 		pr_debug("QUADD_POWER_CLK_EMC, value: %lu\n",
 			 s->data[0].value);
 		mutex_unlock(&s->lock);
@@ -413,6 +407,7 @@ static void init_source(struct power_clk_source *s,
 			int nr_values,
 			int type)
 {
+	s->clkp = NULL;
 	s->type = type;
 	s->nr = min_t(int, nr_values, PCLK_MAX_VALUES);
 	atomic_set(&s->active, 0);
@@ -461,6 +456,7 @@ static DECLARE_WORK(read_all_sources_work, read_all_sources_work_func);
 
 int quadd_power_clk_start(void)
 {
+	int ret;
 	struct power_clk_source *s;
 	struct timer_list *timer = &power_ctx.timer;
 	struct quadd_parameters *param = &power_ctx.quadd_ctx->param;
@@ -484,42 +480,49 @@ int quadd_power_clk_start(void)
 	s = &power_ctx.gpu;
 	s->clkp = clk_get_sys("3d", NULL);
 	if (!IS_ERR_OR_NULL(s->clkp)) {
-#ifdef CONFIG_COMMON_CLK
-		int status = clk_notifier_register(s->clkp, s->nb);
+		ret = clk_prepare_enable(s->clkp);
+		if (ret) {
+			pr_err("error: could not enable gpu clock\n");
+			goto errout_gpu_free;
+		}
 
-		if (status < 0) {
-			pr_err("error: could not setup gpu freq\n");
-			clk_put(s->clkp);
-			return status;
+#ifdef CONFIG_COMMON_CLK
+		ret = clk_notifier_register(s->clkp, &s->nb[PCLK_NB_GPU]);
+		if (ret) {
+			pr_err("error: could not register gpu notifier\n");
+			goto errout_gpu_disable_clk;
 		}
 #endif
-		clk_put(s->clkp);
 		reset_data(s);
 		atomic_set(&s->active, 1);
 	} else {
-		pr_warn("warning: could not setup gpu freq\n");
+		pr_warn("warning: could not setup gpu clock\n");
 		atomic_set(&s->active, 0);
+		s->clkp = NULL;
 	}
 
 	/* setup emc frequency */
 	s = &power_ctx.emc;
 	s->clkp = clk_get_sys("cpu", "emc");
 	if (!IS_ERR_OR_NULL(s->clkp)) {
+		ret = clk_prepare_enable(s->clkp);
+		if (ret) {
+			pr_err("error: could not enable emc clock\n");
+			goto errout_emc_free;
+		}
 #ifdef CONFIG_COMMON_CLK
-		int status = clk_notifier_register(s->clkp, s->nb);
-
-		if (status < 0) {
-			pr_err("error: could not setup emc freq\n");
-			clk_put(s->clkp);
-			return status;
+		ret = clk_notifier_register(s->clkp, &s->nb[PCLK_NB_EMC]);
+		if (ret) {
+			pr_err("error: could not register emc notifier\n");
+			goto errout_emc_disable_clk;
 		}
 #endif
-		clk_put(s->clkp);
 		reset_data(s);
 		atomic_set(&s->active, 1);
 	} else {
-		pr_warn("warning: could not setup emc freq\n");
+		pr_warn("warning: could not setup emc clock\n");
 		atomic_set(&s->active, 0);
+		s->clkp = NULL;
 	}
 
 	/* setup cpu frequency notifier */
@@ -538,6 +541,31 @@ int quadd_power_clk_start(void)
 	schedule_work(&read_all_sources_work);
 
 	return 0;
+
+#ifdef CONFIG_COMMON_CLK
+errout_emc_disable_clk:
+	clk_disable_unprepare(s->clkp);
+#endif
+
+errout_emc_free:
+	clk_put(s->clkp);
+	s->clkp = NULL;
+
+	s = &power_ctx.gpu;
+	if (!s->clkp)
+		return ret;
+
+	atomic_set(&s->active, 0);
+#ifdef CONFIG_COMMON_CLK
+	clk_notifier_unregister(s->clkp, &s->nb[PCLK_NB_GPU]);
+errout_gpu_disable_clk:
+#endif
+	clk_disable_unprepare(s->clkp);
+errout_gpu_free:
+	clk_put(s->clkp);
+	s->clkp = NULL;
+
+	return ret;
 }
 
 void quadd_power_clk_stop(void)
@@ -556,8 +584,10 @@ void quadd_power_clk_stop(void)
 	if (atomic_cmpxchg(&s->active, 1, 0)) {
 #ifdef CONFIG_COMMON_CLK
 		if (s->clkp)
-			clk_notifier_unregister(s->clkp, s->nb);
+			clk_notifier_unregister(s->clkp, &s->nb[PCLK_NB_GPU]);
 #endif
+		clk_disable_unprepare(s->clkp);
+		clk_put(s->clkp);
 	}
 	mutex_unlock(&s->lock);
 
@@ -566,8 +596,10 @@ void quadd_power_clk_stop(void)
 	if (atomic_cmpxchg(&s->active, 1, 0)) {
 #ifdef CONFIG_COMMON_CLK
 		if (s->clkp)
-			clk_notifier_unregister(s->clkp, s->nb);
+			clk_notifier_unregister(s->clkp, &s->nb[PCLK_NB_EMC]);
 #endif
+		clk_disable_unprepare(s->clkp);
+		clk_put(s->clkp);
 	}
 	mutex_unlock(&s->lock);
 

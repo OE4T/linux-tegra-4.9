@@ -500,7 +500,7 @@ static struct sid_to_oids sid_to_oids[] = {
 		.oid	= {
 			HOST1XDMAR,
 		},
-		.ord = SIM_OVERRIDE,
+		.ord = NO_OVERRIDE,
 		.name = "HC",
 	},
 	{
@@ -511,7 +511,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			VICSRD,
 			VICSWR,
 		},
-		.ord = SIM_OVERRIDE,
+		.ord = NO_OVERRIDE,
 		.name = "VIC",
 	},
 	{
@@ -547,7 +547,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			NVDECSRD,
 			NVDECSWR,
 		},
-		.ord = SIM_OVERRIDE,
+		.ord = NO_OVERRIDE,
 		.name = "NVDEC",
 	},
 	{
@@ -558,7 +558,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			NVENCSWR,
 			NVENCSRD1,
 		},
-		.ord = SIM_OVERRIDE,
+		.ord = NO_OVERRIDE,
 		.name = "NVENC",
 	},
 	{
@@ -568,7 +568,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			NVJPGSRD,
 			NVJPGSWR,
 		},
-		.ord = SIM_OVERRIDE,
+		.ord = NO_OVERRIDE,
 		.name = "NVJPG",
 	},
 	{

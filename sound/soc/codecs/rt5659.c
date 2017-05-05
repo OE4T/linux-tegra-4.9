@@ -30,6 +30,7 @@
 #include <sound/initval.h>
 #include <sound/tlv.h>
 #include <sound/rt5659.h>
+#include <linux/of_gpio.h>
 
 #include "rl6231.h"
 #include "rt5659.h"
@@ -1251,6 +1252,34 @@ static int rt5659_hp_vol_put(struct snd_kcontrol *kcontrol,
 	return ret;
 }
 
+/**
+ * manage_dapm_pin - enable or disable dapm pin
+ * @codec: SoC audio codec device.
+ * @pin_name: dapm widget name
+ * @enable: enable when true, disable otherwise
+ *
+ */
+
+static void manage_dapm_pin(struct snd_soc_codec *codec, const char *pin_name,
+	bool enable)
+{
+	char prefixed_ctl[SNDRV_CTL_ELEM_ID_NAME_MAXLEN];
+	struct snd_soc_dapm_context *dapm = snd_soc_codec_get_dapm(codec);
+
+	if (!codec->component.name_prefix) {
+		snprintf(prefixed_ctl, sizeof(prefixed_ctl), "%s",
+			pin_name);
+	} else {
+		snprintf(prefixed_ctl, sizeof(prefixed_ctl), "%s %s",
+			codec->component.name_prefix, pin_name);
+	}
+
+	if (enable)
+		snd_soc_dapm_force_enable_pin(dapm, prefixed_ctl);
+	else
+		snd_soc_dapm_disable_pin(dapm, prefixed_ctl);
+}
+
 static void rt5659_enable_push_button_irq(struct snd_soc_codec *codec,
 	bool enable)
 {
@@ -1260,9 +1289,8 @@ static void rt5659_enable_push_button_irq(struct snd_soc_codec *codec,
 		snd_soc_write(codec, RT5659_4BTN_IL_CMD_1, 0x000b);
 
 		/* MICBIAS1 and Mic Det Power for button detect*/
-		snd_soc_dapm_force_enable_pin(dapm, "MICBIAS1");
-		snd_soc_dapm_force_enable_pin(dapm,
-			"Mic Det Power");
+		manage_dapm_pin(codec, "MICBIAS1", true);
+		manage_dapm_pin(codec, "Mic Det Power", true);
 		snd_soc_dapm_sync(dapm);
 
 		snd_soc_update_bits(codec, RT5659_PWR_ANLG_2,
@@ -1280,8 +1308,8 @@ static void rt5659_enable_push_button_irq(struct snd_soc_codec *codec,
 		snd_soc_update_bits(codec, RT5659_IRQ_CTRL_2,
 				RT5659_IL_IRQ_MASK, RT5659_IL_IRQ_DIS);
 		/* MICBIAS1 and Mic Det Power for button detect*/
-		snd_soc_dapm_disable_pin(dapm, "MICBIAS1");
-		snd_soc_dapm_disable_pin(dapm, "Mic Det Power");
+		manage_dapm_pin(codec, "MICBIAS1", false);
+		manage_dapm_pin(codec, "Mic Det Power", false);
 		snd_soc_dapm_sync(dapm);
 	}
 }
@@ -1305,8 +1333,9 @@ static int rt5659_headset_detect(struct snd_soc_codec *codec, int jack_insert)
 	struct rt5659_priv *rt5659 = snd_soc_codec_get_drvdata(codec);
 
 	if (jack_insert) {
-		snd_soc_dapm_force_enable_pin(dapm,
-			"Mic Det Power");
+		manage_dapm_pin(codec, "LDO2", true);
+		manage_dapm_pin(codec, "MICBIAS1", true);
+		manage_dapm_pin(codec, "Mic Det Power", true);
 		snd_soc_dapm_sync(dapm);
 		reg_63 = snd_soc_read(codec, RT5659_PWR_ANLG_1);
 
@@ -1336,20 +1365,31 @@ static int rt5659_headset_detect(struct snd_soc_codec *codec, int jack_insert)
 		case 1:
 			rt5659->jack_type = SND_JACK_HEADSET;
 			rt5659_enable_push_button_irq(codec, true);
+			snd_soc_update_bits(codec, RT5659_PWR_ANLG_2,
+				RT5659_PWR_BST1 | RT5659_PWR_BST1_P,
+				RT5659_PWR_BST1 | RT5659_PWR_BST1_P);
 			break;
 		default:
 			snd_soc_write(codec, RT5659_PWR_ANLG_1, reg_63);
 			rt5659->jack_type = SND_JACK_HEADPHONE;
-			snd_soc_dapm_disable_pin(dapm, "Mic Det Power");
+			manage_dapm_pin(codec, "LDO2", false);
+			manage_dapm_pin(codec, "MICBIAS1", false);
+			manage_dapm_pin(codec, "Mic Det Power", false);
 			snd_soc_dapm_sync(dapm);
 			break;
 		}
 	} else {
-		snd_soc_dapm_disable_pin(dapm, "Mic Det Power");
-		snd_soc_dapm_sync(dapm);
-		if (rt5659->jack_type == SND_JACK_HEADSET)
+		if (rt5659->jack_type == SND_JACK_HEADSET) {
 			rt5659_enable_push_button_irq(codec, false);
+			snd_soc_update_bits(codec, RT5659_PWR_ANLG_2,
+				RT5659_PWR_BST1 | RT5659_PWR_BST1_P, 0);
+		}
 		rt5659->jack_type = 0;
+
+		manage_dapm_pin(codec, "LDO2", false);
+		manage_dapm_pin(codec, "MICBIAS1", false);
+		manage_dapm_pin(codec, "Mic Det Power", false);
+		snd_soc_dapm_sync(dapm);
 	}
 
 	dev_dbg(codec->dev, "jack_type = %d\n", rt5659->jack_type);
@@ -2456,16 +2496,16 @@ static const struct snd_soc_dapm_widget rt5659_dapm_widgets[] = {
 		RT5659_DMIC_2_EN_SFT, 0, set_dmic_power, SND_SOC_DAPM_POST_PMU),
 
 	/* Boost */
-	SND_SOC_DAPM_PGA("BST1", RT5659_PWR_ANLG_2,
-		RT5659_PWR_BST1_P_BIT, 0, NULL, 0),
+	SND_SOC_DAPM_PGA("BST1", SND_SOC_NOPM,
+		0, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("BST2", RT5659_PWR_ANLG_2,
 		RT5659_PWR_BST2_P_BIT, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("BST3", RT5659_PWR_ANLG_2,
 		RT5659_PWR_BST3_P_BIT, 0, NULL, 0),
 	SND_SOC_DAPM_PGA("BST4", RT5659_PWR_ANLG_2,
 		RT5659_PWR_BST4_P_BIT, 0, NULL, 0),
-	SND_SOC_DAPM_SUPPLY("BST1 Power", RT5659_PWR_ANLG_2,
-		RT5659_PWR_BST1_BIT, 0, NULL, 0),
+	SND_SOC_DAPM_SUPPLY("BST1 Power", SND_SOC_NOPM,
+		0, 0, NULL, 0),
 	SND_SOC_DAPM_SUPPLY("BST2 Power", RT5659_PWR_ANLG_2,
 		RT5659_PWR_BST2_BIT, 0, NULL, 0),
 	SND_SOC_DAPM_SUPPLY("BST3 Power", RT5659_PWR_ANLG_2,
@@ -3301,15 +3341,18 @@ static int rt5659_hw_params(struct snd_pcm_substream *substream,
 	switch (rt5659->lrck[dai->id]) {
 	case 192000:
 		snd_soc_update_bits(codec, RT5659_ADDA_CLK_1,
-			RT5659_DAC_OSR_MASK, RT5659_DAC_OSR_32);
+			RT5659_DAC_OSR_MASK | RT5659_ADC_OSR_MASK,
+			RT5659_DAC_OSR_32 | RT5659_ADC_OSR_32);
 		break;
 	case 96000:
 		snd_soc_update_bits(codec, RT5659_ADDA_CLK_1,
-			RT5659_DAC_OSR_MASK, RT5659_DAC_OSR_64);
+			RT5659_DAC_OSR_MASK | RT5659_ADC_OSR_MASK,
+			RT5659_DAC_OSR_64 | RT5659_ADC_OSR_64);
 		break;
 	default:
 		snd_soc_update_bits(codec, RT5659_ADDA_CLK_1,
-			RT5659_DAC_OSR_MASK, RT5659_DAC_OSR_128);
+			RT5659_DAC_OSR_MASK | RT5659_ADC_OSR_MASK,
+			RT5659_DAC_OSR_128 | RT5659_ADC_OSR_128);
 		break;
 	}
 
@@ -3751,6 +3794,11 @@ static int rt5659_suspend(struct snd_soc_codec *codec)
 
 	regcache_cache_only(rt5659->regmap, true);
 	regcache_mark_dirty(rt5659->regmap);
+	if (rt5659->i2c->irq) {
+		/* disable jack interrupts during system suspend */
+		disable_irq(rt5659->i2c->irq);
+	}
+
 	return 0;
 }
 
@@ -3760,6 +3808,10 @@ static int rt5659_resume(struct snd_soc_codec *codec)
 
 	regcache_cache_only(rt5659->regmap, false);
 	regcache_sync(rt5659->regmap);
+	if (rt5659->i2c->irq) {
+		rt5659_irq(0, rt5659);
+		enable_irq(rt5659->i2c->irq);
+	}
 
 	return 0;
 }
@@ -4104,7 +4156,7 @@ static int rt5659_i2c_probe(struct i2c_client *i2c,
 {
 	struct rt5659_platform_data *pdata = dev_get_platdata(&i2c->dev);
 	struct rt5659_priv *rt5659;
-	int ret;
+	int ret, jack_gpio;
 	unsigned int val;
 
 	rt5659 = devm_kzalloc(&i2c->dev, sizeof(struct rt5659_priv),
@@ -4113,6 +4165,7 @@ static int rt5659_i2c_probe(struct i2c_client *i2c,
 	if (rt5659 == NULL)
 		return -ENOMEM;
 
+	rt5659->i2c = i2c;
 	i2c_set_clientdata(i2c, rt5659);
 
 	if (pdata)
@@ -4291,9 +4344,18 @@ static int rt5659_i2c_probe(struct i2c_client *i2c,
 		break;
 	}
 
+	regmap_update_bits(rt5659->regmap, RT5659_CLK_DET, 0x4, 0x4);
+
 	INIT_DELAYED_WORK(&rt5659->jack_detect_work, rt5659_jack_detect_work);
 
-	if (i2c->irq) {
+	jack_gpio = of_get_gpio(rt5659->i2c->dev.of_node, 0);
+	if (gpio_is_valid(jack_gpio)) {
+		rt5659->i2c->irq = gpio_to_irq(jack_gpio);
+		dev_dbg(&i2c->dev, "irq = %d, assigned for jack interrupt handling\n",
+			rt5659->i2c->irq);
+	}
+
+	if (rt5659->i2c->irq) {
 		ret = devm_request_threaded_irq(&i2c->dev, i2c->irq, NULL,
 			rt5659_irq, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING
 			| IRQF_ONESHOT, "rt5659", rt5659);
@@ -4311,7 +4373,14 @@ static int rt5659_i2c_probe(struct i2c_client *i2c,
 
 static int rt5659_i2c_remove(struct i2c_client *i2c)
 {
+	struct rt5659_priv *rt5659 = i2c_get_clientdata(i2c);
+
 	snd_soc_unregister_codec(&i2c->dev);
+	if (i2c->irq) {
+		/* disable jack interrupts during system suspend */
+		disable_irq(i2c->irq);
+	}
+	cancel_delayed_work_sync(&rt5659->jack_detect_work);
 
 	return 0;
 }

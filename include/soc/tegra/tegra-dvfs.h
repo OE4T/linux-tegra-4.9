@@ -25,6 +25,7 @@
 #define DVFS_RAIL_STATS_BIN	10000
 #define MAX_THERMAL_LIMITS	8
 #define MAX_THERMAL_RANGES	(MAX_THERMAL_LIMITS + 1)
+#define MAX_PROCESS_ID		7
 
 enum tegra_dvfs_core_thermal_type {
 	TEGRA_DVFS_CORE_THERMAL_FLOOR = 0,
@@ -206,6 +207,17 @@ struct cvb_dvfs {
 
 	/* CVB table for various frequencies */
 	struct cvb_dvfs_table cvb_table[MAX_DVFS_FREQS];
+};
+
+struct dvb_dvfs_table {
+	unsigned long freq;
+	int mvolts[MAX_PROCESS_ID + 1];
+};
+
+struct dvb_dvfs {
+	int speedo_id;
+	int freqs_mult;
+	struct dvb_dvfs_table dvb_table[MAX_DVFS_FREQS];
 };
 
 static inline bool tegra_dvfs_rail_is_dfll_mode(struct dvfs_rail *rail)

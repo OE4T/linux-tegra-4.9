@@ -651,7 +651,6 @@ struct gpu_ops {
 				int rw_flag,
 				bool sparse,
 				struct vm_gk20a_mapping_batch *batch);
-		void (*vm_remove)(struct vm_gk20a *vm);
 		int (*vm_alloc_share)(struct gk20a_as_share *as_share,
 				      u32 big_page_size, u32 flags);
 		int (*vm_bind_channel)(struct gk20a_as_share *as_share,

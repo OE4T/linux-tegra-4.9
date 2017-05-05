@@ -463,4 +463,8 @@ int gk20a_mm_get_buffer_info(struct device *dev, int dmabuf_fd,
 			     u64 *buffer_id, u64 *buffer_len);
 void gk20a_vm_unmap_locked_kref(struct kref *ref);
 
+void gk20a_vm_free_entries(struct vm_gk20a *vm,
+			   struct gk20a_mm_entry *parent,
+			   int level);
+
 #endif /* MM_GK20A_H */

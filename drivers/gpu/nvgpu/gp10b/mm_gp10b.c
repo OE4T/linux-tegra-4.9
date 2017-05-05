@@ -401,7 +401,7 @@ static void gp10b_remove_bar2_vm(struct gk20a *g)
 	struct mm_gk20a *mm = &g->mm;
 
 	gp10b_replayable_pagefault_buffer_deinit(g);
-	nvgpu_vm_remove(&mm->bar2.vm, &mm->bar2.inst_block);
+	nvgpu_vm_remove_inst(&mm->bar2.vm, &mm->bar2.inst_block);
 }
 
 

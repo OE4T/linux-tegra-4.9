@@ -442,7 +442,22 @@ clean_up_page_tables:
 	return err;
 }
 
-void nvgpu_vm_remove_support_nofree(struct vm_gk20a *vm)
+void nvgpu_deinit_vm(struct vm_gk20a *vm)
+{
+	if (nvgpu_alloc_initialized(&vm->kernel))
+		nvgpu_alloc_destroy(&vm->kernel);
+	if (nvgpu_alloc_initialized(&vm->user))
+		nvgpu_alloc_destroy(&vm->user);
+	if (nvgpu_alloc_initialized(&vm->user_lp))
+		nvgpu_alloc_destroy(&vm->user_lp);
+
+	gk20a_vm_free_entries(vm, &vm->pdb, 0);
+}
+
+/*
+ * Cleanup the VM but don't nvgpu_kfree() on the vm pointer.
+ */
+void __nvgpu_vm_remove(struct vm_gk20a *vm)
 {
 	struct nvgpu_mapped_buf *mapped_buffer;
 	struct nvgpu_vm_area *vm_area, *vm_area_tmp;
@@ -480,22 +495,40 @@ void nvgpu_vm_remove_support_nofree(struct vm_gk20a *vm)
 
 	nvgpu_deinit_vm(vm);
 
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+	if (g->is_virtual)
+		nvgpu_vm_remove_vgpu(vm);
+#endif
+
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 }
 
-void nvgpu_vm_remove_support(struct vm_gk20a *vm)
+/*
+ * Remove and nvgpu_kfree() the VM struct.
+ */
+void nvgpu_vm_remove(struct vm_gk20a *vm)
 {
-	nvgpu_vm_remove_support_nofree(vm);
-	/* vm is not used anymore. release it. */
+	__nvgpu_vm_remove(vm);
+
 	nvgpu_kfree(vm->mm->g, vm);
 }
 
-static void nvgpu_vm_remove_support_kref(struct kref *ref)
+/*
+ * Note: this does not nvgpu_kfree() the vm. This might be a bug.
+ */
+void nvgpu_vm_remove_inst(struct vm_gk20a *vm, struct nvgpu_mem *inst_block)
+{
+	struct gk20a *g = vm->mm->g;
+
+	gk20a_free_inst_block(g, inst_block);
+	__nvgpu_vm_remove(vm);
+}
+
+static void __nvgpu_vm_remove_kref(struct kref *ref)
 {
 	struct vm_gk20a *vm = container_of(ref, struct vm_gk20a, ref);
-	struct gk20a *g = gk20a_from_vm(vm);
 
-	g->ops.mm.vm_remove(vm);
+	nvgpu_vm_remove(vm);
 }
 
 void nvgpu_vm_get(struct vm_gk20a *vm)
@@ -505,15 +538,7 @@ void nvgpu_vm_get(struct vm_gk20a *vm)
 
 void nvgpu_vm_put(struct vm_gk20a *vm)
 {
-	kref_put(&vm->ref, nvgpu_vm_remove_support_kref);
-}
-
-void nvgpu_vm_remove(struct vm_gk20a *vm, struct nvgpu_mem *inst_block)
-{
-	struct gk20a *g = vm->mm->g;
-
-	gk20a_free_inst_block(g, inst_block);
-	nvgpu_vm_remove_support_nofree(vm);
+	kref_put(&vm->ref, __nvgpu_vm_remove_kref);
 }
 
 int nvgpu_insert_mapped_buf(struct vm_gk20a *vm,

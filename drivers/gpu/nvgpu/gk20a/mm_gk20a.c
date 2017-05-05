@@ -464,7 +464,7 @@ static void gk20a_remove_mm_ce_support(struct mm_gk20a *mm)
 
 	mm->vidmem.ce_ctx_id = (u32)~0;
 
-	nvgpu_vm_remove_support_nofree(&mm->ce.vm);
+	__nvgpu_vm_remove(&mm->ce.vm);
 
 }
 
@@ -476,11 +476,11 @@ static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 		g->ops.mm.remove_bar2_vm(g);
 
 	if (g->ops.mm.is_bar1_supported(g))
-		nvgpu_vm_remove(&mm->bar1.vm, &mm->bar1.inst_block);
+		nvgpu_vm_remove_inst(&mm->bar1.vm, &mm->bar1.inst_block);
 
-	nvgpu_vm_remove(&mm->pmu.vm, &mm->pmu.inst_block);
+	nvgpu_vm_remove_inst(&mm->pmu.vm, &mm->pmu.inst_block);
 	gk20a_free_inst_block(gk20a_from_mm(mm), &mm->hwpm.inst_block);
-	nvgpu_vm_remove_support_nofree(&mm->cde.vm);
+	__nvgpu_vm_remove(&mm->cde.vm);
 
 	gk20a_semaphore_sea_destroy(g);
 	gk20a_vidmem_destroy(g);
@@ -2337,10 +2337,9 @@ void nvgpu_vm_unmap_locked(struct nvgpu_mapped_buf *mapped_buffer,
 	return;
 }
 
-
-static void gk20a_vm_free_entries(struct vm_gk20a *vm,
-				  struct gk20a_mm_entry *parent,
-				  int level)
+void gk20a_vm_free_entries(struct vm_gk20a *vm,
+			   struct gk20a_mm_entry *parent,
+			   int level)
 {
 	int i;
 
@@ -2661,18 +2660,6 @@ int nvgpu_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset,
 
 	nvgpu_vm_unmap_user(vm, offset, batch);
 	return 0;
-}
-
-void nvgpu_deinit_vm(struct vm_gk20a *vm)
-{
-	if (nvgpu_alloc_initialized(&vm->kernel))
-		nvgpu_alloc_destroy(&vm->kernel);
-	if (nvgpu_alloc_initialized(&vm->user))
-		nvgpu_alloc_destroy(&vm->user);
-	if (nvgpu_alloc_initialized(&vm->user_lp))
-		nvgpu_alloc_destroy(&vm->user_lp);
-
-	gk20a_vm_free_entries(vm, &vm->pdb, 0);
 }
 
 int gk20a_alloc_inst_block(struct gk20a *g, struct nvgpu_mem *inst_block)
@@ -3151,7 +3138,6 @@ void gk20a_init_mm(struct gpu_ops *gops)
 {
 	gops->mm.gmmu_map = gk20a_locked_gmmu_map;
 	gops->mm.gmmu_unmap = gk20a_locked_gmmu_unmap;
-	gops->mm.vm_remove = nvgpu_vm_remove_support;
 	gops->mm.vm_alloc_share = gk20a_vm_alloc_share;
 	gops->mm.vm_bind_channel = gk20a_vm_bind_channel;
 	gops->mm.fb_flush = gk20a_mm_fb_flush;

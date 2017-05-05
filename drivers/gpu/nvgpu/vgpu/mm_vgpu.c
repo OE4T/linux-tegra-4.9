@@ -18,6 +18,7 @@
 #include <nvgpu/kmem.h>
 #include <nvgpu/dma.h>
 #include <nvgpu/bug.h>
+#include <nvgpu/vm.h>
 #include <nvgpu/vm_area.h>
 
 #include "vgpu/vgpu.h"
@@ -200,52 +201,18 @@ static void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 	/* TLB invalidate handled on server side */
 }
 
-static void vgpu_vm_remove_support(struct vm_gk20a *vm)
+void nvgpu_vm_remove_vgpu(struct vm_gk20a *vm)
 {
-	struct gk20a *g = vm->mm->g;
-	struct nvgpu_mapped_buf *mapped_buffer;
-	struct nvgpu_vm_area *vm_area, *vm_area_tmp;
+	struct gk20a *g = gk20a_from_vm(vm);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_as_share_params *p = &msg.params.as_share;
-	struct nvgpu_rbtree_node *node = NULL;
 	int err;
-
-	gk20a_dbg_fn("");
-	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
-
-	/* TBD: add a flag here for the unmap code to recognize teardown
-	 * and short-circuit any otherwise expensive operations. */
-
-	nvgpu_rbtree_enum_start(0, &node, vm->mapped_buffers);
-	while (node) {
-		mapped_buffer = mapped_buffer_from_rbtree_node(node);
-		nvgpu_vm_unmap_locked(mapped_buffer, NULL);
-		nvgpu_rbtree_enum_start(0, &node, vm->mapped_buffers);
-	}
-
-	/* destroy remaining reserved memory areas */
-	nvgpu_list_for_each_entry_safe(vm_area, vm_area_tmp,
-			&vm->vm_area_list,
-			nvgpu_vm_area, vm_area_list) {
-		nvgpu_list_del(&vm_area->vm_area_list);
-		nvgpu_kfree(g, vm_area);
-	}
 
 	msg.cmd = TEGRA_VGPU_CMD_AS_FREE_SHARE;
 	msg.handle = vgpu_get_handle(g);
 	p->handle = vm->handle;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
-
-	if (nvgpu_alloc_initialized(&vm->kernel))
-		nvgpu_alloc_destroy(&vm->kernel);
-	if (nvgpu_alloc_initialized(&vm->user))
-		nvgpu_alloc_destroy(&vm->user);
-
-	nvgpu_mutex_release(&vm->update_gmmu_lock);
-
-	/* vm is not used anymore. release it. */
-	nvgpu_kfree(g, vm);
 }
 
 u64 vgpu_bar1_map(struct gk20a *g, struct sg_table **sgt, u64 size)
@@ -534,7 +501,6 @@ void vgpu_init_mm_ops(struct gpu_ops *gops)
 	gops->fb.set_debug_mode = vgpu_mm_mmu_set_debug_mode;
 	gops->mm.gmmu_map = vgpu_locked_gmmu_map;
 	gops->mm.gmmu_unmap = vgpu_locked_gmmu_unmap;
-	gops->mm.vm_remove = vgpu_vm_remove_support;
 	gops->mm.vm_alloc_share = vgpu_vm_alloc_share;
 	gops->mm.vm_bind_channel = vgpu_vm_bind_channel;
 	gops->mm.fb_flush = vgpu_mm_fb_flush;

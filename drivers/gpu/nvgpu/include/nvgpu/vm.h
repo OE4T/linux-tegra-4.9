@@ -225,19 +225,22 @@ int nvgpu_insert_mapped_buf(struct vm_gk20a *vm,
 void nvgpu_remove_mapped_buf(struct vm_gk20a *vm,
 			     struct nvgpu_mapped_buf *mapped_buffer);
 
-void nvgpu_vm_remove_support_nofree(struct vm_gk20a *vm);
-void nvgpu_vm_remove_support(struct vm_gk20a *vm);
-void nvgpu_vm_remove(struct vm_gk20a *vm, struct nvgpu_mem *inst_block);
+void __nvgpu_vm_remove(struct vm_gk20a *vm);
+void nvgpu_vm_remove(struct vm_gk20a *vm);
+void nvgpu_vm_remove_inst(struct vm_gk20a *vm, struct nvgpu_mem *inst_block);
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+void nvgpu_vm_remove_vgpu(struct vm_gk20a *vm);
+#endif
 
 int nvgpu_init_vm(struct mm_gk20a *mm,
-		struct vm_gk20a *vm,
-		u32 big_page_size,
-		u64 low_hole,
-		u64 kernel_reserved,
-		u64 aperture_size,
-		bool big_pages,
-		bool userspace_managed,
-		char *name);
+		  struct vm_gk20a *vm,
+		  u32 big_page_size,
+		  u64 low_hole,
+		  u64 kernel_reserved,
+		  u64 aperture_size,
+		  bool big_pages,
+		  bool userspace_managed,
+		  char *name);
 void nvgpu_deinit_vm(struct vm_gk20a *vm);
 
 /*

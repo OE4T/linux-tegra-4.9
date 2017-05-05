@@ -462,6 +462,42 @@ static inline u32 fb_mmu_vpr_info_fetch_true_v(void)
 {
 	return 0x00000001;
 }
+static inline u32 fb_mmu_l2tlb_ecc_status_r(void)
+{
+	return 0x00100e70;
+}
+static inline u32 fb_mmu_l2tlb_ecc_status_reset_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 fb_mmu_l2tlb_ecc_status_reset_clear_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 fb_mmu_hubtlb_ecc_status_r(void)
+{
+	return 0x00100e84;
+}
+static inline u32 fb_mmu_hubtlb_ecc_status_reset_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 fb_mmu_hubtlb_ecc_status_reset_clear_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 fb_mmu_fillunit_ecc_status_r(void)
+{
+	return 0x00100e98;
+}
+static inline u32 fb_mmu_fillunit_ecc_status_reset_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 fb_mmu_fillunit_ecc_status_reset_clear_f(void)
+{
+	return 0x40000000;
+}
 static inline u32 fb_niso_flush_sysmem_addr_r(void)
 {
 	return 0x00100c10;
@@ -525,6 +561,14 @@ static inline u32 fb_niso_intr_mmu_other_fault_notify_f(u32 v)
 static inline u32 fb_niso_intr_mmu_other_fault_notify_pending_f(void)
 {
 	return 0x80000000;
+}
+static inline u32 fb_niso_intr_mmu_ecc_uncorrected_error_notify_f(u32 v)
+{
+	return (v & 0x1) << 26;
+}
+static inline u32 fb_niso_intr_mmu_ecc_uncorrected_error_notify_pending_f(void)
+{
+	return 0x4000000;
 }
 static inline u32 fb_niso_intr_en_r(u32 i)
 {
@@ -590,6 +634,14 @@ static inline u32 fb_niso_intr_en_mmu_other_fault_notify_enabled_f(void)
 {
 	return 0x80000000;
 }
+static inline u32 fb_niso_intr_en_mmu_ecc_uncorrected_error_notify_f(u32 v)
+{
+	return (v & 0x1) << 26;
+}
+static inline u32 fb_niso_intr_en_mmu_ecc_uncorrected_error_notify_enabled_f(void)
+{
+	return 0x4000000;
+}
 static inline u32 fb_niso_intr_en_set_r(u32 i)
 {
 	return 0x00100a2c + i*4;
@@ -654,6 +706,14 @@ static inline u32 fb_niso_intr_en_set_mmu_other_fault_notify_set_f(void)
 {
 	return 0x80000000;
 }
+static inline u32 fb_niso_intr_en_set_mmu_ecc_uncorrected_error_notify_f(u32 v)
+{
+	return (v & 0x1) << 26;
+}
+static inline u32 fb_niso_intr_en_set_mmu_ecc_uncorrected_error_notify_set_f(void)
+{
+	return 0x4000000;
+}
 static inline u32 fb_niso_intr_en_clr_r(u32 i)
 {
 	return 0x00100a34 + i*4;
@@ -717,6 +777,14 @@ static inline u32 fb_niso_intr_en_clr_mmu_other_fault_notify_f(u32 v)
 static inline u32 fb_niso_intr_en_clr_mmu_other_fault_notify_set_f(void)
 {
 	return 0x80000000;
+}
+static inline u32 fb_niso_intr_en_clr_mmu_ecc_uncorrected_error_notify_f(u32 v)
+{
+	return (v & 0x1) << 26;
+}
+static inline u32 fb_niso_intr_en_clr_mmu_ecc_uncorrected_error_notify_set_f(void)
+{
+	return 0x4000000;
 }
 static inline u32 fb_niso_intr_en_clr_mmu_non_replay_fault_buffer_v(void)
 {

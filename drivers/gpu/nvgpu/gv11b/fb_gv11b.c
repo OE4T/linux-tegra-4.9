@@ -27,6 +27,8 @@
 #include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
 #include <nvgpu/hw/gv11b/hw_fifo_gv11b.h>
 
+#include <nvgpu/log.h>
+
 static void gv11b_init_nvlink_soc_credits(struct gk20a *g)
 {
 	void __iomem *soc1 = ioremap(0x02b10010, 4096);
@@ -34,7 +36,7 @@ static void gv11b_init_nvlink_soc_credits(struct gk20a *g)
 	void __iomem *soc3 = ioremap(0x02b30010, 4096);
 	void __iomem *soc4 = ioremap(0x02b40010, 4096);
 
-	gk20a_dbg_info("init nvlink soc credits");
+	nvgpu_info(g, "init nvlink soc credits");
 
 	writel_relaxed(0x14050000, soc1);
 	writel_relaxed(0x08020000, soc1 + 4);
@@ -51,7 +53,7 @@ static void gv11b_fb_reset(struct gk20a *g)
 {
 	u32 val;
 
-	gk20a_dbg_info("reset gv11b fb");
+	nvgpu_info(g, "reset gv11b fb");
 
 	g->ops.mc.reset(g, mc_enable_pfb_enabled_f() |
 				mc_enable_l2_enabled_f() |
@@ -69,14 +71,14 @@ static void gv11b_fb_reset(struct gk20a *g)
 	gv11b_init_nvlink_soc_credits(g);
 
 	val = gk20a_readl(g, fifo_fb_iface_r());
-	gk20a_dbg_info("fifo_fb_iface val = 0x%x", val);
+	nvgpu_info(g, "fifo_fb_iface val = 0x%x", val);
 	if (!(val & fifo_fb_iface_control_enable_f() &&
 		val & fifo_fb_iface_status_enabled_f())) {
-		gk20a_dbg_info("fifo_fb_iface set control enable");
+		nvgpu_info(g, "fifo_fb_iface set control enable");
 		gk20a_writel(g, fifo_fb_iface_r(),
 				fifo_fb_iface_control_enable_f());
 		val = gk20a_readl(g, fifo_fb_iface_r());
-		gk20a_dbg_info("fifo_fb_iface val = 0x%x", val);
+		nvgpu_info(g, "fifo_fb_iface val = 0x%x", val);
 	}
 }
 
@@ -129,19 +131,137 @@ static void gv11b_init_kind_attr(void)
 	}
 }
 
+static void gv11b_fb_intr_en_set(struct gk20a *g,
+			 unsigned int index, u32 mask)
+{
+	u32 reg_val;
+
+	reg_val = gk20a_readl(g, fb_niso_intr_en_set_r(index));
+	reg_val |= mask;
+	gk20a_writel(g, fb_niso_intr_en_set_r(index), reg_val);
+}
+
+static void gv11b_fb_intr_en_clr(struct gk20a *g,
+			 unsigned int index, u32 mask)
+{
+	u32 reg_val;
+
+	reg_val = gk20a_readl(g, fb_niso_intr_en_clr_r(index));
+	reg_val |= mask;
+	gk20a_writel(g, fb_niso_intr_en_clr_r(index), reg_val);
+}
+
+static u32 gv11b_fb_get_hub_intr_clr_mask(struct gk20a *g,
+			 unsigned int intr_type)
+{
+	u32 mask = 0;
+
+	if (intr_type == HUB_INTR_TYPE_ALL) {
+		mask |=
+		 fb_niso_intr_en_clr_mmu_ecc_uncorrected_error_notify_set_f();
+		return mask;
+	}
+
+	if (intr_type & HUB_INTR_TYPE_ECC_UNCORRECTED) {
+		mask |=
+		 fb_niso_intr_en_clr_mmu_ecc_uncorrected_error_notify_set_f();
+	}
+
+	return mask;
+}
+
+static u32 gv11b_fb_get_hub_intr_en_mask(struct gk20a *g,
+			 unsigned int intr_type)
+{
+	u32 mask = 0;
+
+	if (intr_type == HUB_INTR_TYPE_ALL) {
+		mask |=
+		 fb_niso_intr_en_set_mmu_ecc_uncorrected_error_notify_set_f();
+		return mask;
+	}
+
+	if (intr_type & HUB_INTR_TYPE_ECC_UNCORRECTED) {
+		mask |=
+		 fb_niso_intr_en_set_mmu_ecc_uncorrected_error_notify_set_f();
+	}
+
+	return mask;
+}
+
+void gv11b_fb_enable_hub_intr(struct gk20a *g,
+			 unsigned int index, unsigned int intr_type)
+{
+	u32 mask = 0;
+
+	mask = gv11b_fb_get_hub_intr_en_mask(g, intr_type);
+
+	if (mask)
+		gv11b_fb_intr_en_set(g, index, mask);
+}
+
+void gv11b_fb_disable_hub_intr(struct gk20a *g,
+			 unsigned int index, unsigned int intr_type)
+{
+	u32 mask = 0;
+
+	mask = gv11b_fb_get_hub_intr_clr_mask(g, intr_type);
+
+	if (mask)
+		gv11b_fb_intr_en_clr(g, index, mask);
+}
+
 static void gv11b_fb_hub_isr(struct gk20a *g)
 {
+	u32 status;
 	u32 niso_intr = gk20a_readl(g, fb_niso_intr_r());
 
-	gk20a_dbg_info("enter hub isr, niso_intr = 0x%x", niso_intr);
+	nvgpu_info(g, "enter hub isr, niso_intr = 0x%x", niso_intr);
 
 	if (niso_intr &
 		 (fb_niso_intr_hub_access_counter_notify_pending_f() |
 		  fb_niso_intr_hub_access_counter_error_pending_f())) {
 
-		gk20a_dbg_info("hub access counter notify/error");
+		nvgpu_info(g, "hub access counter notify/error");
+	} else if (niso_intr &
+		fb_niso_intr_mmu_ecc_uncorrected_error_notify_pending_f()) {
+
+		nvgpu_info(g, "ecc uncorrected error notify");
+
+		/* disable interrupts during handling */
+		gv11b_fb_disable_hub_intr(g, STALL_REG_INDEX,
+						HUB_INTR_TYPE_ECC_UNCORRECTED);
+
+		status = gk20a_readl(g, fb_mmu_l2tlb_ecc_status_r());
+		if (status) {
+			nvgpu_info(g, "hub mmu L2 ecc status: 0x%x",
+								status);
+			gk20a_writel(g, fb_mmu_l2tlb_ecc_status_r(),
+				fb_mmu_l2tlb_ecc_status_reset_clear_f());
+		}
+
+		status = gk20a_readl(g, fb_mmu_hubtlb_ecc_status_r());
+		if (status) {
+			nvgpu_info(g, "hub mmu hub tlb  ecc status: 0x%x",
+								status);
+			gk20a_writel(g, fb_mmu_hubtlb_ecc_status_r(),
+				fb_mmu_hubtlb_ecc_status_reset_clear_f());
+		}
+
+		status = gk20a_readl(g, fb_mmu_fillunit_ecc_status_r());
+		if (status) {
+			nvgpu_info(g, "hub mmu fill unit ecc status: 0x%x",
+								status);
+			gk20a_writel(g, fb_mmu_fillunit_ecc_status_r(),
+				fb_mmu_fillunit_ecc_status_reset_clear_f());
+		}
+
+		/* re-enable interrupts after handling */
+		gv11b_fb_enable_hub_intr(g, STALL_REG_INDEX,
+						HUB_INTR_TYPE_ECC_UNCORRECTED);
+
 	} else {
-		gk20a_dbg_info("mmu fault : TODO");
+		nvgpu_info(g, "mmu fault : TODO");
 	}
 }
 

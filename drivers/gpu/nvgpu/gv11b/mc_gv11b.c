@@ -20,6 +20,7 @@
 #include "gp10b/mc_gp10b.h"
 
 #include "mc_gv11b.h"
+#include "fb_gv11b.h"
 
 #include <nvgpu/hw/gv11b/hw_mc_gv11b.h>
 
@@ -47,6 +48,10 @@ static void mc_gv11b_intr_enable(struct gk20a *g)
 			     | eng_intr_mask;
 	gk20a_writel(g, mc_intr_en_set_r(NVGPU_MC_INTR_NONSTALLING),
 			g->ops.mc.intr_mask_restore[NVGPU_MC_INTR_NONSTALLING]);
+
+	/* TODO: Enable PRI faults for HUB ECC err intr */
+	gv11b_fb_enable_hub_intr(g, STALL_REG_INDEX,
+						HUB_INTR_TYPE_ECC_UNCORRECTED);
 }
 
 static bool gv11b_mc_is_intr_hub_pending(struct gk20a *g, u32 mc_intr_0)

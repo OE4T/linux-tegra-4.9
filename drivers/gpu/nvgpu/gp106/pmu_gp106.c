@@ -259,7 +259,7 @@ static int gp106_pg_param_init(struct gk20a *g, u32 pg_engine_id)
 	return 0;
 }
 
-static void gp106_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
+void gp106_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 		struct pmu_pg_stats_data *pg_stat_data)
 {
 	struct pmu_gk20a *pmu = &g->pmu;

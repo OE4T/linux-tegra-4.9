@@ -19,5 +19,7 @@
 
 void gp106_init_pmu_ops(struct gpu_ops *gops);
 int gp106_pmu_reset(struct gk20a *g);
+void gp106_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
+		struct pmu_pg_stats_data *pg_stat_data);
 
 #endif /*__PMU_GP106_H_*/

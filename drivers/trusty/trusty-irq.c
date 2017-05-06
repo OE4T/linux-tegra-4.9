@@ -448,7 +448,7 @@ static void trusty_irq_free_irqs(struct trusty_irq_state *is)
 		kfree(irq);
 	}
 	hlist_for_each_entry_safe(irq, n,
-				  &this_cpu_ptr(is->percpu_irqs)->inactive,
+				  &raw_cpu_ptr(is->percpu_irqs)->inactive,
 				  node) {
 		struct trusty_irq __percpu *trusty_irq_handler_data;
 

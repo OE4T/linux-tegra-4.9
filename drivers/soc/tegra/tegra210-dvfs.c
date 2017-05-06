@@ -1444,6 +1444,8 @@ static int get_core_sku_min_mv(void)
 		return 1100;
 
 	switch (tegra_sku_info.sku_id) {
+	case 0x0:
+	case 0x1:
 	case 0x7:
 	case 0x17:
 	case 0x13:
@@ -1501,19 +1503,13 @@ static int get_core_min_mv_index(void)
 	if (mv < 0)
 		return mv;
 
-	/* Round nominal level down to the nearest core scaling step */
-	for (i = 0; i < MAX_DVFS_FREQS; i++) {
-		if ((core_millivolts[i] == 0) || (mv < core_millivolts[i]))
+	/* Round minimum level up to the nearest core scaling step */
+	for (i = 0; i < MAX_DVFS_FREQS - 1; i++) {
+		if ((core_millivolts[i+1] == 0) || (mv <= core_millivolts[i]))
 			break;
 	}
 
-	if (i == 0) {
-		pr_err("tegra210-dvfs: failed to get min idx at volt %d\n",
-		       mv);
-		return -EINVAL;
-	}
-
-	return i - 1;
+	return i;
 }
 
 static int init_cpu_dvfs_table(struct cpu_dvfs *fv_dvfs_table,

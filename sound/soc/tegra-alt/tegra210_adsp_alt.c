@@ -143,8 +143,13 @@ struct tegra210_adsp_compr_rtd {
 	int is_draining;
 };
 
+struct adsp_soc_data {
+	bool is_soc_t210;
+};
+
 struct tegra210_adsp {
 	struct device *dev;
+	struct adsp_soc_data *soc_data;
 	struct tegra210_adsp_app apps[TEGRA210_ADSP_VIRT_REG_MAX];
 	atomic_t reg_val[TEGRA210_ADSP_VIRT_REG_MAX];
 	DECLARE_BITMAP(adma_usage, TEGRA210_ADSP_ADMA_CHANNEL_COUNT);
@@ -2619,7 +2624,7 @@ static int tegra210_adsp_runtime_suspend(struct device *dev)
 	adsp->adsp_started = 0;
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (IS_ENABLED(CONFIG_ARCH_TEGRA_18x_SOC))
+		if (!adsp->soc_data->is_soc_t210)
 			clk_disable_unprepare(adsp->apb2ape_clk);
 		clk_disable_unprepare(adsp->ahub_clk);
 		clk_disable_unprepare(adsp->ape_clk);
@@ -2650,7 +2655,7 @@ static int tegra210_adsp_runtime_resume(struct device *dev)
 			return ret;
 		}
 
-		if (IS_ENABLED(CONFIG_ARCH_TEGRA_18x_SOC)) {
+		if (!adsp->soc_data->is_soc_t210) {
 			ret = clk_prepare_enable(adsp->apb2ape_clk);
 			if (ret < 0) {
 				dev_err(dev, "apb2ape clk_enable failed: %d\n"
@@ -4368,9 +4373,18 @@ static struct snd_soc_platform_driver tegra210_adsp_platform = {
 
 static u64 tegra_dma_mask = DMA_BIT_MASK(32);
 
+static struct adsp_soc_data adsp_soc_data_t210 = {
+	.is_soc_t210 = true,
+};
+
+static struct adsp_soc_data adsp_soc_data_t186 = {
+	.is_soc_t210 = false,
+};
+
 static const struct of_device_id tegra210_adsp_audio_of_match[] = {
-	{ .compatible = "nvidia,tegra210-adsp-audio", },
-	{ .compatible = "nvidia,tegra210-adsp-audio-hv", },
+	{ .compatible = "nvidia,tegra210-adsp-audio", .data = &adsp_soc_data_t210},
+	{ .compatible = "nvidia,tegra186-adsp-audio", .data = &adsp_soc_data_t186},
+	{ .compatible = "nvidia,tegra210-adsp-audio-hv",  .data = &adsp_soc_data_t186},
 	{},
 };
 
@@ -4423,6 +4437,7 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 	}
 	dev_set_drvdata(&pdev->dev, adsp);
 	adsp->dev = &pdev->dev;
+	adsp->soc_data = (struct adsp_soc_data *)match->data;
 
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
@@ -4440,7 +4455,7 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 			goto err;
 		}
 
-		if (!IS_ENABLED(CONFIG_ARCH_TEGRA_210_SOC)) {
+		if (!adsp->soc_data->is_soc_t210) {
 			adsp->apb2ape_clk = devm_clk_get(&pdev->dev, "apb2ape");
 			if (IS_ERR(adsp->apb2ape_clk)) {
 				dev_err(&pdev->dev, "Error: Missing APB2APE clock\n");
@@ -4619,7 +4634,7 @@ err_unregister_platform:
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 err:
-	if (IS_ENABLED(CONFIG_ARCH_TEGRA_18x_SOC))
+	if (!adsp->soc_data->is_soc_t210)
 		if (!IS_ERR_OR_NULL(adsp->apb2ape_clk))
 			tegra_alt_asoc_utils_clk_put
 				(&pdev->dev, adsp->apb2ape_clk);
@@ -4639,7 +4654,7 @@ static int __maybe_unused tegra210_adsp_audio_platform_remove(
 	struct tegra210_adsp *adsp = dev_get_drvdata(&pdev->dev);
 
 	pm_runtime_disable(&pdev->dev);
-	if (IS_ENABLED(CONFIG_ARCH_TEGRA_18x_SOC))
+	if (!adsp->soc_data->is_soc_t210)
 		if (!IS_ERR_OR_NULL(adsp->apb2ape_clk))
 			tegra_alt_asoc_utils_clk_put
 				(&pdev->dev, adsp->apb2ape_clk);

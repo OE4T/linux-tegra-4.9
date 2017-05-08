@@ -335,14 +335,15 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 			goto err_put_ahub;
 	}
 
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	ret = clk_prepare_enable(data->clk_cdev1);
-	if (ret) {
-		dev_err(data->dev, "Can't enable clk cdev1/extern1");
-		goto err_put_ahub;
+	if (data->soc < TEGRA_ASOC_UTILS_SOC_TEGRA186) {
+		ret = clk_prepare_enable(data->clk_cdev1);
+		if (ret) {
+			dev_err(data->dev, "Can't enable clk cdev1/extern1");
+			goto err_put_ahub;
+		}
+		data->clk_cdev1_state = 1;
 	}
-	data->clk_cdev1_state = 1;
-#endif
+
 	return 0;
 
 err_put_ahub:

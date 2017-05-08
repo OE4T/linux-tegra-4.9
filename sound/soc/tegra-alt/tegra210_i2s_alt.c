@@ -46,13 +46,11 @@
 
 #define DRV_NAME "tegra210-i2s"
 
-#if defined(CONFIG_ARCH_TEGRA_21X_SOC)
 #ifdef CONFIG_PM_GENERIC_DOMAINS_OF
 static struct of_device_id tegra_ape_pd[] = {
 	{ .compatible = "nvidia,tegra210-ape-pd", },
 	{},
 };
-#endif
 #endif
 
 static const struct reg_default tegra210_i2s_reg_defaults[] = {
@@ -981,10 +979,18 @@ static const struct regmap_config tegra210_i2s_regmap_config = {
 static const struct tegra210_i2s_soc_data soc_data_tegra210 = {
 	.set_audio_cif = tegra210_xbar_set_cif,
 	.set_slot_ctrl = tegra210_i2s_set_slot_ctrl,
+	.is_soc_t210 = true,
+};
+
+static const struct tegra210_i2s_soc_data soc_data_tegra186 = {
+	.set_audio_cif = tegra210_xbar_set_cif,
+	.set_slot_ctrl = tegra210_i2s_set_slot_ctrl,
+	.is_soc_t210 = false,
 };
 
 static const struct of_device_id tegra210_i2s_of_match[] = {
 	{ .compatible = "nvidia,tegra210-i2s", .data = &soc_data_tegra210 },
+	{ .compatible = "nvidia,tegra186-i2s", .data = &soc_data_tegra186 },
 	{},
 };
 
@@ -999,17 +1005,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	void __iomem *regs;
 	int ret = 0, count = 0, num_supplies;
 	const char *supply, *prod_name;
-#if defined(CONFIG_ARCH_TEGRA_21X_SOC)
-	int partition_id;
-
-#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
-	partition_id = tegra_pd_get_powergate_id(tegra_ape_pd);
-	if (partition_id < 0)
-		return -EINVAL;
-#else
-	partition_id = TEGRA_POWERGATE_APE;
-#endif
-#endif
+	int partition_id = 0;
 
 	match = of_match_device(tegra210_i2s_of_match, &pdev->dev);
 	if (!match) {
@@ -1031,6 +1027,16 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	i2s->bclk_ratio = 2;
 	i2s->enable_cya = false;
 	i2s->loopback = 0;
+
+	if (i2s->soc_data->is_soc_t210) {
+#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
+		partition_id = tegra_pd_get_powergate_id(tegra_ape_pd);
+		if (partition_id < 0)
+			return -EINVAL;
+#else
+		partition_id = TEGRA_POWERGATE_APE;
+#endif
+	}
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		i2s->clk_i2s = devm_clk_get(&pdev->dev, NULL);
@@ -1092,10 +1098,9 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	}
 
 	i2s->slgc_notifier.notifier_call = _tegra210_i2s_slcg_notifier;
-#if defined(CONFIG_ARCH_TEGRA_21X_SOC)
-	slcg_register_notifier(partition_id, &i2s->slgc_notifier);
-#endif
 
+	if (i2s->soc_data->is_soc_t210)
+		slcg_register_notifier(partition_id, &i2s->slgc_notifier);
 
 	regcache_cache_only(i2s->regmap, true);
 

@@ -199,6 +199,7 @@ struct tegra210_i2s_soc_data {
 				unsigned int total_slots,
 				unsigned int tx_slot_mask,
 				unsigned int rx_slot_mask);
+	bool is_soc_t210;
 };
 
 enum tegra210_i2s_path {

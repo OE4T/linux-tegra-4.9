@@ -814,12 +814,12 @@ static struct snd_soc_codec_driver tegra186_xbar_codec = {
 
 static struct of_dev_auxdata tegra186_xbar_auxdata[] = {
 	OF_DEV_AUXDATA("nvidia,tegra186-admaif", T186_ADMAIF_BASE_ADDR, "tegra186-admaif", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-i2s", T186_I2S1_BASE_ADDR, "tegra210-i2s.0", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-i2s", T186_I2S2_BASE_ADDR, "tegra210-i2s.1", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-i2s", T186_I2S3_BASE_ADDR, "tegra210-i2s.2", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-i2s", T186_I2S4_BASE_ADDR, "tegra210-i2s.3", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-i2s", T186_I2S5_BASE_ADDR, "tegra210-i2s.4", NULL),
-	OF_DEV_AUXDATA("nvidia,tegra210-i2s", T186_I2S6_BASE_ADDR, "tegra210-i2s.5", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra186-i2s", T186_I2S1_BASE_ADDR, "tegra186-i2s.0", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra186-i2s", T186_I2S2_BASE_ADDR, "tegra186-i2s.1", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra186-i2s", T186_I2S3_BASE_ADDR, "tegra186-i2s.2", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra186-i2s", T186_I2S4_BASE_ADDR, "tegra186-i2s.3", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra186-i2s", T186_I2S5_BASE_ADDR, "tegra186-i2s.4", NULL),
+	OF_DEV_AUXDATA("nvidia,tegra186-i2s", T186_I2S6_BASE_ADDR, "tegra186-i2s.5", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-amx", T186_AMX1_BASE_ADDR, "tegra210-amx.0", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-amx", T186_AMX2_BASE_ADDR, "tegra210-amx.1", NULL),
 	OF_DEV_AUXDATA("nvidia,tegra210-amx", T186_AMX3_BASE_ADDR, "tegra210-amx.2", NULL),

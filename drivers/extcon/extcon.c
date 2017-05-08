@@ -190,6 +190,72 @@ struct __extcon_info {
 		.name = "MECHANICAL",
 	},
 
+	[EXTCON_USB_QC2] = {
+		.type = EXTCON_TYPE_CHG | EXTCON_TYPE_USB,
+		.id = EXTCON_USB_QC2,
+		.name = "QC2",
+	},
+
+	[EXTCON_USB_MAXIM] = {
+		.type = EXTCON_TYPE_CHG | EXTCON_TYPE_USB,
+		.id = EXTCON_USB_MAXIM,
+		.name = "MAXIM",
+	},
+
+	[EXTCON_USB_APPLE_500mA] = {
+		.type = EXTCON_TYPE_CHG | EXTCON_TYPE_USB,
+		.id = EXTCON_USB_APPLE_500mA,
+		.name = "APPLE-500mA",
+	},
+
+	[EXTCON_USB_APPLE_1A] = {
+		.type = EXTCON_TYPE_CHG | EXTCON_TYPE_USB,
+		.id = EXTCON_USB_APPLE_1A,
+		.name = "APPLE-1A",
+	},
+
+	[EXTCON_USB_APPLE_2A] = {
+		.type = EXTCON_TYPE_CHG | EXTCON_TYPE_USB,
+		.id = EXTCON_USB_APPLE_2A,
+		.name = "APPLE-2A",
+	},
+
+	[EXTCON_USB_ACA_NV] = {
+		.type = EXTCON_TYPE_CHG | EXTCON_TYPE_USB,
+		.id = EXTCON_USB_ACA_NV,
+		.name = "ACA-NV",
+	},
+
+	[EXTCON_USB_ACA_RIDA] = {
+		.type = EXTCON_TYPE_CHG | EXTCON_TYPE_USB,
+		.id = EXTCON_USB_ACA_RIDA,
+		.name = "ACA-RIDA",
+	},
+
+	[EXTCON_USB_ACA_RIDB] = {
+		.type = EXTCON_TYPE_CHG | EXTCON_TYPE_USB,
+		.id = EXTCON_USB_ACA_RIDB,
+		.name = "ACA-RIDB",
+	},
+
+	[EXTCON_USB_ACA_RIDC] = {
+		.type = EXTCON_TYPE_CHG | EXTCON_TYPE_USB,
+		.id = EXTCON_USB_ACA_RIDC,
+		.name = "ACA-RIDC",
+	},
+
+	[EXTCON_USB_Y_CABLE] = {
+		.type = EXTCON_TYPE_CHG | EXTCON_TYPE_USB,
+		.id = EXTCON_USB_Y_CABLE,
+		.name = "Y-CABLE",
+	},
+
+	[EXTCON_USB_PD] = {
+		.type = EXTCON_TYPE_CHG | EXTCON_TYPE_USB,
+		.id = EXTCON_USB_PD,
+		.name = "USB-PD",
+	},
+
 	{ /* sentinel */ }
 };
 

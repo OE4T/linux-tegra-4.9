@@ -65,6 +65,25 @@
 #define MODE_UND 0x1b
 #define MODE_SYS 0x1f
 
+/*
+ * ADSP OS Config
+ *
+ * DECOMPRESS (Bit 0)  : Set if ADSP FW needs to be decompressed
+ * VIRT CONFIG (Bit 1) : Set if virtualized configuration
+ * DMA PAGE (Bits 7:4) : Contains DMA page information
+ */
+
+#define ADSP_CONFIG_DECOMPRESS_SHIFT  0
+#define ADSP_CONFIG_DECOMPRESS_EN     1
+#define ADSP_CONFIG_DECOMPRESS_MASK   (1 << ADSP_CONFIG_DECOMPRESS_SHIFT)
+
+#define ADSP_CONFIG_VIRT_SHIFT        1
+#define ADSP_CONFIG_VIRT_EN           1
+#define ADSP_CONFIG_VIRT_MASK         (1 << ADSP_CONFIG_VIRT_SHIFT)
+
+#define ADSP_CONFIG_DMA_PAGE_SHIFT    4
+#define ADSP_CONFIG_DMA_PAGE_MASK     (0xF << ADSP_CONFIG_DMA_PAGE_SHIFT)
+
 enum adsp_os_cmd {
 	ADSP_OS_BOOT_COMPLETE,
 	ADSP_OS_SUSPEND,

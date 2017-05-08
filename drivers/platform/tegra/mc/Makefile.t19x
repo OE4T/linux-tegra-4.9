@@ -2,3 +2,4 @@ ccflags-y += -Werror
 
 obj-$(CONFIG_ARCH_TEGRA) += tegra194-mc-sid.o
 obj-$(CONFIG_ARCH_TEGRA) += mc.o
+obj-$(CONFIG_ARCH_TEGRA) += mcerr-t19x.o

@@ -98,6 +98,13 @@ static int nvdla_set_queue(struct nvdla_private *priv, void *args)
 		goto inval_input;
 	}
 
+	if ((status & NVDLA_QUEUE_FLAGS_SUSPEND) &&
+	     (status & NVDLA_QUEUE_FLAGS_RESUME)) {
+		nvdla_dbg_err(pdev, "both queue suspend and resume set %d\n",
+				status);
+		err = -EINVAL;
+		goto inval_input;
+	}
 	if (status & NVDLA_QUEUE_FLAGS_SUSPEND) {
 		err = nvdla_set_queue_state(queue, DLA_CMD_QUEUE_SUSPEND);
 	} else if (status & NVDLA_QUEUE_FLAGS_RESUME) {
@@ -449,11 +456,6 @@ static int nvdla_val_task_submit_input(struct nvdla_ioctl_submit_task *in_task)
 	if (in_task->num_prefences > MAX_NUM_NVDLA_PREFENCES) {
 		pr_err("num_prefences[%u] crossing expected[%d]\n",
 			in_task->num_prefences, MAX_NUM_NVDLA_PREFENCES);
-		return -EINVAL;
-	}
-	if (in_task->num_postfences < 1) {
-		pr_err("num postfences[%u] should be min one",
-			in_task->num_postfences);
 		return -EINVAL;
 	}
 	if (in_task->num_postfences > MAX_NUM_NVDLA_POSTFENCES) {

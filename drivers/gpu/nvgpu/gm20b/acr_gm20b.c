@@ -383,12 +383,13 @@ int prepare_ucode_blob(struct gk20a *g)
 	int err;
 	struct ls_flcn_mgr lsfm_l, *plsfm;
 	struct pmu_gk20a *pmu = &g->pmu;
-	phys_addr_t wpr_addr;
+	phys_addr_t wpr_addr, wpr_page;
 	u32 wprsize;
+	int i;
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct wpr_carveout_info wpr_inf;
-	struct page *page;
+	struct page **pages;
 
 	if (g->acr.ucode_blob.cpu_va) {
 		/*Recovery case, we do not need to form
@@ -412,8 +413,17 @@ int prepare_ucode_blob(struct gk20a *g)
 	gm20b_dbg_pmu("wpr carveout base:%llx\n", wpr_inf.wpr_base);
 	gm20b_dbg_pmu("wpr carveout size :%x\n", wprsize);
 
-	page = phys_to_page(wpr_addr);
-	__nvgpu_mem_create_from_pages(g, &g->pmu.wpr_buf, &page, 1);
+	pages = nvgpu_kmalloc(g, sizeof(struct page *) * (wprsize / PAGE_SIZE));
+	if (!pages)
+		return -ENOMEM;
+
+	wpr_page = wpr_addr;
+	for (i = 0; wpr_page < (wpr_addr + wprsize); i++, wpr_page += PAGE_SIZE)
+		pages[i] = phys_to_page(wpr_page);
+	__nvgpu_mem_create_from_pages(g, &g->pmu.wpr_buf, pages,
+				      wprsize / PAGE_SIZE);
+	nvgpu_kfree(g, pages);
+
 	g->pmu.wpr_buf.gpu_va = nvgpu_gmmu_map(vm, &g->pmu.wpr_buf,
 					       wprsize, 0, gk20a_mem_flag_none,
 					       false, APERTURE_SYSMEM);

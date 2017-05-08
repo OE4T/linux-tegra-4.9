@@ -32,6 +32,7 @@
 #include "nvhost_buffer.h"
 #include "nvhost_queue.h"
 #include "pva_mailbox.h"
+#include "pva_ccq.h"
 #include "pva_queue.h"
 #include "dev.h"
 
@@ -981,25 +982,36 @@ static int pva_task_submit(struct pva_submit_task *task)
 	if (err)
 		goto err_module_busy;
 
-	/* Construct submit command */
-	flags = PVA_CMD_INT_ON_ERR | PVA_CMD_INT_ON_COMPLETE;
-	nregs = pva_cmd_submit(&cmd, task->queue->id,
-				task->dma_addr, flags);
+	if (task->pva->use_ccq) {
+		u64 fifo_flags = PVA_FIFO_INT_ON_ERR;
+		u64 fifo_cmd = pva_fifo_submit(task->queue->id,
+					       task->dma_addr,
+					       fifo_flags);
 
-	/* Submit request to PVA and wait for response */
-	err = pva_mailbox_send_cmd_sync(task->pva, &cmd, nregs, &status);
-	if (err < 0) {
-		nvhost_warn(&task->pva->pdev->dev,
-			"Failed to submit task: %d", err);
-		goto err_submit;
-	}
+		err = pva_ccq_send(task->pva, fifo_cmd);
+		if (err < 0)
+			goto err_submit;
+	} else {
+		/* Construct submit command */
+		flags = PVA_CMD_INT_ON_ERR | PVA_CMD_INT_ON_COMPLETE;
+		nregs = pva_cmd_submit(&cmd, task->queue->id,
+					task->dma_addr, flags);
 
-	/* Ensure that response is valid */
-	if (status.error != PVA_ERR_NO_ERROR) {
-		nvhost_warn(&task->pva->pdev->dev, "PVA task rejected: %u",
+		/* Submit request to PVA and wait for response */
+		err = pva_mailbox_send_cmd_sync(task->pva, &cmd, nregs, &status);
+		if (err < 0) {
+			nvhost_warn(&task->pva->pdev->dev,
+				"Failed to submit task: %d", err);
+			goto err_submit;
+		}
+
+		/* Ensure that response is valid */
+		if (status.error != PVA_ERR_NO_ERROR) {
+			nvhost_warn(&task->pva->pdev->dev, "PVA task rejected: %u",
 				status.error);
-		err = -EINVAL;
-		goto err_submit;
+			err = -EINVAL;
+			goto err_submit;
+		}
 	}
 
 	/* Get a reference of the queue to avoid it being reused. It

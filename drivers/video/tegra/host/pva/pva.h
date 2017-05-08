@@ -156,6 +156,7 @@ struct pva {
 	struct pva_dma_alloc_info priv2_dma;
 
 	struct pva_trace_log pva_trace;
+	bool use_ccq;
 };
 
 /**

@@ -1217,6 +1217,21 @@ pva_cmd_set_sync_polling(struct pva_cmd * const cmd,
 }
 
 /*
+ * CMD_FIFO_SUBMIT
+ */
+static inline uint64_t
+pva_fifo_submit(const uint8_t queue_id,
+		const uint64_t addr,
+		const uint64_t flags)
+{
+	return PVA_INSERT64(CMD_SUBMIT, 63, 56)
+		| PVA_INSERT64(addr, 39, 0)
+		| PVA_INSERT64(queue_id, 47, 40)
+		| flags;
+}
+
+
+/*
  * CMD_SUBMIT
  */
 static inline uint32_t

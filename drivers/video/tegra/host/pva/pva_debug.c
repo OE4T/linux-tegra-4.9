@@ -100,4 +100,9 @@ void pva_debugfs_init(struct platform_device *pdev)
 				&pva->debugfs_entry_vpu1, &pva_crashdump_fops);
 	if (!ret)
 		nvhost_dbg_info("Failed VPU1_crashdump file creation");
+
+	ret = debugfs_create_bool("use_ccq", S_IRUGO | S_IWUSR, de,
+				  &pva->use_ccq);
+	if (!ret)
+		nvhost_dbg_info("Failed to create CCQ selection file");
 }

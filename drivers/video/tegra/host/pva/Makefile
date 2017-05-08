@@ -11,6 +11,7 @@ nvhost-pva-objs  = \
 		pva_isr.o \
 		pva_queue.o \
 		pva_debug.o \
-		pva_trace.o
+		pva_trace.o \
+		pva_ccq.o
 
 obj-$(CONFIG_TEGRA_GRHOST_PVA) += nvhost-pva.o

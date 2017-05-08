@@ -355,6 +355,7 @@ struct mmc_host {
 #define MMC_CAP_UHS_SDR50	(1 << 17)	/* Host supports UHS SDR50 mode */
 #define MMC_CAP_UHS_SDR104	(1 << 18)	/* Host supports UHS SDR104 mode */
 #define MMC_CAP_UHS_DDR50	(1 << 19)	/* Host supports UHS DDR50 mode */
+#define MMC_CAP_RUNTIME_RESUME	(1 << 20)	/* Resume at runtime_resume. */
 #define MMC_CAP_DRIVER_TYPE_A	(1 << 23)	/* Host supports Driver Type A */
 #define MMC_CAP_DRIVER_TYPE_C	(1 << 24)	/* Host supports Driver Type C */
 #define MMC_CAP_DRIVER_TYPE_D	(1 << 25)	/* Host supports Driver Type D */
@@ -394,6 +395,7 @@ struct mmc_host {
 #define MMC_CAP2_HW_CQ		(1 << 25)	/* support eMMC command queue */
 #define MMC_CAP2_CMDQ_QBR	(1 << 26)	/* CMDQ Queue barrier supported */
 #define MMC_CAP2_ONLY_1V8_SIGNAL_VOLTAGE	(1 << 27)	/* Supports only 1V8 voltage */
+#define MMC_CAP2_NO_SLEEP_CMD	(1 << 28)	/* cannot support sleep mode */
 
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
 

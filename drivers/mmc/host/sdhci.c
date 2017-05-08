@@ -632,8 +632,8 @@ static void sdhci_adma_table_pre(struct sdhci_host *host,
 		 * buffer for the (up to three) bytes that screw up the
 		 * alignment.
 		 */
-		offset = (SDHCI_ADMA2_ALIGN - (addr & SDHCI_ADMA2_MASK)) &
-			 SDHCI_ADMA2_MASK;
+		offset = (host->align_sz - (addr & host->align_mask)) &
+			 host->align_mask;
 		if (offset) {
 			if (data->flags & MMC_DATA_WRITE) {
 				buffer = sdhci_kmap_atomic(sg, &flags);
@@ -647,8 +647,8 @@ static void sdhci_adma_table_pre(struct sdhci_host *host,
 
 			BUG_ON(offset > 65536);
 
-			align += SDHCI_ADMA2_ALIGN;
-			align_addr += SDHCI_ADMA2_ALIGN;
+			align += host->align_sz;
+			align_addr += host->align_sz;
 
 			desc += host->desc_sz;
 
@@ -698,7 +698,7 @@ static void sdhci_adma_table_post(struct sdhci_host *host,
 
 		/* Do a quick scan of the SG list for any unaligned mappings */
 		for_each_sg(data->sg, sg, host->sg_count, i)
-			if (sg_dma_address(sg) & SDHCI_ADMA2_MASK) {
+			if (sg_dma_address(sg) & host->align_mask) {
 				has_unaligned = true;
 				break;
 			}
@@ -710,15 +710,16 @@ static void sdhci_adma_table_post(struct sdhci_host *host,
 			align = host->align_buffer;
 
 			for_each_sg(data->sg, sg, host->sg_count, i) {
-				if (sg_dma_address(sg) & SDHCI_ADMA2_MASK) {
-					size = SDHCI_ADMA2_ALIGN -
-					       (sg_dma_address(sg) & SDHCI_ADMA2_MASK);
+				if (sg_dma_address(sg) & host->align_mask) {
+					size = host->align_sz -
+						(sg_dma_address(sg) &
+						 host->align_mask);
 
 					buffer = sdhci_kmap_atomic(sg, &flags);
 					memcpy(buffer, align, size);
 					sdhci_kunmap_atomic(buffer, &flags);
 
-					align += SDHCI_ADMA2_ALIGN;
+					align += host->align_sz;
 				}
 			}
 		}
@@ -3129,6 +3130,15 @@ int sdhci_suspend_host(struct sdhci_host *host)
 	if (host->tuning_mode != SDHCI_TUNING_MODE_3)
 		mmc_retune_needed(host->mmc);
 
+	/*
+	 * If eMMC cards are put in sleep state, Vccq can be disabled
+	 * but Vcc would still be powered on. In resume, we only restore
+	 * the controller context. So, set MMC_PM_KEEP_POWER flag.
+	 */
+	if (!(host->mmc->caps2 & MMC_CAP2_NO_SLEEP_CMD) &&
+		(host->mmc->pm_caps & MMC_PM_KEEP_POWER))
+		host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
+
 	if (!device_may_wakeup(mmc_dev(host->mmc))) {
 		host->ier = 0;
 		sdhci_writel(host, 0, SDHCI_INT_ENABLE);
@@ -3180,6 +3190,9 @@ int sdhci_resume_host(struct sdhci_host *host)
 		host->ops->platform_resume(host);
 
 	sdhci_enable_card_detection(host);
+
+	if (mmc->ios.enhanced_strobe)
+		sdhci_hs400_enhanced_strobe(mmc, &mmc->ios);
 
 	/* Re-enable CQE if eMMC card is in CQ mode */
 	if (host->mmc->card && mmc_card_cmdq(host->mmc->card) &&
@@ -3583,21 +3596,23 @@ int sdhci_setup_host(struct sdhci_host *host)
 				host->desc_sz = SDHCI_ADMA2_64_DESC_SZ;
 			host->adma_table_sz = (SDHCI_MAX_SEGS * 2 + 1) *
 						host->desc_sz;
+			host->align_sz = SDHCI_ADMA2_64_ALIGN;
 		} else {
 			host->adma_table_sz = (SDHCI_MAX_SEGS * 2 + 1) *
 					      SDHCI_ADMA2_32_DESC_SZ;
 			host->desc_sz = SDHCI_ADMA2_32_DESC_SZ;
+			host->align_sz = SDHCI_ADMA2_ALIGN;
 		}
 
-		host->align_buffer_sz = SDHCI_MAX_SEGS * SDHCI_ADMA2_ALIGN;
+		host->align_buffer_sz = SDHCI_MAX_SEGS * host->align_sz;
+		host->align_mask = host->align_sz - 1;
 		buf = dma_alloc_coherent(mmc_dev(mmc), host->align_buffer_sz +
 					 host->adma_table_sz, &dma, GFP_KERNEL);
 		if (!buf) {
 			pr_warn("%s: Unable to allocate ADMA buffers - falling back to standard DMA\n",
 				mmc_hostname(mmc));
 			host->flags &= ~SDHCI_USE_ADMA;
-		} else if ((dma + host->align_buffer_sz) &
-			   (SDHCI_ADMA2_DESC_ALIGN - 1)) {
+		} else if ((dma + host->align_buffer_sz) & host->align_mask) {
 			pr_warn("%s: unable to allocate aligned ADMA descriptor\n",
 				mmc_hostname(mmc));
 			host->flags &= ~SDHCI_USE_ADMA;

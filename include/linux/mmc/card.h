@@ -276,9 +276,9 @@ struct mmc_card {
 #define MMC_STATE_DOING_BKOPS	(1<<5)		/* card is doing BKOPS */
 #define MMC_STATE_SUSPENDED	(1<<6)		/* card is suspended */
 #define MMC_STATE_CMDQ		(1<<8)		/* card is in cmd queue mode */
+#define MMC_STATE_SLEEP		(1<<9)		/* card is in sleep mode */
 #define MMC_STATE_CMDQ_HALT	(1<<10)		/* card is in cmd queue halt mode */
 #define MMC_STATE_CMDQ_PAUSE	(1<<11)
-
 #define MMC_STATE_ULTRAHIGHSPEED (1<<12) /* card is in ultra high speed mode*/
 	unsigned int		quirks; 	/* card quirks */
 #define MMC_QUIRK_LENIENT_FN0	(1<<0)		/* allow SDIO FN0 writes outside of the VS CCCR range */
@@ -474,6 +474,7 @@ static inline void __maybe_unused remove_quirk(struct mmc_card *card, int data)
 #define mmc_card_cmdq(c)   ((c)->state & MMC_STATE_CMDQ)
 #define mmc_card_cmdq_halt(c)   ((c)->state & MMC_STATE_CMDQ_HALT)
 #define mmc_card_cmdq_pause(c)   ((c)->state & MMC_STATE_CMDQ_PAUSE)
+#define mmc_card_in_sleep(c)	((c)->state & MMC_STATE_SLEEP)
 
 #define mmc_card_set_present(c)	((c)->state |= MMC_STATE_PRESENT)
 #define mmc_card_set_readonly(c) ((c)->state |= MMC_STATE_READONLY)
@@ -481,6 +482,7 @@ static inline void __maybe_unused remove_quirk(struct mmc_card *card, int data)
 #define mmc_card_set_ext_capacity(c) ((c)->state |= MMC_CARD_SDXC)
 #define mmc_card_set_removed(c) ((c)->state |= MMC_CARD_REMOVED)
 #define mmc_card_set_doing_bkops(c)	((c)->state |= MMC_STATE_DOING_BKOPS)
+#define mmc_card_set_sleep(c)	((c)->state |= MMC_STATE_SLEEP)
 #define mmc_card_clr_doing_bkops(c)	((c)->state &= ~MMC_STATE_DOING_BKOPS)
 #define mmc_card_set_suspended(c) ((c)->state |= MMC_STATE_SUSPENDED)
 #define mmc_card_clr_suspended(c) ((c)->state &= ~MMC_STATE_SUSPENDED)
@@ -492,6 +494,7 @@ static inline void __maybe_unused remove_quirk(struct mmc_card *card, int data)
 #define mmc_card_clr_cmdq_halt(c)       ((c)->state &= ~MMC_STATE_CMDQ_HALT)
 #define mmc_card_set_cmdq_pause(c)       ((c)->state |= MMC_STATE_CMDQ_PAUSE)
 #define mmc_card_clr_cmdq_pause(c)       ((c)->state &= ~MMC_STATE_CMDQ_PAUSE)
+#define mmc_card_clr_sleep(c)	((c)->state &= ~MMC_STATE_SLEEP)
 
 /*
  * Quirk add/remove for MMC products.

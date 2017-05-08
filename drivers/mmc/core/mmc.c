@@ -2022,10 +2022,11 @@ err:
 
 static int mmc_can_sleep(struct mmc_card *card)
 {
-	return (card && card->ext_csd.rev >= 3);
+	return ((card && card->ext_csd.rev >= 3) &&
+		!(card->host->caps2 & MMC_CAP2_NO_SLEEP_CMD));
 }
 
-static int mmc_sleep(struct mmc_host *host)
+static int mmc_sleep(struct mmc_host *host, int sleep)
 {
 	struct mmc_command cmd = {0};
 	struct mmc_card *card = host->card;
@@ -2035,13 +2036,16 @@ static int mmc_sleep(struct mmc_host *host)
 	/* Re-tuning can't be done once the card is deselected */
 	mmc_retune_hold(host);
 
-	err = mmc_deselect_cards(host);
-	if (err)
-		goto out_release;
+	if (sleep) {
+		err = mmc_deselect_cards(host);
+		if (err)
+			goto out_release;
+	}
 
 	cmd.opcode = MMC_SLEEP_AWAKE;
 	cmd.arg = card->rca << 16;
-	cmd.arg |= 1 << 15;
+	if (sleep)
+		cmd.arg |= 1 << 15;
 
 	/*
 	 * If the max_busy_timeout of the host is specified, validate it against
@@ -2069,6 +2073,8 @@ static int mmc_sleep(struct mmc_host *host)
 	if (!cmd.busy_timeout || !(host->caps & MMC_CAP_WAIT_WHILE_BUSY))
 		mmc_delay(timeout_ms);
 
+	if (!sleep)
+		err = mmc_select_card(card);
 out_release:
 	mmc_retune_release(host);
 	return err;
@@ -2179,12 +2185,16 @@ static int _mmc_suspend(struct mmc_host *host, bool is_suspend)
 	if (mmc_can_poweroff_notify(host->card) &&
 		((host->caps2 & MMC_CAP2_FULL_PWR_CYCLE) || !is_suspend))
 		err = mmc_poweroff_notify(host->card, notify_type);
-	else if (mmc_can_sleep(host->card))
-		err = mmc_sleep(host);
-	else if (!mmc_host_is_spi(host))
+	else if (mmc_can_sleep(host->card)) {
+		err = mmc_sleep(host, 1);
+		if (!err) {
+			mmc_card_set_sleep(host->card);
+			mmc_card_set_suspended(host->card);
+		}
+	} else if (!mmc_host_is_spi(host))
 		err = mmc_deselect_cards(host);
 
-	if (!err) {
+	if (!err && !mmc_card_in_sleep(host->card)) {
 		mmc_power_off(host);
 		mmc_card_set_suspended(host->card);
 	}
@@ -2225,9 +2235,18 @@ static int _mmc_resume(struct mmc_host *host)
 	if (!mmc_card_suspended(host->card))
 		goto out;
 
-	mmc_power_up(host, host->card->ocr);
-	err = mmc_init_card(host, host->card->ocr, host->card);
-	mmc_card_clr_suspended(host->card);
+	if (mmc_can_sleep(host->card) &&
+		mmc_card_in_sleep(host->card)) {
+		err = mmc_sleep(host, 0);
+		if (!err) {
+			mmc_card_clr_sleep(host->card);
+			mmc_card_clr_suspended(host->card);
+		}
+	} else {
+		mmc_power_up(host, host->card->ocr);
+		err = mmc_init_card(host, host->card->ocr, host->card);
+		mmc_card_clr_suspended(host->card);
+	}
 
 out:
 	mmc_release_host(host);
@@ -2260,8 +2279,16 @@ static int mmc_shutdown(struct mmc_host *host)
  */
 static int mmc_resume(struct mmc_host *host)
 {
+	int err = 0;
+
+	if (!(host->caps & MMC_CAP_RUNTIME_RESUME)) {
+		err = _mmc_resume(host);
+		pm_runtime_set_active(&host->card->dev);
+		pm_runtime_mark_last_busy(&host->card->dev);
+	}
 	pm_runtime_enable(&host->card->dev);
-	return 0;
+
+	return err;
 }
 
 /*
@@ -2288,6 +2315,9 @@ static int mmc_runtime_suspend(struct mmc_host *host)
 static int mmc_runtime_resume(struct mmc_host *host)
 {
 	int err;
+
+	if (!(host->caps & (MMC_CAP_AGGRESSIVE_PM | MMC_CAP_RUNTIME_RESUME)))
+		return 0;
 
 	err = _mmc_resume(host);
 	if (err && err != -ENOMEDIUM)
@@ -2348,7 +2378,7 @@ static int mmc_power_save(struct mmc_host *host)
 	if (host->card->ext_csd.strobe_support &&
 		(host->caps2 & MMC_CAP2_HS400_ES) &&
 		(host->ops->hs400_enhanced_strobe)) {
-		host->ios.enhanced_strobe = true;
+		host->ios.enhanced_strobe = false;
 		host->ops->hs400_enhanced_strobe(host, &host->ios);
 	}
 	return 0;

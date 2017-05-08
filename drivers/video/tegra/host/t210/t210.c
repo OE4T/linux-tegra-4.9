@@ -102,20 +102,15 @@ struct nvhost_device_data t21_isp_info = {
 #else
 		{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP },
 #endif
-		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
-#if defined(CONFIG_TEGRA_BWMGR)
-			0, TEGRA_BWMGR_SET_EMC_SHARED_BW_ISO} },
-#else
-		} },
+#if !defined(CONFIG_TEGRA_BWMGR)
+		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER, }
 #endif
+	 },
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
 	.hw_init		= nvhost_isp_register_isr_v1,
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
 	.bond_out_id		= BOND_OUT_ISP,
-#if defined(CONFIG_TEGRA_BWMGR)
-	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_ISPA,
-#endif
 };
 
 struct nvhost_device_data t21_ispb_info = {
@@ -135,20 +130,15 @@ struct nvhost_device_data t21_ispb_info = {
 #else
 		{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISPB },
 #endif
-		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
-#if defined(CONFIG_TEGRA_BWMGR)
-			0, TEGRA_BWMGR_SET_EMC_SHARED_BW_ISO} },
-#else
-		} },
+#if !defined(CONFIG_TEGRA_BWMGR)
+		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER, }
 #endif
+	 },
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
 	.hw_init		= nvhost_isp_register_isr_v1,
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
 	.bond_out_id		= BOND_OUT_ISP,
-#if defined(CONFIG_TEGRA_BWMGR)
-	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_ISPB,
-#endif
 };
 #endif
 
@@ -179,21 +169,16 @@ struct nvhost_device_data t21_vi_info = {
 		{"cile", 102000000},
 		{"vii2c", 86400000},
 		{"i2cslow", 1000000},
-		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
-#if defined(CONFIG_TEGRA_BWMGR)
-			0, TEGRA_BWMGR_SET_EMC_SHARED_BW_ISO} },
-#else
-		} },
+#if !defined(CONFIG_TEGRA_BWMGR)
+		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER, }
 #endif
+	 },
 	.ctrl_ops		= &tegra_vi_ctrl_ops,
 	.num_channels		= 6,
 	.slcg_notifier_enable	= true,
 	.bond_out_id		= BOND_OUT_VI,
 	.prepare_poweroff = nvhost_vi_prepare_poweroff,
 	.finalize_poweron = nvhost_vi_finalize_poweron,
-#if defined(CONFIG_TEGRA_BWMGR)
-	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_VI,
-#endif
 };
 EXPORT_SYMBOL(t21_vi_info);
 #endif

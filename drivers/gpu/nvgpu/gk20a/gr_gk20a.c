@@ -4073,15 +4073,10 @@ int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 
 			if (c_tbl->ref_cnt && c_tbl->format == zbc_val->format &&
 			    memcmp(c_tbl->color_ds, zbc_val->color_ds,
-				sizeof(zbc_val->color_ds)) == 0) {
+				sizeof(zbc_val->color_ds)) == 0 &&
+			    memcmp(c_tbl->color_l2, zbc_val->color_l2,
+				    sizeof(zbc_val->color_l2)) == 0) {
 
-				if (memcmp(c_tbl->color_l2, zbc_val->color_l2,
-				    sizeof(zbc_val->color_l2))) {
-					nvgpu_err(g,
-						"zbc l2 and ds color don't match with existing entries");
-					ret = -EINVAL;
-					goto err_mutex;
-				}
 				added = true;
 				c_tbl->ref_cnt++;
 				ret = 0;

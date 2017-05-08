@@ -157,6 +157,7 @@ struct tegra210_adsp {
 	int init_done;
 	int adsp_started;
 	uint32_t adma_ch_page;
+	uint32_t adma_ch_start;
 	struct tegra210_adsp_path {
 		uint32_t fe_reg;
 		uint32_t be_reg;
@@ -821,7 +822,7 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 #ifdef CONFIG_SND_SOC_TEGRA_VIRT_IVC_COMM
 		if (of_device_is_compatible(node,
 				"nvidia,tegra210-adsp-audio-hv"))
-			app->adma_chan += TEGRA210_ADSP_ADMA_CHANNEL_START_HV;
+			app->adma_chan += adsp->adma_ch_start;
 		else
 #endif
 			app->adma_chan += TEGRA210_ADSP_ADMA_CHANNEL_START;
@@ -4404,6 +4405,7 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 	int i, j, wt_idx, mux_idx, ret = 0;
 	unsigned int compr_ops = 1;
 	uint32_t adma_ch_page = 0;
+	uint32_t adma_ch_start = TEGRA210_ADSP_ADMA_CHANNEL_START_HV;
 	char plugin_info[20];
 
 	pr_info("tegra210_adsp_audio_platform_probe: platform probe started\n");
@@ -4580,6 +4582,13 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 		dev_info(&pdev->dev, "using adma channel page 0\n");
 	}
 	adsp->adma_ch_page = adma_ch_page;
+
+	if (of_property_read_u32_index(pdev->dev.of_node,
+		"nvidia,adma_ch_start", 0, &adma_ch_start)) {
+		dev_info(&pdev->dev, "adma channel start dt entry not found\n");
+		dev_info(&pdev->dev, "using adma channels from 16\n");
+	}
+	adsp->adma_ch_start = adma_ch_start;
 
 	ret = snd_soc_register_platform(&pdev->dev, &tegra210_adsp_platform);
 	if (ret) {

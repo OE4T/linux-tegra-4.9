@@ -72,6 +72,13 @@
 		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>;
 		phy-names = "usb2";
 	};
+
+	usb_cd {
+		status = "okay";
+		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>;
+		phy-names = "otg-phy";
+		nvidia,xusb-padctl = <&xusb_padctl>;
+	};
 #else
 	xudc@3550000 {
 		status = "okay";

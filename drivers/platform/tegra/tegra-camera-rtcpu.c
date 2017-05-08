@@ -301,28 +301,28 @@ static int tegra_camrtc_get_resources(struct device *dev)
 	const struct tegra_cam_rtcpu_pdata *pdata = rtcpu->pdata;
 	int i, err;
 
-#define GET_RESOURCES(_res_, _get_, _warn_, _toerr) \
+#define GET_RESOURCES(_res_, _get_, _null_, _toerr)	\
 	for (i = 0; i < pdata->num_##_res_##s; i++) { \
 		rtcpu->_res_##s[i] = _get_(dev, pdata->_res_##_names[i]); \
 		err = _toerr(rtcpu->_res_##s[i]); \
 		if (err == 0) \
 			continue; \
-		rtcpu->_res_##s[i] = 0; \
+		rtcpu->_res_##s[i] = _null_; \
 		if (err == -EPROBE_DEFER) { \
 			dev_info(dev, "defer %s probe because %s %s\n", \
 				rtcpu->name, #_res_, pdata->_res_##_names[i]); \
 			return err; \
 		} \
-		if (_warn_ && err != -ENODATA && err != -ENOENT) \
+		if (err != -ENODATA && err != -ENOENT) \
 			dev_warn(dev, "%s %s not available: %d\n", #_res_, \
 				pdata->_res_##_names[i], err); \
 	}
 
 #define _PTR2ERR(x) (IS_ERR(x) ? PTR_ERR(x) : 0)
 
-	GET_RESOURCES(clock, devm_clk_get, true, _PTR2ERR);
-	GET_RESOURCES(reset, tegra_camrtc_reset_control_get, true, _PTR2ERR);
-	GET_RESOURCES(reg, tegra_cam_ioremap_byname, true, _PTR2ERR);
+	GET_RESOURCES(clock, devm_clk_get, NULL, _PTR2ERR);
+	GET_RESOURCES(reset, tegra_camrtc_reset_control_get, NULL, _PTR2ERR);
+	GET_RESOURCES(reg, tegra_cam_ioremap_byname, NULL, _PTR2ERR);
 
 #undef _PTR2ERR
 
@@ -344,7 +344,7 @@ static int tegra_camrtc_get_irqs(struct device *dev)
 #define _get_irq(_dev, _name) of_irq_get_byname(_dev->of_node, _name)
 #define _int2err(x) ((x) < 0 ? (x) : 0)
 
-	GET_RESOURCES(irq, _get_irq, true, _int2err);
+	GET_RESOURCES(irq, _get_irq, 0, _int2err);
 
 #undef _get_irq
 #undef _int2err

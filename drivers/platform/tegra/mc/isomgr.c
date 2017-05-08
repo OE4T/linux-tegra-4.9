@@ -240,36 +240,42 @@ static struct isoclient_info tegra21x_isoclients[] = {
 		.name = "disp_0",
 		.dev_name = "tegradc.0",
 		.emc_clk_name = "emc",
+		.bwmgr_id = TEGRA_BWMGR_CLIENT_DISP0,
 	},
 	{
 		.client = TEGRA_ISO_CLIENT_DISP_1,
 		.name = "disp_1",
 		.dev_name = "tegradc.1",
 		.emc_clk_name = "emc",
+		.bwmgr_id = TEGRA_BWMGR_CLIENT_DISP1,
 	},
 	{
 		.client = TEGRA_ISO_CLIENT_VI_0,
 		.name = "vi_0",
 		.dev_name = "tegra_vi",
 		.emc_clk_name = "emc",
+		.bwmgr_id = TEGRA_BWMGR_CLIENT_VI,
 	},
 	{
 		.client = TEGRA_ISO_CLIENT_ISP_A,
 		.name = "isp_a",
 		.dev_name = "tegra_isp.0",
 		.emc_clk_name = "emc",
+		.bwmgr_id = TEGRA_BWMGR_CLIENT_ISPA,
 	},
 	{
 		.client = TEGRA_ISO_CLIENT_ISP_B,
 		.name = "isp_b",
 		.dev_name = "tegra_isp.1",
 		.emc_clk_name = "emc",
+		.bwmgr_id = TEGRA_BWMGR_CLIENT_ISPB,
 	},
 	{
 		.client = TEGRA_ISO_CLIENT_TEGRA_CAMERA,
 		.name = "tegra_camera",
 		.dev_name = "tegra_camera_ctrl",
 		.emc_clk_name = "iso.emc",
+		.bwmgr_id = TEGRA_BWMGR_CLIENT_CAMERA,
 	},
 	/* This must be last entry*/
 	{

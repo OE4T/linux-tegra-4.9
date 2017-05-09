@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -121,5 +121,6 @@ void tegra_clk_osc_resume(void __iomem *clk_base)
 	val = readl_relaxed(clk_base + OSC_CTRL) & ~OSC_CTRL_MASK;
 	val |= osc_ctrl_ctx;
 	writel_relaxed(val, clk_base + OSC_CTRL);
+	fence_udelay(2, clk_base);
 }
 #endif

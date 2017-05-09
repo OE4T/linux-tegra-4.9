@@ -19,6 +19,7 @@
 #include <linux/io.h>
 #include <linux/err.h>
 #include <linux/slab.h>
+#include <linux/delay.h>
 #include <linux/clk-provider.h>
 
 #include "clk.h"
@@ -121,6 +122,7 @@ static int clk_frac_div_set_rate(struct clk_hw *hw, unsigned long rate,
 		val |= pll_out_override(divider);
 
 	writel_relaxed(val, divider->reg);
+	fence_udelay(2, divider->reg);
 
 	if (divider->lock)
 		spin_unlock_irqrestore(divider->lock, flags);

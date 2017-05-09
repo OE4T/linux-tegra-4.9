@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -104,7 +104,7 @@ static int clk_super_set_parent(struct clk_hw *hw, u8 index)
 
 		val ^= SUPER_LP_DIV2_BYPASS;
 		writel_relaxed(val, mux->reg);
-		udelay(2);
+		fence_udelay(2, mux->reg);
 
 		if (index == mux->div2_index)
 			index = mux->pllx_index;
@@ -113,7 +113,7 @@ static int clk_super_set_parent(struct clk_hw *hw, u8 index)
 	val |= (index & (super_state_to_src_mask(mux))) << shift;
 
 	writel_relaxed(val, mux->reg);
-	udelay(2);
+	fence_udelay(2, mux->reg);
 
 out:
 	if (mux->lock)

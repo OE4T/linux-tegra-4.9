@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -53,7 +53,7 @@ static int clk_pll_out_enable(struct clk_hw *hw)
 	val |= (pll_out_enb(pll_out) | pll_out_rst(pll_out));
 
 	writel_relaxed(val, pll_out->reg);
-	udelay(2);
+	fence_udelay(2, pll_out->reg);
 
 	if (pll_out->lock)
 		spin_unlock_irqrestore(pll_out->lock, flags);
@@ -75,7 +75,7 @@ static void clk_pll_out_disable(struct clk_hw *hw)
 	val &= ~(pll_out_enb(pll_out) | pll_out_rst(pll_out));
 
 	writel_relaxed(val, pll_out->reg);
-	udelay(2);
+	fence_udelay(2, pll_out->reg);
 
 	if (pll_out->lock)
 		spin_unlock_irqrestore(pll_out->lock, flags);

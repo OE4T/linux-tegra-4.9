@@ -737,6 +737,14 @@ struct gpu_ops {
 		u32 (*pmu_get_queue_head_size)(void);
 		u32 (*pmu_get_queue_tail_size)(void);
 		u32 (*pmu_get_queue_tail)(u32 i);
+		int (*pmu_queue_head)(struct nvgpu_pmu *pmu,
+			struct pmu_queue *queue, u32 *head, bool set);
+		int (*pmu_queue_tail)(struct nvgpu_pmu *pmu,
+			struct pmu_queue *queue, u32 *tail, bool set);
+		int (*pmu_mutex_acquire)(struct nvgpu_pmu *pmu,
+			u32 id, u32 *token);
+		int (*pmu_mutex_release)(struct nvgpu_pmu *pmu,
+			u32 id, u32 *token);
 		int (*init_wpr_region)(struct gk20a *g);
 		int (*load_lsfalcon_ucode)(struct gk20a *g, u32 falconidmask);
 		void (*write_dmatrfbase)(struct gk20a *g, u32 addr);

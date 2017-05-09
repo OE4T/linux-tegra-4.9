@@ -422,6 +422,10 @@ void gp106_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_get_queue_head_size = pwr_pmu_queue_head__size_1_v;
 	gops->pmu.pmu_get_queue_tail = pwr_pmu_queue_tail_r;
 	gops->pmu.pmu_get_queue_tail_size = pwr_pmu_queue_tail__size_1_v;
+	gops->pmu.pmu_queue_head = gk20a_pmu_queue_head;
+	gops->pmu.pmu_queue_tail = gk20a_pmu_queue_tail;
+	gops->pmu.pmu_mutex_acquire = gk20a_pmu_mutex_acquire;
+	gops->pmu.pmu_mutex_release = gk20a_pmu_mutex_release;
 	gops->pmu.lspmuwprinitdone = 0;
 	gops->pmu.fecsbootstrapdone = false;
 	gops->pmu.write_dmatrfbase = gp10b_write_dmatrfbase;

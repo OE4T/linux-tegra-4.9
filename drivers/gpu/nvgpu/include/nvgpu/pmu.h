@@ -115,6 +115,15 @@ enum {
 typedef void (*pmu_callback)(struct gk20a *, struct pmu_msg *, void *, u32,
 	u32);
 
+struct pmu_payload {
+	struct {
+		void *buf;
+		u32 offset;
+		u32 size;
+		u32 fb_size;
+	} in, out;
+};
+
 struct pmu_ucode_desc {
 	u32 descriptor_size;
 	u32 image_size;
@@ -325,5 +334,34 @@ struct nvgpu_pmu {
 
 	struct nvgpu_firmware *fw;
 };
+
+/* PMU IPC Methods */
+void nvgpu_pmu_seq_init(struct nvgpu_pmu *pmu);
+
+int nvgpu_pmu_mutex_acquire(struct nvgpu_pmu *pmu, u32 id, u32 *token);
+int nvgpu_pmu_mutex_release(struct nvgpu_pmu *pmu, u32 id, u32 *token);
+
+int nvgpu_pmu_queue_init(struct nvgpu_pmu *pmu, u32 id,
+	union pmu_init_msg_pmu *init);
+bool nvgpu_pmu_queue_is_empty(struct nvgpu_pmu *pmu, struct pmu_queue *queue);
+
+/* send a cmd to pmu */
+int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
+		struct pmu_msg *msg, struct pmu_payload *payload,
+		u32 queue_id, pmu_callback callback, void *cb_param,
+		u32 *seq_desc, unsigned long timeout);
+
+int nvgpu_pmu_process_message(struct nvgpu_pmu *pmu);
+
+/* perfmon */
+int nvgpu_pmu_init_perfmon(struct nvgpu_pmu *pmu);
+int nvgpu_pmu_handle_perfmon_event(struct nvgpu_pmu *pmu,
+			struct pmu_perfmon_msg *msg);
+int nvgpu_pmu_handle_therm_event(struct nvgpu_pmu *pmu,
+			struct nv_pmu_therm_msg *msg);
+
+/* PMU init */
+int nvgpu_pmu_process_init_msg(struct nvgpu_pmu *pmu,
+		struct pmu_msg *msg);
 
 #endif /* __NVGPU_PMU_H__ */

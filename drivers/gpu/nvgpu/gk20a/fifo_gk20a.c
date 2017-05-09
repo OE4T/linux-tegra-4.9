@@ -2629,12 +2629,12 @@ int gk20a_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 	for (i = 0; i < g->fifo.max_runlists; i++)
 		nvgpu_mutex_acquire(&f->runlist_info[i].mutex);
 
-	mutex_ret = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	ret = __locked_fifo_preempt(g, hw_chid, false);
 
 	if (!mutex_ret)
-		pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	for (i = 0; i < g->fifo.max_runlists; i++)
 		nvgpu_mutex_release(&f->runlist_info[i].mutex);
@@ -2656,12 +2656,12 @@ int gk20a_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 	for (i = 0; i < g->fifo.max_runlists; i++)
 		nvgpu_mutex_acquire(&f->runlist_info[i].mutex);
 
-	mutex_ret = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	ret = __locked_fifo_preempt(g, tsgid, true);
 
 	if (!mutex_ret)
-		pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	for (i = 0; i < g->fifo.max_runlists; i++)
 		nvgpu_mutex_release(&f->runlist_info[i].mutex);
@@ -2718,12 +2718,12 @@ void gk20a_fifo_set_runlist_state(struct gk20a *g, u32 runlists_mask,
 		}
 	}
 
-	mutex_ret = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	gk20a_fifo_sched_disable_rw(g, runlists_mask, runlist_state);
 
 	if (!mutex_ret)
-		pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	if (!is_runlist_info_mutex_locked) {
 		gk20a_dbg_info("release runlist_info mutex");
@@ -2792,7 +2792,7 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 	    fifo_engine_status_engine_busy_v() && !wait_for_idle)
 		return -EBUSY;
 
-	mutex_ret = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	gk20a_fifo_set_runlist_state(g, fifo_sched_disable_runlist_m(
 					eng_info->runlist_id), RUNLIST_DISABLED,
@@ -2832,7 +2832,7 @@ int gk20a_fifo_disable_engine_activity(struct gk20a *g,
 
 clean_up:
 	if (!mutex_ret)
-		pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	if (err) {
 		gk20a_dbg_fn("failed");
@@ -3300,13 +3300,13 @@ int gk20a_fifo_update_runlist(struct gk20a *g, u32 runlist_id, u32 hw_chid,
 
 	nvgpu_mutex_acquire(&runlist->mutex);
 
-	mutex_ret = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	ret = gk20a_fifo_update_runlist_locked(g, runlist_id, hw_chid, add,
 					       wait_for_finish);
 
 	if (!mutex_ret)
-		pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	nvgpu_mutex_release(&runlist->mutex);
 	return ret;

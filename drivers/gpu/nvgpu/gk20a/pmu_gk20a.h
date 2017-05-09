@@ -57,15 +57,6 @@ struct nvgpu_firmware;
 #define PMU_PGENG_GR_BUFFER_IDX_ZBC	(1)
 #define PMU_PGENG_GR_BUFFER_IDX_FECS	(2)
 
-struct pmu_payload {
-	struct {
-		void *buf;
-		u32 offset;
-		u32 size;
-		u32 fb_size;
-	} in, out;
-};
-
 struct pmu_surface {
 	struct nvgpu_mem vidmem_desc;
 	struct nvgpu_mem sysmem_desc;
@@ -119,13 +110,8 @@ struct pmu_pg_stats_data {
 int gk20a_init_pmu_support(struct gk20a *g);
 int gk20a_init_pmu_bind_fecs(struct gk20a *g);
 
+bool gk20a_pmu_is_interrupted(struct nvgpu_pmu *pmu);
 void gk20a_pmu_isr(struct gk20a *g);
-
-/* send a cmd to pmu */
-int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd, struct pmu_msg *msg,
-		struct pmu_payload *payload, u32 queue_id,
-		pmu_callback callback, void* cb_param,
-		u32 *seq_desc, unsigned long timeout);
 
 int gk20a_pmu_enable_elpg(struct gk20a *g);
 int gk20a_pmu_disable_elpg(struct gk20a *g);
@@ -138,8 +124,14 @@ void gk20a_pmu_save_zbc(struct gk20a *g, u32 entries);
 
 int gk20a_pmu_perfmon_enable(struct gk20a *g, bool enable);
 
-int pmu_mutex_acquire(struct nvgpu_pmu *pmu, u32 id, u32 *token);
-int pmu_mutex_release(struct nvgpu_pmu *pmu, u32 id, u32 *token);
+int gk20a_pmu_mutex_acquire(struct nvgpu_pmu *pmu, u32 id, u32 *token);
+int gk20a_pmu_mutex_release(struct nvgpu_pmu *pmu, u32 id, u32 *token);
+
+int gk20a_pmu_queue_head(struct nvgpu_pmu *pmu, struct pmu_queue *queue,
+			u32 *head, bool set);
+int gk20a_pmu_queue_tail(struct nvgpu_pmu *pmu, struct pmu_queue *queue,
+			u32 *tail, bool set);
+
 int gk20a_pmu_destroy(struct gk20a *g);
 int gk20a_pmu_load_norm(struct gk20a *g, u32 *load);
 int gk20a_pmu_load_update(struct gk20a *g);
@@ -157,7 +149,6 @@ int pmu_bootstrap(struct nvgpu_pmu *pmu);
 int gk20a_init_pmu(struct nvgpu_pmu *pmu);
 void pmu_dump_falcon_stats(struct nvgpu_pmu *pmu);
 void gk20a_remove_pmu_support(struct nvgpu_pmu *pmu);
-void pmu_seq_init(struct nvgpu_pmu *pmu);
 
 int gk20a_init_pmu(struct nvgpu_pmu *pmu);
 

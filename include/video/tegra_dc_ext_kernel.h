@@ -169,6 +169,7 @@ struct tegra_dc_win {
 
 	bool		is_scaler_coeff_set;
 	bool		color_expand_enable;
+	bool		clamp_before_blend;
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	bool		precomp_caps_read;

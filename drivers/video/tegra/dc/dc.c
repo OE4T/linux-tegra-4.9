@@ -6018,6 +6018,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #ifdef CONFIG_TEGRA_NVDISPLAY
 		struct tegra_dc_win *win = &tegra_dc_windows[i];
 		win->color_expand_enable = true;
+		win->clamp_before_blend = true;
 #else
 		struct tegra_dc_win *win = &dc->windows[i];
 		win->dc = dc;

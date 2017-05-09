@@ -471,6 +471,11 @@ static void tegra_dc_ext_set_windowattr_basic(struct tegra_dc_win *win,
 			win->color_expand_enable = true;
 	}
 
+	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_CLAMP_BEFORE_BLEND_DISABLE)
+		win->clamp_before_blend = false;
+	else
+		win->clamp_before_blend = true;
+
 	win->fmt = flip_win->pixformat;
 	win->x.full = flip_win->x;
 	win->y.full = flip_win->y;

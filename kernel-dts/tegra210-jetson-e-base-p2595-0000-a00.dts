@@ -323,13 +323,15 @@
 
 		dsi {
 			nvidia,dsi-controller-vs = <DSI_VS_1>;
-			status = "okay";
+			status = "disabled";
 			panel-s-wqxga-10-1 {
+				status = "disabled";
 				nvidia,panel-rst-gpio = <&gpio TEGRA_GPIO(V, 2) 0>; /* PV2 */
 				nvidia,panel-bl-pwm-gpio = <&gpio TEGRA_GPIO(V, 0) 0>; /* PV0 */
 				nvidia,dsi-te-gpio = <&gpio TEGRA_GPIO(Y, 2) 0>;
 			};
 			panel-a-wuxga-8-0 {
+				status = "disabled";
 				nvidia,dsi-dpd-pads = <DSIC_DPD_EN DSID_DPD_EN>;
 				nvidia,panel-rst-gpio = <&gpio TEGRA_GPIO(V, 2) 0>; /* PV2 */
 				nvidia,panel-bl-pwm-gpio = <&gpio TEGRA_GPIO(V, 0) 0>; /* PV0 */
@@ -340,12 +342,12 @@
 		};
 
 		sor {
-			status = "disbaled";
+			status = "disabled";
 			panel-s-edp-uhdtv-15-6 {
 				status = "disabled";
 			};
 			prod-settings {
-				status = "disbaled";
+				status = "disabled";
 			};
 		};
 

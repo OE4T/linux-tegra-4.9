@@ -38,6 +38,7 @@
 		compatible = "nvidia,tegra210-aconnect";
 		clocks = <&tegra_car TEGRA186_CLK_APE>,
 			 <&tegra_car TEGRA186_CLK_APB2APE>;
+		power-domains = <&ape_pd>;
 		clock-names = "ape", "apb2ape";
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -502,7 +503,6 @@
 		tegra_adsp_audio: adsp_audio {
 			status = "okay";
 			compatible = "nvidia,tegra210-adsp-audio";
-			power-domains = <&adsp_pd>;
 			wakeup-disable;
 			#stream-id-cells = <1>;
 			iommus = <&smmu TEGRA_SID_APE>;

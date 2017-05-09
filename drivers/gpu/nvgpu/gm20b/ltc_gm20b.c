@@ -143,7 +143,7 @@ int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 			ctrl1 = ltc_ltc0_lts0_cbc_ctrl1_r() +
 				ltc * ltc_stride + slice * lts_stride;
 
-			nvgpu_timeout_init(g, &timeout, 200,
+			nvgpu_timeout_init(g, &timeout, 2000,
 					   NVGPU_TIMER_RETRY_TIMER);
 			do {
 				val = gk20a_readl(g, ctrl1);

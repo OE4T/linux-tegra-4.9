@@ -537,10 +537,12 @@ void tegra210_plle_hw_sequence_start(void)
 	val &= ~(PLLE_AUX_ENABLE_SWCTL | PLLE_AUX_SS_SWCTL);
 	writel_relaxed(val, clk_base + PLLE_AUX);
 
-	udelay(1);
+	fence_udelay(1, clk_base);
 
 	val |= PLLE_AUX_SEQ_ENABLE;
 	writel_relaxed(val, clk_base + PLLE_AUX);
+
+	fence_udelay(1, clk_base);
 }
 EXPORT_SYMBOL_GPL(tegra210_plle_hw_sequence_start);
 
@@ -557,6 +559,7 @@ void tegra210_xusb_pll_hw_control_enable(void)
 	val |= XUSBIO_PLL_CFG0_PADPLL_USE_LOCKDET |
 	       XUSBIO_PLL_CFG0_PADPLL_SLEEP_IDDQ;
 	writel_relaxed(val, clk_base + XUSBIO_PLL_CFG0);
+	fence_udelay(1, clk_base);
 }
 EXPORT_SYMBOL_GPL(tegra210_xusb_pll_hw_control_enable);
 
@@ -570,6 +573,7 @@ void tegra210_xusb_pll_hw_sequence_start(void)
 	val = readl_relaxed(clk_base + XUSBIO_PLL_CFG0);
 	val |= XUSBIO_PLL_CFG0_SEQ_ENABLE;
 	writel_relaxed(val, clk_base + XUSBIO_PLL_CFG0);
+	fence_udelay(1, clk_base);
 }
 EXPORT_SYMBOL_GPL(tegra210_xusb_pll_hw_sequence_start);
 
@@ -597,6 +601,7 @@ void tegra210_sata_pll_hw_control_enable(void)
 	val |= SATA_PLL_CFG0_PADPLL_USE_LOCKDET |
 	       SATA_PLL_CFG0_PADPLL_SLEEP_IDDQ;
 	writel_relaxed(val, clk_base + SATA_PLL_CFG0);
+	fence_udelay(1, clk_base);
 }
 EXPORT_SYMBOL_GPL(tegra210_sata_pll_hw_control_enable);
 
@@ -610,6 +615,7 @@ void tegra210_sata_pll_hw_sequence_start(void)
 	val = readl_relaxed(clk_base + SATA_PLL_CFG0);
 	val |= SATA_PLL_CFG0_SEQ_ENABLE;
 	writel_relaxed(val, clk_base + SATA_PLL_CFG0);
+	fence_udelay(1, clk_base);
 }
 EXPORT_SYMBOL_GPL(tegra210_sata_pll_hw_sequence_start);
 
@@ -630,6 +636,7 @@ void tegra210_set_sata_pll_seq_sw(bool state)
 		val &= ~SATA_PLL_CFG0_SATA_SEQ_PADPLL_PD_INPUT_VALUE;
 	}
 	writel_relaxed(val, clk_base + SATA_PLL_CFG0);
+	fence_udelay(1, clk_base);
 }
 EXPORT_SYMBOL_GPL(tegra210_set_sata_pll_seq_sw);
 
@@ -645,6 +652,7 @@ void tegra210_csi_source_from_brick(void)
 	val = readl_relaxed(clk_base + PLLD_BASE);
 	val &= ~PLLD_BASE_CSI_CLKSOURCE;
 	writel_relaxed(val, clk_base + PLLD_BASE);
+	fence_udelay(1, clk_base);
 
 	if (!IS_ERR_OR_NULL(plld))
 		spin_unlock_irqrestore(to_clk_pll(__clk_get_hw(plld))->lock,
@@ -664,6 +672,7 @@ void tegra210_csi_source_from_plld(void)
 	val = readl_relaxed(clk_base + PLLD_BASE);
 	val |= PLLD_BASE_CSI_CLKSOURCE;
 	writel_relaxed(val, clk_base + PLLD_BASE);
+	fence_udelay(1, clk_base);
 
 	if (!IS_ERR_OR_NULL(plld))
 		spin_unlock_irqrestore(to_clk_pll(__clk_get_hw(plld))->lock,
@@ -736,7 +745,7 @@ static void tegra210_pllcx_set_defaults(const char *name,
 			clk_base + pllcx->params->ext_misc_reg[2]);
 	writel_relaxed(PLLCX_MISC3_DEFAULT_VALUE,
 			clk_base + pllcx->params->ext_misc_reg[3]);
-	udelay(1);
+	fence_udelay(1, clk_base);
 }
 
 static void _pllc_set_defaults(struct tegra_clk_pll *pllcx)
@@ -797,7 +806,7 @@ static void tegra210_plla_set_defaults(struct tegra_clk_pll *plla)
 		val &= ~mask;
 		val |= PLLA_MISC0_DEFAULT_VALUE & mask;
 		writel_relaxed(val, clk_base + plla->params->ext_misc_reg[0]);
-		udelay(1);
+		fence_udelay(1, clk_base);
 
 		return;
 	}
@@ -809,7 +818,7 @@ static void tegra210_plla_set_defaults(struct tegra_clk_pll *plla)
 			clk_base + plla->params->ext_misc_reg[0]);
 	writel_relaxed(PLLA_MISC2_DEFAULT_VALUE,
 			clk_base + plla->params->ext_misc_reg[2]);
-	udelay(1);
+	fence_udelay(1, clk_base);
 }
 
 /*
@@ -850,7 +859,7 @@ static void tegra210_plld_set_defaults(struct tegra_clk_pll *plld)
 		val &= ~mask;
 		val |= PLLD_MISC0_DEFAULT_VALUE & mask;
 		writel_relaxed(val, clk_base + plld->params->ext_misc_reg[0]);
-		udelay(1);
+		fence_udelay(1, clk_base);
 
 		return;
 	}
@@ -862,7 +871,7 @@ static void tegra210_plld_set_defaults(struct tegra_clk_pll *plld)
 	writel_relaxed(val, clk_base + plld->params->ext_misc_reg[0]);
 	writel_relaxed(PLLD_MISC1_DEFAULT_VALUE, clk_base +
 			plld->params->ext_misc_reg[1]);
-	udelay(1);
+	fence_udelay(1, clk_base);
 }
 
 /*
@@ -931,7 +940,7 @@ static void plldss_defaults(const char *pll_name, struct tegra_clk_pll *plldss,
 		val &= ~PLLDSS_MISC0_LOCK_ENABLE;
 		val |= misc0_val & PLLDSS_MISC0_LOCK_ENABLE;
 		writel_relaxed(val, clk_base + plldss->params->ext_misc_reg[0]);
-		udelay(1);
+		fence_udelay(1, clk_base);
 
 		return;
 	}
@@ -945,7 +954,7 @@ static void plldss_defaults(const char *pll_name, struct tegra_clk_pll *plldss,
 	if (!plldss->params->ext_misc_reg[1]) {
 		writel_relaxed(misc0_val, clk_base +
 				plldss->params->ext_misc_reg[0]);
-		udelay(1);
+		fence_udelay(1, clk_base);
 		return;
 	}
 
@@ -956,7 +965,7 @@ static void plldss_defaults(const char *pll_name, struct tegra_clk_pll *plldss,
 			clk_base + plldss->params->ext_misc_reg[1]);
 	writel_relaxed(misc2_val, clk_base + plldss->params->ext_misc_reg[2]);
 	writel_relaxed(misc3_val, clk_base + plldss->params->ext_misc_reg[3]);
-	udelay(1);
+	fence_udelay(1, clk_base);
 }
 
 static void tegra210_plld2_set_defaults(struct tegra_clk_pll *plld2)
@@ -1023,7 +1032,7 @@ static void tegra210_pllre_set_defaults(struct tegra_clk_pll *pllre)
 		val &= ~mask;
 		val |= PLLRE_MISC0_DEFAULT_VALUE & mask;
 		writel_relaxed(val, clk_base + pllre->params->ext_misc_reg[0]);
-		udelay(1);
+		fence_udelay(1, clk_base);
 
 		return;
 	}
@@ -1034,7 +1043,7 @@ static void tegra210_pllre_set_defaults(struct tegra_clk_pll *pllre)
 	writel_relaxed(val, clk_base + pllre->params->base_reg);
 	writel_relaxed(PLLRE_MISC0_DEFAULT_VALUE,
 			clk_base + pllre->params->ext_misc_reg[0]);
-	udelay(1);
+	fence_udelay(1, clk_base);
 }
 
 static void pllx_get_dyn_steps(struct clk_hw *hw, u32 *step_a, u32 *step_b)
@@ -1134,7 +1143,7 @@ static void tegra210_pllx_set_defaults(struct tegra_clk_pll *pllx)
 		val &= ~PLLX_MISC0_LOCK_ENABLE;
 		val |= PLLX_MISC0_DEFAULT_VALUE & PLLX_MISC0_LOCK_ENABLE;
 		writel_relaxed(val, clk_base + pllx->params->ext_misc_reg[0]);
-		udelay(1);
+		fence_udelay(1, clk_base);
 
 		return;
 	}
@@ -1159,7 +1168,7 @@ static void tegra210_pllx_set_defaults(struct tegra_clk_pll *pllx)
 			pllx->params->ext_misc_reg[4]);
 	writel_relaxed(PLLX_MISC5_DEFAULT_VALUE, clk_base +
 			pllx->params->ext_misc_reg[5]);
-	udelay(1);
+	fence_udelay(1, clk_base);
 }
 
 /* PLLMB */
@@ -1187,7 +1196,7 @@ static void tegra210_pllmb_set_defaults(struct tegra_clk_pll *pllmb)
 		val &= ~mask;
 		val |= PLLMB_MISC1_DEFAULT_VALUE & mask;
 		writel_relaxed(val, clk_base + pllmb->params->ext_misc_reg[0]);
-		udelay(1);
+		fence_udelay(1, clk_base);
 
 		return;
 	}
@@ -1195,7 +1204,7 @@ static void tegra210_pllmb_set_defaults(struct tegra_clk_pll *pllmb)
 	/* set IDDQ, enable lock detect */
 	writel_relaxed(PLLMB_MISC1_DEFAULT_VALUE,
 			clk_base + pllmb->params->ext_misc_reg[0]);
-	udelay(1);
+	fence_udelay(1, clk_base);
 }
 
 /*
@@ -1246,7 +1255,7 @@ static void tegra210_pllp_set_defaults(struct tegra_clk_pll *pllp)
 		val &= ~mask;
 		val |= PLLP_MISC0_DEFAULT_VALUE & mask;
 		writel_relaxed(val, clk_base + pllp->params->ext_misc_reg[0]);
-		udelay(1);
+		fence_udelay(1, clk_base);
 
 		return;
 	}
@@ -1261,7 +1270,7 @@ static void tegra210_pllp_set_defaults(struct tegra_clk_pll *pllp)
 	val &= mask;
 	val |= ~mask & PLLP_MISC1_DEFAULT_VALUE;
 	writel_relaxed(val, clk_base + pllp->params->ext_misc_reg[1]);
-	udelay(1);
+	fence_udelay(1, clk_base);
 }
 
 /*
@@ -1313,7 +1322,7 @@ static void tegra210_pllu_set_defaults(struct tegra_clk_pll_params *pllu)
 		val &= ~PLLU_MISC1_LOCK_OVERRIDE;
 		val |= PLLU_MISC1_DEFAULT_VALUE & PLLU_MISC1_LOCK_OVERRIDE;
 		writel_relaxed(val, clk_base + pllu->ext_misc_reg[1]);
-		udelay(1);
+		fence_udelay(1, clk_base);
 
 		return;
 	}
@@ -1323,7 +1332,7 @@ static void tegra210_pllu_set_defaults(struct tegra_clk_pll_params *pllu)
 			clk_base + pllu->ext_misc_reg[0]);
 	writel_relaxed(PLLU_MISC1_DEFAULT_VALUE,
 			clk_base + pllu->ext_misc_reg[1]);
-	udelay(1);
+	fence_udelay(1, clk_base);
 }
 
 #define mask(w) ((1 << (w)) - 1)
@@ -1370,12 +1379,12 @@ static int tegra210_pllx_dyn_ramp(struct tegra_clk_pll *pllx,
 	val &= (~ndiv_new_mask);
 	val |= cfg->n << PLLX_MISC2_NDIV_NEW_SHIFT;
 	writel_relaxed(val, clk_base + pllx->params->ext_misc_reg[2]);
-	udelay(1);
+	fence_udelay(1, clk_base);
 
 	val = readl_relaxed(clk_base + pllx->params->ext_misc_reg[2]);
 	val |= PLLX_MISC2_EN_DYNRAMP;
 	writel_relaxed(val, clk_base + pllx->params->ext_misc_reg[2]);
-	udelay(1);
+	fence_udelay(1, clk_base);
 
 	tegra210_wait_for_mask(pllx, pllx->params->ext_misc_reg[2],
 			       PLLX_MISC2_DYNRAMP_DONE);
@@ -1384,11 +1393,11 @@ static int tegra210_pllx_dyn_ramp(struct tegra_clk_pll *pllx,
 		(~divn_mask_shifted(pllx));
 	base |= cfg->n << pllx->params->div_nmp->divn_shift;
 	writel_relaxed(base, clk_base + pllx->params->base_reg);
-	udelay(1);
+	fence_udelay(1, clk_base);
 
 	val &= ~PLLX_MISC2_EN_DYNRAMP;
 	writel_relaxed(val, clk_base + pllx->params->ext_misc_reg[2]);
-	udelay(1);
+	fence_udelay(1, clk_base);
 
 	pr_debug("%s: dynamic ramp to m = %u n = %u p = %u, Fout = %lu kHz\n",
 		 __clk_get_name(pllx->hw.clk), cfg->m, cfg->n, cfg->p,
@@ -2805,7 +2814,7 @@ static void tegra210_utmi_param_configure(void)
 	reg &= ~UTMIPLL_HW_PWRDN_CFG0_IDDQ_OVERRIDE;
 	writel_relaxed(reg, clk_base + UTMIPLL_HW_PWRDN_CFG0);
 
-	udelay(10);
+	fence_udelay(10, clk_base);
 
 	reg = readl_relaxed(clk_base + UTMIP_PLL_CFG2);
 
@@ -2839,7 +2848,7 @@ static void tegra210_utmi_param_configure(void)
 	reg |= UTMIP_PLL_CFG1_FORCE_PLL_ENABLE_POWERUP;
 	writel_relaxed(reg, clk_base + UTMIP_PLL_CFG1);
 
-	udelay(20);
+	fence_udelay(20, clk_base);
 
 	/* Enable samplers for SNPS, XUSB_HOST, XUSB_DEV */
 	reg = readl_relaxed(clk_base + UTMIP_PLL_CFG2);
@@ -2862,18 +2871,20 @@ static void tegra210_utmi_param_configure(void)
 	reg &= ~UTMIPLL_HW_PWRDN_CFG0_CLK_ENABLE_SWCTL;
 	writel_relaxed(reg, clk_base + UTMIPLL_HW_PWRDN_CFG0);
 
-	udelay(1);
+	fence_udelay(1, clk_base);
 
 	reg = readl_relaxed(clk_base + XUSB_PLL_CFG0);
 	reg &= ~XUSB_PLL_CFG0_UTMIPLL_LOCK_DLY;
 	writel_relaxed(reg, clk_base + XUSB_PLL_CFG0);
 
-	udelay(1);
+	fence_udelay(1, clk_base);
 
 	/* Enable HW control UTMIPLL */
 	reg = readl_relaxed(clk_base + UTMIPLL_HW_PWRDN_CFG0);
 	reg |= UTMIPLL_HW_PWRDN_CFG0_SEQ_ENABLE;
 	writel_relaxed(reg, clk_base + UTMIPLL_HW_PWRDN_CFG0);
+
+	fence_udelay(1, clk_base);
 }
 
 static int tegra210_enable_pllu(void)
@@ -2897,7 +2908,7 @@ static int tegra210_enable_pllu(void)
 	reg = readl_relaxed(clk_base + pllu.params->ext_misc_reg[0]);
 	reg &= ~BIT(pllu.params->iddq_bit_idx);
 	writel_relaxed(reg, clk_base + pllu.params->ext_misc_reg[0]);
-	udelay(5);
+	fence_udelay(5, clk_base);
 
 	reg = readl_relaxed(clk_base + PLLU_BASE);
 	reg &= ~GENMASK(20, 0);
@@ -2905,9 +2916,10 @@ static int tegra210_enable_pllu(void)
 	reg |= fentry->n << 8;
 	reg |= fentry->p << 16;
 	writel(reg, clk_base + PLLU_BASE);
-	udelay(1);
+	fence_udelay(1, clk_base);
 	reg |= PLL_ENABLE;
 	writel(reg, clk_base + PLLU_BASE);
+	fence_udelay(1, clk_base);
 
 	readl_relaxed_poll_timeout_atomic(clk_base + PLLU_BASE, reg,
 					  reg & PLL_BASE_LOCK, 2, 1000);
@@ -2951,12 +2963,12 @@ static int tegra210_init_pllu(void)
 		reg = readl_relaxed(clk_base + XUSB_PLL_CFG0);
 		reg &= ~XUSB_PLL_CFG0_PLLU_LOCK_DLY_MASK;
 		writel_relaxed(reg, clk_base + XUSB_PLL_CFG0);
-		udelay(1);
+		fence_udelay(1, clk_base);
 
 		reg = readl_relaxed(clk_base + PLLU_HW_PWRDN_CFG0);
 		reg |= PLLU_HW_PWRDN_CFG0_SEQ_ENABLE;
 		writel_relaxed(reg, clk_base + PLLU_HW_PWRDN_CFG0);
-		udelay(1);
+		fence_udelay(1, clk_base);
 
 		reg = readl_relaxed(clk_base + PLLU_BASE);
 		reg &= ~PLLU_BASE_CLKENABLE_USB;
@@ -3908,7 +3920,7 @@ static void tegra210_clk_resume(void)
 	i = BURST_POLICY_REG_SIZE;
 	if (val < sclk_burst_policy_ctx[i])
 		car_writel(sclk_burst_policy_ctx[i], SYS_CLK_DIV, 0);
-	udelay(2);
+	fence_udelay(2, clk_base);
 	for (i = 0; i < BURST_POLICY_REG_SIZE; i++) {
 		car_writel(cclklp_burst_policy_ctx[i], CCLKLP_BURST_POLICY, i);
 		car_writel(sclk_burst_policy_ctx[i], SCLK_BURST_POLICY, i);
@@ -3925,7 +3937,7 @@ static void tegra210_clk_resume(void)
 				clk_base);
 
 	wmb();
-	udelay(2);
+	fence_udelay(2, clk_base);
 
 	for (i = 0; i < ARRAY_SIZE(periph_srcs); i++)
 		for (off = periph_srcs[i].start; off <= periph_srcs[i].end;
@@ -3933,7 +3945,7 @@ static void tegra210_clk_resume(void)
 			car_writel(*clk_rst_ctx++, off, 0);
 
 	/* propagate and restore resets, restore clock state */
-	udelay(5);
+	fence_udelay(5, clk_base);
 	tegra_clk_periph_resume(clk_base);
 
 	/* restore (sync) the actual PLL and secondary divider values */
@@ -3971,7 +3983,7 @@ static void tegra210_clk_resume(void)
 
 	for (i = 0; i < BURST_POLICY_REG_SIZE; i++)
 		car_writel(cclkg_burst_policy_ctx[i], CCLKG_BURST_POLICY, i);
-	udelay(2);
+	fence_udelay(2, clk_base);
 
 	if (dfll_pdev)
 		tegra_dfll_resume(dfll_pdev, true);
@@ -4047,6 +4059,7 @@ static void __init tegra210_clock_apply_init_table(void)
 static void tegra210_car_barrier(void)
 {
 	readl_relaxed(clk_base + RST_DFLL_DVCO);
+	udelay(2);
 }
 
 /**
@@ -4084,10 +4097,11 @@ static int tegra210_reset_assert(unsigned long id)
 {
 	if (id == TEGRA210_RST_DFLL_DVCO)
 		tegra210_clock_assert_dfll_dvco_reset();
-	else if (id == TEGRA210_RST_ADSP)
+	else if (id == TEGRA210_RST_ADSP) {
 		writel(GENMASK(26, 21) | BIT(7),
 			clk_base + CLK_RST_CONTROLLER_RST_DEV_Y_SET);
-	else
+		fence_udelay(2, clk_base);
+	} else
 		return -EINVAL;
 
 	return 0;
@@ -4104,9 +4118,10 @@ static int tegra210_reset_deassert(unsigned long id)
 		 * a delay of 5us ensures that it's at least
 		 * 6 * adsp_cpu_cycle_period long.
 		 */
-		udelay(5);
+		fence_udelay(5, clk_base);
 		writel(GENMASK(26, 22) | BIT(7),
 			clk_base + CLK_RST_CONTROLLER_RST_DEV_Y_CLR);
+		fence_udelay(2, clk_base);
 	} else
 		return -EINVAL;
 

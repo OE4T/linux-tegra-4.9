@@ -24,6 +24,8 @@
 #include <nvgpu/semaphore.h>
 #include <nvgpu/enabled.h>
 
+#include <nvgpu/vgpu/vm.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/mm_gk20a.h"
 
@@ -209,10 +211,11 @@ static int nvgpu_init_sema_pool(struct vm_gk20a *vm)
  * @vm - The VM to init.
  * @big_page_size - Size of big pages associated with this VM.
  * @low_hole - The size of the low hole (unaddressable memory at the bottom of
- *	       the address space.
+ *	       the address space).
  * @kernel_reserved - Space reserved for kernel only allocations.
  * @aperture_size - Total size of the aperture.
- * @big_pages - Ignored. Will be set based on other passed params.
+ * @big_pages - If true then big pages are possible in the VM. Note this does
+ *              not guarantee that big pages will be possible.
  * @name - Name of the address space.
  *
  * This function initializes an address space according to the following map:
@@ -284,10 +287,21 @@ int nvgpu_init_vm(struct mm_gk20a *mm,
 	vm->userspace_managed = userspace_managed;
 	vm->mmu_levels        = g->ops.mm.get_mmu_levels(g, vm->big_page_size);
 
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+	if (g->is_virtual && userspace_managed) {
+		nvgpu_err(g, "vGPU: no userspace managed addr space support");
+		return -ENOSYS;
+	}
+	if (g->is_virtual && vgpu_vm_init(g, vm)) {
+		nvgpu_err(g, "Failed to init vGPU VM!");
+		return -ENOMEM;
+	}
+#endif
+
 	/* Initialize the page table data structures. */
 	err = nvgpu_vm_init_page_tables(vm);
 	if (err)
-		return err;
+		goto clean_up_vgpu_vm;
 
 	/* Setup vma limits. */
 	if (kernel_reserved + low_hole < aperture_size) {
@@ -445,6 +459,11 @@ clean_up_page_tables:
 	/* Cleans up nvgpu_vm_init_page_tables() */
 	nvgpu_vfree(g, vm->pdb.entries);
 	free_gmmu_pages(vm, &vm->pdb);
+clean_up_vgpu_vm:
+#ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+	if (g->is_virtual)
+		vgpu_vm_remove(vm);
+#endif
 	return err;
 }
 
@@ -503,7 +522,7 @@ void __nvgpu_vm_remove(struct vm_gk20a *vm)
 
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	if (g->is_virtual)
-		nvgpu_vm_remove_vgpu(vm);
+		vgpu_vm_remove(vm);
 #endif
 
 	nvgpu_mutex_release(&vm->update_gmmu_lock);

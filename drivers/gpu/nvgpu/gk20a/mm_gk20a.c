@@ -702,8 +702,6 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 	if (err)
 		return err;
 
-	/* set vm_alloc_share op here as gk20a_as_alloc_share needs it */
-	g->ops.mm.vm_alloc_share = gk20a_vm_alloc_share;
 	mm->remove_support = gk20a_remove_mm_support;
 	mm->remove_ce_support = gk20a_remove_mm_ce_support;
 
@@ -2451,65 +2449,6 @@ enum gmmu_pgsz_gk20a __get_pte_size(struct vm_gk20a *vm, u64 base, u64 size)
 	return gmmu_page_size_small;
 }
 
-/* address space interfaces for the gk20a module */
-int gk20a_vm_alloc_share(struct gk20a_as_share *as_share, u32 big_page_size,
-			 u32 flags)
-{
-	struct gk20a_as *as = as_share->as;
-	struct gk20a *g = gk20a_from_as(as);
-	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm;
-	char name[32];
-	int err;
-	const bool userspace_managed =
-		(flags & NVGPU_GPU_IOCTL_ALLOC_AS_FLAGS_USERSPACE_MANAGED) != 0;
-
-	gk20a_dbg_fn("");
-
-	if (big_page_size == 0) {
-		big_page_size =
-			gk20a_get_platform(g->dev)->default_big_page_size;
-	} else {
-		if (!is_power_of_2(big_page_size))
-			return -EINVAL;
-
-		if (!(big_page_size & g->gpu_characteristics.available_big_page_sizes))
-			return -EINVAL;
-	}
-
-	vm = nvgpu_kzalloc(g, sizeof(*vm));
-	if (!vm)
-		return -ENOMEM;
-
-	as_share->vm = vm;
-	vm->as_share = as_share;
-	vm->enable_ctag = true;
-
-	snprintf(name, sizeof(name), "as_%d", as_share->id);
-
-	err = nvgpu_init_vm(mm, vm, big_page_size,
-			    big_page_size << 10,
-			    mm->channel.kernel_size,
-			    mm->channel.user_size + mm->channel.kernel_size,
-			    !mm->disable_bigpage, userspace_managed, name);
-
-	return err;
-}
-
-int gk20a_vm_release_share(struct gk20a_as_share *as_share)
-{
-	struct vm_gk20a *vm = as_share->vm;
-
-	gk20a_dbg_fn("");
-
-	vm->as_share = NULL;
-	as_share->vm = NULL;
-
-	nvgpu_vm_put(vm);
-
-	return 0;
-}
-
 int __gk20a_vm_bind_channel(struct vm_gk20a *vm, struct channel_gk20a *ch)
 {
 	int err = 0;
@@ -3130,7 +3069,6 @@ void gk20a_init_mm(struct gpu_ops *gops)
 {
 	gops->mm.gmmu_map = gk20a_locked_gmmu_map;
 	gops->mm.gmmu_unmap = gk20a_locked_gmmu_unmap;
-	gops->mm.vm_alloc_share = gk20a_vm_alloc_share;
 	gops->mm.vm_bind_channel = gk20a_vm_bind_channel;
 	gops->mm.fb_flush = gk20a_mm_fb_flush;
 	gops->mm.l2_invalidate = gk20a_mm_l2_invalidate;

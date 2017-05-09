@@ -416,8 +416,6 @@ int nvgpu_vm_get_compbits_info(struct vm_gk20a *vm,
 /* vm-as interface */
 struct nvgpu_as_alloc_space_args;
 struct nvgpu_as_free_space_args;
-int gk20a_vm_alloc_share(struct gk20a_as_share *as_share, u32 big_page_size,
-			 u32 flags);
 int gk20a_vm_release_share(struct gk20a_as_share *as_share);
 int gk20a_vm_bind_channel(struct gk20a_as_share *as_share,
 			  struct channel_gk20a *ch);

@@ -21,6 +21,8 @@
 #include <nvgpu/vm.h>
 #include <nvgpu/vm_area.h>
 
+#include <nvgpu/vgpu/vm.h>
+
 #include "vgpu/vgpu.h"
 #include "gk20a/mm_gk20a.h"
 
@@ -201,7 +203,36 @@ static void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 	/* TLB invalidate handled on server side */
 }
 
-void nvgpu_vm_remove_vgpu(struct vm_gk20a *vm)
+/*
+ * This is called by the common VM init routine to handle vGPU specifics of
+ * intializing a VM on a vGPU. This alone is not enough to init a VM. See
+ * nvgpu_vm_init().
+ */
+int vgpu_vm_init(struct gk20a *g, struct vm_gk20a *vm)
+{
+	struct tegra_vgpu_cmd_msg msg;
+	struct tegra_vgpu_as_share_params *p = &msg.params.as_share;
+	int err;
+
+	msg.cmd = TEGRA_VGPU_CMD_AS_ALLOC_SHARE;
+	msg.handle = vgpu_get_handle(g);
+	p->size = vm->va_limit;
+	p->big_page_size = vm->big_page_size;
+
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	if (err || msg.ret)
+		return -ENOMEM;
+
+	vm->handle = p->handle;
+
+	return 0;
+}
+
+/*
+ * Similar to vgpu_vm_init() this is called as part of the cleanup path for
+ * VMs. This alone is not enough to remove a VM - see nvgpu_vm_remove().
+ */
+void vgpu_vm_remove(struct vm_gk20a *vm)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	struct tegra_vgpu_cmd_msg msg;
@@ -236,169 +267,6 @@ u64 vgpu_bar1_map(struct gk20a *g, struct sg_table **sgt, u64 size)
 		addr = p->gpu_va;
 
 	return addr;
-}
-
-/* address space interfaces for the gk20a module */
-static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
-			       u32 big_page_size, u32 flags)
-{
-	struct gk20a_as *as = as_share->as;
-	struct gk20a *g = gk20a_from_as(as);
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
-	struct tegra_vgpu_cmd_msg msg;
-	struct tegra_vgpu_as_share_params *p = &msg.params.as_share;
-	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm;
-	u64 user_vma_start, user_vma_limit, kernel_vma_start, kernel_vma_limit;
-	char name[32];
-	int err, i;
-	const bool userspace_managed =
-		(flags & NVGPU_GPU_IOCTL_ALLOC_AS_FLAGS_USERSPACE_MANAGED) != 0;
-
-	/* note: keep the page sizes sorted lowest to highest here */
-	u32 gmmu_page_sizes[gmmu_nr_page_sizes] = {
-		SZ_4K,
-		big_page_size ? big_page_size : platform->default_big_page_size,
-		SZ_4K
-	};
-
-	gk20a_dbg_fn("");
-
-	if (userspace_managed) {
-		nvgpu_err(g,
-			  "userspace-managed address spaces not yet supported");
-		return -ENOSYS;
-	}
-
-	big_page_size = gmmu_page_sizes[gmmu_page_size_big];
-
-	vm = nvgpu_kzalloc(g, sizeof(*vm));
-	if (!vm)
-		return -ENOMEM;
-
-	as_share->vm = vm;
-
-	vm->mm = mm;
-	vm->as_share = as_share;
-
-	/* Set up vma pointers. */
-	vm->vma[0] = &vm->user;
-	vm->vma[1] = &vm->user;
-	vm->vma[2] = &vm->kernel;
-
-	for (i = 0; i < gmmu_nr_page_sizes; i++)
-		vm->gmmu_page_sizes[i] = gmmu_page_sizes[i];
-
-	vm->big_pages = !mm->disable_bigpage;
-	vm->big_page_size = big_page_size;
-
-	vm->va_start  = big_page_size << 10;   /* create a one pde hole */
-	vm->va_limit  = mm->channel.user_size + mm->channel.kernel_size;
-
-	msg.cmd = TEGRA_VGPU_CMD_AS_ALLOC_SHARE;
-	msg.handle = vgpu_get_handle(g);
-	p->size = vm->va_limit;
-	p->big_page_size = vm->big_page_size;
-	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
-	if (err || msg.ret) {
-		err = -ENOMEM;
-		goto clean_up;
-	}
-
-	vm->handle = p->handle;
-
-	/* setup vma limits */
-	user_vma_start = vm->va_start;
-	user_vma_limit = vm->va_limit - mm->channel.kernel_size;
-
-	kernel_vma_start = vm->va_limit - mm->channel.kernel_size;
-	kernel_vma_limit = vm->va_limit;
-
-	gk20a_dbg_info(
-		"user_vma=[0x%llx,0x%llx) kernel_vma=[0x%llx,0x%llx)\n",
-		user_vma_start, user_vma_limit,
-		kernel_vma_start, kernel_vma_limit);
-
-	WARN_ON(user_vma_start > user_vma_limit);
-	WARN_ON(kernel_vma_start >= kernel_vma_limit);
-
-	if (user_vma_start > user_vma_limit ||
-	    kernel_vma_start >= kernel_vma_limit) {
-		err = -EINVAL;
-		goto clean_up_share;
-	}
-
-	if (user_vma_start < user_vma_limit) {
-		snprintf(name, sizeof(name), "gk20a_as_%d-%dKB", as_share->id,
-			 gmmu_page_sizes[gmmu_page_size_small] >> 10);
-		if (!nvgpu_big_pages_possible(vm, user_vma_start,
-					      user_vma_limit - user_vma_start))
-			vm->big_pages = false;
-
-		err = __nvgpu_buddy_allocator_init(
-					g,
-					vm->vma[gmmu_page_size_small],
-					vm, name,
-					user_vma_start,
-					user_vma_limit - user_vma_start,
-					SZ_4K,
-					GPU_BALLOC_MAX_ORDER,
-					GPU_ALLOC_GVA_SPACE);
-		if (err)
-			goto clean_up_share;
-	} else {
-		/*
-		 * Make these allocator pointers point to the kernel allocator
-		 * since we still use the legacy notion of page size to choose
-		 * the allocator.
-		 */
-		vm->vma[0] = &vm->kernel;
-		vm->vma[1] = &vm->kernel;
-	}
-
-	snprintf(name, sizeof(name), "gk20a_as_%dKB-sys",
-		 gmmu_page_sizes[gmmu_page_size_kernel] >> 10);
-	if (!nvgpu_big_pages_possible(vm, kernel_vma_start,
-				     kernel_vma_limit - kernel_vma_start))
-		vm->big_pages = false;
-
-	/*
-	 * kernel reserved VMA is at the end of the aperture
-	 */
-	err = __nvgpu_buddy_allocator_init(
-				g,
-				vm->vma[gmmu_page_size_kernel],
-				vm, name,
-				kernel_vma_start,
-				kernel_vma_limit - kernel_vma_start,
-				SZ_4K,
-				GPU_BALLOC_MAX_ORDER,
-				GPU_ALLOC_GVA_SPACE);
-	if (err)
-		goto clean_up_user_allocator;
-
-	vm->mapped_buffers = NULL;
-
-	nvgpu_mutex_init(&vm->update_gmmu_lock);
-	kref_init(&vm->ref);
-	nvgpu_init_list_node(&vm->vm_area_list);
-
-	vm->enable_ctag = true;
-
-	return 0;
-
-clean_up_user_allocator:
-	if (user_vma_start < user_vma_limit)
-		nvgpu_alloc_destroy(&vm->user);
-clean_up_share:
-	msg.cmd = TEGRA_VGPU_CMD_AS_FREE_SHARE;
-	msg.handle = vgpu_get_handle(g);
-	p->handle = vm->handle;
-	WARN_ON(vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg)) || msg.ret);
-clean_up:
-	nvgpu_kfree(g, vm);
-	as_share->vm = NULL;
-	return err;
 }
 
 static int vgpu_vm_bind_channel(struct gk20a_as_share *as_share,
@@ -501,7 +369,6 @@ void vgpu_init_mm_ops(struct gpu_ops *gops)
 	gops->fb.set_debug_mode = vgpu_mm_mmu_set_debug_mode;
 	gops->mm.gmmu_map = vgpu_locked_gmmu_map;
 	gops->mm.gmmu_unmap = vgpu_locked_gmmu_unmap;
-	gops->mm.vm_alloc_share = vgpu_vm_alloc_share;
 	gops->mm.vm_bind_channel = vgpu_vm_bind_channel;
 	gops->mm.fb_flush = vgpu_mm_fb_flush;
 	gops->mm.l2_invalidate = vgpu_mm_l2_invalidate;

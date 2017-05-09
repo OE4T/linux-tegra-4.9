@@ -414,7 +414,7 @@ static void __iomem *tegra_mc_map_regs(struct platform_device *pdev, int device)
 }
 
 
-static const struct of_device_id mc_of_ids[] = {
+__weak const struct of_device_id tegra_mc_of_ids[] = {
 	{ .compatible = "nvidia,tegra-mc" },
 	{ .compatible = "nvidia,tegra-t18x-mc" },
 	{ }
@@ -438,7 +438,7 @@ static int tegra_mc_probe(struct platform_device *pdev)
 	if (!pdev->dev.of_node)
 		return -EINVAL;
 
-	match = of_match_device(mc_of_ids, &pdev->dev);
+	match = of_match_device(tegra_mc_of_ids, &pdev->dev);
 	if (!match) {
 		pr_err("Missing DT entry!\n");
 		return -EINVAL;
@@ -511,7 +511,7 @@ static int tegra_mc_remove(struct platform_device *pdev)
 static struct platform_driver mc_driver = {
 	.driver = {
 		.name	= "tegra-mc",
-		.of_match_table = mc_of_ids,
+		.of_match_table = tegra_mc_of_ids,
 		.owner	= THIS_MODULE,
 	},
 

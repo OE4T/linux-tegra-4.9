@@ -29,6 +29,7 @@ config DT_IDLE_STATES
 menu "ARM CPU Idle Drivers"
 depends on ARM || ARM64
 source "drivers/cpuidle/Kconfig.arm"
+trysource "../t19x/drivers/cpuidle/Kconfig.arm"
 endmenu
 
 menu "MIPS CPU Idle Drivers"

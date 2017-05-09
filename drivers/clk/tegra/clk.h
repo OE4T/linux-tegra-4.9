@@ -1009,4 +1009,11 @@ void tegra_clk_periph_resume(void __iomem *clk_base);
 void tegra_clk_periph_force_on(u32 *clks_on, int count, void __iomem *clk_base);
 #endif
 
+/* Combined read fence with delay */
+#define fence_udelay(delay, reg)	\
+	do {				\
+		readl_relaxed(reg);	\
+		udelay(delay);		\
+	} while (0)
+
 #endif /* TEGRA_CLK_H */

@@ -1789,17 +1789,28 @@ static int emc_read_mrr(int dev, int addr)
 
 static int emc_get_dram_temperature(void)
 {
-	int mr4 = 0;
+	int mr4,mr4_0, mr4_1;
 	unsigned long flags;
 
+	mr4 = mr4_0 = mr4_1 = 0;
+
 	spin_lock_irqsave(&emc_access_lock, flags);
-	mr4 = emc_read_mrr(0, 4);
+	mr4_0 = emc_read_mrr(0, 4);
+	mr4_1 = emc_read_mrr(1, 4);
 	spin_unlock_irqrestore(&emc_access_lock, flags);
 
-	if (IS_ERR_VALUE(mr4))
-		return mr4;
+	if (IS_ERR_VALUE(mr4_0))
+		return mr4_0;
 
-	mr4 = (mr4 & LPDDR2_MR4_TEMP_MASK) >> LPDDR2_MR4_TEMP_SHIFT;
+	if (IS_ERR_VALUE(mr4_1))
+		return mr4_1;
+
+	mr4_0 = (mr4_0 & LPDDR2_MR4_TEMP_MASK) >> LPDDR2_MR4_TEMP_SHIFT;
+	mr4_1 = (mr4_1 & LPDDR2_MR4_TEMP_MASK) >> LPDDR2_MR4_TEMP_SHIFT;
+
+	/* Consider higher temperature of the two DDR Dies */
+	mr4 = (mr4_0 > mr4_1) ? mr4_0 : mr4_1;
+
 	return mr4;
 }
 

@@ -1624,16 +1624,6 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		goto failure;
 	}
 
-	/* if repeater then get repeater info */
-	if (b_caps & BCAPS_REPEATER) {
-		e = get_repeater_info(nvhdcp);
-		if (e) {
-			nvhdcp_err("get repeater info failed\n");
-			mutex_lock(&nvhdcp->lock);
-			goto failure;
-		}
-	}
-
 	mutex_lock(&nvhdcp->lock);
 #if (defined(CONFIG_TEGRA_NVDISPLAY))
 	*pkt = HDCP_TA_CMD_ENC;
@@ -1652,9 +1642,19 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		tmp |= ONEONE_ENABLED;
 	nvhdcp_sor_writel(hdmi, tmp, NV_SOR_TMDS_HDCP_CTRL);
 #endif
-
 	nvhdcp_vdbg("CRYPT enabled\n");
+	mutex_unlock(&nvhdcp->lock);
 
+	/* if repeater then get repeater info */
+	if (b_caps & BCAPS_REPEATER) {
+		e = get_repeater_info(nvhdcp);
+		if (e) {
+			nvhdcp_err("get repeater info failed\n");
+			mutex_lock(&nvhdcp->lock);
+			goto failure;
+		}
+	}
+	mutex_lock(&nvhdcp->lock);
 	nvhdcp->state = STATE_LINK_VERIFY;
 	nvhdcp_info("link verified!\n");
 

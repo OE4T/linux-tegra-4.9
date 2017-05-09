@@ -544,9 +544,11 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 			win_set_planar_storage_uv_r());
 	}
 
-	/* setting full range and clamp before blend as default */
-	win_params = win_win_set_params_in_range_full_f() |
-		win_win_set_params_clamp_before_blend_enable_f();
+	/* setting full range as default */
+	win_params = win_win_set_params_in_range_full_f();
+
+	if (win->clamp_before_blend)
+		win_params |= win_win_set_params_clamp_before_blend_enable_f();
 
 	/* setting input-range */
 	if (win->flags & TEGRA_WIN_FLAG_INPUT_RANGE_BYPASS)

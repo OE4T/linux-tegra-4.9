@@ -463,6 +463,14 @@ static void tegra_dc_ext_set_windowattr_basic(struct tegra_dc_win *win,
 	else if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_DEGAMMA_YUV_12)
 		win->flags |= TEGRA_WIN_FLAG_DEGAMMA_YUV_12;
 
+	if (flip_win->flags & TEGRA_DC_EXT_FLIP_FLAG_COLOR_EXPAND_UPDATE) {
+		if (flip_win->flags &
+				TEGRA_DC_EXT_FLIP_FLAG_COLOR_EXPAND_DISABLE)
+			win->color_expand_enable = false;
+		else
+			win->color_expand_enable = true;
+	}
+
 	win->fmt = flip_win->pixformat;
 	win->x.full = flip_win->x;
 	win->y.full = flip_win->y;

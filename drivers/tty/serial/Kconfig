@@ -1672,6 +1672,15 @@ config TEGRA_HV_COMM
 	  To compile this driver as a module, choose M here: the
 	  module will be called tegra_hv_comm.
 
+config SERIAL_UBLOX_GPS
+       tristate "u-blox 6 I2C GPS support"
+       depends on I2C
+       default n
+       help
+         This driver uses i2c to communicate with the u-blox 6 GPS module
+         and has a serial tty device interface to the user-space, making
+         it easy to read/write data from/to the GPS.
+
 endmenu
 
 config SERIAL_MCTRL_GPIO

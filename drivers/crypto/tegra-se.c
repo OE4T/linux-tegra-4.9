@@ -3151,11 +3151,11 @@ static int tegra_se_probe(struct platform_device *pdev)
 	if (!se_dev->chipdata->drbg_supported)
 		se_dev->ctx_save_buf = dmam_alloc_coherent(&pdev->dev,
 			SE_CONTEXT_BUFER_SIZE, &se_dev->ctx_save_buf_adr,
-			GFP_KERNEL | GFP_DMA32);
+			GFP_KERNEL | GFP_DMA);
 	else
 		se_dev->ctx_save_buf = dmam_alloc_coherent(&pdev->dev,
 			SE_CONTEXT_DRBG_BUFER_SIZE,
-			&se_dev->ctx_save_buf_adr, GFP_KERNEL | GFP_DMA32);
+			&se_dev->ctx_save_buf_adr, GFP_KERNEL | GFP_DMA);
 
 	if (!se_dev->ctx_save_buf) {
 		dev_err(se_dev->dev, "Context save buffer alloc filed\n");
@@ -3879,10 +3879,8 @@ static int tegra_se_runtime_resume(struct device *dev)
 static const struct dev_pm_ops tegra_se_dev_pm_ops = {
 	.runtime_suspend = tegra_se_runtime_suspend,
 	.runtime_resume = tegra_se_runtime_resume,
-#if defined(CONFIG_PM)
 	.suspend = tegra_se_suspend,
 	.resume = tegra_se_resume,
-#endif
 };
 #endif /* CONFIG_PM */
 

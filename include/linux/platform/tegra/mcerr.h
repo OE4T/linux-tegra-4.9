@@ -71,12 +71,14 @@ struct mc_error {
 	int         flags;
 	u32         stat_reg;
 	u32         addr_reg;
+	u32         addr_hi_reg;
 };
 
 #define E_SMMU       (1<<0)
 #define E_NO_STATUS  (1<<1) /* No status/addr */
 #define E_TWO_STATUS (1<<2) /* Two status registers, no addr */
 #define E_VPR        (1<<3) /* VPR violation */
+#define E_ADR_HI_REG (1<<4) /* Hi Addr bits in hi reg */
 
 extern u32 mc_int_mask;
 extern u32  mcerr_silenced;
@@ -136,6 +138,10 @@ struct mcerr_ops {
 #define MC_ERR(_sig, _msg, _flags, _stat_reg, _addr_reg)		\
 	{ .sig = _sig, .msg = _msg, .flags = _flags,			\
 			.stat_reg = _stat_reg, .addr_reg = _addr_reg }
+
+#define MC_ERR_HI(_sig, _msg, _flags, _stat_reg, _addr_reg, _addr_hi_reg) \
+	{ .sig = _sig, .msg = _msg, .flags = _flags, .stat_reg = _stat_reg, \
+	  .addr_reg = _addr_reg, .addr_hi_reg = _addr_hi_reg}
 
 #define mcerr_pr(fmt, ...)					\
 	do {							\

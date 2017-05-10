@@ -108,6 +108,89 @@ static bool gr_gv11b_is_valid_compute_class(struct gk20a *g, u32 class_num)
 	return valid;
 }
 
+static int gr_gv11b_handle_l1_tag_exception(struct gk20a *g, u32 gpc, u32 tpc,
+			bool *post_event, struct channel_gk20a *fault_ch,
+			u32 *hww_global_esr)
+{
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+	u32 offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
+	u32 l1_tag_ecc_status, l1_tag_ecc_corrected_err_status = 0;
+	u32 l1_tag_ecc_uncorrected_err_status = 0;
+	u32 l1_tag_corrected_err_count_delta = 0;
+	u32 l1_tag_uncorrected_err_count_delta = 0;
+	bool is_l1_tag_ecc_corrected_total_err_overflow = 0;
+	bool is_l1_tag_ecc_uncorrected_total_err_overflow = 0;
+
+	/* Check for L1 tag ECC errors. */
+	l1_tag_ecc_status = gk20a_readl(g,
+		gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_r() + offset);
+	l1_tag_ecc_corrected_err_status = l1_tag_ecc_status &
+		(gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_corrected_err_el1_0_m() |
+		 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_corrected_err_el1_1_m() |
+		 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_corrected_err_pixrpf_m() |
+		 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_corrected_err_miss_fifo_m());
+	l1_tag_ecc_uncorrected_err_status = l1_tag_ecc_status &
+		(gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_uncorrected_err_el1_0_m() |
+		 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_uncorrected_err_el1_1_m() |
+		 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_uncorrected_err_pixrpf_m() |
+		 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_uncorrected_err_miss_fifo_m());
+
+	if ((l1_tag_ecc_corrected_err_status == 0) && (l1_tag_ecc_uncorrected_err_status == 0))
+		return 0;
+
+	l1_tag_corrected_err_count_delta =
+		gr_pri_gpc0_tpc0_sm_l1_tag_ecc_corrected_err_count_total_v(
+			gk20a_readl(g,
+				gr_pri_gpc0_tpc0_sm_l1_tag_ecc_corrected_err_count_r() +
+				offset));
+	l1_tag_uncorrected_err_count_delta =
+		gr_pri_gpc0_tpc0_sm_l1_tag_ecc_uncorrected_err_count_total_v(
+			gk20a_readl(g,
+				gr_pri_gpc0_tpc0_sm_l1_tag_ecc_uncorrected_err_count_r() +
+				offset));
+	is_l1_tag_ecc_corrected_total_err_overflow =
+		gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_corrected_err_total_counter_overflow_v(l1_tag_ecc_status);
+	is_l1_tag_ecc_uncorrected_total_err_overflow =
+		gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_uncorrected_err_total_counter_overflow_v(l1_tag_ecc_status);
+
+	if ((l1_tag_corrected_err_count_delta > 0) || is_l1_tag_ecc_corrected_total_err_overflow) {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+			"corrected error (SBE) detected in SM L1 tag! err_mask [%08x] is_overf [%d]",
+			l1_tag_ecc_corrected_err_status, is_l1_tag_ecc_corrected_total_err_overflow);
+
+		/* HW uses 16-bits counter */
+		l1_tag_corrected_err_count_delta +=
+			(is_l1_tag_ecc_corrected_total_err_overflow <<
+			 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_corrected_err_count_total_s());
+		g->gr.t19x.ecc_stats.sm_l1_tag_corrected_err_count.counters[tpc] +=
+							l1_tag_corrected_err_count_delta;
+		gk20a_writel(g,
+			gr_pri_gpc0_tpc0_sm_l1_tag_ecc_corrected_err_count_r() + offset,
+			0);
+	}
+	if ((l1_tag_uncorrected_err_count_delta > 0) || is_l1_tag_ecc_uncorrected_total_err_overflow) {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+			"Uncorrected error (DBE) detected in SM L1 tag! err_mask [%08x] is_overf [%d]",
+			l1_tag_ecc_uncorrected_err_status, is_l1_tag_ecc_uncorrected_total_err_overflow);
+
+		/* HW uses 16-bits counter */
+		l1_tag_uncorrected_err_count_delta +=
+			(is_l1_tag_ecc_uncorrected_total_err_overflow <<
+			 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_uncorrected_err_count_total_s());
+		g->gr.t19x.ecc_stats.sm_l1_tag_uncorrected_err_count.counters[tpc] +=
+							l1_tag_uncorrected_err_count_delta;
+		gk20a_writel(g,
+			gr_pri_gpc0_tpc0_sm_l1_tag_ecc_uncorrected_err_count_r() + offset,
+			0);
+	}
+
+	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_r() + offset,
+			gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_reset_task_f());
+
+	return 0;
+
+}
 
 static int gr_gv11b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			bool *post_event, struct channel_gk20a *fault_ch,
@@ -118,7 +201,8 @@ static int gr_gv11b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			proj_tpc_in_gpc_stride_v() * tpc;
 	u32 lrf_ecc_status;
 
-	gr_gk20a_handle_sm_exception(g, gpc, tpc, post_event, fault_ch, hww_global_esr);
+	/* Check for L1 tag ECC errors. */
+	gr_gv11b_handle_l1_tag_exception(g, gpc, tpc, post_event, fault_ch, hww_global_esr);
 
 	/* Check for LRF ECC errors. */
 	lrf_ecc_status = gk20a_readl(g,
@@ -1692,6 +1776,7 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.pre_process_sm_exception =
 		gr_gv11b_pre_process_sm_exception;
 	gops->gr.handle_fecs_error = gr_gv11b_handle_fecs_error;
+	gops->gr.create_gr_sysfs = gr_gv11b_create_sysfs;
 	gops->gr.setup_rop_mapping = gr_gv11b_setup_rop_mapping;
 	gops->gr.init_sw_veid_bundle = gr_gv11b_init_sw_veid_bundle;
 	gops->gr.program_zcull_mapping = gr_gv11b_program_zcull_mapping;

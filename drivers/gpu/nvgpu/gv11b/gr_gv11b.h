@@ -35,6 +35,13 @@ enum {
 	VOLTA_DMA_COPY_A        = 0xC3B5,
 };
 
+struct gr_t19x {
+	struct {
+		struct gr_gp10b_ecc_stat sm_l1_tag_corrected_err_count;
+		struct gr_gp10b_ecc_stat sm_l1_tag_uncorrected_err_count;
+	} ecc_stats;
+};
+
 #define NVC397_SET_SHADER_EXCEPTIONS		0x1528
 #define NVC397_SET_CIRCULAR_BUFFER_SIZE 	0x1280
 #define NVC397_SET_ALPHA_CIRCULAR_BUFFER_SIZE 	0x02dc
@@ -48,4 +55,5 @@ int gr_gv11b_alloc_buffer(struct vm_gk20a *vm, size_t size,
 /*zcull*/
 void gr_gv11b_program_zcull_mapping(struct gk20a *g, u32 zcull_num_entries,
 					u32 *zcull_map_tiles);
+void gr_gv11b_create_sysfs(struct device *dev);
 #endif

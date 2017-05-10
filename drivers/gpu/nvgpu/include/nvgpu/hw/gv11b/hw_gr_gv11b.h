@@ -482,6 +482,78 @@ static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_r(void)
 {
 	return 0x00504358;
 }
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_r(void)
+{
+	return 0x00504624;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_corrected_err_el1_0_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_corrected_err_el1_1_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_uncorrected_err_el1_0_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_uncorrected_err_el1_1_m(void)
+{
+	return 0x1 << 3;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_corrected_err_pixrpf_m(void)
+{
+	return 0x1 << 4;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_corrected_err_miss_fifo_m(void)
+{
+	return 0x1 << 5;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_uncorrected_err_pixrpf_m(void)
+{
+	return 0x1 << 6;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_uncorrected_err_miss_fifo_m(void)
+{
+	return 0x1 << 7;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_corrected_err_total_counter_overflow_v(u32 r)
+{
+	return (r >> 8) & 0x1;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_uncorrected_err_total_counter_overflow_v(u32 r)
+{
+	return (r >> 10) & 0x1;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_reset_task_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_corrected_err_count_r(void)
+{
+	return 0x00504628;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_corrected_err_count_total_s(void)
+{
+	return 16;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_corrected_err_count_total_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_uncorrected_err_count_r(void)
+{
+	return 0x0050462c;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_uncorrected_err_count_total_s(void)
+{
+	return 16;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_uncorrected_err_count_total_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
 static inline u32 gr_pri_gpc0_tpc0_tex_m_routing_r(void)
 {
 	return 0x005042c4;

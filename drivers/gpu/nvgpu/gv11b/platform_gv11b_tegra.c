@@ -27,11 +27,13 @@
 #include "tegra/linux/clk.h"
 
 #include "gp10b/platform_gp10b.h"
+#include "tegra/linux/platform_gp10b_tegra.h"
 
 #include "tegra/linux/platform_gk20a_tegra.h"
 #include "gr_gv11b.h"
 #include "nvgpu_gpuid_t19x.h"
 
+static void gr_gv11b_remove_sysfs(struct device *dev);
 
 static int gv11b_tegra_probe(struct device *dev)
 {
@@ -53,6 +55,15 @@ static int gv11b_tegra_probe(struct device *dev)
 
 	gp10b_tegra_get_clocks(dev);
 	nvgpu_linux_init_clk_support(platform->g);
+
+	return 0;
+}
+
+static int gv11b_tegra_remove(struct device *dev)
+{
+	gp10b_tegra_remove(dev);
+
+	gr_gv11b_remove_sysfs(dev);
 
 	return 0;
 }
@@ -89,6 +100,7 @@ struct gk20a_platform t19x_gpu_tegra_platform = {
 	.ptimer_src_freq	= 31250000,
 
 	.probe = gv11b_tegra_probe,
+	.remove = gv11b_tegra_remove,
 
 	/* power management callbacks */
 	.suspend = gv11b_tegra_suspend,
@@ -110,3 +122,50 @@ struct gk20a_platform t19x_gpu_tegra_platform = {
 	.reset_assert = gp10b_tegra_reset_assert,
 	.reset_deassert = gp10b_tegra_reset_deassert,
 };
+
+static struct device_attribute *dev_attr_sm_l1_tag_ecc_corrected_err_count_array;
+static struct device_attribute *dev_attr_sm_l1_tag_ecc_uncorrected_err_count_array;
+
+void gr_gv11b_create_sysfs(struct device *dev)
+{
+	struct gk20a *g = get_gk20a(dev);
+	int error = 0;
+	/* This stat creation function is called on GR init. GR can get
+       initialized multiple times but we only need to create the ECC
+       stats once. Therefore, add the following check to avoid
+       creating duplicate stat sysfs nodes. */
+	if (g->gr.t19x.ecc_stats.sm_l1_tag_corrected_err_count.counters != NULL)
+		return;
+
+	gr_gp10b_create_sysfs(dev);
+
+	error |= gr_gp10b_ecc_stat_create(dev,
+				0,
+				"sm_l1_tag_ecc_corrected_err_count",
+				&g->gr.t19x.ecc_stats.sm_l1_tag_corrected_err_count,
+				dev_attr_sm_l1_tag_ecc_corrected_err_count_array);
+
+	error |= gr_gp10b_ecc_stat_create(dev,
+				0,
+				"sm_l1_tag_ecc_uncorrected_err_count",
+				&g->gr.t19x.ecc_stats.sm_l1_tag_uncorrected_err_count,
+				dev_attr_sm_l1_tag_ecc_uncorrected_err_count_array);
+
+	if (error)
+		dev_err(dev, "Failed to create gv11b sysfs attributes!\n");
+}
+
+static void gr_gv11b_remove_sysfs(struct device *dev)
+{
+	struct gk20a *g = get_gk20a(dev);
+
+	gr_gp10b_ecc_stat_remove(dev,
+			0,
+			&g->gr.t19x.ecc_stats.sm_l1_tag_corrected_err_count,
+			dev_attr_sm_l1_tag_ecc_corrected_err_count_array);
+
+	gr_gp10b_ecc_stat_remove(dev,
+			0,
+			&g->gr.t19x.ecc_stats.sm_l1_tag_uncorrected_err_count,
+			dev_attr_sm_l1_tag_ecc_uncorrected_err_count_array);
+}

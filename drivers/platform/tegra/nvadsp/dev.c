@@ -322,11 +322,6 @@ static int __init nvadsp_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto out;
 #endif
-
-	ret = nvadsp_amc_init(pdev);
-	if (ret)
-		goto err;
-
 	ret = nvadsp_hwmbox_init(pdev);
 	if (ret)
 		goto err;

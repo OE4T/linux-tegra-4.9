@@ -3,7 +3,7 @@
  *
  * AMC and ARAM handling
  *
- * Copyright (C) 2014-2016, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2017, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -162,23 +162,33 @@ static irqreturn_t nvadsp_amc_error_int_handler(int irq, void *devid)
 	return IRQ_HANDLED;
 }
 
-status_t __init nvadsp_amc_init(struct platform_device *pdev)
+void nvadsp_free_amc_interrupts(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
-	struct device_node *node = dev->of_node;
+	struct device_node *node;
+
+	node = dev->of_node;
+
+	if (!of_device_is_compatible(node, "nvidia,tegra18x-adsp-hv"))
+		devm_free_irq(dev, drv->agic_irqs[AMC_ERR_VIRQ], pdev);
+}
+
+int nvadsp_setup_amc_interrupts(struct platform_device *pdev)
+{
+	struct nvadsp_drv_data *drv = platform_get_drvdata(pdev);
+	struct device *dev = &pdev->dev;
+	struct device_node *node;
 	int ret = 0;
 
+	node = dev->of_node;
 	nvadsp_pdev = pdev;
 	nvadsp_drv_data = drv;
 
-	if (!of_device_is_compatible(node, "nvidia,tegra18x-adsp-hv")) {
-		dev_info(&pdev->dev, "Registering AMC Error Interrupt\n");
-		ret = request_irq(drv->agic_irqs[AMC_ERR_VIRQ],
-		nvadsp_amc_error_int_handler, 0, "AMC error int", pdev);
-	}
-
-	dev_info(&pdev->dev, "AMC/ARAM initialized.\n");
+	if (!of_device_is_compatible(node, "nvidia,tegra18x-adsp-hv"))
+		ret = devm_request_irq(dev, drv->agic_irqs[AMC_ERR_VIRQ],
+			nvadsp_amc_error_int_handler, 0,
+			"AMC error int", pdev);
 
 	return ret;
 }

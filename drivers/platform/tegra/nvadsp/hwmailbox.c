@@ -266,43 +266,58 @@ static irqreturn_t hwmbox_recv_full_int_handler(int irq, void *devid)
 	return IRQ_HANDLED;
 }
 
+void nvadsp_free_hwmbox_interrupts(struct platform_device *pdev)
+{
+
+	struct nvadsp_drv_data *drv = platform_get_drvdata(pdev);
+	struct device *dev = &pdev->dev;
+	int recv_virq, send_virq;
+
+	recv_virq = drv->agic_irqs[MBOX_RECV_VIRQ];
+	send_virq = drv->agic_irqs[MBOX_SEND_VIRQ];
+
+	devm_free_irq(dev, recv_virq, pdev);
+	devm_free_irq(dev, send_virq, pdev);
+}
+
+int nvadsp_setup_hwmbox_interrupts(struct platform_device *pdev)
+{
+	struct nvadsp_drv_data *drv = platform_get_drvdata(pdev);
+	struct device *dev = &pdev->dev;
+	int recv_virq, send_virq;
+	int ret;
+
+	recv_virq = drv->agic_irqs[MBOX_RECV_VIRQ];
+	send_virq = drv->agic_irqs[MBOX_SEND_VIRQ];
+
+	ret = devm_request_irq(dev, recv_virq, hwmbox_recv_full_int_handler,
+			  IRQF_TRIGGER_RISING, "hwmbox0_recv_full", pdev);
+	if (ret)
+		goto err;
+
+	ret = devm_request_irq(dev, send_virq, hwmbox_send_empty_int_handler,
+			  IRQF_TRIGGER_RISING,
+			  "hwmbox1_send_empty", pdev);
+	if (ret)
+		goto free_interrupts;
+
+	return ret;
+
+ free_interrupts:
+	nvadsp_free_hwmbox_interrupts(pdev);
+ err:
+	return ret;
+}
+
 int __init nvadsp_hwmbox_init(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv = platform_get_drvdata(pdev);
-	int recv_virq, send_virq;
 	int ret = 0;
 
 	nvadsp_pdev = pdev;
 	nvadsp_drv_data = drv;
 
-	recv_virq = drv->agic_irqs[MBOX_RECV_VIRQ];
-	drv->hwmbox_recv_virq = recv_virq;
-
-	send_virq = drv->agic_irqs[MBOX_SEND_VIRQ];
-	drv->hwmbox_send_virq = send_virq;
-
-	ret = request_irq(recv_virq, hwmbox_recv_full_int_handler,
-			  IRQF_TRIGGER_RISING, "hwmbox0_recv_full", pdev);
-	if (ret)
-		goto req_recv_virq;
-
-	ret = request_irq(send_virq, hwmbox_send_empty_int_handler,
-			  IRQF_TRIGGER_RISING,
-			  "hwmbox1_send_empty", pdev);
-	if (ret)
-		goto req_send_virq;
-
 	hwmboxq_init(&drv->hwmbox_send_queue);
 
-	return ret;
-
- req_send_virq:
-	free_irq(recv_virq, pdev);
-
- req_recv_virq:
-	irq_dispose_mapping(send_virq);
-	irq_dispose_mapping(recv_virq);
-	nvadsp_drv_data = NULL;
-	nvadsp_pdev = NULL;
 	return ret;
 }

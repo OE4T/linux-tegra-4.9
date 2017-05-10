@@ -7,7 +7,7 @@
  * Copyright (C) 2015 Google, Inc.
  * Author: Tomasz Figa <tfiga@chromium.org>
  *
- * Copyright (C) 2010-2016 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2010-2017 NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -320,7 +320,7 @@ struct tegra_i2c_dev {
 	int curr_direction;
 	int rx_dma_len;
 	dma_cookie_t rx_cookie;
-	bool disable_dma_mode;
+	bool enable_dma_mode;
 	bool is_clkon_always;
 	struct clk *slow_clk;
 	struct clk *host1x_clk;
@@ -1563,7 +1563,7 @@ static int tegra_i2c_xfer_msg(struct tegra_i2c_dev *i2c_dev,
 	if (msg->len == 0)
 		return -EINVAL;
 
-	if (!i2c_dev->disable_dma_mode && (msg->len > I2C_PIO_MODE_MAX_LEN)
+	if (i2c_dev->enable_dma_mode && (msg->len > I2C_PIO_MODE_MAX_LEN)
 			&& !(i2c_dev->tx_dma_chan && i2c_dev->rx_dma_chan)) {
 		ret = tegra_i2c_init_dma_param(i2c_dev, true);
 		if (ret && (ret != -EPROBE_DEFER) && (ret != -ENODEV))
@@ -1770,8 +1770,8 @@ static void tegra_i2c_parse_dt(struct tegra_i2c_dev *i2c_dev)
 	if (!ret)
 		i2c_dev->hs_master_code = prop;
 
-	i2c_dev->disable_dma_mode = of_property_read_bool(np,
-			"nvidia,disable-dma-mode");
+	i2c_dev->enable_dma_mode = of_property_read_bool(np,
+			"nvidia,enable-dma-mode");
 
 	i2c_dev->is_clkon_always = of_property_read_bool(np,
 			"nvidia,clock-always-on");
@@ -2072,7 +2072,7 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (!i2c_dev->disable_dma_mode) {
+	if (i2c_dev->enable_dma_mode) {
 		ret = tegra_i2c_init_dma_param(i2c_dev, true);
 		if (ret && (ret != -EPROBE_DEFER) && (ret != -ENODEV))
 			goto disable_clk;

@@ -30,6 +30,7 @@
 #include <drm/drm_fixed.h>
 #include <linux/nvhost.h>
 #include <video/tegra_dc_ext_kernel.h>
+#include <video/tegra_dc_ext.h>
 #include "dc_extras.h"
 
 #define DEFAULT_FPGA_FREQ_KHZ	160000
@@ -1319,4 +1320,10 @@ struct nvdisp_isoclient_bw_info {
 
 /* Timestamp in nsec in TSC timebase */
 u64 tegra_dc_get_tsc_time(void);
+
+/* APIs related to CRC IOCTLs */
+long tegra_dc_crc_enable(struct tegra_dc *, struct tegra_dc_ext_crc_arg *);
+long tegra_dc_crc_disable(struct tegra_dc *, struct tegra_dc_ext_crc_arg *);
+long tegra_dc_crc_get(struct tegra_dc *, struct tegra_dc_ext_crc_arg *);
+
 #endif

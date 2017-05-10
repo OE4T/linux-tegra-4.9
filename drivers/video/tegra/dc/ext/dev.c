@@ -27,6 +27,7 @@
 #include <linux/delay.h>
 #include <linux/fb.h>
 #include <linux/version.h>
+#include <linux/string.h>
 #include <video/tegra_dc_ext.h>
 #include <trace/events/display.h>
 
@@ -2405,6 +2406,44 @@ static int tegra_dc_copy_syncpts_to_user(
 	return 0;
 }
 
+static int tegra_dc_crc_sanitize_args(struct tegra_dc_ext_crc_arg *args)
+{
+	if (memcmp(args->magic, "TCRC", 4))
+		return -EINVAL;
+
+	if (args->version >= TEGRA_DC_CRC_ARG_VERSION_MAX)
+		return -EINVAL;
+
+	if (args->num_conf >
+		TEGRA_DC_EXT_CRC_TYPE_MAX - 1 + TEGRA_DC_EXT_MAX_REGIONS)
+		return -EINVAL;
+
+	return 0;
+}
+
+static int tegra_dc_copy_crc_confs_from_user(struct tegra_dc_ext_crc_arg *args)
+{
+	struct tegra_dc_ext_crc_conf *conf;
+	struct tegra_dc_ext_crc_conf __user *user_conf;
+	__u8 num_conf = args->num_conf;
+	size_t sz = sizeof(*conf) * num_conf;
+
+	conf = kzalloc(sz, GFP_KERNEL);
+	if (!conf)
+		return -ENOMEM;
+
+	user_conf = (struct tegra_dc_ext_crc_conf *)args->conf;
+
+	if (copy_from_user(conf, user_conf, sz)) {
+		kfree(conf);
+		return -EFAULT;
+	}
+
+	args->conf = (__u64)conf;
+
+	return 0;
+}
+
 static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			   unsigned long arg)
 {
@@ -3293,6 +3332,85 @@ free_and_ret:
 		if (copy_to_user(user_arg, &args, sizeof(args)))
 			return -EFAULT;
 
+		return ret;
+	}
+
+	case TEGRA_DC_EXT_CRC_ENABLE:
+	{
+		struct tegra_dc_ext_crc_arg args;
+		struct tegra_dc *dc = user->ext->dc;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		ret = tegra_dc_crc_sanitize_args(&args);
+		if (ret)
+			return ret;
+
+		ret = tegra_dc_copy_crc_confs_from_user(&args);
+		if (ret)
+			return ret;
+
+		ret = tegra_dc_crc_enable(dc, &args);
+
+		kfree((struct tegra_dc_ext_crc_conf *)args.conf);
+		return ret;
+	}
+
+	case TEGRA_DC_EXT_CRC_DISABLE:
+	{
+		struct tegra_dc_ext_crc_arg args;
+		struct tegra_dc *dc = user->ext->dc;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		ret = tegra_dc_crc_sanitize_args(&args);
+		if (ret)
+			return ret;
+
+		ret = tegra_dc_copy_crc_confs_from_user(&args);
+		if (ret)
+			return ret;
+
+		ret = tegra_dc_crc_disable(dc, &args);
+
+		kfree((struct tegra_dc_ext_crc_conf *)args.conf);
+		return ret;
+	}
+
+	case TEGRA_DC_EXT_CRC_GET:
+	{
+		struct tegra_dc_ext_crc_arg args;
+		struct tegra_dc_ext_crc_conf __user *user_conf;
+		struct tegra_dc *dc = user->ext->dc;
+		size_t sz;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		ret = tegra_dc_crc_sanitize_args(&args);
+		if (ret)
+			return ret;
+
+		ret = tegra_dc_copy_crc_confs_from_user(&args);
+		if (ret)
+			return ret;
+
+		ret = tegra_dc_crc_get(dc, &args);
+		if (ret) {
+			kfree((struct tegra_dc_ext_crc_conf *)args.conf);
+			return ret;
+		}
+
+		user_conf = (struct tegra_dc_ext_crc_conf *)
+				((struct tegra_dc_ext_crc_arg *)user_arg)->conf;
+		sz = args.num_conf * sizeof(struct tegra_dc_ext_crc_conf);
+
+		if (copy_to_user(user_conf, (void *)args.conf, sz))
+			ret = -EFAULT;
+
+		kfree((struct tegra_dc_ext_crc_conf *)args.conf);
 		return ret;
 	}
 

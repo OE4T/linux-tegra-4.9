@@ -508,7 +508,7 @@ struct tegra_dc_ext_flip_4 {
 	__u64 __user win;
 	__u8 win_num;
 	__u8 flags;
-	__u16 reserved2; /* unused - must be 0 */
+	__u16 flip_id; /* kernel->user arg, to uniquely identify a flip */
 	__s32 post_syncpt_fd;
 	__u16 dirty_rect[4]; /* x,y,w,h for partial screen update. 0 ignores */
 	__u32 nr_elements; /* number of data entities pointed to by data */
@@ -1104,6 +1104,15 @@ struct tegra_dc_ext_scanline_info {
 #define TEGRA_DC_EXT_SET_SCANLINE \
 	_IOWR('D', 0x25, struct tegra_dc_ext_scanline_info)
 
+#define TEGRA_DC_EXT_CRC_ENABLE \
+	_IOW('D', 0x26, struct tegra_dc_ext_crc_arg)
+
+#define TEGRA_DC_EXT_CRC_DISABLE \
+	_IOW('D', 0x27, struct tegra_dc_ext_crc_arg)
+
+#define TEGRA_DC_EXT_CRC_GET \
+	_IOWR('D', 0x28, struct tegra_dc_ext_crc_arg)
+
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,
 	TEGRA_DC_EXT_LVDS,
@@ -1241,6 +1250,105 @@ struct tegra_dc_ext_control_frm_lck_params {
 	 */
 	__u64 valid_heads;
 };
+
+enum tegra_dc_ext_crc_arg_version {
+	TEGRA_DC_CRC_ARG_VERSION_0, /* Current version */
+	TEGRA_DC_CRC_ARG_VERSION_MAX,
+};
+
+enum tegra_dc_ext_crc_type {
+	TEGRA_DC_EXT_CRC_TYPE_RG,
+	TEGRA_DC_EXT_CRC_TYPE_OR,
+	TEGRA_DC_EXT_CRC_TYPE_COMP,
+	TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL,
+	TEGRA_DC_EXT_CRC_TYPE_MAX
+};
+
+enum tegra_dc_ext_crc_input_data {
+	TEGRA_DC_EXT_CRC_INPUT_DATA_FULL_FRAME,
+	TEGRA_DC_EXT_CRC_INPUT_DATA_ACTIVE_DATA,
+	TEGRA_DC_EXT_CRC_INPUT_DATA_MAX
+};
+
+#define TEGRA_DC_EXT_MAX_REGIONS 9
+
+/* tegra_dc_ext_crc_region - A region of the display frame to calculate CRC
+ *                           over. Currently, 9 regions are supported. The
+ *                           regions need to be programmed so that they do not
+ *                           overlap and are within the rastor
+ * @id           - valid range is [0, 8]
+ * @x            - X coordinate of the point where region begins
+ * @y            - Y coordinate of the point where region begins
+ * @w            - Width of the region
+ * @h            - Height of the region
+ * @reserved     - Easier way to extend the data structure
+ */
+struct tegra_dc_ext_crc_region {
+	__u8 id;
+	__u16 x;
+	__u16 y;
+	__u16 w;
+	__u16 h;
+	__u8 reserved[32];
+} __attribute__((__packed__));
+
+/*
+ * tegra_dc_ext_crc_conf - Configuration data to communicate between kernel
+ *                         and userspace
+ * @type       - The block generating the CRC
+ * @input_data - Provides an option to collect CRCs over just the active area
+ *               of the frame, or the blank areas and sync pulses as well. Only
+ *               valid for ENABLE IOCTL
+ * @region     - The region of the frame to do CRC calculations over. Only
+ *               valid for TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL. See enum
+ *               tegra_dc_ext_crc_type.
+ *               For GET IOCTL, request CRC of a specific region via region ID
+ *               For DIS IOCTL, disable CRC calculations over a specific
+ *               region mentioned using region ID
+ *               For EN IOCTL, use this to program or modify the parameters of
+ *               a specific region.
+ * @crc        - This is an overloaded argument across the IOCTLs.
+ *               For EN IOCTL, use this to program the golden CRC registers by
+ *               setting the valid field.
+ *               For GET IOCTL, the kernel space sets the valid field and
+ *               returns the CRC value via the val field
+ * @reserved   - Easier way to extend the data structure
+ */
+struct tegra_dc_ext_crc_conf {
+	enum tegra_dc_ext_crc_type type;
+	enum tegra_dc_ext_crc_input_data input_data;
+	struct tegra_dc_ext_crc_region region;
+	struct tegra_dc_ext_crc {
+		__u8 valid; /* A boolean with 0/1 the only valid values */
+		__u32 val;
+	} crc;
+	__u8 reserved[32];
+} __attribute__((__packed__));
+
+/*
+ * tegra_dc_ext_crc_arg - The argument to EN/DIS/GET CRC IOCTLs
+ * @magic     - Magic bytes - Typically 'TCRC'
+ * @version   - In case the structure needs to change in future
+ * @num_conf  - Num of valid configuration data structures
+ *              For programming multiple regions (see
+ *              TEGRA_DC_EXT_CRC_TYPE_RG_REGIONAL), the client needs to send a
+ *              separate @conf object for each region
+ * @conf      - Pointer to an array of configuration data structures
+ *              tegra_dc_ext_crc_conf
+ * @flip_id   - ID the flip for which CRC GET request is issued.
+ *              Set to 0xFFFF to retrieve the CRC of the most recent frame
+ *              The argument is only valid for GET IOCTL, and a don't care for
+ *              the rest
+ * @reserved  - Easier way to extend the data structure
+ */
+struct tegra_dc_ext_crc_arg {
+	__u8 magic[4];
+	enum tegra_dc_ext_crc_arg_version version;
+	__u8 num_conf;
+	__u64 __user conf;
+	__u16 flip_id;
+	__u8 reserved[32];
+} __attribute__((__packed__));
 
 #define TEGRA_DC_EXT_CONTROL_GET_NUM_OUTPUTS \
 	_IOR('C', 0x00, __u32)

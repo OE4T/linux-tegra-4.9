@@ -86,11 +86,13 @@ static const struct file_operations ufs_tegra_debugfs_ops = {
 void ufs_tegra_init_debugfs(struct ufs_hba *hba)
 {
 	struct dentry *device_root;
+	struct ufs_tegra_host *ufs_tegra = hba->priv;
 
 	device_root = debugfs_create_dir(dev_name(hba->dev), NULL);
 	debugfs_create_file("configuration", S_IFREG | S_IRUGO,
 			device_root, hba, &ufs_tegra_debugfs_ops);
-	debugfs_provision_init(hba, device_root);
+	if (ufs_tegra->enable_ufs_provisioning)
+		debugfs_provision_init(hba, device_root);
 }
 #endif
 
@@ -1152,6 +1154,10 @@ static void ufs_tegra_config_soc_data(struct ufs_tegra_host *ufs_tegra)
 	ufs_tegra->mask_hs_mode_b =
 		of_property_read_bool(np, "nvidia,mask-hs-mode-b");
 
+	ufs_tegra->enable_ufs_provisioning =
+		of_property_read_bool(np, "nvidia,enable-ufs-provisioning");
+
+
 	of_property_read_u32(np, "nvidia,max-hs-gear", &ufs_tegra->max_hs_gear);
 	of_property_read_u32(np, "nvidia,max-pwm-gear",
 					&ufs_tegra->max_pwm_gear);
@@ -1290,7 +1296,8 @@ static void ufs_tegra_exit(struct ufs_hba *hba)
 
 	if (tegra_platform_is_silicon())
 		ufs_tegra_disable_mphylane_clks(ufs_tegra);
-	debugfs_provision_exit(hba);
+	if (ufs_tegra->enable_ufs_provisioning)
+		debugfs_provision_exit(hba);
 }
 
 /**

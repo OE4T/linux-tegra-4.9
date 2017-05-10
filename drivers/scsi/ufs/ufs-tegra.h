@@ -245,6 +245,7 @@ struct ufs_tegra_host {
 	bool x2config;
 	bool enable_mphy_rx_calib;
 	bool enable_hs_mode;
+	bool enable_ufs_provisioning;
 	u32 max_hs_gear;
 	bool mask_fast_auto_mode;
 	bool mask_hs_mode_b;

@@ -986,7 +986,8 @@ static void tegra_qspi_set_gr_registers(struct spi_device *spi)
 			sprintf(prod_name, "prod_c_SDR%d", (tqspi->cur_speed/1000000));
 		if (tegra_prod_set_by_name(&tqspi->base,
 					prod_name, tqspi->prod_list))
-			dev_info(tqspi->dev, "failed to apply prod for qspi\n");
+			dev_info_once(tqspi->dev, "failed to apply prod "
+					"name[%s] for qspi\n", prod_name);
 		else
 			return;
 	}

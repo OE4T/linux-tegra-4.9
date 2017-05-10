@@ -22,6 +22,12 @@
 
 struct gpu_ops;
 
+struct gr_gp10b_ecc_stat {
+	char **names;
+	u32 *counters;
+	struct hlist_node hash_node;
+};
+
 enum {
 	PASCAL_CHANNEL_GPFIFO_A  = 0xC06F,
 	PASCAL_A                 = 0xC097,
@@ -45,12 +51,6 @@ int gr_gp10b_alloc_buffer(struct vm_gk20a *vm, size_t size,
 			struct nvgpu_mem *mem);
 void gr_gp10b_create_sysfs(struct device *dev);
 
-struct ecc_stat {
-	char **names;
-	u32 *counters;
-	struct hlist_node hash_node;
-};
-
 struct gr_t18x {
 	struct {
 		u32 preempt_image_size;
@@ -69,24 +69,24 @@ struct gr_t18x {
 	} ctx_vars;
 
 	struct {
-		struct ecc_stat sm_lrf_single_err_count;
-		struct ecc_stat sm_lrf_double_err_count;
+		struct gr_gp10b_ecc_stat sm_lrf_single_err_count;
+		struct gr_gp10b_ecc_stat sm_lrf_double_err_count;
 
-		struct ecc_stat sm_shm_sec_count;
-		struct ecc_stat sm_shm_sed_count;
-		struct ecc_stat sm_shm_ded_count;
+		struct gr_gp10b_ecc_stat sm_shm_sec_count;
+		struct gr_gp10b_ecc_stat sm_shm_sed_count;
+		struct gr_gp10b_ecc_stat sm_shm_ded_count;
 
-		struct ecc_stat tex_total_sec_pipe0_count;
-		struct ecc_stat tex_total_ded_pipe0_count;
-		struct ecc_stat tex_unique_sec_pipe0_count;
-		struct ecc_stat tex_unique_ded_pipe0_count;
-		struct ecc_stat tex_total_sec_pipe1_count;
-		struct ecc_stat tex_total_ded_pipe1_count;
-		struct ecc_stat tex_unique_sec_pipe1_count;
-		struct ecc_stat tex_unique_ded_pipe1_count;
+		struct gr_gp10b_ecc_stat tex_total_sec_pipe0_count;
+		struct gr_gp10b_ecc_stat tex_total_ded_pipe0_count;
+		struct gr_gp10b_ecc_stat tex_unique_sec_pipe0_count;
+		struct gr_gp10b_ecc_stat tex_unique_ded_pipe0_count;
+		struct gr_gp10b_ecc_stat tex_total_sec_pipe1_count;
+		struct gr_gp10b_ecc_stat tex_total_ded_pipe1_count;
+		struct gr_gp10b_ecc_stat tex_unique_sec_pipe1_count;
+		struct gr_gp10b_ecc_stat tex_unique_ded_pipe1_count;
 
-		struct ecc_stat l2_sec_count;
-		struct ecc_stat l2_ded_count;
+		struct gr_gp10b_ecc_stat l2_sec_count;
+		struct gr_gp10b_ecc_stat l2_ded_count;
 	} ecc_stats;
 
 	u32 fecs_feature_override_ecc_val;

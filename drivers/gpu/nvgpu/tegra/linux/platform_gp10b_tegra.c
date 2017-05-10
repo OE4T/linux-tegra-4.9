@@ -39,6 +39,7 @@
 #include "platform_gk20a_tegra.h"
 #include "gp10b/gp10b_sysfs.h"
 #include "gp10b/platform_gp10b.h"
+#include "platform_gp10b_tegra.h"
 
 #include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_ltc_gp10b.h>
@@ -181,7 +182,7 @@ static int gp10b_tegra_late_probe(struct device *dev)
 	return 0;
 }
 
-static int gp10b_tegra_remove(struct device *dev)
+int gp10b_tegra_remove(struct device *dev)
 {
 	gr_gp10b_remove_sysfs(dev);
 	/*Remove GP10B specific sysfs*/
@@ -483,7 +484,7 @@ static ssize_t ecc_stat_show(struct device *dev,
 	const char *ecc_stat_full_name = attr->attr.name;
 	const char *ecc_stat_base_name;
 	unsigned int hw_unit;
-	struct ecc_stat *ecc_stat;
+	struct gr_gp10b_ecc_stat *ecc_stat;
 	u32 hash_key;
 
 	if (sscanf(ecc_stat_full_name, "ltc%u", &hw_unit) == 1) {
@@ -508,10 +509,10 @@ static ssize_t ecc_stat_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "Error: No ECC stat found!\n");
 }
 
-static int ecc_stat_create(struct device *dev,
+int gr_gp10b_ecc_stat_create(struct device *dev,
 				int is_l2,
 				char *ecc_stat_name,
-				struct ecc_stat *ecc_stat,
+				struct gr_gp10b_ecc_stat *ecc_stat,
 				struct device_attribute *dev_attr_array)
 {
 	int error = 0;
@@ -569,9 +570,9 @@ static int ecc_stat_create(struct device *dev,
 	return error;
 }
 
-static void ecc_stat_remove(struct device *dev,
+void gr_gp10b_ecc_stat_remove(struct device *dev,
 				int is_l2,
-				struct ecc_stat *ecc_stat,
+				struct gr_gp10b_ecc_stat *ecc_stat,
 				struct device_attribute *dev_attr_array)
 {
 	struct gk20a *g = get_gk20a(dev);
@@ -612,80 +613,80 @@ void gr_gp10b_create_sysfs(struct device *dev)
 	if (g->gr.t18x.ecc_stats.sm_lrf_single_err_count.counters != NULL)
 		return;
 
-	error |= ecc_stat_create(dev,
+	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_lrf_ecc_single_err_count",
 				&g->gr.t18x.ecc_stats.sm_lrf_single_err_count,
 				dev_attr_sm_lrf_ecc_single_err_count_array);
-	error |= ecc_stat_create(dev,
+	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_lrf_ecc_double_err_count",
 				&g->gr.t18x.ecc_stats.sm_lrf_double_err_count,
 				dev_attr_sm_lrf_ecc_double_err_count_array);
 
-	error |= ecc_stat_create(dev,
+	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_shm_ecc_sec_count",
 				&g->gr.t18x.ecc_stats.sm_shm_sec_count,
 				dev_attr_sm_shm_ecc_sec_count_array);
-	error |= ecc_stat_create(dev,
+	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_shm_ecc_sed_count",
 				&g->gr.t18x.ecc_stats.sm_shm_sed_count,
 				dev_attr_sm_shm_ecc_sed_count_array);
-	error |= ecc_stat_create(dev,
+	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_shm_ecc_ded_count",
 				&g->gr.t18x.ecc_stats.sm_shm_ded_count,
 				dev_attr_sm_shm_ecc_ded_count_array);
 
-	error |= ecc_stat_create(dev,
+	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_total_sec_pipe0_count",
 				&g->gr.t18x.ecc_stats.tex_total_sec_pipe0_count,
 				dev_attr_tex_ecc_total_sec_pipe0_count_array);
-	error |= ecc_stat_create(dev,
+	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_total_ded_pipe0_count",
 				&g->gr.t18x.ecc_stats.tex_total_ded_pipe0_count,
 				dev_attr_tex_ecc_total_ded_pipe0_count_array);
-	error |= ecc_stat_create(dev,
+	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_unique_sec_pipe0_count",
 				&g->gr.t18x.ecc_stats.tex_unique_sec_pipe0_count,
 				dev_attr_tex_ecc_unique_sec_pipe0_count_array);
-	error |= ecc_stat_create(dev,
+	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_unique_ded_pipe0_count",
 				&g->gr.t18x.ecc_stats.tex_unique_ded_pipe0_count,
 				dev_attr_tex_ecc_unique_ded_pipe0_count_array);
-	error |= ecc_stat_create(dev,
+	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_total_sec_pipe1_count",
 				&g->gr.t18x.ecc_stats.tex_total_sec_pipe1_count,
 				dev_attr_tex_ecc_total_sec_pipe1_count_array);
-	error |= ecc_stat_create(dev,
+	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_total_ded_pipe1_count",
 				&g->gr.t18x.ecc_stats.tex_total_ded_pipe1_count,
 				dev_attr_tex_ecc_total_ded_pipe1_count_array);
-	error |= ecc_stat_create(dev,
+	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_unique_sec_pipe1_count",
 				&g->gr.t18x.ecc_stats.tex_unique_sec_pipe1_count,
 				dev_attr_tex_ecc_unique_sec_pipe1_count_array);
-	error |= ecc_stat_create(dev,
+	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_unique_ded_pipe1_count",
 				&g->gr.t18x.ecc_stats.tex_unique_ded_pipe1_count,
 				dev_attr_tex_ecc_unique_ded_pipe1_count_array);
 
-	error |= ecc_stat_create(dev,
+	error |= gr_gp10b_ecc_stat_create(dev,
 				1,
 				"lts0_ecc_sec_count",
 				&g->gr.t18x.ecc_stats.l2_sec_count,
 				dev_attr_l2_ecc_sec_count_array);
-	error |= ecc_stat_create(dev,
+	error |= gr_gp10b_ecc_stat_create(dev,
 				1,
 				"lts0_ecc_ded_count",
 				&g->gr.t18x.ecc_stats.l2_ded_count,
@@ -699,66 +700,66 @@ static void gr_gp10b_remove_sysfs(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 
-	ecc_stat_remove(dev,
+	gr_gp10b_ecc_stat_remove(dev,
 			0,
 			&g->gr.t18x.ecc_stats.sm_lrf_single_err_count,
 			dev_attr_sm_lrf_ecc_single_err_count_array);
-	ecc_stat_remove(dev,
+	gr_gp10b_ecc_stat_remove(dev,
 			0,
 			&g->gr.t18x.ecc_stats.sm_lrf_double_err_count,
 			dev_attr_sm_lrf_ecc_double_err_count_array);
 
-	ecc_stat_remove(dev,
+	gr_gp10b_ecc_stat_remove(dev,
 			0,
 			&g->gr.t18x.ecc_stats.sm_shm_sec_count,
 			dev_attr_sm_shm_ecc_sec_count_array);
-	ecc_stat_remove(dev,
+	gr_gp10b_ecc_stat_remove(dev,
 			0,
 			&g->gr.t18x.ecc_stats.sm_shm_sed_count,
 			dev_attr_sm_shm_ecc_sed_count_array);
-	ecc_stat_remove(dev,
+	gr_gp10b_ecc_stat_remove(dev,
 			0,
 			&g->gr.t18x.ecc_stats.sm_shm_ded_count,
 			dev_attr_sm_shm_ecc_ded_count_array);
 
-	ecc_stat_remove(dev,
+	gr_gp10b_ecc_stat_remove(dev,
 			0,
 			&g->gr.t18x.ecc_stats.tex_total_sec_pipe0_count,
 			dev_attr_tex_ecc_total_sec_pipe0_count_array);
-	ecc_stat_remove(dev,
+	gr_gp10b_ecc_stat_remove(dev,
 			0,
 			&g->gr.t18x.ecc_stats.tex_total_ded_pipe0_count,
 			dev_attr_tex_ecc_total_ded_pipe0_count_array);
-	ecc_stat_remove(dev,
+	gr_gp10b_ecc_stat_remove(dev,
 			0,
 			&g->gr.t18x.ecc_stats.tex_unique_sec_pipe0_count,
 			dev_attr_tex_ecc_unique_sec_pipe0_count_array);
-	ecc_stat_remove(dev,
+	gr_gp10b_ecc_stat_remove(dev,
 			0,
 			&g->gr.t18x.ecc_stats.tex_unique_ded_pipe0_count,
 			dev_attr_tex_ecc_unique_ded_pipe0_count_array);
-	ecc_stat_remove(dev,
+	gr_gp10b_ecc_stat_remove(dev,
 			0,
 			&g->gr.t18x.ecc_stats.tex_total_sec_pipe1_count,
 			dev_attr_tex_ecc_total_sec_pipe1_count_array);
-	ecc_stat_remove(dev,
+	gr_gp10b_ecc_stat_remove(dev,
 			0,
 			&g->gr.t18x.ecc_stats.tex_total_ded_pipe1_count,
 			dev_attr_tex_ecc_total_ded_pipe1_count_array);
-	ecc_stat_remove(dev,
+	gr_gp10b_ecc_stat_remove(dev,
 			0,
 			&g->gr.t18x.ecc_stats.tex_unique_sec_pipe1_count,
 			dev_attr_tex_ecc_unique_sec_pipe1_count_array);
-	ecc_stat_remove(dev,
+	gr_gp10b_ecc_stat_remove(dev,
 			0,
 			&g->gr.t18x.ecc_stats.tex_unique_ded_pipe1_count,
 			dev_attr_tex_ecc_unique_ded_pipe1_count_array);
 
-	ecc_stat_remove(dev,
+	gr_gp10b_ecc_stat_remove(dev,
 			1,
 			&g->gr.t18x.ecc_stats.l2_sec_count,
 			dev_attr_l2_ecc_sec_count_array);
-	ecc_stat_remove(dev,
+	gr_gp10b_ecc_stat_remove(dev,
 			1,
 			&g->gr.t18x.ecc_stats.l2_ded_count,
 			dev_attr_l2_ecc_ded_count_array);

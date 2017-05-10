@@ -374,6 +374,10 @@ struct gr_gk20a {
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct gr_t18x t18x;
 #endif
+#ifdef CONFIG_TEGRA_19x_GPU
+	struct gr_t19x t19x;
+#endif
+
 	u32 fbp_en_mask;
 	u32 *fbp_rop_l2_en_mask;
 	u32 no_of_sm;

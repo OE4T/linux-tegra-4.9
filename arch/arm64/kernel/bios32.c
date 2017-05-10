@@ -25,7 +25,6 @@
 #include <linux/init.h>
 #include <linux/io.h>
 
-#include <asm/mach-types.h>
 #include <asm/mach/map.h>
 #include <asm/mach/pci.h>
 

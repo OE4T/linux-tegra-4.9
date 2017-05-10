@@ -322,7 +322,7 @@ void gk20a_debug_init(struct device *dev, const char *debugfs_symlink)
 		platform->debugfs, &gk20a_debug_trace_cmdbuf);
 
 	debugfs_create_u32("ch_wdt_timeout_ms", S_IRUGO|S_IWUSR,
-		platform->debugfs, &platform->ch_wdt_timeout_ms);
+		platform->debugfs, &g->ch_wdt_timeout_ms);
 
 	debugfs_create_u32("disable_syncpoints", S_IRUGO|S_IWUSR,
 		platform->debugfs, &g->disable_syncpoints);

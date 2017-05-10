@@ -718,12 +718,12 @@ static int gv11b_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 
 	nvgpu_mutex_acquire(&f->runlist_info[runlist_id].mutex);
 
-	mutex_ret = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	ret = __locked_fifo_preempt(g, hw_chid, false);
 
 	if (!mutex_ret)
-		pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	nvgpu_mutex_release(&f->runlist_info[runlist_id].mutex);
 
@@ -770,12 +770,12 @@ static int gv11b_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 
 	nvgpu_mutex_acquire(&f->runlist_info[runlist_id].mutex);
 
-	mutex_ret = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	ret = __locked_fifo_preempt(g, tsgid, true);
 
 	if (!mutex_ret)
-		pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	nvgpu_mutex_release(&f->runlist_info[runlist_id].mutex);
 
@@ -798,12 +798,12 @@ static int gv11b_fifo_preempt_runlists(struct gk20a *g, u32 runlists_mask)
 				runlist_info[runlist_id].mutex);
 	}
 
-	mutex_ret = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	ret = __locked_fifo_preempt_runlists(g, runlists_mask);
 
 	if (!mutex_ret)
-		pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	for (runlist_id = 0; runlist_id < g->fifo.max_runlists; runlist_id++) {
 		if (runlists_mask & fifo_runlist_preempt_runlist_m(runlist_id))
@@ -858,12 +858,12 @@ static int gv11b_fifo_preempt_ch_tsg(struct gk20a *g, u32 id,
 
 	nvgpu_mutex_acquire(&f->runlist_info[runlist_id].mutex);
 
-	mutex_ret = pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+	mutex_ret = nvgpu_pmu_mutex_acquire(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	ret = __locked_fifo_preempt_ch_tsg(g, id, id_type, timeout_rc_type);
 
 	if (!mutex_ret)
-		pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
+		nvgpu_pmu_mutex_release(&g->pmu, PMU_MUTEX_ID_FIFO, &token);
 
 	nvgpu_mutex_release(&f->runlist_info[runlist_id].mutex);
 

@@ -83,4 +83,46 @@
 		reset-names = "spi";
 		status = "disabled";
 	};
+
+	qspi0: spi@3270000 {
+		compatible = "nvidia,tegra186-qspi";
+		reg = <0x0 0x3270000 0x0 0x10000>;
+		interrupts = < 0 35 0x04 >;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+		dmas = <&gpcdma 5>, <&gpcdma 5>;
+		dma-names = "rx", "tx";
+		nvidia,clk-parents = "pll_p";
+		clocks = <&bpmp_clks TEGRA194_CLK_QSPI0>,
+			 <&bpmp_clks TEGRA194_CLK_QSPI0_PM>,
+			 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
+			 <&bpmp_clks TEGRA194_CLK_CLK_M>;
+		clock-names = "qspi","qspi_out","pll_p","clk_m";
+		resets = <&bpmp_resets TEGRA194_RESET_QSPI0>;
+		reset-names = "qspi";
+		status = "disabled";
+	};
+
+	qspi1: spi@3300000 {
+		compatible = "nvidia,tegra186-qspi";
+		reg = <0x0 0x3300000 0x0 0x10000>;
+		interrupts = < 0 39 0x04 >;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+		dmas = <&gpcdma 6>, <&gpcdma 6>;
+		dma-names = "rx", "tx";
+		nvidia,clk-parents = "pll_p";
+		clocks = <&bpmp_clks TEGRA194_CLK_QSPI1>,
+			 <&bpmp_clks TEGRA194_CLK_QSPI1_PM>,
+			 <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
+			 <&bpmp_clks TEGRA194_CLK_CLK_M>;
+		clock-names = "qspi","qspi_out","pll_p","clk_m";
+		resets = <&bpmp_resets TEGRA194_RESET_QSPI1>;
+		reset-names = "qspi";
+		status = "disabled";
+	};
 };

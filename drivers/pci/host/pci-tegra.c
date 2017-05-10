@@ -1734,6 +1734,9 @@ static int tegra_pcie_module_power_ungate(struct generic_pm_domain *genpd)
 
 	tegra_pcie_domain = container_of(tpd, struct tegra_pcie_domain, tpd);
 	pcie = tegra_pcie_domain->tegra_pcie;
+	if (!pcie)
+		return -EINVAL;
+
 	dev = pcie->dev;
 
 	if (pcie->pcie_power_enabled) {
@@ -4608,7 +4611,7 @@ release_regulators:
 static struct tegra_pcie_domain pcie_domain = {
 	.tpd.gpd.power_on = tegra_pcie_module_power_ungate,
 	.tpd.gpd.power_off = tegra_pcie_module_power_gate,
-	.tpd.gpd.flags = GENPD_FLAG_PM_CLK | GENPD_FLAG_PM_UPSTREAM,
+	.tpd.gpd.flags = GENPD_FLAG_PM_CLK,
 	.tpd.is_off = false,
 };
 
@@ -5094,9 +5097,10 @@ static int __init tegra_pcie_init_driver(void)
 	return platform_driver_register(&tegra_pcie_driver);
 }
 
-static void __exit_refok tegra_pcie_exit_driver(void)
+static void __exit tegra_pcie_exit_driver(void)
 {
 	platform_driver_unregister(&tegra_pcie_driver);
+	pm_genpd_remove(&pcie_domain.tpd.gpd);
 }
 
 module_init(tegra_pcie_init_driver);

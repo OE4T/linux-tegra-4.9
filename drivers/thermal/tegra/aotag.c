@@ -363,7 +363,7 @@ static int aotag_register_sensors(struct platform_device *pdev)
 	}
 
 	ps_info->tzd = ptz;
-	dev_err(&pdev->dev, "Bound to TZ : ID %d\n", ps_info->tzd->id);
+	dev_info(&pdev->dev, "Bound to TZ : ID %d\n", ps_info->tzd->id);
 
 	ret = ptz->ops->get_crit_temp(ptz, &thermtrip);
 	if (!ret)
@@ -486,7 +486,7 @@ static int __init tegra_aotag_probe(struct platform_device *pdev)
 	}
 
 out:
-	dev_err(&pdev->dev, "Probe done %s:%d\n",
+	dev_info(&pdev->dev, "Probe done %s:%d\n",
 			(ret ? "[FAILURE]" : "[SUCCESS]"), ret);
 	return ret;
 }

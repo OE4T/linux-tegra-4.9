@@ -541,7 +541,7 @@ static void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 	nvgpu_vfree(g, f->channel);
 	nvgpu_vfree(g, f->tsg);
 	if (g->ops.mm.is_bar1_supported(g))
-		nvgpu_dma_unmap_free(&g->mm.bar1.vm, &f->userd);
+		nvgpu_dma_unmap_free(g->mm.bar1.vm, &f->userd);
 	else
 		nvgpu_dma_free(g, &f->userd);
 
@@ -923,7 +923,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	nvgpu_mutex_init(&f->free_chs_mutex);
 
 	if (g->ops.mm.is_bar1_supported(g))
-		err = nvgpu_dma_alloc_map_sys(&g->mm.bar1.vm,
+		err = nvgpu_dma_alloc_map_sys(g->mm.bar1.vm,
 				   f->userd_entry_size * f->num_channels,
 				   &f->userd);
 
@@ -963,7 +963,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 clean_up:
 	gk20a_dbg_fn("fail");
 	if (g->ops.mm.is_bar1_supported(g))
-		nvgpu_dma_unmap_free(&g->mm.bar1.vm, &f->userd);
+		nvgpu_dma_unmap_free(g->mm.bar1.vm, &f->userd);
 	else
 		nvgpu_dma_free(g, &f->userd);
 

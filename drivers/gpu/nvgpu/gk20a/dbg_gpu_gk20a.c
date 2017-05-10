@@ -1838,7 +1838,6 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 {
 	struct gk20a *g = dbg_s->g;
 	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = &mm->perfbuf.vm;
 	int err;
 	u32 virt_size;
 	u32 virt_addr_lo;
@@ -1853,23 +1852,23 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 		return -EBUSY;
 	}
 
-	err = nvgpu_init_vm(mm, vm, big_page_size,
+	mm->perfbuf.vm = nvgpu_vm_init(g, big_page_size,
 			big_page_size << 10,
 			NV_MM_DEFAULT_KERNEL_SIZE,
 			NV_MM_DEFAULT_KERNEL_SIZE + NV_MM_DEFAULT_USER_SIZE,
 			false, false, "perfbuf");
-	if (err) {
+	if (!mm->perfbuf.vm) {
 		nvgpu_mutex_release(&g->dbg_sessions_lock);
-		return err;
+		return -ENOMEM;
 	}
 
 	err = gk20a_alloc_inst_block(g, &mm->perfbuf.inst_block);
 	if (err)
 		goto err_remove_vm;
 
-	g->ops.mm.init_inst_block(&mm->perfbuf.inst_block, vm, 0);
+	g->ops.mm.init_inst_block(&mm->perfbuf.inst_block, mm->perfbuf.vm, 0);
 
-	err = nvgpu_vm_map_buffer(vm,
+	err = nvgpu_vm_map_buffer(mm->perfbuf.vm,
 			args->dmabuf_fd,
 			&args->offset,
 			0,
@@ -1922,9 +1921,10 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 	return 0;
 
 err_unmap:
-	nvgpu_vm_unmap_buffer(vm, args->offset, NULL);
+	nvgpu_vm_unmap_buffer(mm->perfbuf.vm, args->offset, NULL);
 err_remove_vm:
-	nvgpu_vm_remove_inst(vm, &mm->perfbuf.inst_block);
+	gk20a_free_inst_block(g, &mm->perfbuf.inst_block);
+	nvgpu_vm_put(mm->perfbuf.vm);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 	return err;
 }
@@ -1956,13 +1956,14 @@ static int gk20a_perfbuf_disable_locked(struct gk20a *g)
 static int gk20a_perfbuf_release_locked(struct gk20a *g, u64 offset)
 {
 	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = &mm->perfbuf.vm;
+	struct vm_gk20a *vm = mm->perfbuf.vm;
 	int err;
 
 	err = gk20a_perfbuf_disable_locked(g);
 
 	nvgpu_vm_unmap_buffer(vm, offset, NULL);
-	nvgpu_vm_remove_inst(vm, &mm->perfbuf.inst_block);
+	gk20a_free_inst_block(g, &mm->perfbuf.inst_block);
+	nvgpu_vm_put(vm);
 
 	g->perfbuf.owner = NULL;
 	g->perfbuf.offset = 0;

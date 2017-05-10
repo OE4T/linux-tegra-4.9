@@ -67,31 +67,32 @@ static int gb10b_init_bar2_vm(struct gk20a *g)
 {
 	int err;
 	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = &mm->bar2.vm;
 	struct nvgpu_mem *inst_block = &mm->bar2.inst_block;
 	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
 	/* BAR2 aperture size is 32MB */
 	mm->bar2.aperture_size = 32 << 20;
 	gk20a_dbg_info("bar2 vm size = 0x%x", mm->bar2.aperture_size);
-	nvgpu_init_vm(mm, vm, big_page_size, SZ_4K,
+
+	mm->bar2.vm = nvgpu_vm_init(g, big_page_size, SZ_4K,
 		mm->bar2.aperture_size - SZ_4K,
 		mm->bar2.aperture_size, false, false, "bar2");
+	if (!mm->bar2.vm)
+		return -ENOMEM;
 
 	/* allocate instance mem for bar2 */
 	err = gk20a_alloc_inst_block(g, inst_block);
 	if (err)
 		goto clean_up_va;
 
-	g->ops.mm.init_inst_block(inst_block, vm, big_page_size);
+	g->ops.mm.init_inst_block(inst_block, mm->bar2.vm, big_page_size);
 
 	return 0;
 
 clean_up_va:
-	nvgpu_deinit_vm(vm);
+	nvgpu_vm_put(mm->bar2.vm);
 	return err;
 }
-
 
 static int gb10b_init_bar2_mm_hw_setup(struct gk20a *g)
 {
@@ -401,7 +402,8 @@ static void gp10b_remove_bar2_vm(struct gk20a *g)
 	struct mm_gk20a *mm = &g->mm;
 
 	gp10b_replayable_pagefault_buffer_deinit(g);
-	nvgpu_vm_remove_inst(&mm->bar2.vm, &mm->bar2.inst_block);
+	gk20a_free_inst_block(g, &mm->bar2.inst_block);
+	nvgpu_vm_put(mm->bar2.vm);
 }
 
 

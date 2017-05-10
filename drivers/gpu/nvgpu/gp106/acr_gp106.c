@@ -1045,7 +1045,7 @@ static int lsf_gen_wpr_requirements(struct gk20a *g,
 static int gp106_bootstrap_hs_flcn(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = &mm->pmu.vm;
+	struct vm_gk20a *vm = mm->pmu.vm;
 	int err = 0;
 	u64 *acr_dmem;
 	u32 img_size_in_bytes = 0;

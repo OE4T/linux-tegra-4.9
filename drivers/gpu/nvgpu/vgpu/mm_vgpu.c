@@ -31,8 +31,6 @@
 static int vgpu_init_mm_setup_sw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = &mm->pmu.vm;
-	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
 	gk20a_dbg_fn("");
 
@@ -53,11 +51,6 @@ static int vgpu_init_mm_setup_sw(struct gk20a *g)
 	gk20a_dbg_info("channel vm size: user %dMB  kernel %dMB",
 		       (int)(mm->channel.user_size >> 20),
 		       (int)(mm->channel.kernel_size >> 20));
-
-	/* gk20a_init_gpu_characteristics expects this to be populated */
-	vm->big_page_size = big_page_size;
-	vm->mmu_levels = (vm->big_page_size == SZ_64K) ?
-			 gk20a_mm_levels_64k : gk20a_mm_levels_128k;
 
 	mm->sw_ready = true;
 

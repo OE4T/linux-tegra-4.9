@@ -43,7 +43,6 @@ static int gk20a_vm_alloc_share(struct gk20a_as_share *as_share,
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm;
 	char name[32];
-	int err;
 	const bool userspace_managed =
 		(flags & NVGPU_GPU_IOCTL_ALLOC_AS_FLAGS_USERSPACE_MANAGED) != 0;
 
@@ -60,7 +59,13 @@ static int gk20a_vm_alloc_share(struct gk20a_as_share *as_share,
 			return -EINVAL;
 	}
 
-	vm = nvgpu_kzalloc(g, sizeof(*vm));
+	snprintf(name, sizeof(name), "as_%d", as_share->id);
+
+	vm = nvgpu_vm_init(g, big_page_size,
+			   big_page_size << 10,
+			   mm->channel.kernel_size,
+			   mm->channel.user_size + mm->channel.kernel_size,
+			   !mm->disable_bigpage, userspace_managed, name);
 	if (!vm)
 		return -ENOMEM;
 
@@ -68,15 +73,7 @@ static int gk20a_vm_alloc_share(struct gk20a_as_share *as_share,
 	vm->as_share = as_share;
 	vm->enable_ctag = true;
 
-	snprintf(name, sizeof(name), "as_%d", as_share->id);
-
-	err = nvgpu_init_vm(mm, vm, big_page_size,
-			    big_page_size << 10,
-			    mm->channel.kernel_size,
-			    mm->channel.user_size + mm->channel.kernel_size,
-			    !mm->disable_bigpage, userspace_managed, name);
-
-	return err;
+	return 0;
 }
 
 int gk20a_as_alloc_share(struct gk20a *g,

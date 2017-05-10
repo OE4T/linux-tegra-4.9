@@ -388,7 +388,7 @@ int prepare_ucode_blob(struct gk20a *g)
 	u32 wprsize;
 	int i;
 	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = &mm->pmu.vm;
+	struct vm_gk20a *vm = mm->pmu.vm;
 	struct wpr_carveout_info wpr_inf;
 	struct page **pages;
 
@@ -1067,7 +1067,7 @@ static int lsf_gen_wpr_requirements(struct gk20a *g, struct ls_flcn_mgr *plsfm)
 static int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = &mm->pmu.vm;
+	struct vm_gk20a *vm = mm->pmu.vm;
 	int err = 0;
 	u64 *acr_dmem;
 	u32 img_size_in_bytes = 0;
@@ -1385,7 +1385,7 @@ static int gm20b_init_pmu_setup_hw1(struct gk20a *g,
 int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 {
 	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = &mm->pmu.vm;
+	struct vm_gk20a *vm = mm->pmu.vm;
 	int err = 0;
 	u32 bl_sz;
 	struct acr_desc *acr = &g->acr;

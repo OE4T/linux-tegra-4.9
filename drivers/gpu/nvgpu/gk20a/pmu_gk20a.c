@@ -3132,7 +3132,7 @@ static int gk20a_prepare_ucode(struct gk20a *g)
 	struct nvgpu_pmu *pmu = &g->pmu;
 	int err = 0;
 	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = &mm->pmu.vm;
+	struct vm_gk20a *vm = mm->pmu.vm;
 
 	if (pmu->fw)
 		return gk20a_init_pmu(pmu);
@@ -3170,7 +3170,7 @@ static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
 	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = &mm->pmu.vm;
+	struct vm_gk20a *vm = mm->pmu.vm;
 	unsigned int i;
 	int err = 0;
 	u8 *ptr;
@@ -4793,7 +4793,7 @@ int gk20a_pmu_vidmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 size)
 {
 	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = &mm->pmu.vm;
+	struct vm_gk20a *vm = mm->pmu.vm;
 	int err;
 
 	err = nvgpu_dma_alloc_map_vid(vm, size, mem);
@@ -4809,7 +4809,7 @@ int gk20a_pmu_sysmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 size)
 {
 	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = &mm->pmu.vm;
+	struct vm_gk20a *vm = mm->pmu.vm;
 	int err;
 
 	err = nvgpu_dma_alloc_map_sys(vm, size, mem);

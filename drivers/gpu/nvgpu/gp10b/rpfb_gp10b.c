@@ -28,7 +28,7 @@ int gp10b_replayable_pagefault_buffer_init(struct gk20a *g)
 {
 	u32 addr_lo;
 	u32 addr_hi;
-	struct vm_gk20a *vm = &g->mm.bar2.vm;
+	struct vm_gk20a *vm = g->mm.bar2.vm;
 	int err;
 	size_t rbfb_size = NV_UVM_FAULT_BUF_SIZE *
 		fifo_replay_fault_buffer_size_hw_entries_v();
@@ -57,7 +57,7 @@ int gp10b_replayable_pagefault_buffer_init(struct gk20a *g)
 
 void gp10b_replayable_pagefault_buffer_deinit(struct gk20a *g)
 {
-	struct vm_gk20a *vm = &g->mm.bar2.vm;
+	struct vm_gk20a *vm = g->mm.bar2.vm;
 
 	nvgpu_dma_unmap_free(vm, &g->mm.bar2_desc);
 }

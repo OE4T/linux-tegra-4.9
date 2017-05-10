@@ -204,52 +204,15 @@ static int nvgpu_init_sema_pool(struct vm_gk20a *vm)
 	return 0;
 }
 
-/**
- * nvgpu_init_vm() - Initialize an address space.
- *
- * @mm - Parent MM.
- * @vm - The VM to init.
- * @big_page_size - Size of big pages associated with this VM.
- * @low_hole - The size of the low hole (unaddressable memory at the bottom of
- *	       the address space).
- * @kernel_reserved - Space reserved for kernel only allocations.
- * @aperture_size - Total size of the aperture.
- * @big_pages - If true then big pages are possible in the VM. Note this does
- *              not guarantee that big pages will be possible.
- * @name - Name of the address space.
- *
- * This function initializes an address space according to the following map:
- *
- *     +--+ 0x0
- *     |  |
- *     +--+ @low_hole
- *     |  |
- *     ~  ~   This is the "user" section.
- *     |  |
- *     +--+ @aperture_size - @kernel_reserved
- *     |  |
- *     ~  ~   This is the "kernel" section.
- *     |  |
- *     +--+ @aperture_size
- *
- * The user section is therefor what ever is left over after the @low_hole and
- * @kernel_reserved memory have been portioned out. The @kernel_reserved is
- * always persent at the top of the memory space and the @low_hole is always at
- * the bottom.
- *
- * For certain address spaces a "user" section makes no sense (bar1, etc) so in
- * such cases the @kernel_reserved and @low_hole should sum to exactly
- * @aperture_size.
- */
-int nvgpu_init_vm(struct mm_gk20a *mm,
-		  struct vm_gk20a *vm,
-		  u32 big_page_size,
-		  u64 low_hole,
-		  u64 kernel_reserved,
-		  u64 aperture_size,
-		  bool big_pages,
-		  bool userspace_managed,
-		  char *name)
+static int __nvgpu_vm_init(struct mm_gk20a *mm,
+			   struct vm_gk20a *vm,
+			   u32 big_page_size,
+			   u64 low_hole,
+			   u64 kernel_reserved,
+			   u64 aperture_size,
+			   bool big_pages,
+			   bool userspace_managed,
+			   char *name)
 {
 	int err;
 	char alloc_name[32];
@@ -257,7 +220,7 @@ int nvgpu_init_vm(struct mm_gk20a *mm,
 	u64 user_vma_start, user_vma_limit;
 	u64 user_lp_vma_start, user_lp_vma_limit;
 	u64 kernel_vma_start, kernel_vma_limit;
-	struct gk20a *g = mm->g;
+	struct gk20a *g = gk20a_from_mm(mm);
 
 	if (WARN_ON(kernel_reserved + low_hole > aperture_size))
 		return -ENOMEM;
@@ -467,22 +430,71 @@ clean_up_vgpu_vm:
 	return err;
 }
 
-void nvgpu_deinit_vm(struct vm_gk20a *vm)
+/**
+ * nvgpu_init_vm() - Initialize an address space.
+ *
+ * @mm - Parent MM.
+ * @vm - The VM to init.
+ * @big_page_size - Size of big pages associated with this VM.
+ * @low_hole - The size of the low hole (unaddressable memory at the bottom of
+ *	       the address space).
+ * @kernel_reserved - Space reserved for kernel only allocations.
+ * @aperture_size - Total size of the aperture.
+ * @big_pages - If true then big pages are possible in the VM. Note this does
+ *              not guarantee that big pages will be possible.
+ * @name - Name of the address space.
+ *
+ * This function initializes an address space according to the following map:
+ *
+ *     +--+ 0x0
+ *     |  |
+ *     +--+ @low_hole
+ *     |  |
+ *     ~  ~   This is the "user" section.
+ *     |  |
+ *     +--+ @aperture_size - @kernel_reserved
+ *     |  |
+ *     ~  ~   This is the "kernel" section.
+ *     |  |
+ *     +--+ @aperture_size
+ *
+ * The user section is therefor what ever is left over after the @low_hole and
+ * @kernel_reserved memory have been portioned out. The @kernel_reserved is
+ * always persent at the top of the memory space and the @low_hole is always at
+ * the bottom.
+ *
+ * For certain address spaces a "user" section makes no sense (bar1, etc) so in
+ * such cases the @kernel_reserved and @low_hole should sum to exactly
+ * @aperture_size.
+ */
+struct vm_gk20a *nvgpu_vm_init(struct gk20a *g,
+			       u32 big_page_size,
+			       u64 low_hole,
+			       u64 kernel_reserved,
+			       u64 aperture_size,
+			       bool big_pages,
+			       bool userspace_managed,
+			       char *name)
 {
-	if (nvgpu_alloc_initialized(&vm->kernel))
-		nvgpu_alloc_destroy(&vm->kernel);
-	if (nvgpu_alloc_initialized(&vm->user))
-		nvgpu_alloc_destroy(&vm->user);
-	if (nvgpu_alloc_initialized(&vm->user_lp))
-		nvgpu_alloc_destroy(&vm->user_lp);
+	struct vm_gk20a *vm = nvgpu_kzalloc(g, sizeof(*vm));
 
-	gk20a_vm_free_entries(vm, &vm->pdb, 0);
+	if (!vm)
+		return NULL;
+
+	if (__nvgpu_vm_init(&g->mm, vm, big_page_size, low_hole,
+			    kernel_reserved, aperture_size, big_pages,
+			    userspace_managed, name)) {
+		nvgpu_kfree(g, vm);
+		return NULL;
+	}
+
+	return vm;
 }
 
 /*
- * Cleanup the VM but don't nvgpu_kfree() on the vm pointer.
+ * Cleanup the VM!
  */
-void __nvgpu_vm_remove(struct vm_gk20a *vm)
+static void __nvgpu_vm_remove(struct vm_gk20a *vm)
 {
 	struct nvgpu_mapped_buf *mapped_buffer;
 	struct nvgpu_vm_area *vm_area, *vm_area_tmp;
@@ -518,7 +530,14 @@ void __nvgpu_vm_remove(struct vm_gk20a *vm)
 		nvgpu_kfree(vm->mm->g, vm_area);
 	}
 
-	nvgpu_deinit_vm(vm);
+	if (nvgpu_alloc_initialized(&vm->kernel))
+		nvgpu_alloc_destroy(&vm->kernel);
+	if (nvgpu_alloc_initialized(&vm->user))
+		nvgpu_alloc_destroy(&vm->user);
+	if (nvgpu_alloc_initialized(&vm->user_lp))
+		nvgpu_alloc_destroy(&vm->user_lp);
+
+	gk20a_vm_free_entries(vm, &vm->pdb, 0);
 
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	if (g->is_virtual)
@@ -526,34 +545,15 @@ void __nvgpu_vm_remove(struct vm_gk20a *vm)
 #endif
 
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
-}
 
-/*
- * Remove and nvgpu_kfree() the VM struct.
- */
-void nvgpu_vm_remove(struct vm_gk20a *vm)
-{
-	__nvgpu_vm_remove(vm);
-
-	nvgpu_kfree(vm->mm->g, vm);
-}
-
-/*
- * Note: this does not nvgpu_kfree() the vm. This might be a bug.
- */
-void nvgpu_vm_remove_inst(struct vm_gk20a *vm, struct nvgpu_mem *inst_block)
-{
-	struct gk20a *g = vm->mm->g;
-
-	gk20a_free_inst_block(g, inst_block);
-	__nvgpu_vm_remove(vm);
+	nvgpu_kfree(g, vm);
 }
 
 static void __nvgpu_vm_remove_kref(struct kref *ref)
 {
 	struct vm_gk20a *vm = container_of(ref, struct vm_gk20a, ref);
 
-	nvgpu_vm_remove(vm);
+	__nvgpu_vm_remove(vm);
 }
 
 void nvgpu_vm_get(struct vm_gk20a *vm)

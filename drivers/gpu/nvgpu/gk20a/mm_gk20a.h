@@ -78,8 +78,6 @@ struct pm_ctx_desc {
 	u32 pm_mode;
 };
 
-struct gk20a;
-
 struct compbit_store_desc {
 	struct nvgpu_mem mem;
 
@@ -191,19 +189,19 @@ struct mm_gk20a {
 
 	struct {
 		u32 aperture_size;
-		struct vm_gk20a vm;
+		struct vm_gk20a *vm;
 		struct nvgpu_mem inst_block;
 	} bar1;
 
 	struct {
 		u32 aperture_size;
-		struct vm_gk20a vm;
+		struct vm_gk20a *vm;
 		struct nvgpu_mem inst_block;
 	} bar2;
 
 	struct {
 		u32 aperture_size;
-		struct vm_gk20a vm;
+		struct vm_gk20a *vm;
 		struct nvgpu_mem inst_block;
 	} pmu;
 
@@ -213,16 +211,16 @@ struct mm_gk20a {
 	} hwpm;
 
 	struct {
-		struct vm_gk20a vm;
+		struct vm_gk20a *vm;
 		struct nvgpu_mem inst_block;
 	} perfbuf;
 
 	struct {
-		struct vm_gk20a vm;
+		struct vm_gk20a *vm;
 	} cde;
 
 	struct {
-		struct vm_gk20a vm;
+		struct vm_gk20a *vm;
 	} ce;
 
 	struct nvgpu_mutex l2_op_lock;

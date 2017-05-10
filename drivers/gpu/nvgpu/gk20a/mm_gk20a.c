@@ -465,8 +465,7 @@ static void gk20a_remove_mm_ce_support(struct mm_gk20a *mm)
 
 	mm->vidmem.ce_ctx_id = (u32)~0;
 
-	__nvgpu_vm_remove(&mm->ce.vm);
-
+	nvgpu_vm_put(mm->ce.vm);
 }
 
 static void gk20a_remove_mm_support(struct mm_gk20a *mm)
@@ -476,12 +475,15 @@ static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 	if (g->ops.mm.remove_bar2_vm)
 		g->ops.mm.remove_bar2_vm(g);
 
-	if (g->ops.mm.is_bar1_supported(g))
-		nvgpu_vm_remove_inst(&mm->bar1.vm, &mm->bar1.inst_block);
+	if (g->ops.mm.is_bar1_supported(g)) {
+		gk20a_free_inst_block(g, &mm->bar1.inst_block);
+		nvgpu_vm_put(mm->bar1.vm);
+	}
 
-	nvgpu_vm_remove_inst(&mm->pmu.vm, &mm->pmu.inst_block);
-	gk20a_free_inst_block(gk20a_from_mm(mm), &mm->hwpm.inst_block);
-	__nvgpu_vm_remove(&mm->cde.vm);
+	gk20a_free_inst_block(g, &mm->pmu.inst_block);
+	gk20a_free_inst_block(g, &mm->hwpm.inst_block);
+	nvgpu_vm_put(mm->pmu.vm);
+	nvgpu_vm_put(mm->cde.vm);
 
 	gk20a_semaphore_sea_destroy(g);
 	gk20a_vidmem_destroy(g);
@@ -2641,30 +2643,31 @@ u64 gk20a_mm_inst_block_addr(struct gk20a *g, struct nvgpu_mem *inst_block)
 static int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 {
 	int err;
-	struct vm_gk20a *vm = &mm->bar1.vm;
 	struct gk20a *g = gk20a_from_mm(mm);
 	struct nvgpu_mem *inst_block = &mm->bar1.inst_block;
 	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
 	mm->bar1.aperture_size = bar1_aperture_size_mb_gk20a() << 20;
 	gk20a_dbg_info("bar1 vm size = 0x%x", mm->bar1.aperture_size);
-	nvgpu_init_vm(mm, vm,
-		      big_page_size,
-		      SZ_4K,				/* Low hole */
-		      mm->bar1.aperture_size - SZ_4K,	/* Kernel reserved. */
-		      mm->bar1.aperture_size,
-		      true, false,
-		      "bar1");
+	mm->bar1.vm = nvgpu_vm_init(g,
+				    big_page_size,
+				    SZ_4K,
+				    mm->bar1.aperture_size - SZ_4K,
+				    mm->bar1.aperture_size,
+				    true, false,
+				    "bar1");
+	if (!mm->bar1.vm)
+		return -ENOMEM;
 
 	err = gk20a_alloc_inst_block(g, inst_block);
 	if (err)
-		goto clean_up_va;
-	g->ops.mm.init_inst_block(inst_block, vm, big_page_size);
+		goto clean_up_vm;
+	g->ops.mm.init_inst_block(inst_block, mm->bar1.vm, big_page_size);
 
 	return 0;
 
-clean_up_va:
-	nvgpu_deinit_vm(vm);
+clean_up_vm:
+	nvgpu_vm_put(mm->bar1.vm);
 	return err;
 }
 
@@ -2672,7 +2675,6 @@ clean_up_va:
 static int gk20a_init_system_vm(struct mm_gk20a *mm)
 {
 	int err;
-	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct gk20a *g = gk20a_from_mm(mm);
 	struct nvgpu_mem *inst_block = &mm->pmu.inst_block;
 	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
@@ -2687,65 +2689,70 @@ static int gk20a_init_system_vm(struct mm_gk20a *mm)
 	mm->pmu.aperture_size = GK20A_PMU_VA_SIZE;
 	gk20a_dbg_info("pmu vm size = 0x%x", mm->pmu.aperture_size);
 
-	nvgpu_init_vm(mm, vm, big_page_size,
-		      low_hole,
-		      aperture_size - low_hole,
-		      aperture_size,
-		      true,
-		      false,
-		      "system");
+	mm->pmu.vm = nvgpu_vm_init(g, big_page_size,
+				   low_hole,
+				   aperture_size - low_hole,
+				   aperture_size,
+				   true,
+				   false,
+				   "system");
+	if (!mm->pmu.vm)
+		return -ENOMEM;
 
 	err = gk20a_alloc_inst_block(g, inst_block);
 	if (err)
-		goto clean_up_va;
-	g->ops.mm.init_inst_block(inst_block, vm, big_page_size);
+		goto clean_up_vm;
+	g->ops.mm.init_inst_block(inst_block, mm->pmu.vm, big_page_size);
 
 	return 0;
 
-clean_up_va:
-	nvgpu_deinit_vm(vm);
+clean_up_vm:
+	nvgpu_vm_put(mm->pmu.vm);
 	return err;
 }
 
 static int gk20a_init_hwpm(struct mm_gk20a *mm)
 {
 	int err;
-	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct gk20a *g = gk20a_from_mm(mm);
 	struct nvgpu_mem *inst_block = &mm->hwpm.inst_block;
 
 	err = gk20a_alloc_inst_block(g, inst_block);
 	if (err)
 		return err;
-	g->ops.mm.init_inst_block(inst_block, vm, 0);
+	g->ops.mm.init_inst_block(inst_block, mm->pmu.vm, 0);
 
 	return 0;
 }
 
 static int gk20a_init_cde_vm(struct mm_gk20a *mm)
 {
-	struct vm_gk20a *vm = &mm->cde.vm;
 	struct gk20a *g = gk20a_from_mm(mm);
 	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
-	return nvgpu_init_vm(mm, vm, big_page_size,
-			big_page_size << 10,
-			NV_MM_DEFAULT_KERNEL_SIZE,
-			NV_MM_DEFAULT_KERNEL_SIZE + NV_MM_DEFAULT_USER_SIZE,
-			false, false, "cde");
+	mm->cde.vm = nvgpu_vm_init(g, big_page_size,
+				   big_page_size << 10,
+				   NV_MM_DEFAULT_KERNEL_SIZE,
+				   NV_MM_DEFAULT_KERNEL_SIZE + NV_MM_DEFAULT_USER_SIZE,
+				   false, false, "cde");
+	if (!mm->cde.vm)
+		return -ENOMEM;
+	return 0;
 }
 
 static int gk20a_init_ce_vm(struct mm_gk20a *mm)
 {
-	struct vm_gk20a *vm = &mm->ce.vm;
 	struct gk20a *g = gk20a_from_mm(mm);
 	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
 
-	return nvgpu_init_vm(mm, vm, big_page_size,
-			big_page_size << 10,
-			NV_MM_DEFAULT_KERNEL_SIZE,
-			NV_MM_DEFAULT_KERNEL_SIZE + NV_MM_DEFAULT_USER_SIZE,
-			false, false, "ce");
+	mm->ce.vm = nvgpu_vm_init(g, big_page_size,
+				  big_page_size << 10,
+				  NV_MM_DEFAULT_KERNEL_SIZE,
+				  NV_MM_DEFAULT_KERNEL_SIZE + NV_MM_DEFAULT_USER_SIZE,
+				  false, false, "ce");
+	if (!mm->ce.vm)
+		return -ENOMEM;
+	return 0;
 }
 
 void gk20a_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *inst_block,

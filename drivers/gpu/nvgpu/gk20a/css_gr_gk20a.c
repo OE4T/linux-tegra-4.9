@@ -146,7 +146,7 @@ static int css_hw_enable_snapshot(struct channel_gk20a *ch,
 	if (snapshot_size < CSS_MIN_HW_SNAPSHOT_SIZE)
 		snapshot_size = CSS_MIN_HW_SNAPSHOT_SIZE;
 
-	ret = nvgpu_dma_alloc_map_sys(&g->mm.pmu.vm, snapshot_size,
+	ret = nvgpu_dma_alloc_map_sys(g->mm.pmu.vm, snapshot_size,
 							&data->hw_memdesc);
 	if (ret)
 		return ret;
@@ -195,7 +195,7 @@ static int css_hw_enable_snapshot(struct channel_gk20a *ch,
 
 failed_allocation:
 	if (data->hw_memdesc.size) {
-		nvgpu_dma_unmap_free(&g->mm.pmu.vm, &data->hw_memdesc);
+		nvgpu_dma_unmap_free(g->mm.pmu.vm, &data->hw_memdesc);
 		memset(&data->hw_memdesc, 0, sizeof(data->hw_memdesc));
 	}
 	data->hw_snapshot = NULL;
@@ -223,7 +223,7 @@ static void css_hw_disable_snapshot(struct gr_gk20a *gr)
 			perf_pmasys_mem_block_valid_false_f() |
 			perf_pmasys_mem_block_target_f(0));
 
-	nvgpu_dma_unmap_free(&g->mm.pmu.vm, &data->hw_memdesc);
+	nvgpu_dma_unmap_free(g->mm.pmu.vm, &data->hw_memdesc);
 	memset(&data->hw_memdesc, 0, sizeof(data->hw_memdesc));
 	data->hw_snapshot = NULL;
 

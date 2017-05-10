@@ -2191,7 +2191,7 @@ static void gr_gk20a_start_falcon_ucode(struct gk20a *g)
 static int gr_gk20a_init_ctxsw_ucode_vaspace(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = &mm->pmu.vm;
+	struct vm_gk20a *vm = mm->pmu.vm;
 	struct gk20a_ctxsw_ucode_info *ucode_info = &g->ctxsw_ucode_info;
 	int err;
 
@@ -2265,7 +2265,7 @@ static int gr_gk20a_copy_ctxsw_ucode_segments(
 int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = &mm->pmu.vm;
+	struct vm_gk20a *vm = mm->pmu.vm;
 	struct gk20a_ctxsw_bootloader_desc *fecs_boot_desc;
 	struct gk20a_ctxsw_bootloader_desc *gpccs_boot_desc;
 	struct nvgpu_firmware *fecs_fw;
@@ -5195,7 +5195,7 @@ static int gk20a_init_gr_bind_fecs_elpg(struct gk20a *g)
 {
 	struct nvgpu_pmu *pmu = &g->pmu;
 	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = &mm->pmu.vm;
+	struct vm_gk20a *vm = mm->pmu.vm;
 	int err = 0;
 
 	u32 size;

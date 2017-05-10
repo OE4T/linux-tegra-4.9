@@ -1465,6 +1465,9 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 
 	trace_display_mode(dc, &dc->mode);
 	tegra_dc_ext_process_modechange(dc->ndev->id);
+
+	tegra_dc_client_handle_event(dc, NOTIFY_MODESET_EVENT);
+
 	return 0;
 }
 

@@ -34,7 +34,7 @@ static bool gv11b_is_pmu_supported(struct gk20a *g)
 	return true;
 }
 
-static int gv11b_pmu_bootstrap(struct pmu_gk20a *pmu)
+static int gv11b_pmu_bootstrap(struct nvgpu_pmu *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct mm_gk20a *mm = &g->mm;

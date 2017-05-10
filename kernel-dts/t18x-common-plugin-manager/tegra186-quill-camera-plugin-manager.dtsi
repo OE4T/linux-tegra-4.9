@@ -1056,7 +1056,7 @@
 						label = "cam0-rst", "cam0-pwdn",
 							"cam1-rst", "cam1-pwdn";
 						output-low;
-						status = "okay";
+						status = "disabled";
 					};
 					camera-control-output-high {
 						status = "disabled";
@@ -1069,6 +1069,14 @@
 					camera-control-input {
 						status = "disabled";
 					};
+					camera-control-output-low {
+						status = "okay";
+					};
+
+					camera-control-output-high {
+						status = "okay";
+					};
+
 				};
 			};
 			/* TCA6408 default */

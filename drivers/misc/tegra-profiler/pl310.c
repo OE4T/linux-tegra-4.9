@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/pl310.c
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -230,8 +230,11 @@ l2x0_events_read_emulate(int cpuid, struct event_data *events, int max_events)
 	return 1;
 }
 
-static int __maybe_unused l2x0_set_events(int cpuid, int *events, int size)
+static int __maybe_unused
+l2x0_set_events(int cpuid, struct quadd_event *events, int size)
 {
+	unsigned int id, type;
+
 	if (!events || size == 0) {
 		l2x0_ctx.l2x0_event_type = -1;
 		l2x0_ctx.event_id = -1;
@@ -243,35 +246,50 @@ static int __maybe_unused l2x0_set_events(int cpuid, int *events, int size)
 		return -ENOSPC;
 	}
 
-	switch (*events) {
-	case QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES:
+	type = events->type;
+	id = events->id;
+
+	if (type != QUADD_EVENT_TYPE_HARDWARE)
+		return -EINVAL;
+
+	switch (id) {
+	case QUADD_EVENT_HW_L2_DCACHE_READ_MISSES:
 		l2x0_ctx.l2x0_event_type = QUADD_L2X0_TYPE_DATA_READ_MISSES;
 		break;
-	case QUADD_EVENT_TYPE_L2_DCACHE_WRITE_MISSES:
+	case QUADD_EVENT_HW_L2_DCACHE_WRITE_MISSES:
 		l2x0_ctx.l2x0_event_type = QUADD_L2X0_TYPE_DATA_WRITE_MISSES;
 		break;
-	case QUADD_EVENT_TYPE_L2_ICACHE_MISSES:
+	case QUADD_EVENT_HW_L2_ICACHE_MISSES:
 		l2x0_ctx.l2x0_event_type = QUADD_L2X0_TYPE_INSTRUCTION_MISSES;
 		break;
 	default:
-		pr_err("Error event: %s\n", quadd_get_event_str(*events));
+		pr_err("Error event: %s\n", quadd_get_hw_event_str(*events));
 		return 1;
 	}
 	l2x0_ctx.event_id = *events;
 
 	pr_info("Event has been added: id/l2x0: %s/%#x\n",
-		quadd_get_event_str(*events), l2x0_ctx.l2x0_event_type);
+		quadd_get_hw_event_str(id), l2x0_ctx.l2x0_event_type);
 	return 0;
 }
 
-static int get_supported_events(int cpuid, int *events, int max_events)
+static int
+get_supported_events(int cpuid, int *events,
+		     int max_events, unsigned int *raw_event_mask)
 {
 	if (max_events < 3)
 		return 0;
 
-	events[0] = QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES;
-	events[1] = QUADD_EVENT_TYPE_L2_DCACHE_WRITE_MISSES;
-	events[2] = QUADD_EVENT_TYPE_L2_ICACHE_MISSES;
+	events[0].type = QUADD_EVENT_TYPE_HARDWARE;
+	events[0].id = QUADD_EVENT_HW_L2_DCACHE_READ_MISSES;
+
+	events[1].type = QUADD_EVENT_TYPE_HARDWARE;
+	events[1].id = QUADD_EVENT_HW_L2_DCACHE_WRITE_MISSES;
+
+	events[2].type = QUADD_EVENT_TYPE_HARDWARE;
+	events[2].id = QUADD_EVENT_HW_L2_ICACHE_MISSES;
+
+	*raw_event_mask = 0;
 
 	return 3;
 }

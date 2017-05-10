@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/quadd_proc.c
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -67,29 +67,8 @@ static int show_capabilities(struct seq_file *f, void *offset)
 		   YES_NO(cap->tegra_lp_cluster));
 	seq_printf(f, "power rate samples:                    %s\n",
 		   YES_NO(cap->power_rate));
-
-	seq_printf(f, "support polling mode:                  %s\n",
-		   YES_NO(cap->blocked_read));
-	seq_printf(f, "backtrace from the kernel ctx:         %s\n",
-		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_BT_KERNEL_CTX));
-	seq_printf(f, "send mmap regions at the start:        %s\n",
-		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_GET_MMAP));
-	seq_printf(f, "group samples:                         %s\n",
-		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_GROUP_SAMPLES));
-	seq_printf(f, "unwinding based on ex-handling tables: %s\n",
-		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_BT_UNWIND_TABLES));
-	seq_printf(f, "support AArch64 architecture:          %s\n",
-		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_SUPPORT_AARCH64));
-	seq_printf(f, "support special architecture mappings: %s\n",
-		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_SPECIAL_ARCH_MMAP));
-	seq_printf(f, "support mixed unwinding mode:          %s\n",
-		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_UNWIND_MIXED));
-	seq_printf(f, "information about unwind entry:        %s\n",
-		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_UNW_ENTRY_TYPE));
 	seq_printf(f, "arch timer is available:               %s\n",
 		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_ARCH_TIMER));
-	seq_printf(f, "ring buffer mmap operation:            %s\n",
-		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_RB_MMAP_OP));
 
 	seq_puts(f, "\n");
 
@@ -142,6 +121,9 @@ static int show_capabilities(struct seq_file *f, void *offset)
 				   YES_NO(event->l2_dcache_write_misses));
 			seq_printf(f, "  l2_icache_misses:               %s\n",
 				   YES_NO(event->l2_icache_misses));
+
+			seq_printf(f, "raw_event_mask:                   %#x\n",
+				   event->raw_event_mask);
 		}
 	}
 

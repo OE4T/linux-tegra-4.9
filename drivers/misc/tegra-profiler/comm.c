@@ -135,6 +135,9 @@ write_sample(struct quadd_ring_buffer *rb,
 		rb_hdr->max_fill_count = c;
 	}
 
+	/* Use smp_store_release() to update circle buffer write pointers to
+	 * ensure the data is stored before we update write pointer.
+	 */
 	smp_store_release(&rb_hdr->pos_write, hdr.pos_write);
 
 	return len;

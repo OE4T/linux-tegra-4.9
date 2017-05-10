@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/arm_pmu.h
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,11 +18,12 @@
 #define __ARM_PMU_H
 
 #include <linux/list.h>
+#include <linux/tegra_profiler.h>
 
 #define QUADD_MAX_PMU_COUNTERS	32
 
 struct quadd_pmu_event_info {
-	int quadd_event_id;
+	struct quadd_event event;
 	int hw_value;
 
 	struct list_head list;
@@ -41,11 +42,19 @@ struct quadd_pmu_ctx {
 	struct quadd_arch_info arch;
 
 	u32 counters_mask;
+	u32 raw_event_mask;
 
 	struct list_head used_events;
 
 	int l1_cache_rw;
 	unsigned int *current_map;
 };
+
+static inline int
+is_cpu_cycles(const struct quadd_event *event)
+{
+	return event->type == QUADD_EVENT_TYPE_HARDWARE &&
+	       event->id == QUADD_EVENT_HW_CPU_CYCLES;
+}
 
 #endif	/* __ARM_PMU_H */

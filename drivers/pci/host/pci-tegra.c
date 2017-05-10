@@ -5090,9 +5090,11 @@ static int __init tegra_pcie_init_driver(void)
 {
 	int ret;
 
+#ifdef CONFIG_TEGRA_MC_DOMAINS
 	ret = tegra_pd_add_domain(tegra_pcie_domain_match, &pcie_domain.tpd.gpd);
 	if (ret)
 		return ret;
+#endif
 
 	return platform_driver_register(&tegra_pcie_driver);
 }
@@ -5100,7 +5102,9 @@ static int __init tegra_pcie_init_driver(void)
 static void __exit tegra_pcie_exit_driver(void)
 {
 	platform_driver_unregister(&tegra_pcie_driver);
+#ifdef CONFIG_TEGRA_MC_DOMAINS
 	pm_genpd_remove(&pcie_domain.tpd.gpd);
+#endif
 }
 
 module_init(tegra_pcie_init_driver);

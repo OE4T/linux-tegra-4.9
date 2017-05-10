@@ -223,12 +223,8 @@ static unsigned int sugov_next_freq_shared(struct sugov_cpu *sg_cpu,
 {
 	struct sugov_policy *sg_policy = sg_cpu->sg_policy;
 	struct cpufreq_policy *policy = sg_policy->policy;
-	unsigned int max_f = policy->cpuinfo.max_freq;
 	u64 last_freq_update_time = sg_policy->last_freq_update_time;
 	unsigned int j;
-
-	if (flags & SCHED_CPUFREQ_RT_DL)
-		return max_f;
 
 	sugov_iowait_boost(sg_cpu, &util, &max);
 
@@ -253,8 +249,6 @@ static unsigned int sugov_next_freq_shared(struct sugov_cpu *sg_cpu,
 			j_sg_cpu->iowait_boost = 0;
 			continue;
 		}
-		if (j_sg_cpu->flags & SCHED_CPUFREQ_RT_DL)
-			return max_f;
 
 		j_util = j_sg_cpu->util;
 		j_max = j_sg_cpu->max;

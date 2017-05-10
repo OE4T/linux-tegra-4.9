@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/main.c
  *
- * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -172,16 +172,26 @@ static void stop(void)
 	}
 }
 
-static inline int is_event_supported(struct source_info *si, int event)
+static inline int
+is_event_supported(struct source_info *si, const struct quadd_event *event)
 {
-	int i;
-	int nr = si->nr_supported_events;
-	int *events = si->supported_events;
+	unsigned int type, id;
+	int i, nr = si->nr_supp_events;
+	struct quadd_event *events = si->supp_events;
 
-	for (i = 0; i < nr; i++) {
-		if (event == events[i])
-			return 1;
+	type = event->type;
+	id = event->id;
+
+	if (type == QUADD_EVENT_TYPE_RAW)
+		return (id & ~si->raw_event_mask) == 0;
+
+	if (type == QUADD_EVENT_TYPE_HARDWARE) {
+		for (i = 0; i < nr; i++) {
+			if (id == events[i].id)
+				return 1;
+		}
 	}
+
 	return 0;
 }
 
@@ -194,34 +204,36 @@ validate_freq(unsigned int freq)
 static int
 set_parameters_for_cpu(struct quadd_pmu_setup_for_cpu *params)
 {
-	int i;
-	int err;
-	int nr_pmu = 0;
+	int i, err, nr_pmu = 0;
 	int cpuid = params->cpuid;
 
 	struct source_info *pmu_info = &per_cpu(ctx_pmu_info, cpuid);
-	int pmu_events_id[QUADD_MAX_COUNTERS];
+	struct quadd_event pmu_events[QUADD_MAX_COUNTERS];
 
 	if (!pmu_info->is_present)
 		return -ENODEV;
 
-	for (i = 0; i < params->nr_events; i++) {
-		int event = params->events[i];
+	if (pmu_info->nr_supp_events == 0)
+		return -ENODEV;
 
-		if (pmu_info->nr_supported_events > 0
-			&& is_event_supported(pmu_info, event)) {
-			pmu_events_id[nr_pmu++] = event;
-			pr_info("PMU active event for cpu %d: %s\n",
-					cpuid,
-					quadd_get_event_str(event));
+	for (i = 0; i < params->nr_events; i++) {
+		struct quadd_event *event = &params->events[i];
+
+		if (is_event_supported(pmu_info, event)) {
+			pmu_events[nr_pmu++] = *event;
+			pr_info("[%d] PMU active event: %#x (%s)\n",
+				cpuid, event->id,
+				event->type == QUADD_EVENT_TYPE_RAW ?
+				"raw" : "hw");
 		} else {
-			pr_err("Bad event: %s\n",
-			       quadd_get_event_str(event));
+			pr_err("[%d] Bad event: %#x (%s)\n", cpuid, event->id,
+			       event->type == QUADD_EVENT_TYPE_RAW ?
+			       "raw" : "hw");
 			return -EINVAL;
 		}
 	}
 
-	err = ctx.pmu->set_events(cpuid, pmu_events_id, nr_pmu);
+	err = ctx.pmu->set_events(cpuid, pmu_events, nr_pmu);
 	if (err) {
 		pr_err("PMU set parameters: error\n");
 		return err;
@@ -236,7 +248,7 @@ set_parameters(struct quadd_parameters *p)
 {
 	int i, err, uid = 0;
 	uid_t task_uid, current_uid;
-	int pl310_events_id;
+	struct quadd_event *pl310_events;
 	int nr_pl310 = 0;
 	struct task_struct *task;
 	u64 *low_addr_p;
@@ -291,15 +303,22 @@ set_parameters(struct quadd_parameters *p)
 	}
 
 	for (i = 0; i < p->nr_events; i++) {
-		int event = p->events[i];
+		unsigned int type, id;
+		struct quadd_event *event = &p->events[i];
+
+		type = event->type;
+		id = event->id;
+
+		if (type != QUADD_EVENT_TYPE_HARDWARE)
+			return -EINVAL;
 
 		if (ctx.pl310 &&
-		    ctx.pl310_info.nr_supported_events > 0 &&
+		    ctx.pl310_info.nr_supp_events > 0 &&
 		    is_event_supported(&ctx.pl310_info, event)) {
-			pl310_events_id = p->events[i];
+			pl310_events = event;
 
 			pr_info("PL310 active event: %s\n",
-				quadd_get_event_str(event));
+				quadd_get_hw_event_str(id));
 
 			if (nr_pl310++ > 1) {
 				pr_err("error: multiply pl310 events\n");
@@ -307,7 +326,7 @@ set_parameters(struct quadd_parameters *p)
 			}
 		} else {
 			pr_err("Bad event: %s\n",
-			       quadd_get_event_str(event));
+			       quadd_get_hw_event_str(id));
 			return -EINVAL;
 		}
 	}
@@ -316,7 +335,7 @@ set_parameters(struct quadd_parameters *p)
 		int cpuid = 0; /* We don't need cpuid for pl310.  */
 
 		if (nr_pl310 == 1) {
-			err = ctx.pl310->set_events(cpuid, &pl310_events_id, 1);
+			err = ctx.pl310->set_events(cpuid, pl310_events, 1);
 			if (err) {
 				pr_info("pl310 set_parameters: error\n");
 				return err;
@@ -344,16 +363,21 @@ set_parameters(struct quadd_parameters *p)
 static void
 get_capabilities_for_cpu(int cpuid, struct quadd_comm_cap_for_cpu *cap)
 {
-	int i;
+	int i, id;
 	struct quadd_events_cap *events_cap;
 	struct source_info *s = &per_cpu(ctx_pmu_info, cpuid);
 
 	if (!s->is_present)
 		return;
 
+	cap->cpuid = cpuid;
+	cap->l2_cache = 0;
+	cap->l2_multiple_events = 0;
+
 	events_cap = &cap->events_cap;
 
-	cap->cpuid = cpuid;
+	events_cap->raw_event_mask = s->raw_event_mask;
+
 	events_cap->cpu_cycles = 0;
 	events_cap->l1_dcache_read_misses = 0;
 	events_cap->l1_dcache_write_misses = 0;
@@ -368,51 +392,52 @@ get_capabilities_for_cpu(int cpuid, struct quadd_comm_cap_for_cpu *cap)
 	events_cap->l2_dcache_write_misses = 0;
 	events_cap->l2_icache_misses = 0;
 
-	for (i = 0; i < s->nr_supported_events; i++) {
-		int event = s->supported_events[i];
+	for (i = 0; i < s->nr_supp_events; i++) {
+		struct quadd_event *event = &s->supp_events[i];
 
-		if (event == QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES ||
-		    event == QUADD_EVENT_TYPE_L2_DCACHE_WRITE_MISSES ||
-		    event == QUADD_EVENT_TYPE_L2_ICACHE_MISSES) {
+		id = event->id;
+
+		if (id == QUADD_EVENT_HW_L2_DCACHE_READ_MISSES ||
+		    id == QUADD_EVENT_HW_L2_DCACHE_WRITE_MISSES ||
+		    id == QUADD_EVENT_HW_L2_ICACHE_MISSES) {
 			cap->l2_cache = 1;
 			cap->l2_multiple_events = 1;
 		}
 
-
-		switch (event) {
-		case QUADD_EVENT_TYPE_CPU_CYCLES:
+		switch (id) {
+		case QUADD_EVENT_HW_CPU_CYCLES:
 			events_cap->cpu_cycles = 1;
 			break;
-		case QUADD_EVENT_TYPE_INSTRUCTIONS:
+		case QUADD_EVENT_HW_INSTRUCTIONS:
 			events_cap->instructions = 1;
 			break;
-		case QUADD_EVENT_TYPE_BRANCH_INSTRUCTIONS:
+		case QUADD_EVENT_HW_BRANCH_INSTRUCTIONS:
 			events_cap->branch_instructions = 1;
 			break;
-		case QUADD_EVENT_TYPE_BRANCH_MISSES:
+		case QUADD_EVENT_HW_BRANCH_MISSES:
 			events_cap->branch_misses = 1;
 			break;
-		case QUADD_EVENT_TYPE_BUS_CYCLES:
+		case QUADD_EVENT_HW_BUS_CYCLES:
 			events_cap->bus_cycles = 1;
 			break;
 
-		case QUADD_EVENT_TYPE_L1_DCACHE_READ_MISSES:
+		case QUADD_EVENT_HW_L1_DCACHE_READ_MISSES:
 			events_cap->l1_dcache_read_misses = 1;
 			break;
-		case QUADD_EVENT_TYPE_L1_DCACHE_WRITE_MISSES:
+		case QUADD_EVENT_HW_L1_DCACHE_WRITE_MISSES:
 			events_cap->l1_dcache_write_misses = 1;
 			break;
-		case QUADD_EVENT_TYPE_L1_ICACHE_MISSES:
+		case QUADD_EVENT_HW_L1_ICACHE_MISSES:
 			events_cap->l1_icache_misses = 1;
 			break;
 
-		case QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES:
+		case QUADD_EVENT_HW_L2_DCACHE_READ_MISSES:
 			events_cap->l2_dcache_read_misses = 1;
 			break;
-		case QUADD_EVENT_TYPE_L2_DCACHE_WRITE_MISSES:
+		case QUADD_EVENT_HW_L2_DCACHE_WRITE_MISSES:
 			events_cap->l2_dcache_write_misses = 1;
 			break;
-		case QUADD_EVENT_TYPE_L2_ICACHE_MISSES:
+		case QUADD_EVENT_HW_L2_ICACHE_MISSES:
 			events_cap->l2_icache_misses = 1;
 			break;
 
@@ -475,19 +500,23 @@ get_capabilities(struct quadd_comm_cap *cap)
 	events_cap->l2_icache_misses = 0;
 
 	if (ctx.pl310) {
+		unsigned int type, id;
 		struct source_info *s = &ctx.pl310_info;
 
-		for (i = 0; i < s->nr_supported_events; i++) {
-			int event = s->supported_events[i];
+		for (i = 0; i < s->nr_supp_events; i++) {
+			struct quadd_event *event = &s->supp_events[i];
 
-			switch (event) {
-			case QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES:
+			type = event->type;
+			id = event->id;
+
+			switch (id) {
+			case QUADD_EVENT_HW_L2_DCACHE_READ_MISSES:
 				events_cap->l2_dcache_read_misses = 1;
 				break;
-			case QUADD_EVENT_TYPE_L2_DCACHE_WRITE_MISSES:
+			case QUADD_EVENT_HW_L2_DCACHE_WRITE_MISSES:
 				events_cap->l2_dcache_write_misses = 1;
 				break;
-			case QUADD_EVENT_TYPE_L2_ICACHE_MISSES:
+			case QUADD_EVENT_HW_L2_ICACHE_MISSES:
 				events_cap->l2_icache_misses = 1;
 				break;
 
@@ -573,7 +602,8 @@ static struct quadd_comm_control_interface control = {
 static int __init quadd_module_init(void)
 {
 	int i, nr_events, err;
-	int *events;
+	unsigned int raw_event_mask;
+	struct quadd_event *events;
 	int cpuid;
 
 	pr_info("Branch: %s\n", QUADD_MODULE_BRANCH);
@@ -620,19 +650,21 @@ static int __init quadd_module_init(void)
 		pmu_info = &per_cpu(ctx_pmu_info, cpuid);
 		pmu_info->is_present = 1;
 
-		events = pmu_info->supported_events;
+		events = pmu_info->supp_events;
 		nr_events =
 		    ctx.pmu->get_supported_events(cpuid, events,
-						  QUADD_MAX_COUNTERS);
+						  QUADD_MAX_COUNTERS,
+						  &raw_event_mask);
 
-		pmu_info->nr_supported_events = nr_events;
+		pmu_info->nr_supp_events = nr_events;
+		pmu_info->raw_event_mask = raw_event_mask;
 
-		pr_debug("CPU: %d PMU: amount of events: %d\n",
-			 cpuid, nr_events);
+		pr_debug("CPU: %d PMU: amount of events: %d, raw mask: %#x\n",
+			 cpuid, nr_events, raw_event_mask);
 
 		for (i = 0; i < nr_events; i++)
 			pr_debug("CPU: %d PMU event: %s\n", cpuid,
-				 quadd_get_event_str(events[i]));
+				 quadd_get_hw_event_str(events[i].id));
 	}
 
 #ifdef CONFIG_CACHE_L2X0
@@ -641,17 +673,18 @@ static int __init quadd_module_init(void)
 	ctx.pl310 = NULL;
 #endif
 	if (ctx.pl310) {
-		events = ctx.pl310_info.supported_events;
+		events = ctx.pl310_info.supp_events;
 		nr_events = ctx.pl310->get_supported_events(0, events,
-							    QUADD_MAX_COUNTERS);
-		ctx.pl310_info.nr_supported_events = nr_events;
+							    QUADD_MAX_COUNTERS,
+							    &raw_event_mask);
+		ctx.pl310_info.nr_supp_events = nr_events;
 
 		pr_info("pl310 success, amount of events: %d\n",
 			nr_events);
 
 		for (i = 0; i < nr_events; i++)
 			pr_info("pl310 event: %s\n",
-				quadd_get_event_str(events[i]));
+				quadd_get_hw_event_str(events[i].id));
 	} else {
 		pr_debug("PL310 not found\n");
 	}

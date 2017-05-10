@@ -52,80 +52,80 @@ static DEFINE_PER_CPU(struct quadd_pmu_info, cpu_pmu_info);
 static DEFINE_PER_CPU(struct quadd_pmu_ctx, pmu_ctx);
 
 static unsigned int
-quadd_armv8_pmuv3_arm_events_map[QUADD_EVENT_TYPE_MAX] = {
-	[QUADD_EVENT_TYPE_INSTRUCTIONS] =
+quadd_armv8_pmuv3_arm_events_map[QUADD_EVENT_HW_MAX] = {
+	[QUADD_EVENT_HW_INSTRUCTIONS] =
 		QUADD_ARMV8_HW_EVENT_INSTR_EXECUTED,
-	[QUADD_EVENT_TYPE_BRANCH_INSTRUCTIONS] =
+	[QUADD_EVENT_HW_BRANCH_INSTRUCTIONS] =
 		QUADD_ARMV8_UNSUPPORTED_EVENT,
-	[QUADD_EVENT_TYPE_BRANCH_MISSES] =
+	[QUADD_EVENT_HW_BRANCH_MISSES] =
 		QUADD_ARMV8_HW_EVENT_PC_BRANCH_MIS_PRED,
-	[QUADD_EVENT_TYPE_BUS_CYCLES] =
+	[QUADD_EVENT_HW_BUS_CYCLES] =
 		QUADD_ARMV8_UNSUPPORTED_EVENT,
 
-	[QUADD_EVENT_TYPE_L1_DCACHE_READ_MISSES] =
+	[QUADD_EVENT_HW_L1_DCACHE_READ_MISSES] =
 		QUADD_ARMV8_HW_EVENT_L1_DCACHE_REFILL,
-	[QUADD_EVENT_TYPE_L1_DCACHE_WRITE_MISSES] =
+	[QUADD_EVENT_HW_L1_DCACHE_WRITE_MISSES] =
 		QUADD_ARMV8_HW_EVENT_L1_DCACHE_REFILL,
-	[QUADD_EVENT_TYPE_L1_ICACHE_MISSES] =
+	[QUADD_EVENT_HW_L1_ICACHE_MISSES] =
 		QUADD_ARMV8_HW_EVENT_L1_ICACHE_REFILL,
 
-	[QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES] =
+	[QUADD_EVENT_HW_L2_DCACHE_READ_MISSES] =
 		QUADD_ARMV8_HW_EVENT_L2_CACHE_REFILL,
-	[QUADD_EVENT_TYPE_L2_DCACHE_WRITE_MISSES] =
+	[QUADD_EVENT_HW_L2_DCACHE_WRITE_MISSES] =
 		QUADD_ARMV8_HW_EVENT_L2_CACHE_REFILL,
-	[QUADD_EVENT_TYPE_L2_ICACHE_MISSES] =
+	[QUADD_EVENT_HW_L2_ICACHE_MISSES] =
 		QUADD_ARMV8_UNSUPPORTED_EVENT,
 };
 
 static unsigned int
-quadd_armv8_pmuv3_a57_events_map[QUADD_EVENT_TYPE_MAX] = {
-	[QUADD_EVENT_TYPE_INSTRUCTIONS] =
+quadd_armv8_pmuv3_a57_events_map[QUADD_EVENT_HW_MAX] = {
+	[QUADD_EVENT_HW_INSTRUCTIONS] =
 		QUADD_ARMV8_HW_EVENT_INSTR_EXECUTED,
-	[QUADD_EVENT_TYPE_BRANCH_INSTRUCTIONS] =
+	[QUADD_EVENT_HW_BRANCH_INSTRUCTIONS] =
 		QUADD_ARMV8_UNSUPPORTED_EVENT,
-	[QUADD_EVENT_TYPE_BRANCH_MISSES] =
+	[QUADD_EVENT_HW_BRANCH_MISSES] =
 		QUADD_ARMV8_HW_EVENT_PC_BRANCH_MIS_PRED,
-	[QUADD_EVENT_TYPE_BUS_CYCLES] =
+	[QUADD_EVENT_HW_BUS_CYCLES] =
 		QUADD_ARMV8_UNSUPPORTED_EVENT,
 
-	[QUADD_EVENT_TYPE_L1_DCACHE_READ_MISSES] =
+	[QUADD_EVENT_HW_L1_DCACHE_READ_MISSES] =
 		QUADD_ARMV8_A57_HW_EVENT_L1D_CACHE_REFILL_LD,
-	[QUADD_EVENT_TYPE_L1_DCACHE_WRITE_MISSES] =
+	[QUADD_EVENT_HW_L1_DCACHE_WRITE_MISSES] =
 		QUADD_ARMV8_A57_HW_EVENT_L1D_CACHE_REFILL_ST,
-	[QUADD_EVENT_TYPE_L1_ICACHE_MISSES] =
+	[QUADD_EVENT_HW_L1_ICACHE_MISSES] =
 		QUADD_ARMV8_HW_EVENT_L1_ICACHE_REFILL,
 
-	[QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES] =
+	[QUADD_EVENT_HW_L2_DCACHE_READ_MISSES] =
 		QUADD_ARMV8_A57_HW_EVENT_L2D_CACHE_REFILL_LD,
-	[QUADD_EVENT_TYPE_L2_DCACHE_WRITE_MISSES] =
+	[QUADD_EVENT_HW_L2_DCACHE_WRITE_MISSES] =
 		QUADD_ARMV8_A57_HW_EVENT_L2D_CACHE_REFILL_ST,
-	[QUADD_EVENT_TYPE_L2_ICACHE_MISSES] =
+	[QUADD_EVENT_HW_L2_ICACHE_MISSES] =
 		QUADD_ARMV8_UNSUPPORTED_EVENT,
 };
 
 static unsigned
-quadd_armv8_pmuv3_denver_events_map[QUADD_EVENT_TYPE_MAX] = {
-	[QUADD_EVENT_TYPE_INSTRUCTIONS] =
+quadd_armv8_pmuv3_denver_events_map[QUADD_EVENT_HW_MAX] = {
+	[QUADD_EVENT_HW_INSTRUCTIONS] =
 		QUADD_ARMV8_HW_EVENT_INSTR_EXECUTED,
-	[QUADD_EVENT_TYPE_BRANCH_INSTRUCTIONS] =
+	[QUADD_EVENT_HW_BRANCH_INSTRUCTIONS] =
 		QUADD_ARMV8_UNSUPPORTED_EVENT,
-	[QUADD_EVENT_TYPE_BRANCH_MISSES] =
+	[QUADD_EVENT_HW_BRANCH_MISSES] =
 		QUADD_ARMV8_HW_EVENT_PC_BRANCH_MIS_PRED,
-	[QUADD_EVENT_TYPE_BUS_CYCLES] =
+	[QUADD_EVENT_HW_BUS_CYCLES] =
 		QUADD_ARMV8_UNSUPPORTED_EVENT,
 
-	[QUADD_EVENT_TYPE_L1_DCACHE_READ_MISSES] =
+	[QUADD_EVENT_HW_L1_DCACHE_READ_MISSES] =
 		QUADD_ARMV8_HW_EVENT_L1_DCACHE_REFILL,
-	[QUADD_EVENT_TYPE_L1_DCACHE_WRITE_MISSES] =
+	[QUADD_EVENT_HW_L1_DCACHE_WRITE_MISSES] =
 		QUADD_ARMV8_HW_EVENT_L1_DCACHE_REFILL,
-	[QUADD_EVENT_TYPE_L1_ICACHE_MISSES] =
+	[QUADD_EVENT_HW_L1_ICACHE_MISSES] =
 		QUADD_ARMV8_HW_EVENT_L1_ICACHE_REFILL,
 
-	[QUADD_EVENT_TYPE_L2_DCACHE_READ_MISSES] =
+	[QUADD_EVENT_HW_L2_DCACHE_READ_MISSES] =
 		QUADD_ARMV8_UNSUPPORTED_EVENT,
-	[QUADD_EVENT_TYPE_L2_DCACHE_WRITE_MISSES] =
+	[QUADD_EVENT_HW_L2_DCACHE_WRITE_MISSES] =
 		QUADD_ARMV8_UNSUPPORTED_EVENT,
-	[QUADD_EVENT_TYPE_L2_ICACHE_MISSES] =
+	[QUADD_EVENT_HW_L2_ICACHE_MISSES] =
 		QUADD_ARMV8_UNSUPPORTED_EVENT,
 };
 
@@ -503,7 +503,7 @@ static void pmu_start(void)
 
 		event = ei->hw_value;
 
-		if (ei->quadd_event_id == QUADD_EVENT_TYPE_CPU_CYCLES) {
+		if (is_cpu_cycles(&ei->event)) {
 			if (!ccntr) {
 				pr_err_once("Error: cpu cycles counter is already occupied\n");
 				return;
@@ -574,7 +574,7 @@ pmu_read(struct event_data *events, int max_events)
 	list_for_each_entry(ei, &local_pmu_ctx->used_events, list) {
 		int index;
 
-		if (ei->quadd_event_id == QUADD_EVENT_TYPE_CPU_CYCLES) {
+		if (is_cpu_cycles(&ei->event)) {
 			if (!test_bit(QUADD_ARMV8_CCNT_BIT, pi->used_cntrs)) {
 				pr_err_once("Error: ccntr is not used\n");
 				return 0;
@@ -594,14 +594,14 @@ pmu_read(struct event_data *events, int max_events)
 		val = read_counter(index);
 
 		events->event_source = QUADD_EVENT_SOURCE_PMU;
-		events->event_id = ei->quadd_event_id;
+		events->event = ei->event;
 
 		events->val = val;
 		events->prev_val = *prevp;
 
 		*prevp = val;
 
-		qm_debug_read_counter(events->event_id, events->prev_val,
+		qm_debug_read_counter(&events->event, events->prev_val,
 				      events->val);
 
 		if (++i >= max_events)
@@ -629,7 +629,7 @@ pmu_read_emulate(struct event_data *events, int max_events)
 		if (val > 200)
 			val = 100;
 
-		events->event_id = *prevp;
+		events->event.id = *prevp;
 		events->val = val;
 
 		*prevp = val;
@@ -676,16 +676,12 @@ static void free_events(struct list_head *head)
 	}
 }
 
-static int set_events(int cpuid, int *events, int size)
+static int
+set_events(int cpuid, const struct quadd_event *events, int size)
 {
-	int free_pcntrs, err;
-	int i, nr_l1_r = 0, nr_l1_w = 0;
+	int i, free_pcntrs, err;
 	struct quadd_cntrs_info free_ci;
-
 	struct quadd_pmu_ctx *local_pmu_ctx = &per_cpu(pmu_ctx, cpuid);
-
-
-	local_pmu_ctx->l1_cache_rw = 0;
 
 	free_events(&local_pmu_ctx->used_events);
 
@@ -707,14 +703,24 @@ static int set_events(int cpuid, int *events, int size)
 	pr_info("free counters: pcntrs/ccntr: %d/%d\n",
 		free_pcntrs, free_ci.ccntr);
 
-	pr_info("event identification register: %#x\n",
-		armv8_pmu_pmceid_read());
-
 	for (i = 0; i < size; i++) {
+		unsigned int type, id;
 		struct quadd_pmu_event_info *ei;
 
-		if (events[i] > QUADD_EVENT_TYPE_MAX) {
-			pr_err("error event: %d\n", events[i]);
+		type = events[i].type;
+		id = events[i].id;
+
+		if (type == QUADD_EVENT_TYPE_HARDWARE) {
+			if (id >= QUADD_EVENT_HW_MAX) {
+				err = -EINVAL;
+				goto out_free;
+			}
+		} else if (type == QUADD_EVENT_TYPE_RAW) {
+			if (id & ~local_pmu_ctx->raw_event_mask) {
+				err = -EINVAL;
+				goto out_free;
+			}
+		} else {
 			err = -EINVAL;
 			goto out_free;
 		}
@@ -728,7 +734,7 @@ static int set_events(int cpuid, int *events, int size)
 		INIT_LIST_HEAD(&ei->list);
 		list_add_tail(&ei->list, &local_pmu_ctx->used_events);
 
-		if (events[i] == QUADD_EVENT_TYPE_CPU_CYCLES) {
+		if (is_cpu_cycles(&events[i])) {
 			ei->hw_value = QUADD_ARMV8_CPU_CYCLE_EVENT;
 			if (!free_ci.ccntr) {
 				pr_err("error: cpu cycles counter is already occupied\n");
@@ -742,23 +748,16 @@ static int set_events(int cpuid, int *events, int size)
 				goto out_free;
 			}
 
-			ei->hw_value = local_pmu_ctx->current_map[events[i]];
+			ei->hw_value = (type == QUADD_EVENT_TYPE_RAW) ? id :
+				local_pmu_ctx->current_map[id];
 		}
 
-		ei->quadd_event_id = events[i];
+		ei->event = events[i];
 
-		if (events[i] == QUADD_EVENT_TYPE_L1_DCACHE_READ_MISSES)
-			nr_l1_r++;
-		else if (events[i] == QUADD_EVENT_TYPE_L1_DCACHE_WRITE_MISSES)
-			nr_l1_w++;
-
-		pr_info("Event has been added: id/pmu value: %s/%#x\n",
-			quadd_get_event_str(events[i]),
+		pr_info("[%d] Event has been added: id: %#x (%s), hw value: %#x\n",
+			cpuid, id, type == QUADD_EVENT_TYPE_RAW ? "raw" : "hw",
 			ei->hw_value);
 	}
-
-	if (nr_l1_r > 0 && nr_l1_w > 0)
-		local_pmu_ctx->l1_cache_rw = 1;
 
 	return 0;
 
@@ -767,7 +766,9 @@ out_free:
 	return err;
 }
 
-static int get_supported_events(int cpuid, int *events, int max_events)
+static int
+get_supported_events(int cpuid, struct quadd_event *events,
+		     int max_events, unsigned int *raw_event_mask)
 {
 	int i, nr_events = 0;
 
@@ -776,28 +777,33 @@ static int get_supported_events(int cpuid, int *events, int max_events)
 	if (!local_pmu_ctx->current_map)
 		return 0;
 
-	max_events = min_t(int, QUADD_EVENT_TYPE_MAX, max_events);
+	max_events = min_t(int, QUADD_EVENT_HW_MAX, max_events);
 
 	for (i = 0; i < max_events; i++) {
 		unsigned int event = local_pmu_ctx->current_map[i];
 
-		if (event != QUADD_ARMV8_UNSUPPORTED_EVENT)
-			events[nr_events++] = i;
+		if (event != QUADD_ARMV8_UNSUPPORTED_EVENT) {
+			events[nr_events].type = QUADD_EVENT_TYPE_HARDWARE;
+			events[nr_events].id = i;
+
+			nr_events++;
+		}
 	}
+
+	*raw_event_mask = local_pmu_ctx->raw_event_mask;
 
 	return nr_events;
 }
 
-static int get_current_events(int cpuid, int *events, int max_events)
+static int
+get_current_events(int cpuid, struct quadd_event *events, int max_events)
 {
 	int i = 0;
 	struct quadd_pmu_event_info *ei;
-
 	struct quadd_pmu_ctx *local_pmu_ctx = &per_cpu(pmu_ctx, cpuid);
 
-
 	list_for_each_entry(ei, &local_pmu_ctx->used_events, list) {
-		events[i++] = ei->quadd_event_id;
+		events[i++] = ei->event;
 
 		if (i >= max_events)
 			break;
@@ -871,6 +877,8 @@ static int quadd_armv8_pmu_init_for_cpu(int cpuid)
 
 		local_pmu_ctx->counters_mask =
 			QUADD_ARMV8_COUNTERS_MASK_PMUV3;
+		local_pmu_ctx->raw_event_mask =
+			QUADD_ARMV8_EVTSEL_MASK;
 		local_pmu_ctx->current_map =
 			quadd_armv8_pmuv3_arm_events_map;
 

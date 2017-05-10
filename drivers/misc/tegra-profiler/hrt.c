@@ -46,7 +46,7 @@ static void
 read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched);
 
 struct hrt_event_value {
-	int event_id;
+	struct quadd_event event;
 	u32 value;
 };
 
@@ -155,7 +155,7 @@ quadd_put_sample(struct quadd_record_data *data,
 static void put_header(int cpuid)
 {
 	int nr_events = 0, max_events = QUADD_MAX_COUNTERS;
-	int events[QUADD_MAX_COUNTERS];
+	struct quadd_event events[QUADD_MAX_COUNTERS];
 	struct quadd_record_data record;
 	struct quadd_header_data *hdr = &record.hdr;
 	struct quadd_parameters *param = &hrt.quadd_ctx->param;
@@ -318,7 +318,7 @@ static int read_source(struct quadd_event_source_interface *source,
 				res_val /= nr_active;
 		}
 
-		events_vals[i].event_id = s->event_id;
+		events_vals[i].event = s->event;
 		events_vals[i].value = res_val;
 	}
 

@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/quadd.h
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,11 +21,18 @@
 
 /* #define QUADD_USE_EMULATE_COUNTERS	1 */
 
-struct event_data;
 struct quadd_comm_data_interface;
 struct quadd_hrt_ctx;
 struct quadd_module_state;
 struct quadd_arch_info;
+
+struct event_data {
+	int event_source;
+	struct quadd_event event;
+
+	u32 val;
+	u32 prev_val;
+};
 
 struct quadd_event_source_interface {
 	int (*enable)(void);
@@ -33,15 +40,21 @@ struct quadd_event_source_interface {
 	void (*start)(void);
 	void (*stop)(void);
 	int (*read)(struct event_data *events, int max_events);
-	int (*set_events)(int cpuid, int *events, int size);
-	int (*get_supported_events)(int cpuid, int *events, int max_events);
-	int (*get_current_events)(int cpuid, int *events, int max_events);
+	int (*set_events)(int cpuid, const struct quadd_event *events,
+			  int size);
+	int (*get_supported_events)(int cpuid, struct quadd_event *events,
+				    int max_events,
+				    unsigned int *raw_event_mask);
+	int (*get_current_events)(int cpuid, struct quadd_event *events,
+				  int max_events);
 	struct quadd_arch_info * (*get_arch)(int cpuid);
 };
 
 struct source_info {
-	int supported_events[QUADD_MAX_COUNTERS];
-	int nr_supported_events;
+	struct quadd_event supp_events[QUADD_MAX_COUNTERS];
+	int nr_supp_events;
+
+	unsigned int raw_event_mask;
 
 	int is_present;
 	int active;

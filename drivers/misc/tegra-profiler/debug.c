@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/debug.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -127,7 +127,7 @@ qm_debug_task_sched_in(pid_t prev_pid, pid_t current_pid, int prev_nr_active)
 	quadd_put_sample_this_cpu(&record, &vec, 1);
 }
 
-void qm_debug_read_counter(int event_id, u32 prev_val, u32 val)
+void qm_debug_read_counter(struct quadd_event *event, u32 prev_val, u32 val)
 {
 	struct quadd_iovec vec;
 	struct quadd_record_data record;
@@ -137,7 +137,7 @@ void qm_debug_read_counter(int event_id, u32 prev_val, u32 val)
 
 	s->type = QM_DEBUG_SAMPLE_TYPE_READ_COUNTER;
 
-	s->extra_value[0] = event_id;
+	s->extra_value[0] = event->id;
 	s->extra_value[1] = prev_val;
 
 	vec.base = &val;

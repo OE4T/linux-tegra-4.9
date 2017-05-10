@@ -146,8 +146,6 @@ struct nvadsp_drv_data {
 	struct platform_device *pdev;
 	struct resource *dram_region[ADSP_MAX_DRAM_MAP];
 	struct hwmbox_queue hwmbox_send_queue;
-	int hwmbox_send_virq;
-	int hwmbox_recv_virq;
 
 	struct nvadsp_mbox **mboxes;
 	unsigned long *mbox_ids;
@@ -216,7 +214,9 @@ struct nvadsp_drv_data {
 #define UART_BAUD_RATE	9600
 
 status_t nvadsp_mbox_init(struct platform_device *pdev);
-status_t nvadsp_amc_init(struct platform_device *pdev);
+
+int nvadsp_setup_amc_interrupts(struct platform_device *pdev);
+void nvadsp_free_amc_interrupts(struct platform_device *pdev);
 
 #ifdef CONFIG_TEGRA_ADSP_DFS
 void adsp_cpu_set_rate(unsigned long freq);

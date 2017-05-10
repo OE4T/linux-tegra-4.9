@@ -133,6 +133,8 @@ static struct nvadsp_mbox adsp_com_mbox;
 static DECLARE_COMPLETION(entered_wfi);
 
 static void __nvadsp_os_stop(bool);
+static irqreturn_t adsp_wdt_handler(int irq, void *arg);
+static irqreturn_t adsp_wfi_handler(int irq, void *arg);
 
 #ifdef CONFIG_DEBUG_FS
 static int adsp_logger_open(struct inode *inode, struct file *file)
@@ -1166,6 +1168,83 @@ void dump_adsp_sys(void)
 }
 EXPORT_SYMBOL(dump_adsp_sys);
 
+static void nvadsp_free_os_interrupts(struct nvadsp_os_data *priv)
+{
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv->pdev);
+	int wdt_virq = drv_data->agic_irqs[WDT_VIRQ];
+	int wfi_virq = drv_data->agic_irqs[WFI_VIRQ];
+	struct device *dev = &priv->pdev->dev;
+
+	devm_free_irq(dev, wdt_virq, priv);
+	devm_free_irq(dev, wfi_virq, priv);
+}
+
+static int nvadsp_setup_os_interrupts(struct nvadsp_os_data *priv)
+{
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(priv->pdev);
+	int wdt_virq = drv_data->agic_irqs[WDT_VIRQ];
+	int wfi_virq = drv_data->agic_irqs[WFI_VIRQ];
+	struct device *dev = &priv->pdev->dev;
+	int ret;
+
+	ret = devm_request_irq(dev, wdt_virq, adsp_wdt_handler,
+			IRQF_TRIGGER_RISING, "adsp watchdog", priv);
+	if (ret) {
+		dev_err(dev, "failed to get adsp watchdog interrupt\n");
+		goto end;
+	}
+
+	ret = devm_request_irq(dev, wfi_virq, adsp_wfi_handler,
+			IRQF_TRIGGER_RISING, "adsp wfi", priv);
+	if (ret) {
+		dev_err(dev, "cannot request for wfi interrupt\n");
+		goto free_interrupts;
+	}
+
+	writel(DISABLE_MBOX2_FULL_INT,
+	       priv->hwmailbox_base + drv_data->chip_data->hwmb.hwmbox2_reg);
+
+ end:
+
+	return ret;
+
+ free_interrupts:
+	nvadsp_free_os_interrupts(priv);
+	return ret;
+}
+
+static void free_interrupts(struct nvadsp_os_data *priv)
+{
+	nvadsp_free_os_interrupts(priv);
+	nvadsp_free_hwmbox_interrupts(priv->pdev);
+	nvadsp_free_amc_interrupts(priv->pdev);
+}
+
+static int setup_interrupts(struct nvadsp_os_data *priv)
+{
+	int ret;
+
+	ret = nvadsp_setup_os_interrupts(priv);
+	if (ret)
+		goto err;
+
+	ret = nvadsp_setup_hwmbox_interrupts(priv->pdev);
+	if (ret)
+		goto free_os_interrupts;
+	ret = nvadsp_setup_amc_interrupts(priv->pdev);
+	if (ret)
+		goto free_hwmbox_interrupts;
+
+	return ret;
+
+ free_hwmbox_interrupts:
+	nvadsp_free_hwmbox_interrupts(priv->pdev);
+ free_os_interrupts:
+	nvadsp_free_os_interrupts(priv);
+ err:
+	return ret;
+}
+
 int nvadsp_os_start(void)
 {
 	struct nvadsp_drv_data *drv_data;
@@ -1198,12 +1277,17 @@ int nvadsp_os_start(void)
 	if (ret < 0)
 		goto unlock;
 #endif
+	ret = setup_interrupts(&priv);
+	if (ret < 0)
+		goto unlock;
+
 	ret = __nvadsp_os_start();
 	if (ret) {
 		priv.os_running = drv_data->adsp_os_running = false;
 		/* if start fails call pm suspend of adsp driver */
 		dev_err(dev, "adsp failed to boot with ret = %d\n", ret);
 		dump_adsp_sys();
+		free_interrupts(&priv);
 #ifdef CONFIG_PM
 		pm_runtime_put_sync(&priv.pdev->dev);
 #endif
@@ -1372,6 +1456,7 @@ void nvadsp_os_stop(void)
 
 	priv.os_running = drv_data->adsp_os_running = false;
 
+	free_interrupts(&priv);
 #ifdef CONFIG_PM
 	if (pm_runtime_put_sync(dev) < 0)
 		dev_err(dev, "failed in pm_runtime_put_sync\n");
@@ -1410,6 +1495,8 @@ int nvadsp_os_suspend(void)
 	if (!ret) {
 #ifdef CONFIG_PM
 		struct device *dev = &priv.pdev->dev;
+
+		free_interrupts(&priv);
 		ret = pm_runtime_put_sync(&priv.pdev->dev);
 		if (ret < 0)
 			dev_err(dev, "failed in pm_runtime_put_sync\n");
@@ -1465,7 +1552,7 @@ static void nvadsp_os_restart(struct work_struct *work)
 		dev_crit(dev, "Unable to restart ADSP OS\n");
 }
 
-static  irqreturn_t adsp_wfi_handler(int irq, void *arg)
+static irqreturn_t adsp_wfi_handler(int irq, void *arg)
 {
 	struct nvadsp_os_data *data = arg;
 	struct device *dev = &data->pdev->dev;
@@ -1564,8 +1651,6 @@ static ssize_t tegrafw_read_adsp(struct device *dev,
 int __init nvadsp_os_probe(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
-	int wdt_virq = drv_data->agic_irqs[WDT_VIRQ];
-	int wfi_virq = drv_data->agic_irqs[WFI_VIRQ];
 	uint16_t com_mid = ADSP_COM_MBOX_ID;
 	struct device *dev = &pdev->dev;
 	int ret = 0;
@@ -1578,23 +1663,6 @@ int __init nvadsp_os_probe(struct platform_device *pdev)
 	priv.adsp_os_size = drv_data->adsp_mem[ADSP_OS_SIZE];
 	priv.app_alloc_addr = drv_data->adsp_mem[ADSP_APP_ADDR];
 	priv.app_size = drv_data->adsp_mem[ADSP_APP_SIZE];
-
-	ret = devm_request_irq(dev, wdt_virq, adsp_wdt_handler,
-			IRQF_TRIGGER_RISING, "adsp watchdog", &priv);
-	if (ret) {
-		dev_err(dev, "failed to get adsp watchdog interrupt\n");
-		goto end;
-	}
-
-	ret = devm_request_irq(dev, wfi_virq, adsp_wfi_handler,
-			IRQF_TRIGGER_RISING, "adsp wfi", &priv);
-	if (ret) {
-		dev_err(dev, "cannot request for wfi interrupt\n");
-		goto end;
-	}
-
-	writel(DISABLE_MBOX2_FULL_INT,
-	       priv.hwmailbox_base + drv_data->chip_data->hwmb.hwmbox2_reg);
 
 	if (of_device_is_compatible(dev->of_node, "nvidia,tegra210-adsp")) {
 		drv_data->assert_adsp = __assert_adsp;

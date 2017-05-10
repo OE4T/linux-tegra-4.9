@@ -110,4 +110,7 @@ int nvadsp_hwmbox_init(struct platform_device *);
 status_t nvadsp_hwmbox_send_data(uint16_t, uint32_t, uint32_t);
 void dump_mailbox_regs(void);
 
+int nvadsp_setup_hwmbox_interrupts(struct platform_device *pdev);
+void nvadsp_free_hwmbox_interrupts(struct platform_device *pdev);
+
 #endif /* __HWMAILBOX_H */

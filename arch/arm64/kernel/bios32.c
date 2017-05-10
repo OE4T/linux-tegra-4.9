@@ -302,6 +302,7 @@ static inline int pdev_bad_for_parity(struct pci_dev *dev)
 
 }
 
+#ifndef CONFIG_ACPI
 void pcibios_add_bus(struct pci_bus *bus)
 {
 	struct pci_sys_data *sys = bus->sysdata;
@@ -315,6 +316,7 @@ void pcibios_remove_bus(struct pci_bus *bus)
 	if (sys->remove_bus)
 		sys->remove_bus(bus);
 }
+#endif
 
 /*
  * Swizzle the device pin each time we cross a bridge.  If a platform does

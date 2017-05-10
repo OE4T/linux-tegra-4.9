@@ -1252,6 +1252,7 @@ u64 tegra_dc_get_tsc_time(void);
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 void tegra_dc_crc_deinit(struct tegra_dc *dc);
 void tegra_dc_crc_reset(struct tegra_dc *dc);
+int tegra_dc_crc_process(struct tegra_dc *dc);
 
 /* APIs related to ring buffer */
 struct tegra_dc_ring_buf;
@@ -1270,6 +1271,11 @@ static inline void tegra_dc_crc_deinit(struct tegra_dc *dc)
 
 static inline void tegra_dc_crc_reset(struct tegra_dc *dc)
 {
+}
+
+static inline int tegra_dc_crc_process(struct tegra_dc *dc)
+{
+	return 0;
 }
 
 struct tegra_dc_ring_buf;

@@ -4400,6 +4400,9 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status)
 	}
 
 	if (status & FRAME_END_INT) {
+		if (atomic_read(&dc->crc_ref_cnt.global))
+			tegra_dc_crc_process(dc);
+
 		/* Mark the frame_end as complete. */
 		dc->crc_pending = false;
 		if (!completion_done(&dc->frame_end_complete))
@@ -4450,6 +4453,9 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status)
 			} else
 				tegra_dc_vrr_extend_vfp(dc);
 		}
+
+		if (atomic_read(&dc->crc_ref_cnt.global))
+			tegra_dc_crc_process(dc);
 
 		/* Mark the frame_end as complete. */
 		if (!completion_done(&dc->frame_end_complete))

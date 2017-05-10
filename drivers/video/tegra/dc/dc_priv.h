@@ -779,6 +779,8 @@ int tegra_nvdisp_crc_enable(struct tegra_dc *dc,
 			    struct tegra_dc_ext_crc_conf *conf);
 int tegra_nvdisp_crc_disable(struct tegra_dc *dc,
 			     struct tegra_dc_ext_crc_conf *conf);
+int tegra_nvdisp_crc_collect(struct tegra_dc *dc,
+			     struct tegra_dc_crc_buf_ele *crc_ele);
 void tegra_nvdisp_crc_reset(struct tegra_dc *dc);
 #endif
 

@@ -144,7 +144,7 @@ int pva_mailbox_send_cmd_sync(struct pva *pva,
 		goto err_send_command;
 
 	/* Wait for the event being triggered in ISR */
-	if (!tegra_platform_is_vdk()) {
+	if (tegra_platform_is_silicon()) {
 		timeout = wait_event_timeout(pva->mailbox_waitqueue,
 			pva->mailbox_status == PVA_MBOX_STATUS_DONE,
 			msecs_to_jiffies(100));

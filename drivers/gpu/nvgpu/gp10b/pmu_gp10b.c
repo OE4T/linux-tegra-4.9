@@ -15,6 +15,9 @@
 
 #include <soc/tegra/fuse.h>
 
+#include <nvgpu/pmu.h>
+#include <nvgpu/log.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "gm20b/acr_gm20b.h"
@@ -22,8 +25,6 @@
 
 #include "pmu_gp10b.h"
 #include "gp10b_sysfs.h"
-
-#include <nvgpu/log.h>
 
 #include <nvgpu/hw/gp10b/hw_pwr_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
@@ -142,7 +143,7 @@ static struct pg_init_sequence_list _pginitseq_gp10b[] = {
 static void gp10b_pmu_load_multiple_falcons(struct gk20a *g, u32 falconidmask,
 					 u32 flags)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq;
 
@@ -226,7 +227,7 @@ static void pmu_handle_gr_param_msg(struct gk20a *g, struct pmu_msg *msg,
 
 int gp10b_pg_gr_init(struct gk20a *g, u32 pg_engine_id)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq;
 
@@ -255,7 +256,7 @@ int gp10b_pg_gr_init(struct gk20a *g, u32 pg_engine_id)
 static void gp10b_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 		struct pmu_pg_stats_data *pg_stat_data)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_pg_stats_v1 stats;
 
 	pmu_copy_from_dmem(pmu,
@@ -301,7 +302,7 @@ void gp10b_write_dmatrfbase(struct gk20a *g, u32 addr)
 
 static int gp10b_init_pmu_setup_hw1(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	int err;
 
 	gk20a_dbg_fn("");

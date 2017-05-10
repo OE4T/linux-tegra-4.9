@@ -26,6 +26,7 @@
 #include <nvgpu/nvgpu_mem.h>
 #include <nvgpu/acr/nvgpu_acr.h>
 #include <nvgpu/firmware.h>
+#include <nvgpu/pmu.h>
 
 #include <nvgpu/linux/dma.h>
 
@@ -131,7 +132,7 @@ void gm20b_init_secure_pmu(struct gpu_ops *gops)
 static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 {
 	struct nvgpu_firmware *pmu_fw, *pmu_desc, *pmu_sig;
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct lsf_ucode_desc *lsf_desc;
 	int err;
 	gm20b_dbg_pmu("requesting PMU ucode in GM20B\n");
@@ -382,7 +383,7 @@ int prepare_ucode_blob(struct gk20a *g)
 
 	int err;
 	struct ls_flcn_mgr lsfm_l, *plsfm;
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	phys_addr_t wpr_addr, wpr_page;
 	u32 wprsize;
 	int i;
@@ -470,7 +471,7 @@ static u8 lsfm_falcon_disabled(struct gk20a *g, struct ls_flcn_mgr *plsfm,
 static int lsfm_discover_ucode_images(struct gk20a *g,
 	struct ls_flcn_mgr *plsfm)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct flcn_ucode_img ucode_img;
 	u32 falcon_id;
 	u32 i;
@@ -555,7 +556,7 @@ static int gm20b_pmu_populate_loader_cfg(struct gk20a *g,
 	void *lsfm, u32 *p_bl_gen_desc_size)
 {
 	struct wpr_carveout_info wpr_inf;
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct lsfm_managed_ucode_img *p_lsfm =
 			(struct lsfm_managed_ucode_img *)lsfm;
 	struct flcn_ucode_img *p_img = &(p_lsfm->ucode_img);
@@ -685,7 +686,7 @@ static int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
 		struct lsfm_managed_ucode_img *pnode)
 {
 
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	if (pnode->wpr_header.falcon_id != pmu->falcon_id) {
 		gm20b_dbg_pmu("non pmu. write flcn bl gen desc\n");
 		g->ops.pmu.flcn_populate_bl_dmem_desc(g,
@@ -842,7 +843,7 @@ static void lsfm_fill_static_lsb_hdr_info(struct gk20a *g,
 	u32 falcon_id, struct lsfm_managed_ucode_img *pnode)
 {
 
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	u32 full_app_size = 0;
 	u32 data = 0;
 
@@ -1214,7 +1215,7 @@ int acr_ucode_patch_sig(struct gk20a *g,
 	return 0;
 }
 
-static int bl_bootstrap(struct pmu_gk20a *pmu,
+static int bl_bootstrap(struct nvgpu_pmu *pmu,
 	struct flcn_bl_dmem_desc *pbl_desc, u32 bl_sz)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -1284,7 +1285,7 @@ static int bl_bootstrap(struct pmu_gk20a *pmu,
 
 int gm20b_init_nspmu_setup_hw1(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	int err = 0;
 
 	gk20a_dbg_fn("");
@@ -1319,7 +1320,7 @@ static int gm20b_init_pmu_setup_hw1(struct gk20a *g,
 		void *desc, u32 bl_sz)
 {
 
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	int err;
 
 	gk20a_dbg_fn("");

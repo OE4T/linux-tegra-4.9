@@ -22,7 +22,6 @@
 #include "boardobj/boardobjgrp_e32.h"
 #include "ctrl/ctrlclk.h"
 #include "ctrl/ctrlvolt.h"
-#include "gk20a/pmu_gk20a.h"
 
 static u32 clk_freq_controller_pmudatainit_super(struct gk20a *g,
 	struct boardobj *board_obj_ptr,

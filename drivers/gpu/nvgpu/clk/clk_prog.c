@@ -12,7 +12,6 @@
  */
 
 #include <nvgpu/bios.h>
-
 #include <nvgpu/kmem.h>
 
 #include "gk20a/gk20a.h"
@@ -24,7 +23,6 @@
 #include "gm206/bios_gm206.h"
 #include "ctrl/ctrlclk.h"
 #include "ctrl/ctrlvolt.h"
-#include "gk20a/pmu_gk20a.h"
 
 static struct clk_prog *construct_clk_prog(struct gk20a *g, void *pargs);
 static u32 devinit_get_clk_prog_table(struct gk20a *g,

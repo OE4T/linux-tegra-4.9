@@ -13,11 +13,11 @@
 
 #include <nvgpu/kmem.h>
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
+#include <nvgpu/pmu.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
 #include "gm206/bios_gm206.h"
-#include "gk20a/pmu_gk20a.h"
 
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"

@@ -11,6 +11,8 @@
  * more details.
  */
 
+#include <nvgpu/pmu.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 
@@ -31,7 +33,7 @@
 #define PMU_MEM_SCRUBBING_TIMEOUT_MAX 1000
 #define PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT 10
 
-static int gp106_pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
+static int gp106_pmu_enable_hw(struct nvgpu_pmu *pmu, bool enable)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 
@@ -86,7 +88,7 @@ static int gp106_pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 	}
 }
 
-static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
+static int pmu_enable(struct nvgpu_pmu *pmu, bool enable)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	u32 reg_reset;
@@ -121,7 +123,7 @@ static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
 
 int gp106_pmu_reset(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	int err = 0;
 
 	gk20a_dbg_fn("");
@@ -210,7 +212,7 @@ static void pmu_handle_param_msg(struct gk20a *g, struct pmu_msg *msg,
 
 static int gp106_pg_param_init(struct gk20a *g, u32 pg_engine_id)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq;
 	u32 status;
@@ -262,7 +264,7 @@ static int gp106_pg_param_init(struct gk20a *g, u32 pg_engine_id)
 void gp106_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 		struct pmu_pg_stats_data *pg_stat_data)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_pg_stats_v2 stats;
 
 	pmu_copy_from_dmem(pmu,
@@ -335,7 +337,7 @@ static bool gp106_is_priv_load(u32 falcon_id)
 static void gp106_pmu_load_multiple_falcons(struct gk20a *g, u32 falconidmask,
 					 u32 flags)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq;
 

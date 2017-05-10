@@ -11,6 +11,7 @@
  * more details.
  */
 
+
 #include "gk20a/gk20a.h"
 #include "clk.h"
 #include "clk_vf_point.h"
@@ -18,7 +19,6 @@
 #include "boardobj/boardobjgrp_e32.h"
 #include "ctrl/ctrlclk.h"
 #include "ctrl/ctrlvolt.h"
-#include "gk20a/pmu_gk20a.h"
 
 static u32 _clk_vf_point_pmudatainit_super(struct gk20a *g, struct boardobj
 	*board_obj_ptr,	struct nv_pmu_boardobj *ppmudata);

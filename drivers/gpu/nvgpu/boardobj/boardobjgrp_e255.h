@@ -14,7 +14,6 @@
 #ifndef _BOARDOBJGRP_E255_H_
 #define _BOARDOBJGRP_E255_H_
 
-#include "gk20a/pmu_gk20a.h"
 #include "ctrl/ctrlboardobj.h"
 #include "boardobj.h"
 #include "boardobjgrpmask.h"

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,12 +16,12 @@
 
 int sec2_clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout);
 int sec2_wait_for_halt(struct gk20a *g, unsigned int timeout);
-void sec2_copy_to_dmem(struct pmu_gk20a *pmu,
+void sec2_copy_to_dmem(struct nvgpu_pmu *pmu,
 		u32 dst, u8 *src, u32 size, u8 port);
-void sec2_dump_falcon_stats(struct pmu_gk20a *pmu);
-int bl_bootstrap_sec2(struct pmu_gk20a *pmu,
+void sec2_dump_falcon_stats(struct nvgpu_pmu *pmu);
+int bl_bootstrap_sec2(struct nvgpu_pmu *pmu,
 	void *desc, u32 bl_sz);
-void sec_enable_irq(struct pmu_gk20a *pmu, bool enable);
+void sec_enable_irq(struct nvgpu_pmu *pmu, bool enable);
 void init_pmu_setup_hw1(struct gk20a *g);
 int init_sec2_setup_hw1(struct gk20a *g,
 		void *desc, u32 bl_sz);

@@ -21,7 +21,6 @@
 #include "boardobj/boardobjgrp_e32.h"
 #include "ctrl/ctrlclk.h"
 #include "ctrl/ctrlvolt.h"
-#include "gk20a/pmu_gk20a.h"
 
 static struct clk_domain *construct_clk_domain(struct gk20a *g, void *pargs);
 

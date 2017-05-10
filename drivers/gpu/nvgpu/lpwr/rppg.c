@@ -11,9 +11,9 @@
  * more details.
  */
 
+#include <nvgpu/pmu.h>
+
 #include "gk20a/gk20a.h"
-#include "gk20a/pmu_gk20a.h"
-#include "gp106/pmu_gp106.h"
 #include "gm206/bios_gm206.h"
 #include "pstate/pstate.h"
 
@@ -29,13 +29,13 @@ static void pmu_handle_rppg_init_msg(struct gk20a *g, struct pmu_msg *msg,
 		case NV_PMU_RPPG_MSG_ID_INIT_CTRL_ACK:
 			ctrlId = msg->msg.pg.rppg_msg.init_ctrl_ack.ctrl_id;
 			*success = 1;
-			gp106_dbg_pmu("RPPG is acknowledged from PMU %x",
+			nvgpu_pmu_dbg(g, "RPPG is acknowledged from PMU %x",
 				msg->msg.pg.msg_type);
 		break;
 		}
 	}
 
-	gp106_dbg_pmu("RPPG is acknowledged from PMU %x",
+	nvgpu_pmu_dbg(g, "RPPG is acknowledged from PMU %x",
 				msg->msg.pg.msg_type);
 }
 

@@ -15,13 +15,14 @@
 
 #include <soc/tegra/fuse.h>
 
+#include <nvgpu/timers.h>
+#include <nvgpu/pmu.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 
 #include "acr_gm20b.h"
 #include "pmu_gm20b.h"
-
-#include <nvgpu/timers.h>
 
 #include <nvgpu/hw/gm20b/hw_gr_gm20b.h>
 #include <nvgpu/hw/gm20b/hw_pwr_gm20b.h>
@@ -138,7 +139,7 @@ static void pmu_handle_acr_init_wpr_msg(struct gk20a *g, struct pmu_msg *msg,
 
 int gm20b_pmu_init_acr(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq;
 
@@ -198,7 +199,7 @@ static int pmu_gm20b_ctx_wait_lsf_ready(struct gk20a *g, u32 timeout_ms,
 
 void gm20b_pmu_load_lsf(struct gk20a *g, u32 falcon_id, u32 flags)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq;
 

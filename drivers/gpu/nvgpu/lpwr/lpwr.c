@@ -12,10 +12,9 @@
  */
 
 #include <nvgpu/bios.h>
+#include <nvgpu/pmu.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/pmu_gk20a.h"
-#include "gp106/pmu_gp106.h"
 #include "gm206/bios_gm206.h"
 #include "pstate/pstate.h"
 #include "perf/perf.h"
@@ -207,7 +206,7 @@ static void nvgpu_pmu_handle_param_lpwr_msg(struct gk20a *g,
 
 	*ack_status = 1;
 
-	gp106_dbg_pmu("lpwr-param is acknowledged from PMU %x",
+	nvgpu_pmu_dbg(g, "lpwr-param is acknowledged from PMU %x",
 			msg->msg.pg.msg_type);
 }
 
@@ -243,7 +242,7 @@ int nvgpu_lwpr_mclk_change(struct gk20a *g, u32 pstate)
 			PMU_PG_PARAM_CMD_MCLK_CHANGE;
 		cmd.cmd.pg.mclk_change.data = payload;
 
-		gp106_dbg_pmu("cmd post MS PMU_PG_PARAM_CMD_MCLK_CHANGE");
+		nvgpu_pmu_dbg(g, "cmd post MS PMU_PG_PARAM_CMD_MCLK_CHANGE");
 		status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL,
 			PMU_COMMAND_QUEUE_HPQ,
 			nvgpu_pmu_handle_param_lpwr_msg, &ack_status, &seq, ~0);
@@ -276,7 +275,7 @@ u32 nvgpu_lpwr_post_init(struct gk20a *g)
 	cmd.cmd.pg.post_init.cmd_id =
 		PMU_PG_PARAM_CMD_POST_INIT;
 
-	gp106_dbg_pmu("cmd post post-init PMU_PG_PARAM_CMD_POST_INIT");
+	nvgpu_pmu_dbg(g, "cmd post post-init PMU_PG_PARAM_CMD_POST_INIT");
 	status = gk20a_pmu_cmd_post(g, &cmd, NULL, NULL,
 		PMU_COMMAND_QUEUE_LPQ,
 		nvgpu_pmu_handle_param_lpwr_msg, &ack_status, &seq, ~0);
@@ -336,7 +335,7 @@ u32 nvgpu_lpwr_is_rppg_supported(struct gk20a *g, u32 pstate_num)
 
 int nvgpu_lpwr_enable_pg(struct gk20a *g, bool pstate_lock)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	u32  status = 0;
 	u32 is_mscg_supported = 0;
 	u32 is_rppg_supported = 0;
@@ -376,7 +375,7 @@ int nvgpu_lpwr_enable_pg(struct gk20a *g, bool pstate_lock)
 
 int nvgpu_lpwr_disable_pg(struct gk20a *g, bool pstate_lock)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	int status = 0;
 	u32 is_mscg_supported = 0;
 	u32 is_rppg_supported = 0;

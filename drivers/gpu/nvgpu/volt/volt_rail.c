@@ -18,7 +18,6 @@
 #include "boardobj/boardobjgrp_e32.h"
 #include "gm206/bios_gm206.h"
 #include "ctrl/ctrlvolt.h"
-#include "gk20a/pmu_gk20a.h"
 
 #include "volt.h"
 

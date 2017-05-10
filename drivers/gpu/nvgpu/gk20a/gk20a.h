@@ -50,6 +50,7 @@ struct gk20a_debug_output;
 #include <nvgpu/acr/nvgpu_acr.h>
 #include <nvgpu/kref.h>
 #include <nvgpu/falcon.h>
+#include <nvgpu/pmu.h>
 
 #include "clk_gk20a.h"
 #include "ce2_gk20a.h"
@@ -523,33 +524,33 @@ struct gpu_ops {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/
 		u32 cmd_id_zbc_table_update;
 		bool is_pmu_zbc_save_supported;
-		u32 (*get_pmu_cmdline_args_size)(struct pmu_gk20a *pmu);
-		void (*set_pmu_cmdline_args_cpu_freq)(struct pmu_gk20a *pmu,
+		u32 (*get_pmu_cmdline_args_size)(struct nvgpu_pmu *pmu);
+		void (*set_pmu_cmdline_args_cpu_freq)(struct nvgpu_pmu *pmu,
 			u32 freq);
-		void (*set_pmu_cmdline_args_trace_size)(struct pmu_gk20a *pmu,
+		void (*set_pmu_cmdline_args_trace_size)(struct nvgpu_pmu *pmu,
 			u32 size);
 		void (*set_pmu_cmdline_args_trace_dma_base)(
-				struct pmu_gk20a *pmu);
+				struct nvgpu_pmu *pmu);
 		void (*set_pmu_cmdline_args_trace_dma_idx)(
-			struct pmu_gk20a *pmu, u32 idx);
-		void * (*get_pmu_cmdline_args_ptr)(struct pmu_gk20a *pmu);
-		u32 (*get_pmu_allocation_struct_size)(struct pmu_gk20a *pmu);
-		void (*set_pmu_allocation_ptr)(struct pmu_gk20a *pmu,
+			struct nvgpu_pmu *pmu, u32 idx);
+		void * (*get_pmu_cmdline_args_ptr)(struct nvgpu_pmu *pmu);
+		u32 (*get_pmu_allocation_struct_size)(struct nvgpu_pmu *pmu);
+		void (*set_pmu_allocation_ptr)(struct nvgpu_pmu *pmu,
 				void **pmu_alloc_ptr, void *assign_ptr);
-		void (*pmu_allocation_set_dmem_size)(struct pmu_gk20a *pmu,
+		void (*pmu_allocation_set_dmem_size)(struct nvgpu_pmu *pmu,
 				void *pmu_alloc_ptr, u16 size);
-		u16 (*pmu_allocation_get_dmem_size)(struct pmu_gk20a *pmu,
+		u16 (*pmu_allocation_get_dmem_size)(struct nvgpu_pmu *pmu,
 				void *pmu_alloc_ptr);
-		u32 (*pmu_allocation_get_dmem_offset)(struct pmu_gk20a *pmu,
+		u32 (*pmu_allocation_get_dmem_offset)(struct nvgpu_pmu *pmu,
 				void *pmu_alloc_ptr);
 		u32 * (*pmu_allocation_get_dmem_offset_addr)(
-				struct pmu_gk20a *pmu, void *pmu_alloc_ptr);
-		void (*pmu_allocation_set_dmem_offset)(struct pmu_gk20a *pmu,
+				struct nvgpu_pmu *pmu, void *pmu_alloc_ptr);
+		void (*pmu_allocation_set_dmem_offset)(struct nvgpu_pmu *pmu,
 				void *pmu_alloc_ptr, u32 offset);
 		void * (*pmu_allocation_get_fb_addr)(
-				struct pmu_gk20a *pmu, void *pmu_alloc_ptr);
+				struct nvgpu_pmu *pmu, void *pmu_alloc_ptr);
 		u32 (*pmu_allocation_get_fb_size)(
-				struct pmu_gk20a *pmu, void *pmu_alloc_ptr);
+				struct nvgpu_pmu *pmu, void *pmu_alloc_ptr);
 		void (*get_pmu_init_msg_pmu_queue_params)(
 				struct pmu_queue *queue, u32 id,
 				void *pmu_init_msg);
@@ -590,15 +591,15 @@ struct gpu_ops {
 				struct pmu_sequence *seq);
 		void *(*get_pmu_seq_out_a_ptr)(
 				struct pmu_sequence *seq);
-		void (*set_pmu_cmdline_args_secure_mode)(struct pmu_gk20a *pmu,
+		void (*set_pmu_cmdline_args_secure_mode)(struct nvgpu_pmu *pmu,
 			u32 val);
-		u32 (*get_perfmon_cntr_sz)(struct pmu_gk20a *pmu);
-		void * (*get_perfmon_cntr_ptr)(struct pmu_gk20a *pmu);
-		void (*set_perfmon_cntr_ut)(struct pmu_gk20a *pmu, u16 ut);
-		void (*set_perfmon_cntr_lt)(struct pmu_gk20a *pmu, u16 lt);
-		void (*set_perfmon_cntr_valid)(struct pmu_gk20a *pmu, u8 val);
-		void (*set_perfmon_cntr_index)(struct pmu_gk20a *pmu, u8 val);
-		void (*set_perfmon_cntr_group_id)(struct pmu_gk20a *pmu,
+		u32 (*get_perfmon_cntr_sz)(struct nvgpu_pmu *pmu);
+		void * (*get_perfmon_cntr_ptr)(struct nvgpu_pmu *pmu);
+		void (*set_perfmon_cntr_ut)(struct nvgpu_pmu *pmu, u16 ut);
+		void (*set_perfmon_cntr_lt)(struct nvgpu_pmu *pmu, u16 lt);
+		void (*set_perfmon_cntr_valid)(struct nvgpu_pmu *pmu, u8 val);
+		void (*set_perfmon_cntr_index)(struct nvgpu_pmu *pmu, u8 val);
+		void (*set_perfmon_cntr_group_id)(struct nvgpu_pmu *pmu,
 				u8 gid);
 
 		u8 (*pg_cmd_eng_buf_load_size)(struct pmu_pg_cmd *pg);
@@ -728,7 +729,7 @@ struct gpu_ops {
 		bool (*is_pmu_supported)(struct gk20a *g);
 		int (*prepare_ucode)(struct gk20a *g);
 		int (*pmu_setup_hw_and_bootstrap)(struct gk20a *g);
-		int (*pmu_nsbootstrap)(struct pmu_gk20a *pmu);
+		int (*pmu_nsbootstrap)(struct nvgpu_pmu *pmu);
 		int (*pmu_setup_elpg)(struct gk20a *g);
 		u32 (*pmu_get_queue_head)(u32 i);
 		u32 (*pmu_get_queue_head_size)(void);
@@ -1014,7 +1015,7 @@ struct gk20a {
 	struct gr_gk20a gr;
 	struct sim_gk20a sim;
 	struct mm_gk20a mm;
-	struct pmu_gk20a pmu;
+	struct nvgpu_pmu pmu;
 	struct acr_desc acr;
 	struct ecc_gk20a ecc;
 	struct cooling_device_gk20a gk20a_cdev;
@@ -1396,7 +1397,7 @@ static inline struct gk20a *gk20a_from_as(struct gk20a_as *as)
 {
 	return container_of(as, struct gk20a, as);
 }
-static inline struct gk20a *gk20a_from_pmu(struct pmu_gk20a *pmu)
+static inline struct gk20a *gk20a_from_pmu(struct nvgpu_pmu *pmu)
 {
 	return container_of(pmu, struct gk20a, pmu);
 }

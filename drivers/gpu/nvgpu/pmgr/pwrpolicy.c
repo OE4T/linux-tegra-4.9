@@ -20,7 +20,6 @@
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
 #include "gm206/bios_gm206.h"
-#include "gk20a/pmu_gk20a.h"
 
 #define _pwr_policy_limitarboutputget_helper(p_limit_arb) (p_limit_arb)->output
 #define _pwr_policy_limitdeltaapply(limit, delta) ((u32)max(((s32)limit) + (delta), 0))

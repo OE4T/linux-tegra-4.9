@@ -12,14 +12,13 @@
  */
 
 #include <nvgpu/bios.h>
+#include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 
 #include "gk20a/gk20a.h"
 #include "thrmdev.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
-#include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 #include "gm206/bios_gm206.h"
-#include "gk20a/pmu_gk20a.h"
 #include "ctrl/ctrltherm.h"
 
 static struct boardobj *construct_therm_device(struct gk20a *g,

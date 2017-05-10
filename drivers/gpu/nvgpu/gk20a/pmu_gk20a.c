@@ -56,171 +56,171 @@ static void nvgpu_pmu_state_change(struct gk20a *g, u32 pmu_state,
 
 static int pmu_init_powergating(struct gk20a *g);
 
-static u32 pmu_perfmon_cntr_sz_v0(struct pmu_gk20a *pmu)
+static u32 pmu_perfmon_cntr_sz_v0(struct nvgpu_pmu *pmu)
 {
 	return sizeof(struct pmu_perfmon_counter_v0);
 }
 
-static u32 pmu_perfmon_cntr_sz_v2(struct pmu_gk20a *pmu)
+static u32 pmu_perfmon_cntr_sz_v2(struct nvgpu_pmu *pmu)
 {
 	return sizeof(struct pmu_perfmon_counter_v2);
 }
 
-static void *get_perfmon_cntr_ptr_v2(struct pmu_gk20a *pmu)
+static void *get_perfmon_cntr_ptr_v2(struct nvgpu_pmu *pmu)
 {
 	return (void *)(&pmu->perfmon_counter_v2);
 }
 
-static void *get_perfmon_cntr_ptr_v0(struct pmu_gk20a *pmu)
+static void *get_perfmon_cntr_ptr_v0(struct nvgpu_pmu *pmu)
 {
 	return (void *)(&pmu->perfmon_counter_v0);
 }
 
-static void set_perfmon_cntr_ut_v2(struct pmu_gk20a *pmu, u16 ut)
+static void set_perfmon_cntr_ut_v2(struct nvgpu_pmu *pmu, u16 ut)
 {
 	pmu->perfmon_counter_v2.upper_threshold = ut;
 }
 
-static void set_perfmon_cntr_ut_v0(struct pmu_gk20a *pmu, u16 ut)
+static void set_perfmon_cntr_ut_v0(struct nvgpu_pmu *pmu, u16 ut)
 {
 	pmu->perfmon_counter_v0.upper_threshold = ut;
 }
 
-static void set_perfmon_cntr_lt_v2(struct pmu_gk20a *pmu, u16 lt)
+static void set_perfmon_cntr_lt_v2(struct nvgpu_pmu *pmu, u16 lt)
 {
 	pmu->perfmon_counter_v2.lower_threshold = lt;
 }
 
-static void set_perfmon_cntr_lt_v0(struct pmu_gk20a *pmu, u16 lt)
+static void set_perfmon_cntr_lt_v0(struct nvgpu_pmu *pmu, u16 lt)
 {
 	pmu->perfmon_counter_v0.lower_threshold = lt;
 }
 
-static void set_perfmon_cntr_valid_v2(struct pmu_gk20a *pmu, u8 valid)
+static void set_perfmon_cntr_valid_v2(struct nvgpu_pmu *pmu, u8 valid)
 {
 	pmu->perfmon_counter_v2.valid = valid;
 }
 
-static void set_perfmon_cntr_valid_v0(struct pmu_gk20a *pmu, u8 valid)
+static void set_perfmon_cntr_valid_v0(struct nvgpu_pmu *pmu, u8 valid)
 {
 	pmu->perfmon_counter_v0.valid = valid;
 }
 
-static void set_perfmon_cntr_index_v2(struct pmu_gk20a *pmu, u8 index)
+static void set_perfmon_cntr_index_v2(struct nvgpu_pmu *pmu, u8 index)
 {
 	pmu->perfmon_counter_v2.index = index;
 }
 
-static void set_perfmon_cntr_index_v0(struct pmu_gk20a *pmu, u8 index)
+static void set_perfmon_cntr_index_v0(struct nvgpu_pmu *pmu, u8 index)
 {
 	pmu->perfmon_counter_v0.index = index;
 }
 
-static void set_perfmon_cntr_group_id_v2(struct pmu_gk20a *pmu, u8 gid)
+static void set_perfmon_cntr_group_id_v2(struct nvgpu_pmu *pmu, u8 gid)
 {
 	pmu->perfmon_counter_v2.group_id = gid;
 }
 
-static void set_perfmon_cntr_group_id_v0(struct pmu_gk20a *pmu, u8 gid)
+static void set_perfmon_cntr_group_id_v0(struct nvgpu_pmu *pmu, u8 gid)
 {
 	pmu->perfmon_counter_v0.group_id = gid;
 }
 
-static u32 pmu_cmdline_size_v0(struct pmu_gk20a *pmu)
+static u32 pmu_cmdline_size_v0(struct nvgpu_pmu *pmu)
 {
 	return sizeof(struct pmu_cmdline_args_v0);
 }
 
-static u32 pmu_cmdline_size_v1(struct pmu_gk20a *pmu)
+static u32 pmu_cmdline_size_v1(struct nvgpu_pmu *pmu)
 {
 	return sizeof(struct pmu_cmdline_args_v1);
 }
 
-static u32 pmu_cmdline_size_v2(struct pmu_gk20a *pmu)
+static u32 pmu_cmdline_size_v2(struct nvgpu_pmu *pmu)
 {
 	return sizeof(struct pmu_cmdline_args_v2);
 }
 
-static void set_pmu_cmdline_args_cpufreq_v2(struct pmu_gk20a *pmu, u32 freq)
+static void set_pmu_cmdline_args_cpufreq_v2(struct nvgpu_pmu *pmu, u32 freq)
 {
 	pmu->args_v2.cpu_freq_hz = freq;
 }
-static void set_pmu_cmdline_args_secure_mode_v2(struct pmu_gk20a *pmu, u32 val)
+static void set_pmu_cmdline_args_secure_mode_v2(struct nvgpu_pmu *pmu, u32 val)
 {
 	pmu->args_v2.secure_mode = val;
 }
 
 static void set_pmu_cmdline_args_falctracesize_v2(
-			struct pmu_gk20a *pmu, u32 size)
+			struct nvgpu_pmu *pmu, u32 size)
 {
 	pmu->args_v2.falc_trace_size = size;
 }
 
-static void set_pmu_cmdline_args_falctracedmabase_v2(struct pmu_gk20a *pmu)
+static void set_pmu_cmdline_args_falctracedmabase_v2(struct nvgpu_pmu *pmu)
 {
 	pmu->args_v2.falc_trace_dma_base = ((u32)pmu->trace_buf.gpu_va)/0x100;
 }
 
 static void set_pmu_cmdline_args_falctracedmaidx_v2(
-			struct pmu_gk20a *pmu, u32 idx)
+			struct nvgpu_pmu *pmu, u32 idx)
 {
 	pmu->args_v2.falc_trace_dma_idx = idx;
 }
 
 
-static void set_pmu_cmdline_args_falctracedmabase_v4(struct pmu_gk20a *pmu)
+static void set_pmu_cmdline_args_falctracedmabase_v4(struct nvgpu_pmu *pmu)
 {
 	pmu->args_v4.dma_addr.dma_base = ((u32)pmu->trace_buf.gpu_va)/0x100;
 	pmu->args_v4.dma_addr.dma_base1 = 0;
 	pmu->args_v4.dma_addr.dma_offset = 0;
 }
 
-static u32 pmu_cmdline_size_v4(struct pmu_gk20a *pmu)
+static u32 pmu_cmdline_size_v4(struct nvgpu_pmu *pmu)
 {
 	return sizeof(struct pmu_cmdline_args_v4);
 }
 
-static void set_pmu_cmdline_args_cpufreq_v4(struct pmu_gk20a *pmu, u32 freq)
+static void set_pmu_cmdline_args_cpufreq_v4(struct nvgpu_pmu *pmu, u32 freq)
 {
 	pmu->args_v4.cpu_freq_hz = freq;
 }
-static void set_pmu_cmdline_args_secure_mode_v4(struct pmu_gk20a *pmu, u32 val)
+static void set_pmu_cmdline_args_secure_mode_v4(struct nvgpu_pmu *pmu, u32 val)
 {
 	pmu->args_v4.secure_mode = val;
 }
 
 static void set_pmu_cmdline_args_falctracesize_v4(
-			struct pmu_gk20a *pmu, u32 size)
+			struct nvgpu_pmu *pmu, u32 size)
 {
 	pmu->args_v4.falc_trace_size = size;
 }
 static void set_pmu_cmdline_args_falctracedmaidx_v4(
-			struct pmu_gk20a *pmu, u32 idx)
+			struct nvgpu_pmu *pmu, u32 idx)
 {
 	pmu->args_v4.falc_trace_dma_idx = idx;
 }
 
-static u32 pmu_cmdline_size_v5(struct pmu_gk20a *pmu)
+static u32 pmu_cmdline_size_v5(struct nvgpu_pmu *pmu)
 {
 	return sizeof(struct pmu_cmdline_args_v5);
 }
 
-static void set_pmu_cmdline_args_cpufreq_v5(struct pmu_gk20a *pmu, u32 freq)
+static void set_pmu_cmdline_args_cpufreq_v5(struct nvgpu_pmu *pmu, u32 freq)
 {
 	pmu->args_v5.cpu_freq_hz = 204000000;
 }
-static void set_pmu_cmdline_args_secure_mode_v5(struct pmu_gk20a *pmu, u32 val)
+static void set_pmu_cmdline_args_secure_mode_v5(struct nvgpu_pmu *pmu, u32 val)
 {
 	pmu->args_v5.secure_mode = val;
 }
 
 static void set_pmu_cmdline_args_falctracesize_v5(
-			struct pmu_gk20a *pmu, u32 size)
+			struct nvgpu_pmu *pmu, u32 size)
 {
 	/* set by surface describe */
 }
 
-static void set_pmu_cmdline_args_falctracedmabase_v5(struct pmu_gk20a *pmu)
+static void set_pmu_cmdline_args_falctracedmabase_v5(struct nvgpu_pmu *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 
@@ -228,53 +228,53 @@ static void set_pmu_cmdline_args_falctracedmabase_v5(struct pmu_gk20a *pmu)
 }
 
 static void set_pmu_cmdline_args_falctracedmaidx_v5(
-			struct pmu_gk20a *pmu, u32 idx)
+			struct nvgpu_pmu *pmu, u32 idx)
 {
 	/* set by surface describe */
 }
 
-static u32 pmu_cmdline_size_v3(struct pmu_gk20a *pmu)
+static u32 pmu_cmdline_size_v3(struct nvgpu_pmu *pmu)
 {
 	return sizeof(struct pmu_cmdline_args_v3);
 }
 
-static void set_pmu_cmdline_args_cpufreq_v3(struct pmu_gk20a *pmu, u32 freq)
+static void set_pmu_cmdline_args_cpufreq_v3(struct nvgpu_pmu *pmu, u32 freq)
 {
 	pmu->args_v3.cpu_freq_hz = freq;
 }
-static void set_pmu_cmdline_args_secure_mode_v3(struct pmu_gk20a *pmu, u32 val)
+static void set_pmu_cmdline_args_secure_mode_v3(struct nvgpu_pmu *pmu, u32 val)
 {
 	pmu->args_v3.secure_mode = val;
 }
 
 static void set_pmu_cmdline_args_falctracesize_v3(
-			struct pmu_gk20a *pmu, u32 size)
+			struct nvgpu_pmu *pmu, u32 size)
 {
 	pmu->args_v3.falc_trace_size = size;
 }
 
-static void set_pmu_cmdline_args_falctracedmabase_v3(struct pmu_gk20a *pmu)
+static void set_pmu_cmdline_args_falctracedmabase_v3(struct nvgpu_pmu *pmu)
 {
 	pmu->args_v3.falc_trace_dma_base = ((u32)pmu->trace_buf.gpu_va)/0x100;
 }
 
 static void set_pmu_cmdline_args_falctracedmaidx_v3(
-			struct pmu_gk20a *pmu, u32 idx)
+			struct nvgpu_pmu *pmu, u32 idx)
 {
 	pmu->args_v3.falc_trace_dma_idx = idx;
 }
 
-static void set_pmu_cmdline_args_cpufreq_v1(struct pmu_gk20a *pmu, u32 freq)
+static void set_pmu_cmdline_args_cpufreq_v1(struct nvgpu_pmu *pmu, u32 freq)
 {
 	pmu->args_v1.cpu_freq_hz = freq;
 }
-static void set_pmu_cmdline_args_secure_mode_v1(struct pmu_gk20a *pmu, u32 val)
+static void set_pmu_cmdline_args_secure_mode_v1(struct nvgpu_pmu *pmu, u32 val)
 {
 	pmu->args_v1.secure_mode = val;
 }
 
 static void set_pmu_cmdline_args_falctracesize_v1(
-			struct pmu_gk20a *pmu, u32 size)
+			struct nvgpu_pmu *pmu, u32 size)
 {
 	pmu->args_v1.falc_trace_size = size;
 }
@@ -293,7 +293,7 @@ bool nvgpu_find_hex_in_string(char *strings, struct gk20a *g, u32 *hex_pos)
 	return false;
 }
 
-static void printtrace(struct pmu_gk20a *pmu)
+static void printtrace(struct nvgpu_pmu *pmu)
 {
 	u32 i = 0, j = 0, k, l, m, count;
 	char part_str[40], buf[0x40];
@@ -340,72 +340,72 @@ static void printtrace(struct pmu_gk20a *pmu)
 	nvgpu_kfree(g, tracebuffer);
 }
 
-static void set_pmu_cmdline_args_falctracedmabase_v1(struct pmu_gk20a *pmu)
+static void set_pmu_cmdline_args_falctracedmabase_v1(struct nvgpu_pmu *pmu)
 {
 	pmu->args_v1.falc_trace_dma_base = ((u32)pmu->trace_buf.gpu_va)/0x100;
 }
 
 static void set_pmu_cmdline_args_falctracedmaidx_v1(
-			struct pmu_gk20a *pmu, u32 idx)
+			struct nvgpu_pmu *pmu, u32 idx)
 {
 	pmu->args_v1.falc_trace_dma_idx = idx;
 }
 
-static void set_pmu_cmdline_args_cpufreq_v0(struct pmu_gk20a *pmu, u32 freq)
+static void set_pmu_cmdline_args_cpufreq_v0(struct nvgpu_pmu *pmu, u32 freq)
 {
 	pmu->args_v0.cpu_freq_hz = freq;
 }
 
-static void *get_pmu_cmdline_args_ptr_v4(struct pmu_gk20a *pmu)
+static void *get_pmu_cmdline_args_ptr_v4(struct nvgpu_pmu *pmu)
 {
 	return (void *)(&pmu->args_v4);
 }
 
-static void *get_pmu_cmdline_args_ptr_v3(struct pmu_gk20a *pmu)
+static void *get_pmu_cmdline_args_ptr_v3(struct nvgpu_pmu *pmu)
 {
 	return (void *)(&pmu->args_v3);
 }
 
-static void *get_pmu_cmdline_args_ptr_v2(struct pmu_gk20a *pmu)
+static void *get_pmu_cmdline_args_ptr_v2(struct nvgpu_pmu *pmu)
 {
 	return (void *)(&pmu->args_v2);
 }
 
-static void *get_pmu_cmdline_args_ptr_v5(struct pmu_gk20a *pmu)
+static void *get_pmu_cmdline_args_ptr_v5(struct nvgpu_pmu *pmu)
 {
 	return (void *)(&pmu->args_v5);
 }
-static void *get_pmu_cmdline_args_ptr_v1(struct pmu_gk20a *pmu)
+static void *get_pmu_cmdline_args_ptr_v1(struct nvgpu_pmu *pmu)
 {
 	return (void *)(&pmu->args_v1);
 }
 
-static void *get_pmu_cmdline_args_ptr_v0(struct pmu_gk20a *pmu)
+static void *get_pmu_cmdline_args_ptr_v0(struct nvgpu_pmu *pmu)
 {
 	return (void *)(&pmu->args_v0);
 }
 
-static u32 get_pmu_allocation_size_v3(struct pmu_gk20a *pmu)
+static u32 get_pmu_allocation_size_v3(struct nvgpu_pmu *pmu)
 {
 	return sizeof(struct pmu_allocation_v3);
 }
 
-static u32 get_pmu_allocation_size_v2(struct pmu_gk20a *pmu)
+static u32 get_pmu_allocation_size_v2(struct nvgpu_pmu *pmu)
 {
 	return sizeof(struct pmu_allocation_v2);
 }
 
-static u32 get_pmu_allocation_size_v1(struct pmu_gk20a *pmu)
+static u32 get_pmu_allocation_size_v1(struct nvgpu_pmu *pmu)
 {
 	return sizeof(struct pmu_allocation_v1);
 }
 
-static u32 get_pmu_allocation_size_v0(struct pmu_gk20a *pmu)
+static u32 get_pmu_allocation_size_v0(struct nvgpu_pmu *pmu)
 {
 	return sizeof(struct pmu_allocation_v0);
 }
 
-static void set_pmu_allocation_ptr_v3(struct pmu_gk20a *pmu,
+static void set_pmu_allocation_ptr_v3(struct nvgpu_pmu *pmu,
 	void **pmu_alloc_ptr, void *assign_ptr)
 {
 	struct pmu_allocation_v3 **pmu_a_ptr =
@@ -413,7 +413,7 @@ static void set_pmu_allocation_ptr_v3(struct pmu_gk20a *pmu,
 	*pmu_a_ptr = (struct pmu_allocation_v3 *)assign_ptr;
 }
 
-static void set_pmu_allocation_ptr_v2(struct pmu_gk20a *pmu,
+static void set_pmu_allocation_ptr_v2(struct nvgpu_pmu *pmu,
 	void **pmu_alloc_ptr, void *assign_ptr)
 {
 	struct pmu_allocation_v2 **pmu_a_ptr =
@@ -421,7 +421,7 @@ static void set_pmu_allocation_ptr_v2(struct pmu_gk20a *pmu,
 	*pmu_a_ptr = (struct pmu_allocation_v2 *)assign_ptr;
 }
 
-static void set_pmu_allocation_ptr_v1(struct pmu_gk20a *pmu,
+static void set_pmu_allocation_ptr_v1(struct nvgpu_pmu *pmu,
 	void **pmu_alloc_ptr, void *assign_ptr)
 {
 	struct pmu_allocation_v1 **pmu_a_ptr =
@@ -429,7 +429,7 @@ static void set_pmu_allocation_ptr_v1(struct pmu_gk20a *pmu,
 	*pmu_a_ptr = (struct pmu_allocation_v1 *)assign_ptr;
 }
 
-static void set_pmu_allocation_ptr_v0(struct pmu_gk20a *pmu,
+static void set_pmu_allocation_ptr_v0(struct nvgpu_pmu *pmu,
 	void **pmu_alloc_ptr, void *assign_ptr)
 {
 	struct pmu_allocation_v0 **pmu_a_ptr =
@@ -437,7 +437,7 @@ static void set_pmu_allocation_ptr_v0(struct pmu_gk20a *pmu,
 	*pmu_a_ptr = (struct pmu_allocation_v0 *)assign_ptr;
 }
 
-static void pmu_allocation_set_dmem_size_v3(struct pmu_gk20a *pmu,
+static void pmu_allocation_set_dmem_size_v3(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr, u16 size)
 {
 	struct pmu_allocation_v3 *pmu_a_ptr =
@@ -445,7 +445,7 @@ static void pmu_allocation_set_dmem_size_v3(struct pmu_gk20a *pmu,
 	pmu_a_ptr->alloc.dmem.size = size;
 }
 
-static void pmu_allocation_set_dmem_size_v2(struct pmu_gk20a *pmu,
+static void pmu_allocation_set_dmem_size_v2(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr, u16 size)
 {
 	struct pmu_allocation_v2 *pmu_a_ptr =
@@ -453,7 +453,7 @@ static void pmu_allocation_set_dmem_size_v2(struct pmu_gk20a *pmu,
 	pmu_a_ptr->alloc.dmem.size = size;
 }
 
-static void pmu_allocation_set_dmem_size_v1(struct pmu_gk20a *pmu,
+static void pmu_allocation_set_dmem_size_v1(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr, u16 size)
 {
 	struct pmu_allocation_v1 *pmu_a_ptr =
@@ -461,7 +461,7 @@ static void pmu_allocation_set_dmem_size_v1(struct pmu_gk20a *pmu,
 	pmu_a_ptr->alloc.dmem.size = size;
 }
 
-static void pmu_allocation_set_dmem_size_v0(struct pmu_gk20a *pmu,
+static void pmu_allocation_set_dmem_size_v0(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr, u16 size)
 {
 	struct pmu_allocation_v0 *pmu_a_ptr =
@@ -469,7 +469,7 @@ static void pmu_allocation_set_dmem_size_v0(struct pmu_gk20a *pmu,
 	pmu_a_ptr->alloc.dmem.size = size;
 }
 
-static u16 pmu_allocation_get_dmem_size_v3(struct pmu_gk20a *pmu,
+static u16 pmu_allocation_get_dmem_size_v3(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr)
 {
 	struct pmu_allocation_v3 *pmu_a_ptr =
@@ -477,7 +477,7 @@ static u16 pmu_allocation_get_dmem_size_v3(struct pmu_gk20a *pmu,
 	return pmu_a_ptr->alloc.dmem.size;
 }
 
-static u16 pmu_allocation_get_dmem_size_v2(struct pmu_gk20a *pmu,
+static u16 pmu_allocation_get_dmem_size_v2(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr)
 {
 	struct pmu_allocation_v2 *pmu_a_ptr =
@@ -485,7 +485,7 @@ static u16 pmu_allocation_get_dmem_size_v2(struct pmu_gk20a *pmu,
 	return pmu_a_ptr->alloc.dmem.size;
 }
 
-static u16 pmu_allocation_get_dmem_size_v1(struct pmu_gk20a *pmu,
+static u16 pmu_allocation_get_dmem_size_v1(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr)
 {
 	struct pmu_allocation_v1 *pmu_a_ptr =
@@ -493,7 +493,7 @@ static u16 pmu_allocation_get_dmem_size_v1(struct pmu_gk20a *pmu,
 	return pmu_a_ptr->alloc.dmem.size;
 }
 
-static u16 pmu_allocation_get_dmem_size_v0(struct pmu_gk20a *pmu,
+static u16 pmu_allocation_get_dmem_size_v0(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr)
 {
 	struct pmu_allocation_v0 *pmu_a_ptr =
@@ -501,7 +501,7 @@ static u16 pmu_allocation_get_dmem_size_v0(struct pmu_gk20a *pmu,
 	return pmu_a_ptr->alloc.dmem.size;
 }
 
-static u32 pmu_allocation_get_dmem_offset_v3(struct pmu_gk20a *pmu,
+static u32 pmu_allocation_get_dmem_offset_v3(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr)
 {
 	struct pmu_allocation_v3 *pmu_a_ptr =
@@ -509,7 +509,7 @@ static u32 pmu_allocation_get_dmem_offset_v3(struct pmu_gk20a *pmu,
 	return pmu_a_ptr->alloc.dmem.offset;
 }
 
-static u32 pmu_allocation_get_dmem_offset_v2(struct pmu_gk20a *pmu,
+static u32 pmu_allocation_get_dmem_offset_v2(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr)
 {
 	struct pmu_allocation_v2 *pmu_a_ptr =
@@ -517,7 +517,7 @@ static u32 pmu_allocation_get_dmem_offset_v2(struct pmu_gk20a *pmu,
 	return pmu_a_ptr->alloc.dmem.offset;
 }
 
-static u32 pmu_allocation_get_dmem_offset_v1(struct pmu_gk20a *pmu,
+static u32 pmu_allocation_get_dmem_offset_v1(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr)
 {
 	struct pmu_allocation_v1 *pmu_a_ptr =
@@ -525,7 +525,7 @@ static u32 pmu_allocation_get_dmem_offset_v1(struct pmu_gk20a *pmu,
 	return pmu_a_ptr->alloc.dmem.offset;
 }
 
-static u32 pmu_allocation_get_dmem_offset_v0(struct pmu_gk20a *pmu,
+static u32 pmu_allocation_get_dmem_offset_v0(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr)
 {
 	struct pmu_allocation_v0 *pmu_a_ptr =
@@ -533,7 +533,7 @@ static u32 pmu_allocation_get_dmem_offset_v0(struct pmu_gk20a *pmu,
 	return pmu_a_ptr->alloc.dmem.offset;
 }
 
-static u32 *pmu_allocation_get_dmem_offset_addr_v3(struct pmu_gk20a *pmu,
+static u32 *pmu_allocation_get_dmem_offset_addr_v3(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr)
 {
 	struct pmu_allocation_v3 *pmu_a_ptr =
@@ -542,7 +542,7 @@ static u32 *pmu_allocation_get_dmem_offset_addr_v3(struct pmu_gk20a *pmu,
 }
 
 static void *pmu_allocation_get_fb_addr_v3(
-				struct pmu_gk20a *pmu, void *pmu_alloc_ptr)
+				struct nvgpu_pmu *pmu, void *pmu_alloc_ptr)
 {
 	struct pmu_allocation_v3 *pmu_a_ptr =
 			(struct pmu_allocation_v3 *)pmu_alloc_ptr;
@@ -550,14 +550,14 @@ static void *pmu_allocation_get_fb_addr_v3(
 }
 
 static u32 pmu_allocation_get_fb_size_v3(
-				struct pmu_gk20a *pmu, void *pmu_alloc_ptr)
+				struct nvgpu_pmu *pmu, void *pmu_alloc_ptr)
 {
 	struct pmu_allocation_v3 *pmu_a_ptr =
 			(struct pmu_allocation_v3 *)pmu_alloc_ptr;
 	return sizeof(pmu_a_ptr->alloc.fb);
 }
 
-static u32 *pmu_allocation_get_dmem_offset_addr_v2(struct pmu_gk20a *pmu,
+static u32 *pmu_allocation_get_dmem_offset_addr_v2(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr)
 {
 	struct pmu_allocation_v2 *pmu_a_ptr =
@@ -565,7 +565,7 @@ static u32 *pmu_allocation_get_dmem_offset_addr_v2(struct pmu_gk20a *pmu,
 	return &pmu_a_ptr->alloc.dmem.offset;
 }
 
-static u32 *pmu_allocation_get_dmem_offset_addr_v1(struct pmu_gk20a *pmu,
+static u32 *pmu_allocation_get_dmem_offset_addr_v1(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr)
 {
 	struct pmu_allocation_v1 *pmu_a_ptr =
@@ -573,7 +573,7 @@ static u32 *pmu_allocation_get_dmem_offset_addr_v1(struct pmu_gk20a *pmu,
 	return &pmu_a_ptr->alloc.dmem.offset;
 }
 
-static u32 *pmu_allocation_get_dmem_offset_addr_v0(struct pmu_gk20a *pmu,
+static u32 *pmu_allocation_get_dmem_offset_addr_v0(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr)
 {
 	struct pmu_allocation_v0 *pmu_a_ptr =
@@ -581,7 +581,7 @@ static u32 *pmu_allocation_get_dmem_offset_addr_v0(struct pmu_gk20a *pmu,
 	return &pmu_a_ptr->alloc.dmem.offset;
 }
 
-static void pmu_allocation_set_dmem_offset_v3(struct pmu_gk20a *pmu,
+static void pmu_allocation_set_dmem_offset_v3(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr, u32 offset)
 {
 	struct pmu_allocation_v3 *pmu_a_ptr =
@@ -589,7 +589,7 @@ static void pmu_allocation_set_dmem_offset_v3(struct pmu_gk20a *pmu,
 	pmu_a_ptr->alloc.dmem.offset = offset;
 }
 
-static void pmu_allocation_set_dmem_offset_v2(struct pmu_gk20a *pmu,
+static void pmu_allocation_set_dmem_offset_v2(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr, u32 offset)
 {
 	struct pmu_allocation_v2 *pmu_a_ptr =
@@ -597,7 +597,7 @@ static void pmu_allocation_set_dmem_offset_v2(struct pmu_gk20a *pmu,
 	pmu_a_ptr->alloc.dmem.offset = offset;
 }
 
-static void pmu_allocation_set_dmem_offset_v1(struct pmu_gk20a *pmu,
+static void pmu_allocation_set_dmem_offset_v1(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr, u32 offset)
 {
 	struct pmu_allocation_v1 *pmu_a_ptr =
@@ -605,7 +605,7 @@ static void pmu_allocation_set_dmem_offset_v1(struct pmu_gk20a *pmu,
 	pmu_a_ptr->alloc.dmem.offset = offset;
 }
 
-static void pmu_allocation_set_dmem_offset_v0(struct pmu_gk20a *pmu,
+static void pmu_allocation_set_dmem_offset_v0(struct nvgpu_pmu *pmu,
 	void *pmu_alloc_ptr, u32 offset)
 {
 	struct pmu_allocation_v0 *pmu_a_ptr =
@@ -1421,7 +1421,7 @@ static void pg_cmd_eng_buf_load_set_dma_idx_v2(struct pmu_pg_cmd *pg,
 	pg->eng_buf_load_v2.dma_desc.params |= (value << 24);
 }
 
-int gk20a_init_pmu(struct pmu_gk20a *pmu)
+int gk20a_init_pmu(struct nvgpu_pmu *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_v *pv = &g->ops.pmu_ver;
@@ -2214,7 +2214,7 @@ fail_elpg:
 	return err;
 }
 
-void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
+void pmu_copy_from_dmem(struct nvgpu_pmu *pmu,
 		u32 src, u8 *dst, u32 size, u8 port)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -2258,7 +2258,7 @@ void pmu_copy_from_dmem(struct pmu_gk20a *pmu,
 	return;
 }
 
-void pmu_copy_to_dmem(struct pmu_gk20a *pmu,
+void pmu_copy_to_dmem(struct nvgpu_pmu *pmu,
 		u32 dst, u8 *src, u32 size, u8 port)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -2309,7 +2309,7 @@ void pmu_copy_to_dmem(struct pmu_gk20a *pmu,
 	return;
 }
 
-int pmu_idle(struct pmu_gk20a *pmu)
+int pmu_idle(struct nvgpu_pmu *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct nvgpu_timeout timeout;
@@ -2338,7 +2338,7 @@ int pmu_idle(struct pmu_gk20a *pmu)
 	return 0;
 }
 
-void pmu_enable_irq(struct pmu_gk20a *pmu, bool enable)
+void pmu_enable_irq(struct nvgpu_pmu *pmu, bool enable)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 
@@ -2400,7 +2400,7 @@ void pmu_enable_irq(struct pmu_gk20a *pmu, bool enable)
 	gk20a_dbg_fn("done");
 }
 
-int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
+int pmu_enable_hw(struct nvgpu_pmu *pmu, bool enable)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct nvgpu_timeout timeout;
@@ -2443,7 +2443,7 @@ int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 	}
 }
 
-static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
+static int pmu_enable(struct nvgpu_pmu *pmu, bool enable)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	u32 pmc_enable;
@@ -2477,7 +2477,7 @@ static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
 	return 0;
 }
 
-int pmu_reset(struct pmu_gk20a *pmu)
+int pmu_reset(struct nvgpu_pmu *pmu)
 {
 	int err;
 
@@ -2502,7 +2502,7 @@ int pmu_reset(struct pmu_gk20a *pmu)
 	return 0;
 }
 
-int pmu_bootstrap(struct pmu_gk20a *pmu)
+int pmu_bootstrap(struct nvgpu_pmu *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct mm_gk20a *mm = &g->mm;
@@ -2593,7 +2593,7 @@ int pmu_bootstrap(struct pmu_gk20a *pmu)
 	return 0;
 }
 
-void pmu_seq_init(struct pmu_gk20a *pmu)
+void pmu_seq_init(struct nvgpu_pmu *pmu)
 {
 	u32 i;
 
@@ -2606,7 +2606,7 @@ void pmu_seq_init(struct pmu_gk20a *pmu)
 		pmu->seq[i].id = i;
 }
 
-static int pmu_seq_acquire(struct pmu_gk20a *pmu,
+static int pmu_seq_acquire(struct nvgpu_pmu *pmu,
 			struct pmu_sequence **pseq)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -2631,7 +2631,7 @@ static int pmu_seq_acquire(struct pmu_gk20a *pmu,
 	return 0;
 }
 
-static void pmu_seq_release(struct pmu_gk20a *pmu,
+static void pmu_seq_release(struct nvgpu_pmu *pmu,
 			struct pmu_sequence *seq)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -2649,7 +2649,7 @@ static void pmu_seq_release(struct pmu_gk20a *pmu,
 	clear_bit(seq->id, pmu->pmu_seq_tbl);
 }
 
-static int pmu_queue_init(struct pmu_gk20a *pmu,
+static int pmu_queue_init(struct nvgpu_pmu *pmu,
 		u32 id, union pmu_init_msg_pmu *init)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -2670,7 +2670,7 @@ static int pmu_queue_init(struct pmu_gk20a *pmu,
 	return 0;
 }
 
-static int pmu_queue_head(struct pmu_gk20a *pmu, struct pmu_queue *queue,
+static int pmu_queue_head(struct nvgpu_pmu *pmu, struct pmu_queue *queue,
 			u32 *head, bool set)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -2707,7 +2707,7 @@ static int pmu_queue_head(struct pmu_gk20a *pmu, struct pmu_queue *queue,
 	return 0;
 }
 
-static int pmu_queue_tail(struct pmu_gk20a *pmu, struct pmu_queue *queue,
+static int pmu_queue_tail(struct nvgpu_pmu *pmu, struct pmu_queue *queue,
 			u32 *tail, bool set)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -2745,19 +2745,19 @@ static int pmu_queue_tail(struct pmu_gk20a *pmu, struct pmu_queue *queue,
 	return 0;
 }
 
-static inline void pmu_queue_read(struct pmu_gk20a *pmu,
+static inline void pmu_queue_read(struct nvgpu_pmu *pmu,
 			u32 offset, u8 *dst, u32 size)
 {
 	pmu_copy_from_dmem(pmu, offset, dst, size, 0);
 }
 
-static inline void pmu_queue_write(struct pmu_gk20a *pmu,
+static inline void pmu_queue_write(struct nvgpu_pmu *pmu,
 			u32 offset, u8 *src, u32 size)
 {
 	pmu_copy_to_dmem(pmu, offset, src, size, 0);
 }
 
-int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token)
+int pmu_mutex_acquire(struct nvgpu_pmu *pmu, u32 id, u32 *token)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_mutex *mutex;
@@ -2826,7 +2826,7 @@ int pmu_mutex_acquire(struct pmu_gk20a *pmu, u32 id, u32 *token)
 	return -EBUSY;
 }
 
-int pmu_mutex_release(struct pmu_gk20a *pmu, u32 id, u32 *token)
+int pmu_mutex_release(struct nvgpu_pmu *pmu, u32 id, u32 *token)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_mutex *mutex;
@@ -2867,7 +2867,7 @@ int pmu_mutex_release(struct pmu_gk20a *pmu, u32 id, u32 *token)
 	return 0;
 }
 
-static int pmu_queue_lock(struct pmu_gk20a *pmu,
+static int pmu_queue_lock(struct nvgpu_pmu *pmu,
 			struct pmu_queue *queue)
 {
 	int err;
@@ -2884,7 +2884,7 @@ static int pmu_queue_lock(struct pmu_gk20a *pmu,
 	return err;
 }
 
-static int pmu_queue_unlock(struct pmu_gk20a *pmu,
+static int pmu_queue_unlock(struct nvgpu_pmu *pmu,
 			struct pmu_queue *queue)
 {
 	int err;
@@ -2902,7 +2902,7 @@ static int pmu_queue_unlock(struct pmu_gk20a *pmu,
 }
 
 /* called by pmu_read_message, no lock */
-static bool pmu_queue_is_empty(struct pmu_gk20a *pmu,
+static bool pmu_queue_is_empty(struct nvgpu_pmu *pmu,
 			struct pmu_queue *queue)
 {
 	u32 head, tail;
@@ -2916,7 +2916,7 @@ static bool pmu_queue_is_empty(struct pmu_gk20a *pmu,
 	return head == tail;
 }
 
-static bool pmu_queue_has_room(struct pmu_gk20a *pmu,
+static bool pmu_queue_has_room(struct nvgpu_pmu *pmu,
 			struct pmu_queue *queue, u32 size, bool *need_rewind)
 {
 	u32 head, tail;
@@ -2946,7 +2946,7 @@ static bool pmu_queue_has_room(struct pmu_gk20a *pmu,
 	return size <= free;
 }
 
-static int pmu_queue_push(struct pmu_gk20a *pmu,
+static int pmu_queue_push(struct nvgpu_pmu *pmu,
 			struct pmu_queue *queue, void *data, u32 size)
 {
 
@@ -2962,7 +2962,7 @@ static int pmu_queue_push(struct pmu_gk20a *pmu,
 	return 0;
 }
 
-static int pmu_queue_pop(struct pmu_gk20a *pmu,
+static int pmu_queue_pop(struct nvgpu_pmu *pmu,
 			struct pmu_queue *queue, void *data, u32 size,
 			u32 *bytes_read)
 {
@@ -2998,7 +2998,7 @@ static int pmu_queue_pop(struct pmu_gk20a *pmu,
 	return 0;
 }
 
-static void pmu_queue_rewind(struct pmu_gk20a *pmu,
+static void pmu_queue_rewind(struct nvgpu_pmu *pmu,
 			struct pmu_queue *queue)
 {
 	struct pmu_cmd cmd;
@@ -3022,7 +3022,7 @@ static void pmu_queue_rewind(struct pmu_gk20a *pmu,
 }
 
 /* open for read and lock the queue */
-static int pmu_queue_open_read(struct pmu_gk20a *pmu,
+static int pmu_queue_open_read(struct nvgpu_pmu *pmu,
 			struct pmu_queue *queue)
 {
 	int err;
@@ -3043,7 +3043,7 @@ static int pmu_queue_open_read(struct pmu_gk20a *pmu,
 
 /* open for write and lock the queue
    make sure there's enough free space for the write */
-static int pmu_queue_open_write(struct pmu_gk20a *pmu,
+static int pmu_queue_open_write(struct nvgpu_pmu *pmu,
 			struct pmu_queue *queue, u32 size)
 {
 	bool rewind = false;
@@ -3074,7 +3074,7 @@ static int pmu_queue_open_write(struct pmu_gk20a *pmu,
 }
 
 /* close and unlock the queue */
-static int pmu_queue_close(struct pmu_gk20a *pmu,
+static int pmu_queue_close(struct nvgpu_pmu *pmu,
 			struct pmu_queue *queue, bool commit)
 {
 	if (!queue->opened)
@@ -3098,7 +3098,7 @@ static int pmu_queue_close(struct pmu_gk20a *pmu,
 	return 0;
 }
 
-void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
+void gk20a_remove_pmu_support(struct nvgpu_pmu *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 
@@ -3118,7 +3118,7 @@ void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
 
 static int gk20a_init_pmu_reset_enable_hw(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 
 	gk20a_dbg_fn("");
 
@@ -3129,7 +3129,7 @@ static int gk20a_init_pmu_reset_enable_hw(struct gk20a *g)
 
 static int gk20a_prepare_ucode(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	int err = 0;
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
@@ -3168,7 +3168,7 @@ static int gk20a_prepare_ucode(struct gk20a *g)
 
 static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	unsigned int i;
@@ -3266,7 +3266,7 @@ skip_init:
 static void pmu_handle_pg_buf_config_msg(struct gk20a *g, struct pmu_msg *msg,
 			void *param, u32 handle, u32 status)
 {
-	struct pmu_gk20a *pmu = param;
+	struct nvgpu_pmu *pmu = param;
 	struct pmu_pg_msg_eng_buf_stat *eng_buf_stat = &msg->msg.pg.eng_buf_stat;
 
 	gk20a_dbg_fn("");
@@ -3289,7 +3289,7 @@ static void pmu_handle_pg_buf_config_msg(struct gk20a *g, struct pmu_msg *msg,
 
 static int gk20a_init_pmu_setup_hw1(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	int err = 0;
 
 	gk20a_dbg_fn("");
@@ -3327,7 +3327,7 @@ static void pmu_setup_hw_enable_elpg(struct gk20a *g);
 static void nvgpu_pmu_state_change(struct gk20a *g, u32 pmu_state,
 		bool post_change_event)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 
 	pmu->pmu_state = pmu_state;
 
@@ -3343,7 +3343,7 @@ static void nvgpu_pmu_state_change(struct gk20a *g, u32 pmu_state,
 static int nvgpu_pg_init_task(void *arg)
 {
 	struct gk20a *g = (struct gk20a *)arg;
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct nvgpu_pg_init *pg_init = &pmu->pg_init;
 	u32 pmu_state = 0;
 
@@ -3396,7 +3396,7 @@ static int nvgpu_pg_init_task(void *arg)
 
 static int nvgpu_init_task_pg_init(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	char thread_name[64];
 	int err = 0;
 
@@ -3415,7 +3415,7 @@ static int nvgpu_init_task_pg_init(struct gk20a *g)
 
 int gk20a_init_pmu_bind_fecs(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 desc;
 	int err = 0;
@@ -3454,7 +3454,7 @@ int gk20a_init_pmu_bind_fecs(struct gk20a *g)
 
 static void pmu_setup_hw_load_zbc(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 desc;
 	u32 gr_engine_id;
@@ -3489,7 +3489,7 @@ static void pmu_setup_hw_load_zbc(struct gk20a *g)
 
 static void pmu_setup_hw_enable_elpg(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 
 	/*
 	 * FIXME: To enable ELPG, we increase the PMU ext2priv timeout unit to
@@ -3532,7 +3532,7 @@ static void gk20a_write_dmatrfbase(struct gk20a *g, u32 addr)
 int gk20a_pmu_reset(struct gk20a *g)
 {
 	int err;
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 
 	err = pmu_reset(pmu);
 
@@ -3592,7 +3592,7 @@ void gk20a_init_pmu_ops(struct gpu_ops *gops)
 
 int gk20a_init_pmu_support(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	u32 err;
 
 	gk20a_dbg_fn("");
@@ -3621,7 +3621,7 @@ int gk20a_init_pmu_support(struct gk20a *g)
 static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 			void *param, u32 handle, u32 status)
 {
-	struct pmu_gk20a *pmu = param;
+	struct nvgpu_pmu *pmu = param;
 	struct pmu_pg_msg_elpg_msg *elpg_msg = &msg->msg.pg.elpg_msg;
 
 	gk20a_dbg_fn("");
@@ -3681,7 +3681,7 @@ static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
 static void pmu_handle_pg_stat_msg(struct gk20a *g, struct pmu_msg *msg,
 			void *param, u32 handle, u32 status)
 {
-	struct pmu_gk20a *pmu = param;
+	struct nvgpu_pmu *pmu = param;
 
 	gk20a_dbg_fn("");
 
@@ -3704,7 +3704,7 @@ static void pmu_handle_pg_stat_msg(struct gk20a *g, struct pmu_msg *msg,
 
 static int pmu_pg_init_send(struct gk20a *g, u32 pg_engine_id)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq;
 
@@ -3766,7 +3766,7 @@ static int pmu_pg_init_send(struct gk20a *g, u32 pg_engine_id)
 }
 static int pmu_init_powergating(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	u32 pg_engine_id;
 	u32 pg_engine_id_list = 0;
 
@@ -3795,7 +3795,7 @@ static int pmu_init_powergating(struct gk20a *g)
 	return 0;
 }
 
-static u8 get_perfmon_id(struct pmu_gk20a *pmu)
+static u8 get_perfmon_id(struct nvgpu_pmu *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
@@ -3824,7 +3824,7 @@ static u8 get_perfmon_id(struct pmu_gk20a *pmu)
 	return unit_id;
 }
 
-static int pmu_init_perfmon(struct pmu_gk20a *pmu)
+static int pmu_init_perfmon(struct nvgpu_pmu *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_v *pv = &g->ops.pmu_ver;
@@ -3924,7 +3924,7 @@ static int pmu_init_perfmon(struct pmu_gk20a *pmu)
 	return 0;
 }
 
-static int pmu_process_init_msg(struct pmu_gk20a *pmu,
+static int pmu_process_init_msg(struct nvgpu_pmu *pmu,
 			struct pmu_msg *msg)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -4002,7 +4002,7 @@ static int pmu_process_init_msg(struct pmu_gk20a *pmu,
 	return 0;
 }
 
-static bool pmu_read_message(struct pmu_gk20a *pmu, struct pmu_queue *queue,
+static bool pmu_read_message(struct nvgpu_pmu *pmu, struct pmu_queue *queue,
 			struct pmu_msg *msg, int *status)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -4077,7 +4077,7 @@ clean_up:
 	return false;
 }
 
-static int pmu_response_handle(struct pmu_gk20a *pmu,
+static int pmu_response_handle(struct nvgpu_pmu *pmu,
 			struct pmu_msg *msg)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -4168,14 +4168,14 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 static void pmu_handle_zbc_msg(struct gk20a *g, struct pmu_msg *msg,
 			void *param, u32 handle, u32 status)
 {
-	struct pmu_gk20a *pmu = param;
+	struct nvgpu_pmu *pmu = param;
 	gk20a_dbg_pmu("reply ZBC_TABLE_UPDATE");
 	pmu->zbc_save_done = 1;
 }
 
 void gk20a_pmu_save_zbc(struct gk20a *g, u32 entries)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq;
 
@@ -4199,7 +4199,7 @@ void gk20a_pmu_save_zbc(struct gk20a *g, u32 entries)
 		nvgpu_err(g, "ZBC save timeout");
 }
 
-int nvgpu_pmu_perfmon_start_sampling(struct pmu_gk20a *pmu)
+int nvgpu_pmu_perfmon_start_sampling(struct nvgpu_pmu *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_v *pv = &g->ops.pmu_ver;
@@ -4243,7 +4243,7 @@ int nvgpu_pmu_perfmon_start_sampling(struct pmu_gk20a *pmu)
 	return 0;
 }
 
-int nvgpu_pmu_perfmon_stop_sampling(struct pmu_gk20a *pmu)
+int nvgpu_pmu_perfmon_stop_sampling(struct nvgpu_pmu *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_cmd cmd;
@@ -4261,7 +4261,7 @@ int nvgpu_pmu_perfmon_stop_sampling(struct pmu_gk20a *pmu)
 	return 0;
 }
 
-static int pmu_handle_perfmon_event(struct pmu_gk20a *pmu,
+static int pmu_handle_perfmon_event(struct nvgpu_pmu *pmu,
 			struct pmu_perfmon_msg *msg)
 {
 	gk20a_dbg_fn("");
@@ -4294,7 +4294,7 @@ static int pmu_handle_perfmon_event(struct pmu_gk20a *pmu,
 }
 
 
-static int pmu_handle_therm_event(struct pmu_gk20a *pmu,
+static int pmu_handle_therm_event(struct nvgpu_pmu *pmu,
 			struct nv_pmu_therm_msg *msg)
 {
 	gk20a_dbg_fn("");
@@ -4318,7 +4318,7 @@ static int pmu_handle_therm_event(struct pmu_gk20a *pmu,
 	return 0;
 }
 
-static int pmu_handle_event(struct pmu_gk20a *pmu, struct pmu_msg *msg)
+static int pmu_handle_event(struct nvgpu_pmu *pmu, struct pmu_msg *msg)
 {
 	int err = 0;
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -4347,7 +4347,7 @@ static int pmu_handle_event(struct pmu_gk20a *pmu, struct pmu_msg *msg)
 	return err;
 }
 
-static int pmu_process_message(struct pmu_gk20a *pmu)
+static int pmu_process_message(struct nvgpu_pmu *pmu)
 {
 	struct pmu_msg msg;
 	int status;
@@ -4383,7 +4383,7 @@ static int pmu_process_message(struct pmu_gk20a *pmu)
 	return 0;
 }
 
-int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout_ms,
+int pmu_wait_message_cond(struct nvgpu_pmu *pmu, u32 timeout_ms,
 				 u32 *var, u32 val)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -4411,7 +4411,7 @@ int pmu_wait_message_cond(struct pmu_gk20a *pmu, u32 timeout_ms,
 	return -ETIMEDOUT;
 }
 
-static void pmu_dump_elpg_stats(struct pmu_gk20a *pmu)
+static void pmu_dump_elpg_stats(struct nvgpu_pmu *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	struct pmu_pg_stats stats;
@@ -4484,7 +4484,7 @@ static void pmu_dump_elpg_stats(struct pmu_gk20a *pmu)
 	*/
 }
 
-void pmu_dump_falcon_stats(struct pmu_gk20a *pmu)
+void pmu_dump_falcon_stats(struct nvgpu_pmu *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	unsigned int i;
@@ -4610,7 +4610,7 @@ void pmu_dump_falcon_stats(struct pmu_gk20a *pmu)
 
 void gk20a_pmu_isr(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_queue *queue;
 	u32 intr, mask;
 	bool recheck = false;
@@ -4672,7 +4672,7 @@ void gk20a_pmu_isr(struct gk20a *g)
 	nvgpu_mutex_release(&pmu->isr_mutex);
 }
 
-static bool pmu_validate_cmd(struct pmu_gk20a *pmu, struct pmu_cmd *cmd,
+static bool pmu_validate_cmd(struct nvgpu_pmu *pmu, struct pmu_cmd *cmd,
 			struct pmu_msg *msg, struct pmu_payload *payload,
 			u32 queue_id)
 {
@@ -4742,7 +4742,7 @@ invalid_cmd:
 	return false;
 }
 
-static int pmu_write_cmd(struct pmu_gk20a *pmu, struct pmu_cmd *cmd,
+static int pmu_write_cmd(struct nvgpu_pmu *pmu, struct pmu_cmd *cmd,
 			u32 queue_id, unsigned long timeout_ms)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -4832,7 +4832,7 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 		u32 queue_id, pmu_callback callback, void* cb_param,
 		u32 *seq_desc, unsigned long timeout)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_v *pv = &g->ops.pmu_ver;
 	struct pmu_sequence *seq;
 	void *in = NULL, *out = NULL;
@@ -5022,7 +5022,7 @@ int gk20a_pmu_pg_global_enable(struct gk20a *g, u32 enable_pg)
 
 static int gk20a_pmu_enable_elpg_locked(struct gk20a *g, u32 pg_engine_id)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq, status;
 
@@ -5057,7 +5057,7 @@ static int gk20a_pmu_enable_elpg_locked(struct gk20a *g, u32 pg_engine_id)
 
 int gk20a_pmu_enable_elpg(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct gr_gk20a *gr = &g->gr;
 	u32 pg_engine_id;
 	u32 pg_engine_id_list = 0;
@@ -5115,7 +5115,7 @@ exit_unlock:
 
 int gk20a_pmu_disable_elpg(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq;
 	int ret = 0;
@@ -5225,7 +5225,7 @@ exit_unlock:
 
 int gk20a_pmu_perfmon_enable(struct gk20a *g, bool enable)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	int err;
 
 	gk20a_dbg_fn("");
@@ -5240,7 +5240,7 @@ int gk20a_pmu_perfmon_enable(struct gk20a *g, bool enable)
 
 int gk20a_pmu_destroy(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_pg_stats_data pg_stat_data = { 0 };
 	struct nvgpu_timeout timeout;
 	int i;
@@ -5306,7 +5306,7 @@ int gk20a_pmu_load_norm(struct gk20a *g, u32 *load)
 
 int gk20a_pmu_load_update(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	u16 _load = 0;
 
 	if (!pmu->perfmon_ready) {
@@ -5354,7 +5354,7 @@ void gk20a_pmu_reset_load_counters(struct gk20a *g)
 void gk20a_pmu_elpg_statistics(struct gk20a *g, u32 pg_engine_id,
 		struct pmu_pg_stats_data *pg_stat_data)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct pmu_pg_stats stats;
 
 	pmu_copy_from_dmem(pmu,
@@ -5372,7 +5372,7 @@ int gk20a_pmu_get_pg_stats(struct gk20a *g,
 		u32 pg_engine_id,
 		struct pmu_pg_stats_data *pg_stat_data)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	u32 pg_engine_id_list = 0;
 
 	if (!pmu->initialized) {
@@ -5396,7 +5396,7 @@ int gk20a_pmu_get_pg_stats(struct gk20a *g,
 int gk20a_pmu_ap_send_command(struct gk20a *g,
 			union pmu_ap_cmd *p_ap_cmd, bool b_block)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	/* FIXME: where is the PG structure defined?? */
 	u32 status = 0;
 	struct pmu_cmd cmd;

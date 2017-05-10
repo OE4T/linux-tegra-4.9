@@ -11,16 +11,17 @@
  * more details.
  */
 
+#include <nvgpu/pmu.h>
+#include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
+
 #include "gk20a/gk20a.h"
 #include "boardobj/boardobjgrp.h"
 #include "boardobj/boardobjgrp_e32.h"
 #include "gm206/bios_gm206.h"
 #include "ctrl/ctrlvolt.h"
 #include "ctrl/ctrlperf.h"
-#include "gk20a/pmu_gk20a.h"
 
 #include "volt.h"
-#include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
 
 #define RAIL_COUNT 2
 

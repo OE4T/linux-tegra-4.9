@@ -24,14 +24,12 @@
 #include <governor.h>
 
 #include <nvgpu/kmem.h>
+#include <nvgpu/log.h>
 
 #include "gk20a.h"
 #include "platform_gk20a.h"
-#include "pmu_gk20a.h"
 #include "clk_gk20a.h"
 #include "gk20a_scale.h"
-
-#include <nvgpu/log.h>
 
 /*
  * gk20a_scale_qos_notify()

@@ -17,7 +17,6 @@
 #include <nvgpu/kmem.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/pmu_gk20a.h"
 #include "gm206/bios_gm206.h"
 
 #include "boardobj/boardobjgrp.h"

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify it
 * under the terms and conditions of the GNU General Public License,
@@ -10,14 +10,12 @@
 * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 * more details.
 */
+#include <nvgpu/bug.h>
 
 #include "gk20a/gk20a.h"
-#include "gk20a/pmu_gk20a.h"
 #include "boardobjgrp.h"
 #include "ctrl/ctrlboardobj.h"
 #include "boardobj.h"
-
-#include <nvgpu/bug.h>
 
 static boardobjgrp_objinsert   boardobjgrp_objinsert_final;
 static boardobjgrp_objgetbyidx   boardobjgrp_objgetbyidx_final;

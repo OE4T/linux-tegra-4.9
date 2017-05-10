@@ -5193,7 +5193,7 @@ clean_up:
 
 static int gk20a_init_gr_bind_fecs_elpg(struct gk20a *g)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	int err = 0;

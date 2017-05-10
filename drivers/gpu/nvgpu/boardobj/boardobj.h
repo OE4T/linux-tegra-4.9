@@ -14,11 +14,11 @@
 #ifndef _BOARDOBJ_H_
 #define _BOARDOBJ_H_
 
-struct boardobj;
-
-#include "gk20a/pmu_gk20a.h"
-#include "ctrl/ctrlboardobj.h"
 #include <nvgpu/pmuif/nvgpu_gpmu_cmdif.h>
+
+#include "ctrl/ctrlboardobj.h"
+
+struct boardobj;
 
 /*
 * check whether the specified BOARDOBJ object implements the queried

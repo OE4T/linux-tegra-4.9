@@ -252,7 +252,7 @@ static const struct file_operations elpg_transitions_fops = {
 static int falc_trace_show(struct seq_file *s, void *data)
 {
 	struct gk20a *g = s->private;
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	u32 i = 0, j = 0, k, l, m;
 	char part_str[40];
 	void *tracebuffer;

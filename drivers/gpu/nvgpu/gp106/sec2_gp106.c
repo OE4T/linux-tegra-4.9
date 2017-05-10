@@ -11,6 +11,8 @@
  * more details.
  */
 
+#include <nvgpu/pmu.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 
@@ -88,7 +90,7 @@ int sec2_wait_for_halt(struct gk20a *g, unsigned int timeout)
 	return completion;
 }
 
-void sec2_copy_to_dmem(struct pmu_gk20a *pmu,
+void sec2_copy_to_dmem(struct nvgpu_pmu *pmu,
 		u32 dst, u8 *src, u32 size, u8 port)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -139,7 +141,7 @@ void sec2_copy_to_dmem(struct pmu_gk20a *pmu,
 	return;
 }
 
-int bl_bootstrap_sec2(struct pmu_gk20a *pmu,
+int bl_bootstrap_sec2(struct nvgpu_pmu *pmu,
 	void *desc, u32 bl_sz)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
@@ -223,7 +225,7 @@ int bl_bootstrap_sec2(struct pmu_gk20a *pmu,
 	return 0;
 }
 
-void sec_enable_irq(struct pmu_gk20a *pmu, bool enable)
+void sec_enable_irq(struct nvgpu_pmu *pmu, bool enable)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 
@@ -281,7 +283,7 @@ void sec_enable_irq(struct pmu_gk20a *pmu, bool enable)
 void init_pmu_setup_hw1(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 
 	/* PMU TRANSCFG */
 	/* setup apertures - virtual */
@@ -331,7 +333,7 @@ void init_pmu_setup_hw1(struct gk20a *g)
 int init_sec2_setup_hw1(struct gk20a *g,
 		void *desc, u32 bl_sz)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	int err;
 	u32 data = 0;
 

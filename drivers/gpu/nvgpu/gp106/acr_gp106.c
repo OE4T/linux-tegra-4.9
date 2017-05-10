@@ -20,6 +20,7 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/acr/nvgpu_acr.h>
 #include <nvgpu/firmware.h>
+#include <nvgpu/pmu.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
@@ -140,7 +141,7 @@ void gp106_init_secure_pmu(struct gpu_ops *gops)
 static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 {
 	struct nvgpu_firmware *pmu_fw, *pmu_desc, *pmu_sig;
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct lsf_ucode_desc_v1 *lsf_desc;
 	int err;
 
@@ -382,7 +383,7 @@ static int gp106_prepare_ucode_blob(struct gk20a *g)
 
 	int err;
 	struct ls_flcn_mgr_v1 lsfm_l, *plsfm;
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct wpr_carveout_info wpr_inf;
 
 	if (g->acr.ucode_blob.cpu_va) {
@@ -445,7 +446,7 @@ static u8 lsfm_falcon_disabled(struct gk20a *g, struct ls_flcn_mgr_v1 *plsfm,
 static int lsfm_discover_ucode_images(struct gk20a *g,
 	struct ls_flcn_mgr_v1 *plsfm)
 {
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct flcn_ucode_img_v1 ucode_img;
 	u32 falcon_id;
 	u32 i;
@@ -531,7 +532,7 @@ static int gp106_pmu_populate_loader_cfg(struct gk20a *g,
 	void *lsfm, u32 *p_bl_gen_desc_size)
 {
 	struct wpr_carveout_info wpr_inf;
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	struct lsfm_managed_ucode_img_v2 *p_lsfm =
 		(struct lsfm_managed_ucode_img_v2 *)lsfm;
 	struct flcn_ucode_img_v1 *p_img = &(p_lsfm->ucode_img);
@@ -661,7 +662,7 @@ static int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
 		struct lsfm_managed_ucode_img_v2 *pnode)
 {
 
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	if (pnode->wpr_header.falcon_id != pmu->falcon_id) {
 		gp106_dbg_pmu("non pmu. write flcn bl gen desc\n");
 		g->ops.pmu.flcn_populate_bl_dmem_desc(g,
@@ -818,7 +819,7 @@ static void lsfm_fill_static_lsb_hdr_info(struct gk20a *g,
 	u32 falcon_id, struct lsfm_managed_ucode_img_v2 *pnode)
 {
 
-	struct pmu_gk20a *pmu = &g->pmu;
+	struct nvgpu_pmu *pmu = &g->pmu;
 	u32 full_app_size = 0;
 	u32 data = 0;
 

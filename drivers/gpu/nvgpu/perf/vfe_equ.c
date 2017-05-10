@@ -20,7 +20,6 @@
 #include "boardobj/boardobjgrp_e255.h"
 #include "ctrl/ctrlclk.h"
 #include "ctrl/ctrlvolt.h"
-#include "gk20a/pmu_gk20a.h"
 
 static struct vfe_equ *construct_vfe_equ(struct gk20a *g, void *pargs);
 static u32 devinit_get_vfe_equ_table(struct gk20a *g,

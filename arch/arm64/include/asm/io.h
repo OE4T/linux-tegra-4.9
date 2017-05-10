@@ -173,6 +173,10 @@ extern void __iomem *ioremap_cache(phys_addr_t phys_addr, size_t size);
 #define ioremap_wt(addr, size)		__ioremap((addr), (size), __pgprot(PROT_DEVICE_nGnRE))
 #define iounmap				__iounmap
 
+extern int pci_ioremap_io(unsigned int offset, phys_addr_t phys_addr);
+extern void pci_iounmap_io(unsigned int offset);
+
+
 /*
  * io{read,write}{16,32,64}be() macros
  */

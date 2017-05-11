@@ -109,9 +109,9 @@ nvgpu_mem_from_clear_list_entry(struct nvgpu_list_node *node)
 static inline const char *nvgpu_aperture_str(enum nvgpu_aperture aperture)
 {
 	switch (aperture) {
-		case APERTURE_INVALID: return "invalid";
-		case APERTURE_SYSMEM:  return "sysmem";
-		case APERTURE_VIDMEM:  return "vidmem";
+		case APERTURE_INVALID: return "INVAL";
+		case APERTURE_SYSMEM:  return "SYSMEM";
+		case APERTURE_VIDMEM:  return "VIDMEM";
 	};
 	return "UNKNOWN";
 }

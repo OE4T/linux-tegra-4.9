@@ -67,7 +67,7 @@ void gk20a_fb_tlb_invalidate(struct gk20a *g, struct nvgpu_mem *pdb)
 	if (!g->power_on)
 		return;
 
-	addr_lo = u64_lo32(gk20a_mem_get_base_addr(g, pdb, 0) >> 12);
+	addr_lo = u64_lo32(nvgpu_mem_get_base_addr(g, pdb, 0) >> 12);
 
 	nvgpu_mutex_acquire(&g->mm.tlb_lock);
 

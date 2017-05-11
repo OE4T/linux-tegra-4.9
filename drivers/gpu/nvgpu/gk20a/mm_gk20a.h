@@ -42,12 +42,6 @@
 		outer_flush_range(pa, pa + (size_t)(size));		\
 	} while (0)
 
-enum gk20a_mem_rw_flag {
-	gk20a_mem_flag_none = 0,
-	gk20a_mem_flag_read_only = 1,
-	gk20a_mem_flag_write_only = 2,
-};
-
 struct gpfifo_desc {
 	struct nvgpu_mem mem;
 	u32 entry_num;
@@ -347,7 +341,7 @@ int gk20a_mm_suspend(struct gk20a *g);
 u64 gk20a_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl,
 		u32 flags);
 u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, dma_addr_t iova);
-u64 gk20a_mem_get_base_addr(struct gk20a *g, struct nvgpu_mem *mem,
+u64 nvgpu_mem_get_base_addr(struct gk20a *g, struct nvgpu_mem *mem,
 			    u32 flags);
 
 void gk20a_mm_ltc_isr(struct gk20a *g);
@@ -370,10 +364,6 @@ static inline phys_addr_t gk20a_mem_phys(struct nvgpu_mem *mem)
 
 	return 0;
 }
-
-void gk20a_pde_wr32(struct gk20a *g, struct gk20a_mm_entry *entry,
-		size_t w, size_t data);
-u64 gk20a_pde_addr(struct gk20a *g, struct gk20a_mm_entry *entry);
 
 u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			u64 map_offset,
@@ -450,9 +440,5 @@ extern const struct gk20a_mmu_level gk20a_mm_levels_128k[];
 int gk20a_mm_get_buffer_info(struct device *dev, int dmabuf_fd,
 			     u64 *buffer_id, u64 *buffer_len);
 void gk20a_vm_unmap_locked_kref(struct kref *ref);
-
-void gk20a_vm_free_entries(struct vm_gk20a *vm,
-			   struct gk20a_mm_entry *parent,
-			   int level);
 
 #endif /* MM_GK20A_H */

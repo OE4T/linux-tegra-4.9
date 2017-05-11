@@ -14,6 +14,7 @@
  */
 
 #include <nvgpu/dma.h>
+#include <nvgpu/gmmu.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
@@ -149,206 +150,186 @@ static u64 gp10b_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl,
 	return gk20a_mm_smmu_vaddr_translate(g, sg_dma_address(sgl));
 }
 
-static u32 pde3_from_index(u32 i)
-{
-	return i * gmmu_new_pde__size_v() / sizeof(u32);
-}
-
-static u32 pte3_from_index(u32 i)
-{
-	return i * gmmu_new_pte__size_v() / sizeof(u32);
-}
-
-static int update_gmmu_pde3_locked(struct vm_gk20a *vm,
-			   struct gk20a_mm_entry *parent,
-			   u32 i, u32 gmmu_pgsz_idx,
-			   struct scatterlist **sgl,
-			   u64 *offset,
-			   u64 *iova,
-			   u32 kind_v, u64 *ctag,
-			   bool cacheable, bool unmapped_pte,
-			   int rw_flag, bool sparse, bool priv,
-			   enum nvgpu_aperture aperture)
+static void update_gmmu_pde3_locked(struct vm_gk20a *vm,
+				    const struct gk20a_mmu_level *l,
+				    struct nvgpu_gmmu_pd *pd,
+				    u32 pd_idx,
+				    u64 virt_addr,
+				    u64 phys_addr,
+				    struct nvgpu_gmmu_attrs *attrs)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-	u64 pte_addr = 0;
-	struct gk20a_mm_entry *pte = parent->entries + i;
+	u32 pd_offset = pd_offset_from_index(l, pd_idx);
 	u32 pde_v[2] = {0, 0};
-	u32 pde;
 
-	gk20a_dbg_fn("");
+	phys_addr >>= gmmu_new_pde_address_shift_v();
 
-	pte_addr = gk20a_pde_addr(g, pte) >> gmmu_new_pde_address_shift_v();
-
-	pde_v[0] |= nvgpu_aperture_mask(g, &pte->mem,
+	pde_v[0] |= nvgpu_aperture_mask(g, &pd->mem,
 			gmmu_new_pde_aperture_sys_mem_ncoh_f(),
 			gmmu_new_pde_aperture_video_memory_f());
-	pde_v[0] |= gmmu_new_pde_address_sys_f(u64_lo32(pte_addr));
+	pde_v[0] |= gmmu_new_pde_address_sys_f(u64_lo32(phys_addr));
 	pde_v[0] |= gmmu_new_pde_vol_true_f();
-	pde_v[1] |= pte_addr >> 24;
-	pde = pde3_from_index(i);
+	pde_v[1] |= phys_addr >> 24;
 
-	gk20a_pde_wr32(g, parent, pde + 0, pde_v[0]);
-	gk20a_pde_wr32(g, parent, pde + 1, pde_v[1]);
+	pd_write(g, pd, pd_offset + 0, pde_v[0]);
+	pd_write(g, pd, pd_offset + 1, pde_v[1]);
 
-	gk20a_dbg(gpu_dbg_pte, "pde:%d,sz=%d = 0x%x,0x%08x",
-		  i, gmmu_pgsz_idx, pde_v[1], pde_v[0]);
-	gk20a_dbg_fn("done");
-	return 0;
+	pte_dbg(g, attrs,
+		"PDE: i=%-4u size=%-2u offs=%-4u pgsz: -- | "
+		"GPU %#-12llx  phys %#-12llx "
+		"[0x%08x, 0x%08x]",
+		pd_idx, l->entry_size, pd_offset,
+		virt_addr, phys_addr,
+		pde_v[1], pde_v[0]);
 }
 
-static u32 pde0_from_index(u32 i)
-{
-	return i * gmmu_new_dual_pde__size_v() / sizeof(u32);
-}
-
-static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
-			   struct gk20a_mm_entry *pte,
-			   u32 i, u32 gmmu_pgsz_idx,
-			   struct scatterlist **sgl,
-			   u64 *offset,
-			   u64 *iova,
-			   u32 kind_v, u64 *ctag,
-			   bool cacheable, bool unmapped_pte,
-			   int rw_flag, bool sparse, bool priv,
-			   enum nvgpu_aperture aperture)
+static void update_gmmu_pde0_locked(struct vm_gk20a *vm,
+				    const struct gk20a_mmu_level *l,
+				    struct nvgpu_gmmu_pd *pd,
+				    u32 pd_idx,
+				    u64 virt_addr,
+				    u64 phys_addr,
+				    struct nvgpu_gmmu_attrs *attrs)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	bool small_valid, big_valid;
-	u32 pte_addr_small = 0, pte_addr_big = 0;
-	struct gk20a_mm_entry *entry = pte->entries + i;
+	u32 small_addr = 0, big_addr = 0;
+	u32 pd_offset = pd_offset_from_index(l, pd_idx);
 	u32 pde_v[4] = {0, 0, 0, 0};
-	u32 pde;
 
-	gk20a_dbg_fn("");
+	small_valid = attrs->pgsz == gmmu_page_size_small;
+	big_valid   = attrs->pgsz == gmmu_page_size_big;
 
-	small_valid = entry->mem.size && entry->pgsz == gmmu_page_size_small;
-	big_valid = entry->mem.size && entry->pgsz == gmmu_page_size_big;
-
-	if (small_valid) {
-		pte_addr_small = gk20a_pde_addr(g, entry)
-				 >> gmmu_new_dual_pde_address_shift_v();
-	}
+	if (small_valid)
+		small_addr = phys_addr >> gmmu_new_dual_pde_address_shift_v();
 
 	if (big_valid)
-		pte_addr_big = gk20a_pde_addr(g, entry)
-			       >> gmmu_new_dual_pde_address_big_shift_v();
+		big_addr = phys_addr >> gmmu_new_dual_pde_address_big_shift_v();
 
 	if (small_valid) {
-		pde_v[2] |= gmmu_new_dual_pde_address_small_sys_f(pte_addr_small);
-		pde_v[2] |= nvgpu_aperture_mask(g, &entry->mem,
+		pde_v[2] |=
+			gmmu_new_dual_pde_address_small_sys_f(small_addr);
+		pde_v[2] |= nvgpu_aperture_mask(g, &pd->mem,
 			gmmu_new_dual_pde_aperture_small_sys_mem_ncoh_f(),
 			gmmu_new_dual_pde_aperture_small_video_memory_f());
 		pde_v[2] |= gmmu_new_dual_pde_vol_small_true_f();
-		pde_v[3] |= pte_addr_small >> 24;
+		pde_v[3] |= small_addr >> 24;
 	}
 
 	if (big_valid) {
-		pde_v[0] |= gmmu_new_dual_pde_address_big_sys_f(pte_addr_big);
+		pde_v[0] |= gmmu_new_dual_pde_address_big_sys_f(big_addr);
 		pde_v[0] |= gmmu_new_dual_pde_vol_big_true_f();
-		pde_v[0] |= nvgpu_aperture_mask(g, &entry->mem,
+		pde_v[0] |= nvgpu_aperture_mask(g, &pd->mem,
 			gmmu_new_dual_pde_aperture_big_sys_mem_ncoh_f(),
 			gmmu_new_dual_pde_aperture_big_video_memory_f());
-		pde_v[1] |= pte_addr_big >> 28;
+		pde_v[1] |= big_addr >> 28;
 	}
 
-	pde = pde0_from_index(i);
+	pd_write(g, pd, pd_offset + 0, pde_v[0]);
+	pd_write(g, pd, pd_offset + 1, pde_v[1]);
+	pd_write(g, pd, pd_offset + 2, pde_v[2]);
+	pd_write(g, pd, pd_offset + 3, pde_v[3]);
 
-	gk20a_pde_wr32(g, pte, pde + 0, pde_v[0]);
-	gk20a_pde_wr32(g, pte, pde + 1, pde_v[1]);
-	gk20a_pde_wr32(g, pte, pde + 2, pde_v[2]);
-	gk20a_pde_wr32(g, pte, pde + 3, pde_v[3]);
-
-	gk20a_dbg(gpu_dbg_pte, "pde:%d,sz=%d [0x%08x, 0x%08x, 0x%x, 0x%08x]",
-		  i, gmmu_pgsz_idx, pde_v[3], pde_v[2], pde_v[1], pde_v[0]);
-	gk20a_dbg_fn("done");
-	return 0;
+	pte_dbg(g, attrs,
+		"PDE: i=%-4u size=%-2u offs=%-4u pgsz: %c%c | "
+		"GPU %#-12llx  phys %#-12llx "
+		"[0x%08x, 0x%08x, 0x%08x, 0x%08x]",
+		pd_idx, l->entry_size, pd_offset,
+		small_valid ? 'S' : '-',
+		big_valid ?   'B' : '-',
+		virt_addr, phys_addr,
+		pde_v[3], pde_v[2], pde_v[1], pde_v[0]);
 }
 
-static int update_gmmu_pte_locked(struct vm_gk20a *vm,
-			   struct gk20a_mm_entry *pte,
-			   u32 i, u32 gmmu_pgsz_idx,
-			   struct scatterlist **sgl,
-			   u64 *offset,
-			   u64 *iova,
-			   u32 kind_v, u64 *ctag,
-			   bool cacheable, bool unmapped_pte,
-			   int rw_flag, bool sparse, bool priv,
-			   enum nvgpu_aperture aperture)
+static void __update_pte(struct vm_gk20a *vm,
+			 u32 *pte_w,
+			 u64 phys_addr,
+			 struct nvgpu_gmmu_attrs *attrs)
+{
+	struct gk20a *g = gk20a_from_vm(vm);
+	u64 ctag_granularity = g->ops.fb.compression_page_size(g);
+	u32 page_size = vm->gmmu_page_sizes[attrs->pgsz];
+	u32 pte_valid = attrs->valid ?
+		gmmu_new_pte_valid_true_f() :
+		gmmu_new_pte_valid_false_f();
+	u32 phys_shifted = phys_addr >> gmmu_new_pte_address_shift_v();
+	u32 pte_addr = attrs->aperture == APERTURE_SYSMEM ?
+		gmmu_new_pte_address_sys_f(phys_shifted) :
+		gmmu_new_pte_address_vid_f(phys_shifted);
+	u32 pte_tgt = __nvgpu_aperture_mask(g, attrs->aperture,
+		gmmu_new_pte_aperture_sys_mem_ncoh_f(),
+		gmmu_new_pte_aperture_video_memory_f());
+
+	pte_w[0] = pte_valid | pte_addr | pte_tgt;
+
+	if (attrs->priv)
+		pte_w[0] |= gmmu_new_pte_privilege_true_f();
+
+	pte_w[1] = phys_addr >> (24 + gmmu_new_pte_address_shift_v()) |
+		gmmu_new_pte_kind_f(attrs->kind_v) |
+		gmmu_new_pte_comptagline_f((u32)(attrs->ctag /
+						 ctag_granularity));
+
+	if (attrs->rw_flag == gk20a_mem_flag_read_only)
+		pte_w[0] |= gmmu_new_pte_read_only_true_f();
+
+	if (!attrs->valid && !attrs->cacheable)
+		pte_w[0] |= gmmu_new_pte_read_only_true_f();
+	else if (!attrs->cacheable)
+		pte_w[0] |= gmmu_new_pte_vol_true_f();
+
+	if (attrs->ctag)
+		attrs->ctag += page_size;
+
+}
+
+static void __update_pte_sparse(u32 *pte_w)
+{
+	pte_w[0] = gmmu_new_pte_valid_false_f();
+	pte_w[0] |= gmmu_new_pte_vol_true_f();
+}
+
+static void update_gmmu_pte_locked(struct vm_gk20a *vm,
+				   const struct gk20a_mmu_level *l,
+				   struct nvgpu_gmmu_pd *pd,
+				   u32 pd_idx,
+				   u64 virt_addr,
+				   u64 phys_addr,
+				   struct nvgpu_gmmu_attrs *attrs)
 {
 	struct gk20a *g = vm->mm->g;
-	u32 page_size  = vm->gmmu_page_sizes[gmmu_pgsz_idx];
-	u64 ctag_granularity = g->ops.fb.compression_page_size(g);
-	u32 pte_w[2] = {0, 0}; /* invalid pte */
-	u32 pte_i;
+	u32 page_size  = vm->gmmu_page_sizes[attrs->pgsz];
+	u32 pd_offset = pd_offset_from_index(l, pd_idx);
+	u32 pte_w[2] = {0, 0};
 
-	if (*iova) {
-		u32 pte_valid = unmapped_pte ?
-			gmmu_new_pte_valid_false_f() :
-			gmmu_new_pte_valid_true_f();
-		u32 iova_v = *iova >> gmmu_new_pte_address_shift_v();
-		u32 pte_addr = aperture == APERTURE_SYSMEM ?
-				gmmu_new_pte_address_sys_f(iova_v) :
-				gmmu_new_pte_address_vid_f(iova_v);
-		u32 pte_tgt = __nvgpu_aperture_mask(g, aperture,
-				gmmu_new_pte_aperture_sys_mem_ncoh_f(),
-				gmmu_new_pte_aperture_video_memory_f());
+	if (phys_addr)
+		__update_pte(vm, pte_w, phys_addr, attrs);
+	else if (attrs->sparse)
+		__update_pte_sparse(pte_w);
 
-		pte_w[0] = pte_valid | pte_addr | pte_tgt;
+	pte_dbg(g, attrs,
+		"vm=%s "
+		"PTE: i=%-4u size=%-2u offs=%-4u | "
+		"GPU %#-12llx  phys %#-12llx "
+		"pgsz: %3dkb perm=%-2s kind=%#02x APT=%-6s %c%c%c%c "
+		"ctag=0x%08x "
+		"[0x%08x, 0x%08x]",
+		vm->name,
+		pd_idx, l->entry_size, pd_offset,
+		virt_addr, phys_addr,
+		page_size >> 10,
+		nvgpu_gmmu_perm_str(attrs->rw_flag),
+		attrs->kind_v,
+		nvgpu_aperture_str(attrs->aperture),
+		attrs->valid     ? 'V' : '-',
+		attrs->cacheable ? 'C' : '-',
+		attrs->sparse    ? 'S' : '-',
+		attrs->priv      ? 'P' : '-',
+		(u32)attrs->ctag / g->ops.fb.compression_page_size(g),
+		pte_w[1], pte_w[0]);
 
-		if (priv)
-			pte_w[0] |= gmmu_new_pte_privilege_true_f();
-
-		pte_w[1] = *iova >> (24 + gmmu_new_pte_address_shift_v()) |
-			   gmmu_new_pte_kind_f(kind_v) |
-			   gmmu_new_pte_comptagline_f((u32)(*ctag / ctag_granularity));
-
-		if (rw_flag == gk20a_mem_flag_read_only)
-			pte_w[0] |= gmmu_new_pte_read_only_true_f();
-		if (unmapped_pte && !cacheable)
-			pte_w[0] |= gmmu_new_pte_read_only_true_f();
-		else if (!cacheable)
-			pte_w[0] |= gmmu_new_pte_vol_true_f();
-
-		gk20a_dbg(gpu_dbg_pte, "pte=%d iova=0x%llx kind=%d"
-			   " ctag=%d vol=%d"
-			   " [0x%08x, 0x%08x]",
-			   i, *iova,
-			   kind_v, (u32)(*ctag / ctag_granularity), !cacheable,
-			   pte_w[1], pte_w[0]);
-
-		if (*ctag)
-			*ctag += page_size;
-	} else if (sparse) {
-		pte_w[0] = gmmu_new_pte_valid_false_f();
-		pte_w[0] |= gmmu_new_pte_vol_true_f();
-	} else {
-		gk20a_dbg(gpu_dbg_pte, "pte_cur=%d [0x0,0x0]", i);
-	}
-
-	pte_i = pte3_from_index(i);
-
-	gk20a_pde_wr32(g, pte, pte_i + 0, pte_w[0]);
-	gk20a_pde_wr32(g, pte, pte_i + 1, pte_w[1]);
-
-	if (*iova) {
-		*iova += page_size;
-		*offset += page_size;
-		if (*sgl && *offset + page_size > (*sgl)->length) {
-			u64 new_iova;
-			*sgl = sg_next(*sgl);
-			if (*sgl) {
-				new_iova = sg_phys(*sgl);
-				gk20a_dbg(gpu_dbg_pte, "chunk address %llx, size %d",
-					  new_iova, (*sgl)->length);
-				if (new_iova) {
-					*offset = 0;
-					*iova = new_iova;
-				}
-			}
-		}
-	}
-	return 0;
+	pd_write(g, pd, pd_offset + 0, pte_w[0]);
+	pd_write(g, pd, pd_offset + 1, pte_w[1]);
 }
 
 static const struct gk20a_mmu_level gp10b_mm_levels[] = {
@@ -384,7 +365,7 @@ static const struct gk20a_mmu_level *gp10b_mm_get_mmu_levels(struct gk20a *g,
 static void gp10b_mm_init_pdb(struct gk20a *g, struct nvgpu_mem *inst_block,
 		struct vm_gk20a *vm)
 {
-	u64 pdb_addr = gk20a_mem_get_base_addr(g, &vm->pdb.mem, 0);
+	u64 pdb_addr = nvgpu_mem_get_base_addr(g, &vm->pdb.mem, 0);
 	u32 pdb_addr_lo = u64_lo32(pdb_addr >> ram_in_base_shift_v());
 	u32 pdb_addr_hi = u64_hi32(pdb_addr);
 

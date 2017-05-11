@@ -126,6 +126,7 @@ mapped_buffer_from_rbtree_node(struct nvgpu_rbtree_node *node)
 struct vm_gk20a {
 	struct mm_gk20a *mm;
 	struct gk20a_as_share *as_share; /* as_share this represents */
+	char name[20];
 
 	u64 va_start;
 	u64 va_limit;
@@ -145,7 +146,7 @@ struct vm_gk20a {
 
 	struct nvgpu_mutex update_gmmu_lock;
 
-	struct gk20a_mm_entry pdb;
+	struct nvgpu_gmmu_pd pdb;
 
 	/*
 	 * These structs define the address spaces. In some cases it's possible

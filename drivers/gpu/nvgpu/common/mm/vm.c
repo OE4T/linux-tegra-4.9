@@ -36,7 +36,7 @@ int vm_aspace_id(struct vm_gk20a *vm)
 }
 
 static void nvgpu_vm_free_entries(struct vm_gk20a *vm,
-				  struct gk20a_mm_entry *parent,
+				  struct nvgpu_gmmu_pd *parent,
 				  int level)
 {
 	int i;
@@ -75,8 +75,6 @@ u64 __nvgpu_vm_alloc_va(struct vm_gk20a *vm, u64 size,
 
 	/* Be certain we round up to page_size if needed */
 	size = (size + ((u64)page_size - 1)) & ~((u64)page_size - 1);
-	nvgpu_log(g, gpu_dbg_map, "size=0x%llx @ pgsz=%dKB", size,
-		  vm->gmmu_page_sizes[pgsz_idx] >> 10);
 
 	addr = nvgpu_alloc(vma, size);
 	if (!addr) {
@@ -84,17 +82,14 @@ u64 __nvgpu_vm_alloc_va(struct vm_gk20a *vm, u64 size,
 		return 0;
 	}
 
-	nvgpu_log(g, gpu_dbg_map, "(%s) addr: 0x%llx", vma->name, addr);
 	return addr;
 }
 
 int __nvgpu_vm_free_va(struct vm_gk20a *vm, u64 addr,
 		       enum gmmu_pgsz_gk20a pgsz_idx)
 {
-	struct gk20a *g = vm->mm->g;
 	struct nvgpu_allocator *vma = vm->vma[pgsz_idx];
 
-	nvgpu_log(g, gpu_dbg_map, "(%s) addr: 0x%llx", vma->name, addr);
 	nvgpu_free(vma, addr);
 
 	return 0;
@@ -125,32 +120,6 @@ void nvgpu_vm_mapping_batch_finish(struct vm_gk20a *vm,
 	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
 	nvgpu_vm_mapping_batch_finish_locked(vm, mapping_batch);
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
-}
-
-static int nvgpu_vm_init_page_tables(struct vm_gk20a *vm)
-{
-	u32 pde_lo, pde_hi;
-	int err;
-
-	pde_range_from_vaddr_range(vm,
-				   0, vm->va_limit-1,
-				   &pde_lo, &pde_hi);
-	vm->pdb.entries = nvgpu_vzalloc(vm->mm->g,
-					sizeof(struct gk20a_mm_entry) *
-					(pde_hi + 1));
-	vm->pdb.num_entries = pde_hi + 1;
-
-	if (!vm->pdb.entries)
-		return -ENOMEM;
-
-	err = nvgpu_zalloc_gmmu_page_table(vm, 0, &vm->mmu_levels[0],
-					   &vm->pdb, NULL);
-	if (err) {
-		nvgpu_vfree(vm->mm->g, vm->pdb.entries);
-		return err;
-	}
-
-	return 0;
 }
 
 /*
@@ -280,7 +249,8 @@ static int __nvgpu_vm_init(struct mm_gk20a *mm,
 #endif
 
 	/* Initialize the page table data structures. */
-	err = nvgpu_vm_init_page_tables(vm);
+	strncpy(vm->name, name, min(strlen(name), sizeof(vm->name)));
+	err = nvgpu_gmmu_init_page_table(vm);
 	if (err)
 		goto clean_up_vgpu_vm;
 

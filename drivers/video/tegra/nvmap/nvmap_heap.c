@@ -211,6 +211,13 @@ static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 	if (dma_mapping_error(dev, dev_base)) {
 		dev_err(dev, "failed to alloc mem of size (%zu)\n",
 			len);
+		if (dma_is_coherent_dev(dev)) {
+			struct dma_coherent_stats stats;
+
+			dma_get_coherent_stats(dev, &stats);
+			dev_err(dev, "used:%zu,curr_size:%zu max:%zu\n",
+				stats.used, stats.size, stats.max);
+		}
 		goto fail_dma_alloc;
 	}
 

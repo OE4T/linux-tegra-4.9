@@ -739,6 +739,8 @@ struct dma_declare_info {
 struct dma_coherent_stats {
 	phys_addr_t base;
 	size_t size;
+	size_t used;
+	size_t max;
 };
 
 #else

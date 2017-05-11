@@ -34,6 +34,8 @@ struct heap_info {
 	size_t cma_chunk_size;
 	/* heap current base */
 	phys_addr_t curr_base;
+	/* heap current allocated memory in bytes */
+	size_t curr_used;
 	/* heap current length */
 	size_t curr_len;
 	/* heap lowest base */
@@ -791,6 +793,7 @@ retry_alloc:
 		(h->curr_base - h->cma_base) >> PAGE_SHIFT)) {
 		dev_dbg(&h->dev, "allocated addr 0x%pa len 0x%zx\n",
 			dma_handle, len);
+		h->curr_used += len;
 		goto out;
 	}
 
@@ -835,6 +838,8 @@ static int dma_release_from_coherent_heap_dev(struct device *dev, size_t len,
 	/* err = 0 on failure, !0 on successful release */
 	if (err && h->task)
 		mod_timer(&h->shrink_timer, jiffies + h->shrink_interval);
+	if (!err)
+		h->curr_used -= len;
 	mutex_unlock(&h->resize_lock);
 
 	if (err && !h->task)
@@ -1242,6 +1247,8 @@ int dma_get_coherent_stats(struct device *dev,
 	if (h && (h->magic == RESIZE_MAGIC)) {
 		stats->size = h->curr_len;
 		stats->base = h->curr_base;
+		stats->used = h->curr_used;
+		stats->max = h->cma_len;
 		goto out;
 	}
 
@@ -1252,3 +1259,4 @@ int dma_get_coherent_stats(struct device *dev,
 out:
 	return 0;
 }
+EXPORT_SYMBOL(dma_get_coherent_stats);

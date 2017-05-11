@@ -76,11 +76,13 @@ int tegra_csi_power(struct tegra_csi_device *csi, int enable)
 	int err = 0;
 
 	if (enable) {
+		tegra_mipi_bias_pad_enable();
 		err = csi->fops->csi_power_on(csi);
 		if (!err)
 			atomic_inc(&csi->power_ref);
 	} else {
 		err = csi->fops->csi_power_off(csi);
+		tegra_mipi_bias_pad_disable();
 		if (!err)
 			atomic_dec(&csi->power_ref);
 	}
@@ -166,13 +168,10 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 	ret = update_video_source(csi, enable, chan->pg_mode);
 	if (ret)
 		return ret;
-	if (!chan->pg_mode) {
-		if (enable) {
-			tegra_mipi_bias_pad_enable();
+	if (!chan->pg_mode)
+		if (enable)
 			csi->fops->mipical(chan);
-		} else
-			tegra_mipi_bias_pad_disable();
-	}
+
 	if (tegra_chan->bypass) {
 		atomic_set(&chan->is_streaming, enable);
 		return 0;
@@ -192,7 +191,6 @@ start_fail:
 	update_video_source(csi, 0, chan->pg_mode);
 	for (i = 0; i < tegra_chan->valid_ports; i++)
 		tegra_csi_stop_streaming(chan, i);
-	tegra_mipi_bias_pad_disable();
 	return ret;
 }
 

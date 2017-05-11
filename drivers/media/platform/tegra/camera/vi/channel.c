@@ -563,21 +563,36 @@ int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 {
 	int num_sd;
 	int ret = 0;
+	int err = 0;
+	struct v4l2_subdev *sd;
 
 	if (atomic_read(&chan->is_streaming) == on)
 		return 0;
 
-	for (num_sd = chan->num_subdevs - 1; num_sd >= 0; num_sd--) {
-		struct v4l2_subdev *sd = chan->subdev[num_sd];
-		int err = 0;
+	if (on) {
+		/* Enable CSI before sensor. Reason is as follows:
+		 * CSI is able to catch the very first clk transition.
+		 * Ensure mipi calibration is done before transmission/first frame data.
+		 * TODO:Ensure deskew is setup properly before first deskew sync signal.
+		 */
+		for (num_sd = 0; num_sd < chan->num_subdevs; num_sd++) {
+			sd = chan->subdev[num_sd];
 
-		err = v4l2_subdev_call(sd, video, s_stream, on);
-		if (!ret && err < 0 && err != -ENOIOCTLCMD)
-			ret = err;
+			err = v4l2_subdev_call(sd, video, s_stream, on);
+			if (!ret && err < 0 && err != -ENOIOCTLCMD)
+				ret = err;
+		}
+	} else {
+		for (num_sd = chan->num_subdevs - 1; num_sd >= 0; num_sd--) {
+			sd = chan->subdev[num_sd];
+
+			err = v4l2_subdev_call(sd, video, s_stream, on);
+			if (!ret && err < 0 && err != -ENOIOCTLCMD)
+				ret = err;
+		}
 	}
 
 	atomic_set(&chan->is_streaming, on);
-
 	return ret;
 }
 
@@ -585,14 +600,25 @@ int tegra_channel_set_power(struct tegra_channel *chan, bool on)
 {
 	int num_sd;
 	int ret = 0;
+	int err = 0;
+	struct v4l2_subdev *sd;
 
-	for (num_sd = 0; num_sd < chan->num_subdevs; num_sd++) {
-		struct v4l2_subdev *sd = chan->subdev[num_sd];
-		int err = 0;
+	if (on) {
+		for (num_sd = 0; num_sd < chan->num_subdevs; num_sd++) {
+			sd = chan->subdev[num_sd];
 
-		err = v4l2_subdev_call(sd, core, s_power, on);
-		if (!ret && err < 0 && err != -ENOIOCTLCMD)
-			ret = err;
+			err = v4l2_subdev_call(sd, core, s_power, on);
+			if (!ret && err < 0 && err != -ENOIOCTLCMD)
+				ret = err;
+		}
+	} else {
+		for (num_sd = chan->num_subdevs - 1; num_sd >= 0; num_sd--) {
+			sd = chan->subdev[num_sd];
+
+			err = v4l2_subdev_call(sd, core, s_power, on);
+			if (!ret && err < 0 && err != -ENOIOCTLCMD)
+				ret = err;
+		}
 	}
 
 	return ret;

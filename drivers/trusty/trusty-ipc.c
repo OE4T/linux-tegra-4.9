@@ -1133,6 +1133,11 @@ static int tipc_release(struct inode *inode, struct file *filp)
 {
 	struct tipc_dn_chan *dn = filp->private_data;
 
+	/* Mark ops_arg (dn) as NULL to synchronize with other functions */
+	mutex_lock(&dn->chan->lock);
+	dn->chan->ops_arg = NULL;
+	mutex_unlock(&dn->chan->lock);
+
 	dn_shutdown(dn);
 
 	/* free all pending buffers */
@@ -1309,6 +1314,11 @@ static void _go_offline(struct tipc_virtio_dev *vds)
 	/* shutdown all channels */
 	while ((chan = vds_lookup_channel(vds, TIPC_ANY_ADDR))) {
 		mutex_lock(&chan->lock);
+		/* Skip if in the middle of tipc_release() */
+		if (chan->ops_arg == NULL) {
+			mutex_unlock(&chan->lock);
+			continue;
+		}
 		chan->state = TIPC_STALE;
 		chan->remote = 0;
 		chan_trigger_event(chan, TIPC_CHANNEL_SHUTDOWN);

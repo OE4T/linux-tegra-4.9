@@ -25,6 +25,7 @@
 #include "gk20a/platform_gk20a.h"
 #include "clk/clk.h"
 #include "module.h"
+#include "intr.h"
 
 #include "pci.h"
 
@@ -232,7 +233,7 @@ static irqreturn_t nvgpu_pci_isr(int irq, void *dev_id)
 	irqreturn_t ret_stall;
 	irqreturn_t ret_nonstall;
 
-	ret_stall = g->ops.mc.isr_stall(g);
+	ret_stall = nvgpu_intr_stall(g);
 	ret_nonstall = g->ops.mc.isr_nonstall(g);
 
 #if defined(CONFIG_PCI_MSI)
@@ -248,9 +249,7 @@ static irqreturn_t nvgpu_pci_intr_thread(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
 
-	g->ops.mc.isr_thread_stall(g);
-
-	return IRQ_HANDLED;
+	return nvgpu_intr_thread_stall(g);
 }
 
 static int nvgpu_pci_init_support(struct pci_dev *pdev)

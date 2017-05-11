@@ -19,7 +19,10 @@ void gk20a_init_mc(struct gpu_ops *gops);
 void mc_gk20a_intr_enable(struct gk20a *g);
 void mc_gk20a_intr_unit_config(struct gk20a *g, bool enable,
 		bool is_stalling, u32 mask);
-irqreturn_t mc_gk20a_isr_stall(struct gk20a *g);
+void mc_gk20a_isr_stall(struct gk20a *g);
+u32 mc_gk20a_intr_stall(struct gk20a *g);
+void mc_gk20a_intr_stall_pause(struct gk20a *g);
+void mc_gk20a_intr_stall_resume(struct gk20a *g);
 irqreturn_t mc_gk20a_isr_nonstall(struct gk20a *g);
 irqreturn_t mc_gk20a_intr_thread_stall(struct gk20a *g);
 void mc_gk20a_intr_thread_nonstall(struct gk20a *g, u32 intr);

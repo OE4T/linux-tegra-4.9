@@ -36,6 +36,7 @@
 #include "gk20a/ctxsw_trace_gk20a.h"
 #include "pci.h"
 #include "module.h"
+#include "intr.h"
 #ifdef CONFIG_TEGRA_19x_GPU
 #include "nvgpu_gpuid_t19x.h"
 #endif
@@ -482,7 +483,7 @@ static irqreturn_t gk20a_intr_isr_stall(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
 
-	return g->ops.mc.isr_stall(g);
+	return nvgpu_intr_stall(g);
 }
 
 static irqreturn_t gk20a_intr_isr_nonstall(int irq, void *dev_id)
@@ -496,7 +497,7 @@ static irqreturn_t gk20a_intr_thread_stall(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
 
-	return g->ops.mc.isr_thread_stall(g);
+	return nvgpu_intr_thread_stall(g);
 }
 
 void gk20a_remove_support(struct gk20a *g)

@@ -41,6 +41,7 @@ nvgpu-y := \
 	common/linux/firmware.o \
 	common/linux/thread.o \
 	common/linux/vm.o \
+	common/linux/intr.o \
 	common/mm/nvgpu_allocator.o \
 	common/mm/bitmap_allocator.o \
 	common/mm/buddy_allocator.o \

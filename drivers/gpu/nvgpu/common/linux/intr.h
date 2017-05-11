@@ -11,20 +11,10 @@
  * more details.
  */
 
-#ifndef MC_GP20B_H
-#define MC_GP20B_H
+#ifndef __NVGPU_LINUX_INTR_H__
+#define __NVGPU_LINUX_INTR_H__
 struct gk20a;
 
-enum MC_INTERRUPT_REGLIST {
-	NVGPU_MC_INTR_STALLING = 0,
-	NVGPU_MC_INTR_NONSTALLING,
-};
-
-void gp10b_init_mc(struct gpu_ops *gops);
-void mc_gp10b_intr_enable(struct gk20a *g);
-void mc_gp10b_intr_unit_config(struct gk20a *g, bool enable,
-		bool is_stalling, u32 mask);
-void mc_gp10b_isr_stall(struct gk20a *g);
-irqreturn_t mc_gp10b_isr_nonstall(struct gk20a *g);
-irqreturn_t mc_gp10b_intr_thread_nonstall(struct gk20a *g);
+irqreturn_t nvgpu_intr_stall(struct gk20a *g);
+irqreturn_t nvgpu_intr_thread_stall(struct gk20a *g);
 #endif

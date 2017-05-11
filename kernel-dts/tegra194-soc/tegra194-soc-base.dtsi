@@ -432,9 +432,8 @@
 		nvdec1@15140000 {
 			compatible = "nvidia,tegra194-nvdec";
 			reg = <0x0 0x15140000 0x0 0x00040000>;
-			/* FIXME once correct defines exist */
-			/* resets = <&bpmp_resets TEGRA194_RESET_NVDEC1>; */
-			clocks = <&bpmp_clks TEGRA194_CLK_NVDEC>,
+			resets = <&bpmp_resets TEGRA194_RESET_NVDEC1>;
+			clocks = <&bpmp_clks TEGRA194_CLK_NVDEC1>,
 				 <&bpmp_clks TEGRA194_CLK_KFUSE>;
 			clock-names = "nvdec", "kfuse";
 
@@ -456,9 +455,8 @@
 		nvenc1@15a80000 {
 			compatible = "nvidia,tegra194-nvenc";
 			reg = <0x0 0x15a80000 0x0 0x00040000>;
-			/* FIXME once correct defines exist */
-			/* resets = <&bpmp_resets TEGRA194_RESET_NVENC>; */
-			clocks = <&bpmp_clks TEGRA194_CLK_NVENC>;
+			resets = <&bpmp_resets TEGRA194_RESET_NVENC1>;
+			clocks = <&bpmp_clks TEGRA194_CLK_NVENC1>;
 			clock-names = "nvenc";
 
 			#stream-id-cells = <1>;

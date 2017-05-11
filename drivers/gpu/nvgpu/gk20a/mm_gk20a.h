@@ -433,17 +433,10 @@ int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev);
 int gk20a_dmabuf_get_state(struct dma_buf *dmabuf, struct gk20a *g,
 			   u64 offset, struct gk20a_buffer_state **state);
 
-int map_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry);
-void unmap_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry);
 void pde_range_from_vaddr_range(struct vm_gk20a *vm,
 					      u64 addr_lo, u64 addr_hi,
 					      u32 *pde_lo, u32 *pde_hi);
 int gk20a_mm_pde_coverage_bit_count(struct vm_gk20a *vm);
-u32 pte_index_from_vaddr(struct vm_gk20a *vm,
-			       u64 addr, enum gmmu_pgsz_gk20a pgsz_idx);
-void free_gmmu_pages(struct vm_gk20a *vm,
-		     struct gk20a_mm_entry *entry);
-
 u32 gk20a_mm_get_physical_addr_bits(struct gk20a *g);
 
 struct gpu_ops;

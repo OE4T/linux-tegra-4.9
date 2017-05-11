@@ -18,6 +18,7 @@
 #include <nvgpu/dma.h>
 #include <nvgpu/vm.h>
 #include <nvgpu/vm_area.h>
+#include <nvgpu/gmmu.h>
 #include <nvgpu/lock.h>
 #include <nvgpu/list.h>
 #include <nvgpu/rbtree.h>
@@ -32,6 +33,22 @@
 int vm_aspace_id(struct vm_gk20a *vm)
 {
 	return vm->as_share ? vm->as_share->id : -1;
+}
+
+static void nvgpu_vm_free_entries(struct vm_gk20a *vm,
+				  struct gk20a_mm_entry *parent,
+				  int level)
+{
+	int i;
+
+	if (parent->entries)
+		for (i = 0; i < parent->num_entries; i++)
+			nvgpu_vm_free_entries(vm, &parent->entries[i], level+1);
+
+	if (parent->mem.size)
+		nvgpu_free_gmmu_pages(vm, parent);
+	nvgpu_vfree(vm->mm->g, parent->entries);
+	parent->entries = NULL;
 }
 
 u64 __nvgpu_vm_alloc_va(struct vm_gk20a *vm, u64 size,
@@ -421,7 +438,7 @@ clean_up_allocators:
 clean_up_page_tables:
 	/* Cleans up nvgpu_vm_init_page_tables() */
 	nvgpu_vfree(g, vm->pdb.entries);
-	free_gmmu_pages(vm, &vm->pdb);
+	nvgpu_free_gmmu_pages(vm, &vm->pdb);
 clean_up_vgpu_vm:
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	if (g->is_virtual)
@@ -537,7 +554,7 @@ static void __nvgpu_vm_remove(struct vm_gk20a *vm)
 	if (nvgpu_alloc_initialized(&vm->user_lp))
 		nvgpu_alloc_destroy(&vm->user_lp);
 
-	gk20a_vm_free_entries(vm, &vm->pdb, 0);
+	nvgpu_vm_free_entries(vm, &vm->pdb, 0);
 
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	if (g->is_virtual)

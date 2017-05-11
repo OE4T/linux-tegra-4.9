@@ -105,4 +105,7 @@ void nvgpu_gmmu_unmap(struct vm_gk20a *vm,
 		      struct nvgpu_mem *mem,
 		      u64 gpu_va);
 
+void nvgpu_free_gmmu_pages(struct vm_gk20a *vm,
+		     struct gk20a_mm_entry *entry);
+
 #endif

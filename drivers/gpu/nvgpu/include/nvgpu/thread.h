@@ -59,4 +59,13 @@ void nvgpu_thread_stop(struct nvgpu_thread *thread);
  */
 bool nvgpu_thread_should_stop(struct nvgpu_thread *thread);
 
+/**
+ * nvgpu_thread_is_running - Query if thread is running
+ *
+ * @thread
+ *
+ * Return true if thread is started.
+ */
+bool nvgpu_thread_is_running(struct nvgpu_thread *thread);
+
 #endif /* __NVGPU_THREAD_H__ */

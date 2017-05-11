@@ -1057,6 +1057,10 @@ static void _tegra_nvdisp_init_default_imp_settings(void)
 
 	_tegra_nvdisp_init_imp_wqs();
 
+	/* Skip IMP init on VDK. */
+	if (tegra_platform_is_vdk())
+		return;
+
 	/*
 	 * For now, hardcode the reset values as the defaults. Any fields that
 	 * aren't explicitly filled in here are either deferred or already being
@@ -1674,12 +1678,9 @@ exit:
 	return ret;
 }
 
-static int tegra_nvdisp_postcomp_init(struct tegra_dc *dc)
+static void tegra_nvdisp_postcomp_imp_init(struct tegra_dc *dc)
 {
-	u32 update_mask = nvdisp_cmd_state_ctrl_common_act_update_enable_f();
-	u32 act_req_mask = nvdisp_cmd_state_ctrl_common_act_req_enable_f();
 	struct tegra_dc_ext_imp_head_results *head_results = NULL;
-	struct tegra_dc_lut *lut = NULL;
 	bool any_dc_enabled = false;
 	int i;
 
@@ -1710,6 +1711,21 @@ static int tegra_nvdisp_postcomp_init(struct tegra_dc *dc)
 	 * since the cursor pipe isn't active at this point in time.
 	 */
 	tegra_nvdisp_program_imp_curs_results(dc, head_results, dc->ctrl_num);
+}
+
+static int tegra_nvdisp_postcomp_init(struct tegra_dc *dc)
+{
+	struct tegra_dc_lut *lut = NULL;
+	u32 update_mask = 0;
+	u32 act_req_mask = 0;
+
+	if (!tegra_platform_is_vdk()) {
+		tegra_nvdisp_postcomp_imp_init(dc);
+		update_mask |=
+			nvdisp_cmd_state_ctrl_common_act_update_enable_f();
+		act_req_mask |=
+			nvdisp_cmd_state_ctrl_common_act_req_enable_f();
+	}
 
 	/*
 	 * Set the LUT address in the HW register. Enable the default sRGB_LUT.
@@ -1751,8 +1767,12 @@ static int tegra_nvdisp_assign_dc_wins(struct tegra_dc *dc)
 	int idx = 0, ret = 0;
 	int i = -1;
 
-	head_results = &nvdisp_default_imp_settings.imp_results[dc->ctrl_num];
-	head_results->num_windows = 0;
+	/* Skip IMP init on VDK. */
+	if (!tegra_platform_is_vdk()) {
+		head_results =
+			&nvdisp_default_imp_settings.imp_results[dc->ctrl_num];
+		head_results->num_windows = 0;
+	}
 
 	mutex_lock(&tegra_nvdisp_lock);
 
@@ -1771,22 +1791,30 @@ static int tegra_nvdisp_assign_dc_wins(struct tegra_dc *dc)
 			act_req_mask |=
 			nvdisp_cmd_state_ctrl_a_act_req_enable_f() << idx;
 
-			head_results->win_ids[head_results->num_windows] = idx;
-			head_results->num_windows += 1;
-
 			if (i == -1)
 				i = idx;
+
+			/* Skip IMP init on VDK. */
+			if (tegra_platform_is_vdk())
+				continue;
+
+			head_results->win_ids[head_results->num_windows] = idx;
+			head_results->num_windows += 1;
 		}
 	}
 
 	/*
-	 *` Program default ihub values for the windows that were just assigned
+	 * Program default ihub values for the windows that were just assigned
 	 * to this head:
 	 * - The thread group for each window was already handled above.
 	 * - There shouldn't be any need to disable ihub latency events since
 	 *   none of the assigned windows are active at this point in time.
+	 *
+	 * Skip IMP init on VDK.
 	 */
-	tegra_nvdisp_program_imp_win_results(dc, head_results, dc->ctrl_num);
+	if (!tegra_platform_is_vdk())
+		tegra_nvdisp_program_imp_win_results(dc, head_results,
+								dc->ctrl_num);
 
 	/* Wait for COMMON_ACT_REQ to complete or time out. */
 	if (tegra_dc_enable_update_and_act(dc, update_mask, act_req_mask)) {
@@ -3560,6 +3588,10 @@ void tegra_dc_reset_imp_state(void)
 	struct nvdisp_bandwidth_config max_bw_cfg = {0};
 	int num_heads = tegra_dc_get_numof_dispheads();
 	int i;
+
+	/* Skip IMP reset on VDK. */
+	if (tegra_platform_is_vdk())
+		return;
 
 	default_dc_settings = kzalloc(sizeof(*default_dc_settings), GFP_KERNEL);
 	if (!default_dc_settings) {

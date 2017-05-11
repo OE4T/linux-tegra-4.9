@@ -227,7 +227,7 @@ static u64 trusty_virtio_get_features(struct virtio_device *vdev)
 static int trusty_virtio_finalize_features(struct virtio_device *vdev)
 {
 	struct trusty_vdev *tvdev = vdev_to_tvdev(vdev);
-	
+
 	/* Make sure we don't have any features > 32 bits! */
 	BUG_ON((u32)vdev->features != vdev->features);
 

@@ -145,6 +145,9 @@ static int tegra_vi_graph_build_one(struct tegra_mc_vi *vi,
 
 		v4l2_of_put_link(&link);
 
+		if (media_entity_find_link(local_pad, remote_pad))
+			continue;
+
 		/* Create the media link. */
 		dev_dbg(vi->dev, "creating %s:%u -> %s:%u link\n",
 			local->name, local_pad->index,
@@ -239,6 +242,9 @@ static int tegra_vi_graph_build_links(struct tegra_mc_vi *vi)
 
 		v4l2_of_put_link(&link);
 
+		if (media_entity_find_link(source_pad, sink_pad))
+			goto next_chan;
+
 		/* Create the media link. */
 		dev_dbg(vi->dev, "creating %s:%u -> %s:%u link\n",
 			source->name, source_pad->index,
@@ -254,6 +260,7 @@ static int tegra_vi_graph_build_links(struct tegra_mc_vi *vi)
 			break;
 		}
 
+next_chan:
 		if (tegra_channel_init_subdevices(chan) < 0) {
 			dev_err(vi->dev, "Failed to initialize sub-devices\n");
 			chan->init_done = false;

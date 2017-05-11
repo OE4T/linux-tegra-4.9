@@ -93,7 +93,7 @@ struct nvgpu_firmware *nvgpu_request_firmware(struct gk20a *g,
 
 	fw->data = nvgpu_kmalloc(g, linux_fw->size);
 	if (!fw->data)
-		goto err;
+		goto err_release;
 
 	memcpy(fw->data, linux_fw->data, linux_fw->size);
 	fw->size = linux_fw->size;
@@ -102,6 +102,8 @@ struct nvgpu_firmware *nvgpu_request_firmware(struct gk20a *g,
 
 	return fw;
 
+err_release:
+	release_firmware(linux_fw);
 err:
 	nvgpu_kfree(g, fw);
 	return NULL;

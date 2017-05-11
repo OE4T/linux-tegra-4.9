@@ -193,7 +193,7 @@ static const char *t210_intr_info[] = {
 	NULL,
 	NULL,		/* Bit 20 */
 	NULL,
-	NULL,
+	"decerr-untranslated", /* specific to t214 */
 	NULL,
 	NULL,		/* Bit 24 */
 	NULL,
@@ -218,6 +218,8 @@ static const char *const smmu_page_attrib[] = {
 	"rd-wr-s",
 	"rd-wr-ns"
 };
+
+#define MC_INT_DECERR_UNTRANSLATED_VIOLATION		(1<<22)
 
 #define MC_ERR_SMMU_MASK		(0x7 << 25)
 #define MC_ERR_SMMU_BITS(err)		(((err) & MC_ERR_SMMU_MASK) >> 25)
@@ -276,6 +278,10 @@ static const struct mc_error mc_errors[] = {
 	       "EMEM GSC access violation", 0,
 	       MC_ERR_GENERALIZED_CARVEOUT_STATUS,
 	       MC_ERR_GENERALIZED_CARVEOUT_ADR),
+
+	MC_ERR(MC_INT_DECERR_UNTRANSLATED_VIOLATION,
+	       "Untranslated memory access violation",
+	       0, MC_ERR_STATUS, MC_ERR_ADR),
 
 	/*
 	 * Miscellaneous errors.

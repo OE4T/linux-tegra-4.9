@@ -1,21 +1,16 @@
 /*
- * Driver for Tegra Security Engine
+ * Header file for Tegra Security Engine
  *
- * Copyright (c) 2015-2017, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
+ * This program is distributed in the hope it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 #ifndef _CRYPTO_TEGRA_SE_H
@@ -221,8 +216,8 @@
 #define SE_MAX_AESBUF_TIMEOUT		(20 * SE_MAX_AESBUF_ALLOC)
 
 /* FIXME: The below 2 macros should fine tuned
- * based on discussions with CPU team */
-
+ * based on discussions with CPU team
+ */
 #define SE_MAX_CMDBUF_TIMEOUT		(200 * SE_MAX_SUBMIT_CHAIN_SZ)
 #define SE_WAIT_UDELAY			500 /* micro seconds */
 

@@ -156,8 +156,8 @@ void gv11b_subctx_commit_pdb(struct channel_gk20a *c,
 		ram_in_sc_page_dir_base_target_sys_mem_ncoh_v(), 0) |
 		ram_in_sc_page_dir_base_vol_f(
 		ram_in_sc_page_dir_base_vol_true_v(), 0) |
-		ram_in_sc_page_dir_base_fault_replay_tex_f(0, 0) |
-		ram_in_sc_page_dir_base_fault_replay_gcc_f(0, 0) |
+		ram_in_sc_page_dir_base_fault_replay_tex_f(1, 0) |
+		ram_in_sc_page_dir_base_fault_replay_gcc_f(1, 0) |
 		ram_in_sc_use_ver2_pt_format_f(1, 0) |
 		ram_in_sc_big_page_size_f(1, 0) |
 		ram_in_sc_page_dir_base_lo_0_f(pdb_addr_lo);

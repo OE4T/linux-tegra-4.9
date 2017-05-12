@@ -1,7 +1,9 @@
 /*
- * Tegra Host Module Class IDs for T194
+ * drivers/video/tegra/host/slvsec/slvsec.h
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Tegra GRHOST SLVS-EC
+ *
+ * Copyright (c) 2017 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,21 +18,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __NVHOST_CLASS_IDS_T194_H
-#define __NVHOST_CLASS_IDS_T194_H
+#ifndef __NVHOST_SLVSEC_H__
+#define __NVHOST_SLVSEC_H__
 
-enum {
-	NV_VIDEO_ENCODE_NVENC1_CLASS_ID = 0x22,
+#include <linux/platform_device.h>
 
-	NV_PVA0_CLASS_ID	= 0xF1,
-	NV_PVA1_CLASS_ID	= 0xF2,
+struct file_operations;
 
-	NV_DLA0_CLASS_ID	= 0xF3,
-	NV_DLA1_CLASS_ID	= 0xF4,
+extern const struct file_operations tegra_t194_slvsec_ctrl_ops;
 
-	NV_NVDEC1_CLASS_ID	= 0xF5,
+int slvsec_finalize_poweron(struct platform_device *pdev);
+int slvsec_prepare_poweroff(struct platform_device *pdev);
 
-	NV_SLVSEC_CLASS_ID	= 0x3F,
-};
-
-#endif /*__NVHOST_CLASS_IDS_T194_H */
+#endif

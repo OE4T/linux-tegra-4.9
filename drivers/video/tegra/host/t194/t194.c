@@ -48,6 +48,10 @@
 #include "nvdla/nvdla.h"
 #endif
 
+#if defined(CONFIG_TEGRA_GRHOST_SLVSEC)
+#include "slvsec/slvsec.h"
+#endif
+
 #include "chip_support.h"
 
 #include "streamid_regs.c"
@@ -567,6 +571,26 @@ struct nvhost_device_data t19_nvdla1_info = {
 	.ctrl_ops		= &tegra_nvdla_ctrl_ops,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.module_irq		= 1,
+};
+#endif
+
+#if defined(CONFIG_TEGRA_GRHOST_SLVSEC)
+struct nvhost_device_data t19_slvsec_info = {
+	.num_channels		= 1,
+	.clocks			= {
+		{"slvs-ec", 234000000},
+		{"slvs-ec-lp", 234000000},
+	},
+	.devfs_name		= "slvs-ec",
+	.class			= NV_SLVSEC_CLASS_ID,
+	.can_powergate          = true,
+	.autosuspend_delay      = 500,
+	.finalize_poweron	= slvsec_finalize_poweron,
+	.prepare_poweroff	= slvsec_prepare_poweroff,
+	.poweron_reset		= true,
+	.keepalive		= true,
+	.serialize		= 1,
+	.push_work_done		= 1,
 };
 #endif
 

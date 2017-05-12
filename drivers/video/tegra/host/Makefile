@@ -14,3 +14,4 @@ obj-y  += nvhost_queue.o \
 obj-$(CONFIG_TEGRA_GRHOST) += t194/
 obj-$(CONFIG_TEGRA_GRHOST_PVA) += pva/
 obj-$(CONFIG_TEGRA_GRHOST_NVDLA) += nvdla/
+obj-$(CONFIG_TEGRA_GRHOST_SLVSEC) += slvsec/

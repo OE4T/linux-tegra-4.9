@@ -20,3 +20,11 @@ config TEGRA_GRHOST_PVA
 	help
 	  Enables Programmable Vision Accelerator engine support under nvhost
 	  Say Y here if not sure.
+
+config TEGRA_GRHOST_SLVSEC
+	bool "Tegra SLVS-EC support"
+	depends on TEGRA_GRHOST && ARCH_TEGRA_19x_SOC
+	default y
+	help
+	  Enables SLVS-EC Camera interface support under nvhost
+	  Say Y here if not sure.

@@ -57,6 +57,10 @@ extern struct nvhost_device_data t19_pva1_info;
 extern struct nvhost_device_data t19_nvdla0_info;
 extern struct nvhost_device_data t19_nvdla1_info;
 #endif
+#if defined(CONFIG_TEGRA_GRHOST_SLVSEC)
+extern struct nvhost_device_data t19_slvsec_info;
+#endif
+
 
 int nvhost_init_t194_support(struct nvhost_master *host,
 			     struct nvhost_chip_support *op);

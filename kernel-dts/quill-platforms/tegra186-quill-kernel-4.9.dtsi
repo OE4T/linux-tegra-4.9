@@ -19,12 +19,6 @@
 		bootargs ="console=ttyS0,115200 androidboot.selinux=permissive androidboot.presilicon=true firmware_class.path=/etc/firmware";
 	};
 
-	firmware {
-		android {
-			hardware = "quill-k49";
-		};
-	};
-
 	/delete-node/ ahub;
 	/delete-node/ agic-controller@2a41000;
 	/delete-node/ adma@2930000;

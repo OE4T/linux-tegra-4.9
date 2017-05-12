@@ -387,7 +387,7 @@ struct gk20a_platform gp10b_tegra_platform = {
 	/* power management configuration */
 	.can_railgate_init	= true,
 	.enable_elpg            = true,
-	.can_elpg               = true,
+	.can_elpg_init          = true,
 	.enable_blcg		= true,
 	.enable_slcg		= true,
 	.enable_elcg		= true,

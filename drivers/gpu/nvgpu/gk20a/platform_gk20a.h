@@ -42,7 +42,7 @@ struct gk20a_platform {
 	bool can_railgate_init;
 
 	/* Should be populated at probe. */
-	bool can_elpg;
+	bool can_elpg_init;
 
 	/* Should be populated at probe. */
 	bool has_syncpoints;

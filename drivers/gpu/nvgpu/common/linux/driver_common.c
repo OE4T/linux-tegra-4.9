@@ -106,7 +106,7 @@ static void nvgpu_init_pm_vars(struct gk20a *g)
 	g->mscg_enabled =
 		nvgpu_platform_is_silicon(g) ? platform->enable_mscg : false;
 	g->can_elpg =
-		nvgpu_platform_is_silicon(g) ? platform->can_elpg : false;
+		nvgpu_platform_is_silicon(g) ? platform->can_elpg_init : false;
 	g->default_pri_timeout = platform->default_pri_timeout;
 	g->aggressive_sync_destroy = platform->aggressive_sync_destroy;
 	g->aggressive_sync_destroy_thresh = platform->aggressive_sync_destroy_thresh;

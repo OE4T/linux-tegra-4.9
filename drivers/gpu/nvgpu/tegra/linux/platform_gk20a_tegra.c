@@ -1053,7 +1053,7 @@ struct gk20a_platform gk20a_tegra_platform = {
 	/* power management configuration */
 	.railgate_delay_init	= 500,
 	.can_railgate_init	= true,
-	.can_elpg               = true,
+	.can_elpg_init          = true,
 	.enable_slcg            = true,
 	.enable_blcg            = true,
 	.enable_elcg            = true,
@@ -1110,7 +1110,7 @@ struct gk20a_platform gm20b_tegra_platform = {
 	/* power management configuration */
 	.railgate_delay_init	= 500,
 	.can_railgate_init	= true,
-	.can_elpg               = true,
+	.can_elpg_init          = true,
 	.enable_slcg            = true,
 	.enable_blcg            = true,
 	.enable_elcg            = true,

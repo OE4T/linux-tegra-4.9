@@ -53,7 +53,7 @@ struct gk20a_platform vgpu_tegra_platform = {
 
 	/* power management configuration */
 	.can_railgate_init	= false,
-	.can_elpg               = false,
+	.can_elpg_init          = false,
 	.enable_slcg            = false,
 	.enable_blcg            = false,
 	.enable_elcg            = false,

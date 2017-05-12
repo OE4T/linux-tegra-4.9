@@ -4936,7 +4936,6 @@ clean_up:
 int gk20a_pmu_pg_global_enable(struct gk20a *g, u32 enable_pg)
 {
 	u32 status = 0;
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	if (enable_pg == true) {
 		if (g->ops.pmu.pmu_pg_engines_feature_list &&
@@ -4946,7 +4945,7 @@ int gk20a_pmu_pg_global_enable(struct gk20a *g, u32 enable_pg)
 			if (g->ops.pmu.pmu_lpwr_enable_pg)
 				status = g->ops.pmu.pmu_lpwr_enable_pg(g,
 						true);
-		} else if (g->support_pmu && platform->can_elpg)
+		} else if (g->support_pmu && g->can_elpg)
 			status = gk20a_pmu_enable_elpg(g);
 	} else if (enable_pg == false) {
 		if (g->ops.pmu.pmu_pg_engines_feature_list &&
@@ -4956,7 +4955,7 @@ int gk20a_pmu_pg_global_enable(struct gk20a *g, u32 enable_pg)
 			if (g->ops.pmu.pmu_lpwr_disable_pg)
 				status = g->ops.pmu.pmu_lpwr_disable_pg(g,
 						true);
-		} else if (g->support_pmu && platform->can_elpg)
+		} else if (g->support_pmu && g->can_elpg)
 			status = gk20a_pmu_disable_elpg(g);
 	}
 

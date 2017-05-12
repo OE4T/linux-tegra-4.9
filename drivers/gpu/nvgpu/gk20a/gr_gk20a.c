@@ -3126,7 +3126,6 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 			struct nvgpu_alloc_obj_ctx_args *args)
 {
 	struct gk20a *g = c->g;
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
 	struct tsg_gk20a *tsg = NULL;
@@ -3281,7 +3280,7 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 
 		args->flags |= NVGPU_ALLOC_OBJ_FLAGS_LOCKBOOST_ZERO;
 
-		if (g->support_pmu && platform->can_elpg)
+		if (g->support_pmu && g->can_elpg)
 			gk20a_pmu_enable_elpg(g);
 	}
 

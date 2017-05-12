@@ -238,8 +238,6 @@ int vi4_add_ctrls(struct tegra_channel *chan)
 
 static bool vi4_init(struct tegra_channel *chan)
 {
-	vi4_write(chan, CFG_INTERRUPT_MASK, 0x3f0000f9);
-	vi4_write(chan, CFG_INTERRUPT_STATUS, 0x3f000001);
 	vi4_write(chan, NOTIFY_ERROR, 0x1);
 	vi4_write(chan, NOTIFY_TAG_CLASSIFY_0, 0xe39c08e3);
 	return true;
@@ -861,7 +859,6 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	struct camera_common_data *s_data;
 	unsigned int emb_buf_size = 0;
 
-	vi4_init(chan);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	ret = media_entity_pipeline_start(&chan->video.entity, pipe);
 	if (ret < 0)
@@ -874,6 +871,8 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 			goto error_set_stream;
 		return ret;
 	}
+
+	vi4_init(chan);
 
 	spin_lock_irqsave(&chan->capture_state_lock, flags);
 	chan->capture_state = CAPTURE_IDLE;

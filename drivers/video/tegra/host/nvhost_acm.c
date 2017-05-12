@@ -60,6 +60,9 @@ static int nvhost_module_toggle_slcg(struct notifier_block *nb,
 				     unsigned long action, void *data);
 
 #ifdef CONFIG_PM
+static int nvhost_module_prepare_suspend(struct device *dev);
+static int nvhost_module_suspend(struct device *dev);
+static int nvhost_module_resume(struct device *dev);
 static int nvhost_module_runtime_suspend(struct device *dev);
 static int nvhost_module_runtime_resume(struct device *dev);
 static int nvhost_module_prepare_poweroff(struct device *dev);
@@ -883,6 +886,10 @@ const struct dev_pm_ops nvhost_module_pm_ops = {
 	/* On 3.18 and 4.4, genpd will call our runtime pm ops. */
 	SET_SYSTEM_SLEEP_PM_OPS(nvhost_module_runtime_suspend,
 				nvhost_module_runtime_resume)
+#else
+	.prepare = nvhost_module_prepare_suspend,
+	.suspend = nvhost_module_suspend,
+	.resume = nvhost_module_resume,
 #endif
 };
 EXPORT_SYMBOL(nvhost_module_pm_ops);
@@ -975,7 +982,7 @@ static int nvhost_module_runtime_suspend(struct device *dev)
 {
 	int err;
 
-	dev_dbg(dev, "suspending");
+	dev_dbg(dev, "runtime suspending");
 
 	err = nvhost_module_prepare_poweroff(dev);
 	if (err)
@@ -992,7 +999,7 @@ static int nvhost_module_runtime_resume(struct device *dev)
 {
 	int err;
 
-	dev_dbg(dev, "resuming");
+	dev_dbg(dev, "runtime resuming");
 
 	err = nvhost_module_enable_clk(dev);
 	if (err)
@@ -1003,6 +1010,52 @@ static int nvhost_module_runtime_resume(struct device *dev)
 		nvhost_module_disable_clk(dev);
 		return err;
 	}
+
+	return 0;
+}
+
+static int nvhost_module_prepare_suspend(struct device *dev)
+{
+	if (atomic_read(&dev->power.usage_count) > 1)
+		return -EBUSY;
+
+	return 0;
+}
+
+static int nvhost_module_suspend(struct device *dev)
+{
+	int err;
+	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
+
+	if (!pdata->power_on)
+		return 0;
+
+	dev_dbg(dev, "suspending");
+
+	err = nvhost_module_runtime_suspend(dev);
+	if (err)
+		return err;
+
+	pdata->suspended = true;
+
+	return 0;
+}
+
+static int nvhost_module_resume(struct device *dev)
+{
+	int err;
+	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
+
+	if (!pdata->suspended)
+		return 0;
+
+	dev_dbg(dev, "resuming");
+
+	err = nvhost_module_runtime_resume(dev);
+	if (err)
+		return err;
+
+	pdata->suspended = false;
 
 	return 0;
 }
@@ -1043,6 +1096,8 @@ static int nvhost_module_prepare_poweroff(struct device *dev)
 
 	if (pdata->prepare_poweroff)
 		pdata->prepare_poweroff(to_platform_device(dev));
+
+	pdata->power_on = false;
 
 	return 0;
 }
@@ -1113,6 +1168,8 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 
 	nvhost_scale_hw_init(to_platform_device(dev));
 	devfreq_resume_device(pdata->power_manager);
+
+	pdata->power_on = true;
 
 	return ret;
 }

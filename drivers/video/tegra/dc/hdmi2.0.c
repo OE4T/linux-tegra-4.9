@@ -100,18 +100,12 @@ static inline bool tegra_hdmi_is_connected(struct tegra_hdmi *hdmi)
 static inline void __maybe_unused
 tegra_hdmi_irq_enable(struct tegra_hdmi *hdmi)
 {
-	if (tegra_platform_is_fpga())
-		return;
-
 	enable_irq(hdmi->irq);
 }
 
 static inline void __maybe_unused
 tegra_hdmi_irq_disable(struct tegra_hdmi *hdmi)
 {
-	if (tegra_platform_is_fpga())
-		return;
-
 	disable_irq(hdmi->irq);
 }
 
@@ -213,7 +207,7 @@ static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi)
 	}
 	tegra_dc_set_edid(dc, hdmi->edid);
 
-	if (tegra_platform_is_sim())
+	if (tegra_platform_is_sim() || tegra_platform_is_fpga())
 		return 0;
 
 	i2c_adap = i2c_get_adapter(dc->out->ddc_bus);
@@ -814,7 +808,7 @@ static int tegra_dc_hdmi_hpd_init(struct tegra_dc *dc)
 	int hotplug_irq;
 	int err;
 
-	if (tegra_platform_is_sim())
+	if (tegra_platform_is_sim() || tegra_platform_is_fpga())
 		goto skip_gpio_irq_settings;
 
 	if (!gpio_is_valid(hotplug_gpio)) {
@@ -1335,7 +1329,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	}
 	atomic_set(&hdmi->suspended, 0);
 #ifdef CONFIG_HDCP
-	if (!tegra_platform_is_sim()) {
+	if (!tegra_platform_is_sim() && !tegra_platform_is_fpga()) {
 		hdmi->nvhdcp = tegra_nvhdcp_create(hdmi, dc->ndev->id,
 			dc->out->ddc_bus);
 		if (IS_ERR_OR_NULL(hdmi->nvhdcp)) {
@@ -1486,10 +1480,13 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 			NV_SOR_INPUT_CONTROL_ARM_VIDEO_RANGE_FULL |
 			NV_SOR_INPUT_CONTROL_HDMI_SRC_SELECT_DISPLAYB);
 
-	dispclk_div_8_2 = clk_get_rate(hdmi->sor->sor_clk) / 1000000 * 4;
-	tegra_sor_writel(sor, NV_SOR_REFCLK,
-			NV_SOR_REFCLK_DIV_INT(dispclk_div_8_2 >> 2) |
-			NV_SOR_REFCLK_DIV_FRAC(dispclk_div_8_2));
+	if (tegra_bpmp_running()) {
+		dispclk_div_8_2 =
+				clk_get_rate(hdmi->sor->sor_clk) / 1000000 * 4;
+		tegra_sor_writel(sor, NV_SOR_REFCLK,
+				NV_SOR_REFCLK_DIV_INT(dispclk_div_8_2 >> 2) |
+				NV_SOR_REFCLK_DIV_FRAC(dispclk_div_8_2));
+	}
 
 	/*
 	 * The rekey register and corresponding eq want to operate
@@ -2717,7 +2714,7 @@ static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 	if (dc->out->hotplug_state != TEGRA_HPD_STATE_NORMAL)
 		delay = 0;
 
-	if (tegra_platform_is_sim() &&
+	if ((tegra_platform_is_sim() || tegra_platform_is_fpga()) &&
 		(dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL))
 		return true;
 

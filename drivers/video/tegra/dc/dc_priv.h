@@ -83,6 +83,9 @@ static inline int tegra_dc_is_clk_enabled(struct clk *clk)
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 static inline void tegra_dc_powergate_locked(struct tegra_dc *dc)
 {
+	if (tegra_platform_is_sim() || tegra_platform_is_fpga())
+		return;
+
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 	tegra_nvdisp_powergate_dc(dc);
 #else
@@ -93,6 +96,10 @@ static inline void tegra_dc_powergate_locked(struct tegra_dc *dc)
 static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc)
 {
 	int ret;
+
+	if (tegra_platform_is_sim() || tegra_platform_is_fpga())
+		return;
+
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 	ret = tegra_nvdisp_unpowergate_dc(dc);
 #else
@@ -105,10 +112,10 @@ static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc)
 
 static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
 {
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
+	if (tegra_platform_is_sim() || tegra_platform_is_fpga())
 		return true;
 
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	return tegra_nvdisp_is_powered(dc);
 #else
 	return tegra_powergate_is_powered(dc->powergate_id);

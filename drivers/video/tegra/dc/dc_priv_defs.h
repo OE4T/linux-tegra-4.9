@@ -47,8 +47,6 @@
 
 static inline u32 ALL_UF_INT(void)
 {
-	if (tegra_platform_is_fpga())
-		return 0;
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 	return NVDISP_UF_INT;
 #else

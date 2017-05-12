@@ -95,23 +95,16 @@ static inline void tegra_dp_clk_disable(struct tegra_dc_dp_data *dp)
 
 static inline void tegra_dp_enable_irq(u32 irq)
 {
-	if (tegra_platform_is_fpga())
-		return;
-
 	enable_irq(irq);
 }
 
 static inline void tegra_dp_disable_irq(u32 irq)
 {
-	if (tegra_platform_is_fpga())
-		return;
-
 	disable_irq(irq);
 }
 
 #define is_hotplug_supported(dp) \
 ({ \
-	!tegra_platform_is_fpga() && \
 	!tegra_platform_is_linsim() && \
 	tegra_dc_is_ext_dp_panel(dp->dc); \
 })
@@ -160,14 +153,6 @@ static inline int tegra_dpaux_wait_transaction(struct tegra_dc_dp_data *dp)
 {
 	struct tegra_dc_dpaux_data *dpaux = dp->dpaux;
 	int err = 0;
-
-	if (unlikely(tegra_platform_is_fpga())) {
-		if (tegra_dc_dpaux_poll_register(dp, DPAUX_DP_AUXCTL,
-				DPAUX_DP_AUXCTL_TRANSACTREQ_MASK,
-				DPAUX_DP_AUXCTL_TRANSACTREQ_DONE,
-				100, DP_AUX_TIMEOUT_MS) != 0)
-			err = -EFAULT;
-	}
 
 	if (likely(tegra_platform_is_silicon())) {
 		reinit_completion(&dp->aux_tx);
@@ -297,10 +282,6 @@ int tegra_dc_dpaux_write_chunk_locked(struct tegra_dc_dp_data *dp,
 				"dp: aux write transaction timeout\n");
 
 		*aux_stat = tegra_dpaux_readl(dpaux, DPAUX_DP_AUXSTAT);
-
-		/* Ignore I2C errors on fpga */
-		if (tegra_platform_is_fpga())
-			*aux_stat &= ~DPAUX_DP_AUXSTAT_REPLYTYPE_I2CNACK;
 
 		if ((*aux_stat & DPAUX_DP_AUXSTAT_TIMEOUT_ERROR_PENDING) ||
 			(*aux_stat & DPAUX_DP_AUXSTAT_RX_ERROR_PENDING) ||
@@ -1894,9 +1875,6 @@ static irqreturn_t tegra_dp_irq(int irq, void *ptr)
 		return IRQ_HANDLED;
 	}
 
-	if (tegra_platform_is_fpga())
-		return IRQ_NONE;
-
 	if (dp->suspended) {
 		dev_info(&dc->ndev->dev,
 			"dp: irq received while suspended, ignoring\n");
@@ -2098,14 +2076,12 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		err = -EFAULT;
 		goto err_audio_switch;
 	}
-	if (!tegra_platform_is_fpga()) {
-		if (request_threaded_irq(irq, NULL, tegra_dp_irq,
-					IRQF_ONESHOT, "tegra_dp", dp)) {
-			dev_err(&dc->ndev->dev,
-				"dp: request_irq %u failed\n", irq);
-			err = -EBUSY;
-			goto err_audio_switch;
-		}
+	if (request_threaded_irq(irq, NULL, tegra_dp_irq,
+				IRQF_ONESHOT, "tegra_dp", dp)) {
+		dev_err(&dc->ndev->dev,
+			"dp: request_irq %u failed\n", irq);
+		err = -EBUSY;
+		goto err_audio_switch;
 	}
 
 	if (dc->out->type != TEGRA_DC_OUT_FAKE_DP)
@@ -3021,7 +2997,7 @@ static bool tegra_dc_dp_detect(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 
-	if (tegra_platform_is_sim() &&
+	if ((tegra_platform_is_sim() || tegra_platform_is_fpga()) &&
 		(dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL))
 		return true;
 

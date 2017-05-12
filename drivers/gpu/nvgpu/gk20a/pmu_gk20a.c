@@ -220,7 +220,7 @@ static void set_pmu_cmdline_args_falctracedmabase_v5(struct nvgpu_pmu *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 
-	gk20a_pmu_surface_describe(g, &pmu->trace_buf, &pmu->args_v5.trace_buf);
+	nvgpu_pmu_surface_describe(g, &pmu->trace_buf, &pmu->args_v5.trace_buf);
 }
 
 static void set_pmu_cmdline_args_falctracedmaidx_v5(
@@ -3787,53 +3787,6 @@ void gk20a_pmu_isr(struct gk20a *g)
 	}
 
 	nvgpu_mutex_release(&pmu->isr_mutex);
-}
-
-void gk20a_pmu_surface_describe(struct gk20a *g, struct nvgpu_mem *mem,
-		struct flcn_mem_desc_v0 *fb)
-{
-	fb->address.lo = u64_lo32(mem->gpu_va);
-	fb->address.hi = u64_hi32(mem->gpu_va);
-	fb->params = ((u32)mem->size & 0xFFFFFF);
-	fb->params |= (GK20A_PMU_DMAIDX_VIRT << 24);
-}
-
-int gk20a_pmu_vidmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
-		u32 size)
-{
-	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = mm->pmu.vm;
-	int err;
-
-	err = nvgpu_dma_alloc_map_vid(vm, size, mem);
-	if (err) {
-		nvgpu_err(g, "memory allocation failed");
-		return -ENOMEM;
-	}
-
-	return 0;
-}
-
-int gk20a_pmu_sysmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
-		u32 size)
-{
-	struct mm_gk20a *mm = &g->mm;
-	struct vm_gk20a *vm = mm->pmu.vm;
-	int err;
-
-	err = nvgpu_dma_alloc_map_sys(vm, size, mem);
-	if (err) {
-		nvgpu_err(g, "failed to allocate memory");
-		return -ENOMEM;
-	}
-
-	return 0;
-}
-
-void gk20a_pmu_surface_free(struct gk20a *g, struct nvgpu_mem *mem)
-{
-	nvgpu_dma_free(g, mem);
-	memset(mem, 0, sizeof(struct nvgpu_mem));
 }
 
 int gk20a_pmu_pg_global_enable(struct gk20a *g, u32 enable_pg)

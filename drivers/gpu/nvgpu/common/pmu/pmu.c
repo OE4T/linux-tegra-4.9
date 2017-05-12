@@ -423,3 +423,50 @@ int nvgpu_pmu_destroy(struct gk20a *g)
 	nvgpu_log_fn(g, "done");
 	return 0;
 }
+
+void nvgpu_pmu_surface_describe(struct gk20a *g, struct nvgpu_mem *mem,
+		struct flcn_mem_desc_v0 *fb)
+{
+	fb->address.lo = u64_lo32(mem->gpu_va);
+	fb->address.hi = u64_hi32(mem->gpu_va);
+	fb->params = ((u32)mem->size & 0xFFFFFF);
+	fb->params |= (GK20A_PMU_DMAIDX_VIRT << 24);
+}
+
+int nvgpu_pmu_vidmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
+		u32 size)
+{
+	struct mm_gk20a *mm = &g->mm;
+	struct vm_gk20a *vm = mm->pmu.vm;
+	int err;
+
+	err = nvgpu_dma_alloc_map_vid(vm, size, mem);
+	if (err) {
+		nvgpu_err(g, "memory allocation failed");
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
+int nvgpu_pmu_sysmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
+		u32 size)
+{
+	struct mm_gk20a *mm = &g->mm;
+	struct vm_gk20a *vm = mm->pmu.vm;
+	int err;
+
+	err = nvgpu_dma_alloc_map_sys(vm, size, mem);
+	if (err) {
+		nvgpu_err(g, "failed to allocate memory\n");
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
+void nvgpu_pmu_surface_free(struct gk20a *g, struct nvgpu_mem *mem)
+{
+	nvgpu_dma_free(g, mem);
+	memset(mem, 0, sizeof(struct nvgpu_mem));
+}

@@ -552,9 +552,9 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 				goto clean_up;
 			}
 
-			gk20a_pmu_vidmem_surface_alloc(g, seq->in_mem,
+			nvgpu_pmu_vidmem_surface_alloc(g, seq->in_mem,
 				payload->in.fb_size);
-			gk20a_pmu_surface_describe(g, seq->in_mem,
+			nvgpu_pmu_surface_describe(g, seq->in_mem,
 				(struct flcn_mem_desc_v0 *)
 				pv->pmu_allocation_get_fb_addr(pmu, in));
 
@@ -595,9 +595,9 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 					err = -ENOMEM;
 					goto clean_up;
 				}
-				gk20a_pmu_vidmem_surface_alloc(g, seq->out_mem,
+				nvgpu_pmu_vidmem_surface_alloc(g, seq->out_mem,
 					payload->out.fb_size);
-				gk20a_pmu_surface_describe(g, seq->out_mem,
+				nvgpu_pmu_surface_describe(g, seq->out_mem,
 					(struct flcn_mem_desc_v0 *)
 					pv->pmu_allocation_get_fb_addr(pmu,
 					out));
@@ -699,7 +699,7 @@ static int pmu_response_handle(struct nvgpu_pmu *pmu,
 			pv->pmu_allocation_get_fb_size(pmu,
 				pv->get_pmu_seq_out_a_ptr(seq)));
 
-		gk20a_pmu_surface_free(g, seq->out_mem);
+		nvgpu_pmu_surface_free(g, seq->out_mem);
 		if (seq->out_mem != seq->in_mem)
 			nvgpu_kfree(g, seq->out_mem);
 		else
@@ -712,7 +712,7 @@ static int pmu_response_handle(struct nvgpu_pmu *pmu,
 			pv->pmu_allocation_get_fb_size(pmu,
 				pv->get_pmu_seq_in_a_ptr(seq)));
 
-		gk20a_pmu_surface_free(g, seq->in_mem);
+		nvgpu_pmu_surface_free(g, seq->in_mem);
 		nvgpu_kfree(g, seq->in_mem);
 		seq->in_mem = NULL;
 	}

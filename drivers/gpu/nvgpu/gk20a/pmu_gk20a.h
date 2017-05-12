@@ -57,12 +57,6 @@ struct nvgpu_firmware;
 #define PMU_PGENG_GR_BUFFER_IDX_ZBC	(1)
 #define PMU_PGENG_GR_BUFFER_IDX_FECS	(2)
 
-struct pmu_surface {
-	struct nvgpu_mem vidmem_desc;
-	struct nvgpu_mem sysmem_desc;
-	struct flcn_mem_desc_v0 params;
-};
-
 #define PMU_PG_IDLE_THRESHOLD_SIM		1000
 #define PMU_PG_POST_POWERUP_IDLE_THRESHOLD_SIM	4000000
 /* TBD: QT or else ? */
@@ -154,13 +148,6 @@ int gk20a_pmu_reset(struct gk20a *g);
 int pmu_idle(struct nvgpu_pmu *pmu);
 int pmu_enable_hw(struct nvgpu_pmu *pmu, bool enable);
 
-void gk20a_pmu_surface_free(struct gk20a *g, struct nvgpu_mem *mem);
-void gk20a_pmu_surface_describe(struct gk20a *g, struct nvgpu_mem *mem,
-		struct flcn_mem_desc_v0 *fb);
-int gk20a_pmu_vidmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
-		u32 size);
-int gk20a_pmu_sysmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
-		u32 size);
 bool nvgpu_find_hex_in_string(char *strings, struct gk20a *g, u32 *hex_pos);
 
 int nvgpu_pmu_perfmon_start_sampling(struct nvgpu_pmu *pmu);

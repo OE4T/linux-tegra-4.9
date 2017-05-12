@@ -172,7 +172,7 @@ u32 boardobjgrp_pmucmd_pmuinithandle_impl(struct gk20a *g,
 	if (pcmd->id == BOARDOBJGRP_GRP_CMD_ID_INVALID)
 		goto boardobjgrp_pmucmd_pmuinithandle_exit;
 
-	gk20a_pmu_sysmem_surface_alloc(g, sysmem_desc, pcmd->fbsize);
+	nvgpu_pmu_sysmem_surface_alloc(g, sysmem_desc, pcmd->fbsize);
 	/* we only have got sysmem later this will get copied to vidmem
 	surface*/
 	pcmd->surf.vidmem_desc.size = 0;
@@ -401,7 +401,7 @@ u32 boardobjgrp_pmuset_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp)
 	 * sysmem to vidmem
 	 */
 	if (pcmd->surf.vidmem_desc.size == 0) {
-		gk20a_pmu_vidmem_surface_alloc(g, &pcmd->surf.vidmem_desc,
+		nvgpu_pmu_vidmem_surface_alloc(g, &pcmd->surf.vidmem_desc,
 			pcmd->fbsize);
 	}
 	nvgpu_mem_wr_n(g, &pcmd->surf.vidmem_desc, 0, pcmd->buf, pcmd->fbsize);
@@ -466,7 +466,7 @@ boardobjgrp_pmugetstatus_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp,
 	 * sysmem to vidmem
 	 */
 	if (pcmd->surf.vidmem_desc.size == 0) {
-		gk20a_pmu_vidmem_surface_alloc(g, &pcmd->surf.vidmem_desc,
+		nvgpu_pmu_vidmem_surface_alloc(g, &pcmd->surf.vidmem_desc,
 			pcmd->fbsize);
 	}
 
@@ -726,7 +726,7 @@ static u32 boardobjgrp_pmucmdsend(struct gk20a *g,
 	/*
 	 * copy vidmem information to boardobj_cmd_grp
 	 */
-	gk20a_pmu_surface_describe(g, &pcmd->surf.vidmem_desc,
+	nvgpu_pmu_surface_describe(g, &pcmd->surf.vidmem_desc,
 			&pgrpcmd->grp.fb);
 
 	/*

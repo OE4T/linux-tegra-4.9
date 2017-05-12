@@ -335,6 +335,12 @@ struct nvgpu_pmu {
 	struct nvgpu_firmware *fw;
 };
 
+struct pmu_surface {
+	struct nvgpu_mem vidmem_desc;
+	struct nvgpu_mem sysmem_desc;
+	struct flcn_mem_desc_v0 params;
+};
+
 /*PG defines used by nvpgu-pmu*/
 struct pmu_pg_stats_data {
 	u32 gating_cnt;
@@ -385,5 +391,14 @@ void nvgpu_pmu_setup_hw_load_zbc(struct gk20a *g);
 
 int nvgpu_pmu_get_pg_stats(struct gk20a *g, u32 pg_engine_id,
 	struct pmu_pg_stats_data *pg_stat_data);
+
+/* NVGPU-PMU MEM alloc */
+void nvgpu_pmu_surface_free(struct gk20a *g, struct nvgpu_mem *mem);
+void nvgpu_pmu_surface_describe(struct gk20a *g, struct nvgpu_mem *mem,
+		struct flcn_mem_desc_v0 *fb);
+int nvgpu_pmu_vidmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
+		u32 size);
+int nvgpu_pmu_sysmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
+		u32 size);
 
 #endif /* __NVGPU_PMU_H__ */

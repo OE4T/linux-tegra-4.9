@@ -673,10 +673,10 @@ static int tegra_i2c_empty_rx_fifo(struct tegra_i2c_dev *i2c_dev)
 {
 	u32 val;
 	int rx_fifo_avail;
+	u32 *buf32 = (u32 *)i2c_dev->msg_rx_buf;
 	u8 *buf = i2c_dev->msg_rx_buf;
 	size_t buf_remaining = i2c_dev->msg_rx_remaining;
 	int words_to_transfer;
-	u32 temp_fifo[8]; /* temporary word aligned buffer for reading fifo */
 
 	if (!i2c_dev->msg_rx_remaining)
 		return 0;
@@ -697,9 +697,8 @@ static int tegra_i2c_empty_rx_fifo(struct tegra_i2c_dev *i2c_dev)
 		words_to_transfer = rx_fifo_avail;
 
 	for (val = 0; val < words_to_transfer; val++)
-		temp_fifo[val] = i2c_readl(i2c_dev, I2C_RX_FIFO);
+		buf32[val] = i2c_readl(i2c_dev, I2C_RX_FIFO);
 
-	memcpy(buf, temp_fifo, words_to_transfer * BYTES_PER_FIFO_WORD);
 	buf += words_to_transfer * BYTES_PER_FIFO_WORD;
 	buf_remaining -= words_to_transfer * BYTES_PER_FIFO_WORD;
 	rx_fifo_avail -= words_to_transfer;

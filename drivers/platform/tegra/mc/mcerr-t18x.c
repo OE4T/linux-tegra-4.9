@@ -232,6 +232,12 @@ static const char *t186_intr_info[] = {
 	NULL,
 };
 
+#define MC_INT_DECERR_MTS			(1<<16)
+#define MC_INT_WCAM_ERR				(1<<19)
+
+/* hub common int status */
+#define MC_HUBC_INT_SCRUB_ECC_WR_ACK		(1 << 0)
+
 /* reported in MC_INTSTATUS_0 */
 static const struct mc_error hub_mc_errors[] = {
 	MC_ERR(MC_INT_DECERR_EMEM,
@@ -429,7 +435,7 @@ static void log_mcerr_fault(unsigned int irq)
 			int_status, ch_int_status, hubc_int_status);
 }
 
-struct mcerr_ops mcerr_ops = {
+static struct mcerr_ops mcerr_ops = {
 	.nr_clients = ARRAY_SIZE(mc_clients),
 	.intr_descriptions = t186_intr_info,
 	.clear_interrupt = clear_interrupt,

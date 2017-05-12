@@ -219,6 +219,12 @@ static const char *const smmu_page_attrib[] = {
 	"rd-wr-ns"
 };
 
+#define MC_ERR_SMMU_MASK		(0x7 << 25)
+#define MC_ERR_SMMU_BITS(err)		(((err) & MC_ERR_SMMU_MASK) >> 25)
+
+#define MC_INT_INVALID_SMMU_PAGE		(1<<10)
+#define MC_INT_INVALID_APB_ASID_UPDATE		(1<<11)
+
 /*
  * Table of known errors and their interrupt signatures.
  */
@@ -258,13 +264,6 @@ static const struct mc_error mc_errors[] = {
 	       MC_INT_DECERR_EMEM,
 	       "EMEM decode error on PDE or PTE entry on VPR context",
 	       E_VPR | E_SMMU, MC_ERR_VPR_STATUS, MC_ERR_VPR_ADR),
-
-	/*
-	 * MTS access violation.
-	 */
-	MC_ERR(MC_INT_DECERR_MTS,
-	       "MTS carveout access violation",
-	       0, MC_ERR_MTS_STATUS, MC_ERR_MTS_ADR),
 
 	/*
 	 * Generalized carveouts.

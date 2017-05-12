@@ -401,4 +401,8 @@ int nvgpu_pmu_vidmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 int nvgpu_pmu_sysmem_surface_alloc(struct gk20a *g, struct nvgpu_mem *mem,
 		u32 size);
 
+/* PMU F/W support */
+int nvgpu_init_pmu_fw_support(struct nvgpu_pmu *pmu);
+int nvgpu_pmu_prepare_ns_ucode_blob(struct gk20a *g);
+
 #endif /* __NVGPU_PMU_H__ */

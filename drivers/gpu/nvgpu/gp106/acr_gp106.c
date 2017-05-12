@@ -174,7 +174,7 @@ static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 	pmu->ucode_image = (u32 *)pmu_fw->data;
 	g->acr.pmu_desc = pmu_desc;
 
-	err = gk20a_init_pmu(pmu);
+	err = nvgpu_init_pmu_fw_support(pmu);
 	if (err) {
 		nvgpu_err(g, "failed to set function pointers");
 		goto release_sig;
@@ -389,7 +389,7 @@ static int gp106_prepare_ucode_blob(struct gk20a *g)
 	if (g->acr.ucode_blob.cpu_va) {
 		/*Recovery case, we do not need to form
 		non WPR blob of ucodes*/
-		err = gk20a_init_pmu(pmu);
+		err = nvgpu_init_pmu_fw_support(pmu);
 		if (err) {
 			gp106_dbg_pmu("failed to set function pointers\n");
 			return err;

@@ -30,24 +30,6 @@ struct nvgpu_firmware;
 
 #define ZBC_MASK(i)			(~(~(0) << ((i)+1)) & 0xfffe)
 
-#define APP_VERSION_NC_3	22204331
-#define APP_VERSION_NC_2	20429989
-#define APP_VERSION_NC_1	20313802
-#define APP_VERSION_NC_0	20360931
-#define APP_VERSION_GM206	20652057
-#define APP_VERSION_NV_GPU	21307569
-#define APP_VERSION_NV_GPU_1	21308030
-#define APP_VERSION_GM20B_5 20490253
-#define APP_VERSION_GM20B_4 19008461
-#define APP_VERSION_GM20B_3 18935575
-#define APP_VERSION_GM20B_2 18694072
-#define APP_VERSION_GM20B_1 18547257
-#define APP_VERSION_GM20B 17615280
-#define APP_VERSION_3 18357968
-#define APP_VERSION_2 18542378
-#define APP_VERSION_1 17997577 /*Obsolete this once 18357968 gets in*/
-#define APP_VERSION_0 16856675
-
 /*Fuse defines*/
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 #define FUSE_GCPLEX_CONFIG_FUSE_0           0x2C8
@@ -127,11 +109,7 @@ void pmu_copy_from_dmem(struct nvgpu_pmu *pmu,
 		u32 src, u8 *dst, u32 size, u8 port);
 int pmu_reset(struct nvgpu_pmu *pmu);
 int pmu_bootstrap(struct nvgpu_pmu *pmu);
-int gk20a_init_pmu(struct nvgpu_pmu *pmu);
 void pmu_dump_falcon_stats(struct nvgpu_pmu *pmu);
-void gk20a_remove_pmu_support(struct nvgpu_pmu *pmu);
-
-int gk20a_init_pmu(struct nvgpu_pmu *pmu);
 
 int gk20a_pmu_ap_send_command(struct gk20a *g,
 		union pmu_ap_cmd *p_ap_cmd, bool b_block);

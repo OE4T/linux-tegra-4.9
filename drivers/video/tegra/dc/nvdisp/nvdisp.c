@@ -3767,6 +3767,36 @@ void tegra_dc_enable_sor_t18x(struct tegra_dc *dc, int sor_num, bool enable)
 	tegra_dc_writel(dc, reg_val, nvdisp_win_options_r());
 }
 
+void tegra_nvdisp_update_per_flip_output_lut(
+	struct tegra_dc *dc,
+	struct tegra_dc_ext_cmu_v2 *user_cmu_v2,
+	bool new_cmu_values)
+{
+	struct tegra_dc_lut *lut;
+	u32 reg_val = 0;
+
+	/* TODO: Currently dc->cmu_enabled controls lut1, csc and output lut
+	 * We need to decouple cmu_enabled and make it exclusive for
+	 * output lut only
+	 * */
+	dc->cmu_enabled = user_cmu_v2->cmu_enable ? true : false;
+	reg_val = tegra_dc_readl(dc, nvdisp_color_ctl_r());
+
+	if (user_cmu_v2->cmu_enable) {
+		reg_val |= nvdisp_color_ctl_cmu_enable_f();
+		if (new_cmu_values) {
+			lut = &dc->cmu;
+			nvdisp_copy_output_lut(lut->rgb,
+				(unsigned int *)&user_cmu_v2->rgb,
+				NVDISP_OUTPUT_LUT_SIZE);
+		}
+	} else {
+		reg_val &= ~nvdisp_color_ctl_cmu_enable_f();
+	}
+
+	tegra_dc_writel(dc, reg_val, nvdisp_color_ctl_r());
+}
+
 void tegra_dc_populate_t18x_hw_data(struct tegra_dc_hw_data *hw_data)
 {
 	if (!hw_data)

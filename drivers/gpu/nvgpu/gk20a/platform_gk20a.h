@@ -235,6 +235,9 @@ struct gk20a_platform {
 	u32 ina3221_dcb_index;
 	u32 ina3221_i2c_address;
 	u32 ina3221_i2c_port;
+
+	/* memory training pattern and mclk switch sequences */
+	u8 mem_config_idx;
 };
 
 static inline struct gk20a_platform *gk20a_get_platform(

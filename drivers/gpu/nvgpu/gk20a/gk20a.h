@@ -775,6 +775,7 @@ struct gpu_ops {
 			void *lsfm,	u32 *p_bl_gen_desc_size, u32 falconid);
 		int (*mclk_init)(struct gk20a *g);
 		void (*mclk_deinit)(struct gk20a *g);
+		int (*mclk_change)(struct gk20a *g, u16 val);
 		u32  lspmuwprinitdone;
 		u32  lsfloadedfalconid;
 		bool fecsbootstrapdone;
@@ -1286,12 +1287,14 @@ struct gk20a {
 	 * from monitoring power, current and voltage */
 	bool power_sensor_missing;
 
+	/* memory training sequence and mclk switch scripts */
+	u32 mem_config_idx;
+
 #if defined(CONFIG_TEGRA_GK20A_NVHOST) && defined(CONFIG_TEGRA_19x_GPU)
 	phys_addr_t	syncpt_unit_base;
 	size_t		syncpt_unit_size;
 	u32		syncpt_size;
 #endif
-
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)

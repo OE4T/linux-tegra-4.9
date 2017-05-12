@@ -16,6 +16,14 @@
 
 #include <nvgpu/lock.h>
 
+#define GP106_MCLK_LOW_SPEED	0
+#define GP106_MCLK_MID_SPEED	1
+#define GP106_MCLK_HIGH_SPEED	2
+#define GP106_MCLK_NUM_SPEED	3
+
+#define GP106_MEM_CONFIG_GDDR5_PG418	0
+#define GP106_MEM_CONFIG_GDDR5_PG419	1
+
 enum gk20a_mclk_speed {
 	gk20a_mclk_low_speed,
 	gk20a_mclk_mid_speed,
@@ -23,7 +31,7 @@ enum gk20a_mclk_speed {
 };
 
 struct clk_mclk_state {
-	enum gk20a_mclk_speed speed;
+	u32 speed;
 	struct nvgpu_mutex mclk_lock;
 	struct nvgpu_mutex data_lock;
 
@@ -32,9 +40,6 @@ struct clk_mclk_state {
 
 	void *vreg_buf;
 	bool init;
-
-	/* function pointers */
-	int (*change)(struct gk20a *g, u16 val);
 
 #ifdef CONFIG_DEBUG_FS
 	s64 switch_max;

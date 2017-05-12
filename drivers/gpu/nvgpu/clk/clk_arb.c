@@ -1989,7 +1989,7 @@ static int nvgpu_clk_arb_change_vf_point(struct gk20a *g, u16 gpc2clk_target,
 
 	/* descending */
 	if (voltuv < arb->voltuv_actual) {
-		status = g->clk_pmu.clk_mclk.change(g, mclk_target);
+		status = g->ops.pmu.mclk_change(g, mclk_target);
 		if (status < 0)
 			return status;
 
@@ -2009,7 +2009,7 @@ static int nvgpu_clk_arb_change_vf_point(struct gk20a *g, u16 gpc2clk_target,
 		if (status < 0)
 			return status;
 
-		status = g->clk_pmu.clk_mclk.change(g, mclk_target);
+		status = g->ops.pmu.mclk_change(g, mclk_target);
 		if (status < 0)
 			return status;
 	}

@@ -6266,6 +6266,14 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	if (dc->out_ops && dc->out_ops->hotplug_init)
 		dc->out_ops->hotplug_init(dc);
 
+	if (dc->out->type == TEGRA_DC_OUT_DP) {
+		ret = tegra_dc_set_fbcon_boot_mode(dc);
+		if (ret)
+			dev_err(&dc->ndev->dev,
+				"Failed to set fbcon mode for DC %d\n",
+				dc->ctrl_num);
+	}
+
 	if (dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) {
 		_tegra_dc_set_default_videomode(dc);
 		dc->enabled = _tegra_dc_enable(dc);

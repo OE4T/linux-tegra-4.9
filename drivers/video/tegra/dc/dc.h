@@ -1075,6 +1075,7 @@ int tegra_dc_to_fb_videomode(struct fb_videomode *fbmode,
 	const struct tegra_dc_mode *mode);
 int tegra_dc_set_fb_mode(struct tegra_dc *dc, const struct fb_videomode *fbmode,
 	bool stereo_mode);
+int tegra_dc_set_fbcon_boot_mode(struct tegra_dc *dc);
 
 unsigned tegra_dc_get_out_height(const struct tegra_dc *dc);
 unsigned tegra_dc_get_out_width(const struct tegra_dc *dc);

@@ -31,6 +31,7 @@
 #include "dc_reg.h"
 #include "dc_priv.h"
 #include "dsi.h"
+#include "edid.h"
 
 /* return non-zero if constraint is violated */
 static int calc_h_ref_to_sync(const struct tegra_dc_mode *mode, int *href)
@@ -794,3 +795,35 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 	return _tegra_dc_set_mode(dc, &mode);
 }
 EXPORT_SYMBOL(tegra_dc_set_fb_mode);
+
+int tegra_dc_set_fbcon_boot_mode(struct tegra_dc *dc)
+{
+	struct tegra_edid *edid = NULL;
+	struct fb_monspecs specs;
+
+	if (IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE) && (!dc->initialized) &&
+							tegra_dc_hpd(dc)) {
+		switch (dc->out->type) {
+		case TEGRA_DC_OUT_HDMI:
+			break;
+
+		case TEGRA_DC_OUT_DP:
+			if (!tegra_dc_is_ext_dp_panel(dc))
+				return 0;
+
+			edid = dc->edid;
+			break;
+		default:
+			return -EINVAL;
+		}
+
+		if (edid && !tegra_edid_get_monspecs(edid, &specs))
+			return tegra_dc_set_fb_mode(dc, specs.modedb, false);
+		else
+			return tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode,
+									false);
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_dc_set_fbcon_boot_mode);

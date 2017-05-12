@@ -158,4 +158,5 @@ void gv11b_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_get_queue_head_size = pwr_pmu_queue_head__size_1_v;
 	gops->pmu.pmu_get_queue_tail = pwr_pmu_queue_tail_r;
 	gops->pmu.pmu_get_queue_tail_size = pwr_pmu_queue_tail__size_1_v;
+	gops->pmu.pmu_elpg_statistics = gp106_pmu_elpg_statistics;
 }

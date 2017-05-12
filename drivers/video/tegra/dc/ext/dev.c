@@ -130,6 +130,10 @@ struct tegra_dc_ext_flip_data {
 	bool cmu_update_needed; /* this is needed for ENABLE or DISABLE */
 	bool new_cmu_values; /* this is to be used only when ENABLE */
 	struct tegra_dc_ext_cmu_v2 user_cmu_v2;
+	bool output_colorspace_update_needed;
+	bool output_range_update_needed;
+	u32 output_colorspace;
+	u8 limited_range_enable;
 };
 
 struct tegra_dc_ext_scanline_data {
@@ -908,6 +912,24 @@ static void tegra_dc_flip_trace(struct tegra_dc_ext_flip_data *data,
 	}
 }
 
+static void tegra_dc_update_enable_general_ack_req(struct tegra_dc *dc)
+{
+	u32 reg_val =  GENERAL_UPDATE;
+	tegra_dc_writel(dc, GENERAL_UPDATE, DC_CMD_STATE_CONTROL);
+	tegra_dc_readl(dc, DC_CMD_STATE_CONTROL); /* flush */
+	reg_val = GENERAL_ACT_REQ;
+	tegra_dc_writel(dc, reg_val, DC_CMD_STATE_CONTROL);
+	tegra_dc_readl(dc, DC_CMD_STATE_CONTROL); /* flush */
+}
+
+static void tegra_dc_ext_enable_update_and_act(struct tegra_dc *dc)
+{
+	if (tegra_dc_is_t21x())
+		tegra_dc_update_enable_general_ack_req(dc);
+	else
+		tegra_nvdisp_update_enable_general_ack_req(dc);
+}
+
 static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 {
 	struct tegra_dc_ext_flip_data *data =
@@ -1068,28 +1090,6 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 				DC_DISP_DISP_COLOR_CONTROL);
 		}
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-		/* If we're transitioning between a bypass and a non-bypass
-		 * mode, update the output CSC and chroma LPF during this flip.
-		 */
-		if (dc->yuv_bypass_dirty) {
-			tegra_nvdisp_set_ocsc(dc, &dc->mode);
-			tegra_nvdisp_set_chroma_lpf(dc);
-		}
-#endif
-
-		if (dc->yuv_bypass || dc->yuv_bypass_dirty) {
-			reg_val = GENERAL_UPDATE;
-			tegra_dc_writel(dc, reg_val, DC_CMD_STATE_CONTROL);
-			tegra_dc_readl(dc, DC_CMD_STATE_CONTROL); /* flush */
-
-			reg_val = GENERAL_ACT_REQ;
-			tegra_dc_writel(dc, reg_val, DC_CMD_STATE_CONTROL);
-			tegra_dc_readl(dc, DC_CMD_STATE_CONTROL); /* flush */
-
-			dc->yuv_bypass_dirty = false;
-		}
-
 		if (flip_win->attr.swap_interval && !no_vsync)
 			wait_for_vblank = true;
 		ext_win->enabled = !!(win->flags & TEGRA_WIN_FLAG_ENABLED);
@@ -1136,12 +1136,40 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 			(dc->out->type == TEGRA_DC_OUT_DP) ||
 			(dc->out->type == TEGRA_DC_OUT_FAKE_DP)))
 				lock_flip = true;
-		/* call tegra_dc_update_postcomp */
-		if (!tegra_dc_is_t21x())
+
+		/* Perform per flip postcomp updates here */
+		if (!tegra_dc_is_t21x()) {
+			/* If we're transitioning between a bypass and
+			 * a non-bypass mode, update the output CSC
+			 * and chroma LPF during this flip.
+			 */
+			if (dc->yuv_bypass_dirty) {
+				tegra_nvdisp_set_ocsc(dc, &dc->mode);
+				tegra_nvdisp_set_chroma_lpf(dc);
+			}
 			if (data->cmu_update_needed)
 				tegra_nvdisp_update_per_flip_output_lut(dc,
 					&data->user_cmu_v2,
 					data->new_cmu_values);
+			if (data->output_colorspace_update_needed)
+				tegra_nvdisp_update_per_flip_output_colorspace(
+					dc, data->output_colorspace);
+			if (data->output_range_update_needed)
+				tegra_nvdisp_update_per_flip_output_range(dc,
+					data->limited_range_enable);
+			if (data->output_range_update_needed ||
+				data->output_colorspace_update_needed)
+				tegra_nvdisp_update_per_flip_csc2(dc);
+		}
+		/* Perform general update and enable */
+		if (dc->yuv_bypass_dirty || dc->yuv_bypass ||
+			data->output_colorspace_update_needed ||
+			data->output_range_update_needed ||
+			data->cmu_update_needed)
+			tegra_dc_ext_enable_update_and_act(dc);
+		if (dc->yuv_bypass_dirty || dc->yuv_bypass)
+			dc->yuv_bypass_dirty = false;
+
 		tegra_dc_update_windows(wins, nr_win,
 			data->dirty_rect_valid ? data->dirty_rect : NULL,
 			wait_for_vblank, lock_flip);
@@ -1510,6 +1538,38 @@ static int tegra_dc_ext_configure_cmu_v2_user_data(
 	return ret;
 }
 
+static int tegra_dc_ext_configure_output_csc_user_data(
+	struct tegra_dc_ext_flip_data *flip_kdata,
+	struct tegra_dc_ext_flip_user_data *flip_udata)
+{
+	struct tegra_dc_ext_udata_output_csc *user_csc =
+		&flip_udata->output_csc;
+
+	if (flip_udata->flags & TEGRA_DC_EXT_FLIP_FLAG_UPDATE_OCSC_CS) {
+		switch (user_csc->output_colorspace) {
+		case TEGRA_DC_EXT_FLIP_FLAG_CS_REC601:
+		case TEGRA_DC_EXT_FLIP_FLAG_CS_REC709:
+		case TEGRA_DC_EXT_FLIP_FLAG_CS_REC2020:
+			flip_kdata->output_colorspace_update_needed = true;
+			flip_kdata->output_colorspace =
+				user_csc->output_colorspace;
+			break;
+		default:
+			dev_err(&flip_kdata->ext->dc->ndev->dev,
+				"Invalid colorspace value\n");
+			return -EINVAL;
+		}
+	}
+
+	if (flip_udata->flags & TEGRA_DC_EXT_FLIP_FLAG_UPDATE_OCSC_RANGE) {
+		flip_kdata->output_range_update_needed = true;
+		flip_kdata->limited_range_enable =
+			user_csc->limited_range_enable;
+	}
+
+	return 0;
+}
+
 static int tegra_dc_ext_read_csc_v2_user_data(
 	struct tegra_dc_ext_flip_data *flip_kdata,
 	struct tegra_dc_ext_flip_user_data *flip_udata)
@@ -1652,6 +1712,13 @@ static int tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 			break;
 		case TEGRA_DC_EXT_FLIP_USER_DATA_CMU_V2:
 			ret = tegra_dc_ext_configure_cmu_v2_user_data(data,
+				&flip_user_data[i]);
+			if (ret)
+				return ret;
+
+			break;
+		case TEGRA_DC_EXT_FLIP_USER_DATA_OUTPUT_CSC:
+			ret = tegra_dc_ext_configure_output_csc_user_data(data,
 				&flip_user_data[i]);
 			if (ret)
 				return ret;

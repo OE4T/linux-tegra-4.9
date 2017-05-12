@@ -252,6 +252,10 @@ struct tegra_dc_clients_info {
 	struct tegra_dc_client_data client_data[MAX_NO_DC_CLIENTS];
 };
 
+struct tegra_dc_cached_settings {
+	u32 csc2_control;
+};
+
 struct tegra_dc {
 	struct platform_device		*ndev;
 	struct tegra_dc_platform_data	*pdata;
@@ -386,6 +390,8 @@ struct tegra_dc {
 	} stats;
 
 	struct tegra_dc_ext		*ext;
+
+	struct tegra_dc_cached_settings cached_settings;
 
 	struct tegra_dc_feature		*feature;
 	int				gen1_blend_num;

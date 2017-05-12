@@ -104,6 +104,11 @@ struct tegra_dc_lut {
 };
 #endif
 
+struct tegra_dc_win_cached_settings {
+	bool clamp_before_blend;
+	bool color_expand_enable;
+};
+
 struct tegra_dc_win {
 	u8			idx;
 	u8			ppflags; /* see TEGRA_WIN_PPFLAG* */
@@ -132,6 +137,8 @@ struct tegra_dc_win {
 	unsigned		out_w;
 	unsigned		out_h;
 	unsigned		z;
+
+	struct tegra_dc_win_cached_settings cached_settings;
 
 #if defined(CONFIG_TEGRA_CSC_V2)
 	struct tegra_dc_csc_v2	csc;

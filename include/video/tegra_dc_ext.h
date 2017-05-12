@@ -180,6 +180,14 @@
  *                      from cached values.
  */
 #define TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CMU_V2	(1 << 0)
+/* FLAG_UPDATE_OCSC_CS: If flag is present, driver will update
+ *                      output colorspace with values provided from userspace
+ */
+#define TEGRA_DC_EXT_FLIP_FLAG_UPDATE_OCSC_CS	(1 << 0)
+/* FLAG_UPDATE_OCSC_RANGE: If flag is present, driver will update output color
+ *                      range with values provided from userspace
+ */
+#define TEGRA_DC_EXT_FLIP_FLAG_UPDATE_OCSC_RANGE	(1 << 1)
 /* Flags for post-syncpt handling */
 /* Bits 1:0 are reserved for the post-syncpt type */
 #define TEGRA_DC_EXT_FLIP_FLAG_POST_SYNCPT_TYPE_SHIFT	0
@@ -411,6 +419,7 @@ enum tegra_dc_ext_flip_data_type {
 	TEGRA_DC_EXT_FLIP_USER_DATA_POST_SYNCPT,
 	TEGRA_DC_EXT_FLIP_USER_DATA_CSC_V2,
 	TEGRA_DC_EXT_FLIP_USER_DATA_CMU_V2,
+	TEGRA_DC_EXT_FLIP_USER_DATA_OUTPUT_CSC,
 };
 
 /*
@@ -544,6 +553,17 @@ struct tegra_dc_ext_udata_cmu_v2 {
 	__u8 reserved[18];
 } __attribute__((__packed__));
 
+struct tegra_dc_ext_udata_output_csc {
+	__u32 output_colorspace;
+	/* Valid values for output colorspace:
+	 * - TEGRA_DC_EXT_FLIP_FLAG_CS_REC601
+	 * - TEGRA_DC_EXT_FLIP_FLAG_CS_REC709
+	 * - TEGRA_DC_EXT_FLIP_FLAG_CS_REC2020
+	 */
+	__u8 limited_range_enable;
+	__u8 reserved[21];
+} __attribute__((__packed__));
+
 /* size of the this struct is 32 bytes */
 struct tegra_dc_ext_flip_user_data {
 	__u8 data_type;
@@ -559,6 +579,7 @@ struct tegra_dc_ext_flip_user_data {
 		struct tegra_dc_ext_syncpt post_syncpt; /* out */
 		struct tegra_dc_ext_udata_csc_v2 csc_v2;
 		struct tegra_dc_ext_udata_cmu_v2 cmu_v2;
+		struct tegra_dc_ext_udata_output_csc output_csc;
 	};
 } __attribute__((__packed__));
 

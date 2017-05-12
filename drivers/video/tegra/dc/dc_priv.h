@@ -779,8 +779,6 @@ void tegra_nvdisp_init_csc_defaults(struct tegra_dc_csc_v2 *csc);
 #endif
 void tegra_nvdisp_vrr_work(struct work_struct *work);
 
-int tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc);
-int tegra_nvdisp_set_ocsc(struct tegra_dc *dc, struct tegra_dc_mode *mode);
 #endif
 
 void __attribute__((weak)) tegra_dc_populate_t21x_hw_data(
@@ -805,6 +803,20 @@ void __attribute__((weak)) tegra_nvdisp_update_per_flip_output_lut(
 	struct tegra_dc *dc,
 	struct tegra_dc_ext_cmu_v2 *user_cmu_v2,
 	bool new_cmu_values);
+void __attribute__((weak))
+	tegra_nvdisp_update_per_flip_output_colorspace(struct tegra_dc *dc,
+	u16 colorspace);
+void __attribute__((weak))
+	tegra_nvdisp_update_per_flip_output_range(struct tegra_dc *dc,
+	u8 limited_range_enable);
+void __attribute__((weak))
+	tegra_nvdisp_update_per_flip_csc2(struct tegra_dc *dc);
+void __attribute__((weak))
+	tegra_nvdisp_update_enable_general_ack_req(struct tegra_dc *dc);
+int __attribute__((weak)) tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc);
+int __attribute__((weak))
+	tegra_nvdisp_set_ocsc(struct tegra_dc *dc,
+	struct tegra_dc_mode *mode);
 
 struct tegra_dc_pd_table *tegra_dc_get_disp_pd_table(void);
 

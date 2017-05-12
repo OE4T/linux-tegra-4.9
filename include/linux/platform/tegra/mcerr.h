@@ -32,16 +32,10 @@
 
 #define MAX_PRINTS			5
 
-/*
- * Lagacy usage of these registers. FIXME.
- */
+/* defines that are common across SOC's. */
 #define MC_INT_STATUS			0x0
 #define MC_INT_MASK			0x4
-#define MC_ERR_BBC_STATUS		0x84
-#define MC_ERR_BBC_ADR			0x88
 
-#define MC_ERR_SMMU_MASK		(0x7 << 25)
-#define MC_ERR_SMMU_BITS(err)		(((err) & MC_ERR_SMMU_MASK) >> 25)
 #define MC_ERR_STATUS_WRITE		(1 << 16)
 #define MC_ERR_STATUS_SECURE		(1 << 17)
 #define MC_ERR_STATUS_ADR_HI		(3 << 20)
@@ -49,18 +43,9 @@
 #define MC_INT_DECERR_EMEM			(1<<6)
 #define MC_INT_SECURITY_VIOLATION		(1<<8)
 #define MC_INT_ARBITRATION_EMEM			(1<<9)
-#define MC_INT_INVALID_SMMU_PAGE		(1<<10)
-#define MC_INT_INVALID_APB_ASID_UPDATE		(1<<11)
 #define MC_INT_DECERR_VPR			(1<<12)
 #define MC_INT_SECERR_SEC			(1<<13)
-#define MC_INT_BBC_PRIVATE_MEM_VIOLATION	(1<<14)
-#define MC_INT_DECERR_BBC			(1<<15)
-#define MC_INT_DECERR_MTS			(1<<16)
 #define MC_INT_DECERR_GENERALIZED_CARVEOUT	(1<<17)
-#define MC_INT_WCAM_ERR				(1<<19)
-
-/* hub common int status */
-#define MC_HUBC_INT_SCRUB_ECC_WR_ACK		(1 << 0)
 
 #define MC_ERR_DECERR_EMEM		(2)
 #define MC_ERR_SECURITY_TRUSTZONE	(3)

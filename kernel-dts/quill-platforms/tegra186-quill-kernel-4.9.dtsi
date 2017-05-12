@@ -618,8 +618,4 @@
 			iommus = <&smmu TEGRA_SID_APE>;
 		};
 	};
-
-	sdhci@3460000 {
-		/delete-property/ nvidia,enable-hwcq;
-	};
 };

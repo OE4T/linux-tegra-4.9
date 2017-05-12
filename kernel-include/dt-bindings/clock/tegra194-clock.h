@@ -495,5 +495,51 @@
 #define TEGRA194_CLK_QSPI0_PM			194
 /** @brief output of the divider QSPI_CLK_DIV2_SEL in CLK_RST_CONTROLLER_CLK_SOURCE_QSPI1 */
 #define TEGRA194_CLK_QSPI1_PM			195
+/** @brief CLK_RST_CONTROLLER_CLK_SOURCE_VI_CONST switch divider output */
+#define TEGRA194_CLK_VI_CONST			196
+/** @brief NAFLL clock source for BPMP */
+#define TEGRA194_CLK_NAFLL_BPMP			197
+/** @brief NAFLL clock source for SCE */
+#define TEGRA194_CLK_NAFLL_SCE			198
+/** @brief NAFLL clock source for NVDEC */
+#define TEGRA194_CLK_NAFLL_NVDEC		199
+/** @brief NAFLL clock source for NVJPG */
+#define TEGRA194_CLK_NAFLL_NVJPG		200
+/** @brief NAFLL clock source for TSEC */
+#define TEGRA194_CLK_NAFLL_TSEC			201
+/** @brief NAFLL clock source for TSECB */
+#define TEGRA194_CLK_NAFLL_TSECB		202
+/** @brief NAFLL clock source for VI */
+#define TEGRA194_CLK_NAFLL_VI			203
+/** @brief NAFLL clock source for SE */
+#define TEGRA194_CLK_NAFLL_SE			204
+/** @brief NAFLL clock source for NVENC */
+#define TEGRA194_CLK_NAFLL_NVENC		205
+/** @brief NAFLL clock source for ISP */
+#define TEGRA194_CLK_NAFLL_ISP			206
+/** @brief NAFLL clock source for VIC */
+#define TEGRA194_CLK_NAFLL_VIC			207
+/** @brief NAFLL clock source for NVDISPLAYHUB */
+#define TEGRA194_CLK_NAFLL_NVDISPLAYHUB		208
+/** @brief NAFLL clock source for AXICBB */
+#define TEGRA194_CLK_NAFLL_AXICBB		209
+/** @brief NAFLL clock source for DLA */
+#define TEGRA194_CLK_NAFLL_DLA			210
+/** @brief NAFLL clock source for PVA_CORE */
+#define TEGRA194_CLK_NAFLL_PVA_CORE		211
+/** @brief NAFLL clock source for PVA_VPS */
+#define TEGRA194_CLK_NAFLL_PVA_VPS		212
+/** @brief NAFLL clock source for CVNAS */
+#define TEGRA194_CLK_NAFLL_CVNAS		213
+/** @brief NAFLL clock source for RCE */
+#define TEGRA194_CLK_NAFLL_RCE			214
+/** @brief NAFLL clock source for NVENC1 */
+#define TEGRA194_CLK_NAFLL_NVENC1		215
+/** @brief NAFLL clock source for DLA_FALCON */
+#define TEGRA194_CLK_NAFLL_DLA_FALCON		216
+/** @brief NAFLL clock source for NVDEC1 */
+#define TEGRA194_CLK_NAFLL_NVDEC1		217
+/** @brief NAFLL clock source for GPU */
+#define TEGRA194_CLK_NAFLL_GPU			218
 
 #endif

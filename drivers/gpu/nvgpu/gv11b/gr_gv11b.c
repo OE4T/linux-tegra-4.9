@@ -634,6 +634,70 @@ static int gr_gv11b_handle_gcc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	return 0;
 }
 
+static int gr_gv11b_handle_gpccs_ecc_exception(struct gk20a *g, u32 gpc,
+								u32 exception)
+{
+	int ret = 0;
+	u32 ecc_status, ecc_addr, corrected_cnt, uncorrected_cnt;
+	int hww_esr;
+	u32 offset = proj_gpc_stride_v() * gpc;
+
+	hww_esr = gk20a_readl(g, gr_gpc0_gpccs_hww_esr_r() + offset);
+
+	if (!(hww_esr & (gr_gpc0_gpccs_hww_esr_ecc_uncorrected_m() |
+		         gr_gpc0_gpccs_hww_esr_ecc_corrected_m())))
+		return ret;
+
+	ecc_status = gk20a_readl(g,
+		gr_gpc0_gpccs_falcon_ecc_status_r() + offset);
+	ecc_addr = gk20a_readl(g,
+		gr_gpc0_gpccs_falcon_ecc_address_r() + offset);
+	corrected_cnt = gk20a_readl(g,
+		gr_gpc0_gpccs_falcon_ecc_corrected_err_count_r() + offset);
+	uncorrected_cnt = gk20a_readl(g,
+		gr_gpc0_gpccs_falcon_ecc_uncorrected_err_count_r() + offset);
+
+	/* clear the interrupt */
+	gk20a_writel(g, gr_gpc0_gpccs_falcon_ecc_status_r() + offset,
+				gr_gpc0_gpccs_falcon_ecc_status_reset_task_f());
+
+	nvgpu_log(g, gpu_dbg_intr,
+			"gppcs gpc:%d ecc interrupt intr: 0x%x", gpc, hww_esr);
+
+	if (ecc_status & gr_gpc0_gpccs_falcon_ecc_status_corrected_err_imem_m())
+		nvgpu_log(g, gpu_dbg_intr, "imem ecc error corrected");
+	if (ecc_status &
+		gr_gpc0_gpccs_falcon_ecc_status_uncorrected_err_imem_m())
+		nvgpu_log(g, gpu_dbg_intr, "imem ecc error uncorrected");
+	if (ecc_status &
+		gr_gpc0_gpccs_falcon_ecc_status_corrected_err_dmem_m())
+		nvgpu_log(g, gpu_dbg_intr, "dmem ecc error corrected");
+	if (ecc_status &
+		gr_gpc0_gpccs_falcon_ecc_status_uncorrected_err_dmem_m())
+		nvgpu_log(g, gpu_dbg_intr, "dmem ecc error uncorrected");
+
+	nvgpu_log(g, gpu_dbg_intr,
+		"ecc error row address: 0x%x",
+		gr_gpc0_gpccs_falcon_ecc_address_row_address_v(ecc_addr));
+
+	nvgpu_log(g, gpu_dbg_intr,
+		"ecc error count corrected: %d, uncorrected %d",
+		gr_gpc0_gpccs_falcon_ecc_corrected_err_count_total_v(corrected_cnt),
+		gr_gpc0_gpccs_falcon_ecc_uncorrected_err_count_total_v(uncorrected_cnt));
+
+	return ret;
+}
+
+static int gr_gv11b_handle_gpc_gpccs_exception(struct gk20a *g, u32 gpc,
+							u32 gpc_exception)
+{
+	if (gpc_exception & gr_gpc0_gpccs_gpc_exception_gpccs_m())
+		return gr_gv11b_handle_gpccs_ecc_exception(g, gpc,
+								gpc_exception);
+
+	return 0;
+}
+
 static void gr_gv11b_enable_gpc_exceptions(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
@@ -646,7 +710,8 @@ static void gr_gv11b_enable_gpc_exceptions(struct gk20a *g)
 		gr_gpcs_gpccs_gpc_exception_en_tpc_f((1 << gr->tpc_count) - 1);
 
 	gk20a_writel(g, gr_gpcs_gpccs_gpc_exception_en_r(),
-		(tpc_mask | gr_gpcs_gpccs_gpc_exception_en_gcc_f(1)));
+		(tpc_mask | gr_gpcs_gpccs_gpc_exception_en_gcc_f(1)
+			    gr_gpcs_gpccs_gpc_exception_en_gpccs_f(1));
 }
 
 static int gr_gv11b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
@@ -1622,6 +1687,55 @@ static int gr_gv11b_get_cilp_preempt_pending_chid(struct gk20a *g, int *__chid)
 	return ret;
 }
 
+static void gr_gv11b_handle_fecs_ecc_error(struct gk20a *g, u32 intr)
+{
+	u32 ecc_status, ecc_addr, corrected_cnt, uncorrected_cnt;
+
+	if (intr & (gr_fecs_host_int_status_ecc_uncorrected_m() |
+		    gr_fecs_host_int_status_ecc_corrected_m())) {
+		ecc_status = gk20a_readl(g, gr_fecs_falcon_ecc_status_r());
+		ecc_addr = gk20a_readl(g,
+			gr_fecs_falcon_ecc_address_r());
+		corrected_cnt = gk20a_readl(g,
+			gr_fecs_falcon_ecc_corrected_err_count_r());
+		uncorrected_cnt = gk20a_readl(g,
+			gr_fecs_falcon_ecc_uncorrected_err_count_r());
+
+		/* clear the interrupt */
+		gk20a_writel(g, gr_fecs_falcon_ecc_status_r(),
+				gr_fecs_falcon_ecc_status_reset_task_f());
+
+		nvgpu_log(g, gpu_dbg_intr,
+			"fecs ecc interrupt intr: 0x%x", intr);
+
+		if (ecc_status &
+			gr_fecs_falcon_ecc_status_corrected_err_imem_m())
+			nvgpu_log(g, gpu_dbg_intr, "imem ecc error corrected");
+		if (ecc_status &
+			gr_fecs_falcon_ecc_status_uncorrected_err_imem_m())
+			nvgpu_log(g, gpu_dbg_intr,
+						"imem ecc error uncorrected");
+		if (ecc_status &
+			gr_fecs_falcon_ecc_status_corrected_err_dmem_m())
+			nvgpu_log(g, gpu_dbg_intr, "dmem ecc error corrected");
+		if (ecc_status &
+			gr_fecs_falcon_ecc_status_uncorrected_err_dmem_m())
+			nvgpu_log(g, gpu_dbg_intr,
+						"dmem ecc error uncorrected");
+
+		nvgpu_log(g, gpu_dbg_intr,
+			"ecc error row address: 0x%x",
+			gr_fecs_falcon_ecc_address_row_address_v(ecc_addr));
+
+		nvgpu_log(g, gpu_dbg_intr,
+			"ecc error count corrected: %d, uncorrected %d",
+			gr_fecs_falcon_ecc_corrected_err_count_total_v(
+							corrected_cnt),
+			gr_fecs_falcon_ecc_uncorrected_err_count_total_v(
+							uncorrected_cnt));
+	}
+}
+
 static int gr_gv11b_handle_fecs_error(struct gk20a *g,
 				struct channel_gk20a *__ch,
 				struct gr_gk20a_isr_data *isr_data)
@@ -1679,6 +1793,9 @@ static int gr_gv11b_handle_fecs_error(struct gk20a *g,
 
 		gk20a_channel_put(ch);
 	}
+
+	/* Handle ECC errors */
+	gr_gv11b_handle_fecs_ecc_error(g, gr_fecs_intr);
 
 clean_up:
 	/* handle any remaining interrupts */
@@ -2214,5 +2331,6 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.write_pm_ptr = gr_gv11b_write_pm_ptr;
 	gops->gr.init_elcg_mode = gr_gv11b_init_elcg_mode;
 	gops->gr.load_tpc_mask = gr_gv11b_load_tpc_mask;
-
+	gops->gr.handle_gpc_gpccs_exception =
+			gr_gv11b_handle_gpc_gpccs_exception;
 }

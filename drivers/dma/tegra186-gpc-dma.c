@@ -390,11 +390,17 @@ static void tegra_dma_sg_req_put(
 {
 	unsigned long flags;
 
-	if (lock)
+	if (lock) {
+		/*
+		 * to make sparse happy, I call lock and unlock
+		 * on the same level, without conditionals
+		 */
 		raw_spin_lock_irqsave(&tdc->lock, flags);
-	list_add_tail(&sgreq->node, &tdc->free_sg_req);
-	if (lock)
+		list_add_tail(&sgreq->node, &tdc->free_sg_req);
 		raw_spin_unlock_irqrestore(&tdc->lock, flags);
+	} else {
+		list_add_tail(&sgreq->node, &tdc->free_sg_req);
+	}
 }
 
 static struct tegra_dma_sg_req *tegra_dma_sg_req_alloc(

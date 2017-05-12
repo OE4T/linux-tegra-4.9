@@ -309,6 +309,8 @@ struct gpu_ops {
 				u32 *hww_global_esr);
 		int (*handle_tex_exception)(struct gk20a *g, u32 gpc, u32 tpc,
 						bool *post_event);
+		int (*handle_gpc_gpccs_exception)(struct gk20a *g, u32 gpc,
+						u32 gpc_exception);
 		void (*enable_gpc_exceptions)(struct gk20a *g);
 		void (*create_gr_sysfs)(struct device *dev);
 		u32 (*get_lrf_tex_ltc_dram_override)(struct gk20a *g);
@@ -749,6 +751,8 @@ struct gpu_ops {
 		u32  lspmuwprinitdone;
 		u32  lsfloadedfalconid;
 		bool fecsbootstrapdone;
+		void (*handle_ext_irq)(struct gk20a *g, u32 intr);
+		void (*set_irqmask)(struct gk20a *g);
 	} pmu;
 	struct {
 		void (*disable_slowboot)(struct gk20a *g);

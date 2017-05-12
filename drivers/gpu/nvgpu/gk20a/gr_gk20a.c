@@ -6350,12 +6350,20 @@ static int gk20a_gr_handle_gpc_exception(struct gk20a *g, bool *post_event,
 		}
 
 		/* Handle GCC exception */
-		if(gr_gpc0_gpccs_gpc_exception_gcc_v(gpc_exception) &&
+		if (gr_gpc0_gpccs_gpc_exception_gcc_v(gpc_exception) &&
 				g->ops.gr.handle_gcc_exception) {
 			int gcc_ret = 0;
 			gcc_ret = g->ops.gr.handle_gcc_exception(g, gpc, tpc,
 				post_event, fault_ch, hww_global_esr);
 			ret = ret ? ret : gcc_ret;
+		}
+
+		/* Handle GPCCS exceptions */
+		if (g->ops.gr.handle_gpc_gpccs_exception) {
+			int ret_ecc = 0;
+			ret_ecc = g->ops.gr.handle_gpc_gpccs_exception(g, gpc,
+								gpc_exception);
+			ret = ret ? ret : ret_ecc;
 		}
 	}
 

@@ -1308,6 +1308,11 @@ int tegra_nvdisp_set_ocsc(struct tegra_dc *dc,
 {
 	u32 csc2_control = nvdisp_csc2_control_output_color_sel_rgb_f();
 
+	/* If mode is not dirty, then set user cached csc2 values */
+	if (!dc->mode_dirty) {
+		csc2_control = dc->cached_settings.csc2_control;
+		goto write_reg;
+	}
 	/* Check whether the extended colorimetry
 	 * is requested in mode set for output csc
 	 */
@@ -1337,6 +1342,10 @@ int tegra_nvdisp_set_ocsc(struct tegra_dc *dc,
 	else
 		csc2_control |= nvdisp_csc2_control_limit_rgb_disable_f();
 
+	/* Set user data cache */
+	dc->cached_settings.csc2_control = csc2_control;
+
+write_reg:
 	tegra_dc_writel(dc, csc2_control, nvdisp_csc2_control_r());
 
 	return 0;
@@ -1641,6 +1650,9 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 			tegra_dc_get_numof_dispwindows()) {
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 
+		/* cache window specific default user data */
+		win->cached_settings.clamp_before_blend = true;
+		win->cached_settings.color_expand_enable = true;
 		BUG_ON(!win);
 
 		/* refuse to operate on invalid syncpts */
@@ -3795,6 +3807,60 @@ void tegra_nvdisp_update_per_flip_output_lut(
 	}
 
 	tegra_dc_writel(dc, reg_val, nvdisp_color_ctl_r());
+}
+
+void tegra_nvdisp_update_per_flip_output_colorspace(
+	struct tegra_dc *dc, u16 output_colorspace)
+{
+	u32 csc2_control = dc->cached_settings.csc2_control;
+	/* Reset the csc2 control colorspace */
+	csc2_control &= ~(nvdisp_csc2_control_output_color_sel_y2020_f());
+
+	if (output_colorspace == TEGRA_DC_EXT_FLIP_FLAG_CS_REC601) {
+		csc2_control = nvdisp_csc2_control_output_color_sel_y601_f();
+	} else if (output_colorspace == TEGRA_DC_EXT_FLIP_FLAG_CS_REC2020) {
+		csc2_control = nvdisp_csc2_control_output_color_sel_y2020_f();
+	} else if (output_colorspace == TEGRA_DC_EXT_FLIP_FLAG_CS_REC709) {
+		csc2_control = nvdisp_csc2_control_output_color_sel_y709_f();
+	} else {
+		dev_err(&dc->ndev->dev, "%s: unsupported colorspace=%u\n",
+			__func__, output_colorspace);
+		return;
+	}
+
+	dc->cached_settings.csc2_control = csc2_control;
+}
+
+void tegra_nvdisp_update_per_flip_output_range(
+	struct tegra_dc *dc, u8 limited_range_enable)
+{
+	u32 csc2_control = dc->cached_settings.csc2_control;
+	/* Reset the csc2 control color range */
+	csc2_control &= ~(nvdisp_csc2_control_limit_rgb_enable_f());
+
+	if (limited_range_enable)
+		csc2_control |= nvdisp_csc2_control_limit_rgb_enable_f();
+	else
+		csc2_control |= nvdisp_csc2_control_limit_rgb_disable_f();
+
+	dc->cached_settings.csc2_control = csc2_control;
+}
+
+void tegra_nvdisp_update_per_flip_csc2(struct tegra_dc *dc)
+{
+	tegra_dc_writel(dc, dc->cached_settings.csc2_control,
+		nvdisp_csc2_control_r());
+}
+
+void tegra_nvdisp_enable_update_and_act(struct tegra_dc *dc)
+{
+	/* Send general ack update and request enable */
+	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_general_update_enable_f(),
+		nvdisp_cmd_state_ctrl_r());
+	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r());
+	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_general_act_req_enable_f(),
+		nvdisp_cmd_state_ctrl_r());
+	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
 }
 
 void tegra_dc_populate_t18x_hw_data(struct tegra_dc_hw_data *hw_data)

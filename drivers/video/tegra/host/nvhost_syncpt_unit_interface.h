@@ -39,13 +39,6 @@ int nvhost_syncpt_alloc_gos_backing(struct platform_device *engine_pdev,
 int nvhost_syncpt_release_gos_backing(struct nvhost_syncpt *sp,
 				      u32 syncpt_id);
 
-int nvhost_syncpt_unit_interface_get_aperture(
-				struct platform_device *host_pdev,
-				phys_addr_t *base,
-				size_t *size);
-
-u32 nvhost_syncpt_unit_interface_get_byte_offset(u32 syncpt_id);
-
 dma_addr_t nvhost_syncpt_address(struct platform_device *engine_pdev, u32 id);
 
 int nvhost_syncpt_unit_interface_init(struct platform_device *engine_pdev);

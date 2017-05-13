@@ -96,6 +96,7 @@ struct clk_gk20a {
 	bool sw_ready;
 	bool clk_hw_on;
 	bool debugfs_set;
+	int pll_poweron_uv;
 };
 
 #if defined(CONFIG_COMMON_CLK)

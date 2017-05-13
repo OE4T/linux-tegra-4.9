@@ -48,7 +48,8 @@
 #define DFS_EXT_CAL_EN	BIT(9)
 #define DFS_EXT_STROBE	BIT(16)
 
-#define BOOT_GPU_UV	1000000	/* gpu rail boot voltage 1.0V */
+#define BOOT_GPU_UV_B1	1000000	/* gpu rail boot voltage 1.0V */
+#define BOOT_GPU_UV_C1	800000	/* gpu rail boot voltage 0.8V */
 #define ADC_SLOPE_UV	10000	/* default ADC detection slope 10mV */
 
 #define DVFS_SAFE_MARGIN	10	/* 10% */
@@ -558,7 +559,7 @@ static int clk_enbale_pll_dvfs(struct gk20a *g)
 
 	data = gk20a_readl(g, trim_sys_gpcpll_cfg3_r());
 	data = trim_sys_gpcpll_cfg3_dfs_testout_v(data);
-	p->uvdet_offs = BOOT_GPU_UV - data * ADC_SLOPE_UV;
+	p->uvdet_offs = g->clk.pll_poweron_uv - data * ADC_SLOPE_UV;
 	p->uvdet_slope = ADC_SLOPE_UV;
 	return 0;
 }
@@ -1154,8 +1155,15 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 		return 0;
 	}
 
-	gpc_pll_params = (clk->gpc_pll.id == GM20B_GPC_PLL_C1) ?
-		gpc_pll_params_c1 : gpc_pll_params_b1;
+	if (clk->gpc_pll.id == GM20B_GPC_PLL_C1) {
+		gpc_pll_params = gpc_pll_params_c1;
+		if (!clk->pll_poweron_uv)
+			clk->pll_poweron_uv = BOOT_GPU_UV_C1;
+	} else {
+		gpc_pll_params = gpc_pll_params_b1;
+		if (!clk->pll_poweron_uv)
+			clk->pll_poweron_uv = BOOT_GPU_UV_B1;
+	}
 
 	if (!gk20a_clk_get(g)) {
 		err = -EINVAL;

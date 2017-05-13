@@ -127,6 +127,8 @@ struct tegra_dc_dp_data {
 
 	u16 dpaux_i2c_dbg_addr;
 	u32 dpaux_i2c_dbg_num_bytes;
+	u16 dpaux_dpcd_dbg_addr;
+	u32 dpaux_dpcd_dbg_num_bytes;
 
 	bool early_enable;
 

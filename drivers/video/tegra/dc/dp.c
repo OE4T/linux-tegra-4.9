@@ -1097,55 +1097,92 @@ static const struct file_operations bits_per_pixel_fops = {
 	.release	= single_release,
 };
 
-static int dpaux_i2c_data_show(struct seq_file *s, void *unused)
+static inline void dpaux_print_data(struct seq_file *s, u8 *data, u32 size)
 {
-	struct tegra_dc_dp_data *dp = s->private;
-	u32 addr = dp->dpaux_i2c_dbg_addr;
-	u32 size = dp->dpaux_i2c_dbg_num_bytes;
-	u32 i, j, aux_stat;
 	u8 row_size = 16;
-	u8 *data;
+	u32 i, j;
 
-	data = kzalloc(size, GFP_KERNEL);
-	if (!data)
-		return -ENOMEM;
-
-	tegra_dc_dp_i2c_read(dp, addr, data, &size, &aux_stat);
 	for (i = 0; i < size; i += row_size) {
 		for (j = i; j < i + row_size && j < size; j++)
 			seq_printf(s, "%02x ", data[j]);
 		seq_puts(s, "\n");
 	}
-
-	kfree(data);
-	return 0;
 }
 
-static ssize_t dpaux_i2c_data_set(struct file *file,
-	const char __user *user_buf, size_t count, loff_t *off)
+static int dpaux_i2c_data_show(struct seq_file *s, void *unused)
 {
-	struct seq_file *s = file->private_data;
 	struct tegra_dc_dp_data *dp = s->private;
-	u32 i = 0, size = 0;
-	u32 aux_stat;
 	u32 addr = dp->dpaux_i2c_dbg_addr;
+	u32 size = dp->dpaux_i2c_dbg_num_bytes;
+	u32 aux_stat;
 	u8 *data;
+	int ret;
+
+	data = kzalloc(size, GFP_KERNEL);
+	if (!data)
+		return -ENOMEM;
+
+	ret = tegra_dc_dp_i2c_read(dp, addr, data, &size, &aux_stat);
+	if (ret) {
+		seq_printf(s, "Error reading %d bytes from I2C reg %x",
+			dp->dpaux_i2c_dbg_num_bytes,
+			dp->dpaux_i2c_dbg_addr);
+		goto free_mem;
+	}
+
+	dpaux_print_data(s, data, size);
+
+free_mem:
+	kfree(data);
+	return ret;
+}
+
+static int dpaux_dpcd_data_show(struct seq_file *s, void *unused)
+{
+	struct tegra_dc_dp_data *dp = s->private;
+	u32 addr = dp->dpaux_dpcd_dbg_addr;
+	u32 size = dp->dpaux_dpcd_dbg_num_bytes;
+	u32 i;
+	u8 *data;
+	int ret;
+
+	data = kzalloc(size, GFP_KERNEL);
+	if (!data)
+		return -ENOMEM;
+
+	for (i = 0; i < size; i++) {
+		ret = tegra_dc_dp_dpcd_read(dp, addr+i, data+i);
+		if (ret) {
+			seq_printf(s, "Reading %d bytes from reg %x; "
+				   "Error at DPCD reg offset %x\n",
+				dp->dpaux_dpcd_dbg_num_bytes,
+				dp->dpaux_dpcd_dbg_addr,
+				addr+i);
+			goto free_mem;
+		}
+	}
+
+	dpaux_print_data(s, data, size);
+
+free_mem:
+	kfree(data);
+	return ret;
+}
+
+static inline int dpaux_parse_input(const char __user *user_buf,
+					u8 *data, size_t count)
+{
+	int size = 0;
+	u32 i = 0;
 	char tmp[3];
 	char *buf;
-	int ret = count;
 
 	buf = kzalloc(count, GFP_KERNEL);
 	if (!buf)
 		return -ENOMEM;
 
-	data = kzalloc(count, GFP_KERNEL);
-	if (!data) {
-		ret = -ENOMEM;
-		goto free_mem;
-	}
-
 	if (copy_from_user(buf, user_buf, count)) {
-		ret = -EINVAL;
+		size = -EINVAL;
 		goto free_mem;
 	}
 
@@ -1155,14 +1192,14 @@ static ssize_t dpaux_i2c_data_set(struct file *file,
 	 * amount of whitespace between each XX.
 	 */
 	while (i + 1 < count) {
-		if (isspace(buf[i])) {
+		if (buf[i] == ' ') {
 			i += 1;
 			continue;
 		}
 
 		tmp[0] = buf[i]; tmp[1] = buf[i + 1]; tmp[2] = '\0';
 		if (kstrtou8(tmp, 16, data + size)) {
-			ret = -EINVAL;
+			size = -EINVAL;
 			goto free_mem;
 		}
 
@@ -1170,10 +1207,73 @@ static ssize_t dpaux_i2c_data_set(struct file *file,
 		i += 2;
 	}
 
-	tegra_dc_dp_i2c_write(dp, addr, data, &size, &aux_stat);
-
 free_mem:
 	kfree(buf);
+	return size;
+}
+
+static ssize_t dpaux_i2c_data_set(struct file *file,
+	const char __user *user_buf, size_t count, loff_t *off)
+{
+	struct seq_file *s = file->private_data;
+	struct tegra_dc_dp_data *dp = s->private;
+	int size = 0;
+	u32 aux_stat;
+	u32 addr = dp->dpaux_i2c_dbg_addr;
+	u8 *data;
+	int ret = count;
+
+	data = kzalloc(count, GFP_KERNEL);
+	if (!data)
+		return -ENOMEM;
+
+	size = dpaux_parse_input(user_buf, data, count);
+	if (size <= 0) {
+		ret = -EINVAL;
+		goto free_mem;
+	}
+
+	ret = tegra_dc_dp_i2c_write(dp, addr, data, &size, &aux_stat);
+	if (!ret)
+		ret = count;
+	else
+		ret = -EIO;
+
+free_mem:
+	kfree(data);
+
+	return ret;
+}
+
+static ssize_t dpaux_dpcd_data_set(struct file *file,
+	const char __user *user_buf, size_t count, loff_t *off)
+{
+	struct seq_file *s = file->private_data;
+	struct tegra_dc_dp_data *dp = s->private;
+	int size = 0;
+	u32 aux_stat;
+	u32 addr = dp->dpaux_dpcd_dbg_addr;
+	u8 *data;
+	int ret = count;
+
+	data = kzalloc(count, GFP_KERNEL);
+	if (!data)
+		return -ENOMEM;
+
+	size = dpaux_parse_input(user_buf, data, count);
+	if (size <= 0) {
+		ret = -EINVAL;
+		goto free_mem;
+	}
+
+	ret = tegra_dc_dpaux_write(dp, DPAUX_DP_AUXCTL_CMD_AUXWR,
+				addr, data, &size, &aux_stat);
+	if (!ret)
+		ret = count;
+	else
+		ret = -EIO;
+
+free_mem:
 	kfree(data);
 
 	return ret;
@@ -1184,10 +1284,23 @@ static int dpaux_i2c_data_open(struct inode *inode, struct file *file)
 	return single_open(file, dpaux_i2c_data_show, inode->i_private);
 }
 
+static int dpaux_dpcd_data_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dpaux_dpcd_data_show, inode->i_private);
+}
+
 static const struct file_operations dpaux_i2c_data_fops = {
 	.open		= dpaux_i2c_data_open,
 	.read		= seq_read,
 	.write		= dpaux_i2c_data_set,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static const struct file_operations dpaux_dpcd_data_fops = {
+	.open		= dpaux_dpcd_data_open,
+	.read		= seq_read,
+	.write		= dpaux_dpcd_data_set,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
@@ -1217,6 +1330,34 @@ static struct dentry *tegra_dpaux_i2c_dir_create(struct tegra_dc_dp_data *dp,
 	return retval;
 free_out:
 	debugfs_remove_recursive(dpaux_i2c_dir);
+	return retval;
+}
+
+static struct dentry *tegra_dpaux_dpcd_dir_create(struct tegra_dc_dp_data *dp,
+	struct dentry *parent)
+{
+	struct dentry *dpaux_dir;
+	struct dentry *retval = NULL;
+
+	dpaux_dir = debugfs_create_dir("dpaux_dpcd", parent);
+	if (!dpaux_dir)
+		return retval;
+	retval = debugfs_create_u16("addr", S_IRUGO | S_IWUGO, dpaux_dir,
+			&dp->dpaux_dpcd_dbg_addr);
+	if (!retval)
+		goto free_out;
+	retval = debugfs_create_u32("num_bytes", S_IRUGO | S_IWUGO,
+			dpaux_dir, &dp->dpaux_dpcd_dbg_num_bytes);
+	if (!retval)
+		goto free_out;
+	retval = debugfs_create_file("data", S_IRUGO, dpaux_dir, dp,
+			&dpaux_dpcd_data_fops);
+	if (!retval)
+		goto free_out;
+
+	return retval;
+free_out:
+	debugfs_remove_recursive(dpaux_dir);
 	return retval;
 }
 
@@ -1255,6 +1396,9 @@ static void tegra_dc_dp_debugfs_create(struct tegra_dc_dp_data *dp)
 	if (!retval)
 		goto free_out;
 	retval = tegra_dpaux_i2c_dir_create(dp, dp->debugdir);
+	if (!retval)
+		goto free_out;
+	retval = tegra_dpaux_dpcd_dir_create(dp, dp->debugdir);
 	if (!retval)
 		goto free_out;
 

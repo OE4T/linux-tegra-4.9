@@ -57,17 +57,25 @@ struct nvhost_queue_task_mem_info {
  *
  */
 struct nvhost_queue {
+	struct nvhost_queue_task_pool *task_pool;
 	struct nvhost_queue_pool *pool;
 	struct kref kref;
-	u32 syncpt_id;
 	u32 id;
-	struct mutex list_lock;
-	struct list_head tasklist;
-	u32 sequence;
-	struct nvhost_queue_task_pool *task_pool;
+
+	/* Host1x resources */
+	struct nvhost_channel *channel;
+	bool use_channel;
+	u32 syncpt_id;
+
 	size_t task_dma_size;
 	size_t task_kmem_size;
+
+	u32 sequence;
+
 	void *attr;
+
+	struct mutex list_lock;
+	struct list_head tasklist;
 };
 
 /**
@@ -163,14 +171,18 @@ void nvhost_queue_get(struct nvhost_queue *queue);
  *
  * This function allocates a queue from the pool to client for the user.
  *
- * @param pool	Pointer to a queue pool table
+ * @param pool		Pointer to a queue pool table
  * @param num_tasks	Max number of tasks per queue
- * @return	Pointer to a queue struct on Success
- *		or negative error on failure.
+ * @param use_channel	Determines whether the routine allocates a channel for
+ *			the queue.
+ *
+ * @return		Pointer to a queue struct on success
+ *			or negative error on failure.
  *
  */
 struct nvhost_queue *nvhost_queue_alloc(struct nvhost_queue_pool *pool,
-					unsigned int num_tasks);
+					unsigned int num_tasks,
+					bool use_channel);
 
 /**
  * @brief	Abort tasks within a client queue
@@ -250,4 +262,37 @@ void nvhost_queue_free_task_memory(struct nvhost_queue *queue, int index);
  *
  */
 int nvhost_queue_set_attr(struct nvhost_queue *queue, void *arg);
+
+/**
+ * @brief		Submit the given command buffer to the device
+ *
+ * This functions submits the given cmdbuf to a Host1x channel. The
+ * submit must perform the given number of syncpoint increments
+ * on the engine.
+ *
+ * @param queue				Pointer to an allocated queue
+ * @param cmdbuf			Pointer to a command buffer to submit
+ * @param num_cmdbuf_words		Number of words in the command buffer
+ * @param num_syncpt_incrs		Number of syncpoint increments the task
+ *					issues
+ * @param wait_syncpt_ids		Syncpoint ids that should be waited on
+ *					Host1x
+ * @param wait_syncpoint_thresholds	Syncpoint thresholds for the waits
+ * @param task_syncpt_threshold		Pointer to a u32. The variable is
+ *					initialized to have the completion
+ *					threshold.
+ *
+ * @return				0 on success or negative error code on
+ *					failure.
+ *
+ */
+int nvhost_queue_submit_to_host1x(struct nvhost_queue *queue,
+				  u32 *cmdbuf,
+				  u32 num_cmdbuf_words,
+				  u32 num_syncpt_incrs,
+				  u32 *wait_syncpt_ids,
+				  u32 *wait_syncpt_thresholds,
+				  u32 num_syncpt_waits,
+				  u32 *task_syncpt_threshold);
+
 #endif

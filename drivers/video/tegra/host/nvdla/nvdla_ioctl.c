@@ -821,7 +821,8 @@ static int nvdla_open(struct inode *inode, struct file *file)
 	}
 
 	priv->queue = nvhost_queue_alloc(nvdla_dev->pool,
-					MAX_NVDLA_TASK_COUNT);
+					 MAX_NVDLA_TASK_COUNT,
+					 false);
 	if (IS_ERR(priv->queue)) {
 		err = PTR_ERR(priv->queue);
 		goto err_alloc_queue;

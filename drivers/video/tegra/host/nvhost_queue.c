@@ -24,8 +24,13 @@
 #include <linux/debugfs.h>
 #include <linux/dma-attrs.h>
 
-#include "dev.h"
+#include <linux/nvhost.h>
+
+#include "nvhost_job.h"
 #include "nvhost_queue.h"
+#include "dev.h"
+
+#define CMDBUF_SIZE	4096
 
 /**
  * @brief Describe a task pool struct
@@ -178,6 +183,7 @@ struct nvhost_queue_pool *nvhost_queue_init(struct platform_device *pdev,
 	}
 
 	pdata = platform_get_drvdata(pdev);
+
 	/* initialize pool and queues */
 	pool->pdev = pdev;
 	pool->ops = ops;
@@ -229,6 +235,9 @@ static void nvhost_queue_release(struct kref *ref)
 
 	nvhost_dbg_fn("");
 
+	if (queue->use_channel)
+		nvhost_putchannel(queue->channel, 1);
+
 	/* release allocated resources */
 	nvhost_syncpt_put_ref_ext(pool->pdev, queue->syncpt_id);
 
@@ -255,9 +264,11 @@ void nvhost_queue_get(struct nvhost_queue *queue)
 }
 
 struct nvhost_queue *nvhost_queue_alloc(struct nvhost_queue_pool *pool,
-			unsigned int num_tasks)
+					unsigned int num_tasks,
+					bool use_channel)
 {
 	struct platform_device *pdev = pool->pdev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvhost_queue *queues = pool->queues;
 	struct nvhost_queue *queue;
 	int index = 0;
@@ -295,6 +306,7 @@ struct nvhost_queue *nvhost_queue_alloc(struct nvhost_queue_pool *pool,
 
 	/* initialize queue ref count and sequence*/
 	kref_init(&queue->kref);
+	queue->use_channel = use_channel;
 	queue->sequence = 0;
 
 	/* initialize task list */
@@ -303,15 +315,25 @@ struct nvhost_queue *nvhost_queue_alloc(struct nvhost_queue_pool *pool,
 
 	mutex_unlock(&pool->queue_lock);
 
+	/* Check if the queue should allocate a channel */
+	if (use_channel) {
+		err = nvhost_channel_map(pdata, &queue->channel, queue);
+		if (err < 0)
+			goto err_alloc_channel;
+
+		queue->channel->syncpts[0] = queue->syncpt_id;
+	}
+
 	return queue;
 
+err_alloc_channel:
+	mutex_lock(&pool->queue_lock);
 err_alloc_task_pool:
 	nvhost_syncpt_put_ref_ext(pdev, queue->syncpt_id);
 err_alloc_syncpt:
 	clear_bit(queue->id, &pool->alloc_table);
 err_alloc_queue:
 	mutex_unlock(&pool->queue_lock);
-
 	return ERR_PTR(err);
 }
 
@@ -345,6 +367,132 @@ int nvhost_queue_set_attr(struct nvhost_queue *queue, void *arg)
 	return 0;
 }
 
+struct nvhost_queue_task {
+	struct platform_device *host1x_pdev;
+
+	struct nvhost_queue *queue;
+
+	dma_addr_t dma_addr;
+	u32 *cpu_addr;
+};
+
+static void queue_task_update(void *priv, int nr_completed)
+{
+	struct nvhost_queue_task *task = priv;
+	struct platform_device *host1x_pdev = task->host1x_pdev;
+
+	dma_free_writecombine(&host1x_pdev->dev,
+			      CMDBUF_SIZE,
+			      task->cpu_addr,
+			      task->dma_addr);
+	kfree(task);
+}
+
+int nvhost_queue_submit_to_host1x(struct nvhost_queue *queue,
+				  u32 *cmdbuf,
+				  u32 num_cmdbuf_words,
+				  u32 num_syncpt_incrs,
+				  u32 *wait_syncpt_ids,
+				  u32 *wait_syncpt_thresholds,
+				  u32 num_syncpt_waits,
+				  u32 *task_syncpt_threshold)
+{
+	struct nvhost_queue_pool *pool = queue->pool;
+	struct platform_device *client_pdev = pool->pdev;
+	struct platform_device *host1x_pdev =
+			to_platform_device(client_pdev->dev.parent);
+	struct nvhost_device_data *pdata = platform_get_drvdata(client_pdev);
+	struct nvhost_queue_task *task;
+	struct nvhost_job *job;
+	unsigned int i;
+	int err = 0;
+
+	if (queue->use_channel == false)
+		return -EINVAL;
+
+	/* Allocate memory for the task and task command buffer */
+	task = kzalloc(sizeof(*task), GFP_KERNEL);
+	if (task == NULL)
+		goto err_alloc_task;
+
+	task->cpu_addr = dma_alloc_writecombine(&host1x_pdev->dev,
+						CMDBUF_SIZE,
+						&task->dma_addr,
+						GFP_KERNEL);
+	if (task->cpu_addr == NULL) {
+		err = -ENOMEM;
+		goto err_alloc_cmdbuf;
+	}
+
+	/* Copy the command buffer */
+	memcpy(task->cpu_addr, cmdbuf, num_cmdbuf_words * 4);
+
+	job = nvhost_job_alloc(queue->channel,
+			       1,
+			       0,
+			       num_syncpt_waits,
+			       1);
+	if (job == NULL) {
+		err = -ENOMEM;
+		goto err_alloc_job;
+	}
+
+	task->queue = queue;
+	task->host1x_pdev = host1x_pdev;
+
+	/* Write waits to the job */
+	job->num_waitchk = num_syncpt_waits;
+	for (i = 0; i < num_syncpt_waits; i++) {
+		job->waitchk[i].syncpt_id = wait_syncpt_ids[i];
+		job->waitchk[i].thresh = wait_syncpt_thresholds[i];
+		job->waitchk[i].mem = 0;
+	}
+
+	/* Initialize syncpoint increments */
+	job->sp->id = queue->syncpt_id;
+	job->sp->incrs = num_syncpt_incrs;
+	job->num_syncpts = 1;
+
+	/* Add the command buffer */
+	nvhost_job_add_client_gather_address(job,
+					     num_cmdbuf_words,
+					     pdata->class,
+					     task->dma_addr);
+
+	/* Submit task to hardware */
+	err = nvhost_channel_submit(job);
+	if (err < 0)
+		goto err_submit_job;
+
+	/* Return the number of increments back to the caller */
+	*task_syncpt_threshold = job->sp->fence;
+
+	/* Register a callback function for releasing resources */
+	err = nvhost_intr_register_notifier(host1x_pdev,
+					    queue->syncpt_id,
+					    job->sp->fence,
+					    queue_task_update, task);
+	if (err < 0)
+		goto err_register_notifier;
+
+	/* nvhost keeps a reference on the job and we don't
+	 * need to access it anymore
+	 */
+	nvhost_job_put(job);
+
+	return 0;
+
+err_register_notifier:
+err_submit_job:
+	nvhost_job_put(job);
+err_alloc_job:
+	dma_free_writecombine(&host1x_pdev->dev, CMDBUF_SIZE, task->cpu_addr,
+			      task->dma_addr);
+err_alloc_cmdbuf:
+	kfree(task);
+err_alloc_task:
+	return err;
+}
 
 int nvhost_queue_get_task_size(struct nvhost_queue *queue)
 {

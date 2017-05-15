@@ -26,6 +26,7 @@
 #include <nvgpu/hw/gm20b/hw_pri_ringmaster_gm20b.h>
 
 #include "gk20a/ltc_common.c"
+#include "ltc_gm20b.h"
 
 static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 {

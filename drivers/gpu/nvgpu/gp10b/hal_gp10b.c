@@ -42,6 +42,7 @@
 #include "gm20b/clk_gm20b.h"
 
 #include "gp10b.h"
+#include "hal_gp10b.h"
 
 #include <nvgpu/bug.h>
 

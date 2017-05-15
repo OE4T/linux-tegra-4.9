@@ -22,6 +22,7 @@
 #include <nvgpu/bug.h>
 
 #include "gk20a.h"
+#include "ltc_gk20a.h"
 
 #include <nvgpu/hw/gk20a/hw_ltc_gk20a.h>
 

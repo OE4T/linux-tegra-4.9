@@ -51,6 +51,8 @@
 #include "gp106/fb_gp106.h"
 #include "gp106/gp106_gating_reglist.h"
 
+#include "hal_gp106.h"
+
 #include <nvgpu/bug.h>
 
 #include <nvgpu/hw/gp106/hw_proj_gp106.h>

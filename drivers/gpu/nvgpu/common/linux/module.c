@@ -809,7 +809,7 @@ static const struct dev_pm_ops gk20a_pm_ops = {
 };
 #endif
 
-int gk20a_pm_init(struct device *dev)
+static int gk20a_pm_init(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 	int err = 0;

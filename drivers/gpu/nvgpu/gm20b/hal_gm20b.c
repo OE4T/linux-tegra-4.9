@@ -36,6 +36,7 @@
 #include "debug_gm20b.h"
 #include "cde_gm20b.h"
 #include "therm_gm20b.h"
+#include "hal_gm20b.h"
 
 #include <nvgpu/bug.h>
 

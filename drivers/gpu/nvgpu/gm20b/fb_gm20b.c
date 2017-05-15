@@ -162,7 +162,7 @@ static int gm20b_fb_vpr_info_fetch_wait(struct gk20a *g,
 	return -ETIMEDOUT;
 }
 
-int gm20b_fb_vpr_info_fetch(struct gk20a *g)
+static int gm20b_fb_vpr_info_fetch(struct gk20a *g)
 {
 	if (gm20b_fb_vpr_info_fetch_wait(g, VPR_INFO_FETCH_WAIT)) {
 		return -ETIME;

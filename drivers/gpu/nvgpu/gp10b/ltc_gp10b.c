@@ -24,6 +24,7 @@
 #include <nvgpu/hw/gp10b/hw_ltc_gp10b.h>
 
 #include "gk20a/ltc_common.c"
+#include "ltc_gp10b.h"
 
 static int gp10b_determine_L2_size_bytes(struct gk20a *g)
 {

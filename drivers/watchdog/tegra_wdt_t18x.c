@@ -132,7 +132,7 @@ static struct tegra_wdt_t18x *to_tegra_wdt_t18x(struct watchdog_device *wdt)
 #define WDT_UNLOCK			(0xC)
 #define WDT_UNLOCK_PATTERN		(0xC45A << 0)
 #define WDT_SKIP			(0x10)
-#define WDT_SKIP_VAL(i, val)		(((val) & 0xf) << (4 * (i)))
+#define WDT_SKIP_VAL(i, val)		(((val) & 0x7) << (4 * (i)))
 
 static int __tegra_wdt_t18x_ping(struct tegra_wdt_t18x *twdt_t18x)
 {

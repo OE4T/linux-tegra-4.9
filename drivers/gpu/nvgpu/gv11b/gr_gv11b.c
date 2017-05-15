@@ -192,24 +192,197 @@ static int gr_gv11b_handle_l1_tag_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 }
 
+static int gr_gv11b_handle_lrf_exception(struct gk20a *g, u32 gpc, u32 tpc,
+			bool *post_event, struct channel_gk20a *fault_ch,
+			u32 *hww_global_esr)
+{
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+	u32 offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
+	u32 lrf_ecc_status, lrf_ecc_corrected_err_status = 0;
+	u32 lrf_ecc_uncorrected_err_status = 0;
+	u32 lrf_corrected_err_count_delta = 0;
+	u32 lrf_uncorrected_err_count_delta = 0;
+	bool is_lrf_ecc_corrected_total_err_overflow = 0;
+	bool is_lrf_ecc_uncorrected_total_err_overflow = 0;
+
+	/* Check for LRF ECC errors. */
+	lrf_ecc_status = gk20a_readl(g,
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_r() + offset);
+	lrf_ecc_corrected_err_status = lrf_ecc_status &
+		(gr_pri_gpc0_tpc0_sm_lrf_ecc_status_corrected_err_qrfdp0_m() |
+		 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_corrected_err_qrfdp1_m() |
+		 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_corrected_err_qrfdp2_m() |
+		 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_corrected_err_qrfdp3_m() |
+		 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_corrected_err_qrfdp4_m() |
+		 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_corrected_err_qrfdp5_m() |
+		 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_corrected_err_qrfdp6_m() |
+		 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_corrected_err_qrfdp7_m());
+	lrf_ecc_uncorrected_err_status = lrf_ecc_status &
+		(gr_pri_gpc0_tpc0_sm_lrf_ecc_status_uncorrected_err_qrfdp0_m() |
+		 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_uncorrected_err_qrfdp1_m() |
+		 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_uncorrected_err_qrfdp2_m() |
+		 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_uncorrected_err_qrfdp3_m() |
+		 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_uncorrected_err_qrfdp4_m() |
+		 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_uncorrected_err_qrfdp5_m() |
+		 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_uncorrected_err_qrfdp6_m() |
+		 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_uncorrected_err_qrfdp7_m());
+
+	if ((lrf_ecc_corrected_err_status == 0) && (lrf_ecc_uncorrected_err_status == 0))
+		return 0;
+
+	lrf_corrected_err_count_delta =
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_corrected_err_count_total_v(
+			gk20a_readl(g,
+				gr_pri_gpc0_tpc0_sm_lrf_ecc_corrected_err_count_r() +
+				offset));
+	lrf_uncorrected_err_count_delta =
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_uncorrected_err_count_total_v(
+			gk20a_readl(g,
+				gr_pri_gpc0_tpc0_sm_lrf_ecc_uncorrected_err_count_r() +
+				offset));
+	is_lrf_ecc_corrected_total_err_overflow =
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_corrected_err_total_counter_overflow_v(lrf_ecc_status);
+	is_lrf_ecc_uncorrected_total_err_overflow =
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_uncorrected_err_total_counter_overflow_v(lrf_ecc_status);
+
+	if ((lrf_corrected_err_count_delta > 0) || is_lrf_ecc_corrected_total_err_overflow) {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+			"corrected error (SBE) detected in SM LRF! err_mask [%08x] is_overf [%d]",
+			lrf_ecc_corrected_err_status, is_lrf_ecc_corrected_total_err_overflow);
+
+		/* HW uses 16-bits counter */
+		lrf_corrected_err_count_delta +=
+			(is_lrf_ecc_corrected_total_err_overflow <<
+			 gr_pri_gpc0_tpc0_sm_lrf_ecc_corrected_err_count_total_s());
+		g->gr.t18x.ecc_stats.sm_lrf_single_err_count.counters[tpc] +=
+							lrf_corrected_err_count_delta;
+		gk20a_writel(g,
+			gr_pri_gpc0_tpc0_sm_lrf_ecc_corrected_err_count_r() + offset,
+			0);
+	}
+	if ((lrf_uncorrected_err_count_delta > 0) || is_lrf_ecc_uncorrected_total_err_overflow) {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+			"Uncorrected error (DBE) detected in SM LRF! err_mask [%08x] is_overf [%d]",
+			lrf_ecc_uncorrected_err_status, is_lrf_ecc_uncorrected_total_err_overflow);
+
+		/* HW uses 16-bits counter */
+		lrf_uncorrected_err_count_delta +=
+			(is_lrf_ecc_uncorrected_total_err_overflow <<
+			 gr_pri_gpc0_tpc0_sm_lrf_ecc_uncorrected_err_count_total_s());
+		g->gr.t18x.ecc_stats.sm_lrf_double_err_count.counters[tpc] +=
+							lrf_uncorrected_err_count_delta;
+		gk20a_writel(g,
+			gr_pri_gpc0_tpc0_sm_lrf_ecc_uncorrected_err_count_r() + offset,
+			0);
+	}
+
+	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_lrf_ecc_status_r() + offset,
+			gr_pri_gpc0_tpc0_sm_lrf_ecc_status_reset_task_f());
+
+	return 0;
+
+}
+
+static int gr_gv11b_handle_cbu_exception(struct gk20a *g, u32 gpc, u32 tpc,
+			bool *post_event, struct channel_gk20a *fault_ch,
+			u32 *hww_global_esr)
+{
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+	u32 offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
+	u32 cbu_ecc_status, cbu_ecc_corrected_err_status = 0;
+	u32 cbu_ecc_uncorrected_err_status = 0;
+	u32 cbu_corrected_err_count_delta = 0;
+	u32 cbu_uncorrected_err_count_delta = 0;
+	bool is_cbu_ecc_corrected_total_err_overflow = 0;
+	bool is_cbu_ecc_uncorrected_total_err_overflow = 0;
+
+	/* Check for CBU ECC errors. */
+	cbu_ecc_status = gk20a_readl(g,
+		gr_pri_gpc0_tpc0_sm_cbu_ecc_status_r() + offset);
+	cbu_ecc_corrected_err_status = cbu_ecc_status &
+		(gr_pri_gpc0_tpc0_sm_cbu_ecc_status_corrected_err_warp_sm0_m() |
+		 gr_pri_gpc0_tpc0_sm_cbu_ecc_status_corrected_err_warp_sm1_m() |
+		 gr_pri_gpc0_tpc0_sm_cbu_ecc_status_corrected_err_barrier_sm0_m() |
+		 gr_pri_gpc0_tpc0_sm_cbu_ecc_status_corrected_err_barrier_sm1_m());
+	cbu_ecc_uncorrected_err_status = cbu_ecc_status &
+		(gr_pri_gpc0_tpc0_sm_cbu_ecc_status_uncorrected_err_warp_sm0_m() |
+		 gr_pri_gpc0_tpc0_sm_cbu_ecc_status_uncorrected_err_warp_sm1_m() |
+		 gr_pri_gpc0_tpc0_sm_cbu_ecc_status_uncorrected_err_barrier_sm0_m() |
+		 gr_pri_gpc0_tpc0_sm_cbu_ecc_status_uncorrected_err_barrier_sm1_m());
+
+	if ((cbu_ecc_corrected_err_status == 0) && (cbu_ecc_uncorrected_err_status == 0))
+		return 0;
+
+	cbu_corrected_err_count_delta =
+		gr_pri_gpc0_tpc0_sm_cbu_ecc_corrected_err_count_total_v(
+			gk20a_readl(g,
+				gr_pri_gpc0_tpc0_sm_cbu_ecc_corrected_err_count_r() +
+				offset));
+	cbu_uncorrected_err_count_delta =
+		gr_pri_gpc0_tpc0_sm_cbu_ecc_uncorrected_err_count_total_v(
+			gk20a_readl(g,
+				gr_pri_gpc0_tpc0_sm_cbu_ecc_uncorrected_err_count_r() +
+				offset));
+	is_cbu_ecc_corrected_total_err_overflow =
+		gr_pri_gpc0_tpc0_sm_cbu_ecc_status_corrected_err_total_counter_overflow_v(cbu_ecc_status);
+	is_cbu_ecc_uncorrected_total_err_overflow =
+		gr_pri_gpc0_tpc0_sm_cbu_ecc_status_uncorrected_err_total_counter_overflow_v(cbu_ecc_status);
+
+	if ((cbu_corrected_err_count_delta > 0) || is_cbu_ecc_corrected_total_err_overflow) {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+			"corrected error (SBE) detected in SM CBU! err_mask [%08x] is_overf [%d]",
+			cbu_ecc_corrected_err_status, is_cbu_ecc_corrected_total_err_overflow);
+
+		/* HW uses 16-bits counter */
+		cbu_corrected_err_count_delta +=
+			(is_cbu_ecc_corrected_total_err_overflow <<
+			 gr_pri_gpc0_tpc0_sm_cbu_ecc_corrected_err_count_total_s());
+		g->gr.t19x.ecc_stats.sm_cbu_corrected_err_count.counters[tpc] +=
+							cbu_corrected_err_count_delta;
+		gk20a_writel(g,
+			gr_pri_gpc0_tpc0_sm_cbu_ecc_corrected_err_count_r() + offset,
+			0);
+	}
+	if ((cbu_uncorrected_err_count_delta > 0) || is_cbu_ecc_uncorrected_total_err_overflow) {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+			"Uncorrected error (DBE) detected in SM CBU! err_mask [%08x] is_overf [%d]",
+			cbu_ecc_uncorrected_err_status, is_cbu_ecc_uncorrected_total_err_overflow);
+
+		/* HW uses 16-bits counter */
+		cbu_uncorrected_err_count_delta +=
+			(is_cbu_ecc_uncorrected_total_err_overflow <<
+			 gr_pri_gpc0_tpc0_sm_cbu_ecc_uncorrected_err_count_total_s());
+		g->gr.t19x.ecc_stats.sm_cbu_uncorrected_err_count.counters[tpc] +=
+							cbu_uncorrected_err_count_delta;
+		gk20a_writel(g,
+			gr_pri_gpc0_tpc0_sm_cbu_ecc_uncorrected_err_count_r() + offset,
+			0);
+	}
+
+	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_cbu_ecc_status_r() + offset,
+			gr_pri_gpc0_tpc0_sm_cbu_ecc_status_reset_task_f());
+
+	return 0;
+
+}
+
 static int gr_gv11b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			bool *post_event, struct channel_gk20a *fault_ch,
 			u32 *hww_global_esr)
 {
 	int ret = 0;
-	u32 offset = proj_gpc_stride_v() * gpc +
-			proj_tpc_in_gpc_stride_v() * tpc;
-	u32 lrf_ecc_status;
 
 	/* Check for L1 tag ECC errors. */
 	gr_gv11b_handle_l1_tag_exception(g, gpc, tpc, post_event, fault_ch, hww_global_esr);
 
 	/* Check for LRF ECC errors. */
-	lrf_ecc_status = gk20a_readl(g,
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_r() + offset);
+	gr_gv11b_handle_lrf_exception(g, gpc, tpc, post_event, fault_ch, hww_global_esr);
 
-	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_lrf_ecc_status_r() + offset,
-			lrf_ecc_status);
+	/* Check for CBU ECC errors. */
+	gr_gv11b_handle_cbu_exception(g, gpc, tpc, post_event, fault_ch, hww_global_esr);
+
 	return ret;
 }
 

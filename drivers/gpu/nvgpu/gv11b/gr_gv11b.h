@@ -39,6 +39,8 @@ struct gr_t19x {
 	struct {
 		struct gr_gp10b_ecc_stat sm_l1_tag_corrected_err_count;
 		struct gr_gp10b_ecc_stat sm_l1_tag_uncorrected_err_count;
+		struct gr_gp10b_ecc_stat sm_cbu_corrected_err_count;
+		struct gr_gp10b_ecc_stat sm_cbu_uncorrected_err_count;
 	} ecc_stats;
 };
 

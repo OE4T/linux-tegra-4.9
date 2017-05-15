@@ -1783,27 +1783,27 @@ static struct snd_soc_codec_conf
 		.name_prefix = "AFC6",
 	},
 	[TEGRA186_CODEC_I2S1_CONF] = {
-		.dev_name = "tegra210-i2s.0",
+		.dev_name = "tegra186-i2s.0",
 		.name_prefix = "I2S1",
 	},
 	[TEGRA186_CODEC_I2S2_CONF] = {
-		.dev_name = "tegra210-i2s.1",
+		.dev_name = "tegra186-i2s.1",
 		.name_prefix = "I2S2",
 	},
 	[TEGRA186_CODEC_I2S3_CONF] = {
-		.dev_name = "tegra210-i2s.2",
+		.dev_name = "tegra186-i2s.2",
 		.name_prefix = "I2S3",
 	},
 	[TEGRA186_CODEC_I2S4_CONF] = {
-		.dev_name = "tegra210-i2s.3",
+		.dev_name = "tegra186-i2s.3",
 		.name_prefix = "I2S4",
 	},
 	[TEGRA186_CODEC_I2S5_CONF] = {
-		.dev_name = "tegra210-i2s.4",
+		.dev_name = "tegra186-i2s.4",
 		.name_prefix = "I2S5",
 	},
 	[TEGRA186_CODEC_I2S6_CONF] = {
-		.dev_name = "tegra210-i2s.5",
+		.dev_name = "tegra186-i2s.5",
 		.name_prefix = "I2S6",
 	},
 	[TEGRA186_CODEC_DMIC1_CONF] = {

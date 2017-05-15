@@ -439,6 +439,25 @@ static inline int pva_task_write_atomic_op(u8 *base, u8 action)
 	return 1;
 }
 
+static inline int pva_task_write_ptr_16b_op(u8 *base, u8 action, u64 addr, u16 val)
+{
+	int i = 0;
+
+	base[i++] = action;
+	base[i++] = (u8)((addr >> 0) & 0xff);
+	base[i++] = (u8)((addr >> 8) & 0xff);
+	base[i++] = (u8)((addr >> 16) & 0xff);
+	base[i++] = (u8)((addr >> 24) & 0xff);
+	base[i++] = (u8)((addr >> 32) & 0xff);
+	base[i++] = (u8)((addr >> 40) & 0xff);
+	base[i++] = (u8)((addr >> 48) & 0xff);
+	base[i++] = (u8)((addr >> 56) & 0xff);
+	base[i++] = (u8)((val >> 0) & 0xff);
+	base[i++] = (u8)((val >> 8) & 0xff);
+
+	return i;
+}
+
 static inline int pva_task_write_ptr_op(u8 *base, u8 action, u64 addr, u32 val)
 {
 	int i = 0;
@@ -558,7 +577,7 @@ static int pva_task_write_preactions(struct pva_submit_task *task,
 				task->input_task_status_ext[i].dma_addr  +
 				input_status->offset;
 
-		ptr += pva_task_write_ptr_op(
+		ptr += pva_task_write_ptr_16b_op(
 					&hw_preactions[ptr],
 					TASK_ACT_READ_STATUS,
 					input_status_addr, 0);
@@ -600,7 +619,7 @@ static void pva_task_write_postactions(struct pva_submit_task *task,
 				task->output_task_status_ext[i].dma_addr  +
 				output_status->offset;
 
-		ptr += pva_task_write_ptr_op(
+		ptr += pva_task_write_ptr_16b_op(
 					&hw_postactions[ptr],
 					TASK_ACT_WRITE_STATUS,
 					output_status_addr, 0);

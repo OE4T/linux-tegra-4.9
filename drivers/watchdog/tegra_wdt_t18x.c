@@ -181,11 +181,22 @@ static inline int tegra_wdt_t18x_skip(struct tegra_wdt_t18x *twdt_t18x)
 {
 	u32 val = 0;
 	int skip_count = 0;
+	bool remote_skip = !(twdt_t18x->config & WDT_CFG_REMOTE_INT_EN);
+	bool dbg_skip = !(twdt_t18x->config & WDT_CFG_DBG_RST_EN);
 
-	/* Skip the 4th expiry if debug reset is disabled */
-	if (!(twdt_t18x->config & WDT_CFG_DBG_RST_EN)) {
-		val |= WDT_SKIP_VAL(3, 1);
-		skip_count++;
+	if (remote_skip) {
+		if (dbg_skip) {
+			val |= WDT_SKIP_VAL(2, 2);
+			skip_count += 2;
+		} else {
+			val |= WDT_SKIP_VAL(2, 1);
+			skip_count += 1;
+		}
+	} else {
+		if (dbg_skip) {
+			val |= WDT_SKIP_VAL(3, 1);
+			skip_count += 1;
+		}
 	}
 
 	if (val)
@@ -499,7 +510,10 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 
 		/* Enable local FIQ and remote interrupt for debug dump */
 		twdt_t18x->config |= WDT_CFG_FINT_EN;
-		twdt_t18x->config |= WDT_CFG_REMOTE_INT_EN;
+
+		if (!of_property_read_bool(np,
+					   "nvidia,disable-remote-interrupt"))
+			twdt_t18x->config |= WDT_CFG_REMOTE_INT_EN;
 
 		/*
 		 * Debug and POR reset events should be enabled by default.

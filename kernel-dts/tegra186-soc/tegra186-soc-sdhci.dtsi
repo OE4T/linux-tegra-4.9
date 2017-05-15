@@ -36,8 +36,6 @@
 		trim-delay = <5>;
 		nvidia,ddr-tap-delay = <9>;
 		ddr-trim-delay = <5>;
-		dqs-trim-delay = <63>;
-		dqs-trim-delay-hs533 = <40>;
 		mmc-ocr-mask = <0>;
 		bus-width = <8>;
 		ignore-pm-notify;

@@ -2,7 +2,7 @@
  *
  * Volta GPU series copy engine
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,5 +23,6 @@ struct gpu_ops;
 
 void gv11b_init_ce(struct gpu_ops *gops);
 void gv11b_ce_mthd_buffer_fault_in_bar2_fault(struct gk20a *g);
+u32 gv11b_ce_get_num_lce(struct gk20a *g);
 
 #endif /*__CE2_GV11B_H__*/

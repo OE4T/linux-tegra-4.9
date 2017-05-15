@@ -75,13 +75,22 @@ static void gv11b_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 	gp10b_ce_isr(g, inst_id, pri_base);
 }
 
-void gv11b_ce_mthd_buffer_fault_in_bar2_fault(struct gk20a *g)
+u32 gv11b_ce_get_num_lce(struct gk20a *g)
 {
-	u32 reg_val, num_lce, lce, clear_intr;
+	u32 reg_val, num_lce;
 
 	reg_val = gk20a_readl(g, top_num_ces_r());
 	num_lce = top_num_ces_value_v(reg_val);
 	nvgpu_log_info(g, "num LCE: %d", num_lce);
+
+	return num_lce;
+}
+
+void gv11b_ce_mthd_buffer_fault_in_bar2_fault(struct gk20a *g)
+{
+	u32 reg_val, num_lce, lce, clear_intr;
+
+	num_lce = gv11b_ce_get_num_lce(g);
 
 	for (lce = 0; lce < num_lce; lce++) {
 		reg_val = gk20a_readl(g, ce_intr_status_r(lce));

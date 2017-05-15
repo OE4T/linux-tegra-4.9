@@ -17,9 +17,11 @@
 / {
 #if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 		xhci@3530000 {
-			phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
+			phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>,
+					<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
+					<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-0}>,
 					<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-2}>;
-					phy-names = "usb2-1", "usb3-2";
+					phy-names = "usb2-0", "usb2-1", "usb3-0", "usb3-2";
 		};
 #else
 		xhci@3530000 {

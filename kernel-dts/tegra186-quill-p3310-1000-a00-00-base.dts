@@ -106,9 +106,10 @@
 #if defined(LINUX_VERSION) && LINUX_VERSION >= 409
 	xhci@3530000 {
 		status = "okay";
-		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
+		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>,
+			<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
 			<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-1}>;
-		phy-names = "usb2-1", "usb3-1";
+		phy-names = "usb2-0", "usb2-1", "usb3-1";
 	};
 #else
 	xhci@3530000 {
@@ -164,6 +165,7 @@
 			usb2-0 {
 				status = "okay";
 				mode = "otg";
+				vbus-supply = <&vdd_usb0_5v>;
 			};
 			usb2-1 {
 				status = "okay";

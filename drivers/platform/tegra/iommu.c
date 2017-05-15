@@ -26,6 +26,7 @@
 #include "../../../arch/arm/mach-tegra/iomap.h"
 #include "../../../arch/arm/mach-tegra/board.h"
 #include <linux/platform/tegra/common.h>
+#include <soc/tegra/common.h>
 
 phys_addr_t tegra_carveout_start;
 phys_addr_t tegra_carveout_size;

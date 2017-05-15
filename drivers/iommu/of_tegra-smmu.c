@@ -170,39 +170,44 @@ int tegra_smmu_of_register_asprops(struct device *dev,
 	struct of_phandle_iter iter;
 	u64 swgid_mask = 0;
 	struct smmu_map_prop *prop, *temp;
-/*
-	of_property_for_each_phandle_with_args(iter, dev->of_node,
-					       "domains", NULL, 2) {
-		struct of_phandle_args *ret = &iter.out_args;
-		struct device_node *np = ret->np;
+	int err;
 
-		if (ret->args_count < 2) {
+	of_for_each_phandle(&iter, err, dev->of_node, "domains", NULL, 2) {
+		struct of_phandle_args iommu_args;
+
+		iommu_args.args_count = of_phandle_iterator_args(&iter,
+				iommu_args.args, MAX_PHANDLE_ARGS);
+		if (iommu_args.args_count < 2) {
 			dev_err(dev,
 				"domains expects 2 params but %d\n",
-				ret->args_count);
+				iommu_args.args_count);
 			goto free_mem;
 		}
 
-		prop = __tegra_smmu_parse_as_prop(dev, np, asprops);
+		iommu_args.np = of_node_get(iter.node);
+
+		prop = __tegra_smmu_parse_as_prop(dev, iommu_args.np, asprops);
+
+		of_node_put(iommu_args.np);
+
 		if (IS_ERR_OR_NULL(prop))
 			goto free_mem;
 
-		memcpy(&prop->swgid_mask, ret->args, sizeof(u64));
+		memcpy(&prop->swgid_mask, iommu_args.args, sizeof(u64));
 		count += 1;
-*/
+
 		/*
 		 * The final entry in domains property is
 		 * domains = <... &as_prop 0xFFFFFFFF 0xFFFFFFFF>;
 		 * This entry is similar to SYSTEM_DEFAULT
 		 * Skip the bit overlap check for this final entry
 		 */
-/*
 		if (prop->swgid_mask != ~0ULL) {
 			swgid_mask |= prop->swgid_mask;
 			sum_hweight += hweight64(prop->swgid_mask);
 		}
 	}
-*/
+
 	if (sum_hweight == hweight64(swgid_mask))
 		return count;
 
@@ -214,6 +219,9 @@ free_mem:
 	return 0;
 }
 
+extern u64 tegra_smmu_fixup_swgids(struct device *dev,
+				   struct iommu_linear_map **map);
+
 u64 tegra_smmu_of_get_swgids(struct device *dev,
 			       const struct of_device_id *matches,
 			       struct iommu_linear_map **area)
@@ -221,6 +229,7 @@ u64 tegra_smmu_of_get_swgids(struct device *dev,
 	struct of_phandle_iter iter;
 	u64 fixup, swgids = 0;
 	struct device_node *np = dev->of_node;
+	int err;
 
 	if (dev_is_pci(dev)) {
 		struct pci_bus *bus = to_pci_dev(dev)->bus;
@@ -229,29 +238,35 @@ u64 tegra_smmu_of_get_swgids(struct device *dev,
 			dev = bus->bridge;
 		np = of_get_parent(dev->of_node);
 	}
-/*
-	of_property_for_each_phandle_with_args(iter, np, "iommus",
-					       "#iommu-cells", 0) {
-		struct of_phandle_args *ret = &iter.out_args;
 
-		if (!of_match_node(matches, ret->np))
+	of_for_each_phandle(&iter, err, np, "iommus",
+					       "#iommu-cells", 0) {
+		struct of_phandle_args iommu_args;
+
+		iommu_args.args_count = of_phandle_iterator_args(&iter,
+				iommu_args.args, MAX_PHANDLE_ARGS);
+		iommu_args.np = of_node_get(iter.node);
+
+		if (!of_match_node(matches, iommu_args.np))
+			of_node_put(iommu_args.np);
 			continue;
 
-		if (ret->args_count != 1) {
+		of_node_put(iommu_args.np);
+
+		if (iommu_args.args_count != 1) {
 			dev_err(dev, "iommus contains %d cells, expected 1\n",
-				ret->args_count);
+				iommu_args.args_count);
 			break;
 		}
-
-		swgids |= (1ULL << ret->args[0]);
+		swgids |= (1ULL << iommu_args.args[0]);
 	}
-*/
+
 	if (dev_is_pci(dev))
 		of_node_put(np);
 
 	swgids = swgids ? swgids : SWGIDS_ERROR_CODE;
 
-	/* fixup = tegra_smmu_fixup_swgids(dev, area); */
+	fixup = tegra_smmu_fixup_swgids(dev, area);
 
 	if (swgids_is_error(fixup))
 		return swgids;

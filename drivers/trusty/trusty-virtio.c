@@ -394,7 +394,7 @@ static const struct virtio_config_ops trusty_virtio_config_ops = {
 	.bus_name = trusty_virtio_bus_name,
 };
 
-static const void trusty_virtio_release_dev(struct device *_d)
+static void trusty_virtio_release_dev(struct device *_d)
 {
 	/*
 	 * No need for a release method similar to virtio PCI.

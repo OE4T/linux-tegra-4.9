@@ -288,7 +288,7 @@ const struct file_operations nvhost_vi4_ctrl_ops = {
 	.release = nvhost_vi4_release,
 };
 
-struct tegra_vi_data t18_vi_data = {
+static struct tegra_vi_data t18_vi_data = {
 	.info = (struct nvhost_device_data *)&t18_vi_info,
 	.vi_fops = &vi4_fops,
 };

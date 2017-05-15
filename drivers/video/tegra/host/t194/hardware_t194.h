@@ -156,6 +156,11 @@ static inline u32 nvhost_opcode_release_mlock(unsigned id)
 	return (14 << 28) | (1 << 24) | id;
 }
 
+static inline u32 nvhost_opcode_nonincr_w(unsigned offset)
+{
+	return (11 << 28) | offset;
+}
+
 #define NVHOST_OPCODE_NOOP nvhost_opcode_nonincr(0, 0)
 
 static inline u32 nvhost_mask2(unsigned x, unsigned y)

@@ -30,6 +30,12 @@
 
 extern const struct file_operations tegra_pva_ctrl_ops;
 
+enum pva_submit_mode {
+	PVA_SUBMIT_MODE_MAILBOX		= 0,
+	PVA_SUBMIT_MODE_MMIO_CCQ	= 1,
+	PVA_SUBMIT_MODE_CHANNEL_CCQ	= 2
+};
+
 /**
  * Queue count of 8 is maintained per PVA.
  */
@@ -156,7 +162,7 @@ struct pva {
 	struct pva_dma_alloc_info priv2_dma;
 
 	struct pva_trace_log pva_trace;
-	bool use_ccq;
+	u32 submit_mode;
 };
 
 /**

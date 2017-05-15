@@ -477,6 +477,7 @@ static int pva_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, pdata);
 	init_waitqueue_head(&pva->mailbox_waitqueue);
 	mutex_init(&pva->mailbox_mutex);
+	pva->submit_mode = PVA_SUBMIT_MODE_MAILBOX;
 
 	/* Map MMIO range to kernel space */
 	err = nvhost_client_device_get_resources(pdev);

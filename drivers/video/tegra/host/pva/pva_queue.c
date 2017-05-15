@@ -35,6 +35,8 @@
 #include "pva_ccq.h"
 #include "pva_queue.h"
 #include "dev.h"
+#include "hw_cfg_pva.h"
+#include "t194/hardware_t194.h"
 
 static void pva_task_dump(struct pva_submit_task *task)
 {
@@ -986,73 +988,157 @@ static void pva_queue_dump(struct nvhost_queue *queue, struct seq_file *s)
 	mutex_unlock(&queue->list_lock);
 }
 
+static int pva_task_submit_channel_ccq(struct pva_submit_task *task,
+				       u32 *thresh)
+{
+	struct nvhost_queue *queue = task->queue;
+	u64 fifo_flags = PVA_FIFO_INT_ON_ERR;
+	u64 fifo_cmd = pva_fifo_submit(queue->id,
+				       task->dma_addr,
+				       fifo_flags);
+	u32 syncpt_wait_ids[PVA_MAX_PREFENCES];
+	u32 syncpt_wait_thresh[PVA_MAX_PREFENCES];
+	unsigned int i;
+	u32 cmdbuf[4];
+	int err = 0;
+
+	/* Pick up fences... */
+	for (i = 0; i < task->num_prefences; i++) {
+		/* ..and ensure that we have only syncpoints present */
+		if (task->prefences[i].type != PVA_FENCE_TYPE_SYNCPT)
+			return -EINVAL;
+
+		/* Put fences into a separate array */
+		syncpt_wait_ids[i] =
+			task->prefences[i].syncpoint_index;
+		syncpt_wait_thresh[i] =
+			task->prefences[i].syncpoint_value;
+	}
+
+	/* A simple command buffer: Write two words into the ccq
+	 * register
+	 */
+	cmdbuf[0] = nvhost_opcode_setpayload(2);
+	cmdbuf[1] = nvhost_opcode_nonincr_w(cfg_ccq_r() >> 2);
+	cmdbuf[2] = (u32)(fifo_cmd >> 32);
+	cmdbuf[3] = (u32)(fifo_cmd & 0xffffffff);
+
+	/* Submit the command buffer and waits to channel */
+	err = nvhost_queue_submit_to_host1x(queue,
+					    cmdbuf,
+					    ARRAY_SIZE(cmdbuf),
+					    1,
+					    syncpt_wait_ids,
+					    syncpt_wait_thresh,
+					    task->num_prefences,
+					    thresh);
+	return err;
+}
+
+static int pva_task_submit_mmio_ccq(struct pva_submit_task *task,
+				    u32 *thresh)
+{
+	struct platform_device *host1x_pdev =
+			to_platform_device(task->pva->pdev->dev.parent);
+	struct nvhost_queue *queue = task->queue;
+	u64 fifo_flags = PVA_FIFO_INT_ON_ERR;
+	u64 fifo_cmd = pva_fifo_submit(queue->id,
+				       task->dma_addr,
+				       fifo_flags);
+	int err = 0;
+
+	err = pva_ccq_send(task->pva, fifo_cmd);
+	if (err < 0)
+		return err;
+
+	/* Increment syncpoint to capture threshold */
+	*thresh = nvhost_syncpt_incr_max_ext(host1x_pdev, queue->syncpt_id, 1);
+
+	return 0;
+}
+
+static int pva_task_submit_mailbox(struct pva_submit_task *task,
+				   u32 *thresh)
+{
+	struct platform_device *host1x_pdev =
+			to_platform_device(task->pva->pdev->dev.parent);
+	struct nvhost_queue *queue = task->queue;
+	struct pva_mailbox_status_regs status;
+	struct pva_cmd cmd;
+	u32 flags, nregs;
+	int err = 0;
+
+	/* Construct submit command */
+	flags = PVA_CMD_INT_ON_ERR | PVA_CMD_INT_ON_COMPLETE;
+	nregs = pva_cmd_submit(&cmd, queue->id,
+				task->dma_addr, flags);
+
+	/* Submit request to PVA and wait for response */
+	err = pva_mailbox_send_cmd_sync(task->pva, &cmd, nregs, &status);
+	if (err < 0) {
+		nvhost_warn(&task->pva->pdev->dev,
+			"Failed to submit task: %d", err);
+		return err;
+	}
+
+	/* Ensure that response is valid */
+	if (status.error != PVA_ERR_NO_ERROR) {
+		nvhost_warn(&task->pva->pdev->dev, "PVA task rejected: %u",
+			status.error);
+		return -EINVAL;
+	}
+
+	/* Increment syncpoint to capture threshold */
+	*thresh = nvhost_syncpt_incr_max_ext(host1x_pdev, queue->syncpt_id, 1);
+
+	return 0;
+}
+
 static int pva_task_submit(struct pva_submit_task *task)
 {
 	struct platform_device *host1x_pdev =
 			to_platform_device(task->pva->pdev->dev.parent);
-	struct pva_mailbox_status_regs status;
-	struct nvhost_queue *queue;
-	u32 thresh, flags, nregs;
-	struct pva_cmd cmd;
+	struct nvhost_queue *queue = task->queue;
+	unsigned int i;
+	u32 thresh = 0;
 	int err = 0;
-	int i;
 
 	nvhost_dbg_info("Submitting task %p (0x%llx)", task,
 			(u64)task->dma_addr);
+
+	/* Get a reference of the queue to avoid it being reused. It
+	 * gets freed in the callback...
+	 */
+	nvhost_queue_get(queue);
 
 	/* Turn on the hardware */
 	err = nvhost_module_busy(task->pva->pdev);
 	if (err)
 		goto err_module_busy;
 
-	if (task->pva->use_ccq) {
-		u64 fifo_flags = PVA_FIFO_INT_ON_ERR;
-		u64 fifo_cmd = pva_fifo_submit(task->queue->id,
-					       task->dma_addr,
-					       fifo_flags);
+	/* Choose the submit policy based on the mode */
+	switch (task->pva->submit_mode) {
+	case PVA_SUBMIT_MODE_MAILBOX:
+		err = pva_task_submit_mailbox(task, &thresh);
+		break;
 
-		err = pva_ccq_send(task->pva, fifo_cmd);
-		if (err < 0)
-			goto err_submit;
-	} else {
-		/* Construct submit command */
-		flags = PVA_CMD_INT_ON_ERR | PVA_CMD_INT_ON_COMPLETE;
-		nregs = pva_cmd_submit(&cmd, task->queue->id,
-					task->dma_addr, flags);
+	case PVA_SUBMIT_MODE_MMIO_CCQ:
+		err = pva_task_submit_mmio_ccq(task, &thresh);
+		break;
 
-		/* Submit request to PVA and wait for response */
-		err = pva_mailbox_send_cmd_sync(task->pva, &cmd, nregs, &status);
-		if (err < 0) {
-			nvhost_warn(&task->pva->pdev->dev,
-				"Failed to submit task: %d", err);
-			goto err_submit;
-		}
-
-		/* Ensure that response is valid */
-		if (status.error != PVA_ERR_NO_ERROR) {
-			nvhost_warn(&task->pva->pdev->dev, "PVA task rejected: %u",
-				status.error);
-			err = -EINVAL;
-			goto err_submit;
-		}
+	case PVA_SUBMIT_MODE_CHANNEL_CCQ:
+		err = pva_task_submit_channel_ccq(task, &thresh);
+		break;
 	}
 
-	/* Get a reference of the queue to avoid it being reused. It
-	 * gets freed in the callback...
-	 */
-	queue = task->queue;
-	nvhost_queue_get(queue);
+	if (err < 0)
+		goto err_submit;
 
-	/* ...that is registered here */
-	thresh = nvhost_syncpt_incr_max_ext(host1x_pdev,
-			queue->syncpt_id, 1);
 	err = nvhost_intr_register_notifier(host1x_pdev,
-			queue->syncpt_id, thresh,
-			pva_task_update, task);
-	if (err < 0) {
-		nvhost_queue_put(queue);
+					    queue->syncpt_id, thresh,
+					    pva_task_update, task);
+	if (err < 0)
 		goto err_register_isr;
-	}
 
 	mutex_lock(&queue->list_lock);
 	list_add_tail(&task->node, &queue->tasklist);
@@ -1101,6 +1187,7 @@ err_register_isr:
 err_submit:
 	nvhost_module_idle(task->pva->pdev);
 err_module_busy:
+	nvhost_queue_put(queue);
 	return err;
 }
 

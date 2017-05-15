@@ -529,9 +529,8 @@ static int pva_open(struct inode *inode, struct file *file)
 		goto err_alloc_buffer;
 	}
 
-	priv->queue = nvhost_queue_alloc(pva->pool,
-					 MAX_PVA_TASK_COUNT,
-					 false);
+	priv->queue = nvhost_queue_alloc(pva->pool, MAX_PVA_TASK_COUNT,
+		pva->submit_mode == PVA_SUBMIT_MODE_CHANNEL_CCQ);
 	if (IS_ERR(priv->queue)) {
 		err = PTR_ERR(priv->queue);
 		goto err_alloc_queue;

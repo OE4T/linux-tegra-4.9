@@ -5145,7 +5145,7 @@ static void tegra_dc_dsi_destroy(struct tegra_dc *dc)
  * call its detect method.
  * Without bridges, DSI assumes a display is always connected,
  */
-bool tegra_dc_dsi_detect(struct tegra_dc *dc)
+static bool tegra_dc_dsi_detect(struct tegra_dc *dc)
 {
 	bool	result = true;
 

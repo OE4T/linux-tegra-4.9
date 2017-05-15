@@ -1091,6 +1091,13 @@
 		#extcon-cells = <1>;
 	};
 
+#if defined(LINUX_VERSION) && LINUX_VERSION >= 409
+	xhci@3530000 {
+		extcon-cables = <&vbus_id_extcon 1>;
+		extcon-cable-names = "id";
+		#extcon-cells = <1>;
+	};
+#endif
 	xotg {
 		extcon-cables = <&vbus_id_extcon 1>, <&vbus_id_extcon 0>;
 		extcon-cable-names = "id", "vbus";

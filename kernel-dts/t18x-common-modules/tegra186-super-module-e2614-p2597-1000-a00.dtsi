@@ -268,7 +268,7 @@
 			overrides@5 {
 				target = <&e2614_bmp280>;
 				_overlay_ {
-					status = "okay";
+					status = "disabled";
 				};
 			};
 			overrides@6 {
@@ -355,7 +355,7 @@
 			overrides@16 {
                                 target = <&e2614_bmp280>;
                                 _overlay_ {
-                                        status = "okay";
+                                        status = "disabled";
                                 };
                         };
 			overrides@17 {

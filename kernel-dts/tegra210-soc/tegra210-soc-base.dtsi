@@ -359,7 +359,6 @@
 		      <0x0 0x7001dba0 0x0 0x460>;
 
 		interrupts = <0 77 0x4>;
-		int_count  = <8>;
 		int_mask   = <0x23D40>;
 
 		channels = <2>;

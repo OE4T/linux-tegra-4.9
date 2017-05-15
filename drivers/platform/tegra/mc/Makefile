@@ -12,7 +12,7 @@ obj-y                                   += mc.o
 
 # MC error reporting.
 obj-y                                   += mcerr.o
-obj-$(CONFIG_ARCH_TEGRA_21x_SOC)        += mcerr-t21.o
+obj-y					+= mcerr-t21.o
 
 # Latency allowance
 obj-y                                   += latency_allowance.o

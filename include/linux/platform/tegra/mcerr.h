@@ -26,6 +26,7 @@
 #include <linux/debugfs.h>
 #include <linux/spinlock.h>
 #include <linux/interrupt.h>
+#include <linux/of.h>
 
 #include <linux/platform/tegra/mc.h>
 
@@ -93,33 +94,10 @@ struct mc_error {
 #define E_TWO_STATUS (1<<2) /* Two status registers, no addr */
 #define E_VPR        (1<<3) /* VPR violation */
 
-extern int mc_client_last;
 extern u32 mc_int_mask;
+extern u32  mcerr_silenced;
 
-struct mcerr_chip_specific {
-
-	/*
-	 * Return a pointer to the relevant mc_error struct for the passed
-	 * interrupt signature.
-	 *
-	 * Called in interrupt context - no sleeping, etc.
-	 */
-	const struct mc_error *(*mcerr_info)(u32 intr);
-
-	/*
-	 * Provide actual user feed back to the kernel log. The passed data is
-	 * everything that could be determined about the fault.
-	 *
-	 * Note: @smmu_info may be NULL if the error occured without involving
-	 * the SMMU. This is something @mcerr_print must handle gracefully.
-	 *
-	 * Called in interrupt context - no sleeping, etc.
-	 */
-	void (*mcerr_print)(const struct mc_error *err,
-			    const struct mc_client *client,
-			    u32 status, phys_addr_t addr,
-			    int secure, int rw, const char *smmu_info);
-
+struct mcerr_ops {
 	/*
 	 * Show the statistics for each client. This is called from a debugfs
 	 * context - that means you can sleep and do general kernel stuff here.
@@ -163,6 +141,7 @@ struct mcerr_chip_specific {
 	 * characters long.
 	 */
 	const char **intr_descriptions;
+	struct mc_client *mc_clients;
 };
 
 #define client(_swgroup, _name, _swgid)					\
@@ -192,12 +171,9 @@ struct arb_emem_intr_info {
 	spinlock_t lock;
 };
 
-/*
- * Externs that get defined by the chip specific code. This way the generic
- * T3x/T11x/T12x can handle a much as possible.
- */
-extern struct mc_client mc_clients[];
-extern void mcerr_chip_specific_setup(struct mcerr_chip_specific *spec);
-extern u32  mcerr_silenced;
+typedef struct mcerr_ops *(*of_mcerr_init_fn)(struct device_node *);
+
+#define MCERR_OF_DECLARE(name, compat, fn) \
+	_OF_DECLARE(mcerr, name, compat, fn, of_mcerr_init_fn)
 
 #endif /* __MCERR_H */

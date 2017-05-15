@@ -21,6 +21,12 @@ config TEGRA_MC
 	help
 	  Enable Tegra MC.
 
+config TEGRA_OF_MCERR
+	bool "Tegra MCERR OF"
+	default y
+	help
+	  Enable Tegra MC ERR OF.
+
 config TEGRA_WAKEUP_MONITOR
 	bool "Enable tegra wakeup monitor"
 	depends on PM_SLEEP && ANDROID_INTF_ALARM_DEV

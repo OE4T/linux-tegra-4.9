@@ -436,7 +436,7 @@ static u32 tegra_se_set_trng_op(struct tegra_se_elp_dev *se_dev)
 		val = se_elp_readl(se_dev, PKA1,
 				   TEGRA_SE_PKA1_TRNG_STATUS_OFFSET);
 		i++;
-	} while (val & TEGRA_SE_PKA1_TRNG_STATUS_SEEDED(ELP_FALSE));
+	} while (!(val & TEGRA_SE_PKA1_TRNG_STATUS_SEEDED(ELP_TRUE)));
 
 	return 0;
 }

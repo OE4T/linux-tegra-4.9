@@ -42,6 +42,11 @@ int tegra_xusb_padctl_usb3_set_lfps_detect(struct tegra_xusb_padctl *padctl,
 int tegra_xusb_padctl_set_vbus_override(struct tegra_xusb_padctl *padctl);
 int tegra_xusb_padctl_clear_vbus_override(struct tegra_xusb_padctl *padctl);
 
+int tegra_xusb_padctl_set_id_override(struct tegra_xusb_padctl *padctl);
+int tegra_xusb_padctl_clear_id_override(struct tegra_xusb_padctl *padctl);
+bool tegra_xusb_padctl_has_otg_cap(struct tegra_xusb_padctl *padctl,
+				struct phy *phy);
+
 int tegra_xusb_padctl_enable_phy_sleepwalk(struct tegra_xusb_padctl *padctl,
 					   struct phy *phy,
 					   enum usb_device_speed speed);

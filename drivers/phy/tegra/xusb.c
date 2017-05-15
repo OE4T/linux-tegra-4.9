@@ -870,6 +870,79 @@ static void tegra_xusb_remove_ports(struct tegra_xusb_padctl *padctl)
 	mutex_unlock(&padctl->lock);
 }
 
+static void tegra_xusb_otg_vbus_work(struct work_struct *work)
+{
+	struct tegra_xusb_padctl *padctl =
+		container_of(work, struct tegra_xusb_padctl, otg_vbus_work);
+
+	if (!padctl->usb2_otg_port_base_1)
+		return; /* nothing to do if there is no USB2 otg port */
+
+	padctl->soc->ops->otg_vbus_handle(padctl, padctl->usb2_otg_port_base_1 - 1);
+}
+
+static ssize_t otg_vbus_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct tegra_xusb_padctl *padctl = platform_get_drvdata(pdev);
+	int index = padctl->usb2_otg_port_base_1 - 1;
+
+	if (!padctl->usb2_otg_port_base_1)
+		return sprintf(buf, "No UTMI OTG port\n");
+
+	return sprintf(buf, "OTG port %d vbus always-on: %s\n",
+			index, padctl->otg_vbus_alwayson ? "yes" : "no");
+}
+
+static ssize_t otg_vbus_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t n)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct tegra_xusb_padctl *padctl = platform_get_drvdata(pdev);
+	int index = padctl->usb2_otg_port_base_1 - 1;
+	unsigned int on;
+	int err = 0;
+
+	if (kstrtouint(buf, 10, &on))
+		return -EINVAL;
+
+	if (!padctl->usb2_otg_port_base_1) {
+		dev_err(dev, "No UTMI OTG port\n");
+		return -EINVAL;
+	}
+
+	if (on && !padctl->otg_vbus_alwayson) {
+		err = padctl->soc->ops->vbus_power_on(padctl, index);
+		if (!err)
+			padctl->otg_vbus_alwayson = true;
+	} else if (!on && padctl->otg_vbus_alwayson) {
+		/* pre-set this to make vbus power off really work */
+		padctl->otg_vbus_alwayson = false;
+		err = padctl->soc->ops->vbus_power_off(padctl, index);
+		if (!err)
+			padctl->otg_vbus_alwayson = false;
+		else
+			padctl->otg_vbus_alwayson = true;
+	}
+
+	if (err)
+		dev_err(dev, "failed to %s OTG port %d vbus always-on: %d\n",
+				on ? "enable" : "disable", index, err);
+
+	return n;
+}
+
+static DEVICE_ATTR(otg_vbus, S_IRUGO | S_IWUSR, otg_vbus_show, otg_vbus_store);
+
+static struct attribute *padctl_attrs[] = {
+	&dev_attr_otg_vbus.attr,
+	NULL,
+};
+static struct attribute_group padctl_attr_group = {
+	.attrs = padctl_attrs,
+};
+
 static int tegra_xusb_padctl_probe(struct platform_device *pdev)
 {
 	struct device_node *np = of_node_get(pdev->dev.of_node);
@@ -914,6 +987,8 @@ static int tegra_xusb_padctl_probe(struct platform_device *pdev)
 		goto remove;
 	}
 
+	INIT_WORK(&padctl->otg_vbus_work, tegra_xusb_otg_vbus_work);
+
 	err = reset_control_deassert(padctl->rst);
 	if (err < 0)
 		goto remove;
@@ -927,6 +1002,12 @@ static int tegra_xusb_padctl_probe(struct platform_device *pdev)
 	err = tegra_xusb_setup_ports(padctl);
 	if (err) {
 		dev_err(&pdev->dev, "failed to setup XUSB ports: %d\n", err);
+		goto remove_pads;
+	}
+
+	err = sysfs_create_group(&pdev->dev.kobj, &padctl_attr_group);
+	if (err) {
+		dev_err(&pdev->dev, "cannot create sysfs group: %d\n", err);
 		goto remove_pads;
 	}
 
@@ -1056,6 +1137,34 @@ int tegra_xusb_padctl_clear_vbus_override(struct tegra_xusb_padctl *padctl)
 	return -ENOSYS;
 }
 EXPORT_SYMBOL_GPL(tegra_xusb_padctl_clear_vbus_override);
+
+int tegra_xusb_padctl_set_id_override(struct tegra_xusb_padctl *padctl)
+{
+	if (padctl->soc->ops->id_override)
+		return padctl->soc->ops->id_override(padctl, true);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_set_id_override);
+
+int tegra_xusb_padctl_clear_id_override(struct tegra_xusb_padctl *padctl)
+{
+        if (padctl->soc->ops->id_override)
+                return padctl->soc->ops->id_override(padctl, false);
+
+	return -ENOSYS;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_clear_id_override);
+
+bool tegra_xusb_padctl_has_otg_cap(struct tegra_xusb_padctl *padctl,
+				struct phy *phy)
+{
+	if (padctl->soc->ops->has_otg_cap)
+		return padctl->soc->ops->has_otg_cap(padctl, phy);
+
+	return false;
+}
+EXPORT_SYMBOL_GPL(tegra_xusb_padctl_has_otg_cap);
 
 int tegra_xusb_padctl_enable_phy_sleepwalk(struct tegra_xusb_padctl *padctl,
 					   struct phy *phy,

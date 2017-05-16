@@ -208,12 +208,12 @@ struct tegra_se_ecdh_context {
 };
 
 static struct tegra_se_ecc_point *tegra_se_ecc_alloc_point(
-				struct tegra_se_elp_dev *se_dev, int nwords)
+			struct tegra_se_elp_dev *se_dev, unsigned int nwords)
 {
 	struct tegra_se_ecc_point *p = devm_kzalloc(se_dev->dev,
 					sizeof(struct tegra_se_ecc_point),
 					GFP_KERNEL);
-	int len = nwords * WORD_SIZE_BYTES;
+	unsigned int len = nwords * WORD_SIZE_BYTES;
 
 	if (!p)
 		return NULL;
@@ -270,7 +270,8 @@ static const struct tegra_se_ecc_curve *tegra_se_ecc_get_curve(
 	}
 }
 
-static inline void tegra_se_ecc_swap(const u32 *in, u32 *out, int nwords)
+static inline void tegra_se_ecc_swap(const u32 *in, u32 *out,
+				     unsigned int nwords)
 {
 	int i;
 
@@ -278,7 +279,7 @@ static inline void tegra_se_ecc_swap(const u32 *in, u32 *out, int nwords)
 		out[i] = swab32(in[nwords - 1 - i]);
 }
 
-static bool tegra_se_ecc_vec_is_zero(const u32 *vec, int nbytes)
+static bool tegra_se_ecc_vec_is_zero(const u32 *vec, unsigned int nbytes)
 {
 	unsigned int zerobuf[ECC_MAX_WORDS * WORD_SIZE_BYTES] = {0};
 
@@ -304,11 +305,11 @@ static bool tegra_se_ecc_vec_cmp(const u8 *vec1, const u8 *vec2,
 static bool tegra_se_ecdh_params_is_valid(struct ecdh *params)
 {
 	const u32 *private_key = (const u32 *)params->key;
-	int private_key_len = params->key_size;
+	unsigned int private_key_len = params->key_size;
 	const struct tegra_se_ecc_curve *curve = tegra_se_ecc_get_curve(
 							params->curve_id);
 	const u32 *order = curve->n;
-	int nbytes = curve->nbytes;
+	unsigned int nbytes = curve->nbytes;
 
 	if (!nbytes || !private_key)
 		return false;
@@ -342,7 +343,7 @@ static int tegra_se_ecdh_set_params(struct tegra_se_ecdh_context *ctx,
 	return 0;
 }
 
-static inline u32 num_words(int mode)
+static inline u32 num_words(unsigned int mode)
 {
 	u32 words = 0;
 
@@ -385,8 +386,9 @@ static inline u32 num_words(int mode)
 	return words;
 }
 
-static inline void se_elp_writel(struct tegra_se_elp_dev *se_dev, int elp_type,
-				 unsigned int val, unsigned int reg_offset)
+static inline void se_elp_writel(struct tegra_se_elp_dev *se_dev,
+				 unsigned int elp_type, unsigned int val,
+				 unsigned int reg_offset)
 {
 	if (elp_type == PKA1)
 		reg_offset -= se_dev->chipdata->amap_shift;
@@ -394,7 +396,8 @@ static inline void se_elp_writel(struct tegra_se_elp_dev *se_dev, int elp_type,
 }
 
 static inline unsigned int se_elp_readl(struct tegra_se_elp_dev *se_dev,
-					int elp_type, unsigned int reg_offset)
+					unsigned int elp_type,
+					unsigned int reg_offset)
 {
 	if (elp_type == PKA1)
 		reg_offset -= se_dev->chipdata->amap_shift;
@@ -556,11 +559,11 @@ static void tegra_se_pka1_ecc_fill_input(struct tegra_se_pka1_ecc_request *req)
 {
 	struct tegra_se_elp_dev *se_dev = req->se_dev;
 	u32 i;
-	int len = 0;
+	unsigned int len = 0;
 	int a_bank = TEGRA_SE_PKA1_ECC_A_BANK;
 	int a_id = TEGRA_SE_PKA1_ECC_A_ID;
-	int nwords = req->size / 4;
-	int nwords_521 = pka1_op_size[SE_ELP_OP_MODE_ECC521] / 32;
+	unsigned int nwords = req->size / 4;
+	unsigned int nwords_521 = pka1_op_size[SE_ELP_OP_MODE_ECC521] / 32;
 	u32 *MOD, *A, *B, *PX, *PY, *K, *QX, *QY;
 
 	if ((req->op_mode == SE_ELP_OP_MODE_ECC521) ||
@@ -1041,12 +1044,12 @@ enum tegra_se_pka1_keyslot_field {
 };
 
 static void tegra_se_pka1_set_key_param(u32 *param, u32 key_words, u32 slot_num,
-					int op, u32 mode, u32 type)
+					unsigned int op, u32 mode, u32 type)
 {
 	struct tegra_se_elp_dev *se_dev = elp_dev;
 	int i;
-	int len = 0;
-	int nwords_521 = pka1_op_size[SE_ELP_OP_MODE_ECC521] / 32;
+	unsigned int len = 0;
+	unsigned int nwords_521 = pka1_op_size[SE_ELP_OP_MODE_ECC521] / 32;
 
 	for (i = 0; i < key_words; i++) {
 		if (op == KEY && type == C25519_POINT_MUL && i == 0)
@@ -1162,7 +1165,8 @@ static int tegra_se_pka1_precomp(struct tegra_se_pka1_rsa_context *ctx,
 				 struct tegra_se_pka1_mod_request *mod_req,
 				 u32 op)
 {
-	int ret, i, op_mode, type = 0;
+	int ret, i;
+	unsigned int op_mode, type = 0;
 	u16 nwords;
 	u32 *MOD, *M, *R2;
 	struct tegra_se_elp_dev *se_dev;
@@ -1303,7 +1307,7 @@ out:
 static int tegra_se_pka1_ecc_init(struct tegra_se_pka1_ecc_request *req)
 {
 	struct tegra_se_elp_dev *se_dev = elp_dev;
-	int len = req->size;
+	unsigned int len = req->size;
 
 	req->se_dev = se_dev;
 
@@ -1336,7 +1340,7 @@ static void tegra_se_pka1_ecc_exit(struct tegra_se_pka1_ecc_request *req)
 	devm_kfree(se_dev->dev, req->r2);
 }
 
-static int tegra_se_mod_op_mode(int nbytes)
+static int tegra_se_mod_op_mode(unsigned int nbytes)
 {
 	int mode;
 
@@ -1528,7 +1532,7 @@ static int tegra_se_pka1_mod_do(struct tegra_se_pka1_mod_request *req)
 static int tegra_se_pka1_mod_init(struct tegra_se_pka1_mod_request *req)
 {
 	struct tegra_se_elp_dev *se_dev = elp_dev;
-	int len = req->size;
+	unsigned int len = req->size;
 
 	req->se_dev = se_dev;
 
@@ -1801,8 +1805,8 @@ static int tegra_se_pka1_rsa_op(struct akcipher_request *req)
 	struct crypto_akcipher *tfm;
 	struct tegra_se_pka1_rsa_context *ctx;
 	struct tegra_se_elp_dev *se_dev = elp_dev;
-	int ret, cnt;
-	u32 i, nwords;
+	int ret;
+	u32 i, nwords, cnt;
 	u32 *MSG;
 
 	if (!req) {
@@ -1966,8 +1970,8 @@ mod_exit:
 	return ret;
 }
 
-static int tegra_se_mod_mult(int op_mode, u32 *result, u32 *left, u32 *right,
-			     u32 *mod, int nbytes)
+static int tegra_se_mod_mult(unsigned int op_mode, u32 *result, u32 *left,
+			     u32 *right, u32 *mod, unsigned int nbytes)
 {
 	struct tegra_se_pka1_mod_request req;
 	int ret;
@@ -1984,8 +1988,8 @@ static int tegra_se_mod_mult(int op_mode, u32 *result, u32 *left, u32 *right,
 	return ret;
 }
 
-static int tegra_se_mod_add(int op_mode, u32 *result, u32 *left, u32 *right,
-			    u32 *mod, int nbytes)
+static int tegra_se_mod_add(unsigned int op_mode, u32 *result, u32 *left,
+			    u32 *right, u32 *mod, unsigned int nbytes)
 {
 	struct tegra_se_pka1_mod_request req;
 	int ret;
@@ -2002,8 +2006,8 @@ static int tegra_se_mod_add(int op_mode, u32 *result, u32 *left, u32 *right,
 	return ret;
 }
 
-static int tegra_se_mod_inv(int op_mode, u32 *result, u32 *input,
-			    u32 *mod, int nbytes)
+static int tegra_se_mod_inv(unsigned int op_mode, u32 *result, u32 *input,
+			    u32 *mod, unsigned int nbytes)
 {
 	struct tegra_se_pka1_mod_request req;
 	int ret;
@@ -2019,8 +2023,8 @@ static int tegra_se_mod_inv(int op_mode, u32 *result, u32 *input,
 	return ret;
 }
 
-static int tegra_se_mod_reduce(int op_mode, u32 *result, u32 *input,
-			       u32 *mod, int nbytes)
+static int tegra_se_mod_reduce(unsigned int op_mode, u32 *result, u32 *input,
+			       u32 *mod, unsigned int nbytes)
 {
 	struct tegra_se_pka1_mod_request req;
 	int ret;
@@ -2063,7 +2067,7 @@ static int tegra_se_ecc_point_mult(struct tegra_se_ecc_point *result,
 				   const struct tegra_se_ecc_point *point,
 				   const u32 *private,
 				   const struct tegra_se_ecc_curve *curve,
-				   int nbytes)
+				   unsigned int nbytes)
 {
 	struct tegra_se_pka1_ecc_request ecc_req;
 	int ret;
@@ -2088,7 +2092,7 @@ static int tegra_se_ecc_point_mult(struct tegra_se_ecc_point *result,
 static int tegra_se_ecc_point_add(struct tegra_se_ecc_point *p1,
 				  struct tegra_se_ecc_point *p2,
 				  const struct tegra_se_ecc_curve *curve,
-				  int nbytes)
+				  unsigned int nbytes)
 {
 	struct tegra_se_pka1_ecc_request ecc_req;
 	int ret;
@@ -2115,7 +2119,7 @@ static int tegra_se_ecc_shamir_trick(u32 *s1,
 				     u32 *s2,
 				     struct tegra_se_ecc_point *p2,
 				     const struct tegra_se_ecc_curve *curve,
-				     int nbytes)
+				     unsigned int nbytes)
 {
 	struct tegra_se_pka1_ecc_request ecc_req;
 	int ret;
@@ -2146,8 +2150,8 @@ static int tegra_se_ecdh_compute_shared_secret(struct tegra_se_elp_dev *se_dev,
 {
 	struct tegra_se_ecc_point *product, *pk;
 	const struct tegra_se_ecc_curve *curve = tegra_se_ecc_get_curve(cid);
-	int nbytes = curve->nbytes;
-	int nwords = nbytes / WORD_SIZE_BYTES;
+	unsigned int nbytes = curve->nbytes;
+	unsigned int nwords = nbytes / WORD_SIZE_BYTES;
 	int ret = -ENOMEM;
 	u32 priv[ECC_MAX_WORDS];
 
@@ -2197,8 +2201,8 @@ static int tegra_se_ecdh_gen_pub_key(struct tegra_se_elp_dev *se_dev,
 	struct tegra_se_ecc_point *G;
 	int ret;
 	const struct tegra_se_ecc_curve *curve = tegra_se_ecc_get_curve(cid);
-	int nbytes = curve->nbytes;
-	int nwords = nbytes / WORD_SIZE_BYTES;
+	unsigned int nbytes = curve->nbytes;
+	unsigned int nwords = nbytes / WORD_SIZE_BYTES;
 	u32 priv[ECC_MAX_WORDS];
 
 	if (!private_key) {
@@ -2243,10 +2247,10 @@ static int tegra_se_ecdh_compute_value(struct kpp_request *req)
 {
 	struct crypto_kpp *tfm;
 	struct tegra_se_ecdh_context *ctx;
-	int sec_nbytes, pub_nbytes, ret, cnt;
+	unsigned int sec_nbytes, pub_nbytes, cnt;
+	int ret;
 	void *buffer;
 	const struct tegra_se_ecc_curve *curve;
-	int nwords = 0;
 
 	if (!req) {
 		pr_err("Invalid ECDH request\n");
@@ -2274,7 +2278,6 @@ static int tegra_se_ecdh_compute_value(struct kpp_request *req)
 	}
 
 	sec_nbytes = curve->nbytes;
-	nwords = sec_nbytes / WORD_SIZE_BYTES;
 
 	if (ctx->curve_id == C25519_CURVE_C256)
 		pub_nbytes = sec_nbytes;
@@ -2350,7 +2353,7 @@ static int tegra_se_ecdh_max_size(struct crypto_kpp *tfm)
 	struct tegra_se_ecdh_context *ctx = kpp_tfm_ctx(tfm);
 	const struct tegra_se_ecc_curve *curve =
 			tegra_se_ecc_get_curve(ctx->curve_id);
-	int nbytes = curve->nbytes;
+	unsigned int nbytes = curve->nbytes;
 
 	/* Public key is made of two coordinates */
 	return 2 * nbytes;
@@ -3014,14 +3017,14 @@ static int tegra_se_ecdsa_verify(struct akcipher_request *req)
 	struct tegra_se_ecc_point *x1y1 = NULL, *x2y2 = NULL, *Q = NULL;
 	const struct tegra_se_ecc_curve *curve =
 		tegra_se_ecc_get_curve(ctx->curve_id);
-	int nbytes = curve->nbytes;
-	int nwords = nbytes / WORD_SIZE_BYTES;
+	unsigned int nbytes = curve->nbytes;
+	unsigned int nwords = nbytes / WORD_SIZE_BYTES;
 	unsigned int ndigits = nwords / 2;
 	u64 *ctx_qx, *ctx_qy;
 	u64 r[ndigits], s[ndigits], v[ndigits];
 	u64 z[ndigits], w[ndigits];
 	u64 u1[ndigits], u2[ndigits];
-	int mod_op_mode;
+	unsigned int mod_op_mode;
 	int ret = -ENOMEM;
 
 	if (!curve)
@@ -3030,6 +3033,8 @@ static int tegra_se_ecdsa_verify(struct akcipher_request *req)
 	mod_op_mode = tegra_se_mod_op_mode(nbytes);
 	if (mod_op_mode < 0)
 		return mod_op_mode;
+
+	mod_op_mode = ret;
 
 	x1y1 = tegra_se_ecc_alloc_point(elp_dev, nwords);
 	x2y2 = tegra_se_ecc_alloc_point(elp_dev, nwords);
@@ -3204,7 +3209,7 @@ static int tegra_se_ecdsa_set_priv_key(struct crypto_akcipher *tfm,
 static int tegra_se_ecdsa_max_size(struct crypto_akcipher *tfm)
 {
 	struct tegra_se_ecdsa_ctx *ctx = tegra_se_ecdsa_get_ctx(tfm);
-	int nbytes = ctx->ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
+	unsigned int nbytes = ctx->ndigits << ECC_DIGITS_TO_BYTES_SHIFT;
 
 	/* For r,s */
 	return 2 * nbytes;

@@ -1,0 +1,318 @@
+/*
+ * tegra186-quill-p3489-0000-a00-plugin-manager.dtsi: P3489 plugin manager
+ *
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+#include "tegra186-soc-prod-plugin-manager.dtsi"
+#include "tegra186-odm-data-plugin-manager.dtsi"
+
+/ {
+	eeprom-manager {
+		data-size = <0x100>;
+		boardid-with-revision = <3489>;
+		boardid-with-config = <3489>;
+		bus@0 {
+			i2c-bus = <&gen8_i2c>;
+			eeprom@0 {
+				slave-address = <0x50>;
+				label = "cvm";
+			};
+			eeprom@1 {
+				slave-address = <0x57>;
+				label = "cvb";
+			};
+		};
+		bus@1 {
+			i2c-bus = <&gen2_i2c>;
+			eeprom@0 {
+				slave-address = <0x51>;
+			};
+		};
+		bus@2 {
+			i2c-bus = <&gen1_i2c>;
+			eeprom@0 {
+				slave-address = <0x50>;
+			};
+		};
+		bus@3 {
+			i2c-bus = <&cam_i2c>;
+			eeprom@0 {
+				slave-address = <0x54>;
+				label = "cam";
+				enable-gpio = <2 9>;
+			};
+		};
+	};
+        pinmux@2430000 {
+                pinctrl-names = "default";
+                pinctrl-0 = <&pinmux_default>;
+
+                pinmux_default: common {
+                        gpio_edp2_pp5 {
+                                nvidia,pins = "gpio_edp2_pp5";
+                                nvidia,pull = <TEGRA_PIN_PULL_UP>;
+                                nvidia,tristate = <TEGRA_PIN_ENABLE>;
+                                nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+                                status = "disabled";
+                        };
+
+                        gpio_edp3_pp6 {
+                                nvidia,pins = "gpio_edp3_pp6";
+                                nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+                                nvidia,tristate = <TEGRA_PIN_DISABLE>;
+                                nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+                                status = "disabled";
+                        };
+                };
+        };
+        gpio@2200000 {
+                sdmmc-wake-support-input {
+                        gpio-hog;
+                        gpios = <TEGRA_MAIN_GPIO(P, 5) 0>;
+                        input;
+                        label = "sdmmc-wake-input";
+                        status = "disabled";
+                };
+
+                sdmmc-wake-support-output {
+                        gpio-hog;
+                        gpios = <TEGRA_MAIN_GPIO(P, 6) 0>;
+                        output-low;
+                        label = "sdmmc-wake-output";
+                        status = "disabled";
+                };
+        };
+
+	plugin-manager {
+		fragment-500-e3325-pcie {
+			enable-override-on-all-matches;
+			ids = ">=3489-0000-A00";
+			odm-data = "enable-pcie-on-uphy-lane0";
+			override@0 {
+				target = <&{/xhci@3530000}>;
+				_overlay_ {
+					phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
+						<&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>;
+					phy-names = "utmi-0", "utmi-1";
+				};
+			};
+			override@1 {
+				target = <&tegra_xusb_padctl_pinmux_default>;
+				_overlay_ {
+					usb3-std-A-port2 {
+						status = "disabled";
+					};
+				};
+			};
+
+			override@2 {
+				target = <&tegra_main_gpio>;
+				_overlay_ {
+					pcie0_lane2_mux {
+						status = "okay";
+					};
+				};
+			};
+		};
+
+		fragment-e3320-dp {
+			ids = ">=3320-1000-000", ">=3320-1100-000";
+			override@0 {
+				target = <&{/host1x}>;
+				_overlay_ {
+					nvdisplay@15220000 {
+						status = "okay";
+					};
+					sor {
+						status = "okay";
+						dp-display {
+							status = "okay";
+						};
+					};
+					dpaux@155c0000 {
+						status = "okay";
+					};
+				};
+			};
+		};
+
+		fragment-p3489-A00 {
+			ids = ">=3489-0000-A00";
+
+			override@0 {
+				target = <&{/bpmp_i2c/spmic@3c/regulators/ldo6}>;
+				_overlay_ {
+					regulator-boot-on;
+					regulator-always-on;
+				};
+			};
+			override@1 {
+				target = <&{/bpmp_i2c/spmic@3c/pinmux@0}>;
+				_overlay_ {
+					pin_gpio2 {
+						status = "disabled";
+					};
+					pin_gpio3 {
+						status = "disabled";
+					};
+				};
+			};
+			override@2 {
+				target = <&spmic_ldo8>;
+				_overlay_ {
+					regulator-name = "dvdd-pex";
+					regulator-min-microvolt = <1000000>;
+					regulator-max-microvolt = <1000000>;
+				};
+			};
+
+			override@3 {
+				target = <&spmic_ldo0>;
+				_overlay_ {
+					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
+				};
+			};
+
+			override@4 {
+				target = <&spmic_ldo7>;
+				_overlay_ {
+					regulator-min-microvolt = <1000000>;
+					regulator-max-microvolt = <1000000>;
+				};
+			};
+			override@5 {
+				target = <&spmic_ldo6>;
+				_overlay_ {
+					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
+				};
+			};
+			override@6 {
+				target = <&{/bluedroid_pm}>;
+				_overlay_ {
+					bluedroid_pm,reset-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(H, 5) 0>;
+				};
+			};
+			override@7 {
+				target = <&{/xhci@3530000}>;
+				_overlay_ {
+					phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
+						<&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>,
+						<&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(2)>,
+						<&tegra_xusb_padctl TEGRA_PADCTL_PHY_USB3_P(0)>;
+					phy-names = "utmi-0", "utmi-1", "utmi-2", "usb3-0";
+				};
+			};
+			override@8 {
+				target = <&tegra_xusb_padctl_pinmux_default>;
+				_overlay_ {
+					usb3-std-A-port2 {
+						nvidia,lanes = "usb3-0";
+					};
+					e3325-usb3-std-A-HS {
+						status = "okay";
+					};
+				};
+			};
+			override@9 {
+				target = <&tegra_pcie>;
+				_overlay_ {
+					pci@1,0 {
+						nvidia,num-lanes = <4>;
+					};
+					pci@2,0 {
+						nvidia,num-lanes = <0>;
+					};
+					pci@3,0 {
+						nvidia,num-lanes = <1>;
+					};
+				};
+			};
+			override@10 {
+				target = <&{/ahci-sata@3507000}>;
+				_overlay_ {
+					gpios = <&spmic 7 0>;
+				};
+			};
+			override@11 {
+				target = <&{/bpmp_i2c/spmic@3c/pinmux@0}>;
+				_overlay_ {
+					pin_gpio7 {
+						drive-push-pull = <1>;
+					};
+				};
+			};
+                        override@12 {
+                                target = <&pinmux_default>;
+                                _overlay_ {
+                                        gpio_edp2_pp5 {
+                                                status = "okay";
+                                        };
+                                        gpio_edp3_pp6 {
+                                                status = "okay";
+                                        };
+                                };
+                        };
+                        override@13 {
+                                target = <&tegra_main_gpio>;
+                                _overlay_ {
+                                        sdmmc-wake-support-input {
+                                                status = "okay";
+                                        };
+                                        sdmmc-wake-support-output {
+                                                status = "okay";
+                                        };
+                                };
+                        };
+                        override@14 {
+                                target = <&en_vdd_sdcard1>;
+                                _overlay_ {
+                                        gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(P, 6) 0>;
+                                };
+                        };
+
+                        override@15 {
+                                target = <&sdmmc1>;
+                                _overlay_ {
+                                        cd-gpios = <&tegra_main_gpio TEGRA_MAIN_GPIO(P, 5) 0>;
+                                        nvidia,cd-wakeup-capable;
+                                };
+                        };
+                        override@16 {
+                                target = <&ina3221x_40>;
+                                _overlay_ {
+                                        channel@0 {
+                                                ti,shunt-resistor-mohm = <10>;
+                                        };
+                                        channel@1 {
+                                                ti,shunt-resistor-mohm = <10>;
+                                        };
+                                };
+                        };
+                        override@17 {
+                                target = <&ina3221x_41>;
+                                _overlay_ {
+                                        channel@0 {
+                                                ti,shunt-resistor-mohm = <20>;
+                                        };
+                                        channel@1 {
+                                                ti,shunt-resistor-mohm = <10>;
+                                        };
+                                        channel@2 {
+						ti,rail-name = "VDD_SYS_DDR";
+                                                ti,shunt-resistor-mohm = <10>;
+                                        };
+                                };
+                        };
+		};
+	};
+};

@@ -1341,8 +1341,8 @@
 		};
 
 		drive_default: drive {
-		        drive_touch_clk {
-			        nvidia,pins = "drive_touch_clk";
+		        touch_clk_pv7 {
+			        nvidia,pins = "touch_clk_pv7";
 				nvidia,pull-down-strength = <0x14>;
 				nvidia,pull-up-strength = <0x14>;
 			};

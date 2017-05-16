@@ -1,14 +1,13 @@
 /*
  * Header file for Tegra Security Elliptic Engine
  *
- * Copyright (c) 2015-2017, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2, as
- * published by the Free Software Foundation, and may be copied,
- * distributed, and modified under those terms.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
+ * This program is distributed in the hope it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
@@ -339,7 +338,6 @@ static struct tegra_se_ecc_curve curve_c256 = {
 #define TEGRA_SE_PKA1_CTRL_SE_INTR_MASK_EIP0_PKA(x) \
 			(x << TEGRA_SE_PKA1_CTRL_SE_INTR_MASK_EIP0_PKA_SHIFT)
 
-
 #define TEGRA_SE_PKA1_INT_ENABLE_OFFSET			0xC040
 #define TEGRA_SE_PKA1_INT_ENABLE_IE_IRQ_EN_SHIFT	30
 #define TEGRA_SE_PKA1_INT_ENABLE_IE_IRQ_EN(x)	\
@@ -645,9 +643,8 @@ static struct tegra_se_ecc_curve curve_c256 = {
 #define TEGRA_SE_PKA1_ENTRY_MODINV	0xe
 #define TEGRA_SE_PKA1_ENTRY_REDUCE	0xf
 
-
-#define TEGRA_SE_PKA1_KEYSLOT_ADDR_OFFSET(i)		(0x00008800+((i)*4))
-#define TEGRA_SE_PKA1_KEYSLOT_DATA_OFFSET(i)		(0x00008810+((i)*4))
+#define TEGRA_SE_PKA1_KEYSLOT_ADDR_OFFSET(i)		(0x00008800 + ((i) * 4))
+#define TEGRA_SE_PKA1_KEYSLOT_DATA_OFFSET(i)		(0x00008810 + ((i) * 4))
 
 #define TEGRA_SE_PKA1_KEYSLOT_ADDR_AUTO_INC_SHIFT	31
 #define TEGRA_SE_PKA1_KEYSLOT_ADDR_AUTO_INC_SET	1

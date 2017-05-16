@@ -1,21 +1,16 @@
 /*
- * Driver for Tegra Security Engine
+ * Header for Tegra Security Engine
  *
- * Copyright (c) 2011-2017, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
+ * This program is distributed in the hope it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 #ifndef _CRYPTO_TEGRA_SE_H
@@ -159,7 +154,6 @@
 #define SE_CRYPTO_MEMIF_SHIFT		31
 #define SE_CRYPTO_MEMIF(x)		(x << SE_CRYPTO_MEMIF_SHIFT)
 
-
 #define SE_CRYPTO_CTR_REG_COUNT		4
 #define SE_CRYPTO_CTR_REG_OFFSET	0x308
 
@@ -250,7 +244,6 @@
 
 #define SE_SHA_MSG_LENGTH_REG_OFFSET	0x204
 #define SE_SHA_MSG_LEFT_REG_OFFSET		0x214
-
 
 #define SE_HASH_RESULT_REG_COUNT	16
 #define SE_HASH_RESULT_REG_OFFSET	0x030
@@ -344,7 +337,6 @@
 #define RSA_KEY_INPUT_MODE_DMA	1
 #define RSA_KEY_INPUT_MODE_SHIFT	8
 #define RSA_KEY_INPUT_MODE(x)	(x << RSA_KEY_INPUT_MODE_SHIFT)
-
 
 #define RSA_KEY_SLOT_ONE	0
 #define RSA_KEY_SLOT_TW0	1

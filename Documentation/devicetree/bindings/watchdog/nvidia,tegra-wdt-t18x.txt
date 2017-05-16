@@ -31,6 +31,8 @@ Optional properties for debug purpose:
 	Disable internal full system reset at fifth expiration of the counter.
 	WDT POR reset cannot be intercepted and acts as a Power On Reset. This
 	reset should be enabled if not specified.
+- nvidia,disable-remote-interrupt:
+	Disable remote interrupt which happen in 3rd expiry of the counter.
 
 Examples:
 

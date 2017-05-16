@@ -64,7 +64,7 @@ struct tegra_wdt_t18x {
 	int			expiry_count;
 	int			active_count;
 	int			shutdown_timeout;
-	int			index;
+	int			wdt_index;
 	bool			extended_suspend;
 	bool			config_locked;
 };
@@ -211,7 +211,7 @@ static int __tegra_wdt_t18x_enable(struct tegra_wdt_t18x *twdt_t18x)
 
 	/* Unmask IRQ. This has to be called after every WDT power gate */
 	if (twdt_t18x->soc->unmask_hw_irq)
-		writel(TOP_TKE_TKEIE_WDT_MASK(twdt_t18x->index),
+		writel(TOP_TKE_TKEIE_WDT_MASK(twdt_t18x->wdt_index),
 		       twdt_t18x->wdt_tke + TOP_TKE_TKEIE(twdt_t18x->hwirq));
 
 	/* Update skip configuration and active expiry count */
@@ -402,7 +402,7 @@ static void tegra_wdt_t18x_debugfs_init(struct tegra_wdt_t18x *twdt_t18x)
 
 static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 {
-	struct resource *res_src, *res_wdt, *res_tke;
+	struct resource *res_wdt, *res_tmr, *res_tke;
 	struct tegra_wdt_t18x *twdt_t18x;
 	struct device_node *np = pdev->dev.of_node;
 	struct of_phandle_args oirq;
@@ -459,23 +459,23 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	t18x_wdt = twdt_t18x;
 	platform_set_drvdata(pdev, twdt_t18x);
 
-	res_src = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	res_wdt = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	res_wdt = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	res_tmr = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	res_tke = platform_get_resource(pdev, IORESOURCE_MEM, 2);
-	if (!res_src || !res_wdt || !res_tke) {
+	if (!res_wdt || !res_tmr || !res_tke) {
 		dev_err(&pdev->dev, "Insufficient resources\n");
 		return -ENOENT;
 	}
 
-	twdt_t18x->wdt_source = devm_ioremap_resource(&pdev->dev, res_src);
+	twdt_t18x->wdt_source = devm_ioremap_resource(&pdev->dev, res_wdt);
 	if (IS_ERR(twdt_t18x->wdt_source)) {
-		dev_err(&pdev->dev, "Cannot request memregion/iomap res_src\n");
+		dev_err(&pdev->dev, "Cannot request memregion/iomap res_wdt\n");
 		return PTR_ERR(twdt_t18x->wdt_source);
 	}
 
-	twdt_t18x->wdt_timer = devm_ioremap_resource(&pdev->dev, res_wdt);
+	twdt_t18x->wdt_timer = devm_ioremap_resource(&pdev->dev, res_tmr);
 	if (IS_ERR(twdt_t18x->wdt_timer)) {
-		dev_err(&pdev->dev, "Cannot request memregion/iomap res_wdt\n");
+		dev_err(&pdev->dev, "Cannot request memregion/iomap res_tmr\n");
 		return PTR_ERR(twdt_t18x->wdt_timer);
 	}
 
@@ -489,10 +489,10 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	twdt_t18x->config_locked = !!(twdt_t18x->config & WDT_CFG_INT_EN);
 
 	/* Watchdog index in list of wdts under top_tke */
-	twdt_t18x->index = ((res_src->start >> 16) & 0xF) - 0xc;
+	twdt_t18x->wdt_index = ((res_wdt->start >> 16) & 0xF) - 0xc;
 
 	if (twdt_t18x->config_locked) {
-		int tmr_id = ((res_wdt->start >> 16) & (0xF)) - 2;
+		int tmr_id = ((res_tmr->start >> 16) & (0xF)) - 2;
 		int tmr_prog = twdt_t18x->config & 0xF;
 
 		if (tmr_id != tmr_prog) {
@@ -503,7 +503,7 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 		}
 	} else {
 		/* Configure timer source and period */
-		twdt_t18x->config = ((res_wdt->start >> 16) & (0xf)) - 2;
+		twdt_t18x->config = ((res_tmr->start >> 16) & (0xf)) - 2;
 		twdt_t18x->config |= WDT_CFG_PERIOD;
 
 		/* Enable local interrupt for WDT petting */

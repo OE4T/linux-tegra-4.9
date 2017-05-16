@@ -18,6 +18,8 @@
 
 #include "gk20a/gk20a.h"
 
+#include "gp10b.h"
+
 #include <nvgpu/hw/gp10b/hw_fuse_gp10b.h>
 #include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
 

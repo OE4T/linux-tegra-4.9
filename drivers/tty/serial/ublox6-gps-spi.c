@@ -79,7 +79,8 @@ static void ublox_gps_read_worker(struct work_struct *private)
 		bytes_pushed[0] = 0;
 		if (ublox_dev->is_active[0]) {
 			bytes_pushed[0] = tty_insert_flip_string(
-			&ublox_dev->tty_port[0], ublox_dev->read_buf, gps_buf_size);
+			&ublox_dev->tty_port[0], ublox_dev->read_buf,
+			gps_buf_size);
 			dev_dbg(ublox_dev->device,
 				"%d bytes pushed to tty buffer for index 0\n",
 				bytes_pushed[0]);
@@ -88,7 +89,8 @@ static void ublox_gps_read_worker(struct work_struct *private)
 		bytes_pushed[1] = 0;
 		if (ublox_dev->is_active[1]) {
 			bytes_pushed[1] = tty_insert_flip_string(
-			&ublox_dev->tty_port[1], ublox_dev->read_buf, gps_buf_size);
+			&ublox_dev->tty_port[1], ublox_dev->read_buf,
+			gps_buf_size);
 			dev_dbg(ublox_dev->device,
 				"%d bytes pushed to tty buffer for index 1\n",
 				bytes_pushed[1]);
@@ -317,6 +319,7 @@ static int ublox_suspend(struct device *dev)
 {
 
 	struct ublox_device *ublox_dev = dev_get_drvdata(dev);
+
 	cancel_delayed_work(&ublox_dev->dwork);
 	flush_work(&ublox_dev->dwork.work);
 	dev_dbg(dev, "Suspending u-blox tty driver\n");

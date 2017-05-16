@@ -1,7 +1,7 @@
 /* u-blox 6 I2C GPS driver
  *
  * Copyright (C) 2015 Felipe F. Tonello <eu@felipetonello.com>
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * Driver that enables control of a U-Blox GPS receiver, connected
  * via I2C, through the TTY interface.
@@ -124,9 +124,11 @@ static void ublox_gps_read_worker(struct work_struct *private)
 				dev_err(&ublox_dev->i2c_client->dev,
 					"bytes pushed to tty are not same\n");
 			}
-			/*As index 0 has read and write access and index 0
-			  should be always active to make index 1 working */
 
+			/*
+			 * As index 0 has read and write access and index 0
+			 * should be always active to make index 1 working.
+			 */
 			gps_buf_size -= bytes_pushed[0];
 
 			/*
@@ -181,9 +183,9 @@ static int ublox_gps_serial_write(struct tty_struct *tty,
 		dev_err(&ublox_dev->i2c_client->dev, "i2c write failed: %d\n",
 			ret);
 		return ret;
-	} else
-		dev_dbg(&ublox_dev->i2c_client->dev, "%d bytes written\n",
-			count);
+	}
+
+	dev_dbg(&ublox_dev->i2c_client->dev, "%d bytes written\n", count);
 
 	if (ublox_dev->is_active[0] || ublox_dev->is_active[1])
 		mod_delayed_work(system_wq, &ublox_dev->dwork,

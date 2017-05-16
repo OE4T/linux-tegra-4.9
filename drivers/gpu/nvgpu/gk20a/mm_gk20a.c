@@ -2583,25 +2583,6 @@ dma_addr_t gk20a_mm_gpuva_to_iova_base(struct vm_gk20a *vm, u64 gpu_vaddr)
 	return addr;
 }
 
-void gk20a_gmmu_unmap(struct vm_gk20a *vm,
-		u64 vaddr,
-		u64 size,
-		int rw_flag)
-{
-	struct gk20a *g = gk20a_from_vm(vm);
-
-	nvgpu_mutex_acquire(&vm->update_gmmu_lock);
-	g->ops.mm.gmmu_unmap(vm,
-			vaddr,
-			size,
-			gmmu_page_size_kernel,
-			true, /*va_allocated */
-			rw_flag,
-			false,
-			NULL);
-	nvgpu_mutex_release(&vm->update_gmmu_lock);
-}
-
 u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, dma_addr_t iova)
 {
 	/* ensure it is not vidmem allocation */

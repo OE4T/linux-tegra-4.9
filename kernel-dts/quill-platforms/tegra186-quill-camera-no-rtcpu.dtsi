@@ -42,4 +42,8 @@
 #if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
 	};
 #endif
+
+	i2c@3180000 { /* Do not use RTCPU I2C driver */
+		compatible = "nvidia,tegra186-i2c";
+	};
 };

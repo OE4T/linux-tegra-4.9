@@ -180,8 +180,8 @@ obj-$(CONFIG_NVMEM)		+= nvmem/
 obj-$(CONFIG_FPGA)		+= fpga/
 obj-$(CONFIG_NVPMODEL_EMC)	+= nvpmodel/
 
-ifneq ($(wildcard $(srctree)/../t18x/drivers/Makefile.*),)
-obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += ../../t18x/drivers/
+ifneq ($(wildcard $(srctree)/../nvidia/drivers/Makefile.*),)
+obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += ../../nvidia/drivers/
 endif
 
 ifneq ($(wildcard $(srctree)/../t19x/drivers/Makefile.*),)

@@ -770,8 +770,8 @@ config SPI_TLE62X0
 # Add new SPI protocol masters in alphabetical order above this line
 #
 
-trysource "../t18x/drivers/spi/Kconfig.t18x"
-trysource "drivers/spi/Kconfig.t18x"
+trysource "../nvidia/drivers/spi/Kconfig.nvidia"
+trysource "drivers/spi/Kconfig.nvidia"
 endif # SPI_MASTER
 
 # (slave support would go here)

@@ -865,8 +865,8 @@ source "drivers/misc/cxl/Kconfig"
 source "drivers/misc/tegra-profiler/Kconfig"
 
 trysource "../nvidia/drivers/misc/Kconfig.nvidia"
-trysource "../t18x/drivers/misc/tegra186-ahc/Kconfig.t18x"
-trysource "drivers/misc/tegra186-ahc/Kconfig.t18x"
+trysource "../nvidia/drivers/misc/tegra186-ahc/Kconfig.nvidia"
+trysource "drivers/misc/tegra186-ahc/Kconfig.nvidia"
 source "drivers/misc/nvs-dfsh/Kconfig"
 source "drivers/misc/nvs/Kconfig"
 endmenu

@@ -577,10 +577,10 @@ config CRYPTO_DEV_ROCKCHIP
 
 source "drivers/crypto/chelsio/Kconfig"
 
-trysource "../t18x/drivers/crypto/Kconfig.t18x"
-trysource "drivers/crypto/Kconfig.t18x"
+trysource "../nvidia/drivers/crypto/Kconfig.nvidia"
+trysource "drivers/crypto/Kconfig.nvidia"
 
-trysource "../t18x/drivers/crypto/elliptic/Kconfig.t18x"
-trysource "drivers/crypto/elliptic/Kconfig.t18x"
+trysource "../nvidia/drivers/crypto/elliptic/Kconfig.nvidia"
+trysource "drivers/crypto/elliptic/Kconfig.nvidia"
 
 endif # CRYPTO_HW

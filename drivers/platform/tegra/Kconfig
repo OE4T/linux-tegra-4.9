@@ -232,5 +232,5 @@ config TEGRA_HSP
 config POWERGATE_TEGRA_BPMP
 	def_bool TEGRA_BPMP
 
-trysource "../t18x/drivers/platform/tegra/Kconfig.t18x"
-trysource "drivers/platform/tegra/Kconfig.t18x"
+trysource "../nvidia/drivers/platform/tegra/Kconfig.nvidia"
+trysource "drivers/platform/tegra/Kconfig.nvidia"

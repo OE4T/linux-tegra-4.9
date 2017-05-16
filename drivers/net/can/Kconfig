@@ -160,5 +160,5 @@ config CAN_DEBUG_DEVICES
 
 endmenu
 
-trysource "../t18x/drivers/net/can/Kconfig.t18x"
-trysource "drivers/net/can/Kconfig.t18x"
+trysource "../nvidia/drivers/net/can/Kconfig.nvidia"
+trysource "drivers/net/can/Kconfig.nvidia"

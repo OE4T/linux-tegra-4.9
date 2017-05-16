@@ -3329,7 +3329,7 @@ enum gmmu_pgsz_gk20a __get_pte_size_fixed_map(struct vm_gk20a *vm,
 /*
  * This is for when the address space does not support unified address spaces.
  */
-enum gmmu_pgsz_gk20a __get_pte_size_split_addr(struct vm_gk20a *vm,
+static enum gmmu_pgsz_gk20a __get_pte_size_split_addr(struct vm_gk20a *vm,
 					       u64 base, u64 size)
 {
 	if (!base) {

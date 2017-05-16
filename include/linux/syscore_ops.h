@@ -15,6 +15,7 @@ struct syscore_ops {
 	struct list_head node;
 	int (*suspend)(void);
 	void (*resume)(void);
+	void (*early_resume)(void);
 	void (*shutdown)(void);
 	int (*save)(void);
 	void (*restore)(void);

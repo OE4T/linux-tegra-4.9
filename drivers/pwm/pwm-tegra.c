@@ -58,6 +58,7 @@ struct tegra_pwm_chip {
 	void __iomem *regs;
 
 	const struct tegra_pwm_soc *soc;
+	unsigned long		max_clk_limit;
 	int (*clk_enable)(struct clk *clk);
 	void (*clk_disable)(struct clk *clk);
 };
@@ -188,6 +189,7 @@ static int tegra_pwm_probe(struct platform_device *pdev)
 	struct resource *r;
 	bool no_clk_sleeping_in_ops;
 	struct clk *parent_clk;
+	u32 pval;
 	int ret;
 
 	pwm = devm_kzalloc(&pdev->dev, sizeof(*pwm), GFP_KERNEL);
@@ -208,6 +210,13 @@ static int tegra_pwm_probe(struct platform_device *pdev)
 			"nvidia,no-clk-sleeping-in-ops");
 	dev_info(&pdev->dev, "PWM clk can%s sleep in ops\n",
 			no_clk_sleeping_in_ops ? "not" : "");
+
+	ret = of_property_read_u32(pdev->dev.of_node,
+				   "pwm-minimum-frequency-hz", &pval);
+	if (!ret)
+		pwm->max_clk_limit = pval * 256 * (1 << PWM_SCALE_WIDTH);
+	else
+		pwm->max_clk_limit = pwm->soc->max_clk_limit;
 
 	pwm->clk = devm_clk_get(&pdev->dev, "pwm");
 	if (IS_ERR(pwm->clk))
@@ -234,7 +243,7 @@ static int tegra_pwm_probe(struct platform_device *pdev)
 		}
 
 		/* Set clock to maximum clock limit */
-		ret = clk_set_rate(pwm->clk, pwm->soc->max_clk_limit);
+		ret = clk_set_rate(pwm->clk, pwm->max_clk_limit);
 		if (ret < 0) {
 			dev_err(dev, "Failed to set max clk rate: %d\n", ret);
 			return ret;
@@ -246,8 +255,8 @@ static int tegra_pwm_probe(struct platform_device *pdev)
 
 	/* Limit the maximum clock rate */
 	if (pwm->soc->max_clk_limit &&
-	    (pwm->clk_rate > pwm->soc->max_clk_limit)) {
-		ret = clk_set_rate(pwm->clk, pwm->soc->max_clk_limit);
+	    (pwm->clk_rate > pwm->max_clk_limit)) {
+		ret = clk_set_rate(pwm->clk, pwm->max_clk_limit);
 		if (ret < 0) {
 			dev_err(&pdev->dev, "Failed to set max clk rate: %d\n",
 				ret);

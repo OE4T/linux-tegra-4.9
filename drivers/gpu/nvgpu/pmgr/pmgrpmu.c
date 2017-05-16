@@ -272,7 +272,7 @@ exit:
 	return status;
 }
 
-u32 pmgr_send_pwr_policy_to_pmu(struct gk20a *g)
+static u32 pmgr_send_pwr_policy_to_pmu(struct gk20a *g)
 {
 	struct nv_pmu_pmgr_pwr_policy_pack *ppwrpack = NULL;
 	struct pwr_policy *ppolicy = NULL;

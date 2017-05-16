@@ -449,6 +449,16 @@ config GENERIC_ADC_THERMAL
 	  to this driver. This driver reports the temperature by reading ADC
 	  channel and converts it to temperature based on lookup table.
 
+config USERSPACE_THERM_ALERT
+	tristate "Userspace thermal alert cooling device"
+	depends on THERMAL_OF
+	help
+	  Adds cooling device for notifying user space to know whether
+	  thermal alert occurred for temperature trip.
+
+	  Say 'Y' here if you want to get notification of temperature alert
+	  in user space.
+
 menu "Qualcomm thermal drivers"
 depends on (ARCH_QCOM && OF) || COMPILE_TEST
 source "drivers/thermal/qcom/Kconfig"

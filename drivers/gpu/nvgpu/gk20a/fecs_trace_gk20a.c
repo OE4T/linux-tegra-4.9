@@ -90,7 +90,7 @@ static inline int gk20a_fecs_trace_num_ts(void)
 		- sizeof(struct gk20a_fecs_trace_record)) / sizeof(u64);
 }
 
-struct gk20a_fecs_trace_record *gk20a_fecs_trace_get_record(
+static struct gk20a_fecs_trace_record *gk20a_fecs_trace_get_record(
 	struct gk20a_fecs_trace *trace, int idx)
 {
 	return (struct gk20a_fecs_trace_record *)
@@ -475,7 +475,7 @@ static int gk20a_fecs_trace_debugfs_ring_seq_show(
 /*
  * Tie them all together into a set of seq_operations.
  */
-const struct seq_operations gk20a_fecs_trace_debugfs_ring_seq_ops = {
+static const struct seq_operations gk20a_fecs_trace_debugfs_ring_seq_ops = {
 	.start = gk20a_fecs_trace_debugfs_ring_seq_start,
 	.next = gk20a_fecs_trace_debugfs_ring_seq_next,
 	.stop = gk20a_fecs_trace_debugfs_ring_seq_stop,
@@ -508,7 +508,7 @@ static int gk20a_ctxsw_debugfs_ring_open(struct inode *inode,
  * The file operations structure contains our open function along with
  * set of the canned seq_ ops.
  */
-const struct file_operations gk20a_fecs_trace_debugfs_ring_fops = {
+static const struct file_operations gk20a_fecs_trace_debugfs_ring_fops = {
 	.owner = THIS_MODULE,
 	.open = gk20a_ctxsw_debugfs_ring_open,
 	.read = seq_read,

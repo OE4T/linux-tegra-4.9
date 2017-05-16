@@ -3216,9 +3216,8 @@ static int tegra_se_probe(struct platform_device *pdev)
 	if (se_dev->chipdata->ahb_ack) {
 		val = tegra_ahb_get_master_id(&pdev->dev);
 		if (val < 0) {
-			err = -EINVAL;
 			dev_err(&pdev->dev, "Error: AHB master id not found\n");
-			goto fail;
+			return -EINVAL;
 		} else
 			se_dev->ahb_id = val;
 	}

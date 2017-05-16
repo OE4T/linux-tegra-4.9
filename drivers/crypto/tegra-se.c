@@ -844,9 +844,9 @@ static void tegra_unmap_sg(struct device *dev, struct scatterlist *sg,
 	}
 }
 
-static int tegra_se_count_sgs(struct scatterlist *sl, u32 nbytes)
+static unsigned int tegra_se_count_sgs(struct scatterlist *sl, u32 nbytes)
 {
-	int sg_nents = 0;
+	unsigned int sg_nents = 0;
 
 	while (sl) {
 		sg_nents++;
@@ -919,7 +919,7 @@ static void tegra_se_get_sg_dma_buf(struct scatterlist *sg, u32 num_sgs,
 	unsigned int sg_flags = SG_MITER_ATOMIC | SG_MITER_FROM_SG;
 	unsigned long flags;
 	u32 *temp_buffer = sg_buf;
-	int total = 0;
+	unsigned int total = 0;
 
 	sg_miter_start(&miter, sg, num_sgs, sg_flags);
 
@@ -943,7 +943,7 @@ static void tegra_se_get_dst_sg(struct scatterlist *sg, u32 num_sgs,
 	unsigned int sg_flags = SG_MITER_ATOMIC | SG_MITER_FROM_SG;
 	unsigned long flags;
 	u32 *temp_buffer = sg_buf;
-	int total = 0;
+	unsigned int total = 0;
 
 	sg_miter_start(&miter, sg, num_sgs, sg_flags);
 
@@ -1361,7 +1361,8 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 	struct tegra_se_dev *se_dev = rng_ctx->se_dev;
 	struct tegra_se_ll *src_ll, *dst_ll;
 	u8 *rdata_addr;
-	int ret = 0, j, num_blocks, data_len = 0;
+	int ret = 0, j;
+	unsigned int num_blocks, data_len = 0;
 
 	num_blocks = (dlen / TEGRA_SE_RNG_DT_SIZE);
 
@@ -1787,10 +1788,10 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 	struct sg_mapping_iter miter;
 	u32 num_sgs, blocks_to_process, last_block_bytes = 0, bytes_to_copy = 0;
 	u8 piv[TEGRA_SE_AES_IV_SIZE];
-	int total, ret = 0, i = 0;
+	int ret = 0, i = 0;
 	bool padding_needed = false;
 	unsigned long flags;
-	unsigned int sg_flags = SG_MITER_ATOMIC;
+	unsigned int sg_flags = SG_MITER_ATOMIC, total = 0;
 	u8 *temp_buffer = NULL;
 	bool use_orig_iv = true;
 
@@ -2551,7 +2552,7 @@ static int tegra_se_dh_setkey(struct crypto_kpp *tfm)
 
 static void tegra_se_fix_endianness(struct tegra_se_dev *se_dev,
 				    struct scatterlist *sg, u32 num_sgs,
-				    int nbytes, bool be)
+				    u32 nbytes, bool be)
 {
 	int j, k;
 
@@ -2577,8 +2578,8 @@ static int tegra_se_dh_compute_value(struct kpp_request *req)
 	u32 num_src_sgs, num_dst_sgs;
 	u8 *base_buff;
 	struct scatterlist src;
-	int err, total, j, zpad_sz;
-	u32 val;
+	int err, j;
+	u32 val, total, zpad_sz;
 
 	if (!req) {
 		pr_err("Invalid DH request\n");
@@ -3759,9 +3760,8 @@ static int tegra_se_lp_encrypt_context_data(struct tegra_se_dev *se_dev,
 static int tegra_se_lp_sticky_bits_context_save(struct tegra_se_dev *se_dev)
 {
 	struct tegra_se_ll *dst_ll;
-	int ret = 0;
+	int ret = 0, i = 0;
 	u32 val = 0;
-	int i = 0;
 
 	mutex_lock(&se_hw_lock);
 	pm_runtime_get_sync(se_dev->dev);
@@ -3844,8 +3844,8 @@ static int tegra_se_lp_keytable_context_save(struct tegra_se_dev *se_dev)
 static int tegra_se_lp_rsakeytable_context_save(struct tegra_se_dev *se_dev)
 {
 	struct tegra_se_ll *dst_ll;
-	int ret = 0, index, word_quad, k, slot;
-	u32 val = 0;
+	int ret = 0, word_quad, k, slot;
+	u32 val = 0, index;
 
 	/* take access to the hw */
 	mutex_lock(&se_hw_lock);
@@ -3934,8 +3934,7 @@ static int tegra_se_lp_iv_context_save(struct tegra_se_dev *se_dev,
 
 static int tegra_se_save_SRK(struct tegra_se_dev *se_dev)
 {
-	int ret;
-	int val;
+	int ret, val;
 
 	mutex_lock(&se_hw_lock);
 	pm_runtime_get_sync(se_dev->dev);

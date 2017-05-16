@@ -63,8 +63,8 @@ struct tegra_se_ecc_curve {
 	u32 *p;
 	u32 *n;
 	u32 *a;
-	int nbytes;
-	int mode;
+	unsigned int nbytes;
+	unsigned int mode;
 };
 
 /* NIST P-192 */

@@ -16,16 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/version.h>
-#include <linux/clk.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #endif
 #include <soc/tegra/fuse.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
-#include <soc/tegra/tegra-dvfs.h>
-#endif
 
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
@@ -266,7 +261,6 @@ found_match:
 
 /* GPCPLL NA/DVFS mode methods */
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
 #define FUSE_RESERVED_CALIB 0x204
 
 static inline int fuse_get_gpcpll_adc_rev(u32 val)
@@ -309,7 +303,6 @@ static bool tegra_fuse_can_use_na_gpcpll(void)
 	return tegra_sku_info.gpu_speedo_id;
 }
 #endif
-#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)) */
 
 /*
  * Read ADC characteristic parmeters from fuses.
@@ -396,12 +389,8 @@ static void clk_config_dvfs_ndiv(int mv, u32 n_eff, struct na_dvfs *d)
 static void clk_config_dvfs(struct gk20a *g, struct pll *gpll)
 {
 	struct na_dvfs *d = &gpll->dvfs;
-	struct clk* clk;
 
-	clk = g->clk.tegra_clk;
-	clk = clk_get_parent(clk);
-
-	d->mv = tegra_dvfs_predict_mv_at_hz_cur_tfloor(clk,
+	d->mv = g->ops.clk.predict_mv_at_hz_cur_tfloor(&g->clk,
 			rate_gpc2clk_to_gpu(gpll->freq));
 
 	clk_config_dvfs_detection(d->mv, d);
@@ -1135,7 +1124,6 @@ int gm20b_init_clk_setup_sw(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
 	unsigned long safe_rate;
-	struct clk *ref = NULL, *c;
 	int err;
 
 	gk20a_dbg_fn("");
@@ -1164,28 +1152,14 @@ int gm20b_init_clk_setup_sw(struct gk20a *g)
 		goto fail;
 	}
 
-	/*
-	 * On Tegra GPU clock exposed to frequency governor is a shared user on
-	 * GPCPLL bus (gbus). The latter can be accessed as GPU clock parent.
-	 * Respectively the grandparent is PLL reference clock.
-	 */
-	c = clk_get_parent(clk->tegra_clk);
-
-	ref = clk_get_sys("gpu_ref", "gpu_ref");
-	if (IS_ERR(ref)) {
-		nvgpu_err(g, "failed to get GPCPLL reference clock");
-		err = -EINVAL;
-		goto fail;
-	}
-
-	clk->gpc_pll.clk_in = clk_get_rate(ref) / KHZ;
+	clk->gpc_pll.clk_in = g->ops.clk.get_ref_clock_rate(g) / KHZ;
 	if (clk->gpc_pll.clk_in == 0) {
 		nvgpu_err(g, "GPCPLL reference clock is zero");
 		err = -EINVAL;
 		goto fail;
 	}
 
-	safe_rate = tegra_dvfs_get_fmax_at_vmin_safe_t(c);
+	safe_rate = g->ops.clk.get_fmax_at_vmin_safe(clk);
 	safe_rate = safe_rate * (100 - DVFS_SAFE_MARGIN) / 100;
 	dvfs_safe_max_freq = rate_gpu_to_gpc2clk(safe_rate);
 	clk->gpc_pll.PL = (dvfs_safe_max_freq == 0) ? 0 :
@@ -1286,8 +1260,9 @@ long gm20b_round_rate(struct clk_gk20a *clk, unsigned long rate,
 	u32 freq;
 	struct pll tmp_pll;
 	unsigned long maxrate;
+	struct gk20a *g = clk->g;
 
-	maxrate = tegra_dvfs_get_maxrate(clk_get_parent(clk->tegra_clk));
+	maxrate = g->ops.clk.get_maxrate(clk);
 	if (rate > maxrate)
 		rate = maxrate;
 
@@ -1426,7 +1401,7 @@ static int gm20b_init_clk_support(struct gk20a *g)
 		return err;
 
 	/* FIXME: this effectively prevents host level clock gating */
-	err = clk_prepare_enable(g->clk.tegra_clk);
+	err = g->ops.clk.prepare_enable(&g->clk);
 	if (err)
 		return err;
 
@@ -1451,7 +1426,7 @@ static int gm20b_suspend_clk_support(struct gk20a *g)
 {
 	int ret = 0;
 
-	clk_disable_unprepare(g->clk.tegra_clk);
+	g->ops.clk.disable_unprepare(&g->clk);
 
 	/* The prev call may not disable PLL if gbus is unbalanced - force it */
 	nvgpu_mutex_acquire(&g->clk.clk_mutex);

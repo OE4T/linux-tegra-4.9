@@ -16,3 +16,4 @@ obj-$(CONFIG_TEGRA_GRHOST_PVA) += pva/
 obj-$(CONFIG_TEGRA_GRHOST_NVCSI) += nvcsi/
 obj-$(CONFIG_TEGRA_GRHOST_NVDLA) += nvdla/
 obj-$(CONFIG_TEGRA_GRHOST_SLVSEC) += slvsec/
+obj-$(CONFIG_TEGRA_GRHOST) += nvhost_minimal_pm/

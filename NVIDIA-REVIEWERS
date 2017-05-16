@@ -59,6 +59,7 @@ L:	SW-Mobile-PVA-Dev@exchange.nvidia.com
 S:	Supported
 F:	drivers/video/tegra/host/pva/
 F:	include/uapi/linux/nvhost_pva_ioctl.h
+F:	drivers/video/tegra/host/nvhost_minimal_pm/
 
 DLA
 M:	Shridhar Rasal <srasal@nvidia.com>

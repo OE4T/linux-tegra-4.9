@@ -1272,7 +1272,8 @@ static int tegra_se_pka1_ecc_do(struct tegra_se_pka1_ecc_request *req)
 			if (i > PKA1_TIMEOUT) {
 				dev_err(se_dev->dev,
 					"PKA1 Load Key timed out\n");
-				return -EINVAL;
+				ret = -EINVAL;
+				goto out;
 			}
 			udelay(1);
 			val = se_elp_readl(se_dev, PKA1,
@@ -1287,10 +1288,10 @@ static int tegra_se_pka1_ecc_do(struct tegra_se_pka1_ecc_request *req)
 
 	ret = tegra_se_check_pka1_op_done(se_dev);
 	if (ret)
-		return ret;
+		goto out;
 
 	tegra_se_read_pka1_ecc_result(req);
-
+out:
 	if (se_dev->chipdata->use_key_slot)
 		tegra_se_pka1_free_key_slot(req->slot);
 
@@ -1357,9 +1358,9 @@ static int tegra_se_mod_op_mode(int nbytes)
 		mode = SE_ELP_OP_MODE_MOD512;
 		break;
 	default:
-		mode = -EINVAL;
-		break;
+		return -EINVAL;
 	}
+
 	return mode;
 }
 
@@ -1854,10 +1855,8 @@ static int tegra_se_pka1_rsa_op(struct akcipher_request *req)
 	tegra_se_read_pka1_rsa_result(ctx, nwords);
 
 	cnt = sg_copy_from_buffer(req->dst, 1, ctx->result, req->dst_len);
-	if (cnt != req->dst_len) {
+	if (cnt != req->dst_len)
 		ret = -ENODATA;
-		goto exit;
-	}
 exit:
 	clk_disable_unprepare(se_dev->c);
 
@@ -1880,7 +1879,11 @@ int tegra_se_pka1_ecc_op(struct tegra_se_pka1_ecc_request *req)
 		return ret;
 
 	se_dev = req->se_dev;
-	clk_prepare_enable(se_dev->c);
+	ret = clk_prepare_enable(se_dev->c);
+	if (ret) {
+		dev_err(se_dev->dev, "clk_enable failed\n");
+		goto ecc_exit;
+	}
 
 	ret = tegra_se_acquire_pka1_mutex(se_dev);
 	if (ret) {
@@ -1897,6 +1900,7 @@ exit:
 	tegra_se_release_pka1_mutex(se_dev);
 clk_dis:
 	clk_disable_unprepare(se_dev->c);
+ecc_exit:
 	tegra_se_pka1_ecc_exit(req);
 
 	return ret;
@@ -1916,7 +1920,11 @@ static int tegra_se_pka1_mod_op(struct tegra_se_pka1_mod_request *req)
 		return ret;
 
 	se_dev = req->se_dev;
-	clk_prepare_enable(se_dev->c);
+	ret = clk_prepare_enable(se_dev->c);
+	if (ret) {
+		dev_err(se_dev->dev, "clk_enable failed\n");
+		goto mod_exit;
+	}
 
 	ret = tegra_se_acquire_pka1_mutex(se_dev);
 	if (ret) {
@@ -1933,6 +1941,7 @@ exit:
 	tegra_se_release_pka1_mutex(se_dev);
 clk_dis:
 	clk_disable_unprepare(se_dev->c);
+mod_exit:
 	tegra_se_pka1_mod_exit(req);
 
 	return ret;
@@ -2185,19 +2194,20 @@ static int tegra_se_ecdh_gen_pub_key(struct tegra_se_elp_dev *se_dev,
 		ret = tegra_se_ecc_point_mult(G, &curve->g, priv,
 					      curve, nbytes);
 	if (ret)
-		goto err_pt_mult;
+		goto out;
 
 	if (tegra_se_ecc_vec_is_zero(G->x, nbytes) ||
 	    ((cid != C25519_CURVE_C256) &&
-	     (tegra_se_ecc_vec_is_zero(G->y, nbytes))))
+	     (tegra_se_ecc_vec_is_zero(G->y, nbytes)))) {
 		ret = -ENODATA;
+		goto out;
+	}
 
 	tegra_se_ecc_swap(G->x, public_key, nwords);
 
 	if (cid != C25519_CURVE_C256)
 		tegra_se_ecc_swap(G->y, &public_key[nwords], nwords);
-
-err_pt_mult:
+out:
 	tegra_se_ecc_free_point(se_dev, G);
 	return ret;
 }
@@ -2341,7 +2351,11 @@ static int tegra_se_pka1_rsa_setkey(struct crypto_akcipher *tfm,
 
 	pkeydata = (u8 *)key;
 
-	clk_prepare_enable(se_dev->c);
+	ret = clk_prepare_enable(se_dev->c);
+	if (ret) {
+		dev_err(se_dev->dev, "clk_enable failed\n");
+		return ret;
+	}
 
 	ret = tegra_se_acquire_pka1_mutex(se_dev);
 	if (ret) {
@@ -2352,8 +2366,10 @@ static int tegra_se_pka1_rsa_setkey(struct crypto_akcipher *tfm,
 	modlen = (keylen >> SE_PKA1_RSA_MOD_SHIFT);
 	explen = (keylen & SE_PKA1_RSA_EXP_BITS);
 
-	if ((modlen < 64) || (modlen > 512))
-		return -EINVAL;
+	if ((modlen < 64) || (modlen > 512)) {
+		ret = -EINVAL;
+		goto rel_mutex;
+	}
 
 	ctx->modlen = modlen;
 	ctx->explen = explen;
@@ -2393,7 +2409,9 @@ static int tegra_se_pka1_rsa_setkey(struct crypto_akcipher *tfm,
 			if (i > PKA1_TIMEOUT) {
 				dev_err(se_dev->dev,
 					"PKA1 Load Key timed out\n");
-				return -EINVAL;
+				tegra_se_pka1_free_key_slot(ctx->slot);
+				ret = -EINVAL;
+				goto rel_mutex;
 			}
 			udelay(1);
 			val = se_elp_readl(se_dev, PKA1,
@@ -3398,4 +3416,3 @@ MODULE_DESCRIPTION("Tegra Elliptic Crypto algorithm support");
 MODULE_AUTHOR("NVIDIA Corporation");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("tegra-se-elp");
-

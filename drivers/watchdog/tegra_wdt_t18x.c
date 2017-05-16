@@ -303,52 +303,61 @@ static const struct watchdog_ops tegra_wdt_t18x_ops = {
 };
 
 #ifdef CONFIG_DEBUG_FS
-static int dump_registers_show(void *data, u64 *val)
+static int dump_registers_show(struct seq_file *s, void *unused)
 {
-	struct tegra_wdt_t18x *twdt_t18x = data;
+	struct tegra_wdt_t18x *twdt_t18x = s->private;
 
-	dev_info(twdt_t18x->dev, "Timer config register \t%x\n",
-		 readl(twdt_t18x->wdt_timer + TOP_TKE_TMR_PTV));
-	dev_info(twdt_t18x->dev, "Timer status register \t%x\n",
-		 readl(twdt_t18x->wdt_timer + TOP_TKE_TMR_PCR));
-	dev_info(twdt_t18x->dev, "Watchdog config register \t%x\n",
-		 readl(twdt_t18x->wdt_source + WDT_CFG));
-	dev_info(twdt_t18x->dev, "Watchdog status register \t%x\n",
-		 readl(twdt_t18x->wdt_source + WDT_STATUS));
-	dev_info(twdt_t18x->dev, "Watchdog command register \t%x\n",
-		 readl(twdt_t18x->wdt_source + WDT_CMD));
-	dev_info(twdt_t18x->dev, "Watchdog skip register \t%x\n",
-		 readl(twdt_t18x->wdt_source + WDT_SKIP));
-
-	*val = 0;
+	seq_printf(s, "Timer config register \t\t0x%08x\n",
+		   readl(twdt_t18x->wdt_timer + TOP_TKE_TMR_PTV));
+	seq_printf(s, "Timer status register \t\t0x%08x\n",
+		   readl(twdt_t18x->wdt_timer + TOP_TKE_TMR_PCR));
+	seq_printf(s, "Watchdog config register \t0x%08x\n",
+		   readl(twdt_t18x->wdt_source + WDT_CFG));
+	seq_printf(s, "Watchdog status register \t0x%08x\n",
+		   readl(twdt_t18x->wdt_source + WDT_STATUS));
+	seq_printf(s, "Watchdog command register \t0x%08x\n",
+		   readl(twdt_t18x->wdt_source + WDT_CMD));
+	seq_printf(s, "Watchdog skip register \t\t0x%08x\n",
+		   readl(twdt_t18x->wdt_source + WDT_SKIP));
 
 	return 0;
 }
 
-static int disable_dbg_reset_show(void *data, u64 *val)
+static int disable_dbg_reset_show(struct seq_file *s, void *unused)
 {
-	struct tegra_wdt_t18x *twdt_t18x = data;
+	struct tegra_wdt_t18x *twdt_t18x = s->private;
 
-	*val = twdt_t18x->config & WDT_CFG_DBG_RST_EN ? 0 : 1;
+	seq_printf(s, "%d\n",
+		   (twdt_t18x->config & WDT_CFG_DBG_RST_EN) ? 0 : 1);
 
 	return 0;
 }
 
-static int disable_por_reset_show(void *data, u64 *val)
+static int disable_por_reset_show(struct seq_file *s, void *unused)
 {
-	struct tegra_wdt_t18x *twdt_t18x = data;
+	struct tegra_wdt_t18x *twdt_t18x = s->private;
 
-	*val = (twdt_t18x->config & WDT_CFG_SYS_PORST_EN) ? 0 : 1;
+	seq_printf(s, "%d\n",
+		   (twdt_t18x->config & WDT_CFG_SYS_PORST_EN) ? 0 : 1);
 
 	return 0;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(dump_regs_fops, dump_registers_show,
-			NULL, "%lld\n");
-DEFINE_SIMPLE_ATTRIBUTE(disable_dbg_reset_fops, disable_dbg_reset_show,
-			NULL, "%lld\n");
-DEFINE_SIMPLE_ATTRIBUTE(disable_por_reset_fops, disable_por_reset_show,
-			NULL, "%lld\n");
+#define SIMPLE_FOPS(_name, _show)					\
+static int dbg_open_##_name(struct inode *inode, struct file *file)	\
+{									\
+	return single_open(file, _show, inode->i_private);		\
+}									\
+static const struct file_operations _name##_fops = {			\
+	.open = dbg_open_##_name,					\
+	.read = seq_read,						\
+	.llseek = seq_lseek,						\
+	.release = single_release,					\
+}
+
+SIMPLE_FOPS(dump_regs, dump_registers_show);
+SIMPLE_FOPS(disable_dbg_reset, disable_dbg_reset_show);
+SIMPLE_FOPS(disable_por_reset, disable_por_reset_show);
 
 static void tegra_wdt_t18x_debugfs_init(struct tegra_wdt_t18x *twdt_t18x)
 {

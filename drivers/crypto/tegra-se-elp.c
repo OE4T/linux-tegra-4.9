@@ -330,8 +330,10 @@ static bool tegra_se_ecdh_params_is_valid(struct ecdh *params)
 static int tegra_se_ecdh_set_params(struct tegra_se_ecdh_context *ctx,
 				    struct ecdh *params)
 {
-	if (!tegra_se_ecdh_params_is_valid(params))
+	if (!tegra_se_ecdh_params_is_valid(params)) {
+		dev_err(ctx->se_dev->dev, "Invalid ECDH parameters\n");
 		return -EINVAL;
+	}
 
 	ctx->curve_id = params->curve_id;
 
@@ -460,7 +462,7 @@ static u32 tegra_se_check_trng_op(struct tegra_se_elp_dev *se_dev)
 					(TRNG_LAST_RESEED_RESEED)))
 		return 0;
 
-	return -EINVAL;
+	return -EFAULT;
 }
 
 static u32 tegra_se_set_trng_op(struct tegra_se_elp_dev *se_dev)
@@ -480,7 +482,7 @@ static u32 tegra_se_set_trng_op(struct tegra_se_elp_dev *se_dev)
 		if (i > PKA1_TIMEOUT) {
 			dev_err(se_dev->dev,
 				"Poll TRNG seeded status timed out\n");
-			return -EINVAL;
+			return -ETIMEDOUT;
 		}
 		udelay(1);
 		val = se_elp_readl(se_dev, PKA1,
@@ -505,7 +507,7 @@ static u32 tegra_se_acquire_pka1_mutex(struct tegra_se_elp_dev *se_dev)
 	do {
 		if (i > PKA1_TIMEOUT) {
 			dev_err(se_dev->dev, "Acquire PKA1 Mutex timed out\n");
-			return -EINVAL;
+			return -ETIMEDOUT;
 		}
 		udelay(1);
 		val = se_elp_readl(se_dev, PKA1, TEGRA_SE_PKA1_MUTEX_OFFSET);
@@ -1272,7 +1274,7 @@ static int tegra_se_pka1_ecc_do(struct tegra_se_pka1_ecc_request *req)
 			if (i > PKA1_TIMEOUT) {
 				dev_err(se_dev->dev,
 					"PKA1 Load Key timed out\n");
-				ret = -EINVAL;
+				ret = -ETIMEDOUT;
 				goto out;
 			}
 			udelay(1);
@@ -1564,7 +1566,7 @@ static u32 tegra_se_acquire_rng1_mutex(struct tegra_se_elp_dev *se_dev)
 	do {
 		if (i > RNG1_TIMEOUT) {
 			dev_err(se_dev->dev, "Acquire RNG1 Mutex timed out\n");
-			return -EINVAL;
+			return -ETIMEDOUT;
 		}
 		udelay(1);
 		val = se_elp_readl(se_dev, RNG1, TEGRA_SE_RNG1_MUTEX_OFFSET);
@@ -1590,7 +1592,7 @@ static u32 tegra_se_check_rng1_status(struct tegra_se_elp_dev *se_dev)
 	do {
 		if (i > RNG1_TIMEOUT) {
 			dev_err(se_dev->dev, "RNG1 Idle timed out\n");
-			return -EINVAL;
+			return -ETIMEDOUT;
 		}
 		udelay(1);
 		val = se_elp_readl(se_dev, RNG1,
@@ -1616,7 +1618,7 @@ static u32 tegra_se_check_rng1_status(struct tegra_se_elp_dev *se_dev)
 		if (!val) {
 			dev_err(se_dev->dev,
 				"Wrong Startup value in RNG1_ISTATUS Reg\n");
-			return -EINVAL;
+			return -EFAULT;
 		}
 		rng1_first = false;
 	}
@@ -1627,7 +1629,7 @@ static u32 tegra_se_check_rng1_status(struct tegra_se_elp_dev *se_dev)
 	val = se_elp_readl(se_dev, RNG1, TEGRA_SE_RNG1_ISTATUS_OFFSET);
 	if (val) {
 		dev_err(se_dev->dev, "RNG1_ISTATUS Reg is not cleared\n");
-		return -EINVAL;
+		return -EFAULT;
 	}
 
 	return 0;
@@ -1704,7 +1706,7 @@ static int tegra_se_execute_rng1_ctrl_cmd(unsigned int cmd)
 	do {
 		if (i > RNG1_TIMEOUT) {
 			dev_err(se_dev->dev, "\nRNG1 ISTAT poll timed out\n");
-			return -EINVAL;
+			return -ETIMEDOUT;
 		}
 		udelay(1);
 		val = se_elp_readl(se_dev, RNG1, TEGRA_SE_RNG1_ISTATUS_OFFSET);
@@ -1718,7 +1720,7 @@ static int tegra_se_execute_rng1_ctrl_cmd(unsigned int cmd)
 	do {
 		if (i > RNG1_TIMEOUT) {
 			dev_err(se_dev->dev, "RNG1 INT status timed out\n");
-			return -EINVAL;
+			return -ETIMEDOUT;
 		}
 		udelay(1);
 		val = se_elp_readl(se_dev, RNG1,
@@ -1736,7 +1738,7 @@ static int tegra_se_execute_rng1_ctrl_cmd(unsigned int cmd)
 		dev_err(se_dev->dev, "RNG1 Command Failure: %s\n",
 			((cmd == RNG1_CMD_ZEROIZE) ? rng1_cmd[9] :
 			rng1_cmd[cmd]));
-		return -EINVAL;
+		return -EFAULT;
 	}
 
 	return 0;
@@ -1750,7 +1752,7 @@ static int tegra_se_check_rng1_alarms(void)
 	val = se_elp_readl(se_dev, RNG1, TEGRA_SE_RNG1_ALARMS_OFFSET);
 	if (val) {
 		dev_err(se_dev->dev, "RNG1 Alarms not cleared (0x%x)\n", val);
-		return -EINVAL;
+		return -EFAULT;
 	}
 
 	return 0;
@@ -1763,14 +1765,16 @@ static int tegra_se_pka1_get_precomp(struct tegra_se_pka1_rsa_context *ctx,
 	int ret;
 	struct tegra_se_elp_dev *se_dev;
 
-	if (ctx)
+	if (ctx) {
 		se_dev = ctx->se_dev;
-	else if (ecc_req)
+	} else if (ecc_req) {
 		se_dev = ecc_req->se_dev;
-	else if (mod_req)
+	} else if (mod_req) {
 		se_dev = mod_req->se_dev;
-	else
+	} else {
+		pr_err("Invalid rsa context\n");
 		return -EINVAL;
+	}
 
 	ret = tegra_se_pka1_precomp(ctx, ecc_req, mod_req, PRECOMP_RINV);
 	if (ret) {
@@ -1802,18 +1806,21 @@ static int tegra_se_pka1_rsa_op(struct akcipher_request *req)
 	u32 *MSG;
 
 	if (!req) {
+		dev_err(se_dev->dev, "Invalid RSA request\n");
 		ret = -EINVAL;
 		goto exit;
 	}
 
 	tfm = crypto_akcipher_reqtfm(req);
 	if (!tfm) {
+		dev_err(se_dev->dev, "Invalid RSA transform\n");
 		ret = -EINVAL;
 		goto exit;
 	}
 
 	ctx = akcipher_tfm_ctx(tfm);
 	if (!ctx || (se_dev->chipdata->use_key_slot && !ctx->slot)) {
+		dev_err(se_dev->dev, "Invalid RSA context\n");
 		ret = -EINVAL;
 		goto exit;
 	}
@@ -1822,17 +1829,20 @@ static int tegra_se_pka1_rsa_op(struct akcipher_request *req)
 	    (req->src_len > TEGRA_SE_PKA1_RSA4096_INPUT_SIZE) ||
 	    (req->dst_len < TEGRA_SE_PKA1_RSA512_INPUT_SIZE) ||
 	    (req->dst_len > TEGRA_SE_PKA1_RSA4096_INPUT_SIZE)) {
-		ret = -EINVAL;
+		dev_err(se_dev->dev, "RSA src/dst lengths not in range\n");
+		ret = -EDOM;
 		goto exit;
 	}
 
 	if (req->src_len != ctx->modlen) {
+		dev_err(se_dev->dev, "RSA source length invalid\n");
 		ret = -EINVAL;
 		goto exit;
 	}
 
 	cnt = sg_copy_to_buffer(req->src, 1, ctx->message, req->src_len);
 	if (cnt != req->src_len) {
+		dev_err(se_dev->dev, "sg_copy_to_buffer fail\n");
 		ret = -ENODATA;
 		goto exit;
 	}
@@ -1855,8 +1865,10 @@ static int tegra_se_pka1_rsa_op(struct akcipher_request *req)
 	tegra_se_read_pka1_rsa_result(ctx, nwords);
 
 	cnt = sg_copy_from_buffer(req->dst, 1, ctx->result, req->dst_len);
-	if (cnt != req->dst_len)
-		ret = -ENODATA;
+	if (cnt != req->dst_len) {
+		dev_err(ctx->se_dev->dev, "sg_copy_from_buffer fail\n");
+		ret = -ERANGE;
+	}
 exit:
 	clk_disable_unprepare(se_dev->c);
 
@@ -1868,17 +1880,22 @@ int tegra_se_pka1_ecc_op(struct tegra_se_pka1_ecc_request *req)
 	struct tegra_se_elp_dev *se_dev;
 	int ret;
 
-	if (!req)
+	if (!req) {
+		pr_err("Invalid ECC request\n");
 		return -EINVAL;
+	}
 
-	if (req->size < ECC_MIN_BYTES || req->size > ECC_MAX_BYTES)
-		return -EINVAL;
+	if (req->size < ECC_MIN_BYTES || req->size > ECC_MAX_BYTES) {
+		pr_err("ECC request size not in range\n");
+		return -EDOM;
+	}
 
 	ret = tegra_se_pka1_ecc_init(req);
 	if (ret)
 		return ret;
 
 	se_dev = req->se_dev;
+
 	ret = clk_prepare_enable(se_dev->c);
 	if (ret) {
 		dev_err(se_dev->dev, "clk_enable failed\n");
@@ -1912,8 +1929,10 @@ static int tegra_se_pka1_mod_op(struct tegra_se_pka1_mod_request *req)
 	struct tegra_se_elp_dev *se_dev;
 	int ret;
 
-	if (!req)
+	if (!req) {
+		pr_err("Invalid PKA1 Mod request\n");
 		return -EINVAL;
+	}
 
 	ret = tegra_se_pka1_mod_init(req);
 	if (ret)
@@ -2132,8 +2151,10 @@ static int tegra_se_ecdh_compute_shared_secret(struct tegra_se_elp_dev *se_dev,
 	int ret = -ENOMEM;
 	u32 priv[ECC_MAX_WORDS];
 
-	if (!private_key || !public_key)
-		return -EINVAL;
+	if (!private_key || !public_key) {
+		dev_err(se_dev->dev, "Invalid private/public Key\n");
+		return -ENODATA;
+	}
 
 	pk = tegra_se_ecc_alloc_point(se_dev, nwords);
 	if (!pk)
@@ -2157,8 +2178,10 @@ static int tegra_se_ecdh_compute_shared_secret(struct tegra_se_elp_dev *se_dev,
 
 	tegra_se_ecc_swap(product->x, secret, nwords);
 
-	if (tegra_se_ecc_vec_is_zero(product->x, nbytes))
-		ret = -ENODATA;
+	if (tegra_se_ecc_vec_is_zero(product->x, nbytes)) {
+		dev_err(se_dev->dev, "ECDH shared secret result is invalid\n");
+		ret = -ERANGE;
+	}
 err_pt_mult:
 	tegra_se_ecc_free_point(se_dev, product);
 exit:
@@ -2178,8 +2201,10 @@ static int tegra_se_ecdh_gen_pub_key(struct tegra_se_elp_dev *se_dev,
 	int nwords = nbytes / WORD_SIZE_BYTES;
 	u32 priv[ECC_MAX_WORDS];
 
-	if (!private_key)
-		return -EINVAL;
+	if (!private_key) {
+		dev_err(se_dev->dev, "Invalid ECDH private key\n");
+		return -ENODATA;
+	}
 
 	tegra_se_ecc_swap(private_key, priv, nwords);
 
@@ -2199,7 +2224,8 @@ static int tegra_se_ecdh_gen_pub_key(struct tegra_se_elp_dev *se_dev,
 	if (tegra_se_ecc_vec_is_zero(G->x, nbytes) ||
 	    ((cid != C25519_CURVE_C256) &&
 	     (tegra_se_ecc_vec_is_zero(G->y, nbytes)))) {
-		ret = -ENODATA;
+		dev_err(se_dev->dev, "ECDH public key result is invalid\n");
+		ret = -ERANGE;
 		goto out;
 	}
 
@@ -2209,6 +2235,7 @@ static int tegra_se_ecdh_gen_pub_key(struct tegra_se_elp_dev *se_dev,
 		tegra_se_ecc_swap(G->y, &public_key[nwords], nwords);
 out:
 	tegra_se_ecc_free_point(se_dev, G);
+
 	return ret;
 }
 
@@ -2221,22 +2248,30 @@ static int tegra_se_ecdh_compute_value(struct kpp_request *req)
 	const struct tegra_se_ecc_curve *curve;
 	int nwords = 0;
 
-	if (!req)
+	if (!req) {
+		pr_err("Invalid ECDH request\n");
 		return -EINVAL;
+	}
 
 	tfm = crypto_kpp_reqtfm(req);
-	if (!tfm)
-		return -ENODATA;
+	if (!tfm) {
+		pr_err("Invalid ECDH transform\n");
+		return -EINVAL;
+	}
 
 	ctx = kpp_tfm_ctx(tfm);
-	if (!ctx)
-		return -ENODATA;
+	if (!ctx) {
+		pr_err("Invalid ECDH context\n");
+		return -EINVAL;
+	}
 
 	ctx->se_dev = elp_dev;
 
 	curve = tegra_se_ecc_get_curve(ctx->curve_id);
-	if (!curve)
+	if (!curve) {
+		dev_err(ctx->se_dev->dev, "ECC Curve not supported\n");
 		return -ENOTSUPP;
+	}
 
 	sec_nbytes = curve->nbytes;
 	nwords = sec_nbytes / WORD_SIZE_BYTES;
@@ -2249,8 +2284,10 @@ static int tegra_se_ecdh_compute_value(struct kpp_request *req)
 	if (req->src) {
 		cnt = sg_copy_to_buffer(req->src, 1, ctx->public_key,
 					pub_nbytes);
-		if (cnt != pub_nbytes)
+		if (cnt != pub_nbytes) {
+			dev_err(ctx->se_dev->dev, "sg_copy_to_buffer fail\n");
 			return -ENODATA;
+		}
 
 		ret = tegra_se_ecdh_compute_shared_secret(ctx->se_dev,
 							  ctx->curve_id,
@@ -2263,8 +2300,10 @@ static int tegra_se_ecdh_compute_value(struct kpp_request *req)
 		buffer = ctx->shared_secret;
 
 		cnt = sg_copy_from_buffer(req->dst, 1, buffer, sec_nbytes);
-		if (cnt != sec_nbytes)
-			return -ENODATA;
+		if (cnt != sec_nbytes) {
+			dev_err(ctx->se_dev->dev, "sg_copy_from_buffer fail\n");
+			return -ERANGE;
+		}
 	} else {
 		ret = tegra_se_ecdh_gen_pub_key(ctx->se_dev, ctx->curve_id,
 						ctx->private_key,
@@ -2275,8 +2314,10 @@ static int tegra_se_ecdh_compute_value(struct kpp_request *req)
 		buffer = ctx->public_key;
 
 		cnt = sg_copy_from_buffer(req->dst, 1, buffer, pub_nbytes);
-		if (cnt != pub_nbytes)
-			return -ENODATA;
+		if (cnt != pub_nbytes) {
+			dev_err(ctx->se_dev->dev, "sg_copy_from_buffer fail\n");
+			return -ERANGE;
+		}
 	}
 
 	return 0;
@@ -2289,9 +2330,13 @@ static int tegra_se_ecdh_set_secret(struct crypto_kpp *tfm, void *buf,
 	struct ecdh params;
 	int ret;
 
+	ctx->se_dev = elp_dev;
+
 	ret = crypto_ecdh_decode_key(buf, len, &params);
-	if (ret)
+	if (ret) {
+		dev_err(ctx->se_dev->dev, "failed to decode ECDH input\n");
 		return ret;
+	}
 
 	ret = tegra_se_ecdh_set_params(ctx, &params);
 	if (ret)
@@ -2346,8 +2391,10 @@ static int tegra_se_pka1_rsa_setkey(struct crypto_akcipher *tfm,
 	int ret;
 	u16 modlen, explen, exp_words;
 
-	if (!ctx || !key)
+	if (!ctx || !key) {
+		dev_err(se_dev->dev, "No RSA context or Key\n");
 		return -EINVAL;
+	}
 
 	pkeydata = (u8 *)key;
 
@@ -2367,7 +2414,8 @@ static int tegra_se_pka1_rsa_setkey(struct crypto_akcipher *tfm,
 	explen = (keylen & SE_PKA1_RSA_EXP_BITS);
 
 	if ((modlen < 64) || (modlen > 512)) {
-		ret = -EINVAL;
+		dev_err(se_dev->dev, "Invalid RSA modulus length\n");
+		ret = -EDOM;
 		goto rel_mutex;
 	}
 
@@ -2378,8 +2426,10 @@ static int tegra_se_pka1_rsa_setkey(struct crypto_akcipher *tfm,
 	memcpy((u8 *)ctx->modulus, &pkeydata[explen], modlen);
 
 	ret = tegra_se_pka1_get_opmode(ctx);
-	if (ret)
+	if (ret < 0) {
+		dev_err(se_dev->dev, "Invalid RSA opmode\n");
 		goto rel_mutex;
+	}
 
 	ret = tegra_se_pka1_get_precomp(ctx, NULL, NULL);
 	if (ret)
@@ -2410,7 +2460,7 @@ static int tegra_se_pka1_rsa_setkey(struct crypto_akcipher *tfm,
 				dev_err(se_dev->dev,
 					"PKA1 Load Key timed out\n");
 				tegra_se_pka1_free_key_slot(ctx->slot);
-				ret = -EINVAL;
+				ret = -ETIMEDOUT;
 				goto rel_mutex;
 			}
 			udelay(1);
@@ -2446,12 +2496,16 @@ static int tegra_se_pka1_rsa_max_size(struct crypto_akcipher *tfm)
 {
 	struct tegra_se_pka1_rsa_context *ctx = akcipher_tfm_ctx(tfm);
 
-	if (!ctx)
+	if (!ctx) {
+		pr_err("No RSA context\n");
 		return -EINVAL;
+	}
 
 	if (ctx->modlen < TEGRA_SE_PKA1_RSA512_INPUT_SIZE ||
-	    ctx->modlen > TEGRA_SE_PKA1_RSA4096_INPUT_SIZE)
-		return -EINVAL;
+	    ctx->modlen > TEGRA_SE_PKA1_RSA4096_INPUT_SIZE) {
+		pr_err("Invalid RSA modulus length\n");
+		return -EDOM;
+	}
 
 	return ctx->modlen;
 }
@@ -2461,8 +2515,10 @@ static int tegra_se_pka1_rsa_init(struct crypto_akcipher *tfm)
 	struct tegra_se_pka1_rsa_context *ctx = akcipher_tfm_ctx(tfm);
 	struct tegra_se_elp_dev *se_dev = elp_dev;
 
-	if (!ctx)
+	if (!ctx) {
+		dev_err(se_dev->dev, "No RSA context\n");
 		return -EINVAL;
+	}
 
 	ctx->se_dev = se_dev;
 
@@ -2510,8 +2566,10 @@ static void tegra_se_pka1_rsa_exit(struct crypto_akcipher *tfm)
 	struct tegra_se_pka1_rsa_context *ctx = akcipher_tfm_ctx(tfm);
 	struct tegra_se_elp_dev *se_dev;
 
-	if (!ctx)
+	if (!ctx) {
+		pr_err("No RSA context\n");
 		return;
+	}
 
 	se_dev = ctx->se_dev;
 
@@ -3221,8 +3279,10 @@ static int tegra_se_elp_probe(struct platform_device *pdev)
 	for (i = 0; i < NR_RES; i++) {
 		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
 		se_dev->io_reg[i] = devm_ioremap_resource(se_dev->dev, res);
-		if (IS_ERR(se_dev->io_reg[i]))
+		if (IS_ERR(se_dev->io_reg[i])) {
+			dev_err(se_dev->dev, "ioremap failed\n");
 			return PTR_ERR(se_dev->io_reg[i]);
+		}
 
 		if (!se_dev->chipdata->rng1_supported)
 			break;
@@ -3231,7 +3291,7 @@ static int tegra_se_elp_probe(struct platform_device *pdev)
 	se_dev->irq = platform_get_irq(pdev, 0);
 	if (se_dev->irq <= 0) {
 		dev_err(&pdev->dev, "no irq resource\n");
-		return -ENODEV;
+		return -ENXIO;
 	}
 
 	err = devm_request_irq(se_dev->dev, se_dev->irq, tegra_se_pka1_irq, 0,

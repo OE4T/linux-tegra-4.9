@@ -587,9 +587,11 @@ static int tegra_xusb_usb2_port_parse_dt(struct tegra_xusb_usb2_port *usb2)
 			usb2->port_cap = USB_OTG_CAP;
 	}
 
-	usb2->supply = devm_regulator_get(&port->dev, "vbus");
-	if (IS_ERR(usb2->supply))
-		return PTR_ERR(usb2->supply);
+	if (tegra_platform_is_silicon()) {
+		usb2->supply = devm_regulator_get(&port->dev, "vbus");
+		if (IS_ERR(usb2->supply))
+			return PTR_ERR(usb2->supply);
+	}
 
 	return 0;
 }
@@ -757,9 +759,11 @@ static int tegra_xusb_usb3_port_parse_dt(struct tegra_xusb_usb3_port *usb3)
 
 	usb3->internal = of_property_read_bool(np, "nvidia,internal");
 
-	usb3->supply = devm_regulator_get(&port->dev, "vbus");
-	if (IS_ERR(usb3->supply))
-		return PTR_ERR(usb3->supply);
+	if (tegra_platform_is_silicon()) {
+		usb3->supply = devm_regulator_get(&port->dev, "vbus");
+		if (IS_ERR(usb3->supply))
+			return PTR_ERR(usb3->supply);
+	}
 
 	return 0;
 }
@@ -914,15 +918,17 @@ static int tegra_xusb_padctl_probe(struct platform_device *pdev)
 		goto remove;
 	}
 
-	padctl->rst = devm_reset_control_get(&pdev->dev, NULL);
-	if (IS_ERR(padctl->rst)) {
-		err = PTR_ERR(padctl->rst);
-		goto remove;
-	}
+	if (tegra_platform_is_silicon()) {
+		padctl->rst = devm_reset_control_get(&pdev->dev, NULL);
+		if (IS_ERR(padctl->rst)) {
+			err = PTR_ERR(padctl->rst);
+			goto remove;
+		}
 
-	err = reset_control_deassert(padctl->rst);
-	if (err < 0)
-		goto remove;
+		err = reset_control_deassert(padctl->rst);
+		if (err < 0)
+			goto remove;
+	}
 
 	err = tegra_xusb_setup_pads(padctl);
 	if (err < 0) {

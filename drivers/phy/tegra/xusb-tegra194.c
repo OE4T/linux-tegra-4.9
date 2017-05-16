@@ -690,12 +690,14 @@ tegra194_usb2_pad_probe(struct tegra_xusb_padctl *padctl,
 		goto out;
 	}
 
-	priv->usb2_trk_clk = devm_clk_get(&pad->dev, "trk");
-	if (IS_ERR(usb2->clk)) {
-		err = PTR_ERR(usb2->clk);
-		dev_dbg(&pad->dev,
-			"failed to get usb2 trk clock: %d\n", err);
-		goto unregister;
+	if (tegra_platform_is_silicon()) {
+		priv->usb2_trk_clk = devm_clk_get(&pad->dev, "trk");
+		if (IS_ERR(usb2->clk)) {
+			err = PTR_ERR(usb2->clk);
+			dev_dbg(&pad->dev,
+				"failed to get usb2 trk clock: %d\n", err);
+			goto unregister;
+		}
 	}
 
 	err = tegra_xusb_pad_register(pad, &utmi_phy_ops);
@@ -1238,9 +1240,11 @@ tegra194_xusb_padctl_probe(struct device *dev,
 	if (IS_ERR(priv->ao_regs))
 		return priv->ao_regs;
 
-	err = tegra194_xusb_read_fuse_calibration(priv);
-	if (err < 0)
-		return ERR_PTR(err);
+	if (tegra_platform_is_silicon()) {
+		err = tegra194_xusb_read_fuse_calibration(priv);
+		if (err < 0)
+			return ERR_PTR(err);
+	}
 
 	priv->prod_list = devm_tegra_prod_get(dev);
 	if (IS_ERR(priv->prod_list)) {

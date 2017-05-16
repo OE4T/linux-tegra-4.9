@@ -392,7 +392,6 @@ static int gk20a_channel_wait_semaphore(struct channel_gk20a *ch,
 	void *data;
 	u32 *semaphore;
 	int ret = 0;
-	long remain;
 
 	/* do not wait if channel has timed out */
 	if (ch->has_timedout)
@@ -413,15 +412,10 @@ static int gk20a_channel_wait_semaphore(struct channel_gk20a *ch,
 
 	semaphore = data + (offset & ~PAGE_MASK);
 
-	remain = NVGPU_COND_WAIT_INTERRUPTIBLE(
+	ret = NVGPU_COND_WAIT_INTERRUPTIBLE(
 			&ch->semaphore_wq,
 			*semaphore == payload || ch->has_timedout,
 			timeout);
-
-	if (remain == 0 && *semaphore != payload)
-		ret = -ETIMEDOUT;
-	else if (remain < 0)
-		ret = remain;
 
 	dma_buf_kunmap(dmabuf, offset >> PAGE_SHIFT, data);
 cleanup_put:

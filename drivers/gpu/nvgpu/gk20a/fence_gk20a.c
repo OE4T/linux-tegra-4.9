@@ -203,20 +203,13 @@ void gk20a_init_fence(struct gk20a_fence *f,
 
 static int nvgpu_semaphore_fence_wait(struct gk20a_fence *f, long timeout)
 {
-	long remain;
-
 	if (!nvgpu_semaphore_is_acquired(f->semaphore))
 		return 0;
 
-	remain = NVGPU_COND_WAIT_INTERRUPTIBLE(
+	return NVGPU_COND_WAIT_INTERRUPTIBLE(
 		f->semaphore_wq,
 		!nvgpu_semaphore_is_acquired(f->semaphore),
 		timeout);
-	if (remain == 0 && nvgpu_semaphore_is_acquired(f->semaphore))
-		return -ETIMEDOUT;
-	else if (remain < 0)
-		return remain;
-	return 0;
 }
 
 static bool nvgpu_semaphore_fence_is_expired(struct gk20a_fence *f)

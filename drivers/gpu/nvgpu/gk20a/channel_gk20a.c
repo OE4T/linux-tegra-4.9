@@ -409,7 +409,7 @@ static void gk20a_wait_until_counter_is_N(
 		if (NVGPU_COND_WAIT(
 			    c,
 			    atomic_read(counter) == wait_value,
-			    msecs_to_jiffies(5000)) > 0)
+			    5000) == 0)
 			break;
 
 		nvgpu_warn(ch->g,
@@ -1798,14 +1798,14 @@ static int gk20a_channel_poll_worker(void *arg)
 
 	start_wait = jiffies;
 	while (!nvgpu_thread_should_stop(&worker->poll_task)) {
-		bool got_events;
+		int ret;
 
-		got_events = NVGPU_COND_WAIT(
+		ret = NVGPU_COND_WAIT(
 				&worker->wq,
 				__gk20a_channel_worker_pending(g, get),
-				timeout) > 0;
+				jiffies_to_msecs(timeout)) > 0;
 
-		if (got_events)
+		if (ret == 0)
 			gk20a_channel_worker_process(g, &get);
 
 		if (jiffies - start_wait >= timeout) {

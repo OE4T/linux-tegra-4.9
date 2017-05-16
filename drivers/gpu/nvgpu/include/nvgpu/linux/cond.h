@@ -24,10 +24,57 @@ struct nvgpu_cond {
 	wait_queue_head_t wq;
 };
 
+/**
+ * NVGPU_COND_WAIT - Wait for a condition to be true
+ *
+ * @c - The condition variable to sleep on
+ * @condition - The condition that needs to be true
+ * @timeout_ms - Timeout in milliseconds, or 0 for infinite wait
+ *
+ * Wait for a condition to become true. Returns -ETIMEOUT if
+ * the wait timed out with condition false.
+ */
 #define NVGPU_COND_WAIT(c, condition, timeout_ms) \
-	wait_event_timeout((c)->wq, condition, timeout_ms)
+({\
+	int ret = 0; \
+	long _timeout_ms = timeout_ms;\
+	if (_timeout_ms > 0) { \
+		long _ret = wait_event_timeout((c)->wq, condition, \
+						 msecs_to_jiffies(_timeout_ms)); \
+		if (_ret == 0) \
+			ret = -ETIMEDOUT; \
+	} else { \
+		wait_event((c)->wq, condition); \
+	} \
+	ret;\
+})
 
+/**
+ * NVGPU_COND_WAIT_INTERRUPTIBLE - Wait for a condition to be true
+ *
+ * @c - The condition variable to sleep on
+ * @condition - The condition that needs to be true
+ * @timeout_ms - Timeout in milliseconds, or 0 for infinite wait
+ *
+ * Wait for a condition to become true. Returns -ETIMEOUT if
+ * the wait timed out with condition false or -ERESTARTSYS on
+ * signal.
+ */
 #define NVGPU_COND_WAIT_INTERRUPTIBLE(c, condition, timeout_ms) \
-	wait_event_interruptible_timeout((c)->wq, condition, timeout_ms)
+({ \
+	int ret = 0; \
+	long _timeout_ms = timeout_ms;\
+	if (_timeout_ms > 0) { \
+		long _ret = wait_event_interruptible_timeout((c)->wq, condition, \
+						 msecs_to_jiffies(_timeout_ms)); \
+		if (_ret == 0) \
+			ret = -ETIMEDOUT; \
+		else if (_ret == -ERESTARTSYS) \
+			ret = -ERESTARTSYS; \
+	} else { \
+		wait_event_interruptible((c)->wq, condition); \
+	} \
+	ret; \
+})
 
 #endif /* __NVGPU_LOCK_LINUX_H__ */

@@ -29,5 +29,5 @@ config PINCTRL_TEGRA_XUSB
 	select PINCONF
 	select PINMUX
 
-trysource "../t18x/drivers/pinctrl/Kconfig.t18x"
-trysource "drivers/pinctrl/Kconfig.t18x"
+trysource "../nvidia/drivers/pinctrl/Kconfig.nvidia"
+trysource "drivers/pinctrl/Kconfig.nvidia"

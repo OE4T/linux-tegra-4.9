@@ -1218,7 +1218,7 @@ config GPIO_VIPERBOARD
 
 endmenu
 
-trysource "../t18x/drivers/gpio/Kconfig.t18x"
-trysource "drivers/gpio/Kconfig.t18x"
+trysource "../nvidia/drivers/gpio/Kconfig.nvidia"
+trysource "drivers/gpio/Kconfig.nvidia"
 
 endif

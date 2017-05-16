@@ -601,7 +601,7 @@ config DMATEST
 config DMA_ENGINE_RAID
 	bool
 
-trysource "../t18x/drivers/dma/Kconfig.t18x"
-trysource "drivers/dma/Kconfig.t18x"
+trysource "../nvidia/drivers/dma/Kconfig.nvidia"
+trysource "drivers/dma/Kconfig.nvidia"
 
 endif

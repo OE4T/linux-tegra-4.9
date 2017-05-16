@@ -191,19 +191,17 @@ EXPORT_SYMBOL(t19x_mce_online_core);
 /**
  * Program Auto-CC3 feature.
  *
- * @freq:		freq of IDLE voltage/freq register
- * @volt:		volt of IDLE voltage/freq register
+ * @ndiv:		ndiv of IDLE freq register
  * @enable:		enable bit for Auto-CC3
  *
  * Returns 0 if success.
  */
-int t19x_mce_cc3_ctrl(u32 freq, u32 volt, u8 enable)
+int t19x_mce_cc3_ctrl(u32 ndiv, u8 enable)
 {
 	struct mce_regs regs;
 
-	regs.args[0] = freq;
-	regs.args[1] = volt;
-	regs.args[2] = enable;
+	regs.args[0] = ndiv;
+	regs.args[1] = enable;
 	return send_smc(MCE_SMC_CC3_CTRL, &regs);
 }
 EXPORT_SYMBOL(t19x_mce_cc3_ctrl);

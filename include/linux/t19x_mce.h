@@ -27,7 +27,7 @@ int t19x_mce_read_cstate_stats(u32 state, u32 *stats);
 int t19x_mce_write_cstate_stats(u32 state, u32 stats);
 int t19x_mce_is_sc7_allowed(u32 state, u32 wake, u32 *allowed);
 int t19x_mce_online_core(int cpu);
-int t19x_mce_cc3_ctrl(u32 freq, u32 volt, u8 enable);
+int t19x_mce_cc3_ctrl(u32 ndiv, u8 enable);
 int t19x_mce_echo_data(u32 data, int *matched);
 int t19x_mce_read_versions(u32 *major, u32 *minor);
 int t19x_mce_enum_features(u64 *features);

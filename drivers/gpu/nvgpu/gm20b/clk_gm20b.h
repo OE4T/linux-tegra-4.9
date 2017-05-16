@@ -23,8 +23,15 @@
 
 void gm20b_init_clk_ops(struct gpu_ops *gops);
 
-#ifdef CONFIG_COMMON_CLK
-int gm20b_register_gpcclk(struct gk20a *g);
-#endif
+int gm20b_init_clk_setup_sw(struct gk20a *g);
+
+int gm20b_clk_prepare(struct clk_gk20a *clk);
+void gm20b_clk_unprepare(struct clk_gk20a *clk);
+int gm20b_clk_is_prepared(struct clk_gk20a *clk);
+unsigned long gm20b_recalc_rate(struct clk_gk20a *clk, unsigned long parent_rate);
+int gm20b_gpcclk_set_rate(struct clk_gk20a *clk, unsigned long rate,
+		unsigned long parent_rate);
+long gm20b_round_rate(struct clk_gk20a *clk, unsigned long rate,
+		unsigned long *parent_rate);
 
 #endif /* _NVHOST_CLK_GM20B_H_ */

@@ -1131,13 +1131,7 @@ static int clk_disable_gpcpll(struct gk20a *g, int allow_slide)
 	return 0;
 }
 
-static int gm20b_init_clk_reset_enable_hw(struct gk20a *g)
-{
-	gk20a_dbg_fn("");
-	return 0;
-}
-
-static int gm20b_init_clk_setup_sw(struct gk20a *g)
+int gm20b_init_clk_setup_sw(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
 	unsigned long safe_rate;
@@ -1238,13 +1232,11 @@ fail:
 }
 
 
-#ifdef CONFIG_COMMON_CLK
 static int set_pll_freq(struct gk20a *g, int allow_slide);
 static int set_pll_target(struct gk20a *g, u32 freq, u32 old_freq);
 
-static int gm20b_clk_prepare(struct clk_hw *hw)
+int gm20b_clk_prepare(struct clk_gk20a *clk)
 {
-	struct clk_gk20a *clk = to_clk_gk20a(hw);
 	int ret = 0;
 
 	nvgpu_mutex_acquire(&clk->clk_mutex);
@@ -1254,34 +1246,27 @@ static int gm20b_clk_prepare(struct clk_hw *hw)
 	return ret;
 }
 
-static void gm20b_clk_unprepare(struct clk_hw *hw)
+void gm20b_clk_unprepare(struct clk_gk20a *clk)
 {
-	struct clk_gk20a *clk = to_clk_gk20a(hw);
-
 	nvgpu_mutex_acquire(&clk->clk_mutex);
 	if (clk->gpc_pll.enabled && clk->clk_hw_on)
 		clk_disable_gpcpll(clk->g, 1);
 	nvgpu_mutex_release(&clk->clk_mutex);
 }
 
-static int gm20b_clk_is_prepared(struct clk_hw *hw)
+int gm20b_clk_is_prepared(struct clk_gk20a *clk)
 {
-	struct clk_gk20a *clk = to_clk_gk20a(hw);
-
 	return clk->gpc_pll.enabled && clk->clk_hw_on;
 }
 
-static unsigned long gm20b_recalc_rate(struct clk_hw *hw, unsigned long parent_rate)
+unsigned long gm20b_recalc_rate(struct clk_gk20a *clk, unsigned long parent_rate)
 {
-	struct clk_gk20a *clk = to_clk_gk20a(hw);
-
 	return rate_gpc2clk_to_gpu(clk->gpc_pll.freq);
 }
 
-static int gm20b_gpcclk_set_rate(struct clk_hw *hw, unsigned long rate,
+int gm20b_gpcclk_set_rate(struct clk_gk20a *clk, unsigned long rate,
 				 unsigned long parent_rate)
 {
-	struct clk_gk20a *clk = to_clk_gk20a(hw);
 	u32 old_freq;
 	int ret = -ENODATA;
 
@@ -1295,10 +1280,9 @@ static int gm20b_gpcclk_set_rate(struct clk_hw *hw, unsigned long rate,
 	return ret;
 }
 
-static long gm20b_round_rate(struct clk_hw *hw, unsigned long rate,
+long gm20b_round_rate(struct clk_gk20a *clk, unsigned long rate,
 			     unsigned long *parent_rate)
 {
-	struct clk_gk20a *clk = to_clk_gk20a(hw);
 	u32 freq;
 	struct pll tmp_pll;
 	unsigned long maxrate;
@@ -1320,48 +1304,6 @@ static long gm20b_round_rate(struct clk_hw *hw, unsigned long rate,
 
 	return rate_gpc2clk_to_gpu(tmp_pll.freq);
 }
-
-static const struct clk_ops gm20b_clk_ops = {
-	.prepare = gm20b_clk_prepare,
-	.unprepare = gm20b_clk_unprepare,
-	.is_prepared = gm20b_clk_is_prepared,
-	.recalc_rate = gm20b_recalc_rate,
-	.set_rate = gm20b_gpcclk_set_rate,
-	.round_rate = gm20b_round_rate,
-};
-
-int gm20b_register_gpcclk(struct gk20a *g) {
-	const char *parent_name = "pllg_ref";
-	struct clk_gk20a *clk = &g->clk;
-	struct clk_init_data init;
-	struct clk *c;
-	int err = 0;
-
-	err = gm20b_init_clk_setup_sw(g);
-	if (err)
-		return err;
-
-	init.name = "gpcclk";
-	init.ops = &gm20b_clk_ops;
-	init.parent_names = &parent_name;
-	init.num_parents = 1;
-	init.flags = 0;
-
-	/* Data in .init is copied by clk_register(), so stack variable OK */
-	clk->hw.init = &init;
-	c = clk_register(g->dev, &clk->hw);
-	if (IS_ERR(c)) {
-		nvgpu_err(g, "Failed to register GPCPLL clock");
-		return -EINVAL;
-	}
-
-	clk->g = g;
-	clk_register_clkdev(c, "gpcclk", "gpcclk");
-
-	return err;
-}
-#endif /* CONFIG_COMMON_CLK */
-
 
 static int gm20b_init_clk_setup_hw(struct gk20a *g)
 {
@@ -1474,10 +1416,6 @@ static int gm20b_init_clk_support(struct gk20a *g)
 	u32 err;
 
 	gk20a_dbg_fn("");
-
-	err = gm20b_init_clk_reset_enable_hw(g);
-	if (err)
-		return err;
 
 	nvgpu_mutex_acquire(&clk->clk_mutex);
 	clk->clk_hw_on = true;

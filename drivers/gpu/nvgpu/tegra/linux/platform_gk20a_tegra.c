@@ -753,6 +753,87 @@ void gk20a_tegra_init_secure_alloc(struct gk20a *g)
 	g->ops.mm.secure_alloc = gk20a_tegra_secure_alloc;
 }
 
+#ifdef CONFIG_COMMON_CLK
+static int gm20b_clk_prepare_ops(struct clk_hw *hw)
+{
+	struct clk_gk20a *clk = to_clk_gk20a(hw);
+	return gm20b_clk_prepare(clk);
+}
+
+static void gm20b_clk_unprepare_ops(struct clk_hw *hw)
+{
+	struct clk_gk20a *clk = to_clk_gk20a(hw);
+	gm20b_clk_unprepare(clk);
+}
+
+static int gm20b_clk_is_prepared_ops(struct clk_hw *hw)
+{
+	struct clk_gk20a *clk = to_clk_gk20a(hw);
+	return gm20b_clk_is_prepared(clk);
+}
+
+static unsigned long gm20b_recalc_rate_ops(struct clk_hw *hw, unsigned long parent_rate)
+{
+	struct clk_gk20a *clk = to_clk_gk20a(hw);
+	return gm20b_recalc_rate(clk, parent_rate);
+}
+
+static int gm20b_gpcclk_set_rate_ops(struct clk_hw *hw, unsigned long rate,
+				 unsigned long parent_rate)
+{
+	struct clk_gk20a *clk = to_clk_gk20a(hw);
+	return gm20b_gpcclk_set_rate(clk, rate, parent_rate);
+}
+
+static long gm20b_round_rate_ops(struct clk_hw *hw, unsigned long rate,
+			     unsigned long *parent_rate)
+{
+	struct clk_gk20a *clk = to_clk_gk20a(hw);
+	return gm20b_round_rate(clk, rate, parent_rate);
+}
+
+static const struct clk_ops gm20b_clk_ops = {
+	.prepare = gm20b_clk_prepare_ops,
+	.unprepare = gm20b_clk_unprepare_ops,
+	.is_prepared = gm20b_clk_is_prepared_ops,
+	.recalc_rate = gm20b_recalc_rate_ops,
+	.set_rate = gm20b_gpcclk_set_rate_ops,
+	.round_rate = gm20b_round_rate_ops,
+};
+
+static int gm20b_register_gpcclk(struct gk20a *g)
+{
+	const char *parent_name = "pllg_ref";
+	struct clk_gk20a *clk = &g->clk;
+	struct clk_init_data init;
+	struct clk *c;
+	int err = 0;
+
+	err = gm20b_init_clk_setup_sw(g);
+	if (err)
+		return err;
+
+	init.name = "gpcclk";
+	init.ops = &gm20b_clk_ops;
+	init.parent_names = &parent_name;
+	init.num_parents = 1;
+	init.flags = 0;
+
+	/* Data in .init is copied by clk_register(), so stack variable OK */
+	clk->hw.init = &init;
+	c = clk_register(g->dev, &clk->hw);
+	if (IS_ERR(c)) {
+		nvgpu_err(g, "Failed to register GPCPLL clock");
+		return -EINVAL;
+	}
+
+	clk->g = g;
+	clk_register_clkdev(c, "gpcclk", "gpcclk");
+
+	return err;
+}
+#endif /* CONFIG_COMMON_CLK */
+
 static int gk20a_tegra_probe(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);

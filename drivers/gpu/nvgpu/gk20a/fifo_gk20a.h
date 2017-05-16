@@ -216,6 +216,7 @@ static inline const char *gk20a_fifo_interleave_level_name(u32 interleave_level)
 struct ch_state {
 	int pid;
 	int refs;
+	bool deterministic;
 	u32 inst_block[0];
 };
 

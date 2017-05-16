@@ -1359,6 +1359,10 @@ struct nvgpu_alloc_gpfifo_ex_args {
 /*
  * Channel shall exhibit deterministic behavior in the submit path.
  *
+ * NOTE: as an exception, VPR resize may still cause the GPU to reset at any
+ * time, which is not deterministic behavior. If this is not acceptable, the
+ * user has to make sure that VPR resize does not occur.
+ *
  * With this flag, any submits with in-kernel job tracking also require that
  * num_inflight_jobs is nonzero, and additionally that
  * NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_SUBMIT_FULL is found in gpu

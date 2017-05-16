@@ -1025,6 +1025,12 @@ struct gk20a {
 	u32 log_trace;
 
 	struct rw_semaphore busy_lock;
+	/*
+	 * Guards access to hardware when usual gk20a_{busy,idle} are skipped
+	 * for submits and held for channel lifetime but dropped for an ongoing
+	 * gk20a_do_idle().
+	 */
+	struct rw_semaphore deterministic_busy;
 
 	struct nvgpu_falcon pmu_flcn;
 	struct nvgpu_falcon sec2_flcn;

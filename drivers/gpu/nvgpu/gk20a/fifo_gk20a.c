@@ -3494,10 +3494,11 @@ void gk20a_dump_channel_status_ramfc(struct gk20a *g,
 	syncpointa = inst_mem[ram_fc_syncpointa_w()];
 	syncpointb = inst_mem[ram_fc_syncpointb_w()];
 
-	gk20a_debug_output(o, "%d-%s, pid %d, refs: %d: ", hw_chid,
+	gk20a_debug_output(o, "%d-%s, pid %d, refs %d%s: ", hw_chid,
 			g->name,
 			ch_state->pid,
-			ch_state->refs);
+			ch_state->refs,
+			ch_state->deterministic ? ", deterministic" : "");
 	gk20a_debug_output(o, "channel status: %s in use %s %s\n",
 			ccsr_channel_enable_v(channel) ? "" : "not",
 			gk20a_decode_ccsr_chan_status(status),
@@ -3576,6 +3577,7 @@ void gk20a_debug_dump_all_channel_status_ramfc(struct gk20a *g,
 
 		ch_state[chid]->pid = ch->pid;
 		ch_state[chid]->refs = atomic_read(&ch->ref_count);
+		ch_state[chid]->deterministic = ch->deterministic;
 		nvgpu_mem_rd_n(g, &ch->inst_block, 0,
 				&ch_state[chid]->inst_block[0],
 				ram_in_alloc_size_v());

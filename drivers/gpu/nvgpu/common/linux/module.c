@@ -298,6 +298,12 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 	bool is_railgated;
 	int err = 0;
 
+	/*
+	 * Hold back deterministic submits and changes to deterministic
+	 * channels - this must be outside the power busy locks.
+	 */
+	gk20a_channel_deterministic_idle(g);
+
 	/* acquire busy lock to block other busy() calls */
 	down_write(&g->busy_lock);
 
@@ -403,6 +409,7 @@ fail_drop_usage_count:
 fail_timeout:
 	nvgpu_mutex_release(&platform->railgate_lock);
 	up_write(&g->busy_lock);
+	gk20a_channel_deterministic_unidle(g);
 	return -EBUSY;
 }
 
@@ -455,6 +462,8 @@ int __gk20a_do_unidle(struct device *dev)
 	/* release the lock and open up all other busy() calls */
 	nvgpu_mutex_release(&platform->railgate_lock);
 	up_write(&g->busy_lock);
+
+	gk20a_channel_deterministic_unidle(g);
 
 	return 0;
 }

@@ -575,8 +575,15 @@ unbind:
 	g->ops.fifo.unbind_channel(ch);
 	g->ops.fifo.free_inst(g, ch);
 
+	/* put back the channel-wide submit ref from init */
+	if (ch->deterministic) {
+		down_read(&g->deterministic_busy);
+		ch->deterministic = false;
+		gk20a_idle(g);
+		up_read(&g->deterministic_busy);
+	}
+
 	ch->vpr = false;
-	ch->deterministic = false;
 	ch->vm = NULL;
 
 	WARN_ON(ch->sync);
@@ -1228,22 +1235,42 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 	if (flags & NVGPU_ALLOC_GPFIFO_EX_FLAGS_VPR_ENABLED)
 		c->vpr = true;
 
-	if (flags & NVGPU_ALLOC_GPFIFO_EX_FLAGS_DETERMINISTIC)
+	if (flags & NVGPU_ALLOC_GPFIFO_EX_FLAGS_DETERMINISTIC) {
+		down_read(&g->deterministic_busy);
+		/*
+		 * Railgating isn't deterministic; instead of disallowing
+		 * railgating globally, take a power refcount for this
+		 * channel's lifetime. The gk20a_idle() pair for this happens
+		 * when the channel gets freed.
+		 *
+		 * Deterministic flag and this busy must be atomic within the
+		 * busy lock.
+		 */
+		err = gk20a_busy(g);
+		if (err) {
+			up_read(&g->deterministic_busy);
+			return err;
+		}
+
 		c->deterministic = true;
+		up_read(&g->deterministic_busy);
+	}
 
 	/* an address space needs to have been bound at this point. */
 	if (!gk20a_channel_as_bound(c)) {
 		nvgpu_err(g,
 			    "not bound to an address space at time of gpfifo"
 			    " allocation.");
-		return -EINVAL;
+		err = -EINVAL;
+		goto clean_up_idle;
 	}
 	ch_vm = c->vm;
 
 	if (c->gpfifo.mem.size) {
 		nvgpu_err(g, "channel %d :"
 			   "gpfifo already allocated", c->hw_chid);
-		return -EEXIST;
+		err = -EEXIST;
+		goto clean_up_idle;
 	}
 
 	err = nvgpu_dma_alloc_map_sys(ch_vm,
@@ -1336,6 +1363,13 @@ clean_up_unmap:
 	nvgpu_dma_unmap_free(ch_vm, &c->gpfifo.mem);
 clean_up:
 	memset(&c->gpfifo, 0, sizeof(struct gpfifo_desc));
+clean_up_idle:
+	if (c->deterministic) {
+		down_read(&g->deterministic_busy);
+		gk20a_idle(g);
+		c->deterministic = false;
+		up_read(&g->deterministic_busy);
+	}
 	nvgpu_err(g, "fail");
 	return err;
 }
@@ -2089,7 +2123,13 @@ static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
 
 		channel_gk20a_free_job(c, job);
 		job_finished = 1;
-		gk20a_idle(g);
+
+		/*
+		 * Deterministic channels have a channel-wide power reference;
+		 * for others, there's one per submit.
+		 */
+		if (!c->deterministic)
+			gk20a_idle(g);
 
 		if (!clean_all) {
 			/* Timeout isn't supported here so don't touch it. */
@@ -2457,7 +2497,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	 * Job tracking is necessary for any of the following conditions:
 	 *  - pre- or post-fence functionality
 	 *  - channel wdt
-	 *  - GPU rail-gating
+	 *  - GPU rail-gating with non-deterministic channels
 	 *  - buffer refcounting
 	 *
 	 * If none of the conditions are met, then job tracking is not
@@ -2467,7 +2507,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	need_job_tracking = (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT) ||
 			(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET) ||
 			c->wdt_enabled ||
-			g->can_railgate ||
+			(g->can_railgate && !c->deterministic) ||
 			!skip_buffer_refcounting;
 
 	if (need_job_tracking) {
@@ -2495,7 +2535,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		 *   behavior of the clean-up operation non-deterministic
 		 *   (should not be performed in the submit path)
 		 * - channel wdt
-		 * - GPU rail-gating
+		 * - GPU rail-gating with non-deterministic channels
 		 * - buffer refcounting
 		 *
 		 * If none of the conditions are met, then deferred clean-up
@@ -2505,7 +2545,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		need_deferred_cleanup = !c->deterministic ||
 					need_sync_framework ||
 					c->wdt_enabled ||
-					g->can_railgate ||
+					(g->can_railgate &&
+					 !c->deterministic) ||
 					!skip_buffer_refcounting;
 
 		/*
@@ -2515,12 +2556,20 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		if (c->deterministic && need_deferred_cleanup)
 			return -EINVAL;
 
-		/* released by job cleanup via syncpt or sema interrupt */
-		err = gk20a_busy(g);
-		if (err) {
-			nvgpu_err(g, "failed to host gk20a to submit gpfifo, process %s",
-				current->comm);
-			return err;
+		if (!c->deterministic) {
+			/*
+			 * Get a power ref unless this is a deterministic
+			 * channel that holds them during the channel lifetime.
+			 * This one is released by gk20a_channel_clean_up_jobs,
+			 * via syncpt or sema interrupt, whichever is used.
+			 */
+			err = gk20a_busy(g);
+			if (err) {
+				nvgpu_err(g,
+					"failed to host gk20a to submit gpfifo, process %s",
+					current->comm);
+				return err;
+			}
 		}
 
 		if (!need_deferred_cleanup) {
@@ -2528,6 +2577,11 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			gk20a_channel_clean_up_jobs(c, false);
 		}
 	}
+
+
+	/* Grab access to HW to deal with do_idle */
+	if (c->deterministic)
+		down_read(&g->deterministic_busy);
 
 	trace_gk20a_channel_submit_gpfifo(g->name,
 					  c->hw_chid,
@@ -2601,6 +2655,10 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	g->ops.fifo.userd_gp_put(g, c);
 
+	/* No hw access beyond this point */
+	if (c->deterministic)
+		up_read(&g->deterministic_busy);
+
 	trace_gk20a_channel_submitted_gpfifo(g->name,
 				c->hw_chid,
 				num_entries,
@@ -2622,9 +2680,88 @@ clean_up:
 	gk20a_dbg_fn("fail");
 	gk20a_fence_put(pre_fence);
 	gk20a_fence_put(post_fence);
-	if (need_deferred_cleanup)
+	if (c->deterministic)
+		up_read(&g->deterministic_busy);
+	else if (need_deferred_cleanup)
 		gk20a_idle(g);
+
 	return err;
+}
+
+/*
+ * Stop deterministic channel activity for do_idle() when power needs to go off
+ * momentarily but deterministic channels keep power refs for potentially a
+ * long time.
+ *
+ * Takes write access on g->deterministic_busy.
+ *
+ * Must be paired with gk20a_channel_deterministic_unidle().
+ */
+void gk20a_channel_deterministic_idle(struct gk20a *g)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	u32 chid;
+
+	/* Grab exclusive access to the hw to block new submits */
+	down_write(&g->deterministic_busy);
+
+	for (chid = 0; chid < f->num_channels; chid++) {
+		struct channel_gk20a *ch = &f->channel[chid];
+
+		if (!gk20a_channel_get(ch))
+			continue;
+
+		if (ch->deterministic) {
+			/*
+			 * Drop the power ref taken when setting deterministic
+			 * flag. deterministic_unidle will put this and the
+			 * channel ref back.
+			 *
+			 * Hold the channel ref: it must not get freed in
+			 * between. A race could otherwise result in lost
+			 * gk20a_busy() via unidle, and in unbalanced
+			 * gk20a_idle() via closing the channel.
+			 */
+			gk20a_idle(g);
+		} else {
+			/* Not interesting, carry on. */
+			gk20a_channel_put(ch);
+		}
+	}
+}
+
+/*
+ * Allow deterministic channel activity again for do_unidle().
+ *
+ * This releases write access on g->deterministic_busy.
+ */
+void gk20a_channel_deterministic_unidle(struct gk20a *g)
+{
+	struct fifo_gk20a *f = &g->fifo;
+	u32 chid;
+
+	for (chid = 0; chid < f->num_channels; chid++) {
+		struct channel_gk20a *ch = &f->channel[chid];
+
+		if (!gk20a_channel_get(ch))
+			continue;
+
+		/*
+		 * Deterministic state changes inside deterministic_busy lock,
+		 * which we took in deterministic_idle.
+		 */
+		if (ch->deterministic) {
+			if (gk20a_busy(g))
+				nvgpu_err(g, "cannot busy() again!");
+			/* Took this in idle() */
+			gk20a_channel_put(ch);
+		}
+
+		gk20a_channel_put(ch);
+	}
+
+	/* Release submits, new deterministic channels and frees */
+	up_write(&g->deterministic_busy);
 }
 
 int gk20a_init_channel_support(struct gk20a *g, u32 chid)

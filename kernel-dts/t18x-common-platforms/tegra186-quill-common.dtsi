@@ -65,6 +65,7 @@
 	};
 
 	i2c@3180000 {
+		compatible = "nvidia,tegra-i2c-rtcpu";
 		status = "okay";
 	};
 

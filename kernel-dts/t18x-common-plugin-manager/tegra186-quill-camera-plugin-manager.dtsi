@@ -1062,6 +1062,13 @@
 					};
 				};
 			};
+			/* I2C default */
+			override@73 {
+				target = <&cam_i2c>;
+				_overlay_ {
+					compatible = "nvidia,tegra186-i2c";
+				};
+			};
 		};
 
 		/* E3322 camera board */
@@ -1784,14 +1791,6 @@
 					status = "okay";
 				};
 			};
-			/* I2C default */
-			override@15 {
-				target = <&cam_i2c>;
-				_overlay_ {
-					compatible = "nvidia,tegra-i2c-rtcpu";
-				};
-			};
-
 		};
 
 		fragment-imx274@0 {
@@ -1928,13 +1927,6 @@
 						output-high;
 						status = "okay";
 					};
-				};
-			};
-			/* I2C default */
-			override@16 {
-				target = <&cam_i2c>;
-				_overlay_ {
-					compatible = "nvidia,tegra-i2c-rtcpu";
 				};
 			};
 		};

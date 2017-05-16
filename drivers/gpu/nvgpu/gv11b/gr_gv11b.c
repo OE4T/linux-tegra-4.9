@@ -1436,12 +1436,17 @@ static int gr_gv11b_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 	u32 addr_lo;
 	u32 addr_hi;
 	struct ctx_header_desc *ctx;
+	int err;
 
 	gk20a_dbg_fn("");
 
-	gv11b_alloc_subctx_header(c);
+	err = gv11b_alloc_subctx_header(c);
+	if (err)
+		return err;
 
-	gv11b_update_subctx_header(c, gpu_va);
+	err = gv11b_update_subctx_header(c, gpu_va);
+	if (err)
+		return err;
 
 	ctx = &c->ch_ctx.ctx_header;
 	addr_lo = u64_lo32(ctx->mem.gpu_va) >> ram_in_base_shift_v();

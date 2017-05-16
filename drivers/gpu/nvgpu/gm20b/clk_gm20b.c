@@ -22,7 +22,6 @@
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #endif
-#include <linux/clk/tegra.h>
 #include <soc/tegra/fuse.h>
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
 #include <soc/tegra/tegra-dvfs.h>
@@ -1142,7 +1141,7 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
 	unsigned long safe_rate;
-	struct clk *ref, *c;
+	struct clk *ref = NULL, *c;
 	int err;
 
 	gk20a_dbg_fn("");
@@ -1178,12 +1177,7 @@ static int gm20b_init_clk_setup_sw(struct gk20a *g)
 	 */
 	c = clk_get_parent(clk->tegra_clk);
 
-#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
-	ref = clk_get_parent(clk_get_parent(c));
-#elif defined (CONFIG_COMMON_CLK)
 	ref = clk_get_sys("gpu_ref", "gpu_ref");
-#endif
-
 	if (IS_ERR(ref)) {
 		nvgpu_err(g, "failed to get GPCPLL reference clock");
 		err = -EINVAL;
@@ -1474,91 +1468,6 @@ static int set_pll_freq(struct gk20a *g, int allow_slide)
 	return err;
 }
 
-#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
-static int gm20b_clk_export_set_rate(void *data, unsigned long *rate)
-{
-	u32 old_freq;
-	int ret = -ENODATA;
-	struct gk20a *g = data;
-	struct clk_gk20a *clk = &g->clk;
-
-	if (rate) {
-		nvgpu_mutex_acquire(&clk->clk_mutex);
-		old_freq = clk->gpc_pll.freq;
-		ret = set_pll_target(g, rate_gpu_to_gpc2clk(*rate), old_freq);
-		if (!ret && clk->gpc_pll.enabled && clk->clk_hw_on)
-			ret = set_pll_freq(g, 1);
-		if (!ret)
-			*rate = rate_gpc2clk_to_gpu(clk->gpc_pll.freq);
-		nvgpu_mutex_release(&clk->clk_mutex);
-	}
-	return ret;
-}
-
-static int gm20b_clk_export_enable(void *data)
-{
-	int ret = 0;
-	struct gk20a *g = data;
-	struct clk_gk20a *clk = &g->clk;
-
-	nvgpu_mutex_acquire(&clk->clk_mutex);
-	if (!clk->gpc_pll.enabled && clk->clk_hw_on)
-		ret = set_pll_freq(g, 1);
-	nvgpu_mutex_release(&clk->clk_mutex);
-	return ret;
-}
-
-static void gm20b_clk_export_disable(void *data)
-{
-	struct gk20a *g = data;
-	struct clk_gk20a *clk = &g->clk;
-
-	nvgpu_mutex_acquire(&clk->clk_mutex);
-	if (clk->gpc_pll.enabled && clk->clk_hw_on)
-		clk_disable_gpcpll(g, 1);
-	nvgpu_mutex_release(&clk->clk_mutex);
-}
-
-static void gm20b_clk_export_init(void *data, unsigned long *rate, bool *state)
-{
-	struct gk20a *g = data;
-	struct clk_gk20a *clk = &g->clk;
-
-	nvgpu_mutex_acquire(&clk->clk_mutex);
-	if (state)
-		*state = clk->gpc_pll.enabled;
-	if (rate)
-		*rate = rate_gpc2clk_to_gpu(clk->gpc_pll.freq);
-	nvgpu_mutex_release(&clk->clk_mutex);
-}
-
-static struct tegra_clk_export_ops gm20b_clk_export_ops = {
-	.init = gm20b_clk_export_init,
-	.enable = gm20b_clk_export_enable,
-	.disable = gm20b_clk_export_disable,
-	.set_rate = gm20b_clk_export_set_rate,
-};
-
-static int gm20b_clk_register_export_ops(struct gk20a *g)
-{
-	int ret;
-	struct clk *c;
-
-	if (gm20b_clk_export_ops.data)
-		return 0;
-
-	gm20b_clk_export_ops.data = (void *)g;
-	c = g->clk.tegra_clk;
-	if (!c || !clk_get_parent(c))
-		return -ENOSYS;
-
-	ret = tegra_clk_register_export_ops(clk_get_parent(c),
-					    &gm20b_clk_export_ops);
-
-	return ret;
-}
-#endif /* CONFIG_TEGRA_CLK_FRAMEWORK */
-
 static int gm20b_init_clk_support(struct gk20a *g)
 {
 	struct clk_gk20a *clk = &g->clk;
@@ -1570,13 +1479,6 @@ static int gm20b_init_clk_support(struct gk20a *g)
 	if (err)
 		return err;
 
-#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
-	clk->g = g;
-	err = gm20b_init_clk_setup_sw(g);
-	if (err)
-		return err;
-#endif
-
 	nvgpu_mutex_acquire(&clk->clk_mutex);
 	clk->clk_hw_on = true;
 
@@ -1584,12 +1486,6 @@ static int gm20b_init_clk_support(struct gk20a *g)
 	nvgpu_mutex_release(&clk->clk_mutex);
 	if (err)
 		return err;
-
-#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
-	err = gm20b_clk_register_export_ops(g);
-	if (err)
-		return err;
-#endif
 
 	/* FIXME: this effectively prevents host level clock gating */
 	err = clk_prepare_enable(g->clk.tegra_clk);

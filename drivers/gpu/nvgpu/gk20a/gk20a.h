@@ -1275,8 +1275,6 @@ enum gk20a_nonstall_ops {
 	gk20a_nonstall_ops_post_events = BIT(1),
 };
 
-void gk20a_init_clk_ops(struct gpu_ops *gops);
-
 /* register accessors */
 int gk20a_lockout_registers(struct gk20a *g);
 int gk20a_restore_registers(struct gk20a *g);

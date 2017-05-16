@@ -167,7 +167,6 @@ int gk20a_init_hal(struct gk20a *g)
 	gk20a_init_mm(gops);
 	gk20a_falcon_init_hal(gops);
 	gk20a_init_pmu_ops(gops);
-	gk20a_init_clk_ops(gops);
 	gk20a_init_regops(gops);
 	gk20a_init_debug_ops(gops);
 	gk20a_init_dbg_session_ops(gops);

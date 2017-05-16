@@ -104,11 +104,6 @@ struct clk_gk20a {
 #endif
 
 struct gpu_ops;
-#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
-void gk20a_init_clk_ops(struct gpu_ops *gops);
-#else
-static inline void gk20a_init_clk_ops(struct gpu_ops *gops) {}
-#endif
 
 /* APIs used for both GK20A and GM20B */
 unsigned long gk20a_clk_get_rate(struct gk20a *g);

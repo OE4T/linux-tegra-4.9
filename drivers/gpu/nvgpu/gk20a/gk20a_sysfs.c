@@ -23,7 +23,6 @@
 #include <linux/pm_runtime.h>
 #include <linux/fb.h>
 #include <linux/gk20a.h>
-#include <linux/clk/tegra.h>
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
 #include <soc/tegra/tegra-dvfs.h>
 #endif
@@ -717,9 +716,6 @@ static ssize_t fmax_at_vmin_safe_read(struct device *dev,
 	unsigned long gpu_fmax_at_vmin_hz = 0;
 	struct clk *clk = g->clk.tegra_clk;
 
-#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
-	clk = clk_get_parent(clk);
-#endif
 	gpu_fmax_at_vmin_hz = tegra_dvfs_get_fmax_at_vmin_safe_t(clk);
 
 	return snprintf(buf, PAGE_SIZE, "%d\n", (int)(gpu_fmax_at_vmin_hz));

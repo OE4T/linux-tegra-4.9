@@ -78,8 +78,8 @@ source "sound/soc/codecs/Kconfig"
 # generic frame-work
 source "sound/soc/generic/Kconfig"
 
-trysource "../t18x/sound/soc/Kconfig"
-trysource "../t18x/sound/soc/Kconfig.t18x"
-trysource "sound/soc/Kconfig.t18x"
+trysource "../nvidia/sound/soc/Kconfig"
+trysource "../nvidia/sound/soc/Kconfig.nvidia"
+trysource "sound/soc/Kconfig.nvidia"
 
 endif	# SND_SOC

@@ -115,8 +115,8 @@ config ARM64
 config 64BIT
 	def_bool y
 
-trysource "../t18x/arch/arm64/Kconfig.t18x"
-trysource "arch/arm64/Kconfig.t18x"
+trysource "../nvidia/arch/arm64/Kconfig.nvidia"
+trysource "arch/arm64/Kconfig.nvidia"
 
 config ARCH_TEGRA_18x_SOC
 	bool "Tegra 18x family SOC Kconfig placeholder"

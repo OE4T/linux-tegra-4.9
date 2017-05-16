@@ -180,7 +180,7 @@ source "drivers/net/ethernet/wiznet/Kconfig"
 source "drivers/net/ethernet/xilinx/Kconfig"
 source "drivers/net/ethernet/xircom/Kconfig"
 
-trysource "../t18x/drivers/net/ethernet/nvidia/eqos/Kconfig.t18x"
-trysource "drivers/net/ethernet/nvidia/eqos/Kconfig.t18x"
+trysource "../nvidia/drivers/net/ethernet/nvidia/eqos/Kconfig.nvidia"
+trysource "drivers/net/ethernet/nvidia/eqos/Kconfig.nvidia"
 
 endif # ETHERNET

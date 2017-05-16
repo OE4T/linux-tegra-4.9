@@ -115,7 +115,7 @@ static u32 volt_construct_volt_policy_split_rail_single_step(struct gk20a *g,
 	return status;
 }
 
-struct voltage_policy *volt_volt_policy_construct(struct gk20a *g, void *pargs)
+static struct voltage_policy *volt_volt_policy_construct(struct gk20a *g, void *pargs)
 {
 	struct boardobj *pboard_obj = NULL;
 	u32 status = 0;

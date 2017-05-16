@@ -1454,7 +1454,7 @@ static int nvgpu_clk_arb_set_event_filter(struct nvgpu_clk_dev *dev,
 	return 0;
 }
 
-long nvgpu_clk_arb_ioctl_event_dev(struct file *filp, unsigned int cmd,
+static long nvgpu_clk_arb_ioctl_event_dev(struct file *filp, unsigned int cmd,
 		unsigned long arg)
 {
 	struct nvgpu_clk_dev *dev = filp->private_data;

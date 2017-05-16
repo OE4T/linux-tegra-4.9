@@ -65,7 +65,7 @@ int pmgr_pwr_devices_get_voltage(struct gk20a *g, u32 *val)
 }
 
 #ifdef CONFIG_DEBUG_FS
-int pmgr_pwr_devices_get_power_u64(void *data, u64 *p)
+static int pmgr_pwr_devices_get_power_u64(void *data, u64 *p)
 {
 	struct gk20a *g = (struct gk20a *)data;
 	int err;
@@ -77,7 +77,7 @@ int pmgr_pwr_devices_get_power_u64(void *data, u64 *p)
 	return err;
 }
 
-int pmgr_pwr_devices_get_current_u64(void *data, u64 *p)
+static int pmgr_pwr_devices_get_current_u64(void *data, u64 *p)
 {
 	struct gk20a *g = (struct gk20a *)data;
 	int err;
@@ -89,7 +89,7 @@ int pmgr_pwr_devices_get_current_u64(void *data, u64 *p)
 	return err;
 }
 
-int pmgr_pwr_devices_get_voltage_u64(void *data, u64 *p)
+static int pmgr_pwr_devices_get_voltage_u64(void *data, u64 *p)
 {
 	struct gk20a *g = (struct gk20a *)data;
 	int err;

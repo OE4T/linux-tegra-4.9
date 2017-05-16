@@ -172,7 +172,7 @@ int gk20a_init_pstate_pmu_support(struct gk20a *g)
 	return err;
 }
 
-int pstate_construct_super(struct gk20a *g, struct boardobj **ppboardobj,
+static int pstate_construct_super(struct gk20a *g, struct boardobj **ppboardobj,
 				u16 size, void *args)
 {
 	struct pstate *ptmppstate = (struct pstate *)args;
@@ -192,7 +192,7 @@ int pstate_construct_super(struct gk20a *g, struct boardobj **ppboardobj,
 	return 0;
 }
 
-int pstate_construct_3x(struct gk20a *g, struct boardobj **ppboardobj,
+static int pstate_construct_3x(struct gk20a *g, struct boardobj **ppboardobj,
 				u16 size, void *args)
 {
 	struct boardobj  *ptmpobj = (struct boardobj *)args;
@@ -201,7 +201,7 @@ int pstate_construct_3x(struct gk20a *g, struct boardobj **ppboardobj,
 	return pstate_construct_super(g, ppboardobj, size, args);
 }
 
-struct pstate *pstate_construct(struct gk20a *g, void *args)
+static struct pstate *pstate_construct(struct gk20a *g, void *args)
 {
 	struct pstate *pstate = NULL;
 	struct pstate *tmp = (struct pstate *)args;
@@ -215,7 +215,7 @@ struct pstate *pstate_construct(struct gk20a *g, void *args)
 	return pstate;
 }
 
-int pstate_insert(struct gk20a *g, struct pstate *pstate, int index)
+static int pstate_insert(struct gk20a *g, struct pstate *pstate, int index)
 {
 	struct pstates *pstates = &(g->perf_pmu.pstatesobjs);
 	int err;

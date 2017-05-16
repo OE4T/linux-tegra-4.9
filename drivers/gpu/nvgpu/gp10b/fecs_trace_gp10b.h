@@ -1,7 +1,7 @@
 /*
  * GP10B GPU FECS traces
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,6 +18,6 @@
 
 struct gpu_ops;
 
-int gp10b_init_fecs_trace_ops(struct gpu_ops *);
+void gp10b_init_fecs_trace_ops(struct gpu_ops *);
 
 #endif

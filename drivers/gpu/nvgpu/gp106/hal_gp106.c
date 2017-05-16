@@ -194,7 +194,7 @@ static int gp106_get_litter_value(struct gk20a *g, int value)
 	return ret;
 }
 
-int gp106_init_gpu_characteristics(struct gk20a *g)
+static int gp106_init_gpu_characteristics(struct gk20a *g)
 {
 	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
 

@@ -677,6 +677,7 @@ void eqos_get_all_hw_features(struct eqos_prv_data *pdata)
 	pr_debug("<--eqos_get_all_hw_features\n");
 }
 
+#ifdef YDEBUG
 /*!
 * \brief API to print all hw features.
 *
@@ -952,7 +953,7 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
 
 	pr_debug("<--eqos_print_all_hw_features\n");
 }
-
+#endif
 /*!
  * \brief allcation of Rx skb's for default rx mode.
  *

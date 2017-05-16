@@ -57,6 +57,17 @@
 		compatible = "nvidia,tegra210b01-pinmux", "nvidia,tegra210-pinmux";
 	};
 
+
+	bpmp_car: bpmp-clocks {
+		compatible = "nvidia,tegra-bpmp-staged-clks";
+		#clock-cells = <1>;
+	};
+
+	bpmp-emc {
+		compatible = "nvidia,tegra-bpmp-emc-clk";
+		clocks = <&bpmp_car 0>;
+	};
+
 	clock {
 		compatible = "nvidia,tegra210b01-car", "nvidia,tegra210-car";
 	};

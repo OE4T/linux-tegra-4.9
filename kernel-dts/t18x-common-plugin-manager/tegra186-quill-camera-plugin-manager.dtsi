@@ -1828,6 +1828,13 @@
 					status = "okay";
 				};
 			};
+			/* I2C default */
+			override@15 {
+				target = <&cam_i2c>;
+				_overlay_ {
+					compatible = "nvidia,tegra-i2c-rtcpu";
+				};
+			};
 
 		};
 
@@ -1965,6 +1972,13 @@
 						output-high;
 						status = "okay";
 					};
+				};
+			};
+			/* I2C default */
+			override@16 {
+				target = <&cam_i2c>;
+				_overlay_ {
+					compatible = "nvidia,tegra-i2c-rtcpu";
 				};
 			};
 		};

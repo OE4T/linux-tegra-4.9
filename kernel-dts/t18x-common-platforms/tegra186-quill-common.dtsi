@@ -1130,4 +1130,10 @@
 	rtcpu@b000000 {
 		status = "okay";
 	};
+
+    sce-ivc-channels {
+        i2c@480 {
+            status = "okay";
+        };
+    };
 };

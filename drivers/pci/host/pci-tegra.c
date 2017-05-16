@@ -5079,18 +5079,20 @@ static struct platform_driver __refdata tegra_pcie_driver = {
 	},
 };
 
+#ifdef CONFIG_TEGRA_MC_DOMAINS
 static struct of_device_id tegra_pcie_domain_match[] = {
 	{.compatible = "nvidia,tegra132-pcie-pd"},
 	{.compatible = "nvidia,tegra210-pcie-pd"},
 	{.compatible = "nvidia,tegra186-pcie-pd"},
 	{},
 };
+#endif
 
 static int __init tegra_pcie_init_driver(void)
 {
-	int ret;
 
 #ifdef CONFIG_TEGRA_MC_DOMAINS
+	int ret;
 	ret = tegra_pd_add_domain(tegra_pcie_domain_match, &pcie_domain.tpd.gpd);
 	if (ret)
 		return ret;

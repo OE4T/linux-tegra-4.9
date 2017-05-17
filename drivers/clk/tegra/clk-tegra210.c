@@ -3576,7 +3576,6 @@ static struct tegra_clk_init_table init_table[] __initdata = {
 	{ TEGRA210_CLK_XUSB_DEV_SRC, TEGRA210_CLK_PLL_P_OUT_XUSB, 102000000, 0 },
 	{ TEGRA210_CLK_SATA, TEGRA210_CLK_PLL_P, 104000000, 0 },
 	{ TEGRA210_CLK_SATA_OOB, TEGRA210_CLK_PLL_P, 204000000, 0 },
-	{ TEGRA210_CLK_EMC, TEGRA210_CLK_CLK_MAX, 0, 1 },
 	{ TEGRA210_CLK_BWMGR_EMC, TEGRA210_CLK_CLK_MAX, 0, 1 },
 	{ TEGRA210_CLK_FUSE, TEGRA210_CLK_CLK_M, 0, 1},
 	{ TEGRA210_CLK_KFUSE, TEGRA210_CLK_CLK_MAX, 0, 1 },
@@ -3997,6 +3996,16 @@ static struct syscore_ops tegra_clk_syscore_ops = {
  */
 static void __init tegra210_clock_apply_init_table(void)
 {
+	struct clk *emc = __clk_lookup("emc");
+
+	/* Enable EMC out-of-table to allow either CAR or BPMP provider in DT */
+	if (!emc) {
+		WARN(1, "Failed to find emc clock\n");
+	} else {
+		if (clk_prepare_enable(emc))
+			WARN(1, "Failed to enable emc clock\n");
+	}
+
 	tegra_init_from_table(init_table, clks, TEGRA210_CLK_CLK_MAX);
 }
 

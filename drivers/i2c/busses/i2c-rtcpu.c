@@ -1,5 +1,5 @@
 /*
- * drivers/i2c/busses/i2c-tegra-single.c
+ * drivers/i2c/busses/i2c-rtcpu.c
  *
  * Copyright (C) 2017 NVIDIA Corporation. All rights reserved.
  *
@@ -70,7 +70,7 @@ static struct tegra_i2c_ivc_dev g_ivc_devs[TEGRA_I2C_SINGLE_MAX_DEV];
  * I2C bus driver internal data structure
  */
 
-struct tegra_i2c_single {
+struct tegra_i2c {
 	struct device *dev;
 	struct i2c_adapter adapter;
 	struct tegra_i2c_ivc_dev *ivc_dev;
@@ -79,7 +79,7 @@ struct tegra_i2c_single {
 	bool is_suspended;
 };
 
-static void tegra_i2c_parse_dt(struct tegra_i2c_single *i2c_dev)
+static void tegra_i2c_parse_dt(struct tegra_i2c *i2c_dev)
 {
 	struct device_node *np = i2c_dev->dev->of_node;
 	i2c_dev->i2c_clk_config.is_clkon_always =
@@ -92,10 +92,10 @@ static void tegra_i2c_parse_dt(struct tegra_i2c_single *i2c_dev)
 static int tegra_ivc_i2c_single_xfer(struct tegra_i2c_ivc_dev *ivc_dev,
 	const struct i2c_msg *reqs, int num);
 
-static int tegra_i2c_single_xfer(struct i2c_adapter *adap,
+static int tegra_i2c_xfer(struct i2c_adapter *adap,
 	struct i2c_msg msgs[], int num)
 {
-	struct tegra_i2c_single *i2c_dev = i2c_get_adapdata(adap);
+	struct tegra_i2c *i2c_dev = i2c_get_adapdata(adap);
 	struct tegra_i2c_ivc_dev *ivc_dev = i2c_dev->ivc_dev;
 	int ret;
 
@@ -111,15 +111,15 @@ static int tegra_i2c_single_xfer(struct i2c_adapter *adap,
 	return ret;
 }
 
-static u32 tegra_i2c_single_func(struct i2c_adapter *adap)
+static u32 tegra_i2c_func(struct i2c_adapter *adap)
 {
 	return I2C_FUNC_I2C | I2C_FUNC_10BIT_ADDR | I2C_FUNC_NOSTART |
 		I2C_FUNC_SMBUS_EMUL;
 }
 
-static const struct i2c_algorithm tegra_i2c_single_algo = {
-	.master_xfer = tegra_i2c_single_xfer,
-	.functionality = tegra_i2c_single_func,
+static const struct i2c_algorithm tegra_i2c_algo = {
+	.master_xfer = tegra_i2c_xfer,
+	.functionality = tegra_i2c_func,
 };
 
 /*
@@ -127,7 +127,7 @@ static const struct i2c_algorithm tegra_i2c_single_algo = {
  */
 static int tegra_i2c_probe(struct platform_device *pdev)
 {
-	struct tegra_i2c_single *i2c_dev;
+	struct tegra_i2c *i2c_dev;
 	struct resource *res;
 	struct clk *div_clk;
 	struct clk *parent_clk;
@@ -256,7 +256,7 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	i2c_dev->adapter.class = I2C_CLASS_DEPRECATED;
 	strlcpy(i2c_dev->adapter.name, "Tegra CAMRTC I2C adapter",
 		sizeof(i2c_dev->adapter.name));
-	i2c_dev->adapter.algo = &tegra_i2c_single_algo;
+	i2c_dev->adapter.algo = &tegra_i2c_algo;
 	i2c_dev->adapter.dev.parent = &pdev->dev;
 	i2c_dev->adapter.nr = pdev->id;
 	i2c_dev->adapter.dev.of_node = pdev->dev.of_node;
@@ -291,7 +291,7 @@ fail:
 
 static int tegra_i2c_remove(struct platform_device *pdev)
 {
-	struct tegra_i2c_single *i2c_dev = platform_get_drvdata(pdev);
+	struct tegra_i2c *i2c_dev = platform_get_drvdata(pdev);
 
 	i2c_del_adapter(&i2c_dev->adapter);
 	pm_runtime_disable(&i2c_dev->adapter.dev);
@@ -302,7 +302,7 @@ static int tegra_i2c_remove(struct platform_device *pdev)
 
 static void tegra_i2c_shutdown(struct platform_device *pdev)
 {
-	struct tegra_i2c_single *i2c_dev = platform_get_drvdata(pdev);
+	struct tegra_i2c *i2c_dev = platform_get_drvdata(pdev);
 
 	dev_info(i2c_dev->dev, "Bus is shutdown down..\n");
 	i2c_shutdown_adapter(&i2c_dev->adapter);
@@ -316,7 +316,7 @@ static void tegra_i2c_shutdown(struct platform_device *pdev)
 #ifdef CONFIG_PM_SLEEP
 static int tegra_i2c_suspend(struct device *dev)
 {
-	struct tegra_i2c_single *i2c_dev = dev_get_drvdata(dev);
+	struct tegra_i2c *i2c_dev = dev_get_drvdata(dev);
 
 	i2c_lock_adapter(&i2c_dev->adapter);
 	i2c_dev->ivc_dev->chan->is_ready = false;
@@ -328,7 +328,7 @@ static int tegra_i2c_suspend(struct device *dev)
 
 static int tegra_i2c_resume(struct device *dev)
 {
-	struct tegra_i2c_single *i2c_dev = dev_get_drvdata(dev);
+	struct tegra_i2c *i2c_dev = dev_get_drvdata(dev);
 
 	i2c_lock_adapter(&i2c_dev->adapter);
 	i2c_dev->is_suspended = false;
@@ -348,7 +348,7 @@ static SIMPLE_DEV_PM_OPS(tegra_i2c_pm, tegra_i2c_suspend, tegra_i2c_resume);
  */
 
 static const struct of_device_id tegra_i2c_of_match[] = {
-	{ .compatible = "nvidia,tegra186-i2c-single", .data = NULL, },
+	{ .compatible = "nvidia,tegra-i2c-rtcpu", .data = NULL, },
 	{},
 };
 MODULE_DEVICE_TABLE(of, tegra_i2c_of_match);
@@ -358,7 +358,7 @@ static struct platform_driver tegra_i2c_driver = {
 	.remove  = tegra_i2c_remove,
 	.late_shutdown = tegra_i2c_shutdown,
 	.driver  = {
-		.name  = "tegra-i2c-single",
+		.name  = "tegra-i2c-rtcpu",
 		.of_match_table = tegra_i2c_of_match,
 		.pm    = TEGRA_I2C_PM,
 	},

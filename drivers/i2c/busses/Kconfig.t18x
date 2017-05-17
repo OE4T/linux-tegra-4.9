@@ -16,10 +16,9 @@ config TEGRA_I2CSLV_T186
 	help
 	  Enable on-chip i2c slave controller.
 
-config I2C_TEGRA_CAMRTC_SINGLE
-	bool "Tegra I2C Camera RTCPU Single driver"
+config I2C_TEGRA_CAMRTC
+	bool "Tegra I2C Camera RTCPU driver"
 	depends on TEGRA_CAMERA_RTCPU
-	default y
 	help
 	  If you say yes to this option, support will be included for the
 	  I2C controller embedded in NVIDIA Tegra SOCs accessed via Camera

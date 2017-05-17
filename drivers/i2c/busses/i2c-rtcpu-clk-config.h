@@ -11,8 +11,8 @@
  * more details.
  */
 
-#ifndef _LINUX_I2C_CAMRTC_CONFIG_H
-#define _LINUX_I2C_CAMRTC_CONFIG_H
+#ifndef _LINUX_I2C_RTCPU_CLK_CONFIG_H
+#define _LINUX_I2C_RTCPU_CLK_CONFIG_H
 
 /* Define speed modes */
 #define I2C_STANDARD_MODE           100000
@@ -53,10 +53,8 @@ struct tegra_i2c_clk_config {
 	int clk_divisor_hs_mode;
 };
 
-u32 tegra_i2c_get_clk_freq(struct device_node *np);
-u32 tegra_i2c_get_reg_base(struct device_node *np);
 int tegra_i2c_rtcpu_clock_enable(struct tegra_i2c_clk_config *i2c_config);
 void tegra_i2c_rtcpu_clock_disable(struct tegra_i2c_clk_config *i2c_config);
 int tegra_i2c_rtcpu_clock_init(struct tegra_i2c_clk_config *i2c_config);
 
-#endif /* _LINUX_I2C_CAMRTC_CONFIG_H */
+#endif /* _LINUX_I2C_RTCPU_CLK_CONFIG_H */

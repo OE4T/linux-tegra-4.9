@@ -19,33 +19,6 @@
 
 #include "i2c-rtcpu-clk-config.h"
 
-u32 tegra_i2c_get_clk_freq(struct device_node *np)
-{
-	int ret;
-	u32 bus_clk_rate;
-
-	ret = of_property_read_u32(np, "clock-frequency",
-			&bus_clk_rate);
-	if (ret)
-		bus_clk_rate = 100000; /* default clock rate */
-
-	return bus_clk_rate;
-}
-EXPORT_SYMBOL(tegra_i2c_get_clk_freq);
-
-u32 tegra_i2c_get_reg_base(struct device_node *np)
-{
-	int ret;
-	u32 reg_base;
-
-	ret = of_property_read_u32_index(np, "reg", 1, &reg_base);
-
-	BUG_ON(ret < 0);
-
-	return reg_base;
-}
-EXPORT_SYMBOL(tegra_i2c_get_reg_base);
-
 static inline u32 i2c_camrtc_readl(struct tegra_i2c_clk_config *i2c_clk_config,
 	unsigned long reg)
 {

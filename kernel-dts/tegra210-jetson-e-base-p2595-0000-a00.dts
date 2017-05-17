@@ -60,6 +60,7 @@
 	#size-cells = <2>;
 
 	chosen {
+		stdout-path = &uarta;
 	};
 
 	pmc@7000e400 {

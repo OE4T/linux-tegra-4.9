@@ -94,7 +94,7 @@ nvgpu-y := \
 	gm20b/ltc_gm20b.o \
 	gm20b/ce2_gm20b.o \
 	gm20b/gr_gm20b.o \
-	gm20b/gr_gm20b.o \
+	gm20b/clk_gm20b.o \
 	gm20b/fb_gm20b.o \
 	gm20b/fifo_gm20b.o \
 	gm20b/gr_ctx_gm20b.o \
@@ -138,8 +138,7 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/sysfs_vgpu.o
 
 nvgpu-$(CONFIG_COMMON_CLK) += \
-	tegra/linux/clk.o \
-	gm20b/clk_gm20b.o
+	tegra/linux/clk.o
 
 nvgpu-$(CONFIG_GK20A_DEVFREQ) += \
 	gk20a/gk20a_scale.o

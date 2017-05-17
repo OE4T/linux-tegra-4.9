@@ -1,7 +1,7 @@
 /*
  * ina3221.c - driver for TI INA3221
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * Based on hwmon driver:
  * 		drivers/hwmon/ina3221.c
@@ -34,6 +34,9 @@
 #include <linux/of.h>
 #include <linux/sysfs.h>
 #include <linux/slab.h>
+
+#define CREATE_TRACE_POINTS
+#include <trace/events/ina3221.h>
 
 #define INA3221_CONFIG			0x00
 #define INA3221_SHUNT_VOL_CHAN1		0x01
@@ -91,6 +94,7 @@ enum {
 	WARN_CURRENT_LIMIT,
 	RUNNING_MODE,
 	VBUS_VOLTAGE_CURRENT,
+	POLL_DELAY,
 };
 
 enum mode {
@@ -103,12 +107,33 @@ enum mode {
 #define IS_TRIGGERED(x) (!((x) & 2))
 #define IS_CONTINUOUS(x) ((x) & 2)
 
+struct shuntv_conditional_offset {
+	s32 shuntv_start;
+	s32 shuntv_end;
+	s32 offset;
+};
+
+struct shunt_volt_offset {
+	s32 offset;
+	struct shuntv_conditional_offset *cond_offset;
+	s32 cond_offset_size;
+};
+
+struct poll_worker_data {
+	struct ina3221_chip *chip;
+	struct delayed_work poll_queue;
+	u32 channel;
+	u32 poll_delay;
+};
+
 struct ina3221_chan_pdata {
 	const char *rail_name;
 	u32 crit_power_limits;
 	u32 warn_conf_limits;
 	u32 crit_conf_limits;
 	u32 shunt_resistor;
+	struct shunt_volt_offset *shuntv_offset;
+	struct poll_worker_data poll_worker;
 };
 
 struct ina3221_platform_data {
@@ -875,6 +900,25 @@ static int ina3221_read_raw(struct iio_dev *indio_dev,
 	return ret;
 }
 
+static void ina_channel_poll_work_func(struct work_struct *work)
+{
+	struct poll_worker_data *poll_data =
+		container_of(work, struct poll_worker_data,
+			     poll_queue.work);
+
+	int power_val = 0;
+
+	ina3221_get_channel_power(poll_data->chip, poll_data->channel,
+				  0, &power_val);
+
+	trace_ina3221_power(poll_data->chip->pdata->cpdata[poll_data->channel]
+			    .rail_name, power_val);
+
+	mod_delayed_work(system_freezable_wq,
+			 &(poll_data->chip->pdata->cpdata[poll_data->channel]
+			 .poll_worker.poll_queue), poll_data->poll_delay);
+}
+
 static ssize_t ina3221_show_channel(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -930,6 +974,11 @@ static ssize_t ina3221_show_channel(struct device *dev,
 					voltage_mv, current_ma);
 		return ret;
 
+	case POLL_DELAY:
+		ret = jiffies_to_msecs(chip->pdata->cpdata[channel]
+					.poll_worker.poll_delay);
+		return snprintf(buf, PAGE_SIZE, "%d ms\n", ret);
+
 	default:
 		break;
 	}
@@ -944,7 +993,7 @@ static ssize_t ina3221_set_channel(struct device *dev,
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
 	int mode = UNPACK_MODE(this_attr->address);
 	int channel = UNPACK_CHAN(this_attr->address);
-	long val;
+	long val, poll_delay;
 	int current_ma;
 	int power_mw;
 	int ret;
@@ -983,6 +1032,31 @@ static ssize_t ina3221_set_channel(struct device *dev,
 
 	case RUNNING_MODE:
 		return ina3221_set_mode(chip, buf, len);
+
+	case POLL_DELAY:
+		if (kstrtol(buf, 10, &val) < 0)
+			return -EINVAL;
+
+		if (val) {
+			if (val < 1000)
+				poll_delay = round_jiffies(
+						msecs_to_jiffies(val));
+			else
+				poll_delay = msecs_to_jiffies(val);
+
+			chip->pdata->cpdata[channel].poll_worker
+				.poll_delay = poll_delay;
+			mod_delayed_work(system_freezable_wq,
+					 &(chip->pdata->cpdata[channel]
+					   .poll_worker.poll_queue),
+					   poll_delay);
+		} else {
+			chip->pdata->cpdata[channel]
+				.poll_worker.poll_delay = val;
+			cancel_delayed_work(&(chip->pdata->cpdata[channel]
+					      .poll_worker.poll_queue));
+		}
+		return len;
 	}
 	return -EINVAL;
 }
@@ -1041,6 +1115,16 @@ static IIO_DEVICE_ATTR(running_mode, S_IRUGO | S_IWUSR,
 		ina3221_show_channel, ina3221_set_channel,
 		PACK_MODE_CHAN(RUNNING_MODE, 0));
 
+static IIO_DEVICE_ATTR(polling_delay_0, S_IRUGO | S_IWUSR,
+		ina3221_show_channel, ina3221_set_channel,
+		PACK_MODE_CHAN(POLL_DELAY, 0));
+static IIO_DEVICE_ATTR(polling_delay_1, S_IRUGO | S_IWUSR,
+		ina3221_show_channel, ina3221_set_channel,
+		PACK_MODE_CHAN(POLL_DELAY, 1));
+static IIO_DEVICE_ATTR(polling_delay_2, S_IRUGO | S_IWUSR,
+		ina3221_show_channel, ina3221_set_channel,
+		PACK_MODE_CHAN(POLL_DELAY, 2));
+
 static struct attribute *ina3221_attributes[] = {
 	&iio_dev_attr_rail_name_0.dev_attr.attr,
 	&iio_dev_attr_rail_name_1.dev_attr.attr,
@@ -1058,6 +1142,9 @@ static struct attribute *ina3221_attributes[] = {
 	&iio_dev_attr_ui_input_1.dev_attr.attr,
 	&iio_dev_attr_ui_input_2.dev_attr.attr,
 	&iio_dev_attr_running_mode.dev_attr.attr,
+	&iio_dev_attr_polling_delay_0.dev_attr.attr,
+	&iio_dev_attr_polling_delay_1.dev_attr.attr,
+	&iio_dev_attr_polling_delay_2.dev_attr.attr,
 	NULL,
 };
 
@@ -1186,7 +1273,7 @@ static int ina3221_probe(struct i2c_client *client,
 	struct ina3221_chip *chip;
 	struct iio_dev *indio_dev;
 	struct ina3221_platform_data *pdata;
-	int ret;
+	int ret, size;
 
 	pdata = ina3221_get_platform_data_dt(client);
 	if (IS_ERR(pdata)) {
@@ -1277,8 +1364,17 @@ static int ina3221_probe(struct i2c_client *client,
 			goto exit_pd;
 		}
 	}
-	return 0;
 
+	size = ARRAY_SIZE(chip->pdata->cpdata);
+	while (size--) {
+		chip->pdata->cpdata[size].poll_worker.chip = chip;
+		chip->pdata->cpdata[size].poll_worker.channel = size;
+		chip->pdata->cpdata[size].poll_worker.poll_delay = 0;
+		INIT_DELAYED_WORK(&chip->pdata->cpdata[size]
+				  .poll_worker.poll_queue,
+				  ina_channel_poll_work_func);
+	}
+	return 0;
 exit_pd:
 	unregister_hotcpu_notifier(&(chip->nb_hot));
 	cpufreq_unregister_notifier(&(chip->nb_cpufreq),

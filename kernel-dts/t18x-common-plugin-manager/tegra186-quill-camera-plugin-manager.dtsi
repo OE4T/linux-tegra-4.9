@@ -1967,7 +1967,143 @@
 					};
 				};
 			};
+		};
 
+		/* E3331 camera board */
+		fragment-e3331@0 {
+			ids = "3331-*";
+			/* VI number of channels */
+			override@0 {
+				target = <&vi_base>;
+				_overlay_ {
+					num-channels=<1>;	 /* TODO change to 3 */
+				};
+			};
+			/* CSI number of channels */
+			override@1 {
+				target = <&csi_base>;
+				_overlay_ {
+					num-channels=<1>;	/* TODO change to 3 */
+				};
+			};
+			/* tegra-camera-platform settings */
+			override@2 {
+				target = <&tcp>;
+				_overlay_ {
+						num_csi_lanes = <3>;
+						max_lane_speed = <1500000>;
+						min_bits_per_pixel = <10>;
+						vi_peak_byte_per_pixel = <2>;
+						vi_bw_margin_pct = <25>;
+						max_pixel_rate = <160000>;
+						isp_peak_byte_per_pixel = <5>;
+						isp_bw_margin_pct = <25>;
+				};
+			};
+			/* TCA9546 */
+			override@4 {
+				target = <&tca9546_70>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			/* Camera 0: Module */
+			override@5 {
+				target = <&e3331_cam0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@6 {
+				target = <&cam_module0>;
+				_overlay_ {
+					status = "okay";
+					badge = "e3331_top_22N02A";
+					position = "top";
+					orientation = "1";
+				};
+			};
+			override@7 {
+				target = <&cam_module0_drivernode0>;
+				_overlay_ {
+					status = "okay";
+					pcl_id = "v4l2_sensor";
+					devname = "imx318 30-0010";
+					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9546@70/i2c@0/imx318_a@10";
+				};
+			};
+			/* Camera 0: VI */
+			override@9 {
+				target = <&vi_port0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@10 {
+				target = <&e3331_vi_in0>;
+				_overlay_ {
+					status = "okay";
+					csi-port = <0>;
+					bus-width = <3>;
+					remote-endpoint = <&e3331_csi_out0>;
+				};
+			};
+			/* Camera 0: CSI */
+			override@11 {
+				target = <&csi_chan0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@12 {
+				target = <&csi_chan0_port0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@13 {
+				target = <&e3331_csi_in0>;
+				_overlay_ {
+					status = "okay";
+					csi-port = <0>;
+					bus-width = <3>;
+					remote-endpoint = <&e3331_imx318_out0>;
+				};
+			};
+			override@14 {
+				target = <&csi_chan0_port1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@15 {
+				target = <&e3331_csi_out0>;
+				_overlay_ {
+					status = "okay";
+					remote-endpoint = <&e3331_vi_in0>;
+				};
+			};
+			/* GPIO */
+			override@71 {
+				target = <&{/gpio@2200000}>;
+				_overlay_ {
+					camera-control-input {
+						status = "disabled";
+					};
+					camera-control-output-low {
+						gpio-hog;
+                        gpios = <CAM0_RST_L 0>;
+                                /*<CAM1_RST_L 0> <CAM2_RST_L 0>*/
+                        label = "cam0-rst";
+                                /*"cam1-rst", "cam2-rst";*/
+						output-low;
+						status = "disabled";
+					};
+					camera-control-output-high {
+						status = "disabled";
+					};
+				};
+			};
 		};
 	};
 };

@@ -14,6 +14,7 @@
 
 #include "t18x-common-platforms/tegra186-quill-camera-e3326-a00.dtsi"
 #include "t18x-common-platforms/tegra186-quill-camera-e3323-a00.dtsi"
+#include "t18x-common-platforms/tegra186-quill-camera-e3331-a00.dtsi"
 #include "t18x-common-platforms/tegra186-quill-camera-e3333-a00.dtsi"
 #include "t18x-common-platforms/tegra186-quill-camera-e3322-a00.dtsi"
 #include "t18x-common-platforms/tegra186-quill-camera-li-mipi-adpt-a00.dtsi"
@@ -267,13 +268,11 @@
 				imx185_cam0: imx185_a@1a {
 					status = "disabled";
 				};
-			};
-		};
-		tca9546_70: tca9546@70 {
-			status = "disabled";
-			i2c@0 {
-				imx274_cam0: imx274_a@1a {
+                imx274_cam0: imx274_a@1a {
 					status = "disabled";
+				};
+                e3331_cam0: imx318_a@10 {
+					status = "disable";
 				};
 			};
 		};

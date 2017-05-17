@@ -340,8 +340,10 @@ int tegra_smmu_of_parse_sids(struct device *dev)
 		}
 
 		prop->nr_sids = of_property_count_u32_elems(child, "sid-list");
-		if (prop->nr_sids < 0)
+		if (prop->nr_sids < 0) {
+			err = -EINVAL;
 			goto free_mem;
+		}
 		prop->sid_list = devm_kcalloc(dev, prop->nr_sids,
 					      sizeof(*prop->sid_list),
 					      GFP_KERNEL);

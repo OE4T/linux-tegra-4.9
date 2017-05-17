@@ -2226,9 +2226,11 @@
 	tegra_wdt:watchdog@30c0000 {
 		compatible = "nvidia,tegra-wdt-t18x";
 		reg = <0x0 0x030c0000 0x0 0x10000>, /* WDT0 */
-		      <0x0 0x03090000 0x0 0x10000>, /* TMR7 */
+		      <0x0 0x03020000 0x0 0x10000>, /* TMR0 */
 		      <0x0 0x03010000 0x0 0x10000>; /* TKE */
 		interrupts = <0 7 0x4 0 8 0x4>; /* TKE shared int */
+		nvidia,watchdog-index = <0>;
+		nvidia,timer-index = <7>;
 		nvidia,expiry-count = <5>;
 		nvidia,enable-on-init;
 		nvidia,extend-watchdog-suspend;

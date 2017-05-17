@@ -877,6 +877,7 @@ enum shared_bus_users_mode {
 #define TEGRA_SHARED_BUS_RETENTION	BIT(1)
 #define TEGRA_SHARED_BUS_RACE_TO_SLEEP	BIT(2)
 #define TEGRA_SHARED_BUS_ROUND_PASS_THRU	BIT(3)
+#define TEGRA_SHARED_BUS_EMC_NATIVE	BIT(4)
 
 struct clk_div_sel {
 	struct clk_hw *src;
@@ -892,6 +893,7 @@ struct tegra_clk_cbus_shared {
 	u32			flags;
 	unsigned long		min_rate;
 	unsigned long		max_rate;
+	unsigned long		users_default_rate;
 	bool			rate_update_started;
 	bool			rate_updating;
 	bool			rate_propagating;

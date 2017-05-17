@@ -1326,6 +1326,12 @@ static void get_adsp_state(void)
 	case ADSP_RESUME_COMPLETE:
 		msg = "resume: complete";
 		break;
+	case ADSP_WFI_ENTER:
+		msg = "WFI: Entering WFI";
+		break;
+	case ADSP_WFI_EXIT:
+		msg = "WFI: Exiting WFI, Failed to Enter";
+		break;
 	default:
 		msg = "Unrecognized ADSP state!!";
 		break;

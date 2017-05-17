@@ -20,13 +20,13 @@
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #endif
-#include <soc/tegra/fuse.h>
 
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
 #include "clk_gm20b.h"
 
 #include <nvgpu/soc.h>
+#include <nvgpu/fuse.h>
 #include <nvgpu/bug.h>
 
 #include <nvgpu/hw/gm20b/hw_trim_gm20b.h>
@@ -280,12 +280,12 @@ static inline int fuse_get_gpcpll_adc_intercept_uv(u32 val)
 	return ((val >> 4) & 0x3ff) * 1000 + ((val >> 0) & 0xf) * 100;
 }
 
-static int tegra_fuse_calib_gpcpll_get_adc(int *slope_uv, int *intercept_uv)
+static int nvgpu_fuse_calib_gpcpll_get_adc(int *slope_uv, int *intercept_uv)
 {
 	u32 val;
 	int ret;
 
-	ret = tegra_fuse_readl(FUSE_RESERVED_CALIB, &val);
+	ret = nvgpu_tegra_fuse_read(FUSE_RESERVED_CALIB, &val);
 	if (ret)
 		return ret;
 
@@ -298,9 +298,9 @@ static int tegra_fuse_calib_gpcpll_get_adc(int *slope_uv, int *intercept_uv)
 }
 
 #ifdef CONFIG_TEGRA_USE_NA_GPCPLL
-static bool tegra_fuse_can_use_na_gpcpll(void)
+static bool nvgpu_fuse_can_use_na_gpcpll(void)
 {
-	return tegra_sku_info.gpu_speedo_id;
+	return nvgpu_tegra_get_gpu_speedo_id();
 }
 #endif
 
@@ -313,7 +313,7 @@ static int clk_config_calibration_params(struct gk20a *g)
 	int slope, offs;
 	struct pll_parms *p = &gpc_pll_params;
 
-	if (!tegra_fuse_calib_gpcpll_get_adc(&slope, &offs)) {
+	if (!nvgpu_fuse_calib_gpcpll_get_adc(&slope, &offs)) {
 		p->uvdet_slope = slope;
 		p->uvdet_offs = offs;
 	}
@@ -1182,7 +1182,7 @@ int gm20b_init_clk_setup_sw(struct gk20a *g)
 	  */
 	clk_config_calibration_params(g);
 #ifdef CONFIG_TEGRA_USE_NA_GPCPLL
-	if (tegra_fuse_can_use_na_gpcpll()) {
+	if (nvgpu_fuse_can_use_na_gpcpll()) {
 		/* NA mode is supported only at max update rate 38.4 MHz */
 		BUG_ON(clk->gpc_pll.clk_in != gpc_pll_params.max_u);
 		clk->gpc_pll.mode = GPC_PLL_MODE_DVFS;

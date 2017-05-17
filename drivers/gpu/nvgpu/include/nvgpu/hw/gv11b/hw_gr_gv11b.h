@@ -582,6 +582,134 @@ static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_uncorrected_err_count_total_v(u32 
 {
 	return (r >> 0) & 0xffff;
 }
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_status_r(void)
+{
+	return 0x0050436c;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_status_corrected_err_el1_0_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_status_corrected_err_el1_1_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_status_uncorrected_err_el1_0_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_status_uncorrected_err_el1_1_m(void)
+{
+	return 0x1 << 3;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_status_corrected_err_total_counter_overflow_v(u32 r)
+{
+	return (r >> 8) & 0x1;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_status_uncorrected_err_total_counter_overflow_v(u32 r)
+{
+	return (r >> 10) & 0x1;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_status_reset_task_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_corrected_err_count_r(void)
+{
+	return 0x00504370;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_corrected_err_count_total_s(void)
+{
+	return 16;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_corrected_err_count_total_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_uncorrected_err_count_r(void)
+{
+	return 0x00504374;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_uncorrected_err_count_total_s(void)
+{
+	return 16;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_l1_data_ecc_uncorrected_err_count_total_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_status_r(void)
+{
+	return 0x0050464c;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_status_corrected_err_l0_data_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_status_corrected_err_l0_predecode_m(void)
+{
+	return 0x1 << 1;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_status_corrected_err_l1_data_m(void)
+{
+	return 0x1 << 2;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_status_corrected_err_l1_predecode_m(void)
+{
+	return 0x1 << 3;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_status_uncorrected_err_l0_data_m(void)
+{
+	return 0x1 << 4;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_status_uncorrected_err_l0_predecode_m(void)
+{
+	return 0x1 << 5;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_status_uncorrected_err_l1_data_m(void)
+{
+	return 0x1 << 6;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_status_uncorrected_err_l1_predecode_m(void)
+{
+	return 0x1 << 7;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_status_corrected_err_total_counter_overflow_v(u32 r)
+{
+	return (r >> 16) & 0x1;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_status_uncorrected_err_total_counter_overflow_v(u32 r)
+{
+	return (r >> 18) & 0x1;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_status_reset_task_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_corrected_err_count_r(void)
+{
+	return 0x00504650;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_corrected_err_count_total_s(void)
+{
+	return 16;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_corrected_err_count_total_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_uncorrected_err_count_r(void)
+{
+	return 0x00504654;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_uncorrected_err_count_total_s(void)
+{
+	return 16;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_icache_ecc_uncorrected_err_count_total_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
 static inline u32 gr_pri_gpc0_tpc0_sm_l1_tag_ecc_status_r(void)
 {
 	return 0x00504624;

@@ -368,6 +368,170 @@ static int gr_gv11b_handle_cbu_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 }
 
+static int gr_gv11b_handle_l1_data_exception(struct gk20a *g, u32 gpc, u32 tpc,
+			bool *post_event, struct channel_gk20a *fault_ch,
+			u32 *hww_global_esr)
+{
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+	u32 offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
+	u32 l1_data_ecc_status, l1_data_ecc_corrected_err_status = 0;
+	u32 l1_data_ecc_uncorrected_err_status = 0;
+	u32 l1_data_corrected_err_count_delta = 0;
+	u32 l1_data_uncorrected_err_count_delta = 0;
+	bool is_l1_data_ecc_corrected_total_err_overflow = 0;
+	bool is_l1_data_ecc_uncorrected_total_err_overflow = 0;
+
+	/* Check for L1 data ECC errors. */
+	l1_data_ecc_status = gk20a_readl(g,
+		gr_pri_gpc0_tpc0_sm_l1_data_ecc_status_r() + offset);
+	l1_data_ecc_corrected_err_status = l1_data_ecc_status &
+		(gr_pri_gpc0_tpc0_sm_l1_data_ecc_status_corrected_err_el1_0_m() |
+		 gr_pri_gpc0_tpc0_sm_l1_data_ecc_status_corrected_err_el1_1_m());
+	l1_data_ecc_uncorrected_err_status = l1_data_ecc_status &
+		(gr_pri_gpc0_tpc0_sm_l1_data_ecc_status_uncorrected_err_el1_0_m() |
+		 gr_pri_gpc0_tpc0_sm_l1_data_ecc_status_uncorrected_err_el1_1_m());
+
+	if ((l1_data_ecc_corrected_err_status == 0) && (l1_data_ecc_uncorrected_err_status == 0))
+		return 0;
+
+	l1_data_corrected_err_count_delta =
+		gr_pri_gpc0_tpc0_sm_l1_data_ecc_corrected_err_count_total_v(
+			gk20a_readl(g,
+				gr_pri_gpc0_tpc0_sm_l1_data_ecc_corrected_err_count_r() +
+				offset));
+	l1_data_uncorrected_err_count_delta =
+		gr_pri_gpc0_tpc0_sm_l1_data_ecc_uncorrected_err_count_total_v(
+			gk20a_readl(g,
+				gr_pri_gpc0_tpc0_sm_l1_data_ecc_uncorrected_err_count_r() +
+				offset));
+	is_l1_data_ecc_corrected_total_err_overflow =
+		gr_pri_gpc0_tpc0_sm_l1_data_ecc_status_corrected_err_total_counter_overflow_v(l1_data_ecc_status);
+	is_l1_data_ecc_uncorrected_total_err_overflow =
+		gr_pri_gpc0_tpc0_sm_l1_data_ecc_status_uncorrected_err_total_counter_overflow_v(l1_data_ecc_status);
+
+	if ((l1_data_corrected_err_count_delta > 0) || is_l1_data_ecc_corrected_total_err_overflow) {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+			"corrected error (SBE) detected in SM L1 data! err_mask [%08x] is_overf [%d]",
+			l1_data_ecc_corrected_err_status, is_l1_data_ecc_corrected_total_err_overflow);
+
+		/* HW uses 16-bits counter */
+		l1_data_corrected_err_count_delta +=
+			(is_l1_data_ecc_corrected_total_err_overflow <<
+			 gr_pri_gpc0_tpc0_sm_l1_data_ecc_corrected_err_count_total_s());
+		g->gr.t19x.ecc_stats.sm_l1_data_corrected_err_count.counters[tpc] +=
+							l1_data_corrected_err_count_delta;
+		gk20a_writel(g,
+			gr_pri_gpc0_tpc0_sm_l1_data_ecc_corrected_err_count_r() + offset,
+			0);
+	}
+	if ((l1_data_uncorrected_err_count_delta > 0) || is_l1_data_ecc_uncorrected_total_err_overflow) {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+			"Uncorrected error (DBE) detected in SM L1 data! err_mask [%08x] is_overf [%d]",
+			l1_data_ecc_uncorrected_err_status, is_l1_data_ecc_uncorrected_total_err_overflow);
+
+		/* HW uses 16-bits counter */
+		l1_data_uncorrected_err_count_delta +=
+			(is_l1_data_ecc_uncorrected_total_err_overflow <<
+			 gr_pri_gpc0_tpc0_sm_l1_data_ecc_uncorrected_err_count_total_s());
+		g->gr.t19x.ecc_stats.sm_l1_data_uncorrected_err_count.counters[tpc] +=
+							l1_data_uncorrected_err_count_delta;
+		gk20a_writel(g,
+			gr_pri_gpc0_tpc0_sm_l1_data_ecc_uncorrected_err_count_r() + offset,
+			0);
+	}
+
+	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_l1_data_ecc_status_r() + offset,
+			gr_pri_gpc0_tpc0_sm_l1_data_ecc_status_reset_task_f());
+
+	return 0;
+
+}
+
+static int gr_gv11b_handle_icache_exception(struct gk20a *g, u32 gpc, u32 tpc,
+			bool *post_event, struct channel_gk20a *fault_ch,
+			u32 *hww_global_esr)
+{
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+	u32 offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
+	u32 icache_ecc_status, icache_ecc_corrected_err_status = 0;
+	u32 icache_ecc_uncorrected_err_status = 0;
+	u32 icache_corrected_err_count_delta = 0;
+	u32 icache_uncorrected_err_count_delta = 0;
+	bool is_icache_ecc_corrected_total_err_overflow = 0;
+	bool is_icache_ecc_uncorrected_total_err_overflow = 0;
+
+	/* Check for L0 && L1 icache ECC errors. */
+	icache_ecc_status = gk20a_readl(g,
+		gr_pri_gpc0_tpc0_sm_icache_ecc_status_r() + offset);
+	icache_ecc_corrected_err_status = icache_ecc_status &
+		(gr_pri_gpc0_tpc0_sm_icache_ecc_status_corrected_err_l0_data_m() |
+		 gr_pri_gpc0_tpc0_sm_icache_ecc_status_corrected_err_l0_predecode_m() |
+		 gr_pri_gpc0_tpc0_sm_icache_ecc_status_corrected_err_l1_data_m() |
+		 gr_pri_gpc0_tpc0_sm_icache_ecc_status_corrected_err_l1_predecode_m());
+	icache_ecc_uncorrected_err_status = icache_ecc_status &
+		(gr_pri_gpc0_tpc0_sm_icache_ecc_status_uncorrected_err_l0_data_m() |
+		 gr_pri_gpc0_tpc0_sm_icache_ecc_status_uncorrected_err_l0_predecode_m() |
+		 gr_pri_gpc0_tpc0_sm_icache_ecc_status_uncorrected_err_l1_data_m() |
+		 gr_pri_gpc0_tpc0_sm_icache_ecc_status_uncorrected_err_l1_predecode_m());
+
+	if ((icache_ecc_corrected_err_status == 0) && (icache_ecc_uncorrected_err_status == 0))
+		return 0;
+
+	icache_corrected_err_count_delta =
+		gr_pri_gpc0_tpc0_sm_icache_ecc_corrected_err_count_total_v(
+			gk20a_readl(g,
+				gr_pri_gpc0_tpc0_sm_icache_ecc_corrected_err_count_r() +
+				offset));
+	icache_uncorrected_err_count_delta =
+		gr_pri_gpc0_tpc0_sm_icache_ecc_uncorrected_err_count_total_v(
+			gk20a_readl(g,
+				gr_pri_gpc0_tpc0_sm_icache_ecc_uncorrected_err_count_r() +
+				offset));
+	is_icache_ecc_corrected_total_err_overflow =
+		gr_pri_gpc0_tpc0_sm_icache_ecc_status_corrected_err_total_counter_overflow_v(icache_ecc_status);
+	is_icache_ecc_uncorrected_total_err_overflow =
+		gr_pri_gpc0_tpc0_sm_icache_ecc_status_uncorrected_err_total_counter_overflow_v(icache_ecc_status);
+
+	if ((icache_corrected_err_count_delta > 0) || is_icache_ecc_corrected_total_err_overflow) {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+			"corrected error (SBE) detected in SM L0 && L1 icache! err_mask [%08x] is_overf [%d]",
+			icache_ecc_corrected_err_status, is_icache_ecc_corrected_total_err_overflow);
+
+		/* HW uses 16-bits counter */
+		icache_corrected_err_count_delta +=
+			(is_icache_ecc_corrected_total_err_overflow <<
+			 gr_pri_gpc0_tpc0_sm_icache_ecc_corrected_err_count_total_s());
+		g->gr.t19x.ecc_stats.sm_icache_corrected_err_count.counters[tpc] +=
+							icache_corrected_err_count_delta;
+		gk20a_writel(g,
+			gr_pri_gpc0_tpc0_sm_icache_ecc_corrected_err_count_r() + offset,
+			0);
+	}
+	if ((icache_uncorrected_err_count_delta > 0) || is_icache_ecc_uncorrected_total_err_overflow) {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
+			"Uncorrected error (DBE) detected in SM L0 && L1 icache! err_mask [%08x] is_overf [%d]",
+			icache_ecc_uncorrected_err_status, is_icache_ecc_uncorrected_total_err_overflow);
+
+		/* HW uses 16-bits counter */
+		icache_uncorrected_err_count_delta +=
+			(is_icache_ecc_uncorrected_total_err_overflow <<
+			 gr_pri_gpc0_tpc0_sm_icache_ecc_uncorrected_err_count_total_s());
+		g->gr.t19x.ecc_stats.sm_icache_uncorrected_err_count.counters[tpc] +=
+							icache_uncorrected_err_count_delta;
+		gk20a_writel(g,
+			gr_pri_gpc0_tpc0_sm_icache_ecc_uncorrected_err_count_r() + offset,
+			0);
+	}
+
+	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_icache_ecc_status_r() + offset,
+			gr_pri_gpc0_tpc0_sm_icache_ecc_status_reset_task_f());
+
+	return 0;
+
+}
+
 static int gr_gv11b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			bool *post_event, struct channel_gk20a *fault_ch,
 			u32 *hww_global_esr)
@@ -382,6 +546,12 @@ static int gr_gv11b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 	/* Check for CBU ECC errors. */
 	gr_gv11b_handle_cbu_exception(g, gpc, tpc, post_event, fault_ch, hww_global_esr);
+
+	/* Check for L1 data ECC errors. */
+	gr_gv11b_handle_l1_data_exception(g, gpc, tpc, post_event, fault_ch, hww_global_esr);
+
+	/* Check for L0 && L1 icache ECC errors. */
+	gr_gv11b_handle_icache_exception(g, gpc, tpc, post_event, fault_ch, hww_global_esr);
 
 	return ret;
 }

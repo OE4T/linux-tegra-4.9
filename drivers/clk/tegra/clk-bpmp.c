@@ -189,6 +189,9 @@ static int clk_bpmp_set_rate(struct clk_hw *hw, unsigned long rate,
 	u8 req_d[16], reply[8];
 	struct bpmp_clk_req *req = (struct bpmp_clk_req *)&req_d[0];
 
+	pr_debug("%s: %s(%d): %lu\n",
+		 __func__, clk_hw_get_name(hw), bpmp_clk->clk_num, rate);
+
 	req->cmd = BPMP_CLK_CMD(MRQ_CLK_SET_RATE, bpmp_clk->clk_num);
 	if (rate > S64_MAX)
 		rate = S64_MAX;
@@ -454,6 +457,9 @@ static int clk_bpmp_init(uint32_t clk_num)
 		return 0;
 
 	err = clk_bpmp_get_all_info(clk_num, &flags, &parent, &parents, name);
+	if (!err)
+		pr_debug("%s: %s: num = %u flags = %u parents = %u\n", __func__,
+			 name, clk_num, flags, parents.num_of_parents);
 
 	/**
 	 * If the real clk is unavailable and if we are using the
@@ -560,7 +566,8 @@ int tegra_bpmp_clk_init(struct device_node *np, int staged)
 
 	r = of_clk_add_provider(np, tegra_of_clk_src_onecell_get, &clk_data);
 
-	pr_info("clock init %s\n", r ? "failed" : "ok");
+	pr_info("%s: clock init %s (%d clks)\n", __func__, r ? "failed" : "ok",
+		max_clk_id + 1);
 
 	return r;
 }

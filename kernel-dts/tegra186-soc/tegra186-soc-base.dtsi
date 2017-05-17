@@ -108,10 +108,7 @@
 	rtc@c2a0000 {
 		compatible = "nvidia,tegra18-rtc";
 		reg = <0x0 0x0c2a0000 0x0 0x100>;
-
-#ifdef WAKEUP_VIA_PM_IRQ_INTERRUPT_CONTROLLER
 		interrupt-parent = <&pm_irq>;
-#endif
 		interrupts = <0 10 0x04>;
 		status = "disabled";
 	};
@@ -443,9 +440,7 @@
 		reg = <0x0 0x03530000 0x0 0x8000>,
 			<0x0 0x03538000 0x0 0x1000>;
 
-#ifdef WAKEUP_VIA_PM_IRQ_INTERRUPT_CONTROLLER
 		interrupt-parent = <&pm_irq>;
-#endif
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SID_XUSB_HOST>;
 		status = "disabled";
@@ -1175,14 +1170,12 @@
 		status = "disabled";
 	};
 
-#ifdef WAKEUP_VIA_PM_IRQ_INTERRUPT_CONTROLLER
 	pm_irq: tegra186-pm-irq {
 		compatible = "nvidia,tegra186-pm-irq";
 		interrupt-controller;
 		#interrupt-cells = <3>;
 		interrupt-parent = <&intc>;
 	};
-#endif
 
 	timer@3020000 {
 		compatible = "nvidia,tegra186-timer";

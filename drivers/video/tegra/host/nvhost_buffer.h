@@ -25,15 +25,19 @@
  * @brief		Information needed for buffers
  *
  * pdev			Pointer to NVHOST device
- * buffer_tree:		RB tree root for of all the buffers used by a file pointer
- * buffer_tree_mutex	Mutex for the buffer tree
+ * rb_root		RB tree root for of all the buffers used by a file pointer
+ * list			List for traversing through all the buffers
+ * mutex		Mutex for the buffer tree and the buffer list
  * kref			Reference count for the bufferlist
  *
  */
 struct nvhost_buffers {
 	struct platform_device *pdev;
-	struct rb_root buffer_tree;
-	struct mutex buffer_tree_mutex;
+
+	struct list_head list_head;
+	struct rb_root rb_root;
+	struct mutex mutex;
+
 	struct kref kref;
 };
 
@@ -113,13 +117,13 @@ void nvhost_buffer_submit_unpin(struct nvhost_buffers *nvhost_buffers,
 					struct dma_buf **dmabufs, u32 count);
 
 /**
- * @brief			Cleanup all the buffers in the list
+ * @brief			Drop a user reference to buffer structure
  *
  * @param nvhost_buffers	Pointer to nvhost_buffer struct
  * @return			None
  *
  */
-void nvhost_buffer_put(struct nvhost_buffers *nvhost_buffers);
+void nvhost_buffer_release(struct nvhost_buffers *nvhost_buffers);
 
 /**
  * @brief		Returns dma buf and dma addr for a given handle

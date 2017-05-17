@@ -848,7 +848,7 @@ static int nvdla_release(struct inode *inode, struct file *file)
 
 	nvhost_queue_abort(priv->queue);
 	nvhost_queue_put(priv->queue);
-	nvhost_buffer_put(priv->buffers);
+	nvhost_buffer_release(priv->buffers);
 	nvhost_module_remove_client(pdev, priv);
 
 	kfree(priv);

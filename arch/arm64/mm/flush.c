@@ -98,6 +98,7 @@ EXPORT_SYMBOL(flush_dcache_page);
  */
 EXPORT_SYMBOL(flush_icache_range);
 EXPORT_SYMBOL(flush_cache_all);
+EXPORT_SYMBOL(__flush_dcache_area);
 EXPORT_SYMBOL(__flush_dcache_all);
 EXPORT_SYMBOL(__clean_dcache_all);
 EXPORT_SYMBOL(__clean_dcache_louis);

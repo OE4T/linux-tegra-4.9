@@ -1100,41 +1100,47 @@ static int vgpu_gr_suspend_resume_contexts(struct gk20a *g,
 		int *ctx_resident_ch_fd, u32 cmd)
 {
 	struct dbg_session_channel_data *ch_data;
-	struct tegra_vgpu_cmd_msg *msg;
+	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_suspend_resume_contexts *p;
-	size_t size_out = offsetof(struct tegra_vgpu_cmd_msg,
-			params.suspend_contexts.chids);
-	size_t size_in;
 	size_t n;
 	int channel_fd = -1;
 	int err = 0;
+	void *handle = NULL;
+	u16 *oob;
+	size_t oob_size;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
 	nvgpu_mutex_acquire(&dbg_s->ch_list_lock);
+
+	handle = tegra_gr_comm_oob_get_ptr(TEGRA_GR_COMM_CTX_CLIENT,
+			tegra_gr_comm_get_server_vmid(), TEGRA_VGPU_QUEUE_CMD,
+			(void **)&oob, &oob_size);
+	if (!handle) {
+		err = -EINVAL;
+		goto done;
+	}
 
 	n = 0;
 	list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry)
 		n++;
 
-	size_in = size_out + n * sizeof(u16);
-
-	msg = nvgpu_kmalloc(g, size_in);
-	if (!msg)
-		return -ENOMEM;
-
-	msg->cmd = cmd;
-	msg->handle = vgpu_get_handle(g);
-	p = &msg->params.suspend_contexts;
-	p->num_channels = n;
-	n = 0;
-	list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry) {
-		p->chids[n++] = (u16)ch_data->chid;
+	if (oob_size < n * sizeof(u16)) {
+		err = -ENOMEM;
+		goto done;
 	}
 
-	err = vgpu_comm_sendrecv(msg, size_in, size_out);
-	if (err || msg->ret) {
+	msg.cmd = cmd;
+	msg.handle = vgpu_get_handle(g);
+	p = &msg.params.suspend_contexts;
+	p->num_channels = n;
+	n = 0;
+	list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry)
+		oob[n++] = (u16)ch_data->chid;
+
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	if (err || msg.ret) {
 		err = -ENOMEM;
-		goto fail;
+		goto done;
 	}
 
 	if (p->resident_chid != (u16)~0) {
@@ -1146,13 +1152,12 @@ static int vgpu_gr_suspend_resume_contexts(struct gk20a *g,
 		}
 	}
 
-fail:
+done:
+	if (handle)
+		tegra_gr_comm_oob_put_ptr(handle);
 	nvgpu_mutex_release(&dbg_s->ch_list_lock);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
-
 	*ctx_resident_ch_fd = channel_fd;
-	nvgpu_kfree(g, msg);
-
 	return err;
 }
 

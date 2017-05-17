@@ -461,28 +461,38 @@ static int vgpu_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 static int vgpu_submit_runlist(struct gk20a *g, u64 handle, u8 runlist_id,
 			       u16 *runlist, u32 num_entries)
 {
-	struct tegra_vgpu_cmd_msg *msg;
+	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_runlist_params *p;
-	size_t size = sizeof(*msg) + sizeof(*runlist) * num_entries;
-	char *ptr;
 	int err;
+	void *oob_handle;
+	void *oob;
+	size_t size, oob_size;
 
-	msg = nvgpu_kmalloc(g, size);
-	if (!msg)
-		return -1;
+	oob_handle = tegra_gr_comm_oob_get_ptr(TEGRA_GR_COMM_CTX_CLIENT,
+			tegra_gr_comm_get_server_vmid(), TEGRA_VGPU_QUEUE_CMD,
+			&oob, &oob_size);
+	if (!oob_handle)
+		return -EINVAL;
 
-	msg->cmd = TEGRA_VGPU_CMD_SUBMIT_RUNLIST;
-	msg->handle = handle;
-	p = &msg->params.runlist;
+	size = sizeof(*runlist) * num_entries;
+	if (oob_size < size) {
+		err = -ENOMEM;
+		goto done;
+	}
+
+	msg.cmd = TEGRA_VGPU_CMD_SUBMIT_RUNLIST;
+	msg.handle = handle;
+	p = &msg.params.runlist;
 	p->runlist_id = runlist_id;
 	p->num_entries = num_entries;
 
-	ptr = (char *)msg + sizeof(*msg);
-	memcpy(ptr, runlist, sizeof(*runlist) * num_entries);
-	err = vgpu_comm_sendrecv(msg, size, sizeof(*msg));
+	memcpy(oob, runlist, size);
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 
-	err = (err || msg->ret) ? -1 : 0;
-	nvgpu_kfree(g, msg);
+	err = (err || msg.ret) ? -1 : 0;
+
+done:
+	tegra_gr_comm_oob_put_ptr(oob_handle);
 	return err;
 }
 

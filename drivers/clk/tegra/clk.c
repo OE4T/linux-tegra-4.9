@@ -737,4 +737,4 @@ static int __init tegra_clocks_apply_init_table(void)
 
 	return 0;
 }
-arch_initcall(tegra_clocks_apply_init_table);
+arch_initcall_sync(tegra_clocks_apply_init_table);

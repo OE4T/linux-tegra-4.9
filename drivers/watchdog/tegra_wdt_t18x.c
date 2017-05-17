@@ -65,6 +65,7 @@ struct tegra_wdt_t18x {
 	int			active_count;
 	int			shutdown_timeout;
 	int			wdt_index;
+	int			tmr_index;
 	bool			extended_suspend;
 	bool			config_locked;
 };
@@ -133,6 +134,8 @@ static struct tegra_wdt_t18x *to_tegra_wdt_t18x(struct watchdog_device *wdt)
 #define WDT_UNLOCK_PATTERN		(0xC45A << 0)
 #define WDT_SKIP			(0x10)
 #define WDT_SKIP_VAL(i, val)		(((val) & 0x7) << (4 * (i)))
+#define TIMER_INDEX(add)		((((add) >> 16) & 0xF) - 0x2)
+#define WATCHDOG_INDEX(add)		((((add) >> 16) & 0xF) - 0xc)
 
 static int __tegra_wdt_t18x_ping(struct tegra_wdt_t18x *twdt_t18x)
 {
@@ -402,10 +405,12 @@ static void tegra_wdt_t18x_debugfs_init(struct tegra_wdt_t18x *twdt_t18x)
 
 static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
 	struct resource *res_wdt, *res_tmr, *res_tke;
 	struct tegra_wdt_t18x *twdt_t18x;
 	struct device_node *np = pdev->dev.of_node;
 	struct of_phandle_args oirq;
+	int timer_id, wdt_id;
 	u32 pval = 0;
 	int ret;
 
@@ -467,10 +472,73 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 		return -ENOENT;
 	}
 
+	/* WDT ID from base address */
+	wdt_id = WATCHDOG_INDEX(res_wdt->start);
+	ret = of_property_read_u32(np, "nvidia,watchdog-index", &pval);
+	if (!ret) {
+		twdt_t18x->wdt_index = pval;
+
+		/* If WDT index provided then address must be for base */
+		if (wdt_id && (wdt_id != twdt_t18x->wdt_index)) {
+			dev_err(dev, "WDT base address must be for WDT0\n");
+			return -EINVAL;
+		}
+
+		/* Adjust address for WDT */
+		ret = adjust_resource(res_wdt, res_wdt->start + pval * 0x1000,
+				      res_wdt->end - res_wdt->start);
+		if (ret < 0) {
+			dev_err(dev, "Cannot adjust address of WDT: %d\n", ret);
+			return ret;
+		}
+	} else {
+		/* Watchdog index in list of wdts under top_tke */
+		twdt_t18x->wdt_index = wdt_id;
+	}
+
 	twdt_t18x->wdt_source = devm_ioremap_resource(&pdev->dev, res_wdt);
 	if (IS_ERR(twdt_t18x->wdt_source)) {
 		dev_err(&pdev->dev, "Cannot request memregion/iomap res_wdt\n");
 		return PTR_ERR(twdt_t18x->wdt_source);
+	}
+
+	twdt_t18x->config = readl(twdt_t18x->wdt_source + WDT_CFG);
+	twdt_t18x->config_locked = !!(twdt_t18x->config & WDT_CFG_INT_EN);
+
+	/*
+	 * Get Timer index,
+	 *	First from BL, if locked else
+	 *	from DT property else
+	 *	From base address.
+	 */
+	if (twdt_t18x->config_locked) {
+		twdt_t18x->tmr_index = twdt_t18x->config & 0xF;
+	} else {
+		ret = of_property_read_u32(np, "nvidia,timer-index", &pval);
+		if (!ret)
+			twdt_t18x->tmr_index = pval;
+		else
+			twdt_t18x->tmr_index = TIMER_INDEX(res_tmr->start);
+	}
+
+	/*
+	 * If timer ID from address different then timer index
+	 * then adjust address.
+	 */
+	timer_id = TIMER_INDEX(res_tmr->start);
+	if (timer_id != twdt_t18x->tmr_index) {
+		if (timer_id) {
+			dev_err(dev, "Timer base address must be Timer0\n");
+			return -EINVAL;
+		}
+
+		ret = adjust_resource(res_tmr, res_tmr->start +
+				      twdt_t18x->tmr_index * 0x10000,
+				      res_tmr->end - res_tmr->start);
+		if (ret < 0) {
+			dev_err(dev, "Cannot adjust address of TMR:%d\n", ret);
+			return ret;
+		}
 	}
 
 	twdt_t18x->wdt_timer = devm_ioremap_resource(&pdev->dev, res_tmr);
@@ -485,25 +553,9 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 		return PTR_ERR(twdt_t18x->wdt_tke);
 	}
 
-	twdt_t18x->config = readl(twdt_t18x->wdt_source + WDT_CFG);
-	twdt_t18x->config_locked = !!(twdt_t18x->config & WDT_CFG_INT_EN);
-
-	/* Watchdog index in list of wdts under top_tke */
-	twdt_t18x->wdt_index = ((res_wdt->start >> 16) & 0xF) - 0xc;
-
-	if (twdt_t18x->config_locked) {
-		int tmr_id = ((res_tmr->start >> 16) & (0xF)) - 2;
-		int tmr_prog = twdt_t18x->config & 0xF;
-
-		if (tmr_id != tmr_prog) {
-			dev_err(&pdev->dev,
-				"The configured timer %d is not same as DT timer ID %d",
-				tmr_id, tmr_prog);
-			return -EINVAL;
-		}
-	} else {
+	if (!twdt_t18x->config_locked) {
 		/* Configure timer source and period */
-		twdt_t18x->config = ((res_tmr->start >> 16) & (0xf)) - 2;
+		twdt_t18x->config = twdt_t18x->tmr_index;
 		twdt_t18x->config |= WDT_CFG_PERIOD;
 
 		/* Enable local interrupt for WDT petting */

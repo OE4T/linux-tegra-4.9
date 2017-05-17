@@ -4,10 +4,17 @@ Required properties:
 
 - compatible: Should be "nvidia,tegra-wdt-t18x"
 - reg: Should contain WDT and corresponding timer source
-  registers location and length.
+  registers location and length. There must be three register
+  addresses and size in following sequence:
+	WDT0 base address and size.
+	Timer0 base address and size.
+	TKE TOP base address and size.
+
+	If timer index and watchdog index is not provided then
+	the address must be the actual base address of WDT and
+	timer which will be use.
 
 Optional properties for recovery mode:
-
 - interrupts: interrupt number to the cpu
 - nvidia,wdt-cluster-id: ID of the cpu cluster monitored by this WDT instance.
 - nvidia,enable-on-init: toggle switch for enable during init
@@ -20,6 +27,11 @@ Optional properties for recovery mode:
 	timer to syscore suspend and re-eanble on syscore resume. If this
 	is selected then do not disable watchdog timer in device suspend
 	otherwise disable in device suspend.
+- nvidia,watchdog-index: Watchdog to be use, it can be 0, 1 or 2.
+- nvidia,timer-index: Timer to be use for counter. It can be 0 to 7.
+
+If nvidia,watchdog-index or nvidia,timer-index are provided then property
+"reg" must contain the base address of timer and watchdog.
 
 Optional properties for debug purpose:
 

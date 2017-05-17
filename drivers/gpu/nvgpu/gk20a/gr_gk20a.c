@@ -1785,7 +1785,9 @@ restore_fe_go_idle:
 		g->ops.gr.write_zcull_ptr(g, gold_mem, 0);
 	nvgpu_mem_end(g, ctxheader);
 
-	g->ops.gr.commit_inst(c, ch_ctx->global_ctx_buffer_va[GOLDEN_CTX_VA]);
+	err = g->ops.gr.commit_inst(c, ch_ctx->global_ctx_buffer_va[GOLDEN_CTX_VA]);
+	if (err)
+		goto clean_up;
 
 	gr_gk20a_fecs_ctx_image_save(c, gr_fecs_method_push_adr_wfi_golden_save_v());
 
@@ -1813,7 +1815,9 @@ restore_fe_go_idle:
 	}
 	nvgpu_mem_end(g, ctxheader);
 
-	g->ops.gr.commit_inst(c, gr_mem->gpu_va);
+	err = g->ops.gr.commit_inst(c, gr_mem->gpu_va);
+	if (err)
+		goto clean_up;
 
 	gr->ctx_vars.golden_image_initialized = true;
 

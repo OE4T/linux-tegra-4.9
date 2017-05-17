@@ -1765,11 +1765,13 @@ int tegra_channel_cleanup(struct tegra_channel *chan)
 	}
 
 	v4l2_ctrl_handler_free(&chan->ctrl_handler);
+	mutex_lock(&chan->video_lock);
 	vb2_queue_release(&chan->queue);
 #if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	tegra_vb2_dma_cleanup(chan->vi->dev, chan->alloc_ctx,
 		&chan->vi->vb2_dma_alloc_refcnt);
 #endif
+	mutex_unlock(&chan->video_lock);
 
 	media_entity_cleanup(&chan->video.entity);
 

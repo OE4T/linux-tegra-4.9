@@ -90,6 +90,8 @@ struct clk *tegra_clk_register_divider(const char *name,
 		u8 frac_width, spinlock_t *lock);
 struct clk *tegra_clk_register_mc(const char *name, const char *parent_name,
 				  void __iomem *reg, spinlock_t *lock);
+struct clk *tegra_clk_register_mc_t210(const char *name,
+		const char *parent_name, void __iomem *reg, spinlock_t *lock);
 
 /*
  * Tegra PLL:

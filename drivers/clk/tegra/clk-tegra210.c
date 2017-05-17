@@ -2978,8 +2978,8 @@ static __init void tegra210_emc_clk_init(void __iomem *clk_base)
 	clks[TEGRA210_CLK_EMC] = clk;
 
 skip_emc:
-	clk = tegra_clk_register_mc("mc", "emc", clk_base + CLK_SOURCE_EMC,
-		&emc_lock);
+	clk = tegra_clk_register_mc_t210("mc", "emc", clk_base + CLK_SOURCE_EMC,
+					&emc_lock);
 	clks[TEGRA210_CLK_MC] = clk;
 }
 

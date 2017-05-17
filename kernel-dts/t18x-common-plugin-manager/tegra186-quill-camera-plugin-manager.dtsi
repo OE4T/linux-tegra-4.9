@@ -1980,8 +1980,8 @@
 				target = <&cam_module0>;
 				_overlay_ {
 					status = "okay";
-					badge = "e3331_top_22N02A";
-					position = "top";
+					badge = "e3331_rear_22N02A";
+					position = "rear";
 					orientation = "1";
 				};
 			};

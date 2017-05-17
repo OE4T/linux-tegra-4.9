@@ -21,10 +21,4 @@
  */
 #define SDMMC_USE_CORE_REGULATOR_HANDLER
 
-/**
- * In Kernel 4.4, IRQ subsystem requires all wake source interrupts to be
- * routed through the pm-irq "interrupt controller",
- */
-#define WAKEUP_VIA_PM_IRQ_INTERRUPT_CONTROLLER
-
 #endif

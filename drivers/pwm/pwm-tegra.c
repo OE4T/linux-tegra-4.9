@@ -189,6 +189,7 @@ static int tegra_pwm_probe(struct platform_device *pdev)
 	struct resource *r;
 	bool no_clk_sleeping_in_ops;
 	struct clk *parent_clk;
+	struct clk *parent_slow;
 	u32 pval;
 	int ret;
 
@@ -254,7 +255,7 @@ static int tegra_pwm_probe(struct platform_device *pdev)
 	pwm->clk_rate = clk_get_rate(pwm->clk);
 
 	/* Limit the maximum clock rate */
-	if (pwm->soc->max_clk_limit &&
+	if (pwm->max_clk_limit &&
 	    (pwm->clk_rate > pwm->max_clk_limit)) {
 		ret = clk_set_rate(pwm->clk, pwm->max_clk_limit);
 		if (ret < 0) {
@@ -265,6 +266,34 @@ static int tegra_pwm_probe(struct platform_device *pdev)
 		pwm->clk_rate = clk_get_rate(pwm->clk);
 	}
 
+	if (pwm->clk_rate <= pwm->max_clk_limit)
+		goto parent_done;
+	/*
+	 * If clk_rate is still higher than the max_clk_limit then
+	 * switch to slow parent if exist
+	 */
+	parent_slow = devm_clk_get(&pdev->dev, "slow-parent");
+	if (IS_ERR(parent_slow)) {
+		dev_warn(&pdev->dev, "Source clock %lu is higher than required %lu\n",
+			 pwm->clk_rate, pwm->max_clk_limit);
+		goto parent_done;
+	}
+
+	ret = clk_set_parent(pwm->clk, parent_slow);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Failed to set slow-parent: %d\n", ret);
+		return ret;
+	}
+
+	/* Set clock to maximum clock limit */
+	ret = clk_set_rate(pwm->clk, pwm->max_clk_limit);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Failed to set max clk rate: %d\n", ret);
+		return ret;
+	}
+	pwm->clk_rate = clk_get_rate(pwm->clk);
+
+parent_done:
 	if (no_clk_sleeping_in_ops) {
 		ret = clk_prepare(pwm->clk);
 		if (ret) {

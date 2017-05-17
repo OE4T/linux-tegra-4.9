@@ -36,6 +36,7 @@ nvgpu-y := \
 	common/linux/nvgpu_mem.o \
 	common/linux/dma.o \
 	common/linux/soc.o \
+	common/linux/fuse.o \
 	common/linux/driver_common.o \
 	common/linux/firmware.o \
 	common/linux/thread.o \

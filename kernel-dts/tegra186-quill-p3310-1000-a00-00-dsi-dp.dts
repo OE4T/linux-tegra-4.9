@@ -42,4 +42,8 @@
 			bootloader-status = "okay";
 		};
 	};
+
+	plugin-manager {
+		/delete-node/ fragment-e3320-dp;
+	};
 };

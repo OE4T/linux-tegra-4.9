@@ -7,7 +7,7 @@
  *
  * Copyright (C) 1999 Hewlett-Packard Co.
  * Copyright (C) 1999 Stephane Eranian <eranian@hpl.hp.com>
- * Copyright (C) 2016 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2016-2017, NVIDIA CORPORATION. All rights reserved.
  */
 #ifndef _LINUX_RTC_H_
 #define _LINUX_RTC_H_
@@ -227,9 +227,9 @@ extern int rtc_hctosys_ret;
 #endif
 
 #ifdef CONFIG_RTC_HCTOSYS
-void set_systohc_rtc_time(void);
+int set_systohc_rtc_time(void);
 #else
-static inline void set_systohc_rtc_time(void){};
+static inline int set_systohc_rtc_time(void){ return 0; };
 #endif
 
 #endif /* _LINUX_RTC_H_ */

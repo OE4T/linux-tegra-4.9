@@ -1,7 +1,7 @@
 /*
  * RTC subsystem, initialize system time on startup
  *
- * Copyright (C) 2016 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2016-2017, NVIDIA CORPORATION. All rights reserved.
  * Copyright (C) 2005 Tower Technologies
  * Author: Alessandro Zummo <a.zummo@towertech.it>
  *
@@ -52,7 +52,7 @@ static int set_hctosys_rtc_time(struct rtc_device *rtc)
 	return 0;
 }
 
-void set_systohc_rtc_time(void)
+int set_systohc_rtc_time(void)
 {
 	int err = -ENODEV;
 	struct rtc_time tm;
@@ -61,24 +61,30 @@ void set_systohc_rtc_time(void)
 
 	system_rtc = rtc_class_open(CONFIG_RTC_HCTOSYS_DEVICE);
 	if (system_rtc == NULL)
-		return;
+		return err;
 
 	err = rtc_read_time(system_rtc, &tm);
 	if (err) {
 		rtc_class_close(system_rtc);
-		return;
+		return err;
 	}
 
 	backup_rtc = rtc_class_open(CONFIG_RTC_BACKUP_HCTOSYS_DEVICE);
 	if (backup_rtc == NULL) {
 		rtc_class_close(system_rtc);
-		return;
+		return err;
 	}
 
-	rtc_set_time(backup_rtc, &tm);
+	err = rtc_set_time(backup_rtc, &tm);
+	if (err) {
+		rtc_class_close(backup_rtc);
+		return err;
+	}
 
 	rtc_class_close(system_rtc);
 	rtc_class_close(backup_rtc);
+
+	return 0;
 }
 EXPORT_SYMBOL(set_systohc_rtc_time);
 

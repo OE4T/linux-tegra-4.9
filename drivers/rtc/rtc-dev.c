@@ -1,7 +1,7 @@
 /*
  * RTC subsystem, dev interface
  *
- * Copyright (C) 2016 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2016-2017, NVIDIA CORPORATION. All rights reserved.
  * Copyright (C) 2005 Tower Technologies
  * Author: Alessandro Zummo <a.zummo@towertech.it>
  *
@@ -350,7 +350,7 @@ static long rtc_dev_ioctl(struct file *file,
 
 		err = rtc_set_time(rtc, &tm);
 		if (!err)
-			set_systohc_rtc_time();
+			err = set_systohc_rtc_time();
 		return err;
 
 	case RTC_PIE_ON:

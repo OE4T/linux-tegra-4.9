@@ -32,10 +32,12 @@
 #include "vhost.h"
 #include "t124/t124.h"
 #include "t210/t210.h"
-#include "../../../../arch/arm/mach-tegra/iomap.h"
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "t186/t186.h"
 #endif
+
+#define TEGRA_ISPB_BASE			0x54680000
+#define TEGRA_ISP_BASE			0x54600000
 
 static int nvhost_vhost_client_finalize_poweron(struct platform_device *pdev)
 {

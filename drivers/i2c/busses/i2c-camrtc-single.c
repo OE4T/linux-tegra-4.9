@@ -158,6 +158,12 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 
 	ivc_dev = g_ivc_devs + i;
 
+	if (ivc_dev->chan == NULL)
+		return -ENODEV;
+
+	if (ivc_dev->chan->is_ready == false)
+		return -ENODEV;
+
 	base = devm_ioremap_resource(&pdev->dev, res);
 	if (IS_ERR(base))
 		return PTR_ERR(base);
@@ -380,6 +386,10 @@ static int tegra_ivc_i2c_single_xfer(struct tegra_i2c_ivc_dev *ivc_dev,
 	u8 *read_ptr = NULL;
 	int read_len = 0;
 
+	if (ivc_dev == NULL)
+		return -EIO;
+	if (ivc_dev->chan == NULL)
+		return -EIO;
 	if (num == 0)
 		return 0;
 	if (tegra_ivc_rpc_channel_is_suspended(ivc_dev->chan))

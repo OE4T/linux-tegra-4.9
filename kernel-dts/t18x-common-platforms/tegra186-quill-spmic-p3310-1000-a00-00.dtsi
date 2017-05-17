@@ -26,9 +26,7 @@
 			compatible = "maxim,max77620";
 			reg = <0x3c>;
 
-#ifdef WAKEUP_VIA_PM_IRQ_INTERRUPT_CONTROLLER
 			interrupt-parent = <&pm_irq>;
-#endif
 			interrupts = <0 209 IRQ_TYPE_NONE>;
 
 			#interrupt-cells = <2>;

@@ -475,7 +475,6 @@ struct tegra_vgpu_gpu_load_params {
 struct tegra_vgpu_suspend_resume_contexts {
 	u32 num_channels;
 	u16 resident_chid;
-	u16 chids[];
 };
 
 struct tegra_vgpu_clear_sm_error_state {

@@ -21,8 +21,9 @@
 		compatible = "nvidia,tegra186-pwm";
 		reg = <0x0 0x3280000 0x0 0x10000>;
 		clocks = <&tegra_car TEGRA186_CLK_PWM1>,
-		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "pwm", "parent";
+		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
+			<&tegra_car TEGRA186_CLK_CLK_M>;
+		clock-names = "pwm", "parent", "slow-parent";
 		#pwm-cells = <2>;
 		resets = <&tegra_car TEGRA186_RESET_PWM1>;
 		reset-names = "pwm";
@@ -33,8 +34,9 @@
 		compatible = "nvidia,tegra186-pwm";
 		reg = <0x0 0x3290000 0x0 0x10000>;
 		clocks = <&tegra_car TEGRA186_CLK_PWM2>,
-		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "pwm", "parent";
+		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
+			<&tegra_car TEGRA186_CLK_CLK_M>;
+		clock-names = "pwm", "parent", "slow-parent";
 		#pwm-cells = <2>;
 		resets = <&tegra_car TEGRA186_RESET_PWM2>;
 		reset-names = "pwm";
@@ -45,8 +47,9 @@
 		compatible = "nvidia,tegra186-pwm";
 		reg = <0x0 0x32a0000 0x0 0x10000>;
 		clocks = <&tegra_car TEGRA186_CLK_PWM3>,
-		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "pwm", "parent";
+		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
+			<&tegra_car TEGRA186_CLK_CLK_M>;
+		clock-names = "pwm", "parent", "slow-parent";
 		#pwm-cells = <2>;
 		resets = <&tegra_car TEGRA186_RESET_PWM3>;
 		reset-names = "pwm";
@@ -68,8 +71,9 @@
 		compatible = "nvidia,tegra186-pwm";
 		reg = <0x0 0x32c0000 0x0 0x10000>;
 		clocks = <&tegra_car TEGRA186_CLK_PWM5>,
-		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "pwm", "parent";
+		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
+			<&tegra_car TEGRA186_CLK_CLK_M>;
+		clock-names = "pwm", "parent", "slow-parent";
 		#pwm-cells = <2>;
 		resets = <&tegra_car TEGRA186_RESET_PWM5>;
 		reset-names = "pwm";
@@ -80,8 +84,9 @@
 		compatible = "nvidia,tegra186-pwm";
 		reg = <0x0 0x32d0000 0x0 0x10000>;
 		clocks = <&tegra_car TEGRA186_CLK_PWM6>,
-		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "pwm", "parent";
+		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
+			<&tegra_car TEGRA186_CLK_CLK_M>;
+		clock-names = "pwm", "parent", "slow-parent";
 		#pwm-cells = <2>;
 		resets = <&tegra_car TEGRA186_RESET_PWM6>;
 		reset-names = "pwm";
@@ -92,8 +97,9 @@
 		compatible = "nvidia,tegra186-pwm";
 		reg = <0x0 0x32e0000 0x0 0x10000>;
 		clocks = <&tegra_car TEGRA186_CLK_PWM7>,
-		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "pwm", "parent";
+		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
+			<&tegra_car TEGRA186_CLK_CLK_M>;
+		clock-names = "pwm", "parent", "slow-parent";
 		#pwm-cells = <2>;
 		resets = <&tegra_car TEGRA186_RESET_PWM7>;
 		reset-names = "pwm";
@@ -104,8 +110,9 @@
 		compatible = "nvidia,tegra186-pwm";
 		reg = <0x0 0x32f0000 0x0 0x10000>;
 		clocks = <&tegra_car TEGRA186_CLK_PWM8>,
-		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "pwm", "parent";
+		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
+			<&tegra_car TEGRA186_CLK_CLK_M>;
+		clock-names = "pwm", "parent", "slow-parent";
 		#pwm-cells = <2>;
 		resets = <&tegra_car TEGRA186_RESET_PWM8>;
 		reset-names = "pwm";

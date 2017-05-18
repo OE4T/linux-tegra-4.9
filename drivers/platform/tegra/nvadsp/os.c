@@ -49,10 +49,6 @@
 #include "hwmailbox.h"
 #include "log_state.h"
 
-void tegra_adma_dump_ch_reg(void)
-{
-}
-
 #define NVADSP_ELF "adsp.elf"
 #define NVADSP_FIRMWARE NVADSP_ELF
 
@@ -140,6 +136,12 @@ static DECLARE_COMPLETION(entered_wfi);
 static void __nvadsp_os_stop(bool);
 static irqreturn_t adsp_wdt_handler(int irq, void *arg);
 static irqreturn_t adsp_wfi_handler(int irq, void *arg);
+
+/*
+ * set by adsp audio driver through exported api nvadsp_set_adma_dump_reg
+ * used to dump adma registers incase of failures for debug
+ */
+void (*nvadsp_tegra_adma_dump_ch_reg)(void) = NULL;
 
 #ifdef CONFIG_DEBUG_FS
 static int adsp_logger_open(struct inode *inode, struct file *file)
@@ -1369,7 +1371,8 @@ void dump_adsp_sys(void)
 	dump_adsp_logs();
 	dump_mailbox_regs();
 	get_adsp_state();
-	tegra_adma_dump_ch_reg();
+	if (nvadsp_tegra_adma_dump_ch_reg)
+		(*nvadsp_tegra_adma_dump_ch_reg)();
 	print_agic_irq_states();
 }
 EXPORT_SYMBOL(dump_adsp_sys);
@@ -1450,6 +1453,14 @@ static int setup_interrupts(struct nvadsp_os_data *priv)
  err:
 	return ret;
 }
+
+void nvadsp_set_adma_dump_reg(void (*cb_adma_regdump)(void))
+{
+	nvadsp_tegra_adma_dump_ch_reg = cb_adma_regdump;
+	pr_info("%s: callback for adma reg dump is sent to %p\n",
+		__func__, nvadsp_tegra_adma_dump_ch_reg);
+}
+EXPORT_SYMBOL(nvadsp_set_adma_dump_reg);
 
 int nvadsp_os_start(void)
 {

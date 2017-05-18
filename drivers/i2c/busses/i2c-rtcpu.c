@@ -26,6 +26,7 @@
 
 #include "i2c-rtcpu-clk-config.h"
 #include "i2c-ivc-single.h"
+#include "i2c-rtcpu-common.h"
 
 /*
  * I2C bus driver internal data structure

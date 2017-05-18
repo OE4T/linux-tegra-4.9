@@ -22,6 +22,7 @@
 
 #include "soc/tegra/camrtc-i2c-common.h"
 #include "i2c-ivc-single.h"
+#include "i2c-rtcpu-common.h"
 
 /*
  * I2C IVC Single driver internal data structure
@@ -29,7 +30,7 @@
 
 #define TEGRA_I2C_SINGLE_MAX_DEV    4
 
-#define I2C_CAMRTC_RPC_TIMEOUT_MS   250
+#define I2C_CAMRTC_RPC_IVC_SINGLE_TIMEOUT_MS   250
 
 struct tegra_i2c_ivc_dev {
 	/* IVC RPC */
@@ -119,8 +120,7 @@ struct tegra_i2c_ivc_dev *tegra_ivc_i2c_get_dev(u32 reg_base)
 }
 EXPORT_SYMBOL(tegra_ivc_i2c_get_dev);
 
-static int tegra_ivc_i2c_add_single(
-	struct tegra_ivc_channel *chan);
+static int tegra_ivc_i2c_add_single(struct tegra_ivc_channel *chan);
 
 int tegra_ivc_i2c_single_xfer(struct tegra_i2c_ivc_dev *i2c_ivc_dev,
 	const struct i2c_msg *reqs, int num)
@@ -362,8 +362,7 @@ static void tegra_ivc_i2c_single_create_debugfs(
  * IVC channel driver interface
  */
 
-static int tegra_ivc_i2c_add_single(
-	struct tegra_ivc_channel *chan)
+static int tegra_ivc_i2c_add_single(struct tegra_ivc_channel *chan)
 {
 	struct tegra_i2c_ivc_dev *i2c_ivc_dev =
 		tegra_ivc_channel_get_drvdata(chan);
@@ -397,7 +396,7 @@ static int tegra_ivc_i2c_add_single(
 	}
 
 	dev_info(&chan->dev,
-		"Registered an I2C device at 0x%08x to bus %d\n",
+		"Registered an I2C single device at 0x%08x to bus %d\n",
 		i2c_ivc_dev->reg_base, bus_id);
 
 	i2c_ivc_dev->bus_id = bus_id;
@@ -411,7 +410,8 @@ static int tegra_ivc_i2c_add_single(
 	i2c_ivc_dev->rpc_i2c_req.response = &i2c_ivc_dev->rpc_i2c_rsp;
 	i2c_ivc_dev->rpc_i2c_req.callback = NULL;
 	i2c_ivc_dev->rpc_i2c_req.callback_param = NULL;
-	i2c_ivc_dev->rpc_i2c_req.timeout_ms = I2C_CAMRTC_RPC_TIMEOUT_MS;
+	i2c_ivc_dev->rpc_i2c_req.timeout_ms =
+		I2C_CAMRTC_RPC_IVC_SINGLE_TIMEOUT_MS;
 	i2c_ivc_dev->is_added = true;
 
 	return 0;

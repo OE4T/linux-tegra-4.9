@@ -4828,6 +4828,9 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	if (g->ops.ltc.init_cbc)
 		g->ops.ltc.init_cbc(g, gr);
 
+	if (g->ops.fb.init_cbc)
+		g->ops.fb.init_cbc(g, gr);
+
 	/* load ctx init */
 	for (i = 0; i < sw_ctx_load->count; i++)
 		gk20a_writel(g, sw_ctx_load->l[i].addr,

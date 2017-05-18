@@ -382,6 +382,7 @@ struct gpu_ops {
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);
+		void (*init_cbc)(struct gk20a *g, struct gr_gk20a *gr);
 		void (*init_fs_state)(struct gk20a *g);
 		void (*reset)(struct gk20a *g);
 		void (*init_uncompressed_kind_map)(struct gk20a *g);

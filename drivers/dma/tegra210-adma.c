@@ -142,6 +142,7 @@
 #define AST_RGN_OFFSET						0x20
 
 struct tegra_adma;
+struct device *dma_device;
 
 /*
  * struct tegra_chan_masks - Tegra chip register masks
@@ -444,6 +445,44 @@ static int tegra_adma_init(struct tegra_adma *tdma)
 
 	return 0;
 }
+
+/* Add function to dump the register status during hung trigger */
+void tegra_adma_dump_ch_reg(void)
+{
+	struct tegra_adma *tdma = dev_get_drvdata(dma_device);
+	int i;
+	void __iomem *ch_addr;
+
+	/* Enable clock before accessing registers */
+	pm_runtime_get_sync(tdma->dev);
+	pr_info("======= ADMA Register Dump ========\n");
+	for (i = 0; i < tdma->chip_data->nr_channels; i++) {
+		ch_addr = tdma->base_addr + tdma->ch_base_offset +
+			(tdma->chip_data->ch_reg_size *
+			(i + tdma->dma_start_index));
+
+		pr_info("ADMA_PAGE1_CH%d_CMD_0 = %x\n",
+			i, readl(ch_addr + ADMA_CH_CMD));
+		pr_info("ADMA_PAGE1_CH%d_STATUS_0 = %x\n",
+			i, readl(ch_addr + ADMA_CH_STATUS));
+		pr_info("ADMA_PAGE1_CH%d_CTRL_0 = %x\n",
+			i, readl(ch_addr + ADMA_CH_CTRL));
+		pr_info("ADMA_PAGE1_CH%d_CONFIG_0 = %x\n",
+			i, readl(ch_addr + ADMA_CH_CONFIG));
+		pr_info("ADMA_PAGE1_CH%d_AHUB_FIFO_CTRL_0 = %x\n",
+			i, readl(ch_addr + ADMA_CH_FIFO_CTRL));
+		pr_info("ADMA_PAGE1_CH%d_TC_STATUS_0 = %x\n",
+			i, readl(ch_addr + ADMA_CH_TC_STATUS));
+		pr_info("ADMA_PAGE1_CH%d_LOWER_SOURCE_ADDR_0 = %x\n",
+			i, readl(ch_addr + ADMA_CH_LOWER_SRC_ADDR));
+		pr_info("ADMA_PAGE1_CH%d_LOWER_TARGET_ADDR_0 = %x\n",
+			i, readl(ch_addr + ADMA_CH_LOWER_TRG_ADDR));
+		pr_info("ADMA_PAGE1_CH%d_TRANSFER_STATUS_0 = %x\n",
+			i, readl(ch_addr + ADMA_CH_XFER_STATUS));
+	}
+	pm_runtime_put_sync(tdma->dev);
+}
+EXPORT_SYMBOL_GPL(tegra_adma_dump_ch_reg);
 
 static int tegra_adma_request_alloc(struct tegra_adma_chan *tdc,
 				    enum dma_transfer_direction direction)
@@ -1170,6 +1209,7 @@ static int tegra_adma_probe(struct platform_device *pdev)
 
 
 	tdma->dev = &pdev->dev;
+	dma_device = &pdev->dev;
 	tdma->chip_data = cdata;
 	tdma->ch_base_offset = cdata->ch_base_offset +
 				(cdata->ch_page_size * (adma_page - 1));

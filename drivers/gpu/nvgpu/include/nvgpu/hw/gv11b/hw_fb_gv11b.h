@@ -1814,4 +1814,84 @@ static inline u32 fb_mmu_fault_status_valid_clear_f(void)
 {
 	return 0x80000000;
 }
+static inline u32 fb_mmu_num_active_ltcs_r(void)
+{
+	return 0x00100ec0;
+}
+static inline u32 fb_mmu_num_active_ltcs_count_f(u32 v)
+{
+	return (v & 0x1f) << 0;
+}
+static inline u32 fb_mmu_num_active_ltcs_count_v(u32 r)
+{
+	return (r >> 0) & 0x1f;
+}
+static inline u32 fb_mmu_cbc_base_r(void)
+{
+	return 0x00100ec4;
+}
+static inline u32 fb_mmu_cbc_base_address_f(u32 v)
+{
+	return (v & 0x3ffffff) << 0;
+}
+static inline u32 fb_mmu_cbc_base_address_v(u32 r)
+{
+	return (r >> 0) & 0x3ffffff;
+}
+static inline u32 fb_mmu_cbc_base_address_alignment_shift_v(void)
+{
+	return 0x0000000b;
+}
+static inline u32 fb_mmu_cbc_top_r(void)
+{
+	return 0x00100ec8;
+}
+static inline u32 fb_mmu_cbc_top_size_f(u32 v)
+{
+	return (v & 0x7fff) << 0;
+}
+static inline u32 fb_mmu_cbc_top_size_v(u32 r)
+{
+	return (r >> 0) & 0x7fff;
+}
+static inline u32 fb_mmu_cbc_top_size_alignment_shift_v(void)
+{
+	return 0x0000000b;
+}
+static inline u32 fb_mmu_cbc_max_r(void)
+{
+	return 0x00100ecc;
+}
+static inline u32 fb_mmu_cbc_max_comptagline_f(u32 v)
+{
+	return (v & 0xffffff) << 0;
+}
+static inline u32 fb_mmu_cbc_max_comptagline_v(u32 r)
+{
+	return (r >> 0) & 0xffffff;
+}
+static inline u32 fb_mmu_cbc_max_safe_f(u32 v)
+{
+	return (v & 0x1) << 30;
+}
+static inline u32 fb_mmu_cbc_max_safe_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 fb_mmu_cbc_max_safe_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fb_mmu_cbc_max_unsafe_fault_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 fb_mmu_cbc_max_unsafe_fault_enabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 fb_mmu_cbc_max_unsafe_fault_disabled_v(void)
+{
+	return 0x00000001;
+}
 #endif

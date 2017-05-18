@@ -28,6 +28,7 @@
 #include <nvgpu/hw/gv11b/hw_fifo_gv11b.h>
 
 #include <nvgpu/log.h>
+#include <nvgpu/enabled.h>
 
 static void gv11b_init_nvlink_soc_credits(struct gk20a *g)
 {
@@ -59,6 +60,71 @@ static void gv11b_init_nvlink_soc_credits(struct gk20a *g)
 	writel_relaxed(val, soc4);
 	val = readl_relaxed(soc4 + 4);
 	writel_relaxed(val, soc4 + 4);
+
+}
+
+static void gv11b_fb_init_fs_state(struct gk20a *g)
+{
+	nvgpu_log(g, gpu_dbg_fn, "initialize gv11b fb");
+
+	nvgpu_log(g, gpu_dbg_info, "fbhub active ltcs %u",
+			gk20a_readl(g, fb_fbhub_num_active_ltcs_r()));
+
+	gk20a_writel(g, fb_mmu_num_active_ltcs_r(),
+			fb_mmu_num_active_ltcs_count_f(g->ltc_count));
+
+	nvgpu_log(g, gpu_dbg_info, "mmu active ltcs %u",
+			fb_mmu_num_active_ltcs_count_v(
+			gk20a_readl(g, fb_mmu_num_active_ltcs_r())));
+}
+
+static void gv11b_fb_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
+{
+	u32 max_size = gr->max_comptag_mem;
+	/* one tag line covers 64KB */
+	u32 max_comptag_lines = max_size << 4;
+	u32 compbit_base_post_divide;
+	u64 compbit_base_post_multiply64;
+	u64 compbit_store_iova;
+	u64 compbit_base_post_divide64;
+
+	if (nvgpu_is_enabled(g, NVGPU_IS_FMODEL))
+		compbit_store_iova = gk20a_mem_phys(&gr->compbit_store.mem);
+	else
+		compbit_store_iova = g->ops.mm.get_iova_addr(g,
+				gr->compbit_store.mem.priv.sgt->sgl, 0);
+
+	compbit_base_post_divide64 = compbit_store_iova >>
+		fb_mmu_cbc_base_address_alignment_shift_v();
+
+	do_div(compbit_base_post_divide64, g->ltc_count);
+	compbit_base_post_divide = u64_lo32(compbit_base_post_divide64);
+
+	compbit_base_post_multiply64 = ((u64)compbit_base_post_divide *
+		g->ltc_count) << fb_mmu_cbc_base_address_alignment_shift_v();
+
+	if (compbit_base_post_multiply64 < compbit_store_iova)
+		compbit_base_post_divide++;
+
+	if (g->ops.ltc.cbc_fix_config)
+		compbit_base_post_divide =
+			g->ops.ltc.cbc_fix_config(g, compbit_base_post_divide);
+
+	gk20a_writel(g, fb_mmu_cbc_base_r(),
+		fb_mmu_cbc_base_address_f(compbit_base_post_divide));
+
+	nvgpu_log(g, gpu_dbg_info | gpu_dbg_map_v | gpu_dbg_pte,
+		"compbit base.pa: 0x%x,%08x cbc_base:0x%08x\n",
+		(u32)(compbit_store_iova >> 32),
+		(u32)(compbit_store_iova & 0xffffffff),
+		compbit_base_post_divide);
+	nvgpu_log(g, gpu_dbg_fn, "cbc base %x",
+		gk20a_readl(g, fb_mmu_cbc_base_r()));
+
+	gr->compbit_store.base_hw = compbit_base_post_divide;
+
+	g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_invalidate,
+			0, max_comptag_lines - 1);
 
 }
 
@@ -450,6 +516,8 @@ void gv11b_init_fb(struct gpu_ops *gops)
 	gp10b_init_fb(gops);
 	gops->fb.hub_isr = gv11b_fb_hub_isr;
 	gops->fb.reset = gv11b_fb_reset;
+	gops->fb.init_fs_state = gv11b_fb_init_fs_state;
+	gops->fb.init_cbc = gv11b_fb_init_cbc;
 
 	gv11b_init_uncompressed_kind_map();
 	gv11b_init_kind_attr();

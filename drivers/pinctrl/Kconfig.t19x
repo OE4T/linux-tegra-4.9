@@ -11,3 +11,13 @@ config PINCTRL_TEGRA194_PADCTL
 	select GENERIC_PHY
 	select PINCONF
 	select PINMUX
+
+config PINCTRL_TEGRA194_PEXCLK_PADCTL
+	bool "NVIDIA Tegra194 PCIE PEXCLK PADCTL Driver"
+	depends on ARCH_TEGRA_19x_SOC
+	select PINCONF
+	select PINMUX
+	help
+	  Support for the NVIDIA Tegra194 PCIE PEXCLK Padcontrol
+	  configurations. This will provide the mechanism to dynamically
+	  select the functionality between camera and PCIE.

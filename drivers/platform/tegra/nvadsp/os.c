@@ -1683,13 +1683,6 @@ int nvadsp_os_suspend(void)
 		goto end;
 	}
 
-	/*
-	 * No os suspend/stop on linsim as
-	 * APE can be reset only once.
-	 */
-	if (tegra_platform_is_linsim())
-		goto end;
-
 	drv_data = platform_get_drvdata(priv.pdev);
 
 	mutex_lock(&priv.os_run_lock);

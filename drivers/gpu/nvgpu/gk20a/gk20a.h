@@ -29,6 +29,7 @@ struct gk20a_ctxsw_trace;
 struct acr_desc;
 struct nvgpu_mem_alloc_tracker;
 struct dbg_profiler_object_data;
+struct ecc_gk20a;
 
 #include <linux/sched.h>
 #include <nvgpu/lock.h>
@@ -69,6 +70,7 @@ struct dbg_profiler_object_data;
 #include "pmgr/pmgr.h"
 #include "therm/thrm.h"
 #endif
+#include "ecc_gk20a.h"
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0)
 #define WRITE_ONCE(x, val) \
@@ -991,6 +993,7 @@ struct gk20a {
 	struct mm_gk20a mm;
 	struct pmu_gk20a pmu;
 	struct acr_desc acr;
+	struct ecc_gk20a ecc;
 	struct cooling_device_gk20a gk20a_cdev;
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct clk_pmupstate clk_pmu;

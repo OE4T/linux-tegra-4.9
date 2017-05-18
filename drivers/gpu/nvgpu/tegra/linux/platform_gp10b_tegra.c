@@ -484,13 +484,15 @@ static ssize_t ecc_stat_show(struct device *dev,
 	const char *ecc_stat_full_name = attr->attr.name;
 	const char *ecc_stat_base_name;
 	unsigned int hw_unit;
-	struct gr_gp10b_ecc_stat *ecc_stat;
+	struct gk20a_ecc_stat *ecc_stat;
 	u32 hash_key;
 
 	if (sscanf(ecc_stat_full_name, "ltc%u", &hw_unit) == 1) {
 		ecc_stat_base_name = &(ecc_stat_full_name[strlen("ltc0_")]);
 	} else if (sscanf(ecc_stat_full_name, "gpc0_tpc%u", &hw_unit) == 1) {
 		ecc_stat_base_name = &(ecc_stat_full_name[strlen("gpc0_tpc0_")]);
+	} else if (sscanf(ecc_stat_full_name, "gpc%u", &hw_unit) == 1) {
+		ecc_stat_base_name = &(ecc_stat_full_name[strlen("gpc0_")]);
 	} else {
 		return snprintf(buf,
 				PAGE_SIZE,
@@ -512,19 +514,38 @@ static ssize_t ecc_stat_show(struct device *dev,
 int gr_gp10b_ecc_stat_create(struct device *dev,
 				int is_l2,
 				char *ecc_stat_name,
-				struct gr_gp10b_ecc_stat *ecc_stat,
+				struct gk20a_ecc_stat *ecc_stat,
 				struct device_attribute *dev_attr_array)
 {
-	int error = 0;
 	struct gk20a *g = get_gk20a(dev);
+	char *ltc_unit_name = "ltc";
+	char *gr_unit_name = "gpc0_tpc";
 	int num_hw_units = 0;
-	int hw_unit = 0;
-	u32 hash_key = 0;
 
 	if (is_l2)
 		num_hw_units = g->ltc_count;
 	else
 		num_hw_units = g->gr.tpc_count;
+
+
+	return gp10b_ecc_stat_create(dev, num_hw_units,
+				is_l2 ? ltc_unit_name : gr_unit_name,
+				ecc_stat_name,
+				ecc_stat,
+				dev_attr_array);
+}
+
+int gp10b_ecc_stat_create(struct device *dev,
+				int num_hw_units,
+				char *ecc_unit_name,
+				char *ecc_stat_name,
+				struct gk20a_ecc_stat *ecc_stat,
+				struct device_attribute *dev_attr_array)
+{
+	int error = 0;
+	struct gk20a *g = get_gk20a(dev);
+	int hw_unit = 0;
+	u32 hash_key = 0;
 
 	/* Allocate arrays */
 	dev_attr_array = nvgpu_kzalloc(g, sizeof(struct device_attribute) *
@@ -538,16 +559,10 @@ int gr_gp10b_ecc_stat_create(struct device *dev,
 
 	for (hw_unit = 0; hw_unit < num_hw_units; hw_unit++) {
 		/* Fill in struct device_attribute members */
-		if (is_l2)
 			snprintf(ecc_stat->names[hw_unit],
 				ECC_STAT_NAME_MAX_SIZE,
-				"ltc%d_%s",
-				hw_unit,
-				ecc_stat_name);
-		else
-			snprintf(ecc_stat->names[hw_unit],
-				ECC_STAT_NAME_MAX_SIZE,
-				"gpc0_tpc%d_%s",
+				"%s%d_%s",
+				ecc_unit_name,
 				hw_unit,
 				ecc_stat_name);
 
@@ -572,17 +587,27 @@ int gr_gp10b_ecc_stat_create(struct device *dev,
 
 void gr_gp10b_ecc_stat_remove(struct device *dev,
 				int is_l2,
-				struct gr_gp10b_ecc_stat *ecc_stat,
+				struct gk20a_ecc_stat *ecc_stat,
 				struct device_attribute *dev_attr_array)
 {
 	struct gk20a *g = get_gk20a(dev);
 	int num_hw_units = 0;
-	int hw_unit = 0;
 
 	if (is_l2)
 		num_hw_units = g->ltc_count;
 	else
 		num_hw_units = g->gr.tpc_count;
+
+	gp10b_ecc_stat_remove(dev, num_hw_units, ecc_stat, dev_attr_array);
+}
+
+void gp10b_ecc_stat_remove(struct device *dev,
+				int num_hw_units,
+				struct gk20a_ecc_stat *ecc_stat,
+				struct device_attribute *dev_attr_array)
+{
+	struct gk20a *g = get_gk20a(dev);
+	int hw_unit = 0;
 
 	/* Remove sysfs files */
 	for (hw_unit = 0; hw_unit < num_hw_units; hw_unit++) {
@@ -610,86 +635,86 @@ void gr_gp10b_create_sysfs(struct device *dev)
 	   initialized multiple times but we only need to create the ECC
 	   stats once. Therefore, add the following check to avoid
 	   creating duplicate stat sysfs nodes. */
-	if (g->gr.t18x.ecc_stats.sm_lrf_single_err_count.counters != NULL)
+	if (g->ecc.gr.t18x.sm_lrf_single_err_count.counters != NULL)
 		return;
 
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_lrf_ecc_single_err_count",
-				&g->gr.t18x.ecc_stats.sm_lrf_single_err_count,
+				&g->ecc.gr.t18x.sm_lrf_single_err_count,
 				dev_attr_sm_lrf_ecc_single_err_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_lrf_ecc_double_err_count",
-				&g->gr.t18x.ecc_stats.sm_lrf_double_err_count,
+				&g->ecc.gr.t18x.sm_lrf_double_err_count,
 				dev_attr_sm_lrf_ecc_double_err_count_array);
 
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_shm_ecc_sec_count",
-				&g->gr.t18x.ecc_stats.sm_shm_sec_count,
+				&g->ecc.gr.t18x.sm_shm_sec_count,
 				dev_attr_sm_shm_ecc_sec_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_shm_ecc_sed_count",
-				&g->gr.t18x.ecc_stats.sm_shm_sed_count,
+				&g->ecc.gr.t18x.sm_shm_sed_count,
 				dev_attr_sm_shm_ecc_sed_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"sm_shm_ecc_ded_count",
-				&g->gr.t18x.ecc_stats.sm_shm_ded_count,
+				&g->ecc.gr.t18x.sm_shm_ded_count,
 				dev_attr_sm_shm_ecc_ded_count_array);
 
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_total_sec_pipe0_count",
-				&g->gr.t18x.ecc_stats.tex_total_sec_pipe0_count,
+				&g->ecc.gr.t18x.tex_total_sec_pipe0_count,
 				dev_attr_tex_ecc_total_sec_pipe0_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_total_ded_pipe0_count",
-				&g->gr.t18x.ecc_stats.tex_total_ded_pipe0_count,
+				&g->ecc.gr.t18x.tex_total_ded_pipe0_count,
 				dev_attr_tex_ecc_total_ded_pipe0_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_unique_sec_pipe0_count",
-				&g->gr.t18x.ecc_stats.tex_unique_sec_pipe0_count,
+				&g->ecc.gr.t18x.tex_unique_sec_pipe0_count,
 				dev_attr_tex_ecc_unique_sec_pipe0_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_unique_ded_pipe0_count",
-				&g->gr.t18x.ecc_stats.tex_unique_ded_pipe0_count,
+				&g->ecc.gr.t18x.tex_unique_ded_pipe0_count,
 				dev_attr_tex_ecc_unique_ded_pipe0_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_total_sec_pipe1_count",
-				&g->gr.t18x.ecc_stats.tex_total_sec_pipe1_count,
+				&g->ecc.gr.t18x.tex_total_sec_pipe1_count,
 				dev_attr_tex_ecc_total_sec_pipe1_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_total_ded_pipe1_count",
-				&g->gr.t18x.ecc_stats.tex_total_ded_pipe1_count,
+				&g->ecc.gr.t18x.tex_total_ded_pipe1_count,
 				dev_attr_tex_ecc_total_ded_pipe1_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_unique_sec_pipe1_count",
-				&g->gr.t18x.ecc_stats.tex_unique_sec_pipe1_count,
+				&g->ecc.gr.t18x.tex_unique_sec_pipe1_count,
 				dev_attr_tex_ecc_unique_sec_pipe1_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				0,
 				"tex_ecc_unique_ded_pipe1_count",
-				&g->gr.t18x.ecc_stats.tex_unique_ded_pipe1_count,
+				&g->ecc.gr.t18x.tex_unique_ded_pipe1_count,
 				dev_attr_tex_ecc_unique_ded_pipe1_count_array);
 
 	error |= gr_gp10b_ecc_stat_create(dev,
 				1,
 				"lts0_ecc_sec_count",
-				&g->gr.t18x.ecc_stats.l2_sec_count,
+				&g->ecc.gr.t18x.l2_sec_count,
 				dev_attr_l2_ecc_sec_count_array);
 	error |= gr_gp10b_ecc_stat_create(dev,
 				1,
 				"lts0_ecc_ded_count",
-				&g->gr.t18x.ecc_stats.l2_ded_count,
+				&g->ecc.gr.t18x.l2_ded_count,
 				dev_attr_l2_ecc_ded_count_array);
 
 	if (error)
@@ -702,65 +727,65 @@ static void gr_gp10b_remove_sysfs(struct device *dev)
 
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t18x.ecc_stats.sm_lrf_single_err_count,
+			&g->ecc.gr.t18x.sm_lrf_single_err_count,
 			dev_attr_sm_lrf_ecc_single_err_count_array);
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t18x.ecc_stats.sm_lrf_double_err_count,
+			&g->ecc.gr.t18x.sm_lrf_double_err_count,
 			dev_attr_sm_lrf_ecc_double_err_count_array);
 
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t18x.ecc_stats.sm_shm_sec_count,
+			&g->ecc.gr.t18x.sm_shm_sec_count,
 			dev_attr_sm_shm_ecc_sec_count_array);
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t18x.ecc_stats.sm_shm_sed_count,
+			&g->ecc.gr.t18x.sm_shm_sed_count,
 			dev_attr_sm_shm_ecc_sed_count_array);
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t18x.ecc_stats.sm_shm_ded_count,
+			&g->ecc.gr.t18x.sm_shm_ded_count,
 			dev_attr_sm_shm_ecc_ded_count_array);
 
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t18x.ecc_stats.tex_total_sec_pipe0_count,
+			&g->ecc.gr.t18x.tex_total_sec_pipe0_count,
 			dev_attr_tex_ecc_total_sec_pipe0_count_array);
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t18x.ecc_stats.tex_total_ded_pipe0_count,
+			&g->ecc.gr.t18x.tex_total_ded_pipe0_count,
 			dev_attr_tex_ecc_total_ded_pipe0_count_array);
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t18x.ecc_stats.tex_unique_sec_pipe0_count,
+			&g->ecc.gr.t18x.tex_unique_sec_pipe0_count,
 			dev_attr_tex_ecc_unique_sec_pipe0_count_array);
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t18x.ecc_stats.tex_unique_ded_pipe0_count,
+			&g->ecc.gr.t18x.tex_unique_ded_pipe0_count,
 			dev_attr_tex_ecc_unique_ded_pipe0_count_array);
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t18x.ecc_stats.tex_total_sec_pipe1_count,
+			&g->ecc.gr.t18x.tex_total_sec_pipe1_count,
 			dev_attr_tex_ecc_total_sec_pipe1_count_array);
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t18x.ecc_stats.tex_total_ded_pipe1_count,
+			&g->ecc.gr.t18x.tex_total_ded_pipe1_count,
 			dev_attr_tex_ecc_total_ded_pipe1_count_array);
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t18x.ecc_stats.tex_unique_sec_pipe1_count,
+			&g->ecc.gr.t18x.tex_unique_sec_pipe1_count,
 			dev_attr_tex_ecc_unique_sec_pipe1_count_array);
 	gr_gp10b_ecc_stat_remove(dev,
 			0,
-			&g->gr.t18x.ecc_stats.tex_unique_ded_pipe1_count,
+			&g->ecc.gr.t18x.tex_unique_ded_pipe1_count,
 			dev_attr_tex_ecc_unique_ded_pipe1_count_array);
 
 	gr_gp10b_ecc_stat_remove(dev,
 			1,
-			&g->gr.t18x.ecc_stats.l2_sec_count,
+			&g->ecc.gr.t18x.l2_sec_count,
 			dev_attr_l2_ecc_sec_count_array);
 	gr_gp10b_ecc_stat_remove(dev,
 			1,
-			&g->gr.t18x.ecc_stats.l2_ded_count,
+			&g->ecc.gr.t18x.l2_ded_count,
 			dev_attr_l2_ecc_ded_count_array);
 }

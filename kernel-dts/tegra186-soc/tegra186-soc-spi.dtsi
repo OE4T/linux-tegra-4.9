@@ -22,6 +22,8 @@
 		spi1 = &spi1;
 		spi2 = &spi2;
 		spi3 = &spi3;
+		spi4 = &aon_spi;
+		qspi6 = &qspi6;
 	};
 
 	spi0: spi@3210000 {
@@ -103,5 +105,37 @@
 		resets = <&tegra_car TEGRA186_RESET_SPI4>;
 		reset-names = "spi";
 		status = "disabled";
+	};
+
+	qspi6: spi@3270000 {
+		compatible = "nvidia,tegra186-qspi";
+		reg = <0x0 0x3270000 0x0 0x10000>;
+		interrupts = < 0 35 0x04 >;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		#stream-id-cells = <1>;
+		iommus = <&smmu TEGRA_SID_GPCDMA_0>;
+		nvidia,dma-request-selector = <&gpcdma 5>;
+		dmas = <&gpcdma 5>, <&gpcdma 5>;
+		dma-names = "rx", "tx";
+		nvidia,clk-parents = "pll_p";
+		clocks = <&tegra_car TEGRA186_CLK_QSPI>,
+			<&tegra_car TEGRA186_CLK_QSPI_OUT>,
+			<&tegra_car TEGRA186_CLK_PLLP_OUT0>,
+			<&tegra_car TEGRA186_CLK_CLK_M>;
+		clock-names = "qspi","qspi_out","pll_p","clk_m";
+		resets = <&tegra_car TEGRA186_RESET_QSPI>;
+		reset-names = "qspi";
+		status = "disabled";
+	};
+
+	aon_spi: aon_spi@c260000 {
+		status = "disabled";
+		compatible = "nvidia,tegra186-aon-spi";
+		bus-number = <1>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		spi-max-frequency = <12000000>;
+		mboxes = <&aon 2>;
 	};
 };

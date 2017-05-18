@@ -1,7 +1,7 @@
 /*
  * driver/platform/tegra/panel-simulator.c
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -157,7 +157,7 @@ static int panel_sim_regulator_get(struct device *dev)
 {
 	int err = 0;
 
-	if (reg_requested || tegra_platform_is_linsim())
+	if (reg_requested)
 		return 0;
 
 	avdd_lcd_3v3 = regulator_get(dev, "avdd_lcd");
@@ -228,9 +228,6 @@ fail:
 static int panel_sim_enable(struct device *dev)
 {
 	int err = 0;
-
-	if (tegra_platform_is_linsim())
-		return err;
 
 	err = panel_sim_regulator_get(dev);
 	if (err < 0) {

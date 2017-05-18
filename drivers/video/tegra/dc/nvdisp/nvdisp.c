@@ -900,7 +900,7 @@ static int tegra_nvdisp_reset_prepare(struct tegra_dc *dc)
 
 	/* Continue if bpmp is enabled or sim */
 	if (!tegra_bpmp_running()) {
-		if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
+		if (tegra_platform_is_vdk())
 			dev_err(&dc->ndev->dev, "Continue without BPMP for sim\n");
 		else
 			return 0;
@@ -2198,17 +2198,6 @@ u32 tegra_nvdisp_sysfs_read_rg_crc(struct tegra_dc *dc)
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
 	val = tegra_dc_readl(dc, nvdisp_rg_crca_r());
-
-	/* tegrasim seems to need more time to set the
-	 * CRCA valid bit. So adding an infinite
-	 * polling loop for tegrasim
-	 */
-	if (tegra_platform_is_linsim()) {
-		while (val <= 0) {
-			val = tegra_dc_readl(dc, nvdisp_rg_crca_r());
-			msleep(100);
-		}
-	}
 
 	if (val & nvdisp_rg_crca_valid_true_f())
 		crc = tegra_dc_readl(dc, nvdisp_rg_crcb_r());

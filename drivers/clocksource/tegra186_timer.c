@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -231,9 +231,8 @@ static void __init tegra186_timer_init(struct device_node *np)
 		irq_index = tmr_index;
 		BUG_ON(irq_index >= irq_count);
 		/* Program TKEIE to map TMR to the right IRQ */
-		if (!tegra_platform_is_linsim())
-			__raw_writel(1 << tmr_index,   tke->reg_base
-						     + TKEIE + 4 * irq_index);
+		__raw_writel(1 << tmr_index,   tke->reg_base
+					     + TKEIE + 4 * irq_index);
 		tmr->evt.irq = irq_of_parse_and_map(np, irq_index);
 		BUG_ON(!tmr->evt.irq);
 

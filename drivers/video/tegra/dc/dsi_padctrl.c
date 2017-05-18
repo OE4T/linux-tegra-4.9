@@ -220,7 +220,7 @@ struct tegra_dsi_padctrl *tegra_dsi_padctrl_init(struct tegra_dc *dc)
 	int err;
 
 	/* Padctrl module doesn't exist on fpga */
-	if (tegra_platform_is_linsim() || tegra_platform_is_fpga())
+	if (tegra_platform_is_fpga())
 		return NULL;
 
 	dsi = tegra_dc_get_outdata(dc);

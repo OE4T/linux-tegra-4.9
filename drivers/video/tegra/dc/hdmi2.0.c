@@ -2660,9 +2660,6 @@ static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 	if (clk_type == hdmi->clk_type)
 		return;
 
-	if (tegra_platform_is_linsim())
-		return;
-
 	if (clk_type == TEGRA_HDMI_BRICK_CLK) {
 		u32 val;
 		struct tegra_dc_sor_data *sor = hdmi->sor;

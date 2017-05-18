@@ -105,7 +105,6 @@ static inline void tegra_dp_disable_irq(u32 irq)
 
 #define is_hotplug_supported(dp) \
 ({ \
-	!tegra_platform_is_linsim() && \
 	tegra_dc_is_ext_dp_panel(dp->dc); \
 })
 
@@ -133,7 +132,7 @@ tegra_dc_dpaux_poll_register(struct tegra_dc_dp_data *dp,
 	unsigned long	timeout_jf = jiffies + msecs_to_jiffies(timeout_ms);
 	u32		reg_val	   = 0;
 
-	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
+	if (tegra_platform_is_vdk())
 		return 0;
 
 	do {
@@ -2611,7 +2610,7 @@ static void tegra_dp_hpd_op_edid_recheck(void *drv_data)
 
 static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp)
 {
-	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
+	if (tegra_platform_is_vdk())
 		return;
 
 	if (!dp || !dp->dpaux)
@@ -3162,9 +3161,7 @@ static bool tegra_dc_dp_hpd_state(struct tegra_dc *dc)
 	if (WARN_ON(!dc || !dc->out))
 		return false;
 
-	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP ||
-		tegra_platform_is_linsim() ||
-		tegra_platform_is_vdk())
+	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP || tegra_platform_is_vdk())
 		return true;
 
 	tegra_dpaux_clk_en(dpaux);
@@ -3251,7 +3248,7 @@ static void tegra_dc_dp_modeset_notifier(struct tegra_dc *dc)
 	tegra_dc_sor_modeset_notifier(dp->sor, false);
 	/* Pixel clock may be changed in new mode,
 	 * recalculate link config */
-	if (!(tegra_platform_is_linsim() || tegra_platform_is_vdk()))
+	if (!(tegra_platform_is_vdk()))
 		tegra_dc_dp_calc_config(dp, dp->mode, &dp->link_cfg);
 
 

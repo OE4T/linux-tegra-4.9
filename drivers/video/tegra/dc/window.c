@@ -1152,21 +1152,11 @@ void tegra_dc_trigger_windows(struct tegra_dc *dc)
 			tegra_dc_get_numof_dispwindows()) {
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 
-		if (tegra_platform_is_linsim()) {
-			/* FIXME: this is not needed when
-			   the simulator clears WIN_x_UPDATE
-			   bits as in HW */
-			if (interlace_done) {
-				win->dirty = 0;
-				completed = 1;
-			}
+		if (!(val & (WIN_A_ACT_REQ << i)) && interlace_done) {
+			win->dirty = 0;
+			completed = 1;
 		} else {
-			if (!(val & (WIN_A_ACT_REQ << i)) && interlace_done) {
-				win->dirty = 0;
-				completed = 1;
-			} else {
-				dirty = 1;
-			}
+			dirty = 1;
 		}
 	}
 

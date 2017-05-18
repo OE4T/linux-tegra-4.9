@@ -2816,7 +2816,7 @@ unsigned long tegra_dc_poll_register(struct tegra_dc *dc, u32 reg, u32 mask,
 	unsigned long timeout_jf = jiffies + msecs_to_jiffies(timeout_ms);
 	u32 reg_val = 0;
 
-	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
+	if (tegra_platform_is_vdk())
 		return 0;
 
 	do {
@@ -3799,7 +3799,7 @@ bool tegra_dc_windows_are_dirty(struct tegra_dc *dc, u32 win_act_req_mask)
 {
 	u32 val;
 
-	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
+	if (tegra_platform_is_vdk())
 		return false;
 
 	val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
@@ -5502,11 +5502,8 @@ void tegra_dc_blank_wins(struct tegra_dc *dc, unsigned windows)
 		dcwins[nr_win++]->flags &= ~TEGRA_WIN_FLAG_ENABLED;
 	}
 
-	/* Skip update for linsim */
-	if (!tegra_platform_is_linsim()) {
-		tegra_dc_update_windows(dcwins, nr_win, NULL, true, false);
-		tegra_dc_sync_windows(dcwins, nr_win);
-	}
+	tegra_dc_update_windows(dcwins, nr_win, NULL, true, false);
+	tegra_dc_sync_windows(dcwins, nr_win);
 
 	tegra_dc_program_bandwidth(dc, true);
 
@@ -5865,13 +5862,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #endif
 	struct resource of_fb_res;
 	int hotplug_init_status = -1;
-
-#ifdef CONFIG_ARCH_TEGRA_210_SOC
-	if (tegra_platform_is_linsim()) {
-		dev_info(&ndev->dev, "DC instances are not present on linsim\n");
-		return -ENODEV;
-	}
-#endif
 
 	/* Specify parameters for the maximum physical segment size. */
 	ndev->dev.dma_parms = &tegra_dc_dma_parameters;
@@ -6245,7 +6235,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 	if (dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) {
 		/* WAR: BL is putting DC in bad state for EDP configuration */
-		if (!(tegra_platform_is_linsim() || tegra_platform_is_vdk()) &&
+		if (!tegra_platform_is_vdk() &&
 			(dc->out->type == TEGRA_DC_OUT_DP ||
 				dc->out->type == TEGRA_DC_OUT_NVSR_DP)) {
 			tegra_disp_clk_prepare_enable(dc->clk);

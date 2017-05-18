@@ -245,7 +245,7 @@ static long tegra_dc_null_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	struct clk *base_clk;
 	long rate;
 
-	if ((clk == NULL) || (parent_clk == NULL) || tegra_platform_is_linsim())
+	if ((clk == NULL) || (parent_clk == NULL))
 		return 0;
 
 	if (dc->out != NULL)

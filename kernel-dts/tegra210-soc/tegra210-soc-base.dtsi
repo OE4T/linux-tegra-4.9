@@ -204,6 +204,7 @@
 		clocks = <&tegra_car TEGRA210_CLK_BWMGR_EMC>;
 		clock-names = "emc";
 		status = "okay";
+		nvidia,bwmgr-use-shared-master;
 	};
 
 	reserved-memory {
@@ -1605,7 +1606,7 @@
 			<&tegra_car TEGRA210_CLK_APB2APE>,
 			<&tegra_car TEGRA210_CLK_ADSP_NEON>,
 			<&tegra_car TEGRA210_CLK_ADSP>,
-			<&tegra_car TEGRA210_CLK_EMC>;
+			<&tegra_car TEGRA210_CLK_APE_EMC>;
 		clock-names = "adsp.ape", "adsp.apb2ape", "adspneon",
 				"adsp", "adsp.emc";
 		resets = <&tegra_car TEGRA210_RST_ADSP>;

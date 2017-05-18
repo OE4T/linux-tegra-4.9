@@ -249,6 +249,51 @@ static ssize_t brightness_store(struct device *dev,
 }
 static DEVICE_ATTR_RW(brightness);
 
+static ssize_t low_persistence_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct backlight_device *bd = to_backlight_device(dev);
+
+	return sprintf(buf, "%d\n", ((bd->props.state & BL_CORE_LPMODE) != 0));
+}
+
+static ssize_t low_persistence_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int rc;
+	struct backlight_device *bd = to_backlight_device(dev);
+	unsigned long lp_mode;
+
+	rc = kstrtoul(buf, 0, &lp_mode);
+	if (rc)
+		return rc;
+
+	lp_mode = !!lp_mode;
+	rc = -ENXIO;
+
+	mutex_lock(&bd->ops_lock);
+	if (bd->ops) {
+		pr_debug("set low_persistence to %lu\n", lp_mode);
+		if (bd->props.low_persistence_capable) {
+			if (lp_mode && !(bd->props.state & BL_CORE_LPMODE)) {
+				bd->props.state |= BL_CORE_LPMODE;
+				backlight_update_status(bd);
+			} else if (!lp_mode &&
+				(bd->props.state & BL_CORE_LPMODE)) {
+				bd->props.state &= ~BL_CORE_LPMODE;
+				backlight_update_status(bd);
+			}
+		} else {
+			pr_err("low_persistence mode isn't supported\n");
+		}
+		rc = count;
+	}
+	mutex_unlock(&bd->ops_lock);
+
+	return rc;
+}
+static DEVICE_ATTR_RW(low_persistence);
+
 static ssize_t type_show(struct device *dev, struct device_attribute *attr,
 		char *buf)
 {
@@ -328,6 +373,7 @@ static void bl_device_release(struct device *dev)
 static struct attribute *bl_device_attrs[] = {
 	&dev_attr_bl_power.attr,
 	&dev_attr_brightness.attr,
+	&dev_attr_low_persistence.attr,
 	&dev_attr_actual_brightness.attr,
 	&dev_attr_max_brightness.attr,
 	&dev_attr_type.attr,

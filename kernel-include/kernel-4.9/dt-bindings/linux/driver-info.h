@@ -13,11 +13,4 @@
 /* For the time being, declare us also as kernel 4.4 */
 #define KERNEL_VERSION_4_9
 
-/*
- * SDMMC core in kernel 4.4 and presumably in kernel 4.9 handles the
- * chip specific regulator and hence provide all regulator with core
- * name supply.
- */
-#define SDMMC_USE_CORE_REGULATOR_HANDLER
-
 #endif
